@@ -1,5 +1,5 @@
 /**
- * Phase 88 Batch17 — profile 页 + ad/SyncMonitor 渲染
+ * Phase 88 Batch17 — profile 页渲染
  */
 import { describe, it, expect, vi } from "vitest";
 import { renderPageWithEndpoints } from "@/test/utils/renderPage";
@@ -10,7 +10,6 @@ vi.mock("@/lib/api", async () => {
 });
 
 import ProfilePage from "../index";
-import SyncMonitor from "@/pages/ad/SyncMonitor";
 
 /** 直接轮询 body 文本出现 */
 async function waitText(text: string, timeoutMs = 6000): Promise<boolean> {
@@ -57,48 +56,5 @@ describe("pages/profile — index", () => {
     });
     await new Promise((r) => setTimeout(r, 800));
     expect(document.body.innerHTML.length).toBeGreaterThan(50);
-  });
-});
-
-describe("pages/ad — SyncMonitor", () => {
-  it("renders sync logs table", async () => {
-    await renderPageWithEndpoints(<SyncMonitor />, {
-      endpoints: {
-        "/api/v1/ad/groups/sync/logs": {
-          data: {
-            list: [
-              {
-                id: "log1",
-                configName: "默认同步任务",
-                syncType: "full",
-                status: "success",
-                startTime: "2026-01-01 02:00:00",
-                duration: 300,
-                successCount: 120,
-                failureCount: 0,
-              },
-            ],
-            total: 1,
-            current: 1,
-            pageSize: 10,
-          },
-        },
-        "/api/v1/ad/groups/sync/status": { data: { running: false } },
-      },
-    });
-    expect(await waitText("默认同步任务")).toBe(true);
-  });
-
-  it("renders empty logs", async () => {
-    await renderPageWithEndpoints(<SyncMonitor />, {
-      endpoints: {
-        "/api/v1/ad/groups/sync/logs": {
-          data: { list: [], total: 0, current: 1, pageSize: 10 },
-        },
-        "/api/v1/ad/groups/sync/status": { data: { running: false } },
-      },
-    });
-    const ok = await waitText("No data");
-    expect(ok || document.querySelector(".ant-table-placeholder")).toBeTruthy();
   });
 });

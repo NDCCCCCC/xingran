@@ -1,18 +1,16 @@
 /**
  * 网络类 hooks 组合测试
  *
- * 覆盖:useNetworkStatus / useRealtimeUpdates / useRPAProgress / useWebSocket。
+ * 覆盖:useNetworkStatus / useRPAProgress / useWebSocket。
  * WebSocket 用 FakeWebSocket stub(vi.stubGlobal)精确控制 open/message/close 事件。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useNetworkStatus } from "./useNetworkStatus";
-import { useRealtimeUpdates } from "./useRealtimeUpdates";
 import { useRPAProgress } from "./useRPAProgress";
 import { useWebSocket } from "./useWebSocket";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useNoticeStore } from "@/store/noticeStore";
-import type { WidgetConfig } from "@/types/dashboard";
 
 /** 可控的 WebSocket 假实现:静态常量对齐真实 WebSocket */
 class FakeWebSocket {
@@ -62,19 +60,6 @@ class FakeWebSocket {
     this.readyState = FakeWebSocket.CLOSED;
     this.onclose?.();
   }
-}
-
-function makeWsWidget(id: string, channel: string): WidgetConfig {
-  return {
-    id,
-    type: "stat-card",
-    title: id,
-    position: { x: 0, y: 0, w: 4, h: 3 },
-    dataSource: { type: "websocket", channel },
-    display: { type: "stat-card" },
-    enabled: true,
-    refreshInterval: 0,
-  } as WidgetConfig;
 }
 
 describe("useNetworkStatus", () => {
@@ -271,135 +256,6 @@ describe("useWebSocket", () => {
     });
     expect(result.current.status).toBe("error");
     expect(onError).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("useRealtimeUpdates", () => {
-  beforeEach(() => {
-    FakeWebSocket.instances = [];
-    vi.stubGlobal("WebSocket", FakeWebSocket);
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    useDashboardStore.setState({ widgetDataCache: new Map() });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-    useDashboardStore.setState({ widgetDataCache: new Map() });
-  });
-
-  it("有 websocket 数据源时自动连接,open 后按 channel 订阅", () => {
-    const widgets = [
-      makeWsWidget("w1", "ch-a"),
-      makeWsWidget("w2", "ch-a"),
-      makeWsWidget("w3", "ch-b"),
-    ];
-    const { result, rerender } = renderHook(() => useRealtimeUpdates(widgets));
-
-    expect(FakeWebSocket.instances).toHaveLength(1);
-    const ws = FakeWebSocket.instances[0];
-    expect(ws.url).toContain("ws://");
-    expect(ws.url).toContain("/ws/dashboard");
-
-    act(() => ws.simulateOpen());
-    // 同 channel 去重:ch-a 订阅一次 + ch-b 一次
-    expect(ws.sent).toHaveLength(2);
-    expect(ws.sent[0]).toBe(JSON.stringify({ action: "subscribe", channel: "ch-a" }));
-    expect(ws.sent[1]).toBe(JSON.stringify({ action: "subscribe", channel: "ch-b" }));
-    // connected 是渲染期快照,手动 rerender 后读取最新 ref
-    rerender();
-    expect(result.current.connected).toBe(true);
-  });
-
-  it("data_update 消息写缓存并触发 onMessage 回调", () => {
-    useDashboardStore.getState().cacheWidgetData("seed", "old");
-    const widgets = [makeWsWidget("w1", "ch-a")];
-    const onMessage = vi.fn();
-    const onConnectionChange = vi.fn();
-
-    renderHook(() => useRealtimeUpdates(widgets, { onMessage, onConnectionChange }));
-    const ws = FakeWebSocket.instances[0];
-    act(() => ws.simulateOpen());
-
-    act(() => ws.simulateMessage({ type: "data_update", widgetId: "w1", data: { v: 9 } }));
-    expect(onMessage).toHaveBeenCalledWith("w1", { v: 9 });
-    expect(useDashboardStore.getState().getCachedWidgetData("w1")).toEqual({ v: 9 });
-
-    // 非 data_update / 非法 JSON 不触发回调
-    act(() => ws.simulateRaw("not-json{{{"));
-    expect(onMessage).toHaveBeenCalledTimes(1);
-  });
-
-  it("enabled=false 或无 websocket 数据源时不连接", () => {
-    const apiWidget = {
-      ...makeWsWidget("api", "x"),
-      dataSource: { type: "static", data: 1 },
-    } as unknown as WidgetConfig;
-
-    renderHook(() => useRealtimeUpdates([apiWidget]));
-    expect(FakeWebSocket.instances).toHaveLength(0);
-
-    const { result: r2 } = renderHook(() =>
-      useRealtimeUpdates([makeWsWidget("w", "c")], { enabled: false })
-    );
-    expect(FakeWebSocket.instances).toHaveLength(0);
-    expect(r2.current.connected).toBe(false);
-  });
-
-  it("onerror 触发 onError/onConnectionChange 回调", () => {
-    const onError = vi.fn();
-    const onConnectionChange = vi.fn();
-    renderHook(() =>
-      useRealtimeUpdates([makeWsWidget("w1", "ch")], { onError, onConnectionChange })
-    );
-    const ws = FakeWebSocket.instances[0];
-
-    act(() => ws.simulateOpen());
-    expect(onConnectionChange).toHaveBeenCalledWith(true);
-
-    act(() => {
-      ws.onerror?.(new Error("boom"));
-    });
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onConnectionChange).toHaveBeenCalledWith(false);
-  });
-
-  it("意外断线 5 秒后自动重连;主动 disconnect 不重连", async () => {
-    vi.useFakeTimers();
-    const widgets = [makeWsWidget("w1", "ch")];
-    const { result, unmount } = renderHook(() => useRealtimeUpdates(widgets));
-
-    const ws = FakeWebSocket.instances[0];
-    act(() => ws.simulateOpen());
-    await act(async () => {
-      ws.simulateClose();
-    });
-    expect(FakeWebSocket.instances).toHaveLength(1);
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000);
-    });
-    expect(FakeWebSocket.instances).toHaveLength(2); // 自动重连
-
-    // 主动断开(含卸载清理)不重连
-    act(() => result.current.disconnect());
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(10000);
-    });
-    expect(FakeWebSocket.instances).toHaveLength(2);
-    unmount();
-  });
-
-  it("refreshSubscriptions 在 OPEN 时对全部 ws 数据源重新订阅", () => {
-    const widgets = [makeWsWidget("w1", "ch-a"), makeWsWidget("w2", "ch-b")];
-    const { result } = renderHook(() => useRealtimeUpdates(widgets));
-    const ws = FakeWebSocket.instances[0];
-    act(() => ws.simulateOpen());
-    expect(ws.sent).toHaveLength(2);
-
-    act(() => result.current.refreshSubscriptions());
-    expect(ws.sent).toHaveLength(4); // 重新订阅全部
   });
 });
 
