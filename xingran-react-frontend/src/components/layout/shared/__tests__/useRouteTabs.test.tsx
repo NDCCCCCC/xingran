@@ -21,19 +21,26 @@ const mockUseTabsReturn: any = {
   updateTab: mockUpdateTab,
   setActiveTab: mockSetActiveTab,
 };
-vi.mock("@/store/tabsStore", () => ({
-  useTabs: vi.fn(() => mockUseTabsReturn),
-  useTabsStore: {
-    getState: vi.fn(() => ({
-      ...mockUseTabsReturn,
-      tabs: mockUseTabsReturn.tabs,
-    })),
-  },
-}));
+vi.mock("@/store/tabsStore", () => {
+  // 兼容 selector 调用（useTabsStore(s => s.addTab)）与无参调用（useTabs()）两种形态
+  const useTabsStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector(mockUseTabsReturn) : mockUseTabsReturn;
+  useTabsStoreFn.getState = vi.fn(() => ({
+    ...mockUseTabsReturn,
+    tabs: mockUseTabsReturn.tabs,
+  }));
+  return {
+    useTabs: vi.fn(() => mockUseTabsReturn),
+    useTabsStore: useTabsStoreFn,
+  };
+});
 
-vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: vi.fn(() => ({ currentDashboard: { name: "My Dashboard" } })),
-}));
+vi.mock("@/store/dashboardStore", () => {
+  const dashboardState = { currentDashboard: { name: "My Dashboard" } };
+  const useDashboardStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector(dashboardState) : dashboardState;
+  return { useDashboardStore: useDashboardStoreFn };
+});
 
 vi.mock("@/router/routeConfigManager", () => ({
   routeConfigManager: {

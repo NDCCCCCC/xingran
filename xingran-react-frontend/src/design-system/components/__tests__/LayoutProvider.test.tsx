@@ -21,7 +21,10 @@ const mockLayoutStore: any = {
   setSidebarCollapsed: vi.fn(),
 };
 vi.mock("@/store/layoutStore", () => ({
-  useLayoutStore: vi.fn(() => mockLayoutStore),
+  // 兼容 selector 调用（useLayoutStore(s => s.currentLayout)）与无参调用两种形态
+  useLayoutStore: vi.fn((selector?: (s: unknown) => unknown) =>
+    selector ? selector(mockLayoutStore) : mockLayoutStore
+  ),
 }));
 
 import LayoutProvider, { useLayoutContext } from "../LayoutProvider";

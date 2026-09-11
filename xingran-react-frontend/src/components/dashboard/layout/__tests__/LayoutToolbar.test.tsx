@@ -21,7 +21,9 @@ const storeState: Record<string, any> = {
 };
 
 vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: () => storeState,
+  // 兼容 selector 调用（useDashboardStore(s => s.viewMode)）与无参调用两种形态
+  useDashboardStore: (selector?: (s: unknown) => unknown) =>
+    selector ? selector(storeState) : storeState,
 }));
 
 const navigateMock = vi.fn();

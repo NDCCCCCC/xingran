@@ -26,22 +26,28 @@ vi.mock("@/store/settingsStore", () => ({
   }),
 }));
 
-vi.mock("@/store/layoutStore", () => ({
-  useLayoutStore: () => ({
+vi.mock("@/store/layoutStore", () => {
+  // 兼容 selector 调用（useLayoutStore(s => s.currentLayout)）与无参调用两种形态
+  const layoutState = {
     currentLayout: "hybrid",
     sidebarCollapsed: false,
     density: "comfortable",
     layout: "hybrid",
     setDensity: vi.fn(),
     setLayout: vi.fn(),
-  }),
-  useLayout: () => ({
-    density: "comfortable",
-    setDensity: vi.fn(),
-    layout: "hybrid",
-    setLayout: vi.fn(),
-  }),
-}));
+  };
+  return {
+    useLayoutStore: vi.fn((selector?: (s: unknown) => unknown) =>
+      selector ? selector(layoutState) : layoutState
+    ),
+    useLayout: () => ({
+      density: "comfortable",
+      setDensity: vi.fn(),
+      layout: "hybrid",
+      setLayout: vi.fn(),
+    }),
+  };
+});
 
 vi.mock("@/store/themeStore", () => ({
   useThemeStore: vi.fn((sel?: any) => {

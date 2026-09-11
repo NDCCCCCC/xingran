@@ -21,11 +21,17 @@ const mockLayoutSync = vi.fn();
 const mockUpdateLayout = vi.fn();
 
 vi.mock("@/store/authStore", () => ({
-  useAuthStore: vi.fn(() => mockAuthState),
+  // 兼容 selector 调用（useAuthStore(s => s.isAuthenticated)）与无参调用两种形态
+  useAuthStore: vi.fn((selector?: (s: unknown) => unknown) =>
+    selector ? selector(mockAuthState) : mockAuthState
+  ),
 }));
 
 vi.mock("@/store/settingsStore", () => ({
-  useSettingsStore: vi.fn(() => mockSettingsState),
+  // 兼容 selector 调用（useSettingsStore(s => s.initialize)）与无参调用两种形态
+  useSettingsStore: vi.fn((selector?: (s: unknown) => unknown) =>
+    selector ? selector(mockSettingsState) : mockSettingsState
+  ),
   useSettingsStore_getState: vi.fn(),
 }));
 
