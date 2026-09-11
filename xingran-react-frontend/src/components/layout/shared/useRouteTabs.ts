@@ -11,7 +11,7 @@
 
 import { useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { useTabs, useTabsStore } from "@/store/tabsStore";
+import { useTabsStore } from "@/store/tabsStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { routeConfigManager } from "@/router/routeConfigManager";
 import { getSpecialPathTitle, matchDynamicRouteTitle, PAGE_TITLES } from "@/constants/pageTitles";
@@ -42,9 +42,10 @@ const getTitleByPath = (path: string): string => {
 };
 
 export function useRouteTabs() {
-  const { addTab, updateTab } = useTabs();
+  const addTab = useTabsStore((s) => s.addTab);
+  const updateTab = useTabsStore((s) => s.updateTab);
   const location = useLocation();
-  const { currentDashboard } = useDashboardStore();
+  const currentDashboard = useDashboardStore((s) => s.currentDashboard);
 
   const getDashboardTitle = useCallback((): string => {
     // 当在 /dashboard 首页时，始终显示"仪表盘"，不使用 currentDashboard.name

@@ -14,7 +14,8 @@ import { HEADER_Z_INDEX } from "./header.constants";
 const { Header: AntHeader } = Layout;
 
 const Header: FC = () => {
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const location = useLocation();
 

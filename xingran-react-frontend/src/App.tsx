@@ -24,7 +24,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const { allMenus } = useMenuStore();
+  const allMenus = useMenuStore((s) => s.allMenus);
 
   // 初始化路由配置管理器
   // 只在菜单数量变化时重新初始化，避免循环渲染

@@ -92,8 +92,11 @@ const Sidebar = () => {
   const expectedOpenKeysRef = useRef<string[] | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { menus, loading, fetchMenus } = useMenuStore();
-  const { sidebarCollapsed, toggleSidebar } = useLayoutStore();
+  const menus = useMenuStore((s) => s.menus);
+  const loading = useMenuStore((s) => s.loading);
+  const fetchMenus = useMenuStore((s) => s.fetchMenus);
+  const sidebarCollapsed = useLayoutStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
 
   // 组件加载时获取菜单
   useEffect(() => {
