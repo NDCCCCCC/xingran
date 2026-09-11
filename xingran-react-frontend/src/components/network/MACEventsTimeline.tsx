@@ -44,9 +44,7 @@ export interface MACEventsTimelineProps {
   deviceId?: string;
 }
 
-const TimelineItem: React.FC<{
-  event: MACHistoryRecord;
-}> = ({ event }) => {
+const TimelineItem = React.memo<{ event: MACHistoryRecord }>(({ event }) => {
   const eventType = (event.eventType ?? "appeared") as MACEventType;
   const label = EVENT_LABEL[eventType];
 
@@ -69,7 +67,7 @@ const TimelineItem: React.FC<{
       </Space>
     </div>
   );
-};
+});
 
 const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   mac,
@@ -177,9 +175,10 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
       }
       bordered={false}
     >
-      <Timeline
-        mode="left"
-        items={allEvents.map((event) => {
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "64px" }}>
+        <Timeline
+          mode="left"
+          items={allEvents.map((event) => {
           const eventType = (event.eventType ?? "appeared") as MACEventType;
           const Icon = EVENT_ICON[eventType];
           const color = EVENT_COLORS[eventType];
@@ -191,7 +190,8 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
             children: <TimelineItem event={event} />,
           };
         })}
-      />
+        </Timeline>
+      </div>
       {hasMore && (
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <Button

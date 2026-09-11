@@ -26,11 +26,14 @@
 
 .cad-wall-control-point {
   cursor: move;
-  transition: r 0.2s ease;
+  transform: scale(1);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.15s ease;
 }
 
 .cad-wall-control-point:hover {
-  r: 6;
+  transform: scale(1.5);
 }
 
 .cad-door {
@@ -47,11 +50,14 @@
 
 .cad-door-control-point {
   cursor: move;
-  transition: r 0.2s ease;
+  transform: scale(1);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.15s ease;
 }
 
 .cad-door-control-point:hover {
-  r: 5;
+  transform: scale(1.5);
 }
 
 /* SVG 样式 */

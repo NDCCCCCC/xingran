@@ -399,31 +399,29 @@ export function CADFloorPlanEditor({
     setSelectedIds(new Set());
   }, []);
 
-  // 获取当前选中的所有元素
+  // 获取当前选中的所有元素（Map 化查找，O(n) 构建 → O(1) 查询）
   const _selectedElements = useMemo(() => {
-    const elements: { id: string; type: "wall" | "door" | "workstation" | "text" }[] = [];
-    if (selectedIds.size === 0) return elements;
+    if (selectedIds.size === 0) return [];
 
+    // 构建 id → {el, type} Map
+    const idToElement = new Map<string, { id: string; type: "wall" | "door" | "workstation" | "text" }>();
+    for (const wall of floorPlanData.walls) {
+      idToElement.set(wall.id, { id: wall.id, type: "wall" });
+    }
+    for (const door of floorPlanData.doors) {
+      idToElement.set(door.id, { id: door.id, type: "door" });
+    }
+    for (const ws of floorPlanData.workstations) {
+      idToElement.set(ws.id, { id: ws.id, type: "workstation" });
+    }
+    for (const text of floorPlanData.texts || []) {
+      idToElement.set(text.id, { id: text.id, type: "text" });
+    }
+
+    const elements: { id: string; type: "wall" | "door" | "workstation" | "text" }[] = [];
     for (const id of selectedIds) {
-      const wall = floorPlanData.walls.find((w) => w.id === id);
-      if (wall) {
-        elements.push({ id: wall.id, type: "wall" });
-        continue;
-      }
-      const door = floorPlanData.doors.find((d) => d.id === id);
-      if (door) {
-        elements.push({ id: door.id, type: "door" });
-        continue;
-      }
-      const ws = floorPlanData.workstations.find((w) => w.id === id);
-      if (ws) {
-        elements.push({ id: ws.id, type: "workstation" });
-        continue;
-      }
-      const text = floorPlanData.texts?.find((t) => t.id === id);
-      if (text) {
-        elements.push({ id: text.id, type: "text" });
-      }
+      const el = idToElement.get(id);
+      if (el) elements.push(el);
     }
     return elements;
   }, [selectedIds, floorPlanData]);
@@ -597,14 +595,16 @@ export function CADFloorPlanEditor({
     [floorPlanData]
   );
 
-  // 检测点击位置是否在已有的墙体节点附近
+  // 检测点击位置是否在已有的墙体节点附近（平方距离比较替代 sqrt）
   const findNearbyWallNode = useCallback(
     (point: Point, threshold = 15): { point: Point; wallId: string; pointIndex: number } | null => {
+      const thresholdSq = threshold * threshold;
       for (const wall of floorPlanData.walls) {
         for (let i = 0; i < wall.points.length; i++) {
           const node = wall.points[i];
-          const dist = Math.sqrt(Math.pow(point.x - node.x, 2) + Math.pow(point.y - node.y, 2));
-          if (dist < threshold) {
+          const dx = point.x - node.x;
+          const dy = point.y - node.y;
+          if (dx * dx + dy * dy < thresholdSq) {
             return { point: node, wallId: wall.id, pointIndex: i };
           }
         }

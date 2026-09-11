@@ -4879,18 +4879,17 @@ body {
   padding: 0;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(120, 100, 70, 0.18);
-  transition: color var(--theme-transition-base);
+  transition: color var(--theme-transition-base), transform var(--theme-transition-base);
 }
 .sidebar-toggle:hover {
   color: var(--theme-primary);
 }
+.sidebar-toggle.is-collapsed {
+  transform: translateY(-50%) rotate(180deg);
+}
 .sidebar-toggle svg {
   width: 12px;
   height: 12px;
-  transition: transform var(--theme-transition-base);
-}
-.sidebar-toggle.is-collapsed svg {
-  transform: rotate(180deg);
 }
 
 /* 菜单选中态对齐原型：浅黄 13% 底 + 金色左竖条；文字/箭头用白色保证可读 */
