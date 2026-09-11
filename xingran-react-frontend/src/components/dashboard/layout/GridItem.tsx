@@ -34,7 +34,10 @@ export const GridItem: React.FC<GridItemProps> = ({
   onClick,
   children,
 }) => {
-  const { viewMode, selectedWidgetId, removeWidget, updateWidget } = useDashboardStore();
+  const viewMode = useDashboardStore((s) => s.viewMode);
+  const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId);
+  const removeWidget = useDashboardStore((s) => s.removeWidget);
+  const updateWidget = useDashboardStore((s) => s.updateWidget);
   const [showEditModal, setShowEditModal] = useState(false);
 
   // 判断是否选中

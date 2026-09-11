@@ -40,7 +40,7 @@ interface DashboardGridProps {
 
 export const DashboardGrid: FC<DashboardGridProps> = ({ widgets, onLayoutChange, children }) => {
   const windowSize = useWindowSize();
-  const { viewMode } = useDashboardStore();
+  const viewMode = useDashboardStore((s) => s.viewMode);
   const layoutConfig = defaultLayoutConfig;
   const isEditable = viewMode === "edit";
 

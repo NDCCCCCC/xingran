@@ -46,14 +46,12 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
 
-  const {
-    viewMode,
-    setViewMode,
-    hasUnsavedChanges,
-    saveCurrentDashboard,
-    resetCurrentDashboard,
-    currentDashboard,
-  } = useDashboardStore();
+  const viewMode = useDashboardStore((s) => s.viewMode);
+  const setViewMode = useDashboardStore((s) => s.setViewMode);
+  const hasUnsavedChanges = useDashboardStore((s) => s.hasUnsavedChanges);
+  const saveCurrentDashboard = useDashboardStore((s) => s.saveCurrentDashboard);
+  const resetCurrentDashboard = useDashboardStore((s) => s.resetCurrentDashboard);
+  const currentDashboard = useDashboardStore((s) => s.currentDashboard);
 
   // 使用 ref 存储最新的 viewMode 和 setViewMode，遵循 Vercel React Best Practices: rerender-defer-reads
   const viewModeRef = useRef(viewMode);

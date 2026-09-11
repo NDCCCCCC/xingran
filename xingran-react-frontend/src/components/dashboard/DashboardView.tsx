@@ -51,15 +51,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onRetry,
 }) => {
   const { message } = App.useApp();
-  const {
-    viewMode,
-    widgetDataCache: _widgetDataCache,
-    setWsStatus,
-    setIsRefreshing,
-    updateWidgetData,
-    wsStatus: _wsStatus,
-    isRefreshing: _isRefreshing,
-  } = useDashboardStore();
+  const viewMode = useDashboardStore((s) => s.viewMode);
+  const setWsStatus = useDashboardStore((s) => s.setWsStatus);
+  const setIsRefreshing = useDashboardStore((s) => s.setIsRefreshing);
+  const updateWidgetData = useDashboardStore((s) => s.updateWidgetData);
 
   // 内部状态
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
