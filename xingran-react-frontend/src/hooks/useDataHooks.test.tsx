@@ -440,7 +440,9 @@ describe("useWidgetPolling", () => {
         await result.current.refresh();
       });
       expect(mocks.getBatchWidgetData).toHaveBeenCalledWith(["w1"]);
-      expect(result.current.loading).toBe(false);
+      // 等待 refetch 错误完成:React Query refetch 期间 isFetching 短暂为 true,
+      // 错误处理完后 isFetching=false,loading 回归 false
+      await waitFor(() => expect(result.current.loading).toBe(false));
     } finally {
       consoleSpy.mockRestore();
     }
