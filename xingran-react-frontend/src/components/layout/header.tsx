@@ -3,7 +3,6 @@ import { Layout, Avatar, Dropdown, Space } from "antd";
 import { UserOutlined, LogoutOutlined, SettingOutlined, DownOutlined } from "@ant-design/icons";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
-import { useWebSocket } from "@/hooks/useWebSocket";
 import { routeConfigManager } from "@/router/routeConfigManager";
 import NotificationBell from "@/components/NotificationBell";
 import GlobalSearch from "@/components/shared/GlobalSearch";
@@ -18,11 +17,6 @@ const Header: FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-
-  // 初始化 WebSocket 连接
-  // useWebSocket 内部已处理只连接一次的逻辑（通过模块级单例 + useEffect + subscribe）
-  // WebSocket 连接成功后会自动获取未读数量
-  useWebSocket();
 
   const handleLogout = async () => {
     try {

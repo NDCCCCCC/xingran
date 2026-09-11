@@ -5,11 +5,14 @@ import { BellOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { USER_NOTICES } from "@/constants/routes";
 import { useNoticeStore } from "@/store/noticeStore";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { buildWebSocketUrl } from "@/lib/noticeApi";
 import {
   getNotificationList,
   markNoticeAsRead,
   markAllNoticesAsRead,
   ignoreNotice,
+  getUnreadCount,
 } from "@/lib/noticeApi";
 import type { NoticeListItem } from "@/types/notice";
 import {
@@ -71,7 +74,30 @@ const NotificationBell: FC = () => {
     setNotifications,
   } = useNoticeStore();
 
-  // WebSocket 连接已在 Header 组件中初始化，此处无需重复调用
+  // 建立通知 WebSocket 连接
+  const { connect } = useWebSocket({
+    url: buildWebSocketUrl(),
+    onMessage: async (data: unknown) => {
+      // 收到新消息通知时，刷新未读数
+
+      const msg = data as { type?: string };
+      if (msg?.type === "new_notice" || msg?.type === "notice_update") {
+        // 重新获取未读数
+        try {
+          const res = await getUnreadCount();
+          if (res.code === 0) {
+            useNoticeStore.getState().setUnreadCount(res.data?.count ?? 0);
+          }
+        } catch {
+          // 忽略刷新错误
+        }
+      }
+    },
+  });
+
+  useEffect(() => {
+    connect();
+  }, [connect]);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const hasLoadedRef = useRef(false);
