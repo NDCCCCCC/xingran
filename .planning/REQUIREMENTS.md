@@ -35,7 +35,7 @@ defined: 2026-09-11
 - [x] **MAP3D-03**: HubeiMap/HubeiMapGL 两份复制聚类算法合并为共享工具函数（单一实现 + 单元测试）
 - [x] **MAP3D-04**: HubeiMap 渲染体 5 道全量 filter（664/667/672/676/705）收敛为 useMemo 一次计算 `{level1, level2, withCoords}`（deps `[buildings]`）
 - [x] **MAP3D-05**: map 级事件监听（zoomend/tiltend）补 effect cleanup（removeEventListener）
-- [ ] **MAP3D-06**: 死组件 BuildingMarkers.tsx / CityMarkers.tsx 删除（连带 DEAD-02 的 @uiw/react-baidu-map 依赖移除）
+- [x] **MAP3D-06**: 死组件 BuildingMarkers.tsx / CityMarkers.tsx 删除（连带 DEAD-02 的 @uiw/react-baidu-map 依赖移除）
 
 ### DASH — Dashboard 重渲染级联（H-1）
 
@@ -121,7 +121,7 @@ Phase 映射由 roadmapper 填充（2026-09-12，`.planning/ROADMAP.md` Phases 1
 | MAP3D-03 | Phase 114 | Complete |
 | MAP3D-04 | Phase 114 | Complete |
 | MAP3D-05 | Phase 114 | Complete |
-| MAP3D-06 | Phase 114 | Pending |
+| MAP3D-06 | Phase 114 | Complete |
 | SELECTOR-01 | Phase 115 | Pending |
 | SELECTOR-02 | Phase 115 | Pending |
 | SELECTOR-03 | Phase 115 | Pending |

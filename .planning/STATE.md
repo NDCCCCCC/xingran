@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.33
 milestone_name: 前端性能治理 (Frontend Performance Remediation)
-status: executing
+status: verifying
 stopped_at: Completed 114-02-PLAN.md
-last_updated: "2026-09-11T18:20:22.620Z"
+last_updated: "2026-09-11T19:20:51.094Z"
 last_activity: 2026-09-11
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 14
 ---
 
 # Project State (v1.33 — Frontend Performance Remediation)
@@ -27,7 +27,7 @@ See: `.planning/PROJECT.md` — v1.33 Current Milestone 段
 
 Phase: 114 (map3d-clustering（地图聚类 O(n²) 消除）) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-11
 
 Progress: [░░░░░░░░░░] 0%
@@ -68,7 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-09-11T18:20:22.614Z
+Last session: 2026-09-11T19:20:51.088Z
 Stopped at: Completed 114-02-PLAN.md
 
 ## Performance Metrics
@@ -77,6 +77,7 @@ Stopped at: Completed 114-02-PLAN.md
 |-------|------|----------|-------|
 | Phase 114 P01 | 11min | 2 tasks | 2 files |
 | Phase 114 P02 | 12min | 2 tasks | 2 files |
+| Phase 114 P03 | 54min | 3 tasks | 3 files |
 
 ## Decisions
 
@@ -84,3 +85,6 @@ Stopped at: Completed 114-02-PLAN.md
 - [Phase ?]: 114-01: cluster.ts 零 SDK 依赖（仅 BuildingItem 类型 + utils 两函数），像素投影剥离到调用方单遍预计算 Map<id,pixel>
 - [Phase 114]: 114-02: 两组件聚类改单遍预计算 Map<id,pixel> + clusterBuildings 消费，n² 地图 API 调用归零；有坐标过滤保留 effect 内保层级+坐标输入集语义
 - [Phase 114]: 114-02: HubeiMap 渲染体 5 道 filter 收敛 useMemo [buildings]，两组件 zoomend/tiltend 提升 effect 作用域具名 handler 并补同引用 cleanup
+- [Phase 114]: 114-03: 死组件 BuildingMarkers/CityMarkers 删除（仅 git rm 两个 .tsx），@uiw/react-baidu-map src/ 零 import 解锁 Phase 120 DEAD-02；components/ 平行第二套 utils/constants/types 与 global.d.ts 原样保留
+- [Phase 114]: 114-03: cleanup 测试构造器 mock 用独立 function 表达式（内联 function 回调被 lint-staged prefer-arrow-callback 改写回箭头致 new 抛错）；TDD RED 门以突变校验等效证明
+- [Phase 114]: 114-03: MAP3D-02 人工性能验证按 AUTO_MODE 自动批准，HUMAN-UAT 步骤全文留档 SUMMARY，自动侧由 Plan 01 500ms 性能冒烟兜底

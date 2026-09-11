@@ -23,7 +23,7 @@
 - Integer phases (114-120): Planned milestone work（D-06 续编，不 reset）
 - Decimal phases: 本里程碑暂无（如需紧急插入用 `/gsd:phase insert`）
 
-- [ ] **Phase 114: map3d-clustering** - 地图聚类 O(n²) 消除（H-2）：Map 预计算 + 40px 像素网格分桶 + 双实现合并共享 + filter useMemo + 事件 cleanup + 死组件删除
+- [x] **Phase 114: map3d-clustering** - 地图聚类 O(n²) 消除（H-2）：Map 预计算 + 40px 像素网格分桶 + 双实现合并共享 + filter useMemo + 事件 cleanup + 死组件删除 (completed 2026-09-11)
 - [ ] **Phase 115: selector-completion** - Zustand selector 收尾：useTabs/useLayout 内部 selector 化 + 路由层 + 3D 页 5 处 + action-only 整店订阅清零
 - [ ] **Phase 116: dashboard-cascade** - Dashboard N² 重渲染级联消除（H-1）：useWidgetData selector 化 + L1 缓存出 state + 9 处订阅收敛 + DashboardGrid 稳定化
 - [ ] **Phase 117: render-columns-and-bugfix** - 渲染热点治理 + 正确性修复：7 处 columns 工厂记忆化 + Table virtual 补齐 + "0" 渲染 / VariablesModal 6 列 / CAD stale closure（附回归测试）
@@ -46,7 +46,7 @@
   4. map 级 zoomend/tiltend 事件监听在组件卸载后不再触发（effect cleanup removeEventListener 生效）
   5. BuildingMarkers.tsx / CityMarkers.tsx 死组件已删除、全库无引用（为 Phase 120 的 @uiw/react-baidu-map 依赖移除解锁）
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -59,7 +59,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 114-03-PLAN.md — 死组件删除（解锁 @uiw 依赖移除）+ cleanup spy 测试 + MAP3D-02 人工性能验证 checkpoint
+- [x] 114-03-PLAN.md — 死组件删除（解锁 @uiw 依赖移除）+ cleanup spy 测试 + MAP3D-02 人工性能验证 checkpoint
 
 ### Phase 115: selector-completion（Zustand selector 收尾）
 
@@ -157,7 +157,7 @@ Phases execute in numeric order: 114 → 115 → 116 → 117 → 118 → 119 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 114. map3d-clustering | 2/3 | In Progress|  |
+| 114. map3d-clustering | 3/3 | Complete   | 2026-09-11 |
 | 115. selector-completion | 0/TBD | Not started | - |
 | 116. dashboard-cascade | 0/TBD | Not started | - |
 | 117. render-columns-and-bugfix | 0/TBD | Not started | - |
