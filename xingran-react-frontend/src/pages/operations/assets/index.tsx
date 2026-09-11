@@ -261,8 +261,7 @@ const AssetList: FC = () => {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- columns array recreated each render; dependency array at tableColumns useMemo intentionally references it
-  const columns: ColumnsType<Asset> = [
+  const columns: ColumnsType<Asset> = useMemo(() => [
     // order=1
     {
       title: "设备序列号",
@@ -558,7 +557,7 @@ const AssetList: FC = () => {
       width: 96,
       render: (_: unknown, _record: Asset) => <>-</>,
     },
-  ];
+  ], [getColumnSortOrder]);
 
   // 根据列配置过滤和排序列
   const tableColumns = useMemo(() => {
