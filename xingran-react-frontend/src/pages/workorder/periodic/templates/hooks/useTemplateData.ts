@@ -13,9 +13,13 @@ import {
   type PeriodicWorkOrderTemplate,
   type PeriodicWorkOrderLog,
 } from "@/lib/workorderApi";
-import { getEnabledWorkOrderCategories, type WorkOrderCategory } from "@/lib/workorderApi";
-import { getUserList, type SimpleUser } from "@/lib/workorderApi";
+import {
+  getEnabledWorkOrderCategories,
+  type WorkOrderCategory,
+  type SimpleUser,
+} from "@/lib/workorderApi";
 import { getDutyPoolList, type DutyPool } from "@/lib/dutyApi";
+import { useUserOptions } from "@/hooks/useUserOptions";
 
 export interface TemplateStatistics {
   total: number;
@@ -39,7 +43,6 @@ export interface UseTemplateDataReturn {
   // 数据加载方法
   fetchList: (page?: number, pageSize?: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
-  fetchUsers: () => Promise<void>;
   fetchDutyPools: () => Promise<void>;
   fetchLogs: (templateId: string) => Promise<void>;
   setSelectedTemplate: (template: PeriodicWorkOrderTemplate | null) => void;
@@ -55,7 +58,7 @@ export function useTemplateData(
   const [dataSource, setDataSource] = useState<PeriodicWorkOrderTemplate[]>([]);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
-  const [users, setUsers] = useState<SimpleUser[]>([]);
+  const { data: users = [] } = useUserOptions();
   const [dutyPools, setDutyPools] = useState<DutyPool[]>([]);
   const [logs, setLogs] = useState<PeriodicWorkOrderLog[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<PeriodicWorkOrderTemplate | null>(null);
@@ -118,16 +121,6 @@ export function useTemplateData(
     }
   }, []);
 
-  // 获取用户列表
-  const fetchUsers = useCallback(async () => {
-    try {
-      const result = await getUserList({ status: 0 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error("获取用户列表失败:", error);
-    }
-  }, []);
-
   // 获取值班池列表
   const fetchDutyPools = useCallback(async () => {
     try {
@@ -160,7 +153,6 @@ export function useTemplateData(
     selectedTemplate,
     fetchList,
     fetchCategories,
-    fetchUsers,
     fetchDutyPools,
     fetchLogs,
     setSelectedTemplate,

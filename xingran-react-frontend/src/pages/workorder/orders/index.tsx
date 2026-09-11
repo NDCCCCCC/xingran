@@ -628,7 +628,7 @@ const WorkOrderPage: FC = () => {
                 optionFilterProp="children"
                 onSearch={() => {}}
               >
-                {users
+                {(users || [])
                   .filter((user) => user.id)
                   .map((user) => (
                     <Option key={user.id} value={user.id}>
@@ -809,7 +809,7 @@ const WorkOrderPage: FC = () => {
                   className="user-form-input"
                   onSearch={() => {}}
                 >
-                  {users
+                  {(users || [])
                     .filter((user) => user.id)
                     .map((user) => (
                       <Option key={user.id} value={user.id}>

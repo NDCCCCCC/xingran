@@ -96,6 +96,11 @@ export const queryKeys = {
     fixSuggestionStats: (windowDays: number) =>
       ["reconciliation", "fix-suggestion-stats", windowDays] as const,
   },
+  // Batch 3 (m76): 共享用户选项缓存，替换 5 处手拉 getUserList({status:0})
+  user: {
+    all: ["user"] as const,
+    options: ["user", "options"] as const,
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;

@@ -8,14 +8,13 @@ import type { FormInstance } from "antd/es/form";
 import {
   getWorkOrderList,
   getWorkOrderStatusStatistics,
-  getUserList,
   getEnabledWorkOrderCategories,
   type WorkOrder,
-  type SimpleUser,
   type SimpleDept,
   type WorkOrderCategory,
 } from "@/lib/workorderApi";
 import { useDeptTree } from "@/hooks/useDeptTree";
+import { useUserOptions } from "@/hooks/useUserOptions";
 
 export interface WorkOrderListParams {
   current?: number;
@@ -51,7 +50,7 @@ export interface UseWorkOrderDataReturn {
   current: number;
   pageSize: number;
   stats: WorkOrderStats;
-  users: SimpleUser[];
+  users: ReturnType<typeof useUserOptions>["data"];
   depts: SimpleDept[];
   categories: WorkOrderCategory[];
   fetchList: (
@@ -60,7 +59,6 @@ export interface UseWorkOrderDataReturn {
     sortParams?: { orderByColumn?: string; isAsc?: boolean }
   ) => Promise<void>;
   fetchStats: () => Promise<void>;
-  fetchUsers: () => Promise<void>;
   fetchCategories: () => Promise<void>;
 }
 
@@ -82,7 +80,7 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
     closed: 0,
   });
 
-  const [users, setUsers] = useState<SimpleUser[]>([]);
+  const { data: users = [] } = useUserOptions();
   // 部门树数据 — 全项目共享 ['dept','tree'] 缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
   const { data: depts = [] } = useDeptTree();
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
@@ -149,16 +147,6 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
     [form, current, pageSize, message, fetchStats]
   );
 
-  // 获取用户列表
-  const fetchUsers = useCallback(async () => {
-    try {
-      const result = await getUserList({ status: 0 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error("获取用户列表失败:", error);
-    }
-  }, []);
-
   // 部门树数据由顶层 useDeptTree() 提供,不再手动 fetch (workorderApi.getDeptTree 副本已删,类型 re-export from dutyApi)
 
   // 获取工单分类
@@ -174,9 +162,8 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
   // 初始化加载
   useEffect(() => {
     fetchList(1, 10); // 内部会顺带刷新统计
-    fetchUsers();
     fetchCategories();
-  }, [fetchList, fetchUsers, fetchCategories]);
+  }, [fetchList, fetchCategories]);
 
   return {
     loading,
@@ -190,7 +177,6 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
     categories,
     fetchList,
     fetchStats,
-    fetchUsers,
     fetchCategories,
   };
 }

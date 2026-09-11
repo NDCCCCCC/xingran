@@ -144,11 +144,11 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
     },
     {
       title: "值班人员",
-      dataIndex: ["user", "nickname"],
+      dataIndex: ["user", "nickName"],
       key: "userName",
       width: 100,
       sorter: createSorter<DutySchedule>("userName", "string"),
-      render: (nickname: string, record: DutySchedule) => nickname || record.user?.username || "-",
+      render: (nickName: string, record: DutySchedule) => nickName || record.user?.username || "-",
     },
     {
       title: "值班类型",
@@ -254,7 +254,6 @@ const DutySchedulePage: FC = () => {
     fetchList,
     fetchAllSchedules,
     fetchPools,
-    fetchUsers,
     fetchWeeklyDuty,
     setCurrentWeekStart,
   } = useScheduleData({
@@ -306,7 +305,6 @@ const DutySchedulePage: FC = () => {
     fetchList(1, paginationProps.pageSize);
     fetchAllSchedules();
     fetchPools();
-    fetchUsers();
     fetchWeeklyDuty(currentWeekStart);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -498,7 +496,7 @@ const DutySchedulePage: FC = () => {
               >
                 {users.map((user) => (
                   <Option key={user.id} value={user.id}>
-                    {user.nickname || user.username}
+                    {user.nickName || user.username}
                   </Option>
                 ))}
               </Select>
@@ -774,8 +772,8 @@ const DutySchedulePage: FC = () => {
               onSearch={() => {}}
             >
               {users.map((user) => (
-                <Option key={user.id} value={user.id} label={user.nickname || user.username}>
-                  {user.username} - {user.nickname}
+                <Option key={user.id} value={user.id} label={user.nickName || user.username}>
+                  {user.username} - {user.nickName}
                 </Option>
               ))}
             </Select>
