@@ -4879,7 +4879,9 @@ body {
   padding: 0;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(120, 100, 70, 0.18);
-  transition: color var(--theme-transition-base), transform var(--theme-transition-base);
+  transition:
+    color var(--theme-transition-base),
+    transform var(--theme-transition-base);
 }
 .sidebar-toggle:hover {
   color: var(--theme-primary);

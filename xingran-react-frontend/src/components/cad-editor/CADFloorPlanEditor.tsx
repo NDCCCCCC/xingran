@@ -404,7 +404,10 @@ export function CADFloorPlanEditor({
     if (selectedIds.size === 0) return [];
 
     // 构建 id → {el, type} Map
-    const idToElement = new Map<string, { id: string; type: "wall" | "door" | "workstation" | "text" }>();
+    const idToElement = new Map<
+      string,
+      { id: string; type: "wall" | "door" | "workstation" | "text" }
+    >();
     for (const wall of floorPlanData.walls) {
       idToElement.set(wall.id, { id: wall.id, type: "wall" });
     }
