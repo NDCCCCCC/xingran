@@ -133,6 +133,11 @@ export class DataFetcher {
           const wsUrl = this.getWebSocketUrl(config.channel);
           ws = new WebSocket(wsUrl);
           this.wsConnections.set(config.channel, ws);
+
+          // 关闭时从 Map 中移除，防止幽灵连接泄漏
+          ws.addEventListener("close", () => {
+            this.wsConnections.delete(config.channel);
+          });
         }
 
         // 设置一次性消息处理

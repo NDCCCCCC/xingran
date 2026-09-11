@@ -20,6 +20,7 @@ import { useDashboardStore } from "@/store/dashboardStore";
 import { useWidgetPolling } from "@/hooks/useWidgetPolling";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { dataFetcher } from "./utils/dataFetcher";
 import { DashboardGrid } from "./layout/DashboardGrid";
 import type { Dashboard } from "@/types/dashboard";
 
@@ -149,6 +150,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       if (hasWebSocketSource) {
         disconnect();
       }
+      // 清理 dataFetcher 中所有 WebSocket 连接，防止泄漏
+      dataFetcher.closeWebSocket();
     };
   }, [hasWebSocketSource, isOnline, viewMode, readonly, connect, disconnect]);
 
