@@ -111,17 +111,54 @@ defined: 2026-09-11
 
 ## 进度追踪
 
-由 roadmapper 填写 phase 映射。
+Phase 映射由 roadmapper 填充（2026-09-12，`.planning/ROADMAP.md` Phases 114-120）。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| （待 roadmap 生成后填充） | | |
+| MAP3D-01 | Phase 114 | Pending |
+| MAP3D-02 | Phase 114 | Pending |
+| MAP3D-03 | Phase 114 | Pending |
+| MAP3D-04 | Phase 114 | Pending |
+| MAP3D-05 | Phase 114 | Pending |
+| MAP3D-06 | Phase 114 | Pending |
+| SELECTOR-01 | Phase 115 | Pending |
+| SELECTOR-02 | Phase 115 | Pending |
+| SELECTOR-03 | Phase 115 | Pending |
+| SELECTOR-04 | Phase 115 | Pending |
+| SELECTOR-05 | Phase 115 | Pending |
+| DASH-01 | Phase 116 | Pending |
+| DASH-02 | Phase 116 | Pending |
+| DASH-03 | Phase 116 | Pending |
+| DASH-04 | Phase 116 | Pending |
+| RENDER-01 | Phase 117 | Pending |
+| RENDER-02 | Phase 117 | Pending |
+| RENDER-03 | Phase 117 | Pending |
+| RENDER-04 | Phase 117 | Pending |
+| BUGFIX-01 | Phase 117 | Pending |
+| BUGFIX-02 | Phase 117 | Pending |
+| BUGFIX-03 | Phase 117 | Pending |
+| DATA-01 | Phase 118 | Pending |
+| DATA-02 | Phase 118 | Pending |
+| DATA-03 | Phase 118 | Pending |
+| DATA-04 | Phase 118 | Pending |
+| MISC-01 | Phase 119 | Pending |
+| MISC-02 | Phase 119 | Pending |
+| MISC-03 | Phase 119 | Pending |
+| MISC-04 | Phase 119 | Pending |
+| MISC-05 | Phase 119 | Pending |
+| BUNDLE-01 | Phase 120 | Pending |
+| BUNDLE-02 | Phase 120 | Pending |
+| BUNDLE-03 | Phase 120 | Pending |
+| BUNDLE-04 | Phase 120 | Pending |
+| DEAD-01 | Phase 120 | Pending |
+| DEAD-02 | Phase 120 | Pending |
+| DEAD-03 | Phase 120 | Pending |
 
 **Coverage:**
 - v1.33 requirements: 38 total
-- Mapped to phases: 0（待 roadmap）
-- Unmapped: 38 ⚠️
+- Mapped to phases: 38（Phase 114-120，每项恰好映射一个 phase）
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-11*
-*Last updated: 2026-09-11 after initial definition*
+*Last updated: 2026-09-12 — roadmapper 填充进度追踪表（Phases 114-120），Coverage 38/38*
