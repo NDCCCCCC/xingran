@@ -218,6 +218,25 @@ export default defineConfig(({ mode }) => {
       // vendor-react 因包含 React 19 + antd 6 整套生态，约 2.5-3MB 属预期（gzip 后约 900KB）。
       // 其他 chunk 超过该阈值才告警。
       chunkSizeWarningLimit: 3000,
+      // Vite 的 modulepreload 默认会预加载 manualChunks 声明的所有 chunk
+      // （包括 vendor-three 这种理论上仅被路由懒 chunk 间接引用的 chunk）。
+      // 这里把 vendor-three / vendor-echarts / vendor-markdown / vendor-xlsx /
+      // vendor-md-editor 从首屏 modulepreload 列表中排除 — 它们都是按需加载的
+      // 大 chunk，路由进入时浏览器按 ES 模块图谱自动按需 fetch，无需预加载。
+      modulePreload: {
+        resolveDependencies(_, deps) {
+          return deps.filter(
+            (d) =>
+              !/vendor-(three|echarts|markdown|xlsx|md-editor)-/.test(d) &&
+              !/EChartsWrapper-/.test(d) &&
+              !/ExcelImportLazy-/.test(d) &&
+              !/FloorPlan3D-/.test(d) &&
+              !/BuildingModel3D-/.test(d) &&
+              !/FloorView3D-/.test(d) &&
+              !/BuildingView3D-/.test(d)
+          );
+        },
+      },
     },
     server: {
       port: 4000,
