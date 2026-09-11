@@ -198,6 +198,12 @@ const AssetList: FC = () => {
     loadAssets(); // 页面加载时自动获取资产列表
   }, [loadStatistics, loadDeviceTypes, loadDeviceCategories, loadAssets]);
 
+  // handleEdit/handleDelete 须定义在 columns useMemo 之前（columns 内联引用二者作 deps）
+  const handleEdit = useCallback((_record: Asset) => {
+    message.info("编辑功能待实现");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+  }, []);
+
   const handleDelete = useCallback(
     async (id: string) => {
       Modal.confirm({
@@ -565,7 +571,7 @@ const AssetList: FC = () => {
         render: (_: unknown, _record: Asset) => <>-</>,
       },
     ],
-    [getColumnSortOrder]
+    [getColumnSortOrder, handleEdit, handleDelete]
   );
 
   // 根据列配置过滤和排序列
@@ -585,11 +591,6 @@ const AssetList: FC = () => {
 
     return visibleCols;
   }, [columns, visibleColumns]);
-
-  const handleEdit = useCallback((_record: Asset) => {
-    message.info("编辑功能待实现");
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, []);
 
   return (
     <div className="p-6">
