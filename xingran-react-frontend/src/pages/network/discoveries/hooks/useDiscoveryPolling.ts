@@ -13,13 +13,19 @@ export interface UseDiscoveryPollingParams {
 
 export function useDiscoveryPolling({ discoveries, onPoll }: UseDiscoveryPollingParams) {
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // 用 ref 保存 discoveries，避免 effect 依赖数组因引用变化而频繁重建定时器
+  const discoveriesRef = useRef(discoveries);
+  // React Compiler 禁止在渲染期间写 ref，用 useEffect 保证初始化时机
+  useEffect(() => {
+    discoveriesRef.current = discoveries;
+  }, [discoveries]);
 
   useEffect(() => {
-    const runningTasks = discoveries.filter((d) => d.status === "running");
+    const runningTasks = discoveriesRef.current.filter((d) => d.status === "running");
 
     if (runningTasks.length > 0 && !pollingTimerRef.current) {
       const timer = setInterval(() => {
-        const currentRunning = discoveries.filter((d) => d.status === "running");
+        const currentRunning = discoveriesRef.current.filter((d) => d.status === "running");
         if (currentRunning.length === 0) {
           if (pollingTimerRef.current) {
             clearInterval(pollingTimerRef.current);
@@ -41,5 +47,5 @@ export function useDiscoveryPolling({ discoveries, onPoll }: UseDiscoveryPolling
         pollingTimerRef.current = null;
       }
     };
-  }, [discoveries, onPoll]);
+  }, [onPoll]);
 }

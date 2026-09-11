@@ -2,7 +2,7 @@
  * RPA Worker 监控页面
  */
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { FC } from "react";
 import {
   Table,
@@ -139,11 +139,21 @@ const WorkerMonitor: FC = () => {
     loadWorkers();
   }, [loadWorkers]);
 
+  // 仅在有 busy Worker 时启用轮询
+  const workersRef = useRef<Worker[]>([]);
+
+  // 保持 ref 与 state 同步
+  useEffect(() => {
+    workersRef.current = workers;
+  }, [workers]);
+
   useEffect(() => {
     loadWorkers();
-    // 自动刷新 Worker 状态
+    // 自动刷新 Worker 状态，仅在有 busy Worker 时启用轮询
     const interval = setInterval(() => {
-      loadWorkers();
+      if (workersRef.current.some((w) => w.status === "busy")) {
+        loadWorkers();
+      }
     }, 10000); // 10秒刷新一次
     return () => clearInterval(interval);
   }, [loadWorkers]);

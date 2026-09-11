@@ -2,7 +2,7 @@
  * RPA 执行记录页面
  */
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { FC } from "react";
 import { Table, Button, Space, Form, Input, Select, Card, Tag, Layout } from "antd";
 import { SearchOutlined, ReloadOutlined, FilterOutlined } from "@ant-design/icons";
@@ -102,15 +102,29 @@ const ExecutionManagement: FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedExecution, setSelectedExecution] = useState<Execution | null>(null);
 
+  // 仅在有 running 任务时启用轮询
+  const executionsRef = useRef<Execution[]>([]);
+  const hasRunningRef = useRef(false);
+
+  // 保持 ref 与 state 同步
+  useEffect(() => {
+    executionsRef.current = executions;
+  }, [executions]);
+
   const refreshData = useCallback(() => {
     loadExecutions();
   }, [loadExecutions]);
 
   useEffect(() => {
     loadExecutions();
-    // 自动刷新运行中的任务
     const interval = setInterval(() => {
-      loadExecutions();
+      // 有 running 状态才继续轮询
+      if (executionsRef.current.some((e) => e.status === "running")) {
+        hasRunningRef.current = true;
+        loadExecutions();
+      } else {
+        hasRunningRef.current = false;
+      }
     }, 5000);
     return () => clearInterval(interval);
   }, [loadExecutions]);

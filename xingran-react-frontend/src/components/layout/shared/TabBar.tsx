@@ -12,6 +12,7 @@ import { Tabs, Dropdown, Button } from "antd";
 import type { MenuProps } from "antd";
 import { useTabs } from "@/store/tabsStore";
 import { useNavigate } from "react-router-dom";
+import { preloadComponents } from "@/router/componentLoader";
 import {
   CloseOutlined,
   CloseCircleOutlined,
@@ -134,21 +135,16 @@ const TabBar: FC = () => {
     const handleScroll = () => updateScrollState();
     container.addEventListener("scroll", handleScroll, { passive: true });
 
-    // 监听容器尺寸变化
+    // 监听容器尺寸变化（ResizeObserver 已覆盖，无需额外 window resize 监听）
     const resizeObserver = new ResizeObserver(() => {
       requestAnimationFrame(updateScrollState);
     });
     resizeObserver.observe(container);
 
-    // 监听窗口大小变化
-    const handleResize = () => updateScrollState();
-    window.addEventListener("resize", handleResize);
-
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
       container.removeEventListener("scroll", handleScroll);
       resizeObserver.disconnect();
-      window.removeEventListener("resize", handleResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs.length]); // 只在 tabs 数量变化时重新绑定；updateScrollState 引用不变，不需要作为依赖
@@ -301,10 +297,19 @@ const TabBar: FC = () => {
     ];
   }, [tabs, handleTabChange, handleTabClose, closeAllTabs]);
 
-  // 自定义 Tab label（添加右键菜单 + 锁定图标）
-  const createTabLabel = (tab: { title: string | ReactNode; key: string; pinned?: boolean }) => (
+  // 自定义 Tab label（添加右键菜单 + 锁定图标 + hover 预取）
+  const createTabLabel = (tab: {
+    title: string | ReactNode;
+    key: string;
+    path: string;
+    pinned?: boolean;
+  }) => (
     <span
       onContextMenu={(e) => handleTabContextMenu(tab.key, e)}
+      onMouseEnter={() => {
+        // hover 预取目标路由 chunk（仅预取，非导航）
+        preloadComponents([tab.path]);
+      }}
       style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
     >
       {tab.pinned && (
@@ -344,7 +349,9 @@ const TabBar: FC = () => {
   // 所有标签页项
   const allTabItems = tabs.map((tab) => ({
     key: tab.key,
-    label: createTabLabel(tab),
+    label: createTabLabel(
+      tab as { title: string | ReactNode; key: string; path: string; pinned?: boolean }
+    ),
     closable: tab.closable,
     icon: tab.icon,
   }));

@@ -30,6 +30,21 @@ const DEFAULT_CONFIG: CacheConfig = {
   storagePrefix: "baidu_geocoding:v1",
 };
 
+/** requestIdleCallback 分片清理，每片处理条目数 */
+const CLEANUP_BATCH_SIZE = 10;
+
+/**
+ * 在浏览器空闲时段执行任务（requestIdleCallback 分片）
+ * fallback: setTimeout
+ */
+function runWhenIdle(callback: () => void): void {
+  if (typeof requestIdleCallback !== "undefined") {
+    requestIdleCallback(callback);
+  } else {
+    setTimeout(callback, 50);
+  }
+}
+
 // 内存缓存存储
 class MemoryCache<T> {
   private cache: Map<string, CacheItem<T>>;
@@ -171,27 +186,41 @@ class StorageCache<T> {
     }
   }
 
-  // 清理过期项
+  // 清理过期项（requestIdleCallback 分片执行，避免大量 localStorage 操作阻塞主线程）
   cleanup(): void {
-    try {
+    const processBatch = (startIndex: number) => {
       const now = Date.now();
       const keys = Object.keys(localStorage);
-      keys.forEach((storageKey) => {
-        if (!storageKey.startsWith(this.prefix)) return;
+      let processed = 0;
+      let batchEnd = startIndex;
+
+      for (let i = startIndex; i < keys.length && processed < CLEANUP_BATCH_SIZE; i++, batchEnd++) {
+        const storageKey = keys[i];
+        if (!storageKey.startsWith(this.prefix)) continue;
 
         try {
           const raw = localStorage.getItem(storageKey);
-          if (!raw) return;
+          if (!raw) continue;
 
           const item: CacheItem<T> = JSON.parse(raw);
           if (now > item.expiresAt) {
             localStorage.removeItem(storageKey);
           }
-        } catch (_e) {
+        } catch {
           // 解析失败，删除该项
           localStorage.removeItem(storageKey);
         }
-      });
+        processed++;
+      }
+
+      // 还有更多则调度下一片
+      if (batchEnd < keys.length) {
+        runWhenIdle(() => processBatch(batchEnd));
+      }
+    };
+
+    try {
+      runWhenIdle(() => processBatch(0));
     } catch (e) {
       console.warn("localStorage cleanup failed:", e);
     }

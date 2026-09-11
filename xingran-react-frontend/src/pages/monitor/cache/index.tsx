@@ -2,7 +2,7 @@
  * Cache 缓存管理页面
  */
 
-import { useState, useEffect, useCallback, useMemo, type FC } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type FC } from "react";
 import {
   Card,
   Table,
@@ -397,18 +397,26 @@ const CacheManager: FC = () => {
 
   // ==================== 初始化 ====================
 
+  // 用 ref 记录最新分页参数，轮询回调使用 ref 读取最新值
+  const paginationPropsRef = useRef(paginationProps);
+  paginationPropsRef.current = paginationProps;
+
+  // fetchMonitor 回调用 ref 读取最新分页
+  const fetchMonitorRef = useRef(fetchMonitor);
+  fetchMonitorRef.current = fetchMonitor;
+
   useEffect(() => {
     fetchCaches();
     fetchMonitor();
 
-    // 设置定时刷新（每30秒）
+    // 设置定时刷新（每30秒），不依赖分页参数变化
     const interval = setInterval(() => {
-      fetchMonitor();
+      fetchMonitorRef.current();
     }, 30000);
 
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
-  }, [paginationProps.current, paginationProps.pageSize, fetchCaches, fetchMonitor]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional, interval only on mount
+  }, [fetchCaches]);
 
   // 表格列 - 使用 useMemo 避免重复创建
   const columns = useMemo(
