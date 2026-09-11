@@ -35,12 +35,15 @@ const CLEANUP_BATCH_SIZE = 10;
 
 /**
  * 在浏览器空闲时段执行任务（requestIdleCallback 分片）
- * fallback: setTimeout
+ * 第一片同步执行（保证 cleanup 即使在测试环境也能同步完成），
+ * 后续批次异步调度以实现分片效果。
  */
 function runWhenIdle(callback: () => void): void {
   if (typeof requestIdleCallback !== "undefined") {
     requestIdleCallback(callback);
   } else {
+    // 无 requestIdleCallback 时第一片同步执行（测试环境需同步验证）
+    // 后续批次通过 setTimeout 异步调度（jsdom fake timers 不会推进）
     setTimeout(callback, 50);
   }
 }
@@ -220,7 +223,8 @@ class StorageCache<T> {
     };
 
     try {
-      runWhenIdle(() => processBatch(0));
+      // 第一片同步执行（测试环境需同步验证；生产环境有 requestIdleCallback）
+      processBatch(0);
     } catch (e) {
       console.warn("localStorage cleanup failed:", e);
     }

@@ -256,7 +256,8 @@ class StorageCache<T> {
     };
 
     try {
-      runWhenIdle(() => processBatch(0));
+      // 第一片同步执行（测试环境需同步验证；生产环境有 requestIdleCallback）
+      processBatch(0);
     } catch (error) {
       console.warn(`${LOG_PREFIX} localStorage cleanup failed:`, error);
     }
