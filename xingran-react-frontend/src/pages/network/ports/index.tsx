@@ -505,6 +505,12 @@ const PortStatusPage: FC = () => {
       : []),
   ];
 
+  // 批量写入选中集：用 Set 做 O(1) 查找，避免每次渲染时 O(n²) 的 includes 遍历（Phase m76-js-misc 6.2）
+  const selectedPorts = useMemo(() => {
+    const keySet = new Set(selectedRowKeys);
+    return portStatus.filter((p) => keySet.has(p.id));
+  }, [portStatus, selectedRowKeys]);
+
   return (
     <div>
       {/* 返回按钮（仅当从设备页面跳转时显示） */}
@@ -812,7 +818,7 @@ const PortStatusPage: FC = () => {
       />
       <BulkWriteDrawer
         open={bulkWriteDrawerOpen}
-        selectedPorts={portStatus.filter((p) => selectedRowKeys.includes(p.id))}
+        selectedPorts={selectedPorts}
         onClose={() => setBulkWriteDrawerOpen(false)}
         onSuccess={() => {
           loadPortStatus();

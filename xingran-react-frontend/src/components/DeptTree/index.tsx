@@ -161,20 +161,24 @@ const DeptTree: FC<DeptTreeProps> = ({
       return treeData;
     }
 
-    const filterFn = (data: DataNode[]): DataNode[] => {
-      const lowerSearchValue = searchValue.toLowerCase();
-      return data
-        .filter((node) => {
-          const titleMatch = node.title?.toString().toLowerCase().includes(lowerSearchValue);
-          const childrenMatch = node.children ? filterFn(node.children).length > 0 : false;
-          return titleMatch || childrenMatch;
-        })
-        .map((node) => ({
-          ...node,
-          children: node.children ? filterFn(node.children) : undefined,
-        }));
+    const lowerSearchValue = searchValue.toLowerCase();
+
+    // 单遍遍历：先递归计算 children，据 titleMatch || children.length>0 决定保留，
+    // null 后统一 filter(Boolean) —— 避免此前 filter 内 filterFn + map 内 filterFn 的双重遍历。
+    const filterFn = (data: DataNode[]): (DataNode | null)[] => {
+      return data.flatMap((node) => {
+        const titleMatch = node.title?.toString().toLowerCase().includes(lowerSearchValue);
+        const childResults = node.children ? filterFn(node.children) : [];
+        const filteredChildren = childResults.filter((c): c is DataNode => c !== null);
+        if (titleMatch || filteredChildren.length > 0) {
+          return [
+            { ...node, children: filteredChildren.length > 0 ? filteredChildren : undefined },
+          ];
+        }
+        return [null];
+      });
     };
-    return filterFn(treeData);
+    return filterFn(treeData).filter((node): node is DataNode => node !== null);
   }, [treeData, searchValue]);
 
   return (
