@@ -66,6 +66,13 @@ Progress: [░░░░░░░░░░] 0%
 - origin/main HEAD: `727e370` (PR #19 quick/260911-m76-frontend-perf-audit merge)
 - Branch Protection: direct push to main allowed (CI gates active)，PR reviews disabled（单人项目）
 
+### Review Findings 挂账（v1.33 范围外，源自 Phase 114 code review）
+
+- **CR-01（安全, pre-existing）**: InfoWindow 存储型 XSS——`building.name`/`address` 未转义拼入百度 InfoWindow HTML（HubeiMap.tsx:414-431 / HubeiMapGL.tsx:407-424）。修复=HTML 转义，行为变更超 v1.33 D-01 锁定范围 → 候选后续 quick task / 安全 milestone。
+- **WR-01（逻辑, pre-existing）**: HubeiMapGL `MAX_ZOOM=18` + `filterBuildingsByZoom` 精确匹配 `zoom === 10` → 缩放 11-18 级二级楼宇消失。`zoom === 10` 语义被 RESEARCH 红线 + plan-checker 锁定"既有行为保持原样" → 挂账；修复建议 `>= 10`（对 2D 版行为不变）。
+- **WR-02（质量, pre-existing）**: HubeiMap.tsx 与共享层逐字重复 ~100 行（toBase64/HUBEI_BOUNDARY/边界辅助），MAP_CONFIG 同名双源已分叉（10 vs 18）→ 挂账（与 Phase 120 死代码清理相邻但不同项）。
+- **IN-01/02/03**: init 竞态残留缺口（无 StrictMode、无用户可见缺陷）/ polygonRef 死引用 / 一致性测试 averagePixelPosition 共同模式盲区 → 低优先级观察项。
+
 ## Session Continuity
 
 Last session: 2026-09-11T19:20:51.088Z
