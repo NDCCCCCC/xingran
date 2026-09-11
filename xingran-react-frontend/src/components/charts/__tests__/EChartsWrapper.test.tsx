@@ -9,15 +9,18 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-vi.mock("echarts-for-react", () => ({
+// esm/core 入口（按需方案）
+vi.mock("echarts-for-react/esm/core", () => ({
   default: (props: any) => (
     <div data-testid="echarts-mock" data-option={JSON.stringify(props.option)} />
   ),
 }));
 
-// Side-effect import inside the lazy Promise.all — must be mocked as no-op
-// so the dynamic import resolves instead of throwing in the vitest environment.
-vi.mock("@/lib/echarts", () => ({}));
+// echartsCore 静态导入（esm/core 入口 + 按需实例 prop 方案）
+vi.mock("@/lib/echarts", () => ({
+  __esModule: true,
+  default: {},
+}));
 
 import EChartsWrapper from "../EChartsWrapper";
 

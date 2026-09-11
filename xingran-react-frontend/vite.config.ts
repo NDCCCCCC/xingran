@@ -154,18 +154,28 @@ export default defineConfig(({ mode }) => {
               return undefined;
             }
 
+            // Vite preload helper（\0vite/preload-helper.js）被所有动态 import 共享，
+            // 单独成 chunk 阻止它被分配进 vendor-three 造成 entry→vendor-three 静态边
+            if (id.includes("preload-helper")) {
+              return "runtime-helper";
+            }
+
             // 统一提取顶层包名（如 @react-three/drei、react-markdown、dayjs），用于族集合判断
             const pm = id.match(/node_modules[/\\]((?:@[\w-]+[/\\])?[\w-]+)/);
             const pkgName = pm ? pm[1].replace(/[/\\]/g, "/") : "";
+
+            // @uiw/react-markdown-preview 与 react-markdown 归入 vendor-md-editor
+            // （非 React 组件，不应进 vendor-react；其余 @uiw/* 继续走 vendor-react 兜底）
+            if (pkgName === "@uiw/react-markdown-preview" || pkgName === "react-markdown") {
+              return "vendor-md-editor";
+            }
 
             // Markdown 编辑器（按需加载，仅在通知公告表单打开时加载）
             if (pkgName === "@uiw/react-md-editor" || id.includes("@uiw_react-md-editor")) {
               return "vendor-md-editor";
             }
 
-            // @uiw/react-markdown-preview 是 React 组件（内部用 react-markdown），必须与 React
-            // 同 chunk（vendor-react），否则会被 Rollup 拆到 vendor-markdown，形成与 vendor-react
-            // 的双向引用环。其余 @uiw/*（copy-to-clipboard 等）同理归入 vendor-react。
+            // 其余 @uiw/*（copy-to-clipboard 等）归入 vendor-react
             if (pkgName.startsWith("@uiw/")) {
               return "vendor-react";
             }
@@ -182,12 +192,6 @@ export default defineConfig(({ mode }) => {
             // 故 vendor-markdown 是自包含叶子，不引用 vendor-react，保证无环。
             if (pkgName && MARKDOWN_FAMILY.has(pkgName)) {
               return "vendor-markdown";
-            }
-
-            // echarts-for-react 依赖 React，必须在 echarts 规则之前 → 归入 vendor-react
-            // 否则它会被分到 vendor-echarts，导致 React 在两个 chunk 中，引发 createContext undefined
-            if (id.includes("echarts-for-react")) {
-              return "vendor-react";
             }
 
             // ECharts 图表核心（不依赖 React）
