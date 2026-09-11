@@ -12,6 +12,7 @@ import {
   EnvironmentOutlined,
 } from "@ant-design/icons";
 import type { BuildingItem } from "../types";
+import { clusterBuildings, type ClusterGroup } from "../cluster";
 import { useVisualizationStore } from "@/store/visualizationStore";
 import { loadBaiduMapGLScript } from "./BaiduMapScript";
 import {
@@ -30,8 +31,6 @@ import {
   toBase64,
   getOfficialHubeiBoundary,
   parseBoundaryPoints,
-  pixelDistance,
-  averagePixelPosition,
   isBuildingStopped,
   getBuildingLabel,
   getBuildingStatusText,
@@ -49,14 +48,6 @@ import {
 } from "@/types/baidu-map";
 
 // ============ 类型定义 ============
-
-/** 聚类群组 */
-interface ClusterGroup {
-  buildings: BuildingItem[];
-  centerPixel: { x: number; y: number };
-  clusterLng: number;
-  clusterLat: number;
-}
 
 interface HubeiMapGLProps {
   buildings: BuildingItem[];
@@ -95,6 +86,15 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       return;
     }
 
+    // map 实例与事件 handler 提升到 effect 作用域：cleanup 以同一函数引用 removeEventListener
+    let map: BMapMapGL | null = null;
+    const handleZoomEnd = () => {
+      if (map) setCurrentZoom(map.getZoom());
+    };
+    const handleTiltEnd = () => {
+      if (map) setCurrentTilt(map.getTilt());
+    };
+
     const initMap = async () => {
       try {
         setLoading(true);
@@ -108,7 +108,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           return;
         }
 
-        const map = new BMapGL.Map(mapRef.current, {
+        map = new BMapGL.Map(mapRef.current, {
           enableMapClick: false,
           showControls: false,
         });
@@ -146,9 +146,9 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           // 静默处理
         });
 
-        // 监听事件
-        map.addEventListener("zoomend", () => setCurrentZoom(map.getZoom()));
-        map.addEventListener("tiltend", () => setCurrentTilt(map.getTilt()));
+        // 监听事件（具名 handler，cleanup 以同一引用移除）
+        map.addEventListener("zoomend", handleZoomEnd);
+        map.addEventListener("tiltend", handleTiltEnd);
 
         setMapLoaded(true);
         setLoading(false);
@@ -160,6 +160,13 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     };
 
     initMap();
+
+    return () => {
+      if (map) {
+        map.removeEventListener("zoomend", handleZoomEnd);
+        map.removeEventListener("tiltend", handleTiltEnd);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined helpers are stable enough for one-time map init
   }, []);
 
@@ -275,52 +282,18 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     const filteredBuildings = filterBuildingsByZoom(buildings, currentZoom);
     const buildingsWithCoords = filteredBuildings.filter((b) => b.longitude && b.latitude);
 
-    // 聚类处理
-    const clusterGroups: ClusterGroup[] = [];
-    const processedBuildings = new Set<string>();
-
-    buildingsWithCoords.forEach((building) => {
-      if (processedBuildings.has(building.id)) return;
-
-      const buildingPoint = new BMapGL.Point(building.longitude!, building.latitude!);
-      const buildingPixel = map.pointToOverlayPixel(buildingPoint);
-
-      const overlappedBuildings: BuildingItem[] = [building];
-      const pixels: Array<{ x: number; y: number }> = [buildingPixel];
-
-      buildingsWithCoords.forEach((otherBuilding) => {
-        if (otherBuilding.id === building.id || processedBuildings.has(otherBuilding.id)) {
-          return;
-        }
-
-        const otherPoint = new BMapGL.Point(otherBuilding.longitude!, otherBuilding.latitude!);
-        const otherPixel = map.pointToOverlayPixel(otherPoint);
-
-        const distance = pixelDistance(buildingPixel, otherPixel);
-
-        if (distance < CLUSTER_PIXEL_THRESHOLD) {
-          overlappedBuildings.push(otherBuilding);
-          pixels.push(otherPixel);
-          processedBuildings.add(otherBuilding.id);
-        }
-      });
-
-      const avgPixel = averagePixelPosition(pixels);
-      const centerPoint = map.pixelToPoint?.(new BMapGL.Pixel(avgPixel.x, avgPixel.y)) || {
-        lng: building.longitude!,
-        lat: building.latitude!,
-      };
-
-      const cluster: ClusterGroup = {
-        buildings: overlappedBuildings,
-        centerPixel: avgPixel,
-        clusterLng: centerPoint.lng || building.longitude!,
-        clusterLat: centerPoint.lat || building.latitude!,
-      };
-
-      clusterGroups.push(cluster);
-      processedBuildings.add(building.id);
-    });
+    // 聚类处理：单遍预计算像素坐标（每楼宇恰 1 次地图 API 调用，n 次替代 n² 次），
+    // 聚类本体走共享纯函数 clusterBuildings（与旧 O(n²) 实现输出逐位一致）
+    const pixels = new Map<string, { x: number; y: number }>();
+    for (const b of buildingsWithCoords) {
+      pixels.set(b.id, map.pointToOverlayPixel(new BMapGL.Point(b.longitude!, b.latitude!)));
+    }
+    const clusterGroups = clusterBuildings(
+      buildingsWithCoords,
+      pixels,
+      CLUSTER_PIXEL_THRESHOLD,
+      (p) => map.pixelToPoint?.(new BMapGL.Pixel(p.x, p.y))
+    );
 
     // 渲染标记
     clusterGroups.forEach((cluster) => {
