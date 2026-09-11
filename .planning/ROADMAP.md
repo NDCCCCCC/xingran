@@ -41,7 +41,12 @@
   3. HubeiMap 渲染体 5 道全量 filter（664/667/672/676/705）收敛为 useMemo 一次计算（deps `[buildings]`），buildings 未变时不重复过滤
   4. map 级 zoomend/tiltend 事件监听在组件卸载后不再触发（effect cleanup removeEventListener 生效）
   5. BuildingMarkers.tsx / CityMarkers.tsx 死组件已删除、全库无引用（为 Phase 120 的 @uiw/react-baidu-map 依赖移除解锁）
-**Plans**: TBD（预估 3）
+**Plans:** 3 plans（wave 1→2→3 串行）
+
+Plans:
+- [ ] 114-01-PLAN.md — 共享聚类纯函数 cluster.ts（40px 网格分桶）+ 参考实现对照一致性测试（RED→GREEN）
+- [ ] 114-02-PLAN.md — HubeiMap/HubeiMapGL 改造：单遍预计算 + 共享函数消费 + 5 filter useMemo + 事件 cleanup
+- [ ] 114-03-PLAN.md — 死组件删除（解锁 @uiw 依赖移除）+ cleanup spy 测试 + MAP3D-02 人工性能验证 checkpoint
 
 ### Phase 115: selector-completion（Zustand selector 收尾）
 **Goal**: 全库剩余整店订阅清零（PROJECT 口径 26 处）——任意 store 切片变化只重渲真正消费该字段的组件，键击/弹窗等高频路径不再被无关 store 变化牵连重渲
