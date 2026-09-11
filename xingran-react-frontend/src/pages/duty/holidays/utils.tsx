@@ -41,8 +41,7 @@ export async function handleExcelImport(
   const { file, onError } = options;
   try {
     // D-06: 动态加载 xlsx，避免进入 holidays 页面时即加载 ~150KB gzip
-    const XLSX = await import("xlsx");
-    const data = await file.arrayBuffer();
+    const [XLSX, data] = await Promise.all([import("xlsx"), file.arrayBuffer()]);
     const workbook = XLSX.read(data);
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];

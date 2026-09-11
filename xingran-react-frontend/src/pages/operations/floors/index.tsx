@@ -420,6 +420,9 @@ const FloorManagement: FC = () => {
       setPageMode("editor");
       setEditMode(false);
 
+      // loadFloorPlanData 与 building/选项加载并行，编辑器 loading 只绑 loadFloorPlanData
+      const loadFloorPlan = loadFloorPlanData(floor.id);
+
       try {
         const buildingResult = await buildingApi.get(floor.buildingId);
         const building = buildingResult.data;
@@ -428,17 +431,19 @@ const FloorManagement: FC = () => {
           setSelectedBuildingId(building.id);
           setSelectedBuildingName(building.name);
           setSelectedDeptIdForEditor(building.orgId);
-
           setSelectedDeptName(building.orgName || "");
 
-          await loadBuildingOptionsByDept(building.orgId);
-          await loadFloorOptionsByBuilding(building.id);
+          // 两个选项加载在拿到 building 后并行
+          await Promise.all([
+            loadBuildingOptionsByDept(building.orgId),
+            loadFloorOptionsByBuilding(building.id),
+          ]);
         }
       } catch (error) {
         console.error("加载楼宇信息失败:", error);
       }
 
-      await loadFloorPlanData(floor.id);
+      await loadFloorPlan;
     },
     [
       loadFloorPlanData,

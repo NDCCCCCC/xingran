@@ -2,7 +2,7 @@
  * WorkOrder 数据管理 Hook
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import {
@@ -72,6 +72,10 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // current/pageSize 收进 ref，避免翻页触发初始化 effect 重跑
+  const currentRef = useRef(current);
+  const pageSizeRef = useRef(pageSize);
+
   const [stats, setStats] = useState<WorkOrderStats>({
     total: 0,
     pending: 0,
@@ -113,8 +117,8 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
       try {
         const values = form.getFieldsValue() as Record<string, unknown>;
         const params: WorkOrderListParams = {
-          current: page ?? current,
-          pageSize: size ?? pageSize,
+          current: page ?? currentRef.current,
+          pageSize: size ?? pageSizeRef.current,
           workOrderNo: values.workOrderNo as string,
           title: values.title as string,
           categoryId: values.categoryId as string,
@@ -134,6 +138,9 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
         setTotal(result.data?.total ?? 0);
         setCurrent(result.data?.current ?? 1);
         setPageSize(result.data?.pageSize ?? 10);
+        // 同步更新 ref（翻页/初始化均走这里）
+        currentRef.current = result.data?.current ?? 1;
+        pageSizeRef.current = result.data?.pageSize ?? 10;
 
         // 列表加载后顺带刷新统计(全局 COUNT,不受分页/筛选影响)。
         // 这样搜索/分页/增删改(均经 fetchList)都会保持统计卡片为真实全局计数。
@@ -144,7 +151,7 @@ export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrder
         setLoading(false);
       }
     },
-    [form, current, pageSize, message, fetchStats]
+    [form, message, fetchStats]
   );
 
   // 部门树数据由顶层 useDeptTree() 提供,不再手动 fetch (workorderApi.getDeptTree 副本已删,类型 re-export from dutyApi)

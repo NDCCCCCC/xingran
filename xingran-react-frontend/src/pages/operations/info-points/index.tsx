@@ -332,21 +332,26 @@ const InfoPointManagement: FC = () => {
     }
   }, []);
 
-  const loadDevicePorts = useCallback(async (deviceId: string) => {
-    if (!deviceId) {
+  // 加载设备端口列表（可并行调用，不阻塞弹窗）
+  const loadDevicePorts = useCallback((devId: string, portId?: string, portName?: string) => {
+    if (!devId) {
       setDevicePorts([]);
       return;
     }
-    try {
-      const result = (await post("/network/ports/list", {
-        deviceId,
-        current: 1,
-        pageSize: 50,
-      })) as { data?: { list: DevicePortOption[] } };
-      setDevicePorts(result.data?.list || []);
-    } catch (error) {
-      handleApiError(error, "加载设备端口列表", false);
-    }
+    post("/network/ports/list", { deviceId: devId, current: 1, pageSize: 50 })
+      .then((result) => {
+        let ports = (result as { data?: { list: DevicePortOption[] } })?.data?.list || [];
+        // 端口兜底:当前 portId 可能不在 pageSize:50 列表,用 record.portName 注入兜底
+        if (portId && portName && !ports.find((p) => p.id === portId)) {
+          ports = [...ports, { id: portId, interfaceName: portName }];
+        }
+        setDevicePorts(ports);
+      })
+      .catch((error) => {
+        console.error("加载设备端口列表失败:", error);
+        // 加载失败时至少保留当前端口兜底,避免显示 UUID
+        setDevicePorts(portId && portName ? [{ id: portId, interfaceName: portName }] : []);
+      });
   }, []);
 
   // 初始化加载
@@ -452,13 +457,13 @@ const InfoPointManagement: FC = () => {
 
   const openModal = async (record?: InfoPoint) => {
     // 初始化 Cascader 选项（加载楼宇列表）
-    await initCascaderOptions();
+    const initCascaderPromise = initCascaderOptions();
 
     if (record) {
       handleEdit(record);
       const formValues = { ...record } as Record<string, unknown>;
 
-      // 如果有设备ID，先加载设备端口列表，确保表单回显时能找到匹配的端口
+      // 如果有设备ID，并行加载设备端口列表
       if (formValues.deviceId) {
         const devId = formValues.deviceId as string;
         setSelectedDeviceId(devId);
@@ -470,37 +475,18 @@ const InfoPointManagement: FC = () => {
             ? prev
             : [...prev, { id: devId, deviceName: devName || "未命名设备", ipAddress: "" }]
         );
-        // 直接调用 API 并同步设置状态，确保在 setFieldsValue 之前完成
-        try {
-          const result = (await post("/network/ports/list", {
-            deviceId: devId,
-            current: 1,
-            pageSize: 50,
-          })) as { data?: { list: DevicePortOption[] } };
-          let ports = result.data?.list || [];
-          // 端口同理:当前 portId 可能不在 pageSize:50 列表,用 record.portName 注入兜底
-          const portId = formValues.portId as string | undefined;
-          const portName = formValues.portName as string | undefined;
-          if (portId && portName && !ports.find((p) => p.id === portId)) {
-            ports = [...ports, { id: portId, interfaceName: portName }];
-          }
-          setDevicePorts(ports);
-        } catch (error) {
-          console.error("加载设备端口列表失败:", error);
-          // 加载失败时至少保留当前端口兜底,避免显示 UUID
-          setDevicePorts(
-            formValues.portId && formValues.portName
-              ? [{ id: formValues.portId as string, interfaceName: formValues.portName as string }]
-              : []
-          );
-        }
+        // 并行加载端口，不阻塞弹窗打开
+        loadDevicePorts(devId, formValues.portId as string, formValues.portName as string);
       }
 
       // 处理 workstationId：将单个字符串转换为三级路径数组
       if (formValues.workstationId && typeof formValues.workstationId === "string") {
         try {
-          // 查询工位详细信息以获取所属楼层
-          const wsResult = await workstationApi.get(formValues.workstationId);
+          // 并行：initCascaderOptions + workstationApi.get（楼层查询）
+          const [wsResult] = await Promise.all([
+            workstationApi.get(formValues.workstationId),
+            initCascaderPromise,
+          ]);
           const workstation = wsResult.data as WorkstationOps | undefined;
 
           if (workstation && workstation.floorId) {
@@ -529,6 +515,9 @@ const InfoPointManagement: FC = () => {
           console.error("获取工位信息失败:", error);
           formValues.workstationId = undefined;
         }
+      } else {
+        // 无 workstationId 时，等待 Cascader 初始化
+        await initCascaderPromise;
       }
 
       // 字段映射：后端的 remark 映射到前端的 description
@@ -539,6 +528,7 @@ const InfoPointManagement: FC = () => {
 
       infoPointForm.setFieldsValue(formValues);
     } else {
+      await initCascaderOptions();
       handleAdd();
       const defaultType =
         infoPointTypeDict.find((d) => d.isDefault)?.dictValue || infoPointTypeDict[0]?.dictValue;
@@ -558,17 +548,18 @@ const InfoPointManagement: FC = () => {
       const buildingIndex = cascaderOptions.findIndex((b) => b.value === buildingId);
       if (buildingIndex === -1) return;
 
-      // 加载该楼宇下的楼层列表
-      const floors = await loadFloorsForCascader(buildingId);
+      // floors 与 workstations 并行加载
+      const [floors, workstationsResult] = await Promise.all([
+        loadFloorsForCascader(buildingId),
+        loadWorkstationsForCascader(floorId, floorId),
+      ]);
 
       // 找到对应的楼层节点
       const floorIndex = floors.findIndex((f) => f.value === floorId);
       if (floorIndex === -1) return;
 
-      const floorNo = floors[floorIndex].floorNo;
-
       // 加载该楼层下的工位列表
-      let workstations = await loadWorkstationsForCascader(floorId, floorNo || floorId);
+      let workstations = workstationsResult;
       // 兜底(2026-06-30):当前工位可能因 floorCode 不匹配等原因未加载到,
       // Cascader 路径末级会显示 raw UUID(用户报告:所属工位末级显示 70869f9b...)。
       // 用 record.workstationName 注入兜底节点,确保末级有 label。

@@ -86,10 +86,12 @@ const DeviceDiscoveryPage: FC = () => {
 
   // 打开创建模态框
   const openModal = async () => {
-    await loadDepartments();
+    // 先打开弹窗，再后台加载部门列表，避免阻塞弹窗显示
     form.resetFields();
     form.setFieldsValue({ snmpPort: 161, discoveryType: "snmp" });
     setModalState((prev) => ({ ...prev, modalVisible: true }));
+    // 后台加载部门（不阻塞弹窗打开）
+    loadDepartments();
   };
 
   // 创建发现任务
