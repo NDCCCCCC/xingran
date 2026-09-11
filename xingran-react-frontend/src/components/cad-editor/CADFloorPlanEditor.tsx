@@ -124,7 +124,7 @@ export function CADFloorPlanEditor({
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [_dragStart, setDragStart] = useState<Point | null>(null);
-  const [lastMousePos, setLastMousePos] = useState<Point | null>(null);
+  const lastMousePosRef = useRef<Point | null>(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const lastElementMouseCanvasPos = useRef<Point | null>(null);
   const dragStartCanvasPos = useRef<Point | null>(null);
@@ -627,7 +627,7 @@ export function CADFloorPlanEditor({
       if (e.button === 1 || (e.button === 0 && e.altKey)) {
         setIsDragging(true);
         setDragStart({ x: e.clientX, y: e.clientY });
-        setLastMousePos({ x: e.clientX, y: e.clientY });
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         e.preventDefault();
         return;
       }
@@ -885,11 +885,11 @@ export function CADFloorPlanEditor({
       }
 
       // 平移画布（Alt+左键或中键）
-      if (isDragging && lastMousePos) {
-        const dx = e.clientX - lastMousePos.x;
-        const dy = e.clientY - lastMousePos.y;
+      if (isDragging && lastMousePosRef.current) {
+        const dx = e.clientX - lastMousePosRef.current.x;
+        const dy = e.clientY - lastMousePosRef.current.y;
         setOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-        setLastMousePos({ x: e.clientX, y: e.clientY });
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         return;
       }
 
@@ -1006,7 +1006,6 @@ export function CADFloorPlanEditor({
     },
     [
       isDragging,
-      lastMousePos,
       isBoxSelecting,
       boxSelectStart,
       draggedElement,
@@ -1028,7 +1027,7 @@ export function CADFloorPlanEditor({
     // 清除拖动和画布平移状态
     setIsDragging(false);
     setDragStart(null);
-    setLastMousePos(null);
+    lastMousePosRef.current = null;
     setDraggedElement(null);
     // 重置拖动相关的 ref
     lastElementMouseCanvasPos.current = null;
@@ -1406,7 +1405,7 @@ export function CADFloorPlanEditor({
                     wall={wall}
                     selected={selectedIds.has(wall.id)}
                     hovered={hoveredId === wall.id}
-                    onSelect={() => handleSelectElement(wall.id, "wall")}
+                    onSelect={handleSelectElement.bind(null, wall.id, "wall")}
                     onHover={(hovered) => setHoveredId(hovered ? wall.id : null)}
                   />
                 ))}
@@ -1419,7 +1418,7 @@ export function CADFloorPlanEditor({
                     door={door}
                     selected={selectedIds.has(door.id)}
                     hovered={hoveredId === door.id}
-                    onSelect={() => handleSelectElement(door.id, "door")}
+                    onSelect={handleSelectElement.bind(null, door.id, "door")}
                     onHover={(hovered) => setHoveredId(hovered ? door.id : null)}
                   />
                 ))}
@@ -1432,7 +1431,7 @@ export function CADFloorPlanEditor({
                     workstation={ws}
                     selected={selectedIds.has(ws.id)}
                     hovered={hoveredId === ws.id}
-                    onSelect={() => handleSelectElement(ws.id, "workstation")}
+                    onSelect={handleSelectElement.bind(null, ws.id, "workstation")}
                     onHover={(hovered) => setHoveredId(hovered ? ws.id : null)}
                   />
                 ))}
@@ -1445,7 +1444,7 @@ export function CADFloorPlanEditor({
                     text={text}
                     selected={selectedIds.has(text.id)}
                     hovered={hoveredId === text.id}
-                    onSelect={() => handleSelectElement(text.id, "text")}
+                    onSelect={handleSelectElement.bind(null, text.id, "text")}
                     onHover={(hovered) => setHoveredId(hovered ? text.id : null)}
                   />
                 ))}

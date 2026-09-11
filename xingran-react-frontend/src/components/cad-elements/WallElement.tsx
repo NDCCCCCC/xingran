@@ -2,7 +2,7 @@
  * 墙体元素组件
  */
 
-import { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback } from "react";
 import { getWallColor } from "@/components/cad-editor/theme";
 import type { Wall } from "@/components/cad-editor/types";
 
@@ -20,7 +20,7 @@ const CONTROL_POINT_RADIUS = 5;
 const CONTROL_POINT_STROKE_WIDTH = 2;
 const CONTROL_POINT_FILL = "#fff";
 
-export function WallElement({
+export const WallElement = React.memo(function WallElement({
   wall,
   selected = false,
   hovered = false,
@@ -99,4 +99,4 @@ export function WallElement({
       )}
     </g>
   );
-}
+});

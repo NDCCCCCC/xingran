@@ -2,7 +2,7 @@
  * 文本元素组件
  */
 
-import { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback } from "react";
 import type { TextElement } from "@/components/cad-editor/types";
 
 export interface TextElementProps {
@@ -23,7 +23,7 @@ const SELECTION_BORDER_COLOR = "#337ab0";
 const CONTROL_POINT_RADIUS = 4;
 const CONTROL_POINT_STROKE_WIDTH = 2;
 
-export function CADTextElement({
+export const CADTextElement = React.memo(function CADTextElement({
   text,
   selected = false,
   hovered = false,
@@ -132,4 +132,4 @@ export function CADTextElement({
       )}
     </g>
   );
-}
+});

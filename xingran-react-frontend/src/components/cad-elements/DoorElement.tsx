@@ -2,9 +2,10 @@
  * 门元素组件 - CAD 标准制图样式
  */
 
-import { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback } from "react";
 import { getDoorColor } from "@/components/cad-editor/theme";
 import type { Door } from "@/components/cad-editor/types";
+import { snapCoord } from "./coord";
 
 export interface DoorElementProps {
   door: Door;
@@ -45,7 +46,7 @@ interface DoorGeometry {
   leafEndY2?: number;
 }
 
-export function DoorElement({
+export const DoorElement = React.memo(function DoorElement({
   door,
   selected = false,
   hovered = false,
@@ -88,8 +89,9 @@ export function DoorElement({
     }
 
     const leafAngleRad = (doorAngle * Math.PI) / 180;
-    const leafEndX = hingePoint.x + Math.cos(leafAngleRad) * length;
-    const leafEndY = hingePoint.y + Math.sin(leafAngleRad) * length;
+    // 三角函数出口坐标取整到 0.01 防止 SVG 亚像素抖动
+    const leafEndX = snapCoord(hingePoint.x + Math.cos(leafAngleRad) * length);
+    const leafEndY = snapCoord(hingePoint.y + Math.sin(leafAngleRad) * length);
 
     const result: DoorGeometry = {
       hingePoint,
@@ -100,8 +102,8 @@ export function DoorElement({
 
     // 双开门的第二扇
     if (door.type === "double") {
-      result.leafEndX2 = openEndPoint.x + Math.cos(leafAngleRad + Math.PI) * length;
-      result.leafEndY2 = openEndPoint.y + Math.sin(leafAngleRad + Math.PI) * length;
+      result.leafEndX2 = snapCoord(openEndPoint.x + Math.cos(leafAngleRad + Math.PI) * length);
+      result.leafEndY2 = snapCoord(openEndPoint.y + Math.sin(leafAngleRad + Math.PI) * length);
     }
 
     return result;
@@ -282,4 +284,4 @@ export function DoorElement({
       )}
     </g>
   );
-}
+});

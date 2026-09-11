@@ -3,8 +3,9 @@
  * 支持：一字型桌和L型桌，带有显示器、键盘、鼠标等设备符号
  */
 
-import { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback } from "react";
 import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
+import { snapCoord } from "./coord";
 
 export interface WorkstationElementProps {
   workstation: WorkstationNode;
@@ -45,7 +46,7 @@ const CHAIR_DIMENSIONS = {
 // 工位类型
 type DeskType = "straight" | "l-shaped";
 
-export function WorkstationElement({
+export const WorkstationElement = React.memo(function WorkstationElement({
   workstation,
   selected = false,
   hovered = false,
@@ -72,11 +73,11 @@ export function WorkstationElement({
     const cos = Math.cos(angleRad);
     const sin = Math.sin(angleRad);
 
-    // 计算旋转后的点
+    // 计算旋转后的点（坐标取整到 0.01 防止 SVG 亚像素抖动）
     function rotatePoint(x: number, y: number): Point {
       return {
-        x: centerX + x * cos - y * sin,
-        y: centerY + x * sin + y * cos,
+        x: snapCoord(centerX + x * cos - y * sin),
+        y: snapCoord(centerY + x * sin + y * cos),
       };
     }
 
@@ -165,13 +166,13 @@ export function WorkstationElement({
     const chairCos = Math.cos(chairRotation);
     const chairSin = Math.sin(chairRotation);
 
-    // 椅子局部坐标旋转辅助函数
+    // 椅子局部坐标旋转辅助函数（取整防止抖动）
     function rotateChairLocal(x: number, y: number): Point {
       const dx = x - chairCenterX;
       const dy = y - chairCenterY;
       return {
-        x: chairCenterX + dx * chairCos - dy * chairSin,
-        y: chairCenterY + dx * chairSin + dy * chairCos,
+        x: snapCoord(chairCenterX + dx * chairCos - dy * chairSin),
+        y: snapCoord(chairCenterY + dx * chairSin + dy * chairCos),
       };
     }
 
@@ -542,4 +543,4 @@ export function WorkstationElement({
       )}
     </g>
   );
-}
+});
