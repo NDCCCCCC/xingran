@@ -57,6 +57,9 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Content } = Layout;
 
+// 模块级静态映射（Phase m76-js-misc 6.3）
+const ROOM_DEVICE_STATUS_MAP: Record<number, string> = { 0: "正常", 1: "故障", 2: "报废" };
+
 type ViewMode = "table" | "card";
 
 interface RoomOption {
@@ -316,8 +319,7 @@ const RoomDeviceManagement: FC = () => {
   };
 
   const getStatusText = (status: number) => {
-    const statusMap: Record<number, string> = { 0: "正常", 1: "故障", 2: "报废" };
-    return statusMap[status] || "未知";
+    return ROOM_DEVICE_STATUS_MAP[status] || "未知";
   };
 
   const columns: ColumnsType<RoomDevice> = [

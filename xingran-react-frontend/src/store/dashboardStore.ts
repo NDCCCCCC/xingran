@@ -491,6 +491,8 @@ export const useDashboardStore = create<DashboardStore>()(
     }),
     {
       name: "dashboard-storage",
+      // version: 1 — 首次引入。字段结构变更时需递增 version 并补 migrate 函数
+      version: 1,
       partialize: (state) => ({
         viewMode: state.viewMode,
         showGridLines: state.showGridLines,

@@ -137,66 +137,93 @@ export function useFloorPlanEditor(
     [currentFloor]
   );
 
-  const saveWalls = useCallback(async (walls: Wall[], floorId: string) => {
-    for (const wall of walls) {
-      const isNew = isNewElement(wall.id, "wall_");
-      const { id: _wallId, ...wallWithoutId } = wall;
-      const wallData = {
-        ...(isNew ? wallWithoutId : wall),
-        floorId,
-        points: stringifyJsonField(wall.points),
-        type: wall.type as "straight" | "curved" | "l_shaped" | "polyline",
-      };
+  // 分批并行保存（每批 10 个元素），收集失败项统一提示
+  const BATCH_SIZE = 10;
 
-      if (isNew) {
-        await wallApi.create(wallData);
-      } else {
-        await wallApi.update(wall.id, wallData);
-      }
-    }
-  }, []);
-
-  const saveDoors = useCallback(async (doors: Door[], floorId: string) => {
-    for (const door of doors) {
-      const isNew = isNewElement(door.id, "door_");
-      const { id: _doorId, ...doorWithoutId } = door;
-      const doorData = {
-        ...(isNew ? doorWithoutId : door),
-        floorId,
-        position: stringifyJsonField(door.position),
-      };
-
-      if (isNew) {
-        await doorApi.create(doorData);
-      } else {
-        await doorApi.update(door.id, doorData);
-      }
-    }
-  }, []);
-
-  const saveTexts = useCallback(async (texts: TextElement[], floorId: string) => {
-    if (texts.length === 0) return;
-
-    try {
-      for (const text of texts) {
-        const isNew = isNewElement(text.id, "text_");
-        const { id: _textId, ...textWithoutId } = text;
-        const textData = {
-          ...(isNew ? textWithoutId : text),
+  const saveWalls = useCallback(
+    async (walls: Wall[], floorId: string) => {
+      if (walls.length === 0) return;
+      const batchSave = async (item: Wall) => {
+        const isNew = isNewElement(item.id, "wall_");
+        const { id: _wallId, ...wallWithoutId } = item;
+        const wallData = {
+          ...(isNew ? wallWithoutId : item),
           floorId,
-          position: stringifyJsonField(text.position),
+          points: stringifyJsonField(item.points),
+          type: item.type as "straight" | "curved" | "l_shaped" | "polyline",
         };
+        if (isNew) {
+          await wallApi.create(wallData);
+        } else {
+          await wallApi.update(item.id, wallData);
+        }
+      };
 
+      const results = await Promise.allSettled(walls.map((wall) => batchSave(wall)));
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        message.error(`墙壁保存失败 ${failed.length} 项`);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    []
+  );
+
+  const saveDoors = useCallback(
+    async (doors: Door[], floorId: string) => {
+      if (doors.length === 0) return;
+      const batchSave = async (item: Door) => {
+        const isNew = isNewElement(item.id, "door_");
+        const { id: _doorId, ...doorWithoutId } = item;
+        const doorData = {
+          ...(isNew ? doorWithoutId : item),
+          floorId,
+          position: stringifyJsonField(item.position),
+        };
+        if (isNew) {
+          await doorApi.create(doorData);
+        } else {
+          await doorApi.update(item.id, doorData);
+        }
+      };
+
+      const results = await Promise.allSettled(doors.map((door) => batchSave(door)));
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        message.error(`门保存失败 ${failed.length} 项`);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    []
+  );
+
+  const saveTexts = useCallback(
+    async (texts: TextElement[], floorId: string) => {
+      if (texts.length === 0) return;
+      const batchSave = async (item: TextElement) => {
+        const isNew = isNewElement(item.id, "text_");
+        const { id: _textId, ...textWithoutId } = item;
+        const textData = {
+          ...(isNew ? textWithoutId : item),
+          floorId,
+          position: stringifyJsonField(item.position),
+        };
         if (isNew) {
           await floorPlanTextApi.create(textData);
         } else {
-          await floorPlanTextApi.update(text.id, textData);
+          await floorPlanTextApi.update(item.id, textData);
         }
+      };
+
+      const results = await Promise.allSettled(texts.map((text) => batchSave(text)));
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        message.error(`文本保存失败 ${failed.length} 项`);
       }
-    } catch (textError) {
-      console.warn("保存文本元素失败，可能需要重启后端服务:", textError);
-    }
-  }, []);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    []
+  );
 
   const saveWorkstations = useCallback(async (workstations: WorkstationNode[]) => {
     const updates = workstations.map((ws) => ({

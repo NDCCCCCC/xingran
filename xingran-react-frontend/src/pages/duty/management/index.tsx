@@ -15,8 +15,9 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { getDutyPoolList, getUserList, type Holiday } from "@/lib/dutyApi";
-import type { DutyPool, SimpleUser } from "@/lib/dutyApi";
+import { getDutyPoolList, type Holiday } from "@/lib/dutyApi";
+import { useUserOptions } from "@/hooks/useUserOptions";
+import type { DutyPool } from "@/lib/dutyApi";
 import { WeeklyView, HolidayManagement, DutyConfig } from "./components";
 import { HolidayModal, BatchHolidayModal } from "./modals";
 import { useScheduleData, useHolidayData, useDutyConfig } from "./hooks";
@@ -36,6 +37,9 @@ export default function DutyManagement() {
   // ==================== 值班配置 ====================
   const dutyConfig = useDutyConfig();
 
+  // 用户选项（共享缓存，5min stale）
+  const { data: users = [] } = useUserOptions();
+
   // ==================== 其他状态 ====================
   const location = useLocation();
   const [activeTab, setActiveTab] = usePersistedStateController<string>({
@@ -44,7 +48,6 @@ export default function DutyManagement() {
     defaultValue: "weekly",
   });
   const [_pools, setPools] = useState<DutyPool[]>([]);
-  const [_users, setUsers] = useState<SimpleUser[]>([]);
 
   // 模态框状态
   const [holidayModalVisible, setHolidayModalVisible] = useState(false);
@@ -58,7 +61,6 @@ export default function DutyManagement() {
   useEffect(() => {
     Promise.all([
       fetchPools(),
-      fetchUsers(),
       scheduleData.fetchWeeklyDuty(scheduleData.currentWeekStart),
       holidayData.fetchYears(),
       dutyConfig.fetch(),
@@ -74,15 +76,6 @@ export default function DutyManagement() {
       setPools(result.data?.list || []);
     } catch (_error) {
       Modal.error({ title: "获取值班池列表失败" });
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const result = await getUserList({ current: 1, pageSize: 50 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error("获取用户列表失败", error);
     }
   };
 

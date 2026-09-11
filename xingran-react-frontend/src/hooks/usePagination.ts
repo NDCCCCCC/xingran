@@ -54,7 +54,7 @@ export interface UsePaginationReturn {
  * />
  */
 export function usePagination(options: UsePaginationOptions = {}): UsePaginationReturn {
-  const { preferences } = useSettingsStore();
+  const preferences = useSettingsStore((s) => s.preferences);
   const location = useLocation();
 
   // fallback：无持久化值时的默认页大小（页面覆盖 > 用户配置 > 10）

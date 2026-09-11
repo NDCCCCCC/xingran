@@ -12,19 +12,19 @@ interface WeekFieldProps {
   onChange: (value: CronFieldConfig) => void;
 }
 
+// 模块级静态选项（Phase m76-js-misc 6.3）
+const WEEK_OPTIONS = [
+  { label: "周日", value: 1 },
+  { label: "周一", value: 2 },
+  { label: "周二", value: 3 },
+  { label: "周三", value: 4 },
+  { label: "周四", value: 5 },
+  { label: "周五", value: 6 },
+  { label: "周六", value: 7 },
+];
+
 const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
   const { periodType } = value;
-
-  // 生成星期选项数组 (1=周日, 2=周一, ..., 7=周六)
-  const weekOptions = [
-    { label: "周日", value: 1 },
-    { label: "周一", value: 2 },
-    { label: "周二", value: 3 },
-    { label: "周三", value: 4 },
-    { label: "周四", value: 5 },
-    { label: "周五", value: 6 },
-    { label: "周六", value: 7 },
-  ];
 
   return (
     <div className="cron-selector-week-field">
@@ -47,7 +47,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 }
                 style={{ marginLeft: 24, display: "flex", flexWrap: "wrap", gap: "8px" }}
               >
-                {weekOptions.map((opt) => (
+                {WEEK_OPTIONS.map((opt) => (
                   <Checkbox key={opt.value} value={opt.value}>
                     {opt.label}
                   </Checkbox>
@@ -68,7 +68,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 }
                 onSearch={() => {}}
               >
-                {weekOptions.map((opt) => (
+                {WEEK_OPTIONS.map((opt) => (
                   <Select.Option key={opt.value} value={opt.value}>
                     {opt.label}
                   </Select.Option>
@@ -105,7 +105,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 }
                 onSearch={() => {}}
               >
-                {weekOptions.map((opt) => (
+                {WEEK_OPTIONS.map((opt) => (
                   <Select.Option key={opt.value} value={opt.value}>
                     {opt.label}
                   </Select.Option>
@@ -120,7 +120,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 }
                 onSearch={() => {}}
               >
-                {weekOptions.map((opt) => (
+                {WEEK_OPTIONS.map((opt) => (
                   <Select.Option key={opt.value} value={opt.value}>
                     {opt.label}
                   </Select.Option>

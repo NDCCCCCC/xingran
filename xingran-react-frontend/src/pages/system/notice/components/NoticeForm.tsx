@@ -14,7 +14,6 @@ import {
 } from "antd";
 import type { FormInstance } from "antd/es/form";
 import { MarkdownEditor as MDEditor } from "@/components/markdown/MarkdownEditor";
-import "@uiw/react-md-editor/markdown-editor.css";
 import CronSelector from "@/components/CronSelector";
 import { TargetSelector } from "./TargetSelector";
 import type { Notice } from "@/types/notice";

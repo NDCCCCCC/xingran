@@ -128,8 +128,7 @@ export function useScheduleData() {
           dutyType: data.dutyType as DutyType,
         });
         message.success(`成功生成 ${result.data?.count || 0} 条排班记录`);
-        await fetchList();
-        await fetchWeeklyDuty(currentWeekStart);
+        await Promise.all([fetchList(), fetchWeeklyDuty(currentWeekStart)]);
         return true;
       } catch (_error) {
         message.error("生成排班失败");
@@ -146,8 +145,7 @@ export function useScheduleData() {
       try {
         await swapDuty(data);
         message.success("调班成功");
-        await fetchList();
-        await fetchWeeklyDuty(currentWeekStart);
+        await Promise.all([fetchList(), fetchWeeklyDuty(currentWeekStart)]);
         return true;
       } catch (_error) {
         message.error("调班失败");
@@ -167,8 +165,7 @@ export function useScheduleData() {
           dutyType: data.dutyType as DutyType,
         });
         message.success("手动排班成功");
-        await fetchList();
-        await fetchWeeklyDuty(currentWeekStart);
+        await Promise.all([fetchList(), fetchWeeklyDuty(currentWeekStart)]);
         return true;
       } catch (_error) {
         message.error("手动排班失败");
@@ -187,8 +184,7 @@ export function useScheduleData() {
         message.success("删除成功");
         // 计算正确的页码：如果当前页只有一条数据且不是第一页，则向前翻页
         const newPage = schedules.length === 1 && current > 1 ? current - 1 : current;
-        await fetchList(newPage);
-        await fetchWeeklyDuty(currentWeekStart);
+        await Promise.all([fetchList(newPage), fetchWeeklyDuty(currentWeekStart)]);
         return true;
       } catch (_error) {
         message.error("删除失败");
@@ -213,8 +209,7 @@ export function useScheduleData() {
         // 如果删除了当前页的所有数据且不是第一页，则向前翻页
         const isCurrentPageCleared = ids.length >= schedules.length;
         const newPage = isCurrentPageCleared && current > 1 ? current - 1 : current;
-        await fetchList(newPage);
-        await fetchWeeklyDuty(currentWeekStart);
+        await Promise.all([fetchList(newPage), fetchWeeklyDuty(currentWeekStart)]);
         return true;
       } catch (_error) {
         message.error("批量删除失败");

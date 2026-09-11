@@ -15,6 +15,7 @@
 
 import { lazy, Suspense, type FC } from "react";
 import { Spin } from "antd";
+import "@uiw/react-md-editor/markdown-editor.css";
 // 注：类型从 nohighlight 入口导入（与 lazy import 保持一致）。
 // 主包 @uiw/react-md-editor 的 MDEditorProps 含 'full' preview 选项，
 // 但 nohighlight 入口的 PreviewType 较窄（'edit' | 'live'），

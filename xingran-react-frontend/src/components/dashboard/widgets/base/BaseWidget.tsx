@@ -80,7 +80,9 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
   disableDataFetch = false,
   isInitialLoad = false,
 }) => {
-  const { viewMode, selectWidget, selectedWidgetId } = useDashboardStore();
+  const viewMode = useDashboardStore((s) => s.viewMode);
+  const selectWidget = useDashboardStore((s) => s.selectWidget);
+  const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId);
   const [isHovered, setIsHovered] = useState(false);
   const isFirstLoadRef = useRef(true);
 

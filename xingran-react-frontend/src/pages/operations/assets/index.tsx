@@ -198,6 +198,12 @@ const AssetList: FC = () => {
     loadAssets(); // 页面加载时自动获取资产列表
   }, [loadStatistics, loadDeviceTypes, loadDeviceCategories, loadAssets]);
 
+  // handleEdit/handleDelete 须定义在 columns useMemo 之前（columns 内联引用二者作 deps）
+  const handleEdit = useCallback((_record: Asset) => {
+    message.info("编辑功能待实现");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+  }, []);
+
   const handleDelete = useCallback(
     async (id: string) => {
       Modal.confirm({
@@ -261,304 +267,312 @@ const AssetList: FC = () => {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- columns array recreated each render; dependency array at tableColumns useMemo intentionally references it
-  const columns: ColumnsType<Asset> = [
-    // order=1
-    {
-      title: "设备序列号",
-      dataIndex: "devicesn",
-      key: "devicesn",
-      width: 150,
-      fixed: "left",
-      sorter: true,
-      sortOrder: getColumnSortOrder("devicesn"),
-      render: (text) => (
-        <Tooltip title={text}>
-          <span style={{ cursor: "pointer" }}>{text}</span>
-        </Tooltip>
-      ),
-    },
-    // order=2
-    { key: "sequenceNo", title: "序列号", dataIndex: "sequenceNo", width: 120, ellipsis: true },
-    // order=3
-    {
-      key: "fixAssetNo",
-      title: "固定资产编号",
-      dataIndex: "fixAssetNo",
-      width: 120,
-      ellipsis: true,
-    },
-    // order=4
-    {
-      key: "deviceModelName",
-      title: "设备型号",
-      dataIndex: "deviceModelName",
-      width: 120,
-      ellipsis: true,
-    },
-    // order=5
-    {
-      key: "deviceTypeName",
-      title: "设备类型",
-      dataIndex: "deviceTypeName",
-      width: 100,
-      ellipsis: true,
-      sorter: true,
-      sortOrder: getColumnSortOrder("deviceTypeName"),
-    },
-    // order=6
-    {
-      key: "deviceCategorySecondName",
-      title: "设备中类",
-      dataIndex: "deviceCategorySecondName",
-      width: 120,
-      ellipsis: true,
-    },
-    // order=7
-    {
-      key: "deviceBasicTypeName",
-      title: "是否固定资产",
-      dataIndex: "deviceBasicTypeName",
-      width: 100,
-      ellipsis: true,
-    },
-    // order=9
-    {
-      key: "usefulDeptName",
-      title: "所属部门",
-      dataIndex: "usefulDeptName",
-      width: 120,
-      ellipsis: true,
-    },
-    // order=13
-    { key: "machineIp", title: "加域IP", dataIndex: "machineIp", width: 120, ellipsis: true },
-    // order=14
-    {
-      key: "mac1",
-      title: "有线MAC",
-      dataIndex: "mac1",
-      width: 140,
-      ellipsis: true,
-      render: (text) => (text ? String(text).toUpperCase() : "-"),
-    },
-    // order=35
-    {
-      key: "useStatusLabel",
-      title: "使用状态",
-      dataIndex: "useStatusLabel",
-      width: 100,
-      ellipsis: true,
-    },
-    // order=43
-    { key: "remark", title: "备注", dataIndex: "remark", width: 200, ellipsis: true },
-    // order=44
-    {
-      key: "signOrgnoName",
-      title: "归属机构",
-      dataIndex: "signOrgnoName",
-      width: 150,
-      ellipsis: true,
-    },
-    // order=45
-    { key: "nowUserName", title: "责任人", dataIndex: "nowUserName", width: 100, ellipsis: true },
-    // order=46
-    {
-      key: "nowUserDeptCode",
-      title: "部门编码",
-      dataIndex: "nowUserDeptCode",
-      width: 120,
-      ellipsis: true,
-    },
-    // order=47
-    {
-      key: "deviceUserName",
-      title: "领取人",
-      dataIndex: "deviceUserName",
-      width: 100,
-      ellipsis: true,
-    },
-    // order=48
-    {
-      key: "status",
-      title: "状态",
-      dataIndex: "status",
-      width: 80,
-      render: (s: number) => (
-        <Tag color={s === 0 ? "green" : "red"}>{s === 0 ? "正常" : "停用"}</Tag>
-      ),
-    },
-    // order=49
-    {
-      key: "nbfStatus",
-      title: "拟报废",
-      dataIndex: "nbfStatus",
-      width: 80,
-      render: (s: number) => (
-        <Tag color={s === 1 ? "orange" : "default"}>{s === 1 ? "是" : "否"}</Tag>
-      ),
-    },
-    // order=50
-    {
-      key: "drawingDate",
-      title: "接收日期",
-      dataIndex: "drawingDate",
-      width: 120,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
-      ellipsis: true,
-    },
-    // order=51
-    {
-      key: "machineUptime",
-      title: "最后上线",
-      dataIndex: "machineUptime",
-      width: 150,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
-      ellipsis: true,
-    },
-    // order=52
-    {
-      key: "lastInventoryDate",
-      title: "盘点日期",
-      dataIndex: "lastInventoryDate",
-      width: 120,
-      ellipsis: true,
-      sorter: true,
-      sortOrder: getColumnSortOrder("lastInventoryDate"),
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
-    },
-    // 设备信息扩展 (order=54 设备渠道, order=55 设备属性)
-    { key: "qudaoName", title: "设备渠道", dataIndex: "qudaoName", width: 100, ellipsis: true },
-    {
-      key: "attributeValue",
-      title: "设备属性",
-      dataIndex: "attributeValue",
-      width: 120,
-      ellipsis: true,
-    },
-    // 部门与用户扩展 (order=53 受益部门)
-    { key: "deptName", title: "受益部门", dataIndex: "deptName", width: 120, ellipsis: true },
-    // 网络信息扩展 (order=63 加域标识, order=64 无线MAC)
-    { key: "machineBs", title: "加域标识", dataIndex: "machineBs", width: 100, ellipsis: true },
-    {
-      key: "mac2",
-      title: "无线MAC",
-      dataIndex: "mac2",
-      width: 140,
-      ellipsis: true,
-      render: (text) => (text ? String(text).toUpperCase() : "-"),
-    },
-    // 归属与责任扩展 (order=58 使用机构, 59 使用人, 60 责任人岗位, 61 用途, 62 子用途, 66 APP扫码账号, 68 APP扫码地理位置)
-    { key: "orgnoName", title: "使用机构", dataIndex: "orgnoName", width: 150, ellipsis: true },
-    { key: "outerUser", title: "使用人", dataIndex: "outerUser", width: 100, ellipsis: true },
-    {
-      key: "nowUserJobName",
-      title: "责任人岗位",
-      dataIndex: "nowUserJobName",
-      width: 120,
-      ellipsis: true,
-    },
-    { key: "usingTypeName", title: "用途", dataIndex: "usingTypeName", width: 100, ellipsis: true },
-    {
-      key: "subUsingTypeName",
-      title: "子用途",
-      dataIndex: "subUsingTypeName",
-      width: 100,
-      ellipsis: true,
-    },
-    { key: "userName", title: "APP扫码账号", dataIndex: "userName", width: 100, ellipsis: true },
-    {
-      key: "scanSite",
-      title: "APP扫码地理位置",
-      dataIndex: "scanSite",
-      width: 200,
-      ellipsis: true,
-    },
-    // 状态与日期扩展 (order=56 发放日期, 57 入库日期, 65 最后上线账号, 67 APP扫码时间, 69 Y07更新时间)
-    {
-      key: "useDate",
-      title: "发放日期",
-      dataIndex: "useDate",
-      width: 120,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
-      ellipsis: true,
-    },
-    {
-      key: "storageDatetime",
-      title: "入库日期",
-      dataIndex: "storageDatetime",
-      width: 120,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
-      ellipsis: true,
-    },
-    {
-      key: "machineUserId",
-      title: "最后上线账号",
-      dataIndex: "machineUserId",
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      key: "lastUpdateDate",
-      title: "APP扫码时间",
-      dataIndex: "lastUpdateDate",
-      width: 150,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
-      ellipsis: true,
-    },
-    {
-      key: "y07UpdateTime",
-      title: "Y07更新时间",
-      dataIndex: "y07UpdateTime",
-      width: 150,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
-      ellipsis: true,
-    },
-    // 标识与盘点 (order=70 新设备标识, 71 异常标识, 72 盘点结果)
-    {
-      key: "newFlagLabel",
-      title: "新设备标识",
-      dataIndex: "newFlagLabel",
-      width: 100,
-      ellipsis: true,
-    },
-    {
-      key: "errorFlagName",
-      title: "异常标识",
-      dataIndex: "errorFlagName",
-      width: 100,
-      ellipsis: true,
-    },
-    {
-      key: "inventoryResult",
-      title: "盘点结果",
-      dataIndex: "inventoryResult",
-      width: 100,
-      ellipsis: true,
-    },
-    // 末尾特殊列:action + reconciliation(不参与 defaultAssetColumns 排序)
-    {
-      title: "操作",
-      key: "action",
-      width: 120,
-      fixed: "right",
-      render: (_, record) => (
-        <AssetRow record={record} onEdit={handleEdit} onDelete={handleDelete} />
-      ),
-    },
-    // R4 (Phase 45) — 对账健康列(行内徽标,assets 列表)
-    // CR-01 修复:ops_asset 工作站绑定未在 /ops/asset/list API 响应中暴露(workstation_id
-    // 不在 SELECT 列表,无法 lift useWorkstationHealth 到页面层)。在此后端限制解除前,
-    // 渲染 "-" 占位以避免显示错误的 healthy 绿色徽标(原 conflictType={null} 会让
-    // HealthBadge 默认渲染绿色圆点,误导用户以为所有资产均健康)。后续若需要真实
-    // 对账状态需扩展 Asset DTO 增加 workstationId 字段,然后才能复用 workstations 页面的
-    // lift-up 模式(assetConflictMap)。
-    {
-      title: "对账健康",
-      key: "reconciliation",
-      width: 96,
-      render: (_: unknown, _record: Asset) => <>-</>,
-    },
-  ];
+  const columns: ColumnsType<Asset> = useMemo(
+    () => [
+      // order=1
+      {
+        title: "设备序列号",
+        dataIndex: "devicesn",
+        key: "devicesn",
+        width: 150,
+        fixed: "left",
+        sorter: true,
+        sortOrder: getColumnSortOrder("devicesn"),
+        render: (text) => (
+          <Tooltip title={text}>
+            <span style={{ cursor: "pointer" }}>{text}</span>
+          </Tooltip>
+        ),
+      },
+      // order=2
+      { key: "sequenceNo", title: "序列号", dataIndex: "sequenceNo", width: 120, ellipsis: true },
+      // order=3
+      {
+        key: "fixAssetNo",
+        title: "固定资产编号",
+        dataIndex: "fixAssetNo",
+        width: 120,
+        ellipsis: true,
+      },
+      // order=4
+      {
+        key: "deviceModelName",
+        title: "设备型号",
+        dataIndex: "deviceModelName",
+        width: 120,
+        ellipsis: true,
+      },
+      // order=5
+      {
+        key: "deviceTypeName",
+        title: "设备类型",
+        dataIndex: "deviceTypeName",
+        width: 100,
+        ellipsis: true,
+        sorter: true,
+        sortOrder: getColumnSortOrder("deviceTypeName"),
+      },
+      // order=6
+      {
+        key: "deviceCategorySecondName",
+        title: "设备中类",
+        dataIndex: "deviceCategorySecondName",
+        width: 120,
+        ellipsis: true,
+      },
+      // order=7
+      {
+        key: "deviceBasicTypeName",
+        title: "是否固定资产",
+        dataIndex: "deviceBasicTypeName",
+        width: 100,
+        ellipsis: true,
+      },
+      // order=9
+      {
+        key: "usefulDeptName",
+        title: "所属部门",
+        dataIndex: "usefulDeptName",
+        width: 120,
+        ellipsis: true,
+      },
+      // order=13
+      { key: "machineIp", title: "加域IP", dataIndex: "machineIp", width: 120, ellipsis: true },
+      // order=14
+      {
+        key: "mac1",
+        title: "有线MAC",
+        dataIndex: "mac1",
+        width: 140,
+        ellipsis: true,
+        render: (text) => (text ? String(text).toUpperCase() : "-"),
+      },
+      // order=35
+      {
+        key: "useStatusLabel",
+        title: "使用状态",
+        dataIndex: "useStatusLabel",
+        width: 100,
+        ellipsis: true,
+      },
+      // order=43
+      { key: "remark", title: "备注", dataIndex: "remark", width: 200, ellipsis: true },
+      // order=44
+      {
+        key: "signOrgnoName",
+        title: "归属机构",
+        dataIndex: "signOrgnoName",
+        width: 150,
+        ellipsis: true,
+      },
+      // order=45
+      { key: "nowUserName", title: "责任人", dataIndex: "nowUserName", width: 100, ellipsis: true },
+      // order=46
+      {
+        key: "nowUserDeptCode",
+        title: "部门编码",
+        dataIndex: "nowUserDeptCode",
+        width: 120,
+        ellipsis: true,
+      },
+      // order=47
+      {
+        key: "deviceUserName",
+        title: "领取人",
+        dataIndex: "deviceUserName",
+        width: 100,
+        ellipsis: true,
+      },
+      // order=48
+      {
+        key: "status",
+        title: "状态",
+        dataIndex: "status",
+        width: 80,
+        render: (s: number) => (
+          <Tag color={s === 0 ? "green" : "red"}>{s === 0 ? "正常" : "停用"}</Tag>
+        ),
+      },
+      // order=49
+      {
+        key: "nbfStatus",
+        title: "拟报废",
+        dataIndex: "nbfStatus",
+        width: 80,
+        render: (s: number) => (
+          <Tag color={s === 1 ? "orange" : "default"}>{s === 1 ? "是" : "否"}</Tag>
+        ),
+      },
+      // order=50
+      {
+        key: "drawingDate",
+        title: "接收日期",
+        dataIndex: "drawingDate",
+        width: 120,
+        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
+        ellipsis: true,
+      },
+      // order=51
+      {
+        key: "machineUptime",
+        title: "最后上线",
+        dataIndex: "machineUptime",
+        width: 150,
+        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
+        ellipsis: true,
+      },
+      // order=52
+      {
+        key: "lastInventoryDate",
+        title: "盘点日期",
+        dataIndex: "lastInventoryDate",
+        width: 120,
+        ellipsis: true,
+        sorter: true,
+        sortOrder: getColumnSortOrder("lastInventoryDate"),
+        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
+      },
+      // 设备信息扩展 (order=54 设备渠道, order=55 设备属性)
+      { key: "qudaoName", title: "设备渠道", dataIndex: "qudaoName", width: 100, ellipsis: true },
+      {
+        key: "attributeValue",
+        title: "设备属性",
+        dataIndex: "attributeValue",
+        width: 120,
+        ellipsis: true,
+      },
+      // 部门与用户扩展 (order=53 受益部门)
+      { key: "deptName", title: "受益部门", dataIndex: "deptName", width: 120, ellipsis: true },
+      // 网络信息扩展 (order=63 加域标识, order=64 无线MAC)
+      { key: "machineBs", title: "加域标识", dataIndex: "machineBs", width: 100, ellipsis: true },
+      {
+        key: "mac2",
+        title: "无线MAC",
+        dataIndex: "mac2",
+        width: 140,
+        ellipsis: true,
+        render: (text) => (text ? String(text).toUpperCase() : "-"),
+      },
+      // 归属与责任扩展 (order=58 使用机构, 59 使用人, 60 责任人岗位, 61 用途, 62 子用途, 66 APP扫码账号, 68 APP扫码地理位置)
+      { key: "orgnoName", title: "使用机构", dataIndex: "orgnoName", width: 150, ellipsis: true },
+      { key: "outerUser", title: "使用人", dataIndex: "outerUser", width: 100, ellipsis: true },
+      {
+        key: "nowUserJobName",
+        title: "责任人岗位",
+        dataIndex: "nowUserJobName",
+        width: 120,
+        ellipsis: true,
+      },
+      {
+        key: "usingTypeName",
+        title: "用途",
+        dataIndex: "usingTypeName",
+        width: 100,
+        ellipsis: true,
+      },
+      {
+        key: "subUsingTypeName",
+        title: "子用途",
+        dataIndex: "subUsingTypeName",
+        width: 100,
+        ellipsis: true,
+      },
+      { key: "userName", title: "APP扫码账号", dataIndex: "userName", width: 100, ellipsis: true },
+      {
+        key: "scanSite",
+        title: "APP扫码地理位置",
+        dataIndex: "scanSite",
+        width: 200,
+        ellipsis: true,
+      },
+      // 状态与日期扩展 (order=56 发放日期, 57 入库日期, 65 最后上线账号, 67 APP扫码时间, 69 Y07更新时间)
+      {
+        key: "useDate",
+        title: "发放日期",
+        dataIndex: "useDate",
+        width: 120,
+        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
+        ellipsis: true,
+      },
+      {
+        key: "storageDatetime",
+        title: "入库日期",
+        dataIndex: "storageDatetime",
+        width: 120,
+        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
+        ellipsis: true,
+      },
+      {
+        key: "machineUserId",
+        title: "最后上线账号",
+        dataIndex: "machineUserId",
+        width: 120,
+        ellipsis: true,
+      },
+      {
+        key: "lastUpdateDate",
+        title: "APP扫码时间",
+        dataIndex: "lastUpdateDate",
+        width: 150,
+        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
+        ellipsis: true,
+      },
+      {
+        key: "y07UpdateTime",
+        title: "Y07更新时间",
+        dataIndex: "y07UpdateTime",
+        width: 150,
+        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
+        ellipsis: true,
+      },
+      // 标识与盘点 (order=70 新设备标识, 71 异常标识, 72 盘点结果)
+      {
+        key: "newFlagLabel",
+        title: "新设备标识",
+        dataIndex: "newFlagLabel",
+        width: 100,
+        ellipsis: true,
+      },
+      {
+        key: "errorFlagName",
+        title: "异常标识",
+        dataIndex: "errorFlagName",
+        width: 100,
+        ellipsis: true,
+      },
+      {
+        key: "inventoryResult",
+        title: "盘点结果",
+        dataIndex: "inventoryResult",
+        width: 100,
+        ellipsis: true,
+      },
+      // 末尾特殊列:action + reconciliation(不参与 defaultAssetColumns 排序)
+      {
+        title: "操作",
+        key: "action",
+        width: 120,
+        fixed: "right",
+        render: (_, record) => (
+          <AssetRow record={record} onEdit={handleEdit} onDelete={handleDelete} />
+        ),
+      },
+      // R4 (Phase 45) — 对账健康列(行内徽标,assets 列表)
+      // CR-01 修复:ops_asset 工作站绑定未在 /ops/asset/list API 响应中暴露(workstation_id
+      // 不在 SELECT 列表,无法 lift useWorkstationHealth 到页面层)。在此后端限制解除前,
+      // 渲染 "-" 占位以避免显示错误的 healthy 绿色徽标(原 conflictType={null} 会让
+      // HealthBadge 默认渲染绿色圆点,误导用户以为所有资产均健康)。后续若需要真实
+      // 对账状态需扩展 Asset DTO 增加 workstationId 字段,然后才能复用 workstations 页面的
+      // lift-up 模式(assetConflictMap)。
+      {
+        title: "对账健康",
+        key: "reconciliation",
+        width: 96,
+        render: (_: unknown, _record: Asset) => <>-</>,
+      },
+    ],
+    [getColumnSortOrder, handleEdit, handleDelete]
+  );
 
   // 根据列配置过滤和排序列
   const tableColumns = useMemo(() => {
@@ -577,11 +591,6 @@ const AssetList: FC = () => {
 
     return visibleCols;
   }, [columns, visibleColumns]);
-
-  const handleEdit = useCallback((_record: Asset) => {
-    message.info("编辑功能待实现");
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, []);
 
   return (
     <div className="p-6">

@@ -248,7 +248,6 @@ const PeriodicTemplatePage: FC = () => {
     selectedTemplate,
     fetchList,
     fetchCategories,
-    fetchUsers,
     fetchDutyPools,
     fetchLogs,
     setSelectedTemplate,
@@ -272,7 +271,6 @@ const PeriodicTemplatePage: FC = () => {
   useEffect(() => {
     fetchList(1, paginationProps.pageSize);
     fetchCategories();
-    fetchUsers();
     fetchDutyPools();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -554,7 +552,7 @@ const PeriodicTemplatePage: FC = () => {
                           className="user-form-input"
                           onSearch={() => {}}
                         >
-                          {users.map((user) => (
+                          {(users || []).map((user) => (
                             <Option key={user.id} value={user.id}>
                               {user.nickName || user.username}
                             </Option>

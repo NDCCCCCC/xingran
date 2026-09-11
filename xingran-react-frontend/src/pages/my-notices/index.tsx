@@ -30,7 +30,10 @@ dayjs.locale("zh-cn");
 const MyNoticesPage: FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const { unreadCount, setUnreadCount, markAsRead, markAllAsRead } = useNoticeStore();
+  const unreadCount = useNoticeStore((s) => s.unreadCount);
+  const setUnreadCount = useNoticeStore((s) => s.setUnreadCount);
+  const markAsRead = useNoticeStore((s) => s.markAsRead);
+  const markAllAsRead = useNoticeStore((s) => s.markAllAsRead);
 
   const [loading, setLoading] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);

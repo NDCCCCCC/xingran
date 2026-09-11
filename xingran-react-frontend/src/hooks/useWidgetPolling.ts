@@ -50,7 +50,7 @@ export interface UseWidgetPollingReturn {
 export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPollingReturn {
   const { widgetIds, interval, enabled = true, minCacheTime = 30 } = options;
 
-  const { cacheWidgetData } = useDashboardStore();
+  const cacheWidgetData = useDashboardStore((s) => s.cacheWidgetData);
 
   // Paused state — managed internally, not via React Query enabled flag (we want
   // to keep the query alive so cached data is still available when paused).

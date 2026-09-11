@@ -94,11 +94,16 @@ const Workstation3D: React.FC<Workstation3DProps> = ({
   // 计算尺寸
   const deskTopY = WORKSTATION_DIMENSIONS.LEG_HEIGHT + WORKSTATION_DIMENSIONS.DESK_HEIGHT / 2;
 
-  // 悬停动画
+  // 悬停动画（收敛即停，减少 60fps 常驻回调）
   useFrame(() => {
     if (groupRef.current) {
       const targetY = hovered || isSelected ? 0.05 : 0;
-      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetY, 0.1);
+      const cur = groupRef.current.position.y;
+      if (Math.abs(targetY - cur) < 1e-3) {
+        groupRef.current.position.y = targetY;
+        return;
+      }
+      groupRef.current.position.y = THREE.MathUtils.lerp(cur, targetY, 0.1);
     }
   });
 

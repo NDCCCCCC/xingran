@@ -4,7 +4,7 @@ milestone: v1.32
 milestone_name: audit-driven-security-reliability
 status: SHIPPED
 stopped_at: v1.32 SHIPPED 2026-09-10 — 5 phases (109-113), 21 plans, 32 plans done, 100%
-last_updated: "2026-09-10T05:30:00.000Z"
+last_updated: "2026-09-11T08:35:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 9
@@ -37,9 +37,26 @@ See: `.planning/PROJECT.md` — v1.32 Current Milestone 段
 
 ## Code State
 
-- origin/main HEAD: `73cb8cc` (Phase 109-112 code + planning artifacts)
+- origin/main HEAD: post `260911-m76` quick task (24 commits, frontend perf audit remediation)
+- Predecessor: `73cb8cc` (Phase 109-112 code + planning artifacts)
 - Predecessor: `27cec0b` (Phase 109-112 code only, prior planning push)
 - Predecessor: `58fbf1c` (prior v1.31 SHIPPED baseline)
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260911-m76 | Vercel React Best Practices audit remediation: 首屏 -55%、6 批次 50+ 项修复 | 2026-09-11 | 见下 | [260911-m76-fix-frontend-perf-audit-findings](./quick/260911-m76-fix-frontend-perf-audit-findings/) |
+
+**260911-m76 批次明细**:
+- 1 build-bundle: `98562a1` + `222c58f` (vite.config manualChunks + modulePreload.resolveDependencies 排除 3 个大 chunk；echarts.ts 注册 Line/Bar/PieChart；EChartsWrapper 改 esm/core 入口) → 首屏 1.43MB→646KB gzip (-55%)
+- 2 bugfix-ws-polling: `58e2872` 通知 WS 链路修复 / `24d0e88` 孤儿页+死代码删除 / `ad21fd2` dataFetcher WS 清理 / `e54d9cf` 4 个 persist version:1 / `65b74ab` encryptionKeyStore finally 清理 / `42a0ff0` 轮询收敛+requestIdleCallback+jsonata 卸载 / `80594e2` 测试兼容
+- 3 zustand-selectors: `7de0692` dashboard 族 / `6975998` 布局壳 / `7f39137` usePagination+my-notices+删 useRPAProgress / `fee1b9b` useUserOptions 共享 / `5f3cb33` assets columns memo / `2e5865b` 测试修补
+- 4 waterfall-parallel: `b97e69b` 10 项串行→并行（平面图保存/duty/VDI/info-points/工单 ref）
+- 5 cad-3d-render: `93d047a` + `550f7a4` snapCoord 精度/lastMousePos ref/cad-elements memo/3D useFrame 收敛/SVG transform/CAD Map 化/死代码
+- 6 js-misc: `b7cc18f` DeptTree 单遍+ports Set / `56c0947` 静态映射模块级+地图 tooltip ref
+
+**全量验证终态**: type-check PASS / build PASS (29.69s) / 169+108+68 测试全 PASS / 首屏 modulepreload 1 条 (vendor-react 646KB)
 
 ## Branch Protection (post-ship)
 

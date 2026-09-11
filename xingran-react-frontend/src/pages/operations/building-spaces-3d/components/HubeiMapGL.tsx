@@ -721,7 +721,6 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
     )}
   </div>
 );
-
 interface ControlHintsProps {
   is3DMode: boolean;
 }

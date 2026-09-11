@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { App, ConfigProvider } from "antd";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import dayjs from "dayjs";
 
 vi.mock("@/lib/dutyApi", () => ({
@@ -14,16 +15,24 @@ vi.mock("@/lib/dutyApi", () => ({
   getMonthlyDutySchedule: vi.fn().mockResolvedValue({ data: {} }),
 }));
 
+vi.mock("@/lib/workorderApi", () => ({
+  getUserList: vi.fn().mockResolvedValue({ data: { list: [] } }),
+}));
+
 import { useScheduleData } from "../hooks/useScheduleData";
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
+const queryClient = new QueryClient();
+
 const wrap = ({ children }: { children: React.ReactNode }) => (
-  <ConfigProvider>
-    <App>{children}</App>
-  </ConfigProvider>
+  <QueryClientProvider client={queryClient}>
+    <ConfigProvider>
+      <App>{children}</App>
+    </ConfigProvider>
+  </QueryClientProvider>
 );
 
 const opts = () => ({ current: 1, pageSize: 10, searchForm: {} as any });
@@ -48,12 +57,11 @@ describe("useScheduleData", () => {
     });
   });
 
-  it("fetchAllSchedules / fetchPools / fetchUsers", async () => {
+  it("fetchAllSchedules / fetchPools", async () => {
     const { result } = renderHook(() => useScheduleData(opts()), { wrapper: wrap });
     await act(async () => {
       await result.current.fetchAllSchedules();
       await result.current.fetchPools();
-      await result.current.fetchUsers();
     });
   });
 

@@ -13,6 +13,14 @@ import { WorkOrderPriority } from "@/lib/workorderApi";
 import type { FC } from "react";
 import { createSorter } from "@/utils/tableHelpers";
 
+// 模块级静态映射（Phase m76-js-misc 6.3）
+const PRIORITY_CONFIG: Record<WorkOrderPriority, { text: string; color: string }> = {
+  [WorkOrderPriority.Low]: { text: "低", color: "default" },
+  [WorkOrderPriority.Medium]: { text: "中", color: "blue" },
+  [WorkOrderPriority.High]: { text: "高", color: "orange" },
+  [WorkOrderPriority.Urgent]: { text: "紧急", color: "red" },
+};
+
 const WorkOrderStatisticsPage: FC = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<WorkOrderStatistics | null>(null);
@@ -150,13 +158,6 @@ const WorkOrderStatisticsPage: FC = () => {
     },
   ];
 
-  const priorityConfig = {
-    [WorkOrderPriority.Low]: { text: "低", color: "default" },
-    [WorkOrderPriority.Medium]: { text: "中", color: "blue" },
-    [WorkOrderPriority.High]: { text: "高", color: "orange" },
-    [WorkOrderPriority.Urgent]: { text: "紧急", color: "red" },
-  };
-
   return (
     <div className="p-6">
       {/* 基本统计卡片 */}
@@ -237,8 +238,8 @@ const WorkOrderStatisticsPage: FC = () => {
                   <div key={key} className="mb-4">
                     <div className="flex justify-between items-center">
                       <span>
-                        <Tag color={priorityConfig[priority]?.color}>
-                          {priorityConfig[priority]?.text}
+                        <Tag color={PRIORITY_CONFIG[priority]?.color}>
+                          {PRIORITY_CONFIG[priority]?.text}
                         </Tag>
                       </span>
                       <Statistic value={Number(value)} />

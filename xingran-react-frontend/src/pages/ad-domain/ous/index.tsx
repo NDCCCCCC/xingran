@@ -239,26 +239,40 @@ const ADOUPage: FC = () => {
       // 找出需要删除的组
       const toRemove = currentMappedIds.filter((id) => !targetKeys.map(String).includes(id));
 
-      // 创建新映射
-      for (const groupId of toAdd) {
-        const group = allGroups.find((g) => g.id === String(groupId));
-        if (group) {
-          await createOUGroupMapping({
-            adConfigId: selectedConfig,
-            ouDn: selectedOU,
-            ouName: selectedOUName,
-            adGroupId: groupId,
-            syncEnabled: true,
-          });
-        }
+      // 创建新映射（并行）
+      const addResults = await Promise.allSettled(
+        toAdd.map((groupId) => {
+          const group = allGroups.find((g) => g.id === String(groupId));
+          if (group) {
+            return createOUGroupMapping({
+              adConfigId: selectedConfig,
+              ouDn: selectedOU,
+              ouName: selectedOUName,
+              adGroupId: groupId,
+              syncEnabled: true,
+            });
+          }
+          return Promise.reject(new Error(`组 ${groupId} 未找到`));
+        })
+      );
+      const addFailed = addResults.filter((r) => r.status === "rejected");
+      if (addFailed.length > 0) {
+        message.error(`创建映射失败 ${addFailed.length} 项`);
       }
 
-      // 删除映射
-      for (const mappingId of toRemove) {
-        const mapping = ouGroups.find((g) => g.adGroupId === mappingId);
-        if (mapping) {
-          await deleteOUGroupMapping(mapping.id);
-        }
+      // 删除映射（并行）
+      const removeResults = await Promise.allSettled(
+        toRemove.map((mappingId) => {
+          const mapping = ouGroups.find((g) => g.adGroupId === mappingId);
+          if (mapping) {
+            return deleteOUGroupMapping(mapping.id);
+          }
+          return Promise.reject(new Error(`映射 ${mappingId} 未找到`));
+        })
+      );
+      const removeFailed = removeResults.filter((r) => r.status === "rejected");
+      if (removeFailed.length > 0) {
+        message.error(`删除映射失败 ${removeFailed.length} 项`);
       }
 
       message.success("更新成功");

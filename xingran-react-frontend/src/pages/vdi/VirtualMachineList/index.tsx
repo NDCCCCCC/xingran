@@ -45,7 +45,6 @@ const hasPermission = (permissions: string[], perm: string) => permissions.inclu
 
 const VirtualMachineList: React.FC = () => {
   const navigate = useNavigate();
-  const { user: _user } = useAuthStore();
   // Use permissions from menuStore (loaded via /system/my-menus/permissions)
   // authStore user.permissions is NOT populated from the login API
   const menuPermissions = useMenuStore((state) => state.permissions);
@@ -660,8 +659,14 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      const resourceGroups = await vmApi.listResourceGroups(availableServer.id);
-      const defaultGroup = resourceGroups.data?.find(
+      // 第一层并行：server 确定后同时发起三个请求
+      const [resourceGroupsResult, resourcesResult, platformsResult] = await Promise.all([
+        vmApi.listResourceGroups(availableServer.id),
+        vmApi.listResources(availableServer.id, DEFAULT_RESOURCE_GROUP_ID),
+        vmApi.listVTPPlatforms(availableServer.id),
+      ]);
+
+      const defaultGroup = resourceGroupsResult.data?.find(
         (g) => g.resource_group_id === DEFAULT_RESOURCE_GROUP_ID
       );
 
@@ -670,8 +675,7 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      const resources = await vmApi.listResources(availableServer.id, DEFAULT_RESOURCE_GROUP_ID);
-      const resourceList = resources.data || [];
+      const resourceList = resourcesResult.data || [];
       const dataResource = resourceList.find((r) => r.name === DEFAULT_RESOURCE_NAME);
 
       if (!dataResource) {
@@ -681,16 +685,23 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      const platforms = await vmApi.listVTPPlatforms(availableServer.id);
-      const vmpPlatform = platforms.data?.find((p) => p.name === "VMP" || p.id === DEFAULT_VTP_ID);
+      const vmpPlatform = platformsResult.data?.find(
+        (p) => p.name === "VMP" || p.id === DEFAULT_VTP_ID
+      );
 
       if (!vmpPlatform) {
         message.error("未找到VMP平台");
         return;
       }
 
-      const positions = await vmApi.listRunPositions(availableServer.id, vmpPlatform.id);
-      const positionList = positions.data || [];
+      // 第二层并行：vmpPlatform 确定后同时发起三个请求
+      const [positionsResult, storagesResult, networksResult] = await Promise.all([
+        vmApi.listRunPositions(availableServer.id, vmpPlatform.id),
+        vmApi.listStorages(availableServer.id, vmpPlatform.id),
+        vmApi.listNetworks(availableServer.id, vmpPlatform.id),
+      ]);
+
+      const positionList = positionsResult.data || [];
       const devPosition = positionList.find((p) => p.name === DEFAULT_POSITION_NAME);
 
       if (!devPosition) {
@@ -700,8 +711,7 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      const storages = await vmApi.listStorages(availableServer.id, vmpPlatform.id);
-      const storageList = storages.data || [];
+      const storageList = storagesResult.data || [];
       const firstStorage = storageList[0];
 
       if (!firstStorage) {
@@ -709,8 +719,7 @@ const VirtualMachineList: React.FC = () => {
         return;
       }
 
-      const networks = await vmApi.listNetworks(availableServer.id, vmpPlatform.id);
-      const networkList = networks.data || [];
+      const networkList = networksResult.data || [];
       const firstNetwork = networkList[0];
 
       if (!firstNetwork) {

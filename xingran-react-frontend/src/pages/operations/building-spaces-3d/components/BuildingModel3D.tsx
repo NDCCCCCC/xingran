@@ -38,9 +38,15 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
 
   const targetScale = hovered || isSelected ? 1.1 : 1;
 
+  // 悬停缩放动画（收敛即停，减少 60fps 常驻回调）
   useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.scale.x = THREE.MathUtils.lerp(meshRef.current.scale.x, targetScale, 0.1);
+      const cur = meshRef.current.scale.x;
+      if (Math.abs(targetScale - cur) < 1e-3) {
+        meshRef.current.scale.set(targetScale, targetScale, targetScale);
+        return;
+      }
+      meshRef.current.scale.x = THREE.MathUtils.lerp(cur, targetScale, 0.1);
       meshRef.current.scale.y = THREE.MathUtils.lerp(meshRef.current.scale.y, targetScale, 0.1);
       meshRef.current.scale.z = THREE.MathUtils.lerp(meshRef.current.scale.z, targetScale, 0.1);
     }

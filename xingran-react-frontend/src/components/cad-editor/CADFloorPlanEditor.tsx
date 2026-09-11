@@ -124,7 +124,7 @@ export function CADFloorPlanEditor({
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [_dragStart, setDragStart] = useState<Point | null>(null);
-  const [lastMousePos, setLastMousePos] = useState<Point | null>(null);
+  const lastMousePosRef = useRef<Point | null>(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const lastElementMouseCanvasPos = useRef<Point | null>(null);
   const dragStartCanvasPos = useRef<Point | null>(null);
@@ -399,31 +399,32 @@ export function CADFloorPlanEditor({
     setSelectedIds(new Set());
   }, []);
 
-  // 获取当前选中的所有元素
+  // 获取当前选中的所有元素（Map 化查找，O(n) 构建 → O(1) 查询）
   const _selectedElements = useMemo(() => {
-    const elements: { id: string; type: "wall" | "door" | "workstation" | "text" }[] = [];
-    if (selectedIds.size === 0) return elements;
+    if (selectedIds.size === 0) return [];
 
+    // 构建 id → {el, type} Map
+    const idToElement = new Map<
+      string,
+      { id: string; type: "wall" | "door" | "workstation" | "text" }
+    >();
+    for (const wall of floorPlanData.walls) {
+      idToElement.set(wall.id, { id: wall.id, type: "wall" });
+    }
+    for (const door of floorPlanData.doors) {
+      idToElement.set(door.id, { id: door.id, type: "door" });
+    }
+    for (const ws of floorPlanData.workstations) {
+      idToElement.set(ws.id, { id: ws.id, type: "workstation" });
+    }
+    for (const text of floorPlanData.texts || []) {
+      idToElement.set(text.id, { id: text.id, type: "text" });
+    }
+
+    const elements: { id: string; type: "wall" | "door" | "workstation" | "text" }[] = [];
     for (const id of selectedIds) {
-      const wall = floorPlanData.walls.find((w) => w.id === id);
-      if (wall) {
-        elements.push({ id: wall.id, type: "wall" });
-        continue;
-      }
-      const door = floorPlanData.doors.find((d) => d.id === id);
-      if (door) {
-        elements.push({ id: door.id, type: "door" });
-        continue;
-      }
-      const ws = floorPlanData.workstations.find((w) => w.id === id);
-      if (ws) {
-        elements.push({ id: ws.id, type: "workstation" });
-        continue;
-      }
-      const text = floorPlanData.texts?.find((t) => t.id === id);
-      if (text) {
-        elements.push({ id: text.id, type: "text" });
-      }
+      const el = idToElement.get(id);
+      if (el) elements.push(el);
     }
     return elements;
   }, [selectedIds, floorPlanData]);
@@ -597,14 +598,16 @@ export function CADFloorPlanEditor({
     [floorPlanData]
   );
 
-  // 检测点击位置是否在已有的墙体节点附近
+  // 检测点击位置是否在已有的墙体节点附近（平方距离比较替代 sqrt）
   const findNearbyWallNode = useCallback(
     (point: Point, threshold = 15): { point: Point; wallId: string; pointIndex: number } | null => {
+      const thresholdSq = threshold * threshold;
       for (const wall of floorPlanData.walls) {
         for (let i = 0; i < wall.points.length; i++) {
           const node = wall.points[i];
-          const dist = Math.sqrt(Math.pow(point.x - node.x, 2) + Math.pow(point.y - node.y, 2));
-          if (dist < threshold) {
+          const dx = point.x - node.x;
+          const dy = point.y - node.y;
+          if (dx * dx + dy * dy < thresholdSq) {
             return { point: node, wallId: wall.id, pointIndex: i };
           }
         }
@@ -627,7 +630,7 @@ export function CADFloorPlanEditor({
       if (e.button === 1 || (e.button === 0 && e.altKey)) {
         setIsDragging(true);
         setDragStart({ x: e.clientX, y: e.clientY });
-        setLastMousePos({ x: e.clientX, y: e.clientY });
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         e.preventDefault();
         return;
       }
@@ -885,11 +888,11 @@ export function CADFloorPlanEditor({
       }
 
       // 平移画布（Alt+左键或中键）
-      if (isDragging && lastMousePos) {
-        const dx = e.clientX - lastMousePos.x;
-        const dy = e.clientY - lastMousePos.y;
+      if (isDragging && lastMousePosRef.current) {
+        const dx = e.clientX - lastMousePosRef.current.x;
+        const dy = e.clientY - lastMousePosRef.current.y;
         setOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-        setLastMousePos({ x: e.clientX, y: e.clientY });
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         return;
       }
 
@@ -1006,7 +1009,6 @@ export function CADFloorPlanEditor({
     },
     [
       isDragging,
-      lastMousePos,
       isBoxSelecting,
       boxSelectStart,
       draggedElement,
@@ -1028,7 +1030,7 @@ export function CADFloorPlanEditor({
     // 清除拖动和画布平移状态
     setIsDragging(false);
     setDragStart(null);
-    setLastMousePos(null);
+    lastMousePosRef.current = null;
     setDraggedElement(null);
     // 重置拖动相关的 ref
     lastElementMouseCanvasPos.current = null;
@@ -1406,7 +1408,7 @@ export function CADFloorPlanEditor({
                     wall={wall}
                     selected={selectedIds.has(wall.id)}
                     hovered={hoveredId === wall.id}
-                    onSelect={() => handleSelectElement(wall.id, "wall")}
+                    onSelect={handleSelectElement.bind(null, wall.id, "wall")}
                     onHover={(hovered) => setHoveredId(hovered ? wall.id : null)}
                   />
                 ))}
@@ -1419,7 +1421,7 @@ export function CADFloorPlanEditor({
                     door={door}
                     selected={selectedIds.has(door.id)}
                     hovered={hoveredId === door.id}
-                    onSelect={() => handleSelectElement(door.id, "door")}
+                    onSelect={handleSelectElement.bind(null, door.id, "door")}
                     onHover={(hovered) => setHoveredId(hovered ? door.id : null)}
                   />
                 ))}
@@ -1432,7 +1434,7 @@ export function CADFloorPlanEditor({
                     workstation={ws}
                     selected={selectedIds.has(ws.id)}
                     hovered={hoveredId === ws.id}
-                    onSelect={() => handleSelectElement(ws.id, "workstation")}
+                    onSelect={handleSelectElement.bind(null, ws.id, "workstation")}
                     onHover={(hovered) => setHoveredId(hovered ? ws.id : null)}
                   />
                 ))}
@@ -1445,7 +1447,7 @@ export function CADFloorPlanEditor({
                     text={text}
                     selected={selectedIds.has(text.id)}
                     hovered={hoveredId === text.id}
-                    onSelect={() => handleSelectElement(text.id, "text")}
+                    onSelect={handleSelectElement.bind(null, text.id, "text")}
                     onHover={(hovered) => setHoveredId(hovered ? text.id : null)}
                   />
                 ))}

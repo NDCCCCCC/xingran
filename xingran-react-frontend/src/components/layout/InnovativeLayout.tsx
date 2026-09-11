@@ -129,7 +129,8 @@ const createSpaceIconStyles = (isActive: boolean, color: string) => ({
 
 const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const [activeSpace, setActiveSpace] = useState<string>("dashboard");
 
   const handleSpaceClick = (space: SpaceNav) => {

@@ -3,7 +3,7 @@
  * 在应用根部包裹，提供布局功能
  */
 
-import { useEffect, createContext, useContext } from "react";
+import { useEffect, createContext, useContext, useMemo } from "react";
 import type { FC, ReactNode } from "react";
 import { useLayoutStore } from "@/store/layoutStore";
 
@@ -20,7 +20,9 @@ const LayoutContext = createContext<LayoutContextValue>({
 export const useLayoutContext = () => useContext(LayoutContext);
 
 const LayoutProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentLayout, sidebarCollapsed, density } = useLayoutStore();
+  const currentLayout = useLayoutStore((s) => s.currentLayout);
+  const sidebarCollapsed = useLayoutStore((s) => s.sidebarCollapsed);
+  const density = useLayoutStore((s) => s.density);
 
   useEffect(() => {
     // 设置data-layout属性
@@ -37,11 +39,12 @@ const LayoutProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, [sidebarCollapsed]);
 
-  return (
-    <LayoutContext.Provider value={{ layout: currentLayout, sidebarCollapsed }}>
-      {children}
-    </LayoutContext.Provider>
+  const contextValue = useMemo(
+    () => ({ layout: currentLayout, sidebarCollapsed }),
+    [currentLayout, sidebarCollapsed]
   );
+
+  return <LayoutContext.Provider value={contextValue}>{children}</LayoutContext.Provider>;
 };
 
 export default LayoutProvider;

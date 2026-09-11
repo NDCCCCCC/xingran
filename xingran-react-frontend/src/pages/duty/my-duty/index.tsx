@@ -41,6 +41,22 @@ import { usePagination } from "@/hooks/usePagination";
 const { Text } = Typography;
 const { Option } = Select;
 
+// 模块级静态映射：避免 render 回调内每行每格重建（Phase m76-js-misc 6.3）
+const PRIORITY_CONFIG: Record<WorkOrderPriority, { text: string; color: string }> = {
+  [WorkOrderPriority.Urgent]: { text: "紧急", color: "red" },
+  [WorkOrderPriority.High]: { text: "高", color: "orange" },
+  [WorkOrderPriority.Medium]: { text: "中", color: "blue" },
+  [WorkOrderPriority.Low]: { text: "低", color: "default" },
+};
+
+const STATUS_CONFIG: Record<WorkOrderStatus, { text: string; color: string }> = {
+  [WorkOrderStatus.Pending]: { text: "待处理", color: "orange" },
+  [WorkOrderStatus.Processing]: { text: "处理中", color: "blue" },
+  [WorkOrderStatus.Completed]: { text: "已完成", color: "green" },
+  [WorkOrderStatus.Closed]: { text: "已关闭", color: "default" },
+  [WorkOrderStatus.Rejected]: { text: "已拒绝", color: "red" },
+};
+
 import type { FC } from "react";
 
 const MyDutyPage: FC = () => {
@@ -195,13 +211,7 @@ const MyDutyPage: FC = () => {
       width: 100,
       sorter: createSorter<WorkOrder>("priority", "string"),
       render: (priority: WorkOrderPriority) => {
-        const priorityMap: Record<WorkOrderPriority, { text: string; color: string }> = {
-          [WorkOrderPriority.Urgent]: { text: "紧急", color: "red" },
-          [WorkOrderPriority.High]: { text: "高", color: "orange" },
-          [WorkOrderPriority.Medium]: { text: "中", color: "blue" },
-          [WorkOrderPriority.Low]: { text: "低", color: "default" },
-        };
-        const config = priorityMap[priority] || priorityMap[WorkOrderPriority.Low];
+        const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG[WorkOrderPriority.Low];
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
@@ -212,14 +222,7 @@ const MyDutyPage: FC = () => {
       width: 100,
       sorter: createSorter<WorkOrder>("status", "string"),
       render: (status: WorkOrderStatus) => {
-        const statusMap: Record<WorkOrderStatus, { text: string; color: string }> = {
-          [WorkOrderStatus.Pending]: { text: "待处理", color: "orange" },
-          [WorkOrderStatus.Processing]: { text: "处理中", color: "blue" },
-          [WorkOrderStatus.Completed]: { text: "已完成", color: "green" },
-          [WorkOrderStatus.Closed]: { text: "已关闭", color: "default" },
-          [WorkOrderStatus.Rejected]: { text: "已拒绝", color: "red" },
-        };
-        const config = statusMap[status] || statusMap[WorkOrderStatus.Pending];
+        const config = STATUS_CONFIG[status] || STATUS_CONFIG[WorkOrderStatus.Pending];
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },

@@ -11,13 +11,13 @@ import {
   getDutyScheduleList,
   getTodayDuty,
   getDutyPoolList,
-  getUserList,
   getMonthlyDutySchedule,
   type DutySchedule,
   type DutyPool,
-  type SimpleUser,
   type MonthlyDutyMember,
 } from "@/lib/dutyApi";
+import type { SimpleUser } from "@/lib/workorderApi";
+import { useUserOptions } from "@/hooks/useUserOptions";
 
 export interface UseScheduleDataParams {
   current: number;
@@ -45,7 +45,6 @@ export interface UseScheduleDataReturn {
   ) => Promise<void>;
   fetchAllSchedules: () => Promise<void>;
   fetchPools: () => Promise<void>;
-  fetchUsers: () => Promise<void>;
   fetchWeeklyDuty: (weekStart: Dayjs) => Promise<void>;
   setCurrentWeekStart: (weekStart: Dayjs) => void;
 }
@@ -59,7 +58,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
   const [total, setTotal] = useState(0);
   const [allSchedules, setAllSchedules] = useState<DutySchedule[]>([]);
   const [pools, setPools] = useState<DutyPool[]>([]);
-  const [users, setUsers] = useState<SimpleUser[]>([]);
+  const { data: users = [] } = useUserOptions();
   const [weeklyDutyData, setWeeklyDutyData] = useState<Record<string, MonthlyDutyMember[]>>({});
   const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(dayjs().startOf("week"));
 
@@ -128,16 +127,6 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
     }
   }, []);
 
-  // 获取用户列表（只获取启用的）
-  const fetchUsers = useCallback(async () => {
-    try {
-      const result = await getUserList({ status: 0 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error("获取用户列表失败", error);
-    }
-  }, []);
-
   // 获取周度值班数据
   const fetchWeeklyDuty = useCallback(async (weekStart: Dayjs) => {
     try {
@@ -178,7 +167,6 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
     fetchList,
     fetchAllSchedules,
     fetchPools,
-    fetchUsers,
     fetchWeeklyDuty,
     setCurrentWeekStart,
   };

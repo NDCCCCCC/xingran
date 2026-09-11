@@ -24,8 +24,10 @@ interface ConfigProviderProps {
  * 3. 处理配置的保存事件
  */
 export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-  const { initialize, initialized, preferences } = useSettingsStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const initialize = useSettingsStore((s) => s.initialize);
+  const initialized = useSettingsStore((s) => s.initialized);
+  const preferences = useSettingsStore((s) => s.preferences);
 
   // 同步方法
   const syncTheme = useThemeStore((state) => state.syncFromSettings);

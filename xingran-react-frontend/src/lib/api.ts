@@ -317,19 +317,19 @@ api.interceptors.response.use(
     // 处理后端中间件自动加密的响应（需要解密）
     if (needsBackendDecryption) {
       console.warn("[API Response] 检测到后端加密响应，尝试解密...");
+      const requestId = responseHeaders["x-request-id"] || responseHeaders["X-Request-ID"] || "";
+
+      if (!data?.data || !data?.iv) {
+        console.error("[Response Decryption] 后端加密响应缺少必要字段");
+        getAppMessage().error("响应解密失败：格式错误");
+        return Promise.reject(new Error("Missing encrypted data fields"));
+      }
+
+      const encryptedDataBase64 = data.data;
+      const ivBase64 = data.iv;
+
+      // 使用请求时存储的密钥解密（finally 统一清理，无论成功/失败）
       try {
-        const requestId = responseHeaders["x-request-id"] || responseHeaders["X-Request-ID"] || "";
-
-        if (!data?.data || !data?.iv) {
-          console.error("[Response Decryption] 后端加密响应缺少必要字段");
-          getAppMessage().error("响应解密失败：格式错误");
-          return Promise.reject(new Error("Missing encrypted data fields"));
-        }
-
-        const encryptedDataBase64 = data.data;
-        const ivBase64 = data.iv;
-
-        // 使用请求时存储的密钥解密
         const keyInfo = encryptionKeyStore.get(requestId);
         if (!keyInfo) {
           console.error("[Response Decryption] 找不到请求的加密密钥:", requestId);
@@ -342,26 +342,27 @@ api.interceptors.response.use(
 
         const decryptedJson = await decryptSM4CBC(encryptedDataHex, keyInfo.sm4KeyHex, ivHex);
         data = JSON.parse(decryptedJson);
-
-        encryptionKeyStore.delete(requestId);
       } catch (error) {
         console.error("[Response Decryption] 后端加密响应解密失败:", error);
         getAppMessage().error("响应解密失败: " + (error as Error).message);
         return Promise.reject(error);
+      } finally {
+        encryptionKeyStore.delete(requestId);
       }
     }
 
     // 处理前端发起加密请求的响应（原有逻辑）
     if (isEncrypted) {
+      const requestId = response.config.headers.get("X-Request-ID") as string;
+
+      if (!requestId) {
+        console.error("[Response Decryption] 响应头中缺少请求 ID");
+        getAppMessage().error("响应解密失败：缺少请求ID");
+        return Promise.reject(new Error("Missing request ID"));
+      }
+
+      // finally 统一清理 encryptionKeyStore，无论成功/失败都删除
       try {
-        const requestId = response.config.headers.get("X-Request-ID") as string;
-
-        if (!requestId) {
-          console.error("[Response Decryption] 响应头中缺少请求 ID");
-          getAppMessage().error("响应解密失败：缺少请求ID");
-          return Promise.reject(new Error("Missing request ID"));
-        }
-
         const keyInfo = encryptionKeyStore.get(requestId);
         if (!keyInfo) {
           console.error("[Response Decryption] 找不到请求的加密密钥:", requestId);
@@ -378,12 +379,12 @@ api.interceptors.response.use(
         const decryptedJson = await decryptSM4CBC(encryptedDataHex, keyInfo.sm4KeyHex, ivHex);
 
         data = JSON.parse(decryptedJson);
-
-        encryptionKeyStore.delete(requestId);
       } catch (error) {
         console.error("[Response Decryption] 解密失败:", error);
         getAppMessage().error("响应解密失败: " + (error as Error).message);
         return Promise.reject(error);
+      } finally {
+        encryptionKeyStore.delete(requestId);
       }
     }
 
