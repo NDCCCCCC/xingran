@@ -209,6 +209,8 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: "auth-storage",
+      // version: 1 — 首次引入。字段结构变更时需递增 version 并补 migrate 函数
+      version: 1,
       // 只持久化用户基本信息（非敏感），不持久化 Token
       partialize: (state) => ({
         user: state.user, // 用户基本信息（用户名、昵称等）

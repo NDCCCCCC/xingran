@@ -293,6 +293,8 @@ export const useTabsStore = create<TabsStore>()(
     }),
     {
       name: "tabs-storage",
+      // version: 1 — 首次引入。字段结构变更时需递增 version 并补 migrate 函数
+      version: 1,
       partialize: (state) => ({
         tabs: state.tabs,
         activeTab: state.activeTab,
