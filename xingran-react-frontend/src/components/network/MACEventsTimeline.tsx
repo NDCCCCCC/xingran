@@ -179,18 +179,18 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
         <Timeline
           mode="left"
           items={allEvents.map((event) => {
-          const eventType = (event.eventType ?? "appeared") as MACEventType;
-          const Icon = EVENT_ICON[eventType];
-          const color = EVENT_COLORS[eventType];
-          return {
-            color,
-            dot: React.createElement(Icon, {
-              style: { color, fontSize: 16 },
-            }),
-            children: <TimelineItem event={event} />,
-          };
-        })}
-        </Timeline>
+            const eventType = (event.eventType ?? "appeared") as MACEventType;
+            const Icon = EVENT_ICON[eventType];
+            const color = EVENT_COLORS[eventType];
+            return {
+              color,
+              dot: React.createElement(Icon, {
+                style: { color, fontSize: 16 },
+              }),
+              children: <TimelineItem event={event} />,
+            };
+          })}
+        />
       </div>
       {hasMore && (
         <div style={{ textAlign: "center", marginTop: 12 }}>
