@@ -13,7 +13,7 @@ import { create } from "zustand";
 import { getUserMenus, getAllUserMenus, getUserPermissions } from "@/lib/menuApi";
 import type { Menu } from "@/types";
 import { getMenuCache } from "@/services/cache/TTLMenuCache";
-import { ZUSTAND_STORAGE_KEYS } from "@/constants/storage";
+import { STORAGE_KEYS, ZUSTAND_STORAGE_KEYS } from "@/constants/storage";
 
 interface MenuState {
   menus: Menu[];
@@ -187,6 +187,14 @@ export const useMenuStore = create<MenuStore>()((set, get) => ({
   clearMenus: () => {
     const cache = getMenuCache();
     cache.clear();
+    // DATA-02: 同步清除 sessionStorage 菜单缓存,防止登出/401 后换人登录时
+    // DynamicRoutes 把上一用户的菜单+权限 hydrate 进当前 store 造成越权闪现。
+    // clearMenus 在 authStore.logout 与 api.ts 401 handler 中均会触发。
+    try {
+      sessionStorage.removeItem(STORAGE_KEYS.MENU_CACHE);
+    } catch {
+      // 隐私模式 — 静默吞掉
+    }
     set({
       menus: [],
       allMenus: [],

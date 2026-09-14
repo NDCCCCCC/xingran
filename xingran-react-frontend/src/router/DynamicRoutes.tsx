@@ -20,12 +20,64 @@ import { routeConfigManager } from "./routeConfigManager";
 import { RouteGuard } from "./RouteGuard";
 import { createLazyComponent } from "./componentLoader";
 import type { MenuRouteConfig } from "@/types/menu";
+import type { Menu } from "@/types";
 import Layout from "@/components/layout";
 import Login from "@/pages/login";
 import AdminNoticeDetailPage from "@/pages/system/notice/detail";
 import MyNoticeDetailPage from "@/pages/my-notices/detail";
 import { Spin } from "antd";
-import { STORAGE_KEYS } from "@/constants/storage";
+import { STORAGE_KEYS, MENU_CACHE_VERSION } from "@/constants/storage";
+
+// ==================== DATA-02: 菜单+权限 sessionStorage 缓存(hydrate-then-revalidate) ====================
+
+/** 30 分钟 TTL,与 App.tsx react-query staleTime 同量级的后台补拉窗口 */
+const MENU_CACHE_TTL_MS = 30 * 60 * 1000;
+
+interface CachedMenuData {
+  version: number;
+  data: {
+    menus: Menu[];
+    allMenus: Menu[];
+    permissions: string[];
+    cachedAt: number;
+  };
+}
+
+/**
+ * 读取并校验 sessionStorage 菜单缓存。
+ * 校验失败(version 不符 / JSON 损坏 / 过期 / 结构异常)返回 null,走 API 回退。
+ */
+const readMenuCache = (): CachedMenuData["data"] | null => {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEYS.MENU_CACHE);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedMenuData;
+    if (!parsed || parsed.version !== MENU_CACHE_VERSION) return null;
+    if (!parsed.data || !Array.isArray(parsed.data.allMenus)) return null;
+    if (Date.now() - parsed.data.cachedAt > MENU_CACHE_TTL_MS) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * 写入 sessionStorage 菜单缓存(revalidate 成功后调用)。
+ * 静默吞掉写入异常(隐私模式 / 配额溢出),hydrate 缺失只影响下次刷新首屏速度。
+ */
+const writeMenuCache = (
+  data: Pick<CachedMenuData["data"], "menus" | "allMenus" | "permissions">
+): void => {
+  try {
+    const payload: CachedMenuData = {
+      version: MENU_CACHE_VERSION,
+      data: { ...data, cachedAt: Date.now() },
+    };
+    sessionStorage.setItem(STORAGE_KEYS.MENU_CACHE, JSON.stringify(payload));
+  } catch {
+    // 静默失败 — 下次刷新时无 hydrate 但会走 API 回退
+  }
+};
 
 // Get last visited path from sessionStorage
 export const getLastPath = (): string | null => {
@@ -112,6 +164,22 @@ export function DynamicRoutes() {
   // 上次访问的路径直接从 sessionStorage 派生 (不再镜像到 state, 避免 effect 内同步 setState)
   const lastPath = getLastPath();
 
+  // DATA-02: 同步读取 sessionStorage 菜单缓存,在首次渲染时就决定是否绕过整页门控
+  const cachedMenuData = useMemo(readMenuCache, []);
+
+  // DATA-02: 硬刷新时立即把缓存里的菜单+权限同步到菜单 store(绕过 setMenus 触发的
+  // TTLMenuCache 写入,保证后续 fetchAll 的 revalidate 仍走真实 API)。
+  // 用 useMenuStore.setState 直接写状态——与本文件已有的 useAuthStore.setState
+  // 兜底(初始化超时)是同一种模式。
+  useEffect(() => {
+    if (!cachedMenuData || !isAuthenticated) return;
+    useMenuStore.setState({
+      menus: cachedMenuData.menus,
+      allMenus: cachedMenuData.allMenus,
+      permissions: cachedMenuData.permissions,
+    });
+  }, [cachedMenuData, isAuthenticated]);
+
   // 兜底：防止 initialized 永远停在 false（例如 HMR 导致 onRehydrateStorage 失败）
   // 3 秒后仍未初始化，强制将状态重置为未认证，让登录页有机会渲染。
   useEffect(() => {
@@ -130,14 +198,20 @@ export function DynamicRoutes() {
     return () => window.clearTimeout(timer);
   }, [initialized]);
 
-  // 当用户已认证但菜单未加载时，自动加载菜单
+  // 已认证时加载/补拉菜单:
+  // - 有 hydrate 缓存 → 后台 revalidate(外壳已渲染,完成后回写 sessionStorage)
+  // - 无缓存 → 首次加载(初次渲染期间仍由下方门控显示 loading)
   useEffect(() => {
-    if (isAuthenticated && initialized && allMenus.length === 0) {
-      fetchAll().catch((error) => {
+    if (!isAuthenticated || !initialized) return;
+    fetchAll()
+      .then(() => {
+        const { menus, allMenus, permissions } = useMenuStore.getState();
+        writeMenuCache({ menus, allMenus, permissions });
+      })
+      .catch((error) => {
         console.error("Failed to load menus after refresh:", error);
       });
-    }
-  }, [isAuthenticated, initialized, allMenus.length, fetchAll]);
+  }, [isAuthenticated, initialized, fetchAll]);
 
   // P0-1 路由权限过滤:
   // 1. routeConfigManager.initialize 在 useMemo 内同步执行, 消除之前 useEffect
@@ -190,8 +264,10 @@ export function DynamicRoutes() {
     );
   }
 
-  // 已认证用户但菜单未加载完成，显示 loading（避免跳转到 dashboard）
-  if (allMenus.length === 0) {
+  // 已认证用户但菜单未加载完成且本地无 sessionStorage 缓存可水合时，显示 loading
+  // DATA-02: 有缓存时不再阻塞——hydrate 后台补拉,外壳立即渲染
+  //          无缓存时保持原有行为(避免跳转到 dashboard 干扰 path 还原)
+  if (allMenus.length === 0 && !cachedMenuData) {
     return <InitializingFallback />;
   }
 

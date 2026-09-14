@@ -35,7 +35,19 @@ export const STORAGE_KEYS = {
    * 存储于 sessionStorage，用于登录后跳转到用户上次访问的页面
    */
   LAST_PATH: "xingran_last_visited_path",
+  /**
+   * DATA-02: 菜单+权限 sessionStorage 缓存 key(hydrate-then-revalidate)。
+   * 存储结构: { version: number, data: { menus, allMenus, permissions, cachedAt } }
+   * 版本号变更时旧缓存自动失效;TTL 30min 由 DynamicRoutes 内联常量控制。
+   */
+  MENU_CACHE: "menu:cache",
 } as const;
+
+/**
+ * DATA-02: 菜单缓存格式版本号。升级缓存结构时 +1,旧数据自动失效
+ * (readMenuCache 检测到版本不符会忽略并走 API 回退)。
+ */
+export const MENU_CACHE_VERSION = 1;
 
 /**
  * 类型导出：所有原生 storage key 的联合类型
