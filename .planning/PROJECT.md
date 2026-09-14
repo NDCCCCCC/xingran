@@ -1,40 +1,38 @@
 ---
-last_updated: 2026-09-11
-update_trigger: v1.33 started — V133 前端性能治理（2 HIGH + 8 MEDIUM + 12 LOW findings + 死代码清理，审计输入 20260911-frontend-perf-audit.md）
-previous_update: 2026-09-09 v1.32 started — V132 审计驱动的安全与可靠性收尾（TLS 环境变量化 + 裸 goroutine 守护 + 8 项回归守护前置）
+last_updated: 2026-09-14
+update_trigger: v1.33 SHIPPED — 前端性能治理里程碑完成（38/38 requirements satisfied，7 phases complete，SHIPPED 2026-09-14）
+previous_update: 2026-09-11 v1.33 started — V133 前端性能治理（2 HIGH + 8 MEDIUM + 12 LOW findings + 死代码清理，审计输入 20260911-frontend-perf-audit.md）
 ---
 
-## Current Milestone: v1.33 V133 前端性能治理 (Frontend Performance Remediation)
+## Current Milestone: v1.33 前端性能治理 (Frontend Performance Remediation) — ✅ SHIPPED 2026-09-14
 
-**Goal:** 修复 2026-09-11 前端全量性能审计报告（`.planning/reviews/20260911-frontend-perf-audit.md`）发现的全部 33 项 findings（2 HIGH + 8 MEDIUM + 3 次级 MEDIUM + 12 LOW，Vercel React Best Practices 57 规则审计，4 并行代理 Grep+Read 确认）+ 8 项死代码/依赖清理，消除用户可感知卡顿（地图聚类 O(n²)、dashboard N² 重渲染级联、键击整表重渲），selector 迁移收尾，附带修复 2 个正确性 bug（"0" 渲染 / VariablesModal 6 列）。
+**Goal:** 修复 2026-09-11 前端全量性能审计报告（`.planning/reviews/20260911-frontend-perf-audit.md`）全部 33 项 findings + 8 项死代码/依赖清理，消除用户可感知卡顿，附带修复 3 个正确性 bug。
 
-**Target features:**
-- **H-2 地图聚类**: HubeiMap/HubeiMapGL O(n²) 双循环 + 内层 pointToOverlayPixel 地图 API 调用 → Map 预计算 + 像素网格分桶，两份复制算法合并共享
-- **H-1 dashboard 级联**: useWidgetData selector 化 + L1 缓存移出响应式 state（noticeStore P1-M4 先例）+ dashboard 模块 9 处整店订阅收敛
-- **SELECTOR 收尾**: useTabs/useLayout 内部 selector 化 + 路由层 RouteGuard/DynamicRoutes + 3D 页 5 处 visualizationStore，共 26 处 `useXxxStore()` 整店订阅
-- **BUNDLE**: ExcelImportLazy 推广至 9 个静态调用点 + iconUtils 假动态导入删除（bare specifier 运行时必失败，兼功能修复）+ 路由 glob 排除 modals/components/hooks + echarts 注释修正
-- **RENDER**: 7 处 columns 工厂 useMemo 化（monitor/job 受控搜索每键击整表重渲最高优先）+ 5+ 大数据页 Table virtual 补齐 + MACHeatmapChart mobile 分支 memo + DoorElement snapCoord
-- **DATA**: VDI 服务器列表 react-query 化（4 处重复请求）+ 菜单 sessionStorage hydrate-then-revalidate 消除整页门控 + useColumnConfig 缓存短路
-- **正确性顺带**: "0" 渲染 ×2（monthlyFee/area 改 `!= null`）、VariablesModal 同一 3 列定义重复渲染 6 列 bug、CADFloorPlanEditor updater stale closure
-- **死代码/依赖**: useTabSync / components/dashboard/DashboardView / BuildingMarkers+CityMarkers（连带 @uiw/react-baidu-map 依赖移除）/ operations barrel / getWorkstationStats / _detailColumns / cron-parser+@react-spring/three+maath 依赖移除 / vite.config react-markdown 注释修正
+**Status:** SHIPPED 2026-09-14 | **Phases:** 7 (114-120) | **Plans:** 23 | **Requirements:** 38/38 SATISFIED
+
+**Target features delivered:**
+- **H-2 地图聚类**: HubeiMap/HubeiMapGL O(n²) → Map 预计算 + 像素网格分桶，cluster.ts 共享纯函数，15 用例测试锁定
+- **H-1 dashboard 级联**: useWidgetData selector 化 + L1 缓存移出 state + dashboard 9 处订阅收敛 + DashboardGrid 稳定化
+- **SELECTOR 收尾**: useTabs 14 / useLayout 10 字段 hook 内 selector 化 + 路由层 + 3D 页全收敛，零整店订阅
+- **BUNDLE**: ExcelImportLazy 统一 9 调用点 + iconUtils 假动态导入删除 + 路由 glob phantom chunk 清零 + 4 僵尸依赖移除
+- **RENDER**: 7 处 columns 工厂 useMemo + 5+ 大数据页 Table virtual + 正确性修复 3 项附回归测试
+- **DATA**: VDI react-query 去重 + 菜单 hydrate-then-revalidate + useColumnConfig 缓存短路 + Promise.all 并行
+- **MISC**: Map 索引 O(n²)→O(n) / 惰性 sessionStorage / scroll 短路 / expandedRowRender useCallback
+- **DEAD**: useTabSync / DashboardView / getWorkstationStats / _detailColumns / operations barrel 全删 + 4 僵尸依赖移除
 
 **锁定决策 (v1.33 init):**
-- **D-01 范围**: 用户确认全量 33 findings + 8 死代码清理，不分批 defer
-- **D-02 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage 全程保持绿
-- **D-03 bundle 基线不倒退**: size-limit 门禁（entry gzip 1MB / 全量 2.5MB）保持；改动不得推高 entry
-- **D-04 回归纪律**: 行为变更（正确性 bug 修复 / 缓存语义变更）附回归测试；纯性能重构（selector 化 / useMemo / Map 索引）以现有测试零回归为准
-- **D-05 复用范本**: info-points:603 Map 索引 / executions:112 columns useMemo / useRouteTabs selector 风格 / noticeStore P1-M4 缓存出 state 四个既有正确范本为准
-- **D-06 Phase 编号**: 从 Phase 114 续编（v1.32 用 109-113，v1.31 用 102-108）
+- **D-01 范围**: 全量 33 findings + 8 死代码清理，不分批 defer
+- **D-02 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 / 前端 45 dirs / lint / type-check / diff coverage 全程绿
+- **D-03 bundle 基线不倒退**: size-limit 门禁 entry gzip 1MB / 全量 2.5MB 不推高
+- **D-04 回归纪律**: 行为变更（BUGFIX-01..03 / BUNDLE-02 / DATA-02）附回归测试；纯性能重构现有测试零回归
+- **D-05 复用范本**: info-points:603 Map 索引 / executions:112 columns useMemo / useRouteTabs selector 风格 / noticeStore P1-M4 缓存出 state
+- **D-06 Phase 编号**: 从 114 续编
 
-**规划输入:**
-- `.planning/reviews/20260911-frontend-perf-audit.md`（2026-09-11 前端全量性能审计，590 文件，4 并行代理按规则类别扫描）
-- 前序背景: quick task `260911-m76-fix-frontend-perf-audit-findings`（同日 PR #19 已合并）修了构建配置/WS 轮询/部分 selector/串行瀑布/CAD 渲染 6 批次；本审计在其 merge 后的工作树上扫描，33+8 项 findings 经抽查（useWidgetData:70 整店订阅 / HubeiMap:267 O(n²) / iconUtils:547 假动态导入 / ExcelImport 静态 9 点 / useTabSync 存活 / 4 僵尸依赖）确认全部残留
+**进度:** Phase 114 ✅ + Phase 115 ✅ + Phase 116 ✅ + Phase 117 ✅ + Phase 118 ✅ + Phase 119 ✅ + Phase 120 ✅ — 7/7 phases complete, 38/38 requirements SATISFIED, 23/23 plans executed.
 
-**范围边界:** 仅前端性能修复 + 死代码/依赖清理 + 顺带正确性 bug；不引入新业务功能；不改后端；不推前端覆盖率新目标（v1.28 已收口）。
+**Known deferred items at close:** 5（ci-lint-hardcoded-ip awaiting_human_verify / knowledge-base reference / Phase 114 HUMAN-UAT partial / Phase 116-120 verification human_needed / quick task unknown — 见 STATE.md Deferred Items）
 
-**进度:** Phase 114（map3d-clustering）✅ Complete 2026-09-14 — 聚类 O(n²) → 单遍 Map 预计算 + 40px 网格分桶（共享 `cluster.ts` + 15 用例逐位一致测试），两组件改造 + useMemo 收敛 + 监听 cleanup，死组件双删（@uiw 解锁）。MAP3D-01~06 全 SATISFIED；MAP3D-02 浏览器人工验证 deferred（114-HUMAN-UAT.md 留档）。Review 发现 1C/2W/3I 均 pre-existing（挂账 STATE.md：InfoWindow XSS / zoom===10 语义 / ~100 行重复）。
-
-Phase 115（selector-completion）✅ Complete 2026-09-14 — 16 处整店订阅全 selector 化（useTabs 14 / useLayout 10 / 路由层 6 / 3D 页 11 / 页面簇 6+NotificationBell 7）+ 4 mock dual-form 化；criterion 5 收口（全库剩余 12 处 = Phase 116/120 白名单分工）；RouteGuard 权限判断逐字保留（V4）；3800 tests 全绿零回归，verification passed 9/9 truths 无人工项。Review 6W/11I 均 pre-existing 或跨 phase 安排（挂账 STATE.md，含 selector AST 守护候选）。**用户指令：P115 完成后暂停**——Phase 116-120 待续。2/7 phases。
+**Archive:** `.planning/milestones/v1.33-ROADMAP.md` + `.planning/milestones/v1.33-REQUIREMENTS.md`
 
 ---
 
@@ -787,7 +785,7 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-09-14 — v1.33 进行中：**Phase 114 ✅ + Phase 115（selector-completion）✅ 2026-09-14**（16 处整店订阅 selector 化收口 + criterion 5 收口 12 处白名单归 116/120；3800 tests 全绿 verification passed；用户指令 P115 后暂停，116-120 待续；前项：（3 plans 全部完成：共享 cluster.ts 40px 网格分桶单遍聚类 + 15 用例逐位一致测试 / 两组件 O(n²) 消除 + useMemo 收敛 + 监听 cleanup / 死组件双删解锁 @uiw 移除；MAP3D-01~06 全 SATISFIED，MAP3D-02 浏览器人工验证 deferred 至 114-HUMAN-UAT.md；review 1C/2W/3I 全 pre-existing 挂账 STATE.md；1/7 phases）。Previous: 2026-09-08 — v1.31 进行中：**Phase 103（缓存闭包收敛 base 单一权威）✅ 2026-09-07**（CONV-01..04 全 4 plans：mac_history query/heatmap + asset reconciliation + rpa selector_learner 三域 legacy interface{} 闭包 GetOrSet 与手写 cache-aside 全部迁 base.GetOrSetJSON[T] + base.CacheProvider，接线链 6 处 router/core 注入 system.NewCacheProvider；cache_invariants_103_test.go 扩口 servicesRoot/asset/rpa + 手写 cache-aside AST 检测（阳性对照实证）；code review 4 Warning 全修——DB 错误一次传播/nil 不缓存占位/脏缓存自愈失效/注释语义口径校正，3 个新回归测试锁定；verification 21/21 must-haves passed，go build 0 错误 + go test 全量 0 FAIL）。Previous footer entries preserved: v1.31 milestone started 2026-09-07（audit-fix 台账 F-06~F-17 全部 12 组 + nilness 观察项；Phase 编号从 102 续编；输入 = `.planning/notes/260907-audit-fix-tech-debt-findings.md`）。Previous: v1.30 SHIPPED + ARCHIVED 2026-09-07（6 phases / 21 plans / 18 项 V130-CANDIDATES + 测试入库 + 62-HUMAN-UAT，CI run 34057232365 全绿）。Previous: v1.29 技术债治理 SHIPPED + ARCHIVED 2026-09-06（7 phases / 26 plans / 45 requirements，191 commits，CI run 34007103013 全绿）；SHIPPED 后深度复查修复 6 Critical + 10 Warning（v1.29-DEEP-RECHECK.md）。Previous: v1.28 SHIPPED + ARCHIVED 2026-09-04（阶段性收口 45.13%）；v1.27 SHIPPED 2026-08-23；v1.26 footer: Last updated: 2026-08-20 — v1.26 后端测试覆盖率优秀 milestone started: 12.8% → ≥70% 加权平均,P0/P1 零测试模块全清,CI coverage 阈值 gate + diff coverage ≥80%;4 phases (71-74) 按 quick-260820-bcs 扫描建议拆分。规划输入: `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`。Previous: Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19 (7 phases / 20 plans / 36 items, audit `passed`); Phase 63 前端工具链自动化 SHIPPED 2026-08-20; v1.21 SHIPPED 2026-08-18 (Phases 57-62).*
+*Last updated: 2026-09-14 — v1.33 SHIPPED 2026-09-14：**7 phases (114-120) / 23 plans / 38/38 requirements / all phases complete**。Next: `/gsd:new-milestone` to start next milestone. Previous: 2026-09-11 v1.33 started；Previous: 2026-09-09 v1.32 started；v1.31 SHIPPED 2026-09-08；v1.30 SHIPPED 2026-09-07；v1.29 SHIPPED 2026-09-06；v1.28 SHIPPED 2026-09-04。*
 
 ---
 

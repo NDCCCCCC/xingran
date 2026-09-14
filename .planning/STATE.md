@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.33
 milestone_name: 前端性能治理 (Frontend Performance Remediation)
-status: Phase 118 plans all executed — DATA-01 VDI dedupe + DATA-02 sessionStorage hydrate-then-revalidate + DATA-03 useColumnConfig cache early-return + DATA-04 Promise.all；3 plans / 5 commits / 1 new regression test / 0 lint errors / tsc clean
-stopped_at: Completed 118-02-PLAN.md
-last_updated: "2026-09-14T15:27:00.000Z"
-last_activity: 2026-09-14
+status: Awaiting next milestone
+stopped_at: Milestone v1.33 complete
+last_updated: "2026-09-14T10:00:00.000Z"
+last_activity: 2026-09-14 — Milestone v1.33 SHIPPED (7 phases, 23 plans, 38 requirements)
 progress:
   total_phases: 7
-  completed_phases: 6
-  total_plans: 19
-  completed_plans: 19
-  percent: 86
+  completed_phases: 7
+  total_plans: 23
+  completed_plans: 23
+  percent: 100
 ---
 
 # Project State (v1.33 — Frontend Performance Remediation)
@@ -21,16 +21,14 @@ progress:
 See: `.planning/PROJECT.md` — v1.33 Current Milestone 段
 
 **Core value:** 端到端运维可观测与可审计
-**Current focus:** Phase 118 — data-fetch（数据获取治理: VDI 去重 + 菜单 hydrate-then-revalidate + 列配置缓存短路 + Promise.all）
+**Current focus:** None — v1.33 milestone shipped, awaiting next milestone
 
 ## Current Position
 
-Phase: 119
-Plan: Not started
-Status: Phase 118 plans all executed (118-01 / 118-02 / 118-03) — DATA-01~04 全部落位；共 5 commits / 1 new regression test file；lint 0 errors / tsc clean / 44/44 relevant tests green
-Last activity: 2026-09-14
-
-Progress: [██████████] 100% (19/19 milestone plans)
+Phase: —
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-14 — Milestone v1.33 SHIPPED
 
 ## v1.33 范围摘要
 
@@ -117,3 +115,7 @@ Stopped at: Completed 115-03-PLAN.md
 - [Phase 115]: 115-03: SELECTOR-05 六处（4 action-only + 2 state 字段 user）+ NotificationBell 7 项（OQ-1 定案推荐 a 纳入）全部单字段 selector 化；detail.tsx useCallback 依赖数组与 DashboardScopeSelector 派生计算逐字保留
 - [Phase 115]: 115-03: 4 个测试 mock 同任务 dual-form 化（selector ? selector(state) : state），let 变量保持调用时求值不快照；DashboardScopeSelector admin 分支断言语义零弱化（T-115-03-A mitigate）
 - [Phase 115]: 115-03: criterion 5 收口——全库无参 useXxxStore() 恰好 12 处且全部命中三组白名单前缀，归属 Phase 116（11 处）/ Phase 120（1 处）；断言口径未修改（T-115-03-C）
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd:new-milestone
