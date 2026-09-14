@@ -97,7 +97,7 @@ Plans:
   3. dashboard 模块 9 处整店订阅全部改 selector（index:30 / DashboardHome:19 / DashboardList:47 / DashboardView:36 / DashboardEdit:43 / edit:41 / view:31 / WidgetEditor:33 / DashboardSettings:30）
   4. DashboardGrid（:42,49）不再订阅窗口尺寸（clientWidth 初始化一次），gridProps（layouts 包装/containerPadding/handleLayoutChange）useMemo 化：拖拽调整期间 layouts 稳定时回调引用稳定
 
-**Plans**: TBD（预估 3）
+**Plans**: 3/3 plans created
 
 ### Phase 117: render-columns-and-bugfix（渲染热点治理 + 正确性修复）
 
@@ -126,7 +126,7 @@ Plans:
   3. useColumnConfig（:122-135）缓存新鲜时 early-return：不再每次进页无条件发网络请求
   4. useHolidayData（:126-127）双独立 GET 合并 Promise.all：请求数 2→1，首屏数据等待缩短
 
-**Plans**: TBD（预估 3）
+**Plans**: 3/3 plans created
 
 ### Phase 119: misc-js-perf（JS 微性能杂项）
 
@@ -141,7 +141,7 @@ Plans:
   4. TabBar（:118-136,339）scroll 状态值比较：无变化跳过 setState，无冗余重渲
   5. workstations/index.tsx（:657-666）expandedRowRender 内联回调 useCallback 化：HealthCard / WorkstationDeviceTable memo 生效，展开行操作不重渲已渲染行
 
-**Plans**: TBD（预估 3）
+**Plans**: 3/3 plans created
 
 ### Phase 120: bundle-dead-cleanup（Bundle 优化 + 死代码/依赖卫生）
 
@@ -168,7 +168,7 @@ Phases execute in numeric order: 114 → 115 → 116 → 117 → 118 → 119 →
 |-------|----------------|--------|-----------|
 | 114. map3d-clustering | 3/3 | Complete    | 2026-09-14 |
 | 115. selector-completion | 3/3 | Complete    | 2026-09-14 |
-| 116. dashboard-cascade | 0/TBD | Not started | - |
+| 116. dashboard-cascade | 0/3 | Not started | - |
 | 117. render-columns-and-bugfix | 0/TBD | Not started | - |
 | 118. data-fetch | 0/TBD | Not started | - |
 | 119. misc-js-perf | 0/TBD | Not started | - |
