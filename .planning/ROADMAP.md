@@ -128,6 +128,12 @@ Plans:
 
 **Plans**: 3/3 plans created
 
+**Wave 1**
+
+- [x] 118-01-PLAN.md — DATA-01 VDI react-query 去重 + DATA-04 Promise.all 合并（纯性能，零回归）
+- [x] 118-02-PLAN.md — DATA-02 sessionStorage hydrate-then-revalidate + TDD 回归测试（行为变更）
+- [x] 118-03-PLAN.md — DATA-03 useColumnConfig 缓存短路 early-return（纯性能，零回归）
+
 ### Phase 119: misc-js-perf（JS 微性能杂项）
 
 **Goal**: 拖拽、搜索过滤、列表初始化、Tab 滚动等高频微交互的 O(n²) 与急切开销清零——共享工具带单元测试守护
