@@ -55,8 +55,10 @@ const FloorView3D: React.FC = () => {
     fixed: 0,
   });
 
-  const { selectedFloor, selectedBuilding, navigateToBuilding, navigateToMap } =
-    useVisualizationStore();
+  const selectedFloor = useVisualizationStore((s) => s.selectedFloor);
+  const selectedBuilding = useVisualizationStore((s) => s.selectedBuilding);
+  const navigateToBuilding = useVisualizationStore((s) => s.navigateToBuilding);
+  const navigateToMap = useVisualizationStore((s) => s.navigateToMap);
 
   // ============ 数据加载 ============
 

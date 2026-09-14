@@ -75,7 +75,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     [buildings]
   );
 
-  const { clearSelection, navigateToBuilding } = useVisualizationStore();
+  const clearSelection = useVisualizationStore((s) => s.clearSelection);
+  const navigateToBuilding = useVisualizationStore((s) => s.navigateToBuilding);
 
   // 湖北省边界坐标（简化版，涵盖主要区域）
   const HUBEI_BOUNDARY = [

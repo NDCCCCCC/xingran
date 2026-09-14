@@ -33,7 +33,7 @@ const BuildingSpaces3D: React.FC = () => {
   const [buildings, setBuildings] = useState<BuildingItem[]>([]);
   const [useWebGL, setUseWebGL] = useState(true);
 
-  const { viewLevel } = useVisualizationStore();
+  const viewLevel = useVisualizationStore((s) => s.viewLevel);
 
   // 加载楼宇数据
   const loadBuildings = useCallback(async () => {

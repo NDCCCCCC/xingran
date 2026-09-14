@@ -74,7 +74,8 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   const [is3DMode, setIs3DMode] = useState(false);
   const [currentTilt, setCurrentTilt] = useState(0);
 
-  const { clearSelection, navigateToBuilding } = useVisualizationStore();
+  const clearSelection = useVisualizationStore((s) => s.clearSelection);
+  const navigateToBuilding = useVisualizationStore((s) => s.navigateToBuilding);
 
   // ============ 地图初始化 ============
 
