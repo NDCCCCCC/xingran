@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.33
 milestone_name: 前端性能治理 (Frontend Performance Remediation)
-status: executing
+status: Phase 115 plans all executed — SELECTOR-01~05 + NotificationBell 落位，criterion 5 收口（全库剩余 12 处归属 Phase 116/120）
 stopped_at: Completed 115-03-PLAN.md
-last_updated: "2026-09-14T03:22:01.883Z"
+last_updated: "2026-09-14T03:57:59.751Z"
 last_activity: 2026-09-14
 progress:
   total_phases: 7
@@ -25,8 +25,8 @@ See: `.planning/PROJECT.md` — v1.33 Current Milestone 段
 
 ## Current Position
 
-Phase: 115 (selector-completion（Zustand selector 收尾）) — EXECUTED（3/3 plans 完成，待 /gsd:verify-work）
-Plan: 3 of 3 (completed)
+Phase: 116
+Plan: Not started
 Status: Phase 115 plans all executed — SELECTOR-01~05 + NotificationBell 落位，criterion 5 收口（全库剩余 12 处归属 Phase 116/120）
 Last activity: 2026-09-14
 
@@ -69,12 +69,14 @@ Progress: [██████████] 100% (6/6 milestone plans)
 ### Review Findings 挂账（v1.33 范围外，源自 Phase 114/115 code review）
 
 **Phase 114（090ff9d 前）:**
+
 - **CR-01（安全, pre-existing）**: InfoWindow 存储型 XSS——`building.name`/`address` 未转义拼入百度 InfoWindow HTML（HubeiMap.tsx:414-431 / HubeiMapGL.tsx:407-424）。修复=HTML 转义，行为变更超 v1.33 D-01 锁定范围 → 候选后续 quick task / 安全 milestone。
 - **WR-01（逻辑, pre-existing）**: HubeiMapGL `MAX_ZOOM=18` + `filterBuildingsByZoom` 精确匹配 `zoom === 10` → 缩放 11-18 级二级楼宇消失。`zoom === 10` 语义被 RESEARCH 红线 + plan-checker 锁定"既有行为保持原样" → 挂账；修复建议 `>= 10`（对 2D 版行为不变）。
 - **WR-02（质量, pre-existing）**: HubeiMap.tsx 与共享层逐字重复 ~100 行（toBase64/HUBEI_BOUNDARY/边界辅助），MAP_CONFIG 同名双源已分叉（10 vs 18）→ 挂账（与 Phase 120 死代码清理相邻但不同项）。
 - **IN-01/02/03**: init 竞态残留缺口（无 StrictMode、无用户可见缺陷）/ polygonRef 死引用 / 一致性测试 averagePixelPosition 共同模式盲区 → 低优先级观察项。
 
 **Phase 115（115-REVIEW.md, commit 090ff9d）:**
+
 - **WR-05 → 非缺口**: 12 处 dashboardStore 家族整店订阅 = planner OQ-1 定案的 Phase 116（11 处 DASH-01~04）/Phase 120（useTabSync→DEAD-01 删除）白名单分工，criterion 5 口径即为此设计。
 - **WR-01（pre-existing）**: my-notices/detail.tsx:29-41 成功返回空 data 时 `setLoading(false)` 不可达 → 页面永久 Spin。挂账。
 - **WR-02（pre-existing）**: duty/my-duty/index.tsx:142-152 `setCurrent` 后 `loadSchedules()` stale closure 旧页码双请求 + pageSize 硬编码 10 与持久化双源不一致 → 错页。挂账。
