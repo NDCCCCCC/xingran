@@ -210,6 +210,8 @@ export const useDashboardStore = create<DashboardStore>()(
               : state.currentDashboard,
           hasUnsavedChanges: false,
         }));
+
+        clearWidgetCache();
       },
 
       deleteDashboard: async (id) => {

@@ -92,7 +92,7 @@ export function useWidgetData<T = unknown>(
     enabled: !disabled && widget.enabled,
     refetchInterval: disabled ? false : refreshInterval * 1000,
     // staleTime just under refetchInterval so background refresh feels instant
-    staleTime: (refreshInterval - 5) * 1000,
+    staleTime: Math.max(0, (refreshInterval - 5) * 1000),
     refetchOnWindowFocus: false,
   });
 
@@ -153,7 +153,7 @@ export function useBatchWidgetData(
     },
     enabled: effectiveWidgets.length > 0,
     refetchInterval: minInterval > 0 ? minInterval : false,
-    staleTime: minInterval - 5000,
+    staleTime: Math.max(0, minInterval - 5000),
     refetchOnWindowFocus: false,
   });
 
