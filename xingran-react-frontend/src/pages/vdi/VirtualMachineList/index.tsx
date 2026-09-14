@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { useAuthStore } from "@/store/authStore";
@@ -23,7 +23,9 @@ import {
   Alert,
 } from "antd";
 import { ReloadOutlined, PlusOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { post } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 import { vmApi, vdiServerApi } from "@/lib/vdiApi";
 import type {
   VirtualMachine,
@@ -90,7 +92,6 @@ const VirtualMachineList: React.FC = () => {
     resourceGroupId: string;
     resourceGroupName: string;
   } | null>(null);
-  const [vdiServers, setVdiServers] = useState<VDIServer[]>([]);
   const [resourceGroups, setResourceGroups] = useState<VDIResourceGroup[]>([]);
   const [resources, setResources] = useState<VDIResource[]>([]);
   const [vtpPlatforms, setVtpPlatforms] = useState<VDIPlatform[]>([]);
@@ -116,6 +117,17 @@ const VirtualMachineList: React.FC = () => {
   } | null>(null);
   const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
 
+  // DATA-01: VDI 服务器列表统一走 react-query——原 preloadVDIData / openCreateModal(2 处) /
+  // loadQuickCreateDefaults 共 4 处服务器列表裸调用归一为 1 个共享缓存查询,
+  // 同页不再重复请求。仅创建权限用户需要该列表,与原权限门控行为保持一致。
+  const { data: serverData } = useQuery({
+    queryKey: queryKeys.vdi.servers(),
+    queryFn: () => vdiServerApi.list({ current: 1, pageSize: 100 }),
+    enabled: canCreateVM,
+    staleTime: 5 * 60 * 1000, // 与 App.tsx defaultOptions.staleTime 一致
+  });
+  const vdiServers: VDIServer[] = useMemo(() => serverData?.data?.list || [], [serverData]);
+
   // 预加载VDI配置数据（仅在用户有 vdi:vm:add 权限时）
   const preloadVDIData = useCallback(async () => {
     // Skip preload if user lacks create permission
@@ -129,19 +141,16 @@ const VirtualMachineList: React.FC = () => {
       return;
     }
 
+    // DATA-01: 服务器列表来自 useQuery 缓存;serverData 未就绪时本轮跳过,
+    // 列表到位后 vdiServers 变化 → preloadVDIData 重建 → 上方 useEffect 自动重跑
+    const availableServer = vdiServers.find((s) => s.status === 0);
+    if (!availableServer) {
+      return;
+    }
+
     setVdiDataLoading(true);
 
     try {
-      // 获取第一个可用的VDI服务器
-      const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
-      const servers = serverResult.data?.list || [];
-      const availableServer = servers.find((s) => s.status === 0);
-
-      if (!availableServer) {
-        setVdiDataLoading(false);
-        return;
-      }
-
       // 并行加载所有VDI配置数据
       const [platformsResult, positionsResult, storagesResult, networksResult] = await Promise.all([
         vmApi.listVTPPlatforms(availableServer.id),
@@ -175,8 +184,7 @@ const VirtualMachineList: React.FC = () => {
     } finally {
       setVdiDataLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canCreateVM, CACHE_DURATION]);
+  }, [canCreateVM, CACHE_DURATION, vdiServers, message]);
 
   // 加载虚拟机列表
   const loadVMs = async () => {
@@ -452,7 +460,8 @@ const VirtualMachineList: React.FC = () => {
   }, [selectedVtpId, selectedServerId, createModalVisible, form, vtpPlatforms, CACHE_DURATION]);
 
   // Open create modal and load dropdown data (使用预加载数据)
-  const openCreateModal = async () => {
+  // DATA-01: VDI 服务器下拉数据来自 useQuery 缓存(vdiServers),不再每次打开弹窗重复请求
+  const openCreateModal = () => {
     setCreateModalVisible(true);
     form.resetFields();
 
@@ -462,35 +471,19 @@ const VirtualMachineList: React.FC = () => {
       setRunPositions(vdiDataCache.current.runPositions);
       setStorages(vdiDataCache.current.storages);
       setNetworks(vdiDataCache.current.networks);
-
-      // 加载VDI服务器列表（这个还是需要调用API）
-      try {
-        const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
-        setVdiServers(serverResult.data?.list || []);
-      } catch (_e) {
-        // ignore
-      }
       return;
     }
 
-    // 如果没有预加载数据，显示加载状态并开始加载
+    // 如果没有预加载数据，清空待加载状态并预选第一个可用服务器
     setVtpPlatforms([]);
     setRunPositions([]);
     setStorages([]);
     setNetworks([]);
     setResources([]);
 
-    try {
-      const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
-      setVdiServers(serverResult.data?.list || []);
-
-      // 触发VDI数据加载
-      const availableServer = serverResult.data?.list.find((s) => s.status === 0);
-      if (availableServer) {
-        form.setFieldsValue({ vdi_server_id: availableServer.id });
-      }
-    } catch (_e) {
-      // ignore
+    const availableServer = vdiServers.find((s) => s.status === 0);
+    if (availableServer) {
+      form.setFieldsValue({ vdi_server_id: availableServer.id });
     }
   };
 
@@ -648,11 +641,10 @@ const VirtualMachineList: React.FC = () => {
   const DEFAULT_POSITION_NAME = "研发";
 
   // 加载快速创建默认配置
+  // DATA-01: 服务器列表来自 useQuery 缓存(vdiServers),不再重复请求
   const loadQuickCreateDefaults = async () => {
     try {
-      const serverResult = await vdiServerApi.list({ current: 1, pageSize: 100 });
-      const servers = serverResult.data?.list || [];
-      const availableServer = servers.find((s) => s.status === 0);
+      const availableServer = vdiServers.find((s) => s.status === 0);
 
       if (!availableServer) {
         message.error("没有可用的VDI服务器");
