@@ -16,7 +16,7 @@ const NoticeDetailPage: FC = () => {
   const { message } = App.useApp();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { markAsRead } = useNoticeStore();
+  const markAsRead = useNoticeStore((s) => s.markAsRead);
 
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);

@@ -44,8 +44,9 @@ const Login: FC = () => {
   const [loginError, setLoginError] = useState<string>("");
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { login } = useAuthStore();
-  const { fetchMenus, fetchPermissions } = useMenuStore();
+  const login = useAuthStore((s) => s.login);
+  const fetchMenus = useMenuStore((s) => s.fetchMenus);
+  const fetchPermissions = useMenuStore((s) => s.fetchPermissions);
   const [captchaEnabled, setCaptchaEnabled] = useState<CaptchaEnabled>("disabled");
   const [captchaValue, setCaptchaValue] = useState("");
   const [captchaId, setCaptchaId] = useState("");

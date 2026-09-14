@@ -13,9 +13,13 @@ vi.mock("@/lib/api", async () => {
 });
 
 let noticeStoreState: Record<string, any> = {};
-vi.mock("@/store/noticeStore", () => ({
-  useNoticeStore: () => noticeStoreState,
-}));
+vi.mock("@/store/noticeStore", () => {
+  // 兼容 selector 调用（useNoticeStore(s => s.markAsRead)）与无参调用两种形态；
+  // 函数体内读取 let 变量，保持调用时求值（beforeEach 重赋值继续生效）
+  const useNoticeStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector(noticeStoreState) : noticeStoreState;
+  return { useNoticeStore: useNoticeStoreFn };
+});
 
 vi.mock("@/lib/noticeApi", () => ({
   getMyNoticeDetail: vi.fn(),

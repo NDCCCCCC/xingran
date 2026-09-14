@@ -44,7 +44,7 @@ const ProfilePage: FC = () => {
   const [passwordForm] = Form.useForm();
   const [dutyStats, setDutyStats] = useState<MyDutyStats | null>(null);
   const [dutyStatsLoading, setDutyStatsLoading] = useState(false);
-  const { updateUser } = useAuthStore();
+  const updateUser = useAuthStore((s) => s.updateUser);
 
   // 加载个人信息
   const loadProfile = async () => {
