@@ -11,7 +11,11 @@ import type {
 import { dashboardService } from "@/services/dashboardService";
 
 // 模块级 widget L1 缓存（不进入响应式 state，参考 noticeStore P1-M4）
-const widgetDataCache = new Map<string, { data: unknown; timestamp: number }>();
+
+export const widgetDataCache = new Map<string, { data: unknown; timestamp: number }>();
+
+// 导出用于测试：获取 widgetDataCache 引用（模块级 Map 无法通过 getState() 访问）
+export const getWidgetDataCache = () => widgetDataCache;
 
 export type DashboardViewMode = "view" | "edit";
 
@@ -470,6 +474,7 @@ export const useDashboardStore = create<DashboardStore>()(
 
       reset: () => {
         set(initialState);
+        widgetDataCache.clear();
       },
     }),
     {

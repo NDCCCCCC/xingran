@@ -24,18 +24,26 @@ vi.mock("@/components/dashboard/layout/GridItem", () => ({
 }));
 
 vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: vi.fn(() => ({
-    currentDashboard: null,
-    currentLoading: false,
-    fetchDashboard: vi.fn(),
-    setViewMode: vi.fn(),
-    updateWidgetLayouts: vi.fn(),
-    addWidget: vi.fn(),
-    removeWidget: vi.fn(),
-    updateWidget: vi.fn(),
-    saveDashboard: vi.fn(),
-    clearCurrentDashboard: vi.fn(),
-  })),
+  useDashboardStore: vi.fn((selector) => {
+    const state = {
+      currentDashboard: null,
+      currentLoading: false,
+      viewMode: "edit" as const,
+    };
+    const actions = {
+      fetchDashboard: vi.fn(),
+      setViewMode: vi.fn(),
+      updateWidgetLayouts: vi.fn(),
+      addWidget: vi.fn(),
+      removeWidget: vi.fn(),
+      updateWidget: vi.fn(),
+      selectWidget: vi.fn(),
+      selectedWidgetId: null,
+      clearCurrentDashboard: vi.fn(),
+    };
+    const store = { ...state, ...actions };
+    return selector ? selector(store) : store;
+  }),
 }));
 
 function wrapper({ children }: { children: ReactNode }): ReactElement {

@@ -31,14 +31,23 @@ vi.mock("@/components/dashboard/Widget", () => ({
 }));
 
 vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: vi.fn(() => ({
-    currentDashboard: null,
-    currentLoading: false,
-    fetchDashboard: vi.fn(),
-    setViewMode: vi.fn(),
-    updateWidgetLayouts: vi.fn(),
-    clearCurrentDashboard: vi.fn(),
-  })),
+  useDashboardStore: vi.fn((selector) => {
+    const state = {
+      currentDashboard: null,
+      currentLoading: false,
+      viewMode: "view" as const,
+    };
+    const actions = {
+      fetchDashboard: vi.fn(),
+      setViewMode: vi.fn(),
+      updateWidgetLayouts: vi.fn(),
+      clearCurrentDashboard: vi.fn(),
+    };
+    const store = { ...state, ...actions };
+    // Support both selector form: useDashboardStore((s) => s.field) and
+    // destructuring form: useDashboardStore() in legacy tests
+    return selector ? selector(store) : store;
+  }),
 }));
 
 function wrapper({ children }: { children: ReactNode }): ReactElement {

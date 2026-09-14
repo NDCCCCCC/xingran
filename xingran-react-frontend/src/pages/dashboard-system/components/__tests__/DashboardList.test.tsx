@@ -14,20 +14,19 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: () => ({
-    dashboards: [],
-    total: 0,
-    loading: false,
-    current: 1,
-    pageSize: 10,
-    selectedDashboard: null,
-    listPagination: { current: 1, pageSize: 10 },
-    fetchDashboards: vi.fn(() => Promise.resolve({ list: [], total: 0 })),
-    deleteDashboard: vi.fn(),
-    duplicateDashboard: vi.fn(),
-    setDefaultDashboard: vi.fn(),
-    setPagination: vi.fn(),
-  }),
+  useDashboardStore: (selector?: (s: Record<string, unknown>) => unknown) => {
+    const store = {
+      dashboards: [] as unknown[],
+      listLoading: false,
+      listPagination: { current: 1, pageSize: 10, total: 0 },
+      fetchDashboards: vi.fn(() => Promise.resolve({ list: [], total: 0 })),
+      createDashboard: vi.fn(),
+      deleteDashboard: vi.fn(),
+      duplicateDashboard: vi.fn(),
+      setDefaultDashboard: vi.fn(),
+    };
+    return selector ? selector(store) : store;
+  },
 }));
 
 function renderList(props: { onNavigateToView?: any; onNavigateToEdit?: any } = {}) {
