@@ -970,14 +970,8 @@ export function CADFloorPlanEditor({
               // 如果启用了网格吸附，实时吸附到网格
               // BUGFIX-03: read prev.snapToGrid/prev.gridSize to avoid stale closure
               if (prev.snapToGrid) {
-                newX = snapToGrid(
-                  newX,
-                  prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE
-                );
-                newY = snapToGrid(
-                  newY,
-                  prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE
-                );
+                newX = snapToGrid(newX, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
+                newY = snapToGrid(newY, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
               }
 
               // 直接应用移动，不进行碰撞检测

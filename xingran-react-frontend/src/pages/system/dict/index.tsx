@@ -473,7 +473,16 @@ const DictManagement: FC = () => {
           loadDictData();
         },
       }),
-    [openTypeModal, handleDeleteType, getTypeColumnSortOrder, loadDictData, setSelectedType, setActiveTab, setCurrent, typeForm]
+    [
+      openTypeModal,
+      handleDeleteType,
+      getTypeColumnSortOrder,
+      loadDictData,
+      setSelectedType,
+      setActiveTab,
+      setCurrent,
+      typeForm,
+    ]
   );
 
   const dataColumns = useMemo(

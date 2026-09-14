@@ -23,10 +23,7 @@ export function DetailDrawer({
   onClose,
   handleViewOutput,
 }: DetailDrawerProps) {
-  const detailColumns = useMemo(
-    () => getDetailColumns({ handleViewOutput }),
-    [handleViewOutput]
-  );
+  const detailColumns = useMemo(() => getDetailColumns({ handleViewOutput }), [handleViewOutput]);
 
   return (
     <Drawer

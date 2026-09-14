@@ -142,15 +142,18 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
     }
   };
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await locationAliasApi.delete(id);
-      handleSuccess("映射删除");
-      await refreshAfterMutation();
-    } catch (err) {
-      handleApiError(err, "删除映射");
-    }
-  }, [refreshAfterMutation]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await locationAliasApi.delete(id);
+        handleSuccess("映射删除");
+        await refreshAfterMutation();
+      } catch (err) {
+        handleApiError(err, "删除映射");
+      }
+    },
+    [refreshAfterMutation]
+  );
 
   const aliasList: LocationAlias[] = aliasPage?.list ?? [];
   const total: number = aliasPage?.total ?? 0;
