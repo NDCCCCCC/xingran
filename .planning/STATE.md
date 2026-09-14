@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.33
 milestone_name: 前端性能治理 (Frontend Performance Remediation)
 status: executing
-stopped_at: Completed 115-01-PLAN.md
-last_updated: "2026-09-14T02:29:12Z"
-last_activity: 2026-09-14 -- Completed 115-01-PLAN.md
+stopped_at: Completed 115-02-PLAN.md
+last_updated: "2026-09-14T02:44:12.402Z"
+last_activity: 2026-09-14
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 14
 ---
 
@@ -26,9 +26,9 @@ See: `.planning/PROJECT.md` — v1.33 Current Milestone 段
 ## Current Position
 
 Phase: 115 (selector-completion（Zustand selector 收尾）) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 115
-Last activity: 2026-09-14 -- Completed 115-01-PLAN.md
+Plan: 3 of 3
+Status: Ready to execute
+Last activity: 2026-09-14
 
 Progress: [█░░░░░░░░░] 33%
 
@@ -75,8 +75,8 @@ Progress: [█░░░░░░░░░] 33%
 
 ## Session Continuity
 
-Last session: 2026-09-14T02:29:12Z
-Stopped at: Completed 115-01-PLAN.md
+Last session: 2026-09-14T02:44:12.395Z
+Stopped at: Completed 115-02-PLAN.md
 
 ## Performance Metrics
 
@@ -86,6 +86,7 @@ Stopped at: Completed 115-01-PLAN.md
 | Phase 114 P02 | 12min | 2 tasks | 2 files |
 | Phase 114 P03 | 54min | 3 tasks | 3 files |
 | Phase 115 P01 | 7min | 2 tasks | 2 files |
+| Phase 115 P02 | 6min | 2 tasks | 7 files |
 
 ## Decisions
 
@@ -98,3 +99,5 @@ Stopped at: Completed 115-01-PLAN.md
 - [Phase 114]: 114-03: MAP3D-02 人工性能验证按 AUTO_MODE 自动批准，HUMAN-UAT 步骤全文留档 SUMMARY，自动侧由 Plan 01 500ms 性能冒烟兜底
 - [Phase 115]: 115-01: useTabs/useLayout hook 内逐字段 selector 化（14/10 个 `useXxxStore((s) => s.field)`），返回对象/2 effect/layoutConfig/6 派生布尔一字不改，消费组件零改动（SELECTOR-01/02）
 - [Phase 115]: 115-01: history 字段按 OQ-2 定案保留在 useTabs 返回对象（0 消费方但 D-04 最小 diff 优先）；useShallow 维持全库 0 使用
+- [Phase 115]: 115-02: 路由层 RouteGuard/DynamicRoutes 整店订阅改 6 个逐字段 selector，41 行权限判断与 UX-only 注释逐字保留（V4 守护项）；DynamicRoutes 只改订阅形态，effect 依赖/allMenus 数组引用/菜单加载时序/routeConfigManager.initialize/getState-setState 一行不动（Phase 118 DATA-02 前向兼容）
+- [Phase 115]: 115-02: 3D 页 5 处 visualizationStore 整店订阅改 11 个字段级 selector（FloorView3D 拆 4 个独立调用，selectedFloor 在 loadWorkstations useCallback 依赖引用语义不变）；action 引用不包 useMemo；不引入 useShallow（维持全库 0 使用）
