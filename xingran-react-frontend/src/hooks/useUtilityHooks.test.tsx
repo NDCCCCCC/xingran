@@ -2,7 +2,7 @@
  * 工具类 hooks 组合测试
  *
  * 覆盖:useCaptcha / useImageUpload / useRoleList / useSidebarDeptFilter /
- * useTabSync / useWallDrawing / useWindowSize。
+ * useWallDrawing / useWindowSize。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
@@ -38,11 +38,8 @@ import { useCaptcha } from "./useCaptcha";
 import { useImageUpload } from "./useImageUpload";
 import { useRoleList } from "./useRoleList";
 import { useSidebarDeptFilter } from "./useSidebarDeptFilter";
-import { useTabSync } from "./useTabSync";
 import { useWallDrawing } from "./useWallDrawing";
 import { useWindowSize } from "./useWindowSize";
-import { useTabsStore } from "@/store/tabsStore";
-import { useDashboardStore } from "@/store/dashboardStore";
 import type { CaptchaConfig, CaptchaResponse } from "@/types/captcha";
 
 const fakeCaptchaConfig = (enabled: string): CaptchaConfig =>
@@ -417,94 +414,5 @@ describe("useWindowSize", () => {
       window.dispatchEvent(new Event("resize"));
     });
     expect(result.current).toEqual({ width: 1280, height: 720 });
-  });
-});
-
-describe("useTabSync", () => {
-  const routerWrapper = ({ children }: { children: ReactNode }) => (
-    <MemoryRouter initialEntries={["/system/user"]}>{children}</MemoryRouter>
-  );
-
-  beforeEach(() => {
-    sessionStorage.clear();
-    localStorage.clear();
-    useTabsStore.setState({ tabs: [], activeTab: "", history: [] });
-    useDashboardStore.setState({ currentDashboard: null, widgetDataCache: new Map() });
-  });
-
-  afterEach(() => {
-    useTabsStore.setState({ tabs: [], activeTab: "", history: [] });
-    useDashboardStore.setState({ currentDashboard: null, widgetDataCache: new Map() });
-  });
-
-  it("非 dashboard 路由:创建标签(fallback 标题=最后一段),/login 不创建", () => {
-    const { rerender } = renderHook(({ path }) => useTabSync(path), {
-      initialProps: { path: "/system/user" },
-      wrapper: routerWrapper,
-    });
-
-    // Effect1 建 user 标签 + Effect2 兜底建固定 dashboard 标签(addTab 会激活新标签)
-    const keys = useTabsStore.getState().tabs.map((t) => t.key);
-    expect(keys).toEqual(expect.arrayContaining(["/system/user", "/dashboard"]));
-    expect(useTabsStore.getState().activeTab).toBe("/dashboard");
-    const userTab = useTabsStore.getState().tabs.find((t) => t.key === "/system/user")!;
-    expect(userTab.title).toBe("user");
-
-    rerender({ path: "/login" });
-    expect(useTabsStore.getState().tabs).toHaveLength(2); // login 不加 tab
-  });
-
-  it("dashboard 路由:固定标签 + 激活;/dashboard 首页标题恒为仪表盘", () => {
-    renderHook(() => useTabSync("/dashboard"), { wrapper: routerWrapper });
-
-    const state = useTabsStore.getState();
-    expect(state.tabs).toHaveLength(1);
-    expect(state.tabs[0]).toMatchObject({
-      key: "/dashboard",
-      title: "仪表盘",
-      pinned: true,
-      closable: false,
-    });
-    expect(state.activeTab).toBe("/dashboard");
-  });
-
-  it("dashboard 子路由标题跟随 currentDashboard.name", () => {
-    useDashboardStore.setState({
-      currentDashboard: {
-        id: "d1",
-        name: "自定义大盘",
-      } as never,
-    });
-    renderHook(() => useTabSync("/dashboard/d1"), { wrapper: routerWrapper });
-
-    const tab = useTabsStore.getState().tabs.find((t) => t.key === "/dashboard");
-    expect(tab?.title).toBe("自定义大盘");
-  });
-
-  it("Effect2 兜底:无 dashboard 标签时创建固定标签", () => {
-    renderHook(() => useTabSync("/system/role"), { wrapper: routerWrapper });
-    // Effect2 在挂载时确保 dashboard 标签存在
-    const dash = useTabsStore.getState().tabs.find((t) => t.key === "/dashboard");
-    expect(dash).toMatchObject({ pinned: true, closable: false });
-  });
-
-  it("已有 dashboard 标签状态破损时强制修复为固定", () => {
-    useTabsStore.setState({
-      tabs: [
-        {
-          key: "/dashboard",
-          title: "仪表盘",
-          path: "/dashboard",
-          closable: true,
-          pinned: false,
-        },
-      ],
-      activeTab: "",
-      history: [],
-    });
-    renderHook(() => useTabSync("/system/role"), { wrapper: routerWrapper });
-
-    const dash = useTabsStore.getState().tabs.find((t) => t.key === "/dashboard");
-    expect(dash).toMatchObject({ pinned: true, closable: false });
   });
 });

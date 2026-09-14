@@ -308,22 +308,22 @@ export const useTabsStore = create<TabsStore>()(
  * 标签页Hook
  */
 export function useTabs() {
-  const {
-    tabs,
-    activeTab,
-    history,
-    addTab,
-    removeTab,
-    setActiveTab,
-    closeOtherTabs,
-    closeAllTabs,
-    closeLeftTabs,
-    closeRightTabs,
-    updateTab,
-    pinTab,
-    unpinTab,
-    reset,
-  } = useTabsStore();
+  // 逐字段 selector 订阅（范本 useRouteTabs.ts:45-48）：任意未被订阅字段的 set()
+  // 不再触发本 hook 消费组件重渲
+  const tabs = useTabsStore((s) => s.tabs);
+  const activeTab = useTabsStore((s) => s.activeTab);
+  const history = useTabsStore((s) => s.history);
+  const addTab = useTabsStore((s) => s.addTab);
+  const removeTab = useTabsStore((s) => s.removeTab);
+  const setActiveTab = useTabsStore((s) => s.setActiveTab);
+  const closeOtherTabs = useTabsStore((s) => s.closeOtherTabs);
+  const closeAllTabs = useTabsStore((s) => s.closeAllTabs);
+  const closeLeftTabs = useTabsStore((s) => s.closeLeftTabs);
+  const closeRightTabs = useTabsStore((s) => s.closeRightTabs);
+  const updateTab = useTabsStore((s) => s.updateTab);
+  const pinTab = useTabsStore((s) => s.pinTab);
+  const unpinTab = useTabsStore((s) => s.unpinTab);
+  const reset = useTabsStore((s) => s.reset);
 
   return {
     tabs,

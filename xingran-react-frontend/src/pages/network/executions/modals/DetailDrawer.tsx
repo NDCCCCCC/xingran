@@ -3,6 +3,7 @@
  * 执行明细抽屉
  */
 
+import { useMemo } from "react";
 import { Drawer, Card, Steps, Progress, Table, Divider } from "antd";
 import type { ConfigExecution, ConfigExecutionDetail } from "@/types";
 import { getDetailColumns } from "../columns";
@@ -22,7 +23,7 @@ export function DetailDrawer({
   onClose,
   handleViewOutput,
 }: DetailDrawerProps) {
-  const detailColumns = getDetailColumns({ handleViewOutput });
+  const detailColumns = useMemo(() => getDetailColumns({ handleViewOutput }), [handleViewOutput]);
 
   return (
     <Drawer

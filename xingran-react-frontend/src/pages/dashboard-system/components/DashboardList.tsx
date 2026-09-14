@@ -35,16 +35,14 @@ const DashboardList: React.FC<DashboardListProps> = ({ onNavigateToView, onNavig
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
-  const {
-    dashboards,
-    listLoading,
-    listPagination,
-    fetchDashboards,
-    createDashboard,
-    deleteDashboard,
-    duplicateDashboard,
-    setDefaultDashboard,
-  } = useDashboardStore();
+  const dashboards = useDashboardStore((s) => s.dashboards);
+  const listLoading = useDashboardStore((s) => s.listLoading);
+  const listPagination = useDashboardStore((s) => s.listPagination);
+  const fetchDashboards = useDashboardStore((s) => s.fetchDashboards);
+  const createDashboard = useDashboardStore((s) => s.createDashboard);
+  const deleteDashboard = useDashboardStore((s) => s.deleteDashboard);
+  const duplicateDashboard = useDashboardStore((s) => s.duplicateDashboard);
+  const setDefaultDashboard = useDashboardStore((s) => s.setDefaultDashboard);
 
   // 加载仪表盘列表
   useEffect(() => {

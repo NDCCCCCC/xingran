@@ -1,129 +1,121 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.32
-milestone_name: audit-driven-security-reliability
-status: SHIPPED
-stopped_at: v1.32 SHIPPED 2026-09-10 — 5 phases (109-113), 21 plans, 32 plans done, 100%
-last_updated: "2026-09-11T08:35:00.000Z"
+milestone: v1.33
+milestone_name: 前端性能治理 (Frontend Performance Remediation)
+status: Awaiting next milestone
+stopped_at: Milestone v1.33 complete
+last_updated: "2026-09-14T10:00:00.000Z"
+last_activity: 2026-09-14 — Milestone v1.33 SHIPPED (7 phases, 23 plans, 38 requirements)
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 21
-  completed_plans: 32
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 23
+  completed_plans: 23
   percent: 100
 ---
 
-# Project State (v1.32 — Audit-Driven Security & Reliability)
+# Project State (v1.33 — Frontend Performance Remediation)
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` — v1.32 Current Milestone 段
+See: `.planning/PROJECT.md` — v1.33 Current Milestone 段
+
+**Core value:** 端到端运维可观测与可审计
+**Current focus:** None — v1.33 milestone shipped, awaiting next milestone
 
 ## Current Position
 
-**v1.32 SHIPPED 2026-09-10** — All 5 phases (109-113) on origin/main, CI green
+Phase: —
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-14 — Milestone v1.33 SHIPPED
 
-## v1.32 Shipped Summary
+## v1.33 范围摘要
 
-| Phase | Title | Requirements | Status |
-|-------|-------|--------------|--------|
-| 109 | 回归守护前置 (GUARD-01..08 invariants 测试) | 8 | ✅ SHIPPED 2026-09-09 |
-| 110 | P0 安全 TLS 环境变量化 (Redis/AD auth/WS CORS + 文档) | TLS-01..06 | ✅ SHIPPED 2026-09-09 |
-| 111 | P0 并发裸 goroutine 守护 + Captcha fail-closed | GOR-01..04 + CAP-01 | ✅ SHIPPED 2026-09-09 |
-| 112 | P1 handler 收敛补丁 (HANDLER-01..05) | 5 | ✅ SHIPPED 2026-09-09 |
-| 113 | 部署文档同步 (V132 TLS/Origin 章节 + MUST SET + 内网兼容) | DOC-01 + TLS-06 | ✅ SHIPPED (as part of Phase 110) |
+**Goal**: 修复 2026-09-11 前端全量性能审计（`.planning/reviews/20260911-frontend-perf-audit.md`）全部 33 项 findings（2 HIGH + 8 MEDIUM + 3 次级 + 12 LOW）+ 8 项死代码/依赖清理。用户确认全量范围不分批 defer。
 
-**总计**: 22 requirements, 21 plans, 32 sub-plans
+**修复域**: H-2 地图聚类 O(n²) / H-1 dashboard N² 级联 / selector 收尾 26 处 / BUNDLE（ExcelImportLazy 推广 + iconUtils 假动态导入）/ RENDER（columns 工厂 + Table virtual）/ DATA（VDI 去重 + 菜单门控）/ 正确性 ×3 / 死代码与僵尸依赖 ×8
 
-## Code State
-
-- origin/main HEAD: post `260911-m76` quick task (24 commits, frontend perf audit remediation)
-- Predecessor: `73cb8cc` (Phase 109-112 code + planning artifacts)
-- Predecessor: `27cec0b` (Phase 109-112 code only, prior planning push)
-- Predecessor: `58fbf1c` (prior v1.31 SHIPPED baseline)
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260911-m76 | Vercel React Best Practices audit remediation: 首屏 -55%、6 批次 50+ 项修复 | 2026-09-11 | 见下 | [260911-m76-fix-frontend-perf-audit-findings](./quick/260911-m76-fix-frontend-perf-audit-findings/) |
-
-**260911-m76 批次明细**:
-- 1 build-bundle: `98562a1` + `222c58f` (vite.config manualChunks + modulePreload.resolveDependencies 排除 3 个大 chunk；echarts.ts 注册 Line/Bar/PieChart；EChartsWrapper 改 esm/core 入口) → 首屏 1.43MB→646KB gzip (-55%)
-- 2 bugfix-ws-polling: `58e2872` 通知 WS 链路修复 / `24d0e88` 孤儿页+死代码删除 / `ad21fd2` dataFetcher WS 清理 / `e54d9cf` 4 个 persist version:1 / `65b74ab` encryptionKeyStore finally 清理 / `42a0ff0` 轮询收敛+requestIdleCallback+jsonata 卸载 / `80594e2` 测试兼容
-- 3 zustand-selectors: `7de0692` dashboard 族 / `6975998` 布局壳 / `7f39137` usePagination+my-notices+删 useRPAProgress / `fee1b9b` useUserOptions 共享 / `5f3cb33` assets columns memo / `2e5865b` 测试修补
-- 4 waterfall-parallel: `b97e69b` 10 项串行→并行（平面图保存/duty/VDI/info-points/工单 ref）
-- 5 cad-3d-render: `93d047a` + `550f7a4` snapCoord 精度/lastMousePos ref/cad-elements memo/3D useFrame 收敛/SVG transform/CAD Map 化/死代码
-- 6 js-misc: `b7cc18f` DeptTree 单遍+ports Set / `56c0947` 静态映射模块级+地图 tooltip ref
-
-**全量验证终态**: type-check PASS / build PASS (29.69s) / 169+108+68 测试全 PASS / 首屏 modulepreload 1 条 (vendor-react 646KB)
-
-## Branch Protection (post-ship)
-
-- required_status_checks: backend, frontend ✅
-- required_pull_request_reviews: **disabled** (single-person project per user decision)
-- enforce_admins: enabled
-- Direct push to main allowed (CI gates still active)
-
-## Next Step
-
-v1.32 SHIPPED. Next: define v1.33 scope in `.planning/PROJECT.md` or take a break.
-
-# Project State (v1.32 — Audit-Driven Security & Reliability)
-
-## Project Reference
-
-See: `.planning/PROJECT.md` — v1.32 Current Milestone 段
-
-## Current Position
-
-**v1.32 DEFINED** — 22 requirements / 5 phases (109-113) awaiting execution
-
-## v1.32 范围摘要
-
-**Goal**: 基于 2026-09-09 全量后端审计报告（`.planning/reviews/20260909-backend-audit.md`）的 18 项 P0/P1 风险 + 4 项 Phase 104/107/108 MUST-FIX + 6 项新发现并发风险，按用户决策分 5 个 phase 收尾：
-
-- **Phase 109** — 回归守护前置（GUARD-01..08, 8 项 invariants 测试）
-- **Phase 110** — P0 安全 TLS 环境变量化（TLS-01..06）
-- **Phase 111** — P0 并发裸 goroutine 守护 + Captcha（GOR-01..04 + CAP-01）
-- **Phase 112** — P1 handler 收敛补丁（HANDLER-01..05）
-- **Phase 113** — 部署文档同步（DOC-01）
-
-## 锁定决策 (v1.32 init)
-
-- D-01: 范围 = P0 安全 + P0 并发 + P1 handler 收敛 + 8 项回归守护；P2 清理不在本期
-- D-02: TLS 选项实现 = 全部走环境变量（沿用 LDAP_TLS_INSECURE_SKIP_VERIFY 模式），默认 false，内网可显式置 true
-- D-03: 回归纪律 = 8 项回归守护作为 Phase 109 前置独立 phase 落地，先测试后修复
-- D-04: 七 gate 不倒退（go build / go test / 后端 coverage ≥78.33 / 前端 45 dirs / lint / type-check / diff coverage）
-- D-05: 范围外 = P2 清理；agent 裸 c.JSON（已锁定）；operlog exclude_paths
-- D-06: Phase 编号从 109 续编
+**前序背景**: quick task `260911-m76`（PR #19，同日合并）修了 6 批次相邻问题；本审计为 merge 后全面扫描，33+8 项经抽查确认全部残留。
 
 ## Milestone Reference
 
-- Roadmap: `.planning/ROADMAP.md` v1.32 段
-- Requirements: `.planning/REQUIREMENTS.md` v1.32 段（22 requirements）
-- Audit input: `.planning/reviews/20260909-backend-audit.md`
+- Roadmap: `.planning/ROADMAP.md`（2026-09-12 生成：Phases 114-120）
+- Requirements: `.planning/REQUIREMENTS.md` v1.33 段（38 项，进度追踪表已填充）
+- Audit input: `.planning/reviews/20260911-frontend-perf-audit.md`
 
-## Accumulated Context (carried forward from v1.31)
+## Accumulated Context (carried forward from v1.32)
 
 ### Decisions preserved
 
-- v1.31 D-01..D-05: 七 gate 基线 / operlog 25 常量 / status 0/1 普适规则
-- WIRE-01: CodeParamError/CodeServerError vs http.Status*+BusinessError 409 — direction set
-- FEMAP-03: success/green token selection — decided
-- Phase 92 `base.CacheProvider` / `base.GetOrSetJSON[T]` single authority confirmed
-- `src/lib/apiFactory.ts` + apiFactory.invariants.test.ts dual-guard confirmed
-- D-04 范围外延续：captcha-background 1=启用语义锁定；agent 裸 c.JSON；operlog exclude_paths
+- 七 gate 基线: go build / go test / 后端 coverage ≥78.33 / 前端 45 dirs / lint / type-check / diff coverage
+- operlog 25 OperType 常量 + 11 敏感关键词 AST 锁值不回归
+- status 0/1 普适规则（Menu visible 例外）
+- Phase 92 `base.CacheProvider` / `base.GetOrSetJSON[T]` single authority
+- `src/lib/apiFactory.ts` + apiFactory.invariants.test.ts dual-guard
+- captcha-background 1=启用语义锁定；agent 裸 c.JSON 有意设计；operlog exclude_paths 挂账
 
 ### Blockers
 
 - 无
 
-## Next Step
+## Code State
 
-执行 Phase 109 — 8 项回归守护测试落地。建议命令：`/gsd-plan-phase 109` 或 `/gsd-quick "落地 8 项回归守护测试"`。
+- origin/main HEAD: `727e370` (PR #19 quick/260911-m76-frontend-perf-audit merge)
+- Branch Protection: direct push to main allowed (CI gates active)，PR reviews disabled（单人项目）
+
+### Review Findings 挂账（v1.33 范围外，源自 Phase 114/115 code review）
+
+**Phase 114（090ff9d 前）:**
+
+- **CR-01（安全, pre-existing）**: InfoWindow 存储型 XSS——`building.name`/`address` 未转义拼入百度 InfoWindow HTML（HubeiMap.tsx:414-431 / HubeiMapGL.tsx:407-424）。修复=HTML 转义，行为变更超 v1.33 D-01 锁定范围 → 候选后续 quick task / 安全 milestone。
+- **WR-01（逻辑, pre-existing）**: HubeiMapGL `MAX_ZOOM=18` + `filterBuildingsByZoom` 精确匹配 `zoom === 10` → 缩放 11-18 级二级楼宇消失。`zoom === 10` 语义被 RESEARCH 红线 + plan-checker 锁定"既有行为保持原样" → 挂账；修复建议 `>= 10`（对 2D 版行为不变）。
+- **WR-02（质量, pre-existing）**: HubeiMap.tsx 与共享层逐字重复 ~100 行（toBase64/HUBEI_BOUNDARY/边界辅助），MAP_CONFIG 同名双源已分叉（10 vs 18）→ 挂账（与 Phase 120 死代码清理相邻但不同项）。
+- **IN-01/02/03**: init 竞态残留缺口（无 StrictMode、无用户可见缺陷）/ polygonRef 死引用 / 一致性测试 averagePixelPosition 共同模式盲区 → 低优先级观察项。
+
+**Phase 115（115-REVIEW.md, commit 090ff9d）:**
+
+- **WR-05 → 非缺口**: 12 处 dashboardStore 家族整店订阅 = planner OQ-1 定案的 Phase 116（11 处 DASH-01~04）/Phase 120（useTabSync→DEAD-01 删除）白名单分工，criterion 5 口径即为此设计。
+- **WR-01（pre-existing）**: my-notices/detail.tsx:29-41 成功返回空 data 时 `setLoading(false)` 不可达 → 页面永久 Spin。挂账。
+- **WR-02（pre-existing）**: duty/my-duty/index.tsx:142-152 `setCurrent` 后 `loadSchedules()` stale closure 旧页码双请求 + pageSize 硬编码 10 与持久化双源不一致 → 错页。挂账。
+- **WR-03（pre-existing, 与 114-WR-01 成因不同文件不同）**: building-spaces-3d/index.tsx:55 `level: 2` 无条件硬编码 → level1 恒空，默认 zoom 8 下地图零标记、统计面板与图例矛盾。挂账（与 114-WR-01 需一起修）。
+- **WR-04（pre-existing）**: DashboardScopeSelector.tsx:57-88 "系统仪表盘必须 global"约束只在开启方向生效，可造矛盾态。挂账。
+- **WR-06（pre-existing）**: detail.test.tsx:73-83 等用例名承诺 markAsRead/navigate/onChange 实际零断言。挂账。
+- **Info 摘要**: DashboardScopeSelector 死分支 / FloorView3D 死变量空回调 / profile 假加载态 / 值班类型映射三处重复 / layoutStore DOM 同步两份实现漂移 / dual-form mock 四处手写重复 / **selector 约定无 AST 守护（建议补 apiFactory.invariants.test.ts 式扫描——candidate for follow-up phase）**。
 
 ## Session Continuity
 
-Last session: 2026-09-09T12:00:00.000Z
-Stopped at: v1.32 defined (requirements + roadmap + state complete)
+Last session: 2026-09-14T03:22:01.883Z
+Stopped at: Completed 115-03-PLAN.md
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 114 P01 | 11min | 2 tasks | 2 files |
+| Phase 114 P02 | 12min | 2 tasks | 2 files |
+| Phase 114 P03 | 54min | 3 tasks | 3 files |
+| Phase 115 P01 | 7min | 2 tasks | 2 files |
+| Phase 115 P02 | 6min | 2 tasks | 7 files |
+| Phase 115 P03 | 33min | 3 tasks | 10 files |
+
+## Decisions
+
+- [Phase ?]: 114-01: 聚类共享函数独立 cluster.ts 落位（桶=threshold、3×3 邻域、下标升序、保留 sqrt 严格小于），与旧 O(n²) 逐位一致由参考实现对照测试锁定
+- [Phase ?]: 114-01: cluster.ts 零 SDK 依赖（仅 BuildingItem 类型 + utils 两函数），像素投影剥离到调用方单遍预计算 Map<id,pixel>
+- [Phase 114]: 114-02: 两组件聚类改单遍预计算 Map<id,pixel> + clusterBuildings 消费，n² 地图 API 调用归零；有坐标过滤保留 effect 内保层级+坐标输入集语义
+- [Phase 114]: 114-02: HubeiMap 渲染体 5 道 filter 收敛 useMemo [buildings]，两组件 zoomend/tiltend 提升 effect 作用域具名 handler 并补同引用 cleanup
+- [Phase 114]: 114-03: 死组件 BuildingMarkers/CityMarkers 删除（仅 git rm 两个 .tsx），@uiw/react-baidu-map src/ 零 import 解锁 Phase 120 DEAD-02；components/ 平行第二套 utils/constants/types 与 global.d.ts 原样保留
+- [Phase 114]: 114-03: cleanup 测试构造器 mock 用独立 function 表达式（内联 function 回调被 lint-staged prefer-arrow-callback 改写回箭头致 new 抛错）；TDD RED 门以突变校验等效证明
+- [Phase 114]: 114-03: MAP3D-02 人工性能验证按 AUTO_MODE 自动批准，HUMAN-UAT 步骤全文留档 SUMMARY，自动侧由 Plan 01 500ms 性能冒烟兜底
+- [Phase 115]: 115-01: useTabs/useLayout hook 内逐字段 selector 化（14/10 个 `useXxxStore((s) => s.field)`），返回对象/2 effect/layoutConfig/6 派生布尔一字不改，消费组件零改动（SELECTOR-01/02）
+- [Phase 115]: 115-01: history 字段按 OQ-2 定案保留在 useTabs 返回对象（0 消费方但 D-04 最小 diff 优先）；useShallow 维持全库 0 使用
+- [Phase 115]: 115-02: 路由层 RouteGuard/DynamicRoutes 整店订阅改 6 个逐字段 selector，41 行权限判断与 UX-only 注释逐字保留（V4 守护项）；DynamicRoutes 只改订阅形态，effect 依赖/allMenus 数组引用/菜单加载时序/routeConfigManager.initialize/getState-setState 一行不动（Phase 118 DATA-02 前向兼容）
+- [Phase 115]: 115-02: 3D 页 5 处 visualizationStore 整店订阅改 11 个字段级 selector（FloorView3D 拆 4 个独立调用，selectedFloor 在 loadWorkstations useCallback 依赖引用语义不变）；action 引用不包 useMemo；不引入 useShallow（维持全库 0 使用）
+- [Phase 115]: 115-03: SELECTOR-05 六处（4 action-only + 2 state 字段 user）+ NotificationBell 7 项（OQ-1 定案推荐 a 纳入）全部单字段 selector 化；detail.tsx useCallback 依赖数组与 DashboardScopeSelector 派生计算逐字保留
+- [Phase 115]: 115-03: 4 个测试 mock 同任务 dual-form 化（selector ? selector(state) : state），let 变量保持调用时求值不快照；DashboardScopeSelector admin 分支断言语义零弱化（T-115-03-A mitigate）
+- [Phase 115]: 115-03: criterion 5 收口——全库无参 useXxxStore() 恰好 12 处且全部命中三组白名单前缀，归属 Phase 116（11 处）/ Phase 120（1 处）；断言口径未修改（T-115-03-C）
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd:new-milestone

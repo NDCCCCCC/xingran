@@ -10,6 +10,22 @@ import type {
 } from "@/types/dashboard";
 import { dashboardService } from "@/services/dashboardService";
 
+// 模块级 widget L1 缓存（不进入响应式 state，参考 noticeStore P1-M4）
+
+export const widgetDataCache = new Map<string, { data: unknown; timestamp: number }>();
+
+// 导出用于测试：获取 widgetDataCache 引用（模块级 Map 无法通过 getState() 访问）
+export const getWidgetDataCache = () => widgetDataCache;
+
+// 模块级缓存清理函数：updateDashboard 内部直调与 store action 委托共用
+export function clearWidgetCache(widgetId?: string): void {
+  if (widgetId) {
+    widgetDataCache.delete(widgetId);
+  } else {
+    widgetDataCache.clear();
+  }
+}
+
 export type DashboardViewMode = "view" | "edit";
 
 // 页面模式类型
@@ -67,13 +83,6 @@ interface DashboardState {
   hasUnsavedChanges: boolean;
   selectedWidgetId: string | null;
   draggingWidgetId: string | null;
-  widgetDataCache: Map<
-    string,
-    {
-      data: unknown;
-      timestamp: number;
-    }
-  >;
   showGridLines: boolean;
   showWidgetBorders: boolean;
   // 新增状态
@@ -140,7 +149,6 @@ const initialState: DashboardState = {
   hasUnsavedChanges: false,
   selectedWidgetId: null,
   draggingWidgetId: null,
-  widgetDataCache: new Map(),
   showGridLines: false,
   showWidgetBorders: false,
   // 新增状态初始值
@@ -211,6 +219,8 @@ export const useDashboardStore = create<DashboardStore>()(
               : state.currentDashboard,
           hasUnsavedChanges: false,
         }));
+
+        clearWidgetCache();
       },
 
       deleteDashboard: async (id) => {
@@ -403,23 +413,19 @@ export const useDashboardStore = create<DashboardStore>()(
       },
 
       cacheWidgetData: (widgetId, data) => {
-        set((state) => {
-          const newCache = new Map(state.widgetDataCache);
-          newCache.set(widgetId, {
-            data,
-            timestamp: Date.now(),
-          });
-          return { widgetDataCache: newCache };
+        widgetDataCache.set(widgetId, {
+          data,
+          timestamp: Date.now(),
         });
       },
 
       getCachedWidgetData: (widgetId) => {
-        const cached = get().widgetDataCache.get(widgetId);
+        const cached = widgetDataCache.get(widgetId);
         if (!cached) return null;
 
         const cacheExpiry = 5 * 60 * 1000;
         if (Date.now() - cached.timestamp > cacheExpiry) {
-          get().clearWidgetCache(widgetId);
+          widgetDataCache.delete(widgetId);
           return null;
         }
 
@@ -427,15 +433,7 @@ export const useDashboardStore = create<DashboardStore>()(
       },
 
       clearWidgetCache: (widgetId) => {
-        set((state) => {
-          const newCache = new Map(state.widgetDataCache);
-          if (widgetId) {
-            newCache.delete(widgetId);
-          } else {
-            newCache.clear();
-          }
-          return { widgetDataCache: newCache };
-        });
+        clearWidgetCache(widgetId);
       },
 
       toggleGridLines: () => {
@@ -475,18 +473,15 @@ export const useDashboardStore = create<DashboardStore>()(
       },
 
       updateWidgetData: (widgetId, data) => {
-        set((state) => {
-          const newCache = new Map(state.widgetDataCache);
-          newCache.set(widgetId, {
-            data,
-            timestamp: Date.now(),
-          });
-          return { widgetDataCache: newCache };
+        widgetDataCache.set(widgetId, {
+          data,
+          timestamp: Date.now(),
         });
       },
 
       reset: () => {
         set(initialState);
+        widgetDataCache.clear();
       },
     }),
     {

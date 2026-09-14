@@ -12,9 +12,13 @@ vi.mock("@/lib/api", async () => {
 });
 
 let mockUser: any = { isAdmin: false, dataScope: "dept", deptId: "d1" };
-vi.mock("@/store/authStore", () => ({
-  useAuthStore: () => ({ user: mockUser }),
-}));
+vi.mock("@/store/authStore", () => {
+  // 兼容 selector 调用（useAuthStore(s => s.user)）与无参调用两种形态；
+  // 函数体内读取 let 变量，保持调用时求值（用例内重赋值 mockUser 继续生效）
+  const useAuthStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector({ user: mockUser }) : { user: mockUser };
+  return { useAuthStore: useAuthStoreFn };
+});
 
 import { DashboardScopeSelector } from "../DashboardScopeSelector";
 
@@ -99,5 +103,22 @@ describe("DashboardScopeSelector", () => {
       { wrapper }
     );
     expect(baseElement.querySelector(".ant-select-disabled")).toBeTruthy();
+  });
+
+  // WR-04 regression: disabling isSystem while scope=global must reset scope
+  // to a non-global value ("private") to maintain the bidirectional invariant
+  // isSystem=true ↔ scope=global
+  it("handleIsSystemChange(false) from isSystem=true+scope=global → scope resets to private", () => {
+    mockUser = { isAdmin: true, dataScope: "all", deptId: "d1" };
+    const onChange = vi.fn();
+    const { baseElement } = render(
+      <DashboardScopeSelector value={{ scope: "global", isSystem: true }} onChange={onChange} />,
+      { wrapper }
+    );
+    const sw = baseElement.querySelector(".ant-switch") as HTMLElement;
+    if (sw) fireEvent.click(sw);
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ isSystem: false, scope: "private" })
+    );
   });
 });

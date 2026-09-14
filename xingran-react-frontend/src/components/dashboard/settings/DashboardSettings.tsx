@@ -27,7 +27,8 @@ export interface DashboardSettingsProps {
  */
 export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, onClose }) => {
   const { message } = App.useApp();
-  const { currentDashboard, updateDashboard } = useDashboardStore();
+  const currentDashboard = useDashboardStore((s) => s.currentDashboard);
+  const updateDashboard = useDashboardStore((s) => s.updateDashboard);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [scopeConfig, setScopeConfig] = useState<{

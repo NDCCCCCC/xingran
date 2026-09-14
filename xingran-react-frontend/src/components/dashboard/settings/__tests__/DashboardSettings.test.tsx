@@ -13,7 +13,12 @@ vi.mock("@/lib/api", async () => {
 
 let storeState: Record<string, any> = {};
 vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: () => storeState,
+  useDashboardStore: (selector?: (s: Record<string, any>) => unknown) => {
+    if (selector) {
+      return selector(storeState);
+    }
+    return storeState;
+  },
 }));
 
 vi.mock("@/components/dashboard/settings/DashboardScopeSelector", () => ({

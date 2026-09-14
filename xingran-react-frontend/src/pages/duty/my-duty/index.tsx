@@ -61,7 +61,7 @@ import type { FC } from "react";
 
 const MyDutyPage: FC = () => {
   const [form] = Form.useForm();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
 
   // 统计数据
   const [stats, setStats] = useState<MyDutyStats | null>(null);
@@ -140,15 +140,19 @@ const MyDutyPage: FC = () => {
 
   // 搜索
   const handleSearch = () => {
-    setCurrent(1);
-    loadSchedules();
+    const newPage = 1;
+    const newPageSize = paginationProps.pageSize;
+    setCurrent(newPage);
+    loadSchedules(newPage, newPageSize); // pass explicit args — avoids stale closure capture of paginationProps
   };
 
   // 分页变化
   const handleTableChange = (pagination: TablePaginationConfig) => {
-    setCurrent(pagination.current ?? 1);
-    setPageSize(pagination.pageSize ?? 10);
-    loadSchedules();
+    const newCurrent = pagination.current ?? 1;
+    const newPageSize = pagination.pageSize ?? 10;
+    setCurrent(newCurrent);
+    setPageSize(newPageSize);
+    loadSchedules(newCurrent, newPageSize); // pass explicit args — avoids stale closure capture of paginationProps
   };
 
   // 获取值班类型颜色

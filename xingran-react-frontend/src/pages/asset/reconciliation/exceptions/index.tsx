@@ -501,7 +501,8 @@ const Exceptions = () => {
         columns={columns}
         dataSource={data?.list ?? []}
         loading={isLoading}
-        scroll={{ x: 1380 }}
+        virtual
+        scroll={{ x: 1380, y: 600 }}
         pagination={{
           current,
           pageSize,

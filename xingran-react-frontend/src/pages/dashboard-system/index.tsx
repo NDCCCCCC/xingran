@@ -27,7 +27,7 @@ const DashboardPage: React.FC = () => {
   const id = pathParts.length > 1 ? pathParts[1] : undefined;
   const mode = searchParams.get("mode") as "list" | "edit" | null;
 
-  const { setPageMode } = useDashboardStore();
+  const setPageMode = useDashboardStore((s) => s.setPageMode);
 
   // 使用 location.key 作为渲染键，确保 location 变化时组件重新渲染
   const renderKey = `${id}-${mode}-${location.key}`;

@@ -101,6 +101,12 @@ export const queryKeys = {
     all: ["user"] as const,
     options: ["user", "options"] as const,
   },
+  // Phase 118 DATA-01: VDI 服务器列表 — VirtualMachineList 同页 4 处裸调用
+  // 归一为单个 useQuery，共享缓存去重（5min staleTime 与 App.tsx 默认一致）
+  vdi: {
+    all: ["vdi"] as const,
+    servers: () => ["vdi", "servers"] as const,
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;

@@ -460,23 +460,40 @@ const DictManagement: FC = () => {
   ]);
 
   // 表格列
-  const typeColumns = getDictTypeTableColumns({
-    openTypeModal: (record) => openTypeModal(record, typeForm),
-    handleDeleteType,
-    getColumnSortOrder: getTypeColumnSortOrder,
-    onDictNameClick: (dictType) => {
-      setSelectedType(dictType);
-      setActiveTab("data");
-      setCurrent(1);
-      loadDictData();
-    },
-  });
+  const typeColumns = useMemo(
+    () =>
+      getDictTypeTableColumns({
+        openTypeModal: (record) => openTypeModal(record, typeForm),
+        handleDeleteType,
+        getColumnSortOrder: getTypeColumnSortOrder,
+        onDictNameClick: (dictType) => {
+          setSelectedType(dictType);
+          setActiveTab("data");
+          setCurrent(1);
+          loadDictData();
+        },
+      }),
+    [
+      openTypeModal,
+      handleDeleteType,
+      getTypeColumnSortOrder,
+      loadDictData,
+      setSelectedType,
+      setActiveTab,
+      setCurrent,
+      typeForm,
+    ]
+  );
 
-  const dataColumns = getDictDataTableColumns({
-    openDataModal: (record) => openDataModal(record, dataForm),
-    handleDeleteData,
-    getColumnSortOrder: getDataColumnSortOrder,
-  });
+  const dataColumns = useMemo(
+    () =>
+      getDictDataTableColumns({
+        openDataModal: (record) => openDataModal(record, dataForm),
+        handleDeleteData,
+        getColumnSortOrder: getDataColumnSortOrder,
+      }),
+    [openDataModal, handleDeleteData, getDataColumnSortOrder, dataForm]
+  );
 
   return (
     <div>

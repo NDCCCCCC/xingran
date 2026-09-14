@@ -169,10 +169,16 @@ export function useTableManager<T>(
   // 保持 filtersRef 的同步可读性（loadData 空依赖读 ref），mount 时从 sessionStorage 恢复，
   // 写入时同步镜像；切 tab / 刷新可恢复筛选条件，关闭 tab / 登出由外部统一清理。
   const filtersStorageKey = `${TABLE_STATE_PREFIX}${sanitizePathForKey(location.pathname)}_filters`;
-  const filtersRef = useRef<Record<string, unknown>>(readInitialFilters(filtersStorageKey));
+  // MISC-03: 惰性初始化 — null 填充 + 首次 access 时读取 sessionStorage，
+  // 消除 24 个列表页首帧不必要的同步 sessionStorage 读取。
+  const filtersRef = useRef<Record<string, unknown> | null>(null);
 
   const persistFilters = useCallback(
     (next: Record<string, unknown>) => {
+      // MISC-03: 惰性初始化 — 首次 access 时读取 sessionStorage
+      if (filtersRef.current === null) {
+        filtersRef.current = readInitialFilters(filtersStorageKey);
+      }
       filtersRef.current = next;
       try {
         if (typeof window !== "undefined") {
@@ -186,6 +192,10 @@ export function useTableManager<T>(
   );
 
   const clearPersistedFilters = useCallback(() => {
+    // MISC-03: 惰性初始化 — 确保已初始化再清理
+    if (filtersRef.current === null) {
+      filtersRef.current = readInitialFilters(filtersStorageKey);
+    }
     filtersRef.current = {};
     try {
       if (typeof window !== "undefined") {
@@ -214,12 +224,18 @@ export function useTableManager<T>(
 
   // mount 时若存在恢复的 filters，回填到搜索表单，保持 UI 与查询参数一致
   useEffect(() => {
+    // MISC-03 修复: filtersRef 在 mount 时为 null（惰性初始化），这里触发首次读取
+    // 让 mount-time form 回填仍按既有契约工作——同时 sessionStorage 读取只在 effect
+    // 首次执行时发生一次，避免 24 个列表页的首帧同步 I/O。
+    if (filtersRef.current === null) {
+      filtersRef.current = readInitialFilters(filtersStorageKey);
+    }
     const restored = filtersRef.current;
     if (restored && Object.keys(restored).length > 0) {
       searchForm.setFieldsValue(restored);
     }
     // 仅 mount 一次：searchForm 引用稳定
-  }, [searchForm]);
+  }, [searchForm, filtersStorageKey]);
 
   // loadData 读 ref 组装参数：current/pageSize + filters(持久化) + 排序。
   // params 作为 override 最后展开，可覆盖任意字段（分页/排序联动显式传新值）。

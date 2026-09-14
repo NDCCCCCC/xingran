@@ -12,7 +12,7 @@ import {
   ApiOutlined,
 } from "@ant-design/icons";
 import { useExecutionData, useExecutionModals } from "./hooks";
-import { getExecutionColumns, getDetailColumns } from "./columns";
+import { getExecutionColumns } from "./columns";
 import { ConfigExecuteModal, VariableModal, DetailDrawer } from "./modals";
 import { STATUS_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
@@ -118,10 +118,6 @@ const ConfigExecutionPage: FC = () => {
       }),
     [handleViewDetail, handleCancelExecution, orderByColumn, netExecSortOrder]
   );
-
-  const _detailColumns = getDetailColumns({
-    handleViewOutput,
-  });
 
   // 批量导出
   const handleBatchExport = async (entityTypes: string[]) => {

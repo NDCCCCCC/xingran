@@ -43,6 +43,8 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   const deptTree = useMemo(() => toShortNameDataNode(rawDept as DeptTreeNode[]), [rawDept]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  // MISC-02: 用 Map<id, option> 索引替代 O(n²) find，每键击过滤 O(n)
+  const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const [checkedDeptKeys, setCheckedDeptKeys] = useState<Key[]>(targetDepts);
   const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
 
@@ -154,7 +156,13 @@ const TargetSelector: FC<TargetSelectorProps> = ({
               onChange={onTargetUsersChange}
               placeholder="请选择用户"
               showSearch
-              filterOption={false}
+              filterOption={(input, option) => {
+                if (!input) return true;
+                const user = userMap.get(option?.value as string);
+                if (!user) return false;
+                const label = `${user.nickname || user.username} (${user.username})`.toLowerCase();
+                return label.includes(input.toLowerCase());
+              }}
               onSearch={(value) => loadUsers(value)}
               className="w-full"
               options={users.map((user) => ({

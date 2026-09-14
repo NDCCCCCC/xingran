@@ -7,7 +7,6 @@
 
 import { type FC, type ReactNode, useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { Responsive, type Layout, type ResponsiveProps } from "react-grid-layout";
-import { useWindowSize } from "@/hooks/useWindowSize";
 import { useDashboardStore } from "@/store/dashboardStore";
 import type { WidgetConfig } from "@/types/dashboard";
 import { defaultLayoutConfig } from "@/types/dashboard";
@@ -15,6 +14,9 @@ import { defaultLayoutConfig } from "@/types/dashboard";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "./DashboardGrid.css";
+
+// 常量：grid 容器内边距
+const CONTAINER_PADDING: [number, number] = [16, 16];
 
 // 扩展 ResponsiveProps 以包含 isDraggable 和 isResizable
 interface ExtendedResponsiveProps extends ResponsiveProps {
@@ -39,14 +41,15 @@ interface DashboardGridProps {
 }
 
 export const DashboardGrid: FC<DashboardGridProps> = ({ widgets, onLayoutChange, children }) => {
-  const windowSize = useWindowSize();
   const viewMode = useDashboardStore((s) => s.viewMode);
   const layoutConfig = defaultLayoutConfig;
   const isEditable = viewMode === "edit";
 
   // 使用 ref 跟踪容器宽度
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(windowSize.width);
+  const [containerWidth, setContainerWidth] = useState<number>(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
 
   // 监听容器宽度变化
   useEffect(() => {
@@ -143,18 +146,21 @@ export const DashboardGrid: FC<DashboardGridProps> = ({ widgets, onLayoutChange,
   );
 
   // 布局变更处理
-  const handleLayoutChange = (currentLayout: Layout) => {
-    const updatedWidgets = currentLayout.map((layout) => ({
-      id: layout.i,
-      position: {
-        x: layout.x ?? 0,
-        y: layout.y ?? 0,
-        w: layout.w ?? 1,
-        h: layout.h ?? 1,
-      } as WidgetConfig["position"],
-    }));
-    onLayoutChange(updatedWidgets);
-  };
+  const handleLayoutChange = useCallback(
+    (currentLayout: Layout) => {
+      const updatedWidgets = currentLayout.map((layout) => ({
+        id: layout.i,
+        position: {
+          x: layout.x ?? 0,
+          y: layout.y ?? 0,
+          w: layout.w ?? 1,
+          h: layout.h ?? 1,
+        } as WidgetConfig["position"],
+      }));
+      onLayoutChange(updatedWidgets);
+    },
+    [onLayoutChange]
+  );
 
   // 拖拽开始/结束
   const handleDragStart = useCallback(() => {
@@ -175,28 +181,45 @@ export const DashboardGrid: FC<DashboardGridProps> = ({ widgets, onLayoutChange,
 
   // 准备 props - 使用 proper 类型断言
   // 移动端禁用拖拽和调整大小
-  const gridProps: ExtendedResponsiveProps = {
-    className: "layout",
-    width: containerWidth,
-    layouts: { lg: layouts },
-    breakpoints,
-    cols,
-    rowHeight: layoutConfig.rowHeight,
-    margin: layoutConfig.margin,
-    containerPadding: [16, 16],
-    isDraggable: isEditable && layoutConfig.draggable && !isMobile,
-    isResizable: isEditable && layoutConfig.resizable && !isMobile,
-    onLayoutChange: handleLayoutChange,
-    onDragStart: handleDragStart,
-    onDragStop: handleDragStop,
-    onResizeStart: handleResizeStart,
-    onResizeStop: handleResizeStop,
-    compactType: "vertical",
-    preventCollision: true, // 防止 Widget 重叠
-    draggableHandle: ".widget-drag-handle", // 指定拖拽手柄
-    useCSSTransforms: true, // 使用 CSS transform 提升性能
-    children,
-  };
+  const gridProps = useMemo<ExtendedResponsiveProps>(
+    () => ({
+      className: "layout",
+      width: containerWidth,
+      layouts: { lg: layouts },
+      breakpoints,
+      cols,
+      rowHeight: layoutConfig.rowHeight,
+      margin: layoutConfig.margin,
+      containerPadding: CONTAINER_PADDING,
+      isDraggable: isEditable && layoutConfig.draggable && !isMobile,
+      isResizable: isEditable && layoutConfig.resizable && !isMobile,
+      onLayoutChange: handleLayoutChange,
+      onDragStart: handleDragStart,
+      onDragStop: handleDragStop,
+      onResizeStart: handleResizeStart,
+      onResizeStop: handleResizeStop,
+      compactType: "vertical",
+      preventCollision: true, // 防止 Widget 重叠
+      draggableHandle: ".widget-drag-handle", // 指定拖拽手柄
+      useCSSTransforms: true, // 使用 CSS transform 提升性能
+      children,
+    }),
+    [
+      containerWidth,
+      layouts,
+      breakpoints,
+      cols,
+      layoutConfig,
+      isEditable,
+      isMobile,
+      handleLayoutChange,
+      handleDragStart,
+      handleDragStop,
+      handleResizeStart,
+      handleResizeStop,
+      children,
+    ]
+  );
 
   return (
     <div

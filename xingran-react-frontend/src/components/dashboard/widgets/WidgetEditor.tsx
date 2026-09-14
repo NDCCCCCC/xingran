@@ -30,7 +30,8 @@ export interface WidgetEditorProps {
  */
 export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onClose }) => {
   const { message } = App.useApp();
-  const { updateWidget, removeWidget } = useDashboardStore();
+  const updateWidget = useDashboardStore((s) => s.updateWidget);
+  const removeWidget = useDashboardStore((s) => s.removeWidget);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<DataSourceConfig | undefined>(undefined);

@@ -1,5 +1,30 @@
 # Milestones
 
+## v1.33 前端性能治理 (Frontend Performance Remediation) (Shipped: 2026-09-14)
+
+**Phases completed:** 7 phases, 23 plans, 24 tasks
+
+**Key accomplishments:**
+
+- 40px 网格分桶 + 锚点贪心的纯函数 clusterBuildings（零 SDK 依赖）+ 内嵌旧 O(n²) 参考实现的 15 用例一致性测试，输出与旧实现逐位一致（TDD RED→GREEN）
+- HubeiMapGL 与 HubeiMap 聚类双循环替换为单遍预计算 + clusterBuildings 共享纯函数（n² 地图 API 调用归零），HubeiMap 渲染体 5 道 filter 收敛 useMemo，两组件事件监听补 effect cleanup——聚类视觉行为逐位不变
+- 删除 @uiw/react-baidu-map 仅有的两处消费方（MAP3D-06，解锁 Phase 120 DEAD-02），新增 3 用例 cleanup spy 测试锁定 MAP3D-05 监听器生命周期（同引用 removeEventListener），MAP3D-02 人工性能验证按自主模式自动批准并留档 HUMAN-UAT 步骤
+- useTabs（14 字段）与 useLayout（10 字段）hook 内部整店解构改为逐字段 Zustand selector 订阅，返回对象一字不改，TabBar/LayoutSwitcher 等常驻组件消费面零改动
+- RouteGuard/DynamicRoutes 路由层 2 文件 + 3D 页 5 文件的整店订阅全部收敛为 17 个字段级 Zustand selector，菜单刷新高频写入不再重渲整棵已认证路由树，Phase 118 DATA-02 同文件前向兼容
+- 页面级 6 处整店订阅（4 action-only + 2 state 字段）与 NotificationBell 7 项全部单字段 selector 化，4 个非 selector 兼容测试 mock 同任务 dual-form 化，criterion 5 收口为全库恰好 12 处且全部归属 Phase 116/120
+- 116-01
+- 116-02
+- 116-03
+- 117-render-columns-and-bugfix-rendering
+- Consolidated VirtualMachineList's 4 scattered VDI server list calls into one shared react-query entry and rewrote duty holiday hooks' year+list fetch from sequential to parallel Promise.all.
+- DynamicRoutes now reads the menu+permissions cache from sessionStorage synchronously on mount, hydrates the store via a useEffect, and runs a background fetchAll revalidate. The full-page InitializingFallback gate is bypassed on hard refresh when the cache exists; menuStore.clearMenus now wipes the sessionStorage cache to prevent the previous user's menu/permissions from hydrating into the next login.
+- useColumnConfig.loadConfig now returns immediately after setConfig(cached) when localStorage holds a sane config, eliminating the unconditional network fetch on every page mount.
+- `xingran-react-frontend/src/pages/operations/workstations/hooks/useWorkstationView.ts`
+- `xingran-react-frontend/src/hooks/useTableManager.ts`
+- `xingran-react-frontend/src/pages/operations/workstations/index.tsx`
+
+---
+
 ## v1.31 V131 技术债清偿 (Tech Debt Retirement) — ✅ SHIPPED 2026-09-08
 
 **Phases**: 7 (Phases 102-108) | **Plans**: 25 | **Status**: shipped

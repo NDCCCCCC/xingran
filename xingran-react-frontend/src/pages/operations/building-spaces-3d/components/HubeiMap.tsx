@@ -4,11 +4,14 @@
  * 功能：限制缩放范围、悬停显示详细信息、处理重叠楼宇
  */
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { App, Spin, Badge, List, Tag } from "antd";
 import type { BuildingItem } from "../types";
+import { CLUSTER_PIXEL_THRESHOLD } from "../constants";
+import { clusterBuildings, type ClusterGroup } from "../cluster";
 import { useVisualizationStore } from "@/store/visualizationStore";
 import { loadBaiduMapScript } from "./BaiduMapScript";
+import { escapeHtml } from "@/utils/security";
 import {
   getBMap,
   type BMapNamespace,
@@ -18,14 +21,6 @@ import {
   type BMapPolygon,
   type BMapPoint,
 } from "@/types/baidu-map";
-
-// 聚类群组类型
-interface ClusterGroup {
-  buildings: BuildingItem[];
-  centerPixel: { x: number; y: number };
-  clusterLng: number;
-  clusterLat: number;
-}
 
 // 获取百度地图 AK
 const BAIDU_MAP_AK = import.meta.env.VITE_BAIDU_MAP_AK || "";
@@ -70,7 +65,19 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   const [selectedCluster, setSelectedCluster] = useState<ClusterGroup | null>(null);
   const [currentZoom, setCurrentZoom] = useState(8); // 当前缩放级别
 
-  const { clearSelection, navigateToBuilding } = useVisualizationStore();
+  // 层级/坐标过滤记忆化：buildings 引用稳定（index.tsx 仅 mount 时 setBuildings 一次），
+  // hover/缩放重渲染不再重复全量 filter（Phase 114 MAP3D-04）
+  const { level1, level2, withCoords } = useMemo(
+    () => ({
+      level1: buildings.filter((b) => b.level === 1),
+      level2: buildings.filter((b) => b.level === 2),
+      withCoords: buildings.filter((b) => b.longitude && b.latitude),
+    }),
+    [buildings]
+  );
+
+  const clearSelection = useVisualizationStore((s) => s.clearSelection);
+  const navigateToBuilding = useVisualizationStore((s) => s.navigateToBuilding);
 
   // 湖北省边界坐标（简化版，涵盖主要区域）
   const HUBEI_BOUNDARY = [
@@ -167,6 +174,12 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       return;
     }
 
+    // map 实例与事件 handler 提升到 effect 作用域：cleanup 以同一函数引用 removeEventListener
+    let map: BMapMap | null = null;
+    const handleZoomEnd = () => {
+      if (map) setCurrentZoom(map.getZoom());
+    };
+
     const initMap = async () => {
       try {
         setLoading(true);
@@ -180,7 +193,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           message.error("百度地图加载失败");
           return;
         }
-        const map = new BMap.Map(mapRef.current, {
+        map = new BMap.Map(mapRef.current, {
           enableMapClick: false,
         });
         mapInstanceRefLocal.current = map;
@@ -215,11 +228,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           // 遮罩层添加失败，静默处理
         });
 
-        // 监听缩放变化，根据缩放级别显示不同层级的楼宇
-        const handleZoomEnd = () => {
-          const zoom = map.getZoom();
-          setCurrentZoom(zoom);
-        };
+        // 监听缩放变化，根据缩放级别显示不同层级的楼宇（具名 handler，cleanup 同引用移除）
         map.addEventListener("zoomend", handleZoomEnd);
 
         // 初始设置当前缩放级别
@@ -234,6 +243,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     };
 
     initMap();
+
+    return () => {
+      if (map) map.removeEventListener("zoomend", handleZoomEnd);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- addHubeiMask render-defined + message stable; init once
   }, []);
 
@@ -251,67 +264,24 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
     // 根据缩放级别过滤楼宇层级
     // zoom=8 显示level=1, zoom=9 显示level=1, zoom=10 显示level=1和level=2
-    const filteredBuildings =
-      currentZoom === 10
-        ? buildings // zoom=10 显示所有楼宇
-        : buildings.filter((b) => b.level === 1); // zoom=8/9 只显示一级楼宇
+    // （消费 useMemo 的 level1；zoom === 10 语义与层级过滤语义保持不变）
+    const filteredBuildings = currentZoom === 10 ? buildings : level1;
 
-    // 聚类阈值（像素）
-    const CLUSTER_PIXEL_THRESHOLD = 40; // 40px内视为一个聚类
-
-    // 楼宇聚类检测
+    // 聚类处理：有坐标过滤保留在 effect 内（旧代码"先层级过滤再有坐标过滤"的
+    // 输入集合语义不变，useMemo 的 withCoords 未做层级过滤不可替代）；随后单遍
+    // 预计算像素坐标（每楼宇恰 1 次地图 API 调用，n 次替代 n² 次），聚类本体走
+    // 共享纯函数 clusterBuildings（与旧 O(n²) 实现输出逐位一致）
     const buildingsWithCoords = filteredBuildings.filter((b) => b.longitude && b.latitude);
-    const clusterGroups: ClusterGroup[] = [];
-    const processedBuildings = new Set<string>();
-
-    buildingsWithCoords.forEach((building) => {
-      if (processedBuildings.has(building.id)) return;
-
-      const buildingPoint = new BMap.Point(building.longitude!, building.latitude!);
-      const buildingPixel = map.pointToOverlayPixel(buildingPoint);
-
-      // 查找与当前楼宇重叠的其他楼宇
-      const overlappedBuildings: BuildingItem[] = [building];
-      const pixels: Array<{ x: number; y: number }> = [buildingPixel];
-
-      buildingsWithCoords.forEach((otherBuilding) => {
-        if (otherBuilding.id === building.id || processedBuildings.has(otherBuilding.id)) return;
-
-        const otherPoint = new BMap.Point(otherBuilding.longitude!, otherBuilding.latitude!);
-        const otherPixel = map.pointToOverlayPixel(otherPoint);
-
-        // 计算像素距离
-        const distance = Math.sqrt(
-          Math.pow(buildingPixel.x - otherPixel.x, 2) + Math.pow(buildingPixel.y - otherPixel.y, 2)
-        );
-
-        if (distance < CLUSTER_PIXEL_THRESHOLD) {
-          overlappedBuildings.push(otherBuilding);
-          pixels.push(otherPixel);
-          processedBuildings.add(otherBuilding.id);
-        }
-      });
-
-      // 计算聚类中心点（像素坐标的平均值）
-      const avgPixelX = pixels.reduce((sum, p) => sum + p.x, 0) / pixels.length;
-      const avgPixelY = pixels.reduce((sum, p) => sum + p.y, 0) / pixels.length;
-
-      // 将像素中心转换回经纬度
-      const centerPoint = map.pixelToPoint?.(new BMap.Pixel(avgPixelX, avgPixelY)) || {
-        lng: building.longitude!,
-        lat: building.latitude!,
-      };
-
-      const cluster: ClusterGroup = {
-        buildings: overlappedBuildings,
-        centerPixel: { x: avgPixelX, y: avgPixelY },
-        clusterLng: centerPoint.lng || building.longitude!,
-        clusterLat: centerPoint.lat || building.latitude!,
-      };
-
-      clusterGroups.push(cluster);
-      processedBuildings.add(building.id);
-    });
+    const pixels = new Map<string, { x: number; y: number }>();
+    for (const b of buildingsWithCoords) {
+      pixels.set(b.id, map.pointToOverlayPixel(new BMap.Point(b.longitude!, b.latitude!)));
+    }
+    const clusterGroups = clusterBuildings(
+      buildingsWithCoords,
+      pixels,
+      CLUSTER_PIXEL_THRESHOLD,
+      (p) => map.pixelToPoint?.(new BMap.Pixel(p.x, p.y))
+    );
 
     // 渲染聚类标记
     clusterGroups.forEach((cluster) => {
@@ -446,10 +416,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     const content = `
       <div style="padding: 12px; min-width: 260px;">
         <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #337ab0); border-bottom: 2px solid #337ab0; padding-bottom: 8px;">
-          ${building.name}
+          ${escapeHtml(building.name)}
         </h3>
         <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
-          <div>📌 ${building.address || "暂无地址"}</div>
+          <div>📌 ${escapeHtml(building.address || "暂无地址")}</div>
           <div style="margin-top: 8px;">
             <span style="display: inline-block; padding: 2px 10px; background: ${statusBg}; color: ${statusColor}; border-radius: 12px; font-size: 12px; font-weight: 500;">
               ${isStopped ? "⏸ 已停用" : "✓ 正常"}
@@ -661,21 +631,18 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           />
         </div>
         <div>
-          一级楼宇: <Badge count={buildings.filter((b) => b.level === 1).length} showZero />
+          一级楼宇: <Badge count={level1.length} showZero />
         </div>
         <div>
-          二级楼宇: <Badge count={buildings.filter((b) => b.level === 2).length} showZero />
+          二级楼宇: <Badge count={level2.length} showZero />
         </div>
         <div>
           有坐标:{" "}
           <Badge
-            count={buildings.filter((b) => b.longitude && b.latitude).length}
+            count={withCoords.length}
             showZero
             style={{
-              backgroundColor:
-                buildings.filter((b) => b.longitude && b.latitude).length > 0
-                  ? "var(--theme-success, #2d8949)"
-                  : "#ba3630",
+              backgroundColor: withCoords.length > 0 ? "var(--theme-success, #2d8949)" : "#ba3630",
             }}
           />
         </div>
@@ -702,22 +669,21 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         </div>
 
         {/* 有坐标的楼宇为 0 时的提示 */}
-        {buildings.filter((b) => b.longitude && b.latitude).length === 0 &&
-          buildings.length > 0 && (
-            <div
-              style={{
-                marginTop: 8,
-                padding: "8px",
-                background: "var(--theme-warning-bg, #fff2e8)",
-                borderRadius: "4px",
-                border: "1px solid var(--theme-warning, #ffbb96)",
-                color: "var(--theme-warning, #d46b08)",
-              }}
-            >
-              <div style={{ fontWeight: "bold", marginBottom: 4 }}>⚠️ 楼宇缺少坐标</div>
-              <div style={{ fontSize: 11 }}>请在楼宇管理中为楼宇设置经纬度坐标</div>
-            </div>
-          )}
+        {withCoords.length === 0 && buildings.length > 0 && (
+          <div
+            style={{
+              marginTop: 8,
+              padding: "8px",
+              background: "var(--theme-warning-bg, #fff2e8)",
+              borderRadius: "4px",
+              border: "1px solid var(--theme-warning, #ffbb96)",
+              color: "var(--theme-warning, #d46b08)",
+            }}
+          >
+            <div style={{ fontWeight: "bold", marginBottom: 4 }}>⚠️ 楼宇缺少坐标</div>
+            <div style={{ fontSize: 11 }}>请在楼宇管理中为楼宇设置经纬度坐标</div>
+          </div>
+        )}
       </div>
 
       {/* 聚类列表侧边栏 */}

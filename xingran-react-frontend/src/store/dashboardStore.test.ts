@@ -23,7 +23,7 @@ vi.mock("@/services/dashboardService", () => ({
   dashboardService: svc,
 }));
 
-import { useDashboardStore } from "./dashboardStore";
+import { useDashboardStore, widgetDataCache, getWidgetDataCache } from "./dashboardStore";
 import type { Dashboard, WidgetConfig } from "@/types/dashboard";
 
 const widget = (id: string, overrides: Partial<WidgetConfig> = {}): WidgetConfig =>
@@ -54,7 +54,7 @@ describe("dashboardStore", () => {
     localStorage.clear();
     vi.clearAllMocks();
     useDashboardStore.getState().reset();
-    useDashboardStore.setState({ widgetDataCache: new Map() });
+    widgetDataCache.clear();
     consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -296,15 +296,15 @@ describe("dashboardStore", () => {
     // 5 分钟后过期 → 返回 null 并清缓存
     vi.advanceTimersByTime(6 * 60 * 1000);
     expect(useDashboardStore.getState().getCachedWidgetData("w1")).toBeNull();
-    expect(useDashboardStore.getState().widgetDataCache.has("w1")).toBe(false);
+    expect(getWidgetDataCache().has("w1")).toBe(false);
 
     useDashboardStore.getState().cacheWidgetData("a", 1);
     useDashboardStore.getState().cacheWidgetData("b", 2);
     useDashboardStore.getState().clearWidgetCache("a");
-    expect(useDashboardStore.getState().widgetDataCache.has("a")).toBe(false);
-    expect(useDashboardStore.getState().widgetDataCache.has("b")).toBe(true);
+    expect(getWidgetDataCache().has("a")).toBe(false);
+    expect(getWidgetDataCache().has("b")).toBe(true);
     useDashboardStore.getState().clearWidgetCache();
-    expect(useDashboardStore.getState().widgetDataCache.size).toBe(0);
+    expect(getWidgetDataCache().size).toBe(0);
   });
 
   it("fetchDefaultDashboard 成功/失败;pageMode/ws 状态/updateWidgetData/reset", async () => {
@@ -330,7 +330,7 @@ describe("dashboardStore", () => {
     expect(useDashboardStore.getState().isRefreshing).toBe(true);
 
     useDashboardStore.getState().updateWidgetData("w1", { updated: true });
-    expect(useDashboardStore.getState().widgetDataCache.get("w1")!.data).toEqual({
+    expect(getWidgetDataCache().get("w1")!.data).toEqual({
       updated: true,
     });
 
@@ -338,7 +338,7 @@ describe("dashboardStore", () => {
     const state = useDashboardStore.getState();
     expect(state.pageMode).toBe("home");
     expect(state.viewMode).toBe("view");
-    expect(state.widgetDataCache.size).toBe(0);
+    expect(getWidgetDataCache().size).toBe(0);
   });
 
   it("persist 只落盘 viewMode/开关(T-83-04-03)", () => {

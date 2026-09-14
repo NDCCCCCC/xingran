@@ -67,15 +67,23 @@ export const DoorElement = React.memo(
       const sin = Math.sin(angleRad);
       const halfWidth = width / 2;
 
-      // 计算合页和开口终点
+      // 计算合页和开口终点（snapCoord 取整到 0.01 防止 SVG 亚像素抖动）
       const hingePoint = {
-        x: direction === "left" ? position.x + cos * halfWidth : position.x - cos * halfWidth,
-        y: direction === "left" ? position.y + sin * halfWidth : position.y - sin * halfWidth,
+        x: snapCoord(
+          direction === "left" ? position.x + cos * halfWidth : position.x - cos * halfWidth
+        ),
+        y: snapCoord(
+          direction === "left" ? position.y + sin * halfWidth : position.y - sin * halfWidth
+        ),
       };
 
       const openEndPoint = {
-        x: direction === "left" ? position.x - cos * halfWidth : position.x + cos * halfWidth,
-        y: direction === "left" ? position.y - sin * halfWidth : position.y + sin * halfWidth,
+        x: snapCoord(
+          direction === "left" ? position.x - cos * halfWidth : position.x + cos * halfWidth
+        ),
+        y: snapCoord(
+          direction === "left" ? position.y - sin * halfWidth : position.y + sin * halfWidth
+        ),
       };
 
       // 计算门扇角度

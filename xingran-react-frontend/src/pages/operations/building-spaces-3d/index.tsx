@@ -33,7 +33,7 @@ const BuildingSpaces3D: React.FC = () => {
   const [buildings, setBuildings] = useState<BuildingItem[]>([]);
   const [useWebGL, setUseWebGL] = useState(true);
 
-  const { viewLevel } = useVisualizationStore();
+  const viewLevel = useVisualizationStore((s) => s.viewLevel);
 
   // 加载楼宇数据
   const loadBuildings = useCallback(async () => {
@@ -52,7 +52,7 @@ const BuildingSpaces3D: React.FC = () => {
           address: b.address || "",
           longitude: b.longitude,
           latitude: b.latitude,
-          level: 2 as const,
+          level: viewLevel === "map" ? 1 : 2, // WR-03: derive level from viewLevel — map=1, building/floor/workstation=2
           status: b.status,
         }))
       );
@@ -61,7 +61,7 @@ const BuildingSpaces3D: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [viewLevel]);
 
   useEffect(() => {
     loadBuildings();

@@ -735,7 +735,8 @@ const PortStatusPage: FC = () => {
           dataSource={portStatus}
           loading={loading}
           rowKey="id"
-          scroll={{ x: 1400 }}
+          virtual
+          scroll={{ x: 1400, y: 600 }}
           pagination={paginationProps}
           onChange={handleTableChange}
           expandable={{

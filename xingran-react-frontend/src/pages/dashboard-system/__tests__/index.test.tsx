@@ -30,8 +30,9 @@ vi.mock("@/components/dashboard/Widget", () => ({
   Widget: () => <div data-testid="widget" />,
 }));
 
-vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: vi.fn(() => ({
+vi.mock("@/store/dashboardStore", () => {
+  // Per-field selector (Phase 116 DASH-03) — pass selector through state.
+  const state = {
     setPageMode: vi.fn(),
     currentDashboard: null,
     currentLoading: false,
@@ -44,8 +45,13 @@ vi.mock("@/store/dashboardStore", () => ({
     removeWidget: vi.fn(),
     updateWidget: vi.fn(),
     saveDashboard: vi.fn(),
-  })),
-}));
+  };
+  return {
+    useDashboardStore: vi.fn((selector?: (s: typeof state) => unknown) =>
+      typeof selector === "function" ? selector(state) : state
+    ),
+  };
+});
 
 function wrapper({
   children,

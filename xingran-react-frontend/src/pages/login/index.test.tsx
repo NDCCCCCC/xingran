@@ -18,16 +18,20 @@ const {
   mockFetchPermissions: vi.fn(),
 }));
 
-vi.mock("@/store/authStore", () => ({
-  useAuthStore: () => ({ login: mockLogin }),
-}));
+vi.mock("@/store/authStore", () => {
+  // 兼容 selector 调用（useAuthStore(s => s.login)）与无参调用两种形态
+  const useAuthStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector({ login: mockLogin }) : { login: mockLogin };
+  return { useAuthStore: useAuthStoreFn };
+});
 
-vi.mock("@/store/menuStore", () => ({
-  useMenuStore: () => ({
-    fetchMenus: mockFetchMenus,
-    fetchPermissions: mockFetchPermissions,
-  }),
-}));
+vi.mock("@/store/menuStore", () => {
+  // 兼容 selector 调用（useMenuStore(s => s.fetchMenus)）与无参调用两种形态
+  const state = { fetchMenus: mockFetchMenus, fetchPermissions: mockFetchPermissions };
+  const useMenuStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector(state) : state;
+  return { useMenuStore: useMenuStoreFn };
+});
 
 vi.mock("@/lib/loginPreflight", () => ({
   submitLoginPreflight: mockSubmitLoginPreflight,

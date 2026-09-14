@@ -717,36 +717,39 @@ export function CADFloorPlanEditor({
             }
           } else {
             // 创建新工位 - 吸附到网格并检查碰撞
-            const snappedX = floorPlanData.snapToGrid
-              ? snapToGrid(point.x, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
-              : point.x;
-            const snappedY = floorPlanData.snapToGrid
-              ? snapToGrid(point.y, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
-              : point.y;
+            // BUGFIX-03: use setFloorPlanData updater to read prev.snapToGrid/prev.gridSize (avoid stale closure)
+            setFloorPlanData((prev) => {
+              const snappedX = prev.snapToGrid
+                ? snapToGrid(point.x, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
+                : point.x;
+              const snappedY = prev.snapToGrid
+                ? snapToGrid(point.y, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
+                : point.y;
 
-            const newWorkstation: WorkstationNode = {
-              id: `ws_${Date.now()}`,
-              code: `WS-${String(floorPlanData.workstations.length + 1).padStart(3, "0")}`,
-              name: `工位-${floorPlanData.workstations.length + 1}`,
-              x: snappedX,
-              y: snappedY,
-              width: 160, // 更宽的桌子
-              height: 70, // 桌子深度
-              rotation: 0,
-              status: 0, // 0 = 空闲
-              type: 0, // 0 = 一字型, 1 = L型
-            };
+              const newWorkstation: WorkstationNode = {
+                id: `ws_${Date.now()}`,
+                code: `WS-${String(prev.workstations.length + 1).padStart(3, "0")}`,
+                name: `工位-${prev.workstations.length + 1}`,
+                x: snappedX,
+                y: snappedY,
+                width: 160, // 更宽的桌子
+                height: 70, // 桌子深度
+                rotation: 0,
+                status: 0, // 0 = 空闲
+                type: 0, // 0 = 一字型, 1 = L型
+              };
 
-            // 碰撞检测
-            if (checkWorkstationCollision(newWorkstation, floorPlanData.workstations)) {
-              message.warning("工位位置与其他工位冲突，请选择其他位置");
-              return;
-            }
+              // 碰撞检测
+              if (checkWorkstationCollision(newWorkstation, prev.workstations)) {
+                message.warning("工位位置与其他工位冲突，请选择其他位置");
+                return prev;
+              }
 
-            setFloorPlanData((prev) => ({
-              ...prev,
-              workstations: [...prev.workstations, newWorkstation],
-            }));
+              return {
+                ...prev,
+                workstations: [...prev.workstations, newWorkstation],
+              };
+            });
             message.success("工位已添加");
           }
           return;
@@ -762,13 +765,17 @@ export function CADFloorPlanEditor({
             }
           } else {
             // 显示文本输入对话框
-            const snappedX = floorPlanData.snapToGrid
-              ? snapToGrid(point.x, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
-              : point.x;
-            const snappedY = floorPlanData.snapToGrid
-              ? snapToGrid(point.y, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
-              : point.y;
-            setTextInputPosition({ x: snappedX, y: snappedY });
+            // BUGFIX-03: compute snapped position inside setFloorPlanData updater to read latest prev.snapToGrid/prev.gridSize
+            setFloorPlanData((prev) => {
+              const snappedX = prev.snapToGrid
+                ? snapToGrid(point.x, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
+                : point.x;
+              const snappedY = prev.snapToGrid
+                ? snapToGrid(point.y, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
+                : point.y;
+              setTextInputPosition({ x: snappedX, y: snappedY });
+              return prev;
+            });
             setTempTextContent("");
             setIsTextInputVisible(true);
           }
@@ -961,15 +968,10 @@ export function CADFloorPlanEditor({
               let newY = ws.y + dy;
 
               // 如果启用了网格吸附，实时吸附到网格
-              if (floorPlanData.snapToGrid) {
-                newX = snapToGrid(
-                  newX,
-                  floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE
-                );
-                newY = snapToGrid(
-                  newY,
-                  floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE
-                );
+              // BUGFIX-03: read prev.snapToGrid/prev.gridSize to avoid stale closure
+              if (prev.snapToGrid) {
+                newX = snapToGrid(newX, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
+                newY = snapToGrid(newY, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
               }
 
               // 直接应用移动，不进行碰撞检测
@@ -1019,7 +1021,6 @@ export function CADFloorPlanEditor({
       readOnly,
       selectedIds,
       findNearbyWallNode,
-      floorPlanData,
       scale,
     ]
   );

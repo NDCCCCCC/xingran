@@ -41,21 +41,46 @@ export function useHolidayData() {
   );
 
   // 获取可用年份
+  // DATA-04: 首次加载时年份 + 节假日列表并行请求（原实现年份→列表串行,2 次 RTT → 1 次）
   const fetchYears = useCallback(async () => {
     try {
-      const result = await getHolidayYears();
-      const years = result.data || [];
+      // 已有选中年份（年份切换后的重入）：仅刷新年份列表，不动列表数据（与原实现一致）
+      if (holidayYear !== undefined) {
+        const result = await getHolidayYears();
+        setAvailableYears(result.data || []);
+        return;
+      }
+
+      setLoading(true);
+      const currentYear = new Date().getFullYear();
+      const [yearsResult, listResult] = await Promise.all([
+        getHolidayYears(),
+        getHolidayList(currentYear),
+      ]);
+      const years = yearsResult.data || [];
       setAvailableYears(years);
 
-      if (years.length > 0 && holidayYear === undefined) {
-        const latestYear = years[0];
-        setHolidayYear(latestYear);
-        fetchList(latestYear);
+      if (years.length === 0) {
+        setHolidays([]);
+        return;
+      }
+
+      // 默认选择最新的年份（第一个，因为后端已按降序返回）
+      const latestYear = years[0];
+      setHolidayYear(latestYear);
+      // 展示最新年份数据；并行预取的是当前年份，两者不一致时补拉一次纠正
+      if (latestYear === currentYear) {
+        setHolidays(listResult.data || []);
+      } else {
+        const corrected = await getHolidayList(latestYear);
+        setHolidays(corrected.data || []);
       }
     } catch (error) {
       console.error("获取年份列表失败:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [holidayYear, fetchList]);
+  }, [holidayYear]);
 
   // 创建节假日
   const create = useCallback(

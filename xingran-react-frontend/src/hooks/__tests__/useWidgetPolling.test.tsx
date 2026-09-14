@@ -8,12 +8,18 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: vi.fn(() => ({
+vi.mock("@/store/dashboardStore", () => {
+  // Per-field selector (Phase 116 DASH-03) — pass selector through state.
+  const state = {
     getCachedWidgetData: vi.fn(),
     cacheWidgetData: vi.fn(),
-  })),
-}));
+  };
+  return {
+    useDashboardStore: vi.fn((selector?: (s: typeof state) => unknown) =>
+      typeof selector === "function" ? selector(state) : state
+    ),
+  };
+});
 
 describe("hooks/useWidgetPolling", () => {
   it("useWidgetPolling 导出", async () => {

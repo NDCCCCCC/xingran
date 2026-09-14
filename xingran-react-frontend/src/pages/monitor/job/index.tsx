@@ -3,7 +3,7 @@
  * Job Manager Page
  */
 
-import { useState, useEffect, type FC } from "react";
+import { useState, useEffect, useMemo, type FC } from "react";
 import {
   Card,
   Table,
@@ -92,15 +92,19 @@ const JobManager: FC = () => {
   }, [paginationProps.current, paginationProps.pageSize, fetchJobs]);
 
   // 表格列
-  const columns = getJobColumns({
-    handleToggleStatus,
-    handleExecute,
-    handleViewLogs,
-    openModal: (record) => openModal(record, form),
-    handleDelete,
-  });
+  const columns = useMemo(
+    () =>
+      getJobColumns({
+        handleToggleStatus,
+        handleExecute,
+        handleViewLogs,
+        openModal: (record) => openModal(record, form),
+        handleDelete,
+      }),
+    [handleToggleStatus, handleExecute, handleViewLogs, openModal, handleDelete, form]
+  );
 
-  const jobLogColumns = getJobLogColumns();
+  const jobLogColumns = useMemo(() => getJobLogColumns(), []);
 
   // 搜索
   const handleSearch = () => {

@@ -29,16 +29,24 @@ vi.mock("@/components/dashboard/Widget", () => ({
   Widget: () => <div data-testid="widget" />,
 }));
 
-vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: vi.fn(() => ({
+vi.mock("@/store/dashboardStore", () => {
+  // Per-field selectors (Phase 116 DASH-03) require the mock to honor the
+  // selector argument: pass it through the state object so each call returns
+  // the requested field, not the whole store.
+  const state = {
     currentDashboard: null,
     currentLoading: false,
     fetchDashboard: vi.fn(),
     setViewMode: vi.fn(),
     updateWidgetLayouts: vi.fn(),
     clearCurrentDashboard: vi.fn(),
-  })),
-}));
+  };
+  return {
+    useDashboardStore: vi.fn((selector?: (s: typeof state) => unknown) =>
+      typeof selector === "function" ? selector(state) : state
+    ),
+  };
+});
 
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   return (

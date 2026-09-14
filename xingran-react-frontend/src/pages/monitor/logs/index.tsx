@@ -200,14 +200,22 @@ const LogMonitor: React.FC = () => {
   }, [currentManager]);
 
   // 表格列
-  const operColumns = getOperLogColumns({
-    handleViewDetail,
-    getColumnSortOrder: operLogManager.getColumnSortOrder,
-  });
-  const loginColumns = getLoginLogColumns({
-    handleViewDetail,
-    getColumnSortOrder: loginLogManager.getColumnSortOrder,
-  });
+  const operColumns = useMemo(
+    () =>
+      getOperLogColumns({
+        handleViewDetail,
+        getColumnSortOrder: operLogManager.getColumnSortOrder,
+      }),
+    [handleViewDetail, operLogManager.getColumnSortOrder]
+  );
+  const loginColumns = useMemo(
+    () =>
+      getLoginLogColumns({
+        handleViewDetail,
+        getColumnSortOrder: loginLogManager.getColumnSortOrder,
+      }),
+    [handleViewDetail, loginLogManager.getColumnSortOrder]
+  );
 
   // 搜索
   const handleSearch = useCallback(() => {
@@ -372,6 +380,7 @@ const LogMonitor: React.FC = () => {
                   dataSource={operLogManager.data}
                   rowKey="id"
                   loading={operLogManager.loading}
+                  virtual
                   pagination={{
                     current: operLogManager.current,
                     pageSize: operLogManager.pageSize,
@@ -381,7 +390,7 @@ const LogMonitor: React.FC = () => {
                     showTotal: (total) => `共 ${total} 条记录`,
                   }}
                   onChange={operLogManager.handleTableChange}
-                  scroll={{ x: 1500 }}
+                  scroll={{ x: 1500, y: 600 }}
                 />
               ),
             },
@@ -399,6 +408,7 @@ const LogMonitor: React.FC = () => {
                   dataSource={loginLogManager.data}
                   rowKey="id"
                   loading={loginLogManager.loading}
+                  virtual
                   pagination={{
                     current: loginLogManager.current,
                     pageSize: loginLogManager.pageSize,
@@ -408,7 +418,7 @@ const LogMonitor: React.FC = () => {
                     showTotal: (total) => `共 ${total} 条记录`,
                   }}
                   onChange={loginLogManager.handleTableChange}
-                  scroll={{ x: 1400 }}
+                  scroll={{ x: 1400, y: 600 }}
                 />
               ),
             },

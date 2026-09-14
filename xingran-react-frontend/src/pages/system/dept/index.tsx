@@ -17,7 +17,7 @@ import { getDeptColumns } from "./columns";
 import { DeptEditModal } from "./modals";
 import { STATUS_OPTIONS } from "./constants";
 import { renderTreeData } from "./utils";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 
 import { post } from "@/lib/api";
@@ -314,7 +314,7 @@ const DepartmentManagement: FC = () => {
         onLeaderChange={handleLeaderChange}
       />
 
-      <ExcelImport
+      <ExcelImportLazy
         entityType="department"
         entityName="部门"
         templateUrl="/api/v1/system/departments/template"

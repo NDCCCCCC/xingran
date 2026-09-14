@@ -17,11 +17,13 @@ vi.mock("@/lib/authApi", () => ({
   getCaptcha: vi.fn(async () => ({ id: "cap1", image: "" })),
 }));
 
-vi.mock("@/store/authStore", () => ({
-  useAuthStore: vi.fn(() => ({
-    login: vi.fn(),
-  })),
-}));
+vi.mock("@/store/authStore", () => {
+  // 兼容 selector 调用（useAuthStore(s => s.login)）与无参调用两种形态
+  const state = { login: vi.fn() };
+  const useAuthStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector(state) : state;
+  return { useAuthStore: useAuthStoreFn };
+});
 
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   return (

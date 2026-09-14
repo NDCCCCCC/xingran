@@ -56,7 +56,8 @@ const BuildingView3D: React.FC = () => {
   const [workstations, setWorkstations] = useState<WorkstationData[]>([]);
   const [loadingWorkstations, setLoadingWorkstations] = useState(false);
 
-  const { selectedBuilding, navigateToMap } = useVisualizationStore();
+  const selectedBuilding = useVisualizationStore((s) => s.selectedBuilding);
+  const navigateToMap = useVisualizationStore((s) => s.navigateToMap);
 
   // ============ 数据加载 ============
 

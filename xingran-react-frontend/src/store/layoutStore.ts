@@ -285,18 +285,18 @@ export const useLayoutStore = create<LayoutStore>()((set, get) => ({
  * 提供更方便的布局访问和操作
  */
 export function useLayout() {
-  const {
-    currentLayout,
-    configuration,
-    sidebarCollapsed,
-    density,
-    syncFromSettings,
-    toggleSidebar,
-    setSidebarCollapsed,
-    setDensity,
-    setLayout,
-    saveState,
-  } = useLayoutStore();
+  // 逐字段 selector 订阅（范本 useRouteTabs.ts:45-48）：任意未被订阅字段的 set()
+  // 不再触发本 hook 消费组件重渲
+  const currentLayout = useLayoutStore((s) => s.currentLayout);
+  const configuration = useLayoutStore((s) => s.configuration);
+  const sidebarCollapsed = useLayoutStore((s) => s.sidebarCollapsed);
+  const density = useLayoutStore((s) => s.density);
+  const syncFromSettings = useLayoutStore((s) => s.syncFromSettings);
+  const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
+  const setSidebarCollapsed = useLayoutStore((s) => s.setSidebarCollapsed);
+  const setDensity = useLayoutStore((s) => s.setDensity);
+  const setLayout = useLayoutStore((s) => s.setLayout);
+  const saveState = useLayoutStore((s) => s.saveState);
 
   // 同步 data-layout 和 data-density 属性
   useEffect(() => {
