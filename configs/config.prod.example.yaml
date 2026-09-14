@@ -32,6 +32,13 @@ server:
   host: "0.0.0.0"
   port: 9000
   mode: release  # 生产环境必须 release（关闭 gin debug 路由/堆栈泄漏）
+  # 【Phase 110 TLS-04】生产必须显式配置至少一个 CORS origin;
+  # 留空会触发 cmd/main.go:106 的 Fatalf 静默退出（无 panic, 仅 status=1）,
+  # 导致 deploy 静默失败、systemd 一直 rollback 到旧二进制。
+  # 环境变量也可: XINGRAN_SERVER_ALLOWED_ORIGINS="https://a.com,https://b.com"
+  # (viper AutomaticEnv 自动绑定, 后注册的 BindEnv 优先级更高 — 详见 internal/config/config.go)。
+  allowed_origins:
+    - "https://your-production-domain.com"
 
 # ----------------------------------------------------------------------------
 # 数据库配置 - PostgreSQL
