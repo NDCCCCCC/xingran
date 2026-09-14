@@ -891,7 +891,8 @@ const DeviceManagement: FC = () => {
               dataSource={devices}
               loading={loading}
               rowKey="id"
-              scroll={{ x: 1600 }}
+              virtual
+              scroll={{ x: 1600, y: 600 }}
               pagination={paginationProps}
               onChange={handleTableChange}
             />

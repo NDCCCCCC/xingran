@@ -1006,6 +1006,8 @@ const InfoPointManagement: FC = () => {
               dataSource={infoPoints}
               loading={loading}
               rowKey="id"
+              virtual
+              scroll={{ y: 600 }}
               pagination={paginationProps}
               onChange={handleInfoPointTableChange}
             />
