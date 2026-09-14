@@ -295,16 +295,18 @@ const initialized = useAuthStore((s) => s.initialized);
 | A2 | `NotificationBell.tsx:75` 不属于任何 requirement（审计 M-3/M-4 均未列名），默认留在 Phase 116/120 之外的挂账 | Open Questions OQ-1 | 若用户预期"grep 全库归零"是本 phase 验收项，则验收会红——必须由 planner 显式定口径（见 OQ-1） |
 | A3 | useTabs 的 `history` 字段 0 消费方（TabBar/useTabSync 均不解构它）——可留可去，默认保留（不碰返回形态） | Pitfall 4 | 低——保留是零风险选项 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Success criterion 5 的 grep 归零口径（需 planner 定案）**
    - What we know: 实测全库 29 处无参调用；本 phase 16 处；Phase 116 收 11 处（DASH-01 两处 + DASH-03 九处）；Phase 120 DEAD-01 删 useTabSync.ts（1 处）；`components/NotificationBell.tsx:75`（useNoticeStore：unreadCount/notifications/loading + 4 个 action）**不属于任何 requirement**
    - What's unclear: criterion 5 "`useXxxStore()` 无参整店订阅 grep 归零" 是否要求本 phase 完成时全库为 0？若是，NotificationBell 必须纳入本 phase（1 处小改，其测试 `components/__tests__/notificationBell.interact.test.tsx` 与 `components.render.test.tsx` 均用真实 store，零 mock 风险）
    - Recommendation: 二选一并写进 PLAN——(a) 把 NotificationBell.tsx:75 纳入 SELECTOR-05（推荐：1 行级改动即让 criterion 5 在本 phase 可验，剩余 12 处全部有明确归属 phase）；(b) criterion 5 的 grep 断言排除 dashboardStore 家族（Phase 116）+ NotificationBell（挂账），本 phase 断言 = 16 处归零
+   - **定案 (2026-09-14, planner):** 采纳推荐 (a)——NotificationBell.tsx:67-75（3 state + 4 action 共 7 项）纳入 115-03；criterion 5 收口 = 全库无参调用恰好 12 处且全部命中白名单三组前缀 `hooks/(useTabSync|useWidgetData).ts` / `pages/dashboard-system/` / `components/dashboard/`（dashboardStore 家族 11 + useTabSync 1，Phase 116/120 清单；03-T3 定案口径，已同步 VALIDATION Criterion 5 行）
 
 2. **useTabs 是否顺带去掉 0 消费的 `history` 字段**
    - What we know: `history` 在 useTabs 消费方中无人解构（A3）
    - Recommendation: 默认保留返回形态（最小 diff，D-04 零回归优先）；不作为验收项
+   - **定案 (2026-09-14, planner):** 不做——`history` 字段保留在 useTabs 返回对象（115-01 Task 1 约束 2），D-04 最小 diff 优先，非验收项
 
 ## Environment Availability
 

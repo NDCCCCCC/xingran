@@ -1,9 +1,9 @@
 ---
 phase: 115
 slug: selector-completion-zustand-selector
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-09-14
 ---
 
@@ -40,10 +40,10 @@ created: 2026-09-14
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | （随 plan 划分） | 01 | 1 | SELECTOR-01 | — | N/A | 既有回归 | `npx vitest run src/store/tabsStore.test.ts src/components/layout/shared/__tests__/TabBar.render.test.tsx src/components/layout/shared/__tests__/useRouteTabs.test.tsx src/hooks/useUtilityHooks.test.tsx` | ✅ | ⬜ pending |
 | （随 plan 划分） | 01 | 1 | SELECTOR-02 | — | N/A | 既有回归（派生值 renderHook 断言） | `npx vitest run src/store/layoutStore.test.ts` | ✅ | ⬜ pending |
-| （随 plan 划分） | 02 | 2 | SELECTOR-03 | V4 守护项 | RouteGuard 权限判断逐字保留（UX-only 注释语义不变） | 既有回归 + type-check | `npx vitest run src/router/__tests__/routeGuard-lastpath.test.tsx && npm run type-check` | ✅ | ⬜ pending |
-| （随 plan 划分） | 02 | 2 | SELECTOR-04 | — | N/A | 既有回归（真实 store） | `npx vitest run src/pages/operations/building-spaces-3d/ src/store/visualizationStore.test.ts` | ✅ | ⬜ pending |
+| （随 plan 划分） | 02 | 1 | SELECTOR-03 | V4 守护项 | RouteGuard 权限判断逐字保留（UX-only 注释语义不变） | 既有回归 + type-check | `npx vitest run src/router/__tests__/routeGuard-lastpath.test.tsx && npm run type-check` | ✅ | ⬜ pending |
+| （随 plan 划分） | 02 | 1 | SELECTOR-04 | — | N/A | 既有回归（真实 store） | `npx vitest run src/pages/operations/building-spaces-3d/ src/store/visualizationStore.test.ts` | ✅ | ⬜ pending |
 | （随 plan 划分） | 03 | 2 | SELECTOR-05 | — | DashboardScopeSelector mock 保持 isAdmin/dataScope 断言语义（dual-form mock） | 既有回归 + 4 个 mock 必改 | `npx vitest run src/pages/login/ src/pages/my-notices/__tests__/detail.test.tsx src/components/dashboard/settings/__tests__/DashboardScopeSelector.test.tsx src/pages/profile/ src/pages/duty/my-duty/` | ✅（mock 更新后） | ⬜ pending |
-| （随 plan 划分） | — | — | Criterion 5 | — | N/A | grep 断言（机械） | `grep -rnE "use[A-Z][A-Za-z0-9]*Store\(\)" xingran-react-frontend/src --include="*.ts" --include="*.tsx" \| grep -vE "__tests__\|\.test\."` → 0 命中（含 NotificationBell.tsx:75，OQ-1 推荐全库口径） | — | ⬜ pending |
+| （随 plan 划分） | 03 | 2 | Criterion 5 | — | N/A | grep 断言（机械） | `grep -rnE "use[A-Z][A-Za-z0-9]*Store\(\)" xingran-react-frontend/src --include="*.ts" --include="*.tsx" \| grep -vE "__tests__\|\.test\."` → **恰好 12 处**（dashboardStore 家族 11 + useTabSync 1，Phase 116/120 清单文件），且全部命中三组白名单前缀：`hooks/(useTabSync\|useWidgetData).ts` / `pages/dashboard-system/` / `components/dashboard/`——清单外命中即回修对应簇，禁改断言口径（03-T3 定案，OQ-1 全库口径） | — | ⬜ pending |
 | — | — | — | 七 gate 相关项 | — | N/A | lint / type-check / coverage floor / size-limit | `npm run lint && npm run type-check && npm run test:coverage && npm run size` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -66,11 +66,11 @@ All phase behaviors have automated verification.（D-04 零回归口径 = 测试
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved — 2026-09-14（checker 维度 8 复核 8a-8d 全部通过；Criterion 5 行已按 03-T3 定案口径修订为恰好 12 处 + 三组白名单前缀；plan 02 行 Wave 修正为 1）
