@@ -580,6 +580,22 @@ const WorkstationManagement: FC = () => {
     setImportVisible(false);
   }, [refreshData]);
 
+  // MISC-05: useCallback 化使 memo 组件避免不必要重渲
+  const handleApplyException = useCallback((workstationId: string) => {
+    window.open(
+      `/asset/reconciliation/exception-rules/new?workstationId=${workstationId}`,
+      "_blank"
+    );
+  }, []);
+
+  const handleDeviceChange = useCallback(() => {
+    refreshData();
+  }, [refreshData]);
+
+  const handleBadgeClick = useCallback((assetId: string, workstationId: string) => {
+    setDrawerState({ open: true, assetId, workstationId, activeTab: "summary" });
+  }, []);
+
   // 等待 cascaderOptions 就绪后写入编辑表单的 floorId / orgId
   // 替代 setEditFormValues 内 setTimeout(0) 的脆弱时序
   useEffect(() => {
@@ -656,26 +672,14 @@ const WorkstationManagement: FC = () => {
                 {reconciliationVisible && (
                   <HealthCard
                     workstationId={record.id}
-                    onApplyException={() => {
-                      window.open(
-                        `/asset/reconciliation/exception-rules/new?workstationId=${record.id}`,
-                        "_blank"
-                      );
-                    }}
+                    onApplyException={() => handleApplyException(record.id)}
                   />
                 )}
                 <WorkstationDeviceTable
                   workstationId={record.id}
                   conflictTypeMap={assetConflictMap}
-                  onDeviceChange={refreshData}
-                  onBadgeClick={(assetId, _conflictType) =>
-                    setDrawerState({
-                      open: true,
-                      assetId,
-                      workstationId: record.id,
-                      activeTab: "summary",
-                    })
-                  }
+                  onDeviceChange={handleDeviceChange}
+                  onBadgeClick={(assetId, _conflictType) => handleBadgeClick(assetId, record.id)}
                 />
               </div>
             ),
