@@ -124,7 +124,7 @@ const VirtualMachineList: React.FC = () => {
     queryKey: queryKeys.vdi.servers(),
     queryFn: () => vdiServerApi.list({ current: 1, pageSize: 100 }),
     enabled: canCreateVM,
-    staleTime: 5 * 60 * 1000, // 与 App.tsx defaultOptions.staleTime 一致
+    staleTime: 30 * 1000, // 30s — server list changes infrequently; 5min staleTime allows disabled servers to remain visible too long
   });
   const vdiServers: VDIServer[] = useMemo(() => serverData?.data?.list || [], [serverData]);
 
