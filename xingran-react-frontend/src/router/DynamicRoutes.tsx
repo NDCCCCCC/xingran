@@ -102,8 +102,11 @@ function InitializingFallback() {
 }
 
 export function DynamicRoutes() {
-  const { allMenus, fetchAll, permissions } = useMenuStore();
-  const { isAuthenticated, initialized } = useAuthStore();
+  const allMenus = useMenuStore((s) => s.allMenus);
+  const fetchAll = useMenuStore((s) => s.fetchAll);
+  const permissions = useMenuStore((s) => s.permissions);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const initialized = useAuthStore((s) => s.initialized);
   const location = useLocation();
 
   // 上次访问的路径直接从 sessionStorage 派生 (不再镜像到 state, 避免 effect 内同步 setState)

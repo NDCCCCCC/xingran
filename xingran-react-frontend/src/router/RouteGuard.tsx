@@ -30,7 +30,7 @@ export interface RouteGuardProps {
 }
 
 export function RouteGuard({ permissions, fallback, fallbackElement, children }: RouteGuardProps) {
-  const { permissions: userPermissions } = useMenuStore();
+  const userPermissions = useMenuStore((s) => s.permissions);
 
   // 空 permissions 数组 = 无权限要求, 直接放行
   if (permissions.length === 0) {
