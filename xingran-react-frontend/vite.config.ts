@@ -11,7 +11,7 @@ import fs from "fs";
 // ----------------------------------------------------------------------------
 // 背景：手动按包名切 chunk 会与真实依赖图冲突——Rollup 把共享模块 hoist 到某个 chunk，
 // 若该 chunk 与 React/three 形成双向引用，模块求值时 React 绑定未就绪 →
-// "Cannot read properties of undefined (reading 'createContext' / 'useLayoutEffect')"。
+// 若该 chunk 与 React/three 形成双向引用，模块求值时 React 绑定未就绪。
 // 做法：配置加载时扫描 node_modules 的 package.json（dependencies + peerDependencies），
 // 计算三组传递闭包，按依赖关系而非包名分组，确保每个 vendor chunk 只单向依赖 vendor-react。
 //   • THREE_FAMILY：所有（直接/间接）依赖 three 的包 → vendor-three（含 three-stdlib、
@@ -165,7 +165,7 @@ export default defineConfig(({ mode }) => {
             const pkgName = pm ? pm[1].replace(/[/\\]/g, "/") : "";
 
             // @uiw/react-markdown-preview 与 react-markdown 归入 vendor-md-editor
-            // （非 React 组件，不应进 vendor-react；其余 @uiw/* 继续走 vendor-react 兜底）
+            // （独立打包为 vendor-md-editor，避免污染 vendor-react；其余 @uiw/* 继续走 vendor-react 兜底）
             if (pkgName === "@uiw/react-markdown-preview" || pkgName === "react-markdown") {
               return "vendor-md-editor";
             }
