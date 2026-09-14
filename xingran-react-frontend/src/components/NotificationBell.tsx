@@ -64,15 +64,13 @@ const FOOTER_STYLE = {
 const NotificationBell: FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const {
-    unreadCount,
-    notifications,
-    loading,
-    markAsRead,
-    markAllAsRead,
-    removeNotification,
-    setNotifications,
-  } = useNoticeStore();
+  const unreadCount = useNoticeStore((s) => s.unreadCount);
+  const notifications = useNoticeStore((s) => s.notifications);
+  const loading = useNoticeStore((s) => s.loading);
+  const markAsRead = useNoticeStore((s) => s.markAsRead);
+  const markAllAsRead = useNoticeStore((s) => s.markAllAsRead);
+  const removeNotification = useNoticeStore((s) => s.removeNotification);
+  const setNotifications = useNoticeStore((s) => s.setNotifications);
 
   // 建立通知 WebSocket 连接
   const { connect } = useWebSocket({

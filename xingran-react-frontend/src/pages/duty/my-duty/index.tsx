@@ -61,7 +61,7 @@ import type { FC } from "react";
 
 const MyDutyPage: FC = () => {
   const [form] = Form.useForm();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
 
   // 统计数据
   const [stats, setStats] = useState<MyDutyStats | null>(null);

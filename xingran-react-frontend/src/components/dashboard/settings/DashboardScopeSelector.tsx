@@ -22,7 +22,7 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
   onChange,
   disabled = false,
 }) => {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const isAdmin = user?.isAdmin || false;
 
   // 获取用户数据范围
