@@ -211,10 +211,16 @@ describe("useTableManager", () => {
     h.unmount();
   });
 
-  it("mount 时从 sessionStorage 恢复 filters 并回填表单", () => {
+  it("首次 loadData 触发 lazy sessionStorage 读取并回填表单", async () => {
+    // MISC-03: filters 是惰性初始化的——mount 时不再同步读 sessionStorage。
+    // 首次 loadData 触发 readInitialFilters，restore 到表单 + 走 persistFilters 路径。
     sessionStorage.setItem(FILTERS_KEY, JSON.stringify({ username: "restored" }));
     const loadFunction = vi.fn();
     const h = createHarness(loadFunction);
+
+    await act(async () => {
+      await h.api().loadData();
+    });
 
     expect(h.api().searchForm.getFieldsValue()).toMatchObject({ username: "restored" });
     h.unmount();

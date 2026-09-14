@@ -25,13 +25,11 @@ describe("getIconComponent", () => {
     expect(screen.getByRole("img", { hidden: true })).toBeTruthy();
   });
 
-  it("未知图标名返回 null Suspense fallback (动态导入失败即静默)", () => {
-    // 动态导入失败的图标返回 Suspense(→ null)，不抛错也不返回 undefined
+  it("未知图标名返回 undefined (BUNDLE-02 删假动态导入后)", () => {
+    // BUNDLE-02: 删除了假动态导入 (bare specifier Vite 不可分析)。
+    // 现在未知图标直接返回 undefined，没有 Suspense wrapper 也没有 fallback。
     const node = getIconComponent("NoSuchIconExists");
-    expect(node).toBeTruthy();
-    // Suspense wrapper is returned; rendered output is null
-    const { container } = render(node as React.ReactElement);
-    expect(container.innerHTML).toBe("");
+    expect(node).toBeUndefined();
   });
 
   it("fullIconNameMap 映射路径可命中（CloudServerOutlined → server）", () => {
