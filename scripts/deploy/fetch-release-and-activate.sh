@@ -21,7 +21,6 @@ APP=/opt/xingran
 UPLOAD=$APP/upload
 NEW=$APP/xingran-backend.new
 UNIT_NEW=$APP/deploy/xingran.service.new
-PROXY="https://gh-proxy.com"
 
 VERSION="${1:-}"
 ASSET_URL="${2:-}"   # runner 侧已解析的 browser_download_url
@@ -41,27 +40,33 @@ sudo install -d -m 0755 "$UPLOAD"
 TARBALL="$UPLOAD/xingran-backend.tar.gz"
 rm -f "$TARBALL"
 
-# 2. 匿名下载（公开资产,CDN 直达） — 3 次重试,指数退避
+# 2. 匿名下载（公开资产,CDN 直达） — 多镜像轮转 + 指数退避
 # 动机: gh-proxy.com 偶发链路抽风（基线 2.7-9.7MB/s, 跌至 ~72KB/s 时一次 22MB
 #   tar.gz 可能 5min 内下不完）。证据: run 32343634772 deploy job 22.5MB 差 621KB
 #   在 5min --max-time 失败,同 run rerun 39s 完成,典型的镜像瞬时降速。
-# 一次 curl 失败不应让 deploy 直接放弃 — 退避后重试通常即可恢复。
-# 注意: 3 次重试 + 30/60/120s 退避 + 单次 --max-time 300 = 最坏 16.5min,
-#   略超 deploy job 的 timeout-minutes: 15;建议运维若频繁触碰 3 次都失败,
-#   关注 deploy job 是否需要 timeout 调整 / 在 build 端分片压缩。
-echo ">> downloading asset via gh-proxy: $ASSET_URL"
-ATTEMPTS=3
+# 2026-09-14: gh-proxy.com 升级为全量 403（所有匿名代理下载被服务端封锁,
+#   含其他公共 repo——非本仓库特例, run 34860399064 两次全链路 403 复现）。
+#   引入镜像轮转链, 每次尝试换下一个镜像:
+#   ghfast.top (2026-09-14 实测 sha256 一致可用) → gh-proxy.com (历史主镜像,
+#   服务恢复后自动回归) → ghproxy.link / gh-proxy.net (307/302 重定向, -L 处理)。
+# 单次 --max-time 300 × 4 = 最坏 20min + 退避 30/60/120s = 23.5min,
+# 已超 deploy job 旧 timeout-minutes: 15 → 该 job timeout 已同步上调至 25。
+PROXIES=("https://ghfast.top" "https://gh-proxy.com" "https://ghproxy.link" "https://gh-proxy.net")
+echo ">> downloading asset via proxy chain: ${PROXIES[*]}"
+ATTEMPTS=${#PROXIES[@]}
 for attempt in $(seq 1 $ATTEMPTS); do
+  PROXY="${PROXIES[$((attempt - 1))]}"
   if curl -fsSL --max-time 300 -o "$TARBALL" "$PROXY/$ASSET_URL"; then
+    echo ">> downloaded via $PROXY"
     break
   fi
   rc=$?
   if [ "$attempt" -eq $ATTEMPTS ]; then
-    fail "asset download failed after $ATTEMPTS attempts (last curl rc=$rc)"
+    fail "asset download failed after $ATTEMPTS attempts across proxy chain (last curl rc=$rc, proxy=$PROXY)"
   fi
   # 指数退避: 30s / 60s / 120s
   backoff=$(( 30 << (attempt - 1) ))
-  echo "!! attempt $attempt/$ATTEMPTS failed (curl rc=$rc), retrying in ${backoff}s"
+  echo "!! attempt $attempt/$ATTEMPTS via $PROXY failed (curl rc=$rc), retrying in ${backoff}s"
   sleep "$backoff"
 done
 
