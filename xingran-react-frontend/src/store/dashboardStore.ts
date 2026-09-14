@@ -17,6 +17,15 @@ export const widgetDataCache = new Map<string, { data: unknown; timestamp: numbe
 // 导出用于测试：获取 widgetDataCache 引用（模块级 Map 无法通过 getState() 访问）
 export const getWidgetDataCache = () => widgetDataCache;
 
+// 模块级缓存清理函数：updateDashboard 内部直调与 store action 委托共用
+export function clearWidgetCache(widgetId?: string): void {
+  if (widgetId) {
+    widgetDataCache.delete(widgetId);
+  } else {
+    widgetDataCache.clear();
+  }
+}
+
 export type DashboardViewMode = "view" | "edit";
 
 // 页面模式类型
@@ -424,11 +433,7 @@ export const useDashboardStore = create<DashboardStore>()(
       },
 
       clearWidgetCache: (widgetId) => {
-        if (widgetId) {
-          widgetDataCache.delete(widgetId);
-        } else {
-          widgetDataCache.clear();
-        }
+        clearWidgetCache(widgetId);
       },
 
       toggleGridLines: () => {
