@@ -112,7 +112,23 @@ Plans:
   4. dedicated-lines:494 monthlyFee=0 与 FloorCardView:82 area=0 正确渲染数值 0 而非空白（改 `!= null` 判断，回归测试锁定 BUGFIX-01）
   5. CADFloorPlanEditor（:870-1028）updater 读 `prev.snapToGrid`/`prev.gridSize` 并从 deps 删除 floorPlanData：snap 操作始终使用最新设置、无 stale closure（回归测试锁定 BUGFIX-03）
 
-**Plans**: TBD（预估 4）
+**Plans**: 4/4 plans created
+
+**Wave 1**
+
+- [x] 120-01-PLAN.md — BUNDLE-01 ExcelImport 懒加载统一 + BUNDLE-03 路由 glob 排除 + BUNDLE-04 EChartsWrapper 注释修正
+
+**Wave 2**
+
+- [x] 120-02-PLAN.md — BUNDLE-02 iconUtils 假动态导入删除 + 回归测试（行为变更附测试）
+
+**Wave 3**
+
+- [x] 120-03-PLAN.md — DEAD-01 5 处死代码删除 + DEAD-03 vite.config 注释修正
+
+**Wave 4**
+
+- [x] 120-04-PLAN.md — DEAD-02 4 僵尸依赖移除 + npm install/build/type-check 验证
 
 ### Phase 118: data-fetch（数据获取治理）
 
