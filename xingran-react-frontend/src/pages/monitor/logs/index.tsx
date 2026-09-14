@@ -200,14 +200,22 @@ const LogMonitor: React.FC = () => {
   }, [currentManager]);
 
   // 表格列
-  const operColumns = getOperLogColumns({
-    handleViewDetail,
-    getColumnSortOrder: operLogManager.getColumnSortOrder,
-  });
-  const loginColumns = getLoginLogColumns({
-    handleViewDetail,
-    getColumnSortOrder: loginLogManager.getColumnSortOrder,
-  });
+  const operColumns = useMemo(
+    () =>
+      getOperLogColumns({
+        handleViewDetail,
+        getColumnSortOrder: operLogManager.getColumnSortOrder,
+      }),
+    [handleViewDetail, operLogManager.getColumnSortOrder]
+  );
+  const loginColumns = useMemo(
+    () =>
+      getLoginLogColumns({
+        handleViewDetail,
+        getColumnSortOrder: loginLogManager.getColumnSortOrder,
+      }),
+    [handleViewDetail, loginLogManager.getColumnSortOrder]
+  );
 
   // 搜索
   const handleSearch = useCallback(() => {

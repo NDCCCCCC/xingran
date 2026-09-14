@@ -15,7 +15,7 @@
  * - 写操作成功后调 useInvalidateDept + invalidate locationAlias(双失效)
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Drawer,
   Form,
@@ -107,14 +107,16 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   // 双失效工具
   const invalidateDept = useInvalidateDept();
   const queryClient = useQueryClient();
-  const invalidateAliasAll = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.locationAlias.all });
+  const invalidateAliasAll = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.locationAlias.all }),
+    [queryClient]
+  );
 
-  const refreshAfterMutation = async () => {
+  const refreshAfterMutation = useCallback(async () => {
     await refetch();
     invalidateDept();
     invalidateAliasAll();
-  };
+  }, [refetch, invalidateDept, invalidateAliasAll]);
 
   const handleCreate = async () => {
     try {
@@ -140,7 +142,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
       await locationAliasApi.delete(id);
       handleSuccess("映射删除");
@@ -148,57 +150,60 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
     } catch (err) {
       handleApiError(err, "删除映射");
     }
-  };
+  }, [refreshAfterMutation]);
 
   const aliasList: LocationAlias[] = aliasPage?.list ?? [];
   const total: number = aliasPage?.total ?? 0;
 
-  const columns = [
-    {
-      title: "所属部门",
-      key: "dept",
-      ellipsis: true,
-      render: (_: unknown, r: LocationAlias) =>
-        r.originDeptName ? <Text>{r.originDeptName}</Text> : <Text code>{r.deptId}</Text>,
-    },
-    {
-      title: "物理位置",
-      key: "location",
-      ellipsis: true,
-      render: (_: unknown, r: LocationAlias) =>
-        r.locationDeptName ? <Text>{r.locationDeptName}</Text> : <Text code>{r.locationId}</Text>,
-    },
-    {
-      title: "备注",
-      dataIndex: "remark",
-      key: "remark",
-      ellipsis: true,
-    },
-    {
-      title: "创建时间",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 160,
-    },
-    {
-      title: "操作",
-      key: "action",
-      width: 80,
-      render: (_: unknown, record: LocationAlias) =>
-        canDelete ? (
-          <Popconfirm
-            title="确认删除该映射?"
-            description="删除后,工位编辑下拉将立即不再追加该 alias 部门。"
-            okText="删除"
-            okButtonProps={{ danger: true }}
-            cancelText="取消"
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button type="link" danger icon={<DeleteOutlined />} size="small" />
-          </Popconfirm>
-        ) : null,
-    },
-  ];
+  const columns = useMemo(
+    () => [
+      {
+        title: "所属部门",
+        key: "dept",
+        ellipsis: true,
+        render: (_: unknown, r: LocationAlias) =>
+          r.originDeptName ? <Text>{r.originDeptName}</Text> : <Text code>{r.deptId}</Text>,
+      },
+      {
+        title: "物理位置",
+        key: "location",
+        ellipsis: true,
+        render: (_: unknown, r: LocationAlias) =>
+          r.locationDeptName ? <Text>{r.locationDeptName}</Text> : <Text code>{r.locationId}</Text>,
+      },
+      {
+        title: "备注",
+        dataIndex: "remark",
+        key: "remark",
+        ellipsis: true,
+      },
+      {
+        title: "创建时间",
+        dataIndex: "createdAt",
+        key: "createdAt",
+        width: 160,
+      },
+      {
+        title: "操作",
+        key: "action",
+        width: 80,
+        render: (_: unknown, record: LocationAlias) =>
+          canDelete ? (
+            <Popconfirm
+              title="确认删除该映射?"
+              description="删除后,工位编辑下拉将立即不再追加该 alias 部门。"
+              okText="删除"
+              okButtonProps={{ danger: true }}
+              cancelText="取消"
+              onConfirm={() => handleDelete(record.id)}
+            >
+              <Button type="link" danger icon={<DeleteOutlined />} size="small" />
+            </Popconfirm>
+          ) : null,
+      },
+    ],
+    [canDelete, handleDelete]
+  );
 
   return (
     <Drawer
