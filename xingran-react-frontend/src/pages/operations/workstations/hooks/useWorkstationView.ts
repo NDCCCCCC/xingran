@@ -59,10 +59,13 @@ export function useWorkstationView(floorOptions: FloorOption[]): UseWorkstationV
       try {
         await workstationApi.updatePositions(items);
 
+        // MISC-01: 用 Map<id, item> 索引替代 O(n²) find，批量更新 O(n)
+        const itemMap = new Map(items.map((item) => [item.id, item]));
+
         // 更新本地平面图数据
         setFloorPlanWorkstations((prev) =>
           prev.map((ws) => {
-            const updatedItem = items.find((item) => item.id === ws.id);
+            const updatedItem = itemMap.get(ws.id);
             if (updatedItem) {
               return {
                 ...ws,
