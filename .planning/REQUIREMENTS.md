@@ -138,10 +138,10 @@ Phase 映射由 roadmapper 填充（2026-09-12，`.planning/ROADMAP.md` Phases 1
 | BUGFIX-01 | Phase 117 | Pending |
 | BUGFIX-02 | Phase 117 | Pending |
 | BUGFIX-03 | Phase 117 | Pending |
-| DATA-01 | Phase 118 | Pending |
-| DATA-02 | Phase 118 | Pending |
-| DATA-03 | Phase 118 | Pending |
-| DATA-04 | Phase 118 | Pending |
+| DATA-01 | Phase 118 | Completed |
+| DATA-02 | Phase 118 | Completed |
+| DATA-03 | Phase 118 | Completed |
+| DATA-04 | Phase 118 | Completed |
 | MISC-01 | Phase 119 | Pending |
 | MISC-02 | Phase 119 | Pending |
 | MISC-03 | Phase 119 | Pending |

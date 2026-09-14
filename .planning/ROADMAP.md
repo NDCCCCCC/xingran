@@ -27,7 +27,7 @@
 - [x] **Phase 115: selector-completion** - Zustand selector 收尾：useTabs/useLayout 内部 selector 化 + 路由层 + 3D 页 5 处 + action-only 整店订阅清零 (completed 2026-09-14)
 - [ ] **Phase 116: dashboard-cascade** - Dashboard N² 重渲染级联消除（H-1）：useWidgetData selector 化 + L1 缓存出 state + 9 处订阅收敛 + DashboardGrid 稳定化
 - [ ] **Phase 117: render-columns-and-bugfix** - 渲染热点治理 + 正确性修复：7 处 columns 工厂记忆化 + Table virtual 补齐 + "0" 渲染 / VariablesModal 6 列 / CAD stale closure（附回归测试）
-- [ ] **Phase 118: data-fetch** - 数据获取治理：VDI react-query 去重 + 菜单 hydrate-then-revalidate 消除整页门控 + 列配置缓存短路 + Promise.all 合并
+- [x] **Phase 118: data-fetch** - 数据获取治理：VDI react-query 去重 + 菜单 hydrate-then-revalidate 消除整页门控 + 列配置缓存短路 + Promise.all 合并 (completed 2026-09-14)
 - [ ] **Phase 119: misc-js-perf** - JS 微性能杂项：Map 索引（拖拽/搜索）+ 惰性 sessionStorage + scroll 状态短路 + expandedRowRender useCallback
 - [ ] **Phase 120: bundle-dead-cleanup** - Bundle 优化 + 死代码/依赖卫生：ExcelImport 口径归一 + iconUtils 假动态导入删除 + phantom chunk 清零 + 4 僵尸依赖移除 + 5 处死代码删除
 
