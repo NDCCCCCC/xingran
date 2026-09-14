@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.33
 milestone_name: 前端性能治理 (Frontend Performance Remediation)
 status: executing
-stopped_at: Completed 114-02-PLAN.md
-last_updated: "2026-09-14T02:22:08.730Z"
-last_activity: 2026-09-14 -- Phase 115 execution started
+stopped_at: Completed 115-01-PLAN.md
+last_updated: "2026-09-14T02:29:12Z"
+last_activity: 2026-09-14 -- Completed 115-01-PLAN.md
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 14
 ---
 
@@ -26,11 +26,11 @@ See: `.planning/PROJECT.md` — v1.33 Current Milestone 段
 ## Current Position
 
 Phase: 115 (selector-completion（Zustand selector 收尾）) — EXECUTING
-Plan: 1 of 3
+Plan: 2 of 3
 Status: Executing Phase 115
-Last activity: 2026-09-14 -- Phase 115 execution started
+Last activity: 2026-09-14 -- Completed 115-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 33%
 
 ## v1.33 范围摘要
 
@@ -75,8 +75,8 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-09-11T19:20:51.088Z
-Stopped at: Completed 114-02-PLAN.md
+Last session: 2026-09-14T02:29:12Z
+Stopped at: Completed 115-01-PLAN.md
 
 ## Performance Metrics
 
@@ -85,6 +85,7 @@ Stopped at: Completed 114-02-PLAN.md
 | Phase 114 P01 | 11min | 2 tasks | 2 files |
 | Phase 114 P02 | 12min | 2 tasks | 2 files |
 | Phase 114 P03 | 54min | 3 tasks | 3 files |
+| Phase 115 P01 | 7min | 2 tasks | 2 files |
 
 ## Decisions
 
@@ -95,3 +96,5 @@ Stopped at: Completed 114-02-PLAN.md
 - [Phase 114]: 114-03: 死组件 BuildingMarkers/CityMarkers 删除（仅 git rm 两个 .tsx），@uiw/react-baidu-map src/ 零 import 解锁 Phase 120 DEAD-02；components/ 平行第二套 utils/constants/types 与 global.d.ts 原样保留
 - [Phase 114]: 114-03: cleanup 测试构造器 mock 用独立 function 表达式（内联 function 回调被 lint-staged prefer-arrow-callback 改写回箭头致 new 抛错）；TDD RED 门以突变校验等效证明
 - [Phase 114]: 114-03: MAP3D-02 人工性能验证按 AUTO_MODE 自动批准，HUMAN-UAT 步骤全文留档 SUMMARY，自动侧由 Plan 01 500ms 性能冒烟兜底
+- [Phase 115]: 115-01: useTabs/useLayout hook 内逐字段 selector 化（14/10 个 `useXxxStore((s) => s.field)`），返回对象/2 effect/layoutConfig/6 派生布尔一字不改，消费组件零改动（SELECTOR-01/02）
+- [Phase 115]: 115-01: history 字段按 OQ-2 定案保留在 useTabs 返回对象（0 消费方但 D-04 最小 diff 优先）；useShallow 维持全库 0 使用

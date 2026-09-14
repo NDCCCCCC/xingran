@@ -46,8 +46,8 @@ defined: 2026-09-11
 
 ### SELECTOR — Zustand selector 收尾（26 处整店订阅）
 
-- [ ] **SELECTOR-01**: `useTabs`（tabsStore.ts:310-326，解构 14 字段）内部改逐字段 selector（useRouteTabs:45-48 范本）
-- [ ] **SELECTOR-02**: `useLayout`（layoutStore.ts:287-299，解构 10 字段）内部改逐字段 selector
+- [x] **SELECTOR-01**: `useTabs`（tabsStore.ts:310-326，解构 14 字段）内部改逐字段 selector（useRouteTabs:45-48 范本）
+- [x] **SELECTOR-02**: `useLayout`（layoutStore.ts:287-299，解构 10 字段）内部改逐字段 selector
 - [ ] **SELECTOR-03**: 路由层 RouteGuard.tsx:33 / DynamicRoutes.tsx:105-106 改 selector 订阅（仅取所需字段，防 menuStore loading/lastFetchTime 变化重渲整页）
 - [ ] **SELECTOR-04**: 3D 页 5 处 visualizationStore 整店订阅改 selector（building-spaces-3d index:36 / HubeiMap:73 / HubeiMapGL:86 / BuildingView3D:59 / FloorView3D:59）
 - [ ] **SELECTOR-05**: 其余 action-only 整店订阅清理（my-notices/detail:19 / profile:47 / login:47-48 / my-duty:64 / DashboardScopeSelector:25）
@@ -122,8 +122,8 @@ Phase 映射由 roadmapper 填充（2026-09-12，`.planning/ROADMAP.md` Phases 1
 | MAP3D-04 | Phase 114 | Complete |
 | MAP3D-05 | Phase 114 | Complete |
 | MAP3D-06 | Phase 114 | Complete |
-| SELECTOR-01 | Phase 115 | Pending |
-| SELECTOR-02 | Phase 115 | Pending |
+| SELECTOR-01 | Phase 115 | Complete |
+| SELECTOR-02 | Phase 115 | Complete |
 | SELECTOR-03 | Phase 115 | Pending |
 | SELECTOR-04 | Phase 115 | Pending |
 | SELECTOR-05 | Phase 115 | Pending |

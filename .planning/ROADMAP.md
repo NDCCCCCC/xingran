@@ -78,7 +78,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 115-01-PLAN.md — useTabs（14 字段）/useLayout（10 字段 + 派生/effect 保留）hook 内部逐字段 selector 化（SELECTOR-01/02）
+- [x] 115-01-PLAN.md — useTabs（14 字段）/useLayout（10 字段 + 派生/effect 保留）hook 内部逐字段 selector 化（SELECTOR-01/02）
 - [ ] 115-02-PLAN.md — 路由层 RouteGuard:33 + DynamicRoutes:105-106（5 selector，权限逻辑/数据流零改动）+ 3D 页 5 处 visualizationStore（SELECTOR-03/04）
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -167,7 +167,7 @@ Phases execute in numeric order: 114 → 115 → 116 → 117 → 118 → 119 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 114. map3d-clustering | 3/3 | Complete    | 2026-09-14 |
-| 115. selector-completion | 0/3 | Not started | - |
+| 115. selector-completion | 1/3 | In progress | - |
 | 116. dashboard-cascade | 0/TBD | Not started | - |
 | 117. render-columns-and-bugfix | 0/TBD | Not started | - |
 | 118. data-fetch | 0/TBD | Not started | - |
