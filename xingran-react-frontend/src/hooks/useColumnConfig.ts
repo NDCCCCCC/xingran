@@ -119,11 +119,14 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
       };
 
       // 尝试从缓存加载
+      // DATA-03: 缓存命中且健全时直接 return,跳过 columnConfigApi.getByPageKey 网络请求
       if (enableCache) {
         const cached = getFromLocalStorage(pageKey);
         if (cached && isConfigSane(cached)) {
           setConfig(cached);
-        } else if (cached) {
+          return; // 缓存新鲜——不重新拉服务端,finally 负责复位 loading
+        }
+        if (cached) {
           console.warn(
             `[useColumnConfig] Cached config for "${pageKey}" has <${minVisible} visible columns, falling back to default`
           );
@@ -131,7 +134,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
         }
       }
 
-      // 从服务器加载
+      // 从服务器加载（仅缓存未命中/判定为损坏时执行）
       const response = await columnConfigApi.getByPageKey(pageKey);
       const userConfig = response.data;
 

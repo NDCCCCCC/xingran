@@ -85,7 +85,7 @@ describe("useColumnConfig", () => {
     expect(JSON.parse(localStorage.getItem(CACHE_KEY)!).data).toEqual(defaultColumns);
   });
 
-  it("缓存命中(未过期且健全)时直接使用缓存,不覆盖服务端结果", async () => {
+  it("缓存命中(未过期且健全)时短路返回,不请求服务端(DATA-03)", async () => {
     const cached: ColumnConfig[] = [
       { key: "name", label: "名称", visible: true, order: 1 },
       { key: "status", label: "状态", visible: true, order: 2 },
@@ -96,11 +96,10 @@ describe("useColumnConfig", () => {
     });
 
     const { result } = renderColumnConfig();
-    // 缓存先应用;随后服务端转换结果覆盖(服务端优先)
     await waitFor(() => expect(result.current.loading).toBe(false));
-    const keys = result.current.config.map((c) => c.key);
-    expect(keys).toContain("created");
-    expect(keys).toContain("name");
+    // DATA-03 语义变更:缓存新鲜时直接 return,不再调用 columnConfigApi.getByPageKey
+    expect(columnConfigApiMock.getByPageKey).not.toHaveBeenCalled();
+    expect(result.current.config).toEqual(cached);
   });
 
   it("缓存过期被清除并回退", async () => {
