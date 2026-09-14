@@ -115,4 +115,17 @@ describe("NoticeDetailPage", () => {
     });
     expect(() => getByText("返回通知中心").click()).not.toThrow();
   });
+
+  // WR-01 regression: when API returns data=null, loading must become false
+  // (not permanent Spin)
+  it("data=null → 不显示 Spin（setLoading false on empty data）", async () => {
+    vi.mocked(getMyNoticeDetail).mockResolvedValue({ data: null } as any);
+    const { baseElement } = renderPage();
+    await waitFor(() => {
+      // Spin must be gone (loading=false), and "通知不存在" renders instead
+      expect(baseElement.querySelector(".ant-spin")).toBeFalsy();
+    });
+    // Component should render the "不存在" placeholder, not spin forever
+    expect(baseElement.textContent).toContain("通知不存在");
+  });
 });

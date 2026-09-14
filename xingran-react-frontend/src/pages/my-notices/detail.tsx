@@ -31,7 +31,6 @@ const NoticeDetailPage: FC = () => {
       const noticeData = response.data;
       if (noticeData) {
         setNotice(noticeData);
-        setLoading(false); // 立即关闭 loading，不等待已读标记
 
         // 标记为已读（后台执行，不阻塞 UI）
         if (!noticeData.isRead) {
@@ -43,7 +42,8 @@ const NoticeDetailPage: FC = () => {
       console.error("加载通知详情失败:", error);
       message.error("加载失败，请稍后重试");
       navigate(USER_NOTICES);
-      setLoading(false);
+    } finally {
+      setLoading(false); // always run — avoids permanent Spin when noticeData is null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, navigate, markAsRead]);
