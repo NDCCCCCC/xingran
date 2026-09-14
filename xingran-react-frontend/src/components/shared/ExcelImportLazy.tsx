@@ -13,10 +13,12 @@ const ExcelImport = lazy(() =>
 
 export interface ExcelImportLazyProps {
   entityType: string;
-  entityName: string;
-  visible: boolean;
-  onClose: () => void;
-  onImportSuccess: () => void;
+  entityName?: string;
+  templateUrl?: string;
+  importUrl?: string;
+  onImportSuccess?: () => void;
+  visible?: boolean;
+  onClose?: () => void;
 }
 
 /**

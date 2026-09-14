@@ -35,7 +35,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useDict, type DictItem } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { DepartmentTreeSelect } from "@/components/shared";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import type { SortOrder } from "@/hooks/useServerSort";
@@ -681,7 +681,7 @@ const UserManagement: FC = () => {
             </Card>
 
             {/* 用户导入模态框：复用通用 ExcelImport 组件 */}
-            <ExcelImport
+            <ExcelImportLazy
               entityType="user"
               entityName="用户"
               importUrl="/api/v1/system/users/import"

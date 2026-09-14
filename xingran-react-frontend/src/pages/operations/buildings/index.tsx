@@ -43,7 +43,7 @@ import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DepartmentTreeSelect } from "@/components/shared";
 import DeptTree from "@/components/DeptTree";
@@ -819,7 +819,7 @@ const BuildingManagement: FC = () => {
               </Form.Item>
             </Form>
           </Modal>
-          <ExcelImport
+          <ExcelImportLazy
             entityType="building"
             entityName="楼宇"
             visible={importVisible}

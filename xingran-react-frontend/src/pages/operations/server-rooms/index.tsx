@@ -44,7 +44,7 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
@@ -663,7 +663,7 @@ const ServerRoomManagement: FC = () => {
             </Form.Item>
           </Form>
         </Modal>
-        <ExcelImport
+        <ExcelImportLazy
           entityType="serverRoom"
           entityName="机房"
           visible={importVisible}

@@ -40,6 +40,10 @@ export class ComponentLoader {
       // 否则 Vite 报 "dynamically imported but also statically imported"（与 login 同理）
       "!/src/pages/system/notice/detail.tsx",
       "!/src/pages/my-notices/detail.tsx",
+      // 排除 modals/components/hooks 目录，这些是局部组件不需要懒加载路由
+      "!**/modals/**",
+      "!**/components/**",
+      "!**/hooks/**",
     ],
     {
       eager: false,

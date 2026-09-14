@@ -47,7 +47,7 @@ import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 
@@ -921,7 +921,7 @@ const DedicatedLineManagement: FC = () => {
             </Form.Item>
           </Form>
         </Modal>
-        <ExcelImport
+        <ExcelImportLazy
           entityType="dedicatedLine"
           entityName="专线"
           visible={importVisible}

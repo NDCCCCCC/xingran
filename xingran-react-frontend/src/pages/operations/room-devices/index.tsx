@@ -48,7 +48,7 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
@@ -822,7 +822,7 @@ const RoomDeviceManagement: FC = () => {
             </Form.Item>
           </Form>
         </Modal>
-        <ExcelImport
+        <ExcelImportLazy
           entityType="roomDevice"
           entityName="机房设备"
           visible={importVisible}

@@ -50,7 +50,7 @@ import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/er
 import { debounce } from "@/utils/debounce";
 import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
@@ -1159,7 +1159,7 @@ const InfoPointManagement: FC = () => {
             </Form.Item>
           </Form>
         </Modal>
-        <ExcelImport
+        <ExcelImportLazy
           entityType="infoPoint"
           entityName="信息点"
           visible={importVisible}

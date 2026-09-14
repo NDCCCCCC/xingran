@@ -21,7 +21,7 @@ import type { Asset } from "@/types/operations";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { assetApi } from "@/lib/opsApi";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { AssetRow } from "@/components/table/AssetRow";
@@ -739,7 +739,7 @@ const AssetList: FC = () => {
       />
 
       {/* 导入弹窗 */}
-      <ExcelImport
+      <ExcelImportLazy
         entityType="asset"
         entityName="资产"
         visible={importVisible}

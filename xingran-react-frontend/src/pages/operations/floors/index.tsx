@@ -14,7 +14,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
@@ -618,7 +618,7 @@ const FloorManagement: FC = () => {
           onDepartmentChange={handleModalDepartmentChange}
         />
 
-        <ExcelImport
+        <ExcelImportLazy
           entityType="floor"
           entityName="楼层"
           visible={importVisible}
