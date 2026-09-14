@@ -101,6 +101,16 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
     };
   }, [data]);
 
+  // 移动端 Top-20 数据（hooks 必须无条件调用，放在 early return 之前）
+  const topPorts = useMemo(
+    () => [...(data?.cells ?? [])].sort((a, b) => b.changeCount - a.changeCount).slice(0, 20),
+    [data?.cells]
+  );
+  const maxCount = useMemo(
+    () => (topPorts.length > 0 ? Math.max(...topPorts.map((c) => c.changeCount), 1) : 1),
+    [topPorts]
+  );
+
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: 60 }}>
@@ -115,9 +125,6 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
 
   if (isMobile) {
     // 移动端: Top-20 端口列表 + 颜色卡片
-    const topPorts = [...data.cells].sort((a, b) => b.changeCount - a.changeCount).slice(0, 20);
-    const maxCount = Math.max(...topPorts.map((c) => c.changeCount), 1);
-
     return (
       <div data-testid="mac-heatmap-mobile">
         <h3 style={{ marginBottom: 16 }}>Top-20 高频变更端口</h3>
