@@ -48,6 +48,7 @@ interface CachedMenuData {
  * 校验失败(version 不符 / JSON 损坏 / 过期 / 结构异常)返回 null,走 API 回退。
  */
 const readMenuCache = (): CachedMenuData["data"] | null => {
+  if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEYS.MENU_CACHE);
     if (!raw) return null;
@@ -68,6 +69,7 @@ const readMenuCache = (): CachedMenuData["data"] | null => {
 const writeMenuCache = (
   data: Pick<CachedMenuData["data"], "menus" | "allMenus" | "permissions">
 ): void => {
+  if (typeof window === "undefined") return;
   try {
     const payload: CachedMenuData = {
       version: MENU_CACHE_VERSION,
@@ -81,6 +83,7 @@ const writeMenuCache = (
 
 // Get last visited path from sessionStorage
 export const getLastPath = (): string | null => {
+  if (typeof window === "undefined") return null;
   try {
     return sessionStorage.getItem(STORAGE_KEYS.LAST_PATH);
   } catch {
@@ -90,6 +93,7 @@ export const getLastPath = (): string | null => {
 
 // Save current path to sessionStorage
 export const saveLastPath = (path: string): void => {
+  if (typeof window === "undefined") return;
   try {
     // 保存所有路径，除了 /login
     if (path && path !== "/login") {
@@ -102,6 +106,7 @@ export const saveLastPath = (path: string): void => {
 
 // Clear last path (for logout)
 export const clearLastPath = (): void => {
+  if (typeof window === "undefined") return;
   try {
     sessionStorage.removeItem(STORAGE_KEYS.LAST_PATH);
   } catch {
