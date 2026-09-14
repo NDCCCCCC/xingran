@@ -66,12 +66,22 @@ Progress: [██████████] 100% (6/6 milestone plans)
 - origin/main HEAD: `727e370` (PR #19 quick/260911-m76-frontend-perf-audit merge)
 - Branch Protection: direct push to main allowed (CI gates active)，PR reviews disabled（单人项目）
 
-### Review Findings 挂账（v1.33 范围外，源自 Phase 114 code review）
+### Review Findings 挂账（v1.33 范围外，源自 Phase 114/115 code review）
 
+**Phase 114（090ff9d 前）:**
 - **CR-01（安全, pre-existing）**: InfoWindow 存储型 XSS——`building.name`/`address` 未转义拼入百度 InfoWindow HTML（HubeiMap.tsx:414-431 / HubeiMapGL.tsx:407-424）。修复=HTML 转义，行为变更超 v1.33 D-01 锁定范围 → 候选后续 quick task / 安全 milestone。
 - **WR-01（逻辑, pre-existing）**: HubeiMapGL `MAX_ZOOM=18` + `filterBuildingsByZoom` 精确匹配 `zoom === 10` → 缩放 11-18 级二级楼宇消失。`zoom === 10` 语义被 RESEARCH 红线 + plan-checker 锁定"既有行为保持原样" → 挂账；修复建议 `>= 10`（对 2D 版行为不变）。
 - **WR-02（质量, pre-existing）**: HubeiMap.tsx 与共享层逐字重复 ~100 行（toBase64/HUBEI_BOUNDARY/边界辅助），MAP_CONFIG 同名双源已分叉（10 vs 18）→ 挂账（与 Phase 120 死代码清理相邻但不同项）。
 - **IN-01/02/03**: init 竞态残留缺口（无 StrictMode、无用户可见缺陷）/ polygonRef 死引用 / 一致性测试 averagePixelPosition 共同模式盲区 → 低优先级观察项。
+
+**Phase 115（115-REVIEW.md, commit 090ff9d）:**
+- **WR-05 → 非缺口**: 12 处 dashboardStore 家族整店订阅 = planner OQ-1 定案的 Phase 116（11 处 DASH-01~04）/Phase 120（useTabSync→DEAD-01 删除）白名单分工，criterion 5 口径即为此设计。
+- **WR-01（pre-existing）**: my-notices/detail.tsx:29-41 成功返回空 data 时 `setLoading(false)` 不可达 → 页面永久 Spin。挂账。
+- **WR-02（pre-existing）**: duty/my-duty/index.tsx:142-152 `setCurrent` 后 `loadSchedules()` stale closure 旧页码双请求 + pageSize 硬编码 10 与持久化双源不一致 → 错页。挂账。
+- **WR-03（pre-existing, 与 114-WR-01 成因不同文件不同）**: building-spaces-3d/index.tsx:55 `level: 2` 无条件硬编码 → level1 恒空，默认 zoom 8 下地图零标记、统计面板与图例矛盾。挂账（与 114-WR-01 需一起修）。
+- **WR-04（pre-existing）**: DashboardScopeSelector.tsx:57-88 "系统仪表盘必须 global"约束只在开启方向生效，可造矛盾态。挂账。
+- **WR-06（pre-existing）**: detail.test.tsx:73-83 等用例名承诺 markAsRead/navigate/onChange 实际零断言。挂账。
+- **Info 摘要**: DashboardScopeSelector 死分支 / FloorView3D 死变量空回调 / profile 假加载态 / 值班类型映射三处重复 / layoutStore DOM 同步两份实现漂移 / dual-form mock 四处手写重复 / **selector 约定无 AST 守护（建议补 apiFactory.invariants.test.ts 式扫描——candidate for follow-up phase）**。
 
 ## Session Continuity
 
