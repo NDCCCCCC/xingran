@@ -118,10 +118,19 @@ const TabBar: FC = () => {
   const updateScrollState = useCallback(() => {
     const state = checkScrollState(scrollContainerRef.current);
 
+    // MISC-04: scroll 状态值无变化时跳过 setState，避免冗余重渲
+    if (
+      state.canScrollLeft === scrollState.canScrollLeft &&
+      state.canScrollRight === scrollState.canScrollRight &&
+      state.scrollLeft === scrollState.scrollLeft
+    ) {
+      return;
+    }
+
     startTransition(() => {
       setScrollState(state);
     });
-  }, []);
+  }, [scrollState]);
 
   // 初始化和监听滚动状态
   useEffect(() => {

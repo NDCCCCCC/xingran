@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Table,
   Button,
@@ -20,15 +20,16 @@ import {
   DeleteOutlined,
   ApiOutlined,
 } from "@ant-design/icons";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { vdiServerApi } from "@/lib/vdiApi";
+import { queryKeys } from "@/lib/queryKeys";
 import type { VDIServer, VDIServerConfig } from "@/types/vdi";
 import type { ColumnsType } from "antd/es/table";
 
 const VDIServerConfig: React.FC = () => {
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [servers, setServers] = useState<VDIServer[]>([]);
-  const [total, setTotal] = useState(0);
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [modalVisible, setModalVisible] = useState(false);
@@ -36,24 +37,17 @@ const VDIServerConfig: React.FC = () => {
   const [selectedServer, setSelectedServer] = useState<VDIServer | null>(null);
   const [form] = Form.useForm();
 
-  // 加载服务器列表
-  const loadServers = async () => {
-    setLoading(true);
-    try {
-      const result = await vdiServerApi.list({ current, pageSize });
-      setServers(result.data?.list || []);
-      setTotal(result.data?.total || 0);
-    } catch (_error) {
-      message.error("加载 VDI 服务器列表失败");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // DATA-01: VDI 服务器列表统一走 react-query——与 VirtualMachineList 共享同一缓存，
+  // create/delete/sync 后 invalidateQueries 确保列表及时刷新。
+  const { data: serverData, refetch } = useQuery({
+    queryKey: queryKeys.vdi.servers(),
+    queryFn: () => vdiServerApi.list({ current, pageSize }),
+    staleTime: 30 * 1000,
+  });
+  const servers: VDIServer[] = serverData?.data?.list || [];
+  const total = serverData?.data?.total || 0;
 
-  useEffect(() => {
-    loadServers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, pageSize]);
+  const loadServers = () => refetch();
 
   // 创建服务器
   const handleCreate = () => {
@@ -98,6 +92,7 @@ const VDIServerConfig: React.FC = () => {
         };
         await vdiServerApi.create(data);
         message.success("VDI 服务器创建成功");
+        queryClient.invalidateQueries({ queryKey: queryKeys.vdi.servers() });
       } else {
         const data: Partial<VDIServerConfig> = {
           name: values.name,
@@ -111,11 +106,11 @@ const VDIServerConfig: React.FC = () => {
         }
         await vdiServerApi.update(selectedServer!.id, data);
         message.success("VDI 服务器更新成功");
+        queryClient.invalidateQueries({ queryKey: queryKeys.vdi.servers() });
       }
 
       setModalVisible(false);
       form.resetFields();
-      loadServers();
     } catch (_error) {
       message.error(modalMode === "create" ? "创建服务器失败" : "更新服务器失败");
     } finally {
@@ -129,7 +124,7 @@ const VDIServerConfig: React.FC = () => {
     try {
       await vdiServerApi.delete(id);
       message.success("删除成功");
-      loadServers();
+      queryClient.invalidateQueries({ queryKey: queryKeys.vdi.servers() });
     } catch (_error) {
       message.error("删除失败");
     } finally {

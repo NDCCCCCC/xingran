@@ -169,10 +169,16 @@ export function useTableManager<T>(
   // 保持 filtersRef 的同步可读性（loadData 空依赖读 ref），mount 时从 sessionStorage 恢复，
   // 写入时同步镜像；切 tab / 刷新可恢复筛选条件，关闭 tab / 登出由外部统一清理。
   const filtersStorageKey = `${TABLE_STATE_PREFIX}${sanitizePathForKey(location.pathname)}_filters`;
-  const filtersRef = useRef<Record<string, unknown>>(readInitialFilters(filtersStorageKey));
+  // MISC-03: 惰性初始化 — null 填充 + 首次 access 时读取 sessionStorage，
+  // 消除 24 个列表页首帧不必要的同步 sessionStorage 读取。
+  const filtersRef = useRef<Record<string, unknown> | null>(null);
 
   const persistFilters = useCallback(
     (next: Record<string, unknown>) => {
+      // MISC-03: 惰性初始化 — 首次 access 时读取 sessionStorage
+      if (filtersRef.current === null) {
+        filtersRef.current = readInitialFilters(filtersStorageKey);
+      }
       filtersRef.current = next;
       try {
         if (typeof window !== "undefined") {
@@ -186,6 +192,10 @@ export function useTableManager<T>(
   );
 
   const clearPersistedFilters = useCallback(() => {
+    // MISC-03: 惰性初始化 — 确保已初始化再清理
+    if (filtersRef.current === null) {
+      filtersRef.current = readInitialFilters(filtersStorageKey);
+    }
     filtersRef.current = {};
     try {
       if (typeof window !== "undefined") {
