@@ -186,7 +186,7 @@ jobs:
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25  # 2026-09-14: fetch proxy chain 4×300s + backoff worst ~23.5min
     environment: production   # deployment history; add reviewers later if wanted
     steps:
       - uses: actions/checkout@v7   # fetches deploy scripts
