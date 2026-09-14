@@ -6,6 +6,8 @@ import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import DedicatedLines from "../index";
 import { dedicatedLineApi, serverRoomApi } from "@/lib/opsApi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as fs from "fs";
+import * as path from "path";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -70,5 +72,15 @@ describe("DedicatedLines 渲染", () => {
     const { baseElement } = renderLines();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();
+  });
+
+  // BUGFIX-01 regression: monthlyFee=0 should render "0", not blank
+  // Source-code verification: monthlyFee uses != null guard (not &&) so 0 is not falsy
+  it("monthlyFee 使用 != null 判断（而非 &&）使 0 值正确渲染", () => {
+    const src = fs.readFileSync(path.resolve(__dirname, "../index.tsx"), "utf-8");
+    // The monthlyFee section must use != null, not && (which treats 0 as falsy)
+    expect(src).toMatch(/monthlyFee != null/);
+    // Must NOT use the old falsy pattern for monthlyFee rendering
+    expect(src).not.toMatch(/monthlyFee && \(\s*<div>\s*<strong>月费/);
   });
 });

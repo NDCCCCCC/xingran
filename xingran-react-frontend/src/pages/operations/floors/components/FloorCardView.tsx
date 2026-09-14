@@ -79,7 +79,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
                     <strong>楼宇：</strong>
                     {floor.buildingName || floor.buildingCode}
                   </div>
-                  {floor.area && (
+                  {floor.area != null && (
                     <div>
                       <strong>面积：</strong>
                       {floor.area}m²

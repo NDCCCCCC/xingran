@@ -491,7 +491,7 @@ const DedicatedLineManagement: FC = () => {
                         {line.destIpAddress}
                       </div>
                     )}
-                    {line.monthlyFee && (
+                    {line.monthlyFee != null && (
                       <div>
                         <strong>月费：</strong>¥{line.monthlyFee}
                       </div>

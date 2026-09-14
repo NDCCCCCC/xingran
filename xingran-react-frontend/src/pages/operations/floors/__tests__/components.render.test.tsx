@@ -104,6 +104,19 @@ describe("FloorCardView", () => {
     );
     expect(await findByText("BLD-X")).toBeDefined();
   });
+
+  // BUGFIX-01 regression: area=0 should render "0m²", not blank
+  it("area=0 时应渲染 '0m²' 而非空白", async () => {
+    const { findByText } = renderWithProviders(
+      <FloorCardView
+        floors={[mockFloor("1", "1F", { area: 0 })]}
+        onEdit={vi.fn()}
+        onEditFloorPlan={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    expect(await findByText("0m²")).toBeInTheDocument();
+  });
 });
 
 describe("FloorStatisticsCards", () => {
