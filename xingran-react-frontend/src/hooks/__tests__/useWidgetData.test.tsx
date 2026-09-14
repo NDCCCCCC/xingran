@@ -18,12 +18,18 @@ vi.mock("@/components/dashboard/utils/dataFetcher", () => ({
   },
 }));
 
-vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: vi.fn(() => ({
+vi.mock("@/store/dashboardStore", () => {
+  // Per-field selector (Phase 116 DASH-03) — pass selector through state.
+  const state = {
     getCachedWidgetData: vi.fn(() => null),
     cacheWidgetData: vi.fn(),
-  })),
-}));
+  };
+  return {
+    useDashboardStore: vi.fn((selector?: (s: typeof state) => unknown) =>
+      typeof selector === "function" ? selector(state) : state
+    ),
+  };
+});
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
