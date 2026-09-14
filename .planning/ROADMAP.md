@@ -24,7 +24,7 @@
 - Decimal phases: 本里程碑暂无（如需紧急插入用 `/gsd:phase insert`）
 
 - [x] **Phase 114: map3d-clustering** - 地图聚类 O(n²) 消除（H-2）：Map 预计算 + 40px 像素网格分桶 + 双实现合并共享 + filter useMemo + 事件 cleanup + 死组件删除 (completed 2026-09-11)
-- [ ] **Phase 115: selector-completion** - Zustand selector 收尾：useTabs/useLayout 内部 selector 化 + 路由层 + 3D 页 5 处 + action-only 整店订阅清零
+- [x] **Phase 115: selector-completion** - Zustand selector 收尾：useTabs/useLayout 内部 selector 化 + 路由层 + 3D 页 5 处 + action-only 整店订阅清零 (completed 2026-09-14)
 - [ ] **Phase 116: dashboard-cascade** - Dashboard N² 重渲染级联消除（H-1）：useWidgetData selector 化 + L1 缓存出 state + 9 处订阅收敛 + DashboardGrid 稳定化
 - [ ] **Phase 117: render-columns-and-bugfix** - 渲染热点治理 + 正确性修复：7 处 columns 工厂记忆化 + Table virtual 补齐 + "0" 渲染 / VariablesModal 6 列 / CAD stale closure（附回归测试）
 - [ ] **Phase 118: data-fetch** - 数据获取治理：VDI react-query 去重 + 菜单 hydrate-then-revalidate 消除整页门控 + 列配置缓存短路 + Promise.all 合并
@@ -74,7 +74,7 @@ Plans:
   4. 5 处 action-only 整店订阅清零（my-notices/detail:19 / profile:47 / login:47-48 / my-duty:64 / DashboardScopeSelector:25）
   5. `useXxxStore()` 无参整店订阅 grep 归零；现有测试 + lint/type-check 零回归（纯性能重构，D-04 零回归口径）
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 **Wave 1**
 
@@ -83,7 +83,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 115-03-PLAN.md — 页面级 6 处单字段清理 + NotificationBell 纳入（OQ-1 定案 a）+ 4 mock dual-form 化 + phase gate grep/全量测试/lint/type-check（SELECTOR-05）
+- [x] 115-03-PLAN.md — 页面级 6 处单字段清理 + NotificationBell 纳入（OQ-1 定案 a）+ 4 mock dual-form 化 + phase gate grep/全量测试/lint/type-check（SELECTOR-05）
 
 ### Phase 116: dashboard-cascade（Dashboard 重渲染级联消除）
 
@@ -167,7 +167,7 @@ Phases execute in numeric order: 114 → 115 → 116 → 117 → 118 → 119 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 114. map3d-clustering | 3/3 | Complete    | 2026-09-14 |
-| 115. selector-completion | 2/3 | In Progress|  |
+| 115. selector-completion | 3/3 | Complete   | 2026-09-14 |
 | 116. dashboard-cascade | 0/TBD | Not started | - |
 | 117. render-columns-and-bugfix | 0/TBD | Not started | - |
 | 118. data-fetch | 0/TBD | Not started | - |

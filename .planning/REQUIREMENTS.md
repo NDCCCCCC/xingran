@@ -50,7 +50,7 @@ defined: 2026-09-11
 - [x] **SELECTOR-02**: `useLayout`（layoutStore.ts:287-299，解构 10 字段）内部改逐字段 selector
 - [x] **SELECTOR-03**: 路由层 RouteGuard.tsx:33 / DynamicRoutes.tsx:105-106 改 selector 订阅（仅取所需字段，防 menuStore loading/lastFetchTime 变化重渲整页）
 - [x] **SELECTOR-04**: 3D 页 5 处 visualizationStore 整店订阅改 selector（building-spaces-3d index:36 / HubeiMap:73 / HubeiMapGL:86 / BuildingView3D:59 / FloorView3D:59）
-- [ ] **SELECTOR-05**: 其余 action-only 整店订阅清理（my-notices/detail:19 / profile:47 / login:47-48 / my-duty:64 / DashboardScopeSelector:25）
+- [x] **SELECTOR-05**: 其余 action-only 整店订阅清理（my-notices/detail:19 / profile:47 / login:47-48 / my-duty:64 / DashboardScopeSelector:25）
 
 ### BUNDLE — Bundle 优化
 
@@ -126,7 +126,7 @@ Phase 映射由 roadmapper 填充（2026-09-12，`.planning/ROADMAP.md` Phases 1
 | SELECTOR-02 | Phase 115 | Complete |
 | SELECTOR-03 | Phase 115 | Complete |
 | SELECTOR-04 | Phase 115 | Complete |
-| SELECTOR-05 | Phase 115 | Pending |
+| SELECTOR-05 | Phase 115 | Complete |
 | DASH-01 | Phase 116 | Pending |
 | DASH-02 | Phase 116 | Pending |
 | DASH-03 | Phase 116 | Pending |

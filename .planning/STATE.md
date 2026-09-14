@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.33
 milestone_name: 前端性能治理 (Frontend Performance Remediation)
 status: executing
-stopped_at: Completed 115-02-PLAN.md
-last_updated: "2026-09-14T02:44:12.402Z"
+stopped_at: Completed 115-03-PLAN.md
+last_updated: "2026-09-14T03:22:01.883Z"
 last_activity: 2026-09-14
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 14
+  completed_plans: 6
+  percent: 29
 ---
 
 # Project State (v1.33 — Frontend Performance Remediation)
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` — v1.33 Current Milestone 段
 
 ## Current Position
 
-Phase: 115 (selector-completion（Zustand selector 收尾）) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 115 (selector-completion（Zustand selector 收尾）) — EXECUTED（3/3 plans 完成，待 /gsd:verify-work）
+Plan: 3 of 3 (completed)
+Status: Phase 115 plans all executed — SELECTOR-01~05 + NotificationBell 落位，criterion 5 收口（全库剩余 12 处归属 Phase 116/120）
 Last activity: 2026-09-14
 
-Progress: [█░░░░░░░░░] 33%
+Progress: [██████████] 100% (6/6 milestone plans)
 
 ## v1.33 范围摘要
 
@@ -75,8 +75,8 @@ Progress: [█░░░░░░░░░] 33%
 
 ## Session Continuity
 
-Last session: 2026-09-14T02:44:12.395Z
-Stopped at: Completed 115-02-PLAN.md
+Last session: 2026-09-14T03:22:01.883Z
+Stopped at: Completed 115-03-PLAN.md
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Stopped at: Completed 115-02-PLAN.md
 | Phase 114 P03 | 54min | 3 tasks | 3 files |
 | Phase 115 P01 | 7min | 2 tasks | 2 files |
 | Phase 115 P02 | 6min | 2 tasks | 7 files |
+| Phase 115 P03 | 33min | 3 tasks | 10 files |
 
 ## Decisions
 
@@ -101,3 +102,6 @@ Stopped at: Completed 115-02-PLAN.md
 - [Phase 115]: 115-01: history 字段按 OQ-2 定案保留在 useTabs 返回对象（0 消费方但 D-04 最小 diff 优先）；useShallow 维持全库 0 使用
 - [Phase 115]: 115-02: 路由层 RouteGuard/DynamicRoutes 整店订阅改 6 个逐字段 selector，41 行权限判断与 UX-only 注释逐字保留（V4 守护项）；DynamicRoutes 只改订阅形态，effect 依赖/allMenus 数组引用/菜单加载时序/routeConfigManager.initialize/getState-setState 一行不动（Phase 118 DATA-02 前向兼容）
 - [Phase 115]: 115-02: 3D 页 5 处 visualizationStore 整店订阅改 11 个字段级 selector（FloorView3D 拆 4 个独立调用，selectedFloor 在 loadWorkstations useCallback 依赖引用语义不变）；action 引用不包 useMemo；不引入 useShallow（维持全库 0 使用）
+- [Phase 115]: 115-03: SELECTOR-05 六处（4 action-only + 2 state 字段 user）+ NotificationBell 7 项（OQ-1 定案推荐 a 纳入）全部单字段 selector 化；detail.tsx useCallback 依赖数组与 DashboardScopeSelector 派生计算逐字保留
+- [Phase 115]: 115-03: 4 个测试 mock 同任务 dual-form 化（selector ? selector(state) : state），let 变量保持调用时求值不快照；DashboardScopeSelector admin 分支断言语义零弱化（T-115-03-A mitigate）
+- [Phase 115]: 115-03: criterion 5 收口——全库无参 useXxxStore() 恰好 12 处且全部命中三组白名单前缀，归属 Phase 116（11 处）/ Phase 120（1 处）；断言口径未修改（T-115-03-C）
