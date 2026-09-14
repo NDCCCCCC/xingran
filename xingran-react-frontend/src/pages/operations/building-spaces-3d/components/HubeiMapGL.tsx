@@ -38,6 +38,7 @@ import {
   filterBuildingsByZoom,
   animateViewTransition,
 } from "../utils";
+import { escapeHtml } from "@/utils/security";
 import {
   getBMapGL,
   type BMapGLNamespace,
@@ -408,10 +409,10 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     const content = `
       <div style="padding: 12px; min-width: 260px;">
         <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #337ab0); border-bottom: 2px solid #337ab0; padding-bottom: 8px;">
-          ${building.name}
+          ${escapeHtml(building.name)}
         </h3>
         <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
-          <div>📌 ${building.address || "暂无地址"}</div>
+          <div>📌 ${escapeHtml(building.address || "暂无地址")}</div>
           <div style="margin-top: 8px;">
             <span style="display: inline-block; padding: 2px 10px; background: ${statusBg}; color: ${statusColor}; border-radius: 12px; font-size: 12px; font-weight: 500;">
               ${stopped ? "⏸ 已停用" : "✓ 正常"}
