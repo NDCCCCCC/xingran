@@ -107,13 +107,12 @@ import {
   FlagOutlined,
   TagOutlined,
 } from "@ant-design/icons";
-import { lazy, Suspense } from "react";
-import type { ComponentType } from "react";
+import type { FC } from "react";
 
 // Static registry — all icons from iconCategories, plus SearchOutlined (used directly)
 // Using FC<any> to accommodate ForwardRefExoticComponent (antd icons) which is
 // not assignable to ComponentType<unknown> but is to FC<any>
-const STATIC_ICON_REGISTRY: Record<string, React.FC<any>> = {
+export const STATIC_ICON_REGISTRY: Record<string, FC<any>> = {
   DashboardOutlined,
   HomeOutlined,
   AppstoreOutlined,
@@ -212,9 +211,6 @@ const STATIC_ICON_REGISTRY: Record<string, React.FC<any>> = {
   FlagOutlined,
   TagOutlined,
 };
-
-// Dynamic import cache — runtime icon names not in the static registry
-const dynamicIconCache = new Map<string, React.FC<any>>();
 
 // ========================================
 // 图标分类（用于图标选择器）
@@ -532,28 +528,7 @@ export function getIconComponent(iconName?: string | null): React.ReactNode {
     }
   }
 
-  // 3. Runtime dynamic import for icons not in the static set
-  //    (e.g. icons added by the backend but not yet registered here)
-  if (dynamicIconCache.has(iconName)) {
-    const LazyIcon = dynamicIconCache.get(iconName)!;
-    return (
-      <Suspense fallback={null}>
-        <LazyIcon />
-      </Suspense>
-    );
-  }
-
-  const DynamicIcon = lazy(() =>
-    import(`@ant-design/icons/${iconName}`)
-      .then((m) => ({ default: m.default ?? m[iconName] }))
-      .catch(() => ({ default: () => null }))
-  );
-  dynamicIconCache.set(iconName, DynamicIcon as React.FC<any>);
-  return (
-    <Suspense fallback={null}>
-      <DynamicIcon />
-    </Suspense>
-  );
+  return undefined;
 }
 
 // ========================================
