@@ -16,7 +16,9 @@ interface DashboardHomeProps {
 
 export const DashboardHome: React.FC<DashboardHomeProps> = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
-  const { defaultDashboard, defaultDashboardLoading, fetchDefaultDashboard } = useDashboardStore();
+  const defaultDashboard = useDashboardStore((s) => s.defaultDashboard);
+  const defaultDashboardLoading = useDashboardStore((s) => s.defaultDashboardLoading);
+  const fetchDefaultDashboard = useDashboardStore((s) => s.fetchDefaultDashboard);
 
   useEffect(() => {
     fetchDefaultDashboard();

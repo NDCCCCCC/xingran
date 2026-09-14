@@ -47,7 +47,6 @@ interface UseWidgetDataResult<T = unknown> {
 /** Data fetcher wrapped so it matches the useQuery<T> contract. */
 async function fetchWidgetData<T>(
   widget: WidgetConfig,
-  _getCachedWidgetData: (id: string) => unknown | null,
   cacheWidgetData: (id: string, data: unknown) => void
 ): Promise<T | null> {
   if (!widget.enabled) return null;
@@ -56,6 +55,7 @@ async function fetchWidgetData<T>(
   if (result.error) throw new Error(result.error);
 
   // Write-through L1 cache so store subscribers keep working
+  // getCachedWidgetData is read internally via useDashboardStore.getState()
   cacheWidgetData(widget.id, result.data);
   return result.data;
 }
@@ -67,7 +67,7 @@ export function useWidgetData<T = unknown>(
   widget: WidgetConfig,
   options?: UseWidgetDataOptions
 ): UseWidgetDataResult<T> {
-  const { getCachedWidgetData, cacheWidgetData } = useDashboardStore();
+  const cacheWidgetData = useDashboardStore((s) => s.cacheWidgetData);
 
   const refreshInterval = options?.refreshInterval ?? widget.refreshInterval ?? 60;
   const disabled = options?.disabled ?? false;
@@ -75,12 +75,13 @@ export function useWidgetData<T = unknown>(
   // Stable fetch function — reads current widget from the dataSource param so
   // callers can vary widget content without breaking queryKey identity. The
   // queryKey includes widget.id which is what React Query uses for deduplication.
+  // getCachedWidgetData is called internally via useDashboardStore.getState() — not a hook dep.
   const queryFn = useCallback(
-    () => fetchWidgetData<T>(widget, getCachedWidgetData, cacheWidgetData),
+    () => fetchWidgetData<T>(widget, cacheWidgetData),
     // widget.id is embedded in the queryKey so this dependency is stable enough;
     // widget.dataSource changes only when the widget type changes (rare, intentional).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [widget.id, widget.enabled, widget.dataSource, getCachedWidgetData, cacheWidgetData]
+    [widget.id, widget.enabled, widget.dataSource, cacheWidgetData]
   );
 
   const queryKey = queryKeys.widget.data(widget.id, widget.dataSource);
@@ -112,7 +113,7 @@ export function useBatchWidgetData(
   widgets: WidgetConfig[],
   options?: UseWidgetDataOptions
 ): Record<string, unknown> {
-  const { cacheWidgetData } = useDashboardStore();
+  const cacheWidgetData = useDashboardStore((s) => s.cacheWidgetData);
 
   // Compute these outside useQuery so the hook is always called (hooks rules).
   // When disabled or empty, we pass enabled:false so the query never fires.

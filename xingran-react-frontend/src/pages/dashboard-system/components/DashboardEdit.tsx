@@ -30,17 +30,15 @@ export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => 
   const navigate = useNavigate();
   const [showWidgetSelector, setShowWidgetSelector] = useState(false);
 
-  const {
-    currentDashboard,
-    currentLoading,
-    fetchDashboard,
-    setViewMode,
-    updateWidgetLayouts,
-    addWidget,
-    selectWidget,
-    selectedWidgetId,
-    clearCurrentDashboard,
-  } = useDashboardStore();
+  const currentDashboard = useDashboardStore((s) => s.currentDashboard);
+  const currentLoading = useDashboardStore((s) => s.currentLoading);
+  const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
+  const setViewMode = useDashboardStore((s) => s.setViewMode);
+  const updateWidgetLayouts = useDashboardStore((s) => s.updateWidgetLayouts);
+  const addWidget = useDashboardStore((s) => s.addWidget);
+  const selectWidget = useDashboardStore((s) => s.selectWidget);
+  const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId);
+  const clearCurrentDashboard = useDashboardStore((s) => s.clearCurrentDashboard);
 
   // 加载仪表盘
   useEffect(() => {
