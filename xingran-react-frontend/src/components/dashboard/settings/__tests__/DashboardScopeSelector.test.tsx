@@ -104,4 +104,21 @@ describe("DashboardScopeSelector", () => {
     );
     expect(baseElement.querySelector(".ant-select-disabled")).toBeTruthy();
   });
+
+  // WR-04 regression: disabling isSystem while scope=global must reset scope
+  // to a non-global value ("private") to maintain the bidirectional invariant
+  // isSystem=true ↔ scope=global
+  it("handleIsSystemChange(false) from isSystem=true+scope=global → scope resets to private", () => {
+    mockUser = { isAdmin: true, dataScope: "all", deptId: "d1" };
+    const onChange = vi.fn();
+    const { baseElement } = render(
+      <DashboardScopeSelector value={{ scope: "global", isSystem: true }} onChange={onChange} />,
+      { wrapper }
+    );
+    const sw = baseElement.querySelector(".ant-switch") as HTMLElement;
+    if (sw) fireEvent.click(sw);
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ isSystem: false, scope: "private" })
+    );
+  });
 });

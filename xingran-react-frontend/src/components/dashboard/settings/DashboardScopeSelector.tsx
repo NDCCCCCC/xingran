@@ -74,7 +74,7 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
   };
 
   const handleIsSystemChange = (isSystem: boolean) => {
-    const newValue = {
+    const newValue: { scope: DashboardScope; isSystem: boolean; deptId?: string } = {
       scope: value?.scope || "private",
       isSystem,
     };
@@ -82,6 +82,11 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
     // 系统仪表盘必须是全局可见的
     if (isSystem) {
       newValue.scope = "global";
+    } else if (newValue.scope === "global") {
+      // WR-04: prevent contradictory state (isSystem=false + scope=global).
+      // Restoring scope to "private" maintains the invariant that
+      // isSystem=true → scope=global AND scope=global → isSystem=true.
+      newValue.scope = "private";
     }
 
     onChange(newValue);
