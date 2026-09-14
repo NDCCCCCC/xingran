@@ -374,7 +374,7 @@ const DedicatedLineManagement: FC = () => {
       dataIndex: "monthlyFee",
       key: "monthlyFee",
       width: 100,
-      render: (v) => (v ? `¥${v}` : "-"),
+      render: (v) => (v != null ? `¥${v}` : "-"),
     },
     createDateTimeColumn("createdAt", {
       width: 180,
