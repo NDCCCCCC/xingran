@@ -165,7 +165,7 @@ export function DynamicRoutes() {
   const lastPath = getLastPath();
 
   // DATA-02: 同步读取 sessionStorage 菜单缓存,在首次渲染时就决定是否绕过整页门控
-  const cachedMenuData = useMemo(readMenuCache, []);
+  const cachedMenuData = useMemo(() => readMenuCache(), []);
 
   // DATA-02: 硬刷新时立即把缓存里的菜单+权限同步到菜单 store(绕过 setMenus 触发的
   // TTLMenuCache 写入,保证后续 fetchAll 的 revalidate 仍走真实 API)。
