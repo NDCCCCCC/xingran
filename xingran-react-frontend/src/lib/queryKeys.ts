@@ -101,6 +101,12 @@ export const queryKeys = {
     all: ["user"] as const,
     options: ["user", "options"] as const,
   },
+  // F-05 (Vercel audit): AD 同步日志页 configs 静态数据 useQuery 缓存
+  adConfig: {
+    all: ["ad-config"] as const,
+    list: () => ["ad-config", "list"] as const,
+  },
+
   // Phase 118 DATA-01: VDI 服务器列表 — VirtualMachineList 同页 4 处裸调用
   // 归一为单个 useQuery，共享缓存去重（5min staleTime 与 App.tsx 默认一致）
   vdi: {

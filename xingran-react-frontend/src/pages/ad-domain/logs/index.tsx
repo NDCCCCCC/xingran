@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
+import { useTableQuery } from "@/hooks/useTableQuery";
 import { App, Card, Table, Tag, Space, Button, Select } from "antd";
 import {
   ReloadOutlined,
@@ -10,13 +12,10 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { getADSyncLogs, getADConfigList, type ADSyncLog, type ADConfig } from "@/lib/adDomainApi";
+import { queryKeys } from "@/lib/queryKeys";
 
 const ADSyncLogsPage: React.FC = () => {
   const { message } = App.useApp();
-  const [logs, setLogs] = useState<ADSyncLog[]>([]);
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const location = useLocation();
@@ -26,41 +25,28 @@ const ADSyncLogsPage: React.FC = () => {
     defaultValue: undefined,
   });
 
-  useEffect(() => {
-    fetchConfigs();
-    fetchLogs();
-    // 仅在分页或筛选条件变化时刷新;函数引用变化不应触发
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, pageSize, selectedConfigId]);
-
-  const fetchConfigs = async () => {
-    try {
+  // F-05: configs 静态数据 useQuery 缓存，翻页/筛选不重拉
+  const { data: configsData } = useQuery({
+    queryKey: queryKeys.adConfig.list(),
+    queryFn: async () => {
       const res = await getADConfigList({ current: 1, pageSize: 100 });
-      if (res.code === 0) {
-        setConfigs(res.data?.list ?? []);
-      }
-    } catch {
-      message.error("获取AD配置失败");
-    }
-  };
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data?.list ?? ([] as ADConfig[]);
+    },
+    staleTime: 5 * 60 * 1000, // 5min — 配置变更罕见
+  });
 
-  const fetchLogs = async () => {
-    setLoading(true);
-    try {
-      const res = await getADSyncLogs(selectedConfigId ?? "", {
-        current,
-        pageSize,
-      });
-      if (res.code === 0) {
-        setLogs(res.data?.list ?? []);
-        setTotal(res.data?.total ?? 0);
-      }
-    } catch {
-      message.error("获取同步日志失败");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // F-05: logs 走 useTableQuery，自动去重+缓存+翻页闪屏消除
+  const logsQuery = useTableQuery<ADSyncLog>({
+    resource: "ad-sync-logs",
+    current,
+    pageSize,
+    queryFn: (params) =>
+      getADSyncLogs(selectedConfigId ?? "", params).then((res) => {
+        if (res.code !== 0) throw new Error(res.message);
+        return res.data as { list: ADSyncLog[]; total: number; current: number; pageSize: number };
+      }),
+  });
 
   const getStatusTag = (status: string) => {
     switch (status) {
@@ -178,16 +164,19 @@ const ADSyncLogsPage: React.FC = () => {
             style={{ width: 200 }}
             allowClear
             value={selectedConfigId}
-            onChange={setSelectedConfigId}
+            onChange={(val) => {
+              setSelectedConfigId(val);
+              setCurrent(1);
+            }}
             onSearch={() => {}}
           >
-            {configs.map((config) => (
+            {(configsData ?? []).map((config) => (
               <Select.Option key={config.id} value={config.id}>
                 {config.configName}
               </Select.Option>
             ))}
           </Select>
-          <Button icon={<ReloadOutlined />} onClick={fetchLogs}>
+          <Button icon={<ReloadOutlined />} onClick={() => setCurrent(1)}>
             刷新
           </Button>
         </Space>
@@ -195,13 +184,13 @@ const ADSyncLogsPage: React.FC = () => {
 
       <Table
         columns={columns}
-        dataSource={logs}
-        loading={loading}
+        dataSource={logsQuery.data?.list}
+        loading={logsQuery.isLoading}
         rowKey="id"
         pagination={{
           current,
           pageSize,
-          total,
+          total: logsQuery.data?.total,
           showSizeChanger: true,
           showTotal: (t) => `共 ${t} 条`,
           onChange: (page, size) => {
