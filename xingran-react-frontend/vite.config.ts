@@ -204,13 +204,25 @@ export default defineConfig(({ mode }) => {
               return "vendor-xlsx";
             }
 
+            // F-04: react-grid-layout + react-resizable 仅被 DashboardGrid（懒路由）使用
+            if (pkgName === "react-grid-layout" || pkgName === "react-resizable") {
+              return "vendor-grid";
+            }
+
+            // F-04: @dnd-kit/* 仅被 ColumnConfigModal（懒路由）使用
+            if (pkgName === "@dnd-kit/core" || pkgName === "@dnd-kit/sortable" || pkgName === "@dnd-kit/utilities") {
+              return "vendor-dnd";
+            }
+
+            // F-04: @breejs/later 仅被 CronSelector（懒路由）使用
+            if (pkgName === "@breejs/later") {
+              return "vendor-cron";
+            }
+
             // 兜底：React 生态整体保持原子性
-            // 注意：dayjs/axios/sm-crypto 等纯工具库不再单独拆 vendor-utils——实测 Rollup 会
-            // 把与 React 生态共享的辅助模块 hoist 进 vendor-react，单独拆 utils 反而形成双向
-            // 引用环。统一留在 vendor-react 保证 chunk 依赖图为 DAG（无环）。
             // react / react-dom / scheduler / antd / @ant-design / rc-* / react-router /
-            // @tanstack/react-query / zustand / @dnd-kit/* / react-grid-layout /
-            // react-markdown / @uiw/react-baidu-map / dayjs / axios / 通用工具(debug/ms) 等全部在此
+            // @tanstack/react-query / zustand / react-markdown /
+            // @uiw/react-baidu-map / dayjs / axios 等全部在此
             return "vendor-react";
           },
         },
@@ -227,7 +239,7 @@ export default defineConfig(({ mode }) => {
         resolveDependencies(_, deps) {
           return deps.filter(
             (d) =>
-              !/vendor-(three|echarts|markdown|xlsx|md-editor)-/.test(d) &&
+              !/vendor-(three|echarts|markdown|xlsx|md-editor|grid|dnd|cron)-/.test(d) &&
               !/EChartsWrapper-/.test(d) &&
               !/ExcelImportLazy-/.test(d) &&
               !/FloorPlan3D-/.test(d) &&
