@@ -399,6 +399,33 @@ export function CADFloorPlanEditor({
     setSelectedIds(new Set());
   }, []);
 
+  // F-02: Single stable click handler reads data-* attributes — one fn for all element types.
+  // Previously each map() created a new .bind() reference per render, busting React.memo.
+  const handleElementClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.currentTarget as SVGElement;
+      const id = target.dataset.elementId as string;
+      const type = target.dataset.elementType as "wall" | "door" | "workstation" | "text";
+      if (id && type) handleSelectElement(id, type);
+    },
+    [handleSelectElement]
+  );
+
+  // F-02: Stable hover handler — elements now pass their own id, parent sets hoveredId directly.
+  const handleElementHover = useCallback((elementId: string | undefined) => {
+    setHoveredId(elementId ?? null);
+  }, []);
+
+  // F-02: Memoize layer lookups — was recomputing .find() on every render
+  const layerVisibilityMap = useMemo(
+    () => new Map(layers.map((l) => [l.id, l.visible])),
+    [layers]
+  );
+  const layerOpacityMap = useMemo(
+    () => new Map(layers.map((l) => [l.id, l.opacity])),
+    [layers]
+  );
+
   // 获取当前选中的所有元素（Map 化查找，O(n) 构建 → O(1) 查询）
   const _selectedElements = useMemo(() => {
     if (selectedIds.size === 0) return [];
@@ -520,11 +547,11 @@ export function CADFloorPlanEditor({
 
   // ==================== 坐标转换 ====================
   function isLayerVisible(layerId: string): boolean {
-    return layers.find((l) => l.id === layerId)?.visible ?? false;
+    return layerVisibilityMap.get(layerId) ?? false;
   }
 
   function getLayerOpacity(layerId: string): number {
-    return layers.find((l) => l.id === layerId)?.opacity ?? 1;
+    return layerOpacityMap.get(layerId) ?? 1;
   }
 
   // ==================== 坐标转换 ====================
@@ -1409,8 +1436,8 @@ export function CADFloorPlanEditor({
                     wall={wall}
                     selected={selectedIds.has(wall.id)}
                     hovered={hoveredId === wall.id}
-                    onSelect={handleSelectElement.bind(null, wall.id, "wall")}
-                    onHover={(hovered) => setHoveredId(hovered ? wall.id : null)}
+                    onSelect={handleElementClick}
+                    onHover={handleElementHover}
                   />
                 ))}
 
@@ -1422,8 +1449,8 @@ export function CADFloorPlanEditor({
                     door={door}
                     selected={selectedIds.has(door.id)}
                     hovered={hoveredId === door.id}
-                    onSelect={handleSelectElement.bind(null, door.id, "door")}
-                    onHover={(hovered) => setHoveredId(hovered ? door.id : null)}
+                    onSelect={handleElementClick}
+                    onHover={handleElementHover}
                   />
                 ))}
 
@@ -1435,8 +1462,8 @@ export function CADFloorPlanEditor({
                     workstation={ws}
                     selected={selectedIds.has(ws.id)}
                     hovered={hoveredId === ws.id}
-                    onSelect={handleSelectElement.bind(null, ws.id, "workstation")}
-                    onHover={(hovered) => setHoveredId(hovered ? ws.id : null)}
+                    onSelect={handleElementClick}
+                    onHover={handleElementHover}
                   />
                 ))}
 
@@ -1448,8 +1475,8 @@ export function CADFloorPlanEditor({
                     text={text}
                     selected={selectedIds.has(text.id)}
                     hovered={hoveredId === text.id}
-                    onSelect={handleSelectElement.bind(null, text.id, "text")}
-                    onHover={(hovered) => setHoveredId(hovered ? text.id : null)}
+                    onSelect={handleElementClick}
+                    onHover={handleElementHover}
                   />
                 ))}
 

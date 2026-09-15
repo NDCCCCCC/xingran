@@ -10,8 +10,13 @@ export interface WallElementProps {
   wall: Wall;
   selected?: boolean;
   hovered?: boolean;
-  onSelect?: () => void;
-  onHover?: (hovered: boolean) => void;
+  /** Pass elementId + elementType so editor can use a single stable onClick
+   *  instead of bind/arrow-per-element (F-02: memo bailout). */
+  elementId?: string;
+  elementType?: string;
+  onSelect?: (e: React.MouseEvent) => void;
+  /** F-02: pass elementId instead of bool — parent derives hovered state via id comparison */
+  onHover?: (elementId: string | undefined) => void;
   onDoubleClick?: () => void;
   style?: React.CSSProperties;
 }
@@ -25,6 +30,8 @@ export const WallElement = React.memo(
     wall,
     selected = false,
     hovered = false,
+    elementId,
+    elementType,
     onSelect,
     onHover,
     onDoubleClick,
@@ -47,11 +54,11 @@ export const WallElement = React.memo(
     }, [wall.points]);
 
     const handleMouseEnter = useCallback(() => {
-      onHover?.(true);
-    }, [onHover]);
+      onHover?.(wall.id);
+    }, [onHover, wall.id]);
 
     const handleMouseLeave = useCallback(() => {
-      onHover?.(false);
+      onHover?.(undefined);
     }, [onHover]);
 
     const containerClassName = [
@@ -65,6 +72,8 @@ export const WallElement = React.memo(
     return (
       <g
         className={containerClassName}
+        data-element-id={elementId ?? wall.id}
+        data-element-type={elementType ?? "wall"}
         onClick={onSelect}
         onDoubleClick={onDoubleClick}
         onMouseEnter={handleMouseEnter}

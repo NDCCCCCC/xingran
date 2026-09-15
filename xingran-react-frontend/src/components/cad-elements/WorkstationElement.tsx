@@ -11,8 +11,12 @@ export interface WorkstationElementProps {
   workstation: WorkstationNode;
   selected?: boolean;
   hovered?: boolean;
-  onSelect?: () => void;
-  onHover?: (hovered: boolean) => void;
+  /** F-02: single stable onClick via data-* attributes */
+  elementId?: string;
+  elementType?: string;
+  onSelect?: (e: React.MouseEvent) => void;
+  /** F-02: pass elementId instead of bool — parent derives hovered state via id comparison */
+  onHover?: (elementId: string | undefined) => void;
   onDoubleClick?: () => void;
   style?: React.CSSProperties;
 }
@@ -51,6 +55,8 @@ export const WorkstationElement = React.memo(
     workstation,
     selected = false,
     hovered = false,
+    elementId,
+    elementType,
     onSelect,
     onHover,
     onDoubleClick,
@@ -299,11 +305,11 @@ export const WorkstationElement = React.memo(
     }, [workstation.x, workstation.y, deskWidth, deskDepth, isLShaped, rotation]);
 
     const handleMouseEnter = useCallback(() => {
-      onHover?.(true);
-    }, [onHover]);
+      onHover?.(workstation.id);
+    }, [onHover, workstation.id]);
 
     const handleMouseLeave = useCallback(() => {
-      onHover?.(false);
+      onHover?.(undefined);
     }, [onHover]);
 
     // 生成多边形路径字符串的辅助函数
@@ -336,6 +342,8 @@ export const WorkstationElement = React.memo(
     return (
       <g
         className={containerClassName}
+        data-element-id={elementId ?? workstation.id}
+        data-element-type={elementType ?? "workstation"}
         onClick={onSelect}
         onDoubleClick={onDoubleClick}
         onMouseEnter={handleMouseEnter}

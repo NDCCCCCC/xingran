@@ -11,8 +11,12 @@ export interface DoorElementProps {
   door: Door;
   selected?: boolean;
   hovered?: boolean;
-  onSelect?: () => void;
-  onHover?: (hovered: boolean) => void;
+  /** F-02: single stable onClick via data-* attributes */
+  elementId?: string;
+  elementType?: string;
+  onSelect?: (e: React.MouseEvent) => void;
+  /** F-02: pass elementId instead of bool — parent derives hovered state via id comparison */
+  onHover?: (elementId: string | undefined) => void;
   onDoubleClick?: () => void;
   style?: React.CSSProperties;
 }
@@ -51,6 +55,8 @@ export const DoorElement = React.memo(
     door,
     selected = false,
     hovered = false,
+    elementId,
+    elementType,
     onSelect,
     onHover,
     onDoubleClick,
@@ -120,11 +126,11 @@ export const DoorElement = React.memo(
     }, [door.position, door.width, door.length, door.angle, door.direction, door.type]);
 
     const handleMouseEnter = useCallback(() => {
-      onHover?.(true);
-    }, [onHover]);
+      onHover?.(door.id);
+    }, [onHover, door.id]);
 
     const handleMouseLeave = useCallback(() => {
-      onHover?.(false);
+      onHover?.(undefined);
     }, [onHover]);
 
     const containerClassName = [
@@ -204,6 +210,8 @@ export const DoorElement = React.memo(
     return (
       <g
         className={containerClassName}
+        data-element-id={elementId ?? door.id}
+        data-element-type={elementType ?? "door"}
         onClick={onSelect}
         onDoubleClick={onDoubleClick}
         onMouseEnter={handleMouseEnter}

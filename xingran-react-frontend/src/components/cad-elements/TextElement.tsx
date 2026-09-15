@@ -9,8 +9,12 @@ export interface TextElementProps {
   text: TextElement;
   selected?: boolean;
   hovered?: boolean;
-  onSelect?: () => void;
-  onHover?: (hovered: boolean) => void;
+  /** F-02: single stable onClick via data-* attributes */
+  elementId?: string;
+  elementType?: string;
+  onSelect?: (e: React.MouseEvent) => void;
+  /** F-02: pass elementId instead of bool — parent derives hovered state via id comparison */
+  onHover?: (elementId: string | undefined) => void;
   onDoubleClick?: () => void;
   style?: React.CSSProperties;
 }
@@ -28,6 +32,8 @@ export const CADTextElement = React.memo(
     text,
     selected = false,
     hovered = false,
+    elementId,
+    elementType,
     onSelect,
     onHover,
     onDoubleClick,
@@ -55,11 +61,11 @@ export const CADTextElement = React.memo(
     }, [text.angle, text.position]);
 
     const handleMouseEnter = useCallback(() => {
-      onHover?.(true);
-    }, [onHover]);
+      onHover?.(text.id);
+    }, [onHover, text.id]);
 
     const handleMouseLeave = useCallback(() => {
-      onHover?.(false);
+      onHover?.(undefined);
     }, [onHover]);
 
     const containerClassName = [
@@ -89,6 +95,8 @@ export const CADTextElement = React.memo(
     return (
       <g
         className={containerClassName}
+        data-element-id={elementId ?? text.id}
+        data-element-type={elementType ?? "text"}
         onClick={onSelect}
         onDoubleClick={onDoubleClick}
         onMouseEnter={handleMouseEnter}
