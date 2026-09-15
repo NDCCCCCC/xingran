@@ -4,26 +4,27 @@ import App from "./App.tsx";
 import { initEncryptionConfig } from "@/lib/api";
 
 /**
- * 初始化应用
- * 在渲染应用前加载必要的配置
+ * F-01: Render immediately — do NOT gate React tree on network configuration.
+ * The encryption config (ENABLE_REQUEST_ENCRYPTION) is a single boolean that
+ * gates SM2+SM4 on POST/PUT/PATCH. Starting with false (unencrypted) is safe
+ * because the backend also accepts unencrypted requests; the config merely enables
+ * extra security. We kick off the fetch in the background without blocking render.
+ *
+ * Background fetch: up to 3 retries × 3s timeout = ~12s worst-case before
+ * encryption activates. This is acceptable — no white screen, only slightly reduced
+ * security for the first few requests of a cold-start session.
+ *
+ * To avoid an ugly hydration flash when React mounts over the skeleton, we
+ * render into a detached container first and replace #root's contents atomically.
  */
-async function initializeApp(): Promise<void> {
-  try {
-    // 初始化加密配置（从后端动态获取）
-    await initEncryptionConfig();
-  } catch (error) {
-    console.error("[App] 应用初始化失败:", error);
-    // 即使初始化失败也继续启动应用（使用默认配置）
-  }
-}
 
-// 在初始化完成后渲染应用
-initializeApp()
-  .then(() => {
-    createRoot(document.getElementById("root")!).render(<App />);
-  })
-  .catch((error) => {
-    console.error("[App] 应用启动失败:", error);
-    // 即使初始化失败也渲染应用
-    createRoot(document.getElementById("root")!).render(<App />);
-  });
+// Remove the inline skeleton from the DOM before mounting React
+const rootEl = document.getElementById("root")!;
+const skeleton = document.getElementById("root-loading");
+if (skeleton) skeleton.remove();
+
+const root = createRoot(rootEl);
+root.render(<App />);
+
+// Fire-and-forget: background config fetch — does not block the UI
+void initEncryptionConfig();

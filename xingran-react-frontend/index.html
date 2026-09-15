@@ -19,7 +19,51 @@
     <title>xingran-react-frontend</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- F-01: inline skeleton — renders immediately while encryption config loads in background.
+         #root content is replaced by React once hydrated. -->
+    <div id="root">
+      <style>
+        #root-loading {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          background: #f0f2f5;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          color: #374151;
+        }
+        #root-loading .logo {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+          margin-bottom: 16px;
+          animation: pulse 1.5s ease-in-out infinite;
+        }
+        #root-loading .title {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 24px;
+          letter-spacing: 0.5px;
+        }
+        #root-loading .spinner {
+          width: 28px;
+          height: 28px;
+          border: 3px solid #e5e7eb;
+          border-top-color: #1677ff;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+      </style>
+      <div id="root-loading">
+        <div class="logo"></div>
+        <div class="title">信软运维管理平台</div>
+        <div class="spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
