@@ -29,7 +29,7 @@ export function computeDiff(content1: string, content2: string): DiffResult {
     }
   }
 
-  // 回溯生成差异
+  // 回溯生成差异 — 使用 push+reverse 代替 unshift，避免 O((m+n)²) 整体搬移
   const leftLines: DiffLine[] = [];
   const rightLines: DiffLine[] = [];
   let i = m,
@@ -38,22 +38,26 @@ export function computeDiff(content1: string, content2: string): DiffResult {
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && lines1[i - 1] === lines2[j - 1]) {
       // 相同的行
-      leftLines.unshift({ type: "same", content: lines1[i - 1], lineNum: i });
-      rightLines.unshift({ type: "same", content: lines2[j - 1], lineNum: j });
+      leftLines.push({ type: "same", content: lines1[i - 1], lineNum: i });
+      rightLines.push({ type: "same", content: lines2[j - 1], lineNum: j });
       i--;
       j--;
     } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
       // 新增的行
-      leftLines.unshift({ type: "empty", content: "", lineNum: undefined });
-      rightLines.unshift({ type: "added", content: lines2[j - 1], lineNum: j });
+      leftLines.push({ type: "empty", content: "", lineNum: undefined });
+      rightLines.push({ type: "added", content: lines2[j - 1], lineNum: j });
       j--;
     } else {
       // 删除的行
-      leftLines.unshift({ type: "removed", content: lines1[i - 1], lineNum: i });
-      rightLines.unshift({ type: "empty", content: "", lineNum: undefined });
+      leftLines.push({ type: "removed", content: lines1[i - 1], lineNum: i });
+      rightLines.push({ type: "empty", content: "", lineNum: undefined });
       i--;
     }
   }
+
+  // 一次性反转，恢复正序 — O(n) 一次 vs O(n²) 逐次 unshift 搬移
+  leftLines.reverse();
+  rightLines.reverse();
 
   return {
     leftContent: content1,
