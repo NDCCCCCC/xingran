@@ -9,8 +9,39 @@ updates:
     groups:
       production-dependencies:
         dependency-type: "production"
+        # Toolchain majors locked — typescript-eslint <6.1.0 peer (see PR #26),
+        # eslint/vite/vitest major bumps need coordinated test infra migration.
+        # Will be revisited in v1.35 toolchain phase.
+        ignore:
+          - dependency-name: "typescript"
+            versions: [">=7.0.0"]
       development-dependencies:
         dependency-type: "development"
+        ignore:
+          # typescript-eslint 8.x does not yet support TypeScript 7
+          # (peer is "typescript": ">=4.8.4 <6.1.0"). Wait for typescript-eslint v9+.
+          - dependency-name: "typescript"
+            versions: [">=7.0.0"]
+          - dependency-name: "typescript-eslint"
+            versions: [">=9.0.0"]
+          # Eslint 10 / Vite 8 / Vitest 5 / jsdom 28+ / @vitejs/plugin-react 6+
+          # major bumps require coordinated migration; track in v1.35.
+          - dependency-name: "eslint"
+            versions: [">=10.0.0"]
+          - dependency-name: "vite"
+            versions: [">=8.0.0"]
+          - dependency-name: "vitest"
+            versions: [">=5.0.0"]
+          - dependency-name: "@vitest/coverage-v8"
+            versions: [">=5.0.0"]
+          - dependency-name: "@vitest/ui"
+            versions: [">=5.0.0"]
+          - dependency-name: "@vitejs/plugin-react"
+            versions: [">=6.0.0"]
+          - dependency-name: "jsdom"
+            versions: [">=28.0.0"]
+          - dependency-name: "@testing-library/jest-dom"
+            versions: [">=7.0.0"]
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
