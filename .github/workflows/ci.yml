@@ -145,6 +145,38 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Peer dependency compat check
+        # Pre-flight check: catch peer-incompatible version combinations BEFORE
+        # the slow lint/typecheck/test/build pipeline runs.
+        # Background: dependabot PR #26 bumped typescript 5.9.3 → 7.0.2 alongside
+        # typescript-eslint 8.50.0 → 8.70.0 (incompatible — peer is
+        # 'typescript': '>=4.8.4 <6.1.0'). Lint failed with a confusing
+        # 'typescript-eslint does not support TS 7.0' message 8 minutes into the
+        # pipeline. This step surfaces peer violations in ~10s as plain text,
+        # saving CI minutes and giving an actionable error.
+        # Note: `npm ls --all` has known false-positives (e.g. react@19.3.0 itself
+        # reports invalid against its own peer after major release). We log
+        # violations as warnings so maintainers can spot real regressions
+        # without blocking CI on npm-tooling noise. Promote to ::error:: + exit 1
+        # if a future regression is real and unambiguous.
+        run: |
+          set -e
+          # Capture stderr (where npm prints the per-violation inv lists) and
+          # stdout (JSON tree) — they normally intermix on conflict. Parse stderr
+          # line-by-line for `npm error invalid: ...` rows.
+          npm ls --all --json > /tmp/npm-ls.json 2> /tmp/npm-ls-stderr.txt || true
+          invalid_count=$(grep -c '^npm error invalid:' /tmp/npm-ls-stderr.txt || true)
+          if [ "$invalid_count" -gt 0 ]; then
+            echo "::warning::Found $invalid_count peer-dependency entries flagged by npm ls — review below"
+            grep '^npm error invalid:' /tmp/npm-ls-stderr.txt | head -20
+            if [ "$invalid_count" -gt 20 ]; then
+              echo "  ... and $(($invalid_count - 20)) more (truncated; see job log)"
+            fi
+            echo "::notice::If violations look like real peer breaks (e.g. typescript-eslint 8.x against typescript 7), consider closing PR + extending dependabot.yml ignore."
+          else
+            echo "Peer dependencies: OK"
+          fi
+
       - name: Format check
         # prettier --check 是廉价 fail-fast:文本比对不需要 transform/parse。
         # 在 lint/type-check/test/build 之前跑,任何未格式化文件立刻阻断 CI,
