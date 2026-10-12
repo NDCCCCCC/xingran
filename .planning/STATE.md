@@ -4,8 +4,8 @@ milestone: v1.20
 milestone_name: 网络设备 VLAN + 端口绑定
 status: Awaiting next milestone
 stopped_at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
-last_updated: "2026-07-13T02:10:00.000Z"
-last_activity: 2026-07-13 — Completed quick task 260713-df0: 工位导入扩展 - 部门代码/用户名/主设备SN + 部门映射表下载
+last_updated: "2026-10-12T07:45:00.000Z"
+last_activity: 2026-10-12 — Completed quick task 261012-l7k: 楼层管理页每行显示工位统计(总/已用/空闲/维护)
 progress:
   total_phases: 1
   completed_phases: 1
@@ -137,6 +137,7 @@ Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
 | 260708-iia | 给所有定时任务日志添加方便识别的前缀 [cron:英文\|中文] | 2026-07-08 | (待提交) | [260708-iia-cron-log-prefix](./quick/260708-iia-cron-log-prefix/) |
 | 260712-vpj | 端口管理页面展开行展示当前 MAC + 历史 MAC fallback(懒加载,零后端改动) | 2026-07-12 | be99597b,bc26f5c4 (merge 1780a914) | [260712-vpj-mac-mac](./quick/260712-vpj-mac-mac/) |
 | 260713-df0 | 工位导入扩展: deptCode(deviceSerial 跨表) + SetPrimaryAndSaveBySerial(共用 mergeBySerial) + 部门映射表下载端点 + 工位页导入 modal "下载部门映射表" 按钮 | 2026-07-13 | 41c4ff05, 25ac6ebd, ad0ac2f9, 4b11f0f6 | [260713-df0-username](./quick/260713-df0-username/) |
+| 261012-l7k | 楼层管理页每行显示工位统计(总/已用/空闲/维护, OpsFloor 虚拟字段 + 单条 GROUP BY 聚合零 N+1, 前端"工位统计"列) | 2026-10-12 | 0d3e9670,03624395 | [261012-l7k-floor-workstation-stats](./quick/261012-l7k-floor-workstation-stats/) |
 
 ## Accumulated Context
 
