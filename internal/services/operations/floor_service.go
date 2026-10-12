@@ -3,18 +3,27 @@ package operations
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 )
 
 // floorSyncBuildingTimeout 楼层变更后异步同步工位 building_id 超时
 const floorSyncBuildingTimeout = 30 * time.Second
+
+// ErrFloorNotInExpectedBuilding 乐观锁冲突：楼层已被其他请求变更
+var ErrFloorNotInExpectedBuilding = errors.New("floor was modified by another request")
 
 type FloorService interface {
 	Create(ctx context.Context, floor *operations.OpsFloor) error
@@ -34,8 +43,8 @@ type FloorService interface {
 // FloorStatisticsResult 楼层统计结果(status: 0=正常 1=停用)。
 type FloorStatisticsResult struct {
 	Total    int64 `json:"total"`
-	Active   int64 `json:"active"`   // status = 0
-	Inactive int64 `json:"inactive"` // status = 1
+	Active   int64 `json:"active"`   // operations.FloorStatusNormal
+	Inactive int64 `json:"inactive"` // operations.FloorStatusStopped
 }
 
 // Statistics 统计楼层(按 status 聚合,排除软删除)。
@@ -45,8 +54,8 @@ func (s *floorService) Statistics(ctx context.Context) (*FloorStatisticsResult, 
 		Model(&operations.OpsFloor{}).
 		Select(
 			"COUNT(*) AS total",
-			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
-			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS active", int(operations.FloorStatusNormal)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS inactive", int(operations.FloorStatusStopped)),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -64,23 +73,37 @@ type FloorTreeNode struct {
 }
 
 type floorService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	repo *base.GORMRepository[operations.OpsFloor]
 }
 
 func NewFloorService(db *gorm.DB) FloorService {
-	return &floorService{db: db}
+	return &floorService{db: db, repo: base.NewGORMRepository[operations.OpsFloor](db)}
+}
+
+// listRepo 返回仓储实例。
+// floor_cache_impl.go 装饰器经白盒字面量 &floorService{db: db} 构造内嵌 base
+// （不经过 NewFloorService，repo 字段为零值），而 router.go 生产路径走
+// NewFloorServiceWithCache——此处惰性兜底补建，保证 P7（零触碰 Phase 92 文件）
+// 约束下装饰器委托 List/GetByID 不 nil-panic。GORMRepository 无状态，惰性
+// 构造与构造函数初始化语义等价。
+func (s *floorService) listRepo() *base.GORMRepository[operations.OpsFloor] {
+	if s.repo == nil {
+		return base.NewGORMRepository[operations.OpsFloor](s.db)
+	}
+	return s.repo
 }
 
 // floorAllowedSortFields 楼层可排序字段白名单。
 // 因 List 有 LEFT JOIN buildings/files,字段值带表别名。
 var floorAllowedSortFields = map[string]string{
-	"name":          "ops_floors.name",
-	"floorNo":       "ops_floors.floor_no",
-	"orderNum":      "ops_floors.order_num",
-	"area":          "ops_floors.area",
-	"buildingName":  "ops_buildings.name",
-	"status":        "ops_floors.status",
-	"createdAt":     "ops_floors.created_at",
+	"name":         "ops_floors.name",
+	"floorNo":      "ops_floors.floor_no",
+	"orderNum":     "ops_floors.order_num",
+	"area":         "ops_floors.area",
+	"buildingName": "ops_buildings.name",
+	"status":       "ops_floors.status",
+	"createdAt":    "ops_floors.created_at",
 }
 
 func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) error {
@@ -123,8 +146,18 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 }
 
 func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) error {
-	// 保存旧的 buildingID 用于后续同步
-	oldBuildingID := floor.BuildingID
+	// 保存旧的 buildingID 用于后续同步。
+	// 91-03 修复（原实现 bug）：oldBuildingID := floor.BuildingID 捕获的是待写入的
+	// 新值（同一变量），下方 oldBuildingID != floor.BuildingID 恒 false，换楼时异步
+	// 同步挂靠工位 building_id 的分支自仓库初始化起即死代码（Wave 0 无 service 级
+	// 测试未能暴露）。此处从库中读取修改前的 building_id，使换楼同步语义真正生效。
+	var oldBuildingID string
+	if floor.ID != "" {
+		var prev operations.OpsFloor
+		if err := s.db.WithContext(ctx).Select("building_id").Where("id = ?", floor.ID).First(&prev).Error; err == nil {
+			oldBuildingID = prev.BuildingID
+		}
+	}
 
 	if floor.BuildingID != "" {
 		if err := s.validateBuilding(ctx, floor.BuildingID); err != nil {
@@ -132,9 +165,33 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 		}
 	}
 
-	// 保存楼层（这会触发 updateBuildingFloorCount）
-	if err := s.db.WithContext(ctx).Save(floor).Error; err != nil {
-		return err
+	// 换楼时使用乐观锁：只有楼层仍在旧楼宇才能更新，防止并发 race 导致后到的请求静默覆盖先到的请求。
+	// V130R-07: 如果 building_id 有变化，WHERE 条件包含 oldBuildingID 确保原子性。
+	if oldBuildingID != "" && floor.BuildingID != "" && oldBuildingID != floor.BuildingID {
+		// 乐观锁 UPDATE：只有楼层仍在 oldBuildingID 时才允许更新
+		result := s.db.WithContext(ctx).Model(&operations.OpsFloor{}).
+			Where("id = ? AND building_id = ?", floor.ID, oldBuildingID).
+			Updates(map[string]interface{}{
+				"building_id": floor.BuildingID,
+				"name":        floor.Name,
+				"floor_no":    floor.FloorNo,
+				"area":        floor.Area,
+				"order_num":   floor.OrderNum,
+				"status":      floor.Status,
+				"remark":      floor.Remark,
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			// 楼层已不在预期的旧楼宇中（被并发修改），返回乐观锁冲突错误
+			return ErrFloorNotInExpectedBuilding
+		}
+	} else {
+		// 无换楼，保留原 Save 语义（普通字段更新）
+		if err := s.db.WithContext(ctx).Save(floor).Error; err != nil {
+			return err
+		}
 	}
 
 	// 如果楼宇ID发生了变化，同步更新相关工位的 building_id
@@ -145,7 +202,7 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 			syncCtx, cancel := context.WithTimeout(context.Background(), floorSyncBuildingTimeout)
 			defer cancel()
 			// best-effort: 同步工位 building_id，忽略错误以避免阻塞主流程
-				_ = s.syncWorkstationBuildingID(syncCtx, floor.ID, floor.BuildingID)
+			_ = s.syncWorkstationBuildingID(syncCtx, floor.ID, floor.BuildingID)
 		}()
 	}
 
@@ -164,43 +221,51 @@ func (s *floorService) Delete(ctx context.Context, id string) error {
 }
 
 func (s *floorService) GetByID(ctx context.Context, id string) (*operations.OpsFloor, error) {
-	var floor operations.OpsFloor
-	err := s.db.WithContext(ctx).
-		Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
-		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id::uuid").
-		Joins("LEFT JOIN sys_files ON sys_files.id = ops_floors.plan_image_id::uuid").
-		Where("ops_floors.id = ?", id).
-		First(&floor).Error
-	if err != nil {
-		return nil, err
+	// repo.GetByID 有 scope 时按 Tabler 断言生成 ops_floors.id = ?（与现状逐字等价），
+	// joinScope 携带 Select+Joins（:229-231 三段原样平移）。
+	return s.listRepo().GetByID(ctx, id, s.joinScope())
+}
+
+// joinScope List/GetByID 共用的 Select+Joins（原 :229-231 三段逐字平移）。
+//
+// 前置 Count 的等价性：现状 Select+Joins 在 Count 之后应用；repo 化后 scope 前置——
+// 两 JOIN 均按主键 N:1 LEFT JOIN 无行增殖，Count 时 Select 被替换为 count(*) 并在
+// Find 恢复，Total 不变（91-01 spike 实证 + TestFloor91_List_Filters 守护）。
+func (s *floorService) joinScope() base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
+			Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id").
+			Joins("LEFT JOIN sys_files ON CAST(sys_files.id AS TEXT) = ops_floors.plan_image_id")
 	}
-	return &floor, nil
+}
+
+// filterScope List 筛选条件（原 :187-201 四条件逐字平移，含 CAST 写法与
+// orgId EXISTS 子查询）。
+func (s *floorService) filterScope(params map[string]interface{}) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if name, ok := params["name"].(string); ok && name != "" {
+			db = db.Where("ops_floors.name LIKE ?", "%"+name+"%")
+		}
+		if buildingId, ok := params["buildingId"].(string); ok && buildingId != "" {
+			db = db.Where("ops_floors.building_id = ?", buildingId)
+		}
+		if orgId, ok := params["orgId"].(string); ok && orgId != "" {
+			// 通过关联楼宇的 orgId 筛选（使用 EXISTS 子查询避免 JOIN 冲突）
+			db = db.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		}
+
+		// 状态筛选
+		if status := extractIntParam(params, "status", -1); status >= 0 {
+			db = db.Where("ops_floors.status = ?", status)
+		}
+		return db
+	}
 }
 
 func (s *floorService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	var total int64
-	var list []operations.OpsFloor
-
-	query := s.db.WithContext(ctx).Model(&operations.OpsFloor{})
-
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("ops_floors.name LIKE ?", "%"+name+"%")
-	}
-	if buildingId, ok := params["buildingId"].(string); ok && buildingId != "" {
-		query = query.Where("ops_floors.building_id = ?", buildingId)
-	}
-	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
-		// 通过关联楼宇的 orgId 筛选（使用 EXISTS 子查询避免 JOIN 冲突）
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
-	}
-
-	// 状态筛选
-	if status := extractIntParam(params, "status", -1); status >= 0 {
-		query = query.Where("ops_floors.status = ?", status)
-	}
-
-	current := 1
-	pageSize := 10
+	// v129-recheck WR-05: 内联字面量改引 pkg/constants（值不变,零行为变更）
+	current := constants.DefaultCurrent
+	pageSize := constants.DefaultPageSize
 	if c, ok := params["current"].(int); ok {
 		current = c
 	} else if c, ok := params["current"].(float64); ok {
@@ -212,34 +277,94 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 		pageSize = int(ps)
 	}
 
-	// 用户排序(白名单,带表别名);无 OrderByColumn 时保留原 order_num ASC 默认
+	// 分页为无 clamp 内联断言语契约（P5 floor 行）：current/pageSize 任意值直传
+	// base.PageParams，repo 直信入参；排序 B 型排他默认（白名单 + ops_floors.order_num ASC）。
+	// floor 起链本就是 Model 形态，无 building/asset 的 F3 软删 Count 分歧。
 	sortReq := extractSortRequest(params)
-	query = base.ApplySort(query, sortReq, floorAllowedSortFields)
-	if sortReq.OrderByColumn == "" {
-		query = query.Order("ops_floors.order_num ASC")
-	}
-
-	if err := query.Count(&total).Error; err != nil {
+	result, err := s.listRepo().List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.filterScope(params),
+		s.joinScope(),
+		base.SortScope(sortReq, floorAllowedSortFields, "ops_floors.order_num ASC"),
+	)
+	if err != nil {
 		return nil, err
 	}
+	// 每行工位统计注入（只读增强）：类型断言失败或空页直接返回原 result。
+	if floors, ok := result.List.([]operations.OpsFloor); ok && len(floors) > 0 {
+		s.attachWorkstationStats(ctx, floors)
+	}
+	return result, nil
+}
 
-	offset := (current - 1) * pageSize
-	if err := query.
-		Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
-		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id::uuid").
-		Joins("LEFT JOIN sys_files ON sys_files.id = ops_floors.plan_image_id::uuid").
-		Offset(offset).
-		Limit(pageSize).
-		Find(&list).Error; err != nil {
-		return nil, err
+// attachWorkstationStats 批量回填楼层工位统计（单条 GROUP BY 聚合，零 N+1）。
+//
+// 状态语义（sys_workstation.status 独立枚举，非全局 0=正常/1=停用惯例）：
+//
+//	0=空闲(未使用) / 1=占用(已使用) / 2=维护
+//
+// 实现要点：
+//   - floor_id 为 varchar(64) 存楼层 UUID 字符串，按页内 id 集合 IN 过滤 + GROUP BY，
+//     无需 JOIN（规避 PG uuid/varchar 类型转换问题）。
+//   - Model(&models.Workstation{}) 让 GORM 自动附加 deleted_at IS NULL 软删过滤。
+//   - 状态值引用 models.WorkstationStatus* 常量（禁止魔法数字内联）。
+//   - 无工位的楼层保持 WorkstationStats=nil（json omitempty 不出键，前端渲染 "-"）。
+//   - 只读增强：聚合失败仅告警降级（行保持 nil），不影响 List 主流程。
+func (s *floorService) attachWorkstationStats(ctx context.Context, floors []operations.OpsFloor) {
+	floorIDs := make([]string, 0, len(floors))
+	seen := make(map[string]struct{}, len(floors))
+	for i := range floors {
+		id := floors[i].ID
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		floorIDs = append(floorIDs, id)
+	}
+	if len(floorIDs) == 0 {
+		return
 	}
 
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
-	}, nil
+	var rows []struct {
+		FloorID     string
+		Total       int64
+		Used        int64
+		Unused      int64
+		Maintenance int64
+	}
+	err := s.db.WithContext(ctx).
+		Model(&models.Workstation{}).
+		Select(
+			"floor_id",
+			"COUNT(*) AS total",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS used", int(models.WorkstationStatusOccupied)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS unused", int(models.WorkstationStatusAvailable)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS maintenance", int(models.WorkstationStatusMaintain)),
+		).
+		Where("floor_id IN ?", floorIDs).
+		Group("floor_id").
+		Scan(&rows).Error
+	if err != nil {
+		logrus.WithError(err).Warn("[floor] 工位统计聚合失败，按无统计降级")
+		return
+	}
+
+	statsByFloor := make(map[string]*operations.FloorWorkstationStats, len(rows))
+	for _, r := range rows {
+		statsByFloor[r.FloorID] = &operations.FloorWorkstationStats{
+			Total:       r.Total,
+			Used:        r.Used,
+			Unused:      r.Unused,
+			Maintenance: r.Maintenance,
+		}
+	}
+	for i := range floors {
+		if st, ok := statsByFloor[floors[i].ID]; ok {
+			floors[i].WorkstationStats = st
+		}
+	}
 }
 
 // SearchFloorOptions 楼层下拉数据源(name LIKE 模糊 + buildingId/orgId/status 筛选,LIMIT 50)。
@@ -261,7 +386,7 @@ func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string
 		query = query.Where("ops_floors.building_id = ?", buildingId)
 	}
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
 	}
 	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("ops_floors.status = ?", status)
