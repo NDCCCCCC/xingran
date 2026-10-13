@@ -27,6 +27,14 @@ type OpsBuilding struct {
 	Status           BuildingStatus `gorm:"default:0" json:"status"`                       // 状态: 0=正常, 1=停用
 	Remark      *string        `gorm:"size:500" json:"remark,omitempty"`              // 备注
 	OrderNum    int            `gorm:"default:0" json:"orderNum"`                     // 排序号
+
+	// FloorCount 楼层数实时统计（buildingService.List 按页内 building_id 批量
+	// GROUP BY 注入，非表列）：ops_floors 中该楼栋非软删行数。
+	// 必须 gorm:"-"（完全忽略）而非 gorm:"->"：List 的 selectScope 用
+	// Select("ops_buildings.*, ...") 显式选列，-> 会让 GORM 尝试扫描不存在的列
+	// （floor.go WorkstationStats 同款教训）。nil = 聚合未覆盖/无楼层，
+	// 配合 omitempty 序列化不出键（前端渲染 "-"）。
+	FloorCount *int64 `gorm:"-" json:"floorCount,omitempty"`
 }
 
 // TableName 指定表名

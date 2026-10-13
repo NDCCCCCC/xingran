@@ -2,12 +2,16 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+	"github.com/sirupsen/logrus"
+
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	pkgquery "github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -29,8 +33,8 @@ type BuildingService interface {
 // BuildingStatisticsResult 楼宇统计结果(status: 0=正常 1=停用)。
 type BuildingStatisticsResult struct {
 	Total    int64 `json:"total"`
-	Active   int64 `json:"active"`   // status = 0
-	Inactive int64 `json:"inactive"` // status = 1
+	Active   int64 `json:"active"`   // operations.BuildingStatusNormal
+	Inactive int64 `json:"inactive"` // operations.BuildingStatusStopped
 }
 
 // Statistics 统计楼宇(按 status 聚合,排除软删除;复用 applyFilters 支持筛选,与 List 筛选语义一致)。
@@ -41,8 +45,8 @@ func (s *buildingService) Statistics(ctx context.Context, params map[string]inte
 	err := query.
 		Select(
 			"COUNT(*) AS total",
-			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
-			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS active", int(operations.BuildingStatusNormal)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS inactive", int(operations.BuildingStatusStopped)),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -53,6 +57,7 @@ func (s *buildingService) Statistics(ctx context.Context, params map[string]inte
 
 type buildingService struct {
 	db            *gorm.DB
+	repo          *base.GORMRepository[operations.OpsBuilding]
 	codeGenerator *CodeGenerator
 	uuidValidator *regexp.Regexp
 }
@@ -61,8 +66,9 @@ type buildingService struct {
 func NewBuildingService(db *gorm.DB) BuildingService {
 	return &buildingService{
 		db:            db,
+		repo:          base.NewGORMRepository[operations.OpsBuilding](db),
 		codeGenerator: NewCodeGenerator(db),
-		uuidValidator: constants.UuidPattern,
+		uuidValidator: constants.UUIDPattern,
 	}
 }
 
@@ -90,7 +96,7 @@ func (s *buildingService) Create(ctx context.Context, building *operations.OpsBu
 		return err
 	}
 
-	return s.db.WithContext(ctx).Create(building).Error
+	return s.repo.Create(ctx, building)
 }
 
 // Update 更新楼宇
@@ -112,56 +118,116 @@ func (s *buildingService) Update(ctx context.Context, building *operations.OpsBu
 
 // Delete 删除楼宇
 func (s *buildingService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsBuilding{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取楼宇
 func (s *buildingService) GetByID(ctx context.Context, id string) (*operations.OpsBuilding, error) {
-	var building operations.OpsBuilding
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&building).Error
+	return s.repo.GetByID(ctx, id)
+}
+
+// List 查询楼宇列表（map 签名不变——F1：D-05 只锁 workstation，service 内部 map→scope 转换）
+//
+// 语义说明（Phase 91-03 repo 化，两处 Total 口径论证）：
+//   - 现状 Select(workstation_count 子查询) 在 Count 之后应用；repo 化后 scope 前置——
+//     Count 时非 count(*) 的 Select 被 GORM 临时替换为 count(*) 并在 Find 恢复，
+//     Total 不变（91-01 spike 实证 + TestBase91 契约锁定）。
+//   - 现状 .Table("ops_buildings") 起链导致 Count 不过滤软删除行（Total 虚高，
+//     GORM stmt.Model==nil 时 Count 的 Dest 无法解析 Schema，RESEARCH F3）；
+//     repo 统一 Model(new(T)) 起链后 Total 收紧为不含软删行（latent bugfix，
+//     经 91-03 Task 4 checkpoint 确认）。无软删数据时逐字节一致。
+func (s *buildingService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
+	// V130R-09 D-03-3: 分页归一化统一走 pkg/query 单一权威出口
+	// (cap=MaxOptionsPageSize,assets Excel 导出等全量路径依赖该上限,行为不变)。
+	current := extractIntParam(params, "current", constants.DefaultCurrent)
+	pageSize := extractIntParam(params, "pageSize", constants.DefaultPageSize)
+	current, pageSize = pkgquery.NormalizePaginationWithMax(current, pageSize, constants.MaxOptionsPageSize)
+	sortReq := extractSortRequest(params)
+	result, err := s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.filterScope(params),
+		s.selectScope(),
+		base.SortScope(sortReq, buildingAllowedSortFields, "order_num ASC"),
+	)
 	if err != nil {
 		return nil, err
 	}
-	return &building, nil
+	// 每行楼层数注入（只读增强，quick 261013-jf1）：类型断言失败或空页直接返回原 result。
+	if buildings, ok := result.List.([]operations.OpsBuilding); ok && len(buildings) > 0 {
+		s.attachFloorCount(ctx, buildings)
+	}
+	return result, nil
 }
 
-// List 查询楼宇列表
-func (s *buildingService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	query := s.db.WithContext(ctx).Table("ops_buildings")
-
-	// 应用筛选条件
-	query = s.applyFilters(query, params)
-
-	// 获取总数
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
+// attachFloorCount 批量回填楼栋楼层数（单条 GROUP BY 聚合，零 N+1）。
+//
+// 口径（orchestrator 锁定）：楼层数 = ops_floors 中该楼栋非软删行数。
+// 实时 COUNT 使显示层对既有 total_floors 漂移路径免疫（floor Update 换楼不重算、
+// Excel 导入直写上传值）；total_floors 持久化字段及其事件同步零改动。
+//
+// 实现要点（floor_service.go attachWorkstationStats 同构）：
+//   - ops_floors.building_id 为 varchar(64) 存楼栋 UUID 字符串，按页内 id 集合
+//     IN 过滤 + GROUP BY，无需 JOIN（规避 PG uuid/varchar 类型转换问题）。
+//   - Model(&operations.OpsFloor{}) 让 GORM 自动附加 deleted_at IS NULL 软删过滤。
+//   - 无楼层的楼栋保持 FloorCount=nil（json omitempty 不出键，前端渲染 "-"）。
+//   - 只读增强：聚合失败仅告警降级（行保持 nil），不影响 List 主流程。
+func (s *buildingService) attachFloorCount(ctx context.Context, buildings []operations.OpsBuilding) {
+	buildingIDs := make([]string, 0, len(buildings))
+	seen := make(map[string]struct{}, len(buildings))
+	for i := range buildings {
+		id := buildings[i].ID
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		buildingIDs = append(buildingIDs, id)
+	}
+	if len(buildingIDs) == 0 {
+		return
 	}
 
-	// 应用分页
-	pagination := extractPagination(params)
-	offset := calculateOffset(pagination)
-
-	// 应用用户排序(白名单);无 OrderByColumn 时保留 order_num ASC 默认
-	sortReq := extractSortRequest(params)
-	query = base.ApplySort(query, sortReq, buildingAllowedSortFields)
-	if sortReq.OrderByColumn == "" {
-		query = query.Order("order_num ASC")
+	var rows []struct {
+		BuildingID string
+		FloorCount int64
+	}
+	err := s.db.WithContext(ctx).
+		Model(&operations.OpsFloor{}).
+		Select("building_id", "COUNT(*) AS floor_count").
+		Where("building_id IN ?", buildingIDs).
+		Group("building_id").
+		Scan(&rows).Error
+	if err != nil {
+		logrus.WithError(err).Warn("[building] 楼层数聚合失败，按无统计降级")
+		return
 	}
 
-	// 附带工位计数(子查询,供 building-spaces 概览卡片;TotalFloors 为后端维护字段无需子查询)
-	query = query.Select(`ops_buildings.*, (SELECT COUNT(*) FROM sys_workstation ws JOIN ops_floors f ON f.id = ws.floor_id::uuid WHERE f.building_id::uuid = ops_buildings.id AND ws.deleted_at IS NULL AND f.deleted_at IS NULL) AS workstation_count`)
-	var list []operations.OpsBuilding
-	if err := query.Offset(offset).Limit(pagination.PageSize).Find(&list).Error; err != nil {
-		return nil, err
+	countByBuilding := make(map[string]int64, len(rows))
+	for _, r := range rows {
+		countByBuilding[r.BuildingID] = r.FloorCount
 	}
+	for i := range buildings {
+		if c, ok := countByBuilding[buildings[i].ID]; ok {
+			buildings[i].FloorCount = &c
+		}
+	}
+}
 
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  pagination.Current,
-		PageSize: pagination.PageSize,
-	}, nil
+// filterScope List 筛选条件 scope（Statistics 仍直调 applyFilters，故 helper 保留原位，
+// 闭包内调用保证条件逐字平移零漂移）。
+func (s *buildingService) filterScope(params map[string]interface{}) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		return s.applyFilters(db, params)
+	}
+}
+
+// selectScope 附带工位计数(子查询,供 building-spaces 概览卡片;TotalFloors 为后端维护字段无需子查询)
+// uuid/varchar 混比用 CAST(... AS TEXT) 双方言写法(PG 专有 ::cast 在 SQLite 报语法错误)
+func (s *buildingService) selectScope() base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Select(`ops_buildings.*, (SELECT COUNT(*) FROM sys_workstation ws JOIN ops_floors f ON CAST(f.id AS TEXT) = ws.floor_id WHERE CAST(ops_buildings.id AS TEXT) = f.building_id AND ws.deleted_at IS NULL AND f.deleted_at IS NULL) AS workstation_count`)
+	}
 }
 
 // applyFilters 应用查询筛选条件
@@ -188,10 +254,9 @@ func (s *buildingService) applyFilters(query *gorm.DB, params map[string]interfa
 func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB {
 	var deptIDs []string
 
-	// 查询该部门及其所有子部门的ID
+	// 查询该部门及其所有子部门的ID（BuildDeptRecursiveFilter，V130R-08）
 	err := s.db.Table("sys_dept").
-		Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
-			orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+		Scopes(BuildDeptRecursiveFilter(orgId, "id")).
 		Pluck("id", &deptIDs).Error
 
 	if err != nil || len(deptIDs) == 0 {
@@ -201,9 +266,9 @@ func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB
 	return query.Where("org_id IN ?", deptIDs)
 }
 
-// BatchDelete 批量删除楼宇
+// BatchDelete 批量删除楼宇（repo 空 ids nil 语义与现状 IN(空) no-op 等价）
 func (s *buildingService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsBuilding{}, "id IN ?", ids).Error
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // validateOrg 验证机构存在性
@@ -233,7 +298,7 @@ func (s *buildingService) validateOrg(ctx context.Context, orgID string) error {
 // validateNameUnique 验证楼宇名称唯一性（同一机构下不能有同名楼宇）
 func (s *buildingService) validateNameUnique(ctx context.Context, orgID, name string, excludeID string) error {
 	var count int64
-	query := s.db.WithContext(ctx).Table("ops_buildings").
+	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).
 		Where("org_id = ? AND name = ?", orgID, name)
 
 	// 更新时排除当前记录
@@ -260,7 +325,7 @@ func (s *buildingService) validateNameUnique(ctx context.Context, orgID, name st
 func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Table("ops_buildings").
+	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).
 		Select("id AS value, name AS label").
 		Limit(DropdownMaxRows)
 
@@ -272,8 +337,7 @@ func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
 		var deptIDs []string
 		err := s.db.Table("sys_dept").
-			Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
-				orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+			Scopes(BuildDeptRecursiveFilter(orgId, "id")).
 			Pluck("id", &deptIDs).Error
 		if err != nil {
 			return nil, err
