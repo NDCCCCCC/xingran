@@ -486,6 +486,18 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 				}
 			}
 		}
+
+		// 261013-lqb: 楼宇/楼层导入完成后全量重算楼栋 total_floors 派生列。
+		// 双实体触发原因：building 导入直写用户上传的 totalFloors 值（路径 B）、
+		// floor 导入经通用 BatchUpsert 直写 ops_floors 不触发 floorService.Create
+		// 的重算（路径 C）——两者都会让派生列漂移，导入事务收尾统一幂等归正。
+		// error 直接 return → 整个导入事务回滚（P2-A8 all-or-nothing，
+		// 对齐上方 user 默认角色 hook 的错误处理语义）。
+		if entityType == "building" || entityType == "floor" {
+			if err := recomputeAllBuildingTotalFloors(ctx, tx); err != nil {
+				return err
+			}
+		}
 		return nil
 	}); err != nil {
 		return nil, err
@@ -1613,9 +1625,6 @@ func (s *ExcelService) writeInstructions(f *excelize.File, sheetName string, col
 	// 设置第一列宽度以容纳说明文字
 	_ = f.SetColWidth(sheetName, "A", "A", 60)
 
-	// 写入说明文字（跨所有列合并）
-	lastCol, _ := excelize.CoordinatesToCellName(len(columns), 1)
-
 	for i, text := range instructions {
 		row := i + 1
 		if text == "" {
@@ -1623,8 +1632,14 @@ func (s *ExcelService) writeInstructions(f *excelize.File, sheetName string, col
 		}
 
 		startCell, _ := excelize.CoordinatesToCellName(1, row)
+		// QUIRK-77-2 修复: 合并区间锚点必须按行逐次计算。原实现把 end 锚点固定为
+		// 第 1 行 (CoordinatesToCellName(len(columns), 1)),当说明多于一行时第二次
+		// MergeCell 变成 A{row}:M1 的跨行巨型合并 —— excelize 会清空区间内非锚点
+		// 单元格,首个说明文本被吞掉,只剩末行说明,与上方"逐行写样式/逐行设行高"
+		// 的设计意图相悖。
+		endCol, _ := excelize.CoordinatesToCellName(len(columns), row)
 		// 合并单元格以显示完整说明
-		if err := f.MergeCell(sheetName, startCell, lastCol); err != nil {
+		if err := f.MergeCell(sheetName, startCell, endCol); err != nil {
 			logger.Debugf("合并单元格失败: %v", err)
 			continue
 		}
@@ -1972,7 +1987,7 @@ func (s *ExcelService) ensureDeptGroupExists(ctx context.Context, db *gorm.DB, c
 		"dept_code":  code,
 		"parent_id":  nil, // 部门组是顶级部门
 		"order_num":  0,
-		"status":     0, // 正常
+		"status":     models.DeptStatusNormal,
 		"ancestors":  "",
 		"created_at": now,
 		"updated_at": now,
@@ -2026,7 +2041,7 @@ func (s *ExcelService) ensureDeptExists(ctx context.Context, db *gorm.DB, code, 
 		"parent_id":  parentID,
 		"ancestors":  ancestors,
 		"order_num":  0,
-		"status":     0, // 正常
+		"status":     models.DeptStatusNormal,
 		"created_at": now,
 		"updated_at": now,
 	}
@@ -2270,8 +2285,8 @@ func (s *ExcelService) batchGetWorkstationNames(ctx context.Context, ids []strin
 		return result
 	}
 	var rows []struct {
-	 ID              string
-	 WorkstationName string
+		ID              string
+		WorkstationName string
 	}
 	if err := s.db.WithContext(ctx).
 		Table("sys_workstation").
@@ -2305,9 +2320,9 @@ func (s *ExcelService) batchGetADEnrichment(ctx context.Context, devices []*mode
 		return result
 	}
 	var rows []struct {
-	 ID              string
-	 OperatingSystem string
-	 LastLogon       *time.Time
+		ID              string
+		OperatingSystem string
+		LastLogon       *time.Time
 	}
 	if err := s.db.WithContext(ctx).
 		Table("sys_ad_computer").
@@ -2349,8 +2364,8 @@ func (s *ExcelService) batchGetAssetEnrichment(ctx context.Context, devices []*m
 		return result
 	}
 	var rows []struct {
-	 ID        string
-	 MachineIP string
+		ID        string
+		MachineIP string
 	}
 	if err := s.db.WithContext(ctx).
 		Table("ops_asset").

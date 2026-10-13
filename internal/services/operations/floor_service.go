@@ -532,6 +532,31 @@ func (s *floorService) updateBuildingFloorCount(ctx context.Context, buildingID 
 	return s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("id = ?", buildingID).Update("total_floors", count).Error
 }
 
+// recomputeAllBuildingTotalFloors 全量重算所有未删楼栋的 total_floors 反范式列
+// （SQL 形状拷贝 BatchDelete 的关联子查询 UPDATE，去掉 id 限定 + 加楼栋软删过滤）。
+//
+// 设计要点：
+//   ① 供 Excel 导入事务收尾调用（building + floor 双实体，修漂移路径 B/C）——
+//     building 导入直写用户上传的 totalFloors 值、floor 导入经通用 BatchUpsert
+//     绕过 floorService.Create 的重算，两者都会污染派生列，导入完成统一归正；
+//   ② 幂等可重入：重复执行结果一致，事务重试/并发导入均安全；
+//   ③ 实时 COUNT 口径与 updateBuildingFloorCount 一致（ops_floors 非软删行数，
+//     禁止 ±1 增量——会把历史脏值固化）；
+//   ④ ops_buildings 量级小（百级行），全表重算无性能顾虑。
+func recomputeAllBuildingTotalFloors(ctx context.Context, db *gorm.DB) error {
+	sql := `
+		UPDATE ops_buildings
+		SET total_floors = (
+			SELECT COUNT(*)
+			FROM ops_floors
+			WHERE ops_floors.building_id = ops_buildings.id
+				AND ops_floors.deleted_at IS NULL
+		)
+		WHERE deleted_at IS NULL
+	`
+	return db.WithContext(ctx).Exec(sql).Error
+}
+
 // syncWorkstationBuildingID 同步更新工位的楼宇ID
 // 当楼层所属楼宇变更时，更新该楼层下所有工位的 building_id
 func (s *floorService) syncWorkstationBuildingID(ctx context.Context, floorID string, newBuildingID string) error {
