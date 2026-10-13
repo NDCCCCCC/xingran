@@ -4,8 +4,8 @@ milestone: v1.20
 milestone_name: 网络设备 VLAN + 端口绑定
 status: Awaiting next milestone
 stopped_at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
-last_updated: "2026-10-12T07:45:00.000Z"
-last_activity: 2026-10-12 — Completed quick task 261012-l7k: 楼层管理页每行显示工位统计(总/已用/空闲/维护)
+last_updated: "2026-10-13T06:20:00.000Z"
+last_activity: 2026-10-13 — Completed quick task 261013-jf1: 楼栋管理页楼层数列切实时 COUNT
 progress:
   total_phases: 1
   completed_phases: 1
@@ -138,6 +138,7 @@ Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
 | 260712-vpj | 端口管理页面展开行展示当前 MAC + 历史 MAC fallback(懒加载,零后端改动) | 2026-07-12 | be99597b,bc26f5c4 (merge 1780a914) | [260712-vpj-mac-mac](./quick/260712-vpj-mac-mac/) |
 | 260713-df0 | 工位导入扩展: deptCode(deviceSerial 跨表) + SetPrimaryAndSaveBySerial(共用 mergeBySerial) + 部门映射表下载端点 + 工位页导入 modal "下载部门映射表" 按钮 | 2026-07-13 | 41c4ff05, 25ac6ebd, ad0ac2f9, 4b11f0f6 | [260713-df0-username](./quick/260713-df0-username/) |
 | 261012-l7k | 楼层管理页每行显示工位统计(总/已用/空闲/维护, OpsFloor 虚拟字段 + 单条 GROUP BY 聚合零 N+1, 前端"工位统计"列) | 2026-10-12 | 0d3e9670,03624395 | [261012-l7k-floor-workstation-stats](./quick/261012-l7k-floor-workstation-stats/) |
+| 261013-jf1 | 楼栋管理页楼层数列从反范式 total_floors(有漂移: 换楼不重算/Excel 直写)切到实时 FloorCount(GROUP BY 零 N+1, 排序仍发 totalFloors 保白名单) | 2026-10-13 | 24af23d9,b4bff80c | [261013-jf1-building-floor-count](./quick/261013-jf1-building-floor-count/) |
 
 ## Accumulated Context
 
