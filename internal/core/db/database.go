@@ -1,81 +1,159 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/glebarez/sqlite"
+	"github.com/lib/pq"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	sysmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	_ "modernc.org/sqlite"
 )
 
 // Database 数据库管理器
 type Database struct {
 	DB   *gorm.DB
 	Type string
+	// SettingsMenuComponentChanged 表示 Migrate209 (系统设置菜单 component 路径
+	// 修正) 本次启动实际改写了数据。core.go 在缓存服务就绪后按此标志失效菜单
+	// 缓存 —— 迁移执行期 c.Cache 尚未创建, 迁移函数内拿不到 cache 实例
+	// (Phase 70 PATTERNS 事实 1 的时序约束)。
+	SettingsMenuComponentChanged bool
+	// migrationLockConn 持有启动期 PG advisory lock 的专用 *sql.Conn。
+	// 仅 AutoMigrate 期间非空;releaseMigrationAdvisoryLock 后重置为 nil。
+	// 不导出,避免外部代码误关连接导致 pg_advisory_unlock noop。
+	migrationLockConn *sql.Conn
+	// keepaliveStop/keepaliveDone 连接保活 goroutine 的停止信号与完成信号。
+	// nil 表示保活未启动(如测试手工构造的 Database) — Close 必须 nil-guard。
+	keepaliveStop chan struct{}
+	keepaliveDone chan struct{}
 }
 
 // NewDatabase 创建数据库连接
+//
+// 2026-08-15:项目曾硬性切到 PostgreSQL(Supabase),删除旧 SQLite 回退路径。
+// 原因:`gorm.io/driver/sqlite` 传递性引入 `github.com/mattn/go-sqlite3`(CGO),
+// Windows 上无 gcc 时 `go run` 直接失败。
+//
+// 2026-08-17:以纯 Go 驱动 `github.com/glebarez/sqlite`(底层 modernc.org/sqlite,
+// 无需 CGO)恢复 sqlite 分支 — cfg.Type=="sqlite" 时连接本地文件库,用于 dev 环境
+// 摆脱 Supabase 跨国链路延迟。区别于已删除的旧 CGO 路径,CGO 驱动禁令由
+// TestNewDatabaseRequiresPostgresConfig 源码断言守护。
+//
+// 分支语义:
+//   - cfg.Type == "sqlite" → createSQLiteConnection(本地文件,不启动 pool keepalive)
+//   - 其他(含空字符串)→ 现有 PG 路径一字不动,Host==\"\" 或 Port<=0 时 fail-fast,
+//     运维可第一时间发现配置缺失。
 func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
-	var db *gorm.DB
-	var dbType string
+	if cfg == nil {
+		return nil, fmt.Errorf("数据库配置缺失:database 配置不能为空")
+	}
 
-	if cfg.Host != "" && cfg.Port > 0 {
-		dbType = "postgres"
-		var err error
-		db, err = createPostgresConnection(cfg)
-		if err != nil {
-			return nil, fmt.Errorf("连接PostgreSQL失败: %w", err)
-		}
-	} else {
-		dbType = "sqlite"
-		var err error
-		db, err = createSQLiteConnection(cfg)
+	// SQLite 分支(dev 本地文件库,纯 Go 驱动,不访问远端 PG/Supabase)
+	if cfg.Type == "sqlite" {
+		db, err := createSQLiteConnection(cfg)
 		if err != nil {
 			return nil, fmt.Errorf("连接SQLite失败: %w", err)
 		}
+		return &Database{DB: db, Type: "sqlite"}, nil
 	}
 
-	if err := configureGORM(db); err != nil {
-		return nil, fmt.Errorf("配置GORM失败: %w", err)
+	if cfg.Host == "" || cfg.Port <= 0 {
+		return nil, fmt.Errorf("数据库配置缺失:database.host 与 database.port 必须显式配置(项目不再提供 SQLite 回退)")
 	}
 
-	return &Database{
+	dbType := "postgres"
+	db, err := createPostgresConnection(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("连接PostgreSQL失败: %w", err)
+	}
+
+	d := &Database{
 		DB:   db,
 		Type: dbType,
-	}, nil
+	}
+
+	// H6 缓解 (login-menu-timeout-20260817): Supabase pooler 上新建连接的
+	// TLS+auth 握手实测 ~4.7s;空闲连接被服务端回收后,下一个查询支付全价握手,
+	// 在低流量 dev 环境表现为间歇性慢查询。后台保活保持少量连接热备。
+	warmConns := cfg.MaxIdleConns
+	if warmConns > poolKeepaliveMaxConns {
+		warmConns = poolKeepaliveMaxConns
+	}
+	if warmConns > 0 {
+		d.startPoolKeepalive(warmConns)
+	}
+
+	return d, nil
 }
 
-// createSQLiteConnection 创建SQLite连接
-func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
-	dbPath := cfg.Host
-	if dbPath == "" {
-		dbPath = "./data/ruoyi.db"
-	}
+// poolKeepaliveInterval 连接保活间隔。远短于 Supabase 空闲连接回收窗口,
+// 每个周期并发 ping N 次,保持 N 个空闲连接热备(消除 ~4.7s 冷握手)。
+const poolKeepaliveInterval = 30 * time.Second
 
-	gormConfig := &gorm.Config{
-		Logger: createFilteredLogger(),
-		NowFunc: func() time.Time {
-			return time.Now().Local()
-		},
-	}
+// poolKeepaliveMaxConns 保活连接数上限 — 保活是兜底机制,不应占用大量池配额。
+const poolKeepaliveMaxConns = 4
 
-	db, err := gorm.Open(sqlite.Open(dbPath), gormConfig)
+// startPoolKeepalive 启动后台连接保活 goroutine(幂等)。
+func (d *Database) startPoolKeepalive(warmConns int) {
+	if d.keepaliveStop != nil {
+		return // 已启动
+	}
+	d.keepaliveStop = make(chan struct{})
+	d.keepaliveDone = make(chan struct{})
+	go d.poolKeepaliveLoop(warmConns)
+	applogger.Infof("[pool-keepalive] 已启动, 间隔=%v, 保活连接数=%d", poolKeepaliveInterval, warmConns)
+}
+
+func (d *Database) poolKeepaliveLoop(warmConns int) {
+	defer close(d.keepaliveDone)
+	ticker := time.NewTicker(poolKeepaliveInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-d.keepaliveStop:
+			return
+		case <-ticker.C:
+			d.pingPoolOnce(warmConns)
+		}
+	}
+}
+
+// pingPoolOnce 并发 ping warmConns 次。database/sql 的 Ping 占用并归还一个连接,
+// 并发 N 次即保持 N 个不同连接热备;串行 ping 会复用同一连接,达不到目的。
+func (d *Database) pingPoolOnce(warmConns int) {
+	sqlDB, err := d.DB.DB()
 	if err != nil {
-		return nil, fmt.Errorf("连接SQLite失败: %w", err)
+		return
 	}
-
-	applogger.Infof("SQLite连接成功: %s", dbPath)
-	return db, nil
+	var wg sync.WaitGroup
+	for i := 0; i < warmConns; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := sqlDB.PingContext(ctx); err != nil {
+				applogger.Warnf("[pool-keepalive] ping 失败: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 // createFilteredLogger 创建使用 FilterLogger 的 GORM 配置
@@ -83,22 +161,142 @@ func createFilteredLogger() *FilterLogger {
 	return NewFilterLogger(DefaultLogFilterConfig)
 }
 
+// defaultSQLitePath 是 cfg.Path 为空时的兜底 SQLite 文件路径
+// (与 config 默认值 database.path 对齐)。
+const defaultSQLitePath = "data/ruoyi.db"
+
+// createSQLiteConnection 创建 SQLite 连接(纯 Go 驱动 glebarez/sqlite,底层
+// modernc.org/sqlite,无 CGO 依赖 — 严禁替换为 gorm.io/driver/sqlite)。
+//
+// 2026-08-17 恢复:dev 环境本地文件库,摆脱 Supabase 跨国链路延迟。
+// DSN 走 modernc `_pragma` 参数:busy_timeout 10s + WAL 日志模式 + 外键开启。
+//
+// dev-only 已知限制(不阻塞,见 plan 260817-hfl):
+//   - reconciliation 物化视图/普通 VIEW(175/176)、菜单 seed(202)、sys_config
+//     连接池 seed(203)等 PG-only 迁移块不执行(AutoMigrate 的 d.Type=="postgres" guard)
+//   - 个别 handler 原生 SQL 若含 PG 方言(::uuid cast / ILIKE / pg_catalog)在 SQLite
+//     下会运行期报错 — 按需后续修
+func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
+	path := cfg.Path
+	if path == "" {
+		path = defaultSQLitePath
+	}
+
+	// 确保数据文件目录存在(相对路径 "." 时跳过)
+	if dir := filepath.Dir(path); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("创建SQLite数据目录失败: %w", err)
+		}
+	}
+
+	dsn := path + "?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)"
+
+	gormConfig := &gorm.Config{
+		Logger:  createFilteredLogger(),
+		NowFunc: func() time.Time { return time.Now().UTC() },
+		DisableForeignKeyConstraintWhenMigrating: true,
+		SkipDefaultTransaction:                   true,
+		PrepareStmt:                              false, // 与 PG 路径对齐(simple protocol)
+	}
+
+	db, err := gorm.Open(sqlite.Open(dsn), gormConfig)
+	if err != nil {
+		return nil, fmt.Errorf("连接SQLite失败: %w", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("获取数据库实例失败: %w", err)
+	}
+
+	// SQLite 单写者:WAL + busy_timeout 下小池即可,25 连接无意义。
+	sqlDB.SetMaxOpenConns(4)
+
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("数据库连接测试失败: %w", err)
+	}
+
+	applogger.Infof("SQLite连接成功: %s", path)
+	return db, nil
+}
+
+// sanitizeSQLiteModelDefaults 净化 schema 缓存中 PG-only 的 DDL 片段,使 AutoMigrate /
+// CreateTable 能在 SQLite 下建表。仅 sqlite 分支调用;PG 路径零改动。
+//
+// 背景 (2026-08-17, quick-260817-hfl): 多个 model tag 携带 PG 专属片段 —
+//   - default:gen_random_uuid() (Asset / APIKeyUsageLog / VDISyncLog / OUGroupMapping 等):
+//     SQLite DDL 只允许常量默认值,函数调用触发 "near \"(\": syntax error"
+//   - type:text[] (AuthCredential.SNMPCommunities / SysReconciliationException):
+//     SQLite type-name 语法不接受方括号
+//
+// 实现: 经 gorm.Statement{DB: d.DB}.Parse 触发的 schema 解析会写入该 DB 实例共享的
+// cacheStore;此处就地修改缓存的 *schema.Schema,后续 Migrator().AutoMigrate /
+// CreateTable 的 Parse 命中同一缓存,拿到净化后的 schema(单一事实源仍是 model tag,
+// 净化是 sqlite 运行期的投影,不改 model 文件,不影响 PG 语义)。
+//
+// 配套: 被剥离 gen_random_uuid() 默认值的列,应用层由 model BeforeCreate 钩子
+// (uuid.New()) 填充 ID;函数式默认剥离后该字段以应用值写入,PG 下行为等价
+// (非空 ID 直接 INSERT,DB 默认值仅对零值生效)。
+func (d *Database) sanitizeSQLiteModelDefaults() error {
+	modelsToSanitize := MigrateModelList()
+	// sys_data_reconciliation 仅在 sqlite 分支注册进 AutoMigrate(见 AutoMigrate
+	// sqlite 分支注释),不在 MigrateModelList 里;但其 tag 含 PG-only 片段
+	// (DetectedAt default:now() / AppliedActions type:text[]),必须一并净化,
+	// 否则 sqlite 建表报 "near \"(\": syntax error" / type-name 方括号语法错误。
+	modelsToSanitize = append(modelsToSanitize, &models.SysDataReconciliation{})
+	// log-errors-fix-20260818: sys_ad_service_accounts 缺表同族(同 rpa-tasks-table-missing
+	// / column-config-table-recon-stats 模式)。模型 internal/models/ad_service_account.go
+	// 自 Phase 36 起存在,ID 字段 tag 含 default:gen_random_uuid()(PG-only 函数式默认,
+	// sqlite 不接受),必须显式加入净化列表,否则 sqlite 路径上 sys_ad_service_accounts
+	// 建表报 "near \"(\": syntax error"。
+	modelsToSanitize = append(modelsToSanitize, &models.ADServiceAccount{})
+	for _, model := range modelsToSanitize {
+		stmt := &gorm.Statement{DB: d.DB}
+		if err := stmt.Parse(model); err != nil {
+			return fmt.Errorf("解析模型 schema 失败(%T): %w", model, err)
+		}
+		for _, field := range stmt.Schema.Fields {
+			// 函数式默认值(gen_random_uuid()/now() 等)SQLite 不接受
+			if strings.Contains(field.DefaultValue, "(") {
+				field.DefaultValue = ""
+				field.HasDefaultValue = false
+			}
+			// PG 数组类型(text[] 等)SQLite type-name 语法不接受方括号;
+			// 降为 text — pq.StringArray 的 Valuer/Scan 走 "{a,b}" 字面量文本,可 roundtrip
+			if strings.Contains(string(field.DataType), "[") {
+				field.DataType = "text"
+			}
+		}
+	}
+	return nil
+}
+
 // createPostgresConnection 创建PostgreSQL连接
 func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	adminDSN := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.SSLMode)
 
+	// CDX-H1:createDatabaseIfNotExists 失败必须上抛而非吞错。
+	// 历史:applogger.Errorf 后继续 → gorm.Open 在 DB 不存在时报 "database does not exist"
+	// 而非真实根因(认证/网络/缺 postgres 维护库)。修复后启动 fail-fast 暴露真实原因。
 	if err := createDatabaseIfNotExists(adminDSN, cfg.DBName); err != nil {
-		applogger.Errorf("创建数据库失败: %v", err)
+		return nil, fmt.Errorf("创建数据库失败: %w", err)
 	}
 
 	dsn := cfg.GetDSN()
 
 	gormConfig := &gorm.Config{
 		Logger:                                   createFilteredLogger(),
-		NowFunc:                                  func() time.Time { return time.Now().Local() },
+		// CDX-M-UTC:全项目 UTC 一致性,与 SQL DEFAULT NOW() 语义对齐。
+		// 历史本地时区行由 timestamptz 规范化(timestamptz 列按会话时区规范化存储,
+		// 混合期查询按 timestamptz 语义正确;naive timestamp 列若有则存在解释漂移)。
+		NowFunc:                                  func() time.Time { return time.Now().UTC() },
 		DisableForeignKeyConstraintWhenMigrating: true,
 		SkipDefaultTransaction:                   true,
+		// Supabase Pooler(Supavisor)兼容:pooler(Transaction/Session)不支持
+		// 跨连接的 prepared statement 缓存,GORM 默认 PrepareStmt=true 会在 pooler 上
+		// 反复 prepare/失败重试,导致 AutoMigrate(80+ DDL)卡死。设为 false 走 simple protocol。
+		PrepareStmt: false,
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
@@ -128,13 +326,17 @@ func configureConnectionPool(sqlDB *sql.DB, cfg *config.DatabaseConfig) {
 	sqlDB.SetConnMaxLifetime(time.Duration(cfg.MaxLifetime) * time.Second)
 }
 
-// configureGORM 配置GORM
-func configureGORM(_ *gorm.DB) error {
-	return nil
-}
-
 // Close 关闭数据库连接
 func (d *Database) Close() error {
+	// 停止连接保活 goroutine(若已启动);测试手工构造的 Database 该字段为 nil。
+	if d.keepaliveStop != nil {
+		close(d.keepaliveStop)
+		select {
+		case <-d.keepaliveDone:
+		case <-time.After(3 * time.Second): // ping 进行中最多等 3s,避免 shutdown 卡死
+		}
+		d.keepaliveStop = nil
+	}
 	if d.DB != nil {
 		sqlDB, err := d.DB.DB()
 		if err != nil {
@@ -179,6 +381,20 @@ func (d *Database) cleanupOldConstraints() {
 		// models.Asset.DeviceSN 标 uniqueIndex → GORM 期望 uni_ops_asset_devicesn
 		{"ops_asset", "uni_ops_asset_devicesn"},
 		{"ops_asset", "ops_asset_devicesn_key"},
+		// === API Key (Phase 58/60) ===
+		// BootstrapMissingTables 用 inline `key_hash ... UNIQUE` → PG 自动名 sys_api_keys_key_hash_key;
+		// models.APIKey.KeyHash 标 uniqueIndex → GORM 期望 uni_sys_api_keys_key_hash。
+		// 不带 bypass 启动时 AutoMigrate 会 DROP CONSTRAINT uni_...(无 IF EXISTS)→ 42704 FATA。
+		{"sys_api_keys", "uni_sys_api_keys_key_hash"},
+		{"sys_api_keys", "sys_api_keys_key_hash_key"},
+		// === 系统配置 sys_config (2026-08-13 远端 DB 实测, 同类 42704) ===
+		// sys_config 早期由 inline `config_key ... UNIQUE` 建表 → PG 自动名 sys_config_config_key_key
+		// (pg_constraint contype=u); models.Config.ConfigKey 标 uniqueIndex → GORM 期望 uni_sys_config_config_key。
+		// AutoMigrate 走 DropConstraint(无 IF EXISTS)→ 42704 FATA(实测 2026-08-13 21:53 部署期)。
+		// 远端 pg_constraint contype=u 实测仅此一例 constraint 级冲突; user/role/post/dept/dict 等是
+		// index 级 idx_* 与 GORM uni_* 共存(GORM CREATE 不报错, 非致命), 仅 sys_config 是 constraint 级致命。
+		{"sys_config", "uni_sys_config_config_key"},
+		{"sys_config", "sys_config_config_key_key"},
 		// === VDI (128_create_vdi_tables.sql 多个 inline UNIQUE) ===
 		{"sys_vdi_virtual_machines", "sys_vdi_virtual_machines_vm_id_key"},
 		{"sys_vdi_virtual_machines", "uni_sys_vdi_virtual_machines_vm_id"},
@@ -268,44 +484,13 @@ func (d *Database) dropDependentMaterializedViews() {
 		"如需恢复 DROP,见 internal/core/db/database.go 历史 commit。")
 }
 
-// AutoMigrate 自动迁移所有模型
+// MigrateModelList 返回 AutoMigrate 注册的完整模型列表。
 //
-// 设计变更 (260704-ne5): 启动期不再调用 200+ migration 函数 ——
-//
-//   1. 所有迁移(Migrate033/117/143~201)都是 schema 演进期一次性脚本,生产 DB 已全部应用过,
-//      每次启动都是 idempotent noop,但累计产生 ~30s 启动开销 + 250 行启动日志噪音。
-//
-//   2. 新部署流程改为:
-//        a) 用 scripts/db/snapshot.sh 从生产 DB 导出 schema-{date}.sql + seed-{date}.sql
-//        b) 新机 psql -f schema-snapshot.sql && psql -f seed-snapshot.sql 一次性导入
-//        c) ./ruoyi-backend 启动
-//
-//   3. GORM AutoMigrate(model) 仍保留 — 它是 model 加新字段时的安全网(ALTER TABLE ADD COLUMN)。
-//      启动期只跑 ~2s,日志 1 行 "所有表迁移成功"。
-//
-//   4. cleanupOldConstraints() 仍保留 — 清理 GORM uniqueIndex 与 SQL inline UNIQUE 命名冲突,
-//      ~5ms,无日志噪音。
-//
-//   5. dropDependentMaterializedViews() 已恢复(260704-ne5-regression-fix)——
-//      GORM AutoMigrate 仍会 ALTER sys_ad_user.username 等被 MV 引用的列,导致 PG SQLSTATE 0A000 FATA。
-//      前置 DROP 引用业务表的 MV,AutoMigrate 完成后由 migrations.Migrate176ReconciliationPhysicalMV
-//      重建 reconciliation_normalized(MV 重建 ~10s 是 R5 双源+物理链路版本的固有开销)。
-//
-//   6. migrateCredentialModel() 已删除 — 凭证模型已在生产迁移完成(protocol_type 列已存在)。
-//
-// 所有 migrations.MigrateNNN 函数定义仍保留在 internal/core/db/migrations/,仅不再启动期调用。
-// 如需重放某次迁移,手动跑对应函数(d.DB)即可。
-func (d *Database) AutoMigrate() error {
-	// 先清理可能存在的旧约束。dropDependentMaterializedViews() 当前 noop,
-	// 保留调用便于将来 model tag 漂移时回退 (260704-regression-fix-5)。
-	if d.Type == "postgres" {
-		d.cleanupOldConstraints()
-		d.dropDependentMaterializedViews()
-	}
-
-	// 禁用外键约束的自动创建，避免类型不匹配的问题
-	// 外键约束已通过 SQL 脚本手动创建
-	err := d.DB.Migrator().AutoMigrate(
+// 抽取为独立函数的原因 (2026-08-13, debug backend-hang-on-automigrate):
+// scripts/dbprovision 一次性补建工具复用同一列表(仅对缺失表 CREATE),
+// 保持单一事实源,避免两处列表漂移再次出现 "表永不会被建" 的问题。
+func MigrateModelList() []interface{} {
+	return []interface{}{
 		&models.User{},
 		&models.UserRole{},
 		&models.Department{},
@@ -324,9 +509,11 @@ func (d *Database) AutoMigrate() error {
 		&models.ConfigExecution{},
 		&models.ConfigExecutionDetail{},
 		&models.ConfigBackup{},
+		&models.ConfigRestoreTask{}, // Phase 93: 配置恢复任务 (D-15 异步编排载体)
 		&models.DeviceMACAddress{},
 		&models.DevicePortStatus{},
-		&models.PortWriteAudit{},  // Phase 52: 端口写审计 append-only 表
+		&models.LLDPNeighborInfo{}, // LLDP 邻居信息(拓扑发现)
+		&models.PortWriteAudit{}, // Phase 52: 端口写审计 append-only 表
 		&models.DeviceDiscovery{},
 		&models.DeviceEnrichmentTask{},
 		// 通知公告相关模型（增强版）
@@ -338,6 +525,11 @@ func (d *Database) AutoMigrate() error {
 		// 通知配置相关模型
 		&models.EmailConfig{},
 		&models.APINotificationConfig{},
+		// API Key 管理 (Phase 58/60 修复: AutoMigrate 缺漏导致 sys_api_keys 永不会被建)
+		&models.APIKey{},
+		&models.APIKeyUsageLog{},
+		// 系统参数配置 sys_config (init_data.go 写入,缺则 seed 中途失败)
+		&models.Config{},
 		// 验证码背景图相关模型
 		&models.CaptchaBackground{},
 		// 值班管理相关模型
@@ -358,7 +550,9 @@ func (d *Database) AutoMigrate() error {
 		&models.PeriodicWorkOrderTemplate{},
 		&models.PeriodicWorkOrderLog{},
 		// 知识库相关模型（排除有约束问题的表）
-		// KnowledgeCategory, KnowledgeTag 已通过 SQL 迁移创建，不需要 AutoMigrate
+		// KnowledgeCategory, KnowledgeTag 已通过 SQL 迁移创建，PG 不需要 AutoMigrate;
+		// sqlite 分支在 AutoMigrate() 内显式补注册(归档 SQL 不执行,且 many2many
+		// 级联不会建 sys_knowledge_tag,详见下方 sqlite 分支注释)
 		&models.KnowledgeArticle{},
 		&models.KnowledgeArticleTag{},
 		// AD域管理相关模型
@@ -371,17 +565,21 @@ func (d *Database) AutoMigrate() error {
 		&models.ADSyncLog{},
 		// OU组映射相关模型（替代旧的部门组映射）
 		&models.OUGroupMapping{},
+		&models.OUGroupMappingSyncLog{}, // OU 组映射同步日志
 		// VDI虚拟化相关模型
 		&models.VDIVirtualMachine{},
 		&models.VDIServer{},
 		&models.VDIResourceGroup{},
 		&models.VDIUserBinding{},
+		&models.VDISyncLog{},
 		// 运维管理相关模型（Workstation 复用系统已有的 sys_workstation）
 		&operations.OpsBuilding{},
 		&operations.OpsFloor{},
 		&operations.OpsServerRoom{},
 		&operations.OpsDedicatedLine{},
 		&operations.OpsRoomDevice{},
+		&operations.OpsRoomNetworkDevice{},
+		&operations.OpsRoomPhoto{},
 		&operations.OpsInfoPoint{},
 		&models.Asset{},
 		// 仪表盘系统相关模型
@@ -389,15 +587,207 @@ func (d *Database) AutoMigrate() error {
 		&models.DashboardVersion{},
 		// Phase 46 R5: 半自动修复建议表
 		&models.SysReconciliationFixSuggestion{},
-	)
+		// 对账异常表(原 migration_174 带 GiST 索引, 归档于 archive/applied 不自动跑;
+		// 此处补注册进 AutoMigrate 建表, GiST 索引可选 — 不影响功能, 仅 IP 匹配性能)
+		&models.SysReconciliationException{},
+	}
+}
+
+// AutoMigrate 自动迁移所有模型
+//
+// 设计变更 (260704-ne5): 启动期不再调用 200+ migration 函数 ——
+//
+//   1. 所有迁移(Migrate033/117/143~201)都是 schema 演进期一次性脚本,生产 DB 已全部应用过,
+//      每次启动都是 idempotent noop,但累计产生 ~30s 启动开销 + 250 行启动日志噪音。
+//
+//   2. 新部署流程改为:
+//        a) 用 scripts/db/snapshot.sh 从生产 DB 导出 schema-{date}.sql + seed-{date}.sql
+//        b) 新机 psql -f schema-snapshot.sql && psql -f seed-snapshot.sql 一次性导入
+//        c) ./xingran-backend 启动
+//
+//   3. GORM AutoMigrate(model) 仍保留 — 它是 model 加新字段时的安全网(ALTER TABLE ADD COLUMN)。
+//      启动期只跑 ~2s,日志 1 行 "所有表迁移成功"。
+//
+//   4. cleanupOldConstraints() 仍保留 — 清理 GORM uniqueIndex 与 SQL inline UNIQUE 命名冲突,
+//      ~5ms,无日志噪音。
+//
+//   5. dropDependentMaterializedViews() 已恢复(260704-ne5-regression-fix)——
+//      GORM AutoMigrate 仍会 ALTER sys_ad_user.username 等被 MV 引用的列,导致 PG SQLSTATE 0A000 FATA。
+//      前置 DROP 引用业务表的 MV,AutoMigrate 完成后由 migrations.Migrate176ReconciliationPhysicalMV
+//      重建 reconciliation_normalized(MV 重建 ~10s 是 R5 双源+物理链路版本的固有开销)。
+//
+//   6. migrateCredentialModel() 已删除 — 凭证模型已在生产迁移完成(protocol_type 列已存在)。
+//
+// 所有 migrations.MigrateNNN 函数定义仍保留在 internal/core/db/migrations/,仅不再启动期调用。
+// 如需重放某次迁移,手动跑对应函数(d.DB)即可。
+func (d *Database) AutoMigrate() error {
+	// SKIP_AUTOMIGRATE=true: dev/调试旁路,跳过 cleanup + dropDependent + AutoMigrate,
+	// 仅执行 BootstrapMissingTables(在 core.go initDBAndData 中分支调用)。
+	// Supabase pooler 上 cleanupOldConstraints 也会卡死,故一并跳过。
+	// 该旁路仅对 postgres 有意义;sqlite 无 pooler 问题且新文件库必须全量 AutoMigrate。
+	if os.Getenv("SKIP_AUTOMIGRATE") == "true" && d.Type == "postgres" {
+		applogger.Warnf("[SKIP_AUTOMIGRATE=true] 跳过 cleanup/dropDependent/AutoMigrate,改由 BootstrapMissingTables 补建")
+		return nil
+	}
+
+	// SQLite:净化 PG-only DDL 片段(gen_random_uuid() 默认值 / text[] 数组类型),
+	// 否则 AutoMigrate 在建 Asset/APIKeyUsageLog/AuthCredential 等表时报语法错误。
+	if d.Type == "sqlite" {
+		if err := d.sanitizeSQLiteModelDefaults(); err != nil {
+			return err
+		}
+	}
+
+	// 先清理可能存在的旧约束。dropDependentMaterializedViews() 当前 noop,
+	// 保留调用便于将来 model tag 漂移时回退 (260704-regression-fix-5)。
+	if d.Type == "postgres" {
+		d.cleanupOldConstraints()
+		d.dropDependentMaterializedViews()
+	}
+
+	// 禁用外键约束的自动创建，避免类型不匹配的问题
+	// 外键约束已通过 SQL 脚本手动创建
+	migrateList := MigrateModelList()
+	if d.Type == "sqlite" {
+		// log-errors-fix-20260818 AutoMigrate-view-dep: GORM ALTER TABLE 在 sqlite 下走
+		// __temp → RENAME 路径,而 reconciliation_normalized 视图持 schema-level 引用
+		// sys_data_reconciliation,RENAME 会触发 "SQL logic error: error in view
+		// reconciliation_normalized: no such table: main.sys_data_reconciliation"
+		// (实测 2026-08-18 10:32 启动期,Phase 48 加 recon_category 列触发)。
+		// 必须先 DROP 三视图让 ALTER 路径无依赖完成,本函数下方
+		// ensureSQLiteReconciliationViews 会在 AutoMigrate 后重建它们。
+		// PG 不受影响(走 advisory-lock + migration_175/176 块流)。
+		if err := d.dropSQLiteReconciliationViews(); err != nil {
+			return err
+		}
+		// sys_user_preference 历史由归档 SQL(004/005/044)创建,PG 存量库已存在;
+		// 仅 sqlite 分支注册进 AutoMigrate(全新文件库必须建表,否则登录后首屏
+		// GET /system/settings/preferences 500)。PG 不注册的原因:GORM 对存量表
+		// 会按 model tag 发起漂移 ALTER(DROP NOT NULL / 默认值 240→280 改写等),
+		// 生产语义必须零改动;PG 新部署由 scripts/dbprovision 建表。
+		migrateList = append(migrateList, &models.UserPreference{})
+		// sys_rpa_workers / sys_rpa_executions / sys_mac_oui_vendor 历史由归档 SQL
+		// (102_add_rpa_tables.sql / 033_create_mac_oui_vendor_table.up.sql)创建,
+		// PG 存量库已存在;仅 sqlite 分支注册进 AutoMigrate(全新文件库必须建表,
+		// 否则 RPA 扩缩容统计查询 / OUI 厂商导入报 "no such table")。
+		// PG 不注册的原因同上:避免 GORM 对存量表按 model tag 发起漂移 ALTER;
+		// PG 新部署由 scripts/dbprovision 建表(已含 MACOUIVendor)。
+		// 单一事实源:rpamodels.Worker/Execution(internal/models/rpa/,
+		// services/rpa 实际使用;internal/models/rpa.go 的 RPAWorker/RPAExecution
+		// 为无引用遗留定义,不注册)、models.MACOUIVendor。
+		// 三个模型 tag 均无 PG-only DDL 片段(无函数式默认值/数组类型),
+		// 无需经过 sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList,
+			&rpamodels.Worker{},
+			&rpamodels.Execution{},
+			&models.MACOUIVendor{},
+		)
+		// rpa-tasks-table-missing (2026-08-18): sys_rpa_tasks 与上块同族缺漏
+		// (同一归档 SQL 102_add_rpa_tables.sql 建表,PG 存量库已存在;上方注册
+		// Worker/Execution 时漏了 Task),sqlite 全新文件库不建表则
+		// /rpa/tasks/list 报 "no such table: sys_rpa_tasks"。仅 sqlite 分支注册,
+		// PG 不注册的原因同上(零漂移)。单一事实源同 rpamodels.Worker/Execution。
+		// rpamodels.Task tag 已核查:无函数式默认值/数组类型等 PG-only DDL 片段
+		// (type:jsonb 为合法 type-name,与 SysDataReconciliation 先例同级;
+		// default:300/5/0 为常量默认值),无需经过 sanitizeSQLiteModelDefaults 净化。
+		// sys_rpa_schedules/variables/templates 未注册:services/api 无任何运行期
+		// 查询引用,不在本症链路,避免无谓漂移。
+		migrateList = append(migrateList, &rpamodels.Task{})
+		// sys_oper_log 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
+		// AutoMigrate(全新文件库必须建表,否则 operlog.Record 写入报 "no such table")。
+		// PG 不注册的原因同上(零漂移);PG 新部署由 scripts/dbprovision 建表。
+		// models.OperLog tag 已核查:无函数式默认值/数组类型等 PG-only DDL 片段
+		// (BaseTimeLine 的 type:uuid 是合法 type-name,ID 由 BeforeCreate 钩子填充),
+		// 无需经过 sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList, &models.OperLog{})
+		// sys_logininfor 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
+		// AutoMigrate(全新文件库必须建表,否则登录成功后 auth.go 记录登录日志写入报
+		// "no such table: sys_logininfor")。PG 不注册的原因同上(零漂移);
+		// PG 新部署由 scripts/dbprovision 建表(已含 LoginLog)。
+		// models.LoginLog tag 已核查:无函数式默认值/数组类型等 PG-only DDL 片段
+		// (与 OperLog 同一 BaseTimeLine,type:uuid 合法 type-name,ID 由 BeforeCreate
+		// 钩子填充),无需经过 sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList, &models.LoginLog{})
+		// sys_data_reconciliation 历史由归档 migration_168(archive/applied,启动期
+		// 不执行)创建,PG 存量库已存在;仅 sqlite 分支注册进 AutoMigrate(全新文件库
+		// 必须建表,否则 cron「对账-自动转工单critical/high」与异常列表查询报
+		// "no such table: sys_data_reconciliation")。PG 不注册的原因同上(零漂移);
+		// PG 新部署由 scripts/dbprovision 建表。
+		// 注意:该模型 tag 含 PG-only 片段(DetectedAt default:now() /
+		// AppliedActions type:text[]),已由 sanitizeSQLiteModelDefaults 一并净化
+		// (净化列表显式追加了本模型);migration_168 的 partial unique index
+		// uniq_recon_asset_type_open 不在 tag 中,sqlite 下不建 — 与
+		// SysReconciliationException 的 GiST 索引同级取舍(功能不受损,仅约束降级)。
+		migrateList = append(migrateList, &models.SysDataReconciliation{})
+		// ops-sqlite-tables-uuid-cast (2026-08-18): 运维模块列表页依赖的 6 张表
+		// 同为"历史由归档 SQL/迁移创建,运行期 sqlite 分支缺注册"缺漏类
+		// (dbprovision 已注册其中 5 个,但那只服务 PG 新部署):
+		//   - sys_workstation / sys_dept_location_alias / sys_dict_data(+sys_dict_type
+		//     同族一并注册): /ops/workstation/list|statistics、/ops/location-alias/list、
+		//     /system/dicts/data/list 报 "no such table"
+		//   - ops_workstation_device: workstation List/GetByID 的 joinSelect 子查询
+		//     (primary_device_serial)引用该表,缺表则列表仍 500
+		//   - sys_files: floor List/GetByID LEFT JOIN 取 plan_image_url,缺表则列表仍 500
+		// 六个模型 tag 已逐一核查:无函数式默认值/数组类型等 PG-only DDL 片段
+		// (SysFile.Metadata 的 type:jsonb 为合法 type-name,非 STRICT sqlite 表可接受,
+		// 与 SysDataReconciliation 的 jsonb 列同级);SysDeptLocationAlias 的 partial
+		// unique index(migration_165)不在 tag 中,sqlite 下不建 — 同 GiST 取舍。
+		// models.WorkstationDevice 虽带 3 个 GORM 关联指针,但本配置
+		// DisableForeignKeyConstraintWhenMigrating=true,不产生 FK/级联 DDL。
+		migrateList = append(migrateList,
+			&models.Workstation{},
+			&models.SysDeptLocationAlias{},
+			&models.DictType{},
+			&models.DictData{},
+			&models.WorkstationDevice{},
+			&sysmodels.SysFile{},
+		)
+		// kb-tag-table-stats-400 (2026-08-18): 知识库 sys_knowledge_tag 缺表同类缺漏。
+		// sys_knowledge_category / sys_knowledge_tag 历史由归档 SQL(legacy 012)创建,
+		// PG 存量库已存在;sqlite 分支此前依赖 GORM AutoMigrate 的关系级联"碰巧"建出
+		// sys_knowledge_category(Article.Category belongs-to 依赖在 ReorderModels
+		// valuesMap 存值前 append,级联生效),但 many2many 远端(Article.Tags→
+		// KnowledgeTag)的 append 位于 defer 闭包、map 存值后执行,slice 扩容后旧副本
+		// 丢失 → sys_knowledge_tag 永不建表,/knowledge/tags/all 报 "no such table"。
+		// 显式注册两模型,不再依赖 cascade 的未定义行为;PG 不注册的原因同上(零漂移)。
+		// 两模型 tag 已核查:无函数式默认值/数组类型等 PG-only DDL 片段(KnowledgeTag
+		// 的 ID 由 BeforeCreate 钩子填充),无需经过 sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList,
+			&models.KnowledgeCategory{},
+			&models.KnowledgeTag{},
+		)
+		// column-config-table-recon-stats (2026-08-18): sys_user_column_config 缺表
+		// 同族第四次缺漏(同 kb-tag-table-stats-400 / rpa-tasks-table-missing 模式 ——
+		// 模型已存在 internal/models/user_column_config.go,历史从未注册进 AutoMigrate
+		// 任何分支,sys_user_column_config 永远不被建,/system/column-config/asset.list 500
+		// "no such table: sys_user_column_config")。仅 sqlite 分支注册:PG 存量库已存在
+		// (假设 production 已 seed),GORM 对存量表按 model tag 发起漂移 ALTER 会破坏
+		// 生产语义(零漂移是项目惯例);PG 新部署由 scripts/dbprovision 建表。
+		// 模型 tag 已核查:无函数式默认值(`BeforeCreate` 钩子填充 ID)/数组类型等
+		// PG-only DDL 片段(type:uuid/bool/int/size:100 均为合法 type-name),无需经过
+		// sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList, &models.UserColumnConfig{})
+		// log-errors-fix-20260818: sys_ad_service_accounts 缺表同族(同
+		// rpa-tasks-table-missing / kb-tag-table-stats-400 /
+		// column-config-table-recon-stats 模式)。Phase 36 引入的多账号池表
+		// internal/models/ad_service_account.go 历史由归档 SQL migration_162
+		// 创建,PG 存量库已存在;sqlite 全新文件库从未被任何 AutoMigrate 分支注册,
+		// 导致 ADAccountPool.RecoverExpiredBreakers 每 5 分钟 cron 触发
+		// "no such table: sys_ad_service_accounts"(实测 585+ 次持续失败)。
+		// 仅 sqlite 分支注册:PG 不注册的原因同 UserPreference(零漂移,GORM 对存量表
+		// 按 model tag 发起漂移 ALTER 会破坏生产语义);PG 新部署由 scripts/dbprovision 建表。
+		// 模型 tag 已核查:无数组类型 text[] 等 PG-only DDL 片段(type:uuid/size:255/500/64
+		// 均为合法 type-name),但 ID 字段 default:gen_random_uuid() 是 PG-only 函数式默认,
+		// 已在上方 sanitizeSQLiteModelDefaults 显式追加本模型净化,SQLite 下默认剥离由应用层
+		// uuid.New() 填充(BeforeCreate 钩子),PG 下行为等价。
+		migrateList = append(migrateList, &models.ADServiceAccount{})
+	}
+	err := d.DB.Migrator().AutoMigrate(migrateList...)
 	if err != nil {
 		return err
 	}
 
 	applogger.Infof("所有表迁移成功")
-
-	// 所有迁移完成后,审计约束命名是否一致,提前暴露潜在 AutoMigrate 冲突
-	d.auditConstraintNaming()
 
 	// 所有迁移完成后,审计约束命名是否一致,提前暴露潜在 AutoMigrate 冲突
 	d.auditConstraintNaming()
@@ -409,7 +799,20 @@ func (d *Database) AutoMigrate() error {
 	// 重建顺序固定:175 先建前置 VIEW → 176 再建 MV(MV 引用 175 的 VIEW)。
 	// migration_175 用 CREATE OR REPLACE VIEW,完全 idempotent;~5s。
 	// migration_176 用 DROP+CREATE MATERIALIZED VIEW,~10s(R5 双源 declared + 物理链路版本固有成本)。
+	//
+	// C3 修复:多副本/滚动重启下 REFRESH CONCURRENTLY 与 CREATE OR REPLACE VIEW 竞态失败
+	// ("tuple concurrently updated" / "CONCURRENTLY refresh in progress")。
+	// 用会话级 advisory lock 包裹整块迁移,未获锁实例 WARN 跳过(fail-safe 而非 fail-deadly):
+	// 单实例部署锁永远可得,只有 HA/滚动重启场景才落到跳过。
+	// SQLite 不需要此锁(d.Type guard 已排除);锁键 'ruoyi-migrations' 由 hashtext 哈希为 int4
+	// 走单参 pg_advisory_lock 变体。
 	if d.Type == "postgres" {
+		if !d.acquireMigrationAdvisoryLock() {
+			applogger.Warnf("[advisory-lock] 另一实例正在执行启动迁移,本实例跳过 175/176/202-205 迁移块")
+			return nil
+		}
+		defer d.releaseMigrationAdvisoryLock()
+
 		if err := migrations.Migrate175ReconciliationPhysicalLink(d.DB); err != nil {
 			applogger.Errorf("reconciliation 前置视图重建失败 (非阻断,留待下次启动): %v", err)
 		}
@@ -428,9 +831,142 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate204AddDot1xUserLimit(d.DB); err != nil {
 			applogger.Errorf("dot1x_user_limit 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// RPA Worker id 列补 DEFAULT gen_random_uuid()
+		// (Register 原生 SQL 路径绕过 BeforeCreate, 列需自带 DEFAULT 与全库 UUID 惯例对齐, 防 23502)
+		if err := migrations.Migrate205RpaWorkerIdDefault(d.DB); err != nil {
+			applogger.Errorf("sys_rpa_workers.id DEFAULT 迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 登录菜单加载慢: 为关联表增加复合索引, 缓解远程 DB 全表扫描导致的超时
+		if err := migrations.Migrate206AddUserRoleRoleMenuIndexes(d.DB); err != nil {
+			applogger.Errorf("sys_user_role / sys_role_menu / sys_menu 索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 规范菜单目录种子 (239 条, 幂等; debug admin-role-incomplete-menus 修复)
+		// 必须在 InitData 的 createOperationsManagementMenus 之前执行:
+		// 规范「运维管理」根就位后, Go 种子按 (name, parent) 查重自然全部跳过
+		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
+			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 字典 seed (11 组, 幂等; Phase 69 DICT-02: dev 库字典表为空的修复)
+		if err := migrations.Migrate208DictSeed(d.DB); err != nil {
+			applogger.Errorf("字典 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 系统设置菜单 component 路径修正 (Phase 70 D-11: 前端 settings-page 目录
+		// 并入 system/settings; 幂等 UPDATE, changed 标志供 core.go 失效菜单缓存)
+		if changed, err := migrations.Migrate209UpdateSettingsMenuComponent(d.DB); err != nil {
+			applogger.Errorf("系统设置菜单 component 修正失败 (非阻断,留待下次启动): %v", err)
+		} else if changed {
+			d.SettingsMenuComponentChanged = true
+		}
+		// Q-11: 归一化 sys_menu.parent_id='0' 为 NULL(幂等,修复 Update 路径落库字面 "0" 造成的孤儿节点)
+		if _, err := migrations.Migrate210NormalizeMenuParentID(d.DB); err != nil {
+			applogger.Errorf("sys_menu parent_id='0' 归一失败 (非阻断,留待下次启动): %v", err)
+		}
+		// Phase 93: 配置恢复任务表 (PG 显式建表,幂等;sqlite 由 AutoMigrate 建表,分支无需注册)
+		if err := migrations.Migrate211CreateConfigRestoreTask(d.DB); err != nil {
+			applogger.Errorf("配置恢复任务表创建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v129-recheck C-1: 同设备活跃恢复任务部分唯一索引 (双方言;PG 分支在 advisory-lock 块内执行)
+		if err := migrations.Migrate212CreateRestoreTaskActiveUniqueIndex(d.DB); err != nil {
+			applogger.Errorf("恢复任务活跃唯一索引创建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 261013-lqb: 楼栋 total_floors 存量漂移一次性归正 (双方言纯 SQL,幂等,无常驻对象)
+		if err := migrations.Migrate213RecomputeBuildingTotalFloors(d.DB); err != nil {
+			applogger.Errorf("楼栋 total_floors 存量重算失败 (非阻断,留待下次启动): %v", err)
+		}
+	} else {
+		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
+		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
+			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 字典 seed (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
+		if err := migrations.Migrate208DictSeed(d.DB); err != nil {
+			applogger.Errorf("字典 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 系统设置菜单 component 路径修正 (双方言迁移; PG 分支在上方
+		// advisory-lock 块内执行)
+		if changed, err := migrations.Migrate209UpdateSettingsMenuComponent(d.DB); err != nil {
+			applogger.Errorf("系统设置菜单 component 修正失败 (非阻断,留待下次启动): %v", err)
+		} else if changed {
+			d.SettingsMenuComponentChanged = true
+		}
+		// sqlite 分支: Q-11 归一化 sys_menu.parent_id='0' 为 NULL
+		if _, err := migrations.Migrate210NormalizeMenuParentID(d.DB); err != nil {
+			applogger.Errorf("sys_menu parent_id='0' 归一失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v129-recheck C-1: 同设备活跃恢复任务部分唯一索引 (双方言;sqlite 3.8+ 支持 partial index)
+		if err := migrations.Migrate212CreateRestoreTaskActiveUniqueIndex(d.DB); err != nil {
+			applogger.Errorf("恢复任务活跃唯一索引创建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 261013-lqb 楼栋 total_floors 存量漂移一次性归正 (双方言纯 SQL,幂等)
+		if err := migrations.Migrate213RecomputeBuildingTotalFloors(d.DB); err != nil {
+			applogger.Errorf("楼栋 total_floors 存量重算失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
+		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
+		// 迁移,此前 probeMaterializedView 诚实探测后走 fallback 降级 + 每请求 WARN)。
+		// 普通 VIEW 实时计算,dev 语义等价或更优;失败非阻断(仍有 fallback 兜底)。
+		if err := d.ensureSQLiteReconciliationViews(); err != nil {
+			applogger.Errorf("sqlite reconciliation 视图补建失败 (非阻断,exception/list 走 fallback 降级): %v", err)
+		}
 	}
 
 	return nil
+}
+
+// acquireMigrationAdvisoryLock 获取 PG 会话级 advisory lock 用于启动期迁移块排他。
+// 返回 true 表示已获锁可执行迁移块;返回 false 表示其他实例正在迁移,本实例应跳过。
+// 必须配对调用 releaseMigrationAdvisoryLock 释放(在 defer 中)。
+//
+// 实现要点:
+//   - 专用 sql.Conn(pinning 单连接):advisory lock 是会话级,跨连接不生效
+//   - pg_try_advisory_lock(hashtext('ruoyi-migrations')) 返回 bool:
+//     true=获锁,false=其他会话已持锁(本实例跳过)
+//   - 取锁本身失败(conn 错误/查询错误)→ Errorf 后按"未获锁"处理(fail-safe)
+func (d *Database) acquireMigrationAdvisoryLock() bool {
+	sqlDB, err := d.DB.DB()
+	if err != nil {
+		applogger.Errorf("[advisory-lock] 获取 *sql.DB 失败: %v", err)
+		return false
+	}
+
+	conn, err := sqlDB.Conn(context.Background())
+	if err != nil {
+		applogger.Errorf("[advisory-lock] 获取专用连接失败: %v", err)
+		return false
+	}
+
+	var acquired bool
+	if err := conn.QueryRowContext(context.Background(),
+		"SELECT pg_try_advisory_lock(hashtext('ruoyi-migrations'))").Scan(&acquired); err != nil {
+		applogger.Errorf("[advisory-lock] 尝试获取锁失败: %v", err)
+		_ = conn.Close()
+		return false
+	}
+
+	if !acquired {
+		_ = conn.Close()
+		return false
+	}
+
+	// 保存 conn 到 d 上供 releaseMigrationAdvisoryLock 使用(嵌入结构体避免污染 Database 公共字段)
+	d.migrationLockConn = conn
+	return true
+}
+
+// releaseMigrationAdvisoryLock 释放 acquireMigrationAdvisoryLock 获取的会话级 lock。
+// 仅在 acquireMigrationAdvisoryLock 返回 true 时调用。
+func (d *Database) releaseMigrationAdvisoryLock() {
+	if d.migrationLockConn == nil {
+		return
+	}
+	// pg_advisory_unlock 与 pg_try_advisory_lock 用同样的 hashtext 锁键,
+	// 必须使用同一连接(pg_advisory_unlock 在已关闭连接上调用会静默 noop)。
+	if _, err := d.migrationLockConn.ExecContext(context.Background(),
+		"SELECT pg_advisory_unlock(hashtext('ruoyi-migrations'))"); err != nil {
+		applogger.Errorf("[advisory-lock] 释放锁失败: %v", err)
+	}
+	_ = d.migrationLockConn.Close()
+	d.migrationLockConn = nil
 }
 
 // auditConstraintNaming 启动期审计 unique 约束命名一致性
@@ -493,965 +1029,141 @@ func (d *Database) InitData() error {
 	return initData(d.DB)
 }
 
-// initData 初始化基础数据
-func initData(db *gorm.DB) error {
-	// 创建默认部门
-	if err := createDefaultDept(db); err != nil {
-		return fmt.Errorf("创建默认部门失败: %w", err)
+// BootstrapMissingTables 在跳过 AutoMigrate 时,经 gorm.Migrator().CreateTable 从 model
+// 派生补建缺失表 + 显式索引兜底。
+//
+// 设计原因: Supabase pooler (Session mode 5432) 上 GORM AutoMigrate(80+ DDL)
+// 会卡死在 dropDependent 之后,所有表都在但 sys_api_keys + sys_api_key_usage_logs
+// 永远建不出来。历史上本函数用硬编码 CREATE TABLE raw SQL 补建 —— 但那成了
+// APIKey schema 的第三份拷贝(model tag + MigrateModelList 之外),model 加列即漂移(C7)。
+//
+// C7 修复: 表结构改由 models.APIKey / models.APIKeyUsageLog 经
+// gorm.Migrator().CreateTable 派生 —— 与 AutoMigrate(MigrateModelList) 同一事实源,
+// 天然防漂移。CreateTable 在 PrepareStmt:false 连接上走 simple protocol,
+// 单表单条 DDL,无 AutoMigrate 80+ DDL 批量路径的 pooler 死锁(原硬编码 DDL 的存在理由),
+// 且不带 public. 硬编码 schema 前缀(跟随 search_path)。
+//
+// 索引: model tag 之外的索引面(usage log 的查询索引等)由六条显式
+// CREATE INDEX IF NOT EXISTS 兜底,幂等可重入。
+//
+// 适用: dev/调试;生产模式(mode=release)由 core.go initDBAndData 直接 fatal,
+// 不会走到本函数。
+func (d *Database) BootstrapMissingTables() error {
+	// 0) SQLite:净化 PG-only DDL 片段(同 AutoMigrate 路径;CreateTable 直接走
+	//    schema 缓存,不净化则 sys_api_key_usage_logs 的 gen_random_uuid() 报语法错误)
+	if d.Type == "sqlite" {
+		if err := d.sanitizeSQLiteModelDefaults(); err != nil {
+			return err
+		}
 	}
 
-	// 创建默认用户
-	if err := createDefaultUser(db); err != nil {
-		return fmt.Errorf("创建默认用户失败: %w", err)
+	// 1) 表结构:model 派生,先判定再补建(幂等)
+	if !d.DB.Migrator().HasTable(&models.APIKey{}) {
+		applogger.Infof("[BootstrapMissingTables] sys_api_keys 缺失,经 CreateTable 从 model 派生补建")
+		if err := d.DB.Migrator().CreateTable(&models.APIKey{}); err != nil {
+			return fmt.Errorf("创建 sys_api_keys 失败: %w", err)
+		}
+	}
+	if !d.DB.Migrator().HasTable(&models.APIKeyUsageLog{}) {
+		applogger.Infof("[BootstrapMissingTables] sys_api_key_usage_logs 缺失,经 CreateTable 从 model 派生补建")
+		if err := d.DB.Migrator().CreateTable(&models.APIKeyUsageLog{}); err != nil {
+			return fmt.Errorf("创建 sys_api_key_usage_logs 失败: %w", err)
+		}
 	}
 
-	// 创建默认角色
-	if err := createDefaultRole(db); err != nil {
-		return fmt.Errorf("创建默认角色失败: %w", err)
+	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建
+	ddl := []string{
+		// Phase 58 SC#1-SC#4 + Phase 60 AUTH-03 + SEC-01 都依赖此表
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON sys_api_keys(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_key_prefix ON sys_api_keys(key_prefix)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_deleted_at ON sys_api_keys(deleted_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_api_key_id ON sys_api_key_usage_logs(api_key_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_created_at ON sys_api_key_usage_logs(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_user_id ON sys_api_key_usage_logs(user_id)`,
 	}
 
-	// 创建用户角色关联
-	if err := createUserRoleRelations(db); err != nil {
-		return fmt.Errorf("创建用户角色关联失败: %w", err)
+	for i, stmt := range ddl {
+		applogger.Infof("[BootstrapMissingTables] executing index %d/%d", i+1, len(ddl))
+		if err := d.DB.Exec(stmt).Error; err != nil {
+			return fmt.Errorf("DDL[%d] failed: %w", i+1, err)
+		}
 	}
-
-	// 创建网络设备系统参数
-	if err := createNetworkDeviceSystemParams(db); err != nil {
-		return fmt.Errorf("创建网络设备系统参数失败: %w", err)
-	}
-
-	// 创建网络设备定时任务
-	if err := createNetworkDeviceScheduledJobs(db); err != nil {
-		return fmt.Errorf("创建网络设备定时任务失败: %w", err)
-	}
-
-	// 创建验证码背景图系统参数
-	if err := createCaptchaBackgroundSystemParams(db); err != nil {
-		return fmt.Errorf("创建验证码背景图系统参数失败: %w", err)
-	}
-
-	// 创建运维管理菜单
-	if err := createOperationsManagementMenus(db); err != nil {
-		return fmt.Errorf("创建运维管理菜单失败: %w", err)
-	}
-
-	// 创建请求加密开关配置参数
-	if err := createRequestEncryptionToggleConfig(db); err != nil {
-		return fmt.Errorf("创建请求加密开关配置失败: %w", err)
-	}
-	// 创建AD认证配置参数
-	if err := createADAuthConfig(db); err != nil {
-		return fmt.Errorf("创建AD认证配置参数失败: %w", err)
-	}
-
-	applogger.Infof("基础数据初始化完成")
+	applogger.Infof("[BootstrapMissingTables] tables model-derived, %d index statements OK", len(ddl))
 	return nil
 }
 
-// createDefaultDept 创建默认部门
-func createDefaultDept(db *gorm.DB) error {
-	// 检查是否已有部门数据
-	var count int64
-	db.Model(&models.Department{}).Count(&count)
-	if count > 0 {
-		applogger.Infof("部门数据已存在，跳过初始化")
-		return nil
-	}
+// dbIdentRe 校验 PG 数据库标识符,防止 CREATE DATABASE 拼接时注入非法字符
+var dbIdentRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
-	// 创建顶级部门
-	topDept := models.Department{
-		DeptName: "若依科技有限公司",
-		OrderNum: 1,
-		Leader:   func() *string { s := "若依"; return &s }(),
-		Phone:    func() *string { s := "15888888888"; return &s }(),
-		Email:    func() *string { s := "ruoyi@qq.com"; return &s }(),
-		Status:   models.DeptStatusNormal,
-		Remark:   "",
-	}
+// migrationAdvisoryLockKey 是迁移块 advisory lock 的字符串锁键,
+// 跨进程共享同一哈希值(hash key 在 pg_advisory_lock(int8, int4) 双参版本下用 int4)。
+const migrationAdvisoryLockKey = "ruoyi-migrations"
 
-	if err := db.Create(&topDept).Error; err != nil {
-		return fmt.Errorf("创建顶级部门失败: %w", err)
+// isDuplicateDatabaseError 判定 err 是否为 PG 42P04 (duplicate_database)。
+// errors.As 解包 *pq.Error 以覆盖 fmt.Errorf("...: %w", pqErr) 包装路径。
+//
+// CDX-H1 修复:并发 bootstrap 撞出的 42P04 容忍为 WARN(不致命)—— 语义就是"已存在",
+// 后续 gorm.Open 会真实验证连通性。理论上一个真正失败的 CREATE DATABASE 若恰好报 42P04
+// 会被 WARN 放过,但风险可接受(42P04 语义唯一即"已存在")。
+func isDuplicateDatabaseError(err error) bool {
+	if err == nil {
+		return false
 	}
-
-	// 创建子部门
-	subDepts := []models.Department{
-		{
-			DeptName:  "深圳总公司",
-			ParentID:  &topDept.ID,
-			Ancestors: topDept.ID,
-			OrderNum:  1,
-			Leader:    func() *string { s := "若依"; return &s }(),
-			Phone:     func() *string { s := "15888888888"; return &s }(),
-			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
-			Status:    models.DeptStatusNormal,
-			Remark:    "",
-		},
-		{
-			DeptName:  "长沙分公司",
-			ParentID:  &topDept.ID,
-			Ancestors: topDept.ID,
-			OrderNum:  2,
-			Leader:    func() *string { s := "若依"; return &s }(),
-			Phone:     func() *string { s := "15888888888"; return &s }(),
-			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
-			Status:    models.DeptStatusNormal,
-			Remark:    "",
-		},
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return pqErr.Code == "42P04"
 	}
-
-	var shenzhenDeptID string
-	for _, dept := range subDepts {
-		if err := db.Create(&dept).Error; err != nil {
-			return fmt.Errorf("创建部门 %s 失败: %w", dept.DeptName, err)
-		}
-		if dept.DeptName == "深圳总公司" {
-			shenzhenDeptID = dept.ID
-		}
-		applogger.Infof("创建部门 %s 成功", dept.DeptName)
-	}
-
-	// 创建深圳总公司的子部门
-	shenzhenSubDepts := []models.Department{
-		{
-			DeptName:  "研发部门",
-			ParentID:  &shenzhenDeptID,
-			Ancestors: topDept.ID + "," + shenzhenDeptID,
-			OrderNum:  1,
-			Leader:    func() *string { s := "若依"; return &s }(),
-			Phone:     func() *string { s := "15888888888"; return &s }(),
-			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
-			Status:    models.DeptStatusNormal,
-			Remark:    "",
-		},
-		{
-			DeptName:  "市场部门",
-			ParentID:  &shenzhenDeptID,
-			Ancestors: topDept.ID + "," + shenzhenDeptID,
-			OrderNum:  2,
-			Leader:    func() *string { s := "若依"; return &s }(),
-			Phone:     func() *string { s := "15888888888"; return &s }(),
-			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
-			Status:    models.DeptStatusNormal,
-			Remark:    "",
-		},
-		{
-			DeptName:  "测试部门",
-			ParentID:  &shenzhenDeptID,
-			Ancestors: topDept.ID + "," + shenzhenDeptID,
-			OrderNum:  3,
-			Leader:    func() *string { s := "若依"; return &s }(),
-			Phone:     func() *string { s := "15888888888"; return &s }(),
-			Email:     func() *string { s := "ruoyi@qq.com"; return &s }(),
-			Status:    models.DeptStatusNormal,
-			Remark:    "",
-		},
-	}
-
-	for _, dept := range shenzhenSubDepts {
-		if err := db.Create(&dept).Error; err != nil {
-			return fmt.Errorf("创建部门 %s 失败: %w", dept.DeptName, err)
-		}
-		applogger.Infof("创建部门 %s 成功", dept.DeptName)
-	}
-
-	applogger.Infof("默认部门创建完成")
-	return nil
+	return false
 }
 
-// createDefaultUser 创建默认管理员用户
-func createDefaultUser(db *gorm.DB) error {
-	var count int64
-
-	// 检查是否已存在管理员用户
-	db.Model(&models.User{}).Where("username = ?", "admin").Count(&count)
-	if count > 0 {
-		return nil // 已存在，跳过
-	}
-
-	// 使用新的SM3密码管理器
-	pwdManager := security.NewPasswordManager(nil)
-
-	// 生成密码哈希
-	passwordHash, err := pwdManager.HashPassword("admin123")
-	if err != nil {
-		return err
-	}
-
-	// 创建默认管理员用户
-	user := models.User{
-		Username: "admin",
-		Password: passwordHash,
-		Salt:     "default",
-		Nickname: func() *string { s := "超级管理员"; return &s }(),
-		Email:    func() *string { s := "admin@ruoyi.com"; return &s }(),
-		Gender:   models.GenderMale,
-		Status:   models.UserStatusEnabled,
-		DeptName: func() *string { s := "总公司"; return &s }(),
-		Roles:    []string{"admin"},
-	}
-
-	if err := db.Create(&user).Error; err != nil {
-		return fmt.Errorf("创建默认用户失败: %w", err)
-	}
-
-	applogger.Infof("创建默认管理员用户成功")
-	return nil
-}
-
-// createDefaultRole 创建默认角色
-func createDefaultRole(db *gorm.DB) error {
-	roles := []models.Role{
-		{
-			RoleName:          "超级管理员",
-			RoleKey:           "admin",
-			RoleSort:          1,
-			DataScope:         models.DataScopeAll,
-			MenuCheckStrictly: true,
-			DeptCheckStrictly: true,
-			Status:            models.RoleStatusEnabled,
-			Remark:            "超级管理员",
-		},
-		{
-			RoleName:          "普通用户",
-			RoleKey:           "user",
-			RoleSort:          2,
-			DataScope:         models.DataScopeSelf,
-			MenuCheckStrictly: true,
-			DeptCheckStrictly: true,
-			Status:            models.RoleStatusEnabled,
-			Remark:            "普通用户",
-		},
-	}
-
-	for _, role := range roles {
-		var count int64
-		// 检查角色是否已存在（通过role_key）
-		db.Model(&models.Role{}).Where("role_key = ?", role.RoleKey).Count(&count)
-		if count > 0 {
-			applogger.Infof("角色 %s (role_key: %s) 已存在，跳过创建", role.RoleName, role.RoleKey)
-			continue
-		}
-
-		if err := db.Create(&role).Error; err != nil {
-			return fmt.Errorf("创建角色 %s 失败: %w", role.RoleName, err)
-		}
-		applogger.Infof("创建角色 %s 成功", role.RoleName)
-	}
-
-	applogger.Infof("默认角色检查/创建完成")
-	return nil
-}
-
-// createUserRoleRelations 创建用户角色关联
-func createUserRoleRelations(db *gorm.DB) error {
-	// 获取默认用户
-	var adminUser models.User
-	if err := db.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
-		applogger.Warnf("未找到管理员用户: %v", err)
-		return nil // 如果用户不存在，跳过
-	}
-
-	// 获取管理员角色
-	var adminRole models.Role
-	if err := db.Where("role_key = ?", "admin").First(&adminRole).Error; err != nil {
-		applogger.Warnf("未找到管理员角色: %v", err)
-		return nil // 如果角色不存在，跳过
-	}
-
-	// 检查关联是否已存在
-	var count int64
-	db.Table("sys_user_role").Where("user_id = ? AND role_id = ?", adminUser.ID, adminRole.ID).Count(&count)
-	if count > 0 {
-		applogger.Infof("用户角色关联已存在，跳过创建")
-		return nil
-	}
-
-	// 创建用户角色关联
-	if err := db.Exec("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
-		adminUser.ID, adminRole.ID).Error; err != nil {
-		return fmt.Errorf("创建用户角色关联失败: %w", err)
-	}
-
-	applogger.Infof("创建用户角色关联成功")
-	return nil
-}
-
-// createDatabaseIfNotExists 如果数据库不存在则创建
+// createDatabaseIfNotExists 如果数据库不存在则创建。
+//
+// CDX-H1 修复:
+//   - 错误真实上抛,启动 fail-fast 暴露根因(认证/网络/缺 postgres 维护库)
+//   - 容忍 42P04 (duplicate_database) 作为 WARN —— 并发 bootstrap 时另一实例已 CREATE 完毕
+//   - 存在性检查加 10s 超时(opencode #10),防 admin DB 不可达导致启动挂死
 func createDatabaseIfNotExists(adminDSN, dbName string) error {
+	// CREATE DATABASE 不支持 $1 占位符,必须拼接标识符,故先校验 dbName 合法性
+	if !dbIdentRe.MatchString(dbName) {
+		return fmt.Errorf("非法数据库名 %q（仅允许 [a-zA-Z_][a-zA-Z0-9_]*）", dbName)
+	}
+
 	db, err := sql.Open("postgres", adminDSN)
 	if err != nil {
 		return fmt.Errorf("连接管理员数据库失败: %w", err)
 	}
 	defer db.Close()
 
+	// 存在性检查加超时,防止 admin PG 不可达时启动挂死(opencode suggestion #10)
+	pingCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := db.PingContext(pingCtx); err != nil {
+		return fmt.Errorf("ping 管理员数据库失败: %w", err)
+	}
+
 	// 检查数据库是否存在
 	var exists bool
 	query := "SELECT EXISTS(SELECT datname FROM pg_catalog.pg_database WHERE datname = $1)"
-	err = db.QueryRow(query, dbName).Scan(&exists)
+	err = db.QueryRowContext(pingCtx, query, dbName).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("检查数据库是否存在失败: %w", err)
 	}
 
 	// 如果数据库不存在，则创建
 	if !exists {
-		createQuery := fmt.Sprintf("CREATE DATABASE %s", dbName)
-		_, err = db.Exec(createQuery)
+		createQuery := fmt.Sprintf("CREATE DATABASE %s", pq.QuoteIdentifier(dbName))
+		_, err = db.ExecContext(pingCtx, createQuery)
 		if err != nil {
+			// CDX-H1:42P04 duplicate_database 容忍为 WARN,其他错误上抛。
+			if isDuplicateDatabaseError(err) {
+				applogger.Warnf("数据库 %s 已被并发实例创建,继续", dbName)
+				return nil
+			}
 			return fmt.Errorf("创建数据库失败: %w", err)
 		}
 		applogger.Infof("数据库 %s 创建成功", dbName)
 	} else {
 		applogger.Infof("数据库 %s 已存在", dbName)
-	}
-
-	return nil
-}
-
-// createNetworkDeviceSystemParams 创建网络设备系统参数
-func createNetworkDeviceSystemParams(db *gorm.DB) error {
-	params := []models.Config{
-		{
-			ConfigName:  "配置备份文件大小阈值",
-			ConfigKey:   "network.config.backup.threshold",
-			ConfigValue: "100",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "配置备份文件大小阈值（单位：KB），小于此值的配置存储在数据库，大于此值存储在文件系统",
-		},
-		{
-			ConfigName:  "设备连接超时时间",
-			ConfigKey:   "network.device.connect.timeout",
-			ConfigValue: "30",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "设备连接超时时间（单位：秒）",
-		},
-		{
-			ConfigName:  "命令执行超时时间",
-			ConfigKey:   "network.command.execute.timeout",
-			ConfigValue: "300",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "命令执行超时时间（单位：秒）",
-		},
-		{
-			ConfigName:  "批量命令并发数",
-			ConfigKey:   "network.command.batch.concurrency",
-			ConfigValue: "10",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "批量命令执行时的最大并发设备数量",
-		},
-		// 新增：网络设备并发配置参数
-		{
-			ConfigName:  "网络设备监控并发数",
-			ConfigKey:   "network.device.monitor.concurrent",
-			ConfigValue: "10",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "设备状态检查和信息更新的最大并发数，默认10",
-		},
-		{
-			ConfigName:  "端口采集并发数",
-			ConfigKey:   "network.port.collection.concurrent",
-			ConfigValue: "10",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "端口状态采集的最大并发数，默认10",
-		},
-		{
-			ConfigName:  "MAC地址采集并发数",
-			ConfigKey:   "network.mac.collection.concurrent",
-			ConfigValue: "10",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "MAC地址表采集的最大并发数，默认10",
-		},
-		{
-			ConfigName:  "配置备份并发数",
-			ConfigKey:   "network.config.backup.concurrent",
-			ConfigValue: "5",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "配置备份的最大并发数，默认5（配置备份较耗时，建议较低并发）",
-		},
-		{
-			ConfigName:  "设备操作超时时间",
-			ConfigKey:   "network.device.timeout",
-			ConfigValue: "30",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "单个设备连接和操作的超时时间（秒），默认30秒",
-		},
-	}
-
-	for _, param := range params {
-		var count int64
-		db.Model(&models.Config{}).Where("config_key = ?", param.ConfigKey).Count(&count)
-		if count > 0 {
-			applogger.Infof("系统参数 %s 已存在，跳过创建", param.ConfigName)
-			continue
-		}
-
-		if err := db.Create(&param).Error; err != nil {
-			return fmt.Errorf("创建系统参数 %s 失败: %w", param.ConfigName, err)
-		}
-		applogger.Infof("创建系统参数 %s 成功", param.ConfigName)
-	}
-
-	applogger.Infof("网络设备系统参数创建完成")
-	return nil
-}
-
-// createNetworkDeviceScheduledJobs 创建网络设备定时任务
-func createNetworkDeviceScheduledJobs(db *gorm.DB) error {
-	remark := func(s string) *string { return &s }
-
-	jobs := []models.Job{
-		{
-			JobName:        "设备状态检查",
-			JobGroup:       "NETWORK",
-			InvokeTarget:   "device_status_check",
-			CronExpression: "0 */5 * * * ?",       // 每5分钟执行一次
-			Status:         models.JobStatusPause, // 默认暂停，由用户手动启动
-			Concurrent:     false,                 // 禁止并发
-			MisfirePolicy:  models.MisfirePolicyImmediately,
-			Remark:         remark("通过SNMP定时检查所有网络设备的在线/离线状态"),
-		},
-		{
-			JobName:        "设备信息更新",
-			JobGroup:       "NETWORK",
-			InvokeTarget:   "device_info_update",
-			CronExpression: "0 0 * * * ?", // 每小时执行一次
-			Status:         models.JobStatusPause,
-			Concurrent:     false,
-			MisfirePolicy:  models.MisfirePolicyImmediately,
-			Remark:         remark("通过SSH采集网络设备的详细信息（型号、版本、序列号等）"),
-		},
-		{
-			JobName:        "端口状态采集",
-			JobGroup:       "NETWORK",
-			InvokeTarget:   "port_collection",
-			CronExpression: "0 0 * * * ?", // 每小时执行一次
-			Status:         models.JobStatusPause,
-			Concurrent:     false,
-			MisfirePolicy:  models.MisfirePolicyImmediately,
-			Remark:         remark("采集所有在线网络设备的端口状态信息（启用/禁用、802.1X、端口安全等）"),
-		},
-		{
-			JobName:        "MAC地址采集",
-			JobGroup:       "NETWORK",
-			InvokeTarget:   "mac_collection",
-			CronExpression: "0 0 * * * ?", // 每小时执行一次
-			Status:         models.JobStatusPause,
-			Concurrent:     false,
-			MisfirePolicy:  models.MisfirePolicyImmediately,
-			Remark:         remark("采集网络设备的MAC地址表信息"),
-		},
-		{
-			JobName:        "配置备份",
-			JobGroup:       "NETWORK",
-			InvokeTarget:   "config_backup",
-			CronExpression: "0 0 2 * * ?", // 每天凌晨2点执行
-			Status:         models.JobStatusPause,
-			Concurrent:     false,
-			MisfirePolicy:  models.MisfirePolicyImmediately,
-			Remark:         remark("自动备份网络设备配置文件"),
-		},
-	}
-
-	for _, job := range jobs {
-		var count int64
-		db.Model(&models.Job{}).Where("invoke_target = ?", job.InvokeTarget).Count(&count)
-		if count > 0 {
-			applogger.Infof("定时任务 %s 已存在，跳过创建", job.JobName)
-			continue
-		}
-
-		if err := db.Create(&job).Error; err != nil {
-			return fmt.Errorf("创建定时任务 %s 失败: %w", job.JobName, err)
-		}
-		applogger.Infof("创建定时任务 %s 成功", job.JobName)
-	}
-
-	applogger.Infof("网络设备定时任务创建完成")
-	return nil
-}
-
-// createCaptchaBackgroundSystemParams 创建验证码背景图系统参数
-func createCaptchaBackgroundSystemParams(db *gorm.DB) error {
-	params := []models.Config{
-		{
-			ConfigName:  "验证码背景图模式",
-			ConfigKey:   "sys.account.captchaBackgroundMode",
-			ConfigValue: "mixed",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "背景图模式: auto=自动生成 custom=仅自定义图片 mixed=混合模式",
-		},
-		{
-			ConfigName:  "验证码默认拼图形状",
-			ConfigKey:   "sys.account.captchaPieceShape",
-			ConfigValue: "circle",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "默认拼图形状: circle=圆形 square=方形 star=星形 heart=心形",
-		},
-		{
-			ConfigName:  "验证码默认难度",
-			ConfigKey:   "sys.account.captchaDifficulty",
-			ConfigValue: "1",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "难度级别: 1=简单 2=中等 3=困难",
-		},
-		{
-			ConfigName:  "验证码缓存池大小",
-			ConfigKey:   "sys.account.captchaCachePoolSize",
-			ConfigValue: "50",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "每种形状和难度预生成的验证码数量",
-		},
-		{
-			ConfigName:  "验证码图片存储路径",
-			ConfigKey:   "sys.account.captchaStoragePath",
-			ConfigValue: "./uploads/captcha/backgrounds",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "背景图存储路径",
-		},
-		{
-			ConfigName:  "验证码图片最大大小",
-			ConfigKey:   "sys.account.captchaMaxFileSize",
-			ConfigValue: "2097152",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "单张图片最大大小(字节)，默认2MB",
-		},
-		{
-			ConfigName:  "验证码允许的图片格式",
-			ConfigKey:   "sys.account.captchaAllowedFormats",
-			ConfigValue: "jpg,jpeg,png",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "允许的图片格式，逗号分隔",
-		},
-	}
-
-	for _, param := range params {
-		var count int64
-		db.Model(&models.Config{}).Where("config_key = ?", param.ConfigKey).Count(&count)
-		if count > 0 {
-			applogger.Infof("系统参数 %s 已存在，跳过创建", param.ConfigName)
-			continue
-		}
-
-		if err := db.Create(&param).Error; err != nil {
-			return fmt.Errorf("创建系统参数 %s 失败: %w", param.ConfigName, err)
-		}
-		applogger.Infof("创建系统参数 %s 成功", param.ConfigName)
-	}
-
-	applogger.Infof("验证码背景图系统参数创建完成")
-	return nil
-}
-
-// createCaptchaBackgroundMenus 创建验证码背景图管理菜单
-// TODO: 此函数未使用，如需要启用验证码背景图功能，请取消注释并调用此函数
-/*
-func createCaptchaBackgroundMenus(db *gorm.DB) error {
-	// 先查找系统管理菜单的ID
-	var systemMenu models.Menu
-	if err := db.Where("menu_name = ? AND menu_type = ?", "系统管理", "M").First(&systemMenu).Error; err != nil {
-		log.Printf("未找到系统管理菜单，跳过创建验证码背景图子菜单: %v", err)
-		return nil
-	}
-
-	// 检查验证码背景图菜单是否已存在
-	var existingCount int64
-	db.Model(&models.Menu{}).Where("menu_name = ?", "验证码背景图").Count(&existingCount)
-	if existingCount > 0 {
-		log.Println("验证码背景图菜单已存在，跳过创建")
-		return nil
-	}
-
-	menus := []models.Menu{
-		{
-			MenuName:  "验证码背景图",
-			ParentID:  &systemMenu.ID,
-			OrderNum:  10,
-			Path:      func() *string { s := "captcha-background"; return &s }(),
-			Component: NULL_STRING_PTR(""),
-			MenuType:  models.MenuTypeDir,
-			Visible:   models.VisibleShow,
-			Status:    models.MenuStatusNormal,
-			Perms:     NULL_STRING_PTR(""),
-			Icon:      func() *string { s := "picture"; return &s }(),
-			Remark:    "验证码背景图管理",
-		},
-		{
-			MenuName:  "背景图查询",
-			ParentID:  nil, // 稍后更新
-			OrderNum:  1,
-			Path:      func() *string { s := "background"; return &s }(),
-			Component: func() *string { s := "system/captcha-background/index"; return &s }(),
-			MenuType:  models.MenuTypeMenu,
-			Visible:   models.VisibleShow,
-			Status:    models.MenuStatusNormal,
-			Perms:     func() *string { s := "system:captchaBackground:list"; return &s }(),
-			Icon:      NULL_STRING_PTR(""),
-			Remark:    "验证码背景图查询菜单",
-		},
-		{
-			MenuName:  "背景图新增",
-			ParentID:  nil, // 稍后更新
-			OrderNum:  2,
-			Path:      NULL_STRING_PTR(""),
-			Component: NULL_STRING_PTR(""),
-			MenuType:  models.MenuTypeButton,
-			Visible:   models.VisibleShow,
-			Status:    models.MenuStatusNormal,
-			Perms:     func() *string { s := "system:captchaBackground:add"; return &s }(),
-			Icon:      NULL_STRING_PTR(""),
-			Remark:    "验证码背景图新增按钮",
-		},
-		{
-			MenuName:  "背景图修改",
-			ParentID:  nil, // 稍后更新
-			OrderNum:  3,
-			Path:      NULL_STRING_PTR(""),
-			Component: NULL_STRING_PTR(""),
-			MenuType:  models.MenuTypeButton,
-			Visible:   models.VisibleShow,
-			Status:    models.MenuStatusNormal,
-			Perms:     func() *string { s := "system:captchaBackground:edit"; return &s }(),
-			Icon:      NULL_STRING_PTR(""),
-			Remark:    "验证码背景图修改按钮",
-		},
-		{
-			MenuName:  "背景图删除",
-			ParentID:  nil, // 稍后更新
-			OrderNum:  4,
-			Path:      NULL_STRING_PTR(""),
-			Component: NULL_STRING_PTR(""),
-			MenuType:  models.MenuTypeButton,
-			Visible:   models.VisibleShow,
-			Status:    models.MenuStatusNormal,
-			Perms:     func() *string { s := "system:captchaBackground:remove"; return &s }(),
-			Icon:      NULL_STRING_PTR(""),
-			Remark:    "验证码背景图删除按钮",
-		},
-	}
-
-	// 首先创建目录菜单
-	if err := db.Create(&menus[0]).Error; err != nil {
-		return fmt.Errorf("创建验证码背景图目录菜单失败: %w", err)
-	}
-	log.Printf("创建菜单 %s 成功", menus[0].MenuName)
-
-	// 更新子菜单的ParentID为目录菜单的ID
-	catalogID := menus[0].ID
-	for i := 1; i < len(menus); i++ {
-		menus[i].ParentID = &catalogID
-		if err := db.Create(&menus[i]).Error; err != nil {
-			return fmt.Errorf("创建菜单 %s 失败: %w", menus[i].MenuName, err)
-		}
-		log.Printf("创建菜单 %s 成功", menus[i].MenuName)
-	}
-
-	log.Println("验证码背景图管理菜单创建完成")
-	return nil
-}
-*/
-
-// NULL_STRING_PTR 返回字符串指针的辅助函数
-func NULL_STRING_PTR(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-// createDutyManagementMenus 创建值班管理菜单
-//
-// 已废弃：请使用 migrations/018_unify_duty_menus.sql 迁移文件
-//
-// 此函数保留仅为向后兼容，不会在菜单已存在时重复创建
-// 所有值班管理菜单（值班池管理、排班管理、节假日管理、值班配置、我的值班）
-// 现在通过 SQL 迁移文件统一创建
-//
-// createOperationsManagementMenus 创建运维管理菜单
-func createOperationsManagementMenus(db *gorm.DB) error {
-	// 检查运维管理菜单是否已存在
-	var opsMenu models.Menu
-	err := db.Where("menu_name = ? AND menu_type = ?", "运维管理", "M").First(&opsMenu).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return fmt.Errorf("查询运维管理菜单失败: %w", err)
-	}
-
-	// 如果运维管理菜单不存在，创建它
-	if err == gorm.ErrRecordNotFound {
-		opsMenu = models.Menu{
-			MenuName:  "运维管理",
-			OrderNum:  4,
-			Path:      func() *string { s := "ops"; return &s }(),
-			Component: NULL_STRING_PTR("Layout"),
-			MenuType:  models.MenuTypeDir,
-			Visible:   models.VisibleShow,
-			Status:    models.MenuStatusNormal,
-			Icon:      func() *string { s := "Control"; return &s }(),
-			Remark:    "运维管理目录",
-		}
-		if err := db.Create(&opsMenu).Error; err != nil {
-			return fmt.Errorf("创建运维管理菜单失败: %w", err)
-		}
-		applogger.Infof("创建菜单 %s 成功", opsMenu.MenuName)
-	} else {
-		applogger.Infof("运维管理菜单已存在，跳过创建")
-	}
-
-	// 定义需要创建的页面菜单（检查是否存在，不存在才创建）
-	pageMenus := []struct {
-		name      string
-		path      string
-		component string
-		perms     string
-		remark    string
-		orderNum  int
-		icon      string
-	}{
-		{"楼宇管理", "buildings", "operations/buildings/index", "ops:building:list", "楼宇管理菜单", 1, "BuildOutlined"},
-		{"楼层管理", "floors", "operations/floors/index", "ops:floor:list", "楼层管理菜单", 2, "ApartmentOutlined"},
-		{"工位管理", "workstations", "operations/workstations/index", "ops:workstation:list", "工位管理菜单", 3, "DesktopOutlined"},
-		{"信息点管理", "info-points", "operations/info-points/index", "ops:infopoint:list", "信息点管理菜单", 4, "DotChartOutlined"},
-		{"机房管理", "server-rooms", "operations/server-rooms/index", "ops:serverroom:list", "机房管理菜单", 5, "CloudServerOutlined"},
-		{"专线管理", "dedicated-lines", "operations/dedicated-lines/index", "ops:dedicatedline:list", "专线管理菜单", 6, "LineChartOutlined"},
-		{"机房设备管理", "room-devices", "operations/room-devices/index", "ops:roomdevice:list", "机房设备管理菜单", 7, "AppstoreOutlined"},
-	}
-
-	// 存储页面菜单的ID，用于后续创建按钮权限
-	menuIDs := make(map[string]string)
-
-	for _, pm := range pageMenus {
-		// 检查菜单是否已存在
-		var existingMenu models.Menu
-		err := db.Where("menu_name = ? AND parent_id = ?", pm.name, opsMenu.ID).First(&existingMenu).Error
-
-		if err == nil {
-			// 菜单已存在，使用现有菜单ID，跳过创建
-			menuIDs[pm.name] = existingMenu.ID
-			applogger.Infof("菜单 %s 已存在，跳过创建", pm.name)
-			continue
-		}
-
-		// 菜单不存在，创建新菜单
-		menu := models.Menu{
-			MenuName:  pm.name,
-			ParentID:  &opsMenu.ID,
-			OrderNum:  pm.orderNum,
-			Path:      func() *string { s := pm.path; return &s }(),
-			Component: func() *string { s := pm.component; return &s }(),
-			MenuType:  models.MenuTypeMenu,
-			Visible:   models.VisibleShow,
-			Status:    models.MenuStatusNormal,
-			Perms:     func() *string { s := pm.perms; return &s }(),
-			Icon:      func() *string { s := pm.icon; return &s }(),
-			Remark:    pm.remark,
-		}
-		if err := db.Create(&menu).Error; err != nil {
-			return fmt.Errorf("创建菜单 %s 失败: %w", pm.name, err)
-		}
-		menuIDs[pm.name] = menu.ID
-		applogger.Infof("创建菜单 %s 成功", pm.name)
-	}
-
-	// 定义需要创建的按钮权限菜单
-	buttonMenus := []struct {
-		parent   string
-		name     string
-		perms    string
-		remark   string
-		orderNum int
-	}{
-		// 楼宇管理的按钮
-		{"楼宇管理", "楼宇查询", "ops:building:query", "楼宇查询", 1},
-		{"楼宇管理", "楼宇新增", "ops:building:add", "楼宇新增", 2},
-		{"楼宇管理", "楼宇修改", "ops:building:edit", "楼宇修改", 3},
-		{"楼宇管理", "楼宇删除", "ops:building:delete", "楼宇删除", 4},
-		// 楼层管理的按钮
-		{"楼层管理", "楼层查询", "ops:floor:query", "楼层查询", 1},
-		{"楼层管理", "楼层新增", "ops:floor:add", "楼层新增", 2},
-		{"楼层管理", "楼层修改", "ops:floor:edit", "楼层修改", 3},
-		{"楼层管理", "楼层删除", "ops:floor:delete", "楼层删除", 4},
-		// 工位管理的按钮
-		{"工位管理", "工位查询", "ops:workstation:query", "工位查询", 1},
-		{"工位管理", "工位新增", "ops:workstation:add", "工位新增", 2},
-		{"工位管理", "工位修改", "ops:workstation:edit", "工位修改", 3},
-		{"工位管理", "工位删除", "ops:workstation:delete", "工位删除", 4},
-		// 信息点管理的按钮
-		{"信息点管理", "信息点查询", "ops:infopoint:query", "信息点查询", 1},
-		{"信息点管理", "信息点新增", "ops:infopoint:add", "信息点新增", 2},
-		{"信息点管理", "信息点修改", "ops:infopoint:edit", "信息点修改", 3},
-		{"信息点管理", "信息点删除", "ops:infopoint:delete", "信息点删除", 4},
-		// 机房管理的按钮
-		{"机房管理", "机房查询", "ops:serverroom:query", "机房查询", 1},
-		{"机房管理", "机房新增", "ops:serverroom:add", "机房新增", 2},
-		{"机房管理", "机房修改", "ops:serverroom:edit", "机房修改", 3},
-		{"机房管理", "机房删除", "ops:serverroom:delete", "机房删除", 4},
-		// 专线管理的按钮
-		{"专线管理", "专线查询", "ops:dedicatedline:query", "专线查询", 1},
-		{"专线管理", "专线新增", "ops:dedicatedline:add", "专线新增", 2},
-		{"专线管理", "专线修改", "ops:dedicatedline:edit", "专线修改", 3},
-		{"专线管理", "专线删除", "ops:dedicatedline:delete", "专线删除", 4},
-		// 机房设备管理的按钮
-		{"机房设备管理", "设备查询", "ops:roomdevice:query", "设备查询", 1},
-		{"机房设备管理", "设备新增", "ops:roomdevice:add", "设备新增", 2},
-		{"机房设备管理", "设备修改", "ops:roomdevice:edit", "设备修改", 3},
-		{"机房设备管理", "设备删除", "ops:roomdevice:delete", "设备删除", 4},
-	}
-
-	for _, bm := range buttonMenus {
-		// 检查按钮菜单是否已存在
-		var existingButton models.Menu
-		parentMenuID := menuIDs[bm.parent]
-		err := db.Where("menu_name = ? AND parent_id = ?", bm.name, parentMenuID).First(&existingButton).Error
-
-		if err == nil {
-			// 按钮已存在，跳过创建
-			applogger.Infof("按钮菜单 %s 已存在，跳过创建", bm.name)
-			continue
-		}
-
-		// 按钮不存在，创建新按钮
-		menu := models.Menu{
-			MenuName:  bm.name,
-			ParentID:  &parentMenuID,
-			OrderNum:  bm.orderNum,
-			Path:      NULL_STRING_PTR(""),
-			Component: NULL_STRING_PTR(""),
-			MenuType:  models.MenuTypeButton,
-			Visible:   models.VisibleShow,
-			Status:    models.MenuStatusNormal,
-			Perms:     func() *string { s := bm.perms; return &s }(),
-			Icon:      NULL_STRING_PTR(""),
-			Remark:    bm.remark,
-		}
-		if err := db.Create(&menu).Error; err != nil {
-			return fmt.Errorf("创建按钮菜单 %s 失败: %w", bm.name, err)
-		}
-		applogger.Infof("创建按钮菜单 %s 成功", bm.name)
-	}
-
-	applogger.Infof("运维管理菜单创建完成")
-	return nil
-}
-
-// createRequestEncryptionToggleConfig 创建请求加密开关配置参数
-func createRequestEncryptionToggleConfig(db *gorm.DB) error {
-	// 检查配置是否已存在
-	var count int64
-	err := db.Table("sys_config").
-		Where("config_key = ?", "sys.request.encryption.enabled").
-		Count(&count).Error
-
-	if err != nil {
-		applogger.Warnf("查询请求加密开关配置失败: %v", err)
-		return err
-	}
-
-	if count > 0 {
-		applogger.Infof("请求加密开关配置已存在，跳过初始化")
-		return nil
-	}
-
-	// 插入默认配置：true (启用)
-	config := models.Config{
-		ConfigName:  "请求加密开关",
-		ConfigKey:   "sys.request.encryption.enabled",
-		ConfigValue: "true",
-		ConfigType:  models.ConfigTypeYes,
-		IsSystem:    models.ConfigIsSystemYes,
-		Remark:      "控制请求体加密功能的启停（true=启用，false=停用），修改后立即生效",
-	}
-
-	applogger.Infof("尝试插入请求加密开关配置...")
-	if err := db.Create(&config).Error; err != nil {
-		applogger.Warnf("创建请求加密开关配置失败: %v", err)
-		return err
-	}
-
-	applogger.Infof("请求加密开关配置已创建（默认启用）")
-	return nil
-}
-
-// createADAuthConfig 创建AD认证配置参数
-func createADAuthConfig(db *gorm.DB) error {
-	authConfigs := []models.Config{
-		{
-			ConfigName:  "AD认证启用",
-			ConfigKey:   "sys.auth.ad.enabled",
-			ConfigValue: "false",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "是否启用AD域控认证（true/false）",
-		},
-		{
-			ConfigName:  "默认认证模式",
-			ConfigKey:   "sys.auth.default.mode",
-			ConfigValue: "local",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemYes,
-			Remark:      "默认认证模式：local=本地, ad=AD, hybrid=混合",
-		},
-		{
-			ConfigName:  "AD配置ID",
-			ConfigKey:   "sys.auth.ad.config_id",
-			ConfigValue: "",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemNo,
-			Remark:      "AD域控配置ID（为空则使用第一个启用的配置）",
-		},
-		{
-			ConfigName:  "AD用户默认角色",
-			ConfigKey:   "sys.auth.ad.default_role_id",
-			ConfigValue: "",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemNo,
-			Remark:      "AD用户首次登录时分配的默认角色ID",
-		},
-		{
-			ConfigName:  "AD用户默认部门",
-			ConfigKey:   "sys.auth.ad.default_dept_id",
-			ConfigValue: "",
-			ConfigType:  models.ConfigTypeYes,
-			IsSystem:    models.ConfigIsSystemNo,
-			Remark:      "AD用户首次登录时分配的默认部门ID",
-		},
-	}
-
-	for _, cfg := range authConfigs {
-		var count int64
-		err := db.Table("sys_config").
-			Where("config_key = ?", cfg.ConfigKey).
-			Count(&count).Error
-
-		if err != nil {
-			applogger.Warnf("查询AD认证配置 %s 失败: %v", cfg.ConfigKey, err)
-			return err
-		}
-
-		if count > 0 {
-			applogger.Infof("AD认证配置 %s 已存在，跳过", cfg.ConfigKey)
-			continue
-		}
-
-		if err := db.Create(&cfg).Error; err != nil {
-			applogger.Warnf("创建AD认证配置 %s 失败: %v", cfg.ConfigKey, err)
-			return err
-		}
-
-		applogger.Infof("AD认证配置 %s 已创建", cfg.ConfigKey)
 	}
 
 	return nil
