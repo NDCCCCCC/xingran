@@ -17,6 +17,8 @@ export interface Building {
   code: string;
   address?: string;
   totalFloors?: number;
+  /** 实时楼层数（ops_floors 行数，软删排除），与 totalFloors 反范式字段并存 */
+  floorCount?: number | null;
   totalArea?: number;
   description?: string;
   longitude?: number;
