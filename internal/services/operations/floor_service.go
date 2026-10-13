@@ -206,6 +206,26 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 		}()
 	}
 
+	// 楼栋 total_floors 重算（修复漂移路径 A：floor Update 换楼 261013-lqb 之前全程零重算，
+	// 91-03 修好了换楼工位同步但漏了计数）：
+	//   ① 换楼后新旧楼栋计数都要重算——旧楼失一层、新楼得一层，只算一侧必漂移；
+	//   ② 普通编辑也重算当前楼栋是自愈设计——Update 非事务（乐观锁已保证换楼 UPDATE 本身
+	//      原子），重算幂等，任何部分失败后的重试走 Save 分支仍会触发重算，历史漂移楼栋
+	//      在任意一次楼层编辑后归正；
+	//   ③ updateBuildingFloorCount 用 Model(&OpsFloor{}) 实时 COUNT（自动软删过滤），
+	//      幂等可重入——禁止改成 ±1 增量（会把历史脏值固化）。
+	// error 上抛（对齐 Delete 路径 fail-loud 行为）。
+	if floor.BuildingID != "" {
+		if err := s.updateBuildingFloorCount(ctx, floor.BuildingID); err != nil {
+			return err
+		}
+		if oldBuildingID != "" && oldBuildingID != floor.BuildingID {
+			if err := s.updateBuildingFloorCount(ctx, oldBuildingID); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
