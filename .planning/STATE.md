@@ -4,8 +4,8 @@ milestone: v1.20
 milestone_name: 网络设备 VLAN + 端口绑定
 status: Awaiting next milestone
 stopped_at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
-last_updated: "2026-10-13T08:20:00.000Z"
-last_activity: 2026-10-13 — Completed quick task 261013-lqb: 根治 total_floors 漂移(换楼双侧重算+Excel导入重算+Migrate213存量归正)
+last_updated: "2026-10-14T01:25:00.000Z"
+last_activity: 2026-10-14 — Completed quick task 261014-ctp: 楼栋 Create/Update 实时 COUNT 覆盖 total_floors(关闭 261013-lqb 最后残余向量)
 progress:
   total_phases: 1
   completed_phases: 1
@@ -140,6 +140,7 @@ Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
 | 261012-l7k | 楼层管理页每行显示工位统计(总/已用/空闲/维护, OpsFloor 虚拟字段 + 单条 GROUP BY 聚合零 N+1, 前端"工位统计"列) | 2026-10-12 | 0d3e9670,03624395 | [261012-l7k-floor-workstation-stats](./quick/261012-l7k-floor-workstation-stats/) |
 | 261013-jf1 | 楼栋管理页楼层数列从反范式 total_floors(有漂移: 换楼不重算/Excel 直写)切到实时 FloorCount(GROUP BY 零 N+1, 排序仍发 totalFloors 保白名单) | 2026-10-13 | 24af23d9,b4bff80c | [261013-jf1-building-floor-count](./quick/261013-jf1-building-floor-count/) |
 | 261013-lqb | 根治 total_floors 漂移: 楼层 Update 换楼双侧重算+普通编辑自愈 / Excel 导入(building+floor)收尾全量重算 / Migrate213 存量归正(代码层, 零 TRIGGER) | 2026-10-13 | d41de5e4,4746cdc1,3a3163a6 | [261013-lqb-ops-buildings-total-floors](./quick/261013-lqb-ops-buildings-total-floors/) |
+| 261014-ctp | 楼栋 Create/Update 末尾实时 COUNT 覆盖 total_floors(共享 helper recomputeBuildingTotalFloorsByID, 关闭 261013-lqb 最后残余向量) | 2026-10-14 | 7b64fc06 | [261014-ctp-create-update-count-total-floors](./quick/261014-ctp-create-update-count-total-floors/) |
 
 ## Accumulated Context
 
