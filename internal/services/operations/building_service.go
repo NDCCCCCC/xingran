@@ -96,7 +96,15 @@ func (s *buildingService) Create(ctx context.Context, building *operations.OpsBu
 		return err
 	}
 
-	return s.repo.Create(ctx, building)
+	if err := s.repo.Create(ctx, building); err != nil {
+		return err
+	}
+
+	// total_floors 是派生列而非用户输入位：表单声明的 totalFloors 一律被实时 COUNT
+	// 覆盖（新建楼栋无楼层 → 0），关闭 261013-lqb SUMMARY 记录的最后一个写路径漂移
+	// 向量（楼栋表单手工 Create/Update 直写声明值）。重算失败上抛（fail-loud，
+	// 对齐 261013-lqb 路径 A 行为），不静默吞掉。
+	return recomputeBuildingTotalFloorsByID(ctx, s.db, building.ID)
 }
 
 // Update 更新楼宇
@@ -113,7 +121,13 @@ func (s *buildingService) Update(ctx context.Context, building *operations.OpsBu
 
 	// 使用 Omit 排除 CreatedAt 字段，只更新其他字段
 	// UpdatedAt 会被 GORM 自动更新
-	return s.db.WithContext(ctx).Omit("CreatedAt").Save(building).Error
+	if err := s.db.WithContext(ctx).Omit("CreatedAt").Save(building).Error; err != nil {
+		return err
+	}
+
+	// total_floors 派生列覆盖（同 Create）：声明值一律被实时 COUNT（软删排除）
+	// 覆盖为当前真实楼层数，幂等可重入；重算失败上抛 fail-loud。
+	return recomputeBuildingTotalFloorsByID(ctx, s.db, building.ID)
 }
 
 // Delete 删除楼宇

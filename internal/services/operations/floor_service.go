@@ -525,11 +525,23 @@ func (s *floorService) validateBuilding(ctx context.Context, buildingID string) 
 }
 
 func (s *floorService) updateBuildingFloorCount(ctx context.Context, buildingID string) error {
+	return recomputeBuildingTotalFloorsByID(ctx, s.db, buildingID)
+}
+
+// recomputeBuildingTotalFloorsByID 单楼栋 total_floors 实时重算（包级共享 helper，
+// 261014-ctp 抽取自 updateBuildingFloorCount，供 floor_service 与 building_service
+// Create/Update 两侧共用）。
+//
+// 口径（与 recomputeAllBuildingTotalFloors 一致）：
+//   - 实时 COUNT ops_floors 非软删行数（Model(&OpsFloor{}) 自动附软删过滤），
+//     禁止 ±1 增量——会把历史脏值固化；
+//   - 幂等可重入：重复执行结果一致，失败重试安全。
+func recomputeBuildingTotalFloorsByID(ctx context.Context, db *gorm.DB, buildingID string) error {
 	var count int64
-	if err := s.db.WithContext(ctx).Model(&operations.OpsFloor{}).Where("building_id = ?", buildingID).Count(&count).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&operations.OpsFloor{}).Where("building_id = ?", buildingID).Count(&count).Error; err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("id = ?", buildingID).Update("total_floors", count).Error
+	return db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("id = ?", buildingID).Update("total_floors", count).Error
 }
 
 // recomputeAllBuildingTotalFloors 全量重算所有未删楼栋的 total_floors 反范式列
