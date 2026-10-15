@@ -255,7 +255,10 @@ func (s *floorService) joinScope() base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
 			Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id").
-			Joins("LEFT JOIN sys_files ON CAST(sys_files.id AS TEXT) = ops_floors.plan_image_id")
+			// plan_image_id 在 PG 是 uuid 类型(model tag type:uuid,与 sys_files.id 同型),
+			// 直接 uuid=uuid 比较;包 CAST(... AS TEXT) 会变 text=uuid → SQLSTATE 42883。
+			// SQLite 两侧均为 TEXT,直接比较同样成立(双方言安全)。
+			Joins("LEFT JOIN sys_files ON sys_files.id = ops_floors.plan_image_id")
 	}
 }
 
