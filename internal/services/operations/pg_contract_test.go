@@ -39,8 +39,18 @@ func openPGForContractTest(t *testing.T) *gorm.DB {
 	}
 	// pgx v5 禁写 keepalives 类 DSN 参数(进 RuntimeParams → FATAL 42704),
 	// connect_timeout 是安全参数;防坏主机挂死。
+	// URL 形式(postgres://...?k=v)用 & 追加,keyword 形式(host=... dbname=...)用空格;
+	// 对 URL 用空格会把 sslmode 的值污染成 "disable connect_timeout=5" → TLS 配置解析失败。
 	if !strings.Contains(dsn, "connect_timeout") {
-		dsn += " connect_timeout=5"
+		if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+			sep := "?"
+			if strings.Contains(dsn, "?") {
+				sep = "&"
+			}
+			dsn += sep + "connect_timeout=5"
+		} else {
+			dsn += " connect_timeout=5"
+		}
 	}
 
 	// DisableAutomaticPing:Open 阶段不探活(等价 lazy connect;GORM v1.30.5 无 OpenLazy 选项),
