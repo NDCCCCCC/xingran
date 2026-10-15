@@ -45,7 +45,10 @@ type Workstation struct {
 	// 组织信息
 	DeptID       *string `gorm:"size:64" json:"deptId,omitempty"`        // 部门ID
 	DeptName     *string `gorm:"size:100" json:"deptName,omitempty"`     // 部门名称
-	BuildingID   *string `gorm:"size:64" json:"buildingId,omitempty"`    // 楼宇ID
+	// BuildingID 声明为 type:uuid:DB 列 sys_workstation.building_id 实际为 uuid
+	// (migration 192/193 时代即与 size:64 漂移),对齐 DB 防止新库初始化/AutoMigrate
+	// 产生 varchar 语义 → text=uuid 42883;参考 ops-list-join-uuid-500 会话(2026-10-15)
+	BuildingID   *string `gorm:"type:uuid" json:"buildingId,omitempty"` // 楼宇ID
 	BuildingName *string `gorm:"size:100" json:"buildingName,omitempty"` // 楼宇名称
 
 	// 位置信息
