@@ -265,6 +265,12 @@ func (s *userService) Delete(ctx context.Context, id string) error {
 			return apperrors.DatabaseError(err)
 		}
 
+		// Phase 57 D-04/QUEUE-06: 软删同事务入队 disable AD 账号动作行
+		// （Phase 58 排水器调 ldap_client.DisableUser 执行，幂等可重放）
+		if err := addomain.NewADPushEnqueuer().EnqueueDisable(tx, []string{id}); err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
 		return nil
 	})
 
@@ -597,6 +603,11 @@ func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 
 		// 批量软删除用户
 		if err := tx.Where("id IN ?", ids).Delete(&models.User{}).Error; err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		// Phase 57 D-04/QUEUE-06: 批量软删同事务入队 disable 动作行（一次成型 + 重复 id 去重）
+		if err := addomain.NewADPushEnqueuer().EnqueueDisable(tx, ids); err != nil {
 			return apperrors.DatabaseError(err)
 		}
 
