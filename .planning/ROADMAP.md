@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-07-10
-update_trigger: v1.20 milestone closed (Phase 56: 1 phase / 5 plans / 5 waves; 12 site-visit UAT deferred)
-previous_update: 2026-07-08 after v1.19 milestone closed
+last_updated: 2026-10-16
+update_trigger: v1.21 roadmap CREATED (Phases 57-62, 19/19 REQ coverage, 三方审计依赖约束全部落图)
+previous_update: 2026-07-08 after Phase 54 (W5) shipped
 ---
 
 # Roadmap: RuoYi-Next 运维管理系统
@@ -29,16 +29,112 @@ previous_update: 2026-07-08 after v1.19 milestone closed
 - ✅ **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (shipped 2026-07-03) — see [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
 - ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (shipped 2026-07-04) — see [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md)
 - ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) | [audit](milestones/v1.19-MILESTONE-AUDIT.md)
-- ✅ **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md) | [requirements](milestones/v1.20-REQUIREMENTS.md) | [design doc](../docs/plans/2026-07-09-v1.20.1-design.md)
+- ✅ **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
+- 🚧 **v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)** — Phases 57-62 (initiated 2026-10-16) — see [REQUIREMENTS.md](REQUIREMENTS.md)
 
 ---
 
-## Phases (v1.20) — SHIPPED
+## Phases (v1.21)
+
+**Milestone goal:** 修复 AD↔系统双向同步的 2 个 P0 bug（部门回退乒乓、软删用户接管风险）、3 个 P1 数据一致性缺口和 P2 卫生项，以三方审计修订后的 outbox-lite 架构落地，消除"改了部门又弹回"与静默数据丢失。
+
+- [ ] **Phase 57: AD 推送队列基建** — outbox-lite 队列表 + 同事务入队 + 按实体合并 + 删除入队 disable (QUEUE-01/02/06, HYGIENE-06)
+- [ ] **Phase 58: 排水器与 compare-and-move 推送** — in-process cron 排水 + 退避重试 + 幂等 OU 移动 + 配置路由无歧义 (HYGIENE-01/02, QUEUE-03/04/05)
+- [ ] **Phase 59: 登录回写守卫与部门对账视图** — AD 登录不再回滚本地编辑 + dept↔OU 不一致可观测 (GUARD-01/02)
+- [ ] **Phase 60: 软删恢复安全** — ad_dn 校验后恢复 + 登录/批量同步共用分类逻辑 (SAFE-01/02)
+- [ ] **Phase 61: 影子表完整性** — 删除清理两道闸门 + 组成员事务化 + singleflight 挂载 (SHADOW-01/02/03)
+- [ ] **Phase 62: 卫生收尾与死代码清理** — F-22 旧路径删除 + 嵌套组标记 + 同名部门 OU DN 冲突告警 (HYGIENE-03/04/05)
+
+### Phase 57: AD 推送队列基建（outbox-lite 同事务入队）
+**Goal**: 管理员编辑用户产生的 AD 推送在业务事务内落队列、进程重启不丢失；同用户多次编辑按实体合并仅保留最新待推送状态；sys 删除用户入队 disable 动作闭环"复活"链路。
+**Depends on**: 无（v1.21 首个 phase；前置条件已满足——1641 文件 5 组提交合入 main 并推送, 2026-10-16）
+**Requirements**: QUEUE-01, QUEUE-02, QUEUE-06, HYGIENE-06
+**Notes**: 本里程碑 DB migration 编号从 **200** 起——Phase 57 落地 migration_200（`ad_push_queue` 表），后续 phase 需要迁移时顺延编号。队列基建（表 + 同事务入队）是 Phase 59 GUARD-01 信号守卫的前置（守卫查队列行）。排水器不注册 sys_job（PROJECT.md 关键决策）。
+**Success Criteria** (what must be TRUE):
+  1. 管理员编辑用户（部门/昵称/邮箱/手机）后，`ad_push_queue` 在同一业务事务内出现待推送行——业务保存回滚时队列行不存在，进程重启后已入队行仍在（QUEUE-01）
+  2. 同一用户短时间内多次编辑后，队列中该用户仅保留最新一条待推送行，内容为最后一次编辑结果，后一次编辑不被丢弃（QUEUE-02）
+  3. sys 侧删除用户后，队列出现 disable AD 账号动作行（QUEUE-06）
+  4. SQLite 测试环境补建队列表后 `go test ./...` 全绿（HYGIENE-06）
+**Plans**: TBD
+
+### Phase 58: 排水器与 compare-and-move 推送
+**Goal**: 队列被可靠排水——按用户 ad_dn 路由正确 AD 配置、闭包内重读最新值幂等移动 OU、失败退避重试至终态可查、目标 DN 消失时转终态不死循环。
+**Depends on**: Phase 57（队列行存在才能排水）；phase 内 wave 顺序约束：HYGIENE-01 配置解析 helper 先于 QUEUE-04 compare-and-move（三方审计依赖）
+**Requirements**: HYGIENE-01, HYGIENE-02, QUEUE-03, QUEUE-04, QUEUE-05
+**Notes**: compare-and-move 是结构性修 F1（部门回退乒乓）的推送侧；禁用新旧值比较（会激活未验证的 MoveUser 重试分支）。`ErrADTargetNotFound` → 终态。
+**Success Criteria** (what must be TRUE):
+  1. 排水器以 in-process cron 运行且未注册 sys_job；处理 dept 推送与 disable 账号两类动作行（闭环 Phase 57 QUEUE-06 执行侧）；失败行按退避重试，达上限转终态且可通过查询确认（QUEUE-03）
+  2. OU 移动采用 compare-and-move：闭包内重读用户最新值 + NormalizeDN 归一化比较，目标一致时跳过 MoveUser；同一队列行重复排水幂等，不产生重复移动（QUEUE-04）
+  3. 多 AD 配置环境下推送按用户 `ad_dn` 归属解析配置，不再依赖 `First()` 取首条；`getDefaultADConfigID` 双份实现合并为公共 helper（HYGIENE-01）
+  4. 含特殊字符的部门名经 OU DN 转义 helper 拼接后推送不产生非法 DN（HYGIENE-02）
+  5. LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，后续排水不再重试（QUEUE-05）
+**Plans**: TBD
+
+### Phase 59: 登录回写守卫与部门对账视图
+**Goal**: AD 登录回写 dept 不再用旧值回滚本地编辑（信号守卫替代被三方审计否决的时间戳仲裁）；dept↔OU 不一致（含映射指向软删部门）可观测。
+**Depends on**: Phase 57（守卫查询 `ad_push_queue` 的 pending/failed 行）
+**Requirements**: GUARD-01, GUARD-02
+**Notes**: 对账视图用普通 SQL VIEW，禁用 MV（避免 MV 刷新僵尸 / GORM AutoMigrate 阻塞前科）。
+**Success Criteria** (what must be TRUE):
+  1. 存在 pending/failed dept 队列行的用户经 AD 登录时，本地 dept 不被 AD 旧值覆盖，日志记录 WARN（GUARD-01）
+  2. 无队列行的用户经 AD 登录时 dept 回写行为与现状一致，守卫不误伤正常同步（GUARD-01）
+  3. `v_dept_ou_mismatch` 普通 SQL VIEW 可查询 dept↔OU 不一致条目及"映射指向软删部门"条目（GUARD-02）
+  4. 只读端点返回对账数据且需登录鉴权访问（GUARD-02）
+**Plans**: TBD
+
+### Phase 60: 软删恢复安全
+**Goal**: 软删用户恢复不再盲目接管 AD 身份——AD 当前 DN 与存量 ad_dn 校验一致才恢复；登录路径与 batch-sync 对同一恢复场景行为一致。
+**Depends on**: 无硬依赖（三方审计确认 SAFE 与 QUEUE/SHADOW 相互独立，可并行排期；本 roadmap 顺序执行置于 Phase 58 之后）
+**Requirements**: SAFE-01, SAFE-02
+**Notes**: HYGIENE-03（Phase 62）依赖本 phase 先落地——SAFE-01 落地前 user_ou_service.go 死代码是 F-22 语义的唯一载体。
+**Success Criteria** (what must be TRUE):
+  1. `catSoftDeleted` 恢复前校验 AD 当前 DN 与存量 `ad_dn` 一致，一致时恢复成功（SAFE-01）
+  2. DN 不一致时拒绝恢复、用户保持软删状态，并写入安全审计日志（SAFE-01）
+  3. 登录路径与 batch-sync 共用软删分类与校验逻辑，同一场景两路径行为一致（SAFE-02）
+**Plans**: TBD
+
+### Phase 61: 影子表完整性（删除清理 + 组成员事务化）
+**Goal**: AD 端已消失的对象不再永久滞留 `sys_ad_user/ou/computer` 影子表（静默数据丢失消除）；组成员重放消除空成员可见窗口；清理与全量同步不并发。
+**Depends on**: 无硬依赖（与 QUEUE/SAFE 相互独立可并行；phase 内 SHADOW-03 依赖 SHADOW-01 先落地）
+**Requirements**: SHADOW-01, SHADOW-02, SHADOW-03
+**Success Criteria** (what must be TRUE):
+  1. 全量同步末尾，AD 端已消失的 `sys_ad_user/ou/computer` 行被软删除（SHADOW-01）
+  2. 两道闸门生效：LDAP 本轮返回 0 条时清理拒绝执行；拟删数量超过存量 50% 时拒绝执行（SHADOW-01）
+  3. `sys_ad_group_member` 重放在单事务（Delete+Create 包 Transaction）内完成，重放过程中外部查询看不到空成员窗口（SHADOW-02）
+  4. 删除清理挂 `syncDataInternal` 内执行（复用 singleflight），与全量同步互斥不并发（SHADOW-03）
+**Plans**: TBD
+
+### Phase 62: 卫生收尾与死代码清理
+**Goal**: F-22 旧路径死代码在 SAFE-01 落地后安全移除；嵌套组不污染用户成员关系；同名兄弟部门 OU DN 冲突显式告警不静默覆盖。
+**Depends on**: Phase 60（HYGIENE-03 死代码删除必须在 SAFE-01 之后——先删会丢 F-22 对照语义）
+**Requirements**: HYGIENE-03, HYGIENE-04, HYGIENE-05
+**Success Criteria** (what must be TRUE):
+  1. `user_ou_service.go` 整文件、`GetUserDeptByADOU`、`BatchMoveUsersToNewOU`、`dept_ou_mapper.go:31` 等过期注释及其关联测试全部删除后 `go build ./...` 通过且测试套件全绿（HYGIENE-03）
+  2. 嵌套组的 member DN 被标记/过滤，不混入用户成员关系数据（HYGIENE-04）
+  3. 同名兄弟部门生成相同 OU DN 时检测并告警，映射不静默互相覆盖（HYGIENE-05）
+**Plans**: TBD
+
+---
+
+### Progress Table (v1.21)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 57. AD 推送队列基建 | 0/TBD | Not started | - |
+| 58. 排水器与 compare-and-move 推送 | 0/TBD | Not started | - |
+| 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
+| 60. 软删恢复安全 | 0/TBD | Not started | - |
+| 61. 影子表完整性 | 0/TBD | Not started | - |
+| 62. 卫生收尾与死代码清理 | 0/TBD | Not started | - |
+
+---
+
+## Archive: Shipped Milestones
 
 <details>
 <summary>✅ v1.20 网络设备 VLAN + 端口绑定 (Phase 56) — SHIPPED 2026-07-10</summary>
 
-### Phase 56: 网络设备 VLAN + 端口绑定 (v1.20.1) — 5/5 plans, completed 2026-07-10
+### Phase 56: 网络设备 VLAN + 端口绑定 (v1.20.1) — 5/5 plans, shipped 2026-07-10
 
 **Goal:** 在 v1.19 端口写命令 MVP 基础上扩展 2 个新写命令：① 修改 access VLAN ② IP+MAC+Port 静态绑定。复用 v1.19 vendor 模板 / operlog / 权限 / 批量 / e2e 全套基建。
 
@@ -46,45 +142,19 @@ previous_update: 2026-07-08 after v1.19 milestone closed
 
 **Requirements**: 22 (VLAN-01~06, BIND-01~07, INFRA-01~04, UI-01~06, TEST-01~05)
 
-**Success Criteria** (目标, 5 phase 完成时全部自动化验证通过):
-1. `go test ./internal/services/portcollection/...` — 12+ 新 vendor template 用例 + 5 已有 PASS (零回归)
-2. `go test ./internal/services/portwrite/...` — 6+ 新 pre_state_check 用例 + 10+ 新 TestE2E_* + 35 已有 PASS (零回归)
-3. `go build ./...` exit 0
-4. `npm run type-check` exit 0
-5. `npm run build` exit 0 (vendor-react gzip 与 Phase 48 baseline 776 kB 容差内, 零回归)
-6. operlog regression_test.go (25 OperType + 11 敏感关键词 + 5-参 Record 签名) PASS
-7. `56-HUMAN-UAT.md` 创建，6+ site-visit SSH verification 项目（owner = 现场运维同事）
+**Success Criteria**: 7 项全部通过 (vendor template / portwrite 单测+e2e / go build / tsc / vite build vendor-react 774.95 kB 零回归 / operlog regression / 56-HUMAN-UAT.md 12 项 site-visit 推迟)。
 
-**Plans**: 5 plans (5 waves, 沿用 v1.19 W1~W5 模式)
+**Plans**: 5 plans (5 waves)
 
-Plans:
-**Wave 1 (vendor 模板) — depends on nothing**
+- [x] 56-01-PLAN.md — vendor 模板新增 (set_access_vlan + port_binding × 3 vendors) + 12+ 单元测试
+- [x] 56-02-PLAN.md — pre_state_check + port_write_service 新增 2 方法 + 4 校验器 + audit JSONB
+- [x] 56-03-PLAN.md — 2 kebab 端点 + 2 handler + operlog OperType 分流 + `network:port:write` 权限复用
+- [x] 56-04-PLAN.md — 2 types + 2 networkApi wrappers + SetAccessVlanModal + PortBindingModal + ports/index.tsx
+- [x] 56-05-PLAN.md — 11 TestE2E_* + 10 fixtures + 56-HUMAN-UAT.md + 文档同步
 
-- [x] 56-01-PLAN.md — vendor 模板新增 (set_access_vlan + port_binding × 3 vendors) + 12+ 单元测试 (VLAN-02, BIND-03, BIND-04, TEST-01)
-
-**Wave 2 (service + pre-state) — depends on 56-01**
-
-- [x] 56-02-PLAN.md — pre_state_check.go 新增 2 action handler + port_write_service.go 新增 2 方法 + 校验器（VLAN ID 范围 / IP regex / MAC regex）+ 6+ 单元测试 + audit row JSONB 写入（VLAN-01, VLAN-03, VLAN-05, VLAN-06, BIND-05, BIND-07, INFRA-01, TEST-02）
-
-**Wave 3 (router + handler) — depends on 56-02**
-
-- [x] 56-03-PLAN.md — port_write_router.go 新增 2 kebab 端点 + port_write_handler.go 新增 2 handler (复用 execSinglePort DRY 模式) + operlog OperType 映射 (Update/Create/Delete) + 复用 `network:port:write` 权限（VLAN-01, BIND-01, BIND-02, INFRA-02, INFRA-03, INFRA-04)
-
-**Wave 4 (前端) — depends on 56-03**
-
-- [x] 56-04-PLAN.md — types/network.ts 新增 2 type + networkApi.ts 新增 2 wrapper + SetAccessVlanModal.tsx + PortBindingModal.tsx + ports/index.tsx 菜单接入 + BulkWriteDrawer 零改动支持（VLAN-04, BIND-06, UI-01~06）
-
-**Wave 5 (e2e + 文档) — depends on 56-04**
-
-- [x] 56-05-PLAN.md — 6+ fixture 文件 + 10+ TestE2E_* 测试 + 56-HUMAN-UAT.md 创建 + 文档同步 (CHANGELOG + MILESTONES + API响应规范 + 加密设计) (TEST-03, TEST-04, TEST-05)
-
-**UI hint**: yes (SetAccessVlanModal + PortBindingModal + ports/index.tsx menu integration + BulkWriteDrawer reuse)
+45 commits / 51 files / +10,961/-104 LOC。详见 [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)。
 
 </details>
-
----
-
-## Phases (v1.19)
 
 <details>
 <summary>✅ v1.19 网络设备写命令 (Phases 50-54) — SHIPPED 2026-07-08</summary>
@@ -99,10 +169,6 @@ Plans:
 See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived details (108 files / 25,224 insertions / 3,152 deletions / 1.7 days / 37/37 requirements). 7 site-visit SSH verifications + 6 v1.19.x+ follow-ups deferred per `.planning/phases/54-w5-e2e-real-device-uat-documentation/54-HUMAN-UAT.md` and `v1.19-REQUIREMENTS.md` §Future Requirements / §Tech Debt sections.
 
 </details>
-
----
-
-## Phases (v1.18)
 
 <details>
 <summary>✅ v1.18 网络设备硬件清单 (Phase 48) — SHIPPED 2026-07-04</summary>
@@ -119,26 +185,13 @@ See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived deta
 
 **Plans**: 3 plans
 
-Plans:
-**Wave 1**
-
 - [x] 48-01-PLAN.md — Schema 迁移(migration_201) + Asset/Reconciliation model 扩展 + asset_service List/Statistics 默认 component_type IS NULL 过滤 (D-01, D-05, D-06, D-07)
-
-**Wave 2** (depends on 48-01)
-
 - [x] 48-02-PLAN.md — component_collector 包(SNMP ENTITY-MIB 单 GET 收集器 + 锐捷 temprature* 过滤 + 华为 dual-class 去重 + OwnerResolver stack 接口 + 4 TextFSM 模板 + CLI 收集器) (D-08, D-09, D-10, D-11, D-12)
-
-**Wave 3** (depends on 48-01 + 48-02)
-
 - [x] 48-03-PLAN.md — OpsAssetWriter(UPDATE-only + D-04 父缺失降级) + ReconciliationEmitter(conflict_type=F + recon_category=component_serial) + Pipeline + DeviceInfoCollectionService cron hook + operlog + 后端 list 端点 + 前端组件清单 Tab + UAT 推迟声明 (D-02, D-03, D-04, D-06, D-07, D-13, D-14)
 
-**UI hint**: yes (前端组件清单 Tab,asset 详情 expandable)
-
-See [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md) for archived details. 3 项 site-visit UAT 待现场闭环,详见 `.planning/phases/48-device-component-serials-planned/48-HUMAN-UAT.md`。
+See [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md) for archived details. Phase 49 gap closure (2/2 plans, 2026-07-05) — enrichChassisSerial 接入 + collectBoardsInto 接入, 14 台设备 serial_number 回填。
 
 </details>
-
-## Phases (v1.17)
 
 <details>
 <summary>✅ v1.17 资产对账 (Phases 42-46) — SHIPPED 2026-07-03</summary>
@@ -148,28 +201,23 @@ See [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md) for archived deta
 - [x] Phase 44: 置信度评分 + IP 段例外 (R3) — 2/2 plans
 - [x] Phase 45: 工位详情整合 (R4) — 2/2 plans
 - [x] Phase 46: 半自动修复 (R5, 可选) — 2/2 plans (UAT 9/10 PASS)
+- [x] Phase 47: 资产对账根因修复 — 2/2 plans (2026-07-03)
 
 See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
-
-</details>
-
-### Progress Table
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 42. 资产对账观测底座 (R1) | 5/6 | Complete | 2026-06-27 |
-| 43. 告警 + 工单闭环 (R2) | 3/3 | Complete    | 2026-06-27 |
-| 44. 置信度评分 + IP 段例外 (R3) | 2/2 | Complete    | 2026-06-28 |
+| 43. 告警 + 工单闭环 (R2) | 3/3 | Complete | 2026-06-27 |
+| 44. 置信度评分 + IP 段例外 (R3) | 2/2 | Complete | 2026-06-28 |
 | 45. 工位详情整合 (R4) | 2/2 | Complete | 2026-06-28 |
 | 46. 半自动修复 (R5, 可选) | 2/2 | Complete | 2026-07-03 |
 | 47. 修復資產對賬系統根因 | 2/2 | Complete | 2026-07-03 |
 
----
-
-## Archive: Pre-v1.17 Phase History (Phases 1-46 preserved)
+</details>
 
 <details>
-<summary>Earlier phase history (v1.0–v1.16) preserved for reference</summary>
+<summary>Pre-v1.17 Phase History (Phases 1-41)</summary>
 
 ### Phase Summary (cumulative)
 
@@ -200,32 +248,13 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 - ✓ Phase 47 — 资产对账根因修复 (2/2 plans)
 - ✓ Phase 48 — v1.18 网络设备组件 (3/3 plans)
 - ✓ Phase 49 — v1.18 gap closure (2/2 plans)
+- ✓ Phases 50-55 — v1.19 网络设备写命令 (9/9 plans, 6 phases)
+- ✓ Phase 56 — v1.20 VLAN + 端口绑定 (5/5 plans)
 
-**Total shipped**: 142 plans across 39 phases (Phases 1-49), 8 gap-closure plans
+**Total shipped**: 156 plans across 46 phases (Phases 1-56)
 
 </details>
 
-### Phase 55: 技术债清理 Phase 53 leftover sweep
-
-**Goal:** 清理 Phase 53 code review (53-REVIEW.md) 与 verification (53-VERIFICATION.md) 记录的可执行遗留代码项。范围（5 项）：
-1. **WR-02** — `PortWriteModal.tsx` / `BulkWriteDrawer.tsx` custom-reason validator 签名修复：antd validator 只传 `(rule, value)`，`reasonText` 恒 undefined，需改 `Form.useWatch` 跨字段校验（前端 TS）。是否修复取决于 Phase 54 UAT 观察到的 custom-reason 实际使用频率。
-2. **IN-01** — `pages/network/ports/index.tsx` handleBatchExport `error: any` → `instanceof Error` 安全取 message（pre-existing，非 53 引入）。
-3. **IN-02** — `pages/network/ports/index.tsx` mount-only useEffect 补 `// eslint-disable-next-line react-hooks/exhaustive-deps`（pre-existing）。
-4. **CR-02 后端防御** — `internal/services/portwrite/batch_orchestrator.go` fallback 路径校验 port 真实 deviceID 与 `req.DeviceID` 一致，不一致归入 `Failed`（"port does not belong to device"）不调 SSH（跨层防御，Go；前端 CR-01 已修但后端兜底建议）。
-5. **HealthCard.test.tsx** — 排查/修复既有失败测试（`src/components/reconciliation/__tests__/`，reconciliation 模块，疑似环境/时序，112s import time 异常；与 Phase 53 无关）。
-
-**不在本阶段范围**（已记录到他处）：8 项真机/浏览器 UAT → Phase 54 HUMAN-UAT；Security 审计 → `/gsd:secure-phase 53`；commits push → git 操作。
-
-**Requirements**: TBD (无新功能需求，纯技术债)
-**Depends on:** Phase 54 (WR-02 修复决策由 W5 UAT 观察驱动)
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 55-01: 前端 Phase 53 leftover tech-debt sweep (WR-02 + IN-01 + IN-02 + HealthCard) — 7 tasks, 5 files (frontend)
-- [x] 55-02: 后端 batch_orchestrator.go fallback 路径 port 归属跨层防御 (CR-02) — 2 tasks, 1 file (backend Go) — commit 4f357dae
-
-✅ **v1.19 milestone closed**: Phase 55 (cleanup) shipped 2026-07-08. v1.19 整体 6 phases / 9 plans / 5 build waves + 1 cleanup all closed. See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived detail.
-
 ---
 
-*Last updated: 2026-07-08 — v1.19 网络设备写命令 milestone closed (Phases 50-55 shipped: 5 build phases + 1 cleanup).*
+*Last updated: 2026-10-16 — v1.21 AD 双向同步 bug 修复 roadmap created (Phases 57-62, 19/19 REQ coverage, 依赖约束来自三方审计)。注: 里程碑实际 REQ 数 = 19 (QUEUE×6 + GUARD×2 + SAFE×2 + SHADOW×3 + HYGIENE×6)。上一里程碑 v1.20 shipped 2026-07-10 (Phase 56, 5 plans)。*

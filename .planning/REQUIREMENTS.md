@@ -53,4 +53,26 @@
 
 ## Traceability
 
-*(由 roadmap 填充：REQ-ID → Phase 映射)*
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| QUEUE-01 | Phase 57 | Pending |
+| QUEUE-02 | Phase 57 | Pending |
+| QUEUE-03 | Phase 58 | Pending |
+| QUEUE-04 | Phase 58 | Pending |
+| QUEUE-05 | Phase 58 | Pending |
+| QUEUE-06 | Phase 57 | Pending |
+| GUARD-01 | Phase 59 | Pending |
+| GUARD-02 | Phase 59 | Pending |
+| SAFE-01 | Phase 60 | Pending |
+| SAFE-02 | Phase 60 | Pending |
+| SHADOW-01 | Phase 61 | Pending |
+| SHADOW-02 | Phase 61 | Pending |
+| SHADOW-03 | Phase 61 | Pending |
+| HYGIENE-01 | Phase 58 | Pending |
+| HYGIENE-02 | Phase 58 | Pending |
+| HYGIENE-03 | Phase 62 | Pending |
+| HYGIENE-04 | Phase 62 | Pending |
+| HYGIENE-05 | Phase 62 | Pending |
+| HYGIENE-06 | Phase 57 | Pending |
+
+**Coverage**: 19/19 v1.21 requirements mapped (roadmap created 2026-10-16, no orphans)

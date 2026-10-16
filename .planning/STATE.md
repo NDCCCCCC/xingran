@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复
-status: planning
+status: roadmap_complete
 stopped_at: ""
 last_updated: "2026-10-16T00:00:00.000Z"
-last_activity: 2026-10-16 — Milestone v1.21 INITIATED (三方 subagent 审计裁决修订方案: outbox-lite 队列 + 信号守卫 + compare-and-move; 11 项 bug 全修)
+last_activity: 2026-10-16 — ROADMAP.md CREATED (Phases 57-62 / 19/19 REQ 覆盖 / 三方审计依赖约束落图)
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,15 +18,16 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 milestone planning — requirements → roadmap
-**Last activity**: 2026-10-16 — 前置闭环: 1641 个未提交文件分 5 组提交合入 main (ced2d75b..31c7eee8) 并推送 origin; v1.21 里程碑启动
+**Status**: v1.21 roadmap complete — awaiting `/gsd:plan-phase 57`
+**Last activity**: 2026-10-16 — ROADMAP.md 创建（Phases 57-62，19/19 REQ 覆盖）
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 57 (AD 推送队列基建) — 待启动（未 plan）
 Plan: —
-Status: Defining requirements
-Last activity: 2026-10-16 — Milestone v1.21 started
+Status: Roadmap complete, Phase 57 待 `/gsd:plan-phase 57`
+Last activity: 2026-10-16 — roadmap created
+Progress: 0/6 phases [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
@@ -34,10 +35,12 @@ Last activity: 2026-10-16 — Milestone v1.21 started
 - 方案经三份独立 subagent 审计修订并经用户拍板：时间戳仲裁弃用（GORM 自动刷 updated_at 恒失效）→ 信号守卫；完整 Outbox → ad_push_queue outbox-lite（同事务入队 + in-process cron 排水）；FieldRule 表驱动引擎砍除（代码内映射 struct）；FK 后置可选；对账视图用普通 VIEW 禁用 MV；软删恢复 = ad_dn 校验后恢复（用户选定）
 - 排水必须 compare-and-move（闭包内重读 + NormalizeDN 归一化比较），禁用新旧值比较（会激活未验证的 MoveUser 重试分支）
 - ErrADTargetNotFound → outbox 终态，防"清 DN→重推"死循环
+- Roadmap 依赖约束（三方审计，已落图）：队列基建(57) → GUARD-01(59)；HYGIENE-01 与 QUEUE-04 同在 Phase 58 且 helper 先落地；SAFE(60)/SHADOW(61) 与 QUEUE 相互独立可并行；HYGIENE-03(62) 必须在 SAFE-01(60) 之后
 
 ### Blockers
 - 无
 
 ### Todos
-- GSD phase 编号从 57 起（v1.20 止于 Phase 56）
-- DB migration 编号从 200 起
+- ~~GSD phase 编号从 57 起~~ ✅ 已落 ROADMAP（Phases 57-62）
+- DB migration 编号从 200 起 — Phase 57 = migration_200（ad_push_queue 表），后续 phase 顺延（Phase 59 的 VIEW 预计 migration_201）
+- Phase plans 数量 TBD（plan-phase 时确定），roadmap progress table 待回填
