@@ -2,9 +2,9 @@ package operations
 
 import (
 	"encoding/json"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
@@ -17,9 +17,9 @@ import (
 )
 
 type WorkstationHandler struct {
-	service          opsServices.WorkstationService
+	service           opsServices.WorkstationService
 	reconciliationSvc asset.ReconciliationService
-	core             *core.Core
+	core              *core.Core
 }
 
 func NewWorkstationHandler(service opsServices.WorkstationService) *WorkstationHandler {
@@ -53,8 +53,7 @@ func (h *WorkstationHandler) Statistics(c *gin.Context) {
 	var params map[string]interface{}
 	_ = c.ShouldBindJSON(&params)
 	result, err := h.service.Statistics(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询统计数据") {
 		return
 	}
 	response.Success(c, result)
@@ -78,8 +77,32 @@ func (h *WorkstationHandler) GetWorkstationDeptOptions(c *gin.Context) {
 		req.OrgID = ""
 	}
 	result, err := h.service.GetWorkstationDeptOptions(c.Request.Context(), req.OrgID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询工位部门下拉选项") {
+		return
+	}
+	response.Success(c, result)
+}
+
+// CountsByFloor 批量获取楼层工位数量(READ,一个 SQL 替代前端 N+1 模式)
+// @Summary 批量楼层工位计数
+// @Description 接收 floorId 数组,返回各楼层工位数量 map(0=正常,软删除排除)
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{floorIds=[]string} true "楼层ID列表"
+// @Success 200 {object} response.Response{data=opsServices.CountsByFloorResult}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/counts-by-floor [post]
+func (h *WorkstationHandler) CountsByFloor(c *gin.Context) {
+	var req struct {
+		FloorIDs []string `json:"floorIds"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req.FloorIDs = []string{}
+	}
+	result, err := h.service.CountsByFloor(c.Request.Context(), req.FloorIDs)
+	if !response.HandleServiceError(c, err, "查询楼层工位数量") {
 		return
 	}
 	response.Success(c, result)
@@ -87,14 +110,16 @@ func (h *WorkstationHandler) GetWorkstationDeptOptions(c *gin.Context) {
 
 // SearchWorkstationOptions 工位下拉数据源(name LIKE 模糊 + floorId/floorCode/status/type/orgId 筛选,LIMIT 50,读操作不写操作日志)
 // 修复 info-points/index.tsx「所属工位」下拉用 pageSize:1000 + filterOption 客户端截断的 bug。
+//
+// D-05: typed bind；bind 失败降级为零值请求继续查询（零值 request = 空过滤全列表，
+// 与迁移前 bind 失败降级空 map 语义一致；不用 response.HandleJSONBinding 的 400 路径）。
 func (h *WorkstationHandler) SearchWorkstationOptions(c *gin.Context) {
-	var params map[string]interface{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		params = map[string]interface{}{}
+	var req requests.WorkstationListRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req = requests.WorkstationListRequest{}
 	}
-	result, err := h.service.SearchWorkstationOptions(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	result, err := h.service.SearchWorkstationOptions(c.Request.Context(), req)
+	if !response.HandleServiceError(c, err, "查询工位下拉选项") {
 		return
 	}
 	response.Success(c, result)
@@ -113,11 +138,11 @@ func (h *WorkstationHandler) SearchWorkstationOptions(c *gin.Context) {
 // @Router /ops/workstation [post]
 func (h *WorkstationHandler) Create(c *gin.Context) {
 	var workstation models.Workstation
-	if !handleJSONBinding(c, &workstation) {
+	if !response.HandleJSONBinding(c, &workstation) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &workstation), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &workstation), "创建") {
 		return
 	}
 
@@ -137,18 +162,43 @@ func (h *WorkstationHandler) Create(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Router /ops/workstation/list [post]
 func (h *WorkstationHandler) List(c *gin.Context) {
-	var params map[string]interface{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		params = make(map[string]interface{})
+	// D-05: typed bind；bind 失败降级为零值请求继续查询（零值 request = 空过滤
+	// 全列表，与迁移前 bind 失败降级空 map 语义一致；不用 response.HandleJSONBinding 的
+	// 400 路径，与现状不符）。
+	var req requests.WorkstationListRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req = requests.WorkstationListRequest{}
 	}
 
-	result, err := h.service.List(c.Request.Context(), params)
+	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
 		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
 		return
 	}
 
 	response.Success(c, result)
+}
+
+// GetFloorWorkstationsAll 楼层全部工位（CAD/3D/平面图专用全集端点，无分页，读操作不写操作日志）
+// @Summary 楼层全部工位
+// @Description 返回指定楼层的全部工位（CAD/平面图/3D 全集场景专用，无分页参数，
+// 替代前端以 pageSize:1000 滥用 List 分页做全集下拉的反模式，V130R-09 D-03-6/D-03-7）
+// @Tags 运维管理
+// @Produce json
+// @Param floorId path string true "楼层ID"
+// @Success 200 {object} response.Response{data=object{list=[]models.Workstation,total=int}}
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/{floorId}/workstations-all [get]
+func (h *WorkstationHandler) GetFloorWorkstationsAll(c *gin.Context) {
+	floorId := c.Param("floorId")
+	workstations, err := h.service.GetFloorWorkstationsAll(c.Request.Context(), floorId)
+	if err != nil {
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
+		return
+	}
+
+	// D-03-7: 返回格式同 List（{list, total}），total 为全集长度非分页口径
+	response.Success(c, gin.H{"list": workstations, "total": len(workstations)})
 }
 
 // GetByID 获取工位详情
@@ -229,12 +279,12 @@ func (h *WorkstationHandler) hasReconciliationPerm(c *gin.Context) bool {
 func (h *WorkstationHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var workstation models.Workstation
-	if !handleJSONBinding(c, &workstation) {
+	if !response.HandleJSONBinding(c, &workstation) {
 		return
 	}
 
 	workstation.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &workstation), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &workstation), "更新") {
 		return
 	}
 
@@ -256,7 +306,7 @@ func (h *WorkstationHandler) Update(c *gin.Context) {
 // @Router /ops/workstation/{id}/delete [post]
 func (h *WorkstationHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -281,13 +331,13 @@ func (h *WorkstationHandler) BatchOperation(c *gin.Context) {
 		Action string   `json:"action"`
 	}
 
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:
@@ -315,11 +365,11 @@ func (h *WorkstationHandler) BatchUpdatePositions(c *gin.Context) {
 		Items []opsServices.PositionUpdateItem `json:"items" binding:"required"`
 	}
 
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.BatchUpdatePositions(c.Request.Context(), req.Items), "批量更新位置") {
+	if !response.HandleServiceError(c, h.service.BatchUpdatePositions(c.Request.Context(), req.Items), "批量更新位置") {
 		return
 	}
 

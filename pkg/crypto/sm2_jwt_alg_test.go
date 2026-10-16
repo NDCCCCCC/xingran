@@ -105,7 +105,7 @@ func TestSM2JWT_AcceptsCorrectSM2Alg(t *testing.T) {
 	claims := &Claims{
 		UserID:   "u-test-001",
 		Username: "alice",
-		Issuer:   "RuoYi-Next",
+		Issuer:   "XingRan-Next",
 		Subject:  "u-test-001",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),

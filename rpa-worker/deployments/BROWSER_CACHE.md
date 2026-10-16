@@ -48,7 +48,7 @@ Chromium 浏览器会被下载到：
 
 **Windows:**
 ```cmd
-cd D:\code\ClaudeCode\ruoyi-go-backend\rpa-worker\deployments
+cd D:\code\ClaudeCode\xingran-go-backend\rpa-worker\deployments
 rebuild-local.bat
 ```
 

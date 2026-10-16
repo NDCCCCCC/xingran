@@ -23,8 +23,3 @@ func GetDiskInfoDetailed(path string) (uint64, uint64, error) {
 	}
 	return total, available, nil
 }
-
-// getDiskInfoByPlatform 获取磁盘总容量和可用容量（内部函数）
-func getDiskInfoByPlatform(path string) (uint64, uint64, error) {
-	return GetDiskInfoDetailed(path)
-}

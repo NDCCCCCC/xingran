@@ -10,16 +10,18 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-// 账号池状态机常量
+// 账号池状态机常量（Phase 69 DICT-01：值唯一真相源位于 models.ADAccountStatus*，
+// 此处为包内别名，保持既有调用方零改动；值语义由 status_constants_test.go 锁定）
 const (
-	AccountStatusAvailable     = 0
-	AccountStatusDisabled      = 1
-	AccountStatusCircuitBroken = 2
+	AccountStatusAvailable     = models.ADAccountStatusAvailable
+	AccountStatusDisabled      = models.ADAccountStatusDisabled
+	AccountStatusCircuitBroken = models.ADAccountStatusBreaker
 )
 
 // 阈值常量（与 PLAN.md 对齐）
@@ -199,12 +201,7 @@ func (p *accountPoolImpl) PickAvailable(ctx context.Context, configID string) (*
 
 // ListAll 包含停用/熔断账号（分页）
 func (p *accountPoolImpl) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
+	page, pageSize = query.NormalizePagination(page, pageSize)
 
 	q := p.db.WithContext(ctx).Model(&models.ADServiceAccount{}).
 		Where("config_id = ? AND deleted_at IS NULL", configID)

@@ -151,7 +151,7 @@ func (s *UserService) Update(ctx context.Context, config *models.ADConfig, userD
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		return client.UpdateUserAttribute(userDN, attrs)
 	}); err != nil {
 		if errors.Is(err, ErrAllAccountsUnavailable) {
@@ -196,7 +196,7 @@ func (s *UserService) Enable(ctx context.Context, config *models.ADConfig, userD
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		return client.EnableUser(userDN)
 	}); err != nil {
 		if errors.Is(err, ErrAllAccountsUnavailable) {
@@ -217,7 +217,7 @@ func (s *UserService) Disable(ctx context.Context, config *models.ADConfig, user
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		return client.DisableUser(userDN)
 	}); err != nil {
 		if errors.Is(err, ErrAllAccountsUnavailable) {
@@ -238,7 +238,7 @@ func (s *UserService) Move(ctx context.Context, config *models.ADConfig, userDN,
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		return client.MoveUser(userDN, newOUDN)
 	}); err != nil {
 		if errors.Is(err, ErrAllAccountsUnavailable) {

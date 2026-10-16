@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -36,36 +37,18 @@ func NewUserServiceWithCache(
 
 // GetByIDWithCache 获取用户详情（带缓存）
 func (s *userCacheService) GetByIDWithCache(ctx context.Context, id string) (*models.User, error) {
-	cacheKey := GetUserByIDKey(id)
-	var result models.User
-
-	expiration := s.GetExpiration(services.CacheConfigUserByID, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.userService.GetByID(ctx, id)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		GetUserByIDKey(id),
+		s.GetExpiration(services.CacheConfigUserByID, 30*time.Minute),
+		func() (*models.User, error) { return s.userService.GetByID(ctx, id) })
 }
 
 // GetByUsernameWithCache 根据用户名获取用户（带缓存）
 func (s *userCacheService) GetByUsernameWithCache(ctx context.Context, username string) (*models.User, error) {
-	cacheKey := GetUserByUsernameKey(username)
-	var result models.User
-
-	expiration := s.GetExpiration(services.CacheConfigUserByUsername, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.getByUsername(ctx, username)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		GetUserByUsernameKey(username),
+		s.GetExpiration(services.CacheConfigUserByUsername, 30*time.Minute),
+		func() (*models.User, error) { return s.getByUsername(ctx, username) })
 }
 
 // getByUsername 根据用户名查询用户（内部方法）
@@ -83,16 +66,10 @@ func (s *userCacheService) getByUsername(ctx context.Context, username string) (
 
 // GetRolesWithCache 获取用户角色（带缓存）
 func (s *userCacheService) GetRolesWithCache(ctx context.Context, userID string) ([]models.Role, error) {
-	cacheKey := GetUserRolesKey(userID)
-	var result []models.Role
-
-	expiration := s.GetExpiration(services.CacheConfigUserRoles, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryRoles(ctx, userID)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		GetUserRolesKey(userID),
+		s.GetExpiration(services.CacheConfigUserRoles, 30*time.Minute),
+		func() ([]models.Role, error) { return s.queryRoles(ctx, userID) })
 }
 
 // queryRoles 查询用户的角色
@@ -121,16 +98,10 @@ func (s *userCacheService) queryRoles(ctx context.Context, userID string) ([]mod
 
 // GetPermissionsWithCache 获取用户权限（带缓存）
 func (s *userCacheService) GetPermissionsWithCache(ctx context.Context, userID string) ([]string, error) {
-	cacheKey := GetUserPermissionsKey(userID)
-	var result []string
-
-	expiration := s.GetExpiration(services.CacheConfigUserByID, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryPermissions(ctx, userID)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		GetUserPermissionsKey(userID),
+		s.GetExpiration(services.CacheConfigUserByID, 30*time.Minute),
+		func() ([]string, error) { return s.queryPermissions(ctx, userID) })
 }
 
 // queryPermissions 查询用户的权限
@@ -186,16 +157,12 @@ func getRoleIDs(roles []models.Role) []string {
 func (s *userCacheService) List(ctx context.Context, params requests.UserListParams) (*PageResult, error) {
 	// 构建缓存键
 	cacheKey := s.buildListCacheKey(params)
-	var result PageResult
 
 	// 缓存时间：10分钟（列表数据变化较频繁）
-	expiration := s.GetExpiration(services.CacheConfigUserList, 10*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.userService.List(ctx, params)
-	})
-
-	return &result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		cacheKey,
+		s.GetExpiration(services.CacheConfigUserList, 10*time.Minute),
+		func() (*PageResult, error) { return s.userService.List(ctx, params) })
 }
 
 // buildListCacheKey 构建列表查询的缓存键
@@ -208,30 +175,30 @@ func (s *userCacheService) buildListCacheKey(params requests.UserListParams) str
 	var keyPart string
 
 	if params.Username != nil && *params.Username != "" {
-		keyPart += ":username:" + *params.Username
+		keyPart += ":username:" + EscapeCacheKeyValue(*params.Username)
 	}
 	if params.Nickname != nil && *params.Nickname != "" {
-		keyPart += ":nickname:" + *params.Nickname
+		keyPart += ":nickname:" + EscapeCacheKeyValue(*params.Nickname)
 	}
 	if params.Phone != nil && *params.Phone != "" {
-		keyPart += ":phone:" + *params.Phone
+		keyPart += ":phone:" + EscapeCacheKeyValue(*params.Phone)
 	}
 	if params.Status != nil {
 		keyPart += ":status:" + fmt.Sprintf("%d", *params.Status)
 	}
 	if params.DeptID != nil && *params.DeptID != "" {
-		keyPart += ":dept:" + *params.DeptID
+		keyPart += ":dept:" + EscapeCacheKeyValue(*params.DeptID)
 	}
 	if params.RecursiveDeptID != nil && *params.RecursiveDeptID != "" {
 		// 与 DeptID 必须分别入 key:同一 deptId 用单值语义和递归语义命中的
 		// 数据集不同(递归 = 部门+所有子部门的并集),否则会读到错误缓存。
-		keyPart += ":recursiveDept:" + *params.RecursiveDeptID
+		keyPart += ":recursiveDept:" + EscapeCacheKeyValue(*params.RecursiveDeptID)
 	}
 	if params.BeginTime != nil && *params.BeginTime != "" {
-		keyPart += ":begin:" + *params.BeginTime
+		keyPart += ":begin:" + EscapeCacheKeyValue(*params.BeginTime)
 	}
 	if params.EndTime != nil && *params.EndTime != "" {
-		keyPart += ":end:" + *params.EndTime
+		keyPart += ":end:" + EscapeCacheKeyValue(*params.EndTime)
 	}
 
 	// 排序参数(关键:orderByColumn + isAsc 必须入 key,否则不同排序命中同一缓存)
@@ -261,13 +228,13 @@ func (s *userCacheService) InvalidateUserCache(ctx context.Context, userID strin
 		GetUserRolesKey(userID),
 		GetUserPermissionsKey(userID),
 	)
-	InvalidateCacheByKey(ctx, s.cache, keys, "USER")
+	base.Invalidate(ctx, s.cache, keys, "USER")
 	return nil
 }
 
 // InvalidateAllUserCache 失效所有用户缓存
 func (s *userCacheService) InvalidateAllUserCache(ctx context.Context) error {
-	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*"}, "USER")
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyUserByID + "*", CacheKeyUserList + "*"}, "USER")
 	return nil
 }
 
@@ -277,7 +244,7 @@ func (s *userCacheService) Create(ctx context.Context, req *requests.UserCreateR
 		return err
 	}
 	// 新建用户不需要清除缓存，但清除列表缓存
-	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
 	return nil
 }
 
@@ -286,6 +253,11 @@ func (s *userCacheService) Update(ctx context.Context, req *requests.UserUpdateR
 	if err := s.userService.Update(ctx, req); err != nil {
 		return err
 	}
+	// 用户↔角色关联(sys_user_role)已重写（先删后插），失效 user-scoped 菜单缓存（F-01），
+	// 避免该用户最长 30min(TTL)看到陈旧菜单/权限标识
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
+	// 昵称/部门/状态等列表可见字段可能变化，失效列表缓存（否则列表最长 30min 陈旧）
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
 	return s.InvalidateUserCache(ctx, req.ID)
 }
 
@@ -294,6 +266,10 @@ func (s *userCacheService) Delete(ctx context.Context, id string) error {
 	if err := s.userService.Delete(ctx, id); err != nil {
 		return err
 	}
+	// 用户↔角色关联(sys_user_role)已删除，失效 user-scoped 菜单缓存（F-01）
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
+	// 行从列表消失，失效列表缓存
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
 	return s.InvalidateUserCache(ctx, id)
 }
 
@@ -303,7 +279,9 @@ func (s *userCacheService) BatchDelete(ctx context.Context, ids []string) error 
 		return err
 	}
 	// 清除所有用户相关缓存
-	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*"}, "USER")
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyUserByID + "*", CacheKeyUserList + "*"}, "USER")
+	// 批量删除同样清理 sys_user_role，失效 user-scoped 菜单缓存（F-01）
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return nil
 }
 
@@ -312,6 +290,8 @@ func (s *userCacheService) UpdateStatus(ctx context.Context, id string, status i
 	if err := s.userService.UpdateStatus(ctx, id, status); err != nil {
 		return err
 	}
+	// 状态列直接展示在列表中，失效列表缓存
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
 	return s.InvalidateUserCache(ctx, id)
 }
 

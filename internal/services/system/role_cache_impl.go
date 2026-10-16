@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -36,16 +37,12 @@ func NewRoleServiceWithCache(
 func (s *roleCacheService) List(ctx context.Context, params requests.RoleListParams) (*PageResult, error) {
 	// 构建缓存键
 	cacheKey := s.buildListCacheKey(params)
-	var result PageResult
 
 	// 缓存时间：30分钟
-	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.roleService.List(ctx, params)
-	})
-
-	return &result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		cacheKey,
+		s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute),
+		func() (*PageResult, error) { return s.roleService.List(ctx, params) })
 }
 
 // buildListCacheKey 构建列表查询的缓存键
@@ -57,10 +54,10 @@ func (s *roleCacheService) buildListCacheKey(params requests.RoleListParams) str
 	var keyPart string
 
 	if params.RoleName != "" {
-		keyPart += ":name:" + params.RoleName
+		keyPart += ":name:" + EscapeCacheKeyValue(params.RoleName)
 	}
 	if params.RoleKey != "" {
-		keyPart += ":key:" + params.RoleKey
+		keyPart += ":key:" + EscapeCacheKeyValue(params.RoleKey)
 	}
 	if params.Status != "" {
 		keyPart += ":status:" + params.Status
@@ -82,61 +79,34 @@ func (s *roleCacheService) buildListCacheKey(params requests.RoleListParams) str
 
 // GetByID 获取角色详情（带缓存）
 func (s *roleCacheService) GetByID(ctx context.Context, id string) (*models.Role, error) {
-	cacheKey := CacheKeyRoleAll + ":id:" + id
-	var result models.Role
-
-	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.roleService.GetByID(ctx, id)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyRoleAll+":id:"+id,
+		s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute),
+		func() (*models.Role, error) { return s.roleService.GetByID(ctx, id) })
 }
 
 // GetAllEnabled 获取所有启用的角色（覆盖基础方法，使用缓存）
 func (s *roleCacheService) GetAllEnabled(ctx context.Context) ([]*models.Role, error) {
-	cacheKey := CacheKeyRoleEnabled
-	var result []*models.Role
-
-	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.roleService.GetAllEnabled(ctx)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyRoleEnabled,
+		s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute),
+		func() ([]*models.Role, error) { return s.roleService.GetAllEnabled(ctx) })
 }
 
 // GetAllEnabledWithCache 获取所有启用的角色（带缓存）- 保留以兼容性
 func (s *roleCacheService) GetAllEnabledWithCache(ctx context.Context) ([]*models.Role, error) {
-	cacheKey := CacheKeyRoleEnabled
-	var result []*models.Role
-
-	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.roleService.GetAllEnabled(ctx)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyRoleEnabled,
+		s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute),
+		func() ([]*models.Role, error) { return s.roleService.GetAllEnabled(ctx) })
 }
 
 // GetMenusWithCache 获取角色的菜单（带缓存）
 func (s *roleCacheService) GetMenusWithCache(ctx context.Context, roleID string) ([]models.Menu, error) {
-	cacheKey := GetRoleMenusKey(roleID)
-	var result []models.Menu
-
-	expiration := s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryMenus(ctx, roleID)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		GetRoleMenusKey(roleID),
+		s.GetExpiration(services.CacheConfigRoleMenus, 30*time.Minute),
+		func() ([]models.Menu, error) { return s.queryMenus(ctx, roleID) })
 }
 
 // queryMenus 查询角色的菜单
@@ -166,16 +136,10 @@ func (s *roleCacheService) queryMenus(ctx context.Context, roleID string) ([]mod
 
 // GetDeptsWithCache 获取角色的部门（带缓存）
 func (s *roleCacheService) GetDeptsWithCache(ctx context.Context, roleID string) ([]models.Department, error) {
-	cacheKey := CacheKeyRoleDepts + ":" + roleID
-	var result []models.Department
-
-	expiration := s.GetExpiration(services.CacheConfigRoleDepts, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryDepts(ctx, roleID)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyRoleDepts+":"+roleID,
+		s.GetExpiration(services.CacheConfigRoleDepts, 30*time.Minute),
+		func() ([]models.Department, error) { return s.queryDepts(ctx, roleID) })
 }
 
 // queryDepts 查询角色的部门
@@ -210,7 +174,7 @@ func (s *roleCacheService) InvalidateRoleCache(ctx context.Context, roleID strin
 		CacheKeyRoleAll + "*",
 		CacheKeyRoleEnabled + "*",
 	}
-	InvalidateCacheByPattern(ctx, s.cache, patterns, "ROLE")
+	base.InvalidatePattern(ctx, s.cache, patterns, "ROLE")
 
 	if roleID != "" {
 		keys := []string{
@@ -218,7 +182,7 @@ func (s *roleCacheService) InvalidateRoleCache(ctx context.Context, roleID strin
 			CacheKeyRoleDepts + ":" + roleID,
 			CacheKeyRoleAll + ":id:" + roleID,
 		}
-		InvalidateCacheByKey(ctx, s.cache, keys, "ROLE")
+		base.Invalidate(ctx, s.cache, keys, "ROLE")
 	}
 	return nil
 }
@@ -228,6 +192,9 @@ func (s *roleCacheService) Create(ctx context.Context, req *requests.RoleCreateR
 	if err := s.roleService.Create(ctx, req); err != nil {
 		return err
 	}
+	// 角色↔菜单关联(sys_role_menu)已写入，失效 user-scoped 菜单缓存（F-01）
+	// 新建角色尚无用户关联，此调用通常为空操作，保持「sys_role_menu 写后必失效」的统一语义
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return s.InvalidateRoleCache(ctx, "")
 }
 
@@ -236,6 +203,9 @@ func (s *roleCacheService) Update(ctx context.Context, req *requests.RoleUpdateR
 	if err := s.roleService.Update(ctx, req); err != nil {
 		return err
 	}
+	// 角色↔菜单关联(sys_role_menu)已重写，失效 user-scoped 菜单缓存（F-01），
+	// 避免已关联用户最长 30min(TTL)看到陈旧菜单/权限标识
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return s.InvalidateRoleCache(ctx, req.ID)
 }
 
@@ -244,6 +214,9 @@ func (s *roleCacheService) Delete(ctx context.Context, id string) error {
 	if err := s.roleService.Delete(ctx, id); err != nil {
 		return err
 	}
+	// 删除路径同样清理 sys_role_menu；虽有「未分配用户」前置校验，校验与删除
+	// 非同一事务存在竞态窗口，统一失效兜底（F-01）
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return s.InvalidateRoleCache(ctx, id)
 }
 
@@ -252,8 +225,12 @@ func (s *roleCacheService) BatchDelete(ctx context.Context, ids []string) error 
 	if err := s.roleService.BatchDelete(ctx, ids); err != nil {
 		return err
 	}
-	// 清除所有角色相关缓存
-	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyRoleAll + "*"}, "ROLE")
+	// 清除所有角色相关缓存（v129-recheck WR-02: 补齐 role:enabled*——批量删除
+	// 启用状态角色后，幽灵角色曾可从 GetAllEnabled 缓存存活一个 TTL 窗口；
+	// 键集与单条路径 InvalidateRoleCache 对齐）
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyRoleAll + "*", CacheKeyRoleEnabled + "*"}, "ROLE")
+	// 批量删除同样清理 sys_role_menu，统一失效 user-scoped 菜单缓存兜底竞态（F-01）
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return nil
 }
 

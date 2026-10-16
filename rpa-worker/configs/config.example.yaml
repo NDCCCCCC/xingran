@@ -1,0 +1,74 @@
+# RPA Worker 配置模板
+# ----------------------------------------------------------------------------
+# 使用方法:
+#   1. cp configs/config.example.yaml configs/config.yaml
+#   2. 编辑 configs/config.yaml 填写真实值
+#   注: configs/config.yaml 已在 .gitignore 中,本地副本不会被提交
+# ----------------------------------------------------------------------------
+
+worker:
+  id: ""                    # Worker ID(留空自动生成)
+  name: "rpa-worker-1"      # Worker 名称
+  max_concurrency: 5        # 最大并发数(同时执行的任务数)
+  loop_concurrency: 3       # 循环内并发数(单个任务内循环的并行执行数,0=串行,已废弃)
+  version: "1.0.0"          # Worker 版本
+  task_timeout: 10m         # 任务超时时间
+  retry_check_interval: 100ms # 任务消费重试检查间隔
+  pause_timeout: 5m         # 暂停操作默认超时(人工介入)
+  autologin_wait_delay: 1s  # 自动登录等待表单就绪延迟
+  autologin_fill_delay: 500ms # 自动登录填写后延迟
+  autologin_nav_delay: 2s   # 自动登录提交后导航延迟
+
+  # 混合模式配置(循环拆分为子任务)
+  hybrid_mode:
+    enabled: true           # 启用混合模式
+    subtask_timeout: 5m     # 子任务超时时间
+    subtask_retry_count: 2  # 子任务重试次数
+    progress_throttle: 100ms # 进度上报节流
+    subtask_priority: 5     # 子任务优先级
+
+  # 扩缩容配置
+  shutdown_timeout: 5s             # 优雅关闭超时
+  max_scale_up_concurrency: 50     # 最大扩容并发数
+  min_scale_down_concurrency: 1    # 最小缩容并发数
+
+backend:
+  base_url: ""              # 后端 API 地址,例如 http://10.0.0.1:9000/api/v1
+  api_token: ""             # API Token(可选)
+  timeout: 30s              # HTTP 请求超时
+  heartbeat_interval: 30s   # 心跳间隔
+  progress_publish_timeout: 5s # 进度发布超时
+
+redis:
+  addr: ""                  # Redis 地址,例如 10.0.0.2:6379
+  password: ""              # Redis 密码(留空表示无密码)
+  db: 0                     # Redis DB
+  stream_tasks: "rpa:tasks"        # 任务流
+  stream_group: "rpa:workers"      # 工作组
+  pending_tasks: "rpa:pending"     # 待处理任务
+  block_time: 5s            # 阻塞读取超时
+  connection_timeout: 5s    # 连接测试超时
+
+browser:
+  headless: true            # 无头模式
+  timeout: 30s              # 元素等待超时
+  navigation_timeout: 60s   # 页面导航超时
+  max_pages: 10             # 最大页面数
+  viewport_width: 1920      # 界面宽度
+  viewport_height: 1080     # 界面高度
+
+logging:
+  level: "info"             # 日志级别: debug, info, warn, error
+  format: "console"         # 日志格式: json, console (console 格式更易读)
+  output: "stdout"          # 输出: stdout, stderr, 日志文件路径
+
+monitor:
+  health_enabled: true      # 启用健康检查
+  health_port: 8080         # 健康检查端口
+  metrics_path: "/metrics"  # 指标路径
+
+executor:
+  max_retries: 3            # 最大重试次数
+  initial_delay: 1s         # 初始重试延迟
+  retry_multiplier: 2.0     # 重试倍数
+  screenshot_on_error: true # 错误时截图

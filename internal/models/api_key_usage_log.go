@@ -2,6 +2,9 @@ package models
 
 import (
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // APIKeyUsageLog API密钥使用日志模型
@@ -21,6 +24,16 @@ type APIKeyUsageLog struct {
 	// 关联
 	APIKey *APIKey `gorm:"foreignKey:APIKeyID" json:"apikey,omitempty"`
 	User   *User   `gorm:"foreignKey:UserID" json:"user,omitempty"`
+}
+
+// BeforeCreate GORM钩子 - 创建前填充 UUID 主键(ID 为空时)。
+// PG 下列自带 default:gen_random_uuid() 兜底;该钩子让 GORM Create 应用层生成 ID,
+// 行为等价,同时兼容无函数式默认值的 SQLite (quick-260817-hfl)。
+func (l *APIKeyUsageLog) BeforeCreate(tx *gorm.DB) error {
+	if l.ID == "" {
+		l.ID = uuid.New().String()
+	}
+	return nil
 }
 
 // TableName 设置表名

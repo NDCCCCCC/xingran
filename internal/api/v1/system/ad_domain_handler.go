@@ -3,23 +3,19 @@ package system
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
-// AD域单分组同步超时时间
-const adSingleGroupSyncTimeout = 2 * time.Minute
-
-// adFullSyncTimeout AD域全量同步超时
-const adFullSyncTimeout = 30 * time.Minute
-
-// adGroupSyncTimeout AD域分组同步超时
-const adGroupSyncTimeout = 10 * time.Minute
+// v129-recheck WR-04: 三处内联 duration 已上移 pkg/constants/timeouts.go
+// （ADSyncTimeout/ADGroupSyncTimeout/ADSingleGroupSyncTimeout），消除与
+// scheduler 侧同值双源漂移。
 
 // ADDomainHandler AD域管理处理器
 type ADDomainHandler struct {
@@ -37,12 +33,9 @@ func NewADDomainHandler(service *addomainServices.ADDomainService, core *core.Co
 
 // setDefaultPagination 设置默认分页参数
 func (h *ADDomainHandler) setDefaultPagination(current, pageSize *int) {
-	if *current == 0 {
-		*current = 1
-	}
-	if *pageSize == 0 {
-		*pageSize = 10
-	}
+	c, ps := query.NormalizePagination(*current, *pageSize)
+	*current = c
+	*pageSize = ps
 }
 
 // requireConfigID 验证配置ID是否为空
@@ -66,11 +59,11 @@ func (h *ADDomainHandler) requireConfigID(id string) error {
 // @Router /system/ad-domain/configs/list [post]
 func (h *ADDomainHandler) ListConfigs(c *gin.Context) {
 	var req struct {
-		Status        *int    `json:"status,omitempty"`
-		Current       int     `json:"current"`
-		PageSize      int     `json:"pageSize"`
-		OrderByColumn string  `json:"orderByColumn,omitempty"`
-		IsAsc         *bool   `json:"isAsc,omitempty"`
+		Status        *int   `json:"status,omitempty"`
+		Current       int    `json:"current"`
+		PageSize      int    `json:"pageSize"`
+		OrderByColumn string `json:"orderByColumn,omitempty"`
+		IsAsc         *bool  `json:"isAsc,omitempty"`
 	}
 	_ = c.ShouldBindJSON(&req)
 
@@ -270,7 +263,7 @@ func (h *ADDomainHandler) SyncData(c *gin.Context) {
 		req.SyncType = "full"
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), adFullSyncTimeout)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.ADSyncTimeout)
 	defer cancel()
 
 	result, err := h.service.SyncADData(ctx, id, req.SyncType)
@@ -758,7 +751,7 @@ func (h *ADDomainHandler) SyncGroups(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), adGroupSyncTimeout)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.ADGroupSyncTimeout)
 	defer cancel()
 
 	result, err := h.service.GroupSync.SyncGroupsByConfig(ctx, id)
@@ -796,7 +789,7 @@ func (h *ADDomainHandler) SyncSingleGroup(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), adSingleGroupSyncTimeout)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.ADSingleGroupSyncTimeout)
 	defer cancel()
 
 	if err := h.service.GroupSync.SyncSingleGroup(ctx, req.ConfigID, req.GroupDN); err != nil {

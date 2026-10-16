@@ -13,7 +13,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
@@ -40,16 +41,16 @@ type DeviceHistoryQuery struct {
 
 // MACHistoryRecord MAC历史记录响应
 type MACHistoryRecord struct {
-	ID                 string      `json:"id"`
-	DeviceID           string      `json:"deviceId"`
-	DeviceNameSnapshot string      `json:"deviceNameSnapshot"`
-	MACAddress         string      `json:"macAddress"`
-	InterfaceName      string      `json:"interfaceName"`
-	VLANID             *int        `json:"vlanId,omitempty"`
-	EventType          string      `json:"eventType"`
-	FirstSeen          time.Time   `json:"firstSeen"`
-	LastSeen           time.Time   `json:"lastSeen"`
-	CollectedAt        time.Time   `json:"collectedAt"`
+	ID                 string    `json:"id"`
+	DeviceID           string    `json:"deviceId"`
+	DeviceNameSnapshot string    `json:"deviceNameSnapshot"`
+	MACAddress         string    `json:"macAddress"`
+	InterfaceName      string    `json:"interfaceName"`
+	VLANID             *int      `json:"vlanId,omitempty"`
+	EventType          string    `json:"eventType"`
+	FirstSeen          time.Time `json:"firstSeen"`
+	LastSeen           time.Time `json:"lastSeen"`
+	CollectedAt        time.Time `json:"collectedAt"`
 }
 
 // MACHistoryListQuery 通用MAC历史列表查询请求（支持过滤+分页）
@@ -77,10 +78,10 @@ type MACHistoryQueryResult struct {
 
 // ConnectionStatsQuery 连接时长统计查询请求
 type ConnectionStatsQuery struct {
-	MACAddress string `json:"macAddress,omitempty"` // 可选，留空统计所有MAC
+	MACAddress string `json:"macAddress,omitempty"`         // 可选，留空统计所有MAC
 	StartTime  string `json:"startTime" binding:"required"` // RFC3339，必填
 	EndTime    string `json:"endTime" binding:"required"`   // RFC3339，必填
-	TopN       int    `json:"topN,omitempty"`        // 默认10
+	TopN       int    `json:"topN,omitempty"`               // 默认10
 }
 
 // ConnectionStatsDetail 连接时长统计明细
@@ -91,9 +92,9 @@ type ConnectionStatsDetail struct {
 	Interface       string    `json:"interface"`
 	FirstSeen       time.Time `json:"firstSeen"`
 	LastSeen        time.Time `json:"lastSeen"`
-	Duration        int64     `json:"duration"`       // 秒
+	Duration        int64     `json:"duration"` // 秒
 	EventCount      int       `json:"eventCount"`
-	FlappingCount   int       `json:"flappingCount"`  // event_type='moved'计数
+	FlappingCount   int       `json:"flappingCount"`   // event_type='moved'计数
 	IsLongOccupancy bool      `json:"isLongOccupancy"` // duration > threshold
 }
 
@@ -136,8 +137,7 @@ type MACHistoryQueryService interface {
 // macHistoryQueryServiceImpl MAC历史查询服务实现
 type macHistoryQueryServiceImpl struct {
 	db         *gorm.DB
-	cache      cache.Cache
-	dataCache  *DataCacheService
+	cache      base.CacheProvider
 	perfConfig *CacheConfigService
 }
 
@@ -146,9 +146,9 @@ func NewMACHistoryQueryService(db *gorm.DB) MACHistoryQueryService {
 	return &macHistoryQueryServiceImpl{db: db, cache: nil}
 }
 
-// NewMACHistoryQueryServiceWithCache 创建带缓存的查询服务 (Phase 15 PERF-03)
-func NewMACHistoryQueryServiceWithCache(db *gorm.DB, dataCache *DataCacheService, perfConfig *CacheConfigService) MACHistoryQueryService {
-	return &macHistoryQueryServiceImpl{db: db, cache: nil, dataCache: dataCache, perfConfig: perfConfig}
+// NewMACHistoryQueryServiceWithCache 创建带缓存的查询服务 (Phase 15 PERF-03; Phase 103 CONV-01 收敛 base.CacheProvider)
+func NewMACHistoryQueryServiceWithCache(db *gorm.DB, cache base.CacheProvider, perfConfig *CacheConfigService) MACHistoryQueryService {
+	return &macHistoryQueryServiceImpl{db: db, cache: cache, perfConfig: perfConfig}
 }
 
 // perfCacheTTL 读取 MAC 性能缓存 TTL (5 分钟兜底)
@@ -252,35 +252,38 @@ func (s *macHistoryQueryServiceImpl) GetVendor(ctx context.Context, macAddress s
 	oui := normalized[:6] // AABBCC格式
 
 	// Redis缓存键
-	cacheKey := fmt.Sprintf("mac:vendor:%s", oui)
+	// D-102-3: fmt.Sprintf 改 constants.MacVendorKeyFormat
+	cacheKey := fmt.Sprintf(constants.MacVendorKeyFormat, oui)
 
-	// 尝试从缓存获取（如果cache可用）
-	if s.cache != nil {
-		vendorName, err := s.cache.Get(ctx, cacheKey)
-		if err == nil && vendorName != "" {
-			return vendorName, nil
-		}
-		// 缓存未命中或出错，降级到DB查询
+	// Phase 103 CONV-01 (D-103-4): 手写 cache-aside 收敛 base.GetOrSetJSON
+	// TTL 24*time.Hour 字面量不变 (D-103-5)。
+	// 错误语义（WR-03 review 修正口径）：provider 层读错误吞为 miss、写失败仅
+	// warn（D-103-6 的"cache 错误不吞"由 provider GetOrSet 内部保证）；
+	// 本层透传的 err 为 DB 查询错误。
+	// cache == nil（裸装配）时直查 DB，等价原手写分支的 nil 语义
+	if s.cache == nil {
+		return s.lookupVendorFromDB(ctx, oui)
+	}
+	vendorName, err := base.GetOrSetJSON[string](ctx, s.cache, cacheKey, 24*time.Hour, func() (string, error) {
+		return s.lookupVendorFromDB(ctx, oui)
+	})
+	if err != nil {
+		return "", err
 	}
 
-	// DB查询
+	return vendorName, nil
+}
+
+// lookupVendorFromDB OUI 厂商 DB 直查；ErrRecordNotFound → "Unknown Vendor"（D-103-5 占位行为保留）。
+func (s *macHistoryQueryServiceImpl) lookupVendorFromDB(ctx context.Context, oui string) (string, error) {
 	var vendor models.MACOUIVendor
 	if err := s.db.WithContext(ctx).Where("oui_prefix = ?", oui).First(&vendor).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// 未知OUI，缓存"Unknown Vendor"避免重复查询
-			if s.cache != nil {
-				_ = s.cache.Set(ctx, cacheKey, "Unknown Vendor", 24*time.Hour)
-			}
 			return "Unknown Vendor", nil
 		}
 		return "", fmt.Errorf("failed to query OUI vendor: %w", err)
 	}
-
-	// 缓存结果（24小时）
-	if s.cache != nil {
-		_ = s.cache.Set(ctx, cacheKey, vendor.VendorName, 24*time.Hour)
-	}
-
 	return vendor.VendorName, nil
 }
 
@@ -293,25 +296,23 @@ func (s *macHistoryQueryServiceImpl) QueryPortHistory(ctx context.Context, req *
 
 	// 设置默认值
 	if req.Current < 1 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize < 1 {
 		req.PageSize = 20
 	}
 
 	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
-	if s.dataCache != nil {
-		var cached MACHistoryQueryResult
+	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON——透传 err 为 DB 查询错误
+	//（provider 层读错误吞为 miss、写失败仅 warn）；TTL s.perfCacheTTL() 不变
+	if s.cache != nil {
 		cacheKey, keyErr := BuildMACQueryCacheKey("port-history", req)
 		if keyErr == nil {
-			err := s.dataCache.GetOrSet(ctx, cacheKey, &cached, s.perfCacheTTL(), func() (interface{}, error) {
+			return base.GetOrSetJSON[*MACHistoryQueryResult](ctx, s.cache, cacheKey, s.perfCacheTTL(), func() (*MACHistoryQueryResult, error) {
 				return s.queryPortHistoryFromDB(ctx, req)
 			})
-			if err == nil {
-				return &cached, nil
-			}
-			applogger.Warnf("[MAC缓存] port-history 走直查: %v", err)
 		}
+		applogger.Warnf("[MAC缓存] port-history 缓存键构造失败走直查: %v", keyErr)
 	}
 	return s.queryPortHistoryFromDB(ctx, req)
 }
@@ -418,25 +419,23 @@ func (s *macHistoryQueryServiceImpl) QueryDeviceHistory(ctx context.Context, req
 
 	// 设置默认值
 	if req.Current < 1 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize < 1 {
 		req.PageSize = 20
 	}
 
 	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
-	if s.dataCache != nil {
-		var cached MACHistoryQueryResult
+	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON——透传 err 为 DB 查询错误
+	//（provider 层读错误吞为 miss、写失败仅 warn）；TTL s.perfCacheTTL() 不变
+	if s.cache != nil {
 		cacheKey, keyErr := BuildMACQueryCacheKey("device-history", req)
 		if keyErr == nil {
-			err := s.dataCache.GetOrSet(ctx, cacheKey, &cached, s.perfCacheTTL(), func() (interface{}, error) {
+			return base.GetOrSetJSON[*MACHistoryQueryResult](ctx, s.cache, cacheKey, s.perfCacheTTL(), func() (*MACHistoryQueryResult, error) {
 				return s.queryDeviceHistoryFromDB(ctx, req)
 			})
-			if err == nil {
-				return &cached, nil
-			}
-			applogger.Warnf("[MAC缓存] device-history 走直查: %v", err)
 		}
+		applogger.Warnf("[MAC缓存] device-history 缓存键构造失败走直查: %v", keyErr)
 	}
 	return s.queryDeviceHistoryFromDB(ctx, req)
 }
@@ -548,7 +547,7 @@ func (s *macHistoryQueryServiceImpl) QueryHistory(ctx context.Context, req *MACH
 
 	// 默认值
 	if req.Current < 1 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize < 1 {
 		req.PageSize = 20
@@ -828,18 +827,16 @@ func (s *macHistoryQueryServiceImpl) getLongOccupancyThreshold(ctx context.Conte
 // 输出明细（每个MAC×端口的停留时长+flapping计数）+Top-N（按MAC长期占用Top+按端口热门连接Top）
 func (s *macHistoryQueryServiceImpl) QueryConnectionStats(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error) {
 	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
-	if s.dataCache != nil {
-		var cached ConnectionStatsResponse
+	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON——透传 err 为 DB 查询错误
+	//（provider 层读错误吞为 miss、写失败仅 warn）；TTL s.perfCacheTTL() 不变
+	if s.cache != nil {
 		cacheKey, keyErr := BuildMACQueryCacheKey("stats", req)
 		if keyErr == nil {
-			err := s.dataCache.GetOrSet(ctx, cacheKey, &cached, s.perfCacheTTL(), func() (interface{}, error) {
+			return base.GetOrSetJSON[*ConnectionStatsResponse](ctx, s.cache, cacheKey, s.perfCacheTTL(), func() (*ConnectionStatsResponse, error) {
 				return s.queryConnectionStatsFromDB(ctx, req)
 			})
-			if err == nil {
-				return &cached, nil
-			}
-			applogger.Warnf("[MAC缓存] stats 走直查: %v", err)
 		}
+		applogger.Warnf("[MAC缓存] stats 缓存键构造失败走直查: %v", keyErr)
 	}
 	return s.queryConnectionStatsFromDB(ctx, req)
 }

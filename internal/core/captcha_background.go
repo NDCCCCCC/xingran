@@ -21,6 +21,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/captcha"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -143,7 +144,7 @@ func (s *CaptchaBackgroundService) GetRandomEnabled(ctx context.Context, shape m
 	var backgrounds []*models.CaptchaBackground
 
 	// 先尝试从缓存获取
-	cacheKey := fmt.Sprintf("captcha:bg:list:%s:%d", shape, difficulty)
+	cacheKey := fmt.Sprintf(constants.CaptchaBgListKeyFormat, shape, difficulty)
 	if cached, err := s.cache.Get(ctx, cacheKey); err == nil && cached != "" {
 		if err := json.Unmarshal([]byte(cached), &backgrounds); err == nil && len(backgrounds) > 0 {
 			return backgrounds[rand.Intn(len(backgrounds))], nil
@@ -162,8 +163,8 @@ func (s *CaptchaBackgroundService) GetRandomEnabled(ctx context.Context, shape m
 		return nil, fmt.Errorf("查询背景图失败: %w", err)
 	}
 
-	// 如果精确匹配没有结果，尝试通过 allowedShapes 匹配
-	if len(backgrounds) == 0 {
+	// 如果精确匹配没有结果，尝试通过 allowedShapes 匹配(PG 专属语法)
+	if len(backgrounds) == 0 && s.db.Type == "postgres" {
 		query = s.db.GetDB().
 			Where("status = ?", models.CaptchaBgEnabled).
 			Where("difficulty_level = ?", difficulty).
@@ -240,7 +241,7 @@ func (s *CaptchaBackgroundService) preGenerateForConfig(ctx context.Context, sha
 		return nil
 	}
 
-	poolPrefix := fmt.Sprintf("captcha:cache:pool:%s:%d", shape, difficulty)
+	poolPrefix := fmt.Sprintf(constants.CaptchaCachePoolPrefixFormat, shape, difficulty)
 	poolSize := s.config.CachePoolSize
 	counterKey := poolPrefix + ":counter"
 
@@ -307,7 +308,7 @@ func (s *CaptchaBackgroundService) preGenerateForConfig(ctx context.Context, sha
 
 // GetFromCachePool 从缓存池获取验证码
 func (s *CaptchaBackgroundService) GetFromCachePool(ctx context.Context, shape string, difficulty int) (map[string]interface{}, error) {
-	poolPrefix := fmt.Sprintf("captcha:cache:pool:%s:%d", shape, difficulty)
+	poolPrefix := fmt.Sprintf(constants.CaptchaCachePoolPrefixFormat, shape, difficulty)
 	counterKey := poolPrefix + ":counter"
 	poolSize := s.config.CachePoolSize
 
@@ -363,6 +364,9 @@ func (s *CaptchaBackgroundService) validateFile(fileName string, fileSize int64)
 
 	// 检查文件扩展名
 	ext := filepath.Ext(fileName)
+	if ext == "" {
+		return fmt.Errorf("不支持的文件格式: 文件名缺少扩展名")
+	}
 	ext = ext[1:] // 去掉点
 	allowed := false
 	for _, format := range s.config.AllowedFormats {

@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ruoyi-next/rpa-worker/internal/config"
-	"github.com/ruoyi-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/config"
+	"github.com/xingran-next/rpa-worker/internal/logger"
 )
 
 // Page 浏览器页面接口

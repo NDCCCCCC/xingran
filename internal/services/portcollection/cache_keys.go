@@ -5,7 +5,7 @@ package portcollection
 // 命名规则: `port:write:<sub>:<suffix>`  (%s = port_id / batch_id)
 //
 // Redis 前缀处理 (CLAUDE.md Cache Key Prefix Handling):
-//   - 实际 Redis key 会自动加 `ruoyi:` 前缀,本文件定义的 key 是"逻辑键"
+//   - 实际 Redis key 会自动加 `xingran:` 前缀,本文件定义的 key 是"逻辑键"
 //   - 调用 cache.Set(ctx, key, ...) 时,直接传本文件的 key 即可,不要手动加前缀
 //
 // MVP 演进 (D-10 锁定):

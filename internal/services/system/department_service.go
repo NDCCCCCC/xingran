@@ -7,6 +7,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -410,10 +411,22 @@ func (s *departmentService) fillLeaderInfo(ctx context.Context, depts []models.D
 		return
 	}
 
+	// sys_dept.leader 字段目前无 UUID 约束，种子数据可能存用户名等非 UUID 值，
+	// 过滤后再查 sys_user.id 防止 22P02 (invalid input syntax for type uuid)
+	var validLeaderIDs []string
+	for _, id := range leaderIDs {
+		if constants.UUIDPattern.MatchString(id) {
+			validLeaderIDs = append(validLeaderIDs, id)
+		}
+	}
+	if len(validLeaderIDs) == 0 {
+		return
+	}
+
 	var leaders []models.User
 	if err := s.db.WithContext(ctx).
 		Select("id, username, nickname").
-		Where("id IN ?", leaderIDs).
+		Where("id IN ?", validLeaderIDs).
 		Find(&leaders).Error; err != nil {
 		return
 	}

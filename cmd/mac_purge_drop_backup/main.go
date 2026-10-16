@@ -33,7 +33,10 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		applogger.Debugf("[drop_backup] .env 未加载: %v", err)
 	}
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		panic("加载配置失败: " + err.Error())
+	}
 	dbConn, err := db.NewDatabase(&cfg.Database)
 	if err != nil {
 		applogger.Errorf("[drop_backup] DB 连接失败: %v", err)

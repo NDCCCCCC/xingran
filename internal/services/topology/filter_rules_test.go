@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/test/fixtures"
-	"gorm.io/driver/sqlite"
+	"github.com/ruoyi-next/ruoyi-go-backend/tests/fixtures"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 

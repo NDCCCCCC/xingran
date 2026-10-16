@@ -7,6 +7,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -172,7 +173,7 @@ func (s *DutyScheduleService) GetDutyScheduleList(ctx context.Context, req *Duty
 	}
 	if req.EndDate != nil && *req.EndDate != "" {
 		if endDate, err := time.Parse("2006-01-02", *req.EndDate); err == nil {
-			query = query.Where("schedule_date <= ?", endDate)
+			query = query.Where("schedule_date <= ?", endDate.AddDate(0, 0, 1))
 		}
 	}
 	if req.DutyType != nil && *req.DutyType != "" {
@@ -200,7 +201,7 @@ func (s *DutyScheduleService) GetDutyScheduleList(ctx context.Context, req *Duty
 
 	// 分页查询
 	if req.Current == 0 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize == 0 {
 		req.PageSize = 20

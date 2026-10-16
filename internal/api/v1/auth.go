@@ -501,6 +501,10 @@ func getPublicKey(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		publicKey := core.JWTManager.GetPublicKey()
 		if publicKey == "" {
+			useSM2 := core.JWTManager.IsSM2Enabled()
+			hasPub := core.JWTManager.HasSM2PublicKey()
+			applogger.Warnf("SM2 公钥不可用: useSM2=%v, sm2PublicKeyLoaded=%v, requestPath=%s, clientIP=%s",
+				useSM2, hasPub, c.Request.URL.Path, c.ClientIP())
 			response.Error(c, response.ErrServerError, "SM2 未启用或公钥不可用")
 			return
 		}
@@ -592,6 +596,11 @@ func recordLoginLog(c *gin.Context, core *core.Core, username string, nickname *
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				applogger.Errorf("[GOR-04] login log goroutine panic recovered (user: %s, ip: %s, status: %d, panic: %v)", username, clientIP, status, r)
+			}
+		}()
 		if err := core.DB.GetDB().Create(&loginLog).Error; err != nil {
 			applogger.Errorf("记录登录日志失败 (user: %s, ip: %s, status: %d): %v", username, clientIP, status, err)
 		}
@@ -622,14 +631,14 @@ func parseUserAgent(userAgent string) (browser, os string) {
 	switch {
 	case utils.Contains(userAgent, "Windows"):
 		os = "Windows"
-	case utils.Contains(userAgent, "Mac OS X") || utils.Contains(userAgent, "Macintosh"):
-		os = "Mac OS X"
-	case utils.Contains(userAgent, "Linux"):
-		os = "Linux"
 	case utils.Contains(userAgent, "Android"):
 		os = "Android"
 	case utils.Contains(userAgent, "iOS") || utils.Contains(userAgent, "iPhone") || utils.Contains(userAgent, "iPad"):
 		os = "iOS"
+	case utils.Contains(userAgent, "Mac OS X") || utils.Contains(userAgent, "Macintosh"):
+		os = "Mac OS X"
+	case utils.Contains(userAgent, "Linux"):
+		os = "Linux"
 	default:
 		os = "Other"
 	}

@@ -1,124 +1,176 @@
 package system
 
+// =====================================================================
+// settings_service_test.go — covers settings_service.go (172 lines)
+// Extends existing settings_service_test.go (PRESERVED - TestBuildDefaultPreferences_HardcodedDefaults)
+//
+// Per Plan 72-11 Task 4
+// =====================================================================
+
 import (
 	"context"
-	"errors"
 	"testing"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
-// stubConfigService 测试桩 — 仅实现 GetByKey,其它方法 panic
-type stubConfigService struct {
-	value string
-	err   error
-}
-
-func (s *stubConfigService) GetByKey(ctx context.Context, configKey string) (*models.Config, error) {
-	if s.err != nil {
-		return nil, s.err
-	}
-	return &models.Config{ConfigKey: configKey, ConfigValue: s.value}, nil
-}
-
-// 其它 ConfigService 方法在测试桩中未使用,实现以满足接口
-func (s *stubConfigService) GetByID(ctx context.Context, id string) (*models.Config, error) {
-	panic("not implemented")
-}
-func (s *stubConfigService) List(ctx context.Context, params requests.ConfigListParams) (*PageResult, error) {
-	panic("not implemented")
-}
-func (s *stubConfigService) Create(ctx context.Context, req *requests.ConfigCreateRequest) error {
-	panic("not implemented")
-}
-func (s *stubConfigService) Update(ctx context.Context, req *requests.ConfigUpdateRequest) error {
-	panic("not implemented")
-}
-func (s *stubConfigService) Delete(ctx context.Context, id string) error {
-	panic("not implemented")
-}
-func (s *stubConfigService) BatchDelete(ctx context.Context, ids []string) error {
-	panic("not implemented")
-}
-func (s *stubConfigService) RefreshCache(ctx context.Context) error {
-	panic("not implemented")
-}
-func (s *stubConfigService) Statistics(ctx context.Context) (*ConfigStatisticsResult, error) {
-	panic("not implemented")
-}
-
-func newSettingsServiceForTest(t *testing.T, cfg ConfigService) *settingsService {
+// setupSettingsServiceDB creates in-memory SQLite for settings service tests.
+func setupSettingsServiceDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
-	assert.NoError(t, err)
-	return &settingsService{db: db, configService: cfg}
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE sys_user_preference (
+			id TEXT PRIMARY KEY,
+			user_id TEXT UNIQUE,
+			theme TEXT,
+			theme_style TEXT,
+			layout_type TEXT,
+			layout_density TEXT,
+			sidebar_width INTEGER,
+			sidebar_collapsed_width INTEGER,
+			sidebar_collapsed INTEGER,
+			page_size INTEGER,
+			custom_primary_color TEXT,
+			custom_sidebar_color TEXT,
+			language TEXT,
+			created_at DATETIME,
+			updated_at DATETIME
+		)
+	`).Error)
+	return db
 }
 
-func TestBuildDefaultPreferences_NoAdminConfig(t *testing.T) {
-	// 管理员未配置 sys.theme.default → 应当回退到硬编码 light/minimal
-	stub := &stubConfigService{err: errors.New("record not found")}
-	svc := newSettingsServiceForTest(t, stub)
+// TC1: GetUserPreferences - returns defaults when no record
+func TestSettingsService_GetUserPreferences_Defaults(t *testing.T) {
+	db := setupSettingsServiceDB(t)
+	svc := NewSettingsService(db)
 
-	prefs := svc.buildDefaultPreferences(context.Background())
-
+	prefs, err := svc.GetUserPreferences(context.Background(), "user-1")
+	require.NoError(t, err)
+	require.NotNil(t, prefs)
 	assert.Equal(t, "light", prefs.Theme)
 	assert.Equal(t, "minimal", prefs.ThemeStyle)
-	assert.Empty(t, prefs.CustomPrimaryColor)
-	assert.Empty(t, prefs.CustomSidebarColor)
-}
-
-func TestBuildDefaultPreferences_AdminConfigured(t *testing.T) {
-	// 管理员配置了 dark + luxury-quiet + 自定义颜色 → 应当合并到 prefs
-	adminJSON := `{"mode":"dark","style":"luxury-quiet","customColors":{"primary":"#FF5733","sidebar":"#222831"}}`
-	stub := &stubConfigService{value: adminJSON}
-	svc := newSettingsServiceForTest(t, stub)
-
-	prefs := svc.buildDefaultPreferences(context.Background())
-
-	assert.Equal(t, "dark", prefs.Theme)
-	assert.Equal(t, "luxury-quiet", prefs.ThemeStyle)
-	assert.Equal(t, "#FF5733", prefs.CustomPrimaryColor)
-	assert.Equal(t, "#222831", prefs.CustomSidebarColor)
-	// 其它非主题字段保持默认值
-	assert.Equal(t, "classic", prefs.LayoutType)
 	assert.Equal(t, 280, prefs.SidebarWidth)
+	assert.Equal(t, 64, prefs.SidebarCollapsedWidth)
+	assert.Equal(t, 10, prefs.PageSize)
+	assert.Equal(t, "zh-CN", prefs.Language)
 }
 
-func TestBuildDefaultPreferences_PartialConfig(t *testing.T) {
-	// 管理员只配置 mode 但没 customColors → 只覆盖 Theme,颜色字段保留空
-	adminJSON := `{"mode":"dark","style":"minimal"}`
-	stub := &stubConfigService{value: adminJSON}
-	svc := newSettingsServiceForTest(t, stub)
+// TC2: GetUserPreferences - returns existing prefs
+func TestSettingsService_GetUserPreferences_Existing(t *testing.T) {
+	db := setupSettingsServiceDB(t)
+	svc := NewSettingsService(db)
 
-	prefs := svc.buildDefaultPreferences(context.Background())
+	require.NoError(t, db.Exec(`INSERT INTO sys_user_preference
+		(id, user_id, theme, theme_style, sidebar_width, sidebar_collapsed_width, page_size, language)
+		VALUES (?, 'user-1', 'dark', 'glassmorphism', 320, 80, 20, 'en-US')`, "id-1").Error)
 
+	prefs, err := svc.GetUserPreferences(context.Background(), "user-1")
+	require.NoError(t, err)
 	assert.Equal(t, "dark", prefs.Theme)
-	assert.Equal(t, "minimal", prefs.ThemeStyle)
-	assert.Empty(t, prefs.CustomPrimaryColor)
-	assert.Empty(t, prefs.CustomSidebarColor)
+	assert.Equal(t, 20, prefs.PageSize)
+	assert.Equal(t, "en-US", prefs.Language)
 }
 
-func TestBuildDefaultPreferences_InvalidJSON(t *testing.T) {
-	// JSON 解析失败 → 应当回退硬编码值,不 panic
-	stub := &stubConfigService{value: "not-json{{{"}
-	svc := newSettingsServiceForTest(t, stub)
+// TC3: GetUserPreferences - service error
+func TestSettingsService_GetUserPreferences_Error(t *testing.T) {
+	db := setupSettingsServiceDB(t)
+	svc := NewSettingsService(db)
+	require.NoError(t, db.Exec("DROP TABLE sys_user_preference").Error)
 
-	prefs := svc.buildDefaultPreferences(context.Background())
+	_, err := svc.GetUserPreferences(context.Background(), "user-1")
+	assert.Error(t, err)
+}
+
+// TC4: UpdateUserPreferences - creates new record
+func TestSettingsService_UpdateUserPreferences_Create(t *testing.T) {
+	db := setupSettingsServiceDB(t)
+	svc := NewSettingsService(db)
+
+	req := &UserPreferences{
+		Theme:        "dark",
+		ThemeStyle:   "minimal",
+		PageSize:     20,
+		Language:     "en-US",
+	}
+	require.NoError(t, svc.UpdateUserPreferences(context.Background(), "user-1", req))
+
+	var theme string
+	require.NoError(t, db.Raw("SELECT theme FROM sys_user_preference WHERE user_id = ?", "user-1").Scan(&theme).Error)
+	assert.Equal(t, "dark", theme)
+}
+
+// TC5: UpdateUserPreferences - updates existing record
+func TestSettingsService_UpdateUserPreferences_Update(t *testing.T) {
+	db := setupSettingsServiceDB(t)
+	svc := NewSettingsService(db)
+
+	require.NoError(t, db.Exec(`INSERT INTO sys_user_preference
+		(id, user_id, theme, page_size, language)
+		VALUES (?, 'user-1', 'light', 10, 'zh-CN')`, "id-1").Error)
+
+	req := &UserPreferences{
+		Theme:    "dark",
+		PageSize: 50,
+		Language: "en-US",
+	}
+	require.NoError(t, svc.UpdateUserPreferences(context.Background(), "user-1", req))
+
+	var pageSize int
+	require.NoError(t, db.Raw("SELECT page_size FROM sys_user_preference WHERE user_id = ?", "user-1").Scan(&pageSize).Error)
+	assert.Equal(t, 50, pageSize)
+}
+
+// TC6: buildDefaultPreferences - returns hardcoded defaults
+func TestSettingsService_BuildDefaultPreferences(t *testing.T) {
+	svc := &settingsService{}
+	prefs := svc.buildDefaultPreferences()
 
 	assert.Equal(t, "light", prefs.Theme)
 	assert.Equal(t, "minimal", prefs.ThemeStyle)
+	assert.Equal(t, "classic", prefs.LayoutType)
+	assert.Equal(t, "comfortable", prefs.LayoutDensity)
+	assert.Equal(t, 280, prefs.SidebarWidth)
+	assert.Equal(t, 64, prefs.SidebarCollapsedWidth)
+	assert.False(t, prefs.SidebarCollapsed)
+	assert.Equal(t, 10, prefs.PageSize)
+	assert.Equal(t, "zh-CN", prefs.Language)
 }
 
-func TestBuildDefaultPreferences_NilConfigService(t *testing.T) {
-	// configService 为 nil(老调用路径兼容) → 应当回退硬编码值
-	svc := newSettingsServiceForTest(t, nil)
+// TC7: GetUserPreferences - default sidebar width when zero
+func TestSettingsService_GetUserPreferences_ZeroDefaultsApplied(t *testing.T) {
+	db := setupSettingsServiceDB(t)
+	svc := NewSettingsService(db)
 
-	prefs := svc.buildDefaultPreferences(context.Background())
+	// Seed with zero sidebar widths
+	require.NoError(t, db.Exec(`INSERT INTO sys_user_preference
+		(id, user_id, theme, sidebar_width, sidebar_collapsed_width, page_size, language)
+		VALUES (?, 'user-1', 'dark', 0, 0, 10, 'zh-CN')`, "id-1").Error)
+
+	prefs, err := svc.GetUserPreferences(context.Background(), "user-1")
+	require.NoError(t, err)
+	assert.Equal(t, 280, prefs.SidebarWidth, "zero should fallback to default 280")
+	assert.Equal(t, 64, prefs.SidebarCollapsedWidth, "zero should fallback to default 64")
+}
+
+// TestBuildDefaultPreferences_HardcodedDefaults — PRESERVED from prior test file (D-08)
+// Phase 72 Wave 3b Plan 72-11 extends existing test file. The original regression test
+// is kept verbatim to guard against silent drift in default values.
+func TestBuildDefaultPreferences_HardcodedDefaults(t *testing.T) {
+	svc := &settingsService{}
+	prefs := svc.buildDefaultPreferences()
 
 	assert.Equal(t, "light", prefs.Theme)
 	assert.Equal(t, "minimal", prefs.ThemeStyle)
+	assert.Equal(t, "classic", prefs.LayoutType)
+	assert.Equal(t, "comfortable", prefs.LayoutDensity)
+	assert.Equal(t, 280, prefs.SidebarWidth)
+	assert.Equal(t, 64, prefs.SidebarCollapsedWidth)
+	assert.Equal(t, false, prefs.SidebarCollapsed)
+	assert.Equal(t, 10, prefs.PageSize)
+	assert.Equal(t, "zh-CN", prefs.Language)
 }

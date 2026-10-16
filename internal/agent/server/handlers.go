@@ -276,7 +276,7 @@ func (h *AgentHandler) ListAccounts(c *gin.Context) {
 func (h *AgentHandler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",
-		"service": "ruoyi-vm-agent",
+		"service": "xingran-vm-agent",
 	})
 }
 
@@ -296,13 +296,6 @@ func (h *AgentHandler) Register(c *gin.Context) {
 			"code":  errCodeInternal,
 		})
 		return
-	}
-
-	// 如果请求中提供了 agent_id 和 vm_id，使用它们注册
-	// 否则使用 authenticator 中已有的配置
-	if req.AgentID != "" && req.VMID != "" {
-		// TODO: 实现动态更新 agent_id 和 vm_id 的逻辑
-		// 当前使用 authenticator 中的配置
 	}
 
 	// 调用后端注册 API

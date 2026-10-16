@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	pkgquery "github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -92,13 +94,10 @@ func NewLocationAliasService(db *gorm.DB) LocationAliasService {
 
 // List 查询 alias 列表(分页 + JOIN sys_dept 取 dept_name)
 func (s *locationAliasServiceImpl) List(ctx context.Context, pageNum, pageSize int) (*PageResult, error) {
-	if pageNum <= 0 {
-		pageNum = DefaultCurrent
-	}
-	if pageSize <= 0 {
-		pageSize = DefaultPageSize
-	}
-	pageSize = clampPageSize(pageSize)
+	// V130R-09 D-03-3: 分页归一化统一走 pkg/query 单一权威出口
+	// (cap=MaxOptionsPageSize,ops 表格 list 口径不变;pkgquery 别名消除
+	// 下方局部 query 变量遮蔽)。
+	pageNum, pageSize = pkgquery.NormalizePaginationWithMax(pageNum, pageSize, constants.MaxOptionsPageSize)
 
 	var total int64
 	var list []LocationAliasListItem

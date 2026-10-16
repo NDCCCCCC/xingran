@@ -70,7 +70,7 @@ func (s *APISenderService) Send(ctx context.Context, configID string, msg *APIMe
 	}
 
 	// 检查配置状态
-	if config.Status != 0 {
+	if config.Status != int(models.NotificationConfigStatusNormal) {
 		return &APISendResult{
 			Success: false,
 			Message: "API配置未启用",
@@ -297,7 +297,7 @@ func (s *APISenderService) setRequestHeaders(req *http.Request, config *models.A
 
 	// 设置User-Agent
 	if req.Header.Get("User-Agent") == "" {
-		req.Header.Set("User-Agent", "RuoYi-Notification/1.0")
+		req.Header.Set("User-Agent", "Xingran-Notification/1.0")
 	}
 }
 

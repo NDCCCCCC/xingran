@@ -3,7 +3,6 @@ package asset
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -11,10 +10,10 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -195,9 +194,10 @@ type ReconciliationService interface {
 type reconciliationServiceImpl struct {
 	db *gorm.DB
 
-	// cache R4 启用:GetByWorkstation 通过 CacheProvider.GetOrSet 做 5min TTL 缓存
+	// cache R4 启用:GetByWorkstation 通过 base.GetOrSetJSON 做 5min TTL 缓存
 	// 与 R1 MV 刷新节流对齐 (D-A4-03)。可为 nil(单元测试场景)→ 直查 DB。
-	cache cache.Cache
+	// Phase 103 CONV-02 (D-103-1/D-103-3): cache.Cache → base.CacheProvider
+	cache base.CacheProvider
 
 	// matcher 例外规则匹配器(Phase 45 R4 / D-A4-02 注入)
 	//
@@ -219,11 +219,14 @@ type reconciliationServiceImpl struct {
 // mvExists 显式初始化为 -1(未探测),避免默认零值 0 导致首次查询跳过 probe。
 //
 // R4 (Phase 45) 改造:
-//   - 第二个参数 c (cache.Cache) 注入以支持 GetByWorkstation 的 5min TTL 缓存
+//   - 第二个参数 c 注入以支持 GetByWorkstation 的 5min TTL 缓存
 //   - 第三个参数 matcher 例外规则匹配器(Phase 45 R4 / D-A4-02),nil 时跳过 per-asset 匹配
 //   - 现有调用方 (router.go, reconciliation_router.go) 必须同步更新
 //   - 传 nil 时 GetByWorkstation 降级为直查 DB(单元测试友好)
-func NewReconciliationService(db *gorm.DB, c cache.Cache, matcher ReconciliationExceptionService) ReconciliationService {
+//
+// Phase 103 CONV-02 (D-103-2): c cache.Cache → base.CacheProvider,
+// 由 router/core 层 system.NewCacheProvider(core.DataCacheService) 注入 (D-103-3)。
+func NewReconciliationService(db *gorm.DB, c base.CacheProvider, matcher ReconciliationExceptionService) ReconciliationService {
 	return &reconciliationServiceImpl{db: db, cache: c, matcher: matcher, mvExists: -1}
 }
 
@@ -240,9 +243,9 @@ func (s *reconciliationServiceImpl) SetMatcher(matcher ReconciliationExceptionSe
 // Refresh 手动刷新物化视图并立即触发异常检测(Phase 45 R5 / D-R5-A3-01)
 //
 // 行为:
-//   1. REFRESH MATERIALIZED VIEW reconciliation_normalized(非 CONCURRENTLY,确保同步生效)
-//   2. 立即调一次 DetectLayer3,绕过 5min/6min cron 等待
-//   3. 返回 inserted/skipped/skippedSilence/skippedThrottle 计数
+//  1. REFRESH MATERIALIZED VIEW reconciliation_normalized(非 CONCURRENTLY,确保同步生效)
+//  2. 立即调一次 DetectLayer3,绕过 5min/6min cron 等待
+//  3. 返回 inserted/skipped/skippedSilence/skippedThrottle 计数
 //
 // 用于运维/UAT 调试,避免等待 R1 cron 周期。
 //
@@ -295,16 +298,29 @@ func (s *reconciliationServiceImpl) Refresh(ctx context.Context) (int, int, int,
 
 // probeMaterializedView 检查 reconciliation_normalized 物化视图是否存在。
 //
-// 仅 PostgreSQL 需要探测(SQLite 测试用 view 模拟,MySQL 由 migration 168 直接跳过);
-// 使用 PG `to_regclass('schema.name')` 内置函数 — 返回 NULL 表示不存在,返回 oid 表示存在。
-// 安全:SELECT to_regclass 不写表,且非破坏性。
+// 仅 PostgreSQL 需要 PG `to_regclass('schema.name')` 内置函数 — 返回 NULL 表示
+// 不存在,返回 oid 表示存在。安全:SELECT to_regclass 不写表,且非破坏性。
+//
+// sqlite(glebarez 驱动 Dialector 名 "sqlite"):诚实探测 sqlite_master。
+// reconciliation_normalized 是 PG MATERIALIZED VIEW(归档迁移 168/176 创建,
+// sqlite 分支不执行,见 database.go sqlite 分支注释)— 此前对非 postgres 无条件
+// return true 基于"单测 setupTestDB 建 view"的假设,运行期文件库无视图时会误走
+// MV 路径,JOIN 报 no such table(reconciliation-sqlite-cast-400 第二层根因)。
+// 视图存在(单测形态 / sqlite bootstrap 补建)→ true;缺失 → false,ListExceptions 走设计内
+// fallback 降级路径(Warnf + 无 rn.* 列)。
 func (s *reconciliationServiceImpl) probeMaterializedView() bool {
 	if s.db == nil {
 		return false
 	}
 	if s.db.Dialector.Name() != "postgres" {
-		// SQLite 测试用 view 模拟,unit test 路径下 MV 等价物总存在(setupTestDB 建 view)
-		return true
+		var cnt int64
+		if err := s.db.Raw(
+			"SELECT COUNT(*) FROM sqlite_master WHERE type IN ('table','view') AND name = 'reconciliation_normalized'",
+		).Scan(&cnt).Error; err != nil {
+			applogger.Warnf("[reconciliation] MV probe(sqlite) SQL error: %v", err)
+			return false
+		}
+		return cnt > 0
 	}
 	var exists sql.NullString
 	if err := s.db.Raw("SELECT to_regclass('public.reconciliation_normalized')::text").Scan(&exists).Error; err != nil {
@@ -336,15 +352,30 @@ func (s *reconciliationServiceImpl) mvAvailable() bool {
 	return avail
 }
 
+// silenceExcludeFilter 返回 silence 默认过滤的 WHERE 片段(R3 / D-R3-A1-01)。
+//
+// 方言条件化 (2026-08-17, sqlite 缺表修复配套):
+//   - postgres:'silence' = ANY(text[]) 原生数组包含判定。
+//   - sqlite:无 ANY 函数(运行期报 "no such function: ANY");applied_actions 由
+//     sanitizeSQLiteModelDefaults 降为 text 列,pq.StringArray 以 "{a,b}" 字面量
+//     写入。等价判定:去花括号后逗号包裹 + LIKE '%,silence,%',避免子串误命中;
+//     NULL/空数组经 COALESCE 归一为 ',,' 不命中(正确:未 silence 的记录应显示)。
+func (s *reconciliationServiceImpl) silenceExcludeFilter() string {
+	if s.db != nil && s.db.Dialector.Name() == "sqlite" {
+		return "(',' || TRIM(COALESCE(sys_data_reconciliation.applied_actions, ''), '{}') || ',') NOT LIKE '%,silence,%'"
+	}
+	return "NOT ('silence' = ANY(sys_data_reconciliation.applied_actions))"
+}
+
 // exceptionListJoinSelect ListExceptions 的 SELECT 子句
 //
 // 关键设计:
 //   - "sys_data_reconciliation.*" 显式限定表名前缀,避免与 JOIN 表的列名冲突
 //   - a.devicesn AS asset_code —— 把 devicesn 别名为业务字段 asset_code,
 //     配合 ExceptionListItem.AssetCode 的 gorm column tag 让 GORM 自动 Scan
-//   - COALESCE(a.machine_ip::text, '') AS asset_ip —— machine_ip 是 inet 类型,
+//   - COALESCE(a.machine_ip::text, ”) AS asset_ip —— machine_ip 是 inet 类型,
 //     PG 强类型 inet 不能直接走 json Marshal,转 text 安全(SQLite 端 inet 即 TEXT,
-//     COALESCE(text, '') 在两库行为一致)
+//     COALESCE(text, ”) 在两库行为一致)
 //   - rn.physical_username / rn.ad_username —— 来自 reconciliation_normalized 物化视图
 //   - ru.username AS responsible_username —— sys_user.username 别名为 responsible_username
 //     匹配 ExceptionListItem.ResponsibleUsername 的 column tag
@@ -391,6 +422,71 @@ const exceptionListJoinClauseFallback = `
 LEFT JOIN ops_asset a ON a.id = sys_data_reconciliation.asset_id AND a.deleted_at IS NULL
 LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL`
 
+// ============================================================================
+// 方言感知片段方法(reconciliation-sqlite-cast-400,2026-08-18)
+//
+// 上方 const 是 PG 规范版,保留字面零改动(PG 语义/索引使用不受影响);
+// sqlite 不识别 `::` cast 词法(SQL logic error: unrecognized token: ":"),
+// 由以下方法按 Dialector 返回 sqlite 安全版本。模式与同模块
+// fix_suggestion_service.go userJoinOn() / 本文件 silenceExcludeFilter() 一致。
+// ============================================================================
+
+// exceptionListJoinSelectDialect 方言感知的 ListExceptions SELECT 子句(MV 路径)。
+//
+// sqlite 差异:COALESCE(CAST(a.machine_ip AS TEXT), ”) 替代 machine_ip::text
+// (sqlite 端该列即 TEXT,CAST 为双方言中立写法);rn.* 列无 cast 不受影响。
+func (s *reconciliationServiceImpl) exceptionListJoinSelectDialect() string {
+	if s.db != nil && s.db.Dialector.Name() == "postgres" {
+		return exceptionListJoinSelect
+	}
+	return `sys_data_reconciliation.*,
+		a.devicesn AS asset_code,
+		COALESCE(CAST(a.machine_ip AS TEXT), '') AS asset_ip,
+		rn.physical_username,
+		ru.username AS responsible_username,
+		rn.ad_username`
+}
+
+// exceptionListResponsibleUserJoinDialect 方言感知的 sys_user LEFT JOIN 片段。
+//
+// postgres: a.user_id(varchar) join sys_user.id(uuid) 必须 ::uuid 显式转换
+// (PG 强类型不会自动 cast,SQLSTATE 42883);cast 在非索引侧,不影响 sys_user.id 索引。
+// sqlite: 两列均 TEXT,直接等值比较。
+func (s *reconciliationServiceImpl) exceptionListResponsibleUserJoinDialect() string {
+	if s.db != nil && s.db.Dialector.Name() == "postgres" {
+		return "LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL"
+	}
+	return "LEFT JOIN sys_user ru ON ru.id = a.user_id AND ru.deleted_at IS NULL"
+}
+
+// exceptionListJoinSelectFallbackDialect 方言感知的降级 SELECT 子句(MV 缺失路径)。
+//
+// sqlite 差异:CAST(a.machine_ip AS TEXT) 替代 ::text;” 字面量两库均推断为
+// text,无需 ::text 定型。
+func (s *reconciliationServiceImpl) exceptionListJoinSelectFallbackDialect() string {
+	if s.db != nil && s.db.Dialector.Name() == "postgres" {
+		return exceptionListJoinSelectFallback
+	}
+	return `sys_data_reconciliation.*,
+		a.devicesn AS asset_code,
+		COALESCE(CAST(a.machine_ip AS TEXT), '') AS asset_ip,
+		'' AS physical_username,
+		ru.username AS responsible_username,
+		'' AS ad_username`
+}
+
+// exceptionListJoinClauseFallbackDialect 方言感知的降级 JOIN 子句(MV 缺失路径)。
+//
+// sqlite 差异:ru.id = a.user_id 直接等值(两列均 TEXT),无 ::uuid cast。
+func (s *reconciliationServiceImpl) exceptionListJoinClauseFallbackDialect() string {
+	if s.db != nil && s.db.Dialector.Name() == "postgres" {
+		return exceptionListJoinClauseFallback
+	}
+	return `
+LEFT JOIN ops_asset a ON a.id = sys_data_reconciliation.asset_id AND a.deleted_at IS NULL
+LEFT JOIN sys_user ru ON ru.id = a.user_id AND ru.deleted_at IS NULL`
+}
+
 // ListExceptions 列出对账异常
 //
 // 行为:
@@ -408,14 +504,7 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 	}
 
 	// 默认分页
-	current := params.Current
-	if current <= 0 {
-		current = 1
-	}
-	pageSize := params.PageSize
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	current, pageSize := query.NormalizePagination(params.Current, params.PageSize)
 
 	// 基础查询
 	// 关键修复:assetCode LIKE 过滤在 WHERE 子句里直接引用 `a.devicesn`,
@@ -452,11 +541,10 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 	// R3 / D-R3-A1-01 — silence 默认过滤(异常列表不显示 silence 记录)
 	//
 	// 用全限定列名 sys_data_reconciliation.applied_actions 避免 JOIN 时歧义;
-	// PG 原生 ANY() 数组操作符 + 'silence' = ANY(array) 在 PG 与 SQLite(text 列)
-	// 行为一致(SQLite 把 applied_actions 当 text,ANY 退化为子串匹配 — 实际测试
-	// 通过,因为 silence 值在数组里包含 'silence' 字符串)。
+	// ANY() 是 PG 数组方言,sqlite 下 applied_actions 为 text 列("{a,b}" 字面量),
+	// 需方言条件化(见 silenceExcludeFilter)。
 	if !params.ShowSilenced {
-		query = query.Where("NOT ('silence' = ANY(sys_data_reconciliation.applied_actions))")
+		query = query.Where(s.silenceExcludeFilter())
 	}
 
 	// Count(COUNT 不需要 JOIN 出来的列;基础查询 + 过滤已足够)
@@ -480,9 +568,9 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 		// 这里只追加 MV JOIN + SELECT。注意:不能再次 .Joins("LEFT JOIN ops_asset ..."),
 		// GORM Joins() 链式累加会导致重复 JOIN(不影响结果但污染 SQL)。
 		findQuery = query.
-			Select(exceptionListJoinSelect).
+			Select(s.exceptionListJoinSelectDialect()).
 			Joins("LEFT JOIN reconciliation_normalized rn ON rn.asset_id = a.id").
-			Joins("LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL")
+			Joins(s.exceptionListResponsibleUserJoinDialect())
 	} else {
 		applogger.Warnf("[reconciliation] reconciliation_normalized 物化视图缺失,异常列表查询降级 (无 physical_username / ad_username 字段)。请执行 migration_168 创建 MV 后重启服务")
 		// 全新 session,只含 filter WHERE,不累加前次 Joins()
@@ -506,23 +594,20 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 		}
 		// R3 / D-R3-A1-01 — silence 默认过滤(fallback 路径同步)
 		if !params.ShowSilenced {
-			filterQuery = filterQuery.Where("NOT ('silence' = ANY(sys_data_reconciliation.applied_actions))")
+			filterQuery = filterQuery.Where(s.silenceExcludeFilter())
 		}
 		findQuery = filterQuery.
-			Select(exceptionListJoinSelectFallback).
-			Joins(exceptionListJoinClauseFallback)
+			Select(s.exceptionListJoinSelectFallbackDialect()).
+			Joins(s.exceptionListJoinClauseFallbackDialect())
 	}
 
 	// 排序:白名单过滤;无显式排序则默认 detected_at DESC(操作员最关心"最新告警")
 	findQuery = base.ApplySort(findQuery, params.BaseListRequest, reconAllowedSortFields)
-	if findQuery.Statement.SQL.String() != "" {
-		// base.ApplySort 在 OrderByColumn 为空时不会追加 Order,这里手动判断
-		// 简化做法:始终先调用 ApplySort,然后无条件追加默认排序作为 fallback
-		// 但 GORM 多个 Order() 调用后者会覆盖前者,所以仅在未指定排序时追加
-		if params.OrderByColumn == "" {
-			findQuery = findQuery.Order("sys_data_reconciliation.detected_at DESC")
-		}
-	} else {
+	// v129-recheck WR-03: 旧守卫 findQuery.Statement.SQL.String() != "" 在查询
+	// 构建期恒为 ""（GORM 惰性构建 SQL,Find 时才填充）,属死分支——默认排序
+	// 实际走 else 无条件追加,显式排序时生成 ORDER BY 显式列, detected_at DESC
+	// 二级排序。对齐 workorder/base.go 模式: 仅无显式排序时补默认。
+	if params.OrderByColumn == "" {
 		findQuery = findQuery.Order("sys_data_reconciliation.detected_at DESC")
 	}
 
@@ -562,10 +647,11 @@ func (s *reconciliationServiceImpl) GetByID(ctx context.Context, id string) (*mo
 // ResolveException 标记异常为已解决(Phase 43 R2 / D-A4-04)
 //
 // 行为(详见接口注释):
-//   step 1: SELECT ... WHERE id=? AND deleted_at IS NULL → First
-//   step 2: 防御检查 — 若 resolved_at != nil → 返回 error(不允许重复 resolve)
-//   step 3: 构造 updates map(resolved_at=NOW, resolved_by=userID, resolution_note=note)
-//   step 4: db.Model(&rec).Updates(updates) — GORM 只 SET 包含的字段,避免覆盖其他字段
+//
+//	step 1: SELECT ... WHERE id=? AND deleted_at IS NULL → First
+//	step 2: 防御检查 — 若 resolved_at != nil → 返回 error(不允许重复 resolve)
+//	step 3: 构造 updates map(resolved_at=NOW, resolved_by=userID, resolution_note=note)
+//	step 4: db.Model(&rec).Updates(updates) — GORM 只 SET 包含的字段,避免覆盖其他字段
 //
 // 并发安全:
 //   - 防御 1:layer 2 SELECT resolved_at 检查 → 普通并发可拦截
@@ -665,7 +751,8 @@ type HealthScore struct {
 // AssetHealthItem 资产健康度条目(行内徽标数据源,UI-SPEC D-A4-02)
 //
 // IP 解析链 inline 实现 (D-A4-02 + strategy §4.4):
-//   asset.ip → workstation.ip → "unknown"
+//
+//	asset.ip → workstation.ip → "unknown"
 type AssetHealthItem struct {
 	AssetID         string   `json:"assetId"`
 	AssetCode       string   `json:"assetCode"`
@@ -710,31 +797,47 @@ func (s *reconciliationServiceImpl) GetByWorkstation(ctx context.Context, wsID s
 		return nil, errors.New("工位ID不能为空")
 	}
 
-	// 缓存命中短路
 	cacheKey := GetReconciliationHealthByWorkstationKey(wsID)
-	if s.cache != nil {
-		var cached ByWorkstationResponse
-		if err := s.cache.GetJSON(ctx, cacheKey, &cached); err == nil && cached.Workstation.ID != "" {
-			cached.Visible = false // service 单一职责,handler 重新注入
-			return &cached, nil
+	// cache == nil（单测场景）→ 直查 DB
+	if s.cache == nil {
+		resp, err := s.computeByWorkstation(ctx, wsID)
+		if err != nil {
+			return nil, err
 		}
+		resp.Visible = false
+		return resp, nil
 	}
+	return s.getByWorkstationWithCache(ctx, cacheKey, wsID)
+}
 
-	resp, err := s.computeByWorkstation(ctx, wsID)
+// getByWorkstationWithCache 读穿透缓存 wrapper (Phase 103 CONV-02)。
+//
+// 语义等价说明（WR-01/WR-04 review 修正后的准确口径）：
+//   - base.GetOrSetJSON 透传的错误只可能是 computeByWorkstation 的 DB 查询错误
+//     （provider 层读错误吞为 miss、写失败仅 warn 不阻断——D-103-7 由 provider
+//     内部保证），因此 err 直接一次传播，不重算（避免 DB 故障时 6 步聚合双跑）
+//   - 脏缓存防御：缓存命中但 Workstation.ID == "" 视为无效条目——失效该键后
+//     回源重建（等价原实现 compute 后 Set 覆写的自愈行为）
+func (s *reconciliationServiceImpl) getByWorkstationWithCache(ctx context.Context, cacheKey string, wsID string) (*ByWorkstationResponse, error) {
+	resp, err := base.GetOrSetJSON[*ByWorkstationResponse](ctx, s.cache, cacheKey, reconciliationHealthCacheTTL, func() (*ByWorkstationResponse, error) {
+		return s.computeByWorkstation(ctx, wsID)
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	// 写缓存
-	if s.cache != nil {
-		if data, mErr := json.Marshal(resp); mErr == nil {
-			if setErr := s.cache.Set(ctx, cacheKey, data, reconciliationHealthCacheTTL); setErr != nil {
-				applogger.Warnf("[reconciliation] GetByWorkstation cache set failed wsID=%s: %v", wsID, setErr)
-			}
+	if resp != nil && resp.Workstation.ID == "" {
+		// 脏缓存（原手写 cached.Workstation.ID != "" 检查的等价迁移）：
+		// 失效脏条目 + 回源重建，恢复原 Set 覆写的自愈语义
+		applogger.Warnf("[reconciliation] GetByWorkstation 脏缓存回源 wsID=%s", wsID)
+		base.Invalidate(ctx, s.cache, []string{cacheKey}, "Reconciliation")
+		resp, err = s.computeByWorkstation(ctx, wsID)
+		if err != nil {
+			return nil, err
 		}
 	}
-
-	resp.Visible = false
+	if resp != nil {
+		resp.Visible = false // service 单一职责,handler 重新注入
+	}
 	return resp, nil
 }
 
@@ -763,9 +866,9 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 
 	// b) 关联资产 ID 列表
 	type assetRow struct {
-		ID         string
-		Devicesn   string
-		IP         *string
+		ID       string
+		Devicesn string
+		IP       *string
 	}
 	// 关联资产通过 ops_workstation_device 中间表(已有 workstation_id + asset_id 外键,
 	// 两列均为 VARCHAR(36) — 存 UUID 字符串,与 ops_asset.id (uuid) 需显式 cast 兼容 PG 强类型)。
@@ -773,12 +876,21 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 	// (R1 已知约束:物理链路 sys_port_mac→sys_info_point→sys_workstation_info_point 未落地,
 	//  R4 用 ops_workstation_device 作工位-资产关联的可靠路径)。
 	// 沿用 workstation_service List 中 primary_device_serial 子查询的 cast 模式 (::text)。
+	// 方言分支(reconciliation-sqlite-cast-400):PG 保留 ::text(零改动);
+	// sqlite 不识别 `::` 词法(unrecognized token ':'),machine_ip/id 均 TEXT,
+	// 用 CAST(x AS TEXT) 中立写法。
+	ipExpr := "a.machine_ip::text AS ip"
+	wsdJoin := "INNER JOIN ops_workstation_device wsd ON wsd.asset_id = a.id::text AND wsd.deleted_at IS NULL"
+	if s.db.Dialector.Name() != "postgres" {
+		ipExpr = "CAST(a.machine_ip AS TEXT) AS ip"
+		wsdJoin = "INNER JOIN ops_workstation_device wsd ON wsd.asset_id = CAST(a.id AS TEXT) AND wsd.deleted_at IS NULL"
+	}
 	var assets []assetRow
 	if err := s.db.WithContext(ctx).
 		Table("ops_asset a").
-		Select("a.id, a.devicesn, a.machine_ip::text AS ip").
-		Joins("INNER JOIN ops_workstation_device wsd ON wsd.asset_id = a.id::text AND wsd.deleted_at IS NULL").
-	Where("wsd.workstation_id = ? AND a.deleted_at IS NULL", wsID).
+		Select("a.id, a.devicesn, "+ipExpr).
+		Joins(wsdJoin).
+		Where("wsd.workstation_id = ? AND a.deleted_at IS NULL", wsID).
 		Scan(&assets).Error; err != nil {
 		return nil, fmt.Errorf("查询工位关联资产失败: %w", err)
 	}
@@ -1005,10 +1117,16 @@ func (s *reconciliationServiceImpl) fetchWorkstationDeviceIPs(ctx context.Contex
 		return nil
 	}
 	var ips []string
+	// 方言分支(reconciliation-sqlite-cast-400):PG 保留 id::text(零改动);
+	// sqlite 用 CAST(x AS TEXT) 中立写法(不识别 `::` 词法)。
+	networkDeviceJoin := "JOIN sys_network_device ON sys_network_device.id::text = ops_info_points.device_id"
+	if s.db.Dialector.Name() != "postgres" {
+		networkDeviceJoin = "JOIN sys_network_device ON CAST(sys_network_device.id AS TEXT) = ops_info_points.device_id"
+	}
 	if err := s.db.WithContext(ctx).
 		Table("ops_info_points").
 		Distinct("sys_network_device.ip_address").
-		Joins("JOIN sys_network_device ON sys_network_device.id::text = ops_info_points.device_id").
+		Joins(networkDeviceJoin).
 		Where("ops_info_points.workstation_id = ? AND ops_info_points.deleted_at IS NULL "+
 			"AND sys_network_device.deleted_at IS NULL "+
 			"AND sys_network_device.ip_address IS NOT NULL AND sys_network_device.ip_address != ''", wsID).

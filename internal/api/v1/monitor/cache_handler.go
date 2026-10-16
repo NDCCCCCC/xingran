@@ -11,6 +11,7 @@ import (
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -48,13 +49,7 @@ func (h *CacheHandler) WithCore(core *core.Core) *CacheHandler {
 
 // setPaginationDefaults 设置分页默认值
 func (h *CacheHandler) setPaginationDefaults(current, pageSize int) (int, int) {
-	if current <= 0 {
-		current = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-	return current, pageSize
+	return query.NormalizePagination(current, pageSize)
 }
 
 // ==================== 请求/响应类型 ====================
@@ -545,7 +540,7 @@ func (h *CacheHandler) TestCacheEndpoint(c *gin.Context) {
 
 // DebugRawKeys 调试端点：直接查询Redis中的所有原始键
 // @Summary 调试原始缓存键
-// @Description 查询Redis中所有原始键和ruoyi前缀的键，用于调试
+// @Description 查询Redis中所有原始键和xingran前缀的键，用于调试
 // @Tags 监控管理
 // @Accept json
 // @Produce json
@@ -561,13 +556,13 @@ func (h *CacheHandler) DebugRawKeys(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	allKeys, _ := h.core.Cache.Keys(ctx, "*")
-	ruoyiKeys, _ := h.core.Cache.Keys(ctx, "ruoyi:*")
+	xingranKeys, _ := h.core.Cache.Keys(ctx, "xingran:*")
 
 	response.Success(c, gin.H{
 		"totalKeys":     len(allKeys),
-		"ruoyiKeys":     len(ruoyiKeys),
+		"xingranKeys":     len(xingranKeys),
 		"allKeys":       allKeys,
-		"ruoyiKeysList": ruoyiKeys,
+		"xingranKeysList": xingranKeys,
 	})
 }
 

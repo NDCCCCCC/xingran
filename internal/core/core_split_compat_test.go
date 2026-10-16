@@ -20,7 +20,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -33,6 +33,9 @@ func newTestCoreForSplitCompat(t *testing.T) *Core {
 	t.Helper()
 	gormDB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
+	if sqlDB, err := gormDB.DB(); err == nil {
+		t.Cleanup(func() { _ = sqlDB.Close() })
+	}
 
 	noticeHub := websocket.NewNoticeHub()
 
@@ -84,7 +87,8 @@ func TestCoreSplit_FieldPromotionMatchesCoreInfra(t *testing.T) {
 }
 
 // minimalTestConfig 返回一个能让 New() 成功执行的最小配置
-// New() 内部会调用 security.NewJWTManager,该函数要求 SecretKey ≥16 字节
+// New() 内部会调用 security.NewJWTManager (要求 SecretKey ≥16 字节) 与
+// initSM4Cipher (要求 SM4Key 为 base64 编码的 16 字节,空值会中止启动)。
 func minimalTestConfig() *config.Config {
 	return &config.Config{
 		JWT: config.JWTConfig{
@@ -92,6 +96,10 @@ func minimalTestConfig() *config.Config {
 			AccessKeyExpire:  3600,
 			RefreshKeyExpire: 86400,
 			Issuer:           "test",
+		},
+		Security: config.SecurityConfig{
+			// base64("test-key-16-byte") — 16 字节,非仓库默认值以避免 SECURITY WARNING 刷屏
+			SM4Key: "dGVzdC1rZXktMTYtYnl0ZQ==",
 		},
 	}
 }

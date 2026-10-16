@@ -47,7 +47,10 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		applogger.Debugf("[diag] .env 未加载: %v", err)
 	}
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		panic("加载配置失败: " + err.Error())
+	}
 	applogger.Info("=================================================================")
 	applogger.Info("= diag_4f001_red 启动: 排查工位 4F001 / 设备 1CZ151008W 红点")
 	applogger.Infof("= 数据库: PostgreSQL @ %s:%d/%s", cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName)

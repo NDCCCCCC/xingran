@@ -1,6 +1,6 @@
 # 数据库迁移目录
 
-此目录包含 RuoYi-Next 项目的数据库迁移文件。
+此目录包含 XingRan-Next 项目的数据库迁移文件。
 
 ## 迁移策略
 
@@ -35,12 +35,12 @@ migrations/
 
 ### 1. 创建数据库
 ```bash
-createdb -U postgres ruoyi_next
+createdb -U postgres xingran_next
 ```
 
 ### 2. 启动应用（自动创建表结构）
 ```bash
-./ruoyi-backend
+./xingran-backend
 ```
 
 ### 3. 导入初始数据

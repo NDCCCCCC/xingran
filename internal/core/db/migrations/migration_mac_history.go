@@ -8,10 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// isPostgreSQL 检查数据库是否为PostgreSQL
-func isPostgreSQL(db *gorm.DB) bool {
-	return db.Config.Dialector.Name() == "postgres"
-}
+// isPostgreSQL 在 migration_helpers.go 中统一定义。
 
 // CreateMACHistoryTable 创建MAC地址历史表（分区表 + BRIN索引）
 // 按 CONTEXT.md D-04, D-05 决策：

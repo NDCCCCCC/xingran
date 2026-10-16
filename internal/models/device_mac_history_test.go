@@ -32,7 +32,16 @@ func TestLocalWallClock(t *testing.T) {
 // TestLocalWallClock_JSONSerialization 验证修复效果:
 // 修复后 JSON 必须输出 wall clock 字符串(后跟本地 offset 如 "+08:00"),
 // 不能输出 "Z"(会让前端 dayjs 当 UTC 再 +8 → 错 8h)。
+//
+// 生产部署时区是 Asia/Shanghai(+08:00),但 CI runner 是 UTC —
+// 在 UTC 机器上 time.Local==UTC,marshal 合法地输出 "Z",断言必挂。
+// 因此测试内把 time.Local 钉到固定 +08:00 区域,保证在任何 runner 上
+// 都验证"offset 被附加、wall clock 不偏移"这一真实契约。
 func TestLocalWallClock_JSONSerialization(t *testing.T) {
+	origLocal := time.Local
+	time.Local = time.FixedZone("Asia/Shanghai(+8 test)", 8*60*60)
+	defer func() { time.Local = origLocal }()
+
 	// 模拟 pgx 读出的形态:wall=13:01:30,loc=UTC
 	utcBeijingWall := time.Date(2026, 6, 29, 13, 1, 30, 0, time.UTC)
 

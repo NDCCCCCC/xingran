@@ -10,7 +10,7 @@ import (
 
 // decryptVDIPassword 解密VDI服务器密码（从models包复制，因为该函数未导出）
 func decryptVDIPassword(encrypted string) string {
-	const encryptionKey = "ruoyi-vdi-server-key-16"
+	const encryptionKey = "xingran-vdi-server-key-16"
 	key := []byte(encryptionKey[:16])
 
 	data, err := base64.StdEncoding.DecodeString(encrypted)
@@ -44,7 +44,7 @@ func decryptVDIPassword(encrypted string) string {
 
 // encryptVDIPassword 加密VDI服务器密码（从models包复制，因为该函数未导出）
 func encryptVDIPassword(password string) string {
-	const encryptionKey = "ruoyi-vdi-server-key-16"
+	const encryptionKey = "xingran-vdi-server-key-16"
 	key := []byte(encryptionKey[:16])
 
 	block, err := aes.NewCipher(key)

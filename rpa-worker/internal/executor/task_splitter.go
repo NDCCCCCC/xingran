@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/ruoyi-next/rpa-worker/internal/config"
-	"github.com/ruoyi-next/rpa-worker/internal/logger"
-	"github.com/ruoyi-next/rpa-worker/internal/types"
+	"github.com/xingran-next/rpa-worker/internal/config"
+	"github.com/xingran-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/types"
 	"golang.org/x/sync/errgroup"
 )
 

@@ -163,7 +163,7 @@ func (h *NoticeHandler) Create(c *gin.Context) {
 			CronExpression: cronExpr,
 			MisfirePolicy:  misfirePolicy,
 			Concurrent:     false,
-			Status:         0, // 正常状态
+			Status:         models.JobStatusNormal, // 正常状态
 			Remark:         strPtr(fmt.Sprintf("通知定时发布: %s", req.NoticeTitle)),
 		}
 
@@ -361,7 +361,7 @@ func (h *NoticeHandler) Update(c *gin.Context) {
 			CronExpression: cronExpr,
 			MisfirePolicy:  models.MisfirePolicyExecuteOnce,
 			Concurrent:     false,
-			Status:         0,
+			Status:         models.JobStatusNormal,
 			Remark:         strPtr(fmt.Sprintf("通知定时发布: %s", title)),
 		}
 		if err := h.schedulerService.AddJob(job); err != nil {

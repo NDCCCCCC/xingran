@@ -1,0 +1,1 @@
+import{j as n}from"./index-gZ1c1L_V.js";async function o(){const e=await n().getAccessToken();return e?{Authorization:`Bearer ${e}`}:{}}async function r(){return await n().getAccessToken()}export{o as a,r as g};

@@ -9,12 +9,12 @@ import (
 // HybridAuthenticator 混合认证器
 // 优先尝试本地认证，失败后降级到AD域控认证
 type HybridAuthenticator struct {
-	localAuth *LocalAuthenticator
-	adAuth    *ADAuthenticator
+	localAuth Authenticator
+	adAuth    Authenticator
 }
 
 // NewHybridAuthenticator 创建混合认证器
-func NewHybridAuthenticator(local *LocalAuthenticator, ad *ADAuthenticator) *HybridAuthenticator {
+func NewHybridAuthenticator(local, ad Authenticator) *HybridAuthenticator {
 	return &HybridAuthenticator{
 		localAuth: local,
 		adAuth:    ad,

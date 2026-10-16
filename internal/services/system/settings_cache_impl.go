@@ -2,10 +2,10 @@ package system
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -18,13 +18,15 @@ type settingsCacheService struct {
 }
 
 // NewSettingsServiceWithCache 创建带缓存的用户设置服务
+//
+// v1.22 收尾：移除 configService 参数（默认主题 sys.theme.default 删除后，
+// settingsService 不再需要它）。
 func NewSettingsServiceWithCache(
 	db *gorm.DB,
 	cache CacheProvider,
 	config *services.CacheConfigService,
-	configService ConfigService,
 ) SettingsService {
-	base := &settingsService{db: db, configService: configService}
+	base := &settingsService{db: db}
 	return &settingsCacheService{
 		settingsService:  base,
 		cache:            cache,
@@ -34,19 +36,10 @@ func NewSettingsServiceWithCache(
 
 // GetUserPreferences 获取用户设置（带缓存）
 func (s *settingsCacheService) GetUserPreferences(ctx context.Context, userID string) (*UserPreferences, error) {
-	cacheKey := fmt.Sprintf("settings:user:%s", userID)
-	var result UserPreferences
-
-	expiration := s.GetExpiration("cache.settings.user", 15*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.settingsService.GetUserPreferences(ctx, userID)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		GetSettingsUserKey(userID),
+		s.GetExpiration("cache.settings.user", 15*time.Minute),
+		func() (*UserPreferences, error) { return s.settingsService.GetUserPreferences(ctx, userID) })
 }
 
 // UpdateUserPreferences 更新用户设置（带缓存失效）
@@ -56,7 +49,7 @@ func (s *settingsCacheService) UpdateUserPreferences(ctx context.Context, userID
 	}
 
 	// 清除该用户的设置缓存
-	cacheKey := fmt.Sprintf("settings:user:%s", userID)
+	cacheKey := GetSettingsUserKey(userID)
 	if err := s.cache.Delete(ctx, cacheKey); err != nil {
 		// 记录日志但不影响更新操作
 		applogger.Warnf("[SETTINGS_CACHE] 清除用户设置缓存失败: %v", err)
@@ -67,6 +60,6 @@ func (s *settingsCacheService) UpdateUserPreferences(ctx context.Context, userID
 
 // InvalidateUserSettingsCache 失效用户设置缓存
 func (s *settingsCacheService) InvalidateUserSettingsCache(ctx context.Context, userID string) error {
-	cacheKey := fmt.Sprintf("settings:user:%s", userID)
+	cacheKey := GetSettingsUserKey(userID)
 	return s.cache.Delete(ctx, cacheKey)
 }

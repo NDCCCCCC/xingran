@@ -8,7 +8,9 @@ import (
 type APIKey struct {
 	BaseModel
 	Name         string     `gorm:"size:100;not null" json:"name"`                           // 密钥名称
-	Key          string     `gorm:"size:100;uniqueIndex;not null" json:"key"`                 // 密钥值（rec_ + 64位hex）
+	KeyHash      string     `gorm:"size:64;uniqueIndex;not null" json:"-"`                    // 密钥 SM3(key+salt) hex 哈希（64 hex chars），不暴露给 API
+	Salt         string     `gorm:"size:32;not null" json:"-"`                                // 密钥盐值（16 字节 hex = 32 hex chars），不暴露给 API
+	KeyPrefix    string     `gorm:"size:12;index;not null" json:"keyPrefix"`                  // 密钥明文前 12 字符（rec_ + 前 8 hex），用于 List 搜索 + 展示
 	UserID       *string    `gorm:"type:uuid" json:"userId,omitempty"`                        // 所属用户ID（外键→sys_user）
 	ExpiresAt    *time.Time `json:"expiresAt,omitempty"`                                      // 过期时间
 	LastUsedAt   *time.Time `json:"lastUsedAt,omitempty"`                                     // 最后使用时间

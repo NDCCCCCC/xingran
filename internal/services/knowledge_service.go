@@ -9,6 +9,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	queryutil "github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -25,11 +26,11 @@ func NewKnowledgeService(db *gorm.DB) *KnowledgeService {
 }
 
 // KnowledgeArticleStatistics 知识库文章统计结果。
-// status: 0=草稿 1=已发布(models.KnowledgeArticleStatus)。
+// status: KnowledgeArticleStatusDraft=草稿 / KnowledgeArticleStatusPublished=已发布（E 簇反转：1=已发布）。
 type KnowledgeArticleStatistics struct {
 	Total      int64 `json:"total"`
-	Draft      int64 `json:"draft"`      // status = 0
-	Published  int64 `json:"published"`  // status = 1
+	Draft      int64 `json:"draft"`      // KnowledgeArticleStatusDraft
+	Published  int64 `json:"published"`  // KnowledgeArticleStatusPublished
 	TotalViews int64 `json:"totalViews"` // SUM(view_count)
 	TotalLikes int64 `json:"totalLikes"` // SUM(like_count)
 }
@@ -43,8 +44,8 @@ func (s *KnowledgeService) GetArticleStatistics(ctx context.Context) (*Knowledge
 		Model(&models.KnowledgeArticle{}).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS draft",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS published",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS draft", int(models.KnowledgeArticleStatusDraft)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS published", int(models.KnowledgeArticleStatusPublished)),
 			"COALESCE(SUM(view_count), 0) AS total_views",
 			"COALESCE(SUM(like_count), 0) AS total_likes",
 		).
@@ -168,14 +169,7 @@ func (s *KnowledgeService) GetKnowledgeArticleList(ctx context.Context, req *Kno
 		return nil, 0, fmt.Errorf("查询知识库文章总数失败: %w", err)
 	}
 
-	current := req.Current
-	if current <= 0 {
-		current = 1
-	}
-	pageSize := req.PageSize
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	current, pageSize := queryutil.NormalizePagination(req.Current, req.PageSize)
 	offset := (current - 1) * pageSize
 
 	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
@@ -485,25 +479,15 @@ func (s *KnowledgeService) SearchKnowledgeArticles(ctx context.Context, req *Sea
 	}
 
 	// 设置分页参数，默认100条，最大500条
-	pageSize := req.PageSize
-	if pageSize <= 0 {
-		pageSize = 100
-	} else if pageSize > 500 {
-		pageSize = 500
-	}
-
-	pageNum := req.PageNum
-	if pageNum < 0 {
-		pageNum = 0
-	}
+	current, pageSize := queryutil.NormalizePagination(req.PageNum, req.PageSize)
 
 	// 应用分页和预加载
 	if err := query.
 		Preload("Category").
 		Preload("Tags").
-		Order("created_at DESC").
+		Order("sys_knowledge_article.created_at DESC").
 		Limit(pageSize).
-		Offset(pageNum * pageSize).
+		Offset((current - 1) * pageSize).
 		Find(&list).Error; err != nil {
 		return nil, 0, fmt.Errorf("搜索知识库文章失败: %w", err)
 	}

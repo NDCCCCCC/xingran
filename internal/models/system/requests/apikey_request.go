@@ -1,7 +1,7 @@
 package requests
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 )
 
 // CreateAPIKeyRequest 创建API密钥请求
@@ -55,8 +55,8 @@ func (p *ListAPIKeysParams) GetPagination() (current, pageSize int) {
 	if pageSize < constants.MinPageSize {
 		pageSize = constants.DefaultPageSize
 	}
-	if pageSize > constants.MaxPageSize {
-		pageSize = constants.MaxPageSize
+	if pageSize > constants.MaxListPageSize {
+		pageSize = constants.MaxListPageSize
 	}
 	return current, pageSize
 }

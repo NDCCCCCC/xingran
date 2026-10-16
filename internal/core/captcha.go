@@ -10,6 +10,7 @@ import (
 	"time"
 
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
@@ -245,23 +246,28 @@ func (s *CaptchaService) GenerateCaptcha(ctx context.Context, clientIP string) (
 
 	// IP限流检查 - 从数据库读取限制次数
 	ipRateLimit := s.getIPRateLimit(ctx)
-	rateLimitKey := fmt.Sprintf("captcha:rate:%s", clientIP)
+	rateLimitKey := fmt.Sprintf(constants.CaptchaRateLimitKeyFormat, clientIP)
 
 	var count int64
 	var err error
 
 	// 尝试使用原子操作（IncrementWithExpire）确保TTL正确设置
-	if redisCache, ok := s.cache.(interface{ IncrementWithExpire(context.Context, string, time.Duration) (int64, error) }); ok {
+	if redisCache, ok := s.cache.(cache.RateLimitCache); ok {
 		count, err = redisCache.IncrementWithExpire(ctx, rateLimitKey, 1*time.Minute)
 		if err != nil {
 			applogger.Errorf("[Captcha] Rate limit check failed for IP %s: %v", clientIP, err)
-			// 限流检查失败时，为安全起见允许请求继续，但记录错误
-			count = 0 // 重置计数器，允许请求通过
+			// fail-close：限流基础设施不可用时拒绝，避免被绕过
+			return nil, fmt.Errorf("服务繁忙，请稍后再试")
 		}
 	} else {
 		// 降级到普通Increment + Expire（旧逻辑）
 		count, err = s.cache.Increment(ctx, rateLimitKey)
-		if err == nil && count == 1 {
+		if err != nil {
+			applogger.Errorf("[Captcha] Rate limit check failed for IP %s: %v", clientIP, err)
+			// fail-close：限流基础设施不可用时拒绝，避免被绕过
+			return nil, fmt.Errorf("服务繁忙，请稍后再试")
+		}
+		if count == 1 {
 			_ = s.cache.Expire(ctx, rateLimitKey, 1*time.Minute)
 		}
 	}
@@ -288,14 +294,14 @@ func (s *CaptchaService) GenerateCaptcha(ctx context.Context, clientIP string) (
 		}
 
 		// 存储验证码到缓存
-		storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+		storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 		err = s.cache.Set(ctx, storageKey, code, expireDuration)
 		if err != nil {
 			return nil, fmt.Errorf("存储验证码失败: %w", err)
 		}
 
 		// 存储验证次数
-		attemptsKey := fmt.Sprintf("captcha:attempts:%s", captchaID)
+		attemptsKey := fmt.Sprintf(constants.CaptchaAttemptsKeyFormat, captchaID)
 		_ = s.cache.SetInt(ctx, attemptsKey, 0, expireDuration)
 
 		response = &captcha.CaptchaResponse{
@@ -317,14 +323,14 @@ func (s *CaptchaService) GenerateCaptcha(ctx context.Context, clientIP string) (
 			YPos:  sliderData["yPos"].(int),
 			Token: sliderData["token"].(string),
 		}
-		storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+		storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 		err = s.cache.SetJSON(ctx, storageKey, verifyData, expireDuration)
 		if err != nil {
 			return nil, fmt.Errorf("存储验证码失败: %w", err)
 		}
 
 		// 存储验证次数
-		attemptsKey := fmt.Sprintf("captcha:attempts:%s", captchaID)
+		attemptsKey := fmt.Sprintf(constants.CaptchaAttemptsKeyFormat, captchaID)
 		_ = s.cache.SetInt(ctx, attemptsKey, 0, expireDuration)
 
 		response = &captcha.CaptchaResponse{
@@ -347,18 +353,18 @@ func (s *CaptchaService) VerifyCaptcha(ctx context.Context, captchaID, input str
 	}
 
 	// 检查验证次数
-	attemptsKey := fmt.Sprintf("captcha:attempts:%s", captchaID)
+	attemptsKey := fmt.Sprintf(constants.CaptchaAttemptsKeyFormat, captchaID)
 	attempts, _ := s.cache.GetInt(ctx, attemptsKey)
 
 	if attempts >= s.config.MaxAttempts {
 		// 超过最大验证次数，删除验证码
-		storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+		storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 		_ = s.cache.Delete(ctx, storageKey)
 		_ = s.cache.Delete(ctx, attemptsKey)
 		return fmt.Errorf("验证码已失效，请重新获取")
 	}
 
-	storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+	storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 
 	switch s.config.Enabled {
 	case captcha.CaptchaTypeNormal:
@@ -370,13 +376,16 @@ func (s *CaptchaService) VerifyCaptcha(ctx context.Context, captchaID, input str
 
 		if storedCode != input {
 			// 增加失败次数
-			_, _ = s.cache.Increment(ctx, attemptsKey)
+			// CAP-01 D-03: fail-closed 安全保证 — Increment 失败仍记录 SECURITY warn，验证仍返回错误
+			if _, err := s.cache.Increment(ctx, attemptsKey); err != nil {
+				applogger.Warnf("[SECURITY] captcha increment failed (key=%s): %v — fail-closed: rejecting verification", attemptsKey, err)
+			}
 			return fmt.Errorf("验证码错误")
 		}
 
 	case captcha.CaptchaTypeSlider:
 		// 验证滑动拼图验证码 - 检查"验证通过"标记
-		verifiedKey := fmt.Sprintf("captcha:verified:%s", captchaID)
+		verifiedKey := fmt.Sprintf(constants.CaptchaVerifiedKeyFormat, captchaID)
 		verified, err := s.cache.Exists(ctx, verifiedKey)
 		if err != nil || !verified {
 			return fmt.Errorf("滑动验证码未通过验证或已过期，请重新验证")
@@ -406,18 +415,18 @@ func (s *CaptchaService) VerifySliderCaptcha(ctx context.Context, captchaID stri
 	}
 
 	// 检查验证次数
-	attemptsKey := fmt.Sprintf("captcha:attempts:%s", captchaID)
+	attemptsKey := fmt.Sprintf(constants.CaptchaAttemptsKeyFormat, captchaID)
 	attempts, _ := s.cache.GetInt(ctx, attemptsKey)
 
 	if attempts >= s.config.MaxAttempts {
-		storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+		storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 		_ = s.cache.Delete(ctx, storageKey)
 		_ = s.cache.Delete(ctx, attemptsKey)
 		return fmt.Errorf("验证码已失效，请重新获取")
 	}
 
 	// 获取存储的验证数据
-	storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+	storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 	var verifyData SliderVerifyData
 	err := s.cache.GetJSON(ctx, storageKey, &verifyData)
 	if err != nil {
@@ -430,24 +439,30 @@ func (s *CaptchaService) VerifySliderCaptcha(ctx context.Context, captchaID stri
 
 	// 验证滑动位置是否在容差范围内
 	if abs(xPos-expectedX) > tolerance {
-		_, _ = s.cache.Increment(ctx, attemptsKey)
+		// CAP-01 D-03: fail-closed 安全保证 — Increment 失败仍记录 SECURITY warn，验证仍返回错误
+		if _, err := s.cache.Increment(ctx, attemptsKey); err != nil {
+			applogger.Warnf("[SECURITY] captcha increment failed (key=%s): %v — fail-closed: rejecting verification", attemptsKey, err)
+		}
 		return fmt.Errorf("验证失败，位置不正确")
 	}
 
 	// 验证token
 	if token == "" || token != verifyData.Token {
-		_, _ = s.cache.Increment(ctx, attemptsKey)
+		// CAP-01 D-03: fail-closed 安全保证 — Increment 失败仍记录 SECURITY warn，验证仍返回错误
+		if _, err := s.cache.Increment(ctx, attemptsKey); err != nil {
+			applogger.Warnf("[SECURITY] captcha increment failed (key=%s): %v — fail-closed: rejecting verification", attemptsKey, err)
+		}
 		return fmt.Errorf("验证失败，token无效")
 	}
 
 	// 验证成功，设置"验证通过"标记（用于后续登录验证）
-	verifiedKey := fmt.Sprintf("captcha:verified:%s", captchaID)
+	verifiedKey := fmt.Sprintf(constants.CaptchaVerifiedKeyFormat, captchaID)
 
 	// CRITICAL: Write verified marker directly to Redis (bypass L2Writer async worker pool)
 	// to ensure immediate availability for subsequent login verification
 	// L2Writer queues writes asynchronously, causing race condition where
 	// Exists check happens before Redis write completes
-	if mlCache, ok := s.cache.(interface{ GetL2Cache() cache.Cache }); ok {
+	if mlCache, ok := s.cache.(cache.L2ExposingCache); ok {
 		// Bypass L2Writer - write directly to L2 (Redis) for immediate availability
 		l2Cache := mlCache.GetL2Cache()
 		err = l2Cache.Set(ctx, verifiedKey, "1", 5*time.Minute)
@@ -482,7 +497,7 @@ func abs(x int) int {
 
 // CheckLoginLock 检查账号是否被锁定
 func (s *CaptchaService) CheckLoginLock(ctx context.Context, username string) error {
-	lockKey := fmt.Sprintf("login:lock:%s", username)
+	lockKey := fmt.Sprintf(constants.LoginLockKeyFormat, username)
 	locked, _ := s.cache.Exists(ctx, lockKey)
 	if locked {
 		ttl, _ := s.cache.TTL(ctx, lockKey)
@@ -494,7 +509,7 @@ func (s *CaptchaService) CheckLoginLock(ctx context.Context, username string) er
 
 // RecordLoginFailure 记录登录失败
 func (s *CaptchaService) RecordLoginFailure(ctx context.Context, username string) error {
-	failKey := fmt.Sprintf("login:fail:%s", username)
+	failKey := fmt.Sprintf(constants.LoginFailKeyFormat, username)
 	count, err := s.cache.Increment(ctx, failKey)
 	if err == nil && count == 1 {
 		// 首次失败，设置过期时间为1小时
@@ -503,7 +518,7 @@ func (s *CaptchaService) RecordLoginFailure(ctx context.Context, username string
 
 	if count >= int64(s.config.LoginMaxRetry) {
 		// 锁定账号
-		lockKey := fmt.Sprintf("login:lock:%s", username)
+		lockKey := fmt.Sprintf(constants.LoginLockKeyFormat, username)
 		lockDuration := time.Duration(s.config.LoginLockTime) * time.Minute
 		_ = s.cache.Set(ctx, lockKey, "1", lockDuration)
 		_ = s.cache.Delete(ctx, failKey)
@@ -520,18 +535,13 @@ func (s *CaptchaService) RecordLoginFailure(ctx context.Context, username string
 
 // ClearLoginFailure 清除登录失败记录（登录成功时调用）
 func (s *CaptchaService) ClearLoginFailure(ctx context.Context, username string) {
-	failKey := fmt.Sprintf("login:fail:%s", username)
+	failKey := fmt.Sprintf(constants.LoginFailKeyFormat, username)
 	_ = s.cache.Delete(ctx, failKey)
 }
 
 // IsEnabled 检查验证码是否启用
 func (s *CaptchaService) IsEnabled() bool {
 	return s.config.Enabled != captcha.CaptchaTypeDisabled
-}
-
-// GetType 获取当前验证码类型
-func (s *CaptchaService) GetType() captcha.CaptchaType {
-	return s.config.Enabled
 }
 
 // generateSliderWithBackground 生成带背景图的滑动验证码

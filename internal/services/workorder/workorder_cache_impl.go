@@ -2,11 +2,12 @@ package workorder
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
@@ -111,9 +112,10 @@ func (s *workOrderCacheServiceImpl) Update(ctx context.Context, req *UpdateReque
 	// 先获取工单以便获取处理人信息
 	var workOrder models.WorkOrder
 	if err := s.db.WithContext(ctx).Where("id = ?", req.ID).First(&workOrder).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			// 继续执行，可能工单已被删除
-			_ = err
+		// v129-recheck WR-01: 仅 NotFound 允许继续（工单可能已删），其余 DB 错误
+		// 必须上抛——吞掉会带着零值 workOrder 继续，改派时旧处理人缓存不失效
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 	}
 
@@ -145,8 +147,9 @@ func (s *workOrderCacheServiceImpl) Delete(ctx context.Context, id string) error
 	// 先获取工单以便获取处理人信息
 	var workOrder models.WorkOrder
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&workOrder).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			_ = err // 工单不存在，继续执行
+		// v129-recheck WR-01: 仅 NotFound 允许继续，其余 DB 错误上抛（同 Update）
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 	}
 
@@ -204,28 +207,26 @@ func (s *workOrderCacheServiceImpl) BatchDelete(ctx context.Context, ids []strin
 
 // GetMyPending 获取当前用户的待办工单（带缓存）
 func (s *workOrderCacheServiceImpl) GetMyPending(ctx context.Context, req *GetMyPendingRequest, userID string) ([]models.WorkOrder, int64, error) {
-	cacheKey := fmt.Sprintf("workorder:my_pending:%s", userID)
-	var result struct {
+	limit := 0
+	if req != nil {
+		limit = req.Limit
+	}
+	cacheKey := systemServices.GetWorkorderMyPendingLimitKey(userID, limit)
+
+	type myPendingResult struct {
 		List  []models.WorkOrder
 		Total int64
 	}
 
-	expiration := s.getExpiration("cache.workorder.my_pending", 2*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		list, total, err := s.base.Base.GetMyPending(ctx, req, userID)
-		if err != nil {
-			return nil, err
-		}
-		return struct {
-			List  []models.WorkOrder
-			Total int64
-		}{
-			List:  list,
-			Total: total,
-		}, nil
-	})
-
+	result, err := base.GetOrSetJSON(ctx, s.cache, cacheKey,
+		s.getExpiration("cache.workorder.my_pending", 2*time.Minute),
+		func() (myPendingResult, error) {
+			list, total, err := s.base.Base.GetMyPending(ctx, req, userID)
+			if err != nil {
+				return myPendingResult{}, err
+			}
+			return myPendingResult{List: list, Total: total}, nil
+		})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -236,47 +237,37 @@ func (s *workOrderCacheServiceImpl) GetMyPending(ctx context.Context, req *GetMy
 
 // GetStatistics 获取工单统计数据（带缓存）
 func (s *workOrderCacheServiceImpl) GetStatistics(ctx context.Context) (*Statistics, error) {
-	cacheKey := "workorder:statistics"
-	var result Statistics
-
-	expiration := s.getExpiration("cache.workorder.statistics", 5*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.statistics.Get(ctx)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache, systemServices.CacheKeyWorkorderStatistics,
+		s.getExpiration("cache.workorder.statistics", 5*time.Minute),
+		func() (*Statistics, error) { return s.statistics.Get(ctx) })
 }
 
 // ==================== 缓存失效方法 ====================
 
 // InvalidateWorkOrderCache 失效工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateWorkOrderCache(ctx context.Context, workOrderID string) error {
-	keys := []string{fmt.Sprintf("workorder:detail:%s", workOrderID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "WORKORDER")
+	keys := []string{systemServices.GetWorkorderDetailKey(workOrderID)}
+	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateMyPendingCache 失效待办工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateMyPendingCache(ctx context.Context, userID string) error {
-	keys := []string{fmt.Sprintf("workorder:my_pending:%s", userID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "WORKORDER")
+	keys := []string{systemServices.GetWorkorderMyPendingKey(userID)}
+	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateStatisticsCache 失效统计缓存
 func (s *workOrderCacheServiceImpl) InvalidateStatisticsCache(ctx context.Context) error {
-	keys := []string{"workorder:statistics"}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "WORKORDER")
+	keys := []string{systemServices.CacheKeyWorkorderStatistics}
+	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateAllWorkOrderCache 失效所有工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateAllWorkOrderCache(ctx context.Context) error {
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, []string{"workorder:*"}, "WORKORDER")
+	base.InvalidatePattern(ctx, s.cache, []string{systemServices.GetWorkorderAllPattern()}, "WORKORDER")
 	return nil
 }
 

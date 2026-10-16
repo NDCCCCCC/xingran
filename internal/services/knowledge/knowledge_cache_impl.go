@@ -2,11 +2,11 @@ package knowledge
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
@@ -87,19 +87,9 @@ func (s *knowledgeCacheServiceImpl) GetArticleStatistics(ctx context.Context) (*
 
 // GetKnowledgeArticle 获取知识库文章详情（带缓存）
 func (s *knowledgeCacheServiceImpl) GetKnowledgeArticle(ctx context.Context, id string) (*models.KnowledgeArticle, error) {
-	cacheKey := fmt.Sprintf("kb:article:%s", id)
-	var result models.KnowledgeArticle
-
-	expiration := s.getExpiration("cache.kb.article", 10*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetKnowledgeArticle(ctx, id)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache, systemServices.GetKbArticleKey(id),
+		s.getExpiration("cache.kb.article", 10*time.Minute),
+		func() (*models.KnowledgeArticle, error) { return s.base.GetKnowledgeArticle(ctx, id) })
 }
 
 // CreateKnowledgeArticle 创建知识库文章（带缓存失效）
@@ -135,26 +125,18 @@ func (s *knowledgeCacheServiceImpl) DeleteKnowledgeArticle(ctx context.Context, 
 // GetKnowledgeCategoryList 获取知识库分类列表（树形结构，带缓存）
 func (s *knowledgeCacheServiceImpl) GetKnowledgeCategoryList(ctx context.Context, req *services.KnowledgeCategoryListRequest) ([]models.KnowledgeCategory, error) {
 	// 构建缓存键，包含查询条件
-	cacheKey := "kb:category:tree"
+	// D-102-3: cacheKey 构造改用 helper 调用
+	cacheKey := systemServices.CacheKeyKbCategoryTree
 	if req.ParentID != nil && *req.ParentID != "" {
-		cacheKey = fmt.Sprintf("kb:category:parent:%s", *req.ParentID)
+		cacheKey = systemServices.GetKbCategoryParentKey(*req.ParentID)
 	}
 	if req.Status != nil {
-		cacheKey = fmt.Sprintf("%s:status:%d", cacheKey, *req.Status)
+		cacheKey = systemServices.GetKbCategoryStatusKey(cacheKey, *req.Status)
 	}
 
-	var result []models.KnowledgeCategory
-
-	expiration := s.getExpiration("cache.kb.category", 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetKnowledgeCategoryList(ctx, req)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, cacheKey,
+		s.getExpiration("cache.kb.category", 30*time.Minute),
+		func() ([]models.KnowledgeCategory, error) { return s.base.GetKnowledgeCategoryList(ctx, req) })
 }
 
 // GetKnowledgeCategory 获取知识库分类详情（不缓存，查询频率低）
@@ -195,19 +177,9 @@ func (s *knowledgeCacheServiceImpl) DeleteKnowledgeCategory(ctx context.Context,
 
 // GetAllTags 获取所有标签（带缓存）
 func (s *knowledgeCacheServiceImpl) GetAllTags(ctx context.Context) ([]models.KnowledgeTag, error) {
-	cacheKey := "kb:tags:all"
-	var result []models.KnowledgeTag
-
-	expiration := s.getExpiration("cache.kb.tags", 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetAllTags(ctx)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, systemServices.CacheKeyKbTagsAll,
+		s.getExpiration("cache.kb.tags", 30*time.Minute),
+		func() ([]models.KnowledgeTag, error) { return s.base.GetAllTags(ctx) })
 }
 
 // GetTagByName 根据名称获取标签（不缓存，内部使用）
@@ -248,29 +220,29 @@ func (s *knowledgeCacheServiceImpl) DeleteTag(ctx context.Context, id string) er
 
 // InvalidateCategoryCache 失效分类缓存
 func (s *knowledgeCacheServiceImpl) InvalidateCategoryCache(ctx context.Context) error {
-	keys := []string{"kb:category:*"}
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, keys, "KNOWLEDGE")
+	keys := []string{systemServices.GetKbCategoryPattern()}
+	base.InvalidatePattern(ctx, s.cache, keys, "KNOWLEDGE")
 	return nil
 }
 
 // InvalidateTagCache 失效标签缓存
 func (s *knowledgeCacheServiceImpl) InvalidateTagCache(ctx context.Context) error {
-	keys := []string{"kb:tags:all"}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "KNOWLEDGE")
+	keys := []string{systemServices.CacheKeyKbTagsAll}
+	base.Invalidate(ctx, s.cache, keys, "KNOWLEDGE")
 	return nil
 }
 
 // InvalidateArticleCache 失效文章缓存
 func (s *knowledgeCacheServiceImpl) InvalidateArticleCache(ctx context.Context, articleID string) error {
-	keys := []string{fmt.Sprintf("kb:article:%s", articleID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "KNOWLEDGE")
+	keys := []string{systemServices.GetKbArticleKey(articleID)}
+	base.Invalidate(ctx, s.cache, keys, "KNOWLEDGE")
 	return nil
 }
 
 // InvalidateAllArticleCache 失效所有文章缓存
 func (s *knowledgeCacheServiceImpl) InvalidateAllArticleCache(ctx context.Context) error {
-	keys := []string{"kb:article:*"}
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, keys, "KNOWLEDGE")
+	keys := []string{systemServices.GetKbArticlePattern()}
+	base.InvalidatePattern(ctx, s.cache, keys, "KNOWLEDGE")
 	return nil
 }
 

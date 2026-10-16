@@ -111,10 +111,14 @@ func ReadRawRowsByName(file *multipart.FileHeader, sheetName string) (map[string
 	return result, nil
 }
 
-// normalizeHeaderTrim 简化版 header 规范化(只去首尾空格 + 转小写用于匹配)
+// normalizeHeaderTrim 简化版 header 规范化(只去首尾空格,不转小写)
 //
 // 注:excel_service 内部有更完整的 normalizeHeader 处理 BOM 等,
 // 此 helper 仅做 TrimSpace(对外 header 已规范化的 Excel 模板场景足够)。
+//
+// 行为锁定 (Q-77-C, D-03): 当前实现**不调用 strings.ToLower**——只在「姓名 / 规则名称」
+// 字面匹配时按原大小写比对表头。改加 ToLower 会改变 "Name" / "name" 表头匹配结果,
+// 与既有 ImportFromExcel 调用方契约不符,本计划内不修改 (D-03 无据不臆断)。
 func normalizeHeaderTrim(s string) string {
 	return strings.TrimSpace(s)
 }

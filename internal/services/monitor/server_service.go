@@ -35,21 +35,21 @@ type SystemMetricsData struct {
 
 // ServerInfoParams 服务器信息查询参数
 type ServerInfoParams struct {
-	Current  int
-	PageSize int
+	Current       int
+	PageSize      int
 	OrderByColumn string
-	IsAsc        bool
+	IsAsc         bool
 }
 
 // MetricsHistoryParams 指标历史查询参数
 type MetricsHistoryParams struct {
-	ServerID  string
-	StartTime *string
-	EndTime   *string
-	Current   int
-	PageSize  int
+	ServerID      string
+	StartTime     *string
+	EndTime       *string
+	Current       int
+	PageSize      int
 	OrderByColumn string
-	IsAsc        bool
+	IsAsc         bool
 }
 
 // MetricsProvider 系统指标提供者接口（支持缓存降级）
@@ -57,7 +57,6 @@ type MetricsProvider interface {
 	GetServerInfo(ctx context.Context) (map[string]interface{}, error)
 	GetCurrentMetrics(ctx context.Context) (*SystemMetricsData, error)
 }
-
 
 // serverAllowedSortFields 服务端排序白名单
 var serverAllowedSortFields = map[string]string{
@@ -67,6 +66,7 @@ var serverAllowedSortFields = map[string]string{
 	"diskUsage":   "disk_usage",
 	"serverId":    "server_id",
 }
+
 // serverServiceImpl 服务器监控服务实现
 type serverServiceImpl struct {
 	db              *gorm.DB
@@ -159,7 +159,7 @@ func (s *serverServiceImpl) GetSystemMetricsHistory(ctx context.Context, params 
 func (s *serverServiceImpl) convertToServerInfo(info map[string]interface{}) *models.ServerInfo {
 	now := time.Now()
 	server := &models.ServerInfo{
-		Status:       0,
+		Status:       models.ServerStatusNormal,
 		LastActiveAt: &now,
 	}
 
@@ -235,7 +235,7 @@ func (s *serverServiceImpl) getCurrentServerInfo() (*models.ServerInfo, error) {
 		AvailableMemory: availableMemory,
 		DiskTotal:       totalDiskSize,
 		DiskAvailable:   availableDiskSize,
-		Status:          0,
+		Status:          models.ServerStatusNormal,
 		LastActiveAt:    &metrics.Timestamp,
 	}, nil
 }

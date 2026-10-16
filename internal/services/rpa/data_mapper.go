@@ -329,7 +329,7 @@ func (s *dataMapperServiceImpl) TransformValue(ctx context.Context, value interf
 		return string(data), nil
 
 	case TransformDefaultValue:
-		if value == nil || value == "" {
+		if value == "" {
 			return params["default"], nil
 		}
 		return value, nil

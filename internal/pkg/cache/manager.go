@@ -31,6 +31,7 @@ type MetricsCacheManager struct {
 	hostname    string         // 主机名
 	stopChan    chan struct{}  // 停止信号
 	wg          sync.WaitGroup // 等待组
+	stopOnce    sync.Once      // 保证 Stop 幂等
 }
 
 // CacheItem 缓存项
@@ -399,9 +400,11 @@ func (m *MetricsCacheManager) cleanupExpiredCache() {
 
 // Stop 停止缓存管理器
 func (m *MetricsCacheManager) Stop() {
-	close(m.stopChan)
-	m.wg.Wait()
-	applogger.Infof("指标缓存管理器已停止")
+	m.stopOnce.Do(func() {
+		close(m.stopChan)
+		m.wg.Wait()
+		applogger.Infof("指标缓存管理器已停止")
+	})
 }
 
 // GetCacheStats 获取缓存统计信息

@@ -34,15 +34,43 @@ type UserSyncService struct {
 	db         *gorm.DB
 	pwdManager PasswordManager
 	ouMapper   *addomain.DeptOUmapper // OU映射解析器
+	cache      CacheProvider          // 缓存提供者（可选，L-02 用于角色分配后失效 user-scoped 菜单缓存）
+}
+
+// UserSyncOption UserSyncService 可选注入项（functional options，避免构造函数签名连锁改动）
+type UserSyncOption func(*UserSyncService)
+
+// WithCacheProvider 注入缓存提供者（可选）。
+// 注入后，写 sys_user_role 成功路径会失效 user-scoped 菜单缓存（menu:user:*）。
+// 未注入或传 nil 时跳过失效逻辑，保持旧行为（测试/无缓存场景兼容）。
+func WithCacheProvider(cache CacheProvider) UserSyncOption {
+	return func(s *UserSyncService) {
+		s.cache = cache
+	}
 }
 
 // NewUserSyncService 创建用户同步服务
-func NewUserSyncService(db *gorm.DB, pwdManager PasswordManager, ouMapper *addomain.DeptOUmapper) *UserSyncService {
-	return &UserSyncService{
+func NewUserSyncService(db *gorm.DB, pwdManager PasswordManager, ouMapper *addomain.DeptOUmapper, opts ...UserSyncOption) *UserSyncService {
+	s := &UserSyncService{
 		db:         db,
 		pwdManager: pwdManager,
 		ouMapper:   ouMapper,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// invalidateUserMenuCache 失效 user-scoped 菜单缓存（L-02）。
+// sys_user_role 写入会改变用户可见菜单，需清 menu:user:* 前缀；
+// 未注入 CacheProvider 时跳过（nil-safe）。批量同步只需在整体成功后调用一次，
+// 不放入逐用户循环（InvalidateUserMenuCacheByProvider 清全部 menu:user:* 前缀）。
+func (s *UserSyncService) invalidateUserMenuCache(ctx context.Context) {
+	if s.cache == nil {
+		return
+	}
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 }
 
 // SyncUserFromAD 从AD同步单个用户到sys_user表（首次AD登录路径使用）。
@@ -74,6 +102,12 @@ func (s *UserSyncService) SyncUserFromAD(ctx context.Context, adUser *ADUserInfo
 
 	if err != nil {
 		return nil, catNew, fmt.Errorf("同步AD用户失败: %w", err)
+	}
+
+	// L-02: 新建/恢复路径在事务内已写 sys_user_role（分配默认角色），
+	// 失效 user-scoped 菜单缓存；其余分类未写角色关联，无需失效。
+	if defaultRoleID != "" && (category == catNew || category == catSoftDeleted) {
+		s.invalidateUserMenuCache(ctx)
 	}
 
 	return &user, category, nil
@@ -324,12 +358,14 @@ func (s *UserSyncService) bindLocalUserToAD(tx *gorm.DB, user *models.User, adUs
 
 // assignRole 分配角色给用户
 func (s *UserSyncService) assignRole(tx *gorm.DB, userID string, roleID string) error {
-	// 使用原生SQL插入角色关联（ON CONFLICT避免重复）
+	// 使用原生SQL插入角色关联（ON CONFLICT避免重复）。
+	// created_at 由 Go 侧传参而非 SQL 方言函数（datetime('now')/NOW()），
+	// 保证 sqlite（测试）与 PostgreSQL（生产）行为一致。
 	sql := `INSERT INTO sys_user_role (user_id, role_id, created_at)
-			VALUES (?, ?, NOW())
+			VALUES (?, ?, ?)
 			ON CONFLICT (user_id, role_id) DO NOTHING`
 
-	if err := tx.Exec(sql, userID, roleID).Error; err != nil {
+	if err := tx.Exec(sql, userID, roleID, time.Now()).Error; err != nil {
 		return fmt.Errorf("分配角色失败: %w", err)
 	}
 
@@ -634,6 +670,12 @@ func (s *UserSyncService) BatchSyncADUsers(
 		}
 	}
 
+	// L-02: 本批已写 sys_user_role（阶段5c软删除恢复分配 + 阶段6新建批量分配），
+	// 整批只需失效一次 user-scoped 菜单缓存（全量清 menu:user:* 前缀）。
+	if defaultRoleID != "" && (len(newCreatedIDs) > 0 || len(plansByCat[catSoftDeleted]) > 0) {
+		s.invalidateUserMenuCache(ctx)
+	}
+
 	applogger.Infof("[BatchSyncADUsers] 完成: 成功=%d, 失败=%d, 跳过=%d, 总耗时=%.2fs",
 		result.Success, result.Failed, result.Skipped, time.Since(totalStart).Seconds())
 	return result, nil
@@ -712,20 +754,22 @@ func (s *UserSyncService) runInBatchedTx(
 
 // assignRolesBatch 批量分配同一角色给多个用户（多值 INSERT ON CONFLICT DO NOTHING）。
 // 相比逐个 assignRole，把 N 次 SQL 往返压成 ceil(N/500) 次。
+// created_at 由 Go 侧传参（同 assignRole），方言中立：sqlite / PostgreSQL 通用。
 func (s *UserSyncService) assignRolesBatch(db *gorm.DB, userIDs []string, roleID string) error {
 	if len(userIDs) == 0 || roleID == "" {
 		return nil
 	}
+	now := time.Now()
 	for i := 0; i < len(userIDs); i += batchWriteSize {
 		end := i + batchWriteSize
 		if end > len(userIDs) {
 			end = len(userIDs)
 		}
 		placeholders := make([]string, 0, end-i)
-		args := make([]interface{}, 0, (end-i)*2)
+		args := make([]interface{}, 0, (end-i)*3)
 		for _, uid := range userIDs[i:end] {
-			placeholders = append(placeholders, "(?, ?, NOW())")
-			args = append(args, uid, roleID)
+			placeholders = append(placeholders, "(?, ?, ?)")
+			args = append(args, uid, roleID, now)
 		}
 		sql := fmt.Sprintf(
 			`INSERT INTO sys_user_role (user_id, role_id, created_at) VALUES %s ON CONFLICT (user_id, role_id) DO NOTHING`,

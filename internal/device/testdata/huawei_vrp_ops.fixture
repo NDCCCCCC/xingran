@@ -1,0 +1,24 @@
+<dummy-host>
+screen-length 0 temporary
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+display device
+NE40E-X8A Board
+<dummy-host>
+display interface brief
+GigabitEthernet0/0/1 up up
+GigabitEthernet0/0/2 up up
+<dummy-host>
+display current-configuration
+! Software Version V800R022C00
+! Last configuration was applied at 2026-08-27 10:00:00
+sysname Huawei-Dummy
+interface GigabitEthernet0/0/1
+ description uplink-to-core
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>

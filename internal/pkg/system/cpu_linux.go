@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -26,21 +27,28 @@ type CPUStats struct {
 var (
 	lastCPUStats CPUStats
 	firstCall    = true
+	cpuStatsMu   sync.Mutex
 )
 
 // GetCPUUsage 获取Linux系统的CPU使用率
 func GetCPUUsage() (float64, error) {
+	cpuStatsMu.Lock()
+	defer cpuStatsMu.Unlock()
+
 	stats, err := readCPUStats()
 	if err != nil {
 		return 0, err
 	}
 
 	if firstCall {
-		// 第一次调用，初始化统计信息
+		// 第一次调用，初始化统计信息并间隔 100ms 后重新采样
 		lastCPUStats = *stats
 		firstCall = false
-		time.Sleep(100 * time.Millisecond) // 等待一段时间再进行下一次测量
-		return GetCPUUsage()               // 递归调用获取真实使用率
+		time.Sleep(100 * time.Millisecond)
+		stats, err = readCPUStats()
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	// 计算差值

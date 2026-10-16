@@ -41,12 +41,22 @@ func (ADServiceAccount) TableName() string {
 	return "sys_ad_service_accounts"
 }
 
+// AD 服务账号池状态机常量（Phase 36 状态机的唯一真相源；Phase 69 DICT-01 收敛落位）。
+// 无类型 int 常量：ADServiceAccount.Status 为 int 字段，services/addomain 的
+// AccountStatus* 包内别名直接引用本组常量（值漂移由 status_constants_test.go 锁定）。
+const (
+	ADAccountStatusAvailable = 0 // 可用
+	ADAccountStatusDisabled  = 1 // 管理员手动停用
+	ADAccountStatusBreaker   = 2 // 熔断中（CircuitBreakerUntil 到期由 cron 统一恢复）
+)
+
 // IsAvailable 判断账号当前是否可用（业务层用）
 func (a *ADServiceAccount) IsAvailable() bool {
-	if a.Status == 1 { // 停用
+	if a.Status == ADAccountStatusDisabled {
 		return false
 	}
-	if a.Status == 2 { // 熔断中且未到期
+	if a.Status == ADAccountStatusBreaker {
+		// 熔断中且未到期
 		if a.CircuitBreakerUntil == nil || time.Now().Before(*a.CircuitBreakerUntil) {
 			return false
 		}
@@ -56,22 +66,22 @@ func (a *ADServiceAccount) IsAvailable() bool {
 
 // IsCircuitBroken 判断是否处于熔断中
 func (a *ADServiceAccount) IsCircuitBroken() bool {
-	return a.Status == 2 && a.CircuitBreakerUntil != nil && time.Now().Before(*a.CircuitBreakerUntil)
+	return a.Status == ADAccountStatusBreaker && a.CircuitBreakerUntil != nil && time.Now().Before(*a.CircuitBreakerUntil)
 }
 
 // IsDisabled 判断是否被管理员手动停用
 func (a *ADServiceAccount) IsDisabled() bool {
-	return a.Status == 1
+	return a.Status == ADAccountStatusDisabled
 }
 
 // StatusText 返回状态的中文描述（前端展示用）
 func (a *ADServiceAccount) StatusText() string {
 	switch a.Status {
-	case 0:
+	case ADAccountStatusAvailable:
 		return "可用"
-	case 1:
+	case ADAccountStatusDisabled:
 		return "已停用"
-	case 2:
+	case ADAccountStatusBreaker:
 		return "熔断中"
 	default:
 		return "未知"

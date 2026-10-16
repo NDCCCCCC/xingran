@@ -2,10 +2,9 @@ package system
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/google/uuid"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -19,61 +18,29 @@ type SettingsService interface {
 }
 
 // settingsService 系统设置服务实现
+//
+// v1.22 收尾：移除对 sys.theme.default (默认主题) 的依赖（删除默认主题页面+API+表行后），
+// 用户无偏好记录时直接返回硬编码默认值，不再注入 ConfigService。
 type settingsService struct {
-	db            *gorm.DB
-	configService ConfigService
+	db *gorm.DB
 }
 
 // NewSettingsService 创建系统设置服务实例
-func NewSettingsService(db *gorm.DB, configService ConfigService) SettingsService {
-	return &settingsService{db: db, configService: configService}
+func NewSettingsService(db *gorm.DB) SettingsService {
+	return &settingsService{db: db}
 }
 
 // UserPreference 用户个人设置模型（扩展版）
-type UserPreference struct {
-	ID     string `gorm:"primaryKey;type:uuid" json:"id"`
-	UserID string `gorm:"type:uuid;not null;uniqueIndex" json:"userId"`
-
-	// 主题配置
-	Theme      string `gorm:"size:20;default:light" json:"theme"`
-	ThemeStyle string `gorm:"size:20;default:minimal" json:"themeStyle"`
-
-	// 布局配置
-	LayoutType            string `gorm:"size:20;default:classic" json:"layoutType"`
-	LayoutDensity         string `gorm:"size:20;default:comfortable" json:"layoutDensity"`
-	SidebarWidth          int    `gorm:"default:280" json:"sidebarWidth"`
-	SidebarCollapsedWidth int    `gorm:"default:64" json:"sidebarCollapsedWidth"`
-	SidebarCollapsed      bool   `gorm:"default:false" json:"sidebarCollapsed"`
-
-	// 数据配置
-	PageSize int `gorm:"default:10" json:"pageSize"`
-
-	// 自定义颜色（JSON 格式存储）
-	CustomPrimaryColor string `gorm:"size:20" json:"customPrimaryColor,omitempty"`
-	CustomSidebarColor string `gorm:"size:20" json:"customSidebarColor,omitempty"`
-
-	// 语言
-	Language string `gorm:"size:10;default:zh-CN" json:"language"`
-}
-
-// TableName 指定表名
-func (UserPreference) TableName() string {
-	return "sys_user_preference"
-}
-
-// BeforeCreate GORM hook - 创建前生成UUID
-func (up *UserPreference) BeforeCreate(tx *gorm.DB) error {
-	if up.ID == "" {
-		up.ID = uuid.New().String()
-	}
-	return nil
-}
+//
+// 2026-08-17 (quick-260817-hfl): 模型本体迁移至 internal/models/user_preference.go
+// (schema 单一事实源,sqlite 分支 AutoMigrate 注册需要;此处 alias 保持全部调用点兼容)。
+type UserPreference = models.UserPreference
 
 // UserPreferences 用户个人设置请求/响应DTO
 type UserPreferences struct {
 	// 主题
 	Theme      string `json:"theme" binding:"required,oneof=light dark"`
-	ThemeStyle string `json:"themeStyle" binding:"omitempty,oneof=minimal glassmorphism neumorphism flat2.0 luxury-quiet"`
+	ThemeStyle string `json:"themeStyle" binding:"omitempty,oneof=minimal glassmorphism neumorphism flat2.0 luxury-quiet ink-amber"`
 
 	// 布局
 	LayoutType            string `json:"layoutType" binding:"omitempty,oneof=classic hybrid innovative"`
@@ -98,9 +65,9 @@ func (s *settingsService) GetUserPreferences(ctx context.Context, userID string)
 	var pref UserPreference
 	err := s.db.WithContext(ctx).Where("user_id = ?", userID).First(&pref).Error
 
-	// 如果不存在，返回默认值（优先合并管理员配置的默认主题）
+	// 如果不存在，返回硬编码默认值（v1.22 收尾：不再合并 sys.theme.default）
 	if err == gorm.ErrRecordNotFound {
-		return s.buildDefaultPreferences(ctx), nil
+		return s.buildDefaultPreferences(), nil
 	}
 
 	if err != nil {
@@ -132,10 +99,15 @@ func (s *settingsService) GetUserPreferences(ctx context.Context, userID string)
 	}, nil
 }
 
-// buildDefaultPreferences 构建用户无偏好记录时的默认值
-// 优先合并管理员在 sys.theme.default 中配置的默认主题；管理员未配置时回退到硬编码值。
-func (s *settingsService) buildDefaultPreferences(ctx context.Context) *UserPreferences {
-	prefs := &UserPreferences{
+// buildDefaultPreferences 构建用户无偏好记录时的硬编码默认值
+//
+// v1.22 收尾：不再合并 sys.theme.default（已删除默认主题页面）。
+// 行为变化：之前若管理员在 sys.theme.default 配置了 mode=dark，
+//          新用户的默认 Theme 会被设为 dark；现在统一回到 light。
+// 后续如需"管理员配置全局默认值"能力，应以独立的 sys.user_preferences_default 表
+// 或 sys_config 通用键实现，不再耦合到 sys.theme.default 这一被删除的主题语义。
+func (s *settingsService) buildDefaultPreferences() *UserPreferences {
+	return &UserPreferences{
 		Theme:                 "light",
 		ThemeStyle:            "minimal",
 		LayoutType:            "classic",
@@ -146,38 +118,6 @@ func (s *settingsService) buildDefaultPreferences(ctx context.Context) *UserPref
 		PageSize:              10,
 		Language:              "zh-CN",
 	}
-
-	// 尝试合并管理员配置的默认主题
-	if s.configService == nil {
-		return prefs
-	}
-
-	config, err := s.configService.GetByKey(ctx, "sys.theme.default")
-	if err != nil || config == nil {
-		// 配置不存在或读取失败，保持硬编码默认值
-		return prefs
-	}
-
-	var themeCfg ThemeConfiguration
-	if err := json.Unmarshal([]byte(config.ConfigValue), &themeCfg); err != nil {
-		// 解析失败，保持硬编码默认值
-		return prefs
-	}
-
-	if themeCfg.Mode != "" {
-		prefs.Theme = themeCfg.Mode
-	}
-	if themeCfg.Style != "" {
-		prefs.ThemeStyle = themeCfg.Style
-	}
-	if primary, ok := themeCfg.CustomColors["primary"]; ok && primary != "" {
-		prefs.CustomPrimaryColor = primary
-	}
-	if sidebar, ok := themeCfg.CustomColors["sidebar"]; ok && sidebar != "" {
-		prefs.CustomSidebarColor = sidebar
-	}
-
-	return prefs
 }
 
 // UpdateUserPreferences 更新用户个人设置

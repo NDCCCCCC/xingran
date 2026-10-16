@@ -36,8 +36,9 @@ func (s *NoticeService) buildUserVisibleQuery(ctx context.Context, userID string
 	}
 
 	// 构建权限过滤查询：已发布 + 正常状态 + 未被忽略 + 匹配用户部门/角色
+	// （publish_status=发布态 E 簇，status=Notice 启停字段，两类语义不可互换）
 	query := s.db.WithContext(ctx).Model(&models.Notice{}).
-		Where("publish_status = ? AND status = 0", models.PublishStatusPublished).
+		Where("publish_status = ? AND status = ?", models.PublishStatusPublished, models.NoticeStatusNormal).
 		Where("id NOT IN (SELECT notice_id FROM sys_notice_ignore WHERE user_id = ?)", userID).
 		Where("(target_type = 0) OR (target_type = 3 AND id IN (SELECT notice_id FROM sys_notice_target WHERE target_type = 'user' AND target_id = ?)) OR "+
 			"(target_type = 1 AND id IN (SELECT notice_id FROM sys_notice_target WHERE target_type = 'dept' AND target_id = ?)) OR "+

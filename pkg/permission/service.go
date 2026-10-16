@@ -66,33 +66,63 @@ func (s *service) createDefaultAdminRole(db *gorm.DB) error {
 	return nil
 }
 
-// assignAllMenusToAdmin 为管理员分配所有菜单权限
+// assignAllMenusToAdmin 增量幂等补全 admin 缺失菜单，不删除已有；差集为空秒过。
+//
+// 设计说明（原"先删后全量重插"的定时炸弹修复）：
+//   - 不再执行 DELETE sys_role_menu WHERE role_id = admin，消除"已删未插"的丢权限中间窗口。
+//   - 仅 Pluck id 列（而非 SELECT * 全表），GORM 对嵌入 BaseModel 的 Menu 自动追加
+//     deleted_at IS NULL，软删菜单天然过滤。
+//   - 差集为空 → return nil（幂等快速路径，启动加速，不触碰 sys_role_menu 表）。
+//   - 差集非空 → 单一事务 CreateInBatches 补缺失，失败回滚不丢已有权限。
+//
+// 行为等价性差异：不再清理指向已软删菜单的陈旧 role_menu 关联。这些 menu_id 在
+// sys_menu 已被软删，GetUserMenus / GetUserPermissions 的 JOIN 带 m.deleted_at IS NULL
+// 在读取层天然屏蔽，不授予任何权限；admin 目标本就是"拥有全部现存菜单"，陈旧关联无害。
 func (s *service) assignAllMenusToAdmin(db *gorm.DB) error {
 	var adminRole models.Role
 	if err := db.Where("role_key = ?", "admin").First(&adminRole).Error; err != nil {
 		return err
 	}
 
-	var allMenus []models.Menu
-	if err := db.Find(&allMenus).Error; err != nil {
+	// 全部现存菜单 id（Pluck 仅取 id 列；Menu 嵌入 BaseModel，GORM 自动过滤软删）
+	var allMenuIDs []string
+	if err := db.Model(&models.Menu{}).Pluck("id", &allMenuIDs).Error; err != nil {
 		return err
 	}
 
-	// 清除现有的角色菜单关联
-	db.Where("role_id = ?", adminRole.ID).Delete(&models.RoleMenu{})
+	// admin 已有的 menu_id
+	var existingIDs []string
+	if err := db.Model(&models.RoleMenu{}).
+		Where("role_id = ?", adminRole.ID).
+		Pluck("menu_id", &existingIDs).Error; err != nil {
+		return err
+	}
 
-	// 创建新的角色菜单关联
-	for _, menu := range allMenus {
-		roleMenu := models.RoleMenu{
-			RoleID: adminRole.ID,
-			MenuID: menu.ID,
-		}
-		if err := db.Create(&roleMenu).Error; err != nil {
-			return err
+	// 构造差集：allMenuIDs 中存在、existingIDs 中缺失的 menu_id（差集天然去重）
+	existingSet := make(map[string]struct{}, len(existingIDs))
+	for _, id := range existingIDs {
+		existingSet[id] = struct{}{}
+	}
+
+	var missing []models.RoleMenu
+	for _, mid := range allMenuIDs {
+		if _, ok := existingSet[mid]; !ok {
+			missing = append(missing, models.RoleMenu{
+				RoleID: adminRole.ID,
+				MenuID: mid,
+			})
 		}
 	}
 
-	return nil
+	// 幂等快速路径：admin 已拥有全部现存菜单，秒过
+	if len(missing) == 0 {
+		return nil
+	}
+
+	// 事务包裹批量补全，失败回滚不丢已有权限
+	return db.Transaction(func(tx *gorm.DB) error {
+		return tx.CreateInBatches(missing, 100).Error
+	})
 }
 
 // GetRoleMenus 获取角色的菜单权限

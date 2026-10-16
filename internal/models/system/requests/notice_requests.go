@@ -3,7 +3,7 @@ package requests
 import (
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
@@ -36,8 +36,8 @@ func (p *NoticeListParams) GetPagination() (current, pageSize int) {
 	if pageSize < constants.MinPageSize {
 		pageSize = constants.DefaultPageSize
 	}
-	if pageSize > constants.MaxPageSize {
-		pageSize = constants.MaxPageSize
+	if pageSize > constants.MaxListPageSize {
+		pageSize = constants.MaxListPageSize
 	}
 	return current, pageSize
 }

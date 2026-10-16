@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -17,7 +17,7 @@ import (
 // per D-07), this handler returns ONLY component rows (component_type IS
 // NOT NULL) under a given parent_asset_id. It is mounted at
 // GET /ops/asset/components and reuses the existing ops:asset:list perm
-// namespace per MEMORY ruoyi-perm-namespace-split-readonly-page (no new
+// namespace per MEMORY xingran-perm-namespace-split-readonly-page (no new
 // perm introduced).
 type AssetComponentHandler struct {
 	core *core.Core
@@ -40,7 +40,7 @@ func (h *AssetComponentHandler) WithCore(core *core.Core) *AssetComponentHandler
 
 // ListComponents returns the subordinate component list for one parent
 // asset. Query parameter parentAssetId is required and must be a valid
-// UUID (constants.UuidPattern).
+// UUID (constants.UUIDPattern).
 //
 // Response shape (response.Success wrapper):
 //
@@ -61,7 +61,7 @@ func (h *AssetComponentHandler) ListComponents(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "parentAssetId 参数必填")
 		return
 	}
-	if !constants.UuidPattern.MatchString(parentAssetID) {
+	if !constants.UUIDPattern.MatchString(parentAssetID) {
 		response.Error(c, http.StatusBadRequest, "parentAssetId 必须是有效的 UUID")
 		return
 	}

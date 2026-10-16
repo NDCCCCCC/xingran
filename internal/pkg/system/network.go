@@ -10,6 +10,9 @@ import (
 	"strings"
 )
 
+// osOpen 包级别变量，允许测试 patch
+var osOpen = os.Open
+
 // NetworkStats 网络统计信息
 type NetworkStats struct {
 	RxBytes uint64
@@ -32,7 +35,7 @@ func GetNetworkStats() (uint64, uint64, error) {
 
 // getLinuxNetworkStats 获取Linux网络统计
 func getLinuxNetworkStats() (uint64, uint64, error) {
-	file, err := os.Open("/proc/net/dev")
+	file, err := osOpen("/proc/net/dev")
 	if err != nil {
 		return 0, 0, fmt.Errorf("无法打开/proc/net/dev文件: %w", err)
 	}

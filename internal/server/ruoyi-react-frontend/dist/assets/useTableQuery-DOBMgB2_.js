@@ -1,0 +1,1 @@
+import{ak as o,aF as t}from"./vendor-react-Mm7mwLRq.js";import{q as y}from"./queryKeys-DHkfxBp_.js";function i({resource:u,current:e,pageSize:a,filters:r={},queryFn:s}){return o({queryKey:y.list.page(u,{current:e,pageSize:a,...r}),queryFn:()=>s({current:e,pageSize:a,...r}),placeholderData:t,staleTime:30*1e3})}export{i as u};

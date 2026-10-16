@@ -7,10 +7,12 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/scrapli/scrapligo/driver/network"
+	"github.com/scrapli/scrapligo/driver/opoptions"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
@@ -52,15 +54,18 @@ func (s ConnectionState) String() string {
 //   - 操作方法获取 RLock（允许多个操作并发）
 //   - Close() 获取 Lock（等待所有操作完成后才关闭）
 type ScrapliWrapper struct {
-	driver      *network.Driver
-	device      *models.NetworkDevice
-	state       ConnectionState // 连接状态
-	stateMu     sync.RWMutex    // 保护状态读写
-	opMu        sync.RWMutex    // 保护 driver 操作与 Close() 的竞态
-	getPromptMu sync.Mutex      // 串行化 GetPrompt 调用（防御 scrapligo Queue 竞态）
-	closing     chan struct{}   // 用于通知关闭信号（用于 OpenContext 初始化循环等非 opMu 路径）
-	initDone    chan struct{}   // 初始化完成信号
-	closeOnce   sync.Once       // 确保 initDone 只关闭一次
+	driver       *network.Driver
+	device       *models.NetworkDevice
+	state        ConnectionState // 连接状态
+	stateMu      sync.RWMutex    // 保护状态读写
+	opMu         sync.RWMutex    // 保护 driver 操作与 Close() 的竞态
+	getPromptMu  sync.Mutex      // 串行化 GetPrompt 调用（防御 scrapligo Queue 竞态）
+	closing      chan struct{}   // 用于通知关闭信号（用于 OpenContext 初始化循环等非 opMu 路径）
+	initDone     chan struct{}   // 初始化完成信号
+	closeOnce    sync.Once       // 确保 initDone 只关闭一次
+	closeStarted atomic.Bool     // CAS 保证 Close() 主体并发幂等（entry 状态检查存在 TOCTOU；
+	// 两个 Close 同时过检会二次 driver.Close() → scrapligo Channel.Close 内 close(Errs) 二次关闭 panic，
+	// 上游 v1.4.2 同款修复：atomic CAS idempotent Close）
 }
 
 // PlatformName 平台名称映射
@@ -107,6 +112,29 @@ func checkDeviceReachable(host string, port int, timeout time.Duration) error {
 	return nil
 }
 
+// newNetworkDriver 是 platform→network.Driver 的默认工厂（76-02 INFRA-02）。
+// 生产路径行为与原先两处内联调用完全一致：NewPlatform 失败包装"创建平台实例失败"，
+// GetNetworkDriver 失败包装"获取网络驱动失败"，错误字符串 byte 不变。
+// 测试通过临时替换该 var 注入 FileTransport/自定义 transport（见
+// driver_factory_76_02_test.go），替换必须 t.Cleanup 恢复且所在测试禁止 t.Parallel()。
+var newNetworkDriver = func(platformName interface{}, host string, opts ...util.Option) (*network.Driver, error) {
+	p, err := platform.NewPlatform(
+		platformName,
+		host,
+		opts...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("创建平台实例失败: %w", err)
+	}
+
+	d, err := p.GetNetworkDriver()
+	if err != nil {
+		return nil, fmt.Errorf("获取网络驱动失败: %w", err)
+	}
+
+	return d, nil
+}
+
 // NewScrapliWrapper 创建scrapligo封装实例
 func NewScrapliWrapper(device *models.NetworkDevice, username, password string, protocolType models.ProtocolType) (*ScrapliWrapper, error) {
 	if device == nil {
@@ -145,20 +173,10 @@ func NewScrapliWrapper(device *models.NetworkDevice, username, password string, 
 		}))
 	}
 
-	// 创建平台实例
-	p, err := platform.NewPlatform(
-		platformName,
-		device.IPAddress,
-		opts...,
-	)
+	// 经工厂构造平台实例与网络驱动（错误在工厂内部包装，文案不变）
+	d, err := newNetworkDriver(platformName, device.IPAddress, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("创建平台实例失败: %w", err)
-	}
-
-	// 获取网络驱动
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return nil, fmt.Errorf("获取网络驱动失败: %w", err)
+		return nil, err
 	}
 
 	return &ScrapliWrapper{
@@ -209,20 +227,10 @@ func NewScrapliWrapperWithPort(device *models.NetworkDevice, username, password 
 		}))
 	}
 
-	// 创建平台实例
-	p, err := platform.NewPlatform(
-		platformName,
-		device.IPAddress,
-		opts...,
-	)
+	// 经工厂构造平台实例与网络驱动（错误在工厂内部包装，文案不变）
+	d, err := newNetworkDriver(platformName, device.IPAddress, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("创建平台实例失败: %w", err)
-	}
-
-	// 获取网络驱动
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return nil, fmt.Errorf("获取网络驱动失败: %w", err)
+		return nil, err
 	}
 
 	return &ScrapliWrapper{
@@ -326,6 +334,26 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 
 	// 在 goroutine 中执行连接
 	go func() {
+		// 全程持有 opMu 读锁：driver.Open() + GetPrompt 探测期间禁止 Close() 拆毁 transport。
+		// scrapligo v1.4.0 内部对 Write 与 Open/Close 无任何同步（Transport.Write 不取 implLock，
+		// Channel.Close 超时路径 force Close(true) 还会绕过 implLock），初始化窗口的 Open/Write
+		// 一旦与并发 teardown 交错，会在库 spawn 的 goroutine 里触发不可恢复 panic（进程退出）。
+		// 此前本 goroutine 全程不持锁，是 2026-10-16 进程崩溃的竞态窗口之一
+		//（debug: scrapligo-getprompt-nil-panic）。
+		w.opMu.RLock()
+		defer w.opMu.RUnlock()
+
+		// 拿到读锁后复查：若 Close() 已在 goroutine 启动前完成，不得再 Open 裸驱动
+		// （否则打开的 transport 无人负责关闭，且会撞上已完成的状态机）。
+		if w.isClosing() {
+			w.setState(StateClosed)
+			w.closeOnce.Do(func() {
+				close(w.initDone)
+			})
+			resultCh <- result{err: fmt.Errorf("连接正在关闭")}
+			return
+		}
+
 		// 捕获 panic
 		defer func() {
 			if r := recover(); r != nil {
@@ -404,13 +432,13 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 	// 等待连接完成或超时
 	select {
 	case <-ctx.Done():
-		// 超时或取消，尝试关闭可能正在进行的连接
+		// 超时或取消，尝试关闭可能正在进行的连接。
+		// 必须走 w.Close()（setState Closing → 关 closing/initDone 信号 → opMu.Lock 排队），
+		// 等 init goroutine 完成 driver.Open()/GetPrompt 探测并释放 opMu.RLock 后才 driver.Close()。
+		// 此前此处 fire-and-forget 直接 w.driver.Close()，与 init goroutine（Open/探测循环）完全无同步，
+		// teardown 撞上库内 spawn 的 Write goroutine → scrapligo-getprompt-nil-panic 进程崩溃根因。
 		go func() {
-			_ = w.driver.Close()
-			w.setState(StateClosed)
-			w.closeOnce.Do(func() {
-				close(w.initDone)
-			})
+			_ = w.Close()
 		}()
 		return fmt.Errorf("连接设备超时 [%s]: %w", w.device.IPAddress, ctx.Err())
 	case res := <-resultCh:
@@ -425,6 +453,13 @@ func (w *ScrapliWrapper) OpenContext(ctx context.Context) error {
 // Close 关闭设备连接
 // 使用 opMu.Lock() 确保所有正在执行的 driver 操作完成后才关闭
 func (w *ScrapliWrapper) Close() error {
+	// CAS 幂等保证：并发 Close（如 OpenContext ctx.Done closer + 池清理同时触发）只允许
+	// 一个进入主体，防止二次 driver.Close()（scrapligo Channel.Close 内 close(Errs) 二次关闭 panic）。
+	// entry 的状态检查存在 TOCTOU，不能作为唯一防线。
+	if !w.closeStarted.CompareAndSwap(false, true) {
+		return nil
+	}
+
 	// 获取当前状态
 	currentState := w.getState()
 	if currentState == StateClosed || currentState == StateClosing {
@@ -441,8 +476,16 @@ func (w *ScrapliWrapper) Close() error {
 		close(w.closing)
 	}
 
+	// 初始化等待者立即放行：Close 意味着初始化已被放弃，WaitForReady 不应继续空等。
+	// 放在 opMu.Lock 之前——Close 若正在等待 init goroutine 释放读锁，
+	// WaitForReady 的调用方（连接池）不必陪等到 opMu 排队结束。
+	w.closeOnce.Do(func() {
+		close(w.initDone)
+	})
+
 	// 获取排他锁 — 阻塞直到所有 acquireOp() 持有的 RLock 释放
-	// 这保证了：所有正在执行的 driver 操作完成后，Close 才会继续
+	// 这保证了：所有正在执行的 driver 操作（含 OpenContext 初始化的 Open/GetPrompt 探测）
+	// 完成后，Close 才会继续，teardown 与库内部 spawn 的 goroutine 不再交错
 	w.opMu.Lock()
 
 	// 安全网：给 scrapligo 内部子 goroutine（如 GetPrompt 内部的 Write goroutine）
@@ -622,6 +665,38 @@ func (w *ScrapliWrapper) SendConfigs(configs []string) ([]*Response, error) {
 		if err != nil {
 			return responses, fmt.Errorf("发送配置 '%s' 失败: %w", cfg, err)
 		}
+		responses = append(responses, &Response{
+			Result:   r.Result,
+			Started:  r.StartTime,
+			Finished: r.EndTime,
+			Failed:   r.Failed != nil,
+		})
+	}
+
+	return responses, nil
+}
+
+// SendConfigsStopOnFailed 一次 AcquirePriv(configuration) 批量下发配置命令，
+// 首个失败行即停止后续下发（scrapligo 原生 StopOnFailed）。与 SendConfigs 的
+// 逐行 SendConfig 循环不同，本方法只做一次 priv 舞步——千行级配置（配置备份
+// 恢复）效率与设备侧噪声显著更优。
+//
+// 失败语义：某行 Failed 时停止后续行，返回已发部分的 responses（含失败行，
+// Failed=true）且 error 为 nil——调用方需检查 Response.Failed 定位中断点
+// （RestoreConfig 的 D-12 进度留痕依赖此形态）。
+func (w *ScrapliWrapper) SendConfigsStopOnFailed(configs []string) ([]*Response, error) {
+	if err := w.acquireOp(); err != nil {
+		return nil, err
+	}
+	defer w.releaseOp()
+
+	m, err := w.driver.SendConfigs(configs, opoptions.WithStopOnFailed())
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]*Response, 0, len(m.Responses))
+	for _, r := range m.Responses {
 		responses = append(responses, &Response{
 			Result:   r.Result,
 			Started:  r.StartTime,

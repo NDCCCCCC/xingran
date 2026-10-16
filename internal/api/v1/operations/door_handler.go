@@ -41,11 +41,11 @@ func (h *DoorHandler) WithCore(core *core.Core) *DoorHandler {
 // @Router /ops/doors [post]
 func (h *DoorHandler) Create(c *gin.Context) {
 	var door operationsmodels.Door
-	if !handleJSONBinding(c, &door) {
+	if !response.HandleJSONBinding(c, &door) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &door), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &door), "创建") {
 		return
 	}
 
@@ -66,12 +66,12 @@ func (h *DoorHandler) Create(c *gin.Context) {
 // @Router /ops/doors/list [post]
 func (h *DoorHandler) List(c *gin.Context) {
 	var req requests.DoorListRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	result, err := h.service.List(c.Request.Context(), req)
-	if !handleServiceError(c, err, "查询") {
+	if !response.HandleServiceError(c, err, "查询") {
 		return
 	}
 
@@ -116,12 +116,12 @@ func (h *DoorHandler) GetByID(c *gin.Context) {
 func (h *DoorHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var door operationsmodels.Door
-	if !handleJSONBinding(c, &door) {
+	if !response.HandleJSONBinding(c, &door) {
 		return
 	}
 
 	door.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &door), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &door), "更新") {
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *DoorHandler) Update(c *gin.Context) {
 // @Router /ops/doors/{id}/delete [post]
 func (h *DoorHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -164,7 +164,7 @@ func (h *DoorHandler) Delete(c *gin.Context) {
 // @Router /ops/doors/batch [post]
 func (h *DoorHandler) BatchOperation(c *gin.Context) {
 	var req requests.DoorBatchOperationRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -173,7 +173,7 @@ func (h *DoorHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+	if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 		return
 	}
 

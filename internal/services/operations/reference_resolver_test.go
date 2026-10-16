@@ -8,12 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
 	// 使用纯 Go 实现的 SQLite 驱动
-	_ "modernc.org/sqlite"
 )
 
 // setupTestDB 创建测试数据库
@@ -37,7 +36,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		CREATE TABLE ops_buildings (
 			id TEXT PRIMARY KEY,
 			name TEXT,
-			building_name TEXT
+			building_name TEXT,
+			deleted_at DATETIME
 		);
 	`).Error
 	assert.NoError(t, err)
@@ -46,7 +46,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		CREATE TABLE ops_floors (
 			id TEXT PRIMARY KEY,
 			name TEXT,
-			building_id TEXT
+			building_id TEXT,
+			deleted_at DATETIME
 		);
 	`).Error
 	assert.NoError(t, err)

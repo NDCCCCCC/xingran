@@ -255,14 +255,10 @@ func (qb *QueryBuilder) Build(model interface{}) *gorm.DB {
 	return query
 }
 
-// Paginate 分页查询
+// Paginate 分页查询（v129-recheck WR-02: 归一化委托 NormalizePagination 唯一
+// 入口——此前这里是一套缺 MaxPageSize 上限的内联重复实现）
 func Paginate(query *gorm.DB, current, pageSize int) *gorm.DB {
-	if current <= 0 {
-		current = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	current, pageSize = NormalizePagination(current, pageSize)
 
 	offset := (current - 1) * pageSize
 	return query.Offset(offset).Limit(pageSize)

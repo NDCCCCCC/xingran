@@ -306,12 +306,12 @@ var ExcelConfigs = map[string]ExcelConfig{
 	//
 	// 方案 B (WARN-7 锁定):
 	//   - 9 列顺序严格 = name/ip_range/conflict_types/exception_actions/severity_override/scope_type/scope_name/expires_at/reason
-	//     (项目记忆 ruoyi-excel-import-column-position-matching: validateAndParseRow 按 row[i] 位置匹配)
-	//   - name 列 UpsertKey=true + DBField="name"(项目记忆 ruoyi-excel-import-upsertkey-needs-dbfield)
+	//     (项目记忆 xingran-excel-import-column-position-matching: validateAndParseRow 按 row[i] 位置匹配)
+	//   - name 列 UpsertKey=true + DBField="name"(项目记忆 xingran-excel-import-upsertkey-needs-dbfield)
 	//   - scopeName 是临时字段无 DBField, 由 ImportFromExcel 后处理按 scope_type 解析为 scope_id
 	//     (dept→sys_dept.dept_name / user→sys_user.username / global→NULL)
 	//   - conflict_types / exception_actions 用 TEXT 存(后处理转 TEXT[])
-	//   - 不在 router.go 预注册 /asset/reconciliation/import (项目记忆 ruoyi-excel-import-route-conflict)
+	//   - 不在 router.go 预注册 /asset/reconciliation/import (项目记忆 xingran-excel-import-route-conflict)
 	"reconciliationExceptionRule": {
 		SheetName:     "对账例外规则",
 		TableName:     "sys_reconciliation_exception",

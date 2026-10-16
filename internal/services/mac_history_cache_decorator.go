@@ -8,7 +8,7 @@ import (
 )
 
 // 缓存键前缀常量 (D-13 锁定)
-// 注意: Core 在缓存层自动加 ruoyi: 前缀, 这里返回的 key 不带前缀
+// 注意: Core 在缓存层自动加 xingran: 前缀, 这里返回的 key 不带前缀
 const (
 	cacheKeyPrefixPortHistory   = "mac:query:port-history"
 	cacheKeyPrefixDeviceHistory = "mac:query:device-history"

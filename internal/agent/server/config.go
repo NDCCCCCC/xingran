@@ -2,9 +2,11 @@ package server
 
 import (
 	"bytes"
+	cryptorand "crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"os/exec"
@@ -24,40 +26,40 @@ const (
 	defaultListenAddr   = ":8443"
 	defaultHeartbeatInterval = 30 * time.Second
 	defaultLogLevel    = "info"
-	defaultLogPath     = "/var/log/ruoyi-agent"
+	defaultLogPath     = "/var/log/xingran-agent"
 	defaultPlatform    = "linux"
 )
 
 // Config Agent 服务配置
 type Config struct {
 	// 后端服务器配置
-	BackendURL string `yaml:"backend_url" env:"BACKEND_URL"`
-	AgentID    string `yaml:"agent_id" env:"AGENT_ID"`
-	VMID       string `yaml:"vm_id" env:"VM_ID"`
+	BackendURL string `yaml:"backend_url" mapstructure:"backend_url" env:"BACKEND_URL"`
+	AgentID    string `yaml:"agent_id" mapstructure:"agent_id" env:"AGENT_ID"`
+	VMID       string `yaml:"vm_id" mapstructure:"vm_id" env:"VM_ID"`
 
 	// JWT 配置
-	JWTSecret  string        `yaml:"jwt_secret" env:"JWT_SECRET"`
-	TokenExpiry time.Duration `yaml:"token_expiry"`
+	JWTSecret   string        `yaml:"jwt_secret" mapstructure:"jwt_secret" env:"JWT_SECRET"`
+	TokenExpiry time.Duration `yaml:"token_expiry" mapstructure:"token_expiry"`
 
 	// HTTP 服务器配置
-	ListenAddr  string `yaml:"listen_addr"`
-	TLSCertFile string `yaml:"tls_cert_file"`
-	TLSKeyFile  string `yaml:"tls_key_file"`
+	ListenAddr  string `yaml:"listen_addr" mapstructure:"listen_addr"`
+	TLSCertFile string `yaml:"tls_cert_file" mapstructure:"tls_cert_file"`
+	TLSKeyFile  string `yaml:"tls_key_file" mapstructure:"tls_key_file"`
 
 	// TLS 强制配置
-	TLSEnabled         bool   `yaml:"tls_enabled"`
-	VerifyCertificates bool   `yaml:"verify_certificates"`
-	CAFile             string `yaml:"ca_file"`
+	TLSEnabled         bool   `yaml:"tls_enabled" mapstructure:"tls_enabled"`
+	VerifyCertificates bool   `yaml:"verify_certificates" mapstructure:"verify_certificates"`
+	CAFile             string `yaml:"ca_file" mapstructure:"ca_file"`
 
 	// 心跳配置
-	HeartbeatInterval time.Duration `yaml:"heartbeat_interval"`
+	HeartbeatInterval time.Duration `yaml:"heartbeat_interval" mapstructure:"heartbeat_interval"`
 
 	// 日志配置
-	LogLevel string `yaml:"log_level"`
-	LogPath  string `yaml:"log_path"`
+	LogLevel string `yaml:"log_level" mapstructure:"log_level"`
+	LogPath  string `yaml:"log_path" mapstructure:"log_path"`
 
 	// 平台配置
-	Platform string `yaml:"platform"` // windows or linux
+	Platform string `yaml:"platform" mapstructure:"platform"` // windows or linux
 }
 
 // LoadConfig 从 YAML 文件或环境变量加载配置
@@ -349,10 +351,17 @@ func AutoRegisterAgent(backendURL string, fp *SystemFingerprint) (vmID, agentID 
 	return result.Data.VMID, result.Data.AgentID, nil
 }
 
+// collectFingerprint 是 CollectSystemFingerprint 的可覆盖包级缝, 初值即原直调,
+// 生产路径 byte 行为不变。该 seam 用于让 77-05 Q-77-B 的 RED 探针 (空 GUID 不 panic)
+// 在 Windows/CI 双平台都得到确定性结论 — 真实 CollectSystemFingerprint 在 Windows 上
+// 总能拿到注册表 GUID, 无法直接驱动 panic 复现。76-02b 覆盖纪律: 测试先 t.Cleanup
+// 后覆盖, 禁 t.Parallel (P-77-9)。
+var collectFingerprint = CollectSystemFingerprint
+
 // RegisterToBackend 配置不完整时自动注册
 func RegisterToBackend(config *Config) (*Config, error) {
 	// 收集指纹
-	fp, err := CollectSystemFingerprint()
+	fp, err := collectFingerprint()
 	if err != nil {
 		return nil, fmt.Errorf("收集系统指纹失败: %w", err)
 	}
@@ -366,7 +375,13 @@ func RegisterToBackend(config *Config) (*Config, error) {
 			"error":       err.Error(),
 		}).Warn("auto registration failed, using temporary ID")
 		vmID = fmt.Sprintf("vm-temp-%s", fp.Hostname)
-		agentID = fmt.Sprintf("agent-%s-%s", fp.Hostname, fp.MachineGUID[:8])
+		// 长度守卫: Linux 上 MachineGUID 永远为空, Windows reg query 失败亦可能
+		// 为空 — 旧实现 fp.MachineGUID[:8] 直接 panic。修复按可用长度截断, 不补零。
+		guidPrefix := fp.MachineGUID
+		if len(guidPrefix) > 8 {
+			guidPrefix = guidPrefix[:8]
+		}
+		agentID = fmt.Sprintf("agent-%s-%s", fp.Hostname, guidPrefix)
 	}
 
 	// 更新配置
@@ -377,12 +392,21 @@ func RegisterToBackend(config *Config) (*Config, error) {
 	return config, nil
 }
 
-// generateRandomSecret 生成随机密钥
+// generateRandomSecret 用 crypto/rand 从字符集随机选 32 字符生成密钥。
+// 修复 Q-77-A: 原实现 charset[i%len] 确定性返回常量串, 与函数名 + 注释
+// 「生成随机密钥」的语义不符, 且让 Agent 自动注册的 JWT secret 可被外部预测。
+// 这里使用 CSPRNG, math/rand 禁用; CSPRNG 读取失败属系统级异常, 直接 panic
+// (签名同一代码基线的不变量: agent secret 永远不应该降级为常量)。
 func generateRandomSecret() string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	result := make([]byte, 32)
+	max := big.NewInt(int64(len(charset)))
 	for i := range result {
-		result[i] = charset[i%len(charset)]
+		n, err := cryptorand.Int(cryptorand.Reader, max)
+		if err != nil {
+			panic(fmt.Sprintf("generateRandomSecret: 读取 crypto/rand 失败: %v", err))
+		}
+		result[i] = charset[n.Int64()]
 	}
 	return string(result)
 }

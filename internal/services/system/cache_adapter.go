@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
@@ -104,7 +105,7 @@ func (a *CacheAdapter) GetOrSet(
 	if err != nil {
 		logger.Warnf("序列化结果失败: key=%s, error=%v", key, err)
 		// 序列化失败，仍然设置结果到目标变量
-		setValue(dest, result)
+		base.SetValue(dest, result)
 		return nil
 	}
 
@@ -114,12 +115,12 @@ func (a *CacheAdapter) GetOrSet(
 	}
 
 	// 设置结果到目标变量
-	setValue(dest, result)
+	base.SetValue(dest, result)
 
 	return nil
 }
 
-// setValue 使用反射设置目标变量的值（定义在 cache_provider.go 中）
+// setValue 使用反射设置目标变量的值（Phase 92-01 已迁至 base.SetValue）
 
 // Delete 删除缓存
 func (a *CacheAdapter) Delete(ctx context.Context, key string) error {

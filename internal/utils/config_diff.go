@@ -248,7 +248,7 @@ func calculateUnifiedDiff(oldLines, newLines []string, contextLines int) *Unifie
 // formatUnifiedDiff 格式化统一差异
 func formatUnifiedDiff(diff *UnifiedDiff) string {
 	if len(diff.Hunks) == 0 {
-		return ""
+		return "--- old\n+++ new\n"
 	}
 
 	var builder strings.Builder

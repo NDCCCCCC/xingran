@@ -8,6 +8,7 @@ import (
 	vdiServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -77,10 +78,10 @@ func (h *VMHandler) List(c *gin.Context) {
 
 	// 设置默认分页参数
 	if req.Page <= 0 {
-		req.Page = 1
+		req.Page = constants.DefaultCurrent
 	}
 	if req.PageSize <= 0 {
-		req.PageSize = 10
+		req.PageSize = constants.DefaultPageSize
 	}
 
 	// Extract data scope info from Gin context (set by DataScopePermission middleware)
@@ -200,7 +201,7 @@ func (h *VMHandler) Delete(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
-// @Router /vdi/vm/operate [post]
+// @Router /vdi/vms/operate [post]
 func (h *VMHandler) Operate(c *gin.Context) {
 	var req vdiServices.VMOperateRequest
 	if !handleJSONBinding(c, &req) {

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -39,21 +40,42 @@ func newWebSocketUpgrader(allowedOrigins []string) websocket.Upgrader {
 				return true // 非浏览器客户端（如Postman）无Origin头
 			}
 
-			// 允许同源请求
+			// v129-recheck WR-05: HasPrefix 前缀匹配可被子域绕过
+			// （http://example.com.attacker.com 前缀命中 example.com）——改 url.Parse
+			// 后精确比较 host:port。Origin 头不含 path，精确 host 匹配即正确语义。
+			originURL, perr := url.Parse(origin)
+			if perr != nil || originURL.Host == "" {
+				applogger.Warnf("WebSocket 连接被拒绝（Origin 解析失败）: origin=%s, client_ip=%s", origin, r.RemoteAddr)
+				return false
+			}
+			originHost := strings.ToLower(originURL.Host)
+
+			// 允许同源请求（Origin host 与请求 Host 精确一致）
 			host := r.Header.Get("Host")
 			if host == "" {
 				host = r.Host
 			}
-			if strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host) {
+			if host != "" && originHost == strings.ToLower(host) {
 				return true
 			}
 
-			// 允许 localhost（开发环境）和配置的域名
-			if strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1") {
+			// 允许 localhost（开发环境，精确 host + 任意端口形态）
+			if originHost == "localhost" || originHost == "127.0.0.1" ||
+				strings.HasPrefix(originHost, "localhost:") || strings.HasPrefix(originHost, "127.0.0.1:") {
 				return true
 			}
+
+			// 配置白名单：解析后精确比较 host（配置项也允许裸 host 形态）
 			for _, allowed := range allowedOrigins {
-				if origin == allowed || strings.HasPrefix(origin, allowed) {
+				if strings.EqualFold(origin, allowed) {
+					return true
+				}
+				allowedURL, aerr := url.Parse(allowed)
+				if aerr == nil && allowedURL.Host != "" {
+					if originHost == strings.ToLower(allowedURL.Host) {
+						return true
+					}
+				} else if originHost == strings.ToLower(allowed) {
 					return true
 				}
 			}
@@ -108,29 +130,15 @@ func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, c
 		}
 
 		// 注册客户端
-		client := hub.RegisterClient(userID, conn)
+		hub.RegisterClient(userID, conn)
 
-		// 读取客户端消息（用于保持连接）
-		go func() {
-			defer hub.UnregisterClient(client)
-			for {
-				messageType, message, err := conn.ReadMessage()
-				if err != nil {
-					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						applogger.Warnf("WebSocket错误: %v", err)
-					}
-					break
-				}
-
-				// 处理客户端消息（如果需要）
-				if messageType == websocket.TextMessage {
-					// 心跳响应
-					if string(message) == "ping" {
-						_ = conn.WriteMessage(websocket.TextMessage, []byte("pong"))
-					}
-				}
-			}
-		}()
+		// v129-recheck C-5: 此处不得再起读循环或直写 conn——RegisterClient 内部
+		// 已启动 Client.readPump（唯一读者：ReadDeadline/Pong/断连注销）与
+		// Client.writePump（唯一写者：54s 协议级 ping + 广播）。gorilla/websocket
+		// 约束单读者/单写者，历史遗留的 handler 读循环构成第二读者，其文本
+		// ping/pong 直写构成第二写者（并发写会 panic("concurrent write to
+		// websocket connection") 且无 recover，进程崩溃）。keep-alive 全权由
+		// hub 泵承担（协议级 ping/pong，浏览器自动应答，无需应用层文本心跳）。
 
 		applogger.Warnf("用户 %s WebSocket连接已建立", userID)
 	})

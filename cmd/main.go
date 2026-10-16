@@ -35,6 +35,14 @@ const (
 	ShutdownTimeout = 10 * time.Second
 )
 
+// Version 版本号，构建时经 ldflags 注入：
+//
+//	go build -ldflags="-X main.Version=v1.2.3" ...
+//
+// 缺省 "dev"（本地 go run / 未注入的构建）。/health 端点与启动日志都会输出，
+// 部署流水线据此校验发布是否生效（curl /health | grep 版本号）。
+var Version = "dev"
+
 func init() {
 	loadDotEnv()
 	setTimeZone()
@@ -82,14 +90,35 @@ func setTimeZone() {
 // @name Authorization
 // @description Bearer token
 func main() {
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		fmt.Printf("配置加载失败: %v\n", err)
+		os.Exit(1)
+	}
 
 	initializeLogger(cfg)
 	logStartupInfo(cfg)
 
 	coreModule := initializeCoreModule(cfg)
 	engine := setupGinEngine(cfg)
-	allowedOrigins := []string{"*"}
+	allowedOrigins := cfg.Server.AllowedOrigins
+	// D-02: Fail-fast in production if no origins configured (empty list or only "*")
+	if len(allowedOrigins) == 0 {
+		if cfg.Server.Mode == "release" {
+			applogger.Fatalf("server.allowed_origins must be configured in production: at least one origin is required")
+		}
+		// 非 release(开发/测试): 恢复历史 dev 兜底行为(通配放行 + 告警),
+		// 不要求 dev config.yaml 显式配置 allowed_origins。
+		allowedOrigins = []string{"*"}
+		applogger.Warnf("server.allowed_origins not configured — falling back to '*' wildcard (dev mode). Configure specific origins in production.")
+	}
+	// Warn if only wildcard is configured (still allows, but warns about insecure setup)
+	for _, origin := range allowedOrigins {
+		if origin == "*" {
+			applogger.Warnf("server.allowed_origins contains '*' wildcard — this allows all origins. In production, configure specific origins.")
+			break
+		}
+	}
 	setupRoutes(engine, cfg, coreModule, allowedOrigins)
 
 	server := startServer(cfg, engine)
@@ -117,6 +146,7 @@ func initializeLogger(cfg *config.Config) {
 // logStartupInfo 记录启动信息
 func logStartupInfo(cfg *config.Config) {
 	applogger.Info("========== 应用启动 ==========")
+	applogger.Infof("版本: %s", Version)
 	applogger.Infof("日志级别: %s", cfg.Log.Level)
 	applogger.Infof("日志目录: %s", cfg.Log.LogDir)
 }
@@ -188,8 +218,9 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, 
 	// 健康检查
 	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-			"time":   time.Now().Format(time.RFC3339),
+			"status":  "ok",
+			"version": Version,
+			"time":    time.Now().Format(time.RFC3339),
 		})
 	})
 
@@ -228,9 +259,13 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, 
 
 // startServer 启动 HTTP 服务器
 func startServer(cfg *config.Config, engine *gin.Engine) *http.Server {
+	// Phase 62-DBG-01: 加 WriteTimeout=75s（前端 axios=60s，后端稍长以让前端先超时，
+	// 同时避免向已关闭 socket 长时间 block；为 cache-miss 长查询场景提供 fast-fail 路径）。
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler: engine,
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:      engine,
+		WriteTimeout: 75 * time.Second,
+		ReadTimeout:  75 * time.Second,
 	}
 
 	go func() {

@@ -1,15 +1,16 @@
 package services
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 )
 
 // adTLSSkipVerify 缓存 AD/LDAP TLS 证书校验开关,从 config.AD.TLSSkipVerify 读取。
@@ -21,9 +22,16 @@ var (
 )
 
 // loadADTLSSkipVerify 懒加载 AD TLS 跳过校验开关
+//
+// 启动期配置错误是致命问题:Load() 失败时必须终止进程,不能让 AD 模块
+// 静默使用零值(默认 TLSSkipVerify=false → 严格校验,可能在某些自签证书
+// 环境下导致 LDAP 绑定失败,掩盖真实配置错误)。
 func loadADTLSSkipVerify() bool {
 	adTLSSkipVerifyOnce.Do(func() {
-		cfg := config.Load()
+		cfg, err := config.Load(context.Background())
+		if err != nil {
+			panic(fmt.Sprintf("[ad_ldap] 配置加载失败: %v", err))
+		}
 		adTLSSkipVerify = cfg.AD.TLSSkipVerify
 	})
 	return adTLSSkipVerify
@@ -63,7 +71,7 @@ func (c *LDAPClient) Connect() error {
 	}
 
 	// 设置超时
-	c.conn.SetTimeout(time.Second * 30)
+	c.conn.SetTimeout(constants.LDAPConnTimeout)
 
 	// 启动TLS (如果配置了StartTLS)
 	if c.config.UseTLS && !c.config.UseSSL {

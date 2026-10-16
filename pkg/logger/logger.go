@@ -1,10 +1,12 @@
 package logger
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -28,6 +30,9 @@ const (
 )
 
 var (
+	// logMu 保护 log/fileLogger/fileWriter 三全局:Init(显式或 GetLogger 懒触发)
+	// 与并发读取之间的同步点。Q-7 race 验证暴露出懒初始化数据竞争,行为不变修复。
+	logMu      sync.RWMutex
 	log        *logrus.Logger
 	fileLogger *logrus.Logger
 	fileWriter io.WriteCloser
@@ -59,6 +64,13 @@ func DefaultConfig() *Config {
 
 // Init 初始化日志系统
 func Init(cfg *Config) error {
+	logMu.Lock()
+	defer logMu.Unlock()
+	return initLocked(cfg)
+}
+
+// initLocked 初始化日志系统(调用方必须已持有 logMu 写锁)
+func initLocked(cfg *Config) error {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
@@ -74,13 +86,51 @@ func Init(cfg *Config) error {
 	fileLogger = createFileLogger(level, fileWriter)
 
 	if cfg.ConsoleOutput {
-		// 控制台日志：仅写 stdout（Text 格式，方便人类阅读）
-		// 修复 bug：之前用 MultiWriter 把 Text 格式同时写到文件，导致文件不是 JSON
-		log = createConsoleLogger(level)
+		// 控制台日志：写 stdout（Text 格式，方便人类阅读）。
+		// 同时通过 hook 镜像到 JSON 文件 logger，避免 fileLogger 孤立
+		// （早期用 MultiWriter 把 Text 也写进文件导致文件非 JSON，已用 hook 方案规避）。
+		console := createConsoleLogger(level)
+		console.AddHook(&fileMirrorHook{fileLogger: fileLogger})
+		log = console
 	} else {
 		log = fileLogger
 	}
 
+	return nil
+}
+
+// fileMirrorHook 将日志条目镜像写入 JSON 文件 logger，
+// 使 ConsoleOutput=true 时文件日志（logs/app.log）同时落盘。
+// fileLogger 自身无 hook，不会递归。
+type fileMirrorHook struct {
+	fileLogger *logrus.Logger
+}
+
+func (h *fileMirrorHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+func (h *fileMirrorHook) Fire(entry *logrus.Entry) error {
+	if h.fileLogger == nil {
+		return nil
+	}
+	fileEntry := h.fileLogger.WithFields(entry.Data)
+	switch entry.Level {
+	case logrus.PanicLevel:
+		fileEntry.Panic(entry.Message)
+	case logrus.FatalLevel:
+		fileEntry.Fatal(entry.Message)
+	case logrus.ErrorLevel:
+		fileEntry.Error(entry.Message)
+	case logrus.WarnLevel:
+		fileEntry.Warn(entry.Message)
+	case logrus.InfoLevel:
+		fileEntry.Info(entry.Message)
+	case logrus.DebugLevel:
+		fileEntry.Debug(entry.Message)
+	case logrus.TraceLevel:
+		fileEntry.Trace(entry.Message)
+	}
 	return nil
 }
 
@@ -140,8 +190,17 @@ func createConsoleLogger(level logrus.Level) *logrus.Logger {
 
 // GetLogger 获取日志记录器
 func GetLogger() *logrus.Logger {
+	logMu.RLock()
+	l := log
+	logMu.RUnlock()
+	if l != nil {
+		return l
+	}
+
+	logMu.Lock()
+	defer logMu.Unlock()
 	if log == nil {
-		if err := Init(DefaultConfig()); err != nil {
+		if err := initLocked(DefaultConfig()); err != nil {
 			// 记录到stderr，因为日志系统尚未初始化
 			fmt.Fprintf(os.Stderr, "日志初始化失败，使用标准日志: %v\n", err)
 			fallbackToStdLogger()
@@ -155,6 +214,22 @@ func GetLogger() *logrus.Logger {
 func fallbackToStdLogger() {
 	logrus.SetOutput(os.Stdout)
 	logrus.SetLevel(logrus.InfoLevel)
+}
+
+// SetTestBuffer redirects GetLogger() output to a buffer for test log capture.
+// Returns a restore function that resets output to the original writer.
+// Initializes the logger if not yet initialized (so tests work without Init).
+// Usage:
+//   restore := SetTestBuffer(&buf)
+//   defer restore()
+func SetTestBuffer(buf *bytes.Buffer) func() {
+	l := GetLogger() // ensures log is initialized
+	origOut := l.Out
+
+	l.SetOutput(buf)
+	return func() {
+		l.SetOutput(origOut)
+	}
 }
 
 // WithFields 创建带有字段的新日志记录器
@@ -213,9 +288,37 @@ func Fatal(args ...interface{}) {
 }
 
 // Fatalf 记录格式化致命错误日志并退出程序
+//
+// 关键修补(2026-10-15):原实现先调 fileLogger.Fatal(msg)——logrus Fatal 内部
+// 立即 os.Exit(1),导致后续 stdout 输出成为死代码,终端永远看不到 Fatal 原因
+// (仅 logs/app.log 有记录)。
+// 现顺序:① stdout 先行(Error 级,保留原终端格式;不用 Fatal 级是避免
+// fileMirrorHook 对 Fatal 级的镜像在 hook 链路内触发 exit);② 文件镜像用
+// Log(FatalLevel) 写入(Log 不触发 logrus 自带 exit);③ 关闭文件 writer 确保
+// flush/sync 落盘;④ 最后 exit。
 func Fatalf(format string, args ...interface{}) {
-	GetLogger().Fatalf(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	// ① 先写 stdout——必须在进程退出前到达终端
+	GetLogger().Error(msg)
+	// ② 直接写一条 Fatal 到 fileLogger(绕过 stdout logger 的 hook 链路,
+	// 避免 fileMirrorHook 递归触发 exit)。
+	logMu.RLock()
+	fl, fw := fileLogger, fileWriter
+	logMu.RUnlock()
+	if fl != nil {
+		fl.Log(logrus.FatalLevel, msg)
+	}
+	// ③ 关闭文件 writer,确保 fatal 镜像 flush/sync 落盘
+	if fw != nil {
+		_ = fw.Close()
+	}
+	// ④ 最后退出(exitFunc 可注入,回归测试用桩替换)
+	exitFunc(1)
 }
+
+// exitFunc Fatalf 的退出出口,默认 os.Exit;测试可替换为不退出的桩,
+// 以验证"stdout 先于退出"的输出顺序(原 QUIRK-80-05-E Fatal 系豁免就此解除)。
+var exitFunc = os.Exit
 
 // Panic 记录恐慌日志并触发panic
 func Panic(args ...interface{}) {
@@ -239,12 +342,17 @@ func SetLevel(level string) error {
 
 // GetFileLogger 获取纯文件日志记录器（只写入文件）
 func GetFileLogger() *logrus.Logger {
+	logMu.RLock()
+	defer logMu.RUnlock()
 	return fileLogger
 }
 
 // Close 关闭日志系统
 func Close() {
-	if fileWriter != nil {
-		fileWriter.Close()
+	logMu.RLock()
+	fw := fileWriter
+	logMu.RUnlock()
+	if fw != nil {
+		fw.Close()
 	}
 }

@@ -12,12 +12,13 @@ import (
 
 // MemoryCache 内存缓存实现
 type MemoryCache struct {
-	items    map[string]*CacheItem
-	mutex    sync.RWMutex
-	maxSize  int
-	stopChan chan struct{}
-	hits     int64 // 命中次数
-	misses   int64 // 未命中次数
+	items     map[string]*CacheItem
+	mutex     sync.RWMutex
+	maxSize   int
+	stopChan  chan struct{}
+	stopOnce  sync.Once
+	hits      int64 // 命中次数
+	misses    int64 // 未命中次数
 }
 
 // NewMemoryCache 创建内存缓存实例
@@ -190,6 +191,7 @@ func (m *MemoryCache) IncrementBy(ctx context.Context, key string, value int64) 
 
 	item, exists := m.items[key]
 	var currentValue int64
+	var expiration int64
 
 	if exists && !item.IsExpired() {
 		// 尝试转换当前值为整数
@@ -199,20 +201,23 @@ func (m *MemoryCache) IncrementBy(ctx context.Context, key string, value int64) 
 		case int64:
 			currentValue = v
 		case string:
-			if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
-				currentValue = parsed
+			parsed, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return 0, ErrNotInteger
 			}
+			currentValue = parsed
 		default:
 			return 0, ErrInvalidType
 		}
+		expiration = item.Expiration
 	}
 
 	currentValue += value
 
-	// 更新值
+	// 更新值:缺 key 或已过期时按 0 起算并新建缓存项(对齐 Redis INCR)
 	m.items[key] = &CacheItem{
 		Value:      currentValue,
-		Expiration: item.Expiration,
+		Expiration: expiration,
 		Created:    time.Now(),
 	}
 
@@ -305,8 +310,11 @@ func (m *MemoryCache) FlushDB(ctx context.Context) error {
 
 // Close 关闭缓存
 func (m *MemoryCache) Close() error {
-	close(m.stopChan)
-	return nil
+	var err error
+	m.stopOnce.Do(func() {
+		close(m.stopChan)
+	})
+	return err
 }
 
 // MGetJSON 批量获取JSON对象

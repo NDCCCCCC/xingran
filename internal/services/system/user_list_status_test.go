@@ -8,7 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 

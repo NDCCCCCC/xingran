@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/common"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -26,11 +27,11 @@ type JobLogService interface {
 	CleanOldLogs(ctx context.Context, days int) error
 }
 
-// JobLogStatistics 任务日志统计结果。status: 0=成功 1=失败。
+// JobLogStatistics 任务日志统计结果。status: JobLogStatusSuccess=成功 / JobLogStatusFailure=失败（簇 C）。
 type JobLogStatistics struct {
 	Total   int64 `json:"total"`
-	Success int64 `json:"success"` // status = 0
-	Fail    int64 `json:"fail"`    // status = 1
+	Success int64 `json:"success"` // JobLogStatusSuccess
+	Fail    int64 `json:"fail"`    // JobLogStatusFailure
 }
 
 // jobLogServiceImpl 任务日志服务实现
@@ -75,10 +76,10 @@ func (s *jobLogServiceImpl) Create(ctx context.Context, log *models.JobLog) erro
 func (s *jobLogServiceImpl) List(ctx context.Context, params *JobLogListParams) (*common.PageResult, error) {
 	// 设置默认值
 	if params.Current <= 0 {
-		params.Current = 1
+		params.Current = constants.DefaultCurrent
 	}
 	if params.PageSize <= 0 {
-		params.PageSize = 10
+		params.PageSize = constants.DefaultPageSize
 	}
 
 	// 构建查询条件
@@ -144,8 +145,8 @@ func (s *jobLogServiceImpl) Statistics(ctx context.Context, params *JobLogListPa
 	var result JobLogStatistics
 	if err := db.Select(
 		"COUNT(*) AS total",
-		"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS success",
-		"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS fail",
+		fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS success", int(models.JobLogStatusSuccess)),
+		fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS fail", int(models.JobLogStatusFailure)),
 	).Scan(&result).Error; err != nil {
 		return nil, fmt.Errorf("统计任务日志失败: %w", err)
 	}

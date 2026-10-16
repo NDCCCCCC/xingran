@@ -74,9 +74,11 @@ func TestNormalizeMACAddress(t *testing.T) {
 			expected: "",
 		},
 		{
-			name:     "格式不合法(非 12 字符)原样返回",
+			// 文档契约(mac_normalize.go:26):不符合 12 hex 字符的输入返回 ""
+			// (丢弃语义,与 parseRuijiePortSecurityLine 失败路径对齐)
+			name:     "格式不合法(非 12 hex)返回空串",
 			input:    "not-a-mac",
-			expected: "not-a-mac",
+			expected: "",
 		},
 	}
 

@@ -28,6 +28,9 @@ func SetupVMRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/stop", middleware.RequirePermissions([]string{"vdi:vm:stop"}, core), vmHandler.StopVM)
 	r.POST("/restart", middleware.RequirePermissions([]string{"vdi:vm:restart"}, core), vmHandler.RestartVM)
 
+	// VDI 批量操作（聚合 action 端点，batchOperate 复用）— Phase 100 D-100-10 补注册
+	r.POST("/operate", middleware.RequirePermissions([]string{"vdi:vm:edit"}, core), vmHandler.Operate)
+
 	// 用户绑定操作
 	r.POST("/:id/bind_user", middleware.RequirePermissions([]string{"vdi:vm:bind"}, core), vmHandler.BindUser)
 	r.POST("/:id/unbind_user", middleware.RequirePermissions([]string{"vdi:vm:bind"}, core), vmHandler.UnbindUser)

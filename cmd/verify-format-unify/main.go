@@ -40,7 +40,10 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		applogger.Debugf("[verify] .env 未加载: %v", err)
 	}
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		panic("加载配置失败: " + err.Error())
+	}
 	applogger.Info("=================================================================")
 	applogger.Info("= verify-format-unify 启动")
 	applogger.Infof("= 数据库: PostgreSQL @ %s:%d/%s", cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName)

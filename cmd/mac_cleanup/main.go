@@ -51,7 +51,10 @@ func main() {
 	}
 
 	// 2. 加载配置(config/config.yaml + env override)
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		panic("加载配置失败: " + err.Error())
+	}
 	applogger.Info("=================================================================")
 	applogger.Info("= mac_cleanup 启动")
 	if cfg.Database.Host != "" {

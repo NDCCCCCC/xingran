@@ -279,14 +279,18 @@ func ValidateTokenWithSM2(tokenString string, publicKey *sm2.PublicKey) (*Claims
 }
 
 // GenerateRefreshTokenWithSM2 生成刷新Token（使用SM2签名）
-func GenerateRefreshTokenWithSM2(userID string, username string, privateKey *sm2.PrivateKey) (string, error) {
-	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+//
+// issuer 与 expiration 必须由调用方（JWTManager）从配置传入，禁止硬编码：
+// 曾硬编码 Issuer "Xingran-Next"，与配置 jwt.issuer（如 "RuoYi-Next-Dev"）不一致，
+// 导致 ValidateToken 签发者校验恒定失败 → 页面刷新时 /system/auth/refresh 100% 401。
+func GenerateRefreshTokenWithSM2(userID string, username string, issuer string, expiration time.Duration, privateKey *sm2.PrivateKey) (string, error) {
+	expirationTime := time.Now().Add(expiration)
 
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
 		Roles:    []string{"refresh"},
-		Issuer:   "RuoYi-Next",
+		Issuer:   issuer,
 		Subject:  userID,
 		Audience: []string{"ruoyi-next"},
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -386,11 +390,18 @@ func DecryptWithSM2(ciphertext string, privateKey *sm2.PrivateKey) (string, erro
 		return "", fmt.Errorf("base64 decode failed: %w", err)
 	}
 
+	// SM2 mode-1(C1C3C2 未压缩)密文最小 97 字节: 0x04(1) + X||Y(64) + SM3(32) + 密文(≥0)
+	if len(data) < 96 {
+		return "", fmt.Errorf("sm2 密文长度非法: %d", len(data))
+	}
+
 	var plaintext []byte
 
-	plaintext, err = sm2.Decrypt(privateKey, data, 1)
-	if err == nil {
-		return decodeHexEncodedResult(plaintext, "mode1")
+	if len(data) >= 97 {
+		plaintext, err = sm2.Decrypt(privateKey, data, 1)
+		if err == nil {
+			return decodeHexEncodedResult(plaintext, "mode1")
+		}
 	}
 
 	if len(data) > 0 && data[0] != 0x04 {
@@ -403,9 +414,11 @@ func DecryptWithSM2(ciphertext string, privateKey *sm2.PrivateKey) (string, erro
 		}
 	}
 
-	plaintext, err = sm2.Decrypt(privateKey, data, 0)
-	if err == nil {
-		return decodeHexEncodedResult(plaintext, "mode0")
+	if len(data) >= 97 {
+		plaintext, err = sm2.Decrypt(privateKey, data, 0)
+		if err == nil {
+			return decodeHexEncodedResult(plaintext, "mode0")
+		}
 	}
 
 	if len(data) > 0 && data[0] != 0x04 {

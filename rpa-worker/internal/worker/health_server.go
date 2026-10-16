@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ruoyi-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/logger"
 )
 
 // HealthServer HTTP health check server

@@ -1,8 +1,6 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
@@ -32,8 +30,7 @@ func (h *FloorHandler) WithCore(core *core.Core) *FloorHandler {
 // Statistics 楼层统计(读操作,不记操作日志)
 func (h *FloorHandler) Statistics(c *gin.Context) {
 	result, err := h.service.Statistics(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询统计数据") {
 		return
 	}
 	response.Success(c, result)
@@ -47,8 +44,7 @@ func (h *FloorHandler) SearchFloorOptions(c *gin.Context) {
 		params = map[string]interface{}{}
 	}
 	result, err := h.service.SearchFloorOptions(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询楼层下拉选项") {
 		return
 	}
 	response.Success(c, result)
@@ -67,11 +63,11 @@ func (h *FloorHandler) SearchFloorOptions(c *gin.Context) {
 // @Router /ops/floor [post]
 func (h *FloorHandler) Create(c *gin.Context) {
 	var floor operations.OpsFloor
-	if !handleJSONBinding(c, &floor) {
+	if !response.HandleJSONBinding(c, &floor) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &floor), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &floor), "创建") {
 		return
 	}
 
@@ -98,8 +94,7 @@ func (h *FloorHandler) List(c *gin.Context) {
 	}
 
 	result, err := h.service.List(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
+	if !response.HandleServiceError(c, err, "查询楼层列表") {
 		return
 	}
 
@@ -163,12 +158,12 @@ func (h *FloorHandler) GetByID(c *gin.Context) {
 func (h *FloorHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var floor operations.OpsFloor
-	if !handleJSONBinding(c, &floor) {
+	if !response.HandleJSONBinding(c, &floor) {
 		return
 	}
 
 	floor.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &floor), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &floor), "更新") {
 		return
 	}
 
@@ -190,7 +185,7 @@ func (h *FloorHandler) Update(c *gin.Context) {
 // @Router /ops/floor/{id}/delete [post]
 func (h *FloorHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -215,13 +210,13 @@ func (h *FloorHandler) BatchOperation(c *gin.Context) {
 		Action string   `json:"action"`
 	}
 
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:

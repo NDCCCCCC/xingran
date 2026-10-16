@@ -12,6 +12,7 @@ var (
 	ErrCacheFull     = errors.New("缓存已满")
 	ErrSerialization = errors.New("序列化失败")
 	ErrConnection    = errors.New("缓存连接失败")
+	ErrNotInteger    = errors.New("值不是整数")
 )
 
 // IsNotFound 检查错误是否为未找到错误

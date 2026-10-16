@@ -8,8 +8,8 @@ import (
     "os/signal"
     "syscall"
 
-    "github.com/ruoyi-next/rpa-worker/internal/config"
-    "github.com/ruoyi-next/rpa-worker/internal/worker"
+    "github.com/xingran-next/rpa-worker/internal/config"
+    "github.com/xingran-next/rpa-worker/internal/worker"
 )
 
 var (

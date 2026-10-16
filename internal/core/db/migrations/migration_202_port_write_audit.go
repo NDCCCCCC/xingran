@@ -18,12 +18,12 @@ import (
 //  1. SQLite 跳过(isPostgreSQL 守卫,参考 migration_201:45-51):Wave 1 handler 测试
 //     用 sqlite 手动 AutoMigrate PortWriteAudit;生产路径仅 PG。
 //  2. 防御索引命名漂移:CREATE INDEX IF NOT EXISTS 同名索引(model tag 已声明,
-//     此处 noop;但若 GORM tag 命名漂移,此语句补回 — memory ruoyi-gorm-sql-constraint-naming-conflict)。
+//     此处 noop;但若 GORM tag 命名漂移,此语句补回 — memory xingran-gorm-sql-constraint-naming-conflict)。
 //  3. 菜单 seed(count-then-insert + F 型按钮):parent 菜单名 = "端口状态"(D-07 锁定,
 //     ROADMAP / REQUIREMENTS 上的别名是笔误,以实际 DB sys_menu.menu_name 为准)。
 //  4. D-08 helper 调用:GrantNewMenuToRolesHavingParent(db, "端口状态", menu.ID)。
 //
-// 字段约束(D-06 + RESEARCH §3.2 A7 + memory ruoyi-menu-no-java-fields):
+// 字段约束(D-06 + RESEARCH §3.2 A7 + memory xingran-menu-no-java-fields):
 //   - **绝对禁止** Java sys_menu 风格的 frame / cache 字段(Go sys_menu 用 Meta JSONB 表达)
 //   - F 型按钮:Visible=VisibleHidden(0), Path="", Icon="#"
 //

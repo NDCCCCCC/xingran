@@ -2,6 +2,14 @@ package models
 
 import "time"
 
+// OperLogStatus 操作日志状态枚举（0=成功, 1=失败）
+type OperLogStatus int
+
+const (
+	OperLogStatusSuccess OperLogStatus = 0 // 成功
+	OperLogStatusFailure OperLogStatus = 1 // 失败
+)
+
 // OperLog 操作日志模型
 type OperLog struct {
 	BaseTimeLine
@@ -23,6 +31,14 @@ type OperLog struct {
 	OperTime      time.Time `gorm:"column:oper_time" json:"operTime"`
 	CostTime      int64     `gorm:"column:cost_time" json:"costTime"`
 }
+
+// LoginLogStatus 登录日志状态枚举（0=成功, 1=失败）
+type LoginLogStatus int
+
+const (
+	LoginLogStatusSuccess LoginLogStatus = 0 // 成功
+	LoginLogStatusFailure LoginLogStatus = 1 // 失败
+)
 
 // LoginLog 登录日志模型
 type LoginLog struct {
@@ -70,6 +86,14 @@ type Job struct {
 	PrevRunTime    *time.Time    `gorm:"column:prev_run_time" json:"prevRunTime,omitempty"`
 	Remark         *string       `gorm:"size:500" json:"remark,omitempty"`
 }
+
+// JobLogStatus 任务执行日志状态枚举（0=成功, 1=失败）
+type JobLogStatus int
+
+const (
+	JobLogStatusSuccess JobLogStatus = 0 // 成功
+	JobLogStatusFailure JobLogStatus = 1 // 失败
+)
 
 // JobLog 任务日志模型
 type JobLog struct {

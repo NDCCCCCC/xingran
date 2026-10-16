@@ -30,6 +30,14 @@ func (s *fixSuggestionServiceImpl) GenerateFixSuggestions(ctx context.Context) (
 		return 0, errors.New("db 未初始化")
 	}
 
+	// 方言守卫(2026-08-17):建议生成依赖物理链路物化视图 reconciliation_normalized
+	// (migration_176,PG-only);SQLite 下该 MV 不存在,建议永远无法生成,
+	// 早退避免每轮 cron 对候选逐条报 "no such table: reconciliation_normalized" WARN。
+	if s.db.Dialector.Name() != "postgres" {
+		applogger.Debugf("[fix-suggestion:Generator] 非 postgres 方言,跳过(物理链路 MV 为 PG-only)")
+		return 0, nil
+	}
+
 	// 1. 紧急熔断:读 sys_config enabled(0 → 返回 0, nil)
 	if !s.isFixFeatureEnabled(ctx) {
 		applogger.Infof("[fix-suggestion:Generator] 功能已禁用(enabled=0),跳过本轮")

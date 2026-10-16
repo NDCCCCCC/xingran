@@ -49,8 +49,8 @@ func (s *dictTypeService) Statistics(ctx context.Context) (*DictTypeStatisticsRe
 		Model(&models.DictType{}).
 		Select(
 			"COUNT(*) AS total",
-			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
-			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS active", int(models.DictStatusNormal)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS inactive", int(models.DictStatusDisabled)),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -228,8 +228,8 @@ func (s *dictDataService) Statistics(ctx context.Context, dictType string) (*Dic
 	}
 	err := q.Select(
 		"COUNT(*) AS total",
-		"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
-		"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+		fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS active", int(models.DictStatusNormal)),
+		fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS inactive", int(models.DictStatusDisabled)),
 	).Scan(&result).Error
 	if err != nil {
 		return nil, fmt.Errorf("统计字典数据失败: %w", err)

@@ -2,13 +2,13 @@ package rpa
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
 
@@ -25,13 +25,14 @@ type SelectorLearner interface {
 // selectorLearnerImpl 选择器学习服务实现
 type selectorLearnerImpl struct {
 	db     *gorm.DB
-	cache  cache.Cache
+	cache  base.CacheProvider
 	config *config.Config
 	mu     sync.RWMutex
 }
 
 // NewSelectorLearner 创建选择器学习服务
-func NewSelectorLearner(db *gorm.DB, cache cache.Cache, cfg *config.Config) SelectorLearner {
+// Phase 103 CONV-03 (D-103-2): cache cache.Cache → cache base.CacheProvider
+func NewSelectorLearner(db *gorm.DB, cache base.CacheProvider, cfg *config.Config) SelectorLearner {
 	return &selectorLearnerImpl{
 		db:     db,
 		cache:  cache,
@@ -121,8 +122,8 @@ func (l *selectorLearnerImpl) RecordSuccess(ctx context.Context, record *Selecto
 	}
 
 	// 清除缓存
-	cacheKey := l.getCacheKey(record.PageURL, record.ElementID)
-	_ = l.cache.Delete(ctx, cacheKey)
+	// Phase 103 CONV-03 (D-103-14): cache.Delete → base.Invalidate（nil 防护 + 统一日志）
+	base.Invalidate(ctx, l.cache, []string{l.getCacheKey(record.PageURL, record.ElementID)}, "SelectorLearner")
 
 	return nil
 }
@@ -164,15 +165,42 @@ func (l *selectorLearnerImpl) RecordFailure(ctx context.Context, record *Selecto
 
 // GetBestSelector 获取最佳选择器
 func (l *selectorLearnerImpl) GetBestSelector(ctx context.Context, pageURL, elementID string) (*SelectorRecommendation, error) {
-	// 先检查缓存
-	cacheKey := l.getCacheKey(pageURL, elementID)
-	if cached, err := l.cache.Get(ctx, cacheKey); err == nil {
-		var result SelectorRecommendation
-		if err := json.Unmarshal([]byte(cached), &result); err == nil {
-			return &result, nil
-		}
-	}
+	// Phase 103 CONV-03 (D-103-8): 手写 JSON cache-aside 收敛 getBestSelectorCached
+	// wrapper，best-effort 静默语义保留（cache 层任何错误 → nil, nil 视为 miss）
+	return l.getBestSelectorCached(ctx, pageURL, elementID)
+}
 
+// getBestSelectorCached 读穿透缓存 wrapper (Phase 103 CONV-03, D-103-8)。
+//
+// 语义等价说明（WR-01/WR-02 review 修正后的准确口径）：
+//   - base.GetOrSetJSON 透传的错误只可能是 computeBestSelector 的 DB 查询错误
+//     （provider 层读错误吞为 miss、写失败仅 warn），因此 err 直接一次传播
+//     （等价原实现 DB 错误 `查询成功记录失败` 一次返回），不重算
+//   - DB 查询返回 (nil, nil)（无记录）时静默返回，不缓存占位：GetOrSetJSON
+//     会把 nil 序列化为 "null" 写缓存（与原实现 `if best != nil` 语义漂移，
+//     WR-02），故 nil 结果主动失效该键恢复原语义
+//   - cache 读失败被 provider 吞为 miss（原实现 cache.Get err → 静默走 DB 等价）
+//
+// TTL 保持 30*time.Minute 字面量（D-103-12）。
+func (l *selectorLearnerImpl) getBestSelectorCached(ctx context.Context, pageURL, elementID string) (*SelectorRecommendation, error) {
+	cacheKey := l.getCacheKey(pageURL, elementID)
+
+	best, err := base.GetOrSetJSON[*SelectorRecommendation](ctx, l.cache, cacheKey, 30*time.Minute, func() (*SelectorRecommendation, error) {
+		return l.computeBestSelector(ctx, pageURL, elementID)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if best == nil {
+		// 无记录不缓存占位（等价原实现 `if best != nil` 才 Set）
+		base.Invalidate(ctx, l.cache, []string{cacheKey}, "SelectorLearner")
+	}
+	return best, nil
+}
+
+// computeBestSelector DB 直查最佳选择器（原 GetBestSelector 主体查询逻辑）。
+// 返回 (nil, nil) 表示无记录；DB 查询错误透传。
+func (l *selectorLearnerImpl) computeBestSelector(ctx context.Context, pageURL, elementID string) (*SelectorRecommendation, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
@@ -217,13 +245,6 @@ func (l *selectorLearnerImpl) GetBestSelector(ctx context.Context, pageURL, elem
 		if score > maxScore {
 			maxScore = score
 			best = rec
-		}
-	}
-
-	// 缓存结果
-	if best != nil {
-		if data, err := json.Marshal(best); err == nil {
-			_ = l.cache.Set(ctx, cacheKey, string(data), 30*time.Minute)
 		}
 	}
 
@@ -358,8 +379,9 @@ func (l *selectorLearnerImpl) calculateScore(stats SelectorStats) float64 {
 }
 
 // getCacheKey 获取缓存键
+// D-102-3: fmt.Sprintf 改 systemServices.GetRpaSelectorBestKey helper
 func (l *selectorLearnerImpl) getCacheKey(pageURL, elementID string) string {
-	return fmt.Sprintf("rpa:selector:best:%s:%s", pageURL, elementID)
+	return systemServices.GetRpaSelectorBestKey(pageURL, elementID)
 }
 
 // markSelectorForUpdate 标记选择器需要更新

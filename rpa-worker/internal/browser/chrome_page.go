@@ -8,8 +8,8 @@ import (
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/ruoyi-next/rpa-worker/internal/config"
-	"github.com/ruoyi-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/config"
+	"github.com/xingran-next/rpa-worker/internal/logger"
 )
 
 // ChromePage Chrome浏览器页面实现

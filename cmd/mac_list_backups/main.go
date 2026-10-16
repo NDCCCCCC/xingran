@@ -15,7 +15,10 @@ import (
 
 func main() {
 	_ = godotenv.Load()
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		panic("加载配置失败: " + err.Error())
+	}
 	dbConn, err := db.NewDatabase(&cfg.Database)
 	if err != nil {
 		applogger.Errorf("[list] DB 连接失败: %v", err)

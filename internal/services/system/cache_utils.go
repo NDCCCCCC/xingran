@@ -1,12 +1,7 @@
 package system
 
 import (
-	"context"
 	"strings"
-	"time"
-
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // filterSlice 通用切片过滤
@@ -47,33 +42,8 @@ func paginate[T any](items []T, current, pageSize int) ([]T, int64) {
 
 // ==================== 缓存服务通用辅助函数 ====================
 
-// CacheServiceBase 缓存服务基础结构
-type CacheServiceBase struct {
-	Config *services.CacheConfigService
-}
-
-// GetExpiration 获取缓存过期时间（通用方法）
-func (b *CacheServiceBase) GetExpiration(configKey string, defaultVal time.Duration) time.Duration {
-	if b.Config != nil {
-		return b.Config.GetDurationWithDefault(configKey, defaultVal)
-	}
-	return defaultVal
-}
-
-// InvalidateCacheByPattern 根据模式列表失效缓存（通用方法）
-func InvalidateCacheByPattern(ctx context.Context, cache CacheProvider, patterns []string, module string) {
-	for _, pattern := range patterns {
-		if err := cache.DeleteByPattern(ctx, pattern); err != nil {
-			logger.Warnf("[%s] 清除缓存失败: %v", module, err)
-		}
-	}
-}
-
-// InvalidateCacheByKey 根据键列表失效缓存（通用方法）
-func InvalidateCacheByKey(ctx context.Context, cache CacheProvider, keys []string, module string) {
-	for _, key := range keys {
-		if err := cache.Delete(ctx, key); err != nil {
-			logger.Warnf("[%s] 清除缓存失败: %v", module, err)
-		}
-	}
-}
+// CacheServiceBase 与 GetExpiration 已迁至 internal/services/base（Phase 92-01，
+// D-01/D-02），本包经 cache_provider.go 的 type alias 原位引用，嵌入点零改动。
+//
+// 原 InvalidateCacheByPattern/InvalidateCacheByKey 已删除（Phase 92-03 D-04）：
+// 失效底层唯一权威为 base.Invalidate/base.InvalidatePattern。

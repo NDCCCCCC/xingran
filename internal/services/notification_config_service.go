@@ -72,7 +72,7 @@ func (s *NotificationConfigService) GetEmailConfigByID(ctx context.Context, id s
 // GetDefaultEmailConfig 获取邮件配置（系统只有一条配置）
 func (s *NotificationConfigService) GetDefaultEmailConfig(ctx context.Context) (*models.EmailConfig, error) {
 	var config models.EmailConfig
-	if err := s.db.WithContext(ctx).Where("status = 0 AND del_flag = 0").First(&config).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("status = ? AND del_flag = ?", int(models.NotificationConfigStatusNormal), 0).First(&config).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("未设置邮件配置")
 		}
@@ -245,12 +245,12 @@ func (s *NotificationConfigService) DeleteAPINotificationConfig(ctx context.Cont
 // EncryptPassword 加密密码
 func EncryptPassword(plainText, key string) (string, error) {
 	if key == "" {
-		key = "ruoyi-default-key" // 默认密钥，实际应从配置读取
+		key = "xingran-default-key" // 默认密钥，实际应从配置读取
 	}
 
 	// 确保密钥长度为16/24/32字节
 	if len(key) < 16 {
-		key = key + "ruoyi-notificaion"[len(key):16]
+		key = key + "xingran-notificaion"[len(key):16]
 	}
 	key = key[:16]
 
@@ -276,12 +276,12 @@ func EncryptPassword(plainText, key string) (string, error) {
 // DecryptPassword 解密密码
 func DecryptPassword(cipherText, key string) (string, error) {
 	if key == "" {
-		key = "ruoyi-default-key"
+		key = "xingran-default-key"
 	}
 
 	// 确保密钥长度为16/24/32字节
 	if len(key) < 16 {
-		key = key + "ruoyi-notificaion"[len(key):16]
+		key = key + "xingran-notificaion"[len(key):16]
 	}
 	key = key[:16]
 

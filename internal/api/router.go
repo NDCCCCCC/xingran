@@ -15,7 +15,11 @@ import (
 	agentV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/agent"
 	workorderV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	// AUTH-03 / D-01: MultiAuth + RateLimitByScope 位于 internal/middleware,
+	// 与下方 pkg/middleware（别名 middleware）同 package 名，故取别名 internalmw。
+	internalmw "github.com/ruoyi-next/ruoyi-go-backend/internal/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
@@ -234,18 +238,35 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				// 新架构：结构体Handler + Service层
 				systemV1.SetupPostRouter(posts, core)
 			}
-				// API密钥管理
-				apikeys := authorized.Group("/apikeys")
-				apikeys.Use(middleware.RequirePermissions([]string{
-					"system:apikey:list",
-					"system:apikey:add",
-					"system:apikey:edit",
-					"system:apikey:delete",
-				}, core))
-				{
-					// 新架构：结构体Handler + Service层
-					systemV1.SetupAPIKeyRouter(apikeys, core)
-				}
+			// API密钥管理
+			apikeys := authorized.Group("/apikeys")
+			// WR-01 修复(Phase 61 review): 删除权限词汇统一为 system:* 模块的 remove
+			// 约定(与 pkg/permission/config.go APIKeyRemove 常量 + resource_action_map
+			// D-04 一致)。历史值 "system:apikey:delete" 无菜单授权来源,永不命中。
+			apikeys.Use(middleware.RequirePermissions([]string{
+				"system:apikey:list",
+				"system:apikey:add",
+				"system:apikey:edit",
+				"system:apikey:remove",
+			}, core))
+			// AUTH-03 / D-01: 启用 X-API-Key 认证链（挂载范围严格限定本管理面路由组，D-02）。
+			// 顺序: RequirePermissions → MultiAuth → RateLimitByScope。
+			// D-03: 无 X-API-Key 头时 MultiAuth 直接 c.Next() 跳过，由上游 JWT 中间件接管（router 层不加 fallback 分支）。
+			// D-04: IP 白名单严格拒绝沿用 internal/middleware/apikey.go 既有 isIPAllowed（本处不改中间件代码）。
+			// 决策记录: .planning/notes/260813-auth03-enable-decision.md
+			apikeys.Use(internalmw.MultiAuth(
+				systemServices.NewAPIKeyService(core.GetDB()),
+				services.NewUsageLogger(core.GetDB()),
+				permission.NewService(),
+				core.GetDB(),
+			))
+			// Phase 61 / D-11/D-18: action 参数("list" → read 档) + RateLimiter 配置驱动,
+			// 从 core.CacheConfigService 字段(非 getter)读 sys_config rate_limit.* 阈值。
+			apikeys.Use(internalmw.RateLimitByScope(services.NewRateLimiter(core.CacheConfigService), "list"))
+			{
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupAPIKeyRouter(apikeys, core)
+			}
 
 			// 字典管理
 			dicts := authorized.Group("/dicts")
@@ -594,8 +615,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// R4 (Phase 45) — 跨模块注入 ReconciliationService 到 WorkstationHandler
 			// GetByID 内根据 hasReconciliationPerm 决定是否拉对账健康度 (D-A1-01/03)
 			// Phase 45 R4: 注入 exceptionSvc 用于 per-asset 命中 (D-A4-02)
+			// Phase 103 CONV-02 (D-103-20): core.Cache → systemServices.NewCacheProvider(core.DataCacheService)
 			exceptionSvcForWs := asset.NewReconciliationExceptionService(core.DB.GetDB())
-			reconciliationSvc := asset.NewReconciliationService(core.DB.GetDB(), core.Cache, exceptionSvcForWs)
+			reconciliationSvc := asset.NewReconciliationService(core.DB.GetDB(), systemServices.NewCacheProvider(core.DataCacheService), exceptionSvcForWs)
 			workstationHandler := operations.NewWorkstationHandler(workstationService).
 				WithCore(core).
 				WithReconciliationService(reconciliationSvc)
@@ -607,10 +629,15 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstations.POST("/dropdown-options", workstationHandler.SearchWorkstationOptions)
 			workstations.POST("/batch", workstationHandler.BatchOperation)
 			workstations.POST("/positions", workstationHandler.BatchUpdatePositions)
+			workstations.POST("/counts-by-floor", workstationHandler.CountsByFloor)
 			workstations.POST("/:id", workstationHandler.GetByID)
 			workstations.POST("/:id/update", workstationHandler.Update)
 			workstations.POST("/:id/delete", workstationHandler.Delete)
 			workstations.POST("", workstationHandler.Create) // 放在最后
+
+			// V130R-09 D-03-6: 楼层全部工位全集端点（CAD/3D/平面图专用，无分页，
+			// 替代前端以 pageSize:1000/10000 滥用 List 分页做全集下拉的反模式）
+			workstations.GET("/:floorId/workstations-all", workstationHandler.GetFloorWorkstationsAll)
 
 			// Excel导入导出
 			operations.SetupExcelRouter(workstations, "workstation", core)
@@ -693,7 +720,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			assets.GET("/search-by-serial/:serial", assetHandler.SearchBySerial)
 
 			// Phase 48 Wave 3 (D-07): 从属组件清单 read-only 端点。
-			// 复用 ops:asset:list 组级 middleware(MEMORY ruoyi-perm-namespace-split-readonly-page)。
+			// 复用 ops:asset:list 组级 middleware(MEMORY xingran-perm-namespace-split-readonly-page)。
 			// 放在 /:id 通配之前避免被吞噬。
 			assetComponentHandler := operations.NewAssetComponentHandler(core)
 			assets.GET("/components", assetComponentHandler.ListComponents)
@@ -951,7 +978,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	// 新增顶层 /asset/reconciliation 路由组,与 /ops/asset/* 分离避免冲突。
 	// 中间件链:JWTAuth → OperLogMiddleware(D-17 写操作自动记)→ RequirePermissions(读端点同样受权限保护)。
 	// 不在 router.go 预注册通用 /asset/reconciliation/* 路径 — 由 Setup*Router 函数内部注册,
-	// 避免与 Excel 导入路由冲突陷阱(MEMORY: ruoyi-excel-import-route-conflict)。
+	// 避免与 Excel 导入路由冲突陷阱(MEMORY: xingran-excel-import-route-conflict)。
 	assetReconciliation := r.Group("/asset/reconciliation")
 	assetReconciliation.Use(middleware.JWTAuth(core.JWTManager))
 	// 添加操作日志中间件(D-17:全部写操作都走 operlog)。LogPaths 必须在 pkg/middleware/oper_log.go 追加 /asset/reconciliation 才会触发。

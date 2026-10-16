@@ -35,7 +35,7 @@ func TestReconciliationExceptionExcelConfigExists(t *testing.T) {
 
 // TestReconciliationExceptionExcelColumnOrder 列顺序严格 = name/ip_range/conflict_types/exception_actions/severity_override/scope_type/scope_name/expires_at/reason
 //
-// 项目记忆 ruoyi-excel-import-column-position-matching: validateAndParseRow 按 row[i] 位置匹配,
+// 项目记忆 xingran-excel-import-column-position-matching: validateAndParseRow 按 row[i] 位置匹配,
 // Columns 顺序必须与 Excel 模板列序严格一致。
 func TestReconciliationExceptionExcelColumnOrder(t *testing.T) {
 	cfg, ok := GetExcelConfig("reconciliationExceptionRule")
@@ -54,7 +54,7 @@ func TestReconciliationExceptionExcelColumnOrder(t *testing.T) {
 
 // TestReconciliationExceptionExcelUpsertKeyHasDBField name 列 UpsertKey=true + DBField="name"
 //
-// 项目记忆 ruoyi-excel-import-upsertkey-needs-dbfield: UpsertKey 列漏 DBField → 冲突键失效。
+// 项目记忆 xingran-excel-import-upsertkey-needs-dbfield: UpsertKey 列漏 DBField → 冲突键失效。
 func TestReconciliationExceptionExcelUpsertKeyHasDBField(t *testing.T) {
 	cfg, ok := GetExcelConfig("reconciliationExceptionRule")
 	require.True(t, ok)
@@ -120,7 +120,7 @@ func TestExportRulesAndDownloadTemplateHandlersExist(t *testing.T) {
 
 // TestImportExportRoutesExist 静态断言:router 含 3 个 Excel 路由
 //
-// 项目记忆 ruoyi-excel-import-route-conflict: 不在 router.go 预注册 /asset/reconciliation/import,
+// 项目记忆 xingran-excel-import-route-conflict: 不在 router.go 预注册 /asset/reconciliation/import,
 // 由 SetupReconciliationExceptionRouter 自管专用路由。
 func TestImportExportRoutesExist(t *testing.T) {
 	routerSrc := mustReadAssetSrc(t, "../../api/v1/asset/reconciliation_exception_router.go")

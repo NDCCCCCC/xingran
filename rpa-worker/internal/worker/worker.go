@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/ruoyi-next/rpa-worker/internal/browser"
-	"github.com/ruoyi-next/rpa-worker/internal/communication"
-	"github.com/ruoyi-next/rpa-worker/internal/config"
-	"github.com/ruoyi-next/rpa-worker/internal/executor"
-	"github.com/ruoyi-next/rpa-worker/internal/logger"
-	"github.com/ruoyi-next/rpa-worker/internal/types"
+	"github.com/xingran-next/rpa-worker/internal/browser"
+	"github.com/xingran-next/rpa-worker/internal/communication"
+	"github.com/xingran-next/rpa-worker/internal/config"
+	"github.com/xingran-next/rpa-worker/internal/executor"
+	"github.com/xingran-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/types"
 )
 
 // getLocalIP 获取本机 IP 地址

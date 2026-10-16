@@ -10,6 +10,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/common"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -142,7 +143,7 @@ func (s *jobServiceImpl) Create(ctx context.Context, req *JobCreateRequest) (*mo
 		CronExpression: req.CronExpression,
 		MisfirePolicy:  req.MisfirePolicy,
 		Concurrent:     req.Concurrent,
-		Status:         0, // 默认正常状态
+		Status:         models.JobStatusNormal, // 默认正常状态（0=正常, 1=暂停）
 		Remark:         req.Remark,
 	}
 
@@ -209,7 +210,7 @@ func (s *jobServiceImpl) Update(ctx context.Context, req *JobUpdateRequest) erro
 	}
 
 	// 更新调度器中的任务
-	if s.scheduler != nil && job.Status == 0 {
+	if s.scheduler != nil && job.Status == models.JobStatusNormal {
 		if err := s.scheduler.UpdateJob(job); err != nil {
 			return fmt.Errorf("更新调度器中的任务失败: %w", err)
 		}
@@ -268,10 +269,10 @@ func (s *jobServiceImpl) GetByID(ctx context.Context, id string) (*models.Job, e
 func (s *jobServiceImpl) List(ctx context.Context, params *JobListParams) (*common.PageResult, error) {
 	// 设置默认值
 	if params.Current <= 0 {
-		params.Current = 1
+		params.Current = constants.DefaultCurrent
 	}
 	if params.PageSize <= 0 {
-		params.PageSize = 10
+		params.PageSize = constants.DefaultPageSize
 	}
 
 	// 构建查询条件
@@ -328,7 +329,7 @@ func (s *jobServiceImpl) UpdateStatus(ctx context.Context, id string, status int
 
 	// 根据状态启动或停止任务
 	if s.scheduler != nil {
-		if status == 0 { // 启用
+		if status == int(models.JobStatusNormal) { // 启用
 			if err := s.scheduler.StartJob(id); err != nil {
 				return fmt.Errorf("启动任务失败: %w", err)
 			}
@@ -362,7 +363,7 @@ func (s *jobServiceImpl) Execute(ctx context.Context, id string) error {
 			JobGroup:     job.JobGroup,
 			InvokeTarget: job.InvokeTarget,
 			JobMessage:   "手动执行",
-			Status:       0,
+			Status:       int(models.JobLogStatusSuccess),
 			StartTime:    &startTime,
 		}
 

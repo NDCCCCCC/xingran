@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -59,7 +61,7 @@ func (s *APIEndpointService) GetUserAccessibleEndpoints(
 	ctx context.Context,
 	userID string,
 ) ([]CategoryEndpoints, error) {
-	cacheKey := fmt.Sprintf("user_endpoints:%s", userID)
+	cacheKey := fmt.Sprintf(constants.UserEndpointsKeyFormat, userID)
 	var cachedResult []CategoryEndpoints
 	if err := s.cache.GetJSON(ctx, cacheKey, &cachedResult); err == nil && len(cachedResult) > 0 {
 		return cachedResult, nil
@@ -126,8 +128,8 @@ func (s *APIEndpointService) getUserPermissions(ctx context.Context, userID stri
 		WHERE ur.user_id = ?
 		AND m.perms IS NOT NULL
 		AND m.perms != ''
-		AND m.status = 0
-	`, userID).Scan(&permissions).Error
+		AND m.status = ?
+	`, userID, models.MenuStatusNormal).Scan(&permissions).Error
 
 	return permissions, err
 }
@@ -190,6 +192,6 @@ func (s *APIEndpointService) ValidateEndpoint(route, method string) (*EndpointDe
 
 // InvalidateUserCache 清除用户端点缓存
 func (s *APIEndpointService) InvalidateUserCache(ctx context.Context, userID string) {
-	cacheKey := fmt.Sprintf("user_endpoints:%s", userID)
+	cacheKey := fmt.Sprintf(constants.UserEndpointsKeyFormat, userID)
 	_ = s.cache.Delete(ctx, cacheKey)
 }

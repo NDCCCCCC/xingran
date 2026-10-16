@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -28,6 +29,8 @@ var (
 	testTrackedAPIKeyIDs []string
 	testTrackedMu        sync.Mutex
 	testKeySeq           uint64
+	testDBSeq            uint64
+	testUserSeq          uint64
 )
 
 // setupTestDB 创建测试数据库连接
@@ -35,10 +38,17 @@ var (
 // 让 Go bool 序列化为 1/0 (而非 "true"/"false"),与 GORM bool 字段语义一致,
 // 修复 is_active 等列在 Where("is_active = ?", true) 查询时不匹配的预存问题。
 func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&_enable_boolean=true"), &gorm.Config{
+	// 使用独立命名的内存库，避免跨 TestXxx / -count=N 共享同一个 cache=shared 库，
+	// 防止上一个测试的异步 goroutine 持有写锁导致 "database table is locked"。
+	// _busy_timeout=5000 进一步消解同库内异步 last_used_at 更新与后续查询的瞬态锁竞争。
+	dsn := fmt.Sprintf("file:memdb%d?mode=memory&cache=shared&_enable_boolean=true&_busy_timeout=5000", atomic.AddUint64(&testDBSeq, 1))
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束以避免SQLite兼容性问题
 	})
 	require.NoError(t, err)
+
+	// 显式设置 busy timeout，兼容 modernc.org/sqlite（DSN 参数不一定生效）
+	require.NoError(t, db.Exec("PRAGMA busy_timeout = 5000").Error)
 
 	// 手动创建表结构，避免PostgreSQL特定的函数
 	// 创建用户表
@@ -79,6 +89,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err)
 
 	// 创建API密钥表
+	// Phase 60 / SEC-01 (D-06): key 列移除，替换为 key_hash(SM3 hex)/salt(16B hex)/key_prefix(12 chars) 三列。
 	err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS sys_api_keys (
 			id TEXT PRIMARY KEY,
@@ -89,7 +100,9 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			updated_by TEXT,
 			version INTEGER,
 			name TEXT NOT NULL,
-			key TEXT NOT NULL UNIQUE,
+			key_hash TEXT NOT NULL UNIQUE,
+			salt TEXT NOT NULL,
+			key_prefix TEXT NOT NULL,
 			user_id TEXT,
 			expires_at DATETIME,
 			last_used_at DATETIME,
@@ -189,8 +202,14 @@ func setupTestDB(t *testing.T) *gorm.DB {
 // createTestUser 创建测试用户
 func createTestUser(t *testing.T, db *gorm.DB) *models.User {
 	nickname := "Test User"
-	// 生成唯一的用户名以避免UNIQUE约束冲突
-	uniqueID := fmt.Sprintf("testuser_%d", time.Now().UnixNano())
+	// 生成唯一的用户名以避免UNIQUE约束冲突。
+	// Windows 时钟粒度粗,连续调用可能拿到相同 nanos(实测 74-07 期间
+	// 7/15 复现)—— 与 testKeySeq 同理,补单调计数器兜底。
+	testTrackedMu.Lock()
+	useq := testUserSeq
+	testUserSeq++
+	testTrackedMu.Unlock()
+	uniqueID := fmt.Sprintf("testuser_%d_%d", time.Now().UnixNano(), useq)
 	user := &models.User{
 		Username: uniqueID,
 		Nickname: &nickname,
@@ -206,8 +225,16 @@ func createTestUser(t *testing.T, db *gorm.DB) *models.User {
 	return user
 }
 
-// createTestAPIKey 创建测试API密钥
-func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *models.APIKey {
+// testFixedSalt SEC-01 测试用固定盐（32 hex = 16 字节）。
+// 测试无需密码学随机盐——确定性盐让 createTestAPIKey 可重复构造 hash，
+// 同时不影响 is_active / UNIQUE 等断言（每个 key 的明文仍唯一 → hash 唯一）。
+const testFixedSalt = "0123456789abcdef0123456789abcdef"
+
+// createTestAPIKey 创建测试API密钥。
+// Phase 60 / SEC-01 (D-06): 返回 (apiKey 对象, 明文 key)。
+// 明文 key 仅在测试内存中流转（不落库），供 ValidateAPIKey 子测试调用；
+// DB 只存 KeyHash(SM3(key+salt))/Salt/KeyPrefix 三列。
+func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) (*models.APIKey, string) {
 	// 每次生成唯一 key,避免软删除残留 + 快速循环 nanos 重合 导致 UNIQUE 冲突。
 	// 必须恰好 64 hex chars 以通过 isValidKeyFormat(KeyLength=64)。
 	// 高 16 位用 nanos,低 48 位用 atomic counter (单调递增) — 单靠 nanos 在
@@ -220,7 +247,9 @@ func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *
 
 	apiKey := &models.APIKey{
 		Name:        "Test API Key",
-		Key:         key,
+		KeyHash:     hashAPIKey(key, testFixedSalt),
+		Salt:        testFixedSalt,
+		KeyPrefix:   key[:12],
 		UserID:      &userID,
 		Scopes:      []string{"read", "write"},
 		IPWhitelist: []string{},
@@ -247,7 +276,7 @@ func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *
 
 	// 同步内存对象
 	apiKey.IsActive = isActive
-	return apiKey
+	return apiKey, key
 }
 
 // cleanupTestData 清理测试数据(按 tracked-APIKeyIDs 精确删除,user 不删)
@@ -297,13 +326,19 @@ func TestCreateAPIKey(t *testing.T) {
 		assert.Equal(t, "rec_", (*key)[:4]) // 检查前缀
 		assert.NotContains(t, *key, " ")     // 无空格
 
-		// 验证数据库中的记录
+		// 验证数据库中的记录（SEC-01: 明文 key 不落库，按 KeyPrefix 反查 DB 行）
 		var apiKey models.APIKey
-		err = db.Where("key = ?", *key).First(&apiKey).Error
+		err = db.Where("key_prefix = ?", (*key)[:12]).First(&apiKey).Error
 		assert.NoError(t, err)
 		assert.Equal(t, "Test Key", apiKey.Name)
 		assert.Equal(t, user.ID, *apiKey.UserID)
 		assert.True(t, apiKey.IsActive)
+		// SEC-01 schema 断言：KeyHash(64 hex)/Salt(32 hex)/KeyPrefix(12 chars) 三列就位，明文 key 不在 DB
+		assert.Equal(t, 64, len(apiKey.KeyHash))
+		assert.Equal(t, 32, len(apiKey.Salt))
+		assert.Equal(t, (*key)[:12], apiKey.KeyPrefix)
+		// SM3(key+salt) 哈希一致性：DB 存的 KeyHash 必须等于用明文 key + DB 的 salt 重算的哈希
+		assert.Equal(t, hashAPIKey(*key, apiKey.Salt), apiKey.KeyHash)
 
 		cleanupTestData(t, db)
 	})
@@ -327,17 +362,20 @@ func TestCreateAPIKey(t *testing.T) {
 		// 为此测试创建新用户，避免数据冲突
 		limitUser := createTestUser(t, db)
 
-		// 创建100个密钥达到限制
+		// 创建100个密钥达到限制（SEC-01: 每个用独立 generateKey → 独立 KeyHash，满足 UNIQUE）
 		for i := 0; i < MaxKeysPerUser; i++ {
-			key := "rec_" + string(rune(i)) + "000000000000000000000000000000000000000000000000000000000000000"
+			plain, err := generateKey()
+			require.NoError(t, err)
 			apiKey := &models.APIKey{
-				Key:      key,
-				Name:     "Limit Key",
-				UserID:   &limitUser.ID,
-				Scopes:   []string{"read"},
-				IsActive: true,
+				KeyHash:   hashAPIKey(plain, testFixedSalt),
+				Salt:      testFixedSalt,
+				KeyPrefix: plain[:12],
+				Name:      "Limit Key",
+				UserID:    &limitUser.ID,
+				Scopes:    []string{"read"},
+				IsActive:  true,
 			}
-			err := db.Create(apiKey).Error
+			err = db.Create(apiKey).Error
 			require.NoError(t, err)
 		}
 
@@ -406,15 +444,18 @@ func TestValidateAPIKey(t *testing.T) {
 	user := createTestUser(t, db)
 
 	t.Run("有效密钥", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, plainKey := createTestAPIKey(t, db, user.ID, true)
 
-		validated, err := service.ValidateAPIKey(ctx, apiKey.Key)
+		validated, err := service.ValidateAPIKey(ctx, plainKey)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, validated)
 		assert.Equal(t, apiKey.ID, validated.ID)
 		assert.Equal(t, apiKey.Name, validated.Name)
 		assert.True(t, validated.IsActive)
+
+		// 给异步 last_used_at 更新 goroutine 留出完成时间，避免与后续子测试竞争 sys_api_keys 写锁
+		time.Sleep(150 * time.Millisecond)
 	})
 
 	t.Run("无效格式_无前缀", func(t *testing.T) {
@@ -454,9 +495,9 @@ func TestValidateAPIKey(t *testing.T) {
 	})
 
 	t.Run("密钥已禁用", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, false)
+		_, plainKey := createTestAPIKey(t, db, user.ID, false)
 
-		_, err := service.ValidateAPIKey(ctx, apiKey.Key)
+		_, err := service.ValidateAPIKey(ctx, plainKey)
 
 		assert.Error(t, err)
 		assert.Contains(t, fmt.Sprintf("%v", err), "密钥不存在或已禁用")
@@ -466,11 +507,11 @@ func TestValidateAPIKey(t *testing.T) {
 
 	t.Run("密钥已过期", func(t *testing.T) {
 		pastTime := time.Now().Add(-24 * time.Hour)
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, plainKey := createTestAPIKey(t, db, user.ID, true)
 		apiKey.ExpiresAt = &pastTime
 		db.Save(apiKey)
 
-		_, err := service.ValidateAPIKey(ctx, apiKey.Key)
+		_, err := service.ValidateAPIKey(ctx, plainKey)
 
 		assert.Error(t, err)
 		assert.Contains(t, fmt.Sprintf("%v", err), "密钥已过期")
@@ -479,7 +520,7 @@ func TestValidateAPIKey(t *testing.T) {
 	})
 
 	t.Run("最后使用时间更新", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, plainKey := createTestAPIKey(t, db, user.ID, true)
 
 		// 验证前：last_used_at 为空
 		var beforeUpdate models.APIKey
@@ -487,7 +528,7 @@ func TestValidateAPIKey(t *testing.T) {
 		assert.Nil(t, beforeUpdate.LastUsedAt)
 
 		// 验证密钥
-		_, err := service.ValidateAPIKey(ctx, apiKey.Key)
+		_, err := service.ValidateAPIKey(ctx, plainKey)
 		assert.NoError(t, err)
 
 		// 等待异步更新完成
@@ -511,12 +552,12 @@ func TestListAPIKeys(t *testing.T) {
 	user := createTestUser(t, db)
 
 	// 创建多个测试密钥
-	key1 := createTestAPIKey(t, db, user.ID, true)
+	key1, _ := createTestAPIKey(t, db, user.ID, true)
 	key1.Name = "Active Key"
 	key1.Scopes = []string{"read"}
 	db.Save(key1)
 
-	key2 := createTestAPIKey(t, db, user.ID, false)
+	key2, _ := createTestAPIKey(t, db, user.ID, false)
 	key2.Name = "Other Key" // 不能含 "Active" 子串,否则关键词搜索 LIKE '%Active%' 会误匹配
 	key2.Scopes = []string{"write"}
 	db.Save(key2)
@@ -596,7 +637,7 @@ func TestListAPIKeys(t *testing.T) {
 	t.Run("分页功能", func(t *testing.T) {
 		// 添加更多密钥以测试分页
 		for i := 0; i < 5; i++ {
-			key := createTestAPIKey(t, db, user.ID, true)
+			key, _ := createTestAPIKey(t, db, user.ID, true)
 			key.Name = "Pagination Key " + string(rune(i))
 			db.Save(key)
 		}
@@ -628,7 +669,7 @@ func TestGetAPIKey(t *testing.T) {
 	user := createTestUser(t, db)
 
 	t.Run("正常获取", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		result, err := service.GetAPIKey(ctx, apiKey.ID)
 
@@ -636,7 +677,9 @@ func TestGetAPIKey(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, apiKey.ID, result.ID)
 		assert.Equal(t, apiKey.Name, result.Name)
-		assert.Equal(t, apiKey.Key, result.Key)
+		// SEC-01: 明文 key 不存储/不返回；只有 KeyPrefix 可比对。
+		// (KeyHash/Salt 在 service 层仍随 DB 行返回，json:"-" 仅在 handler 序列化层隐藏。)
+		assert.Equal(t, apiKey.KeyPrefix, result.KeyPrefix)
 
 		cleanupTestData(t, db)
 	})
@@ -649,17 +692,16 @@ func TestGetAPIKey(t *testing.T) {
 	})
 
 	t.Run("密钥脱敏", func(t *testing.T) {
-		// 注意：当前实现返回完整密钥，实际生产环境应该脱敏
-		// 这里测试验证当前行为
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		// SEC-01: 明文 key 不再存储，响应仅暴露 KeyPrefix（前 12 字符）。
+		// KeyHash/Salt 由 json:"-" 隐藏；这里是「脱敏」的最终形态——无完整密钥可暴露。
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		result, err := service.GetAPIKey(ctx, apiKey.ID)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
-		// 完整密钥长度68，脱敏应该只显示前12位
-		// 但当前实现返回完整密钥
-		assert.Equal(t, 68, len(result.Key))
+		// KeyPrefix 固定 12 字符；完整明文（68 字符）不再存在
+		assert.Equal(t, 12, len(result.KeyPrefix))
 
 		cleanupTestData(t, db)
 	})
@@ -673,7 +715,7 @@ func TestUpdateAPIKey(t *testing.T) {
 	user := createTestUser(t, db)
 
 	t.Run("正常更新", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 		newName := "Updated Name"
 		newDesc := "Updated description"
 
@@ -708,7 +750,7 @@ func TestUpdateAPIKey(t *testing.T) {
 	})
 
 	t.Run("无效作用域", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 		invalidScopes := []string{"invalid_scope"}
 
 		req := &requests.UpdateAPIKeyRequest{
@@ -732,7 +774,7 @@ func TestDeleteAPIKey(t *testing.T) {
 	user := createTestUser(t, db)
 
 	t.Run("正常删除（软删除）", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		err := service.DeleteAPIKey(ctx, apiKey.ID)
 
@@ -755,7 +797,7 @@ func TestDeleteAPIKey(t *testing.T) {
 	})
 
 	t.Run("删除后不可查询", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 删除
 		err := service.DeleteAPIKey(ctx, apiKey.ID)
@@ -778,7 +820,7 @@ func TestToggleAPIKeyStatus(t *testing.T) {
 	user := createTestUser(t, db)
 
 	t.Run("启用切换", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 		initialStatus := apiKey.IsActive
 
 		err := service.ToggleAPIKeyStatus(ctx, apiKey.ID)
@@ -795,7 +837,7 @@ func TestToggleAPIKeyStatus(t *testing.T) {
 	})
 
 	t.Run("禁用切换", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, false)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, false)
 		initialStatus := apiKey.IsActive
 
 		err := service.ToggleAPIKeyStatus(ctx, apiKey.ID)
@@ -827,7 +869,7 @@ func TestListUsageLogs(t *testing.T) {
 	user := createTestUser(t, db)
 
 	t.Run("正常查询", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建测试日志
 		now := time.Now()
@@ -878,7 +920,7 @@ func TestListUsageLogs(t *testing.T) {
 	})
 
 	t.Run("时间范围筛选", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		now := time.Now()
 		oldTime := now.Add(-48 * time.Hour)
@@ -910,7 +952,10 @@ func TestListUsageLogs(t *testing.T) {
 		db.Create(&oldLog)
 		db.Create(&recentLog)
 
-		startTime := now.Add(-24 * time.Hour).Format(time.RFC3339)
+		// sqlite 下 created_at 为字符串字典序比较：RFC3339 的 'T' 分隔符
+		// 会让同日前缀的行恒小于阈值（mac_history_query_service_tz_test.go 同款问题），
+		// 用与存储一致的空间分隔格式。
+		startTime := now.Add(-24 * time.Hour).Format("2006-01-02 15:04:05")
 		params := ListUsageLogsParams{
 			APIKeyID:  apiKey.ID,
 			Current:   1,
@@ -929,7 +974,7 @@ func TestListUsageLogs(t *testing.T) {
 	})
 
 	t.Run("成功筛选", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建成功和失败的日志
 		successLog := models.APIKeyUsageLog{
@@ -975,7 +1020,7 @@ func TestListUsageLogs(t *testing.T) {
 	})
 
 	t.Run("分页功能", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建5条日志
 		for i := 0; i < 5; i++ {
@@ -1019,7 +1064,7 @@ func TestGetUsageLogSummary(t *testing.T) {
 	user := createTestUser(t, db)
 
 	t.Run("统计数据正确性", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建测试日志
 		logs := []models.APIKeyUsageLog{
@@ -1068,7 +1113,7 @@ func TestGetUsageLogSummary(t *testing.T) {
 	})
 
 	t.Run("总请求数", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建10条日志
 		for i := 0; i < 10; i++ {
@@ -1094,7 +1139,7 @@ func TestGetUsageLogSummary(t *testing.T) {
 	})
 
 	t.Run("成功率计算", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建7条成功、3条失败的日志
 		for i := 0; i < 7; i++ {
@@ -1133,7 +1178,7 @@ func TestGetUsageLogSummary(t *testing.T) {
 	})
 
 	t.Run("平均耗时", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建耗时不同的日志
 		durations := []int{100, 200, 300, 400, 500}
@@ -1160,7 +1205,7 @@ func TestGetUsageLogSummary(t *testing.T) {
 	})
 
 	t.Run("按方法分组", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建不同方法的日志
 		methods := []string{"GET", "GET", "POST", "POST", "POST", "DELETE"}
@@ -1189,7 +1234,7 @@ func TestGetUsageLogSummary(t *testing.T) {
 	})
 
 	t.Run("按路径分组", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建不同路径的日志
 		paths := []string{"/api/v1/users", "/api/v1/users", "/api/v1/posts", "/api/v1/posts", "/api/v1/posts"}
@@ -1218,7 +1263,7 @@ func TestGetUsageLogSummary(t *testing.T) {
 	})
 
 	t.Run("错误统计", func(t *testing.T) {
-		apiKey := createTestAPIKey(t, db, user.ID, true)
+		apiKey, _ := createTestAPIKey(t, db, user.ID, true)
 
 		// 创建不同错误状态的日志
 		errors := []int{400, 400, 401, 403, 500}
@@ -1246,4 +1291,78 @@ func TestGetUsageLogSummary(t *testing.T) {
 
 		cleanupTestData(t, db)
 	})
+}
+
+// --- Phase 59 Plan 02: SC#3 (OBSERV-02 successRate 连锁防回归) ---
+
+// TestGetUsageLogSummaryMixed SC#3: 混合 Success=true/false 行后, GetUsageLogSummary 必须返回
+// successRate ∈ (0,100) 开区间, 不恒 ≈ 0% (修复前 Success 永远 false → 聚合恒 0%)。
+//
+// 直接 seed 真实 DB 行 (不经 middleware 异步链), 纯聚合逻辑防回归锚。
+// 2 Success=true + 2 Success=false → 2/4 = 50% 精确锚。
+func TestGetUsageLogSummaryMixed(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewAPIKeyService(db)
+	ctx := context.Background()
+	user := createTestUser(t, db)
+	apiKey, _ := createTestAPIKey(t, db, user.ID, true)
+
+	// 混合 seed: 2 Success=true + 2 Success=false (下游 403/429, 非 pre-auth 401)
+	logs := []models.APIKeyUsageLog{
+		{
+			APIKeyID:   apiKey.ID,
+			UserID:     user.ID,
+			Method:     "GET",
+			Path:       "/api/v1/success-1",
+			StatusCode: 200,
+			ClientIP:   "127.0.0.1",
+			Duration:   50,
+			Success:    true, // 2xx → Success=true (OBSERV-01 修复后)
+		},
+		{
+			APIKeyID:   apiKey.ID,
+			UserID:     user.ID,
+			Method:     "POST",
+			Path:       "/api/v1/success-2",
+			StatusCode: 204,
+			ClientIP:   "127.0.0.1",
+			Duration:   30,
+			Success:    true, // 2xx → Success=true (OBSERV-01 修复后)
+		},
+		{
+			APIKeyID:   apiKey.ID,
+			UserID:     user.ID,
+			Method:     "GET",
+			Path:       "/api/v1/forbidden",
+			StatusCode: 403, // 下游 RequireScope 失败
+			ClientIP:   "127.0.0.1",
+			Duration:   20,
+			Success:    false, // D-01: 4xx → Success=false
+		},
+		{
+			APIKeyID:   apiKey.ID,
+			UserID:     user.ID,
+			Method:     "GET",
+			Path:       "/api/v1/ratelimit",
+			StatusCode: 429, // 下游 RateLimitByScope 失败
+			ClientIP:   "127.0.0.1",
+			Duration:   10,
+			Success:    false, // D-01: 4xx → Success=false
+		},
+	}
+	for _, log := range logs {
+		require.NoError(t, db.Create(&log).Error)
+	}
+
+	// 调聚合
+	summary, err := service.GetUsageLogSummary(ctx, apiKey.ID)
+	require.NoError(t, err)
+	require.NotNil(t, summary)
+
+	// SC#3 防回归三道断言: successRate ∈ (0,100) 开区间, 精确锚 50%
+	assert.Greater(t, summary.SuccessRate, 0.0, "SuccessRate 必须 > 0 (不恒 ≈ 0%)")
+	assert.Less(t, summary.SuccessRate, 100.0, "SuccessRate 必须 < 100 (不全成功)")
+	assert.InDelta(t, 50.0, summary.SuccessRate, 0.1, "2/4 = 50% 精确锚")
+
+	cleanupTestData(t, db)
 }

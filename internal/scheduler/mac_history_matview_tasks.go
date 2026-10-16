@@ -53,7 +53,7 @@ func RegisterMACHistoryMatViewTasks(s *Scheduler, db *gorm.DB, matViewSvc servic
 		InvokeTarget:   "mac_history_matview_refresh",
 		CronExpression: "0 */5 * * * *",
 		MisfirePolicy:  models.MisfirePolicyExecuteOnce,
-		Status:         0,
+		Status:         models.JobStatusNormal,
 		NextRunTime:    &nextRunTime,
 		Remark:         &remark,
 	}

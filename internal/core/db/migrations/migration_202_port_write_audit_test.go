@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -82,7 +82,7 @@ func TestMigrate202_SQLiteSkipsCleanly(t *testing.T) {
 // TestMigrate202_MenuSeedStructure PG path:
 // 跑 Migrate202 → sys_menu 含一行 menu_name='端口配置' AND menu_type='F' AND perms='network:port:write' AND visible=0。
 func TestMigrate202_MenuSeedStructure(t *testing.T) {
-	if os.Getenv("RUOYI_PG_TEST_DSN") == "" {
+	if os.Getenv("XINGRAN_PG_TEST_DSN") == "" {
 		t.Skip("requires PostgreSQL — covered by Phase 54 UAT; sqlite path returns nil")
 	}
 	t.Skip("PG integration not configured in this executor — covered by Phase 54 UAT")
@@ -92,7 +92,7 @@ func TestMigrate202_MenuSeedStructure(t *testing.T) {
 // setup 父菜单 '端口状态' + 2 角色持父菜单 + 1 角色不持;跑 Migrate202 →
 // sys_role_menu 含 2 行 menu_id=新菜单(antd 父子联动陷阱防御)。
 func TestMigrate202_RoleMenuGrantedToParentHolders(t *testing.T) {
-	if os.Getenv("RUOYI_PG_TEST_DSN") == "" {
+	if os.Getenv("XINGRAN_PG_TEST_DSN") == "" {
 		t.Skip("requires PostgreSQL — covered by Phase 54 UAT; sqlite path returns nil")
 	}
 	t.Skip("PG integration not configured in this executor — covered by Phase 54 UAT")
@@ -101,20 +101,20 @@ func TestMigrate202_RoleMenuGrantedToParentHolders(t *testing.T) {
 // TestMigrate202_Idempotent PG path:
 // 连跑两次 Migrate202 → sys_menu 行数不变 + sys_role_menu 行数不变(ON CONFLICT + count-then-insert)。
 func TestMigrate202_Idempotent(t *testing.T) {
-	if os.Getenv("RUOYI_PG_TEST_DSN") == "" {
+	if os.Getenv("XINGRAN_PG_TEST_DSN") == "" {
 		t.Skip("requires PostgreSQL — covered by Phase 54 UAT; sqlite path returns nil")
 	}
 	t.Skip("PG integration not configured in this executor — covered by Phase 54 UAT")
 }
 
 // TestMigrate202_NoIsFrameIsCacheFields 源码 grep 断言:migration_202 文件**不**含
-// `IsFrame` / `IsCache`(Go sys_menu 无此列,memory ruoyi-menu-no-java-fields)。
+// `IsFrame` / `IsCache`(Go sys_menu 无此列,memory xingran-menu-no-java-fields)。
 // 扫描非注释代码(文档注释可能引用这些标识符解释为何不能加)。
 func TestMigrate202_NoIsFrameIsCacheFields(t *testing.T) {
 	s := stripGoComments(t, filepath.Join(".", "migration_202_port_write_audit.go"))
 	for _, bad := range []string{"IsFrame", "IsCache"} {
 		if strings.Contains(s, bad) {
-			t.Fatalf("migration_202 must NOT contain %q in non-comment code (Go sys_menu has no such column; memory ruoyi-menu-no-java-fields)", bad)
+			t.Fatalf("migration_202 must NOT contain %q in non-comment code (Go sys_menu has no such column; memory xingran-menu-no-java-fields)", bad)
 		}
 	}
 }

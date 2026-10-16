@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -22,7 +22,7 @@ func setupSecurityTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err, "Failed to open test database")
 
 	// Create sys_user table
-	// GORM maps ADDN -> "addn" (all lowercase snake_case), so column must be "addn"
+	// AD 列名须与 User 模型 gorm tag 一致: ad_dn / ad_ou_dn / ad_synced_at (见 user.go:34-36)
 	err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS sys_user (
 			id TEXT PRIMARY KEY,
@@ -52,7 +52,9 @@ func setupSecurityTestDB(t *testing.T) *gorm.DB {
 			remark TEXT DEFAULT '',
 			auth_source TEXT NOT NULL DEFAULT 'local',
 			ad_username TEXT,
-			addn TEXT
+			ad_dn TEXT,
+			ad_ou_dn TEXT,
+			ad_synced_at DATETIME
 		)
 	`).Error
 	require.NoError(t, err, "Failed to create sys_user table")
@@ -98,6 +100,7 @@ func setupSecurityTestDB(t *testing.T) *gorm.DB {
 			use_tls INTEGER DEFAULT 0,
 			sync_enabled INTEGER DEFAULT 1,
 			sync_interval INTEGER DEFAULT 3600,
+			member_ou_dn TEXT,
 			last_sync_at DATETIME,
 			status INTEGER DEFAULT 0
 		)

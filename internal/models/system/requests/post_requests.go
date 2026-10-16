@@ -1,9 +1,9 @@
 package requests
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 )
 
 // PostListParams 岗位列表查询参数
@@ -34,8 +34,8 @@ func (p *PostListParams) GetPagination() (current, pageSize int) {
 	if pageSize < constants.MinPageSize {
 		pageSize = constants.DefaultPageSize
 	}
-	if pageSize > constants.MaxPageSize {
-		pageSize = constants.MaxPageSize
+	if pageSize > constants.MaxListPageSize {
+		pageSize = constants.MaxListPageSize
 	}
 	return current, pageSize
 }

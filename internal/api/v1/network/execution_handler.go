@@ -5,7 +5,9 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -60,8 +62,10 @@ func (h *ExecutionHandler) List(c *gin.Context) {
 		rawReq = make(map[string]interface{})
 	}
 
-	current := getIntField(rawReq, "current", 1)
-	pageSize := getIntField(rawReq, "pageSize", 10)
+	current := getIntField(rawReq, "current", constants.DefaultCurrent)
+	pageSize := getIntField(rawReq, "pageSize", constants.DefaultPageSize)
+	// v129-recheck C-6: 分页归一化唯一入口（钳上限 200、负值/零回退默认）
+	current, pageSize = query.NormalizePagination(current, pageSize)
 
 	executions, total, err := h.executionService.GetExecutionList(c.Request.Context(), current, pageSize, getOrderByColumn(rawReq), getIsAscPtr(rawReq))
 	if err != nil {
@@ -96,12 +100,12 @@ func (h *ExecutionHandler) ExecuteByTemplate(c *gin.Context) {
 
 	// 设置默认并发数
 	if req.Concurrency <= 0 {
-		req.Concurrency = 10
+		req.Concurrency = constants.CommandConcurrency
 	}
 
 	// 设置默认超时时间（5分钟）
 	if req.Timeout <= 0 {
-		req.Timeout = 300
+		req.Timeout = int(constants.CommandExecTimeout.Seconds())
 	}
 
 	userID, _ := c.Get("user_id")

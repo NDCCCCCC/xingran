@@ -2,12 +2,14 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	pkgquery "github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -31,9 +33,9 @@ type AssetService interface {
 // status: 0=正常 1=停用; nbf_status: 0=否 1=拟报废(独立维度,nbf 计数与 normal/stopped 不互补)。
 type AssetStatisticsResult struct {
 	Total   int64 `json:"total"`
-	Normal  int64 `json:"normal"`  // status = 0
-	Stopped int64 `json:"stopped"` // status = 1
-	NBF     int64 `json:"nbf"`     // nbf_status = 1
+	Normal  int64 `json:"normal"`  // models.AssetStatusNormal
+	Stopped int64 `json:"stopped"` // models.AssetStatusStopped
+	NBF     int64 `json:"nbf"`     // models.AssetNBFStatusYes
 }
 
 // DeviceTypeCount 设备类型统计
@@ -44,6 +46,7 @@ type DeviceTypeCount struct {
 
 type assetService struct {
 	db            *gorm.DB
+	repo          *base.GORMRepository[models.Asset]
 	uuidValidator *regexp.Regexp
 }
 
@@ -51,7 +54,8 @@ type assetService struct {
 func NewAssetService(db *gorm.DB) AssetService {
 	return &assetService{
 		db:            db,
-		uuidValidator: constants.UuidPattern,
+		repo:          base.NewGORMRepository[models.Asset](db),
+		uuidValidator: constants.UUIDPattern,
 	}
 }
 
@@ -67,9 +71,9 @@ func (s *assetService) Statistics(ctx context.Context) (*AssetStatisticsResult, 
 		Where("component_type IS NULL").
 		Select(
 			"COUNT(*) AS total",
-			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS normal",
-			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS stopped",
-			"COALESCE(SUM(CASE WHEN nbf_status = 1 THEN 1 ELSE 0 END), 0) AS nbf",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS normal", models.AssetStatusNormal),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS stopped", models.AssetStatusStopped),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN nbf_status = %d THEN 1 ELSE 0 END), 0) AS nbf", models.AssetNBFStatusYes),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -82,16 +86,16 @@ func (s *assetService) Statistics(ctx context.Context) (*AssetStatisticsResult, 
 // 注意:key 必须与前端列 dataIndex/json tag 一致(驼峰)才能命中白名单;
 // deviceSN 为旧版别名,保留作向后兼容。
 var assetAllowedSortFields = map[string]string{
-	"deviceSN":           "devicesn",
-	"devicesn":           "devicesn",
-	"name":               "name",
-	"type":               "type",
-	"status":             "status",
-	"deptId":             "dept_id",
-	"userId":             "user_id",
-	"deviceTypeName":     "device_type_name",
-	"lastInventoryDate":  "last_inventory_date",
-	"createdAt":          "created_at",
+	"deviceSN":          "devicesn",
+	"devicesn":          "devicesn",
+	"name":              "name",
+	"type":              "type",
+	"status":            "status",
+	"deptId":            "dept_id",
+	"userId":            "user_id",
+	"deviceTypeName":    "device_type_name",
+	"lastInventoryDate": "last_inventory_date",
+	"createdAt":         "created_at",
 }
 
 // Create 创建资产
@@ -115,7 +119,7 @@ func (s *assetService) Create(ctx context.Context, asset *models.Asset) error {
 		return err
 	}
 
-	return s.db.WithContext(ctx).Create(asset).Error
+	return s.repo.Create(ctx, asset)
 }
 
 // Update 更新资产
@@ -145,17 +149,12 @@ func (s *assetService) Update(ctx context.Context, asset *models.Asset) error {
 
 // Delete 删除资产
 func (s *assetService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&models.Asset{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取资产
 func (s *assetService) GetByID(ctx context.Context, id string) (*models.Asset, error) {
-	var asset models.Asset
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&asset).Error
-	if err != nil {
-		return nil, err
-	}
-	return &asset, nil
+	return s.repo.GetByID(ctx, id)
 }
 
 // GetByDeviceSN 根据设备序列号获取资产
@@ -179,52 +178,43 @@ func (s *assetService) GetByDeviceSN(ctx context.Context, deviceSN string) (*mod
 	return &asset, nil
 }
 
-// List 查询资产列表
+// List 查询资产列表（map 签名不变——F1：D-05 只锁 workstation，service 内部 map→scope 转换）
+//
+// 语义说明（Phase 91-03 repo 化）：现状 .Table("ops_asset") 起链导致 Count 不过滤
+// 软删除行（Total 虚高，RESEARCH F3）；repo 统一 Model(new(T)) 起链后 Total 收紧为
+// 不含软删行（latent bugfix，经 91-03 Task 4 checkpoint 确认）。无软删数据时逐字节一致。
 func (s *assetService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	query := s.db.WithContext(ctx).Table("ops_asset")
-
-	// Phase 48 D-07 默认过滤:组件行(component_type IS NOT NULL)不出现在常规列表,
-	// 避免 "1 台交换机 + 6 块板卡" 被数成 7 台设备。组件另开独立视图(按 parent_asset_id 聚合)。
-	// 硬编码在 service 层(非 controller),保证所有调用入口(含 Excel 导入 GetByDeviceSN 之外的列表
-	// 统计路径)默认排除。GetByDeviceSN 不受影响,对账仍能查到组件 SN。
-	query = query.Where("component_type IS NULL")
-
-	// 应用筛选条件
-	query = s.applyFilters(query, params)
-
-	// 获取总数
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// 应用分页
-	pagination := extractPagination(params)
-	offset := calculateOffset(pagination)
-
-	// 用户排序(白名单);无 OrderByColumn 时保留 created_at DESC 默认
+	// V130R-09 D-03-3: 分页归一化统一走 pkg/query 单一权威出口
+	// (cap=MaxOptionsPageSize,Excel 导出等全量路径依赖该上限,行为不变)。
+	current := extractIntParam(params, "current", constants.DefaultCurrent)
+	pageSize := extractIntParam(params, "pageSize", constants.DefaultPageSize)
+	current, pageSize = pkgquery.NormalizePaginationWithMax(current, pageSize, constants.MaxOptionsPageSize)
 	sortReq := extractSortRequest(params)
-	query = base.ApplySort(query, sortReq, assetAllowedSortFields)
-	if sortReq.OrderByColumn == "" {
-		query = query.Order("created_at DESC")
-	}
-
-	var list []models.Asset
-	if err := query.Offset(offset).Limit(pagination.PageSize).Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  pagination.Current,
-		PageSize: pagination.PageSize,
-	}, nil
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		// Phase 48 D-07 默认过滤:组件行(component_type IS NOT NULL)不出现在常规列表,
+		// 避免 "1 台交换机 + 6 块板卡" 被数成 7 台设备。组件另开独立视图(按 parent_asset_id 聚合)。
+		// 硬编码在 service 层(非 controller),保证所有调用入口(含 Excel 导入 GetByDeviceSN 之外的列表
+		// 统计路径)默认排除。GetByDeviceSN 不受影响,对账仍能查到组件 SN。
+		// 恒定过滤位于 scopes 首位（先于一切用户 filter 叠加）。
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("component_type IS NULL")
+		},
+		s.filterScope(params),
+		base.SortScope(sortReq, assetAllowedSortFields, "created_at DESC"),
+	)
 }
 
-// BatchDelete 批量删除资产
+// filterScope List 筛选条件 scope（闭包内调用 applyFilters 保证 9 个 filter 条件
+// 逐字平移零漂移，T-91-03-03/T-91-03-04 缓解）。
+func (s *assetService) filterScope(params map[string]interface{}) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		return s.applyFilters(db, params)
+	}
+}
+
+// BatchDelete 批量删除资产（repo 空 ids nil 语义与现状 IN(空) no-op 等价）
 func (s *assetService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&models.Asset{}, "id IN ?", ids).Error
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // applyFilters 应用查询筛选条件
@@ -281,10 +271,9 @@ func (s *assetService) applyFilters(query *gorm.DB, params map[string]interface{
 func (s *assetService) applyDeptFilter(query *gorm.DB, deptId string) *gorm.DB {
 	var deptIDs []string
 
-	// 查询该部门及其所有子部门的ID
+	// 查询该部门及其所有子部门的ID（BuildDeptRecursiveFilter，V130R-08）
 	err := s.db.Table("sys_dept").
-		Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
-			deptId, "%,"+deptId+",%", "%,"+deptId, deptId).
+		Scopes(BuildDeptRecursiveFilter(deptId, "id")).
 		Pluck("id", &deptIDs).Error
 
 	if err != nil || len(deptIDs) == 0 {

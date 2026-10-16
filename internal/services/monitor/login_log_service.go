@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -60,8 +61,8 @@ type LoginLogListParams struct {
 func DefaultLoginLogListParams() LoginLogListParams {
 	return LoginLogListParams{
 		BaseListRequest: base.BaseListRequest{
-			Current:  1,
-			PageSize: 10,
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
 		},
 	}
 }

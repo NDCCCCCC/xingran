@@ -1,0 +1,92 @@
+# ============================================================================
+# RuoYi-Next 部署配置模板 (sqlite + memory cache)
+# ============================================================================
+#
+# 用于：腾讯云轻量云等无外网依赖场景。sqlite DB 落盘在
+# WorkingDirectory/data/ruoyi.db（systemd unit ReadWritePaths 包含 data）。
+# Cache 走内存（重启后重建），适合单机/小规模部署。
+#
+# **生产部署前必须替换全部密钥为 openssl rand 输出：**
+#   JWT_SECRET=$(openssl rand -hex 32)
+#   SM4_KEY=$(openssl rand -base64 16)
+#   SM2_私钥对（绝对不能复用仓库默认值）
+#
+#   【启用 SM2 必读】
+#     本模板 use_sm2: true 与生产模板对齐，强制走 SM2 国密签名。
+#     启用前必须先在 /etc/ruoyi/secrets.env 注入 JWT_SM2_PRIVATE_KEY / JWT_SM2_PUBLIC_KEY
+#     两项密钥（生成方法见 docs/deployment/secret-management.md §2.2）。
+#     若仅作本地 sqlite 首跑调试,可临时把 use_sm2 改回 false 跳过密钥注入,
+#     但 /api/v1/system/auth/public-key 将返回 500（与生产行为一致）。
+#
+# 此文件覆盖 configs/config.prod.example.yaml 中与 sqlite/in-memory 不兼容
+# 的字段（database.type / database.path / cache.type）。其余字段（server、
+# jwt、log、security.request_encryption 等）保持与 config.prod.example.yaml 一致。
+
+server:
+  name: "RuoYi-Next"
+  host: "0.0.0.0"
+  port: 9000
+  mode: release
+  # 【Phase 110 TLS-04】生产必须显式配置至少一个 CORS origin;
+  # 留空会触发 cmd/main.go:106 的 Fatalf 静默退出（无 panic, 仅 status=1）,
+  # 导致 deploy 静默失败、systemd 一直 rollback 到旧二进制。
+  # 环境变量也可: RUOYI_SERVER_ALLOWED_ORIGINS="https://a.com,https://b.com"
+  allowed_origins:
+    - "https://your-production-domain.com"
+
+# sqlite — 无需外部数据库
+# path 相对 WorkingDirectory(/opt/ruoyi),systemd unit 配 ReadWritePaths=/opt/ruoyi/data
+database:
+  type: "sqlite"
+  path: "data/ruoyi.db"
+  max_open_conns: 50
+  max_idle_conns: 10
+  max_lifetime: 1800
+
+# 内存 cache — 无需 Redis
+cache:
+  type: "memory"
+  pool_size: 50
+  max_size: 10000
+  cleanup_time: 600
+  warm_up_enabled: false
+  l2_writer:
+    worker_count: 5
+    queue_size: 5000
+    enqueue_timeout: 1s
+    write_timeout: 5s
+    fallback_write_timeout: 3s
+  retry_enabled: true
+  retry_max_retries: 3
+  retry_initial_delay: 50
+  retry_max_delay: 2000
+  retry_backoff_factor: 2.0
+  retry_worker_count: 3
+
+jwt:
+  secret_key: ""              # ⚠️ 必须通过 JWT_SECRET 注入
+  access_key_expire: 7200
+  refresh_key_expire: 604800
+  issuer: "RuoYi-Next"
+  use_sm2: true               # SM2 国密签名（与 config.prod.example.yaml 对齐；启用前必读下方迁移指引）
+  # SM2 密钥留空(必须通过 env 注入);生产环境通过
+  # JWT_SM2_PRIVATE_KEY / JWT_SM2_PUBLIC_KEY 注入新生成的对
+  sm2_private_key: ""
+  sm2_public_key: ""
+
+log:
+  level: "info"
+  log_dir: "logs"
+  max_size: 100
+  max_backups: 30
+  max_age: 90
+  compress: true
+
+security:
+  sm4_key: ""                 # ⚠️ 必须通过 SM4_KEY 注入
+  replay_window_sec: 60
+  request_encryption:
+    enabled: true
+    exclude_paths:
+      - "/api/v1/system/auth/public-key"
+      - "/api/v1/system/auth/test-sm2"

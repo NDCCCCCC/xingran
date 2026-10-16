@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/test/fixtures"
+	"github.com/ruoyi-next/ruoyi-go-backend/tests/fixtures"
 )
 
 // TestParseHuaweiLLDPNeighbors 测试解析华为设备LLDP输出

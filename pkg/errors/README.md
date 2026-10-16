@@ -2,7 +2,7 @@
 
 ## 概述
 
-本包提供了统一的错误处理和错误码体系，用于RuoYi-Next项目的所有模块。
+本包提供了统一的错误处理和错误码体系，用于XingRan-Next项目的所有模块。
 
 ## 基础概念
 
@@ -28,7 +28,7 @@
 #### 创建新错误
 
 ```go
-import apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+import apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 
 // 使用预定义的错误
 err := apperrors.UserNotFound()
@@ -274,7 +274,7 @@ package service
 
 import (
     "context"
-    apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+    apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
     "gorm.io/gorm"
 )
 

@@ -2,13 +2,18 @@ package middleware
 
 import (
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"gorm.io/gorm"
 )
 
 const (
@@ -19,7 +24,12 @@ const (
 // MultiAuth 多重认证中间件（JWT + API Key）
 // 如果提供 X-API-Key 请求头，使用 API Key 认证
 // 否则跳过，允许 JWT 认证中间件处理
-func MultiAuth(apiKeyService system.APIKeyService, usageLogger services.UsageLogger) gin.HandlerFunc {
+//
+// Phase 61 / D-06 扩展: 新增 permSvc + db 参数用于 InheritPerms=true 时实时加载
+// User 权限代码并与 API Key scopes 取并集。permission.Service 是 interface 注入,
+// db 透传给 GetUserPermissions (service.go:272 接收 *gorm.DB)。InheritPerms=false
+// 时 permSvc/db 不被调用,传 nil 也无副作用(测试 stub 场景)。
+func MultiAuth(apiKeyService system.APIKeyService, usageLogger services.UsageLogger, permSvc permission.Service, db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 提取 API Key
 		apiKeyStr := extractAPIKey(c)
@@ -55,24 +65,34 @@ func MultiAuth(apiKeyService system.APIKeyService, usageLogger services.UsageLog
 		}
 
 		// 设置用户上下文（GORM已自动反序列化Scopes为[]string）
-		setUserContextForAPIKey(c, apiKey, apiKey.Scopes)
+		// Phase 61 / D-06/D-07/D-09/D-10: InheritPerms 加载路径 + username/nickname 修正
+		setUserContextForAPIKey(c, apiKey, apiKey.Scopes, permSvc, db)
 
-		// 异步记录使用日志
-		go func() {
-			userID := ""
-			if apiKey.UserID != nil {
-				userID = *apiKey.UserID
-			}
-			usageLogger.LogUsage(c.Request.Context(), &services.LogUsageRequest{
-				APIKeyID: apiKey.ID,
-				UserID:   userID,
-				Method:   c.Request.Method,
-				Path:     c.Request.URL.Path,
-				ClientIP: c.ClientIP(),
-			})
-		}()
+		// OBSERV-01: 计时前置，c.Next() 后捕获真实响应结果。
+		// 先例: pkg/middleware/logger.go:19-28 + :47-49（gin 标准记录模式）。
+		start := time.Now()
+		c.Next() // 下游 handler / RequireScope / RateLimitByScope 执行完毕
 
-		c.Next()
+		// c.Next() 返回后: 真实状态码 / 耗时此刻才可用 (OBSERV-01)
+		statusCode := c.Writer.Status()
+		duration := time.Since(start).Milliseconds()
+
+		userID := ""
+		if apiKey.UserID != nil {
+			userID = *apiKey.UserID
+		}
+
+		// D-02a: middleware 不再包外层 go func; LogUsage 内部已 go logUsageAsync()。
+		usageLogger.LogUsage(c.Request.Context(), &services.LogUsageRequest{
+			APIKeyID:   apiKey.ID,
+			UserID:     userID,
+			Method:     c.Request.Method,
+			Path:       c.Request.URL.Path,
+			ClientIP:   c.ClientIP(),
+			StatusCode: statusCode,                            // 新填 (OBSERV-01)
+			Duration:   int(duration),                         // 新填 (OBSERV-01)
+			Success:    statusCode >= 200 && statusCode < 300, // 新填 (D-01)
+		})
 	}
 }
 
@@ -142,39 +162,95 @@ func isIPAllowed(clientIP string, whitelist []string) bool {
 }
 
 // setUserContextForAPIKey 设置API Key认证的用户上下文（私有函数）
-// apiKey 参数的类型是 *models.APIKey，使用 interface{} 避免循环导入
-func setUserContextForAPIKey(c *gin.Context, apiKey interface{}, scopes []string) {
-	// 通过类型断言访问 apiKey 的字段
-	// models.APIKey 结构: ID, Name, UserID, User, InheritPerms
-	type apiKeyType struct {
-		ID           string
-		Name         string
-		UserID       *string
-		InheritPerms bool
-		User         *interface{}
+//
+// Phase 61 / D-06/D-07/D-09/D-10 改造:
+//   - 新增 permSvc 参数用于 InheritPerms=true 时实时加载 User 权限代码
+//     (GetUserPermissions),与 API Key 自带 scopes 取并集写入 c.Set("scopes")
+//   - D-07: 不引入缓存,每请求一次 DB 查询(InheritPerms=true 时)
+//   - D-08: InheritPerms=false → 行为不变,scopes 仅含 API Key 自带
+//   - D-09: 加载失败(DB error / UserID 为 nil)→ 401 fail-closed,abort 后续步骤
+//   - D-10: username/nickname 从 apiKey.User 关联读取(apiKey.User 已在
+//     ValidateAPIKey 中 Preload)。User 关联缺失时兜底 apiKey.Name + Warnf
+func setUserContextForAPIKey(c *gin.Context, apiKey *models.APIKey, scopes []string, permSvc permission.Service, db *gorm.DB) {
+	userID := ""
+	if apiKey.UserID != nil {
+		userID = *apiKey.UserID
 	}
 
-	if ak, ok := apiKey.(apiKeyType); ok {
-		userID := ""
-		username := ak.Name
+	// 设置上下文
+	c.Set("user_id", userID)
 
-		if ak.UserID != nil {
-			userID = *ak.UserID
+	// D-10: username/nickname 取 apiKey.User 关联值。User 关联缺失时
+	// 兜底 apiKey.Name + 记录 Warnf(不应发生,因为 ValidateAPIKey 已 Preload)
+	if apiKey.User != nil {
+		c.Set("username", apiKey.User.Username)
+		nickname := ""
+		if apiKey.User.Nickname != nil {
+			nickname = *apiKey.User.Nickname
+		}
+		c.Set("nickname", nickname)
+	} else {
+		applogger.Warnf("[API_KEY] username/nickname 缺失 User 关联: apiKeyID=%s name=%s",
+			apiKey.ID, apiKey.Name)
+		c.Set("username", apiKey.Name) // 兜底: 与 D-04 既有行为一致
+		c.Set("nickname", "")
+	}
+
+	c.Set("api_key_id", apiKey.ID)
+	c.Set("scopes", scopes)
+	c.Set("auth_type", "api_key")
+
+	// D-06/D-07/D-09: InheritPerms=true 时实时加载 User 权限代码与 scopes 取并集。
+	// 每请求一次 DB 查询(D-07),失败 → 401 fail-closed(D-09)。
+	//
+	// 注:顺序在 c.Set("auth_type", "api_key") 之后、c.Set("api_key_id") 之前
+	// 不重要 — InheritPerms 分支在 abort 路径上不影响已设的 context 键。
+	if apiKey.InheritPerms {
+		// D-09 校验: UserID 为 nil 视为配置错误,fail-closed
+		if apiKey.UserID == nil {
+			applogger.Errorf("[API_KEY] InheritPerms=true 但 UserID 为 nil: apiKeyID=%s", apiKey.ID)
+			response.Error(c, response.ErrUnauthorized, "用户权限加载失败")
+			c.Abort()
+			return
 		}
 
-		// 设置上下文
-		c.Set("user_id", userID)
-		c.Set("username", username)
-		c.Set("nickname", "") // API Key 认证没有用户昵称
-		c.Set("api_key_id", ak.ID)
-		c.Set("scopes", scopes)
-		c.Set("auth_type", "api_key")
-
-		// 如果继承权限且有关联用户，加载用户角色
-		if ak.InheritPerms && ak.User != nil {
-			// User 角色会在需要时从数据库加载
-			c.Set("inherit_perms", true)
+		// WR-03 (Phase 61 review): permSvc/db 未注入(InheritPerms=true 但调用方传 nil)
+		// 会在 GetUserPermissions 处 nil 接口解引用 panic。D-09 fail-closed 要求 401 而非 panic。
+		if permSvc == nil || db == nil {
+			applogger.Errorf("[API_KEY] InheritPerms=true 但 permSvc/db 未注入: apiKeyID=%s", apiKey.ID)
+			response.Error(c, response.ErrUnauthorized, "用户权限加载失败")
+			c.Abort()
+			return
 		}
+
+		// 加载 User 权限代码 (每请求一次 DB, 无缓存 D-07)
+		userPerms, err := permSvc.GetUserPermissions(db, *apiKey.UserID)
+		if err != nil {
+			// D-09: fail-closed — 加载失败意味着「无法判断是否真有权限」
+			applogger.Errorf("[API_KEY] 加载 User 权限失败: apiKeyID=%s userID=%s err=%v",
+				apiKey.ID, *apiKey.UserID, err)
+			response.Error(c, response.ErrUnauthorized, "用户权限加载失败")
+			c.Abort()
+			return
+		}
+
+		// D-06: scopes 并集写入。粗粒度 read/write/admin(scope)与细粒度
+		// system:user:list(permission code)同入 c.scopes 同一集合,
+		// 供 RequireScope / getScopeFromContext / RequireAPIKeyResourcePermission
+		// 检。
+		mergedScopes := append([]string{}, scopes...)
+		seen := make(map[string]struct{}, len(mergedScopes))
+		for _, s := range mergedScopes {
+			seen[s] = struct{}{}
+		}
+		for _, p := range userPerms {
+			if _, ok := seen[p]; !ok {
+				mergedScopes = append(mergedScopes, p)
+				seen[p] = struct{}{}
+			}
+		}
+		c.Set("scopes", mergedScopes)
+		c.Set("inherit_perms", true)
 	}
 }
 
@@ -220,29 +296,92 @@ func RequireScope(requiredScope string) gin.HandlerFunc {
 
 // RequireAPIKeyResourcePermission API Key资源权限验证中间件
 // 根据资源和操作映射到相应的作用域
+//
+// Phase 61 / AUTH-04 改造:
+//   - D-03 fail-closed: 查 pkg/permission/resource_action_map 命中 → 走 scope
+//     check 路径;未命中 → 403 "资源权限未定义" + abort(不 c.Next())
+//   - D-05: 本函数仍为公共 helper,本 phase 不挂载到 apikey_router.go(仅做
+//     单元测试 + 文档化),最小爆炸半径
+//   - 命中后 scopes 检查接受三种形式(union 语义):
+//     ① admin 通配 — admin 含所有权限
+//     ② 细粒度 PermissionCode — D-06 InheritPerms=true 路径下 User 权限代码
+//        合并入 scopes,例如 "system:user:list"
+//     ③ 粗粒度 scope(read/write) — D-13 非 InheritPerms 路径下 API Key 自带
+//        scope 通过 getRequiredScope(action) 映射(view→read, edit→write)
+//   - 不命中 → 403 "资源权限不足: <permCode>"
 func RequireAPIKeyResourcePermission(resource string, action string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 确定所需作用域
-		requiredScope := getRequiredScope(action)
+		// D-03: 第一步 — 查静态 map。未命中 → fail-closed 403
+		permCode, ok := permission.LookupResourceAction(resource, action)
+		if !ok {
+			response.Error(c, response.ErrForbidden, "资源权限未定义: "+resource+":"+action)
+			c.Abort()
+			return
+		}
 
-		// 调用作用域验证
-		RequireScope(requiredScope)(c)
+		// 第二步 — scopes 集合检查
+		scopesVal, exists := c.Get("scopes")
+		if !exists {
+			response.Error(c, response.ErrForbidden, "权限作用域不足: "+string(permCode))
+			c.Abort()
+			return
+		}
+		userScopes, ok := scopesVal.([]string)
+		if !ok {
+			response.Error(c, response.ErrForbidden, "权限作用域格式错误")
+			c.Abort()
+			return
+		}
+
+		// 三种形式 union 匹配: admin 通配 / 细粒度 PermissionCode / 粗粒度 scope
+		// BL-01 修复: 粗粒度支路仅在 action 属于已知词汇表(actionScopeMap)时参与
+		// 匹配;未知 action 不再兜底 "read" — 粗粒度支路直接不匹配(fail-closed,
+		// 与 D-03/D-12 一致),只剩 admin 通配 / 细粒度 PermissionCode 两支路可放行。
+		requiredScope, actionKnown := actionScopeMap[action]
+		hasPerm := false
+		for _, scope := range userScopes {
+			if scope == "admin" || scope == string(permCode) || (actionKnown && scope == requiredScope) {
+				hasPerm = true
+				break
+			}
+		}
+		if !hasPerm {
+			response.Error(c, response.ErrForbidden, "资源权限不足: "+string(permCode))
+			c.Abort()
+			return
+		}
+
+		c.Next()
 	}
 }
 
-// getRequiredScope 根据操作获取所需作用域（私有函数）
-// 映射规则：view/create/edit/delete -> read/write
-func getRequiredScope(action string) string {
-	// 操作到作用域的映射
-	scopeMap := map[string]string{
-		"view":   "read",
-		"create": "write",
-		"edit":   "write",
-		"delete": "write",
-	}
+// actionScopeMap action → 所需 scope 词汇表(包级唯一真相源)。
+//
+// BL-01 修复(Phase 61 review): 与 pkg/permission/resource_action_map.go 的
+// D-04 action 词汇表对齐 — list/view/add/edit/remove/export/import/resetPwd
+// 全覆盖;create/delete 为历史别名保留(create≡add, delete≡remove,
+// 见 resource_action_map.go 头注「remove 是 system:* 约定, delete 是 network:* 约定」)。
+// export 归为 read(只读导出,不修改数据)。
+var actionScopeMap = map[string]string{
+	"list":     "read",
+	"view":     "read",
+	"add":      "write",
+	"edit":     "write",
+	"remove":   "write",
+	"create":   "write", // 历史别名, 同 add
+	"delete":   "write", // 历史别名, 同 remove
+	"export":   "read",  // 只读导出
+	"import":   "write",
+	"resetPwd": "write",
+}
 
-	// 如果操作不在映射中，默认为 read
-	if scope, ok := scopeMap[action]; ok {
+// getRequiredScope 根据操作获取所需作用域（私有函数）
+// 映射规则: 见 actionScopeMap(BL-01 修复后与 resource_action_map D-04 词汇表对齐)。
+// 未知 action 兜底 "read" — 仅 RateLimitByScope/SelectScope 限流路径使用(D-11);
+// RequireAPIKeyResourcePermission 鉴权路径对未知 action fail-closed(见该函数内
+// actionKnown 判断),不经过本兜底。
+func getRequiredScope(action string) string {
+	if scope, ok := actionScopeMap[action]; ok {
 		return scope
 	}
 	return "read"
@@ -251,7 +390,17 @@ func getRequiredScope(action string) string {
 // RateLimitByScope 基于作用域的速率限制中间件
 // 根据API Key的作用域动态调整速率限制
 // 符合 RFC 6585 规范（429 Too Many Requests）
-func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
+//
+// Phase 61 / D-11/D-12/D-14 改造:
+//   - D-11: 新增 action 参数,注册期计算 requiredScope 闭包捕获(每请求零查表开销)
+//   - D-12: 多 scope 选择改 action-aware — 委托 getScopeFromContext → SelectScope
+//     纯函数;scopes 不含 required scope 且无 admin → 403 fail-closed(无 fallback),
+//     不进入限流检查
+//   - D-14: 与 RequireScope 职责分工 — RequireScope 做硬鉴权(不感知 action),
+//     RateLimitByScope 做精细限流(感知 action 选择限额档位),两个中间件都保留
+func RateLimitByScope(rateLimiter *services.RateLimiter, action string) gin.HandlerFunc {
+	// D-11: 注册期计算 requiredScope,闭包捕获
+	requiredScope := getRequiredScope(action)
 	return func(c *gin.Context) {
 		// 检查是否为API Key认证
 		authType, exists := c.Get("auth_type")
@@ -261,8 +410,15 @@ func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
 			return
 		}
 
-		// 确定作用域
-		scope := getScopeFromContext(c)
+		// D-12: action-aware 多 scope 选择,fail-closed
+		scope, allowed := getScopeFromContext(c, action)
+		if !allowed {
+			applogger.Warnf("[API_KEY] 限流作用域不足: action=%s required_scope=%s path=%s",
+				action, requiredScope, c.Request.URL.Path)
+			response.Error(c, response.ErrForbidden, "权限作用域不足")
+			c.Abort()
+			return
+		}
 
 		// 获取唯一标识符
 		identifier := getIdentifier(c)
@@ -271,13 +427,22 @@ func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
 		allowed, result := rateLimiter.Check(identifier, scope)
 
 		// 设置速率限制响应头（RFC 6585）
-		c.Header("X-RateLimit-Limit", string(rune(result.Limit)))
-		c.Header("X-RateLimit-Remaining", string(rune(result.Remaining)))
+		// QUAL-01 / D-11: 修复 P2-a —— 原 string(rune(int)) 把整数当 Unicode 码点转换
+		// (Limit=100 → "d")，改用 strconv.Itoa 输出数字字面量 ("100")，前端 / 第三方
+		// 工具可用标准 parseInt / strconv.Atoi 反解析。
+		c.Header("X-RateLimit-Limit", strconv.Itoa(result.Limit))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(result.Remaining))
 		c.Header("X-RateLimit-Reset", result.ResetAt.Format(time.RFC3339))
 
 		if !allowed {
 			// 超过速率限制，返回429
-			c.Header("Retry-After", "60") // 建议60秒后重试
+			// WR-02 修复(Phase 61 review): Retry-After 不再硬编码 60,改由真实
+			// ResetAt 动态计算(分钟/小时/天窗口各自正确),下限 1 秒防 0/负值。
+			retryAfter := int(time.Until(result.ResetAt).Seconds())
+			if retryAfter < 1 {
+				retryAfter = 1
+			}
+			c.Header("Retry-After", strconv.Itoa(retryAfter))
 			response.Error(c, 429, "请求过于频繁，请稍后再试")
 			c.Abort()
 			return
@@ -288,26 +453,16 @@ func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
 }
 
 // getScopeFromContext 从上下文获取作用域（私有函数）
-// 如果没有作用域或继承权限，使用 "default" 作用域
-func getScopeFromContext(c *gin.Context) string {
-	// 检查是否继承权限
-	if inheritPerms, exists := c.Get("inherit_perms"); exists && inheritPerms == true {
-		return "default"
-	}
-
-	// 获取作用域
-	scopes, exists := c.Get("scopes")
-	if !exists {
-		return "default"
-	}
-
-	userScopes, ok := scopes.([]string)
-	if !ok || len(userScopes) == 0 {
-		return "default"
-	}
-
-	// 返回第一个作用域
-	return userScopes[0]
+//
+// Phase 61 / D-12/D-13 改造: 薄壳包装 SelectScope 纯函数(select_scope.go),
+// 从既有 context 键 inherit_perms / scopes 读取(Phase 57 D-04 既有 7 键,
+// 不新增内部中转键),返回 (scope, allowed) 供调用方 fail-closed 处理。
+func getScopeFromContext(c *gin.Context, action string) (string, bool) {
+	inheritRaw, exists := c.Get("inherit_perms")
+	inheritPerms, _ := inheritRaw.(bool)
+	scopesRaw, _ := c.Get("scopes")
+	scopes, _ := scopesRaw.([]string)
+	return SelectScope(scopes, inheritPerms && exists, action)
 }
 
 // getIdentifier 获取客户端唯一标识符（私有函数）

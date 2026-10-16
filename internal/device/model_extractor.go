@@ -2,6 +2,7 @@ package device
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
@@ -40,6 +41,11 @@ func (e *ModelExtractor) Extract() string {
 	}
 }
 
+// trimAnchorPrefix 去掉正则匹配结果中来自锚点 `(?:^|[\s\r\n])` 的前导空白字符。
+func trimAnchorPrefix(match string) string {
+	return strings.TrimLeft(match, " \t\r\n\f")
+}
+
 // extractHuaweiModel 提取华为设备型号
 // 华为设备型号通常如: S5735-L48T4X-A, S5700-28P-LI-AC, AR2220, USG6000等
 func (e *ModelExtractor) extractHuaweiModel() string {
@@ -50,7 +56,7 @@ func (e *ModelExtractor) extractHuaweiModel() string {
 		// AR系列路由器: AR2220, AR1220E, AR1220V等
 		`(?:^|[\s\r\n])AR[0-9]{3,4}[A-Z]*`,
 		// USG系列防火墙: USG6000, USG6680, USG67xx等
-		`(?:^|[\s\r\n])USG[0-9]{4,5}(?:-[A-Z0-9]+)?`,
+		`(?:^|[\s\r\n])USG[0-9]{4,5}[A-Z]{0,2}(?:-[A-Z0-9]+)?`,
 		// AirEngine系列AP: AirEngine5760-10, AirEngine5761-21等
 		`(?:^|[\s\r\n])AirEngine[0-9]{4,6}(?:-[A-Z0-9]+)?`,
 		// AP系列: AP4030DN, AP5030DN, AP6010SN等
@@ -63,7 +69,7 @@ func (e *ModelExtractor) extractHuaweiModel() string {
 		re := regexp.MustCompile(pattern)
 		if match := re.FindString(e.sysDescr); match != "" {
 			// 移除前导空白
-			model := regexp.MustCompile(`^[A-Z0-9\-]+`).FindString(match)
+			model := regexp.MustCompile(`^[A-Z0-9\-]+`).FindString(trimAnchorPrefix(match))
 			if len(model) > 0 && len(model) <= 50 {
 				return model
 			}
@@ -90,7 +96,7 @@ func (e *ModelExtractor) extractH3CModel() string {
 	for _, pattern := range patterns {
 		re := regexp.MustCompile(pattern)
 		if match := re.FindString(e.sysDescr); match != "" {
-			model := regexp.MustCompile(`^[A-Z0-9\-]+`).FindString(match)
+			model := regexp.MustCompile(`^[A-Z0-9\-]+`).FindString(trimAnchorPrefix(match))
 			if len(model) > 0 && len(model) <= 50 {
 				return model
 			}
@@ -119,7 +125,7 @@ func (e *ModelExtractor) extractRuijieModel() string {
 	for _, pattern := range patterns {
 		re := regexp.MustCompile(pattern)
 		if match := re.FindString(e.sysDescr); match != "" {
-			model := regexp.MustCompile(`^[A-Z0-9\-]+`).FindString(match)
+			model := regexp.MustCompile(`^[A-Z0-9\-]+`).FindString(trimAnchorPrefix(match))
 			if len(model) > 0 && len(model) <= 50 {
 				return model
 			}
@@ -146,8 +152,8 @@ func (e *ModelExtractor) extractMaipuModel() string {
 	for _, pattern := range patterns {
 		re := regexp.MustCompile(pattern)
 		if match := re.FindString(e.sysDescr); match != "" {
-			model := regexp.MustCompile(`^[A-Z0-9\s\-]+`).FindString(match)
-			model = regexp.MustCompile(`\s+$`).ReplaceAllString(model, "")
+			model := regexp.MustCompile(`^[A-Z0-9\s\-]+`).FindString(trimAnchorPrefix(match))
+			model = strings.TrimRight(model, " \t\r\n\f")
 			if len(model) > 0 && len(model) <= 50 {
 				return model
 			}
@@ -170,7 +176,7 @@ func (e *ModelExtractor) extractGenericModel() string {
 	for _, pattern := range patterns {
 		re := regexp.MustCompile(pattern)
 		if match := re.FindString(e.sysDescr); match != "" {
-			model := regexp.MustCompile(`^[A-Z0-9\-]+`).FindString(match)
+			model := regexp.MustCompile(`^[A-Z0-9\-]+`).FindString(trimAnchorPrefix(match))
 			if len(model) > 0 && len(model) <= 50 {
 				return model
 			}

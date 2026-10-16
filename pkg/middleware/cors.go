@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"os"
 	"strings"
 	"time"
 
@@ -18,8 +19,11 @@ const (
 //
 //	空列表或包含 "*" 则允许所有来源（仅用于开发环境）
 func Cors(allowedOrigins []string) gin.HandlerFunc {
+	// WS_ALLOW_ALL_ORIGINS env var overrides allowedOrigins for WebSocket endpoints.
+	// D-02: Default (unset/"false") = use config. Set to "true" to allow all origins (INSECURE).
+	allowAllEnv := strings.EqualFold(os.Getenv("WS_ALLOW_ALL_ORIGINS"), "true")
 	// 如果没有指定允许的域名或者包含通配符，则允许所有来源（仅开发环境）
-	allowAll := len(allowedOrigins) == 0 || contains(allowedOrigins, "*")
+	allowAll := allowAllEnv || len(allowedOrigins) == 0 || contains(allowedOrigins, "*")
 
 	config := cors.Config{
 		AllowOrigins:     allowedOrigins,

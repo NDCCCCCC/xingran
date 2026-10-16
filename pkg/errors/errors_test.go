@@ -108,11 +108,21 @@ func TestAppError_WithContext(t *testing.T) {
 	}
 }
 
+// TestWrap_NilError 锁定 Wrap 的文档契约(errors.go:86-89):
+// 即使 err == nil 也返回 *AppError(不返回 nil),避免调用方拿到
+// nil error 后误判为"成功"。如需 nil 透传语义,用 WrapWithHTTPStatus。
 func TestWrap_NilError(t *testing.T) {
 	var err error = nil
 	wrapped := Wrap(err, CodeUserNotFound, "test")
-	if wrapped != nil {
-		t.Errorf("Wrap(nil, ...) should return nil, got %v", wrapped)
+	if wrapped == nil {
+		t.Fatal("Wrap(nil, ...) should return non-nil *AppError per documented contract (see errors.go:86)")
+	}
+	if wrapped.Code != CodeUserNotFound {
+		t.Errorf("Wrap(nil).Code = %v, want %v", wrapped.Code, CodeUserNotFound)
+	}
+	// 对照组:WrapWithHTTPStatus 保持 nil 透传语义
+	if got := WrapWithHTTPStatus(err, CodeUserNotFound, http.StatusBadRequest, "test"); got != nil {
+		t.Errorf("WrapWithHTTPStatus(nil, ...) should return nil, got %v", got)
 	}
 }
 

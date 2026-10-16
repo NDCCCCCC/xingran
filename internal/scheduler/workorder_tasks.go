@@ -192,7 +192,7 @@ func getTodayDutyPerson(db *gorm.DB) (*string, error) {
 	var dutyPerson DutyPerson
 	err := db.Table("sys_duty_schedule").
 		Select("user_id").
-		Where("schedule_date = ? AND status = ?", today, 0). // DutyStatusNormal = 0
+		Where("schedule_date = ? AND status = ?", today, models.DutyStatusNormal). // DutyStatusNormal = 0
 		First(&dutyPerson).Error
 
 	if err != nil {
@@ -325,7 +325,7 @@ func createWorkOrderJob(db *gorm.DB, scheduler *Scheduler, template *models.Peri
 		InvokeTarget:   "periodic_workorder_create:" + template.ID,
 		CronExpression: template.CronExpression,
 		MisfirePolicy:  models.MisfirePolicyExecuteOnce,
-		Status:         0,
+		Status:         models.JobStatusNormal,
 		NextRunTime:    &nextRunTime,
 		Remark:         &remark,
 	}
@@ -448,7 +448,7 @@ func EnablePeriodicWorkOrderJob(scheduler *Scheduler, templateID string) error {
 		InvokeTarget:   "periodic_workorder_create:" + template.ID,
 		CronExpression: template.CronExpression,
 		MisfirePolicy:  models.MisfirePolicyExecuteOnce,
-		Status:         0, // 启用
+		Status:         models.JobStatusNormal, // 启用
 		NextRunTime:    &nextRunTime,
 		Remark:         &remark,
 	}

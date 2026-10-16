@@ -9,6 +9,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// NotificationConfigStatus 通知配置启停状态枚举（0=正常 1=停用）
+type NotificationConfigStatus int
+
+const (
+	NotificationConfigStatusNormal  NotificationConfigStatus = 0 // 正常
+	NotificationConfigStatusStopped NotificationConfigStatus = 1 // 停用
+)
+
 // EmailConfig 邮箱服务器配置
 type EmailConfig struct {
 	ID          string    `gorm:"primaryKey;size:64" json:"id"`

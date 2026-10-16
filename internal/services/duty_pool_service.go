@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -19,11 +20,11 @@ func NewDutyPoolService(db *gorm.DB) *DutyPoolService {
 	return &DutyPoolService{db: db}
 }
 
-// DutyPoolStatistics 值班池统计结果。status: 0=启用, 1=停用。
+// DutyPoolStatistics 值班池统计结果。启停状态由 models.DutyPoolStatus 定义。
 type DutyPoolStatistics struct {
 	Total        int64 `json:"total"`
-	Enabled      int64 `json:"enabled"`      // status = 0
-	Disabled     int64 `json:"disabled"`     // status = 1
+	Enabled      int64 `json:"enabled"`      // DutyPoolStatusEnabled
+	Disabled     int64 `json:"disabled"`     // DutyPoolStatusDisabled
 	TotalMembers int64 `json:"totalMembers"` // 所有非软删除池的成员总数
 }
 
@@ -36,8 +37,8 @@ func (s *DutyPoolService) GetDutyPoolStatistics(ctx context.Context) (*DutyPoolS
 		Model(&models.DutyPool{}).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS enabled",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS disabled",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS enabled", int(models.DutyPoolStatusEnabled)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS disabled", int(models.DutyPoolStatusDisabled)),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -168,10 +169,10 @@ func (s *DutyPoolService) GetDutyPoolList(ctx context.Context, req *DutyPoolList
 
 	// 分页查询
 	if req.Current == 0 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize == 0 {
-		req.PageSize = 10
+		req.PageSize = constants.DefaultPageSize
 	}
 
 	offset := (req.Current - 1) * req.PageSize

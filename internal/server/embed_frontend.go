@@ -14,7 +14,7 @@ import (
 func ServeFrontend(c *gin.Context) {
 	c.JSON(http.StatusServiceUnavailable, gin.H{
 		"error":   "Frontend not available in development mode",
-		"message": "Please run the frontend dev server: cd ruoyi-react-frontend && npm run dev",
+		"message": "Please run the frontend dev server: cd xingran-react-frontend && npm run dev",
 	})
 }
 

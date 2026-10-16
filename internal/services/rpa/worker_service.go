@@ -113,12 +113,18 @@ func (s *workerServiceImpl) Register(ctx context.Context, req *WorkerRegisterReq
 
 	// 使用原生 SQL ON CONFLICT DO UPDATE 避免 BaseModel 字段问题
 	// Worker 是自动注册的，不需要用户审计字段
+	//
+	// 注意：原生 SQL INSERT 不走 GORM Create 钩子链，Worker.BeforeCreate / BaseModel.BeforeCreate
+	//（显式赋 UUID）不会触发，故 id 必须在 SQL 内显式用 gen_random_uuid() 生成。
+	// sys_rpa_workers.id 列由 migration_205 补 DEFAULT gen_random_uuid() 兜底，但此处仍显式写入，
+	// 双重保险防止 NOT NULL 违规（SQLSTATE 23502）。
+	// gen_random_uuid() 是 PG 内嵌函数，不占 Go 占位符，下方 Scan 占位实参顺序与数量保持不变。
 	query := `
 		INSERT INTO sys_rpa_workers (
-			worker_name, worker_id, ip_address, port, status,
+			id, worker_name, worker_id, ip_address, port, status,
 			capabilities, max_concurrency, current_tasks, last_heartbeat,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+		) VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 		ON CONFLICT (worker_id) DO UPDATE SET
 			worker_name = EXCLUDED.worker_name,
 			ip_address = EXCLUDED.ip_address,

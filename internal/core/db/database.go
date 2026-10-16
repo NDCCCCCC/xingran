@@ -2,7 +2,9 @@ package db
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/lib/pq"
+	"github.com/tjfoc/gmsm/sm3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -484,6 +487,162 @@ func (d *Database) dropDependentMaterializedViews() {
 		"如需恢复 DROP,见 internal/core/db/database.go 历史 commit。")
 }
 
+// ==== sys_api_keys SEC-01 存量迁移 (debug: sys-api-keys-keyhash-23502) ====
+
+// apikeyBackfillSaltLen 存量盐值字节长度(16 字节 → hex 编码 32 字符)。
+// ⚠️ 必须与 internal/services/system/apikey_service.go 的 apiKeySaltLen 保持一致。
+const apikeyBackfillSaltLen = 16
+
+// apikeyBackfillKeyPrefixLen KeyPrefix 取明文 key 前 N 字符。
+// ⚠️ 必须与 internal/services/system/apikey_service.go CreateAPIKey 的 key[:12] 保持一致。
+const apikeyBackfillKeyPrefixLen = 12
+
+// backfillAPIKeyHash 计算 SM3(key‖salt) 的 hex 摘要(64 字符)。
+// ⚠️ 拼接顺序 key 在前、salt 在后,必须与 internal/services/system/apikey_service.go 的
+// hashAPIKey 逐字节一致,否则存量密钥迁移后 ValidateAPIKey 恒不匹配(全部存量密钥静默失效)。
+func backfillAPIKeyHash(key, salt string) string {
+	h := sm3.New()
+	h.Write([]byte(key))
+	h.Write([]byte(salt))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// backfillGenerateSalt 生成随机盐(hex 编码,32 字符,per-key 独立)。
+// ⚠️ 必须与 internal/services/system/apikey_service.go 的 generateSalt 逐字节一致。
+func backfillGenerateSalt() (string, error) {
+	buf := make([]byte, apikeyBackfillSaltLen)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
+}
+
+// tableColumnExists 探测表列是否存在(双方言:PG information_schema / sqlite pragma_table_info)。
+// 不用 Migrator().HasColumn 的原因:模型已删除 Key 字段,HasColumn(&models.APIKey{}, "key")
+// 会因 schema LookUpField 失败恒为 false,无法探测模型之外的遗留列。
+func (d *Database) tableColumnExists(conn *gorm.DB, table, column string) bool {
+	var count int64
+	var err error
+	if d.Type == "sqlite" {
+		err = conn.Raw(fmt.Sprintf("SELECT count(*) FROM pragma_table_info('%s') WHERE name = ?", table), column).Scan(&count).Error
+	} else {
+		err = conn.Raw(`SELECT count(*) FROM information_schema.columns
+			WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?`, table, column).Scan(&count).Error
+	}
+	return err == nil && count > 0
+}
+
+// backfillSysAPIKeysKeyHash 在 AutoMigrate 之前为 sys_api_keys 存量行回填
+// key_hash/salt/key_prefix 三列并退役旧明文 key 列(Phase 60 / SEC-01)。
+//
+// 设计原因(debug: sys-api-keys-keyhash-23502): 模型 internal/models/api_key.go 已删除明文
+// Key 字段,新增 KeyHash/Salt/KeyPrefix 三列且均 `not null` 无 DEFAULT。存量表(旧 key 列 +
+// 已有行)上 GORM AutoMigrate 发出的 `ADD COLUMN key_hash varchar(64) NOT NULL` 会对已有行
+// 填 NULL → SQLSTATE 23502 "column contains null values" 启动 FATA。AutoMigrate 先于
+// migrations 执行,普通 migration_NNN 拦不住该错误,故必须在此做存量迁移
+// (先例: cleanupOldConstraints / dropDependentMaterializedViews 同为 AutoMigrate 前置步骤)。
+//
+// 语义(幂等):
+//   - 表不存在                  → 全新部署,AutoMigrate 按 model 建表,no-op
+//   - 旧 key 列不存在且新列存在 → 已迁移完成,no-op
+//   - 旧 key 列存在             → 事务内 ADD COLUMN(先 nullable)→ 逐行回填 →
+//     SET NOT NULL(PG)→ DROP COLUMN key。旧明文 key 迁移后仍有效:
+//     ValidateAPIKey(apikey_service.go) 按 KeyPrefix 缩窄候选,重算 SM3(key+salt)
+//     恒定时间比对 —— 回填算法与其 generateSalt/hashAPIKey/CreateAPIKey(key[:12])
+//     完全一致(见 backfillAPIKeyHash/backfillGenerateSalt 注释锚点)。
+//
+// 实现要点:
+//   - 不能一步 ADD COLUMN NOT NULL:存量行被填 NULL → 23502(本 debug 的原始故障);
+//     也不能用 Migrator().AddColumn:FullDataTypeOf 对 not null 字段同样带 NOT NULL 约束。
+//   - 新列类型(varchar 64/32/12)与 model tag size 严格一致,保证 AutoMigrate 视为已对齐
+//     而不再 ALTER。
+//   - 约束命名: KeyHash 的 uniqueIndex(uni_sys_api_keys_key_hash)与旧 inline UNIQUE
+//     (sys_api_keys_key_hash_key)的命名冲突由 cleanupOldConstraints 统一清理,此处不重复。
+//   - 回填含软删行(SET NOT NULL 覆盖全表,漏行即 FATA)。
+//   - sqlite 分支跳过 SET NOT NULL(SQLite 无 ALTER SET NOT NULL;仅 dev 本地文件库,
+//     AutoMigrate 重建表路径会对齐 NOT NULL,回填后无 NULL 行不会失败)。
+func (d *Database) backfillSysAPIKeysKeyHash() error {
+	if !d.DB.Migrator().HasTable("sys_api_keys") {
+		return nil // 全新部署:AutoMigrate 按 model 建表,无存量行
+	}
+
+	if !d.tableColumnExists(d.DB, "sys_api_keys", "key") {
+		if d.tableColumnExists(d.DB, "sys_api_keys", "key_hash") {
+			return nil // 已迁移完成,幂等 no-op
+		}
+		// 非预期状态(无旧列可回填):交给 AutoMigrate 按模型建列并暴露问题,此处不吞。
+		applogger.Warnf("[apikey-backfill] sys_api_keys 无旧 key 列也无 key_hash 列,跳过回填(若启动仍报 23502 请人工检查存量行)")
+		return nil
+	}
+
+	applogger.Infof("[apikey-backfill] 检测到 sys_api_keys 旧明文 key 列,执行 SEC-01 存量迁移(salt/key_hash/key_prefix 回填 → NOT NULL → 删除明文列)")
+
+	backfilled := 0
+	err := d.DB.Transaction(func(tx *gorm.DB) error {
+		// 1) 以 nullable 形态补齐新列(已存在则跳过,兼容上次运行中途失败的半迁移态)。
+		newColumns := []struct{ name, ddl string }{
+			{"key_hash", "varchar(64)"},
+			{"salt", "varchar(32)"},
+			{"key_prefix", "varchar(12)"},
+		}
+		for _, col := range newColumns {
+			if !d.tableColumnExists(tx, "sys_api_keys", col.name) {
+				if err := tx.Exec(fmt.Sprintf("ALTER TABLE sys_api_keys ADD COLUMN %s %s", col.name, col.ddl)).Error; err != nil {
+					return fmt.Errorf("ADD COLUMN %s 失败: %w", col.name, err)
+				}
+			}
+		}
+
+		// 2) 逐行回填。⚠️ 算法必须与 apikey_service.go 的 generateSalt/hashAPIKey/
+		//    CreateAPIKey(key[:12]) 逐字节一致,见 backfillAPIKeyHash 注释锚点。
+		type legacyKeyRow struct {
+			ID  string
+			Key string
+		}
+		var rows []legacyKeyRow
+		if err := tx.Raw("SELECT id, key FROM sys_api_keys WHERE key IS NOT NULL").Scan(&rows).Error; err != nil {
+			return fmt.Errorf("读取存量 key 行失败: %w", err)
+		}
+		for _, row := range rows {
+			if len(row.Key) < apikeyBackfillKeyPrefixLen {
+				return fmt.Errorf("存量 key 行 %s 明文长度 %d < %d,无法派生 key_prefix,请人工处理该行后重试",
+					row.ID, len(row.Key), apikeyBackfillKeyPrefixLen)
+			}
+			salt, err := backfillGenerateSalt()
+			if err != nil {
+				return fmt.Errorf("生成盐失败: %w", err)
+			}
+			if err := tx.Exec("UPDATE sys_api_keys SET salt = ?, key_hash = ?, key_prefix = ? WHERE id = ?",
+				salt, backfillAPIKeyHash(row.Key, salt), row.Key[:apikeyBackfillKeyPrefixLen], row.ID).Error; err != nil {
+				return fmt.Errorf("回填行 %s 失败: %w", row.ID, err)
+			}
+		}
+		backfilled = len(rows)
+
+		// 3) 回填完成后再收紧 NOT NULL,与 model not null tag 对齐 —— AutoMigrate 看到
+		//    列已存在且语义一致 → no-op(不再发会触发 23502 的 ADD COLUMN NOT NULL)。
+		if d.Type == "postgres" {
+			for _, col := range []string{"key_hash", "salt", "key_prefix"} {
+				if err := tx.Exec(fmt.Sprintf("ALTER TABLE sys_api_keys ALTER COLUMN %s SET NOT NULL", col)).Error; err != nil {
+					return fmt.Errorf("SET NOT NULL %s 失败: %w", col, err)
+				}
+			}
+		}
+
+		// 4) 明文使命完成,删除旧列(PG 连带删除其上的 legacy uniqueIndex)。
+		if err := tx.Exec("ALTER TABLE sys_api_keys DROP COLUMN key").Error; err != nil {
+			return fmt.Errorf("DROP COLUMN key 失败: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	applogger.Infof("[apikey-backfill] 完成: 回填 %d 行,salt/key_hash/key_prefix 已就位,旧明文 key 列已删除(存量密钥经 ValidateAPIKey 仍有效)", backfilled)
+	return nil
+}
+
 // MigrateModelList 返回 AutoMigrate 注册的完整模型列表。
 //
 // 抽取为独立函数的原因 (2026-08-13, debug backend-hang-on-automigrate):
@@ -636,6 +795,16 @@ func (d *Database) AutoMigrate() error {
 		if err := d.sanitizeSQLiteModelDefaults(); err != nil {
 			return err
 		}
+	}
+
+	// Phase 60 / SEC-01: sys_api_keys 存量明文 key → key_hash/salt/key_prefix 回填(双方言)。
+	// 必须在 AutoMigrate 之前执行:模型新增三列均 `not null` 无 DEFAULT,存量行会被
+	// ADD COLUMN NOT NULL 填 NULL → SQLSTATE 23502 启动 FATA
+	// (debug: sys-api-keys-keyhash-23502;AutoMigrate 先于 migrations 执行,普通
+	// migration_NNN 拦不住 —— 同 gorm-automigrate-blocked-by-matview 教训)。
+	// 先例: cleanupOldConstraints / dropDependentMaterializedViews 同为 AutoMigrate 前置步骤。
+	if err := d.backfillSysAPIKeysKeyHash(); err != nil {
+		return fmt.Errorf("sys_api_keys key_hash 存量回填失败: %w", err)
 	}
 
 	// 先清理可能存在的旧约束。dropDependentMaterializedViews() 当前 noop,

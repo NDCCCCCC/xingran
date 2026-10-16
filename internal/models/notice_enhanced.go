@@ -16,6 +16,14 @@ const (
 	PriorityUrgent    NoticePriority = 2 // 紧急
 )
 
+// NoticeStatus 通知公告启停状态枚举（Notice.Status 字段；区别于 PublishStatus 发布状态）
+type NoticeStatus int
+
+const (
+	NoticeStatusNormal NoticeStatus = 0 // 正常
+	NoticeStatusClosed NoticeStatus = 1 // 关闭
+)
+
 // PublishStatus 发布状态
 type PublishStatus int
 

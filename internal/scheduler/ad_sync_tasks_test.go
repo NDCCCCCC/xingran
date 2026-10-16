@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -26,7 +26,7 @@ import (
 // 权限粒度参考 44-CONTEXT.md(T-44-02 越权创建例外规则缓解):
 //   - 4 个新端点全部 RequirePermissions,仅持权限角色可调
 //   - list/:id 路由现有无权限中间件(R1 skeleton),R3 保持现状
-//     参照项目记忆 ruoyi-perm-namespace-split-readonly-page 教训:读路径可放宽避免误锁只读场景
+//     参照项目记忆 xingran-perm-namespace-split-readonly-page 教训:读路径可放宽避免误锁只读场景
 //   - baseline 端点 RequirePermissions 闭合权限闭环(CR-03 修复):snapshot=exception:create(写),
 //     compare=reconciliation:list(读,模块标准读权限)。verifier 原 suggestion exception:list 未 seed,
 //     改用已 seed 的 reconciliation:list 避免误锁 dashboard 卡片。
@@ -70,7 +70,7 @@ func SetupReconciliationExceptionRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// Phase 44 R3 / Plan 44-02 Task 4 — Excel 导入/导出/模板(SC 9)
 	//
-	// 方案 B 专路由(WARN-7 锁定),避免项目记忆 ruoyi-excel-import-route-conflict
+	// 方案 B 专路由(WARN-7 锁定),避免项目记忆 xingran-excel-import-route-conflict
 	// (不在 router.go 预注册 /asset/reconciliation/import,由本 router 自管)。
 	//
 	// 权限:

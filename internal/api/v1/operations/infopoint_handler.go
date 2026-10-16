@@ -102,7 +102,7 @@ func (h *InfoPointHandler) SearchInfoPointOptions(c *gin.Context) {
 // @Router /ops/infoPoint [post]
 func (h *InfoPointHandler) Create(c *gin.Context) {
 	var infoPoint operations.OpsInfoPoint
-	if !handleJSONBinding(c, &infoPoint) {
+	if !response.HandleJSONBinding(c, &infoPoint) {
 		return
 	}
 
@@ -112,7 +112,7 @@ func (h *InfoPointHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &infoPoint), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &infoPoint), "创建") {
 		return
 	}
 
@@ -133,7 +133,7 @@ func (h *InfoPointHandler) Create(c *gin.Context) {
 // @Router /ops/infoPoint/list [post]
 func (h *InfoPointHandler) List(c *gin.Context) {
 	var req requests.InfoPointListRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -184,7 +184,7 @@ func (h *InfoPointHandler) GetByID(c *gin.Context) {
 func (h *InfoPointHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var infoPoint operations.OpsInfoPoint
-	if !handleJSONBinding(c, &infoPoint) {
+	if !response.HandleJSONBinding(c, &infoPoint) {
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *InfoPointHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &infoPoint), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &infoPoint), "更新") {
 		return
 	}
 
@@ -217,7 +217,7 @@ func (h *InfoPointHandler) Update(c *gin.Context) {
 // @Router /ops/infoPoint/{id}/delete [post]
 func (h *InfoPointHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -238,13 +238,13 @@ func (h *InfoPointHandler) Delete(c *gin.Context) {
 // @Router /ops/infoPoint/batch [post]
 func (h *InfoPointHandler) BatchOperation(c *gin.Context) {
 	var req requests.InfoPointBatchOperationRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:

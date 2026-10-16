@@ -109,7 +109,7 @@ func (c *SNMPClient) isReady() bool {
 
 // closeLocked 内部关闭方法，假设调用方已持有锁
 func (c *SNMPClient) closeLocked() error {
-	if c.client != nil {
+	if c.client != nil && c.client.Conn != nil {
 		return c.client.Conn.Close()
 	}
 	return nil
@@ -295,7 +295,14 @@ func parseSNMPValue(variable gosnmp.SnmpPDU) interface{} {
 		}
 	case gosnmp.OctetString:
 		if variable.Value != nil {
-			return string(variable.Value.([]byte))
+			switch v := variable.Value.(type) {
+			case []byte:
+				return string(v)
+			case string:
+				return v
+			default:
+				return string(v.([]byte))
+			}
 		}
 	case gosnmp.ObjectIdentifier:
 		if variable.Value != nil {
@@ -707,6 +714,7 @@ func ScanIPRange(startIP, endIP string, timeout time.Duration) []string {
 	}
 
 	// 简单的IP范围扫描
+	// Q-9: 依赖 nextIP 回卷返回 nil 终止;保持 nil 短路在 ipToUint32 之前。
 	for ip := start; ip != nil && ipToUint32(ip) <= ipToUint32(end); ip = nextIP(ip) {
 		if PingCheck(ip.String(), timeout) {
 			results = append(results, ip.String())
@@ -724,8 +732,13 @@ func ipToUint32(ip net.IP) uint32 {
 
 // nextIP 获取下一个IP
 func nextIP(ip net.IP) net.IP {
-	next := make(net.IP, len(ip))
-	copy(next, ip)
+	v4 := ip.To4()
+	if v4 == nil {
+		return nil
+	}
+
+	next := make(net.IP, len(v4))
+	copy(next, v4)
 
 	for i := len(next) - 1; i >= 0; i-- {
 		next[i]++

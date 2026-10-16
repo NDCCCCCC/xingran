@@ -44,8 +44,8 @@ type User struct {
 
 // UserRole 用户角色关联
 type UserRole struct {
-	UserID    string    `gorm:"type:uuid;not null" json:"userId"`
-	RoleID    string    `gorm:"type:uuid;not null" json:"roleId"`
+	UserID    string    `gorm:"type:uuid;not null;index:idx_sys_user_role_user_id_role_id" json:"userId"`
+	RoleID    string    `gorm:"type:uuid;not null;index:idx_sys_user_role_user_id_role_id" json:"roleId"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 

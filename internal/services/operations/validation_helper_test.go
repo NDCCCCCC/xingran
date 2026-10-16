@@ -10,10 +10,9 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	_ "modernc.org/sqlite" // 纯 Go SQLite 驱动，必须在使用前导入
 )
 
 func setupValidatorTestDB(t *testing.T) *gorm.DB {

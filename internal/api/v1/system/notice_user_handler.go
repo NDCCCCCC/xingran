@@ -6,6 +6,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -42,7 +43,9 @@ type NoticeWithReadStatus struct {
 // MyNoticesRequest 我的通知列表请求
 type MyNoticesRequest struct {
 	Current  int     `form:"current" json:"current" binding:"min=1"`
-	PageSize int     `form:"pageSize" json:"pageSize" binding:"min=1,max=50"`
+	// v129-recheck WR-06: 旧 max=50 因 bind 错误被吞从未生效，实际生效上限是
+	// NormalizePagination 的 MaxPageSize=200——删除失真契约，以实际行为为准
+	PageSize int `form:"pageSize" json:"pageSize" binding:"min=1"`
 	Status   *string `form:"status" json:"status,omitempty"` // read/unread/all
 }
 
@@ -107,12 +110,7 @@ func (h *NoticeUserHandler) GetMyNotices(c *gin.Context) {
 		_ = c.ShouldBindJSON(&req)
 	}
 
-	if req.Current == 0 {
-		req.Current = 1
-	}
-	if req.PageSize == 0 {
-		req.PageSize = 10
-	}
+	req.Current, req.PageSize = query.NormalizePagination(req.Current, req.PageSize)
 
 	notices, total, err := h.noticeService.GetUserNotices(c.Request.Context(), userID, req.Current, req.PageSize, req.Status)
 	if err != nil {

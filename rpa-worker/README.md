@@ -1,6 +1,6 @@
 # RPA Worker
 
-RPA (Robotic Process Automation) Worker 是 RuoYi-Next 系统的分布式任务执行器。
+RPA (Robotic Process Automation) Worker 是 XingRan-Next 系统的分布式任务执行器。
 
 ## 功能特性
 
@@ -247,4 +247,4 @@ INFO  worker registered  max_concurrency=10
 
 ## 许可证
 
-Copyright (c) 2024 RuoYi-Next
+Copyright (c) 2024 XingRan-Next

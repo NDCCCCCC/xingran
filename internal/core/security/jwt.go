@@ -166,7 +166,7 @@ func (j *JWTManager) GenerateTokenPair(userID, username, nickname string, roles 
 	var refreshToken string
 	if j.useSM2 {
 		// 使用SM2算法签名
-		refreshToken, err = crypto.GenerateRefreshTokenWithSM2(refreshClaims.UserID, refreshClaims.Username, j.sm2PrivateKey)
+		refreshToken, err = crypto.GenerateRefreshTokenWithSM2(refreshClaims.UserID, refreshClaims.Username, j.issuer, j.refreshKeyExpire, j.sm2PrivateKey)
 		if err != nil {
 			return nil, fmt.Errorf("生成SM2刷新令牌失败: %w", err)
 		}
@@ -280,6 +280,16 @@ func (j *JWTManager) GetPublicKey() string {
 
 	// 返回原始十六进制格式，供前端 sm-crypto 直接使用
 	return crypto.ExportPublicKeyToHex(j.sm2PublicKey)
+}
+
+// IsSM2Enabled 返回 SM2 签名是否启用（来自 jwt.use_sm2 配置）
+func (j *JWTManager) IsSM2Enabled() bool {
+	return j.useSM2
+}
+
+// HasSM2PublicKey 返回 SM2 公钥是否已加载（用于诊断 GetPublicKey 返回空的原因）
+func (j *JWTManager) HasSM2PublicKey() bool {
+	return j.sm2PublicKey != nil
 }
 
 // DecryptPassword 使用 SM2 私钥解密密码

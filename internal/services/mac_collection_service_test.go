@@ -6,7 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
-	"github.com/ruoyi-next/ruoyi-go-backend/test/fixtures"
+	"github.com/ruoyi-next/ruoyi-go-backend/tests/fixtures"
 	"github.com/stretchr/testify/assert"
 )
 

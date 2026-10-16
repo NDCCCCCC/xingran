@@ -1,0 +1,1 @@
+import{g as s,p as e}from"./index-gZ1c1L_V.js";async function n(){return(await s("/system/settings/config/theme/default")).data}async function i(t){await e("/system/settings/config/theme/default",t)}async function f(t){await e("/system/settings/config/theme/sync",{user_id:t})}export{f as a,n as g,i as s};

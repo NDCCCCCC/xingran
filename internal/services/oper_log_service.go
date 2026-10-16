@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -65,9 +66,9 @@ func (s *operLogService) RecordAsync(db *gorm.DB, title string, businessType int
 
 	// 异步写入数据库，不影响响应速度
 	go func() {
+		defer func() { if r := recover(); r != nil { applogger.Errorf("[OPER-LOG] RecordAsync panic 已恢复: panic=%v", r) } }()
 		if err := db.Create(operLog).Error; err != nil {
-			// 静默处理日志记录失败
-			_ = err
+			applogger.Errorf("[OPER-LOG] 异步记录操作日志失败: %v", err)
 		}
 	}()
 }
@@ -109,10 +110,10 @@ func (s *operLogService) RecordFromGinContext(c *gin.Context, db *gorm.DB, title
 	}
 
 	// 确定状态
-	status := 0
+	status := models.OperLogStatusSuccess
 	errorMsg := (*string)(nil)
 	if len(c.Errors) > 0 {
-		status = 1
+		status = models.OperLogStatusFailure
 		errMsg := c.Errors.String()
 		errorMsg = &errMsg
 	}
@@ -130,7 +131,7 @@ func (s *operLogService) RecordFromGinContext(c *gin.Context, db *gorm.DB, title
 		OperLocation:  nil, // 可以添加 IP 地理位置解析
 		OperParam:     operParam,
 		JsonResult:    jsonResult,
-		Status:        status,
+		Status:        int(status),
 		ErrorMsg:      errorMsg,
 		OperTime:      time.Now(),
 		CostTime:      costTime,
@@ -138,9 +139,9 @@ func (s *operLogService) RecordFromGinContext(c *gin.Context, db *gorm.DB, title
 
 	// 异步写入数据库，不影响响应速度
 	go func() {
+		defer func() { if r := recover(); r != nil { applogger.Errorf("[OPER-LOG] RecordFromGinContext panic 已恢复: panic=%v", r) } }()
 		if err := s.RecordOperLog(context.Background(), db, operLog); err != nil {
-			// 静默处理日志记录失败
-			_ = err
+			applogger.Errorf("[OPER-LOG] 异步记录操作日志失败: %v", err)
 		}
 	}()
 }

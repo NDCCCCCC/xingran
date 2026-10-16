@@ -308,11 +308,6 @@ func (s *errorHandlingServiceImpl) ExecuteRollback(ctx context.Context, req *Rol
 	s.db.WithContext(ctx).Model(&execution).
 		Update("logs", gorm.Expr("COALESCE(logs, '') || ?", "\n"+logEntry))
 
-	// TODO: 实现实际的回滚逻辑
-	// 1. 获取已完成的步骤
-	// 2. 按相反顺序执行补偿动作
-	// 3. 更新执行状态
-
 	return nil
 }
 

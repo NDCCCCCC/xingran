@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -34,50 +35,26 @@ func NewConfigServiceWithCache(
 
 // GetByID 获取配置详情（带缓存）
 func (s *configCacheService) GetByID(ctx context.Context, id string) (*models.Config, error) {
-	cacheKey := fmt.Sprintf("config:id:%s", id)
-	var result models.Config
-
-	expiration := s.GetExpiration(services.CacheConfigConfigByID, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.configService.GetByID(ctx, id)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		fmt.Sprintf("%s:%s", CacheKeyConfigByID, id),
+		s.GetExpiration(services.CacheConfigConfigByID, 30*time.Minute),
+		func() (*models.Config, error) { return s.configService.GetByID(ctx, id) })
 }
 
 // GetByKey 根据配置键获取配置（带缓存）
 func (s *configCacheService) GetByKey(ctx context.Context, configKey string) (*models.Config, error) {
-	cacheKey := fmt.Sprintf("config:key:%s", configKey)
-	var result models.Config
-
-	expiration := s.GetExpiration(services.CacheConfigConfigByKey, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.configService.GetByKey(ctx, configKey)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		fmt.Sprintf("%s:%s", CacheKeyConfigByKey, configKey),
+		s.GetExpiration(services.CacheConfigConfigByKey, 30*time.Minute),
+		func() (*models.Config, error) { return s.configService.GetByKey(ctx, configKey) })
 }
 
 // GetAllConfigs 获取所有配置（带缓存）
 func (s *configCacheService) GetAllConfigs(ctx context.Context) ([]models.Config, error) {
-	cacheKey := "config:all"
-	var result []models.Config
-
-	expiration := s.GetExpiration("cache.config.all", 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryAllConfigs(ctx)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyConfigAll,
+		s.GetExpiration("cache.config.all", 30*time.Minute),
+		func() ([]models.Config, error) { return s.queryAllConfigs(ctx) })
 }
 
 // queryAllConfigs 查询所有配置
@@ -91,18 +68,19 @@ func (s *configCacheService) queryAllConfigs(ctx context.Context) ([]models.Conf
 }
 
 // InvalidateConfigCache 失效配置缓存
-func (s *configCacheService) InvalidateConfigCache(ctx context.Context, configKey string) error {
+func (s *configCacheService) InvalidateConfigCache(ctx context.Context, id string, configKey string) error {
 	keys := []string{
-		"config:all",
-		fmt.Sprintf("config:key:%s", configKey),
+		CacheKeyConfigAll,
+		fmt.Sprintf("%s:%s", CacheKeyConfigByKey, configKey),
+		fmt.Sprintf("%s:%s", CacheKeyConfigByID, id),
 	}
-	InvalidateCacheByKey(ctx, s.cache, keys, "CONFIG")
+	base.Invalidate(ctx, s.cache, keys, "CONFIG")
 	return nil
 }
 
 // InvalidateAllConfigCache 失效所有配置缓存
 func (s *configCacheService) InvalidateAllConfigCache(ctx context.Context) error {
-	InvalidateCacheByPattern(ctx, s.cache, []string{"config:*"}, "CONFIG")
+	base.InvalidatePattern(ctx, s.cache, []string{"config:*"}, "CONFIG")
 	return nil
 }
 
@@ -137,7 +115,7 @@ func (s *configCacheService) Delete(ctx context.Context, id string) error {
 	}
 
 	// 清除缓存
-	return s.InvalidateConfigCache(ctx, config.ConfigKey)
+	return s.InvalidateConfigCache(ctx, id, config.ConfigKey)
 }
 
 // BatchDelete 批量删除配置（带缓存失效）

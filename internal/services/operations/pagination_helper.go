@@ -1,55 +1,23 @@
 package operations
 
 import (
-	"math"
-
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 )
 
-const (
-	// DefaultCurrent 默认当前页码
-	DefaultCurrent = 1
-	// DefaultPageSize 默认每页数量
-	DefaultPageSize = 10
-	// MinPageSize 最小每页数量
-	MinPageSize = 10
-	// MaxPageSize 最大每页数量（用于统计数据等场景）
-	MaxPageSize = 10000
-)
-
-// PaginationParams 分页参数
-type PaginationParams struct {
-	Current  int
-	PageSize int
-}
-
-// PageResult 分页结果
-type PageResult struct {
-	List     interface{} `json:"list"`
-	Total    int64       `json:"total"`
-	Current  int         `json:"current"`
-	PageSize int         `json:"pageSize"`
-}
-
-// extractPagination 从参数中提取分页信息
-func extractPagination(params map[string]interface{}) PaginationParams {
-	current := extractIntParam(params, "current", DefaultCurrent)
-	pageSize := extractIntParam(params, "pageSize", DefaultPageSize)
-	pageSize = clampPageSize(pageSize)
-
-	return PaginationParams{
-		Current:  current,
-		PageSize: pageSize,
-	}
-}
+// PageResult 分页结果 — base.PageResult 的 type alias。
+//
+// 全项目唯一 struct 定义在 base 包（D-03 单一定义）；alias 使 opsServices.PageResult
+// 与 base.PageResult 成为同一类型，包内既有引用（含测试）零改动编译。
+type PageResult = base.PageResult
 
 // extractSortRequest 从 map 参数中提取排序请求,构造 base.BaseListRequest。
 // operations 模块 handler 直接 bind map[string]interface{},前端传的
 // orderByColumn/isAsc 会随 map 透传到这里。
 func extractSortRequest(params map[string]interface{}) base.BaseListRequest {
 	req := base.BaseListRequest{
-		Current:       extractIntParam(params, "current", DefaultCurrent),
-		PageSize:      extractIntParam(params, "pageSize", DefaultPageSize),
+		Current:       extractIntParam(params, "current", constants.DefaultCurrent),
+		PageSize:      extractIntParam(params, "pageSize", constants.DefaultPageSize),
 		OrderByColumn: extractStringParam(params, "orderByColumn"),
 	}
 	if isAsc, ok := params["isAsc"].(bool); ok {
@@ -77,12 +45,10 @@ func extractStringParam(params map[string]interface{}, key string) string {
 	return ""
 }
 
-// clampPageSize 限制 pageSize 在有效范围内
-func clampPageSize(pageSize int) int {
-	return int(math.Max(float64(MinPageSize), math.Min(float64(MaxPageSize), float64(pageSize))))
-}
-
-// calculateOffset 计算偏移量
-func calculateOffset(params PaginationParams) int {
-	return (params.Current - 1) * params.PageSize
-}
+// extractPagination / clampPageSize / PaginationParams 已于 Phase 99-04
+// (V130R-09 D-03-3) 删除：三个生产调用方(location_alias/building/asset List)
+// 全部迁移到 pkg/query.NormalizePaginationWithMax 单一权威出口，零调用方
+// 死代码按用户标准直接删除（不留 @deprecated 存根）。分页归一化唯一权威：
+// pkg/query。偏移量计算函数已于 Phase 91-04 修剪（offset 计算由
+// base.GORMRepository.List 内部承接；typed 路径统一走
+// requests.PaginationParams.GetOffset）。

@@ -143,7 +143,7 @@ type ColumnConfigItem struct {
 }
 
 // defaultAssetColumns 资产列表默认配置 — 数据来源 asset_columns_schema.json (go:embed)
-// 真实源: ruoyi-react-frontend/src/pages/operations/assets/columnsSchema.ts
+// 真实源: xingran-react-frontend/src/pages/operations/assets/columnsSchema.ts
 // 同步机制: 前端 npm run sync-columns-schema (prebuild 钩子) 序列化 → JSON → 后端 embed
 func defaultAssetColumns() []ColumnConfigItem {
 	return loadAssetColumnsFromEmbed()

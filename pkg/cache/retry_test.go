@@ -205,8 +205,42 @@ func TestAsyncRetryWorker_Enqueue(t *testing.T) {
 	stats := worker.GetStats()
 	// 验证worker_count存在
 	assert.Equal(t, 2, stats["worker_count"])
-	// 验证队列大小
-	assert.Equal(t, queueSize, stats["queue_size"])
+	// 验证队列大小（worker 并发消费下随时变化，只能验证非负，
+	// 不能断言与 sleep 前相等——那是时序竞态，曾导致 ~10% 概率 flake）
+	statsQueueSize, ok := stats["queue_size"].(int)
+	assert.True(t, ok, "queue_size 应为 int 类型")
+	assert.GreaterOrEqual(t, statsQueueSize, 0)
+}
+
+// TestAsyncRetryWorker_QueueSemantics 不启动 worker 消费者，
+// 确定性地验证 Enqueue 的队列语义：入队成功 → 队列大小精确 +1。
+// 这是 TestAsyncRetryWorker_Enqueue 中竞态断言的确定性替代。
+func TestAsyncRetryWorker_QueueSemantics(t *testing.T) {
+	config := DefaultRetryConfig()
+	// 不调用 Start()——无消费者，队列大小完全由入队驱动，无竞态
+	worker := NewAsyncRetryWorker(config, 2)
+	defer worker.Stop()
+
+	memoryCache := NewMemoryCache(100, 5*time.Minute)
+	ctx := context.Background()
+
+	before := worker.QueueSize()
+	assert.Equal(t, 0, before, "初始队列应为空")
+
+	ok := worker.Enqueue(ctx, memoryCache, "k1", "v1", time.Minute)
+	assert.True(t, ok)
+	assert.Equal(t, before+1, worker.QueueSize(), "入队1项后队列大小应精确 +1")
+
+	ok = worker.Enqueue(ctx, memoryCache, "k2", "v2", time.Minute)
+	assert.True(t, ok)
+	assert.Equal(t, before+2, worker.QueueSize(), "入队2项后队列大小应精确 +2")
+
+	// GetStats 的 queue_size 应与 QueueSize 一致（同一时刻读取）
+	stats := worker.GetStats()
+	statsQueueSize, isInt := stats["queue_size"].(int)
+	assert.True(t, isInt)
+	assert.Equal(t, worker.QueueSize(), statsQueueSize)
+	assert.Equal(t, 2, stats["worker_count"])
 }
 
 // TestRetryDelayCalculation 测试重试延迟计算

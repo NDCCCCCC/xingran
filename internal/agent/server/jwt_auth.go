@@ -6,7 +6,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"runtime"
@@ -85,6 +87,10 @@ func NewJWTAuthenticator(secret, backendURL, agentID, vmID string, tlsConfig *tl
 
 // NewTLSConfigFromConfig 从配置创建 TLS 配置
 func NewTLSConfigFromConfig(certFile, keyFile, caFile string, verifyCertificates bool) (*tls.Config, error) {
+	if certFile == "" && keyFile == "" && caFile == "" {
+		return nil, errors.New("TLS 配置不能全空: 至少提供 certFile/keyFile/caFile 之一(未启用 TLS 请传 nil)")
+	}
+
 	config := &tls.Config{
 		MinVersion: tls.VersionTLS13,
 	}
@@ -221,7 +227,7 @@ func (a *JWTAuthenticator) ValidateToken(tokenString string) (*jwtClaims, error)
 		return claims, nil
 	}
 
-	return nil, fmt.Errorf(errInvalidToken)
+	return nil, errors.New(errInvalidToken)
 }
 
 // GetCurrentToken 获取当前有效令牌（带读锁保护）
@@ -258,7 +264,11 @@ func (a *JWTAuthenticator) CallBackend(ctx context.Context, method, path string,
 	url := a.backendURL + path
 
 	// 序列化请求体
-	var bodyReader *bytes.Reader
+	// 注意: 声明为 io.Reader 而非 *bytes.Reader —— 若用具体类型, body==nil 时会把
+	// "接口持 typed-nil 指针" 传给 http.NewRequestWithContext, stdlib 按
+	// case *bytes.Reader 调 v.Len() 读字段 → nil 解引用 panic(Q-77-D 回归守护见
+	// jwt_conn_77_04_test.go TestJWT77_CallBackend_NilBody_NoTypedNilPanic)。
+	var bodyReader io.Reader
 	if body != nil {
 		jsonData, err := json.Marshal(body)
 		if err != nil {

@@ -22,17 +22,31 @@ type MenuMeta struct {
 }
 
 // Scan 实现 sql.Scanner 接口，用于从数据库读取 JSONB 数据
+//
+// 双方言兼容: PostgreSQL 驱动返回 []byte; SQLite (glebarez/modernc) 对
+// jsonb 列（落为 TEXT）返回 string。旧实现只断言 []byte, 在 sqlite 上
+// 任何 meta 非空的菜单读取都会 Scan error (debug admin-role-incomplete-menus
+// 验证阶段暴露 —— Go 种子从不写 meta, 该缺陷一直潜伏)。
 func (m *MenuMeta) Scan(value interface{}) error {
 	if value == nil {
 		return nil
 	}
 
-	bytes, ok := value.([]byte)
-	if !ok {
+	var data []byte
+	switch v := value.(type) {
+	case []byte:
+		data = v
+	case string:
+		data = []byte(v)
+	default:
 		return errors.New("type assertion to []byte failed")
 	}
 
-	return json.Unmarshal(bytes, m)
+	if len(data) == 0 {
+		return nil
+	}
+
+	return json.Unmarshal(data, m)
 }
 
 // Value 实现 driver.Valuer 接口，用于将数据写入数据库
@@ -47,13 +61,13 @@ func (m MenuMeta) Value() (driver.Value, error) {
 type Menu struct {
 	BaseModel
 	MenuName  string      `gorm:"size:50;not null" json:"menuName"`
-	ParentID  *string     `gorm:"type:uuid" json:"parentId,omitempty"`
+	ParentID  *string     `gorm:"type:uuid;index:idx_sys_menu_parent_status_visible" json:"parentId,omitempty"`
 	OrderNum  int         `gorm:"default:0" json:"orderNum"`
 	Path      *string     `gorm:"size:200" json:"path,omitempty"`
 	Component *string     `gorm:"size:255" json:"component,omitempty"`
 	MenuType  MenuType    `gorm:"default:'M'" json:"menuType"`
-	Visible   VisibleType `gorm:"default:1" json:"visible"`
-	Status    MenuStatus  `gorm:"default:0" json:"status"`
+	Visible   VisibleType `gorm:"default:1;index:idx_sys_menu_parent_status_visible" json:"visible"`
+	Status    MenuStatus  `gorm:"default:0;index:idx_sys_menu_parent_status_visible" json:"status"`
 	Perms     *string     `gorm:"size:100" json:"perms,omitempty"`
 	Icon      *string     `gorm:"size:100" json:"icon,omitempty"`
 	Remark    string      `gorm:"size:500" json:"remark,omitempty"`

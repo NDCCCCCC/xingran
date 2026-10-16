@@ -4,13 +4,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
 // HandleJSONBinding 统一处理 JSON 绑定
 // 返回 true 表示绑定成功，false 表示绑定失败
+//
+// D-104-3: binding 错误透传 err.Error()（含 gin validator 字段名）
 func HandleJSONBinding(c *gin.Context, obj interface{}) bool {
 	if err := c.ShouldBindJSON(obj); err != nil {
-		Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		// D-104-3: pass through err.Error() — gin validator includes field name
+		Error(c, apperrors.Wrap(err, apperrors.CodeParamError, err.Error()))
 		return false
 	}
 	return true
@@ -18,12 +22,21 @@ func HandleJSONBinding(c *gin.Context, obj interface{}) bool {
 
 // HandleServiceError 统一处理服务层错误
 // 返回 true 表示没有错误，false 表示有错误
+//
+// D-104-4: apperrors.AppError 携带业务码(.Code)，使用其内置业务文案
+// D-104-5: 裸内部错误使用 operation+"失败"，不泄露 err.Error() 到前端
 func HandleServiceError(c *gin.Context, err error, operation string) bool {
-	if err != nil {
-		Error(c, http.StatusInternalServerError, operation+"失败: "+err.Error())
-		return false
+	if err == nil {
+		return true
 	}
-	return true
+	// D-104-4: apperrors.AppError — use its built-in business message
+	if apperrors.IsAppError(err) {
+		Error(c, err)
+	} else {
+		// D-104-5: bare internal error — no err detail leaked to client
+		Error(c, err, operation+"失败")
+	}
+	return false
 }
 
 // HandleIDParam 从路径参数中获取 ID
@@ -37,7 +50,12 @@ func HandleIDParam(c *gin.Context) (string, bool) {
 }
 
 // HandleGetByID 通用的 GetByID 处理逻辑
-// 需要提供一个函数来根据 ID 获取实体
+// 返回 true 表示成功，false 表示失败（参数缺失或 getter 错误）
+//
+// HANDLER-05 (Phase 112): use apperrors.NewWithHTTPStatus to force HTTP 404 on not-found.
+// The previous Error(c, http.StatusNotFound, ...) call hit toAppError `case int:` which
+// hardcodes HTTPStatus=400. NewWithHTTPStatus bypasses the Code default (CodeRecordNotFound
+// DefaultHTTPStatus returns 400 in 1000-1020 range). GUARD-04 test asserts HTTP 404.
 func HandleGetByID(c *gin.Context, getter func(string) (interface{}, error), notFoundMessage string) bool {
 	id, ok := HandleIDParam(c)
 	if !ok {
@@ -46,7 +64,7 @@ func HandleGetByID(c *gin.Context, getter func(string) (interface{}, error), not
 
 	entity, err := getter(id)
 	if err != nil {
-		Error(c, http.StatusNotFound, notFoundMessage)
+		Error(c, apperrors.NewWithHTTPStatus(apperrors.CodeRecordNotFound, http.StatusNotFound, notFoundMessage))
 		return false
 	}
 

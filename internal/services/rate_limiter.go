@@ -1,8 +1,11 @@
 package services
 
 import (
+	"strings"
 	"sync"
 	"time"
+
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // API Key 作用域名称（rate_limiter 与 system/apikey_service 各持一份以避免跨包耦合）
@@ -28,9 +31,13 @@ type rateLimitWindow struct {
 }
 
 // RateLimiter 速率限制器
+//
+// Phase 61 QUAL-03 / D-18: 移除硬编码 limits map,改为从 RateLimitProvider
+// (CacheConfigService) 运行时读取阈值;reload 后新请求即读到新阈值,
+// 在途请求的滑动窗口时间戳不受影响(D-19)。
 type RateLimiter struct {
 	windows sync.Map          // 并发安全的窗口映射 (key -> *rateLimitWindow)
-	limits  map[string]RateLimit // 作用域限制配置
+	config  RateLimitProvider // 限流阈值配置提供者(D-18)
 }
 
 // RateLimitResult 速率限制结果
@@ -42,14 +49,68 @@ type RateLimitResult struct {
 }
 
 // NewRateLimiter 创建速率限制器实例
-func NewRateLimiter() *RateLimiter {
+//
+// Phase 61 QUAL-03 / D-18: 接收 RateLimitProvider(生产传 core.CacheConfigService
+// 字段),运行时从 sys_config 读取 rate_limit.* 阈值。config == nil 时兜底
+// staticRateLimitProvider(与既有硬编码默认值一致,D-17),保证旧调用路径不 panic。
+func NewRateLimiter(config RateLimitProvider) *RateLimiter {
+	if config == nil {
+		applogger.Warnf("[RATE_LIMITER] NewRateLimiter(nil), fallback to static defaults")
+		config = newStaticRateLimitProvider()
+	}
 	return &RateLimiter{
+		config: config,
+	}
+}
+
+// getLimit 从 RateLimitProvider 读取指定 scope 的限流配置(私有方法)
+// scope 不存在对应配置时,GetRateLimit 返回传入的 default 兜底值(120/2000/20000)
+func (rl *RateLimiter) getLimit(scope string) RateLimit {
+	if rl.config == nil {
+		return RateLimit{PerMinute: 120, PerHour: 2000, PerDay: 20000}
+	}
+	return RateLimit{
+		PerMinute: rl.config.GetRateLimit("rate_limit."+scope+".per_minute", 120),
+		PerHour:   rl.config.GetRateLimit("rate_limit."+scope+".per_hour", 2000),
+		PerDay:    rl.config.GetRateLimit("rate_limit."+scope+".per_day", 20000),
+	}
+}
+
+// staticRateLimitProvider 静态兜底配置提供者(NewRateLimiter(nil) 时使用)
+// 预填值与 Phase 61 之前既有硬编码一致(D-17)
+type staticRateLimitProvider struct {
+	limits map[string]RateLimit
+}
+
+func newStaticRateLimitProvider() *staticRateLimitProvider {
+	return &staticRateLimitProvider{
 		limits: map[string]RateLimit{
 			APIKeyScopeRead:  {PerMinute: 30, PerHour: 500, PerDay: 5000},
 			APIKeyScopeWrite: {PerMinute: 100, PerHour: 1500, PerDay: 15000},
 			APIKeyScopeAdmin: {PerMinute: 200, PerHour: 5000, PerDay: 50000},
+			"default":        {PerMinute: 120, PerHour: 2000, PerDay: 20000},
 		},
 	}
+}
+
+// GetRateLimit 实现 RateLimitProvider 接口
+// key 形态: rate_limit.<scope>.<per_minute|per_hour|per_day>
+func (p *staticRateLimitProvider) GetRateLimit(key string, defaultValue int) int {
+	parts := strings.Split(key, ".")
+	if len(parts) != 3 {
+		return defaultValue
+	}
+	if l, ok := p.limits[parts[1]]; ok {
+		switch parts[2] {
+		case "per_minute":
+			return l.PerMinute
+		case "per_hour":
+			return l.PerHour
+		case "per_day":
+			return l.PerDay
+		}
+	}
+	return defaultValue
 }
 
 // Check 检查请求是否超过速率限制
@@ -57,12 +118,9 @@ func NewRateLimiter() *RateLimiter {
 //       scope - 作用域（read/write/admin）
 // 返回: (bool, *RateLimitResult) - 是否允许，速率限制结果
 func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) {
-	// 获取作用域限制配置
-	limit, ok := rl.limits[scope]
-	if !ok {
-		// 如果作用域不存在，使用默认限制
-		limit = RateLimit{PerMinute: 120, PerHour: 2000, PerDay: 20000}
-	}
+	// 获取作用域限制配置 (D-18: 运行时从 RateLimitProvider 读,
+	// scope 无对应配置时由 GetRateLimit defaultValue 兜底 120/2000/20000)
+	limit := rl.getLimit(scope)
 
 	// 获取或创建窗口
 	window := rl.getOrCreateWindow(key)
@@ -84,7 +142,7 @@ func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) 
 		result := &RateLimitResult{
 			Allowed:   false,
 			Remaining: 0,
-			ResetAt:   rl.calculateReset(window.minute),
+			ResetAt:   rl.calculateReset(window.minute, time.Minute),
 			Limit:     limit.PerMinute,
 		}
 		return false, result
@@ -95,7 +153,7 @@ func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) 
 		result := &RateLimitResult{
 			Allowed:   false,
 			Remaining: 0,
-			ResetAt:   rl.calculateReset(window.hour),
+			ResetAt:   rl.calculateReset(window.hour, time.Hour),
 			Limit:     limit.PerHour,
 		}
 		return false, result
@@ -106,7 +164,7 @@ func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) 
 		result := &RateLimitResult{
 			Allowed:   false,
 			Remaining: 0,
-			ResetAt:   rl.calculateReset(window.day),
+			ResetAt:   rl.calculateReset(window.day, 24*time.Hour),
 			Limit:     limit.PerDay,
 		}
 		return false, result
@@ -184,12 +242,17 @@ func (rl *RateLimiter) calculateRemaining(limit RateLimit, minuteCount, hourCoun
 }
 
 // calculateReset 计算重置时间（私有方法）
-// 返回最早过期时间
-func (rl *RateLimiter) calculateReset(times []time.Time) time.Time {
+// 返回窗口内最早时间戳 + window 窗口时长 — 即该窗口最早一条记录滑出窗口的时刻。
+//
+// WR-02 修复(Phase 61 review): 原实现无条件 times[0].Add(time.Minute),对
+// hour/day 超限路径返回错误的 ResetAt(声称约 1 分钟后重置,实际窗口要
+// 1 小时/24 小时才滑动),严重误导客户端重试节奏。现按真实窗口时长计算:
+// 分钟路径传 time.Minute,小时路径传 time.Hour,天路径传 24*time.Hour。
+func (rl *RateLimiter) calculateReset(times []time.Time, window time.Duration) time.Time {
 	if len(times) == 0 {
 		return time.Now()
 	}
 
-	// 返回最早的时间点 + 1分钟（因为分钟窗口的清理时间是1分钟）
-	return times[0].Add(time.Minute)
+	// 返回最早的时间点 + 对应窗口时长(窗口内最早记录滑出的时刻)
+	return times[0].Add(window)
 }

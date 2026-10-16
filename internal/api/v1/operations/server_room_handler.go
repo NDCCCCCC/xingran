@@ -1,8 +1,6 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -34,7 +32,7 @@ func (h *ServerRoomHandler) WithCore(core *core.Core) *ServerRoomHandler {
 func (h *ServerRoomHandler) Statistics(c *gin.Context) {
 	result, err := h.service.Statistics(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.HandleServiceError(c, err, "统计")
 		return
 	}
 	response.Success(c, result)
@@ -48,7 +46,7 @@ func (h *ServerRoomHandler) SearchServerRoomOptions(c *gin.Context) {
 	}
 	result, err := h.service.SearchServerRoomOptions(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.HandleServiceError(c, err, "查询")
 		return
 	}
 	response.Success(c, result)
@@ -67,11 +65,11 @@ func (h *ServerRoomHandler) SearchServerRoomOptions(c *gin.Context) {
 // @Router /ops/serverRoom [post]
 func (h *ServerRoomHandler) Create(c *gin.Context) {
 	var room operations.OpsServerRoom
-	if !handleJSONBinding(c, &room) {
+	if !response.HandleJSONBinding(c, &room) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &room), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &room), "创建") {
 		return
 	}
 
@@ -92,13 +90,13 @@ func (h *ServerRoomHandler) Create(c *gin.Context) {
 // @Router /ops/serverRoom/list [post]
 func (h *ServerRoomHandler) List(c *gin.Context) {
 	var req requests.ServerRoomListRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
+		response.HandleServiceError(c, err, "查询")
 		return
 	}
 
@@ -143,12 +141,12 @@ func (h *ServerRoomHandler) GetByID(c *gin.Context) {
 func (h *ServerRoomHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var room operations.OpsServerRoom
-	if !handleJSONBinding(c, &room) {
+	if !response.HandleJSONBinding(c, &room) {
 		return
 	}
 
 	room.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &room), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &room), "更新") {
 		return
 	}
 
@@ -170,7 +168,7 @@ func (h *ServerRoomHandler) Update(c *gin.Context) {
 // @Router /ops/serverRoom/{id}/delete [post]
 func (h *ServerRoomHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -191,13 +189,13 @@ func (h *ServerRoomHandler) Delete(c *gin.Context) {
 // @Router /ops/serverRoom/batch [post]
 func (h *ServerRoomHandler) BatchOperation(c *gin.Context) {
 	var req requests.ServerRoomBatchOperationRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:

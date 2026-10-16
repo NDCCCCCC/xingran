@@ -1,4 +1,4 @@
-module github.com/ruoyi-next/rpa-worker
+module github.com/xingran-next/rpa-worker
 
 go 1.21
 

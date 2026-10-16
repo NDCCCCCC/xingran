@@ -19,7 +19,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 

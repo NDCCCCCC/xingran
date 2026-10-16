@@ -63,6 +63,9 @@ func NewPasswordManager(config *PasswordConfig) *PasswordManager {
 //  2. U2 = SM3(U1)
 //  3. ...
 //  4. result = U1 XOR U2 XOR ... XOR Uc
+// 注意:本实现仅支持 keyLen ≤ 32 (= SM3 摘要长度)。计数器固定为 block 1 (0x00000001),
+// 未实现多块循环。密码哈希场景 keyLen=32 安全;若未来以 keyLen > 32 调用,需补全多块循环
+// (每个 block i 用 INT32_BE(i) 作计数器,逐块填充并 XOR 累加)。
 func (pm *PasswordManager) pbkdf2SM3(password, salt []byte, iterations, keyLen int) []byte {
 	// 初始化数据块和结果
 	block := make([]byte, 32) // SM3输出长度为32字节

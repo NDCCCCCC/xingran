@@ -604,7 +604,7 @@ func (s *macHistoryServiceImpl) mergeTransitionsForDevice(ctx context.Context, d
 //   INSERT INTO sys_device_mac_history SELECT * FROM <backup_table>;
 //   注意:备份表不含分区(普通表),需手工处理 first_seen 落对应分区。
 //
-// 性能:基于现有 idx_device_first_seen + DISTINCT ON,<100 万行 ~12s(见 cmd/mac_purge_meaningless 实测)。
+// 性能:基于现有 idx_device_first_seen + DISTINCT ON,<100 万行 ~12s(见 scripts/mac/purge_meaningless 实测)。
 //
 // 建议调用频率:cron 每月 1 次(月初凌晨 3 点,见 internal/scheduler/mac_history_tasks.go)。
 func (s *macHistoryServiceImpl) PurgeMeaninglessRecords(ctx context.Context, dryRun bool) (int64, string, error) {

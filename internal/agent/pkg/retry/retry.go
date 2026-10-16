@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -124,6 +125,5 @@ func contains(s, substr string) bool {
 }
 
 func containsIgnoreCase(s, substr string) bool {
-	// 简单实现，生产环境可用 strings.ToLower
-	return true
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

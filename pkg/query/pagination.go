@@ -1,7 +1,10 @@
 // Package query 提供通用的查询构建和分页辅助函数
 package query
 
-import "gorm.io/gorm"
+import (
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
+	"gorm.io/gorm"
+)
 
 // PaginatedResult 分页结果
 type PaginatedResult struct {
@@ -14,6 +17,10 @@ type PaginatedResult struct {
 
 // NewPaginatedResult 创建分页结果
 func NewPaginatedResult(total int64, current, pageSize int, data interface{}) *PaginatedResult {
+	// v129-recheck WR-02: 防御 pageSize<=0 的整除零 panic（导出 API 可传任意值）
+	if pageSize <= 0 {
+		pageSize = constants.DefaultPageSize
+	}
 	totalPages := int(total) / pageSize
 	if int(total)%pageSize > 0 {
 		totalPages++
@@ -28,23 +35,41 @@ func NewPaginatedResult(total int64, current, pageSize int, data interface{}) *P
 	}
 }
 
+// NormalizePagination normalizes pagination parameters per industry best practice.
+// Returns (normalizedCurrent, normalizedPageSize).
+// Default: current=1, pageSize=10. Cap: pageSize <= MaxPageSize (200).
+// V130R-09 D-03-1/D-03-2: 单行委托 NormalizePaginationWithMax（cap=MaxPageSize），
+// 归一化唯一实现核心在 NormalizePaginationWithMax。
+func NormalizePagination(current, pageSize int) (int, int) {
+	return NormalizePaginationWithMax(current, pageSize, constants.MaxPageSize)
+}
+
+// NormalizePaginationWithMax 归一化分页参数的唯一实现核心（V130R-09 D-03-2）。
+// current <= 0 → DefaultCurrent；pageSize <= 0 → DefaultPageSize；
+// pageSize > maxPageSize → maxPageSize（钳制，不静默重置默认）。
+// 不做 MinPageSize 下限放大：pageSize 1-9 原样透传。
+func NormalizePaginationWithMax(current, pageSize, maxPageSize int) (int, int) {
+	if current <= 0 {
+		current = constants.DefaultCurrent
+	}
+	if pageSize <= 0 {
+		pageSize = constants.DefaultPageSize
+	}
+	if pageSize > maxPageSize {
+		pageSize = maxPageSize
+	}
+	return current, pageSize
+}
+
 // PaginationRequest 分页请求
 type PaginationRequest struct {
 	Current  int `json:"current" binding:"min=1"`
-	PageSize int `json:"pageSize" binding:"min=1,max=100"`
+	PageSize int `json:"pageSize" binding:"min=1"`
 }
 
 // Normalize 规范化分页参数
 func (p *PaginationRequest) Normalize() {
-	if p.Current <= 0 {
-		p.Current = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 10
-	}
-	if p.PageSize > 100 {
-		p.PageSize = 100
-	}
+	p.Current, p.PageSize = NormalizePagination(p.Current, p.PageSize)
 }
 
 // GetOffset 获取偏移量
@@ -112,10 +137,14 @@ func NewDefaultQueryExecutor(current, pageSize int) *DefaultQueryExecutor {
 
 // Execute 执行查询
 func (e *DefaultQueryExecutor) Execute(query *gorm.DB, dest interface{}) (*PaginatedResult, error) {
-	total, err := CountAndQuery(query, dest, e.Current, e.PageSize)
+	// v129-recheck WR-02: 入口先归一化，保证结果元数据与实际执行的查询口径
+	// 一致（此前 CountAndQuery 内部归一化而 NewPaginatedResult 用原始值，
+	// pageSize=0 时 NewPaginatedResult 还会整除零 panic）
+	current, pageSize := NormalizePagination(e.Current, e.PageSize)
+	total, err := CountAndQuery(query, dest, current, pageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPaginatedResult(total, e.Current, e.PageSize, dest), nil
+	return NewPaginatedResult(total, current, pageSize, dest), nil
 }

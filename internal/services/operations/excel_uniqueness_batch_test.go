@@ -8,12 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
 	// Pure-Go SQLite driver
-	_ "modernc.org/sqlite"
 )
 
 // setupUniquenessTestDB creates an in-memory SQLite DB with a simple

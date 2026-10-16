@@ -67,11 +67,11 @@ func (h *DedicatedLineHandler) SearchDedicatedLineOptions(c *gin.Context) {
 // @Router /ops/dedicatedLine [post]
 func (h *DedicatedLineHandler) Create(c *gin.Context) {
 	var line operations.OpsDedicatedLine
-	if !handleJSONBinding(c, &line) {
+	if !response.HandleJSONBinding(c, &line) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &line), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &line), "创建") {
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *DedicatedLineHandler) Create(c *gin.Context) {
 // @Router /ops/dedicatedLine/list [post]
 func (h *DedicatedLineHandler) List(c *gin.Context) {
 	var req requests.DedicatedLineListRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -143,12 +143,12 @@ func (h *DedicatedLineHandler) GetByID(c *gin.Context) {
 func (h *DedicatedLineHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var line operations.OpsDedicatedLine
-	if !handleJSONBinding(c, &line) {
+	if !response.HandleJSONBinding(c, &line) {
 		return
 	}
 
 	line.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &line), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &line), "更新") {
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *DedicatedLineHandler) Update(c *gin.Context) {
 // @Router /ops/dedicatedLine/{id}/delete [post]
 func (h *DedicatedLineHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -191,13 +191,13 @@ func (h *DedicatedLineHandler) Delete(c *gin.Context) {
 // @Router /ops/dedicatedLine/batch [post]
 func (h *DedicatedLineHandler) BatchOperation(c *gin.Context) {
 	var req requests.DedicatedLineBatchOperationRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:

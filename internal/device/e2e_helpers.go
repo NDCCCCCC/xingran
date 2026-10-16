@@ -40,6 +40,56 @@ func NewPooledConnectionForTesting(d *network.Driver) *PooledConnection {
 	}
 }
 
+// SeedConnectionForTesting places a pre-built *PooledConnection directly into
+// the pool's connection map, bypassing the entire createConnection flow
+// (device/credential DB lookups, password decryption, reachability check,
+// SSH handshake via OpenContext, capacity accounting and TOCTOU connecting
+// placeholder).
+//
+// TEST-ONLY: the naming suffix `ForTesting` is the physical isolation
+// contract (same three-layer contract as NewPooledConnectionForTesting above —
+// no build tag, AST backstop in for_testing_guard_test.go). Production code
+// MUST NOT call this function: it silently skips pool bookkeeping, device-level
+// reachability checks and credential decryption. Production references are
+// reported by for_testing_guard_test.go with a file:line violation.
+//
+// Semantics:
+//   - nil pool, nil conn or empty deviceID is a no-op (never panics).
+//   - The connection's `mu` is aligned to the pool's per-device lock via
+//     getDeviceLock so that Acquire/Release on the seeded connection serialize
+//     exactly like a pooled one (78-03 seedPool78 lock-consistency rule).
+//   - Seeding twice for the same deviceID overwrites the previous entry
+//     (the overwritten *PooledConnection is NOT closed — caller owns it).
+//   - The cleanup goroutine started by NewDeviceConnectionPool is unaffected;
+//     callers must arrange pool shutdown themselves (t.Cleanup(pool.Close)).
+//
+// Related decisions:
+//   - D-79-02 (79-RESEARCH DQ2 / 79-06-PLAN.md Task 1): the only sanctioned
+//     production-tree touch of Phase 79 — test-infra class, zero behavior
+//     change, INFRA-02 precedent.
+//   - Cross-package reachability: all of DeviceConnectionPool/TaskScheduler/
+//     DeviceExecutor fields are unexported, so internal/services tests can
+//     assemble a fully-wired executor via the public constructors
+//     (NewDeviceConnectionPool → NewDeviceTaskScheduler → NewDeviceExecutor)
+//     but could not seed a FileTransport connection into the pool before this
+//     helper existed.
+func SeedConnectionForTesting(pool *DeviceConnectionPool, deviceID string, conn *PooledConnection) {
+	if pool == nil || conn == nil || deviceID == "" {
+		return
+	}
+
+	// Lock consistency: reuse (or create) the pool's per-device lock BEFORE
+	// taking poolLock — getDeviceLock acquires poolLock internally and
+	// sync.RWMutex is not reentrant.
+	conn.mu = pool.getDeviceLock(deviceID)
+	conn.deviceID = deviceID
+	conn.pool = pool
+
+	pool.poolLock.Lock()
+	pool.connections[deviceID] = conn
+	pool.poolLock.Unlock()
+}
+
 // newScrapliWrapperForTesting constructs a minimal *ScrapliWrapper suitable
 // for FileTransport-based e2e tests.
 //

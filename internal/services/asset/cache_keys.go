@@ -13,9 +13,9 @@ import (
 // 命名规则: `reconciliation:<sub>:<suffix>`
 //
 // Redis 前缀处理 (CLAUDE.md Cache Key Prefix Handling):
-//   - 实际 Redis key 会自动加 `ruoyi:` 前缀,本文件定义的 key 是"逻辑键"
+//   - 实际 Redis key 会自动加 `xingran:` 前缀,本文件定义的 key 是"逻辑键"
 //   - 调用 cache.Set(ctx, key, ...) 时,直接传本文件的 key 即可,不要手动加前缀
-//   - 从 UI / 用户输入读 key 时,若已含 `ruoyi:` 前缀,需 strip 后再操作
+//   - 从 UI / 用户输入读 key 时,若已含 `xingran:` 前缀,需 strip 后再操作
 //
 // R1/R2/R3 演进:
 //   - R1: 仅 cache_keys 文件就位,无运行时调用(INFRA-03 占位)
@@ -92,11 +92,11 @@ func GetReconciliationHealthByAssetKey(assetID string) string {
 	return fmt.Sprintf(CacheKeyReconciliationHealthByAsset, assetID)
 }
 
-// StripCachePrefix 去掉 Redis 自动加上的 `ruoyi:` 前缀,用于用户输入的 key
+// StripCachePrefix 去掉 Redis 自动加上的 `xingran:` 前缀,用于用户输入的 key
 //
 // CLAUDE.md Cache Prefix Handling:
-//   - 缓存写入时自动加 `ruoyi:` 前缀,本文件定义的 key 是"逻辑键"(无前缀)
-//   - 当从 UI / 用户输入读取 key 时,若已含 `ruoyi:` 前缀,需先 strip 再做 cache 操作
+//   - 缓存写入时自动加 `xingran:` 前缀,本文件定义的 key 是"逻辑键"(无前缀)
+//   - 当从 UI / 用户输入读取 key 时,若已含 `xingran:` 前缀,需先 strip 再做 cache 操作
 //
 // 典型用法 (R2+):
 //

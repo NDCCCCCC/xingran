@@ -37,7 +37,7 @@ func (s *NoticeService) MarkAllNoticesRead(ctx context.Context, userID string) e
 	// 获取用户可见的所有通知ID
 	var noticeIDs []string
 	s.db.WithContext(ctx).Model(&models.Notice{}).
-		Where("publish_status = ? AND status = 0", models.PublishStatusPublished).
+		Where("publish_status = ? AND status = ?", models.PublishStatusPublished, models.NoticeStatusNormal).
 		Pluck("id", &noticeIDs)
 
 	if len(noticeIDs) == 0 {

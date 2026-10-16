@@ -109,7 +109,7 @@ func decryptPassword(encrypted string) string {
 //
 // env 值必须恰好 16 字节(AES-128 key)。
 // 长期方案: 全量迁移到 SM4 (默认路径) 后可彻底移除 legacy AES。
-const legacyAESKeyHardcoded = "ruoyi-ad-domain-key-16"
+const legacyAESKeyHardcoded = "xingran-ad-domain-key-16"
 
 var legacyAESWarnOnce sync.Once
 

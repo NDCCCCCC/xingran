@@ -9,10 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	floorPlanTextTable = "ops_floor_plan_texts"
-)
-
 type FloorPlanTextService interface {
 	Create(ctx context.Context, text *operationsmodels.FloorPlanText) error
 	Update(ctx context.Context, text *operationsmodels.FloorPlanText) error
@@ -23,12 +19,16 @@ type FloorPlanTextService interface {
 }
 
 type floorPlanTextService struct {
+	// repo 承接六方法 CRUD 管道（Phase 91-04 repo 化，D-02 纯 struct 组合）
+	repo *base.GORMRepository[operationsmodels.FloorPlanText]
+	// db 保留给 Validator 构造来源（Create/Update 的 ValidateFloor 前置校验）
 	db        *gorm.DB
 	validator Validator
 }
 
 func NewFloorPlanTextService(db *gorm.DB) FloorPlanTextService {
 	return &floorPlanTextService{
+		repo:      base.NewGORMRepository[operationsmodels.FloorPlanText](db),
 		db:        db,
 		validator: NewValidator(db),
 	}
@@ -45,72 +45,51 @@ func (s *floorPlanTextService) Create(ctx context.Context, text *operationsmodel
 	if err := s.validator.ValidateFloor(ctx, text.FloorID); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Create(text).Error
+	return s.repo.Create(ctx, text)
 }
 
 func (s *floorPlanTextService) Update(ctx context.Context, text *operationsmodels.FloorPlanText) error {
 	if err := s.validator.ValidateFloor(ctx, text.FloorID); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Save(text).Error
+	return s.repo.Update(ctx, text)
 }
 
 func (s *floorPlanTextService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Table(floorPlanTextTable).Where("id = ?", id).Delete(&operationsmodels.FloorPlanText{}).Error
+	// 迁移前 .Table(ops_floor_plan_texts).Delete(&T{}) 形态与 repo 的
+	// Model(new(T)) 形态行为等价（软删 + WHERE 语义一致，RESEARCH 盘点 #11）
+	return s.repo.Delete(ctx, id)
 }
 
 func (s *floorPlanTextService) GetByID(ctx context.Context, id string) (*operationsmodels.FloorPlanText, error) {
-	var text operationsmodels.FloorPlanText
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&text).Error
-	if err != nil {
-		return nil, err
-	}
-	return &text, nil
+	return s.repo.GetByID(ctx, id)
 }
 
+// filterScope List 的两个过滤条件（条件字符串与 ? 占位符逐字平移自迁移前实现）。
+func (s *floorPlanTextService) filterScope(req requests.FloorPlanTextListRequest) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if req.FloorID != "" {
+			db = db.Where("floor_id = ?", req.FloorID)
+		}
+		if req.Content != "" {
+			db = db.Where("content LIKE ?", "%"+req.Content+"%")
+		}
+		return db
+	}
+}
+
+// List 查询楼层平面文本列表（CRUD 管道经 base.GORMRepository 执行；
+// B 型排他默认排序，无 OrderByColumn 时保留 created_at DESC 默认）。
 func (s *floorPlanTextService) List(ctx context.Context, req requests.FloorPlanTextListRequest) (*PageResult, error) {
-	var total int64
-	var list []operationsmodels.FloorPlanText
-
-	query := s.db.WithContext(ctx).Model(&operationsmodels.FloorPlanText{})
-
-	// 添加筛选条件 - 类型安全，无需类型断言
-	if req.FloorID != "" {
-		query = query.Where("floor_id = ?", req.FloorID)
-	}
-	if req.Content != "" {
-		query = query.Where("content LIKE ?", "%"+req.Content+"%")
-	}
-
-	// 分页 - 使用请求结构体的方法
-	offset := req.GetOffset()
-	_, pageSize := req.GetPagination()
-	current, _ := req.GetPagination()
-
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
-	query = base.ApplySort(query, req.BaseListRequest, floorPlanTextAllowedSortFields)
-	if req.OrderByColumn == "" {
-		query = query.Order("created_at DESC")
-	}
-	if err := query.Offset(offset).Limit(pageSize).Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		Total:    total,
-		List:     list,
-		Current:  current,
-		PageSize: pageSize,
-	}, nil
+	current, pageSize := req.GetPagination()
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.filterScope(req),
+		base.SortScope(req.BaseListRequest, floorPlanTextAllowedSortFields, "created_at DESC"),
+	)
 }
 
 func (s *floorPlanTextService) BatchDelete(ctx context.Context, ids []string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	return s.db.WithContext(ctx).Table(floorPlanTextTable).Where("id IN ?", ids).Delete(&operationsmodels.FloorPlanText{}).Error
+	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil），
+	// 与迁移前 `if len(ids) == 0 { return nil }` 行为一致
+	return s.repo.BatchDelete(ctx, ids)
 }

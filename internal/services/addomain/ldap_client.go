@@ -214,6 +214,14 @@ func (c *LDAPClient) SearchUsers(baseDN string) ([]*ldap.Entry, error) {
 	)
 }
 
+// SearchWithRequest 执行调用方构造的原始 LDAP 搜索请求
+// 76-03 接口化编译门强制补入：group_sync_service.go SyncSingleGroup 闭包
+// 原直接访问 client.conn.Search，闭包参数接口化后不可达，经此委托方法保持
+// 行为与错误语义完全不变（纯转发，零逻辑）。
+func (c *LDAPClient) SearchWithRequest(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error) {
+	return c.conn.Search(searchRequest)
+}
+
 // SearchComputers 搜索计算机（使用分页搜索）
 func (c *LDAPClient) SearchComputers(baseDN string) ([]*ldap.Entry, error) {
 	return c.searchWithPaging(

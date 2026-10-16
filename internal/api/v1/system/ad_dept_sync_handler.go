@@ -1,6 +1,7 @@
 package system
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -97,9 +99,16 @@ func (h *ADDeptSyncHandler) TriggerDeptSync(c *gin.Context) {
 
 	// 异步执行同步，避免长时间阻塞HTTP请求
 	go func() {
-		_, err := h.syncService.SyncDeptStructureToAD(c.Request.Context(), req.ADConfigID)
+		defer func() {
+			if r := recover(); r != nil {
+				applogger.Errorf("[AD-DEPT-SYNC] TriggerDeptSync panic 已恢复: panic=%v", r)
+			}
+		}()
+		ctx, cancel := context.WithTimeout(context.Background(), constants.ADSyncTimeout)
+		defer cancel()
+		_, err := h.syncService.SyncDeptStructureToAD(ctx, req.ADConfigID)
 		if err != nil {
-			applogger.Errorf("手动触发部门同步失败: %v", err)
+			applogger.Errorf("[AD-DEPT-SYNC] 手动触发部门同步失败: %v", err)
 		}
 	}()
 

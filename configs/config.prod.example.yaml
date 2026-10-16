@@ -32,6 +32,11 @@ server:
   host: "0.0.0.0"
   port: 9000
   mode: release  # 生产环境必须 release（关闭 gin debug 路由/堆栈泄漏）
+  # Phase 110 TLS-04: 生产必须显式配置 CORS 白名单（cmd/main.go 启动时 fatal 校验）。
+  # 缺失会导致 deploy 静默失败、systemd 一直 rollback 到旧二进制。
+  # 环境变量也可: RUOYI_SERVER_ALLOWED_ORIGINS="https://a.com,https://b.com"
+  allowed_origins:
+    - "https://your-production-domain.com"
 
 # ----------------------------------------------------------------------------
 # 数据库配置 - PostgreSQL
