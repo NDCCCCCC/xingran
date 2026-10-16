@@ -63,11 +63,11 @@ previous_update: 2026-07-08 after Phase 54 (W5) shipped
 Plans:
 **Wave 1**
 
-- [ ] 57-01-PLAN.md — `ad_push_queue` schema 层：GORM 模型 + migration_215 双方言建表/部分唯一索引 + database.go 双分支注册 + Wave 0 测试 (QUEUE-02, HYGIENE-06)
+- [x] 57-01-PLAN.md — `ad_push_queue` schema 层：GORM 模型 + migration_215 双方言建表/部分唯一索引 + database.go 双分支注册 + Wave 0 测试 (QUEUE-02, HYGIENE-06)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 57-02-PLAN.md — 入队 service（addomain）：四字段 diff 纯函数 + D-02 事务内前置条件 + ON CONFLICT 合并 upsert（update_user / disable）(QUEUE-01/02/06)
+- [x] 57-02-PLAN.md — 入队 service（addomain）：四字段 diff 纯函数 + D-02 事务内前置条件 + ON CONFLICT 合并 upsert（update_user / disable）(QUEUE-01/02/06)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
