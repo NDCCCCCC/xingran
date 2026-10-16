@@ -4,8 +4,8 @@ milestone: v1.20
 milestone_name: 网络设备 VLAN + 端口绑定
 status: Awaiting next milestone
 stopped_at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
-last_updated: "2026-10-15T00:00:00.000Z"
-last_activity: 2026-10-15 — Completed quick task 261015-ops-fk-drift-guard: ops FK 漂移治理 + PG 类型契约回归守护
+last_updated: "2026-10-16T00:00:00.000Z"
+last_activity: 2026-10-16 — Completed quick task 261016-ad-login-history: AD设备登录历史(migration_214 月分区表 + lastLogon 变化检测 + 查询 API + 前端 Drawer + 分区维护 cron)
 progress:
   total_phases: 1
   completed_phases: 1
@@ -142,6 +142,7 @@ Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
 | 261013-lqb | 根治 total_floors 漂移: 楼层 Update 换楼双侧重算+普通编辑自愈 / Excel 导入(building+floor)收尾全量重算 / Migrate213 存量归正(代码层, 零 TRIGGER) | 2026-10-13 | d41de5e4,4746cdc1,3a3163a6 | [261013-lqb-ops-buildings-total-floors](./quick/261013-lqb-ops-buildings-total-floors/) |
 | 261014-ctp | 楼栋 Create/Update 末尾实时 COUNT 覆盖 total_floors(共享 helper recomputeBuildingTotalFloorsByID, 关闭 261013-lqb 最后残余向量) | 2026-10-14 | 7b64fc06 | [261014-ctp-create-update-count-total-floors](./quick/261014-ctp-create-update-count-total-floors/) |
 | 261015-ops-fk-drift-guard | ops FK 漂移治理(Workstation.BuildingID model tag 对齐 DB uuid)+ PG 类型契约回归守护(TEST_PG_DSN 门控集成测试, 守护 uuid/varchar JOIN 比较方向, 源自 debug 会话 ops-list-join-uuid-500) | 2026-10-15 | 38b9987b,753e0b89,1588754d | [261015-ops-fk-drift-guard](./quick/261015-ops-fk-drift-guard/) |
+| 261016-ad-login-history | AD设备登录历史: 同步检测 lastLogon 变化写 sys_ad_login_history(migration_214 月分区表, BRIN+复合索引) + /computers/login-history 查询 API(复用 ops:ad:computer:view) + 设备列表行 Drawer + 每日 02:30 分区维护 cron(保留期 sys_config ops.ad.login_history.retention_days 默认 120 天) | 2026-10-16 | d72fad44,2f29e455,c8cfb1f5,38ddc34a,4ec631ef,0c294551 | [261016-ad-login-history](./quick/261016-ad-login-history/) |
 
 ## Accumulated Context
 
