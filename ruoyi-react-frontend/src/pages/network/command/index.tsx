@@ -5,19 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Form,
-  Input,
-  Select,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  App,
-} from "antd";
+import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
   ThunderboltOutlined,
   SearchOutlined,
@@ -26,12 +14,11 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   ApiOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
 import { batchExport } from "@/lib/api/networkApi";
 import { useCommandData, useCommandModals } from "./hooks";
-import { getExecutionColumns, deviceColumns } from "./columns";
+import { getExecutionColumns } from "./columns";
 import { CommandDispatchModal, CommandDetailDrawer } from "./modals";
 import { STATUS_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
@@ -39,7 +26,6 @@ import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -69,7 +55,12 @@ const CommandDispatch: FC = () => {
     ],
     []
   );
-  const { orderByColumn, isAsc, handleTableChange: handleCmdSortChange, sortOrder: cmdSortOrder } = useServerSort<ConfigExecution>({
+  const {
+    orderByColumn,
+    isAsc,
+    handleTableChange: handleCmdSortChange,
+    sortOrder: cmdSortOrder,
+  } = useServerSort<ConfigExecution>({
     sorterMetas,
   });
 
@@ -77,7 +68,7 @@ const CommandDispatch: FC = () => {
     executions,
     execTotal,
     statistics,
-    setExecTotal,
+    setExecTotal: _setExecTotal,
     loadExecutions,
     loadStatistics,
     loadDevices,
@@ -96,6 +87,7 @@ const CommandDispatch: FC = () => {
 
   useEffect(() => {
     Promise.all([loadExecutions(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [paginationProps.current, paginationProps.pageSize, loadExecutions, loadStatistics]);
 
   // 操作成功后刷新
@@ -126,8 +118,10 @@ const CommandDispatch: FC = () => {
       getExecutionColumns({
         handleViewDetail,
         handleCancel: (id: string) => handleCancelExecution(id, handleSuccess),
-        getSortOrder: (field) => (orderByColumn === field ? (cmdSortOrder ?? null) as "ascend" | "descend" | null : null),
+        getSortOrder: (field) =>
+          orderByColumn === field ? ((cmdSortOrder ?? null) as "ascend" | "descend" | null) : null,
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleCancelExecution from hook is stable enough
     [handleViewDetail, handleSuccess, orderByColumn, cmdSortOrder]
   );
 
@@ -169,7 +163,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="执行中"
               value={statistics.running}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -179,7 +173,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="成功"
               value={statistics.success}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -189,7 +183,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
+              styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>
@@ -206,10 +200,11 @@ const CommandDispatch: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onChange={() =>    {
+                onChange={() => {
                   handleSuccess();
                 }}
-               onSearch={() => {}}>
+                onSearch={() => {}}
+              >
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -235,39 +230,34 @@ const CommandDispatch: FC = () => {
                 >
                   刷新
                 </Button>
-                <Button
-                  type="primary"
-                  icon={<ThunderboltOutlined />}
-                  onClick={openDispatchModal}
-                >
+                <Button type="primary" icon={<ThunderboltOutlined />} onClick={openDispatchModal}>
                   快速命令
                 </Button>
                 <NetworkExport
                   entityType="command"
                   entityName="命令分发"
                   filters={Object.fromEntries(
-                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                      ([, v]) => v !== undefined && v !== null && v !== ""
+                    )
                   )}
                   current={paginationProps?.current ?? 1}
                   pageSize={paginationProps?.pageSize ?? 10}
                 />
               </Space>
             </Form.Item>
-          </Form>{/* 批量导出 Modal */}
+          </Form>
+          {/* 批量导出 Modal */}
 
-        <BatchExportModal
+          <BatchExportModal
+            visible={batchModalVisible}
 
-          visible={batchModalVisible}
+            onConfirm={handleBatchExport}
 
-          onConfirm={handleBatchExport}
+            onCancel={() => setBatchModalVisible(false)}
 
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
+            loading={batchExporting}
+          />
         </div>
 
         <Table
@@ -287,7 +277,7 @@ const CommandDispatch: FC = () => {
               pageSize: pagination.pageSize ?? 10,
               ...(orderByColumn ? { orderByColumn, isAsc } : {}),
             };
-            Object.keys(formValues).forEach(key => {
+            Object.keys(formValues).forEach((key) => {
               const value = formValues[key];
               if (value !== undefined && value !== null && value !== "") {
                 searchParams[key] = value;

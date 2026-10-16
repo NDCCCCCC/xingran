@@ -1,4 +1,6 @@
 import { del, get, post } from "./api";
+import { createResourceApi } from "./apiFactory";
+import type { PageParams } from "@/types";
 import type {
   Notice,
   NoticeListItem,
@@ -17,11 +19,17 @@ const tokenStorage = new SecureTokenStorageImpl();
 
 // ==================== 管理端通知 API ====================
 
+// Phase 94 D-05: 标准 CRUD 形状函数委托共享工厂（导出签名零变化；
+// GET 动词端点 / batch-delete / publish / withdraw / 用户端 my-notices 全族保持原样）
+const adminNoticeCrud = createResourceApi<Notice>({ basePath: "/system/notices" });
+
 /**
  * 获取通知列表（管理端）
  */
-export function getNoticeList(params: NoticeListParams): Promise<BaseResponse<PageResponse<Notice>>> {
-  return post("/system/notices/list", params);
+export function getNoticeList(
+  params: NoticeListParams
+): Promise<BaseResponse<PageResponse<Notice>>> {
+  return adminNoticeCrud.list(params as unknown as PageParams & Record<string, unknown>);
 }
 
 /** 通知状态统计（按发布状态聚合，供统计卡片） */
@@ -44,28 +52,33 @@ export function getNoticeStatusStatistics(): Promise<BaseResponse<NoticeStatusSt
  * 获取通知详情
  */
 export function getNoticeDetail(id: string): Promise<BaseResponse<Notice>> {
-  return post(`/system/notices/${id}`, {});
+  return adminNoticeCrud.get(id);
 }
 
 /**
  * 创建通知
  */
-export function createNotice(data: CreateNoticeRequest): Promise<BaseResponse<{ id: string; message: string }>> {
-  return post("/system/notices", data);
+export function createNotice(
+  data: CreateNoticeRequest
+): Promise<BaseResponse<{ id: string; message: string }>> {
+  return adminNoticeCrud.create(data) as Promise<BaseResponse<{ id: string; message: string }>>;
 }
 
 /**
  * 更新通知
  */
-export function updateNotice(id: string, data: UpdateNoticeRequest): Promise<BaseResponse<{ message: string }>> {
-  return post(`/system/notices/${id}/update`, data);
+export function updateNotice(
+  id: string,
+  data: UpdateNoticeRequest
+): Promise<BaseResponse<{ message: string }>> {
+  return adminNoticeCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 /**
  * 删除通知
  */
 export function deleteNotice(id: string): Promise<BaseResponse<{ message: string }>> {
-  return post(`/system/notices/${id}/delete`, {});
+  return adminNoticeCrud.delete(id) as Promise<BaseResponse<{ message: string }>>;
 }
 
 /**
@@ -101,7 +114,9 @@ export function withdrawNotice(id: string): Promise<BaseResponse<{ message: stri
 /**
  * 获取用户可见的通知列表
  */
-export function getMyNotices(params: UserNoticeListParams = {}): Promise<BaseResponse<PageResponse<Notice>>> {
+export function getMyNotices(
+  params: UserNoticeListParams = {}
+): Promise<BaseResponse<PageResponse<Notice>>> {
   return get("/system/my-notices", params);
 }
 
@@ -150,10 +165,13 @@ export function getUnreadCount(): Promise<BaseResponse<{ count: number }>> {
 /**
  * 获取通知列表（用于铃铛下拉）
  */
-export function getNotificationList(params: { current?: number; pageSize?: number } = {}): Promise<
-  BaseResponse<PageResponse<NoticeListItem>>
-> {
-  return get("/system/my-notices", { current: params.current || 1, pageSize: params.pageSize || 10 });
+export function getNotificationList(
+  params: { current?: number; pageSize?: number } = {}
+): Promise<BaseResponse<PageResponse<NoticeListItem>>> {
+  return get("/system/my-notices", {
+    current: params.current || 1,
+    pageSize: params.pageSize || 10,
+  });
 }
 
 // ==================== WebSocket ====================
@@ -167,7 +185,8 @@ export function buildWebSocketUrl(): string {
   // 保持向后兼容，不再硬编码开发机 IP。
   const apiBaseURL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
   const wsBaseURL =
-    import.meta.env.VITE_WS_BASE_URL || apiBaseURL.replace(/\/api\/v\d+$/, "").replace(/^http/, "ws");
+    import.meta.env.VITE_WS_BASE_URL ||
+    apiBaseURL.replace(/\/api\/v\d+$/, "").replace(/^http/, "ws");
   const token = tokenStorage.getAccessToken();
 
   // 通过 query 参数传递 token

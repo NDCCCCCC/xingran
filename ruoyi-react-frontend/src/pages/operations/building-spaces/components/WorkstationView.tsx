@@ -26,13 +26,10 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
     const loadWorkstations = async () => {
       setLoading(true);
       try {
-        const result = await workstationApi.list({
-          floorCode: floor.floorNo || floor.id,
-          current: 1,
-          pageSize: 1000
-        });
+        // V130R-09 D-03-6: 楼层全集走专用端点(按 floor UUID),不再用 pageSize:1000 List 反模式
+        const workstations = await workstationApi.getFloorWorkstationsAll(floor.id);
 
-        const nodes: WorkstationNode[] = (result.data?.list || []).map(ws => ({
+        const nodes: WorkstationNode[] = (workstations || []).map((ws) => ({
           id: ws.id,
           code: ws.name || ws.id,
           name: ws.name || "",
@@ -55,10 +52,13 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
     };
 
     loadWorkstations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [floor.id]);
 
   // 更新工位位置
-  const handleUpdatePosition = async (items: { id: string; positionX: number; positionY: number; rotation?: number }[]) => {
+  const handleUpdatePosition = async (
+    items: { id: string; positionX: number; positionY: number; rotation?: number }[]
+  ) => {
     try {
       await workstationApi.updatePositions(items);
     } catch (error) {
@@ -70,21 +70,18 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
   // 编辑工位
   const handleEdit = (workstation: WorkstationNode) => {
     message.info(`编辑工位: ${workstation.name}`);
-    // TODO: 打开编辑对话框
   };
 
   return (
     <div className={styles.workstationView}>
-      <Button
-        icon={<ArrowLeftOutlined />}
-        onClick={onBack}
-        className={styles.backButton}
-      >
+      <Button icon={<ArrowLeftOutlined />} onClick={onBack} className={styles.backButton}>
         返回楼层列表
       </Button>
 
       <div style={{ marginBottom: 16 }}>
-        <h3>{floor.name} ({floor.floorNo}F)</h3>
+        <h3>
+          {floor.name} ({floor.floorNo}F)
+        </h3>
         <p style={{ color: "var(--theme-text-tertiary, #666)", margin: 0 }}>
           共 {workstations.length} 个工位
         </p>

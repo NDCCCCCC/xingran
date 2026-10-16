@@ -17,10 +17,7 @@ interface FloorStatisticsCardsProps {
   show: boolean;
 }
 
-export const FloorStatisticsCards: FC<FloorStatisticsCardsProps> = ({
-  statistics,
-  show,
-}) => {
+export const FloorStatisticsCards: FC<FloorStatisticsCardsProps> = ({ statistics, show }) => {
   if (!show) {
     return null;
   }
@@ -29,11 +26,7 @@ export const FloorStatisticsCards: FC<FloorStatisticsCardsProps> = ({
     <Row gutter={16} style={{ marginBottom: 16 }}>
       <Col span={8}>
         <Card>
-          <Statistic
-            title="总楼层数"
-            value={statistics.total}
-            prefix={<CheckCircleOutlined />}
-          />
+          <Statistic title="总楼层数" value={statistics.total} prefix={<CheckCircleOutlined />} />
         </Card>
       </Col>
       <Col span={8}>

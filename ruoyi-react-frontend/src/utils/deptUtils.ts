@@ -15,6 +15,10 @@
  *   再缺省取 `key`。调用者无需关心具体类型。
  *
  * 过滤/收集过程中,过滤掉的子树会被完全丢弃,不会保留为"空 children 节点"。
+ *
+ * 缓存策略:
+ * - 所有树转换函数使用模块级 WeakMap 缓存,key 为输入数组引用。
+ *   相同引用再次调用时直接返回缓存结果,允许 GC 回收旧树。
  */
 
 export interface DeptLikeNode {
@@ -29,6 +33,17 @@ export interface DeptLikeNode {
 export function getDeptNodeId(node: DeptLikeNode): string {
   return node.id ?? node.value ?? node.key ?? "";
 }
+
+// ---------------------------------------------------------------------------
+// WeakMap caches keyed by input tree reference
+// ---------------------------------------------------------------------------
+const _filterCache = new WeakMap<object, DeptLikeNode[]>();
+const _findCache = new WeakMap<object, Map<string, DeptLikeNode | null>>();
+const _collectIdsCache = new WeakMap<object, Map<string, string[]>>();
+const _trimTitleCache = new WeakMap<object, object[]>();
+const _fullPathCache = new WeakMap<object, Map<symbol, object>>();
+const _shortNameCache = new WeakMap<object, ShortNameDataNode[]>();
+const _dedupCache = new WeakMap<object, object[]>();
 
 /**
  * 仅保留 isExternalOrg===1 的节点及其后代。
@@ -50,11 +65,12 @@ export function getDeptNodeId(node: DeptLikeNode): string {
  *   //   ]
  */
 export function filterExternalOrgDepts<T extends DeptLikeNode>(nodes: T[]): T[] {
+  if (!nodes?.length) return nodes ?? [];
+  const cached = _filterCache.get(nodes as unknown as object);
+  if (cached) return cached as T[];
   const walk = (list: T[]): T[] => {
     return list.reduce<T[]>((acc, node) => {
-      const keptChildren = node.children?.length
-        ? walk(node.children as T[])
-        : [];
+      const keptChildren = node.children?.length ? walk(node.children as T[]) : [];
       if (node.isExternalOrg === 1 || keptChildren.length > 0) {
         acc.push({
           ...node,
@@ -64,7 +80,9 @@ export function filterExternalOrgDepts<T extends DeptLikeNode>(nodes: T[]): T[] 
       return acc;
     }, []);
   };
-  return walk(nodes ?? []);
+  const result = walk(nodes);
+  _filterCache.set(nodes as unknown as object, result);
+  return result;
 }
 
 /**
@@ -74,28 +92,45 @@ export function filterExternalOrgDepts<T extends DeptLikeNode>(nodes: T[]): T[] 
  *
  * 注意:返回的是原对象引用,不会克隆。修改返回值会影响原树。
  */
-export function findDeptNode<T extends DeptLikeNode>(
-  nodes: T[],
-  id: string
-): T | null {
-  for (const node of nodes) {
-    if (getDeptNodeId(node) === id) return node;
-    if (node.children?.length) {
-      const hit = findDeptNode(node.children as T[], id);
-      if (hit) return hit;
-    }
+export function findDeptNode<T extends DeptLikeNode>(nodes: T[], id: string): T | null {
+  if (!nodes?.length) return null;
+  const nodesKey = nodes as unknown as object;
+  let idCache = _findCache.get(nodesKey);
+  if (!idCache) {
+    idCache = new Map();
+    _findCache.set(nodesKey, idCache);
+  } else if (idCache.has(id)) {
+    return idCache.get(id) as T | null;
   }
-  return null;
+  const walk = (list: T[]): T | null => {
+    for (const node of list) {
+      if (getDeptNodeId(node) === id) return node;
+      if (node.children?.length) {
+        const hit = walk(node.children as T[]);
+        if (hit) return hit;
+      }
+    }
+    return null;
+  };
+  const result = walk(nodes);
+  idCache.set(id, result);
+  return result;
 }
 
 /**
  * 收集某节点及其所有后代的 id(含自身)。
  * 通过 getDeptNodeId 兼容多种节点形状。未找到 id 时返回空数组。
  */
-export function collectDescendantIds<T extends DeptLikeNode>(
-  nodes: T[],
-  id: string
-): string[] {
+export function collectDescendantIds<T extends DeptLikeNode>(nodes: T[], id: string): string[] {
+  if (!nodes?.length) return [];
+  const nodesKey = nodes as unknown as object;
+  let idCache = _collectIdsCache.get(nodesKey);
+  if (!idCache) {
+    idCache = new Map();
+    _collectIdsCache.set(nodesKey, idCache);
+  } else if (idCache.has(id)) {
+    return idCache.get(id)!;
+  }
   const out: string[] = [];
   const walk = (list: T[]): boolean => {
     for (const n of list) {
@@ -115,6 +150,7 @@ export function collectDescendantIds<T extends DeptLikeNode>(
     return false;
   };
   walk(nodes);
+  idCache.set(id, out);
   return out;
 }
 
@@ -142,22 +178,25 @@ export function collectDescendantIds<T extends DeptLikeNode>(
  *   //     { title: "C", children: [{ title: "D" }] }
  *   //   ]
  */
-export function trimTitleToLastSegment<
-  T extends { title?: string; children?: T[] },
->(nodes: T[]): T[] {
+export function trimTitleToLastSegment<T extends { title?: string; children?: T[] }>(
+  nodes: T[]
+): T[] {
+  if (!nodes?.length) return nodes ?? [];
+  const cached = _trimTitleCache.get(nodes as unknown as object);
+  if (cached) return cached as T[];
   const walk = (list: T[]): T[] => {
     return list.map((n) => {
-      const nextChildren = n.children?.length
-        ? walk(n.children)
-        : n.children;
+      const nextChildren = n.children?.length ? walk(n.children) : n.children;
       const nextTitle =
         typeof n.title === "string" && n.title.includes(" / ")
-          ? n.title.split(" / ").pop() ?? n.title
+          ? (n.title.split(" / ").pop() ?? n.title)
           : n.title;
       return { ...n, title: nextTitle, children: nextChildren } as T;
     });
   };
-  return walk(nodes ?? []);
+  const result = walk(nodes);
+  _trimTitleCache.set(nodes as unknown as object, result);
+  return result;
 }
 
 /**
@@ -214,15 +253,17 @@ export type FullPathTreeNode<T> = Omit<T, "children"> & {
   children?: FullPathTreeNode<T>[];
 };
 
-export function toFullPathTree<
-  T extends DeptLikeNode & { deptName?: string },
->(
+export function toFullPathTree<T extends DeptLikeNode & { deptName?: string }>(
   nodes: T[],
-  opts?: { startFromLevel?: 1 | 2 },
+  opts?: { startFromLevel?: 1 | 2 }
 ): FullPathTreeNode<T>[] {
+  if (!nodes?.length) return [];
+  // Cache key includes opts to avoid incorrect cache hits across different startFromLevel values
+  const cacheKey = Symbol.for(`fullPath:${opts?.startFromLevel ?? 1}`);
+  const existing = _fullPathCache.get(nodes as unknown as object);
+  if (existing?.has(cacheKey)) return existing.get(cacheKey) as FullPathTreeNode<T>[];
+
   const startFromLevel = opts?.startFromLevel ?? 1;
-  // startFromLevel=k 意味着 ancestors[0..k-2] 全部丢弃,保留 ancestors[k-1..]
-  // (k=1 时不裁剪;k=2 时丢 ancestors[0],即等价于旧 convertDeptTreeData 的 slice(1))
   const ancestorKeepFrom = Math.max(0, startFromLevel - 1);
   type Out = FullPathTreeNode<T>;
 
@@ -230,10 +271,7 @@ export function toFullPathTree<
     return (list ?? []).map((node) => {
       const name = node.deptName ?? "";
       const trimmedAncestors = ancestors.slice(ancestorKeepFrom);
-      const title =
-        trimmedAncestors.length === 0
-          ? name
-          : [...trimmedAncestors, name].join(" / ");
+      const title = trimmedAncestors.length === 0 ? name : [...trimmedAncestors, name].join(" / ");
       const id = getDeptNodeId(node);
       const nextChildren = node.children?.length
         ? build(node.children as T[], [...ancestors, name])
@@ -243,15 +281,20 @@ export function toFullPathTree<
         title,
         value: id,
         key: id,
-        ...(node.isExternalOrg !== undefined
-          ? { isExternalOrg: node.isExternalOrg }
-          : {}),
+        ...(node.isExternalOrg !== undefined ? { isExternalOrg: node.isExternalOrg } : {}),
         children: nextChildren,
       } as Out;
     });
   };
 
-  return build(nodes ?? [], []);
+  const result = build(nodes, []);
+  if (existing) {
+    existing.set(cacheKey, result);
+  } else {
+    const cacheMap = new Map([[cacheKey, result]]);
+    _fullPathCache.set(nodes as unknown as object, cacheMap);
+  }
+  return result;
 }
 
 /**
@@ -287,9 +330,12 @@ export interface ShortNameDataNode {
   isLeaf?: boolean;
 }
 
-export function toShortNameDataNode<
-  T extends DeptLikeNode & { deptName?: string },
->(nodes: T[]): ShortNameDataNode[] {
+export function toShortNameDataNode<T extends DeptLikeNode & { deptName?: string }>(
+  nodes: T[]
+): ShortNameDataNode[] {
+  if (!nodes?.length) return [];
+  const cached = _shortNameCache.get(nodes as unknown as object);
+  if (cached) return cached as ShortNameDataNode[];
   const build = (list: T[]): ShortNameDataNode[] => {
     return (list ?? []).map((node) => {
       const id = getDeptNodeId(node);
@@ -303,7 +349,9 @@ export function toShortNameDataNode<
       };
     });
   };
-  return build(nodes ?? []);
+  const result = build(nodes);
+  _shortNameCache.set(nodes as unknown as object, result);
+  return result;
 }
 
 /**
@@ -315,9 +363,12 @@ export function toShortNameDataNode<
  * 本函数在前端兜底去重,保证喂给 TreeSelect 的 treeData 每个 value 唯一。
  * 对 TreeSelect 是安全的(同 value 的重复节点本就无法区分)。
  */
-export function dedupTreeByKey<
-  T extends { value?: string; key?: string; children?: T[] },
->(nodes: T[]): T[] {
+export function dedupTreeByKey<T extends { value?: string; key?: string; children?: T[] }>(
+  nodes: T[]
+): T[] {
+  if (!nodes?.length) return nodes ?? [];
+  const cached = _dedupCache.get(nodes as unknown as object);
+  if (cached) return cached as T[];
   const seen = new Set<string>();
   const walk = (list: T[]): T[] => {
     const result: T[] = [];
@@ -333,5 +384,7 @@ export function dedupTreeByKey<
     }
     return result;
   };
-  return walk(nodes ?? []);
+  const result = walk(nodes);
+  _dedupCache.set(nodes as unknown as object, result);
+  return result;
 }

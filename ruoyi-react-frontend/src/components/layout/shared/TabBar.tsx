@@ -7,29 +7,29 @@
  * - 激活标签样式（底部蓝色指示条，与侧边栏保持一致）
  */
 
-import { useRef, useState, useMemo, useEffect, useCallback } from "react";
+import { useRef, useState, useMemo, useEffect, useCallback, startTransition } from "react";
 import { Tabs, Dropdown, Button } from "antd";
 import type { MenuProps } from "antd";
 import { useTabs } from "@/store/tabsStore";
 import { useNavigate } from "react-router-dom";
+import { preloadComponents } from "@/router/componentLoader";
 import {
-	CloseOutlined,
-	CloseCircleOutlined,
-	DownOutlined,
-	LeftOutlined,
-	RightOutlined,
-	LockOutlined,
-	UnlockOutlined,
+  CloseOutlined,
+  CloseCircleOutlined,
+  DownOutlined,
+  LeftOutlined,
+  RightOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
-import "@/design-system/themes/theme-styles.css";
 import type { FC, ReactNode } from "react";
 import {
-	SCROLL_STEP,
-	INITIAL_DELAYS,
-	DEFAULT_HEIGHT,
-	DEFAULT_PADDING,
-	MIN_WIDTH,
-	DROPDOWN_MAX_ZINDEX,
+  SCROLL_STEP,
+  INITIAL_DELAYS,
+  DEFAULT_HEIGHT,
+  DEFAULT_PADDING,
+  MIN_WIDTH,
+  DROPDOWN_MAX_ZINDEX,
 } from "./TabBar.constants";
 import { checkScrollState, scrollContainer, setupDelayedChecks } from "./TabBar.utils";
 
@@ -41,7 +41,18 @@ interface ContextMenuState {
 }
 
 const TabBar: FC = () => {
-  const { tabs, activeTab, setActiveTab, removeTab, closeAllTabs, closeOtherTabs, closeLeftTabs, closeRightTabs, pinTab, unpinTab } = useTabs();
+  const {
+    tabs,
+    activeTab,
+    setActiveTab,
+    removeTab,
+    closeAllTabs,
+    closeOtherTabs,
+    closeLeftTabs,
+    closeRightTabs,
+    pinTab,
+    unpinTab,
+  } = useTabs();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -62,35 +73,41 @@ const TabBar: FC = () => {
   });
 
   // 处理标签页点击
-  const handleTabChange = useCallback((key: string) => {
-    const tab = tabs.find(t => t.key === key);
-    if (tab) {
-      setActiveTab(key);
-      navigate(tab.path);
-    }
-    // 关闭右键菜单
-    setContextMenuState(prev => ({ ...prev, visible: false }));
-  }, [tabs, setActiveTab, navigate]);
+  const handleTabChange = useCallback(
+    (key: string) => {
+      const tab = tabs.find((t) => t.key === key);
+      if (tab) {
+        setActiveTab(key);
+        navigate(tab.path);
+      }
+      // 关闭右键菜单
+      setContextMenuState((prev) => ({ ...prev, visible: false }));
+    },
+    [tabs, setActiveTab, navigate]
+  );
 
   // 处理标签页关闭
-  const handleTabClose = useCallback((targetKey: string) => {
-    // 如果关闭的是当前激活的标签，需要切换到前一个
-    if (targetKey === activeTab && tabs.length > 1) {
-      const currentIndex = tabs.findIndex(t => t.key === targetKey);
-      if (currentIndex > 0) {
-        const prevTab = tabs[currentIndex - 1];
-        setActiveTab(prevTab.key);
-        navigate(prevTab.path);
-      } else if (tabs.length > 1) {
-        const nextTab = tabs[1];
-        setActiveTab(nextTab.key);
-        navigate(nextTab.path);
+  const handleTabClose = useCallback(
+    (targetKey: string) => {
+      // 如果关闭的是当前激活的标签，需要切换到前一个
+      if (targetKey === activeTab && tabs.length > 1) {
+        const currentIndex = tabs.findIndex((t) => t.key === targetKey);
+        if (currentIndex > 0) {
+          const prevTab = tabs[currentIndex - 1];
+          setActiveTab(prevTab.key);
+          navigate(prevTab.path);
+        } else if (tabs.length > 1) {
+          const nextTab = tabs[1];
+          setActiveTab(nextTab.key);
+          navigate(nextTab.path);
+        }
       }
-    }
-    removeTab(targetKey);
-    // 关闭右键菜单
-    setContextMenuState(prev => ({ ...prev, visible: false }));
-  }, [activeTab, tabs, setActiveTab, navigate, removeTab]);
+      removeTab(targetKey);
+      // 关闭右键菜单
+      setContextMenuState((prev) => ({ ...prev, visible: false }));
+    },
+    [activeTab, tabs, setActiveTab, navigate, removeTab]
+  );
 
   // 滚动控制函数
   const scrollTabs = useCallback((direction: "left" | "right") => {
@@ -101,8 +118,19 @@ const TabBar: FC = () => {
   const updateScrollState = useCallback(() => {
     const state = checkScrollState(scrollContainerRef.current);
 
-    setScrollState(state);
-  }, []);
+    // MISC-04: scroll 状态值无变化时跳过 setState，避免冗余重渲
+    if (
+      state.canScrollLeft === scrollState.canScrollLeft &&
+      state.canScrollRight === scrollState.canScrollRight &&
+      state.scrollLeft === scrollState.scrollLeft
+    ) {
+      return;
+    }
+
+    startTransition(() => {
+      setScrollState(state);
+    });
+  }, [scrollState]);
 
   // 初始化和监听滚动状态
   useEffect(() => {
@@ -116,21 +144,16 @@ const TabBar: FC = () => {
     const handleScroll = () => updateScrollState();
     container.addEventListener("scroll", handleScroll, { passive: true });
 
-    // 监听容器尺寸变化
+    // 监听容器尺寸变化（ResizeObserver 已覆盖，无需额外 window resize 监听）
     const resizeObserver = new ResizeObserver(() => {
       requestAnimationFrame(updateScrollState);
     });
     resizeObserver.observe(container);
 
-    // 监听窗口大小变化
-    const handleResize = () => updateScrollState();
-    window.addEventListener("resize", handleResize);
-
     return () => {
-      timers.forEach(timer => clearTimeout(timer));
+      timers.forEach((timer) => clearTimeout(timer));
       container.removeEventListener("scroll", handleScroll);
       resizeObserver.disconnect();
-      window.removeEventListener("resize", handleResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs.length]); // 只在 tabs 数量变化时重新绑定；updateScrollState 引用不变，不需要作为依赖
@@ -143,8 +166,8 @@ const TabBar: FC = () => {
 
   // 右键菜单项
   const contextMenuItems: MenuProps["items"] = useMemo(() => {
-    const tab = tabs.find(t => t.key === contextMenuState.tabKey);
-    const tabIndex = tabs.findIndex(t => t.key === contextMenuState.tabKey);
+    const tab = tabs.find((t) => t.key === contextMenuState.tabKey);
+    const tabIndex = tabs.findIndex((t) => t.key === contextMenuState.tabKey);
     const hasLeftTabs = tabIndex > 0;
     const hasRightTabs = tabIndex < tabs.length - 1;
 
@@ -163,7 +186,7 @@ const TabBar: FC = () => {
               pinTab(contextMenuState.tabKey);
             }
           }
-          setContextMenuState(prev => ({ ...prev, visible: false }));
+          setContextMenuState((prev) => ({ ...prev, visible: false }));
         },
       },
       { type: "divider" },
@@ -187,7 +210,7 @@ const TabBar: FC = () => {
           if (contextMenuState.tabKey) {
             closeOtherTabs(contextMenuState.tabKey);
           }
-          setContextMenuState(prev => ({ ...prev, visible: false }));
+          setContextMenuState((prev) => ({ ...prev, visible: false }));
         },
       },
       {
@@ -199,7 +222,7 @@ const TabBar: FC = () => {
           if (contextMenuState.tabKey) {
             closeLeftTabs(contextMenuState.tabKey);
           }
-          setContextMenuState(prev => ({ ...prev, visible: false }));
+          setContextMenuState((prev) => ({ ...prev, visible: false }));
         },
       },
       {
@@ -211,19 +234,28 @@ const TabBar: FC = () => {
           if (contextMenuState.tabKey) {
             closeRightTabs(contextMenuState.tabKey);
           }
-          setContextMenuState(prev => ({ ...prev, visible: false }));
+          setContextMenuState((prev) => ({ ...prev, visible: false }));
         },
       },
     ];
-  }, [tabs, contextMenuState.tabKey, handleTabClose, closeOtherTabs, closeLeftTabs, closeRightTabs, pinTab, unpinTab]);
+  }, [
+    tabs,
+    contextMenuState.tabKey,
+    handleTabClose,
+    closeOtherTabs,
+    closeLeftTabs,
+    closeRightTabs,
+    pinTab,
+    unpinTab,
+  ]);
 
   // 更多标签菜单
   const moreMenuItems: MenuProps["items"] = useMemo(() => {
-    const closableTabs = tabs.filter(tab => tab.closable);
-    const pinnedTabs = tabs.filter(tab => !tab.closable && tab.pinned);
+    const closableTabs = tabs.filter((tab) => tab.closable);
+    const pinnedTabs = tabs.filter((tab) => !tab.closable && tab.pinned);
 
     return [
-      ...pinnedTabs.map(tab => ({
+      ...pinnedTabs.map((tab) => ({
         key: tab.key,
         label: (
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -234,10 +266,17 @@ const TabBar: FC = () => {
         onClick: () => handleTabChange(tab.key),
       })),
       ...(pinnedTabs.length > 0 && closableTabs.length > 0 ? [{ type: "divider" as const }] : []),
-      ...closableTabs.map(tab => ({
+      ...closableTabs.map((tab) => ({
         key: tab.key,
         label: (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "8px",
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               {tab.icon}
               <span>{tab.title}</span>
@@ -260,17 +299,26 @@ const TabBar: FC = () => {
         icon: <CloseCircleOutlined />,
         onClick: () => {
           closeAllTabs();
-          setContextMenuState(prev => ({ ...prev, visible: false }));
+          setContextMenuState((prev) => ({ ...prev, visible: false }));
         },
         danger: true,
       },
     ];
   }, [tabs, handleTabChange, handleTabClose, closeAllTabs]);
 
-  // 自定义 Tab label（添加右键菜单 + 锁定图标）
-  const createTabLabel = (tab: { title: string | ReactNode; key: string; pinned?: boolean }) => (
+  // 自定义 Tab label（添加右键菜单 + 锁定图标 + hover 预取）
+  const createTabLabel = (tab: {
+    title: string | ReactNode;
+    key: string;
+    path: string;
+    pinned?: boolean;
+  }) => (
     <span
       onContextMenu={(e) => handleTabContextMenu(tab.key, e)}
+      onMouseEnter={() => {
+        // hover 预取目标路由 chunk（仅预取，非导航）
+        preloadComponents([tab.path]);
+      }}
       style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
     >
       {tab.pinned && (
@@ -284,20 +332,20 @@ const TabBar: FC = () => {
   useEffect(() => {
     const handleGlobalClick = () => {
       if (contextMenuState.visible) {
-        setContextMenuState(prev => ({ ...prev, visible: false }));
+        setContextMenuState((prev) => ({ ...prev, visible: false }));
       }
     };
 
     const handleScroll = () => {
       if (contextMenuState.visible) {
-        setContextMenuState(prev => ({ ...prev, visible: false }));
+        setContextMenuState((prev) => ({ ...prev, visible: false }));
       }
     };
 
     if (contextMenuState.visible) {
       document.addEventListener("click", handleGlobalClick);
-      document.addEventListener("scroll", handleScroll, true);
-      window.addEventListener("resize", handleScroll);
+      document.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+      window.addEventListener("resize", handleScroll, { passive: true });
 
       return () => {
         document.removeEventListener("click", handleGlobalClick);
@@ -308,9 +356,11 @@ const TabBar: FC = () => {
   }, [contextMenuState.visible]);
 
   // 所有标签页项
-  const allTabItems = tabs.map(tab => ({
+  const allTabItems = tabs.map((tab) => ({
     key: tab.key,
-    label: createTabLabel(tab),
+    label: createTabLabel(
+      tab as { title: string | ReactNode; key: string; path: string; pinned?: boolean }
+    ),
     closable: tab.closable,
     icon: tab.icon,
   }));
@@ -335,7 +385,6 @@ const TabBar: FC = () => {
           flexShrink: 0,
         }}
       >
-
         {/* 左滚动按钮 */}
         <Button
           icon={<LeftOutlined />}
@@ -392,7 +441,9 @@ const TabBar: FC = () => {
           trigger={["click"]}
           placement="bottomRight"
           getPopupContainer={(triggerNode) => {
-            return triggerNode?.parentNode?.parentNode?.parentNode as HTMLElement || document.body;
+            return (
+              (triggerNode?.parentNode?.parentNode?.parentNode as HTMLElement) || document.body
+            );
           }}
         >
           <Button
@@ -416,7 +467,7 @@ const TabBar: FC = () => {
         menu={{ items: contextMenuItems }}
         trigger={[]}
         open={contextMenuState.visible}
-        onOpenChange={(open) => setContextMenuState(prev => ({ ...prev, visible: open }))}
+        onOpenChange={(open) => setContextMenuState((prev) => ({ ...prev, visible: open }))}
         placement="bottomLeft"
         getPopupContainer={() => document.body}
       >

@@ -20,45 +20,45 @@ interface MenuPathInfo {
 
 // 路径翻译映射表
 const PATH_TRANSLATIONS: Record<string, string> = {
-  "ops": "运维管理",
-  "operations": "运维",
-  "workorder": "工单",
-  "orders": "工单管理",
-  "categories": "工单分类",
-  "statistics": "工单统计",
-  "periodic": "周期性工单",
-  "templates": "模板",
-  "knowledge": "知识库",
-  "articles": "知识库文章",
-  "view": "查看",
-  "system": "系统管理",
-  "user": "用户",
-  "users": "用户管理",
-  "role": "角色",
-  "roles": "角色管理",
-  "menu": "菜单",
-  "menus": "菜单管理",
-  "dept": "部门",
-  "depts": "部门管理",
-  "buildings": "楼宇管理",
-  "floors": "楼层管理",
-  "workstations": "工位管理",
+  ops: "运维管理",
+  operations: "运维",
+  workorder: "工单",
+  orders: "工单管理",
+  categories: "工单分类",
+  statistics: "工单统计",
+  periodic: "周期性工单",
+  templates: "模板",
+  knowledge: "知识库",
+  articles: "知识库文章",
+  view: "查看",
+  system: "系统管理",
+  user: "用户",
+  users: "用户管理",
+  role: "角色",
+  roles: "角色管理",
+  menu: "菜单",
+  menus: "菜单管理",
+  dept: "部门",
+  depts: "部门管理",
+  buildings: "楼宇管理",
+  floors: "楼层管理",
+  workstations: "工位管理",
   "server-rooms": "机房管理",
   "dedicated-lines": "专线管理",
   "room-devices": "机房设备",
   "building-spaces": "楼宇空间",
   "building-spaces-3d": "楼宇空间3D",
   "info-points": "信息点管理",
-  "network": "网络",
-  "devices": "设备",
-  "ports": "端口",
-  "heatmap": "热力图",
-  "monitor": "监控",
-  "dashboard": "仪表盘",
-  "settings": "设置",
-  "profile": "个人中心",
-  "duty": "值班",
-}
+  network: "网络",
+  devices: "设备",
+  ports: "端口",
+  heatmap: "热力图",
+  monitor: "监控",
+  dashboard: "仪表盘",
+  settings: "设置",
+  profile: "个人中心",
+  duty: "值班",
+};
 
 export class RouteConfigManager {
   private routeMap = new Map<string, MenuPathInfo>();
@@ -94,13 +94,13 @@ export class RouteConfigManager {
       return { hasPermission: true };
     }
 
-    const hasPermission = meta.permissions.some(p => userPermissions.includes(p));
+    const hasPermission = meta.permissions.some((p) => userPermissions.includes(p));
 
     if (hasPermission) {
       return { hasPermission: true };
     }
 
-    const missingPermissions = meta.permissions.filter(p => !userPermissions.includes(p));
+    const missingPermissions = meta.permissions.filter((p) => !userPermissions.includes(p));
     return {
       hasPermission: false,
       missingPermissions,
@@ -135,7 +135,7 @@ export class RouteConfigManager {
   }
 
   getAllRoutes(): MenuRouteConfig[] {
-    return Array.from(this.routeMap.values()).map(info => info.route);
+    return Array.from(this.routeMap.values()).map((info) => info.route);
   }
 
   clear(): void {
@@ -148,11 +148,7 @@ export class RouteConfigManager {
   private buildRouteMap(menus: Menu[]): Map<string, MenuPathInfo> {
     const map = new Map<string, MenuPathInfo>();
 
-    const traverse = (
-      menuList: Menu[],
-      parentPath: string = "",
-      level: number = 1
-    ) => {
+    const traverse = (menuList: Menu[], parentPath: string = "", level: number = 1) => {
       for (const menu of menuList) {
         if (menu.menuType === "F") continue;
 
@@ -228,24 +224,24 @@ export class RouteConfigManager {
   }
 
   private fallbackBreadcrumb(path: string): BreadcrumbItem[] {
-    const segments = path.split("/").filter(Boolean)
+    const segments = path.split("/").filter(Boolean);
 
     if (segments.length === 0) {
-      return [{ path: "/", title: "首页" }]
+      return [{ path: "/", title: "首页" }];
     }
 
-    const breadcrumb: BreadcrumbItem[] = []
-    let currentPath = ""
+    const breadcrumb: BreadcrumbItem[] = [];
+    let currentPath = "";
 
     for (const segment of segments) {
-      currentPath += `/${segment}`
+      currentPath += `/${segment}`;
       breadcrumb.push({
         path: currentPath,
         title: PATH_TRANSLATIONS[segment] || segment,
-      })
+      });
     }
 
-    return breadcrumb
+    return breadcrumb;
   }
 }
 

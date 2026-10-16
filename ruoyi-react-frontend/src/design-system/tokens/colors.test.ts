@@ -1,0 +1,422 @@
+/**
+ * ruoyiBrand WCAG 2.1 对比度自动验证（QA-01）
+ *
+ * 目的：把 brand-spec 列出的关键前景/背景对锁在测试层 —— 不达标即 fail，
+ * 防止后续重构意外破坏 D-03 按钮纪律或品牌对比度承诺。
+ *
+ * 来源：
+ * - WCAG 2.1 相对亮度公式 https://www.w3.org/WAI/WCAG21/Techniques/general/G18
+ * - brand-spec.md（像素实测 + OKLch 派生 + WCAG 标注）
+ *
+ * 覆盖：
+ * - D-03 主按钮纪律：#FFFFFF on #156031 (greenPrimary) ≥ 7.6:1
+ * - D-03 反向断言：#FFFFFF on #C09058 (copper) < 3.5:1（铜金不可作主按钮）
+ * - 关键侧栏 / 表头 / 警告 / 错误 / 成功对全部断言达标
+ */
+
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { ruoyiBrand } from "./colors";
+import { brandSeriesColors, brandHeatRamp } from "./echartsTheme";
+
+/**
+ * 将 #RRGGBB hex 解析为 [r, g, b] 0-255 整数数组。
+ */
+function hexToRgb(hex: string): [number, number, number] {
+  const cleaned = hex.replace("#", "").trim();
+  const expanded =
+    cleaned.length === 3
+      ? cleaned
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : cleaned;
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
+    throw new Error(`Invalid hex color: ${hex}`);
+  }
+  const num = parseInt(expanded, 16);
+  return [(num >> 16) & 0xff, (num >> 8) & 0xff, num & 0xff];
+}
+
+/**
+ * sRGB → linear (per WCAG 2.1):
+ * - if c <= 0.03928: c / 12.92
+ * - else: ((c + 0.055) / 1.055) ^ 2.4
+ */
+function srgbToLinear(c8bit: number): number {
+  const c = c8bit / 255;
+  return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+/**
+ * 相对亮度 L (WCAG 2.1):
+ * L = 0.2126*R + 0.7152*G + 0.0722*B
+ * 其中 R/G/B 是 srgbToLinear 的输出（0-1 范围）。
+ */
+export function relativeLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex);
+  return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
+}
+
+/**
+ * 对比度比 = (L1 + 0.05) / (L2 + 0.05)，其中 L1 是较亮，L2 是较暗。
+ */
+export function contrastRatio(fg: string, bg: string): number {
+  const l1 = relativeLuminance(fg);
+  const l2 = relativeLuminance(bg);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+describe("ruoyiBrand WCAG contrast ratios", () => {
+  // ---- D-03 主按钮纪律 ----
+
+  it("#FFFFFF on ruoyiBrand.greenPrimary (#156031) meets WCAG AA (≥ 7.6:1)", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.greenPrimary);
+    expect(ratio).toBeGreaterThanOrEqual(7.6);
+  });
+
+  it("#FFFFFF on ruoyiBrand.greenPrimaryHover (#2E7444) meets WCAG AA (≥ 5.6:1)", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.greenPrimaryHover);
+    expect(ratio).toBeGreaterThanOrEqual(5.6);
+  });
+
+  it("#FFFFFF on ruoyiBrand.greenPrimaryActive (#14542E) meets WCAG AA (≥ 7.0:1)", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.greenPrimaryActive);
+    expect(ratio).toBeGreaterThanOrEqual(7.0);
+  });
+
+  it("#FFFFFF on ruoyiBrand.green[900] (#14532D) meets WCAG AA (≥ 7.0:1) — 深绿底", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.green[900]);
+    expect(ratio).toBeGreaterThanOrEqual(7.0);
+  });
+
+  // ---- 侧边栏深绿底文字 ----
+
+  it("ruoyiBrand.onDark.lightYellow (#E0E0B0) on ruoyiBrand.greenPrimary (#156031) meets WCAG AA (≥ 5.6:1)", () => {
+    const ratio = contrastRatio(ruoyiBrand.onDark.lightYellow, ruoyiBrand.greenPrimary);
+    expect(ratio).toBeGreaterThanOrEqual(5.6);
+  });
+
+  it("ruoyiBrand.cream.canvas (#F0ECE3) on ruoyiBrand.green[900] (#14532D) meets WCAG AA (≥ 7.0:1) — 深绿侧栏文字", () => {
+    const ratio = contrastRatio(ruoyiBrand.cream.canvas, ruoyiBrand.green[900]);
+    expect(ratio).toBeGreaterThanOrEqual(7.0);
+  });
+
+  // ---- 白卡 / 奶油底文字 ----
+
+  it("ruoyiBrand.cream.muted (#707068) on ruoyiBrand.cream.surface (#FFFFFF) meets WCAG AA (≥ 4.9:1) — 白卡次级文字", () => {
+    const ratio = contrastRatio(ruoyiBrand.cream.muted, ruoyiBrand.cream.surface);
+    expect(ratio).toBeGreaterThanOrEqual(4.9);
+  });
+
+  it("ruoyiBrand.cream.mutedStrong (#64645C) on ruoyiBrand.cream.canvas (#F0ECE3) meets WCAG AA (≥ 4.9:1) — 奶油底次级文字", () => {
+    const ratio = contrastRatio(ruoyiBrand.cream.mutedStrong, ruoyiBrand.cream.canvas);
+    expect(ratio).toBeGreaterThanOrEqual(4.9);
+  });
+
+  it("ruoyiBrand.cream.fg (#101010) on ruoyiBrand.cream.canvas (#F0ECE3) meets WCAG AA (≥ 12:1) — 奶油底主文字", () => {
+    const ratio = contrastRatio(ruoyiBrand.cream.fg, ruoyiBrand.cream.canvas);
+    expect(ratio).toBeGreaterThanOrEqual(12);
+  });
+
+  it("ruoyiBrand.cream.fg (#101010) on ruoyiBrand.cream.surface (#FFFFFF) meets WCAG AA (≥ 15:1) — 白卡主文字", () => {
+    const ratio = contrastRatio(ruoyiBrand.cream.fg, ruoyiBrand.cream.surface);
+    expect(ratio).toBeGreaterThanOrEqual(15);
+  });
+
+  it("ruoyiBrand.cream.fg (#101010) on ruoyiBrand.cream.headerBg (#E9EFEB) meets WCAG AA (≥ 12:1) — 表头文字 (COMP-02)", () => {
+    const ratio = contrastRatio(ruoyiBrand.cream.fg, ruoyiBrand.cream.headerBg);
+    expect(ratio).toBeGreaterThanOrEqual(12);
+  });
+
+  // ---- 功能色 ----
+
+  it("#FFFFFF on ruoyiBrand.functional.danger (#BA3630) meets WCAG AA (≥ 5.6:1) — 危险按钮", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.functional.danger);
+    expect(ratio).toBeGreaterThanOrEqual(5.6);
+  });
+
+  it("#FFFFFF on ruoyiBrand.functional.success (#2D8949) meets WCAG AA (≥ 4.3:1) — 成功图标/大字", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.functional.success);
+    expect(ratio).toBeGreaterThanOrEqual(4.3);
+  });
+
+  it("#FFFFFF on ruoyiBrand.functional.successSolid (#238142) meets WCAG AA (≥ 4.5:1) — 成功实心按钮", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.functional.successSolid);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("ruoyiBrand.functional.warningText (#905D00) on #FFFFFF meets WCAG AA (≥ 5.5:1) — 警告文字白底 (brand-spec 标注 5.60:1)", () => {
+    const ratio = contrastRatio(ruoyiBrand.functional.warningText, "#FFFFFF");
+    expect(ratio).toBeGreaterThanOrEqual(5.5);
+  });
+
+  it("ruoyiBrand.functional.warningText (#905D00) on ruoyiBrand.onDark.paleYellow (#FEF3C7) meets WCAG AA (≥ 5.0:1) — 警告文字淡黄底", () => {
+    const ratio = contrastRatio(
+      ruoyiBrand.functional.warningText,
+      ruoyiBrand.onDark.paleYellow
+    );
+    expect(ratio).toBeGreaterThanOrEqual(5.0);
+  });
+
+  // ---- 铜金梯度（仅作点缀/大字实心按钮，禁止作主按钮） ----
+
+  it("#FFFFFF on ruoyiBrand.copper[500] (#B88850) meets WCAG AA Large (≥ 3.0:1) — 铜金大字实心按钮", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.copper[500]);
+    expect(ratio).toBeGreaterThanOrEqual(3.0);
+  });
+
+  it("#FFFFFF on ruoyiBrand.copper[400] (#AA7B42) meets WCAG AA Large (≥ 3.0:1) — 铜金 hover", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.copper[400]);
+    expect(ratio).toBeGreaterThanOrEqual(3.0);
+  });
+
+  // ---- D-03 反向断言（防回归） ----
+
+  it("#FFFFFF on ruoyiBrand.copperAccent (#C09058) violates D-03 (< 3.5:1) — 铜金不可作主按钮背景", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.copperAccent);
+    expect(ratio).toBeLessThan(3.5);
+  });
+
+  it("#FFFFFF on ruoyiBrand.copper[600] (#C09058) violates D-03 (< 4.5:1) — 铜金不可作次按钮背景", () => {
+    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.copper[600]);
+    expect(ratio).toBeLessThan(4.5);
+  });
+
+  // ---- 品牌令牌完整性（防止意外删除） ----
+
+  it("ruoyiBrand exposes all required token groups", () => {
+    expect(ruoyiBrand.green).toBeDefined();
+    expect(ruoyiBrand.green[50]).toBe("#E9EFEB");
+    expect(ruoyiBrand.green[100]).toBe("#598E5E");
+    expect(ruoyiBrand.green[200]).toBe("#3B784C");
+    expect(ruoyiBrand.green[300]).toBe("#1A6839");
+    expect(ruoyiBrand.green[400]).toBe("#156031");
+    expect(ruoyiBrand.green[900]).toBe("#14532D");
+    expect(ruoyiBrand.greenPrimary).toBe("#156031");
+    expect(ruoyiBrand.copperAccent).toBe("#C09058");
+    expect(ruoyiBrand.cream.canvas).toBe("#F0ECE3");
+    expect(ruoyiBrand.cream.surface).toBe("#FFFFFF");
+    expect(ruoyiBrand.onDark.lightYellow).toBe("#E0E0B0");
+    expect(ruoyiBrand.functional.danger).toBe("#BA3630");
+  });
+});
+
+/**
+ * 从 CSS 文本中切出指定选择器的规则块（花括号匹配）。
+ * selector 需含尾部空格（如 ":root {" / '[data-color-mode="dark"] {'）
+ * 以精确命中变量定义块而非组件覆盖规则。
+ */
+function extractCssBlock(css: string, selectorWithBrace: string): string {
+  const start = css.indexOf(selectorWithBrace);
+  if (start === -1) {
+    throw new Error(`Selector block not found: ${selectorWithBrace}`);
+  }
+  const open = css.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < css.length; i++) {
+    if (css[i] === "{") depth++;
+    else if (css[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        return css.slice(open + 1, i);
+      }
+    }
+  }
+  throw new Error(`Unbalanced braces for block: ${selectorWithBrace}`);
+}
+
+/**
+ * 读取 src/index.css 文本（THEME-02 静态变量层防回归）。
+ * 注：ESLint typed-lint 程序未含 @types/node，node:fs/url 的调用被标记为
+ * unsafe —— 属工具链误报，测试运行时（vitest/node）类型完全正常，定向豁免。
+ */
+function loadIndexCss(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+
+  return readFileSync(resolve(here, "../../index.css"), "utf-8");
+}
+
+/**
+ * 读取 src/design-system/components/AntdThemeBridge.tsx 源文本
+ * （Phase 66 · Phase-64 UAT 四 Gap 的 theme 层令牌防回归）。
+ */
+function loadAntdThemeBridge(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+
+  return readFileSync(resolve(here, "../components/AntdThemeBridge.tsx"), "utf-8");
+}
+
+/**
+ * 从 TS 对象字面量中切出指定 key 的花括号块（如 "Button: {"）。
+ * 与 extractCssBlock 同语义：花括号计数匹配第一个平衡块。
+ */
+function extractTsBlock(source: string, keyWithBrace: string): string {
+  const start = source.indexOf(keyWithBrace);
+  if (start === -1) {
+    throw new Error(`Component block not found: ${keyWithBrace}`);
+  }
+  const open = source.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        return source.slice(open + 1, i);
+      }
+    }
+  }
+  throw new Error(`Unbalanced braces for block: ${keyWithBrace}`);
+}
+
+describe("dark-mode brand derivation (THEME-02)", () => {
+  const css = loadIndexCss();
+  const rootBlock = extractCssBlock(css, ":root {").toLowerCase();
+  const darkBlock = extractCssBlock(css, '[data-color-mode="dark"] {').toLowerCase();
+
+  it("dark block contains deep-green sidebar bg #0a2418 (Phase 64 derivation)", () => {
+    expect(darkBlock).toContain("--sidebar-bg: #0a2418");
+  });
+
+  it("dark block contains deep-green canvas #0f2e1b for --theme-bg-primary (Phase 64 derivation)", () => {
+    expect(darkBlock).toContain("--theme-bg-primary: #0f2e1b");
+    expect(darkBlock).toContain("--theme-bg-surface: #1a2e1f");
+  });
+
+  // ---- Phase 65 品牌深底提亮推导（静态品牌变量） ----
+
+  it("dark block lightens --theme-brand to icon green #598e5e (controlled lightening)", () => {
+    expect(darkBlock).toContain("--theme-brand: #598e5e");
+    expect(darkBlock).toContain("--theme-brand-dark: #3b784c");
+    expect(darkBlock).toContain("--theme-brand-alpha-10: rgba(89, 142, 94, 0.15)");
+  });
+
+  it("dark block lightens --theme-primary-500/600 to secondary/icon green", () => {
+    expect(darkBlock).toContain("--theme-primary-500: #3b784c");
+    expect(darkBlock).toContain("--theme-primary-600: #598e5e");
+  });
+
+  it(":root defines static brand vars matching brand-spec (D-02 single source)", () => {
+    expect(rootBlock).toContain("--theme-brand: #156031");
+    expect(rootBlock).toContain("--theme-brand-dark: #14542e");
+    expect(rootBlock).toContain("--theme-brand-alpha-10: rgba(21, 96, 49, 0.1)");
+    expect(rootBlock).toContain("--theme-primary-50: #e9efeb");
+    expect(rootBlock).toContain("--theme-primary-100: #598e5e");
+    expect(rootBlock).toContain("--theme-primary-500: #156031");
+    expect(rootBlock).toContain("--theme-primary-600: #14532d");
+    expect(rootBlock).toContain("--theme-primary-700: #14542e");
+  });
+
+  // ---- light 模式基线 ----
+
+  it("light baseline: :root --theme-primary stays brand #156031 (no regression)", () => {
+    expect(rootBlock).toContain("--theme-primary: #156031");
+  });
+
+  // ---- 受控提亮：dark 与 :root 品牌色不同且均为品牌绿梯度成员 ----
+
+  it("dark --theme-brand differs from :root and both are brand green gradient members", () => {
+    const darkBrand = "#598E5E";
+    const rootBrand = "#156031";
+    expect(darkBrand).not.toBe(rootBrand);
+    // ruoyiBrand.green[100] = 深底图标绿, green[400] = 品牌主色
+    expect(darkBrand).toBe(ruoyiBrand.green[100]);
+    expect(rootBrand).toBe(ruoyiBrand.green[400]);
+  });
+
+  // ---- 暗色关键前景/背景对 WCAG AA (≥ 4.5:1) ----
+
+  it("#F0ECE3 (cream text) on #0A2418 (deep green sidebar) meets WCAG AA (≥ 4.5:1)", () => {
+    const ratio = contrastRatio("#F0ECE3", "#0A2418");
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("#E0E0B0 (light yellow accent) on #0A2418 (deep green sidebar) meets WCAG AA (≥ 4.5:1)", () => {
+    const ratio = contrastRatio("#E0E0B0", "#0A2418");
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("#F0ECE3 (cream text) on #0F2E1B (dark canvas) meets WCAG AA (≥ 4.5:1)", () => {
+    const ratio = contrastRatio("#F0ECE3", "#0F2E1B");
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("#FFFFFF on #156031 primary button unchanged in dark mode meets WCAG AA (≥ 7.6:1)", () => {
+    const ratio = contrastRatio("#FFFFFF", "#156031");
+    expect(ratio).toBeGreaterThanOrEqual(7.6);
+  });
+});
+
+describe("phase-64 UAT gap tokens in AntdThemeBridge (COMP-02/03/04)", () => {
+  const source = loadAntdThemeBridge();
+
+  it("G4/COMP-03: Button locks primary text to ruoyiBrand.onDark.white (D-03 白字 7.64:1)", () => {
+    const block = extractTsBlock(source, "Button: {");
+    expect(block).toContain("primaryColor: ruoyiBrand.onDark.white");
+  });
+
+  it("G3/COMP-04: Tag default uses paleYellow bg + copper[500] text (SM2/SM3/SM4 品牌锚点配方)", () => {
+    const block = extractTsBlock(source, "Tag: {");
+    expect(block).toContain("defaultBg: ruoyiBrand.onDark.paleYellow");
+    expect(block).toContain("defaultColor: ruoyiBrand.copper[500]");
+  });
+
+  it("G2/COMP-04: Input focus ring is brand green 2px activeShadow + greenPrimary border", () => {
+    const block = extractTsBlock(source, "Input: {");
+    expect(block).toContain('activeShadow: "0 0 0 2px rgba(21, 96, 49, 0.15)"');
+    expect(block).toContain("activeBorderColor: ruoyiBrand.greenPrimary");
+    expect(block).toContain("hoverBorderColor: ruoyiBrand.greenPrimary");
+  });
+
+  it("G1/COMP-02: Table sort/filter/selected states use cream zebra/header tokens", () => {
+    const block = extractTsBlock(source, "Table: {");
+    expect(block).toContain("headerBg: ruoyiBrand.cream.headerBg");
+    expect(block).toContain("headerColor: ruoyiBrand.cream.fg");
+    expect(block).toContain("borderColor: ruoyiBrand.cream.border");
+    expect(block).toContain("headerSortActiveBg: ruoyiBrand.cream.zebraBg");
+    expect(block).toContain("headerFilterHoverBg: ruoyiBrand.cream.zebraBg");
+    expect(block).toContain("fixedHeaderSortActiveBg: ruoyiBrand.cream.zebraBg");
+    expect(block).toContain("rowSelectedBg: ruoyiBrand.cream.headerBg");
+    expect(block).toContain("rowSelectedHoverBg: ruoyiBrand.cream.zebraBg");
+  });
+
+  it("QA-02 hygiene: Menu.dark* tokens read from ruoyiBrand, not string literals", () => {
+    const block = extractTsBlock(source, "Menu: {");
+    expect(block).toContain("darkItemBg: ruoyiBrand.green[900]");
+    expect(block).toContain("darkItemSelectedBg: ruoyiBrand.greenPrimary");
+    expect(block).toContain("darkItemHoverBg: ruoyiBrand.greenPrimaryLight");
+    expect(block).not.toMatch(/#[0-9a-fA-F]{6}/);
+  });
+});
+
+describe("ECharts brand palette (COMP-04, canvas-safe)", () => {
+  it("brandSeriesColors has 5 entries from ruoyiBrand (green-gold gradient, no blue/purple)", () => {
+    expect(brandSeriesColors).toHaveLength(5);
+    expect(brandSeriesColors[0]).toBe(ruoyiBrand.greenPrimary);
+    expect(brandSeriesColors[1]).toBe(ruoyiBrand.green[200]);
+    expect(brandSeriesColors[2]).toBe(ruoyiBrand.copperAccent);
+    expect(brandSeriesColors[3]).toBe(ruoyiBrand.green[100]);
+    expect(brandSeriesColors[4]).toBe(ruoyiBrand.copper[700]);
+  });
+
+  it("brandSeriesColors contains no default Antd blue (#1890ff) or indigo (#6366f1)", () => {
+    const lower = brandSeriesColors.map((c) => c.toLowerCase());
+    expect(lower).not.toContain("#1890ff");
+    expect(lower).not.toContain("#6366f1");
+    expect(lower).not.toContain("#8b5cf6");
+  });
+
+  it("brandHeatRamp has 5 entries: low-to-high green-to-copper gradient", () => {
+    expect(brandHeatRamp).toHaveLength(5);
+    expect(brandHeatRamp[0]).toBe(ruoyiBrand.green[50]);
+    expect(brandHeatRamp[1]).toBe(ruoyiBrand.green[100]);
+    expect(brandHeatRamp[2]).toBe(ruoyiBrand.greenPrimary);
+    expect(brandHeatRamp[3]).toBe(ruoyiBrand.copperAccent);
+    expect(brandHeatRamp[4]).toBe(ruoyiBrand.copper[500]);
+  });
+});

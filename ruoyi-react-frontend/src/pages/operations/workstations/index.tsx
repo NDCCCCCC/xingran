@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 工位管理页面
  *
  * 性能优化说明：
@@ -10,20 +10,28 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { FC } from "react";
 import type React from "react";
+import { Table, Button, Space, Form, Input, Select, Card, Alert, Radio, Layout } from "antd";
 import {
-  Table, Button, Space, Form, Input, Select, Card,
-  Alert, Radio, Layout,
-} from "antd";
-import {
-  PlusOutlined, SearchOutlined, ReloadOutlined, CheckCircleOutlined,
-  StopOutlined, AppstoreOutlined, TableOutlined, ImportOutlined,
-  ExportOutlined, DeleteOutlined, BgColorsOutlined, DesktopOutlined,
-  SettingOutlined, DownloadOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
+  AppstoreOutlined,
+  TableOutlined,
+  ImportOutlined,
+  ExportOutlined,
+  DeleteOutlined,
+  BgColorsOutlined,
+  DesktopOutlined,
+  SettingOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import { useTableManager } from "@/hooks/useTableManager";
 import { useTableQuery } from "@/hooks/useTableQuery";
 import { usePagination } from "@/hooks/usePagination";
+import { useDict, type DictItem } from "@/hooks/useDict";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useAliasByLocation } from "@/hooks/useAliasByLocation";
 import { ExcelImportLazy } from "@/components/shared";
@@ -83,6 +91,17 @@ const WorkstationManagement: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
+
+  // Phase 69 DICT-03: 工位类型下拉迁 useDict("ops_workstation_type")——编辑弹窗 Select
+  // 与新增默认值消费；字典空态/接口异常时回退静态 TYPE_OPTIONS（经 EditModal prop 透传）
+  const { data: typeDict = [] } = useDict("ops_workstation_type");
+
+  // 新增工位默认类型取字典 isDefault 项（seed 为 "0" 固定工位，对齐后端
+  // Workstation.WorkstationType gorm default:0）；字典空态回退静态 0（迁移前行为）
+  const defaultType = useMemo(() => {
+    const item: DictItem | undefined = typeDict.find((d) => d.isDefault);
+    return item ? Number(item.dictValue) : 0;
+  }, [typeDict]);
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
   const [deptTreeData, setDeptTreeData] = useState<DeptTreeNode[]>([]);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
@@ -133,8 +152,7 @@ const WorkstationManagement: FC = () => {
   //   1) 把这个 hook 拆到不同 provider 树(失去共享 cache)
   //   2) 把 expandedWorkstationId 替换为 expandedRowKeys(导致 cache key 在每次 collapse/expand
   //      时变化,触发额外 fetch)
-  const expandedWorkstationId =
-    expandedRowKeys.length > 0 ? String(expandedRowKeys[0]) : "";
+  const expandedWorkstationId = expandedRowKeys.length > 0 ? String(expandedRowKeys[0]) : "";
   const workstationHealthQuery = useWorkstationHealth(expandedWorkstationId);
   const assetConflictMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -201,10 +219,10 @@ const WorkstationManagement: FC = () => {
   } = useTableManager<WorkstationOps>(
     // ✅ 优化：移除动态导入，直接使用顶层导入的 API (bundle-dynamic-imports)
     async (params) => {
-      const searchParams = selectedDeptId
-        ? { ...params, orgId: selectedDeptId }
-        : params;
-      const result = await workstationApi.list(searchParams) as { data?: { list: WorkstationOps[]; total: number } };
+      const searchParams = selectedDeptId ? { ...params, orgId: selectedDeptId } : params;
+      const result = (await workstationApi.list(searchParams)) as {
+        data?: { list: WorkstationOps[]; total: number };
+      };
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
@@ -219,12 +237,13 @@ const WorkstationManagement: FC = () => {
     }
   );
 
-  const { loadStatistics: loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions, ensureUser } = useWorkstationData(
-    setStatistics,
-    setFloorOptions,
-    setDeptTreeData,
-    setUserOptions
-  );
+  const {
+    loadStatistics: loadStatisticsFromHook,
+    loadFloorOptions,
+    loadDeptOptions,
+    loadUserOptions,
+    ensureUser,
+  } = useWorkstationData(setStatistics, setFloorOptions, setDeptTreeData, setUserOptions);
 
   // Refs for stable column callbacks
   const handleEditRef = useRef<(record: WorkstationOps) => void>(() => {});
@@ -270,7 +289,9 @@ const WorkstationManagement: FC = () => {
     pageSize: 5,
     filters: {},
     queryFn: async (params) => {
-      const result = await workstationApi.list(params) as { data?: { list: WorkstationOps[]; total: number } };
+      const result = (await workstationApi.list(params)) as {
+        data?: { list: WorkstationOps[]; total: number };
+      };
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
   });
@@ -304,23 +325,26 @@ const WorkstationManagement: FC = () => {
     refreshData();
   }, [refreshData]);
 
-  const handleWorkstationModalOk = useCallback(async (values: Record<string, unknown>) => {
-    const submitValues = { ...values };
-    if (Array.isArray(submitValues.floorId)) {
-      submitValues.floorId = submitValues.floorId[submitValues.floorId.length - 1];
-    }
+  const handleWorkstationModalOk = useCallback(
+    async (values: Record<string, unknown>) => {
+      const submitValues = { ...values };
+      if (Array.isArray(submitValues.floorId)) {
+        submitValues.floorId = submitValues.floorId[submitValues.floorId.length - 1];
+      }
 
-    if (editingWorkstation) {
-      await workstationApi.update(editingWorkstation.id, submitValues);
-      showSuccessMessage("更新");
-    } else {
-      await workstationApi.create(submitValues);
-      showSuccessMessage("创建");
-    }
-    closeModal(workstationForm);
-    setModalVisible(false);
-    handleSuccess();
-  }, [editingWorkstation, closeModal, workstationForm, setModalVisible, handleSuccess]);
+      if (editingWorkstation) {
+        await workstationApi.update(editingWorkstation.id, submitValues);
+        showSuccessMessage("更新");
+      } else {
+        await workstationApi.create(submitValues);
+        showSuccessMessage("创建");
+      }
+      closeModal(workstationForm);
+      setModalVisible(false);
+      handleSuccess();
+    },
+    [editingWorkstation, closeModal, workstationForm, setModalVisible, handleSuccess]
+  );
 
   // Sync refs with current callbacks
   handleEditRef.current = (record: WorkstationOps) => {
@@ -328,11 +352,15 @@ const WorkstationManagement: FC = () => {
   };
   handleDeleteRef.current = (id: string) => handleDelete(id, handleSuccess);
 
-  const columns = useMemo(() => getWorkstationColumns({
-    handleEdit: (r) => handleEditRef.current(r),
-    handleDelete: (id) => handleDeleteRef.current(id),
-    getColumnSortOrder,
-  }), [getColumnSortOrder]);
+  const columns = useMemo(
+    () =>
+      getWorkstationColumns({
+        handleEdit: (r) => handleEditRef.current(r),
+        handleDelete: (id) => handleDeleteRef.current(id),
+        getColumnSortOrder,
+      }),
+    [getColumnSortOrder]
+  );
 
   const handleDeptChange = (deptId: string) => {
     loadUserOptions(deptId);
@@ -360,169 +388,213 @@ const WorkstationManagement: FC = () => {
   }, []); // 空依赖数组：buildingApi 是稳定的模块导入
 
   // 加载楼层列表（级联第二级）
-  const loadFloorsForCascader = useCallback(async (buildingId: string): Promise<CascaderOption[]> => {
-    try {
-      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
-      const floors = floorResult.data?.list || [];
-      return floors.map((f) => ({
-        value: f.id,
-        label: f.name || f.floorNo || "",
-        isLeaf: true,
-      }));
-    } catch (error) {
-      console.error("加载楼层列表失败:", error);
-      return [];
-    }
-  }, []);
+  const loadFloorsForCascader = useCallback(
+    async (buildingId: string): Promise<CascaderOption[]> => {
+      try {
+        const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
+        const floors = floorResult.data?.list || [];
+        return floors.map((f) => ({
+          value: f.id,
+          label: f.name || f.floorNo || "",
+          isLeaf: true,
+        }));
+      } catch (error) {
+        console.error("加载楼层列表失败:", error);
+        return [];
+      }
+    },
+    []
+  );
 
   // Cascader 懒加载处理函数
-  const handleCascaderLoadData = useCallback(async (selectedOptions: CascaderOption[]) => {
-    const targetOption = selectedOptions[selectedOptions.length - 1];
-    setLoadingCascader(true);
+  const handleCascaderLoadData = useCallback(
+    async (selectedOptions: CascaderOption[]) => {
+      const targetOption = selectedOptions[selectedOptions.length - 1];
+      setLoadingCascader(true);
 
-    try {
-      if (selectedOptions.length === 1) {
-        // 加载楼层（第二级）
-        const buildingId = targetOption.value;
-        const floors = await loadFloorsForCascader(buildingId);
-        // 直接修改 targetOption 的 children 属性
-        targetOption.children = floors;
-        // 触发重新渲染
-        setCascaderOptions([...cascaderOptions]);
+      try {
+        if (selectedOptions.length === 1) {
+          // 加载楼层（第二级）
+          const buildingId = targetOption.value;
+          const floors = await loadFloorsForCascader(buildingId);
+          // 直接修改 targetOption 的 children 属性
+          targetOption.children = floors;
+          // 触发重新渲染
+          setCascaderOptions([...cascaderOptions]);
+        }
+      } finally {
+        setLoadingCascader(false);
       }
-    } finally {
-      setLoadingCascader(false);
-    }
-  }, [cascaderOptions, loadFloorsForCascader]);
+    },
+    [cascaderOptions, loadFloorsForCascader]
+  );
 
   // 机构变化时加载楼宇列表
-  const handleOrgChange = useCallback(async (orgId: string) => {
-    // Phase 39: 同步 orgId 到顶层 state, 触发 useAliasByLocation 重新拉取 alias 映射部门
-    setWatchedOrgId(orgId || undefined);
-    if (!orgId) {
-      setCascaderOptions([]);
-      return;
-    }
+  const handleOrgChange = useCallback(
+    async (orgId: string) => {
+      // Phase 39: 同步 orgId 到顶层 state, 触发 useAliasByLocation 重新拉取 alias 映射部门
+      setWatchedOrgId(orgId || undefined);
+      if (!orgId) {
+        setCascaderOptions([]);
+        return;
+      }
 
-    setLoadingCascader(true);
-    try {
-      const buildings = await loadBuildingsForCascader(orgId);
-      setCascaderOptions(buildings);
-    } catch (error) {
-      console.error("加载楼宇列表失败:", error);
-      setCascaderOptions([]);
-    } finally {
-      setLoadingCascader(false);
-    }
-  }, [loadBuildingsForCascader]);
+      setLoadingCascader(true);
+      try {
+        const buildings = await loadBuildingsForCascader(orgId);
+        setCascaderOptions(buildings);
+      } catch (error) {
+        console.error("加载楼宇列表失败:", error);
+        setCascaderOptions([]);
+      } finally {
+        setLoadingCascader(false);
+      }
+    },
+    [loadBuildingsForCascader]
+  );
 
   // 预加载 Cascader 路径数据（用于编辑回显）
   // 入参 orgId 用于加载机构下所有楼宇，buildingId 用于定位需要附加 children 的目标楼宇
-  const preloadCascaderPath = useCallback(async (orgId: string, buildingId: string) => {
-    try {
-      const [buildings, floors] = await Promise.all([
-        loadBuildingsForCascader(orgId),
-        loadFloorsForCascader(buildingId),
-      ]);
-      const buildingWithFloors = buildings.map(b => ({
-        ...b,
-        children: b.value === buildingId ? floors : undefined,
-      }));
-      setCascaderOptions(buildingWithFloors);
-    } catch (error) {
-      console.error("预加载 Cascader 路径失败:", error);
-    }
-  }, [loadBuildingsForCascader, loadFloorsForCascader]);
+  const preloadCascaderPath = useCallback(
+    async (orgId: string, buildingId: string) => {
+      try {
+        const [buildings, floors] = await Promise.all([
+          loadBuildingsForCascader(orgId),
+          loadFloorsForCascader(buildingId),
+        ]);
+        const buildingWithFloors = buildings.map((b) => ({
+          ...b,
+          children: b.value === buildingId ? floors : undefined,
+        }));
+        setCascaderOptions(buildingWithFloors);
+      } catch (error) {
+        console.error("预加载 Cascader 路径失败:", error);
+      }
+    },
+    [loadBuildingsForCascader, loadFloorsForCascader]
+  );
 
   // 设置编辑模式表单值的辅助函数
   // ✅ 优化：移除动态导入，并行获取楼层和楼宇信息 (async-parallel, bundle-dynamic-imports)
   // 不再使用 setTimeout(0)；回显值通过 pendingCascaderWrite ref + cascaderOptions useEffect 协调
-  const setEditFormValues = useCallback(async (record: WorkstationOps) => {
-    // 所属用户兜底注入(2026-06-30,同 info-points):userOptions 是 pageSize:50 全集源,
-    // 当前工位的 userId 可能不在 → Select 显示 raw UUID。用 record.userName 注入临时 Option。
-    if (record.userId) {
-      ensureUser({ id: record.userId, username: record.userName });
-    }
-    if (!record.floorId) {
-      workstationForm.setFieldsValue(record);
-      // Phase 39: 同步编辑模式的 orgId 到顶层 state, 触发 useAliasByLocation
-      setWatchedOrgId(record.orgId || undefined);
-      return;
-    }
-
-    try {
-      // 先获取楼层信息来得到 buildingId
-      const floorResult = await floorApi.get(record.floorId);
-      const floor = floorResult.data;
-      const buildingId = floor?.buildingId;
-
-      if (!buildingId) {
+  const setEditFormValues = useCallback(
+    async (record: WorkstationOps) => {
+      // 所属用户兜底注入(2026-06-30,同 info-points):userOptions 是 pageSize:50 全集源,
+      // 当前工位的 userId 可能不在 → Select 显示 raw UUID。用 record.userName 注入临时 Option。
+      if (record.userId) {
+        ensureUser({ id: record.userId, username: record.userName });
+      }
+      if (!record.floorId) {
         workstationForm.setFieldsValue(record);
+        // Phase 39: 同步编辑模式的 orgId 到顶层 state, 触发 useAliasByLocation
+        setWatchedOrgId(record.orgId || undefined);
         return;
       }
 
-      // 暂存"等待 cascaderOptions 就绪后写入"的待办值
-      pendingCascaderWrite.current = { record, buildingId };
+      try {
+        // 先获取楼层信息来得到 buildingId
+        const floorResult = await floorApi.get(record.floorId);
+        const floor = floorResult.data;
+        const buildingId = floor?.buildingId;
 
-      // 并行获取楼宇信息（用于拿到 orgId）
-      const buildingResult = await buildingApi.get(buildingId);
-      const building = buildingResult.data;
-      const orgId = building?.orgId;
+        if (!buildingId) {
+          workstationForm.setFieldsValue(record);
+          return;
+        }
 
-      // 不管有没有 orgId 都要把 orgId 写入表单（来自 building.get 的 orgId）
-      // 这样编辑模式下"所属机构"字段才能正确回显
-      pendingCascaderWrite.current = {
-        record: { ...record, orgId },
-        buildingId,
-      };
+        // 暂存"等待 cascaderOptions 就绪后写入"的待办值
+        pendingCascaderWrite.current = { record, buildingId };
 
-      // Phase 39: 编辑模式 orgId 也要同步到顶层 state,
-      // 触发 useAliasByLocation 拉取该机构的 alias 映射部门
-      setWatchedOrgId(orgId || undefined);
+        // 并行获取楼宇信息（用于拿到 orgId）
+        const buildingResult = await buildingApi.get(buildingId);
+        const building = buildingResult.data;
+        const orgId = building?.orgId;
 
-      if (orgId) {
-        // 预加载 cascaderOptions；useEffect 会在选项就绪后写入表单
-        await preloadCascaderPath(orgId, buildingId);
-      } else {
-        // 没有 orgId 时直接写入表单（不依赖 cascaderOptions）
-        workstationForm.setFieldsValue({
-          ...record,
-          orgId,
-          floorId: [buildingId, record.floorId],
-        });
+        // 不管有没有 orgId 都要把 orgId 写入表单（来自 building.get 的 orgId）
+        // 这样编辑模式下"所属机构"字段才能正确回显
+        pendingCascaderWrite.current = {
+          record: { ...record, orgId },
+          buildingId,
+        };
+
+        // Phase 39: 编辑模式 orgId 也要同步到顶层 state,
+        // 触发 useAliasByLocation 拉取该机构的 alias 映射部门
+        setWatchedOrgId(orgId || undefined);
+
+        if (orgId) {
+          // 预加载 cascaderOptions；useEffect 会在选项就绪后写入表单
+          await preloadCascaderPath(orgId, buildingId);
+        } else {
+          // 没有 orgId 时直接写入表单（不依赖 cascaderOptions）
+          workstationForm.setFieldsValue({
+            ...record,
+            orgId,
+            floorId: [buildingId, record.floorId],
+          });
+          pendingCascaderWrite.current = null;
+        }
+      } catch (error) {
+        console.error("获取楼层或楼宇信息失败:", error);
+        workstationForm.setFieldsValue(record);
         pendingCascaderWrite.current = null;
       }
-    } catch (error) {
-      console.error("获取楼层或楼宇信息失败:", error);
-      workstationForm.setFieldsValue(record);
-      pendingCascaderWrite.current = null;
-    }
-  }, [preloadCascaderPath, workstationForm, ensureUser]);
+    },
+    [preloadCascaderPath, workstationForm, ensureUser]
+  );
 
   // 打开编辑模态框
-  const handleOpenModal = useCallback(async (record?: WorkstationOps) => {
-    if (record) {
-      handleEdit(record);
-      // 编辑模式触发部门下用户的异步加载(2026-06-30):除 ensureUser 兜底当前用户外,
-      // 仍以 deptId 加载该部门+子部门用户作为 Select 候选,根因修复。
-      if (record.deptId) {
-        loadUserOptions(record.deptId).catch(() => {/* hook 内部已 handleApiError */});
+  const handleOpenModal = useCallback(
+    async (record?: WorkstationOps) => {
+      if (record) {
+        handleEdit(record);
+        // 编辑模式触发部门下用户的异步加载(2026-06-30):除 ensureUser 兜底当前用户外,
+        // 仍以 deptId 加载该部门+子部门用户作为 Select 候选,根因修复。
+        if (record.deptId) {
+          loadUserOptions(record.deptId).catch(() => {
+            /* hook 内部已 handleApiError */
+          });
+        }
+        await setEditFormValues(record);
+      } else {
+        handleAdd();
+        setCascaderOptions([]);
+        // Phase 39: 新增模式无 orgId, 清空顶层 watchedOrgId 避免上一次编辑的 alias 数据残留
+        setWatchedOrgId(undefined);
+        workstationForm.setFieldsValue({ status: 0, type: defaultType });
       }
-      await setEditFormValues(record);
-    } else {
-      handleAdd();
-      setCascaderOptions([]);
-      // Phase 39: 新增模式无 orgId, 清空顶层 watchedOrgId 避免上一次编辑的 alias 数据残留
-      setWatchedOrgId(undefined);
-      workstationForm.setFieldsValue({ status: 0, type: 0 });
-    }
-    setModalVisible(true);
-  }, [setEditFormValues, handleEdit, handleAdd, workstationForm, setModalVisible, loadUserOptions]);
+      setModalVisible(true);
+    },
+    [
+      setEditFormValues,
+      handleEdit,
+      handleAdd,
+      workstationForm,
+      setModalVisible,
+      loadUserOptions,
+      defaultType,
+    ]
+  );
 
   const handleImportSuccess = useCallback(() => {
     refreshData();
     setImportVisible(false);
   }, [refreshData]);
+
+  // MISC-05: useCallback 化使 memo 组件避免不必要重渲
+  const handleApplyException = useCallback((workstationId: string) => {
+    window.open(
+      `/asset/reconciliation/exception-rules/new?workstationId=${workstationId}`,
+      "_blank"
+    );
+  }, []);
+
+  const handleDeviceChange = useCallback(() => {
+    refreshData();
+  }, [refreshData]);
+
+  const handleBadgeClick = useCallback((assetId: string, workstationId: string) => {
+    setDrawerState({ open: true, assetId, workstationId, activeTab: "summary" });
+  }, []);
 
   // 等待 cascaderOptions 就绪后写入编辑表单的 floorId / orgId
   // 替代 setEditFormValues 内 setTimeout(0) 的脆弱时序
@@ -537,7 +609,7 @@ const WorkstationManagement: FC = () => {
     }
 
     // cascaderOptions 必须包含目标 buildingId 才算就绪
-    const buildingOption = cascaderOptions.find(opt => opt.value === pending.buildingId);
+    const buildingOption = cascaderOptions.find((opt) => opt.value === pending.buildingId);
     if (!buildingOption) return;
 
     const { record, buildingId } = pending;
@@ -588,7 +660,9 @@ const WorkstationManagement: FC = () => {
           expandedRowKeys={expandedRowKeys}
           onExpand={(expanded, record) => {
             setExpandedRowKeys(
-              expanded ? Array.from(new Set([...expandedRowKeys, record.id])) : expandedRowKeys.filter((id) => id !== record.id)
+              expanded
+                ? Array.from(new Set([...expandedRowKeys, record.id]))
+                : expandedRowKeys.filter((id) => id !== record.id)
             );
           }}
           expandable={{
@@ -598,26 +672,14 @@ const WorkstationManagement: FC = () => {
                 {reconciliationVisible && (
                   <HealthCard
                     workstationId={record.id}
-                    onApplyException={() => {
-                      window.open(
-                        `/asset/reconciliation/exception-rules/new?workstationId=${record.id}`,
-                        "_blank"
-                      );
-                    }}
+                    onApplyException={() => handleApplyException(record.id)}
                   />
                 )}
                 <WorkstationDeviceTable
                   workstationId={record.id}
                   conflictTypeMap={assetConflictMap}
-                  onDeviceChange={refreshData}
-                  onBadgeClick={(assetId, conflictType) =>
-                    setDrawerState({
-                      open: true,
-                      assetId,
-                      workstationId: record.id,
-                      activeTab: "summary",
-                    })
-                  }
+                  onDeviceChange={handleDeviceChange}
+                  onBadgeClick={(assetId, _conflictType) => handleBadgeClick(assetId, record.id)}
                 />
               </div>
             ),
@@ -654,7 +716,7 @@ const WorkstationManagement: FC = () => {
         onFloorChange={handleFloorChangeForPlan}
         onPositionUpdate={handlePositionUpdate}
         onEdit={(ws) => {
-          handleOpenModal(workstations.find(w => w.id === ws.id));
+          handleOpenModal(workstations.find((w) => w.id === ws.id));
         }}
         onCloseFloorPlan={() => setViewMode("table")}
       />
@@ -662,16 +724,31 @@ const WorkstationManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
       <Content style={{ background: "#fff" }}>
         <StatisticsCards
           show={total > 10}
           items={[
             { title: "总工位数", value: statistics.total, prefix: <DesktopOutlined /> },
-            { title: "空闲", value: statistics.available, styles: { content: { color: "var(--theme-success, #52c41a)" } }, prefix: <CheckCircleOutlined /> },
-            { title: "占用", value: statistics.occupied, styles: { content: { color: "var(--theme-error, #ff4d4f)" } }, prefix: <StopOutlined /> },
-            { title: "维护", value: statistics.maintain, styles: { content: { color: "var(--theme-warning, #faad14)" } }, prefix: <StopOutlined /> },
+            {
+              title: "空闲",
+              value: statistics.available,
+              styles: { content: { color: "var(--theme-success, #2d8949)" } },
+              prefix: <CheckCircleOutlined />,
+            },
+            {
+              title: "占用",
+              value: statistics.occupied,
+              styles: { content: { color: "var(--theme-error, #ba3630)" } },
+              prefix: <StopOutlined />,
+            },
+            {
+              title: "维护",
+              value: statistics.maintain,
+              styles: { content: { color: "var(--theme-warning, #b07a20)" } },
+              prefix: <StopOutlined />,
+            },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>
@@ -699,10 +776,21 @@ const WorkstationManagement: FC = () => {
                 />
               </Form.Item>
               <Form.Item name="name" label="工位名称">
-                <Input placeholder="请输入工位名称" allowClear className="user-form-input" style={{ width: 150 }} />
+                <Input
+                  placeholder="请输入工位名称"
+                  allowClear
+                  className="user-form-input"
+                  style={{ width: 150 }}
+                />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+                <Select
+                  placeholder="请选择状态"
+                  allowClear
+                  className="user-form-input"
+                  style={{ width: 120 }}
+                  onSearch={() => {}}
+                >
                   {STATUS_OPTIONS.map((opt) => (
                     <Option key={opt.value} value={opt.value}>
                       {opt.label}
@@ -723,7 +811,11 @@ const WorkstationManagement: FC = () => {
               </Form.Item>
             </Form>
             <Space>
-              <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)} buttonStyle="solid">
+              <Radio.Group
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value)}
+                buttonStyle="solid"
+              >
                 <Radio.Button value="table">
                   <TableOutlined /> 表格
                 </Radio.Button>
@@ -739,29 +831,27 @@ const WorkstationManagement: FC = () => {
               </Button>
               {/* quick 260713-df0: 工位导入辅助 — 下载 sys_dept dept_name|code 映射表,
                   用户填 Excel 时不必再翻部门列表查 dept_code */}
-              <Button
-                icon={<DownloadOutlined />}
-                onClick={() => deptApi.exportMapping()}
-              >
+              <Button icon={<DownloadOutlined />} onClick={() => deptApi.exportMapping()}>
                 下载部门映射表
               </Button>
-              <Button icon={<ExportOutlined />} onClick={() => {
-                setExportFilters(buildSearchParams({ searchForm }));
-                setExportVisible(true);
-              }}>
+              <Button
+                icon={<ExportOutlined />}
+                onClick={() => {
+                  setExportFilters(buildSearchParams({ searchForm }));
+                  setExportVisible(true);
+                }}
+              >
                 导出
               </Button>
               {canListAlias && (
-                <Button
-                  icon={<SettingOutlined />}
-                  onClick={() => setAliasDrawerOpen(true)}
-                >
+                <Button icon={<SettingOutlined />} onClick={() => setAliasDrawerOpen(true)}>
                   映射
                 </Button>
               )}
               {selectedRowKeys.length > 0 && (
                 <Button
-                  icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  icon={<DeleteOutlined />}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
                 >
                   批量删除 ({selectedRowKeys.length})
@@ -806,9 +896,9 @@ const WorkstationManagement: FC = () => {
               style={{ marginTop: 12 }}
               title={
                 <span>
-                  useTableQuery (React Query) 已生效: 首页缓存共
-                  {" "}<strong>{reactQueryWorkstations.total}</strong> 条工位
-                  {" "}(companion pattern via React Query, 30s staleTime).
+                  useTableQuery (React Query) 已生效: 首页缓存共{" "}
+                  <strong>{reactQueryWorkstations.total}</strong> 条工位 (companion pattern via
+                  React Query, 30s staleTime).
                 </span>
               }
             />
@@ -819,6 +909,7 @@ const WorkstationManagement: FC = () => {
           open={modalVisible}
           form={workstationForm}
           editingWorkstation={editingWorkstation}
+          typeDict={typeDict}
           orgTreeData={orgTreeData}
           deptTreeData={deptTreeData}
           aliasList={aliasList}
@@ -834,10 +925,7 @@ const WorkstationManagement: FC = () => {
           }}
           onDeptChange={handleDeptChange}
         />
-        <LocationAliasDrawer
-          open={aliasDrawerOpen}
-          onClose={() => setAliasDrawerOpen(false)}
-        />
+        <LocationAliasDrawer open={aliasDrawerOpen} onClose={() => setAliasDrawerOpen(false)} />
         <ExcelImportLazy
           entityType="workstation"
           entityName="工位"
@@ -855,9 +943,7 @@ const WorkstationManagement: FC = () => {
         {/* R4 (Phase 45) — ReconciliationDrawer at page level (UI-SPEC "Both pages — at page level: render once") */}
         <ReconciliationDrawer
           open={drawerState.open}
-          onClose={() =>
-            setDrawerState((s) => ({ ...s, open: false, activeTab: "summary" }))
-          }
+          onClose={() => setDrawerState((s) => ({ ...s, open: false, activeTab: "summary" }))}
           selectedAssetId={drawerState.assetId}
           workstationId={drawerState.workstationId}
           activeTab={drawerState.activeTab}
@@ -869,4 +955,3 @@ const WorkstationManagement: FC = () => {
 };
 
 export default WorkstationManagement;
-

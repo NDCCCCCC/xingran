@@ -13,7 +13,7 @@ const DEFAULT_MEMORY_TTL = 30 * 60 * 1000;
 const DEFAULT_STORAGE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 /** localStorage 存储键前缀 */
-const DEFAULT_STORAGE_PREFIX = "dual_level_cache_";
+const DEFAULT_STORAGE_PREFIX = "dual_level_cache:v1";
 
 /** 定期清理间隔（5分钟） */
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
@@ -21,12 +21,28 @@ const CLEANUP_INTERVAL = 5 * 60 * 1000;
 /** 日志前缀 */
 const LOG_PREFIX = "[DualLevelCache]";
 
+/** requestIdleCallback 分片清理，每片处理条目数 */
+const CLEANUP_BATCH_SIZE = 10;
+
+/**
+ * 在浏览器空闲时段执行任务（requestIdleCallback 分片）
+ * fallback: setTimeout
+ */
+function runWhenIdle(callback: () => void): void {
+  if (typeof requestIdleCallback !== "undefined") {
+    requestIdleCallback(callback);
+  } else {
+    setTimeout(callback, 50);
+  }
+}
+
 // ==================== 类型定义 ====================
 
 interface CacheItem<T> {
   data: T;
   timestamp: number;
   expiresAt: number;
+  version?: number;
 }
 
 interface CacheConfig {
@@ -146,6 +162,7 @@ class StorageCache<T> {
         data,
         timestamp: now,
         expiresAt: now + this.ttl,
+        version: 1,
       };
       localStorage.setItem(this.getStorageKey(key), JSON.stringify(item));
     } catch (error) {
@@ -161,6 +178,12 @@ class StorageCache<T> {
       }
 
       const item: CacheItem<T> = JSON.parse(raw);
+
+      // Migration: v0 items (no version field) are incompatible — delete and re-fetch
+      if (!item.version || item.version < 1) {
+        this.delete(key);
+        return null;
+      }
 
       if (this.isExpired(item)) {
         this.delete(key);
@@ -200,20 +223,20 @@ class StorageCache<T> {
   }
 
   cleanup(): void {
-    try {
+    // requestIdleCallback 分片执行，避免大量 localStorage 操作阻塞主线程
+    const processBatch = (startIndex: number) => {
       const now = Date.now();
       const keys = Object.keys(localStorage);
+      let processed = 0;
+      let batchEnd = startIndex;
 
-      for (const storageKey of keys) {
-        if (!storageKey.startsWith(this.prefix)) {
-          continue;
-        }
+      for (let i = startIndex; i < keys.length && processed < CLEANUP_BATCH_SIZE; i++, batchEnd++) {
+        const storageKey = keys[i];
+        if (!storageKey.startsWith(this.prefix)) continue;
 
         try {
           const raw = localStorage.getItem(storageKey);
-          if (!raw) {
-            continue;
-          }
+          if (!raw) continue;
 
           const item: CacheItem<T> = JSON.parse(raw);
           if (now > item.expiresAt) {
@@ -223,7 +246,18 @@ class StorageCache<T> {
           // 损坏的条目
           localStorage.removeItem(storageKey);
         }
+        processed++;
       }
+
+      // 还有更多则调度下一片
+      if (batchEnd < keys.length) {
+        runWhenIdle(() => processBatch(batchEnd));
+      }
+    };
+
+    try {
+      // 第一片同步执行（测试环境需同步验证；生产环境有 requestIdleCallback）
+      processBatch(0);
     } catch (error) {
       console.warn(`${LOG_PREFIX} localStorage cleanup failed:`, error);
     }
@@ -393,7 +427,7 @@ export class DualLevelCache<T> {
     console.table({
       "Memory Hits": stats.memoryHits,
       "Storage Hits": stats.storageHits,
-      "Misses": stats.misses,
+      Misses: stats.misses,
       "Total Hits": stats.totalHits,
       "Total Requests": stats.totalRequests,
       "Hit Rate": stats.hitRate,

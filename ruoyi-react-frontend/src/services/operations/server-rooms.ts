@@ -11,19 +11,16 @@ export const serverRoomApi = {
     post("/ops/server-rooms", data),
 
   // 更新
-  update: (id: string, data: Partial<ServerRoom>) =>
-    post(`/ops/server-rooms/${id}/update`, data),
+  update: (id: string, data: Partial<ServerRoom>) => post(`/ops/server-rooms/${id}/update`, data),
 
   // 删除
   delete: (id: string) => post(`/ops/server-rooms/${id}/delete`),
 
   // 批量删除
-  batchDelete: (ids: string[]) =>
-    post("/ops/server-rooms/batch", { ids, action: "delete" }),
+  batchDelete: (ids: string[]) => post("/ops/server-rooms/batch", { ids, action: "delete" }),
 
   // 导出
-  export: (params: PageParams) =>
-    post("/ops/server-rooms/export", params),
+  export: (params: PageParams) => post("/ops/server-rooms/export", params),
 
   // 导入
   import: (file: File) => {
@@ -33,6 +30,5 @@ export const serverRoomApi = {
   },
 
   // 下载模板
-  downloadTemplate: () =>
-    post("/ops/server-rooms/template", {}),
+  downloadTemplate: () => post("/ops/server-rooms/template", {}),
 };

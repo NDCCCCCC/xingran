@@ -23,6 +23,8 @@ import {
   Col,
   Statistic,
   Descriptions,
+  Alert,
+  Spin,
   App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -39,12 +41,11 @@ import {
   ClockCircleOutlined,
   FolderOpenOutlined,
   FileTextOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
 import type { ConfigBackup } from "@/types";
 import type { DeviceBackupGroup, DiffLine } from "./types";
 import { useBackupData, useBackupDiff, useBackupModals } from "./hooks";
-import { post } from "@/lib/api";
+import { useRestoreTask } from "./hooks/useRestoreTask";
 import { batchExport } from "@/lib/api/networkApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
@@ -52,6 +53,7 @@ import { BatchExportModal } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { resolveSorter } from "@/hooks/useServerSort";
 import { formatDateTime } from "@/utils/datetime";
 
 const { Option } = Select;
@@ -70,11 +72,11 @@ const ConfigBackupPage: FC = () => {
   const [searchForm] = Form.useForm();
   const [selectedDeviceGroup, setSelectedDeviceGroup] = useState<DeviceBackupGroup | null>(null);
 
-const [batchModalVisible, setBatchModalVisible] = useState(false);
-const [batchExporting, setBatchExporting] = useState(false);
+  const [batchModalVisible, setBatchModalVisible] = useState(false);
+  const [batchExporting, setBatchExporting] = useState(false);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setPageSize, setTotal: _setTotal } = usePagination();
 
   // 服务端排序:field 与 columns.dataIndex 对齐(useServerSort 按 sorter.field 匹配)
   const sorterMetas = useMemo(
@@ -85,7 +87,12 @@ const [batchExporting, setBatchExporting] = useState(false);
     ],
     []
   );
-  const { orderByColumn, isAsc, handleTableChange: handleBackupSortChange, sortOrder: backupSortOrder } = useServerSort<DeviceBackupGroup>({
+  const {
+    orderByColumn,
+    isAsc: _isAsc, // v129-recheck WR-02: onChange 已改 resolveSorter 同步取值，hook state 不再消费
+    handleTableChange: handleBackupSortChange,
+    sortOrder: backupSortOrder,
+  } = useServerSort<DeviceBackupGroup>({
     sorterMetas,
   });
 
@@ -95,11 +102,15 @@ const [batchExporting, setBatchExporting] = useState(false);
     deviceGroups,
     statistics,
     loading,
-    total,
+    total: _total,
     loadDevices,
     loadBackups,
     loadStatistics,
-  } = useBackupData({ current: paginationProps.current ?? 1, pageSize: paginationProps.pageSize ?? 10, searchForm });
+  } = useBackupData({
+    current: paginationProps.current ?? 1,
+    pageSize: paginationProps.pageSize ?? 10,
+    searchForm,
+  });
 
   const {
     diffModalVisible,
@@ -121,8 +132,9 @@ const [batchExporting, setBatchExporting] = useState(false);
     versionListDrawerVisible,
     selectedBackup,
     selectedRestoreBackup,
-    selectedDeviceGroup: modalDeviceGroup,
+    selectedDeviceGroup: _modalDeviceGroup,
     backupContent,
+    restoreTaskId,
     openBackupModal,
     closeBackupModal,
     openRestoreModal,
@@ -140,9 +152,30 @@ const [batchExporting, setBatchExporting] = useState(false);
     },
   });
 
+  // Phase 93: 恢复任务轮询（restoreTaskId 非空时 3s 轮询，终态自动停止）
+  const { task: restoreTask } = useRestoreTask(restoreTaskId);
+
+  // 任务 result JSON 解析（sentLines/totalLines/hashMatched 展示用）
+  const restoreResult = useMemo(() => {
+    if (!restoreTask?.resultJson) {
+      return null;
+    }
+    try {
+      return JSON.parse(restoreTask.resultJson) as {
+        sentLines?: number;
+        totalLines?: number;
+        hashMatched?: boolean;
+        failedLine?: string;
+      };
+    } catch {
+      return null;
+    }
+  }, [restoreTask?.resultJson]);
+
   // 初始化加载
   useEffect(() => {
     Promise.all([loadBackups(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentional
   }, [paginationProps.current, paginationProps.pageSize, loadBackups, loadStatistics]);
 
   // 打开备份弹窗
@@ -181,7 +214,11 @@ const [batchExporting, setBatchExporting] = useState(false);
   };
 
   // 打开对比对话框
-  const handleOpenDiffModal = (group: DeviceBackupGroup, backup1?: ConfigBackup, backup2?: ConfigBackup) => {
+  const handleOpenDiffModal = (
+    group: DeviceBackupGroup,
+    backup1?: ConfigBackup,
+    backup2?: ConfigBackup
+  ) => {
     setSelectedDeviceGroup(group);
     if (group.backups.length < 2) {
       message.info("该设备只有一份备份，无法对比");
@@ -198,22 +235,19 @@ const [batchExporting, setBatchExporting] = useState(false);
     openContentDrawer(backup);
   };
 
-  // 恢复配置
+  // 恢复配置（版本列表抽屉入口——复用恢复 Modal 的异步进度流程，Phase 93）
   const handleRestore = (backup: ConfigBackup) => {
     Modal.confirm({
       title: "确认恢复配置",
-      content: `确定要恢复到版本 ${backup.version} 吗？`,
+      content: `确定要恢复到版本 ${backup.version} 吗？此操作将会覆盖设备当前配置！`,
       okText: "确认",
       cancelText: "取消",
       okType: "danger",
       onOk: async () => {
-        try {
-          await post(`/network/backups/${backup.id}/restore`, {});
-          message.success("恢复成功");
-          loadBackups();
-        } catch (error) {
-          message.error("恢复失败");
-        }
+        openRestoreModal(backup);
+        // v129-recheck WR-01: 显式传参——本闭包捕获的 confirmRestore 引用
+        // selectedRestoreBackup 旧值（null），无参调用会被 null 守卫静默短路
+        await confirmRestore(backup);
       },
     });
   };
@@ -247,74 +281,91 @@ const [batchExporting, setBatchExporting] = useState(false);
     else if (isSame) {
       const lines = side === "left" ? diffResult?.leftLines : diffResult?.rightLines;
       const prevLine = index > 0 ? lines![index - 1] : null;
-      const nextLine = index < (lines!.length - 1) ? lines![index + 1] : null;
-      if ((prevLine?.type === "removed" || prevLine?.type === "added" ||
-           nextLine?.type === "removed" || nextLine?.type === "added")) {
+      const nextLine = index < lines!.length - 1 ? lines![index + 1] : null;
+      if (
+        prevLine?.type === "removed" ||
+        prevLine?.type === "added" ||
+        nextLine?.type === "removed" ||
+        nextLine?.type === "added"
+      ) {
         backgroundColor = "#f5f5f5";
       }
     }
 
-    const textColor = isRemoved ? "#c92a2a" : isAdded ? "#2b7a41" : "var(--theme-text-tertiary, #8c8c8c)";
-    const contentColor = isRemoved ? "#c92a2a" : isAdded ? "#2b7a41" : "var(--theme-text-primary, #262626)";
+    const textColor = isRemoved
+      ? "#c92a2a"
+      : isAdded
+        ? "#2b7a41"
+        : "var(--theme-text-tertiary, #707068)";
+    const contentColor = isRemoved
+      ? "#c92a2a"
+      : isAdded
+        ? "#2b7a41"
+        : "var(--theme-text-primary, #262626)";
 
     if (isEmpty) {
       return (
         <div key={`${side}-${index}`} style={{ display: "flex", backgroundColor }}>
-          <div style={{
-            width: 50,
-            padding: "0 8px",
-            textAlign: "right",
-            color: "var(--theme-text-tertiary, #8c8c8c)",
-            userSelect: "none",
-            flexShrink: 0,
-            borderRight: "1px solid #e8e8e8",
-          }}>
-            {lineNum}{/* 批量导出 Modal */}
+          <div
+            style={{
+              width: 50,
+              padding: "0 8px",
+              textAlign: "right",
+              color: "var(--theme-text-tertiary, #707068)",
+              userSelect: "none",
+              flexShrink: 0,
+              borderRight: "1px solid #e8e8e8",
+            }}
+          >
+            {lineNum}
+            {/* 批量导出 Modal */}
 
-          <BatchExportModal
+            <BatchExportModal
+              visible={batchModalVisible}
 
-            visible={batchModalVisible}
+              onConfirm={handleBatchExport}
 
-            onConfirm={handleBatchExport}
+              onCancel={() => setBatchModalVisible(false)}
 
-            onCancel={() => setBatchModalVisible(false)}
-
-            loading={batchExporting}
-
-          />
-
-
+              loading={batchExporting}
+            />
           </div>
-          <div style={{
-            padding: "0 12px",
-            whiteSpace: "pre",
-            overflowX: "auto",
-            flex: 1,
-          }} />
+          <div
+            style={{
+              padding: "0 12px",
+              whiteSpace: "pre",
+              overflowX: "auto",
+              flex: 1,
+            }}
+          />
         </div>
       );
     }
 
     return (
       <div key={`${side}-${index}`} style={{ display: "flex", backgroundColor }}>
-        <div style={{
-          width: 50,
-          padding: "0 8px",
-          textAlign: "right",
-          color: textColor,
-          userSelect: "none",
-          flexShrink: 0,
-          borderRight: "1px solid #e8e8e8",
-        }}>
+        <div
+          style={{
+            width: 50,
+            padding: "0 8px",
+            textAlign: "right",
+            color: textColor,
+            userSelect: "none",
+            flexShrink: 0,
+            borderRight: "1px solid #e8e8e8",
+          }}
+        >
           {lineNum}
         </div>
-        <div style={{
-          padding: "0 12px",
-          whiteSpace: "pre",
-          overflowX: "auto",
-          color: contentColor,
-          flex: 1,
-        }}>
+        <div
+          style={{
+            padding: "0 12px",
+            whiteSpace: "pre",
+            overflowX: "auto",
+            color: contentColor,
+            flex: 1,
+          }}
+        >
           {line.content}
         </div>
       </div>
@@ -343,7 +394,9 @@ const [batchExporting, setBatchExporting] = useState(false);
       key: "backupCount",
       width: 100,
       render: (count: number) => (
-        <Tag color="blue" icon={<DatabaseOutlined />}>{count} 份</Tag>
+        <Tag color="blue" icon={<DatabaseOutlined />}>
+          {count} 份
+        </Tag>
       ),
     },
     {
@@ -352,8 +405,12 @@ const [batchExporting, setBatchExporting] = useState(false);
       width: 120,
       render: (_, record) => (
         <Space size="small">
-          <Tag color="blue" icon={<ClockCircleOutlined />}>{record.autoCount}</Tag>
-          <Tag color="green" icon={<SaveOutlined />}>{record.manualCount}</Tag>
+          <Tag color="blue" icon={<ClockCircleOutlined />}>
+            {record.autoCount}
+          </Tag>
+          <Tag color="green" icon={<SaveOutlined />}>
+            {record.manualCount}
+          </Tag>
         </Space>
       ),
     },
@@ -420,7 +477,7 @@ const [batchExporting, setBatchExporting] = useState(false);
       key: "backupType",
       width: 100,
       render: (backupType: string) => {
-        const option = BACKUP_TYPE_OPTIONS.find(o => o.value === backupType);
+        const option = BACKUP_TYPE_OPTIONS.find((o) => o.value === backupType);
         return <Tag color={backupType === "auto" ? "blue" : "green"}>{option?.label}</Tag>;
       },
     },
@@ -483,11 +540,7 @@ const [batchExporting, setBatchExporting] = useState(false);
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="备份总数"
-              value={statistics.total}
-              prefix={<DatabaseOutlined />}
-            />
+            <Statistic title="备份总数" value={statistics.total} prefix={<DatabaseOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
@@ -495,7 +548,7 @@ const [batchExporting, setBatchExporting] = useState(false);
             <Statistic
               title="自动备份"
               value={statistics.auto}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -505,40 +558,74 @@ const [batchExporting, setBatchExporting] = useState(false);
             <Statistic
               title="手动备份"
               value={statistics.manual}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<SaveOutlined />}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="涉及设备"
-              value={statistics.devices}
-              prefix={<HistoryOutlined />}
-            />
+            <Statistic title="涉及设备" value={statistics.devices} prefix={<HistoryOutlined />} />
           </Card>
         </Col>
       </Row>
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceName" label="设备名称">
-              <Input placeholder="请输入设备名称" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入设备名称"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="backupType" label="备份类型">
-              <Select placeholder="请选择备份类型" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
-                {BACKUP_TYPE_OPTIONS.map(opt => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              <Select
+                placeholder="请选择备份类型"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
+                {BACKUP_TYPE_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={() => { loadBackups(); loadStatistics(); }}>查询</Button>
-                <Button icon={<ReloadOutlined />} onClick={() => { loadBackups(); loadStatistics(); }}>刷新</Button>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  onClick={() => {
+                    loadBackups();
+                    loadStatistics();
+                  }}
+                >
+                  查询
+                </Button>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    loadBackups();
+                    loadStatistics();
+                  }}
+                >
+                  刷新
+                </Button>
               </Space>
             </Form.Item>
           </Form>
@@ -550,7 +637,9 @@ const [batchExporting, setBatchExporting] = useState(false);
               entityType="backups"
               entityName="配置备份"
               filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                  ([, v]) => v !== undefined && v !== null && v !== ""
+                )
               )}
               current={paginationProps?.current ?? 1}
               pageSize={paginationProps?.pageSize ?? 10}
@@ -572,13 +661,17 @@ const [batchExporting, setBatchExporting] = useState(false);
             handleBackupSortChange(pagination, _filters, sorter);
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
+            // v129-recheck WR-02: 闭包里的 orderByColumn/isAsc 是上一次渲染的
+            // 旧 state（useServerSort 文档点名的时序坑），首次点击发空、之后每次
+            // 发上一次的排序——改用 resolveSorter 同步解析本次事件的新值
+            const nextSort = resolveSorter(sorter, sorterMetas);
             const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
             const searchParams: Record<string, unknown> = {
               current: pagination.current ?? 1,
               pageSize: pagination.pageSize ?? 10,
-              ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+              ...(nextSort.orderByColumn ? nextSort : {}),
             };
-            Object.keys(formValues).forEach(key => {
+            Object.keys(formValues).forEach((key) => {
               const value = formValues[key];
               if (value !== undefined && value !== null && value !== "") {
                 searchParams[key] = value;
@@ -598,14 +691,19 @@ const [batchExporting, setBatchExporting] = useState(false);
         width={600}
       >
         <Form form={backupForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-          <Form.Item name="deviceIds" label="选择设备" rules={[{ required: true, message: "请选择设备" }]}>
+          <Form.Item
+            name="deviceIds"
+            label="选择设备"
+            rules={[{ required: true, message: "请选择设备" }]}
+          >
             <Select
               mode="multiple"
               placeholder="请选择要备份的设备"
               showSearch
               optionFilterProp="children"
-             onSearch={() => {}}>
-              {devices.map(device => (
+              onSearch={() => {}}
+            >
+              {devices.map((device) => (
                 <Option key={device.id} value={device.id}>
                   {device.deviceName} ({device.ipAddress})
                 </Option>
@@ -632,78 +730,156 @@ const [batchExporting, setBatchExporting] = useState(false);
           closeRestoreModal();
           setSelectedDeviceGroup(null);
         }}
-        footer={[
-          <Button key="cancel" onClick={() => { closeRestoreModal(); setSelectedDeviceGroup(null); }}>
-            取消
-          </Button>,
-          <Button key="confirm" type="primary" danger onClick={handleConfirmRestore}>
-            确认还原
-          </Button>,
-        ]}
+        footer={
+          restoreTaskId
+            ? [
+                <Button
+                  key="close"
+                  onClick={() => {
+                    closeRestoreModal();
+                    setSelectedDeviceGroup(null);
+                  }}
+                >
+                  关闭
+                </Button>,
+              ]
+            : [
+                <Button
+                  key="cancel"
+                  onClick={() => {
+                    closeRestoreModal();
+                    setSelectedDeviceGroup(null);
+                  }}
+                >
+                  取消
+                </Button>,
+                <Button key="confirm" type="primary" danger onClick={handleConfirmRestore}>
+                  确认还原
+                </Button>,
+              ]
+        }
         width={800}
       >
-        {selectedDeviceGroup && (
-          <div>
-            <Descriptions column={2} style={{ marginBottom: 16 }} bordered size="small">
-              <Descriptions.Item label="设备名称">{selectedDeviceGroup.deviceName}</Descriptions.Item>
-              <Descriptions.Item label="IP地址">{selectedDeviceGroup.ipAddress}</Descriptions.Item>
-              <Descriptions.Item label="备份总数">{selectedDeviceGroup.backupCount} 份</Descriptions.Item>
-              <Descriptions.Item label="已选版本">
-                <Tag color="blue">版本 {selectedRestoreBackup?.version}</Tag>
-              </Descriptions.Item>
-            </Descriptions>
-
-            <div style={{ marginBottom: 16 }}>
-              <Space>
-                <span>选择要还原的版本：</span>
-                <Select
-                  style={{ width: 400 }}
-                  value={selectedRestoreBackup?.id}
-                  onChange={(value) =>    {
-                    const backup = selectedDeviceGroup.backups.find(b => b.id === value);
-                    if (backup) {
-                      setSelectedDeviceGroup(selectedDeviceGroup);
-                      openRestoreModal(backup);
-                    }
-                  }}
-                  placeholder="请选择要还原的版本"
-                 onSearch={() => {}}>
-                  {selectedDeviceGroup.backups.map(backup => (
-                    <Option key={backup.id} value={backup.id}>
-                      <Space>
-                        <span>版本 {backup.version}</span>
-                        <Tag color={backup.backupType === "auto" ? "blue" : "green"}>
-                          {backup.backupType === "auto" ? "自动" : "手动"}
-                        </Tag>
-                        <span style={{ color: "var(--theme-text-tertiary, #999)" }}>{formatDateTime(backup.createdAt)}</span>
-                      </Space>
-                    </Option>
-                  ))}
-                </Select>
-              </Space>
-            </div>
-
-            {selectedRestoreBackup && (
-              <Card size="small" title="选定版本详情">
-                <Descriptions column={2} size="small">
-                  <Descriptions.Item label="版本号">{selectedRestoreBackup.version}</Descriptions.Item>
-                  <Descriptions.Item label="备份类型">
-                    <Tag color={selectedRestoreBackup.backupType === "auto" ? "blue" : "green"}>
-                      {selectedRestoreBackup.backupType === "auto" ? "自动备份" : "手动备份"}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="文件大小">
-                    {(selectedRestoreBackup.backupSize / 1024).toFixed(2)} KB
-                  </Descriptions.Item>
-                  <Descriptions.Item label="创建时间">{formatDateTime(selectedRestoreBackup.createdAt)}</Descriptions.Item>
-                  <Descriptions.Item label="创建人">{selectedRestoreBackup.createdBy}</Descriptions.Item>
-                  <Descriptions.Item label="变更原因" span={2}>
-                    {selectedRestoreBackup.changeReason || "-"}
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
+        {restoreTaskId ? (
+          // Phase 93: 异步恢复任务进度/结果（useRestoreTask 轮询驱动，D-19）
+          <Card size="small" title="恢复任务进度">
+            {restoreTask?.status === "failed" ? (
+              <Alert
+                type="error"
+                showIcon
+                message="恢复失败"
+                description={
+                  <div>
+                    {restoreTask.errorMessage && <div>错误信息：{restoreTask.errorMessage}</div>}
+                    {restoreResult?.failedLine && <div>失败行：{restoreResult.failedLine}</div>}
+                  </div>
+                }
+              />
+            ) : restoreTask?.status === "success" ? (
+              <Alert
+                type="success"
+                showIcon
+                message="恢复成功"
+                description={
+                  <div>
+                    <div>
+                      配置已下发 {restoreResult?.sentLines ?? restoreTask.sentLines ?? "-"} /{" "}
+                      {restoreResult?.totalLines ?? restoreTask.totalLines ?? "-"} 行
+                    </div>
+                    {restoreResult?.hashMatched === false && (
+                      <div style={{ color: "#faad14" }}>回读配置与备份存在差异，已记录警告</div>
+                    )}
+                  </div>
+                }
+              />
+            ) : (
+              <div style={{ textAlign: "center", padding: "24px 0" }}>
+                <Spin />
+                <div style={{ marginTop: 12 }}>
+                  {restoreTask?.status === "running" ? "配置下发中..." : "排队等待中..."}
+                </div>
+              </div>
             )}
-          </div>
+          </Card>
+        ) : (
+          selectedDeviceGroup && (
+            <div>
+              <Descriptions column={2} style={{ marginBottom: 16 }} bordered size="small">
+                <Descriptions.Item label="设备名称">
+                  {selectedDeviceGroup.deviceName}
+                </Descriptions.Item>
+                <Descriptions.Item label="IP地址">
+                  {selectedDeviceGroup.ipAddress}
+                </Descriptions.Item>
+                <Descriptions.Item label="备份总数">
+                  {selectedDeviceGroup.backupCount} 份
+                </Descriptions.Item>
+                <Descriptions.Item label="已选版本">
+                  <Tag color="blue">版本 {selectedRestoreBackup?.version}</Tag>
+                </Descriptions.Item>
+              </Descriptions>
+
+              <div style={{ marginBottom: 16 }}>
+                <Space>
+                  <span>选择要还原的版本：</span>
+                  <Select
+                    style={{ width: 400 }}
+                    value={selectedRestoreBackup?.id}
+                    onChange={(value) => {
+                      const backup = selectedDeviceGroup.backups.find((b) => b.id === value);
+                      if (backup) {
+                        setSelectedDeviceGroup(selectedDeviceGroup);
+                        openRestoreModal(backup);
+                      }
+                    }}
+                    placeholder="请选择要还原的版本"
+                    onSearch={() => {}}
+                  >
+                    {selectedDeviceGroup.backups.map((backup) => (
+                      <Option key={backup.id} value={backup.id}>
+                        <Space>
+                          <span>版本 {backup.version}</span>
+                          <Tag color={backup.backupType === "auto" ? "blue" : "green"}>
+                            {backup.backupType === "auto" ? "自动" : "手动"}
+                          </Tag>
+                          <span style={{ color: "var(--theme-text-tertiary, #999)" }}>
+                            {formatDateTime(backup.createdAt)}
+                          </span>
+                        </Space>
+                      </Option>
+                    ))}
+                  </Select>
+                </Space>
+              </div>
+
+              {selectedRestoreBackup && (
+                <Card size="small" title="选定版本详情">
+                  <Descriptions column={2} size="small">
+                    <Descriptions.Item label="版本号">
+                      {selectedRestoreBackup.version}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="备份类型">
+                      <Tag color={selectedRestoreBackup.backupType === "auto" ? "blue" : "green"}>
+                        {selectedRestoreBackup.backupType === "auto" ? "自动备份" : "手动备份"}
+                      </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="文件大小">
+                      {(selectedRestoreBackup.backupSize / 1024).toFixed(2)} KB
+                    </Descriptions.Item>
+                    <Descriptions.Item label="创建时间">
+                      {formatDateTime(selectedRestoreBackup.createdAt)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="创建人">
+                      {selectedRestoreBackup.createdBy}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="变更原因" span={2}>
+                      {selectedRestoreBackup.changeReason || "-"}
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              )}
+            </div>
+          )
         )}
       </Modal>
 
@@ -719,9 +895,13 @@ const [batchExporting, setBatchExporting] = useState(false);
         placement="right"
         size="large"
         open={versionListDrawerVisible}
-        onClose={() => { closeVersionListDrawer(); setSelectedDeviceGroup(null); }}
+        onClose={() => {
+          closeVersionListDrawer();
+          setSelectedDeviceGroup(null);
+        }}
         extra={
-          selectedDeviceGroup && selectedDeviceGroup.backups.length >= 2 && (
+          selectedDeviceGroup &&
+          selectedDeviceGroup.backups.length >= 2 && (
             <Button
               type="primary"
               icon={<DiffOutlined />}
@@ -738,9 +918,13 @@ const [batchExporting, setBatchExporting] = useState(false);
         {selectedDeviceGroup && (
           <div>
             <Descriptions column={3} style={{ marginBottom: 16 }} bordered size="small">
-              <Descriptions.Item label="设备名称">{selectedDeviceGroup.deviceName}</Descriptions.Item>
+              <Descriptions.Item label="设备名称">
+                {selectedDeviceGroup.deviceName}
+              </Descriptions.Item>
               <Descriptions.Item label="IP地址">{selectedDeviceGroup.ipAddress}</Descriptions.Item>
-              <Descriptions.Item label="备份总数">{selectedDeviceGroup.backupCount} 份</Descriptions.Item>
+              <Descriptions.Item label="备份总数">
+                {selectedDeviceGroup.backupCount} 份
+              </Descriptions.Item>
             </Descriptions>
 
             <Table
@@ -761,7 +945,9 @@ const [batchExporting, setBatchExporting] = useState(false);
         open={diffModalVisible}
         onCancel={closeDiffModal}
         footer={[
-          <Button key="close" onClick={closeDiffModal}>关闭</Button>,
+          <Button key="close" onClick={closeDiffModal}>
+            关闭
+          </Button>,
         ]}
         width={1400}
       >
@@ -772,16 +958,17 @@ const [batchExporting, setBatchExporting] = useState(false);
                 placeholder="选择第一个版本"
                 style={{ width: "100%" }}
                 value={compareBackup1?.id}
-                onChange={(value) =>    {
+                onChange={(value) => {
                   if (selectedDeviceGroup) {
-                    const backup = selectedDeviceGroup.backups.find(b => b.id === value);
+                    const backup = selectedDeviceGroup.backups.find((b) => b.id === value);
                     if (backup && compareBackup2) {
                       openDiffModal(backup, compareBackup2);
                     }
                   }
                 }}
-               onSearch={() => {}}>
-                {selectedDeviceGroup?.backups.map(backup => (
+                onSearch={() => {}}
+              >
+                {selectedDeviceGroup?.backups.map((backup) => (
                   <Option key={backup.id} value={backup.id}>
                     版本 {backup.version} - {formatDateTime(backup.createdAt)}
                   </Option>
@@ -796,16 +983,17 @@ const [batchExporting, setBatchExporting] = useState(false);
                 placeholder="选择第二个版本"
                 style={{ width: "100%" }}
                 value={compareBackup2?.id}
-                onChange={(value) =>    {
+                onChange={(value) => {
                   if (selectedDeviceGroup) {
-                    const backup = selectedDeviceGroup.backups.find(b => b.id === value);
+                    const backup = selectedDeviceGroup.backups.find((b) => b.id === value);
                     if (backup && compareBackup1) {
                       openDiffModal(compareBackup1, backup);
                     }
                   }
                 }}
-               onSearch={() => {}}>
-                {selectedDeviceGroup?.backups.map(backup => (
+                onSearch={() => {}}
+              >
+                {selectedDeviceGroup?.backups.map((backup) => (
                   <Option key={backup.id} value={backup.id}>
                     版本 {backup.version} - {formatDateTime(backup.createdAt)}
                   </Option>
@@ -816,28 +1004,39 @@ const [batchExporting, setBatchExporting] = useState(false);
         </div>
 
         {diffResult && (
-          <div style={{ height: 600, border: "1px solid #d9d9d9", borderRadius: 4, overflow: "hidden" }}>
+          <div
+            style={{
+              height: 600,
+              border: "1px solid #dbd7ce",
+              borderRadius: 4,
+              overflow: "hidden",
+            }}
+          >
             {/* 版本信息栏 */}
-            <div style={{ display: "flex", borderBottom: "1px solid #d9d9d9" }}>
-              <div style={{
-                flex: 1,
-                padding: "8px 16px",
-                background: "#f5f5f5",
-                borderRight: "1px solid #d9d9d9",
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--theme-text-primary, #262626)",
-              }}>
+            <div style={{ display: "flex", borderBottom: "1px solid #dbd7ce" }}>
+              <div
+                style={{
+                  flex: 1,
+                  padding: "8px 16px",
+                  background: "#f5f5f5",
+                  borderRight: "1px solid #dbd7ce",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--theme-text-primary, #262626)",
+                }}
+              >
                 {diffResult.oldVersion}
               </div>
-              <div style={{
-                flex: 1,
-                padding: "8px 16px",
-                background: "#f5f5f5",
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--theme-text-primary, #262626)",
-              }}>
+              <div
+                style={{
+                  flex: 1,
+                  padding: "8px 16px",
+                  background: "#f5f5f5",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--theme-text-primary, #262626)",
+                }}
+              >
                 {diffResult.newVersion}
               </div>
             </div>
@@ -852,7 +1051,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                   flex: 1,
                   overflow: "auto",
                   background: "#ffffff",
-                  borderRight: "1px solid #d9d9d9",
+                  borderRight: "1px solid #dbd7ce",
                   fontFamily: 'Consolas, "Courier New", monospace',
                   fontSize: 13,
                   lineHeight: "22px",
@@ -886,14 +1085,20 @@ const [batchExporting, setBatchExporting] = useState(false);
         title={
           <Space>
             <FileTextOutlined />
-            <span>配置内容 - {selectedBackup?.deviceName || ""} (版本 {selectedBackup?.version || "-"})</span>
+            <span>
+              配置内容 - {selectedBackup?.deviceName || ""} (版本 {selectedBackup?.version || "-"})
+            </span>
           </Space>
         }
         placement="right"
         size="large"
         open={contentDrawerVisible}
-        onClose={() => { closeContentDrawer(); }}>
-          <pre style={{
+        onClose={() => {
+          closeContentDrawer();
+        }}
+      >
+        <pre
+          style={{
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
             background: "#f5f5f5",
@@ -901,10 +1106,11 @@ const [batchExporting, setBatchExporting] = useState(false);
             borderRadius: 4,
             maxHeight: "calc(100vh - 100px)",
             overflow: "auto",
-          }}>
-            {backupContent}
-          </pre>
-        </Drawer>
+          }}
+        >
+          {backupContent}
+        </pre>
+      </Drawer>
     </div>
   );
 };

@@ -19,13 +19,7 @@ export const StatisticsDrawer: React.FC<StatisticsDrawerProps> = ({
   statistics,
 }) => {
   return (
-    <Drawer
-      title="阅读统计"
-      placement="right"
-      size="default"
-      open={visible}
-      onClose={onClose}
-    >
+    <Drawer title="阅读统计" placement="right" size="default" open={visible} onClose={onClose}>
       {loading ? (
         <div className="flex justify-center py-8">
           <Spin />
@@ -47,7 +41,14 @@ export const StatisticsDrawer: React.FC<StatisticsDrawerProps> = ({
               value={statistics.readRate}
               precision={1}
               suffix="%"
-              styles={{ content: { color: statistics.readRate >= 50 ? "var(--theme-success, #3f8600)" : "var(--theme-error, #cf1322)" } }}
+              styles={{
+                content: {
+                  color:
+                    statistics.readRate >= 50
+                      ? "var(--theme-success, #3f8600)"
+                      : "var(--theme-error, #cf1322)",
+                },
+              }}
             />
           </Card>
         </div>

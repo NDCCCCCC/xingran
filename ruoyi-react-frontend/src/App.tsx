@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import zhCN from "antd/locale/zh_CN";
 import { useMenuStore } from "@/store/menuStore";
 import { routeConfigManager } from "@/router/routeConfigManager";
 import { ThemeProvider } from "@/design-system/components/ThemeProvider";
@@ -25,7 +24,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const { allMenus } = useMenuStore();
+  const allMenus = useMenuStore((s) => s.allMenus);
 
   // 初始化路由配置管理器
   // 只在菜单数量变化时重新初始化，避免循环渲染
@@ -33,22 +32,28 @@ function App() {
     if (allMenus.length > 0) {
       routeConfigManager.initialize(allMenus);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: allMenus.length is intentionally the only trigger; routeConfigManager.initialize is stable and should not re-run on menu metadata changes
   }, [allMenus.length]);
 
   return (
     <QueryClientProvider client={queryClient}>
       {/*
-        AntdThemeBridge 读取 settingsStore 中的 customColors / mode / density
-        并把 AntD ThemeConfig 喂给 ConfigProvider。这是解决"AntD 组件硬编码蓝色"
-        （如工位管理页面表格/卡片/平面图 Radio.Group）跟随用户主色变化的关键。
+        AntdThemeBridge 读取 settingsStore 中的 mode / density，
+        并把 ruoyiBrand 品牌令牌喂给 AntD ThemeConfig。
+        这是解决"AntD 组件硬编码蓝色"（如工位管理页面表格/卡片/平面图
+        Radio.Group）的关键；v1.22 Phase 65 起主色固定为品牌绿 #156031。
         locale 通过 AntdThemeBridge 内部直接传给 ConfigProvider。
       */}
       <AntdThemeBridge>
         <ConfigProvider>
           <ThemeProvider>
             <LayoutProvider>
-              <Router>
+              {/* basename 取 Vite 的 base（VITE_BASE），dev 时 '/' 等价于未设；生产为 '/ruoyi/'
+                  时让 React Router 内部所有 <Link>/navigate/history 都自动加此前缀，
+                  与 nginx 子路径部署模型一致。 */}
+              <Router
+                basename={import.meta.env.BASE_URL !== "/" ? import.meta.env.BASE_URL : undefined}
+              >
                 <DynamicRoutes />
               </Router>
             </LayoutProvider>

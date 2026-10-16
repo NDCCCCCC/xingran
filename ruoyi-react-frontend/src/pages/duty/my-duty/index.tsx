@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Card,
   Row,
@@ -11,41 +11,57 @@ import {
   Empty,
   Typography,
   Space,
-} from 'antd';
+} from "antd";
 import {
   CalendarOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   CoffeeOutlined,
   UnorderedListOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import dayjs from 'dayjs';
-import { formatDateTime } from '@/utils/datetime';
-import { createSorter } from '@/utils/tableHelpers';
+} from "@ant-design/icons";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
+import dayjs from "dayjs";
+import { formatDateTime } from "@/utils/datetime";
+import { createSorter } from "@/utils/tableHelpers";
 import {
   getMyDutyStats,
   getDutyScheduleList,
   type MyDutyStats,
   type DutySchedule,
-} from '@/lib/dutyApi';
+} from "@/lib/dutyApi";
 import {
   getMyPendingWorkOrders,
   type WorkOrder,
   WorkOrderStatus,
   WorkOrderPriority,
-} from '@/lib/workorderApi';
-import { useAuthStore } from '@/store/authStore';
-import { usePagination } from '@/hooks/usePagination';
+} from "@/lib/workorderApi";
+import { useAuthStore } from "@/store/authStore";
+import { usePagination } from "@/hooks/usePagination";
 
 const { Text } = Typography;
 const { Option } = Select;
 
-import type { FC } from 'react';
+// 模块级静态映射：避免 render 回调内每行每格重建（Phase m76-js-misc 6.3）
+const PRIORITY_CONFIG: Record<WorkOrderPriority, { text: string; color: string }> = {
+  [WorkOrderPriority.Urgent]: { text: "紧急", color: "red" },
+  [WorkOrderPriority.High]: { text: "高", color: "orange" },
+  [WorkOrderPriority.Medium]: { text: "中", color: "blue" },
+  [WorkOrderPriority.Low]: { text: "低", color: "default" },
+};
+
+const STATUS_CONFIG: Record<WorkOrderStatus, { text: string; color: string }> = {
+  [WorkOrderStatus.Pending]: { text: "待处理", color: "orange" },
+  [WorkOrderStatus.Processing]: { text: "处理中", color: "blue" },
+  [WorkOrderStatus.Completed]: { text: "已完成", color: "green" },
+  [WorkOrderStatus.Closed]: { text: "已关闭", color: "default" },
+  [WorkOrderStatus.Rejected]: { text: "已拒绝", color: "red" },
+};
+
+import type { FC } from "react";
 
 const MyDutyPage: FC = () => {
   const [form] = Form.useForm();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
 
   // 统计数据
   const [stats, setStats] = useState<MyDutyStats | null>(null);
@@ -70,7 +86,7 @@ const MyDutyPage: FC = () => {
       const data = await getMyDutyStats();
       setStats(data.data || null);
     } catch (error) {
-      console.error('加载值班统计失败', error);
+      console.error("加载值班统计失败", error);
     } finally {
       setStatsLoading(false);
     }
@@ -84,7 +100,7 @@ const MyDutyPage: FC = () => {
       setWorkOrders(data.data?.list ?? []);
       setWorkOrdersTotal(data.data?.total ?? 0);
     } catch (error) {
-      console.error('加载待办工单失败', error);
+      console.error("加载待办工单失败", error);
       // 即使失败也设置为空数组，避免显示undefined
       setWorkOrders([]);
       setWorkOrdersTotal(0);
@@ -102,14 +118,14 @@ const MyDutyPage: FC = () => {
         current: page ?? paginationProps.current,
         pageSize: size ?? paginationProps.pageSize,
         userId: user?.id,
-        startDate: values.dateRange?.[0]?.format('YYYY-MM-DD'),
-        endDate: values.dateRange?.[1]?.format('YYYY-MM-DD'),
+        startDate: values.dateRange?.[0]?.format("YYYY-MM-DD"),
+        endDate: values.dateRange?.[1]?.format("YYYY-MM-DD"),
         dutyType: values.dutyType,
       });
       setSchedules(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
     } catch (error) {
-      console.error('加载值班记录失败', error);
+      console.error("加载值班记录失败", error);
     } finally {
       setLoading(false);
     }
@@ -119,38 +135,51 @@ const MyDutyPage: FC = () => {
     loadStats();
     loadWorkOrders();
     loadSchedules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadSchedules is render-defined; re-run on pagination change
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 搜索
   const handleSearch = () => {
-    setCurrent(1);
-    loadSchedules();
+    const newPage = 1;
+    const newPageSize = paginationProps.pageSize;
+    setCurrent(newPage);
+    loadSchedules(newPage, newPageSize); // pass explicit args — avoids stale closure capture of paginationProps
   };
 
   // 分页变化
   const handleTableChange = (pagination: TablePaginationConfig) => {
-    setCurrent(pagination.current ?? 1);
-    setPageSize(pagination.pageSize ?? 10);
-    loadSchedules();
+    const newCurrent = pagination.current ?? 1;
+    const newPageSize = pagination.pageSize ?? 10;
+    setCurrent(newCurrent);
+    setPageSize(newPageSize);
+    loadSchedules(newCurrent, newPageSize); // pass explicit args — avoids stale closure capture of paginationProps
   };
 
   // 获取值班类型颜色
   const getDutyTypeColor = (type: string) => {
     switch (type) {
-      case 'weekday': return 'blue';
-      case 'weekend': return 'orange';
-      case 'holiday': return 'red';
-      default: return 'default';
+      case "weekday":
+        return "blue";
+      case "weekend":
+        return "orange";
+      case "holiday":
+        return "red";
+      default:
+        return "default";
     }
   };
 
   // 获取值班类型文本
   const getDutyTypeText = (type: string) => {
     switch (type) {
-      case 'weekday': return '工作日';
-      case 'weekend': return '周末';
-      case 'holiday': return '节假日';
-      default: return type;
+      case "weekday":
+        return "工作日";
+      case "weekend":
+        return "周末";
+      case "holiday":
+        return "节假日";
+      default:
+        return type;
     }
   };
 
@@ -165,126 +194,113 @@ const MyDutyPage: FC = () => {
   // 待办工单表格列定义
   const workOrderColumns: ColumnsType<WorkOrder> = [
     {
-      title: '工单编号',
-      dataIndex: 'workOrderNo',
-      key: 'workOrderNo',
+      title: "工单编号",
+      dataIndex: "workOrderNo",
+      key: "workOrderNo",
       width: 150,
       ellipsis: true,
-      sorter: createSorter<WorkOrder>('workOrderNo', 'string'),
+      sorter: createSorter<WorkOrder>("workOrderNo", "string"),
     },
     {
-      title: '工单标题',
-      dataIndex: 'title',
-      key: 'title',
+      title: "工单标题",
+      dataIndex: "title",
+      key: "title",
       ellipsis: true,
-      sorter: createSorter<WorkOrder>('title', 'string'),
+      sorter: createSorter<WorkOrder>("title", "string"),
     },
     {
-      title: '优先级',
-      dataIndex: 'priority',
-      key: 'priority',
+      title: "优先级",
+      dataIndex: "priority",
+      key: "priority",
       width: 100,
-      sorter: createSorter<WorkOrder>('priority', 'string'),
+      sorter: createSorter<WorkOrder>("priority", "string"),
       render: (priority: WorkOrderPriority) => {
-        const priorityMap: Record<WorkOrderPriority, { text: string; color: string }> = {
-          [WorkOrderPriority.Urgent]: { text: '紧急', color: 'red' },
-          [WorkOrderPriority.High]: { text: '高', color: 'orange' },
-          [WorkOrderPriority.Medium]: { text: '中', color: 'blue' },
-          [WorkOrderPriority.Low]: { text: '低', color: 'default' },
-        };
-        const config = priorityMap[priority] || priorityMap[WorkOrderPriority.Low];
+        const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG[WorkOrderPriority.Low];
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 100,
-      sorter: createSorter<WorkOrder>('status', 'string'),
+      sorter: createSorter<WorkOrder>("status", "string"),
       render: (status: WorkOrderStatus) => {
-        const statusMap: Record<WorkOrderStatus, { text: string; color: string }> = {
-          [WorkOrderStatus.Pending]: { text: '待处理', color: 'orange' },
-          [WorkOrderStatus.Processing]: { text: '处理中', color: 'blue' },
-          [WorkOrderStatus.Completed]: { text: '已完成', color: 'green' },
-          [WorkOrderStatus.Closed]: { text: '已关闭', color: 'default' },
-          [WorkOrderStatus.Rejected]: { text: '已拒绝', color: 'red' },
-        };
-        const config = statusMap[status] || statusMap[WorkOrderStatus.Pending];
+        const config = STATUS_CONFIG[status] || STATUS_CONFIG[WorkOrderStatus.Pending];
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 180,
-      sorter: createSorter<WorkOrder>('createdAt', 'date'),
-      render: (date: string) => formatDateTime(date, 'YYYY-MM-DD HH:mm'),
+      sorter: createSorter<WorkOrder>("createdAt", "date"),
+      render: (date: string) => formatDateTime(date, "YYYY-MM-DD HH:mm"),
     },
   ];
 
   // 值班记录表格列定义
   const scheduleColumns: ColumnsType<DutySchedule> = [
     {
-      title: '值班日期',
-      dataIndex: 'scheduleDate',
-      key: 'scheduleDate',
+      title: "值班日期",
+      dataIndex: "scheduleDate",
+      key: "scheduleDate",
       width: 110,
-      sorter: createSorter<DutySchedule>('scheduleDate', 'date'),
-      render: (date: string) => formatDateTime(date, 'MM-DD'),
+      sorter: createSorter<DutySchedule>("scheduleDate", "date"),
+      render: (date: string) => formatDateTime(date, "MM-DD"),
     },
     {
-      title: '星期',
-      key: 'weekday',
+      title: "星期",
+      key: "weekday",
       width: 70,
       render: (_: unknown, record: DutySchedule) => {
         const weekday = dayjs(record.scheduleDate).day();
-        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+        const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
         return `周${weekdays[weekday]}`;
       },
     },
     {
-      title: '值班池',
-      dataIndex: ['pool', 'poolName'],
-      key: 'poolName',
+      title: "值班池",
+      dataIndex: ["pool", "poolName"],
+      key: "poolName",
       ellipsis: true,
-      sorter: createSorter<DutySchedule>('poolName', 'string'),
+      sorter: createSorter<DutySchedule>("poolName", "string"),
     },
     {
-      title: '类型',
-      dataIndex: 'dutyType',
-      key: 'dutyType',
+      title: "类型",
+      dataIndex: "dutyType",
+      key: "dutyType",
       width: 80,
-      sorter: createSorter<DutySchedule>('dutyType', 'string'),
-      render: (type: string) => (
-        <Tag color={getDutyTypeColor(type)}>{getDutyTypeText(type)}</Tag>
-      ),
+      sorter: createSorter<DutySchedule>("dutyType", "string"),
+      render: (type: string) => <Tag color={getDutyTypeColor(type)}>{getDutyTypeText(type)}</Tag>,
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
-      sorter: createSorter<DutySchedule>('status', 'number'),
+      sorter: createSorter<DutySchedule>("status", "number"),
       render: (status: number) => getStatusTag(status),
     },
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: "24px" }}>
       {/* 统计卡片区域 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
         <Col xs={12} sm={6} lg={6}>
           <Card loading={statsLoading}>
             <Statistic
               title="今日状态"
               value={stats?.isOnDutyToday ? "值班中" : "休息"}
               prefix={stats?.isOnDutyToday ? <ClockCircleOutlined /> : <CoffeeOutlined />}
-              styles={{ content: {
-                color: stats?.isOnDutyToday ? '#3f8600' : '#8c8c8c',
-                fontSize: '20px'
-              } }}
+              styles={{
+                content: {
+                  color: stats?.isOnDutyToday ? "#3f8600" : "#707068",
+                  fontSize: "20px",
+                },
+              }}
             />
           </Card>
         </Col>
@@ -296,7 +312,7 @@ const MyDutyPage: FC = () => {
               value={stats?.thisMonthCount || 0}
               suffix="次"
               prefix={<CalendarOutlined />}
-              styles={{ content: { color: '#1890ff', fontSize: '20px' } }}
+              styles={{ content: { color: "#337ab0", fontSize: "20px" } }}
             />
           </Card>
         </Col>
@@ -308,7 +324,7 @@ const MyDutyPage: FC = () => {
               value={stats?.totalCount || 0}
               suffix="次"
               prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: '#722ed1', fontSize: '20px' } }}
+              styles={{ content: { color: "#722ed1", fontSize: "20px" } }}
             />
           </Card>
         </Col>
@@ -316,19 +332,19 @@ const MyDutyPage: FC = () => {
         <Col xs={12} sm={6} lg={6}>
           <Card loading={statsLoading}>
             <div>
-              <Text type="secondary" style={{ fontSize: '14px' }}>下次值班</Text>
-              <div style={{ marginTop: '8px' }}>
+              <Text type="secondary" style={{ fontSize: "14px" }}>
+                下次值班
+              </Text>
+              <div style={{ marginTop: "8px" }}>
                 {stats?.nextDutyDate ? (
                   <Space>
-                    <span style={{ fontSize: '18px', fontWeight: 500 }}>
-                      {formatDateTime(stats.nextDutyDate, 'MM-DD')}
+                    <span style={{ fontSize: "18px", fontWeight: 500 }}>
+                      {formatDateTime(stats.nextDutyDate, "MM-DD")}
                     </span>
-                    {stats.nextDutyPoolName && (
-                      <Tag color="blue">{stats.nextDutyPoolName}</Tag>
-                    )}
+                    {stats.nextDutyPoolName && <Tag color="blue">{stats.nextDutyPoolName}</Tag>}
                   </Space>
                 ) : (
-                  <span style={{ color: '#8c8c8c' }}>暂无排班</span>
+                  <span style={{ color: "#707068" }}>暂无排班</span>
                 )}
               </div>
             </div>
@@ -348,16 +364,14 @@ const MyDutyPage: FC = () => {
               </Space>
             }
             extra={
-              workOrdersTotal > 0 ? (
-                <Tag color="orange">{workOrdersTotal} 条待处理</Tag>
-              ) : null
+              workOrdersTotal > 0 ? <Tag color="orange">{workOrdersTotal} 条待处理</Tag> : null
             }
           >
             {workOrders.length === 0 && !workOrdersLoading ? (
               <Empty
                 description="暂无待办工单"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{ margin: '40px 0' }}
+                style={{ margin: "40px 0" }}
               />
             ) : (
               <Table
@@ -382,7 +396,7 @@ const MyDutyPage: FC = () => {
               </Space>
             }
           >
-            <div style={{ marginBottom: '12px' }}>
+            <div style={{ marginBottom: "12px" }}>
               <Form form={form} layout="inline">
                 <Form.Item name="dutyType" style={{ marginBottom: 0 }}>
                   <Select
@@ -390,7 +404,8 @@ const MyDutyPage: FC = () => {
                     allowClear
                     style={{ width: 100 }}
                     onChange={handleSearch}
-                   onSearch={() => {}}>
+                    onSearch={() => {}}
+                  >
                     <Option value="weekday">工作日</Option>
                     <Option value="weekend">周末</Option>
                     <Option value="holiday">节假日</Option>
@@ -407,7 +422,7 @@ const MyDutyPage: FC = () => {
               pagination={{
                 ...paginationProps,
                 pageSize: 10,
-                size: 'small',
+                size: "small",
                 showSizeChanger: false,
               }}
               onChange={handleTableChange}

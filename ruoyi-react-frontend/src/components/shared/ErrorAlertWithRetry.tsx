@@ -66,12 +66,7 @@ function extractErrorMessage(error: Error | ApiErrorShape | null | undefined): s
     response?: { data?: { message?: string; msg?: string } };
   };
 
-  return (
-    e.message
-    ?? e.response?.data?.message
-    ?? e.response?.data?.msg
-    ?? "未知错误"
-  );
+  return e.message ?? e.response?.data?.message ?? e.response?.data?.msg ?? "未知错误";
 }
 
 const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry, description }) => {
@@ -124,9 +119,10 @@ const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry, des
         type="error"
         message={alertMessage}
         showIcon
-        description={description ?? (code === undefined || code === 1006 || code === 500
-          ? undefined
-          : `错误码:${code}`)}
+        description={
+          description ??
+          (code === undefined || code === 1006 || code === 500 ? undefined : `错误码:${code}`)
+        }
       />
       {onRetry && (
         <Button icon={<ReloadOutlined />} onClick={onRetry}>

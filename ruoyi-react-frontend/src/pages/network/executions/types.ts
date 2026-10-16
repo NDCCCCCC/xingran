@@ -3,7 +3,12 @@
  * 配置执行页面类型定义
  */
 
-import type { NetworkDevice, ConfigTemplate, ConfigExecution, ConfigExecutionDetail } from "@/types";
+import type {
+  NetworkDevice,
+  ConfigTemplate,
+  ConfigExecution,
+  ConfigExecutionDetail,
+} from "@/types";
 
 /** 执行状态 */
 export type ExecutionStatus = "pending" | "running" | "success" | "failed";

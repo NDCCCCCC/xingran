@@ -75,62 +75,74 @@ export function useWallDrawing(options: UseWallDrawingOptions = {}) {
   const [previewPoint, setPreviewPoint] = useState<Point | null>(null);
   const [disableAngleSnap, setDisableAngleSnap] = useState(false);
 
-  const snapPoint = useCallback((point: Point, origin?: Point): Point => {
-    let result = snapEnabled ? snapToGrid(point, gridSize) : point;
+  const snapPoint = useCallback(
+    (point: Point, origin?: Point): Point => {
+      let result = snapEnabled ? snapToGrid(point, gridSize) : point;
 
-    if (origin && angleSnapEnabled && !disableAngleSnap) {
-      result = applyAngleSnap(result, origin);
-    }
+      if (origin && angleSnapEnabled && !disableAngleSnap) {
+        result = applyAngleSnap(result, origin);
+      }
 
-    return result;
-  }, [gridSize, snapEnabled, angleSnapEnabled, disableAngleSnap]);
+      return result;
+    },
+    [gridSize, snapEnabled, angleSnapEnabled, disableAngleSnap]
+  );
 
-  const startDrawing = useCallback((point: Point, existingPoints?: Point[]) => {
-    const snappedPoint = snapPoint(point);
+  const startDrawing = useCallback(
+    (point: Point, existingPoints?: Point[]) => {
+      const snappedPoint = snapPoint(point);
 
-    setIsDrawing(true);
+      setIsDrawing(true);
 
-    if (existingPoints && existingPoints.length > 0) {
-      setDrawPoints(existingPoints);
+      if (existingPoints && existingPoints.length > 0) {
+        setDrawPoints(existingPoints);
+        setPreviewPoint(snappedPoint);
+        onPointsChange?.(existingPoints);
+      } else {
+        setDrawPoints([snappedPoint]);
+        setPreviewPoint(snappedPoint);
+        onPointsChange?.([snappedPoint]);
+      }
+    },
+    [snapPoint, onPointsChange]
+  );
+
+  const addPoint = useCallback(
+    (point: Point) => {
+      if (!isDrawing || drawPoints.length === 0) {
+        return;
+      }
+
+      const lastPoint = drawPoints[drawPoints.length - 1];
+      const snappedPoint = snapPoint(point, lastPoint);
+
+      if (distance(lastPoint, snappedPoint) < MIN_DRAW_DISTANCE) {
+        return;
+      }
+
+      const newPoints = [...drawPoints, snappedPoint];
+      setDrawPoints(newPoints);
       setPreviewPoint(snappedPoint);
-      onPointsChange?.(existingPoints);
-    } else {
-      setDrawPoints([snappedPoint]);
+
+      onPointsChange?.(newPoints);
+    },
+    [isDrawing, drawPoints, snapPoint, onPointsChange]
+  );
+
+  const updatePreview = useCallback(
+    (point: Point, shiftKey?: boolean) => {
+      if (!isDrawing) {
+        return;
+      }
+
+      setDisableAngleSnap(!!shiftKey);
+
+      const lastPoint = drawPoints[drawPoints.length - 1];
+      const snappedPoint = snapPoint(point, lastPoint);
       setPreviewPoint(snappedPoint);
-      onPointsChange?.([snappedPoint]);
-    }
-  }, [snapPoint, onPointsChange]);
-
-  const addPoint = useCallback((point: Point) => {
-    if (!isDrawing || drawPoints.length === 0) {
-      return;
-    }
-
-    const lastPoint = drawPoints[drawPoints.length - 1];
-    const snappedPoint = snapPoint(point, lastPoint);
-
-    if (distance(lastPoint, snappedPoint) < MIN_DRAW_DISTANCE) {
-      return;
-    }
-
-    const newPoints = [...drawPoints, snappedPoint];
-    setDrawPoints(newPoints);
-    setPreviewPoint(snappedPoint);
-
-    onPointsChange?.(newPoints);
-  }, [isDrawing, drawPoints, snapPoint, onPointsChange]);
-
-  const updatePreview = useCallback((point: Point, shiftKey?: boolean) => {
-    if (!isDrawing) {
-      return;
-    }
-
-    setDisableAngleSnap(!!shiftKey);
-
-    const lastPoint = drawPoints[drawPoints.length - 1];
-    const snappedPoint = snapPoint(point, lastPoint);
-    setPreviewPoint(snappedPoint);
-  }, [isDrawing, drawPoints, snapPoint]);
+    },
+    [isDrawing, drawPoints, snapPoint]
+  );
 
   const finishDrawing = useCallback(() => {
     if (!isDrawing || drawPoints.length < 2) {

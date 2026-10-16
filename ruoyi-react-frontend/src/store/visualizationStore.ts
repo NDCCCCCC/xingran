@@ -109,17 +109,20 @@ export const useVisualizationStore = create<VisualizationState>()(
       setViewLevel: (level) => set({ viewLevel: level }),
 
       // 地图操作
-      setMapCenter: (center) => set((state) => ({
-        mapState: { ...state.mapState, center }
-      })),
+      setMapCenter: (center) =>
+        set((state) => ({
+          mapState: { ...state.mapState, center },
+        })),
 
-      setMapZoom: (zoom) => set((state) => ({
-        mapState: { ...state.mapState, zoom }
-      })),
+      setMapZoom: (zoom) =>
+        set((state) => ({
+          mapState: { ...state.mapState, zoom },
+        })),
 
-      setShowLevel: (showLevel) => set((state) => ({
-        mapState: { ...state.mapState, showLevel }
-      })),
+      setShowLevel: (showLevel) =>
+        set((state) => ({
+          mapState: { ...state.mapState, showLevel },
+        })),
 
       // 选择实体
       selectCity: (cityCode) => set({ selectedCity: cityCode }),
@@ -130,12 +133,13 @@ export const useVisualizationStore = create<VisualizationState>()(
 
       selectWorkstationOps: (workstation) => set({ selectedWorkstationOps: workstation }),
 
-      clearSelection: () => set({
-        selectedCity: null,
-        selectedBuilding: null,
-        selectedFloor: null,
-        selectedWorkstationOps: null,
-      }),
+      clearSelection: () =>
+        set({
+          selectedCity: null,
+          selectedBuilding: null,
+          selectedFloor: null,
+          selectedWorkstationOps: null,
+        }),
 
       // 相机操作
       setCameraPosition: (position) => set({ cameraPosition: position }),
@@ -145,9 +149,10 @@ export const useVisualizationStore = create<VisualizationState>()(
       setTransitioning: (isTransitioning) => set({ isTransitioning }),
 
       // 筛选条件
-      updateFilters: (newFilters) => set((state) => ({
-        filters: { ...state.filters, ...newFilters }
-      })),
+      updateFilters: (newFilters) =>
+        set((state) => ({
+          filters: { ...state.filters, ...newFilters },
+        })),
 
       resetFilters: () => set({ filters: DEFAULT_FILTERS }),
 

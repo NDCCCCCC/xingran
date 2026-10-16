@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系统菜单管理页面
  * System Menu Management Page
  */
@@ -39,8 +39,13 @@ import IconSelect from "@/components/IconSelect";
 import { formatDateTime } from "@/utils/datetime";
 
 // 导入提取的模块
-import { MENU_TYPE_OPTIONS, MENU_STATUS_OPTIONS, getMenuIcon, getMenuTypeTag, DEFAULT_FORM_VALUES } from "./constants";
-import { flattenTree, buildParentOptions, renderTreeData, renderMenuName, type ParentOption } from "./utils";
+import {
+  MENU_TYPE_OPTIONS,
+  MENU_STATUS_OPTIONS,
+  getMenuTypeTag,
+  DEFAULT_FORM_VALUES,
+} from "./constants";
+import { renderTreeData, renderMenuName } from "./utils";
 import { useMenuData, useMenuActions } from "./hooks";
 
 const { Option } = Select;
@@ -94,9 +99,7 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
       dataIndex: "visible",
       key: "visible",
       render: (visible) => (
-        <Tag color={visible === 1 ? "success" : "default"}>
-          {visible === 1 ? "显示" : "隐藏"}
-        </Tag>
+        <Tag color={visible === 1 ? "success" : "default"}>{visible === 1 ? "显示" : "隐藏"}</Tag>
       ),
     },
     {
@@ -104,9 +107,7 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
       dataIndex: "status",
       key: "status",
       render: (status) => (
-        <Tag color={status === 0 ? "success" : "error"}>
-          {status === 0 ? "正常" : "停用"}
-        </Tag>
+        <Tag color={status === 0 ? "success" : "error"}>{status === 0 ? "正常" : "停用"}</Tag>
       ),
     },
     {
@@ -120,16 +121,13 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
       key: "action",
       render: (_: unknown, record: Menu) => (
         <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
           <Button
             type="link"
-            icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
+            icon={<DeleteOutlined />}
+            style={{ color: "var(--theme-error, #ba3630)" }}
             onClick={() => handleDeleteConfirm(record)}
           >
             删除
@@ -154,8 +152,8 @@ const MenuManagement: FC = () => {
   // 使用操作管理 Hook
   const {
     editingMenu,
-    cascadeDelete,
-    setCascadeDelete,
+    cascadeDelete: _cascadeDelete,
+    setCascadeDelete: _setCascadeDelete,
     handleAdd,
     handleEdit,
     handleDeleteConfirm,
@@ -174,6 +172,7 @@ const MenuManagement: FC = () => {
   // 初始化加载
   useEffect(() => {
     loadMenus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
 
   // 搜索
@@ -230,11 +229,7 @@ const MenuManagement: FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="总菜单数"
-              value={statistics.total}
-              prefix={<MenuOutlined />}
-            />
+            <Statistic title="总菜单数" value={statistics.total} prefix={<MenuOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
@@ -242,7 +237,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="目录数量"
               value={statistics.directories}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<FolderOutlined />}
             />
           </Card>
@@ -252,7 +247,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="菜单数量"
               value={statistics.menus}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<FileOutlined />}
             />
           </Card>
@@ -271,15 +266,30 @@ const MenuManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="menuName" label="菜单名称">
               <Input placeholder="请输入菜单名称" />
             </Form.Item>
             <Form.Item name="status" label="菜单状态">
-              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
-                {MENU_STATUS_OPTIONS.map(opt => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              <Select
+                placeholder="请选择状态"
+                style={{ width: 120 }}
+                allowClear
+                onSearch={() => {}}
+              >
+                {MENU_STATUS_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
                 ))}
               </Select>
             </Form.Item>
@@ -298,7 +308,8 @@ const MenuManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error, #ba3630)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -342,11 +353,7 @@ const MenuManagement: FC = () => {
           rowSelection={{
             selectedRowKeys,
             onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as string[]),
-            selections: [
-              Table.SELECTION_ALL,
-              Table.SELECTION_INVERT,
-              Table.SELECTION_NONE,
-            ],
+            selections: [Table.SELECTION_ALL, Table.SELECTION_INVERT, Table.SELECTION_NONE],
           }}
           expandable={{
             defaultExpandAllRows: true,
@@ -369,10 +376,7 @@ const MenuManagement: FC = () => {
         <Form form={editForm} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="parentId"
-                label="上级菜单"
-              >
+              <Form.Item name="parentId" label="上级菜单">
                 <TreeSelect
                   style={{ width: "100%" }}
                   styles={{ popup: { root: { maxHeight: 400, overflow: "auto" } } }}
@@ -390,8 +394,10 @@ const MenuManagement: FC = () => {
                 rules={[{ required: true, message: "请选择菜单类型" }]}
               >
                 <Select placeholder="请选择菜单类型" onSearch={() => {}}>
-                  {MENU_TYPE_OPTIONS.map(opt => (
-                    <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                  {MENU_TYPE_OPTIONS.map((opt) => (
+                    <Option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -447,7 +453,12 @@ const MenuManagement: FC = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="visible" label="显示状态" valuePropName="checked" initialValue={true}>
+              <Form.Item
+                name="visible"
+                label="显示状态"
+                valuePropName="checked"
+                initialValue={true}
+              >
                 <Switch checkedChildren="显示" unCheckedChildren="隐藏" />
               </Form.Item>
             </Col>
@@ -468,4 +479,3 @@ const MenuManagement: FC = () => {
 };
 
 export default MenuManagement;
-

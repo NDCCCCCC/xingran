@@ -8,7 +8,6 @@
  */
 
 import { post } from "../api";
-import type { BaseResponse } from "@/types/base";
 
 export interface HeatmapCell {
   deviceId: string;

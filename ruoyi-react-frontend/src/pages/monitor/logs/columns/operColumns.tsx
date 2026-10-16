@@ -6,7 +6,12 @@ import type { ColumnsType } from "antd/es/table";
 import { EyeOutlined } from "@ant-design/icons";
 import ActionButtons from "@/components/shared/ActionButtons";
 import type { OperLog } from "../types";
-import { getBusinessTypeLabel, renderRequestMethodTag, renderLogStatusTag, formatLocalTime } from "../utils";
+import {
+  getBusinessTypeLabel,
+  renderRequestMethodTag,
+  renderLogStatusTag,
+  formatLocalTime,
+} from "../utils";
 import type { SortOrder } from "@/hooks/useServerSort";
 
 interface GetOperLogColumnsParams {

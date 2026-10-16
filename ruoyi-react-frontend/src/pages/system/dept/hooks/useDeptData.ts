@@ -3,7 +3,7 @@
  * 部门数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import type { Department } from "@/types";
 import { post, get } from "@/lib/api";
 import type { DeptStatistics, DeptUser, ParentOption } from "../types";
@@ -41,7 +41,9 @@ export function useDeptData(): UseDeptDataReturn {
   const loadDepartments = useCallback(async (searchParams?: Record<string, unknown>) => {
     setLoading(true);
     try {
-      const result = await post("/system/departments/tree", searchParams || {}) as { data: Department[] };
+      const result = (await post("/system/departments/tree", searchParams || {})) as {
+        data: Department[];
+      };
       const deptData = result.data || [];
       setDepartments(deptData);
 
@@ -70,7 +72,7 @@ export function useDeptData(): UseDeptDataReturn {
   const loadDeptUsers = useCallback(async (deptId: string) => {
     setLoadingUsers(true);
     try {
-      const result = await get(`/system/departments/${deptId}/users`) as { data: DeptUser[] };
+      const result = (await get(`/system/departments/${deptId}/users`)) as { data: DeptUser[] };
       setDeptUsers(result.data || []);
     } catch (error) {
       console.error("加载部门用户失败:", error);

@@ -21,7 +21,11 @@ export interface UseTemplateModalsReturn extends TemplateModalState {
 
   openModal: (record?: ConfigTemplate, editForm?: FormInstance<unknown>) => void;
   closeModal: (editForm?: FormInstance<unknown>) => void;
-  handleCreate: (editingTemplate: ConfigTemplate | null, editForm: FormInstance<unknown>, onSuccess: () => void) => Promise<void>;
+  handleCreate: (
+    editingTemplate: ConfigTemplate | null,
+    editForm: FormInstance<unknown>,
+    onSuccess: () => void
+  ) => Promise<void>;
   handleDelete: (id: string, onSuccess: () => void) => Promise<void>;
   handleBatchDelete: (selectedRowKeys: React.Key[], onSuccess: () => void) => Promise<void>;
   handlePreview: (id: string) => Promise<void>;
@@ -46,10 +50,12 @@ export function useTemplateModals(): UseTemplateModalsReturn {
     } else {
       message.error(defaultMessage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const handleSuccess = useCallback((msg: string) => {
     message.success(msg);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const openModal = useCallback((record?: ConfigTemplate, editForm?: FormInstance<unknown>) => {
@@ -76,7 +82,11 @@ export function useTemplateModals(): UseTemplateModalsReturn {
   }, []);
 
   const handleCreate = useCallback(
-    async (editingTemplate: ConfigTemplate | null, editForm: FormInstance<unknown>, onSuccess: () => void) => {
+    async (
+      editingTemplate: ConfigTemplate | null,
+      editForm: FormInstance<unknown>,
+      onSuccess: () => void
+    ) => {
       try {
         const formValues = await editForm.validateFields();
         const values = formValues as Record<string, unknown> & { variables?: string };
@@ -131,18 +141,24 @@ export function useTemplateModals(): UseTemplateModalsReturn {
         handleApiError(error, "批量删除失败");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [handleSuccess, handleApiError]
   );
 
-  const handlePreview = useCallback(async (id: string) => {
-    try {
-      const result = await post(`/network/templates/${id}/preview`, {}) as { data?: { content?: string } };
-      setPreviewContent(result.data?.content || "");
-      setPreviewVisible(true);
-    } catch (error) {
-      handleApiError(error, "预览失败");
-    }
-  }, [handleApiError]);
+  const handlePreview = useCallback(
+    async (id: string) => {
+      try {
+        const result = (await post(`/network/templates/${id}/preview`, {})) as {
+          data?: { content?: string };
+        };
+        setPreviewContent(result.data?.content || "");
+        setPreviewVisible(true);
+      } catch (error) {
+        handleApiError(error, "预览失败");
+      }
+    },
+    [handleApiError]
+  );
 
   const handleClone = useCallback(
     async (id: string, onSuccess: () => void) => {
@@ -157,15 +173,20 @@ export function useTemplateModals(): UseTemplateModalsReturn {
     [handleSuccess, handleApiError]
   );
 
-  const handleGetVariables = useCallback(async (id: string) => {
-    try {
-      const result = await post(`/network/templates/${id}/variables`, {}) as { data?: { variables?: Record<string, unknown> } };
-      setTemplateVariables(result.data?.variables || {});
-      setVariablesModalVisible(true);
-    } catch (error) {
-      handleApiError(error, "获取变量失败");
-    }
-  }, [handleApiError]);
+  const handleGetVariables = useCallback(
+    async (id: string) => {
+      try {
+        const result = (await post(`/network/templates/${id}/variables`, {})) as {
+          data?: { variables?: Record<string, unknown> };
+        };
+        setTemplateVariables(result.data?.variables || {});
+        setVariablesModalVisible(true);
+      } catch (error) {
+        handleApiError(error, "获取变量失败");
+      }
+    },
+    [handleApiError]
+  );
 
   return {
     editModalVisible,

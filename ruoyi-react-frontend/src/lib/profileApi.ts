@@ -1,9 +1,5 @@
 import { get, post, put, upload } from "./api";
-import type {
-  UserProfile,
-  UpdateProfileRequest,
-  ChangePasswordRequest,
-} from "@/types";
+import type { UserProfile, UpdateProfileRequest, ChangePasswordRequest } from "@/types";
 import type { BackendUserPreferences } from "@/types/config";
 
 // ==================== 个人信息 API ====================
@@ -36,7 +32,10 @@ export async function changePassword(data: ChangePasswordRequest): Promise<{ mes
  * 上传头像
  */
 export async function uploadAvatar(file: File): Promise<{ avatar: string; message: string }> {
-  const response = await upload<{ avatar: string; message: string }>("/system/profile/avatar", file);
+  const response = await upload<{ avatar: string; message: string }>(
+    "/system/profile/avatar",
+    file
+  );
   return response.data!;
 }
 
@@ -55,7 +54,9 @@ export async function getUserPreferences(): Promise<BackendUserPreferences> {
  * 更新用户个人设置
  * 注意：后端接收的是 BackendUserPreferences 格式（扁平结构）
  */
-export async function updateUserPreferences(data: BackendUserPreferences): Promise<{ message: string }> {
+export async function updateUserPreferences(
+  data: BackendUserPreferences
+): Promise<{ message: string }> {
   const response = await put<{ message: string }>("/system/settings/preferences", data);
   return response.data!;
 }

@@ -11,9 +11,7 @@
  * 注意:src/pages/monitor/job/utils.tsx 的 formatDuration 是毫秒级(定时任务执行耗时),
  * 本函数是秒级(MAC 停留时长),职责分离。
  */
-export function formatDurationSeconds(
-  seconds: number | null | undefined
-): string {
+export function formatDurationSeconds(seconds: number | null | undefined): string {
   if (seconds == null || !Number.isFinite(seconds) || seconds <= 0) return "0s";
   const sec = Math.floor(seconds);
   const days = Math.floor(sec / 86400);

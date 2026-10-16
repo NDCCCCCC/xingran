@@ -2,6 +2,8 @@
  * 楼层管理页面常量
  */
 
+import { NORMAL_STOP_OPTIONS } from "@/constants/status";
+
 // 视图模式
 export type ViewMode = "table" | "card";
 export type PageMode = "list" | "editor";
@@ -23,11 +25,8 @@ export const DEFAULT_FLOOR_PLAN_CONFIG = {
   GRID_SIZE: 20,
 } as const;
 
-// 状态选项
-export const STATUS_OPTIONS = [
-  { label: "正常", value: 0 },
-  { label: "停用", value: 1 },
-] as const;
+// 状态选项（Phase 69 DICT-03: 共享常量别名引用，本地导出名不变；对齐 models.FloorStatus）
+export const STATUS_OPTIONS = NORMAL_STOP_OPTIONS;
 
 // 表单状态默认值
 export const DEFAULT_FORM_VALUES = {

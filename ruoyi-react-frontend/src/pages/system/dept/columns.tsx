@@ -35,7 +35,9 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
           <ApartmentOutlined />
           {text}
           {record.accessible === false && (
-            <Tag color="default" style={{ fontSize: "12px", marginLeft: 4 }}>无权限</Tag>
+            <Tag color="default" style={{ fontSize: "12px", marginLeft: 4 }}>
+              无权限
+            </Tag>
           )}
         </Space>
       ),
@@ -55,23 +57,29 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
       title: "联系电话",
       dataIndex: "phone",
       key: "phone",
-      render: (phone) => phone ? (
-        <Space>
-          <PhoneOutlined />
-          {phone}
-        </Space>
-      ) : "-",
+      render: (phone) =>
+        phone ? (
+          <Space>
+            <PhoneOutlined />
+            {phone}
+          </Space>
+        ) : (
+          "-"
+        ),
     },
     {
       title: "邮箱",
       dataIndex: "email",
       key: "email",
-      render: (email) => email ? (
-        <Space>
-          <MailOutlined />
-          {email}
-        </Space>
-      ) : "-",
+      render: (email) =>
+        email ? (
+          <Space>
+            <MailOutlined />
+            {email}
+          </Space>
+        ) : (
+          "-"
+        ),
     },
     {
       title: "显示顺序",

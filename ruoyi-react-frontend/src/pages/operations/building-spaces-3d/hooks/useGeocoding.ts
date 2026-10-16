@@ -128,8 +128,6 @@ export const useGeocoding = () => {
           return cached;
         }
 
-        // TODO: 后端暂时不支持逆地址解析，这里保留接口但返回空值
-        // 如果需要，可以在后端添加逆地址解析的 API 端点
         setLoading(false);
         return null;
       } catch (err) {

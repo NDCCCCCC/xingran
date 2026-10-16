@@ -19,7 +19,9 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { workstationApi, type DeptOption } from "@/lib/opsApi";
 import { queryKeys } from "@/lib/queryKeys";
 
-export function useAliasByLocation(locationId: string | undefined | null): UseQueryResult<DeptOption[]> {
+export function useAliasByLocation(
+  locationId: string | undefined | null
+): UseQueryResult<DeptOption[]> {
   return useQuery({
     queryKey: queryKeys.locationAlias.byLocation(locationId ?? ""),
     queryFn: async () => {
@@ -27,7 +29,7 @@ export function useAliasByLocation(locationId: string | undefined | null): UseQu
       return await workstationApi.deptOptions(locationId);
     },
     enabled: !!locationId,
-    staleTime: 5 * 60 * 1000,   // 5 min,与 useDeptTree 对齐
+    staleTime: 5 * 60 * 1000, // 5 min,与 useDeptTree 对齐
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });

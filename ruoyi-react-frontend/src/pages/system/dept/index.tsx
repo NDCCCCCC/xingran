@@ -17,7 +17,7 @@ import { getDeptColumns } from "./columns";
 import { DeptEditModal } from "./modals";
 import { STATUS_OPTIONS } from "./constants";
 import { renderTreeData } from "./utils";
-import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 
 import { post } from "@/lib/api";
@@ -59,7 +59,8 @@ const DepartmentManagement: FC = () => {
   useEffect(() => {
     if (departments?.length > 0) {
       const treeData = renderTreeData(departments);
-      const rootKeys = treeData.map(d => d.key);
+      const rootKeys = treeData.map((d) => d.key);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional expansion on data load
       setExpandedRowKeys(rootKeys);
     } else {
       setExpandedRowKeys([]);
@@ -97,14 +98,17 @@ const DepartmentManagement: FC = () => {
       // 收窄到局部 const,避免 setState 闭包内 record.leaderName 仍为 string|undefined
       const leaderId: string = record.leader;
       const nickname: string = record.leaderName || "";
-      setDeptUsers(prev =>
-        prev.find(u => u.id === leaderId)
+      setDeptUsers((prev) =>
+        prev.find((u) => u.id === leaderId)
           ? prev
-          : [...prev, {
-              id: leaderId,
-              username: record.leaderUsername || record.leaderName || "未命名用户",
-              nickname,
-            }]
+          : [
+              ...prev,
+              {
+                id: leaderId,
+                username: record.leaderUsername || record.leaderName || "未命名用户",
+                nickname,
+              },
+            ]
       );
     }
   };
@@ -195,11 +199,7 @@ const DepartmentManagement: FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={8}>
           <Card>
-            <Statistic
-              title="总部门数"
-              value={statistics.total}
-              prefix={<ApartmentOutlined />}
-            />
+            <Statistic title="总部门数" value={statistics.total} prefix={<ApartmentOutlined />} />
           </Card>
         </Col>
         <Col span={8}>
@@ -217,7 +217,7 @@ const DepartmentManagement: FC = () => {
             <Statistic
               title="子部门"
               value={statistics.subLevel}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<ApartmentOutlined />}
             />
           </Card>
@@ -239,7 +239,12 @@ const DepartmentManagement: FC = () => {
               <Input placeholder="请输入部门名称" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
+              <Select
+                placeholder="请选择状态"
+                style={{ width: 120 }}
+                allowClear
+                onSearch={() => {}}
+              >
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -288,7 +293,7 @@ const DepartmentManagement: FC = () => {
               if (expanded) {
                 setExpandedRowKeys([...expandedRowKeys, recordKey]);
               } else {
-                setExpandedRowKeys(expandedRowKeys.filter(k => k !== recordKey));
+                setExpandedRowKeys(expandedRowKeys.filter((k) => k !== recordKey));
               }
             },
             childrenColumnName: "children",
@@ -309,7 +314,7 @@ const DepartmentManagement: FC = () => {
         onLeaderChange={handleLeaderChange}
       />
 
-      <ExcelImport
+      <ExcelImportLazy
         entityType="department"
         entityName="部门"
         templateUrl="/api/v1/system/departments/template"

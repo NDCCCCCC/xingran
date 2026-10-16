@@ -45,7 +45,7 @@ export interface DepartmentTreeSelectProps extends Omit<TreeSelectProps, "treeDa
   value?: string;
   onChange?: (value: string) => void;
   departments?: SimpleDept[];
-  treeData?: TreeNode[];  // 直接传递已转换的 TreeSelect 格式数据
+  treeData?: TreeNode[]; // 直接传递已转换的 TreeSelect 格式数据
   placeholder?: string;
   allowClear?: boolean;
   disabled?: boolean;
@@ -61,7 +61,7 @@ function getFirstLevelKeysFromDepartments(departments: SimpleDept[]): string[] {
   if (!departments || departments.length === 0) {
     return [];
   }
-  return departments.map(dept => dept.id);
+  return departments.map((dept) => dept.id);
 }
 
 /**
@@ -71,7 +71,7 @@ function getFirstLevelKeysFromTreeData(treeData: TreeNode[]): string[] {
   if (!treeData || treeData.length === 0) {
     return [];
   }
-  return treeData.map(node => node.key);
+  return treeData.map((node) => node.key);
 }
 
 /**
@@ -97,8 +97,8 @@ export function DepartmentTreeSelect({
 }: DepartmentTreeSelectProps) {
   // 优先使用 treeData（已转换的格式），否则使用 departments 并通过 toFullPathTree 转换。
   // startFromLevel=2 复现旧全路径转换函数的 slice(1) 行为, 保证 UI 文案不变。
-  const finalTreeData = treeData ||
-    (departments ? toFullPathTree(departments, { startFromLevel: 2 }) : []);
+  const finalTreeData =
+    treeData || (departments ? toFullPathTree(departments, { startFromLevel: 2 }) : []);
 
   // 获取默认展开的 keys
   let defaultExpandedKeys: string[] = [];
@@ -134,7 +134,7 @@ export interface DepartmentTreeSelectWithTopProps extends Omit<TreeSelectProps, 
   value?: string;
   onChange?: (value: string) => void;
   departments?: SimpleDept[];
-  treeData?: TreeNode[];  // 直接传递已转换的 TreeSelect 格式数据
+  treeData?: TreeNode[]; // 直接传递已转换的 TreeSelect 格式数据
   placeholder?: string;
   allowClear?: boolean;
   disabled?: boolean;
@@ -161,8 +161,8 @@ export function DepartmentTreeSelectWithTop({
   ...restProps
 }: DepartmentTreeSelectWithTopProps) {
   // 行为保持: 同 DepartmentTreeSelect, startFromLevel=2 复现旧全路径转换函数语义。
-  const baseTreeData = treeData ||
-    (departments ? toFullPathTree(departments, { startFromLevel: 2 }) : []);
+  const baseTreeData =
+    treeData || (departments ? toFullPathTree(departments, { startFromLevel: 2 }) : []);
 
   const finalTreeData = showTopLevel
     ? [

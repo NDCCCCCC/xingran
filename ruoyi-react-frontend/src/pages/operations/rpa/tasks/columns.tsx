@@ -6,7 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import { PlayCircleOutlined } from "@ant-design/icons";
 import type { Task } from "@/types/rpa";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { renderTriggerTypeTag, renderTaskStatusTag } from "../constants";
+import { renderTaskStatusTag } from "../constants";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
 
 export interface TaskColumnsParams {
@@ -73,7 +73,11 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
       width: 180,
       render: (text) => text || "-",
     },
-    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getSortOrder?.("createdAt") }),
+    createDateTimeColumn("createdAt", {
+      width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("createdAt"),
+    }),
     {
       title: "操作",
       key: "action",

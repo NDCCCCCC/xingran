@@ -22,11 +22,28 @@ export const MAP_CONFIG = {
 
 // 湖北省边界坐标（简化版）
 export const HUBEI_BOUNDARY = [
-  [109.5, 33.5], [111.5, 33.5], [113.5, 33.2], [115.5, 33.0], [116.5, 32.5],
-  [116.2, 31.8], [116.1, 31.0], [115.8, 30.2], [115.5, 29.5], [115.2, 29.0],
-  [114.8, 28.5], [114.0, 28.2], [113.0, 28.0], [112.0, 28.2], [111.0, 28.5],
-  [110.0, 29.0], [109.5, 29.8], [109.2, 30.5], [109.0, 31.2], [109.0, 32.0],
-  [109.2, 32.5], [109.5, 33.5]
+  [109.5, 33.5],
+  [111.5, 33.5],
+  [113.5, 33.2],
+  [115.5, 33.0],
+  [116.5, 32.5],
+  [116.2, 31.8],
+  [116.1, 31.0],
+  [115.8, 30.2],
+  [115.5, 29.5],
+  [115.2, 29.0],
+  [114.8, 28.5],
+  [114.0, 28.2],
+  [113.0, 28.0],
+  [112.0, 28.2],
+  [111.0, 28.5],
+  [110.0, 29.0],
+  [109.5, 29.8],
+  [109.2, 30.5],
+  [109.0, 31.2],
+  [109.0, 32.0],
+  [109.2, 32.5],
+  [109.5, 33.5],
 ] as const;
 
 // 楼宇标记颜色配置
@@ -34,7 +51,7 @@ export const MARKER_COLORS = {
   // 正常状态
   NORMAL: {
     MAIN: "#ff6b35",
-    BORDER: "#ff4d4f",
+    BORDER: "#ba3630",
     SHADOW: "rgba(255, 107, 53, 0.5)",
   },
   // 停用状态
@@ -45,38 +62,38 @@ export const MARKER_COLORS = {
   },
   // 聚类标记
   CLUSTER: {
-    MAIN: "#ff4d4f",
-    SHADOW: "rgba(255, 77, 79, 0.5)",
+    MAIN: "#ba3630",
+    SHADOW: "rgba(186, 54, 48, 0.5)",
   },
   // 边界
-  BOUNDARY: "#1890ff",
+  BOUNDARY: "#337ab0",
 } as const;
 
 // 3D 楼宇视图状态色（业务专属色，暂不归入 design-system）
 // 后续如需主题切换可考虑迁移到 design-system/tokens/colors.ts
 export const THREE_D_STATUS_COLORS = {
-  ANOMALY: { MAIN: "#ff6b35", BORDER: "#ff4d4f" },
+  ANOMALY: { MAIN: "#ff6b35", BORDER: "#ba3630" },
   INACTIVE: { MAIN: "#9e9e9e", BORDER: "#757575" },
-  ABNORMAL: { MAIN: "#ff4d4f", BORDER: "#ff4d4f" },
-  BOUNDARY: { MAIN: "#1890ff", BORDER: "#096dd9" },
+  ABNORMAL: { MAIN: "#ba3630", BORDER: "#ba3630" },
+  BOUNDARY: { MAIN: "#337ab0", BORDER: "#096dd9" },
   MAINTENANCE: { MAIN: "#f57c00", BORDER: "#d46b08" },
 } as const;
 
 // 3D 楼层颜色配置
 export const FLOOR_3D_COLORS = {
-  STOPPED: 0xd32f2f,      // 停用 - 深红色
+  STOPPED: 0xd32f2f, // 停用 - 深红色
   NO_WORKSTATION: 0xf57c00, // 无工位 - 深橙色
-  HIGH_OCCUPANCY: 0x388e3c,  // 高占用率 - 深绿色
-  NORMAL: 0x1976d2,        // 正常 - 深蓝色
+  HIGH_OCCUPANCY: 0x388e3c, // 高占用率 - 深绿色
+  NORMAL: 0x1976d2, // 正常 - 深蓝色
 } as const;
 
 // 3D 工位颜色配置
 export const WORKSTATION_3D_COLORS = {
-  OCCUPIED: 0xd32f2f,      // 占用 - 深红色
-  MAINTENANCE: 0xf57c00,   // 维护 - 深橙色
-  FLEXIBLE: 0x7b1fa2,      // 灵活 - 深紫色
-  MANAGEMENT: 0x13c2c2,    // 管理 - 深青色
-  AVAILABLE: 0x388e3c,     // 空闲 - 深绿色
+  OCCUPIED: 0xd32f2f, // 占用 - 深红色
+  MAINTENANCE: 0xf57c00, // 维护 - 深橙色
+  FLEXIBLE: 0x7b1fa2, // 灵活 - 深紫色
+  MANAGEMENT: 0x13c2c2, // 管理 - 深青色
+  AVAILABLE: 0x388e3c, // 空闲 - 深绿色
 } as const;
 
 // 3D 场景尺寸配置
@@ -96,10 +113,10 @@ export const SCENE_DIMENSIONS = {
 
 // 聚类配置
 export const CLUSTER_CONFIG = {
-  PIXEL_THRESHOLD: 40,  // 聚类阈值（像素）
-  MIN_SIZE: 48,         // 最小聚类图标大小
-  SIZE_MULTIPLIER: 2,   // 大小增长系数
-  MAX_SIZE_ADD: 24,     // 最大额外大小
+  PIXEL_THRESHOLD: 40, // 聚类阈值（像素）
+  MIN_SIZE: 48, // 最小聚类图标大小
+  SIZE_MULTIPLIER: 2, // 大小增长系数
+  MAX_SIZE_ADD: 24, // 最大额外大小
 } as const;
 
 // 样式配置
@@ -112,8 +129,8 @@ export const STYLE_CONFIG = {
     PADDING: "12px 16px",
   },
   BUTTON: {
-    GRADIENT: "linear-gradient(135deg, #1890ff, #096dd9)",
-    BOX_SHADOW: "0 2px 4px rgba(24, 144, 255, 0.3)",
+    GRADIENT: "linear-gradient(135deg, #337ab0, #096dd9)",
+    BOX_SHADOW: "0 2px 4px rgba(51, 122, 176, 0.3)",
   },
 } as const;
 

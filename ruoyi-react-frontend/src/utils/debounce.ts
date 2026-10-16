@@ -19,7 +19,7 @@ export interface DebounceOptions {
 export function debounce<T extends (...args: never[]) => void>(
   fn: T,
   wait = 300,
-  options: DebounceOptions = { trailing: true },
+  options: DebounceOptions = { trailing: true }
 ): (...args: Parameters<T>) => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let lastArgs: Parameters<T> | null = null;

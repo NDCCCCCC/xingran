@@ -15,7 +15,8 @@ export const VENDOR_OPTIONS: SelectOption[] = [
   { label: "Maipu", value: "maipu" },
 ];
 
-// 设备类型选项
+// 设备类型选项（Phase 69 DICT-03: 降级为静态 fallback——搜索/编辑下拉与表格 label 已迁
+// useDict("network_device_type")，字典空态/接口异常时回退本数组；导出保留不删除）
 export const DEVICE_TYPE_OPTIONS: SelectOption[] = [
   { label: "路由器", value: "router" },
   { label: "交换机", value: "switch" },

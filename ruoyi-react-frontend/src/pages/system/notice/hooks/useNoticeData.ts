@@ -49,45 +49,51 @@ export function useNoticeData(): UseNoticeDataResult {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 加载通知列表
-  const loadNotices = useCallback(async (params: Partial<NoticeListParams> = {}) => {
-    setLoading(true);
-    try {
-      const requestParams: NoticeListParams = {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-        noticeTitle: params.noticeTitle,
-        noticeType: params.noticeType,
-        // 服务端排序透传：调用方（如 index.tsx fetchList 经 handleTableChange）
-        // 携带的 orderByColumn/isAsc 必须透传到 getNoticeList，否则被丢弃导致排序失效。
-        orderByColumn: params.orderByColumn,
-        isAsc: params.isAsc,
-      };
-      const result = await getNoticeList(requestParams);
-      setNotices(result.data?.list || []);
-      setTotal(result.data?.total || 0);
-    } catch (error) {
-      console.error("加载通知公告失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize]);
+  const loadNotices = useCallback(
+    async (params: Partial<NoticeListParams> = {}) => {
+      setLoading(true);
+      try {
+        const requestParams: NoticeListParams = {
+          current: params.current || current,
+          pageSize: params.pageSize || pageSize,
+          noticeTitle: params.noticeTitle,
+          noticeType: params.noticeType,
+          // 服务端排序透传：调用方（如 index.tsx fetchList 经 handleTableChange）
+          // 携带的 orderByColumn/isAsc 必须透传到 getNoticeList，否则被丢弃导致排序失效。
+          orderByColumn: params.orderByColumn,
+          isAsc: params.isAsc,
+        };
+        const result = await getNoticeList(requestParams);
+        setNotices(result.data?.list || []);
+        setTotal(result.data?.total || 0);
+      } catch (error) {
+        console.error("加载通知公告失败:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, pageSize]
+  );
 
   // 创建通知
   const handleCreate = useCallback(async (request: CreateNoticeRequest) => {
     await createNotice(request);
     message.success("创建成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 更新通知
   const handleUpdate = useCallback(async (id: string, request: UpdateNoticeRequest) => {
     await updateNotice(id, request);
     message.success("更新成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 删除通知
   const handleDelete = useCallback(async (id: string) => {
     await deleteNotice(id);
     message.success("删除成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 批量删除
@@ -99,18 +105,21 @@ export function useNoticeData(): UseNoticeDataResult {
     await batchDeleteNotices(keys as string[]);
     message.success("批量删除成功");
     setSelectedRowKeys([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 发布通知
   const handlePublish = useCallback(async (id: string) => {
     await publishNotice(id);
     message.success("发布成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 撤回通知
   const handleWithdraw = useCallback(async (id: string) => {
     await withdrawNotice(id);
     message.success("撤回成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return {

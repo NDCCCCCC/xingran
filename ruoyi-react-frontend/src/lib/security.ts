@@ -16,7 +16,7 @@ export async function generateHash(data: unknown): Promise<string> {
     let hash = 0;
     for (let i = 0; i < jsonString.length; i++) {
       const char = jsonString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32bit integer
     }
     return Math.abs(hash).toString(16);
@@ -197,7 +197,11 @@ export function isSecureUrl(url: string, allowedDomains: string[] = []): boolean
     }
 
     // 检查是否在白名单中
-    if (allowedDomains.some((domain) => parsedUrl.origin === domain || parsedUrl.hostname.endsWith(domain))) {
+    if (
+      allowedDomains.some(
+        (domain) => parsedUrl.origin === domain || parsedUrl.hostname.endsWith(domain)
+      )
+    ) {
       return true;
     }
 
@@ -225,7 +229,9 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
       }
     } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       // 递归处理嵌套对象
-      (sanitized as Record<string, unknown>)[key] = sanitizeObject(value as Record<string, unknown>);
+      (sanitized as Record<string, unknown>)[key] = sanitizeObject(
+        value as Record<string, unknown>
+      );
     } else if (Array.isArray(value)) {
       // 处理数组
       (sanitized as Record<string, unknown>)[key] = value.map((item) => {
@@ -261,7 +267,11 @@ export function generateSecureRandom(length: number = 16): string {
 /**
  * 安全的日志输出（生产环境可禁用）
  */
-export function secureLog(category: "info" | "warn" | "error", message: string, data?: unknown): void {
+export function secureLog(
+  category: "info" | "warn" | "error",
+  message: string,
+  data?: unknown
+): void {
   const isProduction = import.meta.env.PROD;
 
   if (isProduction) {

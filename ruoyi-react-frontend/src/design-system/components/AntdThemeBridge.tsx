@@ -2,24 +2,29 @@
  * AntD 主题桥接组件
  * AntD Theme Bridge
  *
- * 作用：
- * - 读取 settingsStore 中的 customColors.primary / customColors.sidebar
- * - 读取 settingsStore 中的 mode (light/dark) 与 layout.density
- * - 将上述值映射到 AntD 的 ThemeConfig
- *   - token.colorPrimary: 主色
- *   - token.colorInfo: 主色（保持一致）
- *   - token.colorLink: 主色（保持一致）
- *   - algorithm: 暗色模式切换为 darkAlgorithm；密度紧凑切换为 compactAlgorithm
+ * v1.22 品牌化（Phase 64 · TOKEN-03 → Phase 65 · THEME-01 收敛）
+ * - 读取 ruoyiBrand 常量（TS 侧唯一色值真相源）映射 AntD ThemeConfig
+ * - v1.22 Phase 65：单一品牌主题，主色优先级链已移除 ——
+ *   colorPrimary / colorInfo / colorLink 直接使用 ruoyiBrand.greenPrimary，
+ *   不再订阅用户自定义颜色与主题 store（多主题能力随 D-01 一并删除）
+ * - theme.token 全量覆盖 colorPrimary / colorInfo / colorLink / colorSuccess /
+ *   colorWarning / colorError / colorTextBase / colorBgBase / colorBgContainer /
+ *   colorBgElevated / colorBgLayout / colorBorder / colorBorderSecondary /
+ *   borderRadius / borderRadiusLG / fontFamily
+ * - theme.components 覆盖 Button / Table / Input / Select / Menu / Tabs / Tag /
+ *   Card 八组件，全部从 ruoyiBrand 读取
+ * - algorithm 切换（darkAlgorithm / compactAlgorithm）保留，与明暗/密度正交
  *
- * 解决"工位管理页面表格/卡片/平面图三选一按钮硬编码蓝色"等
- * 所有 AntD 组件不响应用户主题色的问题。
+ * 作用：
+ * - 读取 settingsStore 中的 mode (light/dark) 与 layout.density
+ * - 将上述值映射到 AntD 的 ThemeConfig（v1.22 起全量接 ruoyiBrand 品牌令牌）
  *
  * 原理：
- * - 之前的 App.tsx 仅 <AntConfigProvider locale={zhCN}>，没有 theme prop
- * - AntD 组件内部通过 token 系统获取 colorPrimary；缺少 theme prop 时使用默认 #1677ff
- * - themeStore 仅更新 CSS 变量 (--theme-primary 等)，但 AntD 组件不消费 CSS 变量
- * - 本组件把 customColors.primary 直接喂给 AntD 的 ThemeConfig.token.colorPrimary
- * - 同时挂载到 :root --ant-color-primary CSS 变量，方便自定义 CSS 引用
+ * - AntD 组件内部通过 token 系统获取 colorPrimary；缺少 theme prop 时回退到 AntD 默认色
+ * - index.css 仅更新 CSS 变量 (--theme-primary 等)，但 AntD 组件不消费 CSS 变量
+ * - 本组件把 ruoyiBrand.greenPrimary 直接喂给 AntD 的 ThemeConfig.token.colorPrimary
+ * - v1.22 起：token/components 全量映射到 ruoyiBrand，Button/Table/Input/
+ *   Select/Menu/Tabs/Tag/Card 等内置组件自动品牌化，无需逐组件 CSS override
  */
 
 import { useEffect, useMemo, type FC, type ReactNode } from "react";
@@ -27,18 +32,13 @@ import { App, ConfigProvider, theme as antdTheme } from "antd";
 import type { ThemeConfig } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { useSettingsStore } from "@/store/settingsStore";
-import { useThemeStore } from "@/store/themeStore";
 import { setAppMessageInstance } from "@/utils/antdMessage";
+import { ruoyiBrand } from "@/design-system/tokens/colors";
+import { fontFamily } from "@/design-system/tokens/typography";
 
 interface AntdThemeBridgeProps {
-	children: ReactNode;
+  children: ReactNode;
 }
-
-/**
- * 默认 AntD 主色（与 AntD 内部 defaultSeedToken.colorPrimary 保持一致）
- * 当用户未配置 customColors.primary 时使用此值
- */
-const DEFAULT_ANTD_PRIMARY = "#1677ff";
 
 /**
  * message context 注入器
@@ -47,68 +47,146 @@ const DEFAULT_ANTD_PRIMARY = "#1677ff";
  * 模块作用域代码共享同一 context-aware 实例（见 @/utils/antdMessage）。
  */
 const MessageContextInjector: FC<{ children: ReactNode }> = ({ children }) => {
-	const { message } = App.useApp();
-	useEffect(() => {
-		setAppMessageInstance(message);
-		return () => setAppMessageInstance(null);
-	}, [message]);
-	return <>{children}</>;
+  const { message } = App.useApp();
+  useEffect(() => {
+    setAppMessageInstance(message);
+    return () => setAppMessageInstance(null);
+  }, [message]);
+  return <>{children}</>;
 };
 
 const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
-	// 订阅 settingsStore 的主题与布局配置
-	const customColors = useSettingsStore((state) => state.preferences.theme.customColors);
-	const themeMode = useSettingsStore((state) => state.preferences.theme.mode);
-	const density = useSettingsStore((state) => state.preferences.layout.density);
+  // 订阅 settingsStore 的明暗模式与布局密度（Phase 65 后仅剩两个主题输入）
+  const themeMode = useSettingsStore((state) => state.preferences.theme.mode);
+  const density = useSettingsStore((state) => state.preferences.layout.density);
 
-	// 触发 themeStore 同步到 DOM（CSS 变量），保证 --theme-primary 实时更新
-	const appliedTheme = useThemeStore((state) => state.appliedTheme);
+  const antdThemeConfig = useMemo<ThemeConfig>(() => {
+    // 模式：dark 模式使用 darkAlgorithm
+    const algorithm = themeMode === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm;
 
-	const antdThemeConfig = useMemo<ThemeConfig>(() => {
-		// 主色：优先使用 customColors.primary（如果存在且是字符串），否则回退到默认
-		const primary =
-			typeof customColors?.primary === "string" && customColors.primary
-				? customColors.primary
-				: DEFAULT_ANTD_PRIMARY;
+    // 密度：compact 模式叠加 compactAlgorithm
+    const algorithms = density === "compact" ? [algorithm, antdTheme.compactAlgorithm] : algorithm;
 
-		// 模式：dark 模式使用 darkAlgorithm
-		const algorithm =
-			themeMode === "dark"
-				? antdTheme.darkAlgorithm
-				: antdTheme.defaultAlgorithm;
+    // v1.22 品牌化: theme.token + theme.components 全量映射 ruoyiBrand
+    // D-03 按钮纪律: colorPrimary 永远 = ruoyiBrand.greenPrimary (#156031)
+    // 铜金 #C09058 不做实心主按钮（QA-01 反向断言锁住）
+    return {
+      token: {
+        colorPrimary: ruoyiBrand.greenPrimary,
+        colorInfo: ruoyiBrand.greenPrimary,
+        colorLink: ruoyiBrand.greenPrimary,
+        colorSuccess: ruoyiBrand.functional.success,
+        colorWarning: ruoyiBrand.functional.warning,
+        colorError: ruoyiBrand.functional.danger,
+        colorTextBase: ruoyiBrand.cream.fg,
+        colorBgBase: ruoyiBrand.cream.canvas,
+        colorBgContainer: ruoyiBrand.cream.surface,
+        colorBgElevated: ruoyiBrand.cream.surface,
+        colorBgLayout: ruoyiBrand.cream.canvas,
+        colorBorder: ruoyiBrand.cream.border,
+        colorBorderSecondary: ruoyiBrand.cream.borderStrong,
+        // 控件 8px 一档 / 大容器 12px / 字体栈（sans 含中文）
+        borderRadius: 8,
+        borderRadiusLG: 12,
+        fontFamily: fontFamily.sans,
+      },
+      components: {
+        // 主按钮 D-03: 永远绿底白字 (Phase 66 · G4/COMP-03 白字 7.64:1)
+        Button: {
+          colorPrimary: ruoyiBrand.greenPrimary,
+          primaryColor: ruoyiBrand.onDark.white,
+          colorPrimaryHover: ruoyiBrand.greenPrimaryHover,
+          colorPrimaryActive: ruoyiBrand.greenPrimaryActive,
+          defaultBorderColor: ruoyiBrand.cream.border,
+          borderRadius: 8,
+          controlHeight: 36,
+          fontWeight: 500,
+        },
+        // 表格: 表头 #E9EFEB 绿灰淡彩 / 行 hover #F7F5EE 浅交互底
+        // (Phase 66 · G1/COMP-02 排序/筛选/选中态令牌补齐)
+        Table: {
+          headerBg: ruoyiBrand.cream.headerBg,
+          headerColor: ruoyiBrand.cream.fg,
+          borderColor: ruoyiBrand.cream.border,
+          rowHoverBg: ruoyiBrand.cream.zebraBg,
+          headerSortActiveBg: ruoyiBrand.cream.zebraBg,
+          headerSortHoverBg: ruoyiBrand.cream.zebraBg,
+          headerFilterHoverBg: ruoyiBrand.cream.zebraBg,
+          fixedHeaderSortActiveBg: ruoyiBrand.cream.zebraBg,
+          rowSelectedBg: ruoyiBrand.cream.headerBg,
+          rowSelectedHoverBg: ruoyiBrand.cream.zebraBg,
+          borderRadius: 8,
+        },
+        // 输入框: focus 环用品牌绿 (Phase 66 · G2/COMP-04 焦点环 2px)
+        Input: {
+          colorBgContainer: ruoyiBrand.cream.surface,
+          activeBorderColor: ruoyiBrand.greenPrimary,
+          hoverBorderColor: ruoyiBrand.greenPrimary,
+          activeShadow: "0 0 0 2px rgba(21, 96, 49, 0.15)",
+          borderRadius: 8,
+          controlHeight: 36,
+        },
+        Select: {
+          colorBgContainer: ruoyiBrand.cream.surface,
+          activeBorderColor: ruoyiBrand.greenPrimary,
+          hoverBorderColor: ruoyiBrand.greenPrimary,
+          borderRadius: 8,
+          controlHeight: 36,
+          optionSelectedBg: ruoyiBrand.cream.headerBg,
+        },
+        // 菜单: 浅色底用绿灰 / 深色侧栏用品牌深绿
+        // (Phase 66 · QA-02 卫生 — darkItem* 改为 ruoyiBrand 引用)
+        Menu: {
+          itemBg: "transparent",
+          itemSelectedBg: ruoyiBrand.cream.headerBg,
+          itemSelectedColor: ruoyiBrand.greenPrimary,
+          itemHoverBg: ruoyiBrand.cream.zebraBg,
+          darkItemBg: ruoyiBrand.green[900],
+          darkItemSelectedBg: ruoyiBrand.greenPrimary,
+          darkItemSelectedColor: ruoyiBrand.onDark.lightYellow,
+          darkItemHoverBg: ruoyiBrand.greenPrimaryLight,
+        },
+        // Tabs: 选中色 = 品牌绿
+        Tabs: {
+          itemSelectedColor: ruoyiBrand.greenPrimary,
+          itemActiveColor: ruoyiBrand.greenPrimary,
+          itemHoverColor: ruoyiBrand.greenPrimaryHover,
+          inkBarColor: ruoyiBrand.greenPrimary,
+        },
+        // Tag: 默认底用淡黄 (Phase 66 · G3/COMP-04 SM2/SM3/SM4 品牌锚点配方)
+        Tag: {
+          defaultBg: ruoyiBrand.onDark.paleYellow,
+          defaultColor: ruoyiBrand.copper[500],
+          borderRadiusSM: 4,
+        },
+        // Card: 白卡浮在奶油底上, 12px 圆角
+        Card: {
+          colorBgContainer: ruoyiBrand.cream.surface,
+          headerBg: "transparent",
+          borderRadiusLG: 12,
+        },
+      },
+      algorithm: algorithms,
+      // 主题变更时改变 hashed 标识，强制 AntD 重新生成 CSS（防止主题切换残留）
+      // 注: 双圈 Loading 问题由 src/index.css 的 .ant-btn-loading::before 与
+      // antd v6 内置 Spin 重复渲染导致, 与 hashed 配置无关, 修复见 index.css.
+      hashed: true,
+    };
+  }, [themeMode, density]);
 
-		// 密度：compact 模式叠加 compactAlgorithm
-		const algorithms =
-			density === "compact" ? [algorithm, antdTheme.compactAlgorithm] : algorithm;
-
-		// 把主色同时写入 colorInfo 和 colorLink，保证 Info / Link 类组件也跟随主题
-		return {
-			token: {
-				colorPrimary: primary,
-				colorInfo: primary,
-				colorLink: primary,
-			},
-			algorithm: algorithms,
-			// 主题变更时改变 hashed 标识，强制 AntD 重新生成 CSS（防止主题切换残留）
-			// 注: 双圈 Loading 问题由 src/index.css 的 .ant-btn-loading::before 与
-			// antd v6 内置 Spin 重复渲染导致, 与 hashed 配置无关, 修复见 index.css.
-			hashed: true,
-		};
-	}, [customColors?.primary, customColors?.sidebar, themeMode, density, appliedTheme]);
-
-	return (
-		<ConfigProvider locale={zhCN} theme={antdThemeConfig}>
-			{/*
+  return (
+    <ConfigProvider locale={zhCN} theme={antdThemeConfig}>
+      {/*
 				antd v6 默认启用 cssVar(CSS 变量模式), <App> 需要一个真实 DOM 节点挂载 CSS
 				变量作用域。component={false} 不渲染节点, 会触发 warning:
 				"[antd: App] When using cssVar, ensure `component` is assigned a valid React component string."
 				故移除 component={false}, 使用 antd <App> 默认的 div 包裹。
 			*/}
-			<App>
-				<MessageContextInjector>{children}</MessageContextInjector>
-			</App>
-		</ConfigProvider>
-	);
+      <App>
+        <MessageContextInjector>{children}</MessageContextInjector>
+      </App>
+    </ConfigProvider>
+  );
 };
 
 export default AntdThemeBridge;

@@ -48,7 +48,4 @@ export { default as EmptyStateWithAction } from "./EmptyStateWithAction";
 export type { EmptyStateWithActionProps } from "./EmptyStateWithAction";
 
 export { default as ErrorAlertWithRetry } from "./ErrorAlertWithRetry";
-export type {
-  ErrorAlertWithRetryProps,
-  ApiErrorShape,
-} from "./ErrorAlertWithRetry";
+export type { ErrorAlertWithRetryProps, ApiErrorShape } from "./ErrorAlertWithRetry";

@@ -1,11 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import type {
-  TablePaginationConfig,
-  FilterValue,
-  SorterResult,
-} from "antd/es/table/interface";
+import type { TablePaginationConfig, FilterValue, SorterResult } from "antd/es/table/interface";
 import type { SorterMeta } from "@/utils/tableHelpers";
 
 /**
@@ -122,7 +118,7 @@ export function useServerSort<T = unknown>(
   }, [setOrderByColumn, setIsAsc]);
 
   const handleTableChange = useCallback(
-    <R,>(
+    <R>(
       _pagination: TablePaginationConfig,
       _filters: Record<string, FilterValue | null>,
       sorter: SorterResult<R> | SorterResult<R>[]
@@ -136,9 +132,7 @@ export function useServerSort<T = unknown>(
       }
 
       // 仅当 sorter.field 对应 sorterMetas 中已注册的可排序列时才更新 state
-      const meta = sorterMetas.find(
-        (m) => m !== undefined && m.field === String(s.field)
-      );
+      const meta = sorterMetas.find((m) => m !== undefined && m.field === String(s.field));
       if (!meta) {
         // 未在白名单的列(可能是不该排序列,如操作列)→ 忽略
         return;
@@ -187,9 +181,7 @@ export function resolveSorter<T>(
   if (!s || !s.field) {
     return { orderByColumn: undefined, isAsc: undefined };
   }
-  const meta = sorterMetas.find(
-    (m) => m !== undefined && m.field === String(s.field)
-  );
+  const meta = sorterMetas.find((m) => m !== undefined && m.field === String(s.field));
   if (!meta) {
     return { orderByColumn: undefined, isAsc: undefined };
   }

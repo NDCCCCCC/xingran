@@ -40,12 +40,11 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   // 旧实现的 GET fetch 直接把后端返回的 SimpleDept[] (字段 id/deptName/children) 喂给
   // <Tree fieldNames={{ title:"title", key:"key", children:"children" }}>,
   // 但后端节点没有 title/key 字段——本地转一道与 useTargetSelector (37-02) 一致,行为等价。
-  const deptTree = useMemo(
-    () => toShortNameDataNode(rawDept as DeptTreeNode[]),
-    [rawDept]
-  );
+  const deptTree = useMemo(() => toShortNameDataNode(rawDept as DeptTreeNode[]), [rawDept]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  // MISC-02: 用 Map<id, option> 索引替代 O(n²) find，每键击过滤 O(n)
+  const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const [checkedDeptKeys, setCheckedDeptKeys] = useState<Key[]>(targetDepts);
   const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
 
@@ -91,6 +90,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
       // 指定用户
       loadUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: targetType is the only trigger; dependent callbacks (loadDepts/loadUsers) are stable useCallback refs
   }, [targetType]);
 
   // 部门树选中变化
@@ -104,11 +104,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   const renderTargetContent = () => {
     switch (targetType) {
       case 0: // 全部用户
-        return (
-          <div className="text-gray-500 py-4 text-center">
-            将向所有用户发送此通知
-          </div>
-        );
+        return <div className="text-gray-500 py-4 text-center">将向所有用户发送此通知</div>;
 
       case 1: // 指定部门
         return (
@@ -147,9 +143,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
                 ))}
               </div>
             </Checkbox.Group>
-            <div className="mt-2 text-sm text-gray-500">
-              已选择 {targetRoles.length} 个角色
-            </div>
+            <div className="mt-2 text-sm text-gray-500">已选择 {targetRoles.length} 个角色</div>
           </Spin>
         );
 
@@ -162,7 +156,13 @@ const TargetSelector: FC<TargetSelectorProps> = ({
               onChange={onTargetUsersChange}
               placeholder="请选择用户"
               showSearch
-              filterOption={false}
+              filterOption={(input, option) => {
+                if (!input) return true;
+                const user = userMap.get(option?.value as string);
+                if (!user) return false;
+                const label = `${user.nickname || user.username} (${user.username})`.toLowerCase();
+                return label.includes(input.toLowerCase());
+              }}
               onSearch={(value) => loadUsers(value)}
               className="w-full"
               options={users.map((user) => ({
@@ -170,9 +170,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
                 value: user.id,
               }))}
             />
-            <div className="mt-2 text-sm text-gray-500">
-              已选择 {targetUsers.length} 个用户
-            </div>
+            <div className="mt-2 text-sm text-gray-500">已选择 {targetUsers.length} 个用户</div>
           </Spin>
         );
 
@@ -184,6 +182,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   return (
     <div className="space-y-4">
       <Form.Item label="接收范围" rules={[{ required: true, message: "请选择接收范围" }]}>
+        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
         <Select
           value={targetType}
           onChange={onTargetTypeChange}

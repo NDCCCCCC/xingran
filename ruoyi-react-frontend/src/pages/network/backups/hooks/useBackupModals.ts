@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { ConfigBackup, BaseResponse } from "@/types";
+import type { ConfigBackup } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import type { DeviceBackupGroup } from "../types";
 import { post } from "@/lib/api";
@@ -21,6 +21,8 @@ interface UseBackupModalsReturn {
   selectedRestoreBackup: ConfigBackup | null;
   selectedDeviceGroup: DeviceBackupGroup | null;
   backupContent: string;
+  /** 进行中的恢复任务 ID（非空时恢复 Modal 切换为进度态，Phase 93 D-17/D-19） */
+  restoreTaskId: string | null;
   openBackupModal: () => void;
   closeBackupModal: (form?: FormInstance<unknown>) => void;
   openRestoreModal: (backup: ConfigBackup) => void;
@@ -30,12 +32,10 @@ interface UseBackupModalsReturn {
   openVersionListDrawer: (group: DeviceBackupGroup) => void;
   closeVersionListDrawer: () => void;
   handleBackup: (form: FormInstance<unknown>) => Promise<void>;
-  handleRestore: () => Promise<void>;
+  handleRestore: (backup?: ConfigBackup) => Promise<void>;
 }
 
-export function useBackupModals(
-  options: UseBackupModalsOptions
-): UseBackupModalsReturn {
+export function useBackupModals(options: UseBackupModalsOptions): UseBackupModalsReturn {
   const { onLoad } = options;
 
   const [backupModalVisible, setBackupModalVisible] = useState(false);
@@ -46,6 +46,7 @@ export function useBackupModals(
   const [selectedRestoreBackup, setSelectedRestoreBackup] = useState<ConfigBackup | null>(null);
   const [selectedDeviceGroup, setSelectedDeviceGroup] = useState<DeviceBackupGroup | null>(null);
   const [backupContent, setBackupContent] = useState("");
+  const [restoreTaskId, setRestoreTaskId] = useState<string | null>(null);
 
   // 打开备份弹窗
   const openBackupModal = useCallback(() => {
@@ -66,10 +67,11 @@ export function useBackupModals(
     setRestoreModalVisible(true);
   }, []);
 
-  // 关闭恢复弹窗
+  // 关闭恢复弹窗（复位任务态——任务本体在服务端继续执行，不受前端关闭影响）
   const closeRestoreModal = useCallback(() => {
     setRestoreModalVisible(false);
     setSelectedRestoreBackup(null);
+    setRestoreTaskId(null);
   }, []);
 
   // 打开内容抽屉
@@ -104,38 +106,54 @@ export function useBackupModals(
   }, []);
 
   // 创建备份
-  const handleBackup = useCallback(async (form: FormInstance<unknown>) => {
-    try {
-      const values = await form.validateFields() as Record<string, unknown>;
-      // 调用批量备份端点，添加 backupType 字段
-      await post("/network/backups/batch", {
-        deviceIds: values.deviceIds,
-        backupType: "manual",
-        changeReason: values.changeReason,
-      });
-      closeBackupModal(form);
-      onLoad();
-    } catch (error: unknown) {
-      if ((error as { errorFields?: unknown }).errorFields) {
+  const handleBackup = useCallback(
+    async (form: FormInstance<unknown>) => {
+      try {
+        const values = (await form.validateFields()) as Record<string, unknown>;
+        // 调用批量备份端点，添加 backupType 字段
+        await post("/network/backups/batch", {
+          deviceIds: values.deviceIds,
+          backupType: "manual",
+          changeReason: values.changeReason,
+        });
+        closeBackupModal(form);
+        onLoad();
+      } catch (error: unknown) {
+        if ((error as { errorFields?: unknown }).errorFields) {
+          return;
+        }
+        console.error("创建备份失败:", (error as Error).message);
+      }
+    },
+    [closeBackupModal, onLoad]
+  );
+
+  // 恢复备份（Phase 93 异步语义：携带备份自身 deviceId 发起（D-04 前端侧——
+  // 修复现状发空 body 缺 deviceId 必 400 的缺陷），捕获 taskId 后 Modal 切换为
+  // 进度态，由 useRestoreTask 轮询任务详情（D-16/D-17/D-19），不立即关闭弹窗。
+  // v129-recheck WR-01: backup 显式参数——版本抽屉路径在同一同步块内
+  // openRestoreModal(backup) 后立即调用，state 尚未传播（且本闭包捕获的
+  // selectedRestoreBackup 恒为旧值），无参调用会因 null 守卫静默短路成死代码；
+  // 显式传参使恢复必然发起，恢复 Modal 主路径不传参仍走 state。
+  const handleRestore = useCallback(
+    async (backup?: ConfigBackup) => {
+      const target = backup ?? selectedRestoreBackup;
+      if (!target) {
         return;
       }
-      console.error("创建备份失败:", (error as Error).message);
-    }
-  }, [closeBackupModal, onLoad]);
-
-  // 恢复备份
-  const handleRestore = useCallback(async () => {
-    if (!selectedRestoreBackup) {
-      return;
-    }
-    try {
-      await post(`/network/backups/${selectedRestoreBackup.id}/restore`, {});
-      closeRestoreModal();
-      onLoad();
-    } catch (error) {
-      console.error("恢复备份失败:", error);
-    }
-  }, [selectedRestoreBackup, closeRestoreModal, onLoad]);
+      try {
+        const result = await post<{ taskId: string; status: string; message: string }>(
+          `/network/backups/${target.id}/restore`,
+          { deviceId: target.deviceId }
+        );
+        setRestoreTaskId(result.data?.taskId || null);
+        onLoad();
+      } catch (error) {
+        console.error("发起恢复任务失败:", error);
+      }
+    },
+    [selectedRestoreBackup, onLoad]
+  );
 
   return {
     backupModalVisible,
@@ -146,6 +164,7 @@ export function useBackupModals(
     selectedRestoreBackup,
     selectedDeviceGroup,
     backupContent,
+    restoreTaskId,
     openBackupModal,
     closeBackupModal,
     openRestoreModal,

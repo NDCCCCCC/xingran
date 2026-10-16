@@ -141,43 +141,48 @@ const GlobalSearch: FC = () => {
   }, [searchValue]);
 
   // 处理结果点击
-  const handleResultClick = useCallback((result: SearchResult) => {
-    navigate(result.path);
-    setVisible(false);
-    setSearchValue("");
-  }, [navigate]);
+  const handleResultClick = useCallback(
+    (result: SearchResult) => {
+      navigate(result.path);
+      setVisible(false);
+      setSearchValue("");
+    },
+    [navigate]
+  );
 
   // 处理键盘事件
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Cmd+K or Ctrl+K
-    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-      e.preventDefault();
-      setVisible((prev) => !prev);
-      setSearchValue("");
-      setSelectedIndex(0);
-    }
-
-    // 在搜索框打开时处理键盘导航
-    if (visible) {
-      if (e.key === "ArrowDown") {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev < filteredResults.length - 1 ? prev + 1 : prev
-        );
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        if (filteredResults[selectedIndex]) {
-          handleResultClick(filteredResults[selectedIndex]);
-        }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        setVisible(false);
+        setVisible((prev) => !prev);
+        setSearchValue("");
+        setSelectedIndex(0);
       }
-    }
-  }, [visible, filteredResults.length, selectedIndex, handleResultClick, filteredResults]);
+
+      // 在搜索框打开时处理键盘导航
+      if (visible) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev < filteredResults.length - 1 ? prev + 1 : prev));
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (filteredResults[selectedIndex]) {
+            handleResultClick(filteredResults[selectedIndex]);
+          }
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setVisible(false);
+        }
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filteredResults.length is redundant with filteredResults
+    [visible, filteredResults.length, selectedIndex, handleResultClick, filteredResults]
+  );
 
   // 注册键盘事件监听
   useEffect(() => {
@@ -189,49 +194,17 @@ const GlobalSearch: FC = () => {
 
   return (
     <>
-      {/* 搜索提示 - 鼠标悬停显示 */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          background: "var(--theme-bg-surface)",
-          border: "1px solid var(--theme-border-primary)",
-          borderRadius: "var(--theme-radius-lg)",
-          padding: "8px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          cursor: "pointer",
-          boxShadow: "var(--theme-shadow-md)",
-          zIndex: 1000,
-          transition: "all var(--theme-transition-base)",
-        }}
+      {/* 搜索触发器（原型 .search-trigger：260px 顶栏内嵌，替代旧右下浮动球） */}
+      <button
+        type="button"
+        className="search-trigger"
+        aria-label="全局搜索"
         onClick={() => setVisible(true)}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.boxShadow = "var(--theme-shadow-lg)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "var(--theme-shadow-md)";
-        }}
       >
-        <SearchOutlined style={{ fontSize: "16px", color: "var(--theme-text-secondary)" }} />
-        <Text style={{ fontSize: "14px", color: "var(--theme-text-secondary)" }}>搜索</Text>
-        <Tag
-          style={{
-            margin: 0,
-            fontSize: "12px",
-            borderRadius: "6px",
-            background: "var(--theme-bg-tertiary)",
-            borderColor: "var(--theme-border-primary)",
-            color: "var(--theme-text-secondary)",
-          }}
-        >
-          ⌘K
-        </Tag>
-      </div>
+        <SearchOutlined style={{ fontSize: "14px" }} />
+        <span className="st-text">搜索菜单、资产、告警</span>
+        <kbd>⌘K</kbd>
+      </button>
 
       {/* 搜索模态框 */}
       <Modal
@@ -240,14 +213,16 @@ const GlobalSearch: FC = () => {
         footer={null}
         centered
         width={600}
-        styles={{
-          body: { padding: "16px" },
-          content: {
-            background: "var(--theme-bg-surface)",
-            borderRadius: "var(--theme-radius-xl)",
-            border: "1px solid var(--theme-border-primary)",
-          },
-        } as Record<string, unknown>}
+        styles={
+          {
+            body: { padding: "16px" },
+            content: {
+              background: "var(--theme-bg-surface)",
+              borderRadius: "var(--theme-radius-xl)",
+              border: "1px solid var(--theme-border-primary)",
+            },
+          } as Record<string, unknown>
+        }
         closeIcon={null}
         style={{ top: 100 }}
       >
@@ -305,10 +280,7 @@ const GlobalSearch: FC = () => {
                   padding: "12px",
                   borderRadius: "var(--theme-radius-md)",
                   cursor: "pointer",
-                  background:
-                    index === selectedIndex
-                      ? "var(--theme-primary-50)"
-                      : "transparent",
+                  background: index === selectedIndex ? "var(--theme-primary-50)" : "transparent",
                   transition: "all var(--theme-transition-base)",
                   border:
                     index === selectedIndex

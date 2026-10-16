@@ -37,7 +37,7 @@ const EmptyStateWithAction: FC<EmptyStateWithActionProps> = ({
 }) => {
   const showAction =
     Boolean(actionLabel) &&
-    (typeof actionPath === "string" && actionPath.length > 0 || typeof onAction === "function");
+    ((typeof actionPath === "string" && actionPath.length > 0) || typeof onAction === "function");
 
   return (
     <Empty
@@ -61,7 +61,9 @@ const EmptyStateWithAction: FC<EmptyStateWithActionProps> = ({
               <Button type="primary">{actionLabel}</Button>
             </Link>
           ) : (
-            <Button type="primary" onClick={onAction}>{actionLabel}</Button>
+            <Button type="primary" onClick={onAction}>
+              {actionLabel}
+            </Button>
           )}
         </Space>
       )}

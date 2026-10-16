@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { ConfigBackup, BaseResponse, PageResponse } from "@/types";
+import type { ConfigBackup, PageResponse } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import type { DeviceBackupGroup, BackupStatistics } from "../types";
 import { groupBackupsByDevice } from "../utils";
@@ -26,9 +26,7 @@ interface UseBackupDataReturn {
   loadStatistics: () => Promise<void>;
 }
 
-export function useBackupData(
-  options: UseBackupDataOptions
-): UseBackupDataReturn {
+export function useBackupData(options: UseBackupDataOptions): UseBackupDataReturn {
   const { current, pageSize, searchForm } = options;
 
   const [devices, setDevices] = useState<ConfigBackup[]>([]);
@@ -56,31 +54,45 @@ export function useBackupData(
   }, []);
 
   // 加载备份列表
-  const loadBackups = useCallback(async (params: Record<string, unknown> = {}) => {
-    setLoading(true);
-    try {
-      const values = searchForm.getFieldsValue() as Record<string, unknown>;
-      const result = await post<PageResponse<ConfigBackup>>("/network/backups/list", {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-        ...values,
-      });
-      const backups = result.data?.list || [];
-      const groups = groupBackupsByDevice(backups);
+  const loadBackups = useCallback(
+    async (params: Record<string, unknown> = {}) => {
+      setLoading(true);
+      try {
+        const values = searchForm.getFieldsValue() as Record<string, unknown>;
+        const result = await post<PageResponse<ConfigBackup>>("/network/backups/list", {
+          current: params.current || current,
+          pageSize: params.pageSize || pageSize,
+          // v129-recheck WR-02: 排序参数此前被静默丢弃，列头 sorter 承诺的服务端
+          // 排序从未生效——透传给后端（undefined 时展开为空，保持无排序语义）
+          ...(params.orderByColumn !== undefined && {
+            orderByColumn: params.orderByColumn,
+            isAsc: params.isAsc,
+          }),
+          ...values,
+        });
+        const backups = result.data?.list || [];
+        const groups = groupBackupsByDevice(backups);
 
-      setDeviceGroups(groups);
-      setTotal(result.data?.total || 0);
-    } catch (error) {
-      console.error("加载备份列表失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize, searchForm]);
+        setDeviceGroups(groups);
+        setTotal(result.data?.total || 0);
+      } catch (error) {
+        console.error("加载备份列表失败:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, pageSize, searchForm]
+  );
 
   // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await get<{ totalBackups?: number; autoBackups?: number; manualBackups?: number; uniqueDevices?: number }>("/network/backups/statistics");
+      const result = await get<{
+        totalBackups?: number;
+        autoBackups?: number;
+        manualBackups?: number;
+        uniqueDevices?: number;
+      }>("/network/backups/statistics");
       const data = result.data || {};
       setStatistics({
         total: data.totalBackups ?? 0,

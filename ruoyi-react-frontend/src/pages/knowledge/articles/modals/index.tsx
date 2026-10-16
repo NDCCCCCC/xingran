@@ -7,7 +7,6 @@ import { Modal, Form, Input, Select, Row, Col, Space } from "antd";
 import { EyeOutlined, LikeOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
 import type { KnowledgeArticle, KnowledgeCategory, KnowledgeTag } from "@/lib/knowledgeApi";
-import { KnowledgeArticleStatus } from "@/lib/knowledgeApi";
 import { STATUS_OPTIONS } from "../constants";
 
 const { Option } = Select;
@@ -45,7 +44,13 @@ export function EditModal({
       width={800}
       destroyOnHidden
     >
-      <Form form={form} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }} preserve={false}>
+      <Form
+        form={form}
+        layout="horizontal"
+        labelCol={{ span: 4 }}
+        wrapperCol={{ span: 20 }}
+        preserve={false}
+      >
         <Form.Item
           name="title"
           label="文章标题"
@@ -78,7 +83,9 @@ export function EditModal({
             >
               <Select placeholder="请选择状态" className="user-form-input" onSearch={() => {}}>
                 {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
                 ))}
               </Select>
             </Form.Item>
@@ -86,7 +93,13 @@ export function EditModal({
         </Row>
 
         <Form.Item name="tagIds" label="标签">
-          <Select mode="tags" placeholder="请选择标签" style={{ width: "100%" }} className="user-form-input" onSearch={() => {}}>
+          <Select
+            mode="tags"
+            placeholder="请选择标签"
+            style={{ width: "100%" }}
+            className="user-form-input"
+            onSearch={() => {}}
+          >
             {tags.map((tag) => (
               <Option key={tag.id} value={tag.id}>
                 {tag.tagName}
@@ -119,26 +132,27 @@ export interface PreviewModalProps {
 
 export function PreviewModal({ open, previewRecord, onClose }: PreviewModalProps) {
   return (
-    <Modal
-      title="文章预览"
-      open={open}
-      onCancel={onClose}
-      footer={null}
-      width={800}
-    >
+    <Modal title="文章预览" open={open} onCancel={onClose} footer={null} width={800}>
       {previewRecord && (
         <div>
           <h1 className="text-xl font-bold mb-4">{previewRecord.title}</h1>
           <div className="mb-4 text-gray-500 text-sm">
             <Space>
               <span>分类: {previewRecord.category?.categoryName}</span>
-              <span><EyeOutlined className="mr-1" />{previewRecord.viewCount}</span>
-              <span><LikeOutlined className="mr-1" />{previewRecord.likeCount}</span>
+              <span>
+                <EyeOutlined className="mr-1" />
+                {previewRecord.viewCount}
+              </span>
+              <span>
+                <LikeOutlined className="mr-1" />
+                {previewRecord.likeCount}
+              </span>
             </Space>
           </div>
           {previewRecord.summary && (
             <div className="mb-4 p-4 bg-gray-50 rounded">
-              <strong>摘要：</strong>{previewRecord.summary}
+              <strong>摘要：</strong>
+              {previewRecord.summary}
             </div>
           )}
           <div className="prose max-w-none" style={{ whiteSpace: "pre-wrap" }}>

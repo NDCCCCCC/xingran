@@ -49,7 +49,10 @@ export const FloorModal: FC<FloorModalProps> = ({
     if (!visible) return;
 
     if (editingFloor?.planImageId) {
-      planImageUpload.setInitialValue(editingFloor.planImageId, editingFloor.planImageUrl ?? undefined);
+      planImageUpload.setInitialValue(
+        editingFloor.planImageId,
+        editingFloor.planImageUrl ?? undefined
+      );
     } else {
       planImageUpload.resetUpload();
     }
@@ -70,7 +73,8 @@ export const FloorModal: FC<FloorModalProps> = ({
   const isDisabled = !!editingFloor;
 
   // 合并楼宇选项：优先使用部门特定选项，如果为空则使用全部选项
-  const effectiveBuildingOptions = buildingOptionsByDept.length > 0 ? buildingOptionsByDept : buildingOptions;
+  const effectiveBuildingOptions =
+    buildingOptionsByDept.length > 0 ? buildingOptionsByDept : buildingOptions;
 
   return (
     <Modal
@@ -102,7 +106,8 @@ export const FloorModal: FC<FloorModalProps> = ({
             disabled={isDisabled}
             showSearch
             optionFilterProp="children"
-           onSearch={() => {}}>
+            onSearch={() => {}}
+          >
             {effectiveBuildingOptions.map((b) => (
               <Option key={b.id} value={b.id}>
                 {b.name}

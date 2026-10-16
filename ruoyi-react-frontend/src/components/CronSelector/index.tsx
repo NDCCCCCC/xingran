@@ -6,7 +6,14 @@
  * - 下方: 可视化配置(Tab切换秒/分/时/日/月/周)
  */
 
-import { useState, useLayoutEffect, useImperativeHandle, forwardRef, useRef, useEffect } from "react";
+import {
+  useState,
+  useLayoutEffect,
+  useImperativeHandle,
+  forwardRef,
+  useRef,
+  useEffect,
+} from "react";
 import { Input, Select, Tabs, Alert, Space, Row, Col } from "antd";
 import { InfoCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { CronConfig, CronFieldType } from "./constants";
@@ -77,6 +84,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
     // 同步外部value变化 - 使用 ref 避免依赖问题
     useLayoutEffect(() => {
       if (value !== cronExpression) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCronExpression(value || DEFAULT_CRON_EXPRESSION);
         if (validateRef.current(value)) {
           setCronConfig(toConfigRef.current(value));
@@ -87,6 +95,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
     // 初始化时，如果没有外部值，使用默认值并触发onChange
     useLayoutEffect(() => {
       if (!initialized) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setInitialized(true);
         if (!value) {
           // 使用默认配置生成表达式
@@ -129,7 +138,10 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
     };
 
     // 处理配置对象变化
-    const handleConfigChange = (fieldKey: keyof CronConfig, fieldValue: CronConfig[keyof CronConfig]) => {
+    const handleConfigChange = (
+      fieldKey: keyof CronConfig,
+      fieldValue: CronConfig[keyof CronConfig]
+    ) => {
       const newConfig = { ...cronConfig, [fieldKey]: fieldValue };
       setCronConfig(newConfig);
       const newExpression = cronConfigToExpression(newConfig);
@@ -182,18 +194,25 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           <Col style={{ width: 200 }}>
             <Select
               placeholder="选择预设"
-              value={CRON_PRESETS.find(p => p.value === cronExpression)?.value}
+              value={CRON_PRESETS.find((p) => p.value === cronExpression)?.value}
               onChange={handlePresetSelect}
               disabled={disabled}
               allowClear
               showSearch
               optionFilterProp="label"
               style={{ width: "100%" }}
-             onSearch={() => {}}>
-              {CRON_PRESETS.map(preset => (
+              onSearch={() => {}}
+            >
+              {CRON_PRESETS.map((preset) => (
                 <Select.Option key={preset.value} value={preset.value}>
                   {preset.label}
-                  <span style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 12, marginLeft: 8 }}>
+                  <span
+                    style={{
+                      color: "var(--theme-text-tertiary, #999)",
+                      fontSize: 12,
+                      marginLeft: 8,
+                    }}
+                  >
                     ({preset.value})
                   </span>
                 </Select.Option>
@@ -204,7 +223,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
 
         {/* 中文描述 */}
         {isValid && (
-          <div style={{ marginBottom: 12, color: "var(--theme-info, #1890ff)", fontSize: 13 }}>
+          <div style={{ marginBottom: 12, color: "var(--theme-info, #337ab0)", fontSize: 13 }}>
             {chineseDesc}
           </div>
         )}
@@ -214,7 +233,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           activeKey={activeField}
           onChange={(key) => setActiveField(key as CronFieldType)}
           size="small"
-          items={FIELD_ORDER.map(fieldType => ({
+          items={FIELD_ORDER.map((fieldType) => ({
             key: fieldType,
             label: FIELD_LABELS[fieldType],
             children: renderField(fieldType),
@@ -233,7 +252,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           <div style={{ marginTop: 16 }}>
             <Space orientation="vertical" style={{ width: "100%" }} size="small">
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <ClockCircleOutlined style={{ color: "var(--theme-info, #1890ff)" }} />
+                <ClockCircleOutlined style={{ color: "var(--theme-info, #337ab0)" }} />
                 <span style={{ fontWeight: 500 }}>最近五次执行时间</span>
               </div>
               <div style={{ background: "#fafafa", padding: "8px 16px", borderRadius: 4 }}>

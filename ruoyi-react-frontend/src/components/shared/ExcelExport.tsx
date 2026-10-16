@@ -5,14 +5,7 @@
 
 import { useState, useCallback } from "react";
 import type { FC } from "react";
-import {
-  App,
-  Button,
-  Space,
-  Modal,
-  Alert,
-  Descriptions,
-} from "antd";
+import { App, Button, Space, Modal, Alert, Descriptions } from "antd";
 import { ExportOutlined } from "@ant-design/icons";
 import { getAuthHeaders } from "@/utils/authHelpers";
 import { excelApi } from "@/lib/opsApi";
@@ -67,11 +60,12 @@ const ExcelExport: FC<ExcelExportProps> = ({
 
       message.success("导出成功");
       onClose?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("导出失败");
     } finally {
       setExporting(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [exportUrl, entityType, entityName, onClose, filters]);
 
   return (
@@ -81,7 +75,9 @@ const ExcelExport: FC<ExcelExportProps> = ({
       onCancel={onClose}
       footer={
         <Space>
-          <Button onClick={onClose} disabled={exporting}>取消</Button>
+          <Button onClick={onClose} disabled={exporting}>
+            取消
+          </Button>
           <Button
             type="primary"
             icon={<ExportOutlined />}

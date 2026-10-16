@@ -7,13 +7,22 @@
  */
 
 import { get } from "@/lib/api";
-import { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer, generateRandomHex } from "./encoding";
-import { decryptWithSM2, fetchPublicKey } from "./sm2";
+import {
+  hexToBase64,
+  base64ToHex,
+  arrayBufferToHex,
+  hexToArrayBuffer,
+  generateRandomHex,
+} from "./encoding";
 
 // SM4 模块接口定义
 interface SM4Module {
-	encrypt: (msg: string, key: string, options?: { mode: "cbc" | "ecb"; iv?: string }) => string;
-	decrypt: (cipherHex: string, key: string, options?: { mode: "cbc" | "ecb"; iv?: string }) => string;
+  encrypt: (msg: string, key: string, options?: { mode: "cbc" | "ecb"; iv?: string }) => string;
+  decrypt: (
+    cipherHex: string,
+    key: string,
+    options?: { mode: "cbc" | "ecb"; iv?: string }
+  ) => string;
 }
 
 // sm4 模块缓存
@@ -28,7 +37,9 @@ async function getSM4(): Promise<SM4Module> {
   try {
     const smCrypto = await import("sm-crypto");
     sm4Module = smCrypto.sm4;
-    return sm4Module;
+    // TS 7 不会跨赋值语句收窄 let + SM4Module | null 的类型,
+    // 但此处赋值后必然非 null,显式断言让返回类型匹配 Promise<SM4Module>。
+    return sm4Module as SM4Module;
   } catch (error) {
     console.error("[SM4] 加载 sm-crypto 失败:", error);
     throw new Error("无法加载 sm-crypto 包，请确保已安装: npm install sm-crypto");
@@ -72,7 +83,11 @@ export function generateSM4KeyBytes(): string {
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 密文（十六进制字符串）
  */
-export async function encryptSM4CBC(plaintext: string, keyHex: string, ivHex: string): Promise<string> {
+export async function encryptSM4CBC(
+  plaintext: string,
+  keyHex: string,
+  ivHex: string
+): Promise<string> {
   if (!plaintext) {
     return "";
   }
@@ -92,7 +107,11 @@ export async function encryptSM4CBC(plaintext: string, keyHex: string, ivHex: st
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 明文字符串
  */
-export async function decryptSM4CBC(cipherHex: string, keyHex: string, ivHex: string): Promise<string> {
+export async function decryptSM4CBC(
+  cipherHex: string,
+  keyHex: string,
+  ivHex: string
+): Promise<string> {
   if (!cipherHex) {
     return "";
   }
@@ -113,7 +132,11 @@ export async function decryptSM4CBC(cipherHex: string, keyHex: string, ivHex: st
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 加密后的密文（十六进制字符串）
  */
-export async function encryptRequestBody(data: Record<string, unknown>, keyHex: string, ivHex: string): Promise<string> {
+export async function encryptRequestBody(
+  data: Record<string, unknown>,
+  keyHex: string,
+  ivHex: string
+): Promise<string> {
   const jsonStr = JSON.stringify(data);
   return encryptSM4CBC(jsonStr, keyHex, ivHex);
 }
@@ -127,7 +150,11 @@ export async function encryptRequestBody(data: Record<string, unknown>, keyHex: 
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 解密后的数据对象
  */
-export async function decryptRequestBody(cipherHex: string, keyHex: string, ivHex: string): Promise<Record<string, unknown>> {
+export async function decryptRequestBody(
+  cipherHex: string,
+  keyHex: string,
+  ivHex: string
+): Promise<Record<string, unknown>> {
   const jsonStr = await decryptSM4CBC(cipherHex, keyHex, ivHex);
   return JSON.parse(jsonStr);
 }
@@ -216,4 +243,3 @@ export async function fetchSM4KeyForPassword(): Promise<string> {
 
 // 重新导出编码转换函数，保持向后兼容
 export { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer };
-

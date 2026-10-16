@@ -103,11 +103,7 @@ vlan {{.VLANID}}
 `}
           />
         </Form.Item>
-        <Form.Item
-          name="variables"
-          label="变量定义"
-          extra="JSON格式，定义变量的默认值和描述"
-        >
+        <Form.Item name="variables" label="变量定义" extra="JSON格式，定义变量的默认值和描述">
           <TextArea
             rows={6}
             placeholder={`示例：

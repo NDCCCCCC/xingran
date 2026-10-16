@@ -31,8 +31,8 @@ const DEFAULT_MAX_SIZE = MAX_IMAGE_SIZE;
 
 export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUploadReturn {
   const {
-    businessType = "image",
-    maxSize = DEFAULT_MAX_SIZE,
+    businessType: _businessType = "image",
+    maxSize: _maxSize = DEFAULT_MAX_SIZE,
     onSuccess,
     onError,
   } = options;
@@ -51,19 +51,30 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     }
   }, []);
 
-  const handleUploadSuccess = useCallback((file: UploadFile, response: FileUploadResponse) => {
-    setUploading(false);
-    setImageId(response.id);
-    setImageUrl(`/uploads/${response.storagePath || ""}`);
-    message.success("图片上传成功");
-    onSuccess?.(response.id, `/uploads/${response.storagePath || ""}`);
-  }, [onSuccess]);
+  const handleUploadSuccess = useCallback(
+    (file: UploadFile, response: FileUploadResponse) => {
+      setUploading(false);
+      setImageId(response.id);
+      // 前缀用 Vite base：dev 下 BASE_URL='/' 行为不变，prod 下产出 /ruoyi/uploads/...
+      // 与 nginx location /ruoyi/ 对齐；后端 /uploads/* 在 nginx 剥前缀后正常服务。
+      const uploadsBase = `${import.meta.env.BASE_URL}uploads/`;
+      setImageUrl(`${uploadsBase}${response.storagePath || ""}`);
+      message.success("图片上传成功");
+      onSuccess?.(response.id, `${uploadsBase}${response.storagePath || ""}`);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    [onSuccess]
+  );
 
-  const handleUploadError = useCallback((_file: UploadFile, error: unknown) => {
-    setUploading(false);
-    message.error("图片上传失败");
-    onError?.(error instanceof Error ? error : new Error(String(error)));
-  }, [onError]);
+  const handleUploadError = useCallback(
+    (_file: UploadFile, error: unknown) => {
+      setUploading(false);
+      message.error("图片上传失败");
+      onError?.(error instanceof Error ? error : new Error(String(error)));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    [onError]
+  );
 
   const resetUpload = useCallback(() => {
     setFileList([]);
@@ -79,13 +90,17 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     setImageUrl(fileUrl);
 
     if (fileUrl) {
-      setFileList([{
-        uid: fileId,
-        name: "平面图",
-        status: "done",
-        url: fileUrl,
-        response: { id: fileId, storagePath: fileUrl.replace("/uploads/", "") },
-      }]);
+      setFileList([
+        {
+          uid: fileId,
+          name: "平面图",
+          status: "done",
+          url: fileUrl,
+          // 取 fileUrl 中 "/uploads/" 最后一次出现之后的部分作为 storagePath，
+          // 兼容不带前缀('/uploads/abc')和带 BASE_URL 前缀('/ruoyi/uploads/abc')两种旧/新格式。
+          response: { id: fileId, storagePath: fileUrl.split("/uploads/").pop() || "" },
+        },
+      ]);
     } else {
       setFileList([]);
     }

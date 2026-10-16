@@ -4,13 +4,23 @@
 
 import { useLayoutEffect, useState, useCallback } from "react";
 import {
-  App, Modal, Form, Input, InputNumber, Switch, Tabs, Space, Button,
-  Card, Row, Col, Tag, Divider, Select,
+  App,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Switch,
+  Tabs,
+  Button,
+  Card,
+  Row,
+  Col,
+  Select,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
 import type { Task, Action } from "@/types/rpa";
-import { TASK_STATUS_OPTIONS, ACTION_TYPE_OPTIONS, ACTION_TYPE_TEXT_MAP } from "../../constants";
+import { ACTION_TYPE_OPTIONS } from "../../constants";
 import { AIScriptEditor } from "./AIScriptEditor";
 
 const { TextArea } = Input;
@@ -54,9 +64,10 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
           <Select
             value={action.type}
             placeholder="动作类型"
-            onChange={(value) =>    onUpdate(index, { ...action, type: value })}
+            onChange={(value) => onUpdate(index, { ...action, type: value })}
             style={{ width: "100%" }}
-           onSearch={() => {}}>
+            onSearch={() => {}}
+          >
             {ACTION_TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -75,33 +86,39 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
             <Input
               value={action.selector?.value || ""}
               placeholder="选择器 (CSS Selector)"
-              onChange={(e) => onUpdate(index, {
-                ...action,
-                selector: { ...action.selector, type: "css", value: e.target.value },
-              })}
+              onChange={(e) =>
+                onUpdate(index, {
+                  ...action,
+                  selector: { ...action.selector, type: "css", value: e.target.value },
+                })
+              }
               style={{ marginBottom: 8 }}
             />
           )}
           {(action.type === "fill" || action.type === "select" || action.type === "navigate") && (
             <Input
-              value={action.params?.value as string || ""}
+              value={(action.params?.value as string) || ""}
               placeholder="值 (URL/输入内容/选项)"
-              onChange={(e) => onUpdate(index, {
-                ...action,
-                params: { ...action.params, value: e.target.value },
-              })}
+              onChange={(e) =>
+                onUpdate(index, {
+                  ...action,
+                  params: { ...action.params, value: e.target.value },
+                })
+              }
             />
           )}
           {action.type === "wait" && (
             <InputNumber
-              value={action.params?.duration as number || 1000}
+              value={(action.params?.duration as number) || 1000}
               placeholder="等待时长(毫秒)"
               min={100}
               max={60000}
-              onChange={(value) => onUpdate(index, {
-                ...action,
-                params: { ...action.params, duration: value || 1000 },
-              })}
+              onChange={(value) =>
+                onUpdate(index, {
+                  ...action,
+                  params: { ...action.params, duration: value || 1000 },
+                })
+              }
               style={{ width: "100%" }}
             />
           )}
@@ -111,13 +128,7 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
   );
 }
 
-export function TaskEditModal({
-  open,
-  form,
-  editingTask,
-  onOk,
-  onCancel,
-}: TaskEditModalProps) {
+export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskEditModalProps) {
   const { message } = App.useApp();
   const [actions, setActions] = useState<Action[]>([]);
   const [aiEditorVisible, setAiEditorVisible] = useState(false);
@@ -126,7 +137,13 @@ export function TaskEditModal({
   useLayoutEffect(() => {
     if (open && !editingTask?.id) {
       form.resetFields();
-      form.setFieldsValue({ status: "pending", priority: 50, timeout: 300, retryOnFailure: true, maxRetries: 3 });
+      form.setFieldsValue({
+        status: "pending",
+        priority: 50,
+        timeout: 300,
+        retryOnFailure: true,
+        maxRetries: 3,
+      });
       setActions([]);
     } else if (open && editingTask) {
       // 设置表单值
@@ -139,7 +156,12 @@ export function TaskEditModal({
         maxRetries: editingTask.retryCount || editingTask.maxRetries || 3,
         status: editingTask.status === 0 ? "pending" : "disabled",
         // tags 是字符串，需要转换为数组（用逗号分隔）
-        tags: editingTask.tags ? editingTask.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
+        tags: editingTask.tags
+          ? editingTask.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
       });
 
       // 解析脚本动作
@@ -187,30 +209,37 @@ export function TaskEditModal({
     setActions([...actions, newAction]);
   }, [actions]);
 
-  const handleUpdateAction = useCallback((index: number, updatedAction: Action) => {
-    const newActions = [...actions];
-    newActions[index] = updatedAction;
-    setActions(newActions);
-  }, [actions]);
+  const handleUpdateAction = useCallback(
+    (index: number, updatedAction: Action) => {
+      const newActions = [...actions];
+      newActions[index] = updatedAction;
+      setActions(newActions);
+    },
+    [actions]
+  );
 
-  const handleRemoveAction = useCallback((index: number) => {
-    setActions(actions.filter((_, i) => i !== index));
-  }, [actions]);
+  const handleRemoveAction = useCallback(
+    (index: number) => {
+      setActions(actions.filter((_, i) => i !== index));
+    },
+    [actions]
+  );
 
   const handleAIGenerate = useCallback((generatedActions: Action[]) => {
     setActions(generatedActions);
     setAiEditorVisible(false);
     message.success("AI 生成脚本成功！");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const handleOk = useCallback(async () => {
     const values = await form.validateFields();
 
     // 构建 script 数组格式（后端期望的是 ScriptAction 数组）
-    const script = actions.map(action => ({
+    const script = actions.map((action) => ({
       type: action.type,
       selector: action.selector?.value || "",
-      value: action.params?.value as string || "",
+      value: (action.params?.value as string) || "",
       attributes: {
         description: action.description,
         ...(action.params?.duration !== undefined && { duration: action.params.duration }),
@@ -275,7 +304,12 @@ export function TaskEditModal({
 
                     <Row gutter={16}>
                       <Col span={12}>
-                        <Form.Item name="retryOnFailure" label="失败重试" valuePropName="checked" initialValue={true}>
+                        <Form.Item
+                          name="retryOnFailure"
+                          label="失败重试"
+                          valuePropName="checked"
+                          initialValue={true}
+                        >
                           <Switch />
                         </Form.Item>
                       </Col>
@@ -287,7 +321,7 @@ export function TaskEditModal({
                     </Row>
 
                     <Form.Item name="tags" label="标签">
-                      <Select mode="tags" placeholder="请输入标签"  onSearch={() => {}}/>
+                      <Select mode="tags" placeholder="请输入标签" onSearch={() => {}} />
                     </Form.Item>
                   </>
                 ),
@@ -311,19 +345,20 @@ export function TaskEditModal({
                 children: (
                   <>
                     <div style={{ marginBottom: 16 }}>
-                      <Button
-                        type="dashed"
-                        onClick={handleAddAction}
-                        icon={<PlusOutlined />}
-                        block
-                      >
+                      <Button type="dashed" onClick={handleAddAction} icon={<PlusOutlined />} block>
                         添加动作
                       </Button>
                     </div>
 
                     <div style={{ maxHeight: 400, overflowY: "auto" }}>
                       {actions.length === 0 ? (
-                        <div style={{ textAlign: "center", padding: "40px 0", color: "var(--theme-text-tertiary, #999)" }}>
+                        <div
+                          style={{
+                            textAlign: "center",
+                            padding: "40px 0",
+                            color: "var(--theme-text-tertiary, #999)",
+                          }}
+                        >
                           暂无动作，请点击上方按钮添加或使用 AI 生成
                         </div>
                       ) : (

@@ -19,9 +19,7 @@ import { useReconciliationVisibility } from "./useReconciliationVisibility";
 const STALE_TIME_MS = 5 * 60 * 1000;
 const GC_TIME_MS = 10 * 60 * 1000;
 
-export function useWorkstationHealth(
-  workstationId: string
-): UseQueryResult<ByWorkstationResponse> {
+export function useWorkstationHealth(workstationId: string): UseQueryResult<ByWorkstationResponse> {
   const visible = useReconciliationVisibility();
 
   return useQuery({

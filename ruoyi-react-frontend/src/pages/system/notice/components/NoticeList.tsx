@@ -97,7 +97,9 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       sorter: true,
       sortOrder: getColumnSortOrder?.("noticeType"),
       render: (type: string) => (
-        <Tag color={NOTICE_TYPE_COLORS[type as "1" | "2"]}>{NOTICE_TYPE_LABELS[type as "1" | "2"]}</Tag>
+        <Tag color={NOTICE_TYPE_COLORS[type as "1" | "2"]}>
+          {NOTICE_TYPE_LABELS[type as "1" | "2"]}
+        </Tag>
       ),
     },
     {
@@ -110,7 +112,9 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       render: (priority: number) => {
         if (priority === 0) return <span className="text-gray-400">普通</span>;
         return (
-          <Tag color={PRIORITY_COLORS[priority as NoticePriority]}>{PRIORITY_LABELS[priority as NoticePriority]}</Tag>
+          <Tag color={PRIORITY_COLORS[priority as NoticePriority]}>
+            {PRIORITY_LABELS[priority as NoticePriority]}
+          </Tag>
         );
       },
     },
@@ -119,7 +123,9 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       dataIndex: "targetType",
       key: "targetType",
       width: 100,
-      render: (type: number) => <span className="text-gray-500">{TARGET_TYPE_LABELS[type as TargetType]}</span>,
+      render: (type: number) => (
+        <span className="text-gray-500">{TARGET_TYPE_LABELS[type as TargetType]}</span>
+      ),
     },
     {
       title: "接收范围详情",
@@ -135,8 +141,11 @@ export const NoticeList: React.FC<NoticeListProps> = ({
         const displayTargets = targets.slice(0, 3);
         const remainingCount = targets.length - 3;
         return (
-          <span className="text-gray-600" title={targets.map(t => t.targetName || t.targetType).join(", ")}>
-            {displayTargets.map(t => t.targetName || t.targetType).join(", ")}
+          <span
+            className="text-gray-600"
+            title={targets.map((t) => t.targetName || t.targetType).join(", ")}
+          >
+            {displayTargets.map((t) => t.targetName || t.targetType).join(", ")}
             {remainingCount > 0 && <span className="text-gray-400"> 等 {targets.length} 个</span>}
           </span>
         );
@@ -156,7 +165,9 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       key: "publishStatus",
       width: 100,
       render: (status: number) => (
-        <Tag color={PUBLISH_STATUS_COLORS[status as 0 | 1 | 2 | 3]}>{PUBLISH_STATUS_LABELS[status as 0 | 1 | 2 | 3]}</Tag>
+        <Tag color={PUBLISH_STATUS_COLORS[status as 0 | 1 | 2 | 3]}>
+          {PUBLISH_STATUS_LABELS[status as 0 | 1 | 2 | 3]}
+        </Tag>
       ),
     },
     {
@@ -166,14 +177,17 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       width: 180,
       sorter: true,
       sortOrder: getColumnSortOrder?.("publishTime"),
-      render: (time: string) => time ? formatDateTime(time) : <span className="text-gray-400">-</span>,
+      render: (time: string) =>
+        time ? formatDateTime(time) : <span className="text-gray-400">-</span>,
     },
     {
       title: "状态",
       dataIndex: "status",
       key: "status",
       width: 80,
-      render: (status: number) => <Tag color={status === 0 ? "success" : "default"}>{status === 0 ? "正常" : "关闭"}</Tag>,
+      render: (status: number) => (
+        <Tag color={status === 0 ? "success" : "default"}>{status === 0 ? "正常" : "关闭"}</Tag>
+      ),
     },
     {
       title: "创建时间",
@@ -203,25 +217,33 @@ export const NoticeList: React.FC<NoticeListProps> = ({
             icon: <BarChartOutlined />,
             onClick: () => onStatistics(record),
           },
-          ...(record.publishStatus === 0 || record.publishStatus === 2 ? [{
-            key: "publish",
-            label: "发布",
-            onClick: () => onPublish(record.id),
-          }] : []),
-          ...(record.publishStatus === 1 ? [{
-            key: "withdraw",
-            label: "撤回",
-            danger: true,
-            onClick: () => {
-              Modal.confirm({
-                title: "确认撤回该通知? 撤回后通知将退回到草稿状态",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => onWithdraw(record.id),
-              });
-            },
-          }] : []),
+          ...(record.publishStatus === 0 || record.publishStatus === 2
+            ? [
+                {
+                  key: "publish",
+                  label: "发布",
+                  onClick: () => onPublish(record.id),
+                },
+              ]
+            : []),
+          ...(record.publishStatus === 1
+            ? [
+                {
+                  key: "withdraw",
+                  label: "撤回",
+                  danger: true,
+                  onClick: () => {
+                    Modal.confirm({
+                      title: "确认撤回该通知? 撤回后通知将退回到草稿状态",
+                      okText: "确定",
+                      cancelText: "取消",
+                      okButtonProps: { danger: true },
+                      onOk: () => onWithdraw(record.id),
+                    });
+                  },
+                },
+              ]
+            : []),
           {
             key: "edit",
             label: "编辑",
@@ -254,13 +276,32 @@ export const NoticeList: React.FC<NoticeListProps> = ({
     <>
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="noticeTitle" label="公告标题">
-              <Input placeholder="请输入公告标题" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入公告标题"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="noticeType" label="公告类型">
-              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 <Option value="1">公告</Option>
                 <Option value="2">警告</Option>
               </Select>
@@ -270,7 +311,13 @@ export const NoticeList: React.FC<NoticeListProps> = ({
                 <Button type="primary" icon={<SearchOutlined />} onClick={() => onSearch()}>
                   搜索
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={() => { searchForm.resetFields(); onSearch(); }}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    searchForm.resetFields();
+                    onSearch();
+                  }}
+                >
                   刷新
                 </Button>
               </Space>
@@ -278,11 +325,7 @@ export const NoticeList: React.FC<NoticeListProps> = ({
           </Form>
           <Space>
             {selectedRowKeys.length > 0 && (
-              <Button
-                danger
-                icon={<DeleteOutlined />}
-                onClick={onBatchDelete}
-              >
+              <Button danger icon={<DeleteOutlined />} onClick={onBatchDelete}>
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}

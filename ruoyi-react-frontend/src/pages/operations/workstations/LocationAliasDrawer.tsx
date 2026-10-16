@@ -15,7 +15,7 @@
  * - 写操作成功后调 useInvalidateDept + invalidate locationAlias(双失效)
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Drawer,
   Form,
@@ -33,7 +33,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationAliasApi, type LocationAlias } from "@/lib/opsApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { useDeptTree, useInvalidateDept } from "@/hooks/useDeptTree";
-import { dedupTreeByKey, filterExternalOrgDepts, toFullPathTree, trimTitleToLastSegment } from "@/utils/deptUtils";
+import {
+  dedupTreeByKey,
+  filterExternalOrgDepts,
+  toFullPathTree,
+  trimTitleToLastSegment,
+} from "@/utils/deptUtils";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { useMenuStore } from "@/store/menuStore";
 import type { DeptTreeNode } from "./types";
@@ -61,7 +66,11 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   const { data: deptTreeData = [] } = useDeptTree();
 
   // 数据:alias 分页列表
-  const { data: aliasPage, isLoading, refetch } = useQuery({
+  const {
+    data: aliasPage,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.locationAlias.list({ pageNum, pageSize }),
     queryFn: async () => {
       const res = await locationAliasApi.list({ pageNum, pageSize });
@@ -79,13 +88,16 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   const fullDeptTreeData = useMemo(
     () =>
       dedupTreeByKey(
-        trimTitleToLastSegment(toFullPathTree(deptTreeData ?? [])),
+        trimTitleToLastSegment(toFullPathTree(deptTreeData ?? []))
       ) as unknown as DeptTreeNode[],
-    [deptTreeData],
+    [deptTreeData]
   );
   const locationTreeData: DeptTreeNode[] = useMemo(
-    () => dedupTreeByKey(filterExternalOrgDepts<DeptTreeNode>(fullDeptTreeData)) as unknown as DeptTreeNode[],
-    [fullDeptTreeData],
+    () =>
+      dedupTreeByKey(
+        filterExternalOrgDepts<DeptTreeNode>(fullDeptTreeData)
+      ) as unknown as DeptTreeNode[],
+    [fullDeptTreeData]
   );
 
   // 仅展开第一层(根节点),避免全树展开导致下拉太长难找部门。
@@ -95,14 +107,16 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   // 双失效工具
   const invalidateDept = useInvalidateDept();
   const queryClient = useQueryClient();
-  const invalidateAliasAll = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.locationAlias.all });
+  const invalidateAliasAll = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.locationAlias.all }),
+    [queryClient]
+  );
 
-  const refreshAfterMutation = async () => {
+  const refreshAfterMutation = useCallback(async () => {
     await refetch();
     invalidateDept();
     invalidateAliasAll();
-  };
+  }, [refetch, invalidateDept, invalidateAliasAll]);
 
   const handleCreate = async () => {
     try {
@@ -128,73 +142,71 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
     }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await locationAliasApi.delete(id);
-      handleSuccess("映射删除");
-      await refreshAfterMutation();
-    } catch (err) {
-      handleApiError(err, "删除映射");
-    }
-  };
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await locationAliasApi.delete(id);
+        handleSuccess("映射删除");
+        await refreshAfterMutation();
+      } catch (err) {
+        handleApiError(err, "删除映射");
+      }
+    },
+    [refreshAfterMutation]
+  );
 
   const aliasList: LocationAlias[] = aliasPage?.list ?? [];
   const total: number = aliasPage?.total ?? 0;
 
-  const columns = [
-    {
-      title: "所属部门",
-      key: "dept",
-      ellipsis: true,
-      render: (_: unknown, r: LocationAlias) =>
-        r.originDeptName ? (
-          <Text>{r.originDeptName}</Text>
-        ) : (
-          <Text code>{r.deptId}</Text>
-        ),
-    },
-    {
-      title: "物理位置",
-      key: "location",
-      ellipsis: true,
-      render: (_: unknown, r: LocationAlias) =>
-        r.locationDeptName ? (
-          <Text>{r.locationDeptName}</Text>
-        ) : (
-          <Text code>{r.locationId}</Text>
-        ),
-    },
-    {
-      title: "备注",
-      dataIndex: "remark",
-      key: "remark",
-      ellipsis: true,
-    },
-    {
-      title: "创建时间",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 160,
-    },
-    {
-      title: "操作",
-      key: "action",
-      width: 80,
-      render: (_: unknown, record: LocationAlias) =>
-        canDelete ? (
-          <Popconfirm
-            title="确认删除该映射?"
-            description="删除后,工位编辑下拉将立即不再追加该 alias 部门。"
-            okText="删除"
-            okButtonProps={{ danger: true }}
-            cancelText="取消"
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button type="link" danger icon={<DeleteOutlined />} size="small" />
-          </Popconfirm>
-        ) : null,
-    },
-  ];
+  const columns = useMemo(
+    () => [
+      {
+        title: "所属部门",
+        key: "dept",
+        ellipsis: true,
+        render: (_: unknown, r: LocationAlias) =>
+          r.originDeptName ? <Text>{r.originDeptName}</Text> : <Text code>{r.deptId}</Text>,
+      },
+      {
+        title: "物理位置",
+        key: "location",
+        ellipsis: true,
+        render: (_: unknown, r: LocationAlias) =>
+          r.locationDeptName ? <Text>{r.locationDeptName}</Text> : <Text code>{r.locationId}</Text>,
+      },
+      {
+        title: "备注",
+        dataIndex: "remark",
+        key: "remark",
+        ellipsis: true,
+      },
+      {
+        title: "创建时间",
+        dataIndex: "createdAt",
+        key: "createdAt",
+        width: 160,
+      },
+      {
+        title: "操作",
+        key: "action",
+        width: 80,
+        render: (_: unknown, record: LocationAlias) =>
+          canDelete ? (
+            <Popconfirm
+              title="确认删除该映射?"
+              description="删除后,工位编辑下拉将立即不再追加该 alias 部门。"
+              okText="删除"
+              okButtonProps={{ danger: true }}
+              cancelText="取消"
+              onConfirm={() => handleDelete(record.id)}
+            >
+              <Button type="link" danger icon={<DeleteOutlined />} size="small" />
+            </Popconfirm>
+          ) : null,
+      },
+    ],
+    [canDelete, handleDelete]
+  );
 
   return (
     <Drawer
@@ -222,11 +234,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
         </div>
 
         {showAddForm && (
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{ scope: "workstation" }}
-          >
+          <Form form={form} layout="vertical" initialValues={{ scope: "workstation" }}>
             <Form.Item
               name="deptId"
               label="所属部门(全量)"
@@ -244,9 +252,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
             <Form.Item
               name="locationId"
               label="物理位置(仅外部机构)"
-              rules={[
-                { required: true, message: "请选择物理位置" },
-              ]}
+              rules={[{ required: true, message: "请选择物理位置" }]}
               extra="仅可选择 isExternalOrg=1 的外部机构子树下的节点"
             >
               <TreeSelect

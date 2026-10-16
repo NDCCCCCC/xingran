@@ -10,9 +10,9 @@ import { useVisualizationStore } from "@/store/visualizationStore";
 import { floorApi, workstationApi, buildingApi } from "@/lib/opsApi";
 import type { Floor } from "@/types/operations";
 import { handleApiError } from "@/utils/errorHandler";
-import { convertApiWorkstations, calculateWorkstationStats } from "../utils";
-import BuildingModel3D from "./BuildingModel3D";
-import FloorPlan3D from "./FloorPlan3D";
+import { convertApiWorkstations } from "../utils";
+// Use lazy wrappers from BuildingScene so Three.js stays out of the initial bundle.
+import { BuildingModel3DLazy, FloorPlan3DLazy } from "@/components/three/BuildingScene";
 
 // ============ 类型定义 ============
 
@@ -56,7 +56,8 @@ const BuildingView3D: React.FC = () => {
   const [workstations, setWorkstations] = useState<WorkstationData[]>([]);
   const [loadingWorkstations, setLoadingWorkstations] = useState(false);
 
-  const { selectedBuilding, navigateToMap } = useVisualizationStore();
+  const selectedBuilding = useVisualizationStore((s) => s.selectedBuilding);
+  const navigateToMap = useVisualizationStore((s) => s.navigateToMap);
 
   // ============ 数据加载 ============
 
@@ -87,35 +88,16 @@ const BuildingView3D: React.FC = () => {
 
         const floorList = result.data?.list || [];
 
-        // 获取每层楼的工位数量
-        const floorsWithCount = await Promise.all(
-          floorList.map(async (floor: Floor) => {
-            try {
-              const wsResult = await workstationApi.list({
-                floorCode: floor.id,
-                current: 1,
-                pageSize: 1,
-              });
-              return {
-                id: floor.id,
-                name: floor.name || "",
-                code: floor.code,
-                floorNo: String(floor.floorNo),
-                status: floor.status,
-                workstationCount: wsResult.data?.total || 0,
-              };
-            } catch {
-              return {
-                id: floor.id,
-                name: floor.name || "",
-                code: floor.code,
-                floorNo: String(floor.floorNo),
-                status: floor.status,
-                workstationCount: 0,
-              };
-            }
-          })
-        );
+        // Sprint 1 Fix #4: 批量获取楼层工位数量，替代原来的 1+N 模式
+        const countsResult = await workstationApi.countsByFloor(floorList.map((f: Floor) => f.id));
+        const floorsWithCount = floorList.map((floor: Floor) => ({
+          id: floor.id,
+          name: floor.name || "",
+          code: floor.code,
+          floorNo: String(floor.floorNo),
+          status: floor.status,
+          workstationCount: countsResult.counts[floor.id] ?? 0,
+        }));
 
         setFloors(floorsWithCount);
       } catch (error) {
@@ -153,13 +135,8 @@ const BuildingView3D: React.FC = () => {
   const loadWorkstations = useCallback(async (floor: FloorData) => {
     try {
       setLoadingWorkstations(true);
-      const result = await workstationApi.list({
-        floorCode: floor.id,
-        current: 1,
-        pageSize: 500,
-      });
-
-      const workstationList = result.data?.list || [];
+      // V130R-09 D-03-6: 楼层全集走专用端点(按 floor UUID),替代 pageSize:500 List(99-04 后 >200 会被钳制截断)
+      const workstationList = await workstationApi.getFloorWorkstationsAll(floor.id);
       const convertedWorkstations = convertApiWorkstations(workstationList);
 
       setWorkstations(convertedWorkstations);
@@ -187,10 +164,7 @@ const BuildingView3D: React.FC = () => {
 
   const statusColor = selectedBuilding.status === 0 ? "success" : "default";
   const statusText = selectedBuilding.status === 0 ? "正常" : "停用";
-  const totalWorkstations = floors.reduce(
-    (sum, f) => sum + (f.workstationCount || 0),
-    0
-  );
+  const totalWorkstations = floors.reduce((sum, f) => sum + (f.workstationCount || 0), 0);
 
   return (
     <div style={styles.container}>
@@ -242,9 +216,7 @@ interface NoBuildingSelectedAlertProps {
   onBackToMap: () => void;
 }
 
-const NoBuildingSelectedAlert: React.FC<NoBuildingSelectedAlertProps> = ({
-  onBackToMap,
-}) => (
+const NoBuildingSelectedAlert: React.FC<NoBuildingSelectedAlertProps> = ({ onBackToMap }) => (
   <div style={styles.centerContainer}>
     <Alert
       message="未选择楼宇"
@@ -280,7 +252,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   <div style={styles.headerBar}>
     <div>
       <Space>
-        <BuildOutlined style={{ color: "var(--theme-text-accent, #1890ff)" }} />
+        <BuildOutlined style={{ color: "var(--theme-text-accent, #337ab0)" }} />
         <span style={styles.headerTitle}>{building.name}</span>
         <Tag color={statusColor}>{statusText}</Tag>
         {floor && (
@@ -346,11 +318,12 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
               placeholder="选择楼宇"
               value={currentBuilding?.id}
               onChange={onBuildingChange}
-              options={buildings.map((b) =>    ({
+              options={buildings.map((b) => ({
                 label: b.name,
                 value: b.id,
               }))}
-             onSearch={() => {}}/>
+              onSearch={() => {}}
+            />
           </>
         )}
       </Space>
@@ -358,7 +331,7 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
 
     {/* 3D 楼宇模型 */}
     <div style={styles.modelContainer}>
-      <BuildingModel3D
+      <BuildingModel3DLazy
         floors={floors}
         onFloorClick={onFloorClick}
         selectedFloorId={selectedFloorId}
@@ -373,19 +346,13 @@ interface FloorPlanPanelProps {
   loading: boolean;
 }
 
-const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({
-  floor,
-  workstations,
-  loading,
-}) => (
+const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({ floor, workstations, loading }) => (
   <div style={styles.floorPlanPanel}>
     {/* 平面图标题 */}
     <div style={styles.panelHeader}>
       <Space>
-        <DesktopOutlined style={{ color: "var(--theme-text-accent, #1890ff)" }} />
-        <span style={styles.panelTitle}>
-          {floor.name || floor.floorNo} - 工位平面图
-        </span>
+        <DesktopOutlined style={{ color: "var(--theme-text-accent, #337ab0)" }} />
+        <span style={styles.panelTitle}>{floor.name || floor.floorNo} - 工位平面图</span>
         <Tag color="blue">{workstations.length} 个工位</Tag>
       </Space>
     </div>
@@ -398,7 +365,7 @@ const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({
         <EmptyView message="该楼层暂无工位" />
       ) : (
         <div style={{ height: "100%", width: "100%" }}>
-          <FloorPlan3D workstations={workstations} />
+          <FloorPlan3DLazy workstations={workstations} />
         </div>
       )}
     </div>
@@ -410,9 +377,7 @@ const LoadingView: React.FC<{ message?: string }> = ({ message }) => (
     <Spin size="large">
       <div style={{ minHeight: 120 }} />
     </Spin>
-    {message && (
-      <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>{message}</div>
-    )}
+    {message && <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>{message}</div>}
   </div>
 );
 
@@ -454,14 +419,14 @@ const styles = {
     color: "var(--theme-text-primary, #262626)",
   },
   headerArrow: {
-    color: "var(--theme-text-tertiary, #8c8c8c)",
+    color: "var(--theme-text-tertiary, #707068)",
   },
   headerInfo: {
     fontSize: 12,
-    color: "var(--theme-text-tertiary, #8c8c8c)",
+    color: "var(--theme-text-tertiary, #707068)",
   },
   splitter: {
-    color: "var(--theme-border-divider, #d9d9d9)",
+    color: "var(--theme-border-divider, #dbd7ce)",
   },
   mainContent: {
     flex: 1,
@@ -493,7 +458,7 @@ const styles = {
   },
   controlLabel: {
     fontSize: 12,
-    color: "var(--theme-text-tertiary, #8c8c8c)",
+    color: "var(--theme-text-tertiary, #707068)",
     marginTop: 4,
   },
   modelContainer: {

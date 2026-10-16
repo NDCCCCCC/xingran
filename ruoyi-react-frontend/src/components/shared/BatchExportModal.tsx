@@ -5,8 +5,7 @@
 
 import { useState, useMemo, type FC } from "react";
 import { App, Modal, Checkbox, Space, Button } from "antd";
-import { DownloadOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
-import { getAccessToken } from "@/utils/authHelpers";
+import { DownloadOutlined } from "@ant-design/icons";
 
 export interface EntityType {
   key: string;
@@ -43,16 +42,18 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
 }) => {
   // 默认全选所有实体类型
   const { message } = App.useApp();
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(DEFAULT_ENTITY_TYPES.map(e => e.key));
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    DEFAULT_ENTITY_TYPES.map((e) => e.key)
+  );
 
   // 当 modal 打开时重置为全选
   const handleOpen = () => {
-    setSelectedTypes(DEFAULT_ENTITY_TYPES.map(e => e.key));
+    setSelectedTypes(DEFAULT_ENTITY_TYPES.map((e) => e.key));
   };
 
   // 全选
   const handleSelectAll = () => {
-    setSelectedTypes(availableEntityTypes.map(e => e.key));
+    setSelectedTypes(availableEntityTypes.map((e) => e.key));
   };
 
   // 清空
@@ -62,8 +63,8 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
 
   // 切换单个选项
   const handleToggle = (key: string) => {
-    setSelectedTypes(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    setSelectedTypes((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   };
 
@@ -89,7 +90,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
   );
 
   // 响应式列数配置
-  const checkboxColSpan = useMemo(() => {
+  const _checkboxColSpan = useMemo(() => {
     // 桌面 3 列，平板 2 列，移动 1 列
     if (typeof window !== "undefined") {
       if (window.innerWidth >= 992) return 8;
@@ -112,7 +113,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
         disabled: selectedTypes.length === 0,
       }}
       cancelButtonProps={{ disabled: loading }}
-      afterOpenChange={open => open && handleOpen()}
+      afterOpenChange={(open) => open && handleOpen()}
       destroyOnHidden
     >
       <Space direction="vertical" style={{ width: "100%" }} size="middle">
@@ -130,7 +131,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
         <div>
           <Checkbox
             indeterminate={isIndeterminate}
-            onChange={e => e.target.checked ? handleSelectAll() : handleClearAll()}
+            onChange={(e) => (e.target.checked ? handleSelectAll() : handleClearAll())}
             checked={isAllSelected}
             disabled={loading}
           >
@@ -139,13 +140,15 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-          {availableEntityTypes.map(entity => (
+          {availableEntityTypes.map((entity) => (
             <Checkbox
               key={entity.key}
               checked={selectedTypes.includes(entity.key)}
               onChange={() => handleToggle(entity.key)}
               disabled={loading}
-              style={typeof window !== "undefined" && window.innerWidth < 576 ? { width: "100%" } : {}}
+              style={
+                typeof window !== "undefined" && window.innerWidth < 576 ? { width: "100%" } : {}
+              }
             >
               {entity.label}
             </Checkbox>

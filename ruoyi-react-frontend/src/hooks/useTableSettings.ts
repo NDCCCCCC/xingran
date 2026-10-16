@@ -9,11 +9,11 @@ import { usePagination } from "./usePagination";
 import type { TableProps } from "antd";
 
 export interface UseTableSettingsOptions {
-	// 是否启用全局分页（默认 true）
-	enableGlobalPagination?: boolean;
+  // 是否启用全局分页（默认 true）
+  enableGlobalPagination?: boolean;
 
-	// 页面级分页覆盖
-	pageSize?: number;
+  // 页面级分页覆盖
+  pageSize?: number;
 }
 
 /**
@@ -31,25 +31,25 @@ export interface UseTableSettingsOptions {
  * />
  */
 export function useTableSettings(options: UseTableSettingsOptions = {}) {
-	const { enableGlobalPagination = true, pageSize } = options;
+  const { enableGlobalPagination = true, pageSize } = options;
 
-	// 获取分页配置
-	const pagination = usePagination({
-		pageSize: enableGlobalPagination ? pageSize : undefined,
-	});
+  // 获取分页配置
+  const pagination = usePagination({
+    pageSize: enableGlobalPagination ? pageSize : undefined,
+  });
 
-	/**
-	 * 获取 Table props
-	 * 自动集成分页配置
-	 */
-	const getTableProps = <T = unknown>(): Partial<TableProps<T>> => ({
-		pagination: pagination.paginationProps,
-	});
+  /**
+   * 获取 Table props
+   * 自动集成分页配置
+   */
+  const getTableProps = <T = unknown>(): Partial<TableProps<T>> => ({
+    pagination: pagination.paginationProps,
+  });
 
-	return {
-		pagination,
-		getTableProps,
-	};
+  return {
+    pagination,
+    getTableProps,
+  };
 }
 
 export default useTableSettings;

@@ -1,13 +1,26 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { FC, MouseEvent } from "react";
-import { App, Badge, Dropdown, Empty, Spin, Tag, Avatar } from "antd";
+import { App, Dropdown, Empty, Spin, Tag } from "antd";
 import { BellOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { USER_NOTICES } from "@/constants/routes";
 import { useNoticeStore } from "@/store/noticeStore";
-import { getNotificationList, markNoticeAsRead, markAllNoticesAsRead, ignoreNotice } from "@/lib/noticeApi";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { buildWebSocketUrl } from "@/lib/noticeApi";
+import {
+  getNotificationList,
+  markNoticeAsRead,
+  markAllNoticesAsRead,
+  ignoreNotice,
+  getUnreadCount,
+} from "@/lib/noticeApi";
 import type { NoticeListItem } from "@/types/notice";
-import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS } from "@/types/notice";
+import {
+  PRIORITY_COLORS,
+  PRIORITY_LABELS,
+  NOTICE_TYPE_COLORS,
+  NOTICE_TYPE_LABELS,
+} from "@/types/notice";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/zh-cn";
@@ -44,21 +57,6 @@ const FOOTER_STYLE = {
   background: "var(--theme-bg-tertiary)",
 } as const;
 
-const BADGE_STYLE = {
-  background: "var(--theme-error)",
-  boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
-} as const;
-
-const AVATAR_WRAPPER_STYLE = {
-  display: "inline-block",
-} as const;
-
-const AVATAR_STYLE = {
-  background: "linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)",
-  boxShadow: "0 2px 8px rgba(79, 70, 229, 0.2)",
-  transition: "transform 300ms, box-shadow 300ms",
-} as const;
-
 /**
  * 通知铃铛组件
  * 显示未读数量，点击展开通知列表
@@ -66,10 +64,38 @@ const AVATAR_STYLE = {
 const NotificationBell: FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const { unreadCount, notifications, loading, markAsRead, markAllAsRead, removeNotification, setNotifications } =
-    useNoticeStore();
+  const unreadCount = useNoticeStore((s) => s.unreadCount);
+  const notifications = useNoticeStore((s) => s.notifications);
+  const loading = useNoticeStore((s) => s.loading);
+  const markAsRead = useNoticeStore((s) => s.markAsRead);
+  const markAllAsRead = useNoticeStore((s) => s.markAllAsRead);
+  const removeNotification = useNoticeStore((s) => s.removeNotification);
+  const setNotifications = useNoticeStore((s) => s.setNotifications);
 
-  // WebSocket 连接已在 Header 组件中初始化，此处无需重复调用
+  // 建立通知 WebSocket 连接
+  const { connect } = useWebSocket({
+    url: buildWebSocketUrl(),
+    onMessage: async (data: unknown) => {
+      // 收到新消息通知时，刷新未读数
+
+      const msg = data as { type?: string };
+      if (msg?.type === "new_notice" || msg?.type === "notice_update") {
+        // 重新获取未读数
+        try {
+          const res = await getUnreadCount();
+          if (res.code === 0) {
+            useNoticeStore.getState().setUnreadCount(res.data?.count ?? 0);
+          }
+        } catch {
+          // 忽略刷新错误
+        }
+      }
+    },
+  });
+
+  useEffect(() => {
+    connect();
+  }, [connect]);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const hasLoadedRef = useRef(false);
@@ -79,10 +105,10 @@ const NotificationBell: FC = () => {
   useEffect(() => {
     if (dropdownOpen && notifications.length === 0 && !hasLoadedRef.current) {
       getNotificationList({ current: 1, pageSize: 10 })
-        .then(response => {
+        .then((response) => {
           setNotifications(response.data?.list || []);
         })
-        .catch(error => {
+        .catch((error) => {
           console.error("加载通知列表失败:", error);
         });
       hasLoadedRef.current = true;
@@ -95,21 +121,24 @@ const NotificationBell: FC = () => {
 
   // 点击通知项 - 使用 useCallback 避免每次渲染重新创建函数
   // 遵循 Vercel React Best Practices: rerender-dependencies
-  const handleClickNotification = useCallback(async (notice: NoticeListItem) => {
-    // 标记为已读
-    if (!notice.isRead) {
-      try {
-        await markNoticeAsRead(notice.id);
-        markAsRead(notice.id);
-      } catch (error) {
-        console.error("标记已读失败:", error);
+  const handleClickNotification = useCallback(
+    async (notice: NoticeListItem) => {
+      // 标记为已读
+      if (!notice.isRead) {
+        try {
+          await markNoticeAsRead(notice.id);
+          markAsRead(notice.id);
+        } catch (error) {
+          console.error("标记已读失败:", error);
+        }
       }
-    }
 
-    // 跳转到通知详情页面
-    setDropdownOpen(false);
-    navigate(`/my-notices/${notice.id}`);
-  }, [markAsRead, navigate]);
+      // 跳转到通知详情页面
+      setDropdownOpen(false);
+      navigate(`/my-notices/${notice.id}`);
+    },
+    [markAsRead, navigate]
+  );
 
   // 全部标记为已读
   const handleMarkAllRead = useCallback(async () => {
@@ -121,21 +150,26 @@ const NotificationBell: FC = () => {
       console.error("标记全部已读失败:", error);
       message.error("操作失败，请稍后重试");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [markAllAsRead]);
 
   // 删除通知（调用忽略API）
-  const handleDelete = useCallback(async (e: MouseEvent, noticeId: string) => {
-    e.stopPropagation();
-    try {
-      await ignoreNotice(noticeId);
-      // 从前端列表中移除
-      removeNotification(noticeId);
-      message.success("已忽略该通知");
-    } catch (error) {
-      console.error("忽略通知失败:", error);
-      message.error("操作失败，请稍后重试");
-    }
-  }, [removeNotification]);
+  const handleDelete = useCallback(
+    async (e: MouseEvent, noticeId: string) => {
+      e.stopPropagation();
+      try {
+        await ignoreNotice(noticeId);
+        // 从前端列表中移除
+        removeNotification(noticeId);
+        message.success("已忽略该通知");
+      } catch (error) {
+        console.error("忽略通知失败:", error);
+        message.error("操作失败，请稍后重试");
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    [removeNotification]
+  );
 
   // 查看全部通知
   const handleViewAll = useCallback(() => {
@@ -150,16 +184,10 @@ const NotificationBell: FC = () => {
       style={NOTIFICATION_CONTENT_STYLE}
     >
       {/* 头部 */}
-      <div
-        className="flex items-center justify-between px-4 py-3 border-b"
-        style={HEADER_STYLE}
-      >
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={HEADER_STYLE}>
         <div className="flex items-center gap-2">
           <BellOutlined className="text-sm" style={{ color: "var(--theme-primary)" }} />
-          <span
-            className="font-semibold text-sm"
-            style={{ color: "var(--theme-text-primary)" }}
-          >
+          <span className="font-semibold text-sm" style={{ color: "var(--theme-text-primary)" }}>
             通知中心
           </span>
           {unreadCount > 0 && (
@@ -192,8 +220,8 @@ const NotificationBell: FC = () => {
               color: "var(--theme-text-secondary)",
             }}
             onClick={handleViewAll}
-            onMouseEnter={(e) => e.currentTarget.style.color = "var(--theme-primary)"}
-            onMouseLeave={(e) => e.currentTarget.style.color = "var(--theme-text-secondary)"}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--theme-primary)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--theme-text-secondary)")}
           >
             查看全部
           </span>
@@ -211,19 +239,17 @@ const NotificationBell: FC = () => {
             />
           </div>
         ) : (
-          <div
-            className="overflow-y-auto"
-            style={LIST_CONTAINER_STYLE}
-          >
+          <div className="overflow-y-auto" style={LIST_CONTAINER_STYLE}>
             {notifications.map((notice, index) => (
               <div
                 key={notice.id}
                 className="transition-all duration-200 cursor-pointer relative"
                 style={{
                   padding: "12px 16px",
-                  borderBottom: index < notifications.length - 1
-                    ? "1px solid var(--theme-border-secondary)"
-                    : "none",
+                  borderBottom:
+                    index < notifications.length - 1
+                      ? "1px solid var(--theme-border-secondary)"
+                      : "none",
                   background: !notice.isRead
                     ? "linear-gradient(to right, var(--theme-primary-light), transparent)"
                     : "transparent",
@@ -254,7 +280,8 @@ const NotificationBell: FC = () => {
                     <BellOutlined
                       className="text-sm"
                       style={{
-                        color: NOTICE_TYPE_COLORS[notice.noticeType] || "var(--theme-text-secondary)"
+                        color:
+                          NOTICE_TYPE_COLORS[notice.noticeType] || "var(--theme-text-secondary)",
                       }}
                     />
                   </div>
@@ -304,10 +331,7 @@ const NotificationBell: FC = () => {
                               {PRIORITY_LABELS[notice.priority]}
                             </Tag>
                           )}
-                          <span
-                            className="text-xs"
-                            style={{ color: "var(--theme-text-tertiary)" }}
-                          >
+                          <span className="text-xs" style={{ color: "var(--theme-text-tertiary)" }}>
                             {dayjs(notice.createdAt).fromNow()}
                           </span>
                         </div>
@@ -336,10 +360,7 @@ const NotificationBell: FC = () => {
 
       {/* 底部 */}
       {notifications.length > 0 && (
-        <div
-          className="px-4 py-2 border-t text-center"
-          style={FOOTER_STYLE}
-        >
+        <div className="px-4 py-2 border-t text-center" style={FOOTER_STYLE}>
           <span
             className="text-xs cursor-pointer transition-colors duration-200 font-medium"
             style={{ color: "var(--theme-primary)" }}
@@ -360,37 +381,25 @@ const NotificationBell: FC = () => {
       placement="bottomRight"
       trigger={["click"]}
     >
-      <Badge
-        count={unreadCount}
-        size="small"
-        offset={[0, 8]}
-        style={BADGE_STYLE}
+      {/* 通知触发器：原型 .icon-btn 36×36 透明方块 + 红圆角 badge */}
+      <button
+        type="button"
+        className="notif-btn"
+        aria-label={unreadCount > 0 ? `通知，${unreadCount} 条未读` : "通知"}
       >
-        <div
-          className="cursor-pointer transition-all duration-300"
-          style={AVATAR_WRAPPER_STYLE}
-          onMouseEnter={(e) => {
-            const avatar = e.currentTarget.querySelector(".ant-avatar") as HTMLElement;
-            if (avatar) {
-              avatar.style.transform = "scale(1.05)";
-              avatar.style.boxShadow = "0 4px 16px rgba(79, 70, 229, 0.3)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            const avatar = e.currentTarget.querySelector(".ant-avatar") as HTMLElement;
-            if (avatar) {
-              avatar.style.transform = "scale(1)";
-              avatar.style.boxShadow = "0 2px 8px rgba(79, 70, 229, 0.2)";
-            }
-          }}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <Avatar
-            size="large"
-            icon={<BellOutlined />}
-            style={AVATAR_STYLE}
-          />
-        </div>
-      </Badge>
+          <path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" />
+          <path d="M10 20a2.2 2.2 0 0 0 4 0" />
+        </svg>
+        {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+      </button>
     </Dropdown>
   );
 };

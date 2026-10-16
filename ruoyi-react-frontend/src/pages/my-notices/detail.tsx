@@ -1,16 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import type { FC } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  App,
-  Button,
-  Spin,
-} from "antd";
+import { App, Button, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { getMyNoticeDetail, markNoticeAsRead } from "@/lib/noticeApi";
 import { useNoticeStore } from "@/store/noticeStore";
 import type { Notice } from "@/types/notice";
-import { formatDateTime } from "@/utils/datetime";
 import NoticeDetailContent from "@/components/NoticeDetail/NoticeDetailContent";
 import { USER_NOTICES } from "@/constants/routes";
 
@@ -21,7 +16,7 @@ const NoticeDetailPage: FC = () => {
   const { message } = App.useApp();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { markAsRead } = useNoticeStore();
+  const markAsRead = useNoticeStore((s) => s.markAsRead);
 
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -37,9 +32,9 @@ const NoticeDetailPage: FC = () => {
       if (noticeData) {
         setNotice(noticeData);
 
-        // 标记为已读
+        // 标记为已读（后台执行，不阻塞 UI）
         if (!noticeData.isRead) {
-          await markNoticeAsRead(id);
+          markNoticeAsRead(id).catch((err) => console.error("标记已读失败:", err));
           markAsRead(id);
         }
       }
@@ -48,8 +43,9 @@ const NoticeDetailPage: FC = () => {
       message.error("加载失败，请稍后重试");
       navigate(USER_NOTICES);
     } finally {
-      setLoading(false);
+      setLoading(false); // always run — avoids permanent Spin when noticeData is null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, navigate, markAsRead]);
 
   useEffect(() => {

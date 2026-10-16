@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from "react";
 import { App } from "antd";
-import type { ConfigTemplate, BaseResponse, PageResponse } from "@/types";
+import type { ConfigTemplate, PageResponse } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
 import type { TemplateStatistics } from "../types";
@@ -16,12 +16,18 @@ export interface UseTemplateDataReturn {
   total: number;
   statistics: TemplateStatistics;
 
-  loadTemplates: (params?: Record<string, unknown>, searchValues?: Record<string, unknown>) => Promise<void>;
+  loadTemplates: (
+    params?: Record<string, unknown>,
+    searchValues?: Record<string, unknown>
+  ) => Promise<void>;
   loadStatistics: () => Promise<void>;
   handleApiError: (error: unknown, defaultMessage: string) => void;
 }
 
-export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (total: number) => void): UseTemplateDataReturn {
+export function useTemplateData(
+  searchForm: FormInstance<unknown>,
+  setTotal: (total: number) => void
+): UseTemplateDataReturn {
   const { message } = App.useApp();
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,6 +45,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (to
     } else {
       message.error(defaultMessage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const loadTemplates = useCallback(

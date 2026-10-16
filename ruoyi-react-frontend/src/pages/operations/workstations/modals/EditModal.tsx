@@ -17,6 +17,7 @@ import { Form, Input, InputNumber, Select, Row, Col, Cascader, TreeSelect } from
 import type { FormInstance } from "antd";
 import type { WorkstationOps } from "@/types";
 import type { DeptOption } from "@/lib/opsApi";
+import type { DictItem } from "@/hooks/useDict";
 import type { DeptTreeNode, UserOption } from "../types";
 import { findDeptNode, trimTitleToLastSegment } from "@/utils/deptUtils";
 import { STATUS_OPTIONS, TYPE_OPTIONS } from "../constants";
@@ -37,6 +38,9 @@ export interface WorkstationEditModalProps {
   open: boolean;
   form: FormInstance;
   editingWorkstation: WorkstationOps | null;
+  /** Phase 69 DICT-03: ops_workstation_type 字典数据（父组件 index.tsx useDict 拉取后透传；
+   *  空数组时下拉回退静态 TYPE_OPTIONS） */
+  typeDict?: DictItem[];
   /** 仅外部机构(isExternalOrg===1)的部门树,用于"所属机构"下拉 */
   orgTreeData: DeptTreeNode[];
   /** 全量部门树(原始,含 isExternalOrg 信息),用于在选中机构下取子树展示"所属部门" */
@@ -59,6 +63,7 @@ export function WorkstationEditModal({
   open,
   form,
   editingWorkstation,
+  typeDict = [],
   orgTreeData,
   deptTreeData,
   aliasList,
@@ -71,13 +76,20 @@ export function WorkstationEditModal({
   onDeptChange,
   onOrgChange,
 }: WorkstationEditModalProps) {
+  // Phase 69 DICT-03: 新增默认工位类型取字典 isDefault 项（seed 为 "0" 固定工位，
+  // 对齐 Workstation.WorkstationType gorm default:0）；字典空态回退静态 0（迁移前行为）
+  const defaultType = useMemo(() => {
+    const item = typeDict.find((d) => d.isDefault);
+    return item ? Number(item.dictValue) : 0;
+  }, [typeDict]);
+
   // 仅在新增模式下重置表单（编辑模式的值由父组件设置）
   useLayoutEffect(() => {
     if (open && !editingWorkstation?.id) {
       form.resetFields();
-      form.setFieldsValue({ status: 0, type: 0 });
+      form.setFieldsValue({ status: 0, type: defaultType });
     }
-  }, [open, editingWorkstation, form]);
+  }, [open, editingWorkstation, form, defaultType]);
 
   // 派生:在 deptTreeData 中按 orgId 找出节点,取其全后代子树作为"所属部门"的选项。
   // 注意 deptTreeData 是 useWorkstationData 加载的全量部门树(顶层节点可能不是外部机构,
@@ -111,8 +123,7 @@ export function WorkstationEditModal({
       // 走 trimTitleToLastSegment 保持与 baseTree title 收窄规则一致
       // (DeptOption.deptName 一般不含 " / ",函数会原样返回)
       const trimmed =
-        trimTitleToLastSegment([{ title: a.deptName, children: [] }])[0]?.title ??
-        a.deptName;
+        trimTitleToLastSegment([{ title: a.deptName, children: [] }])[0]?.title ?? a.deptName;
       return {
         title: `${trimmed} [映射]`, // D-01 锁定: 原名 + " [映射]" 后缀 (UAT 文本断言依赖)
         value: a.deptId,
@@ -143,7 +154,11 @@ export function WorkstationEditModal({
       width={700}
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-        <Form.Item name="orgId" label="所属机构" rules={[{ required: true, message: "请选择所属机构" }]}>
+        <Form.Item
+          name="orgId"
+          label="所属机构"
+          rules={[{ required: true, message: "请选择所属机构" }]}
+        >
           <TreeSelect
             treeData={orgTreeData}
             placeholder="请选择机构（仅外部机构）"
@@ -162,26 +177,49 @@ export function WorkstationEditModal({
             }}
           />
         </Form.Item>
-        <Form.Item name="floorId" label="所属楼层" rules={[{ required: true, message: "请选择所属楼层" }]}>
+        <Form.Item
+          name="floorId"
+          label="所属楼层"
+          rules={[{ required: true, message: "请选择所属楼层" }]}
+        >
           <Cascader
             options={cascaderOptions}
             loadData={handleCascaderLoadData}
             loading={loadingCascader}
             placeholder="请先选择楼宇，再选择楼层"
             changeOnSelect
-            showSearch={{ filter: (inputValue, path) => path.some(option => option.label?.toLowerCase().includes(inputValue.toLowerCase())) }}
+            showSearch={{
+              filter: (inputValue, path) =>
+                path.some((option) =>
+                  option.label?.toLowerCase().includes(inputValue.toLowerCase())
+                ),
+            }}
           />
         </Form.Item>
-        <Form.Item name="name" label="工位名称" rules={[{ required: true, message: "请输入工位名称" }]}>
+        <Form.Item
+          name="name"
+          label="工位名称"
+          rules={[{ required: true, message: "请输入工位名称" }]}
+        >
           <Input placeholder="请输入工位名称" />
         </Form.Item>
-        <Form.Item name="type" label="工位类型" rules={[{ required: true, message: "请选择工位类型" }]}>
+        <Form.Item
+          name="type"
+          label="工位类型"
+          rules={[{ required: true, message: "请选择工位类型" }]}
+        >
           <Select placeholder="请选择工位类型" onSearch={() => {}}>
-            {TYPE_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
+            {typeDict.length > 0
+              ? typeDict.map((d) => (
+                  <Option key={d.dictValue} value={Number(d.dictValue)}>
+                    {d.dictLabel}
+                  </Option>
+                ))
+              : TYPE_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
+                ))}
           </Select>
         </Form.Item>
         <Row gutter={16}>
@@ -204,6 +242,7 @@ export function WorkstationEditModal({
           </Col>
           <Col span={12}>
             <Form.Item name="userId" label="所属用户">
+              {/* eslint-disable-next-line local/no-large-dropdown-list -- dept-filtered bounded user list, client-side search via optionFilterProp */}
               <Select
                 placeholder="请先选择部门"
                 allowClear
@@ -258,6 +297,7 @@ export function WorkstationEditModal({
           rules={[{ required: true, message: "请选择状态" }]}
           extra="选择/清空所属用户时,状态会自动切换为占用/空闲(维护状态除外)"
         >
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select placeholder="请选择状态">
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>

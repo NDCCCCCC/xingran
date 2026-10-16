@@ -9,20 +9,26 @@
  * - 抽屉空间有限,> 100 事件时分页拉,避免一次性渲染卡顿
  *
  * 颜色与图标体系(D-10 锁定):
- *   appeared     → #52c41a (绿色) + PlusCircleOutlined
- *   disappeared → #ff4d4f (红色) + MinusCircleOutlined
- *   moved        → #faad14 (黄色) + SwapOutlined
- *   vlan_changed → #1890ff (蓝色) + TagOutlined
+ *   appeared     → #2d8949 (绿色) + PlusCircleOutlined
+ *   disappeared → #ba3630 (红色) + MinusCircleOutlined
+ *   moved        → #b07a20 (黄色) + SwapOutlined
+ *   vlan_changed → #337ab0 (蓝色) + TagOutlined
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Timeline, Empty, Skeleton, Tag, Card, Space, Typography, Button } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { DownOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { getMACEvents } from "@/lib/api/networkApi";
 import type { MACHistoryRecord } from "@/lib/api/networkApi";
-import { EVENT_COLORS, EVENT_ICON, EVENT_LABEL, EVENT_TAG_COLOR, type MACEventType } from "./macEventMeta";
+import {
+  EVENT_COLORS,
+  EVENT_ICON,
+  EVENT_LABEL,
+  EVENT_TAG_COLOR,
+  type MACEventType,
+} from "./macEventMeta";
 import { ErrorAlertWithRetry } from "@/components/shared";
 
 export interface MACEventsTimelineProps {
@@ -38,9 +44,7 @@ export interface MACEventsTimelineProps {
   deviceId?: string;
 }
 
-const TimelineItem: React.FC<{
-  event: MACHistoryRecord;
-}> = ({ event }) => {
+const TimelineItem = React.memo<{ event: MACHistoryRecord }>(({ event }) => {
   const eventType = (event.eventType ?? "appeared") as MACEventType;
   const label = EVENT_LABEL[eventType];
 
@@ -63,7 +67,7 @@ const TimelineItem: React.FC<{
       </Space>
     </div>
   );
-};
+});
 
 const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   mac,
@@ -87,7 +91,12 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   }, [mac, startTime, endTime]);
 
   // 首页查询(交给 useQuery 处理 loading / error / refetch)
-  const { data: firstPage, isLoading, error, refetch } = useQuery({
+  const {
+    data: firstPage,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["macEvents", mac, startTime, endTime, 1],
     queryFn: () => getMACEvents(mac, startTime, endTime, { current: 1, pageSize }),
     enabled: !!mac,
@@ -123,7 +132,12 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   if (error) {
     return (
       <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
-        <ErrorAlertWithRetry error={error as Error} onRetry={() => { void refetch(); }} />
+        <ErrorAlertWithRetry
+          error={error as Error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
       </Card>
     );
   }
@@ -161,21 +175,23 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
       }
       bordered={false}
     >
-      <Timeline
-        mode="left"
-        items={allEvents.map((event) => {
-          const eventType = (event.eventType ?? "appeared") as MACEventType;
-          const Icon = EVENT_ICON[eventType];
-          const color = EVENT_COLORS[eventType];
-          return {
-            color,
-            dot: React.createElement(Icon, {
-              style: { color, fontSize: 16 },
-            }),
-            children: <TimelineItem event={event} />,
-          };
-        })}
-      />
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "64px" }}>
+        <Timeline
+          mode="left"
+          items={allEvents.map((event) => {
+            const eventType = (event.eventType ?? "appeared") as MACEventType;
+            const Icon = EVENT_ICON[eventType];
+            const color = EVENT_COLORS[eventType];
+            return {
+              color,
+              dot: React.createElement(Icon, {
+                style: { color, fontSize: 16 },
+              }),
+              children: <TimelineItem event={event} />,
+            };
+          })}
+        />
+      </div>
       {hasMore && (
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <Button

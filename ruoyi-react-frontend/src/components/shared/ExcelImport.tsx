@@ -1,17 +1,6 @@
 import { useState } from "react";
 import type { FC } from "react";
-import {
-  App,
-  Button,
-  Upload,
-  Modal,
-  Table,
-  Tag,
-  Space,
-  Alert,
-  Progress,
-  Typography,
-} from "antd";
+import { App, Button, Upload, Modal, Table, Tag, Space, Alert, Progress, Typography } from "antd";
 import {
   UploadOutlined,
   DownloadOutlined,
@@ -97,9 +86,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
   };
 
   const beforeUpload = (file: File) => {
-    const validTypes = [
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ];
+    const validTypes = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
     const isExcelType = validTypes.includes(file.type) || file.name.endsWith(".xlsx");
     if (!isExcelType) {
       message.error("只支持 .xlsx 格式。如需导入 .xls 文件，请先用 Excel 或 WPS 另存为 .xlsx 格式");
@@ -258,10 +245,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
         <div>
           <Text strong>步骤1：下载模板</Text>
           <div style={{ marginTop: 8 }}>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={handleDownloadTemplate}
-            >
+            <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
               下载{entityName}Excel模板
             </Button>
           </div>
@@ -280,10 +264,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
               disabled={importing}
               onRemove={handleReset}
             >
-              <Button
-                icon={<UploadOutlined />}
-                disabled={fileList.length >= 1 || importing}
-              >
+              <Button icon={<UploadOutlined />} disabled={fileList.length >= 1 || importing}>
                 选择Excel文件
               </Button>
             </Upload>
@@ -303,13 +284,11 @@ const ExcelImport: FC<ExcelImportProps> = ({
         {importResult && (
           <div>
             <Space orientation="vertical" style={{ width: "100%" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
                 <Text strong>导入结果</Text>
-                <Button
-                  size="small"
-                  icon={<DeleteOutlined />}
-                  onClick={handleReset}
-                >
+                <Button size="small" icon={<DeleteOutlined />} onClick={handleReset}>
                   重置
                 </Button>
               </div>

@@ -1,15 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import type { FC } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  App,
-  Button,
-  Spin,
-} from "antd";
+import { App, Button, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { getNoticeDetail } from "@/lib/noticeApi";
 import type { Notice } from "@/types/notice";
-import { formatDateTime } from "@/utils/datetime";
 import NoticeDetailContent from "@/components/NoticeDetail/NoticeDetailContent";
 
 /**
@@ -41,6 +36,7 @@ const AdminNoticeDetailPage: FC = () => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [id, navigate]);
 
   useEffect(() => {
@@ -76,17 +72,11 @@ const AdminNoticeDetailPage: FC = () => {
       </div>
 
       {/* 通知内容卡片 */}
-      <NoticeDetailContent
-        notice={notice}
-        showPublishStatus
-        showCreator
-      />
+      <NoticeDetailContent notice={notice} showPublishStatus showCreator />
 
       {/* 底部关闭按钮 */}
       <div className="flex justify-end mt-4">
-        <Button onClick={() => navigate("/system/notice")}>
-          关闭
-        </Button>
+        <Button onClick={() => navigate("/system/notice")}>关闭</Button>
       </div>
     </div>
   );

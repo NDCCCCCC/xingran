@@ -40,3 +40,25 @@ export interface BackupStatistics {
   manual: number;
   devices: number;
 }
+
+// 恢复任务状态（与后端 models.RestoreTaskStatus 四态对齐，Phase 93 D-34）
+export type RestoreTaskStatus = "pending" | "running" | "success" | "failed";
+
+// 配置恢复任务（Phase 93 异步恢复；字段与后端 ConfigRestoreTask model json tag 对齐）
+export interface ConfigRestoreTask {
+  id: string;
+  deviceId: string;
+  backupId: string;
+  status: RestoreTaskStatus;
+  totalLines?: number;
+  sentLines?: number;
+  failedLine?: string;
+  /** JSON 字符串：{ totalLines, sentLines, failedLine?, hashMatched, restoredHash? } */
+  resultJson?: string;
+  errorMessage?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}

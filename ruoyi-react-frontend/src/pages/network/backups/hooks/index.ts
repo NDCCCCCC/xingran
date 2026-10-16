@@ -5,3 +5,4 @@
 export { useBackupData } from "./useBackupData";
 export { useBackupDiff } from "./useBackupDiff";
 export { useBackupModals } from "./useBackupModals";
+export { useRestoreTask } from "./useRestoreTask";

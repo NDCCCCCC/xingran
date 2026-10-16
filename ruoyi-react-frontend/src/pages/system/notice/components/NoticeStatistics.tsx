@@ -20,11 +20,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
     <Row gutter={16} style={{ marginBottom: 16 }}>
       <Col span={6}>
         <Card>
-          <Statistic
-            title="总公告数"
-            value={statistics.total}
-            prefix={<CheckCircleOutlined />}
-          />
+          <Statistic title="总公告数" value={statistics.total} prefix={<CheckCircleOutlined />} />
         </Card>
       </Col>
       <Col span={6}>
@@ -42,7 +38,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
           <Statistic
             title="草稿/撤回"
             value={statistics.draft}
-            styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
+            styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
             prefix={<StopOutlined />}
           />
         </Card>
@@ -52,7 +48,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
           <Statistic
             title="定时发布"
             value={statistics.scheduled}
-            styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+            styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
             prefix={<SearchOutlined />}
           />
         </Card>

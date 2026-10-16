@@ -39,9 +39,14 @@ import {
   Typography,
   App,
 } from "antd";
-import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
-import type { DevicePortStatus, PortResult, PortWriteAction, BatchWriteRequest, BatchResult } from "@/types/network";
+import type {
+  DevicePortStatus,
+  PortResult,
+  PortWriteAction,
+  BatchWriteRequest,
+  BatchResult,
+} from "@/types/network";
 import { batchWritePorts } from "@/lib/api/networkApi";
 import {
   PRESET_REASONS,
@@ -103,7 +108,9 @@ export function BulkWriteDrawer({
   // CLAUDE.md useEffect 纪律: deps 全稳定 (open/phase/onExecutingChange 原始值或稳定 setter)
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase("select");
+
       setBatchResult(null);
       form.resetFields();
     }
@@ -316,6 +323,7 @@ function SelectView({
         label="操作类型"
         rules={[{ required: true, message: "请选择操作类型" }]}
       >
+        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
         <Select placeholder="请选择操作类型" options={ACTION_OPTIONS} />
       </Form.Item>
 
@@ -359,6 +367,7 @@ function SelectView({
               ]
         }
       >
+        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
         <Select
           placeholder="请选择操作原因"
           options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}
@@ -393,9 +402,7 @@ function SelectView({
         <Button
           type="primary"
           onClick={onSubmit}
-          disabled={
-            selectedPorts.length === 0 || isMixedDevices
-          }
+          disabled={selectedPorts.length === 0 || isMixedDevices}
         >
           开始批量配置
         </Button>
@@ -433,7 +440,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
             <Statistic
               title="⚠ 跳过"
               value={result.skipped.length}
-              valueStyle={{ color: "var(--theme-text-secondary, #8c8c8c)" }}
+              valueStyle={{ color: "var(--theme-text-secondary, #707068)" }}
             />
             {result.skipped.length > 0 && (
               <Tag color="default" style={{ marginTop: 8 }}>
@@ -474,8 +481,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
                 title: "接口名",
                 key: "interfaceName",
                 width: 150,
-                render: (_, port) =>
-                  interfaceMap.get(port.portId) ?? port.portId,
+                render: (_, port) => interfaceMap.get(port.portId) ?? port.portId,
               },
               {
                 title: "错误原因",
@@ -514,11 +520,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
 
       {/* D-06 重试按钮 — 只取 batchResult.failed (上面 dataSource 同源), disabled 当 failed.length === 0 */}
       <Space>
-        <Button
-          type="primary"
-          disabled={result.failed.length === 0}
-          onClick={onRetry}
-        >
+        <Button type="primary" disabled={result.failed.length === 0} onClick={onRetry}>
           重试失败端口 ({result.failed.length})
         </Button>
       </Space>

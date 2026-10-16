@@ -46,12 +46,7 @@ import {
   ExperimentOutlined,
   CameraOutlined,
 } from "@ant-design/icons";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  keepPreviousData,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { reconciliationApi } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
 import ExceptionRuleForm, {
@@ -148,9 +143,7 @@ const ExceptionRulesPage: React.FC = () => {
   // 创建 / 更新 / 删除 mutation
   const createMutation = useMutation({
     mutationFn: (values: ExceptionRuleFormValues) =>
-      reconciliationApi.exceptionRule.create<unknown>(
-        values as unknown as Record<string, unknown>
-      ),
+      reconciliationApi.exceptionRule.create<unknown>(values as unknown as Record<string, unknown>),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.ruleList() });
       setModalState({ open: false });
@@ -189,8 +182,7 @@ const ExceptionRulesPage: React.FC = () => {
       });
       message.success("基线已记录");
     },
-    onError: (err) =>
-      message.error((err as Error)?.message ?? "记录基线失败(后端可能未启用)"),
+    onError: (err) => message.error((err as Error)?.message ?? "记录基线失败(后端可能未启用)"),
   });
 
   // 搜索 / 重置
@@ -270,13 +262,9 @@ const ExceptionRulesPage: React.FC = () => {
         width: 160,
         render: (_: unknown, record: ExceptionRuleItem) => (
           <Space size={4}>
-            <Tag color={record.scopeType === "global" ? "green" : "orange"}>
-              {record.scopeType}
-            </Tag>
+            <Tag color={record.scopeType === "global" ? "green" : "orange"}>{record.scopeType}</Tag>
             {record.scopeId && (
-              <span style={{ fontSize: 12, color: "#999" }}>
-                {record.scopeId.slice(0, 8)}...
-              </span>
+              <span style={{ fontSize: 12, color: "#999" }}>{record.scopeId.slice(0, 8)}...</span>
             )}
           </Space>
         ),
@@ -286,8 +274,7 @@ const ExceptionRulesPage: React.FC = () => {
         dataIndex: "expiresAt",
         key: "expiresAt",
         width: 170,
-        render: (v?: string | null) =>
-          v ? new Date(v).toLocaleString("zh-CN") : "永久",
+        render: (v?: string | null) => (v ? new Date(v).toLocaleString("zh-CN") : "永久"),
       },
       {
         title: "状态",
@@ -295,9 +282,7 @@ const ExceptionRulesPage: React.FC = () => {
         key: "isActive",
         width: 80,
         render: (v: number) => (
-          <Tag color={v === 0 ? "green" : "default"}>
-            {v === 0 ? "启用" : "停用"}
-          </Tag>
+          <Tag color={v === 0 ? "green" : "default"}>{v === 0 ? "启用" : "停用"}</Tag>
         ),
       },
       {
@@ -362,12 +347,20 @@ const ExceptionRulesPage: React.FC = () => {
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="启用中" value={stats.enabled} valueStyle={{ color: "#52c41a" }} />
+            <Statistic
+              title="启用中"
+              value={stats.enabled}
+              styles={{ content: { color: "#2d8949" } }}
+            />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="已停用" value={stats.disabled} valueStyle={{ color: "#8c8c8c" }} />
+            <Statistic
+              title="已停用"
+              value={stats.disabled}
+              styles={{ content: { color: "#707068" } }}
+            />
           </Card>
         </Col>
         <Col span={6}>
@@ -395,12 +388,14 @@ const ExceptionRulesPage: React.FC = () => {
             <Input placeholder="模糊匹配" allowClear style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="isActive" label="状态">
+            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
             <Select placeholder="全部" allowClear style={{ width: 120 }}>
               <Select.Option value={0}>启用</Select.Option>
               <Select.Option value={1}>停用</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item name="scopeType" label="范围">
+            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
             <Select placeholder="全部" allowClear style={{ width: 140 }}>
               <Select.Option value="global">global</Select.Option>
               <Select.Option value="dept">dept</Select.Option>
@@ -422,10 +417,7 @@ const ExceptionRulesPage: React.FC = () => {
               >
                 新建规则
               </Button>
-              <Button
-                icon={<ExperimentOutlined />}
-                onClick={() => setMatchTestOpen(true)}
-              >
+              <Button icon={<ExperimentOutlined />} onClick={() => setMatchTestOpen(true)}>
                 命中测试
               </Button>
             </Space>

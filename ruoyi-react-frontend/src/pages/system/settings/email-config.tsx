@@ -11,16 +11,10 @@ import {
   Input,
   Select,
   Switch,
-  Tag,
   InputNumber,
+  Empty,
 } from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  MailOutlined,
-  SendOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { formatDateTime } from "@/utils/datetime";
 import {
@@ -45,6 +39,18 @@ const EmailConfigPage: FC = () => {
   const [configs, setConfigs] = useState<EmailConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // 统计卡轻请求（status 0/1 各一次只取 total，零后端改动 — email 0=启用/1=停用）
+  const [totalCount, setTotalCount] = useState(0);
+  const [enabledCount, setEnabledCount] = useState(0);
+  const [disabledCount, setDisabledCount] = useState(0);
+
+  // 搜索表单
+  // 注：后端 list 端点仅支持 status 筛选（notification_config_handler.go 只绑定
+  // current/pageSize/status），配置名称筛选输入框已于 70-07 移除（后端支持后可从
+  // git 历史恢复）。
+  const [searchForm] = Form.useForm();
+  const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
+
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -59,19 +65,39 @@ const EmailConfigPage: FC = () => {
   const [testForm] = Form.useForm();
   const [testing, setTesting] = useState(false);
 
+  // 统计卡轻请求：status 0/1 各一次只取 total
+  const loadStatistics = async () => {
+    try {
+      const [allRes, enabledRes, disabledRes] = await Promise.all([
+        getEmailConfigList({ page: 1, pageSize: 1 }),
+        getEmailConfigList({ page: 1, pageSize: 1, status: 0 }),
+        getEmailConfigList({ page: 1, pageSize: 1, status: 1 }),
+      ]);
+      const data = allRes as { data: { total: number } };
+      const eData = enabledRes as { data: { total: number } };
+      const dData = disabledRes as { data: { total: number } };
+      setTotalCount(data.data.total);
+      setEnabledCount(eData.data.total);
+      setDisabledCount(dData.data.total);
+    } catch (error) {
+      console.error("加载邮箱配置统计失败:", error);
+    }
+  };
+
   // 加载邮箱配置列表
   const loadConfigs = async () => {
     setLoading(true);
     try {
-      const result = await getEmailConfigList({
+      const result = (await getEmailConfigList({
         page: paginationProps.current,
         pageSize: paginationProps.pageSize,
-      }) as { data: { list: EmailConfig[]; total: number } };
+        status: statusFilter,
+      })) as { data: { list: EmailConfig[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
       console.error("加载邮箱配置失败:", error);
-      message.error("加载邮箱配置失败");
+      message.error("加载邮箱配置失败，请刷新重试");
     } finally {
       setLoading(false);
     }
@@ -106,7 +132,7 @@ const EmailConfigPage: FC = () => {
 
       if (editingConfig) {
         const updateData: EmailConfigUpdateRequest = { ...values };
-        // 如果密码为空或未修改，不发送密码字段
+        // 如果密码为空或未修改，不发送密码字段（脱敏：password === ******）
         if (!values.password || values.password === "******") {
           delete updateData.password;
         }
@@ -122,6 +148,7 @@ const EmailConfigPage: FC = () => {
       editForm.resetFields();
       setEditingConfig(null);
       loadConfigs();
+      loadStatistics();
     } catch (error: unknown) {
       if (isFormValidationError(error)) {
         return;
@@ -138,7 +165,8 @@ const EmailConfigPage: FC = () => {
       await deleteEmailConfig(id);
       message.success("删除成功");
       loadConfigs();
-    } catch (error) {
+      loadStatistics();
+    } catch (_error) {
       message.error("删除失败");
     }
   };
@@ -172,28 +200,49 @@ const EmailConfigPage: FC = () => {
     }
   };
 
+  // 搜索处理
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue();
+    setStatusFilter(values.status);
+    setCurrent(1);
+  };
+
+  // 重置搜索
+  const handleResetSearch = () => {
+    searchForm.resetFields();
+    setStatusFilter(undefined);
+    setCurrent(1);
+  };
+
+  // 启用占比 = enabled/total * 100（保留一位小数向下取整百分比）
+  const enabledPct = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0;
+
   // 表格列定义
   const columns: ColumnsType<EmailConfig> = [
     {
       title: "配置名称",
       dataIndex: "configName",
       key: "configName",
-      width: 150,
+      width: 160,
       render: (text: string, record) => (
-        <Space>
-          <span>{text}</span>
-          {record.isDefault && <Tag color="blue">默认</Tag>}
+        <Space size={4}>
+          <span className="xr-cell-id">{text}</span>
+          {record.isDefault && <span className="xr-tag xr-tag-gold">默认</span>}
         </Space>
       ),
     },
     {
       title: "SMTP服务器",
       key: "server",
-      width: 180,
+      width: 200,
       render: (_, record) => (
         <span>
           {record.host}:{record.port}
-          {record.useSsl && <Tag color="green" className="ml-2">SSL</Tag>}
+          {record.useSsl && (
+            <span className="xr-tag" style={{ marginLeft: 8 }}>
+              SSL
+            </span>
+          )}
         </span>
       ),
     },
@@ -216,9 +265,9 @@ const EmailConfigPage: FC = () => {
       key: "status",
       width: 80,
       render: (status: number) => (
-        <Tag color={status === 0 ? "success" : "default"}>
+        <span className={`xr-tag ${status === 0 ? "xr-tag-green" : ""}`}>
           {status === 0 ? "正常" : "停用"}
-        </Tag>
+        </span>
       ),
     },
     {
@@ -226,7 +275,7 @@ const EmailConfigPage: FC = () => {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
-      render: (text: string) => formatDateTime(text),
+      render: (text: string) => <span className="xr-cell-time">{formatDateTime(text)}</span>,
     },
     {
       title: "操作",
@@ -234,7 +283,7 @@ const EmailConfigPage: FC = () => {
       fixed: "right",
       width: 200,
       render: (_, record: EmailConfig) => (
-        <Space size="small">
+        <div className="xr-row-ops">
           <Button
             type="link"
             size="small"
@@ -254,44 +303,88 @@ const EmailConfigPage: FC = () => {
           <Button
             type="link"
             size="small"
-            danger
+            className="xr-op-danger"
             icon={<DeleteOutlined />}
             onClick={() => {
               Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
+                title: "删除邮箱配置？",
+                content: "删除后不可恢复，使用该配置的通知邮件将发送失败。",
+                okText: "删除",
                 okButtonProps: { danger: true },
+                cancelText: "取消",
                 onOk: () => handleDelete(record.id),
               });
             }}
           >
             删除
           </Button>
-        </Space>
+        </div>
       ),
     },
   ];
 
   useEffect(() => {
     loadConfigs();
-  }, [paginationProps.current, paginationProps.pageSize]);
+    loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginationProps.current, paginationProps.pageSize, statusFilter]);
 
   return (
-    <div className="p-6">
-      <Card
-        title={
-          <Space>
-            <MailOutlined />
-            <span>邮箱服务器配置</span>
-          </Space>
-        }
-        extra={
+    <>
+      {/* 统计卡行：3 卡 — 总配置数 / 启用 / 停用 */}
+      <div className="stat-cards">
+        <div className="stat-card">
+          <div className="stat-label">总配置数</div>
+          <div className="stat-value">{totalCount}</div>
+          <div className="stat-trend">全部通知渠道</div>
+        </div>
+        <div className="stat-card sc-green">
+          <div className="stat-label">启用</div>
+          <div className="stat-value">{enabledCount}</div>
+          <div className="stat-trend">占比 {enabledPct}%</div>
+        </div>
+        <div className="stat-card sc-gray">
+          <div className="stat-label">停用</div>
+          <div className="stat-value">{disabledCount}</div>
+          <div className="stat-trend">可随时恢复</div>
+        </div>
+      </div>
+
+      {/* 工具栏卡：状态筛选 / 新增配置（名称搜索待后端支持，70-07 移除死输入框） */}
+      <Card style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
+          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+            <Form.Item name="status" label="状态">
+              <Select placeholder="全部状态" style={{ width: 140 }} allowClear onSearch={() => {}}>
+                <Option value={0}>正常</Option>
+                <Option value={1}>停用</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button onClick={handleResetSearch}>重置</Button>
+                <Button type="primary" onClick={handleSearch}>
+                  搜索
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
             新增配置
           </Button>
-        }
-      >
+        </div>
+      </Card>
+
+      {/* 表格卡：双层纸感表格（.xr-table-zebra 绿灰表头 + 斑马纹） */}
+      <Card>
         <Table
           columns={columns}
           dataSource={configs}
@@ -299,15 +392,33 @@ const EmailConfigPage: FC = () => {
           rowKey="id"
           scroll={{ x: 1200 }}
           pagination={paginationProps}
+          className="xr-table-zebra"
+          size="middle"
           onChange={(pagination) => {
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
-            loadConfigs();
+          }}
+          locale={{
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <Space direction="vertical" size={4}>
+                    <span style={{ color: "var(--theme-text-primary)", fontWeight: 500 }}>
+                      暂无邮箱配置
+                    </span>
+                    <span style={{ color: "var(--theme-text-secondary)", fontSize: 12 }}>
+                      新增第一个邮箱服务器配置，用于发送通知邮件
+                    </span>
+                  </Space>
+                }
+              />
+            ),
           }}
         />
       </Card>
 
-      {/* 编辑模态框 */}
+      {/* 编辑模态框 — D-09: 宽度 700 不变 */}
       <Modal
         title={editingConfig ? "编辑邮箱配置" : "新增邮箱配置"}
         open={modalVisible}
@@ -337,11 +448,7 @@ const EmailConfigPage: FC = () => {
             <Input placeholder="如：smtp.example.com" />
           </Form.Item>
 
-          <Form.Item
-            name="port"
-            label="端口"
-            rules={[{ required: true, message: "请输入端口" }]}
-          >
+          <Form.Item name="port" label="端口" rules={[{ required: true, message: "请输入端口" }]}>
             <InputNumber min={1} max={65535} className="w-full" placeholder="默认587" />
           </Form.Item>
 
@@ -373,7 +480,12 @@ const EmailConfigPage: FC = () => {
             <Switch />
           </Form.Item>
 
-          <Form.Item name="useStartTls" label="启用STARTTLS" valuePropName="checked" tooltip="当不使用SSL时，可选择是否使用STARTTLS升级为加密连接">
+          <Form.Item
+            name="useStartTls"
+            label="启用STARTTLS"
+            valuePropName="checked"
+            tooltip="当不使用SSL时，可选择是否使用STARTTLS升级为加密连接"
+          >
             <Switch />
           </Form.Item>
 
@@ -394,7 +506,7 @@ const EmailConfigPage: FC = () => {
         </Form>
       </Modal>
 
-      {/* 测试模态框 */}
+      {/* 测试模态框 — D-09: 结构不变 */}
       <Modal
         title="测试邮件发送"
         open={testModalVisible}
@@ -415,7 +527,7 @@ const EmailConfigPage: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 };
 

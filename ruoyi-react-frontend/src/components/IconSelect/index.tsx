@@ -42,7 +42,7 @@ const IconSelect: FC<IconSelectProps> = ({
     const result: Record<string, string[]> = {};
 
     for (const [category, icons] of Object.entries(iconCategories)) {
-      const filtered = icons.filter(icon => {
+      const filtered = icons.filter((icon) => {
         // 匹配图标名称
         if (icon.toLowerCase().includes(lowerSearch)) {
           return true;
@@ -128,7 +128,7 @@ const IconSelect: FC<IconSelectProps> = ({
           placeholder="搜索图标名称或描述..."
           prefix={<SearchOutlined />}
           value={searchText}
-          onChange={e => setSearchText(e.target.value)}
+          onChange={(e) => setSearchText(e.target.value)}
           style={{ marginBottom: 16 }}
           allowClear
         />
@@ -143,7 +143,13 @@ const IconSelect: FC<IconSelectProps> = ({
         {/* 图标分类展示 */}
         <div style={{ maxHeight: 400, overflowY: "auto" }}>
           {Object.keys(filteredCategories).length === 0 ? (
-            <div style={{ textAlign: "center", padding: 40, color: "var(--theme-text-tertiary, #999)" }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: 40,
+                color: "var(--theme-text-tertiary, #999)",
+              }}
+            >
               未找到匹配的图标
             </div>
           ) : (
@@ -160,14 +166,14 @@ const IconSelect: FC<IconSelectProps> = ({
                       gap: 12,
                     }}
                   >
-                    {icons.map(iconName => {
+                    {icons.map((iconName) => {
                       const isSelected = selectedIcon === iconName;
                       return (
                         <div
                           key={iconName}
                           onClick={() => handleIconClick(iconName)}
                           style={{
-                            border: `1px solid ${isSelected ? "var(--theme-info, #1890ff)" : "#d9d9d9"}`,
+                            border: `1px solid ${isSelected ? "var(--theme-info, #337ab0)" : "#dbd7ce"}`,
                             borderRadius: 4,
                             padding: 12,
                             textAlign: "center",
@@ -177,13 +183,13 @@ const IconSelect: FC<IconSelectProps> = ({
                           }}
                           onMouseEnter={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.borderColor = "var(--theme-info, #1890ff)";
-                              e.currentTarget.style.backgroundColor = "#f0f0f0";
+                              e.currentTarget.style.borderColor = "var(--theme-info, #337ab0)";
+                              e.currentTarget.style.backgroundColor = "#e9efeb";
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.borderColor = "#d9d9d9";
+                              e.currentTarget.style.borderColor = "#dbd7ce";
                               e.currentTarget.style.backgroundColor = "#fff";
                             }
                           }}
@@ -212,7 +218,7 @@ const IconSelect: FC<IconSelectProps> = ({
                                 width: 16,
                                 height: 16,
                                 borderRadius: "50%",
-                                backgroundColor: "var(--theme-info, #1890ff)",
+                                backgroundColor: "var(--theme-info, #337ab0)",
                                 color: "#fff",
                                 fontSize: 10,
                                 display: "flex",
@@ -257,7 +263,7 @@ const IconSelect: FC<IconSelectProps> = ({
         {/* 清空按钮 */}
         {value && (
           <div style={{ marginTop: 12, textAlign: "center" }}>
-            <a onClick={handleClear} style={{ color: "var(--theme-error, #ff4d4f)" }}>
+            <a onClick={handleClear} style={{ color: "var(--theme-error, #ba3630)" }}>
               清空已选图标
             </a>
           </div>

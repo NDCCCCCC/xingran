@@ -3,6 +3,8 @@
  * 角色管理常量定义
  */
 
+import { NORMAL_STOP_OPTIONS } from "@/constants/status";
+
 /** 数据范围选项 */
 export const DATA_SCOPE_OPTIONS = [
   { label: "全部数据", value: 1 },
@@ -12,11 +14,8 @@ export const DATA_SCOPE_OPTIONS = [
   { label: "仅本人数据", value: 5 },
 ] as const;
 
-/** 状态选项 */
-export const STATUS_OPTIONS = [
-  { label: "正常", value: 0 },
-  { label: "停用", value: 1 },
-] as const;
+/** 状态选项（Phase 69 DICT-03: 共享常量别名引用，本地导出名不变） */
+export const STATUS_OPTIONS = NORMAL_STOP_OPTIONS;
 
 /** 默认表单值 */
 export const DEFAULT_FORM_VALUES = {

@@ -8,15 +8,17 @@ import { Spin } from "antd";
 
 // 懒加载 ExcelImport 组件
 const ExcelImport = lazy(() =>
-  import("./ExcelImport").then(module => ({ default: module.default }))
+  import("./ExcelImport").then((module) => ({ default: module.default }))
 );
 
 export interface ExcelImportLazyProps {
   entityType: string;
-  entityName: string;
-  visible: boolean;
-  onClose: () => void;
-  onImportSuccess: () => void;
+  entityName?: string;
+  templateUrl?: string;
+  importUrl?: string;
+  onImportSuccess?: () => void;
+  visible?: boolean;
+  onClose?: () => void;
 }
 
 /**
@@ -31,9 +33,7 @@ export default function ExcelImportLazy(props: ExcelImportLazyProps) {
           <Spin>
             <div style={{ minHeight: 80 }} />
           </Spin>
-          <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>
-            加载导入组件...
-          </div>
+          <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>加载导入组件...</div>
         </div>
       }
     >

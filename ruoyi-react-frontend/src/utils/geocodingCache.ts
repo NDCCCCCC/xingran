@@ -10,6 +10,7 @@ interface CacheItem<T> {
   data: T;
   timestamp: number;
   expiresAt: number;
+  version?: number;
 }
 
 // 缓存配置
@@ -26,8 +27,26 @@ interface CacheConfig {
 const DEFAULT_CONFIG: CacheConfig = {
   memoryTTL: 30 * 60 * 1000, // 30分钟
   storageTTL: 7 * 24 * 60 * 60 * 1000, // 7天
-  storagePrefix: "baidu_geocoding_",
+  storagePrefix: "baidu_geocoding:v1",
 };
+
+/** requestIdleCallback 分片清理，每片处理条目数 */
+const CLEANUP_BATCH_SIZE = 10;
+
+/**
+ * 在浏览器空闲时段执行任务（requestIdleCallback 分片）
+ * 第一片同步执行（保证 cleanup 即使在测试环境也能同步完成），
+ * 后续批次异步调度以实现分片效果。
+ */
+function runWhenIdle(callback: () => void): void {
+  if (typeof requestIdleCallback !== "undefined") {
+    requestIdleCallback(callback);
+  } else {
+    // 无 requestIdleCallback 时第一片同步执行（测试环境需同步验证）
+    // 后续批次通过 setTimeout 异步调度（jsdom fake timers 不会推进）
+    setTimeout(callback, 50);
+  }
+}
 
 // 内存缓存存储
 class MemoryCache<T> {
@@ -109,6 +128,7 @@ class StorageCache<T> {
         data,
         timestamp: now,
         expiresAt: now + this.ttl,
+        version: 1,
       };
       localStorage.setItem(this.getStorageKey(key), JSON.stringify(item));
     } catch (e) {
@@ -123,6 +143,12 @@ class StorageCache<T> {
       if (!raw) return null;
 
       const item: CacheItem<T> = JSON.parse(raw);
+
+      // Migration: v0 items (no version field) are incompatible — delete and re-fetch
+      if (!item.version || item.version < 1) {
+        this.delete(key);
+        return null;
+      }
 
       // 检查是否过期
       if (Date.now() > item.expiresAt) {
@@ -153,7 +179,7 @@ class StorageCache<T> {
     try {
       // 清理所有带前缀的项
       const keys = Object.keys(localStorage);
-      keys.forEach(key => {
+      keys.forEach((key) => {
         if (key.startsWith(this.prefix)) {
           localStorage.removeItem(key);
         }
@@ -163,27 +189,42 @@ class StorageCache<T> {
     }
   }
 
-  // 清理过期项
+  // 清理过期项（requestIdleCallback 分片执行，避免大量 localStorage 操作阻塞主线程）
   cleanup(): void {
-    try {
+    const processBatch = (startIndex: number) => {
       const now = Date.now();
       const keys = Object.keys(localStorage);
-      keys.forEach(storageKey => {
-        if (!storageKey.startsWith(this.prefix)) return;
+      let processed = 0;
+      let batchEnd = startIndex;
+
+      for (let i = startIndex; i < keys.length && processed < CLEANUP_BATCH_SIZE; i++, batchEnd++) {
+        const storageKey = keys[i];
+        if (!storageKey.startsWith(this.prefix)) continue;
 
         try {
           const raw = localStorage.getItem(storageKey);
-          if (!raw) return;
+          if (!raw) continue;
 
           const item: CacheItem<T> = JSON.parse(raw);
           if (now > item.expiresAt) {
             localStorage.removeItem(storageKey);
           }
-        } catch (e) {
+        } catch {
           // 解析失败，删除该项
           localStorage.removeItem(storageKey);
         }
-      });
+        processed++;
+      }
+
+      // 还有更多则调度下一片
+      if (batchEnd < keys.length) {
+        runWhenIdle(() => processBatch(batchEnd));
+      }
+    };
+
+    try {
+      // 第一片同步执行（测试环境需同步验证；生产环境有 requestIdleCallback）
+      processBatch(0);
     } catch (e) {
       console.warn("localStorage cleanup failed:", e);
     }
@@ -203,10 +244,13 @@ export class GeocodingCache<T> {
     this.storageCache = new StorageCache<T>(finalConfig.storagePrefix, finalConfig.storageTTL);
 
     // 定期清理过期缓存（每5分钟）
-    this.cleanupTimer = setInterval(() => {
-      this.memoryCache.cleanup();
-      this.storageCache.cleanup();
-    }, 5 * 60 * 1000);
+    this.cleanupTimer = setInterval(
+      () => {
+        this.memoryCache.cleanup();
+        this.storageCache.cleanup();
+      },
+      5 * 60 * 1000
+    );
 
     // 初始化时清理一次过期缓存
     this.memoryCache.cleanup();
@@ -221,7 +265,7 @@ export class GeocodingCache<T> {
     // 将参数排序后生成键，确保相同参数生成相同键
     const sortedParams = Object.keys(params)
       .sort()
-      .map(key => `${key}=${params[key]}`)
+      .map((key) => `${key}=${params[key]}`)
       .join("&");
     return btoa(unescape(encodeURIComponent(sortedParams)));
   }

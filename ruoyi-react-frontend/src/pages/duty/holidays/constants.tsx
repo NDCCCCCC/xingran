@@ -6,7 +6,8 @@
 import type { HolidayType } from "./types";
 import { Tag } from "antd";
 
-/** 节假日类型选项 */
+/** 节假日类型选项（Phase 69 DICT-03: 降级为静态 fallback——EditModal/BatchModal 下拉已迁
+ *  useDict("duty_holiday_type")，字典空态/接口异常时回退渲染本数组；导出保留不删除） */
 export const HOLIDAY_TYPE_OPTIONS = [
   { label: "法定节假日", value: "legal" },
   { label: "调休工作日", value: "workday" },

@@ -2,7 +2,6 @@
  * NetworkDevice 工具函数
  */
 
-import dayjs from "dayjs";
 import type { SelectOption } from "./constants";
 
 // 统一时间格式化函数从 @/utils/datetime 导入
@@ -11,8 +10,11 @@ export { formatDateTime } from "@/utils/datetime";
 /**
  * 根据值获取选项标签
  */
-export function getOptionLabel(options: SelectOption[], value: string | number): string | undefined {
-  return options.find(o => o.value === value)?.label;
+export function getOptionLabel(
+  options: SelectOption[],
+  value: string | number
+): string | undefined {
+  return options.find((o) => o.value === value)?.label;
 }
 
 /**

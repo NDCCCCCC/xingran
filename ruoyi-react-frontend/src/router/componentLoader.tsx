@@ -15,18 +15,15 @@ export class ComponentLoader {
   private cache = new Map<string, ComponentType>();
 
   // 允许的组件路径前缀（白名单）
-  private static readonly ALLOWED_PREFIXES = [
-    "pages/",
-    "components/",
-  ];
+  private static readonly ALLOWED_PREFIXES = ["pages/", "components/"];
 
   // 危险字符模式
   private static readonly DANGEROUS_PATTERNS = [
-    /\.\./,           // 路径遍历
-    /\\/,             // 反斜杠
-    /\.html$/i,       // HTML 文件
-    /\.js$/i,         // JS 文件
-    /\.json$/i,       // JSON 文件
+    /\.\./, // 路径遍历
+    /\\/, // 反斜杠
+    /\.html$/i, // HTML 文件
+    /\.js$/i, // JS 文件
+    /\.json$/i, // JSON 文件
   ];
 
   // 使用 Vite 的 glob 导入所有页面组件。
@@ -43,6 +40,10 @@ export class ComponentLoader {
       // 否则 Vite 报 "dynamically imported but also statically imported"（与 login 同理）
       "!/src/pages/system/notice/detail.tsx",
       "!/src/pages/my-notices/detail.tsx",
+      // 排除 modals/components/hooks 目录，这些是局部组件不需要懒加载路由
+      "!**/modals/**",
+      "!**/components/**",
+      "!**/hooks/**",
     ],
     {
       eager: false,
@@ -92,9 +93,7 @@ export class ComponentLoader {
     }
 
     // 检查白名单
-    const isValid = ComponentLoader.ALLOWED_PREFIXES.some(prefix =>
-      path.startsWith(prefix)
-    );
+    const isValid = ComponentLoader.ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix));
 
     if (!isValid) {
       console.warn("[ComponentLoader] Path not in whitelist", { path });
@@ -148,12 +147,8 @@ export class ComponentLoader {
     return () => (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">
-            页面加载失败
-          </h2>
-          <p className="text-gray-600">
-            请检查路由配置或联系管理员
-          </p>
+          <h2 className="text-xl font-semibold text-red-600 mb-2">页面加载失败</h2>
+          <p className="text-gray-600">请检查路由配置或联系管理员</p>
         </div>
       </div>
     );
@@ -220,18 +215,10 @@ export function createLazyComponent(componentPath: string): ComponentType {
     return () => (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">
-            页面加载失败
-          </h2>
-          <p className="text-gray-600">
-            组件路径: {componentPath}
-          </p>
-          <p className="text-gray-500 text-sm mt-2">
-            未找到模块: {fullPath}
-          </p>
-          <p className="text-gray-400 text-xs mt-1">
-            请确保文件路径正确
-          </p>
+          <h2 className="text-xl font-semibold text-red-600 mb-2">页面加载失败</h2>
+          <p className="text-gray-600">组件路径: {componentPath}</p>
+          <p className="text-gray-500 text-sm mt-2">未找到模块: {fullPath}</p>
+          <p className="text-gray-400 text-xs mt-1">请确保文件路径正确</p>
         </div>
       </div>
     );
@@ -246,7 +233,5 @@ export function createLazyComponent(componentPath: string): ComponentType {
  * @param componentPaths 组件路径数组
  */
 export async function preloadComponents(componentPaths: string[]): Promise<void> {
-  await Promise.all(
-    componentPaths.map(path => componentLoader.load(path))
-  );
+  await Promise.all(componentPaths.map((path) => componentLoader.load(path)));
 }

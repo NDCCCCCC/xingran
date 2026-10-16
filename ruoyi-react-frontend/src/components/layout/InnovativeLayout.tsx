@@ -6,10 +6,8 @@
 import { useState } from "react";
 import { Card, Button, Tooltip, Space, Divider } from "antd";
 import { useNavigate } from "react-router-dom";
-import ThemeSwitcher from "@/design-system/components/ThemeSwitcher";
 import LayoutSwitcher from "@/design-system/components/LayoutSwitcher";
 import DensitySwitcher from "@/design-system/components/DensitySwitcher";
-import ColorSwitcher from "@/design-system/components/ColorSwitcher";
 import { useAuthStore } from "@/store/authStore";
 import { DASHBOARD, MONITOR_DASHBOARD, LOGIN } from "@/constants/routes";
 import {
@@ -46,7 +44,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "仪表盘",
     icon: <DashboardOutlined />,
     path: DASHBOARD,
-    color: "var(--theme-info, #3b82f6)",
+    color: "var(--theme-info, #156031)",
     description: "数据概览与统计",
   },
   {
@@ -62,7 +60,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "系统监控",
     icon: <MonitorOutlined />,
     path: MONITOR_DASHBOARD,
-    color: "#f59e0b",
+    color: "#b07a20",
     description: "服务器、日志、任务",
   },
   {
@@ -70,7 +68,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "网络设备",
     icon: <CloudServerOutlined />,
     path: "/network/devices",
-    color: "var(--theme-purple, #8b5cf6)",
+    color: "var(--theme-purple, #c09058)",
     description: "设备、凭证、配置",
   },
   {
@@ -86,7 +84,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "工单管理",
     icon: <FileTextOutlined />,
     path: "/workorder/orders",
-    color: "#ef4444",
+    color: "#ba3630",
     description: "工单、分类、统计",
   },
   {
@@ -102,7 +100,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "个人中心",
     icon: <UserOutlined />,
     path: "/user/profile",
-    color: "#6366f1",
+    color: "#156031",
     description: "个人信息、设置",
   },
   {
@@ -110,7 +108,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "系统设置",
     icon: <SettingOutlined />,
     path: "/user/settings",
-    color: "var(--theme-purple, #8b5cf6)",
+    color: "var(--theme-purple, #c09058)",
     description: "配置、偏好、主题",
   },
 ];
@@ -131,7 +129,8 @@ const createSpaceIconStyles = (isActive: boolean, color: string) => ({
 
 const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const [activeSpace, setActiveSpace] = useState<string>("dashboard");
 
   const handleSpaceClick = (space: SpaceNav) => {
@@ -171,7 +170,8 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
             fontSize: "24px",
             fontWeight: "bold",
             marginBottom: "16px",
-            background: "linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)",
+            background:
+              "linear-gradient(135deg, var(--theme-primary-500, #156031) 0%, var(--theme-primary-600, #14542e) 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
@@ -235,15 +235,13 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
                 color: "var(--theme-text-secondary)",
               }}
             >
-              产险湖北数智化平台
+              数智化平台
             </span>
           </Space>
 
           <Space size="middle" separator={<Divider orientation="vertical" style={{ margin: 0 }} />}>
-            <ThemeSwitcher />
             <LayoutSwitcher />
             <DensitySwitcher />
-            <ColorSwitcher />
             <span
               style={{
                 fontSize: "14px",
@@ -279,7 +277,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
           styles={{
             body: {
               padding: "24px",
-            }
+            },
           }}
         >
           {children}

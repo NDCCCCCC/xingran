@@ -30,11 +30,7 @@
  *   the table doesn't flash to a blank/loading state (D-12).
  */
 
-import {
-  useQuery,
-  keepPreviousData,
-  type UseQueryResult,
-} from "@tanstack/react-query";
+import { useQuery, keepPreviousData, type UseQueryResult } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface UseTableQueryParams {

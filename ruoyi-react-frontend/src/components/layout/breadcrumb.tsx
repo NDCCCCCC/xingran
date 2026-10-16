@@ -24,11 +24,12 @@ const BreadcrumbComponent: FC = () => {
     // 转换为 Ant Design Breadcrumb 所需格式
     return breadcrumbPath.map((item, index) => ({
       key: item.path,
-      title: index === breadcrumbPath.length - 1 ? (
-        <span>{item.title}</span>
-      ) : (
-        <Link to={item.path}>{item.title}</Link>
-      ),
+      title:
+        index === breadcrumbPath.length - 1 ? (
+          <span>{item.title}</span>
+        ) : (
+          <Link to={item.path}>{item.title}</Link>
+        ),
     }));
   }, [location.pathname]);
 

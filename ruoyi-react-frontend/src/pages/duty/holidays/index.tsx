@@ -1,13 +1,5 @@
 import type { FC } from "react";
-import {
-  Button,
-  Table,
-  Card,
-  Space,
-  Select,
-  Alert,
-  Upload,
-} from "antd";
+import { Button, Table, Card, Space, Select, Alert, Upload } from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -15,6 +7,7 @@ import {
   CalendarOutlined,
   FileExcelOutlined,
 } from "@ant-design/icons";
+import { useDict } from "@/hooks/useDict";
 import { useHolidayData, useHolidayModals } from "./hooks";
 import { getHolidayColumns } from "./columns";
 import { HolidayEditModal, HolidayBatchModal } from "./modals";
@@ -23,20 +16,18 @@ import { handleExcelImport, downloadTemplate } from "./utils";
 const { Option } = Select;
 
 const DutyHolidayPage: FC = () => {
+  // Phase 69 DICT-03: 假日类型下拉迁 useDict("duty_holiday_type")——字典管理页改 label
+  // 后 EditModal/BatchModal 下拉随之变化；字典空态/接口异常时回退静态 HOLIDAY_TYPE_OPTIONS
+  const { data: holidayTypeDict = [] } = useDict("duty_holiday_type");
+
   // 数据管理
-  const {
-    loading,
-    dataSource,
-    year,
-    availableYears,
-    fetchList,
-  } = useHolidayData();
+  const { loading, dataSource, year, availableYears, fetchList } = useHolidayData();
 
   // 模态框和操作管理
   const {
     modalState,
     batchState,
-    setBatchHolidays,
+    setBatchHolidays: _setBatchHolidays,
     setModalVisible,
     setBatchModalVisible,
     handleAdd,
@@ -73,10 +64,11 @@ const DutyHolidayPage: FC = () => {
           <Space>
             <Select
               value={year}
-              onChange={(y) =>    fetchList(y)}
+              onChange={(y) => fetchList(y)}
               style={{ width: 120 }}
               suffixIcon={null}
-             onSearch={() => {}}>
+              onSearch={() => {}}
+            >
               {availableYears.map((y) => (
                 <Option key={y} value={y}>
                   {y}年
@@ -102,11 +94,16 @@ const DutyHolidayPage: FC = () => {
           <Upload
             accept=".xlsx,.xls"
             showUploadList={false}
-            customRequest={(options) => handleExcelImport({
-              file: options.file as File,
-              onSuccess: options.onSuccess as (data: unknown) => void,
-              onError: options.onError as (error: Error) => void,
-            }, fetchList)}
+            customRequest={(options) =>
+              handleExcelImport(
+                {
+                  file: options.file as File,
+                  onSuccess: options.onSuccess as (data: unknown) => void,
+                  onError: options.onError as (error: Error) => void,
+                },
+                fetchList
+              )
+            }
           >
             <Button icon={<UploadOutlined />} type="primary">
               导入Excel
@@ -139,6 +136,7 @@ const DutyHolidayPage: FC = () => {
         editingRecord={modalState.editingRecord}
         year={year}
         availableYears={availableYears}
+        holidayTypeDict={holidayTypeDict}
         onOk={handleModalOk}
         onCancel={() => {
           // Close modal through hook - will implement properly
@@ -150,6 +148,7 @@ const DutyHolidayPage: FC = () => {
       <HolidayBatchModal
         open={modalState.batchModalVisible}
         batchHolidays={batchState.batchHolidays}
+        holidayTypeDict={holidayTypeDict}
         onOk={handleBatchSubmit}
         onCancel={() => {
           setBatchModalVisible(false);

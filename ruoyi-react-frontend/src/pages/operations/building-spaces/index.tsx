@@ -30,19 +30,22 @@ const BuildingSpacesPage: React.FC = () => {
   });
 
   // 加载楼宇卡片(分页;后端 list 已带 totalFloors 维护字段 + workstationCount 子查询)
-  const loadBuildings = useCallback(async (page: number) => {
-    setLoading(true);
-    try {
-      const result = await buildingApi.list({ current: page, pageSize: PAGE_SIZE });
-      setBuildings((result.data?.list || []) as unknown as Building[]);
-      setTotal(result.data?.total || 0);
-    } catch (error: unknown) {
-      console.error("加载楼宇数据失败:", error);
-      message.error((error as { message?: string })?.message || "加载楼宇数据失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [message]);
+  const loadBuildings = useCallback(
+    async (page: number) => {
+      setLoading(true);
+      try {
+        const result = await buildingApi.list({ current: page, pageSize: PAGE_SIZE });
+        setBuildings((result.data?.list || []) as unknown as Building[]);
+        setTotal(result.data?.total || 0);
+      } catch (error: unknown) {
+        console.error("加载楼宇数据失败:", error);
+        message.error((error as { message?: string })?.message || "加载楼宇数据失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [message]
+  );
 
   // 加载全局统计(专用 COUNT 端点,不依赖拉全量)
   const loadStatistics = useCallback(async () => {
@@ -132,10 +135,7 @@ const BuildingSpacesPage: React.FC = () => {
             <Row gutter={[16, 16]} className={styles.buildingGrid}>
               {buildings.map((building) => (
                 <Col key={building.id} xs={24} sm={12} lg={8} xl={6}>
-                  <BuildingCard
-                    building={building}
-                    onClick={() => handleBuildingClick(building)}
-                  />
+                  <BuildingCard building={building} onClick={() => handleBuildingClick(building)} />
                 </Col>
               ))}
             </Row>

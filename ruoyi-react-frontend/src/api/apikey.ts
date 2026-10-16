@@ -12,7 +12,7 @@
  * @module api/apikey
  */
 
-import { get, post, put, del } from "@/lib/api";
+import { get, post } from "@/lib/api";
 import type {
   APIKey,
   CreateAPIKeyRequest,
@@ -84,7 +84,7 @@ export function createAPIKey(data: CreateAPIKeyRequest): Promise<BaseResponse<{ 
  * console.log(apiKey.key); // 显示为 rec_1a2b3c4d5e6f...
  */
 export function getAPIKey(id: string): Promise<BaseResponse<APIKey>> {
-  return get(`/system/apikeys/${id}`);
+  return post(`/system/apikeys/${id}`);
 }
 
 /**
@@ -101,11 +101,11 @@ export function getAPIKey(id: string): Promise<BaseResponse<APIKey>> {
  * await updateAPIKey('550e8400-e29b-41d4-a716-446655440000', {
  *   name: 'Updated API Key',
  *   scopes: ['read', 'write', 'admin'],
- *   ip_whitelist: ['10.0.0.0/8']
+ *   ipWhitelist: ['10.0.0.0/8']
  * });
  */
 export function updateAPIKey(id: string, data: UpdateAPIKeyRequest): Promise<BaseResponse<void>> {
-  return put(`/system/apikeys/${id}`, data);
+  return post(`/system/apikeys/${id}/update`, data);
 }
 
 /**
@@ -121,7 +121,7 @@ export function updateAPIKey(id: string, data: UpdateAPIKeyRequest): Promise<Bas
  * await deleteAPIKey('550e8400-e29b-41d4-a716-446655440000');
  */
 export function deleteAPIKey(id: string): Promise<BaseResponse<void>> {
-  return del(`/system/apikeys/${id}`);
+  return post(`/system/apikeys/${id}/delete`);
 }
 
 /**

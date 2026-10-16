@@ -71,6 +71,7 @@ export function parseJsonField<T>(value: string | T): T {
       return JSON.parse(value) as T;
     } catch {
       // JSON解析失败，返回原字符串作为T类型
+      // acceptable: JSON.parse fallback for untyped cache data — T is inferred from call site
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return value as any;
     }

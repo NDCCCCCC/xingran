@@ -48,7 +48,11 @@ function fieldConfigToCronPart(fieldConfig: CronFieldConfig, fieldType: CronFiel
   }
 
   // 范围 - 使用连字符，如 5-10
-  if (periodType === "range" && fieldConfig.rangeStart !== undefined && fieldConfig.rangeEnd !== undefined) {
+  if (
+    periodType === "range" &&
+    fieldConfig.rangeStart !== undefined &&
+    fieldConfig.rangeEnd !== undefined
+  ) {
     return `${fieldConfig.rangeStart}-${fieldConfig.rangeEnd}`;
   }
 
@@ -135,7 +139,7 @@ function parseCronPart(part: string, fieldType: CronFieldType): CronFieldConfig 
 
   // 逗号 - 指定多个值，如 0,5,10 或 MON,WED,FRI
   if (part.includes(",")) {
-    const values = part.split(",").map(v => parseFieldValue(v, fieldType));
+    const values = part.split(",").map((v) => parseFieldValue(v, fieldType));
     return { type: fieldType, periodType: "specific", specific: values };
   }
 
@@ -163,7 +167,20 @@ function parseFieldValue(value: string, fieldType: CronFieldType): number {
 
   // 处理月份缩写（JAN, FEB...）
   if (fieldType === "month") {
-    const monthIndex = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].indexOf(value.toUpperCase());
+    const monthIndex = [
+      "JAN",
+      "FEB",
+      "MAR",
+      "APR",
+      "MAY",
+      "JUN",
+      "JUL",
+      "AUG",
+      "SEP",
+      "OCT",
+      "NOV",
+      "DEC",
+    ].indexOf(value.toUpperCase());
     if (monthIndex !== -1) {
       return monthIndex + 1;
     }
@@ -217,7 +234,6 @@ export function getNextRunTimes(expression: string, count: number = 5): Date[] {
     const normalizedExpression = expression.replace(/\?/g, "*");
 
     // 设置使用本地时间而非 UTC 时间
-    // @ts-expect-error - later库类型定义不完整，但运行时正常
     later.date.localTime();
 
     // 判断表达式是否包含秒字段（6字段格式包含秒，5字段格式不包含秒）
@@ -225,14 +241,14 @@ export function getNextRunTimes(expression: string, count: number = 5): Date[] {
     const hasSeconds = parts.length === 6;
 
     // 解析 cron 表达式，必须正确传递 hasSeconds 参数
-    // @ts-expect-error - later库类型定义不完整，但运行时正常
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
     const schedule = later.parse.cron(normalizedExpression, hasSeconds);
 
     // 使用 later.schedule(schedule).next(count) 一次性获取多次执行时间
-    // @ts-expect-error - later库类型定义不完整，但运行时正常
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const times = later.schedule(schedule).next(count);
+    // @breejs/later 实际运行时始终返回 Date[] (单值用 Date 但 API 签名是不定 union),
+    // 这里用 Array.isArray() 守卫,运行时转换 TS 7 的类型不能跨赋值语句自动收窄。
+    const rawTimes: Date | Date[] = later.schedule(schedule).next(count);
+    const times: Date[] = Array.isArray(rawTimes) ? rawTimes : [];
 
     // 确保返回的是 Date 数组
     return Array.isArray(times) ? times : [];
@@ -283,7 +299,11 @@ export function cronToChinese(expression: string): string {
       const start = config.hour.cycleStart ?? 0;
       const interval = config.hour.cycleInterval ?? 1;
       parts.push(`从${start}点开始每${interval}小时`);
-    } else if (config.hour.periodType === "specific" && config.hour.specific && config.hour.specific.length > 1) {
+    } else if (
+      config.hour.periodType === "specific" &&
+      config.hour.specific &&
+      config.hour.specific.length > 1
+    ) {
       parts.push(`${config.hour.specific.join("、")}点`);
     }
 
@@ -299,8 +319,12 @@ export function cronToChinese(expression: string): string {
     }
 
     // 处理周
-    if (config.week.periodType === "specific" && config.week.specific && config.week.specific.length > 0) {
-      const days = config.week.specific.map(d => WEEK_DAY_NAMES[d - 1] || d).join("、");
+    if (
+      config.week.periodType === "specific" &&
+      config.week.specific &&
+      config.week.specific.length > 0
+    ) {
+      const days = config.week.specific.map((d) => WEEK_DAY_NAMES[d - 1] || d).join("、");
       parts.push(`每${days}`);
     }
 

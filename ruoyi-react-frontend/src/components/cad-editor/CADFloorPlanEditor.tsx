@@ -10,8 +10,23 @@ import { CADLayersPanel } from "./CADLayersPanel";
 import { WallElement, DoorElement, WorkstationElement, CADTextElement } from "../cad-elements";
 import { useWallDrawing, type WallDrawingResult } from "@/hooks/useWallDrawing";
 import { CAD_COLOR_THEME } from "./theme";
-import { EDITOR_CONSTANTS, snapToGrid, checkWorkstationCollision, pointToLineDistance } from "./editorUtils";
-import type { FloorPlanData, Wall, Door, EditorMode, Layer, LayerConfig, Point, WallType, TextElement } from "./types";
+import {
+  EDITOR_CONSTANTS,
+  snapToGrid,
+  checkWorkstationCollision,
+  pointToLineDistance,
+} from "./editorUtils";
+import type {
+  FloorPlanData,
+  Wall,
+  Door,
+  EditorMode,
+  Layer,
+  LayerConfig,
+  Point,
+  WallType,
+  TextElement,
+} from "./types";
 import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
 
 const DRAG_THRESHOLD = 5;
@@ -23,9 +38,9 @@ export interface CADFloorPlanEditorProps {
   doors?: Door[];
   workstations?: WorkstationNode[];
   texts?: TextElement[];
-  planImageId?: string;       // 平面图图片ID
-  planImageUrl?: string;      // 平面图图片URL
-  layerConfig?: LayerConfig;  // 图层配置
+  planImageId?: string; // 平面图图片ID
+  planImageUrl?: string; // 平面图图片URL
+  layerConfig?: LayerConfig; // 图层配置
   onSave?: (data: FloorPlanData) => void;
   readOnly?: boolean;
   style?: React.CSSProperties;
@@ -49,7 +64,9 @@ export function CADFloorPlanEditor({
   const { message } = App.useApp();
   const [mode, setMode] = useState<EditorMode>("select");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<"wall" | "door" | "workstation" | "text" | null>(null);
+  const [selectedType, setSelectedType] = useState<"wall" | "door" | "workstation" | "text" | null>(
+    null
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
@@ -63,10 +80,24 @@ export function CADFloorPlanEditor({
   // 图层状态
   const [layers, setLayers] = useState<Layer[]>([
     { id: "grid", name: "网格", type: "grid", visible: true, locked: true, opacity: 1 },
-    { id: "plan_image", name: "平面图", type: "plan_image", visible: true, locked: true, opacity: 0.5 },
+    {
+      id: "plan_image",
+      name: "平面图",
+      type: "plan_image",
+      visible: true,
+      locked: true,
+      opacity: 0.5,
+    },
     { id: "wall", name: "墙体", type: "wall", visible: true, locked: false, opacity: 1 },
     { id: "door", name: "门", type: "door", visible: true, locked: false, opacity: 1 },
-    { id: "workstation", name: "工位", type: "workstation", visible: true, locked: false, opacity: 1 },
+    {
+      id: "workstation",
+      name: "工位",
+      type: "workstation",
+      visible: true,
+      locked: false,
+      opacity: 1,
+    },
     { id: "text", name: "文本", type: "text", visible: true, locked: false, opacity: 1 },
   ]);
 
@@ -93,14 +124,17 @@ export function CADFloorPlanEditor({
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [_dragStart, setDragStart] = useState<Point | null>(null);
-  const [lastMousePos, setLastMousePos] = useState<Point | null>(null);
+  const lastMousePosRef = useRef<Point | null>(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const lastElementMouseCanvasPos = useRef<Point | null>(null);
   const dragStartCanvasPos = useRef<Point | null>(null);
   const hasMovedBeyondThreshold = useRef<boolean>(false);
   // 存储拖动开始时工位的原始位置
   const originalWorkstationPositions = useRef<Map<string, { x: number; y: number }>>(new Map());
-  const [draggedElement, setDraggedElement] = useState<{ id: string; type: "wall" | "door" | "workstation" | "text" } | null>(null);
+  const [draggedElement, setDraggedElement] = useState<{
+    id: string;
+    type: "wall" | "door" | "workstation" | "text";
+  } | null>(null);
   const [isBoxSelecting, setIsBoxSelecting] = useState(false);
   const [boxSelectStart, setBoxSelectStart] = useState<Point | null>(null);
   const [boxSelectEnd, setBoxSelectEnd] = useState<Point | null>(null);
@@ -124,10 +158,12 @@ export function CADFloorPlanEditor({
   }, [scale]);
 
   // ==================== 墙体绘制 ====================
-  function getWallConnectionPoints(nearbyNode: { point: Point; wallId: string; pointIndex: number } | null): Point[] | null {
+  function getWallConnectionPoints(
+    nearbyNode: { point: Point; wallId: string; pointIndex: number } | null
+  ): Point[] | null {
     if (!nearbyNode) return null;
 
-    const wall = floorPlanData.walls.find(w => w.id === nearbyNode.wallId);
+    const wall = floorPlanData.walls.find((w) => w.id === nearbyNode.wallId);
     if (!wall) return null;
 
     // 根据点击的节点位置，决定绘制方向
@@ -147,37 +183,41 @@ export function CADFloorPlanEditor({
   const wallDrawing = useWallDrawing({
     gridSize: floorPlanData.gridSize,
     snapEnabled: floorPlanData.snapToGrid,
-    onComplete: useCallback((wall: WallDrawingResult) => {
-      if (editingWallId) {
-        // 更新已有的墙体
-        setFloorPlanData((prev) => ({
-          ...prev,
-          walls: prev.walls.map((w) =>
-            w.id === editingWallId
-              ? { ...w, points: wall.points, type: wall.type as WallType }
-              : w
-          ),
-        }));
-        message.success("墙体已更新");
-        setEditingWallId(null);
-      } else {
-        // 创建新墙体
-        const newWall: Wall = {
-          id: `wall_${Date.now()}`,
-          floorId,
-          type: wall.type as WallType,
-          points: wall.points,
-          thickness: 10,
-          height: 3.0,
-          color: CAD_COLOR_THEME.wall.default,
-        };
-        setFloorPlanData((prev) => ({
-          ...prev,
-          walls: [...prev.walls, newWall],
-        }));
-        message.success("墙体绘制完成");
-      }
-    }, [floorId, editingWallId]),
+    onComplete: useCallback(
+      (wall: WallDrawingResult) => {
+        if (editingWallId) {
+          // 更新已有的墙体
+          setFloorPlanData((prev) => ({
+            ...prev,
+            walls: prev.walls.map((w) =>
+              w.id === editingWallId
+                ? { ...w, points: wall.points, type: wall.type as WallType }
+                : w
+            ),
+          }));
+          message.success("墙体已更新");
+          setEditingWallId(null);
+        } else {
+          // 创建新墙体
+          const newWall: Wall = {
+            id: `wall_${Date.now()}`,
+            floorId,
+            type: wall.type as WallType,
+            points: wall.points,
+            thickness: 10,
+            height: 3.0,
+            color: CAD_COLOR_THEME.wall.default,
+          };
+          setFloorPlanData((prev) => ({
+            ...prev,
+            walls: [...prev.walls, newWall],
+          }));
+          message.success("墙体绘制完成");
+        }
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+      [floorId, editingWallId]
+    ),
   });
 
   // ==================== 门绘制 ====================
@@ -186,25 +226,17 @@ export function CADFloorPlanEditor({
   // ==================== 图层操作 ====================
   const handleLayerVisibilityChange = useCallback((layerId: string, visible: boolean) => {
     setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === layerId ? { ...layer, visible } : layer
-      )
+      prev.map((layer) => (layer.id === layerId ? { ...layer, visible } : layer))
     );
   }, []);
 
   const handleLayerLockChange = useCallback((layerId: string, locked: boolean) => {
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === layerId ? { ...layer, locked } : layer
-      )
-    );
+    setLayers((prev) => prev.map((layer) => (layer.id === layerId ? { ...layer, locked } : layer)));
   }, []);
 
   const handleLayerOpacityChange = useCallback((layerId: string, opacity: number) => {
     setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === layerId ? { ...layer, opacity } : layer
-      )
+      prev.map((layer) => (layer.id === layerId ? { ...layer, opacity } : layer))
     );
   }, []);
 
@@ -242,23 +274,24 @@ export function CADFloorPlanEditor({
   // 平面图自动隐藏逻辑：当有墙体或门时，默认隐藏平面图
   useEffect(() => {
     const hasWallsOrDoors = floorPlanData.walls.length > 0 || floorPlanData.doors.length > 0;
-    const planImageLayer = layers.find(l => l.id === "plan_image");
+    const planImageLayer = layers.find((l) => l.id === "plan_image");
 
     // 如果有图层配置，使用配置值；否则使用默认行为（有内容时隐藏）
     const autoHide = layerConfig?.planImage?.autoHide !== false;
 
     if (autoHide && planImageLayer) {
-      setLayers(prev => prev.map(layer =>
-        layer.id === "plan_image"
-          ? { ...layer, visible: !hasWallsOrDoors }
-          : layer
-      ));
+      setLayers((prev) =>
+        prev.map((layer) =>
+          layer.id === "plan_image" ? { ...layer, visible: !hasWallsOrDoors } : layer
+        )
+      );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- layers is state array; disable to avoid re-run loop
   }, [floorPlanData.walls.length, floorPlanData.doors.length, layerConfig?.planImage?.autoHide]);
 
   // ==================== 图层辅助函数 ====================
   function isLayerLocked(layerId: string): boolean {
-    return layers.find(l => l.id === layerId)?.locked ?? false;
+    return layers.find((l) => l.id === layerId)?.locked ?? false;
   }
 
   // 鼠标滚轮缩放（Shift+滚轮缩放平面图，普通滚轮缩放画布）
@@ -274,7 +307,13 @@ export function CADFloorPlanEditor({
       const isOnPlanImage = target.closest('g[data-plan-image="true"]');
       const isShiftKey = (e as WheelEvent).shiftKey;
 
-      if (isOnPlanImage && isShiftKey && !readOnly && !isLayerLocked("plan_image") && floorPlanData.planImageUrl) {
+      if (
+        isOnPlanImage &&
+        isShiftKey &&
+        !readOnly &&
+        !isLayerLocked("plan_image") &&
+        floorPlanData.planImageUrl
+      ) {
         // 缩放平面图图片
         const delta = e.deltaY > 0 ? -0.1 : 0.1;
         setFloorPlanData((prev) => ({
@@ -315,40 +354,44 @@ export function CADFloorPlanEditor({
     return () => {
       svgElement.removeEventListener("wheel", handleWheel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isLayerLocked is a render-defined function
   }, [readOnly, floorPlanData.planImageUrl]);
 
   // ==================== 辅助函数 ====================
   function getElementTypeById(id: string): "wall" | "door" | "workstation" | "text" | null {
-    if (floorPlanData.walls.find(w => w.id === id)) return "wall";
-    if (floorPlanData.doors.find(d => d.id === id)) return "door";
-    if (floorPlanData.workstations.find(w => w.id === id)) return "workstation";
-    if (floorPlanData.texts?.find(t => t.id === id)) return "text";
+    if (floorPlanData.walls.find((w) => w.id === id)) return "wall";
+    if (floorPlanData.doors.find((d) => d.id === id)) return "door";
+    if (floorPlanData.workstations.find((w) => w.id === id)) return "workstation";
+    if (floorPlanData.texts?.find((t) => t.id === id)) return "text";
     return null;
   }
 
   // ==================== 选择操作 ====================
-  const handleSelectElement = useCallback((id: string, type: "wall" | "door" | "workstation" | "text", addToSelection = false) => {
-    if (addToSelection) {
-      // 多选模式
-      setSelectedIds((prev) => {
-        const newSet = new Set(prev);
-        if (newSet.has(id)) {
-          newSet.delete(id);
-        } else {
-          newSet.add(id);
-        }
-        return newSet;
-      });
-      // 保持最后选中的元素作为当前选中
-      setSelectedId(id);
-      setSelectedType(type);
-    } else {
-      // 单选模式
-      setSelectedIds(new Set([id]));
-      setSelectedId(id);
-      setSelectedType(type);
-    }
-  }, []);
+  const handleSelectElement = useCallback(
+    (id: string, type: "wall" | "door" | "workstation" | "text", addToSelection = false) => {
+      if (addToSelection) {
+        // 多选模式
+        setSelectedIds((prev) => {
+          const newSet = new Set(prev);
+          if (newSet.has(id)) {
+            newSet.delete(id);
+          } else {
+            newSet.add(id);
+          }
+          return newSet;
+        });
+        // 保持最后选中的元素作为当前选中
+        setSelectedId(id);
+        setSelectedType(type);
+      } else {
+        // 单选模式
+        setSelectedIds(new Set([id]));
+        setSelectedId(id);
+        setSelectedType(type);
+      }
+    },
+    []
+  );
 
   const handleDeselect = useCallback(() => {
     setSelectedId(null);
@@ -356,31 +399,32 @@ export function CADFloorPlanEditor({
     setSelectedIds(new Set());
   }, []);
 
-  // 获取当前选中的所有元素
+  // 获取当前选中的所有元素（Map 化查找，O(n) 构建 → O(1) 查询）
   const _selectedElements = useMemo(() => {
-    const elements: { id: string; type: "wall" | "door" | "workstation" | "text" }[] = [];
-    if (selectedIds.size === 0) return elements;
+    if (selectedIds.size === 0) return [];
 
+    // 构建 id → {el, type} Map
+    const idToElement = new Map<
+      string,
+      { id: string; type: "wall" | "door" | "workstation" | "text" }
+    >();
+    for (const wall of floorPlanData.walls) {
+      idToElement.set(wall.id, { id: wall.id, type: "wall" });
+    }
+    for (const door of floorPlanData.doors) {
+      idToElement.set(door.id, { id: door.id, type: "door" });
+    }
+    for (const ws of floorPlanData.workstations) {
+      idToElement.set(ws.id, { id: ws.id, type: "workstation" });
+    }
+    for (const text of floorPlanData.texts || []) {
+      idToElement.set(text.id, { id: text.id, type: "text" });
+    }
+
+    const elements: { id: string; type: "wall" | "door" | "workstation" | "text" }[] = [];
     for (const id of selectedIds) {
-      const wall = floorPlanData.walls.find(w => w.id === id);
-      if (wall) {
-        elements.push({ id: wall.id, type: "wall" });
-        continue;
-      }
-      const door = floorPlanData.doors.find(d => d.id === id);
-      if (door) {
-        elements.push({ id: door.id, type: "door" });
-        continue;
-      }
-      const ws = floorPlanData.workstations.find(w => w.id === id);
-      if (ws) {
-        elements.push({ id: ws.id, type: "workstation" });
-        continue;
-      }
-      const text = floorPlanData.texts?.find(t => t.id === id);
-      if (text) {
-        elements.push({ id: text.id, type: "text" });
-      }
+      const el = idToElement.get(id);
+      if (el) elements.push(el);
     }
     return elements;
   }, [selectedIds, floorPlanData]);
@@ -389,30 +433,34 @@ export function CADFloorPlanEditor({
   const handleSave = useCallback(() => {
     onSave?.(floorPlanData);
     message.success("保存成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [floorPlanData, onSave]);
 
   // ==================== 更新元素属性 ====================
-  const handleUpdateElement = useCallback((changes: Partial<Wall | Door | WorkstationNode>) => {
-    if (!selectedId || !selectedType) return;
+  const handleUpdateElement = useCallback(
+    (changes: Partial<Wall | Door | WorkstationNode>) => {
+      if (!selectedId || !selectedType) return;
 
-    setFloorPlanData((prev) => {
-      const newData = { ...prev };
-      if (selectedType === "wall") {
-        newData.walls = prev.walls.map((w) =>
-          w.id === selectedId ? { ...w, ...changes } as Wall : w
-        );
-      } else if (selectedType === "door") {
-        newData.doors = prev.doors.map((d) =>
-          d.id === selectedId ? { ...d, ...changes } as Door : d
-        );
-      } else if (selectedType === "workstation") {
-        newData.workstations = prev.workstations.map((ws) =>
-          ws.id === selectedId ? { ...ws, ...changes } as WorkstationNode : ws
-        );
-      }
-      return newData;
-    });
-  }, [selectedId, selectedType]);
+      setFloorPlanData((prev) => {
+        const newData = { ...prev };
+        if (selectedType === "wall") {
+          newData.walls = prev.walls.map((w) =>
+            w.id === selectedId ? ({ ...w, ...changes } as Wall) : w
+          );
+        } else if (selectedType === "door") {
+          newData.doors = prev.doors.map((d) =>
+            d.id === selectedId ? ({ ...d, ...changes } as Door) : d
+          );
+        } else if (selectedType === "workstation") {
+          newData.workstations = prev.workstations.map((ws) =>
+            ws.id === selectedId ? ({ ...ws, ...changes } as WorkstationNode) : ws
+          );
+        }
+        return newData;
+      });
+    },
+    [selectedId, selectedType]
+  );
 
   // ==================== 撤销/重做 ====================
   const canUndo = historyIndex > 0;
@@ -463,6 +511,7 @@ export function CADFloorPlanEditor({
 
     closeTextInput();
     message.success("文本已添加");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [textInputPosition, tempTextContent, floorId]);
 
   const handleTextInputCancel = useCallback(() => {
@@ -471,91 +520,102 @@ export function CADFloorPlanEditor({
 
   // ==================== 坐标转换 ====================
   function isLayerVisible(layerId: string): boolean {
-    return layers.find(l => l.id === layerId)?.visible ?? false;
+    return layers.find((l) => l.id === layerId)?.visible ?? false;
   }
 
   function getLayerOpacity(layerId: string): number {
-    return layers.find(l => l.id === layerId)?.opacity ?? 1;
+    return layers.find((l) => l.id === layerId)?.opacity ?? 1;
   }
 
   // ==================== 坐标转换 ====================
-  const getCanvasPoint = useCallback((clientX: number, clientY: number): Point => {
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-    return {
-      x: (clientX - rect.left - offset.x) / scale,
-      y: (clientY - rect.top - offset.y) / scale,
-    };
-  }, [scale, offset]);
+  const getCanvasPoint = useCallback(
+    (clientX: number, clientY: number): Point => {
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (!rect) return { x: 0, y: 0 };
+      return {
+        x: (clientX - rect.left - offset.x) / scale,
+        y: (clientY - rect.top - offset.y) / scale,
+      };
+    },
+    [scale, offset]
+  );
 
   // 检测是否点击在元素上
-  const getHitElement = useCallback((point: Point): { id: string; type: "wall" | "door" | "workstation" | "text" } | null => {
-    // 检查文本（最上层）
-    for (const text of floorPlanData.texts || []) {
-      const textWidth = text.content.length * text.fontSize * 0.6;
-      const textHeight = text.fontSize;
-      if (
-        point.x >= text.position.x &&
-        point.x <= text.position.x + textWidth &&
-        point.y >= text.position.y &&
-        point.y <= text.position.y + textHeight
-      ) {
-        return { id: text.id, type: "text" };
-      }
-    }
-    // 检查工位（优先检查，因为工位通常在最上层）
-    for (const ws of floorPlanData.workstations) {
-      const halfW = (ws.width || 120) / 2;
-      const halfH = (ws.height || 80) / 2;
-      // 简单的矩形碰撞检测（不考虑旋转）
-      if (
-        point.x >= ws.x - halfW &&
-        point.x <= ws.x + halfW &&
-        point.y >= ws.y - halfH &&
-        point.y <= ws.y + halfH
-      ) {
-        return { id: ws.id, type: "workstation" };
-      }
-    }
-    // 检查门
-    for (const door of floorPlanData.doors) {
-      const doorPos = door.position;
-      if (typeof doorPos === "object" && "x" in doorPos) {
-        const dx = point.x - doorPos.x;
-        const dy = point.y - doorPos.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 30) {
-          return { id: door.id, type: "door" };
+  const getHitElement = useCallback(
+    (point: Point): { id: string; type: "wall" | "door" | "workstation" | "text" } | null => {
+      // 检查文本（最上层）
+      for (const text of floorPlanData.texts || []) {
+        const textWidth = text.content.length * text.fontSize * 0.6;
+        const textHeight = text.fontSize;
+        if (
+          point.x >= text.position.x &&
+          point.x <= text.position.x + textWidth &&
+          point.y >= text.position.y &&
+          point.y <= text.position.y + textHeight
+        ) {
+          return { id: text.id, type: "text" };
         }
       }
-    }
-    // 检查墙体（放在最后，因为墙体通常在底层）
-    for (const wall of floorPlanData.walls) {
-      if (wall.points.length < 2) continue;
-      for (let i = 0; i < wall.points.length - 1; i++) {
-        const p1 = wall.points[i];
-        const p2 = wall.points[i + 1];
-        const dist = pointToLineDistance(point, p1, p2);
-        if (dist < wall.thickness / 2 + 5) {
-          return { id: wall.id, type: "wall" };
+      // 检查工位（优先检查，因为工位通常在最上层）
+      for (const ws of floorPlanData.workstations) {
+        const halfW = (ws.width || 120) / 2;
+        const halfH = (ws.height || 80) / 2;
+        // 简单的矩形碰撞检测（不考虑旋转）
+        if (
+          point.x >= ws.x - halfW &&
+          point.x <= ws.x + halfW &&
+          point.y >= ws.y - halfH &&
+          point.y <= ws.y + halfH
+        ) {
+          return { id: ws.id, type: "workstation" };
         }
       }
-    }
-    return null;
-  }, [floorPlanData]);
+      // 检查门
+      for (const door of floorPlanData.doors) {
+        const doorPos = door.position;
+        if (typeof doorPos === "object" && "x" in doorPos) {
+          const dx = point.x - doorPos.x;
+          const dy = point.y - doorPos.y;
+          if (Math.sqrt(dx * dx + dy * dy) < 30) {
+            return { id: door.id, type: "door" };
+          }
+        }
+      }
+      // 检查墙体（放在最后，因为墙体通常在底层）
+      for (const wall of floorPlanData.walls) {
+        if (wall.points.length < 2) continue;
+        for (let i = 0; i < wall.points.length - 1; i++) {
+          const p1 = wall.points[i];
+          const p2 = wall.points[i + 1];
+          const dist = pointToLineDistance(point, p1, p2);
+          if (dist < wall.thickness / 2 + 5) {
+            return { id: wall.id, type: "wall" };
+          }
+        }
+      }
+      return null;
+    },
+    [floorPlanData]
+  );
 
-  // 检测点击位置是否在已有的墙体节点附近
-  const findNearbyWallNode = useCallback((point: Point, threshold = 15): { point: Point; wallId: string; pointIndex: number } | null => {
-    for (const wall of floorPlanData.walls) {
-      for (let i = 0; i < wall.points.length; i++) {
-        const node = wall.points[i];
-        const dist = Math.sqrt(Math.pow(point.x - node.x, 2) + Math.pow(point.y - node.y, 2));
-        if (dist < threshold) {
-          return { point: node, wallId: wall.id, pointIndex: i };
+  // 检测点击位置是否在已有的墙体节点附近（平方距离比较替代 sqrt）
+  const findNearbyWallNode = useCallback(
+    (point: Point, threshold = 15): { point: Point; wallId: string; pointIndex: number } | null => {
+      const thresholdSq = threshold * threshold;
+      for (const wall of floorPlanData.walls) {
+        for (let i = 0; i < wall.points.length; i++) {
+          const node = wall.points[i];
+          const dx = point.x - node.x;
+          const dy = point.y - node.y;
+          if (dx * dx + dy * dy < thresholdSq) {
+            return { point: node, wallId: wall.id, pointIndex: i };
+          }
         }
       }
-    }
-    return null;
-  }, [floorPlanData]);
+      return null;
+    },
+    [floorPlanData]
+  );
 
   // ==================== 画布事件 ====================
   const handleCanvasMouseDown = useCallback(
@@ -570,7 +630,7 @@ export function CADFloorPlanEditor({
       if (e.button === 1 || (e.button === 0 && e.altKey)) {
         setIsDragging(true);
         setDragStart({ x: e.clientX, y: e.clientY });
-        setLastMousePos({ x: e.clientX, y: e.clientY });
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         e.preventDefault();
         return;
       }
@@ -608,7 +668,7 @@ export function CADFloorPlanEditor({
             if (!layerIsLocked && !readOnly) {
               handleSelectElement(hitElement.id, "door");
               // 获取完整的门对象用于拖动
-              const fullDoor = floorPlanData.doors.find(d => d.id === hitElement.id);
+              const fullDoor = floorPlanData.doors.find((d) => d.id === hitElement.id);
               if (fullDoor) {
                 setDraggedElement({ id: fullDoor.id, type: "door" });
                 lastElementMouseCanvasPos.current = point;
@@ -650,43 +710,46 @@ export function CADFloorPlanEditor({
               dragStartCanvasPos.current = point;
               hasMovedBeyondThreshold.current = false;
               // 保存工位的原始位置
-              const ws = floorPlanData.workstations.find(w => w.id === hitElement.id);
+              const ws = floorPlanData.workstations.find((w) => w.id === hitElement.id);
               if (ws) {
                 originalWorkstationPositions.current.set(ws.id, { x: ws.x, y: ws.y });
               }
             }
           } else {
             // 创建新工位 - 吸附到网格并检查碰撞
-            const snappedX = floorPlanData.snapToGrid
-              ? snapToGrid(point.x, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
-              : point.x;
-            const snappedY = floorPlanData.snapToGrid
-              ? snapToGrid(point.y, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
-              : point.y;
+            // BUGFIX-03: use setFloorPlanData updater to read prev.snapToGrid/prev.gridSize (avoid stale closure)
+            setFloorPlanData((prev) => {
+              const snappedX = prev.snapToGrid
+                ? snapToGrid(point.x, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
+                : point.x;
+              const snappedY = prev.snapToGrid
+                ? snapToGrid(point.y, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
+                : point.y;
 
-            const newWorkstation: WorkstationNode = {
-              id: `ws_${Date.now()}`,
-              code: `WS-${String(floorPlanData.workstations.length + 1).padStart(3, "0")}`,
-              name: `工位-${floorPlanData.workstations.length + 1}`,
-              x: snappedX,
-              y: snappedY,
-              width: 160, // 更宽的桌子
-              height: 70, // 桌子深度
-              rotation: 0,
-              status: 0, // 0 = 空闲
-              type: 0, // 0 = 一字型, 1 = L型
-            };
+              const newWorkstation: WorkstationNode = {
+                id: `ws_${Date.now()}`,
+                code: `WS-${String(prev.workstations.length + 1).padStart(3, "0")}`,
+                name: `工位-${prev.workstations.length + 1}`,
+                x: snappedX,
+                y: snappedY,
+                width: 160, // 更宽的桌子
+                height: 70, // 桌子深度
+                rotation: 0,
+                status: 0, // 0 = 空闲
+                type: 0, // 0 = 一字型, 1 = L型
+              };
 
-            // 碰撞检测
-            if (checkWorkstationCollision(newWorkstation, floorPlanData.workstations)) {
-              message.warning("工位位置与其他工位冲突，请选择其他位置");
-              return;
-            }
+              // 碰撞检测
+              if (checkWorkstationCollision(newWorkstation, prev.workstations)) {
+                message.warning("工位位置与其他工位冲突，请选择其他位置");
+                return prev;
+              }
 
-            setFloorPlanData((prev) => ({
-              ...prev,
-              workstations: [...prev.workstations, newWorkstation],
-            }));
+              return {
+                ...prev,
+                workstations: [...prev.workstations, newWorkstation],
+              };
+            });
             message.success("工位已添加");
           }
           return;
@@ -702,13 +765,17 @@ export function CADFloorPlanEditor({
             }
           } else {
             // 显示文本输入对话框
-            const snappedX = floorPlanData.snapToGrid
-              ? snapToGrid(point.x, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
-              : point.x;
-            const snappedY = floorPlanData.snapToGrid
-              ? snapToGrid(point.y, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
-              : point.y;
-            setTextInputPosition({ x: snappedX, y: snappedY });
+            // BUGFIX-03: compute snapped position inside setFloorPlanData updater to read latest prev.snapToGrid/prev.gridSize
+            setFloorPlanData((prev) => {
+              const snappedX = prev.snapToGrid
+                ? snapToGrid(point.x, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
+                : point.x;
+              const snappedY = prev.snapToGrid
+                ? snapToGrid(point.y, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE)
+                : point.y;
+              setTextInputPosition({ x: snappedX, y: snappedY });
+              return prev;
+            });
             setTempTextContent("");
             setIsTextInputVisible(true);
           }
@@ -759,16 +826,19 @@ export function CADFloorPlanEditor({
             // 如果是工位，保存所有选中工位的原始位置
             if (hitElement.type === "workstation") {
               // 保存当前点击的工位
-              const ws = floorPlanData.workstations.find(w => w.id === hitElement.id);
+              const ws = floorPlanData.workstations.find((w) => w.id === hitElement.id);
               if (ws) {
                 originalWorkstationPositions.current.set(ws.id, { x: ws.x, y: ws.y });
               }
               // 同时保存其他已选中的工位的原始位置
-              selectedIds.forEach(id => {
+              selectedIds.forEach((id) => {
                 if (id !== hitElement.id) {
-                  const selectedWs = floorPlanData.workstations.find(w => w.id === id);
+                  const selectedWs = floorPlanData.workstations.find((w) => w.id === id);
                   if (selectedWs && !originalWorkstationPositions.current.has(id)) {
-                    originalWorkstationPositions.current.set(id, { x: selectedWs.x, y: selectedWs.y });
+                    originalWorkstationPositions.current.set(id, {
+                      x: selectedWs.x,
+                      y: selectedWs.y,
+                    });
                   }
                 }
               });
@@ -789,7 +859,19 @@ export function CADFloorPlanEditor({
         }
       }
     },
-    [mode, scale, offset, wallDrawing, getCanvasPoint, getHitElement, readOnly, handleSelectElement, handleDeselect, floorPlanData]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mixed render-defined and useCallback deps; disable to avoid loop
+    [
+      mode,
+      scale,
+      offset,
+      wallDrawing,
+      getCanvasPoint,
+      getHitElement,
+      readOnly,
+      handleSelectElement,
+      handleDeselect,
+      floorPlanData,
+    ]
   );
 
   const handleCanvasMouseMove = useCallback(
@@ -813,11 +895,11 @@ export function CADFloorPlanEditor({
       }
 
       // 平移画布（Alt+左键或中键）
-      if (isDragging && lastMousePos) {
-        const dx = e.clientX - lastMousePos.x;
-        const dy = e.clientY - lastMousePos.y;
+      if (isDragging && lastMousePosRef.current) {
+        const dx = e.clientX - lastMousePosRef.current.x;
+        const dy = e.clientY - lastMousePosRef.current.y;
         setOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-        setLastMousePos({ x: e.clientX, y: e.clientY });
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         return;
       }
 
@@ -886,9 +968,10 @@ export function CADFloorPlanEditor({
               let newY = ws.y + dy;
 
               // 如果启用了网格吸附，实时吸附到网格
-              if (floorPlanData.snapToGrid) {
-                newX = snapToGrid(newX, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
-                newY = snapToGrid(newY, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
+              // BUGFIX-03: read prev.snapToGrid/prev.gridSize to avoid stale closure
+              if (prev.snapToGrid) {
+                newX = snapToGrid(newX, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
+                newY = snapToGrid(newY, prev.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
               }
 
               // 直接应用移动，不进行碰撞检测
@@ -926,7 +1009,20 @@ export function CADFloorPlanEditor({
         wallDrawing.updatePreview(previewPoint, e.shiftKey);
       }
     },
-    [isDragging, lastMousePos, isBoxSelecting, boxSelectStart, draggedElement, isDraggingPlanImage, mode, wallDrawing, getCanvasPoint, readOnly, selectedIds, findNearbyWallNode, floorPlanData, scale]
+    [
+      isDragging,
+      isBoxSelecting,
+      boxSelectStart,
+      draggedElement,
+      isDraggingPlanImage,
+      mode,
+      wallDrawing,
+      getCanvasPoint,
+      readOnly,
+      selectedIds,
+      findNearbyWallNode,
+      scale,
+    ]
   );
 
   const handleCanvasMouseUp = useCallback(() => {
@@ -935,7 +1031,7 @@ export function CADFloorPlanEditor({
     // 清除拖动和画布平移状态
     setIsDragging(false);
     setDragStart(null);
-    setLastMousePos(null);
+    lastMousePosRef.current = null;
     setDraggedElement(null);
     // 重置拖动相关的 ref
     lastElementMouseCanvasPos.current = null;
@@ -992,7 +1088,12 @@ export function CADFloorPlanEditor({
       // 检查文本
       if (!isLayerLocked("text")) {
         for (const text of floorPlanData.texts || []) {
-          if (text.position.x >= minX && text.position.x <= maxX && text.position.y >= minY && text.position.y <= maxY) {
+          if (
+            text.position.x >= minX &&
+            text.position.x <= maxX &&
+            text.position.y >= minY &&
+            text.position.y <= maxY
+          ) {
             newSelectedIds.add(text.id);
           }
         }
@@ -1024,8 +1125,14 @@ export function CADFloorPlanEditor({
         if (newData.texts) {
           newData.texts = prev.texts!.map((text) => {
             if (selectedIds.has(text.id)) {
-              const snappedX = snapToGrid(text.position.x, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
-              const snappedY = snapToGrid(text.position.y, floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE);
+              const snappedX = snapToGrid(
+                text.position.x,
+                floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE
+              );
+              const snappedY = snapToGrid(
+                text.position.y,
+                floorPlanData.gridSize ?? EDITOR_CONSTANTS.DEFAULT_GRID_SIZE
+              );
               return { ...text, position: { x: snappedX, y: snappedY } };
             }
             return text;
@@ -1035,6 +1142,7 @@ export function CADFloorPlanEditor({
         return newData;
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getElementTypeById and isLayerLocked are render-defined functions
   }, [isBoxSelecting, boxSelectStart, boxSelectEnd, floorPlanData, selectedIds]);
 
   const handleCanvasDoubleClick = useCallback(() => {
@@ -1150,6 +1258,7 @@ export function CADFloorPlanEditor({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isLayerLocked/message/wallDrawing are render-defined or stable
   }, [
     selectedId,
     selectedType,
@@ -1265,8 +1374,13 @@ export function CADFloorPlanEditor({
                       : undefined
                   }
                   style={{
-                    pointerEvents: (readOnly || isLayerLocked("plan_image")) ? "none" : "auto",
-                    cursor: (readOnly || isLayerLocked("plan_image")) ? "default" : (isDraggingPlanImage ? "grabbing" : "grab")
+                    pointerEvents: readOnly || isLayerLocked("plan_image") ? "none" : "auto",
+                    cursor:
+                      readOnly || isLayerLocked("plan_image")
+                        ? "default"
+                        : isDraggingPlanImage
+                          ? "grabbing"
+                          : "grab",
                   }}
                   onMouseDown={(e) => {
                     if (e.button === 0 && !readOnly && !isLayerLocked("plan_image")) {
@@ -1295,7 +1409,7 @@ export function CADFloorPlanEditor({
                     wall={wall}
                     selected={selectedIds.has(wall.id)}
                     hovered={hoveredId === wall.id}
-                    onSelect={() => handleSelectElement(wall.id, "wall")}
+                    onSelect={handleSelectElement.bind(null, wall.id, "wall")}
                     onHover={(hovered) => setHoveredId(hovered ? wall.id : null)}
                   />
                 ))}
@@ -1308,7 +1422,7 @@ export function CADFloorPlanEditor({
                     door={door}
                     selected={selectedIds.has(door.id)}
                     hovered={hoveredId === door.id}
-                    onSelect={() => handleSelectElement(door.id, "door")}
+                    onSelect={handleSelectElement.bind(null, door.id, "door")}
                     onHover={(hovered) => setHoveredId(hovered ? door.id : null)}
                   />
                 ))}
@@ -1321,7 +1435,7 @@ export function CADFloorPlanEditor({
                     workstation={ws}
                     selected={selectedIds.has(ws.id)}
                     hovered={hoveredId === ws.id}
-                    onSelect={() => handleSelectElement(ws.id, "workstation")}
+                    onSelect={handleSelectElement.bind(null, ws.id, "workstation")}
                     onHover={(hovered) => setHoveredId(hovered ? ws.id : null)}
                   />
                 ))}
@@ -1334,7 +1448,7 @@ export function CADFloorPlanEditor({
                     text={text}
                     selected={selectedIds.has(text.id)}
                     hovered={hoveredId === text.id}
-                    onSelect={() => handleSelectElement(text.id, "text")}
+                    onSelect={handleSelectElement.bind(null, text.id, "text")}
                     onHover={(hovered) => setHoveredId(hovered ? text.id : null)}
                   />
                 ))}
@@ -1347,7 +1461,7 @@ export function CADFloorPlanEditor({
                       d={wallDrawing.drawPoints
                         .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
                         .join(" ")}
-                      stroke="#1890ff"
+                      stroke="#337ab0"
                       strokeWidth={2}
                       fill="none"
                       strokeDasharray="5,5"
@@ -1359,7 +1473,7 @@ export function CADFloorPlanEditor({
                       y1={wallDrawing.drawPoints[wallDrawing.drawPoints.length - 1].y}
                       x2={wallDrawing.previewPoint.x}
                       y2={wallDrawing.previewPoint.y}
-                      stroke="#1890ff"
+                      stroke="#337ab0"
                       strokeWidth={2}
                       strokeDasharray="5,5"
                     />
@@ -1368,7 +1482,7 @@ export function CADFloorPlanEditor({
                     cx={wallDrawing.previewPoint.x}
                     cy={wallDrawing.previewPoint.y}
                     r={4}
-                    fill="#1890ff"
+                    fill="#337ab0"
                   />
                 </>
               )}
@@ -1380,8 +1494,8 @@ export function CADFloorPlanEditor({
                   y={Math.min(boxSelectStart.y, boxSelectEnd.y)}
                   width={Math.abs(boxSelectEnd.x - boxSelectStart.x)}
                   height={Math.abs(boxSelectEnd.y - boxSelectStart.y)}
-                  fill="rgba(24, 144, 255, 0.1)"
-                  stroke="#1890ff"
+                  fill="rgba(51, 122, 176, 0.1)"
+                  stroke="#337ab0"
                   strokeWidth={1}
                   strokeDasharray="4,4"
                   pointerEvents="none"

@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import { App } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,16 +18,20 @@ const {
   mockFetchPermissions: vi.fn(),
 }));
 
-vi.mock("@/store/authStore", () => ({
-  useAuthStore: () => ({ login: mockLogin }),
-}));
+vi.mock("@/store/authStore", () => {
+  // 兼容 selector 调用（useAuthStore(s => s.login)）与无参调用两种形态
+  const useAuthStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector({ login: mockLogin }) : { login: mockLogin };
+  return { useAuthStore: useAuthStoreFn };
+});
 
-vi.mock("@/store/menuStore", () => ({
-  useMenuStore: () => ({
-    fetchMenus: mockFetchMenus,
-    fetchPermissions: mockFetchPermissions,
-  }),
-}));
+vi.mock("@/store/menuStore", () => {
+  // 兼容 selector 调用（useMenuStore(s => s.fetchMenus)）与无参调用两种形态
+  const state = { fetchMenus: mockFetchMenus, fetchPermissions: mockFetchPermissions };
+  const useMenuStoreFn: any = (selector?: (s: unknown) => unknown) =>
+    selector ? selector(state) : state;
+  return { useMenuStore: useMenuStoreFn };
+});
 
 vi.mock("@/lib/loginPreflight", () => ({
   submitLoginPreflight: mockSubmitLoginPreflight,
@@ -45,20 +50,11 @@ vi.mock("@/components/captcha", () => ({
 }));
 
 vi.mock("@/components/captcha/CaptchaModal", () => ({
-  default: ({
-    visible,
-    onError,
-  }: {
-    visible: boolean;
-    onError?: (error: string) => void;
-  }) =>
+  default: ({ visible, onError }: { visible: boolean; onError?: (error: string) => void }) =>
     visible ? (
       <div role="dialog">
         滑动验证码
-        <button
-          type="button"
-          onClick={() => onError?.("CAPTCHA_TYPE_MISMATCH")}
-        >
+        <button type="button" onClick={() => onError?.("CAPTCHA_TYPE_MISMATCH")}>
           模拟滑块类型不匹配
         </button>
       </div>
@@ -108,9 +104,7 @@ describe("登录页安全配置预检", () => {
     submitCredentials();
 
     expect(
-      await screen.findByText(
-        "登录安全配置已过期，自动更新失败，请检查网络后重试"
-      )
+      await screen.findByText("登录安全配置已过期，自动更新失败，请检查网络后重试")
     ).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
   });
@@ -130,10 +124,7 @@ describe("登录页安全配置预检", () => {
   });
 
   it("快速重复提交时只启动一次预检", async () => {
-    let resolvePreflight!: (value: {
-      ok: true;
-      captchaEnabled: "disabled";
-    }) => void;
+    let resolvePreflight!: (value: { ok: true; captchaEnabled: "disabled" }) => void;
     mockSubmitLoginPreflight.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -169,13 +160,9 @@ describe("登录页安全配置预检", () => {
     renderLogin();
     submitCredentials();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "模拟滑块类型不匹配" })
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "模拟滑块类型不匹配" }));
 
-    expect(
-      await screen.findByText("验证码配置已更新，请重新验证")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("验证码配置已更新，请重新验证")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(mockSubmitLoginPreflight).toHaveBeenCalledTimes(2);
   });
@@ -188,14 +175,9 @@ describe("登录页安全配置预检", () => {
     });
     renderLogin();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "模拟验证码类型不匹配" })
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "模拟验证码类型不匹配" }));
 
-    expect(
-      await screen.findByText("验证码配置已更新，请重新验证")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("验证码配置已更新，请重新验证")).toBeInTheDocument();
     expect(mockSubmitLoginPreflight).toHaveBeenCalledTimes(1);
   });
 });
-

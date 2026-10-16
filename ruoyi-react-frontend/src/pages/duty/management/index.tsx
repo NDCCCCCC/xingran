@@ -7,15 +7,18 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { Tabs, Button, Modal, Form } from "antd";
-import { LeftOutlined, RightOutlined, CalendarOutlined, SettingOutlined, TeamOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
-import { getDutyPoolList, getUserList, type Holiday } from "@/lib/dutyApi";
-import type { DutyPool, SimpleUser } from "@/lib/dutyApi";
 import {
-  WeeklyView,
-  HolidayManagement,
-  DutyConfig,
-} from "./components";
+  LeftOutlined,
+  RightOutlined,
+  CalendarOutlined,
+  SettingOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import { getDutyPoolList, type Holiday } from "@/lib/dutyApi";
+import { useUserOptions } from "@/hooks/useUserOptions";
+import type { DutyPool } from "@/lib/dutyApi";
+import { WeeklyView, HolidayManagement, DutyConfig } from "./components";
 import { HolidayModal, BatchHolidayModal } from "./modals";
 import { useScheduleData, useHolidayData, useDutyConfig } from "./hooks";
 import { downloadHolidayTemplate, handleHolidayImport } from "./utils";
@@ -34,6 +37,9 @@ export default function DutyManagement() {
   // ==================== 值班配置 ====================
   const dutyConfig = useDutyConfig();
 
+  // 用户选项（共享缓存，5min stale）
+  const { data: users = [] } = useUserOptions();
+
   // ==================== 其他状态 ====================
   const location = useLocation();
   const [activeTab, setActiveTab] = usePersistedStateController<string>({
@@ -41,8 +47,7 @@ export default function DutyManagement() {
     keySuffix: "activeTab",
     defaultValue: "weekly",
   });
-  const [pools, setPools] = useState<DutyPool[]>([]);
-  const [users, setUsers] = useState<SimpleUser[]>([]);
+  const [_pools, setPools] = useState<DutyPool[]>([]);
 
   // 模态框状态
   const [holidayModalVisible, setHolidayModalVisible] = useState(false);
@@ -54,11 +59,12 @@ export default function DutyManagement() {
   // ==================== 初始化 ====================
 
   useEffect(() => {
-    fetchPools();
-    fetchUsers();
-    scheduleData.fetchWeeklyDuty(scheduleData.currentWeekStart);
-    holidayData.fetchYears();
-    dutyConfig.fetch();
+    Promise.all([
+      fetchPools(),
+      scheduleData.fetchWeeklyDuty(scheduleData.currentWeekStart),
+      holidayData.fetchYears(),
+      dutyConfig.fetch(),
+    ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -68,26 +74,20 @@ export default function DutyManagement() {
     try {
       const result = await getDutyPoolList({ current: 1, pageSize: 100 });
       setPools(result.data?.list || []);
-    } catch (error) {
+    } catch (_error) {
       Modal.error({ title: "获取值班池列表失败" });
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const result = await getUserList({ current: 1, pageSize: 50 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error("获取用户列表失败", error);
     }
   };
 
   // ==================== 节假日操作 ====================
 
-  const handleHolidayYearChange = useCallback((year: number) => {
-    holidayData.setHolidayYear(year);
-    holidayData.fetchList(year);
-  }, [holidayData]);
+  const handleHolidayYearChange = useCallback(
+    (year: number) => {
+      holidayData.setHolidayYear(year);
+      holidayData.fetchList(year);
+    },
+    [holidayData]
+  );
 
   const handleHolidayAdd = useCallback(() => {
     setHolidayModalVisible(true);
@@ -97,17 +97,23 @@ export default function DutyManagement() {
     setHolidayBatchModalVisible(true);
   }, []);
 
-  const handleHolidayEdit = useCallback((record: Holiday) => {
-    holidayForm.setFieldsValue({
-      ...record,
-      holidayDate: dayjs(record.holidayDate),
-    });
-    setHolidayModalVisible(true);
-  }, [holidayForm]);
+  const handleHolidayEdit = useCallback(
+    (record: Holiday) => {
+      holidayForm.setFieldsValue({
+        ...record,
+        holidayDate: dayjs(record.holidayDate),
+      });
+      setHolidayModalVisible(true);
+    },
+    [holidayForm]
+  );
 
-  const handleHolidayDelete = useCallback(async (id: string) => {
-    await holidayData.deleteOne(id);
-  }, [holidayData]);
+  const handleHolidayDelete = useCallback(
+    async (id: string) => {
+      await holidayData.deleteOne(id);
+    },
+    [holidayData]
+  );
 
   const handleHolidayModalOk = useCallback(async () => {
     try {
@@ -133,39 +139,48 @@ export default function DutyManagement() {
     }
   }, [holidayData, holidayForm]);
 
-  const handleImport = useCallback((options: ImportOptions) => {
-    handleHolidayImport(options, holidayData.batchCreate);
-  }, [holidayData]);
+  const handleImport = useCallback(
+    (options: ImportOptions) => {
+      handleHolidayImport(options, holidayData.batchCreate);
+    },
+    [holidayData]
+  );
 
-  const handleBatchHolidayOk = useCallback(async (values: BatchHolidayFormValues) => {
-    const { dateRange, holidayName, holidayType, isOffday } = values;
+  const handleBatchHolidayOk = useCallback(
+    async (values: BatchHolidayFormValues) => {
+      const { dateRange, holidayName, holidayType, isOffday } = values;
 
-    const startDate = dateRange[0];
-    const endDate = dateRange[1];
-    const holidays = [];
-    let current = startDate;
+      const startDate = dateRange[0];
+      const endDate = dateRange[1];
+      const holidays = [];
+      let current = startDate;
 
-    while (current.isBefore(endDate) || current.isSame(endDate, "day")) {
-      holidays.push({
-        holidayDate: current.format("YYYY-MM-DD"),
-        holidayName,
-        isOffday: isOffday ?? true,
-        holidayType: holidayType || "custom",
-        year: current.year(),
-        remark: values.remark,
-      });
-      current = current.add(1, "day");
-    }
+      while (current.isBefore(endDate) || current.isSame(endDate, "day")) {
+        holidays.push({
+          holidayDate: current.format("YYYY-MM-DD"),
+          holidayName,
+          isOffday: isOffday ?? true,
+          holidayType: holidayType || "custom",
+          year: current.year(),
+          remark: values.remark,
+        });
+        current = current.add(1, "day");
+      }
 
-    await holidayData.batchCreate(holidays);
-    setHolidayBatchModalVisible(false);
-  }, [holidayData]);
+      await holidayData.batchCreate(holidays);
+      setHolidayBatchModalVisible(false);
+    },
+    [holidayData]
+  );
 
   // ==================== 配置保存 ====================
 
-  const handleConfigSave = useCallback(async (values: DutyConfigValues) => {
-    return await dutyConfig.save(values);
-  }, [dutyConfig]);
+  const handleConfigSave = useCallback(
+    async (values: DutyConfigValues) => {
+      return await dutyConfig.save(values);
+    },
+    [dutyConfig]
+  );
 
   // ==================== 渲染 ====================
 
@@ -185,13 +200,13 @@ export default function DutyManagement() {
             ),
             children: (
               <>
-                <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                <div
+                  style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}
+                >
                   <Button icon={<LeftOutlined />} onClick={scheduleData.prevWeek}>
                     上一周
                   </Button>
-                  <Button onClick={scheduleData.todayWeek}>
-                    今天
-                  </Button>
+                  <Button onClick={scheduleData.todayWeek}>今天</Button>
                   <Button icon={<RightOutlined />} onClick={scheduleData.nextWeek}>
                     下一周
                   </Button>

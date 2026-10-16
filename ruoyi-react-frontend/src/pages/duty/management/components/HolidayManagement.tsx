@@ -1,16 +1,11 @@
-import React from 'react';
-import { Card, Select, Table, Button, Space, Tag, Upload, Modal } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import {
-  PlusOutlined,
-  ReloadOutlined,
-  FileExcelOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
-import { formatDate } from '@/utils/datetime';
-import type { Holiday } from '@/lib/dutyApi';
-import { usePagination } from '@/hooks/usePagination';
-import { createSorter } from '@/utils/tableHelpers';
+import React from "react";
+import { Card, Select, Table, Button, Space, Tag, Upload, Modal } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { PlusOutlined, ReloadOutlined, FileExcelOutlined, UploadOutlined } from "@ant-design/icons";
+import { formatDate } from "@/utils/datetime";
+import type { Holiday } from "@/lib/dutyApi";
+import { usePagination } from "@/hooks/usePagination";
+import { createSorter } from "@/utils/tableHelpers";
 
 const { Option } = Select;
 
@@ -54,80 +49,82 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
   const { paginationProps } = usePagination();
   const columns: ColumnsType<Holiday> = [
     {
-      title: '日期',
-      dataIndex: 'holidayDate',
-      key: 'holidayDate',
+      title: "日期",
+      dataIndex: "holidayDate",
+      key: "holidayDate",
       width: 120,
-      sorter: createSorter<Holiday>('holidayDate', 'date'),
+      sorter: createSorter<Holiday>("holidayDate", "date"),
       render: (date: string) => formatDate(date),
     },
     {
-      title: '名称',
-      dataIndex: 'holidayName',
-      key: 'holidayName',
-      sorter: createSorter<Holiday>('holidayName', 'string'),
+      title: "名称",
+      dataIndex: "holidayName",
+      key: "holidayName",
+      sorter: createSorter<Holiday>("holidayName", "string"),
     },
     {
-      title: '类型',
-      dataIndex: 'holidayType',
-      key: 'holidayType',
+      title: "类型",
+      dataIndex: "holidayType",
+      key: "holidayType",
       width: 100,
-      sorter: createSorter<Holiday>('holidayType', 'string'),
+      sorter: createSorter<Holiday>("holidayType", "string"),
       render: (type: string) => {
         const colorMap: Record<string, string> = {
-          legal: 'red',
-          workday: 'orange',
-          custom: 'blue',
+          legal: "red",
+          workday: "orange",
+          custom: "blue",
         };
         const textMap: Record<string, string> = {
-          legal: '法定节假日',
-          workday: '调休工作日',
-          custom: '自定义',
+          legal: "法定节假日",
+          workday: "调休工作日",
+          custom: "自定义",
         };
         return <Tag color={colorMap[type]}>{textMap[type]}</Tag>;
       },
     },
     {
-      title: '是否休息',
-      dataIndex: 'isOffday',
-      key: 'isOffday',
+      title: "是否休息",
+      dataIndex: "isOffday",
+      key: "isOffday",
       width: 100,
-      sorter: createSorter<Holiday>('isOffday', 'boolean'),
+      sorter: createSorter<Holiday>("isOffday", "boolean"),
       render: (isOffday: boolean) => (
-        <Tag color={isOffday ? 'green' : 'default'}>{isOffday ? '休息' : '工作'}</Tag>
+        <Tag color={isOffday ? "green" : "default"}>{isOffday ? "休息" : "工作"}</Tag>
       ),
     },
     {
-      title: '年份',
-      dataIndex: 'year',
-      key: 'year',
+      title: "年份",
+      dataIndex: "year",
+      key: "year",
       width: 80,
-      sorter: createSorter<Holiday>('year', 'number'),
+      sorter: createSorter<Holiday>("year", "number"),
     },
     {
-      title: '备注',
-      dataIndex: 'remark',
-      key: 'remark',
-      sorter: createSorter<Holiday>('remark', 'string'),
+      title: "备注",
+      dataIndex: "remark",
+      key: "remark",
+      sorter: createSorter<Holiday>("remark", "string"),
       ellipsis: true,
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 150,
-      fixed: 'right',
+      fixed: "right",
       render: (_: unknown, record: Holiday) => (
         <Space size="small">
-          <Button type="link" size="small" onClick={() => onEdit(record)}>编辑</Button>
+          <Button type="link" size="small" onClick={() => onEdit(record)}>
+            编辑
+          </Button>
           <Button
             type="link"
             size="small"
             danger
             onClick={() => {
               Modal.confirm({
-                title: '确定删除?',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定删除?",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => onDelete(record.id),
               });
@@ -142,16 +139,26 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
 
   return (
     <Card variant="borderless">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}
+      >
         <Space>
           <span>年份：</span>
           <Select
             value={holidayYear}
             onChange={onYearChange}
             style={{ width: 120 }}
-           onSearch={() => {}}>
+            onSearch={() => {}}
+          >
             {availableYears.map((y) => (
-              <Option key={y} value={y}>{y}年</Option>
+              <Option key={y} value={y}>
+                {y}年
+              </Option>
             ))}
           </Select>
         </Space>

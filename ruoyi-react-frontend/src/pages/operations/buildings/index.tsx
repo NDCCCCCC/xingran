@@ -534,7 +534,7 @@ const BuildingManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
       {/* 左侧部门树 */}
       <Sider
         width={360}

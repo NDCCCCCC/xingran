@@ -16,17 +16,9 @@
  * R4 工位详情页将新增 useWorkstationHealth(per CONTEXT.md deferred)。
  */
 
-import {
-  useQuery,
-  type UseQueryResult,
-} from "@tanstack/react-query";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { reconciliationApi } from "@/lib/assetApi";
-import type {
-  SummaryResult,
-  TrendPoint,
-  ExceptionSummary,
-  RuleStats,
-} from "@/lib/assetApi";
+import type { SummaryResult, TrendPoint, ExceptionSummary, RuleStats } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
 
 /** 30s stale 适配 5min 物化视图刷新(D-01) */

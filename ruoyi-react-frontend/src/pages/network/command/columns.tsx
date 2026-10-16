@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Progress, Button, Tag, Modal, Tooltip } from "antd";
+import { Progress, Button, Modal, Tooltip } from "antd";
 import { EyeOutlined, StopOutlined } from "@ant-design/icons";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
@@ -26,13 +26,18 @@ export interface ExecutionColumnsParams {
   getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
-export function getExecutionColumns(
-  params: ExecutionColumnsParams
-): ColumnsType<ConfigExecution> {
+export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType<ConfigExecution> {
   const { handleViewDetail, handleCancel, getSortOrder } = params;
 
   return [
-    { title: "任务名称", dataIndex: "executionName", key: "executionName", width: 200, sorter: true, sortOrder: getSortOrder?.("executionName") },
+    {
+      title: "任务名称",
+      dataIndex: "executionName",
+      key: "executionName",
+      width: 200,
+      sorter: true,
+      sortOrder: getSortOrder?.("executionName"),
+    },
     {
       title: "状态",
       dataIndex: "status",
@@ -175,7 +180,7 @@ export const detailColumns: ColumnsType<ConfigExecutionDetail> = [
     render: (msg: string) =>
       msg ? (
         <Tooltip title={msg}>
-          <span style={{ color: "var(--theme-error, #ff4d4f)" }}>{msg}</span>
+          <span style={{ color: "var(--theme-error, #ba3630)" }}>{msg}</span>
         </Tooltip>
       ) : (
         "-"

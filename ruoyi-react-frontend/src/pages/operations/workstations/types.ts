@@ -3,8 +3,6 @@
  * 工位类型定义
  */
 
-import type { WorkstationOps } from "@/types";
-
 // 视图模式
 export type ViewMode = "table" | "card" | "floorplan";
 

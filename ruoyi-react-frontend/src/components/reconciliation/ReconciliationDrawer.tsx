@@ -150,9 +150,7 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
     </div>
   );
 
-  const timelineTab = (
-    <ReconciliationTimeline records={timeline} loading={timelineLoading} />
-  );
+  const timelineTab = <ReconciliationTimeline records={timeline} loading={timelineLoading} />;
 
   // 🆕 Plan 02: 例外规则 Tab 传入 assetIp + conflictType 让空态"去创建"按钮携带预填
   const exceptionTab = (

@@ -70,7 +70,10 @@ export interface PortWriteModalProps {
  *   - message.destroy() 路由切换前关 toast，避免 portal 在另一个路由下残留 DOM
  *   - navigate() 走 SPA history.pushState，页面不刷新
  */
-export function showAuditLinkToast(message: MessageInstance, navigate: (path: string) => void): void {
+export function showAuditLinkToast(
+  message: MessageInstance,
+  navigate: (path: string) => void
+): void {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     e.preventDefault();
     message.destroy();
@@ -166,15 +169,13 @@ export function PortWriteModal({
     action === "description"
       ? [
           {
-            validator: (rule: unknown, value: unknown) =>
-              validateReasonOptional(rule, value, form),
+            validator: (rule: unknown, value: unknown) => validateReasonOptional(rule, value, form),
           },
         ]
       : [
           {
             required: true,
-            validator: (rule: unknown, value: unknown) =>
-              validateReasonRequired(rule, value, form),
+            validator: (rule: unknown, value: unknown) => validateReasonRequired(rule, value, form),
           },
         ];
 
@@ -207,6 +208,7 @@ export function PortWriteModal({
 
         {/* D-02 reason 字段 — 外层 reasonSelect Select + 内层 reasonText TextArea (仅 __custom__ 时展开) */}
         <Form.Item name="reasonSelect" label="操作原因" rules={reasonRules}>
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}

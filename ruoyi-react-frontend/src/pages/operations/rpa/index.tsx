@@ -6,9 +6,7 @@
 import { useState, useCallback } from "react";
 import type { FC } from "react";
 import { Card, Tabs } from "antd";
-import {
-  RobotOutlined, HistoryOutlined, CloudServerOutlined,
-} from "@ant-design/icons";
+import { RobotOutlined, HistoryOutlined, CloudServerOutlined } from "@ant-design/icons";
 import TaskManagement from "./tasks";
 import ExecutionManagement from "./executions";
 import WorkerMonitor from "./workers";

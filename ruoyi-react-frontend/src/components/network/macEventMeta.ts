@@ -20,10 +20,10 @@ import type { ComponentType, CSSProperties } from "react";
 export type MACEventType = "appeared" | "disappeared" | "moved" | "vlan_changed";
 
 export const EVENT_COLORS: Record<MACEventType, string> = {
-  appeared: "var(--theme-success, #52c41a)",
-  disappeared: "#ff4d4f",
-  moved: "var(--theme-warning, #faad14)",
-  vlan_changed: "var(--theme-info, #1890ff)",
+  appeared: "var(--theme-success, #2d8949)",
+  disappeared: "#ba3630",
+  moved: "var(--theme-warning, #b07a20)",
+  vlan_changed: "var(--theme-info, #337ab0)",
 };
 
 export const EVENT_ICON: Record<MACEventType, ComponentType<{ style?: CSSProperties }>> = {

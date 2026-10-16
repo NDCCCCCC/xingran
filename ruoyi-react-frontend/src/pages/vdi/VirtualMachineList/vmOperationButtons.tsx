@@ -1,5 +1,12 @@
 import React from "react";
-import { PlayCircleOutlined, StopOutlined, ReloadOutlined, SyncOutlined, DeleteOutlined, UserAddOutlined } from "@ant-design/icons";
+import {
+  PlayCircleOutlined,
+  StopOutlined,
+  ReloadOutlined,
+  SyncOutlined,
+  DeleteOutlined,
+  UserAddOutlined,
+} from "@ant-design/icons";
 
 export interface VMOprationButton {
   action: "start" | "stop" | "restart" | "sync" | "delete" | "bind";

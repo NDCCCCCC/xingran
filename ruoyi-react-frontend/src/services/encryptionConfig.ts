@@ -31,7 +31,7 @@ export async function getCachedEncryptionConfig(): Promise<EncryptionConfig> {
   const now = Date.now();
 
   // 缓存有效，直接返回
-  if (encryptionConfigCache && (now - cacheTimestamp) < CACHE_TTL) {
+  if (encryptionConfigCache && now - cacheTimestamp < CACHE_TTL) {
     return encryptionConfigCache;
   }
 

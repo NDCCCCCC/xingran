@@ -93,7 +93,7 @@ export const APIConfigTypes = {
   PUSH: "push",
 } as const;
 
-export type APIConfigType = typeof APIConfigTypes[keyof typeof APIConfigTypes];
+export type APIConfigType = (typeof APIConfigTypes)[keyof typeof APIConfigTypes];
 
 export const AuthTypes = {
   NONE: "none",
@@ -102,7 +102,7 @@ export const AuthTypes = {
   APIKEY: "apikey",
 } as const;
 
-export type AuthType = typeof AuthTypes[keyof typeof AuthTypes];
+export type AuthType = (typeof AuthTypes)[keyof typeof AuthTypes];
 
 export interface APINotificationConfig {
   id: string;
@@ -177,7 +177,10 @@ export const createAPINotificationConfig = (data: APINotificationConfigCreateReq
 };
 
 // 更新API通知配置
-export const updateAPINotificationConfig = (id: string, data: APINotificationConfigUpdateRequest) => {
+export const updateAPINotificationConfig = (
+  id: string,
+  data: APINotificationConfigUpdateRequest
+) => {
   return put(`/system/settings/notification/api-notification-configs/${id}`, data);
 };
 

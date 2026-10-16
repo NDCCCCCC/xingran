@@ -5,12 +5,29 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
-  App, Modal, Descriptions, Steps, Card, Timeline, Image, Space, Tag, Alert,
-  Typography, Spin, Empty, Button, Tabs,
+  App,
+  Modal,
+  Descriptions,
+  Steps,
+  Card,
+  Timeline,
+  Image,
+  Space,
+  Tag,
+  Alert,
+  Typography,
+  Spin,
+  Empty,
+  Button,
+  Tabs,
 } from "antd";
 import {
-  FileTextOutlined, CameraOutlined, LoadingOutlined, CheckCircleOutlined,
-  CloseCircleOutlined, ClockCircleOutlined, DownloadOutlined,
+  FileTextOutlined,
+  CameraOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import type { Execution, ExecutionLog } from "@/types/rpa";
 import { renderExecutionStatusTag } from "../constants";
@@ -25,11 +42,7 @@ export interface ExecutionDetailModalProps {
   onClose: () => void;
 }
 
-export function ExecutionDetailModal({
-  open,
-  execution,
-  onClose,
-}: ExecutionDetailModalProps) {
+export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDetailModalProps) {
   const { message } = App.useApp();
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -51,7 +64,11 @@ export function ExecutionDetailModal({
   }, []);
 
   useEffect(() => {
-    if (open && execution?.id && (execution.status === "running" || execution.status === "pending")) {
+    if (
+      open &&
+      execution?.id &&
+      (execution.status === "running" || execution.status === "pending")
+    ) {
       loadLogs(execution.id);
       // 每3秒刷新一次日志
       const interval = setInterval(() => {
@@ -85,33 +102,33 @@ export function ExecutionDetailModal({
       }
     }
 
-    // 为每个截图 URL 添加正确的前缀
-    // 后端存储的路径格式: rpa/screenshots/{executionID}/xxx.png
-    // 前端访问路径: /uploads/rpa/screenshots/{executionID}/xxx.png
+    // 为每个截图 URL 拼接正确的前缀。前缀取 Vite BASE_URL,
+    // dev 为 '/' 行为完全等同旧逻辑；prod 为 '/ruoyi/' 时产出
+    // /ruoyi/uploads/rpa/screenshots/xxx.png,与 nginx 子路径部署一致。
+    // 兼容已有前缀('/uploads/' 或 '<BASE_URL>uploads/'):剥掉后重新拼接,
+    // 避免产生 '/ruoyi/uploads/uploads/...' 这种重复前缀。
+    const uploadsBase = `${import.meta.env.BASE_URL}uploads/`;
     return screenshotList.map((url) => {
       if (url.startsWith("http://") || url.startsWith("https://")) {
         return url; // 已经是完整 URL
       }
-      if (url.startsWith("/uploads/")) {
-        return url; // 已有前缀
-      }
-      if (url.startsWith("/")) {
-        return `/uploads${url}`;
-      }
-      return `/uploads/${url}`;
+      // 取 "/uploads/" 最后一次出现之后的部分作为相对路径
+      const idx = url.lastIndexOf("/uploads/");
+      const rel = idx >= 0 ? url.slice(idx + "/uploads/".length) : url.replace(/^\//, "");
+      return `${uploadsBase}${rel}`;
     });
   }, [execution?.screenshots]);
 
   const renderStatusIcon = (level: string) => {
     switch (level) {
       case "info":
-        return <CheckCircleOutlined style={{ color: "var(--theme-success, #52c41a)" }} />;
+        return <CheckCircleOutlined style={{ color: "var(--theme-success, #2d8949)" }} />;
       case "error":
-        return <CloseCircleOutlined style={{ color: "var(--theme-error, #ff4d4f)" }} />;
+        return <CloseCircleOutlined style={{ color: "var(--theme-error, #ba3630)" }} />;
       case "warn":
-        return <CloseCircleOutlined style={{ color: "var(--theme-warning, #faad14)" }} />;
+        return <CloseCircleOutlined style={{ color: "var(--theme-warning, #b07a20)" }} />;
       default:
-        return <ClockCircleOutlined style={{ color: "var(--theme-text-tertiary, #8c8c8c)" }} />;
+        return <ClockCircleOutlined style={{ color: "var(--theme-text-tertiary, #707068)" }} />;
     }
   };
 
@@ -135,7 +152,15 @@ export function ExecutionDetailModal({
     return (
       <Steps
         current={execution.step ?? 0}
-        status={execution.status === "failed" ? "error" : execution.status === "completed" ? "finish" : execution.status === "running" ? "process" : "wait"}
+        status={
+          execution.status === "failed"
+            ? "error"
+            : execution.status === "completed"
+              ? "finish"
+              : execution.status === "running"
+                ? "process"
+                : "wait"
+        }
         items={steps}
       />
     );
@@ -165,7 +190,9 @@ export function ExecutionDetailModal({
               <Space direction="vertical" style={{ width: "100%" }}>
                 <Space>
                   <Text type="secondary">{log.timestamp}</Text>
-                  <Tag color={log.level === "error" ? "red" : log.level === "warn" ? "orange" : "blue"}>
+                  <Tag
+                    color={log.level === "error" ? "red" : log.level === "warn" ? "orange" : "blue"}
+                  >
                     {log.level.toUpperCase()}
                   </Tag>
                   {log.step !== undefined && <Tag>步骤 {log.step + 1}</Tag>}
@@ -178,11 +205,7 @@ export function ExecutionDetailModal({
                 )}
                 {log.screenshotUrl && (
                   <div>
-                    <Image
-                      width={200}
-                      src={log.screenshotUrl}
-                      style={{ marginTop: 8 }}
-                    />
+                    <Image width={200} src={log.screenshotUrl} style={{ marginTop: 8 }} />
                   </div>
                 )}
               </Space>
@@ -202,7 +225,7 @@ export function ExecutionDetailModal({
     }));
 
     const logScreenshots = logs
-      .filter(log => log.screenshotUrl)
+      .filter((log) => log.screenshotUrl)
       .map((log, index) => ({
         key: `log-${index}`,
         timestamp: log.timestamp,
@@ -245,7 +268,9 @@ export function ExecutionDetailModal({
       // 使用 fetch + Authorization 头获取 blob，避免 window.location.href 走 GET 缺失鉴权头
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
       const headers = await getAuthHeaders();
-      const response = await fetch(`${baseUrl}/rpa/executions/${execution.id}/download`, { headers });
+      const response = await fetch(`${baseUrl}/rpa/executions/${execution.id}/download`, {
+        headers,
+      });
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
@@ -271,6 +296,7 @@ export function ExecutionDetailModal({
       message.error("下载失败");
       console.error("下载执行产物失败:", error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [execution?.id]);
 
   if (!execution) return null;
@@ -333,11 +359,7 @@ export function ExecutionDetailModal({
                 <ClockCircleOutlined /> 步骤进度
               </span>
             ),
-            children: (
-              <div style={{ padding: "16px 0" }}>
-                {renderSteps()}
-              </div>
-            ),
+            children: <div style={{ padding: "16px 0" }}>{renderSteps()}</div>,
           },
           {
             key: "logs",

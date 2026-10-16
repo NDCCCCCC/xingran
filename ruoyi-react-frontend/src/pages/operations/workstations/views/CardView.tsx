@@ -3,10 +3,14 @@
  * 工位卡片视图
  */
 
-import { Row, Col, Card, Tag, Popconfirm, Button } from "antd";
+import { Row, Col, Card, Tag, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
-import { getWorkstationTypeText, getWorkstationStatusText, getWorkstationStatusColor } from "../constants";
+import {
+  getWorkstationTypeText,
+  getWorkstationStatusText,
+  getWorkstationStatusColor,
+} from "../constants";
 
 export interface WorkstationCardViewProps {
   workstations: WorkstationOps[];
@@ -14,13 +18,15 @@ export interface WorkstationCardViewProps {
   onDelete: (id: string) => void;
 }
 
-export function WorkstationCardView({
-  workstations,
-  onEdit,
-  onDelete,
-}: WorkstationCardViewProps) {
+export function WorkstationCardView({ workstations, onEdit, onDelete }: WorkstationCardViewProps) {
   if (workstations.length === 0) {
-    return <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}>暂无数据</div>;
+    return (
+      <div
+        style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}
+      >
+        暂无数据
+      </div>
+    );
   }
 
   return (
@@ -38,13 +44,15 @@ export function WorkstationCardView({
                 okText="确定"
                 cancelText="取消"
               >
-                <DeleteOutlined style={{ color: "var(--theme-error, #ff4d4f)" }} />
+                <DeleteOutlined style={{ color: "var(--theme-error, #ba3630)" }} />
               </Popconfirm>,
             ]}
           >
             <Card.Meta
               title={
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
                   <span>{workstation.name}</span>
                   <Tag color={getWorkstationStatusColor(workstation.status)}>
                     {getWorkstationStatusText(workstation.status)}

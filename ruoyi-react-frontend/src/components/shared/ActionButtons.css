@@ -20,7 +20,7 @@
 
 /* 危险操作按钮（删除）- 固定红色 */
 .action-btn-link-danger {
-  color: #ff4d4f !important;
+  color: #ba3630 !important;
 }
 
 .action-btn-link-danger:hover {
@@ -37,7 +37,7 @@
 }
 
 .action-dropdown-item-danger {
-  color: #ff4d4f !important;
+  color: #ba3630 !important;
 }
 
 .action-dropdown-item-danger:hover {
@@ -46,7 +46,7 @@
 
 /* 暗色模式 */
 [data-color-mode="dark"] .action-btn-link {
-  color: #d9d9d9 !important;
+  color: #dbd7ce !important;
 }
 
 [data-color-mode="dark"] .action-btn-link:hover {
@@ -59,12 +59,12 @@
 }
 
 [data-color-mode="dark"] .action-btn-link-danger:hover {
-  color: #ff4d4f !important;
-  background-color: rgba(255, 77, 79, 0.15) !important;
+  color: #ba3630 !important;
+  background-color: rgba(186, 54, 48, 0.15) !important;
 }
 
 [data-color-mode="dark"] .action-dropdown-item {
-  color: #d9d9d9 !important;
+  color: #dbd7ce !important;
 }
 
 [data-color-mode="dark"] .action-dropdown-item:hover {

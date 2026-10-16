@@ -15,7 +15,7 @@ export function formatLocalTime(time: string | null | undefined): string {
 
 /** 获取业务类型标签 */
 export function getBusinessTypeLabel(type: number): string {
-  const option = BUSINESS_TYPE_OPTIONS.find(opt => opt.value === type);
+  const option = BUSINESS_TYPE_OPTIONS.find((opt) => opt.value === type);
   return option?.label ?? "-";
 }
 
@@ -34,9 +34,14 @@ export function renderRequestMethodTag(method: string) {
 /** 渲染日志状态标签 */
 export function renderLogStatusTag(status: number, type: "oper" | "login" = "oper") {
   const color = status === LogStatus.Success ? "success" : "error";
-  const text = type === "oper"
-    ? (status === LogStatus.Success ? "正常" : "异常")
-    : (status === LogStatus.Success ? "成功" : "失败");
+  const text =
+    type === "oper"
+      ? status === LogStatus.Success
+        ? "正常"
+        : "异常"
+      : status === LogStatus.Success
+        ? "成功"
+        : "失败";
   return <Tag color={color}>{text}</Tag>;
 }
 

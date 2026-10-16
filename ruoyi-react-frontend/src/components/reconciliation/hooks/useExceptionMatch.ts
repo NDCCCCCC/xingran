@@ -20,9 +20,10 @@ export interface ExceptionMatchResult {
   needsUserDept: boolean;
 }
 
-export function useExceptionMatch(
-  params: { ip: string; conflictType?: string }
-): UseQueryResult<ExceptionMatchResult> {
+export function useExceptionMatch(params: {
+  ip: string;
+  conflictType?: string;
+}): UseQueryResult<ExceptionMatchResult> {
   // 入参对象 useMemo 稳定
   const stableKey = useMemo(
     () => ({ ip: params.ip, conflictType: params.conflictType ?? "" }),

@@ -11,13 +11,13 @@ import { hexToBase64, base64ToHex } from "./encoding";
 
 // SM2 模块接口定义（与 sm-crypto 实际签名匹配）
 interface SM2Module {
-	doEncrypt: (msg: string, publicKey: string, cipherMode: 0 | 1) => string;
-	doDecrypt: (encryptData: string, privateKey: string, cipherMode: 0 | 1) => string;
-	doSignature: (msg: string, privateKey: string, hash?: boolean) => string;
-	doVerifySignature: (msg: string, signHex: string, publicKey: string, hash?: boolean) => boolean;
-	generateKeyPairHex: () => { publicKey: string; privateKey: string };
-	verifyPublicKey: (publicKey: string) => boolean;
-	comparePublicKeyHex: (publicKey1: string, publicKey2: string) => number;
+  doEncrypt: (msg: string, publicKey: string, cipherMode: 0 | 1) => string;
+  doDecrypt: (encryptData: string, privateKey: string, cipherMode: 0 | 1) => string;
+  doSignature: (msg: string, privateKey: string, hash?: boolean) => string;
+  doVerifySignature: (msg: string, signHex: string, publicKey: string, hash?: boolean) => boolean;
+  generateKeyPairHex: () => { publicKey: string; privateKey: string };
+  verifyPublicKey: (publicKey: string) => boolean;
+  comparePublicKeyHex: (publicKey1: string, publicKey2: string) => number;
 }
 
 // SM2 公钥缓存（十六进制格式）
@@ -136,8 +136,13 @@ export async function getEncryptedLoginRequest(
       encryptedPassword: true,
     };
   } catch (error) {
+    // P1-S2: 生产环境绝不回退明文 — 密码明文传输是高危。
+    // 仅开发环境允许回退以便调试(与 api.ts 请求加密回退逻辑一致)。
+    if (import.meta.env.MODE === "production") {
+      console.error("[SM2] 生产环境加密失败,拒绝明文回退:", error);
+      throw new Error("密码加密失败,请检查网络或联系管理员");
+    }
     console.warn("SM2 加密失败，回退到明文传输（仅开发环境）:", error);
-    // 回退方案：如果 SM2 不可用，使用明文传输（仅开发环境）
     return {
       username,
       password,
@@ -167,7 +172,7 @@ export async function generateSM2KeyPair(): Promise<{ privateKey: string; public
   const keyPair = sm2.generateKeyPairHex();
   return {
     privateKey: keyPair.privateKey, // 私钥（十六进制）
-    publicKey: keyPair.publicKey,   // 公钥（十六进制）
+    publicKey: keyPair.publicKey, // 公钥（十六进制）
   };
 }
 

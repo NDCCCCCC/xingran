@@ -1,7 +1,5 @@
 import { getAppMessage } from "@/utils/antdMessage";
-import { useAuthStore } from "@/store/authStore";
 import { clearPublicKeyCache } from "./sm2";
-import { LOGIN } from "@/constants/routes";
 
 // ============================================================================
 // 向后兼容性重新导出
@@ -73,13 +71,15 @@ function extractErrorMessage(error: unknown): string {
 
   if (error && typeof error === "object") {
     const err = error as ErrorResponse;
-    return err?.response?.data?.message
-      ?? err?.response?.data?.msg
-      ?? err?.response?.data?.error
-      ?? err?.message
-      ?? err?.msg
-      ?? err?.error
-      ?? "操作失败";
+    return (
+      err?.response?.data?.message ??
+      err?.response?.data?.msg ??
+      err?.response?.data?.error ??
+      err?.message ??
+      err?.msg ??
+      err?.error ??
+      "操作失败"
+    );
   }
 
   return "操作失败";
@@ -197,10 +197,7 @@ const DEFAULT_ERROR_MESSAGES: Record<HttpErrorType, string> = {
  * @param responseData 响应数据
  * @returns Error 对象
  */
-export function handleHttpResponseError(
-  status: number,
-  responseData?: ApiResponseData
-): Error {
+export function handleHttpResponseError(status: number, responseData?: ApiResponseData): Error {
   const errorType = getErrorTypeByStatus(status);
   const errorMessage = responseData?.message || DEFAULT_ERROR_MESSAGES[errorType];
 
@@ -210,10 +207,11 @@ export function handleHttpResponseError(
     clearPublicKeyCache();
   }
 
-  // 特殊处理 401 未授权 - 自动登出
-  if (status === 401) {
-    handleUnauthorized();
-  }
+  // P1-S3: 401 未授权的自动登出已由 api.ts 响应拦截器完整处理
+  // (L387-451, 含 login 短路/refresh 短路/刷新队列/失败跳转),
+  // 该拦截器对所有 401 响应在到达此处之前已 return, 故此分支不可达。
+  // 移除原 handleUnauthorized() 调用以消除死代码, 避免未来误以为
+  // 这里是 401 处理的入口。
 
   // 显示错误消息
   getAppMessage().error(errorMessage);
@@ -230,9 +228,10 @@ export function handleHttpResponseError(
  * @returns Error 对象
  */
 export function handleNetworkError(error: unknown): Error {
-  const errorMessage = (error as { code?: string })?.code === "ECONNABORTED"
-    ? "请求超时，请检查网络连接"
-    : "网络异常，请检查网络连接";
+  const errorMessage =
+    (error as { code?: string })?.code === "ECONNABORTED"
+      ? "请求超时，请检查网络连接"
+      : "网络异常，请检查网络连接";
 
   getAppMessage().error(errorMessage);
 
@@ -277,26 +276,13 @@ function getErrorTypeByStatus(status: number): HttpErrorType {
   return statusToTypeMap[status] ?? HttpErrorType.INTERNAL_ERROR;
 }
 
-/**
- * 处理未授权错误（登出逻辑）
- */
-async function handleUnauthorized(): Promise<void> {
-  // 清除 auth store 状态（内部已调用 tokenManager.clearTokens() 清理 sessionStorage 中的加密 token）
-  await useAuthStore.getState().logout();
-
-  // 跳转到登录页
-  window.location.href = LOGIN;
-}
-
 // ==================== 类型安全的异步操作包装 ====================
 
 /**
  * 异步操作结果类型
  * 用于替代 try-catch 的类型安全错误处理
  */
-export type AsyncResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: Error };
+export type AsyncResult<T> = { success: true; data: T } | { success: false; error: Error };
 
 /**
  * 将未知错误转换为 Error 对象
@@ -323,9 +309,7 @@ function toError(error: unknown): Error {
  *   console.error(result.error); // error 是 Error 类型
  * }
  */
-export async function safeAsync<T>(
-  operation: () => Promise<T>
-): Promise<AsyncResult<T>> {
+export async function safeAsync<T>(operation: () => Promise<T>): Promise<AsyncResult<T>> {
   try {
     const data = await operation();
     return { success: true, data };
@@ -343,9 +327,7 @@ export async function safeAsync<T>(
  *   console.log(result.data); // 类型安全的 data
  * }
  */
-export function safeSync<T>(
-  operation: () => T
-): AsyncResult<T> {
+export function safeSync<T>(operation: () => T): AsyncResult<T> {
   try {
     const data = operation();
     return { success: true, data };

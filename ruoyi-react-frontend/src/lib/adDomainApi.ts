@@ -1,5 +1,6 @@
 import { get, post } from "./api";
-import type { BaseResponse, PageResponse } from "@/types";
+import { createResourceApi } from "./apiFactory";
+import type { BaseResponse, PageParams, PageResponse } from "@/types";
 
 // ==================== 类型定义 ====================
 
@@ -223,31 +224,42 @@ export interface ADGroupUpdateRequest {
 
 const DEFAULT_PAGINATION = { current: 1, pageSize: 10 };
 
-function withDefaultPagination<T extends { current?: number; pageSize?: number }>(
-  params: T
-): T {
+function withDefaultPagination<T extends { current?: number; pageSize?: number }>(params: T): T {
   return { ...DEFAULT_PAGINATION, ...params };
 }
 
 // ==================== AD配置 API ====================
 
-export function getADConfigList(params: ADConfigListRequest = {}): Promise<BaseResponse<PageResponse<ADConfig>>> {
-  return post("/ad-domain/configs/list", withDefaultPagination(params));
+// Phase 94 D-05/D-08: 标准 CRUD 形状函数委托共享工厂（导出签名零变化；
+// 全部 list 委托保留 withDefaultPagination 前置调用——Pitfall 5，直接透传即丢默认分页）
+const configCrud = createResourceApi<ADConfig>({ basePath: "/ad-domain/configs" });
+
+export function getADConfigList(
+  params: ADConfigListRequest = {}
+): Promise<BaseResponse<PageResponse<ADConfig>>> {
+  return configCrud.list(
+    withDefaultPagination(params) as unknown as PageParams & Record<string, unknown>
+  );
 }
 
 export function createADConfig(data: ADConfigCreateRequest): Promise<BaseResponse<ADConfig>> {
-  return post("/ad-domain/configs", data);
+  return configCrud.create(data) as Promise<BaseResponse<ADConfig>>;
 }
 
 export function getADConfig(id: string): Promise<BaseResponse<ADConfig>> {
+  // KEEP: GET 动词（工厂 get 是 POST，动词不可改）
   return get(`/ad-domain/configs/${id}`);
 }
 
-export function updateADConfig(id: string, data: ADConfigUpdateRequest): Promise<BaseResponse<{ message: string }>> {
-  return post(`/ad-domain/configs/${id}/update`, data);
+export function updateADConfig(
+  id: string,
+  data: ADConfigUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
+  return configCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteADConfig(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: 既有测试锁定单参 post(url) 契约，工厂 delete 传 {} 属 wire 级 body 变更
   return post(`/ad-domain/configs/${id}/delete`);
 }
 
@@ -255,7 +267,10 @@ export function testADConnection(id: string): Promise<BaseResponse<{ message: st
   return post(`/ad-domain/configs/${id}/test`, {});
 }
 
-export function syncADData(id: string, syncType: string = "full"): Promise<BaseResponse<{ message: string; result: ADSyncResult }>> {
+export function syncADData(
+  id: string,
+  syncType: string = "full"
+): Promise<BaseResponse<{ message: string; result: ADSyncResult }>> {
   return post(`/ad-domain/configs/${id}/sync`, { syncType });
 }
 
@@ -267,7 +282,9 @@ export function getADOUTree(configId: string): Promise<BaseResponse<ADOUNode[]>>
 
 // ==================== 用户组管理 API ====================
 
-export function getADGroupList(params: ADGroupListRequest): Promise<BaseResponse<PageResponse<ADGroup>>> {
+export function getADGroupList(
+  params: ADGroupListRequest
+): Promise<BaseResponse<PageResponse<ADGroup>>> {
   return post("/ad-domain/groups/list", withDefaultPagination(params));
 }
 
@@ -275,7 +292,15 @@ export function getADGroupDetail(id: string): Promise<BaseResponse<ADGroup>> {
   return get(`/ad-domain/groups/${id}`);
 }
 
-export function updateADGroup(id: string, configId: string, data: ADGroupUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+// KEEP 例外（Phase 94）：请求体 { configId, ...data } 与 ADGroup 实体字段
+// （adConfigId）解耦，且后端 DTO 是 json:"configId" binding:"required"——
+// 走 factory 的 Partial<CreatePayload<T>> 约束会迫使 wire 字段改名为
+// adConfigId，导致后端 400。保持直接 post()。
+export function updateADGroup(
+  id: string,
+  configId: string,
+  data: ADGroupUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/groups/${id}/update`, { configId, ...data });
 }
 
@@ -290,11 +315,19 @@ export function getADGroupMembers(
   });
 }
 
-export function addADGroupMember(id: string, configId: string, userDn: string): Promise<BaseResponse<{ message: string }>> {
+export function addADGroupMember(
+  id: string,
+  configId: string,
+  userDn: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/groups/${id}/members/add`, { configId, userDn });
 }
 
-export function removeADGroupMember(id: string, configId: string, userDn: string): Promise<BaseResponse<{ message: string }>> {
+export function removeADGroupMember(
+  id: string,
+  configId: string,
+  userDn: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/groups/${id}/members/remove`, { configId, userDn });
 }
 
@@ -326,7 +359,10 @@ export function syncADGroups(configId: string): Promise<BaseResponse<ADGroupSync
   return post(`/ad-domain/groups/sync-by-config/${configId}`, {});
 }
 
-export function syncADSingleGroup(configId: string, groupDn: string): Promise<BaseResponse<{ message: string }>> {
+export function syncADSingleGroup(
+  configId: string,
+  groupDn: string
+): Promise<BaseResponse<{ message: string }>> {
   return post("/ad-domain/groups/sync-single", { configId, groupDn });
 }
 
@@ -336,33 +372,49 @@ export function getADGroupSyncStatus(configId: string): Promise<BaseResponse<ADG
 
 // ==================== 用户管理 API ====================
 
-export function getADUserList(params: ADUserListRequest): Promise<BaseResponse<PageResponse<ADUser>>> {
-  return post("/ad-domain/users/list", withDefaultPagination(params))
+export function getADUserList(
+  params: ADUserListRequest
+): Promise<BaseResponse<PageResponse<ADUser>>> {
+  return post("/ad-domain/users/list", withDefaultPagination(params));
 }
 
-export function getADUserIds(
-  params: ADUserListRequest
-): Promise<BaseResponse<string[]>> {
-  return post("/ad-domain/users/ids", params)
+export function getADUserIds(params: ADUserListRequest): Promise<BaseResponse<string[]>> {
+  return post("/ad-domain/users/ids", params);
 }
 
 export function getADUserDetail(id: string, configId: string): Promise<BaseResponse<ADUser>> {
-  return post(`/ad-domain/users/${id}`, { configId })
+  return post(`/ad-domain/users/${id}`, { configId });
 }
 
-export function updateADUser(id: string, configId: string, data: ADUserUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+// KEEP 例外（Phase 94）：同 updateADGroup——后端 DTO 是 configId 而非实体字段
+// adConfigId，factory 类型约束会迫使 wire 字段改名导致后端 400。保持直接 post()。
+export function updateADUser(
+  id: string,
+  configId: string,
+  data: ADUserUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/users/${id}/update`, { configId, update: data });
 }
 
-export function moveADUser(id: string, configId: string, newOuDn: string): Promise<BaseResponse<{ message: string }>> {
+export function moveADUser(
+  id: string,
+  configId: string,
+  newOuDn: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/users/${id}/move`, { configId, move: { newOuDn } });
 }
 
-export function enableADUser(id: string, configId: string): Promise<BaseResponse<{ message: string }>> {
+export function enableADUser(
+  id: string,
+  configId: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/users/${id}/enable`, { configId });
 }
 
-export function disableADUser(id: string, configId: string): Promise<BaseResponse<{ message: string }>> {
+export function disableADUser(
+  id: string,
+  configId: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/users/${id}/disable`, { configId });
 }
 
@@ -380,11 +432,16 @@ export function getADSyncLogs(
 
 // ==================== 电脑设备管理 API ====================
 
-export function getADComputerList(params: ADComputerListRequest): Promise<BaseResponse<PageResponse<ADComputerDetail>>> {
+export function getADComputerList(
+  params: ADComputerListRequest
+): Promise<BaseResponse<PageResponse<ADComputerDetail>>> {
   return post("/ad-domain/computers/list", withDefaultPagination(params));
 }
 
-export function getADComputerDetail(configId: string, computerDn: string): Promise<BaseResponse<ADComputerDetail>> {
+export function getADComputerDetail(
+  configId: string,
+  computerDn: string
+): Promise<BaseResponse<ADComputerDetail>> {
   return post("/ad-domain/computers/detail", { configId, computerDn });
 }
 
@@ -460,24 +517,35 @@ export interface UpdateMappingRequest {
   syncEnabled?: boolean;
 }
 
-export function getMappingList(params: MappingListRequest): Promise<BaseResponse<MappingListResponse>> {
-  return post("/ad-domain/mappings/list", withDefaultPagination(params));
+// ==================== 部门组映射 API（CRUD 委托） ====================
+
+const mappingCrud = createResourceApi<DeptGroupMapping>({ basePath: "/ad-domain/mappings" });
+
+export function getMappingList(
+  params: MappingListRequest
+): Promise<BaseResponse<MappingListResponse>> {
+  return mappingCrud.list(
+    withDefaultPagination(params) as unknown as PageParams & Record<string, unknown>
+  );
 }
 
 export function createMapping(data: CreateMappingRequest): Promise<BaseResponse<DeptGroupMapping>> {
-  return post("/ad-domain/mappings", data);
+  return mappingCrud.create(data) as Promise<BaseResponse<DeptGroupMapping>>;
 }
 
 export function getMapping(id: string): Promise<BaseResponse<DeptGroupMapping>> {
+  // KEEP: GET 动词（工厂 get 是 POST，动词不可改）
   return get(`/ad-domain/mappings/${id}`);
 }
 
 export function updateMapping(id: string, data: UpdateMappingRequest): Promise<BaseResponse<null>> {
-  return post(`/ad-domain/mappings/${id}/update`, data);
+  return mappingCrud.update(id, data) as Promise<BaseResponse<null>>;
 }
 
 export function deleteMapping(id: string): Promise<BaseResponse<null>> {
-  return post(`/ad-domain/mappings/${id}/delete}`, {});
+  // fix(94-03): URL 模板串历史笔误（末尾多余右括号）必然 404，
+  // 随工厂委托自然正确化为 `${id}/delete`（v1.29 D-05 例外条款登记，独立 commit 可审计）
+  return mappingCrud.delete(id) as Promise<BaseResponse<null>>;
 }
 
 // ==================== OU 部门映射 API ====================
@@ -556,24 +624,40 @@ export interface OUGroupMappingUpdateRequest {
   status?: "active" | "inactive";
 }
 
-export function getOUGroupMappings(params: OUGroupMappingListRequest): Promise<BaseResponse<OUGroupMappingListResponse>> {
-  return post("/ad-domain/ou-group-mappings/list", withDefaultPagination(params));
+// ==================== OU组映射 API ====================
+
+const ouGroupMappingCrud = createResourceApi<OUGroupMapping>({
+  basePath: "/ad-domain/ou-group-mappings",
+});
+
+export function getOUGroupMappings(
+  params: OUGroupMappingListRequest
+): Promise<BaseResponse<OUGroupMappingListResponse>> {
+  return ouGroupMappingCrud.list(
+    withDefaultPagination(params) as unknown as PageParams & Record<string, unknown>
+  );
 }
 
 export function getOUGroupMapping(id: string): Promise<BaseResponse<OUGroupMapping>> {
+  // KEEP: GET 动词（工厂 get 是 POST，动词不可改）
   return get(`/ad-domain/ou-group-mappings/${id}`);
 }
 
-export function createOUGroupMapping(data: OUGroupMappingCreateRequest): Promise<BaseResponse<OUGroupMapping>> {
-  return post("/ad-domain/ou-group-mappings", data);
+export function createOUGroupMapping(
+  data: OUGroupMappingCreateRequest
+): Promise<BaseResponse<OUGroupMapping>> {
+  return ouGroupMappingCrud.create(data) as Promise<BaseResponse<OUGroupMapping>>;
 }
 
-export function updateOUGroupMapping(id: string, data: OUGroupMappingUpdateRequest): Promise<BaseResponse<{ message: string }>> {
-  return post(`/ad-domain/ou-group-mappings/${id}/update`, data);
+export function updateOUGroupMapping(
+  id: string,
+  data: OUGroupMappingUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
+  return ouGroupMappingCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteOUGroupMapping(id: string): Promise<BaseResponse<{ message: string }>> {
-  return post(`/ad-domain/ou-group-mappings/${id}/delete`, {});
+  return ouGroupMappingCrud.delete(id) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function getOUGroupMappingsByOU(ouDn: string): Promise<BaseResponse<OUGroupMapping[]>> {
@@ -643,23 +727,32 @@ export interface ADServiceAccountStats {
 }
 
 // 列表（带分页）
-export function listADServiceAccounts(
-  data: { configId: string; page?: number; pageSize?: number; status?: number }
-): Promise<BaseResponse<ADServiceAccountListResponse>> {
+export function listADServiceAccounts(data: {
+  configId: string;
+  page?: number;
+  pageSize?: number;
+  status?: number;
+}): Promise<BaseResponse<ADServiceAccountListResponse>> {
   return post("/ad-domain/accounts/list", data);
 }
 
 // 新增
-export function createADServiceAccount(
-  data: { configId: string; username: string; password: string; remark?: string }
-): Promise<BaseResponse<{ id: string }>> {
+export function createADServiceAccount(data: {
+  configId: string;
+  username: string;
+  password: string;
+  remark?: string;
+}): Promise<BaseResponse<{ id: string }>> {
   return post("/ad-domain/accounts/create", data);
 }
 
 // 更新
-export function updateADServiceAccount(
-  data: { id: string; username?: string; password?: string; remark?: string }
-): Promise<BaseResponse<{ ok: boolean }>> {
+export function updateADServiceAccount(data: {
+  id: string;
+  username?: string;
+  password?: string;
+  remark?: string;
+}): Promise<BaseResponse<{ ok: boolean }>> {
   return post("/ad-domain/accounts/update", data);
 }
 
@@ -679,9 +772,10 @@ export function disableADServiceAccount(id: string): Promise<BaseResponse<{ ok: 
 }
 
 // 立即解锁（reason ≥10 字符）
-export function unlockADServiceAccount(
-  data: { id: string; reason: string }
-): Promise<BaseResponse<{ ok: boolean }>> {
+export function unlockADServiceAccount(data: {
+  id: string;
+  reason: string;
+}): Promise<BaseResponse<{ ok: boolean }>> {
   return post("/ad-domain/accounts/unlock", data);
 }
 

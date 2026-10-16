@@ -4,7 +4,9 @@ import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { Tabs } from "antd";
 import { MailOutlined, ApiOutlined, PictureOutlined, BgColorsOutlined } from "@ant-design/icons";
-import { EmailConfigPage, APIConfigPage, CaptchaBackgroundSettingsPage } from "../settings";
+import EmailConfigPage from "../settings/email-config";
+import APIConfigPage from "../settings/api-config";
+import CaptchaBackgroundSettingsPage from "../settings/captcha-background";
 import DefaultThemePage from "../settings/default-theme";
 
 /**

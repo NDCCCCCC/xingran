@@ -3,7 +3,7 @@
  * Job Manager Page
  */
 
-import { useState, useEffect, type FC } from "react";
+import { useState, useEffect, useMemo, type FC } from "react";
 import {
   Card,
   Table,
@@ -26,8 +26,12 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 
-import type { JobInfo } from "./types";
-import { STATUS_OPTIONS, MISFIRE_POLICY_OPTIONS, DEFAULT_FORM_VALUES, DEFAULT_SEARCH_FORM } from "./constants";
+import {
+  STATUS_OPTIONS,
+  MISFIRE_POLICY_OPTIONS,
+  DEFAULT_FORM_VALUES,
+  DEFAULT_SEARCH_FORM,
+} from "./constants";
 import { getJobColumns, getJobLogColumns } from "./columns";
 import { useJobData, useJobActions } from "./hooks";
 import CronSelector from "@/components/CronSelector";
@@ -50,7 +54,7 @@ const JobManager: FC = () => {
     jobLogs,
     jobLogStats,
     loading,
-    total,
+    total: _total,
     fetchJobs,
     fetchJobLogs,
   } = useJobData({
@@ -63,7 +67,7 @@ const JobManager: FC = () => {
   const {
     modalVisible,
     modalTitle,
-    isEdit,
+    isEdit: _isEdit,
     logDrawerVisible,
     selectedJob,
     setModalVisible,
@@ -84,18 +88,23 @@ const JobManager: FC = () => {
   // 初始化加载
   useEffect(() => {
     fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentionally stable
   }, [paginationProps.current, paginationProps.pageSize, fetchJobs]);
 
   // 表格列
-  const columns = getJobColumns({
-    handleToggleStatus,
-    handleExecute,
-    handleViewLogs,
-    openModal: (record) => openModal(record, form),
-    handleDelete,
-  });
+  const columns = useMemo(
+    () =>
+      getJobColumns({
+        handleToggleStatus,
+        handleExecute,
+        handleViewLogs,
+        openModal: (record) => openModal(record, form),
+        handleDelete,
+      }),
+    [handleToggleStatus, handleExecute, handleViewLogs, openModal, handleDelete, form]
+  );
 
-  const jobLogColumns = getJobLogColumns();
+  const jobLogColumns = useMemo(() => getJobLogColumns(), []);
 
   // 搜索
   const handleSearch = () => {
@@ -109,7 +118,7 @@ const JobManager: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  const _handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
     setCurrent(pagination.current ?? 1);
     setPageSize(pagination.pageSize ?? 10);
     fetchJobs();
@@ -145,22 +154,29 @@ const JobManager: FC = () => {
               <Select
                 placeholder="状态"
                 value={searchForm.status}
-                onChange={(value) =>    setSearchForm({ ...searchForm, status: value })}
+                onChange={(value) => setSearchForm({ ...searchForm, status: value })}
                 allowClear
                 className="user-form-input"
                 style={{ width: "100%" }}
                 options={STATUS_OPTIONS}
-               onSearch={() => {}}/>
+                onSearch={() => {}}
+              />
             </Col>
             <Col xs={24} sm={24} md={6}>
               <Space>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal(undefined, form)}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => openModal(undefined, form)}
+                >
                   新增
                 </Button>
                 <Button icon={<SearchOutlined />} onClick={handleSearch}>
                   搜索
                 </Button>
-                <Button onClick={() => handleReset(setSearchForm, setCurrent, fetchJobs)}>重置</Button>
+                <Button onClick={() => handleReset(setSearchForm, setCurrent, fetchJobs)}>
+                  重置
+                </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
                   刷新
                 </Button>
@@ -198,11 +214,7 @@ const JobManager: FC = () => {
         onOk={() => handleSubmit(form)}
         width={700}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={DEFAULT_FORM_VALUES}
-        >
+        <Form form={form} layout="vertical" initialValues={DEFAULT_FORM_VALUES}>
           <Form.Item name="id" hidden>
             <Input />
           </Form.Item>
@@ -226,10 +238,7 @@ const JobManager: FC = () => {
             rules={[{ required: true, message: "请输入调用目标字符串" }]}
             extra="任务执行时调用的目标方法或脚本"
           >
-            <TextArea
-              placeholder="请输入调用目标字符串"
-              rows={3}
-            />
+            <TextArea placeholder="请输入调用目标字符串" rows={3} />
           </Form.Item>
           <Form.Item
             label="Cron表达式"
@@ -244,7 +253,7 @@ const JobManager: FC = () => {
             rules={[{ required: true }]}
             extra="任务错过执行时间的处理策略"
           >
-            <Select options={MISFIRE_POLICY_OPTIONS}  onSearch={() => {}}/>
+            <Select options={MISFIRE_POLICY_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item
             label="并发执行"
@@ -254,17 +263,10 @@ const JobManager: FC = () => {
           >
             <Switch checkedChildren="允许" unCheckedChildren="禁止" />
           </Form.Item>
-          <Form.Item
-            label="状态"
-            name="status"
-            rules={[{ required: true }]}
-          >
-            <Select options={STATUS_OPTIONS}  onSearch={() => {}}/>
+          <Form.Item label="状态" name="status" rules={[{ required: true }]}>
+            <Select options={STATUS_OPTIONS} onSearch={() => {}} />
           </Form.Item>
-          <Form.Item
-            label="备注"
-            name="remark"
-          >
+          <Form.Item label="备注" name="remark">
             <TextArea placeholder="请输入备注" rows={3} />
           </Form.Item>
         </Form>
@@ -279,7 +281,10 @@ const JobManager: FC = () => {
         size={800}
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => fetchJobLogs(selectedJob?.jobName, selectedJob?.jobGroup)}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => fetchJobLogs(selectedJob?.jobName, selectedJob?.jobGroup)}
+            >
               刷新
             </Button>
           </Space>

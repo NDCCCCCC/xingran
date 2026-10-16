@@ -1,17 +1,6 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { FC } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Form,
-  Select,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  App,
-} from "antd";
+import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -31,19 +20,18 @@ import { batchExport } from "@/lib/api/networkApi";
 import type { FormInstance } from "antd/es/form";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { isFormValidationError } from "@/utils/errorHandler";
-import type { DeviceDiscovery, NetworkDevice } from "@/types";
+import type { DeviceDiscovery } from "@/types";
 
 const { Option } = Select;
 
 const DeviceDiscoveryPage: FC = () => {
   const { message } = App.useApp();
   // 使用全局分页 hook
-  const { paginationProps, setTotal } = usePagination();
+  const { paginationProps, setTotal: _setTotal } = usePagination();
 
   // 服务端排序:field 与 columns.dataIndex 对齐
   const sorterMetas = useMemo(
@@ -56,7 +44,12 @@ const DeviceDiscoveryPage: FC = () => {
     ],
     []
   );
-  const { orderByColumn, isAsc, handleTableChange: handleDiscoverySortChange, sortOrder: discoverySortOrder } = useServerSort<DeviceDiscovery>({
+  const {
+    orderByColumn,
+    isAsc,
+    handleTableChange: handleDiscoverySortChange,
+    sortOrder: discoverySortOrder,
+  } = useServerSort<DeviceDiscovery>({
     sorterMetas,
   });
 
@@ -70,7 +63,7 @@ const DeviceDiscoveryPage: FC = () => {
     discoveredDevices,
     departments,
     loading,
-    total,
+    total: _total,
     statistics,
     modalState,
     currentDiscovery,
@@ -93,10 +86,12 @@ const DeviceDiscoveryPage: FC = () => {
 
   // 打开创建模态框
   const openModal = async () => {
-    await loadDepartments();
+    // 先打开弹窗，再后台加载部门列表，避免阻塞弹窗显示
     form.resetFields();
     form.setFieldsValue({ snmpPort: 161, discoveryType: "snmp" });
-    setModalState(prev => ({ ...prev, modalVisible: true }));
+    setModalState((prev) => ({ ...prev, modalVisible: true }));
+    // 后台加载部门（不阻塞弹窗打开）
+    loadDepartments();
   };
 
   // 创建发现任务
@@ -132,7 +127,7 @@ const DeviceDiscoveryPage: FC = () => {
 
       await post("/network/discoveries/create", requestData);
       message.success("发现任务已创建");
-      setModalState(prev => ({ ...prev, modalVisible: false }));
+      setModalState((prev) => ({ ...prev, modalVisible: false }));
       form.resetFields();
       loadDiscoveries();
       loadStatistics();
@@ -146,21 +141,23 @@ const DeviceDiscoveryPage: FC = () => {
   };
 
   // 删除任务
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
   const handleDelete = async (id: string) => {
     try {
       await post(`/network/discoveries/${id}/delete`, {});
       message.success("删除成功");
       loadDiscoveries();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
   };
 
   // 查看发现结果
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
   const handleViewResult = async (record: DeviceDiscovery) => {
     setCurrentDiscovery(record);
     await loadDiscoveryResults((record as DeviceDiscovery).id);
-    setModalState(prev => ({ ...prev, resultModalVisible: true }));
+    setModalState((prev) => ({ ...prev, resultModalVisible: true }));
   };
 
   // 导入发现的设备
@@ -169,9 +166,9 @@ const DeviceDiscoveryPage: FC = () => {
     try {
       await post(`/network/discoveries/${currentDiscovery.id}/import`, {});
       message.success("导入成功");
-      setModalState(prev => ({ ...prev, resultModalVisible: false }));
+      setModalState((prev) => ({ ...prev, resultModalVisible: false }));
       loadDiscoveries();
-    } catch (error) {
+    } catch (_error) {
       message.error("导入失败");
     }
   };
@@ -196,7 +193,10 @@ const DeviceDiscoveryPage: FC = () => {
       getDiscoveryColumns({
         handleViewResult,
         handleDelete,
-        getSortOrder: (field) => (orderByColumn === field ? (discoverySortOrder ?? null) as "ascend" | "descend" | null : null),
+        getSortOrder: (field) =>
+          orderByColumn === field
+            ? ((discoverySortOrder ?? null) as "ascend" | "descend" | null)
+            : null,
       }),
     [handleViewResult, handleDelete, orderByColumn, discoverySortOrder]
   );
@@ -204,6 +204,7 @@ const DeviceDiscoveryPage: FC = () => {
   useEffect(() => {
     loadDiscoveries();
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentionally stable
   }, [paginationProps.current, paginationProps.pageSize, loadDiscoveries, loadStatistics]);
 
   return (
@@ -212,11 +213,7 @@ const DeviceDiscoveryPage: FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
           <Card>
-            <Statistic
-              title="任务总数"
-              value={statistics.total}
-              prefix={<CloudServerOutlined />}
-            />
+            <Statistic title="任务总数" value={statistics.total} prefix={<CloudServerOutlined />} />
           </Card>
         </Col>
         <Col span={4}>
@@ -234,7 +231,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="扫描中"
               value={statistics.running}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<CloudServerOutlined />}
             />
           </Card>
@@ -244,7 +241,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="已完成"
               value={statistics.completed}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -254,24 +251,29 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
+              styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>
         </Col>
         <Col span={4}>
           <Card>
-            <Statistic
-              title="发现设备"
-              value={statistics.totalDevices}
-            />
+            <Statistic title="发现设备" value={statistics.totalDevices} />
           </Card>
         </Col>
       </Row>
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
               <Select
@@ -279,11 +281,12 @@ const DeviceDiscoveryPage: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onChange={() =>    {
+                onChange={() => {
                   loadDiscoveries();
                   loadStatistics();
                 }}
-               onSearch={() => {}}>
+                onSearch={() => {}}
+              >
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -325,21 +328,18 @@ const DeviceDiscoveryPage: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
               创建发现任务
             </Button>
-          </Space>{/* 批量导出 Modal */}
+          </Space>
+          {/* 批量导出 Modal */}
 
-        <BatchExportModal
+          <BatchExportModal
+            visible={batchModalVisible}
 
-          visible={batchModalVisible}
+            onConfirm={handleBatchExport}
 
-          onConfirm={handleBatchExport}
+            onCancel={() => setBatchModalVisible(false)}
 
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
+            loading={batchExporting}
+          />
         </div>
       </Card>
 
@@ -368,7 +368,7 @@ const DeviceDiscoveryPage: FC = () => {
         open={modalState.modalVisible}
         departments={departments}
         onOk={handleCreate}
-        onCancel={() => setModalState(prev => ({ ...prev, modalVisible: false }))}
+        onCancel={() => setModalState((prev) => ({ ...prev, modalVisible: false }))}
       />
 
       {/* 发现结果模态框 */}
@@ -377,7 +377,7 @@ const DeviceDiscoveryPage: FC = () => {
         currentDiscovery={currentDiscovery}
         discoveredDevices={discoveredDevices}
         onImport={handleImport}
-        onClose={() => setModalState(prev => ({ ...prev, resultModalVisible: false }))}
+        onClose={() => setModalState((prev) => ({ ...prev, resultModalVisible: false }))}
       />
     </div>
   );

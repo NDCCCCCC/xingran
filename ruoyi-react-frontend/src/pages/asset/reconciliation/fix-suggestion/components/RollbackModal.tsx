@@ -76,7 +76,12 @@ export const RollbackModal = ({ open, onCancel, onSubmit, submitting }: Rollback
             { min: 10, message: "回滚原因至少 10 字符" },
           ]}
         >
-          <Input.TextArea rows={3} placeholder="请说明回滚原因(≥10 字符,7d 窗口内才允许)" maxLength={500} showCount />
+          <Input.TextArea
+            rows={3}
+            placeholder="请说明回滚原因(≥10 字符,7d 窗口内才允许)"
+            maxLength={500}
+            showCount
+          />
         </Form.Item>
       </Form>
     </Modal>

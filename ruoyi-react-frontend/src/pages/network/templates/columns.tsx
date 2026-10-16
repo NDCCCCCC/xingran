@@ -4,13 +4,8 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Button, Space, Tag, Modal } from "antd";
-import {
-  EyeOutlined,
-  CopyOutlined,
-  EditOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+import { Modal } from "antd";
+import { EyeOutlined, CopyOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ConfigTemplate } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { formatDateTime } from "@/utils/datetime";
@@ -19,12 +14,8 @@ import {
   renderDeviceTypeTag,
   renderTemplateTypeTag,
   renderSystemTemplateTag,
-  VENDOR_OPTIONS,
-  DEVICE_TYPE_OPTIONS,
-  TEMPLATE_TYPE_OPTIONS,
 } from "./constants";
 import type { SorterMeta } from "@/utils/tableHelpers";
-import { createSorterMeta } from "@/utils/tableHelpers";
 
 export interface TemplateColumnsParams {
   handlePreview: (id: string) => void;

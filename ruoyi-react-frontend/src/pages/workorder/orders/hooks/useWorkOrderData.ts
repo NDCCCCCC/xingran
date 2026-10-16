@@ -2,20 +2,19 @@
  * WorkOrder 数据管理 Hook
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import {
   getWorkOrderList,
   getWorkOrderStatusStatistics,
-  getUserList,
   getEnabledWorkOrderCategories,
   type WorkOrder,
-  type SimpleUser,
   type SimpleDept,
   type WorkOrderCategory,
 } from "@/lib/workorderApi";
 import { useDeptTree } from "@/hooks/useDeptTree";
+import { useUserOptions } from "@/hooks/useUserOptions";
 
 export interface WorkOrderListParams {
   current?: number;
@@ -51,18 +50,19 @@ export interface UseWorkOrderDataReturn {
   current: number;
   pageSize: number;
   stats: WorkOrderStats;
-  users: SimpleUser[];
+  users: ReturnType<typeof useUserOptions>["data"];
   depts: SimpleDept[];
   categories: WorkOrderCategory[];
-  fetchList: (page?: number, pageSize?: number, sortParams?: { orderByColumn?: string; isAsc?: boolean }) => Promise<void>;
+  fetchList: (
+    page?: number,
+    pageSize?: number,
+    sortParams?: { orderByColumn?: string; isAsc?: boolean }
+  ) => Promise<void>;
   fetchStats: () => Promise<void>;
-  fetchUsers: () => Promise<void>;
   fetchCategories: () => Promise<void>;
 }
 
-export function useWorkOrderData(
-  options: UseWorkOrderDataOptions
-): UseWorkOrderDataReturn {
+export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrderDataReturn {
   const { form } = options;
   const { message } = App.useApp();
 
@@ -72,6 +72,10 @@ export function useWorkOrderData(
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // current/pageSize 收进 ref，避免翻页触发初始化 effect 重跑
+  const currentRef = useRef(current);
+  const pageSizeRef = useRef(pageSize);
+
   const [stats, setStats] = useState<WorkOrderStats>({
     total: 0,
     pending: 0,
@@ -80,7 +84,7 @@ export function useWorkOrderData(
     closed: 0,
   });
 
-  const [users, setUsers] = useState<SimpleUser[]>([]);
+  const { data: users = [] } = useUserOptions();
   // 部门树数据 — 全项目共享 ['dept','tree'] 缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
   const { data: depts = [] } = useDeptTree();
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
@@ -103,50 +107,52 @@ export function useWorkOrderData(
   }, []);
 
   // 获取列表数据;sortParams 携带 orderByColumn/isAsc(由 useServerSort 注入)
-  const fetchList = useCallback(async (page?: number, size?: number, sortParams?: { orderByColumn?: string; isAsc?: boolean }) => {
-    setLoading(true);
-    try {
-      const values = form.getFieldsValue() as Record<string, unknown>;
-      const params: WorkOrderListParams = {
-        current: page ?? current,
-        pageSize: size ?? pageSize,
-        workOrderNo: values.workOrderNo as string,
-        title: values.title as string,
-        categoryId: values.categoryId as string,
-        type: values.type as string,
-        priority: values.priority as number,
-        status: values.status as number,
-        assigneeId: values.assigneeId as string,
-        deptId: values.deptId as string,
-        ...(sortParams?.orderByColumn ? { orderByColumn: sortParams.orderByColumn, isAsc: sortParams.isAsc } : {}),
-      };
+  const fetchList = useCallback(
+    async (
+      page?: number,
+      size?: number,
+      sortParams?: { orderByColumn?: string; isAsc?: boolean }
+    ) => {
+      setLoading(true);
+      try {
+        const values = form.getFieldsValue() as Record<string, unknown>;
+        const params: WorkOrderListParams = {
+          current: page ?? currentRef.current,
+          pageSize: size ?? pageSizeRef.current,
+          workOrderNo: values.workOrderNo as string,
+          title: values.title as string,
+          categoryId: values.categoryId as string,
+          type: values.type as string,
+          priority: values.priority as number,
+          status: values.status as number,
+          assigneeId: values.assigneeId as string,
+          deptId: values.deptId as string,
+          ...(sortParams?.orderByColumn
+            ? { orderByColumn: sortParams.orderByColumn, isAsc: sortParams.isAsc }
+            : {}),
+        };
 
-      const result = await getWorkOrderList(params);
-      const list = result.data?.list ?? [];
-      setDataSource(list);
-      setTotal(result.data?.total ?? 0);
-      setCurrent(result.data?.current ?? 1);
-      setPageSize(result.data?.pageSize ?? 10);
+        const result = await getWorkOrderList(params);
+        const list = result.data?.list ?? [];
+        setDataSource(list);
+        setTotal(result.data?.total ?? 0);
+        setCurrent(result.data?.current ?? 1);
+        setPageSize(result.data?.pageSize ?? 10);
+        // 同步更新 ref（翻页/初始化均走这里）
+        currentRef.current = result.data?.current ?? 1;
+        pageSizeRef.current = result.data?.pageSize ?? 10;
 
-      // 列表加载后顺带刷新统计(全局 COUNT,不受分页/筛选影响)。
-      // 这样搜索/分页/增删改(均经 fetchList)都会保持统计卡片为真实全局计数。
-      fetchStats();
-    } catch (error) {
-      message.error("获取工单列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [form, current, pageSize, message, fetchStats]);
-
-  // 获取用户列表
-  const fetchUsers = useCallback(async () => {
-    try {
-      const result = await getUserList({ status: 0 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error("获取用户列表失败:", error);
-    }
-  }, []);
+        // 列表加载后顺带刷新统计(全局 COUNT,不受分页/筛选影响)。
+        // 这样搜索/分页/增删改(均经 fetchList)都会保持统计卡片为真实全局计数。
+        fetchStats();
+      } catch (_error) {
+        message.error("获取工单列表失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [form, message, fetchStats]
+  );
 
   // 部门树数据由顶层 useDeptTree() 提供,不再手动 fetch (workorderApi.getDeptTree 副本已删,类型 re-export from dutyApi)
 
@@ -163,9 +169,8 @@ export function useWorkOrderData(
   // 初始化加载
   useEffect(() => {
     fetchList(1, 10); // 内部会顺带刷新统计
-    fetchUsers();
     fetchCategories();
-  }, [fetchList, fetchUsers, fetchCategories]);
+  }, [fetchList, fetchCategories]);
 
   return {
     loading,
@@ -179,7 +184,6 @@ export function useWorkOrderData(
     categories,
     fetchList,
     fetchStats,
-    fetchUsers,
     fetchCategories,
   };
 }

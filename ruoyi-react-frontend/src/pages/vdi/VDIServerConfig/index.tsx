@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Table,
   Button,
@@ -20,15 +20,16 @@ import {
   DeleteOutlined,
   ApiOutlined,
 } from "@ant-design/icons";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { vdiServerApi } from "@/lib/vdiApi";
+import { queryKeys } from "@/lib/queryKeys";
 import type { VDIServer, VDIServerConfig } from "@/types/vdi";
 import type { ColumnsType } from "antd/es/table";
 
 const VDIServerConfig: React.FC = () => {
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [servers, setServers] = useState<VDIServer[]>([]);
-  const [total, setTotal] = useState(0);
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [modalVisible, setModalVisible] = useState(false);
@@ -36,23 +37,17 @@ const VDIServerConfig: React.FC = () => {
   const [selectedServer, setSelectedServer] = useState<VDIServer | null>(null);
   const [form] = Form.useForm();
 
-  // 加载服务器列表
-  const loadServers = async () => {
-    setLoading(true);
-    try {
-      const result = await vdiServerApi.list({ current, pageSize });
-      setServers(result.data?.list || []);
-      setTotal(result.data?.total || 0);
-    } catch (error) {
-      message.error("加载 VDI 服务器列表失败");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // DATA-01: VDI 服务器列表统一走 react-query——与 VirtualMachineList 共享同一缓存，
+  // create/delete/sync 后 invalidateQueries 确保列表及时刷新。
+  const { data: serverData, refetch } = useQuery({
+    queryKey: queryKeys.vdi.servers(),
+    queryFn: () => vdiServerApi.list({ current, pageSize }),
+    staleTime: 30 * 1000,
+  });
+  const servers: VDIServer[] = serverData?.data?.list || [];
+  const total = serverData?.data?.total || 0;
 
-  useEffect(() => {
-    loadServers();
-  }, [current, pageSize]);
+  const loadServers = () => refetch();
 
   // 创建服务器
   const handleCreate = () => {
@@ -97,6 +92,7 @@ const VDIServerConfig: React.FC = () => {
         };
         await vdiServerApi.create(data);
         message.success("VDI 服务器创建成功");
+        queryClient.invalidateQueries({ queryKey: queryKeys.vdi.servers() });
       } else {
         const data: Partial<VDIServerConfig> = {
           name: values.name,
@@ -110,12 +106,12 @@ const VDIServerConfig: React.FC = () => {
         }
         await vdiServerApi.update(selectedServer!.id, data);
         message.success("VDI 服务器更新成功");
+        queryClient.invalidateQueries({ queryKey: queryKeys.vdi.servers() });
       }
 
       setModalVisible(false);
       form.resetFields();
-      loadServers();
-    } catch (error) {
+    } catch (_error) {
       message.error(modalMode === "create" ? "创建服务器失败" : "更新服务器失败");
     } finally {
       setLoading(false);
@@ -128,8 +124,8 @@ const VDIServerConfig: React.FC = () => {
     try {
       await vdiServerApi.delete(id);
       message.success("删除成功");
-      loadServers();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.vdi.servers() });
+    } catch (_error) {
       message.error("删除失败");
     } finally {
       setLoading(false);
@@ -142,7 +138,7 @@ const VDIServerConfig: React.FC = () => {
     try {
       await vdiServerApi.testConnection(id);
       message.success("连接测试成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("连接测试失败");
     } finally {
       setLoading(false);
@@ -182,9 +178,7 @@ const VDIServerConfig: React.FC = () => {
       key: "status",
       width: 100,
       render: (status: number) => (
-        <Tag color={status === 0 ? "success" : "default"}>
-          {status === 0 ? "正常" : "停用"}
-        </Tag>
+        <Tag color={status === 0 ? "success" : "default"}>{status === 0 ? "正常" : "停用"}</Tag>
       ),
     },
     {
@@ -192,14 +186,14 @@ const VDIServerConfig: React.FC = () => {
       dataIndex: "token_expiry",
       key: "token_expiry",
       width: 160,
-      render: (time: string) => time ? new Date(time).toLocaleString("zh-CN") : "-",
+      render: (time: string) => (time ? new Date(time).toLocaleString("zh-CN") : "-"),
     },
     {
       title: "最后同步",
       dataIndex: "lastSyncTime",
       key: "lastSyncTime",
       width: 160,
-      render: (time: string) => time ? new Date(time).toLocaleString("zh-CN") : "-",
+      render: (time: string) => (time ? new Date(time).toLocaleString("zh-CN") : "-"),
     },
     {
       title: "操作",
@@ -215,11 +209,7 @@ const VDIServerConfig: React.FC = () => {
           >
             测试连接
           </Button>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
           <Popconfirm
@@ -311,7 +301,9 @@ const VDIServerConfig: React.FC = () => {
             name="password"
             rules={modalMode === "create" ? [{ required: true, message: "请输入密码" }] : []}
           >
-            <Input.Password placeholder={modalMode === "create" ? "VDI 管理员密码" : "留空表示不修改密码"} />
+            <Input.Password
+              placeholder={modalMode === "create" ? "VDI 管理员密码" : "留空表示不修改密码"}
+            />
           </Form.Item>
           <Form.Item
             label="租户 ID"
@@ -320,12 +312,7 @@ const VDIServerConfig: React.FC = () => {
           >
             <InputNumber min={1} style={{ width: "100%" }} placeholder="默认为 1" />
           </Form.Item>
-          <Form.Item
-            label="状态"
-            name="status"
-            valuePropName="checked"
-            initialValue={true}
-          >
+          <Form.Item label="状态" name="status" valuePropName="checked" initialValue={true}>
             <Switch checkedChildren="正常" unCheckedChildren="停用" />
           </Form.Item>
         </Form>

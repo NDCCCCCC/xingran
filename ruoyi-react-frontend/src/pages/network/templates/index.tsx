@@ -23,16 +23,11 @@ import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import type { SorterMeta } from "@/utils/tableHelpers";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { getTemplateColumns } from "./columns";
-import {
-  TemplateEditModal,
-  TemplatePreviewModal,
-  TemplateVariablesModal,
-} from "./modals";
+import { TemplateEditModal, TemplatePreviewModal, TemplateVariablesModal } from "./modals";
 import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -49,7 +44,7 @@ const TemplateManagement: FC = () => {
   const {
     templates,
     loading,
-    total,
+    total: _total,
     statistics,
     loadTemplates,
     loadStatistics,
@@ -73,7 +68,7 @@ const TemplateManagement: FC = () => {
     handleBatchDelete,
     handlePreview,
     handleClone,
-    handleGetVariables,
+    handleGetVariables: _handleGetVariables,
   } = useTemplateModals();
 
   const sorterMetas = useMemo<Array<SorterMeta<ConfigTemplate> | undefined>>(
@@ -103,13 +98,24 @@ const TemplateManagement: FC = () => {
   const sortRef = useRef<{ orderByColumn?: string; isAsc?: boolean }>({});
 
   const handleTableChange = useCallback(
-    (pagination: { current?: number; pageSize?: number }, _filters: Record<string, any>, sorter: import("antd/es/table/interface").SorterResult<ConfigTemplate> | import("antd/es/table/interface").SorterResult<ConfigTemplate>[]) => {
+    (
+      pagination: { current?: number; pageSize?: number },
+      _filters: Record<string, any>,
+      sorter:
+        | import("antd/es/table/interface").SorterResult<ConfigTemplate>
+        | import("antd/es/table/interface").SorterResult<ConfigTemplate>[]
+    ) => {
       const current = pagination.current ?? 1;
       const pageSize = pagination.pageSize ?? 10;
       sort.handleTableChange(pagination, _filters, sorter);
       const { orderByColumn, isAsc } = resolveSorter(sorter, sorterMetas);
       sortRef.current = { orderByColumn, isAsc };
-      const values = searchForm.getFieldsValue() as { templateName?: string; templateCode?: string; templateType?: string; vendor?: string };
+      const values = searchForm.getFieldsValue() as {
+        templateName?: string;
+        templateCode?: string;
+        templateType?: string;
+        vendor?: string;
+      };
       loadTemplates({ current, pageSize, ...values, orderByColumn, isAsc });
     },
     [sort, sorterMetas, searchForm, loadTemplates]
@@ -117,12 +123,23 @@ const TemplateManagement: FC = () => {
   useEffect(() => {
     loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load/fetch fn from hook is stable enough; disable to avoid loop
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 搜索
   const handleSearch = () => {
-    const values = searchForm.getFieldsValue() as { templateName?: string; templateCode?: string; templateType?: string; vendor?: string };
-    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize, ...values, ...sortRef.current });
+    const values = searchForm.getFieldsValue() as {
+      templateName?: string;
+      templateCode?: string;
+      templateType?: string;
+      vendor?: string;
+    };
+    loadTemplates({
+      current: paginationProps.current,
+      pageSize: paginationProps.pageSize,
+      ...values,
+      ...sortRef.current,
+    });
   };
 
   // 重置
@@ -135,13 +152,21 @@ const TemplateManagement: FC = () => {
 
   // 刷新
   const handleRefresh = () => {
-    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize, ...sortRef.current });
+    loadTemplates({
+      current: paginationProps.current,
+      pageSize: paginationProps.pageSize,
+      ...sortRef.current,
+    });
     loadStatistics();
   };
 
   // 操作成功后刷新
   const handleSuccess = () => {
-    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize, ...sortRef.current });
+    loadTemplates({
+      current: paginationProps.current,
+      pageSize: paginationProps.pageSize,
+      ...sortRef.current,
+    });
     loadStatistics();
   };
 
@@ -182,7 +207,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="系统模板"
               value={statistics.system}
-              styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
+              styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
               prefix={<AppstoreOutlined />}
             />
           </Card>
@@ -192,7 +217,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="自定义模板"
               value={statistics.custom}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<SettingOutlined />}
             />
           </Card>
@@ -202,7 +227,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="初始化模板"
               value={statistics.init}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<FundOutlined />}
             />
           </Card>
@@ -222,13 +247,29 @@ const TemplateManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="templateName" label="模板名称">
-              <Input placeholder="请输入模板名称" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入模板名称"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="templateCode" label="模板编码">
-              <Input placeholder="请输入模板编码" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入模板编码"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="templateType" label="模板类型">
-              <Select placeholder="请选择模板类型" allowClear className="user-form-input" style={{ width: 130 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择模板类型"
+                allowClear
+                className="user-form-input"
+                style={{ width: 130 }}
+                onSearch={() => {}}
+              >
                 {TEMPLATE_TYPE_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -237,7 +278,13 @@ const TemplateManagement: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="vendor" label="厂商">
-              <Select placeholder="请选择厂商" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择厂商"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 {VENDOR_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -260,7 +307,11 @@ const TemplateManagement: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal(undefined, editForm)}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => openModal(undefined, editForm)}
+            >
               新增
             </Button>
             <Button
@@ -275,26 +326,25 @@ const TemplateManagement: FC = () => {
               entityType="templates"
               entityName="配置模板"
               filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, any>).filter(([, v]) => v !== undefined && v !== null && v !== "")
+                Object.entries(searchForm.getFieldsValue() as Record<string, any>).filter(
+                  ([, v]) => v !== undefined && v !== null && v !== ""
+                )
               )}
               current={paginationProps?.current ?? 1}
               pageSize={paginationProps?.pageSize ?? 10}
             />
-          </Space>{/* 批量导出 Modal */}
+          </Space>
+          {/* 批量导出 Modal */}
 
-        <BatchExportModal
+          <BatchExportModal
+            visible={batchModalVisible}
 
-          visible={batchModalVisible}
+            onConfirm={handleBatchExport}
 
-          onConfirm={handleBatchExport}
+            onCancel={() => setBatchModalVisible(false)}
 
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
+            loading={batchExporting}
+          />
         </div>
       </Card>
 

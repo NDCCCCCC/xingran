@@ -25,49 +25,52 @@ export function useBuildingGeocoding() {
     warning: null,
   });
 
-  const resolveAddress = useCallback(async (address: string): Promise<GeocodingResult | null> => {
-    if (!address?.trim()) {
-      setState({ loading: false, result: null, warning: null });
-      return null;
-    }
+  const resolveAddress = useCallback(
+    async (address: string): Promise<GeocodingResult | null> => {
+      if (!address?.trim()) {
+        setState({ loading: false, result: null, warning: null });
+        return null;
+      }
 
-    setState(prev => ({ ...prev, loading: true, warning: null }));
+      setState((prev) => ({ ...prev, loading: true, warning: null }));
 
-    try {
-      const result = await geocode(address);
+      try {
+        const result = await geocode(address);
 
-      if (result) {
-        const coords: GeocodingResult = {
-          longitude: result.longitude,
-          latitude: result.latitude,
-          formattedAddress: result.formattedAddress,
-        };
-        setState({ loading: false, result: coords, warning: null });
-        return coords;
-      } else {
+        if (result) {
+          const coords: GeocodingResult = {
+            longitude: result.longitude,
+            latitude: result.latitude,
+            formattedAddress: result.formattedAddress,
+          };
+          setState({ loading: false, result: coords, warning: null });
+          return coords;
+        } else {
+          setState({
+            loading: false,
+            result: null,
+            warning: "地址解析失败，将保存不含经纬度的信息",
+          });
+          return null;
+        }
+      } catch (_error) {
         setState({
           loading: false,
           result: null,
-          warning: "地址解析失败，将保存不含经纬度的信息",
+          warning: "地址解析出错，将保存不含经纬度的信息",
         });
         return null;
       }
-    } catch (_error) {
-      setState({
-        loading: false,
-        result: null,
-        warning: "地址解析出错，将保存不含经纬度的信息",
-      });
-      return null;
-    }
-  }, [geocode]);
+    },
+    [geocode]
+  );
 
   const reset = useCallback(() => {
     setState({ loading: false, result: null, warning: null });
   }, []);
 
   const setResult = useCallback((result: GeocodingResult | null) => {
-    setState(prev => ({ ...prev, result }));
+    setState((prev) => ({ ...prev, result }));
   }, []);
 
   return {

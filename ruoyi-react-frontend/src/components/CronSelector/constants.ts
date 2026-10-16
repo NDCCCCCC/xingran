@@ -37,11 +37,24 @@ export const FIELD_RANGES: Record<string, FieldRange> = {
   hour: { min: 0, max: 23 },
   day: { min: 1, max: 31 },
   month: { min: 1, max: 12 },
-  week: { min: 1, max: 7 }
+  week: { min: 1, max: 7 },
 };
 
 export const WEEK_DAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-export const MONTH_NAMES = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+export const MONTH_NAMES = [
+  "1月",
+  "2月",
+  "3月",
+  "4月",
+  "5月",
+  "6月",
+  "7月",
+  "8月",
+  "9月",
+  "10月",
+  "11月",
+  "12月",
+];
 
 export const CRON_PRESETS: CronPreset[] = [
   { label: "每分钟", value: "0 * * * * ?", description: "每分钟的第0秒执行" },
@@ -64,7 +77,7 @@ export const FIELD_LABELS: Record<string, string> = {
   hour: "时",
   day: "日",
   month: "月",
-  week: "周"
+  week: "周",
 };
 
 export const DEFAULT_CRON_EXPRESSION = "0 0 9 * * ?";

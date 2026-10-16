@@ -6,22 +6,15 @@ import { useMenuStore } from "@/store/menuStore";
 import { useLayoutStore } from "@/store/layoutStore";
 import type { Menu as MenuType } from "@/types";
 import {
-	buildMenuPathMap,
-	isSameTopLevelMenu,
-	getMenuLevel,
-	isSecondLevelMenu,
-	isTopLevelMenu,
+  buildMenuPathMap,
+  isSameTopLevelMenu,
+  getMenuLevel,
+  isSecondLevelMenu,
+  isTopLevelMenu,
 } from "./sidebar-helper";
 import { getIconComponent } from "@/utils/iconUtils";
 import { buildFullPath, findMenuById, findMenuByFullPath } from "./sidebar.utils";
-import {
-	DEFAULT_SIDEBAR_WIDTH,
-	HEADER_HEIGHT,
-	COLLAPSE_BUTTON_LEFT,
-	MENU_FONT_SIZE,
-	NAVIGATION_DELAY,
-} from "./sidebar.constants";
-import "@/design-system/themes/theme-styles.css";
+import { DEFAULT_SIDEBAR_WIDTH, MENU_FONT_SIZE, NAVIGATION_DELAY } from "./sidebar.constants";
 
 const { Sider } = Layout;
 
@@ -29,8 +22,27 @@ type MenuItem = NonNullable<MenuProps["items"]>[number];
 
 const getIcon = (iconName?: string | null): React.ReactNode => getIconComponent(iconName);
 
-const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem => {
-  const icon = getIcon(menu.icon);
+/**
+ * 子菜单项默认细右箭头（原型 shell.js makeLink L202：无 icon 时默认 i-chev）
+ */
+const SubChevron: React.FC = () => (
+  <span className="menu-sub-chevron" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  </span>
+);
+
+const convertToMenuItem = (menu: MenuType, parentPath: string = "", depth = 0): MenuItem => {
+  // 原型 shell.js：子菜单项统一用小箭头（无视后端配置的图标）；仅顶层保留配置图标
+  const icon = depth >= 1 ? <SubChevron /> : getIcon(menu.icon);
 
   if (menu.menuType === "F" || menu.visible !== 1) {
     return null;
@@ -49,8 +61,8 @@ const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem =>
 
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
-      .filter(child => child.menuType !== "F" && child.visible === 1)
-      .map(child => convertToMenuItem(child, menuPath))
+      .filter((child) => child.menuType !== "F" && child.visible === 1)
+      .map((child) => convertToMenuItem(child, menuPath, depth + 1))
       .filter((item): item is MenuItem => item !== null);
 
     if (validChildren.length > 0 || menu.menuType === "M") {
@@ -80,21 +92,27 @@ const Sidebar = () => {
   const expectedOpenKeysRef = useRef<string[] | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { menus, loading, fetchMenus } = useMenuStore();
-  const { sidebarCollapsed, toggleSidebar } = useLayoutStore();
+  const menus = useMenuStore((s) => s.menus);
+  const loading = useMenuStore((s) => s.loading);
+  const fetchMenus = useMenuStore((s) => s.fetchMenus);
+  const sidebarCollapsed = useLayoutStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
 
   // 组件加载时获取菜单
   useEffect(() => {
     if (menus.length === 0) {
-      fetchMenus();
+      // fetchMenus 失败时会 rethrow（login 页面依赖它显示登录失败，故不能在 store 层吞）。
+      // 这里是 fire-and-forget 调用，必须自行兜住，否则逃逸成 unhandled rejection。
+      // 失败原因已由 menuStore 写入 error 状态，此处无需重复提示。
+      fetchMenus().catch(() => {});
     }
-  }, []);
+  }, [fetchMenus, menus.length]);
 
   // 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
   const menuItems: MenuItem[] = useMemo(() => {
     return menus
-      .filter(menu => menu.menuType !== "F" && menu.visible === 1)
-      .map(menu => convertToMenuItem(menu))
+      .filter((menu) => menu.menuType !== "F" && menu.visible === 1)
+      .map((menu) => convertToMenuItem(menu))
       .filter((item): item is MenuItem => item !== null);
   }, [menus]);
 
@@ -106,8 +124,11 @@ const Sidebar = () => {
    * 只返回父级菜单的 key，不包含当前页面路径
    * 因为当前页面可能是不可展开的菜单项（menuType === 'C'）
    */
-  function buildParentKeyChain(currentPath: string, menuPathMap: Map<string, { level: number; topLevel?: string; secondLevel?: string }>): string[] {
-    const normalizePath = (p: string): string => p.startsWith("/") ? p.slice(1) : p;
+  function buildParentKeyChain(
+    currentPath: string,
+    menuPathMap: Map<string, { level: number; topLevel?: string; secondLevel?: string }>
+  ): string[] {
+    const normalizePath = (p: string): string => (p.startsWith("/") ? p.slice(1) : p);
     const normalizedPathname = normalizePath(currentPath);
     const menuInfo = menuPathMap.get(normalizedPathname);
 
@@ -142,6 +163,7 @@ const Sidebar = () => {
     const parentKeys = buildParentKeyChain(location.pathname, menuPathMap);
 
     expectedOpenKeysRef.current = parentKeys;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenKeys(parentKeys);
 
     setTimeout(() => {
@@ -173,8 +195,7 @@ const Sidebar = () => {
     if (expectedOpenKeysRef.current) {
       const expected = expectedOpenKeysRef.current;
       const isExpectedChange =
-        keys.length === expected.length &&
-        keys.every(k => expected.includes(k));
+        keys.length === expected.length && keys.every((k) => expected.includes(k));
 
       if (isExpectedChange) {
         setOpenKeys(keys);
@@ -196,7 +217,7 @@ const Sidebar = () => {
       case undefined: {
         // 一级菜单或以 top_ 开头的菜单：应用手风琴效果
         // 保留新展开的一级菜单和所有非一级菜单，移除其他一级菜单
-        const nonTopLevelKeys = keys.filter(key => !isTopLevelMenu(key, menuPathMap));
+        const nonTopLevelKeys = keys.filter((key) => !isTopLevelMenu(key, menuPathMap));
         setOpenKeys([latestOpenKey, ...nonTopLevelKeys]);
         break;
       }
@@ -211,10 +232,10 @@ const Sidebar = () => {
         }
 
         // 保留所有一级菜单
-        const topLevelKeys = keys.filter(key => isTopLevelMenu(key, menuPathMap));
+        const topLevelKeys = keys.filter((key) => isTopLevelMenu(key, menuPathMap));
 
         // 找出所有与新展开的二级菜单属于同一一级菜单的其他已展开二级菜单
-        const sameTopLevelSecondKeys = openKeys.filter(key => {
+        const sameTopLevelSecondKeys = openKeys.filter((key) => {
           if (!isSecondLevelMenu(key, menuPathMap)) return false;
           return isSameTopLevelMenu(key, latestOpenKey, menuPathMap);
         });
@@ -222,10 +243,11 @@ const Sidebar = () => {
         // 构建新的openKeys
         const result = [
           ...topLevelKeys,
-          ...keys.filter(key =>
-            !sameTopLevelSecondKeys.includes(key) &&
-            (isSecondLevelMenu(key, menuPathMap) || key === latestOpenKey)
-          )
+          ...keys.filter(
+            (key) =>
+              !sameTopLevelSecondKeys.includes(key) &&
+              (isSecondLevelMenu(key, menuPathMap) || key === latestOpenKey)
+          ),
         ];
         setOpenKeys(result);
         break;
@@ -271,86 +293,73 @@ const Sidebar = () => {
       trigger={null}
       className="layout-sidebar"
       style={{
-        background: "#ffffff",
+        background: "var(--sidebar-gradient)",
+        position: "relative",
       }}
     >
-
       <div
-        className="flex items-center relative"
         style={{
-          height: `${HEADER_HEIGHT}px`,
-          borderBottom: "1px solid var(--theme-border-primary)",
-          paddingLeft: sidebarCollapsed ? "0" : "56px",
-          transition: "padding-left var(--theme-transition-base)",
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
         }}
       >
-        {/* 收缩按钮 */}
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors absolute"
-          style={{
-            color: "var(--theme-text-secondary)",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            left: `${COLLAPSE_BUTTON_LEFT}px`,
-          }}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{
-              transition: "transform var(--theme-transition-base)",
-              transform: sidebarCollapsed ? "rotate(180deg)" : "rotate(0deg)",
-            }}
-          >
-            <path
-              d="M3 5h14M3 10h10M3 15h6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+        {/* 品牌区（原型 .sidebar-brand：金方块 mark + font-display 字标） */}
+        <div className="sidebar-brand">
+          <span className="brand-mark" aria-hidden="true">
+            星
+          </span>
+          {!sidebarCollapsed && <span className="brand-wordmark">数智化平台 · RUOYI-NEXT</span>}
+        </div>
 
-        <h1
-          className="text-xl font-bold"
-          style={{
-            backgroundImage: "linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, #ffffff 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            color: "transparent",
-            display: sidebarCollapsed ? "none" : "inline-block",
-          }}
-        >
-          数智化平台
-        </h1>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Spin size="large" />
+          </div>
+        ) : (
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+            <Menu
+              mode="inline"
+              theme="dark"
+              selectedKeys={getSelectedKeys()}
+              openKeys={openKeys}
+              onOpenChange={handleOpenChange}
+              items={menuItems}
+              onClick={handleMenuClick}
+              className="border-r-0 px-2 py-4"
+              style={{
+                background: "transparent",
+                fontSize: `${MENU_FONT_SIZE}px`,
+                color: "var(--sidebar-text)",
+              }}
+            />
+          </div>
+        )}
+
+        {/* 底部国密 chips（原型 .sidebar-foot：SM2/SM3/SM4 + 版本号） */}
+        {!sidebarCollapsed && (
+          <div className="sidebar-foot">
+            <span className="sm-chip">SM2</span>
+            <span className="sm-chip">SM3</span>
+            <span className="sm-chip">SM4</span>
+            <span className="ver">v1.0.0</span>
+          </div>
+        )}
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <Spin size="large" />
-        </div>
-      ) : (
-        <Menu
-          mode="inline"
-          selectedKeys={getSelectedKeys()}
-          openKeys={openKeys}
-          onOpenChange={handleOpenChange}
-          items={menuItems}
-          onClick={handleMenuClick}
-          className="border-r-0 px-2 py-4"
-          style={{
-            background: "transparent",
-            fontSize: `${MENU_FONT_SIZE}px`,
-            color: "var(--theme-text-primary)",
-          }}
-        />
-      )}
+      {/* 右缘内嵌折叠手柄（原型 .sidebar-toggle 18×46 白底） */}
+      <button
+        onClick={toggleSidebar}
+        className={`sidebar-toggle${sidebarCollapsed ? " is-collapsed" : ""}`}
+        aria-expanded={!sidebarCollapsed}
+        aria-label={sidebarCollapsed ? "展开侧边栏" : "折叠侧边栏"}
+        title={sidebarCollapsed ? "展开侧边栏" : "折叠侧边栏"}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
     </Sider>
   );
 };

@@ -26,14 +26,14 @@ let messageRef: MessageInstance | null = null;
 /** no-op 实例：<App> 未挂载时返回，所有方法静默短路 */
 const noop = () => {};
 const noopMessage = {
-	success: noop,
-	error: noop,
-	info: noop,
-	warning: noop,
-	loading: noop,
-	warn: noop,
-	open: noop,
-	destroy: noop,
+  success: noop,
+  error: noop,
+  info: noop,
+  warning: noop,
+  loading: noop,
+  warn: noop,
+  open: noop,
+  destroy: noop,
 } as unknown as MessageInstance;
 
 /**
@@ -41,7 +41,7 @@ const noopMessage = {
  * 卸载时传 null 重置，避免持有过期实例。
  */
 export function setAppMessageInstance(instance: MessageInstance | null): void {
-	messageRef = instance;
+  messageRef = instance;
 }
 
 /**
@@ -49,5 +49,5 @@ export function setAppMessageInstance(instance: MessageInstance | null): void {
  * <App> 未挂载时返回 no-op 实例（静默短路，不抛错）。
  */
 export function getAppMessage(): MessageInstance {
-	return messageRef ?? noopMessage;
+  return messageRef ?? noopMessage;
 }

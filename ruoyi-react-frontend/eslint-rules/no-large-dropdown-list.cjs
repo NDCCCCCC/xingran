@@ -18,9 +18,7 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { ESLintUtils } = require("@typescript-eslint/utils");
 
-const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://example.com/rules/${name}`
-);
+const createRule = ESLintUtils.RuleCreator((name) => `https://example.com/rules/${name}`);
 
 // 危险 pageSize 值集合
 const BAD_PAGE_SIZES = new Set([1000, 2000, 5000, 10000]);
@@ -58,10 +56,7 @@ module.exports = createRule({
       // 如需 Cascader 远程搜索,使用 loadData + searchValue (Phase 47+ 单独规划)
       "JSXOpeningElement[name.name=/^(Select|AutoComplete)$/]"(node) {
         const hasOnSearch = node.attributes.some(
-          (attr) =>
-            attr.type === "JSXAttribute" &&
-            attr.name &&
-            attr.name.name === "onSearch"
+          (attr) => attr.type === "JSXAttribute" && attr.name && attr.name.name === "onSearch"
         );
         if (!hasOnSearch) {
           context.report({ node, messageId: "selectNoOnSearch" });

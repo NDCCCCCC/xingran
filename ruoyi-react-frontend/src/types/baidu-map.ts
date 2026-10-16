@@ -292,7 +292,10 @@ export interface BMapMapConstructor {
 
 /** 地图 GL 构造函数 */
 export interface BMapMapGLConstructor {
-  new (container: string | HTMLElement, opts?: BMapMapOptions & { showControls?: boolean }): BMapMapGL;
+  new (
+    container: string | HTMLElement,
+    opts?: BMapMapOptions & { showControls?: boolean }
+  ): BMapMapGL;
 }
 
 /** 缩放控件配置 */
@@ -382,7 +385,7 @@ export interface BMapGLNamespace extends BMapNamespace {
  * 获取百度地图命名空间（标准2D版本）
  */
 export function getBMap(): BMapNamespace | undefined {
-  return window.BMap;
+  return window.BMap as BMapNamespace | undefined;
 }
 
 /**

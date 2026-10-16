@@ -58,7 +58,9 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
             fieldNames={{ title: "title", key: "key", children: "children" }}
           />
         </div>
-        <div className="mt-2 text-sm text-gray-500">已选择 {targetDepts.length} 个部门（包含子部门）</div>
+        <div className="mt-2 text-sm text-gray-500">
+          已选择 {targetDepts.length} 个部门（包含子部门）
+        </div>
       </Spin>
     );
   }
@@ -93,7 +95,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
         <Select
           mode="multiple"
           value={targetUsers as string[]}
-          onChange={(values) =>    onUserChange(values as string[])}
+          onChange={(values) => onUserChange(values as string[])}
           placeholder="请选择用户"
           showSearch
           filterOption={(input, option) => {
@@ -105,11 +107,14 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
             );
           }}
           className="w-full"
-          options={users.filter((user) => user.id != null).map((user) => ({
-            label: `${user.nickname || user.username} (${user.username})`,
-            value: user.id,
-          }))}
-         onSearch={() => {}}/>
+          options={users
+            .filter((user) => user.id != null)
+            .map((user) => ({
+              label: `${user.nickname || user.username} (${user.username})`,
+              value: user.id,
+            }))}
+          onSearch={() => {}}
+        />
         <div className="mt-2 text-sm text-gray-500">已选择 {targetUsers.length} 个用户</div>
       </Spin>
     );

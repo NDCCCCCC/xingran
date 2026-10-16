@@ -1,19 +1,216 @@
 /**
  * 图标工具函数
  * 用于管理 Ant Design 图标的映射和获取
+ *
+ * Performance note (Vercel audit Sprint 1 Fix #3):
+ * All icons are imported via named imports into a static registry.
+ * This avoids `import * as Icons from "@ant-design/icons"` which
+ * pulls ~1 MB of the entire icon library into the initial bundle.
  */
 
-import * as Icons from "@ant-design/icons";
-import type { ComponentType } from "react";
+import {
+  DashboardOutlined,
+  HomeOutlined,
+  AppstoreOutlined,
+  MenuOutlined,
+  SettingOutlined,
+  ToolOutlined,
+  BulbOutlined,
+  AlertOutlined,
+  UserOutlined,
+  TeamOutlined,
+  IdcardOutlined,
+  SolutionOutlined,
+  LoginOutlined,
+  LogoutOutlined,
+  KeyOutlined,
+  LockOutlined,
+  FileTextOutlined,
+  FileOutlined,
+  FolderOutlined,
+  FolderOpenOutlined,
+  CopyOutlined,
+  SnippetsOutlined,
+  BookOutlined,
+  DatabaseOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  UpOutlined,
+  DownOutlined,
+  LeftOutlined,
+  RightOutlined,
+  CaretUpOutlined,
+  CaretDownOutlined,
+  CaretLeftOutlined,
+  CaretRightOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  StopOutlined,
+  FastForwardOutlined,
+  FastBackwardOutlined,
+  StepForwardOutlined,
+  BellOutlined,
+  MessageOutlined,
+  MailOutlined,
+  WechatOutlined,
+  QqOutlined,
+  DingdingOutlined,
+  WeiboOutlined,
+  GithubOutlined,
+  CloudOutlined,
+  CloudServerOutlined,
+  LaptopOutlined,
+  DesktopOutlined,
+  MobileOutlined,
+  TabletOutlined,
+  AreaChartOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  PieChartOutlined,
+  DotChartOutlined,
+  FundOutlined,
+  SlidersOutlined,
+  ClockCircleOutlined,
+  HistoryOutlined,
+  CalendarOutlined,
+  FieldTimeOutlined,
+  HourglassOutlined,
+  MonitorOutlined,
+  BugOutlined,
+  CodeOutlined,
+  ApiOutlined,
+  ConsoleSqlOutlined,
+  NodeIndexOutlined,
+  SafetyOutlined,
+  SecurityScanOutlined,
+  UnlockOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  WifiOutlined,
+  ApartmentOutlined,
+  ClusterOutlined,
+  ShareAltOutlined,
+  StarOutlined,
+  HeartOutlined,
+  LikeOutlined,
+  DislikeOutlined,
+  FlagOutlined,
+  TagOutlined,
+} from "@ant-design/icons";
+import type { FC } from "react";
 
-// 动态图标访问的类型定义
-type IconName = keyof typeof Icons;
-type IconComponentMap = Record<string, ComponentType<unknown>>;
-
-// 过滤掉非组件的导出（如 createFromIconfontCN）
-const iconComponentKeys = Object.keys(Icons).filter(
-  key => typeof (Icons as Record<string, unknown>)[key] === "function" || key !== "createFromIconfontCN"
-);
+// Static registry — all icons from iconCategories, plus SearchOutlined (used directly)
+// Using FC<any> to accommodate ForwardRefExoticComponent (antd icons) which is
+// not assignable to ComponentType<unknown> but is to FC<any>
+export const STATIC_ICON_REGISTRY: Record<string, FC<any>> = {
+  DashboardOutlined,
+  HomeOutlined,
+  AppstoreOutlined,
+  MenuOutlined,
+  SettingOutlined,
+  ToolOutlined,
+  BulbOutlined,
+  AlertOutlined,
+  UserOutlined,
+  TeamOutlined,
+  IdcardOutlined,
+  SolutionOutlined,
+  LoginOutlined,
+  LogoutOutlined,
+  KeyOutlined,
+  LockOutlined,
+  FileTextOutlined,
+  FileOutlined,
+  FolderOutlined,
+  FolderOpenOutlined,
+  CopyOutlined,
+  SnippetsOutlined,
+  BookOutlined,
+  DatabaseOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  UpOutlined,
+  DownOutlined,
+  LeftOutlined,
+  RightOutlined,
+  CaretUpOutlined,
+  CaretDownOutlined,
+  CaretLeftOutlined,
+  CaretRightOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  StopOutlined,
+  FastForwardOutlined,
+  FastBackwardOutlined,
+  StepForwardOutlined,
+  BellOutlined,
+  MessageOutlined,
+  MailOutlined,
+  WechatOutlined,
+  QqOutlined,
+  DingdingOutlined,
+  WeiboOutlined,
+  GithubOutlined,
+  CloudOutlined,
+  CloudServerOutlined,
+  LaptopOutlined,
+  DesktopOutlined,
+  MobileOutlined,
+  TabletOutlined,
+  AreaChartOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  PieChartOutlined,
+  DotChartOutlined,
+  FundOutlined,
+  SlidersOutlined,
+  ClockCircleOutlined,
+  HistoryOutlined,
+  CalendarOutlined,
+  FieldTimeOutlined,
+  HourglassOutlined,
+  MonitorOutlined,
+  BugOutlined,
+  CodeOutlined,
+  ApiOutlined,
+  ConsoleSqlOutlined,
+  NodeIndexOutlined,
+  SafetyOutlined,
+  SecurityScanOutlined,
+  UnlockOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  WifiOutlined,
+  ApartmentOutlined,
+  ClusterOutlined,
+  ShareAltOutlined,
+  StarOutlined,
+  HeartOutlined,
+  LikeOutlined,
+  DislikeOutlined,
+  FlagOutlined,
+  TagOutlined,
+};
 
 // ========================================
 // 图标分类（用于图标选择器）
@@ -21,61 +218,135 @@ const iconComponentKeys = Object.keys(Icons).filter(
 
 export const iconCategories = {
   基础: [
-    "DashboardOutlined", "HomeOutlined", "AppstoreOutlined", "MenuOutlined",
-    "SettingOutlined", "ToolOutlined", "BulbOutlined", "AlertOutlined",
+    "DashboardOutlined",
+    "HomeOutlined",
+    "AppstoreOutlined",
+    "MenuOutlined",
+    "SettingOutlined",
+    "ToolOutlined",
+    "BulbOutlined",
+    "AlertOutlined",
   ],
   用户: [
-    "UserOutlined", "TeamOutlined", "IdcardOutlined", "SolutionOutlined",
-    "LoginOutlined", "LogoutOutlined", "KeyOutlined", "LockOutlined",
+    "UserOutlined",
+    "TeamOutlined",
+    "IdcardOutlined",
+    "SolutionOutlined",
+    "LoginOutlined",
+    "LogoutOutlined",
+    "KeyOutlined",
+    "LockOutlined",
   ],
   文件: [
-    "FileTextOutlined", "FileOutlined", "FolderOutlined", "FolderOpenOutlined",
-    "CopyOutlined", "SnippetsOutlined", "BookOutlined", "DatabaseOutlined",
+    "FileTextOutlined",
+    "FileOutlined",
+    "FolderOutlined",
+    "FolderOpenOutlined",
+    "CopyOutlined",
+    "SnippetsOutlined",
+    "BookOutlined",
+    "DatabaseOutlined",
   ],
   操作: [
-    "EditOutlined", "DeleteOutlined", "SearchOutlined", "ReloadOutlined",
-    "PlusOutlined", "MinusOutlined", "CheckCircleOutlined", "CloseCircleOutlined",
+    "EditOutlined",
+    "DeleteOutlined",
+    "SearchOutlined",
+    "ReloadOutlined",
+    "PlusOutlined",
+    "MinusOutlined",
+    "CheckCircleOutlined",
+    "CloseCircleOutlined",
   ],
   方向: [
-    "ArrowUpOutlined", "ArrowDownOutlined", "ArrowLeftOutlined", "ArrowRightOutlined",
-    "UpOutlined", "DownOutlined", "LeftOutlined", "RightOutlined",
-    "CaretUpOutlined", "CaretDownOutlined", "CaretLeftOutlined", "CaretRightOutlined",
+    "ArrowUpOutlined",
+    "ArrowDownOutlined",
+    "ArrowLeftOutlined",
+    "ArrowRightOutlined",
+    "UpOutlined",
+    "DownOutlined",
+    "LeftOutlined",
+    "RightOutlined",
+    "CaretUpOutlined",
+    "CaretDownOutlined",
+    "CaretLeftOutlined",
+    "CaretRightOutlined",
   ],
   媒体: [
-    "PlayCircleOutlined", "PauseCircleOutlined", "StopOutlined",
-    "FastForwardOutlined", "FastBackwardOutlined", "StepForwardOutlined",
+    "PlayCircleOutlined",
+    "PauseCircleOutlined",
+    "StopOutlined",
+    "FastForwardOutlined",
+    "FastBackwardOutlined",
+    "StepForwardOutlined",
   ],
   通信: [
-    "BellOutlined", "MessageOutlined", "MailOutlined", "WechatOutlined",
-    "QqOutlined", "DingdingOutlined", "WeiboOutlined", "GithubOutlined",
+    "BellOutlined",
+    "MessageOutlined",
+    "MailOutlined",
+    "WechatOutlined",
+    "QqOutlined",
+    "DingdingOutlined",
+    "WeiboOutlined",
+    "GithubOutlined",
   ],
   云服务: [
-    "CloudOutlined", "CloudServerOutlined", "LaptopOutlined",
-    "DesktopOutlined", "MobileOutlined", "TabletOutlined",
+    "CloudOutlined",
+    "CloudServerOutlined",
+    "LaptopOutlined",
+    "DesktopOutlined",
+    "MobileOutlined",
+    "TabletOutlined",
   ],
   数据: [
-    "DatabaseOutlined", "AreaChartOutlined", "BarChartOutlined", "LineChartOutlined",
-    "PieChartOutlined", "DotChartOutlined", "FundOutlined", "SlidersOutlined",
+    "DatabaseOutlined",
+    "AreaChartOutlined",
+    "BarChartOutlined",
+    "LineChartOutlined",
+    "PieChartOutlined",
+    "DotChartOutlined",
+    "FundOutlined",
+    "SlidersOutlined",
   ],
   时间: [
-    "ClockCircleOutlined", "HistoryOutlined", "CalendarOutlined",
-    "FieldTimeOutlined", "TimerOutlined", "HourglassOutlined",
+    "ClockCircleOutlined",
+    "HistoryOutlined",
+    "CalendarOutlined",
+    "FieldTimeOutlined",
+    "HourglassOutlined",
   ],
   系统: [
-    "MonitorOutlined", "SettingOutlined", "BugOutlined", "CodeOutlined",
-    "ApiOutlined", "ConsoleSqlOutlined", "DatabaseOutlined", "NodeIndexOutlined",
+    "MonitorOutlined",
+    "SettingOutlined",
+    "BugOutlined",
+    "CodeOutlined",
+    "ApiOutlined",
+    "ConsoleSqlOutlined",
+    "DatabaseOutlined",
+    "NodeIndexOutlined",
   ],
   安全: [
-    "SafetyOutlined", "SecurityScanOutlined", "ShieldOutlined",
-    "LockOutlined", "UnlockOutlined", "EyeOutlined", "EyeInvisibleOutlined",
+    "SafetyOutlined",
+    "SecurityScanOutlined",
+    "LockOutlined",
+    "UnlockOutlined",
+    "EyeOutlined",
+    "EyeInvisibleOutlined",
   ],
   网络: [
-    "WifiOutlined", "ApartmentOutlined", "ClusterOutlined",
-    "NodeIndexOutlined", "ShareAltOutlined", "ApiOutlined",
+    "WifiOutlined",
+    "ApartmentOutlined",
+    "ClusterOutlined",
+    "NodeIndexOutlined",
+    "ShareAltOutlined",
+    "ApiOutlined",
   ],
   其他: [
-    "StarOutlined", "HeartOutlined", "LikeOutlined",
-    "DislikeOutlined", "FlagOutlined", "TagOutlined",
+    "StarOutlined",
+    "HeartOutlined",
+    "LikeOutlined",
+    "DislikeOutlined",
+    "FlagOutlined",
+    "TagOutlined",
   ],
 };
 
@@ -170,7 +441,6 @@ export const iconDescriptionMap: Record<string, string> = {
   // 安全相关
   SafetyOutlined: "安全",
   SecurityScanOutlined: "安全扫描",
-  ShieldOutlined: "盾牌",
   UnlockOutlined: "解锁",
   EyeOutlined: "眼睛",
   EyeInvisibleOutlined: "隐藏眼睛",
@@ -196,33 +466,33 @@ export const iconDescriptionMap: Record<string, string> = {
 
 export const fullIconNameMap: Record<string, string> = {
   // 单词图标
-  "UserOutlined": "user",
-  "TeamOutlined": "users",
-  "MenuOutlined": "menu",
-  "SettingOutlined": "setting",
-  "SettingFilled": "setting",
-  "FileTextOutlined": "file",
-  "BellOutlined": "bell",
-  "MonitorOutlined": "monitor",
-  "DatabaseOutlined": "database",
-  "HistoryOutlined": "history",
-  "ClockCircleOutlined": "clock",
-  "HomeOutlined": "home",
-  "FolderOutlined": "folder",
-  "LaptopOutlined": "laptop",
-  "DashboardOutlined": "dashboard",
-  "DashboardFilled": "dashboard",
-  "IdcardOutlined": "idcard",
+  UserOutlined: "user",
+  TeamOutlined: "users",
+  MenuOutlined: "menu",
+  SettingOutlined: "setting",
+  SettingFilled: "setting",
+  FileTextOutlined: "file",
+  BellOutlined: "bell",
+  MonitorOutlined: "monitor",
+  DatabaseOutlined: "database",
+  HistoryOutlined: "history",
+  ClockCircleOutlined: "clock",
+  HomeOutlined: "home",
+  FolderOutlined: "folder",
+  LaptopOutlined: "laptop",
+  DashboardOutlined: "dashboard",
+  DashboardFilled: "dashboard",
+  IdcardOutlined: "idcard",
 
   // 网络设备管理相关图标
-  "CloudOutlined": "cloud",
-  "KeyOutlined": "key",
-  "ApartmentOutlined": "apartment",
+  CloudOutlined: "cloud",
+  KeyOutlined: "key",
+  ApartmentOutlined: "apartment",
 
   // 复合词图标 - 需要特殊映射
-  "CloudServerOutlined": "server",
-  "DesktopOutlined": "laptop",
-  "BookOutlined": "file",
+  CloudServerOutlined: "server",
+  DesktopOutlined: "laptop",
+  BookOutlined: "file",
 };
 
 // ========================================
@@ -237,30 +507,23 @@ export const fullIconNameMap: Record<string, string> = {
 export function getIconComponent(iconName?: string | null): React.ReactNode {
   if (!iconName) return undefined;
 
-  // 获取所有导出的图标组件（过滤掉工具函数）
-  const iconKeys = Object.keys(Icons).filter(
-    key => key !== "createFromIconfontCN" && key !== "default"
-  );
-
-  // 尝试直接匹配
-  if (iconKeys.includes(iconName)) {
-    const IconComponent = (Icons as unknown as IconComponentMap)[iconName];
-    if (IconComponent) {
-      return <IconComponent />;
-    }
+  // 1. Static registry lookup (all icons in iconCategories)
+  const staticIcon = STATIC_ICON_REGISTRY[iconName];
+  if (staticIcon) {
+    const Icon = staticIcon;
+    return <Icon />;
   }
 
-  // 尝试通过 fullIconNameMap 映射
+  // 2. fullIconNameMap reverse-lookup into static registry
   const mappedName = fullIconNameMap[iconName];
   if (mappedName) {
-    // 尝试找到对应的完整图标名
-    for (const key of iconKeys) {
-      if (key.toLowerCase().includes(mappedName.toLowerCase()) ||
-          key.toLowerCase() === mappedName + "outlined") {
-        const IconComponent = (Icons as unknown as IconComponentMap)[key];
-        if (IconComponent) {
-          return <IconComponent />;
-        }
+    for (const key of Object.keys(STATIC_ICON_REGISTRY)) {
+      if (
+        key.toLowerCase().includes(mappedName.toLowerCase()) ||
+        key.toLowerCase() === mappedName + "outlined"
+      ) {
+        const Icon = STATIC_ICON_REGISTRY[key];
+        return <Icon />;
       }
     }
   }
@@ -300,7 +563,7 @@ export function searchIcons(keyword: string): string[] {
   const lowerKeyword = keyword.toLowerCase();
   const allIcons = getAllIcons();
 
-  return allIcons.filter(iconName => {
+  return allIcons.filter((iconName) => {
     // 匹配图标名称
     if (iconName.toLowerCase().includes(lowerKeyword)) {
       return true;

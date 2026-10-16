@@ -17,40 +17,47 @@ export function useDutyConfig() {
       const result = await getDutyConfig();
       setConfig(result.data || null);
       return result.data || null;
-    } catch (error) {
+    } catch (_error) {
       message.error("获取配置失败");
       return null;
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 保存配置
-  const save = useCallback(async (values: {
-    reminderEnabled: boolean;
-    reminderTime: Dayjs;
-    reminderChannels: string[];
-    beforeReminderMinutes?: number;
-  }) => {
-    setSaving(true);
-    try {
-      const data = {
-        reminderEnabled: values.reminderEnabled,
-        reminderTime: values.reminderTime.format("HH:mm"),
-        reminderChannels: Array.isArray(values.reminderChannels) ? values.reminderChannels.join(",") : values.reminderChannels,
-        beforeReminderMinutes: values.beforeReminderMinutes,
-      };
-      await updateDutyConfig(data);
-      message.success("配置保存成功");
-      await fetch();
-      return true;
-    } catch (error) {
-      message.error("配置保存失败");
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  }, [fetch]);
+  const save = useCallback(
+    async (values: {
+      reminderEnabled: boolean;
+      reminderTime: Dayjs;
+      reminderChannels: string[];
+      beforeReminderMinutes?: number;
+    }) => {
+      setSaving(true);
+      try {
+        const data = {
+          reminderEnabled: values.reminderEnabled,
+          reminderTime: values.reminderTime.format("HH:mm"),
+          reminderChannels: Array.isArray(values.reminderChannels)
+            ? values.reminderChannels.join(",")
+            : values.reminderChannels,
+          beforeReminderMinutes: values.beforeReminderMinutes,
+        };
+        await updateDutyConfig(data);
+        message.success("配置保存成功");
+        await fetch();
+        return true;
+      } catch (_error) {
+        message.error("配置保存失败");
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    [fetch]
+  );
 
   // 获取表单初始值
   const getFormValues = useCallback(() => {

@@ -1,21 +1,15 @@
 /**
  * 默认主题配置 API
  * Default Theme Configuration API
+ *
+ * 合并入仓后统一从 @/types/config 导入 ThemeConfiguration，
+ * 避免 types/config.ts 与 lib/defaultThemeApi.ts 双重定义不一致。
  */
 
 import { post, get } from "@/lib/api";
+import type { ThemeConfiguration } from "@/types/config";
 
-/**
- * 主题配置接口
- */
-export interface ThemeConfiguration {
-  mode: "light" | "dark" | "auto";
-  style: "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet";
-  customColors?: {
-    primary?: string;
-    sidebar?: string;
-  };
-}
+export type { ThemeConfiguration };
 
 /**
  * 获取默认主题配置

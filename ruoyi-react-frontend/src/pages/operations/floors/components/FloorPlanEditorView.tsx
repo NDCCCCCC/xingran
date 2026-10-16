@@ -11,7 +11,11 @@ import {
 import type { Floor, Building } from "@/types";
 import { CADFloorPlanEditor } from "@/components/cad-editor";
 import type { FloorPlanData } from "@/components/cad-editor/types";
-import { DepartmentTreeSelect, type TreeNode, type Department } from "@/components/shared/DepartmentTreeSelect";
+import {
+  DepartmentTreeSelect,
+  type TreeNode,
+  type Department,
+} from "@/components/shared/DepartmentTreeSelect";
 
 export interface FloorOption {
   id: string;
@@ -87,7 +91,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
         extra={
           <Space size="middle">
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
-              <BuildOutlined style={{ color: "var(--theme-info, #1890ff)" }} />
+              <BuildOutlined style={{ color: "var(--theme-info, #337ab0)" }} />
               <DepartmentTreeSelect
                 style={{ width: 180 }}
                 placeholder="选择机构"
@@ -106,29 +110,31 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
                 placeholder="选择楼宇"
                 value={selectedBuildingId}
                 onChange={onBuildingChange}
-                options={buildingOptions.map(b =>    ({
+                options={buildingOptions.map((b) => ({
                   label: b.name,
                   value: b.id,
                 }))}
                 showSearch
                 optionFilterProp="label"
-               onSearch={() => {}}/>
+                onSearch={() => {}}
+              />
             </Space>
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
-              <AppstoreOutlined style={{ color: "var(--theme-success, #52c41a)" }} />
+              <AppstoreOutlined style={{ color: "var(--theme-success, #2d8949)" }} />
               <Select
                 style={{ width: 150 }}
                 placeholder="选择楼层"
                 value={currentFloor?.id}
                 onChange={onFloorChange}
-                options={floorOptions.map(f =>    ({
+                options={floorOptions.map((f) => ({
                   label: f.name || `${f.floorNo}层`,
                   value: f.id,
                 }))}
                 showSearch
                 optionFilterProp="label"
-               onSearch={() => {}}/>
+                onSearch={() => {}}
+              />
             </Space>
 
             <Button

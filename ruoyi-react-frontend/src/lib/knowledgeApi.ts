@@ -1,11 +1,13 @@
 import { post } from "./api";
-import type { BaseResponse, PageResponse } from "@/types";
+import { createResourceApi } from "./apiFactory";
+import type { CreatePayload } from "@/types/apiFactory";
+import type { BaseResponse, PageParams, PageResponse } from "@/types";
 
 // ==================== 类型定义 ====================
 
 // 知识库文章状态枚举
 export enum KnowledgeArticleStatus {
-  Draft = 0,     // 草稿
+  Draft = 0, // 草稿
   Published = 1, // 已发布
 }
 
@@ -130,8 +132,13 @@ export interface ConvertWorkOrderToArticleRequest {
 
 // ==================== 知识库文章 API ====================
 
-export function getKnowledgeArticleList(params: KnowledgeArticleListRequest): Promise<BaseResponse<PageResponse<KnowledgeArticle>>> {
-  return post("/knowledge/articles/list", params);
+// Phase 94 D-05: 标准 CRUD 形状函数委托共享工厂（导出签名零变化，异构函数保持原样）
+const articleCrud = createResourceApi<KnowledgeArticle>({ basePath: "/knowledge/articles" });
+
+export function getKnowledgeArticleList(
+  params: KnowledgeArticleListRequest
+): Promise<BaseResponse<PageResponse<KnowledgeArticle>>> {
+  return articleCrud.list(params as unknown as PageParams & Record<string, unknown>);
 }
 
 /** 知识库文章统计（总数 / 草稿 / 已发布 / 累计浏览 / 累计点赞） */
@@ -151,22 +158,30 @@ export function getKnowledgeArticleStatistics(): Promise<BaseResponse<KnowledgeA
 }
 
 export function getKnowledgeArticle(id: string): Promise<BaseResponse<KnowledgeArticle>> {
-  return post(`/knowledge/articles/${id}`, {});
+  return articleCrud.get(id);
 }
 
-export function createKnowledgeArticle(data: KnowledgeArticleCreateRequest): Promise<BaseResponse<KnowledgeArticle>> {
+export function createKnowledgeArticle(
+  data: KnowledgeArticleCreateRequest
+): Promise<BaseResponse<KnowledgeArticle>> {
   return post("/knowledge/articles", data);
 }
 
-export function updateKnowledgeArticle(id: string, data: KnowledgeArticleUpdateRequest): Promise<BaseResponse<{ message: string }>> {
-  return post(`/knowledge/articles/${id}/update`, data);
+export function updateKnowledgeArticle(
+  id: string,
+  data: KnowledgeArticleUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
+  return articleCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteKnowledgeArticle(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: 既有测试锁定单参 post(url) 契约，工厂 delete 传 {} 属 wire 级 body 变更
   return post(`/knowledge/articles/${id}/delete`);
 }
 
-export function searchKnowledgeArticles(data: SearchKnowledgeRequest): Promise<BaseResponse<{ list: KnowledgeArticle[]; total: number }>> {
+export function searchKnowledgeArticles(
+  data: SearchKnowledgeRequest
+): Promise<BaseResponse<{ list: KnowledgeArticle[]; total: number }>> {
   return post("/knowledge/articles/search", data);
 }
 
@@ -176,23 +191,40 @@ export function likeKnowledgeArticle(id: string): Promise<BaseResponse<{ message
 
 // ==================== 知识库分类 API ====================
 
-export function getKnowledgeCategoryList(params?: KnowledgeCategoryListRequest): Promise<BaseResponse<KnowledgeCategory[]>> {
-  return post("/knowledge/categories/list", params || {});
+const categoryCrud = createResourceApi<KnowledgeCategory>({ basePath: "/knowledge/categories" });
+
+export function getKnowledgeCategoryList(
+  params?: KnowledgeCategoryListRequest
+): Promise<BaseResponse<KnowledgeCategory[]>> {
+  return categoryCrud.list(
+    (params || {}) as unknown as PageParams & Record<string, unknown>
+  ) as unknown as Promise<BaseResponse<KnowledgeCategory[]>>;
 }
 
 export function getKnowledgeCategory(id: string): Promise<BaseResponse<KnowledgeCategory>> {
-  return post(`/knowledge/categories/${id}`, {});
+  return categoryCrud.get(id);
 }
 
-export function createKnowledgeCategory(data: KnowledgeCategoryCreateRequest): Promise<BaseResponse<KnowledgeCategory>> {
-  return post("/knowledge/categories", data);
+export function createKnowledgeCategory(
+  data: KnowledgeCategoryCreateRequest
+): Promise<BaseResponse<KnowledgeCategory>> {
+  return categoryCrud.create(
+    data as unknown as Partial<CreatePayload<KnowledgeCategory>>
+  ) as Promise<BaseResponse<KnowledgeCategory>>;
 }
 
-export function updateKnowledgeCategory(id: string, data: KnowledgeCategoryUpdateRequest): Promise<BaseResponse<{ message: string }>> {
-  return post(`/knowledge/categories/${id}/update`, data);
+export function updateKnowledgeCategory(
+  id: string,
+  data: KnowledgeCategoryUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
+  return categoryCrud.update(
+    id,
+    data as unknown as Partial<CreatePayload<KnowledgeCategory>>
+  ) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteKnowledgeCategory(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: delete 统一保持单参 post(url) 契约，不委托工厂 delete（传 {}）
   return post(`/knowledge/categories/${id}/delete`);
 }
 
@@ -206,16 +238,25 @@ export function createKnowledgeTag(data: { tagName: string }): Promise<BaseRespo
   return post("/knowledge/tags", data);
 }
 
-export function updateKnowledgeTag(id: string, data: { tagName: string }): Promise<BaseResponse<{ message: string }>> {
-  return post(`/knowledge/tags/${id}/update`, data);
+const tagCrud = createResourceApi<KnowledgeTag>({ basePath: "/knowledge/tags" });
+
+export function updateKnowledgeTag(
+  id: string,
+  data: { tagName: string }
+): Promise<BaseResponse<{ message: string }>> {
+  return tagCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteKnowledgeTag(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: delete 统一保持单参 post(url) 契约，不委托工厂 delete（传 {}）
   return post(`/knowledge/tags/${id}/delete`);
 }
 
 // ==================== 工单转知识库 API ====================
 
-export function convertWorkOrderToArticle(workOrderId: string, data: ConvertWorkOrderToArticleRequest): Promise<BaseResponse<KnowledgeArticle>> {
+export function convertWorkOrderToArticle(
+  workOrderId: string,
+  data: ConvertWorkOrderToArticleRequest
+): Promise<BaseResponse<KnowledgeArticle>> {
   return post(`/knowledge/workorders/${workOrderId}`, data);
 }

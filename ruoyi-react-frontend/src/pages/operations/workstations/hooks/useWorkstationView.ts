@@ -18,7 +18,9 @@ export interface UseWorkstationViewReturn {
   floorPlanWorkstations: WorkstationNode[];
 
   handleFloorChangeForPlan: (floorId: string) => void;
-  handlePositionUpdate: (items: { id: string; positionX: number; positionY: number; rotation?: number }[]) => Promise<void>;
+  handlePositionUpdate: (
+    items: { id: string; positionX: number; positionY: number; rotation?: number }[]
+  ) => Promise<void>;
   handleFloorPlanEdit: (workstation: WorkstationNode, openModal: () => void) => void;
 }
 
@@ -27,31 +29,43 @@ export function useWorkstationView(floorOptions: FloorOption[]): UseWorkstationV
   const [selectedFloorForPlan, setSelectedFloorForPlan] = useState<string>("");
   const [floorPlanWorkstations, setFloorPlanWorkstations] = useState<WorkstationNode[]>([]);
 
-  const loadFloorPlanWorkstations = useCallback(async (floorCode: string) => {
-    if (!floorCode) {
-      setFloorPlanWorkstations([]);
-      return;
-    }
-    try {
-      const result = await workstationApi.list({ floorCode, current: 1, pageSize: 1000 });
-      const list = result.data?.list || [];
-      // 转换为 WorkstationNode 格式
-      setFloorPlanWorkstations(list.map(toWorkstationNode));
-    } catch (error) {
-      handleApiError(error, "加载平面图数据", false);
-      setFloorPlanWorkstations([]);
-    }
-  }, []);
+  const loadFloorPlanWorkstations = useCallback(
+    async (floorCode: string) => {
+      if (!floorCode) {
+        setFloorPlanWorkstations([]);
+        return;
+      }
+      try {
+        // V130R-09 D-03-6: 对外签名保持按 code（FloorPlanView 的 Select value/Tag 查找均按 code），
+        // 内部 code→id 解析后走楼层全集专用端点（无分页，替代 pageSize:1000 List 反模式）
+        const floorId = floorOptions.find((f) => f.code === floorCode)?.id;
+        if (!floorId) {
+          setFloorPlanWorkstations([]);
+          return;
+        }
+        const list = await workstationApi.getFloorWorkstationsAll(floorId);
+        // 转换为 WorkstationNode 格式
+        setFloorPlanWorkstations(list.map(toWorkstationNode));
+      } catch (error) {
+        handleApiError(error, "加载平面图数据", false);
+        setFloorPlanWorkstations([]);
+      }
+    },
+    [floorOptions]
+  );
 
   const handlePositionUpdate = useCallback(
     async (items: { id: string; positionX: number; positionY: number; rotation?: number }[]) => {
       try {
         await workstationApi.updatePositions(items);
 
+        // MISC-01: 用 Map<id, item> 索引替代 O(n²) find，批量更新 O(n)
+        const itemMap = new Map(items.map((item) => [item.id, item]));
+
         // 更新本地平面图数据
         setFloorPlanWorkstations((prev) =>
           prev.map((ws) => {
-            const updatedItem = items.find((item) => item.id === ws.id);
+            const updatedItem = itemMap.get(ws.id);
             if (updatedItem) {
               return {
                 ...ws,

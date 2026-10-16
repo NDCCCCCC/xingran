@@ -22,7 +22,11 @@ export function useFloorStatistics() {
   const loadStatistics = useCallback(async () => {
     try {
       const stats = await floorApi.statistics();
-      setStatistics({ total: stats.total ?? 0, active: stats.active ?? 0, inactive: stats.inactive ?? 0 });
+      setStatistics({
+        total: stats.total ?? 0,
+        active: stats.active ?? 0,
+        inactive: stats.inactive ?? 0,
+      });
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
     }

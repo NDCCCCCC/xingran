@@ -11,13 +11,13 @@ import {
   getDutyScheduleList,
   getTodayDuty,
   getDutyPoolList,
-  getUserList,
   getMonthlyDutySchedule,
   type DutySchedule,
   type DutyPool,
-  type SimpleUser,
   type MonthlyDutyMember,
 } from "@/lib/dutyApi";
+import type { SimpleUser } from "@/lib/workorderApi";
+import { useUserOptions } from "@/hooks/useUserOptions";
 
 export interface UseScheduleDataParams {
   current: number;
@@ -37,10 +37,14 @@ export interface UseScheduleDataReturn {
   currentWeekStart: Dayjs;
 
   // 数据加载方法
-  fetchList: (page?: number, pageSize?: number, sortCol?: string, sortAsc?: boolean) => Promise<void>;
+  fetchList: (
+    page?: number,
+    pageSize?: number,
+    sortCol?: string,
+    sortAsc?: boolean
+  ) => Promise<void>;
   fetchAllSchedules: () => Promise<void>;
   fetchPools: () => Promise<void>;
-  fetchUsers: () => Promise<void>;
   fetchWeeklyDuty: (weekStart: Dayjs) => Promise<void>;
   setCurrentWeekStart: (weekStart: Dayjs) => void;
 }
@@ -54,44 +58,48 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
   const [total, setTotal] = useState(0);
   const [allSchedules, setAllSchedules] = useState<DutySchedule[]>([]);
   const [pools, setPools] = useState<DutyPool[]>([]);
-  const [users, setUsers] = useState<SimpleUser[]>([]);
+  const { data: users = [] } = useUserOptions();
   const [weeklyDutyData, setWeeklyDutyData] = useState<Record<string, MonthlyDutyMember[]>>({});
   const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(dayjs().startOf("week"));
 
   // 获取排班列表
-  const fetchList = useCallback(async (page?: number, size?: number, sortCol?: string, sortAsc?: boolean) => {
-    setLoading(true);
-    try {
-      const values = searchForm.getFieldsValue() as {
-        poolId?: string;
-        userId?: string;
-        dateRange?: [Dayjs, Dayjs];
-        dutyType?: string;
-        expired?: number;
-      };
-      const result = await getDutyScheduleList({
-        current: page ?? current,
-        pageSize: size ?? pageSize,
-        poolId: values.poolId,
-        userId: values.userId,
-        startDate: values.dateRange?.[0]?.format("YYYY-MM-DD"),
-        endDate: values.dateRange?.[1]?.format("YYYY-MM-DD"),
-        dutyType: values.dutyType,
-        expired: values.expired,
-        // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
-        ...(sortCol ? { orderByColumn: sortCol, isAsc: sortAsc } : {}),
-      });
-      setDataSource(result.data?.list ?? []);
-      setTotal(result.data?.total ?? 0);
-    } catch (error) {
-      message.error("获取排班列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize, searchForm]);
+  const fetchList = useCallback(
+    async (page?: number, size?: number, sortCol?: string, sortAsc?: boolean) => {
+      setLoading(true);
+      try {
+        const values = searchForm.getFieldsValue() as {
+          poolId?: string;
+          userId?: string;
+          dateRange?: [Dayjs, Dayjs];
+          dutyType?: string;
+          expired?: number;
+        };
+        const result = await getDutyScheduleList({
+          current: page ?? current,
+          pageSize: size ?? pageSize,
+          poolId: values.poolId,
+          userId: values.userId,
+          startDate: values.dateRange?.[0]?.format("YYYY-MM-DD"),
+          endDate: values.dateRange?.[1]?.format("YYYY-MM-DD"),
+          dutyType: values.dutyType,
+          expired: values.expired,
+          // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
+          ...(sortCol ? { orderByColumn: sortCol, isAsc: sortAsc } : {}),
+        });
+        setDataSource(result.data?.list ?? []);
+        setTotal(result.data?.total ?? 0);
+      } catch (_error) {
+        message.error("获取排班列表失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    [current, pageSize, searchForm]
+  );
 
   // 获取今日值班
-  const fetchTodayDuty = useCallback(async () => {
+  const _fetchTodayDuty = useCallback(async () => {
     try {
       await getTodayDuty();
     } catch (error) {
@@ -116,16 +124,6 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
       setPools(result.data?.list || []);
     } catch (error) {
       console.error("获取值班池列表失败", error);
-    }
-  }, []);
-
-  // 获取用户列表（只获取启用的）
-  const fetchUsers = useCallback(async () => {
-    try {
-      const result = await getUserList({ status: 0 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error("获取用户列表失败", error);
     }
   }, []);
 
@@ -169,7 +167,6 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
     fetchList,
     fetchAllSchedules,
     fetchPools,
-    fetchUsers,
     fetchWeeklyDuty,
     setCurrentWeekStart,
   };

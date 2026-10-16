@@ -1,5 +1,5 @@
 import { Tag, Button, Space } from "antd";
-import type { ColumnsType, ColumnType, ColumnGroupType } from "antd/es/table";
+import type { ColumnType, ColumnGroupType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { formatDateTime } from "@/utils/datetime";
@@ -39,10 +39,7 @@ export interface SorterMeta<T = unknown> {
   _recordType?: T;
 }
 
-export function createSorterMeta<T = unknown>(
-  field: string,
-  type?: SorterType
-): SorterMeta<T> {
+export function createSorterMeta<T = unknown>(field: string, type?: SorterType): SorterMeta<T> {
   return { field, type };
 }
 
@@ -146,9 +143,7 @@ export function createStatusColumn<T>(
     key: field,
     width: 80,
     render: (status: number) => (
-      <Tag color={status === 0 ? "success" : "error"}>
-        {status === 0 ? "正常" : "停用"}
-      </Tag>
+      <Tag color={status === 0 ? "success" : "error"}>{status === 0 ? "正常" : "停用"}</Tag>
     ),
     ...config,
   };
@@ -213,10 +208,7 @@ export function createTagColumn<T>(
   };
 }
 
-export function createIndexColumn<T>(
-  currentPage: number,
-  pageSize: number
-): TableColumn<T> {
+export function createIndexColumn<T>(currentPage: number, pageSize: number): TableColumn<T> {
   return {
     title: "序号",
     key: "index",

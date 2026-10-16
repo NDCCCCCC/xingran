@@ -16,15 +16,10 @@ import {
 import {
   getEnabledWorkOrderCategories,
   type WorkOrderCategory,
-} from "@/lib/workorderApi";
-import {
-  getUserList,
   type SimpleUser,
 } from "@/lib/workorderApi";
-import {
-  getDutyPoolList,
-  type DutyPool,
-} from "@/lib/dutyApi";
+import { getDutyPoolList, type DutyPool } from "@/lib/dutyApi";
+import { useUserOptions } from "@/hooks/useUserOptions";
 
 export interface TemplateStatistics {
   total: number;
@@ -48,19 +43,22 @@ export interface UseTemplateDataReturn {
   // 数据加载方法
   fetchList: (page?: number, pageSize?: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
-  fetchUsers: () => Promise<void>;
   fetchDutyPools: () => Promise<void>;
   fetchLogs: (templateId: string) => Promise<void>;
   setSelectedTemplate: (template: PeriodicWorkOrderTemplate | null) => void;
 }
 
-export function useTemplateData(searchForm: FormInstance<unknown>, current: number, pageSize: number): UseTemplateDataReturn {
+export function useTemplateData(
+  searchForm: FormInstance<unknown>,
+  current: number,
+  _pageSize: number
+): UseTemplateDataReturn {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<PeriodicWorkOrderTemplate[]>([]);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
-  const [users, setUsers] = useState<SimpleUser[]>([]);
+  const { data: users = [] } = useUserOptions();
   const [dutyPools, setDutyPools] = useState<DutyPool[]>([]);
   const [logs, setLogs] = useState<PeriodicWorkOrderLog[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<PeriodicWorkOrderTemplate | null>(null);
@@ -88,27 +86,30 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
   }, []);
 
   // 获取列表数据
-  const fetchList = useCallback(async (page?: number, pageSize?: number) => {
-    setLoading(true);
-    try {
-      const values = searchForm.getFieldsValue() as { title?: string; isEnabled?: boolean };
-      const result = await getPeriodicTemplateList({
-        current: page ?? current,
-        pageSize: pageSize ?? pageSize,
-        title: values.title,
-        isEnabled: values.isEnabled,
-      });
-      setDataSource(result.data?.list ?? []);
-      setTotal(result.data?.total ?? 0);
+  const fetchList = useCallback(
+    async (page?: number, pageSize?: number) => {
+      setLoading(true);
+      try {
+        const values = searchForm.getFieldsValue() as { title?: string; isEnabled?: boolean };
+        const result = await getPeriodicTemplateList({
+          current: page ?? current,
+          pageSize: pageSize ?? pageSize,
+          title: values.title,
+          isEnabled: values.isEnabled,
+        });
+        setDataSource(result.data?.list ?? []);
+        setTotal(result.data?.total ?? 0);
 
-      // 列表加载后顺带刷新统计（全局 COUNT）；搜索/分页/增删改均经 fetchList，统计始终为真实全局计数。
-      fetchStats();
-    } catch {
-      message.error("获取模板列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize, searchForm, message, fetchStats]);
+        // 列表加载后顺带刷新统计（全局 COUNT）；搜索/分页/增删改均经 fetchList，统计始终为真实全局计数。
+        fetchStats();
+      } catch {
+        message.error("获取模板列表失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, searchForm, message, fetchStats]
+  );
 
   // 获取分类列表
   const fetchCategories = useCallback(async () => {
@@ -117,16 +118,6 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
       setCategories(result.data || []);
     } catch (error) {
       console.error("获取分类列表失败:", error);
-    }
-  }, []);
-
-  // 获取用户列表
-  const fetchUsers = useCallback(async () => {
-    try {
-      const result = await getUserList({ status: 0 });
-      setUsers(result.data?.list || []);
-    } catch (error) {
-      console.error("获取用户列表失败:", error);
     }
   }, []);
 
@@ -162,7 +153,6 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
     selectedTemplate,
     fetchList,
     fetchCategories,
-    fetchUsers,
     fetchDutyPools,
     fetchLogs,
     setSelectedTemplate,

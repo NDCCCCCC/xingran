@@ -12,7 +12,10 @@ import type { FC } from "react";
 export type StatusType = "success" | "error" | "warning" | "default" | "processing";
 
 /** 状态标签配置 */
-const STATUS_CONFIG: Record<StatusType, { className: string; icon?: FC<{ style?: React.CSSProperties }>; label: string }> = {
+const STATUS_CONFIG: Record<
+  StatusType,
+  { className: string; icon?: FC<{ style?: React.CSSProperties }>; label: string }
+> = {
   success: { className: "modern-tag-success", icon: CheckCircleOutlined, label: "正常" },
   error: { className: "modern-tag-error", icon: StopOutlined, label: "停用" },
   warning: { className: "modern-tag-warning", icon: ClockCircleOutlined, label: "警告" },
@@ -48,14 +51,15 @@ export const ModernTag: FC<ModernTagProps> = ({
   const text = children || config.label;
 
   if (!modern) {
-    return <Tag color={status} {...props}>{text}</Tag>;
+    return (
+      <Tag color={status} {...props}>
+        {text}
+      </Tag>
+    );
   }
 
   return (
-    <Tag
-      className={config.className}
-      {...props}
-    >
+    <Tag className={config.className} {...props}>
       {showIcon && Icon && <Icon style={{ marginRight: "4px", fontSize: "12px" }} />}
       {text}
     </Tag>
@@ -80,19 +84,10 @@ export function renderStatusTag(
     modern?: boolean;
   }
 ) {
-  const {
-    normalText = "正常",
-    stopText = "停用",
-    showIcon = true,
-    modern = true,
-  } = config || {};
+  const { normalText = "正常", stopText = "停用", showIcon = true, modern = true } = config || {};
 
   return (
-    <ModernTag
-      status={status === 0 ? "success" : "error"}
-      showIcon={showIcon}
-      modern={modern}
-    >
+    <ModernTag status={status === 0 ? "success" : "error"} showIcon={showIcon} modern={modern}>
       {status === 0 ? normalText : stopText}
     </ModernTag>
   );

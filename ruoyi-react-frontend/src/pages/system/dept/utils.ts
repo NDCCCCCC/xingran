@@ -19,7 +19,7 @@ export function flattenTreeToList(tree: DepartmentTreeNode[]): Department[] {
     if (!nodes || !Array.isArray(nodes)) {
       return;
     }
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (node) {
         result.push(node);
         if (node.children && node.children.length > 0) {
@@ -42,12 +42,17 @@ export function transformToParentTreeOptions(data: DepartmentTreeNode[]): Parent
     title: item.deptName,
     value: item.id,
     key: item.id,
-    children: item.children && item.children.length > 0 ? transformToParentTreeOptions(item.children) : undefined,
+    children:
+      item.children && item.children.length > 0
+        ? transformToParentTreeOptions(item.children)
+        : undefined,
   }));
 }
 
 /** 渲染树形表格数据 */
-export function renderTreeData(data: DepartmentTreeNode[]): (DepartmentTreeNode & { key: string })[] {
+export function renderTreeData(
+  data: DepartmentTreeNode[]
+): (DepartmentTreeNode & { key: string })[] {
   if (!data || !Array.isArray(data)) {
     return [];
   }

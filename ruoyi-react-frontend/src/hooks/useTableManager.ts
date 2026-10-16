@@ -2,14 +2,11 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Form } from "antd";
 import { useLocation } from "react-router-dom";
 import type { FormInstance } from "antd/es/form";
-import type {
-  TablePaginationConfig,
-  FilterValue,
-  SorterResult,
-} from "antd/es/table/interface";
+import type { TablePaginationConfig, FilterValue, SorterResult } from "antd/es/table/interface";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { TABLE_STATE_PREFIX, sanitizePathForKey } from "@/constants/storage";
+import { handleApiError } from "@/utils/errorHandler";
 import type { SortOrder } from "@/hooks/useServerSort";
 import type { SorterMeta } from "@/utils/tableHelpers";
 
@@ -82,13 +79,16 @@ export interface TableManagerReturn<T> {
 /** 过滤掉 undefined / null / "" 的空值，避免污染请求参数 */
 function filterEmpty(values?: Record<string, unknown>): Record<string, unknown> {
   if (!values) return {};
-  return Object.keys(values).reduce((acc, key) => {
-    const value = values[key];
-    if (value !== undefined && value !== null && value !== "") {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, unknown>);
+  return Object.keys(values).reduce(
+    (acc, key) => {
+      const value = values[key];
+      if (value !== undefined && value !== null && value !== "") {
+        acc[key] = value;
+      }
+      return acc;
+    },
+    {} as Record<string, unknown>
+  );
 }
 
 /**
@@ -169,20 +169,33 @@ export function useTableManager<T>(
   // 保持 filtersRef 的同步可读性（loadData 空依赖读 ref），mount 时从 sessionStorage 恢复，
   // 写入时同步镜像；切 tab / 刷新可恢复筛选条件，关闭 tab / 登出由外部统一清理。
   const filtersStorageKey = `${TABLE_STATE_PREFIX}${sanitizePathForKey(location.pathname)}_filters`;
-  const filtersRef = useRef<Record<string, unknown>>(readInitialFilters(filtersStorageKey));
+  // MISC-03: 惰性初始化 — null 填充 + 首次 access 时读取 sessionStorage，
+  // 消除 24 个列表页首帧不必要的同步 sessionStorage 读取。
+  const filtersRef = useRef<Record<string, unknown> | null>(null);
 
-  const persistFilters = useCallback((next: Record<string, unknown>) => {
-    filtersRef.current = next;
-    try {
-      if (typeof window !== "undefined") {
-        window.sessionStorage.setItem(filtersStorageKey, JSON.stringify(next));
+  const persistFilters = useCallback(
+    (next: Record<string, unknown>) => {
+      // MISC-03: 惰性初始化 — 首次 access 时读取 sessionStorage
+      if (filtersRef.current === null) {
+        filtersRef.current = readInitialFilters(filtersStorageKey);
       }
-    } catch {
-      // 隐私模式 / 配额溢出 — 静默
-    }
-  }, [filtersStorageKey]);
+      filtersRef.current = next;
+      try {
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(filtersStorageKey, JSON.stringify(next));
+        }
+      } catch {
+        // 隐私模式 / 配额溢出 — 静默
+      }
+    },
+    [filtersStorageKey]
+  );
 
   const clearPersistedFilters = useCallback(() => {
+    // MISC-03: 惰性初始化 — 确保已初始化再清理
+    if (filtersRef.current === null) {
+      filtersRef.current = readInitialFilters(filtersStorageKey);
+    }
     filtersRef.current = {};
     try {
       if (typeof window !== "undefined") {
@@ -211,13 +224,18 @@ export function useTableManager<T>(
 
   // mount 时若存在恢复的 filters，回填到搜索表单，保持 UI 与查询参数一致
   useEffect(() => {
+    // MISC-03 修复: filtersRef 在 mount 时为 null（惰性初始化），这里触发首次读取
+    // 让 mount-time form 回填仍按既有契约工作——同时 sessionStorage 读取只在 effect
+    // 首次执行时发生一次，避免 24 个列表页的首帧同步 I/O。
+    if (filtersRef.current === null) {
+      filtersRef.current = readInitialFilters(filtersStorageKey);
+    }
     const restored = filtersRef.current;
     if (restored && Object.keys(restored).length > 0) {
       searchForm.setFieldsValue(restored);
     }
     // 仅 mount 一次：searchForm 引用稳定
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchForm]);
+  }, [searchForm, filtersStorageKey]);
 
   // loadData 读 ref 组装参数：current/pageSize + filters(持久化) + 排序。
   // params 作为 override 最后展开，可覆盖任意字段（分页/排序联动显式传新值）。
@@ -239,6 +257,14 @@ export function useTableManager<T>(
       const newTotal = result.total ?? 0;
       setTotal(newTotal);
       externalPaginationRef.current?.setTotal?.(newTotal);
+    } catch (error) {
+      // loadData 的调用方多为 fire-and-forget（handleRefresh / handleReset /
+      // 分页回调），此前只有 finally 没有 catch，请求失败时 rejection 会逃逸成
+      // unhandled rejection，且用户看不到任何提示。这里统一兜住：提示 + 清空表格。
+      handleApiError(error, "加载列表数据");
+      setData([]);
+      setTotal(0);
+      externalPaginationRef.current?.setTotal?.(0);
     } finally {
       setLoading(false);
     }
@@ -285,11 +311,14 @@ export function useTableManager<T>(
     setEditModalVisible(true);
   }, [editForm]);
 
-  const handleEdit = useCallback((item: T) => {
-    setEditingItem(item);
-    editForm.setFieldsValue(item);
-    setEditModalVisible(true);
-  }, [editForm]);
+  const handleEdit = useCallback(
+    (item: T) => {
+      setEditingItem(item);
+      editForm.setFieldsValue(item);
+      setEditModalVisible(true);
+    },
+    [editForm]
+  );
 
   const handleModalClose = useCallback(() => {
     setEditModalVisible(false);

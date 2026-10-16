@@ -3,9 +3,9 @@
  * 设备发现数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { App } from "antd";
-import type { DeviceDiscovery, Department, BaseResponse, PageResponse } from "@/types";
+import type { DeviceDiscovery, Department, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import type { DiscoveryStatistics, ModalState } from "../types";
 
@@ -59,23 +59,26 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   });
   const [currentDiscovery, setCurrentDiscovery] = useState<DeviceDiscovery | null>(null);
 
-  const loadDiscoveries = useCallback(async (params: Record<string, unknown> = {}) => {
-    setLoading(true);
-    try {
-      // 直接透传所有 params(含 orderByColumn/isAsc)给后端,后端白名单过滤非法字段
-      const result = await post<PageResponse<DeviceDiscovery>>("/network/discoveries/list", {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-        ...params,
-      });
-      setDiscoveries(result.data?.list || []);
-      setTotal(result.data?.total || 0);
-    } catch (error) {
-      console.error("加载发现任务失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize]);
+  const loadDiscoveries = useCallback(
+    async (params: Record<string, unknown> = {}) => {
+      setLoading(true);
+      try {
+        // 直接透传所有 params(含 orderByColumn/isAsc)给后端,后端白名单过滤非法字段
+        const result = await post<PageResponse<DeviceDiscovery>>("/network/discoveries/list", {
+          current: params.current || current,
+          pageSize: params.pageSize || pageSize,
+          ...params,
+        });
+        setDiscoveries(result.data?.list || []);
+        setTotal(result.data?.total || 0);
+      } catch (error) {
+        console.error("加载发现任务失败:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, pageSize]
+  );
 
   // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = useCallback(async () => {
@@ -96,7 +99,10 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadDepartments = useCallback(async () => {
     try {
-      const result = await post<PageResponse<Department>>("/system/departments/list", { current: 1, pageSize: 50 });
+      const result = await post<PageResponse<Department>>("/system/departments/list", {
+        current: 1,
+        pageSize: 50,
+      });
       setDepartments(result.data?.list || []);
     } catch (error) {
       console.error("加载部门列表失败:", error);
@@ -105,11 +111,15 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadDiscoveryResults = useCallback(async (id: string) => {
     try {
-      const result = await post<{ devices: Record<string, unknown>[] }>(`/network/discoveries/${id}/results`, {});
+      const result = await post<{ devices: Record<string, unknown>[] }>(
+        `/network/discoveries/${id}/results`,
+        {}
+      );
       setDiscoveredDevices(result.data?.devices || []);
-    } catch (error) {
+    } catch (_error) {
       message.error("获取结果失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return {

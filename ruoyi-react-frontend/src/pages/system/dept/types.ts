@@ -3,8 +3,6 @@
  * 部门页面类型定义
  */
 
-import type { Department } from "@/types";
-
 // 重新导出 Department 类型
 export type { Department } from "@/types";
 

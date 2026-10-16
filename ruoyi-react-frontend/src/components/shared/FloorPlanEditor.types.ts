@@ -6,19 +6,21 @@ export interface WorkstationNode {
   id: string;
   code: string;
   name: string;
-  x: number;  // positionX
-  y: number;  // positionY
-  width: number;   // 默认 80
-  height: number;  // 默认 60
+  x: number; // positionX
+  y: number; // positionY
+  width: number; // 默认 80
+  height: number; // 默认 60
   status: number;
-  type: number;  // workstationType
-  rotation?: number;  // 旋转角度（度），默认0
+  type: number; // workstationType
+  rotation?: number; // 旋转角度（度），默认0
 }
 
 export interface FloorPlanEditorProps {
   floorId: string;
   workstations: WorkstationNode[];
-  onUpdatePosition: (items: {id: string; positionX: number; positionY: number; rotation?: number}[]) => Promise<void>;
+  onUpdatePosition: (
+    items: { id: string; positionX: number; positionY: number; rotation?: number }[]
+  ) => Promise<void>;
   onEdit: (workstation: WorkstationNode) => void;
 }
 

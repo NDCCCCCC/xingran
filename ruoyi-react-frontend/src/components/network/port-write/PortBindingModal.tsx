@@ -20,7 +20,6 @@
 
 import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, Radio, App } from "antd";
-import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus } from "@/types/network";
 import { writePortBinding } from "@/lib/api/networkApi";
@@ -51,12 +50,7 @@ export interface PortBindingModalProps {
  * 端口列表页"操作"列点击"端口绑定"菜单项打开。
  * ports/index.tsx 通过 bindModalOpen + bindModalRecord state 控制。
  */
-export function PortBindingModal({
-  open,
-  portRecord,
-  onClose,
-  onSuccess,
-}: PortBindingModalProps) {
+export function PortBindingModal({ open, portRecord, onClose, onSuccess }: PortBindingModalProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
   const navigate = useNavigate();
@@ -146,11 +140,7 @@ export function PortBindingModal({
         initialValues={{ op: "add", ipAddress: "", macAddress: "" }}
       >
         {/* op 主字段: Radio.Group buttonStyle="solid", default "add" */}
-        <Form.Item
-          name="op"
-          label="操作"
-          rules={[{ required: true, message: "请选择绑定操作" }]}
-        >
+        <Form.Item name="op" label="操作" rules={[{ required: true, message: "请选择绑定操作" }]}>
           <Radio.Group
             buttonStyle="solid"
             options={BIND_OPS as unknown as Array<{ label: string; value: string }>}
@@ -165,10 +155,12 @@ export function PortBindingModal({
             { required: true, message: "请输入 IP 地址" },
             {
               pattern: IPV4_REGEX,
+              // eslint-disable-next-line no-restricted-syntax -- 错误提示示例 IP, 仅 UI 文本
               message: "请输入合法 IPv4 地址（如 10.62.25.5）",
             },
           ]}
         >
+          {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
           <Input placeholder="例如 10.62.25.5" allowClear />
         </Form.Item>
 
@@ -184,10 +176,7 @@ export function PortBindingModal({
           ]}
           extra="不填则仅 IP 绑定；后端 service 会归一化为各厂商格式"
         >
-          <Input
-            placeholder="例如 AA:BB:CC:DD:EE:FF（不填则仅 IP 绑定）"
-            allowClear
-          />
+          <Input placeholder="例如 AA:BB:CC:DD:EE:FF（不填则仅 IP 绑定）" allowClear />
         </Form.Item>
 
         {/* D-02 reason 字段 — 外层 reasonSelect Select + 内层 reasonText TextArea (仅 __custom__ 时展开) */}
@@ -202,6 +191,7 @@ export function PortBindingModal({
             },
           ]}
         >
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({

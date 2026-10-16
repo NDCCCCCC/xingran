@@ -2,10 +2,9 @@
  * 运维管理模块 API
  */
 
-import axios from "axios";
-import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { post, get, postFormData } from "./api";
-import { getAccessToken } from "@/utils/authHelpers";
+import { createResourceApi } from "./apiFactory";
+import { downloadFile, downloadFilePost } from "./download";
 import type {
   BaseResponse,
   Building,
@@ -27,74 +26,10 @@ import type {
 // ==================== 通用类型 ====================
 
 /**
- * 通用下拉选项 — 后端 dropdown-options 端点的响应元素。
- * 与 antd Select 的 options={[{value, label}]} 直接对齐。
- *
- * 后端硬 LIMIT 50;keyword 通过 onSearch 远程查询。
- * 替代反模式: pageSize:1000 + filterOption 客户端 substring 匹配。
+ * 通用下拉选项 — 定义已上移 src/lib/apiFactory.ts（Phase 94 D-03 单一权威）,
+ * 此处 re-export 兜底既有 import 路径（当前零外部消费方,防新增误引直接落工厂权威）。
  */
-export interface DropdownOption {
-  value: string;
-  label: string;
-}
-
-// ==================== 通用 CRUD 工厂函数 ====================
-
-interface CrudApiConfig {
-  basePath: string;
-  /** 自定义 dropdown-options 端点路径,默认 "/dropdown-options" */
-  dropdownPath?: string;
-}
-
-function createCrudApi<T>(config: CrudApiConfig) {
-  const { basePath, dropdownPath = "/dropdown-options" } = config;
-
-  return {
-    list: async (params: PageParams & Record<string, unknown>) => {
-      return await post<PageResponse<T>>(`${basePath}/list`, params);
-    },
-
-    get: async (id: string) => {
-      return await post<T>(`${basePath}/${id}`, {});
-    },
-
-    create: async (data: Partial<T>) => {
-      return await post(basePath, data);
-    },
-
-    update: async (id: string, data: Partial<T>) => {
-      return await post(`${basePath}/${id}/update`, data);
-    },
-
-    delete: async (id: string) => {
-      return await post(`${basePath}/${id}/delete`, {});
-    },
-
-    batch: async (action: string, data: Record<string, unknown>) => {
-      return await post(`${basePath}/batch`, { action, ...data });
-    },
-
-    // 统计(专用 COUNT 端点,可选筛选参数;返回各 status 桶计数 data)
-    statistics: async (params: Record<string, unknown> = {}) => {
-      const res = await post<Record<string, number>>(`${basePath}/statistics`, params);
-      return res.data ?? {};
-    },
-
-    /**
-     * 下拉数据源远程搜索 — 配合 antd Select 的 showSearch + filterOption={false} + onSearch。
-     * 后端硬 LIMIT 50;keyword 通过 onSearch 防抖传入。
-     * @example
-     *   const [opts, setOpts] = useState<DropdownOption[]>([]);
-     *   const debouncedSearch = useMemo(() => debounce(setOpts, 300), []);
-     *   <Select showSearch filterOption={false} options={opts}
-     *           onSearch={(kw) => workstationApi.searchOptions({ name: kw }).then(setOpts)} />
-     */
-    searchOptions: async (params: Record<string, unknown> = {}) => {
-      const res = await post<DropdownOption[]>(`${basePath}${dropdownPath}`, params);
-      return res.data ?? [];
-    },
-  };
-}
+export type { DropdownOption } from "./apiFactory";
 
 // ==================== 楼宇管理 ====================
 
@@ -102,10 +37,10 @@ export interface BuildingListParams extends PageParams {
   name?: string;
   code?: string;
   status?: number;
-  orgId?: string;  // 所属机构ID，用于按部门筛选
+  orgId?: string; // 所属机构ID，用于按部门筛选
 }
 
-export const buildingApi = createCrudApi<Building>({ basePath: "/ops/building" });
+export const buildingApi = createResourceApi<Building>({ basePath: "/ops/building" });
 
 // ==================== 楼层管理 ====================
 
@@ -114,10 +49,10 @@ export interface FloorListParams extends PageParams {
   floorNo?: string;
   name?: string;
   status?: number;
-  orgId?: string;  // 所属机构ID，用于按部门筛选
+  orgId?: string; // 所属机构ID，用于按部门筛选
 }
 
-const floorCrudApi = createCrudApi<Floor>({ basePath: "/ops/floor" });
+const floorCrudApi = createResourceApi<Floor>({ basePath: "/ops/floor" });
 
 export const floorApi = {
   ...floorCrudApi,
@@ -134,10 +69,10 @@ export interface WorkstationListParams extends PageParams {
   workstationCode?: string;
   name?: string;
   status?: number;
-  orgId?: string;  // 所属机构ID，用于按部门筛选
+  orgId?: string; // 所属机构ID，用于按部门筛选
 }
 
-const workstationCrudApi = createCrudApi<WorkstationOps>({ basePath: "/ops/workstation" });
+const workstationCrudApi = createResourceApi<WorkstationOps>({ basePath: "/ops/workstation" });
 
 // Phase 39: 工位部门下拉选项(后端 union: orgId 子孙 + alias 映射)
 // JSON tag 与后端 Plan 39-03 的 DeptOption 完全对齐 (deptId / deptName / isAlias)
@@ -159,6 +94,23 @@ export const workstationApi = {
   deptOptions: async (orgId: string): Promise<DeptOption[]> => {
     const res = await post<DeptOption[]>("/ops/workstation/dept-options", { orgId });
     return res.data ?? [];
+  },
+
+  // V130R-09 D-03-6: 楼层全部工位(CAD/3D/平面图专用,无分页,替代 pageSize:1000 List 反模式)
+  getFloorWorkstationsAll: async (floorId: string): Promise<WorkstationOps[]> => {
+    const res = await get<{ list: WorkstationOps[]; total: number }>(
+      `/ops/workstation/${floorId}/workstations-all`
+    );
+    return res.data?.list ?? [];
+  },
+
+  // Sprint 1 Fix #4 (Vercel async-parallel): 批量楼层工位计数,
+  // 替代 BuildingView3D 原来的 1+N workstationApi.list(pageSize:1) 模式
+  countsByFloor: async (floorIds: string[]): Promise<{ counts: Record<string, number> }> => {
+    const res = await post<{ counts: Record<string, number> }>("/ops/workstation/counts-by-floor", {
+      floorIds,
+    });
+    return { counts: res.data?.counts ?? {} };
   },
 };
 
@@ -213,7 +165,7 @@ export interface ServerRoomListParams extends PageParams {
   status?: number;
 }
 
-export const serverRoomApi = createCrudApi<ServerRoom>({ basePath: "/ops/serverRoom" });
+export const serverRoomApi = createResourceApi<ServerRoom>({ basePath: "/ops/serverRoom" });
 
 // ==================== 机房照片管理 ====================
 
@@ -233,7 +185,7 @@ export const roomPhotoApi = {
     const formData = new FormData();
     formData.append("roomId", roomId);
     formData.append("primaryIndex", primaryIndex.toString());
-    files.forEach(file => {
+    files.forEach((file) => {
       formData.append("files", file);
     });
 
@@ -281,7 +233,7 @@ export interface RoomDeviceListParams extends PageParams {
   status?: number;
 }
 
-export const roomDeviceApi = createCrudApi<RoomDevice>({ basePath: "/ops/roomDevice" });
+export const roomDeviceApi = createResourceApi<RoomDevice>({ basePath: "/ops/roomDevice" });
 
 // ==================== 专线管理 ====================
 
@@ -291,7 +243,9 @@ export interface DedicatedLineListParams extends PageParams {
   status?: number;
 }
 
-export const dedicatedLineApi = createCrudApi<DedicatedLine>({ basePath: "/ops/dedicatedLine" });
+export const dedicatedLineApi = createResourceApi<DedicatedLine>({
+  basePath: "/ops/dedicatedLine",
+});
 
 // ==================== 信息点管理 ====================
 
@@ -303,70 +257,12 @@ export interface InfoPointListParams extends PageParams {
   status?: number;
 }
 
-export const infoPointApi = createCrudApi<InfoPoint>({ basePath: "/ops/infoPoint" });
+export const infoPointApi = createResourceApi<InfoPoint>({ basePath: "/ops/infoPoint" });
 
 // ==================== Excel导入导出 ====================
-
-// 专用于文件下载的 axios 实例：
-// - 复用与主 API 客户端相同的 baseURL（去掉硬编码 /api/v1/ 前缀）
-// - 不挂载响应拦截器，因为响应是 Blob 二进制流，无法 JSON 解析
-// - 请求拦截器只做 Token 注入，行为与其他 CRUD 保持一致
-// - 工位导出 1643 工位 + ~6000 行设备数据 → xlsx ~5-10 MB → 默认 30s timeout 易中招
-//   (尤其 dev 环境 Vite proxy 转发增加额外间接,网络抖动会被放大)
-//   改 5min 给足缓冲;普通 CRUD 不走 blobAxios 不会受影响
-const blobAxios: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
-  timeout: 300000,
-});
-
-blobAxios.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  const token = await getAccessToken();
-  if (token && config.headers) {
-    config.headers.set("Authorization", `Bearer ${token}`);
-  }
-  return config;
-});
-
-// 从响应头提取文件名
-function extractFilenameFromBlobResponse(
-  response: AxiosResponse<Blob>,
-  defaultFilename: string
-): string {
-  const contentDisposition: string | undefined = response.headers["content-disposition"];
-  if (!contentDisposition) {
-    return defaultFilename;
-  }
-
-  const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-  if (match && match[1]) {
-    return decodeURIComponent(match[1].replace(/['"]/g, ""));
-  }
-
-  return defaultFilename;
-}
-
-// 触发浏览器下载 Blob
-function triggerBrowserDownload(blob: Blob, filename: string): void {
-  const blobUrl = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(blobUrl);
-  document.body.removeChild(a);
-}
-
-// 通用文件下载函数
-async function downloadFile(url: string, filename: string): Promise<void> {
-  const response = await blobAxios.get<Blob>(url, { responseType: "blob" });
-
-  if (response.status < 200 || response.status >= 300) {
-    throw new Error(`下载失败: ${filename}`);
-  }
-
-  triggerBrowserDownload(response.data, filename);
-}
+//
+// blob 下载基建（blobAxios / extractFilenameFromBlobResponse / triggerBrowserDownload /
+// downloadFile）已上移 src/lib/download.ts（Phase 94 D-04 单一权威）,本文件仅消费。
 
 export const excelApi = {
   downloadTemplate: async (entityType: string) => {
@@ -376,29 +272,21 @@ export const excelApi = {
   import: async (entityType: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    return await postFormData<BaseResponse<Record<string, unknown>>>(`/ops/${entityType}/import`, formData);
+    return await postFormData<BaseResponse<Record<string, unknown>>>(
+      `/ops/${entityType}/import`,
+      formData
+    );
   },
 
   export: async (entityType: string, params: Record<string, unknown> = {}) => {
-    const response = await blobAxios.post<Blob>(
-      `/ops/${entityType}/export`,
-      params,
-      { responseType: "blob" }
-    );
-
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error("导出失败");
-    }
-
-    const filename = extractFilenameFromBlobResponse(
-      response,
-      `${entityType}_${Date.now()}.xlsx`
-    );
-    triggerBrowserDownload(response.data, filename);
+    await downloadFilePost(`/ops/${entityType}/export`, params, `${entityType}_${Date.now()}.xlsx`);
   },
 
   getStatusOptions: async (entityType: string) => {
-    return await post<Array<{ label: string; value: number }>>(`/ops/${entityType}/status-options`, {});
+    return await post<Array<{ label: string; value: number }>>(
+      `/ops/${entityType}/status-options`,
+      {}
+    );
   },
 };
 
@@ -412,10 +300,7 @@ export const excelApi = {
 // 无需新写 fetch/blob/URL.createObjectURL。
 export const deptApi = {
   exportMapping: async () => {
-    await downloadFile(
-      "/ops/workstation/dept-mapping-template",
-      `dept_mapping_${Date.now()}.xlsx`
-    );
+    await downloadFile("/ops/workstation/dept-mapping-template", `dept_mapping_${Date.now()}.xlsx`);
   },
 };
 
@@ -439,7 +324,7 @@ export interface WallListParams extends PageParams {
   name?: string;
 }
 
-const wallCrudApi = createCrudApi<Wall>({ basePath: "/ops/walls" });
+const wallCrudApi = createResourceApi<Wall>({ basePath: "/ops/walls" });
 
 export const wallApi = {
   ...wallCrudApi,
@@ -473,7 +358,7 @@ export interface DoorListParams extends PageParams {
   name?: string;
 }
 
-const doorCrudApi = createCrudApi<Door>({ basePath: "/ops/doors" });
+const doorCrudApi = createResourceApi<Door>({ basePath: "/ops/doors" });
 
 export const doorApi = {
   ...doorCrudApi,
@@ -504,7 +389,9 @@ export interface FloorPlanTextListParams extends PageParams {
   content?: string;
 }
 
-const floorPlanTextCrudApi = createCrudApi<FloorPlanText>({ basePath: "/ops/floor-plan-texts" });
+const floorPlanTextCrudApi = createResourceApi<FloorPlanText>({
+  basePath: "/ops/floor-plan-texts",
+});
 
 export const floorPlanTextApi = {
   ...floorPlanTextCrudApi,
@@ -542,7 +429,7 @@ const DEFAULT_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7天
  */
 export const geocodeWithCache = async (
   address: string,
-  maxAge = DEFAULT_CACHE_MAX_AGE
+  _maxAge = DEFAULT_CACHE_MAX_AGE
 ): Promise<GeocodeResult | null> => {
   if (!address?.trim()) {
     return null;
@@ -635,7 +522,7 @@ export const resetGeocodeStats = () => {
 
 // ==================== 资产管理 ====================
 
-const assetCrudApi = createCrudApi<Asset>({ basePath: "/ops/asset" });
+const assetCrudApi = createResourceApi<Asset>({ basePath: "/ops/asset" });
 
 export const assetApi = {
   ...assetCrudApi,
@@ -662,7 +549,10 @@ export const assetApi = {
 
   // 资产统计(专用 COUNT 端点,真实 status/nbf_status 计数)
   statistics: async () => {
-    const res = await post<{ total: number; normal: number; stopped: number; nbf: number }>("/ops/asset/statistics", {});
+    const res = await post<{ total: number; normal: number; stopped: number; nbf: number }>(
+      "/ops/asset/statistics",
+      {}
+    );
     return res.data;
   },
   // Excel导入导出通过 SetupExcelRouter 注册在 /ops/asset 路由组下：
@@ -671,8 +561,11 @@ export const assetApi = {
   // - POST /ops/asset/export    (导出数据)
 
   excel: {
+    // v129-recheck WR-05: 后端 SetupExcelRouter 只注册 GET /template，旧实现发
+    // POST 必 405（潜伏死方法，唯一引用为 mock 测试）——对齐 downloadTemplate
+    // 的 GET 下载链
     template: async () => {
-      return await post("/ops/asset/template", {});
+      await downloadFile("/ops/asset/template", "asset_template.xlsx");
     },
 
     import: async (file: File) => {
@@ -682,18 +575,7 @@ export const assetApi = {
     },
 
     export: async (params: AssetListParams & Record<string, unknown>) => {
-      const response = await blobAxios.post<Blob>(
-        "/ops/asset/export",
-        params,
-        { responseType: "blob" }
-      );
-
-      if (response.status < 200 || response.status >= 300) {
-        throw new Error("导出失败");
-      }
-
-      const filename = `资产列表_${Date.now()}.xlsx`;
-      triggerBrowserDownload(response.data, filename);
+      await downloadFilePost("/ops/asset/export", params, `资产列表_${Date.now()}.xlsx`);
 
       return { code: 0, message: "导出成功", data: null };
     },
@@ -709,10 +591,9 @@ export const componentApi = {
   // 列出某父交换机下的所有从属组件(板卡/引擎/电源/风扇/光模块)。
   // 返回 Asset[] 数组(后端已加 component_type IS NOT NULL 过滤)。
   list: async (parentAssetId: string) => {
-    const res = await get<{ list: Asset[]; total: number }>(
-      "/ops/asset/components",
-      { parentAssetId }
-    );
+    const res = await get<{ list: Asset[]; total: number }>("/ops/asset/components", {
+      parentAssetId,
+    });
     return res;
   },
 };

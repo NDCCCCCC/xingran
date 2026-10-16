@@ -10,9 +10,7 @@
  */
 export function hexToBase64(hexString: string): string {
   // 确保十六进制字符串是偶数长度
-  const paddedHex = hexString.length % 2 === 0
-    ? hexString
-    : "0" + hexString;
+  const paddedHex = hexString.length % 2 === 0 ? hexString : "0" + hexString;
 
   // 转换为字节数组
   const bytes = new Uint8Array(paddedHex.length / 2);
@@ -76,7 +74,7 @@ export function hexToBytes(hexString: string): string {
  */
 export function arrayBufferToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, "0"))
+    .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
@@ -112,6 +110,6 @@ export function generateRandomBytes(length: number): Uint8Array {
 export function generateRandomHex(length: number): string {
   const bytes = generateRandomBytes(length);
   return Array.from(bytes)
-    .map(b => b.toString(16).padStart(2, "0"))
+    .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }

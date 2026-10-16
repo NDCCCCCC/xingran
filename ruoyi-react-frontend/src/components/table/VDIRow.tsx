@@ -39,11 +39,11 @@ function VDIRowImpl({
   onSync,
   onBind,
 }: VDIRowProps) {
-  const allowedButtons = buttons.filter(btn => permissions.includes(btn.permission));
+  const allowedButtons = buttons.filter((btn) => permissions.includes(btn.permission));
 
   return (
     <Space size="small">
-      {allowedButtons.map(btn => {
+      {allowedButtons.map((btn) => {
         if (btn.action === "delete") {
           return (
             <Popconfirm
@@ -63,11 +63,7 @@ function VDIRowImpl({
         if (btn.action === "bind") {
           return (
             <Tooltip key={btn.action} title={btn.label}>
-              <Button
-                type="text"
-                icon={btn.icon}
-                onClick={() => onBind(vm)}
-              />
+              <Button type="text" icon={btn.icon} onClick={() => onBind(vm)} />
             </Tooltip>
           );
         }
@@ -75,11 +71,7 @@ function VDIRowImpl({
         if (btn.action === "sync") {
           return (
             <Tooltip key={btn.action} title={btn.label}>
-              <Button
-                type="text"
-                icon={btn.icon}
-                onClick={() => onSync(vm.id)}
-              />
+              <Button type="text" icon={btn.icon} onClick={() => onSync(vm.id)} />
             </Tooltip>
           );
         }
