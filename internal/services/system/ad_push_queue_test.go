@@ -4,9 +4,12 @@ package system
 //
 // 覆盖 HYGIENE-06（sqlite 迁移建表路径）与 QUEUE-02（部分唯一索引合并语义）。
 // 本文件是 Phase 57 三个 plan 新增测试的唯一落地文件，57-02 / 57-03 在此追加。
+//
+// Wave 2（57-02）追加：入队 service 的 diff 边界、前置条件降级、ON CONFLICT 合并语义。
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -15,6 +18,8 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 )
 
 // setupPhase57QueueDB 创建内存 sqlite 并直调 migration_215 建表。
@@ -131,4 +136,193 @@ func TestPhase57_ADPushQueue_ModelRoundTrip(t *testing.T) {
 		`SELECT count(*) AS c FROM pragma_table_info('ad_push_queue') WHERE name='deleted_at'`,
 	).Scan(&softDeleteCols).Error)
 	assert.Equal(t, int64(0), softDeleteCols, "队列表不软删，不应有 deleted_at 列")
+}
+
+// ==================== Wave 2（57-02）：入队 service 行为 ====================
+
+// seedADConfigEnabled 写入一行 sys_ad_config（D-02 前置条件的唯一数据源）。
+//
+// setupUserServiceTestDB 未建 sys_ad_config，故此处幂等建表；models.ADConfig 内嵌
+// BaseModel（含 deleted_at）→ GORM 软删作用域生效，必须带 deleted_at 列。
+// 固定 id + INSERT OR REPLACE：同一用例内可反复切换 sync_enabled / status
+// （否则第二次 INSERT 撞主键）。
+func seedADConfigEnabled(t *testing.T, db *gorm.DB, syncEnabled bool, status int) {
+	t.Helper()
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_ad_config (
+			id TEXT PRIMARY KEY,
+			sync_enabled INTEGER NOT NULL DEFAULT 0,
+			status INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)`).Error)
+	require.NoError(t, db.Exec(`
+		INSERT OR REPLACE INTO sys_ad_config
+			(id, sync_enabled, status, created_at, updated_at, deleted_at)
+		VALUES ('phase57-ad-config', ?, ?, '2024-01-01 00:00:00', '2024-01-01 00:00:00', NULL)
+	`, syncEnabled, status).Error)
+}
+
+// countQueueRows 统计某实体在队列表中的行数。
+func countQueueRows(t *testing.T, db *gorm.DB, entityID string) int64 {
+	t.Helper()
+	var n int64
+	require.NoError(t, db.Table("ad_push_queue").Where("entity_id = ?", entityID).Count(&n).Error)
+	return n
+}
+
+// TestPhase57_HasADFieldChanged_Boundaries 锁定 D-01 四字段 diff 的边界语义。
+func TestPhase57_HasADFieldChanged_Boundaries(t *testing.T) {
+	old := func() *models.User {
+		return &models.User{
+			BaseModel: models.BaseModel{ID: "u1"},
+			Nickname:  strPtr("x"),
+			Email:     strPtr("e@x"),
+			Phone:     strPtr("13800000000"),
+			DeptID:    strPtr("d1"),
+		}
+	}
+
+	cases := []struct {
+		name string
+		old  *models.User
+		req  *requests.UserUpdateRequest
+		want bool
+	}{
+		{"nil 视为无变更", old(), &requests.UserUpdateRequest{}, false},
+		{"旧值 nil 视空串，与空串 req 相等", &models.User{BaseModel: models.BaseModel{ID: "u2"}}, &requests.UserUpdateRequest{Nickname: strPtr("")}, false},
+		{"nickname 变更", old(), &requests.UserUpdateRequest{Nickname: strPtr("y")}, true},
+		{"email 变更", old(), &requests.UserUpdateRequest{Email: strPtr("z@x")}, true},
+		{"email 未变", old(), &requests.UserUpdateRequest{Email: strPtr("e@x")}, false},
+		{"phone 变更", old(), &requests.UserUpdateRequest{Phone: strPtr("13900000000")}, true},
+		{"phone 未变", old(), &requests.UserUpdateRequest{Phone: strPtr("13800000000")}, false},
+		{"deptId 变更", old(), &requests.UserUpdateRequest{DeptID: strPtr("d2")}, true},
+		{"deptId 未变", old(), &requests.UserUpdateRequest{DeptID: strPtr("d1")}, false},
+		{
+			"纯角色/岗位/备注/状态编辑不入队",
+			old(),
+			&requests.UserUpdateRequest{
+				RoleIds: []string{"r1"},
+				PostIds: []string{"p1"},
+				Remark:  strPtr("随便改改"),
+				Status:  models.UserStatusDisabled,
+				Gender:  models.GenderMale,
+			},
+			false,
+		},
+		{"TrimSpace 后相等不算变更", old(), &requests.UserUpdateRequest{Nickname: strPtr("  x  ")}, false},
+		{"oldUser 为 nil", nil, &requests.UserUpdateRequest{Nickname: strPtr("y")}, false},
+		{"req 为 nil", old(), nil, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, addomain.HasADFieldChanged(tc.old, tc.req))
+		})
+	}
+}
+
+// TestPhase57_EnqueueUpdate_EnqueuesOnlyOnRealChange 锁定 D-01 的入队判定。
+func TestPhase57_EnqueueUpdate_EnqueuesOnlyOnRealChange(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-enq-1", 0)
+	enq := addomain.NewADPushEnqueuer()
+	old := &models.User{BaseModel: models.BaseModel{ID: userID}, Nickname: strPtr("oldnick")}
+
+	// 纯角色编辑 → 不入队
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{
+		RoleIds: []string{"r1"},
+		Remark:  strPtr("note"),
+	}))
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID), "非四字段变更不应产生队列行")
+
+	// nickname 变更 → 入队一行
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{
+		Nickname: strPtr("newnick"),
+	}))
+	assert.Equal(t, int64(1), countQueueRows(t, db, userID))
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ?", userID).First(&got).Error)
+	assert.Equal(t, models.ADPushEntityUser, got.EntityType)
+	assert.Equal(t, models.ADPushActionUpdateUser, got.ActionType)
+	assert.Equal(t, models.ADPushStatusPending, got.Status)
+}
+
+// TestPhase57_EnqueueUpdate_NoADConfig_SkipsEnqueue 锁定 D-02 第一层降级。
+func TestPhase57_EnqueueUpdate_NoADConfig_SkipsEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	userID := seedUserRow(t, db, "phase57-enq-2", 0)
+	enq := addomain.NewADPushEnqueuer()
+	old := &models.User{BaseModel: models.BaseModel{ID: userID}, Nickname: strPtr("oldnick")}
+	req := &requests.UserUpdateRequest{Nickname: strPtr("newnick")}
+
+	// 路径一：sync_enabled 关闭
+	seedADConfigEnabled(t, db, false, 0)
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, req), "无启用配置时业务编辑必须放行")
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID))
+
+	// 路径二：status 停用
+	seedADConfigEnabled(t, db, true, 1)
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, req), "配置停用时业务编辑必须放行")
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID))
+}
+
+// TestPhase57_EnqueueUpdate_MergeOnSecondEdit 锁定 QUEUE-02 合并语义（D-06）。
+//
+// 这是 T-57-06 的第三重防线：ON CONFLICT 谓词若误放 Where（DO UPDATE 尾随谓词），
+// 部分唯一索引不被推断，本用例会在第二次入队时直接报错（sqlite: does not match
+// any PRIMARY KEY or UNIQUE constraint）而非合并成一行。
+func TestPhase57_EnqueueUpdate_MergeOnSecondEdit(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-merge", 0)
+	enq := addomain.NewADPushEnqueuer()
+	old := &models.User{BaseModel: models.BaseModel{ID: userID}, Nickname: strPtr("oldnick")}
+
+	// 连续两次编辑（old 快照不变，模拟连续编辑同一用户）
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick1")}))
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick2")}))
+	assert.Equal(t, int64(1), countQueueRows(t, db, userID), "同实体连续入队必须合并为一行")
+
+	// 把该行改成退避态（failed），第三次入队应打回 pending 并清空退避字段
+	failedAt := time.Now().Add(-time.Minute).UTC().Format(time.RFC3339)
+	require.NoError(t, db.Exec(`
+		UPDATE ad_push_queue
+		SET status='failed', attempts=3, last_error='boom', failed_at=?, next_retry_at=?
+		WHERE entity_id=? AND action_type='update_user'
+	`, failedAt, failedAt, userID).Error)
+
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick3")}))
+	assert.Equal(t, int64(1), countQueueRows(t, db, userID), "failed 行应被打回 pending 而非新增一行")
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ?", userID).First(&got).Error)
+	assert.Equal(t, models.ADPushStatusPending, got.Status)
+	assert.Equal(t, 0, got.Attempts)
+	assert.Empty(t, got.LastError)
+	assert.Nil(t, got.FailedAt)
+	assert.Nil(t, got.NextRetryAt)
+}
+
+// TestPhase57_EnqueueUpdate_SyncsWithTerminalRow 锁定终态行退出唯一索引后新行独立存在。
+func TestPhase57_EnqueueUpdate_SyncsWithTerminalRow(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-terminal", 0)
+	enq := addomain.NewADPushEnqueuer()
+	old := &models.User{BaseModel: models.BaseModel{ID: userID}, Nickname: strPtr("oldnick")}
+
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick1")}))
+	require.NoError(t, db.Exec(
+		`UPDATE ad_push_queue SET status='pushed' WHERE entity_id=? AND status='pending'`, userID,
+	).Error)
+
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick2")}))
+	assert.Equal(t, int64(2), countQueueRows(t, db, userID), "终态行不被覆盖，新行独立存在")
 }
