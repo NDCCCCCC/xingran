@@ -326,3 +326,108 @@ func TestPhase57_EnqueueUpdate_SyncsWithTerminalRow(t *testing.T) {
 	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick2")}))
 	assert.Equal(t, int64(2), countQueueRows(t, db, userID), "终态行不被覆盖，新行独立存在")
 }
+
+// countDisableRows 统计 action_type='disable' 的队列行数。
+func countDisableRows(t *testing.T, db *gorm.DB) int64 {
+	t.Helper()
+	var n int64
+	require.NoError(t, db.Table("ad_push_queue").Where("action_type = ?", models.ADPushActionDisable).Count(&n).Error)
+	return n
+}
+
+// TestPhase57_EnqueueDisable_SingleAndBatch 锁定 QUEUE-06 单条与批量 disable 入队。
+func TestPhase57_EnqueueDisable_SingleAndBatch(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+
+	id1 := seedUserRow(t, db, "phase57-dis-1", 0)
+	require.NoError(t, enq.EnqueueDisable(db, []string{id1}))
+	assert.Equal(t, int64(1), countQueueRows(t, db, id1))
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ?", id1).First(&got).Error)
+	assert.Equal(t, models.ADPushActionDisable, got.ActionType)
+	assert.Equal(t, models.ADPushEntityUser, got.EntityType)
+	assert.Equal(t, models.ADPushStatusPending, got.Status)
+
+	ids := []string{
+		seedUserRow(t, db, "phase57-dis-2", 0),
+		seedUserRow(t, db, "phase57-dis-3", 0),
+		seedUserRow(t, db, "phase57-dis-4", 0),
+	}
+	require.NoError(t, enq.EnqueueDisable(db, ids))
+	assert.Equal(t, int64(4), countDisableRows(t, db))
+
+	// 空切片 → no-op
+	require.NoError(t, enq.EnqueueDisable(db, nil))
+	assert.Equal(t, int64(4), countDisableRows(t, db), "空切片不应新增行")
+}
+
+// TestPhase57_EnqueueDisable_DedupesDuplicateIDs 锁定重复 id 去重。
+//
+// 不去重时 PG 会对同一条 INSERT 内重复命中的行报
+// "ON CONFLICT DO UPDATE command cannot affect row a second time"；sqlite 行为不同，
+// 故显式断言行数。
+func TestPhase57_EnqueueDisable_DedupesDuplicateIDs(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+
+	id1 := seedUserRow(t, db, "phase57-dup-1", 0)
+	id2 := seedUserRow(t, db, "phase57-dup-2", 0)
+
+	require.NoError(t, enq.EnqueueDisable(db, []string{id1, id1, id2}))
+	assert.Equal(t, int64(2), countDisableRows(t, db), "重复 id 必须去重")
+}
+
+// TestPhase57_EnqueueDisable_MergeOnRepeatCall 锁定重复调用合并（QUEUE-02）。
+func TestPhase57_EnqueueDisable_MergeOnRepeatCall(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+
+	ids := []string{
+		seedUserRow(t, db, "phase57-rep-1", 0),
+		seedUserRow(t, db, "phase57-rep-2", 0),
+	}
+	require.NoError(t, enq.EnqueueDisable(db, ids))
+	require.NoError(t, enq.EnqueueDisable(db, ids))
+
+	assert.Equal(t, int64(2), countDisableRows(t, db), "重复调用应合并，行数不变")
+
+	var pending int64
+	require.NoError(t, db.Table("ad_push_queue").
+		Where("action_type = ? AND status = ?", models.ADPushActionDisable, models.ADPushStatusPending).
+		Count(&pending).Error)
+	assert.Equal(t, int64(2), pending, "合并后仍为 pending")
+}
+
+// TestPhase57_EnqueueDisable_NoADConfig_SkipsEnqueue 锁定 D-02 第一层对 disable 同样生效。
+func TestPhase57_EnqueueDisable_NoADConfig_SkipsEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 1) // status = 停用
+	enq := addomain.NewADPushEnqueuer()
+
+	id1 := seedUserRow(t, db, "phase57-dis-nocfg", 0)
+	require.NoError(t, enq.EnqueueDisable(db, []string{id1}), "配置停用时业务删除必须放行")
+	assert.Equal(t, int64(0), countDisableRows(t, db))
+}
+
+// TestPhase57_Enqueue_PropagatesInsertFailure 锁定 D-02 第二层：INSERT 真失败不被吞掉。
+//
+// 队列表写入失败必须原样返回 error，让调用方（Plan 03 接线的 user_service）能回滚业务事务；
+// 若此处返回 nil，"同事务入队不丢"语义被架空。
+func TestPhase57_Enqueue_PropagatesInsertFailure(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+
+	id1 := seedUserRow(t, db, "phase57-fail", 0)
+	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
+
+	assert.Error(t, enq.EnqueueDisable(db, []string{id1}), "队列表写入失败必须返回 error")
+
+	// 重建（迁移幂等），确保不影响同包其它测试
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+}
