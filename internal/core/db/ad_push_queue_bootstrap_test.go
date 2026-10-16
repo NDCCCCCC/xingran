@@ -109,5 +109,37 @@ func TestEnsureADPushQueue_FailsFastOnIndexFailure(t *testing.T) {
 	assert.Error(t, d.BootstrapMissingTables(), "旁路路径同样必须传播队列表 DDL 失败")
 }
 
+// TestAutoMigrate_FailsFastWhenADPushQueueIndexCannotBeCreated 锁定 F-04 在启动路径上的
+// 行为：AutoMigrate 里队列表/索引 DDL 失败必须**阻断启动**（返回 error），而不是打一行
+// ERROR 日志继续 —— 后者会让运行期第一次用户编辑撞 42P10 并回滚业务事务，而真实原因被埋在
+// 几小时前的启动日志里。
+//
+// 故障注入同 TestEnsureADPushQueue_FailsFastOnIndexFailure：sqlite 索引名与表名共享命名
+// 空间，先建一张同名表即可让 CREATE UNIQUE INDEX 失败。
+func TestAutoMigrate_FailsFastWhenADPushQueueIndexCannotBeCreated(t *testing.T) {
+	d := newBackfillTestDB(t)
+	require.NoError(t, d.DB.Exec(`CREATE TABLE uq_ad_push_queue_active (x INTEGER)`).Error)
+
+	err := d.AutoMigrate()
+	require.Error(t, err, "uq_ad_push_queue_active 创建失败必须阻断启动（AutoMigrate 返回 error）")
+	assert.Contains(t, err.Error(), "ad_push_queue", "错误信息须指向队列表")
+}
+
+// TestAutoMigrate_SucceedsAndBuildsQueueIndexes 正常路径：AutoMigrate 结束必须已把队列表
+// 与三条索引建齐（旁路与 AutoMigrate 两条路径等价 —— 共享 ensureADPushQueue 的收益）。
+func TestAutoMigrate_SucceedsAndBuildsQueueIndexes(t *testing.T) {
+	d := newBackfillTestDB(t)
+
+	require.NoError(t, d.AutoMigrate())
+	require.True(t, d.DB.Migrator().HasTable(&models.ADPushQueue{}))
+	for _, idx := range []string{
+		"uq_ad_push_queue_active",
+		"idx_ad_push_queue_status_retry",
+		"idx_ad_push_queue_entity_id",
+	} {
+		assert.True(t, hasQueueIndex(t, d, idx), "AutoMigrate 必须建出索引 %s", idx)
+	}
+}
+
 // compile-time: ensureADPushQueue 必须在 sqlite 上也可调用（旁路既服务 PG 也服务 sqlite 单测）
 var _ = func(d *Database, tx *gorm.DB) error { return d.ensureADPushQueue() }

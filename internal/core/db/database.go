@@ -1050,10 +1050,13 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate214CreateADLoginHistory(d.DB); err != nil {
 			applogger.Errorf("AD登录历史分区表创建失败 (非阻断,留待下次启动): %v", err)
 		}
-		// Phase 57: AD 推送队列表 + 部分唯一索引 (双方言 DDL,幂等;
-		// sqlite 侧亦由 AutoMigrate 建表,此处显式迁移保证索引一次建齐)
-		if err := migrations.Migrate215CreateADPushQueue(d.DB); err != nil {
-			applogger.Errorf("ad_push_queue 表与索引创建失败 (非阻断,留待下次启动): %v", err)
+		// Phase 57 F-04: AD 推送队列表 + 部分唯一索引 (双方言 DDL,幂等)。
+		// 与 AutoMigrate 内的建表分开:模型刻意不声明 uniqueIndex tag(见 ensureADPushQueue
+		// 注释),索引只能由显式 DDL 建。**失败阻断启动** —— uq_ad_push_queue_active 是每次
+		// 入队 ON CONFLICT 的硬前提,缺失会让运行期第一次用户编辑报 42P10 并因入队失败
+		// 回滚整个业务事务(用户管理全线不可用),而真实原因只留在几小时前的启动日志里。
+		if err := d.ensureADPushQueue(); err != nil {
+			return err
 		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
@@ -1083,10 +1086,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate213RecomputeBuildingTotalFloors(d.DB); err != nil {
 			applogger.Errorf("楼栋 total_floors 存量重算失败 (非阻断,留待下次启动): %v", err)
 		}
-		// sqlite 分支: Phase 57 AD 推送队列表 + 部分唯一索引 (与 PG 分支同款调用,
+		// sqlite 分支: Phase 57 AD 推送队列表 + 部分唯一索引 (与 PG 分支同款调用 + 同样阻断,
 		// sqlite 既是 dev 运行时也是测试运行时,必须建到表)
-		if err := migrations.Migrate215CreateADPushQueue(d.DB); err != nil {
-			applogger.Errorf("ad_push_queue 表与索引创建失败 (非阻断,留待下次启动): %v", err)
+		if err := d.ensureADPushQueue(); err != nil {
+			return err
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
