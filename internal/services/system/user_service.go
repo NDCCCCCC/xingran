@@ -659,9 +659,19 @@ func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 	return nil
 }
 
-// UpdateStatus 更新用户状态
+// UpdateStatus 更新用户状态（Phase 57 GAP-01：停用同事务入队 disable）
+//
+// 与 Update / Delete / BatchDelete 保持同一形状：状态写与队列写在**同一个事务**里。
+// 决策理由：outbox-lite 的全部价值在于"业务状态与待推送记录同生共死"。若把入队放在事务
+// 之外（或干脆不接），就会出现"系统已停用、AD 账号仍启用"且**无任何记录**的静默分叉 ——
+// 正是本 phase 要消灭的失败模式；且 Phase 59 GUARD-01 信号守卫以 pending/failed 队列行
+// 为判据，缺行的分叉会被判成"无待推送 → 一致"，比不接线更危险。
+//
+// 方向性：仅 0→1（停用）入队。1→0（重新启用）在 v1.21 无对应动作
+// （models.ADPushActionEnable 不存在），0→0 / 1→1 为 no-op。
+// 事务外的 First 只为取旧状态（diff 输入），不参与写。
 func (s *userService) UpdateStatus(ctx context.Context, id string, status int) error {
-	// 检查用户是否存在
+	// 检查用户是否存在（事务外：仅用于取旧状态做 0→1 diff）
 	var user models.User
 	if err := s.db.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -669,13 +679,23 @@ func (s *userService) UpdateStatus(ctx context.Context, id string, status int) e
 		}
 		return apperrors.DatabaseError(err)
 	}
+	oldStatus := user.Status
 
-	// 更新状态
-	if err := s.db.WithContext(ctx).Model(&user).Update("status", status).Error; err != nil {
-		return apperrors.DatabaseError(err)
-	}
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 更新状态
+		if err := tx.Model(&user).Update("status", status).Error; err != nil {
+			return apperrors.DatabaseError(err)
+		}
 
-	return nil
+		// 同事务入队 disable；入队失败 → 返回 error 使 tx.Commit() 被跳过
+		if err := addomain.NewADPushEnqueuer().EnqueueDisableOnStatusTransition(tx, oldStatus, models.UserStatus(status), id); err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // ResetPassword 重置用户密码

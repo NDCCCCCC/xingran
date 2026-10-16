@@ -212,11 +212,13 @@ func (e *ADPushEnqueuer) EnqueueUpdateIfChanged(tx *gorm.DB, oldUser *models.Use
 	return e.upsert(tx, models.ADPushActionUpdateUser, oldUser.ID)
 }
 
-// EnqueueDisableOnStatusTransition 用户**被停用**（status 0→1）时入队 disable 动作行（F-02）。
+// EnqueueDisableOnStatusTransition 用户**被停用**（status 0→1）时入队 disable 动作行（F-02 / GAP-01）。
 //
-// 为什么需要它：停用有两个入口，UpdateStatus() 与 Update()（前端用户管理编辑表单保存时
-// 会带上 status）。Phase 57 只接了前者，若不接后者就留下一个安全语义缺口 ——
+// 为什么需要它：停用有**两个**入口，两个都必须接，否则留下安全语义缺口 ——
 // 系统里用户已停用、AD 账号仍启用，域内照常可登录。
+//   - Update()          —— 用户管理**编辑表单**保存时携带 status（F-02 修复时接入）
+//   - UpdateStatus()    —— 用户列表页 **Switch 开关**（POST /system/users/:id/status）
+//     ← 列表页开关才是最高频的停用入口，GAP-01 修复前未接入；两个入口现已同时接线。
 //
 // 与 EnqueueDisable 的区别：
 //   - 不做 F-01 压制。用户行仍在（只是 status=1），残留的 update_user 行仍可被排水器

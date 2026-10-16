@@ -39,9 +39,19 @@
 
 ---
 
-## F-02 停用经编辑表单入队 disable（`3c57bfa6`）
+## F-02 停用经编辑表单入队 disable（`3c57bfa6`；GAP-01 补全见下）
 
 **问题**：停用有 `UpdateStatus()` 与 `Update()` 两个入口，Phase 57 只接了前者 → 系统停用而 AD 账号仍启用，域内可登录。
+
+> **⚠ 本节描述的两处事实错误已于 GAP-01 修复时更正（保留原文以存真）：**
+> ① 原文"Phase 57 只接了前者（`UpdateStatus`）"与代码事实**相反** —— `3c57bfa6` 实际接的是
+> `Update()`（编辑表单），`UpdateStatus()`（列表页 Switch，`POST /system/users/:id/status`）
+> 当时**未接线**。`ad_push_queue_service.go` 上同源的错误注释已一并改正。
+> ② "Phase 57 只接了前者"这一措辞本身也把缺口说反了：只接 `Update` 而不接 `UpdateStatus`
+> 同样留下安全洞，且 `UpdateStatus` 才是列表页停用开关（最高频入口）所走的路径。
+>
+> **更正后的真实状态**：`Update()`（`3c57bfa6`）与 `UpdateStatus()`（GAP-01 修复）**两个入口
+> 现均已同事务入队 disable**，见下方 "GAP-01 补全" 一节及其守护测试。
 
 **改动**
 - 新增 `addomain.EnqueueDisableOnStatusTransition(tx, oldStatus, newStatus, userID)`：仅 0→1 入队；D-02 降级与 `EnqueueDisable` 一致。
@@ -54,6 +64,28 @@
 **守护测试**：`TestPhase57_UserService_Update_Disable_EnqueuesDisable`（删除接线后转红）、`..._Disable_RollsBackWhenQueueInsertFails`（删除接线后转红）、`..._NoStatusTransition_NoDisable`、`..._Disable_NoADConfig_NoEnqueue`。
 
 **改写的既有断言**：`TestPhase57_UserService_Update_NoADFieldChange_NoEnqueue` 原断言"纯状态编辑产生 0 条队列行"编码的正是本缺口，改为按动作类型收窄（`update_user` = 0），并在注释里注明修正来源。
+
+### GAP-01 补全：`UpdateStatus` 入口（列表页 Switch）
+
+**问题**：F-02 只接了编辑表单，`user_service.UpdateStatus`（`POST /system/users/:id/status`，
+前端用户列表的状态开关走这条）仍然裸写 `status`、零入队 → 系统已停用而 AD 账号仍启用，
+且**没有任何队列行**可供 Phase 59 GUARD-01 信号守卫识别（守卫以 pending/failed 行判据，
+"无行"会被读成"无待推送 → 一致"，比不接线更危险）。
+
+**改动**
+- `UpdateStatus` 改为 `s.db.Transaction(...)` 包裹：状态写与 `EnqueueDisableOnStatusTransition(tx, ...)`
+  在**同一事务**、用 `tx` 而非外层 `db`，入队失败即回滚 —— 与 `Update`/`Delete`/`BatchDelete`
+  同一形状（D-02 立场）。事务外的 `First` 只为取旧状态做 0→1 diff，不参与写。
+- 1→0（重新启用）/ 0→0 / 1→1 三种情况仍为 no-op（v1.21 无 `ADPushActionEnable`）。
+- 缓存层无需调整：`userCacheService.UpdateStatus` 已失效 user 列表与 user 单键缓存，
+  入队不引入新的可见性面。
+- 同步改正 `ad_push_queue_service.go` 中 `EnqueueDisableOnStatusTransition` 的错误注释
+  （原文"Phase 57 只接了前者(UpdateStatus)"与代码相反）。
+
+**守护测试**：`TestPhase57_UserService_UpdateStatus_Disable_EnqueuesDisable`、
+`..._Disable_RollsBackWhenQueueInsertFails`、`..._NoTransition_NoDisable`、
+`..._Disable_NoADConfig_NoEnqueue`。
+**RED 证据**：revert 生产改动后前两条转红（`git stash push -- user_service.go` 实测）。
 
 ---
 

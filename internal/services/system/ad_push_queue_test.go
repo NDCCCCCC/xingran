@@ -952,3 +952,92 @@ func TestPhase57_UserService_Delete_NoADConfig_NoEnqueue(t *testing.T) {
 	require.NoError(t, db.Raw("SELECT deleted_at FROM sys_user WHERE id = ?", userID).Scan(&deletedAt).Error)
 	assert.NotNil(t, deletedAt, "业务软删仍须生效")
 }
+
+// ==================== GAP-01：UpdateStatus 入口接线 ====================
+
+// TestPhase57_UserService_UpdateStatus_Disable_EnqueuesDisable 锁定 GAP-01：
+// 列表页 Switch 走的 POST /system/users/:id/status → UserService.UpdateStatus
+// 必须与 Update 入口一样，在停用（0→1）时同事务入队 disable。
+func TestPhase57_UserService_UpdateStatus_Disable_EnqueuesDisable(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-gap01-status", 0) // status = 0 启用
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.UpdateStatus(context.Background(), userID, int(models.UserStatusDisabled)))
+
+	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionDisable),
+		"UpdateStatus 停用必须同事务入队 disable（列表页 Switch 是最高频停用入口）")
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ?", userID).First(&got).Error)
+	assert.Equal(t, models.ADPushStatusPending, got.Status)
+	assert.Equal(t, models.ADPushEntityUser, got.EntityType)
+
+	var status int
+	require.NoError(t, db.Raw("SELECT status FROM sys_user WHERE id = ?", userID).Scan(&status).Error)
+	assert.Equal(t, int(models.UserStatusDisabled), status, "业务写与队列行应同生共死")
+}
+
+// TestPhase57_UserService_UpdateStatus_Disable_RollsBackWhenQueueInsertFails 锁定 GAP-01
+// 的事务红线：队列表不可写时状态变更必须整体回滚（不得出现"停用了但没记录"）。
+func TestPhase57_UserService_UpdateStatus_Disable_RollsBackWhenQueueInsertFails(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-gap01-status-rollback", 0)
+	svc := newTestUserService(t, db)
+	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
+
+	err := svc.UpdateStatus(context.Background(), userID, int(models.UserStatusDisabled))
+	require.Error(t, err, "队列表不可写时停用必须整体失败")
+
+	var status int
+	require.NoError(t, db.Raw("SELECT status FROM sys_user WHERE id = ?", userID).Scan(&status).Error)
+	assert.Equal(t, int(models.UserStatusEnabled), status, "事务必须回滚：用户不得被停用")
+
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+}
+
+// TestPhase57_UserService_UpdateStatus_NoTransition_NoDisable 锁定方向性与 no-op：
+// 1→0（重新启用）、0→0、1→1 三种情况都不得入队 disable —— v1.21 没有 enable 动作。
+func TestPhase57_UserService_UpdateStatus_NoTransition_NoDisable(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	svc := newTestUserService(t, db)
+
+	// 1) 启用用户重复启用（0→0）
+	enabled := seedUserRow(t, db, "phase57-gap01-stay-enabled", 0)
+	require.NoError(t, svc.UpdateStatus(context.Background(), enabled, int(models.UserStatusEnabled)))
+	assert.Equal(t, int64(0), countRowsByAction(t, db, enabled, models.ADPushActionDisable), "0→0 无跃迁不得入队")
+
+	// 2) 已停用用户重复停用（1→1）
+	disabled := seedUserRow(t, db, "phase57-gap01-stay-disabled", 1)
+	require.NoError(t, svc.UpdateStatus(context.Background(), disabled, int(models.UserStatusDisabled)))
+	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionDisable), "1→1 无跃迁不得入队")
+
+	// 3) 重新启用（1→0）：v1.21 无 enable 动作，不得入队
+	reenable := seedUserRow(t, db, "phase57-gap01-reenable", 1)
+	require.NoError(t, svc.UpdateStatus(context.Background(), reenable, int(models.UserStatusEnabled)))
+	assert.Equal(t, int64(0), countRowsByAction(t, db, reenable, models.ADPushActionDisable), "1→0 启用不在 v1.21 范围")
+	assert.Equal(t, int64(0), countQueueRows(t, db, reenable), "重新启用不得产生任何队列行")
+}
+
+// TestPhase57_UserService_UpdateStatus_Disable_NoADConfig_NoEnqueue 锁定 D-02 第一层
+// 在 UpdateStatus 入口的落地：AD 配置停用时状态变更照常生效，但不入队。
+func TestPhase57_UserService_UpdateStatus_Disable_NoADConfig_NoEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 1) // status = 停用
+
+	userID := seedUserRow(t, db, "phase57-gap01-status-nocfg", 0)
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.UpdateStatus(context.Background(), userID, int(models.UserStatusDisabled)),
+		"无启用配置时状态变更必须放行")
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID), "无启用配置时不应入队")
+
+	var status int
+	require.NoError(t, db.Raw("SELECT status FROM sys_user WHERE id = ?", userID).Scan(&status).Error)
+	assert.Equal(t, int(models.UserStatusDisabled), status, "业务停用仍须生效")
+}
