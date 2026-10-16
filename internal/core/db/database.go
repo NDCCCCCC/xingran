@@ -873,6 +873,13 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate213RecomputeBuildingTotalFloors(d.DB); err != nil {
 			applogger.Errorf("楼栋 total_floors 存量重算失败 (非阻断,留待下次启动): %v", err)
 		}
+		// quick 261016-ad-login-history: AD 设备登录历史月分区表 (PG-only,幂等;
+		// sqlite 不建表,writer/query 侧由 addomain 包 isPostgres 守卫跳过。
+		// 对应模型禁止加入 AutoMigrate 列表 — GORM 对分区父表
+		// 做 ALTER 会触发 42P16 类问题)
+		if err := migrations.Migrate214CreateADLoginHistory(d.DB); err != nil {
+			applogger.Errorf("AD登录历史分区表创建失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
