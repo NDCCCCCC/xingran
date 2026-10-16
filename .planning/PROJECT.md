@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-07-10
-update_trigger: v1.20 milestone SHIPPED + ARCHIVED (Phase 56 / 5 plans / 5 waves / 1 day; 12 site-visit UAT deferred)
-previous_update: 2026-07-09 v1.20 milestone INITIATED
+last_updated: 2026-10-16
+update_trigger: v1.21 milestone INITIATED (AD 双向同步 bug 修复; 三方 subagent 审计裁决修订方案; 前置: 1641 文件合并+推送完成)
+previous_update: 2026-07-10 v1.20 milestone SHIPPED + ARCHIVED
 ---
 
 **Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
@@ -11,30 +11,33 @@ previous_update: 2026-07-09 v1.20 milestone INITIATED
 **Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
 
 
-## Current Milestone: v1.19 网络设备写命令 (Network Device Write Operations)
+## Current Milestone: v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 
-**Goal:** 补全网络设备"读+写"闭环——Web 端通过 SSH 直接对目标设备下发端口配置命令（启停/描述/dot1x），成功后立即采集一次端口信息回填审计。
+**Goal:** 修复 AD↔系统双向同步的 2 个 P0 bug（部门回退乒乓、软删用户接管风险）、3 个 P1 数据一致性缺口和 P2 卫生项，以三方审计修订后的 outbox-lite 架构落地（≈400 行核心层），消除"改了部门又弹回"与静默数据丢失。
 
-**Target features / 工作池:**
-- SSH 写命令基础设施（基于 Scrapli + 厂商命令模板映射）
-- 多厂商命令模板：Huawei + H3C + 锐捷（Cisco 后续 phase）
-- Web UI：端口列表 + 设备详情 + 批量操作对话框（单 + 批量）
-- 改后采集触发链路（复用 v1.18 DeviceInfoCollectionService）
-- 操作审计（operlog.Record 强制约定 + 操作结果回传前端）
-- 权限控制（perms 命名空间 network:port:write）
-- MVP 范围：端口启停（shutdown/undo shutdown）、端口描述（description）、dot1x 启停
-- 批量执行：串行失败即停（避免大批量配置错误）
+**背景:** 三份独立 subagent 审计（架构/代码核对/魔鬼代言人）确认 11 项 bug 属实，并否决了时间戳仲裁（GORM 自动刷新 updated_at 使其恒失效）与完整 Outbox/FieldRule 引擎（过度设计），形成修订方案。
 
-**锁定决策 (v1.19 init):**
-- 策略：device_id 直连（复用现有凭据库），不引入 device_ip 临时建连
-- 命令模板：硬编码 vendor→template map（落地为先，后续 phase 抽象为数据库）
-- 厂商支持：Huawei / H3C / 锐捷（MVP），Cisco 后续
-- 改后采集：复用 DeviceInfoCollectionService.enqueue（v1.18 资产）
-- 操作回滚：MVP 仅"失败即停 + 回传失败点"，暂不实现自动回滚配置
+**Target features / 修复项:**
+- **ad_push_queue (outbox-lite)**：`user_service.Update` 同事务入队 + in-process cron 排水（不进 sys_job）+ 按实体合并 dedupe —— 解决重启丢推送、dedupe 丢弃、为登录守卫提供信号源
+- **排水 compare-and-move**：闭包内重读最新值 → 目标 OU 归一化比较（NormalizeDN）→ 不等才 MoveUser（结构性修 F1，幂等，规避激活未验证重试分支）；`ErrADTargetNotFound` → 终态
+- **登录守卫**：登录写 dept 前查该用户 pending/failed 队列行 → 有则跳过覆盖 + WARN（替代被证死的时间戳仲裁）
+- **F2 软删恢复安全**：ad_dn 校验后恢复（不一致拒绝+审计）；sys 删除用户 → 入队 disable AD 账号（闭环复活链路）
+- **影子表删除清理**：挂 syncDataInternal（复用 singleflight）+ 两道闸门（0 条拒绝 / >50% 拒绝）+ 覆盖组成员关系
+- **组成员同步事务化**（Delete+Create 包 Transaction）
+- **对账视图**：普通 SQL VIEW `v_dept_ou_mismatch`（禁用 MV）+ 只读端点；含"映射指向软删部门"条目
+- **死代码清理**：user_ou_service.go 整文件 + GetUserDeptByADOU + BatchMoveUsersToNewOU + 过期注释（dept_ou_mapper.go:31 等）
+- **P2 卫生**：First() 确定性/按 ad_dn 路由配置、OU DN 转义 helper、嵌套组 member 标记、同名兄弟部门 OU DN 冲突、getDefaultADConfigID 去重、sqlite 测试补建表
 
-**与 v1.18 关系：** v1.18（已 ship）补"读"——板卡/chassis/elabel/接口状态采集；v1.19 补"写"——端口配置下发。两者一起构成网络设备"读+写"完整闭环。
+**关键决策 (v1.21 init，三方审计裁决):**
+- 归属契约：代码内映射 struct + 注释（不建 FieldRule 表驱动引擎）；email/phone/displayName = write-through 委托写
+- 时间仲裁：弃用（GORM updated_at 自动刷新致恒失效）→ 信号守卫
+- FK 约束：后置可选（软删语义收益低）→ 应用层清理映射替代
+- uSNChanged 增量同步：挂起（性能优化非正确性）
+- 对账视图用 VIEW 禁用 MV（避免 MV 刷新僵尸/AutoMigrate 阻塞前科）
 
-**Replaces v1.19 原候选范围：** 真机 site-visit UAT 闭环 / 残余 deferred debug / VDI 22C/22D 推后到 v1.19+ follow-up phase。
+**前置条件（已满足 2026-10-16）:** ✅ 1641 个未提交文件已分 5 组提交并合入 main（`ced2d75b..31c7eee8`），已推送 origin（gitcode.com/ninedrunk/go_react），工作区干净。
+
+**Archived:** `.planning/milestones/v1.21-ROADMAP.md` + `.planning/milestones/v1.21-REQUIREMENTS.md`（milestone 完成时）
 
 ## Active: v1.17 资产对账 (Asset Reconciliation) — SHIPPED 2026-07-03
 
@@ -422,4 +425,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-07-09 — v1.20 网络设备 VLAN + 端口绑定 milestone INITIATED (Phase 56+). v1.19 SHIPPED 2026-07-08 (Phases 50-55, 6 phases / 9 plans / 5 build waves + 1 cleanup, 37/37 MVP requirements, 108 files / 25,224 insertions / 3,152 deletions in 1.7 days, 7 site-visit UAT deferred).*
+*Last updated: 2026-10-16 — v1.21 AD 双向同步 bug 修复 milestone INITIATED。方案经三份独立 subagent 审计修订：时间戳仲裁→信号守卫、完整 Outbox→outbox-lite 队列、FieldRule 引擎砍除、FK 后置。前置已满足：1641 文件 5 组提交合入 main 并推送（31c7eee8）。上一里程碑 v1.20.1 SHIPPED 2026-07-09。*
