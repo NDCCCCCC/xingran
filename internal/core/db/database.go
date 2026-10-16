@@ -1258,6 +1258,19 @@ func (d *Database) BootstrapMissingTables() error {
 		}
 	}
 
+	// 1b) Phase 57 F-03: ad_push_queue 是 AD 推送入队的事务内载体,缺表 = 用户编辑/删除
+	// 整体 500 并回滚(入队失败按 D-02 第二层回滚业务事务)。该表在 AutoMigrate 路径由
+	// Migrate215CreateADPushQueue 建,本旁路路径原本完全缺失。
+	//
+	// 为什么走 migration_215 而不是 CreateTable(model):模型刻意不声明 uniqueIndex tag
+	// (AutoMigrate 的 DROP 无 IF EXISTS,与手写迁移建的 uq_ad_push_queue_active 冲突会
+	// 启动 FATA —— W-1),故部分唯一索引无法由 model 派生。裸 CreateTable 会留下一张没有
+	// uq_ad_push_queue_active 的表,运行期第一次 ON CONFLICT 即 42P10。DDL 与 AutoMigrate
+	// 路径复用同一迁移函数 = 同一事实源,无双份 DDL 可漂移。
+	if err := d.ensureADPushQueue(); err != nil {
+		return err
+	}
+
 	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建
 	ddl := []string{
 		// Phase 58 SC#1-SC#4 + Phase 60 AUTH-03 + SEC-01 都依赖此表
@@ -1276,6 +1289,22 @@ func (d *Database) BootstrapMissingTables() error {
 		}
 	}
 	applogger.Infof("[BootstrapMissingTables] tables model-derived, %d index statements OK", len(ddl))
+	return nil
+}
+
+// ensureADPushQueue 保证 ad_push_queue 表与三条索引就位（Phase 57 F-03）。
+//
+// 表 + 部分唯一索引 + 两个查询索引全部由 migration_215 建立（幂等 IF NOT EXISTS，可重跑）。
+// AutoMigrate 路径与 SKIP_AUTOMIGRATE 旁路（BootstrapMissingTables）都经本函数，
+// 保证两条启动路径的队列表结构完全一致 —— 旁路路径曾完全漏掉本表（F-03），
+// 导致该部署形态下用户管理的新增/编辑/删除全部 500。
+func (d *Database) ensureADPushQueue() error {
+	if !d.DB.Migrator().HasTable(&models.ADPushQueue{}) {
+		applogger.Infof("[ad_push_queue] 表缺失,经 migration_215 显式 DDL 补建(含 uq_ad_push_queue_active)")
+	}
+	if err := migrations.Migrate215CreateADPushQueue(d.DB); err != nil {
+		return fmt.Errorf("ad_push_queue 表/索引创建失败: %w", err)
+	}
 	return nil
 }
 
