@@ -84,7 +84,11 @@ Plans:
 
 **Phase 57 移交待决项**（2026-10-16 code review 发现，Phase 57 按用户决定只记账不修）：
 
-  1. **遗留直推与队列排水双推冲突** — `internal/api/v1/system/user_handler.go:194` 的遗留 goroutine 仍直推 AD。排水器落地后两条路径同时生效 → 重复推送且可能乱序（同实体 update_user 先到、disable 后到会被覆盖回去）。**决策点**：删直推 / 两者共存并加互斥。越早定越便宜——删除会使 AD 侧更新延迟到排水时才可见。
+  1. **遗留直推与队列排水双推冲突（两条路径，缺一不可）** — 排水器落地后，现有两条绕过队列直接推 AD 的路径会同时生效 → 重复推送且可能乱序（同实体 update_user 先到、disable 后到会被覆盖回去）：
+     - `internal/api/v1/system/user_handler.go:194` — 单用户编辑后的直推
+     - `internal/api/v1/system/user_import_handler.go:114` `triggerADSyncAfterImport` — 批量导入后的直推（走 `BatchSyncUsersToAD`，含无 `ad_dn` 跳过、并发上限、失败降级等导入专用语义）
+
+     **决策点**：两条路径都删 / 两者共存并加互斥。越早定越便宜——删除会使 AD 侧更新延迟到排水时才可见，且导入路径的批量语义无法直接套用单条队列行的处理方式。
   2. **`ad_push_queue` 无 `ad_config_id` 列** — 队列行不记录入队时归属的 AD 配置，排水器只能在排水时刻按 `ad_dn` 解析配置。若配置在入队与排水之间变更，重试会打到错误的域控。**决策点**：加列（需 Phase 58 迁移 + 回填策略）还是接受排水时解析现状。SUCCESS CRITERION 3 假设的是后者。
   3. **F-07~F-16 未处理项** — 见 [57-REVIEW-FIX.md](phases/57-ad-outbox-lite/57-REVIEW-FIX.md) 的逐条判定，Phase 58 排水器落地时需一并复核。
 
@@ -95,7 +99,7 @@ Plans:
   3. 多 AD 配置环境下推送按用户 `ad_dn` 归属解析配置，不再依赖 `First()` 取首条；`getDefaultADConfigID` 双份实现合并为公共 helper（HYGIENE-01）
   4. 含特殊字符的部门名经 OU DN 转义 helper 拼接后推送不产生非法 DN（HYGIENE-02）
   5. LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，后续排水不再重试（QUEUE-05）
-  6. 遗留直推路径（`user_handler.go:194`）已按移交待决项 1 处置：或删除、或与排水互斥。不接受"两者并存且都可能触发"的终态
+  6. 两条遗留直推路径（`user_handler.go:194` 单用户编辑、`user_import_handler.go:114` 导入后批量）均已按移交待决项 1 处置：或删除、或与排水互斥。不接受"两者并存且都可能触发"的终态
 
 **Plans**: TBD
 
