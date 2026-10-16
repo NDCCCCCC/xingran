@@ -388,6 +388,29 @@ export function getADComputerDetail(configId: string, computerDn: string): Promi
   return post("/ad-domain/computers/detail", { configId, computerDn });
 }
 
+// ==================== 设备登录历史 API (quick 261016) ====================
+
+export interface ADLoginHistoryRecord {
+  id: string;
+  computerId: string;
+  computerNameSnapshot: string;
+  adConfigId: string;
+  loginTime: string;
+  detectedAt: string;
+  loginUser?: string;
+  ipAddress?: string;
+  eventType: "initial" | "login";
+  createdAt: string;
+}
+
+export function getADComputerLoginHistory(params: {
+  computerId: string;
+  current?: number;
+  pageSize?: number;
+}): Promise<BaseResponse<PageResponse<ADLoginHistoryRecord>>> {
+  return post("/ad-domain/computers/login-history", withDefaultPagination(params));
+}
+
 // ==================== 部门组映射 API ====================
 
 export interface DeptGroupMapping {
