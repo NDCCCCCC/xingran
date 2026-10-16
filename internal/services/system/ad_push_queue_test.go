@@ -1041,3 +1041,131 @@ func TestPhase57_UserService_UpdateStatus_Disable_NoADConfig_NoEnqueue(t *testin
 	require.NoError(t, db.Raw("SELECT status FROM sys_user WHERE id = ?", userID).Scan(&status).Error)
 	assert.Equal(t, int(models.UserStatusDisabled), status, "业务停用仍须生效")
 }
+
+// ==================== GAP-02：profileService.UpdateUserInfo 自助路径接线 ====================
+
+// seedUserProfileRow 在 sys_user 插入带 AD 同步字段初值的一行，返回 id。
+func seedUserProfileRow(t *testing.T, db *gorm.DB, username, nickname, email, phone string) string {
+	t.Helper()
+	id := seedUserRow(t, db, username, 0)
+	require.NoError(t, db.Exec(
+		`UPDATE sys_user SET nickname = ?, email = ?, phone = ? WHERE id = ?`,
+		nickname, email, phone, id,
+	).Error)
+	return id
+}
+
+// TestPhase57_ProfileService_UpdateUserInfo_Change_Enqueues 锁定 GAP-02：
+// 自助资料修改（个人中心）改到 AD 同步字段（nickname/email/phone）时，
+// 必须与管理员 Update 路径一样同事务入队 update_user —— 否则 AD 同步用户的
+// email/phone 会被下次 AD 同步静默回滚，且 Phase 59 守卫把分叉判成"一致"。
+func TestPhase57_ProfileService_UpdateUserInfo_Change_Enqueues(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserProfileRow(t, db, "phase57-gap02-profile", "oldnick", "old@x", "13800000000")
+	svc := NewProfileService(db)
+
+	newNick := "newnick"
+	require.NoError(t, svc.UpdateUserInfo(context.Background(), userID, &UpdateUserInfoRequest{
+		Nickname: &newNick,
+		Gender:   1,
+	}))
+
+	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionUpdateUser),
+		"自助改 AD 同步字段必须同事务入队 update_user")
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ?", userID).First(&got).Error)
+	assert.Equal(t, models.ADPushEntityUser, got.EntityType)
+	assert.Equal(t, models.ADPushActionUpdateUser, got.ActionType)
+	assert.Equal(t, models.ADPushStatusPending, got.Status)
+
+	var nickname *string
+	require.NoError(t, db.Raw("SELECT nickname FROM sys_user WHERE id = ?", userID).Scan(&nickname).Error)
+	assert.NotNil(t, nickname)
+	assert.Equal(t, "newnick", *nickname, "业务写与队列行应同生共死")
+}
+
+// TestPhase57_ProfileService_UpdateUserInfo_NoADFieldChange_NoEnqueue 锁定 D-01 在
+// 自助路径的落地：只改 gender / remark（不在 AD 四字段契约内）不得产生队列行。
+func TestPhase57_ProfileService_UpdateUserInfo_NoADFieldChange_NoEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserProfileRow(t, db, "phase57-gap02-noad", "oldnick", "old@x", "13800000000")
+	svc := NewProfileService(db)
+
+	remark := "just a note"
+	require.NoError(t, svc.UpdateUserInfo(context.Background(), userID, &UpdateUserInfoRequest{
+		Remark: &remark,
+		Gender: 1,
+	}))
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID),
+		"gender/remark 不在 AD 四字段契约内，不得入队")
+}
+
+// TestPhase57_ProfileService_UpdateUserInfo_SameValue_NoEnqueue 锁定"实际变更"语义：
+// 提供了字段但值（TrimSpace 后）与旧值相同 → 不入队。
+func TestPhase57_ProfileService_UpdateUserInfo_SameValue_NoEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserProfileRow(t, db, "phase57-gap02-same", "oldnick", "old@x", "13800000000")
+	svc := NewProfileService(db)
+
+	same := "  oldnick  " // TrimSpace 后与旧值相同
+	require.NoError(t, svc.UpdateUserInfo(context.Background(), userID, &UpdateUserInfoRequest{
+		Nickname: &same,
+		Gender:   1,
+	}))
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID),
+		"值未实际变更（TrimSpace 后相同）不得入队")
+}
+
+// TestPhase57_ProfileService_UpdateUserInfo_RollsBackWhenQueueInsertFails 锁定 GAP-02
+// 的事务红线：队列表不可写时自助编辑必须整体回滚（QUEUE-01，与管理员路径同款）。
+func TestPhase57_ProfileService_UpdateUserInfo_RollsBackWhenQueueInsertFails(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserProfileRow(t, db, "phase57-gap02-rollback", "oldnick", "old@x", "13800000000")
+	svc := NewProfileService(db)
+	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
+
+	newNick := "shouldnotpersist"
+	err := svc.UpdateUserInfo(context.Background(), userID, &UpdateUserInfoRequest{
+		Nickname: &newNick,
+		Gender:   1,
+	})
+	require.Error(t, err, "队列表不可写时自助编辑必须整体失败")
+
+	var nickname *string
+	require.NoError(t, db.Raw("SELECT nickname FROM sys_user WHERE id = ?", userID).Scan(&nickname).Error)
+	require.NotNil(t, nickname)
+	assert.Equal(t, "oldnick", *nickname, "事务必须回滚：nickname 必须保持旧值")
+
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+}
+
+// TestPhase57_ProfileService_UpdateUserInfo_NoADConfig_NoEnqueue 锁定 D-02 第一层在
+// 自助路径的落地：AD 配置停用时自助编辑照常生效，但不入队。
+func TestPhase57_ProfileService_UpdateUserInfo_NoADConfig_NoEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 1) // status = 停用
+
+	userID := seedUserProfileRow(t, db, "phase57-gap02-nocfg", "oldnick", "old@x", "13800000000")
+	svc := NewProfileService(db)
+
+	newNick := "newnick"
+	require.NoError(t, svc.UpdateUserInfo(context.Background(), userID, &UpdateUserInfoRequest{
+		Nickname: &newNick,
+		Gender:   1,
+	}), "无启用配置时自助编辑必须放行")
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID), "无启用配置时不应入队")
+
+	var nickname *string
+	require.NoError(t, db.Raw("SELECT nickname FROM sys_user WHERE id = ?", userID).Scan(&nickname).Error)
+	assert.NotNil(t, nickname)
+	assert.Equal(t, "newnick", *nickname, "业务写仍须生效")
+}

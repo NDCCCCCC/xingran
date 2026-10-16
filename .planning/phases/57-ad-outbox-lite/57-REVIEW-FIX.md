@@ -89,6 +89,47 @@
 
 ---
 
+## GAP-02 补全：profile 自助路径（`UpdateUserInfo`）
+
+**问题**（57-VERIFICATION.md GAP-02）：`profileService.UpdateUserInfo`（个人中心，前端自助
+改昵称/邮箱/手机）走独立的非事务写路径，改到 AD 同步字段却零入队。AD 同步用户的
+email/phone 在每次 AD 同步时被 AD 侧值无条件覆盖（`user_sync_service.go updateExistingUser`），
+自助改动会被下次同步**静默回滚**，且不产生队列行 —— Phase 59 GUARD-01 会把该分叉判成
+"一致"。
+
+**改动**
+- `UpdateUserInfo` 包进 `s.db.Transaction(...)`：事务内先读旧值快照（原先从不读旧行，无
+  diff 输入），再写库，再 `EnqueueUpdateIfChanged(tx, &oldUser, adReq)` —— 与管理员
+  `Update` 路径完全相同的 diff 纯函数与 D-02 两层降级。入队失败整体回滚。
+- diff 仅 nickname/email/phone：gender/remark 不在 AD 四字段契约内，改了不入队；
+  DeptID 留 nil（自助路径无部门字段）→ 不参与 diff。nil = 未提供 = 无变更，语义与管理员
+  路径一致。
+- 顺带删除两处死代码：`len(updates) == 0` 分支（gender 恒写入，永不可达）与
+  `RowsAffected == 0` 的"用户不存在"检测（改由事务内 `First` 的 ErrRecordNotFound 显式
+  判定，错误文案不变）。行为无变化，既有 `TestProfileService_UpdateUserInfo_*` 全绿。
+- fixture：`setupProfileServiceDB` 补 `sys_ad_config` + migration_215 建表（HYGIENE-06
+  同款 —— 触碰该写路径的 sqlite 环境必须有两张表，否则既有用例因 IsADSyncEnabled 报
+  表不存在整体转红）。空配置下 `TestProfileService_UpdateUserInfo_Success` 走 WARN+放行，
+  行为与修复前一致。
+
+**信任边界决策（为什么自助路径也入队，而不是按"管理员专用"排除）**
+- userID 来自会话（`profile_handler.go` `c.Get("user_id")`），不是请求体 —— 用户只能为
+  "自己"入队，无跨用户写面；nickname/email/phone 本就是自助可改字段，队列行只是把这次
+  自编辑的既有效果延伸到自己的 AD 账号，信任升级面极小。
+- 反之不入队的代价是结构性的：静默分叉 + 守卫误判"一致"，正是本里程碑要消灭的失败
+  模式；对 AD 同步用户还是"改动被下次同步静默回滚"的数据丢失。
+- AD 侧写语义：排水器按 D-05 重读 DB 全量推送（属性 Modify 幂等），与管理员路径同一
+  执行面；门控仍是全局 D-02，不新增"自助/管理员"区分 —— 与 Phase 57 既有契约一致。
+  v1.21 队列行在 Phase 58 排水器落地前是惰性记录，本路径不新增任何 LDAP 写。
+
+**守护测试**：`TestPhase57_ProfileService_UpdateUserInfo_Change_Enqueues`、
+`..._RollsBackWhenQueueInsertFails`、`..._NoADFieldChange_NoEnqueue`、
+`..._SameValue_NoEnqueue`、`..._NoADConfig_NoEnqueue`。
+**RED 证据**：revert `profile_service.go` 后前两条转红（实测）；后三条守"不过度入队"，
+两个方向下均绿。
+
+---
+
 ## F-03 旁路补建队列表（`11efec8f`）
 
 **问题**：`SKIP_AUTOMIGRATE=true && postgres` 时只跑 `BootstrapMissingTables()`，队列表不存在 → 用户编辑/删除 500 并回滚。
