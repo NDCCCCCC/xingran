@@ -2,31 +2,31 @@
 gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
-status: executing
+status: completed
 last_updated: "2026-10-17T00:00:00.000Z"
-last_activity: 2026-10-17 -- Phase 57 verified（human_needed: 3 项真环境人工验证留档 UAT）+ marked complete
+last_activity: 2026-10-17 -- Phase 58 规划完成（research + 7 plans / 7 waves + 3 轮 plan-checker 修订收敛 14→10→1→0）
 progress:
   total_phases: 8
   completed_phases: 1
-  total_plans: 3
+  total_plans: 10
   completed_plans: 3
-  percent: 17
+  percent: 13
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 57 complete (3/3) — queue storage + enqueue service + 4 条写路径同事务接线（含 GAP-01 UpdateStatus / GAP-02 profile）
-**Last activity**: 2026-10-17 — code review F-01~F-06 修复 + verifier GAP-01/02/03 闭环 + VERIFICATION human_needed（3 项 UAT 留档）
+**Status**: v1.21 Phase 58 planned (7 plans / 7 waves) — ready to execute
+**Last activity**: 2026-10-17 — plan-phase 58：research（F-A/F-B 阻断级发现 + 7 discretion 收口）+ 7 PLAN + plan-checker 3 轮修订（14→10→1→0 issues）+ VALIDATION.md task 粒度回填 approved
 
 ## Current Position
 
-Phase: 58 (排水器与 compare-and-move 推送) — 待规划
-Plan: Phase 57 ✅ 全部关闭（3/3 plans + 2 轮审查修复 + 验证收口；下一：/gsd:discuss-phase 58 或 /gsd:plan-phase 58）
-Status: Phase 57 Complete
-Last activity: 2026-10-17 -- VERIFICATION.md 判定 human_needed（代码侧全 VERIFIED；PG 实机合并/kill -9 重启/UAC 533 三项入 57-HUMAN-UAT.md）
-Progress: 1/6 phases [█░░░░░░░░] 17%（3/3 plans）
+Phase: 58 (排水器与 compare-and-move 推送) — Planned, ready to execute
+Plan: /gsd:execute-phase 58（7 plans 串行 wave 0→6；HYGIENE-01 helper 先于 QUEUE-04 compare-and-move）
+Status: Phase 58 Planned
+Last activity: 2026-10-17 -- 规划收口：REQ 覆盖 5/5、D-01~D-05 全落 plan、cross-cutting constraints 注入 ROADMAP
+Progress: 1/6 phases [█░░░░░░░░] 17%（3/10 plans）
 
 ## Accumulated Context
 
@@ -49,6 +49,6 @@ Progress: 1/6 phases [█░░░░░░░░] 17%（3/3 plans）
 
 - ~~GSD phase 编号从 57 起~~ ✅ 已落 ROADMAP（Phases 57-62）
 - ~~DB migration 编号从 200 起~~ → **修正：214 已被 ad_login_history 占用，Phase 57 = migration_215**（ad_push_queue 表），后续 phase 从 216 顺延（Phase 59 的 VIEW 预计 migration_216）
-- ~~Phase plans 数量 TBD~~ ✅ Phase 57 = 3 plans，progress table 已回填
-- Phase 58 移交待决项（详见 ROADMAP Phase 58 段）：①两条遗留直推路径（user_handler.go:194 + user_import_handler.go:114）与排水器双推冲突须处置 ②队列表无 ad_config_id 列的取舍 ③F-07~F-16 复核
+- ~~Phase plans 数量 TBD~~ ✅ Phase 57 = 3 plans，Phase 58 = 7 plans（7 waves），progress table 已回填
+- ~~Phase 58 移交待决项~~ ✅ 58-CONTEXT.md D-01~D-05 已拍板并落 plan：①两条直推路径均删（D-01/D-03，导入换批量入队）②不加 ad_config_id 列、排水时最长后缀唯一匹配（D-02）③F-07~F-16 三档分档复核（D-04）
 - 57-HUMAN-UAT.md 三项真环境验证（PG 合并路径 / kill -9 重启 / UAC 533）待人工执行

@@ -101,7 +101,44 @@ Plans:
   5. LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，后续排水不再重试（QUEUE-05）
   6. 两条遗留直推路径（`user_handler.go:194` 单用户编辑、`user_import_handler.go:114` 导入后批量）均已按移交待决项 1 处置：或删除、或与排水互斥。不接受"两者并存且都可能触发"的终态
 
-**Plans**: TBD
+**Plans**: 7 plans (7 waves, sequential — 本仓 parallelization: false，波次串行)
+
+Plans:
+**Wave 0**
+
+- [ ] 58-01-PLAN.md — Wave 0 测试基座：addomain sqlite 五表 fixture + mockLDAPClient 调用计数 + F-F/F-G/F-15/F-16 缺口修补
+
+**Wave 1**
+
+- [ ] 58-02-PLAN.md — DN 单一真实源（NormalizeDN / BuildOUDN）+ D-02 最长后缀唯一匹配纯函数 + D-03 三处调用点收敛（HYGIENE-01, HYGIENE-02）
+
+**Wave 2**
+
+- [ ] 58-03-PLAN.md — 排水器骨架：拾取谓词 + 退避曲线 + 状态机 + disable/属性两条推送路径 + F-12 UTC / F-14 default tag（QUEUE-03, QUEUE-05）
+
+**Wave 3**
+
+- [ ] 58-04-PLAN.md — compare-and-move 执行面：幂等比较 + F-A ad_dn 回写 + F-B config 作用域 OU 映射 + OU 路径 code 32 终态（QUEUE-04, QUEUE-05）
+
+**Wave 4**
+
+- [ ] 58-05-PLAN.md — cron 接线（Start() 第三个 AddJob）+ migration_216 sys_config 单旋钮 + SecondsToCronSpec + 禁 sys_job 证伪（QUEUE-03）
+
+**Wave 5**
+
+- [ ] 58-06-PLAN.md — SC6：删除两条直推路径 + EnqueueUpdateBatch 批量入队 + F-07 入队侧 Pluck + F-10 两个回滚用例（QUEUE-03）
+
+**Wave 6**
+
+- [ ] 58-07-PLAN.md — 收口：端到端用例 + 全量回归 + SC1~6 逐条证据核对 + 人工 UAT 清单 + REQUIREMENTS 回填（全部 5 REQ）
+
+**Wave 顺序约束落地**：HYGIENE-01 配置解析 helper（Wave 1）严格先于 QUEUE-04 compare-and-move（Wave 3）—— ROADMAP 的三方审计依赖约束。
+
+**Cross-cutting constraints**（出现在 ≥2 个 plan 的 must_haves.truths / verify）：
+- Phase 57 sentinel 回归 `go test ./internal/services/system/ -run TestPhase57 -count=1`（58-01/03/06/07 —— D-01 删直推与 F-07 BatchDelete 触碰 57 已合入代码）
+- 禁 sys_job 静态证伪 grep（58-03/05/07 —— SC1：排水器不注册 sys_job）
+- `TestPhase58_*` 命名约定 + quick 命令 `go test ./internal/services/addomain/ -run TestPhase58 -count=1`（58-01~06 —— Nyquist 采样契约，见 58-VALIDATION.md）
+- addomain 包 sqlite 测试基座 `ad_push_queue_drain_test.go`（全部 7 plan —— Wave 0 先行的单一 fixture 事实源）
 
 ### Phase 59: 登录回写守卫与部门对账视图
 
@@ -166,7 +203,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
-| 58. 排水器与 compare-and-move 推送 | 0/TBD | Not started | - |
+| 58. 排水器与 compare-and-move 推送 | 0/7 | Planned (2026-10-17) | - |
 | 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |

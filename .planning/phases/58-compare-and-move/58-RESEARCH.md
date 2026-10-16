@@ -504,9 +504,17 @@ EnqueueUpdateBatch(tx, userIDs []string) error
 
 ---
 
-## 11. 未解问题（研究期无法从代码判定，需 planner/用户拍板）
+## 11. 未解问题（RESOLVED —— 下列 4 问已在 Phase 58 规划期全部拍板，无悬空项）
 
 1. **生产是否真的存在多 AD 配置？** 代码层面 `sys_ad_config` 是列表模型、登录路径也只取单个默认配置（`ad_authenticator.go:66` `getADConfig`）。若生产只有 1 个配置，D-02 的复杂度主要是防御性的；这不影响按契约实现，但会影响 §7-Q3 的 dead 策略激进程度。
+   - **处置（RESOLVED）**：**N/A —— 按防御性契约实现，dead 策略不因单域而放宽**。D-02 的「最长后缀唯一匹配 / 无匹配或多匹配 → 转 dead 不推」是 CONTEXT 锁定的验收级契约，多域与单域走同一条代码路径，不开特例分支（特例只会把跨域误路由的风险藏起来）。
+   - **落点**：契约实现 58-02 Task 2（7 个用例含父子域反例）；单域生产下的验证按 **N/A** 处理 —— 58-07 Task 3 的 `UAT-58-4` 前置写明「生产若只有单域则标 N/A 并在 SUMMARY 注明」，**不得**默认成「已验证」。
 2. **`sys_dept_ou_mapping.ou_dn` 存量数据是否含已转义值？** 决定 §7-Q4 的选择。需实机 `SELECT ou_dn FROM sys_dept_ou_mapping WHERE ou_dn LIKE '%\\\\%'` 探测。
+   - **处置（RESOLVED）**：**Q4 —— 只转义新写入，不做存量数据迁移**。`BuildOUDN` 只作用于部门同步的**新写入点**（全仓唯一拼接点），历史 `ou_dn` 原样保留；含特殊字符的部门需重跑部门同步才会拿到转义后的 DN。这是刻意取舍：在 `NormalizeDN` 明确「仅用于比较、不得回写」的前提下反推存量迁移，风险大于收益。
+   - **落点**：58-02 Task 1 第 3 步（接线处注释写明存量口径 + 重跑要求）；可见后果列入 58-07 输出清单第 5 条（「Q4 后果：HYGIENE-02 只转义新写入」）；`TestPhase58_BuildOUDN_PlainNameUnchanged` 锁住「无特殊字符时与旧行为逐字一致」，保证普通部门的存量口径零影响。
 3. **迁移 216 的失败策略**：Phase 57 对队列表建表选了"失败阻断启动"（F-04），而对普通 seed 迁移一律"非阻断"。`sys_config` seed 应沿用哪一档？（倾向：非阻断，照 203 先例 —— 缺旋钮只是回落默认 30s，不会阻断业务。）
+   - **处置（RESOLVED）**：**非阻断档，照 `migration_203_connection_pool_sysconfig.go` 先例**。建表阻断是因为 `uq_ad_push_queue_active` 缺失会让用户编辑全线 500；seed 缺失只让 `LoadDrainIntervalSeconds` 回落默认 30s，与业务可用性不同量级。
+   - **落点**：58-05 Task 1（`Migrate216` 内 `Create` 失败仅 `log.Printf` + `return nil`；`database.go` 的 PG 与 sqlite 两个分支调用点错误均只 `applogger.Errorf`；`TestPhase58_Migration216_SeedIdempotent` 同时锁「幂等不覆盖管理员改动」）。
 4. **管理员可感知性**：QUEUE-03 要求"终态可查询"，但本 phase 没有 UI/端点要求。是否需要一个只读查询端点，还是仅靠 SQL 排障？（CONTEXT 未列，建议不加端点，走 SQL。）
+   - **处置（RESOLVED）**：**不开端点（Q7）—— 走 SQL 排障**。「可查询」的兑现形态是：`pushed` / `dead` 两类终态**留表不删**（QUEUE-03），且 `last_error` 有可 grep 的结构化前缀（`unrecoverable:*` / `dead:*` / `retry:*` / `pool:*`），管理员按前缀分类即可定位成因。新增队列查询端点会同时带来权限模型、脱敏（`last_error` 可能含 DN）与 operlog 三项成本，超出本 phase 边界。
+   - **落点**：前缀约定由 58-03 Task 1 的 `markFailed` / `markDead` 注释锁定；58-07 Task 3 的五项 UAT 各自给出判据 SQL（如 `SELECT status, attempts, last_error, pushed_at FROM ad_push_queue WHERE ...`），把 SQL 排障路径固化进文档。若将来开端点，须按 CLAUDE.md 在 `response.Success` 前 `operlog.Record(..., OperTypeOther)` 并做权限校验与 DN 脱敏。
