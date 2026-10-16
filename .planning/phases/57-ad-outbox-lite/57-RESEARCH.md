@@ -340,7 +340,7 @@ type ConfigRestoreTask struct {
 
 **Why it happens:** ON CONFLICT 推断目标索引时需要文本级匹配谓词。
 
-**How to avoid:** ON CONFLICT 子句直接复用与部分索引 DDL 完全一致的 WHERE 谓词（PG/sqlite 双方言均要求）；先例 `migration_212_create_restore_task_active_unique_index.go:27` 的写法。
+**How to avoid:** ON CONFLICT 子句直接复用与部分索引 DDL 完全一致的 WHERE 谓词（PG/sqlite 双方言均要求）。GORM 侧该谓词必须写在 `clause.OnConflict.TargetWhere`（而非 `Where`），否则被渲染成 `DO UPDATE ... WHERE` 尾随谓词、部分索引不被推断→ PG 42P10 / sqlite "does not match any PRIMARY KEY or UNIQUE constraint"；裸 SQL 表达式用 `clause.Expr`（v1.30.5 无 `clause.Literal`）；谓词不带表名限定。先例：`internal/services/asset/reconciliation_detection.go:426`（该处 :415 注释记录了不用 TargetWhere 的失败症状）；DDL 侧先例 `migration_212_create_restore_task_active_unique_index.go:27`。
 
 **Warning signs:** 迁移后第一次同实体 INSERT 抛 "there is no unique or exclusion constraint matching the ON CONFLICT specification"。
 
@@ -730,15 +730,22 @@ func (e *ADPushEnqueuer) enqueueUpsert(
         ActionType: actionType,
         Status:     models.ADPushStatusPending,
     }
-    // ON CONFLICT 谓词文本必须与部分唯一索引一致（双方言要求）
+    // ON CONFLICT 谓词文本必须与部分唯一索引一致（双方言要求）。
+    // gorm v1.30.5 三处 API 细节（clause/on_conflict.go）：
+    //   1) 裸 SQL 表达式类型是 clause.Expr，clause.Literal 根本不存在（编译不过）；
+    //   2) 部分索引谓词必须放 TargetWhere（渲染为冲突目标推断谓词），
+    //      放 Where 会被渲染成 DO UPDATE 的尾随 WHERE → 索引不被推断
+    //      → PG 42P10 / sqlite "does not match any PRIMARY KEY or UNIQUE constraint"；
+    //   3) 谓词不带表名限定，文本级等于部分索引 DDL 的 WHERE 片段。
+    // 项目内正确先例：internal/services/asset/reconciliation_detection.go:426。
     err := tx.Clauses(clause.OnConflict{
         Columns: []clause.Column{
             {Name: "entity_type"}, {Name: "entity_id"}, {Name: "action_type"},
         },
-        Where: clause.Where{
+        TargetWhere: clause.Where{
             Exprs: []clause.Expression{
-                clause.Literal{
-                    SQL: "ad_push_queue.status IN ('pending','failed')",
+                clause.Expr{
+                    SQL: "status IN ('pending','failed')",
                 },
             },
         },
@@ -941,7 +948,7 @@ func TestPhase57_ADPushQueue_DeleteEnqueue(t *testing.T) {
 - A4 | semicolon here is wrong
 | A5 | diff helper 用 `strings.TrimSpace` 比较空串 | Code Examples | 边界 `""` vs `"  "` 一律视为无变化；用户实际编辑不会传空格串，可接受 |
 | A6 | BatchDelete 用 `tx.CreateInBatches(&rows, 500)` | Patterns | PG 参数上限安全；sqlite 无上限问题；500 沿用 user_sync_service.go:470 batchWriteSize 惯例 |
-| A7 | ON CONFLICT 用 `clause.OnConflict{...}` 显式 | Code Examples | 部分唯一索引需要 `Where` 字段，clause.Literal 显式 SQL；先例无现成代码（migration_212 不走 ORM） |
+| A7 | ON CONFLICT 用 `clause.OnConflict{...}` 显式 | Code Examples | 部分唯一索引谓词必须放 `TargetWhere`（非 `Where`），裸 SQL 用 `clause.Expr`（gorm v1.30.5 无 `clause.Literal`）；先例 `internal/services/asset/reconciliation_detection.go:426`（migration_212 本身不走 ORM） |
 | A8 | 前置条件 AD 配置检查放事务内 (`tx`) | Pitfall 7 | 用户编辑 RT 恶化可回退到事务外 + WARN 容错 |
 | A9 | migration_215 编号在 214 之后 | All | 214 已用；215 顺延；CONTEXT.md 已明示（roadmap "migration_200"编号失效） |
 | A10 | `attempts/next_retry_at/last_error/failed_at` 字段定义在 Phase 57 而非 Phase 58 | Models / Migration | D-07 决策；Phase 58 排水器只需读取/更新这些列 |

@@ -245,7 +245,17 @@ ON CONFLICT (entity_type, entity_id, action_type)
 WHERE status IN ('pending','failed')  -- 必须与部分索引谓词完全一致
 DO UPDATE SET attempts = 0, last_error = '', failed_at = NULL, ...
 ```
-GORM way: `tx.Clauses(clause.OnConflict{...})` — see `gorm.io/gorm/clause`. The `Where` clause goes on the OnConflict struct (literal `ad_push_queue.status IN ('pending','failed')` — `clause.Literal` form, as research RESEACH.md Code Example 3 demonstrates).
+GORM way: `tx.Clauses(clause.OnConflict{...})` — see `gorm.io/gorm/clause`. gorm v1.30.5 gotchas (three):
+- The partial-index predicate goes in **`TargetWhere`**, not `Where` (`clause/on_conflict.go:35` vs `:49`). `Where` renders as the trailing `DO UPDATE ... WHERE`, so the index is not inferred → PG 42P10 / sqlite "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint".
+- The raw-SQL expression type is **`clause.Expr`**; `clause.Literal` does not exist in v1.30.5.
+- No table qualification — the predicate must be textually identical to the partial-index DDL WHERE clause.
+
+```go
+TargetWhere: clause.Where{Exprs: []clause.Expression{
+    clause.Expr{SQL: "status IN ('pending','failed')"},
+}},
+```
+Verified project precedent: `internal/services/asset/reconciliation_detection.go:426`.
 
 **BatchDisableCreateInBatches — pattern from `internal/services/system/user_sync_service.go:602 batchWriteSize=500`**:
 ```go
@@ -454,7 +464,7 @@ if err := migrations.Migrate215CreateADPushQueue(d.DB); err != nil {
 ```sql
 WHERE status IN ('pending', 'running')  -- 必须与部分索引 DDL 谓词完全一致(双方言均要求)
 ```
-GORM literal form: `clause.Literal{SQL: "ad_push_queue.status IN ('pending','failed')"}` — pass to `clause.OnConflict.Where.Exprs`.
+GORM form: `TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "status IN ('pending','failed')"}}}` — **not** `Where`, and **not** `clause.Literal` (the latter does not exist in gorm v1.30.5). Verified project precedent: `internal/services/asset/reconciliation_detection.go:426`.
 
 ### Fail-Soft Migration Startup Pattern
 **Source:** `internal/core/db/database.go` (lines 985-1051, advisory-lock block)

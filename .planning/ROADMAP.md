@@ -46,72 +46,103 @@ previous_update: 2026-07-08 after Phase 54 (W5) shipped
 - [ ] **Phase 62: 卫生收尾与死代码清理** — F-22 旧路径删除 + 嵌套组标记 + 同名部门 OU DN 冲突告警 (HYGIENE-03/04/05)
 
 ### Phase 57: AD 推送队列基建（outbox-lite 同事务入队）
+
 **Goal**: 管理员编辑用户产生的 AD 推送在业务事务内落队列、进程重启不丢失；同用户多次编辑按实体合并仅保留最新待推送状态；sys 删除用户入队 disable 动作闭环"复活"链路。
 **Depends on**: 无（v1.21 首个 phase；前置条件已满足——1641 文件 5 组提交合入 main 并推送, 2026-10-16）
 **Requirements**: QUEUE-01, QUEUE-02, QUEUE-06, HYGIENE-06
-**Notes**: 本里程碑 DB migration 编号从 **200** 起——Phase 57 落地 migration_200（`ad_push_queue` 表），后续 phase 需要迁移时顺延编号。队列基建（表 + 同事务入队）是 Phase 59 GUARD-01 信号守卫的前置（守卫查队列行）。排水器不注册 sys_job（PROJECT.md 关键决策）。
+**Notes**: ⚠️ 编号修正（2026-10-16 plan-phase）：ROADMAP 原写的 migration_200 已失效——214 已被 `migration_214_create_ad_login_history.go` 占用，Phase 57 实际落地 **migration_215**（见 57-CONTEXT.md D 段与 phase_specific_constraints）。本里程碑 DB migration 编号从 **215** 起，后续 phase 需要迁移时顺延编号。队列基建（表 + 同事务入队）是 Phase 59 GUARD-01 信号守卫的前置（守卫查队列行）。排水器不注册 sys_job（PROJECT.md 关键决策）。
 **Success Criteria** (what must be TRUE):
+
   1. 管理员编辑用户（部门/昵称/邮箱/手机）后，`ad_push_queue` 在同一业务事务内出现待推送行——业务保存回滚时队列行不存在，进程重启后已入队行仍在（QUEUE-01）
   2. 同一用户短时间内多次编辑后，队列中该用户仅保留最新一条待推送行，内容为最后一次编辑结果，后一次编辑不被丢弃（QUEUE-02）
   3. sys 侧删除用户后，队列出现 disable AD 账号动作行（QUEUE-06）
   4. SQLite 测试环境补建队列表后 `go test ./...` 全绿（HYGIENE-06）
-**Plans**: TBD
+
+**Plans**: 3 plans (3 waves, sequential)
+
+Plans:
+**Wave 1**
+
+- [ ] 57-01-PLAN.md — `ad_push_queue` schema 层：GORM 模型 + migration_215 双方言建表/部分唯一索引 + database.go 双分支注册 + Wave 0 测试 (QUEUE-02, HYGIENE-06)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 57-02-PLAN.md — 入队 service（addomain）：四字段 diff 纯函数 + D-02 事务内前置条件 + ON CONFLICT 合并 upsert（update_user / disable）(QUEUE-01/02/06)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 57-03-PLAN.md — user_service.go 三处事务内接线（Update/Delete/BatchDelete）+ sqlite 测试环境补表 + `go test ./...` 全绿 (QUEUE-01/06, HYGIENE-06)
 
 ### Phase 58: 排水器与 compare-and-move 推送
+
 **Goal**: 队列被可靠排水——按用户 ad_dn 路由正确 AD 配置、闭包内重读最新值幂等移动 OU、失败退避重试至终态可查、目标 DN 消失时转终态不死循环。
 **Depends on**: Phase 57（队列行存在才能排水）；phase 内 wave 顺序约束：HYGIENE-01 配置解析 helper 先于 QUEUE-04 compare-and-move（三方审计依赖）
 **Requirements**: HYGIENE-01, HYGIENE-02, QUEUE-03, QUEUE-04, QUEUE-05
 **Notes**: compare-and-move 是结构性修 F1（部门回退乒乓）的推送侧；禁用新旧值比较（会激活未验证的 MoveUser 重试分支）。`ErrADTargetNotFound` → 终态。
 **Success Criteria** (what must be TRUE):
+
   1. 排水器以 in-process cron 运行且未注册 sys_job；处理 dept 推送与 disable 账号两类动作行（闭环 Phase 57 QUEUE-06 执行侧）；失败行按退避重试，达上限转终态且可通过查询确认（QUEUE-03）
   2. OU 移动采用 compare-and-move：闭包内重读用户最新值 + NormalizeDN 归一化比较，目标一致时跳过 MoveUser；同一队列行重复排水幂等，不产生重复移动（QUEUE-04）
   3. 多 AD 配置环境下推送按用户 `ad_dn` 归属解析配置，不再依赖 `First()` 取首条；`getDefaultADConfigID` 双份实现合并为公共 helper（HYGIENE-01）
   4. 含特殊字符的部门名经 OU DN 转义 helper 拼接后推送不产生非法 DN（HYGIENE-02）
   5. LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，后续排水不再重试（QUEUE-05）
+
 **Plans**: TBD
 
 ### Phase 59: 登录回写守卫与部门对账视图
+
 **Goal**: AD 登录回写 dept 不再用旧值回滚本地编辑（信号守卫替代被三方审计否决的时间戳仲裁）；dept↔OU 不一致（含映射指向软删部门）可观测。
 **Depends on**: Phase 57（守卫查询 `ad_push_queue` 的 pending/failed 行）
 **Requirements**: GUARD-01, GUARD-02
 **Notes**: 对账视图用普通 SQL VIEW，禁用 MV（避免 MV 刷新僵尸 / GORM AutoMigrate 阻塞前科）。
 **Success Criteria** (what must be TRUE):
+
   1. 存在 pending/failed dept 队列行的用户经 AD 登录时，本地 dept 不被 AD 旧值覆盖，日志记录 WARN（GUARD-01）
   2. 无队列行的用户经 AD 登录时 dept 回写行为与现状一致，守卫不误伤正常同步（GUARD-01）
   3. `v_dept_ou_mismatch` 普通 SQL VIEW 可查询 dept↔OU 不一致条目及"映射指向软删部门"条目（GUARD-02）
   4. 只读端点返回对账数据且需登录鉴权访问（GUARD-02）
+
 **Plans**: TBD
 
 ### Phase 60: 软删恢复安全
+
 **Goal**: 软删用户恢复不再盲目接管 AD 身份——AD 当前 DN 与存量 ad_dn 校验一致才恢复；登录路径与 batch-sync 对同一恢复场景行为一致。
 **Depends on**: 无硬依赖（三方审计确认 SAFE 与 QUEUE/SHADOW 相互独立，可并行排期；本 roadmap 顺序执行置于 Phase 58 之后）
 **Requirements**: SAFE-01, SAFE-02
 **Notes**: HYGIENE-03（Phase 62）依赖本 phase 先落地——SAFE-01 落地前 user_ou_service.go 死代码是 F-22 语义的唯一载体。
 **Success Criteria** (what must be TRUE):
+
   1. `catSoftDeleted` 恢复前校验 AD 当前 DN 与存量 `ad_dn` 一致，一致时恢复成功（SAFE-01）
   2. DN 不一致时拒绝恢复、用户保持软删状态，并写入安全审计日志（SAFE-01）
   3. 登录路径与 batch-sync 共用软删分类与校验逻辑，同一场景两路径行为一致（SAFE-02）
+
 **Plans**: TBD
 
 ### Phase 61: 影子表完整性（删除清理 + 组成员事务化）
+
 **Goal**: AD 端已消失的对象不再永久滞留 `sys_ad_user/ou/computer` 影子表（静默数据丢失消除）；组成员重放消除空成员可见窗口；清理与全量同步不并发。
 **Depends on**: 无硬依赖（与 QUEUE/SAFE 相互独立可并行；phase 内 SHADOW-03 依赖 SHADOW-01 先落地）
 **Requirements**: SHADOW-01, SHADOW-02, SHADOW-03
 **Success Criteria** (what must be TRUE):
+
   1. 全量同步末尾，AD 端已消失的 `sys_ad_user/ou/computer` 行被软删除（SHADOW-01）
   2. 两道闸门生效：LDAP 本轮返回 0 条时清理拒绝执行；拟删数量超过存量 50% 时拒绝执行（SHADOW-01）
   3. `sys_ad_group_member` 重放在单事务（Delete+Create 包 Transaction）内完成，重放过程中外部查询看不到空成员窗口（SHADOW-02）
   4. 删除清理挂 `syncDataInternal` 内执行（复用 singleflight），与全量同步互斥不并发（SHADOW-03）
+
 **Plans**: TBD
 
 ### Phase 62: 卫生收尾与死代码清理
+
 **Goal**: F-22 旧路径死代码在 SAFE-01 落地后安全移除；嵌套组不污染用户成员关系；同名兄弟部门 OU DN 冲突显式告警不静默覆盖。
 **Depends on**: Phase 60（HYGIENE-03 死代码删除必须在 SAFE-01 之后——先删会丢 F-22 对照语义）
 **Requirements**: HYGIENE-03, HYGIENE-04, HYGIENE-05
 **Success Criteria** (what must be TRUE):
+
   1. `user_ou_service.go` 整文件、`GetUserDeptByADOU`、`BatchMoveUsersToNewOU`、`dept_ou_mapper.go:31` 等过期注释及其关联测试全部删除后 `go build ./...` 通过且测试套件全绿（HYGIENE-03）
   2. 嵌套组的 member DN 被标记/过滤，不混入用户成员关系数据（HYGIENE-04）
   3. 同名兄弟部门生成相同 OU DN 时检测并告警，映射不静默互相覆盖（HYGIENE-05）
+
 **Plans**: TBD
 
 ---
