@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# 仓库根 git hook: 仅对 frontend 改动执行 lint-staged
+# (lint-staged.config.js 在 xingran-react-frontend/ 下,必须 cd 进去)
+cd xingran-react-frontend && npx lint-staged

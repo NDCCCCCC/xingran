@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# 仓库根 commit-msg: 校验 Conventional Commits
+cd xingran-react-frontend && npx --no -- commitlint --edit "$1"

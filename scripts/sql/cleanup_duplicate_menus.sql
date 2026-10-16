@@ -2,7 +2,7 @@
 -- 生成时间: 2026-05-19
 -- 保留规则: 每组保留创建时间最早的记录
 -- ⚠️ 执行前请备份数据库！
--- 备份命令: pg_dump -h 10.62.10.34 -U postgres -d ruoyi -t sys_menu > backup_sys_menu.sql
+-- 备份命令: pg_dump -h 10.62.10.34 -U postgres -d xingran -t sys_menu > backup_sys_menu.sql
 
 BEGIN;
 

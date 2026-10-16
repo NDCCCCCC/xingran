@@ -150,7 +150,7 @@ func checkRedisStats(ctx context.Context, client *redis.Client) {
 
 // isOldKeyFormat 检查是否为旧格式键
 func isOldKeyFormat(key string) bool {
-	// 移除 ruoyi: 前缀
+	// 移除 xingran: 前缀
 	cleanKey := key
 	if len(key) > 6 && key[:6] == "ruoyi:" {
 		cleanKey = key[6:]

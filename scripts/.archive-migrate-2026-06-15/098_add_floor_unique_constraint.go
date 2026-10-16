@@ -34,7 +34,7 @@ func getDB() (*gorm.DB, error) {
 	port := getEnvInt("DB_PORT", 5432)
 	user := getEnv("DB_USER", "postgres")
 	password := getEnv("DB_PASSWORD", "")
-	dbname := getEnv("DB_NAME", "ruoyi")
+	dbname := getEnv("DB_NAME", "xingran")
 
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)

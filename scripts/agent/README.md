@@ -50,22 +50,22 @@ ssh user@vm-ip
 sudo bash /tmp/install-linux.sh "https://backend.com" "agent-id" "vm-id"
 
 # 3. 检查服务状态
-systemctl status ruoyi-vm-agent
-journalctl -u ruoyi-vm-agent -f
+systemctl status xingran-vm-agent
+journalctl -u xingran-vm-agent -f
 ```
 
 #### Windows 虚拟机
 
 ```powershell
 # 1. 复制 Agent 到虚拟机
-Copy-Item "build\agent-windows-amd64.exe" "\\VM-IP\C$\Program Files\RuoyiAgent\"
+Copy-Item "build\agent-windows-amd64.exe" "\\VM-IP\C$\Program Files\XingRanAgent\"
 
 # 2. 在虚拟机上执行安装
 Enter-PSSession -ComputerName VM-IP
 powershell .\install-windows.ps1 -BackendURL "https://backend.com" -AgentID "agent-id" -VMID "vm-id"
 
 # 3. 检查服务状态
-Get-Service RuoyiVMAgent
+Get-Service XingRanVMAgent
 ```
 
 ## API 端点
@@ -93,7 +93,7 @@ vm_id: "unique-vm-id"                        # 虚拟机唯一标识
 listen_addr: ":8443"                         # 监听地址
 heartbeat_interval: "30s"                    # 心跳间隔
 log_level: "info"                             # 日志级别
-log_path: "/var/log/ruoyi-agent"             # 日志目录
+log_path: "/var/log/xingran-agent"             # 日志目录
 jwt_secret: "your-secret-key"                 # JWT 密钥
 ```
 
@@ -114,32 +114,32 @@ export JWT_SECRET="your-secret"
 
 ```bash
 # 检查服务状态
-systemctl status ruoyi-vm-agent
+systemctl status xingran-vm-agent
 
 # 查看日志
-journalctl -u ruoyi-vm-agent -n 100
+journalctl -u xingran-vm-agent -n 100
 
 # 检查端口占用
 netstat -tuln | grep 8443
 
 # 检查进程
-ps aux | grep ruoyi-vm-agent
+ps aux | grep xingran-vm-agent
 ```
 
 ### Windows
 
 ```powershell
 # 检查服务状态
-Get-Service RuoyiVMAgent
+Get-Service XingRanVMAgent
 
 # 查看日志
-Get-Content "C:\Program Files\RuoyiAgent\logs\*.log"
+Get-Content "C:\Program Files\XingRanAgent\logs\*.log"
 
 # 检查端口占用
 netstat -an | findstr 8443
 
 # 检查进程
-Get-Process ruoyi-vm-agent
+Get-Process xingran-vm-agent
 ```
 
 ### 常见问题

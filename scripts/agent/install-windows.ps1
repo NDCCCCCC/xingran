@@ -1,11 +1,11 @@
 # install-windows.ps1 - Windows Agent 安装脚本
 param(
-    [string]$BackendURL = "https://ruoyi-backend.example.com",
+    [string]$BackendURL = "https://xingran-backend.example.com",
     [string]$AgentID = "",
     [string]$VMID = ""
 )
 
-Write-Host "Installing RuoYi VDI Agent..." -ForegroundColor Green
+Write-Host "Installing XingRan VDI Agent..." -ForegroundColor Green
 
 # 检查管理员权限
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -23,7 +23,7 @@ if ([string]::IsNullOrEmpty($AgentID) -or [string]::IsNullOrEmpty($VMID)) {
 
 # 下载 Agent
 $agentUrl = "$BackendURL/api/v1/agent/download/windows"
-$agentPath = "C:\Program Files\RuoyiAgent"
+$agentPath = "C:\Program Files\XingRanAgent"
 $agentExe = "$agentPath\agent.exe"
 
 New-Item -Path $agentPath -ItemType Directory -Force | Out-Null
@@ -45,26 +45,26 @@ vm_id: $VMID
 listen_addr: ":8443"
 heartbeat_interval: 30s
 log_level: info
-log_path: C:\Program Files\RuoyiAgent\logs
+log_path: C:\Program Files\XingRanAgent\logs
 platform: windows
 "@ | Out-File -FilePath $configPath -Encoding UTF8
 
 Write-Host "Configuration created at: $configPath"
 
 # 创建日志目录
-$logPath = "C:\Program Files\RuoyiAgent\logs"
+$logPath = "C:\Program Files\XingRanAgent\logs"
 New-Item -Path $logPath -ItemType Directory -Force | Out-Null
 
 # Create JEA Session Configuration
 function Create-JEAConfiguration {
     param(
-        [string]$ConfigPath = "C:\Program Files\WindowsPowerShell\Configuration\sessionConfigs\RuoyiAgent.pssc"
+        [string]$ConfigPath = "C:\Program Files\WindowsPowerShell\Configuration\sessionConfigs\XingRanAgent.pssc"
     )
 
     Write-Host "Creating JEA session configuration..."
 
     # Define role capabilities
-    $roleCapabilityPath = "C:\Program Files\WindowsPowerShell\Configuration\RoleCapabilities\RuoyiAgentRole.ps1"
+    $roleCapabilityPath = "C:\Program Files\WindowsPowerShell\Configuration\RoleCapabilities\XingRanAgentRole.ps1"
 
     # Create role capabilities file
     @"
@@ -73,13 +73,13 @@ function Create-JEAConfiguration {
     GUID = 'a8c7f7e3-6d4a-4f5b-9e8a-2d3c4b5a6e7f'
 
     # Author of this role capability
-    Author = 'RuoYi VDI System'
+    Author = 'XingRan VDI System'
 
     # Company or vendor of this role capability
-    CompanyName = 'RuoYi'
+    CompanyName = 'XingRan'
 
     # Description of the functionality provided by these role capabilities
-    Description = 'Restricted role for RuoYi VDI Agent - user account management only'
+    Description = 'Restricted role for XingRan VDI Agent - user account management only'
 
     # Cmdlets to make visible when applied to a session
     VisibleCmdlets = @(
@@ -106,9 +106,9 @@ function Create-JEAConfiguration {
         RunAsVirtualAccount = $true
         VirtualAccountType = 'LocalAccount'
         RoleDefinitions = @{
-            'RuoyiAgentUser' = @{ RoleCapabilityFiles = $roleCapabilityPath }
+            'XingRanAgentUser' = @{ RoleCapabilityFiles = $roleCapabilityPath }
         }
-        TranscriptDirectory = 'C:\Program Files\RuoyiAgent\transcripts'
+        TranscriptDirectory = 'C:\Program Files\XingRanAgent\transcripts'
     }
 
     New-PSSessionConfigurationFile @sessionConfigParams -Force
@@ -121,13 +121,13 @@ function Create-JEAConfiguration {
 Create-JEAConfiguration
 
 # Create JEA-restricted service account
-$password = ConvertTo-SecureString "RuoyiAgent123!" -AsPlainText -Force
+$password = ConvertTo-SecureString "XingRanAgent123!" -AsPlainText -Force
 try {
-    New-LocalUser -Name "RuoyiAgentUser" -Password $password -Description "RuoYi VDI Agent User" -ErrorAction Stop | Out-Null
-    Write-Host "Created user: RuoyiAgentUser"
+    New-LocalUser -Name "XingRanAgentUser" -Password $password -Description "XingRan VDI Agent User" -ErrorAction Stop | Out-Null
+    Write-Host "Created user: XingRanAgentUser"
 } catch {
     if ($_.Exception.Message -like "*already exists*") {
-        Write-Host "User RuoyiAgentUser already exists" -ForegroundColor Yellow
+        Write-Host "User XingRanAgentUser already exists" -ForegroundColor Yellow
     } else {
         Write-Host "WARNING: Failed to create user: $_" -ForegroundColor Yellow
     }
@@ -140,10 +140,10 @@ Write-Host "User configured with JEA restricted privileges (NOT in Administrator
 # Register JEA session configuration
 Write-Host "Registering JEA session configuration..."
 try {
-    $psscPath = "C:\Program Files\WindowsPowerShell\Configuration\sessionConfigs\RuoyiAgent.pssc"
+    $psscPath = "C:\Program Files\WindowsPowerShell\Configuration\sessionConfigs\XingRanAgent.pssc"
     if (Test-Path $psscPath) {
-        Register-PSSessionConfiguration -Name "RuoyiAgentJEA" -Path $psscPath -Force -NoServiceRestart
-        Write-Host "JEA session 'RuoyiAgentJEA' registered successfully"
+        Register-PSSessionConfiguration -Name "XingRanAgentJEA" -Path $psscPath -Force -NoServiceRestart
+        Write-Host "JEA session 'XingRanAgentJEA' registered successfully"
     } else {
         Write-Host "WARNING: JEA configuration file not found at $psscPath" -ForegroundColor Yellow
     }
@@ -156,8 +156,8 @@ Write-Host "Restarting WinRM service..."
 Restart-Service -Name WinRM -Force
 
 # 注册 Windows 服务
-$serviceName = "RuoyiVMAgent"
-$serviceDisplayName = "RuoYi VM Agent"
+$serviceName = "XingRanVMAgent"
+$serviceDisplayName = "XingRan VM Agent"
 
 # 检查服务是否已存在
 $existingService = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
@@ -192,7 +192,7 @@ try {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "RuoYi VDI Agent installed successfully!" -ForegroundColor Green
+Write-Host "XingRan VDI Agent installed successfully!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "Service name: $serviceName"
 Write-Host "Config file: $configPath"

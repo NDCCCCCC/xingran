@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# fetch-release-and-activate.sh — server 端（通过 ssh 'bash -s' 触发）
+#
+# 从 GitHub Release 经 gh-proxy.com 镜像匿名拉取部署 tar.gz。
+# 网络矩阵实测(2026-08-18): runner→server SSH ~10KB/s(不可用),
+# server→GitHub 直连 0-1.6KB/s(不可用), server→gh-proxy 公开资产 2.7-9.7MB/s。
+# 仓库已设为 public(用户决策),release 资产匿名可达,无 token / 无 rate limit。
+#
+# 流程：
+#   1. df 磁盘预检
+#   2. curl 匿名经 gh-proxy 下载 browser_download_url
+#   3. sha256 校验（runner 端 build 时生成并传入）
+#   4. 解压出 xingran-backend + xingran.service，就位 .new 文件
+#   5. exec deploy-remote.sh（备份/原子替换/重启/health/回滚，零改动）
+#
+# 用法: ssh ... 'bash -s' -- <VERSION> <BROWSER_DOWNLOAD_URL> <SHA256> < fetch-release-and-activate.sh
+
+set -euo pipefail
+
+APP=/opt/xingran
+UPLOAD=$APP/upload
+NEW=$APP/xingran-backend.new
+UNIT_NEW=$APP/deploy/xingran.service.new
+
+VERSION="${1:-}"
+ASSET_URL="${2:-}"   # runner 侧已解析的 browser_download_url
+EXPECTED_SHA="${3:-}"
+
+fail() { echo "!! $*" >&2; exit 1; }
+
+[ -n "$VERSION" ]    || fail "usage: $0 <version> <browser_download_url> <sha256>"
+[ -n "$ASSET_URL" ]  || fail "missing asset url"
+[ -n "$EXPECTED_SHA" ] || fail "missing sha256"
+
+# 1. 磁盘预检（tar.gz ~22MB + 解压后 63MB + 备份 63MB）
+FREE_KB=$(df -k "$APP" | tail -1 | awk '{print $4}')
+[ "$FREE_KB" -ge 204800 ] || fail "insufficient disk: ${FREE_KB}KB free (need >= 200MB)"
+
+sudo install -d -m 0755 "$UPLOAD"
+TARBALL="$UPLOAD/xingran-backend.tar.gz"
+rm -f "$TARBALL"
+
+# 2. 匿名下载（公开资产,CDN 直达） — 多镜像轮转 + 指数退避
+# 动机: gh-proxy.com 偶发链路抽风（基线 2.7-9.7MB/s, 跌至 ~72KB/s 时一次 22MB
+#   tar.gz 可能 5min 内下不完）。证据: run 32343634772 deploy job 22.5MB 差 621KB
+#   在 5min --max-time 失败,同 run rerun 39s 完成,典型的镜像瞬时降速。
+# 2026-09-14: gh-proxy.com 升级为全量 403（所有匿名代理下载被服务端封锁,
+#   含其他公共 repo——非本仓库特例, run 34860399064 两次全链路 403 复现）。
+#   引入镜像轮转链, 每次尝试换下一个镜像:
+#   ghfast.top (2026-09-14 实测 sha256 一致可用) → gh-proxy.com (历史主镜像,
+#   服务恢复后自动回归) → ghproxy.link / gh-proxy.net (307/302 重定向, -L 处理)。
+# 单次 --max-time 300 × 4 = 最坏 20min + 退避 30/60/120s = 23.5min,
+# 已超 deploy job 旧 timeout-minutes: 15 → 该 job timeout 已同步上调至 25。
+PROXIES=("https://ghfast.top" "https://gh-proxy.com" "https://ghproxy.link" "https://gh-proxy.net")
+echo ">> downloading asset via proxy chain: ${PROXIES[*]}"
+ATTEMPTS=${#PROXIES[@]}
+for attempt in $(seq 1 $ATTEMPTS); do
+  PROXY="${PROXIES[$((attempt - 1))]}"
+  if curl -fsSL --max-time 300 -o "$TARBALL" "$PROXY/$ASSET_URL"; then
+    echo ">> downloaded via $PROXY"
+    break
+  fi
+  rc=$?
+  if [ "$attempt" -eq $ATTEMPTS ]; then
+    fail "asset download failed after $ATTEMPTS attempts across proxy chain (last curl rc=$rc, proxy=$PROXY)"
+  fi
+  # 指数退避: 30s / 60s / 120s
+  backoff=$(( 30 << (attempt - 1) ))
+  echo "!! attempt $attempt/$ATTEMPTS via $PROXY failed (curl rc=$rc), retrying in ${backoff}s"
+  sleep "$backoff"
+done
+
+SIZE=$(stat -c %s "$TARBALL")
+[ "$SIZE" -gt 10000000 ] || fail "tarball too small ($SIZE bytes), download likely corrupted"
+echo ">> downloaded $SIZE bytes"
+
+# 4. sha256 校验
+ACTUAL_SHA=$(sha256sum "$TARBALL" | awk '{print $1}')
+[ "$EXPECTED_SHA" = "$ACTUAL_SHA" ] || { rm -f "$TARBALL"; fail "sha256 mismatch: expected=$EXPECTED_SHA actual=$ACTUAL_SHA"; }
+echo ">> sha256 verified"
+
+# 5. 解压就位 .new 文件
+tar -xzf "$TARBALL" -C "$UPLOAD"
+[ -f "$UPLOAD/xingran-backend" ] || fail "xingran-backend not in tarball"
+[ -f "$UPLOAD/xingran.service" ] || fail "xingran.service not in tarball"
+[ -f "$UPLOAD/deploy-remote.sh" ] || fail "deploy-remote.sh not in tarball"
+
+sudo install -m 0755 "$UPLOAD/xingran-backend" "$NEW"
+install -m 0644 "$UPLOAD/xingran.service" "$UNIT_NEW"
+install -m 0755 "$UPLOAD/deploy-remote.sh" "$APP/deploy/deploy-remote.sh"
+
+rm -f "$TARBALL" "$UPLOAD/xingran-backend" "$UPLOAD/xingran.service" "$UPLOAD/deploy-remote.sh"
+
+echo ">> files in place, activating version $VERSION"
+# 6. exec 原 activate 流程（备份/替换/重启/health/回滚,零改动）
+exec sudo -n bash "$APP/deploy/deploy-remote.sh" "$VERSION"

@@ -219,4 +219,4 @@ Cookie有效期约24小时，过期后需要重新登录。
 ## 相关文档
 
 - `LOGIN_ANALYSIS.md` - 详细的登录逻辑分析
-- Phase 22规划文档: `.planning/phases/22-sangfor-vdi-integration/`
+- Phase 22规划文档: `.planning/milestones/v1.12-phases/22-sangfor-vdi-integration/`

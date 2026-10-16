@@ -201,13 +201,13 @@ KEYS cache:dept:*
 2. **重启应用服务**
    ```bash
    # 停止应用
-   pkill ruoyi-backend
+   pkill xingran-backend
 
    # 重新编译
-   go build -o ruoyi-backend ./cmd/main.go
+   go build -o xingran-backend ./cmd/main.go
 
    # 启动应用
-   ./ruoyi-backend
+   ./xingran-backend
    ```
 
 ## 常见问题
@@ -250,7 +250,7 @@ SCAN 0 MATCH role:* COUNT 1000
 
 ```go
 func normalizeCacheKeyForService(key string) string {
-    if len(key) > 6 && key[:6] == "ruoyi:" {
+    if len(key) > 6 && key[:6] == "xingran:" {
         return key[6:]
     }
     return key
@@ -258,7 +258,7 @@ func normalizeCacheKeyForService(key string) string {
 ```
 
 这个函数确保：
-- Redis 实际存储的键: `ruoyi:cache:user:id:uuid`
+- Redis 实际存储的键: `xingran:cache:user:id:uuid`
 - 业务层使用的键: `cache:user:id:uuid`
 - 显示层显示的键: `cache:user:id:uuid`
 

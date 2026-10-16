@@ -4,7 +4,7 @@
 set -e
 
 # 默认参数
-BACKEND_URL="${1:-https://ruoyi-backend.example.com}"
+BACKEND_URL="${1:-https://xingran-backend.example.com}"
 AGENT_ID="${2:-}"
 VM_ID="${3:-}"
 
@@ -14,7 +14,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Installing RuoYi VDI Agent...${NC}"
+echo -e "${GREEN}Installing XingRan VDI Agent...${NC}"
 
 # 检查 root 权限
 if [ "$EUID" -ne 0 ]; then
@@ -31,7 +31,7 @@ fi
 
 # 下载 Agent
 AGENT_URL="$BACKEND_URL/api/v1/agent/download/linux"
-AGENT_DIR="/opt/ruoyi-agent"
+AGENT_DIR="/opt/xingran-agent"
 AGENT_BIN="$AGENT_DIR/agent"
 
 mkdir -p "$AGENT_DIR"
@@ -54,47 +54,47 @@ vm_id: $VM_ID
 listen_addr: ":8443"
 heartbeat_interval: 30s
 log_level: info
-log_path: /var/log/ruoyi-agent
+log_path: /var/log/xingran-agent
 platform: linux
 EOF
 
 echo "Configuration created at: $CONFIG_PATH"
 
 # 创建日志目录
-LOG_DIR="/var/log/ruoyi-agent"
+LOG_DIR="/var/log/xingran-agent"
 mkdir -p "$LOG_DIR"
 chown -R root:root "$LOG_DIR"
 
 # 创建专用服务账号
-if ! id ruoyi-agent &>/dev/null; then
-    useradd -m -r -s /bin/bash ruoyi-agent
-    echo -e "${GREEN}Created user: ruoyi-agent${NC}"
+if ! id xingran-agent &>/dev/null; then
+    useradd -m -r -s /bin/bash xingran-agent
+    echo -e "${GREEN}Created user: xingran-agent${NC}"
 else
-    echo -e "${YELLOW}User ruoyi-agent already exists${NC}"
+    echo -e "${YELLOW}User xingran-agent already exists${NC}"
 fi
 
 # 配置 sudoers（用户管理命令）
-SUDOERS_FILE="/etc/sudoers.d/ruoyi-agent"
+SUDOERS_FILE="/etc/sudoers.d/xingran-agent"
 cat > "$SUDOERS_FILE" <<EOF
-ruoyi-agent ALL=(root) NOPASSWD: /usr/sbin/useradd
-ruoyi-agent ALL=(root) NOPASSWD: /usr/sbin/userdel
-ruoyi-agent ALL=(root) NOPASSWD: /usr/sbin/usermod
-ruoyi-agent ALL=(root) NOPASSWD: /usr/bin/passwd
+xingran-agent ALL=(root) NOPASSWD: /usr/sbin/useradd
+xingran-agent ALL=(root) NOPASSWD: /usr/sbin/userdel
+xingran-agent ALL=(root) NOPASSWD: /usr/sbin/usermod
+xingran-agent ALL=(root) NOPASSWD: /usr/bin/passwd
 EOF
 
 chmod 440 "$SUDOERS_FILE"
 echo -e "${GREEN}Sudoers configured${NC}"
 
 # 创建 systemd 服务
-SERVICE_FILE="/etc/systemd/system/ruoyi-vm-agent.service"
+SERVICE_FILE="/etc/systemd/system/xingran-vm-agent.service"
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=RuoYi VM Agent
+Description=XingRan VM Agent
 After=network.target
 
 [Service]
 Type=simple
-User=ruoyi-agent
+User=xingran-agent
 WorkingDirectory=$AGENT_DIR
 ExecStart=$AGENT_BIN --config=$CONFIG_PATH
 Restart=always
@@ -116,31 +116,31 @@ systemctl daemon-reload
 
 # 启用并启动服务
 echo "Starting service..."
-systemctl enable ruoyi-vm-agent
-systemctl start ruoyi-vm-agent
+systemctl enable xingran-vm-agent
+systemctl start xingran-vm-agent
 
 # 等待服务启动
 sleep 2
 
 # 检查服务状态
-if systemctl is-active --quiet ruoyi-vm-agent; then
+if systemctl is-active --quiet xingran-vm-agent; then
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}RuoYi VDI Agent installed successfully!${NC}"
+    echo -e "${GREEN}XingRan VDI Agent installed successfully!${NC}"
     echo -e "${GREEN}========================================${NC}"
-    echo "Service name: ruoyi-vm-agent"
+    echo "Service name: xingran-vm-agent"
     echo "Config file: $CONFIG_PATH"
     echo "Log directory: $LOG_DIR"
     echo ""
     echo "To check service status:"
-    echo "  systemctl status ruoyi-vm-agent"
+    echo "  systemctl status xingran-vm-agent"
     echo ""
     echo "To view logs:"
-    echo "  journalctl -u ruoyi-vm-agent -f"
+    echo "  journalctl -u xingran-vm-agent -f"
     echo "  tail -f $LOG_DIR/*.log"
     echo ""
 else
     echo -e "${RED}ERROR: Failed to start service${NC}"
     echo "Check logs:"
-    echo "  journalctl -u ruoyi-vm-agent -n 50"
+    echo "  journalctl -u xingran-vm-agent -n 50"
     exit 1
 fi

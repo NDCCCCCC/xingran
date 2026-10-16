@@ -17,7 +17,7 @@ func main() {
 	port := 5432
 	user := "postgres"
 	password := os.Getenv("DB_PASSWORD")
-	dbname := "ruoyi"
+	dbname := "xingran"
 
 	if password == "" {
 		log.Fatal("环境变量 DB_PASSWORD 未设置")

@@ -7,7 +7,7 @@ VERSION=${1:-"1.0.0"}
 BUILD_DIR="build"
 
 echo "=========================================="
-echo "Building RuoYi VDI Agent v$VERSION"
+echo "Building XingRan VDI Agent v$VERSION"
 echo "=========================================="
 
 # 清理旧构建

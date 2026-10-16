@@ -1,5 +1,5 @@
 -- 检查 sys_menu 表中的重复菜单
--- 执行方式：psql -U ruoyi -d ruoyi_next -f check_duplicate_menus.sql
+-- 执行方式：psql -U xingran -d xingran_next -f check_duplicate_menus.sql
 
 \echo '===== 1. 检查完全重复的记录（除了 id 外所有字段相同） ====='
 SELECT menu_name, parent_id, path, component, menu_type, COUNT(*) as dup_count

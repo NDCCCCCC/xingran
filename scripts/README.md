@@ -1,21 +1,48 @@
 # Scripts 说明
 
-本目录包含用于数据库迁移、维护和构建的脚本。
+本目录包含项目日常开发、调试、运维、构建所用的脚本与工具。
+
+> **2026-08-12 整理记录**
+> 顶层原本散落着 22 个未归类脚本，且已有若干子目录未被 README 收录。本次整理做了三件事：
+> 1. **归档 17 个过时/一次性脚本** → `.archive-scripts-2026-08-12/`（不是删除，移入归档以保留可恢复性）
+> 2. **归位 10 个常用脚本** → 按用途移入对应分类子目录（`build/`、`db/`、`sql/`、`tests/`），同时修正 `build/` 子目录下脚本的路径定位（`..` → `../..`）
+> 3. **重写本 README** 反映完整结构
 
 ## 目录结构
 
 ```
 scripts/
-├── build/          # 构建脚本
-├── .archive-migrate-2026-06-15/  # 已归档的一次性迁移脚本(原 migrate/)
-├── tools/          # 可复用的维护工具
-├── sql/            # SQL 修复脚本
-└── README.md       # 本文档
+├── README.md                       # 本文档
+│
+├── build/                          # 构建脚本（bat/sh 配对）
+├── agent/                          # Agent 部署/测试
+├── vmp-api/                        # VMP API 逆向/分析工具集
+│
+├── e2e/                            # 端到端测试（Go test）
+├── tests/                          # 测试脚本（Python / 一工具一目录）
+├── verify/                         # 格式/校验工具
+│
+├── vdi/                            # VDI 对接工具
+├── diag/                           # 诊断工具
+├── port/                           # 端口采集工具
+├── mac/                            # MAC 地址管理工具
+│
+├── crypto/                         # 国密（SM2/SM3/SM4）工具
+├── db/                             # 数据库运维/导出工具
+├── env/                            # 环境/配置检查工具
+├── tools/                          # 菜单权限维护工具（一工具一目录）
+│
+├── sql/                            # 散落 SQL 修复/查询脚本
+├── migrations/                     # 数据库结构迁移 SQL
+├── migrate_cache_keys/             # 缓存键迁移（含 Makefile + 文档）
+│
+├── .archive-migrate-2026-06-15/    # 历史一次性 DB 迁移归档（2026-06-15）
+└── .archive-scripts-2026-08-12/    # 本次整理的过时/一次性脚本归档（2026-08-12）
 ```
 
-## 环境变量配置
+## 环境变量
 
-所有脚本都通过环境变量获取数据库连接信息，请在运行前设置以下环境变量：
+所有直接连 DB 的脚本都通过环境变量获取数据库连接信息，运行前请设置：
 
 ```bash
 # Windows
@@ -23,160 +50,208 @@ set DB_HOST=localhost
 set DB_PORT=5432
 set DB_USER=postgres
 set DB_PASSWORD=your_password
-set DB_NAME=ruoyi
+set DB_NAME=xingran
 
 # Linux/macOS
 export DB_HOST=localhost
 export DB_PORT=5432
 export DB_USER=postgres
 export DB_PASSWORD=your_password
-export DB_NAME=ruoyi
+export DB_NAME=xingran
 ```
 
-或者创建 `.env` 文件并在运行时加载：
+或使用 `.env` + direnv 等工具自动加载。
 
-```bash
-# 使用 direnv 等工具自动加载
-# 或手动导入
-export $(cat .env | xargs)
-```
+## 各子目录说明
 
-## build/ - 构建脚本
+### `build/` — 构建脚本
 
-用于构建和部署的脚本：
-
-- `build.bat` - 构建后端
-- `build_and_deploy.bat` - 构建并部署
-- `generate_swagger.bat` - 生成 Swagger 文档
-
-### 使用示例
+`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。**所有脚本内已用 `%~dp0..\..` / `dirname/../..` 定位项目根，可从任意 cwd 调用**。
 
 ```bash
 cd scripts/build
 
-# 构建项目
-./build.bat
+# 构建后端（Linux 目标）
+./build.bat                    # 或 ./build_and_deploy.bat
+./build-embedded.sh            # 内嵌前端的版本（Linux）
+build-embedded.bat             # 内嵌前端的版本（Windows）
+build-linux.bat                # 纯 Windows 构建
 
-# 生成 Swagger 文档
+# Swagger 文档
 ./generate_swagger.bat
+./generate_swagger.sh
+
+# 校验打包后的 vendor chunks（D-07）
+./check-bundle.sh
 ```
 
-## .archive-migrate-2026-06-15/ - 已归档的一次性迁移脚本
+### `agent/` — Agent 部署/测试
 
-> **历史归档目录**(2026-06-15 重命名,原名 `migrate/`)。
-> 这些一次性运维脚本全部带 `//go:build ignore`,正常编译不会包含。所有脚本对应的迁移已经在生产 DB 执行过,无需重跑。
-> 配套的 SQL 文件已移至 `internal/core/db/migrations/archive/legacy-2026-06-15/`。
-> 详见归档说明: `internal/core/db/migrations/archive/legacy-2026-06-15/README.md`
+跨平台 Agent 安装与冒烟测试。
 
-历史脚本清单(供参考):
+| 文件 | 说明 |
+|------|------|
+| `install-windows.ps1` / `install-linux.sh` | Agent 安装 |
+| `build.sh` | Agent 构建 |
+| `test-agent.bat` / `test-agent.sh` | Agent 冒烟测试 |
+| `test-config.yaml` | 测试用配置 |
 
-### 用户中心菜单路径修复 (2026-01)
-- `056_fix_user_center_paths.go` - 修复用户中心子菜单路径
-- `057_fix_user_center_parent_path.go` - 修复用户中心父菜单路径
-- `058_fix_user_center_relative_paths.go` - 修复为相对路径
+详见 `agent/README.md`。
 
-### 菜单路径分析和修复
-- `053_fix_menu_paths.go` - 修复菜单路径
-- `054_analyze_menu_paths.go` - 分析菜单路径问题
+### `vmp-api/` — VMP API 逆向分析工具集
 
-### AD 域设备管理 (2026-01)
-- `074_run_migration.go` - 运行电脑设备唯一约束迁移
-- `075_cleanup_duplicate_computers.go` - 清理重复的电脑设备
-- `076_check_computer_data.go` - 检查电脑设备数据
-- `077_run_ou_optimization.go` - 运行OU查询优化
+针对 VMP 平台登录接口的浏览器侧加密分析与重放工具（一次性调研产物）。
 
-### 其他迁移
-- `042_add_hidden_special_page_menus.go` - 添加隐藏的特殊页面菜单
-- `096_fix_floor_and_file_tables.go` - 修复楼层和文件表
-- `098_add_floor_unique_constraint.go` - 添加楼层唯一约束
-- `099_add_workstation_unique_constraint.go` - 添加工位唯一约束
-- `104_run_rpa_scaling_migration.go` - RPA 扩展迁移
-- `106_run_rpa_migration.go` - RPA 迁移
-- `113_fix_screenshots_column.go` - 修复截图列类型
+详见 `vmp-api/README.md`。
 
-**注意：** 这些脚本已经执行过，通常不需要再次运行。如需参考，请查看脚本中的注释。
+### `e2e/` — 端到端测试
 
-## tools/ - 维护工具
+Go 测试入口，与 Go test 框架配合运行。
 
-可重复使用的维护工具脚本：
+```bash
+go test ./scripts/e2e/...
+```
 
-### 菜单管理工具
-- `check_and_fix_apikey_menu.go` - 检查并修复 API 密钥菜单
-- `check_all_including_buttons.go` - 检查所有按钮权限
-- `check_menu_permissions.go` - 检查菜单权限
-- `cleanup_menus.go` - 清理重复菜单
-- `execute_cleanup.go` - 执行清理操作
-- `find_duplicate_names.go` - 查找重复名称
-- `find_real_duplicates.go` - 查找真实重复项
-- `full_check.go` - 完整检查
-- `generate_cleanup.go` - 生成清理脚本
-- `list_all_menus.go` - 列出所有菜单
-- `search_menus.go` - 搜索菜单
-- `show_duplicate_details.go` - 显示重复详情
+### `tests/` — 测试脚本
 
-### 其他工具
-- `analyze_paths.go` - 深入分析路径关系
-- `check_user_menu.go` - 检查用户菜单
-- `fix_user_settings_menu.go` - 修复用户设置菜单
+跨语言测试脚本目录。
 
-### 使用示例
+| 项 | 类型 | 说明 |
+|----|------|------|
+| `test_excel_import/main.go` | Go | Excel 导入功能测试 |
+| `test_rpa_worker.py` | Python | RPA Worker 任务执行测试 |
+| `rpa_test_templates.json` | 配置 | `test_rpa_worker.py` 配套模板 |
+
+### `verify/` — 校验/格式化工具
+
+| 项 | 说明 |
+|----|------|
+| `format_unify/main.go` | 格式统一校验 |
+
+### `vdi/` — VDI 对接工具
+
+| 项 | 说明 |
+|----|------|
+| `test_standalone/main.go` | VDI 独立测试工具 |
+
+> 注：早期一次性 VDI 调研脚本（`get_vdi_data.*`、`vdi_diagnostic_tool.*` 等共 11 个）已归档至 `.archive-scripts-2026-08-12/vdi-research/`。
+
+### `diag/` — 诊断工具
+
+| 项 | 说明 |
+|----|------|
+| `red_4f001/main.go` | 4F001 异常诊断 |
+
+### `port/` — 端口采集工具
+
+| 项 | 说明 |
+|----|------|
+| `cleanup_status/main.go` | 端口采集状态清理 |
+
+### `mac/` — MAC 地址管理工具
+
+| 项 | 说明 |
+|----|------|
+| `cleanup/main.go` | MAC 清理 |
+| `list_backups/main.go` | 备份列表 |
+| `merge_real/main.go` | 真实数据合并 |
+| `purge_drop_backup/main.go` | 丢弃备份清理 |
+| `purge_meaningless/main.go` | 无意义数据清理 |
+| `purge_verify/main.go` | 清理结果校验 |
+
+### `crypto/` — 国密工具
+
+| 项 | 说明 |
+|----|------|
+| `gen_sm2_keys/main.go` | 生成 SM2 密钥对 |
+| `migrate_sm4_key/main.go` | SM4 密钥迁移 |
+| `test_sm2_parse/main.go` | SM2 解析测试 |
+
+### `db/` — 数据库运维/导出工具
+
+| 文件 | 说明 |
+|------|------|
+| `snapshot.sh` | 数据库快照 |
+| `audit_view_refs/main.go` | 视图引用审计 |
+| `dept_parent_chain_export.py` | 部门父级链路导出（Excel） |
+| `trigger_dept_sync.sh` | 手动触发部门到 AD 同步（填充 `sys_dept_ou_mapping`） |
+
+### `env/` — 环境/配置检查
+
+| 项 | 说明 |
+|----|------|
+| `check/main.go` | 环境前置检查 |
+
+### `tools/` — 菜单权限维护工具
+
+13 个 Go 工具，每个独立目录，统一用法 `go run <sub>/main.go`：
 
 ```bash
 cd scripts/tools
 
-# 设置环境变量
+# 设置数据库环境变量（见上文）
 set DB_HOST=10.62.10.34
 set DB_PORT=5432
 set DB_USER=postgres
 set DB_PASSWORD=<your-db-password>
-set DB_NAME=ruoyi
+set DB_NAME=xingran
 
 # 列出所有菜单
-go run list_all_menus.go
+go run list_all_menus/main.go
 
 # 检查重复菜单
-go run find_real_duplicates.go
+go run find_real_duplicates/main.go
 ```
 
-## sql/ - SQL 脚本
+可用工具：`check_all_including_buttons`、`check_and_fix_apikey_menu`、`check_user_menu`、`cleanup_menus`、`execute_cleanup`、`find_duplicate_names`、`find_real_duplicates`、`fix_user_settings_menu`、`full_check`、`generate_cleanup`、`list_all_menus`、`search_menus`、`show_duplicate_details`。
 
-SQL 修复脚本和查询：
-
-### 直接执行 SQL
+### `sql/` — SQL 修复/查询脚本
 
 ```bash
 cd scripts/sql
-
-# 通过 psql 执行 SQL 文件
-psql -h localhost -U postgres -d ruoyi -f check_duplicate_menus.sql
-psql -h localhost -U postgres -d ruoyi -f cleanup_duplicate_menus.sql
+psql -h localhost -U postgres -d xingran -f check_duplicate_menus.sql
 ```
 
-## 测试
+包含：`check_duplicate_menus.sql`、`cleanup_duplicate_menus.sql`、`manual_dept_sync.sql`、`create_comprehensive_rpa_tests.py`。
 
-### Excel 导入测试
-- `.archive-migrate-2026-06-15/test_excel_import.go` - Excel 导入功能测试脚本(已归档)
+### `migrations/` — 数据库结构迁移 SQL
 
-```bash
-cd scripts/.archive-migrate-2026-06-15
+按版本顺序执行的 SQL 迁移文件（与 `internal/core/db/migrations/` 不同 —— 这里是补充性独立迁移）。
 
-# 运行 Excel 导入测试
-go run test_excel_import.go
-```
+| 文件 | 说明 |
+|------|------|
+| `add_source_work_order_id.sql` | 工单表加 `source_work_order_id` 列 |
+| `add_system_menus.sql` / `add_system_menus_fixed.sql` | 系统菜单补充 |
+| `captcha_background.sql` | 验证码背景配置 |
+| `create_workstation_table.sql` | 工位表创建 |
+| `drop_periodic_template_fk_assignee.sql` | 移除定期模板外键约束 |
+
+### `migrate_cache_keys/` — 缓存键迁移
+
+将旧格式 Redis 键迁移到新 `xingran:` 前缀的工具集（含 Makefile）。详见 `migrate_cache_keys/README.md` + `QUICKSTART.md`。
+
+## 归档目录
+
+### `.archive-migrate-2026-06-15/`
+
+2026-06-15 由原 `migrate/` 重命名而来。归档一次性 DB 迁移脚本（`//go:build ignore`，正常编译不包含），所有迁移已在生产 DB 执行过。配套 SQL 见 `internal/core/db/migrations/archive/legacy-2026-06-15/`。
+
+### `.archive-scripts-2026-08-12/`
+
+本次整理（2026-08-12）新增的归档。**不是删除，是移入封存**——非 git 仓库无历史可回溯，移入归档以保留可恢复性（`mv` 回原位即可）。
+
+分 3 组共 17 个文件：
+- `phase-verification/` — 2 个历史阶段验收（Phase 40 / Phase 46 R5）
+- `oneoff-fixes/` — 4 个一次性修复/验证脚本（含 `fix_ip_update.py` 源码 patch、Phase 40 frontmatter 修复、`operlog_e2e_verify.sh`）
+- `vdi-research/` — 11 个 VDI 内网调研一次性产物（`get_vdi_data.*`、`vdi_diagnostic_tool.*`、`vdi_groups*.json` 等）
+
+详见 `.archive-scripts-2026-08-12/README.md`。
 
 ## 注意事项
 
 1. **生产环境使用前请备份数据库**
 2. 确保环境变量配置正确
 3. 建议先在测试环境验证脚本
-4. 某些脚本需要按顺序执行（如用户中心路径修复系列）
-5. **`.archive-migrate-2026-06-15/` 目录中的脚本已执行过(原 migrate/),通常不需要再次运行**
-
-## 数据库连接工具
-
-所有脚本使用 `internal/db` 包进行数据库连接，提供统一的：
-
-- 配置管理
-- 连接池
-- 错误处理
-- 日志记录
+4. **`.archive-*` 目录的脚本通常不需要再次运行**——除非你明确知道它还在用
+5. `build/` 下脚本的路径定位（`%~dp0..\..` / `dirname/../..`）已适配子目录层级，可从任意 cwd 调用
+6. **已知遗留 bug（未修）**：`build/generate_swagger.bat` 第 19 行 `cd /d "%~dp0.."` 在 `build/` 子目录里实际只切到 `scripts/`，应改为 `%~dp0..\..`（Linux 版 `generate_swagger.sh` 已在 2026-08-12 整理时一并修正）。如需在 Windows 上生成 Swagger，请优先使用 `cd scripts/build && generate_swagger.bat` 并手动确认 `cmd/main.go` 路径，或先 `cd ..` 再调用

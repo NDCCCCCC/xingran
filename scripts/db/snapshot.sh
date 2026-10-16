@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# snapshot.sh — 生成 RuoYi-Next 系统的 schema + seed snapshot SQL 文件
+# snapshot.sh — 生成 XingRan-Next 系统的 schema + seed snapshot SQL 文件
 #
 # 用途:
 #   从生产 PostgreSQL DB 导出 schema (DDL) + seed (基础种子数据),
@@ -23,7 +23,7 @@
 #   2. 拷贝两文件到新机器
 #   3. psql -d newdb -f schema-{YYYY-MM-DD}.sql
 #      psql -d newdb -f seed-{YYYY-MM-DD}.sql
-#   4. ./ruoyi-backend   # AutoMigrate 仅做 model 字段增量,不再跑 200+ migration
+#   4. ./xingran-backend   # AutoMigrate 仅做 model 字段增量,不再跑 200+ migration
 #
 # 历史: 260704-ne5 — 启动期 AutoMigrate 精简后,补一个独立 snapshot 工具
 #
@@ -109,7 +109,7 @@ fi
 : "${PGPORT:=${DB_PORT:-5432}}"
 : "${PGUSER:=${DB_USER:-}}"
 : "${PGPASSWORD:=${DB_PASSWORD:-}}"
-: "${PGDATABASE:=${DB_NAME:-ruoyi_next}}"
+: "${PGDATABASE:=${DB_NAME:-xingran_next}}"
 : "${PGDUMP_BIN:=pg_dump}"
 
 # ---------- 前置检查 ----------
@@ -130,7 +130,7 @@ SCHEMA_FILE="${OUTPUT_DIR}/schema-${DATE}.sql"
 SEED_FILE="${OUTPUT_DIR}/seed-${DATE}.sql"
 
 echo "============================================================"
-echo "RuoYi-Next DB Snapshot Generator"
+echo "XingRan-Next DB Snapshot Generator"
 echo "============================================================"
 echo "Host:     ${PGHOST}:${PGPORT}"
 echo "Database: ${PGDATABASE}"
