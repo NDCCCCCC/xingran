@@ -73,6 +73,8 @@ Plans:
 
 - [x] 57-03-PLAN.md — user_service.go 三处事务内接线（Update/Delete/BatchDelete）+ sqlite 测试环境补表 + `go test ./...` 全绿 (QUEUE-01/06, HYGIENE-06)
 
+**Code Review 修复**（2026-10-16，见 [57-REVIEW-FIX.md](phases/57-ad-outbox-lite/57-REVIEW-FIX.md)）：F-01 disable 压制同实体活跃 `update_user` 行 / F-02 编辑表单停用入队 disable（安全缺口）/ F-03 `SKIP_AUTOMIGRATE` 旁路补建队列表 / F-04 队列表索引失败阻断启动 / F-05 去重逻辑抽纯函数（替掉假断言）/ F-06 Update 写路径收窄为显式字段（与入队 diff 语义对齐）。F-07~F-16 判定为 Phase 58 输入或低危，未在本轮处理。
+
 ### Phase 58: 排水器与 compare-and-move 推送
 
 **Goal**: 队列被可靠排水——按用户 ad_dn 路由正确 AD 配置、闭包内重读最新值幂等移动 OU、失败退避重试至终态可查、目标 DN 消失时转终态不死循环。
