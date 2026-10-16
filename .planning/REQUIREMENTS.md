@@ -6,12 +6,12 @@
 ## v1.21 Requirements
 
 ### 队列与推送可靠性 (QUEUE)
-- [ ] **QUEUE-01**: 管理员编辑用户（部门/昵称/邮箱/手机）后，变更在**业务事务内**写入 `ad_push_queue`，进程重启不丢失
-- [ ] **QUEUE-02**: 同一用户短时间内多次编辑时，队列**按实体合并**仅保留最新待推送状态，不丢弃后一次编辑
+- [x] **QUEUE-01**: 管理员编辑用户（部门/昵称/邮箱/手机）后，变更在**业务事务内**写入 `ad_push_queue`，进程重启不丢失
+- [x] **QUEUE-02**: 同一用户短时间内多次编辑时，队列**按实体合并**仅保留最新待推送状态，不丢弃后一次编辑
 - [ ] **QUEUE-03**: 后台排水器（in-process cron，**不注册 sys_job**）按退避重试失败行，达上限转终态且可查询
 - [ ] **QUEUE-04**: 排水执行 OU 移动采用 **compare-and-move**（闭包内重读最新值 + NormalizeDN 归一化比较），仅在需要时 MoveUser，重复排水幂等
 - [ ] **QUEUE-05**: LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，不进重试循环
-- [ ] **QUEUE-06**: sys 删除用户时入队 **disable AD 账号**动作，闭环"已删用户经 AD 登录复活"链路
+- [x] **QUEUE-06**: sys 删除用户时入队 **disable AD 账号**动作，闭环"已删用户经 AD 登录复活"链路
 
 ### 登录回写守卫 (GUARD)
 - [ ] **GUARD-01**: AD 登录写 dept 前，若该用户存在 pending/failed 的 dept 队列行则**跳过覆盖 + WARN**（本地编辑不被 AD 旧值回滚）
@@ -32,7 +32,7 @@
 - [ ] **HYGIENE-03**: 死代码清理：user_ou_service.go 整文件、GetUserDeptByADOU、BatchMoveUsersToNewOU、dept_ou_mapper.go:31 等过期注释及其测试
 - [ ] **HYGIENE-04**: 嵌套组 member DN 标记/过滤，不混入用户成员关系
 - [ ] **HYGIENE-05**: 同名兄弟部门生成相同 OU DN 时检测并告警，不静默互相覆盖映射
-- [ ] **HYGIENE-06**: sqlite 测试补队列建表，测试套件全绿
+- [x] **HYGIENE-06**: sqlite 测试补队列建表，测试套件全绿
 
 ## Future Requirements (deferred)
 
@@ -55,12 +55,12 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QUEUE-01 | Phase 57 | Pending |
-| QUEUE-02 | Phase 57 | Pending |
+| QUEUE-01 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
+| QUEUE-02 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | QUEUE-03 | Phase 58 | Pending |
 | QUEUE-04 | Phase 58 | Pending |
 | QUEUE-05 | Phase 58 | Pending |
-| QUEUE-06 | Phase 57 | Pending |
+| QUEUE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | GUARD-01 | Phase 59 | Pending |
 | GUARD-02 | Phase 59 | Pending |
 | SAFE-01 | Phase 60 | Pending |
@@ -73,6 +73,6 @@
 | HYGIENE-03 | Phase 62 | Pending |
 | HYGIENE-04 | Phase 62 | Pending |
 | HYGIENE-05 | Phase 62 | Pending |
-| HYGIENE-06 | Phase 57 | Pending |
+| HYGIENE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 
 **Coverage**: 19/19 v1.21 requirements mapped (roadmap created 2026-10-16, no orphans)

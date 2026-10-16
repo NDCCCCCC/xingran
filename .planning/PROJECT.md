@@ -37,6 +37,8 @@ previous_update: 2026-07-10 v1.20 milestone SHIPPED + ARCHIVED
 
 **前置条件（已满足 2026-10-16）:** ✅ 1641 个未提交文件已分 5 组提交并合入 main（`ced2d75b..31c7eee8`），已推送 origin（gitcode.com/ninedrunk/go_react），工作区干净。
 
+**Phase 57 已完成（2026-10-16/17，v1.21 首个 phase）:** ad_push_queue 基建落地——migration_215（部分唯一索引谓词单一事实源 `models.ADPushQueueActivePredicate`）+ **五条**写路径同事务入队（Update / UpdateStatus / Delete / BatchDelete / profile.UpdateUserInfo，后两条分别为 GAP-01/GAP-02 补接）+ disable 压制同实体 pending update_user（F-01）。code review F-01~F-06 全修（变异验证可红）+ verifier 独立复核 GAP-01/02/03 闭环。VERIFICATION 判定 `human_needed`：PG 实机合并路径 / kill -9 重启耐久 / AD UAC 533 闭环三项留档 `57-HUMAN-UAT.md`。Phase 58 移交待决项（两条遗留直推路径处置、ad_config_id 取舍、F-07~F-16）已落 ROADMAP。
+
 **Archived:** `.planning/milestones/v1.21-ROADMAP.md` + `.planning/milestones/v1.21-REQUIREMENTS.md`（milestone 完成时）
 
 ## Active: v1.17 资产对账 (Asset Reconciliation) — SHIPPED 2026-07-03
