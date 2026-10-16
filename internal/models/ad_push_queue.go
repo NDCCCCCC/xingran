@@ -39,6 +39,19 @@ const (
 	ADPushStatusDead    ADPushStatus = "dead"    // 终态：不可恢复（ErrADTargetNotFound）
 )
 
+// ADPushQueueActivePredicate 活跃行谓词 —— **单一事实源**（Phase 57 F-01）。
+//
+// 同一串文本被两处强制复用，缺一即 ON CONFLICT 失效：
+//  1. migration_215 的 uq_ad_push_queue_active 部分唯一索引 WHERE 子句（DDL）
+//  2. addomain.adPushOnConflictClause 的 ON CONFLICT ... TargetWhere（冲突目标推断）
+//
+// ⚠ 红线：谓词文本**不得改写、不得加表名限定**。写错 → PG 42P10 / sqlite
+// "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint"。
+// ⚠ 任何"把终态行打回/留在活跃集合"的新逻辑都必须选一个**不在本谓词内**的终态，
+// 否则那批行继续占用唯一索引、同实体的新入队行直接撞唯一约束（见 EnqueueDisable 的 F-01 压制）。
+// TestPhase57_ActiveRowPredicate_MatchesIndexDDL 锁定 DDL 与本常量一致。
+const ADPushQueueActivePredicate = "status IN ('pending', 'failed')"
+
 // ADPushQueue AD 推送队列表（Phase 57 outbox-lite 存储载体）。
 //
 // 载荷 = 最小动作行（entity_type / entity_id / action_type），禁用 JSON 快照

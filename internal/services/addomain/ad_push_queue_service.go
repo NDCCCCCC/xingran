@@ -31,6 +31,10 @@ import (
 // 的 batchWriteSize = 500，兼顾 PostgreSQL 参数上限）。
 const pushQueueBatchSize = 500
 
+// adPushSupersededByDisableReason 被 disable 压制的 update_user 行写入 last_error 的原因串
+// （F-01）。相位 58 排水器/排障 SQL 可据此区分"人工/代码压制"与"AD 推送失败"。
+const adPushSupersededByDisableReason = "superseded by disable"
+
 // IsADSyncEnabled 前置条件检查（D-02 第一层 / T-57-02）：是否存在
 // sync_enabled = true AND status = enabled 的 sys_ad_config 行（软删行自动被作用域排除）。
 //
@@ -132,15 +136,16 @@ func NewADPushEnqueuer() *ADPushEnqueuer {
 //     而非 Where（:49，DO UPDATE 的尾随谓词）。放 Where → 部分唯一索引不被推断 →
 //     PG 报 42P10 / sqlite 报 "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint"。
 //  2. 裸 SQL 表达式类型是 **clause.Expr**（clause.Literal 在 gorm v1.30.5 中并不存在）。
-//  3. 谓词文本与 migration_215 的 uq_ad_push_queue_active 索引谓词文本级一致，
+//  3. 谓词文本取自单一事实源 models.ADPushQueueActivePredicate（migration_215 的
+//     uq_ad_push_queue_active 索引 DDL 复用同一常量），
 //     且**不加 ad_push_queue. 表名限定**（sqlite 对 partial index 的冲突目标是结构化比较，
 //     加限定符会失配）。
 //
 // 项目内已验证先例：internal/services/asset/reconciliation_detection.go:426。
 func adPushOnConflictClause(now time.Time) clause.OnConflict {
-	// 活跃行谓词 = uq_ad_push_queue_active 的索引谓词（文本级一致，无表名限定）
+	// 活跃行谓词 = uq_ad_push_queue_active 的索引谓词（同一常量，文本级一致，无表名限定）
 	activeRowPredicate := clause.Where{Exprs: []clause.Expression{
-		clause.Expr{SQL: "status IN ('pending', 'failed')"},
+		clause.Expr{SQL: models.ADPushQueueActivePredicate},
 	}}
 
 	return clause.OnConflict{
@@ -220,6 +225,7 @@ func (e *ADPushEnqueuer) EnqueueUpdateIfChanged(tx *gorm.DB, oldUser *models.Use
 //   - 空切片 → 直接返回 nil
 //   - 重复 id 先去重（DedupeEntityIDs，保持首次出现顺序）：PG 对同一条 INSERT 内重复
 //     命中的行 DO UPDATE 会报 "ON CONFLICT DO UPDATE command cannot affect row a second time"
+//   - **压制同实体活跃的 update_user 行**（F-01）
 //   - 无启用的 AD 配置 → WARN + 返回 nil
 //   - 配置启用 → 批量 upsert，冲突命中即合并（同实体恒一行活跃）
 //   - INSERT 失败 → 返回 error，让调用方事务回滚
@@ -233,6 +239,41 @@ func (e *ADPushEnqueuer) EnqueueDisable(tx *gorm.DB, userIDs []string) error {
 		return nil
 	}
 
+	now := time.Now()
+
+	// F-01 压制：让"删除"在队列层面对"编辑"形成显式压制。
+	//
+	// 部分唯一索引的一维是 action_type，故同一用户可同时存在 pending update_user 与
+	// pending disable。sys_user 行被软删后，Phase 58 排水器处理残留的 update_user 行时会
+	// 按 D-05 重读 sys_user 全量推送 → 默认软删作用域读不到该行 → 要么永远推不出去（僵尸行），
+	// 要么读到零值后把 nickname/email/phone/dept 清空写进 AD 账号（破坏性）。
+	// 故在入队 disable 的同一事务里把该实体所有活跃 update_user 行打终态。
+	//
+	// 为什么用 dead 而不新增 superseded 状态：终态必须退出
+	// uq_ad_push_queue_active 的索引谓词 (models.ADPushQueueActivePredicate =
+	// status IN ('pending','failed'))，否则被打死的行仍占用唯一索引，同实体的新
+	// disable 行直接撞唯一约束。dead 是既有终态，谓词一行不动 —— DDL 与 ON CONFLICT
+	// TargetWhere 复用的常量不因本修复而变化（漂移由 TestPhase57_ActiveRowPredicate_MatchesIndexDDL 守护）。
+	//
+	// 为什么放在 D-02 配置门控之前：压制的是"已失效的队列行"这一安全性不变量，与"要不要
+	// 入队 disable"的降级策略无关。若 AD 配置当时关闭而跳过压制，AD 重新启用后排水器仍会
+	// 读到这行并复现同一破坏性故障。
+	if err := tx.Model(&models.ADPushQueue{}).
+		Where("entity_type = ? AND entity_id IN ? AND action_type = ? AND status IN ?",
+			string(models.ADPushEntityUser), deduped, string(models.ADPushActionUpdateUser),
+			[]string{string(models.ADPushStatusPending), string(models.ADPushStatusFailed)},
+		).
+		Updates(map[string]interface{}{
+			"status":        string(models.ADPushStatusDead),
+			"last_error":    adPushSupersededByDisableReason,
+			"next_retry_at": nil,
+			"failed_at":     nil,
+			"updated_at":    now,
+		}).Error; err != nil {
+		applogger.Errorf("[ad_push_queue] 压制 update_user 行失败 (%d 个实体): %v", len(deduped), err)
+		return err
+	}
+
 	enabled, err := IsADSyncEnabled(tx)
 	if err != nil {
 		return err
@@ -243,7 +284,6 @@ func (e *ADPushEnqueuer) EnqueueDisable(tx *gorm.DB, userIDs []string) error {
 		return nil
 	}
 
-	now := time.Now()
 	rows := make([]models.ADPushQueue, 0, len(deduped))
 	for _, id := range deduped {
 		rows = append(rows, models.ADPushQueue{

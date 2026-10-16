@@ -3,6 +3,7 @@ package migrations
 import (
 	"log"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -72,11 +73,12 @@ func Migrate215CreateADPushQueue(db *gorm.DB) error {
 
 	// 2. 索引 (双方言共用;sqlite 3.35+ / modernc v1.40.1 支持 partial unique index)
 	//
-	// ⚠ 谓词文本不得改写: 必须恰好是 status IN ('pending', 'failed') 且不加表名限定,
-	// Plan 02 的 ON CONFLICT 冲突目标要文本级复用同一串 (写错即 PG 42P10)。
+	// ⚠ 谓词文本不得改写、不得加表名限定: 取自单一事实源 models.ADPushQueueActivePredicate,
+	// 与 Plan 02 的 ON CONFLICT TargetWhere 复用同一常量 (写错即 PG 42P10)。
+	// 两侧若要改必须同时改该常量 —— 漂移由 TestPhase57_ActiveRowPredicate_MatchesIndexDDL 守护。
 	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uq_ad_push_queue_active
 ON ad_push_queue (entity_type, entity_id, action_type)
-WHERE status IN ('pending', 'failed')`).Error; err != nil {
+WHERE ` + models.ADPushQueueActivePredicate).Error; err != nil {
 		applogger.Errorf("migration 215: create uq_ad_push_queue_active 失败: %v", err)
 		return err
 	}

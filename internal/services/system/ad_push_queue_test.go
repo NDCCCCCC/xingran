@@ -430,6 +430,145 @@ func TestPhase57_EnqueueDisable_MergeOnRepeatCall(t *testing.T) {
 	assert.Equal(t, int64(2), pending, "合并后仍为 pending")
 }
 
+// countRowsByAction 统计某实体 + 动作的队列行数。
+func countRowsByAction(t *testing.T, db *gorm.DB, entityID string, action models.ADPushActionType) int64 {
+	t.Helper()
+	var n int64
+	require.NoError(t, db.Table("ad_push_queue").
+		Where("entity_id = ? AND action_type = ?", entityID, string(action)).Count(&n).Error)
+	return n
+}
+
+// TestPhase57_ActiveRowPredicate_MatchesIndexDDL 锁定 DDL 与 ON CONFLICT TargetWhere 的
+// 谓词文本不会漂移（唯一索引谓词写错 → PG 42P10 / sqlite 冲突目标失配）。
+//
+// 两条防线：
+//  1. models.ADPushQueueActivePredicate 的字面值 —— migration_215 的 DDL 与
+//     addomain.adPushOnConflictClause 都从这一个常量取，漂移在编译期即不可能；但常量本身
+//     被改写（扩谓词 / 加表名限定 / 改空格）会让两侧同时失配，故仍需锁字面值。
+//  2. 实建索引的 DDL（sqlite_master.sql 原文）确实包含该谓词文本。
+func TestPhase57_ActiveRowPredicate_MatchesIndexDDL(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+
+	assert.Equal(t, "status IN ('pending', 'failed')", models.ADPushQueueActivePredicate,
+		"活跃行谓词字面值不得改写/加表名限定（DDL 与 ON CONFLICT TargetWhere 共用）")
+
+	var idxDDL string
+	require.NoError(t, db.Raw(
+		`SELECT sql FROM sqlite_master WHERE type='index' AND name='uq_ad_push_queue_active'`,
+	).Scan(&idxDDL).Error)
+	assert.Contains(t, idxDDL, models.ADPushQueueActivePredicate,
+		"实建索引 DDL 必须含共享谓词文本")
+	assert.NotContains(t, idxDDL, "ad_push_queue.status",
+		"谓词不得带表名限定（sqlite partial index 冲突目标为结构化比较，加限定符失配）")
+}
+
+// TestPhase57_EnqueueDisable_SupersedesPendingUpdateUser 锁定 F-01：
+// 删除必须在队列层压制同实体活跃的 update_user 行，否则软删后排水器重读 sys_user
+// 失败 → 把空属性写进 AD 账号（破坏性）或变僵尸行。
+func TestPhase57_EnqueueDisable_SupersedesPendingUpdateUser(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+
+	userID := seedUserRow(t, db, "phase57-supersede", 0)
+	old := &models.User{BaseModel: models.BaseModel{ID: userID}, Nickname: strPtr("oldnick")}
+
+	// 先编辑入队一行 pending update_user
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick1")}))
+	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionUpdateUser))
+
+	// 再删除 → update_user 行必须被打终态
+	require.NoError(t, enq.EnqueueDisable(db, []string{userID}))
+
+	var upd models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ? AND action_type = ?", userID, string(models.ADPushActionUpdateUser)).
+		First(&upd).Error)
+	assert.Equal(t, models.ADPushStatusDead, upd.Status, "被压制的 update_user 行必须转终态")
+	assert.Contains(t, upd.LastError, "superseded by disable", "终态原因必须可排障")
+	assert.Nil(t, upd.NextRetryAt, "被压制行不得留在退避重试队列上")
+
+	// disable 行本身照常入队
+	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionDisable))
+
+	// 终态行必须退出部分唯一索引：同实体再入队 update_user 不撞约束（dead 不在活跃谓词内）
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick2")}),
+		"dead 终态行必须退出 uq_ad_push_queue_active，新入队不得撞唯一约束")
+	assert.Equal(t, int64(2), countRowsByAction(t, db, userID, models.ADPushActionUpdateUser),
+		"终态行留表可查，新行独立存在")
+}
+
+// TestPhase57_EnqueueDisable_SupersedesFailedUpdateUser 覆盖 failed（退避中）行同样被压制。
+func TestPhase57_EnqueueDisable_SupersedesFailedUpdateUser(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+
+	userID := seedUserRow(t, db, "phase57-supersede-failed", 0)
+	old := &models.User{BaseModel: models.BaseModel{ID: userID}, Nickname: strPtr("oldnick")}
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick1")}))
+
+	failedAt := time.Now().Add(-time.Minute).UTC().Format(time.RFC3339)
+	require.NoError(t, db.Exec(`
+		UPDATE ad_push_queue SET status='failed', attempts=2, last_error='boom', failed_at=?, next_retry_at=?
+		WHERE entity_id=? AND action_type='update_user'
+	`, failedAt, failedAt, userID).Error)
+
+	require.NoError(t, enq.EnqueueDisable(db, []string{userID}))
+
+	var upd models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ? AND action_type = ?", userID, string(models.ADPushActionUpdateUser)).
+		First(&upd).Error)
+	assert.Equal(t, models.ADPushStatusDead, upd.Status, "failed 行同样必须被 disable 压制")
+}
+
+// TestPhase57_EnqueueDisable_SupersedeScopedToTargets 锁定压制只作用于本次入队的实体，
+// 不得误伤其他用户的活跃行。
+func TestPhase57_EnqueueDisable_SupersedeScopedToTargets(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+
+	target := seedUserRow(t, db, "phase57-scope-target", 0)
+	bystander := seedUserRow(t, db, "phase57-scope-bystander", 0)
+	oldOf := func(id string) *models.User {
+		return &models.User{BaseModel: models.BaseModel{ID: id}, Nickname: strPtr("oldnick")}
+	}
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, oldOf(target), &requests.UserUpdateRequest{Nickname: strPtr("n1")}))
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, oldOf(bystander), &requests.UserUpdateRequest{Nickname: strPtr("n1")}))
+
+	require.NoError(t, enq.EnqueueDisable(db, []string{target}))
+
+	var bystanderRow models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ? AND action_type = ?", bystander, string(models.ADPushActionUpdateUser)).
+		First(&bystanderRow).Error)
+	assert.Equal(t, models.ADPushStatusPending, bystanderRow.Status, "非目标实体的活跃行不得被压制")
+}
+
+// TestPhase57_EnqueueDisable_NoADConfig_StillSupersedes 锁定压制不受 D-02 配置门控影响：
+// AD 配置关闭时跳过入队是降级策略，但"用户已软删 + 残留 pending update_user"这一破坏性
+// 故障源必须被消除，否则 AD 重新启用后排水器复现。
+func TestPhase57_EnqueueDisable_NoADConfig_StillSupersedes(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+
+	userID := seedUserRow(t, db, "phase57-supersede-nocfg", 0)
+	old := &models.User{BaseModel: models.BaseModel{ID: userID}, Nickname: strPtr("oldnick")}
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, old, &requests.UserUpdateRequest{Nickname: strPtr("nick1")}))
+	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionUpdateUser))
+	// 之后再停用 AD 配置：模拟"入队时配置关闭"的降级分支
+	require.NoError(t, db.Exec(`UPDATE sys_ad_config SET status=1 WHERE id='phase57-ad-config'`).Error)
+
+	require.NoError(t, enq.EnqueueDisable(db, []string{userID}), "配置停用时业务删除仍放行")
+	assert.Equal(t, int64(0), countRowsByAction(t, db, userID, models.ADPushActionDisable), "无启用配置时 disable 不入队")
+
+	var upd models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ? AND action_type = ?", userID, string(models.ADPushActionUpdateUser)).
+		First(&upd).Error)
+	assert.Equal(t, models.ADPushStatusDead, upd.Status, "压制不因配置门控而跳过")
+}
+
 // TestPhase57_EnqueueDisable_NoADConfig_SkipsEnqueue 锁定 D-02 第一层对 disable 同样生效。
 func TestPhase57_EnqueueDisable_NoADConfig_SkipsEnqueue(t *testing.T) {
 	db := setupPhase57QueueDB(t)
