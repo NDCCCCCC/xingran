@@ -49,6 +49,9 @@ func setupUserServiceTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
+	// ⚠ Phase 57 接线新增：Update 走 tx.Save(&user) 会写满 models.User 全部列，
+	// 缺列即 "no such column"（1），该 fixture 此前只能跑 NotFound 用例。
+	// 补齐 models.User 的全部列（纯增量，不影响既有用例）。
 	require.NoError(t, db.Exec(`
 		CREATE TABLE sys_user (
 			id TEXT PRIMARY KEY,
@@ -57,14 +60,29 @@ func setupUserServiceTestDB(t *testing.T) *gorm.DB {
 			nickname TEXT,
 			email TEXT,
 			phone TEXT,
+			avatar TEXT,
 			gender INTEGER NOT NULL DEFAULT 2,
 			status INTEGER NOT NULL DEFAULT 0,
 			dept_id TEXT,
 			dept_name TEXT,
+			employee_no TEXT,
 			remark TEXT,
 			salt TEXT,
+			login_ip TEXT,
+			login_time DATETIME,
+			pwd_update_time DATETIME,
+			pwd_expire_days INTEGER NOT NULL DEFAULT 0,
+			init_flag INTEGER NOT NULL DEFAULT 0,
+			auth_source TEXT,
+			ad_username TEXT,
+			ad_dn TEXT,
+			ad_ou_dn TEXT,
+			ad_synced_at DATETIME,
 			created_at DATETIME,
 			updated_at DATETIME,
+			created_by TEXT DEFAULT '',
+			updated_by TEXT DEFAULT '',
+			version INTEGER NOT NULL DEFAULT 0,
 			deleted_at DATETIME
 		)
 	`).Error)

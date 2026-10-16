@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
@@ -153,6 +154,11 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 		return apperrors.DatabaseError(err)
 	}
 
+	// Phase 57 D-01: diff 旧值快照，须在事务闭包覆盖 user 之前捕获。
+	// user 是指针，闭包内 user.Nickname = req.Nickname 等是重新赋值指针，
+	// 若不先做值拷贝，传给出队器的"旧值"就是新值，diff 永远返回 false。
+	oldUserSnapshot := user
+
 	// 使用事务更新用户及其关联
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 更新用户基本信息
@@ -213,6 +219,12 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 			if err := tx.Create(&userPosts).Error; err != nil {
 				return apperrors.DatabaseError(err)
 			}
+		}
+
+		// Phase 57 D-01/D-02: 同事务入队（四字段 diff + AD 配置前置条件）；
+		// 失败返回 error 使 tx.Commit() 跳过 —— 业务写与队列行同生共死（QUEUE-01）
+		if err := addomain.NewADPushEnqueuer().EnqueueUpdateIfChanged(tx, &oldUserSnapshot, req); err != nil {
+			return apperrors.DatabaseError(err)
 		}
 
 		return nil
