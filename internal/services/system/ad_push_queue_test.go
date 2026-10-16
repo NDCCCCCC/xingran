@@ -777,6 +777,121 @@ func TestPhase57_UserService_Update_RollsBackWhenQueueInsertFails(t *testing.T) 
 	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
 }
 
+// TestPhase57_UserService_Update_PartialRequest_PreservesOmittedColumns 锁定 F-06：
+// 省略字段 = 未提供 = 不写库。原实现用 tx.Save(&user) 全字段覆盖，任何只带部分字段的请求
+// （curl / 第三方脚本 / 前端漏传）都会把 nickname/email/phone/dept_id/dept_name/employee_no/
+// remark 静默清空 —— 而入队 diff 把 nil 当"无变更、不入队"，两条路径对 nil 的解释不一致。
+//
+// 附加价值：本用例同时证明写路径与 diff 路径语义一致（清库 → 无队列行已不再可能）。
+func TestPhase57_UserService_Update_PartialRequest_PreservesOmittedColumns(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_dept (id, dept_name, ancestors, status, created_at, updated_at, deleted_at)
+		 VALUES ('phase57-dept', '研发部', '', 0, '2024-01-01 00:00:00', '2024-01-01 00:00:00', NULL)`,
+	).Error)
+
+	userID := seedUserRow(t, db, "phase57-f06", 0)
+	require.NoError(t, db.Exec(`
+		UPDATE sys_user SET nickname='keepnick', email='keep@x', phone='13800000000',
+			dept_id='phase57-dept', dept_name='研发部', employee_no='EMP001', remark='keepremark'
+		WHERE id = ?`, userID).Error)
+
+	svc := newTestUserService(t, db)
+
+	// 只带 nickname 一个字段的请求（无 email/phone/deptId/employeeNo/remark）
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID: userID, Nickname: strPtr("newnick"),
+	}))
+
+	var row struct {
+		Nickname   *string
+		Email      *string
+		Phone      *string
+		DeptID     *string
+		DeptName   *string
+		EmployeeNo *string
+		Remark     *string
+	}
+	require.NoError(t, db.Raw(
+		`SELECT nickname, email, phone, dept_id, dept_name, employee_no, remark FROM sys_user WHERE id = ?`,
+		userID,
+	).Scan(&row).Error)
+
+	require.NotNil(t, row.Nickname)
+	assert.Equal(t, "newnick", *row.Nickname, "显式提供的字段必须写入")
+	assert.Equal(t, "keep@x", *row.Email, "省略的 email 不得被清空")
+	assert.Equal(t, "13800000000", *row.Phone, "省略的 phone 不得被清空")
+	assert.Equal(t, "phase57-dept", *row.DeptID, "省略的 dept_id 不得被清空")
+	assert.Equal(t, "研发部", *row.DeptName, "省略的 dept_id 时 dept_name 不得被清空")
+	assert.Equal(t, "EMP001", *row.EmployeeNo, "省略的 employee_no 不得被清空")
+	assert.Equal(t, "keepremark", *row.Remark, "省略的 remark 不得被清空")
+}
+
+// TestPhase57_UserService_Update_ExplicitFieldsStillWrite 锁定 F-06 的另一半契约：
+// 显式提供的字段照常写入（含显式空串 = 清空），不能因为收窄成 selective Updates 就
+// 变成"什么都写不进去"。
+func TestPhase57_UserService_Update_ExplicitFieldsStillWrite(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-f06-explicit", 0)
+	require.NoError(t, db.Exec(
+		`UPDATE sys_user SET nickname='n', email='e@x', phone='1', remark='r' WHERE id = ?`, userID,
+	).Error)
+
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID:       userID,
+		Nickname: strPtr(""),
+		Email:    strPtr("new@x"),
+		Phone:    strPtr("2"),
+		Remark:   strPtr(""),
+	}))
+
+	var row struct {
+		Nickname *string
+		Email    *string
+		Phone    *string
+		Remark   *string
+	}
+	require.NoError(t, db.Raw(
+		`SELECT nickname, email, phone, remark FROM sys_user WHERE id = ?`, userID,
+	).Scan(&row).Error)
+	require.NotNil(t, row.Nickname)
+	assert.Equal(t, "", *row.Nickname, "显式空串应写入（清空 nickname）")
+	require.NotNil(t, row.Email)
+	assert.Equal(t, "new@x", *row.Email)
+	require.NotNil(t, row.Phone)
+	assert.Equal(t, "2", *row.Phone)
+	require.NotNil(t, row.Remark)
+	assert.Equal(t, "", *row.Remark, "显式空串应写入（清空 remark）")
+}
+
+// TestPhase57_UserService_Update_OmittedField_NeverEnqueues 锁定写/diff 语义一致：
+// 省略字段既不写库也不入队（此前是"清库 + 不入队"）。
+func TestPhase57_UserService_Update_OmittedField_NeverEnqueues(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-f06-nodiff", 0)
+	require.NoError(t, db.Exec(`UPDATE sys_user SET nickname='oldnick' WHERE id = ?`, userID).Error)
+
+	svc := newTestUserService(t, db)
+	// 只改 remark —— 不在 AD 四字段内，且省略的 nickname 不得被清空/入队
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID: userID, Remark: strPtr("仅备注"),
+	}))
+
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID), "非四字段编辑不得入队")
+
+	var nickname *string
+	require.NoError(t, db.Raw("SELECT nickname FROM sys_user WHERE id = ?", userID).Scan(&nickname).Error)
+	require.NotNil(t, nickname, "省略的 nickname 不得被清空")
+	assert.Equal(t, "oldnick", *nickname)
+}
+
 // TestPhase57_UserService_Delete_EnqueuesDisable 锁定 QUEUE-06 接线点（T-57-01）。
 func TestPhase57_UserService_Delete_EnqueuesDisable(t *testing.T) {
 	db := setupPhase57QueueDB(t)

@@ -154,34 +154,64 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 		return apperrors.DatabaseError(err)
 	}
 
-	// Phase 57 D-01: diff 旧值快照，须在事务闭包覆盖 user 之前捕获。
-	// user 是指针，闭包内 user.Nickname = req.Nickname 等是重新赋值指针，
-	// 若不先做值拷贝，传给出队器的"旧值"就是新值，diff 永远返回 false。
+	// Phase 57 D-01: diff 旧值快照，须在写 sys_user 之前捕获。
+	//
+	// ⚠ 不变量（F-06 / F-13）：oldUserSnapshot 的四个 *string 字段（nickname/email/phone/
+	// dept_id）**不得被原地解引用改写**（`*oldUserSnapshot.Nickname = ...`），否则新旧值
+	// 共享同一字符串，HasADFieldChanged 恒返回 false → 入队静默失效且无任何测试转红。
+	// 当前写路径不再改动 user 结构体（改为 selective Updates 字段映射），该不变量自然成立。
 	oldUserSnapshot := user
 
 	// 使用事务更新用户及其关联
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 更新用户基本信息
-		user.Nickname = req.Nickname
-		user.EmployeeNo = req.EmployeeNo
-		user.Email = req.Email
-		user.Phone = req.Phone
-		user.Gender = req.Gender
-		user.Status = req.Status
-		user.DeptID = req.DeptID
-		user.Remark = toStringPtr(req.Remark)
-
-		// 如果部门发生变化，同步更新部门名称
-		if req.DeptID != nil {
-			var dept models.Department
-			if err := tx.Select("dept_name").First(&dept, "id = ?", *req.DeptID).Error; err == nil {
-				user.DeptName = &dept.DeptName
-			}
-		} else {
-			user.DeptName = nil
+		// Phase 57 F-06: 只写请求**显式提供**的字段。
+		//
+		// 原实现是 tx.Save(&user) 全字段覆盖 —— 指针字段 nil 被 GORM 写成 NULL，
+		// 而入队 diff（adFieldDiffers）把 nil 解释为"无变更、不入队"。两条路径对 nil 的
+		// 解释不一致，于是任何只带部分字段的请求（curl / 第三方脚本 / 前端漏传）都会静默
+		// 清空 sys_user 的 nickname/email/phone/dept_id/dept_name/employee_no/remark，
+		// 却不产生任何队列行 → 系统与 AD 侧进一步分叉。
+		//
+		// 现在两侧语义一致：**nil = 未提供 = 不写 = 无变更**。
+		updates := map[string]interface{}{}
+		if req.Nickname != nil {
+			updates["nickname"] = *req.Nickname
 		}
+		if req.EmployeeNo != nil {
+			updates["employee_no"] = *req.EmployeeNo
+		}
+		if req.Email != nil {
+			updates["email"] = *req.Email
+		}
+		if req.Phone != nil {
+			updates["phone"] = *req.Phone
+		}
+		if req.Remark != nil {
+			updates["remark"] = *req.Remark
+		}
+		if req.DeptID != nil {
+			updates["dept_id"] = *req.DeptID
+			// 显式空串 = 清空部门（前端清空选择器后提交的就是空串/缺省）；
+			// nil = 未提供 = 不动（见上方 F-06 说明）。
+			if *req.DeptID == "" {
+				updates["dept_name"] = ""
+			} else {
+				// 部门变化时同步部门名称；查不到部门（已删/无权限）时保持旧 dept_name 不动，
+				// 避免把一个有效字段写成 NULL。
+				var dept models.Department
+				if err := tx.Select("dept_name").First(&dept, "id = ?", *req.DeptID).Error; err == nil {
+					updates["dept_name"] = dept.DeptName
+				}
+			}
+		}
+		// gender / status 是值类型：ShouldBindJSON 无法区分"未传"与"零值"
+		// （0 既是合法值也是零值），故保持既有的全量写语义 —— 前端表单始终携带这两项，
+		// 且 status 跃迁由 F-02 的入队逻辑显式 diff（oldUserSnapshot.Status vs req.Status），
+		// 不依赖"是否写入"。
+		updates["gender"] = req.Gender
+		updates["status"] = req.Status
 
-		if err := tx.Save(&user).Error; err != nil {
+		if err := tx.Model(&models.User{}).Where("id = ?", req.ID).Updates(updates).Error; err != nil {
 			return apperrors.DatabaseError(err)
 		}
 
