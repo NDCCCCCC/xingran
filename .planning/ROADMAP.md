@@ -71,7 +71,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 57-03-PLAN.md — user_service.go 三处事务内接线（Update/Delete/BatchDelete）+ sqlite 测试环境补表 + `go test ./...` 全绿 (QUEUE-01/06, HYGIENE-06)
+- [x] 57-03-PLAN.md — user_service.go 三处事务内接线（Update/Delete/BatchDelete）+ sqlite 测试环境补表 + `go test ./...` 全绿 (QUEUE-01/06, HYGIENE-06)
 
 ### Phase 58: 排水器与 compare-and-move 推送
 
@@ -151,7 +151,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 57. AD 推送队列基建 | 1/3 | In progress | - |
+| 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
 | 58. 排水器与 compare-and-move 推送 | 0/TBD | Not started | - |
 | 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
