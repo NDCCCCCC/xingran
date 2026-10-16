@@ -223,7 +223,15 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 
 		// Phase 57 D-01/D-02: 同事务入队（四字段 diff + AD 配置前置条件）；
 		// 失败返回 error 使 tx.Commit() 跳过 —— 业务写与队列行同生共死（QUEUE-01）
-		if err := addomain.NewADPushEnqueuer().EnqueueUpdateIfChanged(tx, &oldUserSnapshot, req); err != nil {
+		enqueuer := addomain.NewADPushEnqueuer()
+		if err := enqueuer.EnqueueUpdateIfChanged(tx, &oldUserSnapshot, req); err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		// Phase 57 F-02: 停用（status 0→1）必须同时入队 disable —— 编辑表单保存会带 status，
+		// 该入口此前既不入队也无任何 AD 侧动作，导致系统已停用而域账号仍可登录。
+		// 语义与 UpdateStatus 的停用一致（启用方向不在 v1.21 范围内）。
+		if err := enqueuer.EnqueueDisableOnStatusTransition(tx, oldUserSnapshot.Status, req.Status, req.ID); err != nil {
 			return apperrors.DatabaseError(err)
 		}
 

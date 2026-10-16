@@ -630,9 +630,12 @@ func TestPhase57_UserService_Update_EnqueuesInSameTransaction(t *testing.T) {
 	assert.Equal(t, "newnick", *nickname)
 }
 
-// TestPhase57_UserService_Update_NoADFieldChange_NoEnqueue 锁定 D-01 diff 在接线后的落地。
+// TestPhase57_UserService_Update_NoADFieldChange_NoEnqueue 锁定 D-01 diff 在接线后的落地：
+// status 不参与四字段 diff → 纯状态编辑**不产生 update_user 行**。
 //
-// status 不参与四字段 diff → 纯状态编辑不产生队列行。
+// ⚠ F-02 修正说明：本用例原先断言"纯状态编辑产生 0 条队列行"。停用编辑现在会额外入队
+// 一行 disable（F-02 安全缺口修复：系统已停用而域账号仍可登录），故断言按动作类型收窄 ——
+// update_user 仍必须为 0 行，disable 行为由 TestPhase57_UserService_Update_Disable_EnqueuesDisable 锁定。
 func TestPhase57_UserService_Update_NoADFieldChange_NoEnqueue(t *testing.T) {
 	db := setupPhase57QueueDB(t)
 	seedADConfigEnabled(t, db, true, 0)
@@ -644,7 +647,110 @@ func TestPhase57_UserService_Update_NoADFieldChange_NoEnqueue(t *testing.T) {
 		ID:     userID,
 		Status: models.UserStatusDisabled,
 	}))
-	assert.Equal(t, int64(0), countQueueRows(t, db, userID), "非四字段编辑不应产生队列行")
+	assert.Equal(t, int64(0), countRowsByAction(t, db, userID, models.ADPushActionUpdateUser),
+		"status 不参与四字段 diff，不得产生 update_user 行")
+}
+
+// TestPhase57_UserService_Update_Disable_EnqueuesDisable 锁定 F-02：
+// 编辑表单保存带 status=1（停用）时必须同事务入队 disable，否则系统停用而域账号仍启用。
+func TestPhase57_UserService_Update_Disable_EnqueuesDisable(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-f02-disable", 0) // status = 0 启用
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID: userID, Status: models.UserStatusDisabled,
+	}))
+
+	require.Equal(t, int64(1), countRowsByAction(t, db, userID, models.ADPushActionDisable),
+		"编辑表单停用必须同事务入队 disable")
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ? AND action_type = ?", userID, string(models.ADPushActionDisable)).
+		First(&got).Error)
+	assert.Equal(t, models.ADPushStatusPending, got.Status)
+	assert.Equal(t, models.ADPushEntityUser, got.EntityType)
+
+	var status int
+	require.NoError(t, db.Raw("SELECT status FROM sys_user WHERE id = ?", userID).Scan(&status).Error)
+	assert.Equal(t, int(models.UserStatusDisabled), status, "sys_user 必须已停用（业务写与队列行同生共死）")
+}
+
+// TestPhase57_UserService_Update_NoStatusTransition_NoDisable 锁定 F-02 的方向性：
+// 已停用用户重复保存（1→1）、启用用户保存（0→0）都不得入队 disable；
+// 启用（1→0）也不入队 —— enable 动作在 v1.21 不存在。
+func TestPhase57_UserService_Update_NoStatusTransition_NoDisable(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+	enq := addomain.NewADPushEnqueuer()
+	svc := newTestUserService(t, db)
+
+	// 1) 启用用户保存（0→0）
+	enabled := seedUserRow(t, db, "phase57-f02-stay-enabled", 0)
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID: enabled, Status: models.UserStatusEnabled, Remark: strPtr("noop"),
+	}))
+	assert.Equal(t, int64(0), countRowsByAction(t, db, enabled, models.ADPushActionDisable), "0→0 无跃迁不得入队")
+
+	// 2) 已停用用户重复保存（1→1）
+	disabled := seedUserRow(t, db, "phase57-f02-stay-disabled", 1)
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID: disabled, Status: models.UserStatusDisabled, Remark: strPtr("noop"),
+	}))
+	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionDisable), "1→1 无跃迁不得入队")
+
+	// 3) 重新启用（1→0）：v1.21 无 enable 动作，不得入队
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID: disabled, Status: models.UserStatusEnabled,
+	}))
+	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionDisable), "1→0 启用不在 v1.21 范围")
+
+	// 纯函数级断言：只有 0→1 返回入队
+	require.NoError(t, enq.EnqueueDisableOnStatusTransition(db, models.UserStatusEnabled, models.UserStatusDisabled, ""))
+	assert.Equal(t, int64(0), countDisableRows(t, db), "空 userID 不得入队")
+}
+
+// TestPhase57_EnqueueDisableOnStatusTransition_RollsBackWithUser 锁定 F-02 的事务红线：
+// 队列表不可写时，停用编辑必须整体回滚（sys_user.status 不得翻转）。
+func TestPhase57_UserService_Update_Disable_RollsBackWhenQueueInsertFails(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-f02-rollback", 0)
+	svc := newTestUserService(t, db)
+	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
+
+	err := svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID: userID, Status: models.UserStatusDisabled,
+	})
+	require.Error(t, err, "队列表不可写时停用编辑必须整体失败")
+
+	var status int
+	require.NoError(t, db.Raw("SELECT status FROM sys_user WHERE id = ?", userID).Scan(&status).Error)
+	assert.Equal(t, int(models.UserStatusEnabled), status, "事务必须回滚：用户不得被停用")
+
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+}
+
+// TestPhase57_UserService_Update_Disable_NoADConfig_NoEnqueue 锁定 F-02 在 D-02 第一层
+// 下降级：AD 配置停用时停用编辑照常生效，但不入队。
+func TestPhase57_UserService_Update_Disable_NoADConfig_NoEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 1) // status = 停用
+
+	userID := seedUserRow(t, db, "phase57-f02-nocfg", 0)
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID: userID, Status: models.UserStatusDisabled,
+	}), "无启用配置时业务停用必须放行")
+	assert.Equal(t, int64(0), countRowsByAction(t, db, userID, models.ADPushActionDisable), "无启用配置时不应入队")
+
+	var status int
+	require.NoError(t, db.Raw("SELECT status FROM sys_user WHERE id = ?", userID).Scan(&status).Error)
+	assert.Equal(t, int(models.UserStatusDisabled), status, "业务停用仍须生效")
 }
 
 // TestPhase57_UserService_Update_RollsBackWhenQueueInsertFails 锁定 D-02 第二层在接线后的落地

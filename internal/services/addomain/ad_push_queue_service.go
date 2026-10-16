@@ -212,6 +212,35 @@ func (e *ADPushEnqueuer) EnqueueUpdateIfChanged(tx *gorm.DB, oldUser *models.Use
 	return e.upsert(tx, models.ADPushActionUpdateUser, oldUser.ID)
 }
 
+// EnqueueDisableOnStatusTransition 用户**被停用**（status 0→1）时入队 disable 动作行（F-02）。
+//
+// 为什么需要它：停用有两个入口，UpdateStatus() 与 Update()（前端用户管理编辑表单保存时
+// 会带上 status）。Phase 57 只接了前者，若不接后者就留下一个安全语义缺口 ——
+// 系统里用户已停用、AD 账号仍启用，域内照常可登录。
+//
+// 与 EnqueueDisable 的区别：
+//   - 不做 F-01 压制。用户行仍在（只是 status=1），残留的 update_user 行仍可被排水器
+//     正常重读推送，两条动作按 created_at 先后处理（先推属性、再禁用）语义正确；
+//   - 语义仅限"停用"：0→1 入队；1→1 / 0→0 无操作。**启用**（1→0）刻意不入队 ——
+//     models.ADPushActionEnable 在 v1.21 不存在（见 ad_push_queue.go 常量注释）。
+//
+// D-02 降级与 EnqueueDisable 一致：队列表写失败返回 error 让调用方事务回滚；
+// 无启用的 AD 配置则 WARN + 放行。
+func (e *ADPushEnqueuer) EnqueueDisableOnStatusTransition(tx *gorm.DB, oldStatus, newStatus models.UserStatus, userID string) error {
+	if userID == "" || oldStatus == newStatus || newStatus != models.UserStatusDisabled {
+		return nil
+	}
+	enabled, err := IsADSyncEnabled(tx)
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		applogger.Warnf("[ad_push_queue] 无启用的 AD 配置(sync_enabled=true AND status=enabled)，跳过停用入队: entity_id=%s", userID)
+		return nil
+	}
+	return e.upsert(tx, models.ADPushActionDisable, userID)
+}
+
 // EnqueueDisable 软删用户入队 disable 动作行（QUEUE-06 / D-04）。
 //
 // 由 Delete 与 BatchDelete 两条软删事务路径调用。Phase 58 排水器按
