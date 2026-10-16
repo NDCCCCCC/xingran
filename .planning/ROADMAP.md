@@ -151,7 +151,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 57. AD 推送队列基建 | 0/TBD | Not started | - |
+| 57. AD 推送队列基建 | 1/3 | In progress | - |
 | 58. 排水器与 compare-and-move 推送 | 0/TBD | Not started | - |
 | 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
