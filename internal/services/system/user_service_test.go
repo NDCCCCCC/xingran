@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -90,6 +91,22 @@ func setupUserServiceTestDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME
 		)
 	`).Error)
+
+	// Phase 57 D-02/HYGIENE-06: sys_ad_config 供入队前置条件查询；ad_push_queue 由
+	// migration_215 直调建表。UserService 的 Update/Delete/BatchDelete 已接线入队，
+	// 缺这两张表会让这些用例因 IsADSyncEnabled 报表不存在而整体转红。
+	// deleted_at 必须存在：models.ADConfig 内嵌 BaseModel，GORM 软删作用域引用它。
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_ad_config (
+			id TEXT PRIMARY KEY,
+			sync_enabled INTEGER NOT NULL DEFAULT 0,
+			status INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)
+	`).Error)
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
 	return db
 }
 

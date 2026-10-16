@@ -8,6 +8,7 @@ package system
 // Wave 2（57-02）追加：入队 service 的 diff 边界、前置条件降级、ON CONFLICT 合并语义。
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -142,21 +143,11 @@ func TestPhase57_ADPushQueue_ModelRoundTrip(t *testing.T) {
 
 // seedADConfigEnabled 写入一行 sys_ad_config（D-02 前置条件的唯一数据源）。
 //
-// setupUserServiceTestDB 未建 sys_ad_config，故此处幂等建表；models.ADConfig 内嵌
-// BaseModel（含 deleted_at）→ GORM 软删作用域生效，必须带 deleted_at 列。
+// 表由 setupUserServiceTestDB（HYGIENE-06 共享 helper）保证存在，此处只写数据。
 // 固定 id + INSERT OR REPLACE：同一用例内可反复切换 sync_enabled / status
 // （否则第二次 INSERT 撞主键）。
 func seedADConfigEnabled(t *testing.T, db *gorm.DB, syncEnabled bool, status int) {
 	t.Helper()
-	require.NoError(t, db.Exec(`
-		CREATE TABLE IF NOT EXISTS sys_ad_config (
-			id TEXT PRIMARY KEY,
-			sync_enabled INTEGER NOT NULL DEFAULT 0,
-			status INTEGER NOT NULL DEFAULT 0,
-			created_at DATETIME,
-			updated_at DATETIME,
-			deleted_at DATETIME
-		)`).Error)
 	require.NoError(t, db.Exec(`
 		INSERT OR REPLACE INTO sys_ad_config
 			(id, sync_enabled, status, created_at, updated_at, deleted_at)
@@ -430,4 +421,138 @@ func TestPhase57_Enqueue_PropagatesInsertFailure(t *testing.T) {
 
 	// 重建（迁移幂等），确保不影响同包其它测试
 	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+}
+
+// ==================== Wave 3（57-03）：UserService 写路径接线 ====================
+
+// TestPhase57_UserService_Update_EnqueuesInSameTransaction 锁定 QUEUE-01 接线点。
+//
+// 管理员改 nickname → 同一业务事务内必须产生一行 pending update_user 队列行。
+func TestPhase57_UserService_Update_EnqueuesInSameTransaction(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-wiring-upd", 0)
+	svc := newTestUserService(t, db)
+
+	err := svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID:       userID,
+		Nickname: strPtr("newnick"),
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(1), countQueueRows(t, db, userID), "用户编辑必须在同事务产生队列行")
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ?", userID).First(&got).Error)
+	assert.Equal(t, models.ADPushEntityUser, got.EntityType)
+	assert.Equal(t, models.ADPushActionUpdateUser, got.ActionType)
+	assert.Equal(t, models.ADPushStatusPending, got.Status)
+
+	var nickname *string
+	require.NoError(t, db.Raw("SELECT nickname FROM sys_user WHERE id = ?", userID).Scan(&nickname).Error)
+	assert.NotNil(t, nickname, "业务写与队列行应同生共死")
+	assert.Equal(t, "newnick", *nickname)
+}
+
+// TestPhase57_UserService_Update_NoADFieldChange_NoEnqueue 锁定 D-01 diff 在接线后的落地。
+//
+// status 不参与四字段 diff → 纯状态编辑不产生队列行。
+func TestPhase57_UserService_Update_NoADFieldChange_NoEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-wiring-nodiff", 0)
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID:     userID,
+		Status: models.UserStatusDisabled,
+	}))
+	assert.Equal(t, int64(0), countQueueRows(t, db, userID), "非四字段编辑不应产生队列行")
+}
+
+// TestPhase57_UserService_Update_RollsBackWhenQueueInsertFails 锁定 D-02 第二层在接线后的落地
+// （T-57-03 的直接证据）：队列表写失败 → 用户编辑整体回滚，sys_user 无任何变更。
+func TestPhase57_UserService_Update_RollsBackWhenQueueInsertFails(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-wiring-rollback", 0)
+	svc := newTestUserService(t, db)
+	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
+
+	err := svc.Update(context.Background(), &requests.UserUpdateRequest{
+		ID:       userID,
+		Nickname: strPtr("shouldnotpersist"),
+	})
+	require.Error(t, err, "队列表不可写时用户编辑必须整体失败，不得静默放行")
+
+	var nickname *string
+	require.NoError(t, db.Raw("SELECT nickname FROM sys_user WHERE id = ?", userID).Scan(&nickname).Error)
+	assert.Nil(t, nickname, "业务事务必须回滚：nickname 不得被写入")
+
+	// 重建（迁移幂等），确保不影响同包其它测试
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+}
+
+// TestPhase57_UserService_Delete_EnqueuesDisable 锁定 QUEUE-06 接线点（T-57-01）。
+func TestPhase57_UserService_Delete_EnqueuesDisable(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase57-wiring-del", 0)
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.Delete(context.Background(), userID))
+
+	assert.Equal(t, int64(1), countDisableRows(t, db), "软删必须同事务产生 disable 队列行")
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ? AND action_type = ?", userID, models.ADPushActionDisable).
+		First(&got).Error)
+	assert.Equal(t, models.ADPushStatusPending, got.Status)
+
+	var deletedAt *string
+	require.NoError(t, db.Raw("SELECT deleted_at FROM sys_user WHERE id = ?", userID).Scan(&deletedAt).Error)
+	assert.NotNil(t, deletedAt, "用户必须已软删")
+}
+
+// TestPhase57_UserService_BatchDelete_EnqueuesDisable 锁定批量软删的 disable 入队。
+func TestPhase57_UserService_BatchDelete_EnqueuesDisable(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	id2 := seedUserRow(t, db, "phase57-wiring-bdel-2", 0)
+	id3 := seedUserRow(t, db, "phase57-wiring-bdel-3", 0)
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.BatchDelete(context.Background(), []string{id2, id3}))
+
+	assert.Equal(t, int64(2), countDisableRows(t, db), "批量软删必须为每个用户产生一行 disable")
+
+	for _, id := range []string{id2, id3} {
+		assert.Equal(t, int64(1), countQueueRows(t, db, id), "每个被删用户都应有队列行")
+		var deletedAt *string
+		require.NoError(t, db.Raw("SELECT deleted_at FROM sys_user WHERE id = ?", id).Scan(&deletedAt).Error)
+		assert.NotNil(t, deletedAt, "用户必须已软删")
+	}
+}
+
+// TestPhase57_UserService_Delete_NoADConfig_NoEnqueue 锁定 D-02 第一层在接线后的落地：
+// AD 配置停用时业务删除照常（软删生效），但不入队。
+func TestPhase57_UserService_Delete_NoADConfig_NoEnqueue(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 1) // status = 停用
+
+	userID := seedUserRow(t, db, "phase57-wiring-nocfg", 0)
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.Delete(context.Background(), userID), "配置停用时业务删除必须放行")
+
+	assert.Equal(t, int64(0), countDisableRows(t, db), "无启用配置时不应入队")
+
+	var deletedAt *string
+	require.NoError(t, db.Raw("SELECT deleted_at FROM sys_user WHERE id = ?", userID).Scan(&deletedAt).Error)
+	assert.NotNil(t, deletedAt, "业务软删仍须生效")
 }

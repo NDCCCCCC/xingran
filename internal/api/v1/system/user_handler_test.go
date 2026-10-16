@@ -17,6 +17,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
@@ -152,6 +153,24 @@ func setupUserTestDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME
 		)
 	`).Error)
+
+	// Phase 57 HYGIENE-06: 第二套 sqlite 环境（本 helper 与
+	// internal/services/system/user_service_test.go 的 setupUserServiceTestDB 同构）。
+	// sys_ad_config 供入队前置条件查询；ad_push_queue 由 migration_215 直调建表。
+	// 缺这两张表，真实 system.NewUserService 的 Delete/BatchDelete 事务内入队会因
+	// IsADSyncEnabled 报表不存在而报错上抛，TC9/TC12 的 require 200 断言直接失败。
+	// deleted_at 必须存在：models.ADConfig 内嵌 BaseModel，GORM 软删作用域引用它。
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_ad_config (
+			id TEXT PRIMARY KEY,
+			sync_enabled INTEGER NOT NULL DEFAULT 0,
+			status INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)
+	`).Error)
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
 	return db
 }
 
