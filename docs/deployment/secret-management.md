@@ -1,6 +1,6 @@
 # 部署期密钥管理指南
 
-> 适用范围：RuoYi-Next 所有环境（开发 / 测试 / 预生产 / 生产）
+> 适用范围：XingRan-Next 所有环境（开发 / 测试 / 预生产 / 生产）
 > 目标：杜绝明文密钥入仓、规范部署期密钥注入流程
 
 ---
@@ -43,8 +43,8 @@ configs/
 | `cache.port` | `REDIS_PORT` | | 整型 |
 | `cache.password` | `REDIS_PASSWORD` | ✓ | **生产绝不能留空** |
 | `jwt.secret_key` | `JWT_SECRET` | ✓ | HS256 备选密钥（`use_sm2: true` 时**不被使用**，仅满足启动校验） |
-| `jwt.sm2_private_key` | `RUOYI_JWT_SM2_PRIVATE_KEY` | ✓ | **真正用于 JWT 签名的密钥**；留空会触发"动态生成"分支，重启后旧 token 全部失效 |
-| `jwt.sm2_public_key` | `RUOYI_JWT_SM2_PUBLIC_KEY` | ✓ | 验签公钥；公钥可对外（嵌入前端、APP） |
+| `jwt.sm2_private_key` | `JWT_SM2_PRIVATE_KEY` | ✓ | **真正用于 JWT 签名的密钥**；留空会触发"动态生成"分支，重启后旧 token 全部失效 |
+| `jwt.sm2_public_key` | `JWT_SM2_PUBLIC_KEY` | ✓ | 验签公钥；公钥可对外（嵌入前端、APP） |
 | `security.sm4_key` | `SM4_KEY` | ✓ | SM4 主密钥（Base64 编码 16 字节） |
 | `baidu.map_ak` | `BAIDU_MAP_AK` | | 百度地图 AK |
 | `rpa.ai.generator.api_key` | `RPA_AI_GENERATOR_KEY` | | 文本模型 Key |
@@ -84,7 +84,7 @@ configs/
 
 set -euo pipefail
 
-echo "# === RuoYi-Next 生产环境密钥 ==="
+echo "# === XingRan-Next 生产环境密钥 ==="
 echo "# 生成时间: $(date -Iseconds)"
 echo "# 警告: 此文件包含生产密钥，必须用 ansible-vault / KMS 加密保存"
 echo
@@ -103,14 +103,14 @@ echo "SERVER_PORT=9000"
 
 **推荐方式：用项目自带的 Go 工具生成（依赖已在 go.mod）**
 
-`scripts/gen-sm2-keys/main.go`：
+`scripts/crypto/gen_sm2_keys/main.go`：
 
 ```go
 package main
 
 import (
 	"fmt"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 )
 
 func main() {
@@ -120,15 +120,15 @@ func main() {
 	}
 	privHex, _ := crypto.PrivateKeyToHex(priv)
 	pubHex, _ := crypto.PublicKeyToHex(pub)
-	fmt.Printf("RUOYI_JWT_SM2_PRIVATE_KEY=%s\n", privHex)
-	fmt.Printf("RUOYI_JWT_SM2_PUBLIC_KEY=%s\n", pubHex)
+	fmt.Printf("JWT_SM2_PRIVATE_KEY=%s\n", privHex)
+	fmt.Printf("JWT_SM2_PUBLIC_KEY=%s\n", pubHex)
 }
 ```
 
 使用：
 
 ```bash
-go run scripts/gen-sm2-keys/main.go >> .env.production
+go run scripts/crypto/gen_sm2_keys/main.go >> .env.production
 ```
 
 **⚠️ 切勿使用"动态生成"**：如果 `sm2_private_key` 配置留空，`internal/core/security/jwt.go:86-92` 会自动生成 SM2 密钥对——**每次重启密钥都换，旧 token 全部失效，所有用户被强制登出**。生产部署必须显式配置。
@@ -148,12 +148,12 @@ grep -E "^\s*password:\s*\"\"$" configs/config.yaml || { echo "⚠️ 数据库/
 
 # 3. 关键环境变量已设置
 for v in DB_PASSWORD REDIS_PASSWORD JWT_SECRET SM4_KEY \
-         RUOYI_JWT_SM2_PRIVATE_KEY RUOYI_JWT_SM2_PUBLIC_KEY; do
+         JWT_SM2_PRIVATE_KEY JWT_SM2_PUBLIC_KEY; do
   [ -n "${!v:-}" ] || { echo "❌ 环境变量 $v 未设置"; exit 1; }
 done
 
 # 4. SM2 私钥不是仓库默认值（公开值,任何能读仓库的人都能伪造 JWT）
-[ "$RUOYI_JWT_SM2_PRIVATE_KEY" != "d8d9a3e6b356cf7538cb0fd6a486055c2a621a63a8a095e60a6362874b26508b" ] \
+[ "$JWT_SM2_PRIVATE_KEY" != "d8d9a3e6b356cf7538cb0fd6a486055c2a621a63a8a095e60a6362874b26508b" ] \
   || { echo "❌ SM2 私钥是仓库默认值，必须重新生成"; exit 1; }
 
 # 5. SM4 不是默认 test-secret
@@ -161,7 +161,7 @@ done
   || { echo "❌ SM4 密钥是默认 test-secret，必须重新生成"; exit 1; }
 
 # 6. JWT 不是 please-change
-[ "$JWT_SECRET" != "ruoyi-next-secret-key-please-change-in-production" ] \
+[ "$JWT_SECRET" != "xingran-next-secret-key-please-change-in-production" ] \
   || { echo "❌ JWT secret 是仓库默认值"; exit 1; }
 
 echo "✅ 所有安全检查通过"
@@ -274,7 +274,7 @@ NEW_SM4_KEY=$(openssl rand -base64 16)
 #    正确做法：保留旧 key + 新 key 并行，迁移数据后移除旧 key
 
 # 3. 重启应用
-systemctl restart ruoyi-backend
+systemctl restart xingran-backend
 ```
 
 ### 5.3 历史清理（已 commit 的敏感值）
@@ -290,7 +290,7 @@ git filter-repo --replace-text expressions.txt
 #   )(PO09po==>REDACTED_REDIS_PASSWORD
 #   31jIJbkkaQHV6pNXbrQmnOoSrynzalC8==>REDACTED_BAIDU_AK
 #   dGVzdC1zZWNyZXQxNiEhIQ====>REDACTED_SM4_KEY
-#   ruoyi-next-secret-key-please-change-in-production==>REDACTED_JWT_SECRET
+#   xingran-next-secret-key-please-change-in-production==>REDACTED_JWT_SECRET
 
 # 强制推送（破坏性，团队需 rebase）
 git push origin --force --all
@@ -312,7 +312,59 @@ git push origin --force --all
 
 ---
 
-## 7. 变更日志
+## 7. V132 TLS/Origin 选项（v1.32 新增）
+
+以下环境变量控制 TLS 证书验证和 CORS 跨域策略。所有默认为安全值（验证启用、来源受限）。
+
+### 7.1 环境变量清单
+
+| 环境变量 | 默认值 | 何时设为 `true` | 安全风险 |
+|---------|--------|----------------|---------|
+| `LDAP_TLS_INSECURE_SKIP_VERIFY` | `false` | 内网 LDAP/AD 使用自签证书时 | 禁用 TLS 验证，MITM 攻击风险 |
+| `AD_AUTH_TLS_INSECURE_SKIP_VERIFY` | `false` | 内网 AD 认证使用自签证书时 | 禁用 TLS 验证，MITM 攻击风险 |
+| `REDIS_TLS_INSECURE_SKIP_VERIFY` | `false` | 内网 Redis 使用自签证书时（如 Upstash TLS） | 禁用 TLS 验证，MITM 攻击风险 |
+| `EMAIL_TLS_INSECURE_SKIP_VERIFY` | `false` | 内网 SMTP 服务器使用自签证书时 | 禁用 TLS 验证，MITM 攻击风险 |
+| `WS_ALLOW_ALL_ORIGINS` | `false` | 仅开发环境调试 WebSocket 时 | 允许任意来源，生产禁用 |
+
+### 7.2 YAML 配置项
+
+| 配置路径 | 类型 | 说明 |
+|---------|------|------|
+| `server.allowed_origins` | `[]string` | 允许的 WebSocket/CORS 来源列表（Phase 110 TLS-04 新增） |
+| `security.ad_legacy_aes_key` | `string` | AD 旧版 AES 密钥，**生产必须配置**（Phase 110 相关） |
+
+### 7.3 MUST SET in production
+
+以下项目在生产环境**必须正确配置**，否则无法启动或存在安全风险：
+
+| 项目 | 要求 | 风险 |
+|------|------|------|
+| `server.allowed_origins` | 必须配置具体来源，禁止仅填 `*` | 任意来源访问，XSS 攻击风险 |
+| `AD_LEGACY_AES_KEY` | 必须设置，非空字符串 | 留空导致 AD 认证相关功能异常 |
+| 所有 `_INSECURE_SKIP_VERIFY` | **禁止**在有公共 CA 的生产环境设为 `true` | 禁用 TLS 验证，MITM 攻击风险 |
+| `WS_ALLOW_ALL_ORIGINS` | **禁止**在生产环境设为 `true` | 任意来源访问，XSS 攻击风险 |
+
+### 7.4 内网兼容（自签证书场景）
+
+在内网部署中，如果 LDAP/AD/Redis/SMTP 使用自签名 TLS 证书，需将对应 `_INSECURE_SKIP_VERIFY` 环境变量设为 `true`：
+
+```bash
+# 内网自签证书场景示例
+LDAP_TLS_INSECURE_SKIP_VERIFY=true
+AD_AUTH_TLS_INSECURE_SKIP_VERIFY=true
+REDIS_TLS_INSECURE_SKIP_VERIFY=true
+EMAIL_TLS_INSECURE_SKIP_VERIFY=true
+```
+
+**安全前提**：内网环境本身已可信（交换机/路由器受控），才可跳过 TLS 验证。公网环境绝对不可。
+
+### 7.5 安全警告
+
+设置任何 `_INSECURE_SKIP_VERIFY` 为 `true` 会禁用 TLS 证书验证，**允许中间人攻击（MITM）**。仅在完全可信的内网环境中使用自签名证书时，才可启用。
+
+---
+
+## 8. 变更日志
 
 | 日期 | 变更 | 提交者 |
 |------|------|--------|
@@ -320,10 +372,9 @@ git push origin --force --all
 
 ---
 
-## 8. 相关文档
+## 9. 相关文档
 
-- [部署和运维文档.md](../部署和运维文档.md) — 主部署文档
-- [安全和认证设计（国密）.md](../安全和认证设计（国密）.md) — 国密算法设计
-- [登录端点加密部署指南](login-encryption-deployment.md) — SM2+SM4 部署细节
+- [部署/生产部署指南](deployment.md) — 主部署文档
+- [架构/安全和认证设计（国密）](../architecture/安全和认证设计（国密）.md) — 国密算法设计
 - `configs/config.example.yaml` — 通用脱敏模板
 - `configs/config.prod.example.yaml` — 生产环境模板

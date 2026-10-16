@@ -1,0 +1,2 @@
+  # Nonce 存储配置
+  <!-- VERIFY: nonce_storage block with type/ttl fields does not exist in configs/config.yaml; only 'enabled', 'exclude_paths', and 'require_encryption' exist under request_encryption. Nonce is stored in memory with a 300s window in code (pkg/crypto/request_encryption.go) -->
