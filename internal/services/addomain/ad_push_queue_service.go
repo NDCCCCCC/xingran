@@ -88,6 +88,33 @@ func adFieldDiffers(oldVal *string, newVal *string) bool {
 	return strings.TrimSpace(oldStr) != strings.TrimSpace(*newVal)
 }
 
+// DedupeEntityIDs 实体 id 列表去重纯函数（QUEUE-06 前置）。
+//
+// 规则：丢弃空串（脏入参不应占队列行），其余按**首次出现顺序**保留 —— 顺序稳定让
+// 批量 INSERT 的入参与排障 SQL 的 entity_id 顺序一致。
+//
+// 为什么要抽成纯函数（F-05）：去重唯一的真实故障模式是 PG 的
+// "ON CONFLICT DO UPDATE command cannot affect row a second time"（同一条 INSERT 内
+// 重复命中冲突目标行）。sqlite 对该情形不报错，会逐行处理并合并 —— 也就是说，
+// 直接对 EnqueueDisable 断言"行数 == 去重后个数"，在 sqlite 上把去重循环整个删掉也照样
+// 变绿（假断言，其 RED 状态不可达）。把逻辑提成可直接单测的纯函数，
+// TestPhase57_DedupeEntityIDs_PureFunction 才是真正能红的断言。
+func DedupeEntityIDs(ids []string) []string {
+	deduped := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		deduped = append(deduped, id)
+	}
+	return deduped
+}
+
 // ADPushEnqueuer AD 推送入队器（无状态，零参构造）。
 type ADPushEnqueuer struct{}
 
@@ -191,8 +218,8 @@ func (e *ADPushEnqueuer) EnqueueUpdateIfChanged(tx *gorm.DB, oldUser *models.Use
 //
 // 行为：
 //   - 空切片 → 直接返回 nil
-//   - 重复 id 先去重（保持首次出现顺序）：PG 对同一条 INSERT 内重复命中的行 DO UPDATE
-//     会报 "ON CONFLICT DO UPDATE command cannot affect row a second time"
+//   - 重复 id 先去重（DedupeEntityIDs，保持首次出现顺序）：PG 对同一条 INSERT 内重复
+//     命中的行 DO UPDATE 会报 "ON CONFLICT DO UPDATE command cannot affect row a second time"
 //   - 无启用的 AD 配置 → WARN + 返回 nil
 //   - 配置启用 → 批量 upsert，冲突命中即合并（同实体恒一行活跃）
 //   - INSERT 失败 → 返回 error，让调用方事务回滚
@@ -201,18 +228,7 @@ func (e *ADPushEnqueuer) EnqueueDisable(tx *gorm.DB, userIDs []string) error {
 		return nil
 	}
 
-	deduped := make([]string, 0, len(userIDs))
-	seen := make(map[string]struct{}, len(userIDs))
-	for _, id := range userIDs {
-		if id == "" {
-			continue
-		}
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		deduped = append(deduped, id)
-	}
+	deduped := DedupeEntityIDs(userIDs)
 	if len(deduped) == 0 {
 		return nil
 	}

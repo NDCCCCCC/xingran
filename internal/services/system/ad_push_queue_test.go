@@ -355,11 +355,47 @@ func TestPhase57_EnqueueDisable_SingleAndBatch(t *testing.T) {
 	assert.Equal(t, int64(4), countDisableRows(t, db), "空切片不应新增行")
 }
 
-// TestPhase57_EnqueueDisable_DedupesDuplicateIDs 锁定重复 id 去重。
+// TestPhase57_DedupeEntityIDs_PureFunction 是 F-05 的**能红**断言：去重逻辑被删除/改坏
+// （原样返回入参、保留空串、顺序不稳定）时本用例直接红。
 //
-// 不去重时 PG 会对同一条 INSERT 内重复命中的行报
-// "ON CONFLICT DO UPDATE command cannot affect row a second time"；sqlite 行为不同，
-// 故显式断言行数。
+// 对照 TestPhase57_EnqueueDisable_DedupesDuplicateIDs —— 后者在 sqlite 上是行为记录，
+// 不是契约断言（sqlite 对同一条 INSERT 内重复命中的 UPSERT 行不报错，见该用例注释）。
+func TestPhase57_DedupeEntityIDs_PureFunction(t *testing.T) {
+	cases := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{"nil 入参", nil, []string{}},
+		{"空切片", []string{}, []string{}},
+		{"无重复原样返回", []string{"a", "b"}, []string{"a", "b"}},
+		{"重复只留首次出现", []string{"a", "b", "a", "b", "a"}, []string{"a", "b"}},
+		{"空串被丢弃", []string{"", "a", "", "b"}, []string{"a", "b"}},
+		{"全空串结果为空", []string{"", ""}, []string{}},
+		{"顺序按首次出现稳定", []string{"c", "a", "c", "b", "a"}, []string{"c", "a", "b"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			before := append([]string{}, tc.in...)
+			got := addomain.DedupeEntityIDs(tc.in)
+			assert.Equal(t, tc.want, got)
+			// 纯函数：不得就地改写入参（调用方 BatchDelete 之后还要用 ids 之外的逻辑）
+			if tc.in != nil {
+				assert.Equal(t, before, tc.in, "去重不得修改入参切片")
+			}
+		})
+	}
+}
+
+// TestPhase57_EnqueueDisable_DedupesDuplicateIDs —— **sqlite 行为记录，非契约断言**。
+//
+// 本用例只证明"当前实现去重后 sqlite 端行数符合预期"，并不能证明去重逻辑存在：
+// sqlite 对同一条 INSERT 语句内重复命中的 UPSERT 行不报错（实测逐行处理并合并），
+// 所以把 EnqueueDisable 里的去重循环整个删掉，本用例仍然变绿 —— RED 状态不可达。
+// 真正的契约断言在 TestPhase57_DedupeEntityIDs_PureFunction（对纯函数断言）。
+// 去重要防的 PG 专属故障是 "ON CONFLICT DO UPDATE command cannot affect row a second
+// time"，需要 PG 测试环境才能覆盖（Phase 58 验证清单项）。
 func TestPhase57_EnqueueDisable_DedupesDuplicateIDs(t *testing.T) {
 	db := setupPhase57QueueDB(t)
 	seedADConfigEnabled(t, db, true, 0)
