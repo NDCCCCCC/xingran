@@ -5,10 +5,10 @@ bin/
 *.dll
 *.so
 *.dylib
-ruoyi-backend-embedded*
+xingran-backend-embedded*
 
 # 嵌入式前端构建产物（复制到 internal/server 用于 embed）
-internal/server/ruoyi-react-frontend/
+internal/server/xingran-react-frontend/
 
 # 临时工具脚本（避免编译冲突）
 scripts/tools/
@@ -25,6 +25,9 @@ tmpclaude-*
 # Claude 个人 settings（每台机器不同，不入公开仓）
 # 真实配置复制到 .claude/settings.local.json,本地覆盖
 .claude/settings.local.json
+
+# Claude Code MCP 配置（含个人 Supabase project_ref 等本地连接，不入仓）
+.mcp.json
 
 # 环境变量文件
 .env
@@ -59,6 +62,7 @@ coverage.html
 *.db
 *.sqlite
 *.sqlite3
+data/
 
 # 密码和密钥文件
 *.pem
@@ -105,3 +109,32 @@ fix_*.sql
 *.xlsx
 *.png
 .trae/
+
+# 调试残留归档（debug_*.js / temp-fix.sh 等临时脚本的归档，不入仓）
+.archive/
+
+# 运行时用户上传文件
+uploads/
+
+# 前端测试覆盖率输出
+xingran-react-frontend/coverage/
+
+# RPA Worker 运行时配置（含明文 Redis 密码 / 内网地址）
+# 模板请使用 rpa-worker/configs/config.example.yaml
+rpa-worker/configs/config.yaml
+
+# HTML 原型调试残留（chrome-devtools 会话产物）
+/655aa291-*/
+
+# root-level accidental artifacts
+cov_*.out
+
+# 崩溃转储（Git Bash / bash.exe 残留）
+*.stackdump
+
+# 嵌入式后端构建产物（新旧命名均覆盖）
+*-backend-embedded
+*-backend-embedded-*
+
+# 一次性生成数据（scripts/tmp_menuimport -mode=gen 可再生）
+xingran_menus_dedup.sql
