@@ -133,6 +133,9 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		computers.POST("/list", handler.ListComputers)
 		computers.POST("/detail", handler.GetComputerDetail)
+		// quick 261016 登录历史查询(只读,继承 group 现有权限,零新权限)
+		historyHandler := NewADLoginHistoryHandler(core.GetDB())
+		computers.POST("/login-history", historyHandler.ListComputerLoginHistory)
 	}
 
 	// OU组映射管理
