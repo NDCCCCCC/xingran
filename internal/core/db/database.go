@@ -669,6 +669,7 @@ func MigrateModelList() []interface{} {
 		&models.ConfigExecutionDetail{},
 		&models.ConfigBackup{},
 		&models.ConfigRestoreTask{}, // Phase 93: 配置恢复任务 (D-15 异步编排载体)
+		&models.ADPushQueue{},      // Phase 57: AD 推送队列 (outbox-lite 队列表)
 		&models.DeviceMACAddress{},
 		&models.DevicePortStatus{},
 		&models.LLDPNeighborInfo{}, // LLDP 邻居信息(拓扑发现)
@@ -1049,6 +1050,11 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate214CreateADLoginHistory(d.DB); err != nil {
 			applogger.Errorf("AD登录历史分区表创建失败 (非阻断,留待下次启动): %v", err)
 		}
+		// Phase 57: AD 推送队列表 + 部分唯一索引 (双方言 DDL,幂等;
+		// sqlite 侧亦由 AutoMigrate 建表,此处显式迁移保证索引一次建齐)
+		if err := migrations.Migrate215CreateADPushQueue(d.DB); err != nil {
+			applogger.Errorf("ad_push_queue 表与索引创建失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -1076,6 +1082,11 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 261013-lqb 楼栋 total_floors 存量漂移一次性归正 (双方言纯 SQL,幂等)
 		if err := migrations.Migrate213RecomputeBuildingTotalFloors(d.DB); err != nil {
 			applogger.Errorf("楼栋 total_floors 存量重算失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: Phase 57 AD 推送队列表 + 部分唯一索引 (与 PG 分支同款调用,
+		// sqlite 既是 dev 运行时也是测试运行时,必须建到表)
+		if err := migrations.Migrate215CreateADPushQueue(d.DB); err != nil {
+			applogger.Errorf("ad_push_queue 表与索引创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
