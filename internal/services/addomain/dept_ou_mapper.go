@@ -61,6 +61,31 @@ func (m *DeptOUmapper) FindOUDNByDeptID(ctx context.Context, deptID string) (str
 	return mapping.OUDN, nil
 }
 
+// FindOUDNByDeptIDForConfig 配置作用域的 OU DN 查询（Phase 58 F-B，阻断级）。
+//
+// 为什么必须新增而不是复用 FindOUDNByDeptID：
+//   - 旧方法只按 (dept_id, sync_enabled) 过滤，**无 ad_config_id、无 ORDER BY**
+//   - sys_dept_ou_mapping 的唯一键是 (dept_id, ad_config_id) → 一个 dept 在 N 个配置下
+//     有 N 行合法记录
+//   - 多 AD 配置环境下旧方法的 First() 顺序不确定 → 排水器会把 A 域用户移进 B 域的 OU
+//     （跨域写入，是 phase 58 最严重的误路由形态）
+//
+// 旧方法保持不动：其调用方（user_ad_sync_service.go 的 moveUserToNewOU /
+// BatchMoveUsersToNewOU、user_ou_service 系列）本轮不改，避免波及其他路径。
+func (m *DeptOUmapper) FindOUDNByDeptIDForConfig(ctx context.Context, deptID, adConfigID string) (string, error) {
+	var mapping models.DeptOUMapping
+	err := m.db.WithContext(ctx).
+		Where("dept_id = ? AND ad_config_id = ? AND sync_enabled = ?", deptID, adConfigID, true).
+		First(&mapping).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", fmt.Errorf("未找到部门 %s 在 AD 配置 %s 下的 OU DN", deptID, adConfigID)
+		}
+		return "", fmt.Errorf("查询部门映射失败: %w", err)
+	}
+	return mapping.OUDN, nil
+}
+
 // UpsertMapping 创建或更新映射关系（幂等操作）
 // 处理数据库的两个唯一约束：
 // 1. uni_dept_ou_mapping_dept (dept_id, ad_config_id) - 一个部门在一个AD配置下只能有一个映射
