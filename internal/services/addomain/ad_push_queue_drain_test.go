@@ -23,10 +23,12 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"github.com/go-ldap/ldap/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -409,4 +411,293 @@ func TestPhase58_Drain_NoConfigDeferWithoutDead(t *testing.T) {
 	var deadCount int64
 	require.NoError(t, db.Model(&models.ADPushQueue{}).Where("status = ?", string(models.ADPushStatusDead)).Count(&deadCount).Error)
 	assert.Equal(t, int64(0), deadCount, "defer 分支不得把任何行打成 dead")
+}
+
+// ==================== Phase 58 Plan 03 Task 2：drainRow 状态跃迁 ====================
+
+// newDrainTestDrainer 返回已注入 mock LDAP 与假账号池的排水器（所有 DrainOnce 用例的统一入口）。
+//
+// ⚠ 缺 clientFactoryOverride 注入 → executeGroup 内 NewFailoverClient 的 clientFactory 为 nil
+// → newClient 真拨号 → 用例落 MarkFailure 必红（且会污染同包其它用例的账号池状态）。
+// Plan 04 的 DrainOnce 用例也必须走这个 helper，不得自行 NewADPushDrainer 后忘记注入。
+func newDrainTestDrainer(t *testing.T, db *gorm.DB, mock *mockLDAPClient, accounts ...models.ADServiceAccount) *ADPushDrainer {
+	t.Helper()
+	d := NewADPushDrainer(db, newDrainTestPool(accounts...))
+	d.clientFactoryOverride = func(*models.ADConfig, *models.ADServiceAccount) LDAPClientIface { return mock }
+	return d
+}
+
+// reloadDrainRow 读回队列行（终态断言用）。
+func reloadDrainRow(t *testing.T, db *gorm.DB, entityID string) models.ADPushQueue {
+	t.Helper()
+	var row models.ADPushQueue
+	require.NoError(t, db.Where("entity_id = ?", entityID).First(&row).Error)
+	return row
+}
+
+// setDrainUserAttrs 给已 seed 的用户补 nickname/email/phone/dept_id（update_user 路径需要
+// 至少一个属性非空，否则 syncUserAttributes 会在 len(attributes)==0 处提前返回、不触达 LDAP）。
+func setDrainUserAttrs(t *testing.T, db *gorm.DB, userID, nickname, email, phone, deptID string) {
+	t.Helper()
+	require.NoError(t, db.Exec(
+		`UPDATE sys_user SET nickname = ?, email = ?, phone = ?, dept_id = ? WHERE id = ?`,
+		nickname, email, phone, deptID, userID).Error)
+}
+
+// TestPhase58_Drain_DisableSuccessWritesPushedAt disable 动作真实执行 DisableUser 并转 pushed。
+func TestPhase58_Drain_DisableSuccessWritesPushedAt(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,OU=研发部,DC=corp,DC=com", "OU=研发部,DC=corp,DC=com", nil)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionDisable), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 1, mock.disableUserCalls, "disable 动作必须真实调用 DisableUser（UAC 514）")
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+	assert.NotNil(t, row.PushedAt, "成功终态必须写 pushed_at")
+	assert.Nil(t, row.NextRetryAt, "成功终态必须清空 next_retry_at")
+}
+
+// TestPhase58_Drain_DisableSoftDeletedUserStillDrains P2 红线：读 sys_user 必须 Unscoped。
+// 软删用户对应的 disable 行仍必须能推出去（未 Unscoped 时本用例必红）。
+func TestPhase58_Drain_DisableSoftDeletedUserStillDrains(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	require.NoError(t, db.Exec(`UPDATE sys_user SET deleted_at = ? WHERE id = ?`, drainNow(), "u-1").Error)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionDisable), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 1, mock.disableUserCalls, "软删用户的 disable 行仍必须推到 AD")
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+}
+
+// TestPhase58_Drain_OrphanDisableRowGoesDead F-07：entity_id 指向不存在用户 → dead，且不烧 attempts。
+func TestPhase58_Drain_OrphanDisableRowGoesDead(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainQueueRow(t, db, "", "ghost-user", string(models.ADPushActionDisable), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "ghost-user")
+	assert.Equal(t, models.ADPushStatusDead, row.Status)
+	assert.Equal(t, 0, row.Attempts, "不可恢复分支不得烧 attempts")
+	assert.Contains(t, row.LastError, "unrecoverable:user-not-found")
+	assert.Equal(t, 0, mock.disableUserCalls)
+}
+
+// TestPhase58_Drain_UpdateUserSuccessWritesPushedAt update_user 属性路径真实执行。
+func TestPhase58_Drain_UpdateUserSuccessWritesPushedAt(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainDept(t, db, "dept-1", "研发部")
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,OU=研发部,DC=corp,DC=com", "OU=研发部,DC=corp,DC=com", nil)
+	setDrainUserAttrs(t, db, "u-1", "Alice", "alice@corp.com", "13800000000", "dept-1")
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 1, mock.updateUserAttrCalls, "属性推送必须真实调用 UpdateUserAttribute")
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+	assert.NotNil(t, row.PushedAt)
+}
+
+// TestPhase58_Drain_FailureSchedulesBackoff 可恢复失败 → failed + attempts+1 + 退避 60s。
+func TestPhase58_Drain_FailureSchedulesBackoff(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	setDrainUserAttrs(t, db, "u-1", "Alice", "", "", "")
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	mock.updateUserAttrErr = errors.New("boom")
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+
+	before := time.Now().UTC()
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusFailed, row.Status)
+	assert.Equal(t, 1, row.Attempts)
+	require.NotNil(t, row.NextRetryAt)
+	backoff := row.NextRetryAt.Sub(before)
+	assert.GreaterOrEqual(t, backoff, 55*time.Second, "退避应约 60s（容差 ±5s）")
+	assert.LessOrEqual(t, backoff, 65*time.Second, "退避应约 60s（容差 ±5s）")
+	assert.NotNil(t, row.FailedAt)
+	assert.True(t, len(row.LastError) >= len("retry:update_user:"), "last_error 应有前缀")
+	assert.Equal(t, "retry:update_user:", row.LastError[:len("retry:update_user:")])
+}
+
+// TestPhase58_Drain_MaxAttemptsGoesDead F-11 主用例：连败 4 次后本轮再失败 → dead 且 attempts 必须落到 5。
+//
+// ⚠ 这条断言就是 markDead 必须带 attempts 入参的验收依据：若 markDead 只写 status/时间戳/reason
+// 不写 attempts，DB 里仍是 4，本用例必红。
+func TestPhase58_Drain_MaxAttemptsGoesDead(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	setDrainUserAttrs(t, db, "u-1", "Alice", "", "", "")
+	// 模拟已连败 4 次
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusFailed), 4, nil)
+
+	mock := newDrainTestLDAP()
+	mock.updateUserAttrErr = errors.New("boom")
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusDead, row.Status)
+	assert.Equal(t, 5, row.Attempts, "达上限分支必须把 newAttempts 落到 DB")
+	assert.Nil(t, row.NextRetryAt)
+	assert.Equal(t, "dead:max-attempts", row.LastError)
+}
+
+// TestPhase58_Drain_NoBareAttemptsDeadAfterMerge F-11 禁令验收：attempts=5 的行本轮成功必须转
+// pushed（而不是凭裸 attempts 判死）。
+func TestPhase58_Drain_NoBareAttemptsDeadAfterMerge(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	setDrainUserAttrs(t, db, "u-1", "Alice", "", "", "")
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusFailed), 5, nil)
+
+	mock := newDrainTestLDAP() // 本轮无错误
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status, "attempts=5 的行若本轮成功必须转 pushed，不得凭裸 attempts 判死")
+	assert.NotNil(t, row.PushedAt)
+}
+
+// TestPhase58_Drain_PoolExhaustedIsRetryable 账号池熔断是可重试失败，不判 dead（D-05）。
+func TestPhase58_Drain_PoolExhaustedIsRetryable(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionDisable), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock) // 无账号 → ErrAllAccountsUnavailable
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusFailed, row.Status, "池熔断必须可重试，不得转 dead")
+	assert.Equal(t, 1, row.Attempts)
+	assert.True(t, len(row.LastError) >= len("pool:"))
+	assert.Equal(t, "pool:", row.LastError[:len("pool:")])
+}
+
+// TestPhase58_Drain_Code32GoesDeadAndClearsAdDn QUEUE-05：code 32 → dead + 清 ad_dn + 不烧 attempts。
+func TestPhase58_Drain_Code32GoesDeadAndClearsAdDn(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	setDrainUserAttrs(t, db, "u-1", "Alice", "", "", "")
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	mock.updateUserAttrErr = ldap.NewError(ldap.LDAPResultNoSuchObject, errors.New("no such object"))
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusDead, row.Status)
+	assert.Equal(t, 0, row.Attempts, "code 32 是不可恢复错误，不烧 attempts")
+	assert.Equal(t, "unrecoverable:target-not-found", row.LastError)
+
+	var adDn, adOuDn, adSyncedAt *string
+	require.NoError(t, db.Raw(`SELECT ad_dn, ad_ou_dn, ad_synced_at FROM sys_user WHERE id = ?`, "u-1").
+		Row().Scan(&adDn, &adOuDn, &adSyncedAt))
+	assert.Nil(t, adDn, "code 32 必须清空 sys_user.ad_dn")
+	assert.Nil(t, adOuDn)
+	assert.Nil(t, adSyncedAt)
+}
+
+// TestPhase58_Drain_DNExistsFalseIsDeadNotPushed DNExists=false 时 syncUserAttributes 清 ad_dn 后
+// 返回 nil，必须重新判空 → dead（锁住 drainRow 里 reload 判空那段逻辑）。
+func TestPhase58_Drain_DNExistsFalseIsDeadNotPushed(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	setDrainUserAttrs(t, db, "u-1", "Alice", "", "", "")
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	mock.dnExistsRes = false // AD 端不存在
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusDead, row.Status, "AD 端不存在 → dead，不得误报 pushed")
+	var adDn *string
+	require.NoError(t, db.Raw(`SELECT ad_dn FROM sys_user WHERE id = ?`, "u-1").Row().Scan(&adDn))
+	assert.Nil(t, adDn, "DNExists=false 会清空 ad_dn")
+}
+
+// TestPhase58_Drain_WritesUTCTimestamps F-12：注入固定 UTC 时刻，断言 pushed_at 的 Location 与值。
+func TestPhase58_Drain_WritesUTCTimestamps(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionDisable), string(models.ADPushStatusPending), 0, nil)
+
+	fixed := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	d.now = func() time.Time { return fixed }
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	require.NotNil(t, row.PushedAt)
+	assert.Equal(t, time.UTC, row.PushedAt.Location(), "pushed_at 的 Location 必须是 UTC")
+	assert.True(t, row.PushedAt.Equal(fixed), "pushed_at 必须等于注入的固定 UTC 时刻")
+}
+
+// TestPhase58_Drain_MutualExclusionSkipsSecondRound mu.TryLock 语义：上一轮未结束则本轮立即跳过。
+func TestPhase58_Drain_MutualExclusionSkipsSecondRound(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionDisable), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+
+	// 手动持锁模拟"上一轮未结束"
+	d.mu.Lock()
+	err := d.DrainOnce(context.Background())
+	d.mu.Unlock()
+
+	require.NoError(t, err, "持锁期间 DrainOnce 必须立即返回 nil（跳过本轮）")
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPending, row.Status, "被跳过的轮次不得改动任何行")
+	assert.Equal(t, 0, mock.disableUserCalls)
 }

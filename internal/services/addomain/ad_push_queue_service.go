@@ -179,7 +179,9 @@ func (e *ADPushEnqueuer) upsert(tx *gorm.DB, action models.ADPushActionType, ent
 		ActionType: action,
 		Status:     models.ADPushStatusPending,
 	}
-	if err := tx.Clauses(adPushOnConflictClause(time.Now())).Create(&row).Error; err != nil {
+	// Phase 58 F-12：入队路径时间戳统一 UTC（排水器是 pushed_at/failed_at 的首个写入方，
+	// 若写入本地时区而 PG 列是 timestamptz，排障 SQL 会出现 8 小时偏移）。
+	if err := tx.Clauses(adPushOnConflictClause(time.Now().UTC())).Create(&row).Error; err != nil {
 		applogger.Errorf("[ad_push_queue] 入队失败 entity_type=%s entity_id=%s action=%s: %v",
 			models.ADPushEntityUser, entityID, action, err)
 		return err
@@ -270,7 +272,7 @@ func (e *ADPushEnqueuer) EnqueueDisable(tx *gorm.DB, userIDs []string) error {
 		return nil
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // Phase 58 F-12：全链路 UTC
 
 	// F-01 压制：让"删除"在队列层面对"编辑"形成显式压制。
 	//

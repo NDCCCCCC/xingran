@@ -58,7 +58,7 @@ const ADPushQueueActivePredicate = "status IN ('pending', 'failed')"
 // （D-05：快照过期是已判死刑的时间戳仲裁土壤）；排水闭包重读 DB 后全量推送。
 //
 // 不含 DeletedAt —— 队列表不软删（D-08），终态行留表可查（QUEUE-03 排障）。
-// 不含任何 uniqueIndex tag —— W-1 教训：GORM AutoMigrate 的 DROP 无 IF EXISTS，
+// 不含任何唯一索引 tag —— W-1 教训：GORM AutoMigrate 的 DROP 无 IF EXISTS，
 // 与手写迁移建的 uq_ad_push_queue_active 冲突会导致启动 FATA；唯一索引只由
 // migration_215 建。
 //
@@ -68,7 +68,7 @@ type ADPushQueue struct {
 	EntityType ADPushEntityType `gorm:"size:32;not null" json:"entityType"`
 	EntityID   string           `gorm:"size:64;not null" json:"entityId"`
 	ActionType ADPushActionType `gorm:"size:32;not null" json:"actionType"`
-	Status     ADPushStatus     `gorm:"size:20;not null" json:"status"`
+	Status     ADPushStatus     `gorm:"size:20;not null;default:'pending'" json:"status"` // F-14：与 migration_215 的 DDL DEFAULT 'pending' 对齐
 	Attempts   int              `gorm:"not null;default:0" json:"attempts"`
 	// NextRetryAt 退避重试时间（Phase 58 退避扫描用，nullable 不阻断）
 	NextRetryAt *time.Time `json:"nextRetryAt,omitempty"`
@@ -89,7 +89,7 @@ func (q *ADPushQueue) BeforeCreate(tx *gorm.DB) error {
 	if q.Status == "" {
 		q.Status = ADPushStatusPending
 	}
-	now := time.Now()
+	now := time.Now().UTC() // Phase 58 F-12：全链路 UTC
 	if q.CreatedAt.IsZero() {
 		q.CreatedAt = now
 	}
@@ -101,7 +101,7 @@ func (q *ADPushQueue) BeforeCreate(tx *gorm.DB) error {
 
 // BeforeUpdate GORM 钩子：更新前刷新 UpdatedAt
 func (q *ADPushQueue) BeforeUpdate(tx *gorm.DB) error {
-	q.UpdatedAt = time.Now()
+	q.UpdatedAt = time.Now().UTC() // Phase 58 F-12：全链路 UTC
 	return nil
 }
 

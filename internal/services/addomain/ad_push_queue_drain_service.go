@@ -303,7 +303,7 @@ func (d *ADPushDrainer) markFailed(ctx context.Context, row models.ADPushQueue, 
 //
 // ⚠ attempts 必须显式入参（否则达上限用例断言 attempts == 5 不可达）：
 //   - 不可恢复分支传 row.Attempts（**不 +1**，D-05「不可恢复不烧 attempts」）；
-//   - 达上限分支（markFailed 内 newAttempts >= maxDrainAttempts）传 newAttempts。
+//   - 达上限分支（markFailed 内的连续失败阈值判定命中时）传新计数。
 //
 // reason 的可 grep 前缀约定：unrecoverable:* / dead:* / retry:* / pool:*。
 func (d *ADPushDrainer) markDead(ctx context.Context, id string, now time.Time, attempts int, reason string) error {
