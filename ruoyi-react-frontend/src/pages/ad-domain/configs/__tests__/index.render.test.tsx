@@ -19,6 +19,11 @@ vi.mock("@/lib/adDomainApi", () => ({
   syncADData: vi.fn(),
   getADConfigs: vi.fn(() => Promise.resolve({ data: { list: [], total: 0 } })),
   getADConfig: vi.fn(),
+  // Phase 59 GUARD-02：对账 Tab 的 API（必须 resolve 出 {data:{list,total}} 形状——
+  // 组件读 res.data?.list，返回 undefined 会把空态用例变成错误态用例）
+  getDeptOUMismatchList: vi.fn(() =>
+    Promise.resolve({ data: { list: [], total: 0, current: 1, pageSize: 20 } })
+  ),
 }));
 
 vi.mock("@/hooks/useADConfigs", () => ({

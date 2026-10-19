@@ -22,7 +22,10 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { Drawer, Tabs } from "antd";
+import { useLocation } from "react-router-dom";
 import AccountPoolTab from "./AccountPoolTab";
+import ReconciliationTab from "./ReconciliationTab";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import type { ColumnsType } from "antd/es/table";
 import {
   createADConfig,
@@ -41,6 +44,15 @@ import type { FC } from "react";
 
 const ADConfigPage: FC = () => {
   const [editForm] = Form.useForm();
+  const location = useLocation();
+
+  // Phase 59 / GUARD-02：页面级「配置列表 / 对账」Tab，activeTab 会话内持久化
+  // （keyPrefix=当前路径，切回本页时停留在离开时的 Tab；与 settings-page 同款）
+  const [activeTab, setActiveTab] = usePersistedStateController<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "activeTab",
+    defaultValue: "configs",
+  });
 
   // 使用共享的 AD 配置 Hook（fetchConfigs 接受排序参数，供服务端排序使用）
   const { configs, loading, fetchConfigs } = useADConfigs({
@@ -322,7 +334,16 @@ const ADConfigPage: FC = () => {
 
   return (
     <Card>
-      <div style={{ marginBottom: 16 }}>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: "configs",
+            label: "配置列表",
+            children: (
+              <>
+                <div style={{ marginBottom: 16 }}>
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             新增AD配置
@@ -496,6 +517,16 @@ const ADConfigPage: FC = () => {
           />
         )}
       </Drawer>
+              </>
+            ),
+          },
+          {
+            key: "reconciliation",
+            label: "对账",
+            children: <ReconciliationTab />,
+          },
+        ]}
+      />
     </Card>
   );
 };
