@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -523,4 +524,51 @@ func (d *ADPushDrainer) clearUserADRefs(ctx context.Context, userID string) {
 		}).Error; err != nil {
 		applogger.Warnf("[ad_push_queue] 清空用户 %s 的 ad_dn 失败: %v", userID, err)
 	}
+}
+
+// drainIntervalSysConfigKey 排水间隔单旋钮的 sys_config key（Phase 58 D-05）。
+// 启动时读取一次，改后需重启后端生效（同 network.connection_pool.* 先例）。
+const drainIntervalSysConfigKey = "ad_push_queue.drain_interval_seconds"
+
+// defaultDrainIntervalSeconds 默认排水间隔（D-05：30s）。管理员编辑 → AD 生效感知 ≤1min；
+// 给"域控吃不消"留放宽到 5min 的逃生门。
+const defaultDrainIntervalSeconds = 30
+
+// LoadDrainIntervalSeconds 启动时读取排水间隔（秒）。读不到/解析失败/非正数 → 回落 30。
+// 形状照抄 core.go:44-79 loadConnectionPoolConfig 的 readInt 闭包。
+func LoadDrainIntervalSeconds(db *gorm.DB) int {
+	const fallback = defaultDrainIntervalSeconds
+	var v string
+	if err := db.Raw(
+		"SELECT config_value FROM sys_config WHERE config_key = ? AND deleted_at IS NULL",
+		drainIntervalSysConfigKey,
+	).Scan(&v).Error; err != nil || v == "" {
+		applogger.Warnf("[ad_push_queue] 读取 %s 失败(%v)，回落默认 %ds", drainIntervalSysConfigKey, err, fallback)
+		return fallback
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		applogger.Warnf("[ad_push_queue] %s 值非法(%q)，回落默认 %ds", drainIntervalSysConfigKey, v, fallback)
+		return fallback
+	}
+	applogger.Infof("[ad_push_queue] 排水间隔配置: %s = %ds（改后需重启后端生效）", drainIntervalSysConfigKey, n)
+	return n
+}
+
+// SecondsToCronSpec 把秒数映射为 robfig/cron 6 段 spec（cron.WithSeconds 实例）。
+//
+// ⚠ 6 段 spec 的步进语义陷阱（F-E）：
+//   - 秒位 "*/N" → 0..59 步进 N（30 → 0,30 = 每 30 秒 ✅）
+//   - 秒位 "0/N" → start=0 end=0（每分钟只触发一次，**不是**每 N 秒 ❌）
+//   - 分位 "*/N" → 0..59 步进 N（5 → 每 5 分钟 ✅）
+//
+// 故：秒级用 "*/s"，分钟级用 "0 */m"。非 60 因子值无法表达，返回 ok=false 由调用方回落。
+func SecondsToCronSpec(seconds int) (string, bool) {
+	if seconds >= 1 && seconds <= 59 && 60%seconds == 0 {
+		return fmt.Sprintf("*/%d * * * * *", seconds), true
+	}
+	if seconds >= 60 && seconds%60 == 0 && seconds/60 <= 59 {
+		return fmt.Sprintf("0 */%d * * * *", seconds/60), true
+	}
+	return "", false
 }

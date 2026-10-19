@@ -29,6 +29,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/go-ldap/ldap/v3"
+	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -1029,4 +1030,102 @@ func TestPhase58_MoveSingleUserToOU_UpdatesAdDn(t *testing.T) {
 	assert.Equal(t, "CN=zhangsan,OU=IT2,DC=corp,DC=com", *adDn)
 	require.NotNil(t, adOuDn)
 	assert.Equal(t, "OU=IT2,DC=corp,DC=com", *adOuDn)
+}
+
+// ==================== Phase 58-05：D-05 单旋钮读取 + SecondsToCronSpec 映射 ====================
+
+// freshDrainSysConfigDB 构建仅含 sys_config 的内存 sqlite（LoadDrainIntervalSeconds 的
+// 最小环境）。AutoMigrate 走 models.Config（与生产同构的列定义）。
+func freshDrainSysConfigDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	dsn := "file:" + t.Name() + "?mode=memory&cache=shared&_busy_timeout=5000"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&models.Config{}))
+	return db
+}
+
+// TestPhase58_LoadDrainIntervalSeconds_FallsBackOnGarbage 锁死"启动读旋钮 + 垃圾值兜底"：
+// 无行 / 非数字 / 非正数 三种情形一律回落 30；合法行按字面返回。
+func TestPhase58_LoadDrainIntervalSeconds_FallsBackOnGarbage(t *testing.T) {
+	const key = drainIntervalSysConfigKey
+
+	t.Run("no-row", func(t *testing.T) {
+		db := freshDrainSysConfigDB(t)
+		assert.Equal(t, 30, LoadDrainIntervalSeconds(db))
+	})
+
+	t.Run("non-numeric", func(t *testing.T) {
+		db := freshDrainSysConfigDB(t)
+		require.NoError(t, db.Exec(
+			`INSERT INTO sys_config (config_name, config_key, config_value, config_type, is_system) VALUES (?, ?, 'abc', 'N', 0)`,
+			"x", key).Error)
+		assert.Equal(t, 30, LoadDrainIntervalSeconds(db))
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		db := freshDrainSysConfigDB(t)
+		require.NoError(t, db.Exec(
+			`INSERT INTO sys_config (config_name, config_key, config_value, config_type, is_system) VALUES (?, ?, '0', 'N', 0)`,
+			"x", key).Error)
+		assert.Equal(t, 30, LoadDrainIntervalSeconds(db))
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		db := freshDrainSysConfigDB(t)
+		require.NoError(t, db.Exec(
+			`INSERT INTO sys_config (config_name, config_key, config_value, config_type, is_system) VALUES (?, ?, '-5', 'N', 0)`,
+			"x", key).Error)
+		assert.Equal(t, 30, LoadDrainIntervalSeconds(db))
+	})
+
+	t.Run("valid-45", func(t *testing.T) {
+		db := freshDrainSysConfigDB(t)
+		require.NoError(t, db.Exec(
+			`INSERT INTO sys_config (config_name, config_key, config_value, config_type, is_system) VALUES (?, ?, '45', 'N', 0)`,
+			"x", key).Error)
+		assert.Equal(t, 45, LoadDrainIntervalSeconds(db))
+	})
+}
+
+// cron6FieldParser robfig/cron v3 的 6 段（含秒）parser，与 NewADSyncScheduler 的
+// cron.New(cron.WithSeconds()) 同构。用于把"spec 合法"从字面比对升级为行为断言。
+func cron6FieldParser() cron.Parser {
+	return cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+}
+
+// TestPhase58_SecondsToCronSpec_Valid 校验合法秒数 → 6 段 spec 的映射，
+// 并额外断言每个返回的 spec 都能被 cron parser 解析（行为断言，非字面）。
+func TestPhase58_SecondsToCronSpec_Valid(t *testing.T) {
+	cases := []struct {
+		seconds int
+		want    string
+	}{
+		{1, "*/1 * * * * *"},
+		{30, "*/30 * * * * *"},
+		{60, "0 */1 * * * *"},
+		{120, "0 */2 * * * *"},
+		{300, "0 */5 * * * *"},
+	}
+	p := cron6FieldParser()
+	for _, tc := range cases {
+		got, ok := SecondsToCronSpec(tc.seconds)
+		require.True(t, ok, "SecondsToCronSpec(%d) 应返回 ok=true", tc.seconds)
+		require.Equal(t, tc.want, got, "SecondsToCronSpec(%d)", tc.seconds)
+		if _, err := p.Parse(got); err != nil {
+			t.Fatalf("SecondsToCronSpec(%d) 产出的 spec %q 无法被 cron parser 解析: %v", tc.seconds, got, err)
+		}
+	}
+}
+
+// TestPhase58_SecondsToCronSpec_InvalidFallsBack 非 60 因子值（45/90/100）与
+// 非法秒数（0/-1）必须返回 ok=false，由调用方回落默认。
+// ⚠ 这是 F-E 陷阱的可证伪防线：若实现改用 fmt.Sprintf("*/%d ...") 硬拼，
+// 45 会返回 ("*/45 * * * * *", true)（秒位退化成 {0,45}）→ 本用例必红。
+func TestPhase58_SecondsToCronSpec_InvalidFallsBack(t *testing.T) {
+	for _, s := range []int{45, 90, 100, 0, -1} {
+		got, ok := SecondsToCronSpec(s)
+		require.False(t, ok, "SecondsToCronSpec(%d) 应返回 ok=false", s)
+		require.Equal(t, "", got, "SecondsToCronSpec(%d) 的 spec 应为空串", s)
+	}
 }

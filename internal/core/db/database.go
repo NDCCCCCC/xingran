@@ -1058,6 +1058,12 @@ func (d *Database) AutoMigrate() error {
 		if err := d.ensureADPushQueue(); err != nil {
 			return err
 		}
+		// Phase 58 D-05: ad_push_queue 排水间隔单旋钮 seed（幂等）。
+		// **非阻断**：缺旋钮只会让 LoadDrainIntervalSeconds 回落默认 30s，
+		// 与队列表建表的"失败阻断启动"档（uq_ad_push_queue_active 是入队硬前提）不同档。
+		if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
+			applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -1090,6 +1096,11 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 既是 dev 运行时也是测试运行时,必须建到表)
 		if err := d.ensureADPushQueue(); err != nil {
 			return err
+		}
+		// sqlite 分支: Phase 58 D-05 排水间隔单旋钮 seed（与 PG 分支同款调用 + 同款非阻断档；
+		// 只注册 PG 分支会让 sqlite dev/测试环境无旋钮行、行为与生产不一致）。
+		if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
+			applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
@@ -1272,6 +1283,12 @@ func (d *Database) BootstrapMissingTables() error {
 	// 路径复用同一迁移函数 = 同一事实源,无双份 DDL 可漂移。
 	if err := d.ensureADPushQueue(); err != nil {
 		return err
+	}
+
+	// Phase 58：SKIP_AUTOMIGRATE 旁路同样要 seed 排水间隔旋钮（F-03 同款盲区）。
+	// 非阻断：缺旋钮只会让 LoadDrainIntervalSeconds 回落默认 30s。
+	if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
+		applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
 	}
 
 	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建
