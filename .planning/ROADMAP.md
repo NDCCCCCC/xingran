@@ -183,7 +183,12 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
   3. `v_dept_ou_mismatch` 普通 SQL VIEW 可查询 dept↔OU 不一致条目及"映射指向软删部门"条目（GUARD-02）
   4. 只读端点返回对账数据且需登录鉴权访问（GUARD-02）
 
-**Plans**: TBD
+**Plans**: 4 plans (3 waves)
+
+- [ ] 59-01-PLAN.md — GUARD-01 登录回写守卫：活跃 update_user 队列行拦截 + WARN + 查询失败保守降级
+- [ ] 59-02-PLAN.md — GUARD-02 数据底座：migration_217 双方言普通视图 v_dept_ou_mismatch + 三路径注册 + AutoMigrate 前置 DROP
+- [ ] 59-03-PLAN.md — GUARD-02 只读端点：分页/筛选服务 + /ad-domain/reconciliation/mismatch + migration_218 权限载体
+- [ ] 59-04-PLAN.md — GUARD-02 前端：AD 配置页「对账」Tab（权限门/筛选/表格/空错态）
 
 ### Phase 60: 软删恢复安全
 

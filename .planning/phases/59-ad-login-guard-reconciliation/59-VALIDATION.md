@@ -40,8 +40,16 @@ created: "2026-10-19"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 59-01-01 | 01 | 1 | GUARD-01 | — | N/A | unit | `go test ./internal/services/system/ -run TestPhase59 -count=1` | ❌ W0 | ⬜ pending |
-| 59-02-01 | 02 | 1 | GUARD-02 | — | 端点需登录鉴权 | unit | `go test ./internal/services/addomain/ -run TestPhase59 -count=1` | ❌ W0 | ⬜ pending |
+| 59-01-01 | 01 | 1 | GUARD-01 | T-59-01 | 守卫只读队列，不改写谓词 | unit | `go test ./internal/services/system/ -run TestPhase59_SyncADUser_ActivePendingQueueSkipsDept -count=1` | ❌ W0 | ⬜ pending |
+| 59-01-02 | 01 | 1 | GUARD-01 | T-59-01 | 查询失败保守跳过，不上抛 | unit | `go test ./internal/services/system/ -run 'TestPhase59_SyncADUser_' -count=1` | ❌ W0 | ⬜ pending |
+| 59-02-01 | 02 | 1 | GUARD-02 | T-59-04 | 视图 DDL 静态、无输入插值 | migration | `go test ./internal/core/db/migrations/ -run TestPhase59_Migration217 -count=1` | ❌ W0 | ⬜ pending |
+| 59-02-02 | 02 | 1 | GUARD-02 | T-59-03 | 四类口径 + 双方言 CAST/布尔/后缀 | migration | `go test ./internal/core/db/migrations/ -run 'TestPhase59_Migration217' -count=1` | ❌ W0 | ⬜ pending |
+| 59-03-01 | 03 | 2 | GUARD-02 | T-59-06 | 参数绑定 + LIKE 转义 | unit | `go test ./internal/services/addomain/ -run 'TestPhase59_DeptOUMismatch\|TestPhase59_MatchConsistency' -count=1` | ❌ W0 | ⬜ pending |
+| 59-03-02 | 03 | 2 | GUARD-02 | T-59-05 | RequirePermissions 独立鉴权 | unit（httptest） | `go test ./internal/api/v1/system/ -run 'TestPhase59_ReconHandler' -count=1` | ❌ W0 | ⬜ pending |
+| 59-03-03 | 03 | 2 | GUARD-02 | T-59-05 | F 型权限载体 + 精准授权 | migration | `go test ./internal/core/db/migrations/ -run TestPhase59_Migration218 -count=1` | ❌ W0 | ⬜ pending |
+| 59-04-01 | 04 | 3 | GUARD-02 | T-59-09 | 无权限零请求 + 后端鉴权 | component | `cd ruoyi-react-frontend && npx vitest run src/lib/adDomainApi.test.ts src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` | ❌ W0 | ⬜ pending |
+| 59-04-02 | 04 | 3 | GUARD-02 | T-59-10 | 不展示 UUID、无写入口 | component | `cd ruoyi-react-frontend && npx vitest run src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` | ❌ W0 | ⬜ pending |
+| 59-04-03 | 04 | 3 | GUARD-02 | — | 无 hex / 无原生 axios | component + source | `cd ruoyi-react-frontend && npx vitest run src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,8 +59,12 @@ created: "2026-10-19"
 
 ## Wave 0 Requirements
 
-- [ ] `internal/services/system/user_sync_guard_test.go` — GUARD-01 守卫用例（有队列行跳过+WARN / 无队列行照常更新）
-- [ ] `internal/services/addomain/reconciliation_*_test.go` — GUARD-02 视图口径 + Go/SQL 双份实现一致性用例
+- [ ] `internal/services/system/user_sync_service_phase59_test.go` — GUARD-01 守卫用例（pending/failed 拦截 + WARN / pushed/dead/disable 放行 / 无行照常更新 / 查询失败保守跳过）
+- [ ] `internal/core/db/migrations/migration_217_dept_ou_mismatch_view_test.go` — 视图建表、幂等、列顺序、四类口径
+- [ ] `internal/services/addomain/dept_ou_mismatch_service_test.go` — 分页/筛选 + Go/SQL 双份实现一致性
+- [ ] `internal/api/v1/system/ad_reconciliation_handler_test.go` — 绑定错误 / 白名单 / 默认分页
+- [ ] `internal/core/db/migrations/migration_218_ad_reconciliation_permission_test.go` — 权限载体幂等与精准授权
+- [ ] `ruoyi-react-frontend/src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` — 权限门/空态/错误态/部分行
 
 *If none: "Existing infrastructure covers all phase requirements."*
 
