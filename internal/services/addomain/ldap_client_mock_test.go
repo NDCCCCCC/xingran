@@ -54,6 +54,15 @@ type mockLDAPClient struct {
 	createOUCalls      int
 	dnExistsCalls      int
 	searchWithReqCalls int
+
+	// Phase 58（共 4 个，compare-and-move 幂等断言的前提）：
+	//   - moveUserCalls / moveUserTargets：断言"目标 OU 相同则不调 MoveUser"以及
+	//     "移到了哪个 OU"（moveUserTargets 按调用顺序记录每次的 newOUDN）
+	//   - disableUserCalls / updateUserAttrCalls：断言终态路径是否触达对应 LDAP 写操作
+	moveUserCalls       int
+	moveUserTargets     []string
+	disableUserCalls    int
+	updateUserAttrCalls int
 }
 
 func (m *mockLDAPClient) Connect() error {
@@ -111,10 +120,13 @@ func (m *mockLDAPClient) DeleteGroup(groupDN string) error {
 }
 
 func (m *mockLDAPClient) UpdateUserAttribute(userDN string, attrs map[string]string) error {
+	m.updateUserAttrCalls++
 	return m.updateUserAttrErr
 }
 
 func (m *mockLDAPClient) MoveUser(userDN, newOUDN string) error {
+	m.moveUserCalls++
+	m.moveUserTargets = append(m.moveUserTargets, newOUDN)
 	return m.moveUserErr
 }
 
@@ -123,6 +135,7 @@ func (m *mockLDAPClient) EnableUser(userDN string) error {
 }
 
 func (m *mockLDAPClient) DisableUser(userDN string) error {
+	m.disableUserCalls++
 	return m.disableUserErr
 }
 
