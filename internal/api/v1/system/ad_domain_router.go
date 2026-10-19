@@ -138,6 +138,19 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		computers.POST("/login-history", historyHandler.ListComputerLoginHistory)
 	}
 
+	// Phase 59 / GUARD-02: 部门↔OU 对账只读端点（独立权限，不与其他组共享）
+	//
+	// 最终路径 /api/v1/ad-domain/reconciliation/mismatch（router.go 把本组挂在
+	// r.Group("/ad-domain")，前端 baseURL = /api/v1）。CONTEXT D-14 字面写的是
+	// /system/ad-config/reconciliation/mismatch，按真实挂载点对齐；语义不变
+	// （与配置/账号池同组、独立鉴权），刻意**不**挂 /system/ad-config 第二套别名
+	// ——别名会制造双契约与长期漂移（59-03 Decision Reconciliation 第 1 条）。
+	recon := r.Group("/reconciliation")
+	recon.Use(middleware.RequirePermissions([]string{"ops:ad:config:reconciliation:list"}, core))
+	{
+		recon.POST("/mismatch", NewADReconciliationHandler(core.GetDB()).ListDeptOUMismatch)
+	}
+
 	// OU组映射管理
 	SetupOUGroupMappingRouter(r, core)
 }
