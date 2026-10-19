@@ -61,9 +61,9 @@ created: 2026-10-17
 | 58-06/T1 | 06 | 5 | D-01（`EnqueueUpdateBatch` 批量入队变体） | T-58-06-03/04 | 只产 `update_user` 行；不做 diff；错误上抛不吞 | unit（sqlite） | `go test ./internal/services/addomain/ -run "TestPhase58_EnqueueUpdateBatch" -count=1` | ❌ W0 | ✅ green `253461c2`（5/5 PASS） |
 | 58-06/T2 | 06 | 5 | SC6（D-01/D-03 两条直推路径删除）+ Q5 | T-58-06-01/02/05/08 | 5 条 grep 静态证伪；operlog 顺序不变；`userADSyncService` 字段保留 | source-assert + 回归 | `go build ./... && go test ./internal/api/v1/system/ -count=1` + 5 条 grep == 0 | ✅（改既有） | ✅ green `ab8a7231`（5 grep 全 0；未加任何互斥开关） |
 | 58-06/T3 | 06 | 5 | F-07（入队侧 Pluck）/ F-10（回滚用例） | T-58-06-06/07 | **Pluck 排在软删之前**（软删后 → 作用域过滤 → existing 恒空 → 入队 no-op）；入队数 == 软删数 | unit + Phase 57 sentinel | `go test ./internal/services/system/ -run "TestPhase58_UserService" -count=1`（sentinel：`go test ./internal/services/system/ -run TestPhase57 -count=1`） | ✅（改既有） | ✅ green `9c2dc88d`（3/3 PASS；Pluck:657 < Delete:662；sentinel 41 PASS/0 FAIL） |
-| 58-07/T1 | 07 | 6 | SC1 / SC2 / SC5（端到端收尾用例） | T-58-07-03 | 入队 → 排水 → compare-and-move → 终态 走生产符号；禁为变绿弱化断言 | unit + mock LDAP | `go test ./internal/services/addomain/ -run "TestPhase58_EndToEnd" -count=1`（**全量 `go test ./...` + 五包 `go vet` 移至 plan 级 `<verification>`**） | ❌ W0 | ⬜ pending |
-| 58-07/T2 | 07 | 6 | SC1~SC6 逐条证据 + F-13 归档 | T-58-07-01/04/06 | 「已验证」必须附命令 + 实际输出；F-13 只核对不改 | source-assert | `go test ./internal/services/addomain/ -run "TestPhase58_MatchADConfigByDN|TestPhase58_BuildOUDN|TestPhase58_PickRows_TerminalRowsNotPicked" -count=1` + 各 SC 的 grep | ✅（文档） | ⬜ pending |
-| 58-07/T3 | 07 | 6 | 5 项人工 UAT + REQUIREMENTS Traceability 回填 | T-58-07-02/05 | 人工项显式留档不可默认「已验证」；Phase 57 的 Done 项不被误伤 | doc-assert | `grep -c "UAT-58-" .planning/phases/58-compare-and-move/58-HUMAN-UAT.md` >= 5 + REQUIREMENTS 5 个 `- [x]` | ✅（文档） | ⬜ pending |
+| 58-07/T1 | 07 | 6 | SC1 / SC2 / SC5（端到端收尾用例） | T-58-07-03 | 入队 → 排水 → compare-and-move → 终态 走生产符号；禁为变绿弱化断言 | unit + mock LDAP | `go test ./internal/services/addomain/ -run "TestPhase58_EndToEnd" -count=1`（**全量 `go test ./...` + 五包 `go vet` 移至 plan 级 `<verification>`**） | ✅ 追加（既有） | ✅ green `1d090937`（3/3 PASS；`-count=10` 确定性；修复自身 latent flake 见 `30af6251`） |
+| 58-07/T2 | 07 | 6 | SC1~SC6 逐条证据 + F-13 归档 | T-58-07-01/04/06 | 「已验证」必须附命令 + 实际输出；F-13 只核对不改 | source-assert | `go test ./internal/services/addomain/ -run "TestPhase58_MatchADConfigByDN|TestPhase58_BuildOUDN|TestPhase58_PickRows_TerminalRowsNotPicked" -count=1` + 各 SC 的 grep | ✅ 新建 58-VERIFICATION.md | ✅ green `f89dbb57`（6/6 SC VERIFIED；F-13 核对归档，无需修改代码） |
+| 58-07/T3 | 07 | 6 | 8 项人工 UAT + REQUIREMENTS Traceability 回填 | T-58-07-02/05 | 人工项显式留档不可默认「已验证」；Phase 57 的 Done 项不被误伤 | doc-assert | `grep -c "UAT-58-" .planning/phases/58-compare-and-move/58-HUMAN-UAT.md` >= 5 + REQUIREMENTS 5 个 `- [x]` | ✅ 新建 58-HUMAN-UAT.md | ✅ green `23cc1308`（8 项 UAT ≥ 5；REQUIREMENTS diff 恰好 5 行；Phase 57 受保护行 8 → 8 未变） |
 
 > **Task ID 图例**：`58-0N/TM` = 计划 `58-0N-PLAN.md` 的第 M 个 task。共 **19 个 task / 7 个 plan / 7 个 wave**（wave 0 = 58-01，wave 1..6 = 58-02..58-07 顺序执行）。
 > **`File Exists` 列语义**：❌ W0 = 该测试文件由 wave 0（58-01）新建，当前尚不存在；✅ = 文件既有，本 task 只做增量。
@@ -89,13 +89,19 @@ created: 2026-10-17
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| 真实 AD 上的 compare-and-move（MoveDN 真生效 + 二次排水不重复移动） | QUEUE-04 | 需真域控 | 编辑用户部门 → 观察排水后 AD 端 OU 变化；再手动触发排水确认无二次移动 |
-| 账号池熔断 30min 内排水器退避节奏 | QUEUE-03 | 需人为触发熔断 | 观察 sys_ad_service_accounts 熔断期间 attempts 增长符合 60s→…→30min 曲线 |
-| `sys_config` 改 `drain_interval_seconds` 重启生效 | D-05 | 需重启后端 | 改值 → 重启 → 日志确认新间隔 |
-| 多 AD 配置（父子域）真实环境 longest-suffix 命中 | D-02 | 需第二个域 | 两域环境编辑分属用户 → 各自命中正确域控 |
-| code 32 真实触发（AD 端删对象 → 本地编辑 → 排水 → dead + ad_dn 清空） | QUEUE-05 | 需真域控 | AD 端删 OU/用户 → 编辑用户 → 排水 → 查队列行 dead 且 sys_user.ad_dn 为空 |
+> 全部已落档为可执行清单：**[`58-HUMAN-UAT.md`](58-HUMAN-UAT.md)**（8 项，每项含前置 / 步骤 /
+> 期望 / 判据 SQL / 失败时该回报什么）。下表为其来源映射。
+
+| Behavior | Requirement | UAT 编号 | Why Manual | Test Instructions |
+|----------|-------------|---------|------------|-------------------|
+| 真实 AD 上的 compare-and-move（MoveDN 真生效 + 二次排水不重复移动） | QUEUE-04 | UAT-58-1 | 需真域控 | 编辑用户部门 → 观察排水后 AD 端 OU 变化；再手动触发排水确认无二次移动 |
+| 账号池熔断 30min 内排水器退避节奏 | QUEUE-03 | UAT-58-2 | 需人为触发熔断 | 观察 sys_ad_service_accounts 熔断期间 attempts 增长符合 60s→…→30min 曲线 |
+| `sys_config` 改 `drain_interval_seconds` 重启生效 | D-05 | UAT-58-3 | 需重启后端 | 改值 → 重启 → 日志确认新间隔 |
+| 多 AD 配置（父子域）真实环境 longest-suffix 命中 | D-02 | UAT-58-4 | 需第二个域（单域环境标 **N/A**） | 两域环境编辑分属用户 → 各自命中正确域控 |
+| code 32 真实触发（AD 端删对象 → 本地编辑 → 排水 → dead + ad_dn 清空） | QUEUE-05 | UAT-58-5 | 需真域控 | AD 端删 OU/用户 → 编辑用户 → 排水 → 查队列行 dead 且 sys_user.ad_dn 为空 |
+| ⚠ 部门同步未跑过时 `update_user` 批量转 `dead`（**Q2 刻意后果，非回归**） | Q2 | UAT-58-6 | 需部署态确认可辨识 | `last_error='unrecoverable:no-ou-mapping'` + `sys_dept_ou_mapping` 为 0 → 判别三问 |
+| ⚠ 「编辑即续命」：持续失败行永不终态（**F-11 已接受方向**） | F-11 | UAT-58-7 | 需长期观察 | `attempts` 在 0/1 间摆动 + `updated_at` 跟人工编辑 → 该现象 |
+| ⚠ 含特殊字符的历史部门需重跑部门同步（Q5 只转义新写入） | HYGIENE-02 | UAT-58-8 | 需历史数据比对 | 历史 `ou_dn` 未转义 vs 重跑后已转义 |
 
 ---
 

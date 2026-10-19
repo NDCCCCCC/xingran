@@ -3,30 +3,62 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 status: in_progress
-last_updated: "2026-10-19T12:20:00.000Z"
-last_activity: 2026-10-19 -- Phase 58 Wave 5（58-06）执行完成：SC6 终态达成（两条遗留直推路径全删，5 条 grep 静态证伪全部 == 0，未加任何互斥开关）+ D-01 EnqueueUpdateBatch 无 diff 批量入队变体（5 用例）+ F-07 入队侧 Pluck 掐根（Pluck:657 < 软删:662）+ F-10 两个删除回滚用例
+last_updated: "2026-10-19T13:10:00.000Z"
+last_activity: 2026-10-19 -- Phase 58 Wave 6（58-07）执行完成，PHASE 58 全部 7 个 plan 交付完毕：3 个走生产符号的端到端用例（入队→排水→compare-and-move→终态）+ SC1~6 六条 Success Criteria 逐条「命令 + 实际输出」证据（全部 VERIFIED）+ F-13 归档核对（值拷贝 + F-06 selective Updates，无 Save，不修）+ 8 项人工 UAT（含 2 项强制告知：Q2「无 OU 映射批量转 dead」/ F-11「编辑即续命」）+ REQUIREMENTS QUEUE-04/05 回填 Complete
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 executing (wave 5/6 done — 58-01 ~ 58-06 完成，58-07 待执行)
-**Last activity**: 2026-10-19 — execute-phase 58 plan 06：SC6 终态（单用户编辑 goroutine 直推 + 导入后 triggerADSyncAfterImport 两条路径连同 adSyncInFlight 字段 / 四字段 map 构造方法全删，5 条 grep 静态证伪 == 0）+ D-01 EnqueueUpdateBatch 批量入队变体（空切片 no-op / 去重 / IsADSyncEnabled 门控 / 合并 / 无 diff / 错误上抛 六语义各有断言）+ 导入路径改同步 enqueueImportUsersToAD（自开短事务，ExcelService 事务已提交 = 已接受的例外）+ F-07 BatchDelete 入队前 Pluck 存在性过滤（只对真实存在的行入队，位置铁律：Pluck 必须早于软删语句）+ F-10 两个删除回滚用例
+**Status**: v1.21 Phase 58 COMPLETE (7/7 plans — 58-01 ~ 58-07 全部交付；下一 phase 59 GUARD 守卫)
+**Last activity**: 2026-10-19 — execute-phase 58 plan 07（收口）：3 个端到端用例（`TestPhase58_EndToEnd_UpdateUserPushedAfterDrain` / `_RepeatDrainIdempotent` / `_Code32ThenNoRetry`）+ SC1~6 逐条证据（SC1 sys_job grep==0 / SC3 双份 helper 全 0 / SC4 裸拼接 0 行 / SC6 三条 grep 0-0-1）+ F-13 归档核对 + 8 项人工 UAT + REQUIREMENTS QUEUE-04/05 转 Complete + 失效直推断言点注释清理
 
 ## Current Position
 
-Phase: 58 (排水器与 compare-and-move 推送) — Executing
-Plan: 58-07-PLAN.md 待执行（Wave 6：端到端用例 + 全量回归 + SC1~6 逐条证据核对 + 人工 UAT 清单 + REQUIREMENTS Traceability 回填）
-Status: Phase 58 Wave 5 完成（58-06 已交付 SC6 终态：AD 推送唯一通路 = ad_push_queue → DrainOnce；两条直推零残留，5 条 grep 证伪 == 0）
-Last activity: 2026-10-19 -- 58-06 三个 task 落地（`253461c2` / `ab8a7231` / `9c2dc88d`）
-Progress: 1/6 phases [█████████░] 90%（9/10 plans）
+Phase: 58 (排水器与 compare-and-move 推送) — **COMPLETE**（7/7 plans）
+Plan: 全部完成。下一步 = `/gsd:plan-phase 59`（GUARD-01 信号守卫 + GUARD-02 对账 VIEW）
+Status: Phase 58 全量交付并收口。全量回归 `go test ./... -count=1` 退出码 0（78 包 ok）；五包 `go vet` 无输出；Phase 57 sentinel 41 PASS 零回归；65 个 `TestPhase58_*` 全 PASS
+Last activity: 2026-10-19 -- 58-07 四个提交（`1d090937` / `f8f88d4e` / `23cc1308` / `30af6251` / `f89dbb57`）
+Progress: 2/6 phases [██████████] 100%（10/10 plans）
+
+## Accumulated Context
+
+### 58-07 执行期决策（2026-10-19，Wave 6 收口）
+
+- **零生产代码改动**：正常路径下 58-07 只**消费** 58-01~58-06 的产物写收尾用例与核对。
+  唯一例外是计划内的失效注释清理（`user_handler_test.go:42`）。**六条 SC 全部 VERIFIED**，
+  每条均附「命令 + 实际输出」，无一条出现「已验证但无输出」。
+- **回归期间抓到的 latent flake（根因在用例写法，非生产代码）**：
+  `TestPhase58_EndToEnd_RepeatDrainIdempotent` 首版用「再入队」制造第二轮 ——
+  `pushed` 行已退出 `uq_ad_push_queue_active` 部分唯一索引（谓词 `status IN ('pending','failed')`），
+  第二次 INSERT **不冲突而是新增并行行**（Phase 57 D-06 的**正确**设计：终态行必须退出索引，
+  否则同实体下一次编辑撞 42P10）。这让「同一行被重复排水」的前提失效，且 `First` 无 `ORDER BY`
+  在两行间不确定 ⇒ 随机通过/随机失败。**修复**：改用 plan 原意的行重置 + 新增
+  `countQueueRowsForEntity` 把「同一行」变可证伪断言。**断言未弱化**，`-count=10` 确定性通过。
+- **F-13 归档核对结论（留档不修，未改代码）**：plan 指向的 `oldUserSnapshot` 不在 enqueuer 内，
+  实际在 `internal/services/system/user_service.go:163`（`oldUserSnapshot := user`，值拷贝），
+  写路径是 `:214` 的 F-06 selective `Updates(updates)`（显式 map，nil 不进 map），
+  enqueuer/drainer 侧 `Save` 出现 **0** 次。⚠ 严格说值拷贝是**浅拷贝**（共享 `*string` 指针），
+  使别名风险不成立的前提是「闭包内不原地解引用改写」—— selective `Updates` 恰好满足。
+- **两个既有不稳定项如实披露，均非本 phase 引入**（用 `git worktree` 在基线 commit `5aa9fded`
+  对照归因，**全程未用 `git stash`**）：
+  ① `TestInit78_Close_PartialInit` 偶发超 30s 守卫（`internal/core`，Phase 78）；
+  ② `TestPhase58_LoadDrainIntervalSeconds_FallsBackOnGarbage` 仅在 `-count=5` 失败
+  （Plan 05 的 `cache=shared` DSN 跨轮次存活）。两者 `-count=1` 全绿，**本 plan 不修**。
+- **给 Phase 59 GUARD-01 的硬约束**：6 类 `dead` 行都**退出**活跃谓词（部分唯一索引），
+  但仍在表里可查。守卫若靠「活跃行数为 0」推断一致性，会把「系统认为推过了、AD 侧其实没有」
+  当成一致。**必须单独把 `dead` 行作为异常信号读出**（前缀表见 58-07-SUMMARY.md）。
+- **给部署/运维的两条强制告知**：① 部门同步从未跑过（`sys_dept_ou_mapping` 为空）时，
+  `update_user` 行会**批量**转 `dead`（`unrecoverable:no-ou-mapping`）—— **Q2 刻意后果，
+  非回归**，判别三问见 UAT-58-6；② 「编辑即续命」（每次编辑清零 `attempts`）使持续失败行
+  永不终态 —— **F-11 已接受方向**，见 UAT-58-7。
 
 ## Accumulated Context
 

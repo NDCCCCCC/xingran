@@ -39,7 +39,7 @@ previous_update: 2026-07-08 after Phase 54 (W5) shipped
 **Milestone goal:** 修复 AD↔系统双向同步的 2 个 P0 bug（部门回退乒乓、软删用户接管风险）、3 个 P1 数据一致性缺口和 P2 卫生项，以三方审计修订后的 outbox-lite 架构落地，消除"改了部门又弹回"与静默数据丢失。
 
 - [x] **Phase 57: AD 推送队列基建** — outbox-lite 队列表 + 同事务入队 + 按实体合并 + 删除入队 disable (QUEUE-01/02/06, HYGIENE-06) — completed 2026-10-16 (3/3 plans, code review F-01~F-06 修复 + verifier GAP-01/02/03 闭环, [VERIFICATION](phases/57-ad-outbox-lite/57-VERIFICATION.md) human_needed: 3 项真环境人工验证在 [57-HUMAN-UAT.md](phases/57-ad-outbox-lite/57-HUMAN-UAT.md))
-- [ ] **Phase 58: 排水器与 compare-and-move 推送** — in-process cron 排水 + 退避重试 + 幂等 OU 移动 + 配置路由无歧义 (HYGIENE-01/02, QUEUE-03/04/05)
+- [x] **Phase 58: 排水器与 compare-and-move 推送** — in-process cron 排水 + 退避重试 + 幂等 OU 移动 + 配置路由无歧义 (HYGIENE-01/02, QUEUE-03/04/05) — 7/7 plans，completed 2026-10-19（SC1~6 全部 VERIFIED，见 [58-VERIFICATION.md](phases/58-compare-and-move/58-VERIFICATION.md)）
 - [ ] **Phase 59: 登录回写守卫与部门对账视图** — AD 登录不再回滚本地编辑 + dept↔OU 不一致可观测 (GUARD-01/02)
 - [ ] **Phase 60: 软删恢复安全** — ad_dn 校验后恢复 + 登录/批量同步共用分类逻辑 (SAFE-01/02)
 - [ ] **Phase 61: 影子表完整性** — 删除清理两道闸门 + 组成员事务化 + singleflight 挂载 (SHADOW-01/02/03)
@@ -130,7 +130,9 @@ Plans:
 
 **Wave 6**
 
-- [ ] 58-07-PLAN.md — 收口：端到端用例 + 全量回归 + SC1~6 逐条证据核对 + 人工 UAT 清单 + REQUIREMENTS 回填（全部 5 REQ）
+- [x] 58-07-PLAN.md — 收口：端到端用例 + 全量回归 + SC1~6 逐条证据核对 + 人工 UAT 清单 + REQUIREMENTS 回填（全部 5 REQ）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-07-SUMMARY.md](phases/58-compare-and-move/58-07-SUMMARY.md)；证据: [58-VERIFICATION.md](phases/58-compare-and-move/58-VERIFICATION.md)）
+
+**Phase 58 收口结论（2026-10-19）**：6 条 Success Criteria **全部 VERIFIED**，每条附「命令 + 实际输出」（见 58-VERIFICATION.md）；F-13 已核对归档（留档不修）；8 项人工验证留档（见 58-HUMAN-UAT.md，含 2 项强制告知：Q2「无 OU 映射批量转 dead」/ F-11「编辑即续命」）；REQ 的 QUEUE-03/04/05 + HYGIENE-01/02 五项全部 Complete。65 个 `TestPhase58_*` 用例全 PASS。
 
 **Wave 顺序约束落地**：HYGIENE-01 配置解析 helper（Wave 1）严格先于 QUEUE-04 compare-and-move（Wave 3）—— ROADMAP 的三方审计依赖约束。
 
