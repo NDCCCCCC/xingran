@@ -192,7 +192,11 @@ ok  	github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain	2.289s
 
 本例与 2a 的 `Drain_RepeatDrainIsIdempotent` 的分工（防假幂等）：本例额外断言 `updateUserAttrCalls == 2`（属性每轮**确实**推了最新值）。若只断言 `moveUserCalls` 不增长，"第二轮什么都没干"也会让它变绿。
 
-端到端第二轮走的是**生产入队路径**（`EnqueueUpdateBatch` 的 D-06 合并子句把 `pushed` 终态行打回 `pending` 并清零 `attempts`），而不是手工 `UPDATE` DB —— 这是真实生产形状「用户又被编辑一次」。
+端到端第二轮走的是**把同一行打回 `pending` 的重放**（测试内一条显式 `UPDATE ... SET status='pending', next_retry_at=NULL, pushed_at=NULL`），**不是**再次 `EnqueueUpdateBatch`。
+
+> ⚠ 本节此前（goal-verification MISSED-03 更正）误述为「第二轮经 `EnqueueUpdateBatch` 的 D-06 合并子句把 `pushed` 行打回 `pending` 并清零 `attempts`」。**该描述在事实上不成立**：Phase 57 D-06 的部分唯一索引谓词是 `status IN ('pending','failed')`，`pushed` 终态行**已退出索引**，二次入队不冲突、会**新增并行行**而非合并 —— 那正是 D-06 的正确设计（终态行必须退出索引，否则同实体的下一次编辑会撞 42P10）。测试代码本身一直是对的，且其注释已写明这一理由；错的是本报告的叙述。代码注释与本节现已一致。
+
+「重复排水同一行」与「用户又被编辑一次产生新行」是两种不同形状：前者验证 compare-and-move 的幂等（SC2 的本意），后者由 `TestPhase58_EnqueueUpdateBatch_MergeOnSecondCall` 等用例覆盖。用例以 `countQueueRowsForEntity == 1` 显式锁定「同一行」这一前提，使其可证伪。
 
 **结论：VERIFIED。**
 

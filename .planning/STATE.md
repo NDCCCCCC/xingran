@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 status: in_progress
-last_updated: "2026-10-19T13:10:00.000Z"
-last_activity: 2026-10-19 -- Phase 58 Wave 6（58-07）执行完成，PHASE 58 全部 7 个 plan 交付完毕：3 个走生产符号的端到端用例（入队→排水→compare-and-move→终态）+ SC1~6 六条 Success Criteria 逐条「命令 + 实际输出」证据（全部 VERIFIED）+ F-13 归档核对（值拷贝 + F-06 selective Updates，无 Save，不修）+ 8 项人工 UAT（含 2 项强制告知：Q2「无 OU 映射批量转 dead」/ F-11「编辑即续命」）+ REQUIREMENTS QUEUE-04/05 回填 Complete
+last_updated: "2026-10-19T15:20:00.000Z"
+last_activity: 2026-10-19 -- Phase 58 复审与补修闭环：code-review 独立复审得 0 BLOCKER / 5 HIGH（H-01 mutex 生产失效、H-02 孪生用例、H-03 退避两档不可达、H-04 拨号全失败整批判死、H-05 回写失败被写成 pushed）→ 用户裁定修 4 留 1 → 全部修复并复跑回归；gsd-verifier 目标反向验证判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04 → 再裁定修前三项、MISSED-04 转独立 phase。三次审计否决项全程未命中。⚠ 下一步优先级：MISSED-04（extractRDNFromDN 转义逗号截断 → ModifyDN 会重命名 AD 对象，数据破坏级）应先于 Phase 59 处理。
 progress:
   total_phases: 8
   completed_phases: 2
@@ -17,8 +17,8 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 COMPLETE (7/7 plans — 58-01 ~ 58-07 全部交付；下一 phase 59 GUARD 守卫)
-**Last activity**: 2026-10-19 — execute-phase 58 plan 07（收口）：3 个端到端用例（`TestPhase58_EndToEnd_UpdateUserPushedAfterDrain` / `_RepeatDrainIdempotent` / `_Code32ThenNoRetry`）+ SC1~6 逐条证据（SC1 sys_job grep==0 / SC3 双份 helper 全 0 / SC4 裸拼接 0 行 / SC6 三条 grep 0-0-1）+ F-13 归档核对 + 8 项人工 UAT + REQUIREMENTS QUEUE-04/05 转 Complete + 失效直推断言点注释清理
+**Status**: v1.21 Phase 58 COMPLETE（含复审与补修闭环；下一步：MISSED-04 独立 phase，优先于 Phase 59 GUARD 守卫）
+**Last activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
 
 ## Current Position
 

@@ -134,6 +134,34 @@ Plans:
 
 **Phase 58 收口结论（2026-10-19）**：6 条 Success Criteria **全部 VERIFIED**，每条附「命令 + 实际输出」（见 58-VERIFICATION.md）；F-13 已核对归档（留档不修）；8 项人工验证留档（见 58-HUMAN-UAT.md，含 2 项强制告知：Q2「无 OU 映射批量转 dead」/ F-11「编辑即续命」）；REQ 的 QUEUE-03/04/05 + HYGIENE-01/02 五项全部 Complete。65 个 `TestPhase58_*` 用例全 PASS。
 
+**Phase 58 复审与补修（2026-10-19，收口之后）**
+
+收口后跑了三道额外闸：`gsd-code-reviewer` 独立复审（**0 BLOCKER / 5 HIGH / 6 MEDIUM / 7 LOW**）→ 用户裁定修复 → `gsd-verifier` 目标达成反向验证（**ACHIEVED WITH CONDITIONS**）。
+
+| 编号 | 摘要 | 处置 |
+|------|------|------|
+| H-01 | 排水器在 cron 闭包内构造 → 每轮新 mutex，轮次互斥**生产中完全失效** | ✅ 已修（构造提升为单例；单机部署，未引入行级认领） |
+| H-02 | 互斥用例锁定了一个生产不成立的性质，却是 SC1 证据 | ✅ 已修（改写为断言同一实例） |
+| H-03 | 退避 16min/30min 两档不可达，实际重试窗 15min vs D-05 声明 ~61min | ⏸ DEFERRED（D-05 自身两条声明互相矛盾，待真实熔断频率数据） |
+| H-04 | 账号全部拨号失败不带池侧哨兵 → 一次 ~15min AD 断连**永久杀死单轮 100 行** | ✅ 已修（新增独立哨兵 `ErrAllAccountsDialFailed`） |
+| H-05 | `MoveUser` 成功但本地回写失败被写成 `pushed` → AD 绑定永久失联 | ⚠ 部分修复（失败改为可见；`MoveUser` 重放经核查**不安全**，仍需人工重建 → UAT-58-9） |
+| MISSED-02 | 池侧故障仍在自增 `attempts` → 长时宕机后**第一次业务失败即终态** | ✅ 已修（H-04 与本项是一对，单独修 H-04 会得到半修状态） |
+| MISSED-01 | H-03 不变量注释在 H-04 后已过期，**主动误导** | ✅ 已修 |
+| MISSED-03 | 58-VERIFICATION.md 端到端幂等叙述与代码不符 | ✅ 已修 |
+| **MISSED-04** | **`extractRDNFromDN` 遇 RFC4514 转义逗号截断** | ⏭ **转独立 phase，见下** |
+
+> **三次审计否决项（禁时间戳仲裁 / 禁新旧值比较 / 禁 `sys_job` 注册）在复审与补修后仍全部未命中**，由 review 与 verifier 各自独立复核。
+
+**⚠ 移交下一 phase 的高优先项 — MISSED-04（数据破坏级）**
+
+`extractRDNFromDN`（`internal/services/addomain/ldap_client.go`）在**第一个逗号**处截断，未处理 RFC4514 的转义逗号：`CN=Zhang\,San,OU=IT,...` → RDN 变成 `CN=Zhang\`。该 RDN 被喂给 `MoveUser` 的 `ModifyDN(deleteOldRDN=true)`，会**把 AD 对象改名**。Phase 58 只在 OU 侧加了 RFC4514 转义（HYGIENE-02），**RDN 侧没有**，并因此引入了一处不对称。
+
+该缺陷是既存的，但 Phase 58 把它从「人工触发」推上了**每 30 秒的自动路径**。用户裁定：独立 phase 尽快修，**优先于 Phase 59**。
+
+**Phase 58 未满足的前置条件（部署前必查）**
+
+SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否则导入更新会以 `unrecoverable:no-ou-mapping` 批量转 dead。建议部署前置检查：`SELECT count(*) FROM sys_dept_ou_mapping WHERE sync_enabled`。
+
 **Wave 顺序约束落地**：HYGIENE-01 配置解析 helper（Wave 1）严格先于 QUEUE-04 compare-and-move（Wave 3）—— ROADMAP 的三方审计依赖约束。
 
 **Cross-cutting constraints**（出现在 ≥2 个 plan 的 must_haves.truths / verify）：
