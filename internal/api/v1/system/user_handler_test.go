@@ -34,15 +34,16 @@ func TestUpdateUserWithADSync(t *testing.T) {
 
 		// 这个测试需要：
 		// - Mock UserHandler
-		// - Mock UserADSyncService
 		// - 测试数据库
 
 		// 验证点：
 		// - 1. 用户更新成功
-		// - 2. UserADSyncService.SyncUserUpdateToAD被调用（异步）
-		// - 3. 返回成功响应
+		// - 2. 返回成功响应
+		//
+		// ⚠ Phase 58 D-01/D-03：编辑后的直推路径（SyncUserUpdateToAD 异步调用）已删除，
+		//   取而代之的是 ad_push_queue 入队 + 排水器推送。此处不再有"直推被调用"的断言点。
 
-		_ = router // TODO: 集成测试需要完整的环境配置（Mock UserHandler / UserADSyncService / 测试数据库）
+		_ = router // TODO: 集成测试需要完整的环境配置（Mock UserHandler / 测试数据库）
 		assert.True(t, true, "集成测试需要完整的环境配置")
 	})
 }
