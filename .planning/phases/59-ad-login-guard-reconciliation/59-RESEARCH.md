@@ -701,32 +701,38 @@ for _, tc := range cases {
 
 ## Open Questions
 
-1. **权限点如何落地（最高优先级）**
+1. **(RESOLVED) 权限点如何落地（最高优先级）**
+   - Resolution: 采纳 Recommendation —— migration_218 新增 `menu_type='F'` 按钮权限行（不可导航、不产生路由），只授予已关联『AD域控配置』父菜单的角色。落点 59-03 task 3。
    - What we know: 后端与前端权限都从 `sys_menu.perms` 读取；没有菜单行 = 无法授予、前端 Tab 恒 403（即使后端超管短路）。
    - What's unclear: D-17 的「不新增菜单 seed」是否允许新增一条 `menu_type='F'` 按钮权限行（不可导航、不产生路由）。
    - Recommendation: 允许并新增；把它理解为「不新增菜单/路由」，与 migration_163 的账号池按钮权限同构。若用户坚持字面禁止，则部署清单必须包含「管理员在菜单管理中手建按钮权限并授权」。
 
-2. **D-14 路径字面值与真实挂载冲突**
+2. **(RESOLVED) D-14 路径字面值与真实挂载冲突**
+   - Resolution: 采纳 Recommendation —— 最终路径 `/api/v1/ad-domain/reconciliation/mismatch`，不加 `/system/ad-config` 别名。落点 59-03 task 2 / 59-04 objective。
    - What we know: 路由组是 `/ad-domain`，前端 baseURL 为 `/api/v1`。
    - What's unclear: 是否要在 router 额外挂一个 `/system/ad-config` 别名。
    - Recommendation: 不加别名，统一 `/api/v1/ad-domain/reconciliation/mismatch`；别名只会制造双契约。
 
-3. **`config_unrouted` 对歧义配置的判定**
+3. **(RESOLVED) `config_unrouted` 对歧义配置的判定**
+   - Resolution: 采纳 Recommendation —— 等长并列算 unrouted（SQL 用 `best_cnt.cnt = 1` 复刻 Go），一致性测试锁定。落点 59-02 task 2 / 59-03 task 1。
    - What we know: Go `MatchADConfigByDN` 在等长并列时返回 error；D-10 只写「无法归属」。
    - What's unclear: 等长并列（同域重复配置）是否算 unrouted。
    - Recommendation: 算（SQL 用 `best_cnt.cnt = 1` 复刻 Go），并在 `mismatch_detail` 保持通用文案；一致性测试锁定。
 
-4. **「部门无映射」的用户是否应可观测**
+4. **(RESOLVED) 「部门无映射」的用户是否应可观测**
+   - Resolution: 采纳 Recommendation —— 本 phase 不扩口径；记入 59-02 objective 的 Known Gap 与部署/UAT 说明，不实现第五类。
    - What we know: D-10 四类口径不包含「无映射」；Phase 58 的 `unrecoverable:no-ou-mapping` 队列行也不在本视图。该缺口有两种形态：① 部门在任何配置下都没有映射；② 部门在「该用户 OU 所路由到的配置」下没有映射（跨配置映射缺口）。
    - What's unclear: 这是否是有意的可观测性缺口。
    - Recommendation: 本 phase 不扩口径（锁定决策），在 plan 的「Known Gaps」记录；若用户要求，再新增第五类 `mapping_missing`（按 `(dept_id, routed_config_id)` 判空）。
 
-5. **`dead` 行是否纳入守卫/对账**
+5. **(RESOLVED) `dead` 行是否纳入守卫/对账**
+   - Resolution: 采纳 Recommendation —— 不扩展（locked decisions D-02/D-03 优先）；59-01 的守卫命中集合锁定 pending/failed + update_user。
    - What we know: D-02/D-03 锁定 pending/failed；58-07 建议守卫单独读 dead。
    - What's unclear: 是否在本 phase 扩展。
    - Recommendation: 不扩展（locked decisions 优先）；作为后续 phase 候选。
 
-6. **`dept_deleted_at` 的 API 类型**
+6. **(RESOLVED) `dept_deleted_at` 的 API 类型**
+   - Resolution: 采纳 Recommendation —— 视图 `CAST(... AS TEXT)`，DTO 用 `*string`。落点 59-02 task 2 / 59-03 task 1。
    - What we know: sqlite 视图列无强类型，扫到 `*time.Time` 可能在驱动层失败；PG 返回 `time.Time`。
    - What's unclear: 前端是否需要真实时间格式。
    - Recommendation: 视图输出 `CAST(... AS TEXT)`，DTO 用 `*string`；前端只做非空判断 + 展示。若需要统一格式，在 service 层解析为 `time.Time` 后格式化。
