@@ -173,3 +173,90 @@ func TestPhase59_SyncADUser_ActivePendingQueueSkipsDept(t *testing.T) {
 	assert.Contains(t, logs, string(models.ADPushActionUpdateUser), "WARN 应含 action_type")
 	assert.Contains(t, logs, "attempts=3", "WARN 应含 attempts 数值")
 }
+
+// TestPhase59_SyncADUser_ActiveFailedQueueSkipsDept
+// failed 行仍在活跃谓词内（status IN ('pending','failed')）→ 同样拦截 dept 回写。
+func TestPhase59_SyncADUser_ActiveFailedQueueSkipsDept(t *testing.T) {
+	f := setupPhase59GuardFixture(t)
+
+	queueID := f.seedQueueRow(t, models.ADPushActionUpdateUser, models.ADPushStatusFailed, 2)
+
+	buf, restore := captureLogs(t)
+	defer restore()
+
+	_, err := f.svc.SyncADUser(context.Background(), f.adUserInfo(), "role-1")
+	require.NoError(t, err)
+
+	assert.Equal(t, f.localDept, f.currentDeptID(t), "failed 队列行存在时不得覆盖本地 dept_id")
+
+	logs := buf.String()
+	assert.Contains(t, logs, f.userID)
+	assert.Contains(t, logs, f.localDept)
+	assert.Contains(t, logs, f.adDept)
+	assert.Contains(t, logs, queueID)
+	assert.Contains(t, logs, "attempts=2")
+}
+
+// TestPhase59_SyncADUser_TerminalRowsDoNotGuard
+// pushed / dead 是终态行，退出活跃谓词（Phase 57 D-06）→ 不拦截，dept 照常更新。
+// 该用例同时是 fixture 存活锚点：观察到 dept 变为映射部门 ID 才证明执行确实走进了守卫分支。
+func TestPhase59_SyncADUser_TerminalRowsDoNotGuard(t *testing.T) {
+	for _, status := range []models.ADPushStatus{models.ADPushStatusPushed, models.ADPushStatusDead} {
+		t.Run(string(status), func(t *testing.T) {
+			f := setupPhase59GuardFixture(t)
+			f.seedQueueRow(t, models.ADPushActionUpdateUser, status, 0)
+
+			_, err := f.svc.SyncADUser(context.Background(), f.adUserInfo(), "role-1")
+			require.NoError(t, err)
+
+			assert.Equal(t, f.adDept, f.currentDeptID(t),
+				"终态行 %s 不在活跃谓词内，dept 应更新为 AD 解析值", status)
+		})
+	}
+}
+
+// TestPhase59_SyncADUser_DisableActionDoesNotGuard
+// 守卫只认 action_type='update_user'；pending 的 disable 行不影响 dept 回写。
+func TestPhase59_SyncADUser_DisableActionDoesNotGuard(t *testing.T) {
+	f := setupPhase59GuardFixture(t)
+	f.seedQueueRow(t, models.ADPushActionDisable, models.ADPushStatusPending, 0)
+
+	_, err := f.svc.SyncADUser(context.Background(), f.adUserInfo(), "role-1")
+	require.NoError(t, err)
+
+	assert.Equal(t, f.adDept, f.currentDeptID(t),
+		"disable 动作的 pending 行不属于守卫命中集合，dept 应更新为 AD 解析值")
+}
+
+// TestPhase59_SyncADUser_NoQueueUpdatesDept
+// 无任何队列行 → 与 Phase 58 完全相同的 Update 调用，写入值等于映射部门 ID（D-08 不误伤）。
+func TestPhase59_SyncADUser_NoQueueUpdatesDept(t *testing.T) {
+	f := setupPhase59GuardFixture(t)
+
+	_, err := f.svc.SyncADUser(context.Background(), f.adUserInfo(), "role-1")
+	require.NoError(t, err)
+
+	// 正向断言：证明 fixture 真正走进了守卫分支（否则「dept 未变」类用例会空跑通过）
+	assert.Equal(t, f.adDept, f.currentDeptID(t), "无活跃队列行时 dept 应更新为映射部门 ID")
+}
+
+// TestPhase59_SyncADUser_QueueQueryErrorSkipsDeptAndWarns
+// 守卫查询失败（模拟 DB 故障/表缺失）→ 保守跳过覆盖并 WARN，错误不上抛（D-07）。
+func TestPhase59_SyncADUser_QueueQueryErrorSkipsDeptAndWarns(t *testing.T) {
+	f := setupPhase59GuardFixture(t)
+	require.NoError(t, f.db.Exec("DROP TABLE ad_push_queue").Error)
+
+	buf, restore := captureLogs(t)
+	defer restore()
+
+	_, err := f.svc.SyncADUser(context.Background(), f.adUserInfo(), "role-1")
+	require.NoError(t, err, "守卫查询失败不得阻断登录同步")
+
+	assert.Equal(t, f.localDept, f.currentDeptID(t), "守卫查询失败时应保守跳过 dept 覆盖")
+
+	logs := buf.String()
+	assert.Contains(t, logs, "守卫查询失败")
+	assert.Contains(t, logs, f.userID)
+	assert.Contains(t, logs, f.localDept)
+	assert.Contains(t, logs, f.adDept)
+}
