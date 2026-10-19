@@ -45,9 +45,9 @@ created: 2026-10-17
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 58-01/T1 | 01 | 0 | Wave 0 fixture（mock 调用计数） | T-58-W0-04 | mock 新增字段不破坏既有用例 | unit fixture | `go test ./internal/services/addomain/ -count=1` | ❌ W0 | ⬜ pending |
-| 58-01/T2 | 01 | 0 | F-F / F-H（排水基座 5 表 + seed + 装配 helper） | T-58-W0-01/02/03 | `base_dn`/`config_name` 补列；复用既有 `createUserTable`/`createDeptOUMappingTable`/`createDeptTable` 零副本 | unit fixture | `go test ./internal/services/addomain/ -run TestPhase58_DrainTestBase -count=1` | ❌ W0 | ⬜ pending |
-| 58-01/T3 | 01 | 0 | F-F / F-G / F-15 / F-16 | T-58-W0-05 | 删 `TestUserHandler_BuildADSyncMap` 不丢四字段 diff 契约 | unit + 回归 | `go build ./... && go test ./internal/services/system/ -run TestPhase57 -count=1 && go test ./internal/api/v1/system/ -count=1` | ✅（改既有） | ⬜ pending |
+| 58-01/T1 | 01 | 0 | Wave 0 fixture（mock 调用计数） | T-58-W0-04 | mock 新增字段不破坏既有用例 | unit fixture | `go test ./internal/services/addomain/ -count=1` | ✅ 文件既有（改） | ✅ green `31a34f90` |
+| 58-01/T2 | 01 | 0 | F-F / F-H（排水基座 5 表 + seed + 装配 helper） | T-58-W0-01/02/03 | `base_dn`/`config_name` 补列；复用既有 `createUserTable`/`createDeptOUMappingTable`/`createDeptTable` 零副本 | unit fixture | `go test ./internal/services/addomain/ -run TestPhase58_DrainTestBase -count=1` | ✅ 新建（原 ❌ W0） | ✅ green `5d63defb` |
+| 58-01/T3 | 01 | 0 | F-F / F-G / F-15 / F-16 | T-58-W0-05 | 删 `TestUserHandler_BuildADSyncMap` 不丢四字段 diff 契约 | unit + 回归 | `go build ./... && go test ./internal/services/system/ -run TestPhase57 -count=1 && go test ./internal/api/v1/system/ -count=1` | ✅（改既有） | ✅ green `6ee328e6` |
 | 58-02/T1 | 02 | 1 | HYGIENE-02 + QUEUE-04（`NormalizeDN` / `BuildOUDN`） | T-58-02-02/04 | 特殊字符部门名 → 合法 DN；**attr 名与值两侧统一 ToLower** | unit（纯函数） | `go test ./internal/services/addomain/ -run "TestPhase58_NormalizeDN|TestPhase58_BuildOUDN" -count=1` | ❌ W0 | ⬜ pending |
 | 58-02/T2 | 02 | 1 | D-02（最长后缀唯一匹配契约） | T-58-02-01/05/06 | 无匹配 / 歧义 → error，不误路由 | unit（纯函数 + GORM 读回） | `go test ./internal/services/addomain/ -run "TestPhase58_MatchADConfigByDN|TestPhase58_FirstEnabledADConfigID|TestPhase58_FirstSyncEnabledADConfigID" -count=1` | ❌ W0 | ⬜ pending |
 | 58-02/T3 | 02 | 1 | HYGIENE-01（三处调用点收敛） | T-58-02-03 | 双份 `getDefaultADConfigID` 消灭；F-D 两入口语义不合并 | source-assert + 回归 | `go test ./internal/scheduler/ ./internal/api/v1/system/ -count=1` + `grep -c "func getDefaultADConfigID" internal/scheduler/*.go` 每行 0 | ✅（改既有） | ⬜ pending |
@@ -78,12 +78,12 @@ created: 2026-10-17
 
 > 本节条目的实现负责已完整分配到 **58-01 的三个 task**（T1 mock 计数 / T2 排水基座 / T3 旧 fixture 缺口），故 frontmatter `wave_0_complete: true`。下面的复选框在**执行期**（wave 0 执完后）勾选，不是规划期未完成。
 
-- [ ] `internal/services/addomain/ad_push_queue_drain_test.go` —— 新建（RED）。自带 sqlite fixture：`ad_push_queue`（直调 `migrations.Migrate215CreateADPushQueue`）、`sys_user`（含 `ad_dn`/`ad_ou_dn`/`ad_synced_at`/`deleted_at` 全列）、`sys_ad_config`（**必须含 `base_dn` + `config_name`**，F-F）、`sys_dept`、`sys_dept_ou_mapping`。`internal/services/addomain` 包目前没有这种 fixture，需新建。
-- [ ] mock LDAP：`ldap_client_mock_test.go` 已有 `mockLDAPClient`，确认已实现 `MoveUser` / `DisableUser` / `DNExists` 且**可注入错误**驱动 code 32 / 失败路径；不可注入则写可配置 fake。
-- [ ] mock AccountPool：`account_pool_*_test.go` 已有先例（`ListAvailable` / `MarkFailure` / `MarkSuccess`），确认可返回空列表驱动 `ErrAllAccountsUnavailable`。
-- [ ] `internal/services/system/user_service_test.go` —— 补 `sys_ad_config.base_dn` 列（F-F）。
-- [ ] `internal/api/v1/system/user_handler_test.go` —— 处置 `TestUserHandler_BuildADSyncMap`（F-G），否则 D-01 删直推时编译红。
-- [ ] Framework install：无（依赖已具备）。
+- [x] `internal/services/addomain/ad_push_queue_drain_test.go` —— 新建（RED）。自带 sqlite fixture：`ad_push_queue`（直调 `migrations.Migrate215CreateADPushQueue`）、`sys_user`（含 `ad_dn`/`ad_ou_dn`/`ad_synced_at`/`deleted_at` 全列）、`sys_ad_config`（**必须含 `base_dn` + `config_name`**，F-F）、`sys_dept`、`sys_dept_ou_mapping`。`internal/services/addomain` 包目前没有这种 fixture，需新建。 → **58-01 Task 2 完成**（`setupDrainTestDB`；`sys_user`/`sys_dept`/`sys_dept_ou_mapping` 复用 `user_ou_service_test.go` 既有 const，零副本）
+- [x] mock LDAP：`ldap_client_mock_test.go` 已有 `mockLDAPClient`，确认已实现 `MoveUser` / `DisableUser` / `DNExists` 且**可注入错误**驱动 code 32 / 失败路径；不可注入则写可配置 fake。 → **58-01 Task 1 完成**（`moveUserErr`/`disableUserErr`/`updateUserAttrErr` 既有可注入；新增 `moveUserCalls`/`moveUserTargets`/`disableUserCalls`/`updateUserAttrCalls` 计数）
+- [x] mock AccountPool：`account_pool_*_test.go` 已有先例（`ListAvailable` / `MarkFailure` / `MarkSuccess`），确认可返回空列表驱动 `ErrAllAccountsUnavailable`。 → **58-01 Task 2 完成**（复用同包 `fakePool78`；`newDrainTestPool()` 空变参 → `listAvailableRes == nil` → `ErrAllAccountsUnavailable`）
+- [x] `internal/services/system/user_service_test.go` —— 补 `sys_ad_config.base_dn` 列（F-F）。 → **58-01 Task 3 完成**（L122–123 补 `config_name` / `base_dn`）
+- [x] `internal/api/v1/system/user_handler_test.go` —— 处置 `TestUserHandler_BuildADSyncMap`（F-G），否则 D-01 删直推时编译红。 → **58-01 Task 3 完成**（函数整体删除，`grep -c buildADSyncMap` == 0）
+- [x] Framework install：无（依赖已具备）。
 
 ---
 

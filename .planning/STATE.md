@@ -2,35 +2,45 @@
 gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
-status: completed
-last_updated: "2026-10-17T00:00:00.000Z"
-last_activity: 2026-10-17 -- Phase 58 规划完成（research + 7 plans / 7 waves + 3 轮 plan-checker 修订收敛 14→10→1→0）
+status: in_progress
+last_updated: "2026-10-19T01:12:00.000Z"
+last_activity: 2026-10-19 -- Phase 58 Wave 0（58-01）执行完成：排水测试基座 + mock 调用计数 + F-F/F-G/F-15/F-16 缺口修补
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 10
-  completed_plans: 3
-  percent: 13
+  completed_plans: 4
+  percent: 40
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 planned (7 plans / 7 waves) — ready to execute
-**Last activity**: 2026-10-17 — plan-phase 58：research（F-A/F-B 阻断级发现 + 7 discretion 收口）+ 7 PLAN + plan-checker 3 轮修订（14→10→1→0 issues）+ VALIDATION.md task 粒度回填 approved
+**Status**: v1.21 Phase 58 executing (wave 0/6 done — 58-01 完成，58-02 待执行)
+**Last activity**: 2026-10-19 — execute-phase 58 plan 01：addomain 五表排水测试基座 + mockLDAPClient 调用计数 + Phase 57 遗留缺口 F-F/F-G/F-15/F-16 处置；Phase 57 sentinel 42 用例全绿
 
 ## Current Position
 
-Phase: 58 (排水器与 compare-and-move 推送) — Planned, ready to execute
-Plan: /gsd:execute-phase 58（7 plans 串行 wave 0→6；HYGIENE-01 helper 先于 QUEUE-04 compare-and-move）
-Status: Phase 58 Planned
-Last activity: 2026-10-17 -- 规划收口：REQ 覆盖 5/5、D-01~D-05 全落 plan、cross-cutting constraints 注入 ROADMAP
-Progress: 1/6 phases [█░░░░░░░░] 17%（3/10 plans）
+Phase: 58 (排水器与 compare-and-move 推送) — Executing
+Plan: 58-02-PLAN.md 待执行（Wave 1：DN 单一真实源 + D-02 最长后缀唯一匹配 + HYGIENE-01 三处调用点收敛）
+Status: Phase 58 Wave 0 完成
+Last activity: 2026-10-19 -- 58-01 三个 task 落地（`31a34f90` / `5d63defb` / `6ee328e6`）
+Progress: 1/6 phases [█░░░░░░░░] 17%（4/10 plans）
 
 ## Accumulated Context
 
 ### Decisions
+
+- 58-01 执行期决策（2026-10-19，Wave 0 测试基座）：
+  - **基座文件带 `!skip_db_tests` build tag**：新文件 `internal/services/addomain/ad_push_queue_drain_test.go` 引用同包 `fakePool78`（定义于带该 tag 的 `failover_client_78_07_test.go`），不加 tag 会让 `go vet -tags skip_db_tests ./internal/services/addomain/` 报 `undefined: fakePool78`（编译面回归）。默认构建行为不变。
+  - **fixture 三表零副本**：`sys_user` / `sys_dept_ou_mapping` / `sys_dept` 一律复用 `user_ou_service_test.go` 既有包级 const（`createUserTable` / `createDeptOUMappingTable` / `createDeptTable`），不建近似副本（两套副本漂移会让"环境缺列"伪装成业务 bug）。`sys_dept` 不扩列 —— `syncUserAttributes` 读部门只取 `DeptName`，GORM `SELECT *` 对缺失模型列只是零值。
+  - **队列表不手写 DDL**：一律直调 `migrations.Migrate215CreateADPushQueue(db)`，三个索引由迁移建（单一 DDL 事实源，避免与模型"不声明 uniqueIndex"红线冲突）。
+  - **T-58-W0-02 防御**：`newDrainTestLDAP()` 固定 `dnExistsRes=true` —— 零值 false 会让 `syncUserAttributes` 走"DNExists=false → 清空 ad_dn 后返回 nil"分支，使 code 32 用例假绿。
+  - **F-G 处置**：删除 `TestUserHandler_BuildADSyncMap`，保留一条不出现被删函数名的 tombstone 注释说明理由（满足 `grep -c buildADSyncMap` == 0）；覆盖损失为零，依据 `TestPhase57_HasADFieldChanged_Boundaries` 已锁四字段 diff 契约。
+  - **F-16 留档**：`TestPhase57_Migration215_BareInsertWithoutID` 加 `t.Skip` —— PG uuid NOT NULL（23502）契约需真实 PG，sqlite 无法复现，v1.22 跟进。
+  - **环境**：`gsd-sdk` CLI 在本执行环境不可用（`$HOME/.claude/get-shit-done/bin/gsd-tools.cjs` 不接受 `query <verb>`），故 58-01 的 STATE/ROADMAP/VALIDATION 更新为手工编辑。
+  - **本 plan 不标记 QUEUE-03/04/05 为 complete**：58-01 只交付基座，行为断言分别在 Wave 2（58-03）/ Wave 3（58-04）落地。
 
 - Phase 57 审查修复轮决策（2026-10-16/17）：F-01 压制用既有终态 `dead` + `last_error='superseded by disable'`（不新增 `superseded` 状态，避免动 DDL/TargetWhere 两处文本），且压制逻辑在 D-02 配置门控**之前**（安全不变量）；部分索引谓词提为单一事实源 `models.ADPushQueueActivePredicate`（migration_215 与 ON CONFLICT TargetWhere 共用，结构上无法漂移）；F-03 `SKIP_AUTOMIGRATE` 旁路走 `ensureADPushQueue()` 复用 Migrate215 同一 DDL（裸 CreateTable 会缺部分唯一索引 → 42P10）；F-04 索引创建失败 PG/sqlite 双分支 `return err` 阻断启动（与 backfillSysAPIKeysKeyHash 同先例，fail-fast trade 经 verifier 复核判定正确）；F-06 `Update` 从 `tx.Save` 全字段覆盖改为显式字段 `Updates`（nil=不动、显式空串=清空部门，保住 UI 清空能力）；**GAP-01**：`UpdateStatus`（前端列表 Switch 开关，最高频停用入口）同事务入队 disable ——推翻 57-03 期的「UpdateStatus 不入队（D-04 Deferred）」记录，该记录在当时计划内成立但 F-02/GAP-01 后已失效；**GAP-02**：profile 自助路径也入队（信任边界：userID 来自会话无跨用户写面 / 不入队被 user_sync_service 无条件覆盖静默回滚且 GUARD-01 误判 / 执行面与门控同一），DI 用 `addomain.NewADPushEnqueuer()` 零参内联构造无包环
 - 57-03 执行期决策：入队调用点固定形态 = 事务闭包内、`return nil` 之前、传 `tx`、失败 `return apperrors.DatabaseError(err)`（禁吞错降级）；`Update` 的 diff 旧值须在 `First` 之后、事务闭包之前做**值拷贝** `oldUserSnapshot`（`user` 是指针，闭包内重新赋值会毁掉 diff 旧值）；HYGIENE-06 实际是**三套** sqlite 环境（非计划列的两套）——`setupUserServiceTestDB`、`setupUserTestDB`(handler 层)、`setupUserCacheTestDB`(userCacheService 内嵌 userService，复用同一写路径)，GAP-02 后加第四套（profile_service_test）第五套（profile_handler_test）；Update 类 fixture 的 `sys_user` 必须补齐 `models.User` 全部列，否则写库报 `no such column` 且让回滚用例假绿；~~`UpdateStatus` 仍不入队（D-04 Deferred）~~ → GAP-01 已推翻，见上

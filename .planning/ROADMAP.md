@@ -106,7 +106,7 @@ Plans:
 Plans:
 **Wave 0**
 
-- [ ] 58-01-PLAN.md — Wave 0 测试基座：addomain sqlite 五表 fixture + mockLDAPClient 调用计数 + F-F/F-G/F-15/F-16 缺口修补
+- [x] 58-01-PLAN.md — Wave 0 测试基座：addomain sqlite 五表 fixture + mockLDAPClient 调用计数 + F-F/F-G/F-15/F-16 缺口修补 — 3/3 tasks，completed 2026-10-19（SUMMARY: [58-01-SUMMARY.md](phases/58-compare-and-move/58-01-SUMMARY.md)）
 
 **Wave 1**
 
@@ -203,7 +203,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
-| 58. 排水器与 compare-and-move 推送 | 0/7 | Planned (2026-10-17) | - |
+| 58. 排水器与 compare-and-move 推送 | 1/7 | In progress (wave 0 done 2026-10-19) | - |
 | 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
