@@ -63,6 +63,11 @@ type mockLDAPClient struct {
 	moveUserTargets     []string
 	disableUserCalls    int
 	updateUserAttrCalls int
+	// updateUserAttrLastAttrs 记录**最后一次** UpdateUserAttribute 的 attrs 实参
+	// （Phase 58 Plan 04 追加）：排水器"闭包内重读最新值"的可观测证据 ——
+	// 只有落到 AD 属性上的值才是真的推了最新值，仅计数无法断言。
+	// 追加字段不改任何既有方法签名（既有用例零影响）。
+	updateUserAttrLastAttrs map[string]string
 }
 
 func (m *mockLDAPClient) Connect() error {
@@ -121,6 +126,13 @@ func (m *mockLDAPClient) DeleteGroup(groupDN string) error {
 
 func (m *mockLDAPClient) UpdateUserAttribute(userDN string, attrs map[string]string) error {
 	m.updateUserAttrCalls++
+	// 拷贝一份快照：调用方的 attributes map 在同一轮内不会复用，但拷贝能杜绝
+	// "测试断言时被后续调用覆写"的隐式耦合（Phase 58 Plan 04）。
+	snapshot := make(map[string]string, len(attrs))
+	for k, v := range attrs {
+		snapshot[k] = v
+	}
+	m.updateUserAttrLastAttrs = snapshot
 	return m.updateUserAttrErr
 }
 

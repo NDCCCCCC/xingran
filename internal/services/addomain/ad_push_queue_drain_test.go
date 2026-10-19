@@ -159,6 +159,21 @@ func seedDrainDept(t *testing.T, db *gorm.DB, id, name string) {
 	).Error)
 }
 
+// seedDrainOUMapping 向 sys_dept_ou_mapping 插入一行（Plan 04 的 compare-and-move 用例铺底）。
+//
+// 唯一键是 (dept_id, ad_config_id)：同一 dept_id 在不同 ad_config_id 下可以有多行
+// （F-B 的测试构造正是靠这一点）。syncEnabled 控制 sync_enabled 列。
+func seedDrainOUMapping(t *testing.T, db *gorm.DB, id, deptID, adConfigID, ouDN string, syncEnabled bool) {
+	t.Helper()
+	now := drainNow()
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_dept_ou_mapping
+		 (id, dept_id, ad_config_id, ou_dn, ou_name, sync_enabled, sync_status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, 'synced', ?, ?)`,
+		id, deptID, adConfigID, ouDN, ouDN, drainBoolToInt(syncEnabled), now, now,
+	).Error)
+}
+
 // seedDrainQueueRow 铺一行 ad_push_queue（走 GORM，BeforeCreate 兜底 UUID 与 pending）。
 // id 传空串时由 BeforeCreate 生成；status 传空串时同样落到 pending。
 func seedDrainQueueRow(t *testing.T, db *gorm.DB, id, entityID, actionType, status string, attempts int, nextRetryAt *time.Time) models.ADPushQueue {
@@ -501,6 +516,11 @@ func TestPhase58_Drain_OrphanDisableRowGoesDead(t *testing.T) {
 }
 
 // TestPhase58_Drain_UpdateUserSuccessWritesPushedAt update_user 属性路径真实执行。
+//
+// ⚠ Phase 58 Plan 04 起 update_user 路径叠加了 compare-and-move：用户有 dept_id 时
+// 必须有对应的 OU 映射行，否则按 Q2 决策转 dead（no-ou-mapping）而非 pushed。
+// 本用例的语义是"属性路径成功 → pushed"，故铺一行与用户当前 ad_ou_dn 归一化相等的
+// 映射（目标一致 → 跳过 MoveUser，落 markPushed），断言强度不变。
 func TestPhase58_Drain_UpdateUserSuccessWritesPushedAt(t *testing.T) {
 	db := setupDrainTestDB(t)
 	const cfgID = "cfg-1"
@@ -508,6 +528,7 @@ func TestPhase58_Drain_UpdateUserSuccessWritesPushedAt(t *testing.T) {
 	seedDrainDept(t, db, "dept-1", "研发部")
 	seedDrainUser(t, db, "u-1", "alice", "CN=alice,OU=研发部,DC=corp,DC=com", "OU=研发部,DC=corp,DC=com", nil)
 	setDrainUserAttrs(t, db, "u-1", "Alice", "alice@corp.com", "13800000000", "dept-1")
+	seedDrainOUMapping(t, db, "m-1", "dept-1", cfgID, "OU=研发部,DC=corp,DC=com", true)
 	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
 
 	mock := newDrainTestLDAP()
@@ -700,4 +721,266 @@ func TestPhase58_Drain_MutualExclusionSkipsSecondRound(t *testing.T) {
 	row := reloadDrainRow(t, db, "u-1")
 	assert.Equal(t, models.ADPushStatusPending, row.Status, "被跳过的轮次不得改动任何行")
 	assert.Equal(t, 0, mock.disableUserCalls)
+}
+
+// ==================== Phase 58 Plan 04 Task 2：compare-and-move OU 移动面 ====================
+
+// drainUserADRefs 读回 sys_user 的 ad_dn / ad_ou_dn（可空列）。
+func drainUserADRefs(t *testing.T, db *gorm.DB, userID string) (adDn, adOuDn *string) {
+	t.Helper()
+	require.NoError(t, db.Raw(`SELECT ad_dn, ad_ou_dn FROM sys_user WHERE id = ?`, userID).
+		Row().Scan(&adDn, &adOuDn))
+	return adDn, adOuDn
+}
+
+// seedCompareMoveUser 铺一个 compare-and-move 用例的标准用户：
+// dept_id = dept-it，ad_dn / ad_ou_dn 均落在 cfg-1 的 base_dn 下，nickname 非空
+// （保证 syncUserAttributes 真的触达 LDAP）。
+func seedCompareMoveUser(t *testing.T, db *gorm.DB, userID, adOuDn, deptID string) {
+	t.Helper()
+	seedDrainUser(t, db, userID, "zhangsan",
+		"CN=zhangsan,OU=IT,DC=corp,DC=com", adOuDn, &deptID)
+	setDrainUserAttrs(t, db, userID, "张三", "", "", deptID)
+}
+
+// TestPhase58_Drain_SkipsMoveWhenOUMatches QUEUE-04 幂等点：目标 OU 与当前 ad_ou_dn
+// 归一化相等时**不调** MoveUser。
+func TestPhase58_Drain_SkipsMoveWhenOUMatches(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedCompareMoveUser(t, db, "u-1", "OU=IT,DC=corp,DC=com", "dept-it")
+	seedDrainOUMapping(t, db, "m-1", "dept-it", cfgID, "OU=IT,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 0, mock.moveUserCalls, "目标 OU 与当前 ad_ou_dn 归一化相等 → 必须跳过 MoveUser（否则对已搬移源 DN 再 ModifyDN 会 code 32）")
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+	assert.NotNil(t, row.PushedAt)
+}
+
+// TestPhase58_Drain_NormalizedComparisonSkipsMove 大小写/空格差异也必须跳过。
+//
+// 这组数据同时覆盖 **attr 名大小写**（OU vs ou）与 **属性值大小写**（IT vs it）
+// 两类差异 —— AD DN 两者皆大小写不敏感，NormalizeDN 的契约是"attr 名与值统一 ToLower"。
+// 未经 NormalizeDN 的裸比较在本用例下必红。
+func TestPhase58_Drain_NormalizedComparisonSkipsMove(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	// 用户侧：attr 名小写 + 值小写 + 分隔逗号前后带空格
+	seedCompareMoveUser(t, db, "u-1", "ou=it , dc=corp , dc=com", "dept-it")
+	// 映射侧：attr 名大写 + 值大写
+	seedDrainOUMapping(t, db, "m-1", "dept-it", cfgID, "OU=IT,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 0, mock.moveUserCalls, "attr 名/值大小写与空格差异归一化后相等 → 必须跳过 MoveUser")
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+}
+
+// TestPhase58_Drain_MoveUpdatesAdDnAndAdOuDn F-A 阻断级：MoveUser 成功后必须**同时**
+// 回写 ad_dn（RDN 保留 + 新 OU 父路径）与 ad_ou_dn。
+func TestPhase58_Drain_MoveUpdatesAdDnAndAdOuDn(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedCompareMoveUser(t, db, "u-1", "OU=IT,DC=corp,DC=com", "dept-it2")
+	seedDrainOUMapping(t, db, "m-1", "dept-it2", cfgID, "OU=IT2,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	require.Equal(t, 1, mock.moveUserCalls, "目标 OU 不一致 → 必须移动一次")
+	require.Len(t, mock.moveUserTargets, 1)
+	assert.Equal(t, "OU=IT2,DC=corp,DC=com", mock.moveUserTargets[0])
+
+	adDn, adOuDn := drainUserADRefs(t, db, "u-1")
+	require.NotNil(t, adDn, "F-A：MoveUser 成功后必须回写 ad_dn（只回写 ad_ou_dn 会让下一轮按陈旧 DN 解析配置）")
+	assert.Equal(t, "CN=zhangsan,OU=IT2,DC=corp,DC=com", *adDn, "新 ad_dn = 原 RDN + 新 OU 父路径")
+	require.NotNil(t, adOuDn)
+	assert.Equal(t, "OU=IT2,DC=corp,DC=com", *adOuDn)
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+}
+
+// TestPhase58_Drain_RepeatDrainIsIdempotent QUEUE-04 主用例（两轮）：同一行重复排水
+// 第二轮必须因 ad_ou_dn 已回写而跳过 MoveUser。
+func TestPhase58_Drain_RepeatDrainIsIdempotent(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedCompareMoveUser(t, db, "u-1", "OU=IT,DC=corp,DC=com", "dept-it2")
+	seedDrainOUMapping(t, db, "m-1", "dept-it2", cfgID, "OU=IT2,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+	require.Equal(t, 1, mock.moveUserCalls, "第一轮必须移动一次")
+
+	// 模拟"同一行被重复排水"：把行打回 pending（终态行退出活跃谓词，不会被再拾取）。
+	require.NoError(t, db.Exec(
+		`UPDATE ad_push_queue SET status = 'pending', next_retry_at = NULL, pushed_at = NULL WHERE entity_id = ?`,
+		"u-1").Error)
+
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 1, mock.moveUserCalls, "第二轮 ad_ou_dn 已回写为目标 OU → 归一化相等 → MoveUser 不得再被调用（幂等）")
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+}
+
+// TestPhase58_Drain_UsesLatestDBValues 闭包内重读：入队后 DB 又改过的值必须被采纳
+// （禁新旧值比较 —— 推的是最新值，不是入队快照）。
+func TestPhase58_Drain_UsesLatestDBValues(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainDept(t, db, "dept-old", "旧部门")
+	seedDrainDept(t, db, "dept-new", "新部门")
+	seedCompareMoveUser(t, db, "u-1", "OU=IT,DC=corp,DC=com", "dept-old")
+	seedDrainOUMapping(t, db, "m-old", "dept-old", cfgID, "OU=IT,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	// ← 入队之后才发生的改动：昵称与部门都变
+	require.NoError(t, db.Exec(
+		`UPDATE sys_user SET nickname = ?, dept_id = ? WHERE id = ?`,
+		"最新昵称", "dept-new", "u-1").Error)
+	seedDrainOUMapping(t, db, "m-new", "dept-new", cfgID, "OU=IT2,DC=corp,DC=com", true)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	require.NotNil(t, mock.updateUserAttrLastAttrs, "属性推送必须真的触达 LDAP 才能断言最新值")
+	assert.Equal(t, "最新昵称", mock.updateUserAttrLastAttrs["displayName"],
+		"推送的必须是闭包内重读到的最新昵称，而非入队时刻的旧值")
+	assert.Equal(t, "新部门", mock.updateUserAttrLastAttrs["department"],
+		"department 属性同样取闭包内重读到的最新部门")
+	require.Len(t, mock.moveUserTargets, 1)
+	assert.Equal(t, "OU=IT2,DC=corp,DC=com", mock.moveUserTargets[0],
+		"OU 移动目标也由最新的 dept_id 决定（不是入队快照）")
+}
+
+// TestPhase58_Drain_UsesConfigScopedOUMapping F-B：同 dept_id 在多个 AD 配置下有映射行时，
+// 必须按本行解析出的配置取（禁跨域取首行）。
+func TestPhase58_Drain_UsesConfigScopedOUMapping(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-a"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedCompareMoveUser(t, db, "u-1", "OU=OLD,DC=corp,DC=com", "dept-1")
+	// 刻意让 cfg-b 的行 id 排序在前：不收敛 ad_config_id 的实现会取到它。
+	seedDrainOUMapping(t, db, "m-aaa-cfgb", "dept-1", "cfg-b", "OU=IT,DC=na,DC=corp,DC=com", true)
+	seedDrainOUMapping(t, db, "m-zzz-cfga", "dept-1", cfgID, "OU=IT,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	require.Len(t, mock.moveUserTargets, 1)
+	assert.Equal(t, "OU=IT,DC=corp,DC=com", mock.moveUserTargets[0],
+		"必须取 cfg-a 的 OU（F-B）：取到 cfg-b 的那行等于把用户在 AD 树里跨域搬错位置")
+}
+
+// TestPhase58_Drain_NoOUMappingGoesDead Q2：目标 OU 映射缺失 → dead 且**不是 pushed**。
+// 这条断言就是「终态被 markPushed 覆盖」的验收依据。
+func TestPhase58_Drain_NoOUMappingGoesDead(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedCompareMoveUser(t, db, "u-1", "OU=IT,DC=corp,DC=com", "dept-orphan") // 无对应映射行
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusDead, row.Status,
+		"无 OU 映射必须转 dead；若被 markPushed 覆盖成 pushed，本断言必红（生产上误报成功 + 运营动作无人触发）")
+	assert.Equal(t, 0, row.Attempts, "不可恢复错误不得烧 attempts")
+	assert.Equal(t, "unrecoverable:no-ou-mapping", row.LastError)
+	assert.Nil(t, row.PushedAt, "dead 终态不得写 pushed_at")
+	assert.Equal(t, 0, mock.moveUserCalls)
+}
+
+// TestPhase58_Drain_NoDeptSkipsMove 无部门不是失败也不是终态：跳过移动照常 pushed。
+func TestPhase58_Drain_NoDeptSkipsMove(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "zhangsan", "CN=zhangsan,OU=IT,DC=corp,DC=com", "OU=IT,DC=corp,DC=com", nil)
+	require.NoError(t, db.Exec(`UPDATE sys_user SET nickname = ? WHERE id = ?`, "张三", "u-1").Error)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 0, mock.moveUserCalls, "无部门 → 无 OU 概念 → 不得移动")
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusPushed, row.Status, "无部门不是失败，必须照常 pushed")
+}
+
+// TestPhase58_Drain_MoveCode32GoesDead QUEUE-05 第二条路径：OU 移动 code 32 →
+// dead + 清 ad_dn/ad_ou_dn + 不烧 attempts。
+func TestPhase58_Drain_MoveCode32GoesDead(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedCompareMoveUser(t, db, "u-1", "OU=IT,DC=corp,DC=com", "dept-it2")
+	seedDrainOUMapping(t, db, "m-1", "dept-it2", cfgID, "OU=IT2,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	mock.moveUserErr = ldap.NewError(ldap.LDAPResultNoSuchObject, errors.New("no such object"))
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusDead, row.Status, "OU 路径 code 32 与属性路径同款终态（dead）")
+	assert.Equal(t, 0, row.Attempts, "code 32 不可恢复，不烧 attempts")
+	assert.Equal(t, "unrecoverable:target-not-found", row.LastError)
+
+	adDn, adOuDn := drainUserADRefs(t, db, "u-1")
+	assert.Nil(t, adDn, "code 32 必须清空 sys_user.ad_dn（clearUserADRefs 生效）")
+	assert.Nil(t, adOuDn)
+}
+
+// TestPhase58_Drain_MoveFailureIsRetryable 有意收紧：属性成功但 OU 移动失败 → 行转 failed
+// （**不是** pushed），退避重试，last_error 前缀 retry:move_ou:。
+func TestPhase58_Drain_MoveFailureIsRetryable(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedCompareMoveUser(t, db, "u-1", "OU=IT,DC=corp,DC=com", "dept-it2")
+	seedDrainOUMapping(t, db, "m-1", "dept-it2", cfgID, "OU=IT2,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	mock := newDrainTestLDAP()
+	mock.moveUserErr = errors.New("boom")
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusFailed, row.Status,
+		"OU 移动失败不得被属性成功掩盖成 pushed（相对 SyncUserUpdateToAD 的有意收紧）")
+	assert.Equal(t, 1, row.Attempts)
+	assert.NotNil(t, row.NextRetryAt, "可重试失败必须排退避")
+	assert.Nil(t, row.PushedAt)
+	require.True(t, len(row.LastError) >= len("retry:move_ou:"))
+	assert.Equal(t, "retry:move_ou:", row.LastError[:len("retry:move_ou:")])
 }

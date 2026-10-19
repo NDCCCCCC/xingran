@@ -7,10 +7,12 @@ package addomain
 // 执行面（本 plan 范围）：
 //   - 拾取：status IN ('pending','failed') AND (next_retry_at IS NULL OR next_retry_at <= now)
 //   - 分组：按 sys_user.ad_dn 归属解析 AD 配置（D-02），每组一次账号池故障切换
-//   - 推送：disable（UAC 514）与 update_user（属性）
+//   - 推送：disable（UAC 514）与 update_user（属性 + compare-and-move OU 移动）
 //   - 状态机：pending/failed → pushed | failed(退避) | dead（终态留表可查）
 //
-// ⚠ OU 移动（compare-and-move）是 Phase 58 Plan 04 的内容，本文件只预留接口位。
+// OU 移动（QUEUE-04 compare-and-move）由本文件的 compareAndMoveOU 承担：
+// 闭包内重读最新值 → 归一化比较当前 ad_ou_dn 与配置收敛查到的目标 OU →
+// 一致则**不调** MoveUser（幂等点）→ 不一致才移动并同时回写 ad_dn + ad_ou_dn。
 
 import (
 	"context"
@@ -367,12 +369,102 @@ func (d *ADPushDrainer) drainRow(ctx context.Context, c LDAPClientIface, row mod
 			}
 			user = refreshed
 		}
-		// Phase 58 Plan 04: 此处补 compare-and-move OU 移动分支
+
+		// compare-and-move（QUEUE-04）：目标 OU 归一化一致则跳过 MoveUser，重复排水幂等。
+		terminal, err := d.compareAndMoveOU(ctx, c, row, user, cfgID, now)
+		if err != nil {
+			// ⚠ 有意相对 SyncUserUpdateToAD 收紧：后者 OU 移动失败仅 ERROR 日志并继续，
+			//   这里上抛 → failed + 退避。否则"OU 永远移不动"的行会被属性成功掩盖成 pushed。
+			d.handlePushError(ctx, row, now, err, "move_ou")
+			return
+		}
+		// ⚠ 终态不覆盖不变量：行已被 compareAndMoveOU 写成终态（no-ou-mapping → dead）时
+		//   **必须**在此处短路返回，绝不能落到下面的 markPushed —— 那会把 dead 覆盖成
+		//   pushed（生产上"需要重跑部门同步"被误报成功 + 终态不可查）。
+		if terminal {
+			return
+		}
 		d.markPushed(ctx, row.ID, now)
 
 	default:
 		d.markDead(ctx, row.ID, now, row.Attempts, "unrecoverable:unknown-action")
 	}
+}
+
+// compareAndMoveOU OU 移动的幂等执行面（Phase 58 QUEUE-04）。
+//
+// 三步，全部基于**闭包内重读到的最新值**（不是入队时刻的旧值 —— 禁新旧值比较，
+// 那会激活 MoveUser 的未验证重试分支）：
+//  1. 取目标 OU：FindOUDNByDeptIDForConfig(ctx, *user.DeptID, cfgID)（F-B）
+//     无映射 → 不可恢复，dead（Q2：需运营动作「跑部门同步」，重试无意义）
+//  2. 归一化比较：当前 ad_ou_dn 与目标 OU **双侧**过 NormalizeDN 后相等 → 直接返回
+//     （幂等点。对同一 DN 重复 MoveUser 会 code 32，见 ldap_client.go:350-361，
+//      ModifyDN 的 deleteOldRDN=true 会先删掉旧 RDN）
+//  3. 不一致 → MoveUser(*user.AdDn, targetOUDN)；成功后**同时**回写
+//     ad_dn = extractRDNFromDN(*user.AdDn) + "," + targetOUDN 与 ad_ou_dn = targetOUDN
+//     （F-A 阻断级：ModifyDN 后 AD 侧 DN 已变，ad_dn 不回写会让 D-02 下一轮按陈旧 DN
+//     解析配置，跨域移动后落到另一个 base_dn → 误判「配置无匹配」→ 误转 dead；
+//     属性 Modify 也会打到旧 DN → 二次 code 32）
+//
+// ⚠ 与 SyncUserUpdateToAD 的语义差异（有意收紧）：后者 OU 移动失败仅 ERROR 日志并继续推属性；
+// 本函数把 OU 失败上抛给 handlePushError → 行转 failed 并退避重试。理由：否则"OU 永远移不动"
+// 的行会被属性成功掩盖成 pushed，SC2「重复排水幂等、失败可查」的可观测性就没了。
+//
+// ⚠ 返回值契约（terminal 是本函数存在的理由，**不得**退回单 error 返回）：
+//
+//	(false, nil) = 本函数未对行做任何终态写 → 调用方**可以** markPushed
+//	(true,  nil) = 本函数已把行写成终态（当前仅 no-ou-mapping → dead）→ 调用方**必须**跳过 markPushed
+//	(false, err) = 本函数失败 → 调用方交给 handlePushError 分流
+//
+// 把 (true, nil) 当成 (false, nil) 处理会让 dead 被 markPushed 覆盖成 pushed，
+// TestPhase58_Drain_NoOUMappingGoesDead 必红，且生产上"需要重跑部门同步"被误报为成功。
+func (d *ADPushDrainer) compareAndMoveOU(ctx context.Context, c LDAPClientIface, row models.ADPushQueue, user *models.User, cfgID string, now time.Time) (terminal bool, err error) {
+	// 1) 用户无部门 → 无 OU 概念：既不是失败也不是终态，调用方照常 markPushed。
+	if user.DeptID == nil || *user.DeptID == "" {
+		return false, nil
+	}
+
+	// 2) 目标 OU 按 AD 配置收敛（F-B）。查不到 → 不可恢复：映射不会自己出现，
+	//    重试只会无限堆积 pending；转 dead 并由 last_error 前缀引导管理员跑部门同步。
+	targetOUDN, mapErr := d.mapper.FindOUDNByDeptIDForConfig(ctx, *user.DeptID, cfgID)
+	if mapErr != nil {
+		// ⚠ terminal=true：本函数已经写了终态，调用方不得再 markPushed。
+		// ⚠ 第三个实参是 row.Attempts（不可恢复不烧 attempts，与 markDead 契约一致）。
+		d.markDead(ctx, row.ID, now, row.Attempts, "unrecoverable:no-ou-mapping")
+		return true, nil
+	}
+
+	// 3) 幂等点：当前 OU 与目标 OU 归一化后相等 → 不调 MoveUser。
+	//    ⚠ 必须走 NormalizeDN（attr 名与值双侧 ToLower + 去空格），裸比较会把
+	//    `OU=IT,DC=corp,DC=com` 与 `ou=it , dc=corp , dc=com` 判为不等 →
+	//    对已搬移的源 DN 再调一次 ModifyDN → code 32。
+	if user.AdOuDn != nil && NormalizeDN(*user.AdOuDn) == NormalizeDN(targetOUDN) {
+		return false, nil
+	}
+
+	// 防御：drainRow 已判过 ad_dn 非空；此处再兜一层，避免 nil 解引用 panic（P1：闭包内不得 panic）。
+	if user.AdDn == nil || *user.AdDn == "" {
+		return false, nil
+	}
+
+	// 4) 不一致才移动。%w 包装让 handlePushError 的 ldap.IsErrorWithCode 能穿透判定 code 32。
+	if moveErr := c.MoveUser(*user.AdDn, targetOUDN); moveErr != nil {
+		return false, fmt.Errorf("移动用户到新 OU 失败 [%s → %s]: %w", *user.AdDn, targetOUDN, moveErr)
+	}
+
+	// 5) F-A：同时回写 ad_dn 与 ad_ou_dn。
+	//    RDN 用同包 extractRDNFromDN 取（MoveUser 内部用的也是它，保证拼接一致）。
+	//    ⚠ 必须 Unscoped()（disable 场景用户已软删，作用域 Updated 会命中 0 行且不报错）。
+	//    ⚠ 用 Updates(map[...]) 而非 Save（Phase 57 F-06 收窄写路径的同款决策：显式字段）。
+	//    回写失败仅 Warn 不上抛 —— MoveUser 已成功、AD 侧状态正确；本地回写失败下轮会重算。
+	newAdDn := fmt.Sprintf("%s,%s", extractRDNFromDN(*user.AdDn), targetOUDN)
+	if err := d.db.WithContext(ctx).Unscoped().Model(&models.User{}).Where("id = ?", user.ID).
+		Updates(map[string]interface{}{"ad_dn": newAdDn, "ad_ou_dn": targetOUDN}).Error; err != nil {
+		applogger.Warnf("[ad_push_queue] 回写用户 %s 的 ad_dn/ad_ou_dn 失败 [%s]: %v", user.ID, newAdDn, err)
+	}
+
+	// 终态由调用方的 markPushed 写，本函数不重复写。
+	return false, nil
 }
 
 // buildDrainUpdateReq 从闭包内重读的最新用户构造属性推送载荷。
