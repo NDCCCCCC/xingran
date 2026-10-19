@@ -1315,6 +1315,19 @@ func e2eSetupCompareMoveEnv(t *testing.T, db *gorm.DB, cfgID, userID string) {
 // 单独抽出来是因为内联 &"dept-it2" 在 Go 中不合法。
 func ptrStr(s string) *string { return &s }
 
+// countQueueRowsForEntity 统计某实体的队列行总数（含终态行）。
+//
+// ⚠ 与 countUpdateUserRows 的区别：后者带 action_type 过滤。端到端幂等用例需要断言
+// "**同一行**被重复排水"，而 reloadDrainRow 用的是 First（无 ORDER BY）—— 一旦因为
+// 误用再入队而产生并行行，First 会静默返回其中一行，让断言变成随机通过/随机失败。
+// 先用本 helper 把行数钉死，才让"同一行"这个前提可证伪。
+func countQueueRowsForEntity(t *testing.T, db *gorm.DB, entityID string) int64 {
+	t.Helper()
+	var n int64
+	require.NoError(t, db.Model(&models.ADPushQueue{}).Where("entity_id = ?", entityID).Count(&n).Error)
+	return n
+}
+
 // TestPhase58_EndToEnd_UpdateUserPushedAfterDrain 端到端主用例：
 // 真实入队 → 排水 → 属性 Modify → compare-and-move OU → pushed 终态。
 //
@@ -1372,7 +1385,8 @@ func TestPhase58_EndToEnd_UpdateUserPushedAfterDrain(t *testing.T) {
 //
 // ⚠ 与 TestPhase58_Drain_RepeatDrainIsIdempotent 的分工：那条用例只断言
 // moveUserCalls 不再增长；本条额外断言 updateUserAttrCalls **确实**增长到 2 ——
-// 否则"第二轮什么都没干"也会让前者变绿（假幂等）。
+// 否则"第二轮什么都没干"也会让前者变绿（假幂等）。本条额外走**生产入队器**起步，
+// 而那条直接 seedDrainQueueRow 铺行。
 func TestPhase58_EndToEnd_RepeatDrainIdempotent(t *testing.T) {
 	db := setupDrainTestDB(t)
 	const cfgID = "cfg-1"
@@ -1388,12 +1402,19 @@ func TestPhase58_EndToEnd_RepeatDrainIdempotent(t *testing.T) {
 	require.Equal(t, 1, mock.moveUserCalls, "第一轮必须移动一次")
 	require.Equal(t, 1, mock.updateUserAttrCalls, "第一轮必须推一次属性")
 
-	// 入队 → 再入队（合并子句把终态行打回 pending）——这是生产里"用户又被编辑一次"的真实形状。
-	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{userID}))
+	// 模拟"同一队列行被重复排水"：把行打回 pending。
+	//
+	// ⚠ 这里刻意**不用**再入队（EnqueueUpdateBatch 第二次）来制造第二轮 ——
+	// 那不是"重复排水同一行"：pushed 行已退出 uq_ad_push_queue_active 部分唯一索引
+	// （谓词 status IN ('pending','failed')），第二次 INSERT 不冲突，会**新增并行行**。
+	// 那是 Phase 57 D-06 的正确设计（终态行必须退出索引，否则同实体的下一次编辑会撞
+	// 42P10），但它会让本用例的"同一行"前提失效，且 reloadDrainRow 的 First 在两行间不确定。
+	require.NoError(t, db.Exec(
+		`UPDATE ad_push_queue SET status = 'pending', next_retry_at = NULL, pushed_at = NULL
+		 WHERE entity_id = ?`, userID).Error)
 	row := reloadDrainRow(t, db, userID)
-	require.Equal(t, models.ADPushStatusPending, row.Status,
-		"重新入队必须把终态行合并回 pending（跨腿：入队器的 D-06 合并语义）")
-	require.Equal(t, 0, row.Attempts, "合并必须清零 attempts（F-11 归零点）")
+	require.Equal(t, models.ADPushStatusPending, row.Status)
+	require.Equal(t, int64(1), countQueueRowsForEntity(t, db, userID), "本用例前提是同一行被重复排水")
 
 	require.NoError(t, d.DrainOnce(context.Background()))
 
