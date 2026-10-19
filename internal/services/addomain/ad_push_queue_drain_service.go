@@ -44,12 +44,25 @@ const (
 // 纯函数：无 DB、无副作用、可单测。attempts 为"本轮失败后的累计连续失败次数"。
 // attempts <= 0 → 60s；1→60s，2→2min，3→4min，4→8min，5→16min，>=6→30min（封顶）。
 //
-// ⚠ 生产不可达档位（Phase 58 审查 H-03，2026-10-19 决定：**不改逻辑**，仅记录）：
-// markFailed 在 newAttempts >= maxDrainAttempts(=5) 时直接转 dead，故本函数只会被以
-// 1/2/3/4 调用 —— **16min 与 30min 封顶两档在生产中永不执行**，实际重试窗是
-// 60s+2m+4m+8m = 15min，而非 D-05 原文声明的 ~61min。后果是"退避窗桥接账号池 30min
-// 熔断周期"的设计意图当前不成立：队列会在熔断窗结束前就全部判死。待真实环境的熔断
-// 频率数据到位后，再决定是把 maxDrainAttempts 提到 8，还是改写 D-05 的 ~61min 表述。
+// ⚠ 生产不可达档位（Phase 58 审查 H-03 + goal-verification MISSED-01/02，2026-10-19 决定：
+// **不改退避逻辑**，仅记录事实）：
+//
+//   【业务失败路径】markFailed 在 newAttempts >= maxDrainAttempts(=5) 时直接转 dead，
+//     故本函数只会被以 1/2/3/4 调用 —— 实际重试窗是 60s+2m+4m+8m = **15min**，
+//     而非 D-05 原文声明的 ~61min。后果：D-05「退避窗桥接账号池 30min 熔断周期」
+//     的设计意图在**业务失败**路径上仍不成立。
+//
+//   【池侧故障路径】MISSED-02 修复后 poolExhausted 分支**不自增 attempts**，故本函数
+//     以该行原值调用并保持不变 —— 故障期间退避**不递增**，固定在 attempts=0 时的 60s。
+//     这反而让"任何时长的 AD 断连都不把行推到终态阈值边上"成立（比 D-05 的 ~61min
+//     更强），代价是池侧故障期间退避不随时间拉长（可接受：池全熔断时一次 LDAP 拨号
+//     都不会发生）。
+//
+//   【为何两档不可达是加载承重的】它曾一度变得可达：H-04 修好"池侧故障不判死"后，
+//   池路径仍在自增 attempts，于是能爬到 5+ 并用上 16min/30min；MISSED-02 把那次自增
+//   去掉后，两档重新不可达。**这两处修复是一对**：单独修 H-04 会得到"不判死但持续计数"
+//   的半修状态（见 markFailed 注释）。任何改动必须同时维持两者。
+//
 // ⚠ TestPhase58_BackoffDuration_Curve / _CappedAt30m 直接对纯函数断言 16min 与封顶档，
 //   因此它们**测不出**这个断层（纯函数本身是对的，错的是调用方永不传 5/6+）。
 func backoffDuration(attempts int) time.Duration {
@@ -308,17 +321,30 @@ func (d *ADPushDrainer) markPushed(ctx context.Context, id string, now time.Time
 // ⚠ 池熔断（ErrAllAccountsUnavailable）不判 dead（D-05：不可恢复错误才短路；
 // 熔断是可恢复的，退避窗正是为它设计的）。
 func (d *ADPushDrainer) markFailed(ctx context.Context, row models.ADPushQueue, now time.Time, poolExhausted bool, msg string) error {
-	newAttempts := row.Attempts + 1
-	// F-11 红线：dead 判定**只能**发生在本轮实际失败分支内，且按 attempts+1 >= maxDrainAttempts。
-	// attempts 的语义是"自上次编辑以来的连续失败次数"（Phase 57 合并子句每次编辑清零 attempts），
-	// 因此它是正确的连续失败计数器 —— 但**禁止**在拾取阶段 / 成功分支 / 任何非失败路径上
-	// 读 attempts 判死。
+	// ⚠ MISSED-02（2026-10-19 goal-verification 补修）：attempts 是**业务失败**的计数，
+	//   池侧/基础设施故障（账号全被熔断、域控宕机、网络中断）**不得**计入。
+	//   原实现无条件 `row.Attempts + 1`，H-04 修好后虽然池侧故障不再判死，却仍在自增 ——
+	//   一次约 2 小时的 AD 断连会把 attempts 推到 12+，此后**任何一次**业务失败立刻
+	//   `attempts >= maxDrainAttempts` 判死，而 last_error 已被覆盖成 "dead:max-attempts"，
+	//   运维完全看不出前面 12 次不是业务失败。H-04 修了"别死"，这里补上"别计数"。
+	newAttempts := row.Attempts
+	if !poolExhausted {
+		newAttempts++
+	}
+	// F-11 红线：dead 判定**只能**发生在本轮实际业务失败分支内，且按 attempts+1 >= maxDrainAttempts。
+	// attempts 的语义是"自上次编辑以来的连续**业务**失败次数"（Phase 57 合并子句每次编辑清零
+	// attempts），因此它是正确的连续失败计数器 —— 但**禁止**在拾取阶段 / 成功分支 /
+	// 池侧故障分支 / 任何非失败路径上读 attempts 判死。
 	// 已知并接受的后果：用户持续编辑某个持续失败的属性时，每次编辑清零 attempts，该行永不
 	// 终态（"编辑即续命"）。这是有意设计 —— 用户还在管这件事，反复重试是期望行为。
 	if !poolExhausted && newAttempts >= maxDrainAttempts {
 		// ⚠ 传 newAttempts：本次失败已计入连续失败计数，DB 必须落到 5。
 		return d.markDead(ctx, row.ID, now, newAttempts, "dead:max-attempts")
 	}
+	// 池侧故障分支：attempts 保持原值，next_retry_at 由该值派生 → 故障期间退避**不递增**，
+	// 固定在 attempts=0 时的 60s。代价与理由：池全被熔断时 ListAvailable 直接返回空、
+	// 一次 LDAP 拨号都不会发生，60s 空转开销可忽略；换来的是基础设施故障永不把行
+	// 推到终态阈值边上。
 	return d.db.WithContext(ctx).Model(&models.ADPushQueue{}).Where("id = ?", row.ID).
 		Updates(map[string]interface{}{
 			"status":        string(models.ADPushStatusFailed),

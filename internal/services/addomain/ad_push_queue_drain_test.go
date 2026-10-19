@@ -629,9 +629,54 @@ func TestPhase58_Drain_PoolExhaustedIsRetryable(t *testing.T) {
 
 	row := reloadDrainRow(t, db, "u-1")
 	assert.Equal(t, models.ADPushStatusFailed, row.Status, "池熔断必须可重试，不得转 dead")
-	assert.Equal(t, 1, row.Attempts)
+	// ⚠ MISSED-02：池侧故障**不计入** attempts。原先此处断言 1，那编码的是缺陷 ——
+	// 池侧故障会累积计数，把整批行推到"再有一次业务失败就判死"的悬崖边上。
+	assert.Equal(t, 0, row.Attempts, "池侧故障不得计入 attempts（基础设施故障不是业务失败）")
+	assert.True(t, row.NextRetryAt != nil, "必须排退避")
 	assert.True(t, len(row.LastError) >= len("pool:"))
 	assert.Equal(t, "pool:", row.LastError[:len("pool:")])
+}
+
+// TestPhase58_Drain_PoolFailureDoesNotArmTerminalState MISSED-02 回归：
+// 连续多轮**池侧故障**后 attempts 必须原地不动；随后第一次**业务**失败才 +1，
+// 且不应因之前的池侧故障而直接判死。
+//
+// 这条锁的是 H-04 与 MISSED-02 的**配对**关系：单独修 H-04 会得到
+// "不判死但持续计数"的半修状态 —— 一次约 2h 的 AD 断连把 attempts 推到 12+，
+// 之后任何一次业务失败立刻 dead，而 last_error 已被覆盖成 "dead:max-attempts"，
+// 运维看不出前 12 次不是业务失败。
+func TestPhase58_Drain_PoolFailureDoesNotArmTerminalState(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionDisable), string(models.ADPushStatusPending), 0, nil)
+
+	// --- 第一阶段：连续 12 轮池侧故障（模拟长时间 AD 断连）---
+	for round := 1; round <= 12; round++ {
+		d := newDrainTestDrainer(t, db, newDrainTestLDAP()) // 无账号 → ErrAllAccountsUnavailable
+		require.NoError(t, d.DrainOnce(context.Background()))
+		// 抹掉退避，使下一轮立即可拾取（生产靠时间推进，此处压缩时间轴）
+		require.NoError(t, db.Exec(
+			`UPDATE ad_push_queue SET next_retry_at = NULL WHERE entity_id = ?`, "u-1").Error)
+
+		row := reloadDrainRow(t, db, "u-1")
+		require.Equal(t, models.ADPushStatusFailed, row.Status, "第 %d 轮池侧故障后不得判死", round)
+		require.Equal(t, 0, row.Attempts,
+			"第 %d 轮池侧故障后 attempts 必须仍为 0（基础设施故障不计入业务失败计数）", round)
+	}
+
+	// --- 第二阶段：一次业务失败，attempts 才 +1，且不判死 ---
+	mock := newDrainTestLDAP()
+	mock.disableUserErr = errors.New("业务失败：AD 返回非池侧错误")
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusFailed, row.Status,
+		"12 轮池侧故障后的首次业务失败不得直接判死（attempts 从 0 起算）")
+	assert.Equal(t, 1, row.Attempts, "首次业务失败才把 attempts 推到 1")
+	assert.NotContains(t, row.LastError, "pool:", "last_error 应反映本次真实业务失败原因")
 }
 
 // TestPhase58_Failover_AllDialFailureWrapsPoolSentinel H-04：所有账号**拨号**失败是池侧
