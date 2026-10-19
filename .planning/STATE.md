@@ -17,20 +17,28 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 executing (wave 0/6 done — 58-01 完成，58-02 待执行)
-**Last activity**: 2026-10-19 — execute-phase 58 plan 01：addomain 五表排水测试基座 + mockLDAPClient 调用计数 + Phase 57 遗留缺口 F-F/F-G/F-15/F-16 处置；Phase 57 sentinel 42 用例全绿
+**Status**: v1.21 Phase 58 executing (wave 1/6 done — 58-01 / 58-02 完成，58-03 待执行)
+**Last activity**: 2026-10-19 — execute-phase 58 plan 02：NormalizeDN / BuildOUDN 单一真实源 + D-02 最长后缀唯一匹配（逗号边界，8 用例含父子域反例）+ D-03 三处 First() 收敛（双份 getDefaultADConfigID 归零）；全仓 `go test ./...` exit 0，Phase 57 sentinel 绿
 
 ## Current Position
 
 Phase: 58 (排水器与 compare-and-move 推送) — Executing
-Plan: 58-02-PLAN.md 待执行（Wave 1：DN 单一真实源 + D-02 最长后缀唯一匹配 + HYGIENE-01 三处调用点收敛）
-Status: Phase 58 Wave 0 完成
-Last activity: 2026-10-19 -- 58-01 三个 task 落地（`31a34f90` / `5d63defb` / `6ee328e6`）
-Progress: 1/6 phases [█░░░░░░░░] 17%（4/10 plans）
+Plan: 58-03-PLAN.md 待执行（Wave 2：队列拾取谓词 + 退避曲线）
+Status: Phase 58 Wave 1 完成（58-02 已交付 DN 单一真实源 + D-02 后缀匹配 + HYGIENE-01 收敛）
+Last activity: 2026-10-19 -- 58-02 三个 task 落地（`b2909660` / `e1fca53a` / `fec65e7d`）
+Progress: 1/6 phases [█░░░░░░░░] 17%（5/10 plans）
 
 ## Accumulated Context
 
 ### Decisions
+
+- 58-02 执行期决策（2026-10-19，Wave 1 DN 单一真实源 + D-02 契约 + HYGIENE-01）：
+  - **`BuildOUDN` 用字符串拼接而非 `fmt.Sprintf("OU=%s,%s", ...)`**：plan 的 action 建议格式化串，但同 task 的验收断言要求 `grep -rn 'OU=%s,%s' --include=*.go internal/` 零命中 —— 冲突时以可证伪断言为准（拼接与格式化逐字等价），`dn_util.go` 的 `fmt` import 随之移除。
+  - **歧义（等长并列）的真实触发形态**：数学上两个等长但不同的字符串不可能同时是同一 DN 的逗号边界后缀，故等长并列只能是"两条启用配置归一后 base_dn 相同"（同一域重复配置）。`TestPhase58_MatchADConfigByDN_AmbiguousEqualsLength` 据此构造（`DC=corp,DC=com` / `dc=CORP,dc=COM`），断言强度未降低。
+  - **`MatchADConfigByDN` 的逗号边界推论**：DN 恰好等于 base_dn 时**不算命中**（需要 `,<base>` 前缀）——刻意如此，`sys_user.ad_dn` 恒为完整用户 DN（含 `CN=`），不会退化成域根。
+  - **`FirstSyncEnabledADConfigID` 不带 ORDER BY**：原 `ou_mapping_handler.go` 就是无序 `First`，收敛只消除重复实现、不改语义；加 ORDER BY 会静默改变取到的配置。
+  - **注释内不出现被删函数名字面量**：沿用 58-01 F-G 的 tombstone 口径，满足 `grep -rn "getDefaultADConfigIDForDept" internal/` 零命中的验收断言。
+  - **本 plan 标记 HYGIENE-01 / HYGIENE-02 为 complete**：本 plan 即为二者的全部落地范围（前缀匹配 helper 与全仓唯一拼接点）。
 
 - 58-01 执行期决策（2026-10-19，Wave 0 测试基座）：
   - **基座文件带 `!skip_db_tests` build tag**：新文件 `internal/services/addomain/ad_push_queue_drain_test.go` 引用同包 `fakePool78`（定义于带该 tag 的 `failover_client_78_07_test.go`），不加 tag 会让 `go vet -tags skip_db_tests ./internal/services/addomain/` 报 `undefined: fakePool78`（编译面回归）。默认构建行为不变。

@@ -27,8 +27,8 @@
 - [ ] **SHADOW-03**: 删除清理挂 `syncDataInternal`（复用 singleflight），不与全量同步并发
 
 ### 卫生与边界 (HYGIENE)
-- [ ] **HYGIENE-01**: 推送路径按用户 `ad_dn` 归属解析 AD 配置（消灭 `First()` 歧义）；`getDefaultADConfigID` 双份合并为公共 helper
-- [ ] **HYGIENE-02**: OU DN 拼接引入转义 helper（部门名特殊字符安全）
+- [x] **HYGIENE-01**: 推送路径按用户 `ad_dn` 归属解析 AD 配置（消灭 `First()` 歧义）；`getDefaultADConfigID` 双份合并为公共 helper（58-02）
+- [x] **HYGIENE-02**: OU DN 拼接引入转义 helper（部门名特殊字符安全）（58-02）
 - [ ] **HYGIENE-03**: 死代码清理：user_ou_service.go 整文件、GetUserDeptByADOU、BatchMoveUsersToNewOU、dept_ou_mapper.go:31 等过期注释及其测试
 - [ ] **HYGIENE-04**: 嵌套组 member DN 标记/过滤，不混入用户成员关系
 - [ ] **HYGIENE-05**: 同名兄弟部门生成相同 OU DN 时检测并告警，不静默互相覆盖映射
@@ -68,8 +68,8 @@
 | SHADOW-01 | Phase 61 | Pending |
 | SHADOW-02 | Phase 61 | Pending |
 | SHADOW-03 | Phase 61 | Pending |
-| HYGIENE-01 | Phase 58 | Pending |
-| HYGIENE-02 | Phase 58 | Pending |
+| HYGIENE-01 | Phase 58 | Complete（58-02） |
+| HYGIENE-02 | Phase 58 | Complete（58-02） |
 | HYGIENE-03 | Phase 62 | Pending |
 | HYGIENE-04 | Phase 62 | Pending |
 | HYGIENE-05 | Phase 62 | Pending |

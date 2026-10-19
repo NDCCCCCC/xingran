@@ -110,7 +110,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 58-02-PLAN.md — DN 单一真实源（NormalizeDN / BuildOUDN）+ D-02 最长后缀唯一匹配纯函数 + D-03 三处调用点收敛（HYGIENE-01, HYGIENE-02）
+- [x] 58-02-PLAN.md — DN 单一真实源（NormalizeDN / BuildOUDN）+ D-02 最长后缀唯一匹配纯函数 + D-03 三处调用点收敛（HYGIENE-01, HYGIENE-02）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-02-SUMMARY.md](phases/58-compare-and-move/58-02-SUMMARY.md)）
 
 **Wave 2**
 
@@ -203,7 +203,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
-| 58. 排水器与 compare-and-move 推送 | 1/7 | In progress (wave 0 done 2026-10-19) | - |
+| 58. 排水器与 compare-and-move 推送 | 2/7 | In progress (wave 1 done 2026-10-19) | - |
 | 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
