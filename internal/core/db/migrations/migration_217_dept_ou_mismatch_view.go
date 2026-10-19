@@ -110,7 +110,30 @@ func deptOUMismatchNormalizeSQL(col string) string {
 
 // buildDeptOUMismatchViewSelect 返回不含方言分叉的视图 SELECT body（两方言共用）。
 //
-// 列顺序即 D-11 的 11 列契约；第一分支决定列名，后续 UNION ALL 分支必须逐列对齐。
+// 列顺序即 D-11 的 11 列契约；第一分支决定列名，后续 UNION ALL 分支逐列对齐。
+//
+// 四类口径（D-10）：
+//
+//	① user_ou_mismatch   —— 用户 ad_ou_dn 与「其路由到的配置」下本部门映射的 ou_dn 不等（归一化比较）
+//	② dept_soft_deleted  —— 映射行的 dept_id 指向 sys_dept.deleted_at IS NOT NULL 的部门（部门级）
+//	③ mapping_disabled   —— 映射 sync_enabled=false 但该部门仍有活跃用户（部门级）
+//	④ config_unrouted    —— 用户 ad_ou_dn 无法归属任何 status=enabled 配置的 base_dn（用户级）
+//
+// 部门级分支（②③）的 user_id / username / user_ad_ou_dn 恒为 NULL（D-09）。
+//
+// ⚠ ② 与 ③ 可能对同一条映射行各出一行（软删部门 + 映射停用）—— 这是 UNION ALL 的预期语义，
+// 刻意不做互斥裁剪（plan objective 的 Decision Reconciliation 第 4 条）。
+//
+// ⚠ Known Gap（不扩口径）：D-10 四类**不含**「部门/用户在路由配置下没有任何映射」的用户；
+// 本 phase 只做可观测，不实现第五类（plan objective 第 2 条）。
+//
+// 最长后缀匹配（routed CTE）复刻 addomain.MatchADConfigByDN 的语义（D-12）：
+//   - 逗号边界：SUBSTR(...) = ',' || base 且 LENGTH(dn) > LENGTH(base)
+//   - 最长优先：best.nbl = MAX(nbl)
+//   - 等长并列 → 歧义 → 不可路由：best_cnt.cnt = 1 才产出 routed
+//     （Go 侧同名歧义返回 error，两者在「同域重复配置」输入上结论一致）
+//
+// 一致性测试落在 59-03（本计划只锁定 SQL 侧形状与语义）。
 func buildDeptOUMismatchViewSelect() string {
 	nBase := deptOUMismatchNormalizeSQL("base_dn")
 	nUserOU := deptOUMismatchNormalizeSQL("ad_ou_dn")
@@ -175,10 +198,70 @@ SELECT CAST(u.dept_id AS TEXT)          AS dept_id,
 FROM routed r
 JOIN usr u ON u.id = r.user_id
 JOIN cfg c ON c.id = r.config_id
-JOIN mp ON CAST(mp.dept_id AS TEXT) = u.dept_id
+-- ⚠ 两侧都 CAST：sys_dept_ou_mapping.dept_id 是 uuid（archived DDL 126），
+-- sys_user.dept_id 是 varchar（model tag size:64）。PG 没有 uuid = varchar 运算符，
+-- 只 CAST 一侧会报 "operator does not exist"；两侧同转 TEXT 则两种类型都成立。
+JOIN mp ON CAST(mp.dept_id AS TEXT) = CAST(u.dept_id AS TEXT)
        AND CAST(mp.ad_config_id AS TEXT) = CAST(r.config_id AS TEXT)
-LEFT JOIN sys_dept d ON CAST(d.id AS TEXT) = u.dept_id
-WHERE mp.nm <> u.nu`
+LEFT JOIN sys_dept d ON CAST(d.id AS TEXT) = CAST(u.dept_id AS TEXT)
+WHERE mp.nm <> u.nu
+
+UNION ALL
+
+SELECT CAST(mp.dept_id AS TEXT)          AS dept_id,
+       d.dept_name                       AS dept_name,
+       CAST(d.deleted_at AS TEXT)        AS dept_deleted_at,
+       CAST(mp.ad_config_id AS TEXT)     AS ad_config_id,
+       c.config_name                     AS config_name,
+       mp.ou_dn                          AS mapped_ou_dn,
+       CAST(NULL AS TEXT)                AS user_id,
+       CAST(NULL AS TEXT)                AS username,
+       CAST(NULL AS TEXT)                AS user_ad_ou_dn,
+       'dept_soft_deleted'               AS mismatch_type,
+       ('部门「' || d.dept_name || '」已软删（' || CAST(d.deleted_at AS TEXT) || '），映射仍指向该部门') AS mismatch_detail
+FROM mp
+JOIN sys_dept d ON d.id = mp.dept_id AND d.deleted_at IS NOT NULL
+LEFT JOIN sys_ad_config c ON c.id = mp.ad_config_id
+
+UNION ALL
+
+SELECT CAST(mp.dept_id AS TEXT)          AS dept_id,
+       d.dept_name                       AS dept_name,
+       CAST(d.deleted_at AS TEXT)        AS dept_deleted_at,
+       CAST(mp.ad_config_id AS TEXT)     AS ad_config_id,
+       c.config_name                     AS config_name,
+       mp.ou_dn                          AS mapped_ou_dn,
+       CAST(NULL AS TEXT)                AS user_id,
+       CAST(NULL AS TEXT)                AS username,
+       CAST(NULL AS TEXT)                AS user_ad_ou_dn,
+       'mapping_disabled'                AS mismatch_type,
+       ('部门「' || d.dept_name || '」的映射已停用，但仍有用户归属') AS mismatch_detail
+FROM mp
+JOIN sys_dept d ON d.id = mp.dept_id
+LEFT JOIN sys_ad_config c ON c.id = mp.ad_config_id
+WHERE NOT mp.sync_enabled
+  AND EXISTS (
+      SELECT 1 FROM sys_user u2
+      WHERE CAST(u2.dept_id AS TEXT) = CAST(mp.dept_id AS TEXT)
+        AND u2.deleted_at IS NULL
+  )
+
+UNION ALL
+
+SELECT CAST(u.dept_id AS TEXT)           AS dept_id,
+       d.dept_name                       AS dept_name,
+       CAST(d.deleted_at AS TEXT)        AS dept_deleted_at,
+       CAST(NULL AS TEXT)                AS ad_config_id,
+       CAST(NULL AS TEXT)                AS config_name,
+       CAST(NULL AS TEXT)                AS mapped_ou_dn,
+       CAST(u.id AS TEXT)                AS user_id,
+       u.username                        AS username,
+       u.ad_ou_dn                        AS user_ad_ou_dn,
+       'config_unrouted'                 AS mismatch_type,
+       ('用户 OU「' || u.ad_ou_dn || '」不匹配任何启用配置的 base_dn') AS mismatch_detail
+FROM usr u
+LEFT JOIN sys_dept d ON CAST(d.id AS TEXT) = CAST(u.dept_id AS TEXT)
+WHERE NOT EXISTS (SELECT 1 FROM routed r WHERE r.user_id = u.id)`
 }
 
 // Migrate217DeptOUMismatchView 创建/刷新部门↔OU 对账普通视图（Phase 59 GUARD-02 / D-09~D-13）。
