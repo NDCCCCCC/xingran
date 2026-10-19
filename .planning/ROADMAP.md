@@ -185,7 +185,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 
 **Plans**: 4 plans (3 waves)
 **Wave 1**
-- [ ] 59-01-PLAN.md — GUARD-01 登录回写守卫：活跃 update_user 队列行拦截 + WARN + 查询失败保守降级
+- [x] 59-01-PLAN.md — GUARD-01 登录回写守卫：活跃 update_user 队列行拦截 + WARN + 查询失败保守降级（2026-10-19, `3ba3b124` + `7334e169`）
 - [ ] 59-02-PLAN.md — GUARD-02 数据底座：migration_217 双方言普通视图 v_dept_ou_mismatch + 三路径注册 + AutoMigrate 前置 DROP
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -243,7 +243,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
 | 58. 排水器与 compare-and-move 推送 | 6/7 | In progress (wave 5 done 2026-10-19, SC6 终态达成) | - |
-| 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
+| 59. 登录回写守卫与部门对账视图 | 1/4 | In progress (59-01 done 2026-10-19) | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
 | 62. 卫生收尾与死代码清理 | 0/TBD | Not started | - |

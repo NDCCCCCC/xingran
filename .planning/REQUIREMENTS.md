@@ -6,6 +6,7 @@
 ## v1.21 Requirements
 
 ### 队列与推送可靠性 (QUEUE)
+
 - [x] **QUEUE-01**: 管理员编辑用户（部门/昵称/邮箱/手机）后，变更在**业务事务内**写入 `ad_push_queue`，进程重启不丢失
 - [x] **QUEUE-02**: 同一用户短时间内多次编辑时，队列**按实体合并**仅保留最新待推送状态，不丢弃后一次编辑
 - [x] **QUEUE-03**: 后台排水器（in-process cron，**不注册 sys_job**）按退避重试失败行，达上限转终态且可查询
@@ -14,19 +15,23 @@
 - [x] **QUEUE-06**: sys 删除用户时入队 **disable AD 账号**动作，闭环"已删用户经 AD 登录复活"链路
 
 ### 登录回写守卫 (GUARD)
-- [ ] **GUARD-01**: AD 登录写 dept 前，若该用户存在 pending/failed 的 dept 队列行则**跳过覆盖 + WARN**（本地编辑不被 AD 旧值回滚）
+
+- [x] **GUARD-01**: AD 登录写 dept 前，若该用户存在 pending/failed 的 dept 队列行则**跳过覆盖 + WARN**（本地编辑不被 AD 旧值回滚）
 - [ ] **GUARD-02**: `v_dept_ou_mismatch` 普通 SQL VIEW + 只读端点，展示 dept↔OU 不一致及"映射指向软删部门"条目
 
 ### 软删恢复安全 (SAFE)
+
 - [ ] **SAFE-01**: `catSoftDeleted` 恢复前校验 AD 当前 DN 与存量 `ad_dn` 一致，不一致拒绝恢复 + 安全审计日志
 - [ ] **SAFE-02**: 登录路径与 batch-sync 共用分类逻辑与校验，行为一致
 
 ### 影子表完整性 (SHADOW)
+
 - [ ] **SHADOW-01**: 全量同步末尾对 AD 端已消失的 `sys_ad_user/ou/computer` 软删除，复用两道闸门（LDAP 0 条拒绝 / 拟删 >50% 拒绝）
 - [ ] **SHADOW-02**: `sys_ad_group_member` 重放改为**事务包裹**，消除空成员可见窗口
 - [ ] **SHADOW-03**: 删除清理挂 `syncDataInternal`（复用 singleflight），不与全量同步并发
 
 ### 卫生与边界 (HYGIENE)
+
 - [x] **HYGIENE-01**: 推送路径按用户 `ad_dn` 归属解析 AD 配置（消灭 `First()` 歧义）；`getDefaultADConfigID` 双份合并为公共 helper（58-02）
 - [x] **HYGIENE-02**: OU DN 拼接引入转义 helper（部门名特殊字符安全）（58-02）
 - [ ] **HYGIENE-03**: 死代码清理：user_ou_service.go 整文件、GetUserDeptByADOU、BatchMoveUsersToNewOU、dept_ou_mapper.go:31 等过期注释及其测试
@@ -61,7 +66,7 @@
 | QUEUE-04 | Phase 58 | Done (2026-10-19, Phase 58 verified — 58-04 compareAndMoveOU + 闭包重读 + NormalizeDN 归一化比较；58-07 端到端证据 `TestPhase58_EndToEnd_RepeatDrainIdempotent` PASS，第二轮 MoveUser 累计仍 1 次。证据：58-VERIFICATION.md SC2。⚠ 真域控 ModifyDN 有效性留 UAT-58-1) |
 | QUEUE-05 | Phase 58 | Done (2026-10-19, Phase 58 verified — 58-04 code 32 → dead 终态 + 清空 ad_dn + 不烧 attempts；58-07 端到端证据 `TestPhase58_EndToEnd_Code32ThenNoRetry` PASS，第二轮零 AD 写。证据：58-VERIFICATION.md SC5。⚠ 真域控 code 32 触发留 UAT-58-5) |
 | QUEUE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
-| GUARD-01 | Phase 59 | Pending |
+| GUARD-01 | Phase 59 | Complete |
 | GUARD-02 | Phase 59 | Pending |
 | SAFE-01 | Phase 60 | Pending |
 | SAFE-02 | Phase 60 | Pending |

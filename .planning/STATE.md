@@ -4,36 +4,36 @@ milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 59
 current_phase_name: 登录回写守卫与部门对账视图
-status: in_progress
-stopped_at: Phase 59 UI-SPEC approved
-last_updated: "2026-10-19T12:44:33.161Z"
+status: executing
+stopped_at: Completed 59-01-PLAN.md
+last_updated: "2026-10-19T13:08:50.711Z"
 last_activity: 2026-10-19
-last_activity_desc: Phase 59 上下文已收集（16 项决策 D-01~D-17）；下一步 /gsd-plan-phase 59
-state_head: 0394c32dcaeec3b943818d63bdb9f21544b78b5a
+last_activity_desc: Phase 59 execution started
+state_head: 7334e169a22dffd49a538c6df72190ffcf9ecf23
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 10
-  percent: 17
+  completed_plans: 11
+  percent: 33
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 COMPLETE（含复审与补修闭环）；Phase 59 上下文已收集，待规划
-**Last activity**: 2026-10-19 — Phase 59 上下文已收集（`f0783fe9`）：16 项决策 D-01~D-17，涵盖守卫判定（只拦 dept_id / 复用活跃谓词 / EXISTS / 查询失败跳过覆盖）、对账视图（单视图 UNION ALL 四类 / 部门+用户双维度 11 列 / 第四类纯 SQL）、端点与前端（`ops:ad:config:reconciliation:list` / POST 分页 / 嵌入 AD 配置页 Tab）
+**Status**: Ready to execute
+**Last activity**: 2026-10-19
 **Previous activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
 **Earlier activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
 
 ## Current Position
 
-Phase: 59 (登录回写守卫与部门对账视图) — READY TO EXECUTE
-Plan: 下一步 = `/gsd-plan-phase 59`（GUARD-01 信号守卫 + GUARD-02 对账 VIEW）
-Status: Phase 58 已闭环（含复审与补修）；Phase 59 决策已锁定于 59-CONTEXT.md（D-01~D-17），待研究+规划
-Last activity: 2026-10-19 -- Phase 59 上下文收集（`f0783fe9`）
-Progress: 2/6 phases [██░░░░░░░░] 17%（10/10 plans）
+Phase: 59 (登录回写守卫与部门对账视图) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-10-19 — Phase 59 execution started
+Progress: 2/6 phases [███░░░░░░░] 33%（10/10 plans）
 
 ## Accumulated Context
 
@@ -135,6 +135,7 @@ Progress: 2/6 phases [██░░░░░░░░] 17%（10/10 plans）
 - 排水必须 compare-and-move（闭包内重读 + NormalizeDN 归一化比较），禁用新旧值比较（会激活未验证的 MoveUser 重试分支）
 - ErrADTargetNotFound → outbox 终态，防"清 DN→重推"死循环
 - Roadmap 依赖约束（三方审计，已落图）：队列基建(57) → GUARD-01(59)；HYGIENE-01 与 QUEUE-04 同在 Phase 58 且 helper 先落地；SAFE(60)/SHADOW(61) 与 QUEUE 相互独立可并行；HYGIENE-03(62) 必须在 SAFE-01(60) 之后
+- [Phase 59]: 59-01 执行期决策（2026-10-19）：GUARD-01 守卫只包住唯一 dept_id Update 调用，谓词逐字复用 models.ADPushQueueActivePredicate（1 处引用）；查询失败按 D-07 与命中同等跳过并 WARN；6 个用例用真实 DeptOUmapper + ad_username 正向锚定，防空跑。测试文件同时作为 59-02 前的守卫回归基线。
 
 ### Blockers
 
@@ -156,6 +157,12 @@ Progress: 2/6 phases [██░░░░░░░░] 17%（10/10 plans）
 
 ## Session
 
-**Last session:** 2026-10-19T10:09:57.193Z
-**Stopped at:** Phase 59 UI-SPEC approved
-**Resume file:** .planning/phases/59-ad-login-guard-reconciliation/59-UI-SPEC.md
+**Last session:** 2026-10-19T13:08:50.496Z
+**Stopped at:** Completed 59-01-PLAN.md
+**Resume file:** None
+
+## Performance Metrics
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 59 P01 | 12min | 2 tasks | 2 files |
