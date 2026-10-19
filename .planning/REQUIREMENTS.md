@@ -8,7 +8,7 @@
 ### 队列与推送可靠性 (QUEUE)
 - [x] **QUEUE-01**: 管理员编辑用户（部门/昵称/邮箱/手机）后，变更在**业务事务内**写入 `ad_push_queue`，进程重启不丢失
 - [x] **QUEUE-02**: 同一用户短时间内多次编辑时，队列**按实体合并**仅保留最新待推送状态，不丢弃后一次编辑
-- [ ] **QUEUE-03**: 后台排水器（in-process cron，**不注册 sys_job**）按退避重试失败行，达上限转终态且可查询
+- [x] **QUEUE-03**: 后台排水器（in-process cron，**不注册 sys_job**）按退避重试失败行，达上限转终态且可查询
 - [ ] **QUEUE-04**: 排水执行 OU 移动采用 **compare-and-move**（闭包内重读最新值 + NormalizeDN 归一化比较），仅在需要时 MoveUser，重复排水幂等
 - [ ] **QUEUE-05**: LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，不进重试循环
 - [x] **QUEUE-06**: sys 删除用户时入队 **disable AD 账号**动作，闭环"已删用户经 AD 登录复活"链路
@@ -57,7 +57,7 @@
 |-------------|-------|--------|
 | QUEUE-01 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | QUEUE-02 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
-| QUEUE-03 | Phase 58 | Pending |
+| QUEUE-03 | Phase 58 | Complete (2026-10-19, 58-05: cron 接线 + sys_config 单旋钮 + 禁 sys_job 证伪) |
 | QUEUE-04 | Phase 58 | Pending |
 | QUEUE-05 | Phase 58 | Pending |
 | QUEUE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |

@@ -3,34 +3,43 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 status: in_progress
-last_updated: "2026-10-19T10:45:00.000Z"
-last_activity: 2026-10-19 -- Phase 58 Wave 3（58-04）执行完成：compare-and-move 幂等 OU 移动 + F-A 三处载体回写 ad_dn + F-B 配置作用域 OU 查询 + OU 路径 code 32 终态 + 终态不被 markPushed 覆盖
+last_updated: "2026-10-19T11:35:00.000Z"
+last_activity: 2026-10-19 -- Phase 58 Wave 4（58-05）执行完成：cron 接线（Start() 第三个 AddJob，AddJob + NewChain + FuncJob）+ sys_config 单旋钮（migration_216 幂等 seed 三路径注册 + LoadDrainIntervalSeconds + SecondsToCronSpec 行为断言）+ 禁 sys_job 静态证伪（grep 输出 0 行）
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
-  percent: 70
+  completed_plans: 8
+  percent: 80
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 executing (wave 3/6 done — 58-01 / 58-02 / 58-03 / 58-04 完成，58-05 待执行)
-**Last activity**: 2026-10-19 — execute-phase 58 plan 04：compare-and-move 幂等 OU 移动（NormalizeDN 比较 → 一致跳过 MoveUser）+ F-A 三处载体（drainer/moveUserToNewOU/moveSingleUserToOU）同时回写 ad_dn 与 ad_ou_dn + F-B 配置作用域 OU 查询（不跨域）+ OU 路径 code 32 转 dead + 终态在 markPushed 之前短路；28 个用例全绿，全仓 `go test ./...` exit 0，Phase 57 sentinel 绿
+**Status**: v1.21 Phase 58 executing (wave 4/6 done — 58-01 / 58-02 / 58-03 / 58-04 / 58-05 完成，58-06 待执行)
+**Last activity**: 2026-10-19 — execute-phase 58 plan 05：cron 接线（Start() 第三个 AddJob 驱动 DrainOnce，AddJob + NewChain(Recover, SkipIfStillRunning) + FuncJob 而非 AddFunc）+ sys_config 单旋钮 ad_push_queue.drain_interval_seconds（migration_216 幂等 seed，PG/sqlite/SKIP_AUTOMIGRATE 三路径注册，垃圾值兜底 30s）+ SecondsToCronSpec 6 段 spec 映射（合法值行为断言可被 cron parser 解析，非法值回落）+ 禁 sys_job 静态证伪（grep 输出 0 行）+ 账号池经 s.getPool() 字面取全局单例（NewAccountPool 计数 == 3 基线守住）
 
 ## Current Position
 
 Phase: 58 (排水器与 compare-and-move 推送) — Executing
-Plan: 58-05-PLAN.md 待执行（Wave 4：cron 接线 + sys_config 单旋钮 + 禁 sys_job）
-Status: Phase 58 Wave 3 完成（58-04 已交付 compare-and-move 执行面：`compareAndMoveOU` 返回 `(terminal, err)`、目标 OU 走 `FindOUDNByDeptIDForConfig`、F-A 三处载体全部双写 ad_dn）
-Last activity: 2026-10-19 -- 58-04 三个 task 落地（`44b4b958` / `f00f41b1` / `c89b4835`）
-Progress: 1/6 phases [█░░░░░░░░] 17%（7/10 plans）
+Plan: 58-06-PLAN.md 待执行（Wave 5：SC6 删两条直推路径 + EnqueueUpdateBatch 批量入队 + F-07 入队侧 Pluck + F-10 两个回滚用例）
+Status: Phase 58 Wave 4 完成（58-05 已交付 cron 接线：AddJob + NewChain + FuncJob；sys_config 单旋钮三路径注册；禁 sys_job 静态证伪 0 行；本 plan 标记 QUEUE-03 为 complete）
+Last activity: 2026-10-19 -- 58-05 两个 task 落地（`721d2890` / `1bcd3106`）
+Progress: 1/6 phases [████████░░] 80%（8/10 plans）
 
 ## Accumulated Context
 
 ### Decisions
+
+- 58-05 执行期决策（2026-10-19，Wave 4 cron 接线 + sys_config 单旋钮 + 禁 sys_job）：
+  - **D-05 单旋钮仅进 sys_config 一项**：`ad_push_queue.drain_interval_seconds`（默认 30s，建议 30，域控压力大时可放宽到 300），与 `network.connection_pool.*` 同档（web 可改、改后重启生效）。
+  - **迁移 216 在 PG / sqlite / BootstrapMissingTables 三路径均注册一次**（Phase 57 F-03 同款盲区：旁路曾漏建 ad_push_queue 表致运行期 ON CONFLICT 42P10 全线 500）。三处错误档位统一为 `applogger.Errorf` 非阻断；缺旋钮只让 `LoadDrainIntervalSeconds` 回落默认 30s。
+  - **Seed 失败为非阻断档**（与 `ensureADPushQueue` 的阻断档区分）：缺队列表会让入队 ON CONFLICT 42P10 致业务事务回滚，缺旋钮只让频率回落默认 30s。
+  - **Pool 计数基线 3 不动**（`internal/scheduler/ad_sync_tasks.go:106` 熔断恢复任务局部池 + `:125` 全局单例 + `getPool()` 惰性兜底）—— 删任一处会破坏既有路径；把断言写成 `== 1` 或 `== 2` 同样属于破坏。
+  - **`s.db == nil` 守卫（仅测试构造）**：`TestADSyncScheduler_StartStop` 用 `NewADSyncScheduler(nil, 5)`，原 `Start()` 只调 `AddFunc`（无 DB 依赖）；新接线下 `LoadDrainIntervalSeconds(nil)` 会 nil 解引用 panic。在 `Start()` 内 `LoadDrainIntervalSeconds` 之前加 `if s.db != nil { ... }`（默认 `drainSpec = "*/30 * * * * *"`）。生产路径（`StartADSyncScheduler(db)` 永远非 nil）语义不变。
+  - **本 plan 标记 QUEUE-03 为 complete**（cron 接线落地、禁 sys_job 静态证伪、spec 校验闭环）；QUEUE-04/QUEUE-05 沿用分档口径由 58-07 回填。
+  - **规整 SC1 注释措辞**：注释本身不能与 `ad_push_queue` 同行出现 `sys_job` 字面（否则 plan 自己的 grep 证伪会因注释自指假阳）；`addomain.NewAccountPool` 字面同理不进注释（保持 grep 计数 == 3）。两处矛盾均以"plan 自己写的可证伪断言"为准裁决（与 58-02/58-03/58-04 同款处置口径）。
 
 - 58-04 执行期决策（2026-10-19，Wave 3 compare-and-move + F-A/F-B）：
   - **F-A 同时回写 `ad_dn` 与 `ad_ou_dn`（三处载体）**：`MoveUser`（ModifyDN, deleteOldRDN=true）后 AD 侧 DN 已变；只回写 `ad_ou_dn` 会让 D-02 的下一轮按陈旧 DN 解析归属配置 → 跨域移动后误判「配置无匹配」→ 误转 dead，且属性 Modify 会打到旧 DN → 二次 code 32。落点：排水器 `compareAndMoveOU` 第 5 步 + `user_ad_sync_service.go:135`（moveUserToNewOU）+ `:328`（moveSingleUserToOU），三处均为 `Updates(map){ad_dn: extractRDNFromDN(旧 ad_dn)+","+新 OU, ad_ou_dn: 新 OU}`（`Unscoped()`，因软删用户也要能回写）。

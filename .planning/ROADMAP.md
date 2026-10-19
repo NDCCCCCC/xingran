@@ -122,7 +122,7 @@ Plans:
 
 **Wave 4**
 
-- [ ] 58-05-PLAN.md — cron 接线（Start() 第三个 AddJob）+ migration_216 sys_config 单旋钮 + SecondsToCronSpec + 禁 sys_job 证伪（QUEUE-03）
+- [x] 58-05-PLAN.md — cron 接线（Start() 第三个 AddJob）+ migration_216 sys_config 单旋钮 + SecondsToCronSpec + 禁 sys_job 证伪（QUEUE-03）— 2/2 tasks，completed 2026-10-19（SUMMARY: [58-05-SUMMARY.md](phases/58-compare-and-move/58-05-SUMMARY.md)）
 
 **Wave 5**
 
@@ -203,7 +203,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
-| 58. 排水器与 compare-and-move 推送 | 4/7 | In progress (wave 3 done 2026-10-19) | - |
+| 58. 排水器与 compare-and-move 推送 | 5/7 | In progress (wave 4 done 2026-10-19) | - |
 | 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
