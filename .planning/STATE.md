@@ -3,34 +3,46 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 status: in_progress
-last_updated: "2026-10-19T11:35:00.000Z"
-last_activity: 2026-10-19 -- Phase 58 Wave 4（58-05）执行完成：cron 接线（Start() 第三个 AddJob，AddJob + NewChain + FuncJob）+ sys_config 单旋钮（migration_216 幂等 seed 三路径注册 + LoadDrainIntervalSeconds + SecondsToCronSpec 行为断言）+ 禁 sys_job 静态证伪（grep 输出 0 行）
+last_updated: "2026-10-19T12:20:00.000Z"
+last_activity: 2026-10-19 -- Phase 58 Wave 5（58-06）执行完成：SC6 终态达成（两条遗留直推路径全删，5 条 grep 静态证伪全部 == 0，未加任何互斥开关）+ D-01 EnqueueUpdateBatch 无 diff 批量入队变体（5 用例）+ F-07 入队侧 Pluck 掐根（Pluck:657 < 软删:662）+ F-10 两个删除回滚用例
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
-  percent: 80
+  completed_plans: 9
+  percent: 90
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 executing (wave 4/6 done — 58-01 / 58-02 / 58-03 / 58-04 / 58-05 完成，58-06 待执行)
-**Last activity**: 2026-10-19 — execute-phase 58 plan 05：cron 接线（Start() 第三个 AddJob 驱动 DrainOnce，AddJob + NewChain(Recover, SkipIfStillRunning) + FuncJob 而非 AddFunc）+ sys_config 单旋钮 ad_push_queue.drain_interval_seconds（migration_216 幂等 seed，PG/sqlite/SKIP_AUTOMIGRATE 三路径注册，垃圾值兜底 30s）+ SecondsToCronSpec 6 段 spec 映射（合法值行为断言可被 cron parser 解析，非法值回落）+ 禁 sys_job 静态证伪（grep 输出 0 行）+ 账号池经 s.getPool() 字面取全局单例（NewAccountPool 计数 == 3 基线守住）
+**Status**: v1.21 Phase 58 executing (wave 5/6 done — 58-01 ~ 58-06 完成，58-07 待执行)
+**Last activity**: 2026-10-19 — execute-phase 58 plan 06：SC6 终态（单用户编辑 goroutine 直推 + 导入后 triggerADSyncAfterImport 两条路径连同 adSyncInFlight 字段 / 四字段 map 构造方法全删，5 条 grep 静态证伪 == 0）+ D-01 EnqueueUpdateBatch 批量入队变体（空切片 no-op / 去重 / IsADSyncEnabled 门控 / 合并 / 无 diff / 错误上抛 六语义各有断言）+ 导入路径改同步 enqueueImportUsersToAD（自开短事务，ExcelService 事务已提交 = 已接受的例外）+ F-07 BatchDelete 入队前 Pluck 存在性过滤（只对真实存在的行入队，位置铁律：Pluck 必须早于软删语句）+ F-10 两个删除回滚用例
 
 ## Current Position
 
 Phase: 58 (排水器与 compare-and-move 推送) — Executing
-Plan: 58-06-PLAN.md 待执行（Wave 5：SC6 删两条直推路径 + EnqueueUpdateBatch 批量入队 + F-07 入队侧 Pluck + F-10 两个回滚用例）
-Status: Phase 58 Wave 4 完成（58-05 已交付 cron 接线：AddJob + NewChain + FuncJob；sys_config 单旋钮三路径注册；禁 sys_job 静态证伪 0 行；本 plan 标记 QUEUE-03 为 complete）
-Last activity: 2026-10-19 -- 58-05 两个 task 落地（`721d2890` / `1bcd3106`）
-Progress: 1/6 phases [████████░░] 80%（8/10 plans）
+Plan: 58-07-PLAN.md 待执行（Wave 6：端到端用例 + 全量回归 + SC1~6 逐条证据核对 + 人工 UAT 清单 + REQUIREMENTS Traceability 回填）
+Status: Phase 58 Wave 5 完成（58-06 已交付 SC6 终态：AD 推送唯一通路 = ad_push_queue → DrainOnce；两条直推零残留，5 条 grep 证伪 == 0）
+Last activity: 2026-10-19 -- 58-06 三个 task 落地（`253461c2` / `ab8a7231` / `9c2dc88d`）
+Progress: 1/6 phases [█████████░] 90%（9/10 plans）
 
 ## Accumulated Context
 
 ### Decisions
+
+- 58-06 执行期决策（2026-10-19，Wave 5 SC6 + D-01 批量入队 + F-07/F-10）：
+  - **SC6 是硬删除，不加互斥开关**：ROADMAP 明文拒绝「两者并存 + 互斥」路线，故 `user_handler.go` 的单用户编辑直推与 `user_import_handler.go` 的导入直推**均整块删除**，无 feature flag / 无 config toggle。SC6 的残留证据由 5 条 grep 静态证伪承担（期望值全 0）。
+  - **被删注释里不写字面名**：SC6 断言是 grep == 0，注释自指会让断言假阳（58-05 同款矛盾）。注释改写为「按用户 ID 的 in-flight 去重」「四字段 map 构造方法」「已删除的导入后直推方法」，并在注释里写明**为什么**不写字面名，避免后来者"好心"补回去。
+  - **`userADSyncService` 字段保留**（Q5）：grep 确认 `SyncManagers`（`user_import_handler.go:226/231`）仍用；`NewUserHandler` 可变参构造与 `user_router.go:38` 注入不动。连带 `user_handler.go` 的 `addomain` import 与 `user_import_handler.go` 的 `context` / `models` import 均**必须保留**，只删 `errors` / `time` / `sync`（逐个 `go build` 确认，不凭猜删）。
+  - **`EnqueueUpdateBatch` 不做 diff，且这一差异必须可证伪**：plan 描述的 `NoDiffFiltering` 用例单独写会**不可证伪**（"无条件对所有 id 入队"的错误实现同样变绿）。改为先跑 diff 变体 `EnqueueUpdateIfChanged` 断言**不入队**、再跑批量变体断言**入队 2 行**。同理 `MergeOnSecondCall` 追加"把两行打回 failed 再入队 → status 回 pending + attempts 归零"作为「合并 ≠ 幂等跳过」的判别式。两处**提高**断言强度。
+  - **`EnqueueUpdateBatch` 不做 F-01 压制**：压制只发生在 disable 打 update_user 上，update 之间无压制关系。且它**只产 `update_user` 行**，disable 仍只由 `Delete`/`BatchDelete`/`UpdateStatus` 三条 service 事务路径产生（T-58-06-04）。
+  - **F-07 Pluck 位置铁律**：`tx.Model(&models.User{})` 走 GORM 默认软删作用域（自动追加 `deleted_at IS NULL`），Pluck **必须排在软删语句之前**，否则本轮刚软删的行被过滤成空 → `EnqueueDisable` 变 no-op → Phase 57 `TestPhase57_UserService_BatchDelete_EnqueuesDisable` 必红。`Unscoped()` 备选**显式禁用**：会把历史已软删、本轮未删的 id 算进 `existing`，破坏「入队数 == 软删数」的可断言性。不变量：`len(入队 disable 行) == len(existing) == 实际软删数`。
+  - **`Delete`（单条）不动**：事务外 `First` 已保证 id 存在，CONTEXT D-04 只锁 BatchDelete。
+  - **D-01 的事务外例外照实写注释、不重构**：入队在 `ExcelService.ImportData` 的 `Transaction` 提交**之后**（`excel_service.go:427`），是 outbox-lite「同生共死」不变量的**一处已接受例外**（进程崩溃窗口丢推送）。CONTEXT 记录为用户批准的取舍，本 plan **未**重构 ExcelService 事务去关闭该窗口。
+  - **Phase 57 sentinel 实测是 41 个顶层用例，不是 plan/CONTEXT 写的 42**：把 `internal/` 回退到 pre-plan 的 `d41e16cb` 重跑同样 41 → 非回归，是文档计数口径差。58-07 勿按 42 核对。
+  - **本 plan 不新标 QUEUE-04 / QUEUE-05 为 complete**：沿用 58-03/58-04/58-05 分档口径（实现已由 58-04 落地，端到端证据归 58-07 回填）；REQUIREMENTS traceability 表改为 In Progress 并注明 58-04 已交付 + 58-07 回填。
 
 - 58-05 执行期决策（2026-10-19，Wave 4 cron 接线 + sys_config 单旋钮 + 禁 sys_job）：
   - **D-05 单旋钮仅进 sys_config 一项**：`ad_push_queue.drain_interval_seconds`（默认 30s，建议 30，域控压力大时可放宽到 300），与 `network.connection_pool.*` 同档（web 可改、改后重启生效）。

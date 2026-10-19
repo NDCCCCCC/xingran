@@ -57,9 +57,9 @@
 |-------------|-------|--------|
 | QUEUE-01 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | QUEUE-02 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
-| QUEUE-03 | Phase 58 | Complete (2026-10-19, 58-05: cron 接线 + sys_config 单旋钮 + 禁 sys_job 证伪) |
-| QUEUE-04 | Phase 58 | Pending |
-| QUEUE-05 | Phase 58 | Pending |
+| QUEUE-03 | Phase 58 | Complete (2026-10-19, 58-05: cron 接线 + sys_config 单旋钮 + 禁 sys_job 证伪；58-06 收尾：SC6 两条直推路径删除后，队列成为 AD 推送唯一通路) |
+| QUEUE-04 | Phase 58 | In Progress (2026-10-19, 58-04: compareAndMoveOU + 闭包重读 + NormalizeDN 归一化比较，23/23 PASS；58-07 回填端到端证据后转 Complete) |
+| QUEUE-05 | Phase 58 | In Progress (2026-10-19, 58-04: code 32 → dead 终态 + 清空 ad_dn + 不烧 attempts；58-07 回填端到端证据后转 Complete) |
 | QUEUE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | GUARD-01 | Phase 59 | Pending |
 | GUARD-02 | Phase 59 | Pending |

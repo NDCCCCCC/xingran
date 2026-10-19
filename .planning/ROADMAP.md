@@ -126,7 +126,7 @@ Plans:
 
 **Wave 5**
 
-- [ ] 58-06-PLAN.md — SC6：删除两条直推路径 + EnqueueUpdateBatch 批量入队 + F-07 入队侧 Pluck + F-10 两个回滚用例（QUEUE-03）
+- [x] 58-06-PLAN.md — SC6：删除两条直推路径 + EnqueueUpdateBatch 批量入队 + F-07 入队侧 Pluck + F-10 两个回滚用例（QUEUE-03）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-06-SUMMARY.md](phases/58-compare-and-move/58-06-SUMMARY.md)）
 
 **Wave 6**
 
@@ -203,7 +203,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
-| 58. 排水器与 compare-and-move 推送 | 5/7 | In progress (wave 4 done 2026-10-19) | - |
+| 58. 排水器与 compare-and-move 推送 | 6/7 | In progress (wave 5 done 2026-10-19, SC6 终态达成) | - |
 | 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
