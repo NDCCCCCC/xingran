@@ -1,0 +1,18 @@
+/**
+ * Phase 59 / GUARD-02 — 对账 Tab 专属样式
+ *
+ * 唯一目的：把共享组件 EmptyStateWithAction 内部以 inline style 渲染的空态标题
+ * （fontSize 16 / fontWeight 500，EmptyStateWithAction.tsx）覆盖为契约字重
+ * 600（59-UI-SPEC.md Typography：Heading = 16px/600）。
+ *
+ * 机制说明：CSS 层叠中作者样式表的 `!important` 声明压过非 `!important` 的
+ * inline 声明，因此「本 Tab 专属包裹类 + !important」是唯一不改共享组件的
+ * 可行覆盖方式（仓库先例：src/components/shared/ActionButtons.css）。
+ * 共享组件零改动、不加 props；jsdom 不计算层叠样式，本规则不做 vitest
+ * 断言，由视觉 / UAT 复核（59-VALIDATION Manual-Only）。
+ *
+ * 刻意只写 font-weight，不写任何颜色（UI-SPEC 硬约束：Tab 内禁 hex 色值）。
+ */
+.reconciliation-tab-empty .ant-empty-description > div > div:first-child {
+  font-weight: 600 !important;
+}

@@ -30,6 +30,8 @@ import type { SimpleDept } from "@/lib/dutyApi";
 import DepartmentTreeSelect from "@/components/shared/DepartmentTreeSelect";
 import EmptyStateWithAction from "@/components/shared/EmptyStateWithAction";
 import ErrorAlertWithRetry from "@/components/shared/ErrorAlertWithRetry";
+// 本 Tab 专属样式：空态标题字重 600 !important 覆盖共享组件的 inline 16px/500（见 css 文件头注释）
+import "./ReconciliationTab.css";
 
 /** D-15 锁定的权限点（与后端 RequirePermissions / migration_218 同一字面） */
 export const RECONCILIATION_PERM = "ops:ad:config:reconciliation:list";
@@ -282,10 +284,12 @@ const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) =
           onRetry={loadList}
         />
       ) : list.length === 0 && !loading ? (
-        <EmptyStateWithAction
-          title="未发现不一致条目"
-          description="当前视图为实时计算。可调整筛选条件，或先在「配置列表」完成部门同步后再查看。"
-        />
+        <div className="reconciliation-tab-empty">
+          <EmptyStateWithAction
+            title="未发现不一致条目"
+            description="当前视图为实时计算。可调整筛选条件，或先在「配置列表」完成部门同步后再查看。"
+          />
+        </div>
       ) : (
         <Table<DeptOUMismatchRow>
           rowKey={rowKeyOf}
