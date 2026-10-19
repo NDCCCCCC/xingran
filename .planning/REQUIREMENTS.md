@@ -67,7 +67,7 @@
 | QUEUE-05 | Phase 58 | Done (2026-10-19, Phase 58 verified — 58-04 code 32 → dead 终态 + 清空 ad_dn + 不烧 attempts；58-07 端到端证据 `TestPhase58_EndToEnd_Code32ThenNoRetry` PASS，第二轮零 AD 写。证据：58-VERIFICATION.md SC5。⚠ 真域控 code 32 触发留 UAT-58-5) |
 | QUEUE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | GUARD-01 | Phase 59 | Complete |
-| GUARD-02 | Phase 59 | Pending |
+| GUARD-02 | Phase 59 | In Progress (59-02 数据底座 `v_dept_ou_mismatch` 已交付；只读端点归 59-03、前端 Tab 归 59-04) |
 | SAFE-01 | Phase 60 | Pending |
 | SAFE-02 | Phase 60 | Pending |
 | SHADOW-01 | Phase 61 | Pending |

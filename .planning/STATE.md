@@ -5,16 +5,16 @@ milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 59
 current_phase_name: 登录回写守卫与部门对账视图
 status: executing
-stopped_at: Completed 59-01-PLAN.md
-last_updated: "2026-10-19T13:08:50.711Z"
+stopped_at: Completed 59-02-PLAN.md
+last_updated: "2026-10-19T13:32:07.199Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 59 execution started
-state_head: 7334e169a22dffd49a538c6df72190ffcf9ecf23
+state_head: bda1e0028be22cb517b19ccdf604a366cef7cfb1
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 33
 ---
 
@@ -30,10 +30,10 @@ progress:
 ## Current Position
 
 Phase: 59 (登录回写守卫与部门对账视图) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 59 execution started
-Progress: 2/6 phases [███░░░░░░░] 33%（10/10 plans）
+Progress: 2/6 phases [███░░░░░░░] 33%（12/14 plans）
 
 ## Accumulated Context
 
@@ -136,6 +136,14 @@ Progress: 2/6 phases [███░░░░░░░] 33%（10/10 plans）
 - ErrADTargetNotFound → outbox 终态，防"清 DN→重推"死循环
 - Roadmap 依赖约束（三方审计，已落图）：队列基建(57) → GUARD-01(59)；HYGIENE-01 与 QUEUE-04 同在 Phase 58 且 helper 先落地；SAFE(60)/SHADOW(61) 与 QUEUE 相互独立可并行；HYGIENE-03(62) 必须在 SAFE-01(60) 之后
 - [Phase 59]: 59-01 执行期决策（2026-10-19）：GUARD-01 守卫只包住唯一 dept_id Update 调用，谓词逐字复用 models.ADPushQueueActivePredicate（1 处引用）；查询失败按 D-07 与命中同等跳过并 WARN；6 个用例用真实 DeptOUmapper + ad_username 正向锚定，防空跑。测试文件同时作为 59-02 前的守卫回归基线。
+- [Phase 59]: 59-02 执行期决策（2026-10-19，migration_217 普通视图 v_dept_ou_mismatch）：
+  - **视图列必须显式 `AS` 别名**：sqlite 从表达式文本推导视图列名，字面量 `'user_ou_mismatch'` 会成为列名 → `WHERE mismatch_type = ...` 报 `no such column`（首轮实测失败）。四分支逐列别名同时把 D-11 列契约写进源码。
+  - **dept_id 比较两侧一律 `CAST(.. AS TEXT)`**：archived DDL 126 确认 `sys_dept_ou_mapping.dept_id` 是 `uuid NOT NULL`，而 `sys_user.dept_id` 是 `varchar(64)`（model tag `size:64`）；PG 没有 `uuid = varchar` 运算符，只 CAST 一侧会运行期报 `operator does not exist`，sqlite 全 TEXT 永远测不出。同理经 DDL 016 核实 `sys_ad_config.status` 是 `INT`，`status = 0` 安全。
+  - **PG 字面量计数与注释自指**：`grep -c 'CREATE OR REPLACE VIEW v_dept_ou_mismatch'` 首轮为 2（注释重复了完整拼串）→ 字面量收敛到唯一常量、注释不再写出完整拼串 → 1。沿用 Phase 58 裁决口径：以 plan 自己写的可证伪断言为准。
+  - **②③ 不做互斥裁剪**：软删部门 + 映射停用可能对同一条映射行各出一行，是 UNION ALL 预期语义（plan Decision Reconciliation 第 4 条）。
+  - **sqlite DROP 只进 `dropSQLiteReconciliationViews`，不进 `ensureSQLiteReconciliationViews`**：后者只重建 reconciliation 三视图，加进去会 DROP 对账视图且不重建（已在代码注释写明）。
+  - **不标记 GUARD-02 为 complete**：`requirements.ready-ids` 返回 `{"ready":[],"blocked":["GUARD-02"]}` —— 59-03/59-04 同样声明该需求，共享-ID 门要求全部声明者完成，由最后一个 plan 回填（沿用 58-01/58-03/58-04/58-05 分档口径）。
+  - **PG 分支的真实执行仍属人工**：本机无 PG 实例，sqlite 覆盖不到 uuid/varchar UNION 与 boolean 取反；已用 `pgDeptOUMismatchViewDDL` / `sqliteDeptOUMismatchViewDDLs` 纯函数 + body 形状断言（CAST / NOT mp.sync_enabled / SUBSTR / LENGTH / 无 LIKE）补一条**可失败**的自动化守卫，真实启动冒烟在 59-VALIDATION.md。
 
 ### Blockers
 
@@ -157,8 +165,8 @@ Progress: 2/6 phases [███░░░░░░░] 33%（10/10 plans）
 
 ## Session
 
-**Last session:** 2026-10-19T13:08:50.496Z
-**Stopped at:** Completed 59-01-PLAN.md
+**Last session:** 2026-10-19T13:32:06.905Z
+**Stopped at:** Completed 59-02-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -166,3 +174,4 @@ Progress: 2/6 phases [███░░░░░░░] 33%（10/10 plans）
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 59 P01 | 12min | 2 tasks | 2 files |
+| Phase 59 P02 | 13min | 2 tasks | 4 files |
