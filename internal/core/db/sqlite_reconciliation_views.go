@@ -118,6 +118,14 @@ func (d *Database) dropSQLiteReconciliationViews() error {
 		"DROP VIEW IF EXISTS reconciliation_normalized",
 		"DROP VIEW IF EXISTS reconciliation_physical_chain",
 		"DROP VIEW IF EXISTS reconciliation_user_lookup",
+		// Phase 59 GUARD-02: v_dept_ou_mismatch 引用 sys_user / sys_dept /
+		// sys_dept_ou_mapping / sys_ad_config，同样会阻塞 AutoMigrate 的
+		// __temp → RENAME 路径。重建由 migrations.Migrate217DeptOUMismatchView 负责
+		// （database.go 的 sqlite 分支与 BootstrapMissingTables 旁路各注册一次）。
+		// ⚠ 只在本函数（AutoMigrate 前置清理）的列表里加；ensureSQLiteReconciliationViews
+		// 的 DROP 列表**不得**加本视图 —— 那个函数只重建 reconciliation 三视图，加了会
+		// 把对账视图 DROP 掉且不重建。
+		"DROP VIEW IF EXISTS v_dept_ou_mismatch",
 	}
 	for _, stmt := range drops {
 		if err := d.DB.Exec(stmt).Error; err != nil {

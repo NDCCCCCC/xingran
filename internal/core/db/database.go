@@ -469,6 +469,16 @@ func (d *Database) cleanupOldConstraints() {
 //
 // 回归守护: docs/.planning/memory/gorm-automigrate-blocked-by-matview.md
 func (d *Database) dropDependentMaterializedViews() {
+	// Phase 59 (GUARD-02): v_dept_ou_mismatch 普通 VIEW 引用 sys_user / sys_dept /
+	// sys_dept_ou_mapping / sys_ad_config。普通 VIEW 同样会阻塞 GORM ALTER COLUMN TYPE
+	// (见本函数上方 :445-451 的 2026-07-04 实测)。AutoMigrate 之前定向 DROP,
+	// migration_217 在 AutoMigrate 之后重建定义。
+	// 该视图无 MV 依赖(不被 reconciliation_normalized 引用),故**不需要 CASCADE**;
+	// 用 RESTRICT 语义的裸 DROP,万一将来有依赖会立刻报错而不是静默级联。
+	if err := d.DB.Exec("DROP VIEW IF EXISTS v_dept_ou_mismatch").Error; err != nil {
+		applogger.Warnf("[dropDependent] DROP v_dept_ou_mismatch 失败(非阻断,继续 AutoMigrate): %v", err)
+	}
+
 	// 2026-07-04 21:05 round-3 教训:DROP VIEW reconciliation_physical_chain
 	// **永远会失败**(SQLSTATE 2BP01 "other objects depend on it")。
 	//
@@ -1064,6 +1074,12 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
 			applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
 		}
+		// Phase 59 GUARD-02: 部门↔OU 对账普通视图 v_dept_ou_mismatch（双方言 DDL，幂等）。
+		// **非阻断**：视图缺失只让对账端点 500，不影响登录 / 入队 / 排水主链路。
+		// 视图在 AutoMigrate 之前被 dropDependentMaterializedViews() DROP 过，此处重建。
+		if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
+			applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -1101,6 +1117,12 @@ func (d *Database) AutoMigrate() error {
 		// 只注册 PG 分支会让 sqlite dev/测试环境无旋钮行、行为与生产不一致）。
 		if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
 			applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: Phase 59 GUARD-02 部门↔OU 对账视图（与 PG 分支同款调用 + 同款非阻断档）。
+		// sqlite 既是 dev 运行时也是测试运行时；只注册 PG 分支会让 dev 环境缺视图。
+		// 视图在 AutoMigrate 之前被 dropSQLiteReconciliationViews() DROP 过，此处重建。
+		if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
+			applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
@@ -1289,6 +1311,12 @@ func (d *Database) BootstrapMissingTables() error {
 	// 非阻断：缺旋钮只会让 LoadDrainIntervalSeconds 回落默认 30s。
 	if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
 		applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
+	}
+
+	// Phase 59 GUARD-02：SKIP_AUTOMIGRATE 旁路同样要建部门↔OU 对账视图（F-03 同款盲区）。
+	// 非阻断：视图缺失只让对账端点 500；该旁路不跑 AutoMigrate，故也不存在视图阻塞 ALTER 的问题。
+	if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
+		applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
 	}
 
 	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建
