@@ -1173,3 +1173,132 @@ func TestPhase57_ProfileService_UpdateUserInfo_NoADConfig_NoEnqueue(t *testing.T
 	assert.NotNil(t, nickname)
 	assert.Equal(t, "newnick", *nickname, "业务写仍须生效")
 }
+
+// ==================== Phase 58 Plan 06（T3）：F-07 入队侧 Pluck + F-10 回滚用例 ====================
+
+// seedUserRoleRows 向 sys_user_role 插 n 行关联（role_id 任意非空）。
+// F-10 断言"关联删除与软删同事务回滚"需要真实存在的关联行 —— 0 行时
+// "行数不变" 恒真，用例会变成假绿。
+func seedUserRoleRows(t *testing.T, db *gorm.DB, userID string, n int) {
+	t.Helper()
+	for i := 0; i < n; i++ {
+		require.NoError(t, db.Exec(
+			"INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
+			userID, uuid.NewString()).Error)
+	}
+}
+
+func countUserRoleRows(t *testing.T, db *gorm.DB, userID string) int64 {
+	t.Helper()
+	var n int64
+	require.NoError(t, db.Raw("SELECT count(*) FROM sys_user_role WHERE user_id = ?", userID).Scan(&n).Error)
+	return n
+}
+
+func countSoftDeletedUsers(t *testing.T, db *gorm.DB) int64 {
+	t.Helper()
+	var n int64
+	require.NoError(t, db.Raw("SELECT count(*) FROM sys_user WHERE deleted_at IS NOT NULL").Scan(&n).Error)
+	return n
+}
+
+func userDeletedAt(t *testing.T, db *gorm.DB, userID string) *string {
+	t.Helper()
+	var deletedAt *string
+	require.NoError(t, db.Raw("SELECT deleted_at FROM sys_user WHERE id = ?", userID).Scan(&deletedAt).Error)
+	return deletedAt
+}
+
+// TestPhase58_UserService_BatchDelete_EnqueuesOnlyExisting 锁定 F-07 入队侧掐根：
+// 传入含不存在 id 的列表时，只对真实存在的行入队 disable。
+//
+// ⚠ 这是"Pluck 必须排在软删之前"的**行为判别式**：若 Pluck 被移到软删之后，
+// GORM 默认软删作用域会把本轮刚软删的行过滤掉 → existing 恒空 → 入队 0 行 → 本用例红。
+func TestPhase58_UserService_BatchDelete_EnqueuesOnlyExisting(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	u1 := seedUserRow(t, db, "phase58-f07-1", 0)
+	u2 := seedUserRow(t, db, "phase58-f07-2", 0)
+	missingID := uuid.NewString() // 故意不 seed —— 不存在的 id
+	svc := newTestUserService(t, db)
+
+	require.NoError(t, svc.BatchDelete(context.Background(), []string{u1, u2, missingID}))
+
+	assert.Equal(t, int64(2), countDisableRows(t, db),
+		"不存在的 id 不得入队（只有真实存在的行才入队）")
+
+	// 入队的两行必须是 u1 / u2，不含 missingID
+	var entityIDs []string
+	require.NoError(t, db.Model(&models.ADPushQueue{}).
+		Where("action_type = ?", string(models.ADPushActionDisable)).
+		Pluck("entity_id", &entityIDs).Error)
+	assert.ElementsMatch(t, []string{u1, u2}, entityIDs, "入队行必须恰好对应两个存在的用户")
+
+	// 口径断言：入队 disable 行数 == 实际被软删的用户数 == len(existing)
+	assert.Equal(t, int64(2), countSoftDeletedUsers(t, db), "实际软删的必须是两个用户")
+
+	// 重复 id 也只入队一行（去重 + 存在性过滤叠加）
+	db2 := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db2, true, 0)
+	v1 := seedUserRow(t, db2, "phase58-f07-dup", 0)
+	require.NoError(t, newTestUserService(t, db2).BatchDelete(context.Background(), []string{v1, v1, v1}))
+	assert.Equal(t, int64(1), countDisableRows(t, db2), "重复 id 必须去重后只入队一行")
+	assert.Equal(t, int64(1), countSoftDeletedUsers(t, db2), "重复 id 不得重复软删计数")
+}
+
+// TestPhase58_UserService_Delete_RollsBackWhenQueueInsertFails 锁定 F-10 单条删除：
+// 队列表不可写时整个删除事务回滚 —— 软删不得落地、角色关联不得消失。
+//
+// 复制源：TestPhase57_UserService_Update_Disable_RollsBackWhenQueueInsertFails（Phase 57 已覆盖 Update 路径，
+// 删除路径此前无回滚证据）。
+func TestPhase58_UserService_Delete_RollsBackWhenQueueInsertFails(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	userID := seedUserRow(t, db, "phase58-f10-delete", 0)
+	seedUserRoleRows(t, db, userID, 2)
+	rolesBefore := countUserRoleRows(t, db, userID)
+	require.Equal(t, int64(2), rolesBefore, "前置条件：必须真的有角色关联行，否则回滚断言恒真")
+
+	svc := newTestUserService(t, db)
+	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
+
+	err := svc.Delete(context.Background(), userID)
+	require.Error(t, err, "队列表不可写时删除用户必须整体失败")
+
+	assert.Nil(t, userDeletedAt(t, db, userID), "事务必须回滚：用户不得被软删")
+	assert.Equal(t, rolesBefore, countUserRoleRows(t, db, userID), "角色关联的删除也必须回滚")
+
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+}
+
+// TestPhase58_UserService_BatchDelete_RollsBackWhenQueueInsertFails 锁定 F-10 批量删除：
+// 与单条同款语义 —— 两个用户的软删与角色关联删除全部回滚。
+func TestPhase58_UserService_BatchDelete_RollsBackWhenQueueInsertFails(t *testing.T) {
+	db := setupPhase57QueueDB(t)
+	seedADConfigEnabled(t, db, true, 0)
+
+	u1 := seedUserRow(t, db, "phase58-f10-bdel-1", 0)
+	u2 := seedUserRow(t, db, "phase58-f10-bdel-2", 0)
+	seedUserRoleRows(t, db, u1, 2)
+	seedUserRoleRows(t, db, u2, 1)
+	rolesBeforeU1 := countUserRoleRows(t, db, u1)
+	rolesBeforeU2 := countUserRoleRows(t, db, u2)
+	require.Equal(t, int64(2), rolesBeforeU1)
+	require.Equal(t, int64(1), rolesBeforeU2)
+
+	svc := newTestUserService(t, db)
+	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
+
+	err := svc.BatchDelete(context.Background(), []string{u1, u2})
+	require.Error(t, err, "队列表不可写时批量删除必须整体失败")
+
+	assert.Nil(t, userDeletedAt(t, db, u1), "事务必须回滚：u1 不得被软删")
+	assert.Nil(t, userDeletedAt(t, db, u2), "事务必须回滚：u2 不得被软删")
+	assert.Equal(t, rolesBeforeU1, countUserRoleRows(t, db, u1), "u1 的角色关联删除必须回滚")
+	assert.Equal(t, rolesBeforeU2, countUserRoleRows(t, db, u2), "u2 的角色关联删除必须回滚")
+	assert.Equal(t, int64(0), countSoftDeletedUsers(t, db), "整体不得有任何软删落地")
+
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+}

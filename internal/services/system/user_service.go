@@ -639,13 +639,32 @@ func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 			return apperrors.DatabaseError(err)
 		}
 
+		// Phase 58 F-07: 入队前 Pluck 存在性 —— 只对真实存在的行入队。
+		// 堵住"重复/已删 id 无限刷孤儿 disable 行"（排水器侧另有 user-not-found → dead 兜底，
+		// 但入队侧掐根更省：一行查询 + "入队数 == 软删数"的口径可断言）。
+		//
+		// 不变量：**入队 disable 行数 == 本轮实际软删的用户数 == len(existing)**。
+		//
+		// ⚠ 位置铁律：必须在**软删语句之前**。
+		//   tx.Model(&models.User{}) 走 GORM 默认软删作用域，SQL 自动追加 deleted_at IS NULL；
+		//   若把 Pluck 排在软删之后，本轮刚软删的行已被作用域过滤掉 → existing 恒空 →
+		//   EnqueueDisable 变 no-op → 上面那条不变量静默失效，且 Phase 57 既有用例
+		//   TestPhase57_UserService_BatchDelete_EnqueuesDisable 必红。
+		//   放在软删之前时，默认作用域恰好表达"仍存在（未被软删）的行" = 本轮将被软删的那批行。
+		// ⚠ 备选方案 tx.Unscoped().Model(...) **禁采用**：它会把历史上已软删、而本轮并未删除的
+		//   id 也算进 existing，与"本轮实际删掉的集合"不再一一对应，破坏入队口径的可断言性。
+		var existing []string
+		if err := tx.Model(&models.User{}).Where("id IN ?", ids).Pluck("id", &existing).Error; err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
 		// 批量软删除用户
 		if err := tx.Where("id IN ?", ids).Delete(&models.User{}).Error; err != nil {
 			return apperrors.DatabaseError(err)
 		}
 
 		// Phase 57 D-04/QUEUE-06: 批量软删同事务入队 disable 动作行（一次成型 + 重复 id 去重）
-		if err := addomain.NewADPushEnqueuer().EnqueueDisable(tx, ids); err != nil {
+		if err := addomain.NewADPushEnqueuer().EnqueueDisable(tx, existing); err != nil {
 			return apperrors.DatabaseError(err)
 		}
 
