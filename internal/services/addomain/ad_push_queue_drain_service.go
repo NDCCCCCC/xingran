@@ -33,6 +33,8 @@ const (
 	drainBatchLimit = 100
 	// maxDrainAttempts 连续失败达此次数转 dead（D-05）。总重试窗 ~61min，
 	// 刻意桥接账号池 30min 熔断周期（避免熔断窗内密集重试继续喂 MarkFailure）。
+	// ⚠ 上述 ~61min 当前**不成立**（实际 15min）—— 见 backoffDuration 的
+	//   "生产不可达档位"注释与 58-REVIEW H-03；逻辑已决定暂不改。
 	maxDrainAttempts = 5
 	// backoffCap 退避封顶（D-05）。
 	backoffCap = 30 * time.Minute
@@ -41,6 +43,15 @@ const (
 // backoffDuration 退避曲线纯函数（Phase 58 D-05：60s→2min→4min→8min→16min，封顶 30min）。
 // 纯函数：无 DB、无副作用、可单测。attempts 为"本轮失败后的累计连续失败次数"。
 // attempts <= 0 → 60s；1→60s，2→2min，3→4min，4→8min，5→16min，>=6→30min（封顶）。
+//
+// ⚠ 生产不可达档位（Phase 58 审查 H-03，2026-10-19 决定：**不改逻辑**，仅记录）：
+// markFailed 在 newAttempts >= maxDrainAttempts(=5) 时直接转 dead，故本函数只会被以
+// 1/2/3/4 调用 —— **16min 与 30min 封顶两档在生产中永不执行**，实际重试窗是
+// 60s+2m+4m+8m = 15min，而非 D-05 原文声明的 ~61min。后果是"退避窗桥接账号池 30min
+// 熔断周期"的设计意图当前不成立：队列会在熔断窗结束前就全部判死。待真实环境的熔断
+// 频率数据到位后，再决定是把 maxDrainAttempts 提到 8，还是改写 D-05 的 ~61min 表述。
+// ⚠ TestPhase58_BackoffDuration_Curve / _CappedAt30m 直接对纯函数断言 16min 与封顶档，
+//   因此它们**测不出**这个断层（纯函数本身是对的，错的是调用方永不传 5/6+）。
 func backoffDuration(attempts int) time.Duration {
 	switch attempts {
 	case 1:
