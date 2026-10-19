@@ -259,8 +259,17 @@ func (d *ADPushDrainer) executeGroup(ctx context.Context, cfgID string, group []
 		return nil // ← 关键：恒 nil
 	})
 	if err != nil {
-		// 空账号列表（池熔断/未配置）在调用闭包之前返回 → 可重试，不直接 dead。
-		poolExhausted := errors.Is(err, ErrAllAccountsUnavailable)
+		// poolExhausted = "池侧故障，闭包根本没跑起来"：账号列表为空（熔断/未配置，
+		// ErrAllAccountsUnavailable）或全部账号拨号失败（域控宕机/网络中断，
+		// ErrAllAccountsDialFailed）—— 两者都是可恢复的基础设施故障，
+		// 纯退避重试、不烧 attempts、不判死。
+		// ⚠ H-04：修复前只认前者。"全部拨号失败"返回的是包着拨号错误的普通 error →
+		//   poolExhausted=false → 一次 AD 宕机会让整批（单轮最多 100 行）在 ~15min 内
+		//   全部转 dead 终态，且 dead 行不会被任何后续编辑复活。
+		//   两个哨兵**不合并**（见 account_pool.go 的注释），只在本处同款处理。
+		// ⚠ 闭包执行过（账号拨通了、只是业务操作全失败）时**不得**归为 poolExhausted：
+		//   code 32 等不可恢复语义必须原样流转到行级 handlePushError。
+		poolExhausted := errors.Is(err, ErrAllAccountsUnavailable) || errors.Is(err, ErrAllAccountsDialFailed)
 		for _, row := range group {
 			d.markFailed(ctx, row, now, poolExhausted, "pool:"+err.Error())
 		}

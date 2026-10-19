@@ -634,6 +634,94 @@ func TestPhase58_Drain_PoolExhaustedIsRetryable(t *testing.T) {
 	assert.Equal(t, "pool:", row.LastError[:len("pool:")])
 }
 
+// TestPhase58_Failover_AllDialFailureWrapsPoolSentinel H-04：所有账号**拨号**失败是池侧
+// 可恢复故障，返回值必须满足 errors.Is(err, ErrAllAccountsDialFailed)。
+//
+// ⚠ 同时锁定它**不**满足 ErrAllAccountsUnavailable：两者对管理员的处置动作不同
+//   （加账号/查熔断 vs 查网络与域控），Phase 78 三条既有用例正锁定这一区分。
+//
+// 反向半边同样重要：账号拨通了、只是业务操作全失败时**不得**带任何池侧哨兵 ——
+// code 32 之类必须原样上抛到 handlePushError 的不可恢复分支。
+func TestPhase58_Failover_AllDialFailureWrapsPoolSentinel(t *testing.T) {
+	accounts := []models.ADServiceAccount{
+		{ID: "a1", Username: "svc-1"},
+		{ID: "a2", Username: "svc-2"},
+	}
+	cfg := &models.ADConfig{BaseModel: models.BaseModel{ID: "cfg-h04"}}
+
+	// --- 全部拨号失败 → 包 ErrAllAccountsDialFailed ---
+	pool := &fakePool78{listAvailableRes: accounts}
+	fc := NewFailoverClient(pool, cfg)
+	fc.clientFactory = func(*models.ADConfig, *models.ADServiceAccount) LDAPClientIface {
+		return &mockLDAPClient{connectErr: errors.New("dial tcp 10.0.0.1:389: connect: connection refused")}
+	}
+	err := fc.ExecuteWithFailover(context.Background(), func(LDAPClientIface) error {
+		t.Fatal("一个账号都没拨通时 operation 不得被执行")
+		return nil
+	})
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrAllAccountsDialFailed),
+		"H-04：全部拨号失败必须被识别为池侧故障，否则排水器会烧 attempts 并在 ~15min 后把整批打成 dead 终态")
+	assert.False(t, errors.Is(err, ErrAllAccountsUnavailable),
+		"池非空时不得冒充 ErrAllAccountsUnavailable（Phase 78 契约：处置动作不同）")
+	assert.Equal(t, 2, len(pool.markFailureCalls), "每个拨号失败的账号都要上报 MarkFailure")
+	for _, call := range pool.markFailureCalls {
+		assert.True(t, len(call.reason) >= len("dial:"), "拨号失败上报的 reason 必须保留 dial: 前缀")
+	}
+
+	// --- 拨通但业务操作全失败 → 不带任何池侧哨兵 ---
+	pool2 := &fakePool78{listAvailableRes: accounts}
+	fc2 := NewFailoverClient(pool2, cfg)
+	fc2.clientFactory = func(*models.ADConfig, *models.ADServiceAccount) LDAPClientIface {
+		return &mockLDAPClient{}
+	}
+	code32 := ldap.NewError(ldap.LDAPResultNoSuchObject, errors.New("no such object"))
+	err = fc2.ExecuteWithFailover(context.Background(), func(LDAPClientIface) error { return code32 })
+	require.Error(t, err)
+	assert.False(t, errors.Is(err, ErrAllAccountsUnavailable),
+		"业务失败不是池耗尽：带哨兵会把 code 32 误判成可重试、跳过不可恢复分支")
+	assert.False(t, errors.Is(err, ErrAllAccountsDialFailed),
+		"业务失败不是拨号失败：否则 code 32 会被误判为池侧故障而绕过 handlePushError")
+	assert.True(t, ldap.IsErrorWithCode(err, ldap.LDAPResultNoSuchObject),
+		"业务失败的原始语义必须能被 errors.As/IsErrorWithCode 穿透")
+}
+
+// TestPhase58_Drain_AllDialFailureNeverKillsBatch H-04 端到端：域控全不可达时，
+// 即使行已连败到 maxDrainAttempts-1，也**不得**转 dead —— 必须 failed + 排退避，
+// 且仍在活跃谓词内可被下轮拾取。
+//
+// ⚠ 这是本条修复的核心可观测后果：修复前这条用例会得到 status=dead，
+//   一批行被永久终结（dead 行不被任何后续编辑复活）。
+func TestPhase58_Drain_AllDialFailureNeverKillsBatch(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	// 连败到上限前一格：本轮再失败即达 maxDrainAttempts
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionDisable),
+		string(models.ADPushStatusFailed), 4, nil)
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	d.clientFactoryOverride = func(*models.ADConfig, *models.ADServiceAccount) LDAPClientIface {
+		return &mockLDAPClient{dnExistsRes: true, connectErr: errors.New("connection refused")}
+	}
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusFailed, row.Status,
+		"全部账号拨号失败是可恢复故障：本轮失败数已达上限也**不得**转 dead（修复前本断言必红）")
+	assert.Nil(t, row.PushedAt)
+	require.NotNil(t, row.NextRetryAt, "退避必须排上，等 AD 恢复后再拾取")
+	require.True(t, len(row.LastError) >= len("pool:"))
+	assert.Equal(t, "pool:", row.LastError[:len("pool:")], "last_error 前缀沿用 pool:，排障口径不变")
+
+	// 仍可拾取：退避到期后行必须重新出现在活跃谓词里（未退出 = 未被终态吃掉）
+	rows, err := d.pickRows(context.Background(), d.now().Add(time.Hour))
+	require.NoError(t, err)
+	assert.Len(t, rows, 1, "池侧故障后的行必须在退避到期后重新可拾取，否则整批会被悄悄饿死")
+}
+
 // TestPhase58_Drain_Code32GoesDeadAndClearsAdDn QUEUE-05：code 32 → dead + 清 ad_dn + 不烧 attempts。
 func TestPhase58_Drain_Code32GoesDeadAndClearsAdDn(t *testing.T) {
 	db := setupDrainTestDB(t)

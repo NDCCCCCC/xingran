@@ -35,6 +35,20 @@ const (
 // 哨兵错误
 var (
 	ErrAllAccountsUnavailable = errors.New("账号池无可用账号")
+	// ErrAllAccountsDialFailed 池里有可用账号，但**全部拨号失败**（域控不可达 / 网络中断 /
+	// DNS 故障 / 服务账号全被锁）。
+	//
+	// ⚠ 与 ErrAllAccountsUnavailable 有意**不合并**（Phase 58 H-04）：两者对管理员的
+	//   处置动作不同 —— 前者"去 AD 配置页加服务账号 / 查熔断状态"，后者"查网络与域控"。
+	//   Phase 78 的三条既有用例（TestGrp78_AddMember_DialFail /
+	//   TestSync78_SyncDataInternal_AllAccountsDialFail /
+	//   TestUsr78_Update_AllAccountsDialFail）正是锁定这一区分的；
+	//   合并会让那三条路径改走"账号池无可用账号"文案，属于跨模块行为变更。
+	//
+	//   排水器（ad_push_queue_drain_service.go）把两者**同款**处理为池侧故障：
+	//   不烧 attempts、不判 dead、纯退避重试。修复前只有前者被识别，拨号失败被当成
+	//   业务失败 → 一次 ~15min 的 AD 宕机会把单轮最多 100 行永久打成 dead 终态。
+	ErrAllAccountsDialFailed = errors.New("账号池所有账号均拨号失败")
 	ErrAccountNotFound        = errors.New("账号不存在")
 	ErrInvalidOperator        = errors.New("operator 必填")
 	ErrInvalidUnlockReason    = errors.New("解锁原因必填且不少于10字符")
