@@ -17,7 +17,7 @@
 ### 登录回写守卫 (GUARD)
 
 - [x] **GUARD-01**: AD 登录写 dept 前，若该用户存在 pending/failed 的 dept 队列行则**跳过覆盖 + WARN**（本地编辑不被 AD 旧值回滚）
-- [ ] **GUARD-02**: `v_dept_ou_mismatch` 普通 SQL VIEW + 只读端点，展示 dept↔OU 不一致及"映射指向软删部门"条目
+- [x] **GUARD-02**: `v_dept_ou_mismatch` 普通 SQL VIEW + 只读端点，展示 dept↔OU 不一致及"映射指向软删部门"条目
 
 ### 软删恢复安全 (SAFE)
 
@@ -67,7 +67,7 @@
 | QUEUE-05 | Phase 58 | Done (2026-10-19, Phase 58 verified — 58-04 code 32 → dead 终态 + 清空 ad_dn + 不烧 attempts；58-07 端到端证据 `TestPhase58_EndToEnd_Code32ThenNoRetry` PASS，第二轮零 AD 写。证据：58-VERIFICATION.md SC5。⚠ 真域控 code 32 触发留 UAT-58-5) |
 | QUEUE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | GUARD-01 | Phase 59 | Complete |
-| GUARD-02 | Phase 59 | In Progress (59-02 数据底座 `v_dept_ou_mismatch` + 59-03 只读端点 `/api/v1/ad-domain/reconciliation/mismatch` 与 migration_218 权限载体已交付；前端 Tab 归 59-04，完成后回填) |
+| GUARD-02 | Phase 59 | Complete (59-02 视图 + 59-03 端点/权限载体 + 59-04 前端对账 Tab 全部交付 2026-10-19；两条视觉断言归 59-VALIDATION Manual-Only) |
 | SAFE-01 | Phase 60 | Pending |
 | SAFE-02 | Phase 60 | Pending |
 | SHADOW-01 | Phase 61 | Pending |

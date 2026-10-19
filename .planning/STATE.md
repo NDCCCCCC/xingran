@@ -4,17 +4,17 @@ milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 59
 current_phase_name: 登录回写守卫与部门对账视图
-status: executing
-stopped_at: Completed 59-03-PLAN.md
-last_updated: "2026-10-19T14:34:41.311Z"
+status: verifying
+stopped_at: Completed 59-04-PLAN.md
+last_updated: "2026-10-19T15:41:07.316Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 59 execution started
-state_head: a640658d7c3aec50e6edc5dd6dcc5780e83a9447
+state_head: e9df2e0b0fb1c3314124e8a95e14d72b99685005
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 33
 ---
 
@@ -22,7 +22,7 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: Ready to execute
+**Status**: Phase complete — ready for verification
 **Last activity**: 2026-10-19
 **Previous activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
 **Earlier activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
@@ -31,9 +31,9 @@ progress:
 
 Phase: 59 (登录回写守卫与部门对账视图) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-19 — Phase 59 execution started
-Progress: 2/6 phases [███░░░░░░░] 33%（13/14 plans）
+Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phase 59 全部完成，待 verification）
 
 ## Accumulated Context
 
@@ -152,6 +152,12 @@ Progress: 2/6 phases [███░░░░░░░] 33%（13/14 plans）
   - **sqlite DROP 只进 `dropSQLiteReconciliationViews`，不进 `ensureSQLiteReconciliationViews`**：后者只重建 reconciliation 三视图，加进去会 DROP 对账视图且不重建（已在代码注释写明）。
   - **不标记 GUARD-02 为 complete**：`requirements.ready-ids` 返回 `{"ready":[],"blocked":["GUARD-02"]}` —— 59-03/59-04 同样声明该需求，共享-ID 门要求全部声明者完成，由最后一个 plan 回填（沿用 58-01/58-03/58-04/58-05 分档口径）。
   - **PG 分支的真实执行仍属人工**：本机无 PG 实例，sqlite 覆盖不到 uuid/varchar UNION 与 boolean 取反；已用 `pgDeptOUMismatchViewDDL` / `sqliteDeptOUMismatchViewDDLs` 纯函数 + body 形状断言（CAST / NOT mp.sync_enabled / SUBSTR / LENGTH / 无 LIKE）补一条**可失败**的自动化守卫，真实启动冒烟在 59-VALIDATION.md。
+- [Phase 59]: 59-04 执行期决策（2026-10-19，对账 Tab 前端）：
+- **空态标题字重唯一可行机制 = ReconciliationTab.css 包裹类 + font-weight:600 !important**：EmptyStateWithAction 标题是 inline style(16px/500)，作者 !important 是唯一不改共享组件的覆盖；无 hex 色值；jsdom 不算层叠 → 不做 vitest 断言，归视觉/UAT（Manual-Only）。
+- **筛选显式提交形状**：控件 onChange 只写 Form 草稿值；已提交筛选独立原始值 state + queryTick 进 loadList 依赖（相同筛选重复点查询也重拉）；useEffect 依赖仅 [canView, loadList]。
+- **测试 form 注入 seam**：antd v6 Form.useForm 是真 React hook（组件外调用抛 Invalid hook call），组件加可选 form prop，测试用 Host 组件捕获实例。
+- **antd v6 测试口径沉淀**：激活面板 = [role=tabpanel]:not(.ant-tabs-content-hidden)（无 tabpane-active）；Button 两汉字自动插空格且 loading 带图标前缀 → unanchored regex 定位。
+- **useDeptTree 空树用模块级 EMPTY_DEPTS 常量**喂 DepartmentTreeSelect（rc-tree motion bail 陷阱，DeptTree #185 同款）。
 
 ### Blockers
 
@@ -173,8 +179,8 @@ Progress: 2/6 phases [███░░░░░░░] 33%（13/14 plans）
 
 ## Session
 
-**Last session:** 2026-10-19T14:29:10Z
-**Stopped at:** Completed 59-03-PLAN.md
+**Last session:** 2026-10-19T15:39:11.481Z
+**Stopped at:** Completed 59-04-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -184,3 +190,4 @@ Progress: 2/6 phases [███░░░░░░░] 33%（13/14 plans）
 | Phase 59 P01 | 12min | 2 tasks | 2 files |
 | Phase 59 P02 | 13min | 2 tasks | 4 files |
 | Phase 59 P03 | 15min | 3 tasks | 8 files |
+| Phase 59 P04 | 44min | 3 tasks | 7 files |

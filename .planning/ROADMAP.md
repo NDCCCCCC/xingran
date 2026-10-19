@@ -40,7 +40,7 @@ previous_update: 2026-07-08 after Phase 54 (W5) shipped
 
 - [x] **Phase 57: AD 推送队列基建** — outbox-lite 队列表 + 同事务入队 + 按实体合并 + 删除入队 disable (QUEUE-01/02/06, HYGIENE-06) — completed 2026-10-16 (3/3 plans, code review F-01~F-06 修复 + verifier GAP-01/02/03 闭环, [VERIFICATION](phases/57-ad-outbox-lite/57-VERIFICATION.md) human_needed: 3 项真环境人工验证在 [57-HUMAN-UAT.md](phases/57-ad-outbox-lite/57-HUMAN-UAT.md))
 - [x] **Phase 58: 排水器与 compare-and-move 推送** — in-process cron 排水 + 退避重试 + 幂等 OU 移动 + 配置路由无歧义 (HYGIENE-01/02, QUEUE-03/04/05) — 7/7 plans，completed 2026-10-19（SC1~6 全部 VERIFIED，见 [58-VERIFICATION.md](phases/58-compare-and-move/58-VERIFICATION.md)）
-- [ ] **Phase 59: 登录回写守卫与部门对账视图** — AD 登录不再回滚本地编辑 + dept↔OU 不一致可观测 (GUARD-01/02)
+- [x] **Phase 59: 登录回写守卫与部门对账视图** — AD 登录不再回滚本地编辑 + dept↔OU 不一致可观测 (GUARD-01/02) — 4/4 plans，completed 2026-10-19（两条 Manual-Only 视觉断言 + PG 真实启动冒烟归 [59-VALIDATION.md](phases/59-ad-login-guard-reconciliation/59-VALIDATION.md)）
 - [ ] **Phase 60: 软删恢复安全** — ad_dn 校验后恢复 + 登录/批量同步共用分类逻辑 (SAFE-01/02)
 - [ ] **Phase 61: 影子表完整性** — 删除清理两道闸门 + 组成员事务化 + singleflight 挂载 (SHADOW-01/02/03)
 - [ ] **Phase 62: 卫生收尾与死代码清理** — F-22 旧路径删除 + 嵌套组标记 + 同名部门 OU DN 冲突告警 (HYGIENE-03/04/05)
@@ -192,7 +192,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 - [x] 59-03-PLAN.md — GUARD-02 只读端点：分页/筛选服务 + /ad-domain/reconciliation/mismatch + migration_218 权限载体（2026-10-19, `2f1c8190` + `0d7b782c` + `a640658d`）
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 59-04-PLAN.md — GUARD-02 前端：AD 配置页「对账」Tab（权限门/筛选/表格/空错态）
+- [x] 59-04-PLAN.md — GUARD-02 前端：AD 配置页「对账」Tab（权限门/筛选/表格/空错态）（2026-10-19, `a5abca44` + `08484062` + `e9df2e0b`）
 
 ### Phase 60: 软删恢复安全
 
@@ -243,7 +243,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
 | 58. 排水器与 compare-and-move 推送 | 6/7 | In progress (wave 5 done 2026-10-19, SC6 终态达成) | - |
-| 59. 登录回写守卫与部门对账视图 | 3/4 | In progress (59-01/59-02/59-03 done 2026-10-19) | - |
+| 59. 登录回写守卫与部门对账视图 | 4/4 | Complete (59-01~59-04 done 2026-10-19) | 2026-10-19 |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
 | 62. 卫生收尾与死代码清理 | 0/TBD | Not started | - |
