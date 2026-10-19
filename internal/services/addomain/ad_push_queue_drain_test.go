@@ -1283,6 +1283,190 @@ func TestPhase58_EnqueueUpdateBatch_NoDiffFiltering(t *testing.T) {
 		"无实际变更也必须入队（本变体不做 diff）")
 }
 
+// ==================== Plan 07（T1）：SC1/2/5 端到端收尾用例 ====================
+//
+// 下面三个用例把 QUEUE-03/04/05 串成一条完整链路：
+// 入队（生产 EnqueueUpdateBatch）→ 排水（生产 DrainOnce）→ compare-and-move
+// （生产 compareAndMoveOU）→ 终态（生产 markPushed/markDead）。
+//
+// ⚠ 与 Plan 03/04/06 的既有单腿用例的分工：那些用例各自锁定一条腿（拾取谓词、
+// 退避曲线、目标一致跳过 MoveUser、单动作终态…），用 seedDrainQueueRow **直接铺行**，
+// 不经入队器；本节三例是唯一从**入队器**出发、走完整条生产路径的用例。
+// 因此本节刻意不重复断言单腿细节（那是上��用例的职责），只断言"链路串得通 +
+// 跨腿的复合不变量（重复排水幂等 / code 32 后零 AD 写）"。
+
+// e2eSetupCompareMoveEnv 铺端到端用例的标准环境：一个用户（当前在 OU=IT）、
+// 一个目标部门（映射到 OU=IT2）、一条启用配置。返回 userID 与固定时刻。
+//
+// ⚠ nickname 必须非空（经 setDrainUserAttrs 写入）：syncUserAttributes 在
+// len(attributes)==0 时提前 return，根本不触达 LDAP，updateUserAttrCalls 断言会假红。
+// ⚠ 必须 seedDrainDept：department 属性走 sys_dept 查名，缺行时该属性被静默省略。
+func e2eSetupCompareMoveEnv(t *testing.T, db *gorm.DB, cfgID, userID string) {
+	t.Helper()
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainDept(t, db, "dept-it2", "IT2部")
+	seedDrainUser(t, db, userID, "zhangsan",
+		"CN=zhangsan,OU=IT,DC=corp,DC=com", "OU=IT,DC=corp,DC=com", ptrStr("dept-it2"))
+	setDrainUserAttrs(t, db, userID, "张三", "zhangsan@corp.com", "13800000000", "dept-it2")
+	seedDrainOUMapping(t, db, "m-1", "dept-it2", cfgID, "OU=IT2,DC=corp,DC=com", true)
+}
+
+// ptrStr 返回指向字面量 str 的指针（seed helper 的 deptID 入参需要 *string）。
+// 单独抽出来是因为内联 &"dept-it2" 在 Go 中不合法。
+func ptrStr(s string) *string { return &s }
+
+// TestPhase58_EndToEnd_UpdateUserPushedAfterDrain 端到端主用例：
+// 真实入队 → 排水 → 属性 Modify → compare-and-move OU → pushed 终态。
+//
+// 断言全部走**生产符号产生的可观测后果**（mock 计数 / sys_user 回写 / 队列行状态），
+// 不做裸 SQL 断言状态之外的实现细节。
+func TestPhase58_EndToEnd_UpdateUserPushedAfterDrain(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	const userID = "u-1"
+	e2eSetupCompareMoveEnv(t, db, cfgID, userID)
+
+	// --- 入队：走生产入队器（非 seedDrainQueueRow）---
+	enq := NewADPushEnqueuer()
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{userID}))
+	assert.Equal(t, int64(1), countUpdateUserRows(t, db, userID), "入队必须产生恰好一行 update_user")
+	row0 := reloadDrainRow(t, db, userID)
+	assert.Equal(t, models.ADPushStatusPending, row0.Status, "入队后初始状态必须是 pending")
+
+	// --- 排水 ---
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	// --- 属性 Modify 恰一次 ---
+	assert.Equal(t, 1, mock.updateUserAttrCalls, "端到端必须真实推送一次属性")
+	require.NotNil(t, mock.updateUserAttrLastAttrs)
+	assert.Equal(t, "张三", mock.updateUserAttrLastAttrs["displayName"],
+		"推的必须是闭包内重读到的最新昵称")
+	assert.Equal(t, "IT2部", mock.updateUserAttrLastAttrs["department"],
+		"department 属性由重读到的最新 dept_id 决定")
+
+	// --- compare-and-move：当前 OU=IT ≠ 目标 OU=IT2 → 移动一次 ---
+	require.Equal(t, 1, mock.moveUserCalls, "目标 OU 不一致 → 必须移动一次")
+	require.Len(t, mock.moveUserTargets, 1)
+	assert.Equal(t, "OU=IT2,DC=corp,DC=com", mock.moveUserTargets[0])
+
+	// --- F-A：ad_dn / ad_ou_dn 双写 ---
+	adDn, adOuDn := drainUserADRefs(t, db, userID)
+	require.NotNil(t, adDn)
+	assert.Equal(t, "CN=zhangsan,OU=IT2,DC=corp,DC=com", *adDn)
+	require.NotNil(t, adOuDn)
+	assert.Equal(t, "OU=IT2,DC=corp,DC=com", *adOuDn)
+
+	// --- 终态 ---
+	row := reloadDrainRow(t, db, userID)
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+	assert.NotNil(t, row.PushedAt, "成功终态必须写 pushed_at（可查询确认，QUEUE-03）")
+	assert.Nil(t, row.NextRetryAt)
+}
+
+// TestPhase58_EndToEnd_RepeatDrainIdempotent QUEUE-04 端到端幂等：
+// 把同一行打回 pending 跑第二轮 —— MoveUser **不得**再被调用（compare-and-move
+// 的幂等点跨腿成立：入队 → 移动 → 回写 → 再排水），但属性 Modify 仍每轮推最新值
+// （Modify 本身幂等，且"推最新值"是 QUEUE-04 的核心承诺）。
+//
+// ⚠ 与 TestPhase58_Drain_RepeatDrainIsIdempotent 的分工：那条用例只断言
+// moveUserCalls 不再增长；本条额外断言 updateUserAttrCalls **确实**增长到 2 ——
+// 否则"第二轮什么都没干"也会让前者变绿（假幂等）。
+func TestPhase58_EndToEnd_RepeatDrainIdempotent(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	const userID = "u-1"
+	e2eSetupCompareMoveEnv(t, db, cfgID, userID)
+
+	enq := NewADPushEnqueuer()
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{userID}))
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+	require.Equal(t, 1, mock.moveUserCalls, "第一轮必须移动一次")
+	require.Equal(t, 1, mock.updateUserAttrCalls, "第一轮必须推一次属性")
+
+	// 入队 → 再入队（合并子句把终态行打回 pending）——这是生产里"用户又被编辑一次"的真实形状。
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{userID}))
+	row := reloadDrainRow(t, db, userID)
+	require.Equal(t, models.ADPushStatusPending, row.Status,
+		"重新入队必须把终态行合并回 pending（跨腿：入队器的 D-06 合并语义）")
+	require.Equal(t, 0, row.Attempts, "合并必须清零 attempts（F-11 归零点）")
+
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 1, mock.moveUserCalls,
+		"第二轮 ad_ou_dn 已回写为目标 OU → 归一化相等 → MoveUser 不得再被调用（端到端幂等）")
+	assert.Equal(t, 2, mock.updateUserAttrCalls,
+		"属性 Modify 每轮都推最新值（幂等写，仍必须真推）")
+
+	adDn, adOuDn := drainUserADRefs(t, db, userID)
+	require.NotNil(t, adDn)
+	assert.Equal(t, "CN=zhangsan,OU=IT2,DC=corp,DC=com", *adDn, "第二轮不得改动 ad_dn")
+	require.NotNil(t, adOuDn)
+	assert.Equal(t, "OU=IT2,DC=corp,DC=com", *adOuDn, "第二轮不得改动 ad_ou_dn")
+	row = reloadDrainRow(t, db, userID)
+	assert.Equal(t, models.ADPushStatusPushed, row.Status)
+}
+
+// TestPhase58_EndToEnd_Code32ThenNoRetry QUEUE-05 端到端终态：
+// 属性路径 code 32 → dead + 清空 sys_user.ad_dn（跨腿：排水器 + syncUserAttributes）。
+//
+// ⚠ 第二轮的断言口径（**不是**"不再被拾取"）：把行改回 pending 后，第二轮**会**被
+// pickRows 拾取 —— 但 groupByResolvedConfig 读到用户 AdDn 已空 → 归入 deadRows 走
+// no-ad-dn 分支 → 再转 dead，全程**零 AD 写**。故断言是
+// 「被拾取但零 AD 写 + 终态仍为 dead」，写成"不再被拾取"会与分组逻辑的真实设计相反，
+// 执行者可能为迎合断言而改坏 groupByResolvedConfig。
+//
+// ⚠ 更强的断言是 updateUserAttrCalls 停在 1：若第二轮真的去 AD 试写，必增。
+func TestPhase58_EndToEnd_Code32ThenNoRetry(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	const userID = "u-1"
+	e2eSetupCompareMoveEnv(t, db, cfgID, userID)
+
+	enq := NewADPushEnqueuer()
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{userID}))
+
+	mock := newDrainTestLDAP()
+	mock.updateUserAttrErr = ldap.NewError(ldap.LDAPResultNoSuchObject, errors.New("no such object"))
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	// --- 第一轮：code 32 → dead ---
+	row := reloadDrainRow(t, db, userID)
+	assert.Equal(t, models.ADPushStatusDead, row.Status)
+	assert.Equal(t, 0, row.Attempts, "不可恢复错误不烧 attempts")
+	assert.Equal(t, "unrecoverable:target-not-found", row.LastError)
+	assert.Nil(t, row.PushedAt, "dead 终态不得写 pushed_at")
+
+	adDn, adOuDn := drainUserADRefs(t, db, userID)
+	assert.Nil(t, adDn, "code 32 必须清空 sys_user.ad_dn（QUEUE-05 核心）")
+	assert.Nil(t, adOuDn)
+	assert.Equal(t, 0, mock.moveUserCalls, "属性路径就 code 32 了，OU 移动根本没走到")
+	dnExistsAfterFirst := mock.dnExistsCalls
+
+	// --- 第二轮：模拟异常回滚（行被打回 pending），断言零 AD 写 ---
+	require.NoError(t, db.Model(&models.ADPushQueue{}).
+		Where("entity_id = ?", userID).
+		Updates(map[string]interface{}{"status": string(models.ADPushStatusPending)}).Error)
+
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	assert.Equal(t, 1, mock.updateUserAttrCalls,
+		"code 32 之后不得再对 AD 发起写（ad_dn 已清空 → 分组阶段即判 no-ad-dn）")
+	assert.Equal(t, 0, mock.moveUserCalls)
+	assert.Equal(t, dnExistsAfterFirst, mock.dnExistsCalls,
+		"第二轮不得再调 DNExists（同样在分组阶段即短路）")
+
+	row = reloadDrainRow(t, db, userID)
+	assert.Equal(t, models.ADPushStatusDead, row.Status, "第二轮结束后仍是 dead 终态")
+	assert.Equal(t, "unrecoverable:no-ad-dn", row.LastError,
+		"第二轮走的是分组阶段的 no-ad-dn 分支（与第一轮的 target-not-found 不同源，排障 SQL 靠前缀区分）")
+}
+
 // TestPhase58_EnqueueUpdateBatch_PropagatesError 锁定 D-02 第二层：队列表真写失败时
 // 原样上抛 error，**禁止**吞错降级 —— 调用方据此决定回滚或降级。
 func TestPhase58_EnqueueUpdateBatch_PropagatesError(t *testing.T) {
