@@ -332,3 +332,63 @@ func (e *ADPushEnqueuer) EnqueueDisable(tx *gorm.DB, userIDs []string) error {
 	}
 	return nil
 }
+
+// EnqueueUpdateBatch 批量入队 update_user（D-01 导入路径专用变体）。
+//
+// ⚠ 与 EnqueueUpdateIfChanged 的语义差异（务必读完再调用）：
+// EnqueueUpdateIfChanged 做**四字段 diff**（nickname/email/phone/deptId），只有实际变更才入队；
+// 本变体**不做 diff** —— 导入场景没有"导入前旧值快照"（被替换掉的
+// BatchSyncUsersToAD 同样在注释里承认拿不到旧值所以不做 OU 移动），
+// "全量入队"才是正确语义：排水器闭包会重读 DB 后推最新值。
+//
+// 行为链（与 EnqueueDisable 同款，只是少了 F-01 压制那一步）：
+//   - 空切片 → 直接返回 nil（连 sys_ad_config 查询都不发）
+//   - 重复 id 先去重（DedupeEntityIDs，保持首次出现顺序）：PG 对同一条 INSERT 内重复
+//     命中的行 DO UPDATE 会报 "ON CONFLICT DO UPDATE command cannot affect row a second time"
+//   - 无启用的 AD 配置 → WARN + 返回 nil（放行导入，D-02 第一层）
+//   - 配置启用 → 批量 upsert，冲突命中即合并（同实体恒一行活跃，adPushOnConflictClause 单一句面）
+//   - INSERT 失败 → 原样返回 error，由调用方决定回滚还是降级（禁吞错）
+//
+// ⚠ 不做 F-01 压制：压制只发生在 disable 打 update_user 上，update 与 update 之间不存在压制关系。
+//
+// ⚠ 唯一调用方是 api/v1/system/user_import_handler.go 的 enqueueImportUsersToAD，
+//   它自开短事务（ExcelService 的 Transaction 已提交）—— 这是 outbox-lite
+//   「同生共死」不变量的**一处已接受例外**，详见调用点注释。
+func (e *ADPushEnqueuer) EnqueueUpdateBatch(tx *gorm.DB, userIDs []string) error {
+	if len(userIDs) == 0 {
+		return nil
+	}
+
+	deduped := DedupeEntityIDs(userIDs)
+	if len(deduped) == 0 {
+		return nil
+	}
+
+	enabled, err := IsADSyncEnabled(tx)
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		applogger.Warnf("[ad_push_queue] 无启用的 AD 配置(sync_enabled=true AND status=enabled)，跳过批量 update 入队: %d 个用户",
+			len(deduped))
+		return nil
+	}
+
+	now := time.Now().UTC() // Phase 58 F-12：全链路 UTC
+
+	rows := make([]models.ADPushQueue, 0, len(deduped))
+	for _, id := range deduped {
+		rows = append(rows, models.ADPushQueue{
+			EntityType: models.ADPushEntityUser,
+			EntityID:   id,
+			ActionType: models.ADPushActionUpdateUser,
+			Status:     models.ADPushStatusPending,
+		})
+	}
+	if err := tx.Clauses(adPushOnConflictClause(now)).CreateInBatches(&rows, pushQueueBatchSize).Error; err != nil {
+		applogger.Errorf("[ad_push_queue] 批量 update 入队失败 (%d 行): %v", len(rows), err)
+		return err // 原样上抛，调用方决定是否降级
+	}
+	applogger.Infof("[ad_push_queue] 批量 update 入队成功: %d 行", len(rows))
+	return nil
+}

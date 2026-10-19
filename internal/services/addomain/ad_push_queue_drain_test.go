@@ -36,6 +36,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 )
 
 // createDrainADConfigTable 排水测试专用的 sys_ad_config 建表语句。
@@ -1128,4 +1129,172 @@ func TestPhase58_SecondsToCronSpec_InvalidFallsBack(t *testing.T) {
 		require.False(t, ok, "SecondsToCronSpec(%d) 应返回 ok=false", s)
 		require.Equal(t, "", got, "SecondsToCronSpec(%d) 的 spec 应为空串", s)
 	}
+}
+
+// ==================== Plan 06（T1）：EnqueueUpdateBatch 批量入队变体（D-01） ====================
+
+// enqueueBatchSeedTwoUsers 铺「一条启用的 AD 配置 + 两个用户」，返回两个 userID。
+// 导入场景只有已同步到 AD 的存量用户才有推送意义，故 ad_dn 取非空串。
+func enqueueBatchSeedTwoUsers(t *testing.T, db *gorm.DB, cfgID string) (string, string) {
+	t.Helper()
+	seedDrainADConfig(t, db, cfgID, "cfg-"+cfgID, "DC=corp,DC=com", true, 0)
+	u1 := "p06-u1-" + cfgID
+	u2 := "p06-u2-" + cfgID
+	seedDrainUser(t, db, u1, "p06un1-"+cfgID, "CN=p06un1,OU=Users,DC=corp,DC=com", "OU=Users,DC=corp,DC=com", nil)
+	seedDrainUser(t, db, u2, "p06un2-"+cfgID, "CN=p06un2,OU=Users,DC=corp,DC=com", "OU=Users,DC=corp,DC=com", nil)
+	return u1, u2
+}
+
+// enqueueBatchSeedTwoUsersNoConfig 只铺用户、不铺任何 AD 配置行。
+//
+// ⚠ 单独抽出是因为 enqueueBatchSeedTwoUsers 无条件铺一条「启用」配置，
+// 用它会与本组用例「无启用配置」的前提直接矛盾（IsADSyncEnabled 会命中那条配置）。
+func enqueueBatchSeedTwoUsersNoConfig(t *testing.T, db *gorm.DB) (string, string) {
+	t.Helper()
+	u1 := "p06-nocfg-u1"
+	u2 := "p06-nocfg-u2"
+	seedDrainUser(t, db, u1, "p06nocfg1", "CN=a,OU=Users,DC=corp,DC=com", "OU=Users,DC=corp,DC=com", nil)
+	seedDrainUser(t, db, u2, "p06nocfg2", "CN=b,OU=Users,DC=corp,DC=com", "OU=Users,DC=corp,DC=com", nil)
+	return u1, u2
+}
+
+// countUpdateUserRows 统计指定实体集合中的 update_user 行数。
+func countUpdateUserRows(t *testing.T, db *gorm.DB, entityIDs ...string) int64 {
+	t.Helper()
+	var n int64
+	require.NoError(t, db.Model(&models.ADPushQueue{}).
+		Where("entity_id IN ?", entityIDs).
+		Where("action_type = ?", string(models.ADPushActionUpdateUser)).
+		Count(&n).Error)
+	return n
+}
+
+// TestPhase58_EnqueueUpdateBatch_DedupesAndFilters 锁定 D-01 批量变体的两条前置语义：
+// 空切片 no-op + 重复 id 去重（PG 对同一条 INSERT 内重复命中的行 DO UPDATE 会报
+// "cannot affect row a second time"，去重是批量入队的硬前提）。
+func TestPhase58_EnqueueUpdateBatch_DedupesAndFilters(t *testing.T) {
+	db := setupDrainTestDB(t)
+	u1, u2 := enqueueBatchSeedTwoUsers(t, db, "p06-dedup")
+	enq := NewADPushEnqueuer()
+
+	// 1) 空切片 no-op
+	require.NoError(t, enq.EnqueueUpdateBatch(db, nil))
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{}))
+	assert.Equal(t, int64(0), countUpdateUserRows(t, db, u1, u2), "空切片不得入队")
+
+	// 2) 重复 id 去重：u1 传两次只应产生一行
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{u1, u1, u2}))
+	assert.Equal(t, int64(2), countUpdateUserRows(t, db, u1, u2), "重复 id 必须去重")
+
+	// 3) 每行的三列语义
+	var rows []models.ADPushQueue
+	require.NoError(t, db.Where("entity_id IN ?", []string{u1, u2}).Find(&rows).Error)
+	require.Len(t, rows, 2)
+	for _, r := range rows {
+		assert.Equal(t, models.ADPushEntityUser, r.EntityType)
+		assert.Equal(t, models.ADPushActionUpdateUser, r.ActionType)
+		assert.Equal(t, models.ADPushStatusPending, r.Status)
+	}
+
+	// 4) 全空串列表（DedupeEntityIDs 过滤空串后为空）同样 no-op
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{"", ""}))
+	assert.Equal(t, int64(2), countUpdateUserRows(t, db, u1, u2), "全空串列表不得入队")
+}
+
+// TestPhase58_EnqueueUpdateBatch_NoADConfigSkips 锁定 D-02 第一层：没有启用的 AD 配置时
+// 放行（返回 nil 不报错），入队数为 0 —— 导入结果不受 AD 开关影响。
+func TestPhase58_EnqueueUpdateBatch_NoADConfigSkips(t *testing.T) {
+	db := setupDrainTestDB(t)
+	// ⚠ 故意 seed 一条 sync_enabled=false 的配置而不是「完全不 seed」：
+	//   完全无行时「无启用配置」是因为表空，本用例想验的是「有配置但未启用」这一档。
+	seedDrainADConfig(t, db, "p06-cfg-off", "cfg-off", "DC=corp,DC=com", false, 0)
+	u1, u2 := enqueueBatchSeedTwoUsersNoConfig(t, db)
+
+	enq := NewADPushEnqueuer()
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{u1, u2}),
+		"无启用配置必须放行（不阻断导入），不能返回 error")
+	assert.Equal(t, int64(0), countUpdateUserRows(t, db, u1, u2), "无启用配置不得入队")
+}
+
+// TestPhase58_EnqueueUpdateBatch_MergeOnSecondCall 锁定 D-06 合并语义：
+// 连续两次同 ids 入队，行数恒为 2（合并命中部分唯一索引，而非追加并行行）。
+func TestPhase58_EnqueueUpdateBatch_MergeOnSecondCall(t *testing.T) {
+	db := setupDrainTestDB(t)
+	u1, u2 := enqueueBatchSeedTwoUsers(t, db, "p06-merge")
+	enq := NewADPushEnqueuer()
+
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{u1, u2}))
+	require.Equal(t, int64(2), countUpdateUserRows(t, db, u1, u2))
+
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{u1, u2}))
+	assert.Equal(t, int64(2), countUpdateUserRows(t, db, u1, u2), "第二次入队必须合并（同实体恒一行活跃）")
+
+	// 把两行打回 failed 再入队：合并子句应把它们打回 pending 并清零 attempts
+	// （这才是"合并"而非"幂等 no-op"的判别式 —— 若实现跳过已存在行，failed 就回不来了）。
+	require.NoError(t, db.Model(&models.ADPushQueue{}).
+		Where("entity_id IN ?", []string{u1, u2}).
+		Where("action_type = ?", string(models.ADPushActionUpdateUser)).
+		Updates(map[string]interface{}{
+			"status":     string(models.ADPushStatusFailed),
+			"attempts":   3,
+			"last_error": "prev failure",
+		}).Error)
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{u1, u2}))
+
+	var rows []models.ADPushQueue
+	require.NoError(t, db.Where("entity_id IN ?", []string{u1, u2}).Find(&rows).Error)
+	require.Len(t, rows, 2, "failed 行被合并而非新增并行行")
+	for _, r := range rows {
+		assert.Equal(t, models.ADPushStatusPending, r.Status, "合并必须把 failed 打回 pending")
+		assert.Equal(t, 0, r.Attempts, "合并必须清零 attempts（F-11 归零点）")
+	}
+}
+
+// TestPhase58_EnqueueUpdateBatch_NoDiffFiltering 锁定本变体与 EnqueueUpdateIfChanged 的
+// 关键差异：**不做 diff**。用户属性没有任何实际变更，仍必须入队 —— 导入场景没有
+// 旧值快照，全量入队才是正确语义（排水器闭包重读 DB 后推最新值）。
+//
+// 反向对照让本用例可证伪：同一组"同值"参数喂给 diff 变体必须判为无变更、不入队。
+func TestPhase58_EnqueueUpdateBatch_NoDiffFiltering(t *testing.T) {
+	db := setupDrainTestDB(t)
+	u1, u2 := enqueueBatchSeedTwoUsers(t, db, "p06-nodiff")
+	enq := NewADPushEnqueuer()
+
+	setDrainUserAttrs(t, db, u1, "same-nick", "same@mail", "13800000000", "")
+	var current models.User
+	require.NoError(t, db.Where("id = ?", u1).First(&current).Error)
+	require.NotNil(t, current.Nickname)
+	require.NotNil(t, current.Email)
+	require.NotNil(t, current.Phone)
+	sameReq := &requests.UserUpdateRequest{
+		Nickname: current.Nickname,
+		Email:    current.Email,
+		Phone:    current.Phone,
+	}
+
+	// 对照组：diff 变体在同值请求下判为无变更 → 不入队
+	require.NoError(t, enq.EnqueueUpdateIfChanged(db, &current, sameReq))
+	assert.Equal(t, int64(0), countUpdateUserRows(t, db, u1, u2),
+		"对照组：diff 变体在无实际变更时不得入队")
+
+	// 主断言：批量变体在完全相同的"无变更"前提下仍入队
+	require.NoError(t, enq.EnqueueUpdateBatch(db, []string{u1, u2}))
+	assert.Equal(t, int64(2), countUpdateUserRows(t, db, u1, u2),
+		"无实际变更也必须入队（本变体不做 diff）")
+}
+
+// TestPhase58_EnqueueUpdateBatch_PropagatesError 锁定 D-02 第二层：队列表真写失败时
+// 原样上抛 error，**禁止**吞错降级 —— 调用方据此决定回滚或降级。
+func TestPhase58_EnqueueUpdateBatch_PropagatesError(t *testing.T) {
+	db := setupDrainTestDB(t)
+	u1, u2 := enqueueBatchSeedTwoUsers(t, db, "p06-err")
+	enq := NewADPushEnqueuer()
+
+	require.NoError(t, db.Exec("DROP TABLE ad_push_queue").Error)
+	err := enq.EnqueueUpdateBatch(db, []string{u1, u2})
+	require.Error(t, err, "队列表不可写时必须返回 error，不得静默降级")
+
+	// 末尾重建队列表（与既有 RollsBack 用例同款收尾）
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
+	assert.Zero(t, countUpdateUserRows(t, db, u1, u2), "写失败不得留下任何半截行")
 }
