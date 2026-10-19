@@ -126,12 +126,18 @@ func (s *UserADSyncService) moveUserToNewOU(ctx context.Context, ldapClient LDAP
 		return fmt.Errorf("移动用户到新OU失败: %w", err)
 	}
 
-	// 4. 更新用户的ad_ou_dn
+	// 4. Phase 58 F-A：ModifyDN 后 AD 侧 DN 已变，必须**同时**回写 ad_dn 与 ad_ou_dn。
+	//    只回写 ad_ou_dn 会让 D-02（排水时按 ad_dn 解析归属配置）下一轮按陈旧 DN 解析：
+	//    跨域移动后落到另一个 base_dn → 误判「配置无匹配」→ 误转 dead；
+	//    后续属性 Modify 也会打到旧 DN → code 32 → 又一次误判 dead。
+	//    RDN 用同包 extractRDNFromDN 取（MoveUser 内部用的也是它，保证拼接一致）。
+	//    ⚠ 本函数是"显式触发的一次性移动"，触发条件不变（不引入 NormalizeDN 比较）。
+	newAdDn := fmt.Sprintf("%s,%s", extractRDNFromDN(*user.AdDn), ouDN)
 	if err := s.db.WithContext(ctx).
 		Model(&models.User{}).
 		Where("id = ?", userID).
-		Update("ad_ou_dn", ouDN).Error; err != nil {
-		applogger.Warnf("更新用户ad_ou_dn失败: %v", err)
+		Updates(map[string]interface{}{"ad_dn": newAdDn, "ad_ou_dn": ouDN}).Error; err != nil {
+		applogger.Warnf("更新用户 ad_dn/ad_ou_dn 失败 [%s]: %v", newAdDn, err)
 	}
 
 	applogger.Infof("用户 %s 已移动到新OU: %s", user.Username, ouDN)
@@ -316,12 +322,15 @@ func (s *UserADSyncService) moveSingleUserToOU(ctx context.Context, ldapClient L
 		return fmt.Errorf("LDAP移动失败: %w", err)
 	}
 
-	// 更新用户的ad_ou_dn
+	// Phase 58 F-A：与 moveUserToNewOU 同款修复 —— ModifyDN 后必须同时回写
+	// ad_dn（原 RDN + 新 OU 父路径）与 ad_ou_dn，否则下一轮按陈旧 DN 解析配置
+	// （跨域移动后误判「配置无匹配」→ 误转 dead）。
+	newAdDn := fmt.Sprintf("%s,%s", extractRDNFromDN(*user.AdDn), ouDN)
 	if err := s.db.WithContext(ctx).
 		Model(&models.User{}).
 		Where("id = ?", userID).
-		Update("ad_ou_dn", ouDN).Error; err != nil {
-		applogger.Warnf("更新用户 %s ad_ou_dn失败: %v", user.Username, err)
+		Updates(map[string]interface{}{"ad_dn": newAdDn, "ad_ou_dn": ouDN}).Error; err != nil {
+		applogger.Warnf("更新用户 %s ad_dn/ad_ou_dn失败: %v", user.Username, err)
 	}
 
 	return nil
