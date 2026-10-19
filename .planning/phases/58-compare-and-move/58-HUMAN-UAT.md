@@ -411,6 +411,33 @@ WHERE d.dept_name ~ '[,=+<>#;\\"]';
 
 ---
 
+### UAT-58-9. ⚠ OU 移动成功但本地回写失败 → 该用户 AD 绑定需人工重建（H-05 残余风险）
+
+**⚠ 这是代码审查后**新增**的已知后果（收口时发现，修复为部分修复）。**
+
+**现象：** 用户调岗触发 OU 移动。AD 侧移动**成功**，但紧接着写回本地 `sys_user.ad_dn` / `ad_ou_dn` 失败（写库瞬时故障）。修复前队列行会被标成 `pushed`（成功）而掩盖问题；**修复后**该行如实转为 `failed` 并排退避，`last_error` 以 `retry:move_ou:` 开头。
+
+**为什么仍需人工介入：** 重试**不能**自愈。核查结论是 `MoveUser` 重放**不安全** —— 重试时行重读到的仍是陈旧 `ad_dn`，而 AD 端该 DN 已随首次移动消失 → `ModifyDN` 打在不存在的对象上得 code 32。
+
+**人工判据：**
+
+```sql
+-- 找出本地 DN 指向 AD 端已不存在对象的用户（写回失败后的典型特征）
+SELECT u.id, u.username, u.ad_dn, u.ad_ou_dn, q.status, q.last_error
+FROM sys_user u
+JOIN ad_push_queue q ON q.entity_id = u.id
+WHERE q.last_error LIKE 'retry:move_ou:%' OR q.last_error LIKE 'unrecoverable:target-not-found%'
+ORDER BY q.updated_at DESC;
+```
+
+对命中行：在 AD 端确认用户当前实际所在 OU，把 `sys_user.ad_dn` / `ad_ou_dn` 手工改对（或触发一次走登录同步路径的重新绑定），再删掉该队列行。
+
+**与 UAT-58-5（code 32）的区别：** UAT-58-5 是 **AD 端对象被真删了**，属正常收敛；UAT-58-9 是 **AD 端对象还在、只是本地记录陈旧**，属需人工纠正的数据不一致。用 `Get-ADUser -Identity <RDN> -SearchBase <当前OU>` 确认对象是否真实存在即可区分。
+
+**result:** [pending]
+
+---
+
 ## Summary
 
 | 编号 | 标题 | 归属 | 状态 |
@@ -423,12 +450,13 @@ WHERE d.dept_name ~ '[,=+<>#;\\"]';
 | UAT-58-6 | ⚠ 部门同步从未跑过时 `update_user` 批量转 `dead` | Q2 刻意后果 | [pending — 必须知晓] |
 | UAT-58-7 | ⚠ 「编辑即续命」：持续失败的行永不终态 | F-11 已接受方向 | [accepted by design] |
 | UAT-58-8 | ⚠ 含特殊字符的历史部门需重跑部门同步 | Q5 / HYGIENE-02 取舍 | [pending] |
+| UAT-58-9 | ⚠ OU 移动成功但本地回写失败 → 需人工重建 AD 绑定 | H-05 残余风险（PARTIAL FIX） | [pending — 必须知晓] |
 
 ```
-total: 8
+total: 9
 passed: 0
 issues: 0
-pending: 6
+pending: 7
 accepted_by_design: 1
 na: 1 (UAT-58-4, 单域环境)
 ```

@@ -22,6 +22,56 @@
 
 ---
 
+## 代码审查修复（2026-10-19 追加，收口后）
+
+收口后由独立 `gsd-code-reviewer` 复审，得 **0 BLOCKER / 5 HIGH / 6 MEDIUM / 7 LOW**。5 条 HIGH 全部经编排者独立复核为真（非误报），用户处置如下：
+
+| 编号 | 摘要 | 处置 | Commit |
+|------|------|------|--------|
+| H-01 | 排水器在 `FuncJob` 闭包内构造 → 每轮一把新 mutex，`TryLock` 恒成功，注释宣称的轮次互斥**生产中完全失效** | ✅ FIXED（构造提升为单一实例 + 注释改为如实描述；单机部署，未引入行级认领） | `c81890dc` |
+| H-02 | `TestPhase58_Drain_MutualExclusionSkipsSecondRound` 锁定了一个生产不成立的性质，却是 SC1 互斥分句的承载证据 | ✅ FIXED（同提交：改写为断言**同一实例**持锁期间 LDAP 写计数不前进 + 放锁后正常执行 + 反向诚实记录单实例语义） | `c81890dc` |
+| H-03 | 退避曲线 16min/30min 两档生产不可达（`markFailed` 在 attempts≥5 即判 dead），实际重试窗 15min 而非 D-05 声明的 ~61min | ⏸ DEFERRED（**逻辑不改**，仅加注释记录事实与出处，留待真实熔断数据） | `550f35e3` |
+| H-04 | 账号池全部拨号失败返回的 error 不带任何池侧哨兵 → `poolExhausted=false` → 一次约 15min 的 AD 宕机/网络中断**永久杀死单轮最多 100 行** | ✅ FIXED（新增独立哨兵 `ErrAllAccountsDialFailed`；**未**合并进 `ErrAllAccountsUnavailable`，理由见下） | `18d6421e` |
+| H-05 | `MoveUser` 成功但本地 `ad_dn` 回写失败仅 `Warnf` 后 `return (false,nil)` → 行以 `pushed` 终态收尾，本地 DN 与 AD 实际状态永久不一致且不自愈 | ⚠ PARTIAL FIXED（失败上抛走 `markFailed`+退避；**MoveUser 重放不安全**，故只让失败可见、不自动修复绑定） | `3f55b7f7` |
+
+**三条审计否决项在修复后仍全部未命中** —— 修复未引入时间戳仲裁、未引入新旧值比较、未注册 `sys_job`。
+
+### H-04 的一处刻意偏离（值得记录）
+
+修复指令原文要求「dial 全失败时返回包裹 `ErrAllAccountsUnavailable` 的错误」。执行者**未照做**，改为新增独立哨兵 `ErrAllAccountsDialFailed`，并在提交说明里给出理由：合并会让 Phase 78 的三条既有用例失效，且把 group / user / sync 三条路径的用户可见文案从「连接AD服务器失败」改成「账号池无可用账号」——属跨模块行为变更。两个哨兵对管理员的处置动作本就不同（加账号/查熔断 vs 查网络与域控）。**该反驳成立**，编排者采纳。若后续要收敛为单一哨兵，需单独决策。
+
+排水器侧两个哨兵同款处理（`ad_push_queue_drain_service.go:283`），而「业务失败不带池侧哨兵」这半边由新用例的**反向断言**锁定——否则 code 32 会被误判为池侧故障、绕过 `handlePushError` 的不可恢复分支，直接破坏 QUEUE-05。
+
+### H-05 的残余风险（必须随 UAT 一起交代）
+
+回写失败现在会如实上抛并转为可见的 `failed`/`dead`（`last_error` 以 `retry:move_ou:` 开头），Phase 59 的信号守卫不会再把它读成「系统一致」。但**它不会自动修复绑定**：`MoveUser` 重放已被独立核查判定为**不安全**（重试时行重读到的仍是陈旧 `ad_dn`，AD 端该 DN 已不存在 → code 32），因此一次瞬时写库失败仍会导致该用户的 AD 绑定需要**人工重建**。
+
+**结论变化：** 修复把「静默的资产失联」降级为「可见的失败 + 明确的人工处置信号」，但未消除人工介入需求。此项已并入 UAT 清单。
+
+### 修复后复跑（实际输出）
+
+```
+$ go build ./...                                                → 无输出, EXIT=0
+$ go test ./internal/services/addomain/ -run TestPhase58 -count=1
+    ok  …/internal/services/addomain  2.377s
+$ go test ./internal/services/addomain/ -count=10 -run "TestPhase58_Drain_|TestPhase58_EndToEnd"
+    ok  …/internal/services/addomain  2.756s        ← 重复 10 次无 flake
+$ go test ./internal/services/system/ -run TestPhase57 -count=1
+    ok  …/internal/services/system  3.644s          ← Phase 57 sentinel 仍绿
+$ go test ./internal/scheduler/ -count=1
+    ok  …/internal/scheduler  60.582s
+$ go test ./internal/services/addomain/ -run "78" -count=1
+    ok  …/internal/services/addomain  7.824s        ← Phase 78 用例**被加强**（追加 dial-failed 哨兵断言），未被削弱
+$ go vet ./internal/services/addomain/ ./internal/scheduler/ ./internal/services/system/
+    → 无输出, EXIT=0
+```
+
+### SC1 证据口径更正
+
+SC1 的「互斥」分句此前由 H-02 那条测试承载，而该测试在当时的生产形态下断言了一个不成立的性质。修 H-01 后，「同一实例」才是生产真实形态（排水器在 `Start()` 中只构造一次、闭包捕获同一实例），改写后的断言才成立。**SC1 判定维持 VERIFIED，但证据换成了修复后的版本**；`cron.SkipIfStillRunning` 仍独立承担 cron 轮次防重叠。
+
+---
+
 ## 总表
 
 | SC | 判定 | 一句话证据指针 |

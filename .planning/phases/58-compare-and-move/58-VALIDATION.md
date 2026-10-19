@@ -23,7 +23,7 @@ created: 2026-10-17
 | **新增依赖** | 无（robfig/cron、go-ldap、testify 均已在 go.mod） |
 | **测试落地文件（建议）** | ① `internal/services/addomain/ad_push_queue_drain_test.go`（新建，排水核心）② `internal/services/addomain/ad_dn_config_match_test.go` 或并入 ①（D-02 纯函数 + NormalizeDN + OU 转义纯函数）③ `internal/services/system/ad_push_queue_test.go`（追加 F-07/F-10）④ `internal/api/v1/system/user_handler_test.go`（F-G 用例处置）⑤ `internal/core/db/migrations/migration_216_*.go` + 可选 `_test.go` |
 | **Quick run command** | `go test ./internal/services/addomain/ -run TestPhase58 -count=1` |
-| **Second env sentinel** | `go test ./internal/services/system/ -run TestPhase57 -count=1`（Phase 57 的 42 个既有用例必须保持绿 —— D-04 触碰 BatchDelete 的回归面） |
+| **Second env sentinel** | `go test ./internal/services/system/ -run TestPhase57 -count=1`（Phase 57 的既有用例必须保持绿 —— D-04 触碰 BatchDelete 的回归面。**口径校正 2026-10-19**：规划期记为 42，执行期实测 **41 例**；58-06 executor 已用 `git stash` 回退至基线 commit `d41e16cb` 重跑同样得 41，确认为文档口径误差而非回归） |
 | **Full suite command** | `go test ./...` |
 | **Estimated runtime** | quick ~3s（研究期实测 sentinel 2.788s） |
 
