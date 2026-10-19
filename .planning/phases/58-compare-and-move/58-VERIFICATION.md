@@ -383,10 +383,53 @@ $ grep -c "Updates(" internal/services/addomain/ad_push_queue_service.go
 |------|---------|------|
 | `go build ./...` | 退出码 `0`，无输出 | PASS |
 | `go vet ./internal/services/addomain/ ./internal/scheduler/ ./internal/services/system/ ./internal/api/v1/system/ ./internal/core/db/` | 无输出，退出码 `0` | PASS |
-| `go test ./... -count=1` | 见 `58-07-SUMMARY.md`「全量回归」段 | PASS |
-| `go test ./internal/services/system/ -run TestPhase57 -count=1` | `ok ... 4.579s` | PASS（零回归） |
-| `go test ./internal/services/addomain/ -run TestPhase58 -count=1` | `ok ... 2.926s`（61 PASS） | PASS |
-| `go test ./internal/services/system/ -run TestPhase57_ActiveRowPredicate_MatchesIndexDDL -count=1` | `--- PASS (0.02s)` | PASS（P7 证伪未触发） |
+| `go test ./... -count=1` | 退出码 `0`，78 个包 `ok`，0 FAIL（复跑一次同样全绿） | PASS |
+| `go test ./internal/services/system/ -run TestPhase57 -count=1` | `ok ... 3.737s`（41 PASS / 0 FAIL） | PASS（零回归） |
+| `go test ./internal/services/addomain/ -run TestPhase58 -count=1` | `ok ... 2.417s`（61 PASS） | PASS |
+| `go test ./internal/services/system/ -run TestPhase57_ActiveRowPredicate_MatchesIndexDDL -count=1` | `--- PASS (0.03s)` | PASS（P7 证伪未触发） |
+
+### ⚠ 回归期间发现并处置的两个不稳定项（均**非** Phase 58 生产代码问题）
+
+处置原则：先复现、再用 `git worktree` 在**改动前的基线 commit** 上对照，确认归因后才动手。
+（全程未使用 `git stash`。）
+
+#### 1. `TestPhase58_EndToEnd_RepeatDrainIdempotent` 偶发失败 —— **本 plan 新增用例自身的缺陷**（已修）
+
+- **症状**：首轮全量回归报 `expected "pending", actual "pushed"`，单独跑却通过。
+- **根因**：`pushed` 行已**退出** `uq_ad_push_queue_active` 部分唯一索引（谓词
+  `status IN ('pending','failed')`），所以第二次 `EnqueueUpdateBatch` 不冲突 ——
+  它**新增并行行**而非合并。这是 Phase 57 D-06 的**正确**设计（终态行必须退出索引，
+  否则同实体的下一次编辑会撞 42P10）。但我原来的用例用「再入队」制造第二轮，
+  让「同一行被重复排水」的前提失效，且 `reloadDrainRow` 的 `First`（无 `ORDER BY`）
+  在两行间不确定 ⇒ **随机通过 / 随机失败**（典型 latent flake）。
+- **归因确认**：这是**用例写法**的缺陷，不是生产代码缺陷。生产语义无需改动。
+- **处置**（提交 `30af6251`）：改用 plan 原意 —— 手工把队列行打回 `pending`
+  （与 Plan 04 的 `TestPhase58_Drain_RepeatDrainIsIdempotent` 同手法），
+  并新增 `countQueueRowsForEntity` 把「同一行」变成可证伪断言。
+- **断言未被弱化**：`moveUserCalls==1` / `updateUserAttrCalls==2` / `ad_dn` 不变全部保留，
+  另加行数 `==1` 的加固。`-count=10` 连跑确定性通过。
+
+#### 2. `TestInit78_Close_PartialInit` 一次超时 —— **既有的负载敏感 flaky**（非本 phase）
+
+- **症状**：某轮全量回归中该用例耗时 `31.28s` 后失败；守卫超时恰为 30s
+  （`core_init_78_02_test.go:49` `close78GuardTimeout = 30 * time.Second`）。
+- **归因确认**：该用例属 `internal/core`（Phase 78 的 core 初始化测试），与 Phase 58 无关：
+  1. 单独跑通过（`--- PASS: TestInit78_Close_PartialInit (8.18s)`）；
+  2. 在**改动前的基线 commit `5aa9fded`**（`git worktree`，未用 stash）上跑完整 suite
+     → 退出码 `0`、78 个包全 `ok`；
+  3. 在本 tree 上复跑完整 suite → 退出码 `0`、78 个包全 `ok`。
+- **结论**：属**全量并行跑时的墙钟预算抖动**（同一 30s 守卫在负载下偶发超支），
+  非 Phase 58 引入的回归。**如实披露，不隐藏**。
+
+#### 3. `TestPhase58_LoadDrainIntervalSeconds_FallsBackOnGarbage` 在 `-count=5` 下失败 —— **既有的共享缓存 DSN 问题**（非本 phase）
+
+- **症状**：仅在 `-count=5` 复跑时失败（4 个子用例全红），`-count=1` 全绿。
+- **归因确认**：在基线 commit `5aa9fded` 上以 `-count=5` 复跑**同样失败**（错误信息一致），
+  而该测试由 Plan 05 交付、**本 plan 未触碰**。根因是该 helper 用
+  `file:<t.Name()>?mode=memory&cache=shared` 作 DSN，`cache=shared` 的 in-memory 库
+  在同进程内跨重复轮次存活，第 2 轮起 INSERT 撞唯一约束。
+- **结论**：既有问题，`-count=1`（本项目标准口径）下全绿。**本 plan 不修**（超出 58 范围，
+  且与 SC 无关），如实记录待后续清理。
 
 ### P7 证伪（谓词常量 ↔ migration_215 索引 DDL）
 
