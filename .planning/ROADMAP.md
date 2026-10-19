@@ -184,10 +184,14 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
   4. 只读端点返回对账数据且需登录鉴权访问（GUARD-02）
 
 **Plans**: 4 plans (3 waves)
-
+**Wave 1**
 - [ ] 59-01-PLAN.md — GUARD-01 登录回写守卫：活跃 update_user 队列行拦截 + WARN + 查询失败保守降级
 - [ ] 59-02-PLAN.md — GUARD-02 数据底座：migration_217 双方言普通视图 v_dept_ou_mismatch + 三路径注册 + AutoMigrate 前置 DROP
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 59-03-PLAN.md — GUARD-02 只读端点：分页/筛选服务 + /ad-domain/reconciliation/mismatch + migration_218 权限载体
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 59-04-PLAN.md — GUARD-02 前端：AD 配置页「对账」Tab（权限门/筛选/表格/空错态）
 
 ### Phase 60: 软删恢复安全
