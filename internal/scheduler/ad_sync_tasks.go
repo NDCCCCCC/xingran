@@ -170,10 +170,62 @@ func (s *ADSyncScheduler) Start() {
 		applogger.Errorf("启动AD账号池恢复定时任务失败: %v", err)
 	}
 
+	// Phase 58 D-05: ad_push_queue 排水器（SC1：in-process cron）。
+	// ⚠ 里程碑锁定项：**禁注册 sys_job** —— 不写 seed、不加 RegisterTask、不建独立调度器。
+	//
+	// ⚠ 必须用 AddJob 而非 AddFunc：AddFunc 不暴露 chain wrapper 入口，
+	// 而 30s 短间隔下单轮可能超 30s，需要 SkipIfStillRunning 防轮次重叠。
+	// ⚠ SkipIfStillRunning 的互斥 channel 是**闭包私有**的，无法被手动触发路径复用 ——
+	//   互斥的事实源是 ADPushDrainer.mu（TryLock），chain wrapper 只是第二道保险。
+	// ⚠ 账号池必须经 s.getPool() 取全局单例，**禁止**在此处自建账号池
+	//   （Pitfall 4：独立缓存 → 熔断后仍选到坏账号；同 dept_sync_tasks.go:16-21 的约束）。
+	// ⚠ sys_config 旋钮在**启动时读取一次**（D-05：改后需重启后端生效）。
+	//
+	// ⚠ s.db 为 nil（仅测试构造）时跳过配置读取，保持安全默认 spec ——
+	//   LoadDrainIntervalSeconds 假定 db 非 nil（同 core.go 的 loadConnectionPoolConfig 先例）。
+	drainSpec := "*/30 * * * * *"
+	if s.db != nil {
+		drainInterval := addomain.LoadDrainIntervalSeconds(s.db)
+		spec, ok := addomain.SecondsToCronSpec(drainInterval)
+		if !ok {
+			applogger.Warnf("[ad_push_queue] drain_interval_seconds=%d 无法映射为 cron spec（非 60 因子值），回落默认 30s",
+				drainInterval)
+		} else {
+			drainSpec = spec
+		}
+	}
+	lg := cronLogger()
+	_, err = s.cron.AddJob(drainSpec,
+		cron.NewChain(cron.Recover(lg), cron.SkipIfStillRunning(lg)).Then(cron.FuncJob(func() {
+			// 互斥与超时由 Drainer 内部统一处理（TryLock + 每轮一次 now）
+			drainer := addomain.NewADPushDrainer(s.db, s.getPool())
+			if err := drainer.DrainOnce(context.Background()); err != nil {
+				applogger.Errorf("[ad_push_queue] 排水轮次失败: %v", err)
+			}
+		})))
+	if err != nil {
+		// 非阻断：排水器启动失败不应阻断已有的全量同步与熔断恢复
+		applogger.Errorf("[ad_push_queue] 启动排水定时任务失败（不阻断其它 AD 定时任务）: %v", err)
+	}
+
 	s.cron.Start()
 	s.started = true
-	applogger.Infof("AD同步定时任务已启动（全量同步: 每5分钟 + 账号池恢复: 每5分钟）")
+	applogger.Infof("AD同步定时任务已启动（全量同步: 每5分钟 + 账号池恢复: 每5分钟 + ad_push_queue 排水: %s）", drainSpec)
 }
+
+// cronLogger 把 cron 的 Logger 接口适配到 applogger，避免 cron 的默认
+// PrintfLogger 把轮次日志打到 stdout 绕过项目日志体系。
+// applogger 不实现 Printf，故不能用 cron.PrintfLogger 直接包装。
+type apploggerCronLogger struct{}
+
+func (apploggerCronLogger) Info(msg string, keysAndValues ...interface{}) {
+	applogger.Debugf("[cron] %s %v", msg, keysAndValues)
+}
+func (apploggerCronLogger) Error(err error, msg string, keysAndValues ...interface{}) {
+	applogger.Errorf("[cron] %s %v: %v", msg, keysAndValues, err)
+}
+
+func cronLogger() cron.Logger { return apploggerCronLogger{} }
 
 // Stop 停止AD同步调度器
 func (s *ADSyncScheduler) Stop() {
