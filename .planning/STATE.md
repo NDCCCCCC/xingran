@@ -3,34 +3,43 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 status: in_progress
-last_updated: "2026-10-19T02:20:00.000Z"
-last_activity: 2026-10-19 -- Phase 58 Wave 2（58-03）执行完成：排水器骨架 + 拾取谓词 + 退避曲线 + 状态机 + disable/属性两条推送路径 + F-11 禁令 + F-12/F-14 一行修
+last_updated: "2026-10-19T10:45:00.000Z"
+last_activity: 2026-10-19 -- Phase 58 Wave 3（58-04）执行完成：compare-and-move 幂等 OU 移动 + F-A 三处载体回写 ad_dn + F-B 配置作用域 OU 查询 + OU 路径 code 32 终态 + 终态不被 markPushed 覆盖
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 10
-  completed_plans: 6
-  percent: 60
+  completed_plans: 7
+  percent: 70
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 executing (wave 2/6 done — 58-01 / 58-02 / 58-03 完成，58-04 待执行)
-**Last activity**: 2026-10-19 — execute-phase 58 plan 03：ADPushDrainer 排水执行面（D-05 拾取谓词 + 退避曲线 + 六状态跃迁 + 按 ad_dn 分组 + disable/属性两条推送路径）+ F-11 dead 判定单点锁死 + F-12 四处 UTC / F-14 default tag；13 个 Drain 用例全绿，全仓 `go test ./...` exit 0，Phase 57 sentinel 绿
+**Status**: v1.21 Phase 58 executing (wave 3/6 done — 58-01 / 58-02 / 58-03 / 58-04 完成，58-05 待执行)
+**Last activity**: 2026-10-19 — execute-phase 58 plan 04：compare-and-move 幂等 OU 移动（NormalizeDN 比较 → 一致跳过 MoveUser）+ F-A 三处载体（drainer/moveUserToNewOU/moveSingleUserToOU）同时回写 ad_dn 与 ad_ou_dn + F-B 配置作用域 OU 查询（不跨域）+ OU 路径 code 32 转 dead + 终态在 markPushed 之前短路；28 个用例全绿，全仓 `go test ./...` exit 0，Phase 57 sentinel 绿
 
 ## Current Position
 
 Phase: 58 (排水器与 compare-and-move 推送) — Executing
-Plan: 58-04-PLAN.md 待执行（Wave 3：compare-and-move + OU 路径 code 32 终态）
-Status: Phase 58 Wave 2 完成（58-03 已交付排水器骨架 + 状态机 + 两条推送路径；`drainRow` 已留 Plan 04 的 compare-and-move 接口位 `ad_push_queue_drain_service.go:370`）
-Last activity: 2026-10-19 -- 58-03 两个 task 落地（`04dfa698` / `34294f67`）
-Progress: 1/6 phases [█░░░░░░░░] 17%（6/10 plans）
+Plan: 58-05-PLAN.md 待执行（Wave 4：cron 接线 + sys_config 单旋钮 + 禁 sys_job）
+Status: Phase 58 Wave 3 完成（58-04 已交付 compare-and-move 执行面：`compareAndMoveOU` 返回 `(terminal, err)`、目标 OU 走 `FindOUDNByDeptIDForConfig`、F-A 三处载体全部双写 ad_dn）
+Last activity: 2026-10-19 -- 58-04 三个 task 落地（`44b4b958` / `f00f41b1` / `c89b4835`）
+Progress: 1/6 phases [█░░░░░░░░] 17%（7/10 plans）
 
 ## Accumulated Context
 
 ### Decisions
+
+- 58-04 执行期决策（2026-10-19，Wave 3 compare-and-move + F-A/F-B）：
+  - **F-A 同时回写 `ad_dn` 与 `ad_ou_dn`（三处载体）**：`MoveUser`（ModifyDN, deleteOldRDN=true）后 AD 侧 DN 已变；只回写 `ad_ou_dn` 会让 D-02 的下一轮按陈旧 DN 解析归属配置 → 跨域移动后误判「配置无匹配」→ 误转 dead，且属性 Modify 会打到旧 DN → 二次 code 32。落点：排水器 `compareAndMoveOU` 第 5 步 + `user_ad_sync_service.go:135`（moveUserToNewOU）+ `:328`（moveSingleUserToOU），三处均为 `Updates(map){ad_dn: extractRDNFromDN(旧 ad_dn)+","+新 OU, ad_ou_dn: 新 OU}`（`Unscoped()`，因软删用户也要能回写）。
+  - **终态不被 `markPushed` 覆盖**：`compareAndMoveOU` 返回 `(terminal bool, err error)`；`no-ou-mapping` 分支内已 `markDead` 并返回 `(true, nil)`，调用方 `if terminal { return }` 在 `markPushed` **之前**短路（`ad_push_queue_drain_service.go:384-387`）。行为证据：`TestPhase58_Drain_NoOUMappingGoesDead` 断言 `status == "dead"`。
+  - **有意相对 `SyncUserUpdateToAD` 收紧语义**：旧路径 OU 移动失败仅 `applogger.Errorf` 并继续推属性；排水器侧改为上抛 → 行转 `failed` + 退避（`last_error` 前缀 `retry:move_ou:`）。理由：否则「OU 永远移不动」的行会被属性成功掩盖成 `pushed`，SC2 的可观测性消失。差异写入 `compareAndMoveOU` 注释与 SUMMARY。
+  - **Plan 03 的 `TestPhase58_Drain_UpdateUserSuccessWritesPushedAt` fixture 补 OU 映射铺底**：叠加 compare-and-move 后，有 `dept_id` 而无映射会按 Q2 转 dead，原 fixture 语义失效。补一行与该用户当前 `ad_ou_dn` 归一化相等的映射（目标一致 → 跳过 MoveUser → pushed），断言强度不变（不是为变绿弱化断言）。
+  - **`TestPhase58_FindOUDNByDeptIDForConfig_*` 放在 `dept_ou_mapper_test.go`（不带 `skip_db_tests` tag）**：排水基座 `setupDrainTestDB` 与 `drainNow()` 都定义在带 `!skip_db_tests` 的文件里，mapper 用例引用它们会让 `-tags skip_db_tests` 构建红。改复用 `user_ou_service_test.go` 的 `createDeptOUMappingTable`（同包无 tag）。
+  - **旧方法 `FindOUDNByDeptID` 保留不动**：其调用方（`moveUserToNewOU` / `BatchMoveUsersToNewOU`）本轮只修 F-A 回写、不改触发条件（不引入 `NormalizeDN` 比较），避免波及其它路径；排水器内 `FindOUDNByDeptID(ctx` 命中数为 0。
+  - **本 plan 不标记 QUEUE-04 / QUEUE-05 为 complete**：沿用 58-01/58-03 分档口径（cron 接线在 58-05、端到端证据在 58-07），最终回填归 58-07。
 
 - 58-03 执行期决策（2026-10-19，Wave 2 排水器骨架 + 状态机）：
   - **`deadRows` 元素携带 reason（`drainDeadRow`）**：plan 的 `DrainOnce` 伪码给全部 deadRows 写死 `reason='unrecoverable:no-ad-config'`，与同 plan 的孤儿用例断言 `last_error` 含 `unrecoverable:user-not-found` 冲突；改为逐行携带 reason（`user-not-found` / `no-ad-dn` / `no-ad-config` 分别落库），循环体形态不变（内嵌提升 `row.ID`/`row.Attempts`）。

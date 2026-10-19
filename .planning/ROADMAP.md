@@ -118,7 +118,7 @@ Plans:
 
 **Wave 3**
 
-- [ ] 58-04-PLAN.md — compare-and-move 执行面：幂等比较 + F-A ad_dn 回写 + F-B config 作用域 OU 映射 + OU 路径 code 32 终态（QUEUE-04, QUEUE-05）
+- [x] 58-04-PLAN.md — compare-and-move 执行面：幂等比较 + F-A ad_dn 回写 + F-B config 作用域 OU 映射 + OU 路径 code 32 终态（QUEUE-04, QUEUE-05）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-04-SUMMARY.md](phases/58-compare-and-move/58-04-SUMMARY.md)）
 
 **Wave 4**
 
@@ -203,7 +203,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
-| 58. 排水器与 compare-and-move 推送 | 2/7 | In progress (wave 1 done 2026-10-19) | - |
+| 58. 排水器与 compare-and-move 推送 | 4/7 | In progress (wave 3 done 2026-10-19) | - |
 | 59. 登录回写守卫与部门对账视图 | 0/TBD | Not started | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
