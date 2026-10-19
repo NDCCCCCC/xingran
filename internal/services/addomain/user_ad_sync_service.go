@@ -41,6 +41,10 @@ func NewUserADSyncService(db *gorm.DB, pool AccountPool, ldapClient *LDAPClient,
 
 // SyncUserUpdateToAD 同步用户更新到AD域控
 // 在系统更新成功后调用，降级处理：AD同步失败不回滚系统更新
+//
+// ⚠ Phase 58 SC6：本方法已无生产调用方（handler 直推已删），保留作显式管理面 / 未来复用。
+// 排水器走的是 syncUserAttributes（属性）+ compareAndMoveOU（OU 移动），
+// 本方法的"从 params 推 deptId 决定是否移动"语义不再用于推送路径。
 func (s *UserADSyncService) SyncUserUpdateToAD(ctx context.Context, userID string, updateReq map[string]interface{}) error {
 	// 1. 获取用户信息
 	var user models.User
@@ -693,6 +697,11 @@ type BatchSyncResult struct {
 //
 // 与 SyncUserUpdateToAD 关系：单用户编辑用 SyncUserUpdateToAD（含 OU 移动判断），
 // 导入/全量用本方法（仅属性同步）。
+//
+// ⚠ Phase 58 SC6：本方法已无生产调用方（导入后的 BatchSyncUsersToAD 直推已删，
+// 改为 EnqueueUpdateBatch 批量入队 → 排水器推送），保留作显式管理面 / 未来复用。
+// 上面「为什么不移动 OU」的结论对排水器同样成立：排水器的 OU 移动走 compareAndMoveOU
+// ——闭包内重读 DB 拿 dept_id 与 ad_ou_dn 比较，而不是靠"导入前旧值快照"。
 func (s *UserADSyncService) BatchSyncUsersToAD(ctx context.Context, userIDs []string) (*BatchSyncResult, error) {
 	result := &BatchSyncResult{}
 
