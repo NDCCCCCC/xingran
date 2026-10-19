@@ -155,6 +155,8 @@ func setupUserCacheTestDB(t *testing.T) *gorm.DB {
 	// 复用同一套 Delete / BatchDelete 写路径，事务内会调 IsADSyncEnabled 查
 	// sys_ad_config 并写 ad_push_queue。缺这两张表会让
 	// TestUserCache_Delete_TriggersInvalidate 等用例因报表不存在而失败。
+	// Phase 58 F-15: 此处刻意不 seed sys_ad_config 行 —— 用例断言的正是
+	// "无启用 AD 配置时入队为 no-op"分支，seed 了反而会让该断言失去意义。
 	require.NoError(t, db.Exec(`
 		CREATE TABLE IF NOT EXISTS sys_ad_config (
 			id TEXT PRIMARY KEY,

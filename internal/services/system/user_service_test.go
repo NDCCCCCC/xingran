@@ -114,9 +114,13 @@ func setupUserServiceTestDB(t *testing.T) *gorm.DB {
 	// migration_215 直调建表。UserService 的 Update/Delete/BatchDelete 已接线入队，
 	// 缺这两张表会让这些用例因 IsADSyncEnabled 报表不存在而整体转红。
 	// deleted_at 必须存在：models.ADConfig 内嵌 BaseModel，GORM 软删作用域引用它。
+	// Phase 58 F-F: 补 config_name / base_dn 两列 —— D-02 的最长后缀匹配测试要读 base_dn，
+	// 缺列则只能绕开 GORM（退化成裸 SQL 断言，测试价值打折）。
 	require.NoError(t, db.Exec(`
 		CREATE TABLE IF NOT EXISTS sys_ad_config (
 			id TEXT PRIMARY KEY,
+			config_name TEXT,
+			base_dn TEXT,
 			sync_enabled INTEGER NOT NULL DEFAULT 0,
 			status INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME,

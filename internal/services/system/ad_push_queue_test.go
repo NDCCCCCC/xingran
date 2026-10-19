@@ -94,7 +94,11 @@ func TestPhase57_Migration215_PartialUniqueIndex(t *testing.T) {
 // 记录裸 INSERT 不带 id 时 sqlite 的实际行为：sqlite 对非 INTEGER 主键列允许 NULL，
 // 而 PG 的 `id uuid PRIMARY KEY` 强制 NOT NULL（23502）。两侧语义不等价，因此生产
 // 写入路径必须走 GORM（BeforeCreate 生成 UUID）。此用例只记录，不断言成功/失败。
+//
+// ⚠ 已 skip：需真实 PG 才能验证 uuid 列的 NOT NULL 契约（v1.22 跟进）。
+// sqlite 对非 INTEGER 主键列容忍 NULL，无法复现 23502，留着跑只会制造"契约已被覆盖"的错觉。
 func TestPhase57_Migration215_BareInsertWithoutID(t *testing.T) {
+	t.Skip("Phase 58 F-16: 裸 INSERT 无 ID 的 PG 契约断言（uuid 列 NOT NULL → 23502）需真实 PG 才能验证；sqlite 无法复现该约束，PG 契约断言留 v1.22（与 Phase 57 D-04「留档不修」一致）")
 	db := setupPhase57QueueDB(t)
 
 	var execErr error
