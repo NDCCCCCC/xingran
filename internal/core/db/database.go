@@ -1080,6 +1080,12 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
 			applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
 		}
+		// Phase 59 GUARD-02: 对账查询按钮权限 seed（幂等，精准授权）。
+		// **非阻断**：缺权限行只让普通角色对账端点 403 / 前端 Tab 不渲染，
+		// 不影响登录 / 入队 / 排水主链路；父菜单缺失时迁移内部降级返回 nil。
+		if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
+			applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -1123,6 +1129,11 @@ func (d *Database) AutoMigrate() error {
 		// 视图在 AutoMigrate 之前被 dropSQLiteReconciliationViews() DROP 过，此处重建。
 		if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
 			applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: Phase 59 GUARD-02 对账查询按钮权限 seed（与 PG 分支同款调用 + 同款非阻断档）。
+		// sqlite 既是 dev 运行时也是测试运行时；只注册 PG 分支会让 dev 环境缺权限行。
+		if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
+			applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
@@ -1317,6 +1328,12 @@ func (d *Database) BootstrapMissingTables() error {
 	// 非阻断：视图缺失只让对账端点 500；该旁路不跑 AutoMigrate，故也不存在视图阻塞 ALTER 的问题。
 	if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
 		applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
+	}
+
+	// Phase 59 GUARD-02：SKIP_AUTOMIGRATE 旁路同样要 seed 对账查询按钮权限（F-03 同款盲区）。
+	// 非阻断：缺权限行只让普通角色对账端点 403 / 前端 Tab 不渲染。
+	if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
+		applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 	}
 
 	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建
