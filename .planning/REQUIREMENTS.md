@@ -9,8 +9,8 @@
 - [x] **QUEUE-01**: 管理员编辑用户（部门/昵称/邮箱/手机）后，变更在**业务事务内**写入 `ad_push_queue`，进程重启不丢失
 - [x] **QUEUE-02**: 同一用户短时间内多次编辑时，队列**按实体合并**仅保留最新待推送状态，不丢弃后一次编辑
 - [x] **QUEUE-03**: 后台排水器（in-process cron，**不注册 sys_job**）按退避重试失败行，达上限转终态且可查询
-- [ ] **QUEUE-04**: 排水执行 OU 移动采用 **compare-and-move**（闭包内重读最新值 + NormalizeDN 归一化比较），仅在需要时 MoveUser，重复排水幂等
-- [ ] **QUEUE-05**: LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，不进重试循环
+- [x] **QUEUE-04**: 排水执行 OU 移动采用 **compare-and-move**（闭包内重读最新值 + NormalizeDN 归一化比较），仅在需要时 MoveUser，重复排水幂等
+- [x] **QUEUE-05**: LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，不进重试循环
 - [x] **QUEUE-06**: sys 删除用户时入队 **disable AD 账号**动作，闭环"已删用户经 AD 登录复活"链路
 
 ### 登录回写守卫 (GUARD)
@@ -58,8 +58,8 @@
 | QUEUE-01 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | QUEUE-02 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | QUEUE-03 | Phase 58 | Complete (2026-10-19, 58-05: cron 接线 + sys_config 单旋钮 + 禁 sys_job 证伪；58-06 收尾：SC6 两条直推路径删除后，队列成为 AD 推送唯一通路) |
-| QUEUE-04 | Phase 58 | In Progress (2026-10-19, 58-04: compareAndMoveOU + 闭包重读 + NormalizeDN 归一化比较，23/23 PASS；58-07 回填端到端证据后转 Complete) |
-| QUEUE-05 | Phase 58 | In Progress (2026-10-19, 58-04: code 32 → dead 终态 + 清空 ad_dn + 不烧 attempts；58-07 回填端到端证据后转 Complete) |
+| QUEUE-04 | Phase 58 | Done (2026-10-19, Phase 58 verified — 58-04 compareAndMoveOU + 闭包重读 + NormalizeDN 归一化比较；58-07 端到端证据 `TestPhase58_EndToEnd_RepeatDrainIdempotent` PASS，第二轮 MoveUser 累计仍 1 次。证据：58-VERIFICATION.md SC2。⚠ 真域控 ModifyDN 有效性留 UAT-58-1) |
+| QUEUE-05 | Phase 58 | Done (2026-10-19, Phase 58 verified — 58-04 code 32 → dead 终态 + 清空 ad_dn + 不烧 attempts；58-07 端到端证据 `TestPhase58_EndToEnd_Code32ThenNoRetry` PASS，第二轮零 AD 写。证据：58-VERIFICATION.md SC5。⚠ 真域控 code 32 触发留 UAT-58-5) |
 | QUEUE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | GUARD-01 | Phase 59 | Pending |
 | GUARD-02 | Phase 59 | Pending |
@@ -76,3 +76,5 @@
 | HYGIENE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 
 **Coverage**: 19/19 v1.21 requirements mapped (roadmap created 2026-10-16, no orphans)
+
+Phase 58 完成 QUEUE-03/04/05 + HYGIENE-01/02（5 项，证据见 [58-VERIFICATION.md](phases/58-compare-and-move/58-VERIFICATION.md)，人工项见 [58-HUMAN-UAT.md](phases/58-compare-and-move/58-HUMAN-UAT.md)）；v1.21 剩余 GUARD/SHADOW/SAFE/HYGIENE-03~05 待 Phase 59-62。
