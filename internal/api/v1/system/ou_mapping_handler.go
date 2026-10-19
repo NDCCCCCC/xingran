@@ -112,9 +112,12 @@ func (h *OUMappingHandler) UpdateOUDeptMapping(c *gin.Context) {
 		return
 	}
 
-	// 查询现有的 AD 配置（取第一个启用的配置）
-	var adConfig models.ADConfig
-	if err := h.db.WithContext(c.Request.Context()).Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).First(&adConfig).Error; err != nil {
+	// Phase 58 D-03（HYGIENE-01）：收敛到 addomain 公共 helper。
+	// 这里**必须**用 FirstSyncEnabledADConfigID（原语义判 sync_enabled + status），
+	// 不是 FirstEnabledADConfigID —— 它是"当前操作的 AD 配置"，无 dn 可依据；
+	// 收敛只消除重复实现，不改语义。
+	adConfigID, err := addomain.FirstSyncEnabledADConfigID(c.Request.Context(), h.db)
+	if err != nil {
 		applogger.Errorf("查询 AD 配置失败: %v", err)
 		response.Error(c, http.StatusInternalServerError, "查询 AD 配置失败")
 		return
@@ -132,7 +135,7 @@ func (h *OUMappingHandler) UpdateOUDeptMapping(c *gin.Context) {
 
 	mapping := &models.DeptOUMapping{
 		DeptID:      req.DeptID,
-		ADConfigID:  adConfig.ID,
+		ADConfigID:  adConfigID,
 		OUDN:        ouDn,
 		OUName:      ouName,
 		ParentOUDN:  parentOUDNPtr,

@@ -10,7 +10,6 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"gorm.io/gorm"
 )
 
 // getGlobalADAccountPool 返回 globalADSyncScheduler 持有的全局账号池单例（W-04 / Pitfall 4）。
@@ -42,34 +41,9 @@ func RegisterDeptSyncTasks(scheduler *Scheduler) {
 	})
 }
 
-// getDefaultADConfigID 获取默认的 AD 配置 ID（部门同步版本）
-// 优先从参数中获取，如果没有则查询第一个启用的配置
-func getDefaultADConfigIDForDept(ctx context.Context, db *gorm.DB, params map[string]interface{}) (string, error) {
-	// 1. 尝试从参数中获取配置ID（支持两种参数名）
-	if configID, ok := params["configId"].(string); ok && configID != "" {
-		return configID, nil
-	}
-	if configID, ok := params["adConfigId"].(string); ok && configID != "" {
-		return configID, nil
-	}
-
-	// 2. 自动获取第一个启用的 AD 配置
-	var adConfig models.ADConfig
-	err := db.WithContext(ctx).
-		Where("status = ?", models.ADConfigStatusEnabled).
-		Order("created_at ASC").
-		First(&adConfig).Error
-
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return "", fmt.Errorf("未找到启用的AD配置，请先在AD域配置中启用至少一个配置")
-		}
-		return "", fmt.Errorf("查询AD配置失败: %w", err)
-	}
-
-	applogger.Infof("自动使用AD配置: %s (ID: %s)", adConfig.ConfigName, adConfig.ID)
-	return adConfig.ID, nil
-}
+// ⚠ Phase 58 D-03（HYGIENE-01）：本文件原有的「部门同步版默认配置选择函数」与本包
+// ad_sync_tasks.go 的旧实现是逐字重复的两份拷贝，已删除并收敛到 resolveADConfigIDFromParams
+// （参数提取层）+ addomain.FirstEnabledADConfigID（自动挑选，只判 status）。
 
 // executeDeptToADSyncTask 执行部门到 AD 同步任务
 // 将系统部门结构同步到 AD 域的 OU 结构
@@ -81,7 +55,7 @@ func executeDeptToADSyncTask(ctx context.Context, params map[string]interface{})
 	db := GlobalDB.GetDB()
 
 	// 自动获取配置ID（支持参数传递或自动获取默认配置）
-	adConfigID, err := getDefaultADConfigIDForDept(ctx, db, params)
+	adConfigID, err := resolveADConfigIDFromParams(ctx, db, params)
 	if err != nil {
 		return err
 	}
@@ -135,7 +109,7 @@ func executeDeptMemberToADGroupSyncTask(ctx context.Context, params map[string]i
 	db := GlobalDB.GetDB()
 
 	// 自动获取配置ID（支持参数传递或自动获取默认配置）
-	adConfigID, err := getDefaultADConfigIDForDept(ctx, db, params)
+	adConfigID, err := resolveADConfigIDFromParams(ctx, db, params)
 	if err != nil {
 		return err
 	}

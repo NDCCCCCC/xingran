@@ -290,11 +290,11 @@ func TestAds8002_SM4CipherSeam(t *testing.T) {
 }
 
 // ============================================================================
-// TestAds8002_GetDefaultADConfigID — getDefaultADConfigID sqlite 两分支
+// TestAds8002_ResolveADConfigIDFromParams — resolveADConfigIDFromParams sqlite 两分支
 // ============================================================================
 
-// TestAds8002_GetDefaultADConfigID 空 config 表 / 有 config 行。
-func TestAds8002_GetDefaultADConfigID(t *testing.T) {
+// TestAds8002_ResolveADConfigIDFromParams 空 config 表 / 有 config 行。
+func TestAds8002_ResolveADConfigIDFromParams(t *testing.T) {
 	db := newSchedDB8002_AD(t)
 	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_ad_config (
 		id TEXT PRIMARY KEY,
@@ -305,14 +305,14 @@ func TestAds8002_GetDefaultADConfigID(t *testing.T) {
 	)`).Error)
 
 	// 分支 1:空表 → ErrRecordNotFound
-	_, err := getDefaultADConfigID(context.Background(), db, nil)
+	_, err := resolveADConfigIDFromParams(context.Background(), db, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "未找到启用的AD配置")
 
 	// 分支 2:有启用配置 → 返回 ID
 	require.NoError(t, db.Exec(`INSERT INTO sys_ad_config (id, config_name, status) VALUES (?, ?, ?)`,
 		"cfg-default", "默认配置", models.ADConfigStatusEnabled).Error)
-	id, err := getDefaultADConfigID(context.Background(), db, nil)
+	id, err := resolveADConfigIDFromParams(context.Background(), db, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "cfg-default", id)
 }
@@ -494,39 +494,39 @@ func TestAds8002_ExecuteDataSync_AutoConfig(t *testing.T) {
 	sched.pool = &stubAccountPool8002{}
 	globalADSyncScheduler = sched
 
-	// 无参数 → getDefaultADConfigID 自动选中启用 config → SyncDataByID →
+	// 无参数 → resolveADConfigIDFromParams 自动选中启用 config → SyncDataByID →
 	// syncDataInternal 创建 ADSyncLog 失败(表缺失)→ 快速报错,未触 wire
 	err := executeADDataSyncTask(context.Background(), map[string]any{"syncType": "full"})
 	require.Error(t, err)
 }
 
-// TestAds8002_GetDefaultADConfigID_ParamKeys 参数键 configId / adConfigId 两分支。
-func TestAds8002_GetDefaultADConfigID_ParamKeys(t *testing.T) {
+// TestAds8002_ResolveADConfigIDFromParams_ParamKeys 参数键 configId / adConfigId 两分支。
+func TestAds8002_ResolveADConfigIDFromParams_ParamKeys(t *testing.T) {
 	db := newSchedDB8002_AD(t)
 
 	ctx := context.Background()
 
 	// configId 命中(非空字符串,不需查库)
-	id, err := getDefaultADConfigID(ctx, db, map[string]any{"configId": "via-config-id"})
+	id, err := resolveADConfigIDFromParams(ctx, db, map[string]any{"configId": "via-config-id"})
 	require.NoError(t, err)
 	assert.Equal(t, "via-config-id", id)
 
 	// adConfigId 命中
-	id, err = getDefaultADConfigID(ctx, db, map[string]any{"adConfigId": "via-ad-config-id"})
+	id, err = resolveADConfigIDFromParams(ctx, db, map[string]any{"adConfigId": "via-ad-config-id"})
 	require.NoError(t, err)
 	assert.Equal(t, "via-ad-config-id", id)
 
 	// 两个键都存在 → configId 优先
-	id, err = getDefaultADConfigID(ctx, db, map[string]any{"configId": "first", "adConfigId": "second"})
+	id, err = resolveADConfigIDFromParams(ctx, db, map[string]any{"configId": "first", "adConfigId": "second"})
 	require.NoError(t, err)
 	assert.Equal(t, "first", id)
 }
 
-// TestAds8002_GetDefaultADConfigID_QueryError 查询非 NotFound 错误分支(表缺失)。
-func TestAds8002_GetDefaultADConfigID_QueryError(t *testing.T) {
+// TestAds8002_ResolveADConfigIDFromParams_QueryError 查询非 NotFound 错误分支(表缺失)。
+func TestAds8002_ResolveADConfigIDFromParams_QueryError(t *testing.T) {
 	db := newSchedDB8002_AD(t) // 不建 sys_ad_config
 
-	_, err := getDefaultADConfigID(context.Background(), db, nil)
+	_, err := resolveADConfigIDFromParams(context.Background(), db, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "查询AD配置失败")
 }

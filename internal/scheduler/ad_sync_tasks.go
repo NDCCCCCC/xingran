@@ -301,9 +301,14 @@ func executeADDataSyncTask(ctx context.Context, params map[string]interface{}) e
 	return err
 }
 
-// getDefaultADConfigID 获取默认的 AD 配置 ID
-// 优先从参数中获取，如果没有则查询第一个启用的配置
-func getDefaultADConfigID(ctx context.Context, db *gorm.DB, params map[string]interface{}) (string, error) {
+// resolveADConfigIDFromParams 解析任务参数中的 AD 配置 ID；参数未带则自动挑选第一条启用配置。
+//
+// Phase 58 D-03（HYGIENE-01）：本函数（旧名见 git 历史）与 dept_sync_tasks.go 的
+// 部门同步版默认配置选择函数是逐字重复的两份实现，已收敛为 addomain 公共 helper。
+// 本函数只保留「从 params 取 configId / adConfigId」的参数提取层（本文件私有，
+// scheduler 包的另一个调用方 dept_sync_tasks.go 复用同一个），自动挑选委派
+// addomain.FirstEnabledADConfigID（**只判 status**，不判 sync_enabled —— 保持现行行为）。
+func resolveADConfigIDFromParams(ctx context.Context, db *gorm.DB, params map[string]interface{}) (string, error) {
 	// 1. 尝试从参数中获取配置ID（支持两种参数名）
 	if configID, ok := params["configId"].(string); ok && configID != "" {
 		return configID, nil
@@ -312,22 +317,8 @@ func getDefaultADConfigID(ctx context.Context, db *gorm.DB, params map[string]in
 		return configID, nil
 	}
 
-	// 2. 自动获取第一个启用的 AD 配置
-	var adConfig models.ADConfig
-	err := db.WithContext(ctx).
-		Where("status = ?", models.ADConfigStatusEnabled).
-		Order("created_at ASC").
-		First(&adConfig).Error
-
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return "", fmt.Errorf("未找到启用的AD配置，请先在AD域配置中启用至少一个配置")
-		}
-		return "", fmt.Errorf("查询AD配置失败: %w", err)
-	}
-
-	applogger.Infof("自动使用AD配置: %s (ID: %s)", adConfig.ConfigName, adConfig.ID)
-	return adConfig.ID, nil
+	// 2. 自动获取第一个启用的 AD 配置（公共 helper，语义见 addomain/ad_config_resolver.go）
+	return addomain.FirstEnabledADConfigID(ctx, db)
 }
 
 // ==================== 辅助函数 ====================

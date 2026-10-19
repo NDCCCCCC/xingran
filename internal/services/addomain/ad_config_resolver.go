@@ -94,7 +94,7 @@ func FirstEnabledADConfigID(ctx context.Context, db *gorm.DB) (string, error) {
 		First(&cfg).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 文案与原 getDefaultADConfigID / getDefaultADConfigIDForDept 逐字一致
+			// 文案与收敛前的 scheduler 两份旧实现逐字一致
 			// （既有 scheduler 测试断言 "未找到启用的AD配置"）
 			return "", fmt.Errorf("未找到启用的AD配置，请先在AD域配置中启用至少一个配置")
 		}
