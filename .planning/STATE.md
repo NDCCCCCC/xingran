@@ -3,34 +3,42 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 status: in_progress
-last_updated: "2026-10-19T01:12:00.000Z"
-last_activity: 2026-10-19 -- Phase 58 Wave 0（58-01）执行完成：排水测试基座 + mock 调用计数 + F-F/F-G/F-15/F-16 缺口修补
+last_updated: "2026-10-19T02:20:00.000Z"
+last_activity: 2026-10-19 -- Phase 58 Wave 2（58-03）执行完成：排水器骨架 + 拾取谓词 + 退避曲线 + 状态机 + disable/属性两条推送路径 + F-11 禁令 + F-12/F-14 一行修
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 10
-  completed_plans: 4
-  percent: 40
+  completed_plans: 6
+  percent: 60
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 executing (wave 1/6 done — 58-01 / 58-02 完成，58-03 待执行)
-**Last activity**: 2026-10-19 — execute-phase 58 plan 02：NormalizeDN / BuildOUDN 单一真实源 + D-02 最长后缀唯一匹配（逗号边界，8 用例含父子域反例）+ D-03 三处 First() 收敛（双份 getDefaultADConfigID 归零）；全仓 `go test ./...` exit 0，Phase 57 sentinel 绿
+**Status**: v1.21 Phase 58 executing (wave 2/6 done — 58-01 / 58-02 / 58-03 完成，58-04 待执行)
+**Last activity**: 2026-10-19 — execute-phase 58 plan 03：ADPushDrainer 排水执行面（D-05 拾取谓词 + 退避曲线 + 六状态跃迁 + 按 ad_dn 分组 + disable/属性两条推送路径）+ F-11 dead 判定单点锁死 + F-12 四处 UTC / F-14 default tag；13 个 Drain 用例全绿，全仓 `go test ./...` exit 0，Phase 57 sentinel 绿
 
 ## Current Position
 
 Phase: 58 (排水器与 compare-and-move 推送) — Executing
-Plan: 58-03-PLAN.md 待执行（Wave 2：队列拾取谓词 + 退避曲线）
-Status: Phase 58 Wave 1 完成（58-02 已交付 DN 单一真实源 + D-02 后缀匹配 + HYGIENE-01 收敛）
-Last activity: 2026-10-19 -- 58-02 三个 task 落地（`b2909660` / `e1fca53a` / `fec65e7d`）
-Progress: 1/6 phases [█░░░░░░░░] 17%（5/10 plans）
+Plan: 58-04-PLAN.md 待执行（Wave 3：compare-and-move + OU 路径 code 32 终态）
+Status: Phase 58 Wave 2 完成（58-03 已交付排水器骨架 + 状态机 + 两条推送路径；`drainRow` 已留 Plan 04 的 compare-and-move 接口位 `ad_push_queue_drain_service.go:370`）
+Last activity: 2026-10-19 -- 58-03 两个 task 落地（`04dfa698` / `34294f67`）
+Progress: 1/6 phases [█░░░░░░░░] 17%（6/10 plans）
 
 ## Accumulated Context
 
 ### Decisions
+
+- 58-03 执行期决策（2026-10-19，Wave 2 排水器骨架 + 状态机）：
+  - **`deadRows` 元素携带 reason（`drainDeadRow`）**：plan 的 `DrainOnce` 伪码给全部 deadRows 写死 `reason='unrecoverable:no-ad-config'`，与同 plan 的孤儿用例断言 `last_error` 含 `unrecoverable:user-not-found` 冲突；改为逐行携带 reason（`user-not-found` / `no-ad-dn` / `no-ad-config` 分别落库），循环体形态不变（内嵌提升 `row.ID`/`row.Attempts`）。
+  - **`drainRow` 及下游函数随 Task 1 落地**：`DrainOnce → executeGroup → drainRow` 是硬编译依赖，Task 1 的 `go build ./...` 验收在缺 drainRow 时不可能通过。Task 2 的落地物相应为 12 个用例 + `newDrainTestDrainer` + F-12/F-14。
+  - **F-11 口径确认**：`attempts` = "自上次编辑以来的连续失败计数"；dead 只在 `markFailed` 单点按 `attempts+1 >= 5` 判定（源码仅 1 处）；**"编辑即续命"（持续编辑的失败行永不终态）是有意设计**，写进 `markFailed` 注释。`markDead` 的 `attempts` 为显式入参：8 处传 `row.Attempts`（不烧计数）+ 1 处传 `newAttempts`（达上限）。
+  - **W-1 注释口径**：`models/ad_push_queue.go` 第 61 行 Phase 57 既有注释含 `uniqueIndex` 字面量，与 plan 的 `grep -c uniqueIndex == 0` 断言冲突（改动前即不成立）；注释改为"唯一索引 tag"（语义未变）。
+  - **F-12 的 `grep "time.Now()" == 0` 断言不可满足**：plan 规定的修复即 `time.Now()` → `time.Now().UTC()`，后者是前者超串，grep 必然命中。按 plan 的规定执行修复，改用语义等价口径 `grep "time.Now()" | grep -v "\.UTC()" == 0`。
+  - **本 plan 不标记 QUEUE-03 / QUEUE-05 为 complete**：二者均为跨 plan 需求（QUEUE-03 的 cron 接线在 58-05；QUEUE-05 的 OU 路径 code 32 在 58-04），沿用 58-01 分档口径，最终回填归 58-07。
 
 - 58-02 执行期决策（2026-10-19，Wave 1 DN 单一真实源 + D-02 契约 + HYGIENE-01）：
   - **`BuildOUDN` 用字符串拼接而非 `fmt.Sprintf("OU=%s,%s", ...)`**：plan 的 action 建议格式化串，但同 task 的验收断言要求 `grep -rn 'OU=%s,%s' --include=*.go internal/` 零命中 —— 冲突时以可证伪断言为准（拼接与格式化逐字等价），`dn_util.go` 的 `fmt` import 随之移除。

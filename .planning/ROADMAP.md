@@ -114,7 +114,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 58-03-PLAN.md — 排水器骨架：拾取谓词 + 退避曲线 + 状态机 + disable/属性两条推送路径 + F-12 UTC / F-14 default tag（QUEUE-03, QUEUE-05）
+- [x] 58-03-PLAN.md — 排水器骨架：拾取谓词 + 退避曲线 + 状态机 + disable/属性两条推送路径 + F-12 UTC / F-14 default tag（QUEUE-03, QUEUE-05）— 2/2 tasks，completed 2026-10-19（SUMMARY: [58-03-SUMMARY.md](phases/58-compare-and-move/58-03-SUMMARY.md)）
 
 **Wave 3**
 
