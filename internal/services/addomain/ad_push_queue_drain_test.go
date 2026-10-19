@@ -703,7 +703,16 @@ func TestPhase58_Drain_WritesUTCTimestamps(t *testing.T) {
 	assert.True(t, row.PushedAt.Equal(fixed), "pushed_at 必须等于注入的固定 UTC 时刻")
 }
 
-// TestPhase58_Drain_MutualExclusionSkipsSecondRound mu.TryLock 语义：上一轮未结束则本轮立即跳过。
+// TestPhase58_Drain_MutualExclusionSkipsSecondRound mu.TryLock 语义：**同一个实例**上
+// 上一轮未结束时本轮立即跳过（一次 LDAP 写都不发生）。
+//
+// H-01/H-02：本用例此前只证明"单实例上 TryLock 有效"，却被写成 SC1 互斥性的验收证据；
+// 而生产中每轮新建实例 → 每轮一把新锁。修 H-01 后（排水器在 Start() 里只构造一次、
+// 闭包捕获同一实例），"同一实例"才是生产的真实形态，断言才成立。
+//
+// 第三段是反向记录：另一个实例**不受**这把锁阻塞 —— 诚实的单实例语义，
+// 不是"跨实例互斥"的主张（生产不存在第二个调用方；cron 轮次防重叠由
+// cron.SkipIfStillRunning 承担）。
 func TestPhase58_Drain_MutualExclusionSkipsSecondRound(t *testing.T) {
 	db := setupDrainTestDB(t)
 	const cfgID = "cfg-1"
@@ -714,15 +723,37 @@ func TestPhase58_Drain_MutualExclusionSkipsSecondRound(t *testing.T) {
 	mock := newDrainTestLDAP()
 	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
 
-	// 手动持锁模拟"上一轮未结束"
-	d.mu.Lock()
+	// --- 1) 同一实例持锁 → 本轮必须被跳过，一次 LDAP 写都不发生 ---
+	d.mu.Lock() // 手动持锁模拟"上一轮未结束"
 	err := d.DrainOnce(context.Background())
 	d.mu.Unlock()
 
 	require.NoError(t, err, "持锁期间 DrainOnce 必须立即返回 nil（跳过本轮）")
 	row := reloadDrainRow(t, db, "u-1")
 	assert.Equal(t, models.ADPushStatusPending, row.Status, "被跳过的轮次不得改动任何行")
-	assert.Equal(t, 0, mock.disableUserCalls)
+	assert.Equal(t, 0, mock.disableUserCalls, "同一实例被锁期间不得发出任何 LDAP 写（mock 计数必须不前进）")
+	assert.Equal(t, 0, mock.dnExistsCalls, "同一实例被锁期间不得触达 LDAP 任何接口")
+
+	// --- 2) 同一实例放锁后仍能正常排水（证明上面是"跳过"而非"卡死"） ---
+	require.NoError(t, d.DrainOnce(context.Background()))
+	assert.Equal(t, 1, mock.disableUserCalls, "放锁后同一实例必须正常执行一轮")
+	assert.Equal(t, models.ADPushStatusPushed, reloadDrainRow(t, db, "u-1").Status)
+
+	// --- 3) 反向记录：另一个实例不被这把锁阻塞（单实例语义，非跨实例互斥） ---
+	// 新用户 u-2 再次被编辑 → 新入队一行（u-1 已是 pushed 终态，不会被再拾取）
+	seedDrainUser(t, db, "u-2", "bob", "CN=bob,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	seedDrainQueueRow(t, db, "", "u-2", string(models.ADPushActionDisable), string(models.ADPushStatusPending), 0, nil)
+
+	mock2 := newDrainTestLDAP()
+	other := newDrainTestDrainer(t, db, mock2, drainTestAccount("a1", cfgID))
+	d.mu.Lock() // 第一个实例仍持锁
+	err = other.DrainOnce(context.Background())
+	d.mu.Unlock()
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, mock2.disableUserCalls,
+		"不同实例各持一把锁 → 互斥不跨实例；生产靠 cron 侧单实例复用 + SkipIfStillRunning")
+	assert.Equal(t, models.ADPushStatusPushed, reloadDrainRow(t, db, "u-2").Status)
 }
 
 // ==================== Phase 58 Plan 04 Task 2：compare-and-move OU 移动面 ====================

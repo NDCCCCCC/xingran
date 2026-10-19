@@ -175,10 +175,17 @@ func (s *ADSyncScheduler) Start() {
 	//
 	// ⚠ 必须用 AddJob 而非 AddFunc：AddFunc 不暴露 chain wrapper 入口，
 	// 而 30s 短间隔下单轮可能超 30s，需要 SkipIfStillRunning 防轮次重叠。
-	// ⚠ SkipIfStillRunning 的互斥 channel 是**闭包私有**的，无法被手动触发路径复用 ——
-	//   互斥的事实源是 ADPushDrainer.mu（TryLock），chain wrapper 只是第二道保险。
-	// ⚠ 账号池必须经 s.getPool() 取全局单例，**禁止**在此处自建账号池
+	// ⚠ SkipIfStillRunning 的互斥 channel 是**闭包私有**的，只覆盖本条 cron；
+	//   跨调用方的互斥事实源是 ADPushDrainer.mu（TryLock），chain wrapper 只是第二道保险。
+	//   为此排水器必须在下面 AddJob **之前**构造一次并由闭包捕获 —— 若写在闭包体内，
+	//   每 30s 会新建一把 ADPushDrainer.mu，TryLock 恒成功、互斥形同虚设。
+	//   ⚠ 当前仓库**不存在**手动触发路径（`grep -rni drain internal/api/` 零命中）；
+	//     mu 现在的作用是保证同一个实例上的并发 DrainOnce 至多跑一个。新增触发端点时
+	//     必须复用这里的同一个实例，否则又变成每调用方一把锁。
+	// ⚠ 账号池必须经 getPool 取全局单例，**禁止**在此处自建账号池
 	//   （Pitfall 4：独立缓存 → 熔断后仍选到坏账号；同 dept_sync_tasks.go:16-21 的约束）。
+	//   getPool 的惰性初始化（if s.pool == nil）必须保留：StartADSyncScheduler 未跑过时
+	//   （仅测试构造的 scheduler）它兜底建池，删掉会让排水器与全量同步拿到 nil 池。
 	// ⚠ sys_config 旋钮在**启动时读取一次**（D-05：改后需重启后端生效）。
 	//
 	// ⚠ s.db 为 nil（仅测试构造）时跳过配置读取，保持安全默认 spec ——
@@ -195,10 +202,13 @@ func (s *ADSyncScheduler) Start() {
 		}
 	}
 	lg := cronLogger()
+	// H-01：**只构造一次**并由下面的 cron 闭包捕获。写进闭包体会让每轮拿到一把新的
+	// ADPushDrainer.mu，TryLock 恒成功。账号池仍走 getPool 的惰性初始化兜底 —— 但本函数
+	// 已持 s.mu（Go Mutex 不可重入），故用 getPoolLocked 而不是 getPool。
+	drainer := addomain.NewADPushDrainer(s.db, s.getPoolLocked())
 	_, err = s.cron.AddJob(drainSpec,
 		cron.NewChain(cron.Recover(lg), cron.SkipIfStillRunning(lg)).Then(cron.FuncJob(func() {
-			// 互斥与超时由 Drainer 内部统一处理（TryLock + 每轮一次 now）
-			drainer := addomain.NewADPushDrainer(s.db, s.getPool())
+			// 轮次互斥由 Drainer 内部的 TryLock + 每轮一次 now 统一处理
 			if err := drainer.DrainOnce(context.Background()); err != nil {
 				applogger.Errorf("[ad_push_queue] 排水轮次失败: %v", err)
 			}
@@ -445,11 +455,21 @@ func (s *ADSyncScheduler) IsStarted() bool {
 }
 
 // getPool 返回 scheduler 持有的全局账号池单例（W-04）。
-// 若 StartADSyncScheduler 未执行（pool 为 nil），则惰性初始化并写回字段，避免所有 caller 各自 NewAccountPool
-// 造成 Pitfall 4（独立缓存 → 熔断后账号仍被选中）。所有 caller 必须通过此方法取池。
+// 所有外部 caller 必须通过此方法取池（它负责加锁）。
 func (s *ADSyncScheduler) getPool() addomain.AccountPool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.getPoolLocked()
+}
+
+// getPoolLocked 是 getPool 的锁内版本：若 StartADSyncScheduler 未执行（pool 为 nil），
+// 则惰性初始化并写回字段，避免所有 caller 各自 NewAccountPool 造成 Pitfall 4
+//（独立缓存 → 熔断后账号仍被选中）。
+//
+// ⚠ 调用方必须已持有 s.mu。Go 的 Mutex 不可重入，已持锁时调 getPool() 会自死锁 ——
+//   Start() 就是这种场景（它在整个函数期间持 s.mu），故排水器在 Start() 内取池时
+//   必须走本函数。
+func (s *ADSyncScheduler) getPoolLocked() addomain.AccountPool {
 	if s.pool == nil {
 		// 惰性初始化（兜底 StartADSyncScheduler 未设置 pool 的极端场景）
 		s.pool = addomain.NewAccountPool(s.db, nil)

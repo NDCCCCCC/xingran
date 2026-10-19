@@ -77,8 +77,14 @@ type ADPushDrainer struct {
 	// now 测试注入点；生产恒为 time.Now。⚠ 一轮只取一次并透传（P8），
 	// 闭包内多次取时间会让 pushed_at / next_retry_at 与行内容不对应。
 	now func() time.Time
-	// mu 轮次互斥的**事实源**：cron 的 SkipIfStillRunning 互斥是闭包私有 channel，
-	// 无法被手动触发路径复用，故此处自持（Go >=1.18 提供 TryLock）。
+	// mu 轮次互斥（Go >=1.18 提供 TryLock）：保证**同一个实例**上的并发 DrainOnce
+	// 至多跑一个。
+	//
+	// ⚠ 单实例语义：互斥只在同一个 ADPushDrainer 内成立 —— 两个实例各有一把锁，
+	//   彼此不阻塞。cron 侧因此必须在 AddJob 之前构造单个排水器并由闭包捕获
+	//   （internal/scheduler/ad_sync_tasks.go）；写在闭包体内等于每轮一把新锁。
+	// ⚠ 当前仓库**不存在**手动触发路径，本字段是"跨调用方互斥"这一设计意图的载体，
+	//   现在真正拦住的是同一实例上的并发调用；将来新增触发端点必须复用同一实例。
 	mu sync.Mutex
 	// adSync 复用 UserADSyncService 的 syncUserAttributes（属性推送 + code 32 语义，
 	// 不复制粘贴 —— P11）。mapper 供 Plan 04 的 OU 映射查询使用，本 plan 先注入。
@@ -107,7 +113,9 @@ func NewADPushDrainer(db *gorm.DB, pool AccountPool) *ADPushDrainer {
 	}
 }
 
-// DrainOnce 执行一轮排水（D-05）。cron 与手动触发共用本入口，互斥在内部统一处理。
+// DrainOnce 执行一轮排水（D-05）。轮次互斥在本入口内部统一处理（mu.TryLock）。
+// ⚠ 该互斥是**单实例**的：调用方必须复用同一个排水器实例（见 mu 字段注释），
+//   每次调用都 New 一个新实例等于没有互斥。
 // 返回 error 只表示"本轮基础设施层失败"（如查库失败），行级失败一律写回队列状态、不上抛。
 func (d *ADPushDrainer) DrainOnce(ctx context.Context) error {
 	if !d.mu.TryLock() { // 上一轮未结束，本轮跳过（30s 间隔下单轮可能超 30s）
