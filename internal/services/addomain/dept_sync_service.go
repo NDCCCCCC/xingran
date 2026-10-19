@@ -110,9 +110,13 @@ func (s *DeptToADSyncService) SyncDeptStructureToAD(ctx context.Context, adConfi
 }
 
 // syncDeptTree 递归同步部门树
+//
+// Phase 58 HYGIENE-02: OU DN 拼接走 BuildOUDN（全仓唯一拼接点），部门名特殊字符按 RFC4514 转义。
+// 存量 sys_dept_ou_mapping.ou_dn 为未转义值，含特殊字符的部门需重跑部门同步后才会写入转义 DN
+// （Q4 决策：不做存量数据迁移）。
 func (s *DeptToADSyncService) syncDeptTree(ctx context.Context, ldapClient LDAPClientIface, config *models.ADConfig, dept *models.Department, parentOUDN string, result *DeptSyncResult) error {
 	// 1. 构建当前部门的OU DN
-	ouDN := fmt.Sprintf("OU=%s,%s", dept.DeptName, parentOUDN)
+	ouDN := BuildOUDN(dept.DeptName, parentOUDN)
 
 	// 2. 在AD中创建OU（如果不存在）
 	if err := ldapClient.CreateOU(ouDN, dept.DeptName); err != nil {
