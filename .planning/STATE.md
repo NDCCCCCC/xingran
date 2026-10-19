@@ -5,16 +5,16 @@ milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 59
 current_phase_name: 登录回写守卫与部门对账视图
 status: executing
-stopped_at: Completed 59-02-PLAN.md
-last_updated: "2026-10-19T13:32:07.199Z"
+stopped_at: Completed 59-03-PLAN.md
+last_updated: "2026-10-19T14:34:41.311Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 59 execution started
-state_head: bda1e0028be22cb517b19ccdf604a366cef7cfb1
+state_head: a640658d7c3aec50e6edc5dd6dcc5780e83a9447
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 33
 ---
 
@@ -30,10 +30,10 @@ progress:
 ## Current Position
 
 Phase: 59 (登录回写守卫与部门对账视图) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 59 execution started
-Progress: 2/6 phases [███░░░░░░░] 33%（12/14 plans）
+Progress: 2/6 phases [███░░░░░░░] 33%（13/14 plans）
 
 ## Accumulated Context
 
@@ -71,6 +71,14 @@ Progress: 2/6 phases [███░░░░░░░] 33%（12/14 plans）
 
 ### Decisions
 
+- [Phase 59]: 59-03 执行期决策（2026-10-19，GUARD-02 只读端点 + migration_218 权限载体）：
+  - **D-14 路径按真实挂载对齐为 `/api/v1/ad-domain/reconciliation/mismatch`**：仓库把 AD 路由组挂在 `r.Group("/ad-domain")`（router.go:519）且前端 baseURL=/api/v1，CONTEXT 字面的 `/system/ad-config/...` 不落第二套别名（防双契约漂移）。
+  - **handler 白名单复用导出的 `addomain.MismatchTypes` 遍历判定**：`validMismatchType` 是包内私有（plan artifact 只允许包内 helper），handler 侧不新增导出面，四值单一事实源仍在服务层。
+  - **migration_218 精准授权 = 只授已关联『AD域控配置』父菜单的角色**：单条 `INSERT...SELECT...WHERE NOT EXISTS`（PG/sqlite 通用、幂等），**不**沿用 migration_163 的「所有 status=0 角色」宽授权面（防 antd Tree 父子联动视觉陷阱）。
+  - **父菜单缺失 = warning + 返回 nil（非阻断降级）**：migration_163 同款 FLAGGED ASSUMPTION 依旧成立——部署清单须登记「管理员手建按钮权限并授权」操作项。
+  - **`Visible/Status` 零值 + 模型 default tag → GORM 省略列、落 DB 默认值**：与 migration_163 同款行为；F 型按钮的可见性不参与前端渲染判定，无语义影响（已在迁移注释写明）。
+  - **幂等补授权有行为断言**：迁移跑过后新接入父菜单的角色，重跑迁移会补拿按钮权限（`TestPhase59_Migration218_GrantsNewRolesLater`）——授权步骤不随「行已存在」被跳过。
+  - **GUARD-02 仍不标 complete**：`requirements.ready-ids` 返回 blocked（59-04 同样声明），沿用分档口径由最后一个 plan 回填。
 - 58-06 执行期决策（2026-10-19，Wave 5 SC6 + D-01 批量入队 + F-07/F-10）：
   - **SC6 是硬删除，不加互斥开关**：ROADMAP 明文拒绝「两者并存 + 互斥」路线，故 `user_handler.go` 的单用户编辑直推与 `user_import_handler.go` 的导入直推**均整块删除**，无 feature flag / 无 config toggle。SC6 的残留证据由 5 条 grep 静态证伪承担（期望值全 0）。
   - **被删注释里不写字面名**：SC6 断言是 grep == 0，注释自指会让断言假阳（58-05 同款矛盾）。注释改写为「按用户 ID 的 in-flight 去重」「四字段 map 构造方法」「已删除的导入后直推方法」，并在注释里写明**为什么**不写字面名，避免后来者"好心"补回去。
@@ -165,8 +173,8 @@ Progress: 2/6 phases [███░░░░░░░] 33%（12/14 plans）
 
 ## Session
 
-**Last session:** 2026-10-19T13:32:06.905Z
-**Stopped at:** Completed 59-02-PLAN.md
+**Last session:** 2026-10-19T14:29:10Z
+**Stopped at:** Completed 59-03-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -175,3 +183,4 @@ Progress: 2/6 phases [███░░░░░░░] 33%（12/14 plans）
 |------|----------|-------|-------|
 | Phase 59 P01 | 12min | 2 tasks | 2 files |
 | Phase 59 P02 | 13min | 2 tasks | 4 files |
+| Phase 59 P03 | 15min | 3 tasks | 8 files |

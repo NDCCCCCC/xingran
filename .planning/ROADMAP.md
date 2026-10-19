@@ -189,7 +189,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 - [x] 59-02-PLAN.md — GUARD-02 数据底座：migration_217 双方言普通视图 v_dept_ou_mismatch + 三路径注册 + AutoMigrate 前置 DROP（2026-10-19, `b4b88666` + `bda1e002`）
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 59-03-PLAN.md — GUARD-02 只读端点：分页/筛选服务 + /ad-domain/reconciliation/mismatch + migration_218 权限载体
+- [x] 59-03-PLAN.md — GUARD-02 只读端点：分页/筛选服务 + /ad-domain/reconciliation/mismatch + migration_218 权限载体（2026-10-19, `2f1c8190` + `0d7b782c` + `a640658d`）
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 59-04-PLAN.md — GUARD-02 前端：AD 配置页「对账」Tab（权限门/筛选/表格/空错态）
@@ -243,7 +243,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
 | 58. 排水器与 compare-and-move 推送 | 6/7 | In progress (wave 5 done 2026-10-19, SC6 终态达成) | - |
-| 59. 登录回写守卫与部门对账视图 | 2/4 | In progress (59-01/59-02 done 2026-10-19) | - |
+| 59. 登录回写守卫与部门对账视图 | 3/4 | In progress (59-01/59-02/59-03 done 2026-10-19) | - |
 | 60. 软删恢复安全 | 0/TBD | Not started | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
 | 62. 卫生收尾与死代码清理 | 0/TBD | Not started | - |
