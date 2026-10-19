@@ -3,10 +3,11 @@ phase: "59"
 slug: "ad-login-guard-reconciliation"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-19"
+validated: "2026-10-20"
 ---
 
 # Phase 59 — Validation Strategy
@@ -42,16 +43,16 @@ Each row mirrors the plan task's full `<automated>` command verbatim (including 
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 59-01-01 | 01 | 1 | GUARD-01 | T-59-01 | 守卫只读队列，不改写谓词 | unit | `go build ./internal/services/system/ && go test ./internal/services/system/ -run TestPhase59_SyncADUser_ActivePendingQueueSkipsDept -count=1` | ❌ W0 | ⬜ pending |
-| 59-01-02 | 01 | 1 | GUARD-01 | T-59-01 | 查询失败保守跳过，不上抛 | unit | `go test ./internal/services/system/ -run 'TestPhase59_SyncADUser_' -count=1` | ❌ W0 | ⬜ pending |
-| 59-02-01 | 02 | 1 | GUARD-02 | T-59-04 | 视图 DDL 静态、无输入插值；PG 方言 DDL 文本守卫（无 PG 实例可失败） | migration | `go build ./... && go test ./internal/core/db/migrations/ -run TestPhase59_Migration217 -count=1` | ❌ W0 | ⬜ pending |
-| 59-02-02 | 02 | 1 | GUARD-02 | T-59-03 | 四类口径 + 双方言 CAST/布尔/后缀 + 共用 body 形状守卫 | migration | `go test ./internal/core/db/migrations/ -run 'TestPhase59_Migration217' -count=1 -v` | ❌ W0 | ⬜ pending |
-| 59-03-01 | 03 | 2 | GUARD-02 | T-59-06 | 参数绑定 + LIKE 转义 | unit | `go test ./internal/services/addomain/ -run 'TestPhase59_DeptOUMismatch|TestPhase59_MatchConsistency' -count=1` | ❌ W0 | ⬜ pending |
-| 59-03-02 | 03 | 2 | GUARD-02 | T-59-05 | RequirePermissions 独立鉴权；新路由不破坏全量注册 | unit（httptest） | `go build ./... && go test ./internal/api/v1/system/ -run 'TestPhase59_ReconHandler' -count=1 && go test ./internal/api/v1/system/ -run 'TestSetupRouters_AllRegisterRoutes' -count=1` | ❌ W0 | ⬜ pending |
-| 59-03-03 | 03 | 2 | GUARD-02 | T-59-05 | F 型权限载体 + 精准授权 | migration | `go build ./... && go test ./internal/core/db/migrations/ -run TestPhase59_Migration218 -count=1` | ❌ W0 | ⬜ pending |
-| 59-04-01 | 04 | 3 | GUARD-02 | T-59-09 | 无权限零请求 + 后端鉴权 | component | `cd ruoyi-react-frontend && npx vitest run src/lib/adDomainApi.test.ts src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` | ❌ W0 | ⬜ pending |
-| 59-04-02 | 04 | 3 | GUARD-02 | T-59-10 | 不展示 UUID、无写入口 | component | `cd ruoyi-react-frontend && npx vitest run src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` | ❌ W0 | ⬜ pending |
-| 59-04-03 | 04 | 3 | GUARD-02 | — | 无 hex / 无原生 axios；Tabs 与反模式契约 | component + source | `cd ruoyi-react-frontend && npx vitest run src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx src/pages/ad-domain/configs/__tests__/index.render.test.tsx` | ❌ W0 | ⬜ pending |
+| 59-01-01 | 01 | 1 | GUARD-01 | T-59-01 | 守卫只读队列，不改写谓词 | unit | `go build ./internal/services/system/ && go test ./internal/services/system/ -run TestPhase59_SyncADUser_ActivePendingQueueSkipsDept -count=1` | ✅ | ✅ green |
+| 59-01-02 | 01 | 1 | GUARD-01 | T-59-01 | 查询失败保守跳过，不上抛 | unit | `go test ./internal/services/system/ -run 'TestPhase59_SyncADUser_' -count=1` | ✅ | ✅ green（6 用例全过，2026-10-20 实测） |
+| 59-02-01 | 02 | 1 | GUARD-02 | T-59-04 | 视图 DDL 静态、无输入插值；PG 方言 DDL 文本守卫（无 PG 实例可失败） | migration | `go build ./... && go test ./internal/core/db/migrations/ -run TestPhase59_Migration217 -count=1` | ✅ | ✅ green |
+| 59-02-02 | 02 | 1 | GUARD-02 | T-59-03 | 四类口径 + 双方言 CAST/布尔/后缀 + 共用 body 形状守卫 | migration | `go test ./internal/core/db/migrations/ -run 'TestPhase59_Migration217' -count=1 -v` | ✅ | ✅ green |
+| 59-03-01 | 03 | 2 | GUARD-02 | T-59-06 | 参数绑定 + LIKE 转义 | unit | `go test ./internal/services/addomain/ -run 'TestPhase59_DeptOUMismatch|TestPhase59_MatchConsistency' -count=1` | ✅ | ✅ green（8 用例，2026-10-20 实测） |
+| 59-03-02 | 03 | 2 | GUARD-02 | T-59-05 | RequirePermissions 独立鉴权；新路由不破坏全量注册 | unit（httptest） | `go build ./... && go test ./internal/api/v1/system/ -run 'TestPhase59_ReconHandler' -count=1 && go test ./internal/api/v1/system/ -run 'TestSetupRouters_AllRegisterRoutes' -count=1` | ✅ | ✅ green |
+| 59-03-03 | 03 | 2 | GUARD-02 | T-59-05 | F 型权限载体 + 精准授权 | migration | `go build ./... && go test ./internal/core/db/migrations/ -run TestPhase59_Migration218 -count=1` | ✅ | ✅ green |
+| 59-04-01 | 04 | 3 | GUARD-02 | T-59-09 | 无权限零请求 + 后端鉴权 | component | `cd ruoyi-react-frontend && npx vitest run src/lib/adDomainApi.test.ts src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` | ✅ | ✅ green |
+| 59-04-02 | 04 | 3 | GUARD-02 | T-59-10 | 不展示 UUID、无写入口 | component | `cd ruoyi-react-frontend && npx vitest run src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` | ✅ | ✅ green |
+| 59-04-03 | 04 | 3 | GUARD-02 | — | 无 hex / 无原生 axios；Tabs 与反模式契约 | component + source | `cd ruoyi-react-frontend && npx vitest run src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx src/pages/ad-domain/configs/__tests__/index.render.test.tsx` | ✅ | ✅ green（3 文件 38 用例，2026-10-20 实测） |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -59,12 +60,12 @@ Each row mirrors the plan task's full `<automated>` command verbatim (including 
 
 ## Wave 0 Requirements
 
-- [ ] `internal/services/system/user_sync_service_phase59_test.go` — GUARD-01 守卫用例（pending/failed 拦截 + WARN / pushed/dead/disable 放行 / 无行照常更新 / 查询失败保守跳过）
-- [ ] `internal/core/db/migrations/migration_217_dept_ou_mismatch_view_test.go` — 视图建表、幂等、列顺序、四类口径
-- [ ] `internal/services/addomain/dept_ou_mismatch_service_test.go` — 分页/筛选 + Go/SQL 双份实现一致性
-- [ ] `internal/api/v1/system/ad_reconciliation_handler_test.go` — 绑定错误 / 白名单 / 默认分页
-- [ ] `internal/core/db/migrations/migration_218_ad_reconciliation_permission_test.go` — 权限载体幂等与精准授权
-- [ ] `ruoyi-react-frontend/src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` — 权限门/空态/错误态/部分行
+- [x] `internal/services/system/user_sync_service_phase59_test.go` — GUARD-01 守卫用例（pending/failed 拦截 + WARN / pushed/dead/disable 放行 / 无行照常更新 / 查询失败保守跳过）✅ 59-01 落地
+- [x] `internal/core/db/migrations/migration_217_dept_ou_mismatch_view_test.go` — 视图建表、幂等、列顺序、四类口径 ✅ 59-02 落地
+- [x] `internal/services/addomain/dept_ou_mismatch_service_test.go` — 分页/筛选 + Go/SQL 双份实现一致性 ✅ 59-03 落地
+- [x] `internal/api/v1/system/ad_reconciliation_handler_test.go` — 绑定错误 / 白名单 / 默认分页 ✅ 59-03 落地
+- [x] `internal/core/db/migrations/migration_218_ad_reconciliation_permission_test.go` — 权限载体幂等与精准授权 ✅ 59-03 落地
+- [x] `ruoyi-react-frontend/src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx` — 权限门/空态/错误态/部分行 ✅ 59-04 落地
 
 *If none: "Existing infrastructure covers all phase requirements."*
 
@@ -83,11 +84,19 @@ Each row mirrors the plan task's full `<automated>` command verbatim (including 
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-10-20 — 10/10 Per-Task Map 行全绿（Go 守卫 6 用例 / migration_217 / addomain 8 用例 / handler+路由注册 / migration_218 / 前端 3 文件 38 用例）；4 项 Manual-Only 维持（真实 AD 环境 / 真实 PG 启动冒烟 / 浏览器授权渲染 / computed font-weight）。
+
+## Validation Audit 2026-10-19
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
