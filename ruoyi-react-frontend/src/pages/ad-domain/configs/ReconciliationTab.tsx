@@ -7,11 +7,15 @@
  * - 权限门是 UX 门：无 `ops:ad:config:reconciliation:list` 时在 Tab 内渲染 403 且**不发任何请求**；
  *   Tab 本身始终可见（真实鉴权在后端 RequirePermissions）。
  * - 只读：无修复/删除/搬移/导出入口（自动修复已 Deferred）。
- * - 查询为显式提交：筛选控件 onChange 只改草稿值，不触发请求（点击「查询」或关键字 Enter 才提交）。
+ * - 查询为显式提交：筛选控件 onChange 只改草稿值（存于 Form），不触发请求；
+ *   点击「查询」或关键字 Enter 才提交；「重置」清空后回到第一页立即查询。
+ * - 翻页/改页大小保持当前已提交筛选条件（已提交值在 loadList 依赖里）。
+ * - 状态面：失败 → ErrorAlertWithRetry；空 → EmptyStateWithAction（不渲染空表头）；加载 → Table loading。
  * - 不展示原始 UUID 列、无操作列、无排序。
  */
 import { useCallback, useEffect, useState } from "react";
-import { Result, Table, Tag, Tooltip } from "antd";
+import { Button, Form, Input, Result, Select, Space, Table, Tag, Tooltip } from "antd";
+import type { FormInstance } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { FC } from "react";
 import {
@@ -21,18 +25,30 @@ import {
   type DeptOUMismatchType,
 } from "@/lib/adDomainApi";
 import { useMenuStore } from "@/store/menuStore";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import type { SimpleDept } from "@/lib/dutyApi";
+import DepartmentTreeSelect from "@/components/shared/DepartmentTreeSelect";
 import EmptyStateWithAction from "@/components/shared/EmptyStateWithAction";
+import ErrorAlertWithRetry from "@/components/shared/ErrorAlertWithRetry";
 
 /** D-15 锁定的权限点（与后端 RequirePermissions / migration_218 同一字面） */
 export const RECONCILIATION_PERM = "ops:ad:config:reconciliation:list";
 
 /** mismatch_type → 中文标签 / antd 预设 Tag color（UI-SPEC Color 契约，禁 hex） */
-const MISMATCH_TYPE_META: Record<DeptOUMismatchType, { label: string; color: string }> = {
+export const MISMATCH_TYPE_META: Record<DeptOUMismatchType, { label: string; color: string }> = {
   user_ou_mismatch: { label: "用户 OU 与部门映射不一致", color: "orange" },
   dept_soft_deleted: { label: "映射指向已删除部门", color: "red" },
   mapping_disabled: { label: "映射已停用", color: "gold" },
   config_unrouted: { label: "配置无法归属", color: "blue" },
 };
+
+/** 筛选下拉选项（与 MISMATCH_TYPE_META 单一事实源派生） */
+const MISMATCH_TYPE_OPTIONS = (Object.keys(MISMATCH_TYPE_META) as DeptOUMismatchType[]).map(
+  (value) => ({ value, label: MISMATCH_TYPE_META[value].label })
+);
+
+/** 空部门树常量：避免内联 [] 造成每次渲染新引用（rc-tree motion bail 陷阱，参照 DeptTree #185） */
+const EMPTY_DEPTS: SimpleDept[] = [];
 
 /** 空值统一渲染 "-"（UI-SPEC partial 规则） */
 function renderText(value?: string | null) {
@@ -43,13 +59,23 @@ function renderText(value?: string | null) {
  * 组合 rowKey（UI-SPEC 锁定）：部门级与用户级行都唯一，
  * NULL 键统一落空串，避免 undefined 参与拼接。
  */
-function rowKeyOf(row: DeptOUMismatchRow) {
+export function rowKeyOf(row: DeptOUMismatchRow) {
   return `${row.mismatchType}-${row.deptId ?? ""}-${row.userId ?? ""}-${row.adConfigId ?? ""}`;
 }
 
-const ReconciliationTab: FC = () => {
+export interface ReconciliationTabProps {
+  /** 注入受控 Form 实例（测试 seam；缺省用组件内部实例） */
+  form?: FormInstance;
+}
+
+const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) => {
   const permissions = useMenuStore((s) => s.permissions);
   const canView = permissions.includes(RECONCILIATION_PERM);
+
+  const [internalForm] = Form.useForm<{ mismatchType?: DeptOUMismatchType; deptId?: string; keyword?: string }>();
+  const form = injectedForm ?? internalForm;
+
+  const deptTree = useDeptTree();
 
   const [list, setList] = useState<DeptOUMismatchRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -58,12 +84,22 @@ const ReconciliationTab: FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  // 已提交筛选（仅「查询 / 重置 / Enter」改变；原始值才能进依赖）
+  const [mismatchType, setMismatchType] = useState<DeptOUMismatchType | "">("");
+  const [deptId, setDeptId] = useState("");
+  const [keyword, setKeyword] = useState("");
+  // 相同筛选下重复点击「查询」也要重新拉取 → 用自增 tick 触发 loadList 身份变化
+  const [queryTick, setQueryTick] = useState(0);
+
   const loadList = useCallback(async () => {
     if (!canView) return;
     setLoading(true);
     setError(null);
     try {
       const params: DeptOUMismatchListRequest = { current, pageSize };
+      if (mismatchType) params.mismatchType = mismatchType;
+      if (deptId) params.deptId = deptId;
+      if (keyword) params.keyword = keyword;
       const res = await getDeptOUMismatchList(params);
       setList(res.data?.list ?? []);
       setTotal(res.data?.total ?? 0);
@@ -72,13 +108,31 @@ const ReconciliationTab: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [canView, current, pageSize]);
+  }, [canView, current, pageSize, mismatchType, deptId, keyword, queryTick]);
 
-  // 依赖只含原始值 / useCallback 引用（CLAUDE.md useEffect 稳定性规则）
+  // 依赖只含 canView 与 loadList（后者依赖原始值）——CLAUDE.md useEffect 稳定性规则
   useEffect(() => {
     if (!canView) return;
     void loadList();
   }, [canView, loadList]);
+
+  const handleQuery = () => {
+    const values = form.getFieldsValue();
+    setMismatchType(values.mismatchType ?? "");
+    setDeptId(values.deptId ?? "");
+    setKeyword((values.keyword ?? "").trim());
+    setCurrent(1);
+    setQueryTick((t) => t + 1);
+  };
+
+  const handleReset = () => {
+    form.resetFields();
+    setMismatchType("");
+    setDeptId("");
+    setKeyword("");
+    setCurrent(1);
+    setQueryTick((t) => t + 1);
+  };
 
   const columns: ColumnsType<DeptOUMismatchRow> = [
     {
@@ -101,7 +155,15 @@ const ReconciliationTab: FC = () => {
       dataIndex: "deptName",
       key: "deptName",
       width: 180,
-      render: (name?: string | null) => renderText(name),
+      render: (name: string | null | undefined, record: DeptOUMismatchRow) => {
+        if (!name && !record.deptDeletedAt) return "-";
+        return (
+          <span>
+            {name ?? "-"}
+            {record.deptDeletedAt ? <Tag color="red">已删除</Tag> : null}
+          </span>
+        );
+      },
     },
     {
       title: "AD 配置",
@@ -177,8 +239,49 @@ const ReconciliationTab: FC = () => {
 
   return (
     <div>
-      {error && <div>对账数据加载失败，请稍后重试。</div>}
-      {list.length === 0 && !loading && !error ? (
+      <Form form={form} layout="inline" style={{ marginBottom: 16 }}>
+        <Space size="middle" wrap>
+          <Form.Item name="mismatchType" label="不一致类型">
+            <Select
+              placeholder="全部类型"
+              allowClear
+              style={{ width: 220 }}
+              options={MISMATCH_TYPE_OPTIONS}
+            />
+          </Form.Item>
+          <Form.Item name="deptId" label="部门">
+            <DepartmentTreeSelect
+              departments={deptTree.data ?? EMPTY_DEPTS}
+              placeholder="全部部门"
+              allowClear
+              style={{ width: 240 }}
+              loading={deptTree.isLoading}
+            />
+          </Form.Item>
+          <Form.Item name="keyword">
+            <Input
+              placeholder="搜索用户名 / 部门名称 / OU DN"
+              allowClear
+              style={{ width: 260 }}
+              onPressEnter={handleQuery}
+            />
+          </Form.Item>
+          <Button type="primary" onClick={handleQuery} loading={loading}>
+            查询
+          </Button>
+          <Button onClick={handleReset} loading={loading}>
+            重置
+          </Button>
+        </Space>
+      </Form>
+
+      {error ? (
+        <ErrorAlertWithRetry
+          error={error}
+          description="对账数据加载失败，请稍后重试。"
+          onRetry={loadList}
+        />
+      ) : list.length === 0 && !loading ? (
         <EmptyStateWithAction
           title="未发现不一致条目"
           description="当前视图为实时计算。可调整筛选条件，或先在「配置列表」完成部门同步后再查看。"
@@ -207,7 +310,5 @@ const ReconciliationTab: FC = () => {
     </div>
   );
 };
-
-/** 无权限态文案（UI-SPEC Copywriting Contract 逐字，见上方权限门渲染） */
 
 export default ReconciliationTab;
