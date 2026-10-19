@@ -426,13 +426,44 @@ func (c *LDAPClient) RemoveGroupMembers(groupDN string, userDNs []string) error 
 	return c.conn.Modify(modifyRequest)
 }
 
-// extractRDNFromDN 从DN中提取RDN
+// extractRDNFromDN 从DN中提取RDN（第一个 RDN）
+//
+// 按 RFC4514，逗号只有在**未被转义**时才是 RDN 分隔符 —— 即其前面是偶数个连续反斜杠。
+// 值内的转义逗号（CN=Zhang\,San）属于 RDN 本身，不是分隔符。
+//
+// 为什么不能直接 strings.Index(dn, ",")：本函数的产物会喂给 MoveUser 的
+// ldap.NewModifyDNRequest(userDN, rdn, true, newOUDN)，deleteOldRDN=true 会让 AD
+// 把对象改名成给定的 RDN 并删除旧 RDN。按字面逗号切会把 CN=Zhang\,San 截成
+// `CN=Zhang\`，AD 对象的名字就此永久丢失（Phase 58 遗留 MISSED-04，数据破坏级）。
+//
+// Phase 58 只给 OU 侧加了 ldap.EscapeDN（见 dn_util.go 的 BuildOUDN），RDN 侧此前
+// 仍是字面切分 —— 本函数补齐这半边。
+//
+// 实现要点：
+//   - 单趟**字节**扫描。RFC4514 的转义字符与分隔符都是 ASCII，中文等多字节 UTF-8 值
+//     的续字节不可能等于 ',' 或 '\'，按字节遍历天然安全；反之若按 rune 迭代
+//     （for range）再拿 rune 当下标，会引入偏移错位。
+//   - escaping 状态位天然实现"奇偶反斜杠"语义：两个连续反斜杠是「反斜杠 + 被转义的
+//     反斜杠」，状态位回到 false，故其后的逗号判为未转义分隔符。无需另数反斜杠个数。
+//   - 输入是**已在库里的 AD 侧 DN**，本就是合法转义形态；不要改用 NormalizeDN 的口径
+//     （NormalizeDN 刻意不用 ldap.ParseDN，因为存量 sys_dept_ou_mapping.ou_dn 含未转义
+//     特殊字符），二者期望语义本就不同，不要顺手"统一"。
 func extractRDNFromDN(dn string) string {
-	idx := strings.Index(dn, ",")
-	if idx == -1 {
-		return dn
+	escaping := false
+	for i := 0; i < len(dn); i++ {
+		switch dn[i] {
+		case '\\':
+			escaping = !escaping
+		case ',':
+			if !escaping {
+				return dn[:i]
+			}
+			escaping = false
+		default:
+			escaping = false
+		}
 	}
-	return dn[:idx]
+	return dn
 }
 
 // extractNetBIOSName 从域名中提取NetBIOS名称

@@ -221,9 +221,14 @@ func TestLC78_ExtractRDNFromDN_Edge(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "转义逗号", // extractRDNFromDN 不处理转义,只找第一个逗号字面值
+			// Phase 58 MISSED-04 / quick 261019-mmc：逗号仅在**未转义**时才是 RDN 分隔符。
+			// 期望值由 `CN=John\`（截断）翻为 `CN=John\,Doe`，**不是**放宽断言 ——
+			// 旧期望把缺陷行为写成了契约。截断串会被 MoveUser 的
+			// ModifyDN(deleteOldRDN=true) 当作新 RDN，让 AD 把对象改名成 `CN=John\`
+			// 并删除旧 RDN（数据破坏）。RFC4514 语义见 ldap_client_rfc4514_test.go。
+			name: "转义逗号",
 			dn:   "CN=John\\,Doe,OU=Users,DC=example,DC=com",
-			want: "CN=John\\", // 第一个逗号在 "Doe" 前,返回 "CN=John\\"
+			want: "CN=John\\,Doe",
 		},
 	}
 
