@@ -182,3 +182,12 @@ func drainTestAccount(id, configID string) models.ADServiceAccount
 
 *Phase: 58-compare-and-move*
 *Completed: 2026-10-19*
+
+## Self-Check: PASSED
+
+- FOUND: internal/services/addomain/ad_push_queue_drain_test.go
+- FOUND: .planning/phases/58-compare-and-move/58-01-SUMMARY.md
+- FOUND commit: 31a34f90 (Task 1)
+- FOUND commit: 5d63defb (Task 2)
+- FOUND commit: 6ee328e6 (Task 3)
+- FOUND commit: ee1bcf34 (plan metadata)
