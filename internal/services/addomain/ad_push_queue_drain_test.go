@@ -22,6 +22,7 @@
 package addomain
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -279,4 +280,133 @@ func TestPhase58_DrainTestBase_FixtureUsable(t *testing.T) {
 	require.NoError(t, db.Raw(`SELECT dept_id FROM sys_user WHERE id = ?`, "user-dept").
 		Scan(&gotDeptID).Error)
 	assert.Equal(t, "dept-1", gotDeptID, "seedDrainUser 的 deptID 必须真的落库（F-07/QUEUE-04 路由依赖）")
+}
+
+// ==================== Phase 58 Plan 03 Task 1：退避纯函数 + 拾取谓词 ====================
+
+// TestPhase58_BackoffDuration_Curve 退避曲线 60s→2m→4m→8m→16m（D-05）。
+func TestPhase58_BackoffDuration_Curve(t *testing.T) {
+	assert.Equal(t, 60*time.Second, backoffDuration(1), "第 1 次失败 → 60s")
+	assert.Equal(t, 2*time.Minute, backoffDuration(2), "第 2 次失败 → 2min")
+	assert.Equal(t, 4*time.Minute, backoffDuration(3), "第 3 次失败 → 4min")
+	assert.Equal(t, 8*time.Minute, backoffDuration(4), "第 4 次失败 → 8min")
+	assert.Equal(t, 16*time.Minute, backoffDuration(5), "第 5 次失败 → 16min")
+}
+
+// TestPhase58_BackoffDuration_CappedAt30m 封顶 30min（D-05）+ <=0 回落 60s。
+func TestPhase58_BackoffDuration_CappedAt30m(t *testing.T) {
+	assert.Equal(t, 30*time.Minute, backoffDuration(6), "第 6 次失败 → 封顶 30min")
+	assert.Equal(t, 30*time.Minute, backoffDuration(99), "超上限仍封顶 30min")
+	assert.Equal(t, 60*time.Second, backoffDuration(0), "attempts<=0 → 60s")
+}
+
+// TestPhase58_PickRows_NullNextRetryIsPickable D-05：next_retry_at IS NULL = 立即可拾取。
+func TestPhase58_PickRows_NullNextRetryIsPickable(t *testing.T) {
+	db := setupDrainTestDB(t)
+	for i, id := range []string{"u-1", "u-2", "u-3"} {
+		seedDrainQueueRow(t, db, "", id, string(models.ADPushActionUpdateUser),
+			string(models.ADPushStatusPending), 0, nil)
+		_ = i
+	}
+	d := NewADPushDrainer(db, newDrainTestPool())
+	rows, err := d.pickRows(context.Background(), time.Now().UTC())
+	require.NoError(t, err)
+	assert.Len(t, rows, 3, "next_retry_at IS NULL 的行必须全部可拾取（反向语义会制造僵尸行）")
+}
+
+// TestPhase58_PickRows_FutureNextRetrySkipped 退避未到期的行不被拾取。
+func TestPhase58_PickRows_FutureNextRetrySkipped(t *testing.T) {
+	db := setupDrainTestDB(t)
+	future := time.Now().UTC().Add(time.Hour)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser),
+		string(models.ADPushStatusFailed), 1, &future)
+	d := NewADPushDrainer(db, newDrainTestPool())
+	rows, err := d.pickRows(context.Background(), time.Now().UTC())
+	require.NoError(t, err)
+	assert.Empty(t, rows, "next_retry_at 未到期的行不得被拾取")
+}
+
+// TestPhase58_PickRows_PastNextRetryPicked failed 且退避已到期的行可被拾取。
+func TestPhase58_PickRows_PastNextRetryPicked(t *testing.T) {
+	db := setupDrainTestDB(t)
+	past := time.Now().UTC().Add(-time.Minute)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser),
+		string(models.ADPushStatusFailed), 1, &past)
+	d := NewADPushDrainer(db, newDrainTestPool())
+	rows, err := d.pickRows(context.Background(), time.Now().UTC())
+	require.NoError(t, err)
+	assert.Len(t, rows, 1, "退避已到期的 failed 行必须可被拾取")
+}
+
+// TestPhase58_PickRows_Limit100 单轮批量上限 100（D-05）。
+func TestPhase58_PickRows_Limit100(t *testing.T) {
+	db := setupDrainTestDB(t)
+	for i := 0; i < 120; i++ {
+		seedDrainQueueRow(t, db, "", "u-"+string(rune('a'+i%26))+string(rune('a'+(i/26))),
+			string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+	}
+	d := NewADPushDrainer(db, newDrainTestPool())
+	rows, err := d.pickRows(context.Background(), time.Now().UTC())
+	require.NoError(t, err)
+	assert.Len(t, rows, 100, "单轮上限 100（drainBatchLimit）")
+}
+
+// TestPhase58_PickRows_OrderedByCreatedAt 按 created_at ASC 返回（F-01 压制后的入队先后）。
+func TestPhase58_PickRows_OrderedByCreatedAt(t *testing.T) {
+	db := setupDrainTestDB(t)
+	r1 := seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser),
+		string(models.ADPushStatusPending), 0, nil)
+	r2 := seedDrainQueueRow(t, db, "", "u-2", string(models.ADPushActionUpdateUser),
+		string(models.ADPushStatusPending), 0, nil)
+	r3 := seedDrainQueueRow(t, db, "", "u-3", string(models.ADPushActionUpdateUser),
+		string(models.ADPushStatusPending), 0, nil)
+	// 显式把 created_at 拉开（GORM Create 会在同一秒内落库，顺序不可辨）。
+	require.NoError(t, db.Exec(`UPDATE ad_push_queue SET created_at = ? WHERE id = ?`, "2026-01-01 00:00:03", r3.ID).Error)
+	require.NoError(t, db.Exec(`UPDATE ad_push_queue SET created_at = ? WHERE id = ?`, "2026-01-01 00:00:01", r1.ID).Error)
+	require.NoError(t, db.Exec(`UPDATE ad_push_queue SET created_at = ? WHERE id = ?`, "2026-01-01 00:00:02", r2.ID).Error)
+
+	d := NewADPushDrainer(db, newDrainTestPool())
+	rows, err := d.pickRows(context.Background(), time.Now().UTC())
+	require.NoError(t, err)
+	require.Len(t, rows, 3)
+	assert.Equal(t, r1.ID, rows[0].ID, "created_at ASC 第一个")
+	assert.Equal(t, r2.ID, rows[1].ID)
+	assert.Equal(t, r3.ID, rows[2].ID)
+}
+
+// TestPhase58_PickRows_TerminalRowsNotPicked 终态行（pushed/dead）退出活跃谓词，不再重试（T-58-03-07）。
+func TestPhase58_PickRows_TerminalRowsNotPicked(t *testing.T) {
+	db := setupDrainTestDB(t)
+	seedDrainQueueRow(t, db, "", "u-pushed", string(models.ADPushActionUpdateUser),
+		string(models.ADPushStatusPushed), 0, nil)
+	seedDrainQueueRow(t, db, "", "u-dead", string(models.ADPushActionUpdateUser),
+		string(models.ADPushStatusDead), 0, nil)
+	d := NewADPushDrainer(db, newDrainTestPool())
+	rows, err := d.pickRows(context.Background(), time.Now().UTC())
+	require.NoError(t, err)
+	assert.Empty(t, rows, "pushed / dead 终态行不得被拾取")
+}
+
+// TestPhase58_Drain_NoConfigDeferWithoutDead Q3(i)：全局零启用配置 → 整轮 defer，不动任何行。
+// ⚠ 与"单用户匹配不到配置"（转 dead）必须区分 —— 混淆会误伤已入队的推送。
+func TestPhase58_Drain_NoConfigDeferWithoutDead(t *testing.T) {
+	db := setupDrainTestDB(t)
+	// 刻意不 seed 任何 sys_ad_config 行（或只 seed 停用的）。
+	seedDrainADConfig(t, db, "cfg-disabled", "停用域", "DC=corp,DC=com", true, int(models.ADConfigStatusDisabled))
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	row := seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser),
+		string(models.ADPushStatusPending), 0, nil)
+
+	// 本用例在分组阶段即 defer，不会触达 LDAP；直接构造即可（Task 2 才引入
+	// newDrainTestDrainer 这一注入 helper）。
+	d := NewADPushDrainer(db, newDrainTestPool(drainTestAccount("a1", "cfg-disabled")))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	var got models.ADPushQueue
+	require.NoError(t, db.Where("id = ?", row.ID).First(&got).Error)
+	assert.Equal(t, models.ADPushStatusPending, got.Status, "零启用配置时行状态必须原样保留（defer 而非 dead）")
+
+	var deadCount int64
+	require.NoError(t, db.Model(&models.ADPushQueue{}).Where("status = ?", string(models.ADPushStatusDead)).Count(&deadCount).Error)
+	assert.Equal(t, int64(0), deadCount, "defer 分支不得把任何行打成 dead")
 }
