@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -423,10 +424,26 @@ func (s *UserSyncService) SyncADUser(ctx context.Context, adUserInfo *security.A
 		} else if deptID == "" {
 			// 无 OU 映射且不自动创建部门 → 保留用户原部门（不置空）
 			applogger.Infof("[SyncADUser] 无OU映射，保留原部门: userID=%s, deptID=%v", user.ID, user.DeptID)
-		} else if err := s.db.WithContext(ctx).Model(user).Update("dept_id", deptID).Error; err != nil {
-			applogger.Warnf("更新用户部门失败: %v", err)
 		} else {
-			applogger.Infof("[SyncADUser] 成功设置用户部门: userID=%s, deptID=%s", user.ID, deptID)
+			// GUARD-01 (Phase 59 D-04): 活跃队列守卫只包住唯一一次 dept_id 回写。
+			// 命中 pending/failed 的 update_user 行 → 管理员本地编辑仍在队列中，跳过覆盖。
+			// 查询失败 → 保守跳过（D-07），绝不回滚本地编辑。
+			// 无活跃行 → 走与 Phase 58 完全相同的 Update 调用（D-08，无平行分支）。
+			qrow, qerr := s.findActiveUserUpdateQueue(ctx, user.ID)
+			switch {
+			case qerr != nil && !errors.Is(qerr, gorm.ErrRecordNotFound):
+				applogger.Warnf("部门回写守卫查询失败，跳过 dept_id 更新: userID=%s, username=%s, localDeptID=%s, adDeptID=%s, err=%v",
+					user.ID, user.Username, deptValue(user.DeptID), deptID, qerr)
+			case qerr == nil:
+				applogger.Warnf("部门回写被活跃队列守卫拦截: userID=%s, username=%s, localDeptID=%s, adDeptID=%s, queueID=%s, actionType=%s, attempts=%d",
+					user.ID, user.Username, deptValue(user.DeptID), deptID, qrow.ID, qrow.ActionType, qrow.Attempts)
+			default:
+				if err := s.db.WithContext(ctx).Model(user).Update("dept_id", deptID).Error; err != nil {
+					applogger.Warnf("更新用户部门失败: %v", err)
+				} else {
+					applogger.Infof("[SyncADUser] 成功设置用户部门: userID=%s, deptID=%s", user.ID, deptID)
+				}
+			}
 		}
 	} else {
 		applogger.Warnf("[SyncADUser] 跳过部门解析: OUDN为空=%v, ouMapper为nil=%v", adUserInfo.OUDN == "", s.ouMapper == nil)
@@ -797,5 +814,34 @@ func (s *UserSyncService) resolveDeptFromOU(ctx context.Context, ouDN string) (s
 	// 无 OU 映射 → 不创建部门，返回空，调用方使用默认部门
 	applogger.Infof("[resolveDeptFromOU] 无OU映射，不创建部门(使用默认部门): ouDN=%s", ouDN)
 	return "", nil
+}
+
+// findActiveUserUpdateQueue 查询该用户是否存在活跃的 update_user 队列行（GUARD-01）。
+//
+// 谓词直接拼接 models 包导出的活跃行谓词常量 —— 该常量是 migration_215 部分唯一索引
+// DDL 与 adPushOnConflictClause 的单一事实源（Phase 57 D-02 红线：不得改写、不得加表名限定）。
+// 只取单行（Take）即可：守卫需要的是布尔信号（Phase 59 D-03）。
+//
+// 返回 (nil, gorm.ErrRecordNotFound) 表示无活跃行；其余 error 由调用方按 D-07 保守降级。
+func (s *UserSyncService) findActiveUserUpdateQueue(ctx context.Context, userID string) (*models.ADPushQueue, error) {
+	var row models.ADPushQueue
+	err := s.db.WithContext(ctx).
+		Where("entity_id = ? AND entity_type = ? AND action_type = ?",
+			userID, models.ADPushEntityUser, models.ADPushActionUpdateUser).
+		Where(models.ADPushQueueActivePredicate).
+		Take(&row).Error
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+// deptValue 将 *string 部门 ID 渲染为日志可读文本（Phase 59 Pitfall 7：
+// %v 直接打印 *string 会输出指针地址，目标是让运维看到本地 dept UUID）。
+func deptValue(p *string) string {
+	if p == nil {
+		return "<nil>"
+	}
+	return *p
 }
 
