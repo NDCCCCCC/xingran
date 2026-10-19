@@ -474,11 +474,26 @@ func (d *ADPushDrainer) compareAndMoveOU(ctx context.Context, c LDAPClientIface,
 	//    RDN 用同包 extractRDNFromDN 取（MoveUser 内部用的也是它，保证拼接一致）。
 	//    ⚠ 必须 Unscoped()（disable 场景用户已软删，作用域 Updated 会命中 0 行且不报错）。
 	//    ⚠ 用 Updates(map[...]) 而非 Save（Phase 57 F-06 收窄写路径的同款决策：显式字段）。
-	//    回写失败仅 Warn 不上抛 —— MoveUser 已成功、AD 侧状态正确；本地回写失败下轮会重算。
+	//
+	//    ⚠ H-05：回写失败**必须上抛**。此前这里只 Warn 并返回 (false, nil)，调用方
+	//    直接 markPushed —— 队列行以"成功"终结，而本地 ad_dn 停在旧 OU，AD 侧对象
+	//    已经在新 OU。下一次该用户被编辑再入队时，syncUserAttributes 的
+	//    DNExists(旧 DN)=false → 清空 ad_dn/ad_ou_dn/ad_synced_at → 行转 dead
+	//    "unrecoverable:target-not-found"：AD 账号明明还在，系统却永久丢失了绑定。
+	//    注释里"本地回写失败下轮会重算"是错的 —— pushed 是终态，根本没有"下轮"。
+	//    上抛后该行走 markFailed + 退避，last_error 立刻暴露真实原因（而不是被
+	//    markPushed 掩盖成成功，Phase 59 的信号守卫也就不会把这种丢绑定读成"一致"）。
 	newAdDn := fmt.Sprintf("%s,%s", extractRDNFromDN(*user.AdDn), targetOUDN)
 	if err := d.db.WithContext(ctx).Unscoped().Model(&models.User{}).Where("id = ?", user.ID).
 		Updates(map[string]interface{}{"ad_dn": newAdDn, "ad_ou_dn": targetOUDN}).Error; err != nil {
-		applogger.Warnf("[ad_push_queue] 回写用户 %s 的 ad_dn/ad_ou_dn 失败 [%s]: %v", user.ID, newAdDn, err)
+		applogger.Errorf("[ad_push_queue] 回写用户 %s 的 ad_dn/ad_ou_dn 失败 [%s]（MoveUser 已在 AD 侧生效）: %v",
+			user.ID, newAdDn, err)
+		// ⚠ 已知残余风险（非退避可自愈）：下一轮该行重读到的仍是旧 ad_dn，
+		//   syncUserAttributes 的 DNExists(旧 DN) 会返回 false → 清空三列 → dead。
+		//   即"重试"并不会自动修复绑定，只是不再被误报成 pushed。要真正自愈需要
+		//   在重放时识别"对象已在目标 OU"并只补写回，该设计待单独决策
+		//   （见 58-REVIEW H-05 的修复建议段与本次修复报告）。
+		return false, fmt.Errorf("回写用户 %s 的 ad_dn/ad_ou_dn 失败（MoveUser 已生效，本地 DN 已陈旧）: %w", user.ID, err)
 	}
 
 	// 终态由调用方的 markPushed 写，本函数不重复写。

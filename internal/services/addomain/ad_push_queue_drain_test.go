@@ -1106,6 +1106,70 @@ func TestPhase58_Drain_MoveFailureIsRetryable(t *testing.T) {
 	assert.Equal(t, "retry:move_ou:", row.LastError[:len("retry:move_ou:")])
 }
 
+// injectSysUserUpdateFailure 让**针对 sys_user 的 UPDATE 在发出 SQL 之前**失败。
+//
+// 用 GORM 的 Before("gorm:update") 回调 + AddError：processor 逐个回调前检查
+// tx.Error，故 SQL 根本不会执行 —— 与真实 DB 故障（连接池耗尽 / 语句超时）的
+// 可观测效果一致（值没写进去 + 返回 error）。若改用 After 回调，SQL 已经落库，
+// 用例就变成了"假失败"。
+//
+// 只拦 sys_user：队列表（ad_push_queue）的终态写入不受影响，否则连 markFailed
+// 都写不进去，用例就测不出状态机了。
+func injectSysUserUpdateFailure(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	const cbName = "test_inject_sys_user_update_failure"
+	require.NoError(t, db.Callback().Update().Before("gorm:update").Register(cbName, func(tx *gorm.DB) {
+		if tx.Statement != nil && tx.Statement.Table == "sys_user" {
+			tx.AddError(errors.New("injected: sys_user write failure"))
+		}
+	}))
+	t.Cleanup(func() { _ = db.Callback().Update().Remove(cbName) })
+}
+
+// TestPhase58_Drain_MoveWriteBackFailureIsNotPushed H-05：MoveUser 已成功（AD 侧对象
+// 搬到新 OU），但紧随其后的 ad_dn / ad_ou_dn 回写失败时，行**不得**被写成 pushed。
+//
+// 修复前该路径只 Warn 并返回 (false, nil) → 调用方 markPushed → 队列以"成功"终结，
+// 而本地 ad_dn 停在旧 OU；此后该用户任何一次编辑都会走 DNExists(旧 DN)=false →
+// 清空三列 → dead "unrecoverable:target-not-found"，AD 账号还在但系统永久丢失绑定。
+//
+// 修复后：failed + attempts+1 + 排退避，last_error 以 retry:move_ou: 开头，暴露真实原因。
+func TestPhase58_Drain_MoveWriteBackFailureIsNotPushed(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedCompareMoveUser(t, db, "u-1", "OU=IT,DC=corp,DC=com", "dept-it2")
+	seedDrainOUMapping(t, db, "m-1", "dept-it2", cfgID, "OU=IT2,DC=corp,DC=com", true)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+
+	injectSysUserUpdateFailure(t, db) // 只拦 ad_dn/ad_ou_dn 回写
+
+	mock := newDrainTestLDAP()
+	d := newDrainTestDrainer(t, db, mock, drainTestAccount("a1", cfgID))
+	require.NoError(t, d.DrainOnce(context.Background()))
+
+	require.Equal(t, 1, mock.moveUserCalls, "前置条件：MoveUser 必须已成功（AD 侧对象已搬走）")
+
+	row := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusFailed, row.Status,
+		"回写失败不得写成 pushed：pushed 是终态、退出活跃谓词，'下轮会重算'不成立")
+	assert.NotEqual(t, models.ADPushStatusPushed, row.Status)
+	assert.Equal(t, 1, row.Attempts)
+	require.NotNil(t, row.NextRetryAt, "可重试失败必须排退避")
+	assert.Nil(t, row.PushedAt)
+	require.True(t, len(row.LastError) >= len("retry:move_ou:"))
+	assert.Equal(t, "retry:move_ou:", row.LastError[:len("retry:move_ou:")],
+		"last_error 必须暴露真实原因（回写失败），而不是被 markPushed 掩盖成成功")
+
+	// 回写确实没发生：本地 ad_dn 仍是旧 OU（这正是 H-05 描述的陈旧绑定）
+	adDn, adOuDn := drainUserADRefs(t, db, "u-1")
+	require.NotNil(t, adDn)
+	assert.Equal(t, "CN=zhangsan,OU=IT,DC=corp,DC=com", *adDn,
+		"注入的回写失败必须真的没落库，否则本用例的前提不成立")
+	require.NotNil(t, adOuDn)
+	assert.Equal(t, "OU=IT,DC=corp,DC=com", *adOuDn)
+}
+
 // ==================== Phase 58 Plan 04 Task 3：F-A 的另两处载体 ====================
 
 // TestPhase58_MoveUserToNewOU_UpdatesAdDn F-A 载体 2：旧直推路径 moveUserToNewOU
