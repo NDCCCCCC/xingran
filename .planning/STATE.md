@@ -1,33 +1,39 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
+current_phase: 59
+current_phase_name: "登录回写守卫与部门对账视图"
 status: in_progress
-last_updated: "2026-10-19T15:20:00.000Z"
-last_activity: 2026-10-19 -- Phase 58 复审与补修闭环：code-review 独立复审得 0 BLOCKER / 5 HIGH（H-01 mutex 生产失效、H-02 孪生用例、H-03 退避两档不可达、H-04 拨号全失败整批判死、H-05 回写失败被写成 pushed）→ 用户裁定修 4 留 1 → 全部修复并复跑回归；gsd-verifier 目标反向验证判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04 → 再裁定修前三项、MISSED-04 转独立 phase。三次审计否决项全程未命中。⚠ 下一步优先级：MISSED-04（extractRDNFromDN 转义逗号截断 → ModifyDN 会重命名 AD 对象，数据破坏级）应先于 Phase 59 处理。
+stopped_at: Phase 59 context gathered
+last_updated: "2026-10-19T09:50:00.000Z"
+last_activity: 2026-10-19
+last_activity_desc: Phase 59 上下文已收集（16 项决策 D-01~D-17）；下一步 /gsd-plan-phase 59
+state_head: f0783fe99ce15938ccea23f3da744747bab510a2
 progress:
-  total_phases: 8
+  total_phases: 6
   completed_phases: 2
   total_plans: 10
   completed_plans: 10
-  percent: 100
+  percent: 33
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 Phase 58 COMPLETE（含复审与补修闭环；下一步：MISSED-04 独立 phase，优先于 Phase 59 GUARD 守卫）
-**Last activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
-**Previous activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
+**Status**: v1.21 Phase 58 COMPLETE（含复审与补修闭环）；Phase 59 上下文已收集，待规划
+**Last activity**: 2026-10-19 — Phase 59 上下文已收集（`f0783fe9`）：16 项决策 D-01~D-17，涵盖守卫判定（只拦 dept_id / 复用活跃谓词 / EXISTS / 查询失败跳过覆盖）、对账视图（单视图 UNION ALL 四类 / 部门+用户双维度 11 列 / 第四类纯 SQL）、端点与前端（`ops:ad:config:reconciliation:list` / POST 分页 / 嵌入 AD 配置页 Tab）
+**Previous activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
+**Earlier activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
 
 ## Current Position
 
-Phase: 58 (排水器与 compare-and-move 推送) — **COMPLETE**（7/7 plans）
-Plan: 全部完成。下一步 = `/gsd:plan-phase 59`（GUARD-01 信号守卫 + GUARD-02 对账 VIEW）
-Status: Phase 58 全量交付并收口。全量回归 `go test ./... -count=1` 退出码 0（78 包 ok）；五包 `go vet` 无输出；Phase 57 sentinel 41 PASS 零回归；65 个 `TestPhase58_*` 全 PASS
-Last activity: 2026-10-19 -- 58-07 四个提交（`1d090937` / `f8f88d4e` / `23cc1308` / `30af6251` / `f89dbb57`）
-Progress: 2/6 phases [██████████] 100%（10/10 plans）
+Phase: 59 (登录回写守卫与部门对账视图) — **CONTEXT GATHERED**（0 plans）
+Plan: 下一步 = `/gsd-plan-phase 59`（GUARD-01 信号守卫 + GUARD-02 对账 VIEW）
+Status: Phase 58 已闭环（含复审与补修）；Phase 59 决策已锁定于 59-CONTEXT.md（D-01~D-17），待研究+规划
+Last activity: 2026-10-19 -- Phase 59 上下文收集（`f0783fe9`）
+Progress: 2/6 phases [███░░░░░░░] 33%（10/10 plans）
 
 ## Accumulated Context
 
@@ -147,3 +153,9 @@ Progress: 2/6 phases [██████████] 100%（10/10 plans）
 - ~~Phase plans 数量 TBD~~ ✅ Phase 57 = 3 plans，Phase 58 = 7 plans（7 waves），progress table 已回填
 - ~~Phase 58 移交待决项~~ ✅ 58-CONTEXT.md D-01~D-05 已拍板并落 plan：①两条直推路径均删（D-01/D-03，导入换批量入队）②不加 ad_config_id 列、排水时最长后缀唯一匹配（D-02）③F-07~F-16 三档分档复核（D-04）
 - 57-HUMAN-UAT.md 三项真环境验证（PG 合并路径 / kill -9 重启 / UAC 533）待人工执行
+
+## Session
+
+**Last session:** 2026-10-19T09:44:19.883Z
+**Stopped at:** Phase 59 context gathered
+**Resume file:** .planning/phases/59-ad-login-guard-reconciliation/59-CONTEXT.md
