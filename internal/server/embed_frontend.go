@@ -18,6 +18,14 @@ func ServeFrontend(c *gin.Context) {
 	})
 }
 
+// ServeRoot 开发模式：与 ServeFrontend 一致，返回错误提示
+func ServeRoot(c *gin.Context) {
+	c.JSON(http.StatusServiceUnavailable, gin.H{
+		"error":   "Frontend not available in development mode",
+		"message": "Please run the frontend dev server: cd xingran-react-frontend && npm run dev",
+	})
+}
+
 // ServeSPA 开发模式：返回错误提示
 // 在开发模式下，SPA fallback 由 Vite 开发服务器处理
 func ServeSPA(c *gin.Context) {

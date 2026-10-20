@@ -16,23 +16,21 @@ import (
 //go:embed all:xingran-react-frontend/dist
 var frontendFS embed.FS
 
-// frontendSubPath 是可选的子路径前缀,与 nginx 部署约定 (location /xingran/
-// proxy_pass http://127.0.0.1:9000/;) 一致 — 生产通过 nginx 转发时 nginx
-// 会剥掉 /xingran/,后端看到的路径始终不含此前缀;但本地直连 :9000 调试时
-// 浏览器按 Vite base 直接发 /xingran/... 路径到后端,需要这里做剥离。
-// 改这里时要同步更新 xingran-react-frontend/.env.production 的 VITE_BASE。
-const frontendSubPath = "/xingran"
-
-// stripSubPath 若路径以 frontendSubPath 开头则剥离并返回剩余路径;
-// 否则原样返回。剥离后空字符串视为 "/"。
-func stripSubPath(p string) string {
-	if strings.HasPrefix(p, frontendSubPath) {
-		p = strings.TrimPrefix(p, frontendSubPath)
+// ServeRoot 处理根路径请求。
+//
+// 直连 :9000(没有 nginx 剥前缀)时,浏览器访问 "/" 与前端 Router 的
+// basename "/xingran" 不匹配 → 白屏。这里 302 到 /xingran/,让浏览器落到
+// basename 能匹配的地址上。
+//
+// nginx 剥前缀部署时,后端收到的 "/" 来自 /xingran/ 且请求带
+// X-Forwarded-Prefix 头,此时直接返回 index.html,否则浏览器会在
+// "/" 与 "/xingran/" 之间无限跳转(见 rootRedirectPath)。
+func ServeRoot(c *gin.Context) {
+	if target := rootRedirectPath(c); target != "" {
+		c.Redirect(http.StatusFound, target)
+		return
 	}
-	if p == "" {
-		p = "/"
-	}
-	return p
+	serveFile(c, "index.html")
 }
 
 // ServeFrontend 提供前端静态文件服务（SPA fallback）
