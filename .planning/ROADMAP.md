@@ -206,7 +206,13 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
   2. DN 不一致时拒绝恢复、用户保持软删状态，并写入安全审计日志（SAFE-01）
   3. 登录路径与 batch-sync 共用软删分类与校验逻辑，同一场景两路径行为一致（SAFE-02）
 
-**Plans**: TBD
+**Plans**: 2 plans (2 waves, sequential — 两个 plan 共享 `user_sync_service.go` 与同一测试文件)
+
+**Wave 1**
+- [ ] 60-01-PLAN.md — SAFE-01 登录路径端到端：共享校验入口 `checkSoftDeletedRestore` + sentinel/原因码/中文文案 + 判定表/恢复/拒绝/审计测试 (SAFE-01, SAFE-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 60-02-PLAN.md — SAFE-02 批量路径收敛：阶段 2 过滤计入 `Skipped`（绕开降级管道）+ 双路径一致性用例 + VALIDATION/REQUIREMENTS/ROADMAP 回填 (SAFE-01, SAFE-02)
 
 ### Phase 61: 影子表完整性（删除清理 + 组成员事务化）
 
@@ -244,7 +250,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
 | 58. 排水器与 compare-and-move 推送 | 6/7 | In progress (wave 5 done 2026-10-19, SC6 终态达成) | - |
 | 59. 登录回写守卫与部门对账视图 | 4/4 | Complete (59-01~59-04 done 2026-10-19) | 2026-10-19 |
-| 60. 软删恢复安全 | 0/TBD | Not started | - |
+| 60. 软删恢复安全 | 0/2 | Planned (2 waves) | - |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
 | 62. 卫生收尾与死代码清理 | 0/TBD | Not started | - |
 

@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
-current_phase: 59
-current_phase_name: 登录回写守卫与部门对账视图
-status: verifying
+current_phase: 60
+current_phase_name: 软删恢复安全
+status: executing
 stopped_at: Phase 60 context gathered
-last_updated: "2026-10-20T05:29:08.699Z"
+last_updated: "2026-10-20T06:48:48.030Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 59 execution started
-state_head: f91832033119dd750c05db6786e5c51318ddef55
+state_head: 75be7e92a59ecbc45c87c581b275f006f1f43b8b
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 14
+  total_plans: 16
   completed_plans: 14
   percent: 33
 ---
@@ -22,16 +22,16 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: Phase complete — ready for verification
+**Status**: Ready to execute
 **Last activity**: 2026-10-19
 **Previous activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
 **Earlier activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
 
 ## Current Position
 
-Phase: 59 (登录回写守卫与部门对账视图) — EXECUTING
+Phase: 60 (软删恢复安全) — READY TO EXECUTE
 Plan: 4 of 4
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-10-19 — Phase 59 execution started
 Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phase 59 全部完成，待 verification）
 
