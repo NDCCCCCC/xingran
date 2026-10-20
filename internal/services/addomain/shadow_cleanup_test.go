@@ -14,6 +14,7 @@ package addomain
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/google/uuid"
@@ -453,6 +454,98 @@ func TestSync_ResurrectGroup_SameDN(t *testing.T) {
 	var row models.ADGroup
 	require.NoError(t, db.Where("group_dn = ? AND ad_config_id = ?", gDN, cfg.ID).First(&row).Error)
 	assert.False(t, row.DeletedAt.Valid, "软删组同 DN 复现 → 行恢复可见")
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADGroup{}, cfg.ID, true),
+		"Unscoped 计数不变:复活而非新建")
+}
+
+// TestSync_ResurrectComputer_SameDN：软删 computer（DN-A/cn=X）+ LDAP 返回同 DN 同 cn →
+// syncComputers 返回 nil、行恢复可见、Unscoped 计数 1。
+//
+// 现状缺陷形态：existing 两查（queryExistingComputers 默认作用域 /
+// queryAllComputerNames 显式 deleted_at IS NULL）都查不到软删行 → Create 分支 →
+// 撞 UNIQUE(ad_config_id, computer_name) → 整轮同步失败。
+func TestSync_ResurrectComputer_SameDN(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+	compSvc := NewComputerService(db)
+
+	dn := "CN=pc-x,OU=Computers,DC=example,DC=com"
+	insertComputer78(t, db, cfg.ID, dn, "pc-x", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+	require.NoError(t, db.Exec(`UPDATE sys_ad_computer SET deleted_at = ? WHERE computer_name = ? AND ad_config_id = ?`,
+		time.Now(), "pc-x", cfg.ID).Error) // 软删（61-01 清理语义的产物）
+
+	entries := []*ldap.Entry{
+		entry78(dn, map[string][]string{"cn": {"pc-x"}}),
+	}
+
+	require.NoError(t, compSvc.syncComputers(ctx, cfg, entries),
+		"软删 computer 同 DN 复现 → syncComputers 应自愈复活,而非 Create 撞 UNIQUE")
+
+	var row models.ADComputer
+	require.NoError(t, db.Where("distinguished_name = ? AND ad_config_id = ?", dn, cfg.ID).First(&row).Error)
+	assert.False(t, row.DeletedAt.Valid, "软删行恢复可见(deleted_at 置空)")
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADComputer{}, cfg.ID, true),
+		"Unscoped 计数不变:复活而非新建")
+}
+
+// TestSync_ResurrectComputer_SameNameNewDN：软删行 DN-A/cn=X + LDAP 返回 DN-B/cn=X →
+// name-map 命中走 update 分支 → 行复活且 distinguished_name 更新为 DN-B（OU 搬迁场景）。
+func TestSync_ResurrectComputer_SameNameNewDN(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+	compSvc := NewComputerService(db)
+
+	oldDN := "CN=pc-x,OU=Old,DC=example,DC=com"
+	newDN := "CN=pc-x,OU=New,DC=example,DC=com"
+	insertComputer78(t, db, cfg.ID, oldDN, "pc-x", "OU=Old,DC=example,DC=com", models.ComputerStatusOnline)
+	require.NoError(t, db.Exec(`UPDATE sys_ad_computer SET deleted_at = ? WHERE computer_name = ? AND ad_config_id = ?`,
+		time.Now(), "pc-x", cfg.ID).Error) // 软删
+
+	entries := []*ldap.Entry{
+		entry78(newDN, map[string][]string{"cn": {"pc-x"}}),
+	}
+
+	require.NoError(t, compSvc.syncComputers(ctx, cfg, entries),
+		"同名软删行经 name-map 命中 update 分支复活,而非 Create 撞 UNIQUE(ad_config_id, computer_name)")
+
+	var row models.ADComputer
+	require.NoError(t, db.Where("computer_name = ? AND ad_config_id = ?", "pc-x", cfg.ID).First(&row).Error)
+	assert.False(t, row.DeletedAt.Valid, "同名软删行复活(deleted_at 置空)")
+	assert.Equal(t, newDN, row.DistinguishedName, "复活行 distinguished_name 已更新为新 DN")
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADComputer{}, cfg.ID, true),
+		"Unscoped 计数不变:复活而非新建")
+}
+
+// TestSync_ResurrectGroup_IncrementalPath：软删组 + 同 DN entry → syncGroupEntries
+// （增量路径,GroupSyncService 私有方法同包直调）返回 nil、行复活 —— 增量路径的复活证明。
+func TestSync_ResurrectGroup_IncrementalPath(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	gDN := "CN=g-inc,OU=Groups,DC=example,DC=com"
+	g := &models.ADGroup{ADConfigID: cfg.ID, GroupDN: gDN, GroupName: "g-inc"}
+	g.ID = uuid.NewString()
+	require.NoError(t, db.Create(g).Error)
+	require.NoError(t, db.Delete(g).Error) // 软删（handleDeletedGroups 增量存量行为）
+
+	groupSyncSvc := &GroupSyncService{db: db, syncService: svc}
+	entries := []*ldap.Entry{
+		entry78(gDN, map[string][]string{"cn": {"g-inc"}}),
+	}
+	result := &GroupSyncResult{}
+
+	require.NoError(t, groupSyncSvc.syncGroupEntries(ctx, cfg, entries, result),
+		"增量路径软删组同 DN 复现 → 应复活,而非裸 Create 撞 UNIQUE(ad_config_id, group_dn)")
+
+	var row models.ADGroup
+	require.NoError(t, db.Where("group_dn = ? AND ad_config_id = ?", gDN, cfg.ID).First(&row).Error)
+	assert.False(t, row.DeletedAt.Valid, "增量路径软删组复活(deleted_at 置空)")
 	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADGroup{}, cfg.ID, true),
 		"Unscoped 计数不变:复活而非新建")
 }
