@@ -209,7 +209,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 **Plans**: 2 plans (2 waves, sequential — 两个 plan 共享 `user_sync_service.go` 与同一测试文件)
 
 **Wave 1**
-- [ ] 60-01-PLAN.md — SAFE-01 登录路径端到端：共享校验入口 `checkSoftDeletedRestore` + sentinel/原因码/中文文案 + 判定表/恢复/拒绝/审计测试 (SAFE-01, SAFE-02)
+- [x] 60-01-PLAN.md — SAFE-01 登录路径端到端：共享校验入口 `checkSoftDeletedRestore` + sentinel/原因码/中文文案 + 判定表/恢复/拒绝/审计测试 (SAFE-01, SAFE-02)（2026-10-20, `466acf04` + `1d7b3e86`）
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 60-02-PLAN.md — SAFE-02 批量路径收敛：阶段 2 过滤计入 `Skipped`（绕开降级管道）+ 双路径一致性用例 + VALIDATION/REQUIREMENTS/ROADMAP 回填 (SAFE-01, SAFE-02)

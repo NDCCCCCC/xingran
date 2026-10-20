@@ -5,16 +5,16 @@ milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 60
 current_phase_name: 软删恢复安全
 status: executing
-stopped_at: Phase 60 context gathered
-last_updated: "2026-10-20T06:48:48.030Z"
-last_activity: 2026-10-19
-last_activity_desc: Phase 59 execution started
-state_head: 75be7e92a59ecbc45c87c581b275f006f1f43b8b
+stopped_at: Completed 60-01-PLAN.md
+last_updated: "2026-10-20T07:21:15.300Z"
+last_activity: 2026-10-20
+last_activity_desc: Phase 60 execution started
+state_head: 1d7b3e864a8a040924187dbb733bd104d8c00669
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 33
 ---
 
@@ -23,16 +23,16 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: Ready to execute
-**Last activity**: 2026-10-19
+**Last activity**: 2026-10-20
 **Previous activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
 **Earlier activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
 
 ## Current Position
 
-Phase: 60 (软删恢复安全) — READY TO EXECUTE
-Plan: 4 of 4
+Phase: 60 (软删恢复安全) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-10-19 — Phase 59 execution started
+Last activity: 2026-10-20 — Phase 60 execution started
 Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phase 59 全部完成，待 verification）
 
 ## Accumulated Context
@@ -158,6 +158,7 @@ Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phas
 - **测试 form 注入 seam**：antd v6 Form.useForm 是真 React hook（组件外调用抛 Invalid hook call），组件加可选 form prop，测试用 Host 组件捕获实例。
 - **antd v6 测试口径沉淀**：激活面板 = [role=tabpanel]:not(.ant-tabs-content-hidden)（无 tabpane-active）；Button 两汉字自动插空格且 loading 带图标前缀 → unanchored regex 定位。
 - **useDeptTree 空树用模块级 EMPTY_DEPTS 常量**喂 DepartmentTreeSelect（rc-tree motion bail 陷阱，DeptTree #185 同款）。
+- [Phase 60]: 60-01 执行期决策：sentinel 放在 security 包（system 已 import security，反向声明会成环）；原因码 soft_delete_mismatch 只以常量出现，ad_authenticator 与 auth.go 共用防漂移；校验入口返回 bool 并内聚唯一审计 WARN，调用点只决定拒绝后动作；策略拒绝日志降为 WARN，与基础设施故障 ERROR 区分。
 
 ### Blockers
 
@@ -179,9 +180,9 @@ Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phas
 
 ## Session
 
-**Last session:** 2026-10-20T05:29:07.917Z
-**Stopped at:** Phase 60 context gathered
-**Resume file:** .planning/phases/60-soft-delete-recovery-safety/60-CONTEXT.md
+**Last session:** 2026-10-20T07:21:14.466Z
+**Stopped at:** Completed 60-01-PLAN.md
+**Resume file:** None
 
 ## Performance Metrics
 
@@ -191,3 +192,4 @@ Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phas
 | Phase 59 P02 | 13min | 2 tasks | 4 files |
 | Phase 59 P03 | 15min | 3 tasks | 8 files |
 | Phase 59 P04 | 44min | 3 tasks | 7 files |
+| Phase 60 P01 | 17 min | 2 tasks | 7 files |
