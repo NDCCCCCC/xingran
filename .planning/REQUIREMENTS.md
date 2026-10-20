@@ -27,7 +27,7 @@
 ### 影子表完整性 (SHADOW)
 
 - [x] **SHADOW-01**: 全量同步末尾对 AD 端已消失的 `sys_ad_user/ou/computer` 软删除，复用两道闸门（LDAP 0 条拒绝 / 拟删 >50% 拒绝）
-- [ ] **SHADOW-02**: `sys_ad_group_member` 重放改为**事务包裹**，消除空成员可见窗口
+- [x] **SHADOW-02**: `sys_ad_group_member` 重放改为**事务包裹**，消除空成员可见窗口（自动化已落地：事务化 + CHECK 失败注入回滚用例 + 重放幂等锁定；真并发空窗观察属人工项，见 61-VALIDATION.md Manual-Only）
 - [x] **SHADOW-03**: 删除清理挂 `syncDataInternal`（复用 singleflight），不与全量同步并发
 
 ### 卫生与边界 (HYGIENE)
@@ -71,7 +71,7 @@
 | SAFE-01 | Phase 60 | Complete (2026-10-20, Phase 60 — 共享校验入口 `checkSoftDeletedRestore` + `NormalizeDN` 比较；登录拒绝零写入，批量拒项计入 `Skipped` 且绕开降级管道。证据：`TestPhase60_Login_*`、`TestPhase60_Batch_*`、`TestPhase60_PathConsistency_*`、`TestPhase60_CheckSoftDeletedRestore_Predicate`) |
 | SAFE-02 | Phase 60 | Complete (2026-10-20, Phase 60 — 两路径共用 `classifyUser` + `checkSoftDeletedRestore`；同一 fixture 双路径用例断言相同判定与相同 DB 终态。证据：`TestPhase60_PathConsistency_MismatchRefusedBoth` / `TestPhase60_PathConsistency_MatchingRestoredBoth`、`TestPhase60_SyncErrorReasonFor`) |
 | SHADOW-01 | Phase 61 | Complete（2026-10-20, 61-01 清理主体 + 61-02 复活路径：三类软删双闸门 + 四类 upsert 软删行复活（existing Unscoped 化 + OnConflict 补 deleted_at），5 条 TestSync_Resurrect 先 RED 后 GREEN，D-78-05c 两用例翻转，sys_ad_group 存量缺陷一并消除，全包零回归；真环境约束核对归 61-VALIDATION Manual-Only） |
-| SHADOW-02 | Phase 61 | Pending |
+| SHADOW-02 | Phase 61 | Complete（2026-10-21, 61-03：syncGroupMembers Delete+Create 包 GORM Transaction 闭包（每组一个事务，三调用方零改动）；`TestSyncGroupMembers_CreateFailRollsBackDelete` 以 fixture 表级 CHECK 注入证伪「Delete 已生效而 Create 失败」（先 RED 后 GREEN，Unscoped 旧成员原样）+ `TestSyncGroupMembers_ReplayIdempotent` 锁定重放幂等；Unscoped 硬删语义与空成员集语义保持。真并发空窗观察（第二会话查 sys_ad_group_member）归 61-VALIDATION Manual-Only） |
 | SHADOW-03 | Phase 61 | Complete（2026-10-20, 61-01：cleanupAfterFullSync 单点挂载 syncDataInternal 成功路径末尾（syncComputers 后、last_sync_at 前），处于 singleflight.Do 闭包内 + models.ADSyncTypeFull 守卫，增量分支 no-op 有行为断言 TestShadowCleanup_FullSyncOnly） |
 | HYGIENE-01 | Phase 58 | Complete（58-02） |
 | HYGIENE-02 | Phase 58 | Complete（58-02） |

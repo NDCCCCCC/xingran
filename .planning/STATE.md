@@ -5,16 +5,16 @@ milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 61
 current_phase_name: 影子表完整性（删除清理 + 组成员事务化）
 status: executing
-stopped_at: Completed 61-02-PLAN.md — Phase 61 executing (2/3 plans), 61-03 组成员事务化待跑
-last_updated: "2026-10-20T17:33:52Z"
+stopped_at: Completed 61-03-PLAN.md — Phase 61 complete (3/3 plans), 待 /gsd-verify-work 61
+last_updated: "2026-10-21T18:20:00Z"
 last_activity: 2026-10-21
-last_activity_desc: 61-02 executed — four-category soft-deleted row resurrection on upsert (existing queries Unscoped + OnConflict deleted_at)
-state_head: 96d2c3f434cc83914d394a08a683497f40ffab4e
+last_activity_desc: 61-03 executed + Phase 61 收口 — syncGroupMembers 事务化 (SHADOW-02), CHECK 失败注入回滚 + 重放幂等, 三调用方零改动
+state_head: cb1382c3d15effce3a89f185175edde3be665191
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 19
   percent: 50
 ---
 
