@@ -12,10 +12,7 @@ import type {
   PageResponse,
 } from "@/types/notice";
 import type { BaseResponse } from "@/types";
-import { SecureTokenStorageImpl } from "@/utils/token/SecureTokenStorageImpl";
-
-// 单例 token 存储，用于 WebSocket 连接同步获取 token
-const tokenStorage = new SecureTokenStorageImpl();
+import { getTokenStorage } from "@/store/authStore";
 
 // ==================== 管理端通知 API ====================
 
@@ -186,7 +183,17 @@ export function buildWebSocketUrl(): string {
   // 握手 404 → 无限重连（生产实测 2026-10-20）。
   const apiBaseURL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
   let wsBaseURL = import.meta.env.VITE_WS_BASE_URL || apiBaseURL.replace(/^http/, "ws");
-  const token = tokenStorage.getAccessToken();
+  // ⚠ 必须经 authStore 的全局单例读 token:SecureTokenStorageImpl 的
+  // accessToken 只存实例内存字段,本模块旧代码自建实例 → 永远读不到
+  // TokenManager 写入的值 → WS 握手 token 恒为空(登录态也一样)。
+  const token = getTokenStorage().getAccessToken();
+
+  // 未登录(无 token)时返回空串:后端对空 token 的 WS 握手直接 401,
+  // 拿不到合法会话就不该发起连接 —— 配合 useWebSocket 的空 URL 守卫,
+  // 避免未登录页面上铃铛无限重连风暴(生产实测 2026-10-20)。
+  if (!token) {
+    return "";
+  }
 
   // WebSocket 构造器只接受绝对 URL（ws:// / wss://）；API base 是
   // 根相对路径（如 "/api/v1" → 推导出 "/xingran"，或整段剥空得 ""）时必须

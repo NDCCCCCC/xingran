@@ -24,6 +24,17 @@ import { STORAGE_KEYS, clearAllTableState } from "@/constants/storage";
  * 使用 SM4 加密存储 RefreshToken
  */
 const tokenStorage = new SecureTokenStorageImpl();
+
+/**
+ * 获取全局唯一的 Token 存储实例（同步读内存 accessToken）。
+ *
+ * ⚠ 任何需要读 token 的模块都必须经此单例 —— SecureTokenStorageImpl 的
+ * accessToken 只存实例内存字段，自建实例永远读不到 auth 层写入的值
+ * （生产实测 2026-10-20: noticeApi 自建实例导致 WS 握手 token 恒为空）。
+ */
+export function getTokenStorage(): SecureTokenStorageImpl {
+  return tokenStorage;
+}
 const tokenManager = new TokenManager(tokenStorage, {
   refreshEndpoint: "/system/auth/refresh",
   refreshBeforeSeconds: 30, // 提前 30 秒刷新

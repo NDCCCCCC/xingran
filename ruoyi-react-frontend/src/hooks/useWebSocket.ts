@@ -123,6 +123,12 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
   // 建立连接 — 用 ref 读取配置和重连次数,自身引用稳定(空依赖)
   const connect = useCallback(() => {
     const opts = optsRef.current;
+    // 空 URL 不尝试连接(约定:调用方用 "" 表示"当前不应连接",
+    // 如 useReconciliationWebSocket 的 enabled=false / buildWebSocketUrl 的未登录态),
+    // 否则 new WebSocket("") 抛异常并触发无意义重连风暴
+    if (!opts.url) {
+      return;
+    }
     // 如果已经连接或正在连接，不重复连接
     if (
       wsRef.current?.readyState === WebSocket.OPEN ||

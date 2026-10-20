@@ -19,14 +19,12 @@ vi.mock("./api", () => ({
   del: (...args: unknown[]) => mockDel(...args),
 }));
 
-// buildWebSocketUrl 经 SecureTokenStorageImpl 读取 accessToken
+// buildWebSocketUrl 经 authStore 的全局 token 存储单例读取 accessToken
 const mockGetAccessToken = vi.fn();
-vi.mock("@/utils/token/SecureTokenStorageImpl", () => ({
-  SecureTokenStorageImpl: class {
-    getAccessToken() {
-      return mockGetAccessToken();
-    }
-  },
+vi.mock("@/store/authStore", () => ({
+  getTokenStorage: () => ({
+    getAccessToken: () => mockGetAccessToken(),
+  }),
 }));
 
 import {
@@ -180,13 +178,14 @@ describe("noticeApi — buildWebSocketUrl", () => {
     expect(url).toBe("ws://ops.example.com/api/v1/system/ws/notices?token=tok");
   });
 
-  it("优先使用独立 VITE_WS_BASE_URL", () => {
+  it("无 token(未登录)返回空串 —— 由 useWebSocket 空 URL 守卫跳过连接", () => {
     vi.stubEnv("VITE_WS_BASE_URL", "wss://ws.example.com");
     mockGetAccessToken.mockReturnValue("");
 
     const url = buildWebSocketUrl();
 
-    expect(url).toBe("wss://ws.example.com/system/ws/notices?token=");
+    // 后端对空 token 握手直接 401;未登录就不该发起连接(避免重连风暴)
+    expect(url).toBe("");
   });
 
   it("根相对 API base /api/v1 → 补全为 ws://host 绝对 URL 且保留 /api/v1", () => {
