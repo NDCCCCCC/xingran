@@ -4,12 +4,12 @@ milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 60
 current_phase_name: 软删恢复安全
-status: executing
-stopped_at: Completed 60-02-PLAN.md
-last_updated: "2026-10-20T08:10:00.000Z"
+status: awaiting-uat
+stopped_at: Phase 60 executed (2/2 plans) — verification human_needed, 3 项人工验证待跑
+last_updated: "2026-10-20T10:05:00.000Z"
 last_activity: 2026-10-20
-last_activity_desc: Phase 60 complete (2/2 plans)
-state_head: 19fefc32
+last_activity_desc: Phase 60 executed (2/2 plans); verifier 12/12 must-haves verified, status human_needed
+state_head: 3d855de3
 progress:
   total_phases: 6
   completed_phases: 3
@@ -29,11 +29,11 @@ progress:
 
 ## Current Position
 
-Phase: 60 (软删恢复安全) — COMPLETE
+Phase: 60 (软删恢复安全) — 执行完成，待人工验证
 Plan: 2 of 2
-Status: Phase complete (2/2 plans)
-Last activity: 2026-10-20 — Phase 60 complete
-Progress: 3/6 phases [█████░░░░░] 50%（16/16 plans — Phase 60 全部完成，待 verification）
+Status: verification human_needed（12/12 must-haves 已自动验证；3 项真环境人工验证在 60-UAT.md）
+Last activity: 2026-10-20 — Phase 60 执行完成 + code review 13 findings 分流（9 deferred / 4 open）
+Progress: 3/6 phases [█████░░░░░] 50%（16/16 plans — Phase 60 待 UAT 通过后标记完成）
 
 ## Accumulated Context
 

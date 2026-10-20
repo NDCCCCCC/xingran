@@ -250,7 +250,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
 | 58. 排水器与 compare-and-move 推送 | 6/7 | In progress (wave 5 done 2026-10-19, SC6 终态达成) | - |
 | 59. 登录回写守卫与部门对账视图 | 4/4 | Complete (59-01~59-04 done 2026-10-19) | 2026-10-19 |
-| 60. 软删恢复安全 | 2/2 | Complete | 2026-10-20 |
+| 60. 软删恢复安全 | 2/2 | Executed — verification human_needed (3 项人工验证待跑，见 60-UAT.md) | 2026-10-20 |
 | 61. 影子表完整性 | 0/TBD | Not started | - |
 | 62. 卫生收尾与死代码清理 | 0/TBD | Not started | - |
 
