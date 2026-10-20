@@ -368,25 +368,31 @@ if syncType == string(models.ADSyncTypeFull) {
 
 ## Open Questions
 
-1. **闸门粒度：per-category 还是 per-run？**
+> **全部已决（2026-10-20 修订回填）**：下列四问的实质决议均已在 61-01 / 61-02 / 61-03 plans 中逐条落地，每条 RESOLVED 行指向承载该决议的 plan 与具体落点。本节不再存在未决问题。
+
+1. **闸门粒度：per-category 还是 per-run？（RESOLVED → 61-01）**
    - What we know: 组先例是 per-category（只管组）；四类搜索独立发生，任一搜索失败会中止整轮同步（到不了清理段），所以「0 条」只可能来自「该类别在 AD 里真的为空」或过滤器极端情况。
    - What's unclear: 用户对「LDAP 本轮返回 0 条」的意图范围。
-   - Recommendation: per-category（与先例同构，且每类各自有 50% 闸门兜底）；在 plan 的 checkpoint 里向用户确认一句即可。
+   - Recommendation: per-category（与先例同构，且每类各自有 50% 闸门兜底）；在 plan 的 checkpoint 里向用户确认一次即可。
+   - RESOLVED: 按 per-category 落地——61-01 Task 2 步骤 3（cleanupAfterFullSync 三类依次独立判定闸门，单类 return nil 不影响其它类别）+ TestShadowCleanup_CategoriesIndependent 行为断言 + 61-01 must_haves.truths「每类清理独立过两道闸门」。
 
-2. **清理可观测性载体**
+2. **清理可观测性载体（RESOLVED → 61-01）**
    - What we know: `SyncResult`（`sync.go:40-45`）与 `sys_ad_sync_log`（`models/ad_domain.go:194-209`）都只有正计数，无 deleted 计数。
    - What's unclear: 是否值得为 deleted 计数加 `sys_ad_sync_log` 列（→ 需要 migration_219 + 双方言 + BootstrapMissingTables 三处注册，Phase 57 F-03 教训）。
    - Recommendation: `SyncResult` 加字段 + applogger INFO/WARN，零 DDL。首版拒绝 DB 列方案。
+   - RESOLVED: 选 SyncResult 增量字段 + applogger，拒绝 DB 列——61-01 artifacts（SyncResult.DeletedUserCount / DeletedOUCount / DeletedComputerCount 三个 JSON 字段 + INFO/WARN 日志面），无 migration（artifact_inventory「Explicitly NOT produced」明写）。
 
-3. **复活路径覆盖面：是否连 `sys_ad_group` 的潜伏同款问题一起修**
+3. **复活路径覆盖面：是否连 `sys_ad_group` 的潜伏同款问题一起修（RESOLVED → 61-02）**
    - What we know: `handleDeletedGroups` 今天就在软删组（`group_sync_service.go:387-391`），同 DN 组复现会让下一轮 `createGroupsInBatches` 裸 Create 撞 `UNIQUE(ad_config_id, group_dn)`——这是**独立于本 phase 也会发生**的存量缺陷。
    - What's unclear: 修它是否算 scope 扩张（SHADOW-01 字面只列 user/ou/computer）。
    - Recommendation: 一并修（同一 Pattern、同一批测试、增量成本低），但 plan 里单列任务并标注「SHADOW-01 配套修复，先例路径同款缺陷」；若用户裁剪则本 phase 至少要在代码注释/RESEARCH 留警示。
+   - RESOLVED: 一并修——61-02 整 plan 即复活路径（OU/Group/User/Computer 四类），must_haves.truths 明写「handleDeletedGroups 软删组后同 DN 组复现 → 全量与增量两路径均复活而非裸 Create 撞约束（Q3 存量缺陷一并修复）」；若用户裁剪，61-02 flagged_assumptions 已记录最小切除面（删 group 相关步骤与 TestSync_ResurrectGroup_* 即可，其余不受影响）。
 
-4. **migration 是否真的为零**
+4. **migration 是否真的为零（RESOLVED → 61-01/61-02/61-03 一致口径）**
    - What we know: 软删列（`deleted_at`）在 016 DDL 与模型 `BaseModel` 均已存在；`sys_ad_group_member` 缺的 `deleted_at/created_by/updated_by/version` 列由 AutoMigrate 补齐（`database.go:745` 注册）。本 phase 推荐 no-DDL。
    - What's unclear: 若 Q2 最终选 DB 列方案则需要 migration_219。
    - Recommendation: 锁定 no-DDL；编号 219 预留给未来（记录于 plan 头部备注即可）。
+   - RESOLVED: 锁定 no-DDL——三个 plan 一致口径（61-01 objective「预计零 DDL（migration_219 预留不用）」与 artifact_inventory「无 migration」；61-02 prohibitions「零 DDL / 零 .sql 变更」；61-03 objective「migration_219 预留不用（零 DDL）」）。Q2 既已选 SyncResult 字段，migration_219 无触发条件，编号留给未来。
 
 ## Environment Availability
 
