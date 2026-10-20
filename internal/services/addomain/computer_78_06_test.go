@@ -554,10 +554,11 @@ func TestComp78_UpdateComputerFields(t *testing.T) {
 		"UpdatedAt 应被刷新到 now 或保持（首次写入等于 now）")
 }
 
-// TestComp78_QueryExistingComputers_And_AllNames 覆盖 computer.go:478-523：
+// TestComp78_QueryExistingComputers_And_AllNames 覆盖 computer.go 查询链：
 //   - queryExistingComputers：按 DN + configID 命中；不同 config 不命中；空 DNs → 空
-//   - queryAllComputerNames：本 config 全部（软删行也命中，因 :519 显式 deleted_at IS NULL
-//     实际过滤；预置软删行 → 验证它被排除）
+//   - queryAllComputerNames：Phase 61 SHADOW-01 复活配套后 Unscoped 化、显式
+//     deleted_at IS NULL 谓词已移除 → 软删行一并返回（同名行走 update 分支复活,
+//     name-map 纳入软删行无遮蔽风险:UNIQUE(ad_config_id, computer_name) 保证同名至多一行）
 func TestComp78_QueryExistingComputers_And_AllNames(t *testing.T) {
 	db := setupComp78DB(t)
 	defer closeDB(t, db)
@@ -572,7 +573,7 @@ func TestComp78_QueryExistingComputers_And_AllNames(t *testing.T) {
 	insertComputer78(t, db, cfgA.ID, "CN=DN2,OU=Test,DC=example,DC=com", "PC-A2", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
 	insertComputer78(t, db, cfgA.ID, "CN=DN3,OU=Test,DC=example,DC=com", "PC-A3", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
 	insertComputer78(t, db, cfgB.ID, "CN=DN1,OU=Test,DC=example,DC=com", "PC-B1", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
-	// 软删行（应被 queryAllComputerNames 排除）
+	// 软删行（复活配套后 queryAllComputerNames 应一并返回）
 	insertComputer78(t, db, cfgA.ID, "CN=DNSOFT,OU=Test,DC=example,DC=com", "PC-SOFT", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
 	require.NoError(t, db.Exec(`UPDATE sys_ad_computer SET deleted_at = ? WHERE computer_name = ?`,
 		time.Now(), "PC-SOFT").Error)
@@ -592,9 +593,9 @@ func TestComp78_QueryExistingComputers_And_AllNames(t *testing.T) {
 	gotEmpty := svc.queryExistingComputers(ctx, cfgA.ID, []string{})
 	assert.Empty(t, gotEmpty)
 
-	// queryAllComputerNames: cfgA 应返回 3 行（PC-SOFT 软删被过滤）
+	// queryAllComputerNames: cfgA 应返回 4 行(复活配套:软删行 PC-SOFT 一并纳入 name-map)
 	all := svc.queryAllComputerNames(ctx, cfgA.ID)
-	assert.Len(t, all, 3, "软删行 PC-SOFT 被 queryAllComputerNames 过滤（:519 显式 deleted_at IS NULL）")
+	assert.Len(t, all, 4, "复活配套:软删行 PC-SOFT 经 Unscoped 一并返回(name-map 命中 → update 分支复活)")
 	names := map[string]bool{}
 	for _, c := range all {
 		names[c.ComputerName] = true
@@ -602,7 +603,7 @@ func TestComp78_QueryExistingComputers_And_AllNames(t *testing.T) {
 	assert.True(t, names["PC-A1"])
 	assert.True(t, names["PC-A2"])
 	assert.True(t, names["PC-A3"])
-	assert.False(t, names["PC-SOFT"], "软删行不在结果中")
+	assert.True(t, names["PC-SOFT"], "软删行纳入 name-map(同名行走 update 分支复活)")
 }
 
 // TestComp78_BuildComputerMaps 覆盖 computer.go:526-539：双 map 构造。

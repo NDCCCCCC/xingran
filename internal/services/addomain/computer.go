@@ -522,9 +522,15 @@ func (s *ComputerService) queryExistingComputers(ctx context.Context, configID s
 		batch := uniqueDNs[i:end]
 
 		var computers []models.ADComputer
-		s.db.WithContext(ctx).
+		// SHADOW-01 复活配套:Unscoped 纳入软删行(同 DN 复现走 update 分支复活,而非
+		// batchCreate 撞 UNIQUE(ad_config_id, computer_name));命中行 DeletedAt 清零 →
+		// INSERT 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
+		s.db.WithContext(ctx).Unscoped().
 			Where("ad_config_id = ? AND distinguished_name IN ?", configID, batch).
 			Find(&computers)
+		for j := range computers {
+			computers[j].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+		}
 		allComputers = append(allComputers, computers...)
 	}
 
@@ -532,12 +538,20 @@ func (s *ComputerService) queryExistingComputers(ctx context.Context, configID s
 }
 
 // queryAllComputerNames 查询所有计算机名称
+//
+// SHADOW-01 复活配套:Unscoped 化并移除显式 deleted_at IS NULL 谓词 —— Unscoped 已解除
+// GORM 默认过滤,保留谓词会继续过滤软删行使复活失效;同名行至多一条
+// (UNIQUE(ad_config_id, computer_name)),name-map 纳入软删行无遮蔽风险。命中行
+// DeletedAt 清零 → INSERT 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
 func (s *ComputerService) queryAllComputerNames(ctx context.Context, configID string) []models.ADComputer {
 	start := time.Now()
 	var computers []models.ADComputer
-	s.db.WithContext(ctx).
-		Where("ad_config_id = ? AND deleted_at IS NULL", configID).
+	s.db.WithContext(ctx).Unscoped().
+		Where("ad_config_id = ?", configID).
 		Find(&computers)
+	for i := range computers {
+		computers[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+	}
 	applogger.Infof("[电脑同步-queryAllComputerNames] 查询耗时 %.2fs，返回 %d 条记录", time.Since(start).Seconds(), len(computers))
 	return computers
 }
@@ -667,6 +681,9 @@ func (s *ComputerService) batchUpdate(ctx context.Context, computers map[string]
 					"cpu_model", "architecture", "memory_capacity", "hard_disk_capacity",
 					"serial_number", "system_info", "last_logon", "password_last_set",
 					"logon_count", "last_online_time", "status", "updated_at",
+					// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+					// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活。
+					"deleted_at",
 				}),
 			}).Create(batch).Error; err != nil {
 				return fmt.Errorf("批量更新电脑设备失败: %w", err)

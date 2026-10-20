@@ -146,11 +146,15 @@ func (s *GroupSyncService) SyncSingleGroup(ctx context.Context, configID, groupD
 	}
 
 	// Upsert the group
+	// deleted_at 入列 = 复活机制本体:该路径无 existing 预查、直接 OnConflict Create,
+	// 新建 struct DeletedAt 为零值 → INSERT 值 deleted_at=NULL → 冲突更新
+	// SET deleted_at=NULL → 撞到软删行时由「更新打到不可见行」转化为「冲突更新并复活」。
 	if err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"group_name", "description", "member_count", "ou_dn",
 			"group_scope", "group_type", "last_sync_at",
+			"deleted_at",
 		}),
 	}).Create(group).Error; err != nil {
 		return fmt.Errorf("同步用户组失败: %w", err)
@@ -234,7 +238,13 @@ func (s *GroupSyncService) syncGroupEntries(ctx context.Context, config *models.
 	// Get existing groups from DB
 	groupDNs := extractDNs(entries)
 	var existingGroups []models.ADGroup
-	s.db.WithContext(ctx).Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
+	// SHADOW-01 复活配套:Unscoped 纳入软删行(同 DN 复现走 update 分支复活,而非
+	// 裸 Create 撞 UNIQUE(ad_config_id, group_dn));命中行 DeletedAt 清零 → INSERT
+	// 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
+	s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
+	for i := range existingGroups {
+		existingGroups[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+	}
 
 	existingGroupMap := make(map[string]*models.ADGroup, len(existingGroups))
 	for i := range existingGroups {
@@ -324,6 +334,9 @@ func (s *GroupSyncService) syncGroupEntries(ctx context.Context, config *models.
 				Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
 				DoUpdates: clause.AssignmentColumns([]string{
 					"group_name", "description", "member_count", "ou_dn", "group_scope", "group_type", "last_sync_at",
+					// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+					// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活。
+					"deleted_at",
 				}),
 			}).Create(batch).Error; err != nil {
 				return fmt.Errorf("批量更新用户组失败: %w", err)
