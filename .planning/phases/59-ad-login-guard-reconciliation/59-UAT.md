@@ -1,18 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 59-ad-login-guard-reconciliation
 source: [59-VERIFICATION.md]
 started: 2026-10-20T01:20:00Z
-updated: 2026-10-20T05:05:00Z
+updated: 2026-10-20T05:07:40.396Z
 ---
 
 ## Current Test
 
-number: 6
-name: 空态标题字重 600（computed style）
-expected: |
-  浏览器打开 AD 配置页 → 对账 Tab → 将筛选调成 0 结果 → DevTools 选中空态标题，确认 computed font-weight: 600、font-size: 16px
-awaiting: user response
+[testing complete]
 
 ## Tests
 
