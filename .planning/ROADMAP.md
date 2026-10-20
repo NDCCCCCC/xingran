@@ -229,7 +229,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 **Plans**: 3 plans (3 waves, sequential — sync.go/computer.go 为共享修改面；SHADOW-03 挂载与 SHADOW-01 清理同 plan 原子落地，依赖约束天然满足)
 
 **Wave 1**
-- [ ] 61-01-PLAN.md — SHADOW-01+03 清理主体：shadow_cleanup_service 三类清理 + 两道闸门（0 条 / >50%）+ full 分支挂载 + SyncResult 计数 (SHADOW-01, SHADOW-03)
+- [x] 61-01-PLAN.md — SHADOW-01+03 清理主体：shadow_cleanup_service 三类清理 + 两道闸门（0 条 / >50%）+ full 分支挂载 + SyncResult 计数 (SHADOW-01, SHADOW-03)（2026-10-20, `6a08933d` + `75a3c015`；SHADOW-01 的 complete 回填待 61-02 复活路径）
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 61-02-PLAN.md — SHADOW-01 配套复活路径：OU/Group/User/Computer 四类 upsert 复活化（existing 查询 Unscoped 化 + OnConflict 补 deleted_at）+ 翻转 D-78-05c 既有断言 + sys_ad_group 存量潜伏缺陷一并修复 (SHADOW-01)

@@ -4,36 +4,36 @@ milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 61
 current_phase_name: 影子表完整性（删除清理 + 组成员事务化）
-status: awaiting-uat
-stopped_at: Phase 60 executed (2/2 plans) — verification human_needed, 3 项人工验证待跑
-last_updated: "2026-10-20T16:03:16.902Z"
-last_activity: 2026-10-20
-last_activity_desc: Phase 60 executed (2/2 plans); verifier 12/12 must-haves verified, status human_needed
-state_head: ffebb6ca1031e11d319880a49c4066fbcc4ea9c8
+status: executing
+stopped_at: Completed 61-01-PLAN.md — Phase 61 executing (1/3 plans), 61-02 复活路径待跑
+last_updated: "2026-10-20T16:45:06Z"
+last_activity: 2026-10-21
+last_activity_desc: 61-01 executed — shadow table cleanup with dual gates + full-sync mount
+state_head: 96d2c3f434cc83914d394a08a683497f40ffab4e
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 19
-  completed_plans: 16
-  percent: 33
+  completed_plans: 17
+  percent: 50
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: Ready to execute
-**Last activity**: 2026-10-20
+**Status**: Executing Phase 61
+**Last activity**: 2026-10-21
 **Previous activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
 **Earlier activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
 
 ## Current Position
 
-Phase: 61 (影子表完整性（删除清理 + 组成员事务化）) — READY TO EXECUTE
-Plan: 2 of 2
-Status: verification human_needed（12/12 must-haves 已自动验证；3 项真环境人工验证在 60-UAT.md）
-Last activity: 2026-10-20 — Phase 60 执行完成 + code review 13 findings 分流（9 deferred / 4 open）
-Progress: 3/6 phases [███░░░░░░░] 33%（16/16 plans — Phase 60 待 UAT 通过后标记完成）
+Phase: 61 (影子表完整性（删除清理 + 组成员事务化）) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 61
+Last activity: 2026-10-21 — 61-01 executed（清理主体 + 两道闸门 + full 分支挂载，12 条 TestShadowCleanup 全绿）
+Progress: 3/6 phases [█████░░░░░] 50%（17/19 plans — Phase 60 待 UAT 通过后标记完成）
 
 ## Accumulated Context
 
@@ -159,6 +159,12 @@ Progress: 3/6 phases [███░░░░░░░] 33%（16/16 plans — Phas
 - **antd v6 测试口径沉淀**：激活面板 = [role=tabpanel]:not(.ant-tabs-content-hidden)（无 tabpane-active）；Button 两汉字自动插空格且 loading 带图标前缀 → unanchored regex 定位。
 - **useDeptTree 空树用模块级 EMPTY_DEPTS 常量**喂 DepartmentTreeSelect（rc-tree motion bail 陷阱，DeptTree #185 同款）。
 - [Phase 60]: 60-01 执行期决策：sentinel 放在 security 包（system 已 import security，反向声明会成环）；原因码 soft_delete_mismatch 只以常量出现，ad_authenticator 与 auth.go 共用防漂移；校验入口返回 bool 并内聚唯一审计 WARN，调用点只决定拒绝后动作；策略拒绝日志降为 WARN，与基础设施故障 ERROR 区分。
+- [Phase 61]: 61-01 执行期决策（2026-10-20，SHADOW-01 清理主体 + SHADOW-03 挂载）：
+  - **FiltersUnmanagedEntries 用例预置 2 活行而非 plan 字面的 1 行**：plan 的用例描述与它自己强制的 Gate 2 判式矛盾——单活行全消失 = 100% > 50% 会被保护性拒绝，「断言该行被软删」不可能成立（同 plan 的 AtExactThreshold 用例恰是该判式的可证伪锚点）。最小修复 = 2 行中消失 1 行（恰 50% 放行），「管理口径 = sync 管理口径」的文档化意图不变；computer 同名用例对齐同款形态。
+  - **三类清理显式三方法而非泛型抽象**：cleanupVanishedOUs/Users/Computers 各自五段结构逐字对齐 handleDeletedGroups 先例（OU 管理集 = 全部 entry、user = sAMAccountName 非空、computer = cn 非空；差集键分别为 OUN/UserDN/DistinguishedName 列），可 grep 性优先于去重。
+  - **闸门拒绝与软删 SQL 失败分层**：拒绝 = WARN + return nil（闸门内消化）；软删 SQL 失败 = fmt.Errorf 上抛，由 syncDataInternal 挂载点 applogger.Warnf 非 fatal 降级（先例 group_sync_service.go:80-83 同款）——四类 upsert 已各自提交不可回滚，整轮同步仍 success。
+  - **SyncResult 三个 deleted 计数纯 JSON 增量字段**：拒绝时保持 0，前端不读则忽略（A3 既有假设）；无 DB 列迁移。
+  - **本 plan 不标记 SHADOW-01 为 complete**：61-02 同样声明该需求（复活路径是清理的安全配套，缺复活会触发 Pitfall-1 唯一约束撞车），按共享-ID 门由 61-02 完成后回填；SHADOW-03 单一声明者已标 complete。
 - [Phase 60]: 60-02 执行期决策（2026-10-20，SAFE-01 批量侧 + SAFE-02 双路径一致性）：
   - **D-03 安全不变量有回归断言**：批量拒绝后 `db.Unscoped().First` 验证 `DeletedAt.Valid == true` 且 `ad_dn` 逐字等于原值；登录路径已有的二次登录拒绝断言继续成立——拒绝绝不清空存量 DN，防「清空 → 空 DN 放行」绕过。
   - **D-06 过滤位置锁定在阶段 2 分类日志之后、阶段 3 哈希之前**：`plansByCat[catSoftDeleted] = allowed` 只保留通过 `checkSoftDeletedRestore(..., "batch")` 的项；被拒项 `result.Skipped++` 并追加不含 DN 的 `SyncError`，不进 `hashPasswordsConcurrent`、不进 `runInBatchedTx`，因此不会触发「降级逐个处理」也不会被计入 `Failed`。
@@ -185,8 +191,8 @@ Progress: 3/6 phases [███░░░░░░░] 33%（16/16 plans — Phas
 
 ## Session
 
-**Last session:** 2026-10-20T08:10:00.000Z
-**Stopped at:** Completed 60-02-PLAN.md
+**Last session:** 2026-10-20T16:45:06Z
+**Stopped at:** Completed 61-01-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -199,3 +205,4 @@ Progress: 3/6 phases [███░░░░░░░] 33%（16/16 plans — Phas
 | Phase 59 P04 | 44min | 3 tasks | 7 files |
 | Phase 60 P01 | 17 min | 2 tasks | 7 files |
 | Phase 60 P02 | 13 min | 2 tasks | 4 files |
+| Phase 61 P01 | 16 min | 2 tasks | 3 files |

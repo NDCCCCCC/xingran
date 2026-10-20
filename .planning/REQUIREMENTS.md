@@ -28,7 +28,7 @@
 
 - [ ] **SHADOW-01**: 全量同步末尾对 AD 端已消失的 `sys_ad_user/ou/computer` 软删除，复用两道闸门（LDAP 0 条拒绝 / 拟删 >50% 拒绝）
 - [ ] **SHADOW-02**: `sys_ad_group_member` 重放改为**事务包裹**，消除空成员可见窗口
-- [ ] **SHADOW-03**: 删除清理挂 `syncDataInternal`（复用 singleflight），不与全量同步并发
+- [x] **SHADOW-03**: 删除清理挂 `syncDataInternal`（复用 singleflight），不与全量同步并发
 
 ### 卫生与边界 (HYGIENE)
 
@@ -70,9 +70,9 @@
 | GUARD-02 | Phase 59 | Complete (59-02 视图 + 59-03 端点/权限载体 + 59-04 前端对账 Tab 全部交付 2026-10-19；两条视觉断言归 59-VALIDATION Manual-Only) |
 | SAFE-01 | Phase 60 | Complete (2026-10-20, Phase 60 — 共享校验入口 `checkSoftDeletedRestore` + `NormalizeDN` 比较；登录拒绝零写入，批量拒项计入 `Skipped` 且绕开降级管道。证据：`TestPhase60_Login_*`、`TestPhase60_Batch_*`、`TestPhase60_PathConsistency_*`、`TestPhase60_CheckSoftDeletedRestore_Predicate`) |
 | SAFE-02 | Phase 60 | Complete (2026-10-20, Phase 60 — 两路径共用 `classifyUser` + `checkSoftDeletedRestore`；同一 fixture 双路径用例断言相同判定与相同 DB 终态。证据：`TestPhase60_PathConsistency_MismatchRefusedBoth` / `TestPhase60_PathConsistency_MatchingRestoredBoth`、`TestPhase60_SyncErrorReasonFor`) |
-| SHADOW-01 | Phase 61 | Pending |
+| SHADOW-01 | Phase 61 | In Progress（2026-10-20, 61-01 清理主体已交付：三类软删 + 两道闸门 + full 分支挂载，12 条 TestShadowCleanup 全绿；61-02 复活路径完成后回填 complete——清理无复活会触发 Pitfall-1 唯一约束撞车） |
 | SHADOW-02 | Phase 61 | Pending |
-| SHADOW-03 | Phase 61 | Pending |
+| SHADOW-03 | Phase 61 | Complete（2026-10-20, 61-01：cleanupAfterFullSync 单点挂载 syncDataInternal 成功路径末尾（syncComputers 后、last_sync_at 前），处于 singleflight.Do 闭包内 + models.ADSyncTypeFull 守卫，增量分支 no-op 有行为断言 TestShadowCleanup_FullSyncOnly） |
 | HYGIENE-01 | Phase 58 | Complete（58-02） |
 | HYGIENE-02 | Phase 58 | Complete（58-02） |
 | HYGIENE-03 | Phase 62 | Pending |
