@@ -42,6 +42,9 @@ type SyncResult struct {
 	GroupCount    int `json:"groupCount"`
 	UserCount     int `json:"userCount"`
 	ComputerCount int `json:"computerCount"`
+	// Phase 61 SHADOW-01: 全量同步末尾清理的软删计数（纯增量可观测性字段,
+	// 前端不读则忽略）。清理拒绝时保持 0。
+	DeletedUserCount int `json:"deletedUserCount"`
 }
 
 // SyncDataByID 根据配置ID同步数据
@@ -157,6 +160,15 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 	if err := computerService.syncComputers(ctx, config, computers); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount, err.Error())
 		return nil, err
+	}
+
+	// Phase 61 SHADOW-01/SHADOW-03: 全量同步四类 upsert 全部成功后，软删 AD 端已消失的
+	// 影子行。清理拒绝/内部失败均为非阻断 —— 对齐 group_sync_service.go:80-83 的调用方
+	// 非 fatal 口径:四类 upsert 已各自提交不可回滚,清理失败只 WARN,整轮同步仍 success。
+	// 挂载处于 singleflight.Do 闭包内 + cleanupAfterFullSync 的 syncType 守卫共同构成
+	// SHADOW-03（清理与全量同步互斥不并发;增量分支 no-op）。
+	if err := s.cleanupAfterFullSync(ctx, config, syncType, ous, users, computers, result); err != nil {
+		applogger.Warnf("[AD同步] 影子表过期清理失败(非阻断,不影响本轮同步结果): %v", err)
 	}
 
 	// 更新配置最后同步时间
