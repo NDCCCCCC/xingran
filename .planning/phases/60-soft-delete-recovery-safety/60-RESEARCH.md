@@ -604,32 +604,39 @@ func TestPhase60_SyncErrorReasonFor(t *testing.T) {
 
 **If this table is empty:** 不适用——上表 6 项需要 planner/用户在执行前确认或接受。
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> 全部 5 项已由 60-01 / 60-02 计划采纳推荐方案，无遗留待决项。
 
 1. **拒绝时的 HTTP 响应码**
    - What we know: 现有 `authResult.User == nil` 分支统一用 `response.Error(c, response.ErrServerError, syncErrorReasonMessage(...))` `[VERIFIED: internal/api/v1/auth.go:211-216]`。
    - What's unclear: 安全拦截语义上更适合 `ErrForbidden`（403），但改变状态码会影响前端拦截器/日志分类。
    - Recommendation: 保持 `ErrServerError` + 专用文案（最小改动、与既有分支一致）；如用户要求 403，再单独加分支。
+   - **Status: RESOLVED** — 60-01 Task 1 明确保持 `ErrServerError`，不新增 403 分支。
 
 2. **原因码字符串命名**
    - What we know: CONTEXT 给出 `restore_refused` / `soft_delete_mismatch` 两个候选。
    - What's unclear: 无外部契约依赖。
    - Recommendation: `soft_delete_mismatch`——精确描述条件，便于 grep 与日志检索；若未来出现「其他恢复拒绝原因」（如目标行已被并发恢复），再引入更泛的 `restore_refused`。
+   - **Status: RESOLVED** — 60-01 采用常量 `SyncReasonSoftDeleteMismatch = "soft_delete_mismatch"`。
 
 3. **批量校验时机：阶段 2 vs 阶段 5c**
    - What we know: 阶段 2 过滤可跳过哈希、天然绕开 `runInBatchedTx`；阶段 5c 数据更新鲜但需要改造降级管道才能正确计入 `Skipped`。
    - What's unclear: 是否需要为极窄 TOCTOU 窗口付出复杂度。
    - Recommendation: 阶段 2（CONTEXT 已倾向推荐）；把 TOCTOU 作为已接受风险写入 plan 的 Assumptions。
+   - **Status: RESOLVED** — 60-02 Task 1 在阶段 2 过滤并计入 `Skipped`；TOCTOU 已写入 60-02 Assumptions A4。
 
 4. **`SyncADUser` 对策略拒绝的日志级别**
    - What we know: 当前 `SyncADUser` 在 `SyncUserFromAD` 返回 error 时用 `applogger.Errorf` `[VERIFIED: internal/services/system/user_sync_service.go:408-411]`。
    - What's unclear: 策略拒绝是否应降级为 WARN，避免与真实故障混淆。
    - Recommendation: 在 `SyncADUser` 内对 `errors.Is(err, security.ErrSoftDeleteIdentityMismatch)` 使用 `Warnf`，其余保持 `Errorf`；纯日志改动，低风险。
+   - **Status: RESOLVED** — 60-01 Task 1 步骤 6 采纳；`ad_authenticator.go` 侧同样按 sentinel 分级。
 
 5. **是否需要同步更新 `BatchSyncADUsers` 的汇总日志**
    - What we know: 完成日志已打印 `跳过=%d` `[VERIFIED: internal/services/system/user_sync_service.go:696-697]`，此前恒为 0。
    - What's unclear: 无。
    - Recommendation: 不改格式；`Skipped` 自本 phase 起才有真实值，日志立即获得可观测性。
+   - **Status: RESOLVED** — 60-02 Task 1 步骤 3 明确不改阶段 6 汇总日志格式。
 
 ## Environment Availability
 
