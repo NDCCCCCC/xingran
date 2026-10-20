@@ -232,7 +232,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 - [x] 61-01-PLAN.md — SHADOW-01+03 清理主体：shadow_cleanup_service 三类清理 + 两道闸门（0 条 / >50%）+ full 分支挂载 + SyncResult 计数 (SHADOW-01, SHADOW-03)（2026-10-20, `6a08933d` + `75a3c015`；SHADOW-01 的 complete 回填待 61-02 复活路径）
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 61-02-PLAN.md — SHADOW-01 配套复活路径：OU/Group/User/Computer 四类 upsert 复活化（existing 查询 Unscoped 化 + OnConflict 补 deleted_at）+ 翻转 D-78-05c 既有断言 + sys_ad_group 存量潜伏缺陷一并修复 (SHADOW-01)
+- [x] 61-02-PLAN.md — SHADOW-01 配套复活路径：OU/Group/User/Computer 四类 upsert 复活化（existing 查询 Unscoped 化 + OnConflict 补 deleted_at）+ 翻转 D-78-05c 既有断言 + sys_ad_group 存量潜伏缺陷一并修复 (SHADOW-01)（2026-10-20, `c441c802` + `af162852` + `bdc8c452` + `3bcd1c84`；5 条 TestSync_Resurrect 先 RED 后 GREEN）
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 61-03-PLAN.md — SHADOW-02 组成员重放事务化 + CHECK 失败注入证伪 + 重放幂等锁定 + phase 收口回填 (SHADOW-02)
@@ -260,7 +260,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 | 58. 排水器与 compare-and-move 推送 | 6/7 | In progress (wave 5 done 2026-10-19, SC6 终态达成) | - |
 | 59. 登录回写守卫与部门对账视图 | 4/4 | Complete (59-01~59-04 done 2026-10-19) | 2026-10-19 |
 | 60. 软删恢复安全 | 2/2 | Executed — verification human_needed (3 项人工验证待跑，见 60-UAT.md) | 2026-10-20 |
-| 61. 影子表完整性 | 0/TBD | Not started | - |
+| 61. 影子表完整性 | 2/3 | In progress (61-01 清理 + 61-02 复活 done 2026-10-20, 61-03 事务化待跑) | - |
 | 62. 卫生收尾与死代码清理 | 0/TBD | Not started | - |
 
 ---

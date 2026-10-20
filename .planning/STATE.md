@@ -5,10 +5,10 @@ milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 61
 current_phase_name: 影子表完整性（删除清理 + 组成员事务化）
 status: executing
-stopped_at: Completed 61-01-PLAN.md — Phase 61 executing (1/3 plans), 61-02 复活路径待跑
-last_updated: "2026-10-20T16:45:06Z"
+stopped_at: Completed 61-02-PLAN.md — Phase 61 executing (2/3 plans), 61-03 组成员事务化待跑
+last_updated: "2026-10-20T17:33:52Z"
 last_activity: 2026-10-21
-last_activity_desc: 61-01 executed — shadow table cleanup with dual gates + full-sync mount
+last_activity_desc: 61-02 executed — four-category soft-deleted row resurrection on upsert (existing queries Unscoped + OnConflict deleted_at)
 state_head: 96d2c3f434cc83914d394a08a683497f40ffab4e
 progress:
   total_phases: 6
@@ -30,12 +30,41 @@ progress:
 ## Current Position
 
 Phase: 61 (影子表完整性（删除清理 + 组成员事务化）) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Executing Phase 61
-Last activity: 2026-10-21 — 61-01 executed（清理主体 + 两道闸门 + full 分支挂载，12 条 TestShadowCleanup 全绿）
-Progress: 3/6 phases [█████░░░░░] 50%（17/19 plans — Phase 60 待 UAT 通过后标记完成）
+Last activity: 2026-10-21 — 61-02 executed（四类 upsert 软删行复活：existing 查询 Unscoped 化 + OnConflict 补 deleted_at，5 条 TestSync_Resurrect + 2 条 D-78-05c 翻转用例全绿）
+Progress: 3/6 phases [█████░░░░░] 50%（18/19 plans — Phase 60 待 UAT 通过后标记完成）
 
 ## Accumulated Context
+
+### 61-02 执行期决策（2026-10-20，SHADOW-01 复活路径 + Q3 组复活一并修）
+
+- **复活机制补了 plan 未言明的一环：existing 集加载点将命中行 `DeletedAt` 清零**。
+  plan 机制注释假设「复活行的 struct DeletedAt 为零值 → INSERT 值 NULL」，但
+  `Unscoped().Find` 会把软删行的旧时间戳读进 struct —— 若不清零，ON CONFLICT
+  `SET deleted_at = EXCLUDED.deleted_at` 会把旧时间戳写回去，行依旧不可见。
+  实现 = 六处 existing 加载（getExistingOUs / syncGroups / syncUsers 批查 /
+  queryExistingComputers / queryAllComputerNames / syncGroupEntries）在 Find 后
+  一行循环清零；活行 SET NULL 与库中现值一致无副作用。行为由 5 条 TestSync_Resurrect*
+  先 RED（UNIQUE 2067）后 GREEN 锁定。
+- **queryAllComputerNames 的显式 `AND deleted_at IS NULL` 谓词按 plan 删除**
+  （Unscoped 已解除默认过滤，保留谓词复活失效——plan 标注的「最可能假改造」点）；
+  既有 TestComp78_QueryExistingComputers_And_AllNames 断言同步改写为软删行纳入
+  name-map（4 行），属 plan 行为变化的计划内披露而非断言弱化。
+- **D-78-05c「软删行 + 同 DN → UNIQUE 冲突」文档化正式推翻**：TestSync78_GetExistingOUs
+  翻转为软删行被命中（2 条含 OU=B），TestSync78_SyncUsers_RestoreSoftDeleted 翻转为
+  require.NoError + 默认作用域可见 + 字段（DisplayName/Email/UAC 推导）已更新 +
+  Unscoped 计数仍 1；文件头注释区记翻转依据（SHADOW-01 清理上线后复现必须自愈）。
+- **Q3 存量缺陷（handleDeletedGroups 软删 → 复现撞裸 Create）一并消除**：全量
+  syncGroups 与增量 syncGroupEntries 两条路径均复活；SyncSingleGroup 无 existing
+  预查、新建 struct 零值直接满足 NULL 语义，仅补 AssignmentColumns。
+- **`internal/device` 的 TestSNMPClient_WaitForReady_Timeout 在全套件并发下偶发超时**：
+  单跑两轮均 PASS（0.2s），与 addomain 无依赖关系，属既有 timing flake，按 58-07
+  既有不稳定项口径如实披露不修。
+- **提交落在 main 分支**（项目 `branching_strategy: none` + orchestrator
+  `<sequential_execution>` 明示主工作树，先例 Phase 57-61 全部同款）；gsd_run CLI
+  本环境不可用（58-01/61-01 既有记录），per-task 提交用原生 git、STATE/ROADMAP/
+  REQUIREMENTS 手工编辑。
 
 ### 58-07 执行期决策（2026-10-19，Wave 6 收口）
 
@@ -191,8 +220,8 @@ Progress: 3/6 phases [█████░░░░░] 50%（17/19 plans — Phas
 
 ## Session
 
-**Last session:** 2026-10-20T16:45:06Z
-**Stopped at:** Completed 61-01-PLAN.md
+**Last session:** 2026-10-20T17:33:52Z
+**Stopped at:** Completed 61-02-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -206,3 +235,4 @@ Progress: 3/6 phases [█████░░░░░] 50%（17/19 plans — Phas
 | Phase 60 P01 | 17 min | 2 tasks | 7 files |
 | Phase 60 P02 | 13 min | 2 tasks | 4 files |
 | Phase 61 P01 | 16 min | 2 tasks | 3 files |
+| Phase 61 P02 | 33 min | 2 tasks | 6 files |
