@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
-current_phase: 60
-current_phase_name: 软删恢复安全
+current_phase: 61
+current_phase_name: 影子表完整性（删除清理 + 组成员事务化）
 status: awaiting-uat
 stopped_at: Phase 60 executed (2/2 plans) — verification human_needed, 3 项人工验证待跑
-last_updated: "2026-10-20T10:05:00.000Z"
+last_updated: "2026-10-20T16:03:16.902Z"
 last_activity: 2026-10-20
 last_activity_desc: Phase 60 executed (2/2 plans); verifier 12/12 must-haves verified, status human_needed
-state_head: 3d855de3
+state_head: ffebb6ca1031e11d319880a49c4066fbcc4ea9c8
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 16
+  total_plans: 19
   completed_plans: 16
-  percent: 50
+  percent: 33
 ---
 
 # Project State
@@ -29,11 +29,11 @@ progress:
 
 ## Current Position
 
-Phase: 60 (软删恢复安全) — 执行完成，待人工验证
+Phase: 61 (影子表完整性（删除清理 + 组成员事务化）) — READY TO EXECUTE
 Plan: 2 of 2
 Status: verification human_needed（12/12 must-haves 已自动验证；3 项真环境人工验证在 60-UAT.md）
 Last activity: 2026-10-20 — Phase 60 执行完成 + code review 13 findings 分流（9 deferred / 4 open）
-Progress: 3/6 phases [█████░░░░░] 50%（16/16 plans — Phase 60 待 UAT 通过后标记完成）
+Progress: 3/6 phases [███░░░░░░░] 33%（16/16 plans — Phase 60 待 UAT 通过后标记完成）
 
 ## Accumulated Context
 
