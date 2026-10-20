@@ -3,15 +3,15 @@ status: testing
 phase: 59-ad-login-guard-reconciliation
 source: [59-VERIFICATION.md]
 started: 2026-10-20T01:20:00Z
-updated: 2026-10-20T03:50:00Z
+updated: 2026-10-20T04:10:00Z
 ---
 
 ## Current Test
 
-number: 5
-name: GUARD-01/GUARD-02 验收口径人工复核（FLAGGED ASSUMPTION 闭环）
+number: 6
+name: 空态标题字重 600（computed style）
 expected: |
-  确认 ROADMAP SC1~SC4 原文即权威验收口径（四个 PLAN frontmatter 的 edge probe 均报 unclassified/unresolved，未假设 backstop）
+  浏览器打开 AD 配置页 → 对账 Tab → 将筛选调成 0 结果 → DevTools 选中空态标题，确认 computed font-weight: 600、font-size: 16px
 awaiting: user response
 
 ## Tests
@@ -39,7 +39,8 @@ verified: 生产库只读探针（2026-10-20）证实父菜单实为 menu_name='
 
 ### 5. GUARD-01/GUARD-02 验收口径人工复核（FLAGGED ASSUMPTION 闭环）
 expected: 确认 ROADMAP SC1~SC4 原文即权威验收口径（四个 PLAN frontmatter 的 edge probe 均报 unclassified/unresolved，未假设 backstop）
-result: [pending]
+result: pass
+verified: 用户确认 SC1~SC4 即权威验收口径。证据映射：SC1=单测 6/6（Test 1 E2E 用户跳过）；SC2=同套单测放行分支；SC3=Test 2 pass + 生产真实数据 2031+66 行；SC4=Test 3 pass + 401/403 冒烟
 
 ### 6. 空态标题字重 600（computed style）
 expected: 浏览器打开 AD 配置页 → 对账 Tab → 将筛选调成 0 结果 → DevTools 选中空态标题，确认 computed font-weight: 600、font-size: 16px
@@ -52,9 +53,9 @@ result: [pending]
 ## Summary
 
 total: 7
-passed: 3
+passed: 4
 issues: 0
-pending: 3
+pending: 2
 skipped: 1
 blocked: 0
 
