@@ -31,11 +31,20 @@ import (
 // 判据用 models.ADSyncTypeFull 常量，禁裸字符串比较。清理与全量同步同处
 // singleflight.Do 闭包内，二者不并发；singleflight key 含 syncType 导致的
 // full/incremental 不互斥是既有行为，本守卫只承诺「清理只在全量分支执行」。
+//
+// 三类依次独立判定闸门：单类拒绝（return nil）不影响其它类别继续执行
+// （per-category 语义）。
 func (s *SyncService) cleanupAfterFullSync(ctx context.Context, config *models.ADConfig, syncType string, ous, users, computers []*ldap.Entry, result *SyncResult) error {
 	if syncType != string(models.ADSyncTypeFull) {
 		return nil
 	}
-	return s.cleanupVanishedUsers(ctx, config, users, result)
+	if err := s.cleanupVanishedOUs(ctx, config, ous, result); err != nil {
+		return err
+	}
+	if err := s.cleanupVanishedUsers(ctx, config, users, result); err != nil {
+		return err
+	}
+	return s.cleanupVanishedComputers(ctx, config, computers, result)
 }
 
 // cleanupVanishedUsers 软删 AD 端已消失的用户行（SHADOW-01 user 类别）。
@@ -95,6 +104,121 @@ func (s *SyncService) cleanupVanishedUsers(ctx context.Context, config *models.A
 
 		result.DeletedUserCount = len(vanishedDNs)
 		applogger.Infof("[用户同步] 清理了 %d 个已不存在的用户", len(vanishedDNs))
+	}
+
+	return nil
+}
+
+// cleanupVanishedOUs 软删 AD 端已消失的 OU 行（SHADOW-01 ou 类别）。
+//
+// 五段结构对齐 handleDeletedGroups 先例；LDAP 管理集 = 全部 entry.DN
+// （syncOUs 无过滤,extractDNs 同口径,sync.go:179-203）。差集键为模型 OUN 列
+// （存储完整 OU DN）。
+func (s *SyncService) cleanupVanishedOUs(ctx context.Context, config *models.ADConfig, entries []*ldap.Entry, result *SyncResult) error {
+	// Gate 1: 安全闸门 — LDAP 返回为空直接拒绝任何删除（AD 不可达/BaseDN 配错伪装成「OU 全部消失」）。
+	if len(entries) == 0 {
+		applogger.Warnf("[OU同步] 跳过过期OU清理: LDAP 返回 0 条记录,可能 AD 不可达或 BaseDN 配置错误")
+		return nil
+	}
+
+	// LDAP 管理集 = 全部 entry（syncOUs 对 entry 无过滤）
+	managedOUNDs := make(map[string]bool, len(entries))
+	for _, entry := range entries {
+		managedOUNDs[entry.DN] = true
+	}
+
+	// 存量活行:默认作用域统计,禁 Unscoped（Pitfall 3）
+	var staleOUs []models.ADOU
+	s.db.WithContext(ctx).
+		Where("ad_config_id = ? AND deleted_at IS NULL", config.ID).
+		Find(&staleOUs)
+
+	var vanishedDNs []string
+	for _, ou := range staleOUs {
+		if !managedOUNDs[ou.OUN] {
+			vanishedDNs = append(vanishedDNs, ou.OUN)
+		}
+	}
+
+	if len(vanishedDNs) > 0 {
+		// Gate 2: 阈值保护 — 判式严格大于（恰 50% 放行）,与先例逐字同构;
+		// 拒绝日志只含数量、不含 DN 明文。
+		if len(staleOUs) > 0 && len(vanishedDNs)*2 > len(staleOUs) {
+			applogger.Warnf(
+				"[OU同步] 跳过过期OU清理: 拟删除 %d/%d 个OU(>50%%),"+
+					"可能是 LDAP 返回不完整。请人工核实后手动清理",
+				len(vanishedDNs), len(staleOUs))
+			return nil
+		}
+
+		// 软删:GORM 默认作用域 Delete = UPDATE deleted_at,禁 Unscoped 硬删。
+		if err := s.db.WithContext(ctx).
+			Where("ad_config_id = ? AND ou_dn IN ?", config.ID, vanishedDNs).
+			Delete(&models.ADOU{}).Error; err != nil {
+			return fmt.Errorf("删除过期OU失败: %w", err)
+		}
+
+		result.DeletedOUCount = len(vanishedDNs)
+		applogger.Infof("[OU同步] 清理了 %d 个已不存在的OU", len(vanishedDNs))
+	}
+
+	return nil
+}
+
+// cleanupVanishedComputers 软删 AD 端已消失的电脑行（SHADOW-01 computer 类别）。
+//
+// LDAP 管理集 = 仅 cn 非空的 entry（与 syncComputers 的跳过口径同源,
+// computer.go:419-423,Pitfall 2）。差集键为 DistinguishedName 列
+// （syncComputers 按 DN 管理:extractDNs + queryExistingComputers 按
+// distinguished_name 查询,computer.go:383/:388）。
+func (s *SyncService) cleanupVanishedComputers(ctx context.Context, config *models.ADConfig, entries []*ldap.Entry, result *SyncResult) error {
+	// Gate 1: 安全闸门 — LDAP 返回为空直接拒绝任何删除。
+	if len(entries) == 0 {
+		applogger.Warnf("[电脑同步] 跳过过期电脑清理: LDAP 返回 0 条记录,可能 AD 不可达或 BaseDN 配置错误")
+		return nil
+	}
+
+	// LDAP 管理集：仅 cn 非空的 entry 入集（本轮真正被 upsert 管理的行集,Pitfall 2）
+	managedComputerDNs := make(map[string]bool, len(entries))
+	for _, entry := range entries {
+		if entry.GetAttributeValue("cn") != "" {
+			managedComputerDNs[entry.DN] = true
+		}
+	}
+
+	// 存量活行:默认作用域统计,禁 Unscoped（Pitfall 3）
+	var staleComputers []models.ADComputer
+	s.db.WithContext(ctx).
+		Where("ad_config_id = ? AND deleted_at IS NULL", config.ID).
+		Find(&staleComputers)
+
+	var vanishedDNs []string
+	for _, computer := range staleComputers {
+		if !managedComputerDNs[computer.DistinguishedName] {
+			vanishedDNs = append(vanishedDNs, computer.DistinguishedName)
+		}
+	}
+
+	if len(vanishedDNs) > 0 {
+		// Gate 2: 阈值保护 — 判式严格大于（恰 50% 放行）,与先例逐字同构;
+		// 拒绝日志只含数量、不含 DN 明文。
+		if len(staleComputers) > 0 && len(vanishedDNs)*2 > len(staleComputers) {
+			applogger.Warnf(
+				"[电脑同步] 跳过过期电脑清理: 拟删除 %d/%d 台电脑(>50%%),"+
+					"可能是 LDAP 返回不完整。请人工核实后手动清理",
+				len(vanishedDNs), len(staleComputers))
+			return nil
+		}
+
+		// 软删:GORM 默认作用域 Delete = UPDATE deleted_at,禁 Unscoped 硬删。
+		if err := s.db.WithContext(ctx).
+			Where("ad_config_id = ? AND distinguished_name IN ?", config.ID, vanishedDNs).
+			Delete(&models.ADComputer{}).Error; err != nil {
+			return fmt.Errorf("删除过期电脑失败: %w", err)
+		}
+
+		result.DeletedComputerCount = len(vanishedDNs)
+		applogger.Infof("[电脑同步] 清理了 %d 台已不存在的电脑", len(vanishedDNs))
 	}
 
 	return nil

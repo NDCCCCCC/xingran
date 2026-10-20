@@ -244,3 +244,199 @@ func TestShadowCleanup_FullSyncOnly(t *testing.T) {
 	require.NoError(t, db.Unscoped().Where("user_dn = ? AND ad_config_id = ?", dn2, cfg.ID).First(&u2).Error)
 	assert.True(t, u2.DeletedAt.Valid)
 }
+
+// ============================================================================
+// Task 2: OU + Computer 类别 —— per-category 独立闸门
+// ============================================================================
+
+// TestShadowCleanup_OUs_SoftDeletesVanishedRows：预置 2 活 OU + LDAP 返回 1 →
+// 恰 1 行软删（OU 管理集 = 全部 entry,无过滤）。
+func TestShadowCleanup_OUs_SoftDeletesVanishedRows(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	cfg := insertConfig78(t, db, "")
+
+	ouKeep := "OU=Keep,DC=example,DC=com"
+	ouGone := "OU=Gone,DC=example,DC=com"
+	seedShadowOU78(t, db, cfg.ID, ouKeep)
+	seedShadowOU78(t, db, cfg.ID, ouGone)
+
+	entries := []*ldap.Entry{entry78(ouKeep, nil)}
+
+	result := &SyncResult{}
+	require.NoError(t, svc.cleanupVanishedOUs(context.Background(), cfg, entries, result))
+
+	assert.Equal(t, int64(2), countShadowRows78(t, db, &models.ADOU{}, cfg.ID, true),
+		"Unscoped 计数不变（软删非硬删）")
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADOU{}, cfg.ID, false))
+
+	var gone models.ADOU
+	require.NoError(t, db.Unscoped().Where("ou_dn = ? AND ad_config_id = ?", ouGone, cfg.ID).First(&gone).Error)
+	assert.True(t, gone.DeletedAt.Valid, "AD 端已消失的 OU 应软删")
+	var keep models.ADOU
+	require.NoError(t, db.Where("ou_dn = ? AND ad_config_id = ?", ouKeep, cfg.ID).First(&keep).Error)
+	assert.False(t, keep.DeletedAt.Valid)
+	assert.Equal(t, 1, result.DeletedOUCount)
+}
+
+// TestShadowCleanup_OUs_RejectsEmptyLDAP：空 entries（Gate 1）→ 无软删。
+func TestShadowCleanup_OUs_RejectsEmptyLDAP(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	cfg := insertConfig78(t, db, "")
+
+	seedShadowOU78(t, db, cfg.ID, "OU=A,DC=example,DC=com")
+	seedShadowOU78(t, db, cfg.ID, "OU=B,DC=example,DC=com")
+
+	result := &SyncResult{}
+	require.NoError(t, svc.cleanupVanishedOUs(context.Background(), cfg, nil, result))
+
+	assert.Equal(t, int64(2), countShadowRows78(t, db, &models.ADOU{}, cfg.ID, false),
+		"Gate 1 拒绝后活行原样保留")
+	assert.Equal(t, 0, result.DeletedOUCount)
+}
+
+// TestShadowCleanup_Computers_SoftDeletesVanishedRows：经 setupComp78DB 补建
+// sys_ad_computer 表后,预置 2 活 computer（DistinguishedName + ComputerName 均填）+
+// LDAP 返回 1（带 cn）→ 恰 1 行软删。
+func TestShadowCleanup_Computers_SoftDeletesVanishedRows(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := &SyncService{db: db, pool: NewAccountPool(db, nil)}
+	cfg := insertConfig78(t, db, "")
+
+	dnKeep := "CN=pc-keep,OU=Computers,DC=example,DC=com"
+	dnGone := "CN=pc-gone,OU=Computers,DC=example,DC=com"
+	insertComputer78(t, db, cfg.ID, dnKeep, "pc-keep", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+	insertComputer78(t, db, cfg.ID, dnGone, "pc-gone", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+
+	entries := []*ldap.Entry{
+		entry78(dnKeep, map[string][]string{"cn": {"pc-keep"}}),
+	}
+
+	result := &SyncResult{}
+	require.NoError(t, svc.cleanupVanishedComputers(context.Background(), cfg, entries, result))
+
+	assert.Equal(t, int64(2), countShadowRows78(t, db, &models.ADComputer{}, cfg.ID, true),
+		"Unscoped 计数不变（软删非硬删）")
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADComputer{}, cfg.ID, false))
+
+	var gone models.ADComputer
+	require.NoError(t, db.Unscoped().Where("distinguished_name = ? AND ad_config_id = ?", dnGone, cfg.ID).First(&gone).Error)
+	assert.True(t, gone.DeletedAt.Valid, "AD 端已消失的电脑应软删")
+	var keep models.ADComputer
+	require.NoError(t, db.Where("distinguished_name = ? AND ad_config_id = ?", dnKeep, cfg.ID).First(&keep).Error)
+	assert.False(t, keep.DeletedAt.Valid)
+	assert.Equal(t, 1, result.DeletedComputerCount)
+}
+
+// TestShadowCleanup_Computers_RejectsOverThreshold：3 活 + LDAP 1 → 拟删 2/3
+// （2*2=4 > 3）→ Gate 2 拒绝,无软删。
+func TestShadowCleanup_Computers_RejectsOverThreshold(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := &SyncService{db: db, pool: NewAccountPool(db, nil)}
+	cfg := insertConfig78(t, db, "")
+
+	dnKeep := "CN=pc-keep,OU=Computers,DC=example,DC=com"
+	insertComputer78(t, db, cfg.ID, dnKeep, "pc-keep", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+	insertComputer78(t, db, cfg.ID, "CN=pc-b,OU=Computers,DC=example,DC=com", "pc-b", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+	insertComputer78(t, db, cfg.ID, "CN=pc-c,OU=Computers,DC=example,DC=com", "pc-c", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+
+	entries := []*ldap.Entry{
+		entry78(dnKeep, map[string][]string{"cn": {"pc-keep"}}),
+	}
+
+	result := &SyncResult{}
+	require.NoError(t, svc.cleanupVanishedComputers(context.Background(), cfg, entries, result),
+		"Gate 2 拒绝为非阻断:返回 nil,无错误传播")
+
+	assert.Equal(t, int64(3), countShadowRows78(t, db, &models.ADComputer{}, cfg.ID, false),
+		"超阈值拒绝后全部活行保留")
+	assert.Equal(t, 0, result.DeletedComputerCount)
+}
+
+// TestShadowCleanup_Computers_FiltersUnmanagedEntries：cn 为空串的 entry 不入管理集
+// （与 syncComputers 跳过口径同源）→ 其对应行按已消失软删。
+//
+// 预置 2 活行而非 1:单行全消失 = 100% > 50%,会被 Gate 2 保护性拒绝
+// （Users_AtExactThreshold 已锚定该判式）;2 行中消失 1 行恰 50% 可放行,
+// 使「管理口径」的差异在放行分支内可观测。
+func TestShadowCleanup_Computers_FiltersUnmanagedEntries(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := &SyncService{db: db, pool: NewAccountPool(db, nil)}
+	cfg := insertConfig78(t, db, "")
+
+	dnUnmanaged := "CN=ghost-pc,OU=Computers,DC=example,DC=com"
+	dnManaged := "CN=real-pc,OU=Computers,DC=example,DC=com"
+	insertComputer78(t, db, cfg.ID, dnUnmanaged, "ghost-pc", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+	insertComputer78(t, db, cfg.ID, dnManaged, "real-pc", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+
+	// ghost-pc 的 entry 存在但 cn 为空串 → 不入管理集
+	entries := []*ldap.Entry{
+		entry78(dnUnmanaged, map[string][]string{"description": {"ghost"}}),
+		entry78(dnManaged, map[string][]string{"cn": {"real-pc"}}),
+	}
+
+	result := &SyncResult{}
+	require.NoError(t, svc.cleanupVanishedComputers(context.Background(), cfg, entries, result))
+
+	var ghost models.ADComputer
+	require.NoError(t, db.Unscoped().Where("distinguished_name = ? AND ad_config_id = ?", dnUnmanaged, cfg.ID).First(&ghost).Error)
+	assert.True(t, ghost.DeletedAt.Valid,
+		"cn 为空的 entry 不受本轮 upsert 管理,其对应行按已消失软删(清理口径=管理口径)")
+	var real models.ADComputer
+	require.NoError(t, db.Where("distinguished_name = ? AND ad_config_id = ?", dnManaged, cfg.ID).First(&real).Error)
+	assert.False(t, real.DeletedAt.Valid)
+	assert.Equal(t, 1, result.DeletedComputerCount)
+}
+
+// TestShadowCleanup_CategoriesIndependent：users entries 传空、ous/computers 正常 →
+// 仅 user 类被 Gate 1 拒绝,OU 与 computer 照常软删（per-category 独立性断言）。
+func TestShadowCleanup_CategoriesIndependent(t *testing.T) {
+	ctx := context.Background()
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := &SyncService{db: db, pool: NewAccountPool(db, nil)}
+	cfg := insertConfig78(t, db, "")
+
+	// 预置:1 活 user + 2 活 OU + 2 活 computer
+	userDN := "CN=u1,OU=Staff,DC=example,DC=com"
+	seedShadowUser78(t, db, cfg.ID, userDN, "u1")
+	ouKeep := "OU=Keep,DC=example,DC=com"
+	ouGone := "OU=Gone,DC=example,DC=com"
+	seedShadowOU78(t, db, cfg.ID, ouKeep)
+	seedShadowOU78(t, db, cfg.ID, ouGone)
+	pcKeep := "CN=pc-keep,OU=Computers,DC=example,DC=com"
+	pcGone := "CN=pc-gone,OU=Computers,DC=example,DC=com"
+	insertComputer78(t, db, cfg.ID, pcKeep, "pc-keep", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+	insertComputer78(t, db, cfg.ID, pcGone, "pc-gone", "OU=Computers,DC=example,DC=com", models.ComputerStatusOnline)
+
+	entries := []*ldap.Entry{
+		entry78(ouKeep, nil),
+		entry78(pcKeep, map[string][]string{"cn": {"pc-keep"}}),
+	}
+
+	result := &SyncResult{}
+	require.NoError(t, svc.cleanupAfterFullSync(ctx, cfg, string(models.ADSyncTypeFull),
+		entries, nil, entries, result),
+		"user 类拒绝不阻断编排入口,整体无错误传播")
+
+	// user 类:Gate 1 拒绝 → 行保留、计数 0
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADUser{}, cfg.ID, false),
+		"空 user entries 只拒绝 user 类清理")
+	assert.Equal(t, 0, result.DeletedUserCount)
+	// OU 类:照常软删 1 行
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADOU{}, cfg.ID, false))
+	assert.Equal(t, 1, result.DeletedOUCount)
+	var ouGoneRow models.ADOU
+	require.NoError(t, db.Unscoped().Where("ou_dn = ? AND ad_config_id = ?", ouGone, cfg.ID).First(&ouGoneRow).Error)
+	assert.True(t, ouGoneRow.DeletedAt.Valid)
+	// computer 类:照常软删 1 行
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADComputer{}, cfg.ID, false))
+	assert.Equal(t, 1, result.DeletedComputerCount)
+	var pcGoneRow models.ADComputer
+	require.NoError(t, db.Unscoped().Where("distinguished_name = ? AND ad_config_id = ?", pcGone, cfg.ID).First(&pcGoneRow).Error)
+	assert.True(t, pcGoneRow.DeletedAt.Valid)
+}

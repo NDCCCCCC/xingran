@@ -45,6 +45,9 @@ type SyncResult struct {
 	// Phase 61 SHADOW-01: 全量同步末尾清理的软删计数（纯增量可观测性字段,
 	// 前端不读则忽略）。清理拒绝时保持 0。
 	DeletedUserCount int `json:"deletedUserCount"`
+	DeletedOUCount   int `json:"deletedOUCount"`
+	//nolint:revive // 与既有 CamelCase JSON tag 风格保持一致
+	DeletedComputerCount int `json:"deletedComputerCount"`
 }
 
 // SyncDataByID 根据配置ID同步数据
