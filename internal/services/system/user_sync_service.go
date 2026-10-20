@@ -207,7 +207,7 @@ func (s *UserSyncService) createNewUser(tx *gorm.DB, user *models.User, adUser *
 	user.AuthSource = "ad"
 	user.ADUsername = &adUsername
 	user.AdDn = &adDN
-	user.InitFlag = true    // 标记为初始密码，需要修改
+	user.InitFlag = true // 标记为初始密码，需要修改
 	user.PwdExpireDays = 90
 
 	// 设置默认密码（首次登录后要求修改）
@@ -241,10 +241,10 @@ func (s *UserSyncService) createNewUser(tx *gorm.DB, user *models.User, adUser *
 func (s *UserSyncService) updateExistingUser(tx *gorm.DB, user *models.User, adUser *ADUserInfoForSync) error {
 	// 使用 GORM 的 Updates 方法，传入数据库列名
 	updates := map[string]interface{}{
-		"email":  &adUser.Email,
-		"phone":  &adUser.Phone,
-		"ad_dn": &adUser.UserDN, // 使用数据库列名 ad_dn
-		"ad_ou_dn":  &adUser.OuDn, // 更新用户OU路径（支持用户移动场景）
+		"email":    &adUser.Email,
+		"phone":    &adUser.Phone,
+		"ad_dn":    &adUser.UserDN, // 使用数据库列名 ad_dn
+		"ad_ou_dn": &adUser.OuDn,   // 更新用户OU路径（支持用户移动场景）
 	}
 
 	// 只有当nickname为空时才更新（尊重本地修改）
@@ -584,6 +584,26 @@ func (s *UserSyncService) BatchSyncADUsers(
 		len(plansByCat[catNew]), len(plansByCat[catActiveAD]),
 		len(plansByCat[catSoftDeleted]), len(plansByCat[catLocalSameName]))
 
+	// SAFE-01/SAFE-02 (D-06/D-07): 在阶段 3 哈希与阶段 5c 写库之前过滤被拒项。
+	// 校验入口与登录路径共用 checkSoftDeletedRestore；拒绝是策略行为不是故障，
+	// 因此短路跳过并计入 Skipped，禁止返回 error（否则 runInBatchedTx 会整批降级
+	// 逐个重试并把策略拒绝记为 Failed）。响应中的错误文本不含 DN（DN 细节只进 WARN）。
+	if items := plansByCat[catSoftDeleted]; len(items) > 0 {
+		allowed := make([]*batchPlanItem, 0, len(items))
+		for _, it := range items {
+			if !s.checkSoftDeletedRestore(it.user, it.adUser.UserDN, "batch") {
+				result.Skipped++
+				result.Errors = append(result.Errors, SyncError{
+					Username: it.adUser.Username,
+					Error:    "AD 身份不一致，拒绝恢复（需管理员核对 ad_dn）",
+				})
+				continue
+			}
+			allowed = append(allowed, it)
+		}
+		plansByCat[catSoftDeleted] = allowed
+	}
+
 	// 阶段3: 并发哈希密码（catNew + catSoftDeleted 需重置默认密码）
 	t0 = time.Now()
 	var needHash []string
@@ -892,4 +912,3 @@ func deptValue(p *string) string {
 	}
 	return *p
 }
-

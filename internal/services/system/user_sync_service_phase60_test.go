@@ -26,13 +26,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// setupPhase60SoftDeletedFixture 建库并插入一行软删用户。
+// insertPhase60SoftDeletedUser 在同一 DB 中插入一行软删用户并返回 userID。
 // storedDN 为 nil 时 ad_dn 写 NULL；否则写指针指向的字面值。
-func setupPhase60SoftDeletedFixture(t *testing.T, username string, storedDN *string) (*gorm.DB, *UserSyncService, string) {
+func insertPhase60SoftDeletedUser(t *testing.T, db *gorm.DB, username string, storedDN *string) string {
 	t.Helper()
-
-	db := setupTestDBForSync(t)
-	require.NotNil(t, db, "setupTestDBForSync 必须返回可用 DB")
 
 	userID := uuid.NewString()
 	if storedDN == nil {
@@ -46,6 +43,18 @@ func setupPhase60SoftDeletedFixture(t *testing.T, username string, storedDN *str
 			 VALUES (?, ?, '', '', ?, 'local', 0, ?, ?)`,
 			userID, username, "Phase60 软删用户", time.Now(), *storedDN).Error)
 	}
+	return userID
+}
+
+// setupPhase60SoftDeletedFixture 建库并插入一行软删用户。
+// storedDN 为 nil 时 ad_dn 写 NULL；否则写指针指向的字面值。
+func setupPhase60SoftDeletedFixture(t *testing.T, username string, storedDN *string) (*gorm.DB, *UserSyncService, string) {
+	t.Helper()
+
+	db := setupTestDBForSync(t)
+	require.NotNil(t, db, "setupTestDBForSync 必须返回可用 DB")
+
+	userID := insertPhase60SoftDeletedUser(t, db, username, storedDN)
 
 	svc := NewUserSyncService(db, security.NewPasswordManager(nil), nil)
 	return db, svc, userID
@@ -180,4 +189,176 @@ func TestPhase60_Login_RefusalAuditWarn(t *testing.T) {
 	}
 	assert.NotContains(t, logs, "该账号存在 AD 身份不一致，已被安全拦截，请联系系统管理员",
 		"用户可见文案不应出现在服务层日志中")
+}
+
+// --- 批量路径（SAFE-01 批量侧 / SAFE-02 双路径一致性） ---
+//
+// 注意（Pitfall 8）：批量用例的 ADUserInfoForSync.OuDn 一律置空，避免
+// resolveDeptFromOU 在 nil mapper 上 panic；defaultRoleID 传空串避开角色表依赖。
+
+// TestPhase60_Batch_MismatchedDN_Skipped DN 不一致 → Skipped，保持软删且不降级。
+func TestPhase60_Batch_MismatchedDN_Skipped(t *testing.T) {
+	const stored = "CN=batch,OU=IT,DC=corp,DC=com"
+	const current = "CN=someone-else,OU=IT,DC=corp,DC=com"
+	const username = "phase60_batch_mismatch"
+
+	db, svc, userID := setupPhase60SoftDeletedFixture(t, username, strPtrSyncTest(stored))
+
+	buf, restore := captureLogs(t)
+	defer restore()
+
+	res, err := svc.BatchSyncADUsers(context.Background(), []*ADUserInfoForSync{
+		phase60ADUser(username, current),
+	}, "")
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	assert.Equal(t, 1, res.Total)
+	assert.Equal(t, 1, res.Skipped, "DN 不一致必须计入 Skipped")
+	assert.Equal(t, 0, res.Failed, "策略拒绝不得伪装成 DB 故障")
+	assert.Equal(t, 0, res.Success, "被拒项不得计入 Success")
+	require.Len(t, res.Errors, 1)
+	assert.Equal(t, username, res.Errors[0].Username)
+	assert.Contains(t, res.Errors[0].Error, "AD 身份不一致")
+	assert.NotContains(t, res.Errors[0].Error, "CN=", "响应错误文本不得泄露 DN（D-05）")
+
+	var after models.User
+	require.NoError(t, db.Unscoped().First(&after, "id = ?", userID).Error)
+	assert.True(t, after.DeletedAt.Valid, "拒绝后必须保持软删")
+	require.NotNil(t, after.AdDn)
+	assert.Equal(t, stored, *after.AdDn, "拒绝路径绝不清空存量 ad_dn（D-03）")
+
+	logs := buf.String()
+	assert.Contains(t, logs, "[SECURITY]")
+	assert.Contains(t, logs, "path=batch", "批量拒绝的审计 WARN 必须标注 path=batch")
+	assert.NotContains(t, logs, "降级逐个处理", "策略拒绝不得进入 runInBatchedTx 降级管道")
+}
+
+// TestPhase60_Batch_MatchingDN_Restores DN 归一化一致 → 批量恢复成功。
+func TestPhase60_Batch_MatchingDN_Restores(t *testing.T) {
+	const stored = "CN=batch-ok,OU=IT,DC=corp,DC=com"
+	const current = "cn=BATCH-OK,ou=it,dc=CORP,dc=COM"
+	const username = "phase60_batch_match"
+
+	db, svc, userID := setupPhase60SoftDeletedFixture(t, username, strPtrSyncTest(stored))
+
+	res, err := svc.BatchSyncADUsers(context.Background(), []*ADUserInfoForSync{
+		phase60ADUser(username, current),
+	}, "")
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	assert.Equal(t, 1, res.Total)
+	assert.Equal(t, 1, res.Success)
+	assert.Equal(t, 0, res.Skipped)
+	assert.Equal(t, 0, res.Failed)
+
+	var after models.User
+	require.NoError(t, db.First(&after, "id = ?", userID).Error, "恢复后应能被活跃作用域查询到")
+	assert.False(t, after.DeletedAt.Valid, "deleted_at 必须被清空")
+	require.NotNil(t, after.AdDn)
+	assert.Equal(t, current, *after.AdDn, "恢复时写入 AD 当前 DN")
+}
+
+// TestPhase60_Batch_MixedUsers_Conservation 同批一允一拒 → 总量守恒。
+func TestPhase60_Batch_MixedUsers_Conservation(t *testing.T) {
+	const okUser = "phase60_mixed_ok"
+	const badUser = "phase60_mixed_bad"
+	const okStored = "CN=mixed-ok,OU=IT,DC=corp,DC=com"
+	const okCurrent = "cn=mixed-OK,ou=it,dc=corp,dc=com"
+	const badStored = "CN=mixed-bad,OU=IT,DC=corp,DC=com"
+	const badCurrent = "CN=other,OU=IT,DC=corp,DC=com"
+
+	db, svc, _ := setupPhase60SoftDeletedFixture(t, okUser, strPtrSyncTest(okStored))
+	insertPhase60SoftDeletedUser(t, db, badUser, strPtrSyncTest(badStored))
+
+	res, err := svc.BatchSyncADUsers(context.Background(), []*ADUserInfoForSync{
+		phase60ADUser(okUser, okCurrent),
+		phase60ADUser(badUser, badCurrent),
+	}, "")
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	assert.Equal(t, 2, res.Total)
+	assert.Equal(t, 1, res.Success, "一致项恢复成功")
+	assert.Equal(t, 1, res.Skipped, "不一致项跳过")
+	assert.Equal(t, 0, res.Failed)
+	assert.Equal(t, res.Total, res.Success+res.Failed+res.Skipped, "成功+失败+跳过必须恒等于总数")
+}
+
+// TestPhase60_PathConsistency_MismatchRefusedBoth 同一输入下登录与批量判定及终态一致。
+func TestPhase60_PathConsistency_MismatchRefusedBoth(t *testing.T) {
+	const stored = "CN=path-mismatch,OU=IT,DC=corp,DC=com"
+	const current = "CN=other,OU=IT,DC=corp,DC=com"
+	const username = "phase60_path_mismatch"
+
+	dbLogin, svcLogin, idLogin := setupPhase60SoftDeletedFixture(t, username, strPtrSyncTest(stored))
+	dbBatch, svcBatch, idBatch := setupPhase60SoftDeletedFixture(t, username, strPtrSyncTest(stored))
+
+	// A: 登录路径 → sentinel 拒绝
+	_, _, loginErr := svcLogin.SyncUserFromAD(context.Background(), phase60ADUser(username, current), "")
+	require.Error(t, loginErr)
+	assert.True(t, errors.Is(loginErr, security.ErrSoftDeleteIdentityMismatch))
+
+	// B: 批量路径 → Skipped
+	res, batchErr := svcBatch.BatchSyncADUsers(context.Background(), []*ADUserInfoForSync{
+		phase60ADUser(username, current),
+	}, "")
+	require.NoError(t, batchErr)
+	require.NotNil(t, res)
+	assert.Equal(t, 1, res.Skipped)
+	assert.Equal(t, 0, res.Failed)
+
+	// 两库终态一致：均保持软删，且 ad_dn 原值逐字不变
+	for _, c := range []struct {
+		name string
+		db   *gorm.DB
+		id   string
+	}{
+		{"login", dbLogin, idLogin},
+		{"batch", dbBatch, idBatch},
+	} {
+		var after models.User
+		require.NoError(t, c.db.Unscoped().First(&after, "id = ?", c.id).Error)
+		assert.True(t, after.DeletedAt.Valid, "%s 路径拒绝后必须保持软删", c.name)
+		require.NotNil(t, after.AdDn)
+		assert.Equal(t, stored, *after.AdDn, "%s 路径拒绝后 ad_dn 必须原值保留", c.name)
+	}
+}
+
+// TestPhase60_PathConsistency_MatchingRestoredBoth 一致场景下两路径均恢复且终态一致。
+func TestPhase60_PathConsistency_MatchingRestoredBoth(t *testing.T) {
+	const stored = "CN=path-match,OU=IT,DC=corp,DC=com"
+	const current = "cn=path-MATCH,ou=it,dc=CORP,dc=COM"
+	const username = "phase60_path_match"
+
+	dbLogin, svcLogin, idLogin := setupPhase60SoftDeletedFixture(t, username, strPtrSyncTest(stored))
+	dbBatch, svcBatch, idBatch := setupPhase60SoftDeletedFixture(t, username, strPtrSyncTest(stored))
+
+	_, _, loginErr := svcLogin.SyncUserFromAD(context.Background(), phase60ADUser(username, current), "")
+	require.NoError(t, loginErr, "登录路径归一化一致必须恢复")
+
+	res, batchErr := svcBatch.BatchSyncADUsers(context.Background(), []*ADUserInfoForSync{
+		phase60ADUser(username, current),
+	}, "")
+	require.NoError(t, batchErr)
+	require.NotNil(t, res)
+	assert.Equal(t, 1, res.Success)
+	assert.Equal(t, 0, res.Skipped)
+	assert.Equal(t, 0, res.Failed)
+
+	for _, c := range []struct {
+		name string
+		db   *gorm.DB
+		id   string
+	}{
+		{"login", dbLogin, idLogin},
+		{"batch", dbBatch, idBatch},
+	} {
+		var after models.User
+		require.NoError(t, c.db.First(&after, "id = ?", c.id).Error, "%s 路径恢复后应能被活跃作用域查询到", c.name)
+		assert.False(t, after.DeletedAt.Valid, "%s 路径必须清空 deleted_at", c.name)
+		require.NotNil(t, after.AdDn)
+		assert.Equal(t, current, *after.AdDn, "%s 路径恢复后 ad_dn 应写入 AD 当前 DN", c.name)
+	}
 }
