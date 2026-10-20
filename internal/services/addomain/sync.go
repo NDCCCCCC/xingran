@@ -659,32 +659,45 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 }
 
 // syncGroupMembers 同步用户组成员关系
+//
+// P1 fix: 把「先 Delete 旧成员 → 再 Create 新成员」包在单事务中。
+// 原实现两步独立提交:Delete 成功后 crash/网络抖动会让旧成员消失而新成员未建,
+// 等同于丢失整组关系;且两步之间外部查询可见空成员窗口(SHADOW-02)。
+// 事务化后 PG READ COMMITTED 下要么旧成员集要么新成员集,无可观测空窗;
+// Create 半途失败时 Delete 自动回滚。每组一个事务,由调用方逐组调用
+// (sync.go syncGroups / group_sync_service.go SyncSingleGroup / syncGroupEntries),
+// 不把整轮所有组合成一个大事务(锁面扩大且违背「重放以组为单位」语义)。
+// Unscoped 硬删语义保留:sys_ad_group_member 是派生数据,随 LDAP 全量重放;
+// 改软删会导致行数爆炸 + GetGroupSyncStatus 计数虚高。
 func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADConfig, groupDN string, memberDNs []string) error {
-	// 先删除旧的成员关系
-	if err := s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
-		Delete(&models.ADGroupMember{}).Error; err != nil {
-		return fmt.Errorf("清理旧成员关系失败: %w", err)
-	}
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 先删除旧的成员关系
+		if err := tx.Unscoped().Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
+			Delete(&models.ADGroupMember{}).Error; err != nil {
+			return fmt.Errorf("清理旧成员关系失败: %w", err)
+		}
 
-	if len(memberDNs) == 0 {
+		// 空成员集语义不变:Delete 已随事务提交,Create 跳过
+		if len(memberDNs) == 0 {
+			return nil
+		}
+
+		// 准备批量数据
+		members := make([]models.ADGroupMember, 0, len(memberDNs))
+		for _, userDN := range memberDNs {
+			members = append(members, models.ADGroupMember{
+				ADConfigID: config.ID,
+				GroupDN:    groupDN,
+				UserDN:     userDN,
+			})
+		}
+
+		if err := tx.Create(&members).Error; err != nil {
+			return fmt.Errorf("批量添加组成员失败: %w", err)
+		}
+
 		return nil
-	}
-
-	// 准备批量数据
-	members := make([]models.ADGroupMember, 0, len(memberDNs))
-	for _, userDN := range memberDNs {
-		members = append(members, models.ADGroupMember{
-			ADConfigID: config.ID,
-			GroupDN:    groupDN,
-			UserDN:     userDN,
-		})
-	}
-
-	if err := s.db.WithContext(ctx).Create(&members).Error; err != nil {
-		return fmt.Errorf("批量添加组成员失败: %w", err)
-	}
-
-	return nil
+	})
 }
 
 // updateSyncLog 更新同步日志
