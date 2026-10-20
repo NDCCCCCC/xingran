@@ -168,7 +168,11 @@ func setupSync78DB(t *testing.T) *gorm.DB {
 	`).Error)
 
 	// 5. sys_ad_group_member (syncGroupMembers)
-	// 含 BaseModel 列(ADGroupMember 嵌入 BaseModel)
+	// 含 BaseModel 列(ADGroupMember 嵌入 BaseModel)。
+	// Phase 61 SHADOW-02:表级 CHECK 是 Create 半途失败的注入点——重放成员集
+	// 含 user_dn='FORCED_FAIL' 时 INSERT 整句被拒,用于证伪「Delete 已生效而
+	// Create 失败」的丢数据形态(事务回滚断言)。其余既有用例从不插入该字面值,
+	// 共享 fixture 零副作用(fixture 零副本纪律:改既有 DDL 而非建第二套表)。
 	require.NoError(t, db.Exec(`
 		CREATE TABLE sys_ad_group_member (
 			id TEXT PRIMARY KEY,
@@ -180,7 +184,8 @@ func setupSync78DB(t *testing.T) *gorm.DB {
 			version INTEGER,
 			created_at DATETIME,
 			updated_at DATETIME,
-			deleted_at DATETIME
+			deleted_at DATETIME,
+			CHECK (user_dn != 'FORCED_FAIL')
 		)
 	`).Error)
 
@@ -1293,6 +1298,85 @@ func TestSync78_SyncGroupMembers_FullDiff(t *testing.T) {
 	require.NoError(t, err)
 	err = svc.syncGroupMembers(ctx, cfg, groupDN, []string{"CN=X,DC=example,DC=com"})
 	assert.Error(t, err, "DROP TABLE 后应返回包装错误")
+}
+
+// TestSyncGroupMembers_CreateFailRollsBackDelete 证伪「Delete 已生效而 Create
+// 半途失败」的丢数据形态(SHADOW-02):预置 2 条旧成员 → 重放成员集含 1 条正常
+// + 1 条 user_dn='FORCED_FAIL'(fixture 表级 CHECK 注入点 → Create 整句被拒)
+// → syncGroupMembers 返回 error,且 Unscoped 查询该组仍是原 2 条旧成员
+// (Delete 已随事务回滚——「无空窗」的进程内可证伪代理,PG 跨连接真观察
+// 归 61-VALIDATION Manual-Only)。
+func TestSyncGroupMembers_CreateFailRollsBackDelete(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+	groupDN := "CN=GF,OU=Groups,DC=example,DC=com"
+
+	oldA := "CN=OldA,DC=example,DC=com"
+	oldB := "CN=OldB,DC=example,DC=com"
+	pre := []models.ADGroupMember{
+		{ADConfigID: cfg.ID, GroupDN: groupDN, UserDN: oldA},
+		{ADConfigID: cfg.ID, GroupDN: groupDN, UserDN: oldB},
+	}
+	for i := range pre {
+		pre[i].ID = uuid.NewString()
+		require.NoError(t, db.Create(&pre[i]).Error)
+	}
+
+	// 重放:1 正常 + 1 FORCED_FAIL(CHECK 注入 Create 失败)
+	err := svc.syncGroupMembers(ctx, cfg, groupDN, []string{
+		"CN=New,DC=example,DC=com",
+		"FORCED_FAIL",
+	})
+	require.Error(t, err, "CHECK 注入点应使 Create 失败并返回 error")
+	assert.Contains(t, err.Error(), "批量添加组成员失败", "错误包装前缀必须保留")
+
+	// Delete 已回滚:旧 2 条原样(Unscoped 硬查询,不经过软删过滤)
+	var old []models.ADGroupMember
+	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Find(&old).Error)
+	require.Len(t, old, 2, "Create 失败后 Delete 必须回滚——旧成员原样(无空窗可证伪代理)")
+	got := make([]string, 0, len(old))
+	for _, m := range old {
+		got = append(got, m.UserDN)
+	}
+	assert.ElementsMatch(t, []string{oldA, oldB}, got)
+}
+
+// TestSyncGroupMembers_ReplayIdempotent 锁定重放幂等(SHADOW-02 idempotency
+// 探针的回答):同一成员集重放两次 → 两次后 Unscoped 成员行集逐字段一致、
+// 行数等于成员数(Delete-all + Create-all 语义天然幂等:不翻倍、不残留)。
+func TestSyncGroupMembers_ReplayIdempotent(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+	groupDN := "CN=GR,OU=Groups,DC=example,DC=com"
+	members := []string{
+		"CN=A,DC=example,DC=com",
+		"CN=B,DC=example,DC=com",
+		"CN=C,DC=example,DC=com",
+	}
+
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, members))
+	var afterFirst []models.ADGroupMember
+	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Order("user_dn").Find(&afterFirst).Error)
+	require.Len(t, afterFirst, len(members))
+
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, members))
+	var afterSecond []models.ADGroupMember
+	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Order("user_dn").Find(&afterSecond).Error)
+
+	require.Len(t, afterSecond, len(members), "重放两次行数不变(不翻倍、不残留)")
+	for i := range afterFirst {
+		assert.Equal(t, afterFirst[i].UserDN, afterSecond[i].UserDN, "行 %d:两次重放 user_dn 一致", i)
+		assert.Equal(t, afterFirst[i].GroupDN, afterSecond[i].GroupDN, "行 %d:两次重放 group_dn 一致", i)
+	}
+	dns := make([]string, 0, len(afterSecond))
+	for _, m := range afterSecond {
+		dns = append(dns, m.UserDN)
+	}
+	assert.ElementsMatch(t, members, dns)
 }
 
 // TestSync78_UpdateSyncLog_StatusMatrix 覆盖 updateSyncLog 状态机:
