@@ -630,6 +630,7 @@ func TestAuth8003_SyncErrorReasonMessage(t *testing.T) {
 		{"admin_bind", "AD 管理员账号配置异常（账号可能被锁定或密码错误），请联系系统管理员"},
 		{"user_search", "AD 用户信息搜索失败，请联系系统管理员"},
 		{"user_sync", "AD 用户同步到本地失败，请联系系统管理员"},
+		{security.SyncReasonSoftDeleteMismatch, "该账号存在 AD 身份不一致，已被安全拦截，请联系系统管理员"},
 		{"no_syncer", "AD 用户同步服务未配置，请联系系统管理员"},
 		{"unknown-reason", "AD 用户信息同步失败，请联系系统管理员"},
 		{"", "AD 用户信息同步失败，请联系系统管理员"},
