@@ -180,13 +180,12 @@ export function getNotificationList(
  * 构建 WebSocket 连接 URL
  */
 export function buildWebSocketUrl(): string {
-  // 与 VITE_API_BASE_URL 解耦：优先使用独立的 VITE_WS_BASE_URL，
-  // 未设置时从 API base 推导（去掉 /api/vN 后缀并将 http(s) 转成 ws(s)），
-  // 保持向后兼容，不再硬编码开发机 IP。
+  // WS 端点与 REST 同挂 /api/v1 前缀下（后端: /api/v1/system/ws/notices，
+  // router.go: system→authorized→ws→SetupNoticeWebSocketRouter 的 /notices）。
+  // ⚠ 不得剥掉 /api/vN 后缀 —— 旧逻辑剥掉后拼出 /system/ws/notices，
+  // 握手 404 → 无限重连（生产实测 2026-10-20）。
   const apiBaseURL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
-  let wsBaseURL =
-    import.meta.env.VITE_WS_BASE_URL ||
-    apiBaseURL.replace(/\/api\/v\d+$/, "").replace(/^http/, "ws");
+  let wsBaseURL = import.meta.env.VITE_WS_BASE_URL || apiBaseURL.replace(/^http/, "ws");
   const token = tokenStorage.getAccessToken();
 
   // WebSocket 构造器只接受绝对 URL（ws:// / wss://）；API base 是

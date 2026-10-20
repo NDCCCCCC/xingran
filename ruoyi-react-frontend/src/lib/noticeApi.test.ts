@@ -169,14 +169,15 @@ describe("noticeApi — buildWebSocketUrl", () => {
     vi.unstubAllEnvs();
   });
 
-  it("从 API base 推导:去掉 /api/vN 后缀并转换 http→ws", () => {
+  it("从 API base 推导:保留 /api/v1 前缀（WS 端点与 REST 同前缀）并转换 http→ws", () => {
     vi.stubEnv("VITE_API_BASE_URL", "http://ops.example.com/api/v1");
     vi.stubEnv("VITE_WS_BASE_URL", "");
     mockGetAccessToken.mockReturnValue("tok");
 
     const url = buildWebSocketUrl();
 
-    expect(url).toBe("ws://ops.example.com/system/ws/notices?token=tok");
+    // 后端路由: /api/v1/system/ws/notices（router.go: system→authorized→ws→/notices）
+    expect(url).toBe("ws://ops.example.com/api/v1/system/ws/notices?token=tok");
   });
 
   it("优先使用独立 VITE_WS_BASE_URL", () => {
@@ -188,7 +189,7 @@ describe("noticeApi — buildWebSocketUrl", () => {
     expect(url).toBe("wss://ws.example.com/system/ws/notices?token=");
   });
 
-  it("相对路径 /api/v1 推导出空 base → 补全为 ws://host 绝对 URL", () => {
+  it("根相对 API base /api/v1 → 补全为 ws://host 绝对 URL 且保留 /api/v1", () => {
     vi.stubEnv("VITE_API_BASE_URL", "");
     vi.stubEnv("VITE_WS_BASE_URL", "");
     mockGetAccessToken.mockReturnValue("tok");
@@ -196,7 +197,7 @@ describe("noticeApi — buildWebSocketUrl", () => {
     const url = buildWebSocketUrl();
 
     // WebSocket 构造器拒绝相对 URL(DOMException)，必须绝对化
-    expect(url).toBe("ws://localhost:3000/system/ws/notices?token=tok");
+    expect(url).toBe("ws://localhost:3000/api/v1/system/ws/notices?token=tok");
   });
 
   it("根相对 API base 推导出子路径 → 同样补全为 ws://host 绝对 URL", () => {
@@ -206,6 +207,6 @@ describe("noticeApi — buildWebSocketUrl", () => {
 
     const url = buildWebSocketUrl();
 
-    expect(url).toBe("ws://localhost:3000/xingran/system/ws/notices?token=tok");
+    expect(url).toBe("ws://localhost:3000/xingran/api/v1/system/ws/notices?token=tok");
   });
 });
