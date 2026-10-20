@@ -392,6 +392,71 @@ func TestShadowCleanup_Computers_FiltersUnmanagedEntries(t *testing.T) {
 	assert.Equal(t, 1, result.DeletedComputerCount)
 }
 
+// ============================================================================
+// Phase 61 Plan 02: 软删行复活（SHADOW-01 配套）——四类 upsert 路径自愈用例
+// ============================================================================
+
+// TestSync_ResurrectOU_SameDN：软删 OU + 同 DN entry 在 AD 复现 → syncOUs 返回 nil、
+// 行恢复可见（deleted_at 置空）、OUName 已更新、Unscoped 计数不变（复活而非新建）。
+//
+// 清理（61-01）软删行后，唯一约束 UNIQUE(ad_config_id, ou_dn) 不含 deleted_at：
+// 复活缺失时软删行走 Create 分支撞约束 → 整轮同步失败（Pitfall 1）。
+func TestSync_ResurrectOU_SameDN(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	ouDN := "OU=B,DC=example,DC=com"
+	ou := &models.ADOU{ADConfigID: cfg.ID, OUN: ouDN, OUName: "OldName"}
+	ou.ID = uuid.NewString()
+	require.NoError(t, db.Create(ou).Error)
+	require.NoError(t, db.Delete(ou).Error) // 软删（61-01 清理语义的产物）
+
+	entries := []*ldap.Entry{
+		entry78(ouDN, map[string][]string{"ou": {"B-Revived"}}),
+	}
+
+	require.NoError(t, svc.syncOUs(ctx, cfg, entries),
+		"软删行同 DN 在 AD 复现 → syncOUs 应自愈复活,而非裸 Create 撞 UNIQUE")
+
+	// 默认作用域可见（deleted_at 已置空）
+	var row models.ADOU
+	require.NoError(t, db.Where("ou_dn = ? AND ad_config_id = ?", ouDN, cfg.ID).First(&row).Error)
+	assert.Equal(t, "B-Revived", row.OUName, "复活行字段已按 entry 更新")
+	// Unscoped 计数不变 —— 复活而非新建
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADOU{}, cfg.ID, true),
+		"Unscoped 计数不变:同 DN 复现走 update 复活,不产生新行")
+}
+
+// TestSync_ResurrectGroup_SameDN：软删组 + 同 DN entry 在 AD 复现 → syncGroups 返回
+// nil、行恢复可见、Unscoped 计数不变（证明裸 Create 不再收到复活行,存量潜伏缺陷一并修复）。
+func TestSync_ResurrectGroup_SameDN(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	gDN := "CN=g1,OU=Groups,DC=example,DC=com"
+	g := &models.ADGroup{ADConfigID: cfg.ID, GroupDN: gDN, GroupName: "g1"}
+	g.ID = uuid.NewString()
+	require.NoError(t, db.Create(g).Error)
+	require.NoError(t, db.Delete(g).Error) // 软删（handleDeletedGroups 存量行为）
+
+	entries := []*ldap.Entry{
+		entry78(gDN, map[string][]string{"cn": {"g1"}}),
+	}
+
+	require.NoError(t, svc.syncGroups(ctx, cfg, entries),
+		"软删组同 DN 复现 → syncGroups 应复活该组,而非 createGroupsInBatches 撞 UNIQUE(ad_config_id, group_dn)")
+
+	var row models.ADGroup
+	require.NoError(t, db.Where("group_dn = ? AND ad_config_id = ?", gDN, cfg.ID).First(&row).Error)
+	assert.False(t, row.DeletedAt.Valid, "软删组同 DN 复现 → 行恢复可见")
+	assert.Equal(t, int64(1), countShadowRows78(t, db, &models.ADGroup{}, cfg.ID, true),
+		"Unscoped 计数不变:复活而非新建")
+}
+
 // TestShadowCleanup_CategoriesIndependent：users entries 传空、ous/computers 正常 →
 // 仅 user 类被 Gate 1 拒绝,OU 与 computer 照常软删（per-category 独立性断言）。
 func TestShadowCleanup_CategoriesIndependent(t *testing.T) {
