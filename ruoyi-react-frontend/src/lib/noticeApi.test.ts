@@ -188,13 +188,24 @@ describe("noticeApi — buildWebSocketUrl", () => {
     expect(url).toBe("wss://ws.example.com/system/ws/notices?token=");
   });
 
-  it("相对路径 /api/v1 保持原样(走同源反代)", () => {
+  it("相对路径 /api/v1 推导出空 base → 补全为 ws://host 绝对 URL", () => {
     vi.stubEnv("VITE_API_BASE_URL", "");
     vi.stubEnv("VITE_WS_BASE_URL", "");
     mockGetAccessToken.mockReturnValue("tok");
 
     const url = buildWebSocketUrl();
 
-    expect(url).toBe("/system/ws/notices?token=tok");
+    // WebSocket 构造器拒绝相对 URL(DOMException)，必须绝对化
+    expect(url).toBe("ws://localhost:3000/system/ws/notices?token=tok");
+  });
+
+  it("根相对 API base 推导出子路径 → 同样补全为 ws://host 绝对 URL", () => {
+    vi.stubEnv("VITE_API_BASE_URL", "/xingran/api/v1");
+    vi.stubEnv("VITE_WS_BASE_URL", "");
+    mockGetAccessToken.mockReturnValue("tok");
+
+    const url = buildWebSocketUrl();
+
+    expect(url).toBe("ws://localhost:3000/xingran/system/ws/notices?token=tok");
   });
 });

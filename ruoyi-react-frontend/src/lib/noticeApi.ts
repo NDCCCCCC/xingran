@@ -190,10 +190,11 @@ export function buildWebSocketUrl(): string {
   const token = tokenStorage.getAccessToken();
 
   // WebSocket 构造器只接受绝对 URL（ws:// / wss://）；API base 是
-  // 根相对路径（如 "/api/v1" → 推导出 "/xingran" 或 ""）时必须用当前
-  // 页面的协议与主机补全，否则 new WebSocket(relative) 直接抛 DOMException
-  // （dev 下 VITE_API_BASE_URL 带 http:// 前缀所以从未暴露此问题）。
-  if (wsBaseURL.startsWith("/")) {
+  // 根相对路径（如 "/api/v1" → 推导出 "/xingran"，或整段剥空得 ""）时必须
+  // 用当前页面的协议与主机补全，否则 new WebSocket(relative) 直接抛
+  // DOMException（dev 下 VITE_API_BASE_URL 带 http:// 前缀所以从未暴露）。
+  // ⚠ 空串也算相对："/api/v1".replace(...) 的结果是 ""，不是 "/"。
+  if (wsBaseURL === "" || wsBaseURL.startsWith("/")) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     wsBaseURL = `${protocol}//${window.location.host}${wsBaseURL}`;
   }
