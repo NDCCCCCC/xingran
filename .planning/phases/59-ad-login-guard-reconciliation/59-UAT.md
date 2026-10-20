@@ -3,7 +3,7 @@ status: testing
 phase: 59-ad-login-guard-reconciliation
 source: [59-VERIFICATION.md]
 started: 2026-10-20T01:20:00Z
-updated: 2026-10-20T04:10:00Z
+updated: 2026-10-20T05:05:00Z
 ---
 
 ## Current Test
@@ -44,18 +44,20 @@ verified: 用户确认 SC1~SC4 即权威验收口径。证据映射：SC1=单测
 
 ### 6. 空态标题字重 600（computed style）
 expected: 浏览器打开 AD 配置页 → 对账 Tab → 将筛选调成 0 结果 → DevTools 选中空态标题，确认 computed font-weight: 600、font-size: 16px
-result: [pending]
+result: pass
+verified: chrome-devtools 真实浏览器实测（2026-10-20，本地隔离环境 admin 登录 → AD域控 → 域控配置 → 对账 Tab）。空态标题「未发现不一致条目」computed style: font-weight=600, font-size=16px —— ReconciliationTab.css 的 !important 规则在真实层叠中生效（本地库 0 条数据,空态直接渲染,无需调筛选）。截图: 本机 %TEMP%/uat59/reconciliation-empty-state.png
 
 ### 7. Tab 栏不溢出视觉回归（backstop）
 expected: 两个 Tab 标签不换行/不截断
-result: [pending]
+result: pass
+verified: chrome-devtools 实测两个视口 —— 1034px 宽屏: 4 个 Tab（页级 仪表盘/AD配置管理 + 内层 配置列表/对账）scrollWidth==clientWidth 零裁剪、高度 40px/22px 单行、nav 无溢出; 480px 窄屏模拟: 全部 Tab 依旧零裁剪零换行（navList 总宽仅 196px, nowrap）
 
 ## Summary
 
 total: 7
-passed: 4
+passed: 6
 issues: 0
-pending: 2
+pending: 0
 skipped: 1
 blocked: 0
 
