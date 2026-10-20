@@ -233,9 +233,18 @@ func safeAttr(s string, maxLen int) string {
 }
 
 // getExistingOUs 获取已存在的OU
+//
+// SHADOW-01 复活配套：查询 Unscoped 化,软删行一并纳入 existing 集 —— 软删行同 DN
+// 在 AD 复现时进入 update 分支复活,而非走 Create 撞不含 deleted_at 的唯一约束。
+// 命中行 DeletedAt 随即清零 → INSERT 值 deleted_at 为 NULL → ON CONFLICT
+// SET deleted_at = EXCLUDED.deleted_at(NULL) → 行复活;活行 SET NULL 与库中现值
+// 一致,无副作用。读路径(List/Get 默认作用域)不受影响。
 func (s *SyncService) getExistingOUs(ctx context.Context, configID string, ouDNs []string) []models.ADOU {
 	var existingOUs []models.ADOU
-	s.db.WithContext(ctx).Where("ad_config_id = ? AND ou_dn IN ?", configID, ouDNs).Find(&existingOUs)
+	s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND ou_dn IN ?", configID, ouDNs).Find(&existingOUs)
+	for i := range existingOUs {
+		existingOUs[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+	}
 	return existingOUs
 }
 
@@ -314,6 +323,10 @@ func (s *SyncService) batchUpdateOUs(ctx context.Context, ous map[string]*models
 				Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "ou_dn"}},
 				DoUpdates: clause.AssignmentColumns([]string{
 					"ou_name", "description", "parent_dn", "ou_path", "last_sync_at",
+					// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+					// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活
+					//（活行 SET NULL 与库中现值一致,无副作用）。
+					"deleted_at",
 				}),
 			}).Create(batch).Error; err != nil {
 				return fmt.Errorf("批量更新OU失败: %w", err)
@@ -332,7 +345,13 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 
 	groupDNs := extractDNs(entries)
 	var existingGroups []models.ADGroup
-	s.db.WithContext(ctx).Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
+	// SHADOW-01 复活配套:Unscoped 纳入软删行(同 DN 复现走 update 分支复活,而非
+	// createGroupsInBatches 裸 Create 撞 UNIQUE(ad_config_id, group_dn));命中行
+	// DeletedAt 清零 → INSERT 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
+	s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
+	for i := range existingGroups {
+		existingGroups[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+	}
 
 	existingGroupMap := make(map[string]*models.ADGroup, len(existingGroups))
 	for i := range existingGroups {
@@ -436,6 +455,9 @@ func (s *SyncService) updateGroupsInBatches(ctx context.Context, groups map[stri
 			Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"group_name", "description", "member_count", "ou_dn", "group_scope", "group_type", "last_sync_at",
+				// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+				// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活。
+				"deleted_at",
 			}),
 		}).Create(batch).Error; err != nil {
 			return fmt.Errorf("批量更新用户组失败: %w", err)
@@ -477,7 +499,13 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		}
 		batch := userDNs[i:end]
 		var batchUsers []models.ADUser
-		s.db.WithContext(ctx).Where("ad_config_id = ? AND user_dn IN ?", config.ID, batch).Find(&batchUsers)
+		// SHADOW-01 复活配套:Unscoped 纳入软删行(同 DN 复现走 update 分支复活,而非
+		// 裸 Create 撞 UNIQUE(ad_config_id, user_dn));命中行 DeletedAt 清零 → INSERT
+		// 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
+		s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND user_dn IN ?", config.ID, batch).Find(&batchUsers)
+		for i := range batchUsers {
+			batchUsers[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+		}
 		existingUsers = append(existingUsers, batchUsers...)
 	}
 
@@ -614,6 +642,9 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 						"user_account_control", "is_enabled", "is_locked",
 						"password_expired", "member_of", "last_logon",
 						"password_last_set", "last_sync_at",
+						// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+						// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活。
+						"deleted_at",
 					}),
 				}).Create(batch).Error; err != nil {
 					return fmt.Errorf("批量更新用户失败: %w", err)
