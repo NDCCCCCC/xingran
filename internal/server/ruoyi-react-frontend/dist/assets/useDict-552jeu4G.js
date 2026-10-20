@@ -1,1 +1,0 @@
-import{ak as t}from"./vendor-react-Mm7mwLRq.js";import{p as s}from"./index-gZ1c1L_V.js";import{q as r}from"./queryKeys-DHkfxBp_.js";function n(e){return t({queryKey:r.dict.list(e),queryFn:async()=>(await s("/system/dicts/data/list",{dictType:e,current:1,pageSize:1e3})).data?.list??[],staleTime:300*1e3,gcTime:1800*1e3,refetchOnWindowFocus:!1})}export{n as u};

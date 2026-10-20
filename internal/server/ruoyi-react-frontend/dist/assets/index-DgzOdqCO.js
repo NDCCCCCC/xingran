@@ -1,1 +1,0 @@
-import{j as t,a5 as a}from"./vendor-react-Mm7mwLRq.js";import"./vendor-markdown-CTNRp5o7.js";import"./vendor-echarts-D4lsRrLc.js";const i=()=>t.jsx(a,{to:"/asset/reconciliation/dashboard",replace:!0});export{i as default};

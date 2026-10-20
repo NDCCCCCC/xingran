@@ -42,11 +42,11 @@ echo.
 
 REM Step 4: Copy frontend to embed directory
 echo [4/6] Copying frontend to embed directory...
-if exist internal\server\ruoyi-react-frontend (
-    rmdir /s /q internal\server\ruoyi-react-frontend
+if exist internal\server\xingran-react-frontend (
+    rmdir /s /q internal\server\xingran-react-frontend
 )
-mkdir internal\server\ruoyi-react-frontend
-xcopy /e /i /y ruoyi-react-frontend\dist internal\server\ruoyi-react-frontend\dist
+mkdir internal\server\xingran-react-frontend
+xcopy /e /i /y ruoyi-react-frontend\dist internal\server\xingran-react-frontend\dist
 echo Frontend files copied to embed directory
 echo.
 

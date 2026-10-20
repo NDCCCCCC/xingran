@@ -98,7 +98,7 @@ fi
 
 # ---------- frontend 段 ----------
 if [ "$SCOPE" = "frontend" ] || [ "$SCOPE" = "all" ]; then
-  cd "$ROOT/xingran-react-frontend"
+  cd "$ROOT/ruoyi-react-frontend"
 
   if command -v node >/dev/null 2>&1; then
     NODE_MAJOR="$(node --version | cut -d. -f1 | tr -d v)"

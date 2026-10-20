@@ -53,9 +53,9 @@ echo ""
 
 # Step 4: Copy frontend to embed directory
 echo -e "[4/6] ${YELLOW}Copying frontend to embed directory...${NC}"
-rm -rf internal/server/ruoyi-react-frontend
-mkdir -p internal/server/ruoyi-react-frontend
-cp -r ruoyi-react-frontend/dist internal/server/ruoyi-react-frontend/
+rm -rf internal/server/xingran-react-frontend
+mkdir -p internal/server/xingran-react-frontend
+cp -r ruoyi-react-frontend/dist internal/server/xingran-react-frontend/
 echo "Frontend files copied to embed directory"
 echo ""
 
