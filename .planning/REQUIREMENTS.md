@@ -21,8 +21,8 @@
 
 ### 软删恢复安全 (SAFE)
 
-- [ ] **SAFE-01**: `catSoftDeleted` 恢复前校验 AD 当前 DN 与存量 `ad_dn` 一致，不一致拒绝恢复 + 安全审计日志
-- [ ] **SAFE-02**: 登录路径与 batch-sync 共用分类逻辑与校验，行为一致
+- [x] **SAFE-01**: `catSoftDeleted` 恢复前校验 AD 当前 DN 与存量 `ad_dn` 一致，不一致拒绝恢复 + 安全审计日志
+- [x] **SAFE-02**: 登录路径与 batch-sync 共用分类逻辑与校验，行为一致
 
 ### 影子表完整性 (SHADOW)
 
@@ -68,8 +68,8 @@
 | QUEUE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 | GUARD-01 | Phase 59 | Complete |
 | GUARD-02 | Phase 59 | Complete (59-02 视图 + 59-03 端点/权限载体 + 59-04 前端对账 Tab 全部交付 2026-10-19；两条视觉断言归 59-VALIDATION Manual-Only) |
-| SAFE-01 | Phase 60 | Pending |
-| SAFE-02 | Phase 60 | Pending |
+| SAFE-01 | Phase 60 | Complete (2026-10-20, Phase 60 — 共享校验入口 `checkSoftDeletedRestore` + `NormalizeDN` 比较；登录拒绝零写入，批量拒项计入 `Skipped` 且绕开降级管道。证据：`TestPhase60_Login_*`、`TestPhase60_Batch_*`、`TestPhase60_PathConsistency_*`、`TestPhase60_CheckSoftDeletedRestore_Predicate`) |
+| SAFE-02 | Phase 60 | Complete (2026-10-20, Phase 60 — 两路径共用 `classifyUser` + `checkSoftDeletedRestore`；同一 fixture 双路径用例断言相同判定与相同 DB 终态。证据：`TestPhase60_PathConsistency_MismatchRefusedBoth` / `TestPhase60_PathConsistency_MatchingRestoredBoth`、`TestPhase60_SyncErrorReasonFor`) |
 | SHADOW-01 | Phase 61 | Pending |
 | SHADOW-02 | Phase 61 | Pending |
 | SHADOW-03 | Phase 61 | Pending |

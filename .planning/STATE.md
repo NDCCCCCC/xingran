@@ -5,17 +5,17 @@ milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 60
 current_phase_name: 软删恢复安全
 status: executing
-stopped_at: Completed 60-01-PLAN.md
-last_updated: "2026-10-20T07:21:15.300Z"
+stopped_at: Completed 60-02-PLAN.md
+last_updated: "2026-10-20T08:10:00.000Z"
 last_activity: 2026-10-20
-last_activity_desc: Phase 60 execution started
-state_head: 1d7b3e864a8a040924187dbb733bd104d8c00669
+last_activity_desc: Phase 60 complete (2/2 plans)
+state_head: 19fefc32
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 16
-  completed_plans: 15
-  percent: 33
+  completed_plans: 16
+  percent: 50
 ---
 
 # Project State
@@ -29,11 +29,11 @@ progress:
 
 ## Current Position
 
-Phase: 60 (软删恢复安全) — EXECUTING
+Phase: 60 (软删恢复安全) — COMPLETE
 Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-10-20 — Phase 60 execution started
-Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phase 59 全部完成，待 verification）
+Status: Phase complete (2/2 plans)
+Last activity: 2026-10-20 — Phase 60 complete
+Progress: 3/6 phases [█████░░░░░] 50%（16/16 plans — Phase 60 全部完成，待 verification）
 
 ## Accumulated Context
 
@@ -159,6 +159,11 @@ Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phas
 - **antd v6 测试口径沉淀**：激活面板 = [role=tabpanel]:not(.ant-tabs-content-hidden)（无 tabpane-active）；Button 两汉字自动插空格且 loading 带图标前缀 → unanchored regex 定位。
 - **useDeptTree 空树用模块级 EMPTY_DEPTS 常量**喂 DepartmentTreeSelect（rc-tree motion bail 陷阱，DeptTree #185 同款）。
 - [Phase 60]: 60-01 执行期决策：sentinel 放在 security 包（system 已 import security，反向声明会成环）；原因码 soft_delete_mismatch 只以常量出现，ad_authenticator 与 auth.go 共用防漂移；校验入口返回 bool 并内聚唯一审计 WARN，调用点只决定拒绝后动作；策略拒绝日志降为 WARN，与基础设施故障 ERROR 区分。
+- [Phase 60]: 60-02 执行期决策（2026-10-20，SAFE-01 批量侧 + SAFE-02 双路径一致性）：
+  - **D-03 安全不变量有回归断言**：批量拒绝后 `db.Unscoped().First` 验证 `DeletedAt.Valid == true` 且 `ad_dn` 逐字等于原值；登录路径已有的二次登录拒绝断言继续成立——拒绝绝不清空存量 DN，防「清空 → 空 DN 放行」绕过。
+  - **D-06 过滤位置锁定在阶段 2 分类日志之后、阶段 3 哈希之前**：`plansByCat[catSoftDeleted] = allowed` 只保留通过 `checkSoftDeletedRestore(..., "batch")` 的项；被拒项 `result.Skipped++` 并追加不含 DN 的 `SyncError`，不进 `hashPasswordsConcurrent`、不进 `runInBatchedTx`，因此不会触发「降级逐个处理」也不会被计入 `Failed`。
+  - **D-07 双路径一致性证据**：`TestPhase60_PathConsistency_MismatchRefusedBoth` / `TestPhase60_PathConsistency_MatchingRestoredBoth` 用两个完全相同 fixture 分别跑 `SyncUserFromAD` 与 `BatchSyncADUsers`，断言判定结果与 DB 终态一致；静态守卫 `grep -c 's.checkSoftDeletedRestore('` 恰为 2。
+  - **测试基座扩展而非复制**：抽出 `insertPhase60SoftDeletedUser` 供混合批用例复用同一 DB；批量用例 `OuDn` 一律置空、`defaultRoleID` 传空串，规避 nil mapper 与角色表依赖（RESEARCH Pitfall 8）。
 
 ### Blockers
 
@@ -180,8 +185,8 @@ Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phas
 
 ## Session
 
-**Last session:** 2026-10-20T07:21:14.466Z
-**Stopped at:** Completed 60-01-PLAN.md
+**Last session:** 2026-10-20T08:10:00.000Z
+**Stopped at:** Completed 60-02-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -193,3 +198,4 @@ Progress: 2/6 phases [███░░░░░░░] 33%（14/14 plans — Phas
 | Phase 59 P03 | 15min | 3 tasks | 8 files |
 | Phase 59 P04 | 44min | 3 tasks | 7 files |
 | Phase 60 P01 | 17 min | 2 tasks | 7 files |
+| Phase 60 P02 | 13 min | 2 tasks | 4 files |
