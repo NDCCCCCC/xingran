@@ -660,6 +660,9 @@ func syncErrorReasonMessage(reason string) string {
 		return "AD 用户信息搜索失败，请联系系统管理员"
 	case "user_sync":
 		return "AD 用户同步到本地失败，请联系系统管理员"
+	case security.SyncReasonSoftDeleteMismatch:
+		// 安全策略拦截：固定文案，绝不包含 DN 内部细节（D-04 / T-60-03）。
+		return "该账号存在 AD 身份不一致，已被安全拦截，请联系系统管理员"
 	case "no_syncer":
 		return "AD 用户同步服务未配置，请联系系统管理员"
 	default:

@@ -259,6 +259,43 @@ func (s *UserSyncService) updateExistingUser(tx *gorm.DB, user *models.User, adU
 	return nil
 }
 
+// checkSoftDeletedRestore 软删用户恢复的身份校验共享入口（SAFE-01 / SAFE-02）。
+// 返回 true 表示允许恢复；false 表示拒绝，且本函数已写出唯一一条安全审计 WARN。
+//
+// 判定（D-01 / D-02）：
+//   - 存量 ad_dn 归一化后为空（NULL / 空串 / 纯空白）→ 放行；
+//   - 与 AD 当前 DN 归一化后相等 → 放行；
+//   - 其余 → 拒绝。
+//
+// 安全不变量（D-03）：本函数只读，绝不改写存量 ad_dn，也绝不解除软删状态。
+// 登录路径与批量路径都必须经由本函数判定，禁止在调用点自行实现 DN 比较。
+func (s *UserSyncService) checkSoftDeletedRestore(user *models.User, currentUserDN, path string) bool {
+	storedDN := ""
+	if user.AdDn != nil {
+		storedDN = *user.AdDn
+	}
+	normalizedStored := addomain.NormalizeDN(storedDN)
+
+	// D-01: 存量 DN 为空 → 无身份可比对，放行（不写日志）。
+	if normalizedStored == "" {
+		return true
+	}
+
+	// D-02: 归一化比较（属性名与属性值都大小写不敏感）。
+	normalizedCurrent := addomain.NormalizeDN(currentUserDN)
+	if normalizedStored == normalizedCurrent {
+		return true
+	}
+
+	// D-05: 两路径共用的唯一审计日志产出点。用户可见文案不含 DN；
+	// 完整 DN 细节只进 WARN。
+	applogger.Warnf(
+		"[SECURITY] 软删用户恢复被拒绝: AD 身份不一致, path=%s, userID=%s, username=%s, storedAdDN=%q, currentAdDN=%q, normalizedStored=%q, normalizedCurrent=%q",
+		path, user.ID, user.Username, storedDN, currentUserDN, normalizedStored, normalizedCurrent,
+	)
+	return false
+}
+
 // restoreSoftDeletedUser 恢复被软删除的用户并补充/重置AD信息。
 // 用于处理"用户曾被软删除(deleted_at IS NOT NULL),再次从AD同步"的场景:
 // 由于 sys_user.username 是普通唯一索引(软删除行仍占用 username),
@@ -270,6 +307,12 @@ func (s *UserSyncService) updateExistingUser(tx *gorm.DB, user *models.User, adU
 //  3. 更新 AD 信息(ad_username/ad_dn/ad_ou_dn/ad_synced_at/email/phone)
 //  4. 重新分配默认角色(软删除期间角色关联可能已被清理)
 func (s *UserSyncService) restoreSoftDeletedUser(tx *gorm.DB, user *models.User, adUser *ADUserInfoForSync, defaultRoleID string) error {
+	// SAFE-01/SAFE-02: 在密码哈希与任何写库之前做身份校验。
+	// 拒绝时返回 sentinel；事务内无写入 → 回滚后行保持软删、存量 ad_dn 原值保留（D-03）。
+	if !s.checkSoftDeletedRestore(user, adUser.UserDN, "login") {
+		return fmt.Errorf("%w: username=%s", security.ErrSoftDeleteIdentityMismatch, adUser.Username)
+	}
+
 	// 重置默认密码（首次登录后要求修改，对齐 createNewUser）
 	hashedPassword, err := s.pwdManager.HashPassword("123456")
 	if err != nil {
@@ -406,7 +449,12 @@ func (s *UserSyncService) SyncADUser(ctx context.Context, adUserInfo *security.A
 	// 1. 转换并同步用户基本信息
 	user, category, err := s.SyncUserFromAD(ctx, adUser, defaultRoleID)
 	if err != nil {
-		applogger.Errorf("[SyncADUser] 同步失败: %v", err)
+		// 安全策略拒绝是预期行为（WARN），其余是基础设施/数据故障（ERROR）。
+		if errors.Is(err, security.ErrSoftDeleteIdentityMismatch) {
+			applogger.Warnf("[SECURITY] 软删恢复被安全策略拒绝: username=%s, err=%v", adUser.Username, err)
+		} else {
+			applogger.Errorf("[SyncADUser] 同步失败: %v", err)
+		}
 		return nil, err
 	}
 
