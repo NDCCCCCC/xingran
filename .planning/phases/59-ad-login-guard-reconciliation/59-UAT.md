@@ -3,15 +3,15 @@ status: testing
 phase: 59-ad-login-guard-reconciliation
 source: [59-VERIFICATION.md]
 started: 2026-10-20T01:20:00Z
-updated: 2026-10-20T02:30:00Z
+updated: 2026-10-20T03:50:00Z
 ---
 
 ## Current Test
 
-number: 3
-name: 对账 Tab 浏览器权限渲染（授权与未授权两态）
+number: 5
+name: GUARD-01/GUARD-02 验收口径人工复核（FLAGGED ASSUMPTION 闭环）
 expected: |
-  管理员为角色授予 ops:ad:config:reconciliation:list → 该角色登录后对账 Tab 出数据；未授权角色登录后 Tab 内渲染『无对账查看权限』403 且不发对账数据请求；直接 POST /api/v1/ad-domain/reconciliation/mismatch 被后端 RequirePermissions 拒为 403
+  确认 ROADMAP SC1~SC4 原文即权威验收口径（四个 PLAN frontmatter 的 edge probe 均报 unclassified/unresolved，未假设 backstop）
 awaiting: user response
 
 ## Tests
@@ -29,11 +29,13 @@ issues_found: 2（见 Gaps G-59-2 / G-59-3，均已在本轮修复并复验）
 
 ### 3. 对账 Tab 浏览器权限渲染（授权与未授权两态）
 expected: 管理员为角色授予 ops:ad:config:reconciliation:list → 该角色登录后对账 Tab 出数据；未授权角色登录后 Tab 内渲染『无对账查看权限』403 且不发对账数据请求；直接 POST /api/v1/ad-domain/reconciliation/mismatch 被后端 RequirePermissions 拒为 403
-result: [pending]
+result: pass
+verified: 用户实测确认（2026-10-20 11:42 部署 11:17 二进制后）—— 授权角色登录后对账 Tab 出数据（真实生产数据渲染成功）；权限树「域控配置」下出现「对账查询」按钮（Test 4 同轮确认）
 
 ### 4. 生产库父菜单『AD域控配置』（menu_type='C'）存在性确认
 expected: 生产 sys_menu 存在该父菜单 → migration_218 自动建 F 行并精准授权；若缺失 → 管理员需手建按钮权限 ops:ad:config:reconciliation:list 并为相关角色授权（迁移已按 warning + nil 降级，不会启动失败）
-result: [pending]
+result: pass
+verified: 生产库只读探针（2026-10-20）证实父菜单实为 menu_name='域控配置'/perms='ops:ad:config:list'（规划假设的『AD域控配置』不存在，G-59-3）；部署修复版二进制后 migration_218 按 perms 命中，用户实测权限树出现「对账查询」按钮（F 行已建并精准授权 2 个关联父菜单的角色）
 
 ### 5. GUARD-01/GUARD-02 验收口径人工复核（FLAGGED ASSUMPTION 闭环）
 expected: 确认 ROADMAP SC1~SC4 原文即权威验收口径（四个 PLAN frontmatter 的 edge probe 均报 unclassified/unresolved，未假设 backstop）
@@ -50,9 +52,9 @@ result: [pending]
 ## Summary
 
 total: 7
-passed: 1
+passed: 3
 issues: 0
-pending: 5
+pending: 3
 skipped: 1
 blocked: 0
 
