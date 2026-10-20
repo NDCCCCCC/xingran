@@ -17,7 +17,19 @@ import (
 var frontendFS embed.FS
 
 // ServeRoot 处理根路径请求。
+//
+// 直连 :9000(没有 nginx 剥前缀)时,浏览器访问 "/" 与前端 Router 的
+// basename "/xingran" 不匹配 → 白屏。这里 302 到 /xingran/,让浏览器落到
+// basename 能匹配的地址上。
+//
+// nginx 剥前缀部署时,后端收到的 "/" 来自 /xingran/ 且请求带
+// X-Forwarded-Prefix 头,此时直接返回 index.html,否则浏览器会在
+// "/" 与 "/xingran/" 之间无限跳转(见 rootRedirectPath)。
 func ServeRoot(c *gin.Context) {
+	if target := rootRedirectPath(c); target != "" {
+		c.Redirect(http.StatusFound, target)
+		return
+	}
 	serveFile(c, "index.html")
 }
 

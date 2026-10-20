@@ -101,13 +101,13 @@ func TestSubPath_Middleware_RewritesBackendPrefixes(t *testing.T) {
 // 无前缀请求、SPA 客户端路由、相似前缀 /xingranfoo、根路径。
 func TestSubPath_Middleware_LeavesOtherPathsUnchanged(t *testing.T) {
 	unchanged := []string{
-		"/api/v1/probe",        // 无前缀
-		"/uploads/a.png",       // 无前缀
-		"/xingran/dashboard",    // SPA 客户端路由
-		"/xingran/",            // 子路径根
-		"/xingran",             // 子路径根(无尾斜杠)
+		"/api/v1/probe",            // 无前缀
+		"/uploads/a.png",           // 无前缀
+		"/xingran/dashboard",       // SPA 客户端路由
+		"/xingran/",                // 子路径根
+		"/xingran",                 // 子路径根(无尾斜杠)
 		"/xingranfoo/api/v1/probe", // 相似前缀,不得误剥
-		"/",                    // 根路径
+		"/",                        // 根路径
 	}
 	for _, p := range unchanged {
 		c, _ := newSubPathCtx(http.MethodGet, p)
