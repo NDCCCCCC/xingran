@@ -226,7 +226,16 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
   3. `sys_ad_group_member` 重放在单事务（Delete+Create 包 Transaction）内完成，重放过程中外部查询看不到空成员窗口（SHADOW-02）
   4. 删除清理挂 `syncDataInternal` 内执行（复用 singleflight），与全量同步互斥不并发（SHADOW-03）
 
-**Plans**: TBD
+**Plans**: 3 plans (3 waves, sequential — sync.go/computer.go 为共享修改面；SHADOW-03 挂载与 SHADOW-01 清理同 plan 原子落地，依赖约束天然满足)
+
+**Wave 1**
+- [ ] 61-01-PLAN.md — SHADOW-01+03 清理主体：shadow_cleanup_service 三类清理 + 两道闸门（0 条 / >50%）+ full 分支挂载 + SyncResult 计数 (SHADOW-01, SHADOW-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 61-02-PLAN.md — SHADOW-01 配套复活路径：OU/Group/User/Computer 四类 upsert 复活化（existing 查询 Unscoped 化 + OnConflict 补 deleted_at）+ 翻转 D-78-05c 既有断言 + sys_ad_group 存量潜伏缺陷一并修复 (SHADOW-01)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 61-03-PLAN.md — SHADOW-02 组成员重放事务化 + CHECK 失败注入证伪 + 重放幂等锁定 + phase 收口回填 (SHADOW-02)
 
 ### Phase 62: 卫生收尾与死代码清理
 
