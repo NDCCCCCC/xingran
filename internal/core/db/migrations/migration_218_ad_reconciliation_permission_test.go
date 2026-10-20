@@ -93,8 +93,10 @@ func countMigrate218Rows(t *testing.T, db *gorm.DB, query string, args ...interf
 func seedMigrate218ParentAndRoles(t *testing.T, db *gorm.DB) {
 	t.Helper()
 	execMigrate218(t, db, []string{
-		`INSERT INTO sys_menu (id, menu_name, menu_type, visible, status, path, order_num)
-		 VALUES ('menu-adcfg', 'AD域控配置', 'C', 1, 0, 'ad-config', 3)`,
+		// 父菜单形态对齐真实库：menu_name='域控配置' + perms='ops:ad:config:list'
+		// （migration_218 按 perms 定位父菜单，不按 menu_name —— 见迁移注释）
+		`INSERT INTO sys_menu (id, menu_name, menu_type, visible, status, path, order_num, perms)
+		 VALUES ('menu-adcfg', '域控配置', 'C', 1, 0, 'ad-config', 3, 'ops:ad:config:list')`,
 		`INSERT INTO sys_role (id, role_name, status) VALUES ('role-a', 'AD管理员', 0)`,
 		`INSERT INTO sys_role (id, role_name, status) VALUES ('role-b', '普通角色', 0)`,
 		// 只有角色 A 关联了父菜单

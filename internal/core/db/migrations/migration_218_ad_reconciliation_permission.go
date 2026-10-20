@@ -16,6 +16,10 @@ import (
 // （菜单 seed perms 与路由命名不一致是本仓库踩过的历史坑）。
 const adReconciliationListPerms = "ops:ad:config:reconciliation:list"
 
+// adConfigListPerms 是 AD 域控配置页的菜单权限标识（C 型菜单，menu_name='域控配置'）。
+// 本迁移的对账按钮挂在它下面，授权面与该页面的既有按钮（新增/编辑/删除/测试连接/同步数据）同源。
+const adConfigListPerms = "ops:ad:config:list"
+
 // Migrate218ADReconciliationPermission Phase 59 / GUARD-02：对账查询按钮权限载体。
 //
 // 设计（59-03 Decision Reconciliation 第 2/3 条）：
@@ -27,9 +31,11 @@ const adReconciliationListPerms = "ops:ad:config:reconciliation:list"
 //     父子联动视觉陷阱），不用 migration_163 的「所有 status=0 角色」宽授权面。
 //   - 幂等：perms 行已存在则跳过创建（复用既有行 ID 补跑授权）；
 //     授权 INSERT 用 NOT EXISTS 兜底，可重复执行。
-//   - 父菜单缺失（FLAGGED ASSUMPTION：生产库应有 menu_name='AD域控配置' 且
-//     menu_type='C'，与 migration_163 同款假设）→ log warning 并返回 nil（非阻断，
-//     部署清单登记「管理员手建按钮权限并授权」操作项）。
+//   - 父菜单缺失（生产库/测试库实测：C 型菜单 menu_name='域控配置'，perms=ops:ad:config:list）
+//     → log warning 并返回 nil（非阻断，部署清单登记「管理员手建按钮权限并授权」操作项）。
+//     ⚠ 2026-10-20 UAT-59 Test 2 实测修正：原实现按 menu_name='AD域控配置' 查找，
+//     而该名字在 seed 与归档 SQL 中均不存在 → 迁移恒降级跳过 → 对账按钮权限
+//     永远建不出来（普通角色对账 Tab 恒 403）。改为按 perms 定位。
 func Migrate218ADReconciliationPermission(db *gorm.DB) error {
 	log.Println("Running migration 218: AD reconciliation button permission (no menu)")
 
@@ -41,15 +47,21 @@ func Migrate218ADReconciliationPermission(db *gorm.DB) error {
 		return fmt.Errorf("查询既有对账权限行失败: %w", permErr)
 	}
 
-	// 2) 查找父菜单（只认 C 型『AD域控配置』）
+	// 2) 查找父菜单（AD 域控配置页，C 型）
+	//
+	// ⚠ 按 **perms** 定位，不按 menu_name：
+	// 生产/测试库的该菜单实际 menu_name 是「域控配置」（perms=ops:ad:config:list），
+	// 规划时假设的「AD域控配置」在 seed 与归档 SQL 里都不存在 → 按名字查必然
+	// ErrRecordNotFound → 静默降级跳过 → 对账按钮权限永远建不出来（普通角色恒 403）。
+	// perms 才是该页面的稳定标识（菜单改名不影响路由鉴权）。
 	var parent models.Menu
-	if err := db.Where("menu_name = ? AND menu_type = ?", "AD域控配置", "C").First(&parent).Error; err != nil {
+	if err := db.Where("perms = ? AND menu_type = ?", adConfigListPerms, "C").First(&parent).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("Warning: 未找到『AD域控配置』父菜单, migration_218 跳过创建与授权 "+
-				"(部署清单须管理员手建按钮权限并授权): %v", err)
+			log.Printf("Warning: 未找到 AD 域控配置父菜单(perms=%s), migration_218 跳过创建与授权 "+
+				"(部署清单须管理员手建按钮权限并授权): %v", adConfigListPerms, err)
 			return nil
 		}
-		return fmt.Errorf("查询『AD域控配置』父菜单失败: %w", err)
+		return fmt.Errorf("查询 AD 域控配置父菜单失败: %w", err)
 	}
 
 	// 3) 创建 F 型按钮权限行（幂等：已存在则复用既有行）

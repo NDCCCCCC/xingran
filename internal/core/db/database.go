@@ -253,6 +253,11 @@ func (d *Database) sanitizeSQLiteModelDefaults() error {
 	// sqlite 不接受),必须显式加入净化列表,否则 sqlite 路径上 sys_ad_service_accounts
 	// 建表报 "near \"(\": syntax error"。
 	modelsToSanitize = append(modelsToSanitize, &models.ADServiceAccount{})
+	// Phase 59 G-59-2: sys_dept_ou_mapping 的 ID 字段 tag 含 default:gen_random_uuid()
+	// (PG-only 函数式默认,sqlite 不接受 → 建表报 "near \"(\": syntax error")。
+	// 该模型在 sqlite 分支注册进 AutoMigrate,故必须一并净化;剥离后由
+	// BeforeCreate 钩子(uuid.New()) 填充 ID,PG 下行为等价。
+	modelsToSanitize = append(modelsToSanitize, &models.DeptOUMapping{})
 	for _, model := range modelsToSanitize {
 		stmt := &gorm.Statement{DB: d.DB}
 		if err := stmt.Parse(model); err != nil {
@@ -680,6 +685,13 @@ func MigrateModelList() []interface{} {
 		&models.ConfigBackup{},
 		&models.ConfigRestoreTask{}, // Phase 93: 配置恢复任务 (D-15 异步编排载体)
 		&models.ADPushQueue{},      // Phase 57: AD 推送队列 (outbox-lite 队列表)
+		// Phase 59 G-59-2: 部门-OU 映射表。其建表 DDL 原先只存在于归档 .sql
+		// (archive/legacy-2026-06-15/126_create_dept_ou_mapping_table.sql) 与
+		// scripts/dbprovision(新部署专用工具),而 .sql 迁移不被自动加载 ——
+		// 生产库因当年手工执行过该 SQL 而有表,全新库走常规启动路径必然缺表,
+		// 导致 migration_217 的 CREATE VIEW 报 SQLSTATE 42P01(视图建不出来,
+		// 对账端点 500)。此处补注册进 AutoMigrate(存量库无操作,全新库建表)。
+		&models.DeptOUMapping{},
 		&models.DeviceMACAddress{},
 		&models.DevicePortStatus{},
 		&models.LLDPNeighborInfo{}, // LLDP 邻居信息(拓扑发现)
@@ -961,6 +973,14 @@ func (d *Database) AutoMigrate() error {
 		// 已在上方 sanitizeSQLiteModelDefaults 显式追加本模型净化,SQLite 下默认剥离由应用层
 		// uuid.New() 填充(BeforeCreate 钩子),PG 下行为等价。
 		migrateList = append(migrateList, &models.ADServiceAccount{})
+		// Phase 59 G-59-2: sys_dept_ou_mapping 缺表同族(与 ADServiceAccount 同款)。
+		// 建表 DDL 只在归档 .sql(126_create_dept_ou_mapping_table.sql)与
+		// scripts/dbprovision 里,两者都不在常规启动路径上 → sqlite 全新文件库
+		// 缺表 → migration_217 建视图报 42P01 → 对账端点 500。
+		// ID 字段 default:gen_random_uuid() 是 PG-only 函数式默认,已在
+		// sanitizeSQLiteModelDefaults 显式追加本模型净化(sqlite 下由
+		// BeforeCreate 钩子 uuid.New() 填充 ID,PG 下行为等价)。
+		migrateList = append(migrateList, &models.DeptOUMapping{})
 	}
 	err := d.DB.Migrator().AutoMigrate(migrateList...)
 	if err != nil {
