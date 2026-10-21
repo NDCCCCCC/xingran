@@ -1,0 +1,43 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v1.21 — AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)",
+  "phases": [
+    {
+      "number": "57",
+      "name": "AD 推送队列基建",
+      "status": "complete"
+    },
+    {
+      "number": "58",
+      "name": "排水器与 compare-and-move 推送",
+      "status": "in_progress"
+    },
+    {
+      "number": "59",
+      "name": "登录回写守卫与部门对账视图",
+      "status": "complete"
+    },
+    {
+      "number": "60",
+      "name": "软删恢复安全",
+      "status": "pending"
+    },
+    {
+      "number": "61",
+      "name": "影子表完整性",
+      "status": "pending"
+    },
+    {
+      "number": "62",
+      "name": "卫生收尾与死代码清理",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 5 of 6 · 50% · executing"
+  },
+  "updated_at": "2026-10-20T16:17:06.765Z"
+}
