@@ -210,7 +210,7 @@ Progress: 3/6 phases [█████░░░░░] 50%（18/19 plans — Phas
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261019-mmc | 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04） | 2026-10-19 | `264aaf33` | [261019-mmc-extractrdnfromdn-rfc4514-modifydn-ad-pha](./quick/261019-mmc-extractrdnfromdn-rfc4514-modifydn-ad-pha/) |
-| 261021-iqq | ad_push_queue 排水间隔热重载（方案A：固定 30s tick + drainGate 门控，改 sys_config ≤30s 生效无需重启）+ 缺陷X markFailed/markDead sanitize + NUL 回归用例 | 2026-10-21 | 待提交 | [261021-iqq-drain-interval-hot-reload](./quick/261021-iqq-drain-interval-hot-reload/) |
+| 261021-iqq | ad_push_queue 排水间隔热重载（方案A：固定 30s tick + drainGate 门控，改 sys_config ≤30s 生效无需重启）+ 缺陷X markFailed/markDead sanitize + NUL 回归用例 | 2026-10-21 | `426903fd` | [261021-iqq-drain-interval-hot-reload](./quick/261021-iqq-drain-interval-hot-reload/) |
 
 ### Todos
 
