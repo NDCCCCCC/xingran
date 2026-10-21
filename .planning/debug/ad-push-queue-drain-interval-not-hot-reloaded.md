@@ -4,8 +4,8 @@ status: fixed
 session_type: bug
 trigger: "verify-work 57 Test 1 期间发现：修改 sys_config 的 ad_push_queue.drain_interval_seconds 后不生效，必须重启后端才生效"
 created: 2026-10-21T12:05:00+08:00
-updated: 2026-10-21T14:10:00+08:00
-deferred_to: （已完成）quick 261021-iqq，方案A落地：固定 30s tick + drainGate 门控 + 缺陷X sanitize；待提交
+updated: 2026-10-21T15:22:00+08:00
+deferred_to: （已完成）quick 261021-iqq（426903fd），方案A实测：300→60 12s 生效、60→300 29s 生效
 component: internal/services/addomain/ad_push_queue_drain_service.go
 phase: 57
 related:
@@ -171,3 +171,17 @@ chenchao-076，但暴露两个**新缺陷**（与热重载无关，独立记录�
 Test 2 的核心断言（kill -9 → 重启 → pending 行不丢）**已经独立成立**：行在 kill 与重启
 之间保持 pending、重启后 attempts=0、字段零漂移。12:15 tick 的失败是**排水阶段的另一个
 缺陷**（X），不回溯到持久化。Test 2 可以按证据裁决；缺陷 X/Y 转入修复清单。
+
+---
+
+## 修复后实测（2026-10-21 15:17–15:21，quick 261021-iqq 代码 426903fd）
+
+本机重建 ruoyi-backend.exe 并启动（pid 29272，15:17:24）：
+
+- 启动日志确认新注册形态：`AD同步定时任务已启动（… + ad_push_queue 排水: 固定30s tick×间隔门控，sys_config 热重载）`。
+- **正向**：T0=15:18:18 UPDATE sys_config 300→60 → **15:18:30**（12 秒后，下一个 30s tick）打出
+  `[ad_push_queue] 排水间隔配置变化 300s → 60s（热重载生效，无需重启）`。
+- **反向**：T1=15:20:31 UPDATE 60→300 → **15:21:00**（29 秒后）打出 `60s → 300s（热重载生效，无需重启）`。
+- 结束状态：config_value 已恢复用户原值 **300**；remark 已对齐新文案『修改后约30秒内生效(无需重启)』（存量行手工 UPDATE，migration 216 seed 只对新环境生效的 debt 已消化）。
+
+结论：方案A热重载实测达成 ≤30s 生效目标；档案关闭（status: fixed）。
