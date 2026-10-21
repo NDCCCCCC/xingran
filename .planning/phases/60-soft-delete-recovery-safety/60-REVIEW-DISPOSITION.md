@@ -9,12 +9,14 @@ findings:
     title: "AD bind identity (UPN) and DN-gate identity (sAMAccountName) are resolved by different attributes — SAFE-01 can be bypassed"
   - id: CR-02
     severity: critical
-    disposition: deferred
+    disposition: fixed
     title: "Locally disabled users can still log in through the AD and hybrid paths (token issued without status check)"
+    resolution: "2026-10-21 修复：主登录路径发 token 前补 user.Status != models.UserStatusEnabled 检查（internal/api/v1/auth.go 段 6.5，覆盖 AD/hybrid/工厂回退；loginLocalDirect 原有检查不变）。57-CONTEXT.md Deferred 项同步关闭。build + auth 包测试通过。"
   - id: CR-03
     severity: critical
-    disposition: deferred
+    disposition: fixed
     title: "`refreshToken` re-issues a full token pair for disabled users"
+    resolution: "2026-10-21 修复：refreshToken 查库后补 user.Status != models.UserStatusEnabled 拒绝（internal/api/v1/auth.go；refresh 非登录，不记 login log）。与 CR-02 同批修复，build + auth 包测试通过。"
   - id: WR-01
     severity: warning
     disposition: open

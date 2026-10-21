@@ -119,7 +119,7 @@
 ## Deferred Ideas
 
 - **UpdateStatus 双向推送**（停用→disable / 启用→enable）— v1.21 范围外；动作枚举已预留扩展位（D-04），后续 milestone 可低成本接入
-- **auth.go AD 登录路径不查 user.Status**（停用用户仍可 AD bind 登录拿 JWT，local 路径有检查 :39）— 独立 bug，修法应为 auth 补 ~3 行 status 检查而非队列推送；候选后续 phase 或并入 GUARD 相关工作
+- ~~**auth.go AD 登录路径不查 user.Status**~~（停用用户仍可 AD bind 登录拿 JWT，local 路径有检查 :39）— ✅ 已修复 2026-10-21：主登录路径发 token 前补 user.Status != UserStatusEnabled 检查（auth.go 段 6.5，覆盖 AD/hybrid/工厂回退三路；60-REVIEW-DISPOSITION CR-02 critical 同源），build + auth 包测试通过
 - **BatchDelete 之外的批量路径排查**（如 Excel 删除类入口若有）— Phase 57 只覆盖已确认的两条软删事务路径
 
 </deferred>

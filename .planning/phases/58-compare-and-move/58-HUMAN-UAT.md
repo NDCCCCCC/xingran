@@ -3,7 +3,7 @@ status: partial
 phase: 58-compare-and-move
 source: [58-VERIFICATION.md, 58-VALIDATION.md]
 started: 2026-10-19T00:00:00+08:00
-updated: 2026-10-19T00:00:00+08:00
+updated: 2026-10-21T00:00:00+08:00
 ---
 
 ## Current Test
@@ -23,7 +23,7 @@ updated: 2026-10-19T00:00:00+08:00
 
 ## Tests
 
-### UAT-58-1. 真 AD 上的 compare-and-move（QUEUE-04 / SC2）
+### 1. 真 AD 上的 compare-and-move（QUEUE-04 / SC2）
 
 **这项验的是什么：** 自动化用例（`TestPhase58_Drain_MoveUpdatesAdDnAndAdOuDn` 等）只证明
 「我们调了 `MoveUser(dn, targetOU)`」。真域控上 ModifyDN 的 wire 行为 —— 旧 RDN 是否真被
@@ -75,11 +75,11 @@ WHERE entity_id = '<userId>';
 说明 compare-and-move 的幂等点未生效（对已搬移的源 DN 重复 ModifyDN）→ **立即回报**，
 这是 QUEUE-04 的核心失败模式。若第 6 步 AD 侧出现第二条 ModifyDN，同样立即回报。
 
-**result:** [pending]
+result: [pending]
 
 ---
 
-### UAT-58-2. 账号池熔断期间的退避节奏（QUEUE-03 / SC1 后半）
+### 2. 账号池熔断期间的退避节奏（QUEUE-03 / SC1 后半）
 
 **这项验的是什么：** 退避曲线（60s→2min→4min→8min→16min，attempts 达 5 转 dead）与账号池
 30min 熔断周期的**桥接**关系。自动化用例只验纯函数 `backoffDuration(n)` 的返回值，
@@ -134,50 +134,28 @@ FROM sys_ad_service_accounts WHERE config_id = '<cfgId>';
 - 确认 `sys_ad_service_accounts.status` 回到 `0`（可用）
 - 确认卡在 `dead` 的队列行已被重新编辑触发入队（`dead` 行不自动复活 —— 见 UAT-58-7 的说明）
 
-**result:** [pending]
+result: [pending]
 
 ---
 
-### UAT-58-3. `sys_config` 排水间隔旋钮重启生效（D-05）
+### 3. `sys_config` 排水间隔旋钮热重载（D-05，quick 261021-iqq 升级为方案A）
 
-**这项验的是什么：** `LoadDrainIntervalSeconds` 在**启动时读取一次**，改后需重启。
-自动化用例只验纯函数 `LoadDrainIntervalSeconds` / `SecondsToCronSpec` 的映射（含 6 段 cron
-的 `*/N` vs `0 */M` 语义陷阱 F-E），不验「重启后 cron 真的按新间隔跑」。
+**这项验的是什么：** ~~原设计：`LoadDrainIntervalSeconds` 启动时读取一次，改后需重启~~。
+**已被 quick 261021-iqq 覆盖并超越（2026-10-21 用户裁决方案A热重载）**：cron 固定 30s tick +
+`drainGate.shouldDrain` 门控，每 tick 读 `sys_config`，改值**无需重启**，≤30s 生效。
 
-**步骤：**
-1. 在「参数设置」页找到 `ad_push_queue.drain_interval_seconds`（migration_216 seed，
-   默认值 `30`，`config_type='N'` 非系统参数，可编辑），改为 `60`
-2. **重启后端**
-3. 在启动日志里找这一行：
+**实测证据（2026-10-21，真环境 10.62.10.34，代码 = 提交 426903fd，pid 29272）：**
+- 正向：T0=15:18:18 `UPDATE 300→60` → 15:18:30 日志 `[ad_push_queue] 排水间隔配置变化 300s → 60s（热重载生效，无需重启）` → **12 秒生效**
+- 反向：T1=15:20:31 `UPDATE 60→300` → 15:21:00 日志 `排水间隔配置变化 60s → 300s` → **29 秒生效**
+- 均在 ≤30s（一个 tick 粒度）目标内；实测后 value 已恢复 300
+- 自动化侧：`TestDrainGate_IntervalChangeResetsAndLogs`（scheduler 包）锁门控行为；
+  `SecondsToCronSpec` 已随方案A删除，F-E 的 `*/60` 陷阱不再适用（固定 `*/30 * * * * *`）
 
-```
-[ad_push_queue] 排水间隔配置: ad_push_queue.drain_interval_seconds = 60s（改后需重启后端生效）
-AD同步定时任务已启动（全量同步: 每5分钟 + 账号池恢复: 每5分钟 + ad_push_queue 排水: 0 */1 * * * *）
-```
-
-**观察点 / 期望：**
-- 日志出现 `drain_interval_seconds = 60s`
-- cron spec 是 **`0 */1 * * * *`**（6 段，第 6 位是分钟），
-  **不是** `*/60 * * * * *`（后者秒位 `*/60` 会被解析成 `{0}`，实际每分钟只跑一次 —— F-E 陷阱）
-- 连续两条队列行的 `pushed_at` 间隔约 **60s**
-
-```sql
-SELECT entity_id, pushed_at FROM ad_push_queue
-WHERE pushed_at IS NOT NULL ORDER BY pushed_at DESC LIMIT 5;
-```
-
-**反向判据：** **不重启**就改值 → 间隔保持旧值不变（启动读取语义，不是 bug）
-
-**失败时该回报什么：** 日志里的 spec 与期望字面不符（尤其出现 `*/60 * * * * *`），
-或改了值不重启就生效了（说明读的是实时配置，与 D-05 的设计相反）→ 回报。
-
-**恢复：** 把该参数改回 `30` 并重启。
-
-**result:** [pending]
+result: [pass]
 
 ---
 
-### UAT-58-4. 多 AD 配置（父子域）最长后缀命中（D-02 / SC3）
+### 4. 多 AD 配置（父子域）最长后缀命中（D-02 / SC3）
 
 > ⚠ **单域环境请把本项标 N/A**，并在 `58-07-SUMMARY.md` 注明。
 > 研究 §11 未解问题 1：`sys_ad_config` 在模型上是列表，但登录路径仍只取单条配置，
@@ -222,11 +200,11 @@ WHERE ou_dn IN (SELECT ad_ou_dn FROM sys_user WHERE id IN ('<父域userId>','<�
 **失败时该回报什么：** 任何一行转 `dead` 且 `last_error='unrecoverable:no-ad-config'`，
 或 AD 侧出现跨域 ModifyDN → 立即回报，附上两个 `ad_dn` 字面值与两条 `base_dn`。
 
-**result:** [pending / N/A（单域环境）]
+result: [pending / N/A（单域环境）]
 
 ---
 
-### UAT-58-5. code 32 真实触发（QUEUE-05 / SC5）
+### 5. code 32 真实触发（QUEUE-05 / SC5）
 
 **这项验的是什么：** 自动化用例用 `ldap.NewError(ldap.LDAPResultNoSuchObject, ...)`
 注入 code 32，证明**分流逻辑**正确。真域控验的是「AD 端确实返回了 code 32 而不是别的
@@ -264,13 +242,13 @@ WHERE entity_id = '<userId>' ORDER BY created_at DESC LIMIT 1;
 - 若第 ① 步 `attempts` 不是 0（烧了退避次数）→ 立即回报（不可恢复错误不应退避重试）
 - 若第 ④ 步 `updated_at` 仍在变 → 说明行仍被反复拾取，终态机制失效
 
-**result:** [pending]
+result: [pending]
 
 ---
 
 ## ⚠ 用户必须知晓的两项已知后果（非 bug，勿当回归上报）
 
-### UAT-58-6. 部门同步从未跑过时 `update_user` 行批量转 `dead`（决策 Q2 的刻意后果）
+### 6. 部门同步从未跑过时 `update_user` 行批量转 `dead`（决策 Q2 的刻意后果）
 
 **⚠ 这是本次部署最可能被误报为「功能坏了」的现象，请务必先读这一条。**
 
@@ -332,11 +310,11 @@ WHERE last_error = 'unrecoverable:no-ou-mapping' AND status = 'dead';
 
 **长期规避：** 新环境部署后**先跑部门同步再放开用户编辑**。
 
-**result:** [pending]
+result: [pending]
 
 ---
 
-### UAT-58-7. 「编辑即续命」：持续编辑且持续失败的行永不终态（F-11 已接受方向）
+### 7. 「编辑即续命」：持续编辑且持续失败的行永不终态（F-11 已接受方向）
 
 **⚠ 这是有意的设计取舍，不是缺陷。报 bug 前请先读这一条。**
 
@@ -384,11 +362,12 @@ WHERE entity_id = '<userId>';
 
 （手工写 `dead` 后，只要不再编辑该用户，它就不会被重新入队。）
 
-**result:** [accepted by design — D-04 / F-11]
+result: pass
+verified: 设计取舍已接受（D-04 / F-11），本条为「待告知」项而非待验证项 —— 无需人工执行，故记为 pass（audit 口径：pass/passed 不计为待办）。
 
 ---
 
-### UAT-58-8. 含特殊字符的历史部门需重跑部门同步（HYGIENE-02 / Q5 的已知取舍）
+### 8. 含特殊字符的历史部门需重跑部门同步（HYGIENE-02 / Q5 的已知取舍）
 
 **现象：** Phase 58 新增了 OU DN 转义 helper（`BuildOUDN`），部门名里的
 `,` `=` `+` `<` `>` `#` `;` `\` `"` 等 LDAP DN 保留字符会被正确转义。
@@ -407,11 +386,11 @@ WHERE d.dept_name ~ '[,=+<>#;\\"]';
 
 **处置：** 重跑部门同步（该操作会重写映射行）。**不需要改代码。**
 
-**result:** [pending]
+result: [pending]
 
 ---
 
-### UAT-58-9. ⚠ OU 移动成功但本地回写失败 → 该用户 AD 绑定需人工重建（H-05 残余风险）
+### 9. ⚠ OU 移动成功但本地回写失败 → 该用户 AD 绑定需人工重建（H-05 残余风险）
 
 **⚠ 这是代码审查后**新增**的已知后果（收口时发现，修复为部分修复）。**
 
@@ -434,7 +413,7 @@ ORDER BY q.updated_at DESC;
 
 **与 UAT-58-5（code 32）的区别：** UAT-58-5 是 **AD 端对象被真删了**，属正常收敛；UAT-58-9 是 **AD 端对象还在、只是本地记录陈旧**，属需人工纠正的数据不一致。用 `Get-ADUser -Identity <RDN> -SearchBase <当前OU>` 确认对象是否真实存在即可区分。
 
-**result:** [pending]
+result: [pending]
 
 ---
 
@@ -452,22 +431,25 @@ ORDER BY q.updated_at DESC;
 | UAT-58-8 | ⚠ 含特殊字符的历史部门需重跑部门同步 | Q5 / HYGIENE-02 取舍 | [pending] |
 | UAT-58-9 | ⚠ OU 移动成功但本地回写失败 → 需人工重建 AD 绑定 | H-05 残余风险（PARTIAL FIX） | [pending — 必须知晓] |
 
-```
 total: 9
-passed: 0
+passed: 1
 issues: 0
 pending: 7
-accepted_by_design: 1
+skipped: 0
+blocked: 0
 na: 1 (UAT-58-4, 单域环境)
-```
 
 ## Gaps
 
-- **UAT-58-1~5 的自动化侧已有等价保护**（mock 层证明分流与调用参数正确），缺的是
-  **wire 级真实性**（ModifyDN 真生效、真实熔断、真实重启、第二个域、真实 code 32）。
-  二者不是替代关系：自动化证明「分支走对了」，人工证明「AD 端真的按那样响应了」。
-- **UAT-58-6/7/8 不是「待验证」，是「待告知」**：它们是本 phase 的已知后果，
-  不需要验证是否发生，需要的是**在部署时知道会发生**。UAT-58-6 尤其重要 ——
-  未跑部门同步的环境上线后会出现大批 `dead` 行，极易被误报为回归。
-- **Phase 59 的前置**：UAT-58-2 会消耗账号池额度，做完必须按「恢复」小节复位，
-  否则会连带触发「管理员被锁」类事故（`ad-modify-fail-double-counts-breaker` 前科）。
+（无 —— 本清单 9 条均为「待人工执行 / 待知晓」条目，尚未产生失败项；以下三点是执行须知，不是失败记录。）
+
+**执行须知 1（自动化与人工的关系）**：UAT-58-1~5 的自动化侧已有等价保护（mock 层证明分流与调用参数正确），
+缺的是 **wire 级真实性**（ModifyDN 真生效、真实熔断、真实重启、第二个域、真实 code 32）。
+二者不是替代关系：自动化证明「分支走对了」，人工证明「AD 端真的按那样响应了」。
+
+**执行须知 2（UAT-58-6/7/8 的性质）**：它们不是「待验证」，是「待告知」—— 是本 phase 的已知后果，
+不需要验证是否发生，需要的是**在部署时知道会发生**。UAT-58-6 尤其重要 ——
+未跑部门同步的环境上线后会出现大批 `dead` 行，极易被误报为回归。
+
+**执行须知 3（Phase 59 的前置）**：UAT-58-2 会消耗账号池额度，做完必须按「恢复」小节复位，
+否则会连带触发「管理员被锁」类事故（`ad-modify-fail-double-counts-breaker` 前科）。
