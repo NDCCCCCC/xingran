@@ -186,28 +186,29 @@ func (s *ADSyncScheduler) Start() {
 	//   （Pitfall 4：独立缓存 → 熔断后仍选到坏账号；同 dept_sync_tasks.go:16-21 的约束）。
 	//   getPool 的惰性初始化（if s.pool == nil）必须保留：StartADSyncScheduler 未跑过时
 	//   （仅测试构造的 scheduler）它兜底建池，删掉会让排水器与全量同步拿到 nil 池。
-	// ⚠ sys_config 旋钮在**启动时读取一次**（D-05：改后需重启后端生效）。
+	// ⚠ sys_config 旋钮**每 tick 读取**（Phase 58 D-05 方案A热重载，2026-10-21 用户裁决）：
+	//   cron 固定 30s 最小 tick + lastDrain 门控，距上次实际排水 ≥ 配置间隔才 DrainOnce
+	//   —— 改配置无需重启；多实例部署（Test 3 实锤 10.62.10.39 / 10.62.10.33 双实例排水）
+	//   各实例独立读 DB 自动收敛。30s 是最小有效间隔（更小值被 tick 粒度托底为 30s）；
+	//   >30s 的间隔有 ≤30s 抖动（放弃整分对齐，用户已接受）。
 	//
-	// ⚠ s.db 为 nil（仅测试构造）时跳过配置读取，保持安全默认 spec ——
+	// ⚠ s.db 为 nil（仅测试构造）时跳过配置读取，使用默认 30s 间隔 ——
 	//   LoadDrainIntervalSeconds 假定 db 非 nil（同 core.go 的 loadConnectionPoolConfig 先例）。
-	drainSpec := "*/30 * * * * *"
-	if s.db != nil {
-		drainInterval := addomain.LoadDrainIntervalSeconds(s.db)
-		spec, ok := addomain.SecondsToCronSpec(drainInterval)
-		if !ok {
-			applogger.Warnf("[ad_push_queue] drain_interval_seconds=%d 无法映射为 cron spec（非 60 因子值），回落默认 30s",
-				drainInterval)
-		} else {
-			drainSpec = spec
-		}
-	}
 	lg := cronLogger()
 	// H-01：**只构造一次**并由下面的 cron 闭包捕获。写进闭包体会让每轮拿到一把新的
 	// ADPushDrainer.mu，TryLock 恒成功。账号池仍走 getPool 的惰性初始化兜底 —— 但本函数
 	// 已持 s.mu（Go Mutex 不可重入），故用 getPoolLocked 而不是 getPool。
 	drainer := addomain.NewADPushDrainer(s.db, s.getPoolLocked())
-	_, err = s.cron.AddJob(drainSpec,
+	gate := &drainGate{}
+	_, err = s.cron.AddJob("*/30 * * * * *",
 		cron.NewChain(cron.Recover(lg), cron.SkipIfStillRunning(lg)).Then(cron.FuncJob(func() {
+			interval := addomain.DefaultDrainIntervalSeconds
+			if s.db != nil {
+				interval = addomain.LoadDrainIntervalSeconds(s.db)
+			}
+			if !gate.shouldDrain(time.Now(), interval) {
+				return
+			}
 			// 轮次互斥由 Drainer 内部的 TryLock + 每轮一次 now 统一处理
 			if err := drainer.DrainOnce(context.Background()); err != nil {
 				applogger.Errorf("[ad_push_queue] 排水轮次失败: %v", err)
@@ -220,7 +221,38 @@ func (s *ADSyncScheduler) Start() {
 
 	s.cron.Start()
 	s.started = true
-	applogger.Infof("AD同步定时任务已启动（全量同步: 每5分钟 + 账号池恢复: 每5分钟 + ad_push_queue 排水: %s）", drainSpec)
+	applogger.Infof("AD同步定时任务已启动（全量同步: 每5分钟 + 账号池恢复: 每5分钟 + ad_push_queue 排水: 固定30s tick×间隔门控，sys_config 热重载）")
+}
+
+// drainGate 排水间隔门控（方案A热重载的核心状态）。
+// cron 固定 30s 最小 tick；每个 tick 用 shouldDrain 判断"距上次实际排水是否已到
+// 配置间隔"。非并发安全：仅 cron 任务闭包单 goroutine 使用（SkipIfStillRunning
+// 已保证同刻度不重叠），无需加锁。
+//
+// lastDrain 零值语义：调度器启动后首个 tick 立即排水（与旧实现"启动即挂 cron、
+// 首个刻度排水"行为一致）。
+type drainGate struct {
+	lastDrain    time.Time
+	lastInterval int
+}
+
+// shouldDrain 返回本轮 tick 是否应实际排水，内部维护 lastDrain/lastInterval。
+// 间隔值变化时打一条 Infof（热重载生效日志）。interval <= 0 兜底为默认 30s。
+func (g *drainGate) shouldDrain(now time.Time, interval int) bool {
+	if interval <= 0 {
+		interval = addomain.DefaultDrainIntervalSeconds
+	}
+	if g.lastInterval != interval {
+		if g.lastInterval != 0 {
+			applogger.Infof("[ad_push_queue] 排水间隔配置变化 %ds → %ds（热重载生效，无需重启）", g.lastInterval, interval)
+		}
+		g.lastInterval = interval
+	}
+	if !g.lastDrain.IsZero() && now.Sub(g.lastDrain) < time.Duration(interval)*time.Second {
+		return false
+	}
+	g.lastDrain = now
+	return true
 }
 
 // cronLogger 把 cron 的 Logger 接口适配到 applogger，避免 cron 的默认

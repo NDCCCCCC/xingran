@@ -14,7 +14,8 @@ import (
 //      （默认 30s 保证"管理员编辑 → AD 生效感知 ≤1min"）。
 //
 // ConfigType=N（非系统参数，前端「参数设置」页可编辑），IsSystem=0。
-// ⚠ 排水间隔在**启动时读取一次**，修改后需重启后端生效（同 network.connection_pool.* 先例）。
+// ⚠ 方案A热重载（2026-10-21）：排水器每 30s tick 读取该配置（drainGate 门控），
+//   修改后**无需重启**，≤30s 生效。
 // ⚠ 非阻断：缺旋钮只会让 LoadDrainIntervalSeconds 回落默认 30s，不影响业务 ——
 //   对照 migration 215 建表的"失败阻断启动"档，seed 类迁移不该阻断。
 func Migrate216ADPushDrainSysConfig(db *gorm.DB) error {
@@ -24,7 +25,7 @@ func Migrate216ADPushDrainSysConfig(db *gorm.DB) error {
 		seedKey    = "ad_push_queue.drain_interval_seconds"
 		seedValue  = "30"
 		seedName   = "AD推送队列-排水间隔(秒)"
-		seedRemark = "ad_push_queue 排水器轮询间隔(秒);建议 30,域控压力大时可放宽到 300;修改后需重启后端生效"
+		seedRemark = "ad_push_queue 排水器轮询间隔(秒);建议 30,域控压力大时可放宽到 300;修改后约30秒内生效(无需重启)"
 	)
 
 	var existingCount int64

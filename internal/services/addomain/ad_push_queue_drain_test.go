@@ -26,10 +26,10 @@ import (
 	"errors"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/glebarez/sqlite"
 	"github.com/go-ldap/ldap/v3"
-	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -569,6 +569,42 @@ func TestPhase58_Drain_FailureSchedulesBackoff(t *testing.T) {
 	assert.NotNil(t, row.FailedAt)
 	assert.True(t, len(row.LastError) >= len("retry:update_user:"), "last_error 应有前缀")
 	assert.Equal(t, "retry:update_user:", row.LastError[:len("retry:update_user:")])
+}
+
+// TestPhase58_MarkFailed_SanitizesNulInLastError 缺陷X 回归（2026-10-21 UAT 实测）：
+// LDAP Result Code 50 的 err.Error() 实测含 "\x00"（problem 4003, data 0\n\0）→
+// markFailed/markDead 直写 last_error → PG 拒收 SQLSTATE 22021 → UPDATE 整体失败 →
+// 行留 pending/attempts=0/next_retry_at=NULL 每 tick 无限重试。两入口必须先过
+// sanitizeFailureReason（与账号池 MarkFailure 同款），保证 last_error 恒为合法 UTF-8
+// 且不含 0x00。
+func TestPhase58_MarkFailed_SanitizesNulInLastError(t *testing.T) {
+	db := setupDrainTestDB(t)
+	const cfgID = "cfg-1"
+	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
+	seedDrainUser(t, db, "u-1", "alice", "CN=alice,DC=corp,DC=com", "DC=corp,DC=com", nil)
+	seedDrainQueueRow(t, db, "", "u-1", string(models.ADPushActionUpdateUser), string(models.ADPushStatusPending), 0, nil)
+	row := reloadDrainRow(t, db, "u-1")
+
+	// 实测 LDAP 50 报文形态：含 NUL（data 0\n\0）与非法 UTF-8 序列
+	dirty := "retry:update_user:LDAP Result Code 50 \"Insufficient Access Rights\": 00002098: DSID-031514A2, problem 4003, data 0\n\x00\x80\x01bad"
+	require.Contains(t, dirty, "\x00", "构造的报文必须真的含 NUL")
+	d := NewADPushDrainer(db, newDrainTestPool(drainTestAccount("a1", cfgID)))
+	now := time.Now().UTC()
+
+	// markFailed 入口（failed 分支）
+	require.NoError(t, d.markFailed(context.Background(), row, now, false, dirty))
+	got := reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusFailed, got.Status)
+	assert.NotContains(t, got.LastError, "\x00", "last_error 不得含 0x00（缺陷X：PG SQLSTATE 22021）")
+	assert.True(t, utf8.ValidString(got.LastError), "last_error 必须是合法 UTF-8")
+	assert.Contains(t, got.LastError, "LDAP Result Code 50", "清洗只去坏字节，保留可排障正文")
+
+	// markDead 入口（终态分支）
+	require.NoError(t, d.markDead(context.Background(), row.ID, now, 5, "dead:retry:"+dirty))
+	got = reloadDrainRow(t, db, "u-1")
+	assert.Equal(t, models.ADPushStatusDead, got.Status)
+	assert.NotContains(t, got.LastError, "\x00", "markDead 的 last_error 同样不得含 0x00")
+	assert.True(t, utf8.ValidString(got.LastError), "markDead 的 last_error 必须是合法 UTF-8")
 }
 
 // TestPhase58_Drain_MaxAttemptsGoesDead F-11 主用例：连败 4 次后本轮再失败 → dead 且 attempts 必须落到 5。
@@ -1261,7 +1297,7 @@ func TestPhase58_MoveSingleUserToOU_UpdatesAdDn(t *testing.T) {
 	assert.Equal(t, "OU=IT2,DC=corp,DC=com", *adOuDn)
 }
 
-// ==================== Phase 58-05：D-05 单旋钮读取 + SecondsToCronSpec 映射 ====================
+// ==================== Phase 58-05：D-05 单旋钮读取（方案A热重载：每 tick 调用） ====================
 
 // freshDrainSysConfigDB 构建仅含 sys_config 的内存 sqlite（LoadDrainIntervalSeconds 的
 // 最小环境）。AutoMigrate 走 models.Config（与生产同构的列定义）。
@@ -1315,48 +1351,6 @@ func TestPhase58_LoadDrainIntervalSeconds_FallsBackOnGarbage(t *testing.T) {
 			"x", key).Error)
 		assert.Equal(t, 45, LoadDrainIntervalSeconds(db))
 	})
-}
-
-// cron6FieldParser robfig/cron v3 的 6 段（含秒）parser，与 NewADSyncScheduler 的
-// cron.New(cron.WithSeconds()) 同构。用于把"spec 合法"从字面比对升级为行为断言。
-func cron6FieldParser() cron.Parser {
-	return cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-}
-
-// TestPhase58_SecondsToCronSpec_Valid 校验合法秒数 → 6 段 spec 的映射，
-// 并额外断言每个返回的 spec 都能被 cron parser 解析（行为断言，非字面）。
-func TestPhase58_SecondsToCronSpec_Valid(t *testing.T) {
-	cases := []struct {
-		seconds int
-		want    string
-	}{
-		{1, "*/1 * * * * *"},
-		{30, "*/30 * * * * *"},
-		{60, "0 */1 * * * *"},
-		{120, "0 */2 * * * *"},
-		{300, "0 */5 * * * *"},
-	}
-	p := cron6FieldParser()
-	for _, tc := range cases {
-		got, ok := SecondsToCronSpec(tc.seconds)
-		require.True(t, ok, "SecondsToCronSpec(%d) 应返回 ok=true", tc.seconds)
-		require.Equal(t, tc.want, got, "SecondsToCronSpec(%d)", tc.seconds)
-		if _, err := p.Parse(got); err != nil {
-			t.Fatalf("SecondsToCronSpec(%d) 产出的 spec %q 无法被 cron parser 解析: %v", tc.seconds, got, err)
-		}
-	}
-}
-
-// TestPhase58_SecondsToCronSpec_InvalidFallsBack 非 60 因子值（45/90/100）与
-// 非法秒数（0/-1）必须返回 ok=false，由调用方回落默认。
-// ⚠ 这是 F-E 陷阱的可证伪防线：若实现改用 fmt.Sprintf("*/%d ...") 硬拼，
-// 45 会返回 ("*/45 * * * * *", true)（秒位退化成 {0,45}）→ 本用例必红。
-func TestPhase58_SecondsToCronSpec_InvalidFallsBack(t *testing.T) {
-	for _, s := range []int{45, 90, 100, 0, -1} {
-		got, ok := SecondsToCronSpec(s)
-		require.False(t, ok, "SecondsToCronSpec(%d) 应返回 ok=false", s)
-		require.Equal(t, "", got, "SecondsToCronSpec(%d) 的 spec 应为空串", s)
-	}
 }
 
 // ==================== Plan 06（T1）：EnqueueUpdateBatch 批量入队变体（D-01） ====================

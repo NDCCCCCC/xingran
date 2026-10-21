@@ -321,6 +321,11 @@ func (d *ADPushDrainer) markPushed(ctx context.Context, id string, now time.Time
 // ⚠ 池熔断（ErrAllAccountsUnavailable）不判 dead（D-05：不可恢复错误才短路；
 // 熔断是可恢复的，退避窗正是为它设计的）。
 func (d *ADPushDrainer) markFailed(ctx context.Context, row models.ADPushQueue, now time.Time, poolExhausted bool, msg string) error {
+	// ⚠ 缺陷X（2026-10-21 UAT 实测 12:15-12:50 刻度循环）：msg 可能来自 LDAP err.Error()
+	//   直拼（:581/:298/:390 三处调用点），含 0x00 / 无效 UTF-8 → PG 拒收 SQLSTATE 22021
+	//   → UPDATE 整体失败 → 行留 pending/attempts=0/next_retry_at=NULL 每 tick 无限重试。
+	//   与账号池 MarkFailure 同款清洗（sanitizeFailureReason），必须在任何 DB 写之前。
+	msg = sanitizeFailureReason(msg)
 	// ⚠ MISSED-02（2026-10-19 goal-verification 补修）：attempts 是**业务失败**的计数，
 	//   池侧/基础设施故障（账号全被熔断、域控宕机、网络中断）**不得**计入。
 	//   原实现无条件 `row.Attempts + 1`，H-04 修好后虽然池侧故障不再判死，却仍在自增 ——
@@ -364,6 +369,9 @@ func (d *ADPushDrainer) markFailed(ctx context.Context, row models.ADPushQueue, 
 //
 // reason 的可 grep 前缀约定：unrecoverable:* / dead:* / retry:* / pool:*。
 func (d *ADPushDrainer) markDead(ctx context.Context, id string, now time.Time, attempts int, reason string) error {
+	// 缺陷X 同源：reason 也可能含 0x00 / 无效 UTF-8（dead:retry: 前缀拼链），
+	// 同款清洗保证 last_error 恒为合法 UTF-8。
+	reason = sanitizeFailureReason(reason)
 	return d.db.WithContext(ctx).Model(&models.ADPushQueue{}).Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"status":        string(models.ADPushStatusDead),
@@ -599,12 +607,18 @@ func (d *ADPushDrainer) clearUserADRefs(ctx context.Context, userID string) {
 // 启动时读取一次，改后需重启后端生效（同 network.connection_pool.* 先例）。
 const drainIntervalSysConfigKey = "ad_push_queue.drain_interval_seconds"
 
-// defaultDrainIntervalSeconds 默认排水间隔（D-05：30s）。管理员编辑 → AD 生效感知 ≤1min；
+// DefaultDrainIntervalSeconds 默认排水间隔（D-05：30s）。管理员编辑 → AD 生效感知 ≤1min；
 // 给"域控吃不消"留放宽到 5min 的逃生门。
-const defaultDrainIntervalSeconds = 30
+// 导出：scheduler 排水门控（方案A热重载）需要引用同一默认值。
+const DefaultDrainIntervalSeconds = 30
 
-// LoadDrainIntervalSeconds 启动时读取排水间隔（秒）。读不到/解析失败/非正数 → 回落 30。
-// 形状照抄 core.go:44-79 loadConnectionPoolConfig 的 readInt 闭包。
+// defaultDrainIntervalSeconds 包内兼容别名（历史引用点不改名）。
+const defaultDrainIntervalSeconds = DefaultDrainIntervalSeconds
+
+// LoadDrainIntervalSeconds 读取排水间隔（秒）。读不到/解析失败/非正数 → 回落 30。
+// 方案A热重载（2026-10-21）：由 scheduler 排水闭包**每 tick（30s）调用一次**，
+// 改 sys_config 无需重启；成功路径不打日志（每 30s 一条会刷屏），值变化日志由
+// scheduler 的 drainGate.shouldDrain 负责。
 func LoadDrainIntervalSeconds(db *gorm.DB) int {
 	const fallback = defaultDrainIntervalSeconds
 	var v string
@@ -620,24 +634,5 @@ func LoadDrainIntervalSeconds(db *gorm.DB) int {
 		applogger.Warnf("[ad_push_queue] %s 值非法(%q)，回落默认 %ds", drainIntervalSysConfigKey, v, fallback)
 		return fallback
 	}
-	applogger.Infof("[ad_push_queue] 排水间隔配置: %s = %ds（改后需重启后端生效）", drainIntervalSysConfigKey, n)
 	return n
-}
-
-// SecondsToCronSpec 把秒数映射为 robfig/cron 6 段 spec（cron.WithSeconds 实例）。
-//
-// ⚠ 6 段 spec 的步进语义陷阱（F-E）：
-//   - 秒位 "*/N" → 0..59 步进 N（30 → 0,30 = 每 30 秒 ✅）
-//   - 秒位 "0/N" → start=0 end=0（每分钟只触发一次，**不是**每 N 秒 ❌）
-//   - 分位 "*/N" → 0..59 步进 N（5 → 每 5 分钟 ✅）
-//
-// 故：秒级用 "*/s"，分钟级用 "0 */m"。非 60 因子值无法表达，返回 ok=false 由调用方回落。
-func SecondsToCronSpec(seconds int) (string, bool) {
-	if seconds >= 1 && seconds <= 59 && 60%seconds == 0 {
-		return fmt.Sprintf("*/%d * * * * *", seconds), true
-	}
-	if seconds >= 60 && seconds%60 == 0 && seconds/60 <= 59 {
-		return fmt.Sprintf("0 */%d * * * *", seconds/60), true
-	}
-	return "", false
 }
