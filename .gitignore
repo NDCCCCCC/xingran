@@ -6,6 +6,7 @@ bin/
 *.so
 *.dylib
 xingran-backend-embedded*
+ruoyi-backend-linux
 
 # 嵌入式前端构建产物（复制到 internal/server 用于 embed）
 internal/server/xingran-react-frontend/
