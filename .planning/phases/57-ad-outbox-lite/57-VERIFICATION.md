@@ -1,6 +1,7 @@
 ---
 phase: 57-ad-outbox-lite
 verified: 2026-10-16
+updated: 2026-10-21
 re_verified: 2026-10-17
 status: human_needed
 scope: 57-01 / 57-02 / 57-03 + F-01~F-06 + Gap 闭环（GAP-01/02/03）
@@ -47,12 +48,15 @@ human_verification:
   - test: "PG 真实环境验证 ON CONFLICT 部分索引合并路径"
     expected: "连续两次编辑同一用户 → ad_push_queue 仅 1 行 pending；若报 42P10 there is no unique or exclusion constraint matching the ON CONFLICT specification → 谓词写错。sqlite 侧 TestPhase57_EnqueueUpdate_MergeOnSecondEdit 已提供等价回归保护，但 PG 的冲突目标推断路径只能实机确认"
     why_human: "本仓无 PG 测试基座；QUEUE-02 的「DB 层合并语义成立」在 PG 上的实际执行未跑过"
+    resolution: "已转留 57-HUMAN-UAT.md Test 1（人工执行清单，结果记录在该文件）"
   - test: "进程重启不丢已入队行（QUEUE-01 / SC1 后半）"
     expected: "PG 部署后编辑用户入队 → kill -9 → 重启 → SELECT * FROM ad_push_queue WHERE status='pending' 行仍在"
     why_human: "需真实部署二进制 + 启停；57-VALIDATION.md 声明为 Manual-Only 且未执行"
+    resolution: "已转留 57-HUMAN-UAT.md Test 2（人工执行清单，结果记录在该文件）"
   - test: "AD 端复活链路闭环（QUEUE-06 端到端）"
     expected: "sys 删除用户 → Phase 58 排水器执行 DisableUser → AD 端 UAC 514 → bind 失败（data 533）"
-    why_human: "需真实 AD；且执行侧（排水器）Phase 58 才存在，本 phase 只能验证队列行产生（已由测试锁定）"
+    why_human: "需真实 AD；执行侧（排水器）已存在（internal/services/addomain/ad_push_queue_drain_service.go:400 的 `case models.ADPushActionDisable:` → `c.DisableUser(*user.AdDn)`，UAC 514），本 phase 只能验证队列行产生（已由测试锁定）"
+    resolution: "已转留 57-HUMAN-UAT.md Test 3（人工执行清单，结果记录在该文件）"
 ---
 
 # Phase 57 验证报告（AD Push Queue / outbox-lite 基建）

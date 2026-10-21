@@ -3,7 +3,7 @@ status: complete
 phase: 59-ad-login-guard-reconciliation
 source: [59-VERIFICATION.md]
 started: 2026-10-20T01:20:00Z
-updated: 2026-10-20T05:07:40.396Z
+updated: 2026-10-21T01:44:00.000Z
 ---
 
 ## Current Test
@@ -61,7 +61,7 @@ blocked: 0
 
 - gap_id: G-59-2
   truth: "migration_217 视图在全新库上能建成（sys_dept_ou_mapping 等被引用表已存在）"
-  status: failed
+  failure_status: failed
   reason: "User reported: 实测 migration 217 失败 —— ERROR: relation \"sys_dept_ou_mapping\" does not exist (SQLSTATE 42P01)。该表由归档 .sql（archive/legacy-2026-06-15/126_create_dept_ou_mapping_table.sql）创建，而 .sql 迁移不被自动加载；常规启动路径（AutoMigrate / BootstrapMissingTables）从未注册 models.DeptOUMapping。生产库因当年手工执行过该 SQL 而有表，故仅全新库暴露。scripts/dbprovision 虽建该模型，但那是新部署专用工具，常规启动不跑。"
   severity: major
   test: 2
@@ -80,7 +80,7 @@ blocked: 0
 
 - gap_id: G-59-3
   truth: "migration_218 能在生产库上找到父菜单并创建 + 授权对账按钮权限"
-  status: failed
+  failure_status: failed
   reason: "User reported: 实测 migration 218 恒降级跳过 —— 「Warning: 未找到『AD域控配置』父菜单, migration_218 跳过创建与授权」。该菜单名在 seed 与归档 SQL 中都不存在；库中真实父菜单是 menu_name='域控配置'、perms='ops:ad:config:list'（其下已有 5 个 F 型按钮）。规划时的 FLAGGED ASSUMPTION 未成立，且此缺陷在生产库同样存在（不限于全新库）→ 对账按钮权限永远建不出来 → 普通角色对账 Tab 恒 403。"
   severity: blocker
   test: 2

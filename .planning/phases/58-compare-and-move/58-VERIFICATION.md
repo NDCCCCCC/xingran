@@ -1,3 +1,44 @@
+---
+phase: 58-compare-and-move
+verified: 2026-10-19
+updated: 2026-10-21
+status: human_needed
+scope: 58-01 ~ 58-07（Wave 1~6）+ SC1~SC6 逐条判定 + H-01~H-05 代码审查处置
+score: "17 VERIFIED / 3 NOT VERIFIED / 1 PARTIAL（65 个 TestPhase58_* 全部 PASS）"
+human_verification:
+  - test: "UAT-58-1 真 AD 上的 compare-and-move（QUEUE-04 / SC2）"
+    expected: "AD 端 ModifyDN 真生效：用户被移到新 OU、RDN 与用户属性保留；二次排水不重复移动（sys_user.ad_dn 逐字节不变、队列行回到 pushed）"
+    why_human: "mock LDAP 只能证明调用了 MoveUser(dn, targetOU)，无法证明真实域控的 ModifyDN wire 行为（旧 RDN 是否真删除、RDN 属性是否随 move 保留、deleteOldRDN 的真实后果）"
+    resolution: "已转留 58-HUMAN-UAT.md Test 1（人工执行清单，结果记录在该文件）"
+  - test: "UAT-58-2 账号池熔断期间的退避节奏（QUEUE-03 / SC1 后半）"
+    expected: "attempts 按 60s→2min→4min→8min→16min 递增；last_error 前缀为 pool: 或 retry:（不得为 dead:）；attempts 达 5 后行转 dead 且 last_error=dead:max-attempts；连续 3 次失败后账号 status=2（熔断）、circuit_breaker_until ≈ now+30min"
+    why_human: "退避曲线与 30min 熔断窗的桥接依赖真实时钟跨度与真实熔断，自动化只验纯函数 backoffDuration(n)"
+    resolution: "已转留 58-HUMAN-UAT.md Test 2（人工执行清单，结果记录在该文件）"
+  - test: "UAT-58-3 sys_config 排水间隔旋钮重启生效（D-05）"
+    expected: "把 ad_push_queue.drain_interval_seconds 改为 60 并重启后端，启动日志出现 drain_interval_seconds = 60s，且 cron spec 为 0 */1 * * * *（6 段，第 6 位是分钟）"
+    why_human: "LoadDrainIntervalSeconds 只在启动时读取一次，必须真实重启进程才能验证生效"
+    resolution: "已转留 58-HUMAN-UAT.md Test 3（人工执行清单，结果记录在该文件）"
+  - test: "UAT-58-4 多 AD 配置（父子域）最长后缀命中（D-02 / SC3）"
+    expected: "父子域共享后缀时两条 base_dn 各自命中，不出现 unrecoverable:no-ad-config，两人的 OU 映射分别落在各自 base_dn 下"
+    why_human: "需要第二个域；单域环境下 MatchADConfigByDN 的歧义分支不可能触发（单域环境标 N/A）"
+    resolution: "已转留 58-HUMAN-UAT.md Test 4（单域环境标 N/A，见 58-07-SUMMARY.md）"
+  - test: "UAT-58-5 code 32 真实触发（QUEUE-05 / SC5）"
+    expected: "AD 端删除对象后编辑用户 → 队列行 status=dead、attempts=0（未烧退避）、last_error=unrecoverable:target-not-found，且 sys_user 的 ad_dn / ad_ou_dn / ad_synced_at 三列均被清空"
+    why_human: "自动化用 ldap.NewError 注入 code 32 只证明分流逻辑；真实域控才证明 AD 端真的返回 code 32，且 clearUserADRefs 的写回在真实 PG 上生效"
+    resolution: "已转留 58-HUMAN-UAT.md Test 5（人工执行清单，结果记录在该文件）"
+  - test: "UAT-58-6 部门同步从未跑过时 update_user 行批量转 dead（决策 Q2 的刻意后果）"
+    expected: "sys_dept_ou_mapping 为空时编辑部门 → 队列行 last_error=unrecoverable:no-ou-mapping、status=dead、attempts=0、LDAP 写次数为 0（不打扰域控）"
+    why_human: "需要未跑过部门同步的真实部署环境（或清空映射表后复现），属部署环境事实"
+    resolution: "已转留 58-HUMAN-UAT.md Test 6（人工执行清单，结果记录在该文件）"
+  - test: "UAT-58-8 含特殊字符的历史部门需重跑部门同步（HYGIENE-02 / 决策 Q5 的已知取舍）"
+    expected: "名字含 , = + < > # ; 等保留字符的历史部门，其 sys_dept_ou_mapping.ou_dn 未被转义（无前置反斜杠）→ 需重跑部门同步后带转义"
+    why_human: "取决于部署环境既有 sys_dept_ou_mapping 行的内容，代码库不可见"
+    resolution: "已转留 58-HUMAN-UAT.md Test 8（人工执行清单，结果记录在该文件）"
+  - test: "UAT-58-9 OU 移动成功但本地回写失败 → 该用户 AD 绑定需人工重建（H-05 残余风险）"
+    expected: "写回失败时队列行转 failed 且 last_error 以 retry:move_ou: 开头；需人工把 sys_user.ad_dn / ad_ou_dn 改回 AD 端实际值，再删除该队列行"
+    why_human: "需真实域控上构造「AD 移动成功 + 写库瞬时故障」；MoveUser 重放不安全（code 32）无法自动自愈"
+    resolution: "已转留 58-HUMAN-UAT.md Test 9（人工执行清单，结果记录在该文件）"
+---
 # Phase 58 验证报告 — SC1~SC6 逐条证据
 
 **执行日期:** 2026-10-19

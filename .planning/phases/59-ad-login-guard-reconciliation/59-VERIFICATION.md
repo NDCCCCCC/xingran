@@ -1,6 +1,7 @@
 ---
 phase: 59-ad-login-guard-reconciliation
 verified: 2026-10-19T16:35:48Z
+updated: 2026-10-21
 status: human_needed
 score: 12/14 must-haves verified
 covered_files:
@@ -48,24 +49,31 @@ human_verification:
   - test: "真实 AD 登录守卫拦截（GUARD-01 端到端）"
     expected: "管理员编辑用户 dept → 等队列入队（pending/failed）→ 该用户 AD 登录 → 日志出现『部门回写被活跃队列守卫拦截』WARN（含 userID/username/本地 dept UUID/AD 解析 dept UUID/队列行 ID/action_type/attempts），且 sys_user.dept_id 未被 AD 旧值覆盖"
     why_human: "单元测试已证明 SyncADUser 组件级行为（6/6 PASS），但真实 LDAP 登录链路（ad_authenticator → SyncADUser）需真实 AD 环境与 pending 队列行（59-VALIDATION Manual-Only）"
+    resolution: "已转留 59-UAT.md Test 1（用户选择跳过；真实 AD 登录守卫拦截仍待实测，结果记录在该文件）"
   - test: "真实 PG 启动冒烟：migration_217 视图 + migration_218 权限 seed + 二次重启幂等"
     expected: "目标 PG 环境启动服务：AutoMigrate 前 DROP 视图、Migrate217 无错、SELECT count(*) FROM v_dept_ou_mismatch 可执行；再次重启同库无 SQLSTATE 0A000『cannot alter type』且视图重建成功；启动日志无『对账查询按钮权限 seed 失败』"
     why_human: "本机无 PG 实例；sqlite 测试覆盖不到 uuid↔varchar CAST、boolean NOT、CREATE OR REPLACE VIEW 的真实执行（DDL 文本守卫 TestPhase59_Migration217_PGDialectDDL 已过，但文本断言≠运行期证明）。本仓库有 MV/视图阻塞 AutoMigrate 启动 FATA 前科，PG 启动是全 phase 风险最高且完全未演练的路径"
+    resolution: "已在 59-UAT.md Test 2 实测通过（2026-10-20，WSL PostgreSQL 14 隔离实例 6 轮启动验证）"
   - test: "对账 Tab 浏览器权限渲染（授权与未授权两态）"
     expected: "管理员为角色授予 ops:ad:config:reconciliation:list → 该角色登录后对账 Tab 出数据；未授权角色登录后 Tab 内渲染『无对账查看权限』403 且不发对账数据请求；直接 POST /api/v1/ad-domain/reconciliation/mismatch 被后端 RequirePermissions 拒为 403"
     why_human: "RequirePermissions 的真实运行期拒绝（JWT + 角色矩阵）与浏览器渲染均需部署环境（59-03 coverage D5 / 59-VALIDATION Manual-Only）"
+    resolution: "已在 59-UAT.md Test 3 实测通过（2026-10-20，用户实测授权 / 未授权两态渲染）"
   - test: "生产库父菜单『AD域控配置』（menu_type='C'）存在性确认"
     expected: "生产 sys_menu 存在该父菜单 → migration_218 自动建 F 行并精准授权；若缺失 → 管理员需手建按钮权限 ops:ad:config:reconciliation:list 并为相关角色授权（迁移已按 warning + nil 降级，不会启动失败）"
     why_human: "sqlite 测试无法证明生产数据形态（59-01/02/03/04 四个 PLAN 的 FLAGGED ASSUMPTION 同款）；缺失时普通角色对账 Tab 恒 403"
+    resolution: "已在 59-UAT.md Test 4 实测通过（2026-10-20，生产库只读探针确认父菜单为「域控配置」/ perms=ops:ad:config:list）"
   - test: "GUARD-01/GUARD-02 验收口径人工复核（FLAGGED ASSUMPTION 闭环）"
     expected: "确认 ROADMAP SC1~SC4 原文即权威验收口径（四个 PLAN frontmatter 的 edge probe 均报 unclassified/unresolved，未假设 backstop）"
     why_human: "probe 分类机制自身无法裁决；四个 PLAN 均显式要求 phase verification 时人工复核验收口径来源"
+    resolution: "已在 59-UAT.md Test 5 实测通过（2026-10-20，用户确认 SC1~SC4 即权威验收口径）"
   - test: "空态标题字重 600（computed style）"
     expected: "computed font-weight: 600（见 behavior_unverified_items 第 1 条）"
     why_human: "jsdom 不计算层叠样式"
+    resolution: "已在 59-UAT.md Test 6 实测通过（2026-10-20，chrome-devtools computed font-weight=600 / font-size=16px）"
   - test: "Tab 栏不溢出视觉回归（backstop）"
     expected: "两个 Tab 标签不换行/不截断（见 behavior_unverified_items 第 2 条）"
     why_human: "纯视觉断言，jsdom 不可得"
+    resolution: "已在 59-UAT.md Test 7 实测通过（2026-10-20，1034px + 480px 两视口零裁剪零换行）"
 ---
 
 # Phase 59: 登录回写守卫与部门对账视图 Verification Report
