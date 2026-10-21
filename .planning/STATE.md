@@ -23,8 +23,9 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: Executing Phase 61
-**Last activity**: 2026-10-21
-**Previous activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
+**Last activity**: 2026-10-21 - Completed quick task 261021-iqq: ad_push_queue 排水间隔热重载（方案A：固定 30s tick + drainGate 门控）+ 缺陷X markFailed/markDead sanitize + NUL 回归用例
+**Previous activity**: 2026-10-21 - verify-work 57 UAT：Test 1 pass / Test 2 evidence 落盘；两个缺陷档案（热重载、缺陷X NUL）转 quick 261021-iqq 执行
+**Earlier activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
 **Earlier activity**: 2026-10-19 — Phase 58 复审 + 补修闭环：code-review 判 0 BLOCKER / 5 HIGH，H-01/02/04/05 已修、H-03 DEFERRED；gsd-verifier 判 ACHIEVED WITH CONDITIONS 并新发现 MISSED-01~04，其中 MISSED-02（池侧故障自增 attempts）/01/03 已修且新用例做过 RED→GREEN，MISSED-04（`extractRDNFromDN` 转义逗号截断 → `ModifyDN` 重命名 AD 对象）转独立 phase。部署前置：目标环境须先跑过部门同步，否则 `update_user` 会以 `unrecoverable:no-ou-mapping` 批量转 dead
 
 ## Current Position
@@ -209,6 +210,7 @@ Progress: 3/6 phases [█████░░░░░] 50%（18/19 plans — Phas
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261019-mmc | 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04） | 2026-10-19 | `264aaf33` | [261019-mmc-extractrdnfromdn-rfc4514-modifydn-ad-pha](./quick/261019-mmc-extractrdnfromdn-rfc4514-modifydn-ad-pha/) |
+| 261021-iqq | ad_push_queue 排水间隔热重载（方案A：固定 30s tick + drainGate 门控，改 sys_config ≤30s 生效无需重启）+ 缺陷X markFailed/markDead sanitize + NUL 回归用例 | 2026-10-21 | 待提交 | [261021-iqq-drain-interval-hot-reload](./quick/261021-iqq-drain-interval-hot-reload/) |
 
 ### Todos
 
