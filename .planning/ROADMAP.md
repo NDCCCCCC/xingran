@@ -260,9 +260,9 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
-| 58. 排水器与 compare-and-move 推送 | 7/7 | Executed — verification human_needed（58-UAT 9 项：2 pass / 2 N/A / 5 项待真实 AD：Test 1/2/5/6/9） | - |
-| 59. 登录回写守卫与部门对账视图 | 4/4 | Executed — verification human_needed（12/14：真相 13/14 需真实浏览器；2026-10-22 staleness 复验已重算 digest） | 2026-10-19 |
-| 60. 软删恢复安全 | 2/2 | Executed — verification human_needed（Test 2 已 PASS；Test 1/3 待真实 AD；2026-10-22 staleness 复验已重算 digest） | 2026-10-20 |
+| 58. 排水器与 compare-and-move 推送 | 7/7 | Complete（2026-10-22 全收口：Test 1/3/7 pass 生产实测、2/5/6/9 skip 用户知情、4/8 N/A） | 2026-10-22 |
+| 59. 登录回写守卫与部门对账视图 | 4/4 | Complete（GUARD-01 登录守卫双半段端到端实锤 2026-10-22，verification passed） | 2026-10-22 |
+| 60. 软删恢复安全 | 2/2 | Complete（SAFE-01 漂移拦截端到端 + 影子表对拍实锤 2026-10-22，verification passed） | 2026-10-22 |
 | 61. 影子表完整性 | 3/3 | Complete（61-UAT 4/4 pass，VERIFICATION status=passed） | 2026-10-22 |
 | 62. 卫生收尾与死代码清理 | 3/3 | Complete（62-UAT 4/4 pass，62-VERIFICATION status=passed，GAP-62-01 已修复并生产验证） | 2026-10-22 |
 

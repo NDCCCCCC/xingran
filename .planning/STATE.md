@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
-current_phase: 58
-current_phase_name: 排水器与 compare-and-move 推送（QUEUE-01~06）
-status: executing
-stopped_at: 里程碑 v1.21 六个 phase 的实现与自动化验证已全部完成（19/19 plans；57/61/62 verification=passed）；剩余为真实环境人工验证债：Phase 58 五项（Test 1 compare-and-move / 2 退避与熔断 / 5 code 32 / 6 无 OU 映射批量 dead / 9 移动成功写回失败）、Phase 59 两项浏览器 CSS 行为、Phase 60 两项真实 AD（Test 1 DN 漂移端到端 / Test 3 ad_dn 一致性）
-last_updated: "2026-10-22T16:25:00Z"
+current_phase: 62
+current_phase_name: 卫生收尾与死代码清理（HYGIENE-03/04/05）
+status: complete
+stopped_at: 里程碑 v1.21 全部收口（2026-10-22）：六 phase 57-62 verification 全 passed；人工验证债清零——58 UAT 9 项全落终态（3 pass 生产实测 / 4 skip 用户知情裁决 / 2 N/A 单域或前提不存在）、59 GUARD-01 登录守卫双半段端到端实锤（拦截+放行）、60 SAFE-01 软删 DN 漂移拦截端到端 + 影子表对拍 0 漂移 + 实时抽查 3 样本一致
+last_updated: "2026-10-22T19:05:00+08:00"
 last_activity: 2026-10-22
-last_activity_desc: 剩余 verify 复验 — 59/60/61 三 phase staleness 消除（重算 covered_digest + 逐条 truth 复核 + 受影响测试包复跑全绿）；61 转 complete/passed，59/60 维持 human_needed（环境约束项未实测）
+last_activity_desc: v1.21 人工验证债清零收口（chenchao-076 真实登录链路 ×4 次端到端 + c_chenchao-051 compare-and-move 双向 move + 幂等半段），57-62 全 passed
 state_head: cb1382c3d15effce3a89f185175edde3be665191
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 19
   completed_plans: 19
-  percent: 83
+  percent: 100
 ---
 
 # Project State
