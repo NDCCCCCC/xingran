@@ -168,3 +168,38 @@ func TestLoadKnownGroupDNSet_ExcludesSoftDeleted(t *testing.T) {
 	assert.False(t, hasSoft, "软删组不得进入过滤集合")
 }
 
+
+// TestSyncGroupMembers_AllMembersNestedNoEmptySliceError 回归 62-02 生产缺陷:
+// 生产存在成员"全部"是嵌套组的组(CN=CXHUB-人资条线,OU=外网权限,...),
+// 过滤后 kept 为空,GORM Create(空切片) 返回 ErrEmptySlice("empty slice found"),
+// 事务回滚并让整轮 syncGroups 中止(2026-10-22 14:05 轮 sync_status=failed)。
+// 期望:不返回错误,且该组零行(Delete 已随事务提交)。
+func TestSyncGroupMembers_AllMembersNestedNoEmptySliceError(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+	groupG := "CN=CXHUB-人资条线,OU=外网权限,OU=MgtGrp,DC=example,DC=com"
+	nestedOnly := "CN=CXHUB-人力资源部,OU=Groups,DC=example,DC=com"
+
+	// 预置:唯一成员本身是一个已入库的组 DN
+	g := models.ADGroup{ADConfigID: cfg.ID, GroupDN: nestedOnly, GroupName: "CXHUB-人力资源部", MemberCount: 0}
+	g.ID = uuid.NewString()
+	require.NoError(t, db.Create(&g).Error)
+
+	// 预置历史行(模拟重放前的存量关系)，验证 Delete 之后不回填
+	legacy := models.ADGroupMember{ADConfigID: cfg.ID, GroupDN: groupG, UserDN: nestedOnly}
+	legacy.ID = uuid.NewString()
+	require.NoError(t, db.Create(&legacy).Error)
+
+	set, err := svc.loadKnownGroupDNSet(ctx, cfg.ID)
+	require.NoError(t, err)
+
+	// 关键断言:不得返回 "empty slice found"
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupG, []string{nestedOnly}, set),
+		"全嵌套成员的组不得因 GORM ErrEmptySlice 中断整轮同步")
+
+	var rows []models.ADGroupMember
+	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupG).Find(&rows).Error)
+	assert.Len(t, rows, 0, "过滤后为空:该组应零行")
+}

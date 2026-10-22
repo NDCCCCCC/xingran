@@ -700,6 +700,13 @@ func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADCon
 			}
 		}
 
+		// HYGIENE-04 边界:组成员可能"全部"是嵌套组(生产实例 CN=CXHUB-人资条线),
+		// 过滤后为空时 Create 会返回 GORM ErrEmptySlice("empty slice found"),
+		// 事务回滚并让整轮 syncGroups 中止。Delete 已在事务内生效,直接提交即可。
+		if len(memberDNs) == 0 {
+			return nil
+		}
+
 		// 准备批量数据
 		members := make([]models.ADGroupMember, 0, len(memberDNs))
 		for _, userDN := range memberDNs {
