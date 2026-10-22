@@ -1272,7 +1272,7 @@ func TestSync78_SyncGroupMembers_FullDiff(t *testing.T) {
 		"CN=A,DC=example,DC=com",
 		"CN=B,DC=example,DC=com",
 		"CN=D,DC=example,DC=com",
-	}))
+	}, nil))
 
 	// 最终 3 行
 	var liveMembers []models.ADGroupMember
@@ -1286,7 +1286,7 @@ func TestSync78_SyncGroupMembers_FullDiff(t *testing.T) {
 		"A/B 保留,C 移除,D 新增")
 
 	// 空 memberDNs → 全部清空
-	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, []string{}))
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, []string{}, nil))
 	var remaining []models.ADGroupMember
 	require.NoError(t, db.Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Find(&remaining).Error)
 	assert.Empty(t, remaining, "空 memberDNs → 清空")
@@ -1296,7 +1296,7 @@ func TestSync78_SyncGroupMembers_FullDiff(t *testing.T) {
 	require.NoError(t, err)
 	_, err = sqlDB.Exec(`DROP TABLE sys_ad_group_member`)
 	require.NoError(t, err)
-	err = svc.syncGroupMembers(ctx, cfg, groupDN, []string{"CN=X,DC=example,DC=com"})
+	err = svc.syncGroupMembers(ctx, cfg, groupDN, []string{"CN=X,DC=example,DC=com"}, nil)
 	assert.Error(t, err, "DROP TABLE 后应返回包装错误")
 }
 
@@ -1328,7 +1328,7 @@ func TestSyncGroupMembers_CreateFailRollsBackDelete(t *testing.T) {
 	err := svc.syncGroupMembers(ctx, cfg, groupDN, []string{
 		"CN=New,DC=example,DC=com",
 		"FORCED_FAIL",
-	})
+	}, nil)
 	require.Error(t, err, "CHECK 注入点应使 Create 失败并返回 error")
 	assert.Contains(t, err.Error(), "批量添加组成员失败", "错误包装前缀必须保留")
 
@@ -1358,12 +1358,12 @@ func TestSyncGroupMembers_ReplayIdempotent(t *testing.T) {
 		"CN=C,DC=example,DC=com",
 	}
 
-	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, members))
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, members, nil))
 	var afterFirst []models.ADGroupMember
 	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Order("user_dn").Find(&afterFirst).Error)
 	require.Len(t, afterFirst, len(members))
 
-	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, members))
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, members, nil))
 	var afterSecond []models.ADGroupMember
 	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Order("user_dn").Find(&afterSecond).Error)
 
