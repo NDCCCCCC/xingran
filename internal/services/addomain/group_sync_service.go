@@ -161,7 +161,12 @@ func (s *GroupSyncService) SyncSingleGroup(ctx context.Context, configID, groupD
 	}
 
 	// Sync members
-	if err := s.syncService.syncGroupMembers(ctx, &config, groupDN, members); err != nil {
+	// HYGIENE-04:本组已 Upsert 完成，加载集合（含本组）后过滤嵌套组 DN
+	groupDNSet, err := s.syncService.loadKnownGroupDNSet(ctx, config.ID)
+	if err != nil {
+		return fmt.Errorf("加载已知组 DN 集合失败: %w", err)
+	}
+	if err := s.syncService.syncGroupMembers(ctx, &config, groupDN, members, groupDNSet); err != nil {
 		return fmt.Errorf("同步组成员失败: %w", err)
 	}
 
@@ -345,8 +350,13 @@ func (s *GroupSyncService) syncGroupEntries(ctx context.Context, config *models.
 	}
 
 	// Sync group members
+	// HYGIENE-04:批量建组已完成，加载集合后过滤嵌套组 DN；加载失败按本路径降级语义 Warnf + 不过滤
+	groupDNSet, err := s.syncService.loadKnownGroupDNSet(ctx, config.ID)
+	if err != nil {
+		applogger.Warnf("[组同步] 加载已知组 DN 集合失败，跳过嵌套组过滤: %v", err)
+	}
 	for groupDN, members := range groupMembersMap {
-		if err := s.syncService.syncGroupMembers(ctx, config, groupDN, members); err != nil {
+		if err := s.syncService.syncGroupMembers(ctx, config, groupDN, members, groupDNSet); err != nil {
 			applogger.Warnf("[组同步] 同步组成员失败 [%s]: %v", groupDN, err)
 			// Continue with other groups
 		}

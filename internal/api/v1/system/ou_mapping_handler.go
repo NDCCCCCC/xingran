@@ -143,7 +143,11 @@ func (h *OUMappingHandler) UpdateOUDeptMapping(c *gin.Context) {
 		SyncStatus:  "pending",
 	}
 
-	if err := h.mapper.UpsertMapping(c.Request.Context(), mapping); err != nil {
+	// HYGIENE-05:手工重绑走 Force + 预检告警（操作员可合法覆盖，但必须显式留痕）
+	if existing, err := h.mapper.GetMappingByOU(c.Request.Context(), ouDn); err == nil && existing != nil && existing.DeptID != req.DeptID {
+		applogger.Warnf("手工重绑 OU %s: 原部门 %s → 新部门 %s（操作员显式覆盖，原映射将被替换）", ouDn, existing.DeptID, req.DeptID)
+	}
+	if err := h.mapper.UpsertMappingForce(c.Request.Context(), mapping); err != nil {
 		applogger.Errorf("更新 OU 部门映射失败: %v", err)
 		response.Error(c, http.StatusInternalServerError, "更新映射关系失败")
 		return

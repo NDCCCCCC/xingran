@@ -248,69 +248,6 @@ func (s *UserADSyncService) updateSyncTimestamp(ctx context.Context, userID stri
 		Update("ad_synced_at", time.Now()).Error
 }
 
-// BatchMoveUsersToNewOU 批量移动用户到新OU
-// 为未来功能预留的批量操作接口
-func (s *UserADSyncService) BatchMoveUsersToNewOU(ctx context.Context, userIDs []string, newDeptID string) error {
-	// 1. 查找新部门的OU DN
-	ouDN, err := s.mapper.FindOUDNByDeptID(ctx, newDeptID)
-	if err != nil {
-		return fmt.Errorf("查找部门OU失败: %w", err)
-	}
-
-	// 2. 获取AD配置
-	var adConfig models.ADConfig
-	if err := s.db.WithContext(ctx).Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).First(&adConfig).Error; err != nil {
-		return fmt.Errorf("获取AD配置失败: %w", err)
-	}
-	// Phase 36 后 admin_password 为 SM4 密文存储，绑定前必须解密
-	// （遗漏会导致密文当明文绑定 → LDAP 49 data 52e → 重试触发账号锁定 775）
-
-	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
-	// operation 边界 = 整个批量任务（SP-3：单次批量一个 operation，非每用户）
-	// 所有 LDAP 操作（MoveUser）必须在闭包内（Pitfall 3）；单用户失败计入 failedCount 不中断批量
-	successCount := 0
-	failedCount := 0
-	fc := NewFailoverClient(s.pool, &adConfig)
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
-		// 批量移动用户（分批处理，每批10个）
-		batchSize := 10
-		for i := 0; i < len(userIDs); i += batchSize {
-			end := i + batchSize
-			if end > len(userIDs) {
-				end = len(userIDs)
-			}
-
-			batch := userIDs[i:end]
-			for _, userID := range batch {
-				if err := s.moveSingleUserToOU(ctx, ldapClient, userID, ouDN); err != nil {
-					applogger.Errorf("移动用户失败 [ID=%s]: %v", userID, err)
-					failedCount++
-				} else {
-					successCount++
-				}
-			}
-
-			// 每批之间暂停1秒，避免AD压力过大
-			if i+batchSize < len(userIDs) {
-				time.Sleep(1 * time.Second)
-			}
-		}
-		return nil
-	}); err != nil {
-		if errors.Is(err, ErrAllAccountsUnavailable) {
-			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
-		}
-		return fmt.Errorf("连接AD失败: %w", err)
-	}
-
-	applogger.Infof("批量移动用户完成: 成功=%d, 失败=%d, 目标OU=%s", successCount, failedCount, ouDN)
-
-	if failedCount > 0 {
-		return fmt.Errorf("批量移动完成，部分失败: 成功=%d, 失败=%d", successCount, failedCount)
-	}
-	return nil
-}
-
 // moveSingleUserToOU 移动单个用户到指定OU
 func (s *UserADSyncService) moveSingleUserToOU(ctx context.Context, ldapClient LDAPClientIface, userID, ouDN string) error {
 	var user models.User

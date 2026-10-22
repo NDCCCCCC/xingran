@@ -144,7 +144,16 @@ func (s *DeptToADSyncService) syncDeptTree(ctx context.Context, ldapClient LDAPC
 	mapping.LastSyncAt = &now
 
 	if err := s.mapper.UpsertMapping(ctx, mapping); err != nil {
-		applogger.Warnf("更新映射关系失败 [%s]: %v", dept.DeptName, err)
+		var conflict *OUDNConflictError
+		if errors.As(err, &conflict) {
+			// HYGIENE-05:同名兄弟部门争用同一 OU DN —— 显式计失败 + Errorf 双部门名，不静默覆盖
+			applogger.Errorf("部门 OU DN 冲突: 部门 [%s] 与部门 [%s] 争用同一 OU DN %s，映射保留给 [%s]，本次不同步该部门",
+				conflict.IncomingDeptName, conflict.ExistingDeptName, conflict.OUDN, conflict.ExistingDeptName)
+			result.FailedDepts++
+			result.Errors = append(result.Errors, DeptSyncError{DeptID: dept.ID, DeptName: dept.DeptName, Error: conflict.Error()})
+		} else {
+			applogger.Warnf("更新映射关系失败 [%s]: %v", dept.DeptName, err)
+		}
 		// 不中断同步流程，继续处理子部门
 	} else {
 		result.SuccessDepts++

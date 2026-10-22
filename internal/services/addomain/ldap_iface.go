@@ -11,10 +11,10 @@ import (
 //   - mockLDAPClient（测试用，见 ldap_client_mock_test.go）
 //
 // 接口覆盖 Connect/Close 生命周期、只读搜索（OU/Group/User/Computer），
-// 以及 group_sync_service 与 user_ou_service 实际调用的写操作（成员增删、组创建/删除）。
+// 以及 group_sync_service 与 user_ad_sync_service 实际调用的写操作（成员增删、组创建/删除）。
 //
 // P2-A6: 抽取该接口以便 AD 关键路径（LDAP 连接、组同步、用户 OU 同步）
-// 可在不依赖真实 AD 服务器的条件下进行单元测试，覆盖率达 ≥70%。
+// 可在不依赖真实 AD 服务器的条件下进行单元测试（62-01 起 user_ou_service 已删除，调用方为 group/user 同步路径）。
 type LDAPClientIface interface {
 	// 连接与生命周期
 	Connect() error
@@ -34,7 +34,7 @@ type LDAPClientIface interface {
 	CreateGroup(groupDN, groupName, description string, groupType int) error
 	DeleteGroup(groupDN string) error
 
-	// 用户属性管理（user_ou_service 使用）
+	// 用户属性管理（user_ad_sync_service 使用）
 	UpdateUserAttribute(userDN string, attrs map[string]string) error
 	MoveUser(userDN, newOUDN string) error
 	EnableUser(userDN string) error

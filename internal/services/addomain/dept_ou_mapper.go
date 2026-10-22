@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -28,7 +29,7 @@ func NewDeptOUmapper(db *gorm.DB) *DeptOUmapper {
 // 原实现只校验映射表存在性，未验证映射部门是否已被软删除，导致登录时把用户
 // 挂到 deleted_at IS NOT NULL 的乱码部门（参见 .planning/debug/ad-login-deleted-dept-reuse.md）。
 // JOIN 后若映射部门已被删除，本函数返回 ErrRecordNotFound，
-// 上层 user_ou_service.resolveDeptFromOU 会落到 createDeptFromOUDN 重建部门链。
+// 上层 resolveDeptFromOU（internal/services/system/user_sync_service.go）查不到映射时返回空串，走默认部门兜底。
 func (m *DeptOUmapper) FindDeptByOUDN(ctx context.Context, ouDN string) (string, error) {
 	var mapping models.DeptOUMapping
 	err := m.db.WithContext(ctx).
@@ -70,8 +71,7 @@ func (m *DeptOUmapper) FindOUDNByDeptID(ctx context.Context, deptID string) (str
 //   - 多 AD 配置环境下旧方法的 First() 顺序不确定 → 排水器会把 A 域用户移进 B 域的 OU
 //     （跨域写入，是 phase 58 最严重的误路由形态）
 //
-// 旧方法保持不动：其调用方（user_ad_sync_service.go 的 moveUserToNewOU /
-// BatchMoveUsersToNewOU、user_ou_service 系列）本轮不改，避免波及其他路径。
+// 旧方法保留：唯一存活调用方为 user_ad_sync_service.go 的 moveUserToNewOU（62-01 已删除 user_ou_service 系列与 BatchMoveUsersToNewOU）。
 func (m *DeptOUmapper) FindOUDNByDeptIDForConfig(ctx context.Context, deptID, adConfigID string) (string, error) {
 	var mapping models.DeptOUMapping
 	err := m.db.WithContext(ctx).
@@ -86,14 +86,49 @@ func (m *DeptOUmapper) FindOUDNByDeptIDForConfig(ctx context.Context, deptID, ad
 	return mapping.OUDN, nil
 }
 
-// UpsertMapping 创建或更新映射关系（幂等操作）
+// ErrOUDNConflict 哨兵错误：OU DN 已映射到其他部门（HYGIENE-05）。
+// 用 errors.Is(err, ErrOUDNConflict) 或 errors.As(err, &*OUDNConflictError) 识别。
+var ErrOUDNConflict = errors.New("OU DN 已映射到其他部门")
+
+// OUDNConflictError 携带冲突双方详情的 typed error。
+// UpsertMapping 严格化后：同名兄弟部门争用同一 OU DN 时不再静默互相覆盖，
+// 冲突显式返回，映射保留给 incumbent（先占方）。
+type OUDNConflictError struct {
+	OUDN             string
+	ADConfigID       string
+	ExistingDeptID   string
+	ExistingDeptName string
+	IncomingDeptID   string
+	IncomingDeptName string
+}
+
+func (e *OUDNConflictError) Error() string {
+	return fmt.Sprintf("OU DN %s 已映射到部门 [%s](%s)，不能重新映射到部门 [%s](%s)",
+		e.OUDN, e.ExistingDeptName, e.ExistingDeptID, e.IncomingDeptName, e.IncomingDeptID)
+}
+
+// Unwrap 使 errors.Is(err, ErrOUDNConflict) 成立。
+func (e *OUDNConflictError) Unwrap() error { return ErrOUDNConflict }
+
+// UpsertMapping 创建或更新映射关系（幂等操作，冲突严格化 HYGIENE-05）。
 // 处理数据库的两个唯一约束：
 // 1. uni_dept_ou_mapping_dept (dept_id, ad_config_id) - 一个部门在一个AD配置下只能有一个映射
 // 2. uni_dept_ou_mapping_ou (ad_config_id, ou_dn) - 一个OU在一个AD配置下只能映射到一个部门
+//
+// 冲突语义：若 (ad_config_id, ou_dn) 已映射到其他部门，返回 *OUDNConflictError
+// 且不做任何删除（映射保留给先占部门）。显式覆盖走 UpsertMappingForce（仅手工重绑 API）。
 func (m *DeptOUmapper) UpsertMapping(ctx context.Context, mapping *models.DeptOUMapping) error {
-	// P1 fix: 把"先 delete 旧映射 → 再 Create 新映射"包在单事务中。
-	// 原实现中两步在独立事务,delete 成功后 crash/网络抖动会让旧映射消失
-	// 而新映射未建,等同于丢失整条映射关系。
+	return m.upsert(ctx, mapping, false)
+}
+
+// UpsertMappingForce 强制建立映射：发现异部门冲突时告警 + 删旧 + 建新。
+// 仅供手工重绑 API（ou_mapping_handler）使用；自动同步路径禁止调用。
+// P1 fix 保留：delete+create 包在单事务中，delete 成功后 crash 不会丢映射。
+func (m *DeptOUmapper) UpsertMappingForce(ctx context.Context, mapping *models.DeptOUMapping) error {
+	return m.upsert(ctx, mapping, true)
+}
+
+func (m *DeptOUmapper) upsert(ctx context.Context, mapping *models.DeptOUMapping, allowRebind bool) error {
 	return m.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 先检查是否已存在相同 ou_dn 的映射
 		var existing models.DeptOUMapping
@@ -116,8 +151,24 @@ func (m *DeptOUmapper) UpsertMapping(ctx context.Context, mapping *models.DeptOU
 						"sync_enabled": mapping.SyncEnabled,
 					}).Error
 			}
-			// ou_dn 已映射到不同部门，事务内删除旧映射(失败回滚)
-			applogger.Warnf("OU DN %s 已映射到部门 %s，现在重新映射到部门 %s",
+			if !allowRebind {
+				// HYGIENE-05：不删除，返回携带双方部门名的冲突错误
+				var conflict OUDNConflictError
+				conflict.OUDN = mapping.OUDN
+				conflict.ADConfigID = mapping.ADConfigID
+				conflict.ExistingDeptID = existing.DeptID
+				conflict.IncomingDeptID = mapping.DeptID
+				var dept models.Department
+				if err := tx.Select("dept_name").Where("id = ?", existing.DeptID).First(&dept).Error; err == nil {
+					conflict.ExistingDeptName = dept.DeptName
+				}
+				if err := tx.Select("dept_name").Where("id = ?", mapping.DeptID).First(&dept).Error; err == nil {
+					conflict.IncomingDeptName = dept.DeptName
+				}
+				return &conflict
+			}
+			// 显式 Force：ou_dn 已映射到不同部门，事务内删除旧映射(失败回滚)
+			applogger.Warnf("OU DN %s 已映射到部门 %s，现在重新映射到部门 %s（显式 Force 覆盖）",
 				mapping.OUDN, existing.DeptID, mapping.DeptID)
 			if err := tx.Delete(&existing).Error; err != nil {
 				return fmt.Errorf("删除旧映射失败: %w", err)

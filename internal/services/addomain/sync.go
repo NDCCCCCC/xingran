@@ -404,8 +404,13 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		return err
 	}
 
+	// HYGIENE-04:建组已在上一步完成，此处加载的集合已含本轮全部组
+	groupDNSet, err := s.loadKnownGroupDNSet(ctx, config.ID)
+	if err != nil {
+		return fmt.Errorf("加载已知组 DN 集合失败: %w", err)
+	}
 	for groupDN, members := range groupMembersMap {
-		if err := s.syncGroupMembers(ctx, config, groupDN, members); err != nil {
+		if err := s.syncGroupMembers(ctx, config, groupDN, members, groupDNSet); err != nil {
 			return err
 		}
 	}
@@ -669,7 +674,9 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 // 不把整轮所有组合成一个大事务(锁面扩大且违背「重放以组为单位」语义)。
 // Unscoped 硬删语义保留:sys_ad_group_member 是派生数据,随 LDAP 全量重放;
 // 改软删会导致行数爆炸 + GetGroupSyncStatus 计数虚高。
-func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADConfig, groupDN string, memberDNs []string) error {
+// groupDNSet 为本轮已知 group DN 集合（loadKnownGroupDNSet 产出）；nil 时不过滤（防御语义，
+// 生产调用方必须显式加载传入）。嵌套组 DN 被过滤不写入用户成员关系（HYGIENE-04）。
+func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADConfig, groupDN string, memberDNs []string, groupDNSet map[string]struct{}) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 先删除旧的成员关系
 		if err := tx.Unscoped().Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
@@ -680,6 +687,17 @@ func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADCon
 		// 空成员集语义不变:Delete 已随事务提交,Create 跳过
 		if len(memberDNs) == 0 {
 			return nil
+		}
+
+		// HYGIENE-04:过滤嵌套组 DN，不写入用户成员关系（重放 delete+insert 天然自愈存量污染行）
+		if groupDNSet == nil {
+			applogger.Warnf("[组同步] 组 %s 未提供 group DN 集合，跳过嵌套组过滤（防御路径，生产不应出现）", groupDN)
+		} else {
+			var filtered []string
+			memberDNs, filtered = filterNestedGroupMemberDNs(memberDNs, groupDNSet)
+			if len(filtered) > 0 {
+				applogger.Infof("[组同步] 组 %s 过滤嵌套组成员 %d 个（不写入用户成员关系）", groupDN, len(filtered))
+			}
 		}
 
 		// 准备批量数据
