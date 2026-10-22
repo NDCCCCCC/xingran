@@ -1,9 +1,9 @@
 ---
 phase: 57-ad-outbox-lite
 verified: 2026-10-16
-updated: 2026-10-21
+updated: 2026-10-22
 re_verified: 2026-10-17
-status: human_needed
+status: passed
 scope: 57-01 / 57-02 / 57-03 + F-01~F-06 + Gap 闭环（GAP-01/02/03）
 independently_reproduced:
   - "go build ./... → exit 0"
@@ -48,21 +48,21 @@ human_verification:
   - test: "PG 真实环境验证 ON CONFLICT 部分索引合并路径"
     expected: "连续两次编辑同一用户 → ad_push_queue 仅 1 行 pending；若报 42P10 there is no unique or exclusion constraint matching the ON CONFLICT specification → 谓词写错。sqlite 侧 TestPhase57_EnqueueUpdate_MergeOnSecondEdit 已提供等价回归保护，但 PG 的冲突目标推断路径只能实机确认"
     why_human: "本仓无 PG 测试基座；QUEUE-02 的「DB 层合并语义成立」在 PG 上的实际执行未跑过"
-    resolution: "已转留 57-HUMAN-UAT.md Test 1（人工执行清单，结果记录在该文件）"
+    resolution: "PASS（2026-10-21 11:44 生产 PG 10.62.10.34/ruoyi 实机）：以生产同款子句 ON CONFLICT (entity_type, entity_id, action_type) WHERE status IN (pending, failed) DO UPDATE 推断成功未报 42P10；两次入队后仅 1 行且同一 id，status=pending/attempts=0/last_error/next_retry_at/failed_at 全清；再把该行打成 failed/attempts=3/last_error=boom 后第三次入队仍合并为 1 行（事务内 ROLLBACK 无残留）。UI 首测出现的 2 行 pushed 归因为终态行退出唯一索引的设计行为（TestPhase57_EnqueueUpdate_SyncsWithTerminalRow），非合并失效。证据在 57-HUMAN-UAT.md Test 1"
   - test: "进程重启不丢已入队行（QUEUE-01 / SC1 后半）"
     expected: "PG 部署后编辑用户入队 → kill -9 → 重启 → SELECT * FROM ad_push_queue WHERE status='pending' 行仍在"
     why_human: "需真实部署二进制 + 启停；57-VALIDATION.md 声明为 Manual-Only 且未执行"
-    resolution: "已转留 57-HUMAN-UAT.md Test 2（人工执行清单，结果记录在该文件）"
+    resolution: "PASS（2026-10-21 12:03-12:15 kill -9 实测）：行 4b743635-972c-4ec1-bc06-0fe2c51d5b0f（entity 8bd62962=chenchao-076, update_user）12:03:35.075 入队 pending/attempts=0；12:05:29 复核仍 pending；12:09:5x taskkill /PID 49428 /F 强杀后端（9000 释放）→ 杀后仍 pending/attempts=0/字段零漂移；12:11 重启（app.log 12:11:42 确认 drain_interval_seconds=300 生效、cron 0 */5 * * * * 注册）→ 12:15:47 复核仍 pending/attempts=0/updated_at 未变。持久化断言成立。证据在 57-HUMAN-UAT.md Test 2"
   - test: "AD 端复活链路闭环（QUEUE-06 端到端）"
     expected: "sys 删除用户 → Phase 58 排水器执行 DisableUser → AD 端 UAC 514 → bind 失败（data 533）"
     why_human: "需真实 AD；执行侧（排水器）已存在（internal/services/addomain/ad_push_queue_drain_service.go:400 的 `case models.ADPushActionDisable:` → `c.DisableUser(*user.AdDn)`，UAC 514），本 phase 只能验证队列行产生（已由测试锁定）"
-    resolution: "已转留 57-HUMAN-UAT.md Test 3（人工执行清单，结果记录在该文件）"
+    resolution: "PASS（2026-10-21 12:51 端到端）：UI 删除 d_chenchao（sys_user f5d4152b…，ad_dn CN=d_chenchao,OU=孝感中心支公司,…）→ 同事务入队 disable 行 df40eff4（created 12:51:02.472，比 user.deleted_at 晚 6ms）→ 12:51:30.004 该行被并发实例 10.62.10.39 推成 pushed（attempts=0、无 last_error）→ 用户确认域控账号已被禁用（UAC 514 生效）。AD 登录 data 533 步骤经用户裁决省略（域控账号禁用后不可登录属 AD 标准语义）。证据在 57-HUMAN-UAT.md Test 3"
 ---
 
 # Phase 57 验证报告（AD Push Queue / outbox-lite 基建）
 
 **Phase Goal**：队列写入路径的原子性与合并语义在 DB 层成立 — AD 侧属性变化可被可靠记录、合并与抑制，为 Phase 58 排水器提供可靠地基。
-**结论**：**human_needed** —— 代码侧全部达成：4 条 requirement 落地、8 组变异测试证明守护真实可红、本轮 3 个高/中危 GAP 已闭环且经独立变异复核、无 Phase 58/59 越界。剩余 4 项均为低危记账/文档类（已注明去向），不阻塞目标。PG 实机合并路径与重启耐久性属声明过的 Manual-Only 项，待人工/环境验证。
+**结论**：**passed** —— 代码侧全部达成：4 条 requirement 落地、8 组变异测试证明守护真实可红、本轮 3 个高/中危 GAP 已闭环且经独立变异复核、无 Phase 58/59 越界。3 项人工项已于 2026-10-21 在真实 PG/真实 AD 环境执行完毕并全部 PASS（PG 合并路径、kill -9 重启耐久性、AD 禁用链路），证据见 57-HUMAN-UAT.md Test 1~3。剩余 4 项（GAP-04~GAP-07）均为低危记账/文档类且已注明去向，不阻塞目标。
 
 ---
 

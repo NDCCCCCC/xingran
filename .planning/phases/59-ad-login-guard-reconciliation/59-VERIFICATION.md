@@ -1,7 +1,7 @@
 ---
 phase: 59-ad-login-guard-reconciliation
 verified: 2026-10-19T16:35:48Z
-updated: 2026-10-21
+updated: 2026-10-22
 status: human_needed
 score: 12/14 must-haves verified
 covered_files:
@@ -33,7 +33,7 @@ covered_files:
   - "ruoyi-react-frontend/src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx"
   - "ruoyi-react-frontend/src/pages/ad-domain/configs/__tests__/index.render.test.tsx"
   - "ruoyi-react-frontend/src/pages/ad-domain/configs/index.tsx"
-covered_digest: "v3:sha256:789b088e75063f07e76dcd0476e12c2fa44b48c00a03abc0438fd84205a0cdc8"
+covered_digest: "v3:sha256:0f5b6342f770dbb6df9d26dfd922375700fdda83bed34ea0aa2c7efafd6dd29f"
 behavior_unverified: 2
 overrides_applied: 0
 behavior_unverified_items:
@@ -81,7 +81,27 @@ human_verification:
 **Phase Goal:** AD 登录回写 dept 不再用旧值回滚本地编辑（信号守卫替代被三方审计否决的时间戳仲裁）；dept↔OU 不一致（含映射指向软删部门）可观测。
 **Verified:** 2026-10-19T16:35:48Z
 **Status:** human_needed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — 2026-10-22（staleness refresh：covered_files 变更后重跑验证）
+
+## Re-verification (2026-10-22 — staleness refresh)
+
+**触发原因**：`init progress` 报告本 phase `verification_status=stale`。covered_files 中 3 个文件在本报告出具后被改动：
+
+| 文件 | 最后改动提交 | 性质 |
+|---|---|---|
+| `internal/services/system/user_sync_service.go` | `19fefc32` feat(60-02): filter refused soft-delete restores in batch sync | Phase 60 的 SAFE-02 批量路径改动，与 59 覆盖的**登录回写守卫**不在同一函数 |
+| `internal/core/db/database.go` | `11c26fbd` fix(59): 补齐 sys_dept_ou_mapping 建表 + 修正 migration_218 父菜单查找 | Phase 59 自身收尾修复（原验证快照早于该提交） |
+| `internal/core/db/migrations/migration_218_ad_reconciliation_permission.go` | `11c26fbd` | 同上 |
+
+**复核动作与结论**：
+
+1. 真相 1/2/5/7（GUARD-01 守卫）：因 60-01/60-02 新增函数，守卫代码整体下移（原 `user_sync_service.go:432-439` → 现 `:480` 守卫查询 / `:483` 失败 WARN / `:486` 命中 WARN / `:489` 唯一 dept_id 写入 / `:887` 注释 / `:894` `findActiveUserUpdateQueue`），**语义未变**：三分支 switch（查询失败保守降级 / 命中拦截 / 默认放行）保持原样；`Model(user).Update("dept_id", deptID)` 仍是**唯一** dept_id 写入点（无平行分支）。
+2. 真相 6（谓词单一事实源）：`models.ADPushQueueActivePredicate` 在 `user_sync_service.go` 中 grep 计数仍 = **1**（未复制/改写/加表名限定），常量原文 `status IN ('pending', 'failed')` 未变。
+3. 真相 8/9（视图 DROP 与迁移注册）：`database.go:476 dropDependentMaterializedViews()` 仍在 `AutoMigrate()` 之前调用（`:837`）；`Migrate217`/`Migrate218` 三条启动路径注册仍在（217 → `:1100`/`:1150`/`:1349`；218 → `:1106`/`:1155`/`:1355`）。
+4. 真相 3/4/10/11/12（视图四类口径、端点鉴权、方言一致性、权限行、前端 403 零请求）：相关文件 `git log -1` 逐个核对，2026-10-20 之后**未再改动**，无回归面。
+5. 行为测试复跑：`go test ./internal/services/system/ ./internal/services/addomain/ ./internal/api/v1/system/ ./internal/api/v1/ ./internal/core/db/migrations/ -count=1` → 全部 ok（11.5s / 8.3s / 3.7s / 13.5s / 1.8s），含 `TestPhase59_SyncADUser_*` 五类守卫用例与 migration_217/218 用例。
+
+**状态结论**：真相 1–12 仍 VERIFIED；真相 13/14 维持 `PRESENT_BEHAVIOR_UNVERIFIED`（CSS 层叠与 Tab 换行属真实浏览器约束，jsdom 无法判定，本次复验不改变其状态）。真实 AD / 真实 PG / 浏览器人工项仍未执行，故 `status` 维持 `human_needed`（12/14）。**本次变化仅为按当前文件内容重算 covered_digest（`v3:sha256:0f5b6342…`），stale 消除。**
 
 ## Goal Achievement
 

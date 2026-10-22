@@ -1,11 +1,11 @@
 ---
 phase: 61-shadow-table-integrity
 verified: 2026-10-20T23:53:36Z
-updated: 2026-10-22T01:30:00+08:00
+updated: 2026-10-22T16:20:00+08:00
 status: passed
 score: 8/8 must-haves verified
 covered_files: [".planning/phases/61-shadow-table-integrity/61-01-PLAN.md", ".planning/phases/61-shadow-table-integrity/61-01-SUMMARY.md", ".planning/phases/61-shadow-table-integrity/61-02-PLAN.md", ".planning/phases/61-shadow-table-integrity/61-02-SUMMARY.md", ".planning/phases/61-shadow-table-integrity/61-03-PLAN.md", ".planning/phases/61-shadow-table-integrity/61-03-SUMMARY.md", "internal/services/addomain/computer.go", "internal/services/addomain/computer_78_06_test.go", "internal/services/addomain/group_sync_service.go", "internal/services/addomain/shadow_cleanup_service.go", "internal/services/addomain/shadow_cleanup_test.go", "internal/services/addomain/sync.go", "internal/services/addomain/sync_78_05_test.go"]
-covered_digest: "v3:sha256:e3e0c7d11ad65c8b50edcd3162dc5123482addfc9a1391b3a0ea4ce388bbcce0"
+covered_digest: "v3:sha256:15ac699db24e4aa3a75608e3b78fce1c3fe69a1682093cc73683086346030bf4"
 behavior_unverified: 0
 overrides_applied: 0
 human_verification:
@@ -31,8 +31,30 @@ human_verification:
 
 **Phase Goal:** AD 端已消失的对象不再永久滞留 `sys_ad_user/ou/computer` 影子表（静默数据丢失消除）；组成员重放消除空成员可见窗口；清理与全量同步不并发。
 **Verified:** 2026-10-20T23:53:36Z
-**Status:** human_needed（自动化证据全绿；4 项真环境人工项待执行）
-**Re-verification:** No — initial verification
+**Status:** passed（自动化证据全绿；4 项真环境人工项均已 PASS，见 frontmatter resolution；2026-10-22 为 staleness 复验）
+**Re-verification:** Yes — 2026-10-22（staleness refresh：covered_files 变更后重跑验证）
+
+## Re-verification (2026-10-22 — staleness refresh)
+
+**触发原因**：`init progress` 报告 `verification_status=stale`。covered_files 中 6 个文件在本报告出具后被改动：
+
+| 文件 | 最后改动提交 | 性质 |
+|---|---|---|
+| `internal/services/addomain/sync.go` | `78cb857a` fix(addomain): GAP-62-01 全嵌套组成员导致 GORM ErrEmptySlice 中止整轮同步 | Phase 62 的 HYGIENE-04 过滤 + 过滤后空切片早返回 |
+| `internal/services/addomain/group_sync_service.go` | `390ae9eb` fix(addomain): HYGIENE-03/04/05 … | Phase 62 的组成员过滤接线 |
+| `internal/services/addomain/sync_78_05_test.go` | `30f58068` test(addomain): Phase 62 三 plan 测试用例 | 6 处直调补第 5 参（语义不变） |
+| `internal/services/addomain/computer.go`、`computer_78_06_test.go` | `3bcd1c84` feat(61-02): resurrect soft-deleted computer and group rows on upsert | 61 自身后续提交（原验证快照早于该提交） |
+| `internal/services/addomain/shadow_cleanup_test.go` | `bdc8c452` test(61-02): add failing resurrect tests … | 同上 |
+
+**复核动作与结论**：
+
+1. 核心真相「组成员重放消除空成员可见窗口」——`sync.go:679 syncGroupMembers` 仍是**每组单事务**：`s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {`（`:680`）内 `tx.Unscoped().Where("ad_config_id = ? AND group_dn = ?", …).Delete(...)`（`:682`）+ 批量 Create。Phase 62 的改动只在**该事务内部**追加嵌套组 DN 过滤与「过滤后为空则早返回」，**未触碰 delete/insert 的事务边界** → 原子性不变。
+2. 回滚语义回归仍绿：`TestSyncGroupMembers_CreateFailRollsBackDelete`（FORCED_FAIL CHECK 注入 → 旧成员 Unscoped 原样保留）仍 PASS，证明事务边界未被 Phase 62 破坏。
+3. 生产端复核（Phase 62 部署后）：2026-10-22 14:35 轮（UTC 06:35）全量同步 `success`（ou_count=3590 / group_count=67 / user_count=4177 / error_count=0 / duration=9s），其中嵌套组污染行由 8 → 0 —— 61 的「重放无空窗 + 影子表清理」链路在新代码下整轮正常完成。
+4. `computer.go` 的复活语义与 `shadow_cleanup_service.go` 的两道闸门（用户 `:90` / OU `:146`，判式 `len(vanishedDNs)*2 > len(stale*)` 严格大于、恰 50% 放行）自 61 自身提交后未再改动。
+5. 行为测试复跑：`go test ./internal/services/addomain/ ./internal/scheduler/ -count=1` → ok 8.3s / 12.5s（含 `TestSync78_*`、`TestPhase58_*` 及 62 阶段新增用例）。
+
+**状态结论**：8/8 must-haves 仍 VERIFIED，4 项 human_verification 均为 PASS（结论见 frontmatter resolution），`status` 维持 `passed`。本次变化仅为重算 covered_digest（`v3:sha256:15ac699d…`）以消除 stale。
 
 ## Goal Achievement
 

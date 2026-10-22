@@ -2,13 +2,13 @@
 gsd_state_version: "1.0"
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
-current_phase: 62
-current_phase_name: 卫生收尾与死代码清理（HYGIENE-03/04/05）
+current_phase: 58
+current_phase_name: 排水器与 compare-and-move 推送（QUEUE-01~06）
 status: executing
-stopped_at: Phase 62 Complete — verification status=passed（18/18 must-haves，UAT 4/4），UAT 期间捕获并修复生产回归 GAP-62-01；里程碑剩余 Phase 58（6/7）与 57/58 人工验证债
-last_updated: "2026-10-22T15:05:00Z"
+stopped_at: 里程碑 v1.21 六个 phase 的实现与自动化验证已全部完成（19/19 plans；57/61/62 verification=passed）；剩余为真实环境人工验证债：Phase 58 五项（Test 1 compare-and-move / 2 退避与熔断 / 5 code 32 / 6 无 OU 映射批量 dead / 9 移动成功写回失败）、Phase 59 两项浏览器 CSS 行为、Phase 60 两项真实 AD（Test 1 DN 漂移端到端 / Test 3 ad_dn 一致性）
+last_updated: "2026-10-22T16:25:00Z"
 last_activity: 2026-10-22
-last_activity_desc: Phase 62 收口 — verify-work 62 完成（Test 1 人工 / Test 2 生产验证 nested_pollution 8→0 / Test 3-4 自动化），62-VERIFICATION status=passed
+last_activity_desc: 剩余 verify 复验 — 59/60/61 三 phase staleness 消除（重算 covered_digest + 逐条 truth 复核 + 受影响测试包复跑全绿）；61 转 complete/passed，59/60 维持 human_needed（环境约束项未实测）
 state_head: cb1382c3d15effce3a89f185175edde3be665191
 progress:
   total_phases: 6
@@ -22,8 +22,8 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: Phase 62 Complete — verification passed（18/18 must-haves, UAT 4/4）；里程碑剩 Phase 58 与 57/58 人工验证债
-**Last activity**: 2026-10-22 - verify-work 62 收口：4/4 UAT pass + 62-VERIFICATION status=passed；UAT 期间发现并修复生产回归 GAP-62-01（全嵌套组成员导致 GORM ErrEmptySlice 中止整轮同步），14:35 轮生产验证 nested_pollution 8→0
+**Status**: 实现与自动化验证全部完成 — 57/61/62 verification=passed；剩余真实环境人工验证债（58 五项 / 59 两项 / 60 两项）
+**Last activity**: 2026-10-22 - 剩余 verify 复验：59/60/61 的 staleness 已消除（covered_digest 重算 + truth 复核 + 测试包复跑全绿）；61 转 complete/passed，59/60 维持 human_needed（真实 AD / 浏览器项未实测，不可由本地测试替代）
 **Prior activity**: 2026-10-21 - Completed quick task 261021-iqq: ad_push_queue 排水间隔热重载（方案A：固定 30s tick + drainGate 门控）+ 缺陷X markFailed/markDead sanitize + NUL 回归用例
 **Previous activity**: 2026-10-21 - verify-work 57 UAT：Test 1 pass / Test 2 evidence 落盘；两个缺陷档案（热重载、缺陷X NUL）转 quick 261021-iqq 执行
 **Earlier activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
@@ -31,12 +31,12 @@ progress:
 
 ## Current Position
 
-Phase: 62 (卫生收尾与死代码清理（HYGIENE-03/04/05）) — COMPLETE (verification passed)
-Plan: 3 of 3 (62-01 w1 / 62-02 w1 / 62-03 w2 — executed, verified)
-Status: Phase 62 Complete (5/6 phases complete；Phase 58 仍 6/7，57/58 人工验证债待清)
-Last activity: 2026-10-22 — verify-work 62：UAT 4/4 pass、62-VERIFICATION passed、GAP-62-01 已修复并生产验证
+Phase: 58 (排水器与 compare-and-move 推送) — EXECUTED（verification human_needed：9 项 UAT 中 5 项待真实 AD）
+Plan: 7 of 7（58-01~58-07 已执行并落 SUMMARY；余 58-UAT 人工验证项待跑）
+Status: 里程碑实现与自动化验证全完成（57/61/62 verification=passed；19/19 plans）；59/60 staleness 已消除，58/59/60 人工项待真实环境
+Last activity: 2026-10-22 — 剩余 verify 复验：59/60/61 digest 重算 + truth 复核 + 测试包复跑全绿
 Prior: 2026-10-21 — 61-02 executed（四类 upsert 软删行复活：existing 查询 Unscoped 化 + OnConflict 补 deleted_at，5 条 TestSync_Resurrect + 2 条 D-78-05c 翻转用例全绿）
-Progress: 5/6 phases [████████░░] 83%（19/19 plans；Phase 58 仍 6/7 — 57/58 人工验证债待清）
+Progress: 5/6 phases [████████░░] 83%（19/19 plans；Phase 58 7/7 已执行 —— 人工验证债：58 五项真实 AD + 59 两项浏览器 + 60 两项真实 AD）
 
 ## Accumulated Context
 

@@ -1,7 +1,7 @@
 ---
 phase: 60-soft-delete-recovery-safety
 verified: 2026-10-20T09:20:34Z
-updated: 2026-10-21
+updated: 2026-10-22
 status: human_needed
 score: 12/12 must-haves verified
 covered_files:
@@ -16,7 +16,7 @@ covered_files:
   - "internal/core/security/authenticator.go"
   - "internal/services/system/user_sync_service.go"
   - "internal/services/system/user_sync_service_phase60_test.go"
-covered_digest: "v3:sha256:658d29654050183fa269e7347c2054b251ecbf5667cfacf124a0f2c07ee15e87"
+covered_digest: "v3:sha256:8d37669b66ac996932c4498ef3e83ac0513d4992ec568581d0bbca55a7426adb"
 behavior_unverified: 0
 overrides_applied: 0
 advisory:
@@ -48,7 +48,23 @@ human_verification:
 **Phase Goal:** 软删用户恢复不再盲目接管 AD 身份——AD 当前 DN 与存量 ad_dn 校验一致才恢复；登录路径与 batch-sync 对同一恢复场景行为一致。
 **Verified:** 2026-10-20
 **Status:** human_needed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — 2026-10-22（staleness refresh：covered_files 变更后重跑验证）
+
+## Re-verification (2026-10-22 — staleness refresh)
+
+**触发原因**：`init progress` 报告 `verification_status=stale`。covered_files 中 `internal/api/v1/auth.go` 在本报告出具后被 `ff699b9b`（fix: 登录与刷新令牌路径补本地账号状态检查（60-REVIEW CR-02/CR-03 critical））改动。该修复来自本会话的缺陷盘点，与 SAFE-01/SAFE-02 属**不同相位**的安全要求，必须验证二者不互相掩盖。
+
+**关键交互核查（CR-02 × SAFE-01）**：
+
+1. `auth.go` 登录链路顺序：步骤 5 `Authenticate` → 步骤 6 `if authResult.User == nil` → **步骤 6.5 `user.Status != models.UserStatusEnabled` → 403「用户已被禁用」**（`:229-237`）→ 步骤 9 发 token。
+2. SAFE-01 的**拒绝侧**发生在步骤 5 内部：`ad_authenticator.go:131 SyncADUser` 返回 `ErrSoftDeleteIdentityMismatch` → `:136-137` 记 `[SECURITY] 软删恢复被安全策略拒绝` WARN → `:141-147` 返回 `AuthResult{User: nil, SyncErrorReason: syncErrorReasonFor(err)}` → **在步骤 6 即被 `syncErrorReasonMessage` 转成「该账号存在 AD 身份不一致，已被安全拦截，请联系系统管理员」返回，早于 6.5** → SAFE-01 的拒绝语义**不会被「用户已被禁用」掩盖**。
+3. SAFE-01 的**放行侧**（DN 一致 → 恢复）：`user_sync_service.go:346-358 applyRestoreSoftDeleted` 的更新集含 `"status": models.UserStatusEnabled`（`:351`）→ 恢复后账号为启用态；`auth.go` 步骤 6 又从 DB 重读用户（`:219`）→ 6.5 读到的即启用态 → 放行，SAFE-01「DN 一致才恢复并可登录」语义完整保留。
+4. SAFE-02（批量路径）：`user_sync_service.go:598` 的「AD 身份不一致，拒绝恢复（需管理员核对 ad_dn）」仍在；60-02 的批量过滤只作用于批量路径，不改登录路径。
+5. CR-03（`refreshToken` `:439` 同款状态检查）是**新增收紧**，不改变 SAFE-01/SAFE-02 的判定路径。
+
+**复核动作**：行为测试复跑 `go test ./internal/api/v1/ ./internal/core/security/ ./internal/services/system/ -count=1` → 全部 ok（13.5s / 33.2s / 11.5s），含 `ad_authenticator_phase60_test.go`、`user_sync_service_phase60_test.go`、`auth_80_03_test.go`（`TestAuth8003_*`、`TestPhase60_*`）。
+
+**状态结论**：12/12 must-haves 仍 VERIFIED，CR-02/CR-03 与 SAFE-01/SAFE-02 无冲突。`status` 维持 `human_needed` —— 剩余 human_verification 中「真实 AD + 国密登录下的 DN 漂移拒绝端到端」（60-UAT.md Test 1）与「sys_ad_user.user_dn 与 AD 实时 DN 一致性抽查」（Test 3）仍待实测，属环境约束、不可由本地测试替代。本次变化仅为重算 covered_digest（`v3:sha256:8d37669b…`）以消除 stale。
 
 ## 目标达成判定
 
