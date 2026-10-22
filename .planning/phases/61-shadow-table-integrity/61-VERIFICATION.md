@@ -1,8 +1,8 @@
 ---
 phase: 61-shadow-table-integrity
 verified: 2026-10-20T23:53:36Z
-updated: 2026-10-21
-status: human_needed
+updated: 2026-10-22T01:30:00+08:00
+status: passed
 score: 8/8 must-haves verified
 covered_files: [".planning/phases/61-shadow-table-integrity/61-01-PLAN.md", ".planning/phases/61-shadow-table-integrity/61-01-SUMMARY.md", ".planning/phases/61-shadow-table-integrity/61-02-PLAN.md", ".planning/phases/61-shadow-table-integrity/61-02-SUMMARY.md", ".planning/phases/61-shadow-table-integrity/61-03-PLAN.md", ".planning/phases/61-shadow-table-integrity/61-03-SUMMARY.md", "internal/services/addomain/computer.go", "internal/services/addomain/computer_78_06_test.go", "internal/services/addomain/group_sync_service.go", "internal/services/addomain/shadow_cleanup_service.go", "internal/services/addomain/shadow_cleanup_test.go", "internal/services/addomain/sync.go", "internal/services/addomain/sync_78_05_test.go"]
 covered_digest: "v3:sha256:e3e0c7d11ad65c8b50edcd3162dc5123482addfc9a1391b3a0ea4ce388bbcce0"
@@ -12,19 +12,19 @@ human_verification:
   - test: "生产 PG 真并发空窗观察：组成员重放执行期间，从第二会话查询 sys_ad_group_member"
     expected: "外部会话要么看到旧成员集、要么看到新成员集，观察不到空成员窗口（PG READ COMMITTED + 单事务原子性）"
     why_human: "sqlite 进程内测试无法建立真正的跨连接并发观察者；单测只覆盖了原子性的进程内可证伪代理（TestSyncGroupMembers_CreateFailRollsBackDelete）"
-    resolution: "已转留 61-UAT.md Test 1（人工执行清单，结果记录在该文件）"
+    resolution: "PASS（2026-10-22 08:05 轮复测）：根因经 20:05 轮观测 + 最小复现实验闭合为部署滞后（10.62.10.39 二进制未含 cb1382c3 单事务实现，V 形与旧两步提交逐特征自洽）。39 重新发版后 08:05 轮（sync_log 08:05:00.011 dur=9s / 08:05:00.013 dur=6s，67 组）采样器 v5 连续 3025 点 member_count 全程 2815、DISTINCT 59 零偏差；重放窗口 08:05:04.882-05.769（0.887s）内 26 个样本逐条 2815|59，与失败轮同等密度下无 V 形 → 空窗不可观测，expected 达成。证据在 61-UAT.md Test 1"
   - test: "首轮批量清理规模真实观察：部署后核对 SyncResult 三计数（deletedUserCount/deletedOUCount/deletedComputerCount）与 sys_oper_log 清理日志"
     expected: "清理计数与 AD 端实际消失对象数一致；若拟删 >50% 被闸门拒绝属预期保护行为，运维不得误报为故障"
     why_human: "清理规模依赖生产 PG 存量与真实 AD 数据对比，无法在本地 sqlite fixture 复现"
-    resolution: "已转留 61-UAT.md Test 2（人工执行清单，结果记录在该文件）"
+    resolution: "PASS（2026-10-21 14:05 生产首跑）：OU 清理 977（与 sync_log ou_count 对账一致）、电脑 13、用户拟删 4643/8820 被闸门拦截（零误删）——三类计数与 AD 端数据自洽，WARN 无 DN 明文，整轮 success；证据在 61-UAT.md Test 2"
   - test: "闸门真触发演练：测试域控删除 >50% 对象后跑全量同步"
     expected: "清理被 Gate 2 拒绝，日志含「拟删除 x/y 个...(>50%)」WARN（不含 DN 明文），整轮同步仍 success"
     why_human: "需人为构造 AD 端大规模删除的真实域控环境"
-    resolution: "已转留 61-UAT.md Test 3（人工执行清单，结果记录在该文件）"
+    resolution: "PASS（2026-10-21 14:05 生产真实触发，等价覆盖）：LDAP 返回不完整使差集虚大 52.6% → Gate 2 拒绝 + WARN 无 DN 明文 + 轮次 success，与人为删对象走同一代码分支（shadow_cleanup_service.go:90-95）；测试域控真删演练转为可选项；证据在 61-UAT.md Test 3"
   - test: "生产 PG 唯一约束核对（FLAGGED ASSUMPTION A1）：启动冒烟后执行 \\d sys_ad_user / sys_ad_ou / sys_ad_computer / sys_ad_group"
     expected: "各表存在 (ad_config_id, *_dn/name) 唯一约束；若缺失，软删行复现将表现为重复行而非约束冲突（复活路径设计仍正确）"
     why_human: "本机无 PG 实例，sqlite 单测无法覆盖生产约束形态"
-    resolution: "已转留 61-UAT.md Test 4（人工执行清单，结果记录在该文件）"
+    resolution: "PASS（2026-10-21 16:33 实测）：user/ou/group 为真 UNIQUE 约束 (ad_config_id, *_dn)；computer 无约束行但有唯一索引 uni_sys_ad_computer_config_name (ad_config_id, computer_name)，与 computer.go:676 ON CONFLICT 目标完全对齐——A1 成立，证据在 61-UAT.md Test 4"
 ---
 
 # Phase 61: 影子表完整性（删除清理 + 组成员事务化）Verification Report

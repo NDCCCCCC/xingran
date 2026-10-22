@@ -42,7 +42,7 @@ previous_update: 2026-07-08 after Phase 54 (W5) shipped
 - [x] **Phase 58: 排水器与 compare-and-move 推送** — in-process cron 排水 + 退避重试 + 幂等 OU 移动 + 配置路由无歧义 (HYGIENE-01/02, QUEUE-03/04/05) — 7/7 plans，completed 2026-10-19（SC1~6 全部 VERIFIED，见 [58-VERIFICATION.md](phases/58-compare-and-move/58-VERIFICATION.md)）
 - [x] **Phase 59: 登录回写守卫与部门对账视图** — AD 登录不再回滚本地编辑 + dept↔OU 不一致可观测 (GUARD-01/02) — 4/4 plans，completed 2026-10-19（两条 Manual-Only 视觉断言 + PG 真实启动冒烟归 [59-VALIDATION.md](phases/59-ad-login-guard-reconciliation/59-VALIDATION.md)）
 - [x] **Phase 60: 软删恢复安全** — ad_dn 校验后恢复 + 登录/批量同步共用分类逻辑 (SAFE-01/02) — 2/2 plans，completed 2026-10-20（12/12 must-haves VERIFIED，见 [60-VERIFICATION.md](phases/60-soft-delete-recovery-safety/60-VERIFICATION.md) human_needed: 3 项真环境人工验证在 [60-UAT.md](phases/60-soft-delete-recovery-safety/60-UAT.md)）
-- [x] **Phase 61: 影子表完整性** — 删除清理两道闸门 + 组成员事务化 + singleflight 挂载 (SHADOW-01/02/03) — 3/3 plans，completed 2026-10-21（自动化项全绿，真环境人工项见 [61-VALIDATION.md](phases/61-shadow-table-integrity/61-VALIDATION.md) Manual-Only）
+- [x] **Phase 61: 影子表完整性** — 删除清理两道闸门 + 组成员事务化 + singleflight 挂载 (SHADOW-01/02/03) — 3/3 plans，**Complete 2026-10-22**（8/8 must-haves VERIFIED，61-UAT 4/4 pass；真环境人工项见 [61-UAT.md](phases/61-shadow-table-integrity/61-UAT.md) 与 [61-VERIFICATION.md](phases/61-shadow-table-integrity/61-VERIFICATION.md) status=passed）
 - [ ] **Phase 62: 卫生收尾与死代码清理** — F-22 旧路径删除 + 嵌套组标记 + 同名部门 OU DN 冲突告警 (HYGIENE-03/04/05)
 
 ### Phase 57: AD 推送队列基建（outbox-lite 同事务入队）
@@ -248,7 +248,10 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
   2. 嵌套组的 member DN 被标记/过滤，不混入用户成员关系数据（HYGIENE-04）
   3. 同名兄弟部门生成相同 OU DN 时检测并告警，映射不静默互相覆盖（HYGIENE-05）
 
-**Plans**: TBD
+**Plans**:
+- 62-01-PLAN.md (wave 1) — HYGIENE-03 死代码删除（user_ou_service.go + BatchMoveUsersToNewOU + 过期注释 + 共享测试 const 迁移）
+- 62-02-PLAN.md (wave 1) — HYGIENE-04 嵌套组成员 DN 过滤（零 DDL，group_member_filter.go）
+- 62-03-PLAN.md (wave 2, depends_on 62-01) — HYGIENE-05 OU DN 冲突显式化（ErrOUDNConflict + FailedDepts 计数 + 手工 API Force）
 
 ---
 
@@ -260,8 +263,8 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 | 58. 排水器与 compare-and-move 推送 | 6/7 | In progress (wave 5 done 2026-10-19, SC6 终态达成) | - |
 | 59. 登录回写守卫与部门对账视图 | 4/4 | Complete (59-01~59-04 done 2026-10-19) | 2026-10-19 |
 | 60. 软删恢复安全 | 2/2 | Executed — verification human_needed (3 项人工验证待跑，见 60-UAT.md) | 2026-10-20 |
-| 61. 影子表完整性 | 3/3 | Executed — verification human_needed (Manual-Only 三项待真环境, 见 61-VALIDATION.md) | 2026-10-21 |
-| 62. 卫生收尾与死代码清理 | 0/TBD | Not started | - |
+| 61. 影子表完整性 | 3/3 | Complete（61-UAT 4/4 pass，VERIFICATION status=passed） | 2026-10-22 |
+| 62. 卫生收尾与死代码清理 | 3/3 | Executed — verification pending（3 SUMMARY 落盘，改动未提交） | - |
 
 ---
 

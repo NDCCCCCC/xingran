@@ -3,7 +3,7 @@ status: partial
 phase: 58-compare-and-move
 source: [58-VERIFICATION.md, 58-VALIDATION.md]
 started: 2026-10-19T00:00:00+08:00
-updated: 2026-10-21T00:00:00+08:00
+updated: 2026-10-21T19:35:00+08:00
 ---
 
 ## Current Test
@@ -386,7 +386,12 @@ WHERE d.dept_name ~ '[,=+<>#;\\"]';
 
 **处置：** 重跑部门同步（该操作会重写映射行）。**不需要改代码。**
 
-result: [pending]
+**验证记录（2026-10-21 19:35 生产 PG 10.62.10.34/ruoyi 实测）：**
+判据 SQL 首查 0 行（无含 DN 保留字符的部门映射）；反向校验 sys_dept_ou_mapping 共 974 行、
+sys_dept 中名字含 [,=+<>#;\"] 的部门 0 行 → 判据查询有效（有数据可查），前提不存在
+（生产库无含特殊字符的部门名）→ 本项 **N/A**，无需重跑部门同步。
+
+result: [N/A（生产库无含特殊字符的历史部门，974 条映射全清洁）]
 
 ---
 
@@ -428,16 +433,16 @@ result: [pending]
 | UAT-58-5 | code 32 真实触发 | QUEUE-05 / SC5 | [pending] |
 | UAT-58-6 | ⚠ 部门同步从未跑过时 `update_user` 批量转 `dead` | Q2 刻意后果 | [pending — 必须知晓] |
 | UAT-58-7 | ⚠ 「编辑即续命」：持续失败的行永不终态 | F-11 已接受方向 | [accepted by design] |
-| UAT-58-8 | ⚠ 含特殊字符的历史部门需重跑部门同步 | Q5 / HYGIENE-02 取舍 | [pending] |
+| UAT-58-8 | ⚠ 含特殊字符的历史部门需重跑部门同步 | Q5 / HYGIENE-02 取舍 | [N/A — 生产库无特殊字符部门] |
 | UAT-58-9 | ⚠ OU 移动成功但本地回写失败 → 需人工重建 AD 绑定 | H-05 残余风险（PARTIAL FIX） | [pending — 必须知晓] |
 
 total: 9
 passed: 1
 issues: 0
-pending: 7
+pending: 6
 skipped: 0
 blocked: 0
-na: 1 (UAT-58-4, 单域环境)
+na: 2 (UAT-58-4 单域环境; UAT-58-8 生产库无特殊字符部门)
 
 ## Gaps
 
