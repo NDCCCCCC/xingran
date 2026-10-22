@@ -264,7 +264,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 | 59. 登录回写守卫与部门对账视图 | 4/4 | Complete (59-01~59-04 done 2026-10-19) | 2026-10-19 |
 | 60. 软删恢复安全 | 2/2 | Executed — verification human_needed (3 项人工验证待跑，见 60-UAT.md) | 2026-10-20 |
 | 61. 影子表完整性 | 3/3 | Complete（61-UAT 4/4 pass，VERIFICATION status=passed） | 2026-10-22 |
-| 62. 卫生收尾与死代码清理 | 3/3 | Executed — verification pending（3 SUMMARY 落盘，改动未提交） | - |
+| 62. 卫生收尾与死代码清理 | 3/3 | Complete（62-UAT 4/4 pass，62-VERIFICATION status=passed，GAP-62-01 已修复并生产验证） | 2026-10-22 |
 
 ---
 

@@ -5,25 +5,25 @@ milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
 current_phase: 62
 current_phase_name: 卫生收尾与死代码清理（HYGIENE-03/04/05）
 status: executing
-stopped_at: Phase 62 三 plan 执行完成（62-01 死代码删除 / 62-02 嵌套组过滤 / 62-03 OU DN 冲突显式化），回归全绿；改动未提交，待用户确认提交后走 verify
-last_updated: "2026-10-22T02:15:00Z"
+stopped_at: Phase 62 Complete — verification status=passed（18/18 must-haves，UAT 4/4），UAT 期间捕获并修复生产回归 GAP-62-01；里程碑剩余 Phase 58（6/7）与 57/58 人工验证债
+last_updated: "2026-10-22T15:05:00Z"
 last_activity: 2026-10-22
-last_activity_desc: Phase 62 规划落盘（跳过研究，3 plans / wave1: 62-01+62-02, wave2: 62-03 dep 62-01）
+last_activity_desc: Phase 62 收口 — verify-work 62 完成（Test 1 人工 / Test 2 生产验证 nested_pollution 8→0 / Test 3-4 自动化），62-VERIFICATION status=passed
 state_head: cb1382c3d15effce3a89f185175edde3be665191
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
   completed_plans: 19
-  percent: 67
+  percent: 83
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: Phase 62 executed (3/3 plans complete) — pending commit approval + verification
-**Last activity**: 2026-10-22 - Phase 62 规划完成：62-01（HYGIENE-03 死代码删除）/ 62-02（HYGIENE-04 嵌套组过滤）/ 62-03（HYGIENE-05 OU DN 冲突显式化），plan-checker REVISE 5 项已修复
+**Status**: Phase 62 Complete — verification passed（18/18 must-haves, UAT 4/4）；里程碑剩 Phase 58 与 57/58 人工验证债
+**Last activity**: 2026-10-22 - verify-work 62 收口：4/4 UAT pass + 62-VERIFICATION status=passed；UAT 期间发现并修复生产回归 GAP-62-01（全嵌套组成员导致 GORM ErrEmptySlice 中止整轮同步），14:35 轮生产验证 nested_pollution 8→0
 **Prior activity**: 2026-10-21 - Completed quick task 261021-iqq: ad_push_queue 排水间隔热重载（方案A：固定 30s tick + drainGate 门控）+ 缺陷X markFailed/markDead sanitize + NUL 回归用例
 **Previous activity**: 2026-10-21 - verify-work 57 UAT：Test 1 pass / Test 2 evidence 落盘；两个缺陷档案（热重载、缺陷X NUL）转 quick 261021-iqq 执行
 **Earlier activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
@@ -31,12 +31,12 @@ progress:
 
 ## Current Position
 
-Phase: 62 (卫生收尾与死代码清理（HYGIENE-03/04/05）) — EXECUTING (plans ready)
-Plan: 3 of 3 (62-01 w1 / 62-02 w1 / 62-03 w2 — all executed, summaries written)
-Status: Phase 62 Planning complete (4/6 phases complete)
-Last activity: 2026-10-22 — Phase 62 规划落盘并通过 plan-checker 审查
+Phase: 62 (卫生收尾与死代码清理（HYGIENE-03/04/05）) — COMPLETE (verification passed)
+Plan: 3 of 3 (62-01 w1 / 62-02 w1 / 62-03 w2 — executed, verified)
+Status: Phase 62 Complete (5/6 phases complete；Phase 58 仍 6/7，57/58 人工验证债待清)
+Last activity: 2026-10-22 — verify-work 62：UAT 4/4 pass、62-VERIFICATION passed、GAP-62-01 已修复并生产验证
 Prior: 2026-10-21 — 61-02 executed（四类 upsert 软删行复活：existing 查询 Unscoped 化 + OnConflict 补 deleted_at，5 条 TestSync_Resurrect + 2 条 D-78-05c 翻转用例全绿）
-Progress: 4/6 phases [███████░░░] 67%（18/19 plans — Phase 60 待 UAT 通过后标记完成）
+Progress: 5/6 phases [████████░░] 83%（19/19 plans；Phase 58 仍 6/7 — 57/58 人工验证债待清）
 
 ## Accumulated Context
 

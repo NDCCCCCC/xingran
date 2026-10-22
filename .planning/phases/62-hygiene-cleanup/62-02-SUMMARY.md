@@ -61,3 +61,15 @@ WHERE EXISTS (SELECT 1 FROM sys_ad_group g
 - internal/services/addomain/sync.go（签名 +5 参、过滤、syncGroups 加载集合）
 - internal/services/addomain/group_sync_service.go（两个调用点）
 - internal/services/addomain/sync_78_05_test.go（6 处补 nil 参）
+
+## UAT 补记（2026-10-22 14:20）：GAP-62-01 全嵌套成员的组导致整轮同步失败
+
+首次部署后的 14:05 轮全量同步 `sync_status=failed`、`error_count=1`、`user_count=0`，`error_message` = `批量添加组成员失败: empty slice found`。
+
+根因：本计划在 `syncGroupMembers` 的 Delete 之后过滤嵌套组 DN，但"过滤后为空"的边界未处理——生产存在成员**全部**是嵌套组的组（`CN=CXHUB-人资条线,OU=外网权限,...`，唯一成员是组 DN），过滤后 `kept` 为空，`tx.Create(&[])` 返回 GORM `ErrEmptySlice`，事务回滚并把错误上抛给 `syncGroups`（sync.go:408），中止整轮同步。
+
+修复：过滤块之后补 `if len(memberDNs) == 0 { return nil }`（Delete 已在事务内生效）。回归用例 `TestSyncGroupMembers_AllMembersNestedNoEmptySliceError`，RED→GREEN 已验证（RED 时输出与生产一致的 `empty slice found`）。
+
+教训：**过滤类改动的关键边界是"全量被过滤"**，与原实现"输入为空"是两个不同分支；空输入已有早返回不代表过滤后为空也安全（GORM v2 `Create` 对空 slice 直接返回 `ErrEmptySlice`）。
+
+详见 62-UAT.md 的 GAP-62-01。
