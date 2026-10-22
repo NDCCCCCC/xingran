@@ -31,16 +31,18 @@ import (
 const (
 	// drainBatchLimit 单轮批量上限（D-05）。LDAP 单写 10-100ms → 单轮 1-10s 天然有界。
 	drainBatchLimit = 100
-	// maxDrainAttempts 连续失败达此次数转 dead（D-05）。总重试窗 ~61min，
-	// 刻意桥接账号池 30min 熔断周期（避免熔断窗内密集重试继续喂 MarkFailure）。
-	// ⚠ 上述 ~61min 当前**不成立**（实际 15min）—— 见 backoffDuration 的
-	//   "生产不可达档位"注释与 58-REVIEW H-03；逻辑已决定暂不改。
+	// maxDrainAttempts 连续失败达此次数转 dead（D-05）。
+	// 业务失败路径实际总重试窗 = 60s+2m+4m+8m = **15min**（第 5 次失败即转 dead，
+	// 第 5/6+ 档 16min/30min 生产不可达）—— D-05 原文"~61min 桥接账号池 30min 熔断"
+	// 的意图在该路径不成立，逻辑已决定暂不改（见 backoffDuration "生产不可达档位"
+	// 注释与 58-REVIEW H-03）。池侧故障路径退避不递增，行不会逼近终态阈值。
 	maxDrainAttempts = 5
 	// backoffCap 退避封顶（D-05）。
 	backoffCap = 30 * time.Minute
 )
 
-// backoffDuration 退避曲线纯函数（Phase 58 D-05：60s→2min→4min→8min→16min，封顶 30min）。
+// backoffDuration 退避曲线纯函数（Phase 58 D-05 名义曲线 60s→2min→4min→8min→16min，封顶 30min；
+// 实际业务失败路径只走前四档，见上方"生产不可达档位"说明）。
 // 纯函数：无 DB、无副作用、可单测。attempts 为"本轮失败后的累计连续失败次数"。
 // attempts <= 0 → 60s；1→60s，2→2min，3→4min，4→8min，5→16min，>=6→30min（封顶）。
 //
