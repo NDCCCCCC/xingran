@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-10-16
-update_trigger: v1.21 roadmap CREATED (Phases 57-62, 19/19 REQ coverage, 三方审计依赖约束全部落图)
-previous_update: 2026-07-08 after Phase 54 (W5) shipped
+last_updated: 2026-10-22
+update_trigger: v1.21 SHIPPED & ARCHIVED (Phases 57-62, 6 phases / 22 plans / 45 tasks, 19/19 REQ, 集成审计 passed; v1.21 段折叠进 Archive)
+previous_update: 2026-10-16 v1.21 roadmap CREATED
 ---
 
 # Roadmap: RuoYi-Next 运维管理系统
@@ -30,20 +30,25 @@ previous_update: 2026-07-08 after Phase 54 (W5) shipped
 - ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (shipped 2026-07-04) — see [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md)
 - ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) | [audit](milestones/v1.19-MILESTONE-AUDIT.md)
 - ✅ **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
-- 🚧 **v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)** — Phases 57-62 (initiated 2026-10-16) — see [REQUIREMENTS.md](REQUIREMENTS.md)
+- ✅ **v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)** — Phases 57-62 (shipped 2026-10-22) — see [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.md) | [audit](milestones/v1.21-MILESTONE-AUDIT.md) | [requirements](milestones/v1.21-REQUIREMENTS.md)
 
 ---
 
-## Phases (v1.21)
+## Archive: Shipped Milestones
+
+<details>
+<summary>✅ v1.21 AD 双向同步 bug 修复 (Phases 57-62) — SHIPPED 2026-10-22</summary>
+
+### Phases (v1.21) — 6 phases / 22 plans / 45 tasks（SHIPPED 2026-10-22）
 
 **Milestone goal:** 修复 AD↔系统双向同步的 2 个 P0 bug（部门回退乒乓、软删用户接管风险）、3 个 P1 数据一致性缺口和 P2 卫生项，以三方审计修订后的 outbox-lite 架构落地，消除"改了部门又弹回"与静默数据丢失。
 
-- [x] **Phase 57: AD 推送队列基建** — outbox-lite 队列表 + 同事务入队 + 按实体合并 + 删除入队 disable (QUEUE-01/02/06, HYGIENE-06) — completed 2026-10-16 (3/3 plans, code review F-01~F-06 修复 + verifier GAP-01/02/03 闭环, [VERIFICATION](phases/57-ad-outbox-lite/57-VERIFICATION.md) human_needed: 3 项真环境人工验证在 [57-HUMAN-UAT.md](phases/57-ad-outbox-lite/57-HUMAN-UAT.md))
-- [x] **Phase 58: 排水器与 compare-and-move 推送** — in-process cron 排水 + 退避重试 + 幂等 OU 移动 + 配置路由无歧义 (HYGIENE-01/02, QUEUE-03/04/05) — 7/7 plans，completed 2026-10-19（SC1~6 全部 VERIFIED，见 [58-VERIFICATION.md](phases/58-compare-and-move/58-VERIFICATION.md)）
-- [x] **Phase 59: 登录回写守卫与部门对账视图** — AD 登录不再回滚本地编辑 + dept↔OU 不一致可观测 (GUARD-01/02) — 4/4 plans，completed 2026-10-19（两条 Manual-Only 视觉断言 + PG 真实启动冒烟归 [59-VALIDATION.md](phases/59-ad-login-guard-reconciliation/59-VALIDATION.md)）
-- [x] **Phase 60: 软删恢复安全** — ad_dn 校验后恢复 + 登录/批量同步共用分类逻辑 (SAFE-01/02) — 2/2 plans，completed 2026-10-20（12/12 must-haves VERIFIED，见 [60-VERIFICATION.md](phases/60-soft-delete-recovery-safety/60-VERIFICATION.md) human_needed: 3 项真环境人工验证在 [60-UAT.md](phases/60-soft-delete-recovery-safety/60-UAT.md)）
-- [x] **Phase 61: 影子表完整性** — 删除清理两道闸门 + 组成员事务化 + singleflight 挂载 (SHADOW-01/02/03) — 3/3 plans，**Complete 2026-10-22**（8/8 must-haves VERIFIED，61-UAT 4/4 pass；真环境人工项见 [61-UAT.md](phases/61-shadow-table-integrity/61-UAT.md) 与 [61-VERIFICATION.md](phases/61-shadow-table-integrity/61-VERIFICATION.md) status=passed）
-- [ ] **Phase 62: 卫生收尾与死代码清理** — F-22 旧路径删除 + 嵌套组标记 + 同名部门 OU DN 冲突告警 (HYGIENE-03/04/05)
+- [x] **Phase 57: AD 推送队列基建** — outbox-lite 队列表 + 同事务入队 + 按实体合并 + 删除入队 disable (QUEUE-01/02/06, HYGIENE-06) — completed 2026-10-16 (3/3 plans, code review F-01~F-06 修复 + verifier GAP-01/02/03 闭环, [VERIFICATION](milestones/v1.21-phases/57-ad-outbox-lite/57-VERIFICATION.md) human_needed: 3 项真环境人工验证在 [57-HUMAN-UAT.md](milestones/v1.21-phases/57-ad-outbox-lite/57-HUMAN-UAT.md))
+- [x] **Phase 58: 排水器与 compare-and-move 推送** — in-process cron 排水 + 退避重试 + 幂等 OU 移动 + 配置路由无歧义 (HYGIENE-01/02, QUEUE-03/04/05) — 7/7 plans，completed 2026-10-19（SC1~6 全部 VERIFIED，见 [58-VERIFICATION.md](milestones/v1.21-phases/58-compare-and-move/58-VERIFICATION.md)）
+- [x] **Phase 59: 登录回写守卫与部门对账视图** — AD 登录不再回滚本地编辑 + dept↔OU 不一致可观测 (GUARD-01/02) — 4/4 plans，completed 2026-10-19（两条 Manual-Only 视觉断言 + PG 真实启动冒烟归 [59-VALIDATION.md](milestones/v1.21-phases/59-ad-login-guard-reconciliation/59-VALIDATION.md)）
+- [x] **Phase 60: 软删恢复安全** — ad_dn 校验后恢复 + 登录/批量同步共用分类逻辑 (SAFE-01/02) — 2/2 plans，completed 2026-10-20（12/12 must-haves VERIFIED，见 [60-VERIFICATION.md](milestones/v1.21-phases/60-soft-delete-recovery-safety/60-VERIFICATION.md) human_needed: 3 项真环境人工验证在 [60-UAT.md](milestones/v1.21-phases/60-soft-delete-recovery-safety/60-UAT.md)）
+- [x] **Phase 61: 影子表完整性** — 删除清理两道闸门 + 组成员事务化 + singleflight 挂载 (SHADOW-01/02/03) — 3/3 plans，**Complete 2026-10-22**（8/8 must-haves VERIFIED，61-UAT 4/4 pass；真环境人工项见 [61-UAT.md](milestones/v1.21-phases/61-shadow-table-integrity/61-UAT.md) 与 [61-VERIFICATION.md](milestones/v1.21-phases/61-shadow-table-integrity/61-VERIFICATION.md) status=passed）
+- [x] **Phase 62: 卫生收尾与死代码清理** — F-22 旧路径删除 + 嵌套组标记 + 同名部门 OU DN 冲突告警 (HYGIENE-03/04/05) — 3/3 plans，completed 2026-10-22（18/18 must-haves VERIFIED，HYGIENE-03 死代码 grep 残留=0 / HYGIENE-04 嵌套组过滤零 DDL + 生产 8 行污染自愈 / HYGIENE-05 OU DN 冲突 typed error 显式化）
 
 ### Phase 57: AD 推送队列基建（outbox-lite 同事务入队）
 
@@ -73,7 +78,7 @@ Plans:
 
 - [x] 57-03-PLAN.md — user_service.go 三处事务内接线（Update/Delete/BatchDelete）+ sqlite 测试环境补表 + `go test ./...` 全绿 (QUEUE-01/06, HYGIENE-06)
 
-**Code Review 修复**（2026-10-16，见 [57-REVIEW-FIX.md](phases/57-ad-outbox-lite/57-REVIEW-FIX.md)）：F-01 disable 压制同实体活跃 `update_user` 行 / F-02 编辑表单停用入队 disable（安全缺口）/ F-03 `SKIP_AUTOMIGRATE` 旁路补建队列表 / F-04 队列表索引失败阻断启动 / F-05 去重逻辑抽纯函数（替掉假断言）/ F-06 Update 写路径收窄为显式字段（与入队 diff 语义对齐）。F-07~F-16 判定为 Phase 58 输入或低危，未在本轮处理。
+**Code Review 修复**（2026-10-16，见 [57-REVIEW-FIX.md](milestones/v1.21-phases/57-ad-outbox-lite/57-REVIEW-FIX.md)）：F-01 disable 压制同实体活跃 `update_user` 行 / F-02 编辑表单停用入队 disable（安全缺口）/ F-03 `SKIP_AUTOMIGRATE` 旁路补建队列表 / F-04 队列表索引失败阻断启动 / F-05 去重逻辑抽纯函数（替掉假断言）/ F-06 Update 写路径收窄为显式字段（与入队 diff 语义对齐）。F-07~F-16 判定为 Phase 58 输入或低危，未在本轮处理。
 
 ### Phase 58: 排水器与 compare-and-move 推送
 
@@ -90,7 +95,7 @@ Plans:
 
      **决策点**：两条路径都删 / 两者共存并加互斥。越早定越便宜——删除会使 AD 侧更新延迟到排水时才可见，且导入路径的批量语义无法直接套用单条队列行的处理方式。
   2. **`ad_push_queue` 无 `ad_config_id` 列** — 队列行不记录入队时归属的 AD 配置，排水器只能在排水时刻按 `ad_dn` 解析配置。若配置在入队与排水之间变更，重试会打到错误的域控。**决策点**：加列（需 Phase 58 迁移 + 回填策略）还是接受排水时解析现状。SUCCESS CRITERION 3 假设的是后者。
-  3. **F-07~F-16 未处理项** — 见 [57-REVIEW-FIX.md](phases/57-ad-outbox-lite/57-REVIEW-FIX.md) 的逐条判定，Phase 58 排水器落地时需一并复核。
+  3. **F-07~F-16 未处理项** — 见 [57-REVIEW-FIX.md](milestones/v1.21-phases/57-ad-outbox-lite/57-REVIEW-FIX.md) 的逐条判定，Phase 58 排水器落地时需一并复核。
 
 **Success Criteria** (what must be TRUE):
 
@@ -106,31 +111,31 @@ Plans:
 Plans:
 **Wave 0**
 
-- [x] 58-01-PLAN.md — Wave 0 测试基座：addomain sqlite 五表 fixture + mockLDAPClient 调用计数 + F-F/F-G/F-15/F-16 缺口修补 — 3/3 tasks，completed 2026-10-19（SUMMARY: [58-01-SUMMARY.md](phases/58-compare-and-move/58-01-SUMMARY.md)）
+- [x] 58-01-PLAN.md — Wave 0 测试基座：addomain sqlite 五表 fixture + mockLDAPClient 调用计数 + F-F/F-G/F-15/F-16 缺口修补 — 3/3 tasks，completed 2026-10-19（SUMMARY: [58-01-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-01-SUMMARY.md)）
 
 **Wave 1**
 
-- [x] 58-02-PLAN.md — DN 单一真实源（NormalizeDN / BuildOUDN）+ D-02 最长后缀唯一匹配纯函数 + D-03 三处调用点收敛（HYGIENE-01, HYGIENE-02）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-02-SUMMARY.md](phases/58-compare-and-move/58-02-SUMMARY.md)）
+- [x] 58-02-PLAN.md — DN 单一真实源（NormalizeDN / BuildOUDN）+ D-02 最长后缀唯一匹配纯函数 + D-03 三处调用点收敛（HYGIENE-01, HYGIENE-02）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-02-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-02-SUMMARY.md)）
 
 **Wave 2**
 
-- [x] 58-03-PLAN.md — 排水器骨架：拾取谓词 + 退避曲线 + 状态机 + disable/属性两条推送路径 + F-12 UTC / F-14 default tag（QUEUE-03, QUEUE-05）— 2/2 tasks，completed 2026-10-19（SUMMARY: [58-03-SUMMARY.md](phases/58-compare-and-move/58-03-SUMMARY.md)）
+- [x] 58-03-PLAN.md — 排水器骨架：拾取谓词 + 退避曲线 + 状态机 + disable/属性两条推送路径 + F-12 UTC / F-14 default tag（QUEUE-03, QUEUE-05）— 2/2 tasks，completed 2026-10-19（SUMMARY: [58-03-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-03-SUMMARY.md)）
 
 **Wave 3**
 
-- [x] 58-04-PLAN.md — compare-and-move 执行面：幂等比较 + F-A ad_dn 回写 + F-B config 作用域 OU 映射 + OU 路径 code 32 终态（QUEUE-04, QUEUE-05）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-04-SUMMARY.md](phases/58-compare-and-move/58-04-SUMMARY.md)）
+- [x] 58-04-PLAN.md — compare-and-move 执行面：幂等比较 + F-A ad_dn 回写 + F-B config 作用域 OU 映射 + OU 路径 code 32 终态（QUEUE-04, QUEUE-05）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-04-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-04-SUMMARY.md)）
 
 **Wave 4**
 
-- [x] 58-05-PLAN.md — cron 接线（Start() 第三个 AddJob）+ migration_216 sys_config 单旋钮 + SecondsToCronSpec + 禁 sys_job 证伪（QUEUE-03）— 2/2 tasks，completed 2026-10-19（SUMMARY: [58-05-SUMMARY.md](phases/58-compare-and-move/58-05-SUMMARY.md)）
+- [x] 58-05-PLAN.md — cron 接线（Start() 第三个 AddJob）+ migration_216 sys_config 单旋钮 + SecondsToCronSpec + 禁 sys_job 证伪（QUEUE-03）— 2/2 tasks，completed 2026-10-19（SUMMARY: [58-05-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-05-SUMMARY.md)）
 
 **Wave 5**
 
-- [x] 58-06-PLAN.md — SC6：删除两条直推路径 + EnqueueUpdateBatch 批量入队 + F-07 入队侧 Pluck + F-10 两个回滚用例（QUEUE-03）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-06-SUMMARY.md](phases/58-compare-and-move/58-06-SUMMARY.md)）
+- [x] 58-06-PLAN.md — SC6：删除两条直推路径 + EnqueueUpdateBatch 批量入队 + F-07 入队侧 Pluck + F-10 两个回滚用例（QUEUE-03）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-06-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-06-SUMMARY.md)）
 
 **Wave 6**
 
-- [x] 58-07-PLAN.md — 收口：端到端用例 + 全量回归 + SC1~6 逐条证据核对 + 人工 UAT 清单 + REQUIREMENTS 回填（全部 5 REQ）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-07-SUMMARY.md](phases/58-compare-and-move/58-07-SUMMARY.md)；证据: [58-VERIFICATION.md](phases/58-compare-and-move/58-VERIFICATION.md)）
+- [x] 58-07-PLAN.md — 收口：端到端用例 + 全量回归 + SC1~6 逐条证据核对 + 人工 UAT 清单 + REQUIREMENTS 回填（全部 5 REQ）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-07-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-07-SUMMARY.md)；证据: [58-VERIFICATION.md](milestones/v1.21-phases/58-compare-and-move/58-VERIFICATION.md)）
 
 **Phase 58 收口结论（2026-10-19）**：6 条 Success Criteria **全部 VERIFIED**，每条附「命令 + 实际输出」（见 58-VERIFICATION.md）；F-13 已核对归档（留档不修）；8 项人工验证留档（见 58-HUMAN-UAT.md，含 2 项强制告知：Q2「无 OU 映射批量转 dead」/ F-11「编辑即续命」）；REQ 的 QUEUE-03/04/05 + HYGIENE-01/02 五项全部 Complete。65 个 `TestPhase58_*` 用例全 PASS。
 
@@ -266,9 +271,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 | 61. 影子表完整性 | 3/3 | Complete（61-UAT 4/4 pass，VERIFICATION status=passed） | 2026-10-22 |
 | 62. 卫生收尾与死代码清理 | 3/3 | Complete（62-UAT 4/4 pass，62-VERIFICATION status=passed，GAP-62-01 已修复并生产验证） | 2026-10-22 |
 
----
-
-## Archive: Shipped Milestones
+</details>
 
 <details>
 <summary>✅ v1.20 网络设备 VLAN + 端口绑定 (Phase 56) — SHIPPED 2026-07-10</summary>

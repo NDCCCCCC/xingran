@@ -2,28 +2,28 @@
 gsd_state_version: "1.0"
 milestone: v1.21
 milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
-current_phase: 62
-current_phase_name: 卫生收尾与死代码清理（HYGIENE-03/04/05）
-status: complete
+status: Awaiting next milestone
 stopped_at: 里程碑 v1.21 全部收口（2026-10-22）：六 phase 57-62 verification 全 passed；人工验证债清零——58 UAT 9 项全落终态（3 pass 生产实测 / 4 skip 用户知情裁决 / 2 N/A 单域或前提不存在）、59 GUARD-01 登录守卫双半段端到端实锤（拦截+放行）、60 SAFE-01 软删 DN 漂移拦截端到端 + 影子表对拍 0 漂移 + 实时抽查 3 样本一致
-last_updated: "2026-10-22T19:05:00+08:00"
+last_updated: "2026-10-22T12:22:49.278Z"
 last_activity: 2026-10-22
-last_activity_desc: v1.21 人工验证债清零收口（chenchao-076 真实登录链路 ×4 次端到端 + c_chenchao-051 compare-and-move 双向 move + 幂等半段），57-62 全 passed
-state_head: cb1382c3d15effce3a89f185175edde3be665191
+last_activity_desc: Milestone v1.21 completed and archived
+state_head: 8e252ca7b2d890b780e642ee00f810b848efe865
 progress:
   total_phases: 6
   completed_phases: 6
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 22
+  completed_plans: 22
   percent: 100
+current_phase: 62
+current_phase_name: 卫生收尾与死代码清理（HYGIENE-03/04/05）
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 实现与自动化验证全部完成 — 57/61/62 verification=passed；剩余真实环境人工验证债（58 五项 / 59 两项 / 60 两项）
-**Last activity**: 2026-10-22 - 剩余 verify 复验：59/60/61 的 staleness 已消除（covered_digest 重算 + truth 复核 + 测试包复跑全绿）；61 转 complete/passed，59/60 维持 human_needed（真实 AD / 浏览器项未实测，不可由本地测试替代）
+**Status**: v1.21 milestone complete
+**Last activity**: 2026-10-22
 **Prior activity**: 2026-10-21 - Completed quick task 261021-iqq: ad_push_queue 排水间隔热重载（方案A：固定 30s tick + drainGate 门控）+ 缺陷X markFailed/markDead sanitize + NUL 回归用例
 **Previous activity**: 2026-10-21 - verify-work 57 UAT：Test 1 pass / Test 2 evidence 落盘；两个缺陷档案（热重载、缺陷X NUL）转 quick 261021-iqq 执行
 **Earlier activity**: 2026-10-19 - Completed quick task 261019-mmc: 修复 extractRDNFromDN 在 RFC4514 转义逗号处截断导致 ModifyDN 重命名 AD 对象（Phase 58 MISSED-04）
@@ -31,12 +31,10 @@ progress:
 
 ## Current Position
 
-Phase: 58 (排水器与 compare-and-move 推送) — EXECUTED（verification human_needed：9 项 UAT 中 5 项待真实 AD）
-Plan: 7 of 7（58-01~58-07 已执行并落 SUMMARY；余 58-UAT 人工验证项待跑）
-Status: 里程碑实现与自动化验证全完成（57/61/62 verification=passed；19/19 plans）；59/60 staleness 已消除，58/59/60 人工项待真实环境
-Last activity: 2026-10-22 — 剩余 verify 复验：59/60/61 digest 重算 + truth 复核 + 测试包复跑全绿
-Prior: 2026-10-21 — 61-02 executed（四类 upsert 软删行复活：existing 查询 Unscoped 化 + OnConflict 补 deleted_at，5 条 TestSync_Resurrect + 2 条 D-78-05c 翻转用例全绿）
-Progress: 5/6 phases [████████░░] 83%（19/19 plans；Phase 58 7/7 已执行 —— 人工验证债：58 五项真实 AD + 59 两项浏览器 + 60 两项真实 AD）
+Phase: Milestone v1.21 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-22 — Milestone v1.21 completed and archived
 
 ## Accumulated Context
 
@@ -240,3 +238,7 @@ Progress: 5/6 phases [████████░░] 83%（19/19 plans；Phase 
 | Phase 60 P02 | 13 min | 2 tasks | 4 files |
 | Phase 61 P01 | 16 min | 2 tasks | 3 files |
 | Phase 61 P02 | 33 min | 2 tasks | 6 files |
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

@@ -11,7 +11,7 @@
     {
       "number": "58",
       "name": "排水器与 compare-and-move 推送",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "59",
@@ -21,23 +21,23 @@
     {
       "number": "60",
       "name": "软删恢复安全",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "61",
       "name": "影子表完整性",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "62",
       "name": "卫生收尾与死代码清理",
-      "status": "pending"
+      "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd-progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 5 of 6 · 50% · executing"
+    "command": "/gsd-progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-10-20T16:17:06.765Z"
+  "updated_at": "2026-10-22T12:22:49.396Z"
 }

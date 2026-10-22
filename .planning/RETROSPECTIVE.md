@@ -210,6 +210,55 @@
 
 ---
 
+## Milestone: v1.21 — AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
+
+**Shipped:** 2026-10-22
+**Phases:** 6 (57-62) | **Plans:** 22 | **Tasks:** 45
+
+### What Was Built
+
+1. **Phase 57 — ad_push_queue (outbox-lite)** — migration_215 建表 + 部分唯一索引（活跃谓词单一事实源 `models.ADPushQueueActivePredicate` = `status IN ('pending','failed')`）+ 五条写路径同事务入队（Update / UpdateStatus / Delete / BatchDelete / profile.UpdateUserInfo）
+2. **Phase 58 — 排水器 + compare-and-move** — in-process cron 排水（非 sys_job）+ 退避重试 + `NormalizeDN` 幂等短路 + 配置路由无歧义；7/7 plans
+3. **Phase 59 — 登录回写守卫 + 部门对账视图** — 登录写 dept 前查活跃队列行，命中则跳过覆盖 + WARN（替代被证死的时间戳仲裁）；`v_dept_ou_mismatch` 只读 VIEW
+4. **Phase 60 — 软删恢复安全** — ad_dn 校验后恢复（不一致拒绝 + 审计），登录与批量同步共用分类逻辑
+5. **Phase 61 — 影子表完整性** — 删除清理两道闸门（LDAP 0 条拒绝 / 拟删 >50% 拒绝）+ 组成员 Delete+Create 事务化 + singleflight 挂载
+6. **Phase 62 — 卫生收尾与死代码清理** — HYGIENE-03 死代码删除（`user_ou_service.go` 整文件 + `BatchMoveUsersToNewOU`）+ HYGIENE-04 嵌套组成员过滤（零 DDL）+ HYGIENE-05 OU DN 冲突 typed error 显式化
+
+### What Worked
+
+- **三方 subagent 审计砍掉了两个错误方案** — 时间戳仲裁（GORM 自动刷新 `updated_at` 使其恒失效）与完整 Outbox/FieldRule 引擎（过度设计），落到 ~400 行 outbox-lite 核心层
+- **真环境实锤替代「看起来通过」** — 08:05 轮全量同步 3025 次采样在 0.887s 重放窗口内逐条 2815|59 零偏差；嵌套组成员污染 8→0 靠重放自愈；登录守卫双半段（拦截 / 正常覆盖）与软删 DN 漂移拦截全部端到端
+- **采样器纪律** — v5 先查 `sys_ad_sync_log` 确认轮次时刻再布防（v4 窗口 02:58-03:12 完全打空，因为全量 cron 是 3 小时周期）
+- **quick task 261021-iqq 把「重启才生效」变成热重载** — 固定 30s tick + `drainGate.shouldDrain` 门控，改配置 ≤30s 生效（实测 12s / 29s），无需重启后端
+- **里程碑级集成审计补齐单 phase 盲区** — 集成检查器核到 8/8 集成点 VERIFIED + E2E 流 A-D 全通过，并抓出 QUEUE-03 退避窗注释矛盾与 HYGIENE-04 nil 路径可达性两条 finding
+
+### What Was Inefficient
+
+- **Phase 62 引入生产回归** — 嵌套组过滤后 kept 为空 → `tx.Create(&[])` 触发 GORM ErrEmptySlice → 事务回滚 → 整轮同步中止（14:05 轮 failed、error_count=1）。修复 = 过滤块后补早返回 + 回归用例 + 重建二进制发版
+- **一次 write 调用漏参把 `58-VERIFICATION.md` 覆成 4 字节** — 用 `git show HEAD` 逐字节恢复后重做（git diff 证明正文零改动）
+- **UAT 文档的 frontmatter / 状态字段是解析器契约** — 缺 byte-0 frontmatter、首个 `status: failed` 被优先命中、多个 `status:` 字段并存，都会让 audit-uat 把 18 项真待办报成 32 项或反之
+- **ORM 边界要用例锁** — 过滤后空切片、`ON CONFLICT` 合并路径、终态行退出部分唯一索引，这些都不是「显然」行为，必须有 RED→GREEN 用例
+
+### Patterns Established
+
+- **活跃谓词做部分唯一索引** — `status IN ('pending','failed')` 让终态行（pushed/dead）自动退出唯一索引，后续编辑自然新增行而非合并
+- **冲突显式化三件套** — typed error（`ErrOUDNConflict` + `Unwrap` 哨兵）+ 计数（`FailedDepts` / `Errors`）+ 人工通道（`UpsertMappingForce` + 预检告警），杜绝静默互相覆盖
+- **「重放删除污染行」优于「标记污染行」** — 零 DDL、无数据修复脚本，下一轮成功同步即自愈
+- **跨实例并发是既有事实** — 排水器实际跑在另一台机器（10.62.10.39），本地实例只连库；单实例假设会让验证结论失真
+
+### Key Lessons
+
+1. **过滤后空集合必须早返回** — 把空切片交给 GORM `Create` 会得到 ErrEmptySlice 并回滚事务，把局部空集放大成整轮失败
+2. **采样窗口必须先对齐真实事件时刻** — 事件周期（3 小时 cron）与窗口不重叠时，再密的采样也只会得到「全恒定」的空结论
+3. **发版后必须实测，不能只看 `/health`** — 20:05 轮的 V 形是旧二进制造成；只有 08:05 轮零偏差才是新代码生效的证据
+4. **文档状态字段是工具契约，不是格式** — frontmatter 必须在 byte 0、同一语义只保留一个权威字段名
+
+### Cost Observations
+
+- 6 phases / 22 plans / 45 tasks，主 session 跨多轮 goal 续跑；真实域控 + 真实登录的人工验证占了本里程碑最大比重（58/59/60 三个 phase 的终态都靠真环境实锤）
+- Notable: 62-01/62-02/62-03 三 plan 的 checker 只提 MAJOR-2 + MINOR-3 + 标签闭合类问题，无架构级返工；代码事实先落 PLAN 再派 executor 的做法明显降低返工
+
+---
 ## Cross-Milestone Trends
 
 ### Process Evolution

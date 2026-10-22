@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.21 AD 双向同步 bug 修复 (Shipped: 2026-10-22)
+
+**Phases completed:** 6 phases, 22 plans, 45 tasks
+
+**Key accomplishments:**
+- ad_push_queue 队列表以最小动作行落地：`uq_ad_push_queue_active` 部分唯一索引在 pending/failed 上夺锁实现 QUEUE-02 合并语义，PG/sqlite 双方言 DDL 幂等建表并由 Wave 0 sqlite 测试锁定行为
+- 四字段 diff 纯函数 + 事务内 `sys_ad_config` 启用行前置检查 + 靠 `uq_ad_push_queue_active` 部分唯一索引夺锁的 upsert 入队（update_user 与 disable 两条入口），T-57-06 三重防线在 sqlite 上由合并测试直接锁定
+- Update 的四字段 diff 入队与 Delete/BatchDelete 的 disable 入队全部落在业务事务闭包内、失败即回滚，队列表写不可用时 sys_user 无任何残留；HYGIENE-06 实际覆盖到三套 sqlite 环境（含计划外的 userCacheService 那一套）
+- addomain 包五表排水测试基座（ad_push_queue 走迁移、其余三表复用既有 const 零副本）+ mockLDAPClient 调用计数 + F-F/F-G/F-15/F-16 四项 Phase 57 遗留缺口处置，为 Wave 1~6 的 RED 测试提供可判真的环境
+- NormalizeDN/BuildOUDN 纯函数落地并接线唯一 OU DN 拼接点，MatchADConfigByDN 以逗号边界最长后缀唯一匹配锁定 D-02 契约（8 个用例含父子域反例），三处 First() 歧义收敛为两个语义分明的 addomain 入口，双份 getDefaultADConfigID 归零
+- ADPushDrainer 落地 QUEUE-03 排水执行面：D-05 拾取谓词（next_retry_at IS NULL = 可拾取）+ 退避曲线纯函数 + 六状态跃迁状态机 + 按 ad_dn 归属分组（每组一次账号池故障切换）+ disable(UAC 514)/update_user(属性) 两条真实推送路径；F-11 禁令以 markFailed 单点判定锁死，F-12 四处时间戳 UTC 与 F-14 model default tag 一并落地，13 个 Drain/拾取用例全绿、Phase 57 sentinel 与全仓 `go test ./...` 零回归
+- QUEUE-04 的 compare-and-move 执行面落地：闭包内重读最新值 → NormalizeDN 双侧归一化比较目标 OU → 一致跳过 `MoveUser`（幂等点）→ 不一致才移动并
+- D-05 单旋钮三层齐备（migration_216 幂等 seed + 启动读取 + SecondsToCronSpec 合法值映射 / 非法值回落 + 行为断言可被 cron parser 解析），cron 接线第三个 AddJob 落生产（AddJob + NewChain + FuncJob，cron 日志接入 applogger，账号池经 s.getPool() 字面取单例，
+- SC6 终态达成 —— 两条遗留直推路径（单用户编辑 goroutine 直推 + 导入后 `triggerADSyncAfterImport`）及其字段/方法零残留，5 条 grep 静态证伪全部 == 0；导入路径改为同步批量入队 `EnqueueUpdateBatch`（D-01，无 diff）；F-07 入队侧 Pluck 掐根 + F-10 两个删除回滚用例落地，Phase 57 sentinel 零回归。
+- 2026-10-19
+- 登录路径软删恢复在哈希与写库前增加 NormalizeDN 身份校验，拒绝经 sentinel → 专用原因码 → 固定中文文案传播，且拒绝零写入、DN 仅进 WARN。
+- 批量同步在阶段 2 用与登录路径相同的 NormalizeDN 校验过滤软删恢复，被拒项计入 Skipped 并绕开降级管道，双路径判定与 DB 终态由成对用例证伪。
+- 全量同步末尾对 AD 端已消失的 sys_ad_user/ou/computer 活行按类别软删除：三类独立双闸门（LDAP 0 条拒绝 / 拟删 >50% 拒绝、恰 50% 放行）+ syncDataInternal 单点挂载（singleflight 闭包内、增量 no-op）+ SyncResult 三计数，12 条 sqlite 可证伪用例全绿、全包零回归。
+- 四类 upsert（OU/Group/User/Computer）软删行复活：existing 查询 Unscoped 化 + OnConflict 补 deleted_at + 命中行 DeletedAt 清零，5 条 TestSync_Resurrect 先 RED（UNIQUE 2067）后 GREEN，D-78-05c 两用例翻转，全包零回归。
+- syncGroupMembers 的 Delete+Create 包进 GORM `Transaction` 闭包（每组一个事务），以 fixture 表级 CHECK 注入证伪「Create 半途失败永久丢成员」，重放幂等锁定，三调用方零改动
+
+---
+
 ## v1.20 网络设备 VLAN + 端口绑定 (Shipped: 2026-07-10)
 
 **Phases completed:** 1 phases, 5 plans, 23 tasks

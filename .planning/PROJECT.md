@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-10-16
-update_trigger: v1.21 milestone INITIATED (AD 双向同步 bug 修复; 三方 subagent 审计裁决修订方案; 前置: 1641 文件合并+推送完成)
-previous_update: 2026-07-10 v1.20 milestone SHIPPED + ARCHIVED
+last_updated: 2026-10-22
+update_trigger: v1.21 milestone SHIPPED & ARCHIVED (Phases 57-62; 6 phases / 22 plans / 45 tasks; 19/19 REQ verified; 集成审计 passed)
+previous_update: 2026-10-16 v1.21 milestone INITIATED
 ---
 
 **Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
@@ -11,7 +11,7 @@ previous_update: 2026-07-10 v1.20 milestone SHIPPED + ARCHIVED
 **Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
 
 
-## Current Milestone: v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
+## Current Milestone: v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes) — ✅ SHIPPED 2026-10-22
 
 **Goal:** 修复 AD↔系统双向同步的 2 个 P0 bug（部门回退乒乓、软删用户接管风险）、3 个 P1 数据一致性缺口和 P2 卫生项，以三方审计修订后的 outbox-lite 架构落地（≈400 行核心层），消除"改了部门又弹回"与静默数据丢失。
 
@@ -39,7 +39,25 @@ previous_update: 2026-07-10 v1.20 milestone SHIPPED + ARCHIVED
 
 **Phase 57 已完成（2026-10-16/17，v1.21 首个 phase）:** ad_push_queue 基建落地——migration_215（部分唯一索引谓词单一事实源 `models.ADPushQueueActivePredicate`）+ **五条**写路径同事务入队（Update / UpdateStatus / Delete / BatchDelete / profile.UpdateUserInfo，后两条分别为 GAP-01/GAP-02 补接）+ disable 压制同实体 pending update_user（F-01）。code review F-01~F-06 全修（变异验证可红）+ verifier 独立复核 GAP-01/02/03 闭环。VERIFICATION 判定 `human_needed`：PG 实机合并路径 / kill -9 重启耐久 / AD UAC 533 闭环三项留档 `57-HUMAN-UAT.md`。Phase 58 移交待决项（两条遗留直推路径处置、ad_config_id 取舍、F-07~F-16）已落 ROADMAP。
 
-**Archived:** `.planning/milestones/v1.21-ROADMAP.md` + `.planning/milestones/v1.21-REQUIREMENTS.md`（milestone 完成时）
+**Archived:** `.planning/milestones/v1.21-ROADMAP.md` + `.planning/milestones/v1.21-REQUIREMENTS.md` + `.planning/milestones/v1.21-MILESTONE-AUDIT.md`（里程碑审计 passed：6 phase VERIFICATION 全 passed、19/19 REQ、8/8 集成点 VERIFIED、E2E 流 A-D 全通过）
+
+## Current State (2026-10-22)
+
+- **Shipped**: v1.0 ~ v1.21 — v1.21 = Phases 57-62（6 phases / 22 plans / 45 tasks）。
+- **v1.21 终态**：19/19 requirements verified（REQUIREMENTS 全勾）；六个 phase 的 VERIFICATION 全部 status=passed；集成审计 passed（8/8 集成点 VERIFIED + E2E 流 A-D 全通过，2 条 minor findings 已处置并复核）。
+- **生产实锤**：全量同步轮 user_count=4177、error_count=0、67 组；嵌套组成员污染 8→0（重放自愈）；AD 部门变更 ≤30s 推送并 compare-and-move 落位（NormalizeDN 幂等短路）；登录回写守卫双半段（拦截 / 正常覆盖）与软删 DN 漂移拦截均端到端验证。
+- **Phase 62 引入的生产回归已修复**：全嵌套组过滤后 kept 为空 → GORM ErrEmptySlice 中止整轮 → 补早返回 + 回归用例 + 二进制重建发版（14:22）→ 14:35 轮 full success。
+- **构建状态**：`go build ./...` clean；`go test ./internal/services/addomain/ ./internal/api/v1/... ./internal/scheduler/` 全绿；`go vet` 仅存量 `internal/core/security/ad_authenticator_test.go:159 unreachable code`（非本次影响面）。
+
+## Next Milestone Goals（待 /gsd-new-milestone 定义）
+
+候选（源自 v1.21 收口审计与历史 deferred，非承诺范围）：
+
+1. **AD 方向补齐** — ad_push_queue 目前只有 update_user / disable 两个动作方向，缺 enable（软删用户恢复后重新启用 AD 账号），见 `.planning/todos/pending/ad-push-enable-direction.md`。
+2. **同组管理员 OU 写权限** — 域控 ACL 导致同组管理员互相改 OU 报 LDAP Result Code 50，属域控侧策略（已裁决不作为代码缺陷），若要放开需域控授权流程。
+3. **残留现场 UAT 债** — v1.18（3 项真机 SNMP/CLI）+ v1.19（6 项 SSH）+ v1.20（12 项 VLAN/绑定 site-visit）仍为 deferred，需现场运维同事执行后回写 UAT。
+4. **全量同步节流** — 3 小时全量 cron（sync_interval=10800）+ 失败后每 5 分钟 tick 重试，重试风暴与节流策略可优化。
+5. **同步可观测性** — 把 v1.21 期间用于捕获重放窗口漂移的采样脚本（`scripts/uat61-t1-poller-v5.ps1`）产品化为常态化的同步漂移告警。
 
 ## Active: v1.17 资产对账 (Asset Reconciliation) — SHIPPED 2026-07-03
 
@@ -427,4 +445,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-10-16 — v1.21 AD 双向同步 bug 修复 milestone INITIATED。方案经三份独立 subagent 审计修订：时间戳仲裁→信号守卫、完整 Outbox→outbox-lite 队列、FieldRule 引擎砍除、FK 后置。前置已满足：1641 文件 5 组提交合入 main 并推送（31c7eee8）。上一里程碑 v1.20.1 SHIPPED 2026-07-09。*
+*Last updated: 2026-10-22 — v1.21 AD 双向同步 bug 修复 milestone SHIPPED & ARCHIVED（Phases 57-62：6 phases / 22 plans / 45 tasks，19/19 requirements verified，集成审计 passed）。核心落地：ad_push_queue outbox-lite 同事务入队 + in-process cron 排水（compare-and-move 幂等）+ 登录回写守卫 + 软删恢复 DN 校验 + 影子表删除清理双闸门 + 组成员事务化 + 死代码清理。上一里程碑 v1.20 SHIPPED 2026-07-10。*
