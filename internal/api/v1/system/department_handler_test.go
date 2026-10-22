@@ -67,7 +67,7 @@ func setupDeptTestDB(t *testing.T) *gorm.DB {
 			id TEXT PRIMARY KEY,
 			username TEXT,
 			nickname TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			email TEXT,
 			dept_id TEXT,
 			created_at DATETIME,

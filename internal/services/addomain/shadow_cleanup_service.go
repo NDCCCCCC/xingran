@@ -51,6 +51,10 @@ func (s *SyncService) cleanupAfterFullSync(ctx context.Context, config *models.A
 //
 // 五段结构逐字对齐 handleDeletedGroups（group_sync_service.go:346-405）：
 // Gate 1（LDAP 0 条拒绝）→ LDAP 管理集 → 存量活行差集 → Gate 2（拟删 >50% 拒绝）→ 软删。
+//
+// P1-3 补充：软删成功**之后**联动停用对应的 sys_user 账号（AD 端消失 = 本地账号
+// 不得再登录）。两道闸门任一拒绝都在联动之前 return，故闸门拒绝时**不会**
+// 停用任何账号（AD 抖动 ≠ 全员停用）。
 func (s *SyncService) cleanupVanishedUsers(ctx context.Context, config *models.ADConfig, entries []*ldap.Entry, result *SyncResult) error {
 	// Gate 1: 安全闸门 — 如果 LDAP 返回为空,直接拒绝任何删除。
 	// 否则 AD 不可达/网络抖动/搜索 BaseDN 配错都会伪装成「用户全部消失」,
@@ -104,6 +108,23 @@ func (s *SyncService) cleanupVanishedUsers(ctx context.Context, config *models.A
 
 		result.DeletedUserCount = len(vanishedDNs)
 		applogger.Infof("[用户同步] 清理了 %d 个已不存在的用户", len(vanishedDNs))
+
+		// P1-3 联动:AD 端已消失（离职/被删）的用户,系统里对应的账号也必须停用,
+		// 否则 AD 账号没了 sys_user 仍是启用态 → 登录鉴权只查 sys_user.Status
+		// (internal/api/v1/auth.go:229) → 该账号照样能登录。
+		//
+		// 位置约束（重要）:
+		//   - 挂在**软删成功之后**:影子行删掉了但本地账号还活着 = 漏停用;
+		//   - 位于两道闸门**之后**:Gate 1(LDAP 0 条)/Gate 2(拟删>50%)拒绝时
+		//     上面已 return,根本走不到这里 —— AD 抖动时不会"全员停用"。
+		//   - 联动失败只记 WARN 不阻断:影子清理本身是软删(可恢复),
+		//     清理主流程不应因联动失败而回滚/中断。
+		if disabled, linkErr := disableSysUsersForADDNs(ctx, s.db, config, vanishedDNs); linkErr != nil {
+			applogger.Warnf("[用户同步] 联动停用 sys_user 失败（已清理 %d 个消失用户）: %v",
+				len(vanishedDNs), linkErr)
+		} else if disabled > 0 {
+			applogger.Infof("[用户同步] 联动停用 %d 个 sys_user 账号（AD 端已消失）", disabled)
+		}
 	}
 
 	return nil

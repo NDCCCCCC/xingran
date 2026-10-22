@@ -65,7 +65,7 @@ func setupImportRest77DB(t *testing.T) *gorm.DB {
 		CREATE TABLE sys_user (
 			id TEXT PRIMARY KEY, username TEXT, nickname TEXT, password TEXT, salt TEXT,
 			init_flag INTEGER, pwd_expire_days INTEGER, deleted_at DATETIME,
-			employee_no TEXT, email TEXT, phone TEXT, dept_id TEXT, status INTEGER DEFAULT 0,
+			employee_no TEXT, email TEXT, phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT, dept_id TEXT, status INTEGER DEFAULT 0,
 			gender INTEGER DEFAULT 2,
 			created_at DATETIME, updated_at DATETIME
 		)`).Error)

@@ -117,13 +117,32 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       sortOrder: getColumnSortOrder("email"),
     },
     {
-      title: "手机号",
+      // phone 为后端「联系电话」字段；mobile 为后端新增的「手机号」字段（AD 同步写入）
+      title: "联系电话",
       dataIndex: "phone",
       key: "phone",
       width: 130,
       minWidth: 120,
       sorter: true,
       sortOrder: getColumnSortOrder("phone"),
+      render: (text) => <span className="xr-cell-id">{text || "—"}</span>,
+    },
+    {
+      title: "手机号",
+      dataIndex: "mobile",
+      key: "mobile",
+      width: 130,
+      minWidth: 120,
+      ellipsis: true,
+      render: (text) => <span className="xr-cell-id">{text || "—"}</span>,
+    },
+    {
+      title: "职位",
+      dataIndex: "title",
+      key: "title",
+      width: 140,
+      minWidth: 120,
+      ellipsis: true,
       render: (text) => <span className="xr-cell-id">{text || "—"}</span>,
     },
     {
@@ -740,8 +759,15 @@ const UserManagement: FC = () => {
             <Form.Item name="email" label="邮箱">
               <Input className="user-form-input" />
             </Form.Item>
-            <Form.Item name="phone" label="手机号">
+            <Form.Item name="phone" label="联系电话">
               <Input className="user-form-input" />
+            </Form.Item>
+            {/* mobile / title 为后端新增字段：手机号与职位（AD 同步写入） */}
+            <Form.Item name="mobile" label="手机号">
+              <Input placeholder="请输入手机号" className="user-form-input" />
+            </Form.Item>
+            <Form.Item name="title" label="职位">
+              <Input placeholder="请输入职位" className="user-form-input" />
             </Form.Item>
             <Form.Item name="gender" label="性别" initialValue={2}>
               <Select className="user-form-input" onSearch={() => {}}>

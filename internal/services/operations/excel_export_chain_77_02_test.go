@@ -88,7 +88,7 @@ func setupExp77LegacyDB(t *testing.T) *gorm.DB {
 			username TEXT,
 			employee_no TEXT,
 			email TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			dept_id TEXT,
 			deleted_at DATETIME
 		)`).Error)
@@ -138,9 +138,9 @@ func TestExp77_ExportData_LegacyTypes(t *testing.T) {
 	ctx := context.Background()
 
 	// ---- user:3 行种子其中 1 行软删 → 2 条数据行 ----
-	exp77Exec(t, db, `INSERT INTO sys_user VALUES ('u1','张三','zhangsan','E001','z@x.com','13800000001',NULL,NULL)`)
-	exp77Exec(t, db, `INSERT INTO sys_user VALUES ('u2','李四','lisi',NULL,NULL,NULL,NULL,NULL)`)
-	exp77Exec(t, db, `INSERT INTO sys_user VALUES ('u3','王五','wangwu',NULL,NULL,NULL,NULL,'2026-07-01')`)
+	exp77Exec(t, db, `INSERT INTO sys_user (id,nickname,username,employee_no,email,phone,dept_id,deleted_at) VALUES ('u1','张三','zhangsan','E001','z@x.com','13800000001',NULL,NULL)`)
+	exp77Exec(t, db, `INSERT INTO sys_user (id,nickname,username,employee_no,email,phone,dept_id,deleted_at) VALUES ('u2','李四','lisi',NULL,NULL,NULL,NULL,NULL)`)
+	exp77Exec(t, db, `INSERT INTO sys_user (id,nickname,username,employee_no,email,phone,dept_id,deleted_at) VALUES ('u3','王五','wangwu',NULL,NULL,NULL,NULL,'2026-07-01')`)
 
 	userCfg, ok := GetExcelConfig("user")
 	require.True(t, ok)

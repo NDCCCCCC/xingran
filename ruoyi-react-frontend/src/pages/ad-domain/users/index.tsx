@@ -461,6 +461,22 @@ const ADUserPage: FC = () => {
       width: 120,
     },
     {
+      // 域控 manager 属性（DN 字符串），为空时显示 "-"
+      title: "域控经理",
+      dataIndex: "manager",
+      key: "manager",
+      width: 260,
+      ellipsis: true,
+      render: (manager?: string) =>
+        manager ? (
+          <span title={manager} style={{ cursor: "help" }}>
+            {manager}
+          </span>
+        ) : (
+          "-"
+        ),
+    },
+    {
       title: "办公电话",
       dataIndex: "phone",
       key: "phone",
@@ -611,7 +627,7 @@ const ADUserPage: FC = () => {
           dataSource={users}
           loading={loading}
           rowKey="id"
-          scroll={{ x: 1500 }}
+          scroll={{ x: 1900 }}
           pagination={paginationProps}
           onChange={handleTableChange}
           rowSelection={
@@ -650,6 +666,10 @@ const ADUserPage: FC = () => {
           </Form.Item>
           <Form.Item label="职位" name="title">
             <Input />
+          </Form.Item>
+          {/* 域控 manager 属性（DN）为只读展示，不参与提交 */}
+          <Form.Item label="域控经理">
+            <Input readOnly value={editingUser?.manager || ""} placeholder="未设置" />
           </Form.Item>
           <Form.Item label="部门" name="department">
             <Input />

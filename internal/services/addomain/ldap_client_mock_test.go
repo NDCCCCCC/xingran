@@ -68,6 +68,10 @@ type mockLDAPClient struct {
 	// 只有落到 AD 属性上的值才是真的推了最新值，仅计数无法断言。
 	// 追加字段不改任何既有方法签名（既有用例零影响）。
 	updateUserAttrLastAttrs map[string]string
+	// deleteUserAttr* 记录 DeleteUserAttribute 调用次数与最近一次实参（经理同步测试用）
+	deleteUserAttrCalls    int
+	deleteUserAttrLastDN   string
+	deleteUserAttrLastAttr string
 }
 
 func (m *mockLDAPClient) Connect() error {
@@ -122,6 +126,14 @@ func (m *mockLDAPClient) CreateGroup(groupDN, groupName, description string, gro
 
 func (m *mockLDAPClient) DeleteGroup(groupDN string) error {
 	return m.deleteGroupErr
+}
+
+// DeleteUserAttribute 实现 LDAPClientIface 新增的删属性接口（经理同步清空 manager 用）。
+func (m *mockLDAPClient) DeleteUserAttribute(userDN, attr string) error {
+	m.deleteUserAttrCalls++
+	m.deleteUserAttrLastDN = userDN
+	m.deleteUserAttrLastAttr = attr
+	return nil
 }
 
 func (m *mockLDAPClient) UpdateUserAttribute(userDN string, attrs map[string]string) error {

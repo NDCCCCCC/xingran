@@ -315,6 +315,14 @@ func (c *LDAPClient) UpdateUserAttribute(userDN string, attrs map[string]string)
 	return c.updateAttributes(userDN, attrs)
 }
 
+// DeleteUserAttribute 删除单个用户属性（Modify delete 语义）。
+// 用途：清空 AD manager —— Replace 空值在 AD 上会报错，必须走 delete。
+func (c *LDAPClient) DeleteUserAttribute(userDN, attr string) error {
+	modifyRequest := ldap.NewModifyRequest(userDN, nil)
+	modifyRequest.Delete(attr, nil)
+	return c.conn.Modify(modifyRequest)
+}
+
 // UpdateGroupAttribute 更新用户组属性
 func (c *LDAPClient) UpdateGroupAttribute(groupDN string, attrs map[string]string) error {
 	return c.updateAttributes(groupDN, attrs)

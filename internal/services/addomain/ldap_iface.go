@@ -36,6 +36,9 @@ type LDAPClientIface interface {
 
 	// 用户属性管理（user_ad_sync_service 使用）
 	UpdateUserAttribute(userDN string, attrs map[string]string) error
+	// DeleteUserAttribute 删除单个用户属性（如清空 AD manager；Replace 空值会报错，
+	// 必须走 Modify 的 delete 语义）
+	DeleteUserAttribute(userDN, attr string) error
 	MoveUser(userDN, newOUDN string) error
 	EnableUser(userDN string) error
 	DisableUser(userDN string) error

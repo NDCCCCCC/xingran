@@ -7,6 +7,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -113,11 +114,53 @@ func (s *departmentService) Update(ctx context.Context, req *requests.Department
 	dept.Status = req.Status
 	dept.Remark = toStringPtr(req.Remark)
 
-	if err := s.db.WithContext(ctx).Save(&dept).Error; err != nil {
-		return fmt.Errorf("更新部门失败: %w", err)
+	// 同事务落库 + 经理重算入队（QUEUE-01 同生共死）。
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&dept).Error; err != nil {
+			return fmt.Errorf("更新部门失败: %w", err)
+		}
+
+		// 经理重算（经理同步规则引擎）：部门 leader 是 dept_leader 来源经理的解析输入，
+		// leader 变更 → 本部门及其子树全部活跃用户重算 AD manager。
+		// 子树匹配沿用 operations/dept_filter.go 的 ancestors 三段 LIKE 模式。
+		if leaderChanged := deptLeaderChanged(dept.Leader, req.Leader); leaderChanged {
+			likeMid := "%," + dept.ID + ",%"
+			likeEnd := "%," + dept.ID
+			likeStart := dept.ID + ",%"
+			var userIDIDs []string
+			if err := tx.Model(&models.User{}).
+				Where("dept_id IN (?)", tx.Model(&models.Department{}).
+					Select("id").
+					Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors LIKE ?",
+						dept.ID, likeMid, likeEnd, likeStart)).
+				Pluck("id", &userIDIDs).Error; err != nil {
+				return fmt.Errorf("查询部门子树用户失败: %w", err)
+			}
+			if len(userIDIDs) > 0 {
+				if err := addomain.NewADPushEnqueuer().EnqueueUpdateManager(tx, userIDIDs); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil
+}
+
+// deptLeaderChanged 判断部门负责人是否发生变更（nil 与空串视为等价）。
+func deptLeaderChanged(old, new *string) bool {
+	oldV, newV := "", ""
+	if old != nil {
+		oldV = *old
+	}
+	if new != nil {
+		newV = *new
+	}
+	return oldV != newV
 }
 
 // Delete 删除部门

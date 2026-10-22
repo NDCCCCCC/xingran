@@ -67,7 +67,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			nickname TEXT,
 			employee_no TEXT,
 			email TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			avatar TEXT,
 			gender INTEGER,
 			status INTEGER,

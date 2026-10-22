@@ -238,6 +238,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				// 新架构：结构体Handler + Service层
 				systemV1.SetupPostRouter(posts, core)
 			}
+			// 经理同步规则/机构维护（权限在 SetupManagerRuleRouter 内按动作细分）
+			systemV1.SetupManagerRuleRouter(authorized, core)
 			// API密钥管理
 			apikeys := authorized.Group("/apikeys")
 			// WR-01 修复(Phase 61 review): 删除权限词汇统一为 system:* 模块的 remove

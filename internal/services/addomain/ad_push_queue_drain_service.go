@@ -451,9 +451,47 @@ func (d *ADPushDrainer) drainRow(ctx context.Context, c LDAPClientIface, row mod
 		}
 		d.markPushed(ctx, row.ID, now)
 
+	case models.ADPushActionUpdateManager:
+		// 经理同步规则引擎（Phase：ad-sync-fixes）：按 sys_manager_rule 解析经理，
+		// 回写 AD manager 属性；解析结果为空 → 清空属性（与系统侧"无经理"一致）。
+		d.drainUpdateManager(ctx, c, row, user, now)
+
 	default:
 		d.markDead(ctx, row.ID, now, row.Attempts, "unrecoverable:unknown-action")
 	}
+}
+
+// drainUpdateManager update_manager 动作执行面：
+//  1. 规则引擎解析经理（ResolveManagerDN 内部处理无规则/无经理等跳过语义）
+//  2. 有经理 DN → Replace AD manager；无 → DeleteUserAttribute 清空
+//  3. LDAP 失败 → handlePushError（failed + 退避）；规则引擎内部错误 → 同样退避
+//
+// 幂等性：Replace 同一 DN 重复执行无副作用；每次排水实时解析（规则/任职人可能已变）。
+func (d *ADPushDrainer) drainUpdateManager(ctx context.Context, c LDAPClientIface, row models.ADPushQueue, user *models.User, now time.Time) {
+	svc := NewManagerRuleService(d.db)
+	managerDN, reason, err := svc.ResolveManagerDN(ctx, user)
+	if err != nil {
+		// 规则引擎内部故障（DB 查询失败等）→ 与业务失败同路径退避重试
+		d.handlePushError(ctx, row, now, err, "update_manager")
+		return
+	}
+	if managerDN == "" {
+		// 无规则命中或解析不出经理 → 清空 AD manager（保持系统侧一致性）
+		applogger.Infof("[ad_push_queue] update_manager 无经理可写，清空属性: user=%s, reason=%s", user.Username, reason)
+		if err := c.DeleteUserAttribute(*user.AdDn, "manager"); err != nil {
+			// 属性本就不存在等场景 AD 可能报错；按失败退避一次后人工排查
+			d.handlePushError(ctx, row, now, err, "update_manager:clear")
+			return
+		}
+		d.markPushed(ctx, row.ID, now)
+		return
+	}
+	if err := c.UpdateUserAttribute(*user.AdDn, map[string]string{"manager": managerDN}); err != nil {
+		d.handlePushError(ctx, row, now, err, "update_manager")
+		return
+	}
+	applogger.Infof("[ad_push_queue] update_manager 推送成功: user=%s, managerDN=%s", user.Username, managerDN)
+	d.markPushed(ctx, row.ID, now)
 }
 
 // compareAndMoveOU OU 移动的幂等执行面（Phase 58 QUEUE-04）。

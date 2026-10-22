@@ -128,6 +128,10 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 		defaultRoleID := a.getDefaultRoleID()
 		applogger.Infof("[ADAuth] 开始同步AD用户: username=%s, defaultRoleID=%s", adUserInfo.Username, defaultRoleID)
 
+		// 多域隔离：把本次认证使用的 AD 配置 ID 注入 context，
+		// 用户同步层据此判定存量行是否属于其它 AD 域（classifyADUser 规则 2a 例外）。
+		ctx = WithADConfigID(ctx, a.configID)
+
 		syncedUser, err := a.userSyncer.SyncADUser(ctx, adUserInfo, defaultRoleID)
 		if err != nil {
 			// 同步失败不影响认证成功，但标记需要同步。

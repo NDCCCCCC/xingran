@@ -144,6 +144,7 @@ func setupSync78DB(t *testing.T) *gorm.DB {
 			phone TEXT,
 			mobile TEXT,
 			title TEXT,
+			manager TEXT,
 			department TEXT,
 			company TEXT,
 			description TEXT,

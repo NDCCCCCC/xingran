@@ -1,0 +1,344 @@
+import { useState, useEffect, useCallback, useMemo } from "react";
+import type { FC } from "react";
+import {
+  Card,
+  Table,
+  Button,
+  Space,
+  Form,
+  Input,
+  Radio,
+  Switch,
+  TreeSelect,
+  Modal,
+  Tag,
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
+import {
+  getManagerOrgList,
+  createManagerOrg,
+  updateManagerOrg,
+  deleteManagerOrg,
+  MANAGER_ORG_TYPE,
+  MANAGER_ORG_TYPE_LABELS,
+  isManagerEnabled,
+  type ManagerOrg,
+  type ManagerOrgQuery,
+  type ManagerOrgPayload,
+} from "@/lib/managerApi";
+import type { SimpleDept } from "@/lib/dutyApi";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+
+/** 把部门树转成 TreeSelect 数据 */
+function toTreeData(
+  depts: SimpleDept[],
+  disabledIds: ReadonlySet<string>
+): { title: string; value: string; key: string; disabled: boolean; children?: ReturnType<typeof toTreeData> }[] {
+  return depts.map((d) => ({
+    title: d.deptName,
+    value: d.id,
+    key: d.id,
+    disabled: disabledIds.has(d.id),
+    children: d.children ? toTreeData(d.children, disabledIds) : undefined,
+  }));
+}
+
+/** 收集某节点及其全部后代 id */
+function collectSelfAndDescendants(depts: SimpleDept[], rootId: string, acc: Set<string>): void {
+  for (const d of depts) {
+    if (d.id === rootId) {
+      const collect = (node: SimpleDept): void => {
+        acc.add(node.id);
+        node.children?.forEach(collect);
+      };
+      collect(d);
+      return;
+    }
+    if (d.children) collectSelfAndDescendants(d.children, rootId, acc);
+  }
+}
+
+const ManagerOrgsPage: FC = () => {
+  const [list, setList] = useState<ManagerOrg[]>([]);
+  const [total, setTotal] = useState(0);
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<ManagerOrg | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [searchForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+
+  const { data: deptTree = [] } = useDeptTree();
+
+  const [searchOrgName, setSearchOrgName] = useState<string | undefined>(undefined);
+
+  // useMemo 包住请求参数，防止对象引用不稳定造成无限请求循环
+  const params = useMemo<ManagerOrgQuery>(
+    () => ({ current, pageSize, orgName: searchOrgName }),
+    [current, pageSize, searchOrgName]
+  );
+
+  const loadList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await getManagerOrgList(params);
+      setList(result.list ?? []);
+      setTotal(result.total ?? 0);
+    } catch (error) {
+      handleApiError(error, "加载机构列表");
+    } finally {
+      setLoading(false);
+    }
+  }, [params]);
+
+  useEffect(() => {
+    loadList();
+  }, [loadList]);
+
+  // 父机构 TreeSelect：编辑时禁止选自己/自己的后代
+  const parentTreeData = useMemo(() => {
+    const disabled = new Set<string>();
+    if (editingOrg) collectSelfAndDescendants(deptTree, editingOrg.deptId, disabled);
+    return toTreeData(deptTree, disabled);
+  }, [deptTree, editingOrg]);
+
+  const deptTreeData = useMemo(() => toTreeData(deptTree, new Set()), [deptTree]);
+
+  const openModal = (record?: ManagerOrg) => {
+    setEditingOrg(record ?? null);
+    setModalOpen(true);
+    if (record) {
+      editForm.setFieldsValue({
+        orgName: record.orgName,
+        deptId: record.deptId,
+        parentOrgId: record.parentOrgId,
+        orgType: record.orgType,
+        enabled: isManagerEnabled(record.enabled),
+      });
+    } else {
+      editForm.setFieldsValue({ orgName: undefined, deptId: undefined, parentOrgId: undefined, orgType: MANAGER_ORG_TYPE.HEADQUARTERS, enabled: true });
+    }
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setEditingOrg(null);
+    editForm.resetFields();
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const values = (await editForm.validateFields()) as ManagerOrgPayload;
+      setSaving(true);
+      const payload: ManagerOrgPayload = {
+        ...values,
+        parentOrgId: values.parentOrgId || undefined,
+      };
+      if (editingOrg) {
+        await updateManagerOrg(editingOrg.id, payload);
+        handleSuccess("更新");
+      } else {
+        await createManagerOrg(payload);
+        handleSuccess("创建");
+      }
+      handleModalClose();
+      loadList();
+    } catch (error: unknown) {
+      if (isFormValidationError(error)) return;
+      handleApiError(error, "操作");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = (record: ManagerOrg) => {
+    Modal.confirm({
+      title: "删除机构",
+      content: `确定要删除机构「${record.orgName}」吗？`,
+      okText: "确定",
+      okType: "danger",
+      cancelText: "取消",
+      onOk: async () => {
+        try {
+          await deleteManagerOrg(record.id);
+          handleSuccess("删除");
+          loadList();
+        } catch (error) {
+          handleApiError(error, "删除");
+        }
+      },
+    });
+  };
+
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue() as { orgName?: string };
+    setCurrent(1);
+    setSearchOrgName(values.orgName || undefined);
+  };
+
+  const handleReset = () => {
+    searchForm.resetFields();
+    setCurrent(1);
+    setSearchOrgName(undefined);
+  };
+
+  const columns: ColumnsType<ManagerOrg> = [
+    { title: "机构名称", dataIndex: "orgName", key: "orgName", width: 180 },
+    { title: "对应部门", dataIndex: "deptName", key: "deptName", width: 180, render: (v: string | undefined, r) => v ?? r.deptId },
+    {
+      title: "上级机构",
+      dataIndex: "parentOrgName",
+      key: "parentOrgName",
+      width: 160,
+      render: (v: string | undefined, r) => v ?? r.parentOrgId ?? "-",
+    },
+    {
+      title: "机构类型",
+      dataIndex: "orgType",
+      key: "orgType",
+      width: 120,
+      render: (v: number) => (
+        <Tag color={v === MANAGER_ORG_TYPE.HEADQUARTERS ? "blue" : "cyan"}>
+          {MANAGER_ORG_TYPE_LABELS[v] ?? String(v)}
+        </Tag>
+      ),
+    },
+    {
+      title: "状态",
+      dataIndex: "enabled",
+      key: "enabled",
+      width: 100,
+      render: (v: boolean | number | undefined) =>
+        isManagerEnabled(v) ? <Tag color="success">启用</Tag> : <Tag color="default">停用</Tag>,
+    },
+    {
+      title: "操作",
+      key: "action",
+      width: 140,
+      render: (_, record) => (
+        <Space>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>
+            编辑
+          </Button>
+          <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
+            删除
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <Card style={{ marginBottom: 16 }}>
+        <Form form={searchForm} layout="inline">
+          <Form.Item name="orgName" label="机构名称">
+            <Input placeholder="请输入机构名称" allowClear style={{ width: 180 }} onPressEnter={handleSearch} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                搜索
+              </Button>
+              <Button onClick={handleReset}>重置</Button>
+              <Button icon={<ReloadOutlined />} onClick={loadList}>
+                刷新
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      <Card
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+            新增机构
+          </Button>
+        }
+      >
+        <Table
+          columns={columns}
+          dataSource={list}
+          loading={loading}
+          rowKey="id"
+          pagination={{
+            current,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (page, size) => {
+              setCurrent(page);
+              setPageSize(size);
+            },
+          }}
+        />
+      </Card>
+
+      <Modal
+        title={editingOrg ? "编辑机构" : "新增机构"}
+        open={modalOpen}
+        onOk={handleSubmit}
+        onCancel={handleModalClose}
+        confirmLoading={saving}
+        destroyOnHidden
+        width={560}
+      >
+        <Form form={editForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
+          <Form.Item
+            name="orgName"
+            label="机构名称"
+            rules={[{ required: true, message: "请输入机构名称" }]}
+          >
+            <Input placeholder="请输入机构名称" />
+          </Form.Item>
+          <Form.Item
+            name="deptId"
+            label="对应部门"
+            rules={[{ required: true, message: "请选择对应部门" }]}
+          >
+            <TreeSelect
+              placeholder="请选择对应部门"
+              treeData={deptTreeData}
+              treeDefaultExpandAll
+              showSearch
+              treeNodeFilterProp="title"
+              allowClear
+            />
+          </Form.Item>
+          <Form.Item name="parentOrgId" label="上级机构">
+            <TreeSelect
+              placeholder="不选则为顶级机构"
+              treeData={parentTreeData}
+              treeDefaultExpandAll
+              showSearch
+              treeNodeFilterProp="title"
+              allowClear
+            />
+          </Form.Item>
+          <Form.Item name="orgType" label="机构类型" rules={[{ required: true }]}>
+            <Radio.Group>
+              <Radio value={MANAGER_ORG_TYPE.HEADQUARTERS}>分公司本部</Radio>
+              <Radio value={MANAGER_ORG_TYPE.BRANCH}>分支机构</Radio>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item name="enabled" label="是否启用" valuePropName="checked">
+            <Switch checkedChildren="启用" unCheckedChildren="停用" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+};
+
+export default ManagerOrgsPage;

@@ -74,6 +74,8 @@ export interface ADUser {
   department?: string;
   company?: string;
   ouDn?: string;
+  /** 域控 manager 属性（DN 字符串），后端 models.ADUser.Manager */
+  manager?: string;
   userAccountControl?: number;
   isEnabled: boolean;
   isLocked: boolean;

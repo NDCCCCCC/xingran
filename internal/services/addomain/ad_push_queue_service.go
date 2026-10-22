@@ -392,3 +392,47 @@ func (e *ADPushEnqueuer) EnqueueUpdateBatch(tx *gorm.DB, userIDs []string) error
 	applogger.Infof("[ad_push_queue] 批量 update 入队成功: %d 行", len(rows))
 	return nil
 }
+
+// EnqueueUpdateManager 经理重算入队入口：为一批用户 upsert action=update_manager 行。
+//
+// 触发点（同事务调用，QUEUE-01 同生共死）：
+//   - user_service.Update：用户部门/岗位变更（经理解析的输入变了）
+//   - department_service.Update：部门 leader 变更（dept_leader 来源的经理可能变）
+//
+// 行为与 EnqueueUpdateBatch 一致（去重 / D-02 两层降级 / 冲突合并），仅 action 不同。
+func (e *ADPushEnqueuer) EnqueueUpdateManager(tx *gorm.DB, userIDs []string) error {
+	if len(userIDs) == 0 {
+		return nil
+	}
+
+	deduped := DedupeEntityIDs(userIDs)
+	if len(deduped) == 0 {
+		return nil
+	}
+
+	enabled, err := IsADSyncEnabled(tx)
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		applogger.Warnf("[ad_push_queue] 无启用的 AD 配置，跳过 update_manager 入队: %d 个用户", len(deduped))
+		return nil
+	}
+
+	now := time.Now().UTC()
+	rows := make([]models.ADPushQueue, 0, len(deduped))
+	for _, id := range deduped {
+		rows = append(rows, models.ADPushQueue{
+			EntityType: models.ADPushEntityUser,
+			EntityID:   id,
+			ActionType: models.ADPushActionUpdateManager,
+			Status:     models.ADPushStatusPending,
+		})
+	}
+	if err := tx.Clauses(adPushOnConflictClause(now)).CreateInBatches(&rows, pushQueueBatchSize).Error; err != nil {
+		applogger.Errorf("[ad_push_queue] update_manager 入队失败 (%d 行): %v", len(rows), err)
+		return err
+	}
+	applogger.Infof("[ad_push_queue] update_manager 入队成功: %d 行", len(rows))
+	return nil
+}

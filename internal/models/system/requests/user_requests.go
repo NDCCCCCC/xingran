@@ -65,6 +65,8 @@ type UserCreateRequest struct {
 	EmployeeNo *string           `json:"employeeNo"`
 	Email      *string           `json:"email"`
 	Phone      *string           `json:"phone"`
+	Mobile     *string           `json:"mobile"`
+	Title      *string           `json:"title"`
 	Gender     models.Gender     `json:"gender"`
 	Status     models.UserStatus `json:"status"`
 	DeptID     *string           `json:"deptId"`
@@ -82,6 +84,8 @@ func (r *UserCreateRequest) ToModel(hashedPassword string) models.User {
 		EmployeeNo: r.EmployeeNo,
 		Email:      r.Email,
 		Phone:      r.Phone,
+		Mobile:     r.Mobile,
+		Title:      r.Title,
 		Gender:     r.Gender,
 		Status:     r.Status,
 		DeptID:     r.DeptID,
@@ -96,6 +100,8 @@ type UserUpdateRequest struct {
 	EmployeeNo *string           `json:"employeeNo"`
 	Email      *string           `json:"email"`
 	Phone      *string           `json:"phone"`
+	Mobile     *string           `json:"mobile"`
+	Title      *string           `json:"title"`
 	Gender     models.Gender     `json:"gender"`
 	Status     models.UserStatus `json:"status"`
 	DeptID     *string           `json:"deptId"`
@@ -112,6 +118,8 @@ func (r *UserUpdateRequest) ToModel() models.User {
 		EmployeeNo: r.EmployeeNo,
 		Email:      r.Email,
 		Phone:      r.Phone,
+		Mobile:     r.Mobile,
+		Title:      r.Title,
 		Gender:     r.Gender,
 		Status:     r.Status,
 		DeptID:     r.DeptID,

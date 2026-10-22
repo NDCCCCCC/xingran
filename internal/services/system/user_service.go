@@ -186,6 +186,12 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 		if req.Phone != nil {
 			updates["phone"] = *req.Phone
 		}
+		if req.Mobile != nil {
+			updates["mobile"] = *req.Mobile
+		}
+		if req.Title != nil {
+			updates["title"] = *req.Title
+		}
 		if req.Remark != nil {
 			updates["remark"] = *req.Remark
 		}
@@ -263,6 +269,16 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 		// 语义与 UpdateStatus 的停用一致（启用方向不在 v1.21 范围内）。
 		if err := enqueuer.EnqueueDisableOnStatusTransition(tx, oldUserSnapshot.Status, req.Status, req.ID); err != nil {
 			return apperrors.DatabaseError(err)
+		}
+
+		// 经理重算（经理同步规则引擎）：部门或岗位是经理解析的输入，
+		// 任一变更 → 重算该用户的 AD manager（排水器 update_manager 动作实时解析规则）。
+		deptChanged := req.DeptID != nil &&
+			(oldUserSnapshot.DeptID == nil || *oldUserSnapshot.DeptID != *req.DeptID)
+		if deptChanged || req.PostIds != nil {
+			if err := enqueuer.EnqueueUpdateManager(tx, []string{req.ID}); err != nil {
+				return apperrors.DatabaseError(err)
+			}
 		}
 
 		return nil

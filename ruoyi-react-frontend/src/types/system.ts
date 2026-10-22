@@ -16,6 +16,10 @@ export interface User {
   employeeNo?: string;
   email?: string;
   phone?: string;
+  /** 手机号（后端 models.User.Mobile，AD 同步写入） */
+  mobile?: string;
+  /** 职位（后端 models.User.Title，AD 同步写入） */
+  title?: string;
   avatar?: string;
   gender: 0 | 1 | 2;
   status: Status;

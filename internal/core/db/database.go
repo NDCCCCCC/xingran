@@ -1106,6 +1106,22 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
 			applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
+		// AD 域控用户同步修复: sys_user 补 mobile/title/ad_config_id 列 + sys_ad_user 补 manager 列
+		// (双方言幂等,走 GORM Migrator 的 HasColumn/AddColumn)。
+		// **非阻断**：缺列只让 AD 同步丢弃手机号/职位、多域隔离退化为按用户名匹配。
+		if err := migrations.Migrate219UserADSyncFields(d.DB); err != nil {
+			applogger.Errorf("用户/AD影子表 AD 同步列补建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 通用经理同步: sys_manager_org / sys_manager_rule 两张表 (AutoMigrate 建表,幂等)。
+		// **非阻断**：缺表只让经理同步端点 500,不影响登录 / 入队 / 排水主链路。
+		if err := migrations.Migrate220ManagerRuleTables(d.DB); err != nil {
+			applogger.Errorf("经理同步规则表创建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 通用经理同步: 经理同步规则/机构两个菜单 + 按钮权限 seed (幂等,精准授权)。
+		// **非阻断**：缺菜单只让普通角色无入口(admin 超管旁路可见),不影响主链路。
+		if err := migrations.Migrate221ManagerSyncMenus(d.DB); err != nil {
+			applogger.Errorf("经理同步菜单 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -1154,6 +1170,19 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 既是 dev 运行时也是测试运行时；只注册 PG 分支会让 dev 环境缺权限行。
 		if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
 			applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: AD 域控用户同步修复补列 (与 PG 分支同款调用 + 同款非阻断档)。
+		// sqlite 既是 dev 运行时也是测试运行时;只注册 PG 分支会让 dev 环境缺列。
+		if err := migrations.Migrate219UserADSyncFields(d.DB); err != nil {
+			applogger.Errorf("用户/AD影子表 AD 同步列补建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 通用经理同步两张表 (与 PG 分支同款调用 + 同款非阻断档)。
+		if err := migrations.Migrate220ManagerRuleTables(d.DB); err != nil {
+			applogger.Errorf("经理同步规则表创建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 经理同步菜单 seed (与 PG 分支同款调用 + 同款非阻断档)。
+		if err := migrations.Migrate221ManagerSyncMenus(d.DB); err != nil {
+			applogger.Errorf("经理同步菜单 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
@@ -1354,6 +1383,20 @@ func (d *Database) BootstrapMissingTables() error {
 	// 非阻断：缺权限行只让普通角色对账端点 403 / 前端 Tab 不渲染。
 	if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
 		applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
+	}
+
+	// AD 域控用户同步修复：SKIP_AUTOMIGRATE 旁路同样要补列（F-03 同款盲区）。
+	// 该旁路不跑 AutoMigrate，models.User 新增的 mobile/title/ad_config_id 列不会被
+	// 自动补上 —— 缺列会让所有 sys_user 查询（GORM 自动 SELECT 新列）报 42703/无此列，
+	// 用户管理整体不可用，故此处**失败阻断**（与 ensureADPushQueue 同档）。
+	if err := migrations.Migrate219UserADSyncFields(d.DB); err != nil {
+		return fmt.Errorf("用户/AD影子表 AD 同步列补建失败: %w", err)
+	}
+
+	// 通用经理同步：SKIP_AUTOMIGRATE 旁路同样要建 sys_manager_org / sys_manager_rule。
+	// 非阻断：缺表只让经理同步端点 500，不影响登录 / 入队 / 排水主链路。
+	if err := migrations.Migrate220ManagerRuleTables(d.DB); err != nil {
+		applogger.Errorf("经理同步规则表创建失败 (非阻断,留待下次启动): %v", err)
 	}
 
 	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建

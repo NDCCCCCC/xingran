@@ -27,6 +27,13 @@ const (
 	// 注意: UpdateStatus 双向推送（停用→disable / 启用→enable）明确排除在 v1.21 外,
 	// 此处仅预留扩展位。
 	ADPushActionDisable ADPushActionType = "disable"
+	// ADPushActionUpdateManager 重算并回写用户的 AD manager 属性（经理同步规则引擎）。
+	//
+	// 触发时机：部门负责人变更（该部门子树内全部用户）、用户岗位变更、用户部门变更、
+	// 规则/机构配置变更后的批量重算。排水器按当前规则重新解析经理并写 AD manager。
+	// 与 ADPushActionUpdateUser 相互独立：四字段 diff 命中不上 manager 变更，
+	// 反之亦然；EnqueueDisable 的 F-01 压制**只作用于 update_user**，不压制本动作。
+	ADPushActionUpdateManager ADPushActionType = "update_manager"
 )
 
 // ADPushStatus 队列行状态（string 而非 int：部分唯一索引谓词与排障 SQL 可读）。
