@@ -188,18 +188,25 @@ func (s *ManagerRuleService) LoadResolver(ctx context.Context) (*ManagerResolver
 
 	// 4) 用户（id / username / dept_id / ad_dn / status）
 	//    ⚠ 精简测试库可能没有 status 列 → 降级为最小列集（status 视为 0 正常）。
+	//    ⚠ 不能用 map dest（Find(&map[string]models.User)）：Table+Select 精简列
+	//    场景下 GORM map 扫描报 "Scan called without calling Next"，必须 slice 查询后手工建 map。
+	var userRows []models.User
 	if err := s.db.WithContext(ctx).
 		Table("sys_user").
 		Select("id, username, dept_id, ad_dn, status").
-		Find(&r.users).Error; err != nil {
+		Find(&userRows).Error; err != nil {
 		applogger.Warnf("%s 查询用户（含 status 列）失败，降级为最小列集: %v", managerRuleLogPrefix, err)
-		r.users = make(map[string]models.User)
+		userRows = nil
 		if err2 := s.db.WithContext(ctx).
 			Table("sys_user").
 			Select("id, username, dept_id, ad_dn").
-			Find(&r.users).Error; err2 != nil {
+			Find(&userRows).Error; err2 != nil {
 			return nil, fmt.Errorf("查询用户失败: %w", err2)
 		}
+	}
+	r.users = make(map[string]models.User, len(userRows))
+	for _, u := range userRows {
+		r.users[u.ID] = u
 	}
 
 	// 5) 岗位任职关系
