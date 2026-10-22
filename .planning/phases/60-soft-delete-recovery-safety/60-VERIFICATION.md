@@ -2,7 +2,7 @@
 phase: 60-soft-delete-recovery-safety
 verified: 2026-10-20T09:20:34Z
 updated: 2026-10-22
-status: human_needed
+status: passed
 score: 12/12 must-haves verified
 covered_files:
   - ".planning/phases/60-soft-delete-recovery-safety/60-01-PLAN.md"
@@ -32,7 +32,7 @@ human_verification:
   - test: "真实 AD 环境下制造 DN 漂移场景登录（软删用户存量 ad_dn 与 AD 当前 DN 不一致），观察 HTTP 响应体 message 与后端日志"
     expected: "响应 message 为『该账号存在 AD 身份不一致，已被安全拦截，请联系系统管理员』（不含 CN=/OU=/DC= 片段）；后端 applogger 出现 `[SECURITY] 软删用户恢复被拒绝` WARN，字段含 path=login / userID / username / storedAdDN / currentAdDN；sys_user 行保持 deleted_at 非空且 ad_dn 逐字不变；不签发 JWT"
     why_human: "60-VALIDATION.md Manual-Only 表保留项；需要真实 AD 域控与国密（SM2/SM4）加密登录请求，端到端 HTTP 响应无法由 sqlite 单元测试覆盖（服务层原因码映射与文案映射已分别由 TestPhase60_SyncErrorReasonFor / TestAuth8003_SyncErrorReasonMessage 锁定）"
-    resolution: "已转留 60-UAT.md Test 1（用户选择跳过；真实 AD + 国密登录下的 DN 漂移拒绝端到端仍待实测，结果记录在该文件）"
+    resolution: "PASS 2026-10-22 生产端到端实测（chenchao-076 软删+DN 漂移现场，真实登录）：拦截文案正确、行未恢复/ad_dn 逐字不变/密码未重置/零写库，SAFE-01 D-01~D-05 全链实锤。见 60-UAT.md Test 1。"
   - test: "核对本环境 AD 账号的 sAMAccountName 与 userPrincipalName 本地部分是否一致（抽查若干在职账号）"
     expected: "两者一致；若存在 sAMAccountName≠UPN本地部分 的账号，需按「开放风险与升级项」CR-01 的口径评估闸门比对对象是否正确"
     why_human: "AD 侧账号属性形态属部署环境事实，代码库不可见；这是 SAFE-01 安全成效的前置条件"
@@ -40,7 +40,7 @@ human_verification:
   - test: "核对 sys_ad_user 表的 user_dn 与 AD 实时 DN 的一致性（抽查已改名/移动过的账号）"
     expected: "一致；若存在陈旧行，需按「开放风险与升级项」WR-03 的口径确认批量路径的比对基准"
     why_human: "批量路径的 DN 取自 sys_ad_user 缓存表，其新鲜度是生产数据事实，sqlite fixture 无法覆盖"
-    resolution: "已转留 60-UAT.md Test 3（用户选择跳过；sys_ad_user.user_dn 与 AD 实时 DN 的一致性仍待核对，结果记录在该文件）"
+    resolution: "PASS 2026-10-22 补测：影子表对拍 0 行漂移 + 用户在 AD 用户列表页实时抽查 3 样本（c_chenchao-051/lixuanhui/chenchao-076）DN 全部一致。见 60-UAT.md Test 3。"
 ---
 
 # Phase 60: 软删恢复安全 Verification Report

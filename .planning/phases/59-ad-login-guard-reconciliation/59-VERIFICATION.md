@@ -2,7 +2,7 @@
 phase: 59-ad-login-guard-reconciliation
 verified: 2026-10-19T16:35:48Z
 updated: 2026-10-22
-status: human_needed
+status: passed
 score: 12/14 must-haves verified
 covered_files:
   - ".planning/phases/59-ad-login-guard-reconciliation/59-01-PLAN.md"
@@ -49,7 +49,7 @@ human_verification:
   - test: "真实 AD 登录守卫拦截（GUARD-01 端到端）"
     expected: "管理员编辑用户 dept → 等队列入队（pending/failed）→ 该用户 AD 登录 → 日志出现『部门回写被活跃队列守卫拦截』WARN（含 userID/username/本地 dept UUID/AD 解析 dept UUID/队列行 ID/action_type/attempts），且 sys_user.dept_id 未被 AD 旧值覆盖"
     why_human: "单元测试已证明 SyncADUser 组件级行为（6/6 PASS），但真实 LDAP 登录链路（ad_authenticator → SyncADUser）需真实 AD 环境与 pending 队列行（59-VALIDATION Manual-Only）"
-    resolution: "已转留 59-UAT.md Test 1（用户选择跳过；真实 AD 登录守卫拦截仍待实测，结果记录在该文件）"
+    resolution: "PASS 2026-10-22 生产端到端实测（chenchao-076 真实登录×2）：守卫半段（pending 行在场 → dept 不被 AD 覆盖）+ 对照半段（行终态后 → dept 正常覆盖）双确认，GUARD-01 拦截/放行两态均实锤。见 59-UAT.md Test 1。"
   - test: "真实 PG 启动冒烟：migration_217 视图 + migration_218 权限 seed + 二次重启幂等"
     expected: "目标 PG 环境启动服务：AutoMigrate 前 DROP 视图、Migrate217 无错、SELECT count(*) FROM v_dept_ou_mismatch 可执行；再次重启同库无 SQLSTATE 0A000『cannot alter type』且视图重建成功；启动日志无『对账查询按钮权限 seed 失败』"
     why_human: "本机无 PG 实例；sqlite 测试覆盖不到 uuid↔varchar CAST、boolean NOT、CREATE OR REPLACE VIEW 的真实执行（DDL 文本守卫 TestPhase59_Migration217_PGDialectDDL 已过，但文本断言≠运行期证明）。本仓库有 MV/视图阻塞 AutoMigrate 启动 FATA 前科，PG 启动是全 phase 风险最高且完全未演练的路径"

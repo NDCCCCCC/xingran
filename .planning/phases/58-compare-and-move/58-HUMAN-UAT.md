@@ -1,14 +1,14 @@
 ---
-status: partial
+status: complete
 phase: 58-compare-and-move
 source: [58-VERIFICATION.md, 58-VALIDATION.md]
 started: 2026-10-19T00:00:00+08:00
-updated: 2026-10-21T19:35:00+08:00
+updated: 2026-10-22T17:30:00+08:00
 ---
 
 ## Current Test
 
-[awaiting human testing]
+[testing complete 2026-10-22：Test 1/3/7 pass；Test 2/5/6/9 skipped（裁决见各条）；Test 4/8 N/A]
 
 > **为什么这些项不可自动化**：本仓 Phase 58 的全部自动化验证跑在
 > `github.com/glebarez/sqlite` 的 in-memory 基座上 + 手写 `mockLDAPClient`。
@@ -24,6 +24,8 @@ updated: 2026-10-21T19:35:00+08:00
 ## Tests
 
 ### 1. 真 AD 上的 compare-and-move（QUEUE-04 / SC2）
+
+expected: 用户在系统里改部门后：队列行最终 status='pushed'、attempts=0、last_error 为空、pushed_at 非空；sys_user.ad_dn / ad_ou_dn 更新为新 OU；AD 端对象确实移到新 OU 且 RDN 与用户属性保留；把队列行打回 pending 再排水时，AD 侧不产生第二条 ModifyDN，本地 ad_dn 与步骤 3 记录值逐字节相同。
 
 **这项验的是什么：** 自动化用例（`TestPhase58_Drain_MoveUpdatesAdDnAndAdOuDn` 等）只证明
 「我们调了 `MoveUser(dn, targetOU)`」。真域控上 ModifyDN 的 wire 行为 —— 旧 RDN 是否真被
@@ -75,11 +77,20 @@ WHERE entity_id = '<userId>';
 说明 compare-and-move 的幂等点未生效（对已搬移的源 DN 重复 ModifyDN）→ **立即回报**，
 这是 QUEUE-04 的核心失败模式。若第 6 步 AD 侧出现第二条 ModifyDN，同样立即回报。
 
-result: [pending]
+result: [pass]
+
+> **2026-10-22 生产实测（c_chenchao-051，域控 21.120.164.44，排水器 10.62.10.39）：**
+> - 加速：drain_interval 300→30（方案A热重载 ≤30s 生效），测毕已恢复 300。
+> - 正向 move：17:08:29 入队行 6022ba9a（改部门 孝感→随州）→ pushed @ 17:09:00.002，attempts=0，last_error 空；sys_user.ad_dn/ad_ou_dn 回写为 OU=随州中心支公司 @ 17:09:00.207（推送后 200ms 内）。用户在「AD 用户列表」页（实时查域控）确认对象位于 OU=随州中心支公司 ✓。
+> - 幂等半段：17:20:09 该行打回 pending（ad_dn md5 基线 da347147…/e746cd31…）→ 17:21:00.004 排水回 pushed，attempts=0，last_error 空，ad_dn/ad_ou_dn 逐字节不变（updated_at 未触碰）→ 幂等点短路，未发起第二条 ModifyDN（若发起必现 retry:move_ou:…LDAP Result Code 32）。
+> - 反向恢复：17:23:52 入队行 a48c8584（改回孝感）→ pushed @ 17:24:00.004，ad_dn 回写 OU=孝感中心支公司 @ 17:24:00.147。
+> - QUEUE-04 两条核心断言（推送闭环 + SC2 幂等）生产实锤 PASS。
 
 ---
 
 ### 2. 账号池熔断期间的退避节奏（QUEUE-03 / SC1 后半）
+
+expected: 账号池熔断期间的退避节奏：连续失败时 attempts 按 60s→2min→4min→8min→16min 递增（5 次未达即转 dead），next_retry_at 随之推后；服务账号连续 3 次失败后 status=2（熔断）、circuit_breaker_until ≈ now+30min；熔断期间不出现密集重试。
 
 **这项验的是什么：** 退避曲线（60s→2min→4min→8min→16min，attempts 达 5 转 dead）与账号池
 30min 熔断周期的**桥接**关系。自动化用例只验纯函数 `backoffDuration(n)` 的返回值，
@@ -134,11 +145,17 @@ FROM sys_ad_service_accounts WHERE config_id = '<cfgId>';
 - 确认 `sys_ad_service_accounts.status` 回到 `0`（可用）
 - 确认卡在 `dead` 的队列行已被重新编辑触发入队（`dead` 行不自动复活 —— 见 UAT-58-7 的说明）
 
-result: [pending]
+result: [skipped]
+
+> **2026-10-22 裁决（用户）**：skip。理由：本项需向生产服务账号灌错凭据触发真实域控 bind 失败 ×3，
+> 有域控账户锁定策略误锁 AD-sync/ninedrunk（全局 AD 同步通道）的风险，且完整退避曲线需 ~30 分钟生产时钟。
+> 留待有隔离测试域控的环境再验（与 60-VERIFICATION 人工项同池）。
 
 ---
 
 ### 3. `sys_config` 排水间隔旋钮热重载（D-05，quick 261021-iqq 升级为方案A）
+
+expected: 修改 sys_config 的 ad_push_queue.drain_interval_seconds 后，≤30s 内后端日志出现「排水间隔配置变化」，无需重启即生效。
 
 **这项验的是什么：** ~~原设计：`LoadDrainIntervalSeconds` 启动时读取一次，改后需重启~~。
 **已被 quick 261021-iqq 覆盖并超越（2026-10-21 用户裁决方案A热重载）**：cron 固定 30s tick +
@@ -156,6 +173,8 @@ result: [pass]
 ---
 
 ### 4. 多 AD 配置（父子域）最长后缀命中（D-02 / SC3）
+
+expected: 父子域两个用户的队列行都 status='pushed' 且 last_error 不含 'unrecoverable:no-ad-config'；两人各自留在本域 OU、sys_dept_ou_mapping 的 ou_dn 分别落在各自 base_dn 下；无跨域 ModifyDN。
 
 > ⚠ **单域环境请把本项标 N/A**，并在 `58-07-SUMMARY.md` 注明。
 > 研究 §11 未解问题 1：`sys_ad_config` 在模型上是列表，但登录路径仍只取单条配置，
@@ -200,11 +219,18 @@ WHERE ou_dn IN (SELECT ad_ou_dn FROM sys_user WHERE id IN ('<父域userId>','<�
 **失败时该回报什么：** 任何一行转 `dead` 且 `last_error='unrecoverable:no-ad-config'`，
 或 AD 侧出现跨域 ModifyDN → 立即回报，附上两个 `ad_dn` 字面值与两条 `base_dn`。
 
-result: [pending / N/A（单域环境）]
+result: [N/A（单域环境）]
+
+> **2026-10-22 结论化**：生产 sys_ad_config 仅 1 条（「AD域控主机」4ee691f4，BaseDN=DC=PR,DC=intra,DC=cpic,DC=com,DC=cn），
+> 单域环境下 MatchADConfigByDN 歧义分支不可能触发（该函数的防御性复杂度为多域预留）。
+> 字符串级误命中反例已有自动化覆盖（TestPhase58_MatchADConfigByDN_ParentChildSharedSuffix）。
+> 与正文「⚠ 单域环境请把本项标 N/A」指引一致。
 
 ---
 
 ### 5. code 32 真实触发（QUEUE-05 / SC5）
+
+expected: 队列行 status='dead'、attempts=0（未烧退避次数）、last_error='unrecoverable:target-not-found'；sys_user 的 ad_dn / ad_ou_dn / ad_synced_at 三列均为 NULL；再等 3 个周期该行仍为 dead 且 updated_at 不再变化。
 
 **这项验的是什么：** 自动化用例用 `ldap.NewError(ldap.LDAPResultNoSuchObject, ...)`
 注入 code 32，证明**分流逻辑**正确。真域控验的是「AD 端确实返回了 code 32 而不是别的
@@ -242,13 +268,21 @@ WHERE entity_id = '<userId>' ORDER BY created_at DESC LIMIT 1;
 - 若第 ① 步 `attempts` 不是 0（烧了退避次数）→ 立即回报（不可恢复错误不应退避重试）
 - 若第 ④ 步 `updated_at` 仍在变 → 说明行仍被反复拾取，终态机制失效
 
-result: [pending]
+result: [skipped]
+
+> **2026-10-22 裁决（用户）**：skip。理由：触发前提需在生产域控人为删除 AD 对象/OU（违反 61-VALIDATION
+> 「严禁生产域控人为删对象」红线）；d_chenchao 为 Web 删除（disable/UAC 514，AD 对象仍在）不满足前提，
+> 影子表核对（10-21 轮 50% 闸门拦截 4643 拟删行）无法证明任何 ad_dn 已失效。
+> 旁证：clearUserADRefs 所在同文件的 PG 回写路径已由 Test 1 正向/反向 move 实锤（ad_dn/ad_ou_dn 真实回写正常），
+> 仅「code 32 分流 + 三列清空」未实机验，留待有一次性测试对象的环境再验。
 
 ---
 
-## ⚠ 用户必须知晓的两项已知后果（非 bug，勿当回归上报）
+**⚠ 用户必须知晓的两项已知后果（非 bug，勿当回归上报）**
 
 ### 6. 部门同步从未跑过时 `update_user` 行批量转 `dead`（决策 Q2 的刻意后果）
+
+expected: 从未跑过部门同步的环境里 update_user 行批量转终态：last_error='unrecoverable:no-ou-mapping'、attempts=0、pushed_at 为 NULL、LDAP 写次数为 0；执行一次部门 AD 同步并重新编辑后这些行恢复为 pushed。
 
 **⚠ 这是本次部署最可能被误报为「功能坏了」的现象，请务必先读这一条。**
 
@@ -310,11 +344,19 @@ WHERE last_error = 'unrecoverable:no-ou-mapping' AND status = 'dead';
 
 **长期规避：** 新环境部署后**先跑部门同步再放开用户编辑**。
 
-result: [pending]
+result: [skipped]
+
+> **2026-10-22 裁决（用户）**：skip。理由：本环境 sys_dept_ou_mapping 非空（部门同步已跑，Test 1 的
+> 随州/孝感 move 正是依赖这些映射），复现「空映射批量 dead」需清空生产映射表，风险不可接受。
+> 本项本质是 Q2 决策的已知后果文档化（判别三问 + 处置 SQL 已在上文）；
+> 分流行为（dead 不烧 attempts、LDAP 零调用、Phase 59 信号守卫不误报）有自动化覆盖。
+> 长期规避（新环境先跑部门同步再放开用户编辑）已写入部署须知。
 
 ---
 
 ### 7. 「编辑即续命」：持续编辑且持续失败的行永不终态（F-11 已接受方向）
+
+expected: 某用户该属性持续失败且被持续编辑时，该行 attempts 长期在 0/1 之间摆动、status 在 pending/failed 间来回，永远不会转 dead。
 
 **⚠ 这是有意的设计取舍，不是缺陷。报 bug 前请先读这一条。**
 
@@ -369,6 +411,8 @@ verified: 设计取舍已接受（D-04 / F-11），本条为「待告知」项�
 
 ### 8. 含特殊字符的历史部门需重跑部门同步（HYGIENE-02 / Q5 的已知取舍）
 
+expected: 含 LDAP DN 保留字符（, = + < > # ; \ "）的历史部门，其映射 ou_dn 在重跑部门同步前未被转义；重跑部门同步后 ou_dn 中的保留字符带反斜杠。
+
 **现象：** Phase 58 新增了 OU DN 转义 helper（`BuildOUDN`），部门名里的
 `,` `=` `+` `<` `>` `#` `;` `\` `"` 等 LDAP DN 保留字符会被正确转义。
 但**只作用于新写入**。部署前就已存在的 `sys_dept_ou_mapping.ou_dn` 行不会被回溯改写。
@@ -397,6 +441,8 @@ result: [N/A（生产库无含特殊字符的历史部门，974 条映射全清�
 
 ### 9. ⚠ OU 移动成功但本地回写失败 → 该用户 AD 绑定需人工重建（H-05 残余风险）
 
+expected: OU 移动成功但本地回写失败时，该队列行状态为 failed（而非 pushed）且 last_error 以 'retry:move_ou:' 开头；重试不会产生第二条 ModifyDN，需人工在 AD 端确认用户实际所在 OU 并手工纠正 sys_user.ad_dn / ad_ou_dn。
+
 **⚠ 这是代码审查后**新增**的已知后果（收口时发现，修复为部分修复）。**
 
 **现象：** 用户调岗触发 OU 移动。AD 侧移动**成功**，但紧接着写回本地 `sys_user.ad_dn` / `ad_ou_dn` 失败（写库瞬时故障）。修复前队列行会被标成 `pushed`（成功）而掩盖问题；**修复后**该行如实转为 `failed` 并排退避，`last_error` 以 `retry:move_ou:` 开头。
@@ -418,7 +464,14 @@ ORDER BY q.updated_at DESC;
 
 **与 UAT-58-5（code 32）的区别：** UAT-58-5 是 **AD 端对象被真删了**，属正常收敛；UAT-58-9 是 **AD 端对象还在、只是本地记录陈旧**，属需人工纠正的数据不一致。用 `Get-ADUser -Identity <RDN> -SearchBase <当前OU>` 确认对象是否真实存在即可区分。
 
-result: [pending]
+result: [skipped]
+
+> **2026-10-22 裁决（用户）**：skip。理由：触发前提是「AD 移动成功、紧接着 sys_user 写回瞬时失败」——
+> 生产无法安全注入该故障（锁行会卡死排水器、断库影响全局）；本项本身是 H-05 部分修复的已知残余风险文档化
+> （正文明确：重试不自愈、MoveUser 重放不安全会吃 code 32）。
+> 旁证：正常路径「推送成功 + 本地回写」已由 Test 1 实锤（回写在 pushed_at 后 200ms 内完成，行如实 pushed）；
+> 异常分流行为（回写失败→handlePushError→failed+退避、last_error 以 retry:move_ou: 开头）有自动化覆盖。
+> 留待隔离环境注入写库故障再验。
 
 ---
 

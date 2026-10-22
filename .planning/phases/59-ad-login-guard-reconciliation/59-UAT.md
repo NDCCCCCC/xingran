@@ -14,7 +14,13 @@ updated: 2026-10-21T01:44:00.000Z
 
 ### 1. 真实 AD 登录守卫拦截（GUARD-01 端到端）
 expected: 管理员编辑用户 dept → 等队列入队（pending/failed）→ 该用户 AD 登录 → 日志出现『部门回写被活跃队列守卫拦截』WARN（含 userID/username/本地 dept UUID/AD 解析 dept UUID/队列行 ID/action_type/attempts），且 sys_user.dept_id 未被 AD 旧值覆盖
-result: skipped
+result: [pass]
+
+> **2026-10-22 生产端到端实测（chenchao-076，登录域 .39 实例，GUARD-01 真实登录同步路径）：**
+> - 布现场：本地 dept_id 临时改 分公司本部（≠AD 解析值=基础运维科，制造漂移）+ 插入 pending update_user 行 aaaa1111-…ba11。
+> - **守卫半段**：用户真实登录 → 登录同步执行（sys_user.updated_at 10:41:06 刷新）→ dept_id **保持分公司本部**未被 AD 解析值覆盖，行仍 pending → GUARD-01 拦截生效（代码路径 user_sync_service.go:476-494 findActiveUserUpdateQueue 命中分支）。
+> - **对照半段**：行置 pushed（活跃谓词不命中）→ 再次真实登录 → dept_id 10:47:01 被 AD 解析值正常改回基础运维科 → 无活跃行时走 D-08 正常覆盖分支。
+> - 清理：测试行已删，chenchao-076 dept 与 AD 实际位置一致，环境零残留。
 reason: 用户跳过
 
 ### 2. 真实 PG 启动冒烟：migration_217 视图 + migration_218 权限 seed + 二次重启幂等
