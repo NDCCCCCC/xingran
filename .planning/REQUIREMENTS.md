@@ -34,9 +34,9 @@
 
 - [x] **HYGIENE-01**: 推送路径按用户 `ad_dn` 归属解析 AD 配置（消灭 `First()` 歧义）；`getDefaultADConfigID` 双份合并为公共 helper（58-02）
 - [x] **HYGIENE-02**: OU DN 拼接引入转义 helper（部门名特殊字符安全）（58-02）
-- [ ] **HYGIENE-03**: 死代码清理：user_ou_service.go 整文件、GetUserDeptByADOU、BatchMoveUsersToNewOU、dept_ou_mapper.go:31 等过期注释及其测试
-- [ ] **HYGIENE-04**: 嵌套组 member DN 标记/过滤，不混入用户成员关系
-- [ ] **HYGIENE-05**: 同名兄弟部门生成相同 OU DN 时检测并告警，不静默互相覆盖映射
+- [x] **HYGIENE-03**: 死代码清理：user_ou_service.go 整文件、GetUserDeptByADOU、BatchMoveUsersToNewOU、dept_ou_mapper.go:31 等过期注释及其测试
+- [x] **HYGIENE-04**: 嵌套组 member DN 标记/过滤，不混入用户成员关系
+- [x] **HYGIENE-05**: 同名兄弟部门生成相同 OU DN 时检测并告警，不静默互相覆盖映射
 - [x] **HYGIENE-06**: sqlite 测试补队列建表，测试套件全绿
 
 ## Future Requirements (deferred)
@@ -75,9 +75,9 @@
 | SHADOW-03 | Phase 61 | Complete（2026-10-20, 61-01：cleanupAfterFullSync 单点挂载 syncDataInternal 成功路径末尾（syncComputers 后、last_sync_at 前），处于 singleflight.Do 闭包内 + models.ADSyncTypeFull 守卫，增量分支 no-op 有行为断言 TestShadowCleanup_FullSyncOnly） |
 | HYGIENE-01 | Phase 58 | Complete（58-02） |
 | HYGIENE-02 | Phase 58 | Complete（58-02） |
-| HYGIENE-03 | Phase 62 | Pending |
-| HYGIENE-04 | Phase 62 | Pending |
-| HYGIENE-05 | Phase 62 | Pending |
+| HYGIENE-03 | Phase 62 | Complete (2026-10-22, 62-01 — user_ou_service.go/user_ou_service_test.go 删除、BatchMoveUsersToNewOU 删除（保 moveSingleUserToOU）、共享测试 const 迁 test_fixtures_test.go、过期注释修订；grep 残留=0，go build+全量回归绿。证据：62-01-SUMMARY.md / 62-VERIFICATION.md) |
+| HYGIENE-04 | Phase 62 | Complete (2026-10-22, 62-02 — group_member_filter.go filterNestedGroupMemberDNs（EqualFold，nil 集合防御）+ loadKnownGroupDNSet 每轮一次；syncGroupMembers 三调用点接线；零 DDL，重放自愈生产 8 行嵌套污染。证据：62-02-SUMMARY.md / 62-VERIFICATION.md) |
+| HYGIENE-05 | Phase 62 | Complete (2026-10-22, 62-03 — ErrOUDNConflict/OUDNConflictError + UpsertMapping 严格化不静默删 + UpsertMappingForce；dept_sync 冲突计 FailedDepts+Errorf 双部门名；手工 API GetMappingByOU 预检+Force。证据：62-03-SUMMARY.md / 62-VERIFICATION.md) |
 | HYGIENE-06 | Phase 57 | Done (2026-10-17, Phase 57 verified) |
 
 **Coverage**: 19/19 v1.21 requirements mapped (roadmap created 2026-10-16, no orphans)
