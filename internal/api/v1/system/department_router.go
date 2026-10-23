@@ -4,8 +4,27 @@ import (
 	"github.com/gin-gonic/gin"
 	opsAPI "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 )
+
+// adcascadeSetter 部门服务的 AD 级联注入点（缓存包装内嵌基础服务，方法集透传）。
+type adcascadeSetter interface {
+	SetADCascade(cascade *addomain.DeptADCascadeService)
+}
+
+// wireDeptADCascade 给部门服务注入 AD OU 级联（域控审查 P0-2）。
+// pool 复用 AuthFactory 的全局共享单例（Pitfall 4：禁临时 NewAccountPool）。
+func wireDeptADCascade(core *core.Core, svc systemServices.DepartmentService) {
+	if core.DB == nil || core.AuthFactory == nil {
+		return
+	}
+	setter, ok := svc.(adcascadeSetter)
+	if !ok {
+		return
+	}
+	setter.SetADCascade(addomain.NewDeptADCascadeService(core.DB.GetDB(), core.AuthFactory.GetAccountPool()))
+}
 
 // SetupDepartmentRouter 设置部门路由
 func SetupDepartmentRouter(r *gin.RouterGroup, core *core.Core) {
@@ -23,6 +42,7 @@ func SetupDepartmentRouter(r *gin.RouterGroup, core *core.Core) {
 	} else {
 		departmentService = systemServices.NewDepartmentService(core.DB.GetDB())
 	}
+	wireDeptADCascade(core, departmentService)
 
 	// 创建Handler
 	handler := NewDepartmentHandler(departmentService).WithCore(core)

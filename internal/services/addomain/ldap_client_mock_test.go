@@ -34,6 +34,16 @@ type mockLDAPClient struct {
 	removeMembersErr    error
 	createGroupErr      error
 	deleteGroupErr      error
+	// 域控审查 P0-1/P0-2 新增方法
+	getGroupMembersRes map[string][]string // groupDN → 成员 DN 列表
+	getGroupMembersErr error
+	deleteOUErr        error
+	deleteOUCalls      int
+	deleteOULastDN     string
+	renameOUErr        error
+	renameOUCalls      int
+	renameOULastDN     string
+	renameOULastName   string
 	updateUserAttrErr   error
 	moveUserErr         error
 	enableUserErr       error
@@ -118,6 +128,32 @@ func (m *mockLDAPClient) AddGroupMembers(groupDN string, userDNs []string) error
 
 func (m *mockLDAPClient) RemoveGroupMembers(groupDN string, userDNs []string) error {
 	return m.removeMembersErr
+}
+
+// GetGroupMembers 实现 P0-1 新增接口；getGroupMembersRes[groupDN] 非空时返回对应列表。
+func (m *mockLDAPClient) GetGroupMembers(groupDN string) ([]string, error) {
+	if m.getGroupMembersErr != nil {
+		return nil, m.getGroupMembersErr
+	}
+	if m.getGroupMembersRes == nil {
+		return nil, nil
+	}
+	return m.getGroupMembersRes[groupDN], nil
+}
+
+// DeleteOU 实现 P0-2 新增接口（部门删除联动）。
+func (m *mockLDAPClient) DeleteOU(ouDN string) error {
+	m.deleteOUCalls++
+	m.deleteOULastDN = ouDN
+	return m.deleteOUErr
+}
+
+// RenameOU 实现 P0-2 新增接口（部门改名联动）。
+func (m *mockLDAPClient) RenameOU(ouDN, newOUName string) error {
+	m.renameOUCalls++
+	m.renameOULastDN = ouDN
+	m.renameOULastName = newOUName
+	return m.renameOUErr
 }
 
 func (m *mockLDAPClient) CreateGroup(groupDN, groupName, description string, groupType int) error {

@@ -72,3 +72,33 @@ func BuildOUDN(deptName, parentOUDN string) string {
 	}
 	return "OU=" + escaped + "," + parentOUDN
 }
+
+// parentDNFromDN 提取 DN 的父 DN（去掉第一个 RDN）。
+//
+// 与 extractRDNFromDN（ldap_client.go）同款转义感知解析：按 RFC4514，逗号只有
+// 在**未被转义**时才是 RDN 分隔符（前面是偶数个连续反斜杠）。值内转义逗号
+// （如 CN=Zhang\,San）属于 RDN 本身，不能按字面逗号切分。
+//
+// 域控审查 P0-2 扩展使用：RenameOU 需要 parent DN 作为 ModifyDN 的 newSuperior。
+// 无未转义逗号（DN 只有一个 RDN）时返回 ""，由调用方报错。
+func parentDNFromDN(dn string) string {
+	trimmed := strings.TrimSpace(dn)
+	if trimmed == "" {
+		return ""
+	}
+	for i := 0; i < len(trimmed); i++ {
+		if trimmed[i] != ',' {
+			continue
+		}
+		// 数这个逗号前连续反斜杠的个数：偶数个 = 未转义分隔符
+		backslashes := 0
+		for j := i - 1; j >= 0 && trimmed[j] == '\\'; j-- {
+			backslashes++
+		}
+		if backslashes%2 == 0 {
+			parent := strings.TrimSpace(trimmed[i+1:])
+			return parent
+		}
+	}
+	return ""
+}

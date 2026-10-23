@@ -1135,6 +1135,11 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate223ManagerOrgPartialUnique(d.DB); err != nil {
 			applogger.Errorf("机构表部分唯一索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 域控审查: seed dept_to_ad_sync 定时任务(P1-1) + sys_ou_group_mapping
+		// 唯一键扩展加入 ad_config_id(P1-7 多域支持)。**非阻断**：失败降级 WARN。
+		if err := migrations.Migrate224DeptSyncSeedAndOUGroupUnique(d.DB); err != nil {
+			applogger.Errorf("部门同步seed与OU组唯一键迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -1204,6 +1209,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 机构表部分唯一索引 (与 PG 分支同款调用 + 同款非阻断档)。
 		if err := migrations.Migrate223ManagerOrgPartialUnique(d.DB); err != nil {
 			applogger.Errorf("机构表部分唯一索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 部门同步 seed + OU 组唯一键扩展 (与 PG 分支同款 + 非阻断档)。
+		if err := migrations.Migrate224DeptSyncSeedAndOUGroupUnique(d.DB); err != nil {
+			applogger.Errorf("部门同步seed与OU组唯一键迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only

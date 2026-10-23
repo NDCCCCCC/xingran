@@ -31,6 +31,9 @@ type LDAPClientIface interface {
 	RemoveGroupMember(groupDN, userDN string) error
 	AddGroupMembers(groupDN string, userDNs []string) error
 	RemoveGroupMembers(groupDN string, userDNs []string) error
+	// GetGroupMembers 读取组当前 member DN 列表（域控审查 P0-1：组成员双向同步
+	// 需要 diff 基准 —— AD 实际成员 vs 影子表期望成员，多退少补）
+	GetGroupMembers(groupDN string) ([]string, error)
 	CreateGroup(groupDN, groupName, description string, groupType int) error
 	DeleteGroup(groupDN string) error
 
@@ -47,6 +50,13 @@ type LDAPClientIface interface {
 	UpdateGroupAttribute(groupDN string, attrs map[string]string) error
 	// OU 管理（dept_sync_service.go failover 闭包使用）
 	CreateOU(ouDN, ouName string) error
+	// DeleteOU 删除AD端OU（域控审查 P0-2 扩展：部门删除联动）。
+	// 调用方须先预检"部门无用户且 OU 下无 AD 用户"；OU 下仍有子对象时 AD 返回
+	// Not Allowed On Non-Leaf（66），原样上抛由调用方降级处理。
+	DeleteOU(ouDN string) error
+	// RenameOU 重命名AD端OU（域控审查 P0-2 扩展：部门改名联动）。
+	// ModifyDN 只改 RDN（OU 名），parent 不变，子树对象 DN 随动（LDAP 语义）。
+	RenameOU(ouDN, newOUName string) error
 	// DN 存在性预检（user_ad_sync_service.go failover 闭包使用）
 	DNExists(dn string) (bool, error)
 	// 原始搜索请求直通（group_sync_service.go SyncSingleGroup failover 闭包使用，

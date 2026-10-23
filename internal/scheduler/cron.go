@@ -310,13 +310,26 @@ func (s *Scheduler) addJob(job *models.Job) error {
 		scheduler: s, // 传递调度器引用以访问 taskRegistry
 	}
 
-	// 添加到调度器 - cron.AddFunc 会自动验证表达式格式
-	jobID, err := s.cron.AddFunc(job.CronExpression, func() {
-		ctx := context.Background()
+	// 添加到调度器 - cron.AddJob 会自动验证表达式格式
+	// 域控审查 P0-3：原裸 AddFunc 无 Recover/防重叠/超时，panic 会击穿 goroutine、
+	// 短周期任务重叠执行。此处统一 chain 包装：
+	//   - cron.Recover：任务 panic 转为日志，不击穿调度器 goroutine
+	//   - cron.SkipIfStillRunning：上一轮未结束时跳过本轮（job.Concurrent=false 默认防重叠；
+	//     Concurrent=true 表示任务显式声明可并行，不加该 wrapper 尊重 DB 开关）
+	//   - context.WithTimeout(JobExecutionTimeout)：限制单轮执行时长，防任务挂死
+	lg := cronLogger()
+	jobChain := cron.NewChain(cron.Recover(lg))
+	if !job.Concurrent {
+		jobChain = cron.NewChain(cron.Recover(lg), cron.SkipIfStillRunning(lg))
+	}
+	wrappedJob := jobChain.Then(cron.FuncJob(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), constants.JobExecutionTimeout)
+		defer cancel()
 		if err := executor.Execute(ctx); err != nil {
 			s.logger.Errorf("任务执行异常 [%s]: %v", job.JobName, err)
 		}
-	})
+	}))
+	jobID, err := s.cron.AddJob(job.CronExpression, wrappedJob)
 
 	if err != nil {
 		return fmt.Errorf("添加任务到调度器失败: %w", err)

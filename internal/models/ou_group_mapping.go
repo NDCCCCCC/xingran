@@ -19,10 +19,10 @@ const (
 // 用于AD域控OU与用户组的直接关联，替代原来的部门-组映射
 type OUGroupMapping struct {
 	ID            string                `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	ADConfigID    string                `gorm:"type:uuid;not null;index:idx_ou_group_config,priority:1" json:"adConfigId"`
-	OUDN          string                `gorm:"column:ou_dn;size:500;not null;uniqueIndex:uni_ou_group_mapping_ou,priority:0;index:idx_ou_group_mapping_dn" json:"ouDn"`
+	ADConfigID    string                `gorm:"type:uuid;not null;index:idx_ou_group_config,priority:1;uniqueIndex:uni_ou_group_mapping_ou,priority:0" json:"adConfigId"`
+	OUDN          string                `gorm:"column:ou_dn;size:500;not null;uniqueIndex:uni_ou_group_mapping_ou,priority:1;index:idx_ou_group_mapping_dn" json:"ouDn"`
 	OUName        string                `gorm:"column:ou_name;size:255;not null" json:"ouName"`
-	ADGroupID     string                `gorm:"type:uuid;not null;uniqueIndex:uni_ou_group_mapping_ou,priority:1;index:idx_ou_group_mapping_group" json:"adGroupId"`
+	ADGroupID     string                `gorm:"type:uuid;not null;uniqueIndex:uni_ou_group_mapping_ou,priority:2;index:idx_ou_group_mapping_group" json:"adGroupId"`
 	MappingStatus OUGroupMappingStatus `gorm:"size:20;not null;default:active" json:"mappingStatus"`
 	SyncEnabled   bool                  `gorm:"default:true" json:"syncEnabled"` // 是否启用成员同步
 	LastSyncAt    *time.Time            `json:"lastSyncAt,omitempty"`

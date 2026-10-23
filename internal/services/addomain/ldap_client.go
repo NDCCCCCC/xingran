@@ -436,6 +436,66 @@ func (c *LDAPClient) RemoveGroupMembers(groupDN string, userDNs []string) error 
 	return c.conn.Modify(modifyRequest)
 }
 
+// groupMemberRangePageSize 是 AD 组成员 Range 检索的页大小。
+// AD 对单组 member 属性超过 ~1500 时启用 range 检索（member;range=0-1499），
+// 必须按页循环读取；2807 个影子成员分布在 67 组（平均 ~42/组），此页大小足够。
+const groupMemberRangePageSize = 1500
+
+// GetGroupMembers 读取AD组当前成员DN列表（域控审查 P0-1）
+// 通过 SearchWithRequest 直读 member 属性；大组自动走 AD Range 检索循环补页。
+func (c *LDAPClient) GetGroupMembers(groupDN string) ([]string, error) {
+	var members []string
+	attr := "member"
+	for {
+		searchRequest := ldap.NewSearchRequest(
+			groupDN,
+			ldap.ScopeBaseObject,
+			ldap.NeverDerefAliases,
+			0,     // SizeLimit
+			0,     // TimeLimit
+			false, // TypesOnly
+			"(objectClass=*)",
+			[]string{attr},
+			nil,
+		)
+		result, err := c.SearchWithRequest(searchRequest)
+		if err != nil {
+			return nil, fmt.Errorf("查询组 %s 成员失败: %w", groupDN, err)
+		}
+		if len(result.Entries) == 0 {
+			return nil, fmt.Errorf("组 %s 在AD中不存在", groupDN)
+		}
+		values := result.Entries[0].GetAttributeValues(attr)
+		members = append(members, values...)
+		if len(values) < groupMemberRangePageSize {
+			return members, nil
+		}
+		// 本页已满：下次请求下一 Range 段（AD 响应中的属性名形如 member;range=1500-）
+		attr = fmt.Sprintf("member;range=%d-", len(members))
+	}
+}
+
+// DeleteOU 删除AD端OU（域控审查 P0-2 扩展：部门删除联动）
+// 调用方须先预检"部门无用户且 OU 下无 AD 用户"；OU 下仍有子对象时 AD 返回
+// Not Allowed On Non-Leaf（错误码 66），原样上抛由调用方降级处理。
+func (c *LDAPClient) DeleteOU(ouDN string) error {
+	delRequest := ldap.NewDelRequest(ouDN, nil)
+	return c.conn.Del(delRequest)
+}
+
+// RenameOU 重命名AD端OU（域控审查 P0-2 扩展：部门改名联动）
+// ModifyDN 只改 RDN（OU 名），parent 不变，子树对象 DN 随动（LDAP 语义）；
+// RDN 拼接规则与 dn_util.go BuildOUDN 保持一致（ldap.EscapeDN）。
+func (c *LDAPClient) RenameOU(ouDN, newOUName string) error {
+	rdn := "OU=" + ldap.EscapeDN(newOUName)
+	parentDN := parentDNFromDN(ouDN)
+	if parentDN == "" {
+		return fmt.Errorf("无法从OU DN提取父DN: %s", ouDN)
+	}
+	req := ldap.NewModifyDNRequest(ouDN, rdn, true, parentDN)
+	return c.conn.ModifyDN(req)
+}
+
 // extractRDNFromDN 从DN中提取RDN（第一个 RDN）
 //
 // 按 RFC4514，逗号只有在**未被转义**时才是 RDN 分隔符 —— 即其前面是偶数个连续反斜杠。
