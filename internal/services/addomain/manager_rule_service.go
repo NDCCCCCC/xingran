@@ -1196,7 +1196,11 @@ func (s *ManagerOrgService) DeleteOrg(ctx context.Context, id string) error {
 		Updates(map[string]interface{}{"parent_org_id": nil}).Error; err != nil {
 		return fmt.Errorf("清理子机构上级引用失败: %w", err)
 	}
-	if err := s.db.WithContext(ctx).Where("id = ?", id).Delete(&models.ManagerOrg{}).Error; err != nil {
+	// 机构映射是配置数据（审计靠 operlog），删除走物理删除：
+	// 软删行会在 dept_id 唯一索引上占坑（idx_sys_manager_org_dept_id），
+	// 导致同部门无法重建机构（SQLSTATE 23505）。migration_223 已把索引改为
+	// WHERE deleted_at IS NULL 的部分唯一索引作为双保险，此处 Unscoped 双管齐下。
+	if err := s.db.WithContext(ctx).Unscoped().Where("id = ?", id).Delete(&models.ManagerOrg{}).Error; err != nil {
 		return fmt.Errorf("删除机构失败: %w", err)
 	}
 	return nil

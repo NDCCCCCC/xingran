@@ -1129,6 +1129,12 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate222DropPhantomJoinTables(d.DB); err != nil {
 			applogger.Errorf("幻影关联表清理失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 通用经理同步: sys_manager_org.dept_id 唯一索引改为部分唯一 (WHERE deleted_at IS NULL),
+		// 并物理清理已软删机构行——修复「删除机构后无法重建同部门机构」(23505)。
+		// **非阻断**：失败只保留旧索引语义,不影响主链路。
+		if err := migrations.Migrate223ManagerOrgPartialUnique(d.DB); err != nil {
+			applogger.Errorf("机构表部分唯一索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -1194,6 +1200,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 幻影关联表清理 (与 PG 分支同款调用 + 同款非阻断档)。
 		if err := migrations.Migrate222DropPhantomJoinTables(d.DB); err != nil {
 			applogger.Errorf("幻影关联表清理失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 机构表部分唯一索引 (与 PG 分支同款调用 + 同款非阻断档)。
+		if err := migrations.Migrate223ManagerOrgPartialUnique(d.DB); err != nil {
+			applogger.Errorf("机构表部分唯一索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
