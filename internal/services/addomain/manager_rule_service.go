@@ -150,6 +150,28 @@ func invalidateResolverCache() {
 	resolverCacheMu.Unlock()
 }
 
+// enqueueAllManagersRecheck 规则/机构配置变更后，为全部有 AD 绑定的在职用户入队
+// update_manager，排水器会按最新规则重算每个人的经理（30s 内生效）。
+// 重复入队由 ad_push_queue 的部分唯一索引 + adPushOnConflictClause 合并，不会堆积；
+// 入队失败不回滚已成功的配置变更，仅 WARN（管理员可手动「同步经理」全量兜底）。
+func enqueueAllManagersRecheck(ctx context.Context, db *gorm.DB) {
+	var ids []string
+	if err := db.WithContext(ctx).Model(&models.User{}).
+		Where("deleted_at IS NULL AND ad_dn IS NOT NULL AND ad_dn <> ''").
+		Pluck("id", &ids).Error; err != nil {
+		applogger.Warnf("%s 规则变更后查询待重算用户失败: %v", managerRuleLogPrefix, err)
+		return
+	}
+	if len(ids) == 0 {
+		return
+	}
+	if err := NewADPushEnqueuer().EnqueueUpdateManager(db.WithContext(ctx), ids); err != nil {
+		applogger.Warnf("%s 规则变更后入队经理重算失败（共 %d 人）: %v", managerRuleLogPrefix, len(ids), err)
+		return
+	}
+	applogger.Infof("%s 规则/机构已变更，已为 %d 个AD绑定用户入队经理重算", managerRuleLogPrefix, len(ids))
+}
+
 // LoadResolver 一次性预加载规则引擎所需的全部只读数据（带进程内 TTL 缓存）。
 func (s *ManagerRuleService) LoadResolver(ctx context.Context) (*ManagerResolver, error) {
 	resolverCacheMu.Lock()
@@ -1048,6 +1070,7 @@ func (s *ManagerRuleService) CreateRule(ctx context.Context, req *ManagerRuleCre
 		return nil, fmt.Errorf("创建经理同步规则失败: %w", err)
 	}
 	invalidateResolverCache()
+	enqueueAllManagersRecheck(ctx, s.db)
 	return &rule, nil
 }
 
@@ -1095,6 +1118,7 @@ func (s *ManagerRuleService) UpdateRule(ctx context.Context, id string, req *Man
 		return fmt.Errorf("更新经理同步规则失败: %w", err)
 	}
 	invalidateResolverCache()
+	enqueueAllManagersRecheck(ctx, s.db)
 	return nil
 }
 
@@ -1104,6 +1128,7 @@ func (s *ManagerRuleService) DeleteRule(ctx context.Context, id string) error {
 		return fmt.Errorf("删除经理同步规则失败: %w", err)
 	}
 	invalidateResolverCache()
+	enqueueAllManagersRecheck(ctx, s.db)
 	return nil
 }
 
@@ -1246,6 +1271,7 @@ func (s *ManagerOrgService) CreateOrg(ctx context.Context, req *ManagerOrgCreate
 		return nil, fmt.Errorf("创建机构失败: %w", err)
 	}
 	invalidateResolverCache()
+	enqueueAllManagersRecheck(ctx, s.db)
 	return &org, nil
 }
 
@@ -1293,6 +1319,7 @@ func (s *ManagerOrgService) UpdateOrg(ctx context.Context, id string, req *Manag
 		return fmt.Errorf("更新机构失败: %w", err)
 	}
 	invalidateResolverCache()
+	enqueueAllManagersRecheck(ctx, s.db)
 	return nil
 }
 
@@ -1326,6 +1353,7 @@ func (s *ManagerOrgService) DeleteOrg(ctx context.Context, id string) error {
 		return fmt.Errorf("删除机构失败: %w", err)
 	}
 	invalidateResolverCache()
+	enqueueAllManagersRecheck(ctx, s.db)
 	return nil
 }
 
@@ -1533,6 +1561,7 @@ func (s *ManagerOrgService) GenerateOrgsFromDept(ctx context.Context) (*Generate
 	}
 	if result.Created > 0 {
 		invalidateResolverCache()
+		enqueueAllManagersRecheck(ctx, s.db)
 	}
 	return result, nil
 }
