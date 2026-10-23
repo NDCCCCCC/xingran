@@ -29,6 +29,7 @@ import {
 import type { User } from "@/types";
 import { post } from "@/lib/api";
 import type { PageResponse } from "@/types";
+import { previewManagers, type ManagerPreviewItem } from "@/lib/managerApi";
 import DeptTree from "@/components/DeptTree";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
@@ -63,6 +64,8 @@ interface UserTableColumnsProps {
   getColumnSortOrder: (field: string) => SortOrder | undefined;
   /** Phase 69 DICT-03: sys_user_sex 字典数据（空数组时 formatGender 回退静态映射） */
   genderDict: DictItem[];
+  /** 经理预览映射（key=用户 id；纯计算不落库，规则变更后由后端缓存失效保证准实时） */
+  managerMap: Record<string, ManagerPreviewItem>;
 }
 
 function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
@@ -73,6 +76,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
     handleDelete,
     getColumnSortOrder,
     genderDict,
+    managerMap,
   } = props;
 
   return [
@@ -166,6 +170,41 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       sorter: true,
       sortOrder: getColumnSortOrder("deptName"),
       render: (_, record) => record.deptFullName || record.deptName || "-",
+    },
+    {
+      // 经理预览：按当前生效的经理同步规则纯内存计算（不落库），
+      // 显示「姓名(账号)」；未配置规则或未解析出时显示 "—"，
+      // hover 提示给出原因（如“未命中任何机构定义”）。
+      title: "经理",
+      dataIndex: "manager",
+      key: "manager",
+      width: 140,
+      minWidth: 120,
+      ellipsis: true,
+      render: (_, record) => {
+        const preview = managerMap[record.id];
+        if (!preview) return <span className="xr-cell-id">—</span>;
+        const label =
+          preview.managerName || preview.managerUsername
+            ? `${preview.managerName || preview.managerUsername}${
+                preview.managerUsername && preview.managerName
+                  ? `(${preview.managerUsername})`
+                  : ""
+              }`
+            : "—";
+        const tip =
+          preview.reason ||
+          (preview.warnings && preview.warnings.length > 0
+            ? preview.warnings.join("；")
+            : preview.ruleName
+              ? `命中规则：${preview.ruleName}`
+              : "");
+        return (
+          <span className="xr-cell-id" title={tip}>
+            {label}
+          </span>
+        );
+      },
     },
     {
       title: "角色",
@@ -356,6 +395,35 @@ const UserManagement: FC = () => {
     sorterMetas,
   });
 
+  // ==================== 经理预览（当前页） ====================
+
+  // 经理预览映射（key=用户 id）。监听当前页数据变化批量查询；
+  // previewManagers 内部静默降级，失败不阻塞用户列表展示。
+  const [managerMap, setManagerMap] = useState<Record<string, ManagerPreviewItem>>({});
+
+  const userIdsKey = useMemo(
+    () => (users ?? []).map((u) => u.id).join(","),
+    [users]
+  );
+
+  useEffect(() => {
+    const ids = userIdsKey ? userIdsKey.split(",") : [];
+    if (ids.length === 0) {
+      setManagerMap({});
+      return;
+    }
+    let cancelled = false;
+    previewManagers(ids).then((items) => {
+      if (cancelled) return;
+      const next: Record<string, ManagerPreviewItem> = {};
+      for (const item of items) next[item.userId] = item;
+      setManagerMap(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userIdsKey]);
+
   // ==================== 初始化 ====================
 
   useEffect(() => {
@@ -541,6 +609,7 @@ const UserManagement: FC = () => {
     handleDelete,
     getColumnSortOrder,
     genderDict,
+    managerMap,
   });
 
   // 给 DeptTree 喂稳定引用 — selectedKeys 在 selectedDeptId 不变时复用同一数组，

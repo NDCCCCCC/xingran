@@ -64,6 +64,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -125,12 +127,58 @@ func (s *ManagerRuleService) HasEnabledRules(ctx context.Context) (bool, error) 
 	return cnt > 0, nil
 }
 
-// LoadResolver 一次性预加载规则引擎所需的全部只读数据。
+// ============================ Resolver 进程内缓存 ============================
+
+// ManagerResolver 是全量只读索引（规则/机构/部门/用户/岗位任职），
+// Resolve 及各 match/resolve 方法只读 map，可安全跨请求共享。
+// 预览端点等高频读路径复用缓存实例，避免每次全表预加载；
+// 规则/机构任一写操作成功后由 invalidateResolverCache 主动失效，TTL 兜底。
+var (
+	resolverCacheMu     sync.Mutex
+	resolverCache       *ManagerResolver
+	resolverCacheLoaded time.Time
+)
+
+// resolverCacheTTL 缓存存活时间。配置页改动会主动失效，TTL 仅兜底
+// （如 DB 侧手工改数据）。预览展示允许该量级的延迟。
+const resolverCacheTTL = 60 * time.Second
+
+// invalidateResolverCache 使 resolver 进程内缓存失效（规则/机构写路径调用）。
+func invalidateResolverCache() {
+	resolverCacheMu.Lock()
+	resolverCache = nil
+	resolverCacheMu.Unlock()
+}
+
+// LoadResolver 一次性预加载规则引擎所需的全部只读数据（带进程内 TTL 缓存）。
+func (s *ManagerRuleService) LoadResolver(ctx context.Context) (*ManagerResolver, error) {
+	resolverCacheMu.Lock()
+	if resolverCache != nil && time.Since(resolverCacheLoaded) < resolverCacheTTL {
+		r := resolverCache
+		resolverCacheMu.Unlock()
+		return r, nil
+	}
+	resolverCacheMu.Unlock()
+
+	// 查库在锁外执行（全表预加载耗时），并发 miss 容忍重复查询，
+	// 结果一致（同表快照级别差异可忽略）。
+	r, err := s.loadResolverUncached(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resolverCacheMu.Lock()
+	resolverCache = r
+	resolverCacheLoaded = time.Now()
+	resolverCacheMu.Unlock()
+	return r, nil
+}
+
+// loadResolverUncached 实际执行全量预加载。
 //
 // 为什么要「一次性预加载」：规则数 × 用户数的朴素实现会产生 N+1 放大
 // （每个用户都要遍历规则并回查部门/岗位/机构）。本方法把只读数据全部装进内存，
 // 之后的解析是纯内存计算。
-func (s *ManagerRuleService) LoadResolver(ctx context.Context) (*ManagerResolver, error) {
+func (s *ManagerRuleService) loadResolverUncached(ctx context.Context) (*ManagerResolver, error) {
 	r := &ManagerResolver{
 		orgByID:           make(map[string]models.ManagerOrg),
 		orgByDept:         make(map[string]models.ManagerOrg),
@@ -186,14 +234,15 @@ func (s *ManagerRuleService) LoadResolver(ctx context.Context) (*ManagerResolver
 		}
 	}
 
-	// 4) 用户（id / username / dept_id / ad_dn / status）
+	// 4) 用户（id / username / nickname / dept_id / ad_dn / status）
 	//    ⚠ 精简测试库可能没有 status 列 → 降级为最小列集（status 视为 0 正常）。
 	//    ⚠ 不能用 map dest（Find(&map[string]models.User)）：Table+Select 精简列
 	//    场景下 GORM map 扫描报 "Scan called without calling Next"，必须 slice 查询后手工建 map。
+	//    nickname 供经理预览端点显示「姓名(账号)」（有 nickname 列即有，无降级风险）。
 	var userRows []models.User
 	if err := s.db.WithContext(ctx).
 		Table("sys_user").
-		Select("id, username, dept_id, ad_dn, status").
+		Select("id, username, nickname, dept_id, ad_dn, status").
 		Find(&userRows).Error; err != nil {
 		applogger.Warnf("%s 查询用户（含 status 列）失败，降级为最小列集: %v", managerRuleLogPrefix, err)
 		userRows = nil
@@ -334,6 +383,59 @@ func (s *ManagerRuleService) ResolveManagerDN(ctx context.Context, u *models.Use
 		return "", "经理用户无 ad_dn", nil
 	}
 	return managerDN, "", nil
+}
+
+// ManagerPreviewItem 经理预览项（用户列表「经理」列展示用，不落库）。
+type ManagerPreviewItem struct {
+	UserID          string   `json:"userId"`
+	ManagerID       string   `json:"managerId,omitempty"`
+	ManagerName     string   `json:"managerName,omitempty"`     // 经理姓名（nickname）
+	ManagerUsername string   `json:"managerUsername,omitempty"` // 经理账号（username）
+	RuleName        string   `json:"ruleName,omitempty"`        // 命中的规则名
+	Reason          string   `json:"reason,omitempty"`          // 未解析出经理时的原因
+	Warnings        []string `json:"warnings,omitempty"`
+}
+
+// PreviewManagers 批量预览用户的经理（用户列表展示用）。
+//
+// 与 SyncManagersToAD 的区别：纯内存计算、不写 AD、不落库；
+// 复用 LoadResolver（带进程内 TTL 缓存，规则/机构变更时主动失效），
+// 当页 ≤100 用户的解析开销可忽略。
+// 无启用规则 → 返回空列表（前端不显示经理列内容），不回退旧 leader 逻辑
+// （预览语义 = "配置了规则之后的经理是谁"）。
+func (s *ManagerRuleService) PreviewManagers(ctx context.Context, userIDs []string) ([]ManagerPreviewItem, error) {
+	if len(userIDs) == 0 {
+		return []ManagerPreviewItem{}, nil
+	}
+	resolver, err := s.LoadResolver(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ManagerPreviewItem, 0, len(userIDs))
+	for _, uid := range userIDs {
+		u, ok := resolver.users[uid]
+		if !ok {
+			continue
+		}
+		res := resolver.Resolve(&u)
+		item := ManagerPreviewItem{
+			UserID:   uid,
+			RuleName: res.RuleName,
+			Reason:   res.Reason,
+			Warnings: res.Warnings,
+		}
+		if res.ManagerID != "" {
+			item.ManagerID = res.ManagerID
+			if m, ok := resolver.users[res.ManagerID]; ok {
+				if m.Nickname != nil && *m.Nickname != "" {
+					item.ManagerName = *m.Nickname
+				}
+				item.ManagerUsername = m.Username
+			}
+		}
+		out = append(out, item)
+	}
+	return out, nil
 }
 
 // lookupAdDn 查询用户的 ad_dn（空串表示没有 AD 绑定）。
@@ -930,6 +1032,7 @@ func (s *ManagerRuleService) CreateRule(ctx context.Context, req *ManagerRuleCre
 	if err := s.db.WithContext(ctx).Create(&rule).Error; err != nil {
 		return nil, fmt.Errorf("创建经理同步规则失败: %w", err)
 	}
+	invalidateResolverCache()
 	return &rule, nil
 }
 
@@ -976,6 +1079,7 @@ func (s *ManagerRuleService) UpdateRule(ctx context.Context, id string, req *Man
 	if err := s.db.WithContext(ctx).Save(&rule).Error; err != nil {
 		return fmt.Errorf("更新经理同步规则失败: %w", err)
 	}
+	invalidateResolverCache()
 	return nil
 }
 
@@ -984,6 +1088,7 @@ func (s *ManagerRuleService) DeleteRule(ctx context.Context, id string) error {
 	if err := s.db.WithContext(ctx).Where("id = ?", id).Delete(&models.ManagerRule{}).Error; err != nil {
 		return fmt.Errorf("删除经理同步规则失败: %w", err)
 	}
+	invalidateResolverCache()
 	return nil
 }
 
@@ -1125,6 +1230,7 @@ func (s *ManagerOrgService) CreateOrg(ctx context.Context, req *ManagerOrgCreate
 	if err := s.db.WithContext(ctx).Create(&org).Error; err != nil {
 		return nil, fmt.Errorf("创建机构失败: %w", err)
 	}
+	invalidateResolverCache()
 	return &org, nil
 }
 
@@ -1171,6 +1277,7 @@ func (s *ManagerOrgService) UpdateOrg(ctx context.Context, id string, req *Manag
 	if err := s.db.WithContext(ctx).Save(&org).Error; err != nil {
 		return fmt.Errorf("更新机构失败: %w", err)
 	}
+	invalidateResolverCache()
 	return nil
 }
 
@@ -1203,6 +1310,7 @@ func (s *ManagerOrgService) DeleteOrg(ctx context.Context, id string) error {
 	if err := s.db.WithContext(ctx).Unscoped().Where("id = ?", id).Delete(&models.ManagerOrg{}).Error; err != nil {
 		return fmt.Errorf("删除机构失败: %w", err)
 	}
+	invalidateResolverCache()
 	return nil
 }
 
@@ -1407,6 +1515,9 @@ func (s *ManagerOrgService) GenerateOrgsFromDept(ctx context.Context) (*Generate
 		orgIDByDept[d.ID] = org.ID
 		orgByDept[d.ID] = struct{}{}
 		result.Created++
+	}
+	if result.Created > 0 {
+		invalidateResolverCache()
 	}
 	return result, nil
 }

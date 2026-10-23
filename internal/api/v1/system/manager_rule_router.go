@@ -30,6 +30,13 @@ func SetupManagerRuleRouter(r *gin.RouterGroup, core *core.Core) {
 		rules.POST("/:id/delete", ruleHandler.DeleteRule)
 	}
 
+	// 经理预览（用户列表「经理」列展示用）：仅要求登录态（父组已挂 auth），
+	// 不要求经理规则权限——能看用户列表的管理员都可见；数据为内存计算结果，不落库。
+	preview := r.Group("/manager-rules")
+	{
+		preview.POST("/manager-preview", ruleHandler.ManagerPreview)
+	}
+
 	// 机构维护
 	orgs := r.Group("/manager-orgs")
 	orgs.Use(middleware.RequirePermissions([]string{

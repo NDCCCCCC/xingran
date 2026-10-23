@@ -72,6 +72,28 @@ func (h *ManagerRuleHandler) ListRules(c *gin.Context) {
 	response.Success(c, page)
 }
 
+// ManagerPreviewRequest 经理预览请求体。
+type ManagerPreviewRequest struct {
+	UserIDs []string `json:"userIds" binding:"required,min=1,max=200"`
+}
+
+// ManagerPreview 批量预览用户的经理（用户列表「经理」列展示用，纯计算不落库）
+// POST /system/manager-rules/manager-preview
+func (h *ManagerRuleHandler) ManagerPreview(c *gin.Context) {
+	var req ManagerPreviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, apperrors.ParamInvalid("userIds"))
+		return
+	}
+	items, err := h.svc.PreviewManagers(c.Request.Context(), req.UserIDs)
+	if err != nil {
+		response.Error(c, apperrors.ServerError(err))
+		return
+	}
+	// 查询类端点，不记 operlog；失败由前端降级为不显示经理列。
+	response.Success(c, items)
+}
+
 // CreateRule 新增规则
 // POST /system/manager-rules
 func (h *ManagerRuleHandler) CreateRule(c *gin.Context) {

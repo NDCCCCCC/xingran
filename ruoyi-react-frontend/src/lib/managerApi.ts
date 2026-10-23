@@ -254,3 +254,30 @@ export async function updateManagerRule(id: string, payload: ManagerRulePayload)
 export async function deleteManagerRule(id: string): Promise<void> {
   await post(`/system/manager-rules/${id}/delete`, {});
 }
+
+// ==================== 经理预览 API ====================
+
+/** 经理预览项（用户列表「经理」列展示用，纯计算不落库） */
+export interface ManagerPreviewItem {
+  userId: string;
+  managerId?: string;
+  managerName?: string;
+  managerUsername?: string;
+  ruleName?: string;
+  reason?: string;
+  warnings?: string[];
+}
+
+/** 批量预览用户的经理（按当前页 userIds 查询；无启用规则返回空数组） */
+export async function previewManagers(userIds: string[]): Promise<ManagerPreviewItem[]> {
+  if (userIds.length === 0) return [];
+  try {
+    const result = await post<ManagerPreviewItem[]>("/system/manager-rules/manager-preview", {
+      userIds,
+    });
+    return result.data ?? [];
+  } catch {
+    // 预览是增强展示，失败静默降级为不显示经理列内容
+    return [];
+  }
+}
