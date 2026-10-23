@@ -46,32 +46,17 @@ func (m *DeptOUmapper) FindDeptByOUDN(ctx context.Context, ouDN string) (string,
 	return mapping.DeptID, nil
 }
 
-// FindOUDNByDeptID 通过部门ID查找OU DN
-// 用于部门同步到AD时，查找已存在的映射关系
-func (m *DeptOUmapper) FindOUDNByDeptID(ctx context.Context, deptID string) (string, error) {
-	var mapping models.DeptOUMapping
-	err := m.db.WithContext(ctx).
-		Where("dept_id = ? AND sync_enabled = ?", deptID, true).
-		First(&mapping).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return "", fmt.Errorf("未找到部门 %s 对应的OU DN", deptID)
-		}
-		return "", fmt.Errorf("查询部门映射失败: %w", err)
-	}
-	return mapping.OUDN, nil
-}
-
 // FindOUDNByDeptIDForConfig 配置作用域的 OU DN 查询（Phase 58 F-B，阻断级）。
 //
-// 为什么必须新增而不是复用 FindOUDNByDeptID：
-//   - 旧方法只按 (dept_id, sync_enabled) 过滤，**无 ad_config_id、无 ORDER BY**
+// 为什么必须用这个而不是简单的 (dept_id, sync_enabled) 查询：
 //   - sys_dept_ou_mapping 的唯一键是 (dept_id, ad_config_id) → 一个 dept 在 N 个配置下
 //     有 N 行合法记录
-//   - 多 AD 配置环境下旧方法的 First() 顺序不确定 → 排水器会把 A 域用户移进 B 域的 OU
+//   - 多 AD 配置环境下不带 ad_config_id 的 First() 顺序不确定 → 排水器会把 A 域用户移进 B 域的 OU
 //     （跨域写入，是 phase 58 最严重的误路由形态）
 //
-// 旧方法保留：唯一存活调用方为 user_ad_sync_service.go 的 moveUserToNewOU（62-01 已删除 user_ou_service 系列与 BatchMoveUsersToNewOU）。
+// ⚠ 不带 ad_config_id 的旧方法 FindOUDNByDeptID 已随 moveUserToNewOU 一起删除：
+//   它唯一的生产调用方 moveUserToNewOU 属于已下线的 SyncUserUpdateToAD 路径，
+//   保留会留下一条「无配置作用域」的跨域误路由隐患。
 func (m *DeptOUmapper) FindOUDNByDeptIDForConfig(ctx context.Context, deptID, adConfigID string) (string, error) {
 	var mapping models.DeptOUMapping
 	err := m.db.WithContext(ctx).

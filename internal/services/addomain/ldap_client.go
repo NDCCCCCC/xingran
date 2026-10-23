@@ -209,6 +209,8 @@ func (c *LDAPClient) SearchUsers(baseDN string) ([]*ldap.Entry, error) {
 			"dn", "sAMAccountName", "displayName", "mail", "telephoneNumber",
 			"mobile", "title", "department", "company", "description",
 			"userAccountControl", "memberOf", "lastLogon", "pwdLastSet",
+			// manager：域控 manager 属性（DN 格式），影子表 sys_ad_user.manager 依赖它回显
+			"manager",
 		},
 		defaultPageSize,
 	)

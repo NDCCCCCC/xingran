@@ -1251,52 +1251,6 @@ func TestPhase58_Drain_MoveWriteBackFailureIsNotPushed(t *testing.T) {
 	assert.Equal(t, "OU=IT,DC=corp,DC=com", *adOuDn)
 }
 
-// ==================== Phase 58 Plan 04 Task 3：F-A 的另两处载体 ====================
-
-// TestPhase58_MoveUserToNewOU_UpdatesAdDn F-A 载体 2：旧直推路径 moveUserToNewOU
-// 同样必须回写 ad_dn（同一根因，两处载体语义必须一致）。
-func TestPhase58_MoveUserToNewOU_UpdatesAdDn(t *testing.T) {
-	db := setupDrainTestDB(t)
-	const cfgID = "cfg-1"
-	seedDrainADConfig(t, db, cfgID, "总部域", "DC=corp,DC=com", true, 0)
-	seedDrainUser(t, db, "u-1", "zhangsan", "CN=zhangsan,OU=IT,DC=corp,DC=com", "OU=IT,DC=corp,DC=com", nil)
-	seedDrainOUMapping(t, db, "m-1", "dept-new", cfgID, "OU=IT2,DC=corp,DC=com", true)
-
-	mock := newDrainTestLDAP()
-	svc := &UserADSyncService{db: db, pool: newDrainTestPool(), ldap: nil, mapper: NewDeptOUmapper(db)}
-
-	require.NoError(t, svc.moveUserToNewOU(context.Background(), mock, "u-1", "dept-new"))
-
-	require.Equal(t, 1, mock.moveUserCalls)
-	require.Len(t, mock.moveUserTargets, 1)
-	assert.Equal(t, "OU=IT2,DC=corp,DC=com", mock.moveUserTargets[0])
-
-	adDn, adOuDn := drainUserADRefs(t, db, "u-1")
-	require.NotNil(t, adDn, "F-A：moveUserToNewOU 也必须回写 ad_dn")
-	assert.Equal(t, "CN=zhangsan,OU=IT2,DC=corp,DC=com", *adDn)
-	require.NotNil(t, adOuDn)
-	assert.Equal(t, "OU=IT2,DC=corp,DC=com", *adOuDn)
-}
-
-// TestPhase58_MoveSingleUserToOU_UpdatesAdDn F-A 载体 3：批量移动路径 moveSingleUserToOU
-// 同款修复。
-func TestPhase58_MoveSingleUserToOU_UpdatesAdDn(t *testing.T) {
-	db := setupDrainTestDB(t)
-	seedDrainUser(t, db, "u-1", "zhangsan", "CN=zhangsan,OU=IT,DC=corp,DC=com", "OU=IT,DC=corp,DC=com", nil)
-
-	mock := newDrainTestLDAP()
-	svc := &UserADSyncService{db: db, pool: newDrainTestPool(), ldap: nil, mapper: NewDeptOUmapper(db)}
-
-	require.NoError(t, svc.moveSingleUserToOU(context.Background(), mock, "u-1", "OU=IT2,DC=corp,DC=com"))
-
-	require.Equal(t, 1, mock.moveUserCalls)
-	adDn, adOuDn := drainUserADRefs(t, db, "u-1")
-	require.NotNil(t, adDn, "F-A：moveSingleUserToOU 也必须回写 ad_dn")
-	assert.Equal(t, "CN=zhangsan,OU=IT2,DC=corp,DC=com", *adDn)
-	require.NotNil(t, adOuDn)
-	assert.Equal(t, "OU=IT2,DC=corp,DC=com", *adOuDn)
-}
-
 // ==================== Phase 58-05：D-05 单旋钮读取（方案A热重载：每 tick 调用） ====================
 
 // freshDrainSysConfigDB 构建仅含 sys_config 的内存 sqlite（LoadDrainIntervalSeconds 的

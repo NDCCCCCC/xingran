@@ -570,6 +570,7 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			existingUser.Department = safeAttr(entry.GetAttributeValue("department"), 255)
 			existingUser.Company = safeAttr(entry.GetAttributeValue("company"), 255)
 			existingUser.Description = safeAttr(entry.GetAttributeValue("description"), 4000)
+			existingUser.Manager = safeAttr(entry.GetAttributeValue("manager"), 500)
 			existingUser.OUN = ouDN
 			existingUser.UserAccountControl = userAccountControl
 			existingUser.IsEnabled = !existingUser.IsDisabledByUAC()
@@ -594,6 +595,7 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 				Department:         safeAttr(entry.GetAttributeValue("department"), 255),
 				Company:            safeAttr(entry.GetAttributeValue("company"), 255),
 				Description:        safeAttr(entry.GetAttributeValue("description"), 4000),
+				Manager:            safeAttr(entry.GetAttributeValue("manager"), 500),
 				OUN:                ouDN,
 				UserAccountControl: userAccountControl,
 				MemberOf:           memberOf,
@@ -644,6 +646,7 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 					DoUpdates: clause.AssignmentColumns([]string{
 						"username", "display_name", "email", "phone", "mobile",
 						"title", "department", "company", "description", "ou_dn",
+						"manager",
 						"user_account_control", "is_enabled", "is_locked",
 						"password_expired", "member_of", "last_logon",
 						"password_last_set", "last_sync_at",

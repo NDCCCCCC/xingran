@@ -9,7 +9,11 @@ type ManagerOrg struct {
 	OrgName     string  `gorm:"size:100;not null" json:"orgName"`
 	DeptID      string  `gorm:"type:uuid;not null;uniqueIndex" json:"deptId"`
 	ParentOrgID *string `gorm:"type:uuid;index" json:"parentOrgId,omitempty"`
-	OrgType     int     `gorm:"default:1" json:"orgType"` // 0=分公司本部 1=分支机构
+	// OrgType 机构层级（对应系统三层架构：分公司 → 中支（含分公司本部）→ 支公司）。
+	// 0=分公司 1=中支 2=支公司。
+	//
+	// 说明：仅用于展示与自动生成时的默认值推导，规则引擎不按该字段分支。
+	OrgType int `gorm:"default:1" json:"orgType"`
 	Enabled     bool    `gorm:"default:true" json:"enabled"`
 }
 

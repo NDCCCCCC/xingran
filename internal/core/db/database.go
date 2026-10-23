@@ -1122,6 +1122,13 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate221ManagerSyncMenus(d.DB); err != nil {
 			applogger.Errorf("经理同步菜单 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 清理 4 张幻影关联表 (user_posts/user_roles/role_menus/role_depts):
+		// many2many 标签早期写错表名导致 GORM 额外建表,真实关联表是
+		// sys_user_post/sys_user_role/sys_role_menu/sys_role_dept。
+		// 仅删 0 行表;有数据则只告警。**非阻断**：失败只留残余空表,不影响主链路。
+		if err := migrations.Migrate222DropPhantomJoinTables(d.DB); err != nil {
+			applogger.Errorf("幻影关联表清理失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -1183,6 +1190,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 经理同步菜单 seed (与 PG 分支同款调用 + 同款非阻断档)。
 		if err := migrations.Migrate221ManagerSyncMenus(d.DB); err != nil {
 			applogger.Errorf("经理同步菜单 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 幻影关联表清理 (与 PG 分支同款调用 + 同款非阻断档)。
+		if err := migrations.Migrate222DropPhantomJoinTables(d.DB); err != nil {
+			applogger.Errorf("幻影关联表清理失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only

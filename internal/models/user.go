@@ -43,7 +43,7 @@ type User struct {
 	// 关联
 	Roles   []string    `gorm:"-" json:"roles"`           // 简化为字符串数组，避免复杂关联
 	RoleIds []string    `gorm:"-" json:"roleIds,omitempty"` // 角色ID数组，用于前端表单回显
-	Posts   []Post      `gorm:"many2many:user_posts;" json:"posts,omitempty"`
+	Posts   []Post      `gorm:"many2many:sys_user_post;" json:"posts,omitempty"`
 	Dept    *Department `gorm:"foreignKey:DeptID" json:"department,omitempty"`
 }
 

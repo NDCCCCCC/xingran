@@ -78,7 +78,7 @@ type Menu struct {
 
 	// 关联
 	Children []Menu `gorm:"foreignKey:ParentID" json:"children,omitempty"`
-	Roles    []Role `gorm:"many2many:role_menus;" json:"roles,omitempty"`
+	Roles    []Role `gorm:"many2many:sys_role_menu;" json:"roles,omitempty"`
 }
 
 // TableName 设置表名

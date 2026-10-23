@@ -183,3 +183,15 @@ func (h *ManagerOrgHandler) DeleteOrg(c *gin.Context) {
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "经理同步机构", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"message": "删除成功"})
 }
+
+// GenerateOrgsFromDept 从部门架构自动生成机构映射
+// POST /system/manager-orgs/generate-from-dept
+func (h *ManagerOrgHandler) GenerateOrgsFromDept(c *gin.Context) {
+	result, err := h.svc.GenerateOrgsFromDept(c.Request.Context())
+	if err != nil {
+		response.Error(c, apperrors.ServerError(err))
+		return
+	}
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "经理同步机构", operlog.OperTypeCreate)
+	response.Success(c, result)
+}

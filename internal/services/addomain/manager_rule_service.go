@@ -210,9 +210,10 @@ func (s *ManagerRuleService) LoadResolver(ctx context.Context) (*ManagerResolver
 	}
 
 	// 5) 岗位任职关系
-	//    ⚠ 表名歧义：User.Posts 的 many2many tag 写 user_posts，但写入路径
-	//    （services/system/user_service.go）用的是 models.UserPost.TableName()
-	//    = sys_user_post。两个名字都查一遍，命中哪个用哪个（去重）。
+	//    真实关联表是 sys_user_post（写入路径见 services/system/user_service.go
+	//    的 models.UserPost.TableName()）。user_posts 是 many2many 标签写错时
+	//    产生的幻影表，已由 migration_222 清理；此处保留兜底查询以兼容尚未
+	//    执行该迁移的旧部署（HasTable 守卫 + 去重，不会重复计入）。
 	for _, table := range []string{"sys_user_post", "user_posts"} {
 		if !s.db.Migrator().HasTable(table) {
 			continue
@@ -1030,8 +1031,8 @@ func (r *ManagerOrgCreateRequest) validate() error {
 	if strings.TrimSpace(r.DeptID) == "" {
 		return fmt.Errorf("机构必须绑定一个部门")
 	}
-	if r.OrgType != 0 && r.OrgType != 1 {
-		return fmt.Errorf("机构类型非法：0=分公司本部 1=分支机构")
+	if r.OrgType < 0 || r.OrgType > 2 {
+		return fmt.Errorf("机构类型非法：0=分公司 1=中支 2=支公司")
 	}
 	return nil
 }
@@ -1275,4 +1276,165 @@ func (s *ManagerOrgService) countRuleReferences(ctx context.Context, orgID strin
 		return 0, fmt.Errorf("统计机构规则引用失败: %w", err)
 	}
 	return count, nil
+}
+
+// GenerateFromDeptResult 从部门架构自动生成机构的结果摘要。
+type GenerateFromDeptResult struct {
+	TotalCandidates int      `json:"totalCandidates"` // is_external_org=1 的部门数
+	Created         int      `json:"created"`         // 新建机构数
+	SkippedExisting int      `json:"skippedExisting"` // 已存在（含手工创建）跳过数
+	OrphanCount     int      `json:"orphanCount"`     // 祖先链上找不到机构父节点的顶层机构数
+	Warnings        []string `json:"warnings,omitempty"`
+}
+
+// GenerateOrgsFromDept 从部门架构自动生成机构映射（「从部门架构生成」按钮）。
+//
+// 规则（2026-10 与用户确认的三层架构）：
+//  1. 候选 = sys_dept.is_external_org = 1 且未软删的部门（有职场 ≈ 机构）；
+//  2. 已存在的机构（按 dept_id 匹配）不覆盖 —— 保护手工修改；
+//  3. 新机构的 parent_org_id = 部门 ancestors 链上最近的「同样是机构」的祖先
+//     （优先用本表已存在机构，其次本次同批生成的候选）；链上没有 → 顶层机构（nil）；
+//  4. org_type 按祖先机构链深度默认（系统三层架构：分公司 → 中支 → 支公司）：
+//     深度 0 → 0=分公司，深度 1 → 1=中支，深度 >=2 → 2=支公司；
+//     特例（如中支同时含分公司本部）由页面手工调整。
+//
+// 幂等：重复点击只补增量，不破坏已有数据。
+func (s *ManagerOrgService) GenerateOrgsFromDept(ctx context.Context) (*GenerateFromDeptResult, error) {
+	if !s.db.Migrator().HasTable(&models.Department{}) {
+		return nil, fmt.Errorf("部门表不存在")
+	}
+
+	// 1) 取全部机构候选部门（含 ancestors，供推导父机构）。
+	type deptRow struct {
+		ID        string
+		DeptName  string
+		ParentID  *string
+		Ancestors string
+	}
+	var depts []deptRow
+	if err := s.db.WithContext(ctx).Table("sys_dept").
+		Select("id, dept_name, parent_id, ancestors").
+		Where("is_external_org = ? AND deleted_at IS NULL", 1).
+		Order("length(ancestors) ASC"). // 祖先短的先建，保证父机构先生成
+		Find(&depts).Error; err != nil {
+		return nil, fmt.Errorf("查询机构候选部门失败: %w", err)
+	}
+
+	result := &GenerateFromDeptResult{TotalCandidates: len(depts)}
+	if len(depts) == 0 {
+		return result, nil
+	}
+
+	// 2) 已存在的机构按 dept_id 建索引（不覆盖）。
+	var existing []models.ManagerOrg
+	if err := s.db.WithContext(ctx).Find(&existing).Error; err != nil {
+		return nil, fmt.Errorf("查询已有机构失败: %w", err)
+	}
+	orgByDept := make(map[string]struct{}, len(existing))
+	for _, o := range existing {
+		orgByDept[o.DeptID] = struct{}{}
+	}
+
+	// deptID → 是否机构（已存在 ∪ 本次候选），用于祖先链判定。
+	isOrgDept := func(deptID string) bool {
+		if _, ok := orgByDept[deptID]; ok {
+			return true
+		}
+		for _, d := range depts {
+			if d.ID == deptID {
+				return true
+			}
+		}
+		return false
+	}
+
+	// deptID → ManagerOrg.ID（已存在 ∪ 本次新建），供父机构引用。
+	orgIDByDept := make(map[string]string, len(existing))
+	for _, o := range existing {
+		orgIDByDept[o.DeptID] = o.ID
+	}
+	deptByID := make(map[string]deptRow, len(depts))
+	for _, d := range depts {
+		deptByID[d.ID] = d
+	}
+
+	for _, d := range depts {
+		if _, done := orgByDept[d.ID]; done {
+			result.SkippedExisting++
+			continue
+		}
+
+		// 3) 沿 ancestors（逗号分隔，由根到父）向上找最近的机构祖先。
+		var parentOrgID *string
+		ancestorOrgDepth := 0
+		ancestors := splitDeptAncestors(d.Ancestors)
+		for _, anc := range ancestors {
+			if anc == "" || anc == d.ID || !isOrgDept(anc) {
+				continue
+			}
+			ancestorOrgDepth++
+			if parentOrgID == nil {
+				if oid, ok := orgIDByDept[anc]; ok {
+					pid := oid
+					parentOrgID = &pid
+				}
+				// 祖先是机构但机构行还没建（同为候选且祖先序在前，正常已建；
+				// 极端乱序兜底：留空由下一次生成补），记 WARN。
+			}
+		}
+		if parentOrgID == nil && ancestorOrgDepth > 0 {
+			result.Warnings = append(result.Warnings,
+				fmt.Sprintf("部门 %s 存在机构祖先但父机构行尚未就绪，可再次点击生成补齐", d.DeptName))
+			result.OrphanCount++
+		}
+
+		org := models.ManagerOrg{
+			OrgName:     d.DeptName,
+			DeptID:      d.ID,
+			ParentOrgID: parentOrgID,
+			OrgType:     orgTypeByOrgDepth(ancestorOrgDepth),
+			Enabled:     true,
+		}
+		if err := s.db.WithContext(ctx).Create(&org).Error; err != nil {
+			result.Warnings = append(result.Warnings,
+				fmt.Sprintf("创建机构 %s 失败: %v", d.DeptName, err))
+			continue
+		}
+		orgIDByDept[d.ID] = org.ID
+		orgByDept[d.ID] = struct{}{}
+		result.Created++
+	}
+	return result, nil
+}
+
+// orgTypeByOrgDepth 按「机构祖先链深度」推导机构层级（系统三层架构：分公司 → 中支 → 支公司）。
+//
+// 深度 0（顶层机构）→ 0=分公司；深度 1 → 1=中支；深度 >=2 → 2=支公司。
+//
+// 只作为自动生成时的默认值，特例（如中支同时含分公司本部）由页面手工调整。
+func orgTypeByOrgDepth(orgAncestorDepth int) int {
+	switch {
+	case orgAncestorDepth <= 0:
+		return 0 // 分公司
+	case orgAncestorDepth == 1:
+		return 1 // 中支
+	default:
+		return 2 // 支公司
+	}
+}
+
+// splitDeptAncestors 按逗号切分 sys_dept.ancestors（形如 "0,id1,id2"）。
+func splitDeptAncestors(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := parts[:0]
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" && p != "0" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

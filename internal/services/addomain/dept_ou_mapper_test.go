@@ -109,51 +109,6 @@ func TestFindDeptByOUDN(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestFindOUDNByDeptID(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	assert.NoError(t, err)
-
-	// 创建表
-	db.Exec(`CREATE TABLE sys_dept_ou_mapping (
-		id TEXT PRIMARY KEY,
-		dept_id TEXT NOT NULL,
-		ad_config_id TEXT NOT NULL,
-		ou_dn TEXT NOT NULL,
-		ou_name TEXT NOT NULL,
-		parent_ou_dn TEXT,
-		sync_enabled INTEGER DEFAULT 1,
-		sync_status TEXT DEFAULT 'pending',
-		last_sync_at DATETIME,
-		created_at DATETIME,
-		updated_at DATETIME,
-		UNIQUE(dept_id, ad_config_id)
-	)`)
-
-	mapper := NewDeptOUmapper(db)
-
-	ctx := context.Background()
-	mapping := &models.DeptOUMapping{
-		ID:          "test-id-2",
-		DeptID:      "dept-1",
-		ADConfigID:  "config-1",
-		OUDN:        "OU=TestDept,DC=company,DC=com",
-		OUName:      "TestDept",
-		SyncEnabled: true,
-		SyncStatus:  "synced",
-	}
-	err = mapper.UpsertMapping(ctx, mapping)
-	assert.NoError(t, err)
-
-	// 测试查找
-	ouDN, err := mapper.FindOUDNByDeptID(ctx, "dept-1")
-	assert.NoError(t, err)
-	assert.Equal(t, "OU=TestDept,DC=company,DC=com", ouDN)
-
-	// 测试未找到
-	_, err = mapper.FindOUDNByDeptID(ctx, "non-existent")
-	assert.Error(t, err)
-}
-
 func TestUpsertMapping(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)

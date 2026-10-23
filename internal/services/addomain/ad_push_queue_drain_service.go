@@ -483,6 +483,7 @@ func (d *ADPushDrainer) drainUpdateManager(ctx context.Context, c LDAPClientIfac
 			d.handlePushError(ctx, row, now, err, "update_manager:clear")
 			return
 		}
+		d.updateShadowManager(ctx, user, "")
 		d.markPushed(ctx, row.ID, now)
 		return
 	}
@@ -491,7 +492,31 @@ func (d *ADPushDrainer) drainUpdateManager(ctx context.Context, c LDAPClientIfac
 		return
 	}
 	applogger.Infof("[ad_push_queue] update_manager 推送成功: user=%s, managerDN=%s", user.Username, managerDN)
+	d.updateShadowManager(ctx, user, managerDN)
 	d.markPushed(ctx, row.ID, now)
+}
+
+// updateShadowManager 同步 AD 用户影子表 sys_ad_user.manager。
+//
+// 目的：AD 用户页的 manager 列读的是影子表，影子同步全量跑之前若不回写，
+// 页面看不到刚推送的经理值（manager 列永远是空的）。
+//
+// 失败只 WARN 不阻断：影子表回写失败不影响 AD 侧已生效的属性，下次全量同步会纠正。
+func (d *ADPushDrainer) updateShadowManager(ctx context.Context, user *models.User, managerDN string) {
+	if user.AdDn == nil || *user.AdDn == "" {
+		return
+	}
+	if !d.db.Migrator().HasTable(&models.ADUser{}) {
+		return
+	}
+	q := d.db.WithContext(ctx).Model(&models.ADUser{}).
+		Where("user_dn = ?", *user.AdDn)
+	if user.AdConfigID != nil && *user.AdConfigID != "" {
+		q = q.Where("ad_config_id = ?", *user.AdConfigID)
+	}
+	if err := q.Update("manager", managerDN).Error; err != nil {
+		applogger.Warnf("[ad_push_queue] 回写影子表 manager 失败: user=%s, err=%v", user.Username, err)
+	}
 }
 
 // compareAndMoveOU OU 移动的幂等执行面（Phase 58 QUEUE-04）。

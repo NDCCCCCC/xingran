@@ -13,9 +13,11 @@ type Role struct {
 	Remark            string     `gorm:"size:500" json:"remark,omitempty"`
 
 	// 关联
-	Menus []Menu       `gorm:"many2many:role_menus;" json:"menus,omitempty"`
-	Depts []Department `gorm:"many2many:role_depts;" json:"depts,omitempty"`
-	Users []User       `gorm:"many2many:user_roles;" json:"users,omitempty"`
+	// 关联。关联表指向真实关联表（RoleMenu/RoleDept/UserRole 模型），
+	// 早期误写为 role_menus/role_depts/user_roles 导致 GORM 额外创建永远为空的影子关联表。
+	Menus []Menu       `gorm:"many2many:sys_role_menu;" json:"menus,omitempty"`
+	Depts []Department `gorm:"many2many:sys_role_dept;" json:"depts,omitempty"`
+	Users []User       `gorm:"many2many:sys_user_role;" json:"users,omitempty"`
 }
 
 // RoleMenu 角色菜单关联

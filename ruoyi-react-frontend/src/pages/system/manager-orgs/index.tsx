@@ -20,12 +20,14 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
   getManagerOrgList,
   createManagerOrg,
   updateManagerOrg,
   deleteManagerOrg,
+  generateManagerOrgsFromDept,
   MANAGER_ORG_TYPE,
   MANAGER_ORG_TYPE_LABELS,
   isManagerEnabled,
@@ -126,7 +128,7 @@ const ManagerOrgsPage: FC = () => {
         enabled: isManagerEnabled(record.enabled),
       });
     } else {
-      editForm.setFieldsValue({ orgName: undefined, deptId: undefined, parentOrgId: undefined, orgType: MANAGER_ORG_TYPE.HEADQUARTERS, enabled: true });
+      editForm.setFieldsValue({ orgName: undefined, deptId: undefined, parentOrgId: undefined, orgType: MANAGER_ORG_TYPE.MIDDLE_BRANCH, enabled: true });
     }
   };
 
@@ -186,6 +188,40 @@ const ManagerOrgsPage: FC = () => {
     setSearchOrgName(values.orgName || undefined);
   };
 
+  /** 从部门架构自动生成机构映射（幂等，不覆盖手工修改） */
+  const handleGenerateFromDept = () => {
+    Modal.confirm({
+      title: "从部门架构生成机构",
+      content:
+        "将扫描所有标记为「外部机构」（有职场）的部门，自动创建机构记录，" +
+        "并按部门层级推导上级机构。已存在的机构不会被覆盖，可放心重复点击。",
+      okText: "开始生成",
+      cancelText: "取消",
+      onOk: async () => {
+        try {
+          const result = await generateManagerOrgsFromDept();
+          Modal.success({
+            title: "生成完成",
+            content: (
+              <div>
+                <p>候选机构部门：{result.totalCandidates} 个</p>
+                <p>新建机构：{result.created} 个</p>
+                <p>已存在跳过：{result.skippedExisting} 个</p>
+                <p>顶层机构（无上级）：{result.orphanCount} 个</p>
+                {result.warnings && result.warnings.length > 0 && (
+                  <p style={{ color: "#faad14" }}>{result.warnings.join("；")}</p>
+                )}
+              </div>
+            ),
+          });
+          loadList();
+        } catch (error) {
+          handleApiError(error, "从部门架构生成机构");
+        }
+      },
+    });
+  };
+
   const handleReset = () => {
     searchForm.resetFields();
     setCurrent(1);
@@ -208,7 +244,15 @@ const ManagerOrgsPage: FC = () => {
       key: "orgType",
       width: 120,
       render: (v: number) => (
-        <Tag color={v === MANAGER_ORG_TYPE.HEADQUARTERS ? "blue" : "cyan"}>
+        <Tag
+          color={
+            v === MANAGER_ORG_TYPE.BRANCH_COMPANY
+              ? "blue"
+              : v === MANAGER_ORG_TYPE.MIDDLE_BRANCH
+                ? "cyan"
+                : "green"
+          }
+        >
           {MANAGER_ORG_TYPE_LABELS[v] ?? String(v)}
         </Tag>
       ),
@@ -261,9 +305,14 @@ const ManagerOrgsPage: FC = () => {
 
       <Card
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-            新增机构
-          </Button>
+          <Space>
+            <Button icon={<ThunderboltOutlined />} onClick={handleGenerateFromDept}>
+              从部门架构生成
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+              新增机构
+            </Button>
+          </Space>
         }
       >
         <Table
@@ -328,8 +377,9 @@ const ManagerOrgsPage: FC = () => {
           </Form.Item>
           <Form.Item name="orgType" label="机构类型" rules={[{ required: true }]}>
             <Radio.Group>
-              <Radio value={MANAGER_ORG_TYPE.HEADQUARTERS}>分公司本部</Radio>
-              <Radio value={MANAGER_ORG_TYPE.BRANCH}>分支机构</Radio>
+              <Radio value={MANAGER_ORG_TYPE.BRANCH_COMPANY}>分公司</Radio>
+              <Radio value={MANAGER_ORG_TYPE.MIDDLE_BRANCH}>中支</Radio>
+              <Radio value={MANAGER_ORG_TYPE.SUB_BRANCH}>支公司</Radio>
             </Radio.Group>
           </Form.Item>
           <Form.Item name="enabled" label="是否启用" valuePropName="checked">

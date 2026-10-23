@@ -42,5 +42,7 @@ func SetupManagerRuleRouter(r *gin.RouterGroup, core *core.Core) {
 		orgs.POST("", orgHandler.CreateOrg)
 		orgs.POST("/:id/update", orgHandler.UpdateOrg)
 		orgs.POST("/:id/delete", orgHandler.DeleteOrg)
+		// 从部门架构自动生成机构映射（幂等，不覆盖手工修改）
+		orgs.POST("/generate-from-dept", orgHandler.GenerateOrgsFromDept)
 	}
 }

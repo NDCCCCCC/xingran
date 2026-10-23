@@ -17,18 +17,23 @@
 import { post } from "@/lib/api";
 import type { PageResponse } from "@/types/base";
 
-/** 机构类型：0=分公司本部，1=分支机构 */
+/**
+ * 机构类型（对应系统三层架构：分公司 → 中支（含分公司本部）→ 支公司）
+ */
 export const MANAGER_ORG_TYPE = {
-  /** 分公司本部 */
-  HEADQUARTERS: 0,
-  /** 分支机构 */
-  BRANCH: 1,
+  /** 分公司 */
+  BRANCH_COMPANY: 0,
+  /** 中支（含分公司本部） */
+  MIDDLE_BRANCH: 1,
+  /** 支公司 */
+  SUB_BRANCH: 2,
 } as const;
 
 /** 机构类型中文名 */
 export const MANAGER_ORG_TYPE_LABELS: Record<number, string> = {
-  [MANAGER_ORG_TYPE.HEADQUARTERS]: "分公司本部",
-  [MANAGER_ORG_TYPE.BRANCH]: "分支机构",
+  [MANAGER_ORG_TYPE.BRANCH_COMPANY]: "分公司",
+  [MANAGER_ORG_TYPE.MIDDLE_BRANCH]: "中支",
+  [MANAGER_ORG_TYPE.SUB_BRANCH]: "支公司",
 };
 
 /**
@@ -46,7 +51,7 @@ export interface ManagerOrg {
   parentOrgId?: string;
   /** 后端返回的可读上级机构名 */
   parentOrgName?: string;
-  /** 0=分公司本部 1=分支机构 */
+  /** 机构层级：0=分公司 1=中支 2=支公司 */
   orgType: number;
   /** 是否启用 */
   enabled: boolean;
@@ -206,6 +211,23 @@ export async function updateManagerOrg(id: string, payload: ManagerOrgPayload): 
 /** 删除机构 */
 export async function deleteManagerOrg(id: string): Promise<void> {
   await post(`/system/manager-orgs/${id}/delete`, {});
+}
+
+/** 从部门架构自动生成机构映射的结果 */
+export interface GenerateOrgsResult {
+  totalCandidates: number;
+  created: number;
+  skippedExisting: number;
+  orphanCount: number;
+  warnings?: string[];
+}
+
+/** 从部门架构自动生成机构映射（幂等；已存在的不覆盖手工修改） */
+export async function generateManagerOrgsFromDept(): Promise<GenerateOrgsResult> {
+  const result = await post<GenerateOrgsResult>("/system/manager-orgs/generate-from-dept", {});
+  return (
+    result.data ?? { totalCandidates: 0, created: 0, skippedExisting: 0, orphanCount: 0 }
+  );
 }
 
 // ==================== 规则 API ====================
