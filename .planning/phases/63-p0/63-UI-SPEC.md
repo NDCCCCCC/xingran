@@ -245,3 +245,78 @@ total = 0  →  （不渲染任何文案，showTotal 返回 ''）
 - [ ] Dimension 7 Inventory Provenance: PASS
 
 **Approval:** pending
+
+## UI Considerations — Probe Coverage (2026-10-24)
+
+UI-consideration-probe 引擎对 8 个元素面 × 8 个状态维度生成 64 项探针；全部解析经 propose-then-confirm 由用户批量批准（30 项由契约 §1–§7 覆盖，16 项 N/A）。
+
+### E1
+
+- **empty**: 契约 §1：total=0 时 showTotal 返回空串，不渲染「共 1 页」。
+- **loading**: 沿用表格既有 loading；全局加载态归 Phase 64 FIX-01（显式 out of scope）。
+- **error**: 沿用各页面现有错误处理；本契约不新增错误 UI。
+- **populated**: 契约 §1：渲染「共 {total} 条 / {pages} 页」。
+- **partial**: N/A：total 以后端返回为唯一权威，无前端部分数据合成。
+- **overflow**: N/A：纯数字短文案，不存在溢出。
+- **zero-one-many**: 契约 §1：单条数据显示「共 1 条 / 1 页」，无单复数特判。
+- **long-text**: N/A：数字文案无长文本场景。
+
+### E2
+
+- **empty**: 沿用 AntD Table 默认空态；三态组件推广归后续 Phase（REQUIREMENTS.md Future）。
+- **loading**: 沿用表格既有 loading（AntD 默认 spinner）。
+- **error**: 沿用页面现有错误处理，不新增。
+- **populated**: 契约 §2：回填 setTotal(data.total) 后正常翻页。
+- **partial**: N/A：分页数据来自后端分页接口，无部分数据场景。
+- **overflow**: AntD 分页页码自动折叠（默认行为），不改动。
+- **zero-one-many**: 单页时 AntD 默认隐藏部分分页控件，保持默认。
+- **long-text**: N/A。
+
+### E3
+
+- **empty**: AntD 默认空态；OU 空库场景沿用现状。
+- **loading**: 表格既有 loading。
+- **error**: 沿用现有 message.error 处理。
+- **populated**: 契约 §3：服务端分页，任意页数据可达。
+- **partial**: N/A：后端分页权威。
+- **overflow**: AntD 页码折叠默认行为。
+- **zero-one-many**: total=1 显示「共 1 条 / 1 页」（契约 §1 同口径）。
+- **long-text**: OU 名称列沿用现有 ellipsis 配置，本 phase 不改列配置。
+
+### E4
+
+- **empty**: N/A：表单弹窗无空数据态。
+- **loading**: 契约 §4：confirmLoading={submitting} 或 onOk 返回 Promise，按钮转圈。
+- **error**: 契约 §4：提交失败 message.error，弹窗保持打开可重试。
+- **partial**: 表单校验失败时 AntD 阻止提交，弹窗保持打开（默认行为）。
+- **long-text**: N/A：按钮文案固定（确定/保存）。
+
+### E5
+
+- **loading**: 契约 §5：确认中 okButtonProps loading，不可重复触发。
+- **error**: 契约 §5：删除失败 message.error，保留当前选择。
+- **long-text**: N/A。
+
+### E6
+
+- **loading**: N/A。
+- **error**: N/A。
+- **overflow**: N/A。
+- **long-text**: N/A。
+
+### E7
+
+- **empty**: AntD 空态下表头与固定列仍可见（默认行为）。
+- **loading**: 表格既有 loading 遮罩。
+- **error**: 沿用现有错误处理。
+- **populated**: 契约 §7：fixed:"right" 操作列在横向滚动时保持可见。
+- **partial**: N/A。
+- **overflow**: 契约 §7：scroll={{x:"max-content"}} 或列宽合计，横向滚动替代截断。
+- **zero-one-many**: N/A。
+
+### E8
+
+- **loading**: 契约 §4：确认中按钮 loading 且 disabled，取消按钮同禁用。
+- **error**: 失败后按钮恢复可点，允许重试。
+- **long-text**: N/A。
+
