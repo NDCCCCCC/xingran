@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-10-22
-update_trigger: v1.21 milestone SHIPPED & ARCHIVED (Phases 57-62; 6 phases / 22 plans / 45 tasks; 19/19 REQ verified; 集成审计 passed)
-previous_update: 2026-10-16 v1.21 milestone INITIATED
+last_updated: 2026-10-23
+update_trigger: v1.22 milestone INITIATED (前端公用组件整治)
+previous_update: 2026-10-22 v1.21 milestone SHIPPED & ARCHIVED
 ---
 
 **Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
@@ -10,6 +10,26 @@ previous_update: 2026-10-16 v1.21 milestone INITIATED
 
 **Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
 
+
+## Current Milestone: v1.22 前端公用组件整治 (Frontend Shared Component Remediation)
+
+**Goal:** 消化 2026-10-23 全量前端组件审查的 201 条问题（P0 24 / P1 87 / P2 90），核心是把公共层从"只有零件没有契约"补成"有契约"：默认值下沉（allowClear/showSearch）、分页契约下沉（showTotal/setTotal）、危险操作唯一入口（ConfirmDelete），使抽出的组件真正被用起来。
+
+**问题来源（已定稿的审查报告，作为本里程碑的事实基线）:**
+- 主方案：`docs/2026-10-23-前端公用组件审查与最佳实践方案.md`（677 行：量化诊断 / 根因 / ROI 矩阵 / 三层架构 / 15 条硬规则 / 四阶段路线图）
+- 分片报告：`.planning/notes/frontend-audit/{01-system,02-operations-asset-vdi,03-network-monitor,04-duty-workorder-ad}.md`（合计 201 条，全部精确到 文件:行号）
+
+**Target features（四阶段路线图）:**
+- **P0 止血**：`usePagination.ts:122` showTotal 把总条数算成页数（51 页受害）；backups:79 / discoveries:34 `_setTotal` 从未调用（total 恒 0）；ad-domain/ous:130 固定 pageSize:100 前端分页截断；27 个业务弹窗 confirmLoading 0 命中（双击重复提交）；7 处批量删除无二次确认；3 处假功能入口（message.info 空确认、ReconciliationDrawer 永久空 Tab）；6 处 fixed 列无 scroll.x 失效
+- **P1 修复**：表格 loading / scroll / Modal maskClosable+脏检查 / 本地排序误用 / console 错误出口收敛 / aria 可访问名
+- **公共层契约组件抽取**：AppInput / AppSelect（默认值下沉，修 285 Input 仅 23% allowClear、400 Select 仅 30% 的根因）、AppTable / AppPagination、PageTable、FormModal、SearchForm、ConfirmDelete
+- **P2 一致性债务**：hex 硬编码 / 日期状态格式化 / any 收敛 / index key 等
+
+**关键决策 (v1.22 init):**
+- 抽取原则：抽契约不抽业务（资产选择器/部门树等业务语义组件不抽）；useDebouncedSearch 并入 RemoteSelect 不单独抽
+- 默认值必须下沉封装层，禁止逐页补 allowClear（横跨 73 文件，不可维护）
+- ConfirmDelete 成为危险操作唯一入口；危险操作必须二次确认
+- 预期收益：四片外推全前端消除约 7,000~8,000 行样板
 
 ## Current Milestone: v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes) — ✅ SHIPPED 2026-10-22
 
@@ -445,4 +465,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-10-22 — v1.21 AD 双向同步 bug 修复 milestone SHIPPED & ARCHIVED（Phases 57-62：6 phases / 22 plans / 45 tasks，19/19 requirements verified，集成审计 passed）。核心落地：ad_push_queue outbox-lite 同事务入队 + in-process cron 排水（compare-and-move 幂等）+ 登录回写守卫 + 软删恢复 DN 校验 + 影子表删除清理双闸门 + 组成员事务化 + 死代码清理。上一里程碑 v1.20 SHIPPED 2026-07-10。*
+*Last updated: 2026-10-23 — v1.22 前端公用组件整治 milestone INITIATED（消化 2026-10-23 前端审查 201 条问题：P0 止血 → P1 修复 → 契约组件抽取 → P2 债务）。上一里程碑 v1.21 SHIPPED & ARCHIVED 2026-10-22（Phases 57-62：6 phases / 22 plans / 45 tasks，19/19 requirements verified，集成审计 passed）。*

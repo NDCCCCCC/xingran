@@ -1,21 +1,16 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.21
-milestone_name: AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
-status: Awaiting next milestone
-stopped_at: 里程碑 v1.21 全部收口（2026-10-22）：六 phase 57-62 verification 全 passed；人工验证债清零——58 UAT 9 项全落终态（3 pass 生产实测 / 4 skip 用户知情裁决 / 2 N/A 单域或前提不存在）、59 GUARD-01 登录守卫双半段端到端实锤（拦截+放行）、60 SAFE-01 软删 DN 漂移拦截端到端 + 影子表对拍 0 漂移 + 实时抽查 3 样本一致
-last_updated: "2026-10-22T12:22:49.278Z"
-last_activity: 2026-10-22
-last_activity_desc: Milestone v1.21 completed and archived
-state_head: 8e252ca7b2d890b780e642ee00f810b848efe865
+milestone: v1.22
+milestone_name: 前端公用组件整治
+status: planning
+last_updated: "2026-10-23T13:45:35.413Z"
+last_activity: 2026-10-23
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
-current_phase: 62
-current_phase_name: 卫生收尾与死代码清理（HYGIENE-03/04/05）
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -31,10 +26,10 @@ current_phase_name: 卫生收尾与死代码清理（HYGIENE-03/04/05）
 
 ## Current Position
 
-Phase: Milestone v1.21 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-22 — Milestone v1.21 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-23 — Milestone v1.22 started
 
 ## Accumulated Context
 
