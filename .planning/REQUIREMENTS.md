@@ -58,4 +58,27 @@
 
 ## Traceability
 
-（由 roadmap 填充：REQ → Phase 映射）
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| STOP-01 | Phase 63 | Pending |
+| STOP-02 | Phase 63 | Pending |
+| STOP-03 | Phase 63 | Pending |
+| STOP-04 | Phase 63 | Pending |
+| STOP-05 | Phase 63 | Pending |
+| STOP-06 | Phase 63 | Pending |
+| STOP-07 | Phase 63 | Pending |
+| FIX-01 | Phase 64 | Pending |
+| FIX-02 | Phase 64 | Pending |
+| FIX-03 | Phase 64 | Pending |
+| FIX-04 | Phase 64 | Pending |
+| FIX-05 | Phase 64 | Pending |
+| COMP-01 | Phase 65 | Pending |
+| COMP-02 | Phase 65 | Pending |
+| COMP-03 | Phase 66 | Pending |
+| COMP-04 | Phase 66 | Pending |
+| COMP-05 | Phase 67 | Pending |
+| DEBT-01 | Phase 68 | Pending |
+| DEBT-02 | Phase 68 | Pending |
+| DEBT-03 | Phase 68 | Pending |
+
+Coverage: 20/20 mapped ✓（Phase 63-68，见 ROADMAP.md）

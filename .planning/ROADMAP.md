@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-10-22
-update_trigger: v1.21 SHIPPED & ARCHIVED (Phases 57-62, 6 phases / 22 plans / 45 tasks, 19/19 REQ, 集成审计 passed; v1.21 段折叠进 Archive)
-previous_update: 2026-10-16 v1.21 roadmap CREATED
+last_updated: 2026-10-23
+update_trigger: v1.22 前端公用组件整治 roadmap CREATED (Phases 63-68, 20/20 REQ coverage)
+previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
 ---
 
 # Roadmap: RuoYi-Next 运维管理系统
@@ -31,6 +31,131 @@ previous_update: 2026-10-16 v1.21 roadmap CREATED
 - ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) | [audit](milestones/v1.19-MILESTONE-AUDIT.md)
 - ✅ **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
 - ✅ **v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)** — Phases 57-62 (shipped 2026-10-22) — see [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.md) | [audit](milestones/v1.21-MILESTONE-AUDIT.md) | [requirements](milestones/v1.21-REQUIREMENTS.md)
+- 🚧 **v1.22 前端公用组件整治 (Frontend Shared Component Remediation)** — Phases 63-68 (planning)
+
+---
+
+## v1.22 前端公用组件整治 — 🚧 In Progress
+
+**Milestone goal:** 消化 2026-10-23 全量前端组件审查的 201 条问题（P0 24 / P1 87 / P2 90，事实基线：`docs/2026-10-23-前端公用组件审查与最佳实践方案.md` + `.planning/notes/frontend-audit/{01..04}*.md`），把公共层从"只有零件没有契约"补成"有契约"：默认值下沉（allowClear/showSearch）、分页契约下沉（showTotal/setTotal）、危险操作唯一入口（ConfirmDelete），使抽出的组件真正被用起来。
+
+**抽取原则（locked）:** 抽契约不抽业务（资产选择器/部门树选择器等业务语义组件不抽）；`useDebouncedSearch` 并入 RemoteSelect 不单独抽；巨型文件拆分随 COMP-05 迁移顺带、不单独立项；默认值必须下沉封装层；ConfirmDelete 是危险操作唯一入口。
+
+## Phases
+
+- [ ] **Phase 63: P0 止血 — 数据可达与安全** — 修 showTotal 分页根因 / total 恒 0 / OU 截断 / 双击重复提交 / 批量删除无确认 / 假功能入口 / fixed 列失效（STOP-01..07）
+- [ ] **Phase 64: P1 修复 — 反馈与可访问性** — 表格 loading / Modal 遮罩脏检查 / 本地排序误用 / console 错误出口收敛 / aria 可访问名（FIX-01..05）
+- [ ] **Phase 65: 基础契约组件 — 默认值与危险操作唯一入口** — AppInput/AppSelect 默认值下沉 + ConfirmDelete 统一危险删除入口（COMP-01, COMP-02）
+- [ ] **Phase 66: 高级契约组件 — PageTable 与 FormModal** — 列表/表单弹窗契约内建骨架，依赖 Phase 65 组件（COMP-03, COMP-04）
+- [ ] **Phase 67: 存量迁移 — 按 ROI 顺序落地契约组件** — C1 试点 discoveries → backups → devices/cache 巨型页，每页一个 PR（COMP-05）
+- [ ] **Phase 68: P2 一致性债务 — 颜色/日期/类型收敛** — design token 收敛 hex 硬编码 + 日期/状态 helper + any 类型消除（DEBT-01..03）
+
+## Phase Details
+
+### Phase 63: P0 止血 — 数据可达与安全
+**Goal**: 用户在所有列表页能看到真实的数据总量并翻到任意一页；双击确认不会重复提交；批量删除必有二次确认；假功能入口不再出现；宽表滚动时固定操作列保持可见。本 phase 全部为小根因修复（每项 ~0.5-1 天），ROI 最高，独立于组件抽取先行落地。
+**Depends on**: Nothing (v1.22 首个 phase)
+**Requirements**: STOP-01, STOP-02, STOP-03, STOP-04, STOP-05, STOP-06, STOP-07
+**Notes**: 事实基线 `.planning/notes/frontend-audit/`（201 条，精确到 文件:行号）。STOP-01 根因 `src/hooks/usePagination.ts:122` showTotal 只输出页数（51 页受害）；STOP-02 根因 `src/pages/network/backups/index.tsx:79`、`src/pages/network/discoveries/index.tsx:34` 的 `_setTotal` 从未调用；STOP-03 根因 `src/pages/ad-domain/ous/index.tsx:130` 固定 `pageSize:100` 前端分页截断。
+**Success Criteria** (what must be TRUE):
+  1. 用户在任意分页列表页同时看到总条数与页数（如"共 128 条 / 13 页"），total=0 时不显示"共 1 页"（STOP-01）
+  2. 用户能翻到 backups / discoveries 列表的任意一页，每页数据与总数一致（STOP-02）
+  3. 用户能浏览 AD 域 OU 列表第 3 页及以后的全部数据，不再被 100 条截断（STOP-03）
+  4. 用户快速双击任意业务弹窗确认按钮，后端只收到一次请求、不产生重复记录（STOP-04）
+  5. 用户触发批量删除前必见二次确认弹窗；点击 3 处假功能入口（assets 空确认 / ReconciliationDrawer 空 Tab）能看到真实功能或入口已移除；宽表横向滚动时固定操作列始终贴右可见（STOP-05/06/07）
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 64: P1 修复 — 反馈与可访问性
+**Goal**: 系统在加载、出错、误操作时给用户明确反馈而非静默——表格有 loading、误点遮罩不丢表单、排序结果正确、失败有可见错误提示、读屏器用户能识别图标按钮。
+**Depends on**: Phase 63（同属存量页修补，收敛节奏一致；无硬数据依赖）
+**Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
+**Notes**: FIX-04 的 `console.*` 52 处收敛应建立统一错误出口（toast/errorHandler），该出口在 Phase 65+ 被契约组件复用。FIX-02 Modal `maskClosable` 0/22 全部可点即关，改受控 + 脏检查——该契约随后下沉到 Phase 66 FormModal。
+**Success Criteria** (what must be TRUE):
+  1. 用户打开 network/monitor 域任意列表页时，数据加载期间表格显示 loading 状态而非空白（FIX-01）
+  2. 用户在含未保存修改的表单弹窗中误点遮罩时，弹窗不关闭或先提示确认，未保存内容不丢失（FIX-02）
+  3. 用户在 cache/job 等分页表上按列排序时得到全量正确结果（服务端排序或明确的降级说明）（FIX-03）
+  4. 用户请求失败时看到可见的错误提示（toast/message），`console.*` 静默吞错收敛到统一错误出口（FIX-04）
+  5. 使用读屏器的用户能通过可访问名识别每个图标按钮的功能（aria-label/role 补齐）（FIX-05）
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 65: 基础契约组件 — 默认值与危险操作唯一入口
+**Goal**: 新页面使用 AppInput/AppSelect 零配置获得可清除/可搜索行为；所有危险删除操作统一经 ConfirmDelete 唯一入口强制二次确认——把"逐页补 allowClear 不可维护"的根因（285 Input 仅 23% allowClear、400 Select 仅 30%）通过默认值下沉封装层解决。
+**Depends on**: Nothing 硬依赖（可与 Phase 63/64 并行评估；按 roadmap 顺序置于其后）
+**Requirements**: COMP-01, COMP-02
+**Notes**: 抽契约不抽业务（locked）。`useDebouncedSearch` 并入 RemoteSelect，不单独抽。本 phase 产物是 Phase 66 PageTable/FormModal 的直接前置。
+**Success Criteria** (what must be TRUE):
+  1. 新页面使用 AppInput/AppSelect 时无需逐个配置即默认带 allowClear（Select 另含 showSearch），行为与全站一致（COMP-01）
+  2. 开发者在封装层外的业务代码中直接写裸 `<Input>`/`<Select>` 会被 lint/约定拦截或有明确豁免清单（COMP-01）
+  3. 用户点击任意危险删除按钮，都经过同一个 ConfirmDelete 组件的二次确认，不存在绕过入口的裸 Popconfirm/直接 delete 调用（COMP-02）
+  4. ConfirmDelete 的确认文案统一包含操作对象与不可恢复警示，删除失败时有可见错误反馈（COMP-02）
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 66: 高级契约组件 — PageTable 与 FormModal
+**Goal**: 新列表页使用 PageTable 一站式骨架（分页/loading/空态/错误态契约内建，模板页样板 ~450 行 → ~120 行）；新表单弹窗使用 FormModal（confirmLoading/脏检查/destroyOnHidden 契约内建）——把 Phase 63/64 修出的 P0/P1 行为固化为组件默认契约，新代码不再可能回退。
+**Depends on**: Phase 65（PageTable 内建分页契约依赖 AppSelect 等基础组件；FormModal 脏检查契约承接 FIX-02）
+**Requirements**: COMP-03, COMP-04
+**Notes**: 三态组件（Empty/Skeleton/ErrorAlert）随 PageTable 间接覆盖（REQUIREMENTS deferred 项）。FIX-01 loading / STOP-04 confirmLoading / FIX-02 脏检查在本 phase 完成契约化。
+**Success Criteria** (what must be TRUE):
+  1. 新列表页接入 PageTable 后，分页（含 showTotal）/loading/空态/错误态无需逐页实现即全部具备（COMP-03）
+  2. PageTable 模板页代码量显著下降（样板 ~450 行 → ~120 行量级）， SearchForm 模式并入 PageTable 体系（COMP-03）
+  3. 新表单弹窗接入 FormModal 后，confirmLoading 防重复提交、脏检查拦误关、destroyOnHidden 重置三项默认生效（COMP-04）
+  4. 使用者可在不读源码的情况下按组件 README/类型签名正确接入 PageTable 与 FormModal（契约自描述）（COMP-03/04）
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 67: 存量迁移 — 按 ROI 顺序落地契约组件
+**Goal**: 存量页面按 ROI 顺序迁移到契约组件体系，使新契约真实吃掉存量样板而非只服务新代码——C1 试点 discoveries 最小页 → backups → devices/cache 巨型页（随拆分迁移），每页一个 PR，旧实现保留一个迭代。
+**Depends on**: Phase 66（迁移目标 PageTable/FormModal 必须先就位）
+**Requirements**: COMP-05
+**Notes**: 巨型文件拆分随迁移顺带（locked，不单独立项）。SearchForm 并入 PageTable 体系。每页一个 PR 便于回滚与 review。
+**Success Criteria** (what must be TRUE):
+  1. discoveries 页作为 C1 试点完成迁移，用户视角行为不回归（分页/删除确认/表单弹窗均走新契约）（COMP-05）
+  2. backups 页完成迁移，Phase 63 修的 total/setTotal 行为在 PageTable 契约下保持（COMP-05）
+  3. devices/cache 巨型页随拆分完成迁移（或完成拆分前置并明确迁移计划），迁移过程零行为回归（COMP-05）
+  4. 每个迁移页独立 PR 可回滚，旧实现保留一个迭代后删除，样板行数下降可量化（COMP-05）
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 68: P2 一致性债务 — 颜色/日期/类型收敛
+**Goal**: 视觉与数据展示全站一致：颜色统一走 design token（109 处 6 位 hex / 25 文件，含 3 位简写共 125 行命中收敛）；日期/状态展示统一 helper（裸三元 13 处/6 文件 + 手写日期格式 12 处/8 文件）；`: any` / `as any` 27 处/16 文件随 FormModal 迁移逐步消除。
+**Depends on**: Phase 66/67（any 消除挂在 FormModal 迁移路径上；helper 收敛在迁移后的页面上做最省）
+**Requirements**: DEBT-01, DEBT-02, DEBT-03
+**Success Criteria** (what must be TRUE):
+  1. 用户在 light/dark 主题下看到的页面颜色一致来自 design token，硬编码 hex 收敛到 token（残留有明确豁免清单）（DEBT-01）
+  2. 全站列表中的状态标签与日期展示格式统一（同一 helper 渲染），不再出现同一状态两种文案/同一日期两种格式（DEBT-02）
+  3. 前端 `: any` / `as any` 收敛至目标基线（27 处 → 随迁移消除或有记录的豁免），`npm run type-check` 通过（DEBT-03）
+  4. `npm run build` 通过且 vendor-react gzip 包体积不高于迁移前基线（零回归守卫，沿用 v1.19 起 776 kB 基线惯例）
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Progress Table (v1.22)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 63. P0 止血 — 数据可达与安全 | 0/TBD | Not started | - |
+| 64. P1 修复 — 反馈与可访问性 | 0/TBD | Not started | - |
+| 65. 基础契约组件 — 默认值与危险操作唯一入口 | 0/TBD | Not started | - |
+| 66. 高级契约组件 — PageTable 与 FormModal | 0/TBD | Not started | - |
+| 67. 存量迁移 — 按 ROI 顺序落地契约组件 | 0/TBD | Not started | - |
+| 68. P2 一致性债务 — 颜色/日期/类型收敛 | 0/TBD | Not started | - |
+
+### Coverage Map (v1.22)
+
+```
+STOP-01..07 → Phase 63 (7)
+FIX-01..05  → Phase 64 (5)
+COMP-01, COMP-02 → Phase 65 (2)
+COMP-03, COMP-04 → Phase 66 (2)
+COMP-05     → Phase 67 (1)
+DEBT-01..03 → Phase 68 (3)
+
+Mapped: 20/20 ✓  No orphans, no duplicates
+```
 
 ---
 
@@ -50,226 +175,16 @@ previous_update: 2026-10-16 v1.21 roadmap CREATED
 - [x] **Phase 61: 影子表完整性** — 删除清理两道闸门 + 组成员事务化 + singleflight 挂载 (SHADOW-01/02/03) — 3/3 plans，**Complete 2026-10-22**（8/8 must-haves VERIFIED，61-UAT 4/4 pass；真环境人工项见 [61-UAT.md](milestones/v1.21-phases/61-shadow-table-integrity/61-UAT.md) 与 [61-VERIFICATION.md](milestones/v1.21-phases/61-shadow-table-integrity/61-VERIFICATION.md) status=passed）
 - [x] **Phase 62: 卫生收尾与死代码清理** — F-22 旧路径删除 + 嵌套组标记 + 同名部门 OU DN 冲突告警 (HYGIENE-03/04/05) — 3/3 plans，completed 2026-10-22（18/18 must-haves VERIFIED，HYGIENE-03 死代码 grep 残留=0 / HYGIENE-04 嵌套组过滤零 DDL + 生产 8 行污染自愈 / HYGIENE-05 OU DN 冲突 typed error 显式化）
 
-### Phase 57: AD 推送队列基建（outbox-lite 同事务入队）
-
-**Goal**: 管理员编辑用户产生的 AD 推送在业务事务内落队列、进程重启不丢失；同用户多次编辑按实体合并仅保留最新待推送状态；sys 删除用户入队 disable 动作闭环"复活"链路。
-**Depends on**: 无（v1.21 首个 phase；前置条件已满足——1641 文件 5 组提交合入 main 并推送, 2026-10-16）
-**Requirements**: QUEUE-01, QUEUE-02, QUEUE-06, HYGIENE-06
-**Notes**: ⚠️ 编号修正（2026-10-16 plan-phase）：ROADMAP 原写的 migration_200 已失效——214 已被 `migration_214_create_ad_login_history.go` 占用，Phase 57 实际落地 **migration_215**（见 57-CONTEXT.md D 段与 phase_specific_constraints）。本里程碑 DB migration 编号从 **215** 起，后续 phase 需要迁移时顺延编号。队列基建（表 + 同事务入队）是 Phase 59 GUARD-01 信号守卫的前置（守卫查队列行）。排水器不注册 sys_job（PROJECT.md 关键决策）。
-**Success Criteria** (what must be TRUE):
-
-  1. 管理员编辑用户（部门/昵称/邮箱/手机）后，`ad_push_queue` 在同一业务事务内出现待推送行——业务保存回滚时队列行不存在，进程重启后已入队行仍在（QUEUE-01）
-  2. 同一用户短时间内多次编辑后，队列中该用户仅保留最新一条待推送行，内容为最后一次编辑结果，后一次编辑不被丢弃（QUEUE-02）
-  3. sys 侧删除用户后，队列出现 disable AD 账号动作行（QUEUE-06）
-  4. SQLite 测试环境补建队列表后 `go test ./...` 全绿（HYGIENE-06）
-
-**Plans**: 3 plans (3 waves, sequential)
-
-Plans:
-**Wave 1**
-
-- [x] 57-01-PLAN.md — `ad_push_queue` schema 层：GORM 模型 + migration_215 双方言建表/部分唯一索引 + database.go 双分支注册 + Wave 0 测试 (QUEUE-02, HYGIENE-06)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 57-02-PLAN.md — 入队 service（addomain）：四字段 diff 纯函数 + D-02 事务内前置条件 + ON CONFLICT 合并 upsert（update_user / disable）(QUEUE-01/02/06)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 57-03-PLAN.md — user_service.go 三处事务内接线（Update/Delete/BatchDelete）+ sqlite 测试环境补表 + `go test ./...` 全绿 (QUEUE-01/06, HYGIENE-06)
-
-**Code Review 修复**（2026-10-16，见 [57-REVIEW-FIX.md](milestones/v1.21-phases/57-ad-outbox-lite/57-REVIEW-FIX.md)）：F-01 disable 压制同实体活跃 `update_user` 行 / F-02 编辑表单停用入队 disable（安全缺口）/ F-03 `SKIP_AUTOMIGRATE` 旁路补建队列表 / F-04 队列表索引失败阻断启动 / F-05 去重逻辑抽纯函数（替掉假断言）/ F-06 Update 写路径收窄为显式字段（与入队 diff 语义对齐）。F-07~F-16 判定为 Phase 58 输入或低危，未在本轮处理。
-
-### Phase 58: 排水器与 compare-and-move 推送
-
-**Goal**: 队列被可靠排水——按用户 ad_dn 路由正确 AD 配置、闭包内重读最新值幂等移动 OU、失败退避重试至终态可查、目标 DN 消失时转终态不死循环。
-**Depends on**: Phase 57（队列行存在才能排水）；phase 内 wave 顺序约束：HYGIENE-01 配置解析 helper 先于 QUEUE-04 compare-and-move（三方审计依赖）
-**Requirements**: HYGIENE-01, HYGIENE-02, QUEUE-03, QUEUE-04, QUEUE-05
-**Notes**: compare-and-move 是结构性修 F1（部门回退乒乓）的推送侧；禁用新旧值比较（会激活未验证的 MoveUser 重试分支）。`ErrADTargetNotFound` → 终态。
-
-**Phase 57 移交待决项**（2026-10-16 code review 发现，Phase 57 按用户决定只记账不修）：
-
-  1. **遗留直推与队列排水双推冲突（两条路径，缺一不可）** — 排水器落地后，现有两条绕过队列直接推 AD 的路径会同时生效 → 重复推送且可能乱序（同实体 update_user 先到、disable 后到会被覆盖回去）：
-     - `internal/api/v1/system/user_handler.go:194` — 单用户编辑后的直推
-     - `internal/api/v1/system/user_import_handler.go:114` `triggerADSyncAfterImport` — 批量导入后的直推（走 `BatchSyncUsersToAD`，含无 `ad_dn` 跳过、并发上限、失败降级等导入专用语义）
-
-     **决策点**：两条路径都删 / 两者共存并加互斥。越早定越便宜——删除会使 AD 侧更新延迟到排水时才可见，且导入路径的批量语义无法直接套用单条队列行的处理方式。
-  2. **`ad_push_queue` 无 `ad_config_id` 列** — 队列行不记录入队时归属的 AD 配置，排水器只能在排水时刻按 `ad_dn` 解析配置。若配置在入队与排水之间变更，重试会打到错误的域控。**决策点**：加列（需 Phase 58 迁移 + 回填策略）还是接受排水时解析现状。SUCCESS CRITERION 3 假设的是后者。
-  3. **F-07~F-16 未处理项** — 见 [57-REVIEW-FIX.md](milestones/v1.21-phases/57-ad-outbox-lite/57-REVIEW-FIX.md) 的逐条判定，Phase 58 排水器落地时需一并复核。
-
-**Success Criteria** (what must be TRUE):
-
-  1. 排水器以 in-process cron 运行且未注册 sys_job；处理 dept 推送与 disable 账号两类动作行（闭环 Phase 57 QUEUE-06 执行侧）；失败行按退避重试，达上限转终态且可通过查询确认（QUEUE-03）
-  2. OU 移动采用 compare-and-move：闭包内重读用户最新值 + NormalizeDN 归一化比较，目标一致时跳过 MoveUser；同一队列行重复排水幂等，不产生重复移动（QUEUE-04）
-  3. 多 AD 配置环境下推送按用户 `ad_dn` 归属解析配置，不再依赖 `First()` 取首条；`getDefaultADConfigID` 双份实现合并为公共 helper（HYGIENE-01）
-  4. 含特殊字符的部门名经 OU DN 转义 helper 拼接后推送不产生非法 DN（HYGIENE-02）
-  5. LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，后续排水不再重试（QUEUE-05）
-  6. 两条遗留直推路径（`user_handler.go:194` 单用户编辑、`user_import_handler.go:114` 导入后批量）均已按移交待决项 1 处置：或删除、或与排水互斥。不接受"两者并存且都可能触发"的终态
-
-**Plans**: 7 plans (7 waves, sequential — 本仓 parallelization: false，波次串行)
-
-Plans:
-**Wave 0**
-
-- [x] 58-01-PLAN.md — Wave 0 测试基座：addomain sqlite 五表 fixture + mockLDAPClient 调用计数 + F-F/F-G/F-15/F-16 缺口修补 — 3/3 tasks，completed 2026-10-19（SUMMARY: [58-01-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-01-SUMMARY.md)）
-
-**Wave 1**
-
-- [x] 58-02-PLAN.md — DN 单一真实源（NormalizeDN / BuildOUDN）+ D-02 最长后缀唯一匹配纯函数 + D-03 三处调用点收敛（HYGIENE-01, HYGIENE-02）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-02-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-02-SUMMARY.md)）
-
-**Wave 2**
-
-- [x] 58-03-PLAN.md — 排水器骨架：拾取谓词 + 退避曲线 + 状态机 + disable/属性两条推送路径 + F-12 UTC / F-14 default tag（QUEUE-03, QUEUE-05）— 2/2 tasks，completed 2026-10-19（SUMMARY: [58-03-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-03-SUMMARY.md)）
-
-**Wave 3**
-
-- [x] 58-04-PLAN.md — compare-and-move 执行面：幂等比较 + F-A ad_dn 回写 + F-B config 作用域 OU 映射 + OU 路径 code 32 终态（QUEUE-04, QUEUE-05）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-04-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-04-SUMMARY.md)）
-
-**Wave 4**
-
-- [x] 58-05-PLAN.md — cron 接线（Start() 第三个 AddJob）+ migration_216 sys_config 单旋钮 + SecondsToCronSpec + 禁 sys_job 证伪（QUEUE-03）— 2/2 tasks，completed 2026-10-19（SUMMARY: [58-05-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-05-SUMMARY.md)）
-
-**Wave 5**
-
-- [x] 58-06-PLAN.md — SC6：删除两条直推路径 + EnqueueUpdateBatch 批量入队 + F-07 入队侧 Pluck + F-10 两个回滚用例（QUEUE-03）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-06-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-06-SUMMARY.md)）
-
-**Wave 6**
-
-- [x] 58-07-PLAN.md — 收口：端到端用例 + 全量回归 + SC1~6 逐条证据核对 + 人工 UAT 清单 + REQUIREMENTS 回填（全部 5 REQ）— 3/3 tasks，completed 2026-10-19（SUMMARY: [58-07-SUMMARY.md](milestones/v1.21-phases/58-compare-and-move/58-07-SUMMARY.md)；证据: [58-VERIFICATION.md](milestones/v1.21-phases/58-compare-and-move/58-VERIFICATION.md)）
-
-**Phase 58 收口结论（2026-10-19）**：6 条 Success Criteria **全部 VERIFIED**，每条附「命令 + 实际输出」（见 58-VERIFICATION.md）；F-13 已核对归档（留档不修）；8 项人工验证留档（见 58-HUMAN-UAT.md，含 2 项强制告知：Q2「无 OU 映射批量转 dead」/ F-11「编辑即续命」）；REQ 的 QUEUE-03/04/05 + HYGIENE-01/02 五项全部 Complete。65 个 `TestPhase58_*` 用例全 PASS。
-
-**Phase 58 复审与补修（2026-10-19，收口之后）**
-
-收口后跑了三道额外闸：`gsd-code-reviewer` 独立复审（**0 BLOCKER / 5 HIGH / 6 MEDIUM / 7 LOW**）→ 用户裁定修复 → `gsd-verifier` 目标达成反向验证（**ACHIEVED WITH CONDITIONS**）。
-
-| 编号 | 摘要 | 处置 |
-|------|------|------|
-| H-01 | 排水器在 cron 闭包内构造 → 每轮新 mutex，轮次互斥**生产中完全失效** | ✅ 已修（构造提升为单例；单机部署，未引入行级认领） |
-| H-02 | 互斥用例锁定了一个生产不成立的性质，却是 SC1 证据 | ✅ 已修（改写为断言同一实例） |
-| H-03 | 退避 16min/30min 两档不可达，实际重试窗 15min vs D-05 声明 ~61min | ⏸ DEFERRED（D-05 自身两条声明互相矛盾，待真实熔断频率数据；2026-10-21 盘点复核维持——不阻塞任何路径，故障行仍按 attempts 退避至 dead） |
-| H-04 | 账号全部拨号失败不带池侧哨兵 → 一次 ~15min AD 断连**永久杀死单轮 100 行** | ✅ 已修（新增独立哨兵 `ErrAllAccountsDialFailed`） |
-| H-05 | `MoveUser` 成功但本地回写失败被写成 `pushed` → AD 绑定永久失联 | ⚠ 部分修复（失败改为可见；`MoveUser` 重放经核查**不安全**，仍需人工重建 → UAT-58-9） |
-| MISSED-02 | 池侧故障仍在自增 `attempts` → 长时宕机后**第一次业务失败即终态** | ✅ 已修（H-04 与本项是一对，单独修 H-04 会得到半修状态） |
-| MISSED-01 | H-03 不变量注释在 H-04 后已过期，**主动误导** | ✅ 已修 |
-| MISSED-03 | 58-VERIFICATION.md 端到端幂等叙述与代码不符 | ✅ 已修 |
-| **MISSED-04** | **`extractRDNFromDN` 遇 RFC4514 转义逗号截断** | ⏭ **转独立 phase，见下** |
-
-> **三次审计否决项（禁时间戳仲裁 / 禁新旧值比较 / 禁 `sys_job` 注册）在复审与补修后仍全部未命中**，由 review 与 verifier 各自独立复核。
-
-**⚠ 移交下一 phase 的高优先项 — MISSED-04（数据破坏级）**
-
-`extractRDNFromDN`（`internal/services/addomain/ldap_client.go`）在**第一个逗号**处截断，未处理 RFC4514 的转义逗号：`CN=Zhang\,San,OU=IT,...` → RDN 变成 `CN=Zhang\`。该 RDN 被喂给 `MoveUser` 的 `ModifyDN(deleteOldRDN=true)`，会**把 AD 对象改名**。Phase 58 只在 OU 侧加了 RFC4514 转义（HYGIENE-02），**RDN 侧没有**，并因此引入了一处不对称。
-
-该缺陷是既存的，但 Phase 58 把它从「人工触发」推上了**每 30 秒的自动路径**。用户裁定：独立 phase 尽快修，**优先于 Phase 59**。
-
-**Phase 58 未满足的前置条件（部署前必查）**
-
-SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否则导入更新会以 `unrecoverable:no-ou-mapping` 批量转 dead。建议部署前置检查：`SELECT count(*) FROM sys_dept_ou_mapping WHERE sync_enabled`。
-
-**Wave 顺序约束落地**：HYGIENE-01 配置解析 helper（Wave 1）严格先于 QUEUE-04 compare-and-move（Wave 3）—— ROADMAP 的三方审计依赖约束。
-
-**Cross-cutting constraints**（出现在 ≥2 个 plan 的 must_haves.truths / verify）：
-- Phase 57 sentinel 回归 `go test ./internal/services/system/ -run TestPhase57 -count=1`（58-01/03/06/07 —— D-01 删直推与 F-07 BatchDelete 触碰 57 已合入代码）
-- 禁 sys_job 静态证伪 grep（58-03/05/07 —— SC1：排水器不注册 sys_job）
-- `TestPhase58_*` 命名约定 + quick 命令 `go test ./internal/services/addomain/ -run TestPhase58 -count=1`（58-01~06 —— Nyquist 采样契约，见 58-VALIDATION.md）
-- addomain 包 sqlite 测试基座 `ad_push_queue_drain_test.go`（全部 7 plan —— Wave 0 先行的单一 fixture 事实源）
-
-### Phase 59: 登录回写守卫与部门对账视图
-
-**Goal**: AD 登录回写 dept 不再用旧值回滚本地编辑（信号守卫替代被三方审计否决的时间戳仲裁）；dept↔OU 不一致（含映射指向软删部门）可观测。
-**Depends on**: Phase 57（守卫查询 `ad_push_queue` 的 pending/failed 行）
-**Requirements**: GUARD-01, GUARD-02
-**Notes**: 对账视图用普通 SQL VIEW，禁用 MV（避免 MV 刷新僵尸 / GORM AutoMigrate 阻塞前科）。
-**Success Criteria** (what must be TRUE):
-
-  1. 存在 pending/failed dept 队列行的用户经 AD 登录时，本地 dept 不被 AD 旧值覆盖，日志记录 WARN（GUARD-01）
-  2. 无队列行的用户经 AD 登录时 dept 回写行为与现状一致，守卫不误伤正常同步（GUARD-01）
-  3. `v_dept_ou_mismatch` 普通 SQL VIEW 可查询 dept↔OU 不一致条目及"映射指向软删部门"条目（GUARD-02）
-  4. 只读端点返回对账数据且需登录鉴权访问（GUARD-02）
-
-**Plans**: 4 plans (3 waves)
-**Wave 1**
-- [x] 59-01-PLAN.md — GUARD-01 登录回写守卫：活跃 update_user 队列行拦截 + WARN + 查询失败保守降级（2026-10-19, `3ba3b124` + `7334e169`）
-- [x] 59-02-PLAN.md — GUARD-02 数据底座：migration_217 双方言普通视图 v_dept_ou_mismatch + 三路径注册 + AutoMigrate 前置 DROP（2026-10-19, `b4b88666` + `bda1e002`）
-
-**Wave 2** *(blocked on Wave 1 completion)*
-- [x] 59-03-PLAN.md — GUARD-02 只读端点：分页/筛选服务 + /ad-domain/reconciliation/mismatch + migration_218 权限载体（2026-10-19, `2f1c8190` + `0d7b782c` + `a640658d`）
-
-**Wave 3** *(blocked on Wave 2 completion)*
-- [x] 59-04-PLAN.md — GUARD-02 前端：AD 配置页「对账」Tab（权限门/筛选/表格/空错态）（2026-10-19, `a5abca44` + `08484062` + `e9df2e0b`）
-
-### Phase 60: 软删恢复安全
-
-**Goal**: 软删用户恢复不再盲目接管 AD 身份——AD 当前 DN 与存量 ad_dn 校验一致才恢复；登录路径与 batch-sync 对同一恢复场景行为一致。
-**Depends on**: 无硬依赖（三方审计确认 SAFE 与 QUEUE/SHADOW 相互独立，可并行排期；本 roadmap 顺序执行置于 Phase 58 之后）
-**Requirements**: SAFE-01, SAFE-02
-**Notes**: HYGIENE-03（Phase 62）依赖本 phase 先落地——SAFE-01 落地前 user_ou_service.go 死代码是 F-22 语义的唯一载体。
-**Success Criteria** (what must be TRUE):
-
-  1. `catSoftDeleted` 恢复前校验 AD 当前 DN 与存量 `ad_dn` 一致，一致时恢复成功（SAFE-01）
-  2. DN 不一致时拒绝恢复、用户保持软删状态，并写入安全审计日志（SAFE-01）
-  3. 登录路径与 batch-sync 共用软删分类与校验逻辑，同一场景两路径行为一致（SAFE-02）
-
-**Plans**: 2 plans (2 waves, sequential — 两个 plan 共享 `user_sync_service.go` 与同一测试文件)
-
-**Wave 1**
-- [x] 60-01-PLAN.md — SAFE-01 登录路径端到端：共享校验入口 `checkSoftDeletedRestore` + sentinel/原因码/中文文案 + 判定表/恢复/拒绝/审计测试 (SAFE-01, SAFE-02)（2026-10-20, `466acf04` + `1d7b3e86`）
-
-**Wave 2** *(blocked on Wave 1 completion)*
-- [x] 60-02-PLAN.md — SAFE-02 批量路径收敛：阶段 2 过滤计入 `Skipped`（绕开降级管道）+ 双路径一致性用例 + VALIDATION/REQUIREMENTS/ROADMAP 回填 (SAFE-01, SAFE-02)（2026-10-20, `19fefc32`）
-
-### Phase 61: 影子表完整性（删除清理 + 组成员事务化）
-
-**Goal**: AD 端已消失的对象不再永久滞留 `sys_ad_user/ou/computer` 影子表（静默数据丢失消除）；组成员重放消除空成员可见窗口；清理与全量同步不并发。
-**Depends on**: 无硬依赖（与 QUEUE/SAFE 相互独立可并行；phase 内 SHADOW-03 依赖 SHADOW-01 先落地）
-**Requirements**: SHADOW-01, SHADOW-02, SHADOW-03
-**Success Criteria** (what must be TRUE):
-
-  1. 全量同步末尾，AD 端已消失的 `sys_ad_user/ou/computer` 行被软删除（SHADOW-01）
-  2. 两道闸门生效：LDAP 本轮返回 0 条时清理拒绝执行；拟删数量超过存量 50% 时拒绝执行（SHADOW-01）
-  3. `sys_ad_group_member` 重放在单事务（Delete+Create 包 Transaction）内完成，重放过程中外部查询看不到空成员窗口（SHADOW-02）
-  4. 删除清理挂 `syncDataInternal` 内执行（复用 singleflight），与全量同步互斥不并发（SHADOW-03）
-
-**Plans**: 3 plans (3 waves, sequential — sync.go/computer.go 为共享修改面；SHADOW-03 挂载与 SHADOW-01 清理同 plan 原子落地，依赖约束天然满足)
-
-**Wave 1**
-- [x] 61-01-PLAN.md — SHADOW-01+03 清理主体：shadow_cleanup_service 三类清理 + 两道闸门（0 条 / >50%）+ full 分支挂载 + SyncResult 计数 (SHADOW-01, SHADOW-03)（2026-10-20, `6a08933d` + `75a3c015`；SHADOW-01 的 complete 回填待 61-02 复活路径）
-
-**Wave 2** *(blocked on Wave 1 completion)*
-- [x] 61-02-PLAN.md — SHADOW-01 配套复活路径：OU/Group/User/Computer 四类 upsert 复活化（existing 查询 Unscoped 化 + OnConflict 补 deleted_at）+ 翻转 D-78-05c 既有断言 + sys_ad_group 存量潜伏缺陷一并修复 (SHADOW-01)（2026-10-20, `c441c802` + `af162852` + `bdc8c452` + `3bcd1c84`；5 条 TestSync_Resurrect 先 RED 后 GREEN）
-
-**Wave 3** *(blocked on Wave 2 completion)*
-- [x] 61-03-PLAN.md — SHADOW-02 组成员重放事务化 + CHECK 失败注入证伪 + 重放幂等锁定 + phase 收口回填 (SHADOW-02)（2026-10-21, `508b9b9e` + `cb1382c3`；TestSyncGroupMembers_CreateFailRollsBackDelete 先 RED 后 GREEN，三调用方零改动，全套件 78 ok）
-
-### Phase 62: 卫生收尾与死代码清理
-
-**Goal**: F-22 旧路径死代码在 SAFE-01 落地后安全移除；嵌套组不污染用户成员关系；同名兄弟部门 OU DN 冲突显式告警不静默覆盖。
-**Depends on**: Phase 60（HYGIENE-03 死代码删除必须在 SAFE-01 之后——先删会丢 F-22 对照语义）
-**Requirements**: HYGIENE-03, HYGIENE-04, HYGIENE-05
-**Success Criteria** (what must be TRUE):
-
-  1. `user_ou_service.go` 整文件、`GetUserDeptByADOU`、`BatchMoveUsersToNewOU`、`dept_ou_mapper.go:31` 等过期注释及其关联测试全部删除后 `go build ./...` 通过且测试套件全绿（HYGIENE-03）
-  2. 嵌套组的 member DN 被标记/过滤，不混入用户成员关系数据（HYGIENE-04）
-  3. 同名兄弟部门生成相同 OU DN 时检测并告警，映射不静默互相覆盖（HYGIENE-05）
-
-**Plans**:
-- 62-01-PLAN.md (wave 1) — HYGIENE-03 死代码删除（user_ou_service.go + BatchMoveUsersToNewOU + 过期注释 + 共享测试 const 迁移）
-- 62-02-PLAN.md (wave 1) — HYGIENE-04 嵌套组成员 DN 过滤（零 DDL，group_member_filter.go）
-- 62-03-PLAN.md (wave 2, depends_on 62-01) — HYGIENE-05 OU DN 冲突显式化（ErrOUDNConflict + FailedDepts 计数 + 手工 API Force）
-
----
-
 ### Progress Table (v1.21)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 57. AD 推送队列基建 | 3/3 | Complete | 2026-10-16 |
-| 58. 排水器与 compare-and-move 推送 | 7/7 | Complete（2026-10-22 全收口：Test 1/3/7 pass 生产实测、2/5/6/9 skip 用户知情、4/8 N/A） | 2026-10-22 |
-| 59. 登录回写守卫与部门对账视图 | 4/4 | Complete（GUARD-01 登录守卫双半段端到端实锤 2026-10-22，verification passed） | 2026-10-22 |
-| 60. 软删恢复安全 | 2/2 | Complete（SAFE-01 漂移拦截端到端 + 影子表对拍实锤 2026-10-22，verification passed） | 2026-10-22 |
-| 61. 影子表完整性 | 3/3 | Complete（61-UAT 4/4 pass，VERIFICATION status=passed） | 2026-10-22 |
-| 62. 卫生收尾与死代码清理 | 3/3 | Complete（62-UAT 4/4 pass，62-VERIFICATION status=passed，GAP-62-01 已修复并生产验证） | 2026-10-22 |
+| 58. 排水器与 compare-and-move 推送 | 7/7 | Complete（2026-10-22 全收口） | 2026-10-22 |
+| 59. 登录回写守卫与部门对账视图 | 4/4 | Complete（verification passed） | 2026-10-22 |
+| 60. 软删恢复安全 | 2/2 | Complete（verification passed） | 2026-10-22 |
+| 61. 影子表完整性 | 3/3 | Complete（VERIFICATION status=passed） | 2026-10-22 |
+| 62. 卫生收尾与死代码清理 | 3/3 | Complete（VERIFICATION status=passed） | 2026-10-22 |
 
 </details>
 
@@ -280,11 +195,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 
 **Goal:** 在 v1.19 端口写命令 MVP 基础上扩展 2 个新写命令：① 修改 access VLAN ② IP+MAC+Port 静态绑定。复用 v1.19 vendor 模板 / operlog / 权限 / 批量 / e2e 全套基建。
 
-**Depends on:** **v1.19 端口写命令 MVP (Phases 50-55)** — 复用 vendorPortTemplate + pre_state_check + port_write_service + execSinglePort + PortWriteModal + BulkWriteDrawer 全套基建
-
 **Requirements**: 22 (VLAN-01~06, BIND-01~07, INFRA-01~04, UI-01~06, TEST-01~05)
-
-**Success Criteria**: 7 项全部通过 (vendor template / portwrite 单测+e2e / go build / tsc / vite build vendor-react 774.95 kB 零回归 / operlog regression / 56-HUMAN-UAT.md 12 项 site-visit 推迟)。
 
 **Plans**: 5 plans (5 waves)
 
@@ -308,7 +219,7 @@ SC6 的价值兑现有前置：**目标环境必须已跑过部门同步**，否
 - [x] Phase 54: W5 E2E + Real-Device UAT + Documentation — 1/1 plan — completed 2026-07-07
 - [x] Phase 55: Tech-Debt Cleanup (Phase 53 leftover sweep) — 2/2 plans — completed 2026-07-08
 
-See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived details (108 files / 25,224 insertions / 3,152 deletions / 1.7 days / 37/37 requirements). 7 site-visit SSH verifications + 6 v1.19.x+ follow-ups deferred per `.planning/phases/54-w5-e2e-real-device-uat-documentation/54-HUMAN-UAT.md` and `v1.19-REQUIREMENTS.md` §Future Requirements / §Tech Debt sections.
+See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived details (108 files / 25,224 insertions / 3,152 deletions / 1.7 days / 37/37 requirements).
 
 </details>
 
@@ -317,21 +228,15 @@ See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived deta
 
 ### Phase 48: 网络设备组件序列号采集 (Device Component Serials) — 3/3 plans, shipped 2026-07-04
 
-**Goal**: 支持"一机多序列号"——将网络设备的板卡/引擎卡、电源、风扇、光模块各自的序列号**作为资产设备纳入资产系统 `ops_asset`**（每个组件一条记录，`DeviceSN`=组件序列号），保存组件对交换机/路由的从属关系并在前端展示。
-
-**Depends on**: **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
-
-**Requirements**: 14 D-ids (D-01~D-14) 覆盖,源自 48-CONTEXT.md,无正式 REQ-ID
-
-**Success Criteria**: 16 项全部通过自动化 UAT(schema introspection / go build / 21 collector tests / 5 D-10 流水线测试 / 3 handler tests / 5 operlog regression / tsc / vite build)。3 项 site-visit 真机 UAT(S8700/RS8607E)按 RESEARCH §Environment Availability 显式推迟到下次现场访问。
+**Goal**: 支持"一机多序列号"——将网络设备的板卡/引擎卡、电源、风扇、光模块各自的序列号**作为资产设备纳入资产系统 `ops_asset`**，保存组件从属关系并在前端展示。
 
 **Plans**: 3 plans
 
-- [x] 48-01-PLAN.md — Schema 迁移(migration_201) + Asset/Reconciliation model 扩展 + asset_service List/Statistics 默认 component_type IS NULL 过滤 (D-01, D-05, D-06, D-07)
-- [x] 48-02-PLAN.md — component_collector 包(SNMP ENTITY-MIB 单 GET 收集器 + 锐捷 temprature* 过滤 + 华为 dual-class 去重 + OwnerResolver stack 接口 + 4 TextFSM 模板 + CLI 收集器) (D-08, D-09, D-10, D-11, D-12)
-- [x] 48-03-PLAN.md — OpsAssetWriter(UPDATE-only + D-04 父缺失降级) + ReconciliationEmitter(conflict_type=F + recon_category=component_serial) + Pipeline + DeviceInfoCollectionService cron hook + operlog + 后端 list 端点 + 前端组件清单 Tab + UAT 推迟声明 (D-02, D-03, D-04, D-06, D-07, D-13, D-14)
+- [x] 48-01-PLAN.md — Schema 迁移(migration_201) + model 扩展 + component_type IS NULL 过滤
+- [x] 48-02-PLAN.md — component_collector 包(SNMP ENTITY-MIB + CLI 双厂商 + 6 TextFSM 模板)
+- [x] 48-03-PLAN.md — OpsAssetWriter + ReconciliationEmitter + Pipeline + 前端组件清单 Tab + UAT 推迟声明
 
-See [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md) for archived details. Phase 49 gap closure (2/2 plans, 2026-07-05) — enrichChassisSerial 接入 + collectBoardsInto 接入, 14 台设备 serial_number 回填。
+Phase 49 gap closure (2/2 plans, 2026-07-05) — enrichChassisSerial 接入 + collectBoardsInto 接入, 14 台设备 serial_number 回填。
 
 </details>
 
@@ -346,15 +251,6 @@ See [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md) for archived deta
 - [x] Phase 47: 资产对账根因修复 — 2/2 plans (2026-07-03)
 
 See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 42. 资产对账观测底座 (R1) | 5/6 | Complete | 2026-06-27 |
-| 43. 告警 + 工单闭环 (R2) | 3/3 | Complete | 2026-06-27 |
-| 44. 置信度评分 + IP 段例外 (R3) | 2/2 | Complete | 2026-06-28 |
-| 45. 工位详情整合 (R4) | 2/2 | Complete | 2026-06-28 |
-| 46. 半自动修复 (R5, 可选) | 2/2 | Complete | 2026-07-03 |
-| 47. 修復資產對賬系統根因 | 2/2 | Complete | 2026-07-03 |
 
 </details>
 
@@ -393,10 +289,10 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 - ✓ Phases 50-55 — v1.19 网络设备写命令 (9/9 plans, 6 phases)
 - ✓ Phase 56 — v1.20 VLAN + 端口绑定 (5/5 plans)
 
-**Total shipped**: 156 plans across 46 phases (Phases 1-56)
+**Total shipped**: 162 plans across 56 phases (Phases 1-56) + v1.21 Phases 57-62 (22 plans)
 
 </details>
 
 ---
 
-*Last updated: 2026-10-16 — v1.21 AD 双向同步 bug 修复 roadmap created (Phases 57-62, 19/19 REQ coverage, 依赖约束来自三方审计)。注: 里程碑实际 REQ 数 = 19 (QUEUE×6 + GUARD×2 + SAFE×2 + SHADOW×3 + HYGIENE×6)。上一里程碑 v1.20 shipped 2026-07-10 (Phase 56, 5 plans)。*
+*Last updated: 2026-10-23 — v1.22 前端公用组件整治 roadmap created (Phases 63-68, 20/20 REQ coverage: STOP×7 + FIX×5 + COMP×5 + DEBT×3)。上一里程碑 v1.21 shipped 2026-10-22 (Phases 57-62, 22 plans)。*
