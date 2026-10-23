@@ -489,7 +489,7 @@ func GetDictDataByTypeKey(dictType string) string {
 
 ### LDAP/AD Connections
 
-**CRITICAL:** Current code uses `InsecureSkipVerify: true` for LDAPS/StartTLS. This should be addressed for production.
+LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify` config key (default `true` for dev convenience). **Set it to `false` in production yaml** to enforce certificate validation. The login authentication path additionally honors env `AD_AUTH_TLS_INSECURE_SKIP_VERIFY` (default `false` = strict verification, see `internal/core/security/ad_authenticator.go`).
 
 ### Authentication
 
@@ -516,7 +516,7 @@ func GetDictDataByTypeKey(dictType string) string {
 - **Sync tasks** via scheduler
 - **Modular services**: config, group, user, OU, sync
 - **Location**: `internal/services/addomain/`
-- **Warning**: Uses `InsecureSkipVerify: true` for LDAPS/StartTLS
+- **Note**: TLS verification for LDAPS/StartTLS is governed by `ad.tls_skip_verify` config (default true; set false in production)
 
 ### AD Service Account Pool (Phase 36)
 
