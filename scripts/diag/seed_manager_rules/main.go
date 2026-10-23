@@ -40,21 +40,13 @@ func main() {
 		fmt.Println("找不到机构「分公司本部」:", err)
 		os.Exit(1)
 	}
-	postID := func(code string) string {
-		var row struct{ ID string }
-		if err := g.Table("sys_post").Select("id").Where("post_code = ?", code).Scan(&row).Error; err != nil || row.ID == "" {
-			fmt.Printf("找不到岗位 %s（err=%v）\n", code, err)
-			os.Exit(1)
-		}
-		return row.ID
-	}
-	gmID := postID("GM")          // 总经理
-	vpID := postID("VP")          // 分管副总
-	branchGmID := postID("BRANCH_GM") // 中心支公司总经理
-
 	strPtr := func(s string) *string { return &s }
 
-	// ---- 5 条规则（用户 2026-10-23 确认稿）----
+	// ---- 5 条规则（用户 2026-10-23 确认稿；B 方案：一把手来源统一用机构负责人 org_leader，不依赖岗位）----
+	// 配套数据要求：
+	//   规则3/5：各中支/支公司的机构节点部门（如武汉中心支公司）负责人 = 该机构一把手
+	//   规则4：湖北分公司根部门负责人 = 分公司总经理
+	//   规则2：分公司本部部门负责人 = 分管副总
 	rules := []models.ManagerRule{
 		{
 			RuleName: "分公司本部·员工→部门经理", Priority: 10, Enabled: true,
@@ -65,28 +57,28 @@ func main() {
 		{
 			RuleName: "分公司本部·部门经理→分管副总", Priority: 20, Enabled: true,
 			SubjectType: models.ManagerSubjectDeptLeader, SubjectOrgID: strPtr(hqBranch.ID),
-			ManagerType: models.ManagerSourcePostHolder, ManagerPostID: strPtr(vpID),
-			ManagerOrgID: nil, // 自身机构（分管副总属分公司本部）
+			ManagerType: models.ManagerSourceOrgLeader, // 分公司本部机构节点部门的负责人 = 分管副总
+			ManagerOrgID: nil, // 自身机构（分公司本部）
 			ScopeType:    models.ManagerScopeAll,
 		},
 		{
 			RuleName: "各机构·部门经理→本机构一把手", Priority: 30, Enabled: true,
 			SubjectType: models.ManagerSubjectDeptLeader,
-			ManagerType: models.ManagerSourceOrgHead, ManagerPostID: strPtr(branchGmID),
+			ManagerType: models.ManagerSourceOrgLeader, // 本机构节点部门的负责人
 			ManagerOrgID: nil, // 自身机构
 			ScopeType:    models.ManagerScopeOrgTree, ScopeID: strPtr(hqOrg.ID),
 		},
 		{
 			RuleName: "各机构·一把手→分公司总经理", Priority: 35, Enabled: true,
-			SubjectType: models.ManagerSubjectOrgHead, SubjectPostID: strPtr(gmID),
-			ManagerType: models.ManagerSourcePostHolder, ManagerPostID: strPtr(gmID),
+			SubjectType: models.ManagerSubjectDeptLeader, // 主体=部门负责人（机构节点部门的负责人即一把手，不依赖岗位）
+			ManagerType: models.ManagerSourceOrgLeader, // 湖北分公司机构节点部门的负责人 = 分公司总经理
 			ManagerOrgID: strPtr(hqOrg.ID), // 指定机构：湖北分公司
 			ScopeType:    models.ManagerScopeOrgTree, ScopeID: strPtr(hqOrg.ID),
 		},
 		{
 			RuleName: "各机构·员工→本机构一把手", Priority: 40, Enabled: true,
 			SubjectType: models.ManagerSubjectEmployee,
-			ManagerType: models.ManagerSourceOrgHead, ManagerPostID: strPtr(branchGmID),
+			ManagerType: models.ManagerSourceOrgLeader, // 本机构节点部门的负责人
 			ManagerOrgID: nil, // 自身机构
 			ScopeType:    models.ManagerScopeAll,
 		},
@@ -94,13 +86,26 @@ func main() {
 
 	for i := range rules {
 		r := &rules[i]
-		var count int64
-		if err := g.Model(&models.ManagerRule{}).Where("rule_name = ?", r.RuleName).Count(&count).Error; err != nil {
-			fmt.Println("查重失败:", err)
-			os.Exit(1)
-		}
-		if count > 0 {
-			fmt.Printf("跳过（已存在）: %s\n", r.RuleName)
+		var existing models.ManagerRule
+		err := g.Where("rule_name = ?", r.RuleName).First(&existing).Error
+		if err == nil {
+			// 已存在 → 更新（B 方案调整 manager_type，清掉岗位依赖）
+			if err := g.Model(&existing).Updates(map[string]interface{}{
+				"subject_type":    r.SubjectType,
+				"subject_post_id": r.SubjectPostID,
+				"manager_type":    r.ManagerType,
+				"manager_post_id": r.ManagerPostID,
+				"manager_org_id":  r.ManagerOrgID,
+				"subject_org_id":  r.SubjectOrgID,
+				"scope_type":      r.ScopeType,
+				"scope_id":        r.ScopeID,
+				"priority":        r.Priority,
+				"enabled":         r.Enabled,
+			}).Error; err != nil {
+				fmt.Printf("更新失败 %s: %v\n", r.RuleName, err)
+				os.Exit(1)
+			}
+			fmt.Printf("已更新: [%d] %s → %s\n", r.Priority, r.RuleName, r.ManagerType)
 			continue
 		}
 		if err := g.Create(r).Error; err != nil {
@@ -109,5 +114,5 @@ func main() {
 		}
 		fmt.Printf("已写入: [%d] %s\n", r.Priority, r.RuleName)
 	}
-	fmt.Println("完成。注意：规则生效前需先在「岗位管理」给用户分配岗位（sys_user_post 目前为空）。")
+	fmt.Println("完成。注意：规则2/3/4/5 依赖机构节点部门的负责人字段（sys_dept.leader），请确认已配置。")
 }

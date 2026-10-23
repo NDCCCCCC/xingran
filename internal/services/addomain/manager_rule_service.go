@@ -528,21 +528,23 @@ func (r *ManagerResolver) Resolve(u *models.User) ManagerResolution {
 		managerID, warns := r.resolveManagerID(rule, u, org)
 		res.Warnings = append(res.Warnings, warns...)
 		if managerID == "" {
-			res.Skipped = true
+			// 该规则解析不出经理 → 顺延尝试下一条规则（first-match 不短路于解析失败）
 			res.Reason = fmt.Sprintf("规则「%s」未解析出经理", rule.RuleName)
-			return res
+			continue
 		}
 		if managerID == u.ID {
-			res.Skipped = true
+			// 自指（如机构一把手被规则指回自己）→ 顺延尝试下一条规则
 			res.Reason = fmt.Sprintf("规则「%s」解析出的经理为本人（自指），跳过", rule.RuleName)
-			return res
+			continue
 		}
 		res.ManagerID = managerID
 		return res
 	}
 
 	res.Skipped = true
-	res.Reason = "没有命中任何启用的经理同步规则"
+	if res.Reason == "" {
+		res.Reason = "没有命中任何启用的经理同步规则"
+	}
 	return res
 }
 
@@ -622,8 +624,21 @@ func (r *ManagerResolver) resolveManagerID(rule models.ManagerRule, u *models.Us
 		}
 		return r.resolveDeptLeader(&dept), warns
 	case models.ManagerSourceOrgLeader:
-		dept, ok := r.depts[org.DeptID]
-		if !ok || dept.Leader == nil {
+		// 机构负责人：取目标机构节点部门（org.DeptID）的 leader。
+		// 目标机构遵循 resolveTargetOrg（自身/上级/指定），与 org_head/post_holder 语义一致；
+		// 未配置目标机构时即自身机构，与旧行为兼容。
+		targetOrgID, terr := r.resolveTargetOrg(rule, org)
+		if terr != nil {
+			warns = append(warns, terr.Error())
+			return "", warns
+		}
+		targetOrg, ok := r.orgByID[targetOrgID]
+		if !ok {
+			warns = append(warns, fmt.Sprintf("目标机构 %s 不存在", targetOrgID))
+			return "", warns
+		}
+		dept, ok := r.depts[targetOrg.DeptID]
+		if !ok || dept.Leader == nil || *dept.Leader == "" {
 			return "", warns
 		}
 		return *dept.Leader, warns

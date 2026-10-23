@@ -424,6 +424,32 @@ const UserManagement: FC = () => {
     };
   }, [userIdsKey]);
 
+  // ==================== 职位下拉（数据源：岗位管理 sys_post） ====================
+
+  // 职位下拉选项 = 启用中的岗位名称。title 列本身是自由文本（AD 同步会写入
+  // AD 侧 title 原文），值不在岗位列表时 Select 直接显示原文本，不丢数据。
+  const [postTitleOptions, setPostTitleOptions] = useState<{ value: string }[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    post<{ list: { postName: string }[]; total: number }>("/system/posts/list", {
+      current: 1,
+      pageSize: 200,
+      status: 0,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        const names = Array.from(new Set((res.data?.list ?? []).map((p) => p.postName)));
+        setPostTitleOptions(names.map((n) => ({ value: n })));
+      })
+      .catch(() => {
+        /* 拉取失败降级为无选项的可输入下拉，不阻塞表单 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ==================== 初始化 ====================
 
   useEffect(() => {
@@ -836,7 +862,14 @@ const UserManagement: FC = () => {
               <Input placeholder="请输入手机号" className="user-form-input" />
             </Form.Item>
             <Form.Item name="title" label="职位">
-              <Input placeholder="请输入职位" className="user-form-input" />
+              <Select
+                className="user-form-input"
+                showSearch
+                allowClear
+                placeholder="请选择职位"
+                options={postTitleOptions}
+                optionFilterProp="value"
+              />
             </Form.Item>
             <Form.Item name="gender" label="性别" initialValue={2}>
               <Select className="user-form-input" onSearch={() => {}}>
