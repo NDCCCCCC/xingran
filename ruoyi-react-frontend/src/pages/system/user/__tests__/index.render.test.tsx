@@ -1,14 +1,23 @@
 /**
  * Phase 88 Batch104 — system/user 页面渲染(150 stmts, 33.3% → 高)
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
+import { createApiMock } from "@/test/utils/createApiMock";
 import UserManagement from "../index";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
   return createApiTestingModule();
+});
+
+// 页面 useEffect 会拉职位下拉（/system/posts/list），未登记时通用回退 spy
+// 返回 undefined 导致 .then 抛 TypeError——此处显式登记安全空结构
+beforeEach(() => {
+  createApiMock("/system/posts/list").endpoint.mockResolvedValue({
+    data: { list: [], total: 0, current: 1, pageSize: 200 },
+  });
 });
 
 function renderUser(endpoints: Record<string, unknown> = {}) {
