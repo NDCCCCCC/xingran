@@ -6,6 +6,7 @@
 import { useState, useCallback } from "react";
 import type { JobInfo, JobLog, SearchFormState } from "../types";
 import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 import type { PageResponse } from "@/types";
 
 export interface UseJobDataParams {
@@ -31,6 +32,8 @@ export interface UseJobDataReturn {
   jobLogStats: JobLogStats;
   loading: boolean;
   total: number;
+  /** FIX-04b: 任务列表加载失败的可重试错误 */
+  error: unknown;
 
   // 数据操作方法
   setJobs: React.Dispatch<React.SetStateAction<JobInfo[]>>;
@@ -55,6 +58,8 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
   const [jobLogStats, setJobLogStats] = useState<JobLogStats>({ total: 0, success: 0, fail: 0 });
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  // FIX-04b: 列表加载失败的可重试错误
+  const [error, setError] = useState<unknown>(null);
 
   // 获取任务列表
   const fetchJobs = useCallback(
@@ -95,8 +100,9 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
 
         setJobs(result.data?.list || []);
         setTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("获取任务列表失败:", error);
+        setError(error);
       } finally {
         setLoading(false);
       }
@@ -118,7 +124,7 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
         fail: result.data?.fail ?? 0,
       });
     } catch (error) {
-      console.error("获取任务日志统计失败:", error);
+      handleApiError(error, "获取任务日志统计", false);
     }
   }, []);
 
@@ -145,7 +151,7 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
         // 顺带刷新统计（开抽屉 / 点刷新都覆盖）
         fetchJobStats(jobName, jobGroup);
       } catch (error) {
-        console.error("获取任务日志失败:", error);
+        handleApiError(error, "获取任务日志", false);
       }
     },
     [fetchJobStats]
@@ -157,6 +163,7 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
     jobLogStats,
     loading,
     total,
+    error,
     setJobs,
     setJobLogs,
     setTotal,

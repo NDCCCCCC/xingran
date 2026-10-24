@@ -27,6 +27,7 @@ import {
   writeDot1xEnable,
   writeDot1xDisable,
 } from "@/lib/api/networkApi";
+import { handleApiError } from "@/utils/errorHandler";
 import {
   PRESET_REASONS,
   ACTION_TITLE,
@@ -128,7 +129,7 @@ export function PortWriteModal({
         // validateFields 失败抛 errorFields, antd 自动标红字段, 不需 Toast
         if (err && typeof err === "object" && "errorFields" in err) return;
         // WR-01: 非预期校验异常不再 throw 冒泡到 antd onOk 形成未处理 Promise rejection
-        console.error("[PortWriteModal] validateFields unexpected error:", err);
+        handleApiError(err, "表单校验", false);
         return;
       }
 

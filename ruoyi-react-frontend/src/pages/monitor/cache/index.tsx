@@ -40,6 +40,8 @@ import ActionButtons from "@/components/shared/ActionButtons";
 import { usePagination } from "@/hooks/usePagination";
 import type { PageResponse } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
+import { handleApiError } from "@/utils/errorHandler";
+import { ErrorAlertWithRetry } from "@/components/shared";
 
 // 导入提取的文件
 import type { CacheInfo, CacheMonitor, CacheSearchForm } from "./types";
@@ -180,6 +182,8 @@ const CacheManager: FC = () => {
   const { message } = App.useApp();
   // 状态管理
   const [caches, setCaches] = useState<CacheInfo[]>([]);
+  // FIX-04b: 列表/监控数据加载失败的可重试错误
+  const [cacheError, setCacheError] = useState<unknown>(null);
   const [monitor, setMonitor] = useState<CacheMonitor | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchForm, setSearchForm] = useState<CacheSearchForm>({
@@ -233,9 +237,9 @@ const CacheManager: FC = () => {
 
         setCaches(result.data?.list || []);
         setTotal(result.data?.total || 0);
+        setCacheError(null);
       } catch (error) {
-        console.error("获取缓存列表失败:", error);
-        message.error("网络错误，请稍后重试");
+        setCacheError(error);
       } finally {
         setLoading(false);
       }
@@ -248,9 +252,9 @@ const CacheManager: FC = () => {
     try {
       const result = await post<CacheMonitor>("/monitor/cache/monitor", {});
       setMonitor(result.data || null);
+      setCacheError(null);
     } catch (error) {
-      console.error("获取监控数据失败:", error);
-      message.error("获取监控数据失败");
+      setCacheError(error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
@@ -271,8 +275,7 @@ const CacheManager: FC = () => {
       // fetchCaches 内部用 orderByColumn/isAsc state 兜底，无需重传
       fetchCaches();
     } catch (error) {
-      console.error("操作失败:", error);
-      message.error("操作失败");
+      handleApiError(error, "缓存操作");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [form, fetchCaches]);
@@ -289,8 +292,7 @@ const CacheManager: FC = () => {
         // fetchCaches 内部用 orderByColumn/isAsc state 兜底，无需重传
         fetchCaches();
       } catch (error) {
-        console.error("批量操作失败:", error);
-        message.error("批量操作失败");
+        handleApiError(error, "批量操作");
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
@@ -311,8 +313,7 @@ const CacheManager: FC = () => {
           fetchCaches();
           fetchMonitor();
         } catch (error) {
-          console.error("清空失败:", error);
-          message.error("清空失败");
+          handleApiError(error, "清空缓存");
         }
       },
     });
@@ -328,8 +329,7 @@ const CacheManager: FC = () => {
       exportCacheAsJson(result.data || []);
       message.success("导出成功");
     } catch (error) {
-      console.error("导出失败:", error);
-      message.error("导出失败");
+      handleApiError(error, "导出缓存");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [searchForm]);
@@ -374,8 +374,7 @@ const CacheManager: FC = () => {
           ),
         });
       } catch (error) {
-        console.error("获取缓存详情失败:", error);
-        message.error("获取缓存详情失败");
+        handleApiError(error, "获取缓存详情");
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
@@ -464,6 +463,16 @@ const CacheManager: FC = () => {
 
   return (
     <div className="p-6">
+      {/* FIX-04b: 列表加载失败可重试错误条 */}
+      {!!cacheError && (
+        <ErrorAlertWithRetry
+          error={cacheError}
+          onRetry={() => {
+            fetchCaches();
+            fetchMonitor();
+          }}
+        />
+      )}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-4">缓存管理</h1>
 

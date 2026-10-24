@@ -38,6 +38,7 @@ import CronSelector from "@/components/CronSelector";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { ErrorAlertWithRetry } from "@/components/shared";
 import type { JobInfo, JobLog } from "./types";
 
 const { TextArea } = Input;
@@ -86,6 +87,7 @@ const JobManager: FC = () => {
     jobLogStats,
     loading,
     total: _total,
+    error: jobError,
     fetchJobs,
     fetchJobLogs,
   } = useJobData({
@@ -183,6 +185,8 @@ const JobManager: FC = () => {
 
   return (
     <div className="p-6">
+      {/* FIX-04b: 列表加载失败可重试错误条 */}
+      {!!jobError && <ErrorAlertWithRetry error={jobError} onRetry={() => fetchJobs()} />}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-4">定时任务管理</h1>
 

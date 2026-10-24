@@ -60,6 +60,7 @@ import {
   validateReasonRequired,
 } from "./constants";
 import { showAuditLinkToast } from "./PortWriteModal";
+import { handleApiError } from "@/utils/errorHandler";
 
 type DrawerPhase = "select" | "executing" | "result";
 
@@ -179,7 +180,7 @@ export function BulkWriteDrawer({
       // validateFields 校验失败抛含 errorFields 的对象, antd 自动标红字段, 直接 return
       if (err && typeof err === "object" && "errorFields" in err) return;
       // WR-01: 非预期校验异常不再 throw 冒泡到 antd onOk/onClick 形成未处理 Promise rejection
-      console.error("[BulkWriteDrawer] validateFields unexpected error:", err);
+      handleApiError(err, "表单校验", false);
       return;
     }
 

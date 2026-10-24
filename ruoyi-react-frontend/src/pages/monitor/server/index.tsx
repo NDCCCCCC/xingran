@@ -28,6 +28,8 @@ import { usePagination } from "@/hooks/usePagination";
 import type { ColumnsType } from "antd/es/table";
 import type { PageResponse } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { ErrorAlertWithRetry } from "@/components/shared";
+import { handleApiError } from "@/utils/errorHandler";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
 
@@ -61,6 +63,8 @@ interface ServerMetrics {
 const ServerMonitor: FC = () => {
   const { message } = App.useApp();
   const [servers, setServers] = useState<ServerInfo[]>([]);
+  // FIX-04b: 列表加载失败的可重试错误
+  const [serverError, setServerError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [searchForm, setSearchForm] = useState({
     hostName: "",
@@ -88,9 +92,9 @@ const ServerMonitor: FC = () => {
 
       setServers(result.data?.list || []);
       setTotal(result.data?.total || 0);
+      setServerError(null);
     } catch (error) {
-      console.error("获取服务器列表失败:", error);
-      message.error("网络错误，请稍后重试");
+      setServerError(error);
     } finally {
       setLoading(false);
     }
@@ -110,7 +114,7 @@ const ServerMonitor: FC = () => {
       });
       // 历史指标数据已获取但暂未使用
     } catch (error) {
-      console.error("获取服务器指标历史失败:", error);
+      handleApiError(error, "获取服务器指标历史", false);
     }
   };
 
@@ -320,6 +324,8 @@ const ServerMonitor: FC = () => {
 
   return (
     <div className="p-6">
+      {/* FIX-04b: 列表加载失败可重试错误条 */}
+      {!!serverError && <ErrorAlertWithRetry error={serverError} onRetry={fetchServers} />}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-4">服务器监控</h1>
 

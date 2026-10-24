@@ -7,6 +7,7 @@ import { useCallback, useState } from "react";
 import { Modal, App } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 
 export interface UseLogActionsParams {
   activeTab: string;
@@ -60,8 +61,7 @@ export function useLogActions(params: UseLogActionsParams): UseLogActionsReturn 
             fetchLoginLogs();
           }
         } catch (error) {
-          console.error("清空日志失败:", error);
-          message.error("网络错误，请稍后重试");
+          handleApiError(error, "清空日志");
         }
       },
     });

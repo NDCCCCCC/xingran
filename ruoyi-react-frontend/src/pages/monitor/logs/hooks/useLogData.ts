@@ -23,6 +23,8 @@ export interface UseLogDataReturn {
   loginLogs: LoginLog[];
   loading: boolean;
   total: number;
+  /** FIX-04b: 列表加载失败的可重试错误 */
+  error: unknown;
 
   // 数据操作方法
   setOperLogs: React.Dispatch<React.SetStateAction<OperLog[]>>;
@@ -40,6 +42,8 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  // FIX-04b: 列表加载失败的可重试错误
+  const [error, setError] = useState<unknown>(null);
 
   // 获取操作日志
   const fetchOperLogs = useCallback(
@@ -62,9 +66,9 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
 
         setOperLogs(result.data?.list || []);
         setTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("获取操作日志失败:", error);
-        message.error("网络错误，请稍后重试");
+        setError(error);
       } finally {
         setLoading(false);
       }
@@ -96,9 +100,9 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
 
         setLoginLogs(result.data?.list || []);
         setTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("获取登录日志失败:", error);
-        message.error("网络错误，请稍后重试");
+        setError(error);
       } finally {
         setLoading(false);
       }
@@ -111,6 +115,7 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
     loginLogs,
     loading,
     total,
+    error,
     setOperLogs,
     setLoginLogs,
     setTotal,

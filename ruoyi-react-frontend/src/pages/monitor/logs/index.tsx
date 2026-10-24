@@ -38,6 +38,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import type { BaseResponse, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { handleApiError } from "@/utils/errorHandler";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -187,8 +188,7 @@ const LogMonitor: React.FC = () => {
           message.success("清空成功");
           currentManager.handleRefresh();
         } catch (error) {
-          console.error("清空日志失败:", error);
-          message.error("清空失败");
+          handleApiError(error, "清空日志");
         }
       },
     });
