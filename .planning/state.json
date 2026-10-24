@@ -1,7 +1,7 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.21 — AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)",
+  "milestone": "v1.22",
   "phases": [
     {
       "number": "57",
@@ -35,9 +35,9 @@
     }
   ],
   "next": {
-    "command": "/gsd-progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd-discuss-phase",
+    "label": "Discuss the first phase",
+    "reason": "Project initialized — plan your first phase"
   },
-  "updated_at": "2026-10-22T12:22:49.396Z"
+  "updated_at": "2026-10-23T13:45:35.421Z"
 }
