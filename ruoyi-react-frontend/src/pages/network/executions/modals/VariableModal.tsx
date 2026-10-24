@@ -23,7 +23,15 @@ export function VariableModal({
   onCancel,
 }: VariableModalProps) {
   return (
-    <Modal title="模板变量" open={open} onOk={onOk} onCancel={onCancel} width={600}>
+    <Modal
+      title="模板变量"
+      maskClosable={false}
+      keyboard={false}
+      open={open}
+      onOk={onOk}
+      onCancel={onCancel}
+      width={600}
+    >
       <Form form={form} layout="vertical">
         {selectedTemplate?.variables &&
           Object.entries(selectedTemplate.variables).map(([key, defaultValue]) => (

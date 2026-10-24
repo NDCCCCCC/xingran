@@ -728,6 +728,8 @@ const CacheManager: FC = () => {
       {/* 操作缓存模态框 */}
       <Modal
         title="缓存操作"
+        maskClosable={false}
+        keyboard={false}
         open={operateModalVisible}
         onCancel={() => setOperateModalVisible(false)}
         onOk={handleOperate}
@@ -778,6 +780,8 @@ const CacheManager: FC = () => {
       {/* 统计信息模态框 */}
       <Modal
         title="缓存统计信息"
+        maskClosable={false}
+        keyboard={false}
         open={statsModalVisible}
         onCancel={() => setStatsModalVisible(false)}
         footer={null}

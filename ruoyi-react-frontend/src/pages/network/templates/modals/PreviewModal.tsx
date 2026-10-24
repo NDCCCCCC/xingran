@@ -15,6 +15,8 @@ export function TemplatePreviewModal({ open, content, onClose }: TemplatePreview
   return (
     <Modal
       title="模板预览"
+      maskClosable={false}
+      keyboard={false}
       open={open}
       onCancel={onClose}
       footer={[

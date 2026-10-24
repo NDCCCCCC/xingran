@@ -44,6 +44,8 @@ export function TemplateVariablesModal({ open, variables, onClose }: TemplateVar
   return (
     <Modal
       title="模板变量"
+      maskClosable={false}
+      keyboard={false}
       open={open}
       onCancel={onClose}
       footer={[

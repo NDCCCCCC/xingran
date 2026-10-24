@@ -25,6 +25,8 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
   return (
     <Modal
       title="创建设备发现任务"
+      maskClosable={false}
+      keyboard={false}
       open={open}
       onOk={() => onOk(form)}
       onCancel={() => {

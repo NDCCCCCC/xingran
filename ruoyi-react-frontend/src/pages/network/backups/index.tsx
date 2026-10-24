@@ -688,6 +688,8 @@ const ConfigBackupPage: FC = () => {
       {/* 创建备份模态框 */}
       <Modal
         title="创建配置备份"
+        maskClosable={false}
+        keyboard={false}
         open={backupModalVisible}
         onOk={() => handleBackup(backupForm)}
         onCancel={() => closeBackupModal(backupForm)}
@@ -728,6 +730,8 @@ const ConfigBackupPage: FC = () => {
             <span>选择还原版本 - {selectedDeviceGroup?.deviceName}</span>
           </Space>
         }
+        maskClosable={false}
+        keyboard={false}
         open={restoreModalVisible}
         onCancel={() => {
           closeRestoreModal();
@@ -945,6 +949,8 @@ const ConfigBackupPage: FC = () => {
       {/* 差异对比模态框 */}
       <Modal
         title="配置差异对比"
+        maskClosable={false}
+        keyboard={false}
         open={diffModalVisible}
         onCancel={closeDiffModal}
         footer={[

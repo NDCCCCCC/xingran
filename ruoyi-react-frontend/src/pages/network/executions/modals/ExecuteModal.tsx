@@ -40,6 +40,8 @@ export function ConfigExecuteModal({
   return (
     <Modal
       title="执行配置模板"
+      maskClosable={false}
+      keyboard={false}
       open={open}
       onOk={async () => {
         await onOk();

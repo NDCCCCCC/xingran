@@ -34,6 +34,8 @@ export function CommandDispatchModal({
   return (
     <Modal
       title="快速命令分发"
+      maskClosable={false}
+      keyboard={false}
       open={open}
       onOk={async () => {
         await onOk();

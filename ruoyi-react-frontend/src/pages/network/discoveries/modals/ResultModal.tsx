@@ -38,6 +38,8 @@ export function ResultModal({
   return (
     <Modal
       title={`发现结果 - ${currentDiscovery?.taskName || ""}`}
+      maskClosable={false}
+      keyboard={false}
       open={open}
       onCancel={onClose}
       width={900}
