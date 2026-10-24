@@ -50,7 +50,8 @@ import {
   formatDateTime as cacheFormatDateTime,
   exportCacheAsJson,
 } from "./utils";
-import { createSorter } from "@/utils/tableHelpers";
+import { createSorterMeta } from "@/utils/tableHelpers";
+import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 
 const { TextArea } = Input;
 
@@ -61,10 +62,11 @@ interface CacheTableColumnsProps {
   handleBatchOperate: (operation: string, keys: string[]) => void;
   formatTTL: (seconds: number) => string;
   formatMemorySize: (bytes: number) => string;
+  getSortOrder: (field: string) => "ascend" | "descend" | null;
 }
 
 function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheInfo> {
-  const { handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize } = props;
+  const { handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize, getSortOrder } = props;
 
   return [
     {
@@ -73,7 +75,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       key: "key",
       width: 300,
       ellipsis: true,
-      sorter: createSorter<CacheInfo>("key", "string"),
+      sortOrder: getSortOrder("key"),
       render: (text: string) => (
         <code className="bg-gray-100 px-2 py-1 rounded text-xs">{text}</code>
       ),
@@ -83,7 +85,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "type",
       key: "type",
       width: 100,
-      sorter: createSorter<CacheInfo>("type", "string"),
+      sortOrder: getSortOrder("type"),
       render: (type: string) => <Tag color="blue">{type}</Tag>,
     },
     {
@@ -91,7 +93,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "location",
       key: "location",
       width: 120,
-      sorter: createSorter<CacheInfo>("location", "string"),
+      sortOrder: getSortOrder("location"),
       render: (location: string) => {
         const config = LEVEL_TAG_CONFIG[location];
         if (config) {
@@ -105,7 +107,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "ttl",
       key: "ttl",
       width: 120,
-      sorter: createSorter<CacheInfo>("ttl", "number"),
+      sortOrder: getSortOrder("ttl"),
       render: (ttl: number) => <Tag color={ttl > 0 ? "green" : "default"}>{formatTTL(ttl)}</Tag>,
     },
     {
@@ -113,7 +115,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "size",
       key: "size",
       width: 100,
-      sorter: createSorter<CacheInfo>("size", "number"),
+      sortOrder: getSortOrder("size"),
       render: (size: number) => formatMemorySize(size),
     },
     {
@@ -121,7 +123,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
-      sorter: createSorter<CacheInfo>("createdAt", "date"),
+      sortOrder: getSortOrder("createdAt"),
       render: (value: string) => cacheFormatDateTime(value),
     },
     {
@@ -129,7 +131,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "updatedAt",
       key: "updatedAt",
       width: 180,
-      sorter: createSorter<CacheInfo>("updatedAt", "date"),
+      sortOrder: getSortOrder("updatedAt"),
       render: (value: string) => cacheFormatDateTime(value),
     },
     {
@@ -188,8 +190,29 @@ const CacheManager: FC = () => {
   const [operateModalVisible, setOperateModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [form] = Form.useForm();
-  const [orderByColumn, setOrderByColumn] = useState("createdAt");
-  const [isAsc, setIsAsc] = useState(false);
+
+  // FIX-03a: 服务端排序（useServerSort，字段名对齐后端 cacheAllowedSortFields）
+  const cacheSorterMetas = useMemo(
+    () => [
+      createSorterMeta<CacheInfo>("key"),
+      createSorterMeta<CacheInfo>("type"),
+      createSorterMeta<CacheInfo>("location"),
+      createSorterMeta<CacheInfo>("ttl", "number"),
+      createSorterMeta<CacheInfo>("size", "number"),
+      createSorterMeta<CacheInfo>("createdAt", "date"),
+      createSorterMeta<CacheInfo>("updatedAt", "date"),
+    ],
+    []
+  );
+  const {
+    orderByColumn,
+    isAsc,
+    sortOrder: cacheSortOrder,
+    handleTableChange: handleSortChange,
+  } = useServerSort<CacheInfo>({
+    sorterMetas: cacheSorterMetas,
+    defaultSort: { orderByColumn: "createdAt", isAsc: false },
+  });
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -197,15 +220,15 @@ const CacheManager: FC = () => {
   // ==================== 数据获取 ====================
 
   const fetchCaches = useCallback(
-    async (sortCol?: string, sortAsc?: boolean) => {
+    async (sort?: { orderByColumn?: string; isAsc?: boolean }) => {
       setLoading(true);
       try {
         const result = await post<PageResponse<CacheInfo>>("/monitor/cache/list", {
           ...searchForm,
           current: paginationProps.current,
           pageSize: paginationProps.pageSize,
-          orderByColumn: sortCol ?? orderByColumn,
-          isAsc: sortAsc ?? isAsc,
+          orderByColumn: sort ? sort.orderByColumn : orderByColumn,
+          isAsc: sort ? sort.isAsc : isAsc,
         });
 
         setCaches(result.data?.list || []);
@@ -382,17 +405,21 @@ const CacheManager: FC = () => {
 
   const handleTableChange = useCallback(
     (pagination: any, _filters: Record<string, any>, sorter: any) => {
-      if (sorter && sorter.field) {
-        setOrderByColumn(sorter.field);
-        setIsAsc(sorter.order === "ascend");
+      handleSortChange(pagination, _filters, sorter);
+      const resolved = resolveSorter(sorter, cacheSorterMetas);
+      // 排序操作（点击了可排序列头）时页码回到第 1 页
+      const activeSorter = Array.isArray(sorter) ? sorter[sorter.length - 1] : sorter;
+      if (activeSorter && activeSorter.column) {
+        // 排序操作（点击了可排序列头）时页码回到第 1 页
+        setCurrent(1);
+      } else {
+        // 分页操作
+        setCurrent(pagination.current);
+        setPageSize(pagination.pageSize);
       }
-      setCurrent(pagination.current);
-      setPageSize(pagination.pageSize);
-      const sortField = sorter && sorter.field ? sorter.field : undefined;
-      const sortAsc = sorter && sorter.field ? sorter.order === "ascend" : undefined;
-      fetchCaches(sortField, sortAsc);
+      fetchCaches({ orderByColumn: resolved.orderByColumn, isAsc: resolved.isAsc });
     },
-    [fetchCaches, setCurrent, setPageSize, setOrderByColumn, setIsAsc]
+    [handleSortChange, cacheSorterMetas, setCurrent, setPageSize, fetchCaches]
   );
 
   // ==================== 初始化 ====================
@@ -426,9 +453,13 @@ const CacheManager: FC = () => {
         handleBatchOperate,
         formatTTL,
         formatMemorySize,
+        getSortOrder: (field) =>
+          orderByColumn === field
+            ? ((cacheSortOrder ?? null) as "ascend" | "descend" | null)
+            : null,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- imported helpers are stable
-    [handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize]
+    [handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize, orderByColumn, cacheSortOrder]
   );
 
   return (
