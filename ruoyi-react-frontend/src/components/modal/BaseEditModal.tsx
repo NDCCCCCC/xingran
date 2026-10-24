@@ -26,8 +26,10 @@ export interface BaseEditModalProps {
   /** 底部按钮文案 */
   okText?: string;
   cancelText?: string;
-  /** 是否允许点击蒙层关闭（默认 true） */
+  /** 是否允许点击蒙层关闭（默认 false，防误关丢失表单内容） */
   maskClosable?: boolean;
+  /** 是否允许按 ESC 关闭（默认 false，防误关丢失表单内容） */
+  keyboard?: boolean;
   children: ReactNode;
 }
 
@@ -41,7 +43,8 @@ function BaseEditModalImpl({
   width = 520,
   okText = "确定",
   cancelText = "取消",
-  maskClosable = true,
+  maskClosable = false,
+  keyboard = false,
   children,
 }: BaseEditModalProps) {
   return (
@@ -56,6 +59,7 @@ function BaseEditModalImpl({
       okText={okText}
       cancelText={cancelText}
       maskClosable={maskClosable}
+      keyboard={keyboard}
       destroyOnHidden
     >
       {children}
