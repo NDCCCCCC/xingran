@@ -519,6 +519,7 @@ const Exceptions = () => {
         title="标记异常已解决"
         open={resolveModal.open}
         onOk={handleResolveSubmit}
+        cancelButtonProps={{ disabled: resolveModal.submitting }}
         onCancel={() => {
           if (resolveModal.submitting) return;
           setResolveModal({ open: false, exceptionId: null, note: "", submitting: false });

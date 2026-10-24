@@ -73,6 +73,7 @@ const ADOUPage: FC = () => {
   const [deptMapping, setDeptMapping] = useState<OUDeptMappingResponse | null>(null);
   const [mappingLoading, setMappingLoading] = useState(false);
   const [deptModalVisible, setDeptModalVisible] = useState(false);
+  const [mappingSubmitting, setMappingSubmitting] = useState(false);
   // 部门树 — 通过 React Query 全局共享缓存 (D-13 Step 2)
   const { data: deptTreeData, isLoading: deptTreeLoading } = useDeptTree();
   const deptTree: Department[] = (deptTreeData ?? []) as Department[];
@@ -651,7 +652,15 @@ const ADOUPage: FC = () => {
       <Modal
         title="选择关联部门"
         open={deptModalVisible}
-        onOk={handleUpdateMapping}
+        onOk={async () => {
+          setMappingSubmitting(true);
+          try {
+            await handleUpdateMapping();
+          } finally {
+            setMappingSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: mappingSubmitting }}
         onCancel={() => {
           setDeptModalVisible(false);
           setSelectedDeptId("");

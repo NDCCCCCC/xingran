@@ -66,6 +66,7 @@ const VirtualMachineList: React.FC = () => {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [quickCreateModalVisible, setQuickCreateModalVisible] = useState(false);
   const [bindUserModalVisible, setBindUserModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedVM, setSelectedVM] = useState<VirtualMachine | null>(null);
   const [form] = Form.useForm();
   const [quickCreateForm] = Form.useForm();
@@ -967,7 +968,15 @@ const VirtualMachineList: React.FC = () => {
       <Modal
         title="创建虚拟机"
         open={createModalVisible}
-        onOk={handleCreate}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleCreate();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setCreateModalVisible(false)}
         width={800}
       >
@@ -1193,7 +1202,15 @@ const VirtualMachineList: React.FC = () => {
       <Modal
         title="快速创建虚拟机"
         open={quickCreateModalVisible}
-        onOk={handleQuickCreate}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleQuickCreate();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setQuickCreateModalVisible(false)}
         width={600}
       >
@@ -1238,7 +1255,15 @@ const VirtualMachineList: React.FC = () => {
       <Modal
         title="绑定用户"
         open={bindUserModalVisible}
-        onOk={handleBindUser}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleBindUser();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           setBindUserModalVisible(false);
           bindUserForm.resetFields();

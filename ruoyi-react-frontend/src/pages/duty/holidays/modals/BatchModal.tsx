@@ -4,6 +4,7 @@
  */
 
 import { Modal, Button, DatePicker, Input, Select, Switch } from "antd";
+import { useState } from "react";
 import { PlusOutlined } from "@ant-design/icons";
 import type { DictItem } from "@/hooks/useDict";
 import type { BatchHolidayRow } from "../types";
@@ -34,11 +35,20 @@ export function HolidayBatchModal({
   onRemoveRow,
   onUpdateRow,
 }: HolidayBatchModalProps) {
+  const [submitting, setSubmitting] = useState(false);
   return (
     <Modal
       title="批量新增节假日"
       open={open}
-      onOk={onOk}
+      onOk={async () => {
+        setSubmitting(true);
+        try {
+          await onOk();
+        } finally {
+          setSubmitting(false);
+        }
+      }}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={onCancel}
       width={800}
       destroyOnHidden

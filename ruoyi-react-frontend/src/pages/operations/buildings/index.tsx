@@ -80,6 +80,7 @@ const BuildingManagement: FC = () => {
     defaultValue: "table",
   });
   const [importVisible, setImportVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
 
@@ -441,12 +442,19 @@ const BuildingManagement: FC = () => {
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
+              const confirmInstance = Modal.confirm({
                 title: "确定要删除这个楼宇吗？",
                 okText: "确定",
                 cancelText: "取消",
                 okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+                onOk: async () => {
+                  confirmInstance.update({ cancelButtonProps: { disabled: true } });
+                  try {
+                    await handleDelete(record.id);
+                  } finally {
+                    confirmInstance.update({ cancelButtonProps: { disabled: false } });
+                  }
+                },
               });
             },
           },
@@ -481,12 +489,19 @@ const BuildingManagement: FC = () => {
                   key="delete"
                   style={{ color: "var(--theme-error, #ba3630)" }}
                   onClick={() => {
-                    Modal.confirm({
+                    const confirmInstance = Modal.confirm({
                       title: "确定要删除这个楼宇吗？",
                       okText: "确定",
                       cancelText: "取消",
                       okButtonProps: { danger: true },
-                      onOk: () => handleDelete(building.id),
+                      onOk: async () => {
+                        confirmInstance.update({ cancelButtonProps: { disabled: true } });
+                        try {
+                          await handleDelete(building.id);
+                        } finally {
+                          confirmInstance.update({ cancelButtonProps: { disabled: false } });
+                        }
+                      },
                     });
                   }}
                 />,
@@ -715,7 +730,15 @@ const BuildingManagement: FC = () => {
           <Modal
             title={editingBuilding ? "编辑楼宇" : "新增楼宇"}
             open={modalVisible}
-            onOk={handleSave}
+            onOk={async () => {
+              setSubmitting(true);
+              try {
+                await handleSave();
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            cancelButtonProps={{ disabled: submitting }}
             onCancel={() => {
               setModalVisible(false);
               buildingForm.resetFields();

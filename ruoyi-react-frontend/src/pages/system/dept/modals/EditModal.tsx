@@ -3,7 +3,7 @@
  * 部门编辑模态框
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Form, Input, InputNumber, Select, Space, TreeSelect } from "antd";
 import type { FormInstance } from "antd/es/form";
 import { UserOutlined } from "@ant-design/icons";
@@ -37,6 +37,7 @@ export function DeptEditModal({
   onParentChange,
   onLeaderChange,
 }: DeptEditModalProps) {
+  const [submitting, setSubmitting] = useState(false);
   // 当editingDept变化时，设置表单值
   useEffect(() => {
     if (open && editingDept) {
@@ -52,8 +53,14 @@ export function DeptEditModal({
       title={editingDept ? "编辑部门" : "新增部门"}
       open={open}
       onOk={async () => {
-        await onOk();
+        setSubmitting(true);
+        try {
+          await onOk();
+        } finally {
+          setSubmitting(false);
+        }
       }}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={() => {
         onCancel();
         form.resetFields();

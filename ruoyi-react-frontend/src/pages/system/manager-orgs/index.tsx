@@ -164,19 +164,22 @@ const ManagerOrgsPage: FC = () => {
   };
 
   const handleDelete = (record: ManagerOrg) => {
-    Modal.confirm({
+    const confirmInstance = Modal.confirm({
       title: "删除机构",
       content: `确定要删除机构「${record.orgName}」吗？`,
       okText: "确定",
       okType: "danger",
       cancelText: "取消",
       onOk: async () => {
+        confirmInstance.update({ cancelButtonProps: { disabled: true } });
         try {
           await deleteManagerOrg(record.id);
           handleSuccess("删除");
           loadList();
         } catch (error) {
           handleApiError(error, "删除");
+        } finally {
+          confirmInstance.update({ cancelButtonProps: { disabled: false } });
         }
       },
     });
@@ -190,7 +193,7 @@ const ManagerOrgsPage: FC = () => {
 
   /** 从部门架构自动生成机构映射（幂等，不覆盖手工修改） */
   const handleGenerateFromDept = () => {
-    Modal.confirm({
+    const confirmInstance = Modal.confirm({
       title: "从部门架构生成机构",
       content:
         "将扫描所有标记为「外部机构」（有职场）的部门，自动创建机构记录，" +
@@ -198,6 +201,7 @@ const ManagerOrgsPage: FC = () => {
       okText: "开始生成",
       cancelText: "取消",
       onOk: async () => {
+        confirmInstance.update({ cancelButtonProps: { disabled: true } });
         try {
           const result = await generateManagerOrgsFromDept();
           Modal.success({
@@ -217,6 +221,8 @@ const ManagerOrgsPage: FC = () => {
           loadList();
         } catch (error) {
           handleApiError(error, "从部门架构生成机构");
+        } finally {
+          confirmInstance.update({ cancelButtonProps: { disabled: false } });
         }
       },
     });
@@ -338,6 +344,7 @@ const ManagerOrgsPage: FC = () => {
         title={editingOrg ? "编辑机构" : "新增机构"}
         open={modalOpen}
         onOk={handleSubmit}
+        cancelButtonProps={{ disabled: saving }}
         onCancel={handleModalClose}
         destroyOnHidden
         width={560}

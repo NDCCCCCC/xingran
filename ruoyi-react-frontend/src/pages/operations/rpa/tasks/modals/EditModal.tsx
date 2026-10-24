@@ -131,6 +131,7 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
 export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskEditModalProps) {
   const { message } = App.useApp();
   const [actions, setActions] = useState<Action[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [aiEditorVisible, setAiEditorVisible] = useState(false);
 
   // 仅在新增模式下重置表单
@@ -263,7 +264,15 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
       <Modal
         title={editingTask ? "编辑 RPA 任务" : "新增 RPA 任务"}
         open={open}
-        onOk={handleOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={onCancel}
         width={900}
         destroyOnHidden

@@ -35,6 +35,7 @@ export function CaptchaUploadModal({
       onOk={async () => {
         await onOk();
       }}
+      cancelButtonProps={{ disabled: uploading }}
       onCancel={() => {
         onCancel();
         form.resetFields();

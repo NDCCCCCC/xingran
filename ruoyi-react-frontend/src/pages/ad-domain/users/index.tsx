@@ -69,6 +69,7 @@ const ADUserPage: FC = () => {
   const [ouSelectVisible, setOUSelectVisible] = useState(false);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const [editingUser, setEditingUser] = useState<ADUser | null>(null);
 
   const [moveModalVisible, setMoveModalVisible] = useState(false);
@@ -647,7 +648,15 @@ const ADUserPage: FC = () => {
       <Modal
         title="编辑用户"
         open={editModalVisible}
-        onOk={handleUpdateUser}
+        onOk={async () => {
+          setEditSubmitting(true);
+          try {
+            await handleUpdateUser();
+          } finally {
+            setEditSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: editSubmitting }}
         onCancel={() => setEditModalVisible(false)}
         width={600}
       >

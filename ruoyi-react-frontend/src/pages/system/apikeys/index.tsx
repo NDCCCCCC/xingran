@@ -124,6 +124,7 @@ const APIKeyManagement: FC = () => {
 
   // Modal 状态
   const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState(false);
   const [modalType, setModalType] = useState<"create" | "edit">("create");
   const [editingRecord, setEditingRecord] = useState<APIKey | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
@@ -702,7 +703,15 @@ const APIKeyManagement: FC = () => {
       <Modal
         title={modalType === "create" ? "创建 API 密钥" : "编辑 API 密钥"}
         open={modalVisible}
-        onOk={handleSubmit}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleSubmit();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setModalVisible(false)}
         width={600}
         destroyOnHidden

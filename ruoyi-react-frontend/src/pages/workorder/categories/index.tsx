@@ -43,6 +43,7 @@ const WorkOrderCategoryPage: FC = () => {
   const [treeData, setTreeData] = useState<DataNode[]>([]);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [editingRecord, setEditingRecord] = useState<WorkOrderCategory | null>(null);
 
   // 统一错误处理
@@ -257,7 +258,15 @@ const WorkOrderCategoryPage: FC = () => {
       <Modal
         title={editingRecord ? "编辑分类" : "新增分类"}
         open={modalVisible}
-        onOk={handleModalOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleModalOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setModalVisible(false)}
         width={600}
         destroyOnHidden

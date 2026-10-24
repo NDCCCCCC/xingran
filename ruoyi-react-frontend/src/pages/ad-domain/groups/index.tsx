@@ -68,6 +68,7 @@ const ADGroupPage: FC = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ADGroup | null>(null);
 
   const [addMemberVisible, setAddMemberVisible] = useState(false);
@@ -558,7 +559,15 @@ const ADGroupPage: FC = () => {
       <Modal
         title="编辑用户组"
         open={editModalVisible}
-        onOk={handleUpdateGroup}
+        onOk={async () => {
+          setEditSubmitting(true);
+          try {
+            await handleUpdateGroup();
+          } finally {
+            setEditSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: editSubmitting }}
         onCancel={() => setEditModalVisible(false)}
       >
         <Form layout="vertical">

@@ -23,6 +23,8 @@ import { findDeptNode, trimTitleToLastSegment } from "@/utils/deptUtils";
 import { STATUS_OPTIONS, TYPE_OPTIONS } from "../constants";
 import { BaseEditModal } from "@/components/modal/BaseEditModal";
 
+import { useState } from "react";
+
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -76,6 +78,7 @@ export function WorkstationEditModal({
   onDeptChange,
   onOrgChange,
 }: WorkstationEditModalProps) {
+  const [submitting, setSubmitting] = useState(false);
   // Phase 69 DICT-03: 新增默认工位类型取字典 isDefault 项（seed 为 "0" 固定工位，
   // 对齐 Workstation.WorkstationType gorm default:0）；字典空态回退静态 0（迁移前行为）
   const defaultType = useMemo(() => {
@@ -142,11 +145,17 @@ export function WorkstationEditModal({
       title={editingWorkstation ? "编辑工位" : "新增工位"}
       open={open}
       onOk={async () => {
-        // 验证表单并获取值
-        const values = await form.validateFields();
-        // 将表单值传递给父组件的 onOk 处理
-        await onOk(values);
+        setSubmitting(true);
+        try {
+          // 验证表单并获取值
+          const values = await form.validateFields();
+          // 将表单值传递给父组件的 onOk 处理
+          await onOk(values);
+        } finally {
+          setSubmitting(false);
+        }
       }}
+      cancelButtonDisabled={submitting}
       onCancel={() => {
         onCancel();
         form.resetFields();

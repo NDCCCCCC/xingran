@@ -4,6 +4,7 @@
  */
 
 import { Modal, Form, Select, Input } from "antd";
+import { useState } from "react";
 import type { CaptchaBackground } from "@/types/captcha";
 import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from "../constants";
 
@@ -19,14 +20,21 @@ export interface CaptchaEditModalProps {
 
 export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEditModalProps) {
   const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <Modal
       title="编辑背景图"
       open={open}
       onOk={async () => {
-        await onOk();
+        setSubmitting(true);
+        try {
+          await onOk();
+        } finally {
+          setSubmitting(false);
+        }
       }}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={() => {
         onCancel();
         form.resetFields();

@@ -221,19 +221,22 @@ const ManagerRulesPage: FC = () => {
   };
 
   const handleDelete = (record: ManagerRule) => {
-    Modal.confirm({
+    const confirmInstance = Modal.confirm({
       title: "删除规则",
       content: `确定要删除规则「${record.ruleName}」吗？`,
       okText: "确定",
       okType: "danger",
       cancelText: "取消",
       onOk: async () => {
+        confirmInstance.update({ cancelButtonProps: { disabled: true } });
         try {
           await deleteManagerRule(record.id);
           handleSuccess("删除");
           loadList();
         } catch (error) {
           handleApiError(error, "删除");
+        } finally {
+          confirmInstance.update({ cancelButtonProps: { disabled: false } });
         }
       },
     });
@@ -403,6 +406,7 @@ const ManagerRulesPage: FC = () => {
         title={editingRule ? "编辑规则" : "新增规则"}
         open={modalOpen}
         onOk={handleSubmit}
+        cancelButtonProps={{ disabled: saving }}
         onCancel={handleModalClose}
         destroyOnHidden
         width={620}

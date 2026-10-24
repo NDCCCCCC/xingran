@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { FC } from "react";
 import { Modal, Form, Input, InputNumber, Select } from "antd";
 import type { FormInstance } from "antd/es/form";
@@ -71,6 +71,7 @@ export const FloorModal: FC<FloorModalProps> = ({
   };
 
   const isDisabled = !!editingFloor;
+  const [submitting, setSubmitting] = useState(false);
 
   // 合并楼宇选项：优先使用部门特定选项，如果为空则使用全部选项
   const effectiveBuildingOptions =
@@ -80,7 +81,15 @@ export const FloorModal: FC<FloorModalProps> = ({
     <Modal
       title={editingFloor ? "编辑楼层" : "新增楼层"}
       open={visible}
-      onOk={handleOk}
+      onOk={async () => {
+        setSubmitting(true);
+        try {
+          await handleOk();
+        } finally {
+          setSubmitting(false);
+        }
+      }}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={handleCancel}
       width={600}
     >

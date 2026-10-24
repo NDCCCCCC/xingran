@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 信息点管理页面
  */
 
@@ -117,6 +117,7 @@ const InfoPointManagement: FC = () => {
     defaultValue: "table",
   });
   const [importVisible, setImportVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [workstationOptions, setWorkstationOptions] = useState<WorkstationOption[]>([]);
@@ -1018,7 +1019,15 @@ const InfoPointManagement: FC = () => {
         <Modal
           title={editingInfoPoint ? "编辑信息点" : "新增信息点"}
           open={modalVisible}
-          onOk={handleSave}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSave();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           onCancel={() => {
             setModalVisible(false);
             infoPointForm.resetFields();

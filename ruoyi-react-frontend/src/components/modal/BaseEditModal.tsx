@@ -19,6 +19,8 @@ export interface BaseEditModalProps {
   onCancel: () => void;
   /** 确认按钮 loading 状态 */
   confirmLoading?: boolean;
+  /** 提交期间禁用取消按钮 */
+  cancelButtonDisabled?: boolean;
   /** Modal 宽度（默认 520） */
   width?: number;
   /** 底部按钮文案 */
@@ -35,6 +37,7 @@ function BaseEditModalImpl({
   onOk,
   onCancel,
   confirmLoading = false,
+  cancelButtonDisabled = false,
   width = 520,
   okText = "确定",
   cancelText = "取消",
@@ -48,6 +51,7 @@ function BaseEditModalImpl({
       onOk={onOk}
       onCancel={onCancel}
       confirmLoading={confirmLoading}
+      cancelButtonProps={{ disabled: cancelButtonDisabled }}
       width={width}
       okText={okText}
       cancelText={cancelText}

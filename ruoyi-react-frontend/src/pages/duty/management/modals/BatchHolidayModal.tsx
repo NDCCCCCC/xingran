@@ -3,6 +3,7 @@
  */
 
 import { Modal, Form, Select, DatePicker, App } from "antd";
+import { useState } from "react";
 import { BATCH_HOLIDAY_NAME_OPTIONS, MAX_BATCH_DAYS } from "../constants";
 import type { BatchHolidayFormValues } from "../types";
 
@@ -18,8 +19,10 @@ interface BatchHolidayModalProps {
 export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModalProps) {
   const { message } = App.useApp();
   const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
 
   const handleOk = async () => {
+    setSubmitting(true);
     try {
       const values = await form.validateFields();
       const { dateRange } = values;
@@ -38,6 +41,8 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
       form.resetFields();
     } catch (_error) {
       // 表单验证失败
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -46,6 +51,7 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
       title="批量添加节假日"
       open={visible}
       onOk={handleOk}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={onCancel}
       destroyOnHidden
     >

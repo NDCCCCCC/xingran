@@ -271,6 +271,7 @@ const DutySchedulePage: FC = () => {
 
   // 使用弹窗管理 Hook
   const {
+    submitting,
     generateModalVisible,
     swapModalVisible,
     manualModalVisible,
@@ -595,6 +596,7 @@ const DutySchedulePage: FC = () => {
         title="生成排班"
         open={generateModalVisible}
         onOk={handleGenerate}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={closeGenerateModal}
         destroyOnHidden
       >
@@ -659,6 +661,7 @@ const DutySchedulePage: FC = () => {
         title="调班"
         open={swapModalVisible}
         onOk={handleSwap}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={closeSwapModal}
         destroyOnHidden
         width={600}
@@ -720,6 +723,7 @@ const DutySchedulePage: FC = () => {
         title="手动排班"
         open={manualModalVisible}
         onOk={handleManual}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={closeManualModal}
         destroyOnHidden
       >

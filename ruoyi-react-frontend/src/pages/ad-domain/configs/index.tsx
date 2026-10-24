@@ -61,6 +61,7 @@ const ADConfigPage: FC = () => {
   });
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [editingConfig, setEditingConfig] = useState<ADConfig | null>(null);
 
   // Phase 36: 详情 Drawer（含服务账号池 Tab）
@@ -377,7 +378,15 @@ const ADConfigPage: FC = () => {
       <Modal
         title={editingConfig ? "编辑AD配置" : "新增AD配置"}
         open={modalVisible}
-        onOk={handleSubmit}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleSubmit();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setModalVisible(false)}
         afterOpenChange={handleModalOpenChange}
         width={600}

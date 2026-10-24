@@ -81,6 +81,7 @@ const DedicatedLineManagement: FC = () => {
     defaultValue: "table",
   });
   const [importVisible, setImportVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [serverRooms, setServerRooms] = useState<ServerRoomOption[]>([]);
@@ -725,7 +726,15 @@ const DedicatedLineManagement: FC = () => {
         <Modal
           title={editingLine ? "编辑专线" : "新增专线"}
           open={modalVisible}
-          onOk={handleSave}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSave();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           onCancel={() => {
             setModalVisible(false);
             lineForm.resetFields();

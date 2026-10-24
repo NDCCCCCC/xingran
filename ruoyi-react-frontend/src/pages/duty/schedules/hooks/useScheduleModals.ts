@@ -26,6 +26,8 @@ export interface UseScheduleModalsReturn {
   generateModalVisible: boolean;
   swapModalVisible: boolean;
   manualModalVisible: boolean;
+  /** 提交中（禁用取消按钮） */
+  submitting: boolean;
 
   // 表单实例
   generateForm: FormInstance<unknown>;
@@ -63,6 +65,18 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
   const [generateModalVisible, setGenerateModalVisible] = useState(false);
   const [swapModalVisible, setSwapModalVisible] = useState(false);
   const [manualModalVisible, setManualModalVisible] = useState(false);
+  // STOP-04 B1: 提交中标记（三弹窗互斥，共用一个），用于禁用取消按钮
+  const [submitting, setSubmitting] = useState(false);
+
+  // 包装异步提交 handler：提交期间置 submitting，finally 复位
+  const wrapSubmitting = (fn: () => Promise<void>) => async () => {
+    setSubmitting(true);
+    try {
+      await fn();
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const [generateForm] = Form.useForm();
   const [swapForm] = Form.useForm();
@@ -166,6 +180,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
   );
 
   return {
+    submitting,
     generateModalVisible,
     swapModalVisible,
     manualModalVisible,
@@ -187,9 +202,9 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       setManualModalVisible(false);
       manualForm.resetFields();
     },
-    handleGenerate,
-    handleSwap,
-    handleManual,
+    handleGenerate: wrapSubmitting(handleGenerate),
+    handleSwap: wrapSubmitting(handleSwap),
+    handleManual: wrapSubmitting(handleManual),
     handleDelete,
     handleBatchDelete,
   };

@@ -230,6 +230,7 @@ const PeriodicTemplatePage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [logsDrawerVisible, setLogsDrawerVisible] = useState(false);
 
   // 使用全局分页 hook
@@ -422,7 +423,15 @@ const PeriodicTemplatePage: FC = () => {
       <Modal
         title={editingRecord ? "编辑模板" : "新增模板"}
         open={modalVisible}
-        onOk={handleModalOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleModalOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           setModalVisible(false);
           setEditingRecord(null);

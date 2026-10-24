@@ -327,6 +327,7 @@ const UserManagement: FC = () => {
 
   // 用户导入模态框
   const [importModalVisible, setImportModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Phase 69 DICT-03: 性别下拉迁 useDict("sys_user_sex")——字典管理页改 label 后
   // 搜索/编辑下拉与表格渲染随之变化；字典空态/接口异常时回退静态 GENDER_OPTIONS
@@ -827,7 +828,15 @@ const UserManagement: FC = () => {
         <Modal
           title={editingUser ? "编辑用户" : "新增用户"}
           open={editModalVisible}
-          onOk={handleSave}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSave();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           afterOpenChange={handleModalOpenChange}
           onCancel={() => setEditModalVisible(false)}
           width={600}
@@ -935,7 +944,15 @@ const UserManagement: FC = () => {
         <Modal
           title={`重置密码 - ${resettingUser?.username || ""}`}
           open={resetPasswordModalVisible}
-          onOk={handleSaveResetPassword}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSaveResetPassword();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           onCancel={closeResetPasswordModal}
           width={400}
         >

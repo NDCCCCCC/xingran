@@ -144,6 +144,7 @@ const MenuManagement: FC = () => {
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   // 使用数据管理 Hook
@@ -365,7 +366,15 @@ const MenuManagement: FC = () => {
       <Modal
         title={editingMenu ? "编辑菜单" : "新增菜单"}
         open={editModalVisible}
-        onOk={() => handleSave(editForm)}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleSave(editForm);
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         afterOpenChange={handleModalOpenChange}
         onCancel={() => {
           setEditModalVisible(false);

@@ -82,6 +82,7 @@ const ServerRoomManagement: FC = () => {
     defaultValue: "table",
   });
   const [importVisible, setImportVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [buildingOptions, setBuildingOptions] = useState<BuildingOption[]>([]);
@@ -589,7 +590,15 @@ const ServerRoomManagement: FC = () => {
         <Modal
           title={editingServerRoom ? "编辑机房" : "新增机房"}
           open={modalVisible}
-          onOk={handleSave}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSave();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           onCancel={() => {
             setModalVisible(false);
             serverRoomForm.resetFields();

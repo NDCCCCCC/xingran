@@ -282,13 +282,20 @@ const APIConfigPage: FC = () => {
             className="xr-op-danger"
             icon={<DeleteOutlined />}
             onClick={() => {
-              Modal.confirm({
+              const confirmInstance = Modal.confirm({
                 title: "删除 API 配置？",
                 content: "删除后不可恢复，使用该配置的通知推送将失败。",
                 okText: "删除",
                 okButtonProps: { danger: true },
                 cancelText: "取消",
-                onOk: () => handleDelete(record.id),
+                onOk: async () => {
+                  confirmInstance.update({ cancelButtonProps: { disabled: true } });
+                  try {
+                    await handleDelete(record.id);
+                  } finally {
+                    confirmInstance.update({ cancelButtonProps: { disabled: false } });
+                  }
+                },
               });
             }}
           >
@@ -406,6 +413,7 @@ const APIConfigPage: FC = () => {
         title={editingConfig ? "编辑API配置" : "新增API配置"}
         open={modalVisible}
         onOk={handleSubmit}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           setModalVisible(false);
           editForm.resetFields();

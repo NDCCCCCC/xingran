@@ -306,13 +306,20 @@ const EmailConfigPage: FC = () => {
             className="xr-op-danger"
             icon={<DeleteOutlined />}
             onClick={() => {
-              Modal.confirm({
+              const confirmInstance = Modal.confirm({
                 title: "删除邮箱配置？",
                 content: "删除后不可恢复，使用该配置的通知邮件将发送失败。",
                 okText: "删除",
                 okButtonProps: { danger: true },
                 cancelText: "取消",
-                onOk: () => handleDelete(record.id),
+                onOk: async () => {
+                  confirmInstance.update({ cancelButtonProps: { disabled: true } });
+                  try {
+                    await handleDelete(record.id);
+                  } finally {
+                    confirmInstance.update({ cancelButtonProps: { disabled: false } });
+                  }
+                },
               });
             }}
           >
@@ -423,6 +430,7 @@ const EmailConfigPage: FC = () => {
         title={editingConfig ? "编辑邮箱配置" : "新增邮箱配置"}
         open={modalVisible}
         onOk={handleSubmit}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           setModalVisible(false);
           editForm.resetFields();
@@ -510,6 +518,7 @@ const EmailConfigPage: FC = () => {
         title="测试邮件发送"
         open={testModalVisible}
         onOk={handleTest}
+        cancelButtonProps={{ disabled: testing }}
         onCancel={() => setTestModalVisible(false)}
       >
         <Form form={testForm} labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>

@@ -555,6 +555,7 @@ const FixSuggestion = () => {
         open={rejectModal.open}
         onCancel={() => setRejectModal({ open: false, suggestionId: null, submitting: false })}
         onOk={handleRejectSubmit}
+        cancelButtonProps={{ disabled: rejectModal.submitting }}
         okText="确认拒绝"
         okButtonProps={{ danger: true }}
       >

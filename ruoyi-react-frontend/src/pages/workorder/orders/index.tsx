@@ -233,6 +233,7 @@ const WorkOrderPage: FC = () => {
   const [commentForm] = Form.useForm();
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize } = usePagination();
@@ -706,7 +707,15 @@ const WorkOrderPage: FC = () => {
       <Modal
         title={editingRecord ? "编辑工单" : "新增工单"}
         open={modalVisible}
-        onOk={handleModalOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleModalOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setModalVisible(false)}
         width={700}
         destroyOnHidden

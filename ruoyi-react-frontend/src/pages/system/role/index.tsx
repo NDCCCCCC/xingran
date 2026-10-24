@@ -3,7 +3,7 @@
  * Role Management Page
  */
 
-import { useEffect, useCallback, useRef, useMemo, type FC } from "react";
+import { useEffect, useCallback, useRef, useMemo, useState, type FC } from "react";
 import {
   Table,
   Button,
@@ -41,6 +41,8 @@ const { Option } = Select;
 // ==================== 主组件 ====================
 
 const RoleManagement: FC = () => {
+  // STOP-04 B1: 提交中标记，用于禁用编辑弹窗取消按钮
+  const [submitting, setSubmitting] = useState(false);
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -344,7 +346,15 @@ const RoleManagement: FC = () => {
       <Modal
         title={editingRole ? "编辑角色" : "新增角色"}
         open={editModalVisible}
-        onOk={() => handleSave(editForm)}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleSave(editForm);
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         afterOpenChange={(open) => handleModalOpenChange(open, editForm)}
         onCancel={() => setEditModalVisible(false)}
         width={800}

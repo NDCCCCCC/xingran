@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Form,
   Input,
@@ -73,7 +73,7 @@ export interface NoticeFormProps {
   markdownContent: string;
   form: FormInstance;
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
   onExecutionTypeChange: (type: ExecutionType) => void;
   onChannelsChange: (channels: string[]) => void;
   onMarkdownContentChange: (content: string) => void;
@@ -117,19 +117,28 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
   const targetRoles = Form.useWatch("targetRoles", form) || [];
   const targetUsers = Form.useWatch("targetUsers", form) || [];
   const isMarkdown = Form.useWatch("isMarkdown", form) || false;
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await onSubmit();
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Modal
       title={editingNotice ? "编辑通知公告" : "新增通知公告"}
       open={visible}
-      onOk={onSubmit}
       onCancel={onCancel}
       width={900}
       footer={[
-        <Button key="cancel" onClick={onCancel}>
+        <Button key="cancel" onClick={onCancel} disabled={submitting}>
           取消
         </Button>,
-        <Button key="submit" type="primary" onClick={onSubmit}>
+        <Button key="submit" type="primary" onClick={handleSubmit} loading={submitting}>
           {editingNotice ? "更新" : "创建"}
         </Button>,
       ]}

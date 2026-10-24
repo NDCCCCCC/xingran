@@ -268,6 +268,8 @@ const DictManagement: FC = () => {
   const [typeForm] = Form.useForm();
   const [dataForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+  const [typeSubmitting, setTypeSubmitting] = useState(false);
+  const [dataSubmitting, setDataSubmitting] = useState(false);
   const location = useLocation();
   const [activeTab, setActiveTab] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
@@ -851,7 +853,15 @@ const DictManagement: FC = () => {
       <Modal
         title={editingType ? "编辑字典类型" : "新增字典类型"}
         open={typeModalVisible}
-        onOk={() => handleCreateType(typeForm)}
+        onOk={async () => {
+          setTypeSubmitting(true);
+          try {
+            await handleCreateType(typeForm);
+          } finally {
+            setTypeSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: typeSubmitting }}
         onCancel={() => {
           setTypeModalVisible(false);
           typeForm.resetFields();
@@ -897,7 +907,15 @@ const DictManagement: FC = () => {
       <Modal
         title={editingData ? "编辑字典数据" : "新增字典数据"}
         open={dataModalVisible}
-        onOk={() => handleCreateData(dataForm)}
+        onOk={async () => {
+          setDataSubmitting(true);
+          try {
+            await handleCreateData(dataForm);
+          } finally {
+            setDataSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: dataSubmitting }}
         onCancel={() => {
           setDataModalVisible(false);
           dataForm.resetFields();

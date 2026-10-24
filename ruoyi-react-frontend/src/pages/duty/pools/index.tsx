@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { FC } from "react";
 import {
   Button,
@@ -67,6 +67,7 @@ const DutyPoolPage: FC = () => {
     sortField === field ? (sortOrder ?? undefined) : undefined;
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DutyPool | null>(null);
 
   // 统计数据
@@ -471,7 +472,15 @@ const DutyPoolPage: FC = () => {
       <Modal
         title={editingRecord ? "编辑值班池" : "新增值班池"}
         open={modalVisible}
-        onOk={handleModalOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleModalOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         afterOpenChange={handleModalOpenChange}
         onCancel={() => setModalVisible(false)}
         width={600}

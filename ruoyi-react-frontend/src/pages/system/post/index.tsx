@@ -46,6 +46,7 @@ const PostManagement: FC = () => {
     active: 0,
     inactive: 0,
   });
+  const [submitting, setSubmitting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -429,7 +430,15 @@ const PostManagement: FC = () => {
       <BaseEditModal
         title={editingPost ? "编辑岗位" : "新增岗位"}
         open={modalVisible}
-        onOk={handleCreate}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleCreate();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonDisabled={submitting}
         onCancel={() => {
           setModalVisible(false);
           postForm.resetFields();

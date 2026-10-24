@@ -84,6 +84,7 @@ const RoomDeviceManagement: FC = () => {
     defaultValue: "table",
   });
   const [importVisible, setImportVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [roomOptions, setRoomOptions] = useState<RoomOption[]>([]);
@@ -688,7 +689,15 @@ const RoomDeviceManagement: FC = () => {
         <Modal
           title={editingDevice ? "编辑设备" : "新增设备"}
           open={modalVisible}
-          onOk={handleSave}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSave();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           onCancel={() => {
             setModalVisible(false);
             deviceForm.resetFields();

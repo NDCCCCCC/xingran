@@ -3,6 +3,7 @@
  */
 
 import { Modal, Form, Select, DatePicker } from "antd";
+import { useState } from "react";
 import type { DutyPool, SimpleUser } from "@/lib/dutyApi";
 import { DUTY_TYPE_OPTIONS, MANUAL_REASON_OPTIONS } from "../constants";
 
@@ -24,10 +25,16 @@ export function ManualScheduleModal({
   onCancel,
 }: ManualScheduleModalProps) {
   const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
 
   const handleOk = async () => {
-    await onOk();
-    form.resetFields();
+    setSubmitting(true);
+    try {
+      await onOk();
+      form.resetFields();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -35,6 +42,7 @@ export function ManualScheduleModal({
       title="手动排班"
       open={visible}
       onOk={handleOk}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={onCancel}
       destroyOnHidden
       width={500}

@@ -240,12 +240,19 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
+              const confirmInstance = Modal.confirm({
                 title: "确认删除?",
                 okText: "确定",
                 cancelText: "取消",
                 okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+                onOk: async () => {
+                  confirmInstance.update({ cancelButtonProps: { disabled: true } });
+                  try {
+                    await handleDelete(record.id);
+                  } finally {
+                    confirmInstance.update({ cancelButtonProps: { disabled: false } });
+                  }
+                },
               });
             },
           },
@@ -282,6 +289,7 @@ const DeviceManagement: FC = () => {
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -512,13 +520,14 @@ const DeviceManagement: FC = () => {
       return;
     }
     // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
-    Modal.confirm({
+    const confirmInstance = Modal.confirm({
       title: "确认批量删除",
       content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
       okText: "删除",
       cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
+        confirmInstance.update({ cancelButtonProps: { disabled: true } });
         try {
           await post("/network/devices/batch-delete", { ids: selectedRowKeys });
           message.success("已删除");
@@ -531,6 +540,8 @@ const DeviceManagement: FC = () => {
           loadStatistics();
         } catch (error) {
           handleApiError(error, "批量删除");
+        } finally {
+          confirmInstance.update({ cancelButtonProps: { disabled: false } });
         }
       },
     });
@@ -914,7 +925,15 @@ const DeviceManagement: FC = () => {
       <Modal
         title="快速创建设备"
         open={quickCreateModalVisible}
-        onOk={handleQuickCreate}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleQuickCreate();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           closeQuickCreateModal();
           quickCreateForm.resetFields();
@@ -1025,7 +1044,15 @@ const DeviceManagement: FC = () => {
       <Modal
         title={editingDevice ? "编辑设备" : "手动新增设备"}
         open={modalVisible}
-        onOk={handleCreate}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleCreate();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           setEditModalVisible(false);
           editForm.resetFields();

@@ -94,6 +94,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const [editingBg, setEditingBg] = useState<CaptchaBackground | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   // 使用全局分页 hook（list API 契约不变）
   const { paginationProps, setCurrent, setTotal } = usePagination();
@@ -456,13 +457,20 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                     size="small"
                     className="xr-op-danger"
                     onClick={() => {
-                      Modal.confirm({
+                      const confirmInstance = Modal.confirm({
                         title: "删除背景图？",
                         content: "删除后不可恢复，启用中的拼图验证码将不再使用该背景。",
                         okText: "删除",
                         cancelText: "取消",
                         okButtonProps: { danger: true },
-                        onOk: () => handleDelete(record.id),
+                        onOk: async () => {
+                          confirmInstance.update({ cancelButtonProps: { disabled: true } });
+                          try {
+                            await handleDelete(record.id);
+                          } finally {
+                            confirmInstance.update({ cancelButtonProps: { disabled: false } });
+                          }
+                        },
                       });
                     }}
                   >
@@ -483,6 +491,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         title="上传背景图"
         open={uploadModalVisible}
         onOk={handleUpload}
+        cancelButtonProps={{ disabled: uploading }}
         onCancel={() => {
           setUploadModalVisible(false);
           uploadForm.resetFields();
@@ -549,7 +558,15 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       <Modal
         title="编辑背景图"
         open={editModalVisible}
-        onOk={handleUpdate}
+        onOk={async () => {
+          setUpdating(true);
+          try {
+            await handleUpdate();
+          } finally {
+            setUpdating(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: updating }}
         onCancel={() => {
           setEditModalVisible(false);
           editForm.resetFields();

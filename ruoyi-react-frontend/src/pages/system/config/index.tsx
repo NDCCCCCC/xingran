@@ -47,6 +47,7 @@ const ConfigManagement: FC = () => {
     active: 0,
     inactive: 0,
   });
+  const [submitting, setSubmitting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -496,7 +497,15 @@ const ConfigManagement: FC = () => {
       <Modal
         title={editingConfig ? "编辑参数配置" : "新增参数配置"}
         open={editModalVisible}
-        onOk={handleCreate}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleCreate();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={handleModalClose}
         width={600}
       >

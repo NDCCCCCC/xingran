@@ -69,6 +69,8 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
 
   // Modal 状态
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const [editing, setEditing] = useState<ADServiceAccount | null>(null);
   const [form] = Form.useForm();
 
@@ -419,7 +421,15 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
         title={editing ? "编辑账号" : "新增账号"}
         open={editModalVisible}
         onCancel={() => setEditModalVisible(false)}
-        onOk={handleSubmit}
+        onOk={async () => {
+          setSaving(true);
+          try {
+            await handleSubmit();
+          } finally {
+            setSaving(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: saving }}
         destroyOnClose
       >
         <Form form={form} layout="vertical" preserve={false}>
@@ -448,7 +458,15 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
         title="立即解锁"
         open={unlockModalVisible}
         onCancel={() => setUnlockModalVisible(false)}
-        onOk={handleUnlockSubmit}
+        onOk={async () => {
+          setUnlocking(true);
+          try {
+            await handleUnlockSubmit();
+          } finally {
+            setUnlocking(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: unlocking }}
         destroyOnClose
       >
         <Form form={unlockForm} layout="vertical" preserve={false}>

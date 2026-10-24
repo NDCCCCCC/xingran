@@ -9,7 +9,7 @@ import type { Holiday } from "@/lib/dutyApi";
 import type { DictItem } from "@/hooks/useDict";
 import { HOLIDAY_TYPE_OPTIONS } from "../constants";
 import dayjs from "dayjs";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -36,6 +36,7 @@ export function HolidayEditModal({
   onCancel,
 }: HolidayEditModalProps) {
   const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
 
   const getDefaultYear = () => year ?? availableYears[0] ?? new Date().getFullYear();
 
@@ -73,7 +74,15 @@ export function HolidayEditModal({
     <Modal
       title={editingRecord ? "编辑节假日" : "新增节假日"}
       open={open}
-      onOk={() => onOk(form)}
+      onOk={async () => {
+        setSubmitting(true);
+        try {
+          await onOk(form);
+        } finally {
+          setSubmitting(false);
+        }
+      }}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={onCancel}
       destroyOnHidden
     >

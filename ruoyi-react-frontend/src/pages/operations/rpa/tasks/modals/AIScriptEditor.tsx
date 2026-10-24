@@ -136,7 +136,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
       width={800}
       footer={
         <Space>
-          <Button onClick={handleCancel}>取消</Button>
+          <Button onClick={handleCancel} disabled={loading}>取消</Button>
           <Button
             type="primary"
             icon={<ThunderboltOutlined />}

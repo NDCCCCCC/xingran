@@ -33,6 +33,7 @@ const VDIServerConfig: React.FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedServer, setSelectedServer] = useState<VDIServer | null>(null);
   const [form] = Form.useForm();
@@ -266,7 +267,15 @@ const VDIServerConfig: React.FC = () => {
       <Modal
         title={modalMode === "create" ? "添加 VDI 服务器" : "编辑 VDI 服务器"}
         open={modalVisible}
-        onOk={handleSubmit}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleSubmit();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setModalVisible(false)}
         width={600}
       >
