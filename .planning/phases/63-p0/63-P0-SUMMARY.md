@@ -55,6 +55,23 @@
 
 按 PLAN「手工冒烟总清单」逐 STOP：任一列表页看「共 N 条 / M 页」、backups/discoveries 空态分页、OU 用户表翻到第 3 页、任一批删双击只发一次请求、批删弹确认框、assets 行内无编辑按钮、「下载模板」真实下载、对账抽屉仅摘要 Tab、宽表横向滚动操作列贴右。
 
+## 运行时冒烟验收（2026-10-24，Lead agent-browser 只读 + 用户人工复核）
+
+环境：本地前端 4000 / 后端 9000，账号 chenchao-076（AD 域账号，system 域菜单不可见）。冒烟严格只读（批量删除确认框弹出后立即取消，零写入）。
+
+| STOP | 页面 | 结果 | 证据 |
+| --- | --- | --- | --- |
+| 01 分页总条数 | backups / assets / users | ✅ | 「共 171 条 / 4 页」「共 6641 条 / 133 页」「共 4463 条 / 90 页」 |
+| 02 数据可达 | network/backups | ✅ | 19 行真实数据，翻第 2 页正常（修复前 total 恒 0 只能看第 1 页） |
+| 02 空态 | network/discoveries | ✅ | 真实无数据时「暂无数据」、不渲染分页器（total=0 契约） |
+| 03 OU 服务端分页 | ad-domain/ous | ✅ | 左树 28 节点；选「武汉中心支公司」→「共 534 条 / 11 页」每页 50 条服务端分页，翻第 2 页生效（修复前固定拉 100 条、第 3 页起不可见） |
+| 05 批量删除确认 | assets/list | ✅ | 勾选 1 条 →「确定要删除选中的 1 条资产吗？」确认框弹出（未执行） |
+| 06 假入口 | assets/list | ✅ | 假「编辑」按钮已消失；「下载模板」真实请求 `/api/v1/ops/asset/template` |
+| 04 弹窗防重 | 用户人工 | ✅ pass | 提交期间确定 loading、取消禁用，双击无重复写入 |
+| 07 fixed 列 | 用户人工 | ✅ pass | 横向滚动时操作列贴右固定 |
+
+**结论：7/7 项 STOP 全部运行时验收通过，Phase 63 完整收官。**
+
 ## Verifier B1 修复（Phase 63 追加执行，2026-10-24）
 
 **缺口**：STOP-04 统一采用方案①（onOk 返回 Promise，antd 自动 loading ok 按钮）时，误认为已覆盖取消按钮；实际 UI-SPEC §4 契约要求「提交期间取消按钮同样禁用」（`cancelButtonProps={{ disabled: submitting }}`），方案①不覆盖，提交中点取消存在半写风险。修复前 `cancelButtonProps` 在 src/pages/ 0 命中（B1 blocking）。
