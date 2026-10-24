@@ -451,12 +451,18 @@ const CredentialManagement: FC = () => {
             <Form.Item>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  aria-label="搜索"
+                  title="搜索"
                   查询
                 </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                  aria-label="重置"
+                  title="重置"
                   重置
                 </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  aria-label="刷新"
+                  title="刷新"
                   刷新
                 </Button>
               </Space>
@@ -464,10 +470,14 @@ const CredentialManagement: FC = () => {
           </Form>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              aria-label="新增"
+              title="新增"
               新增
             </Button>
             {selectedRowKeys.length > 0 && (
               <Button
+                aria-label="批量删除"
+                title="批量删除"
                 icon={<DeleteOutlined />}
                 style={{ color: "var(--theme-error, #ba3630)" }}
                 onClick={handleBatchDelete}

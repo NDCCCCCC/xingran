@@ -54,10 +54,10 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = 
                 onClick={action.onClick}
                 disabled={action.disabled}
                 className={action.danger ? "action-btn-link-danger" : "action-btn-link"}
+                title={action.label}
               >
                 {action.label}
-              </Button>
-            )}
+              </Button>            )}
           </div>
         ))}
       </Space>
@@ -86,7 +86,13 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = 
 
   return (
     <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-      <Button type="link" size={size} icon={<DownOutlined />} className="action-btn-link">
+      <Button
+        type="link"
+        size={size}
+        icon={<DownOutlined />}
+        className="action-btn-link"
+        title="操作"
+      >
         操作
       </Button>
     </Dropdown>

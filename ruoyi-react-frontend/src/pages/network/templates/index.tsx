@@ -303,12 +303,18 @@ const TemplateManagement: FC = () => {
             <Form.Item>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  aria-label="搜索"
+                  title="搜索"
                   查询
                 </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                  aria-label="重置"
+                  title="重置"
                   重置
                 </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  aria-label="刷新"
+                  title="刷新"
                   刷新
                 </Button>
               </Space>
@@ -316,6 +322,8 @@ const TemplateManagement: FC = () => {
           </Form>
           <Space>
             <Button
+              aria-label="新增模板"
+              title="新增模板"
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => openModal(undefined, editForm)}
@@ -323,6 +331,8 @@ const TemplateManagement: FC = () => {
               新增
             </Button>
             <Button
+              aria-label="批量删除"
+              title="批量删除"
               danger
               icon={<DeleteOutlined />}
               onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess)}

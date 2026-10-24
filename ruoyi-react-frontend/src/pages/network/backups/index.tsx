@@ -621,6 +621,8 @@ const ConfigBackupPage: FC = () => {
             <Form.Item>
               <Space>
                 <Button
+                  aria-label="查询"
+                  title="查询"
                   type="primary"
                   icon={<SearchOutlined />}
                   onClick={() => {
@@ -631,6 +633,8 @@ const ConfigBackupPage: FC = () => {
                   查询
                 </Button>
                 <Button
+                  aria-label="刷新"
+                  title="刷新"
                   icon={<ReloadOutlined />}
                   onClick={() => {
                     loadBackups();
@@ -644,6 +648,8 @@ const ConfigBackupPage: FC = () => {
           </Form>
           <Space>
             <Button type="primary" icon={<CloudUploadOutlined />} onClick={handleOpenBackupModal}>
+              aria-label="创建备份"
+              title="创建备份"
               创建备份
             </Button>
             <NetworkExport
@@ -918,6 +924,8 @@ const ConfigBackupPage: FC = () => {
           selectedDeviceGroup &&
           selectedDeviceGroup.backups.length >= 2 && (
             <Button
+              aria-label="对比备份"
+              title="对比备份"
               type="primary"
               icon={<DiffOutlined />}
               onClick={() => {

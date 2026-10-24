@@ -528,6 +528,8 @@ const PortStatusPage: FC = () => {
       {/* 返回按钮（仅当从设备页面跳转时显示） */}
       {isFromDevice && (
         <Button
+          aria-label="返回"
+          title="返回"
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate("/network/devices")}
           style={{ marginBottom: 16 }}
@@ -663,12 +665,18 @@ const PortStatusPage: FC = () => {
             <Form.Item>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  aria-label="搜索"
+                  title="搜索"
                   查询
                 </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                  aria-label="重置"
+                  title="重置"
                   重置
                 </Button>
                 <Button
+                  aria-label="刷新"
+                  title="刷新"
                   icon={<ReloadOutlined />}
                   onClick={handleRefresh}
                   disabled={batchInProgress}
@@ -697,6 +705,8 @@ const PortStatusPage: FC = () => {
               pageSize={paginationProps.pageSize}
             />
             <Button
+              aria-label="全量采集"
+              title="全量采集"
               icon={<CloudSyncOutlined />}
               onClick={handleCollectAll}
               loading={collecting}
@@ -705,6 +715,8 @@ const PortStatusPage: FC = () => {
               采集所有设备
             </Button>
             <Button
+              aria-label="批量删除"
+              title="批量删除"
               icon={<DeleteOutlined />}
               onClick={handleBatchDelete}
               disabled={selectedRowKeys.length === 0}
@@ -714,6 +726,8 @@ const PortStatusPage: FC = () => {
             </Button>
             {/* Phase 53 W4 D-04: 批量配置入口 — 与批量删除 UX 一致, 额外加 !canWrite 防 */}
             <Button
+              aria-label="批量写入"
+              title="批量写入"
               icon={<SettingOutlined />}
               onClick={() => setBulkWriteDrawerOpen(true)}
               disabled={selectedRowKeys.length === 0 || !canWrite}

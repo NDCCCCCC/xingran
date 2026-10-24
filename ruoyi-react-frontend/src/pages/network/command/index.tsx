@@ -228,6 +228,8 @@ const CommandDispatch: FC = () => {
             <Form.Item>
               <Space>
                 <Button
+                  aria-label="查询"
+                  title="查询"
                   icon={<SearchOutlined />}
                   onClick={() => {
                     handleSuccess();
@@ -236,6 +238,8 @@ const CommandDispatch: FC = () => {
                   查询
                 </Button>
                 <Button
+                  aria-label="刷新"
+                  title="刷新"
                   icon={<ReloadOutlined />}
                   onClick={() => {
                     handleSuccess();
@@ -244,6 +248,8 @@ const CommandDispatch: FC = () => {
                   刷新
                 </Button>
                 <Button type="primary" icon={<ThunderboltOutlined />} onClick={openDispatchModal}>
+                  aria-label="快速命令"
+                  title="快速命令"
                   快速命令
                 </Button>
                 <NetworkExport

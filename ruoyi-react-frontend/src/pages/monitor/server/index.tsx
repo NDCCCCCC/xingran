@@ -359,10 +359,14 @@ const ServerMonitor: FC = () => {
             <Col xs={24} sm={8} md={12}>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  aria-label="搜索"
+                  title="搜索"
                   搜索
                 </Button>
                 <Button onClick={handleReset}>重置</Button>
                 <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  aria-label="刷新"
+                  title="刷新"
                   刷新
                 </Button>
               </Space>

@@ -226,6 +226,8 @@ const JobManager: FC = () => {
             <Col xs={24} sm={24} md={6}>
               <Space>
                 <Button
+                  aria-label="新增任务"
+                  title="新增任务"
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={() => openModal(undefined, form)}
@@ -233,12 +235,16 @@ const JobManager: FC = () => {
                   新增
                 </Button>
                 <Button icon={<SearchOutlined />} onClick={handleSearch}>
+                  aria-label="搜索"
+                  title="搜索"
                   搜索
                 </Button>
                 <Button onClick={() => handleReset(setSearchForm, setCurrent, fetchJobs)}>
                   重置
                 </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  aria-label="刷新"
+                  title="刷新"
                   刷新
                 </Button>
               </Space>
@@ -353,6 +359,8 @@ const JobManager: FC = () => {
         extra={
           <Space>
             <Button
+              aria-label="刷新日志"
+              title="刷新日志"
               icon={<ReloadOutlined />}
               onClick={() => fetchJobLogs(selectedJob?.jobName, selectedJob?.jobGroup)}
             >

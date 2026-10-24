@@ -195,6 +195,8 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
       {hasMore && (
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <Button
+            aria-label="加载更多"
+            title="加载更多"
             type="link"
             icon={<DownOutlined />}
             onClick={handleLoadMore}

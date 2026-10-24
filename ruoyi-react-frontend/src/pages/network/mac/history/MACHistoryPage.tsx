@@ -302,6 +302,8 @@ const MACHistoryPage: React.FC = () => {
         render: (_: unknown, record: MACHistoryRecord) => (
           <Space size={4} wrap>
             <Button
+              aria-label="查看详情"
+              title="查看详情"
               type="link"
               size="small"
               icon={<EyeOutlined />}
@@ -514,6 +516,8 @@ const MACHistoryPage: React.FC = () => {
                   <Typography.Text code>{record.macAddress}</Typography.Text>
                   <Tooltip title="复制 MAC">
                     <Button
+                      aria-label="复制"
+                      title="复制"
                       type="text"
                       size="small"
                       icon={<CopyOutlined />}
@@ -663,15 +667,21 @@ const MACHistoryPage: React.FC = () => {
           <Form.Item>
             <Space wrap>
               <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                aria-label="搜索"
+                title="搜索"
                 查询
               </Button>
               <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                aria-label="重置"
+                title="重置"
                 重置
               </Button>
               {/* 14-04 注入的导出按钮 — prop 名称 exportScope='current'|'all' 保留,工具栏查询/重置按钮之后位置不变 */}
               {canExport && (
                 <>
                   <Button
+                    aria-label="导出"
+                    title="导出"
                     type="primary"
                     icon={<DownloadOutlined />}
                     onClick={() => handleExport("current")}
@@ -680,6 +690,8 @@ const MACHistoryPage: React.FC = () => {
                     导出当前查询
                   </Button>
                   <Button
+                    aria-label="导出"
+                    title="导出"
                     icon={<DownloadOutlined />}
                     onClick={() => handleExport("all")}
                     loading={exporting}
@@ -712,6 +724,8 @@ const MACHistoryPage: React.FC = () => {
           isMobile && (
             <Tooltip title={isMobile ? "已切换卡片视图" : "切换为表格视图"}>
               <Button
+                aria-label="切换视图"
+                title="切换视图"
                 type="text"
                 icon={isMobile ? <TableOutlined /> : <AppstoreOutlined />}
                 disabled

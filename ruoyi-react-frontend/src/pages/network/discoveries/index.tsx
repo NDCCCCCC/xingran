@@ -311,6 +311,8 @@ const DeviceDiscoveryPage: FC = () => {
             <Form.Item>
               <Space>
                 <Button
+                  aria-label="查询"
+                  title="查询"
                   icon={<SearchOutlined />}
                   onClick={() => {
                     loadDiscoveries();
@@ -320,6 +322,8 @@ const DeviceDiscoveryPage: FC = () => {
                   查询
                 </Button>
                 <Button
+                  aria-label="刷新"
+                  title="刷新"
                   icon={<ReloadOutlined />}
                   onClick={() => {
                     loadDiscoveries();
@@ -340,6 +344,8 @@ const DeviceDiscoveryPage: FC = () => {
               pageSize={paginationProps.pageSize}
             />
             <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
+              aria-label="新增任务"
+              title="新增任务"
               创建发现任务
             </Button>
           </Space>

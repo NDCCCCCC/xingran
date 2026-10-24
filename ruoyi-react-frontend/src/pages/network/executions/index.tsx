@@ -238,6 +238,8 @@ const ConfigExecutionPage: FC = () => {
             <Form.Item>
               <Space>
                 <Button
+                  aria-label="查询"
+                  title="查询"
                   icon={<SearchOutlined />}
                   onClick={() => {
                     loadExecutions();
@@ -247,6 +249,8 @@ const ConfigExecutionPage: FC = () => {
                   查询
                 </Button>
                 <Button
+                  aria-label="刷新"
+                  title="刷新"
                   icon={<ReloadOutlined />}
                   onClick={() => {
                     loadExecutions();
@@ -260,6 +264,8 @@ const ConfigExecutionPage: FC = () => {
           </Form>
           <Space>
             <Button type="primary" icon={<PlayCircleOutlined />} onClick={openExecuteModal}>
+              aria-label="执行模板"
+              title="执行模板"
               执行配置模板
             </Button>
             <NetworkExport

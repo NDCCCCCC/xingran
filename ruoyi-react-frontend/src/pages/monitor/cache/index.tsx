@@ -159,6 +159,8 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
                 onConfirm={() => handleBatchOperate("del", [record.key])}
               >
                 <Button
+                  aria-label="删除"
+                  title="删除"
                   type="link"
                   icon={<DeleteOutlined />}
                   style={{ color: "#ba3630" }}
@@ -594,6 +596,8 @@ const CacheManager: FC = () => {
             <Col xs={24} sm={24} md={12}>
               <Space wrap>
                 <Button
+                  aria-label="缓存操作"
+                  title="缓存操作"
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={() => setOperateModalVisible(true)}
@@ -601,19 +605,29 @@ const CacheManager: FC = () => {
                   操作缓存
                 </Button>
                 <Button icon={<SearchOutlined />} onClick={handleSearch}>
+                  aria-label="搜索"
+                  title="搜索"
                   搜索
                 </Button>
                 <Button onClick={handleReset}>重置</Button>
                 <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  aria-label="刷新"
+                  title="刷新"
                   刷新
                 </Button>
                 <Button icon={<SettingOutlined />} onClick={() => setStatsModalVisible(true)}>
+                  aria-label="查看统计"
+                  title="查看统计"
                   统计信息
                 </Button>
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
+                  aria-label="导出"
+                  title="导出"
                   导出
                 </Button>
                 <Button
+                  aria-label="清空全部缓存"
+                  title="清空全部缓存"
                   icon={<DeleteOutlined />}
                   style={{ color: "#ba3630" }}
                   onClick={handleClearAll}

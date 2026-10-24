@@ -48,6 +48,8 @@ export function ResultModal({
           关闭
         </Button>,
         <Button
+          aria-label="导入结果"
+          title="导入结果"
           key="import"
           type="primary"
           icon={<ImportOutlined />}

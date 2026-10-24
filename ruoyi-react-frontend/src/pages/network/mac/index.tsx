@@ -347,6 +347,8 @@ const MACAddressPage: FC = () => {
         {isMobile && (
           <div style={{ marginBottom: 16 }}>
             <Button icon={<ApartmentOutlined />} onClick={() => setDeptDrawerOpen(true)}>
+              aria-label="选择部门"
+              title="选择部门"
               {selectedDeptId ? `已选部门:${selectedDeptId.slice(0, 8)}...` : "选择部门"}
             </Button>
             <Drawer
@@ -470,12 +472,18 @@ const MACAddressPage: FC = () => {
               <Form.Item>
                 <Space>
                   <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    aria-label="搜索"
+                    title="搜索"
                     查询
                   </Button>
                   <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                    aria-label="重置"
+                    title="重置"
                     重置
                   </Button>
                   <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                    aria-label="刷新"
+                    title="刷新"
                     刷新
                   </Button>
                 </Space>
@@ -500,6 +508,8 @@ const MACAddressPage: FC = () => {
                 pageSize={paginationProps.pageSize}
               />
               <Button
+                aria-label="批量删除"
+                title="批量删除"
                 icon={<DeleteOutlined />}
                 onClick={handleBatchDelete}
                 disabled={selectedRowKeys.length === 0}

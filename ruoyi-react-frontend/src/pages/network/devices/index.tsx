@@ -818,12 +818,18 @@ const DeviceManagement: FC = () => {
                 <Form.Item>
                   <Space>
                     <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                      aria-label="搜索"
+                      title="搜索"
                       查询
                     </Button>
                     <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                      aria-label="重置"
+                      title="重置"
                       重置
                     </Button>
                     <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                      aria-label="刷新"
+                      title="刷新"
                       刷新
                     </Button>
                   </Space>
@@ -848,6 +854,8 @@ const DeviceManagement: FC = () => {
                   pageSize={paginationProps.pageSize}
                 />
                 <Button
+                  aria-label="快速创建设备"
+                  title="快速创建设备"
                   type="primary"
                   icon={<ThunderboltOutlined />}
                   onClick={openQuickCreateModal}
@@ -855,10 +863,14 @@ const DeviceManagement: FC = () => {
                   快速创建
                 </Button>
                 <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>
+                  aria-label="新增设备"
+                  title="新增设备"
                   手动新增
                 </Button>
                 {selectedRowKeys.length > 0 && (
                   <Button
+                    aria-label="批量删除"
+                    title="批量删除"
                     icon={<DeleteOutlined />}
                     style={{ color: "var(--theme-error, #ba3630)" }}
                     onClick={handleBatchDelete}
@@ -976,6 +988,8 @@ const DeviceManagement: FC = () => {
             <Col offset={6}>
               <Space>
                 <Button
+                  aria-label="连接探测"
+                  title="连接探测"
                   type="primary"
                   icon={<ApiOutlined />}
                   onClick={handleProbe}
@@ -1173,6 +1187,8 @@ const DeviceManagement: FC = () => {
           ...(canViewMACHistory && viewingDevice
             ? [
                 <Button
+                  aria-label="查看 MAC 历史"
+                  title="查看 MAC 历史"
                   key="mac-history"
                   icon={<HistoryOutlined />}
                   onClick={() => {
