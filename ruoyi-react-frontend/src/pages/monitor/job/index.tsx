@@ -3,7 +3,7 @@
  * Job Manager Page
  */
 
-import { useState, useEffect, useMemo, type FC } from "react";
+import { useState, useEffect, useMemo, useCallback, type FC } from "react";
 import {
   Card,
   Table,
@@ -36,6 +36,9 @@ import { getJobColumns, getJobLogColumns } from "./columns";
 import { useJobData, useJobActions } from "./hooks";
 import CronSelector from "@/components/CronSelector";
 import { usePagination } from "@/hooks/usePagination";
+import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
+import type { JobInfo, JobLog } from "./types";
 
 const { TextArea } = Input;
 
@@ -47,6 +50,34 @@ const JobManager: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize } = usePagination();
+
+  // FIX-03b: job 主表服务端排序（字段对齐后端 jobAllowedSortFields：jobName/jobGroup/status/createdAt）
+  const jobSorterMetas = useMemo(
+    () => [
+      createSorterMeta<JobInfo>("jobName"),
+      createSorterMeta<JobInfo>("jobGroup"),
+      createSorterMeta<JobInfo>("status", "number"),
+      createSorterMeta<JobInfo>("createdAt", "date"),
+    ],
+    []
+  );
+  const {
+    orderByColumn: jobOrderByColumn,
+    isAsc: jobIsAsc,
+    sortOrder: jobSortOrder,
+    handleTableChange: handleJobSortChange,
+  } = useServerSort<JobInfo>({ sorterMetas: jobSorterMetas });
+
+  // FIX-03b: jobLog 日志表服务端排序（本地 state，字段映射 startTime→createdAt 对齐 jobLogAllowedSortFields）
+  const [jobLogSort, setJobLogSort] = useState<{ orderByColumn?: string; isAsc?: boolean }>({});
+  const jobLogSorterMetas = useMemo(
+    () => [createSorterMeta<JobLog>("status", "number"), createSorterMeta<JobLog>("startTime", "date")],
+    []
+  );
+  const mapJobLogSortField = useCallback(
+    (field?: string) => (field === "startTime" ? "createdAt" : field),
+    []
+  );
 
   // 使用数据管理 Hook
   const {
@@ -61,6 +92,8 @@ const JobManager: FC = () => {
     searchForm,
     current: paginationProps.current ?? 1,
     pageSize: paginationProps.pageSize ?? 10,
+    orderByColumn: jobOrderByColumn,
+    isAsc: jobIsAsc,
   });
 
   // 使用操作管理 Hook
@@ -100,11 +133,35 @@ const JobManager: FC = () => {
         handleViewLogs,
         openModal: (record) => openModal(record, form),
         handleDelete,
+        getSortOrder: (field) =>
+          jobOrderByColumn === field
+            ? ((jobSortOrder ?? null) as "ascend" | "descend" | null)
+            : null,
       }),
-    [handleToggleStatus, handleExecute, handleViewLogs, openModal, handleDelete, form]
+    [
+      handleToggleStatus,
+      handleExecute,
+      handleViewLogs,
+      openModal,
+      handleDelete,
+      form,
+      jobOrderByColumn,
+      jobSortOrder,
+    ]
   );
 
-  const jobLogColumns = useMemo(() => getJobLogColumns(), []);
+  const jobLogGetSortOrder = useCallback(
+    (field: string) => {
+      const mapped = mapJobLogSortField(field);
+      if (jobLogSort.orderByColumn !== mapped) return null;
+      return jobLogSort.isAsc === false ? "descend" : "ascend";
+    },
+    [jobLogSort, mapJobLogSortField]
+  );
+  const jobLogColumns = useMemo(
+    () => getJobLogColumns({ getSortOrder: jobLogGetSortOrder }),
+    [jobLogGetSortOrder]
+  );
 
   // 搜索
   const handleSearch = () => {
@@ -194,10 +251,18 @@ const JobManager: FC = () => {
           rowKey="id"
           loading={loading}
           pagination={paginationProps}
-          onChange={(pagination) => {
-            setCurrent(pagination.current ?? 1);
-            setPageSize(pagination.pageSize ?? 10);
-            fetchJobs();
+          onChange={(pagination, _filters, sorter) => {
+            handleJobSortChange(pagination, _filters, sorter);
+            const resolved = resolveSorter(sorter, jobSorterMetas);
+            const activeSorter = Array.isArray(sorter) ? sorter[sorter.length - 1] : sorter;
+            if (activeSorter && activeSorter.column) {
+              // 排序操作回第 1 页
+              setCurrent(1);
+            } else {
+              setCurrent(pagination.current ?? 1);
+              setPageSize(pagination.pageSize ?? 10);
+            }
+            fetchJobs(undefined, { orderByColumn: resolved.orderByColumn, isAsc: resolved.isAsc });
           }}
           scroll={{ x: 1500 }}
         />
@@ -329,6 +394,21 @@ const JobManager: FC = () => {
           dataSource={jobLogs}
           rowKey="id"
           size="small"
+          onChange={(_pagination, _filters, sorter) => {
+            const resolved = resolveSorter(sorter, jobLogSorterMetas);
+            setJobLogSort({
+              orderByColumn: resolved.orderByColumn
+                ? mapJobLogSortField(resolved.orderByColumn)
+                : undefined,
+              isAsc: resolved.isAsc,
+            });
+            fetchJobLogs(selectedJob?.jobName, selectedJob?.jobGroup, {
+              orderByColumn: resolved.orderByColumn
+                ? mapJobLogSortField(resolved.orderByColumn)
+                : undefined,
+              isAsc: resolved.isAsc,
+            });
+          }}
           pagination={{
             pageSize: 50,
             showSizeChanger: true,

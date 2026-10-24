@@ -9,14 +9,14 @@ import { vmOperationButtons } from "../../vdi/VirtualMachineList/vmOperationButt
 
 describe("getJobLogColumns", () => {
   it("返回 5 列", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     expect(cols.length).toBe(5);
     const keys = cols.map((c) => c.key as string);
     expect(keys).toEqual(["startTime", "duration", "jobMessage", "status", "exceptionInfo"]);
   });
 
   it("status render 成功/失败 Tag", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const col = cols.find((c) => c.key === "status");
     const render = col?.render as (s: number) => any;
     const ok = render(0);
@@ -28,7 +28,7 @@ describe("getJobLogColumns", () => {
   });
 
   it("duration render 委托 formatDuration", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const col = cols.find((c) => c.key === "duration");
     const render = col?.render as (d: number) => any;
     expect(render(0)).toBe("-");
@@ -36,7 +36,7 @@ describe("getJobLogColumns", () => {
   });
 
   it("startTime render 委托 formatDateTime(字符串)", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const col = cols.find((c) => c.key === "startTime");
     const render = col?.render as (t: string) => unknown;
     // 不 throw + 返回任意展示值
@@ -44,7 +44,7 @@ describe("getJobLogColumns", () => {
   });
 
   it("exceptionInfo render 委托 renderExceptionInfo", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const col = cols.find((c) => c.key === "exceptionInfo");
     const render = col?.render as (v: string) => unknown;
     expect(render("")).toBe("-");
@@ -59,6 +59,7 @@ describe("getJobColumns", () => {
       handleDelete: () => {},
       handleStatusChange: () => {},
       handleRun: () => {},
+      getSortOrder: () => null,
     } as any);
     expect(Array.isArray(cols)).toBe(true);
     expect(cols.length).toBeGreaterThan(5);

@@ -42,12 +42,12 @@ const dataSource = [
 
 describe("jobLogColumns", () => {
   it("getJobLogColumns 返回 5 列", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     expect(cols.length).toBeGreaterThanOrEqual(5);
   });
 
   it("列包含基本列名", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const titles = cols.map((c: any) => c.title);
     expect(titles).toContain("执行时间");
     expect(titles).toContain("执行时长");
@@ -56,7 +56,7 @@ describe("jobLogColumns", () => {
   });
 
   it("完整表格渲染 + 各列 render", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const { baseElement } = render(<Table dataSource={dataSource} columns={cols} rowKey="id" />, {
       wrapper,
     });
@@ -72,7 +72,7 @@ describe("jobLogColumns", () => {
   });
 
   it("执行状态 → 成功/失败 Tag", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const { baseElement } = render(<Table dataSource={dataSource} columns={cols} rowKey="id" />, {
       wrapper,
     });

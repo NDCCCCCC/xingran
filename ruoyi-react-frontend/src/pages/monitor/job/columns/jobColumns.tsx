@@ -15,7 +15,6 @@ import ActionButtons from "@/components/shared/ActionButtons";
 import type { JobInfo } from "../types";
 import { formatDateTime } from "@/utils/datetime";
 import { renderCronExpression, renderConcurrentTag, renderJobStatusTag } from "../utils";
-import { createSorter } from "@/utils/tableHelpers";
 
 interface GetJobColumnsParams {
   handleToggleStatus: (record: JobInfo) => void;
@@ -23,10 +22,12 @@ interface GetJobColumnsParams {
   handleViewLogs: (record: JobInfo) => void;
   openModal: (record: JobInfo) => void;
   handleDelete: (record: JobInfo) => void;
+  /** 服务端排序受控箭头（字段名对齐后端 jobAllowedSortFields） */
+  getSortOrder: (field: string) => "ascend" | "descend" | null;
 }
 
 export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo> {
-  const { handleToggleStatus, handleExecute, handleViewLogs, openModal, handleDelete } = params;
+  const { handleToggleStatus, handleExecute, handleViewLogs, openModal, handleDelete, getSortOrder } = params;
 
   return [
     {
@@ -34,14 +35,14 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "jobName",
       key: "jobName",
       width: 150,
-      sorter: createSorter<JobInfo>("jobName", "string"),
+      sortOrder: getSortOrder("jobName"),
     },
     {
       title: "任务组",
       dataIndex: "jobGroup",
       key: "jobGroup",
       width: 120,
-      sorter: createSorter<JobInfo>("jobGroup", "string"),
+      sortOrder: getSortOrder("jobGroup"),
     },
     {
       title: "调用目标",
@@ -49,14 +50,12 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       key: "invokeTarget",
       width: 200,
       ellipsis: true,
-      sorter: createSorter<JobInfo>("invokeTarget", "string"),
     },
     {
       title: "Cron表达式",
       dataIndex: "cronExpression",
       key: "cronExpression",
       width: 150,
-      sorter: createSorter<JobInfo>("cronExpression", "string"),
       render: renderCronExpression,
     },
     {
@@ -64,7 +63,6 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "concurrent",
       key: "concurrent",
       width: 100,
-      sorter: createSorter<JobInfo>("concurrent", "number"),
       render: renderConcurrentTag,
     },
     {
@@ -72,7 +70,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "status",
       key: "status",
       width: 100,
-      sorter: createSorter<JobInfo>("status", "number"),
+      sortOrder: getSortOrder("status"),
       render: (status: number, record: JobInfo) => (
         <Space>
           {renderJobStatusTag(status)}
@@ -92,7 +90,6 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "nextRunTime",
       key: "nextRunTime",
       width: 180,
-      sorter: createSorter<JobInfo>("nextRunTime", "date"),
       render: (text: string) => formatDateTime(text),
     },
     {
@@ -100,7 +97,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
-      sorter: createSorter<JobInfo>("createdAt", "date"),
+      sortOrder: getSortOrder("createdAt"),
       render: (text: string) => formatDateTime(text),
     },
     {
