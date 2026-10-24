@@ -39,6 +39,7 @@ import {
   type OUDeptMappingResponse,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
+import { usePagination } from "@/hooks/usePagination";
 import { useDeptTree, type DeptTreeNode } from "@/hooks/useDeptTree";
 import { createSorter } from "@/utils/tableHelpers";
 
@@ -57,6 +58,14 @@ const ADOUPage: FC = () => {
   const [selectedOU, setSelectedOU] = useState<string>("");
   const [selectedOUName, setSelectedOUName] = useState<string>("");
   const [users, setUsers] = useState<ADUser[]>([]);
+  // STOP-03: 用户表改服务端分页（pageSize 硬约束沿用 50，与后端 MaxPageSize=100 兼容）
+  const {
+    current: userCurrent,
+    pageSize: userPageSize,
+    paginationProps: userPaginationProps,
+    setCurrent: userSetCurrent,
+    setTotal: userSetTotal,
+  } = usePagination({ pageSize: 50 });
   const [treeLoading, setTreeLoading] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
 
@@ -106,7 +115,7 @@ const ADOUPage: FC = () => {
       const ouNode = ouTree.find((n) => n.dn === ouDn);
       setSelectedOU(ouDn);
       setSelectedOUName(ouNode?.name || ouDn);
-      fetchUsers(ouDn);
+      userSetCurrent(1); // 切换 OU 时页码重置第 1 页
       fetchDeptMapping(ouDn);
       fetchOUGroupMappings(ouDn);
       fetchAllGroups();
@@ -127,11 +136,12 @@ const ADOUPage: FC = () => {
       const res = await getADUserList({
         configId: selectedConfig,
         ouDn: ouDn || selectedOU,
-        current: 1,
-        pageSize: 100,
+        current: userCurrent,
+        pageSize: userPageSize,
       });
       if (res.code === 0) {
         setUsers(res.data?.list ?? []);
+        userSetTotal(res.data?.total ?? 0);
       }
     } catch {
       message.error("获取用户列表失败");
@@ -139,6 +149,13 @@ const ADOUPage: FC = () => {
       setUsersLoading(false);
     }
   };
+
+  // STOP-03: OU / 配置 / 分页任一变化时按服务端分页重新拉取用户
+  useEffect(() => {
+    if (!selectedConfig || !selectedOU) return;
+    fetchUsers(selectedOU);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchUsers uses latest closure state
+  }, [selectedConfig, selectedOU, userCurrent, userPageSize]);
 
   const fetchDeptMapping = async (ouDn: string) => {
     setMappingLoading(true);
@@ -536,7 +553,7 @@ const ADOUPage: FC = () => {
                 dataSource={users}
                 loading={usersLoading}
                 rowKey="id"
-                pagination={{ pageSize: 50, size: "small" }}
+                pagination={{ ...userPaginationProps, showSizeChanger: false, size: "small" }}
                 scroll={{ x: 1200 }}
                 size="small"
               />
