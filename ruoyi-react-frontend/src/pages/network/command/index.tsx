@@ -68,6 +68,8 @@ const CommandDispatch: FC = () => {
     executions,
     execTotal,
     statistics,
+    devicesLoading,
+    detailsLoading,
     setExecTotal: _setExecTotal,
     loadExecutions,
     loadStatistics,
@@ -98,19 +100,22 @@ const CommandDispatch: FC = () => {
 
   // 查看执行详情
   const handleViewDetail = async (record: ConfigExecution) => {
-    const { execution, details } = await loadExecutionDetails(record.id);
-    setCurrentExecution(execution);
-    setExecutionDetails(details as unknown as ConfigExecutionDetail[]);
+    // FIX-01: 先开抽屉再加载，加载期间内嵌表显示 loading 蒙层
+    setCurrentExecution(record);
     setDetailDrawerVisible(true);
+    const { details } = await loadExecutionDetails(record.id);
+    setExecutionDetails(details as unknown as ConfigExecutionDetail[]);
   };
 
   // 打开命令分发模态框
   const openDispatchModal = async () => {
-    const loadedDevices = await loadDevices();
-    setDevices(loadedDevices);
+    // FIX-01: 先开弹窗再加载设备，加载期间内嵌表显示 loading 蒙层
+    setDevices([]);
     setSelectedRowKeys([]);
     dispatchForm.resetFields();
     setDispatchModalVisible(true);
+    const loadedDevices = await loadDevices();
+    setDevices(loadedDevices);
   };
 
   const columns = useMemo(
@@ -292,6 +297,7 @@ const CommandDispatch: FC = () => {
       <CommandDispatchModal
         open={dispatchModalVisible}
         devices={devices}
+        loading={devicesLoading}
         selectedRowKeys={selectedRowKeys}
         onOk={async () => {
           await handleQuickCommand(selectedRowKeys, dispatchForm, () => {
@@ -308,6 +314,7 @@ const CommandDispatch: FC = () => {
         open={detailDrawerVisible}
         execution={currentExecution}
         details={executionDetails}
+        loading={detailsLoading}
         onClose={() => setDetailDrawerVisible(false)}
       />
     </div>

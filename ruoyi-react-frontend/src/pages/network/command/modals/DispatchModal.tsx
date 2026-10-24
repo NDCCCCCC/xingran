@@ -13,6 +13,8 @@ export interface CommandDispatchModalProps {
   open: boolean;
   devices: NetworkDevice[];
   selectedRowKeys: string[];
+  /** FIX-01: 设备列表请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onOk: () => Promise<void>;
   onCancel: () => void;
   onSelectionChange: (keys: React.Key[]) => void;
@@ -22,6 +24,7 @@ export function CommandDispatchModal({
   open,
   devices,
   selectedRowKeys,
+  loading = false,
   onOk,
   onCancel,
   onSelectionChange,
@@ -46,6 +49,7 @@ export function CommandDispatchModal({
       <Form form={form} layout="vertical">
         <Form.Item label="选择设备" required>
           <Table
+            loading={loading}
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => onSelectionChange(keys),

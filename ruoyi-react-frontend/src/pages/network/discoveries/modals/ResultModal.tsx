@@ -12,6 +12,8 @@ export interface ResultModalProps {
   open: boolean;
   currentDiscovery: DeviceDiscovery | null;
   discoveredDevices: Record<string, unknown>[];
+  /** FIX-01: 结果请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onImport: () => Promise<void>;
   onClose: () => void;
 }
@@ -29,6 +31,7 @@ export function ResultModal({
   open,
   currentDiscovery,
   discoveredDevices,
+  loading = false,
   onImport,
   onClose,
 }: ResultModalProps) {
@@ -61,6 +64,7 @@ export function ResultModal({
       </div>
 
       <Table
+        loading={loading}
         columns={resultColumns}
         dataSource={discoveredDevices}
         rowKey={(record) => String(record.ipAddress || record.id || Math.random())}

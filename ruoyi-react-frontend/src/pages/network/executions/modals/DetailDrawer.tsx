@@ -12,6 +12,8 @@ export interface DetailDrawerProps {
   open: boolean;
   currentExecution: ConfigExecution | null;
   executionDetails: ConfigExecutionDetail[];
+  /** FIX-01: 明细请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onClose: () => void;
   handleViewOutput: (output: string) => void;
 }
@@ -20,6 +22,7 @@ export function DetailDrawer({
   open,
   currentExecution,
   executionDetails,
+  loading = false,
   onClose,
   handleViewOutput,
 }: DetailDrawerProps) {
@@ -73,6 +76,7 @@ export function DetailDrawer({
           </Card>
 
           <Table
+            loading={loading}
             columns={detailColumns}
             dataSource={executionDetails}
             rowKey="id"

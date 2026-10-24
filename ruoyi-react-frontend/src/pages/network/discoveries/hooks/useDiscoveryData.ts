@@ -17,6 +17,7 @@ export interface UseDiscoveryDataParams {
 export interface UseDiscoveryDataReturn {
   discoveries: DeviceDiscovery[];
   discoveredDevices: Record<string, unknown>[];
+  resultsLoading: boolean;
   departments: Department[];
   loading: boolean;
   total: number;
@@ -42,6 +43,8 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const [discoveries, setDiscoveries] = useState<DeviceDiscovery[]>([]);
   const [discoveredDevices, setDiscoveredDevices] = useState<Record<string, unknown>[]>([]);
+  /** FIX-01: 发现结果请求中状态，供 ResultModal 内嵌表 loading */
+  const [resultsLoading, setResultsLoading] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -110,6 +113,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   }, []);
 
   const loadDiscoveryResults = useCallback(async (id: string) => {
+    setResultsLoading(true);
     try {
       const result = await post<{ devices: Record<string, unknown>[] }>(
         `/network/discoveries/${id}/results`,
@@ -118,6 +122,8 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
       setDiscoveredDevices(result.data?.devices || []);
     } catch (_error) {
       message.error("获取结果失败");
+    } finally {
+      setResultsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
@@ -125,6 +131,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   return {
     discoveries,
     discoveredDevices,
+    resultsLoading,
     departments,
     loading,
     total,

@@ -61,6 +61,7 @@ const DeviceDiscoveryPage: FC = () => {
   const {
     discoveries,
     discoveredDevices,
+    resultsLoading,
     departments,
     loading,
     total: hookTotal,
@@ -156,8 +157,9 @@ const DeviceDiscoveryPage: FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
   const handleViewResult = async (record: DeviceDiscovery) => {
     setCurrentDiscovery(record);
-    await loadDiscoveryResults((record as DeviceDiscovery).id);
+    // FIX-01: 先开弹窗再加载，加载期间内嵌表显示 loading 蒙层
     setModalState((prev) => ({ ...prev, resultModalVisible: true }));
+    await loadDiscoveryResults((record as DeviceDiscovery).id);
   };
 
   // 导入发现的设备
@@ -381,6 +383,7 @@ const DeviceDiscoveryPage: FC = () => {
         open={modalState.resultModalVisible}
         currentDiscovery={currentDiscovery}
         discoveredDevices={discoveredDevices}
+        loading={resultsLoading}
         onImport={handleImport}
         onClose={() => setModalState((prev) => ({ ...prev, resultModalVisible: false }))}
       />

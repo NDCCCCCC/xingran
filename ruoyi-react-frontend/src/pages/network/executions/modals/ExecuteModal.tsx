@@ -15,6 +15,8 @@ export interface ConfigExecuteModalProps {
   templates: ConfigTemplate[];
   selectedTemplate: ConfigTemplate | null;
   selectedRowKeys: string[];
+  /** FIX-01: 设备列表请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onOk: () => Promise<void>;
   onCancel: () => void;
   onTemplateChange: (templateId: string) => void;
@@ -27,6 +29,7 @@ export function ConfigExecuteModal({
   templates,
   selectedTemplate,
   selectedRowKeys,
+  loading = false,
   onOk,
   onCancel,
   onTemplateChange,
@@ -99,6 +102,7 @@ export function ConfigExecuteModal({
 
         <Form.Item label="选择目标设备" required>
           <Table
+            loading={loading}
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => onSelectedRowKeysChange(keys as string[]),

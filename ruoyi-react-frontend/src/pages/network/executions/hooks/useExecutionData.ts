@@ -20,6 +20,8 @@ export interface UseExecutionDataReturn {
   dataState: ExecutionDataState;
   loading: boolean;
   execLoading: boolean;
+  devicesLoading: boolean;
+  detailsLoading: boolean;
   total: number;
   execTotal: number;
   statistics: ExecutionStatistics;
@@ -55,6 +57,10 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
 
   const [loading, setLoading] = useState(false);
   const [execLoading, setExecLoading] = useState(false);
+  /** FIX-01: 设备列表请求中，供 ExecuteModal 内嵌表 loading */
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  /** FIX-01: 执行明细请求中，供 DetailDrawer 内嵌表 loading */
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [execTotal, setExecTotal] = useState(0);
 
@@ -68,6 +74,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
 
   // 加载设备列表
   const loadDevices = useCallback(async () => {
+    setDevicesLoading(true);
     try {
       const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
         current: 1,
@@ -77,6 +84,8 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       setDataState((prev) => ({ ...prev, devices: result.data?.list || [] }));
     } catch (error) {
       console.error("加载设备列表失败:", error);
+    } finally {
+      setDevicesLoading(false);
     }
   }, []);
 
@@ -137,6 +146,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
 
   // 加载执行明细
   const loadExecutionDetails = useCallback(async (executionId: string) => {
+    setDetailsLoading(true);
     try {
       const result = await post<ConfigExecution>(`/network/executions/${executionId}`, {});
       setDataState((prev) => ({
@@ -146,6 +156,8 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       }));
     } catch (_error) {
       message.error("加载执行明细失败");
+    } finally {
+      setDetailsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
@@ -154,6 +166,8 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
     dataState,
     loading,
     execLoading,
+    devicesLoading,
+    detailsLoading,
     total,
     execTotal,
     statistics,

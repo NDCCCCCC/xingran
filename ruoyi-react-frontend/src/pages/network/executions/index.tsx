@@ -56,7 +56,10 @@ const ConfigExecutionPage: FC = () => {
   // 数据管理
   const {
     dataState,
+    setDataState,
     execLoading,
+    devicesLoading,
+    detailsLoading,
     statistics,
     loadDevices,
     loadTemplates,
@@ -90,16 +93,20 @@ const ConfigExecutionPage: FC = () => {
   });
 
   // 打开执行模态框时加载设备和模板
+  // FIX-01: 先开弹窗再加载，加载期间内嵌表显示 loading 蒙层
   const openExecuteModal = async () => {
-    await Promise.all([loadDevices(), loadTemplates()]);
     openExecuteModalBase();
+    await Promise.all([loadDevices(), loadTemplates()]);
   };
 
   // 查看详情时加载执行详情
+  // FIX-01: 先开抽屉再加载，加载期间内嵌表显示 loading 蒙层
   const handleViewDetail = useCallback(
     async (record: ConfigExecution) => {
-      await loadExecutionDetails(record.id);
+      // 先用列表行数据填充 currentExecution，抽屉立即可见，明细表 loading
+      setDataState((prev) => ({ ...prev, currentExecution: record, executionDetails: [] }));
       handleViewDetailBase(record);
+      await loadExecutionDetails(record.id);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handleViewDetailBase is a stable modal handler
     [loadExecutionDetails]
@@ -310,6 +317,7 @@ const ConfigExecutionPage: FC = () => {
         templates={dataState.templates}
         selectedTemplate={dataState.selectedTemplate}
         selectedRowKeys={selectedRowKeys}
+        loading={devicesLoading}
         onOk={async () => {
           await handleExecuteByTemplate(executeForm);
         }}
@@ -335,6 +343,7 @@ const ConfigExecutionPage: FC = () => {
         open={modalState.detailDrawerVisible}
         currentExecution={dataState.currentExecution}
         executionDetails={dataState.executionDetails}
+        loading={detailsLoading}
         onClose={closeDetailDrawer}
         handleViewOutput={handleViewOutput}
       />

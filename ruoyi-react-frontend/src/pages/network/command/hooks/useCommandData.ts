@@ -18,6 +18,10 @@ export interface UseCommandDataReturn {
   execLoading: boolean;
   execTotal: number;
   statistics: CommandStatistics;
+  /** FIX-01: 设备列表请求中，供 DispatchModal 内嵌表 loading */
+  devicesLoading: boolean;
+  /** FIX-01: 执行明细请求中，供 DetailDrawer 内嵌表 loading */
+  detailsLoading: boolean;
 
   setExecTotal: React.Dispatch<React.SetStateAction<number>>;
   setStatistics: React.Dispatch<React.SetStateAction<CommandStatistics>>;
@@ -37,6 +41,8 @@ export function useCommandData(
 ): UseCommandDataReturn {
   const [executions, setExecutions] = useState<ConfigExecution[]>([]);
   const [execLoading, setExecLoadingState] = useState(false);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [execTotal, setExecTotal] = useState(0);
   const [statistics, setStatistics] = useState<CommandStatistics>({
     total: 0,
@@ -85,6 +91,7 @@ export function useCommandData(
   }, []);
 
   const loadDevices = useCallback(async (): Promise<NetworkDevice[]> => {
+    setDevicesLoading(true);
     try {
       const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
         current: 1,
@@ -95,6 +102,8 @@ export function useCommandData(
     } catch (error) {
       console.error("加载设备列表失败:", error);
       return [];
+    } finally {
+      setDevicesLoading(false);
     }
   }, []);
 
@@ -102,6 +111,7 @@ export function useCommandData(
     async (
       executionId: string
     ): Promise<{ execution: ConfigExecution; details: ConfigExecutionDetail[] }> => {
+      setDetailsLoading(true);
       try {
         const result = await post<ConfigExecution>(`/network/command/${executionId}`, {});
         return {
@@ -111,6 +121,8 @@ export function useCommandData(
       } catch (error) {
         console.error("加载执行明细失败:", error);
         throw error;
+      } finally {
+        setDetailsLoading(false);
       }
     },
     []
@@ -121,6 +133,8 @@ export function useCommandData(
     execLoading,
     execTotal,
     statistics,
+    devicesLoading,
+    detailsLoading,
     setExecTotal,
     setStatistics,
     setExecutions,
