@@ -23,7 +23,7 @@ created: "2026-10-24"
 |-----|------------|---------------------|---------------------|
 | FIX-01 | network/monitor 域列表页数据加载期间表格显示 loading 而非空白 | `pages/network` + `pages/monitor` + `components/network` + `components/CronSelector` 全量扫描（排除 `__tests__`）：含 `<Table` 且无任何 `loading=` 信号（含 spread 注入）的表共 **7 处**，全部是 Modal/Drawer 内嵌表（清单见 `## 1`） | `## 1` 表格 loading 契约 |
 | FIX-02 | 含未保存修改的表单弹窗误点遮罩/ESC 不丢内容 | `maskClosable` 全前端显式声明仅 5 个文件命中（`components/captcha/CaptchaModal.tsx:116`、`components/modal/BaseEditModal.tsx:30/:44/:58`、`components/network/port-write/BulkWriteDrawer.tsx:238`、`pages/operations/workstations/LocationAliasDrawer.tsx:218`）；**`BaseEditModal` 默认值 `maskClosable = true`（`BaseEditModal.tsx:44`）**；network/monitor 22 个业务 Modal 0 处显式关闭 | `## 2` 弹窗防误关契约 |
-| FIX-03 | cache/job 分页表排序得到全量正确结果或明确降级说明 | `pages/monitor/cache/index.tsx:76-132`（7 列 `createSorter` 内存排序）、`pages/monitor/job/columns/jobColumns.tsx:37-103`（8 处）+ `jobLogColumns.tsx:19-53`（5 处）；**后端不支持排序**：`internal/api/v1/monitor/cache_handler.go:138` `CacheListParams` 无排序字段（数据源为 Redis keys 扫描），`internal/services/scheduler/job_service.go:302` 固定 `Order("created_at DESC")`、无动态排序入参 | `## 3` 排序降级契约（前端排序 + 常显降级说明） |
+| FIX-03 | cache/job 分页表排序得到全量正确结果 | `pages/monitor/cache/index.tsx:76-132`（7 列 `createSorter` 内存排序）、`pages/monitor/job/columns/jobColumns.tsx:37-103`（8 处）+ `jobLogColumns.tsx:19-53`（5 处）均只做当前页内存排序；**后端已支持白名单排序**（checker 复核 2026-10-24，修正 researcher 初版误判）：`internal/api/v1/monitor/cache_handler.go:144-145` 透传 `OrderByColumn/IsAsc` → `internal/services/monitor/cache_service.go:237-246` 按 `cacheAllowedSortFields`（7 字段）应用；`internal/services/scheduler/job_service.go:300` `base.ApplySort`（白名单 4 字段），job 日志同（`job_log_service.go:117`，白名单 4 字段） | `## 3` 排序契约（白名单内列服务端排序，白名单外列移除 sorter） |
 | FIX-04 | 请求失败有可见错误提示；console.* 静默吞错收敛 | REQUIREMENTS「52 处」精确对应 network+monitor 域口径（`pages/network` 27 + `pages/monitor` 20 + `components/network`+`CronSelector` 5 = **52 处**，排除测试）。全前端非测试 `console.*` 共 287 处（system 49、operations 34、duty 14、workorder 10、components 29 等）。现有合法出口已存在：`utils/errorHandler.ts:136` `handleApiError`（内部 `getAppMessage().error`，经 `utils/antdMessage.ts` 桥接 context-aware 实例） | `## 4` 统一错误出口契约 |
 | FIX-05 | 读屏器用户能识别图标按钮 | 全前端（非测试）`aria-label|role=|tabIndex` 合计仅 **20 处**；`pages/monitor` + `components/network` 域 aria 为 **0**。01 分片：system 域 51 个 icon-only Button 仅 1 处有 aria-label（`pages/system/user/index.tsx:737`，历史先例）。表格行内操作的共享封装 `components/shared/ActionButtons.tsx` 已存在且 network 全片接入，但其 aria 现状为 0（仅 `:126` 有 `title`） | `## 5` 图标按钮可访问名契约 |
 
@@ -51,12 +51,12 @@ created: "2026-10-24"
 |-----------|-------------|-------|
 | `Table` | `antd` | FIX-01 载体；`loading` 为原生 prop，接受 boolean 或 `{ spin }`；**统一用 boolean** |
 | `Modal` / `BaseEditModal` | `antd` / `@/components/modal/BaseEditModal.tsx` | FIX-02 载体；`maskClosable` / `keyboard` 原生支持；BaseEditModal 需改默认值（见 `## 2`，属既有组件默认值修正，非新组件） |
-| `Typography.Text` | `antd` | FIX-03 降级说明文案载体，`type="secondary"` |
+| `Typography.Text` | `antd` | 初版 FIX-03 降级说明载体，契约修订后**本 phase 不使用**（保留条目仅作追溯） |
 | `handleApiError` | `@/utils/errorHandler.ts:136` | FIX-04 **唯一合法错误出口**（已存在、已桥接 context-aware message）；`isFormValidationError`（同文件 `:15` re-export）用于校验错误分流 |
 | `getAppMessage` | `@/utils/antdMessage.ts:51` | 模块作用域代码（非组件）获取 message 的唯一途径；组件内优先 `App.useApp()` |
 | `isFormValidationError` | `@/utils/errorHandler.ts:15`（re-export 自 `@/types/common`） | 校验错误静默分流的判定函数；`pages/network/discoveries/index.tsx:26` 已有正确 import 先例 |
 | `ActionButtons` | `@/components/shared/ActionButtons.tsx` | FIX-05 首选载体：表格行内操作按钮的既有共享封装，改一处全片生效（需扩展 aria 输出，属既有组件增强） |
-| `useServerSort` | `@/hooks/useServerSort.ts:89` | FIX-03 仅作对照：服务端排序既有范式（后端支持的表使用），cache/job 不适用（后端无排序入参） |
+| `useServerSort` | `@/hooks/useServerSort.ts:89` | FIX-03 载体：服务端排序既有范式（先例 `pages/monitor/logs/columns/loginColumns.tsx` 等），配 `createSorterMeta`；cache/job 白名单内列接入（见 `## 3`） |
 | `usePagination` / `useTableManager` | `@/hooks/*` | FIX-01 loading 的数据来源层；`useTableManager` 已暴露 `loading`/`setLoading`（`useTableManager.ts:33/:47`） |
 
 ---
@@ -68,14 +68,14 @@ created: "2026-10-24"
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | 图标与文字间隙 |
-| sm | 8px | 降级说明文案与表格的间距（`marginBottom: 8`） |
+| sm | 8px | 紧凑元素间距（63 惯例；初版降级说明间距用途已取消） |
 | md | 16px | 默认元素间距 |
 | lg | 24px | 区块内边距 |
 | xl | 32px | 布局间隙 |
 | 2xl | 48px | 大区块分隔 |
 | 3xl | 64px | 页面级间距 |
 
-Exceptions: 本 phase 新增的唯一布局元素是 FIX-03 的降级说明一行文案（`marginBottom: 8`，即 sm）。其余修复不触碰布局间距。
+Exceptions: none（本 phase 不新增任何自定义间距；初版 FIX-03 降级说明 caption 已取消——服务端排序方案无新增布局元素）。
 
 ---
 
@@ -86,10 +86,9 @@ Exceptions: 本 phase 新增的唯一布局元素是 FIX-03 的降级说明一�
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body / 表格单元格 | 14px (`fontSize.sm`) | 400 | 1.5 |
-| 降级说明（FIX-03 caption） | 12px (`fontSize.xs`) | 400 | 1.5 |
 | Heading（页标题） | 20px (`fontSize.xl`) | 600 | 1.375（本 phase 不新增页标题） |
 
-降级说明使用 `Typography.Text type="secondary"`，不得加粗、不得自定义颜色（语义色由 AntD token 消费）。
+初版 FIX-03 降级说明的 `Typography.Text type="secondary"` 约束随契约修订取消，本 phase 不新增任何文字样式角色。
 
 ---
 
@@ -103,7 +102,6 @@ Exceptions: 本 phase 新增的唯一布局元素是 FIX-03 的降级说明一�
 | Secondary (30%) | `var(--theme-card)` | 沿用现状 |
 | Accent (10%) | `var(--theme-primary)` | 沿用现状；本 phase 不新增 accent 使用点 |
 | Error（FIX-04 提示） | antd `message.error` 语义色（`colorError`） | 仅通过统一错误出口出现，禁止手写错误色 |
-| 降级说明（FIX-03） | `Typography.Text type="secondary"` 语义色 | 常显弱提示，非警示色 |
 
 ---
 
@@ -154,30 +152,23 @@ keyboard={false}       // 按 ESC 不关闭
 - 非表单类 Modal（纯详情展示、无输入控件）不强制，但补齐不禁止；`Modal.confirm`（函数式确认框）不在此列——其语义就是「可取消」，ESC/遮罩点击等价取消按钮，63 STOP-04 已处理其防重。
 - 用户可见结果：在任一表单弹窗填入内容后点击遮罩区域或按 ESC，弹窗保持打开、内容完好；只能通过「取消/关闭」按钮（其确认行为归 Phase 66 脏检查，本 phase 直接关闭属可接受降级——关闭动作是用户显式意图）。
 
-## 3. FIX-03 — 分页表排序降级契约
+## 3. FIX-03 — 分页表排序契约（服务端白名单排序）
 
-**判定标准**（依源码证据，按任务预期方向落地）：服务端排序要求后端 list 接口接受排序入参。实测：
+**判定标准**（checker 2026-10-24 复核源码，修正初版「后端不支持排序」的误判）：三个列表的后端**均已支持** `orderByColumn` / `isAsc` 白名单排序，前端只需接参，不构成里程碑 Out of Scope 的「后端接口改造」：
 
-- cache：`internal/api/v1/monitor/cache_handler.go:138` `CacheListParams` 仅有 `Key/Current/PageSize` 等字段，无任何排序参数；数据源是 Redis keys 扫描（`internal/services/monitor/cache_service.go`），排序需后端新增——**里程碑 Out of Scope 明确排除后端接口改造**（REQUIREMENTS.md Out of Scope）。
-- job：`internal/services/scheduler/job_service.go:302` 固定 `Order("created_at DESC")`，handler 无排序入参透传。
+- cache：`internal/api/v1/monitor/cache_handler.go:144-145` 透传 `OrderByColumn/IsAsc` → `internal/services/monitor/cache_service.go:237-246` 按 `cacheAllowedSortFields` 白名单（`key/type/location/ttl/size/createdAt/updatedAt`，恰为前端 7 列全集）应用。
+- job：`internal/services/scheduler/job_service.go:300` `base.ApplySort(db, params.BaseListRequest, jobAllowedSortFields)`，白名单 4 字段：`jobName/jobGroup/status/createdAt`；`:302` 的固定 `Order("created_at DESC")` 仅为无排序入参时的默认。
+- job 日志：`internal/services/scheduler/job_log_service.go:117` `jobLogAllowedSortFields` 白名单 4 字段：`jobName/jobGroup/status/createdAt`。
 
-→ **结论：全部降级为「前端排序 + 明确降级说明」**，不做服务端排序改造（留待后端里程碑评估）。
+→ **结论：白名单内列改服务端排序（全量正确结果），白名单外列移除 sorter。** 不做「前端排序 + 常显降级说明」——初版契约建立在错误事实上；「只对当前页生效」的半真排序比无排序更误导（用户看到排序箭头即默认跨页有序）。
 
 **规则**：
 
-1. `cache/index.tsx:76-132`（7 列）、`job/columns/jobColumns.tsx`（8 处）与 `jobLogColumns.tsx`（5 处）的 `createSorter` **保留**（降级方案下它是唯一正确的本地排序实现），不改为 `createSorterMeta`（后者配合 `useServerSort` 使用，此处后端不支持，改了反而是死代码）。需在每处 columns 定义附近补一行注释：`// 前端排序：后端 list 接口无排序入参，仅对当前页生效（Phase 64 UI-SPEC §3）`。
-2. **降级说明（用户可见契约）**：受影响表格上方常显一行弱提示：
-
-| Element | Copy |
-|---------|------|
-| 载体 | `<Typography.Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 8 }}>` |
-| 文案 | `排序仅对当前页数据生效` |
-| 位置 | cache 列表 Table、job 列表 Table、job 日志 Table 三处，紧贴表格上方 |
-| 出现时机 | **常显**（不做「点击排序后才出现」、不做 toast） |
-
-   否决的替代方案：① 排序触发时 `message.success("已按 X 升序")` ——02 分片第 28 条已判为反模式（每次点表头都弹，轰炸用户）；② 列 header Tooltip ——hover 才可见，触屏与读屏用户不可达。常显单行 caption 是三者中确定性与可达性最优的轻量方案。
+1. **服务端排序统一范式**：复用既有 `useServerSort`（`@/hooks/useServerSort.ts:89`，先例：`pages/monitor/logs/columns/loginColumns.tsx`、`pages/knowledge/articles/index.tsx` 等）+ `createSorterMeta`，列表请求透传 `orderByColumn` / `isAsc`（URL 按路由自动持久化，见 hook 内建行为）。cache 列表 7 列全部接 `createSorterMeta`；job 主表仅 `jobName/jobGroup/status/createdAt` 4 列接；job 日志表仅 `status` 列接（前端列 `startTime` 映射 `orderByColumn: "createdAt"`，二者同义：`job_log_service.go:118-119` 无入参时默认即按 `created_at DESC`）。
+2. **白名单外列移除 sorter**：job 主表 `invokeTarget/cronExpression/concurrent/nextRunTime` 4 列、job 日志表 `duration/jobMessage/exceptionInfo` 3 列——删除 `createSorter` 调用，表头不再渲染排序箭头（后端不支持这些字段的 ORDER BY，加白名单属后端接口改造，被 Out of Scope 排除；保留前端排序即回到「当前页半真排序」缺陷）。cache 7 列无此问题（全在白名单）。
 3. **范围收敛**：本 phase 仅覆盖 REQUIREMENTS 点名的 cache / job 两页（含 job 日志表）。`pages/monitor/server/index.tsx:199-298` 的「本地+服务端双轨」是另一缺陷形态（03 分片 3.5 第 22 条 P2 面），且该页已有服务端排序轨，不在 FIX-03 点名范围，不动。
-4. 用户可见结果：在 cache/job 表点击表头排序，用户能看到「排序仅对当前页数据生效」的说明，不会误以为跨页全量有序；排序行为本身与现状一致（当前页内存排序）。
+4. **不做降级说明文案**：初版方案中的常显 caption（`排序仅对当前页数据生效`）随降级方案一并取消——服务端排序后不再存在「仅当前页生效」的歧义；白名单外列移除 sorter 后也不存在「点了才知道只排当前页」的假入口。
+5. 用户可见结果：在 cache/job 表点击白名单内列表头，排序结果跨页全量正确（后端 ORDER BY）；白名单外列不再显示排序箭头，不会产生「排序了但结果不对」的误导。
 
 ## 4. FIX-04 — 统一错误出口契约
 
@@ -239,7 +230,6 @@ catch (error) {
 | Element | Copy |
 |---------|------|
 | 错误 toast（FIX-04） | `${context}失败: ${原因}`（`handleApiError` 内建模板；context 用既有动作名，不新造句式） |
-| 降级说明（FIX-03） | `排序仅对当前页数据生效` |
 | aria-label（FIX-05） | 与按钮动作名一致：`刷新` / `删除` / `详情` / `执行` / `清空缓存` 等——**必须是人类可读中文动作名**，禁止 `btn-x` 类标识符；与 `title` 同文案 |
 | loading 态 | 无文案（antd Table 蒙层自带转圈）；不新增「加载中…」文字 |
 | 弹窗遮罩（FIX-02） | 无提示文案（遮罩点击静默无响应即契约行为；「更改尚未保存」确认文案归 Phase 66 FormModal 脏检查契约，本 phase 不引入） |
@@ -254,15 +244,15 @@ catch (error) {
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
 | empty (加载完成无数据) | network/monitor 全部列表表 | ✅ covered | loading 结束后 data=[] 渲染 antd 默认空态；加载中与空数据由 loading 蒙层天然区分（FIX-01） |
-| zero-data pagination | cache/job 等分页表 | ✅ covered | 63 已修 total 口径；本 phase 排序降级说明不依赖数据量，0 条时同样成立（FIX-03） |
+| zero-data pagination | cache/job 等分页表 | ✅ covered | 63 已修 total 口径；服务端排序（FIX-03）不依赖数据量，0 条时同样成立 |
 | overflow (Modal 内嵌表) | 7 处 Modal/Drawer 内嵌表 | ✅ covered | 内嵌表与页级表同受 FIX-01 loading 契约约束，复扫清单兜底 |
 | double-submit | 本 phase 不触碰提交链路 | ✅ covered（63 已达） | confirmLoading/防重归 63 STOP-04 + Phase 66 FormModal；本 phase 各章节不引入新的提交入口 |
 | destructive | FIX-04 错误出口覆盖删除/清空类失败提示 | ✅ covered | 删除失败出 toast「删除失败: 原因」，列表保持原状可重试；删除确认交互归 63 STOP-05 |
-| dead-affordance | 降级排序表头 | ✅ covered | 排序表头仍是真功能（当前页排序）+ 常显降级说明，不是假入口；未产生任何「可点无响应」元素 |
+| dead-affordance | 排序表头 | ✅ covered | 白名单内列服务端排序是真功能（跨页全量有序）；白名单外列移除 sorter，不再渲染排序箭头，无「可点但结果误导」的半真入口 |
 | overflow (horizontal) | 本 phase 无新列/新 fixed 声明 | ✅ covered | 63 STOP-07 已修 fixed+scroll 成对；本 phase 触碰的 7 处内嵌表如补 loading 时发现 fixed 失效，按 63 §7 同规则一并成对补 scroll.x |
 | confirming | FIX-02 遮罩/ESC 关闭路径 | ✅ covered | 表单弹窗关死遮罩/ESC（不关闭 → 内容不丢）；显式取消按钮仍可关；精细脏检查确认弹窗归 Phase 66 |
 
-不适用（归后续 phase）：FormModal 脏检查确认弹窗（Phase 66）、PageTable loading/空态/错误态组件化（Phase 66）、其余域 console 收敛与 aria 补齐（Phase 67）、服务端排序后端改造（后端里程碑评估）、Skeleton 骨架屏（Phase 66 三态设计再评估）。
+不适用（归后续 phase，不在本契约内）：FormModal 脏检查确认弹窗（Phase 66）、PageTable loading/空态/错误态组件化（Phase 66）、其余域 console 收敛与 aria 补齐（Phase 67）、排序白名单外字段的后端白名单扩充（后端里程碑评估）、Skeleton 骨架屏（Phase 66 三态设计再评估）。
 
 ---
 
@@ -279,10 +269,14 @@ catch (error) {
 
 ## Checker Sign-Off
 
-- [x] Dimension 1 Layout & Structure: PASS（唯一新布局元素为 FIX-03 单行 caption，间距走 sm token）
-- [x] Dimension 2 Typography: PASS（caption 12px `fontSize.xs` secondary，无新字号角色）
+> 2026-10-24 gsd-ui-checker 复审修订：FIX-03 根因事实更正（后端三处均已有 `orderByColumn/isAsc` 白名单排序），契约由「前端排序 + 常显降级说明」改为「白名单内列服务端排序 + 白名单外列移除 sorter」；降级说明 caption 及其 Typography/Spacing/Color/Copywriting 条目随之取消。
+
+- [x] Dimension 1 Layout & Structure: PASS（初版唯一新布局元素 FIX-03 caption 已随契约修订取消，本 phase 零新增布局）
+- [x] Dimension 2 Typography: PASS（caption 条目已取消，无新字号角色）
 - [x] Dimension 3 Color: PASS（零新色值；secondary/error 均为 AntD 语义 token 消费）
-- [x] Dimension 4 Spacing: PASS（`marginBottom: 8` = sm token，Exceptions 已声明）
-- [x] Dimension 5 Copywriting: PASS（文案模板/aria 命名规则/降级说明文案均已锁定）
-- [x] Dimension 6 Interaction States: PASS（loading/防误关/排序降级/错误反馈四类状态口径明确）
+- [x] Dimension 4 Spacing: PASS（不再有新增间距；Exceptions 更新为 none）
+- [x] Dimension 5 Copywriting: PASS（文案模板/aria 命名规则已锁定；降级说明文案已取消）
+- [x] Dimension 6 Interaction States: PASS（loading/防误关/服务端排序/错误反馈四类状态口径明确）
 - [x] Dimension 7 Accessibility: PASS（FIX-05 aria-label+title 双载；ESC/遮罩关闭路径对读屏行为一致）
+
+Approval: approved
