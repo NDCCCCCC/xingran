@@ -360,6 +360,7 @@ const ADConfigPage: FC = () => {
         loading={loading}
         rowKey="id"
         pagination={false}
+        scroll={{ x: "max-content" }}
         onChange={(pagination, filters, sorter) => {
           // 用 local const 持有新值传 fetchConfigs，规避 React 18 setState 异步时序
           // （fetchConfigs 不在 useMemo 依赖链，setState 后读 state 仍为旧值——commit 7ab1189 同类坑）

@@ -488,6 +488,7 @@ const ConfigManagement: FC = () => {
           rowKey="id"
           pagination={paginationProps}
           onChange={handleTableChange}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 

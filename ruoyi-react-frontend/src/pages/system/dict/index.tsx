@@ -663,6 +663,7 @@ const DictManagement: FC = () => {
                     rowKey="id"
                     pagination={paginationProps}
                     onChange={handleTypeTableChange}
+                    scroll={{ x: "max-content" }}
                   />
                 </Card>
               </>
@@ -837,6 +838,7 @@ const DictManagement: FC = () => {
                     rowKey="id"
                     pagination={paginationProps}
                     onChange={handleDataTableChange}
+                    scroll={{ x: "max-content" }}
                   />
                 </Card>
               </>

@@ -801,6 +801,7 @@ const UserManagement: FC = () => {
                 loading={loading}
                 pagination={paginationProps}
                 onChange={handleTableChange}
+                scroll={{ x: "max-content" }}
                 className="xr-table-zebra"
                 size="middle"
               />

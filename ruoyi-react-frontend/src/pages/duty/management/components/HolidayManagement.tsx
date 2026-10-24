@@ -201,6 +201,7 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
         pagination={paginationProps}
         columns={columns}
         size="small"
+        scroll={{ x: "max-content" }}
       />
     </Card>
   );

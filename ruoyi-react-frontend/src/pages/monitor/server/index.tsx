@@ -374,6 +374,7 @@ const ServerMonitor: FC = () => {
           loading={loading}
           pagination={paginationProps}
           onChange={handleTableChange} // replaced with handleTableChange
+          scroll={{ x: "max-content" }}
         />
       </Card>
 

@@ -196,6 +196,7 @@ const CaptchaBackgroundManagement: FC = () => {
         loading={loading}
         rowKey="id"
         pagination={paginationProps}
+        scroll={{ x: "max-content" }}
       />
 
       {/* 上传模态框 */}
