@@ -117,8 +117,9 @@ describe("AssetRow", () => {
   it("onEdit/onDelete undefined 时不 throw", () => {
     const { container } = render(<AssetRow record={record} />);
     const btns = container.querySelectorAll("button");
+    // STOP-06: 无 onEdit 时编辑按钮隐藏，仅剩删除按钮
+    expect(btns.length).toBe(1);
     fireEvent.click(btns[0]);
-    fireEvent.click(btns[1]);
     expect(container).not.toBeNull();
   });
 });

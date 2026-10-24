@@ -20,7 +20,8 @@ import type { ColumnsType } from "antd/es/table";
 import type { Asset } from "@/types/operations";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
-import { assetApi } from "@/lib/opsApi";
+import { assetApi, excelApi } from "@/lib/opsApi";
+import { handleApiError } from "@/utils/errorHandler";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
@@ -62,6 +63,7 @@ const AssetList: FC = () => {
     nbf: 0,
   });
   const [importVisible, setImportVisible] = useState(false);
+  const [templateDownloading, setTemplateDownloading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deviceTypeOptions, setDeviceTypeOptions] = useState<DeviceTypeOption[]>([]);
   const [deviceCategoryOptions, setDeviceCategoryOptions] = useState<DeviceTypeOption[]>([]);
@@ -199,11 +201,7 @@ const AssetList: FC = () => {
   }, [loadStatistics, loadDeviceTypes, loadDeviceCategories, loadAssets]);
 
   // handleEdit/handleDelete 须定义在 columns useMemo 之前（columns 内联引用二者作 deps）
-  const handleEdit = useCallback((_record: Asset) => {
-    message.info("编辑功能待实现");
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, []);
-
+  // TODO(P67): 资产编辑表单接入（届时恢复 AssetRow 的 onEdit 传入）
   const handleDelete = useCallback(
     async (id: string) => {
       Modal.confirm({
@@ -554,7 +552,7 @@ const AssetList: FC = () => {
         width: 120,
         fixed: "right",
         render: (_, record) => (
-          <AssetRow record={record} onEdit={handleEdit} onDelete={handleDelete} />
+          <AssetRow record={record} onDelete={handleDelete} />
         ),
       },
       // R4 (Phase 45) — 对账健康列(行内徽标,assets 列表)
@@ -571,7 +569,7 @@ const AssetList: FC = () => {
         render: (_: unknown, _record: Asset) => <>-</>,
       },
     ],
-    [getColumnSortOrder, handleEdit, handleDelete]
+    [getColumnSortOrder, handleDelete]
   );
 
   // 根据列配置过滤和排序列
@@ -684,7 +682,21 @@ const AssetList: FC = () => {
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             新增资产
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={() => setImportVisible(true)}>
+          {/* STOP-06: 下载模板兑现真实下载（原为假入口，复用导入弹层） */}
+          <Button
+            icon={<DownloadOutlined />}
+            loading={templateDownloading}
+            onClick={async () => {
+              setTemplateDownloading(true);
+              try {
+                await excelApi.downloadTemplate("asset");
+              } catch (error) {
+                handleApiError(error, "下载模板");
+              } finally {
+                setTemplateDownloading(false);
+              }
+            }}
+          >
             下载模板
           </Button>
           <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
