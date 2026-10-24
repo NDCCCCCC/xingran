@@ -73,7 +73,7 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
         setLoading(false);
       }
     },
-    [searchForm, current, pageSize, message]
+    [searchForm, current, pageSize]
   );
 
   // 获取登录日志
@@ -107,7 +107,7 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
         setLoading(false);
       }
     },
-    [loginSearchForm, current, pageSize, message]
+    [loginSearchForm, current, pageSize]
   );
 
   return {
