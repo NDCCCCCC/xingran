@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { App, ConfigProvider } from "antd";
+import { App, ConfigProvider, Modal } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/lib/api", async () => {
@@ -114,7 +114,15 @@ describe("useRoleActions", () => {
         result.current.setSelectedRowKeys(["r1", "r2"]);
       });
       await act(async () => {
+        // STOP-05: handleBatchDelete 先弹 Modal.confirm，确认后才发请求
+        const confirmSpy = vi
+          .spyOn(Modal, "confirm")
+          .mockImplementation(({ onOk }: { onOk?: () => unknown }) => {
+            void onOk?.();
+            return { destroy: vi.fn(), update: vi.fn() } as never;
+          });
         await result.current.handleBatchDelete(["r1", "r2"]);
+        confirmSpy.mockRestore();
       });
     });
     expect(postSpy).toHaveBeenCalledWith("/system/roles/batch-delete", { ids: ["r1", "r2"] });

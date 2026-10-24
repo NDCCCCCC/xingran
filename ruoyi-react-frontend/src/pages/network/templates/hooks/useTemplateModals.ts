@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { App } from "antd";
+import { App, Modal } from "antd";
 import type { ConfigTemplate } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
@@ -132,17 +132,27 @@ export function useTemplateModals(): UseTemplateModalsReturn {
         message.warning("请选择要删除的数据");
         return;
       }
-      try {
-        await post("/network/templates/batch-delete", { ids: selectedRowKeys });
-        handleSuccess("批量删除成功");
-        setSelectedRowKeys([]);
-        onSuccess();
-      } catch (error) {
-        handleApiError(error, "批量删除失败");
-      }
+      // STOP-05: 确认闸门下沉到 hook 内——任何调用点都无法绕过二次确认
+      Modal.confirm({
+        title: "确认批量删除",
+        content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
+        okText: "删除",
+        cancelText: "取消",
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          try {
+            await post("/network/templates/batch-delete", { ids: selectedRowKeys });
+            message.success("已删除");
+            setSelectedRowKeys([]);
+            onSuccess();
+          } catch (error) {
+            handleApiError(error, "批量删除失败");
+          }
+        },
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-    [handleSuccess, handleApiError]
+    [handleApiError]
   );
 
   const handlePreview = useCallback(

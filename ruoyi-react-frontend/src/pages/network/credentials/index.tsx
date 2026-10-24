@@ -185,24 +185,35 @@ const CredentialManagement: FC = () => {
   };
 
   // 批量删除凭证
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       message.warning("请选择要删除的数据");
       return;
     }
-    await withErrorHandling(
-      async () => {
-        await post("/network/credentials/batch-delete", { ids: selectedRowKeys });
-        return "批量删除成功";
+    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
+    Modal.confirm({
+      title: "确认批量删除",
+      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
+      okText: "删除",
+      cancelText: "取消",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        await withErrorHandling(
+          async () => {
+            await post("/network/credentials/batch-delete", { ids: selectedRowKeys });
+            return "已删除";
+          },
+          {
+            successMessage: "已删除",
+            onSuccess: () => {
+              setSelectedRowKeys([]);
+              loadCredentials();
+              loadStatistics();
+            },
+          }
+        );
       },
-      {
-        onSuccess: () => {
-          setSelectedRowKeys([]);
-          loadCredentials();
-          loadStatistics();
-        },
-      }
-    );
+    });
   };
 
   const handleBatchExport = async (entityTypes: string[]) => {

@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, type Key } from "react";
-import { App, type FormInstance } from "antd";
+import { App, Modal, type FormInstance } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DictType, DictData } from "@/types";
 import { post } from "@/lib/api";
@@ -117,16 +117,26 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
         message.warning("请选择要删除的数据");
         return;
       }
-      try {
-        await post("/system/dicts/types/batch-delete", { ids: selectedRowKeys });
-        handleSuccess("批量删除");
-        setSelectedRowKeys([]);
-        loadDictTypes();
-        loadTypeStatistics();
-        invalidateAllDicts();
-      } catch (error) {
-        handleApiError(error, "批量删除");
-      }
+      // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
+      Modal.confirm({
+        title: "确认批量删除",
+        content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
+        okText: "删除",
+        cancelText: "取消",
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          try {
+            await post("/system/dicts/types/batch-delete", { ids: selectedRowKeys });
+            message.success("已删除");
+            setSelectedRowKeys([]);
+            loadDictTypes();
+            loadTypeStatistics();
+            invalidateAllDicts();
+          } catch (error) {
+            handleApiError(error, "批量删除");
+          }
+        },
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadDictTypes, loadTypeStatistics, invalidateAllDicts]
@@ -183,16 +193,26 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
         message.warning("请选择要删除的数据");
         return;
       }
-      try {
-        await post("/system/dicts/data/batch-delete", { ids: selectedRowKeys });
-        handleSuccess("批量删除");
-        setSelectedRowKeys([]);
-        loadDictData();
-        loadDataStatistics();
-        invalidateAllDicts();
-      } catch (error) {
-        handleApiError(error, "批量删除");
-      }
+      // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
+      Modal.confirm({
+        title: "确认批量删除",
+        content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
+        okText: "删除",
+        cancelText: "取消",
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          try {
+            await post("/system/dicts/data/batch-delete", { ids: selectedRowKeys });
+            message.success("已删除");
+            setSelectedRowKeys([]);
+            loadDictData();
+            loadDataStatistics();
+            invalidateAllDicts();
+          } catch (error) {
+            handleApiError(error, "批量删除");
+          }
+        },
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadDictData, loadDataStatistics, invalidateAllDicts]

@@ -17,6 +17,7 @@ import {
   Layout,
   Alert,
   Card,
+  App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -304,6 +305,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
 // ==================== 主组件 ====================
 
 const UserManagement: FC = () => {
+  const { message } = App.useApp();
   // 自定义状态
   const location = useLocation();
   const [selectedDeptId, setSelectedDeptId] = usePersistedStateController<string>({
@@ -541,21 +543,31 @@ const UserManagement: FC = () => {
     [loadUsers, loadStatistics]
   );
 
-  const handleBatchDelete = useCallback(async () => {
+  const handleBatchDelete = useCallback(() => {
     if (selectedRowKeys.length === 0) {
       return;
     }
 
-    try {
-      await post("/system/users/batch-delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      resetSelection();
-      loadUsers();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
-  }, [selectedRowKeys, resetSelection, loadUsers, loadStatistics]);
+    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
+    Modal.confirm({
+      title: "确认批量删除",
+      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
+      okText: "删除",
+      cancelText: "取消",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await post("/system/users/batch-delete", { ids: selectedRowKeys });
+          message.success("已删除");
+          resetSelection();
+          loadUsers();
+          loadStatistics();
+        } catch (error) {
+          handleApiError(error, "批量删除");
+        }
+      },
+    });
+  }, [selectedRowKeys, resetSelection, loadUsers, loadStatistics, message]);
 
   const handleUpdateStatus = useCallback(
     async (id: string, status: number) => {

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { FC } from "react";
 import {
   Table,
@@ -14,6 +14,8 @@ import {
   Col,
   Statistic,
   Alert,
+  Modal,
+  App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -38,6 +40,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 const PostManagement: FC = () => {
+  const { message } = App.useApp();
   const [statistics, setStatistics] = useState({
     total: 0,
     active: 0,
@@ -153,19 +156,29 @@ const PostManagement: FC = () => {
   };
 
   // 批量删除岗位
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       return;
     }
-    try {
-      await post("/system/posts/batch-delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      resetSelection();
-      loadPosts();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
+    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
+    Modal.confirm({
+      title: "确认批量删除",
+      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
+      okText: "删除",
+      cancelText: "取消",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await post("/system/posts/batch-delete", { ids: selectedRowKeys });
+          message.success("已删除");
+          resetSelection();
+          loadPosts();
+          loadStatistics();
+        } catch (error) {
+          handleApiError(error, "批量删除");
+        }
+      },
+    });
   };
 
   // 打开编辑模态框

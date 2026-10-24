@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { App as AntdApp } from "antd";
+import { App as AntdApp, Modal } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 
@@ -102,7 +102,15 @@ describe("useDictActions", () => {
     const setKeys = vi.fn();
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
+      // STOP-05: handleBatchDeleteType 先弹 Modal.confirm，确认后才发请求
+      const confirmSpy = vi
+        .spyOn(Modal, "confirm")
+        .mockImplementation(({ onOk }: { onOk?: () => unknown }) => {
+          void onOk?.();
+          return { destroy: vi.fn(), update: vi.fn() } as never;
+        });
       await result.current.handleBatchDeleteType(["d1", "d2"], setKeys);
+      confirmSpy.mockRestore();
     });
     expect(api.endpoint).toHaveBeenCalled();
   });
@@ -137,7 +145,15 @@ describe("useDictActions", () => {
     const setKeys = vi.fn();
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
+      // STOP-05: handleBatchDeleteData 先弹 Modal.confirm，确认后才发请求
+      const confirmSpy = vi
+        .spyOn(Modal, "confirm")
+        .mockImplementation(({ onOk }: { onOk?: () => unknown }) => {
+          void onOk?.();
+          return { destroy: vi.fn(), update: vi.fn() } as never;
+        });
       await result.current.handleBatchDeleteData(["d1"], setKeys);
+      confirmSpy.mockRestore();
     });
     expect(api.endpoint).toHaveBeenCalled();
   });

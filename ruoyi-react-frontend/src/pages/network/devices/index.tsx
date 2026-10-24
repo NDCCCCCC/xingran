@@ -507,23 +507,33 @@ const DeviceManagement: FC = () => {
   };
 
   // 批量删除设备
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       return;
     }
-    try {
-      await post("/network/devices/batch-delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      resetSelection();
-      if (selectedDeptId) {
-        loadDevices({ deptId: selectedDeptId });
-      } else {
-        loadDevices();
-      }
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
+    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
+    Modal.confirm({
+      title: "确认批量删除",
+      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
+      okText: "删除",
+      cancelText: "取消",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await post("/network/devices/batch-delete", { ids: selectedRowKeys });
+          message.success("已删除");
+          resetSelection();
+          if (selectedDeptId) {
+            loadDevices({ deptId: selectedDeptId });
+          } else {
+            loadDevices();
+          }
+          loadStatistics();
+        } catch (error) {
+          handleApiError(error, "批量删除");
+        }
+      },
+    });
   };
 
   const handleBatchExport = async (entityTypes: string[]) => {
