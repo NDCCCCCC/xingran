@@ -280,3 +280,41 @@ catch (error) {
 - [x] Dimension 7 Accessibility: PASS（FIX-05 aria-label+title 双载；ESC/遮罩关闭路径对读屏行为一致）
 
 Approval: approved
+
+## UI Considerations — Probe Coverage (2026-10-24)
+
+ui-consideration-probe（6 类元素 × 8 类闭合状态分类）对 5 个代表性 UI 元素（E1 表格 loading、E2 表单弹窗遮罩、E3 列排序、E4 错误出口、E5 可访问名）生成 29 项状态考察点，全部 resolved（explicit verification，逐项引用本文契约节），0 项 unclassified。用户已确认全部接受。
+
+| # | 元素 | 状态 | 决议 | 覆盖依据 |
+|---|------|------|------|----------|
+| 1 | E1 列表表格在数据加载期间显示 loading 状态而非空白（network/monitor 域 Modal/Drawer 内嵌表 7 处） | 空态 | resolved | §1 FIX-01 契约（加载中/空数据区分，Table locale.emptyText） |
+| 2 | E1 列表表格在数据加载期间显示 loading 状态而非空白（network/monitor 域 Modal/Drawer 内嵌表 7 处） | 加载中 | resolved | §1 FIX-01 契约（Table loading prop，7 处内嵌表） |
+| 3 | E1 列表表格在数据加载期间显示 loading 状态而非空白（network/monitor 域 Modal/Drawer 内嵌表 7 处） | 失败 | resolved | §4 FIX-04 契约（数据区失败 ErrorAlertWithRetry） |
+| 4 | E1 列表表格在数据加载期间显示 loading 状态而非空白（network/monitor 域 Modal/Drawer 内嵌表 7 处） | 正常有数据 | resolved | §1 FIX-01 契约（正常渲染不受影响） |
+| 5 | E1 列表表格在数据加载期间显示 loading 状态而非空白（network/monitor 域 Modal/Drawer 内嵌表 7 处） | 部分数据 | resolved | §1 FIX-01 契约（部分列空值走既有 emptyText） |
+| 6 | E1 列表表格在数据加载期间显示 loading 状态而非空白（network/monitor 域 Modal/Drawer 内嵌表 7 处） | 溢出 | resolved | §1 FIX-01 契约（既有 scroll.x 规则延续 63 契约） |
+| 7 | E1 列表表格在数据加载期间显示 loading 状态而非空白（network/monitor 域 Modal/Drawer 内嵌表 7 处） | 零/一/多 | resolved | §1 FIX-01 契约（total=0 不渲染分页，63 已定） |
+| 8 | E2 含未保存修改的表单弹窗，误点遮罩或按 ESC 不关闭，未保存内容不丢失（22 个业务 Modal） | 空态 | resolved | §2 FIX-02 契约（空表单误点遮罩同不关闭） |
+| 9 | E2 含未保存修改的表单弹窗，误点遮罩或按 ESC 不关闭，未保存内容不丢失（22 个业务 Modal） | 加载中 | resolved | §2 FIX-02 契约（确认 loading 期间遮罩点击无效） |
+| 10 | E2 含未保存修改的表单弹窗，误点遮罩或按 ESC 不关闭，未保存内容不丢失（22 个业务 Modal） | 失败 | resolved | §2 FIX-02 + §4 FIX-04 契约（提交失败弹窗不关，错误提示可见） |
+| 11 | E2 含未保存修改的表单弹窗，误点遮罩或按 ESC 不关闭，未保存内容不丢失（22 个业务 Modal） | 部分数据 | resolved | §2 FIX-02 契约（部分填写=未保存，一律不静默关闭） |
+| 12 | E2 含未保存修改的表单弹窗，误点遮罩或按 ESC 不关闭，未保存内容不丢失（22 个业务 Modal） | 长文本 | resolved | §2 FIX-02 契约（长文本输入不受遮罩策略影响） |
+| 13 | E3 cache/job 分页表列排序，白名单内列走服务端排序，白名单外列移除排序功能 | 空态 | resolved | §3 FIX-03 契约（空表无排序交互） |
+| 14 | E3 cache/job 分页表列排序，白名单内列走服务端排序，白名单外列移除排序功能 | 加载中 | resolved | §3 FIX-03 契约（排序请求复用表格 loading） |
+| 15 | E3 cache/job 分页表列排序，白名单内列走服务端排序，白名单外列移除排序功能 | 失败 | resolved | §3 FIX-03 + §4 FIX-04 契约（排序请求失败走统一出口） |
+| 16 | E3 cache/job 分页表列排序，白名单内列走服务端排序，白名单外列移除排序功能 | 正常有数据 | resolved | §3 FIX-03 契约（白名单列服务端排序 orderByColumn/isAsc） |
+| 17 | E3 cache/job 分页表列排序，白名单内列走服务端排序，白名单外列移除排序功能 | 部分数据 | resolved | §3 FIX-03 契约（白名单外列移除 sorter） |
+| 18 | E3 cache/job 分页表列排序，白名单内列走服务端排序，白名单外列移除排序功能 | 溢出 | resolved | §3 FIX-03 契约（列宽/溢出沿用 63 契约） |
+| 19 | E3 cache/job 分页表列排序，白名单内列走服务端排序，白名单外列移除排序功能 | 零/一/多 | resolved | §3 FIX-03 契约（排序结果页码回 1） |
+| 20 | E3 cache/job 分页表列排序，白名单内列走服务端排序，白名单外列移除排序功能 | 长文本 | resolved | §3 FIX-03 契约（长列名省略号，不动） |
+| 21 | E4 请求失败时用户看到可见错误提示（统一走 handleApiError 错误出口），数据区失败优先 ErrorAlertWithRetry | 加载中 | resolved | §4 FIX-04 契约（请求期间按钮禁用防重，63 已定） |
+| 22 | E4 请求失败时用户看到可见错误提示（统一走 handleApiError 错误出口），数据区失败优先 ErrorAlertWithRetry | 失败 | resolved | §4 FIX-04 契约（handleApiError 唯一出口 + catch 三分支） |
+| 23 | E4 请求失败时用户看到可见错误提示（统一走 handleApiError 错误出口），数据区失败优先 ErrorAlertWithRetry | 长文本 | resolved | 64-UI-SPEC.md 对应 FIX 契约节 |
+| 24 | E5 icon-only 图标按钮补 aria-label 与 title 可访问名（ActionButtons 组件一处修全片） | 空态 | resolved | §5 FIX-05 契约（icon-only 按钮必有可访问名） |
+| 25 | E5 icon-only 图标按钮补 aria-label 与 title 可访问名（ActionButtons 组件一处修全片） | 加载中 | resolved | §5 FIX-05 契约（loading 态图标按钮 aria 不丢） |
+| 26 | E5 icon-only 图标按钮补 aria-label 与 title 可访问名（ActionButtons 组件一处修全片） | 失败 | resolved | §5 FIX-05 契约（错误图标按钮可访问名） |
+| 27 | E5 icon-only 图标按钮补 aria-label 与 title 可访问名（ActionButtons 组件一处修全片） | 正常有数据 | resolved | §5 FIX-05 契约（ActionButtons aria-label+title 双载） |
+| 28 | E5 icon-only 图标按钮补 aria-label 与 title 可访问名（ActionButtons 组件一处修全片） | 溢出 | resolved | §5 FIX-05 契约（title 溢出提示策略） |
+| 29 | E5 icon-only 图标按钮补 aria-label 与 title 可访问名（ActionButtons 组件一处修全片） | 长文本 | resolved | §5 FIX-05 契约（aria-label 不受文本长度影响） |
+
+**Coverage**: applicable 29 / resolved 29 / unresolved 0 / unclassified 0 · byVerification: explicit 29, backstop 0。
