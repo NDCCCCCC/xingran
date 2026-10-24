@@ -31,7 +31,7 @@ const { Option } = Select;
 const DeviceDiscoveryPage: FC = () => {
   const { message } = App.useApp();
   // 使用全局分页 hook
-  const { paginationProps, setTotal: _setTotal } = usePagination();
+  const { paginationProps, setTotal } = usePagination();
 
   // 服务端排序:field 与 columns.dataIndex 对齐
   const sorterMetas = useMemo(
@@ -63,7 +63,7 @@ const DeviceDiscoveryPage: FC = () => {
     discoveredDevices,
     departments,
     loading,
-    total: _total,
+    total: hookTotal,
     statistics,
     modalState,
     currentDiscovery,
@@ -200,6 +200,11 @@ const DeviceDiscoveryPage: FC = () => {
       }),
     [handleViewResult, handleDelete, orderByColumn, discoverySortOrder]
   );
+
+  // STOP-02: 列表接口返回后回填分页器 total（hook 内部 total → usePagination）
+  useEffect(() => {
+    setTotal(hookTotal);
+  }, [setTotal, hookTotal]);
 
   useEffect(() => {
     loadDiscoveries();

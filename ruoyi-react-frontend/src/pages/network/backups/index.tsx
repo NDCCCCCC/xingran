@@ -76,7 +76,7 @@ const ConfigBackupPage: FC = () => {
   const [batchExporting, setBatchExporting] = useState(false);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal: _setTotal } = usePagination();
+  const { paginationProps, setTotal } = usePagination();
 
   // 服务端排序:field 与 columns.dataIndex 对齐(useServerSort 按 sorter.field 匹配)
   const sorterMetas = useMemo(
@@ -102,7 +102,7 @@ const ConfigBackupPage: FC = () => {
     deviceGroups,
     statistics,
     loading,
-    total: _total,
+    total: hookTotal,
     loadDevices,
     loadBackups,
     loadStatistics,
@@ -171,6 +171,11 @@ const ConfigBackupPage: FC = () => {
       return null;
     }
   }, [restoreTask?.resultJson]);
+
+  // STOP-02: 列表接口返回后回填分页器 total（hook 内部 total → usePagination）
+  useEffect(() => {
+    setTotal(hookTotal);
+  }, [setTotal, hookTotal]);
 
   // 初始化加载
   useEffect(() => {
@@ -659,8 +664,6 @@ const ConfigBackupPage: FC = () => {
           pagination={paginationProps}
           onChange={(pagination, _filters, sorter) => {
             handleBackupSortChange(pagination, _filters, sorter);
-            setCurrent(pagination.current ?? 1);
-            setPageSize(pagination.pageSize ?? 10);
             // v129-recheck WR-02: 闭包里的 orderByColumn/isAsc 是上一次渲染的
             // 旧 state（useServerSort 文档点名的时序坑），首次点击发空、之后每次
             // 发上一次的排序——改用 resolveSorter 同步解析本次事件的新值
