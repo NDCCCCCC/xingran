@@ -49,7 +49,7 @@ import { useRestoreTask } from "./hooks/useRestoreTask";
 import { batchExport } from "@/lib/api/networkApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -103,6 +103,7 @@ const ConfigBackupPage: FC = () => {
     statistics,
     loading,
     total: hookTotal,
+    error: backupError,
     loadDevices,
     loadBackups,
     loadStatistics,
@@ -541,6 +542,13 @@ const ConfigBackupPage: FC = () => {
 
   return (
     <div>
+      {/* FIX-04a: 列表加载失败可重试错误条 */}
+      {!!backupError && (
+        <ErrorAlertWithRetry
+          error={backupError}
+          onRetry={() => Promise.all([loadBackups(), loadStatistics()])}
+        />
+      )}
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>

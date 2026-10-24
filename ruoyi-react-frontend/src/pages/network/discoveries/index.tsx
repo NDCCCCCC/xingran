@@ -19,11 +19,11 @@ import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import type { FormInstance } from "antd/es/form";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { isFormValidationError } from "@/utils/errorHandler";
+import { handleApiError, isFormValidationError } from "@/utils/errorHandler";
 import type { DeviceDiscovery } from "@/types";
 
 const { Option } = Select;
@@ -70,6 +70,7 @@ const DeviceDiscoveryPage: FC = () => {
     currentDiscovery,
     setModalState,
     setCurrentDiscovery,
+    error: discoveryError,
     loadDiscoveries,
     loadStatistics,
     loadDepartments,
@@ -136,8 +137,7 @@ const DeviceDiscoveryPage: FC = () => {
       if (isFormValidationError(error)) {
         return;
       }
-      console.error("创建任务失败:", error);
-      message.error("创建任务失败");
+      handleApiError(error, "创建任务");
     }
   };
 
@@ -216,6 +216,13 @@ const DeviceDiscoveryPage: FC = () => {
 
   return (
     <div>
+      {/* FIX-04a: 列表加载失败可重试错误条 */}
+      {!!discoveryError && (
+        <ErrorAlertWithRetry
+          error={discoveryError}
+          onRetry={() => Promise.all([loadDiscoveries(), loadStatistics()])}
+        />
+      )}
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>

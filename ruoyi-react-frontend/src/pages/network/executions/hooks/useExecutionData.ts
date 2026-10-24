@@ -7,6 +7,7 @@ import { useState, useCallback } from "react";
 import { App } from "antd";
 import type { ConfigExecution, NetworkDevice, ConfigTemplate, PageResponse } from "@/types";
 import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 import type { ExecutionStatistics, ExecutionDataState } from "../types";
 
 export interface UseExecutionDataParams {
@@ -19,6 +20,8 @@ export interface UseExecutionDataReturn {
   // 数据状态
   dataState: ExecutionDataState;
   loading: boolean;
+  /** FIX-04a: 列表加载失败的可见错误（渲染 ErrorAlertWithRetry） */
+  error: unknown;
   execLoading: boolean;
   devicesLoading: boolean;
   detailsLoading: boolean;
@@ -56,6 +59,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   });
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [execLoading, setExecLoading] = useState(false);
   /** FIX-01: 设备列表请求中，供 ExecuteModal 内嵌表 loading */
   const [devicesLoading, setDevicesLoading] = useState(false);
@@ -83,7 +87,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       });
       setDataState((prev) => ({ ...prev, devices: result.data?.list || [] }));
     } catch (error) {
-      console.error("加载设备列表失败:", error);
+      handleApiError(error, "加载设备列表");
     } finally {
       setDevicesLoading(false);
     }
@@ -99,7 +103,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       });
       setDataState((prev) => ({ ...prev, templates: result.data?.list || [] }));
     } catch (error) {
-      console.error("加载模板列表失败:", error);
+      handleApiError(error, "加载模板列表");
     }
   }, []);
 
@@ -119,8 +123,9 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
         });
         setDataState((prev) => ({ ...prev, executions: result.data?.list || [] }));
         setExecTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("加载执行记录失败:", error);
+        setError(error);
       } finally {
         setExecLoading(false);
       }
@@ -139,8 +144,9 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
         success: result.data?.success ?? 0,
         failed: result.data?.failed ?? 0,
       });
+      setError(null);
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      setError(error);
     }
   }, []);
 
@@ -165,6 +171,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   return {
     dataState,
     loading,
+    error,
     execLoading,
     devicesLoading,
     detailsLoading,

@@ -25,7 +25,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
 
 const { Option } = Select;
 
@@ -68,6 +68,7 @@ const CommandDispatch: FC = () => {
     executions,
     execTotal,
     statistics,
+    error: commandError,
     devicesLoading,
     detailsLoading,
     setExecTotal: _setExecTotal,
@@ -146,6 +147,13 @@ const CommandDispatch: FC = () => {
 
   return (
     <div>
+      {/* FIX-04a: 列表加载失败可重试错误条 */}
+      {!!commandError && (
+        <ErrorAlertWithRetry
+          error={commandError}
+          onRetry={() => Promise.all([loadExecutions(), loadStatistics()])}
+        />
+      )}
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={5}>

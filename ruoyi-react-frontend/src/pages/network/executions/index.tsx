@@ -19,7 +19,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
 import type { ConfigExecution } from "@/types";
 
 const { Option } = Select;
@@ -58,6 +58,7 @@ const ConfigExecutionPage: FC = () => {
     dataState,
     setDataState,
     execLoading,
+    error: executionError,
     devicesLoading,
     detailsLoading,
     statistics,
@@ -147,6 +148,13 @@ const ConfigExecutionPage: FC = () => {
 
   return (
     <div>
+      {/* FIX-04a: 列表加载失败可重试错误条 */}
+      {!!executionError && (
+        <ErrorAlertWithRetry
+          error={executionError}
+          onRetry={() => Promise.all([loadExecutions(), loadStatistics()])}
+        />
+      )}
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={5}>

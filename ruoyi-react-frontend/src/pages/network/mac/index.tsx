@@ -32,7 +32,7 @@ import { get, post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { withErrorHandling } from "@/utils/errorHandler";
+import { handleApiError, withErrorHandling } from "@/utils/errorHandler";
 import { useState, useEffect, useMemo } from "react";
 import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
@@ -190,7 +190,7 @@ const MACAddressPage: FC = () => {
         secure: data.secure ?? 0,
       });
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      handleApiError(error, "加载统计数据");
     }
   };
 
@@ -207,7 +207,7 @@ const MACAddressPage: FC = () => {
       const list = result.data?.list || [];
       setDevices(list);
     } catch (error) {
-      console.error("加载设备列表失败:", error);
+      handleApiError(error, "加载设备列表");
     }
   };
 

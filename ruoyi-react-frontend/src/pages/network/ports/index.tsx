@@ -35,7 +35,7 @@ import { batchExport, getPortMACBundle, type PortMACBundle } from "@/lib/api/net
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { useTableManager } from "@/hooks/useTableManager";
-import { withErrorHandling } from "@/utils/errorHandler";
+import { handleApiError, withErrorHandling } from "@/utils/errorHandler";
 import { formatDateTime } from "@/utils/datetime";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
@@ -271,7 +271,7 @@ const PortStatusPage: FC = () => {
         dot1xEnabled: stats.dot1xEnabledCount || 0,
       });
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      handleApiError(error, "加载统计数据");
     }
   };
 
@@ -284,7 +284,7 @@ const PortStatusPage: FC = () => {
       })) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
-      console.error("加载设备列表失败:", error);
+      handleApiError(error, "加载设备列表");
     }
   };
 

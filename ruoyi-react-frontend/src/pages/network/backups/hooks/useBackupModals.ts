@@ -7,6 +7,7 @@ import type { ConfigBackup } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import type { DeviceBackupGroup } from "../types";
 import { post } from "@/lib/api";
+import { handleApiError, isFormValidationError } from "@/utils/errorHandler";
 
 interface UseBackupModalsOptions {
   onLoad: () => void;
@@ -82,7 +83,7 @@ export function useBackupModals(options: UseBackupModalsOptions): UseBackupModal
       setSelectedBackup(backup);
       setContentDrawerVisible(true);
     } catch (error) {
-      console.error("加载备份内容失败:", error);
+      handleApiError(error, "加载备份内容");
     }
   }, []);
 
@@ -119,10 +120,8 @@ export function useBackupModals(options: UseBackupModalsOptions): UseBackupModal
         closeBackupModal(form);
         onLoad();
       } catch (error: unknown) {
-        if ((error as { errorFields?: unknown }).errorFields) {
-          return;
-        }
-        console.error("创建备份失败:", (error as Error).message);
+        if (isFormValidationError(error)) return;
+        handleApiError(error, "创建备份");
       }
     },
     [closeBackupModal, onLoad]
@@ -149,7 +148,7 @@ export function useBackupModals(options: UseBackupModalsOptions): UseBackupModal
         setRestoreTaskId(result.data?.taskId || null);
         onLoad();
       } catch (error) {
-        console.error("发起恢复任务失败:", error);
+        handleApiError(error, "发起恢复任务");
       }
     },
     [selectedRestoreBackup, onLoad]

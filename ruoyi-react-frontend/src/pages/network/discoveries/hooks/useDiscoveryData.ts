@@ -7,6 +7,7 @@ import { useState, useCallback } from "react";
 import { App } from "antd";
 import type { DeviceDiscovery, Department, PageResponse } from "@/types";
 import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 import type { DiscoveryStatistics, ModalState } from "../types";
 
 export interface UseDiscoveryDataParams {
@@ -20,6 +21,8 @@ export interface UseDiscoveryDataReturn {
   resultsLoading: boolean;
   departments: Department[];
   loading: boolean;
+  /** FIX-04a: 列表加载失败的可见错误（渲染 ErrorAlertWithRetry） */
+  error: unknown;
   total: number;
   statistics: DiscoveryStatistics;
   modalState: ModalState;
@@ -47,6 +50,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   const [resultsLoading, setResultsLoading] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [total, setTotal] = useState(0);
   const [statistics, setStatistics] = useState<DiscoveryStatistics>({
     total: 0,
@@ -74,8 +78,9 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
         });
         setDiscoveries(result.data?.list || []);
         setTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("加载发现任务失败:", error);
+        setError(error);
       } finally {
         setLoading(false);
       }
@@ -95,8 +100,9 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
         failed: result.data?.failed ?? 0,
         totalDevices: result.data?.totalDevices ?? 0,
       });
+      setError(null);
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      setError(error);
     }
   }, []);
 
@@ -108,7 +114,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
       });
       setDepartments(result.data?.list || []);
     } catch (error) {
-      console.error("加载部门列表失败:", error);
+      handleApiError(error, "加载部门列表");
     }
   }, []);
 
@@ -136,6 +142,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
     loading,
     total,
     statistics,
+    error,
     modalState,
     currentDiscovery,
     setDiscoveries,

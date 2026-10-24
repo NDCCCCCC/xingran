@@ -6,6 +6,7 @@
 import { useState, useCallback } from "react";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice, PageResponse } from "@/types";
 import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 import type { CommandStatistics } from "../types";
 
 export interface UseCommandDataParams {
@@ -22,6 +23,8 @@ export interface UseCommandDataReturn {
   devicesLoading: boolean;
   /** FIX-01: 执行明细请求中，供 DetailDrawer 内嵌表 loading */
   detailsLoading: boolean;
+  /** FIX-04a: 列表加载失败的可见错误（渲染 ErrorAlertWithRetry） */
+  error: unknown;
 
   setExecTotal: React.Dispatch<React.SetStateAction<number>>;
   setStatistics: React.Dispatch<React.SetStateAction<CommandStatistics>>;
@@ -40,6 +43,7 @@ export function useCommandData(
   { current, pageSize }: UseCommandDataParams
 ): UseCommandDataReturn {
   const [executions, setExecutions] = useState<ConfigExecution[]>([]);
+  const [error, setError] = useState<unknown>(null);
   const [execLoading, setExecLoadingState] = useState(false);
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -64,8 +68,9 @@ export function useCommandData(
         });
         setExecutions(result.data?.list || []);
         setExecTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("加载执行记录失败:", error);
+        setError(error);
       } finally {
         setExecLoading(false);
         setExecLoadingState(false);
@@ -85,8 +90,9 @@ export function useCommandData(
         success: result.data?.success ?? 0,
         failed: result.data?.failed ?? 0,
       });
+      setError(null);
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      setError(error);
     }
   }, []);
 
@@ -100,7 +106,7 @@ export function useCommandData(
       });
       return result.data?.list || [];
     } catch (error) {
-      console.error("加载设备列表失败:", error);
+      handleApiError(error, "加载设备列表");
       return [];
     } finally {
       setDevicesLoading(false);
@@ -119,7 +125,7 @@ export function useCommandData(
           details: result.data?.details || [],
         };
       } catch (error) {
-        console.error("加载执行明细失败:", error);
+        handleApiError(error, "加载执行明细");
         throw error;
       } finally {
         setDetailsLoading(false);
@@ -135,6 +141,7 @@ export function useCommandData(
     statistics,
     devicesLoading,
     detailsLoading,
+    error,
     setExecTotal,
     setStatistics,
     setExecutions,

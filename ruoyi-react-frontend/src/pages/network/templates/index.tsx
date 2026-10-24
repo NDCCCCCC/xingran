@@ -27,7 +27,7 @@ import { TemplateEditModal, TemplatePreviewModal, TemplateVariablesModal } from 
 import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
 
 const { Option } = Select;
 
@@ -46,6 +46,7 @@ const TemplateManagement: FC = () => {
     loading,
     total: _total,
     statistics,
+    error: templateError,
     loadTemplates,
     loadStatistics,
   } = useTemplateData(searchForm, setTotal);
@@ -195,6 +196,13 @@ const TemplateManagement: FC = () => {
 
   return (
     <div>
+      {/* FIX-04a: 列表加载失败可重试错误条 */}
+      {!!templateError && (
+        <ErrorAlertWithRetry
+          error={templateError}
+          onRetry={() => Promise.all([loadTemplates(), loadStatistics()])}
+        />
+      )}
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
