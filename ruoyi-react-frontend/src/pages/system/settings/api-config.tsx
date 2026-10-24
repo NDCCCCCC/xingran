@@ -411,7 +411,6 @@ const APIConfigPage: FC = () => {
           editForm.resetFields();
           setEditingConfig(null);
         }}
-        confirmLoading={submitting}
         width={800}
       >
         <Form form={editForm} labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>

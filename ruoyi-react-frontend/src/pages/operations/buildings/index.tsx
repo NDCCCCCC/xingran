@@ -723,7 +723,6 @@ const BuildingManagement: FC = () => {
               geocoding.reset();
             }}
             width={600}
-            confirmLoading={geocoding.loading}
           >
             <Form
               form={buildingForm}

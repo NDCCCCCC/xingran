@@ -969,7 +969,6 @@ const VirtualMachineList: React.FC = () => {
         open={createModalVisible}
         onOk={handleCreate}
         onCancel={() => setCreateModalVisible(false)}
-        confirmLoading={loading}
         width={800}
       >
         <Spin spinning={loading && !vtpPlatforms.length}>
@@ -1196,7 +1195,6 @@ const VirtualMachineList: React.FC = () => {
         open={quickCreateModalVisible}
         onOk={handleQuickCreate}
         onCancel={() => setQuickCreateModalVisible(false)}
-        confirmLoading={loading}
         width={600}
       >
         <Spin spinning={loading && !quickConfig}>
@@ -1245,7 +1243,6 @@ const VirtualMachineList: React.FC = () => {
           setBindUserModalVisible(false);
           bindUserForm.resetFields();
         }}
-        confirmLoading={loading}
       >
         <Form form={bindUserForm} layout="vertical">
           <Form.Item

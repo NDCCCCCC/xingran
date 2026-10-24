@@ -39,7 +39,6 @@ export function CaptchaUploadModal({
         onCancel();
         form.resetFields();
       }}
-      confirmLoading={uploading}
       width={600}
       destroyOnHidden
     >

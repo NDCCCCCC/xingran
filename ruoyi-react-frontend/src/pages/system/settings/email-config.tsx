@@ -428,7 +428,6 @@ const EmailConfigPage: FC = () => {
           editForm.resetFields();
           setEditingConfig(null);
         }}
-        confirmLoading={submitting}
         width={700}
       >
         <Form form={editForm} labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
@@ -512,7 +511,6 @@ const EmailConfigPage: FC = () => {
         open={testModalVisible}
         onOk={handleTest}
         onCancel={() => setTestModalVisible(false)}
-        confirmLoading={testing}
       >
         <Form form={testForm} labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
           <Form.Item name="configId" hidden>

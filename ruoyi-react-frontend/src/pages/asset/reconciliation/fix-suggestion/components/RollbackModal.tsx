@@ -60,7 +60,6 @@ export const RollbackModal = ({ open, onCancel, onSubmit, submitting }: Rollback
     <Modal
       title="回滚修复"
       open={open}
-      confirmLoading={submitting}
       onCancel={handleCancel}
       onOk={handleOk}
       okText="确认回滚"

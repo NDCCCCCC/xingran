@@ -921,7 +921,6 @@ const DeviceManagement: FC = () => {
         }}
         width={700}
         okText="创建设备"
-        confirmLoading={creating}
       >
         <Alert
           title="快速创建说明"

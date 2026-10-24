@@ -404,7 +404,6 @@ const ManagerRulesPage: FC = () => {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={handleModalClose}
-        confirmLoading={saving}
         destroyOnHidden
         width={620}
       >

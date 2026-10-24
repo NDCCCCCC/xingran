@@ -553,7 +553,6 @@ const FixSuggestion = () => {
       <Modal
         title="拒绝修复建议"
         open={rejectModal.open}
-        confirmLoading={rejectModal.submitting}
         onCancel={() => setRejectModal({ open: false, suggestionId: null, submitting: false })}
         onOk={handleRejectSubmit}
         okText="确认拒绝"

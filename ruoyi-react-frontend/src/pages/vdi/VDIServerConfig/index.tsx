@@ -268,7 +268,6 @@ const VDIServerConfig: React.FC = () => {
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
-        confirmLoading={loading}
         width={600}
       >
         <Form form={form} layout="vertical">

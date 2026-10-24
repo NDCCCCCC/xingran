@@ -339,7 +339,6 @@ const ManagerOrgsPage: FC = () => {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={handleModalClose}
-        confirmLoading={saving}
         destroyOnHidden
         width={560}
       >

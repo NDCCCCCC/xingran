@@ -488,7 +488,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           uploadForm.resetFields();
           setFileList([]);
         }}
-        confirmLoading={uploading}
         width={600}
       >
         <Form
