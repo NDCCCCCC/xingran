@@ -315,7 +315,7 @@ const ConfigManagement: FC = () => {
                 <Button
                   type="link"
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ba3630)" }}
+                  style={{ color: "var(--theme-error)" }}
                   size="small"
                   disabled={record.isSystem === 1}
                 >
@@ -350,7 +350,7 @@ const ConfigManagement: FC = () => {
               <Statistic
                 title="启用配置"
                 value={statistics.active}
-                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
                 prefix={<CheckCircleOutlined />}
               />
             </Card>
@@ -360,7 +360,7 @@ const ConfigManagement: FC = () => {
               <Statistic
                 title="禁用配置"
                 value={statistics.inactive}
-                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+                styles={{ content: { color: "var(--theme-error)" } }}
                 prefix={<StopOutlined />}
               />
             </Card>
@@ -430,7 +430,7 @@ const ConfigManagement: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})

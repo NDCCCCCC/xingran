@@ -248,7 +248,7 @@ const RoleManagement: FC = () => {
             <Statistic
               title="正常角色"
               value={statistics.active}
-              styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<SafetyCertificateOutlined />}
             />
           </Card>
@@ -258,7 +258,7 @@ const RoleManagement: FC = () => {
             <Statistic
               title="停用角色"
               value={statistics.inactive}
-              styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+              styles={{ content: { color: "var(--theme-error)" } }}
               prefix={<DeleteOutlined />}
             />
           </Card>
@@ -316,7 +316,7 @@ const RoleManagement: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
                 onClick={() => handleBatchDelete(selectedRowKeys)}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -430,7 +430,7 @@ const RoleManagement: FC = () => {
                     }}
                     treeData={menuTree}
                     style={{
-                      background: "#f5f5f5",
+                      background: "var(--theme-bg-secondary)",
                       padding: "8px",
                       borderRadius: "4px",
                       maxHeight: "400px",
@@ -473,7 +473,7 @@ const RoleManagement: FC = () => {
                       }}
                       treeData={deptTree}
                       style={{
-                        background: "#f5f5f5",
+                        background: "var(--theme-bg-secondary)",
                         padding: "8px",
                         borderRadius: "4px",
                         maxHeight: "400px",

@@ -216,7 +216,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       // 原型复刻：品牌圆点 tag（demo .tag-green / .tag-gold，超级管理员=金）
       render: (roles: string[] | Array<{ roleName?: string; roleKey?: string; id?: string }>) => {
         if (!roles || roles.length === 0) {
-          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>无角色</span>;
+          return <span style={{ color: "var(--theme-text-tertiary)" }}>无角色</span>;
         }
         return (
           <Space size="small" wrap>
@@ -749,7 +749,7 @@ const UserManagement: FC = () => {
                       icon={<DeleteOutlined />}
                       onClick={handleBatchDelete}
                       style={{
-                        color: "var(--theme-error, #ba3630)",
+                        color: "var(--theme-error)",
                       }}
                     >
                       批量删除 ({selectedRowKeys.length})

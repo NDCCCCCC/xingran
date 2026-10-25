@@ -107,7 +107,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
           <span>模板预览</span>
           <span
             style={{
-              color: "var(--theme-text-tertiary, #999)",
+              color: "var(--theme-text-tertiary)",
               fontSize: 14,
               fontWeight: "normal",
             }}

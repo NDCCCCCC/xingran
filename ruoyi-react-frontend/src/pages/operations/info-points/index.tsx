@@ -737,7 +737,7 @@ const InfoPointManagement: FC = () => {
           style={{
             textAlign: "center",
             padding: "40px",
-            color: "var(--theme-text-tertiary, #999)",
+            color: "var(--theme-text-tertiary)",
           }}
         >
           暂无数据
@@ -753,7 +753,7 @@ const InfoPointManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(infoPoint)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: "var(--theme-error, #ba3630)" }}
+                  style={{ color: "var(--theme-error)" }}
                   onClick={() => {
                     Modal.confirm({
                       title: "确定要删除这个信息点吗？",
@@ -822,7 +822,7 @@ const InfoPointManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
       <Content style={{ background: "#fff" }}>
         <StatisticsCards
@@ -832,19 +832,19 @@ const InfoPointManagement: FC = () => {
             {
               title: "正常",
               value: statistics.normal,
-              styles: { content: { color: "var(--theme-success, #3f8600)" } },
+              styles: { content: { color: "var(--theme-success)" } },
               prefix: <CheckCircleOutlined />,
             },
             {
               title: "故障",
               value: statistics.fault,
-              styles: { content: { color: "var(--theme-error, #cf1322)" } },
+              styles: { content: { color: "var(--theme-error)" } },
               prefix: <WarningOutlined />,
             },
             {
               title: "停用",
               value: statistics.disabled,
-              styles: { content: { color: "var(--theme-text-tertiary, #707068)" } },
+              styles: { content: { color: "var(--theme-text-tertiary)" } },
               prefix: <StopOutlined />,
             },
           ]}
@@ -967,7 +967,7 @@ const InfoPointManagement: FC = () => {
               {selectedRowKeys.length > 0 && (
                 <Button
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ba3630)" }}
+                  style={{ color: "var(--theme-error)" }}
                   onClick={handleBatchDelete}
                 >
                   批量删除 ({selectedRowKeys.length})

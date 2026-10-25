@@ -254,8 +254,8 @@ const ProfilePage: FC = () => {
                     styles={{
                       content: {
                         color: dutyStats.isOnDutyToday
-                          ? "var(--theme-success, #3f8600)"
-                          : "var(--theme-text-tertiary, #707068)",
+                          ? "var(--theme-success)"
+                          : "var(--theme-text-tertiary)",
                       },
                     }}
                   />
@@ -282,7 +282,7 @@ const ProfilePage: FC = () => {
                           )}
                         </Space>
                       ) : (
-                        <span style={{ color: "var(--theme-text-tertiary, #707068)" }}>
+                        <span style={{ color: "var(--theme-text-tertiary)" }}>
                           暂无排班
                         </span>
                       )}

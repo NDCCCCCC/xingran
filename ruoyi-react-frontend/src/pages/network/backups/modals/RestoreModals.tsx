@@ -248,7 +248,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
                       {restoreResult?.totalLines ?? restoreTask.totalLines ?? "-"} 行
                     </div>
                     {restoreResult?.hashMatched === false && (
-                      <div style={{ color: "#faad14" }}>回读配置与备份存在差异，已记录警告</div>
+                      <div style={{ color: "var(--theme-warning)" }}>回读配置与备份存在差异，已记录警告</div>
                     )}
                   </div>
                 }
@@ -303,7 +303,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
                           <Tag color={backup.backupType === "auto" ? "blue" : "green"}>
                             {backup.backupType === "auto" ? "自动" : "手动"}
                           </Tag>
-                          <span style={{ color: "var(--theme-text-tertiary, #999)" }}>
+                          <span style={{ color: "var(--theme-text-tertiary)" }}>
                             {formatDateTime(backup.createdAt)}
                           </span>
                         </Space>
@@ -429,22 +429,22 @@ export default function RestoreModals(props: RestoreModalsProps) {
           <div
             style={{
               height: 600,
-              border: "1px solid #dbd7ce",
+              border: "1px solid var(--theme-border-primary)",
               borderRadius: 4,
               overflow: "hidden",
             }}
           >
             {/* 版本信息栏 */}
-            <div style={{ display: "flex", borderBottom: "1px solid #dbd7ce" }}>
+            <div style={{ display: "flex", borderBottom: "1px solid var(--theme-border-primary)" }}>
               <div
                 style={{
                   flex: 1,
                   padding: "8px 16px",
-                  background: "#f5f5f5",
-                  borderRight: "1px solid #dbd7ce",
+                  background: "var(--theme-bg-secondary)",
+                  borderRight: "1px solid var(--theme-border-primary)",
                   fontSize: 13,
                   fontWeight: 500,
-                  color: "var(--theme-text-primary, #262626)",
+                  color: "var(--theme-text-primary)",
                 }}
               >
                 {diffResult.oldVersion}
@@ -453,10 +453,10 @@ export default function RestoreModals(props: RestoreModalsProps) {
                 style={{
                   flex: 1,
                   padding: "8px 16px",
-                  background: "#f5f5f5",
+                  background: "var(--theme-bg-secondary)",
                   fontSize: 13,
                   fontWeight: 500,
-                  color: "var(--theme-text-primary, #262626)",
+                  color: "var(--theme-text-primary)",
                 }}
               >
                 {diffResult.newVersion}
@@ -473,7 +473,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
                   flex: 1,
                   overflow: "auto",
                   background: "#ffffff",
-                  borderRight: "1px solid #dbd7ce",
+                  borderRight: "1px solid var(--theme-border-primary)",
                   fontFamily: 'Consolas, "Courier New", monospace',
                   fontSize: 13,
                   lineHeight: "22px",
@@ -523,7 +523,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
           style={{
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
-            background: "#f5f5f5",
+            background: "var(--theme-bg-secondary)",
             padding: 16,
             borderRadius: 4,
             maxHeight: "calc(100vh - 100px)",

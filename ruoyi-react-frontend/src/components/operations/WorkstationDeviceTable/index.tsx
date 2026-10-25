@@ -437,7 +437,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       align: "center" as const,
       render: (isPrimary: boolean) =>
         isPrimary ? (
-          <StarOutlined style={{ color: "var(--theme-warning, #b07a20)", fontSize: 11 }} />
+          <StarOutlined style={{ color: "var(--theme-warning)", fontSize: 11 }} />
         ) : null,
     },
     {
@@ -500,7 +500,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   // 注:删除 currentPageData 分页切片,直接渲染 manualDevices(最多 1-2 条无需分页)
 
   return (
-    <div style={{ padding: "4px 8px", backgroundColor: "#fafafa" }}>
+    <div style={{ padding: "4px 8px", backgroundColor: "var(--theme-bg-secondary)" }}>
       <Space style={{ marginBottom: 4 }} size="small">
         <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAdd}>
           手动添加
@@ -641,7 +641,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           </Form.Item>
 
           {autoFilledAsset && (
-            <div style={{ marginBottom: 16, padding: 12, background: "#f5f5f5", borderRadius: 4 }}>
+            <div style={{ marginBottom: 16, padding: 12, background: "var(--theme-bg-secondary)", borderRadius: 4 }}>
               <div style={{ marginBottom: 8, fontWeight: "bold" }}>自动匹配的设备信息：</div>
               <div>设备名称: {autoFilledAsset.devicesn || "-"}</div>
               <div>设备型号: {autoFilledAsset.deviceModelName || "-"}</div>

@@ -724,7 +724,7 @@ const WorkstationManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
       <Content style={{ background: "#fff" }}>
         <StatisticsCards
@@ -734,19 +734,19 @@ const WorkstationManagement: FC = () => {
             {
               title: "空闲",
               value: statistics.available,
-              styles: { content: { color: "var(--theme-success, #2d8949)" } },
+              styles: { content: { color: "var(--theme-success)" } },
               prefix: <CheckCircleOutlined />,
             },
             {
               title: "占用",
               value: statistics.occupied,
-              styles: { content: { color: "var(--theme-error, #ba3630)" } },
+              styles: { content: { color: "var(--theme-error)" } },
               prefix: <StopOutlined />,
             },
             {
               title: "维护",
               value: statistics.maintain,
-              styles: { content: { color: "var(--theme-warning, #b07a20)" } },
+              styles: { content: { color: "var(--theme-warning)" } },
               prefix: <StopOutlined />,
             },
           ]}
@@ -851,7 +851,7 @@ const WorkstationManagement: FC = () => {
               {selectedRowKeys.length > 0 && (
                 <Button
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ba3630)" }}
+                  style={{ color: "var(--theme-error)" }}
                   onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
                 >
                   批量删除 ({selectedRowKeys.length})

@@ -128,7 +128,7 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
       case "warn":
         return <CloseCircleOutlined style={{ color: "var(--theme-warning)" }} />;
       default:
-        return <ClockCircleOutlined style={{ color: "var(--theme-text-tertiary, #707068)" }} />;
+        return <ClockCircleOutlined style={{ color: "var(--theme-text-tertiary)" }} />;
     }
   };
 

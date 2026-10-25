@@ -155,7 +155,7 @@ export const detailColumns: ColumnsType<ConfigExecutionDetail> = [
                   style={{
                     maxHeight: 400,
                     overflow: "auto",
-                    background: "#f5f5f5",
+                    background: "var(--theme-bg-secondary)",
                     padding: 12,
                   }}
                 >
@@ -180,7 +180,7 @@ export const detailColumns: ColumnsType<ConfigExecutionDetail> = [
     render: (msg: string) =>
       msg ? (
         <Tooltip title={msg}>
-          <span style={{ color: "var(--theme-error, #ba3630)" }}>{msg}</span>
+          <span style={{ color: "var(--theme-error)" }}>{msg}</span>
         </Tooltip>
       ) : (
         "-"

@@ -338,14 +338,14 @@ const PeriodicTemplatePage: FC = () => {
               <Statistic
                 title="已启用"
                 value={statistics.enabled}
-                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Col>
             <Col span={6}>
               <Statistic
                 title="已禁用"
                 value={statistics.disabled}
-                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+                styles={{ content: { color: "var(--theme-error)" } }}
               />
             </Col>
             <Col span={6}>

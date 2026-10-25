@@ -286,7 +286,7 @@ const ConfigBackupPage: FC = () => {
         nextLine?.type === "removed" ||
         nextLine?.type === "added"
       ) {
-        backgroundColor = "#f5f5f5";
+        backgroundColor = "var(--theme-bg-secondary)";
       }
     }
 
@@ -294,12 +294,12 @@ const ConfigBackupPage: FC = () => {
       ? "#c92a2a"
       : isAdded
         ? "#2b7a41"
-        : "var(--theme-text-tertiary, #707068)";
+        : "var(--theme-text-tertiary)";
     const contentColor = isRemoved
       ? "#c92a2a"
       : isAdded
         ? "#2b7a41"
-        : "var(--theme-text-primary, #262626)";
+        : "var(--theme-text-primary)";
 
     if (isEmpty) {
       return (
@@ -309,10 +309,10 @@ const ConfigBackupPage: FC = () => {
               width: 50,
               padding: "0 8px",
               textAlign: "right",
-              color: "var(--theme-text-tertiary, #707068)",
+              color: "var(--theme-text-tertiary)",
               userSelect: "none",
               flexShrink: 0,
-              borderRight: "1px solid #e8e8e8",
+              borderRight: "1px solid var(--theme-border-primary)",
             }}
           >
             {lineNum}
@@ -339,7 +339,7 @@ const ConfigBackupPage: FC = () => {
             color: textColor,
             userSelect: "none",
             flexShrink: 0,
-            borderRight: "1px solid #e8e8e8",
+            borderRight: "1px solid var(--theme-border-primary)",
           }}
         >
           {lineNum}
@@ -519,7 +519,7 @@ const ConfigBackupPage: FC = () => {
                     <Statistic
                       title="自动备份"
                       value={statistics.auto}
-                      styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                      styles={{ content: { color: "var(--theme-info)" } }}
                       prefix={<ClockCircleOutlined />}
                     />
                   </Card>
@@ -529,7 +529,7 @@ const ConfigBackupPage: FC = () => {
                     <Statistic
                       title="手动备份"
                       value={statistics.manual}
-                      styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                      styles={{ content: { color: "var(--theme-success)" } }}
                       prefix={<SaveOutlined />}
                     />
                   </Card>

@@ -519,7 +519,7 @@ const WorkOrderPage: FC = () => {
               <Statistic
                 title="已关闭"
                 value={stats.closed}
-                styles={{ content: { color: "var(--theme-text-tertiary, #707068)" } }}
+                styles={{ content: { color: "var(--theme-text-tertiary)" } }}
               />
             </Col>
             <Col span={4}>

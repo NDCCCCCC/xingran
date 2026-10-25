@@ -46,14 +46,14 @@ const CacheStatsModal: FC<CacheStatsModalProps> = ({ open, onClose, monitor }) =
               <Statistic
                 title="命中次数"
                 value={monitor?.l1?.stats?.hitCount || 0}
-                valueStyle={{ fontSize: "18px", color: "#3f8600" }}
+                valueStyle={{ fontSize: "18px", color: "var(--theme-success)" }}
               />
             </Col>
             <Col span={12}>
               <Statistic
                 title="未命中次数"
                 value={monitor?.l1?.stats?.missCount || 0}
-                valueStyle={{ fontSize: "18px", color: "#cf1322" }}
+                valueStyle={{ fontSize: "18px", color: "var(--theme-error)" }}
               />
             </Col>
           </Row>
@@ -63,7 +63,7 @@ const CacheStatsModal: FC<CacheStatsModalProps> = ({ open, onClose, monitor }) =
             value={monitor?.l1?.stats?.hitRate || 0}
             precision={2}
             suffix="%"
-            styles={{ content: { fontSize: "20px", color: "#337ab0" } }}
+            styles={{ content: { fontSize: "20px", color: "var(--theme-info)" } }}
           />
           <Divider className="my-2" />
           <Statistic title="内存使用" value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)} />
@@ -91,14 +91,14 @@ const CacheStatsModal: FC<CacheStatsModalProps> = ({ open, onClose, monitor }) =
               <Statistic
                 title="命中次数"
                 value={monitor?.l2?.stats?.hitCount || 0}
-                valueStyle={{ fontSize: "18px", color: "#3f8600" }}
+                valueStyle={{ fontSize: "18px", color: "var(--theme-success)" }}
               />
             </Col>
             <Col span={12}>
               <Statistic
                 title="未命中次数"
                 value={monitor?.l2?.stats?.missCount || 0}
-                valueStyle={{ fontSize: "18px", color: "#cf1322" }}
+                valueStyle={{ fontSize: "18px", color: "var(--theme-error)" }}
               />
             </Col>
           </Row>
@@ -108,7 +108,7 @@ const CacheStatsModal: FC<CacheStatsModalProps> = ({ open, onClose, monitor }) =
             value={monitor?.l2?.stats?.hitRate || 0}
             precision={2}
             suffix="%"
-            styles={{ content: { fontSize: "20px", color: "#337ab0" } }}
+            styles={{ content: { fontSize: "20px", color: "var(--theme-info)" } }}
           />
           <Divider className="my-2" />
           <Statistic title="内存使用" value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)} />

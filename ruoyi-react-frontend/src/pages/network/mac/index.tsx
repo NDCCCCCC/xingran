@@ -367,7 +367,7 @@ const MACAddressPage: FC = () => {
               <Statistic
                 title="动态MAC"
                 value={statistics.dynamic}
-                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                styles={{ content: { color: "var(--theme-info)" } }}
               />
             </Card>
           </Col>
@@ -376,7 +376,7 @@ const MACAddressPage: FC = () => {
               <Statistic
                 title="静态MAC"
                 value={statistics.static}
-                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Card>
           </Col>
@@ -385,7 +385,7 @@ const MACAddressPage: FC = () => {
               <Statistic
                 title="安全MAC"
                 value={statistics.secure}
-                styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+                styles={{ content: { color: "var(--theme-warning)" } }}
               />
             </Card>
           </Col>
@@ -493,7 +493,7 @@ const MACAddressPage: FC = () => {
                 icon={<DeleteOutlined />}
                 onClick={handleBatchDelete}
                 disabled={selectedRowKeys.length === 0}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>

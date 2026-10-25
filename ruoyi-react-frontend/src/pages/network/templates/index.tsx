@@ -215,7 +215,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="系统模板"
               value={statistics.system}
-              styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+              styles={{ content: { color: "var(--theme-warning)" } }}
               prefix={<AppstoreOutlined />}
             />
           </Card>
@@ -225,7 +225,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="自定义模板"
               value={statistics.custom}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<SettingOutlined />}
             />
           </Card>
@@ -235,7 +235,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="初始化模板"
               value={statistics.init}
-              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<FundOutlined />}
             />
           </Card>

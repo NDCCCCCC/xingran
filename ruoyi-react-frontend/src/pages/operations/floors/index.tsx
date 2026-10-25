@@ -499,7 +499,7 @@ const FloorManagement: FC = () => {
   );
 
   const renderListView = () => (
-    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar
         selectedDeptId={selectedDeptId}
         onSelect={(keys, info) => {
@@ -516,12 +516,12 @@ const FloorManagement: FC = () => {
             {
               title: "正常",
               value: statistics.active,
-              styles: { content: { color: "var(--theme-success, #2d8949)" } },
+              styles: { content: { color: "var(--theme-success)" } },
             },
             {
               title: "停用",
               value: statistics.inactive,
-              styles: { content: { color: "var(--theme-error, #ba3630)" } },
+              styles: { content: { color: "var(--theme-error)" } },
             },
           ]}
         />

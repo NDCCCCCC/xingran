@@ -23,7 +23,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
   if (floors.length === 0) {
     return (
       <div
-        style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}
+        style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary)" }}
       >
         暂无数据
       </div>
@@ -50,7 +50,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
                 okText="确定"
                 cancelText="取消"
               >
-                <DeleteOutlined style={{ color: "var(--theme-error, #ba3630)" }} />
+                <DeleteOutlined style={{ color: "var(--theme-error)" }} />
               </Popconfirm>,
             ]}
           >

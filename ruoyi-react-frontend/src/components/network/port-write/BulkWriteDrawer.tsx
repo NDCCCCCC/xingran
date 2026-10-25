@@ -432,7 +432,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
             <Statistic
               title="✓ 成功"
               value={result.succeeded.length}
-              valueStyle={{ color: "var(--theme-success, #3f8600)" }}
+              valueStyle={{ color: "var(--theme-success)" }}
             />
           </Card>
         </Col>
@@ -441,7 +441,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
             <Statistic
               title="⚠ 跳过"
               value={result.skipped.length}
-              valueStyle={{ color: "var(--theme-text-secondary, #707068)" }}
+              valueStyle={{ color: "var(--theme-text-secondary)" }}
             />
             {result.skipped.length > 0 && (
               <Tag color="default" style={{ marginTop: 8 }}>
@@ -455,7 +455,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
             <Statistic
               title="✗ 失败"
               value={result.failed.length}
-              valueStyle={{ color: "var(--theme-error, #cf1322)" }}
+              valueStyle={{ color: "var(--theme-error)" }}
             />
           </Card>
         </Col>

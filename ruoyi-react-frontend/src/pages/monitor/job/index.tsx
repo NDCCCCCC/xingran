@@ -381,7 +381,7 @@ const JobManager: FC = () => {
                 <Statistic
                   title="成功次数"
                   value={jobLogStats.success}
-                  styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+                  styles={{ content: { color: "var(--theme-success)" } }}
                 />
               </Card>
             </Col>
@@ -390,7 +390,7 @@ const JobManager: FC = () => {
                 <Statistic
                   title="失败次数"
                   value={jobLogStats.fail}
-                  styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+                  styles={{ content: { color: "var(--theme-error)" } }}
                 />
               </Card>
             </Col>

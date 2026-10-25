@@ -538,7 +538,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="UP端口"
               value={statistics.up}
-              styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -548,7 +548,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="DOWN端口"
               value={statistics.down}
-              styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+              styles={{ content: { color: "var(--theme-error)" } }}
               prefix={<WarningOutlined />}
             />
           </Card>
@@ -558,7 +558,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="802.1X启用"
               value={statistics.dot1xEnabled}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -704,7 +704,7 @@ const PortStatusPage: FC = () => {
               icon={<DeleteOutlined />}
               onClick={handleBatchDelete}
               disabled={selectedRowKeys.length === 0}
-              style={{ color: "var(--theme-error, #ba3630)" }}
+              style={{ color: "var(--theme-error)" }}
             >
               批量删除 ({selectedRowKeys.length})
             </Button>
@@ -763,7 +763,7 @@ const PortStatusPage: FC = () => {
               }
             },
             expandedRowRender: (record) => (
-              <div style={{ padding: 16, background: "#fafafa" }}>
+              <div style={{ padding: 16, background: "var(--theme-bg-secondary)" }}>
                 <p>
                   <strong>接口详情:</strong>
                 </p>

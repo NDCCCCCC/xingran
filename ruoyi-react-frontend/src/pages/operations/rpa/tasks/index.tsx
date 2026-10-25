@@ -166,7 +166,7 @@ const TaskManagement: FC = () => {
   );
 
   return (
-    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <Content style={{ background: "#fff", padding: 16 }}>
         <Card style={{ marginBottom: 16 }}>
           <div
@@ -217,7 +217,7 @@ const TaskManagement: FC = () => {
             </Space>
           </div>
           {selectedRowKeys.length > 0 && (
-            <div style={{ marginTop: 12, color: "var(--theme-info, #337ab0)" }}>
+            <div style={{ marginTop: 12, color: "var(--theme-info)" }}>
               已选择 <strong>{selectedRowKeys.length}</strong> 个任务
             </div>
           )}

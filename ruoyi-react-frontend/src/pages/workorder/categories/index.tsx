@@ -233,7 +233,7 @@ const WorkOrderCategoryPage: FC = () => {
                     type="link"
                     size="small"
                     icon={<DeleteOutlined />}
-                    style={{ color: "var(--theme-error, #ba3630)" }}
+                    style={{ color: "var(--theme-error)" }}
                     onClick={(e) => {
                       e.stopPropagation();
                       Modal.confirm({

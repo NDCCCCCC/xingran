@@ -174,7 +174,7 @@ const WorkerMonitor: FC = () => {
     statistics.totalCapacity > 0 ? (statistics.usedCapacity / statistics.totalCapacity) * 100 : 0;
 
   return (
-    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <Content style={{ background: "#fff", padding: 16 }}>
         {/* 统计卡片 */}
         <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -184,7 +184,7 @@ const WorkerMonitor: FC = () => {
                 title="Worker 总数"
                 value={statistics.total}
                 prefix={<CloudServerOutlined />}
-                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                styles={{ content: { color: "var(--theme-info)" } }}
               />
             </Card>
           </Col>
@@ -194,7 +194,7 @@ const WorkerMonitor: FC = () => {
                 title="在线"
                 value={statistics.online}
                 prefix={<CheckCircleOutlined />}
-                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Card>
           </Col>
@@ -204,7 +204,7 @@ const WorkerMonitor: FC = () => {
                 title="忙碌"
                 value={statistics.busy}
                 prefix={<LoadingOutlined />}
-                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                styles={{ content: { color: "var(--theme-info)" } }}
               />
             </Card>
           </Col>
@@ -214,7 +214,7 @@ const WorkerMonitor: FC = () => {
                 title="离线"
                 value={statistics.offline}
                 prefix={<ClockCircleOutlined />}
-                styles={{ content: { color: "var(--theme-text-tertiary, #707068)" } }}
+                styles={{ content: { color: "var(--theme-text-tertiary)" } }}
               />
             </Card>
           </Col>
@@ -224,7 +224,7 @@ const WorkerMonitor: FC = () => {
                 title="错误"
                 value={statistics.error}
                 prefix={<CloseCircleOutlined />}
-                styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
+                styles={{ content: { color: "var(--theme-error)" } }}
               />
             </Card>
           </Col>
@@ -342,10 +342,10 @@ const WorkerMonitor: FC = () => {
 
         <style>{`
         .row-offline {
-          background-color: #fafafa;
+          background-color: var(--theme-bg-secondary);
         }
         .row-error {
-          background-color: #fff2f0;
+          background-color: var(--theme-error-bg);
         }
       `}</style>
       </Content>

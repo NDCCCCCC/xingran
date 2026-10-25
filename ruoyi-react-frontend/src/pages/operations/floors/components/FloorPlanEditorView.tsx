@@ -79,7 +79,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
         }}
       >
         <Spin size="large" />
-        <span style={{ color: "var(--theme-text-tertiary, #999)" }}>加载中...</span>
+        <span style={{ color: "var(--theme-text-tertiary)" }}>加载中...</span>
       </div>
     );
   }
@@ -91,7 +91,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
         extra={
           <Space size="middle">
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
-              <BuildOutlined style={{ color: "var(--theme-info, #337ab0)" }} />
+              <BuildOutlined style={{ color: "var(--theme-info)" }} />
               <DepartmentTreeSelect
                 style={{ width: 180 }}
                 placeholder="选择机构"
@@ -121,7 +121,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
             </Space>
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
-              <AppstoreOutlined style={{ color: "var(--theme-success, #2d8949)" }} />
+              <AppstoreOutlined style={{ color: "var(--theme-success)" }} />
               <Select
                 style={{ width: 150 }}
                 placeholder="选择楼层"

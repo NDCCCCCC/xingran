@@ -15,7 +15,7 @@ const DeptTreePanel: React.FC<DeptTreePanelProps> = ({ selectedDeptId, onSelect 
   <Sider
     width={360}
     className="dept-list-sider"
-    style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #e9efeb" }}
+    style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid var(--theme-border-primary)" }}
   >
     <DeptTree onSelect={onSelect} selectedKeys={selectedDeptId ? [selectedDeptId] : []} />
   </Sider>

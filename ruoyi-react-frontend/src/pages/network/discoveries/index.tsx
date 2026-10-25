@@ -257,7 +257,7 @@ const DeviceDiscoveryPage: FC = () => {
                 <Statistic
                   title="待执行"
                   value={statistics.pending}
-                  styles={{ content: { color: "var(--theme-text-tertiary, #999)" } }}
+                  styles={{ content: { color: "var(--theme-text-tertiary)" } }}
                   prefix={<ClockCircleOutlined />}
                 />
               </Card>
@@ -267,7 +267,7 @@ const DeviceDiscoveryPage: FC = () => {
                 <Statistic
                   title="扫描中"
                   value={statistics.running}
-                  styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                  styles={{ content: { color: "var(--theme-info)" } }}
                   prefix={<CloudServerOutlined />}
                 />
               </Card>
@@ -277,7 +277,7 @@ const DeviceDiscoveryPage: FC = () => {
                 <Statistic
                   title="已完成"
                   value={statistics.completed}
-                  styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                  styles={{ content: { color: "var(--theme-success)" } }}
                   prefix={<CheckCircleOutlined />}
                 />
               </Card>
@@ -287,7 +287,7 @@ const DeviceDiscoveryPage: FC = () => {
                 <Statistic
                   title="失败"
                   value={statistics.failed}
-                  styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
+                  styles={{ content: { color: "var(--theme-error)" } }}
                   prefix={<CloseCircleOutlined />}
                 />
               </Card>

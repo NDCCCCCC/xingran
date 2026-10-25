@@ -185,7 +185,7 @@ const Dashboard: FC = () => {
               suffix="%"
               styles={{
                 content: {
-                  color: metrics?.cpuUsage && metrics.cpuUsage > 80 ? "#cf1322" : "#3f8600",
+                  color: metrics?.cpuUsage && metrics.cpuUsage > 80 ? "var(--theme-error)" : "var(--theme-success)",
                 },
               }}
               prefix={<ClusterOutlined />}
@@ -201,7 +201,7 @@ const Dashboard: FC = () => {
               suffix="%"
               styles={{
                 content: {
-                  color: metrics?.memoryUsage && metrics.memoryUsage > 80 ? "#cf1322" : "#3f8600",
+                  color: metrics?.memoryUsage && metrics.memoryUsage > 80 ? "var(--theme-error)" : "var(--theme-success)",
                 },
               }}
               prefix={<DatabaseOutlined />}
@@ -217,7 +217,7 @@ const Dashboard: FC = () => {
               suffix="%"
               styles={{
                 content: {
-                  color: metrics?.diskUsage && metrics.diskUsage > 80 ? "#cf1322" : "#3f8600",
+                  color: metrics?.diskUsage && metrics.diskUsage > 80 ? "var(--theme-error)" : "var(--theme-success)",
                 },
               }}
               prefix={<DatabaseOutlined />}
@@ -229,7 +229,7 @@ const Dashboard: FC = () => {
             <Statistic
               title="进程数量"
               value={metrics?.processCount || 0}
-              styles={{ content: { color: "#337ab0" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<ClusterOutlined />}
             />
           </Card>

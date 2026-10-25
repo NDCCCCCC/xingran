@@ -123,7 +123,7 @@ export function DeptEditModal({
                 <Space>
                   <UserOutlined />
                   {user.nickname || user.username}
-                  <span style={{ color: "var(--theme-text-tertiary, #999)" }}>
+                  <span style={{ color: "var(--theme-text-tertiary)" }}>
                     ({user.username})
                   </span>
                 </Space>

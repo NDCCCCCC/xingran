@@ -365,7 +365,7 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
                           style={{
                             textAlign: "center",
                             padding: "40px 0",
-                            color: "var(--theme-text-tertiary, #999)",
+                            color: "var(--theme-text-tertiary)",
                           }}
                         >
                           暂无动作，请点击上方按钮添加或使用 AI 生成

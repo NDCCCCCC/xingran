@@ -253,10 +253,10 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                     content: {
                       color:
                         summary.success_rate >= 0.95
-                          ? "var(--theme-success, #3f8600)"
+                          ? "var(--theme-success)"
                           : summary.success_rate >= 0.8
                             ? "var(--theme-warning)"
-                            : "var(--theme-error, #cf1322)",
+                            : "var(--theme-error)",
                     },
                   }}
                   prefix={
@@ -281,10 +281,10 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                     content: {
                       color:
                         summary.avg_duration < 100
-                          ? "var(--theme-success, #3f8600)"
+                          ? "var(--theme-success)"
                           : summary.avg_duration < 500
                             ? "var(--theme-warning)"
-                            : "var(--theme-error, #cf1322)",
+                            : "var(--theme-error)",
                     },
                   }}
                 />
@@ -300,7 +300,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   }
                   styles={{
                     content: {
-                      color: "var(--theme-error, #cf1322)",
+                      color: "var(--theme-error)",
                     },
                   }}
                 />
@@ -328,7 +328,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   <div
                     style={{
                       textAlign: "center",
-                      color: "var(--theme-text-tertiary, #999)",
+                      color: "var(--theme-text-tertiary)",
                       padding: "8px 0",
                     }}
                   >
@@ -359,7 +359,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                             }}
                           >
                             <span
-                              style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)" }}
+                              style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}
                             >
                               {index + 1}. {path.length > 30 ? `${path.slice(0, 30)}...` : path}
                             </span>
@@ -379,7 +379,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                     <div
                       style={{
                         textAlign: "center",
-                        color: "var(--theme-text-tertiary, #999)",
+                        color: "var(--theme-text-tertiary)",
                         padding: "8px 0",
                       }}
                     >
@@ -406,7 +406,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                     <div
                       style={{
                         textAlign: "center",
-                        color: "var(--theme-text-tertiary, #999)",
+                        color: "var(--theme-text-tertiary)",
                         padding: "8px 0",
                       }}
                     >

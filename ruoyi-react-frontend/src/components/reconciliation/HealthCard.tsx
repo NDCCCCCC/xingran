@@ -22,9 +22,9 @@ export interface HealthCardProps {
 }
 
 const SCORE_BAND_COLOR = (score: number): string => {
-  if (score >= 80) return "#2d8949";
-  if (score >= 60) return "#b07a20";
-  return "#ba3630";
+  if (score >= 80) return "var(--theme-success)";
+  if (score >= 60) return "var(--theme-warning)";
+  return "var(--theme-error)";
 };
 
 const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyException }) => {

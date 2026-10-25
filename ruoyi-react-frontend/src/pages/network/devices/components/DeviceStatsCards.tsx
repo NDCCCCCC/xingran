@@ -39,7 +39,7 @@ const DeviceStatsCards: React.FC<DeviceStatsCardsProps> = ({ statistics }) => {
           <Statistic
             title="在线设备"
             value={statistics.online}
-            styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+            styles={{ content: { color: "var(--theme-success)" } }}
             prefix={<CheckCircleOutlined />}
           />
         </Card>
@@ -49,7 +49,7 @@ const DeviceStatsCards: React.FC<DeviceStatsCardsProps> = ({ statistics }) => {
           <Statistic
             title="离线设备"
             value={statistics.offline}
-            styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+            styles={{ content: { color: "var(--theme-error)" } }}
             prefix={<CloseCircleOutlined />}
           />
         </Card>
@@ -59,7 +59,7 @@ const DeviceStatsCards: React.FC<DeviceStatsCardsProps> = ({ statistics }) => {
           <Statistic
             title="未知状态"
             value={statistics.unknown}
-            styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+            styles={{ content: { color: "var(--theme-warning)" } }}
             prefix={<WarningOutlined />}
           />
         </Card>

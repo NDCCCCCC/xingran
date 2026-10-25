@@ -178,7 +178,7 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
                 </Tag>
                 <span>{endpoint.displayName}</span>
               </Space>
-              <span style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 12 }}>
+              <span style={{ color: "var(--theme-text-tertiary)", fontSize: 12 }}>
                 {endpoint.route}
               </span>
             </Space>

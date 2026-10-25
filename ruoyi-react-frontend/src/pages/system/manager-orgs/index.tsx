@@ -213,7 +213,7 @@ const ManagerOrgsPage: FC = () => {
                 <p>已存在跳过：{result.skippedExisting} 个</p>
                 <p>顶层机构（无上级）：{result.orphanCount} 个</p>
                 {result.warnings && result.warnings.length > 0 && (
-                  <p style={{ color: "#faad14" }}>{result.warnings.join("；")}</p>
+                  <p style={{ color: "var(--theme-warning)" }}>{result.warnings.join("；")}</p>
                 )}
               </div>
             ),

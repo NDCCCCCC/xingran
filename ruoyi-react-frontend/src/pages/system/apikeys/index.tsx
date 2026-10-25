@@ -512,7 +512,7 @@ const APIKeyManagement: FC = () => {
         ellipsis: true,
         render: (whitelist: string[]) => {
           if (!whitelist || whitelist.length === 0) {
-            return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>-</span>;
+            return <span style={{ color: "var(--theme-text-tertiary)" }}>-</span>;
           }
           return (
             <Tooltip title={whitelist.join(", ")}>
@@ -545,7 +545,7 @@ const APIKeyManagement: FC = () => {
         sortOrder: sortField === "expiresAt" ? sortOrder : undefined,
         render: (text) => {
           if (!text) {
-            return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>永不过期</span>;
+            return <span style={{ color: "var(--theme-text-tertiary)" }}>永不过期</span>;
           }
           const date = new Date(text);
           const now = new Date();
@@ -564,7 +564,7 @@ const APIKeyManagement: FC = () => {
         sortOrder: sortField === "lastUsedAt" ? sortOrder : undefined,
         render: (text) => {
           if (!text) {
-            return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>未使用</span>;
+            return <span style={{ color: "var(--theme-text-tertiary)" }}>未使用</span>;
           }
           return formatDateTime(text);
         },

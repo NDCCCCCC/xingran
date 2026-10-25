@@ -117,7 +117,7 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
             checkedChildren="是"
             unCheckedChildren="否"
           />
-          <div style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 12, marginTop: 4 }}>
+          <div style={{ color: "var(--theme-text-tertiary)", fontSize: 12, marginTop: 4 }}>
             系统仪表盘将作为无默认仪表盘用户的兜底选项
           </div>
         </Form.Item>

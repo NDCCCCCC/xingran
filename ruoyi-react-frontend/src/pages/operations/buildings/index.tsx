@@ -471,7 +471,7 @@ const BuildingManagement: FC = () => {
           style={{
             textAlign: "center",
             padding: "40px",
-            color: "var(--theme-text-tertiary, #999)",
+            color: "var(--theme-text-tertiary)",
           }}
         >
           暂无数据
@@ -487,7 +487,7 @@ const BuildingManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(building)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: "var(--theme-error, #ba3630)" }}
+                  style={{ color: "var(--theme-error)" }}
                   onClick={() => {
                     const confirmInstance = Modal.confirm({
                       title: "确定要删除这个楼宇吗？",
@@ -549,12 +549,12 @@ const BuildingManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       {/* 左侧部门树 */}
       <Sider
         width={360}
         className="dept-list-sider"
-        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #e9efeb" }}
+        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid var(--theme-border-primary)" }}
       >
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
@@ -581,7 +581,7 @@ const BuildingManagement: FC = () => {
                 <Statistic
                   title="正常楼宇"
                   value={statistics.active}
-                  styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+                  styles={{ content: { color: "var(--theme-success)" } }}
                   prefix={<CheckCircleOutlined />}
                 />
               </Card>
@@ -591,7 +591,7 @@ const BuildingManagement: FC = () => {
                 <Statistic
                   title="停用楼宇"
                   value={statistics.inactive}
-                  styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+                  styles={{ content: { color: "var(--theme-error)" } }}
                   prefix={<StopOutlined />}
                 />
               </Card>
@@ -680,7 +680,7 @@ const BuildingManagement: FC = () => {
                 {selectedRowKeys.length > 0 && (
                   <Button
                     icon={<DeleteOutlined />}
-                    style={{ color: "var(--theme-error, #ba3630)" }}
+                    style={{ color: "var(--theme-error)" }}
                     onClick={handleBatchDelete}
                   >
                     批量删除 ({selectedRowKeys.length})

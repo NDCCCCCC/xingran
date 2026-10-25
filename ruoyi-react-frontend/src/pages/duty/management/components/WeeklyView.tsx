@@ -91,7 +91,7 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weekly
                     <Text
                       style={{
                         fontSize: "12px",
-                        color: "var(--theme-text-tertiary, #999)",
+                        color: "var(--theme-text-tertiary)",
                         display: "block",
                       }}
                     >

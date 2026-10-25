@@ -145,7 +145,7 @@ const ExecutionManagement: FC = () => {
   );
 
   return (
-    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <Content style={{ background: "#fff", padding: 16 }}>
         <Card style={{ marginBottom: 16 }}>
           <div
@@ -188,7 +188,7 @@ const ExecutionManagement: FC = () => {
           </div>
 
           {/* 统计信息 */}
-          <Space style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e9efeb" }}>
+          <Space style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--theme-border-primary)" }}>
             <Tag icon={<FilterOutlined />} color="blue">
               总计: {statistics.total}
             </Tag>

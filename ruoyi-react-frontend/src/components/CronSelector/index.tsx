@@ -209,7 +209,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                   {preset.label}
                   <span
                     style={{
-                      color: "var(--theme-text-tertiary, #999)",
+                      color: "var(--theme-text-tertiary)",
                       fontSize: 12,
                       marginLeft: 8,
                     }}
@@ -260,7 +260,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                 {getNextRunTimes(cronExpression, 5).map((item, index) => (
                   <div key={index} style={{ padding: "4px 0" }}>
                     <Space>
-                      <span style={{ color: "var(--theme-text-tertiary, #999)", minWidth: 60 }}>
+                      <span style={{ color: "var(--theme-text-tertiary)", minWidth: 60 }}>
                         第{index + 1}次
                       </span>
                       <span style={{ fontFamily: "monospace", color: "#333" }}>

@@ -314,7 +314,7 @@ const CacheManager: FC = () => {
               title="删除"
               type="link"
               icon={<DeleteOutlined />}
-              style={{ color: "#ba3630" }}
+              style={{ color: "var(--theme-error)" }}
               size="small"
             >
               删除
@@ -381,7 +381,7 @@ const CacheManager: FC = () => {
               aria-label="清空全部缓存"
               title="清空全部缓存"
               icon={<DeleteOutlined />}
-              style={{ color: "#ba3630" }}
+              style={{ color: "var(--theme-error)" }}
               onClick={handleClearAll}
             >
               清空

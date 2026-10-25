@@ -92,7 +92,7 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       render: (deviceName: string, record: NetworkDevice) => (
         <a
           onClick={() => navigate(`/network/ports?deviceId=${record.id}`)}
-          style={{ color: "var(--theme-info, #337ab0)", cursor: "pointer" }}
+          style={{ color: "var(--theme-info)", cursor: "pointer" }}
         >
           {deviceName}
         </a>
@@ -541,7 +541,7 @@ const DeviceManagement = () => {
   ];
 
   return (
-    <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       {/* 左侧部门树 */}
       <DeptTreePanel
         selectedDeptId={selectedDeptId}

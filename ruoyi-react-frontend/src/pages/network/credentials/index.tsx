@@ -384,7 +384,7 @@ const CredentialManagement: FC = () => {
             <Statistic
               title="SSH凭证"
               value={statistics.ssh}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -394,7 +394,7 @@ const CredentialManagement: FC = () => {
             <Statistic
               title="Telnet凭证"
               value={statistics.telnet}
-              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -459,7 +459,7 @@ const CredentialManagement: FC = () => {
                 aria-label="批量删除"
                 title="批量删除"
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})

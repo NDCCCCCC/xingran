@@ -22,7 +22,7 @@ export function WorkstationCardView({ workstations, onEdit, onDelete }: Workstat
   if (workstations.length === 0) {
     return (
       <div
-        style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}
+        style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary)" }}
       >
         暂无数据
       </div>
@@ -44,7 +44,7 @@ export function WorkstationCardView({ workstations, onEdit, onDelete }: Workstat
                 okText="确定"
                 cancelText="取消"
               >
-                <DeleteOutlined style={{ color: "var(--theme-error, #ba3630)" }} />
+                <DeleteOutlined style={{ color: "var(--theme-error)" }} />
               </Popconfirm>,
             ]}
           >

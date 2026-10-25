@@ -102,9 +102,9 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
   const trendIcon = useMemo(() => {
     if (!trend) return null;
     if (trend.direction === "up") {
-      return <ArrowUpOutlined style={{ color: "var(--theme-success, #2d8949)" }} />;
+      return <ArrowUpOutlined style={{ color: "var(--theme-success)" }} />;
     }
-    return <ArrowDownOutlined style={{ color: "var(--theme-error, #ba3630)" }} />;
+    return <ArrowDownOutlined style={{ color: "var(--theme-error)" }} />;
   }, [trend]);
 
   return (

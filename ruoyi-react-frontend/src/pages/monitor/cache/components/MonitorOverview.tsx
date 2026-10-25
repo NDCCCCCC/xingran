@@ -56,7 +56,7 @@ const MonitorOverview: FC<MonitorOverviewProps> = ({ monitor }) => (
           value={monitor?.l1?.stats?.hitRate || 0}
           precision={1}
           suffix="%"
-          styles={{ content: { fontSize: "20px", color: "#3f8600" } }}
+          styles={{ content: { fontSize: "20px", color: "var(--theme-success)" } }}
         />
         <Divider className="my-2" />
         <Statistic
@@ -64,7 +64,7 @@ const MonitorOverview: FC<MonitorOverviewProps> = ({ monitor }) => (
           value={monitor?.l2?.stats?.hitRate || 0}
           precision={1}
           suffix="%"
-          styles={{ content: { fontSize: "16px", color: "#337ab0" } }}
+          styles={{ content: { fontSize: "16px", color: "var(--theme-info)" } }}
         />
       </Card>
     </Col>

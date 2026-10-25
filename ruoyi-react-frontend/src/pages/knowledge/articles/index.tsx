@@ -199,14 +199,14 @@ const KnowledgeArticlePage: FC = () => {
               <Statistic
                 title="草稿"
                 value={statistics.draft}
-                styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+                styles={{ content: { color: "var(--theme-warning)" } }}
               />
             </Col>
             <Col span={5}>
               <Statistic
                 title="已发布"
                 value={statistics.published}
-                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Col>
             <Col span={4}>

@@ -94,7 +94,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
         <div>
           <p>确定要删除 Widget 吗？</p>
           <p style={{ fontWeight: "bold", marginTop: 8 }}>「{widget.title}」</p>
-          <p style={{ color: "var(--theme-text-tertiary, #999)", marginTop: 8 }}>此操作不可撤销</p>
+          <p style={{ color: "var(--theme-text-tertiary)", marginTop: 8 }}>此操作不可撤销</p>
         </div>
       ),
       okText: "删除",

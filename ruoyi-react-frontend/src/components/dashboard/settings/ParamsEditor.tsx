@@ -128,7 +128,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
                   onClick={() => remove(name)}
                   style={{
                     fontSize: 16,
-                    color: "var(--theme-text-tertiary, #999)",
+                    color: "var(--theme-text-tertiary)",
                     cursor: "pointer",
                     marginTop: 8,
                   }}
@@ -152,11 +152,11 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 
       {/* 参数说明 */}
       {endpoint && (
-        <div style={{ marginTop: 16, padding: "12px", background: "#f5f5f5", borderRadius: 4 }}>
+        <div style={{ marginTop: 16, padding: "12px", background: "var(--theme-bg-secondary)", borderRadius: 4 }}>
           <div style={{ fontSize: 12, color: "#666" }}>
             <strong>参数说明：</strong>
           </div>
-          <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)", marginTop: 4 }}>
             添加的参数将作为请求参数发送到API端点。支持动态变量替换， 如使用{" "}
             <code>{"{{userId}}"}</code> 将在请求时替换为当前用户ID。
           </div>

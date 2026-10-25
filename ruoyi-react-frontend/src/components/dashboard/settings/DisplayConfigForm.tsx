@@ -40,7 +40,7 @@ const getDefaultDisplayConfig = (widgetType: WidgetType): DisplayConfig => {
       return {
         type: "stat-card",
         icon: "📊",
-        iconColor: "var(--theme-info, #337ab0)",
+        iconColor: "var(--theme-info)",
         decimals: 0,
         showTrend: false,
       } as StatCardDisplayConfig;
@@ -82,7 +82,7 @@ const getDefaultDisplayConfig = (widgetType: WidgetType): DisplayConfig => {
       return {
         type: "stat-card",
         icon: "📊",
-        iconColor: "var(--theme-info, #337ab0)",
+        iconColor: "var(--theme-info)",
       } as StatCardDisplayConfig;
   }
 };
@@ -235,7 +235,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
               style={{ width: 100 }}
             />
           </Form.Item>
-          <span style={{ color: "var(--theme-text-tertiary, #999)" }}>条/页</span>
+          <span style={{ color: "var(--theme-text-tertiary)" }}>条/页</span>
         </Space>
       </Form.Item>
       <Divider titlePlacement="left" plain>
@@ -369,7 +369,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
                 disabled={disabled}
                 placeholder="添加阈值..."
                 onChange={() => {
-                  add({ value: 50, color: "var(--theme-warning, #b07a20)" });
+                  add({ value: 50, color: "var(--theme-warning)" });
                 }}
                 value={undefined}
                 options={[{ value: "add", label: "添加颜色阈值" }]}
@@ -398,7 +398,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
       default:
         return (
           <div
-            style={{ color: "var(--theme-text-tertiary, #999)", textAlign: "center", padding: 20 }}
+            style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: 20 }}
           >
             暂无额外配置项
           </div>
