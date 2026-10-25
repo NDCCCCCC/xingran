@@ -41,13 +41,16 @@ func newNtc7903(t *testing.T) (*NoticeService, *gorm.DB) {
 	if sqlDB, err := db.DB(); err == nil {
 		t.Cleanup(func() { _ = sqlDB.Close() })
 	}
+	// commit 9fa0836d 将 Role.Users many2many 改指 sys_user_role 后,与 User/Role
+	// 同一次 AutoMigrate 会让 join-table handler 把 sys_user_role 重建为无 created_at
+	// 列的纯 join 表,后续 seed Create(&UserRole{}) 失败;须先单独迁移 UserRole。
+	require.NoError(t, db.AutoMigrate(&models.UserRole{}), "auto migrate user_role join model first")
 	require.NoError(t, db.AutoMigrate(
 		&models.Notice{},
 		&models.NoticeTarget{},
 		&models.NoticeRead{},
 		&models.NoticeIgnore{},
 		&models.User{},
-		&models.UserRole{},
 		&models.Role{},
 		&models.Department{},
 	), "auto migrate notice chain models")

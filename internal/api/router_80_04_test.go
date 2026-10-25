@@ -107,12 +107,16 @@ func newMiniCore8004(t *testing.T) (*core.Core, *gorm.DB) {
 // 结论 B 时按 panic 模块逐个补。
 func migrateMinimalTables8004(t *testing.T, db *gorm.DB) {
 	t.Helper()
+	// 注意(commit 9fa0836d 将 Role.Users many2many 改指 sys_user_role 后):
+	// 与 User/Role 同一次 AutoMigrate 调用会让 join-table handler 把 sys_user_role
+	// 重建为无 created_at 列的纯 join 表,后续 db.Create(&UserRole{}) 必然失败。
+	// 因此必须先单独迁移 UserRole 建好完整表,再迁移其余模型。
+	require.NoError(t, db.AutoMigrate(&models.UserRole{}))
 	// system auth 组相关(auth.go loginLocalDirect 直调).
 	// 注意:ADConfig/ADServiceAccount 使用 gen_random_uuid()(PG 语法),sqlite 下不 AutoMigrate。
 	// AccountPool 构造时仅存 db 引用,不执行查询;等 spot-check 或后续测试按需建表。
 	require.NoError(t, db.AutoMigrate(
 		&models.User{},
-		&models.UserRole{},
 		&models.Role{},
 		&models.Menu{},
 		&models.DictType{},
@@ -203,9 +207,10 @@ func TestRtr8004_SetupRouter_FullAssembly(t *testing.T) {
 
 	// 建 auth handler 实际引用的全部表(system 组).
 	// ADConfig/ADServiceAccount 使用 gen_random_uuid()(PG 语法),sqlite 下不 AutoMigrate。
+	// 关联表必须先单独迁移(理由见 migrateMinimalTables8004 注释,commit 9fa0836d)。
+	require.NoError(t, db.AutoMigrate(&models.UserRole{}))
 	require.NoError(t, db.AutoMigrate(
 		&models.User{},
-		&models.UserRole{},
 		&models.Role{},
 		&models.Menu{},
 		&models.DictType{},
@@ -214,6 +219,18 @@ func TestRtr8004_SetupRouter_FullAssembly(t *testing.T) {
 		&models.LoginLog{},
 		&models.Notice{},
 	))
+	rows, _ := db.Raw("PRAGMA table_info(sys_user_role)").Rows()
+	cols := []string{}
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notnull, pk int
+		var dflt interface{}
+		rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk)
+		cols = append(cols, name)
+	}
+	rows.Close()
+	t.Logf("DEBUG sys_user_role cols: %v", cols)
 	seedTestUser8004(t, db)
 
 	originalNoticeHub := scheduler.GetNoticeHub()

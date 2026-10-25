@@ -45,10 +45,13 @@ func newOpl7903(t *testing.T) (*gorm.DB, OperLogService, *APIEndpointService) {
 	if sqlDB, err := db.DB(); err == nil {
 		t.Cleanup(func() { _ = sqlDB.Close() })
 	}
+	// commit 9fa0836d 将 Role.Users many2many 改指 sys_user_role 后,与 User/Role
+	// 同一次 AutoMigrate 会让 join-table handler 把 sys_user_role 重建为无 created_at
+	// 列的纯 join 表;须先单独迁移 UserRole(理由同 notice_service_79_03_test.go)。
+	require.NoError(t, db.AutoMigrate(&models.UserRole{}), "auto migrate user_role join model first")
 	require.NoError(t, db.AutoMigrate(
 		&models.OperLog{},
 		&models.User{},
-		&models.UserRole{},
 		&models.Role{},
 		&models.RoleMenu{},
 		&models.Menu{},
