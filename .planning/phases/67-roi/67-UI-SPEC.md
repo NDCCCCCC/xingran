@@ -73,6 +73,7 @@ created: "2026-10-25"
 2. **搜索按钮文案**：discoveries/backups 现状「查询」（无重置按钮）、devices「查询/重置/刷新」、cache「搜索/重置/刷新」。SearchForm 内建为「搜索/重置/刷新」。裁决：**统一到 SearchForm 内建文案**（65→66 已验收惯例；「查询→搜索」为 B 类可感知微变，逐 PR 记录）；backups/discoveries 迁移后**新增「重置」按钮**（新增能力，B 类）。
 3. **cache 搜索区非 Form 形态**（`cache/index.tsx:568-638`：受控 state `setSearchForm`，非 antd Form）——迁移到 useTableManager searchForm 需接线改造；行为等价（输入/下拉值进查询参数），视觉不变。
 4. **devices 批删取消按钮防抖放弃**：`devices/index.tsx:243-257` 单删 confirmInstance.update 防抖与 `:518` 注释——批删已声明「随迁移放弃」（helper 契约外增强）；单删迁移到 ConfirmDelete 后其 onOk Promise 语义天然覆盖防重，等效。
+5. **（执行后追认 2026-10-26）cache Tabs 移除**：执行器 T4（commit 0ac66bad）移除统计 Tabs，理由「统计面板为 CacheStatsModal 真子集，信息零损失、统计入口经 toolbar『统计信息』按钮保留」。未列入上述 A/B/C 任何一级，属执行越权裁决；verifier 核对子集声明成立、SUMMARY §6.4 显式记录，裁定 minor 并由 Lead 追认回写本节。后续 executor 不得效仿——未列行为变化仍须停下上报。
 
 ---
 
