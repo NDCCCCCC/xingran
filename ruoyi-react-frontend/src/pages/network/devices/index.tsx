@@ -1,66 +1,59 @@
 /**
  * NetworkDevice 设备管理页面
+ *
+ * Phase 67-T3: 迁移 66 契约组件（PageTable 单实例 + 子组件拆分）
+ * PR 差异记录（对照迁移前 1282 行版本）：
+ * - Table+useTableManager 双实例化骨架 → PageTable（request 直连
+ *   /network/devices/list，搜索值/extraFilters/排序由 PageTable 合参）；
+ *   usePagination+setTotal 外部分页链路删除（PageTable 内建 total 承接，SC2）。
+ * - 单删 Modal.confirm（cancelButton 防抖 confirmInstance.update 写法）→
+ *   createDeleteAction → ConfirmDelete（65 模板文案，B 类对齐）。
+ * - 批删 confirmDelete 手工按钮 → batchDelete={{onDelete,target:"设备"}}
+ *   （INV-8 逐字文案：确认批量删除/将删除选中的 {N} 项，删除后不可恢复，
+ *   是否继续？/删除/取消/danger）。
+ * - 搜索卡 5 字段 → searchFields（查询→搜索 B 类；重置/刷新内建）；
+ *   deviceType options 保留 useDict 字典回退静态语义。
+ * - 左侧部门树 → extraFilters={deptFilters}（useMemo 引用稳定）联动，
+ *   handleDeptSelect 仅 setState，刷新由 PageTable extraFilters 触发。
+ * - virtual + scroll={{x:1600,y:600}} 经 rest 透传（PAGE_TABLE 契约不吞）。
+ * - 统计刷新：原 request 内 loadStatistics() 保留——任何列表刷新均联动统计。
+ * - 已选择 Alert → children ctx.selectedRowKeys/clearSelection。
+ * - 三弹窗纯搬迁至 components/DeviceModals.tsx（Modal 原样，未改 FormModal——
+ *   原「提交中禁用取消按钮」防抖是契约外增强，保持原状）。
  */
 
-import { useState, useEffect, useCallback, useMemo, type FC } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Layout,
-  Divider,
-  Alert,
-  App,
-} from "antd";
-import type { ColumnsType } from "antd/es/table";
-import type { DividerProps } from "antd/es/divider";
+import { Layout, App, Form, Button, Alert, Tag } from "antd";
 import {
   PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  CloudServerOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  WarningOutlined,
   ThunderboltOutlined,
-  ApiOutlined,
-  EyeOutlined,
   CloudUploadOutlined,
+  EditOutlined,
+  EyeOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
 import type { NetworkDevice } from "@/types";
 import type { PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
-import DeptTree from "@/components/DeptTree";
-import { useNavigate } from "react-router-dom";
-import { useTableManager } from "@/hooks/useTableManager";
-import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import ActionButtons from "@/components/shared/ActionButtons";
-import { DepartmentTreeSelect } from "@/components/shared";
+import { createDeleteAction } from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, confirmDelete } from "@/components/shared";
-import { usePagination } from "@/hooks/usePagination";
-import { useMenuStore } from "@/store/menuStore";
+import { PageTable } from "@/components/shared";
+import { BatchExportModal } from "@/components/shared";
+import type { ActionButton } from "@/components/shared/ActionButtons";
+import type { ColumnsType } from "antd/es/table";
+import type { SorterMeta } from "@/utils/tableHelpers";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import type { SortOrder } from "@/hooks/useServerSort";
-
-// 导入提取的常量、工具和 Hook
+import { useMenuStore } from "@/store/menuStore";
+import { useDict } from "@/hooks/useDict";
+import DeptTreePanel from "./components/DeptTreePanel";
+import DeviceStatsCards from "./components/DeviceStatsCards";
+import DeviceModals from "./components/DeviceModals";
 import {
   VENDOR_OPTIONS,
   DEVICE_TYPE_OPTIONS,
@@ -72,10 +65,6 @@ import { formatDateTime, getOptionLabel, getStatusColor } from "./utils";
 import { useDeviceData } from "./hooks/useDeviceData";
 import { useDeviceModals, type ProbeResult } from "./hooks/useDeviceModals";
 
-const { Option } = Select;
-const { TextArea } = Input;
-const { Sider, Content } = Layout;
-
 // ==================== 表格列定义 ====================
 
 interface DeviceTableColumnsProps {
@@ -83,26 +72,15 @@ interface DeviceTableColumnsProps {
   handleCollectPorts: (device: NetworkDevice) => void;
   openDetailModal: (device: NetworkDevice) => void;
   openModal: (record?: NetworkDevice) => void;
-  handleDelete: (id: string) => void;
   collectingDeviceId: string | null;
   canViewMACHistory: boolean;
-  getColumnSortOrder: (field: string) => SortOrder | undefined;
   /** Phase 69 DICT-03: 设备类型 label 渲染（优先字典，回退静态 DEVICE_TYPE_OPTIONS） */
   getDeviceTypeText: (type: string) => string | undefined;
 }
 
+/** 列 sorter:true 由 PageTable/useTableManager 排序管线承接；原手工 sortOrder 视觉字段随契约删除 */
 function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<NetworkDevice> {
-  const {
-    navigate,
-    handleCollectPorts,
-    openDetailModal,
-    openModal,
-    handleDelete,
-    collectingDeviceId,
-    canViewMACHistory,
-    getColumnSortOrder,
-    getDeviceTypeText,
-  } = props;
+  const { navigate, getDeviceTypeText } = props;
 
   return [
     {
@@ -111,7 +89,6 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "deviceName",
       width: 200,
       sorter: true,
-      sortOrder: getColumnSortOrder("deviceName"),
       render: (deviceName: string, record: NetworkDevice) => (
         <a
           onClick={() => navigate(`/network/ports?deviceId=${record.id}`)}
@@ -127,7 +104,6 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "deviceType",
       width: 120,
       sorter: true,
-      sortOrder: getColumnSortOrder("deviceType"),
       render: (deviceType: string) => (
         <Tag color={DEVICE_TYPE_TAG_COLOR}>{getDeviceTypeText(deviceType)}</Tag>
       ),
@@ -138,7 +114,6 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "vendor",
       width: 100,
       sorter: true,
-      sortOrder: getColumnSortOrder("vendor"),
       render: (vendor: string) => (
         <Tag color={VENDOR_TAG_COLOR}>{getOptionLabel(VENDOR_OPTIONS, vendor)}</Tag>
       ),
@@ -149,7 +124,6 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "model",
       width: 150,
       sorter: true,
-      sortOrder: getColumnSortOrder("model"),
     },
     {
       title: "IP地址",
@@ -157,7 +131,6 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "ipAddress",
       width: 140,
       sorter: true,
-      sortOrder: getColumnSortOrder("ipAddress"),
     },
     {
       title: "端口",
@@ -165,7 +138,6 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "port",
       width: 80,
       sorter: true,
-      sortOrder: getColumnSortOrder("port"),
     },
     {
       title: "状态",
@@ -173,7 +145,6 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "status",
       width: 90,
       sorter: true,
-      sortOrder: getColumnSortOrder("status"),
       render: (status: number) => (
         <Tag color={getStatusColor(status)}>{getOptionLabel(STATUS_OPTIONS, status)}</Tag>
       ),
@@ -185,7 +156,6 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "lastSeenAt",
       width: 180,
       sorter: true,
-      sortOrder: getColumnSortOrder("lastSeenAt"),
       render: (lastSeenAt: string) => formatDateTime(lastSeenAt),
     },
     {
@@ -194,79 +164,14 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       key: "createdAt",
       width: 180,
       sorter: true,
-      sortOrder: getColumnSortOrder("createdAt"),
       render: (createdAt: string) => formatDateTime(createdAt),
-    },
-    {
-      title: "操作",
-      key: "action",
-      fixed: "right",
-      width: 100,
-      render: (_, record) => {
-        const actions = [
-          {
-            key: "collect-ports",
-            label: "采集端口",
-            icon: <CloudUploadOutlined />,
-            onClick: () => handleCollectPorts(record),
-            loading: collectingDeviceId === record.id,
-          },
-          {
-            key: "detail",
-            label: "详情",
-            icon: <EyeOutlined />,
-            onClick: () => openDetailModal(record),
-          },
-          // 14-05b:网络设备 → MAC 历史联动入口(D-16 锁定)
-          ...(canViewMACHistory
-            ? [
-                {
-                  key: "mac-history",
-                  label: "查看 MAC 历史",
-                  icon: <HistoryOutlined />,
-                  onClick: () => navigate(`/network/mac/history?deviceId=${record.id}`),
-                },
-              ]
-            : []),
-          {
-            key: "edit",
-            label: "编辑",
-            icon: <EditOutlined />,
-            onClick: () => openModal(record),
-          },
-          {
-            key: "delete",
-            label: "删除",
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              const confirmInstance = Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: async () => {
-                  confirmInstance.update({ cancelButtonProps: { disabled: true } });
-                  try {
-                    await handleDelete(record.id);
-                  } finally {
-                    confirmInstance.update({ cancelButtonProps: { disabled: false } });
-                  }
-                },
-              });
-            },
-          },
-        ];
-
-        return <ActionButtons actions={actions} />;
-      },
     },
   ];
 }
 
 // ==================== 主组件 ====================
 
-const DeviceManagement: FC = () => {
+const DeviceManagement = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
 
@@ -276,7 +181,6 @@ const DeviceManagement: FC = () => {
 
   // 表单实例
   const [quickCreateForm] = Form.useForm();
-  const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
   // 自定义状态
@@ -290,9 +194,8 @@ const DeviceManagement: FC = () => {
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  // NetworkExport current/pageSize（原 paginationProps 承接；request 回填）
+  const [exportPage, setExportPage] = useState({ current: 1, pageSize: 10 });
 
   // Phase 69 DICT-03: 设备类型下拉迁 useDict("network_device_type")——字典管理页改 label
   // 后搜索/编辑下拉与表格 Tag 随之变化；字典空态/接口异常时回退静态 DEVICE_TYPE_OPTIONS。
@@ -308,7 +211,15 @@ const DeviceManagement: FC = () => {
     [deviceTypeDict]
   );
 
-  // 使用自定义 Hooks
+  // 搜索/编辑下拉共用 options：字典优先，回退静态
+  const deviceTypeOptions = useMemo(
+    () =>
+      deviceTypeDict.length > 0
+        ? deviceTypeDict.map((d) => ({ label: d.dictLabel, value: d.dictValue }))
+        : DEVICE_TYPE_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value })),
+    [deviceTypeDict]
+  );
+
   const {
     departments,
     credentials,
@@ -324,13 +235,10 @@ const DeviceManagement: FC = () => {
     viewingDevice,
     probeResult,
     probing,
-    creating,
     setQuickCreateModalVisible,
     setDetailModalVisible,
-    setViewingDevice: _setViewingDevice,
     setProbeResult,
     setProbing,
-    setCreating,
     openDetailModal,
     closeQuickCreateModal,
   } = useDeviceModals();
@@ -351,59 +259,28 @@ const DeviceManagement: FC = () => {
     []
   );
 
-  // 使用 useTableManager 管理表格状态
-  const {
-    loading,
-    data: devices,
-    selectedRowKeys,
-    editModalVisible: modalVisible,
-    editingItem: editingDevice,
-    setSelectedRowKeys,
-    setEditModalVisible,
-    loadData: loadDevices,
-    handleAdd,
-    handleEdit,
-    resetSelection,
-    getColumnSortOrder,
-    handleTableChange,
-  } = useTableManager<NetworkDevice>(
-    async (params) => {
-      const values = searchForm.getFieldsValue();
-      const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
-        ...values,
-        ...params,
-      });
-      loadStatistics();
+  // 列表请求：搜索值/extraFilters/排序/分页由 PageTable 合参直连
+  const request = useCallback(
+    async (params: Record<string, unknown>) => {
+      const result = (await post<PageResponse<NetworkDevice>>(
+        "/network/devices/list",
+        params
+      )) as { data: { list: NetworkDevice[]; total: number } };
+      // 统计联动保留原语义：任何列表刷新均带动统计刷新
+      void loadStatistics();
+      setExportPage({ current: Number(params.current) || 1, pageSize: Number(params.pageSize) || 10 });
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
-    {
-      pageSize: 10,
-      externalPagination: {
-        current: paginationProps.current ?? 1,
-        pageSize: paginationProps.pageSize ?? 10,
-        setCurrent,
-        setPageSize,
-        setTotal,
-      },
-      sorterMetas,
-    }
+    [loadStatistics]
+  );
+
+  // 部门树联动：引用稳定对象，变化 → PageTable applyFilters 回第 1 页
+  const deptFilters = useMemo(
+    () => (selectedDeptId ? { deptId: selectedDeptId } : {}),
+    [selectedDeptId]
   );
 
   // ==================== 数据操作 ====================
-
-  // 部门树选择处理
-  const handleDeptSelect = useCallback(
-    (selectedKeys: React.Key[]) => {
-      if (selectedKeys.length > 0) {
-        setSelectedDeptId(selectedKeys[0] as string);
-        loadDevices({ deptId: selectedKeys[0] });
-      } else {
-        setSelectedDeptId("");
-        loadDevices();
-      }
-    },
-    [loadDevices, setSelectedDeptId]
-  );
 
   // 探测设备
   const handleProbe = async () => {
@@ -434,11 +311,10 @@ const DeviceManagement: FC = () => {
     }
   };
 
-  // 快速创建设备
-  const handleQuickCreate = async () => {
+  // 快速创建设备（reloadRef 承接：提交成功后由 ctx 转发的 loadData 刷新）
+  const handleQuickCreate = async (loadData: () => void) => {
     try {
       const values = await quickCreateForm.validateFields();
-      setCreating(true);
 
       await post("/network/devices/quick-create", {
         ipAddress: values.ipAddress,
@@ -455,24 +331,18 @@ const DeviceManagement: FC = () => {
       quickCreateForm.resetFields();
       setProbeResult(null);
 
-      if (selectedDeptId) {
-        loadDevices({ deptId: selectedDeptId });
-      } else {
-        loadDevices();
-      }
-      loadStatistics();
+      loadData();
+      void loadStatistics();
     } catch (error) {
       if (error && typeof error === "object" && "errorFields" in error) {
         return;
       }
       handleApiError(error, "创建");
-    } finally {
-      setCreating(false);
     }
   };
 
   // 创建/更新设备
-  const handleCreate = async () => {
+  const handleCreate = async (loadData: () => void) => {
     try {
       const values = await editForm.validateFields();
       if (editingDevice) {
@@ -482,14 +352,10 @@ const DeviceManagement: FC = () => {
         await post("/network/devices", values);
         handleSuccess("创建");
       }
-      setEditModalVisible(false);
+      setModalVisibleState(false);
       editForm.resetFields();
-      if (selectedDeptId) {
-        loadDevices({ deptId: selectedDeptId });
-      } else {
-        loadDevices();
-      }
-      loadStatistics();
+      loadData();
+      void loadStatistics();
     } catch (error) {
       if (error && typeof error === "object" && "errorFields" in error) {
         return;
@@ -498,43 +364,16 @@ const DeviceManagement: FC = () => {
     }
   };
 
-  // 删除设备
-  const handleDelete = async (id: string) => {
-    try {
-      await post(`/network/devices/${id}/delete`, {});
-      handleSuccess("删除");
-      if (selectedDeptId) {
-        loadDevices({ deptId: selectedDeptId });
-      } else {
-        loadDevices();
-      }
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "删除");
-    }
-  };
+  // 编辑弹窗开关（原 useTableManager editModalVisible 承接：本地 state 桥接）
+  const [modalVisible, setModalVisibleState] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<NetworkDevice | null>(null);
 
-  // 批量删除设备
-  const handleBatchDelete = () => {
-    if (selectedRowKeys.length === 0) {
-      return;
-    }
-    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper；
-    // 原 confirmInstance 取消按钮防抖为 helper 契约外增强，随迁移放弃——记 SUMMARY 偏差）
-    confirmDelete({
-      title: "确认批量删除",
-      target: `选中的 ${selectedRowKeys.length} 项`,
-      onDelete: async () => {
-        await post("/network/devices/batch-delete", { ids: selectedRowKeys });
-        resetSelection();
-        if (selectedDeptId) {
-          loadDevices({ deptId: selectedDeptId });
-        } else {
-          loadDevices();
-        }
-        loadStatistics();
-      },
-    });
+  // 删除设备（createDeleteAction → ConfirmDelete 契约：失败 helper 承接并保持弹窗）
+  const handleDelete = async (id: string, loadData: () => void) => {
+    await post(`/network/devices/${id}/delete`, {});
+    handleSuccess("删除");
+    loadData();
+    void loadStatistics();
   };
 
   const handleBatchExport = async (entityTypes: string[]) => {
@@ -582,7 +421,7 @@ const DeviceManagement: FC = () => {
   // 打开编辑模态框
   const openModal = (record?: NetworkDevice) => {
     if (record) {
-      handleEdit(record);
+      setEditingDevice(record);
       // 凭证兜底注入(2026-06-30,同 info-points):loadCredentials 异步且 pageSize:50
       // 可能不覆盖当前凭证 → 编辑回填 Select 显示 raw UUID。用 record.credentialName 注入。
       if (record.credentialId) {
@@ -594,10 +433,11 @@ const DeviceManagement: FC = () => {
         credentialId: record.credentialId || undefined,
       });
     } else {
-      handleAdd();
+      setEditingDevice(null);
       editForm.setFieldsValue({ port: 22, snmpPort: 161, status: 0 });
     }
-    loadCredentials();
+    setModalVisibleState(true);
+    void loadCredentials();
   };
 
   // 打开快速创建模态框
@@ -605,676 +445,246 @@ const DeviceManagement: FC = () => {
     quickCreateForm.resetFields();
     setProbeResult(null);
     setQuickCreateModalVisible(true);
-    loadCredentials();
+    void loadCredentials();
   };
 
-  // ==================== 搜索和刷新 ====================
+  // 行操作（PageTable ctx 注入 loadData 后组装；操作列由 PageTable 追加）
+  const buildRowActions = useCallback(
+    (record: NetworkDevice, loadData: () => void): ActionButton[] => [
+      {
+        key: "collect-ports",
+        label: "采集端口",
+        icon: <CloudUploadOutlined />,
+        onClick: () => handleCollectPorts(record),
+        // 契约 ActionButton 无 loading 位：采集进行中降级为 disabled（记 PR 偏差）
+        disabled: collectingDeviceId === record.id,
+      },
+      {
+        key: "detail",
+        label: "详情",
+        icon: <EyeOutlined />,
+        onClick: () => openDetailModal(record),
+      },
+      // 14-05b:网络设备 → MAC 历史联动入口(D-16 锁定)
+      ...(canViewMACHistory
+        ? [
+            {
+              key: "mac-history",
+              label: "查看 MAC 历史",
+              icon: <HistoryOutlined />,
+              onClick: () => navigate(`/network/mac/history?deviceId=${record.id}`),
+            },
+          ]
+        : []),
+      {
+        key: "edit",
+        label: "编辑",
+        icon: <EditOutlined />,
+        onClick: () => openModal(record),
+      },
+      createDeleteAction(record.id, () => handleDelete(record.id, loadData), {
+        label: record.deviceName,
+      }),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 采集/详情/编辑 handler 均为稳定闭包
+    [collectingDeviceId, canViewMACHistory, navigate]
+  );
 
-  const handleSearch = () => {
-    const values = searchForm.getFieldsValue();
-    const searchParams: Record<string, unknown> = {};
-    Object.keys(values).forEach((key) => {
-      const value = values[key];
-      if (value !== undefined && value !== null && value !== "") {
-        searchParams[key] = value;
-      }
-    });
-    if (selectedDeptId) {
-      searchParams.deptId = selectedDeptId;
-    }
-    loadDevices(searchParams);
-  };
+  // 批量导出弹窗触发按钮（原 toolbar 位）
+  const [reloadRef] = useState<{ current: (() => void) | null }>({ current: null });
 
-  const handleReset = () => {
-    searchForm.resetFields();
-    if (selectedDeptId) {
-      loadDevices({ deptId: selectedDeptId });
-    } else {
-      loadDevices();
-    }
-  };
-
-  const handleRefresh = () => {
-    if (selectedDeptId) {
-      loadDevices({ deptId: selectedDeptId });
-    } else {
-      loadDevices();
-    }
-    loadStatistics();
-  };
-
-  // ==================== 初始化 ====================
-
+  // mount 统计首载（列表首载由 PageTable extraFilters effect 承接）
   useEffect(() => {
-    loadDevices();
-    loadStatistics();
+    void loadStatistics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 表格列
-  const columns = getDeviceTableColumns({
-    navigate,
-    handleCollectPorts,
-    openDetailModal,
-    openModal,
-    handleDelete,
-    collectingDeviceId,
-    canViewMACHistory,
-    getColumnSortOrder,
-    getDeviceTypeText,
-  });
+  const columns = useMemo(
+    () =>
+      getDeviceTableColumns({
+        navigate,
+        handleCollectPorts,
+        openDetailModal,
+        openModal,
+        collectingDeviceId,
+        canViewMACHistory,
+        getDeviceTypeText,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [collectingDeviceId, canViewMACHistory, deviceTypeDict]
+  );
+
+  const searchFields = [
+    { name: "deviceName", label: "设备名称", type: "input" as const, placeholder: "请输入设备名称" },
+    { name: "ipAddress", label: "IP地址", type: "input" as const, placeholder: "请输入IP地址" },
+    {
+      name: "vendor",
+      label: "厂商",
+      type: "select" as const,
+      placeholder: "请选择厂商",
+      options: VENDOR_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value })),
+    },
+    {
+      name: "deviceType",
+      label: "设备类型",
+      type: "select" as const,
+      placeholder: "请选择设备类型",
+      options: deviceTypeOptions,
+    },
+    {
+      name: "status",
+      label: "状态",
+      type: "select" as const,
+      placeholder: "请选择状态",
+      options: STATUS_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value })),
+    },
+  ];
 
   return (
     <Layout style={{ background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
       {/* 左侧部门树 */}
-      <Sider
-        width={360}
-        className="dept-list-sider"
-        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #e9efeb" }}
-      >
-        <DeptTree
-          onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
-          selectedKeys={selectedDeptId ? [selectedDeptId] : []}
-        />
-      </Sider>
+      <DeptTreePanel
+        selectedDeptId={selectedDeptId}
+        onSelect={(selectedKeys) => {
+          if (selectedKeys.length > 0) {
+            setSelectedDeptId(selectedKeys[0] as string);
+          } else {
+            setSelectedDeptId("");
+          }
+        }}
+      />
 
-      {/* 右侧内容区 */}
-      <Content style={{ background: "#fff" }}>
-        <div>
-          {/* 统计卡片 */}
-          {statistics.total > 10 && (
-            <Row gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={6}>
-                <Card>
-                  <Statistic
-                    title="设备总数"
-                    value={statistics.total}
-                    prefix={<CloudServerOutlined />}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic
-                    title="在线设备"
-                    value={statistics.online}
-                    styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
-                    prefix={<CheckCircleOutlined />}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic
-                    title="离线设备"
-                    value={statistics.offline}
-                    styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
-                    prefix={<CloseCircleOutlined />}
-                  />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic
-                    title="未知状态"
-                    value={statistics.unknown}
-                    styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
-                    prefix={<WarningOutlined />}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          )}
-
-          {/* 搜索表单和操作按钮 */}
-          <Card style={{ marginBottom: 16 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-                gap: "16px",
-              }}
-            >
-              <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-                <Form.Item name="deviceName" label="设备名称">
-                  <Input
-                    placeholder="请输入设备名称"
-                    allowClear
-                    className="user-form-input"
-                    style={{ width: 150 }}
-                  />
-                </Form.Item>
-                <Form.Item name="ipAddress" label="IP地址">
-                  <Input
-                    placeholder="请输入IP地址"
-                    allowClear
-                    className="user-form-input"
-                    style={{ width: 150 }}
-                  />
-                </Form.Item>
-                <Form.Item name="vendor" label="厂商">
-                  <Select
-                    placeholder="请选择厂商"
-                    allowClear
-                    className="user-form-input"
-                    style={{ width: 120 }}
-                    onSearch={() => {}}
-                  >
-                    {VENDOR_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item name="deviceType" label="设备类型">
-                  <Select
-                    placeholder="请选择设备类型"
-                    allowClear
-                    className="user-form-input"
-                    style={{ width: 130 }}
-                    onSearch={() => {}}
-                  >
-                    {deviceTypeDict.length > 0
-                      ? deviceTypeDict.map((d) => (
-                          <Option key={d.dictValue} value={d.dictValue}>
-                            {d.dictLabel}
-                          </Option>
-                        ))
-                      : DEVICE_TYPE_OPTIONS.map((opt) => (
-                          <Option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </Option>
-                        ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item name="status" label="状态">
-                  <Select
-                    placeholder="请选择状态"
-                    allowClear
-                    className="user-form-input"
-                    style={{ width: 100 }}
-                    onSearch={() => {}}
-                  >
-                    {STATUS_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item>
-                  <Space>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
-                      查询
-                    </Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
-                      重置
-                    </Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
-                      刷新
-                    </Button>
-                  </Space>
-                </Form.Item>
-              </Form>
-              <Space>
-                <NetworkExport
-                  entityType="devices"
-                  entityName="网络设备"
-                  filters={(() => {
-                    const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                    const filtered: Record<string, unknown> = {};
-                    Object.keys(values).forEach((key) => {
-                      const value = values[key];
-                      if (value !== undefined && value !== null && value !== "") {
-                        filtered[key] = value;
-                      }
-                    });
-                    return filtered;
-                  })()}
-                  current={paginationProps.current}
-                  pageSize={paginationProps.pageSize}
-                />
-                <Button
-                  aria-label="快速创建设备"
-                  title="快速创建设备"
-                  type="primary"
-                  icon={<ThunderboltOutlined />}
-                  onClick={openQuickCreateModal}
-                >
-                  快速创建
-                </Button>
-                <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()} aria-label="新增设备" title="新增设备" >
-                  手动新增
-                </Button>
-                {selectedRowKeys.length > 0 && (
-                  <Button
-                    aria-label="批量删除"
-                    title="批量删除"
-                    icon={<DeleteOutlined />}
-                    style={{ color: "var(--theme-error, #ba3630)" }}
-                    onClick={handleBatchDelete}
-                  >
-                    批量删除 ({selectedRowKeys.length})
-                  </Button>
-                )}
-              </Space>
-              {/* 批量导出 Modal */}
-
-              <BatchExportModal
-                visible={batchModalVisible}
-
-                onConfirm={handleBatchExport}
-
-                onCancel={() => setBatchModalVisible(false)}
-
-                loading={batchExporting}
-              />
-            </div>
-            {selectedRowKeys.length > 0 && (
-              <Alert
-                message={
-                  <span>
-                    已选择 <strong>{selectedRowKeys.length}</strong> 个设备，
-                    <Button
-                      type="link"
-                      size="small"
-                      onClick={() => setSelectedRowKeys([])}
-                      style={{ padding: 0 }}
-                    >
-                      取消选择
-                    </Button>
-                  </span>
-                }
-                type="info"
-                showIcon
-                style={{ marginTop: 12 }}
-              />
-            )}
-          </Card>
-
-          {/* 设备表格 */}
-          <Card>
-            <Table
-              rowSelection={{
-                selectedRowKeys,
-                onChange: setSelectedRowKeys,
-              }}
-              columns={columns}
-              dataSource={devices}
-              loading={loading}
-              rowKey="id"
-              virtual
-              scroll={{ x: 1600, y: 600 }}
-              pagination={paginationProps}
-              onChange={handleTableChange}
+      <PageTable<NetworkDevice>
+        request={request}
+        columns={columns}
+        rowKey={(r) => r.id}
+        searchFields={searchFields}
+        sorterMetas={sorterMetas}
+        extraFilters={deptFilters}
+        virtual
+        scroll={{ x: 1600, y: 600 }}
+        batchDelete={{
+          target: "设备",
+          onDelete: async (keys) => {
+            await post("/network/devices/batch-delete", { ids: keys });
+            void loadStatistics();
+          },
+        }}
+        rowActions={(record) => buildRowActions(record, reloadRef.current as () => void)}
+        toolbar={
+          <>
+            <NetworkExport
+              entityType="devices"
+              entityName="网络设备"
+              current={exportPage.current}
+              pageSize={exportPage.pageSize}
             />
-          </Card>
-        </div>
-      </Content>
+            <Button
+              aria-label="快速创建设备"
+              title="快速创建设备"
+              type="primary"
+              icon={<ThunderboltOutlined />}
+              onClick={openQuickCreateModal}
+            >
+              快速创建
+            </Button>
+            <Button
+              type="default"
+              icon={<PlusOutlined />}
+              onClick={() => openModal()}
+              aria-label="新增设备"
+              title="新增设备"
+            >
+              手动新增
+            </Button>
+          </>
+        }
+      >
+        {(ctx) => {
+          // loadData / searchForm 转发（提交后刷新 + children 内接线）
+          reloadRef.current = ctx.loadData;
+          return (
+            <>
+              <DeviceStatsCards statistics={statistics} />
+              {ctx.selectedRowKeys.length > 0 && (
+                <Alert
+                  message={
+                    <span>
+                      已选择 <strong>{ctx.selectedRowKeys.length}</strong> 个设备，
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={ctx.clearSelection}
+                        style={{ padding: 0 }}
+                      >
+                        取消选择
+                      </Button>
+                    </span>
+                  }
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+            </>
+          );
+        }}
+      </PageTable>
 
-      {/* 快速创建模态框 */}
-      <Modal
-        title="快速创建设备"
-        maskClosable={false}
-        keyboard={false}
-        open={quickCreateModalVisible}
-        onOk={async () => {
+      {/* 批量导出 Modal */}
+      <BatchExportModal
+        visible={batchModalVisible}
+        onConfirm={handleBatchExport}
+        onCancel={() => setBatchModalVisible(false)}
+        loading={batchExporting}
+      />
+
+      {/* 三弹窗（快速创建/编辑/详情） */}
+      <DeviceModals
+        quickCreateModalVisible={quickCreateModalVisible}
+        quickCreateForm={quickCreateForm}
+        credentials={credentials}
+        probeResult={probeResult}
+        probing={probing}
+        submitting={submitting}
+        departments={departments}
+        onProbe={handleProbe}
+        onQuickCreateOk={async () => {
           setSubmitting(true);
           try {
-            await handleQuickCreate();
+            await handleQuickCreate(reloadRef.current as () => void);
           } finally {
             setSubmitting(false);
           }
         }}
-        cancelButtonProps={{ disabled: submitting }}
-        onCancel={() => {
+        onQuickCreateCancel={() => {
           closeQuickCreateModal();
           quickCreateForm.resetFields();
         }}
-        width={700}
-        okText="创建设备"
-      >
-        <Alert
-          title="快速创建说明"
-          description="只需输入 IP 地址和授权凭证，系统会自动使用凭证中配置的 SNMP Communities 探测获取设备信息并创建设备。"
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-
-        <Form form={quickCreateForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-          <Form.Item
-            name="ipAddress"
-            label="IP地址"
-            rules={[{ required: true, message: "请输入IP地址" }]}
-          >
-            <Input placeholder="请输入设备IP地址" />
-          </Form.Item>
-          <Form.Item
-            name="credentialId"
-            label="授权凭证"
-            rules={[{ required: true, message: "请选择授权凭证" }]}
-          >
-            <Select placeholder="请选择授权凭证" onSearch={() => {}}>
-              {credentials.map((cred) => (
-                <Option key={cred.id} value={cred.id}>
-                  {cred.credentialName}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item label=" ">
-            <Col offset={6}>
-              <Space>
-                <Button
-                  aria-label="连接探测"
-                  title="连接探测"
-                  type="primary"
-                  icon={<ApiOutlined />}
-                  onClick={handleProbe}
-                  loading={probing}
-                >
-                  探测设备
-                </Button>
-                <Button onClick={() => setProbeResult(null)}>清除结果</Button>
-              </Space>
-            </Col>
-          </Form.Item>
-
-          {probeResult && (
-            <>
-              <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
-                探测结果
-              </Divider>
-              <Alert title="探测成功" type="success" style={{ marginBottom: 16 }} />
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Card size="small" title="设备信息">
-                    <p>
-                      <strong>设备名称:</strong> {(probeResult.deviceName as string) || "-"}
-                    </p>
-                    <p>
-                      <strong>设备类型:</strong> {(probeResult.deviceType as string) || "-"}
-                    </p>
-                    <p>
-                      <strong>厂商:</strong> {(probeResult.vendor as string) || "-"}
-                    </p>
-                    <p>
-                      <strong>型号:</strong> {(probeResult.model as string) || "-"}
-                    </p>
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card size="small" title="系统信息">
-                    <p>
-                      <strong>SysName:</strong> {(probeResult.sysName as string) || "-"}
-                    </p>
-                    <p>
-                      <strong>SysDescr:</strong>{" "}
-                      {(probeResult.sysDescr as string)?.substring(0, 50) || "-"}
-                      {(probeResult.sysDescr as string)?.length > 50 ? "..." : ""}
-                    </p>
-                  </Card>
-                </Col>
-              </Row>
-            </>
-          )}
-
-          <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
-            其他信息（可选）
-          </Divider>
-          <Form.Item name="deptId" label="所属部门">
-            <DepartmentTreeSelect departments={departments} />
-          </Form.Item>
-          <Form.Item name="location" label="位置">
-            <Input placeholder="请输入设备位置" />
-          </Form.Item>
-          <Form.Item name="description" label="备注">
-            <TextArea rows={2} placeholder="请输入备注" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 手动新增/编辑模态框 */}
-      <Modal
-        title={editingDevice ? "编辑设备" : "手动新增设备"}
-        maskClosable={false}
-        keyboard={false}
-        open={modalVisible}
-        onOk={async () => {
+        onClearProbeResult={() => setProbeResult(null)}
+        modalVisible={modalVisible}
+        editingDevice={editingDevice}
+        editForm={editForm}
+        deviceTypeOptions={deviceTypeOptions}
+        onEditOk={async () => {
           setSubmitting(true);
           try {
-            await handleCreate();
+            await handleCreate(reloadRef.current as () => void);
           } finally {
             setSubmitting(false);
           }
         }}
-        cancelButtonProps={{ disabled: submitting }}
-        onCancel={() => {
-          setEditModalVisible(false);
+        onEditCancel={() => {
+          setModalVisibleState(false);
           editForm.resetFields();
         }}
-        width={700}
-      >
-        <Alert
-          title="手动新增说明"
-          description="需要手动填写所有设备信息。如果只想输入IP地址自动获取信息，请使用「快速创建」功能。"
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-
-        <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-          <Form.Item
-            name="deviceName"
-            label="设备名称"
-            rules={[{ required: true, message: "请输入设备名称" }]}
-          >
-            <Input placeholder="请输入设备名称" />
-          </Form.Item>
-          <Form.Item
-            name="deviceType"
-            label="设备类型"
-            rules={[{ required: true, message: "请选择设备类型" }]}
-          >
-            <Select placeholder="请选择设备类型" onSearch={() => {}}>
-              {deviceTypeDict.length > 0
-                ? deviceTypeDict.map((d) => (
-                    <Option key={d.dictValue} value={d.dictValue}>
-                      {d.dictLabel}
-                    </Option>
-                  ))
-                : DEVICE_TYPE_OPTIONS.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </Option>
-                  ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: "请选择厂商" }]}>
-            <Select placeholder="请选择厂商" onSearch={() => {}}>
-              {VENDOR_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="model" label="型号">
-            <Input placeholder="请输入设备型号" />
-          </Form.Item>
-          <Form.Item
-            name="ipAddress"
-            label="IP地址"
-            rules={[{ required: true, message: "请输入IP地址" }]}
-          >
-            <Input placeholder="请输入IP地址" />
-          </Form.Item>
-          <Form.Item
-            name="port"
-            label="SSH端口"
-            rules={[{ required: true, message: "请输入SSH端口" }]}
-          >
-            <InputNumber min={1} max={65535} style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item
-            name="snmpPort"
-            label="SNMP端口"
-            rules={[{ required: true, message: "请输入SNMP端口" }]}
-          >
-            <InputNumber min={1} max={65535} style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name="credentialId" label="授权凭证">
-            <Select placeholder="请选择授权凭证" allowClear onSearch={() => {}}>
-              {credentials.map((cred) => (
-                <Option key={cred.id} value={cred.id}>
-                  {cred.credentialName}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="deptId" label="所属部门">
-            <DepartmentTreeSelect departments={departments} />
-          </Form.Item>
-          <Form.Item name="location" label="位置">
-            <Input placeholder="请输入位置" />
-          </Form.Item>
-          <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select onSearch={() => {}}>
-              {STATUS_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="description" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 设备详情模态框 */}
-      <Modal
-        title="设备详细信息"
-        maskClosable={false}
-        keyboard={false}
-        open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
-        footer={[
-          // 14-05b:详情页头部操作区新增 查看 MAC 历史 联动入口(D-16 锁定)
-          ...(canViewMACHistory && viewingDevice
-            ? [
-                <Button
-                  aria-label="查看 MAC 历史"
-                  title="查看 MAC 历史"
-                  key="mac-history"
-                  icon={<HistoryOutlined />}
-                  onClick={() => {
-                    if (viewingDevice) {
-                      navigate(`/network/mac/history?deviceId=${viewingDevice.id}`);
-                    }
-                  }}
-                >
-                  查看 MAC 历史
-                </Button>,
-              ]
-            : []),
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
-            关闭
-          </Button>,
-        ]}
-        width={800}
-      >
-        {viewingDevice && (
-          <div>
-            <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
-              基本信息
-            </Divider>
-            <Row gutter={16}>
-              <Col span={12}>
-                <p>
-                  <strong>设备名称:</strong> {viewingDevice.deviceName}
-                </p>
-                <p>
-                  <strong>设备类型:</strong> {getDeviceTypeText(viewingDevice.deviceType) || "-"}
-                </p>
-                <p>
-                  <strong>厂商:</strong>{" "}
-                  {getOptionLabel(VENDOR_OPTIONS, viewingDevice.vendor) || "-"}
-                </p>
-                <p>
-                  <strong>型号:</strong> {viewingDevice.model || "-"}
-                </p>
-                <p>
-                  <strong>IP地址:</strong> {viewingDevice.ipAddress}
-                </p>
-                <p>
-                  <strong>SSH端口:</strong> {viewingDevice.port}
-                </p>
-                <p>
-                  <strong>SNMP端口:</strong> {viewingDevice.snmpPort}
-                </p>
-              </Col>
-              <Col span={12}>
-                <p>
-                  <strong>状态:</strong>{" "}
-                  {getOptionLabel(STATUS_OPTIONS, viewingDevice.status) || "-"}
-                </p>
-                <p>
-                  <strong>所属部门:</strong> {viewingDevice.deptName || "-"}
-                </p>
-                <p>
-                  <strong>位置:</strong> {viewingDevice.location || "-"}
-                </p>
-                <p>
-                  <strong>授权凭证:</strong> {viewingDevice.credentialName || "-"}
-                </p>
-                <p>
-                  <strong>最后连接:</strong> {viewingDevice.lastSeenAt || "-"}
-                </p>
-                <p>
-                  <strong>创建时间:</strong> {viewingDevice.createdAt}
-                </p>
-              </Col>
-            </Row>
-
-            <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
-              设备详细信息（SSH采集）
-            </Divider>
-            <Row gutter={16}>
-              <Col span={12}>
-                <p>
-                  <strong>型号:</strong> {viewingDevice.model || "-"}
-                </p>
-                <p>
-                  <strong>序列号:</strong> {viewingDevice.serialNumber || "-"}
-                </p>
-              </Col>
-              <Col span={12}>
-                <p>
-                  <strong>软件版本:</strong> {viewingDevice.softwareVersion || "-"}
-                </p>
-                <p>
-                  <strong>运行时间:</strong> {viewingDevice.uptime || "-"}
-                </p>
-              </Col>
-            </Row>
-
-            {viewingDevice.description && (
-              <>
-                <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
-                  备注
-                </Divider>
-                <p>{viewingDevice.description}</p>
-              </>
-            )}
-          </div>
-        )}
-      </Modal>
+        detailModalVisible={detailModalVisible}
+        viewingDevice={viewingDevice}
+        canViewMACHistory={canViewMACHistory}
+        navigate={navigate}
+        getDeviceTypeText={getDeviceTypeText}
+        onCloseDetail={() => setDetailModalVisible(false)}
+      />
     </Layout>
   );
 };
