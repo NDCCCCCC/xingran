@@ -7,6 +7,7 @@ import { Tag } from "antd";
 import type { TagProps } from "antd";
 import { CheckCircleOutlined, StopOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { FC } from "react";
+import { statusLabel } from "./statusHelpers";
 
 /** 状态类型 */
 export type StatusType = "success" | "error" | "warning" | "default" | "processing";
@@ -84,7 +85,14 @@ export function renderStatusTag(
     modern?: boolean;
   }
 ) {
-  const { normalText = "正常", stopText = "停用", showIcon = true, modern = true } = config || {};
+  // Phase 68 DEBT-02a：域固定 enable，默认文案收敛为 statusHelpers 口径
+  // （0=「启用」，去「正常/禁用」混写）；normalText/stopText 覆盖语义保留。
+  const {
+    normalText = statusLabel(0, "enable"),
+    stopText = statusLabel(1, "enable"),
+    showIcon = true,
+    modern = true,
+  } = config || {};
 
   return (
     <ModernTag status={status === 0 ? "success" : "error"} showIcon={showIcon} modern={modern}>

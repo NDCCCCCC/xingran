@@ -72,3 +72,12 @@ export type { SearchFormProps, SearchField, SearchFieldOption } from "./SearchFo
 // Phase 66：FormModal（编辑弹窗封装：脏检查 + 统一提交/错误分流）
 export { FormModal, useFormModalForm } from "./FormModal";
 export type { FormModalProps } from "./FormModal";
+
+// Phase 68 DEBT-02a：状态展示统一 helper（唯一落点裁定 shared/，勿移 utils/）
+export {
+  StatusTag,
+  statusLabel,
+  statusColor,
+  UNKNOWN_STATUS_LABEL,
+} from "./statusHelpers";
+export type { StatusDomain, StatusColor } from "./statusHelpers";

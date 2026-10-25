@@ -3,6 +3,8 @@ import type { ColumnType, ColumnGroupType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { formatDateTime } from "@/utils/datetime";
+// Phase 68 DEBT-02a：状态列渲染统一走 statusHelpers（enable 域：0=启用/1=停用）
+import { StatusTag } from "@/components/shared/statusHelpers";
 
 /**
  * Sorter 类型：标识字段的排序语义
@@ -142,9 +144,7 @@ export function createStatusColumn<T>(
     dataIndex: field,
     key: field,
     width: 80,
-    render: (status: number) => (
-      <Tag color={status === 0 ? "success" : "error"}>{status === 0 ? "正常" : "停用"}</Tag>
-    ),
+    render: (status: number) => <StatusTag status={status} domain="enable" />,
     ...config,
   };
 }
