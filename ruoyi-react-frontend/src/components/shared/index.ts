@@ -60,3 +60,7 @@ export type { ConfirmDeleteOptions } from "./confirmDelete";
 // Phase 66：PageTable（新列表页唯一合法列表数据层入口）
 export { default as PageTable } from "./PageTable";
 export type { PageTableProps, PageTableRequest } from "./PageTable";
+
+// Phase 66：SearchForm（schema 驱动搜索区）
+export { SearchForm } from "./SearchForm";
+export type { SearchFormProps, SearchField, SearchFieldOption } from "./SearchForm";

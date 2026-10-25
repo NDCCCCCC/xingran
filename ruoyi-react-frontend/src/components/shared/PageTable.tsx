@@ -20,6 +20,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Table } from "antd";
+import type { FormInstance } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import type { TableProps } from "antd";
 import type { ColumnsType, GetRowKey } from "antd/es/table/interface";
@@ -29,6 +30,8 @@ import type { SorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "./ActionButtons";
 import type { ActionButton } from "./ActionButtons";
 import { BatchDeleteButton } from "./BatchDeleteButton";
+import { SearchForm } from "./SearchForm";
+import type { SearchField } from "./SearchForm";
 import ErrorAlertWithRetry from "./ErrorAlertWithRetry";
 
 /** 列表请求：入参含 current/pageSize/filters/排序；返回 { list, total } —— 即 useTableManager 的 loadFunction 签名 */
@@ -45,6 +48,10 @@ export interface PageTableProps<T> {
   rowKey: GetRowKey<T>;
   /** 初始 pageSize（默认 10） */
   pageSize?: number;
+  /** 搜索区 schema（§2）；与 searchChildren 二选一，同时传时 schema 优先并 console.warn 一次 */
+  searchFields?: SearchField[];
+  /** schema 覆盖不了的复杂搜索区逃生口：ReactNode 或 (searchForm: FormInstance) => ReactNode */
+  searchChildren?: React.ReactNode | ((searchForm: FormInstance) => React.ReactNode);
   /** 工具栏左区（新增/导入等业务按钮）；右区内建刷新按钮（aria-label+title） */
   toolbar?: React.ReactNode;
   /** 行操作列：组件注入 record，返回 ActionButton[]（删除经 createDeleteAction → ConfirmDelete） */
@@ -73,6 +80,8 @@ function PageTableImpl<T extends object>({
   columns,
   rowKey,
   pageSize,
+  searchFields,
+  searchChildren,
   toolbar,
   rowActions,
   batchDelete,
@@ -107,8 +116,11 @@ function PageTableImpl<T extends object>({
     pageSize: effectivePageSize,
     selectedRowKeys,
     setSelectedRowKeys,
+    searchForm,
     loadData,
     applyFilters,
+    handleSearch,
+    handleReset,
     resetSelection,
     handleRefresh,
   } = manager;
@@ -167,8 +179,34 @@ function PageTableImpl<T extends object>({
   // 空态：无错误 + 无数据 + 非 loading 时用 emptyAction（若传）替换 antd 默认空态
   const showEmptyAction = emptyAction !== undefined && !loading && loadError === null && total === 0;
 
+  // searchFields 与 searchChildren 二选一：同时传时 schema 优先并警告一次
+  const warnedRef = useRef(false);
+  if (searchFields !== undefined && searchChildren !== undefined && !warnedRef.current) {
+    warnedRef.current = true;
+    console.warn(
+      "[PageTable] searchFields 与 searchChildren 同时传入，schema 优先，searchChildren 将被忽略。"
+    );
+  }
+  const showSearchCard = searchFields !== undefined || searchChildren !== undefined;
+  const effectiveChildren =
+    searchFields !== undefined
+      ? undefined
+      : typeof searchChildren === "function"
+        ? searchChildren(searchForm)
+        : searchChildren;
+
   return (
     <div>
+      {showSearchCard && (
+        <SearchForm
+          form={searchForm}
+          fields={searchFields}
+          children={effectiveChildren}
+          onSearch={handleSearch}
+          onReset={handleReset}
+          onRefresh={handleRefresh}
+        />
+      )}
       {(toolbar !== undefined || batchDelete !== undefined) && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

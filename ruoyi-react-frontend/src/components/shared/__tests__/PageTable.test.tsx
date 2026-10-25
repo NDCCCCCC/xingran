@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { App as AntdApp, Modal } from "antd";
+import { App as AntdApp, Form, Modal } from "antd";
 import type { ReactElement, ReactNode } from "react";
 
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -299,5 +299,91 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
       expect(screen.getByTestId("guide")).toBeTruthy();
     });
     expect(container.querySelector(".ant-empty")).toBeNull();
+  });
+
+  it("searchFields schema 渲染搜索卡；搜索/重置走 handleSearch/handleReset 语义", async () => {
+    const request = vi
+      .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()
+      .mockResolvedValue({ list: makeRows(2), total: 2 });
+    const { container } = render(
+      <PageTable
+        request={request}
+        columns={columns2}
+        rowKey="id"
+        searchFields={[
+          { type: "input", name: "kw", label: "关键字" },
+          { type: "select", name: "status", label: "状态", options: [{ label: "正常", value: 0 }] },
+        ]}
+      />,
+      { wrapper: Wrap }
+    );
+    await waitFor(() => expect(screen.getAllByText("行1").length).toBeGreaterThan(0));
+    expect(container.querySelector("input#kw")).not.toBeNull();
+    // 输入 + 搜索 → 请求参数含字段值
+    const input = container.querySelector<HTMLInputElement>("input#kw")!;
+    fireEvent.input(input, { target: { value: "abc" } });
+    fireEvent.click(screen.getByText((c) => c.replace(/\s/g, "") === "搜索"));
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(2);
+      expect(request.mock.calls[1][0]).toMatchObject({ kw: "abc", current: 1 });
+    });
+    // 重置 → 清 filters 回第 1 页
+    fireEvent.click(screen.getByText((c) => c.replace(/\s/g, "") === "重置"));
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(3);
+      expect(request.mock.calls[2][0]).toMatchObject({ current: 1 });
+      // filterEmpty 语义：清空后的字段不进请求参数
+      expect("kw" in request.mock.calls[2][0]).toBe(false);
+    });
+  });
+
+  it("searchChildren 与 searchFields 同时传 → schema 优先 + console.warn 一次", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const request = vi.fn(async () => ({ list: makeRows(1), total: 1 }));
+    const node = (
+      <PageTable
+        request={request}
+        columns={columns2}
+        rowKey="id"
+        searchFields={[{ type: "input", name: "kw", label: "关键字" }]}
+        searchChildren={<div data-testid="child-search">复杂搜索</div>}
+      />
+    );
+    const { rerender } = render(node, { wrapper: Wrap });
+    await waitFor(() => expect(screen.getAllByText("行1").length).toBeGreaterThan(0));
+    expect(screen.queryByTestId("child-search")).toBeNull();
+    expect(document.querySelector("input#kw")).not.toBeNull();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    // 同 props 重渲染：不重复警告
+    rerender(node);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
+  });
+
+  it("searchChildren 函数形态收到 searchForm，其 Form.Item 值进入请求参数", async () => {
+    const request = vi
+      .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()
+      .mockResolvedValue({ list: makeRows(1), total: 1 });
+    const { container } = render(
+      <PageTable
+        request={request}
+        columns={columns2}
+        rowKey="id"
+        searchChildren={(form) => (
+          <Form.Item name="deptId" label="部门">
+            <input data-testid="dept-input" />
+          </Form.Item>
+        )}
+      />,
+      { wrapper: Wrap }
+    );
+    await waitFor(() => expect(screen.getAllByText("行1").length).toBeGreaterThan(0));
+    fireEvent.change(screen.getByTestId("dept-input"), { target: { value: "d-1" } });
+    fireEvent.click(screen.getByText((c) => c.replace(/\s/g, "") === "搜索"));
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledTimes(2);
+      expect(request.mock.calls[1][0]).toMatchObject({ deptId: "d-1" });
+    });
+    void container;
   });
 });
