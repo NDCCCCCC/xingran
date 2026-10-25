@@ -246,7 +246,6 @@ export default [
       "src/pages/duty/pools/index.tsx",
       "src/pages/duty/schedules/index.tsx",
       "src/pages/knowledge/articles/index.tsx",
-      "src/pages/monitor/cache/index.tsx",
       "src/pages/monitor/job/index.tsx",
       "src/pages/monitor/logs/index.tsx",
       "src/pages/monitor/server/index.tsx",

@@ -1,50 +1,38 @@
 /**
  * Cache 缓存管理页面
+ *
+ * Phase 67-T4: 迁移 66 契约组件（PageTable/FormModal）。
+ * PR 差异记录（详见 67-SUMMARY）：
+ * - 双状态源（caches+setTotal+usePagination+useServerSort 手工管线）→ PageTable 单实例 request 管线
+ * - 搜索卡（受控 Input/Select + 搜索/重置/刷新按钮）→ searchFields 3 字段（B 类：按钮文案统一内建 搜索/重置/刷新）
+ * - 操作缓存 Modal → FormModal（okText="确定"；FormModal 不透传 maskClosable/keyboard——记录差异；
+ *   Form 布局 vertical → FormModal 内建 horizontal labelCol4/wrapperCol20）
+ * - 单删 Popconfirm 原样保留（B 类豁免原文案，不切 ConfirmDelete——避免 INV 口径回归）
+ * - Tabs（列表/缓存统计）移除：统计面板内容为「统计信息」Modal 的真子集，信息零损失（记 PR）
+ * - 30s monitor 轮询保留（ref 承接）；列表失败重试由 PageTable 内建 ErrorAlertWithRetry 承接
  */
-
 import { useState, useEffect, useCallback, useMemo, useRef, type FC } from "react";
+import { Button, App, Popconfirm, Space, Modal, Form, Input, Select, InputNumber, Tag } from "antd";
 import {
-  Card,
-  Table,
-  Button,
-  Space,
-  Input,
-  Select,
-  Modal,
-  Form,
-  InputNumber,
-  Tag,
-  Row,
-  Col,
-  Statistic,
-  Tabs,
-  App,
-  Divider,
-  Popconfirm,
-} from "antd";
-import {
-  SearchOutlined,
-  ReloadOutlined,
-  DeleteOutlined,
-  EyeOutlined,
   PlusOutlined,
   SettingOutlined,
-  BarChartOutlined,
   ExportOutlined,
   ExclamationCircleOutlined,
-  DatabaseOutlined,
+  DeleteOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { post, get } from "@/lib/api";
+import { PageTable } from "@/components/shared";
+import type { PageTableRenderContext } from "@/components/shared";
+import { FormModal, useFormModalForm } from "@/components/shared/FormModal";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { usePagination } from "@/hooks/usePagination";
-import type { PageResponse } from "@/types";
-import { formatDateTime } from "@/utils/datetime";
 import { handleApiError } from "@/utils/errorHandler";
 import { ErrorAlertWithRetry } from "@/components/shared";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 // 导入提取的文件
-import type { CacheInfo, CacheMonitor, CacheSearchForm } from "./types";
+import type { CacheInfo, CacheMonitor } from "./types";
 import { TYPE_OPTIONS, OPERATION_OPTIONS, LEVEL_OPTIONS, LEVEL_TAG_CONFIG } from "./constants";
 import {
   formatMemorySize,
@@ -52,8 +40,8 @@ import {
   formatDateTime as cacheFormatDateTime,
   exportCacheAsJson,
 } from "./utils";
-import { createSorterMeta } from "@/utils/tableHelpers";
-import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
+import MonitorOverview from "./components/MonitorOverview";
+import CacheStatsModal from "./components/CacheStatsModal";
 
 const { TextArea } = Input;
 
@@ -61,14 +49,10 @@ const { TextArea } = Input;
 
 interface CacheTableColumnsProps {
   handleViewDetail: (key: string) => void;
-  handleBatchOperate: (operation: string, keys: string[]) => void;
-  formatTTL: (seconds: number) => string;
-  formatMemorySize: (bytes: number) => string;
-  getSortOrder: (field: string) => "ascend" | "descend" | null;
 }
 
 function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheInfo> {
-  const { handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize, getSortOrder } = props;
+  const { handleViewDetail: _handleViewDetail } = props;
 
   return [
     {
@@ -78,7 +62,6 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       width: 300,
       ellipsis: true,
       sorter: true,
-      sortOrder: getSortOrder("key"),
       render: (text: string) => (
         <code className="bg-gray-100 px-2 py-1 rounded text-xs">{text}</code>
       ),
@@ -89,7 +72,6 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       key: "type",
       width: 100,
       sorter: true,
-      sortOrder: getSortOrder("type"),
       render: (type: string) => <Tag color="blue">{type}</Tag>,
     },
     {
@@ -98,7 +80,6 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       key: "location",
       width: 120,
       sorter: true,
-      sortOrder: getSortOrder("location"),
       render: (location: string) => {
         const config = LEVEL_TAG_CONFIG[location];
         if (config) {
@@ -113,7 +94,6 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       key: "ttl",
       width: 120,
       sorter: true,
-      sortOrder: getSortOrder("ttl"),
       render: (ttl: number) => <Tag color={ttl > 0 ? "green" : "default"}>{formatTTL(ttl)}</Tag>,
     },
     {
@@ -122,7 +102,6 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       key: "size",
       width: 100,
       sorter: true,
-      sortOrder: getSortOrder("size"),
       render: (size: number) => formatMemorySize(size),
     },
     {
@@ -131,7 +110,6 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       key: "createdAt",
       width: 180,
       sorter: true,
-      sortOrder: getSortOrder("createdAt"),
       render: (value: string) => cacheFormatDateTime(value),
     },
     {
@@ -140,47 +118,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       key: "updatedAt",
       width: 180,
       sorter: true,
-      sortOrder: getSortOrder("updatedAt"),
       render: (value: string) => cacheFormatDateTime(value),
-    },
-    {
-      title: "操作",
-      key: "action",
-      width: 200,
-      render: (_, record: CacheInfo) => {
-        const actions = [
-          {
-            key: "view",
-            label: "查看详情",
-            icon: <EyeOutlined />,
-            onClick: () => handleViewDetail(record.key),
-          },
-          {
-            key: "delete",
-            label: "删除",
-            icon: <DeleteOutlined />,
-            danger: true,
-            render: () => (
-              <Popconfirm
-                title="确定要删除这个缓存吗？"
-                onConfirm={() => handleBatchOperate("del", [record.key])}
-              >
-                <Button
-                  aria-label="删除"
-                  title="删除"
-                  type="link"
-                  icon={<DeleteOutlined />}
-                  style={{ color: "#ba3630" }}
-                  size="small"
-                >
-                  删除
-                </Button>
-              </Popconfirm>
-            ),
-          },
-        ];
-        return <ActionButtons actions={actions} />;
-      },
     },
   ];
 }
@@ -189,22 +127,158 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
 
 const CacheManager: FC = () => {
   const { message } = App.useApp();
-  // 状态管理
-  const [caches, setCaches] = useState<CacheInfo[]>([]);
-  // FIX-04b: 列表/监控数据加载失败的可重试错误
-  const [cacheError, setCacheError] = useState<unknown>(null);
   const [monitor, setMonitor] = useState<CacheMonitor | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [searchForm, setSearchForm] = useState<CacheSearchForm>({
-    key: "",
-    type: "",
-    level: "all",
-  });
+  const [monitorError, setMonitorError] = useState<unknown>(null);
   const [operateModalVisible, setOperateModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
-  const [form] = Form.useForm();
 
-  // FIX-03a: 服务端排序（useServerSort，字段名对齐后端 cacheAllowedSortFields）
+  // 操作缓存弹窗（FormModal 契约）
+  const operateForm = useFormModalForm();
+  // PageTable ctx.loadData 转发（操作/清空后刷新列表；devices 页同款 state 承接写法）
+  const [reloadRef] = useState<{ current: (() => void) | null }>({ current: null });
+
+  // ==================== 监控数据 ====================
+
+  const fetchMonitor = useCallback(async () => {
+    try {
+      const result = await post<CacheMonitor>("/monitor/cache/monitor", {});
+      setMonitor(result.data || null);
+      setMonitorError(null);
+    } catch (error) {
+      setMonitorError(error);
+    }
+  }, []);
+
+  // ==================== 初始化（monitor 30s 轮询） ====================
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchMonitor 异步 setMonitor 为既有挂载行为
+    fetchMonitor();
+    // 设置定时刷新（每30秒）；fetchMonitor 为稳定引用（deps=[]），无需 ref 承接
+    const interval = setInterval(() => {
+      fetchMonitor();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchMonitor]);
+
+  // ==================== 缓存操作 ====================
+
+  // handlers 用普通函数（devices 页风格）：内部读 reloadRef.current，避免 useCallback deps 报错
+  const handleOperate = async (rawValues: Record<string, unknown>) => {
+    const values = rawValues as { key: string; operation: string; value?: string; ttl?: number };
+    await post<unknown>("/monitor/cache/operate", {
+      ...values,
+      ttl: values.ttl || undefined,
+    });
+    message.success("操作成功");
+    setOperateModalVisible(false);
+    reloadRef.current?.();
+  };
+
+  // 单条删除（原 Popconfirm onConfirm → batch 端点 operation=del，语义不变）
+  const handleDelete = async (key: string) => {
+    await post<unknown>("/monitor/cache/batch", { keys: [key], operation: "del" });
+    message.success("批量操作成功");
+    reloadRef.current?.();
+  };
+
+  const handleClearAll = () => {
+    // B 类豁免原文案保留（UI-SPEC §1.2）
+    Modal.confirm({
+      title: "确认清空",
+      icon: <ExclamationCircleOutlined />,
+      content: "确定要清空所有缓存吗？此操作不可恢复！",
+      onOk: async () => {
+        try {
+          await post("/monitor/cache/clear", {});
+
+          message.success("清空成功");
+          reloadRef.current?.();
+          fetchMonitor();
+        } catch (error) {
+          handleApiError(error, "清空缓存");
+        }
+      },
+    });
+  };
+
+  const handleExport = useCallback(async () => {
+    try {
+      const result = await post<unknown[]>("/monitor/cache/export", {});
+      exportCacheAsJson(result.data || []);
+      message.success("导出成功");
+    } catch (error) {
+      handleApiError(error, "导出缓存");
+    }
+  }, [message]);
+
+  const handleViewDetail = useCallback(async (key: string) => {
+    try {
+      const result = await get<CacheInfo>(`/monitor/cache/${key}`);
+
+      Modal.info({
+        title: "缓存详情",
+        width: 600,
+        content: (
+          <div>
+            <p>
+              <strong>键名：</strong>
+              {result.data?.key}
+            </p>
+            <p>
+              <strong>值：</strong>
+            </p>
+            <pre className="bg-gray-100 p-3 rounded">
+              {JSON.stringify(JSON.parse(result.data?.value || "{}"), null, 2)}
+            </pre>
+            <p>
+              <strong>类型：</strong>
+              {result.data?.type}
+            </p>
+            <p>
+              <strong>大小：</strong>
+              {(result.data?.size || 0).toLocaleString()} 字节
+            </p>
+            <p>
+              <strong>TTL：</strong>
+              {formatTTL(result.data?.ttl || -1)}
+            </p>
+            <p>
+              <strong>创建时间：</strong>
+              {result.data?.createdAt ? cacheFormatDateTime(result.data.createdAt) : "-"}
+            </p>
+          </div>
+        ),
+      });
+    } catch (error) {
+      handleApiError(error, "获取缓存详情");
+    }
+  }, []);
+
+  // ==================== 搜索字段 / 排序 ====================
+
+  const searchFields = useMemo(
+    () => [
+      { type: "input" as const, name: "key", label: "缓存键", placeholder: "缓存键" },
+      {
+        type: "select" as const,
+        name: "type",
+        label: "缓存类型",
+        options: [...TYPE_OPTIONS],
+        placeholder: "缓存类型",
+      },
+      {
+        type: "select" as const,
+        name: "level",
+        label: "缓存层级",
+        options: [...LEVEL_OPTIONS],
+        placeholder: "缓存层级",
+      },
+    ],
+    []
+  );
+
   const cacheSorterMetas = useMemo(
     () => [
       createSorterMeta<CacheInfo>("key"),
@@ -217,756 +291,162 @@ const CacheManager: FC = () => {
     ],
     []
   );
-  const {
-    orderByColumn,
-    isAsc,
-    sortOrder: cacheSortOrder,
-    handleTableChange: handleSortChange,
-  } = useServerSort<CacheInfo>({
-    sorterMetas: cacheSorterMetas,
-    defaultSort: { orderByColumn: "createdAt", isAsc: false },
-  });
 
-  // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  // ==================== 行操作（原操作列整体迁 rowActions；Popconfirm 原样保留） ====================
 
-  // ==================== 数据获取 ====================
-
-  const fetchCaches = useCallback(
-    async (sort?: { orderByColumn?: string; isAsc?: boolean }) => {
-      setLoading(true);
-      try {
-        const result = await post<PageResponse<CacheInfo>>("/monitor/cache/list", {
-          ...searchForm,
-          current: paginationProps.current,
-          pageSize: paginationProps.pageSize,
-          orderByColumn: sort ? sort.orderByColumn : orderByColumn,
-          isAsc: sort ? sort.isAsc : isAsc,
-        });
-
-        setCaches(result.data?.list || []);
-        setTotal(result.data?.total || 0);
-        setCacheError(null);
-      } catch (error) {
-        setCacheError(error);
-      } finally {
-        setLoading(false);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-    [searchForm, paginationProps.current, paginationProps.pageSize, orderByColumn, isAsc, setTotal]
-  );
-
-  const fetchMonitor = useCallback(async () => {
-    try {
-      const result = await post<CacheMonitor>("/monitor/cache/monitor", {});
-      setMonitor(result.data || null);
-      setCacheError(null);
-    } catch (error) {
-      setCacheError(error);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, []);
-
-  // ==================== 缓存操作 ====================
-
-  const handleOperate = useCallback(async () => {
-    try {
-      const values = await form.validateFields();
-      await post<unknown>("/monitor/cache/operate", {
-        ...values,
-        ttl: values.ttl || undefined,
-      });
-
-      message.success("操作成功");
-      setOperateModalVisible(false);
-      form.resetFields();
-      // fetchCaches 内部用 orderByColumn/isAsc state 兜底，无需重传
-      fetchCaches();
-    } catch (error) {
-      handleApiError(error, "缓存操作");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, [form, fetchCaches]);
-
-  const handleBatchOperate = useCallback(
-    async (operation: string, keys?: string[]) => {
-      try {
-        await post<unknown>("/monitor/cache/batch", {
-          keys: keys || [],
-          operation,
-        });
-
-        message.success("批量操作成功");
-        // fetchCaches 内部用 orderByColumn/isAsc state 兜底，无需重传
-        fetchCaches();
-      } catch (error) {
-        handleApiError(error, "批量操作");
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-    [fetchCaches]
-  );
-
-  const handleClearAll = useCallback(() => {
-    Modal.confirm({
-      title: "确认清空",
-      icon: <ExclamationCircleOutlined />,
-      content: "确定要清空所有缓存吗？此操作不可恢复！",
-      onOk: async () => {
-        try {
-          await post("/monitor/cache/clear", {});
-
-          message.success("清空成功");
-          // fetchCaches 内部用 orderByColumn/isAsc state 兜底，无需重传
-          fetchCaches();
-          fetchMonitor();
-        } catch (error) {
-          handleApiError(error, "清空缓存");
-        }
+  // 行操作（普通函数组装；handleDelete/handleViewDetail 稳定闭包语义）
+  const buildRowActions = (record: CacheInfo) => [
+      {
+        key: "view",
+        label: "查看详情",
+        icon: <EyeOutlined />,
+        onClick: () => void handleViewDetail(record.key),
       },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, [fetchCaches, fetchMonitor]);
+      {
+        key: "delete",
+        label: "删除",
+        icon: <DeleteOutlined />,
+        danger: true,
+        render: () => (
+          <Popconfirm title="确定要删除这个缓存吗？" onConfirm={() => void handleDelete(record.key)}>
+            <Button
+              aria-label="删除"
+              title="删除"
+              type="link"
+              icon={<DeleteOutlined />}
+              style={{ color: "#ba3630" }}
+              size="small"
+            >
+              删除
+            </Button>
+          </Popconfirm>
+        ),
+      },
+    ];
 
-  const handleExport = useCallback(async () => {
-    try {
-      const result = await post<unknown[]>("/monitor/cache/export", {
-        ...searchForm,
-      });
-
-      exportCacheAsJson(result.data || []);
-      message.success("导出成功");
-    } catch (error) {
-      handleApiError(error, "导出缓存");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, [searchForm]);
-
-  const handleViewDetail = useCallback(
-    async (key: string) => {
-      try {
-        const result = await get<CacheInfo>(`/monitor/cache/${key}`);
-
-        Modal.info({
-          title: "缓存详情",
-          width: 600,
-          content: (
-            <div>
-              <p>
-                <strong>键名：</strong>
-                {result.data?.key}
-              </p>
-              <p>
-                <strong>值：</strong>
-              </p>
-              <pre className="bg-gray-100 p-3 rounded">
-                {JSON.stringify(JSON.parse(result.data?.value || "{}"), null, 2)}
-              </pre>
-              <p>
-                <strong>类型：</strong>
-                {result.data?.type}
-              </p>
-              <p>
-                <strong>大小：</strong>
-                {(result.data?.size || 0).toLocaleString()} 字节
-              </p>
-              <p>
-                <strong>TTL：</strong>
-                {formatTTL(result.data?.ttl || -1)}
-              </p>
-              <p>
-                <strong>创建时间：</strong>
-                {result.data?.createdAt ? formatDateTime(result.data.createdAt) : "-"}
-              </p>
-            </div>
-          ),
-        });
-      } catch (error) {
-        handleApiError(error, "获取缓存详情");
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-    [formatTTL]
-  );
-
-  // ==================== 搜索和刷新 ====================
-
-  const handleSearch = useCallback(() => {
-    setCurrent(1);
-    fetchCaches();
-  }, [fetchCaches, setCurrent]);
-
-  const handleReset = useCallback(() => {
-    setSearchForm({
-      key: "",
-      type: "",
-      level: "all",
-    });
-    setCurrent(1);
-  }, [setCurrent]);
-
-  const handleRefresh = useCallback(() => {
-    fetchCaches();
-    fetchMonitor();
-  }, [fetchCaches, fetchMonitor]);
-
-  const handleTableChange = useCallback(
-    (pagination: any, _filters: Record<string, any>, sorter: any) => {
-      handleSortChange(pagination, _filters, sorter);
-      const resolved = resolveSorter(sorter, cacheSorterMetas);
-      // 排序操作（点击了可排序列头）时页码回到第 1 页
-      const activeSorter = Array.isArray(sorter) ? sorter[sorter.length - 1] : sorter;
-      if (activeSorter && activeSorter.column) {
-        // 排序操作（点击了可排序列头）时页码回到第 1 页
-        setCurrent(1);
-      } else {
-        // 分页操作
-        setCurrent(pagination.current);
-        setPageSize(pagination.pageSize);
-      }
-      fetchCaches({ orderByColumn: resolved.orderByColumn, isAsc: resolved.isAsc });
-    },
-    [handleSortChange, cacheSorterMetas, setCurrent, setPageSize, fetchCaches]
-  );
-
-  // ==================== 初始化 ====================
-
-  // 用 ref 记录最新分页参数，轮询回调使用 ref 读取最新值
-  const paginationPropsRef = useRef(paginationProps);
-  paginationPropsRef.current = paginationProps;
-
-  // fetchMonitor 回调用 ref 读取最新分页
-  const fetchMonitorRef = useRef(fetchMonitor);
-  fetchMonitorRef.current = fetchMonitor;
-
-  useEffect(() => {
-    fetchCaches();
-    fetchMonitor();
-
-    // 设置定时刷新（每30秒），不依赖分页参数变化
-    const interval = setInterval(() => {
-      fetchMonitorRef.current();
-    }, 30000);
-
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional, interval only on mount
-  }, [fetchCaches]);
-
-  // 表格列 - 使用 useMemo 避免重复创建
-  const columns = useMemo(
-    () =>
-      getCacheTableColumns({
-        handleViewDetail,
-        handleBatchOperate,
-        formatTTL,
-        formatMemorySize,
-        getSortOrder: (field) =>
-          orderByColumn === field
-            ? ((cacheSortOrder ?? null) as "ascend" | "descend" | null)
-            : null,
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- imported helpers are stable
-    [handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize, orderByColumn, cacheSortOrder]
-  );
+  const columns = useMemo(() => getCacheTableColumns({ handleViewDetail }), [handleViewDetail]);
 
   return (
     <div className="p-6">
-      {/* FIX-04b: 列表加载失败可重试错误条 */}
-      {!!cacheError && (
-        <ErrorAlertWithRetry
-          error={cacheError}
-          onRetry={() => {
-            fetchCaches();
-            fetchMonitor();
-          }}
-        />
-      )}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-4">缓存管理</h1>
-
-        {/* 监控概览 */}
-        <Row gutter={16} className="mb-6">
-          {/* L1 内存缓存 */}
-          <Col xs={24} sm={12} md={6}>
-            <Card size="small" title="L1 内存缓存" extra={<Tag color="blue">L1</Tag>}>
-              <Statistic
-                title="键数量"
-                value={monitor?.l1?.stats?.keyCount || 0}
-                prefix={<DatabaseOutlined />}
-                styles={{ content: { fontSize: "20px" } }}
-              />
-              <div className="mt-2">
-                <small className="text-gray-500">
-                  内存: {formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
-                </small>
-              </div>
-            </Card>
-          </Col>
-
-          {/* L2 Redis缓存 */}
-          <Col xs={24} sm={12} md={6}>
-            <Card size="small" title="L2 Redis缓存" extra={<Tag color="green">L2</Tag>}>
-              <Statistic
-                title="键数量"
-                value={monitor?.l2?.stats?.keyCount || 0}
-                prefix={<DatabaseOutlined />}
-                styles={{ content: { fontSize: "20px" } }}
-              />
-              <div className="mt-2">
-                <small className="text-gray-500">
-                  内存: {formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
-                </small>
-              </div>
-            </Card>
-          </Col>
-
-          {/* 综合命中率 */}
-          <Col xs={24} sm={12} md={6}>
-            <Card size="small" title="综合命中率">
-              <Statistic
-                title="L1命中率"
-                value={monitor?.l1?.stats?.hitRate || 0}
-                precision={1}
-                suffix="%"
-                styles={{ content: { fontSize: "20px", color: "#3f8600" } }}
-              />
-              <Divider className="my-2" />
-              <Statistic
-                title="L2命中率"
-                value={monitor?.l2?.stats?.hitRate || 0}
-                precision={1}
-                suffix="%"
-                styles={{ content: { fontSize: "16px", color: "#337ab0" } }}
-              />
-            </Card>
-          </Col>
-
-          {/* 状态指示 */}
-          <Col xs={24} sm={12} md={6}>
-            <Card size="small" title="缓存状态">
-              <Space orientation="vertical" className="w-full">
-                <div className="flex justify-between items-center">
-                  <span>L1状态:</span>
-                  <Tag color={monitor?.l1?.status?.connected ? "success" : "error"}>
-                    {monitor?.l1?.status?.connected ? "正常" : "异常"}
-                  </Tag>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>L2状态:</span>
-                  <Tag color={monitor?.l2?.status?.connected ? "success" : "error"}>
-                    {monitor?.l2?.status?.connected ? "正常" : "异常"}
-                  </Tag>
-                </div>
-              </Space>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* 搜索表单 */}
-        <Card className="mb-4">
-          <Row gutter={16}>
-            <Col xs={24} sm={8} md={5}>
-              <Input
-                placeholder="缓存键"
-                value={searchForm.key}
-                onChange={(e) => setSearchForm({ ...searchForm, key: e.target.value })}
-                allowClear
-                prefix={<SearchOutlined />}
-                className="user-form-input"
-              />
-            </Col>
-            <Col xs={24} sm={8} md={4}>
-              <Select
-                placeholder="缓存类型"
-                value={searchForm.type}
-                onChange={(value) => setSearchForm({ ...searchForm, type: value })}
-                allowClear
-                className="user-form-input"
-                style={{ width: "100%" }}
-                options={TYPE_OPTIONS}
-                onSearch={() => {}}
-              />
-            </Col>
-            <Col xs={24} sm={8} md={3}>
-              <Select
-                placeholder="缓存层级"
-                value={searchForm.level}
-                onChange={(value) => setSearchForm({ ...searchForm, level: value })}
-                allowClear
-                className="user-form-input"
-                style={{ width: "100%" }}
-                options={LEVEL_OPTIONS}
-                onSearch={() => {}}
-              />
-            </Col>
-            <Col xs={24} sm={24} md={12}>
-              <Space wrap>
-                <Button
-                  aria-label="缓存操作"
-                  title="缓存操作"
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => setOperateModalVisible(true)}
-                >
-                  操作缓存
-                </Button>
-                <Button icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
-                  搜索
-                </Button>
-                <Button onClick={handleReset}>重置</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
-                  刷新
-                </Button>
-                <Button icon={<SettingOutlined />} onClick={() => setStatsModalVisible(true)} aria-label="查看统计" title="查看统计" >
-                  统计信息
-                </Button>
-                <Button icon={<ExportOutlined />} onClick={handleExport} aria-label="导出" title="导出" >
-                  导出
-                </Button>
-                <Button
-                  aria-label="清空全部缓存"
-                  title="清空全部缓存"
-                  icon={<DeleteOutlined />}
-                  style={{ color: "#ba3630" }}
-                  onClick={handleClearAll}
-                >
-                  清空
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-        </Card>
       </div>
 
-      <Tabs
-        defaultActiveKey="list"
-        items={[
-          {
-            key: "list",
-            label: (
-              <span>
-                <DatabaseOutlined />
-                缓存列表
-              </span>
-            ),
-            children: (
-              <Table
-                columns={columns}
-                dataSource={caches}
-                rowKey="key"
-                loading={loading}
-                pagination={paginationProps}
-                onChange={handleTableChange}
-              />
-            ),
-          },
-          {
-            key: "stats",
-            label: (
-              <span>
-                <BarChartOutlined />
-                缓存统计
-              </span>
-            ),
-            children: (
-              <div>
-                <Row gutter={16} className="mb-4">
-                  <Col xs={24} md={12}>
-                    <Card
-                      title={
-                        <>
-                          <Tag color="blue">L1</Tag> 内存使用情况
-                        </>
-                      }
-                    >
-                      <Statistic
-                        title="内存使用"
-                        value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
-                        styles={{ content: { fontSize: "18px" } }}
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Card
-                      title={
-                        <>
-                          <Tag color="green">L2</Tag> Redis内存使用
-                        </>
-                      }
-                    >
-                      <Statistic
-                        title="内存使用"
-                        value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
-                        styles={{ content: { fontSize: "18px" } }}
-                      />
-                    </Card>
-                  </Col>
-                </Row>
+      {/* FIX-04b: 监控数据加载失败可重试错误条（列表错误由 PageTable 内建承接） */}
+      {!!monitorError && <ErrorAlertWithRetry error={monitorError} onRetry={() => void fetchMonitor()} />}
 
-                <Row gutter={16}>
-                  <Col xs={24} md={12}>
-                    <Card
-                      title={
-                        <>
-                          <Tag color="blue">L1</Tag> 命中率
-                        </>
-                      }
-                    >
-                      <Statistic
-                        value={monitor?.l1?.stats?.hitRate || 0}
-                        precision={2}
-                        suffix="%"
-                        styles={{ content: { color: "#3f8600" } }}
-                      />
-                      <Divider className="my-2" />
-                      <Row gutter={8}>
-                        <Col span={12}>
-                          <Statistic
-                            title="命中"
-                            value={monitor?.l1?.stats?.hitCount || 0}
-                            styles={{ content: { fontSize: "16px", color: "#3f8600" } }}
-                          />
-                        </Col>
-                        <Col span={12}>
-                          <Statistic
-                            title="未命中"
-                            value={monitor?.l1?.stats?.missCount || 0}
-                            styles={{ content: { fontSize: "16px", color: "#cf1322" } }}
-                          />
-                        </Col>
-                      </Row>
-                    </Card>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Card
-                      title={
-                        <>
-                          <Tag color="green">L2</Tag> 命中率
-                        </>
-                      }
-                    >
-                      <Statistic
-                        value={monitor?.l2?.stats?.hitRate || 0}
-                        precision={2}
-                        suffix="%"
-                        styles={{ content: { color: "#337ab0" } }}
-                      />
-                      <Divider className="my-2" />
-                      <Row gutter={8}>
-                        <Col span={12}>
-                          <Statistic
-                            title="命中"
-                            value={monitor?.l2?.stats?.hitCount || 0}
-                            styles={{ content: { fontSize: "16px", color: "#3f8600" } }}
-                          />
-                        </Col>
-                        <Col span={12}>
-                          <Statistic
-                            title="未命中"
-                            value={monitor?.l2?.stats?.missCount || 0}
-                            styles={{ content: { fontSize: "16px", color: "#cf1322" } }}
-                          />
-                        </Col>
-                      </Row>
-                    </Card>
-                  </Col>
-                </Row>
-              </div>
-            ),
-          },
-        ]}
-      />
+      <PageTable<CacheInfo>
+        request={async (params) => {
+          // level 默认 "all"（SearchField 无 initialValue 支持；filterEmpty 剔除空值后兜底）
+          const result = await post<{ list?: CacheInfo[]; total?: number }>("/monitor/cache/list", {
+            ...params,
+            level: (params as { level?: string }).level || "all",
+          });
+          return { list: result.data?.list || [], total: result.data?.total || 0 };
+        }}
+        columns={columns}
+        rowKey={(r) => r.key}
+        searchFields={searchFields}
+        sorterMetas={cacheSorterMetas}
+        defaultSort={{ orderByColumn: "createdAt", isAsc: false }}
+        rowActions={buildRowActions}
+        toolbar={
+          <Space wrap>
+            <Button
+              aria-label="缓存操作"
+              title="缓存操作"
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setOperateModalVisible(true)}
+            >
+              操作缓存
+            </Button>
+            <Button
+              icon={<SettingOutlined />}
+              onClick={() => setStatsModalVisible(true)}
+              aria-label="查看统计"
+              title="查看统计"
+            >
+              统计信息
+            </Button>
+            <Button
+              icon={<ExportOutlined />}
+              onClick={() => void handleExport()}
+              aria-label="导出"
+              title="导出"
+            >
+              导出
+            </Button>
+            <Button
+              aria-label="清空全部缓存"
+              title="清空全部缓存"
+              icon={<DeleteOutlined />}
+              style={{ color: "#ba3630" }}
+              onClick={handleClearAll}
+            >
+              清空
+            </Button>
+          </Space>
+        }
+      >
+        {(ctx: PageTableRenderContext<CacheInfo>) => {
+          reloadRef.current = ctx.loadData;
+          return <MonitorOverview monitor={monitor} />;
+        }}
+      </PageTable>
 
-      {/* 操作缓存模态框 */}
-      <Modal
+      {/* 操作缓存模态框（FormModal 契约） */}
+      <FormModal
         title="缓存操作"
-        maskClosable={false}
-        keyboard={false}
         open={operateModalVisible}
         onCancel={() => setOperateModalVisible(false)}
-        onOk={handleOperate}
+        form={operateForm}
+        okText="确定"
         width={500}
+        onFinish={handleOperate}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            label="缓存键"
-            name="key"
-            rules={[{ required: true, message: "请输入缓存键" }]}
-          >
-            <Input placeholder="请输入缓存键" />
-          </Form.Item>
-          <Form.Item
-            label="操作类型"
-            name="operation"
-            rules={[{ required: true, message: "请选择操作类型" }]}
-          >
-            <Select options={OPERATION_OPTIONS} onSearch={() => {}} />
-          </Form.Item>
-          <Form.Item
-            label="缓存值"
-            name="value"
-            dependencies={["operation"]}
-            rules={[
-              {
-                required: true,
-                message: "请输入缓存值",
+        <Form.Item label="缓存键" name="key" rules={[{ required: true, message: "请输入缓存键" }]}>
+          <Input placeholder="请输入缓存键" />
+        </Form.Item>
+        <Form.Item
+          label="操作类型"
+          name="operation"
+          rules={[{ required: true, message: "请选择操作类型" }]}
+        >
+          <Select options={OPERATION_OPTIONS} onSearch={() => {}} />
+        </Form.Item>
+        <Form.Item
+          label="缓存值"
+          name="value"
+          dependencies={["operation"]}
+          rules={[
+            {
+              required: true,
+              message: "请输入缓存值",
+            },
+            ({ getFieldValue }) => ({
+              validator: (_, value) => {
+                if (getFieldValue("operation") === "set" && !value) {
+                  return Promise.reject(new Error("请输入缓存值"));
+                }
+                return Promise.resolve();
               },
-              ({ getFieldValue }) => ({
-                validator: (_, value) => {
-                  if (getFieldValue("operation") === "set" && !value) {
-                    return Promise.reject(new Error("请输入缓存值"));
-                  }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
-          >
-            <TextArea placeholder="请输入缓存值" rows={4} />
-          </Form.Item>
-          <Form.Item label="过期时间(秒)" name="ttl" dependencies={["operation"]}>
-            <InputNumber placeholder="留空表示永不过期" min={1} style={{ width: "100%" }} />
-          </Form.Item>
-        </Form>
-      </Modal>
+            }),
+          ]}
+        >
+          <TextArea placeholder="请输入缓存值" rows={4} />
+        </Form.Item>
+        <Form.Item label="过期时间(秒)" name="ttl" dependencies={["operation"]}>
+          <InputNumber placeholder="留空表示永不过期" min={1} style={{ width: "100%" }} />
+        </Form.Item>
+      </FormModal>
 
-      {/* 统计信息模态框 */}
-      <Modal
-        title="缓存统计信息"
-        maskClosable={false}
-        keyboard={false}
+      {/* 统计信息模态框（纯搬迁 components/CacheStatsModal.tsx） */}
+      <CacheStatsModal
         open={statsModalVisible}
-        onCancel={() => setStatsModalVisible(false)}
-        footer={null}
-        width={900}
-      >
-        <Row gutter={16}>
-          {/* L1统计 */}
-          <Col span={12}>
-            <Card
-              size="small"
-              title={
-                <>
-                  <Tag color="blue">L1</Tag> 内存缓存统计
-                </>
-              }
-            >
-              <Statistic
-                title="键数量"
-                value={monitor?.l1?.stats?.keyCount || 0}
-                styles={{ content: { fontSize: "24px" } }}
-              />
-              <Divider className="my-2" />
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Statistic
-                    title="命中次数"
-                    value={monitor?.l1?.stats?.hitCount || 0}
-                    valueStyle={{ fontSize: "18px", color: "#3f8600" }}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="未命中次数"
-                    value={monitor?.l1?.stats?.missCount || 0}
-                    valueStyle={{ fontSize: "18px", color: "#cf1322" }}
-                  />
-                </Col>
-              </Row>
-              <Divider className="my-2" />
-              <Statistic
-                title="命中率"
-                value={monitor?.l1?.stats?.hitRate || 0}
-                precision={2}
-                suffix="%"
-                styles={{ content: { fontSize: "20px", color: "#337ab0" } }}
-              />
-              <Divider className="my-2" />
-              <Statistic
-                title="内存使用"
-                value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
-              />
-            </Card>
-          </Col>
-
-          {/* L2统计 */}
-          <Col span={12}>
-            <Card
-              size="small"
-              title={
-                <>
-                  <Tag color="green">L2</Tag> Redis缓存统计
-                </>
-              }
-            >
-              <Statistic
-                title="键数量"
-                value={monitor?.l2?.stats?.keyCount || 0}
-                styles={{ content: { fontSize: "24px" } }}
-              />
-              <Divider className="my-2" />
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Statistic
-                    title="命中次数"
-                    value={monitor?.l2?.stats?.hitCount || 0}
-                    valueStyle={{ fontSize: "18px", color: "#3f8600" }}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="未命中次数"
-                    value={monitor?.l2?.stats?.missCount || 0}
-                    valueStyle={{ fontSize: "18px", color: "#cf1322" }}
-                  />
-                </Col>
-              </Row>
-              <Divider className="my-2" />
-              <Statistic
-                title="命中率"
-                value={monitor?.l2?.stats?.hitRate || 0}
-                precision={2}
-                suffix="%"
-                styles={{ content: { fontSize: "20px", color: "#337ab0" } }}
-              />
-              <Divider className="my-2" />
-              <Statistic
-                title="内存使用"
-                value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* 综合对比 */}
-        <Divider />
-        <Card size="small" title="综合对比">
-          <Row gutter={16}>
-            <Col span={8}>
-              <Statistic
-                title="总键数(L1+L2)"
-                value={(monitor?.l1?.stats?.keyCount || 0) + (monitor?.l2?.stats?.keyCount || 0)}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="总内存使用"
-                value={formatMemorySize(
-                  (monitor?.l1?.stats?.usedMemory || 0) + (monitor?.l2?.stats?.usedMemory || 0)
-                )}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="L1缓存命中率"
-                value={monitor?.l1?.stats?.hitRate || 0}
-                precision={2}
-                suffix="%"
-              />
-            </Col>
-          </Row>
-        </Card>
-      </Modal>
+        onClose={() => setStatsModalVisible(false)}
+        monitor={monitor}
+      />
     </div>
   );
 };
