@@ -1,9 +1,10 @@
 /**
  * Phase 84 84-01a Task 1 — 批量操作组件测试
- * BatchDeleteButton(Popconfirm 二次确认) / BatchExportModal(9 实体类型多选导出)
+ * BatchDeleteButton(confirmDelete 二次确认, Phase 65 内部切换) / BatchExportModal(9 实体类型多选导出)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { Modal } from "antd";
 
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import BatchDeleteButton from "../BatchDeleteButton";
@@ -12,6 +13,7 @@ import BatchExportModal from "../BatchExportModal";
 describe("BatchDeleteButton", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() } as never);
   });
 
   it("renders nothing when selectedCount=0", () => {
@@ -26,23 +28,27 @@ describe("BatchDeleteButton", () => {
     expect(screen.getByText("批量删除 (7)")).not.toBeNull();
   });
 
-  it("shows popconfirm and calls onConfirm after OK click", async () => {
+  it("click 触发 confirmDelete 路径（Modal.confirm），文案含 target 与模板，OK 后调用 onConfirm", async () => {
     const onConfirm = vi.fn(() => Promise.resolve());
     renderWithProviders(<BatchDeleteButton selectedCount={2} onConfirm={onConfirm} />);
     fireEvent.click(screen.getByText("批量删除 (2)"));
-    const okBtn = await screen.findByRole("button", { name: "确 定" });
-    fireEvent.click(okBtn);
+    expect(Modal.confirm).toHaveBeenCalledTimes(1);
+    const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
+    expect(opts.title).toBe("确认批量删除");
+    expect(opts.content).toBe("将删除选中的 2 项，删除后不可恢复，是否继续？");
+    await opts.onOk();
     await waitFor(() => {
       expect(onConfirm).toHaveBeenCalledTimes(1);
     });
   });
 
-  it("respects custom confirmTitle", async () => {
+  it("respects custom confirmTitle", () => {
     renderWithProviders(
       <BatchDeleteButton selectedCount={5} onConfirm={vi.fn()} confirmTitle="确认删除设备?" />
     );
     fireEvent.click(screen.getByText("批量删除 (5)"));
-    expect(await screen.findByText("确认删除设备?")).not.toBeNull();
+    const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
+    expect(opts.title).toBe("确认删除设备?");
   });
 });
 

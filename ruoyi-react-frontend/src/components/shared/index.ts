@@ -51,7 +51,8 @@ export { default as ErrorAlertWithRetry } from "./ErrorAlertWithRetry";
 export type { ErrorAlertWithRetryProps, ApiErrorShape } from "./ErrorAlertWithRetry";
 
 // Phase 65 — 危险删除唯一入口（声明式 + 命令式）
-export { ConfirmDelete } from "./ConfirmDelete";
-export type { ConfirmDeleteProps } from "./ConfirmDelete";
+// 显式扩展名：Windows 大小写不敏感解析下 "./ConfirmDelete" 会命中 confirmDelete.ts
+export { ConfirmDelete } from "./ConfirmDelete.tsx";
+export type { ConfirmDeleteProps } from "./ConfirmDelete.tsx";
 export { confirmDelete } from "./confirmDelete";
 export type { ConfirmDeleteOptions } from "./confirmDelete";

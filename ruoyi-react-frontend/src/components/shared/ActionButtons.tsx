@@ -4,11 +4,12 @@
  * 否则直接显示所有按钮
  */
 
-import { Space, Button, Dropdown, Popconfirm } from "antd";
+import { Space, Button, Dropdown } from "antd";
 import { DownOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import type { FC } from "react";
 import { DELETE_CONFIRM } from "@/constants/buttonStyles";
+import { ConfirmDelete } from "./ConfirmDelete.tsx"; // 显式扩展名：Windows 大小写不敏感解析会命中 confirmDelete.ts
 import "@/components/shared/ActionButtons.css";
 
 export interface ActionButton {
@@ -129,26 +130,20 @@ export const createDeleteAction = <T extends string | number>(
   icon: <DeleteOutlined />,
   danger: true,
   disabled: options?.disabled,
+  // Phase 65：render 内部切换到唯一声明式入口 ConfirmDelete（不再使用裸二次确认组件）。
+  // 降级注记：原 ghost 视觉（红边框）不再支持——ConfirmDelete 呈现 type=link danger；
+  // title 语义保留（覆盖确认标题，默认值消费升级后的 DELETE_CONFIRM.title="确认删除"）。
   render: () => (
-    <Popconfirm
+    <ConfirmDelete
+      target={options?.label || "选中项"}
+      onDelete={async () => {
+        await handleDelete(id);
+      }}
       title={options?.title || DELETE_CONFIRM.title}
-      onConfirm={() => handleDelete(id)}
-      okText={DELETE_CONFIRM.okText}
-      cancelText={DELETE_CONFIRM.cancelText}
+      disabled={options?.disabled}
     >
-      <Button
-        type="link"
-        danger
-        ghost={options?.ghost ?? true}
-        icon={<DeleteOutlined />}
-        size="small"
-        disabled={options?.disabled}
-        className="action-btn-link-danger"
-        aria-label={options?.label || "删除"}
-      >
-        {options?.label || "删除"}
-      </Button>
-    </Popconfirm>
+      {options?.label || "删除"}
+    </ConfirmDelete>
   ),
 });
 
