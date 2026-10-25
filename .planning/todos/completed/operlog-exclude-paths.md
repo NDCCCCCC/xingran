@@ -2,10 +2,11 @@
 title: operlog.exclude_paths 配置驱动白名单（解决 RPA 心跳日志污染）
 date: 2026-06-16
 priority: high
-status: pending
+status: completed
 origin: explore-session-260616-rpa-heartbeat-log-flooding
 related_note: .planning/notes/260616-rpa-heartbeat-log-flooding.md
 related_phase: pending (路由至 /gsd:plan-phase)
+completed: 2026-10-25
 ---
 
 # operlog.exclude_paths 配置驱动白名单
@@ -24,11 +25,13 @@ related_phase: pending (路由至 /gsd:plan-phase)
 ## 实施步骤
 
 ### Step 1: 配置项注入
+
 - [ ] 在 `configs/config.yaml` 新增 `operlog.exclude_paths: []`
 - [ ] 在 `configs/config.dev.yaml` 同步新增（默认空数组）
 - [ ] 确认 config struct 在 `internal/config/` 中能正确反序列化（YAML → Go struct）
 
 ### Step 2: operlog 包内实现
+
 - [ ] 在 `internal/utils/operlog/operlog.go` 顶部新增包级 `var ExcludedPaths []string`
 - [ ] 新增 `func Configure(paths []string)`：替换包级变量（线程安全：单次启动期调用即可，无需 mutex）
 - [ ] 新增 `func IsExcludedPath(path string) bool`：使用 `filepath.Match` + `/*` 后缀通配，与 `pkg/middleware/request_decryption.go:294-315` 的 `isExcludedPath` 风格一致
@@ -36,11 +39,13 @@ related_phase: pending (路由至 /gsd:plan-phase)
 - [ ] 修改 `RecordWithBody` 函数体首行：同上（**必须**在 `c.GetRawData()` 之前，否则 body 已被消费）
 
 ### Step 3: core.go 引导
+
 - [ ] 在 `internal/core/core.go` 配置加载后、调起任何 handler 前调一次 `operlog.Configure(core.Config.OperLog.ExcludePaths)`
 - [ ] 确认配置结构路径正确（`core.Config.OperLog.ExcludePaths` 或项目实际使用的命名约定）
 - [ ] 加注释说明启动顺序约束（"必须在任何 Record 调用之前"）
 
 ### Step 4: 测试
+
 - [ ] 在 `internal/utils/operlog/regression_test.go` 新增 `TestExcludedPathsEarlyReturn`：
   - mock Recorder 实例，断言路径命中时 `RecordAsync` 不被调用
   - 断言路径未命中时 `RecordAsync` 仍被调用
@@ -52,6 +57,7 @@ related_phase: pending (路由至 /gsd:plan-phase)
   - `/list` 误伤测试：确认 `isExcludedPath("/system/user/list")` 不被 heartbeat 通配符误匹配
 
 ### Step 5: 验证
+
 - [ ] 运行 `go build ./...` 确认编译通过
 - [ ] 运行 `go test ./internal/utils/operlog/...` 确认所有测试通过（包括原 14 个 FilterSensitiveParams 子用例）
 - [ ] 运行 `go test ./...` 确认无回归
@@ -59,6 +65,7 @@ related_phase: pending (路由至 /gsd:plan-phase)
 - [ ] 验证 `sys_oper_log` 中无 heartbeat 相关 audit 行（用 SQL：`SELECT COUNT(*) FROM sys_oper_log WHERE oper_url LIKE '%heartbeat%' AND oper_time > NOW() - INTERVAL '5 minutes'`）
 
 ### Step 6: 默认配置
+
 - [ ] 在 `configs/config.yaml` 中加入示例：
   ```yaml
   operlog:
