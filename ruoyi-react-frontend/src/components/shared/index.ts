@@ -56,3 +56,7 @@ export { ConfirmDelete } from "./ConfirmDelete.tsx";
 export type { ConfirmDeleteProps } from "./ConfirmDelete.tsx";
 export { confirmDelete } from "./confirmDelete";
 export type { ConfirmDeleteOptions } from "./confirmDelete";
+
+// Phase 66：PageTable（新列表页唯一合法列表数据层入口）
+export { default as PageTable } from "./PageTable";
+export type { PageTableProps, PageTableRequest } from "./PageTable";
