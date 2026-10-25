@@ -102,7 +102,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
         <Space>
           <EnvironmentOutlined />
           <span>城市：</span>
-          <Select
+          <Select allowClear
             style={{ width: 200 }}
             placeholder="请选择城市"
             value={localValue.cityCode || undefined}

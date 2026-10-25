@@ -427,7 +427,7 @@ const APIConfigPage: FC = () => {
             label="配置名称"
             rules={[{ required: true, message: "请输入配置名称" }]}
           >
-            <Input placeholder="请输入配置名称，如：阿里云短信" />
+            <Input allowClear placeholder="请输入配置名称，如：阿里云短信" />
           </Form.Item>
 
           <Form.Item
@@ -435,7 +435,7 @@ const APIConfigPage: FC = () => {
             label="配置类型"
             rules={[{ required: true, message: "请选择配置类型" }]}
           >
-            <Select placeholder="请选择配置类型" onSearch={() => {}}>
+            <Select allowClear placeholder="请选择配置类型" onSearch={() => {}}>
               <Option value={APIConfigTypes.SMS}>短信</Option>
               <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
               <Option value={APIConfigTypes.PUSH}>推送</Option>
@@ -447,7 +447,7 @@ const APIConfigPage: FC = () => {
             label="API地址"
             rules={[{ required: true, message: "请输入API地址" }]}
           >
-            <Input placeholder="请输入API调用地址" />
+            <Input allowClear placeholder="请输入API调用地址" />
           </Form.Item>
 
           <Form.Item name="apiMethod" label="请求方法" rules={[{ required: true }]}>
@@ -491,7 +491,7 @@ const APIConfigPage: FC = () => {
                 children: (
                   <>
                     <Form.Item name="authType" label="认证方式" rules={[{ required: true }]}>
-                      <Select onSearch={() => {}}>
+                      <Select allowClear onSearch={() => {}}>
                         <Option value={AuthTypes.NONE}>无需认证</Option>
                         <Option value={AuthTypes.BASIC}>Basic Auth</Option>
                         <Option value={AuthTypes.BEARER}>Bearer Token</Option>
@@ -508,7 +508,7 @@ const APIConfigPage: FC = () => {
                           return (
                             <>
                               <Form.Item name={["authConfig", "username"]} label="用户名">
-                                <Input placeholder="请输入用户名" />
+                                <Input allowClear placeholder="请输入用户名" />
                               </Form.Item>
                               <Form.Item name={["authConfig", "password"]} label="密码">
                                 <Input.Password placeholder="请输入密码" />
@@ -519,7 +519,7 @@ const APIConfigPage: FC = () => {
                         if (authType === AuthTypes.BEARER) {
                           return (
                             <Form.Item name={["authConfig", "token"]} label="Token">
-                              <Input placeholder="请输入Bearer Token" />
+                              <Input allowClear placeholder="请输入Bearer Token" />
                             </Form.Item>
                           );
                         }
@@ -527,10 +527,10 @@ const APIConfigPage: FC = () => {
                           return (
                             <>
                               <Form.Item name={["authConfig", "key"]} label="Key名称">
-                                <Input placeholder="如：X-API-Key" />
+                                <Input allowClear placeholder="如：X-API-Key" />
                               </Form.Item>
                               <Form.Item name={["authConfig", "value"]} label="Key值">
-                                <Input placeholder="请输入API Key的值" />
+                                <Input allowClear placeholder="请输入API Key的值" />
                               </Form.Item>
                             </>
                           );
@@ -557,7 +557,7 @@ const APIConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               <Option value={0}>正常</Option>
               <Option value={1}>停用</Option>
             </Select>

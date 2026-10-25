@@ -139,7 +139,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
               { max: 100, message: "名称不能超过 100 个字符" },
             ]}
           >
-            <Input placeholder="请输入仪表盘名称" />
+            <Input allowClear placeholder="请输入仪表盘名称" />
           </Form.Item>
 
           <Form.Item

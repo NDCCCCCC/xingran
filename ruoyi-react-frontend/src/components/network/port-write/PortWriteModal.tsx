@@ -203,14 +203,14 @@ export function PortWriteModal({
               { max: DESCRIPTION_MAX, message: `描述不超过 ${DESCRIPTION_MAX} 字符` },
             ]}
           >
-            <Input maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
+            <Input allowClear maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
           </Form.Item>
         )}
 
         {/* D-02 reason 字段 — 外层 reasonSelect Select + 内层 reasonText TextArea (仅 __custom__ 时展开) */}
         <Form.Item name="reasonSelect" label="操作原因" rules={reasonRules}>
           {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select
+          <Select allowClear
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}
           />

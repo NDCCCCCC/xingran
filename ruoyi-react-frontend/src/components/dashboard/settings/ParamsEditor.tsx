@@ -112,7 +112,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
                   rules={[{ required: true, message: "请输入参数名" }]}
                   style={{ marginBottom: 0 }}
                 >
-                  <Input placeholder="参数名" style={{ width: 150 }} aria-label="参数名" />
+                  <Input allowClear placeholder="参数名" style={{ width: 150 }} aria-label="参数名" />
                 </Form.Item>
 
                 <Form.Item
@@ -121,7 +121,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
                   rules={[{ required: true, message: "请输入参数值" }]}
                   style={{ marginBottom: 0 }}
                 >
-                  <Input placeholder="参数值" style={{ width: 200 }} aria-label="参数值" />
+                  <Input allowClear placeholder="参数值" style={{ width: 200 }} aria-label="参数值" />
                 </Form.Item>
 
                 <MinusCircleOutlined

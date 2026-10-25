@@ -352,7 +352,7 @@ const ADComputerPage: FC = () => {
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
-            <Select
+            <Select allowClear
               style={{ width: 200 }}
               value={selectedConfig}
               onChange={setSelectedConfig}

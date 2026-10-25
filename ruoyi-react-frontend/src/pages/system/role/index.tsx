@@ -278,10 +278,10 @@ const RoleManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="roleName" label="角色名称">
-              <Input placeholder="请输入角色名称" />
+              <Input allowClear placeholder="请输入角色名称" />
             </Form.Item>
             <Form.Item name="roleKey" label="权限字符">
-              <Input placeholder="请输入权限字符" />
+              <Input allowClear placeholder="请输入权限字符" />
             </Form.Item>
             <Form.Item name="status" label="状态">
               <Select
@@ -370,7 +370,7 @@ const RoleManagement: FC = () => {
                   label="角色名称"
                   rules={[{ required: true, message: "请输入角色名称" }]}
                 >
-                  <Input />
+                  <Input allowClear />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -379,7 +379,7 @@ const RoleManagement: FC = () => {
                   label="权限字符"
                   rules={[{ required: true, message: "请输入权限字符" }]}
                 >
-                  <Input />
+                  <Input allowClear />
                 </Form.Item>
               </Col>
             </Row>
@@ -390,12 +390,12 @@ const RoleManagement: FC = () => {
                   label="显示顺序"
                   rules={[{ required: true, message: "请输入显示顺序" }]}
                 >
-                  <Input type="number" />
+                  <Input allowClear type="number" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="status" label="状态">
-                  <Select onSearch={() => {}}>
+                  <Select allowClear onSearch={() => {}}>
                     {STATUS_OPTIONS.map((opt) => (
                       <Option key={opt.value} value={opt.value}>
                         {opt.label}
@@ -445,7 +445,7 @@ const RoleManagement: FC = () => {
             <Col span={12}>
               <Card title="数据权限" size="small">
                 <Form.Item name="dataScope" label="数据范围">
-                  <Select
+                  <Select allowClear
                     onChange={(value) => handleDataScopeChange(value, editForm)}
                     onSearch={() => {}}
                   >

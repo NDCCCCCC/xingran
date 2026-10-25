@@ -735,7 +735,7 @@ const WorkOrderPage: FC = () => {
                 label="工单标题"
                 rules={[{ required: true, message: "请输入工单标题" }]}
               >
-                <Input placeholder="请输入工单标题" className="user-form-input" />
+                <Input allowClear placeholder="请输入工单标题" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -761,7 +761,7 @@ const WorkOrderPage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: "请选择工单类型" }]}
               >
-                <Select
+                <Select allowClear
                   placeholder="请选择工单类型"
                   className="user-form-input"
                   onSearch={() => {}}
@@ -780,7 +780,7 @@ const WorkOrderPage: FC = () => {
                 label="优先级"
                 rules={[{ required: true, message: "请选择优先级" }]}
               >
-                <Select placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
+                <Select allowClear placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
                   {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={Number(key)}>
                       {text}
@@ -831,7 +831,7 @@ const WorkOrderPage: FC = () => {
             </Col>
           </Row>
           <Form.Item name="expectedResolveAt" label="期望解决时间">
-            <Input type="datetime-local" className="user-form-input" />
+            <Input allowClear type="datetime-local" className="user-form-input" />
           </Form.Item>
           <Form.Item name="description" label="工单描述">
             <TextArea rows={4} placeholder="请输入工单描述" />

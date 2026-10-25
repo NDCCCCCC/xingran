@@ -150,7 +150,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
       case 3: // 指定用户
         return (
           <Spin spinning={loading}>
-            <Select
+            <Select allowClear
               mode="multiple"
               value={targetUsers}
               onChange={onTargetUsersChange}
@@ -183,7 +183,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
     <div className="space-y-4">
       <Form.Item label="接收范围" rules={[{ required: true, message: "请选择接收范围" }]}>
         {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select
+        <Select allowClear
           value={targetType}
           onChange={onTargetTypeChange}
           options={[

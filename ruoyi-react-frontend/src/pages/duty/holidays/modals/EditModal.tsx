@@ -100,7 +100,7 @@ export function HolidayEditModal({
           label="节假日名称"
           rules={[{ required: true, message: "请输入节假日名称" }]}
         >
-          <Input placeholder="请输入节假日名称" />
+          <Input allowClear placeholder="请输入节假日名称" />
         </Form.Item>
 
         <Form.Item
@@ -108,7 +108,7 @@ export function HolidayEditModal({
           label="类型"
           rules={[{ required: true, message: "请选择类型" }]}
         >
-          <Select placeholder="请选择类型" onSearch={() => {}}>
+          <Select allowClear placeholder="请选择类型" onSearch={() => {}}>
             {holidayTypeDict.length > 0
               ? holidayTypeDict.map((d) => (
                   <Option key={d.dictValue} value={d.dictValue}>

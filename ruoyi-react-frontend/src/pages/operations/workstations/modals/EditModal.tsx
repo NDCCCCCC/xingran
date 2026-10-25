@@ -210,14 +210,14 @@ export function WorkstationEditModal({
           label="工位名称"
           rules={[{ required: true, message: "请输入工位名称" }]}
         >
-          <Input placeholder="请输入工位名称" />
+          <Input allowClear placeholder="请输入工位名称" />
         </Form.Item>
         <Form.Item
           name="type"
           label="工位类型"
           rules={[{ required: true, message: "请选择工位类型" }]}
         >
-          <Select placeholder="请选择工位类型" onSearch={() => {}}>
+          <Select allowClear placeholder="请选择工位类型" onSearch={() => {}}>
             {typeDict.length > 0
               ? typeDict.map((d) => (
                   <Option key={d.dictValue} value={Number(d.dictValue)}>
@@ -307,7 +307,7 @@ export function WorkstationEditModal({
           extra="选择/清空所属用户时,状态会自动切换为占用/空闲(维护状态除外)"
         >
           {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select placeholder="请选择状态">
+          <Select allowClear placeholder="请选择状态">
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

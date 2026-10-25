@@ -56,7 +56,7 @@ export function EditModal({
           label="文章标题"
           rules={[{ required: true, message: "请输入文章标题" }]}
         >
-          <Input placeholder="请输入文章标题" className="user-form-input" />
+          <Input allowClear placeholder="请输入文章标题" className="user-form-input" />
         </Form.Item>
 
         <Row gutter={16}>
@@ -66,7 +66,7 @@ export function EditModal({
               label="文章分类"
               rules={[{ required: true, message: "请选择文章分类" }]}
             >
-              <Select placeholder="请选择文章分类" className="user-form-input" onSearch={() => {}}>
+              <Select allowClear placeholder="请选择文章分类" className="user-form-input" onSearch={() => {}}>
                 {flatCategories.map((cat) => (
                   <Option key={cat.id} value={cat.id}>
                     {cat.categoryName}
@@ -81,7 +81,7 @@ export function EditModal({
               label="状态"
               rules={[{ required: true, message: "请选择状态" }]}
             >
-              <Select placeholder="请选择状态" className="user-form-input" onSearch={() => {}}>
+              <Select allowClear placeholder="请选择状态" className="user-form-input" onSearch={() => {}}>
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -93,7 +93,7 @@ export function EditModal({
         </Row>
 
         <Form.Item name="tagIds" label="标签">
-          <Select
+          <Select allowClear
             mode="tags"
             placeholder="请选择标签"
             style={{ width: "100%" }}

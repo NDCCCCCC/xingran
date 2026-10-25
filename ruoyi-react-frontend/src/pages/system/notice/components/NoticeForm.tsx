@@ -154,7 +154,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 14 }}
               rules={[{ required: true, message: "请输入公告标题" }]}
             >
-              <Input placeholder="请输入公告标题" />
+              <Input allowClear placeholder="请输入公告标题" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -165,7 +165,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 14 }}
               rules={[{ required: true, message: "请选择公告类型" }]}
             >
-              <Select onSearch={() => {}}>
+              <Select allowClear onSearch={() => {}}>
                 <Option value="1">公告</Option>
                 <Option value="2">警告</Option>
               </Select>
@@ -183,7 +183,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 14 }}
               initialValue={0}
             >
-              <Select onSearch={() => {}}>
+              <Select allowClear onSearch={() => {}}>
                 <Option value={0}>普通</Option>
                 <Option value={1}>重要</Option>
                 <Option value={2}>紧急</Option>
@@ -198,7 +198,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 14 }}
               initialValue={0}
             >
-              <Select onSearch={() => {}}>
+              <Select allowClear onSearch={() => {}}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>关闭</Option>
               </Select>
@@ -280,10 +280,10 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
 
         {/* 隐藏字段 */}
         <Form.Item name="executionType" hidden>
-          <Input />
+          <Input allowClear />
         </Form.Item>
         <Form.Item name="recurrenceConfig" hidden>
-          <Input />
+          <Input allowClear />
         </Form.Item>
 
         {/* 接收范围配置 */}
@@ -293,7 +293,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               <Row gutter={8}>
                 <Col span={6}>
                   <Form.Item name="targetType" noStyle initialValue={0}>
-                    <Select onChange={onTargetTypeChange} onSearch={() => {}}>
+                    <Select allowClear onChange={onTargetTypeChange} onSearch={() => {}}>
                       <Option value={0}>全部用户</Option>
                       <Option value={1}>指定部门</Option>
                       <Option value={2}>指定角色</Option>
@@ -328,13 +328,13 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         </Row>
 
         <Form.Item name="targetDepts" hidden>
-          <Input />
+          <Input allowClear />
         </Form.Item>
         <Form.Item name="targetRoles" hidden>
-          <Input />
+          <Input allowClear />
         </Form.Item>
         <Form.Item name="targetUsers" hidden>
-          <Input />
+          <Input allowClear />
         </Form.Item>
 
         {/* 发送渠道配置 */}

@@ -325,7 +325,7 @@ function SelectView({
         rules={[{ required: true, message: "请选择操作类型" }]}
       >
         {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select placeholder="请选择操作类型" options={ACTION_OPTIONS} />
+        <Select allowClear placeholder="请选择操作类型" options={ACTION_OPTIONS} />
       </Form.Item>
 
       {/* D-03 description action 时多一个"新描述"必填字段 */}
@@ -340,7 +340,7 @@ function SelectView({
                 { max: DESCRIPTION_MAX, message: `描述不超过 ${DESCRIPTION_MAX} 字符` },
               ]}
             >
-              <Input maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
+              <Input allowClear maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
             </Form.Item>
           ) : null
         }
@@ -369,7 +369,7 @@ function SelectView({
         }
       >
         {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select
+        <Select allowClear
           placeholder="请选择操作原因"
           options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}
         />

@@ -508,7 +508,7 @@ const ConfigManagement: FC = () => {
             label="参数名称"
             rules={[{ required: true, message: "请输入参数名称" }]}
           >
-            <Input placeholder="请输入参数名称" className="user-form-input" />
+            <Input allowClear placeholder="请输入参数名称" className="user-form-input" />
           </Form.Item>
           <Form.Item
             name="configKey"
@@ -516,7 +516,7 @@ const ConfigManagement: FC = () => {
             rules={[{ required: true, message: "请输入参数键名" }]}
             extra="建议格式：sys.user.initPassword"
           >
-            <Input
+            <Input allowClear
               placeholder="请输入参数键名"
               disabled={!!editingConfig && editingConfig.isSystem === 1}
               className="user-form-input"
@@ -527,10 +527,10 @@ const ConfigManagement: FC = () => {
             label="参数键值"
             rules={[{ required: true, message: "请输入参数键值" }]}
           >
-            <Input placeholder="请输入参数键值" className="user-form-input" />
+            <Input allowClear placeholder="请输入参数键值" className="user-form-input" />
           </Form.Item>
           <Form.Item name="configType" label="状态" rules={[{ required: true }]}>
-            <Select className="user-form-input" onSearch={() => {}}>
+            <Select allowClear className="user-form-input" onSearch={() => {}}>
               <Option value="Y">是</Option>
               <Option value="N">否</Option>
             </Select>
@@ -541,7 +541,7 @@ const ConfigManagement: FC = () => {
             rules={[{ required: true }]}
             extra="系统内置参数不可删除"
           >
-            <Select disabled={!!editingConfig} className="user-form-input" onSearch={() => {}}>
+            <Select allowClear disabled={!!editingConfig} className="user-form-input" onSearch={() => {}}>
               <Option value={0}>否</Option>
               <Option value={1}>是</Option>
             </Select>

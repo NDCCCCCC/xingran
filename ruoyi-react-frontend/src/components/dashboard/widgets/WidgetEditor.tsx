@@ -156,7 +156,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
               { max: 100, message: "标题不能超过 100 个字符" },
             ]}
           >
-            <Input placeholder="请输入 Widget 标题" />
+            <Input allowClear placeholder="请输入 Widget 标题" />
           </Form.Item>
 
           <Form.Item

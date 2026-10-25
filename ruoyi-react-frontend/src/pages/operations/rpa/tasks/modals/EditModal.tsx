@@ -61,7 +61,7 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
     >
       <Row gutter={16}>
         <Col span={6}>
-          <Select
+          <Select allowClear
             value={action.type}
             placeholder="动作类型"
             onChange={(value) => onUpdate(index, { ...action, type: value })}
@@ -76,14 +76,14 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
           </Select>
         </Col>
         <Col span={18}>
-          <Input
+          <Input allowClear
             value={action.description || ""}
             placeholder="动作描述"
             onChange={(e) => onUpdate(index, { ...action, description: e.target.value })}
             style={{ marginBottom: 8 }}
           />
           {action.type !== "navigate" && action.type !== "wait" && (
-            <Input
+            <Input allowClear
               value={action.selector?.value || ""}
               placeholder="选择器 (CSS Selector)"
               onChange={(e) =>
@@ -96,7 +96,7 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
             />
           )}
           {(action.type === "fill" || action.type === "select" || action.type === "navigate") && (
-            <Input
+            <Input allowClear
               value={(action.params?.value as string) || ""}
               placeholder="值 (URL/输入内容/选项)"
               onChange={(e) =>
@@ -291,7 +291,7 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
                       label="任务名称"
                       rules={[{ required: true, message: "请输入任务名称" }]}
                     >
-                      <Input placeholder="请输入任务名称" />
+                      <Input allowClear placeholder="请输入任务名称" />
                     </Form.Item>
 
                     <Form.Item name="description" label="任务描述">
@@ -330,7 +330,7 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
                     </Row>
 
                     <Form.Item name="tags" label="标签">
-                      <Select mode="tags" placeholder="请输入标签" onSearch={() => {}} />
+                      <Select allowClear mode="tags" placeholder="请输入标签" onSearch={() => {}} />
                     </Form.Item>
                   </>
                 ),

@@ -159,13 +159,13 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
         <Form form={form} layout="inline">
           <Form.Item name="ip" label="IP" rules={[{ required: true, message: "请输入 IP" }]}>
             {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
-            <Input placeholder="192.168.0.10" style={{ width: 200 }} />
+            <Input allowClear placeholder="192.168.0.10" style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="userId" label="User ID">
-            <Input placeholder="可选 UUID" style={{ width: 220 }} />
+            <Input allowClear placeholder="可选 UUID" style={{ width: 220 }} />
           </Form.Item>
           <Form.Item name="deptId" label="Dept ID">
-            <Input placeholder="可选 UUID" style={{ width: 220 }} />
+            <Input allowClear placeholder="可选 UUID" style={{ width: 220 }} />
           </Form.Item>
           <Form.Item>
             <Button

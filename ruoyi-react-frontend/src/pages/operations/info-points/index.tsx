@@ -1067,14 +1067,14 @@ const InfoPointManagement: FC = () => {
                   label="名称"
                   rules={[{ required: true, message: "请输入名称" }]}
                 >
-                  <Input placeholder="请输入名称" />
+                  <Input allowClear placeholder="请输入名称" />
                 </Form.Item>
                 <Form.Item
                   name="infoPointType"
                   label="类型"
                   rules={[{ required: true, message: "请选择类型" }]}
                 >
-                  <Select placeholder="请选择类型" onSearch={() => {}}>
+                  <Select allowClear placeholder="请选择类型" onSearch={() => {}}>
                     {infoPointTypeDict.map((d) => (
                       <Option key={d.dictValue} value={d.dictValue}>
                         {d.dictLabel}
@@ -1087,7 +1087,7 @@ const InfoPointManagement: FC = () => {
                   label="状态"
                   rules={[{ required: true, message: "请选择状态" }]}
                 >
-                  <Select placeholder="请选择状态" onSearch={() => {}}>
+                  <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
                     <Option value={0}>正常</Option>
                     <Option value={1}>故障</Option>
                     <Option value={2}>停用</Option>

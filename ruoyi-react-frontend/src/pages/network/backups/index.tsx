@@ -607,7 +607,7 @@ const ConfigBackupPage: FC = () => {
                   label="选择设备"
                   rules={[{ required: true, message: "请选择设备" }]}
                 >
-                  <Select
+                  <Select allowClear
                     mode="multiple"
                     placeholder="请选择要备份的设备"
                     showSearch

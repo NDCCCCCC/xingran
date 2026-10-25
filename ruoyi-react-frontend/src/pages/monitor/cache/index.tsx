@@ -406,14 +406,14 @@ const CacheManager: FC = () => {
         onFinish={handleOperate}
       >
         <Form.Item label="缓存键" name="key" rules={[{ required: true, message: "请输入缓存键" }]}>
-          <Input placeholder="请输入缓存键" />
+          <Input allowClear placeholder="请输入缓存键" />
         </Form.Item>
         <Form.Item
           label="操作类型"
           name="operation"
           rules={[{ required: true, message: "请选择操作类型" }]}
         >
-          <Select options={OPERATION_OPTIONS} onSearch={() => {}} />
+          <Select allowClear options={OPERATION_OPTIONS} onSearch={() => {}} />
         </Form.Item>
         <Form.Item
           label="缓存值"

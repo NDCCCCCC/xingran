@@ -60,7 +60,7 @@ export function ConfigExecuteModal({
           label="任务名称"
           rules={[{ required: true, message: "请输入任务名称" }]}
         >
-          <Input placeholder="请输入任务名称" />
+          <Input allowClear placeholder="请输入任务名称" />
         </Form.Item>
 
         <Form.Item
@@ -68,7 +68,7 @@ export function ConfigExecuteModal({
           label="选择模板"
           rules={[{ required: true, message: "请选择模板" }]}
         >
-          <Select
+          <Select allowClear
             placeholder="请选择配置模板"
             showSearch
             optionFilterProp="children"
@@ -128,7 +128,7 @@ export function ConfigExecuteModal({
           initialValue={300}
           rules={[{ required: true }]}
         >
-          <Input type="number" min={10} max={3600} style={{ width: 200 }} />
+          <Input allowClear type="number" min={10} max={3600} style={{ width: 200 }} />
         </Form.Item>
       </Form>
     </Modal>

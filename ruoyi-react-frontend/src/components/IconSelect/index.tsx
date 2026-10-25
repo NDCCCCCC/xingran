@@ -102,7 +102,7 @@ const IconSelect: FC<IconSelectProps> = ({
   return (
     <>
       {/* 输入框 */}
-      <Input
+      <Input allowClear
         value={value ? `${value} (${iconDescriptionMap[value] || value})` : ""}
         readOnly
         disabled={disabled}

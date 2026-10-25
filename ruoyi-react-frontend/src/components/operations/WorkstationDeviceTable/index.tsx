@@ -633,7 +633,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                   : "未在资产系统中找到"
             }
           >
-            <Input
+            <Input allowClear
               placeholder="请输入设备序列号"
               onBlur={(e) => handleSerialSearch(e.target.value)}
               disabled={!!editingDevice}
@@ -676,7 +676,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
             ]}
           >
             {/* eslint-disable-next-line no-restricted-syntax -- placeholder hint, not an actual server URL */}
-            <Input placeholder="请输入IP地址（可选，如 192.168.1.10）" />
+            <Input allowClear placeholder="请输入IP地址（可选，如 192.168.1.10）" />
           </Form.Item>
         </Form>
       </Modal>

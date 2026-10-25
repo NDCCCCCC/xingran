@@ -355,7 +355,7 @@ const ManagerOrgsPage: FC = () => {
             label="机构名称"
             rules={[{ required: true, message: "请输入机构名称" }]}
           >
-            <Input placeholder="请输入机构名称" />
+            <Input allowClear placeholder="请输入机构名称" />
           </Form.Item>
           <Form.Item
             name="deptId"

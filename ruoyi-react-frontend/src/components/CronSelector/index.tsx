@@ -184,7 +184,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
         {/* 顶部输入框 + 预设下拉框 */}
         <Row gutter={8} style={{ marginBottom: 12 }}>
           <Col flex="1">
-            <Input
+            <Input allowClear
               placeholder="请输入Cron表达式，如: 0 0 9 * * ?"
               value={cronExpression}
               onChange={(e) => handleExpressionInputChange(e.target.value)}

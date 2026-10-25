@@ -128,7 +128,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
   return (
     <div className="refresh-interval-selector">
       <Space direction="vertical" style={{ width: "100%" }}>
-        <Select
+        <Select allowClear
           value={selectValue}
           onChange={handlePresetChange}
           disabled={disabled}
@@ -154,7 +154,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
               disabled={disabled}
               style={{ width: 100 }}
             />
-            <Select
+            <Select allowClear
               value={customUnit}
               onChange={handleCustomUnitChange}
               disabled={disabled}

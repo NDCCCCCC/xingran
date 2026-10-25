@@ -189,7 +189,7 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
   };
 
   return (
-    <Select
+    <Select allowClear
       value={value}
       onChange={handleChange}
       loading={loading}

@@ -444,7 +444,7 @@ const EmailConfigPage: FC = () => {
             label="配置名称"
             rules={[{ required: true, message: "请输入配置名称" }]}
           >
-            <Input placeholder="请输入配置名称，如：企业邮箱" />
+            <Input allowClear placeholder="请输入配置名称，如：企业邮箱" />
           </Form.Item>
 
           <Form.Item
@@ -452,7 +452,7 @@ const EmailConfigPage: FC = () => {
             label="SMTP服务器"
             rules={[{ required: true, message: "请输入SMTP服务器地址" }]}
           >
-            <Input placeholder="如：smtp.example.com" />
+            <Input allowClear placeholder="如：smtp.example.com" />
           </Form.Item>
 
           <Form.Item name="port" label="端口" rules={[{ required: true, message: "请输入端口" }]}>
@@ -464,7 +464,7 @@ const EmailConfigPage: FC = () => {
             label="邮箱账号"
             rules={[{ required: true, message: "请输入邮箱账号" }]}
           >
-            <Input placeholder="请输入发件人邮箱账号" />
+            <Input allowClear placeholder="请输入发件人邮箱账号" />
           </Form.Item>
 
           <Form.Item
@@ -476,11 +476,11 @@ const EmailConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="fromName" label="发件名称">
-            <Input placeholder="发件人显示名称" />
+            <Input allowClear placeholder="发件人显示名称" />
           </Form.Item>
 
           <Form.Item name="fromEmail" label="发件邮箱">
-            <Input placeholder="发件人显示邮箱（可不同于登录邮箱）" />
+            <Input allowClear placeholder="发件人显示邮箱（可不同于登录邮箱）" />
           </Form.Item>
 
           <Form.Item name="useSsl" label="启用SSL" valuePropName="checked">
@@ -501,7 +501,7 @@ const EmailConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               <Option value={0}>正常</Option>
               <Option value={1}>停用</Option>
             </Select>
@@ -523,14 +523,14 @@ const EmailConfigPage: FC = () => {
       >
         <Form form={testForm} labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
           <Form.Item name="configId" hidden>
-            <Input />
+            <Input allowClear />
           </Form.Item>
           <Form.Item
             name="testTo"
             label="收件人"
             rules={[{ required: true, message: "请输入收件人邮箱" }]}
           >
-            <Input placeholder="请输入测试邮件的收件人邮箱" />
+            <Input allowClear placeholder="请输入测试邮件的收件人邮箱" />
           </Form.Item>
         </Form>
       </Modal>

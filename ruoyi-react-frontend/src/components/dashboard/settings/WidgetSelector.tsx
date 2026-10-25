@@ -233,7 +233,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
               </Form.Item>
 
               <Form.Item label="Widget类型" name="type" rules={[{ required: true }]}>
-                <Select disabled onSearch={() => {}}>
+                <Select allowClear disabled onSearch={() => {}}>
                   {widgetTypes.map((type: WidgetType) => (
                     <Select.Option key={type} value={type}>
                       {widgetRegistry[type]?.displayName}
@@ -247,7 +247,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
                 name="title"
                 rules={[{ required: true, message: "请输入Widget标题" }]}
               >
-                <Input placeholder="请输入Widget标题" />
+                <Input allowClear placeholder="请输入Widget标题" />
               </Form.Item>
 
               <Divider titlePlacement="left">数据源配置</Divider>

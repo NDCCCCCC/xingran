@@ -417,7 +417,7 @@ const ManagerRulesPage: FC = () => {
             label="规则名称"
             rules={[{ required: true, message: "请输入规则名称" }]}
           >
-            <Input placeholder="请输入规则名称" />
+            <Input allowClear placeholder="请输入规则名称" />
           </Form.Item>
           <Form.Item
             name="priority"
@@ -434,7 +434,7 @@ const ManagerRulesPage: FC = () => {
             label="适用主体"
             rules={[{ required: true, message: "请选择适用主体" }]}
           >
-            <Select
+            <Select allowClear
               onSearch={() => {}}
               options={SUBJECT_TYPES.map((t) => ({ value: t, label: MANAGER_SUBJECT_LABELS[t] }))}
               placeholder="请选择适用主体"
@@ -446,7 +446,7 @@ const ManagerRulesPage: FC = () => {
               label="主体岗位"
               rules={[{ required: true, message: "请选择主体岗位" }]}
             >
-              <Select
+              <Select allowClear
                 onSearch={() => {}}
                 placeholder="请选择主体岗位"
                 showSearch
@@ -469,7 +469,7 @@ const ManagerRulesPage: FC = () => {
             label="经理来源"
             rules={[{ required: true, message: "请选择经理来源" }]}
           >
-            <Select
+            <Select allowClear
               onSearch={() => {}}
               options={MANAGER_TYPES.map((t) => ({ value: t, label: MANAGER_TYPE_LABELS[t] }))}
               placeholder="请选择经理来源"
@@ -481,7 +481,7 @@ const ManagerRulesPage: FC = () => {
               label="经理岗位"
               rules={[{ required: true, message: "请选择经理岗位" }]}
             >
-              <Select
+              <Select allowClear
                 onSearch={() => {}}
                 placeholder="请选择经理岗位"
                 showSearch
@@ -491,7 +491,7 @@ const ManagerRulesPage: FC = () => {
             </Form.Item>
           )}
           <Form.Item name="managerOrgMode" label="目标机构">
-            <Select
+            <Select allowClear
               onSearch={() => {}}
               options={[
                 { value: "self", label: "自身机构" },

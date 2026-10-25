@@ -313,7 +313,7 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
         {buildings.length > 1 && (
           <>
             <div style={styles.controlLabel}>切换楼宇</div>
-            <Select
+            <Select allowClear
               style={{ width: "100%" }}
               placeholder="选择楼宇"
               value={currentBuilding?.id}

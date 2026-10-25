@@ -548,7 +548,7 @@ const ADUserPage: FC = () => {
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
-            <Select
+            <Select allowClear
               style={{ width: 200 }}
               value={selectedConfig}
               onChange={setSelectedConfig}
@@ -669,26 +669,26 @@ const ADUserPage: FC = () => {
       >
         <Form form={editForm} layout="vertical">
           <Form.Item label="显示名" name="displayName">
-            <Input />
+            <Input allowClear />
           </Form.Item>
           <Form.Item label="邮箱" name="email">
-            <Input />
+            <Input allowClear />
           </Form.Item>
           <Form.Item label="办公电话" name="phone">
-            <Input />
+            <Input allowClear />
           </Form.Item>
           <Form.Item label="手机" name="mobile">
-            <Input />
+            <Input allowClear />
           </Form.Item>
           <Form.Item label="职位" name="title">
-            <Input />
+            <Input allowClear />
           </Form.Item>
           {/* 域控 manager 属性（DN）为只读展示，不参与提交 */}
           <Form.Item label="域控经理">
-            <Input readOnly value={editingUser?.manager || ""} placeholder="未设置" />
+            <Input allowClear readOnly value={editingUser?.manager || ""} placeholder="未设置" />
           </Form.Item>
           <Form.Item label="部门" name="department">
-            <Input />
+            <Input allowClear />
           </Form.Item>
           <Form.Item label="描述" name="description">
             <Input.TextArea rows={3} />

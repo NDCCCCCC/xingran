@@ -758,7 +758,7 @@ const APIKeyManagement: FC = () => {
               { max: 100, message: "名称长度不能超过100个字符" },
             ]}
           >
-            <Input placeholder="请输入密钥名称" />
+            <Input allowClear placeholder="请输入密钥名称" />
           </Form.Item>
 
           <Form.Item
@@ -774,7 +774,7 @@ const APIKeyManagement: FC = () => {
             label="作用域"
             rules={[{ required: true, message: "请选择作用域" }]}
           >
-            <Select
+            <Select allowClear
               mode="multiple"
               placeholder="请选择作用域"
               options={SCOPE_OPTIONS}
@@ -792,12 +792,12 @@ const APIKeyManagement: FC = () => {
             extra="支持单个 IP 或 CIDR 格式，多个用逗号分隔，留空表示不限制"
           >
             {/* eslint-disable-next-line no-restricted-syntax -- placeholder hint, not an actual server URL */}
-            <Input placeholder="例如: 192.168.1.100, 10.0.0.0/24" />
+            <Input allowClear placeholder="例如: 192.168.1.100, 10.0.0.0/24" />
           </Form.Item>
 
           {modalType === "create" && (
             <Form.Item name="expiresAt" label="过期时间">
-              <Input type="datetime-local" />
+              <Input allowClear type="datetime-local" />
             </Form.Item>
           )}
         </Form>

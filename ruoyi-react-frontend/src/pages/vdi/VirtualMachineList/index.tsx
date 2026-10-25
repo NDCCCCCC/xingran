@@ -993,7 +993,7 @@ const VirtualMachineList: React.FC = () => {
                   name="vdi_server_id"
                   rules={[{ required: true, message: "请选择VDI服务器" }]}
                 >
-                  <Select
+                  <Select allowClear
                     placeholder="请选择VDI服务器"
                     loading={vdiServers.length === 0}
                     onSearch={() => {}}
@@ -1013,7 +1013,7 @@ const VirtualMachineList: React.FC = () => {
                   name="resource_group_id"
                   rules={[{ required: true, message: "请选择资源组" }]}
                 >
-                  <Select
+                  <Select allowClear
                     placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"}
                     disabled={!selectedServerId}
                     onSearch={() => {}}
@@ -1031,7 +1031,7 @@ const VirtualMachineList: React.FC = () => {
                   name="resource_id"
                   rules={[{ required: true, message: "请选择资源" }]}
                 >
-                  <Select
+                  <Select allowClear
                     placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"}
                     disabled={!selectedResourceGroupId}
                     onSearch={() => {}}
@@ -1049,7 +1049,7 @@ const VirtualMachineList: React.FC = () => {
                   name="vtp_id"
                   rules={[{ required: true, message: "请选择VTP平台" }]}
                 >
-                  <Select
+                  <Select allowClear
                     placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"}
                     disabled={!selectedServerId}
                     onSearch={() => {}}
@@ -1067,7 +1067,7 @@ const VirtualMachineList: React.FC = () => {
                   name="run_position_id"
                   rules={[{ required: true, message: "请选择运行位置" }]}
                 >
-                  <Select
+                  <Select allowClear
                     placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
                     onSearch={() => {}}
@@ -1094,7 +1094,7 @@ const VirtualMachineList: React.FC = () => {
                   name="disk_id"
                   rules={[{ required: true, message: "请选择个人盘" }]}
                 >
-                  <Select
+                  <Select allowClear
                     placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
                     onSearch={() => {}}
@@ -1119,7 +1119,7 @@ const VirtualMachineList: React.FC = () => {
                   name="storage_id"
                   rules={[{ required: true, message: "请选择存储位置" }]}
                 >
-                  <Select
+                  <Select allowClear
                     placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
                     onSearch={() => {}}
@@ -1137,7 +1137,7 @@ const VirtualMachineList: React.FC = () => {
                   name="network_id"
                   rules={[{ required: true, message: "请选择网络接口" }]}
                 >
-                  <Select
+                  <Select allowClear
                     placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
                     onSearch={() => {}}
@@ -1160,7 +1160,7 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="主机位置" name="host_id">
-                  <Input disabled placeholder="自动从运行位置获取 (father_id)" />
+                  <Input allowClear disabled placeholder="自动从运行位置获取 (father_id)" />
                 </Form.Item>
 
                 <Form.Item label="内存" name="memory" initialValue={4096}>
@@ -1275,7 +1275,7 @@ const VirtualMachineList: React.FC = () => {
             name="username"
             rules={[{ required: true, message: "请选择用户" }]}
           >
-            <Select
+            <Select allowClear
               showSearch
               placeholder="请输入用户名或昵称搜索"
               filterOption={false}

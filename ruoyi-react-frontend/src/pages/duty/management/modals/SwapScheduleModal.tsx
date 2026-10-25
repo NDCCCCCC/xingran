@@ -33,7 +33,7 @@ export function SwapScheduleModal({
     <Modal title="调班" open={visible} onOk={handleOk} onCancel={onCancel} destroyOnHidden>
       <Form form={form} layout="vertical">
         <Form.Item name="fromScheduleId" label="原排班" rules={[{ required: true }]}>
-          <Select placeholder="选择原排班" onSearch={() => {}}>
+          <Select allowClear placeholder="选择原排班" onSearch={() => {}}>
             {allSchedules.map((s) => (
               <Option key={s.id} value={s.id}>
                 {formatDate(s.scheduleDate)} - {s.user?.nickname || s.user?.username}
@@ -42,7 +42,7 @@ export function SwapScheduleModal({
           </Select>
         </Form.Item>
         <Form.Item name="toScheduleId" label="目标排班" rules={[{ required: true }]}>
-          <Select placeholder="选择目标排班" onSearch={() => {}}>
+          <Select allowClear placeholder="选择目标排班" onSearch={() => {}}>
             {allSchedules.map((s) => (
               <Option key={s.id} value={s.id}>
                 {formatDate(s.scheduleDate)} - {s.user?.nickname || s.user?.username}
@@ -55,7 +55,7 @@ export function SwapScheduleModal({
           label="调班原因"
           rules={[{ required: true, message: "请输入调班原因" }]}
         >
-          <Select placeholder="选择原因" onSearch={() => {}}>
+          <Select allowClear placeholder="选择原因" onSearch={() => {}}>
             {SWAP_REASON_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

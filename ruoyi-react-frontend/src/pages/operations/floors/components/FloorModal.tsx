@@ -110,7 +110,7 @@ export const FloorModal: FC<FloorModalProps> = ({
           label="所属楼宇"
           rules={[{ required: true, message: "请选择所属楼宇" }]}
         >
-          <Select
+          <Select allowClear
             placeholder="请选择所属楼宇"
             disabled={isDisabled}
             showSearch
@@ -130,11 +130,11 @@ export const FloorModal: FC<FloorModalProps> = ({
           label="楼层号"
           rules={[{ required: true, message: "请输入楼层号" }]}
         >
-          <Input placeholder="请输入楼层号，如：1F" disabled={!!editingFloor} />
+          <Input allowClear placeholder="请输入楼层号，如：1F" disabled={!!editingFloor} />
         </Form.Item>
 
         <Form.Item name="name" label="楼层名称">
-          <Input placeholder="请输入楼层名称" />
+          <Input allowClear placeholder="请输入楼层名称" />
         </Form.Item>
 
         <Form.Item name="area" label="面积">
@@ -147,7 +147,7 @@ export const FloorModal: FC<FloorModalProps> = ({
           rules={[{ required: true, message: "请选择状态" }]}
           initialValue={DEFAULT_FORM_VALUES.status}
         >
-          <Select placeholder="请选择状态" onSearch={() => {}}>
+          <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

@@ -289,21 +289,21 @@ const JobManager: FC = () => {
       >
         <Form form={form} layout="vertical" initialValues={DEFAULT_FORM_VALUES}>
           <Form.Item name="id" hidden>
-            <Input />
+            <Input allowClear />
           </Form.Item>
           <Form.Item
             label="任务名称"
             name="jobName"
             rules={[{ required: true, message: "请输入任务名称" }]}
           >
-            <Input placeholder="请输入任务名称" />
+            <Input allowClear placeholder="请输入任务名称" />
           </Form.Item>
           <Form.Item
             label="任务组"
             name="jobGroup"
             rules={[{ required: true, message: "请输入任务组" }]}
           >
-            <Input placeholder="请输入任务组，如：DEFAULT" />
+            <Input allowClear placeholder="请输入任务组，如：DEFAULT" />
           </Form.Item>
           <Form.Item
             label="调用目标"
@@ -326,7 +326,7 @@ const JobManager: FC = () => {
             rules={[{ required: true }]}
             extra="任务错过执行时间的处理策略"
           >
-            <Select options={MISFIRE_POLICY_OPTIONS} onSearch={() => {}} />
+            <Select allowClear options={MISFIRE_POLICY_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item
             label="并发执行"
@@ -337,7 +337,7 @@ const JobManager: FC = () => {
             <Switch checkedChildren="允许" unCheckedChildren="禁止" />
           </Form.Item>
           <Form.Item label="状态" name="status" rules={[{ required: true }]}>
-            <Select options={STATUS_OPTIONS} onSearch={() => {}} />
+            <Select allowClear options={STATUS_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item label="备注" name="remark">
             <TextArea placeholder="请输入备注" rows={3} />

@@ -113,7 +113,7 @@ export const DutyConfig: React.FC<DutyConfigProps> = ({ config, loading, saving,
               name="reminderChannels"
               rules={[{ required: true, message: "请选择渠道" }]}
             >
-              <Select mode="multiple" placeholder="选择渠道" onSearch={() => {}}>
+              <Select allowClear mode="multiple" placeholder="选择渠道" onSearch={() => {}}>
                 <Option value="websocket">站内通知</Option>
                 <Option value="email" disabled>
                   邮件（未开放）

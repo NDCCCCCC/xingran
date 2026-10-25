@@ -398,7 +398,7 @@ const ADConfigPage: FC = () => {
             name="configName"
             rules={[{ required: true, message: "请输入配置名称" }]}
           >
-            <Input placeholder="如: 公司主AD域" />
+            <Input allowClear placeholder="如: 公司主AD域" />
           </Form.Item>
 
           <Form.Item
@@ -407,7 +407,7 @@ const ADConfigPage: FC = () => {
             rules={[{ required: true, message: "请输入AD服务器地址" }]}
           >
             {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
-            <Input placeholder="如: ad.example.com 或 192.168.1.100" />
+            <Input allowClear placeholder="如: ad.example.com 或 192.168.1.100" />
           </Form.Item>
 
           <Form.Item
@@ -423,7 +423,7 @@ const ADConfigPage: FC = () => {
             name="domainName"
             rules={[{ required: true, message: "请输入域名" }]}
           >
-            <Input placeholder="如: example.com" />
+            <Input allowClear placeholder="如: example.com" />
           </Form.Item>
 
           <Form.Item
@@ -431,7 +431,7 @@ const ADConfigPage: FC = () => {
             name="baseDn"
             rules={[{ required: true, message: "请输入基础DN" }]}
           >
-            <Input placeholder="如: DC=example,DC=com" />
+            <Input allowClear placeholder="如: DC=example,DC=com" />
           </Form.Item>
 
           {/* 账号管理改用「服务账号池」（详情 Drawer 的服务账号池 Tab） */}

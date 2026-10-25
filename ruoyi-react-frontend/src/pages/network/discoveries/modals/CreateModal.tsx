@@ -42,11 +42,11 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
           label="任务名称"
           rules={[{ required: true, message: "请输入任务名称" }]}
         >
-          <Input placeholder="请输入任务名称" />
+          <Input allowClear placeholder="请输入任务名称" />
         </Form.Item>
 
         <Form.Item name="discoveryType" label="发现类型" rules={[{ required: true }]}>
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             {DISCOVERY_TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -77,7 +77,7 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
               label="SNMP Community"
               rules={[{ required: true, message: "请输入SNMP Community" }]}
             >
-              <Input placeholder="请输入SNMP Community，如：public" />
+              <Input allowClear placeholder="请输入SNMP Community，如：public" />
             </Form.Item>
             <Form.Item name="snmpPort" label="SNMP端口" rules={[{ required: true }]}>
               <InputNumber min={1} max={65535} style={{ width: "100%" }} />

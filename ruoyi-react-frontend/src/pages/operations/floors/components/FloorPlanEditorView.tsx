@@ -105,7 +105,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
               <AppstoreOutlined style={{ color: "var(--theme-purple, #722ed1)" }} />
-              <Select
+              <Select allowClear
                 style={{ width: 150 }}
                 placeholder="选择楼宇"
                 value={selectedBuildingId}
@@ -122,7 +122,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
               <AppstoreOutlined style={{ color: "var(--theme-success)" }} />
-              <Select
+              <Select allowClear
                 style={{ width: 150 }}
                 placeholder="选择楼层"
                 value={currentFloor?.id}

@@ -724,7 +724,7 @@ const DictManagement: FC = () => {
                   >
                     <Form form={dataSearchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item label="字典类型">
-                        <Select
+                        <Select allowClear
                           placeholder="请选择字典类型"
                           value={selectedType}
                           onChange={setSelectedType}
@@ -875,21 +875,21 @@ const DictManagement: FC = () => {
             label="字典名称"
             rules={[{ required: true, message: "请输入字典名称" }]}
           >
-            <Input placeholder="请输入字典名称" className="user-form-input" />
+            <Input allowClear placeholder="请输入字典名称" className="user-form-input" />
           </Form.Item>
           <Form.Item
             name="dictType"
             label="字典类型"
             rules={[{ required: true, message: "请输入字典类型" }]}
           >
-            <Input
+            <Input allowClear
               placeholder="请输入字典类型"
               disabled={!!editingType}
               className="user-form-input"
             />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select className="user-form-input" onSearch={() => {}}>
+            <Select allowClear className="user-form-input" onSearch={() => {}}>
               {STATUS_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -936,26 +936,26 @@ const DictManagement: FC = () => {
             label="字典标签"
             rules={[{ required: true, message: "请输入字典标签" }]}
           >
-            <Input placeholder="请输入字典标签" className="user-form-input" />
+            <Input allowClear placeholder="请输入字典标签" className="user-form-input" />
           </Form.Item>
           <Form.Item
             name="dictValue"
             label="字典键值"
             rules={[{ required: true, message: "请输入字典键值" }]}
           >
-            <Input placeholder="请输入字典键值" className="user-form-input" />
+            <Input allowClear placeholder="请输入字典键值" className="user-form-input" />
           </Form.Item>
           <Form.Item name="cssClass" label="CSS类名">
-            <Input placeholder="请输入CSS类名" className="user-form-input" />
+            <Input allowClear placeholder="请输入CSS类名" className="user-form-input" />
           </Form.Item>
           <Form.Item name="listClass" label="列表类名">
-            <Input placeholder="请输入列表类名" className="user-form-input" />
+            <Input allowClear placeholder="请输入列表类名" className="user-form-input" />
           </Form.Item>
           <Form.Item name="isDefault" label="是否默认" valuePropName="checked">
             <Switch checkedChildren="是" unCheckedChildren="否" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select className="user-form-input" onSearch={() => {}}>
+            <Select allowClear className="user-form-input" onSearch={() => {}}>
               {STATUS_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}

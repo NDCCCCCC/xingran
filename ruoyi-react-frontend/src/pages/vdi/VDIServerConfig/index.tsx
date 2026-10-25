@@ -285,7 +285,7 @@ const VDIServerConfig: React.FC = () => {
             name="name"
             rules={[{ required: true, message: "请输入服务器名称" }]}
           >
-            <Input placeholder="例如：生产环境 VDI" />
+            <Input allowClear placeholder="例如：生产环境 VDI" />
           </Form.Item>
           <Form.Item
             label="服务端点"
@@ -295,14 +295,14 @@ const VDIServerConfig: React.FC = () => {
               { type: "url", message: "请输入有效的 URL" },
             ]}
           >
-            <Input placeholder="https://vdi.example.com" />
+            <Input allowClear placeholder="https://vdi.example.com" />
           </Form.Item>
           <Form.Item
             label="用户名"
             name="username"
             rules={[{ required: true, message: "请输入用户名" }]}
           >
-            <Input placeholder="VDI 管理员用户名" />
+            <Input allowClear placeholder="VDI 管理员用户名" />
           </Form.Item>
           <Form.Item
             label="密码"

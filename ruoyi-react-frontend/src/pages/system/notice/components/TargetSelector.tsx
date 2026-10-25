@@ -92,7 +92,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
   if (targetType === 3) {
     return (
       <Spin spinning={loadingUsers}>
-        <Select
+        <Select allowClear
           mode="multiple"
           value={targetUsers as string[]}
           onChange={(values) => onUserChange(values as string[])}

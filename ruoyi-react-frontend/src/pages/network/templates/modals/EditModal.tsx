@@ -47,17 +47,17 @@ export function TemplateEditModal({
           label="模板名称"
           rules={[{ required: true, message: "请输入模板名称" }]}
         >
-          <Input placeholder="请输入模板名称" />
+          <Input allowClear placeholder="请输入模板名称" />
         </Form.Item>
         <Form.Item
           name="templateCode"
           label="模板编码"
           rules={[{ required: true, message: "请输入模板编码" }]}
         >
-          <Input placeholder="请输入模板编码（英文，用于API调用）" disabled={!!editingTemplate} />
+          <Input allowClear placeholder="请输入模板编码（英文，用于API调用）" disabled={!!editingTemplate} />
         </Form.Item>
         <Form.Item name="templateType" label="模板类型" rules={[{ required: true }]}>
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             {TEMPLATE_TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

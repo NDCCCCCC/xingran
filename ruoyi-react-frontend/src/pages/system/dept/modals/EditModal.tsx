@@ -85,7 +85,7 @@ export function DeptEditModal({
           label="部门名称"
           rules={[{ required: true, message: "请输入部门名称" }]}
         >
-          <Input />
+          <Input allowClear />
         </Form.Item>
         <Form.Item
           name="deptCode"
@@ -93,7 +93,7 @@ export function DeptEditModal({
           rules={[{ required: true, message: "请输入部门编码" }]}
           tooltip="部门编码用于唯一标识部门，在Excel导入时作为关联键"
         >
-          <Input placeholder="请输入部门编码，如：DEV、TECH" />
+          <Input allowClear placeholder="请输入部门编码，如：DEV、TECH" />
         </Form.Item>
         <Form.Item
           name="orderNum"
@@ -132,10 +132,10 @@ export function DeptEditModal({
           </Select>
         </Form.Item>
         <Form.Item name="phone" hidden>
-          <Input />
+          <Input allowClear />
         </Form.Item>
         <Form.Item name="email" hidden>
-          <Input />
+          <Input allowClear />
         </Form.Item>
         <Form.Item
           name="isExternalOrg"
@@ -143,7 +143,7 @@ export function DeptEditModal({
           initialValue={0}
           tooltip="标记为外部机构的部门可以作为楼宇的所属机构"
         >
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             {EXTERNAL_ORG_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -152,7 +152,7 @@ export function DeptEditModal({
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态" initialValue={0}>
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

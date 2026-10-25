@@ -492,7 +492,7 @@ const DutyPoolPage: FC = () => {
             label="值班池名称"
             rules={[{ required: true, message: "请输入值班池名称" }]}
           >
-            <Input placeholder="请输入值班池名称" />
+            <Input allowClear placeholder="请输入值班池名称" />
           </Form.Item>
 
           <Form.Item name="deptId" label="所属部门">
@@ -524,7 +524,7 @@ const DutyPoolPage: FC = () => {
             label="值班成员"
             rules={[{ required: true, message: "请选择值班成员" }]}
           >
-            <Select
+            <Select allowClear
               mode="multiple"
               showSearch
               optionFilterProp="children"

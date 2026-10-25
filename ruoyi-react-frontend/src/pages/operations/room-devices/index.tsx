@@ -716,7 +716,7 @@ const RoomDeviceManagement: FC = () => {
               label="所属机房"
               rules={[{ required: true, message: "请选择所属机房" }]}
             >
-              <Select
+              <Select allowClear
                 placeholder="请选择所属机房"
                 showSearch
                 filterOption={(input, option) =>
@@ -733,21 +733,21 @@ const RoomDeviceManagement: FC = () => {
               label="设备名称"
               rules={[{ required: true, message: "请输入设备名称" }]}
             >
-              <Input placeholder="请输入设备名称" />
+              <Input allowClear placeholder="请输入设备名称" />
             </Form.Item>
             <Form.Item
               name="deviceCode"
               label="设备编码"
               rules={[{ required: true, message: "请输入设备编码" }]}
             >
-              <Input placeholder="请输入设备编码" />
+              <Input allowClear placeholder="请输入设备编码" />
             </Form.Item>
             <Form.Item
               name="deviceType"
               label="设备类型"
               rules={[{ required: true, message: "请选择设备类型" }]}
             >
-              <Select placeholder="请选择设备类型" onSearch={() => {}}>
+              <Select allowClear placeholder="请选择设备类型" onSearch={() => {}}>
                 <Option value="server">服务器</Option>
                 <Option value="storage">存储设备</Option>
                 <Option value="ups">UPS</Option>
@@ -761,24 +761,24 @@ const RoomDeviceManagement: FC = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="vendor" label="厂商">
-                  <Input placeholder="请输入厂商" />
+                  <Input allowClear placeholder="请输入厂商" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="model" label="型号">
-                  <Input placeholder="请输入型号" />
+                  <Input allowClear placeholder="请输入型号" />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="serialNumber" label="序列号">
-                  <Input placeholder="请输入序列号" />
+                  <Input allowClear placeholder="请输入序列号" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="positionDesc" label="位置描述">
-                  <Input placeholder="请输入位置描述" />
+                  <Input allowClear placeholder="请输入位置描述" />
                 </Form.Item>
               </Col>
             </Row>
@@ -806,7 +806,7 @@ const RoomDeviceManagement: FC = () => {
                   label="状态"
                   rules={[{ required: true, message: "请选择状态" }]}
                 >
-                  <Select placeholder="请选择状态" onSearch={() => {}}>
+                  <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
                     <Option value={0}>正常</Option>
                     <Option value={1}>故障</Option>
                     <Option value={2}>报废</Option>

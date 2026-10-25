@@ -717,7 +717,7 @@ const UserManagement: FC = () => {
               >
                 <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                   <Form.Item name="username" label="用户名">
-                    <Input placeholder="用户名 / 昵称 / 手机号" />
+                    <Input allowClear placeholder="用户名 / 昵称 / 手机号" />
                   </Form.Item>
                   <Form.Item name="status" label="状态">
                     <Select
@@ -844,7 +844,7 @@ const UserManagement: FC = () => {
               label="用户名"
               rules={[{ required: true, message: "请输入用户名" }]}
             >
-              <Input disabled={!!editingUser} className="user-form-input" />
+              <Input allowClear disabled={!!editingUser} className="user-form-input" />
             </Form.Item>
             {!editingUser && (
               <Form.Item
@@ -860,20 +860,20 @@ const UserManagement: FC = () => {
               label="昵称"
               rules={[{ required: true, message: "请输入昵称" }]}
             >
-              <Input className="user-form-input" />
+              <Input allowClear className="user-form-input" />
             </Form.Item>
             <Form.Item name="employeeNo" label="工号">
-              <Input placeholder="请输入工号" className="user-form-input" />
+              <Input allowClear placeholder="请输入工号" className="user-form-input" />
             </Form.Item>
             <Form.Item name="email" label="邮箱">
-              <Input className="user-form-input" />
+              <Input allowClear className="user-form-input" />
             </Form.Item>
             <Form.Item name="phone" label="联系电话">
-              <Input className="user-form-input" />
+              <Input allowClear className="user-form-input" />
             </Form.Item>
             {/* mobile / title 为后端新增字段：手机号与职位（AD 同步写入） */}
             <Form.Item name="mobile" label="手机号">
-              <Input placeholder="请输入手机号" className="user-form-input" />
+              <Input allowClear placeholder="请输入手机号" className="user-form-input" />
             </Form.Item>
             <Form.Item name="title" label="职位">
               <Select
@@ -886,7 +886,7 @@ const UserManagement: FC = () => {
               />
             </Form.Item>
             <Form.Item name="gender" label="性别" initialValue={2}>
-              <Select className="user-form-input" onSearch={() => {}}>
+              <Select allowClear className="user-form-input" onSearch={() => {}}>
                 {genderDict.length > 0
                   ? genderDict.map((d) => (
                       <Option key={d.dictValue} value={Number(d.dictValue)}>
@@ -921,7 +921,7 @@ const UserManagement: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态" initialValue={0}>
-              <Select className="user-form-input" onSearch={() => {}}>
+              <Select allowClear className="user-form-input" onSearch={() => {}}>
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}

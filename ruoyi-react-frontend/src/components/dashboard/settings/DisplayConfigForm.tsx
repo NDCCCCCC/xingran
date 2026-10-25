@@ -120,16 +120,16 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
   const renderStatCardConfig = () => (
     <>
       <Form.Item label="前缀" name="prefix" tooltip="数值前显示的文本">
-        <Input placeholder="¥" disabled={disabled} />
+        <Input allowClear placeholder="¥" disabled={disabled} />
       </Form.Item>
       <Form.Item label="后缀" name="suffix" tooltip="数值后显示的文本">
-        <Input placeholder="%" disabled={disabled} />
+        <Input allowClear placeholder="%" disabled={disabled} />
       </Form.Item>
       <Form.Item label="小数位数" name="decimals" tooltip="保留的小数位数" initialValue={0}>
         <InputNumber min={0} max={10} disabled={disabled} style={{ width: "100%" }} />
       </Form.Item>
       <Form.Item label="图标" name="icon" tooltip="显示的图标（emoji 或图标名称）">
-        <Input placeholder="📊" disabled={disabled} />
+        <Input allowClear placeholder="📊" disabled={disabled} />
       </Form.Item>
       <Form.Item label="图标颜色" name="iconColor" tooltip="图标的颜色">
         <ColorPicker disabled={disabled} showText />
@@ -150,7 +150,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
   const renderChartConfig = () => (
     <>
       <Form.Item label="图表类型" name="chartType" tooltip="选择图表的展示形式" initialValue="line">
-        <Select disabled={disabled} onSearch={() => {}}>
+        <Select allowClear disabled={disabled} onSearch={() => {}}>
           <Select.Option value="line">折线图</Select.Option>
           <Select.Option value="bar">柱状图</Select.Option>
           <Select.Option value="pie">饼图</Select.Option>
@@ -159,13 +159,13 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
         </Select>
       </Form.Item>
       <Form.Item label="X 轴字段" name="xField" tooltip="X 轴对应的数据字段">
-        <Input placeholder="date" disabled={disabled} />
+        <Input allowClear placeholder="date" disabled={disabled} />
       </Form.Item>
       <Form.Item label="Y 轴字段" name="yField" tooltip="Y 轴对应的数据字段">
-        <Input placeholder="value" disabled={disabled} />
+        <Input allowClear placeholder="value" disabled={disabled} />
       </Form.Item>
       <Form.Item label="系列字段" name="seriesField" tooltip="用于区分多系列的字段">
-        <Input placeholder="category" disabled={disabled} />
+        <Input allowClear placeholder="category" disabled={disabled} />
       </Form.Item>
       <Form.Item
         label="显示图例"
@@ -210,7 +210,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
         <Switch disabled={disabled} />
       </Form.Item>
       <Form.Item label="表格大小" name="size" tooltip="表格行高大小" initialValue="middle">
-        <Select disabled={disabled} onSearch={() => {}}>
+        <Select allowClear disabled={disabled} onSearch={() => {}}>
           <Select.Option value="small">紧凑</Select.Option>
           <Select.Option value="middle">默认</Select.Option>
           <Select.Option value="large">宽松</Select.Option>
@@ -251,14 +251,14 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
                   name={[name, "dataIndex"]}
                   rules={[{ required: true, message: "请输入字段名" }]}
                 >
-                  <Input placeholder="字段名" disabled={disabled} style={{ width: 120 }} />
+                  <Input allowClear placeholder="字段名" disabled={disabled} style={{ width: 120 }} />
                 </Form.Item>
                 <Form.Item
                   {...restField}
                   name={[name, "title"]}
                   rules={[{ required: true, message: "请输入列标题" }]}
                 >
-                  <Input placeholder="列标题" disabled={disabled} style={{ width: 120 }} />
+                  <Input allowClear placeholder="列标题" disabled={disabled} style={{ width: 120 }} />
                 </Form.Item>
                 <Form.Item {...restField} name={[name, "width"]}>
                   <InputNumber placeholder="宽度" disabled={disabled} style={{ width: 80 }} />
@@ -267,7 +267,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
             ))}
             <Form.Item>
               {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-              <Select
+              <Select allowClear
                 disabled={disabled}
                 placeholder="添加列..."
                 onChange={(value) => {
@@ -298,16 +298,16 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
         rules={[{ required: true, message: "请输入标题字段" }]}
         initialValue="title"
       >
-        <Input placeholder="title" disabled={disabled} />
+        <Input allowClear placeholder="title" disabled={disabled} />
       </Form.Item>
       <Form.Item label="描述字段" name="descriptionField" tooltip="列表项描述对应的数据字段">
-        <Input placeholder="description" disabled={disabled} />
+        <Input allowClear placeholder="description" disabled={disabled} />
       </Form.Item>
       <Form.Item label="时间字段" name="timeField" tooltip="列表项时间对应的数据字段">
-        <Input placeholder="createTime" disabled={disabled} />
+        <Input allowClear placeholder="createTime" disabled={disabled} />
       </Form.Item>
       <Form.Item label="图标字段" name="iconField" tooltip="列表项图标对应的数据字段">
-        <Input placeholder="icon" disabled={disabled} />
+        <Input allowClear placeholder="icon" disabled={disabled} />
       </Form.Item>
       <Form.Item
         label="最大显示数量"
@@ -338,7 +338,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
         tooltip="进度条的展示形式"
         initialValue="line"
       >
-        <Select disabled={disabled} onSearch={() => {}}>
+        <Select allowClear disabled={disabled} onSearch={() => {}}>
           <Select.Option value="line">线性进度条</Select.Option>
           <Select.Option value="circle">圆形进度</Select.Option>
           <Select.Option value="dashboard">仪表盘</Select.Option>
@@ -365,7 +365,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
             ))}
             <Form.Item>
               {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-              <Select
+              <Select allowClear
                 disabled={disabled}
                 placeholder="添加阈值..."
                 onChange={() => {

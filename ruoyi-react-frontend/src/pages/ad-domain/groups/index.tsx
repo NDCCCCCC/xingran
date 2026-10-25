@@ -437,7 +437,7 @@ const ADGroupPage: FC = () => {
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
-            <Select
+            <Select allowClear
               style={{ width: 200 }}
               value={selectedConfig}
               onChange={setSelectedConfig}
@@ -579,7 +579,7 @@ const ADGroupPage: FC = () => {
       >
         <Form layout="vertical">
           <Form.Item label="组名称" name="groupName" rules={[{ required: true }]}>
-            <Input />
+            <Input allowClear />
           </Form.Item>
           <Form.Item label="描述" name="description">
             <Input.TextArea rows={4} />

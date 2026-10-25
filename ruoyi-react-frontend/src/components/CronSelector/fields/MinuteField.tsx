@@ -35,7 +35,7 @@ const MinuteField: FC<MinuteFieldProps> = ({ value, onChange }) => {
             <Space align="center">
               <span>指定:</span>
               {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-              <Select
+              <Select allowClear
                 mode="multiple"
                 style={{ width: 300 }}
                 value={value.specific || [0]}
@@ -52,7 +52,7 @@ const MinuteField: FC<MinuteFieldProps> = ({ value, onChange }) => {
             <Space align="center">
               <span>周期:</span>
               <span>从</span>
-              <Select
+              <Select allowClear
                 style={{ width: 80 }}
                 value={value.cycleStart ?? 0}
                 onChange={(cycleStart: number) =>
@@ -67,7 +67,7 @@ const MinuteField: FC<MinuteFieldProps> = ({ value, onChange }) => {
                 ))}
               </Select>
               <span>分开始，每</span>
-              <Select
+              <Select allowClear
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
                 onChange={(cycleInterval: number) =>
@@ -89,7 +89,7 @@ const MinuteField: FC<MinuteFieldProps> = ({ value, onChange }) => {
             <Space align="center">
               <span>范围:</span>
               <span>从</span>
-              <Select
+              <Select allowClear
                 style={{ width: 80 }}
                 value={value.rangeStart ?? 0}
                 onChange={(rangeStart: number) =>
@@ -104,7 +104,7 @@ const MinuteField: FC<MinuteFieldProps> = ({ value, onChange }) => {
                 ))}
               </Select>
               <span>到</span>
-              <Select
+              <Select allowClear
                 style={{ width: 80 }}
                 value={value.rangeEnd ?? 59}
                 onChange={(rangeEnd: number) =>

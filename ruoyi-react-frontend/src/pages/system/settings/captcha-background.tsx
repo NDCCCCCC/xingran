@@ -520,7 +520,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             label="拼图形状"
             rules={[{ required: true, message: "请选择拼图形状" }]}
           >
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               {SHAPE_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -533,14 +533,14 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             label="难度级别"
             rules={[{ required: true, message: "请选择难度" }]}
           >
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               <Option value={1}>简单</Option>
               <Option value={2}>中等</Option>
               <Option value={3}>困难</Option>
             </Select>
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
-            <Select mode="multiple" placeholder="不限制则默认使用当前形状" onSearch={() => {}}>
+            <Select allowClear mode="multiple" placeholder="不限制则默认使用当前形状" onSearch={() => {}}>
               {SHAPE_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -576,7 +576,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       >
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
           <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               {SHAPE_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -585,14 +585,14 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               <Option value={1}>简单</Option>
               <Option value={2}>中等</Option>
               <Option value={3}>困难</Option>
             </Select>
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
-            <Select mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
+            <Select allowClear mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
               {SHAPE_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -601,13 +601,13 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               <Option value={1}>启用</Option>
               <Option value={0}>禁用</Option>
             </Select>
           </Form.Item>
           <Form.Item name="sortOrder" label="排序" rules={[{ required: true }]}>
-            <Input type="number" placeholder="数字越小优先级越高" />
+            <Input allowClear type="number" placeholder="数字越小优先级越高" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
             <TextArea rows={3} placeholder="请输入备注" />

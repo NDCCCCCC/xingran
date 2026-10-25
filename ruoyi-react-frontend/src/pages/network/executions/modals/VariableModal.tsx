@@ -36,7 +36,7 @@ export function VariableModal({
         {selectedTemplate?.variables &&
           Object.entries(selectedTemplate.variables).map(([key, defaultValue]) => (
             <Form.Item key={key} name={["templateVariables", key]} label={key}>
-              <Input placeholder={`默认值: ${String(defaultValue)}`} />
+              <Input allowClear placeholder={`默认值: ${String(defaultValue)}`} />
             </Form.Item>
           ))}
       </Form>

@@ -99,7 +99,7 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
     <Space direction="vertical" style={{ width: "100%" }}>
       <Form.Item label="可见范围" style={{ marginBottom: 8 }}>
         {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select
+        <Select allowClear
           value={value?.scope || "private"}
           onChange={handleScopeChange}
           options={scopeOptions}

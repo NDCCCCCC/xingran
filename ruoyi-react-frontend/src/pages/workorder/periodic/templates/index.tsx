@@ -446,7 +446,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="模板名称"
                 rules={[{ required: true, message: "请输入模板名称" }]}
               >
-                <Input placeholder="请输入模板名称" className="user-form-input" />
+                <Input allowClear placeholder="请输入模板名称" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -473,7 +473,7 @@ const PeriodicTemplatePage: FC = () => {
             rules={[{ required: true, message: "请输入工单标题" }]}
             extra={<VariableHelp content={VARIABLE_HELP_CONTENT} />}
           >
-            <Input placeholder="例如：{date} 日例行检" className="user-form-input" />
+            <Input allowClear placeholder="例如：{date} 日例行检" className="user-form-input" />
           </Form.Item>
 
           <Row gutter={16}>
@@ -483,7 +483,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: "请选择工单类型" }]}
               >
-                <Select
+                <Select allowClear
                   placeholder="请选择工单类型"
                   className="user-form-input"
                   onSearch={() => {}}
@@ -502,7 +502,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="优先级"
                 rules={[{ required: true, message: "请选择优先级" }]}
               >
-                <Select placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
+                <Select allowClear placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
                   {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={Number(key)}>
                       {text}
@@ -528,7 +528,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="分配类型"
                 rules={[{ required: true, message: "请选择分配类型" }]}
               >
-                <Select
+                <Select allowClear
                   placeholder="请选择分配类型"
                   className="user-form-input"
                   onSearch={() => {}}

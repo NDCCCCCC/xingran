@@ -499,7 +499,7 @@ const FixSuggestion = () => {
             />
           </Form.Item>
           <Form.Item name="responsibleDeptId" label="责任部门">
-            <Input placeholder="部门 ID" style={{ width: 180 }} />
+            <Input allowClear placeholder="部门 ID" style={{ width: 180 }} />
           </Form.Item>
           <Form.Item>
             <Space>

@@ -95,7 +95,7 @@ show running-config
           initialValue={300}
           rules={[{ required: true }]}
         >
-          <Input type="number" min={10} max={3600} />
+          <Input allowClear type="number" min={10} max={3600} />
         </Form.Item>
       </Form>
     </Modal>

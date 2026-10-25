@@ -267,7 +267,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
             </Form.Item>
             {/* scope 隐藏字段(后端默认 workstation,前端兜底) */}
             <Form.Item name="scope" hidden>
-              <Input />
+              <Input allowClear />
             </Form.Item>
             <Form.Item name="remark" label="备注">
               <Input.TextArea rows={2} placeholder="选填,如:分公司本部 4F 工位映射" />

@@ -278,7 +278,7 @@ const MenuManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="menuName" label="菜单名称">
-              <Input placeholder="请输入菜单名称" />
+              <Input allowClear placeholder="请输入菜单名称" />
             </Form.Item>
             <Form.Item name="status" label="菜单状态">
               <Select
@@ -402,7 +402,7 @@ const MenuManagement: FC = () => {
                 label="菜单类型"
                 rules={[{ required: true, message: "请选择菜单类型" }]}
               >
-                <Select placeholder="请选择菜单类型" onSearch={() => {}}>
+                <Select allowClear placeholder="请选择菜单类型" onSearch={() => {}}>
                   {MENU_TYPE_OPTIONS.map((opt) => (
                     <Option key={opt.value} value={opt.value}>
                       {opt.label}
@@ -420,7 +420,7 @@ const MenuManagement: FC = () => {
                 label="菜单名称"
                 rules={[{ required: true, message: "请输入菜单名称" }]}
               >
-                <Input />
+                <Input allowClear />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -437,12 +437,12 @@ const MenuManagement: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="path" label="路由地址">
-                <Input placeholder="请输入路由地址" />
+                <Input allowClear placeholder="请输入路由地址" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="component" label="组件路径">
-                <Input placeholder="请输入组件路径" />
+                <Input allowClear placeholder="请输入组件路径" />
               </Form.Item>
             </Col>
           </Row>
@@ -450,7 +450,7 @@ const MenuManagement: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="perms" label="权限标识">
-                <Input placeholder="请输入权限标识" />
+                <Input allowClear placeholder="请输入权限标识" />
               </Form.Item>
             </Col>
             <Col span={12}>

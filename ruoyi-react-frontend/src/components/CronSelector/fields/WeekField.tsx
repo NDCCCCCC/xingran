@@ -60,7 +60,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
             <Space align="center" wrap>
               <span>周期:</span>
               <span>从</span>
-              <Select
+              <Select allowClear
                 style={{ width: 100 }}
                 value={value.cycleStart ?? 1}
                 onChange={(cycleStart: number) =>
@@ -75,7 +75,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 ))}
               </Select>
               <span>开始，每</span>
-              <Select
+              <Select allowClear
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
                 onChange={(cycleInterval: number) =>
@@ -97,7 +97,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
             <Space align="center" wrap>
               <span>范围:</span>
               <span>从</span>
-              <Select
+              <Select allowClear
                 style={{ width: 100 }}
                 value={value.rangeStart ?? 1}
                 onChange={(rangeStart: number) =>
@@ -112,7 +112,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 ))}
               </Select>
               <span>到</span>
-              <Select
+              <Select allowClear
                 style={{ width: 100 }}
                 value={value.rangeEnd ?? 7}
                 onChange={(rangeEnd: number) =>

@@ -283,7 +283,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
               <div style={{ marginBottom: 16 }}>
                 <Space>
                   <span>选择要还原的版本：</span>
-                  <Select
+                  <Select allowClear
                     style={{ width: 400 }}
                     value={selectedRestoreBackup?.id}
                     onChange={(value) => {
@@ -548,7 +548,7 @@ function DiffSelectRow(props: {
   return (
     <Row gutter={16}>
       <Col span={10}>
-        <Select
+        <Select allowClear
           placeholder="选择第一个版本"
           style={{ width: "100%" }}
           value={compareBackup1?.id}
@@ -573,7 +573,7 @@ function DiffSelectRow(props: {
         VS
       </Col>
       <Col span={10}>
-        <Select
+        <Select allowClear
           placeholder="选择第二个版本"
           style={{ width: "100%" }}
           value={compareBackup2?.id}

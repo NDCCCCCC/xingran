@@ -147,7 +147,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           name="name"
           rules={[{ required: true, message: "请输入规则名称" }, { max: 128 }]}
         >
-          <Input placeholder="如:研发部测试网段豁免" />
+          <Input allowClear placeholder="如:研发部测试网段豁免" />
         </Form.Item>
 
         <Form.Item
@@ -158,7 +158,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           extra="支持 IPv4/IPv6,如 192.168.0.0/16 或 2001:db8::/32"
         >
           {/* eslint-disable-next-line no-restricted-syntax -- placeholder 仅作 UI 提示 */}
-          <Input placeholder="192.168.0.0/16" />
+          <Input allowClear placeholder="192.168.0.0/16" />
         </Form.Item>
 
         <Form.Item label="冲突类型" name="conflictTypes" extra="留空 = 匹配全部 B-F 类型">
@@ -179,7 +179,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           extra="可多选,多规则命中时取并集"
         >
           {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select mode="multiple" placeholder="选择动作">
+          <Select allowClear mode="multiple" placeholder="选择动作">
             {EXCEPTION_ACTION_OPTIONS.map((o) => (
               <Select.Option key={o.value} value={o.value}>
                 {o.label}
@@ -212,7 +212,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
             rules={[{ required: true, message: `请输入 ${scopeType} UUID` }]}
             extra={`${scopeType} scope 需 IP CIDR 命中 + ${scopeType}ID 匹配双条件`}
           >
-            <Input placeholder="00000000-0000-0000-0000-000000000000" />
+            <Input allowClear placeholder="00000000-0000-0000-0000-000000000000" />
           </Form.Item>
         )}
 

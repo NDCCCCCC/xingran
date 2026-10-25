@@ -62,7 +62,7 @@ const DutyHolidayPage: FC = () => {
         }
         extra={
           <Space>
-            <Select
+            <Select allowClear
               value={year}
               onChange={(y) => fetchList(y)}
               style={{ width: 120 }}

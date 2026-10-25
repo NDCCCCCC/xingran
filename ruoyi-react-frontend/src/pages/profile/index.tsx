@@ -331,7 +331,7 @@ const ProfilePage: FC = () => {
             name="nickname"
             rules={[{ max: 64, message: "昵称长度不能超过64个字符" }]}
           >
-            <Input placeholder="请输入昵称" />
+            <Input allowClear placeholder="请输入昵称" />
           </Form.Item>
 
           <Form.Item
@@ -339,7 +339,7 @@ const ProfilePage: FC = () => {
             name="email"
             rules={[{ type: "email", message: "请输入有效的邮箱地址" }]}
           >
-            <Input placeholder="请输入邮箱" />
+            <Input allowClear placeholder="请输入邮箱" />
           </Form.Item>
 
           <Form.Item
@@ -347,11 +347,11 @@ const ProfilePage: FC = () => {
             name="phone"
             rules={[{ max: 32, message: "手机号长度不能超过32个字符" }]}
           >
-            <Input placeholder="请输入手机号" />
+            <Input allowClear placeholder="请输入手机号" />
           </Form.Item>
 
           <Form.Item label="性别" name="gender" initialValue={0}>
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               <Option value={0}>未知</Option>
               <Option value={1}>男</Option>
               <Option value={2}>女</Option>

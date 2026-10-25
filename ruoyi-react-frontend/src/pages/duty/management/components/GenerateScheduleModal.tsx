@@ -61,7 +61,7 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
           label="值班池"
           rules={[{ required: true, message: "请选择值班池" }]}
         >
-          <Select placeholder="请选择值班池" onSearch={() => {}}>
+          <Select allowClear placeholder="请选择值班池" onSearch={() => {}}>
             {pools.map((pool) => (
               <Select.Option key={pool.id} value={pool.id}>
                 {pool.poolName}
@@ -82,7 +82,7 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
           rules={[{ required: true, message: "请选择值班类型" }]}
           initialValue="weekday"
         >
-          <Select placeholder="请选择值班类型" onSearch={() => {}}>
+          <Select allowClear placeholder="请选择值班类型" onSearch={() => {}}>
             <Select.Option value="weekday">工作日值班</Select.Option>
             <Select.Option value="weekend">周末值班</Select.Option>
             <Select.Option value="holiday">节假日值班</Select.Option>

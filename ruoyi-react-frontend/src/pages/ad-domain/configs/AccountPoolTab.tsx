@@ -443,7 +443,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             label="账号（UPN 或 sAMAccountName）"
             rules={[{ required: true, message: "请输入账号" }]}
           >
-            <Input placeholder="如 svc-01@corp.local" disabled={!!editing} />
+            <Input allowClear placeholder="如 svc-01@corp.local" disabled={!!editing} />
           </Form.Item>
           <Form.Item
             name="password"

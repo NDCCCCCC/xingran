@@ -236,7 +236,7 @@ const DepartmentManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deptName" label="部门名称">
-              <Input placeholder="请输入部门名称" />
+              <Input allowClear placeholder="请输入部门名称" />
             </Form.Item>
             <Form.Item name="status" label="状态">
               <Select

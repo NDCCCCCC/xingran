@@ -81,14 +81,14 @@ export function HolidayBatchModal({
                   />
                 </td>
                 <td className="border p-2">
-                  <Input
+                  <Input allowClear
                     value={row.holidayName}
                     onChange={(e) => onUpdateRow(index, "holidayName", e.target.value)}
                     placeholder="节假日名称"
                   />
                 </td>
                 <td className="border p-2">
-                  <Select
+                  <Select allowClear
                     value={row.holidayType}
                     onChange={(v) => onUpdateRow(index, "holidayType", v)}
                     style={{ width: "100%" }}

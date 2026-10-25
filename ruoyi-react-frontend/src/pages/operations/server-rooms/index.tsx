@@ -472,7 +472,7 @@ const ServerRoomManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="buildingId" label="所在楼宇">
-                <Select
+                <Select allowClear
                   placeholder="请先选择部门"
                   options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
                   disabled={!selectedDeptId}
@@ -480,13 +480,13 @@ const ServerRoomManagement: FC = () => {
                 />
               </Form.Item>
               <Form.Item name="floorNo" label="楼层">
-                <Input placeholder="请输入楼层" />
+                <Input allowClear placeholder="请输入楼层" />
               </Form.Item>
               <Form.Item name="name" label="机房名称">
-                <Input placeholder="请输入机房名称" />
+                <Input allowClear placeholder="请输入机房名称" />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" onSearch={() => {}}>
+                <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
                   <Option value={0}>正常</Option>
                   <Option value={1}>停用</Option>
                 </Select>
@@ -618,7 +618,7 @@ const ServerRoomManagement: FC = () => {
               label="所在楼宇"
               rules={[{ required: true, message: "请选择所在楼宇" }]}
             >
-              <Select
+              <Select allowClear
                 placeholder="请选择所在楼宇"
                 className="user-form-input"
                 options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
@@ -634,7 +634,7 @@ const ServerRoomManagement: FC = () => {
               label="楼层"
               rules={[{ required: true, message: "请选择楼层" }]}
             >
-              <Select
+              <Select allowClear
                 placeholder="请选择楼层"
                 className="user-form-input"
                 disabled={floorOptions.length === 0}
@@ -650,14 +650,14 @@ const ServerRoomManagement: FC = () => {
               label="机房名称"
               rules={[{ required: true, message: "请输入机房名称" }]}
             >
-              <Input placeholder="请输入机房名称" className="user-form-input" />
+              <Input allowClear placeholder="请输入机房名称" className="user-form-input" />
             </Form.Item>
             <Form.Item
               name="status"
               label="状态"
               rules={[{ required: true, message: "请选择状态" }]}
             >
-              <Select
+              <Select allowClear
                 placeholder="请选择状态"
                 className="user-form-input"
                 options={[

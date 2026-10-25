@@ -271,7 +271,7 @@ const Login: FC = () => {
               label={<span className="login-label">账号</span>}
               rules={[{ required: true, message: "请输入用户名" }]}
             >
-              <Input prefix={<UserOutlined />} placeholder="用户名" autoComplete="username" />
+              <Input allowClear prefix={<UserOutlined />} placeholder="用户名" autoComplete="username" />
             </Form.Item>
 
             <Form.Item

@@ -758,7 +758,7 @@ const BuildingManagement: FC = () => {
                 label="楼宇名称"
                 rules={[{ required: true, message: "请输入楼宇名称" }]}
               >
-                <Input placeholder="请输入楼宇名称" />
+                <Input allowClear placeholder="请输入楼宇名称" />
               </Form.Item>
 
               <Form.Item name="orgId" label="所属机构">
@@ -781,13 +781,13 @@ const BuildingManagement: FC = () => {
               </Form.Item>
 
               <Form.Item name="address" label="地址">
-                <Input placeholder="请输入地址（保存时将自动解析经纬度）" />
+                <Input allowClear placeholder="请输入地址（保存时将自动解析经纬度）" />
               </Form.Item>
 
               {/* 经纬度显示（只读，自动解析） */}
               {(geocoding.result || editingBuilding?.longitude) && (
                 <Form.Item label="经纬度">
-                  <Input
+                  <Input allowClear
                     disabled
                     placeholder="经纬度（保存时根据地址自动解析）"
                     value={
@@ -825,7 +825,7 @@ const BuildingManagement: FC = () => {
                 label="状态"
                 rules={[{ required: true, message: "请选择状态" }]}
               >
-                <Select placeholder="请选择状态" onSearch={() => {}}>
+                <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
                   <Option value={0}>正常</Option>
                   <Option value={1}>停用</Option>
                 </Select>

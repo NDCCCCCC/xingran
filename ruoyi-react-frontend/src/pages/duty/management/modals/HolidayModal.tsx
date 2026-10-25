@@ -36,7 +36,7 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
           label="名称"
           rules={[{ required: true, message: "请输入名称" }]}
         >
-          <Select placeholder="选择或输入" onSearch={() => {}}>
+          <Select allowClear placeholder="选择或输入" onSearch={() => {}}>
             {HOLIDAY_NAME_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -50,7 +50,7 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
           rules={[{ required: true }]}
           initialValue="custom"
         >
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             {HOLIDAY_TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -59,7 +59,7 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
           </Select>
         </Form.Item>
         <Form.Item name="isOffday" label="是否休息" valuePropName="checked" initialValue={true}>
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             <Option value={true}>休息</Option>
             <Option value={false}>工作</Option>
           </Select>

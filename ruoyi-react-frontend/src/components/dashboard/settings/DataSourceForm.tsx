@@ -200,7 +200,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
           initialValue={dataSourceType}
         >
           {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select
+          <Select allowClear
             value={dataSourceType}
             onChange={handleTypeChange}
             disabled={disabled}
@@ -234,7 +234,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               tooltip="根据所选端点自动设置"
               initialValue="GET"
             >
-              <Select disabled={disabled} onSearch={() => {}}>
+              <Select allowClear disabled={disabled} onSearch={() => {}}>
                 <Select.Option value="GET">GET</Select.Option>
                 <Select.Option value="POST">POST</Select.Option>
               </Select>
@@ -250,7 +250,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               tooltip="使用 JSONata 表达式提取和转换数据"
               extra="例如：data.list[0].value 或 $sum(data.items.price)"
             >
-              <Input placeholder="data.list" disabled={disabled} />
+              <Input allowClear placeholder="data.list" disabled={disabled} />
             </Form.Item>
           </>
         )}
@@ -264,7 +264,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               rules={[{ required: true, message: "请输入 WebSocket 频道" }]}
               tooltip="订阅的 WebSocket 频道/主题名称"
             >
-              <Input placeholder="dashboard/realtime" disabled={disabled} />
+              <Input allowClear placeholder="dashboard/realtime" disabled={disabled} />
             </Form.Item>
 
             <Form.Item
@@ -272,7 +272,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               name="transformExpression"
               tooltip="使用 JSONata 表达式转换推送数据"
             >
-              <Input placeholder="data.value" disabled={disabled} />
+              <Input allowClear placeholder="data.value" disabled={disabled} />
             </Form.Item>
 
             <Alert

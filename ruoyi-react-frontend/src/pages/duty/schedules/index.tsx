@@ -608,7 +608,7 @@ const DutySchedulePage: FC = () => {
             label="值班池"
             rules={[{ required: true, message: "请选择值班池" }]}
           >
-            <Select placeholder="请选择值班池" onSearch={() => {}}>
+            <Select allowClear placeholder="请选择值班池" onSearch={() => {}}>
               {pools.map((pool) => (
                 <Option key={pool.id} value={pool.id}>
                   {pool.poolName}
@@ -631,7 +631,7 @@ const DutySchedulePage: FC = () => {
             rules={[{ required: true, message: "请选择值班类型" }]}
             initialValue="weekday"
           >
-            <Select placeholder="请选择值班类型" onSearch={() => {}}>
+            <Select allowClear placeholder="请选择值班类型" onSearch={() => {}}>
               {DUTY_TYPE_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}值班
@@ -674,7 +674,7 @@ const DutySchedulePage: FC = () => {
             label="原排班记录"
             rules={[{ required: true, message: "请选择排班记录" }]}
           >
-            <Select
+            <Select allowClear
               placeholder="请选择原排班记录"
               showSearch
               optionFilterProp="label"
@@ -693,7 +693,7 @@ const DutySchedulePage: FC = () => {
             label="目标排班记录"
             rules={[{ required: true, message: "请选择排班记录" }]}
           >
-            <Select
+            <Select allowClear
               placeholder="请选择目标排班记录"
               showSearch
               optionFilterProp="label"
@@ -735,7 +735,7 @@ const DutySchedulePage: FC = () => {
             label="值班池"
             rules={[{ required: true, message: "请选择值班池" }]}
           >
-            <Select placeholder="请选择值班池" onSearch={() => {}}>
+            <Select allowClear placeholder="请选择值班池" onSearch={() => {}}>
               {pools.map((pool) => (
                 <Option key={pool.id} value={pool.id}>
                   {pool.poolName}
@@ -757,7 +757,7 @@ const DutySchedulePage: FC = () => {
             label="值班类型"
             rules={[{ required: true, message: "请选择值班类型" }]}
           >
-            <Select placeholder="请选择值班类型" onSearch={() => {}}>
+            <Select allowClear placeholder="请选择值班类型" onSearch={() => {}}>
               {DUTY_TYPE_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -771,7 +771,7 @@ const DutySchedulePage: FC = () => {
             label="值班人员"
             rules={[{ required: true, message: "请选择值班人员" }]}
           >
-            <Select
+            <Select allowClear
               mode="multiple"
               placeholder="请选择值班人员"
               optionLabelProp="label"

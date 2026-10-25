@@ -153,7 +153,7 @@ const DutyConfigPage: FC = () => {
             tooltip="可选择多种提醒方式"
             rules={[{ required: true, message: "请选择提醒渠道" }]}
           >
-            <Select mode="multiple" placeholder="请选择提醒渠道" onSearch={() => {}}>
+            <Select allowClear mode="multiple" placeholder="请选择提醒渠道" onSearch={() => {}}>
               <Select.Option value="websocket">
                 <Space>
                   <BellOutlined />
@@ -180,7 +180,7 @@ const DutyConfigPage: FC = () => {
             name="beforeReminderMinutes"
             tooltip="设置提前多少分钟提醒，留空则表示当天提醒"
           >
-            <Input
+            <Input allowClear
               type="number"
               placeholder="留空表示当天提醒"
               suffix="分钟"

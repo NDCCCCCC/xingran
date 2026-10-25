@@ -198,7 +198,7 @@ export function CADPropertyPanel({
             />
           );
         }
-        return <Input key={String(field.name)} placeholder={field.placeholder} {...commonProps} />;
+        return <Input allowClear key={String(field.name)} placeholder={field.placeholder} {...commonProps} />;
 
       case "number":
         return (
@@ -213,7 +213,7 @@ export function CADPropertyPanel({
 
       case "select":
         // eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed
-        return <Select key={String(field.name)} options={field.options} {...commonProps} />;
+        return <Select allowClear key={String(field.name)} options={field.options} {...commonProps} />;
 
       case "color":
         return <ColorPicker key={String(field.name)} showText disabled={readOnly} format="hex" />;

@@ -535,14 +535,14 @@ const CredentialManagement: FC = () => {
             label="凭证名称"
             rules={[{ required: true, message: "请输入凭证名称" }]}
           >
-            <Input placeholder="请输入凭证名称" />
+            <Input allowClear placeholder="请输入凭证名称" />
           </Form.Item>
           <Form.Item
             name="protocolType"
             label="协议类型"
             rules={[{ required: true, message: "请选择协议类型" }]}
           >
-            <Select placeholder="请选择协议类型 (SSH 或 Telnet)" onSearch={() => {}}>
+            <Select allowClear placeholder="请选择协议类型 (SSH 或 Telnet)" onSearch={() => {}}>
               {protocolTypeOptions.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -557,7 +557,7 @@ const CredentialManagement: FC = () => {
             label="用户名"
             rules={[{ required: true, message: "请输入用户名" }]}
           >
-            <Input placeholder="请输入用户名" />
+            <Input allowClear placeholder="请输入用户名" />
           </Form.Item>
           <Form.Item
             name="password"
@@ -588,7 +588,7 @@ const CredentialManagement: FC = () => {
             label="SNMP Communities"
             extra="用于设备状态检查和自动发现，可留空"
           >
-            <Select
+            <Select allowClear
               mode="tags"
               placeholder="请输入 SNMP Community，可添加多个"
               tokenSeparators={[","]}
@@ -596,7 +596,7 @@ const CredentialManagement: FC = () => {
             ></Select>
           </Form.Item>
           <Form.Item name="snmpVersion" label="SNMP版本" rules={[{ required: true }]}>
-            <Select onSearch={() => {}}>
+            <Select allowClear onSearch={() => {}}>
               {snmpVersionOptions.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}

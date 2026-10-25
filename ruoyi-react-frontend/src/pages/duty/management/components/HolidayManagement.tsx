@@ -149,7 +149,7 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
       >
         <Space>
           <span>年份：</span>
-          <Select
+          <Select allowClear
             value={holidayYear}
             onChange={onYearChange}
             style={{ width: 120 }}

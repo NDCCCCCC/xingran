@@ -44,7 +44,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
     >
       <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
         <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             {SHAPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -53,7 +53,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
           </Select>
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             {DIFFICULTY_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -62,7 +62,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
           </Select>
         </Form.Item>
         <Form.Item name="allowedShapes" label="允许的形状">
-          <Select mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
+          <Select allowClear mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
             {SHAPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -71,7 +71,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-          <Select onSearch={() => {}}>
+          <Select allowClear onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -80,7 +80,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
           </Select>
         </Form.Item>
         <Form.Item name="sortOrder" label="排序" rules={[{ required: true }]}>
-          <Input type="number" placeholder="数字越小优先级越高" />
+          <Input allowClear type="number" placeholder="数字越小优先级越高" />
         </Form.Item>
         <Form.Item name="remark" label="备注">
           <TextArea rows={3} placeholder="请输入备注" />
