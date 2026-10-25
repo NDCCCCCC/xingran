@@ -209,7 +209,7 @@ export function formatTime(date): string;   // "HH:mm:ss"
 | `"YYYY-MM-DD HH:mm:ss"` | 9 | ✅ 基准 → `formatDateTime()` |
 | `"YYYY年MM月DD日"` | 4 | 收敛 → `formatDate()`（列表/详情一律 ISO 风格；如确为展示性场景保留须登记豁免+理由） |
 | `"YYYY-MM-DD HH:mm"` | 3 | 分档收敛：精度到分的场景统一 `formatDateTime(x, "YYYY-MM-DD HH:mm")`（helper 的 format 参数允许，但字符串字面量集中为常量 `FORMAT_DATETIME_MINUTE` 导出） |
-| `"YYYY-MM-DDTHH:mm:ss"` | 2 | **bug 级**：T 分隔符会原样渲染给用户 → `formatDateTime()` |
+| `"YYYY-MM-DDTHH:mm:ss"` | 2 | ~~**bug 级**：T 分隔符会原样渲染给用户 → `formatDateTime()`~~ **执行时核实修正（2026-10-26）**：2 处在 `notice/index.tsx:257/:280`，为提交后端的 ISO 8601 payload 构建而非用户可见展示，T 分隔符是标准语义——**不改**，登记 `date-exemptions.md`（Lead 裁决见 `.lead-ruling.md`，本行原「bug 级」判定系 grep 未核消费场景误标） |
 | `"MM-DD"` | 2 | 周视图等紧凑场景 → `formatDate(x, "MM-DD")`? 归入常量 `FORMAT_DATE_SHORT`，禁止散落 |
 | `"HH:mm"` | 2 | → `formatTime` 或常量 `FORMAT_TIME_MINUTE` |
 
