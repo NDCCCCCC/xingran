@@ -179,6 +179,7 @@ export default [
   // T7 迁移完成后复跑收缩）。文件清单见下方 files 数组。
   {
     files: [
+      // __P65_EXEMPTION_FILES__（脚本替换锚点）
       "src/components/CronSelector/fields/DayField.tsx",
       "src/components/CronSelector/fields/HourField.tsx",
       "src/components/CronSelector/fields/MinuteField.tsx",
