@@ -1,10 +1,27 @@
-import { useState, useEffect, useMemo } from "react";
+/**
+ * 设备发现管理 — Phase 67 T1 存量迁移（PageTable 契约，405 → 契约化）
+ *
+ * 迁移自双 hook（usePagination + useServerSort）+ 手工 Table/搜索卡实现；
+ * 列表数据层/分页/排序/三态/删除确认全部由 PageTable 内建承接。
+ *
+ * PR 差异记录（66/67 契约内允许变化，67-UI-SPEC §1.2）：
+ * - B 类：删除确认文案对齐 65 模板（原 columns.tsx 裸 Modal.confirm「确认删除?/确定/取消」
+ *   → ConfirmDelete「确认删除 / 将删除{taskName}，删除后不可恢复，是否继续？/删除/取消」）；
+ *   成功文案 helper「已删除」替代原「删除成功」；onOk Promise 天然获得提交中防重。
+ * - C 类 1：状态筛选接线生效（原 Select 未受控，选择不进请求参数；现经 searchFields
+ *   schema 进入 filters.status）——缺陷修复。
+ * - C 类 2：搜索按钮「查询→搜索」；新增「重置」按钮（SearchForm 内建）。
+ * - retry 联动（M1-error 裁决）：request 内联动 loadStatistics——错误重试/搜索/刷新
+ *   均同时刷新列表 + 统计（副作用：翻页也会刷新统计，原翻页不刷，可感知差异趋强不趋弱）。
+ * - 轮询保持：useDiscoveryPolling 继续工作（列表行经 request 回传驻留 pollList state，
+ *   onPoll 桥接 PageTable ctx.loadData）；CreateModal/ResultModal/导出原样未迁。
+ */
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
+import { Button, Row, Col, Card, Statistic, App, Form } from "antd";
 import {
-  SearchOutlined,
-  ReloadOutlined,
   PlusOutlined,
+  EyeOutlined,
   CloudServerOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -18,73 +35,74 @@ import { parseIPRanges } from "./utils";
 import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import type { FormInstance } from "antd/es/form";
+import type { PageResponse } from "@/types";
+import type { DeviceDiscovery } from "@/types";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
-import { usePagination } from "@/hooks/usePagination";
-import { useServerSort } from "@/hooks/useServerSort";
+import { BatchExportModal } from "@/components/shared";
+import { PageTable } from "@/components/shared";
+import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { handleApiError, isFormValidationError } from "@/utils/errorHandler";
-import type { DeviceDiscovery } from "@/types";
 
-const { Option } = Select;
+const statusSearchOptions = STATUS_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value }));
 
 const DeviceDiscoveryPage: FC = () => {
   const { message } = App.useApp();
-  // 使用全局分页 hook
-  const { paginationProps, setTotal } = usePagination();
 
-  // 服务端排序:field 与 columns.dataIndex 对齐
-  const sorterMetas = useMemo(
-    () => [
-      createSorterMeta<DeviceDiscovery>("taskName"),
-      createSorterMeta<DeviceDiscovery>("discoveryType"),
-      createSorterMeta<DeviceDiscovery>("status"),
-      createSorterMeta<DeviceDiscovery>("startedAt"),
-      createSorterMeta<DeviceDiscovery>("completedAt"),
-    ],
-    []
-  );
-  const {
-    orderByColumn,
-    isAsc,
-    handleTableChange: handleDiscoverySortChange,
-    sortOrder: discoverySortOrder,
-  } = useServerSort<DeviceDiscovery>({
-    sorterMetas,
-  });
-
-  const [form] = Form.useForm();
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
+  const [form] = Form.useForm();
 
-  // 数据管理
+  // PageTable ctx.loadData 提升到删除/创建/轮询回调
+  const reloadRef = useRef<() => void>(() => {});
+  // 轮询桥接：request 回传的最新列表行驻留此处，供 useDiscoveryPolling 判断 running 任务
+  const [pollList, setPollList] = useState<DeviceDiscovery[]>([]);
+  // 导出当前页参数：request 入参回传（PageTable 契约外经 state 透传给 NetworkExport）
+  const [exportPage, setExportPage] = useState({ current: 1, pageSize: 10 });
+
+  // 统计/部门/结果弹窗数据（PageTable 契约外业务；hook 文件零改动）
   const {
-    discoveries,
     discoveredDevices,
     resultsLoading,
     departments,
-    loading,
-    total: hookTotal,
     statistics,
     modalState,
     currentDiscovery,
     setModalState,
     setCurrentDiscovery,
-    error: discoveryError,
-    loadDiscoveries,
     loadStatistics,
     loadDepartments,
     loadDiscoveryResults,
-  } = useDiscoveryData({
-    current: paginationProps.current ?? 1,
-    pageSize: paginationProps.pageSize ?? 10,
-  });
+  } = useDiscoveryData({ current: 1, pageSize: 10 });
 
-  // 轮询管理
-  useDiscoveryPolling({
-    discoveries,
-    onPoll: loadDiscoveries,
-  });
+  // 服务端排序:field 与 columns.dataIndex 对齐（经 PageTable sorterMetas 透传）
+  const sorterMetas = [
+    createSorterMeta<DeviceDiscovery>("taskName"),
+    createSorterMeta<DeviceDiscovery>("discoveryType"),
+    createSorterMeta<DeviceDiscovery>("status"),
+    createSorterMeta<DeviceDiscovery>("startedAt"),
+    createSorterMeta<DeviceDiscovery>("completedAt"),
+  ];
+
+  // 列表请求（PageTable 唯一数据入口）；同时联动统计刷新（retry = 列表 + 统计都刷）
+  const request = useCallback(
+    async (params: Record<string, unknown>) => {
+      void loadStatistics();
+      setExportPage({
+        current: (params.current as number) ?? 1,
+        pageSize: (params.pageSize as number) ?? 10,
+      });
+      const result = await post<PageResponse<DeviceDiscovery>>("/network/discoveries/list", params);
+      const list = result.data?.list || [];
+      setPollList(list);
+      return { list, total: result.data?.total || 0 };
+    },
+    [loadStatistics]
+  );
+
+  // 轮询管理（onPoll 桥接 PageTable 内部重载；行为与迁前 loadDiscoveries 等价）
+  const handlePoll = useCallback(() => reloadRef.current(), []);
+  useDiscoveryPolling({ discoveries: pollList, onPoll: handlePoll });
 
   // 打开创建模态框
   const openModal = async () => {
@@ -131,7 +149,7 @@ const DeviceDiscoveryPage: FC = () => {
       message.success("发现任务已创建");
       setModalState((prev) => ({ ...prev, modalVisible: false }));
       form.resetFields();
-      loadDiscoveries();
+      reloadRef.current();
       loadStatistics();
     } catch (error: unknown) {
       if (isFormValidationError(error)) {
@@ -141,20 +159,14 @@ const DeviceDiscoveryPage: FC = () => {
     }
   };
 
-  // 删除任务
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
+  // 删除任务（经 rowActions createDeleteAction→ConfirmDelete；成功文案由 helper
+  // 「已删除」承接，失败 helper 内 handleApiError 且确认框保持打开可重试）
   const handleDelete = async (id: string) => {
-    try {
-      await post(`/network/discoveries/${id}/delete`, {});
-      message.success("删除成功");
-      loadDiscoveries();
-    } catch (_error) {
-      message.error("删除失败");
-    }
+    await post(`/network/discoveries/${id}/delete`, {});
+    reloadRef.current();
   };
 
   // 查看发现结果
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
   const handleViewResult = async (record: DeviceDiscovery) => {
     setCurrentDiscovery(record);
     // FIX-01: 先开弹窗再加载，加载期间内嵌表显示 loading 蒙层
@@ -169,7 +181,7 @@ const DeviceDiscoveryPage: FC = () => {
       await post(`/network/discoveries/${currentDiscovery.id}/import`, {});
       message.success("导入成功");
       setModalState((prev) => ({ ...prev, resultModalVisible: false }));
-      loadDiscoveries();
+      reloadRef.current();
     } catch (_error) {
       message.error("导入失败");
     }
@@ -189,197 +201,113 @@ const DeviceDiscoveryPage: FC = () => {
     }
   };
 
-  // 表格列
-  const discoveryColumns = useMemo(
-    () =>
-      getDiscoveryColumns({
-        handleViewResult,
-        handleDelete,
-        getSortOrder: (field) =>
-          orderByColumn === field
-            ? ((discoverySortOrder ?? null) as "ascend" | "descend" | null)
-            : null,
-      }),
-    [handleViewResult, handleDelete, orderByColumn, discoverySortOrder]
-  );
-
-  // STOP-02: 列表接口返回后回填分页器 total（hook 内部 total → usePagination）
-  useEffect(() => {
-    setTotal(hookTotal);
-  }, [setTotal, hookTotal]);
-
-  useEffect(() => {
-    loadDiscoveries();
-    loadStatistics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentionally stable
-  }, [paginationProps.current, paginationProps.pageSize, loadDiscoveries, loadStatistics]);
+  const columns = getDiscoveryColumns();
 
   return (
     <div>
-      {/* FIX-04a: 列表加载失败可重试错误条 */}
-      {!!discoveryError && (
-        <ErrorAlertWithRetry
-          error={discoveryError}
-          onRetry={() => Promise.all([loadDiscoveries(), loadStatistics()])}
-        />
-      )}
-      {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={4}>
-          <Card>
-            <Statistic title="任务总数" value={statistics.total} prefix={<CloudServerOutlined />} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="待执行"
-              value={statistics.pending}
-              styles={{ content: { color: "var(--theme-text-tertiary, #999)" } }}
-              prefix={<ClockCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="扫描中"
-              value={statistics.running}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
-              prefix={<CloudServerOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="已完成"
-              value={statistics.completed}
-              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="失败"
-              value={statistics.failed}
-              styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
-              prefix={<CloseCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic title="发现设备" value={statistics.totalDevices} />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 搜索表单和操作按钮 */}
-      <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
-        >
-          <Form layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item label="状态">
-              <Select
-                placeholder="请选择状态"
-                allowClear
-                className="user-form-input"
-                style={{ width: 120 }}
-                onChange={() => {
-                  loadDiscoveries();
-                  loadStatistics();
-                }}
-                onSearch={() => {}}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button
-                  aria-label="查询"
-                  title="查询"
-                  icon={<SearchOutlined />}
-                  onClick={() => {
-                    loadDiscoveries();
-                    loadStatistics();
-                  }}
-                >
-                  查询
-                </Button>
-                <Button
-                  aria-label="刷新"
-                  title="刷新"
-                  icon={<ReloadOutlined />}
-                  onClick={() => {
-                    loadDiscoveries();
-                    loadStatistics();
-                  }}
-                >
-                  刷新
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-          <Space>
+      <PageTable<DeviceDiscovery>
+        request={request}
+        columns={columns}
+        rowKey={(record) => record.id}
+        scroll={{ x: 1500 }}
+        searchFields={[
+          {
+            type: "select",
+            name: "status",
+            label: "状态",
+            options: statusSearchOptions,
+            placeholder: "请选择状态",
+          },
+        ]}
+        sorterMetas={sorterMetas}
+        rowActions={(record) => [
+          {
+            key: "view-result",
+            label: "查看结果",
+            icon: <EyeOutlined />,
+            onClick: () => handleViewResult(record),
+            disabled: record.status === "pending",
+          },
+          createDeleteAction(record.id, handleDelete, { label: record.taskName }),
+        ]}
+        toolbar={
+          <>
             <NetworkExport
               entityType="discoveries"
               entityName="设备发现"
               filters={{}}
-              current={paginationProps.current}
-              pageSize={paginationProps.pageSize}
+              current={exportPage.current}
+              pageSize={exportPage.pageSize}
             />
-            <Button type="primary" icon={<PlusOutlined />} onClick={openModal} aria-label="新增任务" title="新增任务" >
+            <Button type="primary" icon={<PlusOutlined />} onClick={openModal} aria-label="新增任务" title="新增任务">
               创建发现任务
             </Button>
-          </Space>
-          {/* 批量导出 Modal */}
+          </>
+        }
+      >
+        {() => (
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={4}>
+              <Card>
+                <Statistic title="任务总数" value={statistics.total} prefix={<CloudServerOutlined />} />
+              </Card>
+            </Col>
+            <Col span={4}>
+              <Card>
+                <Statistic
+                  title="待执行"
+                  value={statistics.pending}
+                  styles={{ content: { color: "var(--theme-text-tertiary, #999)" } }}
+                  prefix={<ClockCircleOutlined />}
+                />
+              </Card>
+            </Col>
+            <Col span={4}>
+              <Card>
+                <Statistic
+                  title="扫描中"
+                  value={statistics.running}
+                  styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                  prefix={<CloudServerOutlined />}
+                />
+              </Card>
+            </Col>
+            <Col span={4}>
+              <Card>
+                <Statistic
+                  title="已完成"
+                  value={statistics.completed}
+                  styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                  prefix={<CheckCircleOutlined />}
+                />
+              </Card>
+            </Col>
+            <Col span={4}>
+              <Card>
+                <Statistic
+                  title="失败"
+                  value={statistics.failed}
+                  styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
+                  prefix={<CloseCircleOutlined />}
+                />
+              </Card>
+            </Col>
+            <Col span={4}>
+              <Card>
+                <Statistic title="发现设备" value={statistics.totalDevices} />
+              </Card>
+            </Col>
+          </Row>
+        )}
+      </PageTable>
 
-          <BatchExportModal
-            visible={batchModalVisible}
-
-            onConfirm={handleBatchExport}
-
-            onCancel={() => setBatchModalVisible(false)}
-
-            loading={batchExporting}
-          />
-        </div>
-      </Card>
-
-      {/* 发现任务表格 */}
-      <Card>
-        <Table
-          columns={discoveryColumns}
-          dataSource={discoveries}
-          loading={loading}
-          rowKey="id"
-          scroll={{ x: 1500 }}
-          pagination={paginationProps}
-          onChange={(pagination, _filters, sorter) => {
-            handleDiscoverySortChange(pagination, _filters, sorter);
-            loadDiscoveries({
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              ...(orderByColumn ? { orderByColumn, isAsc } : {}),
-            });
-          }}
-        />
-      </Card>
+      {/* 批量导出 Modal */}
+      <BatchExportModal
+        visible={batchModalVisible}
+        onConfirm={handleBatchExport}
+        onCancel={() => setBatchModalVisible(false)}
+        loading={batchExporting}
+      />
 
       {/* 创建发现任务模态框 */}
       <CreateModal
