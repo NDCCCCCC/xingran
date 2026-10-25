@@ -26,7 +26,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
 import { useQuery } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/usePagination";
@@ -323,7 +323,7 @@ const DutyPoolPage: FC = () => {
       width: 160,
       sorter: true,
       sortOrder: getColumnSortOrder("createdAt"),
-      render: (date: string) => formatDateTime(date, "YYYY-MM-DD HH:mm"),
+      render: (date: string) => formatDateTime(date, FORMAT_DATETIME_MINUTE),
     },
     {
       title: "操作",
@@ -344,7 +344,7 @@ const DutyPoolPage: FC = () => {
             type="link"
             size="small"
             icon={<DeleteOutlined />}
-            style={{ color: "#ba3630" }}
+            style={{ color: "var(--theme-error)" }}
             onClick={() => {
               Modal.confirm({
                 title: "确定要删除吗？",
@@ -373,14 +373,14 @@ const DutyPoolPage: FC = () => {
             <Statistic
               title="启用中"
               value={stats.enabled}
-              styles={{ content: { color: "#3f8600" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
             />
           </Col>
           <Col span={6}>
             <Statistic
               title="已停用"
               value={stats.disabled}
-              styles={{ content: { color: "#cf1322" } }}
+              styles={{ content: { color: "var(--theme-error)" } }}
             />
           </Col>
           <Col span={6}>

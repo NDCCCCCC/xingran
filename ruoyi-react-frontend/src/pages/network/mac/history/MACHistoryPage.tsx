@@ -54,6 +54,7 @@ import {
 } from "@ant-design/icons";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import { formatDateTime } from "@/utils/datetime";
 import type { Dayjs } from "dayjs";
 import { useTableQuery } from "@/hooks/useTableQuery";
 import { useColumnConfig, type ColumnConfig } from "@/hooks/useColumnConfig";
@@ -236,8 +237,7 @@ const MACHistoryPage: React.FC = () => {
         title: "时间",
         key: "time",
         width: 160,
-        render: (_: unknown, record: MACHistoryRecord) =>
-          dayjs(record.firstSeen).format("YYYY-MM-DD HH:mm:ss"),
+        render: (_: unknown, record: MACHistoryRecord) => formatDateTime(record.firstSeen),
       },
       mac: {
         title: "MAC 地址",
@@ -544,7 +544,7 @@ const MACHistoryPage: React.FC = () => {
                   <div>设备: {record.deviceNameSnapshot || record.deviceId}</div>
                   <div>端口: {record.interfaceName}</div>
                   <div>VLAN: {record.vlanId ?? "-"}</div>
-                  <div>时间: {dayjs(record.firstSeen).format("YYYY-MM-DD HH:mm:ss")}</div>
+                  <div>时间: {formatDateTime(record.firstSeen)}</div>
                 </div>
               }
             />

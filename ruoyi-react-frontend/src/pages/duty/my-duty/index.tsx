@@ -21,7 +21,7 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import dayjs from "dayjs";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDateTime, FORMAT_DATETIME_MINUTE, FORMAT_DATE_SHORT } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
 import {
   getMyDutyStats,
@@ -236,7 +236,7 @@ const MyDutyPage: FC = () => {
       key: "createdAt",
       width: 180,
       sorter: createSorter<WorkOrder>("createdAt", "date"),
-      render: (date: string) => formatDateTime(date, "YYYY-MM-DD HH:mm"),
+      render: (date: string) => formatDateTime(date, FORMAT_DATETIME_MINUTE),
     },
   ];
 
@@ -248,7 +248,7 @@ const MyDutyPage: FC = () => {
       key: "scheduleDate",
       width: 110,
       sorter: createSorter<DutySchedule>("scheduleDate", "date"),
-      render: (date: string) => formatDateTime(date, "MM-DD"),
+      render: (date: string) => formatDateTime(date, FORMAT_DATE_SHORT),
     },
     {
       title: "星期",
@@ -297,7 +297,7 @@ const MyDutyPage: FC = () => {
               prefix={stats?.isOnDutyToday ? <ClockCircleOutlined /> : <CoffeeOutlined />}
               styles={{
                 content: {
-                  color: stats?.isOnDutyToday ? "#3f8600" : "#707068",
+                  color: stats?.isOnDutyToday ? "var(--theme-success)" : "var(--theme-text-secondary)",
                   fontSize: "20px",
                 },
               }}
@@ -312,7 +312,7 @@ const MyDutyPage: FC = () => {
               value={stats?.thisMonthCount || 0}
               suffix="次"
               prefix={<CalendarOutlined />}
-              styles={{ content: { color: "#337ab0", fontSize: "20px" } }}
+              styles={{ content: { color: "var(--theme-info)", fontSize: "20px" } }}
             />
           </Card>
         </Col>
@@ -339,12 +339,12 @@ const MyDutyPage: FC = () => {
                 {stats?.nextDutyDate ? (
                   <Space>
                     <span style={{ fontSize: "18px", fontWeight: 500 }}>
-                      {formatDateTime(stats.nextDutyDate, "MM-DD")}
+                      {formatDateTime(stats.nextDutyDate, FORMAT_DATE_SHORT)}
                     </span>
                     {stats.nextDutyPoolName && <Tag color="blue">{stats.nextDutyPoolName}</Tag>}
                   </Space>
                 ) : (
-                  <span style={{ color: "#707068" }}>暂无排班</span>
+                  <span style={{ color: "var(--theme-text-secondary)" }}>暂无排班</span>
                 )}
               </div>
             </div>

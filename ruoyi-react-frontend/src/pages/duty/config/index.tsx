@@ -16,6 +16,7 @@ import {
 } from "antd";
 import { SaveOutlined, ReloadOutlined, BellOutlined, SettingOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { formatDateTime, FORMAT_TIME_MINUTE } from "@/utils/datetime";
 import { getDutyConfig, updateDutyConfig, type DutyConfig } from "@/lib/dutyApi";
 import { isFormValidationError } from "@/utils/errorHandler";
 
@@ -56,7 +57,7 @@ const DutyConfigPage: FC = () => {
       const values = await form.validateFields();
       const data = {
         reminderEnabled: values.reminderEnabled,
-        reminderTime: values.reminderTime.format("HH:mm"),
+        reminderTime: formatDateTime(values.reminderTime, FORMAT_TIME_MINUTE),
         reminderChannels: Array.isArray(values.reminderChannels)
           ? values.reminderChannels.join(",")
           : values.reminderChannels,

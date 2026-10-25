@@ -25,6 +25,9 @@ vi.mock("@/components/shared/ActionButtons", () => ({
 
 vi.mock("@/utils/datetime", () => ({
   formatDateTime: vi.fn(() => "2026-08-30 10:00"),
+  FORMAT_DATETIME_MINUTE: "YYYY-MM-DD HH:mm",
+  FORMAT_DATE_SHORT: "MM-DD",
+  FORMAT_TIME_MINUTE: "HH:mm",
 }));
 
 import { getArticleColumns } from "../columns";

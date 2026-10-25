@@ -10,7 +10,7 @@ import type { KnowledgeArticle } from "@/lib/knowledgeApi";
 import { KnowledgeArticleStatus } from "@/lib/knowledgeApi";
 import { STATUS_CONFIG } from "./constants";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import type { SorterMeta } from "@/utils/tableHelpers";
 
 export interface ArticleColumnsParams {
@@ -131,7 +131,7 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
       width: 160,
       sorter: true,
       sortOrder: getColumnSortOrder?.("createdAt"),
-      render: (date: string) => formatDateTime(date, "YYYY-MM-DD HH:mm"),
+      render: (date: string) => formatDateTime(date, FORMAT_DATETIME_MINUTE),
     },
     {
       title: "操作",

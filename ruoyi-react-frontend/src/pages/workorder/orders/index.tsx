@@ -57,6 +57,7 @@ import ActionButtons from "@/components/shared/ActionButtons";
 // 导入提取的常量、工具和 Hook
 import { STATUS_CONFIG, PRIORITY_CONFIG, TYPE_CONFIG } from "./constants";
 import { formatDateTime, buildCategoryTree } from "@/lib/workorderApi";
+import { FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { useWorkOrderData } from "./hooks/useWorkOrderData";
 import { useWorkOrderModals, type Comment, type HistoryItem } from "./hooks/useWorkOrderModals";
 import { usePagination } from "@/hooks/usePagination";
@@ -208,7 +209,7 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
                 <Button
                   type="link"
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ba3630)" }}
+                  style={{ color: "var(--theme-error)" }}
                   size="small"
                 >
                   删除
@@ -497,21 +498,21 @@ const WorkOrderPage: FC = () => {
               <Statistic
                 title="待处理"
                 value={stats.pending}
-                styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+                styles={{ content: { color: "var(--theme-warning)" } }}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="处理中"
                 value={stats.processing}
-                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                styles={{ content: { color: "var(--theme-info)" } }}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="已完成"
                 value={stats.completed}
-                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Col>
             <Col span={4}>
@@ -654,7 +655,7 @@ const WorkOrderPage: FC = () => {
               <Button
                 type="primary"
                 onClick={handleBatchDelete}
-                style={{ color: "var(--theme-error, #ba3630)", borderColor: "#ba3630" }}
+                style={{ color: "var(--theme-error)", borderColor: "var(--theme-error)" }}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>
@@ -971,7 +972,7 @@ const WorkOrderPage: FC = () => {
                           </Tag>
                         )}
                         <span className="text-gray-400 text-sm ml-2">
-                          {formatDateTime(comment.createdAt, "YYYY-MM-DD HH:mm")}
+                          {formatDateTime(comment.createdAt, FORMAT_DATETIME_MINUTE)}
                         </span>
                       </div>
                       <p className="mt-1">{comment.content}</p>
@@ -991,7 +992,7 @@ const WorkOrderPage: FC = () => {
                       <div>
                         <strong>{item.operator?.nickName || item.operator?.username}</strong>
                         <span className="text-gray-400 text-sm ml-2">
-                          {formatDateTime(item.createdAt, "YYYY-MM-DD HH:mm")}
+                          {formatDateTime(item.createdAt, FORMAT_DATETIME_MINUTE)}
                         </span>
                       </div>
                       <p className="mt-1">

@@ -25,6 +25,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
+import { formatDateTime } from "@/utils/datetime";
 import {
   Table,
   Form,
@@ -223,7 +224,7 @@ const Exceptions = () => {
         width: 170,
         sorter: createSorter<ExceptionListItem>("detectedAt", "date"),
         sortOrder: getColumnSortOrder("detectedAt"),
-        render: (val: string) => (val ? dayjs(val).format("YYYY-MM-DD HH:mm:ss") : "-"),
+        render: (val: string) => formatDateTime(val),
       },
       {
         title: "冲突类型",

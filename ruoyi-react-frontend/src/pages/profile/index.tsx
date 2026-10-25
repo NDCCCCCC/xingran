@@ -30,7 +30,7 @@ import { useAuthStore } from "@/store/authStore";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { LOGIN, DUTY_MY_DUTY } from "@/constants/routes";
 import type { UserProfile } from "@/types";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDateTime, FORMAT_DATE_SHORT } from "@/utils/datetime";
 import { Link } from "react-router-dom";
 
 const { Option } = Select;
@@ -276,7 +276,7 @@ const ProfilePage: FC = () => {
                     <div style={{ fontSize: "20px", fontWeight: 500 }}>
                       {dutyStats.nextDutyDate ? (
                         <Space>
-                          <span>{formatDateTime(dutyStats.nextDutyDate, "MM-DD")}</span>
+                          <span>{formatDateTime(dutyStats.nextDutyDate, FORMAT_DATE_SHORT)}</span>
                           {dutyStats.nextDutyPoolName && (
                             <Tag color="blue">{dutyStats.nextDutyPoolName}</Tag>
                           )}

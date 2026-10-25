@@ -35,7 +35,9 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
+import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
+import { formatDateTime, FORMAT_DATE_SHORT } from "@/utils/datetime";
 import type { Dayjs } from "dayjs";
 
 import type { DutySchedule } from "@/lib/dutyApi";
@@ -206,7 +208,7 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
           type="link"
           size="small"
           icon={<DeleteOutlined />}
-          style={{ color: "#ba3630" }}
+          style={{ color: "var(--theme-error)" }}
           onClick={() => {
             Modal.confirm({
               title: "确定要删除这条排班吗？",
@@ -313,7 +315,7 @@ const DutySchedulePage: FC = () => {
   const handleTableChange = (
     pagination: TablePaginationConfig,
     _filters: Record<string, unknown>,
-    sorter: any
+    sorter: SorterResult<DutySchedule> | SorterResult<DutySchedule>[]
   ) => {
     // 排序：用 local const 持有新值传 fetchList，规避 React 18 setState 异步时序
     const field = sorter && !Array.isArray(sorter) ? (sorter.field as string) || "" : "";
@@ -395,7 +397,7 @@ const DutySchedulePage: FC = () => {
                 <Card
                   size="small"
                   style={{
-                    borderColor: isToday ? "#337ab0" : undefined,
+                    borderColor: isToday ? "var(--theme-info)" : undefined,
                     backgroundColor: isToday ? "#e6f7ff" : undefined,
                     borderRadius: "4px",
                     minHeight: "80px",
@@ -410,7 +412,7 @@ const DutySchedulePage: FC = () => {
                           strong
                           style={{
                             fontSize: "12px",
-                            color: isToday ? "#337ab0" : undefined,
+                            color: isToday ? "var(--theme-info)" : undefined,
                           }}
                         >
                           {getWeekdayText(day)}
@@ -418,7 +420,7 @@ const DutySchedulePage: FC = () => {
                       </div>
                       <div>
                         <Text style={{ fontSize: "11px", color: "#999" }}>
-                          {day.format("MM-DD")}
+                          {formatDateTime(day.toDate(), FORMAT_DATE_SHORT)}
                         </Text>
                       </div>
                     </div>
@@ -556,7 +558,7 @@ const DutySchedulePage: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "#ba3630" }}
+                style={{ color: "var(--theme-error)" }}
                 onClick={() => {
                   Modal.confirm({
                     title: "确定要批量删除选中的排班记录吗？",

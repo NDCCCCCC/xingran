@@ -2,6 +2,7 @@
  * 资产管理页面
  */
 
+import { formatDateTime, formatDate } from "@/utils/datetime";
 import dayjs from "dayjs";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
@@ -407,7 +408,7 @@ const AssetList: FC = () => {
         title: "接收日期",
         dataIndex: "drawingDate",
         width: 120,
-        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
+        render: (date) => formatDate(date),
         ellipsis: true,
       },
       // order=51
@@ -416,7 +417,7 @@ const AssetList: FC = () => {
         title: "最后上线",
         dataIndex: "machineUptime",
         width: 150,
-        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
+        render: (date) => formatDateTime(date),
         ellipsis: true,
       },
       // order=52
@@ -428,7 +429,7 @@ const AssetList: FC = () => {
         ellipsis: true,
         sorter: true,
         sortOrder: getColumnSortOrder("lastInventoryDate"),
-        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
+        render: (date) => formatDate(date),
       },
       // 设备信息扩展 (order=54 设备渠道, order=55 设备属性)
       { key: "qudaoName", title: "设备渠道", dataIndex: "qudaoName", width: 100, ellipsis: true },
@@ -489,7 +490,7 @@ const AssetList: FC = () => {
         title: "发放日期",
         dataIndex: "useDate",
         width: 120,
-        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
+        render: (date) => formatDate(date),
         ellipsis: true,
       },
       {
@@ -497,7 +498,7 @@ const AssetList: FC = () => {
         title: "入库日期",
         dataIndex: "storageDatetime",
         width: 120,
-        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
+        render: (date) => formatDate(date),
         ellipsis: true,
       },
       {
@@ -512,7 +513,7 @@ const AssetList: FC = () => {
         title: "APP扫码时间",
         dataIndex: "lastUpdateDate",
         width: 150,
-        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
+        render: (date) => formatDateTime(date),
         ellipsis: true,
       },
       {
@@ -520,7 +521,7 @@ const AssetList: FC = () => {
         title: "Y07更新时间",
         dataIndex: "y07UpdateTime",
         width: 150,
-        render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"),
+        render: (date) => formatDateTime(date),
         ellipsis: true,
       },
       // 标识与盘点 (order=70 新设备标识, 71 异常标识, 72 盘点结果)

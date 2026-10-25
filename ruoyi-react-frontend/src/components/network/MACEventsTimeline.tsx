@@ -20,6 +20,7 @@ import { Timeline, Empty, Skeleton, Tag, Card, Space, Typography, Button } from 
 import { useQuery } from "@tanstack/react-query";
 import { DownOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { getMACEvents } from "@/lib/api/networkApi";
 import type { MACHistoryRecord } from "@/lib/api/networkApi";
 import {
@@ -53,7 +54,7 @@ const TimelineItem = React.memo<{ event: MACHistoryRecord }>(({ event }) => {
       <Space direction="vertical" size={2} style={{ width: "100%" }}>
         <Space size={8} wrap>
           <Typography.Text strong>
-            {dayjs(event.firstSeen).format("YYYY-MM-DD HH:mm")}
+            {formatDateTime(event.firstSeen, FORMAT_DATETIME_MINUTE)}
           </Typography.Text>
           <Tag color={EVENT_TAG_COLOR[eventType]}>{label}</Tag>
           {event.vlanId != null && <Tag> VLAN {event.vlanId} </Tag>}

@@ -34,11 +34,12 @@ import MonthField from "./fields/MonthField";
 import WeekField from "./fields/WeekField";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
+import { formatDateTime } from "@/utils/datetime";
 
 dayjs.extend(utc);
 
 const formatTime = (date: Date) => {
-  return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
+  return formatDateTime(date);
 };
 
 const FIELD_ORDER: CronFieldType[] = ["second", "minute", "hour", "day", "month", "week"];
@@ -223,7 +224,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
 
         {/* 中文描述 */}
         {isValid && (
-          <div style={{ marginBottom: 12, color: "var(--theme-info, #337ab0)", fontSize: 13 }}>
+          <div style={{ marginBottom: 12, color: "var(--theme-info)", fontSize: 13 }}>
             {chineseDesc}
           </div>
         )}
@@ -252,10 +253,10 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           <div style={{ marginTop: 16 }}>
             <Space orientation="vertical" style={{ width: "100%" }} size="small">
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <ClockCircleOutlined style={{ color: "var(--theme-info, #337ab0)" }} />
+                <ClockCircleOutlined style={{ color: "var(--theme-info)" }} />
                 <span style={{ fontWeight: 500 }}>最近五次执行时间</span>
               </div>
-              <div style={{ background: "#fafafa", padding: "8px 16px", borderRadius: 4 }}>
+              <div style={{ background: "var(--theme-bg-secondary)", padding: "8px 16px", borderRadius: 4 }}>
                 {getNextRunTimes(cronExpression, 5).map((item, index) => (
                   <div key={index} style={{ padding: "4px 0" }}>
                     <Space>
