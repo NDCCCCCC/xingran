@@ -49,3 +49,9 @@ export type { EmptyStateWithActionProps } from "./EmptyStateWithAction";
 
 export { default as ErrorAlertWithRetry } from "./ErrorAlertWithRetry";
 export type { ErrorAlertWithRetryProps, ApiErrorShape } from "./ErrorAlertWithRetry";
+
+// Phase 65 — 危险删除唯一入口（声明式 + 命令式）
+export { ConfirmDelete } from "./ConfirmDelete";
+export type { ConfirmDeleteProps } from "./ConfirmDelete";
+export { confirmDelete } from "./confirmDelete";
+export type { ConfirmDeleteOptions } from "./confirmDelete";
