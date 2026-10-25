@@ -173,6 +173,131 @@ export default [
       ],
     },
   },
+  // ===== Phase 66 契约强制（独立 config 块，勿与 65 块合并——flat config
+  // 同一 rules 对象内同名键互相覆盖）=====
+  // 拦截新业务文件直接 import useTableManager / usePagination（新列表页
+  // 唯一合法列表数据层入口 = @/components/shared 的 PageTable），契约见
+  // .planning/phases/66-page-form/66-UI-SPEC.md §1。
+  // patterns 数组必须合并 65 契约块的 antd 子包 patterns——本块在 flat config
+  // 中整体覆盖 65 契约块的同名规则，另起数组会让 65 的 antd 子包拦截静默失效。
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["antd/Input", "antd/Input/*", "antd/Select", "antd/Select/*"],
+              message:
+                "禁止直接 import antd Input/Select 子包，请使用 @/components/ui 的 AppInput/AppSelect",
+            },
+            {
+              group: ["@/hooks/useTableManager"],
+              message:
+                "新列表页请使用 @/components/shared 的 PageTable；存量页见豁免清单，P67 迁移后移除",
+            },
+            {
+              group: ["@/hooks/usePagination"],
+              message:
+                "新列表页请使用 @/components/shared 的 PageTable；存量页见豁免清单，P67 迁移后移除",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // ===== 封装层 import 豁免 override（Phase 66）=====
+  // PageTable 自身 import useTableManager 是唯一合法点（封装层内部实现细节）。
+  // 本块重声明 no-restricted-imports = 仅保留 65 的 antd 子包 patterns、
+  // 去掉两条 hook patterns（antd 子包拦截在该层仍生效）。
+  {
+    files: ["src/components/shared/**", "src/components/ui/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["antd/Input", "antd/Input/*", "antd/Select", "antd/Select/*"],
+              message:
+                "禁止直接 import antd Input/Select 子包，请使用 @/components/ui 的 AppInput/AppSelect",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // ===== Phase 66 存量豁免 override =====
+  // P67 收敛后移除
+  // 清单由 scripts/gen-p66-exemptions.mjs 生成（规则上线时的存量 import 命中
+  // 文件全集 + T8 收口复跑对账）。本块重声明完整 no-restricted-imports 数组
+  // （保留 antd 子包 patterns、仅省去两条 hook patterns），禁止直接置 off——
+  // off 会连带关闭 65 的 antd 子包拦截。文件清单见下方 files 数组。
+  {
+    files: [
+      // __P66_EXEMPTION_FILES__（脚本替换锚点）
+      "src/pages/ad-domain/computers/index.tsx",
+      "src/pages/ad-domain/groups/index.tsx",
+      "src/pages/ad-domain/ous/index.tsx",
+      "src/pages/ad-domain/users/index.tsx",
+      "src/pages/duty/management/components/HolidayManagement.tsx",
+      "src/pages/duty/my-duty/index.tsx",
+      "src/pages/duty/pools/index.tsx",
+      "src/pages/duty/schedules/index.tsx",
+      "src/pages/knowledge/articles/index.tsx",
+      "src/pages/monitor/cache/index.tsx",
+      "src/pages/monitor/job/index.tsx",
+      "src/pages/monitor/logs/index.tsx",
+      "src/pages/monitor/server/index.tsx",
+      "src/pages/my-notices/index.tsx",
+      "src/pages/network/backups/index.tsx",
+      "src/pages/network/command/index.tsx",
+      "src/pages/network/credentials/index.tsx",
+      "src/pages/network/devices/index.tsx",
+      "src/pages/network/discoveries/index.tsx",
+      "src/pages/network/executions/index.tsx",
+      "src/pages/network/mac/index.tsx",
+      "src/pages/network/ports/index.tsx",
+      "src/pages/network/templates/index.tsx",
+      "src/pages/operations/assets/index.tsx",
+      "src/pages/operations/buildings/index.tsx",
+      "src/pages/operations/dedicated-lines/index.tsx",
+      "src/pages/operations/floors/index.tsx",
+      "src/pages/operations/info-points/index.tsx",
+      "src/pages/operations/room-devices/index.tsx",
+      "src/pages/operations/rpa/executions/index.tsx",
+      "src/pages/operations/rpa/tasks/index.tsx",
+      "src/pages/operations/rpa/workers/index.tsx",
+      "src/pages/operations/server-rooms/index.tsx",
+      "src/pages/operations/workstations/index.tsx",
+      "src/pages/system/captcha-background/index.tsx",
+      "src/pages/system/config/index.tsx",
+      "src/pages/system/dict/index.tsx",
+      "src/pages/system/notice/index.tsx",
+      "src/pages/system/role/index.tsx",
+      "src/pages/system/settings/api-config.tsx",
+      "src/pages/system/settings/captcha-background.tsx",
+      "src/pages/system/settings/email-config.tsx",
+      "src/pages/system/user/index.tsx",
+      "src/pages/workorder/orders/index.tsx",
+      "src/pages/workorder/periodic/templates/index.tsx",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["antd/Input", "antd/Input/*", "antd/Select", "antd/Select/*"],
+              message:
+                "禁止直接 import antd Input/Select 子包，请使用 @/components/ui 的 AppInput/AppSelect",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // ===== Phase 65 存量豁免 override =====
   // P67 收敛后移除
   // 清单由 scripts/gen-p65-exemptions.mjs 生成（规则上线时的存量命中文件全集 +
@@ -343,6 +468,21 @@ export default [
     files: ["**/__tests__/**", "**/*.test.*", "**/*.spec.*"],
     rules: {
       "no-restricted-syntax": "off",
+      // Phase 66（AC4）：测试文件天然豁免 hook import 拦截——useTableManager/
+      // usePagination 自身的单测直接 import 被测对象是合法的。重声明为仅保留
+      // antd 子包 patterns（与 65 口径一致，不置 off）。
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["antd/Input", "antd/Input/*", "antd/Select", "antd/Select/*"],
+              message:
+                "禁止直接 import antd Input/Select 子包，请使用 @/components/ui 的 AppInput/AppSelect",
+            },
+          ],
+        },
+      ],
     },
   },
   // eslint-config-prettier 必须放最后: 关闭与 prettier 冲突的格式规则

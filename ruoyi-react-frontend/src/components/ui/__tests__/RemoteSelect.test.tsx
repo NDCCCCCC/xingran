@@ -152,23 +152,29 @@ describe("components/ui/RemoteSelect（T5）", () => {
 describe("SearchForm remoteSelect 端点接线（T5 接通）", () => {
   it("渲染 RemoteSelect 端点并可搜索回填选项", async () => {
     const fetcher = vi.fn(async () => [{ label: "负责人甲", value: "u9" }]);
-    let formInstance: FormInstance | undefined;
+    // 测试夹具：form 实例冒泡到外部断言（React 19 下 Form.useForm 只能在组件
+    // 内调用；react-compiler 禁止 render 内写外部变量，此处为测试专用逃生口）
+    let formRef: FormInstance | null = null;
+    const onSearch = vi.fn();
     function H() {
       const [form] = Form.useForm();
-      formInstance = form;
+      // eslint-disable-next-line react-hooks/globals -- 测试夹具 form 实例冒泡
+      formRef = form;
       return (
-        <AntdApp>
-          <SearchForm
-            form={form}
-            fields={[{ type: "remoteSelect", name: "owner", label: "负责人", fetcher, debounceMs: 0 }]}
-            onSearch={() => {}}
-            onReset={() => {}}
-            onRefresh={() => {}}
-          />
-        </AntdApp>
+        <SearchForm
+          form={form}
+          fields={[{ type: "remoteSelect", name: "owner", label: "负责人", fetcher, debounceMs: 0 }]}
+          onSearch={onSearch}
+          onReset={() => {}}
+          onRefresh={() => {}}
+        />
       );
     }
-    const { container } = render(<H />);
+    const { container } = render(
+      <AntdApp>
+        <H />
+      </AntdApp>
+    );
     openDropdown(container);
     typeKeyword("甲");
     await waitFor(() => {
@@ -180,7 +186,7 @@ describe("SearchForm remoteSelect 端点接线（T5 接通）", () => {
     // 选中 → 进入表单值
     fireEvent.click(screen.getAllByText("负责人甲")[0]);
     await waitFor(() => {
-      expect(formInstance!.getFieldValue("owner")).toBe("u9");
+      expect(formRef!.getFieldValue("owner")).toBe("u9");
     });
     void container;
   });
