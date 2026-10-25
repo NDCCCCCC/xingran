@@ -13,3 +13,7 @@ export type { AppSelectProps } from "./AppSelect";
 // P67 降险别名：仅存量迁移期使用，新代码禁止
 export { AppInput as Input } from "./AppInput";
 export { AppSelect as Select } from "./AppSelect";
+
+// Phase 66：RemoteSelect（防抖远程搜索下拉；fetcher+debounceMs=300+initialOptions+竞态守卫）
+export { RemoteSelect } from "./RemoteSelect";
+export type { RemoteSelectProps, RemoteSelectOption } from "./RemoteSelect";

@@ -22,6 +22,7 @@ import type { FormInstance } from "antd";
 import type { ReactNode } from "react";
 import { AppInput } from "@/components/ui/AppInput";
 import { AppSelect } from "@/components/ui/AppSelect";
+import { RemoteSelect } from "@/components/ui/RemoteSelect";
 
 /** 搜索字段 schema（§2；remoteSelect 端点为 RemoteSelect，T5 接通前的占位见 renderField） */
 export type SearchFieldOption = { label: string; value: string | number | boolean | null };
@@ -81,11 +82,17 @@ function renderField(field: SearchField, onSearch: () => void): ReactNode {
         </Form.Item>
       );
     case "remoteSelect":
-      // T5 接通前占位：类型契约已锁定（fetcher/initialOptions/debounceMs），
-      // 端点接线与行为断言归 T5（RemoteSelect.tsx）落地时替换
+      // T5 契约（§4）：fetcher+debounceMs=300+initialOptions；竞态/失败/清空语义在
+      // RemoteSelect 内建，这里只接线
       return (
         <Form.Item key={field.name} name={field.name} label={field.label}>
-          <div data-testid={`remote-select-placeholder-${field.name}`} />
+          <RemoteSelect
+            fetcher={field.fetcher}
+            initialOptions={field.initialOptions}
+            debounceMs={field.debounceMs}
+            placeholder={field.placeholder}
+            style={{ minWidth: 140 }}
+          />
         </Form.Item>
       );
     case "custom":

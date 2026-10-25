@@ -131,7 +131,7 @@ describe("components/shared/SearchForm（T3）", () => {
     });
   });
 
-  it("remoteSelect 占位渲染不抛错（端点接线断言归 T5）", () => {
+  it("remoteSelect→RemoteSelect 端点（T5 接通；行为断言在 RemoteSelect.test.tsx）", () => {
     const fields: SearchField[] = [
       {
         type: "remoteSelect",
@@ -140,8 +140,9 @@ describe("components/shared/SearchForm（T3）", () => {
         fetcher: vi.fn(async () => []),
       },
     ];
-    render(<Harness fields={fields} />);
-    expect(screen.getByTestId("remote-select-placeholder-owner")).toBeTruthy();
+    const { container } = render(<Harness fields={fields} />);
+    // 端点是 RemoteSelect（.ant-select），不再是占位 div
+    expect(container.querySelector(".ant-select")).not.toBeNull();
   });
 
   it("searchChildren 逃生口渲染且其 Form.Item 值进入表单（经暴露的 form 实例接线）", async () => {
