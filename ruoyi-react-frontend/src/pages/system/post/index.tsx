@@ -35,6 +35,7 @@ import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/er
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { BaseEditModal } from "@/components/modal/BaseEditModal";
+import { AppInput, AppSelect } from "@/components/ui";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -328,32 +329,28 @@ const PostManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="postCode" label="岗位编码">
-              <Input
+              <AppInput
                 placeholder="请输入岗位编码"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="postName" label="岗位名称">
-              <Input
+              <AppInput
                 placeholder="请输入岗位名称"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
               >
                 <Option value={0}>正常</Option>
                 <Option value={1}>停用</Option>
-              </Select>
+              </AppSelect>
             </Form.Item>
             <Form.Item>
               <Space>
