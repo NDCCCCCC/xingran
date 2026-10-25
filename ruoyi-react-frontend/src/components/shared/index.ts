@@ -64,3 +64,7 @@ export type { PageTableProps, PageTableRequest } from "./PageTable";
 // Phase 66：SearchForm（schema 驱动搜索区）
 export { SearchForm } from "./SearchForm";
 export type { SearchFormProps, SearchField, SearchFieldOption } from "./SearchForm";
+
+// Phase 66：FormModal（编辑弹窗封装：脏检查 + 统一提交/错误分流）
+export { FormModal, useFormModalForm } from "./FormModal";
+export type { FormModalProps } from "./FormModal";
