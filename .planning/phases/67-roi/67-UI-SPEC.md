@@ -66,7 +66,7 @@ created: "2026-10-25"
 | devices 单删（`devices/index.tsx:238-257` 裸 Modal.confirm：`确认删除?` / `确定` / `取消`） | `确认删除?`，内容为空，无对象无警示 | `确认删除` / `将删除{target}，删除后不可恢复，是否继续？` / `删除` / `取消`（target=设备名，经 createDeleteAction→ConfirmDelete） | **对齐**（65 §4 既定） |
 | backups 还原确认（`backups/index.tsx:206-214`：`确认恢复配置` + 覆盖警示；`backups/index.tsx:527-533`：`确认恢复到此版本?` / `确定`） | 两处还原确认文案不一 | **保持各自现状原文不动**——还原是危险恢复操作而非删除，不在 65 ConfirmDelete 强制面；零 UI 变化优先。lint 若拦（Popconfirm/Modal.confirm selector）按 65 §3 存量豁免清单处理，不加 eslint-disable 散点 | **保持现状**（豁免清单承接） |
 | cache 清空全部（`cache/index.tsx:311-330`：`确认清空` / `确定要清空所有缓存吗？此操作不可恢复！`） | 含警示但非删除模板 | **保持现状原文**（同上：清空≠删除，且文案已含不可恢复警示；豁免清单承接） | **保持现状** |
-| discoveries 删除任务（`discoveries/index.tsx:146-154`，**现状无确认弹窗**，直接 post delete） | 无确认 | 迁移经 createDeleteAction→ConfirmDelete 后**获得确认弹窗**（65 模板）——这是防误删修复，用户可感知 | **对齐并显式标注**：discoveries 删除属 STOP 级缺口（无确认直达删除 API，65 §4「不存在任何绕过确认直达删除 API 的路径」红线），随迁移补上，记 PR 描述首条 |
+| discoveries 删除任务（`discoveries/index.tsx:146-154` onOk 直连 post；确认弹窗实际存在于 `discoveries/columns.tsx:114-121` Modal.confirm「确认删除?/确定/取消/danger」——**planner 亲测修正：现状已有确认，非 STOP 级缺口**） | 有确认（文案过时） | 迁移经 createDeleteAction→ConfirmDelete，文案对齐 65 模板（「确认删除?」→ 模板句式） | **B 类文案对齐**（原「STOP 级缺口」表述系 UI-SPEC 误判，2026-10-25 planner PLAN 期间修正，裁决结果不变） |
 
 **C 类：结构缺陷裁决（如实记录，执行时需 checker/用户确认）**
 1. **discoveries 状态筛选未接线**（`discoveries/index.tsx:292-310`：Form.Item 无 name，Select 无受控值——用户选了状态，请求并不携带该参数）。迁移到 searchFields schema 会**顺带接线使筛选生效** = 行为变化（缺陷修复）。裁决建议：**接线生效并显式标注**（与 B 类 discoveries 删除同性质：修复假交互）；若 checker 裁决零变化优先，则用 `searchChildren` 逃生口复刻现状不接线形态。默认按「接线生效」执行。
