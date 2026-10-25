@@ -263,9 +263,7 @@ const ConfigExecutionPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlayCircleOutlined />} onClick={openExecuteModal}>
-              aria-label="执行模板"
-              title="执行模板"
+            <Button type="primary" icon={<PlayCircleOutlined />} onClick={openExecuteModal} aria-label="执行模板" title="执行模板" >
               执行配置模板
             </Button>
             <NetworkExport

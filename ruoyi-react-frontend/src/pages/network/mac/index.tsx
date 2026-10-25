@@ -346,9 +346,7 @@ const MACAddressPage: FC = () => {
         {/* 移动端:Dept tree 折叠进 Drawer,通过按钮触发(与 workstations 同步) */}
         {isMobile && (
           <div style={{ marginBottom: 16 }}>
-            <Button icon={<ApartmentOutlined />} onClick={() => setDeptDrawerOpen(true)}>
-              aria-label="选择部门"
-              title="选择部门"
+            <Button icon={<ApartmentOutlined />} onClick={() => setDeptDrawerOpen(true)} aria-label="选择部门" title="选择部门" >
               {selectedDeptId ? `已选部门:${selectedDeptId.slice(0, 8)}...` : "选择部门"}
             </Button>
             <Drawer
@@ -471,19 +469,13 @@ const MACAddressPage: FC = () => {
               </Form.Item>
               <Form.Item>
                 <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                    aria-label="搜索"
-                    title="搜索"
+                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
                     查询
                   </Button>
-                  <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                    aria-label="重置"
-                    title="重置"
+                  <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
                     重置
                   </Button>
-                  <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                    aria-label="刷新"
-                    title="刷新"
+                  <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
                     刷新
                   </Button>
                 </Space>

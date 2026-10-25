@@ -35,6 +35,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "jobName",
       key: "jobName",
       width: 150,
+      sorter: true,
       sortOrder: getSortOrder("jobName"),
     },
     {
@@ -42,6 +43,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "jobGroup",
       key: "jobGroup",
       width: 120,
+      sorter: true,
       sortOrder: getSortOrder("jobGroup"),
     },
     {
@@ -70,6 +72,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
       sortOrder: getSortOrder("status"),
       render: (status: number, record: JobInfo) => (
         <Space>
@@ -97,6 +100,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
       sortOrder: getSortOrder("createdAt"),
       render: (text: string) => formatDateTime(text),
     },

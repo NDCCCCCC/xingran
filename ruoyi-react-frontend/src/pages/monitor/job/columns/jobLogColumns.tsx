@@ -21,6 +21,7 @@ export function getJobLogColumns(params: GetJobLogColumnsParams): ColumnsType<Jo
       dataIndex: "startTime",
       key: "startTime",
       width: 180,
+      sorter: true,
       sortOrder: getSortOrder("startTime"),
       render: (text: string) => formatDateTime(text),
     },
@@ -43,6 +44,7 @@ export function getJobLogColumns(params: GetJobLogColumnsParams): ColumnsType<Jo
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
       sortOrder: getSortOrder("status"),
       render: (status: number) => (
         <Tag color={status === 0 ? "success" : "error"}>{status === 0 ? "成功" : "失败"}</Tag>

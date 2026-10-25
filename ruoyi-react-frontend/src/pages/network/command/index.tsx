@@ -247,9 +247,7 @@ const CommandDispatch: FC = () => {
                 >
                   刷新
                 </Button>
-                <Button type="primary" icon={<ThunderboltOutlined />} onClick={openDispatchModal}>
-                  aria-label="快速命令"
-                  title="快速命令"
+                <Button type="primary" icon={<ThunderboltOutlined />} onClick={openDispatchModal} aria-label="快速命令" title="快速命令" >
                   快速命令
                 </Button>
                 <NetworkExport

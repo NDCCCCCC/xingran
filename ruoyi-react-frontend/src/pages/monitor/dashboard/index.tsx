@@ -169,9 +169,7 @@ const Dashboard: FC = () => {
     <div className="p-6">
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold">监控仪表盘</h1>
-        <Button type="primary" icon={<ReloadOutlined />} loading={loading} onClick={refresh}>
-          aria-label="刷新"
-          title="刷新"
+        <Button type="primary" icon={<ReloadOutlined />} loading={loading} onClick={refresh} aria-label="刷新" title="刷新" >
           刷新
         </Button>
       </div>

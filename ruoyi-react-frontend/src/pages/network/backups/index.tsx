@@ -647,9 +647,7 @@ const ConfigBackupPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<CloudUploadOutlined />} onClick={handleOpenBackupModal}>
-              aria-label="创建备份"
-              title="创建备份"
+            <Button type="primary" icon={<CloudUploadOutlined />} onClick={handleOpenBackupModal} aria-label="创建备份" title="创建备份" >
               创建备份
             </Button>
             <NetworkExport

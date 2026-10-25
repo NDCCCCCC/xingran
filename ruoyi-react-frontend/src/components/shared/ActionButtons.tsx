@@ -54,6 +54,7 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = 
                 onClick={action.onClick}
                 disabled={action.disabled}
                 className={action.danger ? "action-btn-link-danger" : "action-btn-link"}
+                aria-label={action.label}
                 title={action.label}
               >
                 {action.label}
@@ -91,6 +92,7 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = 
         size={size}
         icon={<DownOutlined />}
         className="action-btn-link"
+        aria-label="操作"
         title="操作"
       >
         操作
@@ -142,6 +144,7 @@ export const createDeleteAction = <T extends string | number>(
         size="small"
         disabled={options?.disabled}
         className="action-btn-link-danger"
+        aria-label={options?.label || "删除"}
       >
         {options?.label || "删除"}
       </Button>

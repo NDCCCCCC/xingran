@@ -234,17 +234,13 @@ const JobManager: FC = () => {
                 >
                   新增
                 </Button>
-                <Button icon={<SearchOutlined />} onClick={handleSearch}>
-                  aria-label="搜索"
-                  title="搜索"
+                <Button icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
                   搜索
                 </Button>
                 <Button onClick={() => handleReset(setSearchForm, setCurrent, fetchJobs)}>
                   重置
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                  aria-label="刷新"
-                  title="刷新"
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
                   刷新
                 </Button>
               </Space>

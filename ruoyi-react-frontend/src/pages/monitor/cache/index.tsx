@@ -77,6 +77,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       key: "key",
       width: 300,
       ellipsis: true,
+      sorter: true,
       sortOrder: getSortOrder("key"),
       render: (text: string) => (
         <code className="bg-gray-100 px-2 py-1 rounded text-xs">{text}</code>
@@ -87,6 +88,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "type",
       key: "type",
       width: 100,
+      sorter: true,
       sortOrder: getSortOrder("type"),
       render: (type: string) => <Tag color="blue">{type}</Tag>,
     },
@@ -95,6 +97,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "location",
       key: "location",
       width: 120,
+      sorter: true,
       sortOrder: getSortOrder("location"),
       render: (location: string) => {
         const config = LEVEL_TAG_CONFIG[location];
@@ -109,6 +112,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "ttl",
       key: "ttl",
       width: 120,
+      sorter: true,
       sortOrder: getSortOrder("ttl"),
       render: (ttl: number) => <Tag color={ttl > 0 ? "green" : "default"}>{formatTTL(ttl)}</Tag>,
     },
@@ -117,6 +121,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "size",
       key: "size",
       width: 100,
+      sorter: true,
       sortOrder: getSortOrder("size"),
       render: (size: number) => formatMemorySize(size),
     },
@@ -125,6 +130,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
       sortOrder: getSortOrder("createdAt"),
       render: (value: string) => cacheFormatDateTime(value),
     },
@@ -133,6 +139,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: "updatedAt",
       key: "updatedAt",
       width: 180,
+      sorter: true,
       sortOrder: getSortOrder("updatedAt"),
       render: (value: string) => cacheFormatDateTime(value),
     },
@@ -604,25 +611,17 @@ const CacheManager: FC = () => {
                 >
                   操作缓存
                 </Button>
-                <Button icon={<SearchOutlined />} onClick={handleSearch}>
-                  aria-label="搜索"
-                  title="搜索"
+                <Button icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
                   搜索
                 </Button>
                 <Button onClick={handleReset}>重置</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                  aria-label="刷新"
-                  title="刷新"
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
                   刷新
                 </Button>
-                <Button icon={<SettingOutlined />} onClick={() => setStatsModalVisible(true)}>
-                  aria-label="查看统计"
-                  title="查看统计"
+                <Button icon={<SettingOutlined />} onClick={() => setStatsModalVisible(true)} aria-label="查看统计" title="查看统计" >
                   统计信息
                 </Button>
-                <Button icon={<ExportOutlined />} onClick={handleExport}>
-                  aria-label="导出"
-                  title="导出"
+                <Button icon={<ExportOutlined />} onClick={handleExport} aria-label="导出" title="导出" >
                   导出
                 </Button>
                 <Button

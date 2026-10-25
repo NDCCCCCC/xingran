@@ -343,9 +343,7 @@ const DeviceDiscoveryPage: FC = () => {
               current={paginationProps.current}
               pageSize={paginationProps.pageSize}
             />
-            <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
-              aria-label="新增任务"
-              title="新增任务"
+            <Button type="primary" icon={<PlusOutlined />} onClick={openModal} aria-label="新增任务" title="新增任务" >
               创建发现任务
             </Button>
           </Space>
