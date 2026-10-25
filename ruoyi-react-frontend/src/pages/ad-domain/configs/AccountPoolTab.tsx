@@ -147,7 +147,12 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
 
       if (editing) {
         // 更新：只在填了新密码时才传
-        const updateData: any = {
+        const updateData: {
+          id: string;
+          username?: string;
+          password?: string;
+          remark?: string;
+        } = {
           id: editing.id,
           username: values.username,
           remark: values.remark,
@@ -365,7 +370,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             <Statistic title="账号总数" value={stats.total} />
           </Col>
           <Col span={4}>
-            <Statistic title="可用" value={stats.available} valueStyle={{ color: "#3f8600" }} />
+            <Statistic title="可用" value={stats.available} valueStyle={{ color: "var(--theme-success)" }} />
           </Col>
           <Col span={4}>
             <Statistic title="已停用" value={stats.disabled} />
@@ -374,7 +379,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             <Statistic
               title="熔断中"
               value={stats.circuitBroken}
-              valueStyle={{ color: "#cf1322" }}
+              valueStyle={{ color: "var(--theme-error)" }}
             />
           </Col>
           <Col span={8}>

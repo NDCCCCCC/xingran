@@ -17,6 +17,12 @@ export interface UseLogDataParams {
   pageSize: number;
 }
 
+/** 分页覆盖参数（可选，缺省用 Hook 入参） */
+export interface LogFetchParams {
+  current?: number;
+  pageSize?: number;
+}
+
 export interface UseLogDataReturn {
   // 数据状态
   operLogs: OperLog[];
@@ -30,8 +36,8 @@ export interface UseLogDataReturn {
   setOperLogs: React.Dispatch<React.SetStateAction<OperLog[]>>;
   setLoginLogs: React.Dispatch<React.SetStateAction<LoginLog[]>>;
   setTotal: React.Dispatch<React.SetStateAction<number>>;
-  fetchOperLogs: (params?: any) => Promise<void>;
-  fetchLoginLogs: (params?: any) => Promise<void>;
+  fetchOperLogs: (params?: LogFetchParams) => Promise<void>;
+  fetchLoginLogs: (params?: LogFetchParams) => Promise<void>;
 }
 
 export function useLogData(params: UseLogDataParams): UseLogDataReturn {
@@ -47,10 +53,10 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
 
   // 获取操作日志
   const fetchOperLogs = useCallback(
-    async (params: any = {}) => {
+    async (params: LogFetchParams = {}) => {
       setLoading(true);
       try {
-        const requestParams: any = {
+        const requestParams: Record<string, unknown> = {
           ...searchForm,
           current: params.current || current,
           pageSize: params.pageSize || pageSize,
@@ -78,10 +84,10 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
 
   // 获取登录日志
   const fetchLoginLogs = useCallback(
-    async (params: any = {}) => {
+    async (params: LogFetchParams = {}) => {
       setLoading(true);
       try {
-        const requestParams: any = {
+        const requestParams: Record<string, unknown> = {
           ...loginSearchForm,
           current: params.current || current,
           pageSize: params.pageSize || pageSize,

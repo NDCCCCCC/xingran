@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo, type FC } from "react";
 import { Modal, Table, Statistic, Card, Row, Col, Tag, Descriptions, Progress } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import {
   FileTextOutlined,
   CheckCircleOutlined,
@@ -145,7 +145,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
   /**
    * 分页变化
    */
-  const handleTableChange = useCallback((newPagination: any) => {
+  const handleTableChange = useCallback((newPagination: TablePaginationConfig) => {
     setPagination({
       current: newPagination.current || 1,
       pageSize: newPagination.pageSize || 20,
@@ -255,7 +255,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                         summary.success_rate >= 0.95
                           ? "var(--theme-success, #3f8600)"
                           : summary.success_rate >= 0.8
-                            ? "var(--theme-warning, #b07a20)"
+                            ? "var(--theme-warning)"
                             : "var(--theme-error, #cf1322)",
                     },
                   }}
@@ -283,7 +283,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                         summary.avg_duration < 100
                           ? "var(--theme-success, #3f8600)"
                           : summary.avg_duration < 500
-                            ? "var(--theme-warning, #b07a20)"
+                            ? "var(--theme-warning)"
                             : "var(--theme-error, #cf1322)",
                     },
                   }}
@@ -368,8 +368,8 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                           <Progress
                             percent={percentage}
                             showInfo={false}
-                            strokeColor="var(--theme-info, #337ab0)"
-                            trailColor="#e9efeb"
+                            strokeColor="var(--theme-info)"
+                            trailColor="var(--theme-bg-tertiary)"
                             size="small"
                           />
                         </div>

@@ -37,12 +37,12 @@ export const DEFAULT_OPER_SEARCH_FORM = {
   businessType: undefined,
   status: undefined,
   operName: "",
-  timeRange: null as any,
+  timeRange: null,
 };
 
 export const DEFAULT_LOGIN_SEARCH_FORM = {
   userName: "",
   ipAddr: "",
   status: undefined,
-  timeRange: null as any,
+  timeRange: null,
 };

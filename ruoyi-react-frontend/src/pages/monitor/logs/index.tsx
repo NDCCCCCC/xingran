@@ -30,7 +30,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 
-import type { OperLog, LoginLog } from "./types";
+import type { OperLog, LoginLog, SearchFormState } from "./types";
 import { BUSINESS_TYPE_OPTIONS, LOG_STATUS_OPTIONS, LOGIN_STATUS_OPTIONS } from "./constants";
 import { formatLocalTime, renderLogStatusTag } from "./utils";
 import { getOperLogColumns, getLoginLogColumns } from "./columns";
@@ -46,8 +46,10 @@ const { RangePicker } = DatePicker;
 // ==================== 数据加载函数 ====================
 
 // 加载操作日志
-const loadOperLogs = async (params: any): Promise<{ list: OperLog[]; total: number }> => {
-  const requestParams: any = {
+const loadOperLogs = async (
+  params: SearchFormState & { current?: number; pageSize?: number }
+): Promise<{ list: OperLog[]; total: number }> => {
+  const requestParams: Record<string, unknown> = {
     ...params,
   };
 
@@ -67,8 +69,10 @@ const loadOperLogs = async (params: any): Promise<{ list: OperLog[]; total: numb
 };
 
 // 加载登录日志
-const loadLoginLogs = async (params: any): Promise<{ list: LoginLog[]; total: number }> => {
-  const requestParams: any = {
+const loadLoginLogs = async (
+  params: SearchFormState & { current?: number; pageSize?: number }
+): Promise<{ list: LoginLog[]; total: number }> => {
+  const requestParams: Record<string, unknown> = {
     ...params,
   };
 

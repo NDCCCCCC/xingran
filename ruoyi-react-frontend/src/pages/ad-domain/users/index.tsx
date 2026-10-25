@@ -13,6 +13,8 @@ import {
   message,
   Tooltip,
 } from "antd";
+import type { TablePaginationConfig } from "antd/es/table";
+import type { SorterResult } from "antd/es/table/interface";
 import {
   ReloadOutlined,
   CheckCircleOutlined,
@@ -168,11 +170,16 @@ const ADUserPage: FC = () => {
   };
 
   // 表格排序双向关联
-  const handleTableChange = (pagination: any, _filters: any, sorter: any) => {
+  const handleTableChange = (
+    _pagination: TablePaginationConfig,
+    _filters: Record<string, unknown>,
+    sorter: SorterResult<ADUser> | SorterResult<ADUser>[]
+  ) => {
     // 用 local const 持有新值传 fetchUsers，规避 React 18 setState 异步时序
     // （setState 后立即读 state 仍为旧值——加 deep 一层避坑）
-    const newCol = sorter?.field || "";
-    const newAsc = sorter?.order === "ascend";
+    const s = Array.isArray(sorter) ? sorter[0] : sorter;
+    const newCol = s?.field != null ? String(s.field) : "";
+    const newAsc = s?.order === "ascend";
     setOrderByColumn(newCol);
     setIsAsc(newAsc);
     fetchUsers(newCol, newAsc);

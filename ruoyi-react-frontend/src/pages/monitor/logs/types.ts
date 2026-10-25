@@ -2,6 +2,7 @@
  * Log Types
  * 日志管理类型定义
  */
+import type { Dayjs } from "dayjs";
 
 /** 操作日志 */
 export interface OperLog {
@@ -64,5 +65,5 @@ export interface SearchFormState {
   operName?: string;
   userName?: string;
   ipAddr?: string;
-  timeRange: any;
+  timeRange?: [Dayjs, Dayjs] | null;
 }

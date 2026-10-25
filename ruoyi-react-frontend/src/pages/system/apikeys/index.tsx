@@ -23,7 +23,8 @@ import {
   Popconfirm,
   Alert,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
+import type { SorterResult } from "antd/es/table/interface";
 import {
   PlusOutlined,
   EditOutlined,
@@ -428,7 +429,12 @@ const APIKeyManagement: FC = () => {
   /**
    * 分页 + 排序变化（antd Table onChange 统一入口）
    */
-  const handleTableChange = useCallback((newPagination: any, _filters: any, sorter: any) => {
+  const handleTableChange = useCallback(
+    (
+      newPagination: TablePaginationConfig,
+      _filters: Record<string, unknown>,
+      sorter: SorterResult<APIKey> | SorterResult<APIKey>[]
+    ) => {
     setPagination({
       current: newPagination.current || 1,
       pageSize: newPagination.pageSize || 10,
@@ -437,8 +443,9 @@ const APIKeyManagement: FC = () => {
     // 排序：用 local const 持有新值，规避 React 18 setState 异步时序（handleTableChange 触发的
     // fetchData 读 state 仍为旧值——详见 commit 7ab1189 ad-domain 同类坑）。
     // queryParams 已监听 sortField/sortOrder，setState 后 useEffect 会自动重拉。
-    const field = sorter?.field || "";
-    const order = sorter?.order ?? null;
+    const s = Array.isArray(sorter) ? sorter[0] : sorter;
+    const field = s?.field != null ? String(s.field) : "";
+    const order = s?.order ?? null;
     setSortField(field);
     setSortOrder(order);
   }, []);
@@ -544,7 +551,7 @@ const APIKeyManagement: FC = () => {
           const now = new Date();
           const isExpired = date < now;
           return (
-            <span style={{ color: isExpired ? "#ba3630" : undefined }}>{formatDateTime(text)}</span>
+            <span style={{ color: isExpired ? "var(--theme-error)" : undefined }}>{formatDateTime(text)}</span>
           );
         },
       },
@@ -722,7 +729,7 @@ const APIKeyManagement: FC = () => {
             description={
               <div>
                 <p>请妥善保管您的 API 密钥，完整密钥仅显示一次：</p>
-                <div style={{ marginTop: 8, padding: 12, background: "#f5f5f5", borderRadius: 4 }}>
+                <div style={{ marginTop: 8, padding: 12, background: "var(--theme-bg-secondary)", borderRadius: 4 }}>
                   <code style={{ fontSize: 14, wordBreak: "break-all" }}>{createdKey}</code>
                 </div>
                 <Button

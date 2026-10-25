@@ -53,7 +53,7 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
     try {
       const result = await post(`/rpa/executions/${executionId}/logs`, {});
       // 确保 logs 是数组
-      const responseLogs = (result.data as any)?.logs;
+      const responseLogs = (result.data as { logs?: ExecutionLog[] } | null)?.logs;
       setLogs(Array.isArray(responseLogs) ? responseLogs : []);
     } catch (error) {
       console.error("加载日志失败:", error);
@@ -77,7 +77,7 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
       return () => clearInterval(interval);
     } else if (open && execution) {
       // 确保 execution.logs 是数组
-      const execLogs = (execution as any).logs;
+      const execLogs = execution?.logs;
       setLogs(Array.isArray(execLogs) ? execLogs : []);
     } else {
       setLogs([]);
@@ -122,11 +122,11 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
   const renderStatusIcon = (level: string) => {
     switch (level) {
       case "info":
-        return <CheckCircleOutlined style={{ color: "var(--theme-success, #2d8949)" }} />;
+        return <CheckCircleOutlined style={{ color: "var(--theme-success)" }} />;
       case "error":
-        return <CloseCircleOutlined style={{ color: "var(--theme-error, #ba3630)" }} />;
+        return <CloseCircleOutlined style={{ color: "var(--theme-error)" }} />;
       case "warn":
-        return <CloseCircleOutlined style={{ color: "var(--theme-warning, #b07a20)" }} />;
+        return <CloseCircleOutlined style={{ color: "var(--theme-warning)" }} />;
       default:
         return <ClockCircleOutlined style={{ color: "var(--theme-text-tertiary, #707068)" }} />;
     }
@@ -234,7 +234,13 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
         message: log.message,
       }));
 
-    const allScreenshots = [...executionScreenshotItems, ...logScreenshots];
+    const allScreenshots: {
+      key: string;
+      timestamp?: string;
+      step?: number;
+      image?: string;
+      message: string;
+    }[] = [...executionScreenshotItems, ...logScreenshots];
 
     if (allScreenshots.length === 0) {
       return <Empty description="暂无截图" />;
@@ -242,7 +248,7 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
 
     return (
       <Space direction="vertical" style={{ width: "100%" }}>
-        {allScreenshots.map((item: any) => (
+        {allScreenshots.map((item) => (
           <Card key={item.key} size="small" variant="outlined">
             <Space direction="vertical" style={{ width: "100%" }}>
               {item.timestamp && (
