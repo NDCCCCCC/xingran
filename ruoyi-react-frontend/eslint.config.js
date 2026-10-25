@@ -310,7 +310,6 @@ export default [
       "src/pages/system/notice/components/NoticeForm.tsx",
       "src/pages/system/notice/components/NoticeList.tsx",
       "src/pages/system/notice/components/TargetSelector.tsx",
-      "src/pages/system/post/index.tsx",
       "src/pages/system/role/columns/roleColumns.tsx",
       "src/pages/system/role/index.tsx",
       "src/pages/system/settings/api-config.tsx",

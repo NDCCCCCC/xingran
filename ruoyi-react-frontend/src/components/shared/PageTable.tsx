@@ -66,8 +66,31 @@ export interface PageTableProps<T> {
   extraFilters?: Record<string, unknown>;
   /** 空态引导动作（转发 EmptyStateWithAction；空态且无错误时替换 antd 默认空态） */
   emptyAction?: React.ReactNode;
+  /**
+   * 渲染上下文暴露（UI-SPEC §1 决策 2「searchForm 等经 render-props 暴露」）：
+   * 函数形态 (ctx) => ReactNode，渲染在组件最上方（PageTable 之前的业务区，
+   * 如统计卡片 / 已选择 Alert）；ctx 提供 selectedRowKeys / clearSelection /
+   * total / loadData / searchForm。
+   */
+  children?: (ctx: PageTableRenderContext<T>) => React.ReactNode;
   /** 透传 antd Table 其余 props（scroll/expandable/rowSelection 等），全透传不吞不改名 */
   [key: string]: unknown;
+}
+
+/** children render-prop 收到的上下文（业务区接线用：统计卡片/已选择 Alert/提交后刷新） */
+export interface PageTableRenderContext<T> {
+  /** 当前选中行 key（batchDelete 内建 rowSelection 同源） */
+  selectedRowKeys: Key[];
+  /** 清空选中（「取消选择」入口） */
+  clearSelection: () => void;
+  /** 当前列表总数 */
+  total: number;
+  /** 手动刷新列表（提交/删除成功后回调） */
+  loadData: () => void;
+  /** 内部 useTableManager 的 searchForm（searchChildren 逃生口同源） */
+  searchForm: FormInstance;
+  /** 类型占位（TS 泛型推断辅助） */
+  __type?: T;
 }
 
 /**
@@ -89,6 +112,7 @@ function PageTableImpl<T extends object>({
   defaultSort,
   extraFilters,
   emptyAction,
+  children,
   ...rest
 }: PageTableProps<T>) {
   // 错误态升格：包装 request，失败记 error state（不改 useTableManager 内部兜底行为）
@@ -197,6 +221,14 @@ function PageTableImpl<T extends object>({
 
   return (
     <div>
+      {typeof children === "function" &&
+        children({
+          selectedRowKeys,
+          clearSelection: resetSelection,
+          total,
+          loadData: () => void loadData(),
+          searchForm,
+        })}
       {showSearchCard && (
         <SearchForm
           form={searchForm}
