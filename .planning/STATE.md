@@ -2,9 +2,9 @@
 gsd_state_version: "1.0"
 milestone: v1.22
 milestone_name: 前端公用组件整治 (Frontend Shared Component Remediation)
-current_phase: 66
-status: executing
-stopped_at: UI-SPEC 65 完成（aa30e13f），下一步派 gsd-planner 出 PLAN
+current_phase: 67
+status: pending
+stopped_at: Phase 66 完成（verifier CLEAN，commit 97cd859e），下一步 /gsd-plan-phase 67
 last_updated: "2026-10-25T12:00:41.375Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 66 marked complete
