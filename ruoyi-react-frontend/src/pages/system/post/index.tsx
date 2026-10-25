@@ -34,6 +34,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared";
 import { BaseEditModal } from "@/components/modal/BaseEditModal";
 import { AppInput, AppSelect } from "@/components/ui";
 
@@ -162,23 +163,15 @@ const PostManagement: FC = () => {
     if (selectedRowKeys.length === 0) {
       return;
     }
-    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
-    Modal.confirm({
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+    confirmDelete({
       title: "确认批量删除",
-      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
-      okText: "删除",
-      cancelText: "取消",
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await post("/system/posts/batch-delete", { ids: selectedRowKeys });
-          message.success("已删除");
-          resetSelection();
-          loadPosts();
-          loadStatistics();
-        } catch (error) {
-          handleApiError(error, "批量删除");
-        }
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
+        await post("/system/posts/batch-delete", { ids: selectedRowKeys });
+        resetSelection();
+        loadPosts();
+        loadStatistics();
       },
     });
   };

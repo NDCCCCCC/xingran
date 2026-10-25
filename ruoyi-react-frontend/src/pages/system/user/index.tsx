@@ -36,7 +36,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useDict, type DictItem } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import { DepartmentTreeSelect } from "@/components/shared";
+import { DepartmentTreeSelect, confirmDelete } from "@/components/shared";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -549,26 +549,18 @@ const UserManagement: FC = () => {
       return;
     }
 
-    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
-    Modal.confirm({
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+    confirmDelete({
       title: "确认批量删除",
-      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
-      okText: "删除",
-      cancelText: "取消",
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await post("/system/users/batch-delete", { ids: selectedRowKeys });
-          message.success("已删除");
-          resetSelection();
-          loadUsers();
-          loadStatistics();
-        } catch (error) {
-          handleApiError(error, "批量删除");
-        }
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
+        await post("/system/users/batch-delete", { ids: selectedRowKeys });
+        resetSelection();
+        loadUsers();
+        loadStatistics();
       },
     });
-  }, [selectedRowKeys, resetSelection, loadUsers, loadStatistics, message]);
+  }, [selectedRowKeys, resetSelection, loadUsers, loadStatistics]);
 
   const handleUpdateStatus = useCallback(
     async (id: string, status: number) => {

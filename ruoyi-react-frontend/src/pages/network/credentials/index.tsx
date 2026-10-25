@@ -35,7 +35,7 @@ import { handleApiError, withErrorHandling } from "@/utils/errorHandler";
 import { useState, useEffect, useMemo } from "react";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, confirmDelete } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 
 const { Option } = Select;
@@ -190,28 +190,16 @@ const CredentialManagement: FC = () => {
       message.warning("请选择要删除的数据");
       return;
     }
-    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
-    Modal.confirm({
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper；
+    // 原 withErrorHandling 包装由 helper 内建成功/失败提示替代——记 SUMMARY 偏差）
+    confirmDelete({
       title: "确认批量删除",
-      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
-      okText: "删除",
-      cancelText: "取消",
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        await withErrorHandling(
-          async () => {
-            await post("/network/credentials/batch-delete", { ids: selectedRowKeys });
-            return "已删除";
-          },
-          {
-            successMessage: "已删除",
-            onSuccess: () => {
-              setSelectedRowKeys([]);
-              loadCredentials();
-              loadStatistics();
-            },
-          }
-        );
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
+        await post("/network/credentials/batch-delete", { ids: selectedRowKeys });
+        setSelectedRowKeys([]);
+        loadCredentials();
+        loadStatistics();
       },
     });
   };

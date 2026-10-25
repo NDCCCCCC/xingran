@@ -34,6 +34,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared";
 import { refreshEncryptionConfig } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
 
@@ -192,23 +193,15 @@ const ConfigManagement: FC = () => {
       message.warning("请选择要删除的数据");
       return;
     }
-    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
-    Modal.confirm({
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+    confirmDelete({
       title: "确认批量删除",
-      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
-      okText: "删除",
-      cancelText: "取消",
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await post("/system/configs/batch-delete", { ids: selectedRowKeys });
-          message.success("已删除");
-          setSelectedRowKeys([]);
-          loadConfigs();
-          loadStatistics();
-        } catch (error) {
-          handleApiError(error, "批量删除");
-        }
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
+        await post("/system/configs/batch-delete", { ids: selectedRowKeys });
+        setSelectedRowKeys([]);
+        loadConfigs();
+        loadStatistics();
       },
     });
   };

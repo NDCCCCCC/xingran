@@ -54,7 +54,7 @@ import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { DepartmentTreeSelect } from "@/components/shared";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, confirmDelete } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { useMenuStore } from "@/store/menuStore";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -519,30 +519,20 @@ const DeviceManagement: FC = () => {
     if (selectedRowKeys.length === 0) {
       return;
     }
-    // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
-    const confirmInstance = Modal.confirm({
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper；
+    // 原 confirmInstance 取消按钮防抖为 helper 契约外增强，随迁移放弃——记 SUMMARY 偏差）
+    confirmDelete({
       title: "确认批量删除",
-      content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
-      okText: "删除",
-      cancelText: "取消",
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        confirmInstance.update({ cancelButtonProps: { disabled: true } });
-        try {
-          await post("/network/devices/batch-delete", { ids: selectedRowKeys });
-          message.success("已删除");
-          resetSelection();
-          if (selectedDeptId) {
-            loadDevices({ deptId: selectedDeptId });
-          } else {
-            loadDevices();
-          }
-          loadStatistics();
-        } catch (error) {
-          handleApiError(error, "批量删除");
-        } finally {
-          confirmInstance.update({ cancelButtonProps: { disabled: false } });
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
+        await post("/network/devices/batch-delete", { ids: selectedRowKeys });
+        resetSelection();
+        if (selectedDeptId) {
+          loadDevices({ deptId: selectedDeptId });
+        } else {
+          loadDevices();
         }
+        loadStatistics();
       },
     });
   };

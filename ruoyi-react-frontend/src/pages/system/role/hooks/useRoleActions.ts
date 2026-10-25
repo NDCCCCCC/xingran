@@ -11,6 +11,7 @@ import type { Key } from "antd/es/table/interface";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
 import { handleApiError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface UseRoleActionsParams {
@@ -137,24 +138,16 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
         return;
       }
 
-      // STOP-05: 批删前二次确认（UI-SPEC §5 Modal.confirm 契约文案）
-      Modal.confirm({
+      // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+      confirmDelete({
         title: "确认批量删除",
-        content: `将删除选中的 ${keys.length} 项，删除后不可恢复，是否继续？`,
-        okText: "删除",
-        cancelText: "取消",
-        okButtonProps: { danger: true },
-        onOk: async () => {
-          try {
-            await post("/system/roles/batch-delete", { ids: keys });
-            message.success("已删除");
-            setSelectedRowKeys([]);
-            loadRoles();
-            loadStatistics();
-            invalidateAllRoles();
-          } catch (error) {
-            handleApiError(error, "批量删除");
-          }
+        target: `选中的 ${keys.length} 项`,
+        onDelete: async () => {
+          await post("/system/roles/batch-delete", { ids: keys });
+          setSelectedRowKeys([]);
+          loadRoles();
+          loadStatistics();
+          invalidateAllRoles();
         },
       });
     },

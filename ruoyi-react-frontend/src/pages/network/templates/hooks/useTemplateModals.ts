@@ -4,7 +4,8 @@
  */
 
 import { useState, useCallback } from "react";
-import { App, Modal } from "antd";
+import { App } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import type { ConfigTemplate } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
@@ -132,22 +133,14 @@ export function useTemplateModals(): UseTemplateModalsReturn {
         message.warning("请选择要删除的数据");
         return;
       }
-      // STOP-05: 确认闸门下沉到 hook 内——任何调用点都无法绕过二次确认
-      Modal.confirm({
+      // STOP-05: 确认闸门下沉到 hook 内——任何调用点都无法绕过二次确认（Phase 65 走 helper）
+      confirmDelete({
         title: "确认批量删除",
-        content: `将删除选中的 ${selectedRowKeys.length} 项，删除后不可恢复，是否继续？`,
-        okText: "删除",
-        cancelText: "取消",
-        okButtonProps: { danger: true },
-        onOk: async () => {
-          try {
-            await post("/network/templates/batch-delete", { ids: selectedRowKeys });
-            message.success("已删除");
-            setSelectedRowKeys([]);
-            onSuccess();
-          } catch (error) {
-            handleApiError(error, "批量删除失败");
-          }
+        target: `选中的 ${selectedRowKeys.length} 项`,
+        onDelete: async () => {
+          await post("/network/templates/batch-delete", { ids: selectedRowKeys });
+          setSelectedRowKeys([]);
+          onSuccess();
         },
       });
     },
