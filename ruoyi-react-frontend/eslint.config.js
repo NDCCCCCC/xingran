@@ -137,6 +137,15 @@ export default [
           message:
             "禁止直接使用 Popconfirm 作为删除确认（SC3 无绕过入口），请使用 @/components/shared 的 ConfirmDelete；非删除类确认须 eslint-disable-next-line 并注明原因",
         },
+        {
+          // Phase 68 DEBT-01（.planning/phases/68-p2/68-UI-SPEC.md §1.3）：
+          // 追加进本数组（勿另起 config 块——flat config 后块整体覆盖同名规则键，
+          // 会使上方 4 个 selector 与内网 IP 拦截静默失效）。豁免链见下方
+          // 「Phase 68 hex 豁免」块与 .planning/phases/68-p2/hex-exemptions.md。
+          selector: "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+          message:
+            "禁止裸 hex 颜色字面量，请使用 var(--theme-*) 或 @/design-system/tokens/colors 的 ruoyiBrand；豁免须 eslint-disable-next-line 并注明原因（Phase 68 DEBT-01）",
+        },
       ],
       // 阻断绕过 JSX 名字的子包侧门 import
       "no-restricted-imports": [
@@ -149,6 +158,73 @@ export default [
                 "禁止直接 import antd Input/Select 子包，请使用 @/components/ui 的 AppInput/AppSelect",
             },
           ],
+        },
+      ],
+    },
+  },
+  // ===== Phase 68 hex 豁免 override（层面③，DEBT-01）=====
+  // 位于 P65 契约块之后、封装层/P65 存量豁免块之前：对列出的结构性目录与
+  // 存量命中文件，重声明「不含 hex selector」的完整数组——即豁免 DEBT-01、
+  // 保留内网 IP + 65 契约拦截。凡同时命中下方 P65 存量豁免块（更后、更宽：
+  // 整条规则仅剩内网 IP）的文件，以存量豁免块为准（65+hex 均豁免）。
+  // 逐条理由见 .planning/phases/68-p2/hex-exemptions.md。
+  {
+    files: [
+      // —— 结构性目录/文件（hex 为内在需要）——
+      "src/design-system/**",
+      "src/types/**",
+      "src/pages/operations/building-spaces-3d/**",
+      "src/components/cad-editor/**",
+      "src/components/cad-elements/**",
+      "src/components/IconSelect/**",
+      "src/pages/operations/workstations/views/FloorPlanView.tsx",
+      "src/components/network/MACHeatmapChart.tsx",
+      "src/components/network/macEventMeta.ts",
+      "src/pages/network/mac/heatmap.tsx",
+      "src/pages/system/settings/default-theme.tsx",
+      // —— 存量命中文件（Phase 68 上线时 hex 全集的未豁免部分；后续清偿后收缩）——
+      "src/components/dashboard/widgets/types/ChartWidget.tsx",
+      "src/components/layout/InnovativeLayout.tsx",
+      "src/components/layout/shared/QuickNav.tsx",
+      "src/components/operations/DeptSidebar.tsx",
+      "src/components/reconciliation/HealthBadge.tsx",
+      "src/components/reconciliation/HealthCard.tsx",
+      "src/lib/security.ts",
+      "src/utils/three/colors.ts",
+      "src/router/DynamicRoutes.tsx",
+      "src/pages/asset/reconciliation/dashboard/index.tsx",
+      "src/pages/asset/reconciliation/fix-suggestion/components/FixSuggestionDetailDrawer.tsx",
+      "src/pages/duty/management/components/WeeklyView.tsx",
+      "src/pages/network/devices/components/DeptTreePanel.tsx",
+      "src/pages/operations/floors/index.tsx",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "Literal[value=/(10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(1[6-9]|2\\d|3[0-1])\\.\\d{1,3}\\.\\d{1,3})(:\\d+)?/]",
+          message: "禁止硬编码内网 IP,应通过 VITE_API_BASE_URL / VITE_WS_BASE_URL 等环境变量配置",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='Input']",
+          message:
+            "禁止直接使用 antd <Input>，请使用 @/components/ui 的 AppInput（默认 allowClear）",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='Select']",
+          message:
+            "禁止直接使用 antd <Select>，请使用 @/components/ui 的 AppSelect（默认 allowClear/showSearch）",
+        },
+        {
+          selector: "CallExpression[callee.object.name='Modal'][callee.property.name='confirm']",
+          message:
+            "禁止直接调用 Modal.confirm，危险删除请使用 @/components/shared 的 ConfirmDelete / confirmDelete",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='Popconfirm']",
+          message:
+            "禁止直接使用 Popconfirm 作为删除确认（SC3 无绕过入口），请使用 @/components/shared 的 ConfirmDelete；非删除类确认须 eslint-disable-next-line 并注明原因",
         },
       ],
     },
