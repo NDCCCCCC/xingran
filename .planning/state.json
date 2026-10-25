@@ -1,43 +1,43 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.22",
+  "milestone": "v1.22 — 前端公用组件整治 (Frontend Shared Component Remediation)",
   "phases": [
     {
-      "number": "57",
-      "name": "AD 推送队列基建",
-      "status": "complete"
+      "number": "63",
+      "name": "P0 止血 — 数据可达与安全",
+      "status": "pending"
     },
     {
-      "number": "58",
-      "name": "排水器与 compare-and-move 推送",
-      "status": "complete"
+      "number": "64",
+      "name": "P1 修复 — 反馈与可访问性",
+      "status": "pending"
     },
     {
-      "number": "59",
-      "name": "登录回写守卫与部门对账视图",
-      "status": "complete"
+      "number": "65",
+      "name": "基础契约组件 — 默认值与危险操作唯一入口",
+      "status": "pending"
     },
     {
-      "number": "60",
-      "name": "软删恢复安全",
-      "status": "complete"
+      "number": "66",
+      "name": "高级契约组件 — PageTable 与 FormModal",
+      "status": "pending"
     },
     {
-      "number": "61",
-      "name": "影子表完整性",
-      "status": "complete"
+      "number": "67",
+      "name": "存量迁移 — 按 ROI 顺序落地契约组件",
+      "status": "pending"
     },
     {
-      "number": "62",
-      "name": "卫生收尾与死代码清理",
-      "status": "complete"
+      "number": "68",
+      "name": "P2 一致性债务 — 颜色/日期/类型收敛",
+      "status": "pending"
     }
   ],
   "next": {
-    "command": "/gsd-discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 2 of 6 · 0% · executing"
   },
-  "updated_at": "2026-10-23T13:45:35.421Z"
+  "updated_at": "2026-10-25T01:32:36.439Z"
 }
