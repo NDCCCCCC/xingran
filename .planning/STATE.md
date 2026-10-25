@@ -3,8 +3,8 @@ gsd_state_version: "1.0"
 milestone: v1.22
 milestone_name: 前端公用组件整治 (Frontend Shared Component Remediation)
 current_phase: 68
-status: executing
-stopped_at: Phase 67 完成（verifier CLEAN 0 blocking，四页迁移收口），下一步 begin-phase 68
+status: complete
+stopped_at: v1.22 全部执行 phase（63-68）完成；Phase 68 verifier blocking 已补（UI-SPEC §3.2 回写），收口 commit 9a4a9c8e/958efd6a。下一步：/gsd-audit-milestone 或 /gsd-complete-milestone
 last_updated: "2026-10-25T21:54:12.578Z"
 last_activity: 2026-10-26
 last_activity_desc: Phase 68 marked complete
