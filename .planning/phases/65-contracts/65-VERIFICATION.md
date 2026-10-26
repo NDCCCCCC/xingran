@@ -1,12 +1,12 @@
-# Phase 65 VERIFICATION
-
-> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（4b2235ac）落盘。
-
 ---
 status: passed
 verified: 2026-10-25
 requirements-completed: [COMP-01, COMP-02]
 ---
+
+# Phase 65 VERIFICATION
+
+> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（4b2235ac）落盘。
 
 ## 裁定：CLEAN（SC1-4 全 PASS，7 项全过，0 blocking）
 

@@ -49,10 +49,12 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
 - [ ] **Phase 66: 高级契约组件 — PageTable 与 FormModal** — 列表/表单弹窗契约内建骨架，依赖 Phase 65 组件（COMP-03, COMP-04）
 - [ ] **Phase 67: 存量迁移 — 按 ROI 顺序落地契约组件** — C1 试点 discoveries → backups → devices/cache 巨型页，每页一个 PR（COMP-05）
 - [ ] **Phase 68: P2 一致性债务 — 颜色/日期/类型收敛** — design token 收敛 hex 硬编码 + 日期/状态 helper + any 类型消除（DEBT-01..03）
+- [ ] **Phase 68.1: 收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾** — 清偿 v1.22 审计登记的四组技术债，使里程碑以无债状态收档（DEBT-04）
 
 ## Phase Details
 
 ### Phase 63: P0 止血 — 数据可达与安全
+
 **Goal**: 用户在所有列表页能看到真实的数据总量并翻到任意一页；双击确认不会重复提交；批量删除必有二次确认；假功能入口不再出现；宽表滚动时固定操作列保持可见。本 phase 全部为小根因修复（每项 ~0.5-1 天），ROI 最高，独立于组件抽取先行落地。
 **Depends on**: Nothing (v1.22 首个 phase)
 **Requirements**: STOP-01, STOP-02, STOP-03, STOP-04, STOP-05, STOP-06, STOP-07
@@ -63,10 +65,12 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
   3. 用户能浏览 AD 域 OU 列表第 3 页及以后的全部数据，不再被 100 条截断（STOP-03）
   4. 用户快速双击任意业务弹窗确认按钮，后端只收到一次请求、不产生重复记录（STOP-04）
   5. 用户触发批量删除前必见二次确认弹窗；点击 3 处假功能入口（assets 空确认 / ReconciliationDrawer 空 Tab）能看到真实功能或入口已移除；宽表横向滚动时固定操作列始终贴右可见（STOP-05/06/07）
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 64: P1 修复 — 反馈与可访问性
+
 **Goal**: 系统在加载、出错、误操作时给用户明确反馈而非静默——表格有 loading、误点遮罩不丢表单、排序结果正确、失败有可见错误提示、读屏器用户能识别图标按钮。
 **Depends on**: Phase 63（同属存量页修补，收敛节奏一致；无硬数据依赖）
 **Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
@@ -77,10 +81,12 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
   3. 用户在 cache/job 等分页表上按列排序时得到全量正确结果（服务端排序或明确的降级说明）（FIX-03）
   4. 用户请求失败时看到可见的错误提示（toast/message），`console.*` 静默吞错收敛到统一错误出口（FIX-04）
   5. 使用读屏器的用户能通过可访问名识别每个图标按钮的功能（aria-label/role 补齐）（FIX-05）
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 65: 基础契约组件 — 默认值与危险操作唯一入口
+
 **Goal**: 新页面使用 AppInput/AppSelect 零配置获得可清除/可搜索行为；所有危险删除操作统一经 ConfirmDelete 唯一入口强制二次确认——把"逐页补 allowClear 不可维护"的根因（285 Input 仅 23% allowClear、400 Select 仅 30%）通过默认值下沉封装层解决。
 **Depends on**: Nothing 硬依赖（可与 Phase 63/64 并行评估；按 roadmap 顺序置于其后）
 **Requirements**: COMP-01, COMP-02
@@ -90,10 +96,12 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
   2. 开发者在封装层外的业务代码中直接写裸 `<Input>`/`<Select>` 会被 lint/约定拦截或有明确豁免清单（COMP-01）
   3. 用户点击任意危险删除按钮，都经过同一个 ConfirmDelete 组件的二次确认，不存在绕过入口的裸 Popconfirm/直接 delete 调用（COMP-02）
   4. ConfirmDelete 的确认文案统一包含操作对象与不可恢复警示，删除失败时有可见错误反馈（COMP-02）
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 66: 高级契约组件 — PageTable 与 FormModal
+
 **Goal**: 新列表页使用 PageTable 一站式骨架（分页/loading/空态/错误态契约内建，模板页样板 ~450 行 → ~120 行）；新表单弹窗使用 FormModal（confirmLoading/脏检查/destroyOnHidden 契约内建）——把 Phase 63/64 修出的 P0/P1 行为固化为组件默认契约，新代码不再可能回退。
 **Depends on**: Phase 65（PageTable 内建分页契约依赖 AppSelect 等基础组件；FormModal 脏检查契约承接 FIX-02）
 **Requirements**: COMP-03, COMP-04
@@ -103,10 +111,12 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
   2. PageTable 模板页代码量显著下降（样板 ~450 行 → ~120 行量级）， SearchForm 模式并入 PageTable 体系（COMP-03）
   3. 新表单弹窗接入 FormModal 后，confirmLoading 防重复提交、脏检查拦误关、destroyOnHidden 重置三项默认生效（COMP-04）
   4. 使用者可在不读源码的情况下按组件 README/类型签名正确接入 PageTable 与 FormModal（契约自描述）（COMP-03/04）
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 67: 存量迁移 — 按 ROI 顺序落地契约组件
+
 **Goal**: 存量页面按 ROI 顺序迁移到契约组件体系，使新契约真实吃掉存量样板而非只服务新代码——C1 试点 discoveries 最小页 → backups → devices/cache 巨型页（随拆分迁移），每页一个 PR，旧实现保留一个迭代。
 **Depends on**: Phase 66（迁移目标 PageTable/FormModal 必须先就位）
 **Requirements**: COMP-05
@@ -116,10 +126,12 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
   2. backups 页完成迁移，Phase 63 修的 total/setTotal 行为在 PageTable 契约下保持（COMP-05）
   3. devices/cache 巨型页随拆分完成迁移（或完成拆分前置并明确迁移计划），迁移过程零行为回归（COMP-05）
   4. 每个迁移页独立 PR 可回滚，旧实现保留一个迭代后删除，样板行数下降可量化（COMP-05）
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 68: P2 一致性债务 — 颜色/日期/类型收敛
+
 **Goal**: 视觉与数据展示全站一致：颜色统一走 design token（109 处 6 位 hex / 25 文件，含 3 位简写共 125 行命中收敛）；日期/状态展示统一 helper（裸三元 13 处/6 文件 + 手写日期格式 12 处/8 文件）；`: any` / `as any` 27 处/16 文件随 FormModal 迁移逐步消除。
 **Depends on**: Phase 66/67（any 消除挂在 FormModal 迁移路径上；helper 收敛在迁移后的页面上做最省）
 **Requirements**: DEBT-01, DEBT-02, DEBT-03
@@ -128,6 +140,24 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
   2. 全站列表中的状态标签与日期展示格式统一（同一 helper 渲染），不再出现同一状态两种文案/同一日期两种格式（DEBT-02）
   3. 前端 `: any` / `as any` 收敛至目标基线（27 处 → 随迁移消除或有记录的豁免），`npm run type-check` 通过（DEBT-03）
   4. `npm run build` 通过且 vendor-react gzip 包体积不高于迁移前基线（零回归守卫，沿用 v1.19 起 776 kB 基线惯例）
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 68.1: 收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾
+
+**Goal**: 清偿 v1.22 里程碑审计（.planning/v1.22-MILESTONE-AUDIT.md）登记的四组技术债，让 v1.22 以无债状态收档：①45 处未迁移的批量删除统一到 ConfirmDelete 唯一入口（危险操作必二次确认）；②Phase 63-68 验证报告登记的 7 项契约 minor 补课；③P65（140 项）+ P66（41 项）存量豁免清单逐项清偿收缩；④剩余存量列表页（dedicated-lines 等）完成契约组件迁移。
+**Depends on**: Phase 68（豁免清单与契约组件均已就位）
+**Requirements**: DEBT-04
+**Success Criteria** (what must be TRUE):
+  1. 全站批量删除入口只剩 ConfirmDelete 一条路径，源码中不再存在裸 Modal.confirm 删除（豁免项须逐条说明原因）（DEBT-04）
+  2. 7 项契约 minor（PageTable 分页口径双点同步、FormModal 不透传 maskClosable/keyboard 等）已修复或显式记录为设计决策（DEBT-04）
+  3. P65/P66 豁免清单条目数显著收缩，剩余每项都有可核查的豁免理由（DEBT-04）
+  4. dedicated-lines 等剩余存量列表页完成契约组件迁移，样板行数下降可量化（DEBT-04）
+  5. type-check 0 / vitest 全绿 / lint errors 不高于基线，npm run build 通过（DEBT-04）
+
 **Plans**: TBD
 **UI hint**: yes
 
@@ -137,12 +167,13 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 63. P0 止血 — 数据可达与安全 | 0/TBD | Not started | - |
-| 64. P1 修复 — 反馈与可访问性 | 0/TBD | Not started | - |
-| 65. 基础契约组件 — 默认值与危险操作唯一入口 | 0/TBD | Not started | - |
-| 66. 高级契约组件 — PageTable 与 FormModal | 0/TBD | Not started | - |
-| 67. 存量迁移 — 按 ROI 顺序落地契约组件 | 0/TBD | Not started | - |
-| 68. P2 一致性债务 — 颜色/日期/类型收敛 | 0/TBD | Not started | - |
+| 63. P0 止血 — 数据可达与安全 | 1/1 | ✅ Complete | 2026-10-25 |
+| 64. P1 修复 — 反馈与可访问性 | 1/1 | ✅ Complete | 2026-10-25 |
+| 65. 基础契约组件 — 默认值与危险操作唯一入口 | 1/1 | ✅ Complete | 2026-10-25 |
+| 66. 高级契约组件 — PageTable 与 FormModal | 1/1 | ✅ Complete | 2026-10-25 |
+| 67. 存量迁移 — 按 ROI 顺序落地契约组件 | 1/1 | ✅ Complete | 2026-10-26 |
+| 68. P2 一致性债务 — 颜色/日期/类型收敛 | 1/1 | ✅ Complete | 2026-10-26 |
+| 68.1 收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾 | 0/TBD | Not started | - |
 
 ### Coverage Map (v1.22)
 
@@ -153,6 +184,7 @@ COMP-01, COMP-02 → Phase 65 (2)
 COMP-03, COMP-04 → Phase 66 (2)
 COMP-05     → Phase 67 (1)
 DEBT-01..03 → Phase 68 (3)
+DEBT-04     → Phase 68.1 (1)
 
 Mapped: 20/20 ✓  No orphans, no duplicates
 ```
@@ -190,6 +222,7 @@ Mapped: 20/20 ✓  No orphans, no duplicates
 
 <details>
 <summary>✅ v1.20 网络设备 VLAN + 端口绑定 (Phase 56) — SHIPPED 2026-07-10</summary>
+
 
 ### Phase 56: 网络设备 VLAN + 端口绑定 (v1.20.1) — 5/5 plans, shipped 2026-07-10
 

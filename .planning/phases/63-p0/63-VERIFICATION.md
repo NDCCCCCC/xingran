@@ -1,12 +1,12 @@
-# Phase 63 VERIFICATION
-
-> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（c82569d1 → B1 修复 → 复核 CLEAN）落盘。验证事实与当时一致。
-
 ---
 status: passed
 verified: 2026-10-25
 requirements-completed: [STOP-01, STOP-02, STOP-03, STOP-04, STOP-05, STOP-06, STOP-07]
 ---
+
+# Phase 63 VERIFICATION
+
+> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（c82569d1 → B1 修复 → 复核 CLEAN）落盘。验证事实与当时一致。
 
 ## 裁定
 

@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1.22
 milestone_name: 前端公用组件整治 (Frontend Shared Component Remediation)
-current_phase: 68
-status: complete
-stopped_at: v1.22 全部执行 phase（63-68）完成；Phase 68 verifier blocking 已补（UI-SPEC §3.2 回写），收口 commit 9a4a9c8e/958efd6a。下一步：/gsd-audit-milestone 或 /gsd-complete-milestone
-last_updated: "2026-10-25T21:54:12.578Z"
+current_phase: 68.1
+status: in_progress
+stopped_at: 里程碑审计已完成（tech_debt 裁定）并清偿历史遗留（3 个 quick 收档、6 个 debug frontmatter 修复、7 项 acknowledge、UpdateAPIKeyRequest.ID binding 修复）。按用户决策，v1.22 暂不收档，改在尾部插入 Phase 68.1 收尾清偿（DEBT-04：危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾）。下一步：/gsd-ui-phase 68.1 → /gsd-plan-phase 68.1 → /gsd-execute-phase 68.1，完成后再收档 v1.22
+last_updated: "2026-10-26T02:47:15.179Z"
 last_activity: 2026-10-26
-last_activity_desc: Phase 68 marked complete
-state_head: 9a4a9c8e75165c38b5f1c186d7cddc55d789adc7
+last_activity_desc: Phase 68.1 收尾清偿已插入（DEBT-04）
+state_head: f213999509cc756ab51e1911322ff4ed680e49fe
 progress:
-  total_phases: 6
-  completed_phases: 0
+  total_phases: 7
+  completed_phases: 6
   total_plans: 6
   completed_plans: 5
-  percent: 0
+  percent: 83
 ---
 
 # Project State
@@ -33,14 +33,14 @@ progress:
 
 ## Current Position
 
-Phase: 68 — COMPLETE
-Plan: 1 of ?
-Status: Phase 68 complete
-Last activity: 2026-10-26 — Phase 68 marked complete
+Phase: 68.1 — PLANNED（v1.22 收尾清偿）
+Plan: 0 of ?
+Status: Phase 68.1 待规划（UI hint yes → 先 /gsd-ui-phase 68.1）
+Last activity: 2026-10-26 — Phase 68.1 inserted (DEBT-04)
 
-Progress: [□□□□□□] 0/6 phases ([░░░░░░░░░░] 0%)
+Progress: [□□□□□□□] 6/7 phases ([████████░░] 83%)
 
-**Phase structure**: 63 P0 止血 (STOP×7) → 64 P1 修复 (FIX×5) → 65 基础契约组件 (COMP-01/02) → 66 PageTable/FormModal (COMP-03/04) → 67 存量迁移 (COMP-05) → 68 P2 债务 (DEBT×3)。Coverage 20/20 REQ。
+**Phase structure**: 63 P0 止血 (STOP×7) → 64 P1 修复 (FIX×5) → 65 基础契约组件 (COMP-01/02) → 66 PageTable/FormModal (COMP-03/04) → 67 存量迁移 (COMP-05) → 68 P2 债务 (DEBT×3) → 68.1 收尾清偿 (DEBT-04)。Coverage 20/20 satisfied + DEBT-04 待做。
 
 ## Accumulated Context
 
@@ -75,6 +75,10 @@ Progress: [□□□□□□] 0/6 phases ([░░░░░░░░░░] 0%)
 - Phase 63 可直接 `/gsd-plan-phase 63` 启动（无前置依赖）
 - Phase 64/65 顺序可按需并行评估（无硬数据依赖），roadmap 默认串行
 - vendor-react gzip 776 kB 基线沿用为 Phase 68 零回归守卫
+
+### Roadmap Evolution
+
+- Phase 68.1 inserted after Phase 68: v1.22 收尾清偿 phase：危险操作收口 + 契约 minor 补课 + 豁免收缩 + 存量迁移收尾（DEBT-04） (URGENT)
 
 ## Session
 

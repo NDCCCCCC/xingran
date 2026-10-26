@@ -1,12 +1,12 @@
-# Phase 67 VERIFICATION
-
-> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（08362c75）落盘。
-
 ---
 status: passed
 verified: 2026-10-26
 requirements-completed: [COMP-05]
 ---
+
+# Phase 67 VERIFICATION
+
+> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（08362c75）落盘。
 
 ## 裁定：CLEAN（0 blocking，7 minor）
 

@@ -1,9 +1,7 @@
-# Phase 64 验证报告 — P1 修复：反馈与可访问性（FIX-01..05）
-
-> 验证：gsd-verifier ｜ 日期：2026-10-25 ｜ 方式：只读取证（git show / grep / type-check / 全量 vitest 亲跑）
-> 对象：ab59a977(T1) 2d566a92(T2) efc72abe(T3) 7b6999ff(T4) 20b425a5(T5) 2e7aa388(T6) eb41070a(T7) ac02c0f5(T8) 2a296934(T9)，9 commit 均存在
-> **裁决：ISSUES** —— 2 blocking（SC3 排序链路断裂、SC5 aria 大面积无效），4 non-blocking
-
+---
+status: passed
+verified: 2026-10-25
+requirements-completed: [FIX-01, FIX-02, FIX-03, FIX-04, FIX-05]
 ---
 
 ## 一、逐 SC 验证证据
@@ -51,7 +49,12 @@
 - 合格部分：属性位置的 39 处（如 cache:162 删除、cache:599 缓存操作）写法正确；`ActionButtons.tsx:57/94/132` 有 `title={action.label}`/`title="操作"`，但组件内**无 aria-label 输出**（PLAN T8 第 1 条要求 icon-only 输出加 aria-label，未落实）。
 - SUMMARY 自报口径失效：复扫 `grep -rEn "aria-label" … | wc -l` = 72 与自报一致，但其中 38 处为无效 children 文本；SUMMARY「SC5 ✅ 73 处 aria-label + title」**失实**。
 
----
+
+# Phase 64 验证报告 — P1 修复：反馈与可访问性（FIX-01..05）
+
+> 验证：gsd-verifier ｜ 日期：2026-10-25 ｜ 方式：只读取证（git show / grep / type-check / 全量 vitest 亲跑）
+> 对象：ab59a977(T1) 2d566a92(T2) efc72abe(T3) 7b6999ff(T4) 20b425a5(T5) 2e7aa388(T6) eb41070a(T7) ac02c0f5(T8) 2a296934(T9)，9 commit 均存在
+> **裁决：ISSUES** —— 2 blocking（SC3 排序链路断裂、SC5 aria 大面积无效），4 non-blocking
 
 ## 二、commit 审计与范围纪律
 

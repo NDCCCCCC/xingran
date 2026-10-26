@@ -1,12 +1,12 @@
-# Phase 66 VERIFICATION
-
-> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（48e0e4c7）落盘。
-
 ---
 status: passed
 verified: 2026-10-25
 requirements-completed: [COMP-03, COMP-04]
 ---
+
+# Phase 66 VERIFICATION
+
+> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（48e0e4c7）落盘。
 
 ## 裁定：CLEAN（0 blocking）
 

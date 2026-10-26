@@ -1,12 +1,12 @@
-# Phase 68 VERIFICATION
-
-> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（40aba675）及修复处置落盘。
-
 ---
 status: passed
 verified: 2026-10-26
 requirements-completed: [DEBT-01, DEBT-02, DEBT-03]
 ---
+
+# Phase 68 VERIFICATION
+
+> 本文由 Lead 于 2026-10-26 里程碑审计时，从 verifier 会话报告（40aba675）及修复处置落盘。
 
 ## 裁定：ISSUES → blocking 修复后 CLEAN
 
