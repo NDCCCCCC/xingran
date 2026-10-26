@@ -1,13 +1,25 @@
 /**
- * 机房设备管理页面
+ * 机房设备管理页面 — Phase 68.1 T6b：operations 域最后一页（PageTable 全契约形态）
+ *
+ * 迁移自页面级双 hook 数据层实现：数据层 / 搜索区 /
+ * 分页 / 三态 / 删除确认全部收敛到 PageTable（UI-SPEC §3.2），本页只保留业务块
+ * （部门侧边栏、统计卡片、已选择 Alert、视图切换、导入导出、新增/编辑弹窗表单）。
+ *
+ * 部门筛选：selectedDeptId 经 PageTable extraFilters（orgId）驱动——引用变化即回第 1 页
+ * 重载；部门切换时先清空搜索字段，再交由 applyFilters 合并 extra，保持迁移前"切部门清筛选"
+ * 的语义。
+ *
+ * 视图切换（表格 / 卡片）：卡片数据取自同一 request 的最近一次快照；表格仍由 PageTable
+ * 承载、在卡片模式下隐藏——搜索 / 排序 / 分页 / 批删 / 三态与表格视图共用同一数据层
+ * （PageTableRenderContext 不暴露 data，故镜像一份快照）。
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import type { FC } from "react";
+import type { FC, Key } from "react";
+import type { FormInstance } from "antd";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
-  Table,
   Button,
   Space,
   Modal,
@@ -29,8 +41,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  SearchOutlined,
-  ReloadOutlined,
   CheckCircleOutlined,
   StopOutlined,
   WarningOutlined,
@@ -42,12 +52,13 @@ import {
 } from "@ant-design/icons";
 import type { RoomDevice } from "@/types";
 import { roomDeviceApi, serverRoomApi } from "@/lib/opsApi";
-import { useTableManager } from "@/hooks/useTableManager";
-import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
-import ActionButtons from "@/components/shared/ActionButtons";
+import { PageTable } from "@/components/shared";
+import type { PageTableRenderContext, SearchField } from "@/components/shared";
+import { createDeleteAction } from "@/components/shared/ActionButtons";
+import { AppSelect } from "@/components/ui/AppSelect";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { confirmDelete } from "@/components/shared/confirmDelete";
@@ -60,6 +71,25 @@ const { Content } = Layout;
 
 // 模块级静态映射（Phase m76-js-misc 6.3）
 const ROOM_DEVICE_STATUS_MAP: Record<number, string> = { 0: "正常", 1: "故障", 2: "报废" };
+
+// 搜索区选项（值沿用后端 status 口径 0/1/2）
+const ROOM_DEVICE_STATUS_OPTIONS = [
+  { label: "正常", value: 0 },
+  { label: "故障", value: 1 },
+  { label: "报废", value: 2 },
+];
+
+// 设备类型选项（值同后端 deviceType 口径）
+const DEVICE_TYPE_OPTIONS = [
+  { label: "服务器", value: "server" },
+  { label: "存储设备", value: "storage" },
+  { label: "UPS", value: "ups" },
+  { label: "PDU", value: "pdu" },
+  { label: "防火墙", value: "firewall" },
+  { label: "KVM", value: "kvm" },
+  { label: "机柜", value: "cabinet" },
+  { label: "其他", value: "other" },
+];
 
 type ViewMode = "table" | "card";
 
@@ -96,23 +126,20 @@ const RoomDeviceManagement: FC = () => {
     scrapped: 0,
   });
 
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  // 卡片视图数据快照（与表格同一 request，不另建数据层）
+  const [cardDevices, setCardDevices] = useState<RoomDevice[]>([]);
 
-  // 使用 useSidebarDeptFilter hook 管理部门筛选
-  const {
-    selectedDeptId,
-    handleDeptSelect,
-    setSelectedDeptId: _setSelectedDeptId,
-  } = useSidebarDeptFilter({
-    searchForm: undefined,
-    clearFieldNames: ["roomId"],
-  });
+  // 新增/编辑弹窗态（原表格管理器 hook 的 editForm/editModalVisible/editingItem 位）
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<RoomDevice | null>(null);
+  const [deviceForm] = Form.useForm();
 
-  // 使用 ref 存储最新的 selectedDeptId，避免闭包问题
-  const selectedDeptIdRef = useRef<string>("");
-  useEffect(() => {
-    selectedDeptIdRef.current = selectedDeptId;
-  }, [selectedDeptId]);
+  // PageTable render-prop 上下文提升到业务回调（提交/删除/导入后刷新 + 导出筛选 + 清筛选）
+  const reloadRef = useRef<() => void>(() => {});
+  const searchFormRef = useRef<FormInstance | null>(null);
+
+  // 使用 useSidebarDeptFilter hook 管理部门筛选（清字段在切换入口手动做，见下）
+  const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter();
 
   const loadRoomOptions = useCallback(async (orgId?: string) => {
     try {
@@ -146,52 +173,14 @@ const RoomDeviceManagement: FC = () => {
     []
   );
 
-  const {
-    loading,
-    data: devices,
-    total,
-    selectedRowKeys,
-    searchForm,
-    editForm: deviceForm,
-    editModalVisible: modalVisible,
-    editingItem: editingDevice,
-    setSelectedRowKeys,
-    setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingDevice,
-    handleSearch,
-    handleReset,
-    handleAdd,
-    handleEdit,
-    handleModalClose,
-    loadData: loadDevices,
-    resetSelection,
-    handleTableChange: handleDeviceTableChange,
-    getColumnSortOrder: getDeviceColumnSortOrder,
-  } = useTableManager<RoomDevice>(
-    async (params) => {
-      // 使用 ref 获取最新的部门 ID，避免闭包捕获旧值
-      const currentDeptId = selectedDeptIdRef.current;
-      const searchParams = currentDeptId ? { ...params, orgId: currentDeptId } : params;
-      const result = await roomDeviceApi.list(searchParams);
-      return { list: result.data?.list || [], total: result.data?.total || 0 };
-    },
-    {
-      externalPagination: {
-        current: paginationProps.current ?? 1,
-        pageSize: paginationProps.pageSize ?? 10,
-        setCurrent,
-        setPageSize,
-        setTotal,
-      },
-      sorterMetas,
-    }
-  );
-
-  // 当部门变化时，重新加载数据并重置分页
-  const loadDevicesByDept = useCallback(async () => {
-    setCurrent(1);
-    loadDevices();
-  }, [setCurrent, loadDevices]);
+  // 列表请求：查询条件（current/pageSize/filters/排序，含部门 orgId）由 PageTable 组装后透传
+  const request = useCallback(async (params: Record<string, unknown>) => {
+    const result = await roomDeviceApi.list(params);
+    const list = result.data?.list || [];
+    // 卡片视图快照：与表格同一份数据源
+    setCardDevices(list);
+    return { list, total: result.data?.total || 0 };
+  }, []);
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
@@ -208,31 +197,32 @@ const RoomDeviceManagement: FC = () => {
     }
   }, []);
 
-  // 统一的数据刷新函数
-  const refreshData = useCallback(() => {
-    loadDevices();
-    loadStatistics().then(setStatistics);
-  }, [loadDevices, loadStatistics]);
-
-  // 初始化加载
-  useEffect(() => {
-    loadStatistics().then(setStatistics);
+  // 统计卡片刷新（列表刷新由 PageTable 内部 loadData 承担）
+  const refreshStatistics = useCallback(() => {
+    void loadStatistics().then(setStatistics);
   }, [loadStatistics]);
 
-  // 当部门变化时，重新加载数据和机房选项
-  useEffect(() => {
-    loadDevicesByDept();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadRoomOptions(selectedDeptId || undefined);
-  }, [selectedDeptId, loadDevicesByDept, loadRoomOptions]);
+  // 统一的数据刷新函数：列表 + 统计
+  const refreshData = useCallback(() => {
+    reloadRef.current();
+    refreshStatistics();
+  }, [refreshStatistics]);
 
-  // 部门变化时清空搜索表单中的机房筛选字段
+  // 初始化加载（列表首载由 PageTable 内建；此处只载统计）
   useEffect(() => {
-    searchForm.setFieldValue("roomId", undefined);
-    searchForm.setFieldValue("name", undefined);
-    searchForm.setFieldValue("deviceType", undefined);
-    searchForm.setFieldValue("status", undefined);
-  }, [selectedDeptId, searchForm]);
+    void loadStatistics().then(setStatistics);
+  }, [loadStatistics]);
+
+  // 部门变化：重载机房选项（列表由 extraFilters 联动回第 1 页重载）
+  useEffect(() => {
+    void loadRoomOptions(selectedDeptId || undefined);
+  }, [selectedDeptId, loadRoomOptions]);
+
+  const closeModal = () => {
+    setModalVisible(false);
+    deviceForm.resetFields();
+    setEditingDevice(null);
+  };
 
   const handleSave = async () => {
     try {
@@ -244,7 +234,7 @@ const RoomDeviceManagement: FC = () => {
         await roomDeviceApi.create(values as Partial<RoomDevice>);
         handleSuccess("创建");
       }
-      handleModalClose();
+      closeModal();
       refreshData();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
@@ -252,31 +242,22 @@ const RoomDeviceManagement: FC = () => {
     }
   };
 
+  // 单删（经 createDeleteAction → ConfirmDelete；失败由 confirmDelete 统一反馈后 rethrow）
   const handleDelete = async (id: string) => {
-    try {
-      await roomDeviceApi.delete(id);
-      handleSuccess("删除");
-      refreshData();
-    } catch (error) {
-      handleApiError(error, "删除");
-    }
+    await roomDeviceApi.delete(id);
+    refreshData();
   };
 
-  const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) return;
-    try {
-      await roomDeviceApi.batch("delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      resetSelection();
-      refreshData();
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
+  // 批删（确认/成功提示由 PageTable → BatchDeleteButton → confirmDelete 承担；
+  // 成功后 PageTable 自动清空选中并重载列表，这里只补统计同步）
+  const handleBatchDelete = async (keys: Key[]) => {
+    await roomDeviceApi.batch("delete", { ids: keys });
+    refreshStatistics();
   };
 
   const openModal = (record?: RoomDevice) => {
     if (record) {
-      handleEdit(record);
+      setEditingDevice(record);
       // 机房兜底注入(2026-06-30,同 info-points):loadRoomOptions 异步且 pageSize:50
       // 可能不包含当前 roomId → Select 显示 raw UUID。用 record.roomName 注入。
       if (record.roomId) {
@@ -295,15 +276,32 @@ const RoomDeviceManagement: FC = () => {
         );
       }
       deviceForm.setFieldsValue(record);
+      setModalVisible(true);
     } else {
-      handleAdd();
+      setEditingDevice(null);
+      deviceForm.resetFields();
       deviceForm.setFieldsValue({ status: 0, deviceType: "server" });
+      setModalVisible(true);
     }
   };
 
   const handleImportSuccess = () => {
     refreshData();
     setImportVisible(false);
+  };
+
+  // 导出：沿用迁移前口径——取当前搜索表单非空值作为 filters
+  const handleOpenExport = () => {
+    const values = (searchFormRef.current?.getFieldsValue() ?? {}) as Record<string, unknown>;
+    const currentFilters: Record<string, unknown> = {};
+    Object.keys(values).forEach((key) => {
+      const value = values[key];
+      if (value !== undefined && value !== null && value !== "") {
+        currentFilters[key] = value;
+      }
+    });
+    setExportFilters(currentFilters);
+    setExportVisible(true);
   };
 
   const getDeviceTypeText = (type: string) => {
@@ -324,6 +322,67 @@ const RoomDeviceManagement: FC = () => {
     return ROOM_DEVICE_STATUS_MAP[status] || "未知";
   };
 
+  const roomSelectOptions = useMemo(
+    () => roomOptions.map((r) => ({ label: r.name, value: r.id })),
+    [roomOptions]
+  );
+
+  // 搜索区 schema：字段名与后端查询参数一一对应（roomId/name/deviceType/status）；
+  // roomId 依赖侧边栏部门态（disabled/placeholder 动态），走 custom 逃生口。
+  const searchFields = useMemo<SearchField[]>(
+    () => [
+      {
+        type: "custom",
+        name: "roomId",
+        render: (value, onChange) => (
+          <Form.Item label="所属机房" style={{ marginBottom: 0 }}>
+            <AppSelect
+              value={(value as string | undefined) ?? undefined}
+              onChange={(v) => onChange(v)}
+              placeholder={selectedDeptId ? "请选择机房" : "请先选择部门"}
+              disabled={!selectedDeptId}
+              showSearch
+              style={{ width: 150 }}
+              options={roomSelectOptions}
+            />
+          </Form.Item>
+        ),
+      },
+      { type: "input", name: "name", label: "设备名称", placeholder: "请输入设备名称" },
+      {
+        type: "select",
+        name: "deviceType",
+        label: "设备类型",
+        placeholder: "请选择类型",
+        options: DEVICE_TYPE_OPTIONS,
+      },
+      {
+        type: "select",
+        name: "status",
+        label: "状态",
+        placeholder: "请选择状态",
+        options: ROOM_DEVICE_STATUS_OPTIONS,
+      },
+    ],
+    [roomSelectOptions, selectedDeptId]
+  );
+
+  // 部门筛选联动：引用变化 → PageTable applyFilters 回第 1 页重载
+  const extraFilters = useMemo(
+    () => (selectedDeptId ? { orgId: selectedDeptId } : {}),
+    [selectedDeptId]
+  );
+
+  // 部门切换入口：迁移前 effect 在部门变化时清空搜索字段（roomId/name/deviceType/status），
+  // 这里在触发联动前清空，避免旧筛选被 applyFilters 合并进 filters
+  const handleDeptSelectAndReset = useCallback(
+    (selectedKeys: Key[], info: Parameters<typeof handleDeptSelect>[1]) => {
+      searchFormRef.current?.resetFields();
+      handleDeptSelect(selectedKeys, info);
+    },
+    [handleDeptSelect]
+  );
+
   const columns: ColumnsType<RoomDevice> = [
     {
       title: "设备名称",
@@ -331,7 +390,6 @@ const RoomDeviceManagement: FC = () => {
       key: "name",
       width: 150,
       sorter: true,
-      sortOrder: getDeviceColumnSortOrder("name"),
     },
     {
       title: "设备编码",
@@ -339,7 +397,6 @@ const RoomDeviceManagement: FC = () => {
       key: "deviceCode",
       width: 150,
       sorter: true,
-      sortOrder: getDeviceColumnSortOrder("deviceCode"),
     },
     {
       title: "所属机房",
@@ -347,7 +404,6 @@ const RoomDeviceManagement: FC = () => {
       key: "roomName",
       width: 120,
       sorter: true,
-      sortOrder: getDeviceColumnSortOrder("roomName"),
       render: (roomName) => roomName || "-",
     },
     {
@@ -356,7 +412,6 @@ const RoomDeviceManagement: FC = () => {
       key: "deviceType",
       width: 100,
       sorter: true,
-      sortOrder: getDeviceColumnSortOrder("deviceType"),
       render: (type) => <Tag>{getDeviceTypeText(type as string)}</Tag>,
     },
     { title: "厂商", dataIndex: "vendor", key: "vendor", width: 100, render: (v) => v || "-" },
@@ -374,7 +429,6 @@ const RoomDeviceManagement: FC = () => {
       key: "status",
       width: 80,
       sorter: true,
-      sortOrder: getDeviceColumnSortOrder("status"),
       render: (status) => {
         const colors: Record<number, string> = { 0: "success", 1: "error", 2: "default" };
         return (
@@ -385,34 +439,17 @@ const RoomDeviceManagement: FC = () => {
     createDateTimeColumn("createdAt", {
       width: 180,
       sorter: true,
-      sortOrder: getDeviceColumnSortOrder("createdAt"),
     }),
-    {
-      title: "操作",
-      key: "action",
-      render: (_, record) => {
-        const actions = [
-          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
-          {
-            key: "delete",
-            label: "删除",
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              confirmDelete({
-                target: `机房设备 ${record.name}`,
-                onDelete: () => handleDelete(record.id),
-              });
-            },
-          },
-        ];
-        return <ActionButtons actions={actions} />;
-      },
-    },
+  ];
+
+  // 行操作：编辑 + 删除（数量/顺序与迁移前一致；删除走 createDeleteAction 唯一入口）
+  const rowActions = (record: RoomDevice) => [
+    { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
+    createDeleteAction(record.id, handleDelete, { target: `机房设备 ${record.name}` }),
   ];
 
   const renderCardView = () => {
-    if (devices.length === 0)
+    if (cardDevices.length === 0)
       return (
         <div
           style={{
@@ -426,7 +463,7 @@ const RoomDeviceManagement: FC = () => {
       );
     return (
       <Row gutter={[16, 16]}>
-        {devices.map((device) => (
+        {cardDevices.map((device) => (
           <Col key={device.id} xs={24} sm={12} md={8} lg={6}>
             <Card
               hoverable
@@ -499,10 +536,19 @@ const RoomDeviceManagement: FC = () => {
     );
   };
 
-  return (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
-      <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: "#fff" }}>
+  // 业务区：统计卡片（total>10 才显示）+ 已选择 Alert（PageTable render-prop 顶部）
+  const renderBusinessArea = ({
+    selectedRowKeys,
+    clearSelection,
+    total,
+    loadData,
+    searchForm,
+  }: PageTableRenderContext<RoomDevice>) => {
+    // 提升到业务回调：弹窗提交/删除/导入成功后刷新列表；导出取当前搜索条件
+    reloadRef.current = loadData;
+    searchFormRef.current = searchForm;
+    return (
+      <>
         <StatisticsCards
           show={total > 10}
           items={[
@@ -527,77 +573,39 @@ const RoomDeviceManagement: FC = () => {
             },
           ]}
         />
-        <Card style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
-            <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-              <Form.Item name="roomId" label="所属机房">
-                <Select
-                  placeholder={selectedDeptId ? "请选择机房" : "请先选择部门"}
-                  allowClear
-                  showSearch
-                  filterOption={(input, option) =>
-                    String(option?.label ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  onSearch={() => {}}
-                  style={{ width: 150 }}
-                  disabled={!selectedDeptId}
-                  options={roomOptions.map((r) => ({ label: r.name, value: r.id }))}
-                />
-              </Form.Item>
-              <Form.Item name="name" label="设备名称">
-                <Input placeholder="请输入设备名称" allowClear style={{ width: 150 }} />
-              </Form.Item>
-              <Form.Item name="deviceType" label="设备类型">
-                <Select
-                  placeholder="请选择类型"
-                  allowClear
-                  style={{ width: 130 }}
-                  onSearch={() => {}}
-                >
-                  <Option value="server">服务器</Option>
-                  <Option value="storage">存储设备</Option>
-                  <Option value="ups">UPS</Option>
-                  <Option value="pdu">PDU</Option>
-                  <Option value="firewall">防火墙</Option>
-                  <Option value="kvm">KVM</Option>
-                  <Option value="cabinet">机柜</Option>
-                  <Option value="other">其他</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item name="status" label="状态">
-                <Select
-                  placeholder="请选择状态"
-                  allowClear
-                  style={{ width: 100 }}
-                  onSearch={() => {}}
-                >
-                  <Option value={0}>正常</Option>
-                  <Option value={1}>故障</Option>
-                  <Option value={2}>报废</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                    搜索
-                  </Button>
-                  <Button onClick={handleReset}>重置</Button>
-                  <Button icon={<ReloadOutlined />} onClick={refreshData}>
-                    刷新
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Form>
+        {selectedRowKeys.length > 0 && (
+          <Alert
+            title={
+              <span>
+                已选择 <strong>{selectedRowKeys.length}</strong> 个设备，
+                <Button type="link" size="small" onClick={clearSelection} style={{ padding: 0 }}>
+                  取消选择
+                </Button>
+              </span>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+      </>
+    );
+  };
+
+  return (
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
+      <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelectAndReset} />
+      <Content style={{ background: "#fff", padding: 16 }}>
+        <PageTable<RoomDevice>
+          request={request}
+          columns={columns}
+          rowKey={(record) => record.id}
+          searchFields={searchFields}
+          sorterMetas={sorterMetas}
+          extraFilters={extraFilters}
+          rowActions={rowActions}
+          batchDelete={{ onDelete: handleBatchDelete, target: "机房设备" }}
+          toolbar={
             <Space>
               <Radio.Group
                 value={viewMode}
@@ -614,73 +622,20 @@ const RoomDeviceManagement: FC = () => {
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
                 导入
               </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => {
-                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                  const currentFilters: Record<string, unknown> = {};
-                  Object.keys(values).forEach((key) => {
-                    const value = values[key];
-                    if (value !== undefined && value !== null && value !== "") {
-                      currentFilters[key] = value;
-                    }
-                  });
-                  setExportFilters(currentFilters);
-                  setExportVisible(true);
-                }}
-              >
+              <Button icon={<ExportOutlined />} onClick={handleOpenExport}>
                 导出
               </Button>
-              {selectedRowKeys.length > 0 && (
-                <Button
-                  icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error)" }}
-                  onClick={handleBatchDelete}
-                >
-                  批量删除 ({selectedRowKeys.length})
-                </Button>
-              )}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
                 新增设备
               </Button>
             </Space>
-          </div>
-          {selectedRowKeys.length > 0 && (
-            <Alert
-              title={
-                <span>
-                  已选择 <strong>{selectedRowKeys.length}</strong> 个设备，
-                  <Button
-                    type="link"
-                    size="small"
-                    onClick={() => setSelectedRowKeys([])}
-                    style={{ padding: 0 }}
-                  >
-                    取消选择
-                  </Button>
-                </span>
-              }
-              type="info"
-              showIcon
-              style={{ marginTop: 12 }}
-            />
-          )}
-        </Card>
-        <Card>
-          {viewMode === "table" ? (
-            <Table
-              rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-              columns={columns}
-              dataSource={devices}
-              loading={loading}
-              rowKey="id"
-              pagination={paginationProps}
-              onChange={handleDeviceTableChange}
-            />
-          ) : (
-            renderCardView()
-          )}
-        </Card>
+          }
+          // 卡片模式：表格由 PageTable 承载但隐藏（搜索/排序/分页/批删/三态保持同一数据层）
+          style={viewMode === "card" ? { display: "none" } : undefined}
+        >
+          {renderBusinessArea}
+        </PageTable>
+        {viewMode === "card" && <Card style={{ marginTop: 16 }}>{renderCardView()}</Card>}
         <Modal
           title={editingDevice ? "编辑设备" : "新增设备"}
           open={modalVisible}
@@ -693,11 +648,7 @@ const RoomDeviceManagement: FC = () => {
             }
           }}
           cancelButtonProps={{ disabled: submitting }}
-          onCancel={() => {
-            setModalVisible(false);
-            deviceForm.resetFields();
-            setEditingDevice(null);
-          }}
+          onCancel={closeModal}
           width={700}
         >
           <Form
@@ -711,7 +662,8 @@ const RoomDeviceManagement: FC = () => {
               label="所属机房"
               rules={[{ required: true, message: "请选择所属机房" }]}
             >
-              <Select allowClear
+              <Select
+                allowClear
                 placeholder="请选择所属机房"
                 showSearch
                 filterOption={(input, option) =>
@@ -720,7 +672,7 @@ const RoomDeviceManagement: FC = () => {
                     .includes(input.toLowerCase())
                 }
                 onSearch={() => {}}
-                options={roomOptions.map((r) => ({ label: r.name, value: r.id }))}
+                options={roomSelectOptions}
               />
             </Form.Item>
             <Form.Item

@@ -1,8 +1,8 @@
 /**
  * 楼宇管理页面 — Phase 68.1 T6b：operations 域 PageTable 契约形态
  *
- * 迁移自页面级双 hook 数据层实现（useTableManager + usePagination）：数据层 /
- * 搜索区 / 分页 / 三态 / 删除确认全部收敛到 PageTable（UI-SPEC §3.2），本页只保留
+ * 迁移自页面级双 hook 数据层实现：数据层 / 搜索区 / 分页 / 三态 / 删除确认
+ * 全部收敛到 PageTable（UI-SPEC §3.2），本页只保留
  * 业务块（左侧部门树、统计卡片、已选择 Alert、视图切换、导入导出、新增/编辑弹窗表单）。
  *
  * 部门树联动：选中部门经 PageTable extraFilters（{ orgId }）触发回第 1 页重载；
@@ -167,13 +167,10 @@ const BuildingManagement: FC = () => {
       // 卡片视图快照：与表格同一份数据源
       setBuildings(list);
       // 统计与列表同口径（剥离分页 / 排序参数，只保留过滤条件）
-      const {
-        current: _current,
-        pageSize: _pageSize,
-        orderByColumn: _orderByColumn,
-        isAsc: _isAsc,
-        ...filterParams
-      } = listParams;
+      const filterParams: Record<string, unknown> = { ...listParams };
+      (["current", "pageSize", "orderByColumn", "isAsc"] as const).forEach((key) => {
+        delete filterParams[key];
+      });
       void loadStatistics(filterParams);
       return { list, total: result.data?.total || 0 };
     },
@@ -379,7 +376,7 @@ const BuildingManagement: FC = () => {
   // 行操作：编辑 + 删除（数量/顺序与迁移前一致；删除走 createDeleteAction 唯一入口）
   const rowActions = (record: Building) => [
     { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
-    createDeleteAction(record.id, handleDelete, { label: `楼宇 ${record.name}` }),
+    createDeleteAction(record.id, handleDelete, { target: `楼宇 ${record.name}` }),
   ];
 
   const renderCardView = () => {

@@ -112,12 +112,13 @@ describe("NetworkDevicePage 渲染", () => {
     });
     await waitFor(() => expect(screen.getByText("switch-01")).toBeTruthy());
     // 操作列 5 个动作 ≥3 → ActionButtons 收进「操作」下拉；
-    // 删除项经 createDeleteAction render → ConfirmDelete 按钮文本 = label(deviceName)
+    // 删除项经 createDeleteAction render → ConfirmDelete 按钮文字固定「删除」，
+    // 设备名只进可访问名 aria-label=「删除{target}」（68.1 Q1）
     const moreButton = screen.getAllByRole("button", { name: "操作" }).at(-1) as HTMLElement;
     fireEvent.click(moreButton);
     const deleteMenuButton = await waitFor(() => {
       const btn = [...document.querySelectorAll<HTMLButtonElement>(".ant-dropdown-menu-item button")].find(
-        (el) => el.textContent?.includes("switch-01")
+        (el) => el.getAttribute("aria-label")?.includes("switch-01")
       );
       expect(btn).toBeTruthy();
       return btn as HTMLButtonElement;

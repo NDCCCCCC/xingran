@@ -84,13 +84,11 @@ describe("PostManagement 页面渲染(真实 hooks)", () => {
       },
       { timeout: 5000 }
     );
-    // PLAN T6 指定 createDeleteAction({label: r.postName})——按钮文本为岗位名（target 同源）
-    // getAllByText 同时命中 td 与按钮内 span；只点按钮
-    const deleteBtn = screen
-      .getAllByText("总经理")
-      .find((el) => el.closest("button"));
+    // Phase 68.1：createDeleteAction({ target: r.postName })——按钮文字固定「删除」，
+    // 对象名只进可访问名（Q1：aria-label=「删除{target}」，与确认标题解耦）
+    const deleteBtn = screen.getByLabelText("删除总经理");
     expect(deleteBtn).toBeTruthy();
-    fireEvent.click(deleteBtn!);
+    fireEvent.click(deleteBtn);
     await waitFor(() => {
       // confirmDelete 模板文案（65 §4 唯一入口）
       expect(document.querySelector(".ant-modal-confirm")).not.toBeNull();

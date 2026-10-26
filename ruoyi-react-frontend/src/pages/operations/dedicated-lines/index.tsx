@@ -443,7 +443,7 @@ const DedicatedLineManagement: FC = () => {
   // 行操作：编辑 + 删除（数量/顺序与迁移前一致；删除走 createDeleteAction 唯一入口）
   const rowActions = (record: DedicatedLine) => [
     { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
-    createDeleteAction(record.id, handleDelete, { label: `专线 ${record.name}` }),
+    createDeleteAction(record.id, handleDelete, { target: `专线 ${record.name}` }),
   ];
 
   const renderCardView = () => {

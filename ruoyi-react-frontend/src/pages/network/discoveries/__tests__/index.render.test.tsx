@@ -143,10 +143,10 @@ describe("DeviceDiscoveryPage 渲染（PageTable 契约链路）", () => {
       },
       { timeout: 5000 }
     );
-    // 删除按钮文本为任务名（createDeleteAction target 同源）
-    const deleteBtn = screen.getAllByText("扫描任务A").find((el) => el.closest("button"));
+    // 删除按钮文字固定「删除」，任务名只进可访问名（68.1 Q1）
+    const deleteBtn = screen.getByLabelText("删除扫描任务A");
     expect(deleteBtn).toBeTruthy();
-    fireEvent.click(deleteBtn!);
+    fireEvent.click(deleteBtn);
     await waitFor(() => {
       // confirmDelete 模板文案（65 §4 唯一入口；B 类对齐）
       expect(document.querySelector(".ant-modal-confirm")).not.toBeNull();

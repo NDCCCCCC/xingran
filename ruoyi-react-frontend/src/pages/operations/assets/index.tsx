@@ -534,7 +534,7 @@ const AssetList: FC = () => {
   const rowActions = useCallback(
     (record: Asset) => [
       createDeleteAction(record.id, handleDelete, {
-        label: `资产 ${record.devicesn || record.id}`,
+        target: `资产 ${record.devicesn || record.id}`,
       }),
     ],
     [handleDelete]
@@ -669,8 +669,8 @@ const AssetList: FC = () => {
           // Phase 48 Wave 3 (D-07): 行展开渲染「从属组件清单」Tab。
           // 仅主设备行可展开(componentType 为空即主设备);组件行本身不会
           // 出现在此列表(后端默认 component_type IS NULL 过滤已生效)。
-          expandedRowRender: (record) => <ComponentListTab parentAssetId={record.id} />,
-          rowExpandable: (record) => !record.componentType,
+          expandedRowRender: (record: Asset) => <ComponentListTab parentAssetId={record.id} />,
+          rowExpandable: (record: Asset) => !record.componentType,
         }}
       >
         {renderBusinessArea}

@@ -228,7 +228,7 @@ const DeviceDiscoveryPage: FC = () => {
             onClick: () => handleViewResult(record),
             disabled: record.status === "pending",
           },
-          createDeleteAction(record.id, handleDelete, { label: record.taskName }),
+          createDeleteAction(record.id, handleDelete, { target: record.taskName }),
         ]}
         toolbar={
           <>

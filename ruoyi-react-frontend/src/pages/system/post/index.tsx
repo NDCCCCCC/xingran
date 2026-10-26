@@ -206,7 +206,7 @@ const PostManagement: FC = () => {
         sorterMetas={sorterMetas}
         rowActions={(record) => [
           { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openEdit(record) },
-          createDeleteAction(record.id, handleDelete, { label: record.postName }),
+          createDeleteAction(record.id, handleDelete, { target: record.postName }),
         ]}
         batchDelete={{
           onDelete: async (keys: Key[]) => {

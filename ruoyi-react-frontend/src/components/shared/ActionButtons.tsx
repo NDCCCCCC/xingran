@@ -117,7 +117,16 @@ export const createDeleteAction = <T extends string | number>(
   options?: {
     /** 确认框标题 */
     title?: string;
-    /** 按钮标签 */
+    /**
+     * 删除对象名（供确认文案「将删除{target}…」与可访问名「删除{target}」）
+     * Phase 68.1：与按钮文案解耦——传 target 不会改变按钮上的「删除」文字。
+     */
+    target?: string;
+    /**
+     * @deprecated Phase 68.1：请不要再用 label 传对象名。
+     * label 语义是「按钮标签」，传对象名会让行内按钮文字变成记录名（视觉回归）。
+     * 传对象名请用 `target`；label 仅用于确实需要自定义按钮文字的极少数场景。
+     */
     label?: string;
     /** 是否禁用 */
     disabled?: boolean;
@@ -133,9 +142,11 @@ export const createDeleteAction = <T extends string | number>(
   // Phase 65：render 内部切换到唯一声明式入口 ConfirmDelete（不再使用裸二次确认组件）。
   // 降级注记：原 ghost 视觉（红边框）不再支持——ConfirmDelete 呈现 type=link danger；
   // title 语义保留（覆盖确认标题，默认值消费升级后的 DELETE_CONFIRM.title="确认删除"）。
+  // Phase 68.1（Q1/R1）：target 承载对象名，按钮文字固定「删除」；aria-label 由
+  // ConfirmDelete 内建为「删除{target}」，与确认弹窗标题解耦。
   render: () => (
     <ConfirmDelete
-      target={options?.label || "选中项"}
+      target={options?.target || "选中项"}
       onDelete={async () => {
         await handleDelete(id);
       }}

@@ -9,7 +9,7 @@
  *   rowKey="id"
  *   searchFields={[{ name: "postCode", label: "岗位编码", type: "input" }]}
  *   toolbar={<Button type="primary" onClick={openCreate}>新增</Button>}
- *   rowActions={(r) => [editAction(r), createDeleteAction(r.id, handleDelete, { label: r.postName })]}
+ *   rowActions={(r) => [editAction(r), createDeleteAction(r.id, handleDelete, { target: r.postName })]}
  *   batchDelete={{ onDelete: postApi.batchDelete, target: "岗位" }}
  * />
  * ```

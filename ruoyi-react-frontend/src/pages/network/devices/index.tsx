@@ -458,6 +458,29 @@ const DeviceManagement = () => {
         onClick: () => handleCollectPorts(record),
         // 契约 ActionButton 无 loading 位：采集进行中降级为 disabled（记 PR 偏差）
         disabled: collectingDeviceId === record.id,
+        // 68.1-T5 minor#1：降级语义保持不变，仅补「进行中」状态语义（UI-SPEC §2 #1 / §7）。
+        // 走 render 而非 ActionButton 顶层字段的原因：
+        // 1) ActionButton 契约（T1 冻结）无 aria-busy/title 透传位；
+        // 2) 本页动作数 ≥3 时 ActionButtons 收进「操作」下拉，普通动作的 aria 属性不会落到 DOM。
+        // 渲染参数与 ActionButtons 普通按钮分支保持一致（type=link/size=small/className）。
+        render: () => {
+          const collecting = collectingDeviceId === record.id;
+          return (
+            <Button
+              type="link"
+              size="small"
+              icon={<CloudUploadOutlined />}
+              onClick={() => handleCollectPorts(record)}
+              disabled={collecting}
+              className="action-btn-link"
+              aria-label="采集端口"
+              aria-busy={collecting}
+              title={collecting ? "采集中" : "采集端口"}
+            >
+              采集端口
+            </Button>
+          );
+        },
       },
       {
         key: "detail",
@@ -483,7 +506,7 @@ const DeviceManagement = () => {
         onClick: () => openModal(record),
       },
       createDeleteAction(record.id, () => handleDelete(record.id, loadData), {
-        label: record.deviceName,
+        target: record.deviceName,
       }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 采集/详情/编辑 handler 均为稳定闭包
