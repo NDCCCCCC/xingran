@@ -37,6 +37,7 @@ import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
 import type { PeriodicWorkOrderTemplate } from "@/lib/workorderApi";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import CronSelector from "@/components/CronSelector";
 import { PeriodicAssignType } from "@/lib/workorderApi";
 
@@ -186,12 +187,9 @@ function getTemplateTableColumns(
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `周期工单模板 ${record.templateName}`,
+                onDelete: async () => { handleDelete(record.id); },
               });
             },
           },

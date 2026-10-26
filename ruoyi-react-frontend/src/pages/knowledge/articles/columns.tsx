@@ -4,7 +4,8 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Space, Tag, Modal } from "antd";
+import { Space, Tag } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { EyeOutlined, LikeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { KnowledgeArticle } from "@/lib/knowledgeApi";
 import { KnowledgeArticleStatus } from "@/lib/knowledgeApi";
@@ -173,12 +174,9 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `知识库文章 ${record.title}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },

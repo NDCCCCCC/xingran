@@ -60,6 +60,7 @@ import {
 import { useScheduleData, useScheduleModals } from "./hooks";
 import { usePagination } from "@/hooks/usePagination";
 import { createSorter } from "@/utils/tableHelpers";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -210,12 +211,9 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
           icon={<DeleteOutlined />}
           style={{ color: "var(--theme-error)" }}
           onClick={() => {
-            Modal.confirm({
-              title: "确定要删除这条排班吗？",
-              okText: "确定",
-              cancelText: "取消",
-              okButtonProps: { danger: true },
-              onOk: () => handleDelete(record.id),
+            confirmDelete({
+              target: `排班记录 ${record.scheduleDate}`,
+              onDelete: async () => { handleDelete(record.id); },
             });
           }}
         >
@@ -560,12 +558,11 @@ const DutySchedulePage: FC = () => {
                 icon={<DeleteOutlined />}
                 style={{ color: "var(--theme-error)" }}
                 onClick={() => {
-                  Modal.confirm({
-                    title: "确定要批量删除选中的排班记录吗？",
-                    okText: "确定",
-                    cancelText: "取消",
-                    okButtonProps: { danger: true },
-                    onOk: () => handleBatchDelete(selectedRowKeys, setSelectedRowKeys),
+                  confirmDelete({
+                    target: `选中的 ${selectedRowKeys.length} 项排班记录`,
+                    title: "确认批量删除",
+                    actionContext: "批量删除",
+                    onDelete: () => handleBatchDelete(selectedRowKeys, setSelectedRowKeys),
                   });
                 }}
               >

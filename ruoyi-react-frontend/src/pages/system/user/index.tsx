@@ -285,12 +285,9 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
             size="small"
             className="xr-op-danger"
             onClick={() => {
-              Modal.confirm({
-                title: "确定要删除这个用户吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `用户 ${record.username}`,
+                onDelete: async () => { handleDelete(record.id); },
               });
             }}
           >

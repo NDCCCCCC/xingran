@@ -2,7 +2,8 @@
  * 定时任务表格列定义
  */
 
-import { Space, Button, Tooltip, Modal } from "antd";
+import { Space, Button, Tooltip } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   PlayCircleOutlined,
   PauseCircleOutlined,
@@ -135,13 +136,9 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个任务吗？",
-                content: "删除后将无法恢复",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record),
+              confirmDelete({
+                target: `定时任务 ${record.jobName}`,
+                onDelete: async () => { handleDelete(record); },
               });
             },
           },

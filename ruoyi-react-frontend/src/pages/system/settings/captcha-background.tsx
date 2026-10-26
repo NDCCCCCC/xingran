@@ -27,6 +27,7 @@ import type {
 import * as captchaService from "@/services/captcha";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -457,20 +458,9 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                     size="small"
                     className="xr-op-danger"
                     onClick={() => {
-                      const confirmInstance = Modal.confirm({
-                        title: "删除背景图？",
-                        content: "删除后不可恢复，启用中的拼图验证码将不再使用该背景。",
-                        okText: "删除",
-                        cancelText: "取消",
-                        okButtonProps: { danger: true },
-                        onOk: async () => {
-                          confirmInstance.update({ cancelButtonProps: { disabled: true } });
-                          try {
-                            await handleDelete(record.id);
-                          } finally {
-                            confirmInstance.update({ cancelButtonProps: { disabled: false } });
-                          }
-                        },
+                      confirmDelete({
+                        target: `验证码背景 ${record.fileName}`,
+                        onDelete: () => handleDelete(record.id),
                       });
                     }}
                   >

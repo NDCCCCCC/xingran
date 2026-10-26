@@ -50,6 +50,7 @@ import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 
@@ -398,12 +399,9 @@ const RoomDeviceManagement: FC = () => {
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个设备吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `机房设备 ${record.name}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },
@@ -438,12 +436,9 @@ const RoomDeviceManagement: FC = () => {
                   key="delete"
                   style={{ color: "var(--theme-error)" }}
                   onClick={() => {
-                    Modal.confirm({
-                      title: "确定要删除这个设备吗？",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleDelete(device.id),
+                    confirmDelete({
+                      target: `机房设备 ${device.name}`,
+                      onDelete: () => handleDelete(device.id),
                     });
                   }}
                 />,

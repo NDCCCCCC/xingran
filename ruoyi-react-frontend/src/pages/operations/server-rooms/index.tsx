@@ -46,6 +46,7 @@ import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/ut
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import { NORMAL_STOP_TAG_CONFIG } from "@/constants/status";
@@ -355,12 +356,9 @@ const ServerRoomManagement: FC = () => {
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个机房吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `机房 ${record.name}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },
@@ -395,12 +393,9 @@ const ServerRoomManagement: FC = () => {
                   key="delete"
                   style={{ color: "var(--theme-error)" }}
                   onClick={() => {
-                    Modal.confirm({
-                      title: "确定要删除这个机房吗？",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleDelete(room.id),
+                    confirmDelete({
+                      target: `机房 ${room.name}`,
+                      onDelete: () => handleDelete(room.id),
                     });
                   }}
                 />,

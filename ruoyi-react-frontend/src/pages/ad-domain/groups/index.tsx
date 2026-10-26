@@ -40,6 +40,7 @@ import {
   type ADGroupSyncStatus,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 import type { FC } from "react";
 import { usePagination } from "@/hooks/usePagination";
@@ -416,12 +417,9 @@ const ADGroupPage: FC = () => {
           danger
           icon={<MinusCircleOutlined />}
           onClick={() => {
-            Modal.confirm({
-              title: "确定移除该成员吗？",
-              okText: "确定",
-              cancelText: "取消",
-              okButtonProps: { danger: true },
-              onOk: () => handleRemoveMember(record.userDn),
+            confirmDelete({
+              target: `AD 成员 ${record.userDn}`,
+              onDelete: () => handleRemoveMember(record.userDn),
             });
           }}
         >

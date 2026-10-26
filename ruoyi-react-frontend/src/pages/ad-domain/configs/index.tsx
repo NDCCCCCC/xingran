@@ -36,6 +36,7 @@ import {
   type ADSyncResult,
 } from "@/lib/adDomainApi";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { formatDateTime } from "@/utils/datetime";
 import { useADConfigs } from "@/hooks/useADConfigs";
 import type { ADConfig } from "@/lib/adDomainApi";
@@ -317,12 +318,9 @@ const ADConfigPage: FC = () => {
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定删除此配置吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `AD 配置 ${record.configName}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },

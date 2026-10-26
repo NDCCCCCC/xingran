@@ -1,5 +1,6 @@
 import React from "react";
-import { Card, Select, Table, Button, Space, Tag, Upload, Modal } from "antd";
+import { Card, Select, Table, Button, Space, Tag, Upload } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import type { ColumnsType } from "antd/es/table";
 import { PlusOutlined, ReloadOutlined, FileExcelOutlined, UploadOutlined } from "@ant-design/icons";
 import { formatDate } from "@/utils/datetime";
@@ -121,12 +122,9 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
             size="small"
             danger
             onClick={() => {
-              Modal.confirm({
-                title: "确定删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => onDelete(record.id),
+              confirmDelete({
+                target: `节假日 ${record.holidayName}`,
+                onDelete: async () => { onDelete(record.id); },
               });
             }}
           >

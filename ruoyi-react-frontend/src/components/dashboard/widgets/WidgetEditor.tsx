@@ -7,8 +7,9 @@
  */
 
 import { useState, useEffect } from "react";
-import { App, Drawer, Form, Input, Button, Modal, Spin, Divider, Space } from "antd";
+import { App, Drawer, Form, Input, Button, Spin, Divider, Space } from "antd";
 import { SaveOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { useDashboardStore } from "@/store/dashboardStore";
 import DataSourceForm from "../settings/DataSourceForm";
 import DisplayConfigForm from "../settings/DisplayConfigForm";
@@ -88,21 +89,11 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
   const handleDelete = () => {
     if (!widget) return;
 
-    Modal.confirm({
-      title: "确认删除",
-      content: (
-        <div>
-          <p>确定要删除 Widget 吗？</p>
-          <p style={{ fontWeight: "bold", marginTop: 8 }}>「{widget.title}」</p>
-          <p style={{ color: "var(--theme-text-tertiary)", marginTop: 8 }}>此操作不可撤销</p>
-        </div>
-      ),
-      okText: "删除",
-      okType: "danger",
-      cancelText: "取消",
-      onOk: () => {
+    confirmDelete({
+      target: `Widget ${widget.title}`,
+      successText: "Widget 已删除",
+      onDelete: async () => {
         removeWidget(widget.id);
-        message.success("Widget 已删除");
         onClose();
       },
     });

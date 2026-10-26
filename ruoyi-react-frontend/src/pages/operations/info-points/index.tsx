@@ -52,6 +52,7 @@ import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import { post } from "@/lib/api";
@@ -715,12 +716,9 @@ const InfoPointManagement: FC = () => {
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个信息点吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `信息点 ${record.name}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },
@@ -755,12 +753,9 @@ const InfoPointManagement: FC = () => {
                   key="delete"
                   style={{ color: "var(--theme-error)" }}
                   onClick={() => {
-                    Modal.confirm({
-                      title: "确定要删除这个信息点吗？",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleDelete(infoPoint.id),
+                    confirmDelete({
+                      target: `信息点 ${infoPoint.name}`,
+                      onDelete: () => handleDelete(infoPoint.id),
                     });
                   }}
                 />,

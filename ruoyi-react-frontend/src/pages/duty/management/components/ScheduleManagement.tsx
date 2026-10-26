@@ -1,5 +1,6 @@
 import React from "react";
-import { Card, Form, Select, Table, Button, Space, Modal, Tag, DatePicker } from "antd";
+import { Card, Form, Select, Table, Button, Space, Tag, DatePicker } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -169,12 +170,9 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
           danger
           icon={<DeleteOutlined />}
           onClick={() => {
-            Modal.confirm({
-              title: "确定要删除这条排班吗？",
-              okText: "确定",
-              cancelText: "取消",
-              okButtonProps: { danger: true },
-              onOk: () => onDelete(record.id),
+            confirmDelete({
+              target: `排班记录 ${record.scheduleDate}`,
+              onDelete: async () => { onDelete(record.id); },
             });
           }}
         >
@@ -260,12 +258,11 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
               danger
               icon={<DeleteOutlined />}
               onClick={() => {
-                Modal.confirm({
-                  title: "确定要批量删除选中的排班记录吗？",
-                  okText: "确定",
-                  cancelText: "取消",
-                  okButtonProps: { danger: true },
-                  onOk: onBatchDelete,
+                confirmDelete({
+                  target: `选中的 ${selectedRowKeys.length} 项排班记录`,
+                  title: "确认批量删除",
+                  actionContext: "批量删除",
+                  onDelete: async () => { onBatchDelete(); },
                 });
               }}
             >

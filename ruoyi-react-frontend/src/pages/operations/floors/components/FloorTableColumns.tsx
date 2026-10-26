@@ -3,11 +3,12 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Modal, Tag } from "antd";
+import { Tag } from "antd";
 import { EditOutlined, DeleteOutlined, BgColorsOutlined } from "@ant-design/icons";
 import type { Floor } from "@/types";
 import { createStatusColumn, createDateTimeColumn } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import type { SortOrder } from "@/hooks/useServerSort";
 
 interface FloorTableColumnCallbacks {
@@ -118,15 +119,11 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
             label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
-            onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个楼层吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => onDelete(record.id),
-              });
-            },
+            onClick: () =>
+              confirmDelete({
+                target: `楼层 ${record.name || record.floorNo}`,
+                onDelete: async () => { onDelete(record.id); },
+              }),
           },
         ];
         return <ActionButtons actions={actions} />;

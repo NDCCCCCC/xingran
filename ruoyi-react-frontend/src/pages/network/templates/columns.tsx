@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Modal } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { EyeOutlined, CopyOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ConfigTemplate } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
@@ -142,12 +142,9 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
                   icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => {
-                    Modal.confirm({
-                      title: "确认删除?",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleDelete(record.id),
+                    confirmDelete({
+                      target: `命令模板 ${record.templateName}`,
+                      onDelete: async () => { handleDelete(record.id); },
                     });
                   },
                 },

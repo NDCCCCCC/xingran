@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Modal } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
@@ -128,15 +128,11 @@ export function getWorkstationColumns(
             label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
-            onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个工位吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
-              });
-            },
+            onClick: () =>
+              confirmDelete({
+                target: `工位 ${record.name}`,
+                onDelete: async () => { handleDelete(record.id); },
+              }),
           },
         ];
         return <ActionButtons actions={actions} />;

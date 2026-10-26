@@ -46,6 +46,7 @@ import type { SimpleDept } from "@/lib/dutyApi";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import { post } from "@/lib/api";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 interface PostItem {
   id: string;
@@ -221,23 +222,12 @@ const ManagerRulesPage: FC = () => {
   };
 
   const handleDelete = (record: ManagerRule) => {
-    const confirmInstance = Modal.confirm({
-      title: "删除规则",
-      content: `确定要删除规则「${record.ruleName}」吗？`,
-      okText: "确定",
-      okType: "danger",
-      cancelText: "取消",
-      onOk: async () => {
-        confirmInstance.update({ cancelButtonProps: { disabled: true } });
-        try {
-          await deleteManagerRule(record.id);
-          handleSuccess("删除");
-          loadList();
-        } catch (error) {
-          handleApiError(error, "删除");
-        } finally {
-          confirmInstance.update({ cancelButtonProps: { disabled: false } });
-        }
+    confirmDelete({
+      target: `管理规则 ${record.ruleName}`,
+      onDelete: async () => {
+        await deleteManagerRule(record.id);
+        handleSuccess("删除");
+        loadList();
       },
     });
   };

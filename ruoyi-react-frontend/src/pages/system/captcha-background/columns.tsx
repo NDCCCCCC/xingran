@@ -4,10 +4,11 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Button, Space, Modal, Image } from "antd";
+import { Button, Space, Image } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { CaptchaBackground } from "@/types/captcha";
 import { renderPieceShapeTag, renderDifficultyTag, renderStatusTag } from "./constants";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 export interface CaptchaColumnsParams {
   handleEdit: (record: CaptchaBackground) => void;
@@ -107,15 +108,12 @@ export function getCaptchaColumns(params: CaptchaColumnsParams): ColumnsType<Cap
             type="link"
             size="small"
             icon={<DeleteOutlined />}
-            onClick={() => {
-              Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
-              });
-            }}
+            onClick={() =>
+              confirmDelete({
+                target: `验证码背景图 ${record.fileName}`,
+                onDelete: async () => { handleDelete(record.id); },
+              })
+            }
           >
             删除
           </Button>

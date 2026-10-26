@@ -29,6 +29,7 @@ import {
 } from "@/lib/notificationConfigApi";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -306,20 +307,9 @@ const EmailConfigPage: FC = () => {
             className="xr-op-danger"
             icon={<DeleteOutlined />}
             onClick={() => {
-              const confirmInstance = Modal.confirm({
-                title: "删除邮箱配置？",
-                content: "删除后不可恢复，使用该配置的通知邮件将发送失败。",
-                okText: "删除",
-                okButtonProps: { danger: true },
-                cancelText: "取消",
-                onOk: async () => {
-                  confirmInstance.update({ cancelButtonProps: { disabled: true } });
-                  try {
-                    await handleDelete(record.id);
-                  } finally {
-                    confirmInstance.update({ cancelButtonProps: { disabled: false } });
-                  }
-                },
+              confirmDelete({
+                target: `邮件配置 ${record.configName}`,
+                onDelete: () => handleDelete(record.id),
               });
             }}
           >

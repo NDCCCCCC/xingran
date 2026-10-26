@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Space, Tag, Modal } from "antd";
+import { Space, Tag } from "antd";
 import {
   ApartmentOutlined,
   PhoneOutlined,
@@ -14,6 +14,7 @@ import {
 } from "@ant-design/icons";
 import type { Department } from "@/types";
 import { renderStatusTag, renderExternalOrgTag } from "./constants";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { formatDateTime } from "@/utils/datetime";
 import ActionButtons from "@/components/shared/ActionButtons";
 
@@ -122,15 +123,11 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
             icon: <DeleteOutlined />,
             danger: true,
             disabled: record.accessible === false,
-            onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个部门吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
-              });
-            },
+            onClick: () =>
+              confirmDelete({
+                target: `部门 ${record.deptName}`,
+                onDelete: () => handleDelete(record.id),
+              }),
           },
         ];
         return <ActionButtons actions={actions} />;

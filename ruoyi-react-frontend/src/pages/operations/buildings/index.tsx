@@ -1,8 +1,24 @@
-import { useState, useEffect, useCallback, useRef, useMemo, type FC, type Key } from "react";
+/**
+ * 楼宇管理页面 — Phase 68.1 T6b：operations 域 PageTable 契约形态
+ *
+ * 迁移自页面级双 hook 数据层实现（useTableManager + usePagination）：数据层 /
+ * 搜索区 / 分页 / 三态 / 删除确认全部收敛到 PageTable（UI-SPEC §3.2），本页只保留
+ * 业务块（左侧部门树、统计卡片、已选择 Alert、视图切换、导入导出、新增/编辑弹窗表单）。
+ *
+ * 部门树联动：选中部门经 PageTable extraFilters（{ orgId }）触发回第 1 页重载；
+ * request 侧再兜底注入 orgId，保证搜索 / 重置 / 翻页 / 排序等任何重载路径都不丢部门过滤。
+ * 统计口径与列表共用同一次 request 的过滤条件（分页/排序参数剥离后传 statistics）。
+ *
+ * 视图切换（表格 / 卡片）：卡片数据取自同一 request 的最近一次快照；表格仍由
+ * PageTable 承载、在卡片模式下隐藏——搜索 / 排序 / 分页 / 批删 / 三态与表格视图
+ * 共用同一数据层（PageTableRenderContext 不暴露 data，故镜像一份快照）。
+ */
+
+import { useState, useCallback, useRef, useMemo, type FC, type Key } from "react";
+import type { FormInstance } from "antd";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
-  Table,
   Button,
   Space,
   Modal,
@@ -24,8 +40,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  SearchOutlined,
-  ReloadOutlined,
   CheckCircleOutlined,
   StopOutlined,
   AppstoreOutlined,
@@ -37,14 +51,14 @@ import {
 const { Sider, Content } = Layout;
 import type { Building } from "@/types/operations";
 import { buildingApi } from "@/lib/opsApi";
-import { useTableManager } from "@/hooks/useTableManager";
-import { usePagination } from "@/hooks/usePagination";
-import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import { isFormValidationError } from "@/utils/errorHandler";
+import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
-import ActionButtons from "@/components/shared/ActionButtons";
+import { PageTable } from "@/components/shared";
+import type { PageTableRenderContext, SearchField } from "@/components/shared";
+import { createDeleteAction } from "@/components/shared/ActionButtons";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DepartmentTreeSelect } from "@/components/shared";
 import DeptTree from "@/components/DeptTree";
 import { useDeptTree } from "@/hooks/useDeptTree";
@@ -56,8 +70,14 @@ const { TextArea } = Input;
 
 type ViewMode = "table" | "card";
 
+// 搜索区状态选项（值沿用后端 status 口径 0=正常 / 1=停用）
+const BUILDING_STATUS_OPTIONS = [
+  { label: "正常", value: 0 },
+  { label: "停用", value: 1 },
+];
+
 const BuildingManagement: FC = () => {
-  // 自定义状态
+  // 左侧部门树选中态（列表过滤经 PageTable extraFilters 联动）
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
 
   // 使用自定义 Hooks
@@ -84,8 +104,17 @@ const BuildingManagement: FC = () => {
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
 
-  // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  // 卡片视图数据快照（与表格同一 request，不另建数据层）
+  const [buildings, setBuildings] = useState<Building[]>([]);
+
+  // 新增/编辑弹窗态（原表格管理器 hook 的 editForm/editModalVisible/editingItem 位）
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
+  const [buildingForm] = Form.useForm();
+
+  // PageTable render-prop 上下文提升到业务回调（提交/删除/导入后刷新 + 导出筛选）
+  const reloadRef = useRef<() => void>(() => {});
+  const searchFormRef = useRef<FormInstance | null>(null);
 
   // 服务端排序:field 对应后端 buildingAllowedSortFields 白名单 key
   const sorterMetas = useMemo(
@@ -102,46 +131,6 @@ const BuildingManagement: FC = () => {
     []
   );
 
-  const {
-    loading,
-    data: buildings,
-    total: _total,
-    selectedRowKeys,
-    searchForm,
-    editForm: buildingForm,
-    editModalVisible: modalVisible,
-    editingItem: editingBuilding,
-    setSelectedRowKeys,
-    setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingBuilding,
-    handleSearch: _tableHandleSearch,
-    handleReset: _handleReset,
-    handleAdd,
-    handleEdit,
-    handleModalClose,
-    loadData: loadBuildings,
-    resetSelection,
-    getColumnSortOrder,
-    handleTableChange,
-  } = useTableManager<Building>(
-    async (params) => {
-      const result = (await buildingApi.list(params)) as {
-        data?: { list: Building[]; total: number };
-      };
-      return { list: result.data?.list || [], total: result.data?.total || 0 };
-    },
-    {
-      externalPagination: {
-        current: paginationProps.current ?? 1,
-        pageSize: paginationProps.pageSize ?? 10,
-        setCurrent,
-        setPageSize,
-        setTotal,
-      },
-      sorterMetas,
-    }
-  );
-
   const loadStatistics = useCallback(async (searchParams: Record<string, unknown> = {}) => {
     try {
       const stats = await buildingApi.statistics(searchParams);
@@ -155,88 +144,50 @@ const BuildingManagement: FC = () => {
     }
   }, []);
 
-  // 使用 ref 跟踪初始化状态，避免循环请求
-  const isInitialized = useRef(false);
-  const prevPageRef = useRef({ current: 1, pageSize: 10 });
+  // 部门树选中：列表重载由 extraFilters 引用变化内建完成，统计随 request 联动
+  const handleDeptSelect = useCallback((selectedKeys: Key[]) => {
+    setSelectedDeptId(selectedKeys.length > 0 ? (selectedKeys[0] as string) : "");
+  }, []);
 
-  // 部门树选择处理
-  const handleDeptSelect = useCallback(
-    (selectedKeys: Key[]) => {
-      const searchParams: Record<string, unknown> = {};
-      if (selectedKeys.length > 0) {
-        setSelectedDeptId(selectedKeys[0] as string);
-        searchParams.orgId = selectedKeys[0] as string;
-      } else {
-        setSelectedDeptId("");
-      }
-      loadBuildings(searchParams);
-      loadStatistics(searchParams);
-    },
-    [loadBuildings, loadStatistics]
+  // 部门过滤（PageTable extraFilters：引用变化 → applyFilters 回第 1 页重载）
+  const extraFilters = useMemo(
+    () => (selectedDeptId ? { orgId: selectedDeptId } : {}),
+    [selectedDeptId]
   );
 
-  // 搜索处理（支持部门过滤）
-  const handleSearch = useCallback(() => {
-    const values = searchForm.getFieldsValue() as Record<string, unknown>;
-    const searchParams: Record<string, unknown> = {};
-    Object.keys(values).forEach((key) => {
-      const value = values[key];
-      if (value !== undefined && value !== null && value !== "") {
-        searchParams[key] = value;
-      }
-    });
-    if (selectedDeptId) {
-      searchParams.orgId = selectedDeptId;
-    }
-    loadBuildings(searchParams);
-    loadStatistics(searchParams);
-  }, [searchForm, selectedDeptId, loadBuildings, loadStatistics]);
-
-  // 重置处理（支持部门过滤）
-  const handleResetWithDept = useCallback(() => {
-    searchForm.resetFields();
-    const searchParams: Record<string, unknown> = {};
-    if (selectedDeptId) {
-      searchParams.orgId = selectedDeptId;
-    }
-    loadBuildings(searchParams);
-    loadStatistics(searchParams);
-  }, [searchForm, selectedDeptId, loadBuildings, loadStatistics]);
-
-  // 刷新处理（支持部门过滤）
-  const handleRefresh = useCallback(() => {
-    const searchParams: Record<string, unknown> = {};
-    if (selectedDeptId) {
-      searchParams.orgId = selectedDeptId;
-    }
-    loadBuildings(searchParams);
-    loadStatistics(searchParams);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDeptId]);
-
-  // 初始加载和分页变化处理
-  useEffect(() => {
-    const { current, pageSize } = paginationProps;
-    const prev = prevPageRef.current;
-
-    // 检查分页是否真的发生了变化
-    const pageChanged = prev.current !== current || prev.pageSize !== pageSize;
-
-    if (!isInitialized.current || pageChanged) {
-      isInitialized.current = true;
-      prevPageRef.current = { current: current ?? 1, pageSize: pageSize ?? 10 };
-
-      // 使用 setTimeout 避免同步 setState 导致的循环
-      // 部门树由 useDeptTree 自动获取,无需手动触发
-      setTimeout(() => {
-        loadBuildings();
-        loadStatistics();
-      }, 0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paginationProps.current, paginationProps.pageSize]);
+  // 列表请求：查询条件（current/pageSize/filters/排序）由 PageTable 内部组装后透传；
+  // 部门过滤在此兜底注入，覆盖搜索 / 重置 / 翻页 / 排序等所有重载路径。
+  const request = useCallback(
+    async (params: Record<string, unknown>) => {
+      const listParams = selectedDeptId ? { ...params, orgId: selectedDeptId } : params;
+      const result = (await buildingApi.list(listParams)) as {
+        data?: { list: Building[]; total: number };
+      };
+      const list = result.data?.list || [];
+      // 卡片视图快照：与表格同一份数据源
+      setBuildings(list);
+      // 统计与列表同口径（剥离分页 / 排序参数，只保留过滤条件）
+      const {
+        current: _current,
+        pageSize: _pageSize,
+        orderByColumn: _orderByColumn,
+        isAsc: _isAsc,
+        ...filterParams
+      } = listParams;
+      void loadStatistics(filterParams);
+      return { list, total: result.data?.total || 0 };
+    },
+    [selectedDeptId, loadStatistics]
+  );
 
   // ==================== 楼宇操作函数 ====================
+
+  const closeModal = () => {
+    setModalVisible(false);
+    buildingForm.resetFields();
+    setEditingBuilding(null);
+    geocoding.reset();
+  };
 
   const handleSave = async () => {
     try {
@@ -266,59 +217,32 @@ const BuildingManagement: FC = () => {
         await buildingApi.create(submitData);
         handleSuccess("创建");
       }
-      handleModalClose();
-      // 刷新时保持部门筛选状态
-      const searchParams: Record<string, unknown> = {};
-      if (selectedDeptId) {
-        searchParams.orgId = selectedDeptId;
-      }
-      loadBuildings(searchParams);
-      loadStatistics(searchParams);
+      closeModal();
+      // 刷新列表（请求侧自动带上部门过滤，统计随 request 联动）
+      reloadRef.current();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
       handleApiError(error, "操作");
     }
   };
 
+  // 单删（经 createDeleteAction → ConfirmDelete；成功/失败提示由 confirmDelete 统一承担）
   const handleDelete = async (id: string) => {
-    try {
-      await buildingApi.delete(id);
-      handleSuccess("删除");
-      // 刷新时保持部门筛选状态
-      const searchParams: Record<string, unknown> = {};
-      if (selectedDeptId) {
-        searchParams.orgId = selectedDeptId;
-      }
-      loadBuildings(searchParams);
-      loadStatistics(searchParams);
-    } catch (error) {
-      handleApiError(error, "删除");
-    }
+    await buildingApi.delete(id);
+    reloadRef.current();
   };
 
-  const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) return;
-    try {
-      await buildingApi.batch("delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      resetSelection();
-      // 刷新时保持部门筛选状态
-      const searchParams: Record<string, unknown> = {};
-      if (selectedDeptId) {
-        searchParams.orgId = selectedDeptId;
-      }
-      loadBuildings(searchParams);
-      loadStatistics(searchParams);
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
+  // 批删（确认/成功提示由 PageTable → BatchDeleteButton → confirmDelete 承担；
+  // 成功后 PageTable 自动清空选中并重载列表，统计随 request 联动）
+  const handleBatchDelete = async (keys: Key[]) => {
+    await buildingApi.batch("delete", { ids: keys });
   };
 
   const openModal = (record?: Building) => {
     geocoding.reset();
 
     if (record) {
-      handleEdit(record);
+      setEditingBuilding(record);
       // 只设置表单中实际需要的字段，排除时间字段等不需要的
       const formValues = {
         name: record.name,
@@ -340,21 +264,51 @@ const BuildingManagement: FC = () => {
           latitude: record.latitude,
         });
       }
+      setModalVisible(true);
     } else {
-      handleAdd();
+      setEditingBuilding(null);
+      buildingForm.resetFields();
       buildingForm.setFieldsValue({ status: 0, level: 2 });
+      setModalVisible(true);
     }
   };
 
   const handleImportSuccess = () => {
-    const searchParams: Record<string, unknown> = {};
-    if (selectedDeptId) {
-      searchParams.orgId = selectedDeptId;
-    }
-    loadBuildings(searchParams);
-    loadStatistics(searchParams);
+    reloadRef.current();
     setImportVisible(false);
   };
+
+  // 导出：沿用迁移前口径——取当前搜索表单非空值 + 部门过滤作为 filters
+  const handleOpenExport = () => {
+    const values = (searchFormRef.current?.getFieldsValue() ?? {}) as Record<string, unknown>;
+    const currentFilters: Record<string, unknown> = {};
+    Object.keys(values).forEach((key) => {
+      const value = values[key];
+      if (value !== undefined && value !== null && value !== "") {
+        currentFilters[key] = value;
+      }
+    });
+    if (selectedDeptId) {
+      currentFilters.orgId = selectedDeptId;
+    }
+    setExportFilters(currentFilters);
+    setExportVisible(true);
+  };
+
+  // 搜索区 schema：字段名与后端查询参数一一对应（name / status）
+  const searchFields = useMemo<SearchField[]>(
+    () => [
+      { name: "name", label: "楼宇名称", type: "input", placeholder: "请输入楼宇名称" },
+      {
+        name: "status",
+        label: "状态",
+        type: "select",
+        placeholder: "请选择状态",
+        options: BUILDING_STATUS_OPTIONS,
+      },
+    ],
+    []
+  );
 
   const columns: ColumnsType<Building> = [
     {
@@ -363,7 +317,6 @@ const BuildingManagement: FC = () => {
       key: "name",
       width: 150,
       sorter: true,
-      sortOrder: getColumnSortOrder("name"),
     },
     {
       title: "所属机构",
@@ -371,7 +324,6 @@ const BuildingManagement: FC = () => {
       key: "orgName",
       width: 150,
       sorter: true,
-      sortOrder: getColumnSortOrder("orgId"),
       render: getOrgName,
     },
     {
@@ -380,7 +332,6 @@ const BuildingManagement: FC = () => {
       key: "level",
       width: 80,
       sorter: true,
-      sortOrder: getColumnSortOrder("level"),
       render: (level: number) => (
         <Tag color={level === 1 ? "purple" : "blue"}>{level === 1 ? "一级" : "二级"}</Tag>
       ),
@@ -392,7 +343,6 @@ const BuildingManagement: FC = () => {
       ellipsis: true,
       width: 200,
       sorter: true,
-      sortOrder: getColumnSortOrder("address"),
     },
     {
       title: "经纬度",
@@ -414,54 +364,22 @@ const BuildingManagement: FC = () => {
       key: "floorCount",
       width: 100,
       sorter: true,
-      sortOrder: getColumnSortOrder("totalFloors"),
       render: (v) => (v == null ? "-" : v),
     },
-    createStatusColumn("status", {
-      width: 100,
-      sorter: true,
-      sortOrder: getColumnSortOrder("status"),
-    }),
+    createStatusColumn("status", { width: 100, sorter: true }),
     { title: "描述", dataIndex: "remark", key: "remark", ellipsis: true },
     createDateTimeColumn("createdAt", {
       width: 180,
       title: "创建时间",
       sorter: true,
-      sortOrder: getColumnSortOrder("createdAt"),
     }),
     createDateTimeColumn("updatedAt", { width: 180, title: "更新时间" }),
-    {
-      title: "操作",
-      key: "action",
-      render: (_, record) => {
-        const actions = [
-          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
-          {
-            key: "delete",
-            label: "删除",
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              const confirmInstance = Modal.confirm({
-                title: "确定要删除这个楼宇吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: async () => {
-                  confirmInstance.update({ cancelButtonProps: { disabled: true } });
-                  try {
-                    await handleDelete(record.id);
-                  } finally {
-                    confirmInstance.update({ cancelButtonProps: { disabled: false } });
-                  }
-                },
-              });
-            },
-          },
-        ];
-        return <ActionButtons actions={actions} />;
-      },
-    },
+  ];
+
+  // 行操作：编辑 + 删除（数量/顺序与迁移前一致；删除走 createDeleteAction 唯一入口）
+  const rowActions = (record: Building) => [
+    { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
+    createDeleteAction(record.id, handleDelete, { label: `楼宇 ${record.name}` }),
   ];
 
   const renderCardView = () => {
@@ -488,22 +406,12 @@ const BuildingManagement: FC = () => {
                 <DeleteOutlined
                   key="delete"
                   style={{ color: "var(--theme-error)" }}
-                  onClick={() => {
-                    const confirmInstance = Modal.confirm({
-                      title: "确定要删除这个楼宇吗？",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: async () => {
-                        confirmInstance.update({ cancelButtonProps: { disabled: true } });
-                        try {
-                          await handleDelete(building.id);
-                        } finally {
-                          confirmInstance.update({ cancelButtonProps: { disabled: false } });
-                        }
-                      },
-                    });
-                  }}
+                  onClick={() =>
+                    confirmDelete({
+                      target: `楼宇 ${building.name}`,
+                      onDelete: () => handleDelete(building.id),
+                    })
+                  }
                 />,
               ]}
             >
@@ -548,6 +456,68 @@ const BuildingManagement: FC = () => {
     );
   };
 
+  // 业务区：统计卡片 + 已选择 Alert（PageTable render-prop 顶部，表格 / 卡片视图共用）
+  const renderBusinessArea = ({
+    selectedRowKeys,
+    clearSelection,
+    loadData,
+    searchForm,
+  }: PageTableRenderContext<Building>) => {
+    // 提升到业务回调：弹窗提交/删除/导入成功后刷新列表；导出取当前搜索条件
+    reloadRef.current = loadData;
+    searchFormRef.current = searchForm;
+    return (
+      <>
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="总楼宇数"
+                value={statistics.total}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="正常楼宇"
+                value={statistics.active}
+                styles={{ content: { color: "var(--theme-success)" } }}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="停用楼宇"
+                value={statistics.inactive}
+                styles={{ content: { color: "var(--theme-error)" } }}
+                prefix={<StopOutlined />}
+              />
+            </Card>
+          </Col>
+        </Row>
+        {selectedRowKeys.length > 0 && (
+          <Alert
+            title={
+              <span>
+                已选择 <strong>{selectedRowKeys.length}</strong> 个楼宇，
+                <Button type="link" size="small" onClick={clearSelection} style={{ padding: 0 }}>
+                  取消选择
+                </Button>
+              </span>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+      </>
+    );
+  };
+
   return (
     <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       {/* 左侧部门树 */}
@@ -566,80 +536,16 @@ const BuildingManagement: FC = () => {
       {/* 右侧内容区 */}
       <Content style={{ background: "#fff" }}>
         <div>
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={8}>
-              <Card>
-                <Statistic
-                  title="总楼宇数"
-                  value={statistics.total}
-                  prefix={<CheckCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card>
-                <Statistic
-                  title="正常楼宇"
-                  value={statistics.active}
-                  styles={{ content: { color: "var(--theme-success)" } }}
-                  prefix={<CheckCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card>
-                <Statistic
-                  title="停用楼宇"
-                  value={statistics.inactive}
-                  styles={{ content: { color: "var(--theme-error)" } }}
-                  prefix={<StopOutlined />}
-                />
-              </Card>
-            </Col>
-          </Row>
-          <Card style={{ marginBottom: 16 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-                gap: "16px",
-              }}
-            >
-              <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-                <Form.Item name="name" label="楼宇名称">
-                  <Input
-                    placeholder="请输入楼宇名称"
-                    allowClear
-                    className="user-form-input"
-                    style={{ width: 150 }}
-                  />
-                </Form.Item>
-                <Form.Item name="status" label="状态">
-                  <Select
-                    placeholder="请选择状态"
-                    allowClear
-                    className="user-form-input"
-                    style={{ width: 120 }}
-                    onSearch={() => {}}
-                  >
-                    <Option value={0}>正常</Option>
-                    <Option value={1}>停用</Option>
-                  </Select>
-                </Form.Item>
-                <Form.Item>
-                  <Space>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                      搜索
-                    </Button>
-                    <Button onClick={handleResetWithDept}>重置</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                      刷新
-                    </Button>
-                  </Space>
-                </Form.Item>
-              </Form>
+          <PageTable<Building>
+            request={request}
+            columns={columns}
+            rowKey={(record) => record.id}
+            searchFields={searchFields}
+            sorterMetas={sorterMetas}
+            extraFilters={extraFilters}
+            rowActions={rowActions}
+            batchDelete={{ onDelete: handleBatchDelete, target: "楼宇" }}
+            toolbar={
               <Space>
                 <Radio.Group
                   value={viewMode}
@@ -656,77 +562,20 @@ const BuildingManagement: FC = () => {
                 <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
                   导入
                 </Button>
-                <Button
-                  icon={<ExportOutlined />}
-                  onClick={() => {
-                    // 获取当前筛选条件
-                    const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                    const currentFilters: Record<string, unknown> = {};
-                    Object.keys(values).forEach((key) => {
-                      const value = values[key];
-                      if (value !== undefined && value !== null && value !== "") {
-                        currentFilters[key] = value;
-                      }
-                    });
-                    if (selectedDeptId) {
-                      currentFilters.orgId = selectedDeptId;
-                    }
-                    setExportFilters(currentFilters);
-                    setExportVisible(true);
-                  }}
-                >
+                <Button icon={<ExportOutlined />} onClick={handleOpenExport}>
                   导出
                 </Button>
-                {selectedRowKeys.length > 0 && (
-                  <Button
-                    icon={<DeleteOutlined />}
-                    style={{ color: "var(--theme-error)" }}
-                    onClick={handleBatchDelete}
-                  >
-                    批量删除 ({selectedRowKeys.length})
-                  </Button>
-                )}
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
                   新增楼宇
                 </Button>
               </Space>
-            </div>
-            {selectedRowKeys.length > 0 && (
-              <Alert
-                title={
-                  <span>
-                    已选择 <strong>{selectedRowKeys.length}</strong> 个楼宇，
-                    <Button
-                      type="link"
-                      size="small"
-                      onClick={() => setSelectedRowKeys([])}
-                      style={{ padding: 0 }}
-                    >
-                      取消选择
-                    </Button>
-                  </span>
-                }
-                type="info"
-                showIcon
-                style={{ marginTop: 12 }}
-              />
-            )}
-          </Card>
-          <Card>
-            {viewMode === "table" ? (
-              <Table
-                rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-                columns={columns}
-                dataSource={buildings}
-                loading={loading}
-                rowKey="id"
-                pagination={paginationProps}
-                onChange={handleTableChange}
-              />
-            ) : (
-              renderCardView()
-            )}
-          </Card>
+            }
+            // 卡片模式：表格由 PageTable 承载但隐藏（搜索/排序/分页/批删/三态保持同一数据层）
+            style={viewMode === "card" ? { display: "none" } : undefined}
+          >
+            {renderBusinessArea}
+          </PageTable>
+          {viewMode === "card" && <Card style={{ marginTop: 16 }}>{renderCardView()}</Card>}
           <Modal
             title={editingBuilding ? "编辑楼宇" : "新增楼宇"}
             open={modalVisible}
@@ -739,12 +588,7 @@ const BuildingManagement: FC = () => {
               }
             }}
             cancelButtonProps={{ disabled: submitting }}
-            onCancel={() => {
-              setModalVisible(false);
-              buildingForm.resetFields();
-              setEditingBuilding(null);
-              geocoding.reset();
-            }}
+            onCancel={closeModal}
             width={600}
           >
             <Form

@@ -33,6 +33,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import { queryKeys } from "@/lib/queryKeys";
 import { DepartmentTreeSelect } from "@/components/shared";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   getDutyPoolList,
   getDutyPoolStatistics,
@@ -346,12 +347,9 @@ const DutyPoolPage: FC = () => {
             icon={<DeleteOutlined />}
             style={{ color: "var(--theme-error)" }}
             onClick={() => {
-              Modal.confirm({
-                title: "确定要删除吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `值班池 ${record.poolName}`,
+                onDelete: () => handleDelete(record.id),
               });
             }}
           >

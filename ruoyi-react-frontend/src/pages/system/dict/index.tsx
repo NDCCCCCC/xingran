@@ -39,6 +39,7 @@ import { formatDateTime } from "@/utils/datetime";
 
 import type { DictType, DictData } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import type { SortOrder } from "@/hooks/useServerSort";
@@ -141,12 +142,9 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDeleteType(record.id),
+              confirmDelete({
+                target: `字典类型 ${record.dictName}`,
+                onDelete: async () => { handleDeleteType(record.id); },
               });
             },
           },
@@ -243,12 +241,9 @@ function getDictDataTableColumns(props: DictDataTableColumnsProps): ColumnsType<
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDeleteData(record.id),
+              confirmDelete({
+                target: `字典数据 ${record.dictLabel}`,
+                onDelete: async () => { handleDeleteData(record.id); },
               });
             },
           },

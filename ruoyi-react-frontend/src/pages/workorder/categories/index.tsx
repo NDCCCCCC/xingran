@@ -32,6 +32,7 @@ import {
   type WorkOrderCategoryUpdateRequest,
 } from "@/lib/workorderApi";
 import { isFormValidationError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 const { Option } = Select;
 
@@ -236,12 +237,9 @@ const WorkOrderCategoryPage: FC = () => {
                     style={{ color: "var(--theme-error)" }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      Modal.confirm({
-                        title: "确定要删除吗？",
-                        okText: "确定",
-                        cancelText: "取消",
-                        okButtonProps: { danger: true },
-                        onOk: () => handleDelete(node.data?.id || ""),
+                      confirmDelete({
+                        target: `工单分类 ${node.data?.categoryName ?? ""}`,
+                        onDelete: () => handleDelete(node.data?.id || ""),
                       });
                     }}
                   >

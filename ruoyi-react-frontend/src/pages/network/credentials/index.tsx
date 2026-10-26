@@ -352,12 +352,9 @@ const CredentialManagement: FC = () => {
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `设备凭据 ${record.credentialName}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },

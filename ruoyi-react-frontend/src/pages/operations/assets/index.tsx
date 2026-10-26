@@ -1,17 +1,21 @@
 /**
- * 资产管理页面
+ * 资产管理页面 — Phase 68.1 T6（PageTable 全契约形态）
+ *
+ * 迁移自页面级数据层实现：数据层 / 搜索区 / 分页 / 三态 / 删除确认全部
+ * 收敛到 PageTable（UI-SPEC §3.2），本页只保留业务块（统计卡片、列配置、
+ * 导入/下载模板/导出、行展开从属组件、对账抽屉）。
+ *
+ * 列定义仍是 `columnsSchema.ts` 的单一真理源：可见列/宽度经 useColumnConfig
+ * 计算后作为 columns 传入，行操作列由 PageTable 的 rowActions 统一追加。
  */
 
 import { formatDateTime, formatDate } from "@/utils/datetime";
-import dayjs from "dayjs";
-import { useState, useCallback, useEffect, useMemo } from "react";
-import type { FC } from "react";
-import { App, Table, Button, Space, Form, Input, Select, Tag, Modal, Card, Tooltip } from "antd";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import type { FC, Key } from "react";
+import type { FormInstance } from "antd";
+import { App, Button, Space, Tag, Card, Tooltip } from "antd";
 import {
   PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  DeleteOutlined,
   ImportOutlined,
   ExportOutlined,
   DownloadOutlined,
@@ -19,15 +23,15 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Asset } from "@/types/operations";
-import { useTableManager } from "@/hooks/useTableManager";
-import { usePagination } from "@/hooks/usePagination";
 import { assetApi, excelApi } from "@/lib/opsApi";
 import { handleApiError } from "@/utils/errorHandler";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
-import { AssetRow } from "@/components/table/AssetRow";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { PageTable } from "@/components/shared";
+import type { PageTableRenderContext, SearchField } from "@/components/shared";
+import { createDeleteAction } from "@/components/shared/ActionButtons";
 import {
   ReconciliationDrawer,
   useReconciliationVisibility,
@@ -35,8 +39,6 @@ import {
 } from "@/components/reconciliation";
 import { defaultAssetColumns, type AssetColumnConfig } from "./columnsSchema";
 import ComponentListTab from "./components/ComponentListTab";
-
-const { Option } = Select;
 
 // 统计数据类型
 interface Statistics {
@@ -82,7 +84,9 @@ const AssetList: FC = () => {
   const _reconciliationVisible = useReconciliationVisibility();
   void _reconciliationVisible;
 
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  // PageTable render-prop 上下文提升到业务回调（删除/导入成功后刷新 + 导出取筛选）
+  const reloadRef = useRef<() => void>(() => {});
+  const searchFormRef = useRef<FormInstance | null>(null);
 
   // 服务端排序:field 对应后端 assetAllowedSortFields 白名单 key
   const sorterMetas = useMemo(
@@ -94,42 +98,16 @@ const AssetList: FC = () => {
     []
   );
 
-  const {
-    loading,
-    data: assets,
-    total,
-    selectedRowKeys,
-    searchForm,
-    setSelectedRowKeys,
-    getColumnSortOrder,
-    handleTableChange,
-    handleSearch,
-    handleReset,
-    handleAdd,
-    loadData: loadAssets,
-    resetSelection,
-  } = useTableManager<Asset>(
-    async (params) => {
-      const result = (await assetApi.list(params)) as { data?: { list: Asset[]; total: number } };
-      return { list: result.data?.list || [], total: result.data?.total || 0 };
-    },
-    {
-      externalPagination: {
-        current: paginationProps.current ?? 1,
-        pageSize: paginationProps.pageSize ?? 10,
-        setCurrent,
-        setPageSize,
-        setTotal,
-      },
-      sorterMetas,
-    }
-  );
+  // 列表请求：查询条件（current/pageSize/filters/排序）由 PageTable 内部组装后透传
+  const request = useCallback(async (params: Record<string, unknown>) => {
+    const result = (await assetApi.list(params)) as { data?: { list: Asset[]; total: number } };
+    return { list: result.data?.list || [], total: result.data?.total || 0 };
+  }, []);
 
   // 列配置 Hook
   const {
     config,
     visibleColumns,
-    loading: configLoading,
     saving: configSaving,
     saveConfig,
     resetConfig,
@@ -189,72 +167,45 @@ const AssetList: FC = () => {
     }
   }, []);
 
-  // WR-04 审计 useEffect deps: useTableManager.loadData 内部已用 useCallback([]) 稳定
-  // (loadAssets 来自 useTableManager 的 destructure),同样 loadStatistics / loadDeviceTypes /
-  // loadDeviceCategories 均为本页内 useCallback([]) 稳定引用。整个 deps 数组都是稳定引用,
-  // 不会触发额外 re-render / re-fetch。R4 在本文件新增 useReconciliationVisibility() 与
-  // ReconciliationDrawer 状态未引入新依赖 — 上述 deps 保持完整且稳定。
+  // 列表首载由 PageTable 内建（mount 即发起请求）；此处只载统计与筛选选项。
+  // 三个 loader 均为 useCallback([]) 稳定引用，deps 不会触发重复请求。
   useEffect(() => {
     loadStatistics();
     loadDeviceTypes();
     loadDeviceCategories();
-    loadAssets(); // 页面加载时自动获取资产列表
-  }, [loadStatistics, loadDeviceTypes, loadDeviceCategories, loadAssets]);
+  }, [loadStatistics, loadDeviceTypes, loadDeviceCategories]);
 
-  // handleEdit/handleDelete 须定义在 columns useMemo 之前（columns 内联引用二者作 deps）
-  // TODO(P67): 资产编辑表单接入（届时恢复 AssetRow 的 onEdit 传入）
+  // 单删（CreateDeleteAction → ConfirmDelete；失败由 confirmDelete 统一反馈后 rethrow）
   const handleDelete = useCallback(
     async (id: string) => {
-      Modal.confirm({
-        title: "确认删除",
-        content: "确定要删除该资产吗？",
-        onOk: async () => {
-          try {
-            await assetApi.delete(id);
-            message.success("删除成功");
-            loadAssets();
-            loadStatistics();
-          } catch (_error) {
-            message.error("删除失败");
-          }
-        },
-      });
+      await assetApi.delete(id);
+      reloadRef.current();
+      loadStatistics();
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-    [loadAssets, loadStatistics]
+    [loadStatistics]
   );
 
-  const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) {
-      message.warning("请先选择要删除的资产");
-      return;
-    }
-
-    Modal.confirm({
-      title: "确认批量删除",
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条资产吗？`,
-      onOk: async () => {
-        try {
-          await assetApi.batch("delete", { ids: selectedRowKeys });
-          message.success("批量删除成功");
-          resetSelection();
-          loadAssets();
-          loadStatistics();
-        } catch (_error) {
-          message.error("批量删除失败");
-        }
-      },
-    });
-  };
+  // 批删（确认/成功提示由 PageTable → BatchDeleteButton → confirmDelete 承担；
+  // 成功后 PageTable 自动清空选中并重载列表，这里只补统计同步）
+  const handleBatchDelete = useCallback(
+    async (keys: Key[]) => {
+      await assetApi.batch("delete", { ids: keys });
+      loadStatistics();
+    },
+    [loadStatistics]
+  );
 
   const handleExport = async () => {
     setExporting(true);
     try {
-      const searchValues = searchForm.getFieldsValue();
+      const searchValues = (searchFormRef.current?.getFieldsValue() ?? {}) as Record<
+        string,
+        unknown
+      >;
       const params: Record<string, unknown> = {
         current: 1,
         pageSize: 10000,
-        ...(searchValues as Record<string, unknown>),
+        ...searchValues,
       };
 
       await assetApi.excel.export(params);
@@ -276,7 +227,6 @@ const AssetList: FC = () => {
         width: 150,
         fixed: "left",
         sorter: true,
-        sortOrder: getColumnSortOrder("devicesn"),
         render: (text) => (
           <Tooltip title={text}>
             <span style={{ cursor: "pointer" }}>{text}</span>
@@ -309,7 +259,6 @@ const AssetList: FC = () => {
         width: 100,
         ellipsis: true,
         sorter: true,
-        sortOrder: getColumnSortOrder("deviceTypeName"),
       },
       // order=6
       {
@@ -428,7 +377,6 @@ const AssetList: FC = () => {
         width: 120,
         ellipsis: true,
         sorter: true,
-        sortOrder: getColumnSortOrder("lastInventoryDate"),
         render: (date) => formatDate(date),
       },
       // 设备信息扩展 (order=54 设备渠道, order=55 设备属性)
@@ -546,16 +494,6 @@ const AssetList: FC = () => {
         width: 100,
         ellipsis: true,
       },
-      // 末尾特殊列:action + reconciliation(不参与 defaultAssetColumns 排序)
-      {
-        title: "操作",
-        key: "action",
-        width: 120,
-        fixed: "right",
-        render: (_, record) => (
-          <AssetRow record={record} onDelete={handleDelete} />
-        ),
-      },
       // R4 (Phase 45) — 对账健康列(行内徽标,assets 列表)
       // CR-01 修复:ops_asset 工作站绑定未在 /ops/asset/list API 响应中暴露(workstation_id
       // 不在 SELECT 列表,无法 lift useWorkstationHealth 到页面层)。在此后端限制解除前,
@@ -570,12 +508,12 @@ const AssetList: FC = () => {
         render: (_: unknown, _record: Asset) => <>-</>,
       },
     ],
-    [getColumnSortOrder, handleDelete]
+    []
   );
 
   // 根据列配置过滤和排序列
   const tableColumns = useMemo(() => {
-    const allColumnsMap = new Map<string, any>();
+    const allColumnsMap = new Map<string, ColumnsType<Asset>[number]>();
     columns.forEach((col) => allColumnsMap.set(col.key as string, col));
 
     const visibleCols = visibleColumns
@@ -588,12 +526,76 @@ const AssetList: FC = () => {
       })
       .filter((col) => col !== undefined);
 
-    return visibleCols;
+    return visibleCols as ColumnsType<Asset>;
   }, [columns, visibleColumns]);
 
-  return (
-    <div className="p-6">
-      {/* 统计卡片 */}
+  // 行操作：删除（数量/顺序与迁移前一致，唯一入口 createDeleteAction → ConfirmDelete；
+  // label 传对象名，作为确认弹窗的对象标识。操作列由 PageTable 统一追加在列尾部）
+  const rowActions = useCallback(
+    (record: Asset) => [
+      createDeleteAction(record.id, handleDelete, {
+        label: `资产 ${record.devicesn || record.id}`,
+      }),
+    ],
+    [handleDelete]
+  );
+
+  // 搜索区 schema：字段名与后端查询参数一一对应
+  // (devicesn / deviceModelName / deviceTypeName / deviceCategorySecondName / status / nbfStatus)
+  const searchFields = useMemo<SearchField[]>(
+    () => [
+      { type: "input", name: "devicesn", label: "设备序列号", placeholder: "请输入设备序列号" },
+      { type: "input", name: "deviceModelName", label: "型号", placeholder: "请输入型号" },
+      {
+        type: "select",
+        name: "deviceTypeName",
+        label: "设备类型",
+        placeholder: "请选择设备类型",
+        options: deviceTypeOptions.map((option) => ({
+          label: `${option.value} (${option.count})`,
+          value: option.value,
+        })),
+      },
+      {
+        type: "select",
+        name: "deviceCategorySecondName",
+        label: "设备种类",
+        placeholder: "请选择设备种类",
+        options: deviceCategoryOptions.map((option) => ({
+          label: `${option.value} (${option.count})`,
+          value: option.value,
+        })),
+      },
+      {
+        type: "select",
+        name: "status",
+        label: "状态",
+        placeholder: "请选择状态",
+        options: [
+          { label: "正常", value: 0 },
+          { label: "停用", value: 1 },
+        ],
+      },
+      {
+        type: "select",
+        name: "nbfStatus",
+        label: "拟报废",
+        placeholder: "请选择",
+        options: [
+          { label: "否", value: 0 },
+          { label: "是", value: 1 },
+        ],
+      },
+    ],
+    [deviceTypeOptions, deviceCategoryOptions]
+  );
+
+  // 业务区：统计卡片（PageTable render-prop 顶部；同时把 loadData / searchForm
+  // 提升给业务回调，供删除/导入后刷新与导出取筛选）
+  const renderBusinessArea = ({ loadData, searchForm }: PageTableRenderContext<Asset>) => {
+    reloadRef.current = loadData;
+    searchFormRef.current = searchForm;
+    return (
       <div className="grid grid-cols-4 gap-4 mb-6">
         <Card>
           <div className="text-2xl font-bold">{statistics.total}</div>
@@ -612,120 +614,56 @@ const AssetList: FC = () => {
           <div className="text-gray-500">拟报废</div>
         </Card>
       </div>
+    );
+  };
 
-      {/* 搜索表单 */}
-      <Card className="mb-4">
-        <Form form={searchForm} layout="inline">
-          <Form.Item name="devicesn" label="设备序列号">
-            <Input placeholder="请输入设备序列号" allowClear />
-          </Form.Item>
-          <Form.Item name="deviceModelName" label="型号">
-            <Input placeholder="请输入型号" allowClear />
-          </Form.Item>
-          <Form.Item name="deviceTypeName" label="设备类型">
-            <Select
-              placeholder="请选择设备类型"
-              allowClear
-              style={{ width: 200 }}
-              loading={deviceTypeOptions.length === 0}
-              onSearch={() => {}}
-            >
-              {deviceTypeOptions.map((option) => (
-                <Option key={option.value} value={option.value}>
-                  {option.value} ({option.count})
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="deviceCategorySecondName" label="设备种类">
-            <Select
-              placeholder="请选择设备种类"
-              allowClear
-              style={{ width: 200 }}
-              loading={deviceCategoryOptions.length === 0}
-              onSearch={() => {}}
-            >
-              {deviceCategoryOptions.map((option) => (
-                <Option key={option.value} value={option.value}>
-                  {option.value} ({option.count})
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" allowClear style={{ width: 120 }} onSearch={() => {}}>
-              <Option value={0}>正常</Option>
-              <Option value={1}>停用</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="nbfStatus" label="拟报废">
-            <Select placeholder="请选择" allowClear style={{ width: 120 }} onSearch={() => {}}>
-              <Option value={0}>否</Option>
-              <Option value={1}>是</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                重置
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
-
-      {/* 工具栏 */}
-      <div className="mt-4 mb-4 flex items-center justify-between">
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            新增资产
-          </Button>
-          {/* STOP-06: 下载模板兑现真实下载（原为假入口，复用导入弹层） */}
-          <Button
-            icon={<DownloadOutlined />}
-            loading={templateDownloading}
-            onClick={async () => {
-              setTemplateDownloading(true);
-              try {
-                await excelApi.downloadTemplate("asset");
-              } catch (error) {
-                handleApiError(error, "下载模板");
-              } finally {
-                setTemplateDownloading(false);
-              }
-            }}
-          >
-            下载模板
-          </Button>
-          <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-            导入
-          </Button>
-          <Button icon={<ExportOutlined />} loading={exporting} onClick={handleExport}>
-            导出
-          </Button>
-          <Button icon={<SettingOutlined />} onClick={() => setShowColumnConfig(true)}>
-            列设置
-          </Button>
-        </Space>
-        <Button
-          danger
-          icon={<DeleteOutlined />}
-          disabled={selectedRowKeys.length === 0}
-          onClick={handleBatchDelete}
-        >
-          批量删除 ({selectedRowKeys.length})
-        </Button>
-      </div>
-
-      {/* 数据表格 */}
-      <Table
-        rowKey="id"
+  return (
+    <div className="p-6">
+      <PageTable<Asset>
+        request={request}
         columns={tableColumns}
-        dataSource={assets}
-        loading={loading || configLoading}
+        rowKey={(record) => record.id}
+        searchFields={searchFields}
+        sorterMetas={sorterMetas}
+        rowActions={rowActions}
+        batchDelete={{ onDelete: handleBatchDelete, target: "资产" }}
+        toolbar={
+          <Space>
+            {/* Phase 63 STOP-06 遗留：本页未渲染资产表单弹窗，新增入口保持可见
+                （迁移前由列表数据层内建弹窗承接，但该弹窗从未在本页渲染） */}
+            <Button type="primary" icon={<PlusOutlined />}>
+              新增资产
+            </Button>
+            {/* STOP-06: 下载模板兑现真实下载（原为假入口，复用导入弹层） */}
+            <Button
+              icon={<DownloadOutlined />}
+              loading={templateDownloading}
+              onClick={async () => {
+                setTemplateDownloading(true);
+                try {
+                  await excelApi.downloadTemplate("asset");
+                } catch (error) {
+                  handleApiError(error, "下载模板");
+                } finally {
+                  setTemplateDownloading(false);
+                }
+              }}
+            >
+              下载模板
+            </Button>
+            <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
+              导入
+            </Button>
+            <Button icon={<ExportOutlined />} loading={exporting} onClick={handleExport}>
+              导出
+            </Button>
+            <Button icon={<SettingOutlined />} onClick={() => setShowColumnConfig(true)}>
+              列设置
+            </Button>
+          </Space>
+        }
+        // fixed 列（devicesn fixed:left）配套 scroll.x；行展开渲染「从属组件清单」Tab
+        scroll={{ x: 4200, y: 600 }}
         virtual
         expandable={{
           // Phase 48 Wave 3 (D-07): 行展开渲染「从属组件清单」Tab。
@@ -734,22 +672,9 @@ const AssetList: FC = () => {
           expandedRowRender: (record) => <ComponentListTab parentAssetId={record.id} />,
           rowExpandable: (record) => !record.componentType,
         }}
-        pagination={{
-          current: paginationProps.current,
-          pageSize: paginationProps.pageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
-        }}
-        onChange={handleTableChange}
-        scroll={{ x: 4200, y: 600 }}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: setSelectedRowKeys,
-          columnWidth: 50,
-        }}
-      />
+      >
+        {renderBusinessArea}
+      </PageTable>
 
       {/* 导入弹窗 */}
       <ExcelImportLazy
@@ -759,7 +684,7 @@ const AssetList: FC = () => {
         onClose={() => setImportVisible(false)}
         onImportSuccess={() => {
           setImportVisible(false);
-          loadAssets();
+          reloadRef.current();
           loadStatistics();
         }}
       />
