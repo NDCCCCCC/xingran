@@ -1,8 +1,8 @@
 /**
  * Phase 67 T2 — 配置备份页还原/版本/对比/内容四弹窗组件
  *
- * 由 index.tsx :737-1136 纯搬迁（versionColumns 随版本列表抽屉迁入），
- * 文案与交互逐字保留（含 B 类豁免的两处还原确认原文）。
+ * 由 index.tsx :737-1136 纯搬迁（versionColumns 随版本列表抽屉迁入）。
+ * 68.1-T4：版本列表「确认恢复到此版本?」裸 Modal.confirm → confirmDelete §1.9 变体。
  */
 import { Button, Card, Col, Descriptions, Drawer, Modal, Row, Select, Space, Spin, Table, Tag, Alert } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -17,6 +17,7 @@ import {
 import type { ConfigBackup } from "@/types";
 import type { ConfigRestoreTask, DeviceBackupGroup, DiffLine, DiffResult } from "../types";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared";
 import { formatDateTime } from "@/utils/datetime";
 
 const { Option } = Select;
@@ -158,12 +159,17 @@ export default function RestoreModals(props: RestoreModalsProps) {
             label: "恢复",
             icon: <DownloadOutlined />,
             onClick: () => {
-              Modal.confirm({
-                title: "确认恢复到此版本?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleRestore(record),
+              // 68.1-T4 §1.9 非删除破坏性变体：恢复到指定版本
+              confirmDelete({
+                title: "确认恢复到此版本",
+                target: `把设备当前配置恢复到版本 ${record.version}`,
+                actionLabel: "恢复",
+                actionContext: "恢复配置",
+                contentText: "将{target}，操作不可恢复，是否继续？",
+                successText: "已恢复配置",
+                onDelete: async () => {
+                  await handleRestore(record);
+                },
               });
             },
           },

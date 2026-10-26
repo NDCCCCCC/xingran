@@ -91,14 +91,15 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it("handleCancelExecution 失败 → error toast + 不调 onSuccess", async () => {
+  // 68.1-T4：失败上抛（错误反馈由 confirmDelete helper 内 handleApiError 统一承接），不调 onSuccess
+  it("handleCancelExecution 失败 → 上抛错误 + 不调 onSuccess", async () => {
     const { post } = await import("@/lib/api");
     vi.mocked(post).mockRejectedValueOnce(new Error("net"));
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useCommandModals(), { wrapper });
-    await act(async () => {
-      await result.current.handleCancelExecution("exec-2", onSuccess);
-    });
+    await expect(
+      result.current.handleCancelExecution("exec-2", onSuccess)
+    ).rejects.toThrow("net");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

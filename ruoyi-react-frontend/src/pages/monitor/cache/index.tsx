@@ -7,23 +7,25 @@
  * - 搜索卡（受控 Input/Select + 搜索/重置/刷新按钮）→ searchFields 3 字段（B 类：按钮文案统一内建 搜索/重置/刷新）
  * - 操作缓存 Modal → FormModal（okText="确定"；FormModal 不透传 maskClosable/keyboard——记录差异；
  *   Form 布局 vertical → FormModal 内建 horizontal labelCol4/wrapperCol20）
- * - 单删 Popconfirm 原样保留（B 类豁免原文案，不切 ConfirmDelete——避免 INV 口径回归）
+ * - 单删 Popconfirm → 命令式 confirmDelete（68.1-T4：Modal 强确认，触发按钮原样保留）
+ * - 清空全部缓存 → confirmDelete 非删除变体（actionLabel="清空"，68.1-T4 §1.9）
+ * - 导出按钮文案如实标注「导出全部缓存数据」：后端 /monitor/cache/export 仅支持
+ *   Key/Type 参数（CacheExportParams），不支持页面筛选中的 level → 不标称筛选结果（68.1 R3）
  * - Tabs（列表/缓存统计）移除：统计面板内容为「统计信息」Modal 的真子集，信息零损失（记 PR）
  * - 30s monitor 轮询保留（ref 承接）；列表失败重试由 PageTable 内建 ErrorAlertWithRetry 承接
  */
 import { useState, useEffect, useCallback, useMemo, useRef, type FC } from "react";
-import { Button, App, Popconfirm, Space, Modal, Form, Input, Select, InputNumber, Tag } from "antd";
+import { Button, App, Space, Modal, Form, Input, Select, InputNumber, Tag } from "antd";
 import {
   PlusOutlined,
   SettingOutlined,
   ExportOutlined,
-  ExclamationCircleOutlined,
   DeleteOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { post, get } from "@/lib/api";
-import { PageTable } from "@/components/shared";
+import { PageTable, confirmDelete } from "@/components/shared";
 import type { PageTableRenderContext } from "@/components/shared";
 import { FormModal, useFormModalForm } from "@/components/shared/FormModal";
 import ActionButtons from "@/components/shared/ActionButtons";
@@ -176,35 +178,38 @@ const CacheManager: FC = () => {
     reloadRef.current?.();
   };
 
-  // 单条删除（原 Popconfirm onConfirm → batch 端点 operation=del，语义不变）
-  const handleDelete = async (key: string) => {
-    await post<unknown>("/monitor/cache/batch", { keys: [key], operation: "del" });
-    message.success("批量操作成功");
-    reloadRef.current?.();
+  // 单条删除（68.1-T4 附加条目：原 Popconfirm → 命令式 confirmDelete，触发按钮不变）
+  const handleDelete = (key: string) => {
+    confirmDelete({
+      target: `缓存键 ${key}`,
+      onDelete: async () => {
+        await post<unknown>("/monitor/cache/batch", { keys: [key], operation: "del" });
+        reloadRef.current?.();
+      },
+    });
   };
 
   const handleClearAll = () => {
-    // B 类豁免原文案保留（UI-SPEC §1.2）
-    Modal.confirm({
+    // 68.1-T4 §1.9 非删除破坏性变体（清空缓存）
+    confirmDelete({
       title: "确认清空",
-      icon: <ExclamationCircleOutlined />,
-      content: "确定要清空所有缓存吗？此操作不可恢复！",
-      onOk: async () => {
-        try {
-          await post("/monitor/cache/clear", {});
-
-          message.success("清空成功");
-          reloadRef.current?.();
-          fetchMonitor();
-        } catch (error) {
-          handleApiError(error, "清空缓存");
-        }
+      target: "全部缓存数据",
+      actionLabel: "清空",
+      actionContext: "清空缓存",
+      contentText: "将{target}，操作不可恢复，是否继续？",
+      successText: "已清空缓存",
+      onDelete: async () => {
+        await post("/monitor/cache/clear", {});
+        reloadRef.current?.();
+        fetchMonitor();
       },
     });
   };
 
   const handleExport = useCallback(async () => {
     try {
+      // 68.1 R3：后端 /monitor/cache/export 仅支持 Key/Type（CacheExportParams），
+      // 不支持页面筛选中的 level → 如实标注导出全部，不标称筛选结果
       const result = await post<unknown[]>("/monitor/cache/export", {});
       exportCacheAsJson(result.data || []);
       message.success("导出成功");
@@ -292,7 +297,7 @@ const CacheManager: FC = () => {
     []
   );
 
-  // ==================== 行操作（原操作列整体迁 rowActions；Popconfirm 原样保留） ====================
+  // ==================== 行操作（原操作列整体迁 rowActions；删除走 confirmDelete 强确认） ====================
 
   // 行操作（普通函数组装；handleDelete/handleViewDetail 稳定闭包语义）
   const buildRowActions = (record: CacheInfo) => [
@@ -308,18 +313,17 @@ const CacheManager: FC = () => {
         icon: <DeleteOutlined />,
         danger: true,
         render: () => (
-          <Popconfirm title="确定要删除这个缓存吗？" onConfirm={() => void handleDelete(record.key)}>
-            <Button
-              aria-label="删除"
-              title="删除"
-              type="link"
-              icon={<DeleteOutlined />}
-              style={{ color: "var(--theme-error)" }}
-              size="small"
-            >
-              删除
-            </Button>
-          </Popconfirm>
+          <Button
+            aria-label="删除缓存键"
+            title="删除缓存键"
+            type="link"
+            icon={<DeleteOutlined />}
+            style={{ color: "var(--theme-error)" }}
+            size="small"
+            onClick={() => handleDelete(record.key)}
+          >
+            删除
+          </Button>
         ),
       },
     ];
@@ -372,10 +376,10 @@ const CacheManager: FC = () => {
             <Button
               icon={<ExportOutlined />}
               onClick={() => void handleExport()}
-              aria-label="导出"
-              title="导出"
+              aria-label="导出全部缓存数据"
+              title="导出全部缓存数据"
             >
-              导出
+              导出全部缓存数据
             </Button>
             <Button
               aria-label="清空全部缓存"

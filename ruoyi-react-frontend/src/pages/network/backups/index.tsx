@@ -20,7 +20,7 @@
  * - hooks/useBackupData、useBackupModals、useRestoreTask、utils、types 零修改
  */
 import { useCallback, useMemo, useRef, useState, type FC } from "react";
-import { App, Button, Card, Col, Form, Input, Modal, Row, Select, Space, Statistic, Tag } from "antd";
+import { App, Button, Card, Col, Form, Input, Row, Select, Space, Statistic, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { PageResponse, ConfigBackup } from "@/types";
 import type { DeviceBackupGroup, DiffLine } from "./types";
@@ -34,7 +34,7 @@ import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, confirmDelete } from "@/components/shared";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { formatDateTime } from "@/utils/datetime";
 import {
@@ -188,19 +188,22 @@ const ConfigBackupPage: FC = () => {
     openRestoreModal(group.latestBackup);
   };
 
-  // 确认还原（B 类豁免原文保留：「确认恢复配置」）
+  // 确认还原（68.1-T4 §1.9 非删除破坏性变体：恢复配置）
   const handleConfirmRestore = () => {
     if (!selectedRestoreBackup) {
       message.warning("请选择要还原的版本");
       return;
     }
-    Modal.confirm({
+    confirmDelete({
       title: "确认恢复配置",
-      content: `确定要将 ${selectedDeviceGroup?.deviceName} 恢复到版本 ${selectedRestoreBackup.version} 吗？此操作将会覆盖设备当前配置！`,
-      okText: "确认",
-      cancelText: "取消",
-      okType: "danger",
-      onOk: () => confirmRestore(),
+      target: `把设备 ${selectedDeviceGroup?.deviceName} 的当前配置恢复到版本 ${selectedRestoreBackup.version}`,
+      actionLabel: "恢复",
+      actionContext: "恢复配置",
+      contentText: "将{target}，操作不可恢复，是否继续？",
+      successText: "已恢复配置",
+      onDelete: async () => {
+        await confirmRestore();
+      },
     });
   };
 
@@ -232,16 +235,16 @@ const ConfigBackupPage: FC = () => {
     openContentDrawer(backup);
   };
 
-  // 恢复配置（版本列表抽屉入口——B 类豁免第二处「确认恢复配置」在 RestoreModals
-  // versionColumns 内的「确认恢复到此版本?」确认之后进入这里）
+  // 恢复配置（版本列表抽屉入口——68.1-T4 §1.9 变体收口）
   const handleRestore = (backup: ConfigBackup) => {
-    Modal.confirm({
+    confirmDelete({
       title: "确认恢复配置",
-      content: `确定要恢复到版本 ${backup.version} 吗？此操作将会覆盖设备当前配置！`,
-      okText: "确认",
-      cancelText: "取消",
-      okType: "danger",
-      onOk: async () => {
+      target: `把设备当前配置恢复到版本 ${backup.version}`,
+      actionLabel: "恢复",
+      actionContext: "恢复配置",
+      contentText: "将{target}，操作不可恢复，是否继续？",
+      successText: "已恢复配置",
+      onDelete: async () => {
         openRestoreModal(backup);
         // v129-recheck WR-01: 显式传参——本闭包捕获的 confirmRestore 引用
         // selectedRestoreBackup 旧值（null），无参调用会被 null 守卫静默短路

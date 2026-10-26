@@ -8,6 +8,7 @@ import { Progress, Button, Modal, Tooltip } from "antd";
 import { EyeOutlined, StopOutlined } from "@ant-design/icons";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared";
 import { formatDateTime } from "@/utils/datetime";
 import { renderExecutionStatusTag, renderSimpleStatusTag } from "./constants";
 
@@ -98,12 +99,17 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
                   icon: <StopOutlined />,
                   danger: true,
                   onClick: () => {
-                    Modal.confirm({
-                      title: "确认取消执行?",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleCancel(record.id),
+                    // 68.1-T4 §1.9 非删除破坏性变体：取消执行
+                    confirmDelete({
+                      title: "确认取消执行",
+                      target: "该命令的执行任务",
+                      actionLabel: "取消执行",
+                      actionContext: "取消执行",
+                      contentText: "将{target}，操作不可恢复，是否继续？",
+                      successText: "已取消执行",
+                      onDelete: async () => {
+                        await handleCancel(record.id);
+                      },
                     });
                   },
                 },

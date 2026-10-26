@@ -38,6 +38,7 @@ import {
 import type { SimpleDept } from "@/lib/dutyApi";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared";
 
 /** 把部门树转成 TreeSelect 数据 */
 function toTreeData(
@@ -164,23 +165,12 @@ const ManagerOrgsPage: FC = () => {
   };
 
   const handleDelete = (record: ManagerOrg) => {
-    const confirmInstance = Modal.confirm({
-      title: "删除机构",
-      content: `确定要删除机构「${record.orgName}」吗？`,
-      okText: "确定",
-      okType: "danger",
-      cancelText: "取消",
-      onOk: async () => {
-        confirmInstance.update({ cancelButtonProps: { disabled: true } });
-        try {
-          await deleteManagerOrg(record.id);
-          handleSuccess("删除");
-          loadList();
-        } catch (error) {
-          handleApiError(error, "删除");
-        } finally {
-          confirmInstance.update({ cancelButtonProps: { disabled: false } });
-        }
+    // 68.1-T4 附加条目（T2 清单）：删除类 → confirmDelete（提交中禁取消由 helper 内建）
+    confirmDelete({
+      target: `机构「${record.orgName}」`,
+      onDelete: async () => {
+        await deleteManagerOrg(record.id);
+        loadList();
       },
     });
   };
@@ -193,37 +183,31 @@ const ManagerOrgsPage: FC = () => {
 
   /** 从部门架构自动生成机构映射（幂等，不覆盖手工修改） */
   const handleGenerateFromDept = () => {
-    const confirmInstance = Modal.confirm({
+    // 68.1-T4 §1.9 非删除破坏性变体：从部门架构生成机构（幂等语义保留在 contentText）
+    confirmDelete({
       title: "从部门架构生成机构",
-      content:
-        "将扫描所有标记为「外部机构」（有职场）的部门，自动创建机构记录，" +
-        "并按部门层级推导上级机构。已存在的机构不会被覆盖，可放心重复点击。",
-      okText: "开始生成",
-      cancelText: "取消",
-      onOk: async () => {
-        confirmInstance.update({ cancelButtonProps: { disabled: true } });
-        try {
-          const result = await generateManagerOrgsFromDept();
-          Modal.success({
-            title: "生成完成",
-            content: (
-              <div>
-                <p>候选机构部门：{result.totalCandidates} 个</p>
-                <p>新建机构：{result.created} 个</p>
-                <p>已存在跳过：{result.skippedExisting} 个</p>
-                <p>顶层机构（无上级）：{result.orphanCount} 个</p>
-                {result.warnings && result.warnings.length > 0 && (
-                  <p style={{ color: "var(--theme-warning)" }}>{result.warnings.join("；")}</p>
-                )}
-              </div>
-            ),
-          });
-          loadList();
-        } catch (error) {
-          handleApiError(error, "从部门架构生成机构");
-        } finally {
-          confirmInstance.update({ cancelButtonProps: { disabled: false } });
-        }
+      target: "扫描「外部机构」部门并自动生成机构记录",
+      actionLabel: "生成",
+      actionContext: "生成机构",
+      contentText: "将{target}，已存在的机构不会被覆盖，可放心重复点击。是否继续？",
+      successText: "已生成机构",
+      onDelete: async () => {
+        const result = await generateManagerOrgsFromDept();
+        Modal.success({
+          title: "生成完成",
+          content: (
+            <div>
+              <p>候选机构部门：{result.totalCandidates} 个</p>
+              <p>新建机构：{result.created} 个</p>
+              <p>已存在跳过：{result.skippedExisting} 个</p>
+              <p>顶层机构（无上级）：{result.orphanCount} 个</p>
+              {result.warnings && result.warnings.length > 0 && (
+                <p style={{ color: "var(--theme-warning)" }}>{result.warnings.join("；")}</p>
+              )}
+            </div>
+          ),
+        });
+        loadList();
       },
     });
   };

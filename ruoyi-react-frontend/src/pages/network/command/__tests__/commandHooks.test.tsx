@@ -190,14 +190,13 @@ describe("useCommandModals", () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it("handleCancelExecution 失败静默", async () => {
+  // 68.1-T4：失败上抛（错误反馈由 confirmDelete helper 承接），不调 onSuccess
+  it("handleCancelExecution 失败上抛", async () => {
     postSpy.mockRejectedValue(new Error("boom"));
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useCommandModals(), { wrapper: Wrap });
 
-    await act(async () => {
-      await result.current.handleCancelExecution("e1", onSuccess);
-    });
+    await expect(result.current.handleCancelExecution("e1", onSuccess)).rejects.toThrow("boom");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

@@ -20,7 +20,7 @@ import {
   Modal,
   Typography,
   Form,
-  App,
+
 } from "antd";
 import {
   SearchOutlined,
@@ -38,7 +38,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import type { BaseResponse, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { handleApiError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -94,7 +94,6 @@ const loadLoginLogs = async (
 // ==================== 主组件 ====================
 
 const LogMonitor: React.FC = () => {
-  const { message } = App.useApp();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = usePersistedStateController<"oper" | "login">({
@@ -179,24 +178,23 @@ const LogMonitor: React.FC = () => {
     setDetailModalVisible(true);
   }, []);
 
-  // 清空日志
-  const handleClearLogs = useCallback(async () => {
-    Modal.confirm({
+  // 清空日志（68.1-T4 §1.9 非删除破坏性变体）
+  const handleClearLogs = useCallback(() => {
+    confirmDelete({
       title: "确认清空",
-      content: `确定要清空${activeTab === "oper" ? "操作" : "登录"}日志吗？此操作不可恢复！`,
-      onOk: async () => {
-        try {
-          const endpoint =
-            activeTab === "oper" ? "/monitor/oper-logs/clear" : "/monitor/login-logs/clear";
-          await post<BaseResponse<any>>(endpoint, {});
-          message.success("清空成功");
-          currentManager.handleRefresh();
-        } catch (error) {
-          handleApiError(error, "清空日志");
-        }
+      target: activeTab === "oper" ? "全部操作日志" : "全部登录日志",
+      actionLabel: "清空",
+      actionContext: "清空日志",
+      contentText: "将{target}，操作不可恢复，是否继续？",
+      successText: "已清空日志",
+      onDelete: async () => {
+        const endpoint =
+          activeTab === "oper" ? "/monitor/oper-logs/clear" : "/monitor/login-logs/clear";
+        await post<BaseResponse<any>>(endpoint, {});
+        currentManager.handleRefresh();
       },
     });
-  }, [activeTab, currentManager, message]);
+  }, [activeTab, currentManager]);
 
   // 刷新
   const handleRefresh = useCallback(() => {
