@@ -36,7 +36,7 @@
 - [x] **DEBT-02**: 日期/状态展示统一 helper —— 裸三元 13 处/6 文件、手写日期格式 12 处/8 文件
 - [x] **DEBT-03**: 类型收敛 —— `: any` / `as any` 27 处/16 文件（随 COMP-04 FormModal 迁移逐步消除）
 
-- [ ] **DEBT-04**: 收尾清偿 —— ①45 处批量删除统一到 ConfirmDelete 唯一入口（危险操作必二次确认）②Phase 63-68 验证登记的 7 项契约 minor 补课 ③P65（140 项）+ P66（41 项）存量豁免清单清偿收缩 ④remaining 存量列表页（dedicated-lines 等）完成契约组件迁移
+- [ ] **DEBT-04**: 收尾清偿 —— ①68 处危险操作统一到 ConfirmDelete 唯一入口（44 删除类裸 Modal.confirm + 10 其他破坏性 confirm + 14 删除类 Popconfirm，Popconfirm 一律升级为 Modal 强确认；实测口径，取代旧「45 处」约数）②Phase 63-68 验证登记的 7 项契约 minor 补课（6 项仍存在）③P65（140 项）+ P66（41 项）存量豁免清单清偿收缩并补「豁免理由 + 用户可感知性」字段 ④dedicated-lines + operations 域 3-4 页完成契约组件迁移
 
 ## 抽取原则（locked）
 

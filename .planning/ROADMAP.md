@@ -148,14 +148,14 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
 
 ### Phase 68.1: 收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾
 
-**Goal**: 清偿 v1.22 里程碑审计（.planning/v1.22-MILESTONE-AUDIT.md）登记的四组技术债，让 v1.22 以无债状态收档：①45 处未迁移的批量删除统一到 ConfirmDelete 唯一入口（危险操作必二次确认）；②Phase 63-68 验证报告登记的 7 项契约 minor 补课；③P65（140 项）+ P66（41 项）存量豁免清单逐项清偿收缩；④剩余存量列表页（dedicated-lines 等）完成契约组件迁移。
+**Goal**: 清偿 v1.22 里程碑审计（.planning/v1.22-MILESTONE-AUDIT.md）登记的四组技术债，让 v1.22 以无债状态收档：①**68 处危险操作统一到 ConfirmDelete 唯一入口**（44 处删除类裸 Modal.confirm + 10 处其他破坏性 confirm + 14 处删除类 Popconfirm 全部升级为 Modal 强确认；实测口径，取代早期「45 处」约数）；②Phase 63-68 验证报告登记的 7 项契约 minor 补课（6 项仍存在）；③P65（140 项）+ P66（41 项）存量豁免清单逐项清偿收缩并补「豁免理由 + 用户可感知性」字段；④dedicated-lines + operations 域 3-4 页完成契约组件迁移。
 **Depends on**: Phase 68（豁免清单与契约组件均已就位）
 **Requirements**: DEBT-04
 **Success Criteria** (what must be TRUE):
-  1. 全站批量删除入口只剩 ConfirmDelete 一条路径，源码中不再存在裸 Modal.confirm 删除（豁免项须逐条说明原因）（DEBT-04）
-  2. 7 项契约 minor（PageTable 分页口径双点同步、FormModal 不透传 maskClosable/keyboard 等）已修复或显式记录为设计决策（DEBT-04）
-  3. P65/P66 豁免清单条目数显著收缩，剩余每项都有可核查的豁免理由（DEBT-04）
-  4. dedicated-lines 等剩余存量列表页完成契约组件迁移，样板行数下降可量化（DEBT-04）
+  1. 全站危险操作入口只剩 ConfirmDelete 一条路径：68 处（44 删除类 Modal.confirm + 10 其他破坏性 + 14 删除类 Popconfirm）全部收敛，源码中不再存在裸 Modal.confirm 危险操作与删除类 Popconfirm；6 处非危险确认明确排除并记录判定规则（DEBT-04）
+  2. 7 项契约 minor（PageTable 分页口径双点同步、FormModal 不透传 maskClosable/keyboard、BatchDeleteButton target 未透传等 6 项仍存在项）已修复或显式记录为设计决策（DEBT-04）
+  3. P65/P66 豁免清单条目数显著收缩，剩余每项都有可核查的豁免理由 + 用户可感知性字段；P66 段 rules 与其真实成因（import usePagination/useTableManager）错配已修正（DEBT-04）
+  4. dedicated-lines + operations 域 3-4 页完成契约组件迁移，样板行数下降可量化（DEBT-04）
   5. type-check 0 / vitest 全绿 / lint errors 不高于基线，npm run build 通过（DEBT-04）
 
 **Plans**: TBD
