@@ -178,14 +178,15 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
         rowKey="id"
         rowActions={(r) => [
           { key: "edit", label: "编辑", onClick: () => {} },
-          createDeleteAction(r.id, handleDelete, { label: `删${r.name}` }),
+          // 68.1-T1 契约：对象名走 target（label 已 @deprecated，按钮文字固定「删除」，aria-label 为 删除${target}）
+          createDeleteAction(r.id, handleDelete, { target: `删${r.name}` }),
         ]}
       />,
       { wrapper: Wrap }
     );
     await waitFor(() => expect(screen.getAllByText("行1").length).toBeGreaterThan(0));
     expect(screen.getByText("操作")).toBeTruthy();
-    fireEvent.click(screen.getByText("删行1"));
+    fireEvent.click(screen.getByLabelText("删除删行1"));
     await waitFor(() => {
       expect(confirmSpy).toHaveBeenCalled();
       const opts = confirmSpy.mock.calls[0][0] as { title?: string; content?: string };
