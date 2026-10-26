@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Table,
   Button,
@@ -8,7 +9,7 @@ import {
   Form,
   Input,
   message,
-  Popconfirm,
+
   Statistic,
   Row,
   Col,
@@ -195,19 +196,14 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
   };
 
   // 删除
+  // 68.1-T3：删除确认改走 confirmDelete，业务失败上抛由 helper 统一反馈
   const handleDelete = async (id: string) => {
-    try {
-      const res = await deleteADServiceAccount(id);
-      if (res.code === 0) {
-        message.success("删除成功");
-        loadList();
-        loadStats();
-      } else {
-        message.error(res.message || "删除失败");
-      }
-    } catch (_e) {
-      message.error("删除失败");
+    const res = await deleteADServiceAccount(id);
+    if (res.code !== 0) {
+      throw new Error(res.message || "删除失败");
     }
+    loadList();
+    loadStats();
   };
 
   // 启用/停用
@@ -347,15 +343,21 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
           >
             {record.status === 1 ? "启用" : "停用"}
           </Button>
-          <Popconfirm
-            title="确认删除？"
-            description="删除后该账号无法恢复。"
-            onConfirm={() => handleDelete(record.id)}
+          <Button
+            type="link"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() =>
+              confirmDelete({
+                target: `该账号池账号（${record.username || record.id}）`,
+                extra: "删除后该账号无法恢复。",
+                onDelete: () => handleDelete(record.id),
+              })
+            }
           >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+            删除
+          </Button>
         </Space>
       ),
     },

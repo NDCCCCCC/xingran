@@ -3,9 +3,10 @@
  */
 
 import type { FC } from "react";
-import { Row, Col, Card, Tag, Popconfirm } from "antd";
+import { Row, Col, Card, Tag } from "antd";
 import { EditOutlined, BgColorsOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { Floor } from "@/types";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 interface FloorCardViewProps {
   floors: Floor[];
@@ -43,15 +44,18 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
                 onClick={() => onEditFloorPlan(floor)}
                 title="查看平面图"
               />,
-              <Popconfirm
+              <DeleteOutlined
                 key="delete"
-                title="确定要删除这个楼层吗？"
-                onConfirm={() => onDelete(floor.id)}
-                okText="确定"
-                cancelText="取消"
-              >
-                <DeleteOutlined style={{ color: "var(--theme-error)" }} />
-              </Popconfirm>,
+                style={{ color: "var(--theme-error)" }}
+                onClick={() =>
+                  confirmDelete({
+                    target: `该楼层（${floor.name || `${floor.floorNo}层`}）`,
+                    onDelete: async () => {
+                      await onDelete(floor.id);
+                    },
+                  })
+                }
+              />,
             ]}
           >
             <Card.Meta

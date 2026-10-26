@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Table,
   Button,
@@ -6,7 +7,6 @@ import {
   Tag,
   Modal,
   App,
-  Popconfirm,
   Input,
   Card,
   Form,
@@ -120,14 +120,12 @@ const VDIServerConfig: React.FC = () => {
   };
 
   // 删除服务器
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = async (id: string) => {
     setLoading(true);
     try {
       await vdiServerApi.delete(id);
-      message.success("删除成功");
       queryClient.invalidateQueries({ queryKey: queryKeys.vdi.servers() });
-    } catch (_error) {
-      message.error("删除失败");
     } finally {
       setLoading(false);
     }
@@ -213,16 +211,19 @@ const VDIServerConfig: React.FC = () => {
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Popconfirm
-            title="确定要删除这个 VDI 服务器吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() =>
+              confirmDelete({
+                target: `该 VDI 服务器（${record.name || record.id}）`,
+                onDelete: () => handleDelete(record.id),
+              })
+            }
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+            删除
+          </Button>
         </Space>
       ),
     },

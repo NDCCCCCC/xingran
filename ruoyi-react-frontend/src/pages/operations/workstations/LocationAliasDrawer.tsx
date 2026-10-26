@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Drawer,
   Form,
@@ -23,7 +24,6 @@ import {
   Button,
   Table,
   Space,
-  Popconfirm,
   Input,
   Tooltip,
   Typography,
@@ -142,15 +142,11 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
     }
   };
 
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = useCallback(
     async (id: string) => {
-      try {
-        await locationAliasApi.delete(id);
-        handleSuccess("映射删除");
-        await refreshAfterMutation();
-      } catch (err) {
-        handleApiError(err, "删除映射");
-      }
+      await locationAliasApi.delete(id);
+      await refreshAfterMutation();
     },
     [refreshAfterMutation]
   );
@@ -192,16 +188,24 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
         width: 80,
         render: (_: unknown, record: LocationAlias) =>
           canDelete ? (
-            <Popconfirm
-              title="确认删除该映射?"
-              description="删除后,工位编辑下拉将立即不再追加该 alias 部门。"
-              okText="删除"
-              okButtonProps={{ danger: true }}
-              cancelText="取消"
-              onConfirm={() => handleDelete(record.id)}
-            >
-              <Button type="link" danger icon={<DeleteOutlined />} size="small" />
-            </Popconfirm>
+            <Tooltip title="删除映射">
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+                aria-label={`删除 位置别名映射（${record.originDeptName || record.deptId}）`}
+                title={`删除 位置别名映射（${record.originDeptName || record.deptId}）`}
+                onClick={() =>
+                  confirmDelete({
+                    target: `该工位位置别名映射（${record.originDeptName || record.deptId}）`,
+                    // 业务语义说明，不得丢失
+                    extra: "删除后,工位编辑下拉将立即不再追加该 alias 部门。",
+                    onDelete: () => handleDelete(record.id),
+                  })
+                }
+              />
+            </Tooltip>
           ) : null,
       },
     ],

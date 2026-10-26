@@ -31,6 +31,7 @@ import {
 import type { WorkstationDevice, DeviceFormData, Asset } from "@/types";
 import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
 import { HealthBadge } from "@/components/reconciliation";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 export interface WorkstationDeviceTableProps {
   workstationId: string;
@@ -213,15 +214,11 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   };
 
   // 删除设备
+  // 68.1-T3：删除确认改走 confirmDelete（Modal 强确认），失败上抛由 helper 统一反馈
   const handleDelete = async (id: string) => {
-    try {
-      await workstationDeviceApi.delete(id);
-      message.success("删除成功");
-      fetchAllDevices();
-      onDeviceChange?.();
-    } catch (_error) {
-      message.error("删除失败");
-    }
+    await workstationDeviceApi.delete(id);
+    fetchAllDevices();
+    onDeviceChange?.();
   };
 
   // 设置主设备（手动设备直接设置，AD/资产设备弹窗确认）
@@ -458,22 +455,21 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
             </Button>
           )}
           {canEdit && (
-            <Popconfirm
-              title="确定删除？"
-              onConfirm={() => handleDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              style={{ padding: 0, fontSize: 11, height: "auto" }}
+              onClick={() =>
+                confirmDelete({
+                  target: `该设备绑定关系（${record.deviceName || record.id}）`,
+                  onDelete: () => handleDelete(record.id),
+                })
+              }
             >
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                style={{ padding: 0, fontSize: 11, height: "auto" }}
-              >
-                删除
-              </Button>
-            </Popconfirm>
+              删除
+            </Button>
           )}
           {!record.isPrimary && (
             <Popconfirm

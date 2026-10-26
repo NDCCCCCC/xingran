@@ -3,9 +3,10 @@
  * 工位卡片视图
  */
 
-import { Row, Col, Card, Tag, Popconfirm } from "antd";
+import { Row, Col, Card, Tag } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   getWorkstationTypeText,
   getWorkstationStatusText,
@@ -37,15 +38,18 @@ export function WorkstationCardView({ workstations, onEdit, onDelete }: Workstat
             hoverable
             actions={[
               <EditOutlined key="edit" onClick={() => onEdit(workstation)} />,
-              <Popconfirm
+              <DeleteOutlined
                 key="delete"
-                title="确定要删除这个工位吗？"
-                onConfirm={() => onDelete(workstation.id)}
-                okText="确定"
-                cancelText="取消"
-              >
-                <DeleteOutlined style={{ color: "var(--theme-error)" }} />
-              </Popconfirm>,
+                style={{ color: "var(--theme-error)" }}
+                onClick={() =>
+                  confirmDelete({
+                    target: `该工位（${workstation.name || workstation.id}）`,
+                    onDelete: async () => {
+                      await onDelete(workstation.id);
+                    },
+                  })
+                }
+              />,
             ]}
           >
             <Card.Meta

@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, type FC } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -20,7 +21,6 @@ import {
   Row,
   Col,
   Tooltip,
-  Popconfirm,
   Alert,
 } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
@@ -303,16 +303,11 @@ const APIKeyManagement: FC = () => {
   /**
    * 删除密钥
    */
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = useCallback(
     async (id: string) => {
-      try {
-        await deleteAPIKey(id);
-        message.success("删除成功");
-        fetchData();
-      } catch (error) {
-        console.error("删除 API 密钥失败:", error);
-        message.error("删除失败，请稍后重试");
-      }
+      await deleteAPIKey(id);
+      fetchData();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchData]
@@ -608,17 +603,22 @@ const APIKeyManagement: FC = () => {
                 onClick={() => handleViewLogs(record)}
               />
             </Tooltip>
-            <Popconfirm
-              title="确定要删除这个密钥吗？"
-              onConfirm={() => handleDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
-              okButtonProps={{ danger: true }}
-            >
-              <Tooltip title="删除">
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-              </Tooltip>
-            </Popconfirm>
+            <Tooltip title={`删除 API 密钥 ${record.name || record.id}`}>
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                aria-label={`删除 API 密钥 ${record.name || record.id}`}
+                title={`删除 API 密钥 ${record.name || record.id}`}
+                onClick={() =>
+                  confirmDelete({
+                    target: `该 API 密钥（${record.name || record.id}）`,
+                    onDelete: () => handleDelete(record.id),
+                  })
+                }
+              />
+            </Tooltip>
           </Space>
         ),
       },

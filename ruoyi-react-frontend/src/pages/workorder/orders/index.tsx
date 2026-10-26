@@ -3,6 +3,7 @@
  */
 
 import { useState, useCallback, useMemo, type FC } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Button,
   Form,
@@ -13,7 +14,6 @@ import {
   Space,
   Tag,
   App,
-  Popconfirm,
   Card,
   Statistic,
   Row,
@@ -200,21 +200,22 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
             icon: <DeleteOutlined />,
             danger: true,
             render: () => (
-              <Popconfirm
-                title="确定要删除吗？"
-                onConfirm={() => handleDelete(record.id)}
-                okText="确定"
-                cancelText="取消"
+              <Button
+                type="link"
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error)" }}
+                size="small"
+                aria-label={`删除 工单 ${record.id}`}
+                title={`删除 工单 ${record.id}`}
+                onClick={() =>
+                  confirmDelete({
+                    target: `该工单（${record.title || record.id}）`,
+                    onDelete: async () => { handleDelete(record.id); },
+                  })
+                }
               >
-                <Button
-                  type="link"
-                  icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error)" }}
-                  size="small"
-                >
-                  删除
-                </Button>
-              </Popconfirm>
+                删除
+              </Button>
             ),
           },
         ];
@@ -329,15 +330,11 @@ const WorkOrderPage: FC = () => {
     [openEditModal, editForm]
   );
 
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = useCallback(
     async (id: string) => {
-      try {
-        await deleteWorkOrder(id);
-        message.success("删除成功");
-        fetchList(paginationProps.current, paginationProps.pageSize);
-      } catch (_error) {
-        message.error("删除失败");
-      }
+      await deleteWorkOrder(id);
+      fetchList(paginationProps.current, paginationProps.pageSize);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps from usePagination is stable
     [fetchList, message]

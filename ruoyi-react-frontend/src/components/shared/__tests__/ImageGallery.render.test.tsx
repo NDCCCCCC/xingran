@@ -180,47 +180,60 @@ describe("ImageGallery — handleEditDescription / handleSaveDescription", () =>
   });
 });
 
-describe("ImageGallery — handleDelete (Popconfirm)", () => {
-  it("点删除 → Popconfirm 确认后 onDelete 调", async () => {
+describe("ImageGallery — handleDelete (confirmDelete Modal 强确认, 68.1-T3)", () => {
+  // static Modal.confirm 的 portal 容器会跨用例残留在 body 上，先清除避免查询串扰
+  const purgeLeftoverModals = () => {
+    document
+      .querySelectorAll<HTMLElement>(".ant-modal-container")
+      .forEach((n) => n.parentElement?.remove());
+  };
+
+  it("点删除 → Modal 确认后 onDelete 调", async () => {
+    purgeLeftoverModals();
     const onDelete = vi.fn().mockResolvedValue(undefined);
-    const { baseElement } = renderWithProviders(
-      <ImageGallery photos={basePhotos} onDelete={onDelete} />
-    );
+    renderWithProviders(<ImageGallery photos={basePhotos} onDelete={onDelete} />);
     fireEvent.click(screen.getAllByText("删除")[0]);
-    // Popconfirm 弹出
+    // Modal 强确认弹出（68.1-T3：Popconfirm 升级为 confirmDelete）
     await waitFor(() => {
-      expect(screen.getByText("确定要删除这张照片吗？")).toBeDefined();
+      expect(screen.getAllByText("确认删除").length).toBeGreaterThan(0);
     });
-    // Popconfirm 按钮在 portal
-    const confirmBtn = Array.from(
-      baseElement.querySelectorAll(
-        ".ant-popover-buttons .ant-btn, .ant-popconfirm-buttons .ant-btn, .ant-popover .ant-btn-primary, .ant-popconfirm .ant-btn-primary"
-      )
-    ).find((b) => b.textContent?.replace(/\s+/g, "") === "确定") as HTMLElement;
-    expect(confirmBtn).toBeDefined();
+    let confirmBtn: HTMLElement | undefined;
+    await waitFor(() => {
+      // static Modal.confirm 实例跨用例残留，取最后一个（当前用例）弹窗的确认按钮
+      const all = Array.from(
+        document.querySelectorAll<HTMLElement>(".ant-modal-confirm-btns button")
+      ).filter((b) => (b.textContent ?? "").replace(/\s/g, "") === "删除");
+      confirmBtn = all[all.length - 1];
+      expect(confirmBtn).toBeDefined();
+    });
     fireEvent.click(confirmBtn);
     await waitFor(() => {
       expect(onDelete).toHaveBeenCalledWith("p1");
     });
   });
 
-  it("onDelete 抛错 → message.error", async () => {
+  it("onDelete 抛错 → handleApiError 反馈且 Modal 保持打开", async () => {
+    purgeLeftoverModals();
     const onDelete = vi.fn().mockRejectedValue(new Error("delete fail"));
-    const { baseElement } = renderWithProviders(
-      <ImageGallery photos={basePhotos} onDelete={onDelete} />
-    );
+    renderWithProviders(<ImageGallery photos={basePhotos} onDelete={onDelete} />);
     fireEvent.click(screen.getAllByText("删除")[0]);
     await waitFor(() => {
-      expect(screen.getByText("确定要删除这张照片吗？")).toBeDefined();
+      expect(screen.getAllByText("确认删除").length).toBeGreaterThan(0);
     });
-    const confirmBtn = Array.from(
-      baseElement.querySelectorAll(
-        ".ant-popover-buttons .ant-btn, .ant-popconfirm-buttons .ant-btn, .ant-popover .ant-btn-primary, .ant-popconfirm .ant-btn-primary"
-      )
-    ).find((b) => b.textContent?.replace(/\s+/g, "") === "确定") as HTMLElement;
+    let confirmBtn: HTMLElement | undefined;
+    await waitFor(() => {
+      // static Modal.confirm 实例跨用例残留，取最后一个（当前用例）弹窗的确认按钮
+      const all = Array.from(
+        document.querySelectorAll<HTMLElement>(".ant-modal-confirm-btns button")
+      ).filter((b) => (b.textContent ?? "").replace(/\s/g, "") === "删除");
+      confirmBtn = all[all.length - 1];
+      expect(confirmBtn).toBeDefined();
+    });
     fireEvent.click(confirmBtn);
     await waitFor(() => {
       expect(onDelete).toHaveBeenCalled();
     });
+    // 失败路径：Modal 保持打开可重试（antd onOk reject 不关闭）
+    expect(screen.getAllByText("确认删除").length).toBeGreaterThan(0);
   });
 });

@@ -20,6 +20,7 @@
  */
 
 import { useMemo, useState, useCallback } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Table,
   Form,
@@ -34,7 +35,6 @@ import {
   Statistic,
   Row,
   Col,
-  Popconfirm,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -164,13 +164,12 @@ const ExceptionRulesPage: React.FC = () => {
     onError: (err) => message.error((err as Error)?.message ?? "更新失败"),
   });
 
+  // 68.1-T3：成功/失败反馈改由 confirmDelete 统一承载，此处仅做缓存失效
   const deleteMutation = useMutation({
     mutationFn: (id: string) => reconciliationApi.exceptionRule.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.ruleList() });
-      message.success("已删除");
     },
-    onError: (err) => message.error((err as Error)?.message ?? "删除失败"),
   });
 
   // 降噪基线 snapshot (D-R3-A4-01) — UI 先到位,后端 44-02 实现
@@ -316,17 +315,22 @@ const ExceptionRulesPage: React.FC = () => {
             >
               编辑
             </Button>
-            <Popconfirm
-              title="确认删除该规则?"
-              description="软删除,历史审计链不断(D-R3-A4-03)"
-              onConfirm={() => deleteMutation.mutate(record.id)}
-              okText="确认"
-              cancelText="取消"
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() =>
+                confirmDelete({
+                  target: `该异常处置规则（${record.name}）`,
+                  // 业务语义说明，不得丢失（D-R3-A4-03）
+                  extra: "软删除,历史审计链不断(D-R3-A4-03)",
+                  onDelete: async () => { await deleteMutation.mutateAsync(record.id); },
+                })
+              }
             >
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
-            </Popconfirm>
+              删除
+            </Button>
           </Space>
         ),
       },

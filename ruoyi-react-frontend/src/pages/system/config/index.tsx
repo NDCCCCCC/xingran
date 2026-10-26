@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   Select,
-  Popconfirm,
   Tag,
   Card,
   Row,
@@ -172,19 +171,15 @@ const ConfigManagement: FC = () => {
   };
 
   // 删除参数配置
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = async (id: string, isSystem: number) => {
     if (isSystem === 1) {
-      message.warning("系统内置参数不能删除");
-      return;
+      throw new Error("系统内置参数不能删除");
     }
-    try {
-      await post(`/system/configs/${id}/delete`, {});
-      handleSuccess("删除");
-      loadConfigs();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "删除");
-    }
+    await post(`/system/configs/${id}/delete`, {});
+    handleSuccess("删除");
+    loadConfigs();
+    loadStatistics();
   };
 
   // 批量删除参数配置
@@ -308,20 +303,21 @@ const ConfigManagement: FC = () => {
             danger: true,
             disabled: record.isSystem === 1,
             render: () => (
-              <Popconfirm
-                title="确认删除?"
-                onConfirm={() => handleDelete(record.id, record.isSystem)}
+              <Button
+                type="link"
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error)" }}
+                size="small"
+                disabled={record.isSystem === 1}
+                onClick={() =>
+                  confirmDelete({
+                    target: `该参数配置（${record.configName || record.configKey}）`,
+                    onDelete: () => handleDelete(record.id, record.isSystem),
+                  })
+                }
               >
-                <Button
-                  type="link"
-                  icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error)" }}
-                  size="small"
-                  disabled={record.isSystem === 1}
-                >
-                  删除
-                </Button>
-              </Popconfirm>
+                删除
+              </Button>
             ),
           },
         ];

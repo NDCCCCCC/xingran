@@ -6,7 +6,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { App, Card, Table, Button, Space, Tag, Popconfirm, Input, Row, Col } from "antd";
+import { App, Card, Table, Button, Space, Tag, Input, Row, Col } from "antd";
 import { DASHBOARD } from "@/constants/routes";
 import {
   PlusOutlined,
@@ -19,6 +19,7 @@ import {
   ArrowLeftOutlined,
 } from "@ant-design/icons";
 import { useDashboardStore } from "@/store/dashboardStore";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { TemplateSelector } from "@/components/dashboard/layout/TemplateSelector";
 import type { Dashboard } from "@/types/dashboard";
 import type { ColumnsType } from "antd/es/table";
@@ -94,14 +95,10 @@ const DashboardList: React.FC<DashboardListProps> = ({ onNavigateToView, onNavig
   };
 
   // 删除仪表盘
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = async (id: string) => {
-    try {
-      await deleteDashboard(id);
-      message.success("删除成功");
-      handleRefresh();
-    } catch (error) {
-      message.error(`删除失败: ${(error as Error).message}`);
-    }
+    await deleteDashboard(id);
+    handleRefresh();
   };
 
   // 复制仪表盘
@@ -254,16 +251,20 @@ const DashboardList: React.FC<DashboardListProps> = ({ onNavigateToView, onNavig
                 设为默认
               </Button>
             )}
-            <Popconfirm
-              title="确定要删除这个仪表盘吗？"
-              onConfirm={() => handleDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() =>
+                confirmDelete({
+                  target: `该仪表盘（${record.name || record.id}）`,
+                  onDelete: () => handleDelete(record.id),
+                })
+              }
             >
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
-            </Popconfirm>
+              删除
+            </Button>
           </Space>
         ),
       },
