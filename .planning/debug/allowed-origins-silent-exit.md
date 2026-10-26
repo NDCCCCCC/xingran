@@ -1,7 +1,7 @@
 ---
 slug: allowed-origins-silent-exit
 name: allowed-origins-silent-exit
-status: awaiting_human_verify
+status: resolved
 trigger: 启动链第三环: 迁移/服务全部初始化成功后,HTTP 启动前静默 exit status 1,终端无任何错误输出
 created: 2026-10-15
 updated: 2026-10-15 14:15

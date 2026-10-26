@@ -1,3 +1,7 @@
+---
+status: resolved
+---
+
 # Workstation Create primary_device_serial 列不存在
 
 ## 症状 (Symptoms)

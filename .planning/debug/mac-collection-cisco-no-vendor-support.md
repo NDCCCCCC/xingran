@@ -5,6 +5,11 @@ trigger: MAC地址 b022.7a2e.4a4f 在 Cisco 交换机 CX-WH-WH-04F-FL-RS8607E-03
 created: 2026-06-29T00:00:00Z
 updated: 2026-06-29
 session_type: bug
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-26T10:00:00+08:00
+  status: diagnosed
+
 ---
 
 # Debug Session: mac-collection-cisco-no-vendor-support

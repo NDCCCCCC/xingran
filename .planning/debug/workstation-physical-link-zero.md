@@ -1,6 +1,6 @@
 ---
 slug: workstation-physical-link-zero
-status: awaiting_human_verify
+status: resolved
 trigger: 工位 5F003 下"物理链路设备"显示为 0 台，但实际该工位绑定信息点 5D212 → CX-WH-WH-05F-FL-RS8607E-01 端口 GE5/44，且该端口上有多个设备 MAC
 created: 2026-06-30
 updated: 2026-06-30

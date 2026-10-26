@@ -4,6 +4,11 @@ trigger: "MAC 轨迹查询无法查到任何 mac，在数据库里查是存在�
 created: 2026-06-30T00:00:00Z
 updated: 2026-06-30T00:00:00Z
 goal: find_root_cause_only
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-26T10:00:00+08:00
+  status: investigating
+
 ---
 
 ## Current Focus

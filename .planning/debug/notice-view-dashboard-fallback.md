@@ -1,7 +1,7 @@
 ---
 slug: notice-view-dashboard-fallback
 trigger: "调查并修复 RuoYi-Next 项目中'通知公告'和'我的通知'两个页面的'查看'按钮跳转到仪表盘的 bug"
-status: awaiting_human_verify
+status: resolved
 created: 2026-07-04T00:00:00Z
 updated: 2026-07-04T00:00:00Z
 ---

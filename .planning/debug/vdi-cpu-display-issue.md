@@ -2,15 +2,16 @@
 slug: vdi-cpu-display-issue
 name: vdi-cpu-display-issue
 status: resolved
-trigger: 虚拟机列表页面显示CPU核数不正确：页面显示1核，但实际API返回的是"1颗 × 8核"。需要调查：
-1. 后端API响应的CPU数据结构
-2. 前端如何解析和显示CPU信息
-3. 数据库模型中CPU相关字段的定义
+trigger: >-
+  虚拟机列表页面显示CPU核数不正确：页面显示1核，但实际API返回的是"1颗 × 8核"。需要调查：
+  1. 后端API响应的CPU数据结构
+  2. 前端如何解析和显示CPU信息
+  3. 数据库模型中CPU相关字段的定义
 
-测试脚本显示实际数据为"CPU: 1颗 × 8核"，说明后端能正确获取数据，问题可能在于：
-- 数据库字段定义（可能是cpu_count=1, cpu_cores=8，但前端只显示了cpu_count）
-- 前端组件的字段映射错误
-- API响应的字段名称混淆
+  测试脚本显示实际数据为"CPU: 1颗 × 8核"，说明后端能正确获取数据，问题可能在于：
+  - 数据库字段定义（可能是cpu_count=1, cpu_cores=8，但前端只显示了cpu_count）
+  - 前端组件的字段映射错误
+  - API响应的字段名称混淆
 
 created: 2026-05-28
 updated: 2026-05-28

@@ -1,3 +1,7 @@
+---
+status: resolved
+---
+
 # AppliedActions pq.StringArray Scan 失败
 
 ## Symptom (User-reported)

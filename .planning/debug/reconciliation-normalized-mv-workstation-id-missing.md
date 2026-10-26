@@ -1,3 +1,7 @@
+---
+status: resolved
+---
+
 # reconciliation_normalized.workstation_id 列创建失败
 
 ## Symptom (User-reported)

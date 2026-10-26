@@ -3,7 +3,8 @@ slug: role-hooks-params-missing
 name: role-hooks-params-missing
 description: Frontend tsc -b fails — hooks/index.ts re-exports UseRoleDataParams but useRoleData.ts no longer defines it
 status: resolved
-trigger: "TypeScript build error: src/pages/system/role/hooks/index.ts:8:15 - error TS2305: Module '"./useRoleData"' has no exported member 'UseRoleDataParams'. The hooks/index.ts exports UseRoleDataParams, UseRoleDataReturn, RoleStatistics from ./useRoleData, but useRoleData.ts does not export UseRoleDataParams. Frontend build failed."
+trigger: >-
+  "TypeScript build error: src/pages/system/role/hooks/index.ts:8:15 - error TS2305: Module '"./useRoleData"' has no exported member 'UseRoleDataParams'. The hooks/index.ts exports UseRoleDataParams, UseRoleDataReturn, RoleStatistics from ./useRoleData, but useRoleData.ts does not export UseRoleDataParams. Frontend build failed."
 created: 2026-06-18
 updated: 2026-06-18
 resolved: 2026-06-18

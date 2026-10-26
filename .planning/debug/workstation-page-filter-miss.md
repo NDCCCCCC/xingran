@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
 slug: workstation-page-filter-miss
-status: diagnosed
+status: resolved
 trigger: "工位管理页面，所属工位下拉框有limit限制导致部分工位无法查找，请检查并提出最佳实践解决方案"
 created: 2026-06-29
 updated: 2026-06-29

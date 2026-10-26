@@ -1,8 +1,9 @@
 ---
 slug: vendor-commons-createcontext
 status: resolved
-trigger: 使用scripts目录下的build-linux.bat构建程序后部署到服务器上运行报错：vendor-commons-igDAyHU2.js:1 Uncaught TypeError: Cannot read properties of undefined (reading 'createContext')
-    at vendor-commons-igDAyHU2.js:1:31027
+trigger: >-
+  使用scripts目录下的build-linux.bat构建程序后部署到服务器上运行报错：vendor-commons-igDAyHU2.js:1 Uncaught TypeError: Cannot read properties of undefined (reading 'createContext')
+  at vendor-commons-igDAyHU2.js:1:31027
 created: 2026-06-14T00:00:00+08:00
 updated: 2026-06-14T00:00:00+08:00
 session_type: bug

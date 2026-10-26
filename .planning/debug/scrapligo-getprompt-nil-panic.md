@@ -4,6 +4,11 @@ status: awaiting_human_verify
 created: 2026-10-16
 updated: 2026-10-16
 trigger: scrapligo transport.(*Standard).Write nil pointer panic in GetPrompt goroutine crashed the whole backend process (exit status 2)
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-26T10:00:00+08:00
+  status: awaiting_human_verify
+
 ---
 
 # Debug Session: scrapligo-getprompt-nil-panic

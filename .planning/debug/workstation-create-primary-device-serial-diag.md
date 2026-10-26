@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: resolved
 trigger: "POST /api/v1/ops/workstation returns 500 - GORM INSERT into sys_workstation with column primary_device_serial (SQLSTATE 42703)"
 created: 2026-06-26
 updated: 2026-06-26

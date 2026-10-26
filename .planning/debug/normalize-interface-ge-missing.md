@@ -1,6 +1,6 @@
 ---
 slug: normalize-interface-ge-missing
-status: awaiting_human_verify
+status: resolved
 trigger: 处理长期根因（normalizeInterfaceName 的 GE/GigabitEthernet 归一化遗漏）— 双层遗漏：Go 函数缺厂商短名映射，SQL view 注释声称折叠但实际只做了 LOWER
 created: 2026-06-29
 updated: 2026-06-29

@@ -3,6 +3,11 @@ status: diagnosing
 trigger: "Linux服务器从6月24号左右起log目录下就没有生成日志了"
 created: 2026-07-09T08:40:00+08:00
 updated: 2026-07-09T08:45:00+08:00
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-26T10:00:00+08:00
+  status: diagnosing
+
 ---
 
 ## Current Focus

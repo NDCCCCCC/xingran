@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: go test ./internal/services/system/... panic + UNIQUE 约束失败，独立于 MAC 死代码清理
 created: 2026-07-02
 updated: 2026-07-02

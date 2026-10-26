@@ -1,6 +1,6 @@
 ---
 slug: ad-push-queue-drain-interval-not-hot-reloaded
-status: fixed
+status: resolved
 session_type: bug
 trigger: "verify-work 57 Test 1 期间发现：修改 sys_config 的 ad_push_queue.drain_interval_seconds 后不生效，必须重启后端才生效"
 created: 2026-10-21T12:05:00+08:00

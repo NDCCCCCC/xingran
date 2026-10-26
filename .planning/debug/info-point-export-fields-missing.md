@@ -1,6 +1,6 @@
 ---
 slug: info-point-export-fields-missing
-status: root_cause_found
+status: resolved
 trigger: 信息点导出功能，经过多次修改，设备名称齐全了，但是所属工位名称不完整，端口名称完全没有
 created: 2026-06-30
 updated: 2026-06-30

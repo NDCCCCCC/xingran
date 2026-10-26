@@ -1,6 +1,6 @@
 ---
 slug: port-mac-format-unify-20260701
-status: plan_approved
+status: resolved
 trigger: "请检查所有网络设备端口相关的逻辑，包括所有定时任务，rest api等等，要求统一端口名称格式和mac物理地址格式"
 created: 2026-07-01
 updated: 2026-07-01

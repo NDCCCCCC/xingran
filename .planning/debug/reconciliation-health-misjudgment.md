@@ -1,3 +1,7 @@
+---
+status: resolved
+---
+
 # 资产对账健康判断逻辑错误
 
 **Slug**: `reconciliation-health-misjudgment`

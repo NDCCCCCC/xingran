@@ -1,4 +1,17 @@
-# Debug Report: MAC Format Recurrence R2 (2026-07-02)
+---
+slug: mac-format-recurrence-R2
+name: mac-format-recurrence-R2
+status: investigated
+created: 2026-07-02
+updated: 2026-10-26
+trigger: >-
+  mac地址采集又出现了格式问题…请检查是否还有其他定时任务导致该问题（2026-07-02 复发复查，diagnose-only）
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-26T10:00:00+08:00
+  status: investigated
+---
+
 
 **Trigger**: "mac地址采集又出现了格式问题...请检查是否还有其他定时任务导致该问题"
 **Mode**: diagnose-only (no source/db modification)

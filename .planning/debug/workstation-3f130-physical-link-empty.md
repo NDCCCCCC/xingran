@@ -1,6 +1,7 @@
 ---
 status: investigated
-trigger: "分公司本部工位 3f130，在其绑定的信息点-网络设备端口 CX-WH-WH-04F-FL-RS8607E-01 GE2/6 上显示有物理地址（MAC），但是工位管理上"物理链路设备"字段为空。请定位根因。"
+trigger: >-
+  "分公司本部工位 3f130，在其绑定的信息点-网络设备端口 CX-WH-WH-04F-FL-RS8607E-01 GE2/6 上显示有物理地址（MAC），但是工位管理上"物理链路设备"字段为空。请定位根因。"
 created: 2026-07-21
 updated: 2026-07-21
 session_type: observation
@@ -9,6 +10,11 @@ related_sessions:
   - workstation-physical-link-zero.md (5F003 — 2026-06-30 已根因定位)
   - info-point-port-drift-recheck-20260701.md (1247/1483 历史漂移)
   - reconciliation-normalized-mv-workstation-id-missing.md (R5 MV 修复)
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-26T10:00:00+08:00
+  status: investigated
+
 ---
 
 # Debug Session: 工位 3f130 物理链路设备为空

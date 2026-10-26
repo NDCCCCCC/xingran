@@ -4,6 +4,11 @@ trigger: "请确认为什么mac历史物化视图定时任务每次都执行两�
 created: 2026-07-03T00:00:00Z
 updated: 2026-07-03T00:00:00Z
 goal: find_root_cause_only
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-26T10:00:00+08:00
+  status: investigating
+
 ---
 
 ## Current Focus

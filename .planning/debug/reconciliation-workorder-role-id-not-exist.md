@@ -1,3 +1,7 @@
+---
+status: resolved
+---
+
 # Root Cause Report — Reconciliation Workorder: role_id Column + "SYSTEM" Submitter Bugs
 
 **Date:** 2026-06-30

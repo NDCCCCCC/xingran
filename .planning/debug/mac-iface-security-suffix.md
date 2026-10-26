@@ -1,3 +1,7 @@
+---
+status: resolved
+---
+
 # MAC 接口名 `GE1/0/4SECURITY` / `GigabitEthernet 0/2` 回归诊断
 
 **状态**: 根因已定位,修复中
