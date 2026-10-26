@@ -17,4 +17,5 @@ requirements-completed: [STOP-01, STOP-02, STOP-03, STOP-04, STOP-05, STOP-06, S
 ## Non-critical gaps（归后续 phase）
 
 - 45 处删除类 Popconfirm 归 Phase 65（用户批复 m00393）。
+  - 【2026-10-26 校订】该条数量为早期约数；实测删除类 `Popconfirm` 14 处（Phase 65 并未清除），已连同 44 处删除类 + 10 处其他破坏性 `Modal.confirm` 统一归 Phase 68.1（DEBT-04）处置，详见 `68.1-FACTS.md` A 节。
 - T6 遗留文案命中只上报不强改。

@@ -86,6 +86,8 @@
 
 **豁免（只读/无默认取消按钮，无需禁用）**：ad-domain computers 两详情弹窗、users 移动/OU 弹窗、ad-domain ous/groups 用户组弹窗 footer=null、building-spaces/BuildingModal footer=null、rpa AIScriptEditor（自定义 footer，生成 loading 期间取消按钮 disabled={loading}）、network/devices 详情弹窗、rpa ExecutionDetailModal 只读详情。
 
+**【2026-10-26 校订】** 本条「约 45 处」为早期约数；2026-10-26 实测：真实裸 `Modal.confirm` 调用点 62 处（删除类 44 + 其他破坏性 10 + 非危险 6 + 合法 2），另有删除类 `Popconfirm` 14 处，合计需收口 **68 处**。实测清单见 `.planning/phases/68.1-closeout-debt-clearance/68.1-FACTS.md` A 节；处置归属 Phase 68.1（DEBT-04）。
+
 **已知遗留（上报 planner 裁决）**：T5 清单文件内其余函数式 `Modal.confirm`（约 45 处，几乎全部为单条/批量删除确认，见 duty/schedules、duty/management、system/dict hooks、system/role hooks、system/menu hooks、system/notice、workorder、operations 各 columns 等）未做实例 update 禁用——删除类 confirm 同样存在提交中点取消的窗口，建议后续统一抽 helper（如 `withConfirmSubmitting`）一次性覆盖；本修复优先保证 B1 blocking 指向的业务表单弹窗 100% 达标。
 
 **验证**：

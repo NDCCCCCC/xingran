@@ -22,6 +22,7 @@ planner: gsd-planner
 - AppTextarea/AppPassword 不扩面；`Input.TextArea|Search|Password` 不在 lint 拦截面
 - RemoteSelect 仅锁契约（UI-SPEC §2.3），不写实现，归 Phase 66
 - 存量 ~45 处 Modal.confirm / 18 处 Popconfirm 不迁移（归 Phase 67）
+  - 【2026-10-26 校订】此处为早期约数；实测需收口 68 处（44 删除类 `Modal.confirm` + 10 其他破坏性 + 14 删除类 `Popconfirm`），已改由 Phase 68.1（DEBT-04）处置，详见 `68.1-FACTS.md` A 节。
 - 不新建 useConfirmAction / withConfirmSubmitting 第三路径
 - UI 文案/颜色全走既有 token 与 antd 语义，禁止裸 hex
 - 全程不 commit
