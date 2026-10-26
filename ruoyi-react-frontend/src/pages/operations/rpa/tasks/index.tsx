@@ -107,6 +107,7 @@ const TaskManagement: FC = () => {
 
   const handleExecute = useCallback(
     async (id: string, name: string) => {
+      // eslint-disable-next-line no-restricted-syntax -- 非删除语义：执行 RPA 任务为发起动作，UI-SPEC §1.1 判定规则排除
       Modal.confirm({
         title: "确认执行",
         content: `确定要执行任务 "${name}" 吗？`,

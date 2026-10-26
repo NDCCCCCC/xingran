@@ -230,6 +230,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       setPrimaryDirect(device.id);
     } else {
       // AD/资产设备弹窗确认
+      // eslint-disable-next-line no-restricted-syntax -- 非删除语义：设置主设备是正向指派（可再次更改），UI-SPEC §1.1 判定规则排除
       Modal.confirm({
         title: "设置主设备",
         content: "是否将此设备信息同步到数据库？同步后可手动编辑。",
@@ -472,6 +473,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
             </Button>
           )}
           {!record.isPrimary && (
+            // eslint-disable-next-line no-restricted-syntax -- 非删除语义：设为主设备为正向指派，非危险删除，保留 Popconfirm 轻确认
             <Popconfirm
               title="设为主设备？"
               onConfirm={() => handleSetPrimary(record)}

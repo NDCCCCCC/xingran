@@ -297,6 +297,7 @@ const ADUserPage: FC = () => {
     const syncCount = selectAllMode ? selectAllTotal : selectedUsers.length;
     if (syncCount === 0) return;
 
+    // eslint-disable-next-line no-restricted-syntax -- 非删除语义：同步用户到系统用户表为幂等补写，不删除任何数据，UI-SPEC §1.1 判定规则排除
     Modal.confirm({
       title: `确定同步选中的 ${syncCount} 个用户到系统用户表？`,
       content: selectAllMode
