@@ -2,7 +2,7 @@
 quick_id: "260605-h3p"
 slug: "ad-group-auto-sync"
 description: "完成AD组自动化同步功能 - 更新定时任务执行函数实现基于OU-组映射的成员同步"
-status: "complete"
+status: complete
 date: "2026-06-05"
 duration: "30min"
 author: "Claude"

@@ -1,4 +1,5 @@
 ---
+status: complete
 phase: quick
 plan: 260529-ivp
 tags: [testing, vdi, standalone, refactor]

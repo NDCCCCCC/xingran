@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # Quick Task 260520-jrp: 在参数管理页面添加请求加密开关配置参数
 
 ## Task Description

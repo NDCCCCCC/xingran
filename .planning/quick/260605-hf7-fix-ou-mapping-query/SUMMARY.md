@@ -2,7 +2,7 @@
 quick_id: "260605-hf7"
 slug: "fix-ou-mapping-query"
 description: "修复OU组映射查询错误 - 移除deleted_at条件"
-status: "complete"
+status: complete
 date: "2026-06-05"
 duration: "2min"
 author: "Claude"

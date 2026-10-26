@@ -1,6 +1,6 @@
 ---
 quick_id: "260608-asset-excel-columns"
-status: "complete"
+status: complete
 commit: "d526aff"
 ---
 

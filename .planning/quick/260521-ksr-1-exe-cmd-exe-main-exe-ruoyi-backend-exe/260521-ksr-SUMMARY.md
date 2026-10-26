@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # Quick Task Summary: 整理项目目录，清除临时版本和构建物
 
 **Quick ID:** 260521-ksr

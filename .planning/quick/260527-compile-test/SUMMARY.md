@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # Quick Task Summary: 测试前后端编译
 
 **Slug:** `compile-test`

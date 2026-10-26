@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # Quick Task Summary: 分批次提交代码修复
 
 **Slug:** `commit-fixes`

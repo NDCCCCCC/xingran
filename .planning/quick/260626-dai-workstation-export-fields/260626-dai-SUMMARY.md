@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # Quick Task 260626-dai: 工位导出补充所属部门/人员名称 + 设备序列号等 — Summary
 
 **Status:** Complete

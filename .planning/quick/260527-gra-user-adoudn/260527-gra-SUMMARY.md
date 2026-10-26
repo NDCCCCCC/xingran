@@ -1,4 +1,5 @@
 ---
+status: complete
 phase: quick
 plan: 260527-gra
 subsystem: ad-auth

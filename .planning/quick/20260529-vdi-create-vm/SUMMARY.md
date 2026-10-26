@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # Quick Task Summary: VDI 创建虚拟机功能
 
 **Slug:** vdi-create-vm  

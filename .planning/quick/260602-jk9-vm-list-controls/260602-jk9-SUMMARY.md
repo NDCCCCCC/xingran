@@ -1,4 +1,5 @@
 ---
+status: complete
 phase: quick
 plan: 260602-jk9
 subsystem: VDI

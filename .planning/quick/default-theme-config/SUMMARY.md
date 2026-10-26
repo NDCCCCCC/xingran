@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # 默认主题管理功能 - 完成总结
 
 **任务 ID**: 260615-default-theme-config

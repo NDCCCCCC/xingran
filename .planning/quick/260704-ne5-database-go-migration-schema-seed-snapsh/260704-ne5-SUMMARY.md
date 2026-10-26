@@ -2,7 +2,7 @@
 quick_id: 260704-ne5
 created: 2026-07-04
 completed: 2026-07-04
-status: success
+status: complete
 type: refactor
 tags: [database, startup, deployment, snapshot, schema]
 ---

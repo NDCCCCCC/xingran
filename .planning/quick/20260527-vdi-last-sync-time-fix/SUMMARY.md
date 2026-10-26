@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # VDI服务器表last_sync_time字段修复 - 执行总结
 
 ## 状态

@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # Quick Task Summary: VDI虚拟机列表页面修复
 
 ## 任务完成情况

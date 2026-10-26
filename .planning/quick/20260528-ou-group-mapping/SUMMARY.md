@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # Quick Task Summary: OU-Group Direct Mapping Implementation
 
 **Status:** complete

@@ -1,3 +1,7 @@
+---
+status: complete
+---
+
 # 修复总结
 
 ## 状态：complete ✓

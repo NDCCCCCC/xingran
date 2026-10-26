@@ -2,7 +2,7 @@
 quick: 260613-vp5-workstation-expand-fix
 title: Workstation expand cell — full-area click + stopPropagation
 type: execute
-status: manual verification pending
+status: complete
 ---
 
 # Quick 260613-vp5: Workstation expand cell — full-area click + stopPropagation
