@@ -247,6 +247,7 @@ function PageTableImpl<T extends object>({
               <BatchDeleteButton
                 selectedCount={selectedRowKeys.length}
                 onConfirm={handleBatchDeleteConfirm}
+                target={batchDelete.target}
               />
             )}
           </div>

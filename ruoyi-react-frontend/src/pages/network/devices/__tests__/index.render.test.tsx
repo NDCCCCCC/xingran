@@ -166,8 +166,8 @@ describe("NetworkDevicePage 渲染", () => {
       const confirmEl = document.querySelector(".ant-modal-confirm");
       expect(confirmEl).toBeTruthy();
       expect(screen.getAllByText("确认批量删除").length).toBeGreaterThanOrEqual(1);
-      // INV-8 逐字文案（target 可能被拆分为独立节点，按容器 textContent 校验）
-      expect(confirmEl?.textContent).toContain("将删除选中的 1 项，删除后不可恢复，是否继续？");
+      // INV-8 逐字文案（68.1-T1：PageTable target 透传打通 →「选中的 1 项设备」，PLAN 注记 3 期望文案改善）
+      expect(confirmEl?.textContent).toContain("将删除选中的 1 项设备，删除后不可恢复，是否继续？");
     });
   });
 });

@@ -236,6 +236,33 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
     confirmSpy.mockRestore();
   });
 
+  it("batchDelete.target 透传（68.1 minor #2）：确认正文含「选中的 N 项资产」", async () => {
+    const confirmSpy = vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() } as never);
+    const onDelete = vi.fn(async () => {});
+    const request = vi.fn(async () => ({ list: makeRows(3), total: 3 }));
+    render(
+      <PageTable
+        request={request}
+        columns={columns2}
+        rowKey="id"
+        batchDelete={{ onDelete, target: "资产" }}
+      />,
+      { wrapper: Wrap }
+    );
+    await waitFor(() => expect(screen.getByText("行1")).toBeTruthy());
+    const checkboxes = document.body.querySelectorAll<HTMLInputElement>(
+      ".ant-table-thead .ant-checkbox-input, .ant-table-tbody .ant-checkbox-input"
+    );
+    fireEvent.click(checkboxes[1]);
+    fireEvent.click(screen.getByRole("button", { name: /批量删除 \(1\)/ }));
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalled();
+      const opts = confirmSpy.mock.calls[0][0] as { content?: string };
+      expect(opts.content).toContain("选中的 1 项资产");
+    });
+    confirmSpy.mockRestore();
+  });
+
   it("sorterMetas+defaultSort：defaultSort 进首次请求参数；表头点击触发带 orderByColumn/isAsc 的请求", async () => {
     const request = vi
       .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()

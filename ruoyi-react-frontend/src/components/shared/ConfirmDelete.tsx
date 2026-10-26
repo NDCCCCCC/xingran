@@ -23,12 +23,23 @@ export interface ConfirmDeleteProps extends Omit<ConfirmDeleteOptions, "onDelete
 }
 
 /** 危险删除按钮（声明式形态） */
-export function ConfirmDelete({ target, onDelete, children, title, extra, disabled }: ConfirmDeleteProps) {
+export function ConfirmDelete({
+  target,
+  onDelete,
+  children,
+  title,
+  extra,
+  disabled,
+  actionLabel,
+  actionContext,
+  contentText,
+  successText,
+}: ConfirmDeleteProps) {
   const isDisabled = disabled || typeof onDelete !== "function";
 
   const handleClick = () => {
     if (isDisabled || !onDelete) return;
-    confirmDelete({ target, onDelete, title, extra });
+    confirmDelete({ target, onDelete, title, extra, actionLabel, actionContext, contentText, successText });
   };
 
   return (
@@ -37,7 +48,8 @@ export function ConfirmDelete({ target, onDelete, children, title, extra, disabl
       danger
       icon={<DeleteOutlined />}
       className="action-btn-link-danger"
-      aria-label={typeof title === "string" ? title : "删除"}
+      // Q1：可访问名与弹窗标题解耦——title 只作确认弹窗标题，不流入 aria-label
+      aria-label={`删除${target}`}
       disabled={isDisabled}
       onClick={handleClick}
     >

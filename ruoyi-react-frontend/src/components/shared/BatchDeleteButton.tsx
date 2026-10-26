@@ -26,6 +26,8 @@ interface BatchDeleteButtonProps {
   disabled?: boolean;
   /** 是否使用 ghost 样式（红色边框+文字） */
   ghost?: boolean;
+  /** 对象类别（如 "资产"）；确认文案派生为 `选中的 {N} 项{target}`；缺省行为逐字不变（68.1 minor #2） */
+  target?: string;
 }
 
 /**
@@ -39,6 +41,7 @@ export const BatchDeleteButton: FC<BatchDeleteButtonProps> = ({
   confirmTitle = BATCH_DELETE_CONFIRM.title,
   disabled = false,
   ghost = true,
+  target,
 }) => {
   if (selectedCount === 0) {
     return null;
@@ -47,11 +50,12 @@ export const BatchDeleteButton: FC<BatchDeleteButtonProps> = ({
   const handleClick = () => {
     if (disabled) return;
     confirmDelete({
-      target: `选中的 ${selectedCount} 项`,
+      target: target ? `选中的 ${selectedCount} 项${target}` : `选中的 ${selectedCount} 项`,
       onDelete: async () => {
         await onConfirm();
       },
       title: confirmTitle,
+      actionContext: "批量删除",
     });
   };
 

@@ -77,6 +77,99 @@ describe("components/shared/confirmDelete（命令式）", () => {
   });
 });
 
+// Phase 68.1 T1 — 契约扩展特性（Q1/Q4 + 焦点落点 + aria-busy + 提交中禁取消）
+describe("components/shared/confirmDelete（68.1 扩展）", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setAppMessageInstance(messageMock);
+  });
+
+  it("默认形态向后兼容：maskClosable=false / keyboard=false / focusable.autoFocusButton='ok'", () => {
+    const confirmSpy = spyConfirm();
+    confirmDelete({ target: "x", onDelete: async () => {} });
+    const opts = confirmSpy.mock.calls[0][0];
+    expect(opts.maskClosable).toBe(false);
+    expect(opts.keyboard).toBe(false);
+    expect(opts.focusable).toEqual({ autoFocusButton: "ok" });
+  });
+
+  it("actionLabel='清空' → okText「清空」+ 成功「已清空」（不串成已删除）", async () => {
+    spyConfirm();
+    confirmDelete({ target: "缓存", onDelete: async () => {}, actionLabel: "清空" });
+    const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
+    expect(opts.okText).toBe("清空");
+    await opts.onOk();
+    expect(messageMock.success).toHaveBeenCalledWith("已清空");
+    expect(messageMock.success).not.toHaveBeenCalledWith("已删除");
+  });
+
+  it("successText 显式覆盖派生成功文案", async () => {
+    spyConfirm();
+    confirmDelete({ target: "x", onDelete: async () => {}, successText: "已恢复" });
+    const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
+    await opts.onOk();
+    expect(messageMock.success).toHaveBeenCalledWith("已恢复");
+  });
+
+  it("actionContext='批量删除' → 失败 handleApiError 收到「批量删除」", async () => {
+    spyConfirm();
+    const boom = new Error("boom");
+    confirmDelete({ target: "x", onDelete: async () => { throw boom; }, actionContext: "批量删除" });
+    const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
+    await expect(opts.onOk()).rejects.toBe(boom);
+    expect(handleApiError).toHaveBeenCalledWith(boom, "批量删除");
+  });
+
+  it("contentText 覆盖正文且 {target} 占位符被替换", () => {
+    spyConfirm();
+    confirmDelete({ target: "缓存数据", onDelete: async () => {}, contentText: "将清空{target}，操作不可恢复，是否继续？" });
+    const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
+    expect(opts.content).toBe("将清空缓存数据，操作不可恢复，是否继续？");
+  });
+
+  it("提交中：instance.update 被调用（cancelButtonProps.disabled=true + okButtonProps aria-busy=true），finally 恢复", async () => {
+    const update = vi.fn();
+    vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update } as never);
+    let resolveDelete: () => void = () => {};
+    const onDelete = vi.fn().mockImplementation(() => new Promise<void>((r) => { resolveDelete = r; }));
+    confirmDelete({ target: "x", onDelete });
+    const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
+    const pending = opts.onOk();
+    expect(update).toHaveBeenCalledWith({
+      cancelButtonProps: { disabled: true },
+      okButtonProps: { danger: true, "aria-busy": true },
+    });
+    resolveDelete();
+    await pending;
+    expect(update).toHaveBeenLastCalledWith({
+      cancelButtonProps: { disabled: false },
+      okButtonProps: { danger: true },
+    });
+  });
+});
+
+// Phase 68.1 T1 Q1 — 声明式组件可访问名与弹窗标题解耦
+describe("components/shared/ConfirmDelete（68.1 Q1 解耦）", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setAppMessageInstance(messageMock);
+  });
+
+  it("aria-label 等于 删除{target}；传 title='确认删除' 时 aria-label 仍为「删除X」（title 不流入可访问名）", () => {
+    render(<ConfirmDelete target="用户 张三" onDelete={async () => {}} title="确认删除" />);
+    const btn = screen.getByRole("button");
+    expect(btn.getAttribute("aria-label")).toBe("删除用户 张三");
+    expect(btn.getAttribute("aria-label")).not.toContain("确认删除");
+  });
+
+  it("title 仍出现在确认弹窗标题", () => {
+    const confirmSpy = spyConfirm();
+    render(<ConfirmDelete target="x" onDelete={async () => {}} title="确认删除" />);
+    fireEvent.click(screen.getByRole("button"));
+    expect(confirmSpy.mock.calls[0][0].title).toBe("确认删除");
+  });
+});
+
 describe("components/shared/ConfirmDelete（声明式）", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -97,18 +190,18 @@ describe("components/shared/ConfirmDelete（声明式）", () => {
 
   it("disabled=true 或 onDelete 未传 → 按钮 disabled；children 替换默认内容", () => {
     render(<ConfirmDelete target="x" onDelete={async () => {}} disabled>移除</ConfirmDelete>);
-    expect(screen.getByRole("button", { name: "删除" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "删除x" })).toBeDisabled();
     expect(screen.getByText("移除")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button"));
     expect(vi.mocked(Modal.confirm)).not.toHaveBeenCalled();
 
     render(<ConfirmDelete target="y">移除</ConfirmDelete>);
-    expect(screen.getAllByRole("button", { name: "删除" })[1]).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: "删除y" })[0]).toBeDisabled();
   });
 
   it("视觉惯例：danger + action-btn-link-danger + DeleteOutlined 图标", () => {
     render(<ConfirmDelete target="x" onDelete={async () => {}} />);
-    const btn = screen.getByRole("button", { name: "删除" });
+    const btn = screen.getByRole("button", { name: "删除x" });
     expect(btn.className).toContain("action-btn-link-danger");
     expect(btn.querySelector(".anticon-delete")).not.toBeNull();
   });
