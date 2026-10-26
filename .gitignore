@@ -139,3 +139,8 @@ cov_*.out
 
 # 一次性生成数据（scripts/tmp_menuimport -mode=gen 可再生）
 xingran_menus_dedup.sql
+
+# 前端依赖与测试缓存
+node_modules/
+.vite/
+.vitest-cache/
