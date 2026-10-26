@@ -32,12 +32,17 @@
       "number": "68",
       "name": "P2 一致性债务 — 颜色/日期/类型收敛",
       "status": "pending"
+    },
+    {
+      "number": "68.1",
+      "name": "收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾",
+      "status": "pending"
     }
   ],
   "next": {
-    "command": "/gsd-new-milestone",
-    "label": "Start a new milestone",
-    "reason": "All phases complete — start a new milestone"
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 7 of 7 · 71% · executing"
   },
-  "updated_at": "2026-10-26T02:37:33.457Z"
+  "updated_at": "2026-10-26T08:34:07.964Z"
 }
