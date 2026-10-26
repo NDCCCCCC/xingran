@@ -44,6 +44,15 @@ export interface FormModalProps {
   okText?: string;
   /** 脏检查开关（默认 true；onCancel 时 isFieldsTouched → 确认弹窗） */
   dirtyCheck?: boolean;
+  /**
+   * 遮罩点击关闭（默认 false，沿用 BaseEditModal / Phase 64 FIX-02 已收紧口径）。
+   * 68.1-T5 minor#7：向后兼容可选透传位，仅供调用页按原弹窗取值显式声明；不得放宽默认值。
+   */
+  maskClosable?: boolean;
+  /**
+   * Esc 关闭（默认 false，同上）。68.1-T5 minor#7：向后兼容可选透传位。
+   */
+  keyboard?: boolean;
   /** Form.Item 列表；或 (form) => Form.Item 列表 */
   children: React.ReactNode | ((form: FormInstance) => React.ReactNode);
 }
@@ -69,6 +78,8 @@ export function FormModal({
   width = 520,
   okText = "保存",
   dirtyCheck = true,
+  maskClosable = false,
+  keyboard = false,
   children,
 }: FormModalProps) {
   const [submitting, setSubmitting] = useState(false);
@@ -130,6 +141,10 @@ export function FormModal({
       cancelButtonDisabled={submitting}
       width={width}
       okText={okText}
+      // 68.1-T5 minor#7：maskClosable/keyboard 默认 false（BaseEditModal 口径，不改变已收紧行为），
+      // 调用页可按原弹窗取值显式声明
+      maskClosable={maskClosable}
+      keyboard={keyboard}
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
         {typeof children === "function" ? children(form) : children}

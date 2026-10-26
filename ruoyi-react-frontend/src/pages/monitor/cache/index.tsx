@@ -5,12 +5,14 @@
  * PR 差异记录（详见 67-SUMMARY）：
  * - 双状态源（caches+setTotal+usePagination+useServerSort 手工管线）→ PageTable 单实例 request 管线
  * - 搜索卡（受控 Input/Select + 搜索/重置/刷新按钮）→ searchFields 3 字段（B 类：按钮文案统一内建 搜索/重置/刷新）
- * - 操作缓存 Modal → FormModal（okText="确定"；FormModal 不透传 maskClosable/keyboard——记录差异；
+ * - 操作缓存 Modal → FormModal（okText="确定"；68.1-T5 minor#7：FormModal 已补
+ *   maskClosable/keyboard 透传位，此处按迁移前原 Modal 取值显式声明 false/false；
  *   Form 布局 vertical → FormModal 内建 horizontal labelCol4/wrapperCol20）
  * - 单删 Popconfirm → 命令式 confirmDelete（68.1-T4：Modal 强确认，触发按钮原样保留）
  * - 清空全部缓存 → confirmDelete 非删除变体（actionLabel="清空"，68.1-T4 §1.9）
- * - 导出按钮文案如实标注「导出全部缓存数据」：后端 /monitor/cache/export 仅支持
- *   Key/Type 参数（CacheExportParams），不支持页面筛选中的 level → 不标称筛选结果（68.1 R3）
+ * - 导出按钮文案「导出当前筛选结果」：导出携带表格当前筛选（缓存键/缓存类型）同参，
+ *   层级（level）因后端 /monitor/cache/export 仅支持 Key/Type（CacheExportParams）而在
+ *   前端导出前二次过滤，保证「导出结果 = 当前筛选结果」（68.1-T5 minor#6）
  * - Tabs（列表/缓存统计）移除：统计面板内容为「统计信息」Modal 的真子集，信息零损失（记 PR）
  * - 30s monitor 轮询保留（ref 承接）；列表失败重试由 PageTable 内建 ErrorAlertWithRetry 承接
  */
@@ -138,6 +140,8 @@ const CacheManager: FC = () => {
   const operateForm = useFormModalForm();
   // PageTable ctx.loadData 转发（操作/清空后刷新列表；devices 页同款 state 承接写法）
   const [reloadRef] = useState<{ current: (() => void) | null }>({ current: null });
+  // 68.1-T5 minor#6：最近一次列表查询参数（列表 request 入参），导出须与之同参
+  const lastListQueryRef = useRef<{ key?: string; type?: string; level?: string }>({});
 
   // ==================== 监控数据 ====================
 
@@ -208,10 +212,19 @@ const CacheManager: FC = () => {
 
   const handleExport = useCallback(async () => {
     try {
-      // 68.1 R3：后端 /monitor/cache/export 仅支持 Key/Type（CacheExportParams），
-      // 不支持页面筛选中的 level → 如实标注导出全部，不标称筛选结果
-      const result = await post<unknown[]>("/monitor/cache/export", {});
-      exportCacheAsJson(result.data || []);
+      // 68.1-T5 minor#6：导出携带当前筛选条件（与列表同参），不再导出全量。
+      // 后端 /monitor/cache/export 的 CacheExportParams 仅支持 Key / Type 两个过滤位
+      // （handler 只取 req.Key / req.Type；service 用 key LIKE + type = 过滤），不支持 level
+      // → 层级在导出前由前端对 location 二次过滤，使导出结果与表格当前筛选一致。
+      const query = lastListQueryRef.current;
+      const result = await post<{ data?: CacheInfo[]; count?: number }>("/monitor/cache/export", {
+        key: query.key || undefined,
+        type: query.type || undefined,
+      });
+      const rows = result.data?.data || [];
+      const level = query.level && query.level !== "all" ? query.level : "";
+      // 层级口径与列表一致：l1/l2 对应 CacheInfo.location；"both" 仅在「全部」下出现
+      exportCacheAsJson(level ? rows.filter((row) => row.location === level) : rows);
       message.success("导出成功");
     } catch (error) {
       handleApiError(error, "导出缓存");
@@ -341,6 +354,8 @@ const CacheManager: FC = () => {
 
       <PageTable<CacheInfo>
         request={async (params) => {
+          // 68.1-T5 minor#6：留存列表查询入参，导出复用（保证导出与当前筛选同参）
+          lastListQueryRef.current = params as { key?: string; type?: string; level?: string };
           // level 默认 "all"（SearchField 无 initialValue 支持；filterEmpty 剔除空值后兜底）
           const result = await post<{ list?: CacheInfo[]; total?: number }>("/monitor/cache/list", {
             ...params,
@@ -376,10 +391,10 @@ const CacheManager: FC = () => {
             <Button
               icon={<ExportOutlined />}
               onClick={() => void handleExport()}
-              aria-label="导出全部缓存数据"
-              title="导出全部缓存数据"
+              aria-label="导出当前筛选结果"
+              title="按当前筛选条件（缓存键 / 缓存类型 / 缓存层级）导出 JSON"
             >
-              导出全部缓存数据
+              导出当前筛选结果
             </Button>
             <Button
               aria-label="清空全部缓存"
@@ -399,7 +414,8 @@ const CacheManager: FC = () => {
         }}
       </PageTable>
 
-      {/* 操作缓存模态框（FormModal 契约） */}
+      {/* 操作缓存模态框（FormModal 契约）
+          68.1-T5 minor#7：按迁移前原 Modal 取值显式声明 maskClosable/keyboard = false */}
       <FormModal
         title="缓存操作"
         open={operateModalVisible}
@@ -407,6 +423,8 @@ const CacheManager: FC = () => {
         form={operateForm}
         okText="确定"
         width={500}
+        maskClosable={false}
+        keyboard={false}
         onFinish={handleOperate}
       >
         <Form.Item label="缓存键" name="key" rules={[{ required: true, message: "请输入缓存键" }]}>

@@ -25,6 +25,8 @@ function Harness({
   dirtyCheck = true,
   formRef,
   okText,
+  maskClosable,
+  keyboard,
 }: {
   open: boolean;
   onFinish: (v: Record<string, unknown>) => Promise<void>;
@@ -33,6 +35,8 @@ function Harness({
   dirtyCheck?: boolean;
   formRef?: (f: FormInstance) => void;
   okText?: string;
+  maskClosable?: boolean;
+  keyboard?: boolean;
 }) {
   const form = useFormModalForm();
   formRef?.(form);
@@ -47,6 +51,8 @@ function Harness({
         initialValues={initialValues}
         dirtyCheck={dirtyCheck}
         okText={okText}
+        maskClosable={maskClosable}
+        keyboard={keyboard}
       >
         <Form.Item name="postName" label="岗位名称" rules={[{ required: true, message: "请输入岗位名称" }]}>
           <input data-testid="name-input" />
@@ -152,5 +158,55 @@ describe("components/shared/FormModal（T4）", () => {
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(onCancel).toHaveBeenCalledTimes(1);
     confirmSpy.mockRestore();
+  });
+});
+
+/**
+ * 68.1-T5 minor#7：FormModal 新增 maskClosable / keyboard 向后兼容透传位。
+ * 默认值必须保持 false / false（沿用 BaseEditModal 已收紧的 Phase 64 FIX-02 口径），
+ * 调用页可按原弹窗取值显式声明。
+ */
+describe("components/shared/FormModal（T5 minor#7：maskClosable / keyboard 透传）", () => {
+  const openModalGate = async () => {
+    await waitFor(() => expect(document.querySelector(".ant-modal")).not.toBeNull());
+    return {
+      // 遮罩点击在 antd 6（@rc-component/dialog）由 .ant-modal-wrap 承接：
+      // mouseDown 命中 wrap 自身 + click 命中 wrap 自身 才关闭（Dialog/index.js onWrapperClick）
+      wrap: document.querySelector(".ant-modal-wrap") as HTMLElement,
+      modal: document.querySelector(".ant-modal") as HTMLElement,
+    };
+  };
+  const clickMask = (wrap: HTMLElement) => {
+    fireEvent.mouseDown(wrap);
+    fireEvent.click(wrap);
+  };
+
+  it("默认值 false/false：点遮罩不关闭、Esc 不关闭（onCancel 不被调）", async () => {
+    const onCancel = vi.fn();
+    render(<Harness open onFinish={async () => {}} onCancel={onCancel} />);
+    const { wrap, modal } = await openModalGate();
+    // 遮罩点击（maskClosable 默认 false → 不关闭）
+    clickMask(wrap);
+    // Esc（keyboard 默认 false → 不关闭）
+    fireEvent.keyDown(modal, { key: "Escape", code: "Escape", keyCode: 27 });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.querySelector(".ant-modal")).not.toBeNull();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("显式 maskClosable=true：点遮罩关闭 → onCancel", async () => {
+    const onCancel = vi.fn();
+    render(<Harness open onFinish={async () => {}} onCancel={onCancel} maskClosable />);
+    const { wrap } = await openModalGate();
+    clickMask(wrap);
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+  });
+
+  it("显式 keyboard=true：Esc 关闭 → onCancel", async () => {
+    const onCancel = vi.fn();
+    render(<Harness open onFinish={async () => {}} onCancel={onCancel} keyboard />);
+    const { modal } = await openModalGate();
+    fireEvent.keyDown(modal, { key: "Escape", code: "Escape", keyCode: 27 });
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
   });
 });
