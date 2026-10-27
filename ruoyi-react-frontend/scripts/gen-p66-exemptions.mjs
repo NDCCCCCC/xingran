@@ -16,8 +16,18 @@
  *   （p65 段只关 no-restricted-syntax，不影响 import 扫描）。
  * ③ 命中识别按 no-restricted-imports 的 message 标记（类比 P65_MESSAGE_MARKS）。
  *
- * 用法：node scripts/gen-p66-exemptions.mjs [--dry]
- *   --dry  仅打印清单，不写回 eslint.config.js
+ * Phase 74 收口（2026-10-28）：本脚本转为 **校验模式（VERIFICATION-ONLY）**——
+ * 写回逻辑已移除。P66 存量豁免清单（37 条）经逐文件 grep 核实全部仍真实命中
+ * useTableManager/usePagination import（PageTable 封装层为合法豁免点，不在清单），
+ * 清单条目数 = 真实命中数，故豁免块保留为极小清单不再收缩。
+ *
+ * 现在脚本只做两件事：
+ * ① 打印当前真实命中清单（等价旧 --dry）；
+ * ② 与 eslint.config.js 锚点段现存清单比对：一致 → exit 0；不一致 → 打印差异并
+ *    exit 1（防回退：新增 hook import 命中文件未登记、或清单残留已迁移条目均会报红）。
+ *
+ * 用法：node scripts/gen-p66-exemptions.mjs [--dry]（--dry 为兼容保留，行为相同——
+ * 本脚本已无写回能力，天然幂等：连跑两次输出 diff 恒为空）
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, rmSync } from "node:fs";
@@ -25,7 +35,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const dry = process.argv.includes("--dry");
 const configPath = path.join(root, "eslint.config.js");
 const scanConfigPath = path.join(root, "eslint.config.p66-scan.js");
 const ANCHOR = "      // __P66_EXEMPTION_FILES__（脚本替换锚点）";
@@ -105,12 +114,16 @@ const rel = hitFiles
 console.log(`命中 Phase 66 hook import 拦截的文件数: ${rel.length}`);
 for (const f of rel) console.log("  " + f);
 
-if (dry) process.exit(0);
-
-// 写回正式 config：保留锚点行本身，保证脚本可重复执行（T8 收口复跑对账）
-const listing = rel.length
-  ? rel.map((f) => `      "${f}",`).join("\n")
-  : "      // （当前无存量命中）\n" + PLACEHOLDER;
-const updated = config.slice(0, anchorIdx) + ANCHOR + "\n" + listing + config.slice(endIdx);
-writeFileSync(configPath, updated, "utf8");
-console.log(`\n已写回 ${path.relative(root, configPath)}（${rel.length} 个文件）`);
+// ---- 校验模式：比对锚点段现存清单 ----
+const anchorSection = config.slice(anchorIdx, endIdx);
+const listed = [...anchorSection.matchAll(/"([^"]+)"/g)].map((m) => m[1]).sort();
+const missing = rel.filter((f) => !listed.includes(f)); // 真实命中但清单未登记
+const stale = listed.filter((f) => !rel.includes(f));   // 清单登记但已无命中
+if (missing.length || stale.length) {
+  console.error("\n[校验失败] 豁免清单与真实命中不一致:");
+  for (const f of missing) console.error("  缺登记: " + f);
+  for (const f of stale) console.error("  已失效: " + f);
+  process.exit(1);
+}
+console.log(`\n[校验通过] 锚点清单 ${listed.length} 条 = 真实命中 ${rel.length} 条，逐条一致`);
+process.exit(0);
