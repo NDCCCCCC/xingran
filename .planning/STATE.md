@@ -2,30 +2,31 @@
 gsd_state_version: "1.0"
 milestone: v1.23
 milestone_name: 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance)
-current_phase: 70
-current_phase_name: TextArea 契约基建 (W0)
-status: Roadmap created (Phases 69-75, 22/22 REQ mapped)
-stopped_at: Phase 69 context gathered
-last_updated: "2026-10-27T08:02:37.411Z"
-last_activity: 2026-10-27
-last_activity_desc: v1.23 roadmap created (Phases 69-75)
-state_head: abce8ed02c12fffdf91104954eb0cb9e95aa150b
+current_phase: 75
+current_phase_name: 浏览器实机 UAT + 收档
+status: v1.23 milestone complete — ready to archive (22/22 REQ satisfied)
+stopped_at: Phase 69-75 全部完成；22/22 需求 Satisfied；唯一例外 #16 行操作权限需 PG 环境复测定责（sqlite 角色创建 500 环境限制，转 v1.24 债）。下一步 /gsd-complete-milestone
+last_updated: "2026-10-28T04:00:00+08:00"
+last_activity: 2026-10-28
+last_activity_desc: Phase 75 UAT 完成 + FAIL-1 修复实机复验通过，22/22 REQ satisfied
+state_head: bf12ac19e8e46b53a6d5285ac98f9c19f35ea9d4
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 7
   total_plans: 1
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 100
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.23 milestone planning (roadmap created 2026-10-27, Phases 69-75)
-**Last activity**: 2026-10-27
-**Prior activity**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）
-**Prior activity (2)**: 2026-10-27 — v1.22 前端公用组件整治 SHIPPED & ARCHIVED（Phases 63-68.1, 7 phases, 20/20 REQ satisfied）
+**Status**: v1.23 milestone complete — ready to archive
+**Last activity**: 2026-10-28
+**Prior activity**: 2026-10-28 — Phase 75 UAT 完成（18/19 实测 + FAIL-1 修复复验 + #16 需 PG 复测转债），22/22 REQ satisfied
+**Prior activity (2)**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）
+**Prior activity (3)**: 2026-10-27 — v1.22 前端公用组件整治 SHIPPED & ARCHIVED（Phases 63-68.1, 7 phases, 20/20 REQ satisfied）
 
 ## Current Milestone: v1.23 前端契约全量收尾与遗留清偿
 
