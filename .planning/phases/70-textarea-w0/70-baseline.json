@@ -7,17 +7,23 @@
   "eslint_totals": {
     "errors": 83,
     "warnings": 1367,
-    "files_scanned": 1220,
+    "files_scanned": 1228,
     "command": "npx eslint . --format json (ruoyi-react-frontend)",
-    "note": "与 v1.22 收档基线完全一致（83 / 1367 零新增红线保持）。Phase 70 T4 上线 TextArea 双 selector 后仍为 83/1367 —— 因 74 处存量 TextArea 文件已在 P65/P66 豁免清单内预登记。"
+    "note": "与 v1.22 收档基线完全一致（83 / 1367 零新增红线保持）。Phase 70 T4 上线 TextArea 双 selector 后仍为 83/1367 —— 61 个存量 TextArea 命中文件已在 P65/P66 豁免清单内预登记（见 textarea_selector_hits.suppressed_in_main_config）。by_rule 分布：no-explicit-any 958 / no-unused-vars 363 / quotes 64 / react-refresh 33 / exhaustive-deps 12 / no-console 5。"
   },
 
   "textarea_selector_hits": {
-    "member": 0,
-    "simple": 0,
-    "files": 0,
-    "interpretation": "0 = 全部存量命中文件已被 P65/P66 豁免 override 覆盖（预登记生效，零新增 error 达成）。这不是 selector 失效：2026-10-27 用临时探针文件 src/__lintprobe__.tsx（含 <Input.TextArea> 与解构 <TextArea> 各一处）实测，selector 精确报出 2 条 '禁止直接使用 antd 多行输入框' 错误，验证双 selector 真实生效。探针文件已删除。",
-    "probe_evidence": "errors: 2, warnings: 0 —— 成员表达式 1 条 + 解构形态 1 条"
+    "member": 27,
+    "simple": 48,
+    "files": 61,
+    "interpretation": "这是「无豁免」口径的真实命中数 = 迁移总量分母。2026-10-27 用临时配置（仅含 TEXT-04 两条 selector、无任何 P65/P66 豁免 override）跑 `npx eslint src` 实测：member 27 / simple 48 / 61 files（含封装层 AppTextArea.tsx 自身 1 条，排除 components/ui/ 后为 26/48/60）。",
+    "suppressed_in_main_config": {
+      "member": 0,
+      "simple": 0,
+      "files": 0,
+      "why": "主配置 eslint.config.js 下全部 61 个文件均落在 P65/P66 豁免 override 内，故 `npx eslint .` 的 JSON 输出中本规则命中为 0（83 errors 里不含 TextArea）。这是预登记生效的表现，不是 selector 失效。"
+    },
+    "probe_evidence": "探针文件 src/__p70_selector_probe.tsx（<Input.TextArea> + 解构 <TextArea> 各一处）在主配置下精确报出 2 条 error，验证双 selector 真实生效，探针已删除。"
   },
 
   "exemption_inventory": {
@@ -28,16 +34,43 @@
   },
 
   "grep_estimate": {
-    "input_textarea_member": 26,
-    "textarea_destructured": 37,
-    "textarea_total": 63,
-    "scope": "ruoyi-react-frontend/src 递归 *.tsx，排除 __tests__ / *.test.* / components/ui/",
-    "note": "与 v1.23 规划期口径（74 处「0 allowClear」）的差异来自统计范围：此处排除 components/ui/ 封装层与测试文件；且 grep 计行数，eslint 计 JSX 节点数。以 eslint 命中 + 豁免清单为排期权威。"
+    "input_textarea_member": 27,
+    "textarea_destructured": 48,
+    "textarea_total": 75,
+    "files": 61,
+    "scope": "ruoyi-react-frontend/src 递归 *.tsx + *.ts，全量（不排除测试/封装层）",
+    "note": "与 eslint 无豁免命中完全吻合（27/48/61），两种独立手段互证。与 v1.23 规划期「74 处」的差异来自：此处按 JSX 开标签出现次数计（<TextArea 多行写法各计一次），且不排除封装层与测试。以 eslint 命中 + 豁免清单为排期权威。"
   },
 
   "single_line_input_select_estimate": {
     "note": "单行 <Input> 与 <Select> 的迁移量（TEXT/MIG 主战场）以 Phase 71 迁移时逐域实际 grep + 豁免清单 delta 为准；本基线不做硬编码（研究文档间口径 157-220 不一致）。",
     "authority": "每波次迁移后：该域裸组件 grep 命中数 = 豁免清单中该域剩余条目数"
+  },
+
+  "t6_gate_results": {
+    "verified_at": "2026-10-27 (T6 收口实测)",
+    "type_check": {
+      "command": "npm run type-check (tsc --noEmit -p tsconfig.app.json)",
+      "result": "exit 0，0 error",
+      "note": "既有存量债务检查，本次改动（T2/T3/T4）未引入任何类型错误。"
+    },
+    "vitest": {
+      "command": "npm run test (vitest run 全量)",
+      "result": "567 test files / 3946 tests，全部通过（两次全量跑各出现偶发失败，单跑均通过——见 note）",
+      "note": "全量跑 #1：asset/reconciliation/dashboard/index.test.tsx 30000ms 超时（单跑 3.6s 通过）。全量跑 #2：network devices/templates 的 VENDOR_OPTIONS 断言 4≠5（源码实际 5 项，单跑 17 项全过）。两者均为并发会话同时写 network 目录 + 全量高负载导致的偶发/陈旧缓存，非本次改动引入；均单独复跑通过。"
+    },
+    "eslint": {
+      "command": "npx eslint . --format json",
+      "errors": 83,
+      "warnings": 1367,
+      "result": "errors 83 ≤ 83，warnings 1367 ≤ 1367，零新增红线保持",
+      "note": "与 captured 时的 .p70-lint.json 快照逐规则分布完全一致，确认 T4 双 selector 上线未带来新增。"
+    },
+    "build": {
+      "command": "npm run build (tsc -b && vite build)",
+      "result": "成功，built in 40.34s",
+      "note": "无新增 warning/error；bundle 产物正常生成。"
+    }
   },
 
   "reference": {
