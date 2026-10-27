@@ -9,8 +9,6 @@ import {
   Table,
   Button,
   Space,
-  Input,
-  Select,
   Modal,
   Form,
   Switch,
@@ -19,6 +17,8 @@ import {
   Statistic,
   Drawer,
 } from "antd";
+// Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -40,8 +40,6 @@ import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { ErrorAlertWithRetry } from "@/components/shared";
 import type { JobInfo, JobLog } from "./types";
-
-const { TextArea } = Input;
 
 // ==================== 主组件 ====================
 
@@ -194,7 +192,7 @@ const JobManager: FC = () => {
         <Card>
           <Row gutter={16}>
             <Col xs={24} sm={8} md={6}>
-              <Input
+              <AppInput
                 placeholder="任务名称"
                 value={searchForm.jobName}
                 onChange={(e) => setSearchForm({ ...searchForm, jobName: e.target.value })}
@@ -203,7 +201,7 @@ const JobManager: FC = () => {
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <Input
+              <AppInput
                 placeholder="任务组"
                 value={searchForm.jobGroup}
                 onChange={(e) => setSearchForm({ ...searchForm, jobGroup: e.target.value })}
@@ -212,10 +210,13 @@ const JobManager: FC = () => {
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <Select
+              <AppSelect
                 placeholder="状态"
                 value={searchForm.status}
-                onChange={(value) => setSearchForm({ ...searchForm, status: value })}
+                // AppSelect 由 ComponentProps 派生，泛型被擦除 → onChange 值为 unknown，收敛回业务类型
+                onChange={(value) =>
+                  setSearchForm({ ...searchForm, status: value as number | undefined })
+                }
                 allowClear
                 className="user-form-input"
                 style={{ width: "100%" }}
@@ -289,21 +290,21 @@ const JobManager: FC = () => {
       >
         <Form form={form} layout="vertical" initialValues={DEFAULT_FORM_VALUES}>
           <Form.Item name="id" hidden>
-            <Input allowClear />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item
             label="任务名称"
             name="jobName"
             rules={[{ required: true, message: "请输入任务名称" }]}
           >
-            <Input allowClear placeholder="请输入任务名称" />
+            <AppInput allowClear placeholder="请输入任务名称" />
           </Form.Item>
           <Form.Item
             label="任务组"
             name="jobGroup"
             rules={[{ required: true, message: "请输入任务组" }]}
           >
-            <Input allowClear placeholder="请输入任务组，如：DEFAULT" />
+            <AppInput allowClear placeholder="请输入任务组，如：DEFAULT" />
           </Form.Item>
           <Form.Item
             label="调用目标"
@@ -311,7 +312,7 @@ const JobManager: FC = () => {
             rules={[{ required: true, message: "请输入调用目标字符串" }]}
             extra="任务执行时调用的目标方法或脚本"
           >
-            <TextArea placeholder="请输入调用目标字符串" rows={3} />
+            <AppTextArea placeholder="请输入调用目标字符串" rows={3} />
           </Form.Item>
           <Form.Item
             label="Cron表达式"
@@ -326,7 +327,7 @@ const JobManager: FC = () => {
             rules={[{ required: true }]}
             extra="任务错过执行时间的处理策略"
           >
-            <Select allowClear options={MISFIRE_POLICY_OPTIONS} onSearch={() => {}} />
+            <AppSelect allowClear options={MISFIRE_POLICY_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item
             label="并发执行"
@@ -337,10 +338,10 @@ const JobManager: FC = () => {
             <Switch checkedChildren="允许" unCheckedChildren="禁止" />
           </Form.Item>
           <Form.Item label="状态" name="status" rules={[{ required: true }]}>
-            <Select allowClear options={STATUS_OPTIONS} onSearch={() => {}} />
+            <AppSelect allowClear options={STATUS_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item label="备注" name="remark">
-            <TextArea placeholder="请输入备注" rows={3} />
+            <AppTextArea placeholder="请输入备注" rows={3} />
           </Form.Item>
         </Form>
       </Modal>

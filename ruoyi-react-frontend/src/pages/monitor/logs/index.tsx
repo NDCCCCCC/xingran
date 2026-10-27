@@ -11,8 +11,6 @@ import {
   Table,
   Button,
   Space,
-  Input,
-  Select,
   DatePicker,
   Row,
   Col,
@@ -20,8 +18,9 @@ import {
   Modal,
   Typography,
   Form,
-
 } from "antd";
+// Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -246,12 +245,12 @@ const LogMonitor: React.FC = () => {
               <Row gutter={16}>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="title">
-                    <Input placeholder="操作模块" allowClear className="user-form-input" />
+                    <AppInput placeholder="操作模块" allowClear className="user-form-input" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="businessType">
-                    <Select
+                    <AppSelect
                       placeholder="业务类型"
                       allowClear
                       className="user-form-input"
@@ -263,7 +262,7 @@ const LogMonitor: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="status">
-                    <Select
+                    <AppSelect
                       placeholder="操作状态"
                       allowClear
                       className="user-form-input"
@@ -275,7 +274,7 @@ const LogMonitor: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="operName">
-                    <Input placeholder="操作人员" allowClear className="user-form-input" />
+                    <AppInput placeholder="操作人员" allowClear className="user-form-input" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={16} md={6}>
@@ -313,17 +312,17 @@ const LogMonitor: React.FC = () => {
               <Row gutter={16}>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="userName">
-                    <Input placeholder="用户名称" allowClear className="user-form-input" />
+                    <AppInput placeholder="用户名称" allowClear className="user-form-input" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="ipAddr">
-                    <Input placeholder="IP地址" allowClear className="user-form-input" />
+                    <AppInput placeholder="IP地址" allowClear className="user-form-input" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="status">
-                    <Select
+                    <AppSelect
                       placeholder="登录状态"
                       allowClear
                       className="user-form-input"
@@ -530,10 +529,13 @@ const LogMonitor: React.FC = () => {
             {(selectedLog as OperLog).operParam && (
               <>
                 <Title level={5}>请求参数</Title>
-                <Input.TextArea
+                <AppTextArea
                   value={(selectedLog as OperLog).operParam}
                   rows={10}
                   readOnly
+                  // PITFALLS 1.2：只读展示区（受控 value、无 onChange）——契约默认 allowClear
+                  // 会渲染一个点了既清不掉内容也无副作用的清空按钮，属纯 UI 倒退，显式关闭。
+                  allowClear={false}
                   className="mb-4"
                 />
               </>
@@ -542,10 +544,12 @@ const LogMonitor: React.FC = () => {
             {(selectedLog as OperLog).errorMessage && (
               <>
                 <Title level={5}>错误信息</Title>
-                <Input.TextArea
+                <AppTextArea
                   value={(selectedLog as OperLog).errorMessage}
                   rows={5}
                   readOnly
+                  // 同上：只读展示区，显式关闭契约默认 allowClear
+                  allowClear={false}
                   className="text-red-500"
                 />
               </>

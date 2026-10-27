@@ -6,8 +6,6 @@ import {
   Button,
   Space,
   Tag,
-  Input,
-  Select,
   Row,
   Col,
   Statistic,
@@ -16,6 +14,8 @@ import {
   Descriptions,
   App,
 } from "antd";
+// Phase 71 (W1)：裸 Input/Select → 契约组件
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -66,7 +66,9 @@ const ServerMonitor: FC = () => {
   // FIX-04b: 列表加载失败的可重试错误
   const [serverError, setServerError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
-  const [searchForm, setSearchForm] = useState({
+  // Phase 71：status 显式标注为 number | undefined —— 原字面量 undefined 会把类型收窄成
+  // undefined 本身，导致 AppSelect onChange（unknown）无法回写
+  const [searchForm, setSearchForm] = useState<{ hostName: string; status: number | undefined }>({
     hostName: "",
     status: undefined,
   });
@@ -333,7 +335,7 @@ const ServerMonitor: FC = () => {
         <Card>
           <Row gutter={16}>
             <Col xs={24} sm={8} md={6}>
-              <Input
+              <AppInput
                 placeholder="主机名"
                 value={searchForm.hostName}
                 onChange={(e) => setSearchForm({ ...searchForm, hostName: e.target.value })}
@@ -342,10 +344,13 @@ const ServerMonitor: FC = () => {
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <Select
+              <AppSelect
                 placeholder="状态"
                 value={searchForm.status}
-                onChange={(value) => setSearchForm({ ...searchForm, status: value })}
+                // AppSelect 由 ComponentProps 派生，泛型被擦除 → onChange 值为 unknown，收敛回业务类型
+                onChange={(value) =>
+                  setSearchForm({ ...searchForm, status: value as number | undefined })
+                }
                 allowClear
                 className="user-form-input"
                 style={{ width: "100%" }}

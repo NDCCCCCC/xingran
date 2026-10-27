@@ -17,7 +17,9 @@
  * - 30s monitor 轮询保留（ref 承接）；列表失败重试由 PageTable 内建 ErrorAlertWithRetry 承接
  */
 import { useState, useEffect, useCallback, useMemo, useRef, type FC } from "react";
-import { Button, App, Space, Modal, Form, Input, Select, InputNumber, Tag } from "antd";
+import { Button, App, Space, Modal, Form, InputNumber, Tag } from "antd";
+// Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件（P65 allowClear / P65 Select 契约 / P70 TextArea 契约）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   SettingOutlined,
@@ -46,8 +48,6 @@ import {
 } from "./utils";
 import MonitorOverview from "./components/MonitorOverview";
 import CacheStatsModal from "./components/CacheStatsModal";
-
-const { TextArea } = Input;
 
 // ==================== 表格列定义 ====================
 
@@ -428,14 +428,14 @@ const CacheManager: FC = () => {
         onFinish={handleOperate}
       >
         <Form.Item label="缓存键" name="key" rules={[{ required: true, message: "请输入缓存键" }]}>
-          <Input allowClear placeholder="请输入缓存键" />
+          <AppInput allowClear placeholder="请输入缓存键" />
         </Form.Item>
         <Form.Item
           label="操作类型"
           name="operation"
           rules={[{ required: true, message: "请选择操作类型" }]}
         >
-          <Select allowClear options={OPERATION_OPTIONS} onSearch={() => {}} />
+          <AppSelect allowClear options={OPERATION_OPTIONS} onSearch={() => {}} />
         </Form.Item>
         <Form.Item
           label="缓存值"
@@ -456,7 +456,7 @@ const CacheManager: FC = () => {
             }),
           ]}
         >
-          <TextArea placeholder="请输入缓存值" rows={4} />
+          <AppTextArea placeholder="请输入缓存值" rows={4} />
         </Form.Item>
         <Form.Item label="过期时间(秒)" name="ttl" dependencies={["operation"]}>
           <InputNumber placeholder="留空表示永不过期" min={1} style={{ width: "100%" }} />

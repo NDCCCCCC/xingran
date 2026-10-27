@@ -17,7 +17,10 @@
  */
 
 import { useCallback, useEffect, useRef, type FC, type KeyboardEvent } from "react";
-import { App, Card, Select, Switch } from "antd";
+import { App, Card, Switch } from "antd";
+// Phase 71 (W1)：裸 Select → AppSelect。两处均为 options 形态的固定枚举（3 项 / 4 项，
+// 均 < 8 项 → showSearch 自动为 false）；再显式 showSearch={false} 表达「设置项禁搜」业务意图。
+import { AppSelect } from "@/components/ui";
 import { BgColorsOutlined, DatabaseOutlined, LayoutOutlined } from "@ant-design/icons";
 import { SettingsShell, type SettingsCategory } from "@/design-system/components/SettingsShell";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -154,12 +157,14 @@ const LayoutSettingsCard: FC = () => {
           <div className="xr-settings-card-row-desc">控制列表与表单的紧凑程度</div>
         </div>
         <div className="xr-settings-card-row-control">
-          <Select<DensityMode>
+          <AppSelect
+            showSearch={false}
             style={{ width: 160 }}
             value={preferences.layout.density}
             options={DENSITY_OPTIONS}
             onSearch={() => {}}
-            onChange={(value) => handleUpdate(() => updateLayout({ density: value }))}
+            // AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型
+            onChange={(value) => handleUpdate(() => updateLayout({ density: value as DensityMode }))}
           />
         </div>
       </div>
@@ -202,12 +207,13 @@ const DataSettingsCard: FC = () => {
           <div className="xr-settings-card-row-desc">列表页面默认每页显示的数据条数</div>
         </div>
         <div className="xr-settings-card-row-control">
-          <Select<number>
+          <AppSelect
+            showSearch={false}
             style={{ width: 160 }}
             value={preferences.data.defaultPageSize}
             options={PAGE_SIZE_SELECT_OPTIONS}
             onSearch={() => {}}
-            onChange={(value) => handleUpdate(() => updateDataPageSize(value))}
+            onChange={(value) => handleUpdate(() => updateDataPageSize(value as number))}
           />
         </div>
       </div>
