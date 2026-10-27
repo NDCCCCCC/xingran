@@ -38,7 +38,7 @@
 | 10 | 升级后取消语义 + Esc 有意加强 | ✅ | 10-esc-does-not-close.png | 点「取消」无副作用（行数不变、无残留弹窗）；非提交态按 Esc 弹窗不关闭（`keyboard:false`），用户可明确走「取消」退出，无卡死感 |
 | 11 | 非删除破坏性文案各自贴切 | ✅（抽验 2/10） | 11-clear-cache-wording.png / 11-clear-log-wording.png | 清空缓存：「将全部缓存数据，操作不可恢复…」确认键「清空」；清空日志：「将全部操作日志…」。均无「将删除…」误用模板 |
 | 12 | 危险操作收口计数归零 | ✅ | 静态 grep（记录于本文件） | 删除类裸 `Modal.confirm`=0；删除类 `<Popconfirm`=0（`WorkstationDeviceTable:478` 的 Popconfirm 为「设为主设备？」非删除语义且带豁免注释）。备注 1 处轻微偏离：`ColumnConfigModal.tsx:136`「重置列配置」确认无 `eslint-disable` 理由注释（非删除类，建议补注释，不计缺陷） |
-| 13 | 分页口径统一 | ❌（口径 ✅ / 恢复 ❌） | 13-pagination-total.png / 13-empty-no-pagination.png | 口径：「共 12 条 / 2 页」正确（`usePagination.ts:122`），空数据无分页文案 ✅。**恢复失败**：楼宇页翻到第 2 页（sessionStorage `current=2`）→ 切到首页 tab 再切回 → 页码回第 1 页且 storage 被覆写为 1，两次稳定复现 |
+| 13 | 分页口径统一 | ✅（口径 ✅ / 恢复 ✅ 已修复） | 13-pagination-total.png / 13-empty-no-pagination.png / FAIL1-fixed-1-page2-before-tab-switch.png / FAIL1-fixed-2-page2-after-tab-switch.png | 口径：「共 12 条 / 2 页」正确（`usePagination.ts:122`），空数据无分页文案 ✅。恢复失败 FAIL-1 **已修复并实机复验通过**（2026-10-28）：切 tab 后仍停第 2 页、storage 未覆写，见「四、FAIL-1」修复记录 |
 | 14 | 空态/错误态可见 | ✅ | 13-empty-no-pagination.png / 14-error-state-retry.png | 机房页空数据显示「暂无数据」无分页；后端重启窗口期资产页出现「查询失败:网络异常」+「重新加载」按钮，后端恢复后可重试成功 |
 | 15 | 固定列不失效 | ✅ | 15-fixed-column-scroll.png | 参数配置页（操作列 fixed right）横向滚动 500px 前后固定列 x 坐标 1044→1044 不变 |
 | 16 | 行操作权限不变 | ❌ | 16-no-perm-no-delete-btn.png | 受限用户 uatview（角色仅含 `ops:building:list/query`，无 delete）登录后楼宇页 9 行全部仍显示「编辑/删除」按钮（delCount=9）。**环境限制**：角色创建 API 在 sqlite 后端报 500（`ON CONFLICT` 不匹配，PG 不受影响），角色-菜单关联为手工插库，未走正常缓存加载链路，后端实际下发权限集未能独立核实（`/system/menus/permissions` 对该用户 403）。根因候选：①前端 hasPerm 在权限获取失败时未隐藏危险按钮；②手工插库角色数据不完整导致后端权限异常。**建议在 PG 生产库复测定责** |
@@ -64,10 +64,14 @@
 
 ## 四、失败 / 异常明细与根因猜想
 
-### FAIL-1：#13 usePagination 持久化恢复失效（切 tab 场景）
+### FAIL-1：#13 usePagination 持久化恢复失效（切 tab 场景）——✅ 已修复 + 实机复验通过（2026-10-28）
 - **现象**：楼宇管理（`/operations/buildings`）翻至第 2 页 → sessionStorage `ruoyi_table_state_operations_buildings_current=2` 正确写入 → 切到「首页」tab 再切回「楼宇管理」tab → 页码显示第 1 页且 storage 被覆写为 `1`。另：F5 刷新后 SPA 落到 `/dashboard` 且 `ruoyi_last_visited_path` 被覆盖为 `/dashboard`，无法经刷新路径回归原页。
-- **根因猜想**：tab 切回时页面组件重新 mount，数据加载 effect 以硬编码 `current:1` 发起查询并回写 hook 状态（未读取持久化值）；或 `usePersistedStateController` 的 keyPrefix 在 mount 瞬间与最终 `location.pathname` 不一致，读写了错误 key。`usePagination.ts` 本身（64-77 行）逻辑正确，嫌疑在页面侧调用方式或 tab keep-alive 缺失。
-- **单测对照**：`usePagination.test.tsx` jsdom 下恢复断言通过 → **jsdom 覆盖与浏览器实机行为存在盲区**，正是 Phase 75 要抓的类别。
+- **根因（已定责）**：`usePagination` 本身无问题（keyPrefix 读写一致）。真正根因在 PageTable → useTableManager 数据加载链：`PageTable.tsx` 的 mount effect 无条件调用 `applyFilters`，而 `useTableManager.ts` 的 `applyFilters` 硬编码 `currentRef.current = 1; setCurrent(1); loadData({ current: 1 })`（回第 1 页语义）——tab 切换 remount 时把 sessionStorage 恢复出的 current=2 覆写回 1。楼宇页走 PageTable 契约组件（非直接 usePagination），故嫌疑①「mount 硬编码回写」成立。
+- **为什么 jsdom 没抓到**：既有单测覆盖 `usePagination` hook 本身（mount 恢复断言通过）与 PageTable 基础骨架，但没有「预置持久化页码 + 组件 mount + 数据加载 effect」的组合用例，也未模拟卸载→重挂载（tab 切换 remount）路径——覆写发生在组件层 mount effect 与数据加载时序之间，恰好落在覆盖盲区。
+- **修复**：`useTableManager.applyFilters` 增加 `opts.keepPage` 选项（保留当前页码加载，不回写 1）；`PageTable` mount 首载改走 `keepPage: true`（恢复语义优先），extraFilters 引用变化仍回第 1 页（联动语义不变）。一处修全站（所有 PageTable 列表页）受益。
+- **新测试**：`usePagination.test.tsx`「tab 切换卸载→重挂载：恢复持久化页码且 sessionStorage 未被覆写」；`useTableManager.test.tsx`「applyFilters({ keepPage: true }) 保留当前页码加载且不覆写持久化 current」；`PageTable.test.tsx`「UAT FAIL-1：sessionStorage 有持久化页码时 mount 首载恢复该页码且不覆写 storage」。
+- **实机复验**：✅ 通过。prod build（修复后）+ preview 4173 + sqlite 后端 9000，admin 登录，楼宇页补造数据至 13 条（2 页）→ 翻第 2 页（storage=`2`）→ 切「仪表盘」tab 再切回 → **仍停第 2 页、「共 13 条 / 2 页」口径正确、storage 未被覆写（=2）**。证据：`screenshots/FAIL1-fixed-1-page2-before-tab-switch.png`、`screenshots/FAIL1-fixed-2-page2-after-tab-switch.png`。
+- **单测对照**：`usePagination.test.tsx` jsdom 下恢复断言通过 → **jsdom 覆盖与浏览器实机行为存在盲区**，正是 Phase 75 要抓的类别（盲区已由上述新用例闭合）。
 
 ### FAIL-2：#16 受限用户仍可见「删除」行操作按钮
 - **现象**：见总表 #16。

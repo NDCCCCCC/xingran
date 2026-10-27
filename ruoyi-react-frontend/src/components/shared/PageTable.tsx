@@ -156,10 +156,22 @@ function PageTableImpl<T extends object>({
   );
 
   // 首次加载 + extraFilters 联动：mount 时（带 extra）首载；之后仅当 extraFilters 引用变化
-  // 才 applyFilters 回第 1 页重载（对齐 applyFilters 语义，避免每渲染都触发）
+  // 才 applyFilters 回第 1 页重载（对齐 applyFilters 语义，避免每渲染都触发）。
+  // FAIL-1 修复：mount 首载走 keepPage——保留 sessionStorage 恢复的页码，
+  // 不得硬编码回第 1 页（tab 切换 remount 后恢复语义优先）；extraFilters 引用变化才回第 1 页。
   const applyFiltersRef = useRef(applyFilters);
   applyFiltersRef.current = applyFilters;
+  const isFirstMountRef = useRef(true);
   useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      if (extraFilters !== undefined) {
+        void applyFiltersRef.current(extraFilters, { keepPage: true });
+      } else {
+        void applyFiltersRef.current(undefined, { keepPage: true });
+      }
+      return;
+    }
     if (extraFilters !== undefined) {
       void applyFiltersRef.current(extraFilters);
     } else {
