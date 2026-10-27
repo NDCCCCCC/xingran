@@ -17,15 +17,17 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.22 milestone complete
+**Status**: v1.23 milestone planning
 **Last activity**: 2026-10-27
-**Prior activity**: 2026-10-22 — v1.21 AD 双向同步 bug 修复 SHIPPED & ARCHIVED（Phases 57-62, 6 phases / 22 plans / 45 tasks, 19/19 REQ verified, 集成审计 passed）
+**Prior activity**: 2026-10-27 — v1.22 前端公用组件整治 SHIPPED & ARCHIVED（Phases 63-68.1, 7 phases, 20/20 REQ satisfied）
 
-## Current Milestone: v1.22 前端公用组件整治
+## Current Milestone: v1.23 前端契约全量收尾与遗留清偿
 
-**Core value**: 把前端公共层从"只有零件没有契约"补成"有契约"——默认值下沉（allowClear/showSearch）、分页契约下沉（showTotal/setTotal）、危险操作唯一入口（ConfirmDelete），消化 2026-10-23 前端审查 201 条问题。
+**Core value**: 把 v1.22 建立但未落地的契约真正推到全量——修复用户主诉的「文本输入框无法一键删除」，并清偿 v1.22 收档结转的 debug / UAT / 流程积压，让里程碑以「无债、无盲区」收档。
 
-**事实基线**: `docs/2026-10-23-前端公用组件审查与最佳实践方案.md` + `.planning/notes/frontend-audit/{01..04}*.md`（201 条：P0 24 / P1 87 / P2 90，精确到 文件:行号）。
+**事实基线**: `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY}.md`（4 维并行研究, commit b5b3aeaf）+ `.planning/v1.23-seeds.md`（A/B/C/D 四类结转项）+ `.planning/debug/` 7 份 debug 文档。
+
+**用户主诉根因**: TextArea 74 处 0 allowClear 覆盖——`AppInput` 契约只包单行 `Input`, `eslint.config.js:114` 注释又明确 `Input.TextArea`「有意不拦」, 形成零约束盲区。
 
 ## Current Position
 
