@@ -1,12 +1,12 @@
 ﻿---
 status: resolved
-trigger: "MAC 杞ㄨ抗鏌ヨ鏃犳硶鏌ュ埌浠讳綍 mac锛屽湪鏁版嵁搴撻噷鏌ユ槸瀛樺湪鐨?
+trigger: "MAC 轨迹查询无法查到任何 mac，在数据库里查是存在的"
 created: 2026-06-30T00:00:00Z
 updated: 2026-10-27T16:40:00+08:00
 goal: find_root_cause_only
 audit_acknowledged:
   milestone: v1.23
-  at: 2026-10-26T10:00:00+08:00
+  at: 2026-10-28
   status: resolved
 
 ---
@@ -24,6 +24,7 @@ test: 鍦?PG 绔拡瀵?MAC `B0227A2E4A4F` 鍒嗗埆璺戯細
 3. `SELECT column_name FROM information_schema.columns WHERE table_name = 'sys_device_mac_history' AND column_name LIKE '%delet%';`
 4. 鐪?application 鏃ュ織涓?`[MAC杞ㄨ抗鏌ヨ] 鏌ヨ澶辫触` 鏄惁鍖呭惈 SQL 閿欒
 5. 鐪?routine query 涓〃璺敱鏄惁璧?partition pruning
+
 expecting: 鑻ュ瓙鍒嗗尯鏈?N 琛岃€屾牴琛ㄨ繑鍥?0 琛岋紝鍒欎腑闂村眰(RLS/permission/瑙嗗浘)鍚炴帀浜嗭紱
 鑻ユ牴琛ㄨ繑鍥?0 鑰屽瓙鍒嗗尯鏈?N锛屽垯 GORM 鎴?Raw 瑙﹀彂 PG 鎶ラ敊锛涘惁鍒欎竴瀹氬瓨鍦ㄥ叾浠?杩囨护(濡?first_seen 鑼冨洿銆乵ac_address 澶у皬鍐欍€乨eleted_at)瀵艰嚧绌洪泦
 next_action: 1) 妫€鏌?`internal/services/mac_history_service.go` 涓?scheduler
@@ -66,6 +67,7 @@ started: 寰呯敤鎴风‘璁?鍩轰簬鐜扮姸鎶ュ憡锛屾湭缁欓娆�
   `startTime = time.Now().Add(-30 * 24 * time.Hour)` 鍗?2026-05-31锛沗endTime = time.Now()`
   鍗?2026-06-30(褰撳墠)銆傛牱鏈椂闂?2026-06-29 鍦ㄨ寖鍥村唴锛屽簲琚懡涓€?  timestamp: 2026-06-30
   conclusion: 鏃堕棿绐楀彛鍙帓闄?
+
 ## Evidence
 
 - timestamp: 2026-06-30
@@ -108,6 +110,7 @@ started: 寰呯敤鎴风‘璁?鍩轰簬鐜扮姸鎶ュ憡锛屾湭缁欓娆�
   source: internal/api/v1/network/mac_history_router.go:11-32
   finding: |
     璺敱琛細`POST /history/trajectory` 鈫?`historyHandler.QueryTrajectory` 鈫?    `h.historyQueryService.QueryMACTrajectory`銆?    鏈嶅姟鏋勯€?`NewMACHistoryQueryService(core.GetDB())` 涓嶅甫 cache(NoCache 璺緞)銆?
+
 ## Resolution
 
 root_cause: **TBD 鈥?闇€瑕?DB 绔疄娴?*銆備唬鐮佸眰闈㈡病鏈夊彂鐜颁細瀵艰嚧绌洪泦鐨勯€昏緫缂洪櫡銆?鏈€鍙兘浠嶉渶鍦?PG 绔疄娴嬩互涓嬪洓绉嶅満鏅細
@@ -134,6 +137,7 @@ verification: 缂哄け鐨?DB 绔疄娴嬶細
    vs 瀛愬垎鍖哄悓鏌ヨ
 3. `EXPLAIN (ANALYZE, BUFFERS) SELECT ... FROM sys_device_mac_history WHERE mac_address = 'B0227A2E4A4F' AND first_seen >= '2026-05-31T00:00:00Z' AND first_seen <= '2026-06-30T23:59:59Z';`
 4. backend application 鏃ュ織涓?`[MAC杞ㄨ抗鏌ヨ] 鏌ヨ澶辫触:` 鎴?   `[MAC鍘嗗彶鏌ヨ] 鏌ヨ璁板綍澶辫触:` 鏄惁鏈?PG 閿欒鐮?
+
 files_changed: []
 
 ---
@@ -142,12 +146,16 @@ files_changed: []
 
 鐢ㄦ埛鎵ц浜嗘竻鍗?B 鐨?4 鏉?SQL锛坧g 瀹㈡埛绔埅鍥撅級锛?
 - **鍒嗗尯鏍戯紙pg_partition_tree锛?*锛氱埗琛?`sys_device_mac_history` + **2026_06 ~ 2026_12 鍏?7 涓湀搴﹀垎鍖?*锛堟棤鏇存棭鍒嗗尯锛夈€?- **EXPLAIN ANALYZE**锛坢ac_address='B0227A2E4A4F' AND first_seen 2026-05-31~2026-06-30锛夛細鍒嗗尯鍓灊姝ｇ‘锛堝彧鎵?2026_06 鍒嗗尯鐨?`device_id_mac_address_first_idx1` 绱㈠紩锛夛紝Index Actual Rows: 6锛孭lanning 29.8ms / Execution 0.105ms銆?- **鏍锋湰 count**锛歚B0227A2E4A4F` 鍦ㄥ叏琛ㄤ笌 2026_06 鍒嗗尯鐨?count(*) 鎴浘鍧囨樉绀?**count=0**銆?- **deleted_at 鍒楀瓨鍦ㄦ€?*锛坕nformation_schema 鏌ヨ锛夛細鎴浘 tab 鏈兘鍒嗚鲸璇ユ煡璇㈢粨鏋溾€斺€?*寰呯‘璁?*銆?
+
 ### 闃舵鎬х粨璁猴紙濡傚疄璁板綍锛屼笉杩囧害鎺ㄦ柇锛?
+
 - 鍒嗗尯鍓灊涓庣储寮曟湰韬伐浣滄甯革紙EXPLAIN 璇佹嵁锛夈€?- 鏍锋湰 MAC `B0227A2E4A4F` 褰撳墠鍏ㄨ〃 count=0锛屼袱绉嶅彲鑳斤細
   1. 6 鏈堝垎鍖烘竻鐞嗙瓥鐣ュ凡鎶婅鏍锋湰娓呴櫎锛堢敤鎴锋鍓嶉璀﹁繃姝ゅ彲鑳斤級锛?  2. 瀛樺偍鏍煎紡涓庢煡璇㈠瓧闈㈤噺涓嶄竴鑷达紙鏈。鍘熷鐤戠偣锛夈€?- **鍥?EXPLAIN 鐨?Index Actual Rows=6 涓?count=0 骞跺瓨锛屼笉鑳芥帓闄ゆ煡璇㈠瓧闈㈤噺鏍煎紡涓庡瓨鍌ㄦ牸寮忎笉涓€鑷?*锛堣繖姝ｆ槸鏈。鍘熷鐤戠偣锛夈€?
+
 ### Open follow-up
 
 1. 鎹竴涓綋鍓嶇‘瀹炲瓨鍦ㄧ殑鏍锋湰 MAC锛堢敤鎴烽渶鎻愪緵锛夛紝澶嶆煡銆孌B 鐩存煡鏈夎 / 搴旂敤 API 杩斿洖绌恒€嶆槸鍚︿粛澶嶇幇銆?2. 纭 `deleted_at` 鍒楁槸鍚﹀瓨鍦紙information_schema 鏌ヨ B1 閲嶈窇涓€娆★級銆?
+
 鍦ㄦ嬁鍒版柊鏍锋湰鍓嶏紝鏈。淇濇寔 **investigating**銆?
 ---
 
@@ -171,12 +179,16 @@ files_changed: []
 - 涓婃柟 Eliminated C 鐨勭粨璁?*閿欒**锛氬叾鎺ㄧ悊銆屾暟鎹簱鏍锋湰鍊间篃鏄?`B0:22:7A:2E:4A:4F` 褰㈠紡锛屾爣鍑嗗寲鍚庝細鍖归厤銆嶈嚜鐩哥煕鐩锯€斺€攏ormalize 鎴?`B0227A2E4A4F` 鍚庝笌鍐掑彿瀛樺偍**姘镐笉鐩哥瓑**銆傚綋骞翠粎鍑唬鐮佹帹鐞嗘帓闄わ紝鏈粡 DB 瀹炴祴锛屾湰杞疄娴嬫帹缈?- 闄勫甫鍙戠幇锛欵XPLAIN銆孖ndex Actual Rows=6銆嶄笌 count=0 骞跺瓨鐨勭枒鍥篃瑙ｅ紑鈥斺€斾袱鏉?SQL 瀛楅潰閲忎笉鍚岋紙EXPLAIN 鐗堟湰鐢ㄧ殑鏉′欢涓?count 鐗堟湰瀛樺湪宸紓锛夛紝浠ユ湰杞笁鏍煎紡瀵圭収涓哄噯
 
 ### fix 鏂瑰悜锛圥hase 72/73 钀藉湴锛?
+
 鍙屼晶褰掍竴鍖栫粺涓€锛堟帹鑽愨憼锛夛細
 1. **鏌ヨ渚?*锛歋QL 绛夊€兼潯浠舵敼涓哄瀛樺偍鍊煎仛鍚屾牱 normalize锛屽 `WHERE REPLACE(REPLACE(mac_address, ':', ''), '-', '') = ?`锛堟垨 PG 渚?`regexp_replace(upper(mac_address), '[^0-9A-F]', '', 'g') = ?`锛夛紝浣夸换鎰忚緭鍏ユ牸寮忓潎鍙懡涓?2. 鍐欎晶 normalize锛圖BG-03 鐨?Go 渚ч槻绾匡級浜у嚭鏍煎紡涓庢煡璇晶涓€鑷达紝鏉滅粷鏂版牸寮忔紓绉?3. 椤哄甫淇锛歊aw SQL 鈫?GORM chainable + 閿欒浼犳挱锛堢┖ 鈫?500锛屼笉鍐嶅悶 error锛夆€斺€擱EQ DBG-06 鐨勬棦瀹氭柟妗?4. 鏂囨。淇锛歮igration_175 娉ㄩ噴澹扮О銆屽甫 deleted_at 鐨勮蒋鍒犻櫎琛ㄣ€嶄笌瀹為檯 schema 涓嶇锛岄殢淇涓€骞舵洿姝ｆ敞閲?
+
 ### 鐜板瓨鏍锋湰锛堜緵淇鍚庨獙璇侊級
 
 - `A4:0C:66:2C:E9:44`锛坉evice `96aab2e4-65c5-464f-9ee2-c4645d8ae868`锛宨face GE0/40锛宖irst_seen 2026-10-27 16:02锛?- `00:E0:FC:09:BC:F9`锛坉evice `48d75b51-c495-4cd2-a3f8-2babbe396c84`锛宨face GE0/14锛?
+
 status 鍗囩骇涓?**root_cause_identified**锛屽緟 Phase 73 淇 + 鐢ㄤ笂鏍锋湰鍥炲綊楠岃瘉鍚庡叧闂€?
+
 ## Resolution 补记（2026-10-28，Phase 73 修复落地）
 
 修复 commit `da984927`：双侧归一化双分支 SQL（`mac_address = ? OR REPLACE(REPLACE(REPLACE(UPPER(mac_address),':',''),'-',''),'.','') = ?`）+ 5 处等值匹配改造 + Raw SQL 错误传播 + migration_175 注释更正。回归测试 5 个（含脏格式存储反向用例与失败传播用例，红绿验证通过）。**本档关闭。**
