@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
+// Phase 71 (W5)：裸 Input/Select → 契约组件
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   App,
   Card,
   Table,
-  Select,
   TreeSelect,
-  Input,
   Space,
   Button,
   Tag,
@@ -352,11 +352,16 @@ const ADComputerPage: FC = () => {
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
-            <Select allowClear
+            {/* Phase 71 W5：迁 AppSelect——原 antd 单选默认禁搜，显式 showSearch={false}；
+                configId 为 UUID 外键，原 allowClear=true 行为不变；
+                AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型 */}
+            <AppSelect
+              allowClear
               style={{ width: 200 }}
               value={selectedConfig}
-              onChange={setSelectedConfig}
+              onChange={(value) => setSelectedConfig(value as string)}
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
+              showSearch={false}
               onSearch={() => {}}
             />
           </Form.Item>
@@ -386,7 +391,7 @@ const ADComputerPage: FC = () => {
             </Space.Compact>
           </Form.Item>
           <Form.Item name="computerName">
-            <Input placeholder="计算机名称" allowClear style={{ width: 180 }} />
+            <AppInput placeholder="计算机名称" allowClear style={{ width: 180 }} />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -527,7 +532,7 @@ const ADComputerPage: FC = () => {
         width={600}
       >
         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-          <div style={{ color: "#666", fontSize: "14px" }}>
+          <div style={{ color: "var(--theme-text-secondary)", fontSize: "14px" }}>
             点击下方OU标签快速筛选该OU下的电脑设备
           </div>
           <div style={{ maxHeight: 400, overflowY: "auto" }}>
@@ -553,7 +558,7 @@ const ADComputerPage: FC = () => {
             </Space>
           </div>
           {commonOUs.length === 0 && (
-            <div style={{ textAlign: "center", color: "#999", padding: "40px" }}>
+            <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "40px" }}>
               暂无常用OU配置
             </div>
           )}

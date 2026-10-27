@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
+// Phase 71 (W5)：裸 Input/Select/TextArea → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   Card,
   Table,
-  Select,
   TreeSelect,
-  Input,
   Space,
   Button,
   Tag,
@@ -549,10 +549,14 @@ const ADUserPage: FC = () => {
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
-            <Select allowClear
+            {/* Phase 71 W5：迁 AppSelect——原显式 showSearch 保持；configId 为 UUID 外键，
+                原 allowClear=true 行为不变；AppSelect 泛型被 ComponentProps 擦除 →
+                onChange 值为 unknown，收敛回业务类型 */}
+            <AppSelect
+              allowClear
               style={{ width: 200 }}
               value={selectedConfig}
-              onChange={setSelectedConfig}
+              onChange={(value) => setSelectedConfig(value as string)}
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
               showSearch
               // noop 满足 local/no-large-dropdown-list(要求 Select 带 onSearch);
@@ -586,19 +590,22 @@ const ADUserPage: FC = () => {
             </Space.Compact>
           </Form.Item>
           <Form.Item name="username">
-            <Input placeholder="用户名" allowClear style={{ width: 150 }} />
+            <AppInput placeholder="用户名" allowClear style={{ width: 150 }} />
           </Form.Item>
           <Form.Item name="isEnabled">
-            <Select
+            {/* Phase 71 W5：children 写法改写 options；原显式 showSearch（boolean 值下拉，
+                契约过滤走 label）保持 */}
+            <AppSelect
               placeholder="状态"
               allowClear
               style={{ width: 120 }}
               showSearch
               onSearch={() => {}}
-            >
-              <Select.Option value={true}>启用</Select.Option>
-              <Select.Option value={false}>禁用</Select.Option>
-            </Select>
+              options={[
+                { value: true, label: "启用" },
+                { value: false, label: "禁用" },
+              ]}
+            />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -670,29 +677,29 @@ const ADUserPage: FC = () => {
       >
         <Form form={editForm} layout="vertical">
           <Form.Item label="显示名" name="displayName">
-            <Input allowClear />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="邮箱" name="email">
-            <Input allowClear />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="办公电话" name="phone">
-            <Input allowClear />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="手机" name="mobile">
-            <Input allowClear />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="职位" name="title">
-            <Input allowClear />
+            <AppInput allowClear />
           </Form.Item>
           {/* 域控 manager 属性（DN）为只读展示，不参与提交 */}
           <Form.Item label="域控经理">
-            <Input allowClear readOnly value={editingUser?.manager || ""} placeholder="未设置" />
+            <AppInput allowClear readOnly value={editingUser?.manager || ""} placeholder="未设置" />
           </Form.Item>
           <Form.Item label="部门" name="department">
-            <Input allowClear />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="描述" name="description">
-            <Input.TextArea rows={3} />
+            <AppTextArea rows={3} />
           </Form.Item>
         </Form>
       </Modal>
@@ -737,7 +744,7 @@ const ADUserPage: FC = () => {
         width={600}
       >
         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-          <div style={{ color: "#666", fontSize: "14px" }}>点击下方OU标签快速筛选该OU下的用户</div>
+          <div style={{ color: "var(--theme-text-secondary)", fontSize: "14px" }}>点击下方OU标签快速筛选该OU下的用户</div>
           <div style={{ maxHeight: 400, overflowY: "auto" }}>
             <Space wrap>
               {commonOUs.map((ou) => (
@@ -761,7 +768,7 @@ const ADUserPage: FC = () => {
             </Space>
           </div>
           {commonOUs.length === 0 && (
-            <div style={{ textAlign: "center", color: "#999", padding: "40px" }}>
+            <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "40px" }}>
               暂无常用OU配置
             </div>
           )}

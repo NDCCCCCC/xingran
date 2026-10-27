@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+// Phase 71 (W5)：裸 Input/Select/TextArea → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   Card,
   Table,
-  Select,
-  Input,
   Space,
   Button,
   Tag,
@@ -435,34 +435,37 @@ const ADGroupPage: FC = () => {
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
-            <Select allowClear
+            {/* Phase 71 W5：迁 AppSelect——原 antd 单选默认禁搜，显式 showSearch={false}；
+                configId 为 UUID 外键，原 allowClear=true 行为不变；
+                AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型 */}
+            <AppSelect
+              allowClear
               style={{ width: 200 }}
               value={selectedConfig}
-              onChange={setSelectedConfig}
+              onChange={(value) => setSelectedConfig(value as string)}
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
+              showSearch={false}
               onSearch={() => {}}
             />
           </Form.Item>
           <Form.Item label="所属OU">
-            <Select
+            {/* Phase 71 W5：children 写法改写 options；optionFilterProp 由 children 改 label；
+                showSearch 保持显式开启。AppSelect 泛型被 ComponentProps 擦除 → onChange 值为
+                unknown，收敛回业务类型 */}
+            <AppSelect
               style={{ width: 250 }}
               value={selectedOUDN}
-              onChange={handleOUChange}
+              onChange={(value) => handleOUChange(value as string)}
               allowClear
               placeholder="选择OU（默认：本部部门分组）"
               showSearch
-              optionFilterProp="children"
+              optionFilterProp="label"
               onSearch={() => {}}
-            >
-              {ouList.map((ou) => (
-                <Select.Option key={ou.dn} value={ou.dn}>
-                  {ou.name}
-                </Select.Option>
-              ))}
-            </Select>
+              options={ouList.map((ou) => ({ value: ou.dn, label: ou.name }))}
+            />
           </Form.Item>
           <Form.Item name="groupName">
-            <Input placeholder="组名称" allowClear />
+            <AppInput placeholder="组名称" allowClear />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -577,10 +580,10 @@ const ADGroupPage: FC = () => {
       >
         <Form layout="vertical">
           <Form.Item label="组名称" name="groupName" rules={[{ required: true }]}>
-            <Input allowClear />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="描述" name="description">
-            <Input.TextArea rows={4} />
+            <AppTextArea rows={4} />
           </Form.Item>
         </Form>
       </Modal>

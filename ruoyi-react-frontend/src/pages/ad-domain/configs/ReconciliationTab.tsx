@@ -14,7 +14,9 @@
  * - 不展示原始 UUID 列、无操作列、无排序。
  */
 import { useCallback, useEffect, useState } from "react";
-import { Button, Form, Input, Result, Select, Space, Table, Tag, Tooltip } from "antd";
+// Phase 71 (W5)：裸 Input/Select → 契约组件
+import { AppInput, AppSelect } from "@/components/ui";
+import { Button, Form, Result, Space, Table, Tag, Tooltip } from "antd";
 import type { FormInstance } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { FC } from "react";
@@ -244,10 +246,14 @@ const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) =
       <Form form={form} layout="inline" style={{ marginBottom: 16 }}>
         <Space size="middle" wrap>
           <Form.Item name="mismatchType" label="不一致类型">
-            <Select
+            {/* Phase 71 W5：迁 AppSelect——原 antd 单选默认禁搜，显式 showSearch={false}；
+                契约要求显式 onSearch，补空函数不改变行为 */}
+            <AppSelect
               placeholder="全部类型"
               allowClear
               style={{ width: 220 }}
+              showSearch={false}
+              onSearch={() => {}}
               options={MISMATCH_TYPE_OPTIONS}
             />
           </Form.Item>
@@ -261,7 +267,7 @@ const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) =
             />
           </Form.Item>
           <Form.Item name="keyword">
-            <Input
+            <AppInput
               placeholder="搜索用户名 / 部门名称 / OU DN"
               allowClear
               style={{ width: 260 }}

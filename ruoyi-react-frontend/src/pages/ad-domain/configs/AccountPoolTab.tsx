@@ -7,7 +7,6 @@ import {
   Tag,
   Modal,
   Form,
-  Input,
   message,
 
   Statistic,
@@ -15,6 +14,10 @@ import {
   Col,
   Tooltip,
 } from "antd";
+// Phase 71 (W5)：裸 Input/TextArea → 契约组件。
+// 跳过项：<Input.Password>（成员表达式，不在 P65 selector 命中面）→ 保留 antd Input 导入。
+import { AppInput, AppTextArea } from "@/components/ui";
+import { Input } from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -445,7 +448,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             label="账号（UPN 或 sAMAccountName）"
             rules={[{ required: true, message: "请输入账号" }]}
           >
-            <Input allowClear placeholder="如 svc-01@corp.local" disabled={!!editing} />
+            <AppInput allowClear placeholder="如 svc-01@corp.local" disabled={!!editing} />
           </Form.Item>
           <Form.Item
             name="password"
@@ -455,7 +458,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             <Input.Password placeholder="SM4 加密后传输" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={2} maxLength={500} showCount />
+            <AppTextArea rows={2} maxLength={500} showCount />
           </Form.Item>
         </Form>
       </Modal>
@@ -485,7 +488,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
               { min: 10, message: "解锁原因至少 10 字符" },
             ]}
           >
-            <Input.TextArea
+            <AppTextArea
               rows={3}
               maxLength={200}
               showCount

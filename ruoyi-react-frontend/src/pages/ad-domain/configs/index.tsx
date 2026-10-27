@@ -1,10 +1,11 @@
 import { useState } from "react";
+// Phase 71 (W5)：裸 Input → 契约组件
+import { AppInput } from "@/components/ui";
 import {
   Button,
   Table,
   Modal,
   Form,
-  Input,
   InputNumber,
   Switch,
   Space,
@@ -396,7 +397,7 @@ const ADConfigPage: FC = () => {
             name="configName"
             rules={[{ required: true, message: "请输入配置名称" }]}
           >
-            <Input allowClear placeholder="如: 公司主AD域" />
+            <AppInput allowClear placeholder="如: 公司主AD域" />
           </Form.Item>
 
           <Form.Item
@@ -405,7 +406,7 @@ const ADConfigPage: FC = () => {
             rules={[{ required: true, message: "请输入AD服务器地址" }]}
           >
             {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
-            <Input allowClear placeholder="如: ad.example.com 或 192.168.1.100" />
+            <AppInput allowClear placeholder="如: ad.example.com 或 192.168.1.100" />
           </Form.Item>
 
           <Form.Item
@@ -421,7 +422,7 @@ const ADConfigPage: FC = () => {
             name="domainName"
             rules={[{ required: true, message: "请输入域名" }]}
           >
-            <Input allowClear placeholder="如: example.com" />
+            <AppInput allowClear placeholder="如: example.com" />
           </Form.Item>
 
           <Form.Item
@@ -429,7 +430,7 @@ const ADConfigPage: FC = () => {
             name="baseDn"
             rules={[{ required: true, message: "请输入基础DN" }]}
           >
-            <Input allowClear placeholder="如: DC=example,DC=com" />
+            <AppInput allowClear placeholder="如: DC=example,DC=com" />
           </Form.Item>
 
           {/* 账号管理改用「服务账号池」（详情 Drawer 的服务账号池 Tab） */}
