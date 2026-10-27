@@ -86,7 +86,7 @@
 | DBG-06 | 73 | Satisfied (2026-10-27) |
 | DBG-07 | 73 | Satisfied (2026-10-27) |
 | UAT-01 | 75 | Pending |
-| UAT-02 | 75 | Pending |
+| UAT-02 | 75 | Satisfied (2026-10-28) |
 | HYG-01 | 74 | Satisfied (2026-10-27) |
 | HYG-02 | 74 | Satisfied (2026-10-28) |
 | HYG-03 | 74 | Satisfied (2026-10-28) |
