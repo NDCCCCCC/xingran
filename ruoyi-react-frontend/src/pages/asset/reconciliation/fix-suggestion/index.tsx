@@ -30,8 +30,8 @@ import {
   Statistic,
   App,
   Modal,
-  Input,
 } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   ReloadOutlined,
@@ -476,8 +476,7 @@ const FixSuggestion = () => {
       <Card style={{ marginBottom: 16 }}>
         <Form form={form} layout="inline" onFinish={handleSearch}>
           <Form.Item name="fixStatus" label="状态">
-            <Select
-              allowClear
+            <AppSelect
               placeholder="全部"
               style={{ width: 140 }}
               showSearch
@@ -486,8 +485,7 @@ const FixSuggestion = () => {
             />
           </Form.Item>
           <Form.Item name="conflictType" label="冲突类型">
-            <Select
-              allowClear
+            <AppSelect
               placeholder="全部"
               style={{ width: 120 }}
               showSearch
@@ -499,7 +497,7 @@ const FixSuggestion = () => {
             />
           </Form.Item>
           <Form.Item name="responsibleDeptId" label="责任部门">
-            <Input allowClear placeholder="部门 ID" style={{ width: 180 }} />
+            <AppInput placeholder="部门 ID" style={{ width: 180 }} />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -565,7 +563,7 @@ const FixSuggestion = () => {
             label="拒绝原因"
             rules={[{ required: true, min: 10, message: "至少 10 字符" }]}
           >
-            <Input.TextArea rows={4} placeholder="请说明拒绝原因(至少 10 字符)" />
+            <AppTextArea rows={4} placeholder="请说明拒绝原因(至少 10 字符)" />
           </Form.Item>
         </Form>
       </Modal>

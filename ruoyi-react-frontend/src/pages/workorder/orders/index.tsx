@@ -7,8 +7,6 @@ import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Button,
   Form,
-  Input,
-  Select,
   Table,
   Modal,
   Space,
@@ -24,6 +22,7 @@ import {
   TreeSelect,
   Alert,
 } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   EditOutlined,
@@ -63,9 +62,6 @@ import { useWorkOrderModals, type Comment, type HistoryItem } from "./hooks/useW
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 // ==================== 表格列定义 ====================
 
@@ -546,17 +542,15 @@ const WorkOrderPage: FC = () => {
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="workOrderNo" label="工单编号">
-              <Input
+              <AppInput
                 placeholder="请输入工单编号"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="title" label="标题">
-              <Input
+              <AppInput
                 placeholder="请输入标题"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
@@ -573,68 +567,56 @@ const WorkOrderPage: FC = () => {
               />
             </Form.Item>
             <Form.Item name="type" label="类型">
-              <Select
+              <AppSelect
                 placeholder="请选择类型"
-                allowClear
+                showSearch={false}
                 className="user-form-input"
                 style={{ width: 100 }}
-                onSearch={() => {}}
-              >
-                {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
-                  <Option key={key} value={key}>
-                    {text}
-                  </Option>
-                ))}
-              </Select>
+                options={Object.entries(TYPE_CONFIG).map(([key, { text }]) => ({
+                  value: key,
+                  label: text,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="priority" label="优先级">
-              <Select
+              <AppSelect
                 placeholder="请选择优先级"
-                allowClear
+                showSearch={false}
                 className="user-form-input"
                 style={{ width: 100 }}
-                onSearch={() => {}}
-              >
-                {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
-                  <Option key={key} value={Number(key)}>
-                    {text}
-                  </Option>
-                ))}
-              </Select>
+                options={Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => ({
+                  value: Number(key),
+                  label: text,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
+                showSearch={false}
                 className="user-form-input"
                 style={{ width: 100 }}
-                onSearch={() => {}}
-              >
-                {Object.entries(STATUS_CONFIG).map(([key, { text }]) => (
-                  <Option key={key} value={Number(key)}>
-                    {text}
-                  </Option>
-                ))}
-              </Select>
+                options={Object.entries(STATUS_CONFIG).map(([key, { text }]) => ({
+                  value: Number(key),
+                  label: text,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="assigneeId" label="处理人">
-              <Select
+              <AppSelect
                 placeholder="请选择处理人"
-                allowClear
-                className="user-form-input"
                 showSearch
+                className="user-form-input"
                 style={{ width: 120 }}
-                optionFilterProp="children"
+                optionFilterProp="label"
                 onSearch={() => {}}
-              >
-                {(users || [])
+                options={(users || [])
                   .filter((user) => user.id)
-                  .map((user) => (
-                    <Option key={user.id} value={user.id}>
-                      {user.nickName || user.username}
-                    </Option>
-                  ))}
-              </Select>
+                  .map((user) => ({
+                    value: user.id,
+                    label: user.nickName || user.username,
+                  }))}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -732,7 +714,7 @@ const WorkOrderPage: FC = () => {
                 label="工单标题"
                 rules={[{ required: true, message: "请输入工单标题" }]}
               >
-                <Input allowClear placeholder="请输入工单标题" className="user-form-input" />
+                <AppInput placeholder="请输入工单标题" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -758,17 +740,15 @@ const WorkOrderPage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: "请选择工单类型" }]}
               >
-                <Select allowClear
+                <AppSelect
                   placeholder="请选择工单类型"
+                  showSearch={false}
                   className="user-form-input"
-                  onSearch={() => {}}
-                >
-                  {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
-                    <Option key={key} value={key}>
-                      {text}
-                    </Option>
-                  ))}
-                </Select>
+                  options={Object.entries(TYPE_CONFIG).map(([key, { text }]) => ({
+                    value: key,
+                    label: text,
+                  }))}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -777,65 +757,58 @@ const WorkOrderPage: FC = () => {
                 label="优先级"
                 rules={[{ required: true, message: "请选择优先级" }]}
               >
-                <Select allowClear placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
-                  {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
-                    <Option key={key} value={Number(key)}>
-                      {text}
-                    </Option>
-                  ))}
-                </Select>
+                <AppSelect
+                  placeholder="请选择优先级"
+                  showSearch={false}
+                  className="user-form-input"
+                  options={Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => ({
+                    value: Number(key),
+                    label: text,
+                  }))}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="deptId" label="所属部门">
-                <Select
+                <AppSelect
                   placeholder="请选择部门"
-                  allowClear
+                  showSearch={false}
                   className="user-form-input"
-                  onSearch={() => {}}
-                >
-                  {depts
+                  options={depts
                     .filter((dept) => dept.id)
-                    .map((dept) => (
-                      <Option key={dept.id} value={dept.id}>
-                        {dept.deptName}
-                      </Option>
-                    ))}
-                </Select>
+                    .map((dept) => ({ value: dept.id, label: dept.deptName }))}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="assigneeId" label="处理人">
-                <Select
+                <AppSelect
                   placeholder="请选择处理人"
-                  allowClear
                   showSearch
-                  optionFilterProp="children"
+                  optionFilterProp="label"
                   className="user-form-input"
                   onSearch={() => {}}
-                >
-                  {(users || [])
+                  options={(users || [])
                     .filter((user) => user.id)
-                    .map((user) => (
-                      <Option key={user.id} value={user.id}>
-                        {user.nickName || user.username}
-                      </Option>
-                    ))}
-                </Select>
+                    .map((user) => ({
+                      value: user.id,
+                      label: user.nickName || user.username,
+                    }))}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item name="expectedResolveAt" label="期望解决时间">
-            <Input allowClear type="datetime-local" className="user-form-input" />
+            <AppInput type="datetime-local" className="user-form-input" />
           </Form.Item>
           <Form.Item name="description" label="工单描述">
-            <TextArea rows={4} placeholder="请输入工单描述" />
+            <AppTextArea rows={4} placeholder="请输入工单描述" />
           </Form.Item>
           {editingRecord && (
             <Form.Item name="solution" label="解决方案">
-              <TextArea rows={4} placeholder="请输入解决方案" />
+              <AppTextArea rows={4} placeholder="请输入解决方案" />
             </Form.Item>
           )}
         </Form>
@@ -935,7 +908,7 @@ const WorkOrderPage: FC = () => {
             <Card title="添加评论" size="small" className="mb-4">
               <Form form={commentForm} layout="vertical">
                 <Form.Item name="content" rules={[{ required: true, message: "请输入评论内容" }]}>
-                  <TextArea rows={3} placeholder="请输入评论内容" />
+                  <AppTextArea rows={3} placeholder="请输入评论内容" />
                 </Form.Item>
                 <Form.Item>
                   <Space>

@@ -11,7 +11,6 @@ import {
   Tag,
   App,
   Modal,
-  Select,
   Card,
   Form,
   Slider,
@@ -22,6 +21,7 @@ import {
   Spin,
   Alert,
 } from "antd";
+import { AppInput, AppSelect } from "@/components/ui";
 import { ReloadOutlined, PlusOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { post } from "@/lib/api";
@@ -901,20 +901,22 @@ const VirtualMachineList: React.FC = () => {
           <Input.Search
             placeholder="搜索虚拟机名称"
             style={{ width: 200 }}
-            onSearch={(value) => setFilters({ ...filters, name: value })}
+            onSearch={(value: string) => setFilters({ ...filters, name: value })}
           />
-          <Select
+          <AppSelect
             placeholder="虚拟机状态"
             style={{ width: 120 }}
-            allowClear
-            onChange={(value) => setFilters({ ...filters, powerState: value })}
-            onSearch={() => {}}
-          >
-            <Select.Option value="pending">等待Agent</Select.Option>
-            <Select.Option value="stopped">关机</Select.Option>
-            <Select.Option value="suspended">挂起</Select.Option>
-            <Select.Option value="in_use">正常使用</Select.Option>
-          </Select>
+            showSearch={false}
+            onChange={(value) =>
+              setFilters({ ...filters, powerState: value as "pending" | "stopped" | "suspended" | "in_use" | undefined })
+            }
+            options={[
+              { value: "pending", label: "等待Agent" },
+              { value: "stopped", label: "关机" },
+              { value: "suspended", label: "挂起" },
+              { value: "in_use", label: "正常使用" },
+            ]}
+          />
           <Button icon={<ReloadOutlined />} onClick={loadVMs}>
             刷新
           </Button>
@@ -993,19 +995,14 @@ const VirtualMachineList: React.FC = () => {
                   name="vdi_server_id"
                   rules={[{ required: true, message: "请选择VDI服务器" }]}
                 >
-                  <Select allowClear
+                  <AppSelect
                     placeholder="请选择VDI服务器"
                     loading={vdiServers.length === 0}
                     onSearch={() => {}}
-                  >
-                    {vdiServers
+                    options={vdiServers
                       .filter((s) => s.status === 0)
-                      .map((server) => (
-                        <Select.Option key={server.id} value={server.id}>
-                          {server.name}
-                        </Select.Option>
-                      ))}
-                  </Select>
+                      .map((server) => ({ value: server.id, label: server.name }))}
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -1013,17 +1010,15 @@ const VirtualMachineList: React.FC = () => {
                   name="resource_group_id"
                   rules={[{ required: true, message: "请选择资源组" }]}
                 >
-                  <Select allowClear
+                  <AppSelect
                     placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"}
                     disabled={!selectedServerId}
                     onSearch={() => {}}
-                  >
-                    {resourceGroups.map((group) => (
-                      <Select.Option key={group.resource_group_id} value={group.resource_group_id}>
-                        {group.name} {group.type ? `(${group.type})` : ""}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    options={resourceGroups.map((group) => ({
+                      value: group.resource_group_id,
+                      label: `${group.name} ${group.type ? `(${group.type})` : ""}`,
+                    }))}
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -1031,17 +1026,15 @@ const VirtualMachineList: React.FC = () => {
                   name="resource_id"
                   rules={[{ required: true, message: "请选择资源" }]}
                 >
-                  <Select allowClear
+                  <AppSelect
                     placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"}
                     disabled={!selectedResourceGroupId}
                     onSearch={() => {}}
-                  >
-                    {resources.map((r) => (
-                      <Select.Option key={r.id} value={String(r.id)}>
-                        {r.name} {r.note ? `(${r.note})` : ""}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    options={resources.map((r) => ({
+                      value: String(r.id),
+                      label: `${r.name} ${r.note ? `(${r.note})` : ""}`,
+                    }))}
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -1049,17 +1042,15 @@ const VirtualMachineList: React.FC = () => {
                   name="vtp_id"
                   rules={[{ required: true, message: "请选择VTP平台" }]}
                 >
-                  <Select allowClear
+                  <AppSelect
                     placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"}
                     disabled={!selectedServerId}
                     onSearch={() => {}}
-                  >
-                    {vtpPlatforms.map((platform) => (
-                      <Select.Option key={platform.id} value={platform.id}>
-                        {platform.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    options={vtpPlatforms.map((platform) => ({
+                      value: platform.id,
+                      label: platform.name,
+                    }))}
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -1067,17 +1058,15 @@ const VirtualMachineList: React.FC = () => {
                   name="run_position_id"
                   rules={[{ required: true, message: "请选择运行位置" }]}
                 >
-                  <Select allowClear
+                  <AppSelect
                     placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
                     onSearch={() => {}}
-                  >
-                    {runPositions.map((position) => (
-                      <Select.Option key={position.id} value={position.id}>
-                        {position.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    options={runPositions.map((position) => ({
+                      value: position.id,
+                      label: position.name,
+                    }))}
+                  />
                   <div
                     style={{
                       fontSize: "12px",
@@ -1085,7 +1074,7 @@ const VirtualMachineList: React.FC = () => {
                       marginTop: "4px",
                     }}
                   >
-                    服务器会自动分配到 10.62.0.73 或 10.62.0.74
+                    服务器由 VDI 平台自动分配到指定内网节点
                   </div>
                 </Form.Item>
 
@@ -1094,17 +1083,15 @@ const VirtualMachineList: React.FC = () => {
                   name="disk_id"
                   rules={[{ required: true, message: "请选择个人盘" }]}
                 >
-                  <Select allowClear
+                  <AppSelect
                     placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
                     onSearch={() => {}}
-                  >
-                    {storages.map((storage) => (
-                      <Select.Option key={storage.id} value={storage.id}>
-                        {storage.name} ({(parseInt(storage.avail) / 1024).toFixed(1)}GB可用)
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    options={storages.map((storage) => ({
+                      value: storage.id,
+                      label: `${storage.name} (${(parseInt(storage.avail) / 1024).toFixed(1)}GB可用)`,
+                    }))}
+                  />
                 </Form.Item>
 
                 <Form.Item label="CPU 颗数" name="cpu_number" initialValue={1}>
@@ -1119,17 +1106,15 @@ const VirtualMachineList: React.FC = () => {
                   name="storage_id"
                   rules={[{ required: true, message: "请选择存储位置" }]}
                 >
-                  <Select allowClear
+                  <AppSelect
                     placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
                     onSearch={() => {}}
-                  >
-                    {storages.map((storage) => (
-                      <Select.Option key={storage.id} value={storage.id}>
-                        {storage.name} ({storage.avail}MB可用)
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    options={storages.map((storage) => ({
+                      value: storage.id,
+                      label: `${storage.name} (${storage.avail}MB可用)`,
+                    }))}
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -1137,17 +1122,15 @@ const VirtualMachineList: React.FC = () => {
                   name="network_id"
                   rules={[{ required: true, message: "请选择网络接口" }]}
                 >
-                  <Select allowClear
+                  <AppSelect
                     placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
                     onSearch={() => {}}
-                  >
-                    {networks.map((network) => (
-                      <Select.Option key={network.id} value={network.id}>
-                        {network.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    options={networks.map((network) => ({
+                      value: network.id,
+                      label: network.name,
+                    }))}
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -1160,7 +1143,8 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="主机位置" name="host_id">
-                  <Input allowClear disabled placeholder="自动从运行位置获取 (father_id)" />
+                  {/* UUID 外键回显只读区：不提供清空能力 */}
+                  <AppInput allowClear={false} disabled placeholder="自动从运行位置获取 (father_id)" />
                 </Form.Item>
 
                 <Form.Item label="内存" name="memory" initialValue={4096}>
@@ -1275,7 +1259,7 @@ const VirtualMachineList: React.FC = () => {
             name="username"
             rules={[{ required: true, message: "请选择用户" }]}
           >
-            <Select allowClear
+            <AppSelect
               showSearch
               placeholder="请输入用户名或昵称搜索"
               filterOption={false}
@@ -1290,13 +1274,11 @@ const VirtualMachineList: React.FC = () => {
                 }
               }}
               notFoundContent={userSearchLoading ? "搜索中..." : "未找到用户"}
-            >
-              {systemUsers.map((user) => (
-                <Select.Option key={user.id} value={user.username}>
-                  {user.nickname || user.username}
-                </Select.Option>
-              ))}
-            </Select>
+              options={systemUsers.map((user) => ({
+                value: user.username,
+                label: user.nickname || user.username,
+              }))}
+            />
           </Form.Item>
         </Form>
       </Modal>

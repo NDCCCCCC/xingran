@@ -24,8 +24,6 @@ import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Table,
   Form,
-  Input,
-  Select,
   Button,
   Space,
   Tag,
@@ -36,6 +34,7 @@ import {
   Row,
   Col,
 } from "antd";
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -389,22 +388,28 @@ const ExceptionRulesPage: React.FC = () => {
       <Card className="mb-4">
         <Form form={form} layout="inline" onFinish={handleSearch}>
           <Form.Item name="name" label="规则名称">
-            <Input placeholder="模糊匹配" allowClear style={{ width: 200 }} />
+            <AppInput placeholder="模糊匹配" style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="isActive" label="状态">
-            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-            <Select placeholder="全部" allowClear style={{ width: 120 }}>
-              <Select.Option value={0}>启用</Select.Option>
-              <Select.Option value={1}>停用</Select.Option>
-            </Select>
+            <AppSelect
+              placeholder="全部"
+              showSearch={false}
+              options={[
+                { value: 0, label: "启用" },
+                { value: 1, label: "停用" },
+              ]}
+            />
           </Form.Item>
           <Form.Item name="scopeType" label="范围">
-            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-            <Select placeholder="全部" allowClear style={{ width: 140 }}>
-              <Select.Option value="global">global</Select.Option>
-              <Select.Option value="dept">dept</Select.Option>
-              <Select.Option value="user">user</Select.Option>
-            </Select>
+            <AppSelect
+              placeholder="全部"
+              showSearch={false}
+              options={[
+                { value: "global", label: "global" },
+                { value: "dept", label: "dept" },
+                { value: "user", label: "user" },
+              ]}
+            />
           </Form.Item>
           <Form.Item>
             <Space>

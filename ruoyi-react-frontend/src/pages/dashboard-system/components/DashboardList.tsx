@@ -6,7 +6,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { App, Card, Table, Button, Space, Tag, Input, Row, Col } from "antd";
+import { App, Card, Table, Button, Space, Tag, Row, Col } from "antd";
+import { AppInput } from "@/components/ui";
 import { DASHBOARD } from "@/constants/routes";
 import {
   PlusOutlined,
@@ -296,13 +297,12 @@ const DashboardList: React.FC<DashboardListProps> = ({ onNavigateToView, onNavig
       <Card>
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col flex="auto">
-            <Input
+            <AppInput
               placeholder="搜索仪表盘名称或描述"
               prefix={<SearchOutlined />}
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               onPressEnter={handleSearch}
-              allowClear
             />
           </Col>
           <Col>

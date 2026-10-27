@@ -13,6 +13,7 @@ import {
   InputNumber,
   Switch,
 } from "antd";
+import { AppInput } from "@/components/ui";
 import {
   ReloadOutlined,
   PlusOutlined,
@@ -286,7 +287,7 @@ const VDIServerConfig: React.FC = () => {
             name="name"
             rules={[{ required: true, message: "请输入服务器名称" }]}
           >
-            <Input allowClear placeholder="例如：生产环境 VDI" />
+            <AppInput placeholder="例如：生产环境 VDI" />
           </Form.Item>
           <Form.Item
             label="服务端点"
@@ -296,14 +297,14 @@ const VDIServerConfig: React.FC = () => {
               { type: "url", message: "请输入有效的 URL" },
             ]}
           >
-            <Input allowClear placeholder="https://vdi.example.com" />
+            <AppInput placeholder="https://vdi.example.com" />
           </Form.Item>
           <Form.Item
             label="用户名"
             name="username"
             rules={[{ required: true, message: "请输入用户名" }]}
           >
-            <Input allowClear placeholder="VDI 管理员用户名" />
+            <AppInput placeholder="VDI 管理员用户名" />
           </Form.Item>
           <Form.Item
             label="密码"
