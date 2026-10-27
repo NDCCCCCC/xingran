@@ -1,20 +1,16 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.22
-milestone_name: 前端公用组件整治 (Frontend Shared Component Remediation)
-status: Awaiting next milestone
-stopped_at: 里程碑审计已完成（tech_debt 裁定）并清偿历史遗留（3 个 quick 收档、6 个 debug frontmatter 修复、7 项 acknowledge、UpdateAPIKeyRequest.ID binding 修复）。按用户决策，v1.22 暂不收档，改在尾部插入 Phase 68.1 收尾清偿（DEBT-04：危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾）。下一步：/gsd-ui-phase 68.1 → /gsd-plan-phase 68.1 → /gsd-execute-phase 68.1，完成后再收档 v1.22
-last_updated: "2026-10-27T01:26:55.204Z"
+milestone: v1.23
+milestone_name: 前端契约全量收尾与遗留清偿
+status: planning
+last_updated: "2026-10-27T07:17:34.434Z"
 last_activity: 2026-10-27
-last_activity_desc: Milestone v1.22 completed and archived
-state_head: 2604ea912b4507b674ed7b6d870f292a6013c7f5
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 7
-  completed_plans: 6
-  percent: 86
-current_phase: "68.1"
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -33,10 +29,10 @@ current_phase: "68.1"
 
 ## Current Position
 
-Phase: Milestone v1.22 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-27 — Milestone v1.22 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-27 — Milestone v1.23 started
 
 ## Accumulated Context
 
