@@ -256,11 +256,18 @@ func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *mod
 	}
 
 	// 批量插入历史记录
+	// Phase 72 #3 (DBG-03): 写路径防线 — Create 前显式归一化(大写冒号) + canonical 校验,
+	// 不合格记录丢弃并计数(Warn 可观测),保证 sys_device_mac_history 格式与
+	// sys_device_mac_address 存量一致(大写冒号)。
+	historyRecords, rejectedHistoryRecords := SanitizeMACHistoryRecords(device.DeviceName, historyRecords)
 	if len(historyRecords) > 0 {
 		if err := s.db.WithContext(ctx).Create(&historyRecords).Error; err != nil {
 			return fmt.Errorf("批量插入MAC历史记录失败: %w", err)
 		}
 
+		if rejectedHistoryRecords > 0 {
+			applogger.Warnf("[MAC历史] %s: %d 条历史记录格式不合格被拦截", device.DeviceName, rejectedHistoryRecords)
+		}
 		applogger.Infof("[MAC历史] %s: 记录 %d 条变更事件", device.DeviceName, len(historyRecords))
 	}
 

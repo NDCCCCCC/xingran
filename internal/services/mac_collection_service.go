@@ -287,6 +287,13 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 	}
 
 	// Step 8: 批量插入新的MAC地址记录
+	// Phase 72 #3 (DBG-03): 写路径最后防线 — Create 前显式归一化(大写冒号) + canonical
+	// 校验,不合格记录丢弃并计数(Warn 可观测),保证 sys_device_mac_address 无论上游喂进
+	// 什么格式(点分/连字符/无分隔/垃圾)入库一律 canonical。禁用 DB TRIGGER 路线(v1.19 决策)。
+	macRecords, rejectedMACRecords := SanitizeMACRecords(device.DeviceName, macRecords)
+	if rejectedMACRecords > 0 {
+		result.FailedCount += rejectedMACRecords
+	}
 	if len(macRecords) > 0 {
 		if err := s.db.WithContext(ctx).
 			Create(&macRecords).Error; err != nil {
@@ -376,10 +383,26 @@ func (s *MACCollectionService) getMACCommands(vendor models.DeviceVendor) []MACC
 	return []MACCommand{{Cmd: "show mac-address-table", Type: MACCommandTypeMacTable}}
 }
 
+// isKnownMACVendor 判定 vendor 是否已有 parseMACLine 解析分支。
+// Phase 72 #3 (DBG-03): 未知厂商在 parseMACAddressTable 入口显式报错,
+// 把「静默丢弃」改成可观测失败——不允许任何 vendor 的行无声消失。
+func isKnownMACVendor(vendor models.DeviceVendor) bool {
+	switch vendor {
+	case models.VendorHuawei, models.VendorH3C, models.VendorRuijie, models.VendorMaipu:
+		return true
+	}
+	return false
+}
+
 // parseMACAddressTable 解析MAC地址表
 // cmdType 指定输出格式:Ruijie 的 show port-security address 与 show mac-address-table
 // 字段顺序不同,需要独立解析路径。
+// Phase 72 #3 (DBG-03): 未知厂商显式返回 error(可观测失败),不再静默产出空 entries。
 func (s *MACCollectionService) parseMACAddressTable(output string, vendor models.DeviceVendor, cmdType MACCommandType) ([]MACAddressEntry, error) {
+	if !isKnownMACVendor(vendor) {
+		return nil, fmt.Errorf("未知厂商 %q 无 MAC 解析分支,拒绝静默丢弃 — 请扩展 parseMACLine vendor switch", vendor)
+	}
+
 	var entries []MACAddressEntry
 	lines := strings.Split(output, "\n")
 
@@ -494,6 +517,12 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 				entry.InterfaceName = portcollection.NormalizeInterfaceName(fields[3])
 			}
 		}
+
+	default:
+		// Phase 72 #3 (DBG-03): default 分支显式拒绝 — 未知厂商的行不允许静默丢弃。
+		// parseMACAddressTable 已在入口对未知厂商整体报错,此处是行级兜底(双保险);
+		// 新增 vendor 时必须先扩展本 switch 再开放采集。
+		return MACAddressEntry{}, false
 	}
 
 	// 2026-07-01: 校验 MAC 是标准大写冒号格式,过滤设备 display mac-address 输出里的
