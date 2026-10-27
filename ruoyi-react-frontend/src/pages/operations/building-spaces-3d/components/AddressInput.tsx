@@ -4,13 +4,16 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { Input, Select, Button, Space, Alert, Spin } from "antd";
+import { Button, Space, Alert, Spin } from "antd";
 import { SearchOutlined, EnvironmentOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useGeocoding } from "../hooks/useGeocoding";
 import { HUBEI_CITIES } from "@/utils/baidu-map";
 import type { AddressValue } from "./types";
-
-const { TextArea } = Input;
+// Phase 71 (W3)：裸 Select/TextArea → 契约组件（只换 UI 组件，不碰地址解析逻辑）。
+// 城市下拉原 optionFilterProp="children" + options 形态 → 交给 AppSelect 统一下沉
+// optionFilterProp="label"（cityOptions 的 label 真实存在，过滤语义等价）；
+// 详细地址是受控输入框 → 显式 allowClear={false}，保持原有「无清空按钮」交互。
+import { AppSelect, AppTextArea } from "@/components/ui";
 
 interface AddressInputProps {
   value?: AddressValue;
@@ -102,14 +105,16 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
         <Space>
           <EnvironmentOutlined />
           <span>城市：</span>
-          <Select allowClear
+          <AppSelect
+            allowClear
             style={{ width: 200 }}
             placeholder="请选择城市"
             value={localValue.cityCode || undefined}
-            onChange={handleCityChange}
+            // AppSelect 的 onChange 值为 unknown；原 allowClear 清空时同样落到
+            // handleCityChange 的空值路径（city 查不到 → cityName ""），收敛成 "" 等价
+            onChange={(value) => handleCityChange((value as string) ?? "")}
             disabled={disabled}
             showSearch
-            optionFilterProp="children"
             options={cityOptions}
             onSearch={() => {}}
           />
@@ -121,8 +126,9 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
             <EnvironmentOutlined /> 详细地址：
           </div>
           <Space.Compact style={{ width: "100%" }}>
-            <TextArea
+            <AppTextArea
               rows={2}
+              allowClear={false}
               placeholder="请输入详细地址，如：武汉市洪山区珞喻路1037号"
               value={localValue.address}
               onChange={handleAddressChange}

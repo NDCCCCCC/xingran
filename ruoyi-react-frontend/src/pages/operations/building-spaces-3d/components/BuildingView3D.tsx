@@ -4,13 +4,16 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { Button, Space, Spin, Alert, Tag, Select } from "antd";
+import { Button, Space, Spin, Alert, Tag } from "antd";
 import { ArrowLeftOutlined, DesktopOutlined, BuildOutlined } from "@ant-design/icons";
 import { useVisualizationStore } from "@/store/visualizationStore";
 import { floorApi, workstationApi, buildingApi } from "@/lib/opsApi";
 import type { Floor } from "@/types/operations";
 import { handleApiError } from "@/utils/errorHandler";
 import { convertApiWorkstations } from "../utils";
+// Phase 71 (W3)：裸 Select → AppSelect（只换 UI 组件，不碰 Three.js 渲染逻辑）。
+// 楼宇切换下拉本是 options 形态；buildingId 为 UUID，allowClear 原已有。
+import { AppSelect } from "@/components/ui";
 // Use lazy wrappers from BuildingScene so Three.js stays out of the initial bundle.
 import { BuildingModel3DLazy, FloorPlan3DLazy } from "@/components/three/BuildingScene";
 
@@ -313,11 +316,14 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
         {buildings.length > 1 && (
           <>
             <div style={styles.controlLabel}>切换楼宇</div>
-            <Select allowClear
+            <AppSelect
+              allowClear
               style={{ width: "100%" }}
               placeholder="选择楼宇"
               value={currentBuilding?.id}
-              onChange={onBuildingChange}
+              // AppSelect 的 onChange 值为 unknown；handleBuildingChange 对查不到的 id
+              // 已有「不切换」分支，清空收敛成 "" 走同一分支，不引入新语义
+              onChange={(value) => onBuildingChange((value as string) ?? "")}
               options={buildings.map((b) => ({
                 label: b.name,
                 value: b.id,

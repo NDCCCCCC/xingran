@@ -24,9 +24,7 @@ import {
   Space,
   Modal,
   Form,
-  Input,
   InputNumber,
-  Select,
   Tag,
   Card,
   Row,
@@ -58,19 +56,34 @@ import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import { PageTable } from "@/components/shared";
 import type { PageTableRenderContext, SearchField } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
-import { AppSelect } from "@/components/ui/AppSelect";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// roomId 为 UUID 字段，allowClear + 自定义 filterOption（按 label 子串）原样保留；
+// deviceType/status 为固定枚举 → options 改写并显式 showSearch={false}。
+// 注：本文件原有 `@/components/ui/AppSelect` 直接导入（搜索区已在用），统一收敛到
+// `@/components/ui` 具名导出，避免重复标识符。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
-const { Option } = Select;
-const { TextArea } = Input;
 const { Content } = Layout;
 
 // 模块级静态映射（Phase m76-js-misc 6.3）
 const ROOM_DEVICE_STATUS_MAP: Record<number, string> = { 0: "正常", 1: "故障", 2: "报废" };
+
+// 设备类型固定枚举（AppSelect 需 options 形态）
+const ROOM_DEVICE_TYPE_OPTIONS = [
+  { label: "服务器", value: "server" },
+  { label: "存储设备", value: "storage" },
+  { label: "UPS", value: "ups" },
+  { label: "PDU", value: "pdu" },
+  { label: "防火墙", value: "firewall" },
+  { label: "KVM", value: "kvm" },
+  { label: "机柜", value: "cabinet" },
+  { label: "其他", value: "other" },
+];
 
 // 搜索区选项（值沿用后端 status 口径 0/1/2）
 const ROOM_DEVICE_STATUS_OPTIONS = [
@@ -595,7 +608,7 @@ const RoomDeviceManagement: FC = () => {
   return (
     <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelectAndReset} />
-      <Content style={{ background: "#fff", padding: 16 }}>
+      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
         <PageTable<RoomDevice>
           request={request}
           columns={columns}
@@ -662,7 +675,8 @@ const RoomDeviceManagement: FC = () => {
               label="所属机房"
               rules={[{ required: true, message: "请选择所属机房" }]}
             >
-              <Select
+              {/* 形态分类器①：已是 options 形态；机房 UUID 字段，allowClear 原已有 */}
+              <AppSelect
                 allowClear
                 placeholder="请选择所属机房"
                 showSearch
@@ -680,52 +694,50 @@ const RoomDeviceManagement: FC = () => {
               label="设备名称"
               rules={[{ required: true, message: "请输入设备名称" }]}
             >
-              <Input allowClear placeholder="请输入设备名称" />
+              <AppInput placeholder="请输入设备名称" />
             </Form.Item>
             <Form.Item
               name="deviceCode"
               label="设备编码"
               rules={[{ required: true, message: "请输入设备编码" }]}
             >
-              <Input allowClear placeholder="请输入设备编码" />
+              <AppInput placeholder="请输入设备编码" />
             </Form.Item>
             <Form.Item
               name="deviceType"
               label="设备类型"
               rules={[{ required: true, message: "请选择设备类型" }]}
             >
-              <Select allowClear placeholder="请选择设备类型" onSearch={() => {}}>
-                <Option value="server">服务器</Option>
-                <Option value="storage">存储设备</Option>
-                <Option value="ups">UPS</Option>
-                <Option value="pdu">PDU</Option>
-                <Option value="firewall">防火墙</Option>
-                <Option value="kvm">KVM</Option>
-                <Option value="cabinet">机柜</Option>
-                <Option value="other">其他</Option>
-              </Select>
+              {/* 形态分类器②④：固定枚举 children → options；业务禁搜 */}
+              <AppSelect
+                allowClear
+                placeholder="请选择设备类型"
+                showSearch={false}
+                onSearch={() => {}}
+                options={ROOM_DEVICE_TYPE_OPTIONS}
+              />
             </Form.Item>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="vendor" label="厂商">
-                  <Input allowClear placeholder="请输入厂商" />
+                  <AppInput placeholder="请输入厂商" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="model" label="型号">
-                  <Input allowClear placeholder="请输入型号" />
+                  <AppInput placeholder="请输入型号" />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="serialNumber" label="序列号">
-                  <Input allowClear placeholder="请输入序列号" />
+                  <AppInput placeholder="请输入序列号" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="positionDesc" label="位置描述">
-                  <Input allowClear placeholder="请输入位置描述" />
+                  <AppInput placeholder="请输入位置描述" />
                 </Form.Item>
               </Col>
             </Row>
@@ -753,11 +765,14 @@ const RoomDeviceManagement: FC = () => {
                   label="状态"
                   rules={[{ required: true, message: "请选择状态" }]}
                 >
-                  <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
-                    <Option value={0}>正常</Option>
-                    <Option value={1}>故障</Option>
-                    <Option value={2}>报废</Option>
-                  </Select>
+                  {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                  <AppSelect
+                    allowClear
+                    placeholder="请选择状态"
+                    showSearch={false}
+                    onSearch={() => {}}
+                    options={ROOM_DEVICE_STATUS_OPTIONS}
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -774,7 +789,7 @@ const RoomDeviceManagement: FC = () => {
               </Col>
             </Row>
             <Form.Item name="description" label="描述">
-              <TextArea rows={3} placeholder="请输入描述" />
+              <AppTextArea rows={3} placeholder="请输入描述" />
             </Form.Item>
           </Form>
         </Modal>

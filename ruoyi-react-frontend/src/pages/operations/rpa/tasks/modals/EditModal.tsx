@@ -7,7 +7,6 @@ import {
   App,
   Modal,
   Form,
-  Input,
   InputNumber,
   Switch,
   Tabs,
@@ -15,16 +14,17 @@ import {
   Card,
   Row,
   Col,
-  Select,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
-import type { Task, Action } from "@/types/rpa";
+import type { Task, Action, ActionType } from "@/types/rpa";
 import { ACTION_TYPE_OPTIONS } from "../../constants";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// - 动作类型 Select：固定枚举 → options 改写 + showSearch={false}
+// - tags Select：mode="tags"（⑦ 自由输入）→ 显式 showSearch（否则无法输入新标签）
+// - 动作描述/选择器/值：受控输入（value + onChange），allowClear 原就存在
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { AIScriptEditor } from "./AIScriptEditor";
-
-const { TextArea } = Input;
-const { Option } = Select;
 
 export interface TaskEditModalProps {
   open: boolean;
@@ -61,29 +61,28 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
     >
       <Row gutter={16}>
         <Col span={6}>
-          <Select allowClear
+          {/* 形态分类器②④：动作类型固定枚举（业务禁搜），children → options。
+              onChange 值由 string 变 unknown → as ActionType 收敛（选项集合即 ActionType 子集） */}
+          <AppSelect
+            allowClear
             value={action.type}
             placeholder="动作类型"
-            onChange={(value) => onUpdate(index, { ...action, type: value })}
+            onChange={(value) => onUpdate(index, { ...action, type: value as ActionType })}
             style={{ width: "100%" }}
+            showSearch={false}
             onSearch={() => {}}
-          >
-            {ACTION_TYPE_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+            options={ACTION_TYPE_OPTIONS}
+          />
         </Col>
         <Col span={18}>
-          <Input allowClear
+          <AppInput
             value={action.description || ""}
             placeholder="动作描述"
             onChange={(e) => onUpdate(index, { ...action, description: e.target.value })}
             style={{ marginBottom: 8 }}
           />
           {action.type !== "navigate" && action.type !== "wait" && (
-            <Input allowClear
+            <AppInput
               value={action.selector?.value || ""}
               placeholder="选择器 (CSS Selector)"
               onChange={(e) =>
@@ -96,7 +95,7 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
             />
           )}
           {(action.type === "fill" || action.type === "select" || action.type === "navigate") && (
-            <Input allowClear
+            <AppInput
               value={(action.params?.value as string) || ""}
               placeholder="值 (URL/输入内容/选项)"
               onChange={(e) =>
@@ -291,11 +290,11 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
                       label="任务名称"
                       rules={[{ required: true, message: "请输入任务名称" }]}
                     >
-                      <Input allowClear placeholder="请输入任务名称" />
+                      <AppInput placeholder="请输入任务名称" />
                     </Form.Item>
 
                     <Form.Item name="description" label="任务描述">
-                      <TextArea rows={3} placeholder="请输入任务描述" />
+                      <AppTextArea rows={3} placeholder="请输入任务描述" />
                     </Form.Item>
 
                     <Row gutter={16}>
@@ -330,7 +329,15 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
                     </Row>
 
                     <Form.Item name="tags" label="标签">
-                      <Select allowClear mode="tags" placeholder="请输入标签" onSearch={() => {}} />
+                      {/* 形态分类器⑦：mode="tags" 必须显式 showSearch（默认策略按
+                          options.length 判定，本处无 options 会被判 ≤8 而关掉搜索/输入） */}
+                      <AppSelect
+                        allowClear
+                        mode="tags"
+                        showSearch
+                        placeholder="请输入标签"
+                        onSearch={() => {}}
+                      />
                     </Form.Item>
                   </>
                 ),
