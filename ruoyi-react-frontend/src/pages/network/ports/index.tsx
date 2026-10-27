@@ -4,8 +4,6 @@ import {
   Button,
   Space,
   Form,
-  Input,
-  Select,
   Tag,
   Card,
   Row,
@@ -17,6 +15,8 @@ import {
   Skeleton,
   Typography,
 } from "antd";
+// Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   SearchOutlined,
@@ -49,8 +49,6 @@ import { BulkWriteDrawer } from "@/components/network/port-write/BulkWriteDrawer
 import { SetAccessVlanModal } from "@/components/network/port-write/SetAccessVlanModal";
 import { PortBindingModal } from "@/components/network/port-write/PortBindingModal";
 import { EVENT_LABEL, EVENT_TAG_COLOR, type MACEventType } from "@/components/network/macEventMeta";
-
-const { Option } = Select;
 
 // ==================== PortMACPanel (quick 260712-vpj, D-05/D-06) ====================
 //
@@ -578,77 +576,83 @@ const PortStatusPage: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options（均带 label，optionFilterProp="label" 生效）。
+                  设备为 UUID 外键，原 allowClear=true → 清空即「不按设备筛选」，行为保持不变 */}
+              <AppSelect
                 placeholder="请选择设备"
                 allowClear
                 className="user-form-input"
                 style={{ width: 200 }}
                 showSearch
-                optionFilterProp="label"
                 onSearch={() => {}}
-              >
-                {devices.map((device) => (
-                  <Option key={device.id} value={device.id} label={device.deviceName}>
-                    {device.deviceName}
-                  </Option>
-                ))}
-              </Select>
+                options={devices.map((device) => ({
+                  value: device.id,
+                  label: device.deviceName,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="interfaceName" label="接口">
-              <Input
+              <AppInput
                 placeholder="请输入接口名称"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="adminStatus" label="管理状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；状态固定 2 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value="up">UP</Option>
-                <Option value="down">DOWN</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: "up", label: "UP" },
+                  { value: "down", label: "DOWN" },
+                ]}
+              />
             </Form.Item>
             <Form.Item name="operStatus" label="操作状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；状态固定 2 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value="up">UP</Option>
-                <Option value="down">DOWN</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: "up", label: "UP" },
+                  { value: "down", label: "DOWN" },
+                ]}
+              />
             </Form.Item>
             <Form.Item name="dot1xEnabled" label="802.1X状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；布尔开关类 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value={true}>已启用</Option>
-                <Option value={false}>未启用</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: true, label: "已启用" },
+                  { value: false, label: "未启用" },
+                ]}
+              />
             </Form.Item>
             <Form.Item name="portSecurityEnabled" label="端口安全">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；布尔开关类 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value={true}>已启用</Option>
-                <Option value={false}>未启用</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: true, label: "已启用" },
+                  { value: false, label: "未启用" },
+                ]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>

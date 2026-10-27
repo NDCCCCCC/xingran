@@ -20,7 +20,9 @@
  * - hooks/useBackupData、useBackupModals、useRestoreTask、utils、types 零修改
  */
 import { useCallback, useMemo, useRef, useState, type FC } from "react";
-import { App, Button, Card, Col, Form, Input, Row, Select, Space, Statistic, Tag } from "antd";
+import { App, Button, Card, Col, Form, Row, Space, Statistic, Tag } from "antd";
+// Phase 71 (W4)：裸 Select/TextArea → 契约组件（children 形态改写 options）
+import { AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import type { PageResponse, ConfigBackup } from "@/types";
 import type { DeviceBackupGroup, DiffLine } from "./types";
@@ -46,9 +48,6 @@ import {
   DownloadOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 // 备份类型选项（搜索字段用）
 const BACKUP_TYPE_SEARCH_OPTIONS = [
@@ -276,9 +275,10 @@ const ConfigBackupPage: FC = () => {
     const isEmpty = line.type === "empty";
 
     // 计算背景色
+    // Phase 71 (W4)：裸 hex 收敛主题 token（移出 P65 豁免块后 P68 hex 契约生效）
     let backgroundColor = "transparent";
-    if (isRemoved) backgroundColor = "#ffced0";
-    else if (isAdded) backgroundColor = "#d4edda";
+    if (isRemoved) backgroundColor = "var(--theme-error-bg)";
+    else if (isAdded) backgroundColor = "var(--theme-success-bg)";
     else if (isSame) {
       const lines = side === "left" ? diffResult?.leftLines : diffResult?.rightLines;
       const prevLine = index > 0 ? lines![index - 1] : null;
@@ -294,14 +294,14 @@ const ConfigBackupPage: FC = () => {
     }
 
     const textColor = isRemoved
-      ? "#c92a2a"
+      ? "var(--theme-error)"
       : isAdded
-        ? "#2b7a41"
+        ? "var(--theme-success)"
         : "var(--theme-text-tertiary)";
     const contentColor = isRemoved
-      ? "#c92a2a"
+      ? "var(--theme-error)"
       : isAdded
-        ? "#2b7a41"
+        ? "var(--theme-success)"
         : "var(--theme-text-primary)";
 
     if (isEmpty) {
@@ -614,23 +614,23 @@ const ConfigBackupPage: FC = () => {
                   label="选择设备"
                   rules={[{ required: true, message: "请选择设备" }]}
                 >
-                  <Select allowClear
+                  {/* 形态分类器①/②⑦：children 写法改写 options；mode="multiple" 显式 showSearch。
+                      原 optionFilterProp="children" 在 options 形态下失效，改由 AppSelect 契约的
+                      optionFilterProp="label" 承接（options 均带 label） */}
+                  <AppSelect
                     mode="multiple"
                     placeholder="请选择要备份的设备"
                     showSearch
-                    optionFilterProp="children"
                     onSearch={() => {}}
-                  >
-                    {devices.map((device) => (
-                      <Option key={device.id} value={device.id}>
-                        {device.deviceName} ({device.ipAddress})
-                      </Option>
-                    ))}
-                  </Select>
+                    options={devices.map((device) => ({
+                      value: device.id,
+                      label: `${device.deviceName} (${device.ipAddress})`,
+                    }))}
+                  />
                 </Form.Item>
 
                 <Form.Item name="changeReason" label="变更原因">
-                  <TextArea rows={3} placeholder="请输入变更原因" />
+                  <AppTextArea rows={3} placeholder="请输入变更原因" />
                 </Form.Item>
               </FormModal>
             </>

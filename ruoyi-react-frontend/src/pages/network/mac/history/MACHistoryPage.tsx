@@ -27,9 +27,7 @@ import {
   Button,
   Space,
   Form,
-  Input,
   InputNumber,
-  Select,
   Tag,
   Card,
   DatePicker,
@@ -40,6 +38,8 @@ import {
   Typography,
   App,
 } from "antd";
+// Phase 71 (W4)：裸 Input/Select → 契约组件
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 
 type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
@@ -488,7 +488,7 @@ const MACHistoryPage: React.FC = () => {
             key={record.id}
             style={{
               padding: "12px",
-              background: "#fff",
+              background: "var(--theme-bg-elevated)",
               marginBottom: 8,
               borderRadius: 6,
               border: "1px solid var(--theme-border-primary)",
@@ -627,18 +627,18 @@ const MACHistoryPage: React.FC = () => {
 
         <Form form={form} layout={isMobile ? "vertical" : "inline"} onFinish={handleSearch}>
           <Form.Item name="mac" label="MAC 地址">
-            <Input placeholder="AA:BB:CC:DD:EE:FF" style={{ width: 180 }} allowClear />
+            <AppInput placeholder="AA:BB:CC:DD:EE:FF" style={{ width: 180 }} />
           </Form.Item>
           <Form.Item name="deviceId" label="设备 ID">
-            <Input placeholder="设备 UUID" style={{ width: 220 }} allowClear />
+            <AppInput placeholder="设备 UUID" style={{ width: 220 }} />
           </Form.Item>
           <Form.Item name="interfaceName" label="端口">
-            <Input placeholder="如 GigabitEthernet0/0/1" style={{ width: 180 }} allowClear />
+            <AppInput placeholder="如 GigabitEthernet0/0/1" style={{ width: 180 }} />
           </Form.Item>
           <Form.Item name="eventType" label="事件类型">
-            <Select
+            {/* 形态分类器①：已是 options 形态 → 直接迁；事件类型固定 4 项 → 显式禁搜 */}
+            <AppSelect
               placeholder="全部"
-              allowClear
               style={{ width: 130 }}
               options={[
                 { value: "appeared", label: "出现" },
@@ -647,21 +647,23 @@ const MACHistoryPage: React.FC = () => {
                 { value: "vlan_changed", label: "VLAN 变更" },
               ]}
               onSearch={() => {}}
+              showSearch={false}
             />
           </Form.Item>
           <Form.Item name="vlanId" label="VLAN">
             <InputNumber min={0} max={4094} placeholder="VLAN" style={{ width: 100 }} />
           </Form.Item>
           <Form.Item name="status" label="状态">
-            <Select
+            {/* 形态分类器①：已是 options 形态 → 直接迁；状态固定 2 项 → 显式禁搜 */}
+            <AppSelect
               placeholder="全部"
-              allowClear
               style={{ width: 110 }}
               options={[
                 { value: 0, label: "正常" },
                 { value: 1, label: "停用" },
               ]}
               onSearch={() => {}}
+              showSearch={false}
             />
           </Form.Item>
           <Form.Item>

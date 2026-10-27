@@ -3,7 +3,9 @@
  * 模板变量模态框
  */
 
-import { Modal, Form, Input } from "antd";
+import { Modal, Form } from "antd";
+// Phase 71 (W4)：裸 Input → 契约组件
+import { AppInput } from "@/components/ui";
 import type { FormInstance } from "antd/es/form";
 import type { ConfigTemplate } from "@/types";
 
@@ -36,7 +38,7 @@ export function VariableModal({
         {selectedTemplate?.variables &&
           Object.entries(selectedTemplate.variables).map(([key, defaultValue]) => (
             <Form.Item key={key} name={["templateVariables", key]} label={key}>
-              <Input allowClear placeholder={`默认值: ${String(defaultValue)}`} />
+              <AppInput placeholder={`默认值: ${String(defaultValue)}`} />
             </Form.Item>
           ))}
       </Form>

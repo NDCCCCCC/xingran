@@ -16,7 +16,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { Modal, Form, Select, Input, InputNumber, App } from "antd";
+import { Modal, Form, InputNumber, App } from "antd";
+// Phase 71 (W4)：裸 Select/Input.TextArea → 契约组件。
+// ⚠️ 本文件承载 v1.20.1 set_access_vlan 冻结交互（submitting 防重 / reason __custom__
+// 状态机 / vlanId initialValues 预填），本波仅换 UI 组件名，不改状态/条件渲染/校验逻辑。
+import { AppSelect, AppTextArea } from "@/components/ui";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus } from "@/types/network";
 import { writeSetAccessVlan } from "@/lib/api/networkApi";
@@ -157,8 +161,9 @@ export function SetAccessVlanModal({
             },
           ]}
         >
-          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select allowClear
+          {/* fixed option list, no server search needed（AppSelect 不受 local/no-large-dropdown-list
+              的 Select 名拦截，原 eslint-disable 已随迁移失效，故移除） */}
+          <AppSelect
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({
               label: opt.label,
@@ -181,7 +186,7 @@ export function SetAccessVlanModal({
                   },
                 ]}
               >
-                <Input.TextArea
+                <AppTextArea
                   rows={2}
                   maxLength={REASON_MAX}
                   showCount

@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { FC } from "react";
 import { batchExport } from "@/lib/api/networkApi";
-import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
+import { Table, Button, Space, Form, Card, Row, Col, Statistic, App } from "antd";
+// Phase 71 (W4)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
 import {
   PlayCircleOutlined,
   SearchOutlined,
@@ -21,8 +23,6 @@ import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
 import type { ConfigExecution } from "@/types";
-
-const { Option } = Select;
 
 const ConfigExecutionPage: FC = () => {
   const { message } = App.useApp();
@@ -217,9 +217,9 @@ const ConfigExecutionPage: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；状态固定枚举 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onChange={() => {
@@ -227,13 +227,9 @@ const ConfigExecutionPage: FC = () => {
                   loadStatistics();
                 }}
                 onSearch={() => {}}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={[...STATUS_OPTIONS]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>

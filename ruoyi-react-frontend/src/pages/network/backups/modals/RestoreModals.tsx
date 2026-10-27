@@ -5,6 +5,8 @@
  * 68.1-T4：版本列表「确认恢复到此版本?」裸 Modal.confirm → confirmDelete §1.9 变体。
  */
 import { Button, Card, Col, Descriptions, Drawer, Modal, Row, Select, Space, Spin, Table, Tag, Alert } from "antd";
+// Phase 71 (W4)：裸 Select → 契约组件（children 形态改写 options / 复合子节点保留写法）
+import { AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import type { RefObject } from "react";
 import {
@@ -20,6 +22,10 @@ import ActionButtons from "@/components/shared/ActionButtons";
 import { confirmDelete } from "@/components/shared";
 import { formatDateTime } from "@/utils/datetime";
 
+// 形态分类器⑤专用：还原版本下拉为「children + 复合子节点（Space/Tag/时间）」，
+// 按 W1/W2 口径保留 children 写法（不改写为 options），故仍需 antd Select.Option。
+// 注意：本文件已无裸 <Select> JSX（P65 selector 按 JSXOpeningElement 名匹配，
+// Select.Option 为成员表达式，不在命中面），Select 仅用于取 Option。
 const { Option } = Select;
 
 // 备份类型选项（随 versionColumns 迁入）
@@ -289,7 +295,10 @@ export default function RestoreModals(props: RestoreModalsProps) {
               <div style={{ marginBottom: 16 }}>
                 <Space>
                   <span>选择要还原的版本：</span>
-                  <Select allowClear
+                  {/* 形态分类器⑤：children + 复合子节点（Space/Tag），保留写法；
+                      原 Select 无 showSearch（antd 单选默认关），显式 showSearch={false}
+                      避免 AppSelect 在版本数 ≥8 时自动开搜索 + 复合 label 过滤失效 */}
+                  <AppSelect
                     style={{ width: 400 }}
                     value={selectedRestoreBackup?.id}
                     onChange={(value) => {
@@ -301,6 +310,8 @@ export default function RestoreModals(props: RestoreModalsProps) {
                     }}
                     placeholder="请选择要还原的版本"
                     onSearch={() => {}}
+                    showSearch={false}
+                    optionFilterProp="label"
                   >
                     {selectedDeviceGroup.backups.map((backup) => (
                       <Option key={backup.id} value={backup.id}>
@@ -315,7 +326,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
                         </Space>
                       </Option>
                     ))}
-                  </Select>
+                  </AppSelect>
                 </Space>
               </div>
 
@@ -478,7 +489,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
                 style={{
                   flex: 1,
                   overflow: "auto",
-                  background: "#ffffff",
+                  background: "var(--theme-bg-elevated)",
                   borderRight: "1px solid var(--theme-border-primary)",
                   fontFamily: 'Consolas, "Courier New", monospace',
                   fontSize: 13,
@@ -495,7 +506,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
                 style={{
                   flex: 1,
                   overflow: "auto",
-                  background: "#ffffff",
+                  background: "var(--theme-bg-elevated)",
                   fontFamily: 'Consolas, "Courier New", monospace',
                   fontSize: 13,
                   lineHeight: "22px",
@@ -554,7 +565,8 @@ function DiffSelectRow(props: {
   return (
     <Row gutter={16}>
       <Col span={10}>
-        <Select allowClear
+        {/* 形态分类器②：children 文本改写 options；原无 showSearch（单选默认关）→ 显式禁搜 */}
+        <AppSelect
           placeholder="选择第一个版本"
           style={{ width: "100%" }}
           value={compareBackup1?.id}
@@ -567,19 +579,19 @@ function DiffSelectRow(props: {
             }
           }}
           onSearch={() => {}}
-        >
-          {selectedDeviceGroup?.backups.map((backup) => (
-            <Option key={backup.id} value={backup.id}>
-              版本 {backup.version} - {formatDateTime(backup.createdAt)}
-            </Option>
-          ))}
-        </Select>
+          showSearch={false}
+          options={selectedDeviceGroup?.backups.map((backup) => ({
+            value: backup.id,
+            label: `版本 ${backup.version} - ${formatDateTime(backup.createdAt)}`,
+          }))}
+        />
       </Col>
       <Col span={4} style={{ textAlign: "center", lineHeight: "32px" }}>
         VS
       </Col>
       <Col span={10}>
-        <Select allowClear
+        {/* 形态分类器②：children 文本改写 options；显式禁搜 */}
+        <AppSelect
           placeholder="选择第二个版本"
           style={{ width: "100%" }}
           value={compareBackup2?.id}
@@ -592,13 +604,12 @@ function DiffSelectRow(props: {
             }
           }}
           onSearch={() => {}}
-        >
-          {selectedDeviceGroup?.backups.map((backup) => (
-            <Option key={backup.id} value={backup.id}>
-              版本 {backup.version} - {formatDateTime(backup.createdAt)}
-            </Option>
-          ))}
-        </Select>
+          showSearch={false}
+          options={selectedDeviceGroup?.backups.map((backup) => ({
+            value: backup.id,
+            label: `版本 ${backup.version} - ${formatDateTime(backup.createdAt)}`,
+          }))}
+        />
       </Col>
     </Row>
   );

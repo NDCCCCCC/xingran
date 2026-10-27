@@ -16,7 +16,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { Modal, Form, Select, Input, App } from "antd";
+import { Modal, Form, App } from "antd";
+// Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
+// ⚠️ 本文件承载 v1.19 端口写命令冻结交互（submitting 防重 / reason __custom__ 状态机），
+// 本波仅换 UI 组件名，不改任何状态/条件渲染/校验逻辑。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus, PortWriteAction } from "@/types/network";
@@ -203,14 +207,15 @@ export function PortWriteModal({
               { max: DESCRIPTION_MAX, message: `描述不超过 ${DESCRIPTION_MAX} 字符` },
             ]}
           >
-            <Input allowClear maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
+            <AppInput maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
           </Form.Item>
         )}
 
         {/* D-02 reason 字段 — 外层 reasonSelect Select + 内层 reasonText TextArea (仅 __custom__ 时展开) */}
         <Form.Item name="reasonSelect" label="操作原因" rules={reasonRules}>
-          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select allowClear
+          {/* fixed option list, no server search needed（AppSelect 不受 local/no-large-dropdown-list
+              的 Select 名拦截，原 eslint-disable 已随迁移失效，故移除） */}
+          <AppSelect
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}
           />
@@ -225,7 +230,7 @@ export function PortWriteModal({
                 label="自定义原因"
                 rules={[{ max: REASON_MAX, message: `操作原因不超过 ${REASON_MAX} 个字符` }]}
               >
-                <Input.TextArea
+                <AppTextArea
                   rows={2}
                   maxLength={REASON_MAX}
                   showCount

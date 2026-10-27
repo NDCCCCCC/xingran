@@ -4,9 +4,7 @@ import {
   Button,
   Space,
   Form,
-  Input,
   InputNumber,
-  Select,
   Card,
   Row,
   Col,
@@ -18,6 +16,8 @@ import {
   App,
   Modal,
 } from "antd";
+// Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   SearchOutlined,
@@ -44,7 +44,6 @@ import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { MACEventsTimeline } from "@/components/network";
 import { MAC_TYPE_TAG_CONFIG } from "@/constants/status";
 
-const { Option } = Select;
 const { Content } = Layout;
 const { useBreakpoint } = Grid;
 
@@ -330,7 +329,7 @@ const MACAddressPage: FC = () => {
           onSelect={handleDeptChangeWithUrl}
         />
       )}
-      <Content style={{ background: "#fff", padding: isMobile ? 12 : 24 }}>
+      <Content style={{ background: "var(--theme-bg-elevated)", padding: isMobile ? 12 : 24 }}>
         {/* 移动端:Dept tree 折叠进 Drawer,通过按钮触发(与 workstations 同步) */}
         {isMobile && (
           <div style={{ marginBottom: 16 }}>
@@ -404,35 +403,31 @@ const MACAddressPage: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="deviceId" label="设备">
-                <Select
+                {/* 形态分类器①/②：children 写法改写 options。设备下拉为 UUID 外键
+                    （deviceId），原 allowClear=true → 清空即「不按设备筛选」，行为保持不变；
+                    options 均带 label，过滤由 AppSelect 契约 optionFilterProp="label" 承接。
+                    注：原 optionFilterProp="deviceName" 指向的是 Option.children 之外的
+                    自定义字段，实际无效（antd 只认 children/label/value），改写后过滤才真正可用 */}
+                <AppSelect
                   placeholder={selectedDeptId ? "请选择设备" : "请先选择部门"}
                   disabled={!selectedDeptId}
                   allowClear
                   className="user-form-input"
                   style={{ width: 200 }}
                   showSearch
-                  optionFilterProp="deviceName"
                   onSearch={() => {}}
-                >
-                  {devices.map((device) => (
-                    <Option key={device.id} value={device.id}>
-                      {device.deviceName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item name="macAddress" label="MAC地址">
-                <Input
-                  placeholder="请输入MAC地址"
-                  allowClear
-                  className="user-form-input"
-                  style={{ width: 180 }}
+                  options={devices.map((device) => ({
+                    value: device.id,
+                    label: device.deviceName,
+                  }))}
                 />
               </Form.Item>
+              <Form.Item name="macAddress" label="MAC地址">
+                <AppInput placeholder="请输入MAC地址" className="user-form-input" style={{ width: 180 }} />
+              </Form.Item>
               <Form.Item name="interfaceName" label="接口">
-                <Input
+                <AppInput
                   placeholder="请输入接口名称"
-                  allowClear
                   className="user-form-input"
                   style={{ width: 150 }}
                 />
@@ -441,19 +436,15 @@ const MACAddressPage: FC = () => {
                 <InputNumber placeholder="VLAN ID" style={{ width: 120 }} />
               </Form.Item>
               <Form.Item name="macType" label="MAC类型">
-                <Select
+                {/* 形态分类器①/②：children 写法改写 options；MAC 类型固定 2 项 → 显式禁搜 */}
+                <AppSelect
                   placeholder="请选择类型"
-                  allowClear
                   className="user-form-input"
                   style={{ width: 120 }}
                   onSearch={() => {}}
-                >
-                  {MAC_TYPE_OPTIONS.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </Option>
-                  ))}
-                </Select>
+                  showSearch={false}
+                  options={MAC_TYPE_OPTIONS}
+                />
               </Form.Item>
               <Form.Item>
                 <Space>

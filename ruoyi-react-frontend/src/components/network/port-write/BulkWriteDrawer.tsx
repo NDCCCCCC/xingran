@@ -23,8 +23,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Drawer,
   Form,
-  Select,
-  Input,
   Button,
   Space,
   Alert,
@@ -39,6 +37,10 @@ import {
   Typography,
   App,
 } from "antd";
+// Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
+// ⚠️ 本文件承载 v1.19 批量写 drawer 冻结交互（提交中状态机 / batchInProgress），
+// 本波仅换 UI 组件名，不改任何状态/条件渲染/disabled 逻辑。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { useNavigate } from "react-router-dom";
 import type {
   DevicePortStatus,
@@ -324,8 +326,9 @@ function SelectView({
         label="操作类型"
         rules={[{ required: true, message: "请选择操作类型" }]}
       >
-        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select allowClear placeholder="请选择操作类型" options={ACTION_OPTIONS} />
+        {/* fixed option list, no server search needed（AppSelect 不受 local/no-large-dropdown-list
+            的 Select 名拦截，原 eslint-disable 已随迁移失效，故移除） */}
+        <AppSelect placeholder="请选择操作类型" options={ACTION_OPTIONS} />
       </Form.Item>
 
       {/* D-03 description action 时多一个"新描述"必填字段 */}
@@ -340,7 +343,7 @@ function SelectView({
                 { max: DESCRIPTION_MAX, message: `描述不超过 ${DESCRIPTION_MAX} 字符` },
               ]}
             >
-              <Input allowClear maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
+              <AppInput maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
             </Form.Item>
           ) : null
         }
@@ -368,8 +371,8 @@ function SelectView({
               ]
         }
       >
-        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select allowClear
+        {/* fixed option list, no server search needed（同上，disable 注释已随迁移失效） */}
+        <AppSelect
           placeholder="请选择操作原因"
           options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}
         />
@@ -388,7 +391,7 @@ function SelectView({
                 { max: REASON_MAX, message: `操作原因不超过 ${REASON_MAX} 个字符` },
               ]}
             >
-              <Input.TextArea
+              <AppTextArea
                 rows={2}
                 maxLength={REASON_MAX}
                 showCount
