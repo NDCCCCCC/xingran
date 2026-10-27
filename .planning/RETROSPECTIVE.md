@@ -2,6 +2,50 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.23 — 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance)
+
+**Shipped:** 2026-10-28
+**Phases:** 7 (69-75) | **Requirements:** 22/22 Satisfied | **Timeline:** 单日完成（2026-10-27 规划+研究 → 10-28 收档），多 subagent 并行
+
+### What Was Built
+
+- **TextArea 一键清空契约（用户主诉闭环）** — AppTextArea 独立组件 + SearchForm textarea 字段 + eslint 成员表达式/解构双 selector（探针验证非假绿）+ 存量全量接入 + 实机 UAT 抽查通过
+- **COMP-05 全量收尾** — W1-W6 六波 121 文件具名迁移，P65 豁免 127→0，无豁免口径裸组件命中全归零；Select 形态七类分类器
+- **7 项 debug 全终结** — #5 MAC 查询双侧归一化双分支 SQL / #7 空因可诊断端点（纯增量）/ #2 Cisco 采集 / #3 Go 写防线；#1/#4 实证不复现（非 systemd 托管 / 双实例部署）；#6 关单
+- **lint 清偿 + 门禁** — errors 81→17、warnings 1366→34、any 958→0、unused 364→0、console 5→0；--max-warnings 34 + assert-lint-budget.mjs 断言
+- **流程清偿** — quick 目录 94 个归档、68.1 §8 实机回写关债、FAIL-1 分页恢复 bug 修复实机复验
+
+### What Worked
+
+- **4 维并行研究前置** — 规划前拿到 selector 盲区、豁免锚点脆弱性、acknowledge 不等于已定位等关键情报，直接改变 phase 排序（spike 先行）
+- **subagent 深度并行** — 前端线与后端线无共享文件全程并行（70/71 与 72/73），W3 并行 W4、W5 并行 W6 按域切分，零冲突
+- **每波真实闸门** — type-check/vitest/eslint 预算/build 四件套每 commit 前跑，82 到 81 到 17 errors 收敛全程零回归
+- **用户三次 DB 实测一举清零调查** — spike 阶段下发 SQL/命令清单，实测数据直接钉死 #5/#7 根因，Phase 73 变纯执行
+- **探针验证文化** — selector 生效性用临时探针实测而非推理；红绿验证证明测试有效
+
+### What Was Inefficient
+
+- **pwsh 编码事故连环（最痛）** — Get-Content/Set-Content 在 GBK 控制台把中文规划文件读坏，且字符串替换因乱码静默失败，收档时才发现需从 git 历史重建（REQUIREMENTS 全量重建 + 2 份 debug 文档恢复）
+- **规划假设被实测推翻** — P67 别名降险法在 JSX 名匹配 selector 下无效，W1 探针才发现；规划期可用 5 分钟探针避免
+- **subagent 中途崩溃 3 次** — W3/W5/W6 崩溃但遗留合格半成品，主会话接管补验或重派收尾；要有「验收遗留、接管或重派」固定动作
+- **grep 检测面漏检换行形态** — Select 标签行尾换行逃过多波对账，「残留脱节文件」实为漏检；W5/W6 宽松模式补齐
+- **UAT jsdom 盲区再现** — 分页恢复 jsdom 通过实机失败（mount 时序覆写），实机 UAT 必须保留为独立 phase
+
+### Patterns Established
+
+- **契约组件收口三件套** — 组件（默认值下沉）+ selector（eslint error 拦截）+ 豁免清单（gen 脚本管理、收口归零、转校验模式）
+- **迁移波次闸门四件套** — type-check / 定向 vitest / eslint 预算断言 / build，每 commit 前必跑
+- **Select 形态七类分类器** — options 直接迁 / children 必改 options / 禁搜显式 false / 复合子节点保留加显式 label / multiple 显式 showSearch
+- **debug 文档生命周期** — investigating 到 root_cause_identified 到 resolved；acknowledge 结转必须先重验 spike
+- **数量口径纪律** — eslint 实跑命中加豁免清单为权威；每波「域命中数 = 清单剩余数」对账
+
+### Key Lessons
+
+1. **acknowledge 不等于已定位**：结转 debug 项 7 项里 4 项调查未完成，直接排修复 wave 会修不存在的根因——重验 spike 必须前置
+2. **用户实测是最强杠杆**：三次 DB 实测把整个「DB 实测日」调查 phase 清零
+3. **契约默认值下沉必须配 selector 拦截**：否则存量永远补不齐、新增继续漏（74 处 TextArea 前车之鉴）
+4. **中文规划文件读写工具纪律**：PowerShell 管道在 GBK 控制台静默毁文件且替换静默失败——一律用 node/write 工具
+
 ## Milestone: v1.19 — 网络设备写命令 (Network Device Port Write Operations)
 
 **Shipped:** 2026-07-08 (Phase 55 close)
