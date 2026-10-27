@@ -11,9 +11,11 @@ previous_update: 2026-10-27 v1.22 milestone SHIPPED & ARCHIVED
 **Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
 
 
-## Current Milestone: v1.23 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance)
+## Current Milestone: v1.23 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance) — ✅ SHIPPED 2026-10-28
 
 **Goal:** 把 v1.22 建立但未落地的契约真正推到全量——修复用户主诉的「文本输入框无法一键删除」，并清偿 v1.22 收档结转的 debug / UAT / 流程积压，让里程碑以「无债、无盲区」收档。
+
+**交付终态（2026-10-28 收档）:** 22/22 需求 Satisfied；121 文件迁移、P65 豁免 127→0、无豁免口径裸组件归零；7 项 debug 全终结（#5 双侧归一化 / #7 空因可诊断端点 / #2 Cisco 采集 / #3 Go 写防线，#1/#4 实证不复现，#6 关单）；lint errors 81→17、warnings 1366→34、any 958→0、unused 364→0、门禁上线；实机 UAT 18/19 + FAIL-1 修复复验 + §8 回写关债。Known Gaps 转 v1.24：#16 需 PG 复测定责、3f130 绑 user_id、F5 跳转 /dashboard。
 
 **问题来源（用户实机反馈 + v1.22 收档结转）:**
 - 用户主诉：「v1.22 完成后文本输入框无法一键删除等细节问题还是没有解决」——经代码核实，**根因是多行输入框（TextArea）74 处 0 覆盖 allowClear**：v1.22 的 `AppInput` 契约只包了单行 `Input`，`eslint.config.js:114` 注释又明确声明 `Input.TextArea` 成员表达式「有意不拦」，形成零约束盲区
@@ -88,7 +90,7 @@ previous_update: 2026-10-27 v1.22 milestone SHIPPED & ARCHIVED
 
 ## Current State (2026-10-27)
 
-- **Shipped**: v1.0 ~ v1.22 — v1.22 = Phases 63-68.1（7 phases），20/20 requirements satisfied，SHIPPED & ARCHIVED 2026-10-27。
+- **Shipped**: v1.0 ~ v1.23 — v1.23 = Phases 69-75（7 phases），22/22 requirements satisfied，SHIPPED 2026-10-28（待 /gsd-complete-milestone tag 归档）。
 - **v1.22 终态**：前端公共层从"只有零件没有契约"补成"有契约"——AppInput/AppSelect 默认值下沉（allowClear/showSearch）、ConfirmDelete 危险操作唯一入口（68 处收口）、PageTable/FormModal/RemoteSelect 契约内建、hex/日期/any 三类债务收敛、handleApiError 唯一错误出口。
 - **v1.22 遗留（→ v1.23）**：TextArea 74 处零 allowClear 覆盖（用户主诉根因）+ 裸 Input/Select 存量迁移未完成（P65/P66 豁免 override 仍在）+ 7 项 debug acknowledge（≥4 项调查未完成）+ 浏览器实机 UAT 债 + `.planning/quick/` 94 个历史目录 + lint 1367 warnings / 83 errors。
 - **构建状态**：`go build ./...` clean；`go test ./internal/services/addomain/ ./internal/api/v1/... ./internal/scheduler/` 全绿；`go vet` 仅存量 `internal/core/security/ad_authenticator_test.go:159 unreachable code`（非本次影响面）。
@@ -517,4 +519,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-10-27 — v1.23 前端契约全量收尾与遗留清偿 milestone INITIATED（TextArea 契约基建 → 分域迁移 → 契约收口 → lint 清偿 → 浏览器 UAT，外加后端 debug 重验与清偿线）。上一里程碑 v1.22 SHIPPED & ARCHIVED 2026-10-27（Phases 63-68.1，20/20 requirements satisfied）。*
+*Last updated: 2026-10-28 after v1.23 milestone（前端契约全量收尾与遗留清偿 SHIPPED：TextArea 契约闭环 + 121 文件迁移 + 7 项 debug 终结 + lint 清偿与门禁 + 实机 UAT）*

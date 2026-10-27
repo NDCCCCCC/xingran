@@ -1,5 +1,31 @@
 # Milestones
 
+## v1.23 前端契约全量收尾与遗留清偿 (Shipped: 2026-10-28)
+
+**Phases completed:** 7 phases (69-75), 121+ 文件迁移 | **Requirements:** 22/22 Satisfied
+
+**Delivered**: 修复用户主诉「文本输入框无法一键删除」（TextArea 74 处 0 覆盖根因），把 v1.22 契约推到全量落地（裸组件归零、P65 豁免 127→0），清偿 7 项 debug 遗留与流程积压，lint 债务大幅清偿并上线防回退门禁。
+
+**Key Accomplishments**:
+
+1. ✅ **TextArea 一键清空契约（用户主诉闭环）** — AppTextArea 独立契约组件 + SearchForm textarea 字段类型 + eslint 成员表达式/解构形态双 selector（探针验证非假绿）+ 存量全量接入；实机 UAT 抽查 3/3 通过
+2. ✅ **COMP-05 全量收尾** — W1-W6 六波迁移 121 文件（Input/Select/TextArea），P65 豁免 127→0、无豁免口径裸组件命中全归零；Select 形态七类分类器全量执行；v1.22 冻结契约零破坏（port-write 62 测试全绿）
+3. ✅ **7 项 debug 遗留全终结** — #1 Linux 日志（不复现）/ #2 Cisco MAC 采集（b022.7a2e.4a4f 验收）/ #3 MAC 格式 Go 侧防线 / #4 双执行（双实例部署）/ #5 历史查询双侧归一化 / #6 scrapligo（关单）/ #7 空因可诊断端点——多项实证反转原认知（acknowledge ≠ 已定位）
+4. ✅ **lint 债务清偿 + 防回退门禁** — errors 81→17（全部为范围外存量）、warnings 1366→**34**、no-explicit-any 958→**0**、no-unused-vars 364→0、no-console 5→0；`--max-warnings 34` + assert-lint-budget.mjs 断言上线
+5. ✅ **浏览器实机 UAT** — 68.1 §8 全表 18/19 通过 + FAIL-1 分页恢复 bug 修复实机复验（PageTable mount 硬编码回写根因）；§8 回写关闭 68.1 结转债务；quick 目录 94 个归档清零
+
+**Verification overrides**: 7 个 phase 未走 GSD verifier 流程（subagent 直接执行 + 每波真实闸门：type-check/vitest/eslint 预算/build + UAT 实机），override 收档；3 项审计开放项 acknowledge（debug 已 resolved / UAT 0 pending / CONTEXT 6 问已执行回填）
+
+**Known Gaps（转 v1.24 债）**:
+- #16 行操作权限需 PG 环境 UI 复测定责（sqlite 角色创建 500 环境限制）
+- 3f130 绑定 user_id（业务核对后数据修复，代码已能诊断该空因）
+- F5 刷新落 /dashboard（UAT 顺带发现）
+- ColumnConfigModal:136 缺豁免注释（低优先级）
+
+**全程质量基线**: type-check 0 错误、vitest 全量绿（3946 tests）、eslint errors 17（≤基线 83）、build 通过、零新依赖
+
+---
+
 ## v1.22 前端公用组件整治 (Shipped: 2026-10-27)
 
 **Phases completed:** 7 phases, 7 plans, 0 tasks

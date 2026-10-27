@@ -3,6 +3,10 @@ phase: 69
 name: 后端 debug 重验 spike + 信息收集下发
 date: 2026-10-27
 requirement: DBG-01
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-28
+  questions_digest: 11930bbb5700fef15cf5a76ac3b4f4ceb4cfd7ebcee80edaf09337baa2563e08
 ---
 
 # Phase 69 Context — 后端 debug 重验 spike + 信息收集下发
@@ -41,21 +45,34 @@ requirement: DBG-01
 **清单 A — #1 的 6 条 Linux 诊断命令**（原文：`.planning/debug/linux-log-missing-2026-07-09.md` §诊断待确认项；服务名 szh-backend，部署目录 /app/szh）：
 
 ```bash
+
 # 1. 服务状态检查
+
 sudo systemctl status szh-backend
+
 # 2. 查看 journald 日志（HTTP 访问日志走 journald 不走 app.log —— 架构事实）
+
 sudo journalctl -u szh-backend --since "2026-06-24" | tail -50
 sudo journalctl -u szh-backend -n 100 --no-pager
+
 # 3. logs/ 目录实际内容
+
 ls -la /app/szh/logs/ && stat /app/szh/logs/app.log
+
 # 4. 磁盘空间
+
 df -h /app/szh/ && df -h /var/log/
+
 # 5. 进程是否存活
+
 ps aux | grep ruoyi && pidof ruoyi-backend
+
 # 6. 服务启动时间与最近重启（验证「6/22 后重启过、新 app.log 在别处」假设）
+
 sudo systemctl show szh-backend -p ActiveEnterTimestamp,ActiveExitTimestamp
 sudo journalctl -u szh-backend -b | head -20
 ```
+
 回填位置：debug 文档 `linux-log-missing-2026-07-09.md` 的 Evidence + Resolution 节。
 
 **清单 B — #5 的 4 条 verification SQL**（原文：`mac-history-query-returns-empty.md` §Resolution verification；样本 MAC `B0227A2E4A4F`）：
@@ -73,6 +90,7 @@ EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM sys_device_mac_history
  WHERE mac_address = 'B0227A2E4A4F'
    AND first_seen >= '2026-05-31T00:00:00Z' AND first_seen <= '2026-06-30T23:59:59Z';
 ```
+
 第 4 项 = 检查 backend 日志中 `[MAC轨迹查询] 查询失败:` / `[MAC历史查询] 查询记录失败:` 是否有 PG 错误（场景 c 判定）。**先跑基线 SQL 确认数据基线再改代码**——该表是 PG 分区表且 model 缺 `deleted_at`，半吊子加过滤会把存量数据「变没」。
 回填位置：`mac-history-query-returns-empty.md` 场景 a-d 逐条判定结论。
 

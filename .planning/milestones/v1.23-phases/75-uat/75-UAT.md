@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v1.23
+  at: 2026-10-28
+  gap_snapshot: "unknown::scenarios=0"
+---
+
 # Phase 75：浏览器实机 UAT 报告（68.1 UI-SPEC §8 全表 + v1.23 抽查）
 
 - **日期**：2026-10-28
@@ -65,6 +72,7 @@
 ## 四、失败 / 异常明细与根因猜想
 
 ### FAIL-1：#13 usePagination 持久化恢复失效（切 tab 场景）——✅ 已修复 + 实机复验通过（2026-10-28）
+
 - **现象**：楼宇管理（`/operations/buildings`）翻至第 2 页 → sessionStorage `ruoyi_table_state_operations_buildings_current=2` 正确写入 → 切到「首页」tab 再切回「楼宇管理」tab → 页码显示第 1 页且 storage 被覆写为 `1`。另：F5 刷新后 SPA 落到 `/dashboard` 且 `ruoyi_last_visited_path` 被覆盖为 `/dashboard`，无法经刷新路径回归原页。
 - **根因（已定责）**：`usePagination` 本身无问题（keyPrefix 读写一致）。真正根因在 PageTable → useTableManager 数据加载链：`PageTable.tsx` 的 mount effect 无条件调用 `applyFilters`，而 `useTableManager.ts` 的 `applyFilters` 硬编码 `currentRef.current = 1; setCurrent(1); loadData({ current: 1 })`（回第 1 页语义）——tab 切换 remount 时把 sessionStorage 恢复出的 current=2 覆写回 1。楼宇页走 PageTable 契约组件（非直接 usePagination），故嫌疑①「mount 硬编码回写」成立。
 - **为什么 jsdom 没抓到**：既有单测覆盖 `usePagination` hook 本身（mount 恢复断言通过）与 PageTable 基础骨架，但没有「预置持久化页码 + 组件 mount + 数据加载 effect」的组合用例，也未模拟卸载→重挂载（tab 切换 remount）路径——覆写发生在组件层 mount effect 与数据加载时序之间，恰好落在覆盖盲区。
@@ -74,10 +82,12 @@
 - **单测对照**：`usePagination.test.tsx` jsdom 下恢复断言通过 → **jsdom 覆盖与浏览器实机行为存在盲区**，正是 Phase 75 要抓的类别（盲区已由上述新用例闭合）。
 
 ### FAIL-2：#16 受限用户仍可见「删除」行操作按钮
+
 - **现象**：见总表 #16。
 - **根因候选**：①前端 `hasPerm` 类判定在权限列表获取失败/为空时默认放行危险按钮（fail-open，正确姿势应为 fail-close）；②本地 sqlite 手工插库角色未触发权限缓存加载，后端下发的权限集异常——**不能排除测试环境因素**，定责需在 PG 环境用 UI 正常路径建角色复测。
 
 ### 环境备注（非缺陷）
+
 1. 本地 sqlite 后端「角色管理→批量分配菜单权限」500：`ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint`——sqlite 迁移兼容问题，生产 PG 不触发，建议登记后续 sqlite 兼容债。
 2. 本地配置踩坑记录（对后续 UAT 有用）：`cache.retry_initial_delay` 需整数（毫秒）；`security.sm4_key` 需 16 字节的 base64（24 字符）；`use_sm2: true` 时 `JWT_SM2_PRIVATE_KEY/PUBLIC_KEY` 必须注入（hex，公钥需 `04+X+Y` 定长 130 字符），否则 public-key 500 且加密中间件不挂载、`/encryption-config` 永远返回默认 true，前端报「登录安全配置已过期」无法登录。
 
