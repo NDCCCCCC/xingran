@@ -12,8 +12,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Tag,
   Card,
   Row,
@@ -50,9 +48,12 @@ import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import { NORMAL_STOP_TAG_CONFIG } from "@/constants/status";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// 楼宇/楼层均为 UUID 下拉：原 allowClear 已有，清空后表单值 undefined，
+// 由 Form rules={required} 在提交前拦截（不改 UUID 校验契约）。
+// 状态枚举业务禁搜 → 显式 showSearch={false}。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
-const { Option } = Select;
-const { TextArea } = Input;
 const { Content } = Layout;
 
 type ViewMode = "table" | "card";
@@ -436,7 +437,7 @@ const ServerRoomManagement: FC = () => {
   return (
     <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: "#fff" }}>
+      <Content style={{ background: "var(--theme-bg-surface)" }}>
         <StatisticsCards
           show={total > 10}
           items={[
@@ -467,7 +468,9 @@ const ServerRoomManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="buildingId" label="所在楼宇">
-                <Select allowClear
+                {/* 形态分类器②：已是 options 形态，直接迁；楼宇 UUID 字段 */}
+                <AppSelect
+                  allowClear
                   placeholder="请先选择部门"
                   options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
                   disabled={!selectedDeptId}
@@ -475,16 +478,23 @@ const ServerRoomManagement: FC = () => {
                 />
               </Form.Item>
               <Form.Item name="floorNo" label="楼层">
-                <Input allowClear placeholder="请输入楼层" />
+                <AppInput placeholder="请输入楼层" />
               </Form.Item>
               <Form.Item name="name" label="机房名称">
-                <Input allowClear placeholder="请输入机房名称" />
+                <AppInput placeholder="请输入机房名称" />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
-                  <Option value={0}>正常</Option>
-                  <Option value={1}>停用</Option>
-                </Select>
+                {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                <AppSelect
+                  allowClear
+                  placeholder="请选择状态"
+                  showSearch={false}
+                  onSearch={() => {}}
+                  options={[
+                    { label: "正常", value: 0 },
+                    { label: "停用", value: 1 },
+                  ]}
+                />
               </Form.Item>
               <Form.Item>
                 <Space>
@@ -613,12 +623,15 @@ const ServerRoomManagement: FC = () => {
               label="所在楼宇"
               rules={[{ required: true, message: "请选择所在楼宇" }]}
             >
-              <Select allowClear
+              <AppSelect
+                allowClear
                 placeholder="请选择所在楼宇"
                 className="user-form-input"
                 options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
                 onChange={(value) => {
-                  loadFloorOptions(value);
+                  // AppSelect 的 onChange 值为 unknown；loadFloorOptions 对空值
+                  // 已有「清空楼层选项」的既有分支，收敛成 "" 不引入新语义
+                  loadFloorOptions((value as string) ?? "");
                   serverRoomForm.setFieldValue("floorId", undefined);
                 }}
                 onSearch={() => {}}
@@ -629,7 +642,8 @@ const ServerRoomManagement: FC = () => {
               label="楼层"
               rules={[{ required: true, message: "请选择楼层" }]}
             >
-              <Select allowClear
+              <AppSelect
+                allowClear
                 placeholder="请选择楼层"
                 className="user-form-input"
                 disabled={floorOptions.length === 0}
@@ -645,16 +659,18 @@ const ServerRoomManagement: FC = () => {
               label="机房名称"
               rules={[{ required: true, message: "请输入机房名称" }]}
             >
-              <Input allowClear placeholder="请输入机房名称" className="user-form-input" />
+              <AppInput placeholder="请输入机房名称" className="user-form-input" />
             </Form.Item>
             <Form.Item
               name="status"
               label="状态"
               rules={[{ required: true, message: "请选择状态" }]}
             >
-              <Select allowClear
+              <AppSelect
+                allowClear
                 placeholder="请选择状态"
                 className="user-form-input"
+                showSearch={false}
                 options={[
                   { label: "正常", value: 0 },
                   { label: "停用", value: 1 },
@@ -663,7 +679,7 @@ const ServerRoomManagement: FC = () => {
               />
             </Form.Item>
             <Form.Item name="remark" label="描述">
-              <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
+              <AppTextArea rows={3} placeholder="请输入描述" className="user-form-input" />
             </Form.Item>
           </Form>
         </Modal>

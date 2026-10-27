@@ -20,9 +20,7 @@ import {
   Space,
   Modal,
   Form,
-  Input,
   InputNumber,
-  Select,
   Tag,
   Card,
   Row,
@@ -57,9 +55,13 @@ import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// - sourceRoomId/destRoomId：UUID 字段，原 allowClear + showSearch + 自定义
+//   filterOption（按 label 子串），已改写为 options 形态，AppSelect 的
+//   optionFilterProp="label" 与之一致；自定义 filterOption 保留（行为不变）
+// - lineType/isp/status：字典/枚举 children → options；枚举类显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
-const { Option } = Select;
-const { TextArea } = Input;
 const { Content } = Layout;
 
 // 模块级静态映射（Phase m76-js-misc 6.3）
@@ -599,7 +601,7 @@ const DedicatedLineManagement: FC = () => {
 
   return (
     <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
-      <Content style={{ background: "#fff", padding: 16 }}>
+      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
         <PageTable<DedicatedLine>
           request={request}
           columns={columns}
@@ -665,25 +667,26 @@ const DedicatedLineManagement: FC = () => {
               label="专线名称"
               rules={[{ required: true, message: "请输入专线名称" }]}
             >
-              <Input allowClear placeholder="请输入专线名称" />
+              <AppInput placeholder="请输入专线名称" />
             </Form.Item>
             <Form.Item
               name="lineType"
               label="专线类型"
               rules={[{ required: true, message: "请选择专线类型" }]}
             >
-              <Select allowClear placeholder="请选择专线类型" onSearch={() => {}}>
-                {lineTypeDict.map((d) => (
-                  <Option key={d.dictValue} value={d.dictValue}>
-                    {d.dictLabel}
-                  </Option>
-                ))}
-              </Select>
+              {/* 形态分类器②④：字典 children → options；业务禁搜 */}
+              <AppSelect
+                allowClear
+                placeholder="请选择专线类型"
+                showSearch={false}
+                onSearch={() => {}}
+                options={lineTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))}
+              />
             </Form.Item>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="bandwidth" label="带宽">
-                  <Input allowClear placeholder="如：100M, 1G" className="user-form-input" />
+                  <AppInput placeholder="如：100M, 1G" className="user-form-input" />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -692,24 +695,23 @@ const DedicatedLineManagement: FC = () => {
                   label="运营商"
                   rules={[{ required: true, message: "请选择运营商" }]}
                 >
-                  <Select allowClear
+                  {/* 形态分类器②④：字典 children → options；业务禁搜 */}
+                  <AppSelect
+                    allowClear
                     placeholder="请选择运营商"
                     className="user-form-input"
+                    showSearch={false}
                     onSearch={() => {}}
-                  >
-                    {ispDict.map((d) => (
-                      <Option key={d.dictValue} value={d.dictValue}>
-                        {d.dictLabel}
-                      </Option>
-                    ))}
-                  </Select>
+                    options={ispDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))}
+                  />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="sourceRoomId" label="源机房">
-                  <Select
+                  {/* 形态分类器①：已是 options 形态；房号 UUID 字段，allowClear 原已有 */}
+                  <AppSelect
                     placeholder="请选择源机房"
                     allowClear
                     showSearch
@@ -726,12 +728,12 @@ const DedicatedLineManagement: FC = () => {
               </Col>
               <Col span={12}>
                 <Form.Item name="sourceDeviceName" label="源设备名称">
-                  <Input allowClear placeholder="请输入源设备名称" className="user-form-input" />
+                  <AppInput placeholder="请输入源设备名称" className="user-form-input" />
                 </Form.Item>
               </Col>
             </Row>
             <Form.Item name="sourcePort" label="源端口">
-              <Input allowClear
+              <AppInput
                 placeholder="请输入源端口"
                 className="user-form-input"
                 style={{ width: "50%" }}
@@ -740,7 +742,8 @@ const DedicatedLineManagement: FC = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="destRoomId" label="目的机房">
-                  <Select
+                  {/* 形态分类器①：已是 options 形态；房号 UUID 字段，allowClear 原已有 */}
+                  <AppSelect
                     placeholder="请选择目的机房"
                     allowClear
                     showSearch
@@ -757,12 +760,12 @@ const DedicatedLineManagement: FC = () => {
               </Col>
               <Col span={12}>
                 <Form.Item name="destDeviceName" label="目的设备名称">
-                  <Input allowClear placeholder="请输入目的设备名称" className="user-form-input" />
+                  <AppInput placeholder="请输入目的设备名称" className="user-form-input" />
                 </Form.Item>
               </Col>
             </Row>
             <Form.Item name="destPort" label="目的端口">
-              <Input allowClear
+              <AppInput
                 placeholder="请输入目的端口"
                 className="user-form-input"
                 style={{ width: "50%" }}
@@ -771,43 +774,43 @@ const DedicatedLineManagement: FC = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="sourceIpAddress" label="源IP地址">
-                  <Input allowClear placeholder="请输入源IP地址" className="user-form-input" />
+                  <AppInput placeholder="请输入源IP地址" className="user-form-input" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="sourceSubnetMask" label="源子网掩码">
-                  <Input allowClear placeholder="请输入源子网掩码" className="user-form-input" />
+                  <AppInput placeholder="请输入源子网掩码" className="user-form-input" />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="destIpAddress" label="目的IP地址">
-                  <Input allowClear placeholder="请输入目的IP地址" className="user-form-input" />
+                  <AppInput placeholder="请输入目的IP地址" className="user-form-input" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="destSubnetMask" label="目的子网掩码">
-                  <Input allowClear placeholder="请输入目的子网掩码" className="user-form-input" />
+                  <AppInput placeholder="请输入目的子网掩码" className="user-form-input" />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="vlan" label="VLAN">
-                  <Input allowClear placeholder="请输入VLAN" className="user-form-input" />
+                  <AppInput placeholder="请输入VLAN" className="user-form-input" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="carrierContactName" label="运营商联系人">
-                  <Input allowClear placeholder="请输入联系人" className="user-form-input" />
+                  <AppInput placeholder="请输入联系人" className="user-form-input" />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="carrierContactPhone" label="联系人电话">
-                  <Input allowClear placeholder="请输入联系电话" className="user-form-input" />
+                  <AppInput placeholder="请输入联系电话" className="user-form-input" />
                 </Form.Item>
               </Col>
             </Row>
@@ -829,16 +832,20 @@ const DedicatedLineManagement: FC = () => {
                   label="状态"
                   rules={[{ required: true, message: "请选择状态" }]}
                 >
-                  <Select allowClear placeholder="请选择状态" className="user-form-input" onSearch={() => {}}>
-                    <Option value={0}>正常</Option>
-                    <Option value={1}>故障</Option>
-                    <Option value={2}>停用</Option>
-                  </Select>
+                  {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                  <AppSelect
+                    allowClear
+                    placeholder="请选择状态"
+                    className="user-form-input"
+                    showSearch={false}
+                    onSearch={() => {}}
+                    options={DEDICATED_LINE_STATUS_OPTIONS}
+                  />
                 </Form.Item>
               </Col>
             </Row>
             <Form.Item name="remark" label="备注">
-              <TextArea rows={3} placeholder="请输入备注" className="user-form-input" />
+              <AppTextArea rows={3} placeholder="请输入备注" className="user-form-input" />
             </Form.Item>
           </Form>
         </Modal>

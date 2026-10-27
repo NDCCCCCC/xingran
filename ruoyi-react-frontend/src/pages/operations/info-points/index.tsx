@@ -12,8 +12,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Tag,
   Card,
   Row,
@@ -56,13 +54,23 @@ import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import { post } from "@/lib/api";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// - workstationId/deviceId/portId：UUID 字段，原 allowClear + showSearch 与自定义
+//   filterOption 原样保留（自定义 filterOption 覆盖 AppSelect 的 optionFilterProp）
+// - infoPointType/status：字典/枚举 children → options；枚举类显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
-const { Option } = Select;
-const { TextArea } = Input;
 const { Content } = Layout;
 
 // 模块级静态映射（Phase m76-js-misc 6.3）
 const INFO_POINT_STATUS_MAP: Record<number, string> = { 0: "正常", 1: "故障", 2: "停用" };
+
+// 状态枚举 options 形态（AppSelect 需 options；children 写法已弃用）
+const INFO_POINT_STATUS_OPTIONS = [
+  { label: "正常", value: 0 },
+  { label: "故障", value: 1 },
+  { label: "停用", value: 2 },
+];
 
 type ViewMode = "table" | "card";
 
@@ -819,7 +827,7 @@ const InfoPointManagement: FC = () => {
   return (
     <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: "#fff" }}>
+      <Content style={{ background: "var(--theme-bg-surface)" }}>
         <StatisticsCards
           show={total > 10}
           items={[
@@ -856,7 +864,9 @@ const InfoPointManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="workstationId" label="所属工位">
-                <Select
+                {/* 形态分类器②+⑦：children → options；服务端搜索（filterOption={false}）
+                    保留，AppSelect 的 optionFilterProp="label" 在此不参与过滤 */}
+                <AppSelect
                   placeholder={selectedDeptId ? "搜索工位名称" : "请先选择部门"}
                   allowClear
                   className="user-form-input"
@@ -868,51 +878,44 @@ const InfoPointManagement: FC = () => {
                   showSearch
                   filterOption={false}
                   onSearch={debouncedWorkstationSearch}
-                >
-                  {workstationOptions
+                  options={workstationOptions
                     .filter((w) => w.id)
-                    .map((w) => (
-                      <Option key={w.id} value={w.id}>
-                        {w.name}
-                      </Option>
-                    ))}
-                </Select>
+                    .map((w) => ({ value: w.id, label: w.name }))}
+                />
               </Form.Item>
               <Form.Item name="name" label="信息点名称">
-                <Input
+                <AppInput
                   placeholder="请输入信息点名称"
-                  allowClear
                   className="user-form-input"
                   style={{ width: 150 }}
                 />
               </Form.Item>
               <Form.Item name="infoPointType" label="信息点类型">
-                <Select
+                {/* 形态分类器②④：字典 children → options；业务禁搜 */}
+                <AppSelect
                   placeholder="请选择类型"
                   allowClear
                   className="user-form-input"
                   style={{ width: 120 }}
+                  showSearch={false}
                   onSearch={() => {}}
-                >
-                  {infoPointTypeDict.map((d) => (
-                    <Option key={d.dictValue} value={d.dictValue}>
-                      {d.dictLabel}
-                    </Option>
-                  ))}
-                </Select>
+                  options={infoPointTypeDict.map((d) => ({
+                    value: d.dictValue,
+                    label: d.dictLabel,
+                  }))}
+                />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select
+                {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                <AppSelect
                   placeholder="请选择状态"
                   allowClear
                   className="user-form-input"
                   style={{ width: 100 }}
+                  showSearch={false}
                   onSearch={() => {}}
-                >
-                  <Option value={0}>正常</Option>
-                  <Option value={1}>故障</Option>
-                  <Option value={2}>停用</Option>
-                </Select>
+                  options={INFO_POINT_STATUS_OPTIONS}
+                />
               </Form.Item>
               <Form.Item>
                 <Space>
@@ -1062,42 +1065,52 @@ const InfoPointManagement: FC = () => {
                   label="名称"
                   rules={[{ required: true, message: "请输入名称" }]}
                 >
-                  <Input allowClear placeholder="请输入名称" />
+                  <AppInput placeholder="请输入名称" />
                 </Form.Item>
                 <Form.Item
                   name="infoPointType"
                   label="类型"
                   rules={[{ required: true, message: "请选择类型" }]}
                 >
-                  <Select allowClear placeholder="请选择类型" onSearch={() => {}}>
-                    {infoPointTypeDict.map((d) => (
-                      <Option key={d.dictValue} value={d.dictValue}>
-                        {d.dictLabel}
-                      </Option>
-                    ))}
-                  </Select>
+                  {/* 形态分类器②④：字典 children → options；业务禁搜 */}
+                  <AppSelect
+                    allowClear
+                    placeholder="请选择类型"
+                    showSearch={false}
+                    onSearch={() => {}}
+                    options={infoPointTypeDict.map((d) => ({
+                      value: d.dictValue,
+                      label: d.dictLabel,
+                    }))}
+                  />
                 </Form.Item>
                 <Form.Item
                   name="status"
                   label="状态"
                   rules={[{ required: true, message: "请选择状态" }]}
                 >
-                  <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
-                    <Option value={0}>正常</Option>
-                    <Option value={1}>故障</Option>
-                    <Option value={2}>停用</Option>
-                  </Select>
+                  {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                  <AppSelect
+                    allowClear
+                    placeholder="请选择状态"
+                    showSearch={false}
+                    onSearch={() => {}}
+                    options={INFO_POINT_STATUS_OPTIONS}
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="deviceId" label="所属设备">
-                  <Select
+                  {/* 形态分类器②+③：children（复合子节点 Tooltip）→ options 改写。
+                      自定义 filterOption（按设备名+IP 搜索）与 optionLabelProp 原样保留；
+                      deviceId 为 UUID 字段，allowClear 原已有。 */}
+                  <AppSelect
                     placeholder="请选择网络设备"
                     allowClear
                     showSearch
                     onChange={(value) => {
-                      setSelectedDeviceId(value);
-                      loadDevicePorts(value);
+                      setSelectedDeviceId((value as string) ?? "");
+                      loadDevicePorts((value as string) ?? "");
                     }}
                     filterOption={(input, option) => {
                       const device = networkDevices.find((d) => d.id === option?.value);
@@ -1108,26 +1121,27 @@ const InfoPointManagement: FC = () => {
                     }}
                     optionLabelProp="label"
                     onSearch={() => {}}
-                  >
-                    {networkDevices.map((d) => {
+                    options={networkDevices.map((d) => {
                       const deviceName = d.deviceName || "未命名设备";
                       const fullName = `${deviceName} (${d.ipAddress})`;
                       const displayName =
                         deviceName.length > 12
                           ? `${deviceName.substring(0, 12)}... (${d.ipAddress})`
                           : fullName;
-                      return (
-                        <Option key={d.id} value={d.id} label={deviceName}>
-                          <Tooltip title={fullName} placement="right">
-                            <span>{displayName}</span>
-                          </Tooltip>
-                        </Option>
-                      );
+                      // label = 选中框展示（与原 Option label 属性一致）；下拉项视觉
+                      // 由 optionRender 还原原复合子节点（Tooltip + 截断名）
+                      return { value: d.id, label: deviceName, fullName, displayName };
                     })}
-                  </Select>
+                    optionRender={(option) => (
+                      <Tooltip title={option.data.fullName} placement="right">
+                        <span>{option.data.displayName}</span>
+                      </Tooltip>
+                    )}
+                  />
                 </Form.Item>
                 <Form.Item name="portId" label="所属端口">
-                  <Select
+                  {/* 形态分类器②：children → options；UUID 字段，allowClear 原已有 */}
+                  <AppSelect
                     placeholder={selectedDeviceId ? "请选择端口" : "请先选择设备"}
                     allowClear
                     disabled={!selectedDeviceId}
@@ -1140,16 +1154,11 @@ const InfoPointManagement: FC = () => {
                     }
                     optionLabelProp="label"
                     onSearch={() => {}}
-                  >
-                    {devicePorts.map((p) => {
-                      const displayLabel = p.interfaceName || p.id || "未命名端口";
-                      return (
-                        <Option key={p.id} value={p.id} label={displayLabel}>
-                          {displayLabel}
-                        </Option>
-                      );
-                    })}
-                  </Select>
+                    options={devicePorts.map((p) => ({
+                      value: p.id,
+                      label: p.interfaceName || p.id || "未命名端口",
+                    }))}
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -1159,7 +1168,7 @@ const InfoPointManagement: FC = () => {
               labelCol={{ span: 4 }}
               wrapperCol={{ span: 20 }}
             >
-              <TextArea rows={3} placeholder="请输入描述" />
+              <AppTextArea rows={3} placeholder="请输入描述" />
             </Form.Item>
           </Form>
         </Modal>
