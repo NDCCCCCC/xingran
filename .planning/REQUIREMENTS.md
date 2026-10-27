@@ -56,7 +56,7 @@
 
 ### HYG — 流程积压清偿
 
-- [ ] **HYG-01**: `.planning/quick/` 94 个历史任务目录完成归属判定与归档
+- [x] **HYG-01**: `.planning/quick/` 94 个历史任务目录完成归属判定与归档（✅ 2026-10-27 完成：92 个按日期窗口 + 主题归属到对应里程碑 `<version>-phases/quick/`，2 个 2025 年目录（早于项目起点 2026-04-16）归 `milestones/obsolete-quick/` 并附 README 理由，零删除；清单见 `.planning/notes/2026-10-27-quick-archive.md`，commit `135bcab4`）
 - [ ] **HYG-02**: lint `no-unused-vars` + `no-console` 归零（≈368 条机械可修）
 - [ ] **HYG-03**: lint `no-explicit-any` 降低 50%（958 → <500；三档：类型文件机械修 / chart 边界需判断 / 动态结构豁免）
 - [ ] **HYG-04**: lint `--max-warnings` 门禁纳入 npm script 防回退
@@ -115,7 +115,7 @@
 | DBG-07 | 73 | Pending |
 | UAT-01 | 75 | Pending |
 | UAT-02 | 75 | Pending |
-| HYG-01 | 74 | Pending |
+| HYG-01 | 74 | Satisfied (2026-10-27) |
 | HYG-02 | 74 | Pending |
 | HYG-03 | 74 | Pending |
 | HYG-04 | 74 | Pending |

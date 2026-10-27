@@ -182,16 +182,15 @@ previous_update: 2026-10-27 v1.22 SHIPPED & ARCHIVED
 
 ### Phase 74: COMP-05 收口 + lint 清偿第一波 + 流程积压归档
 
-**Goal**: 拆除 eslint 豁免脚手架、偿还 lint 债、清算 `.planning/quick/` 历史目录——让契约规则对全 `src/` 真正生效，并给 lint 装上防回退门禁。
+**Goal**: 拆除 eslint 豁免脚手架、偿还 lint 债——让契约规则对全 `src/` 真正生效，并给 lint 装上防回退门禁。（2026-10-27 更新：原 `.planning/quick/` 94 个历史目录清算已提前完成——HYG-01 Satisfied，92 个按日期窗口+主题归入对应里程碑 `<version>-phases/quick/`，2 个 2025 年目录归 `milestones/obsolete-quick/` 附理由，零删除，清单见 `.planning/notes/2026-10-27-quick-archive.md`。）
 **Depends on**: Phase 71（收口必须建立在迁移完成之上；lint 排在迁移后是硬排序约束——迁移波次自身会产生新的 warn 峰值）
-**Requirements**: MIG-03, HYG-01, HYG-02, HYG-03, HYG-04
+**Requirements**: MIG-03, HYG-02, HYG-03, HYG-04（HYG-01 已 Satisfied——2026-10-27 提前完成归档）
 **Notes**: **收口 = 拆脚手架，不是改级别**——裸组件 selector 本来就是 `error` 级，存量页不报错是因为 P65/P66 豁免 override 块把它们整条重声明掉了；收口动作 = P66 锚点 files 数组清空 → 整块删除 → P65 锚点 files 数组清空 → 整块删除 → gen 脚本转 **--dry 校验模式**（连跑两次 diff 为空，68.1 §8 #18 幂等口径）。**保留**：封装层豁免块（`src/components/ui|shared`）+ 测试文件豁免块 + P68 hex 豁免块（收缩后）+ 65 契约块。lint 清偿**按规则分组、禁全量 `--fix`**（`--fix` 会删掉 API 形态文档性死代码、`any→unknown` 引发类型蔓延再撒 `as any`、fixer 可能击穿 83 errors 线）：机械安全规则先行 → `no-unused-vars` + `no-console` 归零（≈368 条）→ `no-explicit-any` 软目标降 50%（958 → <500，分两 wave = 类型文件 wave + 组件边界 wave，chart/ECharts 边界不强行清零）→ `--max-warnings N` 门禁进 npm script。**errors ≤ 83 必须写成脚本断言**（对比 lint 输出计数），不靠人眼。`.planning/quick/` 94 个历史目录（全部早于 v1.22）逐个判定归属：归档到对应里程碑或标记 OBSOLETE，**不手工删**。
 **Success Criteria** (what must be TRUE):
   1. 全 `src/` 范围内不再存在 P65/P66 存量豁免块，脚手架移除后契约规则对新代码持续生效——开发者新写裸 `<Input>` / `<Select>` / `<TextArea>` 会**立刻**被 lint 拦下。
   2. `npm run lint` 的 error 数不高于 83 基线（**脚本断言**，非人眼），`no-unused-vars` 与 `no-console` 命中归零，`no-explicit-any` 相对权威基线下降 ≥ 50%，`npm run type-check` 全绿。
   3. npm script 携带 `--max-warnings N` 门禁：warnings 超预算时本地/CI 直接失败——lint 债务不再静默回退。
-  4. `.planning/quick/` 的 94 个历史任务目录**全部**有明确归属（归档到对应里程碑或标记 OBSOLETE），无「归属不明、无人认领」的历史任务残留；归档后目录计数归零或逐条有归属说明。
-  5. **收口对账报告落盘**：权威计数与 Phase 70 基线的差异被逐项解释（每一条差异都有对应迁移动作或豁免理由），差异条数与豁免清单剩余条目数能够相互印证。
+  4. **收口对账报告落盘**：权威计数与 Phase 70 基线的差异被逐项解释（每一条差异都有对应迁移动作或豁免理由），差异条数与豁免清单剩余条目数能够相互印证。（原 SC「quick 目录归属」已随 HYG-01 提前完成而移除）
 
 **Plans**: TBD
 **UI hint**: yes
