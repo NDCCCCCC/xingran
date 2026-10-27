@@ -3,11 +3,11 @@
  * 网络命令分发模态框
  */
 
-import { Modal, Form, Input, Table } from "antd";
+import { Modal, Form, Table } from "antd";
+// Phase 71 (W4)：裸 Input/TextArea → 契约组件
+import { AppInput, AppTextArea } from "@/components/ui";
 import type { NetworkDevice } from "@/types";
 import { deviceColumns } from "../columns";
-
-const { TextArea } = Input;
 
 export interface CommandDispatchModalProps {
   open: boolean;
@@ -75,7 +75,7 @@ export function CommandDispatchModal({
           rules={[{ required: true, message: "请输入命令内容" }]}
           extra="每行一条命令，支持标准网络设备命令"
         >
-          <TextArea
+          <AppTextArea
             rows={8}
             placeholder={`示例：
 display version
@@ -95,7 +95,7 @@ show running-config
           initialValue={300}
           rules={[{ required: true }]}
         >
-          <Input allowClear type="number" min={10} max={3600} />
+          <AppInput type="number" min={10} max={3600} />
         </Form.Item>
       </Form>
     </Modal>

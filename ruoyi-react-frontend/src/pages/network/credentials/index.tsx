@@ -1,20 +1,8 @@
 import type { FC } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Alert,
-  App,
-} from "antd";
+// Input 仍需保留：Input.Password 为成员表达式形态，不在 Phase 65 selector 命中面（有意不拦）
+import { Table, Button, Space, Modal, Form, Input, Tag, Card, Row, Col, Statistic, Alert, App } from "antd";
+// Phase 71 (W4)：裸 Input/Select/TextArea → 契约组件（Select 全部 children 形态改写为 options）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -37,9 +25,6 @@ import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal, confirmDelete } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 const CredentialManagement: FC = () => {
   const { message } = App.useApp();
@@ -411,27 +396,18 @@ const CredentialManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="searchCredentialName" label="凭证名称">
-              <Input
-                placeholder="请输入凭证名称"
-                allowClear
-                className="user-form-input"
-                style={{ width: 150 }}
-              />
+              <AppInput placeholder="请输入凭证名称" className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="searchProtocolType" label="协议类型">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；协议类型固定 2 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择协议类型"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                {protocolTypeOptions.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={protocolTypeOptions}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -532,20 +508,20 @@ const CredentialManagement: FC = () => {
             label="凭证名称"
             rules={[{ required: true, message: "请输入凭证名称" }]}
           >
-            <Input allowClear placeholder="请输入凭证名称" />
+            <AppInput placeholder="请输入凭证名称" />
           </Form.Item>
           <Form.Item
             name="protocolType"
             label="协议类型"
             rules={[{ required: true, message: "请选择协议类型" }]}
           >
-            <Select allowClear placeholder="请选择协议类型 (SSH 或 Telnet)" onSearch={() => {}}>
-              {protocolTypeOptions.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            {/* 形态分类器①/②：children 写法改写 options；固定 2 项 → 显式禁搜 */}
+            <AppSelect
+              placeholder="请选择协议类型 (SSH 或 Telnet)"
+              onSearch={() => {}}
+              showSearch={false}
+              options={protocolTypeOptions}
+            />
           </Form.Item>
 
           {/* SSH/Telnet 字段 - 始终显示 */}
@@ -554,7 +530,7 @@ const CredentialManagement: FC = () => {
             label="用户名"
             rules={[{ required: true, message: "请输入用户名" }]}
           >
-            <Input allowClear placeholder="请输入用户名" />
+            <AppInput placeholder="请输入用户名" />
           </Form.Item>
           <Form.Item
             name="password"
@@ -585,25 +561,22 @@ const CredentialManagement: FC = () => {
             label="SNMP Communities"
             extra="用于设备状态检查和自动发现，可留空"
           >
-            <Select allowClear
+            {/* 形态分类器⑦：mode="tags" 多值输入 → 显式 showSearch 保持可输入检索 */}
+            <AppSelect
               mode="tags"
               placeholder="请输入 SNMP Community，可添加多个"
               tokenSeparators={[","]}
               onSearch={() => {}}
-            ></Select>
+              showSearch
+            />
           </Form.Item>
           <Form.Item name="snmpVersion" label="SNMP版本" rules={[{ required: true }]}>
-            <Select allowClear onSearch={() => {}}>
-              {snmpVersionOptions.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            {/* 形态分类器①/②：children 写法改写 options；固定 3 项 → 显式禁搜 */}
+            <AppSelect onSearch={() => {}} showSearch={false} options={snmpVersionOptions} />
           </Form.Item>
 
           <Form.Item name="description" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>

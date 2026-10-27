@@ -5,7 +5,9 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, App } from "antd";
+import { Table, Button, Space, Form, Card, Row, Col, Statistic, App } from "antd";
+// Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -28,8 +30,6 @@ import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
-
-const { Option } = Select;
 
 const TemplateManagement: FC = () => {
   const { message } = App.useApp();
@@ -255,50 +255,40 @@ const TemplateManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="templateName" label="模板名称">
-              <Input
+              <AppInput
                 placeholder="请输入模板名称"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="templateCode" label="模板编码">
-              <Input
+              <AppInput
                 placeholder="请输入模板编码"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="templateType" label="模板类型">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；固定 3 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择模板类型"
-                allowClear
                 className="user-form-input"
                 style={{ width: 130 }}
                 onSearch={() => {}}
-              >
-                {TEMPLATE_TYPE_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={TEMPLATE_TYPE_OPTIONS}
+              />
             </Form.Item>
             <Form.Item name="vendor" label="厂商">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；厂商固定 5 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择厂商"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                {VENDOR_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={VENDOR_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>

@@ -5,7 +5,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
+import { Table, Button, Space, Form, Card, Row, Col, Statistic, App } from "antd";
+// Phase 71 (W4)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
 import {
   ThunderboltOutlined,
   SearchOutlined,
@@ -26,8 +28,6 @@ import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
-
-const { Option } = Select;
 
 const CommandDispatch: FC = () => {
   const { message } = App.useApp();
@@ -208,22 +208,18 @@ const CommandDispatch: FC = () => {
         <div style={{ marginBottom: 16 }}>
           <Form form={searchForm} layout="inline">
             <Form.Item label="状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；执行状态固定 4 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onChange={() => {
                   handleSuccess();
                 }}
                 onSearch={() => {}}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={STATUS_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>

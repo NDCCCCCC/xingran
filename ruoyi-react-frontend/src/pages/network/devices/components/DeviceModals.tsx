@@ -4,31 +4,15 @@
  * 注：快速创建/编辑两弹窗的「提交中禁用取消按钮」防抖是原页面对 Modal.onOk
  * 的直接控制，FormModal 契约不含此增强；保持原 Modal 形态（纯搬迁不动）。
  */
-import {
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Row,
-  Col,
-  Card,
-  Divider,
-  Alert,
-  Button,
-  Space,
-} from "antd";
+import { Modal, Form, InputNumber, Row, Col, Card, Divider, Alert, Button, Space } from "antd";
 import type { DividerProps } from "antd/es/divider";
 import { ApiOutlined, HistoryOutlined } from "@ant-design/icons";
 import type { NetworkDevice } from "@/types";
 import { DepartmentTreeSelect } from "@/components/shared";
-import { AppInput, AppSelect } from "@/components/ui";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ProbeResult } from "../hooks/useDeviceModals";
 import { STATUS_OPTIONS, VENDOR_OPTIONS } from "../constants";
 import { getOptionLabel } from "../utils";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 export interface DeviceModalsProps {
   /* 快速创建 */
@@ -118,13 +102,13 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           label="授权凭证"
           rules={[{ required: true, message: "请选择授权凭证" }]}
         >
-          <AppSelect placeholder="请选择授权凭证" onSearch={() => {}}>
-            {credentials.map((cred) => (
-              <Option key={cred.id} value={cred.id}>
-                {cred.credentialName}
-              </Option>
-            ))}
-          </AppSelect>
+          {/* UUID 炸弹防护：credentialId 为 UUID 外键，原无 allowClear，禁用清空避免 undefined 触发后端校验 400 */}
+          <AppSelect
+            placeholder="请选择授权凭证"
+            onSearch={() => {}}
+            allowClear={false}
+            options={credentials.map((cred) => ({ value: cred.id, label: cred.credentialName }))}
+          />
         </Form.Item>
         <Form.Item label=" ">
           <Col offset={6}>
@@ -193,7 +177,7 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           <AppInput placeholder="请输入设备位置" />
         </Form.Item>
         <Form.Item name="description" label="备注">
-          <TextArea rows={2} placeholder="请输入备注" />
+          <AppTextArea rows={2} placeholder="请输入备注" />
         </Form.Item>
       </Form>
     </Modal>
@@ -230,22 +214,22 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           label="设备类型"
           rules={[{ required: true, message: "请选择设备类型" }]}
         >
-          <AppSelect placeholder="请选择设备类型" onSearch={() => {}}>
-            {deviceTypeOptions.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </AppSelect>
+          {/* 形态分类器①/②：children 写法改写为 options；4 项枚举 + 固定业务语义 → 显式禁搜 */}
+          <AppSelect
+            placeholder="请选择设备类型"
+            onSearch={() => {}}
+            showSearch={false}
+            options={deviceTypeOptions}
+          />
         </Form.Item>
         <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: "请选择厂商" }]}>
-          <AppSelect placeholder="请选择厂商" onSearch={() => {}}>
-            {VENDOR_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </AppSelect>
+          {/* 形态分类器①/②：children 改写 options；厂商为固定短枚举（5 项）→ 显式禁搜 */}
+          <AppSelect
+            placeholder="请选择厂商"
+            onSearch={() => {}}
+            showSearch={false}
+            options={VENDOR_OPTIONS}
+          />
         </Form.Item>
         <Form.Item name="model" label="型号">
           <AppInput placeholder="请输入设备型号" />
@@ -272,13 +256,13 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           <InputNumber min={1} max={65535} style={{ width: "100%" }} />
         </Form.Item>
         <Form.Item name="credentialId" label="授权凭证">
-          <AppSelect placeholder="请选择授权凭证" allowClear onSearch={() => {}}>
-            {credentials.map((cred) => (
-              <Option key={cred.id} value={cred.id}>
-                {cred.credentialName}
-              </Option>
-            ))}
-          </AppSelect>
+          {/* 形态分类器①/②：children 改写 options；原 allowClear=true 行为保持不变 */}
+          <AppSelect
+            placeholder="请选择授权凭证"
+            allowClear
+            onSearch={() => {}}
+            options={credentials.map((cred) => ({ value: cred.id, label: cred.credentialName }))}
+          />
         </Form.Item>
         <Form.Item name="deptId" label="所属部门">
           <DepartmentTreeSelect departments={departments} />
@@ -287,16 +271,11 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           <AppInput placeholder="请输入位置" />
         </Form.Item>
         <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-          <AppSelect onSearch={() => {}}>
-            {STATUS_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </AppSelect>
+          {/* 形态分类器①/②：children 改写 options；状态类固定枚举 → 显式禁搜 */}
+          <AppSelect onSearch={() => {}} showSearch={false} options={STATUS_OPTIONS} />
         </Form.Item>
         <Form.Item name="description" label="备注">
-          <TextArea rows={3} placeholder="请输入备注" />
+          <AppTextArea rows={3} placeholder="请输入备注" />
         </Form.Item>
       </Form>
     </Modal>
