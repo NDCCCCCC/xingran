@@ -76,7 +76,7 @@
 | TEXT-04 | 70 | Satisfied (2026-10-27) |
 | MIG-01 | 71 | Satisfied (2026-10-28) |
 | MIG-02 | 71 | Satisfied (2026-10-28) |
-| MIG-03 | 74 | Pending |
+| MIG-03 | 74 | Satisfied (2026-10-28) |
 | MIG-04 | 71 | Satisfied (2026-10-28) |
 | DBG-01 | 69 | Satisfied (2026-10-27) |
 | DBG-02 | 72 | Satisfied (2026-10-27) |
@@ -88,9 +88,9 @@
 | UAT-01 | 75 | Pending |
 | UAT-02 | 75 | Pending |
 | HYG-01 | 74 | Satisfied (2026-10-27) |
-| HYG-02 | 74 | Pending |
-| HYG-03 | 74 | Pending |
-| HYG-04 | 74 | Pending |
+| HYG-02 | 74 | Satisfied (2026-10-28) |
+| HYG-03 | 74 | Satisfied (2026-10-28) |
+| HYG-04 | 74 | Satisfied (2026-10-28) |
 | HYG-05 | 70 | Satisfied (2026-10-27) |
 
 **Coverage:**
