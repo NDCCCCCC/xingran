@@ -1,5 +1,5 @@
 ---
-status: root_cause_identified
+status: resolved
 trigger: "MAC 轨迹查询无法查到任何 mac，在数据库里查是存在的"
 created: 2026-06-30T00:00:00Z
 updated: 2026-10-27T16:40:00+08:00
@@ -7,7 +7,7 @@ goal: find_root_cause_only
 audit_acknowledged:
   milestone: v1.23
   at: 2026-10-26T10:00:00+08:00
-  status: root_cause_identified
+  status: resolved
 
 ---
 
@@ -245,7 +245,7 @@ files_changed: []
 - `A4:0C:66:2C:E9:44`（device `96aab2e4-65c5-464f-9ee2-c4645d8ae868`，iface GE0/40，first_seen 2026-10-27 16:02）
 - `00:E0:FC:09:BC:F9`（device `48d75b51-c495-4cd2-a3f8-2babbe396c84`，iface GE0/14）
 
-status 升级为 **root_cause_identified**，待 Phase 73 修复 + 用上样本回归验证后关闭。
+status 升级为 root_cause_identified 后，Phase 73 修复（commit `da984927`）已落地并经回归验证，本档 resolved。
 
 
 ## Resolution 补记（2026-10-28，Phase 73 修复落地）
