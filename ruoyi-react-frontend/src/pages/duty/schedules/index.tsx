@@ -4,13 +4,14 @@
  */
 
 import { useState, useEffect, type FC } from "react";
+// Phase 71 (W5)：裸 Input/Select/TextArea → 契约组件（children 复合子节点保留写法）
+import { AppSelect, AppTextArea } from "@/components/ui";
 import {
   Button,
   Form,
   Select,
   Table,
   Modal,
-  Input,
   App,
   Card,
   Space,
@@ -64,6 +65,8 @@ import { confirmDelete } from "@/components/shared/confirmDelete";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
+// 形态分类器⑤专用：调班/手动排班下拉为「children + 复合子节点」，保留写法，故仍需 antd Select 取 Option。
+// 本文件已无裸 <Select> JSX（Select.Option 为成员表达式，不在 P65 selector 命中面）。
 const { Option } = Select;
 
 // ==================== 周视图控制 Hook ====================
@@ -396,7 +399,8 @@ const DutySchedulePage: FC = () => {
                   size="small"
                   style={{
                     borderColor: isToday ? "var(--theme-info)" : undefined,
-                    backgroundColor: isToday ? "#e6f7ff" : undefined,
+                    // Phase 71 W5：P68 契约清偿——裸 hex → 主题变量
+                    backgroundColor: isToday ? "var(--theme-primary-lighter)" : undefined,
                     borderRadius: "4px",
                     minHeight: "80px",
                   }}
@@ -417,7 +421,7 @@ const DutySchedulePage: FC = () => {
                         </Text>
                       </div>
                       <div>
-                        <Text style={{ fontSize: "11px", color: "#999" }}>
+                        <Text style={{ fontSize: "11px", color: "var(--theme-text-tertiary)" }}>
                           {formatDateTime(day.toDate(), FORMAT_DATE_SHORT)}
                         </Text>
                       </div>
@@ -441,7 +445,7 @@ const DutySchedulePage: FC = () => {
                             </Tag>
                           ))
                         ) : (
-                          <Text style={{ fontSize: "11px", color: "#ccc" }}>无值班</Text>
+                          <Text style={{ fontSize: "11px", color: "var(--theme-text-disabled)" }}>无值班</Text>
                         )}
                       </Space>
                     </div>
@@ -473,61 +477,56 @@ const DutySchedulePage: FC = () => {
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolId" label="值班池">
-              <Select
+              {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，
+                  显式 showSearch={false} 保持不变。poolId 为 UUID 外键，原 allowClear=true 行为不变 */}
+              <AppSelect
                 placeholder="请选择值班池"
                 allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
+                showSearch={false}
                 onSearch={() => {}}
-              >
-                {pools.map((pool) => (
-                  <Option key={pool.id} value={pool.id}>
-                    {pool.poolName}
-                  </Option>
-                ))}
-              </Select>
+                options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
+              />
             </Form.Item>
             <Form.Item name="userId" label="值班人员">
-              <Select
+              <AppSelect
                 placeholder="请选择值班人员"
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
+                showSearch={false}
                 onSearch={() => {}}
-              >
-                {users.map((user) => (
-                  <Option key={user.id} value={user.id}>
-                    {user.nickName || user.username}
-                  </Option>
-                ))}
-              </Select>
+                options={users.map((user) => ({
+                  value: user.id,
+                  label: user.nickName || user.username,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="dutyType" label="值班类型">
-              <Select
+              <AppSelect
                 placeholder="请选择值班类型"
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
+                showSearch={false}
                 onSearch={() => {}}
-              >
-                {DUTY_TYPE_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                options={DUTY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
+              />
             </Form.Item>
             <Form.Item name="expired" label="排班状态">
-              <Select
+              <AppSelect
                 placeholder="请选择排班状态"
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
+                showSearch={false}
                 onSearch={() => {}}
-              >
-                <Option value={0}>未过期</Option>
-                <Option value={1}>已过期</Option>
-              </Select>
+                options={[
+                  { value: 0, label: "未过期" },
+                  { value: 1, label: "已过期" },
+                ]}
+              />
             </Form.Item>
             <Form.Item name="dateRange" label="日期范围">
               <RangePicker style={{ width: 240 }} />
@@ -605,13 +604,15 @@ const DutySchedulePage: FC = () => {
             label="值班池"
             rules={[{ required: true, message: "请选择值班池" }]}
           >
-            <Select allowClear placeholder="请选择值班池" onSearch={() => {}}>
-              {pools.map((pool) => (
-                <Option key={pool.id} value={pool.id}>
-                  {pool.poolName}
-                </Option>
-              ))}
-            </Select>
+            {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，
+                显式 showSearch={false} 保持不变。poolId 为 UUID 外键，原 allowClear=true 行为不变 */}
+            <AppSelect
+              allowClear
+              placeholder="请选择值班池"
+              showSearch={false}
+              onSearch={() => {}}
+              options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
+            />
           </Form.Item>
 
           <Form.Item
@@ -628,13 +629,16 @@ const DutySchedulePage: FC = () => {
             rules={[{ required: true, message: "请选择值班类型" }]}
             initialValue="weekday"
           >
-            <Select allowClear placeholder="请选择值班类型" onSearch={() => {}}>
-              {DUTY_TYPE_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}值班
-                </Option>
-              ))}
-            </Select>
+            <AppSelect
+              allowClear
+              placeholder="请选择值班类型"
+              showSearch={false}
+              onSearch={() => {}}
+              options={DUTY_TYPE_OPTIONS.map((opt) => ({
+                value: opt.value,
+                label: `${opt.label}值班`,
+              }))}
+            />
           </Form.Item>
 
           <Form.Item
@@ -671,7 +675,11 @@ const DutySchedulePage: FC = () => {
             label="原排班记录"
             rules={[{ required: true, message: "请选择排班记录" }]}
           >
-            <Select allowClear
+            {/* 形态分类器⑤：children + 复合子节点（formatScheduleOptionContent），保留写法；
+                显式 showSearch（antd 契约过滤走 optionFilterProp="label"，Option 已带 label 属性）。
+                scheduleId 为 UUID 外键，原 allowClear=true 行为不变 */}
+            <AppSelect
+              allowClear
               placeholder="请选择原排班记录"
               showSearch
               optionFilterProp="label"
@@ -682,7 +690,7 @@ const DutySchedulePage: FC = () => {
                   {formatScheduleOptionContent(s, getDutyTypeText)}
                 </Option>
               ))}
-            </Select>
+            </AppSelect>
           </Form.Item>
 
           <Form.Item
@@ -690,7 +698,8 @@ const DutySchedulePage: FC = () => {
             label="目标排班记录"
             rules={[{ required: true, message: "请选择排班记录" }]}
           >
-            <Select allowClear
+            <AppSelect
+              allowClear
               placeholder="请选择目标排班记录"
               showSearch
               optionFilterProp="label"
@@ -701,11 +710,11 @@ const DutySchedulePage: FC = () => {
                   {formatScheduleOptionContent(s, getDutyTypeText)}
                 </Option>
               ))}
-            </Select>
+            </AppSelect>
           </Form.Item>
 
           <Form.Item name="reason" label="调班原因">
-            <Input.TextArea rows={3} placeholder="请输入调班原因" />
+            <AppTextArea rows={3} placeholder="请输入调班原因" />
           </Form.Item>
 
           <Alert
@@ -732,13 +741,15 @@ const DutySchedulePage: FC = () => {
             label="值班池"
             rules={[{ required: true, message: "请选择值班池" }]}
           >
-            <Select allowClear placeholder="请选择值班池" onSearch={() => {}}>
-              {pools.map((pool) => (
-                <Option key={pool.id} value={pool.id}>
-                  {pool.poolName}
-                </Option>
-              ))}
-            </Select>
+            {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，
+                显式 showSearch={false} 保持不变。poolId 为 UUID 外键，原 allowClear=true 行为不变 */}
+            <AppSelect
+              allowClear
+              placeholder="请选择值班池"
+              showSearch={false}
+              onSearch={() => {}}
+              options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
+            />
           </Form.Item>
 
           <Form.Item
@@ -754,13 +765,13 @@ const DutySchedulePage: FC = () => {
             label="值班类型"
             rules={[{ required: true, message: "请选择值班类型" }]}
           >
-            <Select allowClear placeholder="请选择值班类型" onSearch={() => {}}>
-              {DUTY_TYPE_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            <AppSelect
+              allowClear
+              placeholder="请选择值班类型"
+              showSearch={false}
+              onSearch={() => {}}
+              options={DUTY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
+            />
           </Form.Item>
 
           <Form.Item
@@ -768,9 +779,16 @@ const DutySchedulePage: FC = () => {
             label="值班人员"
             rules={[{ required: true, message: "请选择值班人员" }]}
           >
-            <Select allowClear
+            {/* 形态分类器⑤：children + 复合子节点（账号-昵称拼接），保留写法；
+                mode="multiple" 显式 showSearch（antd 多选默认开搜索，保持不变）；
+                显式 optionFilterProp="label" —— 每个 Option 已带 label 属性。
+                userIds 为 UUID 外键，原 allowClear=true 行为不变 */}
+            <AppSelect
+              allowClear
               mode="multiple"
               placeholder="请选择值班人员"
+              showSearch
+              optionFilterProp="label"
               optionLabelProp="label"
               onSearch={() => {}}
             >
@@ -779,11 +797,11 @@ const DutySchedulePage: FC = () => {
                   {user.username} - {user.nickName}
                 </Option>
               ))}
-            </Select>
+            </AppSelect>
           </Form.Item>
 
           <Form.Item name="reason" label="备注">
-            <Input.TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>

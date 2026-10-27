@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+// Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
 import {
   Card,
   Row,
@@ -7,7 +9,6 @@ import {
   Tag,
   Table,
   Form,
-  Select,
   Empty,
   Typography,
   Space,
@@ -39,7 +40,6 @@ import { useAuthStore } from "@/store/authStore";
 import { usePagination } from "@/hooks/usePagination";
 
 const { Text } = Typography;
-const { Option } = Select;
 
 // 模块级静态映射：避免 render 回调内每行每格重建（Phase m76-js-misc 6.3）
 const PRIORITY_CONFIG: Record<WorkOrderPriority, { text: string; color: string }> = {
@@ -319,12 +319,13 @@ const MyDutyPage: FC = () => {
 
         <Col xs={12} sm={6} lg={6}>
           <Card loading={statsLoading}>
+            {/* Phase 71 W5：P68 契约清偿——裸 hex → 主题变量 */}
             <Statistic
               title="累计值班"
               value={stats?.totalCount || 0}
               suffix="次"
               prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: "#722ed1", fontSize: "20px" } }}
+              styles={{ content: { color: "var(--theme-brand)", fontSize: "20px" } }}
             />
           </Card>
         </Col>
@@ -399,17 +400,21 @@ const MyDutyPage: FC = () => {
             <div style={{ marginBottom: "12px" }}>
               <Form form={form} layout="inline">
                 <Form.Item name="dutyType" style={{ marginBottom: 0 }}>
-                  <Select
+                  {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，
+                      显式 showSearch={false} 保持不变 */}
+                  <AppSelect
                     placeholder="全部类型"
                     allowClear
                     style={{ width: 100 }}
                     onChange={handleSearch}
+                    showSearch={false}
                     onSearch={() => {}}
-                  >
-                    <Option value="weekday">工作日</Option>
-                    <Option value="weekend">周末</Option>
-                    <Option value="holiday">节假日</Option>
-                  </Select>
+                    options={[
+                      { value: "weekday", label: "工作日" },
+                      { value: "weekend", label: "周末" },
+                      { value: "holiday", label: "节假日" },
+                    ]}
+                  />
                 </Form.Item>
               </Form>
             </div>
