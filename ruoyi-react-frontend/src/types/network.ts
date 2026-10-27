@@ -7,7 +7,7 @@
 /**
  * 设备厂商
  */
-export type DeviceVendor = "huawei" | "h3c" | "ruijie" | "maipu";
+export type DeviceVendor = "huawei" | "h3c" | "ruijie" | "maipu" | "cisco";
 
 /**
  * 设备类型

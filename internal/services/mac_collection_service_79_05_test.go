@@ -346,11 +346,25 @@ func TestMcl7905_GetMACCommand_Vendors(t *testing.T) {
 		}
 	})
 
+	t.Run("cisco_dual", func(t *testing.T) {
+		// Phase 72 #2 (DBG-02): Cisco 升为已知厂商,走双命令
+		// (Cisco IOS/NX-OS 是 "show mac address-table",无连字符)
+		cmds := svc.getMACCommands(models.VendorCisco)
+		require.Len(t, cmds, 2, "cisco 应双命令(mac-table + port-security)")
+		assert.Equal(t, "show mac address-table", cmds[0].Cmd)
+		assert.Equal(t, MACCommandTypeMacTable, cmds[0].Type)
+		assert.Equal(t, "show port-security address", cmds[1].Cmd)
+		assert.Equal(t, MACCommandTypePortSecurity, cmds[1].Type)
+		assert.Equal(t, "show mac address-table", svc.getMACCommand(models.VendorCisco), "首条命令向后兼容")
+	})
+
 	t.Run("unknown_vendor_fallback", func(t *testing.T) {
-		cmds := svc.getMACCommands(models.DeviceVendor("cisco"))
+		// 注: 原样本用 "cisco" 充当未知厂商,Phase 72 #2 起 cisco 已是已知厂商,
+		// 改用确实无解析分支的 vendor 继续保持该兜底断言。
+		cmds := svc.getMACCommands(models.DeviceVendor("juniper"))
 		require.Len(t, cmds, 1)
 		assert.Equal(t, "show mac-address-table", cmds[0].Cmd)
-		assert.Equal(t, "show mac-address-table", svc.getMACCommand(models.DeviceVendor("cisco")))
+		assert.Equal(t, "show mac-address-table", svc.getMACCommand(models.DeviceVendor("juniper")))
 	})
 }
 

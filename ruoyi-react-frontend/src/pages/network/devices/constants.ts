@@ -13,6 +13,7 @@ export const VENDOR_OPTIONS: SelectOption[] = [
   { label: "H3C", value: "h3c" },
   { label: "Ruijie", value: "ruijie" },
   { label: "Maipu", value: "maipu" },
+  { label: "Cisco", value: "cisco" },
 ];
 
 // 设备类型选项（Phase 69 DICT-03: 降级为静态 fallback——搜索/编辑下拉与表格 label 已迁
