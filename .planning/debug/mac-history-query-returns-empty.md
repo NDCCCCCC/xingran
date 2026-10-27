@@ -1,193 +1,252 @@
-﻿---
-status: resolved
+---
+status: root_cause_identified
 trigger: "MAC 轨迹查询无法查到任何 mac，在数据库里查是存在的"
 created: 2026-06-30T00:00:00Z
 updated: 2026-10-27T16:40:00+08:00
 goal: find_root_cause_only
 audit_acknowledged:
   milestone: v1.23
-  at: 2026-10-28
-  status: resolved
+  at: 2026-10-26T10:00:00+08:00
+  status: root_cause_identified
 
 ---
 
 ## Current Focus
 
-hypothesis: 杞ㄨ抗鏌ヨ (POST /network/history/trajectory) 璧?`QueryMACTrajectory`
-瀹為檯鍛戒腑鐨勬槸 PG 鍒嗗尯鏍硅〃 `sys_device_mac_history`锛屾甯稿簲琚?PG 璺敱鍒板瓙鍒嗗尯
-`sys_device_mac_history_2026_06`锛涗絾 model 鏂囦欢缂?`deleted_at` + Raw SQL 涔熸病鏈変换浣?`deleted_at IS NULL` 杩囨护锛屾墍浠ヨ蒋鍒犻櫎鍦烘櫙涓嬭繕鑳藉懡涓€傞渶瑕佸湪 DB 鐪熷疄鐘舵€佷腑纭
-锛堟槸鍚﹀瓨鍦?reconciliation/cleanup 浠诲姟鎶婂巻鍙叉爣杞垹锛夛紝鍚屾椂鎺掓煡 UPDATE/CREATE
-鐨勫疄闄呭啓鍏ヨ矾寰勩€?
-test: 鍦?PG 绔拡瀵?MAC `B0227A2E4A4F` 鍒嗗埆璺戯細
+hypothesis: 轨迹查询 (POST /network/history/trajectory) 走 `QueryMACTrajectory`
+实际命中的是 PG 分区根表 `sys_device_mac_history`，正常应被 PG 路由到子分区
+`sys_device_mac_history_2026_06`；但 model 文件缺 `deleted_at` + Raw SQL 也没有任何
+`deleted_at IS NULL` 过滤，所以软删除场景下还能命中。需要在 DB 真实状态中确认
+（是否存在 reconciliation/cleanup 任务把历史标软删），同时排查 UPDATE/CREATE
+的实际写入路径。
+
+test: 在 PG 端针对 MAC `B0227A2E4A4F` 分别跑：
 1. `SELECT count(*) FROM sys_device_mac_history WHERE mac_address = 'B0227A2E4A4F';`
 2. `SELECT count(*) FROM sys_device_mac_history_2026_06 WHERE mac_address = 'B0227A2E4A4F';`
 3. `SELECT column_name FROM information_schema.columns WHERE table_name = 'sys_device_mac_history' AND column_name LIKE '%delet%';`
-4. 鐪?application 鏃ュ織涓?`[MAC杞ㄨ抗鏌ヨ] 鏌ヨ澶辫触` 鏄惁鍖呭惈 SQL 閿欒
-5. 鐪?routine query 涓〃璺敱鏄惁璧?partition pruning
-
-expecting: 鑻ュ瓙鍒嗗尯鏈?N 琛岃€屾牴琛ㄨ繑鍥?0 琛岋紝鍒欎腑闂村眰(RLS/permission/瑙嗗浘)鍚炴帀浜嗭紱
-鑻ユ牴琛ㄨ繑鍥?0 鑰屽瓙鍒嗗尯鏈?N锛屽垯 GORM 鎴?Raw 瑙﹀彂 PG 鎶ラ敊锛涘惁鍒欎竴瀹氬瓨鍦ㄥ叾浠?杩囨护(濡?first_seen 鑼冨洿銆乵ac_address 澶у皬鍐欍€乨eleted_at)瀵艰嚧绌洪泦
-next_action: 1) 妫€鏌?`internal/services/mac_history_service.go` 涓?scheduler
-涓殑娓呯悊閫昏緫鏄惁瀵?`deleted_at` 璧嬪€硷紱2) 鐪?application 鏃ュ織鏄惁鏈?PG 鎶ラ敊
-(`column ... does not exist` / `relation ... does not exist`)锛?) 鎺掓煡
-Phase 39+ reconciliation / matview 閲嶅缓鏄惁鏀瑰彉鏁版嵁鍩虹嚎
+4. 看 application 日志中 `[MAC轨迹查询] 查询失败` 是否包含 SQL 错误
+5. 看 routine query 中表路由是否走 partition pruning
+expecting: 若子分区有 N 行而根表返回 0 行，则中间层(RLS/permission/视图)吞掉了；
+若根表返回 0 而子分区有 N，则 GORM 或 Raw 触发 PG 报错；否则一定存在其他
+过滤(如 first_seen 范围、mac_address 大小写、deleted_at)导致空集
+next_action: 1) 检查 `internal/services/mac_history_service.go` 与 scheduler
+中的清理逻辑是否对 `deleted_at` 赋值；2) 看 application 日志是否有 PG 报错
+(`column ... does not exist` / `relation ... does not exist`)；3) 排查
+Phase 39+ reconciliation / matview 重建是否改变数据基线
 
 ## Symptoms
 
-expected: 鍦ㄥ墠绔?杞ㄨ抗鏌ヨ"椤佃緭鍏?MAC `B0:22:7A:2E:4A:4F` 鑳芥煡鍒拌 MAC 鍦?`sys_device_mac_history_2026_06` 鐨勮嚦灏?1 琛?璁惧 `a8c30b8c-...` 鎺ュ彛
+expected: 在前端"轨迹查询"页输入 MAC `B0:22:7A:2E:4A:4F` 能查到该 MAC 在
+`sys_device_mac_history_2026_06` 的至少 1 行(设备 `a8c30b8c-...` 接口
 `GigabitEthernet 2/25` VLAN 308)
 
-actual: API 杩斿洖绌哄垪琛?娌℃湁浠讳綍 mac)
+actual: API 返回空列表(没有任何 mac)
 
-errors: 鏃犳槑纭姤閿?鍙湁鍙兘 query 娌″尮閰嶅埌 row 璧扮┖鏁扮粍杩斿洖)
+errors: 无明确报错(只有可能 query 没匹配到 row 走空数组返回)
 
-reproduction: 璋冪敤 `POST /network/history/trajectory`锛宐ody = `{"macAddress": "B0:22:7A:2E:4A:4F"}`锛?鎴栧湪 pg 绔洿鏌?`SELECT * FROM sys_device_mac_history WHERE mac_address='B0227A2E4A4F';`
+reproduction: 调用 `POST /network/history/trajectory`，body = `{"macAddress": "B0:22:7A:2E:4A:4F"}`；
+或在 pg 端直查 `SELECT * FROM sys_device_mac_history WHERE mac_address='B0227A2E4A4F';`
 
-started: 寰呯敤鎴风‘璁?鍩轰簬鐜扮姸鎶ュ憡锛屾湭缁欓娆″彂鐢熸椂闂?
+started: 待用户确认(基于现状报告，未给首次发生时间)
 
 ## Eliminated
 
-- hypothesis: A. 鍒嗗尯鏍硅〃 vs 瀛愬垎鍖鸿矾鐢遍棶棰?  evidence: PG 鍘熺敓鍒嗗尯琛?`FROM sys_device_mac_history` 浼氳嚜鍔?partition pruning
-  鍒?`sys_device_mac_history_2026_06`(鍓嶆彁 first_seen 鍦ㄨ鏈堣寖鍥?銆俙QueryMACTrajectory`
-  浣跨敤 `s.db.WithContext(ctx).Raw(sql, normalizedMAC, startTime, endTime)` 璧?  `first_seen >= ? AND first_seen <= ?`锛宲artition pruning 搴旇嚜鍔ㄥ惎鐢ㄣ€?  timestamp: 2026-06-30
-  conclusion: 杩欐潯璺緞闇€瑕?DB 绔疄娴嬮獙璇侊紝浠ｇ爜灞傞潰娌￠棶棰?
-- hypothesis: B. 琛ㄥ悕鎷兼帴閿欒(鏈堜唤鏍煎紡 `2026_06` vs `2026-06` vs `202606`)
-  evidence: `mac_history_partition.go:60`銆乣migration_mac_history.go:65, 144, 176`
-  涓夊浣跨敤 `fmt.Sprintf("sys_device_mac_history_%d_%02d", year, monthNum)` 涓€鑷村湴
-  鐢熸垚 `sys_device_mac_history_2026_06`锛屼笌鐢ㄦ埛鎶ュ憡鐨勫疄闄呰〃鍚嶅尮閰嶃€係QL `Raw(sql, ...)`
-  涔熺洿鎺ョ‖缂栫爜 `FROM sys_device_mac_history`锛屼笉璧拌繍琛屾椂鎷兼帴銆?  timestamp: 2026-06-30
-  conclusion: 琛ㄥ悕闂鍙帓闄?
-- hypothesis: C. MAC 鍦板潃澶у皬鍐?鏍煎紡杩囨护
-  evidence: `QueryMACTrajectory` 鏄惧紡 normalize锛氱Щ闄?`.`銆乣:`銆乣-`锛岃浆 `ToUpper`
-  (lines 849-852)銆傜敤鎴风粰鐨?MAC `B0:22:7A:2E:4A:4F` 鈫?鏍囧噯鍖栦负 `B0227A2E4A4F`銆?  鏁版嵁搴撴牱鏈€间篃鏄?`B0:22:7A:2E:4A:4F` 褰㈠紡锛屾爣鍑嗗寲鍚庝細鍖归厤銆侱B schema
-  `mac_address VARCHAR(30)` 娌℃湁 COLLATE 闄愬埗锛屼絾浠ｇ爜宸茬粺涓€澶у啓銆?  timestamp: 2026-06-30
-  conclusion: MAC 鏍煎紡鍖归厤鍙帓闄?
-- hypothesis: D. 鏃堕棿鑼冨洿澶弗
-  evidence: 鏍锋湰鏁版嵁 `first_seen = 2026-06-29 12:46`銆俙QueryMACTrajectory` 榛樿
-  `startTime = time.Now().Add(-30 * 24 * time.Hour)` 鍗?2026-05-31锛沗endTime = time.Now()`
-  鍗?2026-06-30(褰撳墠)銆傛牱鏈椂闂?2026-06-29 鍦ㄨ寖鍥村唴锛屽簲琚懡涓€?  timestamp: 2026-06-30
-  conclusion: 鏃堕棿绐楀彛鍙帓闄?
+- hypothesis: A. 分区根表 vs 子分区路由问题
+  evidence: PG 原生分区表 `FROM sys_device_mac_history` 会自动 partition pruning
+  到 `sys_device_mac_history_2026_06`(前提 first_seen 在该月范围)。`QueryMACTrajectory`
+  使用 `s.db.WithContext(ctx).Raw(sql, normalizedMAC, startTime, endTime)` 走
+  `first_seen >= ? AND first_seen <= ?`，partition pruning 应自动启用。
+  timestamp: 2026-06-30
+  conclusion: 这条路径需要 DB 端实测验证，代码层面没问题
+
+- hypothesis: B. 表名拼接错误(月份格式 `2026_06` vs `2026-06` vs `202606`)
+  evidence: `mac_history_partition.go:60`、`migration_mac_history.go:65, 144, 176`
+  三处使用 `fmt.Sprintf("sys_device_mac_history_%d_%02d", year, monthNum)` 一致地
+  生成 `sys_device_mac_history_2026_06`，与用户报告的实际表名匹配。SQL `Raw(sql, ...)`
+  也直接硬编码 `FROM sys_device_mac_history`，不走运行时拼接。
+  timestamp: 2026-06-30
+  conclusion: 表名问题可排除
+
+- hypothesis: C. MAC 地址大小写/格式过滤
+  evidence: `QueryMACTrajectory` 显式 normalize：移除 `.`、`:`、`-`，转 `ToUpper`
+  (lines 849-852)。用户给的 MAC `B0:22:7A:2E:4A:4F` → 标准化为 `B0227A2E4A4F`。
+  数据库样本值也是 `B0:22:7A:2E:4A:4F` 形式，标准化后会匹配。DB schema
+  `mac_address VARCHAR(30)` 没有 COLLATE 限制，但代码已统一大写。
+  timestamp: 2026-06-30
+  conclusion: MAC 格式匹配可排除
+
+- hypothesis: D. 时间范围太严
+  evidence: 样本数据 `first_seen = 2026-06-29 12:46`。`QueryMACTrajectory` 默认
+  `startTime = time.Now().Add(-30 * 24 * time.Hour)` 即 2026-05-31；`endTime = time.Now()`
+  即 2026-06-30(当前)。样本时间 2026-06-29 在范围内，应被命中。
+  timestamp: 2026-06-30
+  conclusion: 时间窗口可排除
 
 ## Evidence
 
 - timestamp: 2026-06-30
   source: internal/services/mac_history_query_service.go:842-915
   finding: |
-    `QueryMACTrajectory` 璧?`Raw(sql, normalizedMAC, startTime, endTime)` 鐩存帴
-    瀵?`sys_device_mac_history` 鍙?SQL锛學HERE 鏉′欢 = `mac_address = ? AND first_seen >= ? AND first_seen <= ?`銆?    娌℃湁 `deleted_at IS NULL`銆佹病鏈?ORDER BY 瀛愬彞涔嬪鐨勮繃婊わ紝娌℃湁 LIMIT/OFFSET銆?    鏁翠釜鏂囦欢涓嶅嚭鐜?`deleted_at` / `DeletedAt` 鍏抽敭瀛椼€?
+    `QueryMACTrajectory` 走 `Raw(sql, normalizedMAC, startTime, endTime)` 直接
+    对 `sys_device_mac_history` 发 SQL，WHERE 条件 = `mac_address = ? AND first_seen >= ? AND first_seen <= ?`。
+    没有 `deleted_at IS NULL`、没有 ORDER BY 子句之外的过滤，没有 LIMIT/OFFSET。
+    整个文件不出现 `deleted_at` / `DeletedAt` 关键字。
+
 - timestamp: 2026-06-30
   source: internal/models/device_mac_history.go:21-46
   finding: |
-    `DeviceMACHistory` struct 瀛楁锛歚ID`, `DeviceID`, `DeviceNameSnapshot`,
+    `DeviceMACHistory` struct 字段：`ID`, `DeviceID`, `DeviceNameSnapshot`,
     `MACAddress`, `InterfaceName`, `VLANID`, `EventType`, `FirstSeen`,
-    `LastSeen`, `CollectedAt`, `CreatedAt` 鈥斺€?**娌℃湁 `DeletedAt` / `deleted_at` 瀛楁**銆?    `TableName()` 杩斿洖甯搁噺 `"sys_device_mac_history"`銆?
+    `LastSeen`, `CollectedAt`, `CreatedAt` —— **没有 `DeletedAt` / `deleted_at` 字段**。
+    `TableName()` 返回常量 `"sys_device_mac_history"`。
+
 - timestamp: 2026-06-30
   source: internal/core/db/migrations/migration_mac_history.go:33-47
   finding: |
-    `CREATE TABLE IF NOT EXISTS sys_device_mac_history` DDL 鍒楁竻鍗曪細
+    `CREATE TABLE IF NOT EXISTS sys_device_mac_history` DDL 列清单：
     `id`, `device_id`, `device_name_snapshot`, `mac_address`, `interface_name`,
     `vlan_id`, `event_type`, `first_seen`, `last_seen`, `collected_at`,
-    `created_at DEFAULT CURRENT_TIMESTAMP` 鈥斺€?**娌℃湁 `deleted_at` 鍒?*銆?    琛ㄨ澹版槑涓?`PARTITION BY RANGE (first_seen)`銆?
+    `created_at DEFAULT CURRENT_TIMESTAMP` —— **没有 `deleted_at` 列**。
+    表被声明为 `PARTITION BY RANGE (first_seen)`。
+
 - timestamp: 2026-06-30
   source: internal/core/db/migrations/migration_mac_history.go:62-86
   finding: |
-    杩佺Щ鏃朵负 now / now+1m / now+2m 鍚勫垱寤轰竴涓湀搴﹀垎鍖猴細
+    迁移时为 now / now+1m / now+2m 各创建一个月度分区：
     `CREATE TABLE IF NOT EXISTS sys_device_mac_history_%d_%02d PARTITION OF ...`
-    鐢ㄦ埛鎶ュ憡鐨?`sys_device_mac_history_2026_06` 涓庢鍛藉悕涓€鑷达紱2026-06-30 鐨?now
-    鍒涘缓鐨勫氨鏄?`sys_device_mac_history_2026_06`銆傛ā寮忓尮閰嶇‘璁ゃ€?
+    用户报告的 `sys_device_mac_history_2026_06` 与此命名一致；2026-06-30 的 now
+    创建的就是 `sys_device_mac_history_2026_06`。模式匹配确认。
+
 - timestamp: 2026-06-30
   source: internal/services/mac_history_partition.go:50-93
   finding: |
-    `CreateMonthlyPartition` 涓庤縼绉婚€昏緫绛変环锛氱敓鎴?`sys_device_mac_history_YYYY_MM`锛?    骞剁敤 `FOR VALUES FROM ('YYYY-MM-01') TO ('YYYY-MM-01')`銆?    楠岃瘉鍒嗗尯鍚嶆牸寮忔鍒欙細
-    `^[a-z]+(?:_[a-z]+)*_[0-9]{4}_[0-9]{2}$` 鈥斺€?`sys_device_mac_history_2026_06` 閫氳繃銆?
+    `CreateMonthlyPartition` 与迁移逻辑等价：生成 `sys_device_mac_history_YYYY_MM`，
+    并用 `FOR VALUES FROM ('YYYY-MM-01') TO ('YYYY-MM-01')`。
+    验证分区名格式正则：
+    `^[a-z]+(?:_[a-z]+)*_[0-9]{4}_[0-9]{2}$` —— `sys_device_mac_history_2026_06` 通过。
+
 - timestamp: 2026-06-30
   source: internal/core/db/migrations/migration_175_reconciliation_physical_link.go:69
   finding: |
-    璇ヨ縼绉绘枃妗ｆ敞閲婂０绉帮細
-    `sys_device_mac_history` 鎵嶆槸甯?`deleted_at` 鐨勮蒋鍒犻櫎琛?    (瑙?internal/models/device_mac_history.go)銆?    浣嗗疄闄?model 鏂囦欢(migration_mac_history.go 鐨?DDL 涓?device_mac_history.go
-    鐨?struct)閮芥病鏈?deleted_at 瀛楁鈥斺€?*娉ㄩ噴涓庡疄闄?schema 涓嶄竴鑷?*銆傞渶鍒?DB 绔?    楠岃瘉 `information_schema.columns` 鐪嬫槸鍚︾湡鏈?`deleted_at` 鍒椼€?
+    该迁移文档注释声称：
+    `sys_device_mac_history` 才是带 `deleted_at` 的软删除表
+    (见 internal/models/device_mac_history.go)。
+    但实际 model 文件(migration_mac_history.go 的 DDL 与 device_mac_history.go
+    的 struct)都没有 deleted_at 字段——**注释与实际 schema 不一致**。需到 DB 端
+    验证 `information_schema.columns` 看是否真有 `deleted_at` 列。
+
 - timestamp: 2026-06-30
   source: internal/api/v1/network/mac_history_router.go:11-32
   finding: |
-    璺敱琛細`POST /history/trajectory` 鈫?`historyHandler.QueryTrajectory` 鈫?    `h.historyQueryService.QueryMACTrajectory`銆?    鏈嶅姟鏋勯€?`NewMACHistoryQueryService(core.GetDB())` 涓嶅甫 cache(NoCache 璺緞)銆?
+    路由表：`POST /history/trajectory` → `historyHandler.QueryTrajectory` →
+    `h.historyQueryService.QueryMACTrajectory`。
+    服务构造 `NewMACHistoryQueryService(core.GetDB())` 不带 cache(NoCache 路径)。
 
 ## Resolution
 
-root_cause: **TBD 鈥?闇€瑕?DB 绔疄娴?*銆備唬鐮佸眰闈㈡病鏈夊彂鐜颁細瀵艰嚧绌洪泦鐨勯€昏緫缂洪櫡銆?鏈€鍙兘浠嶉渶鍦?PG 绔疄娴嬩互涓嬪洓绉嶅満鏅細
+root_cause: **TBD — 需要 DB 端实测**。代码层面没有发现会导致空集的逻辑缺陷。
+最可能仍需在 PG 端实测以下四种场景：
 
-(a) `deleted_at` 鍦?DB 瀹為檯 schema 涓瓨鍦?鐢卞悗缁?reconciliation 杩佺Щ娣诲姞)锛?浣嗘墍鏈夊巻鍙?row 宸茶鏍囪 `deleted_at IS NOT NULL`锛屼絾 `QueryMACTrajectory` 娌?鏈夎繃婊よ瀛楁 鈫?鍛戒腑鍗宠繑鍥炵┖銆傝繖鏄枃妗ｆ敞閲?vs 瀹為檯 schema 涓嶈嚜娲界殑鍙枒鐐?(`migration_175` 娉ㄩ噴鑷浉鐭涚浘)銆?
-(b) 鐢ㄦ埛缁欑殑鏍锋湰 MAC `B0:22:7A:2E:4A:4F` 鍦?DB 涓疄闄呮槸 `b0:22:7a:2e:4a:4f`
-鎴栧寘鍚┖鏍?涓嶅彲瑙佸瓧绗︼紱闇€ `SELECT mac_address, length(mac_address) FROM sys_device_mac_history WHERE ...`銆?
-(c) PG 绔繍琛岃 Raw 鏌ヨ鏃跺疄闄呮姤 `column ... does not exist`(column name
-涓嶅湪 whitelist/permission schema 鍐?锛宎pplication 鍚?error 杩斿洖绌恒€傚缓璁細
-鐪?backend application 鏃ュ織涓?`[MAC杞ㄨ抗鏌ヨ] 鏌ヨ澶辫触: ...` 鏄惁鏈夊叿浣?PG 閿欒銆?
-(d) 鏁版嵁琚?partition prune 閿欓厤锛氱敤鎴风殑鏍锋湰鍒嗗竷鍦?`sys_device_mac_history_2026_06`
-浣?`first_seen` 瀹為檯鏄?UTC 涔嬪鏃跺尯鎴栧瓧绗︿覆锛孭G 璺敱涓嶅埌銆傞渶瑕?`SELECT pg_partition_tree('sys_device_mac_history');` 涓?`EXPLAIN SELECT ... FROM sys_device_mac_history WHERE mac_address = 'B0227A2E4A4F' AND first_seen >= ...`
+(a) `deleted_at` 在 DB 实际 schema 中存在(由后续 reconciliation 迁移添加)，
+但所有历史 row 已被标记 `deleted_at IS NOT NULL`，但 `QueryMACTrajectory` 没
+有过滤该字段 → 命中即返回空。这是文档注释 vs 实际 schema 不自洽的可疑点
+(`migration_175` 注释自相矛盾)。
 
-fix: **涓嶅湪鏈疆浠诲姟鑼冨洿**(鍙瘖鏂?銆傚彲鑳戒慨澶嶆柟鍚戯細
-- 濡傛灉 (a)锛氬湪 `QueryMACTrajectory` SQL 鍔?`AND deleted_at IS NULL`
-  (鍓嶆彁 DB 鐪熸湁璇ュ垪锛屼笖鍒犻櫎绛栫暐纭疄鏍囪蒋鍒?
-- 濡傛灉 (b)锛氭牎瀵规暟鎹湰韬?鍙兘 collector 鍐欏叆浜嗘煇绉嶉潪棰勬湡鏍煎紡)
-- 濡傛灉 (c)锛氶噸鍐?Raw 涓?GORM chainable 澶勭悊閿欒浼犳挱锛屽苟鍦?handler 涓?  杩斿洖 500 鑰岄潪鍚?error
-- 濡傛灉 (d)锛氬湪 GORM Raw 鍓?wrap `SET TIME ZONE 'UTC'` 鎴?cast 鏃堕棿
+(b) 用户给的样本 MAC `B0:22:7A:2E:4A:4F` 在 DB 中实际是 `b0:22:7a:2e:4a:4f`
+或包含空格/不可见字符；需 `SELECT mac_address, length(mac_address) FROM sys_device_mac_history WHERE ...`。
 
-verification: 缂哄け鐨?DB 绔疄娴嬶細
+(c) PG 端运行该 Raw 查询时实际报 `column ... does not exist`(column name
+不在 whitelist/permission schema 内)，application 吞 error 返回空。建议：
+看 backend application 日志中 `[MAC轨迹查询] 查询失败: ...` 是否有具体
+PG 错误。
+
+(d) 数据被 partition prune 错配：用户的样本分布在 `sys_device_mac_history_2026_06`
+但 `first_seen` 实际是 UTC 之外时区或字符串，PG 路由不到。需要
+`SELECT pg_partition_tree('sys_device_mac_history');` 与
+`EXPLAIN SELECT ... FROM sys_device_mac_history WHERE mac_address = 'B0227A2E4A4F' AND first_seen >= ...`
+
+fix: **不在本轮任务范围**(只诊断)。可能修复方向：
+- 如果 (a)：在 `QueryMACTrajectory` SQL 加 `AND deleted_at IS NULL`
+  (前提 DB 真有该列，且删除策略确实标软删)
+- 如果 (b)：校对数据本身(可能 collector 写入了某种非预期格式)
+- 如果 (c)：重写 Raw 为 GORM chainable 处理错误传播，并在 handler 中
+  返回 500 而非吞 error
+- 如果 (d)：在 GORM Raw 前 wrap `SET TIME ZONE 'UTC'` 或 cast 时间
+
+verification: 缺失的 DB 端实测：
 1. `SELECT column_name FROM information_schema.columns WHERE table_name = 'sys_device_mac_history' AND column_name = 'deleted_at';`
 2. `SELECT count(*) FROM sys_device_mac_history WHERE mac_address = 'B0227A2E4A4F';`
-   vs 瀛愬垎鍖哄悓鏌ヨ
+   vs 子分区同查询
 3. `EXPLAIN (ANALYZE, BUFFERS) SELECT ... FROM sys_device_mac_history WHERE mac_address = 'B0227A2E4A4F' AND first_seen >= '2026-05-31T00:00:00Z' AND first_seen <= '2026-06-30T23:59:59Z';`
-4. backend application 鏃ュ織涓?`[MAC杞ㄨ抗鏌ヨ] 鏌ヨ澶辫触:` 鎴?   `[MAC鍘嗗彶鏌ヨ] 鏌ヨ璁板綍澶辫触:` 鏄惁鏈?PG 閿欒鐮?
+4. backend application 日志中 `[MAC轨迹查询] 查询失败:` 或
+   `[MAC历史查询] 查询记录失败:` 是否有 PG 错误码
 
 files_changed: []
 
 ---
 
-## 鐢ㄦ埛瀹炴祴鍥炲～锛?026-10-27锛孭G 鐢熶骇搴擄級
+## 用户实测回填（2026-10-27，PG 生产库）
 
-鐢ㄦ埛鎵ц浜嗘竻鍗?B 鐨?4 鏉?SQL锛坧g 瀹㈡埛绔埅鍥撅級锛?
-- **鍒嗗尯鏍戯紙pg_partition_tree锛?*锛氱埗琛?`sys_device_mac_history` + **2026_06 ~ 2026_12 鍏?7 涓湀搴﹀垎鍖?*锛堟棤鏇存棭鍒嗗尯锛夈€?- **EXPLAIN ANALYZE**锛坢ac_address='B0227A2E4A4F' AND first_seen 2026-05-31~2026-06-30锛夛細鍒嗗尯鍓灊姝ｇ‘锛堝彧鎵?2026_06 鍒嗗尯鐨?`device_id_mac_address_first_idx1` 绱㈠紩锛夛紝Index Actual Rows: 6锛孭lanning 29.8ms / Execution 0.105ms銆?- **鏍锋湰 count**锛歚B0227A2E4A4F` 鍦ㄥ叏琛ㄤ笌 2026_06 鍒嗗尯鐨?count(*) 鎴浘鍧囨樉绀?**count=0**銆?- **deleted_at 鍒楀瓨鍦ㄦ€?*锛坕nformation_schema 鏌ヨ锛夛細鎴浘 tab 鏈兘鍒嗚鲸璇ユ煡璇㈢粨鏋溾€斺€?*寰呯‘璁?*銆?
+用户执行了清单 B 的 4 条 SQL（pg 客户端截图）：
 
-### 闃舵鎬х粨璁猴紙濡傚疄璁板綍锛屼笉杩囧害鎺ㄦ柇锛?
+- **分区树（pg_partition_tree）**：父表 `sys_device_mac_history` + **2026_06 ~ 2026_12 共 7 个月度分区**（无更早分区）。
+- **EXPLAIN ANALYZE**（mac_address='B0227A2E4A4F' AND first_seen 2026-05-31~2026-06-30）：分区剪枝正确（只扫 2026_06 分区的 `device_id_mac_address_first_idx1` 索引），Index Actual Rows: 6，Planning 29.8ms / Execution 0.105ms。
+- **样本 count**：`B0227A2E4A4F` 在全表与 2026_06 分区的 count(*) 截图均显示 **count=0**。
+- **deleted_at 列存在性**（information_schema 查询）：截图 tab 未能分辨该查询结果——**待确认**。
 
-- 鍒嗗尯鍓灊涓庣储寮曟湰韬伐浣滄甯革紙EXPLAIN 璇佹嵁锛夈€?- 鏍锋湰 MAC `B0227A2E4A4F` 褰撳墠鍏ㄨ〃 count=0锛屼袱绉嶅彲鑳斤細
-  1. 6 鏈堝垎鍖烘竻鐞嗙瓥鐣ュ凡鎶婅鏍锋湰娓呴櫎锛堢敤鎴锋鍓嶉璀﹁繃姝ゅ彲鑳斤級锛?  2. 瀛樺偍鏍煎紡涓庢煡璇㈠瓧闈㈤噺涓嶄竴鑷达紙鏈。鍘熷鐤戠偣锛夈€?- **鍥?EXPLAIN 鐨?Index Actual Rows=6 涓?count=0 骞跺瓨锛屼笉鑳芥帓闄ゆ煡璇㈠瓧闈㈤噺鏍煎紡涓庡瓨鍌ㄦ牸寮忎笉涓€鑷?*锛堣繖姝ｆ槸鏈。鍘熷鐤戠偣锛夈€?
+### 阶段性结论（如实记录，不过度推断）
+
+- 分区剪枝与索引本身工作正常（EXPLAIN 证据）。
+- 样本 MAC `B0227A2E4A4F` 当前全表 count=0，两种可能：
+  1. 6 月分区清理策略已把该样本清除（用户此前预警过此可能）；
+  2. 存储格式与查询字面量不一致（本档原始疑点）。
+- **因 EXPLAIN 的 Index Actual Rows=6 与 count=0 并存，不能排除查询字面量格式与存储格式不一致**（这正是本档原始疑点）。
 
 ### Open follow-up
 
-1. 鎹竴涓綋鍓嶇‘瀹炲瓨鍦ㄧ殑鏍锋湰 MAC锛堢敤鎴烽渶鎻愪緵锛夛紝澶嶆煡銆孌B 鐩存煡鏈夎 / 搴旂敤 API 杩斿洖绌恒€嶆槸鍚︿粛澶嶇幇銆?2. 纭 `deleted_at` 鍒楁槸鍚﹀瓨鍦紙information_schema 鏌ヨ B1 閲嶈窇涓€娆★級銆?
+1. 换一个当前确实存在的样本 MAC（用户需提供），复查「DB 直查有行 / 应用 API 返回空」是否仍复现。
+2. 确认 `deleted_at` 列是否存在（information_schema 查询 B1 重跑一次）。
 
-鍦ㄦ嬁鍒版柊鏍锋湰鍓嶏紝鏈。淇濇寔 **investigating**銆?
+在拿到新样本前，本档保持 **investigating**。
+
 ---
 
-## 鏍瑰洜纭锛?026-10-27 绗簩鎵瑰疄娴嬶紝PG 鐢熶骇搴擄級
+## 根因确认（2026-10-27 第二批实测，PG 生产库）
 
-鐢ㄦ埛鎵ц绗簩鎵?SQL锛堢幇瀛樻牱鏈娊鏍?+ 鏍煎紡瀵圭収锛夛紝缁撴灉锛?
-| 楠岃瘉椤?| 缁撴灉 |
+用户执行第二批 SQL（现存样本抽样 + 格式对照），结果：
+
+| 验证项 | 结果 |
 |--------|------|
-| `sys_device_mac_history` 鏈€鏂?5 琛?| **瀛樺偍鏍煎紡 = 澶у啓鍐掑彿鍒嗛殧**锛堝 `00:E0:FC:09:BC:F9`銆乣A4:0C:66:2C:E9:44`锛宖irst_seen 2026-10-27 16:02锛?|
-| `sys_device_mac_address` 鏈€鏂?5 琛?| 鍚屼负澶у啓鍐掑彿鏍煎紡 |
-| `B0227A2E4A4F`锛堟棤鍒嗛殧锛?| **0 琛?* |
-| `B0:22:7A:2E:4A:4F`锛堝啋鍙凤級 | **53 琛?* |
-| `deleted_at` 鍒?| **涓嶅瓨鍦?*锛坕nformation_schema count=0锛宮igration_175 娉ㄩ噴鐭涚浘鍧愬疄锛?|
+| `sys_device_mac_history` 最新 5 行 | **存储格式 = 大写冒号分隔**（如 `00:E0:FC:09:BC:F9`、`A4:0C:66:2C:E9:44`，first_seen 2026-10-27 16:02） |
+| `sys_device_mac_address` 最新 5 行 | 同为大写冒号格式 |
+| `B0227A2E4A4F`（无分隔） | **0 行** |
+| `B0:22:7A:2E:4A:4F`（冒号） | **53 行** |
+| `deleted_at` 列 | **不存在**（information_schema count=0，migration_175 注释矛盾坐实） |
 
-### ROOT CAUSE锛堢‘璁わ級
+### ROOT CAUSE（确认）
 
-**鏌ヨ绔妸 MAC normalize 鎴愭棤鍒嗛殧澶у啓锛坄QueryMACTrajectory` lines 849-852锛氱Щ闄?`.`銆乣:`銆乣-` + ToUpper锛夛紝鑰?DB 瀛樺偍鏄ぇ鍐欏啋鍙峰垎闅旀牸寮忊€斺€旂瓑鍊煎尮閰?`mac_address = 'B0227A2E4A4F'` 姘歌繙绌洪泦銆?*
+**查询端把 MAC normalize 成无分隔大写（`QueryMACTrajectory` lines 849-852：移除 `.`、`:`、`-` + ToUpper），而 DB 存储是大写冒号分隔格式——等值匹配 `mac_address = 'B0227A2E4A4F'` 永远空集。**
 
-- 鍦烘櫙 (b) 鍛戒腑锛氭暟鎹病闂锛屾槸**鏌ヨ瀛楅潰閲忎笌瀛樺偍鏍煎紡涓嶄竴鑷?*
-- 鍦烘櫙 (a) 璇佷吉锛歚deleted_at` 鍒楁牴鏈笉瀛樺湪锛屾棤杞垹杩囨护鍙█
-- 涓婃柟 Eliminated C 鐨勭粨璁?*閿欒**锛氬叾鎺ㄧ悊銆屾暟鎹簱鏍锋湰鍊间篃鏄?`B0:22:7A:2E:4A:4F` 褰㈠紡锛屾爣鍑嗗寲鍚庝細鍖归厤銆嶈嚜鐩哥煕鐩锯€斺€攏ormalize 鎴?`B0227A2E4A4F` 鍚庝笌鍐掑彿瀛樺偍**姘镐笉鐩哥瓑**銆傚綋骞翠粎鍑唬鐮佹帹鐞嗘帓闄わ紝鏈粡 DB 瀹炴祴锛屾湰杞疄娴嬫帹缈?- 闄勫甫鍙戠幇锛欵XPLAIN銆孖ndex Actual Rows=6銆嶄笌 count=0 骞跺瓨鐨勭枒鍥篃瑙ｅ紑鈥斺€斾袱鏉?SQL 瀛楅潰閲忎笉鍚岋紙EXPLAIN 鐗堟湰鐢ㄧ殑鏉′欢涓?count 鐗堟湰瀛樺湪宸紓锛夛紝浠ユ湰杞笁鏍煎紡瀵圭収涓哄噯
+- 场景 (b) 命中：数据没问题，是**查询字面量与存储格式不一致**
+- 场景 (a) 证伪：`deleted_at` 列根本不存在，无软删过滤可言
+- 上方 Eliminated C 的结论**错误**：其推理「数据库样本值也是 `B0:22:7A:2E:4A:4F` 形式，标准化后会匹配」自相矛盾——normalize 成 `B0227A2E4A4F` 后与冒号存储**永不相等**。当年仅凭代码推理排除，未经 DB 实测，本轮实测推翻
+- 附带发现：EXPLAIN「Index Actual Rows=6」与 count=0 并存的疑团也解开——两条 SQL 字面量不同（EXPLAIN 版本用的条件与 count 版本存在差异），以本轮三格式对照为准
 
-### fix 鏂瑰悜锛圥hase 72/73 钀藉湴锛?
+### fix 方向（Phase 72/73 落地）
 
-鍙屼晶褰掍竴鍖栫粺涓€锛堟帹鑽愨憼锛夛細
-1. **鏌ヨ渚?*锛歋QL 绛夊€兼潯浠舵敼涓哄瀛樺偍鍊煎仛鍚屾牱 normalize锛屽 `WHERE REPLACE(REPLACE(mac_address, ':', ''), '-', '') = ?`锛堟垨 PG 渚?`regexp_replace(upper(mac_address), '[^0-9A-F]', '', 'g') = ?`锛夛紝浣夸换鎰忚緭鍏ユ牸寮忓潎鍙懡涓?2. 鍐欎晶 normalize锛圖BG-03 鐨?Go 渚ч槻绾匡級浜у嚭鏍煎紡涓庢煡璇晶涓€鑷达紝鏉滅粷鏂版牸寮忔紓绉?3. 椤哄甫淇锛歊aw SQL 鈫?GORM chainable + 閿欒浼犳挱锛堢┖ 鈫?500锛屼笉鍐嶅悶 error锛夆€斺€擱EQ DBG-06 鐨勬棦瀹氭柟妗?4. 鏂囨。淇锛歮igration_175 娉ㄩ噴澹扮О銆屽甫 deleted_at 鐨勮蒋鍒犻櫎琛ㄣ€嶄笌瀹為檯 schema 涓嶇锛岄殢淇涓€骞舵洿姝ｆ敞閲?
+双侧归一化统一（推荐①）：
+1. **查询侧**：SQL 等值条件改为对存储值做同样 normalize，如 `WHERE REPLACE(REPLACE(mac_address, ':', ''), '-', '') = ?`（或 PG 侧 `regexp_replace(upper(mac_address), '[^0-9A-F]', '', 'g') = ?`），使任意输入格式均可命中
+2. 写侧 normalize（DBG-03 的 Go 侧防线）产出格式与查询侧一致，杜绝新格式漂移
+3. 顺带修复：Raw SQL → GORM chainable + 错误传播（空 → 500，不再吞 error）——REQ DBG-06 的既定方案
+4. 文档修正：migration_175 注释声称「带 deleted_at 的软删除表」与实际 schema 不符，随修复一并更正注释
 
-### 鐜板瓨鏍锋湰锛堜緵淇鍚庨獙璇侊級
+### 现存样本（供修复后验证）
 
-- `A4:0C:66:2C:E9:44`锛坉evice `96aab2e4-65c5-464f-9ee2-c4645d8ae868`锛宨face GE0/40锛宖irst_seen 2026-10-27 16:02锛?- `00:E0:FC:09:BC:F9`锛坉evice `48d75b51-c495-4cd2-a3f8-2babbe396c84`锛宨face GE0/14锛?
+- `A4:0C:66:2C:E9:44`（device `96aab2e4-65c5-464f-9ee2-c4645d8ae868`，iface GE0/40，first_seen 2026-10-27 16:02）
+- `00:E0:FC:09:BC:F9`（device `48d75b51-c495-4cd2-a3f8-2babbe396c84`，iface GE0/14）
 
-status 鍗囩骇涓?**root_cause_identified**锛屽緟 Phase 73 淇 + 鐢ㄤ笂鏍锋湰鍥炲綊楠岃瘉鍚庡叧闂€?
+status 升级为 **root_cause_identified**，待 Phase 73 修复 + 用上样本回归验证后关闭。
+
 
 ## Resolution 补记（2026-10-28，Phase 73 修复落地）
 
