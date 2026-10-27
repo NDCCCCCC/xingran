@@ -1,9 +1,9 @@
 ---
-status: investigated
+status: root_cause_identified
 trigger: >-
   "分公司本部工位 3f130，在其绑定的信息点-网络设备端口 CX-WH-WH-04F-FL-RS8607E-01 GE2/6 上显示有物理地址（MAC），但是工位管理上"物理链路设备"字段为空。请定位根因。"
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-10-27
 session_type: observation
 goal: find_root_cause_only
 related_sessions:
@@ -13,7 +13,7 @@ related_sessions:
 audit_acknowledged:
   milestone: v1.23
   at: 2026-10-26T10:00:00+08:00
-  status: investigated
+  status: root_cause_identified
 
 ---
 
@@ -86,13 +86,27 @@ codebase_evidence: 5F003 修复 (commit 6575a1e7) 已合入主干:`workstation_d
 
 ## Resolution
 
-root_cause: 静态分析无法独立确认；需要用户提供 4 项查询结果。最大可能性 = 工位绑定错位或工位 user_id 为空（5F003 修复未覆盖的边界）。
+root_cause: **H3 确认（2026-10-27 §4.5 综合诊断实测）——工位 3f130 未绑定 user_id**。`workstation_device_service.go:339` 的早退断点命中：UserID 空 → 直接返回 `[]`，物理链路展示按「用户→物理链路」维度走，未绑用户即空。
 
-fix: 不在本次范围内（仅诊断）
+### 终版实测（2026-10-27，PG 生产库 §4.5 修正版）
 
-verification: 见下方"待用户提供的关键信息"
+| 读数 | 值 | 判读 |
+|------|-----|------|
+| ws_user_id / ws_user_name | **NULL** | **H3 命中：未绑定用户** |
+| active_info_points | 1 | H2 排除（信息点在、状态 0、未删） |
+| ip_bound_to_valid_device | 1 | H1/H4 排除（绑定正确且设备存在） |
+| mac_match_count | **1** | **MAC 数据链路完全通**（设备+接口归一化匹配成功） |
 
-files_changed: (N/A)
+排查过程备注（供后续同类问题复用）：
+- `sys_workstation` 无 `code`/`name` 列，工位名实际列 = `workstation_name`
+- `ops_info_points.workstation_id` 为 varchar，与 `sys_workstation.id`(uuid) 比较需 `id::text` 显式转换
+- `ops_info_points` 无 `interface_name`，接口名走信息点自带 `port_name` 快照，归一化后与 `sys_device_mac_address.interface_name` 匹配成功
+
+fix 方向（Phase 73 落地，对应 REQ DBG-07）：
+1. **数据修复**：给 3f130 绑定 user_id（业务动作，需与人事/用户核对应绑谁）
+2. **可观测性增强**：`GetPhysicalDevices` 在 user_id 为空时不再静默返回 `[]`，而是返回可区分的空因状态（未绑定用户 / 绑定错位 / 无 MAC / 正常），前端展示诊断结论而非空白——正是 DBG-07 需求文本「可区分空因状态」
+
+files_changed: (N/A — 数据侧 + 后续可观测性增强)
 ---
 
 # 根因报告（Root Cause Report）
