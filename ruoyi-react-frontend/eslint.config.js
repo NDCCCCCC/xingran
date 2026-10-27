@@ -111,7 +111,8 @@ export default [
   // .planning/phases/65-contracts/65-UI-SPEC.md §3。
   // 豁免三层面：① 封装层目录 override（下方）② 测试文件既有 override（关整条
   // no-restricted-syntax，天然覆盖本块）③ 存量命中文件豁免 override（P67 清偿）。
-  // 注意：Input.TextArea|Search|Password|OTP 为成员表达式 JSX 名，不在本 selector 命中面（有意不拦）。
+  // 注意：Input.TextArea 已由 Phase 70 双 selector 拦截（P65 契约块 + P68 hex 豁免块两处同步）；
+  // Search|Password|OTP 仍为成员表达式形态，不在本 selector 命中面（有意不拦）。
   {
     files: ["src/**/*.{ts,tsx}"],
     rules: {
@@ -145,6 +146,20 @@ export default [
           selector: "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
           message:
             "禁止裸 hex 颜色字面量，请使用 var(--theme-*) 或 @/design-system/tokens/colors 的 ruoyiBrand；豁免须 eslint-disable-next-line 并注明原因（Phase 68 DEBT-01）",
+        },
+        {
+          // Phase 70（TEXT-04）：TextArea 双形态拦截。成员表达式形态挂在 JSXOpeningElement
+          // 的 name.* 属性路径上（报错位置与上方 selector 口径一致）；两条 selector 必须
+          // 同步进下方 P68 hex 豁免块重声明数组，豁免清单由 scripts/gen-p65-exemptions.mjs 预登记。
+          selector:
+            "JSXOpeningElement[name.type='JSXMemberExpression'][name.object.name='Input'][name.property.name='TextArea']",
+          message:
+            "禁止直接使用 antd 多行输入框 <Input.TextArea>，请使用 @/components/ui 的 AppTextArea（默认 allowClear）",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='TextArea']",
+          message:
+            "禁止直接使用 antd 多行输入框 <TextArea>，请使用 @/components/ui 的 AppTextArea（默认 allowClear）",
         },
       ],
       // 阻断绕过 JSX 名字的子包侧门 import
@@ -225,6 +240,19 @@ export default [
           selector: "JSXOpeningElement[name.name='Popconfirm']",
           message:
             "禁止直接使用 Popconfirm 作为删除确认（SC3 无绕过入口），请使用 @/components/shared 的 ConfirmDelete；非删除类确认须 eslint-disable-next-line 并注明原因",
+        },
+        {
+          // Phase 70：TextArea 双形态（与 P65 契约块逐字同步——本块重声明完整数组，
+          // 漏同步会让本块 files 清单对 TextArea 拦截静默失明）
+          selector:
+            "JSXOpeningElement[name.type='JSXMemberExpression'][name.object.name='Input'][name.property.name='TextArea']",
+          message:
+            "禁止直接使用 antd 多行输入框 <Input.TextArea>，请使用 @/components/ui 的 AppTextArea（默认 allowClear）",
+        },
+        {
+          selector: "JSXOpeningElement[name.name='TextArea']",
+          message:
+            "禁止直接使用 antd 多行输入框 <TextArea>，请使用 @/components/ui 的 AppTextArea（默认 allowClear）",
         },
       ],
     },
@@ -385,6 +413,7 @@ export default [
       "src/components/TargetSelector.tsx",
       "src/components/asset/reconciliation/ExceptionRuleForm.tsx",
       "src/components/asset/reconciliation/MatchTestPanel.tsx",
+      "src/components/cad-editor/CADFloorPlanEditor.tsx",
       "src/components/cad-editor/CADPropertyPanel.tsx",
       "src/components/dashboard/settings/DashboardScopeSelector.tsx",
       "src/components/dashboard/settings/DashboardSettings.tsx",
@@ -411,6 +440,7 @@ export default [
       "src/pages/ad-domain/users/index.tsx",
       "src/pages/asset/reconciliation/exception-rules/index.tsx",
       "src/pages/asset/reconciliation/exceptions/index.tsx",
+      "src/pages/asset/reconciliation/fix-suggestion/components/RollbackModal.tsx",
       "src/pages/asset/reconciliation/fix-suggestion/index.tsx",
       "src/pages/dashboard-system/components/DashboardList.tsx",
       "src/pages/duty/config/index.tsx",
@@ -440,6 +470,7 @@ export default [
       "src/pages/network/command/index.tsx",
       "src/pages/network/command/modals/DispatchModal.tsx",
       "src/pages/network/credentials/index.tsx",
+      "src/pages/network/devices/components/DeviceModals.tsx",
       "src/pages/network/discoveries/modals/CreateModal.tsx",
       "src/pages/network/executions/index.tsx",
       "src/pages/network/executions/modals/ExecuteModal.tsx",
@@ -460,6 +491,7 @@ export default [
       "src/pages/operations/room-devices/index.tsx",
       "src/pages/operations/rpa/executions/index.tsx",
       "src/pages/operations/rpa/tasks/index.tsx",
+      "src/pages/operations/rpa/tasks/modals/AIScriptEditor.tsx",
       "src/pages/operations/rpa/tasks/modals/EditModal.tsx",
       "src/pages/operations/rpa/workers/index.tsx",
       "src/pages/operations/server-rooms/index.tsx",
@@ -484,6 +516,7 @@ export default [
       "src/pages/system/notice/components/NoticeForm.tsx",
       "src/pages/system/notice/components/NoticeList.tsx",
       "src/pages/system/notice/components/TargetSelector.tsx",
+      "src/pages/system/post/index.tsx",
       "src/pages/system/role/index.tsx",
       "src/pages/system/settings/api-config.tsx",
       "src/pages/system/settings/captcha-background.tsx",

@@ -27,12 +27,14 @@ const scanConfigPath = path.join(root, "eslint.config.p65-scan.js");
 const ANCHOR = "      // __P65_EXEMPTION_FILES__（脚本替换锚点）";
 const PLACEHOLDER = '      "src/__p65_no_exemptions__/**",';
 
-// Phase 65 新增 4 selector 的 message 前缀（与 eslint.config.js 中的文案保持同步）
+// Phase 65 新增 selector 的 message 前缀（与 eslint.config.js 中的文案保持同步；
+// Phase 70 追加 TextArea 双形态拦截的前缀）
 const P65_MESSAGE_MARKS = [
   "禁止直接使用 antd <Input>",
   "禁止直接使用 antd <Select>",
   "禁止直接调用 Modal.confirm",
   "禁止直接使用 Popconfirm",
+  "禁止直接使用 antd 多行输入框",
 ];
 
 // 生成「禁用存量豁免」的临时扫描 config；同时校验正式 config 锚点存在
