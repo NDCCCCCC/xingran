@@ -1,5 +1,21 @@
 # Milestones
 
+## v1.22 前端公用组件整治 (Shipped: 2026-10-27)
+
+**Phases completed:** 7 phases, 7 plans, 0 tasks
+
+**Key accomplishments:**
+- **P0 止血（Phase 63）**：usePagination.ts:122 分页口径修正为「共 N 条 / M 页」并全线生效（此前 51 个列表页把总条数算成页数）；backups/discoveries setTotal 断链接通恢复翻页；OU 树改服务端分页；7 处批量删除补 Modal.confirm 二次确认；71 处弹窗补提交中取消禁用（cancelButtonProps）；删除 3 处假入口（假编辑/假下载/空 Tab）；8 处 fixed 列与 scroll.x 配对修复；运行时浏览器冒烟 7/7 通过
+- **反馈与可访问性（Phase 64）**：BaseEditModal 默认 maskClosable=false+keyboard 关闭防丢表单；7 处表格 loading 反馈；cache/job/jobLog 白名单内服务端排序（此前初版误判后端不支持）；52 处 catch 收敛到 handleApiError 唯一错误出口；73 处 icon-only 按钮补 aria-label（修复 38 处误写 children 的形态缺陷）
+- **危险操作唯一入口（Phase 65）**：AppInput/AppSelect 契约组件落地（allowClear/showSearch 默认值下沉，rest 全透传+逃生口）；confirmDelete helper + ConfirmDelete 声明式 + BatchDeleteButton 三形态统一文案「将删除{target}，删除后不可恢复」；eslint no-restricted-syntax 4 selector + no-restricted-imports 双闸拦截裸组件；11 处批删迁移；存量豁免 147 文件登记
+- **列表契约组件（Phase 66）**：PageTable（受控 props+插槽+三态内建）、SearchForm（schema 驱动+children 逃生口）、FormModal（onOk Promise 防重+脏检查三文案）、RemoteSelect（debounce+竞态守卫）四大件落地；system/post 双试点迁移；useTableManager 降格为内部引擎废双轨
+- **存量迁移（Phase 67）**：discoveries 405→333、backups 1141→637、devices 1282→692、cache 974→454，四页全部切换 PageTable/SearchForm/confirmDelete 契约
+- **一致性收敛（Phase 68）**：shared/statusHelpers.tsx 六域状态唯一落点；裸 hex 526→非豁免残留 32（lint 拦截+hex-exemptions 登记制）；any 52→21（any-exemptions 登记制）；日期格式 20 文件收敛 datetime.ts 常量；gzip 体积守卫进 CI 口径
+- **收尾清偿（Phase 68.1）**：44 处删除类裸 Modal.confirm + 10 处破坏性 confirm + 14 处 Popconfirm 全部收口到 ConfirmDelete 唯一入口（剩 8 处合法点全部带行内理由）；契约 minor 7 项补课（aria-label=删除{target} 解耦、actionContext 批量语义、focusable 焦点落点、aria-busy、提交中禁取消）；豁免清单 181→159 且 100% 带结构化理由（exemption-reasons.json + 校验脚本）；operations 4 页迁移净 -375 行；独立 verifier 发现并修复 15 处 onDelete 丢 Promise 回归
+- 全程质量基线：type-check 0 错误、vitest 3937/0、eslint 83 errors 零新增、build 通过；5 天 124 commits，534 文件 +29173/−7695
+
+---
+
 ## v1.21 AD 双向同步 bug 修复 (Shipped: 2026-10-22)
 
 **Phases completed:** 6 phases, 22 plans, 45 tasks
