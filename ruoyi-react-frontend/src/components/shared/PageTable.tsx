@@ -165,7 +165,7 @@ function PageTableImpl<T extends object>({
     } else {
       void applyFiltersRef.current();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 以 extraFilters 引用为唯一触发器
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 以 extraFilters 引用为唯一触发器（该 suppression 同时使 React Compiler 跳过本 hook 分析，移除会暴露 refs 误报）
   }, [extraFilters]);
 
   // 行操作列：追加到 columns 末尾（经 ActionButtons 渲染，<3 平铺 / >=3 收下拉）

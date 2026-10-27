@@ -4,7 +4,7 @@
  * ColumnConfigModal(DndContext+SortableContext 复杂依赖 jsdom) 已有现有测试覆盖,
  * 此处专注 DepartmentTreeSelect 的 props 渲染断言(D-11/D-12)。
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import DepartmentTreeSelect from "../DepartmentTreeSelect";

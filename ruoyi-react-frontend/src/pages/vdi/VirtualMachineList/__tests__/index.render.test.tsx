@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import VirtualMachineListPage from "../index";
-import { vmApi, vdiServerApi } from "@/lib/vdiApi";
+import { vmApi } from "@/lib/vdiApi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/lib/api", async () => {

@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { App, Form, Button, Card, Space, Divider, ColorPicker } from "antd";
 // Phase 71 (W2)：裸 Select → AppSelect（options 形态固定枚举，均 <8 项；设置项显式禁搜）
 import { AppSelect } from "@/components/ui";
-import { BgColorsOutlined, SyncOutlined, SaveOutlined } from "@ant-design/icons";
+import { SyncOutlined, SaveOutlined } from "@ant-design/icons";
 import type { ThemeConfiguration } from "@/types/config";
 import { getDefaultThemeConfig, setDefaultThemeConfig, syncUserThemeToDefault } from "@/lib/defaultThemeApi";
 import { useSettingsStore } from "@/store/settingsStore";

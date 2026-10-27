@@ -25,7 +25,7 @@ import {
   processTimeRangeParams,
 } from "../logs/utils";
 import { useLogActions } from "../logs/hooks/useLogActions";
-import * as apiModule from "@/lib/api";
+import "@/lib/api";
 
 describe("monitor/job/utils", () => {
   it("formatLocalTime null 返回占位", () => {

@@ -17,7 +17,7 @@ import VirtualMachineList from "../vdi/VirtualMachineList";
 import WorkOrderPage from "../workorder/orders";
 import KnowledgeArticlePage from "../knowledge/articles";
 
-const emptyList = { data: { list: [], total: 0 } };
+const _emptyList = { data: { list: [], total: 0 } };
 
 async function expectRenders(ui: React.ReactElement, endpoints: Record<string, unknown> = {}) {
   const { rendered } = renderPageWithEndpoints(ui, { endpoints });

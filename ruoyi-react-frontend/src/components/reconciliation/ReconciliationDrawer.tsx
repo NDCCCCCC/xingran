@@ -20,8 +20,8 @@
  */
 import React, { useCallback, useState } from "react";
 import { Drawer, Tabs, Tag, Descriptions, Button, Skeleton, Empty, message } from "antd";
-import { ReconciliationTimeline, type TimelineRecord } from "./ReconciliationTimeline";
-import { ExceptionMatchList, type ExceptionRuleItem } from "./ExceptionMatchList";
+import { type TimelineRecord } from "./ReconciliationTimeline";
+import { type ExceptionRuleItem } from "./ExceptionMatchList";
 import { useAssetHealth } from "./hooks/useAssetHealth";
 import { useReconciliationVisibility } from "./hooks/useReconciliationVisibility";
 
@@ -64,10 +64,10 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
   onApplyException,
 }) => {
   const visible = useReconciliationVisibility();
-  const [timeline] = useState<TimelineRecord[]>([]);
-  const [timelineLoading] = useState(false);
-  const [rules] = useState<ExceptionRuleItem[]>([]);
-  const [rulesLoading] = useState(false);
+  const [_timeline] = useState<TimelineRecord[]>([]);
+  const [_timelineLoading] = useState(false);
+  const [_rules] = useState<ExceptionRuleItem[]>([]);
+  const [_rulesLoading] = useState(false);
 
   const asset = useAssetHealth(selectedAssetId, workstationId ?? "");
 

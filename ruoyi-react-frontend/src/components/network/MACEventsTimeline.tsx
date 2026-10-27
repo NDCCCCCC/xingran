@@ -19,7 +19,6 @@ import React, { useState, useCallback, useEffect } from "react";
 import { Timeline, Empty, Skeleton, Tag, Card, Space, Typography, Button } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { DownOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
 import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { getMACEvents } from "@/lib/api/networkApi";
 import type { MACHistoryRecord } from "@/lib/api/networkApi";

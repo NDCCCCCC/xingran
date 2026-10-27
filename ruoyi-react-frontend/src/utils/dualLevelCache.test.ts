@@ -117,7 +117,7 @@ describe("DualLevelCache", () => {
   });
 
   it("统计与重置：hitRate 百分比 + resetStats 归零", () => {
-    const tableSpy = vi.spyOn(console, "table").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     cache.set("k1", "v1");
     cache.get("k1"); // hit
     cache.get("miss"); // miss
@@ -132,7 +132,7 @@ describe("DualLevelCache", () => {
     expect(cache.getStats().totalRequests).toBe(0);
 
     expect(() => cache.printStats()).not.toThrow();
-    expect(tableSpy).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
   });
 
   it("v1 迁移：localStorage 写入无 version 字段的 v0 条目，读取时触发迁移删除（dualLevelCache.ts:167-171）", () => {

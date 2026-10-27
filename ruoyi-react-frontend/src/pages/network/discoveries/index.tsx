@@ -16,7 +16,7 @@
  * - 轮询保持：useDiscoveryPolling 继续工作（列表行经 request 回传驻留 pollList state，
  *   onPoll 桥接 PageTable ctx.loadData）；CreateModal/ResultModal/导出原样未迁。
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { FC } from "react";
 import { Button, Row, Col, Card, Statistic, App, Form } from "antd";
 import {

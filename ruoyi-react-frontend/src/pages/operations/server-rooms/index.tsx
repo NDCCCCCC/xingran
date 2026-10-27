@@ -239,7 +239,6 @@ const ServerRoomManagement: FC = () => {
     searchForm.setFieldValue("floorNo", undefined);
     searchForm.setFieldValue("name", undefined);
     searchForm.setFieldValue("status", undefined);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBuildingOptions(selectedDeptId || undefined);
   }, [selectedDeptId, searchForm, loadBuildingOptions]);
 

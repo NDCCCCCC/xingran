@@ -109,7 +109,7 @@ describe("LayoutToolbar", () => {
     storeState.hasUnsavedChanges = true;
     const confirmSpy = vi.spyOn(Modal, "confirm");
     const origConfirm = Modal.confirm;
-    Modal.confirm = vi.fn(({ onOk }) => {
+    Modal.confirm = vi.fn(({ onOk: _onOk }) => {
       // simulate cancel - don't call onOk
       return { destroy: vi.fn() } as any;
     }) as any;

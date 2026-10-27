@@ -57,7 +57,7 @@ describe("CaptchaModal", () => {
 
   it("slider 验证成功 → 500ms 后调用 onSuccess", () => {
     const onSuccess = vi.fn();
-    const { baseElement, getByText } = render(
+    const { baseElement: _baseElement, getByText } = render(
       <CaptchaModal visible captchaType="slider" onSuccess={onSuccess} onCancel={vi.fn()} />,
       { wrapper }
     );
@@ -99,7 +99,7 @@ describe("CaptchaModal", () => {
   });
 
   it("visible=true + normal → 渲染 TextCaptcha + 确定按钮", () => {
-    const { baseElement, getByText } = render(
+    const { baseElement, getByText: _getByText } = render(
       <CaptchaModal visible captchaType="normal" onSuccess={vi.fn()} onCancel={vi.fn()} />,
       { wrapper }
     );

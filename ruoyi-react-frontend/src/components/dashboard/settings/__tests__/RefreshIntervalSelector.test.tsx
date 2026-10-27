@@ -2,7 +2,7 @@
  * Phase 88 Batch134 — components/dashboard/settings/RefreshIntervalSelector 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import type { ReactElement, ReactNode } from "react";
 

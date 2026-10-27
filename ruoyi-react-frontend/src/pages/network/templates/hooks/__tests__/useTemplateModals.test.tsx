@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { App as AntdApp, Form } from "antd";
+import { App as AntdApp } from "antd";
 import type { ReactElement, ReactNode } from "react";
 
 vi.mock("@/lib/api", async () => {
@@ -14,32 +14,8 @@ vi.mock("@/lib/api", async () => {
 import { useTemplateModals } from "../useTemplateModals";
 import { createApiMock } from "@/test/utils/createApiMock";
 
-function HookWrapper() {
-  const { result } = useTemplateModalsTest();
-  return (
-    <span data-testid="state">
-      {JSON.stringify({
-        editing: result.editingTemplate,
-        editVisible: result.editModalVisible,
-        previewVisible: result.previewVisible,
-        previewContent: result.previewContent,
-      })}
-    </span>
-  );
-}
-
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
-}
-
-interface UseTemplateModalsTestHook {
-  result: ReturnType<typeof useTemplateModals>;
-}
-
-// Re-export hook for direct testing via wrapper that passes an App
-function useTemplateModalsTest(): UseTemplateModalsTestHook {
-  const r = useTemplateModals();
-  return { result: r };
 }
 
 describe("useTemplateModals", () => {

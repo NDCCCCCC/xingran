@@ -2,7 +2,7 @@
  * Phase 88 Batch179 — pages/monitor/job/columns/jobLogColumns 测试
  */
 import { describe, it, expect } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { App as AntdApp, Table } from "antd";
 import type { ReactElement, ReactNode } from "react";
 

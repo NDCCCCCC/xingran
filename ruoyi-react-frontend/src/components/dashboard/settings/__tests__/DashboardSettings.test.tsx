@@ -93,7 +93,7 @@ describe("DashboardSettings", () => {
 
   it("点击 保存 + 校验通过 → 调用 updateDashboard + onClose", async () => {
     const onClose = vi.fn();
-    const { baseElement, getByText } = render(<DashboardSettings visible onClose={onClose} />, {
+    const { baseElement: _baseElement, getByText } = render(<DashboardSettings visible onClose={onClose} />, {
       wrapper,
     });
     await act(async () => {});
@@ -106,7 +106,7 @@ describe("DashboardSettings", () => {
 
   it("点击 取消 → onClose + resetFields", async () => {
     const onClose = vi.fn();
-    const { baseElement, getByText } = render(<DashboardSettings visible onClose={onClose} />, {
+    const { baseElement: _baseElement, getByText } = render(<DashboardSettings visible onClose={onClose} />, {
       wrapper,
     });
     await act(async () => {});

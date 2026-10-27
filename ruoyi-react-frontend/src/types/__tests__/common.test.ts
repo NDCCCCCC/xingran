@@ -61,12 +61,12 @@ describe("types/common", () => {
   });
 
   it("SuccessCallback 编译", () => {
-    const cb: SuccessCallback<string> = (data) => {};
+    const cb: SuccessCallback<string> = (_data) => {};
     expect(typeof cb).toBe("function");
   });
 
   it("ErrorCallback 编译", () => {
-    const cb: ErrorCallback = (error) => {};
+    const cb: ErrorCallback = (_error) => {};
     expect(typeof cb).toBe("function");
   });
 });

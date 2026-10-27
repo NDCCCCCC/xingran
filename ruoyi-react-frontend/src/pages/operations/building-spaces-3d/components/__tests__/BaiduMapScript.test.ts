@@ -1,7 +1,7 @@
 /**
  * Phase 88 Batch98 — BaiduMapScript 测试(36 stmts, 0% → 高)
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   loadBaiduMapGLScript,
   loadBaiduMapScript,

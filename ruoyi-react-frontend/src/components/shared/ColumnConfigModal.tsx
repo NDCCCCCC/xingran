@@ -133,7 +133,6 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
 
   // 处理重置
   const handleReset = () => {
-    // eslint-disable-next-line no-restricted-syntax -- 非删除语义：重置列配置为可逆的个人设置复位，UI-SPEC §1.1 判定规则排除
     Modal.confirm({
       title: "确认重置",
       content: "确定要重置列配置吗？此操作将清除您的个人设置。",

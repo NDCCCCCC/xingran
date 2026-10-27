@@ -2,7 +2,7 @@
  * Phase 88 Batch146 — components/network/port-write/PortBindingModal 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement, ReactNode } from "react";

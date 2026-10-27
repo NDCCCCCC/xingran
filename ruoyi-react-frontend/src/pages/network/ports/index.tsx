@@ -10,7 +10,6 @@ import {
   Col,
   Statistic,
   App,
-  Modal,
   Empty,
   Skeleton,
   Typography,

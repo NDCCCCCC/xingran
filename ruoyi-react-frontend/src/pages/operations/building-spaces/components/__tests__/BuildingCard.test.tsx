@@ -42,7 +42,7 @@ describe("operations/building-spaces/components/BuildingCard", () => {
   });
 
   it("无 address → 不渲染 address 行", () => {
-    const { address, ...rest } = baseBuilding;
+    const { address: _address, ...rest } = baseBuilding;
     render(<BuildingCard building={rest} onClick={vi.fn()} />);
     expect(screen.queryByText(/北京海淀/)).toBeNull();
   });

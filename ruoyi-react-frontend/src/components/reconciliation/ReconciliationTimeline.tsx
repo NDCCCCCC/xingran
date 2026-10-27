@@ -16,7 +16,6 @@
  */
 import React from "react";
 import { Timeline, Skeleton, Empty, Tag } from "antd";
-import dayjs from "dayjs";
 import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { HealthBadge } from "./HealthBadge";
 

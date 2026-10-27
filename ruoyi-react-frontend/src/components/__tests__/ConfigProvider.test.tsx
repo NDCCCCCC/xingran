@@ -2,8 +2,8 @@
  * Phase 88 Batch321 — components/ConfigProvider 测试
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, act } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { render } from "@testing-library/react";
+import type {  } from "react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -18,7 +18,7 @@ const mockSettingsState: any = {
 };
 const mockThemeSync = vi.fn();
 const mockLayoutSync = vi.fn();
-const mockUpdateLayout = vi.fn();
+const _mockUpdateLayout = vi.fn();
 
 vi.mock("@/store/authStore", () => ({
   // 兼容 selector 调用（useAuthStore(s => s.isAuthenticated)）与无参调用两种形态

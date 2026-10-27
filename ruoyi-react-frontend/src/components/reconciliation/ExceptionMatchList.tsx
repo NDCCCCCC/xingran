@@ -17,7 +17,6 @@
  */
 import React, { useCallback } from "react";
 import { List, Tag, Empty, Spin, Button, Space } from "antd";
-import dayjs from "dayjs";
 import { formatDate } from "@/utils/datetime";
 
 export interface ExceptionRuleItem {

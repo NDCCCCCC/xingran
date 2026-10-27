@@ -1,7 +1,7 @@
 /**
  * Phase 88 Batch425 — FloorPlanEditor.hooks 测试
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 describe("FloorPlanEditor.hooks", () => {
   it("导出 hook 函数", async () => {

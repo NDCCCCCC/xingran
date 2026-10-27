@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import DedicatedLines from "../index";
-import { dedicatedLineApi, serverRoomApi } from "@/lib/opsApi";
+import { dedicatedLineApi } from "@/lib/opsApi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as fs from "fs";
 import * as path from "path";

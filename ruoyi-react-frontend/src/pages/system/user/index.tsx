@@ -306,7 +306,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
 // ==================== 主组件 ====================
 
 const UserManagement: FC = () => {
-  const { message } = App.useApp();
+  const { message: _message } = App.useApp();
   // 自定义状态
   const location = useLocation();
   const [selectedDeptId, setSelectedDeptId] = usePersistedStateController<string>({

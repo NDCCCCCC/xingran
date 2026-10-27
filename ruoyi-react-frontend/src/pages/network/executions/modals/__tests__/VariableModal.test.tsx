@@ -2,7 +2,7 @@
  * Phase 88 Batch191 — pages/network/executions/modals/VariableModal 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { App as AntdApp, Form } from "antd";
 import type { ReactElement, ReactNode } from "react";
 

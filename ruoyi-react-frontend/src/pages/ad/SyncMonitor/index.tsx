@@ -7,8 +7,7 @@ import {
   Statistic,
   Button,
   Table,
-  Tag,
-  Progress
+  Tag
 } from 'antd';
 import { ReloadOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { post } from '@/lib/api';

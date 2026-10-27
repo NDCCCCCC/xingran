@@ -29,8 +29,8 @@ vi.mock("@/hooks/useDeptTree", () => ({
 
 import { Form } from "antd";
 import type { FormInstance } from "antd";
-import type { ReactElement } from "react";
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import type {  } from "react";
+import { act, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import ReconciliationTab, {
   MISMATCH_TYPE_META,

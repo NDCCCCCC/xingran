@@ -4,12 +4,10 @@
  */
 
 import type { UploadFile } from "antd";
-import type { UploadProps } from "antd";
+import type {  } from "antd";
 import type {
   CaptchaBackground,
-  PieceShape,
-  DifficultyLevel,
-} from "@/types/captcha";
+  } from "@/types/captcha";
 
 // 统计数据
 export interface CaptchaStatistics {

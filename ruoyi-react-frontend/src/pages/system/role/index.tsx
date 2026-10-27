@@ -150,14 +150,14 @@ const RoleManagement: FC = () => {
     }
 
     loadingDeptsRef.current.add(roleId);
-    console.log("[loadRoleDepts] 开始加载角色部门权限:", roleId);
+    console.warn("[loadRoleDepts] 开始加载角色部门权限:", roleId);
 
     try {
       const result = (await post(`/system/departments/role-dept-tree-select/${roleId}`)) as {
         data: { checkedKeys: string[] };
       };
       const checkedKeys = result.data.checkedKeys || [];
-      console.log("[loadRoleDepts] 加载完成，权限数量:", checkedKeys.length, "roleId:", roleId);
+      console.warn("[loadRoleDepts] 加载完成，权限数量:", checkedKeys.length, "roleId:", roleId);
       return checkedKeys;
     } catch (error) {
       console.error("[loadRoleDepts] 加载失败:", error);

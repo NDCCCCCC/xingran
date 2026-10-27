@@ -2,7 +2,7 @@
  * Phase 88 Batch142 — components/shared/NetworkExport 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent, waitFor } from "@testing-library/react";
+import { render, fireEvent } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import type { ReactElement, ReactNode } from "react";
 

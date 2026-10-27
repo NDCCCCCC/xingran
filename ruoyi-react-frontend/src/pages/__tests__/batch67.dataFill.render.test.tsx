@@ -13,7 +13,7 @@ vi.mock("@/lib/api", async () => {
 import { renderPageWithEndpoints } from "@/test/utils/renderPage";
 import MACHistoryPage from "../network/mac/history/MACHistoryPage";
 import PortStatusPage from "../network/ports";
-import UserManagement from "../system/user";
+import "../system/user";
 // ExecutionDetailModal 需要 modalState,跳过
 
 async function renderWithRows(

@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import InfoPointPage from "../index";
-import { infoPointApi, workstationApi, buildingApi, floorApi } from "@/lib/opsApi";
+import { infoPointApi } from "@/lib/opsApi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/lib/api", async () => {

@@ -116,7 +116,7 @@ describe("BuildingModal", () => {
 
   it("Modal 取消 → 调用 onClose + 重置状态", async () => {
     const onClose = vi.fn();
-    const { baseElement, getByText } = render(
+    const { baseElement, getByText: _getByText } = render(
       <BuildingModal building={building} visible onClose={onClose} />,
       { wrapper }
     );

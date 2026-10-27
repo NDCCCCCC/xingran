@@ -34,7 +34,7 @@ export function WorkstationFloorPlanView({
   selectedFloorForPlan,
   floorOptions,
   floorPlanWorkstations,
-  allWorkstations,
+  allWorkstations: _allWorkstations,
   onFloorChange,
   onPositionUpdate,
   onEdit,

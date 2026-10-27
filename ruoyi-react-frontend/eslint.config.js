@@ -75,8 +75,12 @@ export default [
         },
       ],
 
-      // typescript-eslint 恢复后的存量噪音，降为 warn 不阻塞 CI，后续逐步清理
-      "@typescript-eslint/no-unused-vars": "warn",
+      // typescript-eslint 恢复后的存量噪音，降为 warn 不阻塞 CI，后续逐步清理。
+      // Phase 74（HYG-02）：存量清偿，`_` 前缀 = 有意忽略（参数占位/保留解构）。
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
+      ],
       "@typescript-eslint/no-explicit-any": "warn",
 
       // 通用规则

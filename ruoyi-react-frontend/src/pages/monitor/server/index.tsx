@@ -61,7 +61,7 @@ interface ServerMetrics {
 }
 
 const ServerMonitor: FC = () => {
-  const { message } = App.useApp();
+  const { message: _message } = App.useApp();
   const [servers, setServers] = useState<ServerInfo[]>([]);
   // FIX-04b: 列表加载失败的可重试错误
   const [serverError, setServerError] = useState<unknown>(null);

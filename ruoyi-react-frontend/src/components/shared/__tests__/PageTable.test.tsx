@@ -397,7 +397,7 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
         request={request}
         columns={columns2}
         rowKey="id"
-        searchChildren={(form) => (
+        searchChildren={(_form) => (
           <Form.Item name="deptId" label="部门">
             <input data-testid="dept-input" />
           </Form.Item>

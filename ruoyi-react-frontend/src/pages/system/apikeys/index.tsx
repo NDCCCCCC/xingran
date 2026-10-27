@@ -197,8 +197,7 @@ const APIKeyManagement: FC = () => {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-  }, [queryParams]);
+  }, [queryParams, message]);
 
   /**
    * 初始化加载数据
@@ -307,7 +306,6 @@ const APIKeyManagement: FC = () => {
       await deleteAPIKey(id);
       fetchData();
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchData]
   );
 

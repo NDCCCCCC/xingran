@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { App, Form } from "antd";
+import { App } from "antd";
 import { ConfigProvider } from "antd";
 
 vi.mock("@/lib/api", async () => {

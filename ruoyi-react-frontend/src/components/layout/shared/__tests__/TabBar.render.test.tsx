@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
-import { useTabsStore, useTabs } from "@/store/tabsStore";
+import { useTabsStore } from "@/store/tabsStore";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");

@@ -7,7 +7,7 @@
  * D-05: setState(initialState) reset;T-83-04-02 fake timers 验证无隐藏异步突变。
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useTabsStore, useTabs } from "./tabsStore";
+import { useTabsStore } from "./tabsStore";
 import type { TabItem } from "@/types/layout";
 
 const tab = (key: string, overrides: Partial<TabItem> = {}): TabItem => ({

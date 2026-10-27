@@ -42,7 +42,7 @@ export interface UseLogDataReturn {
 
 export function useLogData(params: UseLogDataParams): UseLogDataReturn {
   const { searchForm, loginSearchForm, current, pageSize } = params;
-  const { message } = App.useApp();
+  const { message: _message } = App.useApp();
 
   const [operLogs, setOperLogs] = useState<OperLog[]>([]);
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);

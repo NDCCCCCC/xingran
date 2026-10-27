@@ -9,8 +9,8 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { App, notification, Badge, Tooltip, Spin, Alert, Result, Button, Empty } from "antd";
-import { WifiOutlined, DisconnectOutlined, ReloadOutlined, SyncOutlined, WarningOutlined, ReloadOutlined as RefreshIcon } from "@ant-design/icons";
-import { useDashboardStore, widgetDataCache } from "@/store/dashboardStore";
+import { WifiOutlined, DisconnectOutlined, SyncOutlined, WarningOutlined, ReloadOutlined as RefreshIcon } from "@ant-design/icons";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { useWidgetPolling } from "@/hooks/useWidgetPolling";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -49,8 +49,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 		setWsStatus,
 		setIsRefreshing,
 		updateWidgetData,
-		wsStatus,
-		isRefreshing,
+		wsStatus: _wsStatus,
+		isRefreshing: _isRefreshing,
 	} = useDashboardStore();
 
 	// 内部状态
@@ -65,7 +65,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	}, [dashboard]);
 
 	// 轮询数据刷新
-	const { loading, refresh, isPaused, pause, resume } = useWidgetPolling({
+	const { loading, refresh, isPaused, pause: _pause, resume: _resume } = useWidgetPolling({
 		widgetIds,
 		interval: dashboard?.refreshInterval || 300,
 		enabled: isOnline && viewMode === "view" && !readonly,
@@ -194,7 +194,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	};
 
 	// 布局变更处理
-	const handleLayoutChange = useCallback((layouts: Array<{ id: string; position: unknown }>) => {
+	const handleLayoutChange = useCallback((_layouts: Array<{ id: string; position: unknown }>) => {
 		// 布局变更处理
 	}, []);
 

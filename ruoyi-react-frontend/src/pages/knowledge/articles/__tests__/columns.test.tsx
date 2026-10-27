@@ -154,7 +154,7 @@ describe("getArticleColumns", () => {
         createdAt: "2026-01-01",
       },
     ];
-    const { container, getByTestId } = render(
+    const { container, getByTestId: _getByTestId } = render(
       <Table dataSource={dataSource} columns={cols} rowKey="id" />,
       { wrapper }
     );

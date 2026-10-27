@@ -10,7 +10,7 @@
 import { useEffect } from "react";
 import { Drawer, Tabs, Descriptions, Tag, Timeline, Empty, Spin } from "antd";
 import { useQuery } from "@tanstack/react-query";
-import { fixSuggestionApi, type FixSuggestionListItem, type FixStatus } from "@/lib/assetApi";
+import { fixSuggestionApi, type FixSuggestionListItem } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { FIX_STATUS_TAG_CONFIG } from "@/constants/status";
 

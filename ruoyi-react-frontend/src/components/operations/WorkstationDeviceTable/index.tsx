@@ -674,7 +674,6 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
               },
             ]}
           >
-            {/* eslint-disable-next-line no-restricted-syntax -- placeholder hint, not an actual server URL */}
             <AppInput placeholder="请输入IP地址（可选，如 192.168.1.10）" />
           </Form.Item>
         </Form>

@@ -57,7 +57,7 @@ describe("BUGFIX-03 — CADFloorPlanEditor stale closure", () => {
     const src = readSource();
     // Find the text drawing snap block
     const textPattern = /setTextInputPosition[\s\S]*?prev\.snapToGrid/;
-    const match = src.match(textPattern);
+    const _match = src.match(textPattern);
     // This verifies the text drawing mode also uses prev (if it exists)
     // The text drawing block should use prev in the updater context
     // We'll check that floorPlanData.snapToGrid is not used for text snapping in updater

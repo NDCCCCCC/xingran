@@ -1,7 +1,7 @@
 /**
  * Phase 88 Batch424 — CronSelector/fields 测试
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import SecondField from "../SecondField";

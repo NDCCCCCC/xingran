@@ -9,7 +9,7 @@ import { useDashboardStore } from "@/store/dashboardStore";
 import type { WidgetConfig, WebSocketDataSourceConfig, DataSourceConfig } from "@/types/dashboard";
 
 // 类型守卫：检查 dataSource 是否有直接的 type 属性
-function hasDataSourceType(ds: DataSourceConfig): ds is WebSocketDataSourceConfig {
+function _hasDataSourceType(ds: DataSourceConfig): ds is WebSocketDataSourceConfig {
 	return "type" in ds && (ds as { type: string }).type === "websocket";
 }
 

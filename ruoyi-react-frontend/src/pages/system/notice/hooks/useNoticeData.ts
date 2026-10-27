@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { App, Modal } from "antd";
-import { handleApiError } from "@/utils/errorHandler";
+import { App } from "antd";
+import {  } from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   getNoticeList,

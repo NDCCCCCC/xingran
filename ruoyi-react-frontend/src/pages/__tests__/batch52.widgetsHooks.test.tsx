@@ -5,9 +5,9 @@
  * useLogData(33,0%) renderHook — useWidgetData 走真实 hook(mock 端点)。
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ConfigProvider, App } from "antd";
+import { waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import {  } from "antd";
 import type { ReactElement } from "react";
 
 vi.mock("@/lib/api", async () => {
@@ -20,7 +20,7 @@ import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import { ChartWidget } from "@/components/dashboard/widgets/types/ChartWidget";
 import { ListWidget } from "@/components/dashboard/widgets/types/ListWidget";
 import { MetricWidget } from "@/components/dashboard/widgets/types/MetricWidget";
-import { useLogData } from "../monitor/logs/hooks/useLogData";
+import {  } from "../monitor/logs/hooks/useLogData";
 import type { WidgetConfig } from "@/types/dashboard";
 
 beforeEach(() => {

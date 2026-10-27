@@ -10,7 +10,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-import { get } from "@/test/utils/createApiMock";
+import {  } from "@/test/utils/createApiMock";
 import PostManagement from "../index";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 

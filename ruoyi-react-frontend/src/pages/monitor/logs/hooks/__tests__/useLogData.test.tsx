@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 import { useLogData, type UseLogDataParams } from "../useLogData";
-import { createApiMock, resetApiMocks } from "@/test/utils/createApiMock";
+import { createApiMock } from "@/test/utils/createApiMock";
 
 function wrapper({ children }: { children: React.ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;

@@ -3,7 +3,7 @@
  * BUNDLE-02: Verifies getIconComponent works via static registry (fake dynamic import removed)
  */
 
-import { render, screen } from "@testing-library/react";
+import {  } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
   getIconComponent,

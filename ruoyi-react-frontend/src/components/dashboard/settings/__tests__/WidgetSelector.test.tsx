@@ -93,7 +93,7 @@ describe("WidgetSelector", () => {
 
   it("handleConfirm + 校验通过 → 调用 onSelect", async () => {
     const onSelect = vi.fn();
-    const { baseElement, getByText } = render(
+    const { baseElement: _baseElement, getByText } = render(
       <WidgetSelector visible onClose={vi.fn()} onSelect={onSelect} />,
       { wrapper }
     );

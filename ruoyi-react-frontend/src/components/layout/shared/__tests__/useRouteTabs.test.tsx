@@ -2,7 +2,7 @@
  * Phase 88 Batch369 — components/layout/shared/useRouteTabs 测试
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement, ReactNode } from "react";
 
