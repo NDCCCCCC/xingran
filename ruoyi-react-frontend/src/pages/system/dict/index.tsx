@@ -12,8 +12,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Card,
   Row,
   Col,
@@ -33,6 +31,9 @@ import {
   StopOutlined,
   LinkOutlined,
 } from "@ant-design/icons";
+// Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。状态枚举与字典类型选择均为
+// children 形态 → 改写 options 形态；状态类业务下拉显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import type { TableProps } from "antd";
 import { formatDateTime } from "@/utils/datetime";
@@ -49,9 +50,6 @@ import { createSorterMeta } from "@/utils/tableHelpers";
 // 导入提取的模块
 import { STATUS_OPTIONS, renderStatusTag } from "./constants";
 import { useDictData, useDictActions } from "./hooks";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 // ==================== 表格列定义 ====================
 
@@ -551,35 +549,30 @@ const DictManagement: FC = () => {
                   >
                     <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item name="dictName" label="字典名称">
-                        <Input
+                        <AppInput
                           placeholder="请输入字典名称"
-                          allowClear
                           className="user-form-input"
                           style={{ width: 150 }}
                         />
                       </Form.Item>
                       <Form.Item name="dictType" label="字典类型">
-                        <Input
+                        <AppInput
                           placeholder="请输入字典类型"
-                          allowClear
                           className="user-form-input"
                           style={{ width: 150 }}
                         />
                       </Form.Item>
                       <Form.Item name="status" label="状态">
-                        <Select
+                        {/* 形态分类器②④：字典状态枚举（业务禁搜） */}
+                        <AppSelect
                           placeholder="请选择状态"
                           allowClear
                           className="user-form-input"
                           style={{ width: 120 }}
                           onSearch={() => {}}
-                        >
-                          {STATUS_OPTIONS.map((opt) => (
-                            <Option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </Option>
-                          ))}
-                        </Select>
+                          showSearch={false}
+                          options={STATUS_OPTIONS}
+                        />
                       </Form.Item>
                       <Form.Item>
                         <Space>
@@ -719,44 +712,39 @@ const DictManagement: FC = () => {
                   >
                     <Form form={dataSearchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item label="字典类型">
-                        <Select allowClear
+                        {/* 形态分类器③：动态 children → options 改写；label 真实存在（字典名称） */}
+                        <AppSelect
+                          allowClear
                           placeholder="请选择字典类型"
                           value={selectedType}
-                          onChange={setSelectedType}
+                          // 清空回落到空串（hook 内 selectedType 为 string，初值 ""）——
+                          // 语义等同「未选择字典类型」，不引入 undefined 分支
+                          onChange={(value) => setSelectedType((value as string) ?? "")}
                           style={{ width: 200 }}
                           onSearch={() => {}}
-                        >
-                          {dictTypes
+                          options={dictTypes
                             .filter((t) => t.status === 0)
-                            .map((t) => (
-                              <Option key={t.id} value={t.dictType}>
-                                {t.dictName}
-                              </Option>
-                            ))}
-                        </Select>
+                            .map((t) => ({ value: t.dictType, label: t.dictName }))}
+                        />
                       </Form.Item>
                       <Form.Item name="dictLabel" label="字典标签">
-                        <Input
+                        <AppInput
                           placeholder="请输入字典标签"
-                          allowClear
                           className="user-form-input"
                           style={{ width: 150 }}
                         />
                       </Form.Item>
                       <Form.Item name="status" label="状态">
-                        <Select
+                        {/* 形态分类器②④：字典状态枚举（业务禁搜） */}
+                        <AppSelect
                           placeholder="请选择状态"
                           allowClear
                           className="user-form-input"
                           style={{ width: 120 }}
                           onSearch={() => {}}
-                        >
-                          {STATUS_OPTIONS.map((opt) => (
-                            <Option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </Option>
-                          ))}
-                        </Select>
+                          showSearch={false}
+                          options={STATUS_OPTIONS}
+                        />
                       </Form.Item>
                       <Form.Item>
                         <Space>
@@ -870,30 +858,30 @@ const DictManagement: FC = () => {
             label="字典名称"
             rules={[{ required: true, message: "请输入字典名称" }]}
           >
-            <Input allowClear placeholder="请输入字典名称" className="user-form-input" />
+            <AppInput placeholder="请输入字典名称" className="user-form-input" />
           </Form.Item>
           <Form.Item
             name="dictType"
             label="字典类型"
             rules={[{ required: true, message: "请输入字典类型" }]}
           >
-            <Input allowClear
+            <AppInput
               placeholder="请输入字典类型"
               disabled={!!editingType}
               className="user-form-input"
             />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select allowClear className="user-form-input" onSearch={() => {}}>
-              {STATUS_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            <AppSelect
+              allowClear
+              className="user-form-input"
+              onSearch={() => {}}
+              showSearch={false}
+              options={STATUS_OPTIONS}
+            />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>
@@ -931,35 +919,35 @@ const DictManagement: FC = () => {
             label="字典标签"
             rules={[{ required: true, message: "请输入字典标签" }]}
           >
-            <Input allowClear placeholder="请输入字典标签" className="user-form-input" />
+            <AppInput placeholder="请输入字典标签" className="user-form-input" />
           </Form.Item>
           <Form.Item
             name="dictValue"
             label="字典键值"
             rules={[{ required: true, message: "请输入字典键值" }]}
           >
-            <Input allowClear placeholder="请输入字典键值" className="user-form-input" />
+            <AppInput placeholder="请输入字典键值" className="user-form-input" />
           </Form.Item>
           <Form.Item name="cssClass" label="CSS类名">
-            <Input allowClear placeholder="请输入CSS类名" className="user-form-input" />
+            <AppInput placeholder="请输入CSS类名" className="user-form-input" />
           </Form.Item>
           <Form.Item name="listClass" label="列表类名">
-            <Input allowClear placeholder="请输入列表类名" className="user-form-input" />
+            <AppInput placeholder="请输入列表类名" className="user-form-input" />
           </Form.Item>
           <Form.Item name="isDefault" label="是否默认" valuePropName="checked">
             <Switch checkedChildren="是" unCheckedChildren="否" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select allowClear className="user-form-input" onSearch={() => {}}>
-              {STATUS_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            <AppSelect
+              allowClear
+              className="user-form-input"
+              onSearch={() => {}}
+              showSearch={false}
+              options={STATUS_OPTIONS}
+            />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>

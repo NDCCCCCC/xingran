@@ -12,13 +12,18 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Switch,
   Layout,
   Alert,
   Card,
   App,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select → 契约组件。
+// 跳过项：<Input.Password>（成员表达式）不在本波 selector 命中面，保留 antd Input 导入。
+// Select 形态：状态/性别为固定枚举（children → options + 禁搜）；角色多选为 children 带
+// label（→ options 形态）；职位下拉 options 无 label 字段且显式 optionFilterProp="value"，
+// 该显式值经 AppSelect 的 {...rest} 覆盖默认 "label"，行为不变。
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -48,7 +53,6 @@ import { formatGender } from "./utils.tsx";
 import { useUserData } from "./hooks/useUserData";
 import { useUserModals } from "./hooks/useUserModals";
 
-const { Option } = Select;
 const { Sider, Content } = Layout;
 
 // 模块级稳定空数组 — 给 DeptTree.selectedKeys 在"未选部门"时复用，
@@ -714,21 +718,21 @@ const UserManagement: FC = () => {
               >
                 <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                   <Form.Item name="username" label="用户名">
-                    <Input allowClear placeholder="用户名 / 昵称 / 手机号" />
+                    <AppInput placeholder="用户名 / 昵称 / 手机号" />
                   </Form.Item>
                   <Form.Item name="status" label="状态">
-                    <Select
+                    {/* 形态分类器②④：用户状态枚举（业务禁搜）。注意原值经 String() 转换 */}
+                    <AppSelect
                       placeholder="全部状态"
                       style={{ width: 140 }}
                       allowClear
                       onSearch={() => {}}
-                    >
-                      {STATUS_OPTIONS.map((opt) => (
-                        <Option key={opt.value} value={String(opt.value)}>
-                          {opt.label}
-                        </Option>
-                      ))}
-                    </Select>
+                      showSearch={false}
+                      options={STATUS_OPTIONS.map((opt) => ({
+                        value: String(opt.value),
+                        label: opt.label,
+                      }))}
+                    />
                   </Form.Item>
                   <Form.Item>
                     <Space>
@@ -841,7 +845,7 @@ const UserManagement: FC = () => {
               label="用户名"
               rules={[{ required: true, message: "请输入用户名" }]}
             >
-              <Input allowClear disabled={!!editingUser} className="user-form-input" />
+              <AppInput disabled={!!editingUser} className="user-form-input" />
             </Form.Item>
             {!editingUser && (
               <Form.Item
@@ -857,23 +861,25 @@ const UserManagement: FC = () => {
               label="昵称"
               rules={[{ required: true, message: "请输入昵称" }]}
             >
-              <Input allowClear className="user-form-input" />
+              <AppInput className="user-form-input" />
             </Form.Item>
             <Form.Item name="employeeNo" label="工号">
-              <Input allowClear placeholder="请输入工号" className="user-form-input" />
+              <AppInput placeholder="请输入工号" className="user-form-input" />
             </Form.Item>
             <Form.Item name="email" label="邮箱">
-              <Input allowClear className="user-form-input" />
+              <AppInput className="user-form-input" />
             </Form.Item>
             <Form.Item name="phone" label="联系电话">
-              <Input allowClear className="user-form-input" />
+              <AppInput className="user-form-input" />
             </Form.Item>
             {/* mobile / title 为后端新增字段：手机号与职位（AD 同步写入） */}
             <Form.Item name="mobile" label="手机号">
-              <Input allowClear placeholder="请输入手机号" className="user-form-input" />
+              <AppInput placeholder="请输入手机号" className="user-form-input" />
             </Form.Item>
             <Form.Item name="title" label="职位">
-              <Select
+              {/* 形态分类器③：options 仅有 value 无 label → 显式 optionFilterProp="value"
+                  （AppSelect 的 {...rest} 展开在后，覆盖其默认 "label"，过滤行为与迁移前一致） */}
+              <AppSelect
                 className="user-form-input"
                 showSearch
                 allowClear
@@ -883,25 +889,29 @@ const UserManagement: FC = () => {
               />
             </Form.Item>
             <Form.Item name="gender" label="性别" initialValue={2}>
-              <Select allowClear className="user-form-input" onSearch={() => {}}>
-                {genderDict.length > 0
-                  ? genderDict.map((d) => (
-                      <Option key={d.dictValue} value={Number(d.dictValue)}>
-                        {d.dictLabel}
-                      </Option>
-                    ))
-                  : GENDER_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
-              </Select>
+              {/* 形态分类器②③④：性别枚举（业务禁搜）。字典优先、常量兜底的取值逻辑原样保留 */}
+              <AppSelect
+                allowClear
+                className="user-form-input"
+                onSearch={() => {}}
+                showSearch={false}
+                options={
+                  genderDict.length > 0
+                    ? genderDict.map((d) => ({
+                        value: Number(d.dictValue),
+                        label: d.dictLabel,
+                      }))
+                    : GENDER_OPTIONS
+                }
+              />
             </Form.Item>
             <Form.Item name="deptId" label="部门">
               <DepartmentTreeSelect departments={departments} className="user-form-input" />
             </Form.Item>
             <Form.Item name="roleIds" label="角色">
-              <Select
+              {/* 形态分类器③：children 带 label → options 形态（label 真实存在，
+                  与原显式 optionFilterProp="label" 同构）；多选需搜索，显式 showSearch */}
+              <AppSelect
                 mode="multiple"
                 placeholder="请选择角色"
                 allowClear
@@ -909,22 +919,17 @@ const UserManagement: FC = () => {
                 showSearch
                 className="user-form-input"
                 onSearch={() => {}}
-              >
-                {roles.map((role) => (
-                  <Option key={role.id} value={role.id} label={role.roleName}>
-                    {role.roleName}
-                  </Option>
-                ))}
-              </Select>
+                options={roles.map((role) => ({ value: role.id, label: role.roleName }))}
+              />
             </Form.Item>
             <Form.Item name="status" label="状态" initialValue={0}>
-              <Select allowClear className="user-form-input" onSearch={() => {}}>
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+              <AppSelect
+                allowClear
+                className="user-form-input"
+                onSearch={() => {}}
+                showSearch={false}
+                options={STATUS_OPTIONS}
+              />
             </Form.Item>
           </Form>
         </Modal>

@@ -6,14 +6,17 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Upload,
   Image,
   Card,
   Pagination,
   Spin,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。全部 Select 均为固定枚举
+// （形状/难度/状态）→ children 改写 options 形态；状态类业务下拉显式 showSearch={false}。
+// 注：原 Select<PieceShape|undefined> 等泛型参数因 ComponentProps 擦除泛型而移除，
+// onChange 值以 as 收敛回业务类型（与 W1 settings 同法）。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { UploadFile, UploadProps } from "antd/es/upload";
 import { UploadOutlined, PictureOutlined } from "@ant-design/icons";
 import type {
@@ -29,8 +32,18 @@ import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 
-const { Option } = Select;
-const { TextArea } = Input;
+// 难度级别枚举（形态分类器产物：children <Option> → options）
+const DIFFICULTY_LEVEL_OPTIONS = [
+  { value: 1, label: "简单" },
+  { value: 2, label: "中等" },
+  { value: 3, label: "困难" },
+];
+
+// 启停状态枚举（形态分类器产物：children <Option> → options）
+const STATUS_ENUM_OPTIONS = [
+  { value: 1, label: "启用" },
+  { value: 0, label: "禁用" },
+];
 
 // 拼图形状映射
 const PIECE_SHAPE_MAP: Record<PieceShape, string> = {
@@ -326,9 +339,10 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           }}
         >
           <Space wrap size={8}>
-            <Input
+            {/* 搜索框：清空走 onChange 内的显式 "" 分支（既有关键字清空即重查逻辑原样保留），
+                onPressEnter 仅在回车时触发筛选 */}
+            <AppInput
               placeholder="搜索文件名"
-              allowClear
               value={fileNameInput}
               onChange={(e) => {
                 setFileNameInput(e.target.value);
@@ -343,26 +357,28 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               }}
               style={{ width: 180 }}
             />
-            <Select<PieceShape | undefined>
+            <AppSelect
               placeholder="拼图形状"
               allowClear
               value={shapeFilter}
               onChange={(value) => {
-                setShapeFilter(value);
+                setShapeFilter(value as PieceShape | undefined);
                 setCurrent(1);
               }}
               options={SHAPE_OPTIONS}
               onSearch={() => {}}
+              showSearch={false}
               style={{ width: 110 }}
             />
-            <Select<DifficultyLevel | undefined>
+            <AppSelect
               placeholder="难度"
               allowClear
               value={difficultyFilter}
               onChange={(value) => {
-                setDifficultyFilter(value);
+                setDifficultyFilter(value as DifficultyLevel | undefined);
                 setCurrent(1);
               }}
+              showSearch={false}
               options={[
                 { value: 1, label: "简单" },
                 { value: 2, label: "中等" },
@@ -371,14 +387,15 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               onSearch={() => {}}
               style={{ width: 100 }}
             />
-            <Select<CaptchaBackgroundStatus | undefined>
+            <AppSelect
               placeholder="状态"
               allowClear
               value={statusFilter}
               onChange={(value) => {
-                setStatusFilter(value);
+                setStatusFilter(value as CaptchaBackgroundStatus | undefined);
                 setCurrent(1);
               }}
+              showSearch={false}
               options={[
                 { value: 1, label: "启用" },
                 { value: 0, label: "禁用" },
@@ -510,36 +527,38 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             label="拼图形状"
             rules={[{ required: true, message: "请选择拼图形状" }]}
           >
-            <Select allowClear onSearch={() => {}}>
-              {SHAPE_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            <AppSelect
+              allowClear
+              onSearch={() => {}}
+              showSearch={false}
+              options={[...SHAPE_OPTIONS]}
+            />
           </Form.Item>
           <Form.Item
             name="difficultyLevel"
             label="难度级别"
             rules={[{ required: true, message: "请选择难度" }]}
           >
-            <Select allowClear onSearch={() => {}}>
-              <Option value={1}>简单</Option>
-              <Option value={2}>中等</Option>
-              <Option value={3}>困难</Option>
-            </Select>
+            <AppSelect
+              allowClear
+              onSearch={() => {}}
+              showSearch={false}
+              options={DIFFICULTY_LEVEL_OPTIONS}
+            />
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
-            <Select allowClear mode="multiple" placeholder="不限制则默认使用当前形状" onSearch={() => {}}>
-              {SHAPE_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            {/* mode="multiple"：多选需搜索辅助定位，显式 showSearch */}
+            <AppSelect
+              allowClear
+              mode="multiple"
+              placeholder="不限制则默认使用当前形状"
+              onSearch={() => {}}
+              showSearch
+              options={[...SHAPE_OPTIONS]}
+            />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>
@@ -566,41 +585,45 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       >
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
           <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
-            <Select allowClear onSearch={() => {}}>
-              {SHAPE_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            <AppSelect
+              allowClear
+              onSearch={() => {}}
+              showSearch={false}
+              options={[...SHAPE_OPTIONS]}
+            />
           </Form.Item>
           <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
-            <Select allowClear onSearch={() => {}}>
-              <Option value={1}>简单</Option>
-              <Option value={2}>中等</Option>
-              <Option value={3}>困难</Option>
-            </Select>
+            <AppSelect
+              allowClear
+              onSearch={() => {}}
+              showSearch={false}
+              options={DIFFICULTY_LEVEL_OPTIONS}
+            />
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
-            <Select allowClear mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
-              {SHAPE_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            {/* mode="multiple"：多选需搜索辅助定位，显式 showSearch */}
+            <AppSelect
+              allowClear
+              mode="multiple"
+              placeholder="不限制则使用默认"
+              onSearch={() => {}}
+              showSearch
+              options={[...SHAPE_OPTIONS]}
+            />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select allowClear onSearch={() => {}}>
-              <Option value={1}>启用</Option>
-              <Option value={0}>禁用</Option>
-            </Select>
+            <AppSelect
+              allowClear
+              onSearch={() => {}}
+              showSearch={false}
+              options={STATUS_ENUM_OPTIONS}
+            />
           </Form.Item>
           <Form.Item name="sortOrder" label="排序" rules={[{ required: true }]}>
-            <Input allowClear type="number" placeholder="数字越小优先级越高" />
+            <AppInput type="number" placeholder="数字越小优先级越高" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>

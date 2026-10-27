@@ -10,14 +10,15 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Card,
   Row,
   Col,
   Statistic,
   Tree,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/Input.TextArea → 契约组件。状态/数据范围为固定枚举
+// → children 改写 options 形态；状态类业务下拉显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -35,8 +36,6 @@ import { useRoleData, useRoleActions } from "./hooks";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
-
-const { Option } = Select;
 
 // ==================== 主组件 ====================
 
@@ -278,24 +277,21 @@ const RoleManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="roleName" label="角色名称">
-              <Input allowClear placeholder="请输入角色名称" />
+              <AppInput placeholder="请输入角色名称" />
             </Form.Item>
             <Form.Item name="roleKey" label="权限字符">
-              <Input allowClear placeholder="请输入权限字符" />
+              <AppInput placeholder="请输入权限字符" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              {/* 形态分类器②④：角色状态枚举（业务禁搜） */}
+              <AppSelect
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
                 onSearch={() => {}}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={[...STATUS_OPTIONS]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -370,7 +366,7 @@ const RoleManagement: FC = () => {
                   label="角色名称"
                   rules={[{ required: true, message: "请输入角色名称" }]}
                 >
-                  <Input allowClear />
+                  <AppInput />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -379,7 +375,7 @@ const RoleManagement: FC = () => {
                   label="权限字符"
                   rules={[{ required: true, message: "请输入权限字符" }]}
                 >
-                  <Input allowClear />
+                  <AppInput />
                 </Form.Item>
               </Col>
             </Row>
@@ -390,23 +386,22 @@ const RoleManagement: FC = () => {
                   label="显示顺序"
                   rules={[{ required: true, message: "请输入显示顺序" }]}
                 >
-                  <Input allowClear type="number" />
+                  <AppInput type="number" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="status" label="状态">
-                  <Select allowClear onSearch={() => {}}>
-                    {STATUS_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
-                  </Select>
+                  <AppSelect
+                    allowClear
+                    onSearch={() => {}}
+                    showSearch={false}
+                    options={[...STATUS_OPTIONS]}
+                  />
                 </Form.Item>
               </Col>
             </Row>
             <Form.Item name="remark" label="备注">
-              <Input.TextArea rows={2} />
+              <AppTextArea rows={2} />
             </Form.Item>
           </Card>
 
@@ -445,16 +440,14 @@ const RoleManagement: FC = () => {
             <Col span={12}>
               <Card title="数据权限" size="small">
                 <Form.Item name="dataScope" label="数据范围">
-                  <Select allowClear
-                    onChange={(value) => handleDataScopeChange(value, editForm)}
+                  {/* 形态分类器②④：数据范围固定枚举（业务禁搜） */}
+                  <AppSelect
+                    allowClear
+                    onChange={(value) => handleDataScopeChange(value as number, editForm)}
                     onSearch={() => {}}
-                  >
-                    {DATA_SCOPE_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
-                  </Select>
+                    showSearch={false}
+                    options={[...DATA_SCOPE_OPTIONS]}
+                  />
                 </Form.Item>
 
                 {currentDataScope === 2 && (

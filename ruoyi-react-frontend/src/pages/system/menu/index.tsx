@@ -10,8 +10,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Tag,
   Card,
   Row,
@@ -22,6 +20,9 @@ import {
   TreeSelect,
   Alert,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/Input.TextArea → 契约组件。菜单类型/状态为固定枚举
+// → children 改写 options 形态；状态类业务下拉显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   EditOutlined,
@@ -47,8 +48,6 @@ import {
 } from "./constants";
 import { renderTreeData, renderMenuName } from "./utils";
 import { useMenuData, useMenuActions } from "./hooks";
-
-const { Option } = Select;
 
 // ==================== 表格列定义 ====================
 
@@ -278,21 +277,18 @@ const MenuManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="menuName" label="菜单名称">
-              <Input allowClear placeholder="请输入菜单名称" />
+              <AppInput placeholder="请输入菜单名称" />
             </Form.Item>
             <Form.Item name="status" label="菜单状态">
-              <Select
+              {/* 形态分类器②④：菜单状态枚举（业务禁搜） */}
+              <AppSelect
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
                 onSearch={() => {}}
-              >
-                {MENU_STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={MENU_STATUS_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -402,13 +398,15 @@ const MenuManagement: FC = () => {
                 label="菜单类型"
                 rules={[{ required: true, message: "请选择菜单类型" }]}
               >
-                <Select allowClear placeholder="请选择菜单类型" onSearch={() => {}}>
-                  {MENU_TYPE_OPTIONS.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </Option>
-                  ))}
-                </Select>
+                {/* 形态分类器②④：菜单类型固定 3 项（业务禁搜）。MENU_TYPE_OPTIONS 为 as const
+                    只读元组 → 展开复制以匹配 antd 可变数组类型 */}
+                <AppSelect
+                  allowClear
+                  placeholder="请选择菜单类型"
+                  onSearch={() => {}}
+                  showSearch={false}
+                  options={[...MENU_TYPE_OPTIONS]}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -420,7 +418,7 @@ const MenuManagement: FC = () => {
                 label="菜单名称"
                 rules={[{ required: true, message: "请输入菜单名称" }]}
               >
-                <Input allowClear />
+                <AppInput />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -437,12 +435,12 @@ const MenuManagement: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="path" label="路由地址">
-                <Input allowClear placeholder="请输入路由地址" />
+                <AppInput placeholder="请输入路由地址" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="component" label="组件路径">
-                <Input allowClear placeholder="请输入组件路径" />
+                <AppInput placeholder="请输入组件路径" />
               </Form.Item>
             </Col>
           </Row>
@@ -450,7 +448,7 @@ const MenuManagement: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="perms" label="权限标识">
-                <Input allowClear placeholder="请输入权限标识" />
+                <AppInput placeholder="请输入权限标识" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -479,7 +477,7 @@ const MenuManagement: FC = () => {
           </Row>
 
           <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={4} />
+            <AppTextArea rows={4} />
           </Form.Item>
         </Form>
       </Modal>

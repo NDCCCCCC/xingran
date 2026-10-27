@@ -13,8 +13,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Switch,
   Tag,
   Card,
@@ -23,6 +21,9 @@ import {
   Tooltip,
   Alert,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。状态/作用域为固定枚举
+// → 改写 options 形态；状态类业务下拉显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import {
@@ -48,9 +49,6 @@ import {
 import type { APIKey, CreateAPIKeyRequest, UpdateAPIKeyRequest } from "@/types/apikey";
 import { formatDateTime } from "@/utils/datetime";
 import LogsModal from "./LogsModal";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 // ==================== 常量定义 ====================
 
@@ -636,39 +634,39 @@ const APIKeyManagement: FC = () => {
         <Row gutter={16} justify="space-between" align="middle">
           <Col>
             <Space>
-              <Input
+              {/* 搜索框：清空只改受控值，不触发 onPressEnter（仅回车进搜索） */}
+              <AppInput
                 placeholder="搜索名称或密钥"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
                 onPressEnter={handleSearch}
                 style={{ width: 200 }}
-                allowClear
               />
-              <Select
+              {/* 形态分类器②④：启用/禁用状态类（业务禁搜）。注意 value 为 boolean，
+                  清空后 onChange 收到 undefined → setFilterStatus 为 useState<boolean|undefined>，
+                  后端按「不筛选」处理（已 grep 确认 /system/api-keys/list 对 status 缺省即不过滤） */}
+              <AppSelect
                 placeholder="状态筛选"
                 value={filterStatus}
-                onChange={setFilterStatus}
+                onChange={(value) => setFilterStatus(value as boolean | undefined)}
                 style={{ width: 120 }}
                 allowClear
                 onSearch={() => {}}
-              >
-                <Option value={true}>启用</Option>
-                <Option value={false}>禁用</Option>
-              </Select>
-              <Select
+                showSearch={false}
+                options={[
+                  { value: true, label: "启用" },
+                  { value: false, label: "禁用" },
+                ]}
+              />
+              <AppSelect
                 placeholder="作用域筛选"
                 value={filterScope}
-                onChange={setFilterScope}
+                onChange={(value) => setFilterScope(value as string | undefined)}
                 style={{ width: 120 }}
                 allowClear
                 onSearch={() => {}}
-              >
-                {SCOPE_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                options={SCOPE_OPTIONS}
+              />
               <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                 搜索
               </Button>
@@ -758,7 +756,7 @@ const APIKeyManagement: FC = () => {
               { max: 100, message: "名称长度不能超过100个字符" },
             ]}
           >
-            <Input allowClear placeholder="请输入密钥名称" />
+            <AppInput placeholder="请输入密钥名称" />
           </Form.Item>
 
           <Form.Item
@@ -766,7 +764,7 @@ const APIKeyManagement: FC = () => {
             label="描述"
             rules={[{ max: 500, message: "描述长度不能超过500个字符" }]}
           >
-            <TextArea rows={3} placeholder="请输入描述（可选）" />
+            <AppTextArea rows={3} placeholder="请输入描述（可选）" />
           </Form.Item>
 
           <Form.Item
@@ -774,11 +772,14 @@ const APIKeyManagement: FC = () => {
             label="作用域"
             rules={[{ required: true, message: "请选择作用域" }]}
           >
-            <Select allowClear
+            {/* mode="multiple"：多选需搜索辅助定位，显式 showSearch */}
+            <AppSelect
+              allowClear
               mode="multiple"
               placeholder="请选择作用域"
               options={SCOPE_OPTIONS}
               onSearch={() => {}}
+              showSearch
             />
           </Form.Item>
 
@@ -791,13 +792,15 @@ const APIKeyManagement: FC = () => {
             label="IP 白名单"
             extra="支持单个 IP 或 CIDR 格式，多个用逗号分隔，留空表示不限制"
           >
-            {/* eslint-disable-next-line no-restricted-syntax -- placeholder hint, not an actual server URL */}
-            <Input allowClear placeholder="例如: 192.168.1.100, 10.0.0.0/24" />
+            {/* placeholder 里的内网 IP 只是示例提示，不是真实服务地址。迁移到 AppInput 后
+                该行不再触发 P65 Input selector，原 eslint-disable 成为无用指令 → 已删除
+                （P65 内网 IP selector 的 Literal 命中面不覆盖 JSX 属性字符串，见探测结论） */}
+            <AppInput placeholder="例如: 192.168.1.100, 10.0.0.0/24" />
           </Form.Item>
 
           {modalType === "create" && (
             <Form.Item name="expiresAt" label="过期时间">
-              <Input allowClear type="datetime-local" />
+              <AppInput type="datetime-local" />
             </Form.Item>
           )}
         </Form>
