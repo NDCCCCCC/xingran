@@ -401,29 +401,9 @@ export default [
   {
     files: [
       // __P65_EXEMPTION_FILES__（脚本替换锚点）
-      "src/components/CronSelector/fields/DayField.tsx",
-      "src/components/CronSelector/fields/HourField.tsx",
-      "src/components/CronSelector/fields/MinuteField.tsx",
-      "src/components/CronSelector/fields/MonthField.tsx",
-      "src/components/CronSelector/fields/SecondField.tsx",
-      "src/components/CronSelector/fields/WeekField.tsx",
-      "src/components/CronSelector/index.tsx",
-      "src/components/DeptTree/index.tsx",
-      "src/components/IconSelect/index.tsx",
-      "src/components/TargetSelector.tsx",
-      "src/components/asset/reconciliation/ExceptionRuleForm.tsx",
-      "src/components/asset/reconciliation/MatchTestPanel.tsx",
-      "src/components/cad-editor/CADFloorPlanEditor.tsx",
-      "src/components/cad-editor/CADPropertyPanel.tsx",
-      "src/components/dashboard/settings/DashboardScopeSelector.tsx",
-      "src/components/dashboard/settings/DashboardSettings.tsx",
-      "src/components/dashboard/settings/DataSourceForm.tsx",
-      "src/components/dashboard/settings/DisplayConfigForm.tsx",
-      "src/components/dashboard/settings/EndpointSelector.tsx",
-      "src/components/dashboard/settings/ParamsEditor.tsx",
-      "src/components/dashboard/settings/RefreshIntervalSelector.tsx",
-      "src/components/dashboard/settings/WidgetSelector.tsx",
-      "src/components/dashboard/widgets/WidgetEditor.tsx",
+      // Phase 71 W6 收口：存量豁免已全部清偿（原 58 → 0，duty/ad-domain 由 W5 并行收缩、
+      // 其余 34 条由本波迁移清偿）。占位 glob 永不匹配，块成为无操作，供 gen 脚本锚点使用。
+      "src/__p65_no_exemptions__/**",
     ],
     rules: {
       "no-restricted-syntax": [

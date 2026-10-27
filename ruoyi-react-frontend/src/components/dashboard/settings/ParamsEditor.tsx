@@ -1,11 +1,12 @@
-/**
+﻿/**
  * 参数编辑器组件
  * Params Editor Component
  *
  * 用于编辑API请求参数，支持动态添加/删除参数键值对
  */
 import { useCallback, useEffect } from "react";
-import { Form, Input, Button, Space, Alert, Empty } from "antd";
+import { Form, Button, Space, Alert, Empty } from "antd";
+import { AppInput } from "@/components/ui";
 import { PlusOutlined, MinusCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
 import type { EndpointDetail } from "@/types/dashboard";
@@ -112,7 +113,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
                   rules={[{ required: true, message: "请输入参数名" }]}
                   style={{ marginBottom: 0 }}
                 >
-                  <Input allowClear placeholder="参数名" style={{ width: 150 }} aria-label="参数名" />
+                  <AppInput placeholder="参数名" style={{ width: 150 }} aria-label="参数名" />
                 </Form.Item>
 
                 <Form.Item
@@ -121,7 +122,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
                   rules={[{ required: true, message: "请输入参数值" }]}
                   style={{ marginBottom: 0 }}
                 >
-                  <Input allowClear placeholder="参数值" style={{ width: 200 }} aria-label="参数值" />
+                  <AppInput placeholder="参数值" style={{ width: 200 }} aria-label="参数值" />
                 </Form.Item>
 
                 <MinusCircleOutlined
@@ -153,7 +154,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
       {/* 参数说明 */}
       {endpoint && (
         <div style={{ marginTop: 16, padding: "12px", background: "var(--theme-bg-secondary)", borderRadius: 4 }}>
-          <div style={{ fontSize: 12, color: "#666" }}>
+          <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>
             <strong>参数说明：</strong>
           </div>
           <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)", marginTop: 4 }}>

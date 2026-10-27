@@ -6,7 +6,8 @@
  */
 
 import { useState, useEffect } from "react";
-import { Form, Select, Input, Alert } from "antd";
+import { Form, Alert } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import EndpointSelector from "./EndpointSelector";
 import ParamsEditor from "./ParamsEditor";
@@ -20,8 +21,6 @@ import type {
   EndpointDetail,
 } from "@/types/dashboard";
 import type { FormInstance } from "antd";
-
-const { TextArea } = Input;
 
 export interface DataSourceFormProps {
   /** 当前数据源配置 */
@@ -199,10 +198,10 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
           tooltip="选择数据来源方式：API（REST接口）、WebSocket（实时推送）、Static（静态数据）"
           initialValue={dataSourceType}
         >
-          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select allowClear
+          <AppSelect
             value={dataSourceType}
-            onChange={handleTypeChange}
+            onChange={(v: unknown) => handleTypeChange(v as DataSourceType)}
+            showSearch={false}
             disabled={disabled}
             options={[
               { label: "API 接口", value: "api" },
@@ -234,10 +233,14 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               tooltip="根据所选端点自动设置"
               initialValue="GET"
             >
-              <Select allowClear disabled={disabled} onSearch={() => {}}>
-                <Select.Option value="GET">GET</Select.Option>
-                <Select.Option value="POST">POST</Select.Option>
-              </Select>
+              <AppSelect
+                disabled={disabled}
+                showSearch={false}
+                options={[
+                  { value: "GET", label: "GET" },
+                  { value: "POST", label: "POST" },
+                ]}
+              />
             </Form.Item>
 
             <Form.Item label="请求参数" tooltip="配置 API 请求的查询参数">
@@ -250,7 +253,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               tooltip="使用 JSONata 表达式提取和转换数据"
               extra="例如：data.list[0].value 或 $sum(data.items.price)"
             >
-              <Input allowClear placeholder="data.list" disabled={disabled} />
+              <AppInput placeholder="data.list" disabled={disabled} />
             </Form.Item>
           </>
         )}
@@ -264,7 +267,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               rules={[{ required: true, message: "请输入 WebSocket 频道" }]}
               tooltip="订阅的 WebSocket 频道/主题名称"
             >
-              <Input allowClear placeholder="dashboard/realtime" disabled={disabled} />
+              <AppInput placeholder="dashboard/realtime" disabled={disabled} />
             </Form.Item>
 
             <Form.Item
@@ -272,7 +275,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               name="transformExpression"
               tooltip="使用 JSONata 表达式转换推送数据"
             >
-              <Input allowClear placeholder="data.value" disabled={disabled} />
+              <AppInput placeholder="data.value" disabled={disabled} />
             </Form.Item>
 
             <Alert
@@ -307,7 +310,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
               ]}
               tooltip="输入 JSON 格式的静态数据"
             >
-              <TextArea
+              <AppTextArea
                 rows={6}
                 placeholder='{"value": 100, "label": "示例数据"}'
                 disabled={disabled}

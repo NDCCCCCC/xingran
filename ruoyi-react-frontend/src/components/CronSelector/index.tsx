@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cron表达式选择器主组件
  *
  * 布局:
@@ -14,7 +14,8 @@ import {
   useRef,
   useEffect,
 } from "react";
-import { Input, Select, Tabs, Alert, Space, Row, Col } from "antd";
+import { Select, Tabs, Alert, Space, Row, Col } from "antd";
+import { AppInput, AppSelect } from "@/components/ui";
 import { InfoCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { CronConfig, CronFieldType } from "./constants";
 import {
@@ -184,7 +185,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
         {/* 顶部输入框 + 预设下拉框 */}
         <Row gutter={8} style={{ marginBottom: 12 }}>
           <Col flex="1">
-            <Input allowClear
+            <AppInput
               placeholder="请输入Cron表达式，如: 0 0 9 * * ?"
               value={cronExpression}
               onChange={(e) => handleExpressionInputChange(e.target.value)}
@@ -193,12 +194,12 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
             />
           </Col>
           <Col style={{ width: 200 }}>
-            <Select
+            {/* 复合 label 子节点：保留 children 形态 + 显式 optionFilterProp */}
+            <AppSelect
               placeholder="选择预设"
               value={CRON_PRESETS.find((p) => p.value === cronExpression)?.value}
-              onChange={handlePresetSelect}
+              onChange={(v: unknown) => handlePresetSelect(v as string)}
               disabled={disabled}
-              allowClear
               showSearch
               optionFilterProp="label"
               style={{ width: "100%" }}
@@ -218,7 +219,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                   </span>
                 </Select.Option>
               ))}
-            </Select>
+            </AppSelect>
           </Col>
         </Row>
 
@@ -263,7 +264,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                       <span style={{ color: "var(--theme-text-tertiary)", minWidth: 60 }}>
                         第{index + 1}次
                       </span>
-                      <span style={{ fontFamily: "monospace", color: "#333" }}>
+                      <span style={{ fontFamily: "monospace", color: "var(--theme-text-tertiary)" }}>
                         {formatTime(item)}
                       </span>
                     </Space>

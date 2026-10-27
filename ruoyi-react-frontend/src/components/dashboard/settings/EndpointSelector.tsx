@@ -6,6 +6,7 @@
  */
 import { useState, useEffect, useCallback } from "react";
 import { Select, Tag, Space, Spin, Empty } from "antd";
+import { AppSelect } from "@/components/ui";
 import type { SelectProps } from "antd";
 import {
   FileTextOutlined,
@@ -189,9 +190,10 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
   };
 
   return (
-    <Select allowClear
+    // 复合子节点（分组+富 label）形态：保留 children 写法
+    <AppSelect
       value={value}
-      onChange={handleChange}
+      onChange={(v: unknown) => handleChange(v as string)}
       loading={loading}
       placeholder="选择API端点"
       showSearch
@@ -206,10 +208,10 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
         );
       }}
       {...selectProps}
-      onSearch={() => {}}
+      onSearch={() => undefined}
     >
       {renderOptions()}
-    </Select>
+    </AppSelect>
   );
 };
 

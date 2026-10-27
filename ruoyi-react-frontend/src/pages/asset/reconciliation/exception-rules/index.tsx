@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 例外规则 admin 页 (Phase 44 R3 / Plan 44-01 Task 6b)
  *
  * 内容:
@@ -262,7 +262,7 @@ const ExceptionRulesPage: React.FC = () => {
           <Space size={4}>
             <Tag color={record.scopeType === "global" ? "green" : "orange"}>{record.scopeType}</Tag>
             {record.scopeId && (
-              <span style={{ fontSize: 12, color: "#999" }}>{record.scopeId.slice(0, 8)}...</span>
+              <span style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>{record.scopeId.slice(0, 8)}...</span>
             )}
           </Space>
         ),
@@ -377,7 +377,7 @@ const ExceptionRulesPage: React.FC = () => {
             >
               记录当前为基线
             </Button>
-            <div style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
+            <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)", marginTop: 8 }}>
               降噪对比基准 (D-R3-A4-01)
             </div>
           </Card>

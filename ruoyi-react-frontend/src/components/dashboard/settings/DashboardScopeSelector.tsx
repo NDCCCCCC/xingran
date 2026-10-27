@@ -3,7 +3,8 @@
  * 根据用户数据范围权限动态显示可用选项
  */
 import { useMemo } from "react";
-import { Form, Select, Switch, Space } from "antd";
+import { Form, Switch, Space } from "antd";
+import { AppSelect } from "@/components/ui";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardScope } from "@/types/dashboard";
 
@@ -98,10 +99,10 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
   return (
     <Space direction="vertical" style={{ width: "100%" }}>
       <Form.Item label="可见范围" style={{ marginBottom: 8 }}>
-        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select allowClear
+        <AppSelect
           value={value?.scope || "private"}
-          onChange={handleScopeChange}
+          onChange={(v: unknown) => handleScopeChange(v as DashboardScope)}
+          showSearch={false}
           options={scopeOptions}
           style={{ width: "100%" }}
           disabled={disabled || (value?.isSystem && value?.scope === "global")}

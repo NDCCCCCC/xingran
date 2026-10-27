@@ -6,14 +6,13 @@
  */
 
 import { useState, useEffect } from "react";
-import { App, Drawer, Form, Input, Button, Spin, Divider } from "antd";
+import { App, Drawer, Form, Button, Spin, Divider } from "antd";
+import { AppInput, AppTextArea } from "@/components/ui";
 import { SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import { useDashboardStore } from "@/store/dashboardStore";
 import DashboardScopeSelector from "./DashboardScopeSelector";
 import RefreshIntervalSelector from "./RefreshIntervalSelector";
 import type { DashboardScope, UpdateDashboardRequest } from "@/types/dashboard";
-
-const { TextArea } = Input;
 
 export interface DashboardSettingsProps {
   /** 是否可见 */
@@ -139,7 +138,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
               { max: 100, message: "名称不能超过 100 个字符" },
             ]}
           >
-            <Input allowClear placeholder="请输入仪表盘名称" />
+            <AppInput placeholder="请输入仪表盘名称" />
           </Form.Item>
 
           <Form.Item
@@ -147,7 +146,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
             name="description"
             rules={[{ max: 500, message: "描述不能超过 500 个字符" }]}
           >
-            <TextArea rows={3} placeholder="请输入仪表盘描述（可选）" />
+            <AppTextArea rows={3} placeholder="请输入仪表盘描述（可选）" />
           </Form.Item>
 
           {/* 权限设置 */}

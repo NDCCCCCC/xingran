@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 修复建议 admin 页面 (Phase 46 R5)
  *
  * 内容:
@@ -322,7 +322,7 @@ const FixSuggestion = () => {
       dataIndex: "currentUserId",
       key: "currentUserId",
       width: 140,
-      render: (v: string | null) => v ?? <span style={{ color: "#999" }}>-</span>,
+      render: (v: string | null) => v ?? <span style={{ color: "var(--theme-text-tertiary)" }}>-</span>,
     },
     {
       title: "建议 user_id",
