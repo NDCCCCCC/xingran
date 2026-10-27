@@ -2,7 +2,7 @@
 status: investigating
 trigger: "MAC 轨迹查询无法查到任何 mac，在数据库里查是存在的"
 created: 2026-06-30T00:00:00Z
-updated: 2026-06-30T00:00:00Z
+updated: 2026-10-27T16:10:00+08:00
 goal: find_root_cause_only
 audit_acknowledged:
   milestone: v1.23
@@ -182,3 +182,29 @@ verification: 缺失的 DB 端实测：
    `[MAC历史查询] 查询记录失败:` 是否有 PG 错误码
 
 files_changed: []
+
+---
+
+## 用户实测回填（2026-10-27，PG 生产库）
+
+用户执行了清单 B 的 4 条 SQL（pg 客户端截图）：
+
+- **分区树（pg_partition_tree）**：父表 `sys_device_mac_history` + **2026_06 ~ 2026_12 共 7 个月度分区**（无更早分区）。
+- **EXPLAIN ANALYZE**（mac_address='B0227A2E4A4F' AND first_seen 2026-05-31~2026-06-30）：分区剪枝正确（只扫 2026_06 分区的 `device_id_mac_address_first_idx1` 索引），Index Actual Rows: 6，Planning 29.8ms / Execution 0.105ms。
+- **样本 count**：`B0227A2E4A4F` 在全表与 2026_06 分区的 count(*) 截图均显示 **count=0**。
+- **deleted_at 列存在性**（information_schema 查询）：截图 tab 未能分辨该查询结果——**待确认**。
+
+### 阶段性结论（如实记录，不过度推断）
+
+- 分区剪枝与索引本身工作正常（EXPLAIN 证据）。
+- 样本 MAC `B0227A2E4A4F` 当前全表 count=0，两种可能：
+  1. 6 月分区清理策略已把该样本清除（用户此前预警过此可能）；
+  2. 存储格式与查询字面量不一致（本档原始疑点）。
+- **因 EXPLAIN 的 Index Actual Rows=6 与 count=0 并存，不能排除查询字面量格式与存储格式不一致**（这正是本档原始疑点）。
+
+### Open follow-up
+
+1. 换一个当前确实存在的样本 MAC（用户需提供），复查「DB 直查有行 / 应用 API 返回空」是否仍复现。
+2. 确认 `deleted_at` 列是否存在（information_schema 查询 B1 重跑一次）。
+
+在拿到新样本前，本档保持 **investigating**。

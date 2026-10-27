@@ -1,13 +1,13 @@
 ---
 slug: scrapligo-getprompt-nil-panic
-status: awaiting_human_verify
+status: closed
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-27T16:10:00+08:00
 trigger: scrapligo transport.(*Standard).Write nil pointer panic in GetPrompt goroutine crashed the whole backend process (exit status 2)
 audit_acknowledged:
   milestone: v1.23
   at: 2026-10-26T10:00:00+08:00
-  status: awaiting_human_verify
+  status: closed
 
 ---
 
@@ -86,7 +86,7 @@ audit_acknowledged:
 
 test: 等待用户在生产/本地工作流中确认不再出现进程级 panic（原始症状：exit status 2 崩溃）
 expecting: 后端持续运行，设备连接操作失败时返回错误而非进程退出
-next_action: awaiting human verify — 用户确认后 archive + knowledge base
+next_action: 已关闭（2026-10-27 用户确认无复现）
 
 ## Resolution
 
@@ -110,3 +110,7 @@ files_changed:
   - internal/device/scrapli_wrapper_initrace_test.go (new)
   - go.mod
   - go.sum
+
+### 关单确认
+
+2026-10-27 用户确认生产环境修复后无 panic 复现，关闭。（来源：用户实测 2026-10-27）status → closed（已修复 + 人工验证无复现）。

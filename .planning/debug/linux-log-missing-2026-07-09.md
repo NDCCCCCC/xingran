@@ -1,12 +1,12 @@
 ---
-status: diagnosing
+status: resolved
 trigger: "Linux服务器从6月24号左右起log目录下就没有生成日志了"
 created: 2026-07-09T08:40:00+08:00
-updated: 2026-07-09T08:45:00+08:00
+updated: 2026-10-27T16:10:00+08:00
 audit_acknowledged:
   milestone: v1.23
   at: 2026-10-26T10:00:00+08:00
-  status: diagnosing
+  status: resolved
 
 ---
 
@@ -68,10 +68,15 @@ started: "2026-06-24 左右"
 
 ## Resolution
 
-root_cause: "待远程诊断确认"
-fix: ""
-verification: ""
+root_cause: 「日志缺失」**不复现**（来源：用户实测 2026-10-27，Linux 生产机 zs10621039 / 10.62.10.39，执行诊断清单 A）。实测结果：`/app/szh/logs/app.log` 65,632,213 字节，最后修改 2026-10-27 08:03（持续在写），另有 `app-2026-10-24T20-05-00.022.log.gz`（7,189,525 字节，10-24 滚动归档）；日志一直在正常落盘。
+fix: 无需代码修复。误判根源：当初以为服务由 systemd 托管（unit 名 szh-backend），实测 `systemctl status szh-backend` 返回 **Unit could not be found**，`systemctl show` ActiveEnterTimestamp 为空 —— 实际进程是直接启动的二进制 `/app/szh/ruoyi-backend-embedded-linux`（pid 2177001，Oct26 启动，ps 可见，非 systemd 托管），`journalctl -u szh-backend`（--since 与 -n 100 两种方式）均为 **-- No entries --** 属预期行为；且 HTTP 访问日志设计上走 journald（架构事实，见上文 Evidence），非 systemd 托管下无处可看。
+verification: 磁盘 / 97G 用 16G（17%），充足；app.log 持续更新至 2026-10-27 08:03，写入正常。
 files_changed: []
+
+### 剩余动作（降级为文档项）
+
+- 部署文档需写明：「Linux 下日志在 `/app/szh/logs/app.log`（logrus+lumberjack 滚动），进程非 systemd 托管，journalctl 不适用」。
+- 不需要代码修复。status → resolved（不复现，文档项）。
 ---
 
 ## 诊断待确认项（需要用户在Linux服务器执行）
