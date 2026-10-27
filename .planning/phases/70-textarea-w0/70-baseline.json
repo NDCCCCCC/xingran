@@ -1,0 +1,54 @@
+{
+  "captured_at": "2026-10-27",
+  "phase": "70 (TextArea 契约基建 W0)",
+  "requirements": ["HYG-05", "TEXT-04"],
+  "purpose": "v1.23 权威计数基线：Phase 71 迁移与 Phase 74 收口的对账分母。排期口径以 eslint selector 实跑命中数 + 豁免清单条目数为权威，grep 数仅供粗估（三数口径不同）。",
+
+  "eslint_totals": {
+    "errors": 83,
+    "warnings": 1367,
+    "files_scanned": 1220,
+    "command": "npx eslint . --format json (ruoyi-react-frontend)",
+    "note": "与 v1.22 收档基线完全一致（83 / 1367 零新增红线保持）。Phase 70 T4 上线 TextArea 双 selector 后仍为 83/1367 —— 因 74 处存量 TextArea 文件已在 P65/P66 豁免清单内预登记。"
+  },
+
+  "textarea_selector_hits": {
+    "member": 0,
+    "simple": 0,
+    "files": 0,
+    "interpretation": "0 = 全部存量命中文件已被 P65/P66 豁免 override 覆盖（预登记生效，零新增 error 达成）。这不是 selector 失效：2026-10-27 用临时探针文件 src/__lintprobe__.tsx（含 <Input.TextArea> 与解构 <TextArea> 各一处）实测，selector 精确报出 2 条 '禁止直接使用 antd 多行输入框' 错误，验证双 selector 真实生效。探针文件已删除。",
+    "probe_evidence": "errors: 2, warnings: 0 —— 成员表达式 1 条 + 解构形态 1 条"
+  },
+
+  "exemption_inventory": {
+    "p65_exempt_files": 127,
+    "p66_exempt_files": 37,
+    "source": "ruoyi-react-frontend/eslint.config.js 的 __P65_EXEMPTION_FILES__ / __P66_EXEMPTION_FILES__ 锚点数组内 \"src/ 条目计数",
+    "note": "P65/P66 存量豁免 override 块（Phase 74 收口时清空删除）。两份清单存在交集，逐文件迁移可同时缩减两处。"
+  },
+
+  "grep_estimate": {
+    "input_textarea_member": 26,
+    "textarea_destructured": 37,
+    "textarea_total": 63,
+    "scope": "ruoyi-react-frontend/src 递归 *.tsx，排除 __tests__ / *.test.* / components/ui/",
+    "note": "与 v1.23 规划期口径（74 处「0 allowClear」）的差异来自统计范围：此处排除 components/ui/ 封装层与测试文件；且 grep 计行数，eslint 计 JSX 节点数。以 eslint 命中 + 豁免清单为排期权威。"
+  },
+
+  "single_line_input_select_estimate": {
+    "note": "单行 <Input> 与 <Select> 的迁移量（TEXT/MIG 主战场）以 Phase 71 迁移时逐域实际 grep + 豁免清单 delta 为准；本基线不做硬编码（研究文档间口径 157-220 不一致）。",
+    "authority": "每波次迁移后：该域裸组件 grep 命中数 = 豁免清单中该域剩余条目数"
+  },
+
+  "reference": {
+    "lint_full_baseline": ".planning/notes/v1.23-lint-baseline.json (by_rule 分布 + 文件级明细)",
+    "by_rule_top": {
+      "@typescript-eslint/no-explicit-any": 958,
+      "@typescript-eslint/no-unused-vars": 363,
+      "quotes": 64,
+      "react-refresh/only-export-components": 33,
+      "react-hooks/exhaustive-deps": 12,
+      "no-console": 5
+    }
+  }
+}
