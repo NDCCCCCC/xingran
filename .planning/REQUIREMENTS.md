@@ -44,8 +44,8 @@
 - [ ] **DBG-03**: MAC 地址格式问题不再复发——写入方枚举 + 显式 normalize + 回归测试（**Go 侧防线，不用 DB TRIGGER**，维持 v1.19 决策）
 - [x] **DBG-04**: Linux 环境应用日志正常落盘（✅ 2026-10-27 实测不复现：app.log 65MB 持续在写；误判根源 = 进程非 systemd 托管，journalctl 为空属预期；降级为部署文档项）
 - [x] **DBG-05**: MAC 历史迁移任务不重复执行（✅ 2026-10-27 根因确认 = 10.62.10.39 上有第二套实例并行运行（双实例部署共用同一 DB 调度器），非代码缺陷；部署约束「调度器单实例」已记录，多实例 HA 需分布式锁列为 future enhancement）
-- [ ] **DBG-06**: MAC 历史查询返回正确结果（`mac_history_query_service.go:842-915` Raw SQL → GORM chainable + 错误传播）
-- [ ] **DBG-07**: 工位 3F130 物理链路为空可区分空因状态（可诊断，`workstation_device_service.go:320/:339/:391-404`）
+- [x] **DBG-06**: MAC 历史查询返回正确结果（✅ 2026-10-27 修复：根因 = 查询侧 normalize 无分隔 vs 存储大写冒号，等值永空；改为**双侧归一化**双分支 SQL `mac_address = ? OR REPLACE(...)=?`（PG/SQLite 通用，分支一走 canonical 索引）+ 5 处等值匹配改造 + Raw SQL 错误传播（不再吞 error 成空数组）+ migration_175 的 deleted_at 注释更正。注意：`QueryMACTrajectory` 已在 migration_189 中随前端页面移除，根因同源落到现存 5 处查询路径。commit `da984927`）
+- [x] **DBG-07**: 工位 3F130 物理链路为空可区分空因状态（✅ 2026-10-27 修复：根因 = H3 未绑 user_id；**纯增量**新增 `POST /ops/workstation-device/:id/physical-diagnosis` 端点返回 `emptyReason`/`emptyMessage`/`warnings`/`diagnosis` 四类空因 + 十项链路诊断计数，旧端点行为完全不变（向后兼容）。设计决策：`no_user_bound` 优先级压过「有数据」（因 3f130 实测 mac_match_count=1 但前端按用户维度呈现仍空白）。commit `8b85fe6b`；前端接入留 Phase 75）
 
 ### UAT — 浏览器实机验证
 
@@ -111,8 +111,8 @@
 | DBG-03 | 72 | Pending |
 | DBG-04 | 72 | Satisfied (2026-10-27) |
 | DBG-05 | 73 | Satisfied (2026-10-27) |
-| DBG-06 | 73 | Pending |
-| DBG-07 | 73 | Pending |
+| DBG-06 | 73 | Satisfied (2026-10-27) |
+| DBG-07 | 73 | Satisfied (2026-10-27) |
 | UAT-01 | 75 | Pending |
 | UAT-02 | 75 | Pending |
 | HYG-01 | 74 | Satisfied (2026-10-27) |
