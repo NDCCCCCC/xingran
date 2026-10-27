@@ -7,8 +7,11 @@
  */
 export { AppInput } from "./AppInput";
 export { AppSelect } from "./AppSelect";
+// Phase 70：AppTextArea 独立具名导出（locked：不挂 AppInput.TextArea 静态别名、不加 TextArea 形态的别名导出）
+export { AppTextArea } from "./AppTextArea";
 export type { AppInputProps } from "./AppInput";
 export type { AppSelectProps } from "./AppSelect";
+export type { AppTextAreaProps } from "./AppTextArea";
 
 // P67 降险别名：仅存量迁移期使用，新代码禁止
 export { AppInput as Input } from "./AppInput";
