@@ -8,12 +8,13 @@
  *   fields={[
  *     { type: "input", name: "postCode", label: "岗位编码" },
  *     { type: "select", name: "status", label: "状态", options: STATUS_OPTIONS },
+ *     { type: "textarea", name: "remark", label: "备注", placeholder: "模糊匹配备注", rows: 3 },
  *   ]}
  *   onSearch={handleSearch} onReset={handleReset} onRefresh={handleRefresh}
  * />
  * ```
  *
- * 契约：渲染端点只允许 AppInput / AppSelect / RemoteSelect / custom.render，
+ * 契约：渲染端点只允许 AppInput / AppTextArea / AppSelect / RemoteSelect / custom.render，
  * 内部禁止裸 <Input>/<Select>（65 §3 纪律，封装层内亦自律）。
  */
 import { Card, Button, Form } from "antd";
@@ -22,6 +23,7 @@ import type { FormInstance } from "antd";
 import type { ReactNode } from "react";
 import { AppInput } from "@/components/ui/AppInput";
 import { AppSelect } from "@/components/ui/AppSelect";
+import { AppTextArea } from "@/components/ui/AppTextArea";
 import { RemoteSelect } from "@/components/ui/RemoteSelect";
 
 /** 搜索字段 schema（§2；remoteSelect 端点为 RemoteSelect，T5 接通前的占位见 renderField） */
@@ -29,6 +31,15 @@ export type SearchFieldOption = { label: string; value: string | number | boolea
 
 export type SearchField =
   | { type: "input"; name: string; label: string; placeholder?: string }
+  // Phase 70（TEXT-03）：多行搜索字段；rows/autoSize 显式透传（T1 审计定稿：不下沉默认）
+  | {
+      type: "textarea";
+      name: string;
+      label: string;
+      placeholder?: string;
+      rows?: number;
+      autoSize?: boolean | { minRows: number; maxRows: number };
+    }
   | { type: "select"; name: string; label: string; options: SearchFieldOption[]; placeholder?: string }
   | {
       type: "remoteSelect";
@@ -62,13 +73,25 @@ export interface SearchFormProps {
   onRefresh: () => void;
 }
 
-/** 渲染单个字段（input→AppInput / select→AppSelect / remoteSelect→T5 占位 / custom→受控 render） */
+/** 渲染单个字段（input→AppInput / textarea→AppTextArea / select→AppSelect / remoteSelect→T5 占位 / custom→受控 render） */
 function renderField(field: SearchField, onSearch: () => void): ReactNode {
   switch (field.type) {
     case "input":
       return (
         <Form.Item key={field.name} name={field.name} label={field.label}>
           <AppInput placeholder={field.placeholder} onPressEnter={onSearch} />
+        </Form.Item>
+      );
+    case "textarea":
+      // Phase 70：多行字段不传 onPressEnter——多行回车必须换行（区别于 input 分支）；
+      // 清空 = onChange('') 直通 filters（空串由 useTableManager.filterEmpty 过滤）
+      return (
+        <Form.Item key={field.name} name={field.name} label={field.label}>
+          <AppTextArea
+            placeholder={field.placeholder}
+            rows={field.rows}
+            autoSize={field.autoSize}
+          />
         </Form.Item>
       );
     case "select":

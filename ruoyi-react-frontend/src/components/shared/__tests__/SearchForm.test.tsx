@@ -168,3 +168,67 @@ describe("components/shared/SearchForm（T3）", () => {
     expect(true).toBe(true);
   });
 });
+
+describe("components/shared/SearchForm textarea 字段（Phase 70 T3）", () => {
+  it("textarea→AppTextArea DOM：渲染 textarea，输入值后带 clear icon（SC2 清空能力）", () => {
+    const { container } = render(
+      <Harness fields={[{ type: "textarea", name: "remark", label: "备注", placeholder: "模糊匹配备注", rows: 3 }]} />
+    );
+    const textarea = container.querySelector("textarea#remark") as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
+    expect(textarea.placeholder).toBe("模糊匹配备注");
+    fireEvent.change(textarea, { target: { value: "abc" } });
+    expect(container.querySelector(".ant-input-clear-icon")).toBeTruthy();
+  });
+
+  it("点击 clear icon 清空表单值（SC2 清空链路：onChange('') 直通 form）", async () => {
+    let formInstance: FormInstance | undefined;
+    const { container } = render(
+      <Harness
+        formRef={(f) => (formInstance = f)}
+        fields={[{ type: "textarea", name: "remark", label: "备注" }]}
+      />
+    );
+    const textarea = container.querySelector("textarea#remark") as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: "abc" } });
+    await vi.waitFor(() => {
+      expect(formInstance!.getFieldValue("remark")).toBe("abc");
+    });
+    const clearIcon = container.querySelector(".ant-input-clear-icon");
+    expect(clearIcon).not.toBeNull();
+    fireEvent.click(clearIcon as Element, { bubbles: true });
+    await vi.waitFor(() => {
+      expect(formInstance!.getFieldValue("remark")).toBe("");
+    });
+  });
+
+  it("textarea 回车不触发 onSearch（多行回车必须换行，不接 onPressEnter）", () => {
+    const onSearch = vi.fn();
+    const { container } = render(
+      <Harness
+        fields={[{ type: "textarea", name: "remark", label: "备注" }]}
+        onSearch={onSearch}
+      />
+    );
+    const textarea = container.querySelector("textarea#remark") as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: "abc" } });
+    fireEvent.keyDown(textarea, { key: "Enter" });
+    fireEvent.keyDown(textarea, { keyCode: 13 });
+    expect(onSearch).not.toHaveBeenCalled();
+  });
+
+  it("受控接入 form：fireEvent.change 后 form.getFieldValue('remark') 收到值", async () => {
+    let formInstance: FormInstance | undefined;
+    const { container } = render(
+      <Harness
+        formRef={(f) => (formInstance = f)}
+        fields={[{ type: "textarea", name: "remark", label: "备注" }]}
+      />
+    );
+    const textarea = container.querySelector("textarea#remark") as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: "hello" } });
+    await vi.waitFor(() => {
+      expect(formInstance!.getFieldValue("remark")).toBe("hello");
+    });
+  });
+});
