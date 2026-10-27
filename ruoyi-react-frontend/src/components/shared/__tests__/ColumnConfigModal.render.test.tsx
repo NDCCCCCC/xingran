@@ -64,7 +64,7 @@ describe("ColumnConfigModal", () => {
       />
     );
     // placeholder="搜索列..."
-    const searchInput = (await screen.findAllByPlaceholderText("搜索列..."))[0] as any;
+    const searchInput = (await screen.findAllByPlaceholderText("搜索列..."))[0] as unknown;
     fireEvent.change(searchInput, { target: { value: "代码" } });
     expect((await screen.findAllByText("代码")).length).toBeGreaterThanOrEqual(1);
   }, 15000);
@@ -81,7 +81,7 @@ describe("ColumnConfigModal", () => {
       />
     );
     // 全选 checkbox → change 事件
-    const allCheckbox = container.querySelector(".ant-modal-body .ant-checkbox-input") as any;
+    const allCheckbox = container.querySelector(".ant-modal-body .ant-checkbox-input") as unknown;
     if (allCheckbox) fireEvent.click(allCheckbox);
   });
 

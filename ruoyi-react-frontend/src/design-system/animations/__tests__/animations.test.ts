@@ -7,9 +7,9 @@ import * as transitions from "../transitions";
 
 describe("animations keyframes (D-12)", () => {
   it("exports multiple keyframes", () => {
-    expect((keyframes as any).fadeIn).toBeDefined();
-    expect((keyframes as any).fadeOut).toBeDefined();
-    expect((keyframes as any).scaleIn).toBeDefined();
+    expect((keyframes as unknown).fadeIn).toBeDefined();
+    expect((keyframes as unknown).fadeOut).toBeDefined();
+    expect((keyframes as unknown).scaleIn).toBeDefined();
   });
 });
 
@@ -19,25 +19,25 @@ describe("animations transitions", () => {
   });
 
   it("easings has standard easing functions", () => {
-    expect((transitions as any).easings).toBeDefined();
-    expect((transitions as any).easings.ease).toBeTruthy();
-    expect((transitions as any).easings.linear).toBeTruthy();
+    expect((transitions as unknown).easings).toBeDefined();
+    expect((transitions as unknown).easings.ease).toBeTruthy();
+    expect((transitions as unknown).easings.linear).toBeTruthy();
   });
 
   it("durations has standard time scale", () => {
-    expect((transitions as any).durations).toBeDefined();
-    expect((transitions as any).durations.fast).toBeTruthy();
-    expect((transitions as any).durations.normal).toBeTruthy();
-    expect((transitions as any).durations.slow).toBeTruthy();
+    expect((transitions as unknown).durations).toBeDefined();
+    expect((transitions as unknown).durations.fast).toBeTruthy();
+    expect((transitions as unknown).durations.normal).toBeTruthy();
+    expect((transitions as unknown).durations.slow).toBeTruthy();
   });
 
   it("delays has standard delays", () => {
-    expect((transitions as any).delays).toBeDefined();
-    expect((transitions as any).delays.none).toBeTruthy();
+    expect((transitions as unknown).delays).toBeDefined();
+    expect((transitions as unknown).delays.none).toBeTruthy();
   });
 
   it("transitions aggregate is object", () => {
-    expect((transitions as any).transitions).toBeDefined();
-    expect(typeof (transitions as any).transitions).toBe("object");
+    expect((transitions as unknown).transitions).toBeDefined();
+    expect(typeof (transitions as unknown).transitions).toBe("object");
   });
 });

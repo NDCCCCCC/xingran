@@ -77,8 +77,8 @@ describe("duty holidays utils", () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         ["日期", "名称", "类型", "是否休息", "year", "remark"],
         ["2026-01-01", "元旦", "法定", "是", 2026, ""],
-      ] as any);
-      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as any);
+      ] as unknown);
+      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as unknown);
 
       const onSuccess = vi.fn();
       await handleExcelImport({ file: makeFile(), onSuccess }, onSuccess);
@@ -90,8 +90,8 @@ describe("duty holidays utils", () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         [],
         ["2026-01-01", "元旦", "legal", "是", 2026, ""],
-      ] as any);
-      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as any);
+      ] as unknown);
+      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as unknown);
 
       await handleExcelImport({ file: makeFile() });
       const arg = vi.mocked(batchCreateHolidays).mock.calls[0][0];
@@ -102,8 +102,8 @@ describe("duty holidays utils", () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         [],
         ["2026-04-26", "调休", "workday", "否", 2026, ""],
-      ] as any);
-      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as any);
+      ] as unknown);
+      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as unknown);
 
       await handleExcelImport({ file: makeFile() });
       const arg = vi.mocked(batchCreateHolidays).mock.calls[0][0];
@@ -114,8 +114,8 @@ describe("duty holidays utils", () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         [],
         ["2026-03-15", "纪念日", "custom", "是", 2026, ""],
-      ] as any);
-      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as any);
+      ] as unknown);
+      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as unknown);
 
       await handleExcelImport({ file: makeFile() });
       const arg = vi.mocked(batchCreateHolidays).mock.calls[0][0];
@@ -126,8 +126,8 @@ describe("duty holidays utils", () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         [],
         ["2026-04-26", "调休", undefined, "否", 2026, ""],
-      ] as any);
-      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as any);
+      ] as unknown);
+      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as unknown);
 
       await handleExcelImport({ file: makeFile() });
       const arg = vi.mocked(batchCreateHolidays).mock.calls[0][0];
@@ -138,14 +138,14 @@ describe("duty holidays utils", () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         [],
         ["bad-date", "x", "法定", "是", 2026, ""],
-      ] as any);
+      ] as unknown);
 
       await handleExcelImport({ file: makeFile() });
       expect(msgApi.error).toHaveBeenCalledWith(expect.stringContaining("日期格式不正确"));
     });
 
     it("数据 <2 行 → Excel 空错误", async () => {
-      xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([["header"]] as any);
+      xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([["header"]] as unknown);
 
       await handleExcelImport({ file: makeFile() });
       expect(msgApi.error).toHaveBeenCalledWith("Excel文件为空或格式不正确");
@@ -155,7 +155,7 @@ describe("duty holidays utils", () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         ["header"],
         [null, null, null, null, null, null],
-      ] as any);
+      ] as unknown);
 
       await handleExcelImport({ file: makeFile() });
       expect(msgApi.error).toHaveBeenCalledWith("没有有效的节假日数据");
@@ -177,8 +177,8 @@ describe("duty holidays utils", () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         [],
         [45292, "数字日期", "法定", "是", 2026, ""],
-      ] as any);
-      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as any);
+      ] as unknown);
+      vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as unknown);
 
       await handleExcelImport({ file: makeFile() });
       expect(batchCreateHolidays).toHaveBeenCalled();

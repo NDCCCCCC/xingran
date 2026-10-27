@@ -21,7 +21,7 @@ vi.mock("../styles.module.css", () => ({
 }));
 
 describe("operations/building-spaces/components/BuildingCard", () => {
-  const baseBuilding: any = {
+  const baseBuilding: unknown = {
     id: "b1",
     name: "A 座",
     code: "BLD-A",

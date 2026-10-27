@@ -63,7 +63,7 @@ describe("ADOUPage 渲染", () => {
   });
 
   it("无 config → 不请求 OU tree", async () => {
-    vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({ data: { list: [] } } as any);
+    vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({ data: { list: [] } } as unknown);
     const { baseElement } = renderOU();
     await new Promise((r) => setTimeout(r, 300));
     expect(baseElement).toBeDefined();

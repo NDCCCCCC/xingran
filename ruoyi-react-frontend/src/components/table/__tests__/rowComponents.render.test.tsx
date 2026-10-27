@@ -9,7 +9,7 @@ import AssetRow from "../AssetRow";
 import { vmOperationButtons } from "@/pages/vdi/VirtualMachineList/vmOperationButtons";
 
 describe("VDIRow", () => {
-  const mockVm: any = {
+  const mockVm: unknown = {
     id: "vm-1",
     name: "测试VM",
     power_state: "stopped",
@@ -100,7 +100,7 @@ describe("VDIRow", () => {
 });
 
 describe("AssetRow", () => {
-  const record: any = { id: "a1", name: "设备A" };
+  const record: unknown = { id: "a1", name: "设备A" };
 
   it("渲染编辑/删除按钮 + 点击触发回调", () => {
     const onEdit = vi.fn();

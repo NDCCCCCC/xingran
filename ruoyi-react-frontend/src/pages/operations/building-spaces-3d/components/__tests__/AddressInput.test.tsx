@@ -21,7 +21,7 @@ vi.mock("../hooks/useGeocoding", () => ({
 describe("AddressInput 渲染", () => {
   it("空 value 渲染", () => {
     const { baseElement } = renderWithProviders(
-      <AddressInput value={undefined as any} onChange={vi.fn()} />
+      <AddressInput value={undefined as unknown} onChange={vi.fn()} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -34,14 +34,14 @@ describe("AddressInput 渲染", () => {
       lat: 30.5,
     };
     const { baseElement } = renderWithProviders(
-      <AddressInput value={value as any} onChange={vi.fn()} />
+      <AddressInput value={value as unknown} onChange={vi.fn()} />
     );
     expect(baseElement).toBeDefined();
   });
 
   it("disabled=true 渲染", () => {
     const { baseElement } = renderWithProviders(
-      <AddressInput value={undefined as any} onChange={vi.fn()} disabled />
+      <AddressInput value={undefined as unknown} onChange={vi.fn()} disabled />
     );
     expect(baseElement).toBeDefined();
   });

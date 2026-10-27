@@ -33,7 +33,7 @@ describe("WorkstationCardView", () => {
               status: 0,
               orgId: "org1",
               createTime: "",
-            } as any,
+            } as unknown,
           ]}
           onEdit={vi.fn()}
           onDelete={vi.fn()}

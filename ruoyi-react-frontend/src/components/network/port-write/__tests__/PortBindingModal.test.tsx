@@ -37,7 +37,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 const portRecord = {
   id: "p1",
   interfaceName: "eth0",
-} as any;
+} as unknown;
 
 describe("PortBindingModal", () => {
   it("open=true + portRecord → 渲染 Modal + 表单字段", () => {

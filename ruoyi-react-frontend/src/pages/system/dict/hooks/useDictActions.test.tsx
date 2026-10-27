@@ -57,8 +57,8 @@ describe("useDictActions — initial state + setters", () => {
     act(() => {
       result.current.setTypeModalVisible(true);
       result.current.setDataModalVisible(true);
-      result.current.setEditingType({ id: "t1", name: "type1" } as any);
-      result.current.setEditingData({ id: "d1", label: "v1" } as any);
+      result.current.setEditingType({ id: "t1", name: "type1" } as unknown);
+      result.current.setEditingData({ id: "d1", label: "v1" } as unknown);
     });
     expect(result.current.typeModalVisible).toBe(true);
     expect(result.current.dataModalVisible).toBe(true);
@@ -73,7 +73,7 @@ describe("useDictActions — handlers", () => {
     const form = {
       validateFields: vi.fn().mockResolvedValue({ name: "t1" }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     const { result } = renderHook(() => useDictActions({ ...opts(), loadDictTypes }), {
       wrapper: wrap,
     });
@@ -84,7 +84,7 @@ describe("useDictActions — handlers", () => {
   });
 
   it("handleCreateType validate 失败 → 不调 post", async () => {
-    const form = { validateFields: vi.fn().mockRejectedValue({ errorFields: [] }) } as any;
+    const form = { validateFields: vi.fn().mockRejectedValue({ errorFields: [] }) } as unknown;
     const { result } = renderHook(() => useDictActions(opts()), { wrapper: wrap });
     await act(async () => {
       await result.current.handleCreateType(form);

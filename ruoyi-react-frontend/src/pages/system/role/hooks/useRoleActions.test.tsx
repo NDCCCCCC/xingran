@@ -44,7 +44,7 @@ const wrap = Wrap;
 
 beforeEach(() => {
   postSpy.mockReset().mockResolvedValue({});
-  vi.spyOn(apiModule, "post" as any).mockImplementation(postSpy as any);
+  vi.spyOn(apiModule, "post" as unknown).mockImplementation(postSpy as unknown);
 });
 
 describe("useRoleActions", () => {
@@ -69,7 +69,7 @@ describe("useRoleActions", () => {
   it("handleEdit 加载 menu/dept 并写入 formData", async () => {
     const params = baseParams();
     const { result } = renderHook(() => useRoleActions(params), { wrapper: wrap });
-    const record = { id: "r1", roleName: "管理员" } as any;
+    const record = { id: "r1", roleName: "管理员" } as unknown;
     await act(async () => {
       await result.current.handleEdit(record);
     });

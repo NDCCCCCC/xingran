@@ -29,7 +29,7 @@ vi.mock("@/store/dashboardStore", () => ({
   },
 }));
 
-function renderList(props: { onNavigateToView?: any; onNavigateToEdit?: any } = {}) {
+function renderList(props: { onNavigateToView?: unknown; onNavigateToEdit?: unknown } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderWithProviders(
     <QueryClientProvider client={qc}>

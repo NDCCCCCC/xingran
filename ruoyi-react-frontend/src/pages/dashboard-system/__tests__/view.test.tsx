@@ -17,12 +17,12 @@ vi.mock("@/components/dashboard/layout/LayoutToolbar", () => ({
 }));
 
 vi.mock("@/components/dashboard/layout/DashboardGrid", () => ({
-  DashboardGrid: ({ children }: any) => <div data-testid="dashboard-grid">{children}</div>,
+  DashboardGrid: ({ children }: unknown) => <div data-testid="dashboard-grid">{children}</div>,
   DashboardGridPlaceholder: () => <div data-testid="grid-placeholder" />,
 }));
 
 vi.mock("@/components/dashboard/layout/GridItem", () => ({
-  GridItem: ({ children }: any) => <div data-testid="grid-item">{children}</div>,
+  GridItem: ({ children }: unknown) => <div data-testid="grid-item">{children}</div>,
 }));
 
 vi.mock("@/components/dashboard/Widget", () => ({

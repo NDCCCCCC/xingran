@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
 
 // esm/core 入口（按需方案）
 vi.mock("echarts-for-react/esm/core", () => ({
-  default: (props: any) => (
+  default: (props: unknown) => (
     <div data-testid="echarts-mock" data-option={JSON.stringify(props.option)} />
   ),
 }));

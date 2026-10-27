@@ -36,8 +36,8 @@ const postFormDataSpy = vi.fn();
 beforeEach(() => {
   postSpy.mockReset().mockResolvedValue({ data: {} });
   postFormDataSpy.mockReset().mockResolvedValue({ data: {} });
-  vi.spyOn(apiModule, "post" as any).mockImplementation(postSpy as any);
-  vi.spyOn(apiModule, "postFormData" as any).mockImplementation(postFormDataSpy as any);
+  vi.spyOn(apiModule, "post" as unknown).mockImplementation(postSpy as unknown);
+  vi.spyOn(apiModule, "postFormData" as unknown).mockImplementation(postFormDataSpy as unknown);
 });
 
 describe("services/captcha", () => {
@@ -138,7 +138,7 @@ describe("services/operations floors/buildings/dedicated-lines/server-rooms/work
     await floorApi.getTree();
     expect(postSpy).toHaveBeenLastCalledWith("/ops/floors/tree");
 
-    await floorApi.create({ name: "1F" } as any);
+    await floorApi.create({ name: "1F" } as unknown);
     expect(postSpy).toHaveBeenLastCalledWith("/ops/floors", { name: "1F" });
 
     await floorApi.update("f1", { name: "1F改" });

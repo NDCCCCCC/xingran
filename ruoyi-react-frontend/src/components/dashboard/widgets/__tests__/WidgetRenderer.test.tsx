@@ -12,10 +12,10 @@ vi.mock("@/lib/api", async () => {
 vi.mock("../configs/widgetRegistry", () => ({
   widgetRegistry: {
     stat: {
-      component: ({ widget }: any) => <div data-testid="stat-widget">{widget.title}</div>,
+      component: ({ widget }: unknown) => <div data-testid="stat-widget">{widget.title}</div>,
     },
     chart: {
-      component: ({ widget }: any) => <div data-testid="chart-widget">{widget.title}</div>,
+      component: ({ widget }: unknown) => <div data-testid="chart-widget">{widget.title}</div>,
     },
   },
 }));
@@ -25,7 +25,7 @@ import WidgetRenderer from "../WidgetRenderer";
 describe("components/dashboard/widgets/WidgetRenderer", () => {
   it("已知 widget type → 渲染对应组件", () => {
     render(
-      <WidgetRenderer widget={{ id: "w1", type: "stat", title: "统计", display: {} } as any} />
+      <WidgetRenderer widget={{ id: "w1", type: "stat", title: "统计", display: {} } as unknown} />
     );
     expect(screen.getByTestId("stat-widget")).toBeInTheDocument();
     expect(screen.getByText("统计")).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe("components/dashboard/widgets/WidgetRenderer", () => {
 
   it("未知 widget type → 渲染占位 div", () => {
     render(
-      <WidgetRenderer widget={{ id: "w1", type: "unknown-type", title: "X", display: {} } as any} />
+      <WidgetRenderer widget={{ id: "w1", type: "unknown-type", title: "X", display: {} } as unknown} />
     );
     expect(screen.getByText(/未知的Widget类型/)).toBeInTheDocument();
     expect(screen.getByText(/unknown-type/)).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe("components/dashboard/widgets/WidgetRenderer", () => {
 
   it("chart widget → 渲染 chart 组件", () => {
     render(
-      <WidgetRenderer widget={{ id: "w2", type: "chart", title: "图表", display: {} } as any} />
+      <WidgetRenderer widget={{ id: "w2", type: "chart", title: "图表", display: {} } as unknown} />
     );
     expect(screen.getByTestId("chart-widget")).toBeInTheDocument();
   });
@@ -51,7 +51,7 @@ describe("components/dashboard/widgets/WidgetRenderer", () => {
     const onDelete = vi.fn();
     render(
       <WidgetRenderer
-        widget={{ id: "w3", type: "stat", title: "T", display: {} } as any}
+        widget={{ id: "w3", type: "stat", title: "T", display: {} } as unknown}
         onEdit={onEdit}
         onDelete={onDelete}
       />

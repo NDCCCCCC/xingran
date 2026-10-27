@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-const storeState: Record<string, any> = {
+const storeState: Record<string, unknown> = {
   viewMode: "view",
   hasUnsavedChanges: false,
   saveCurrentDashboard: vi.fn(() => Promise.resolve()),
@@ -111,8 +111,8 @@ describe("LayoutToolbar", () => {
     const origConfirm = Modal.confirm;
     Modal.confirm = vi.fn(({ onOk: _onOk }) => {
       // simulate cancel - don't call onOk
-      return { destroy: vi.fn() } as any;
-    }) as any;
+      return { destroy: vi.fn() } as unknown;
+    }) as unknown;
     const { getByText } = render(<LayoutToolbar />, { wrapper });
     fireEvent.click(getByText("重置"));
     expect(storeState.resetCurrentDashboard).not.toHaveBeenCalled();
@@ -146,8 +146,8 @@ describe("LayoutToolbar", () => {
     const origConfirm = Modal.confirm;
     Modal.confirm = vi.fn(({ onOk }) => {
       onOk();
-      return { destroy: vi.fn() } as any;
-    }) as any;
+      return { destroy: vi.fn() } as unknown;
+    }) as unknown;
     const { container } = render(<LayoutToolbar showBackButton />, { wrapper });
     fireEvent.click(container.querySelector("button")!);
     expect(navigateMock).toHaveBeenCalled();

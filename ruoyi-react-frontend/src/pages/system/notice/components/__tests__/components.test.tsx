@@ -38,7 +38,7 @@ describe("notice/components — ChannelSelector", () => {
       <ChannelSelector
         selectedChannels={["email", "wecom", "api", "site"]}
         selectedAPIConfigId="cfg1"
-        apiConfigs={[{ id: "cfg1", name: "Webhook" } as any]}
+        apiConfigs={[{ id: "cfg1", name: "Webhook" } as unknown]}
         loadingAPIConfigs={false}
         customEmails="a@test.com,b@test.com"
         customWeComUsers="user1|user2"
@@ -109,7 +109,7 @@ describe("notice/components — StatisticsDrawer", () => {
             readCount: 80,
             unreadCount: 20,
             readRate: 0.8,
-          } as any
+          } as unknown
         }
       />
     );

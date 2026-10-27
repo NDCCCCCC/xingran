@@ -93,7 +93,7 @@ describe("reconciliation/ExceptionMatchList", () => {
   });
 
   it("scopeType 不在 SCOPE_COLOR → default", () => {
-    const rule = { ...baseRule, scopeType: "unknown" as any };
+    const rule = { ...baseRule, scopeType: "unknown" as unknown };
     render(<ExceptionMatchList rules={[rule]} loading={false} />, { wrapper });
     expect(screen.getByText("Test Rule")).toBeInTheDocument();
   });

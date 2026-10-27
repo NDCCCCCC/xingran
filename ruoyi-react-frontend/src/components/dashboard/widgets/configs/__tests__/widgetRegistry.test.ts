@@ -29,7 +29,7 @@ describe("components/dashboard/widgets/configs/widgetRegistry", () => {
   });
 
   it("getWidgetConfig 未知类型 → undefined", () => {
-    expect(getWidgetConfig("unknown-type" as any)).toBeUndefined();
+    expect(getWidgetConfig("unknown-type" as unknown)).toBeUndefined();
   });
 
   it("getWidgetComponent 已知类型 → 返回组件", () => {
@@ -38,49 +38,49 @@ describe("components/dashboard/widgets/configs/widgetRegistry", () => {
   });
 
   it("getWidgetComponent 未知类型 → undefined", () => {
-    expect(getWidgetComponent("unknown-type" as any)).toBeUndefined();
+    expect(getWidgetComponent("unknown-type" as unknown)).toBeUndefined();
   });
 
   it("registerWidget 添加新类型", () => {
     registerWidget({
-      type: "custom-test" as any,
+      type: "custom-test" as unknown,
       displayName: "Custom Test",
       description: "test widget",
       icon: "🧪",
       defaultSize: { w: 4, h: 3 },
-      component: null as any,
+      component: null as unknown,
       supportsDataSource: false,
       supportedDataSources: [],
     });
-    expect(getWidgetConfig("custom-test" as any)).toBeDefined();
-    expect(getWidgetComponent("custom-test" as any)).toBeNull();
+    expect(getWidgetConfig("custom-test" as unknown)).toBeDefined();
+    expect(getWidgetComponent("custom-test" as unknown)).toBeNull();
   });
 
   it("registerWidgets 批量添加", () => {
     registerWidgets([
       {
-        type: "batch-1" as any,
+        type: "batch-1" as unknown,
         displayName: "Batch 1",
         description: "first",
         icon: "1",
         defaultSize: { w: 1, h: 1 },
-        component: null as any,
+        component: null as unknown,
         supportsDataSource: false,
         supportedDataSources: [],
       },
       {
-        type: "batch-2" as any,
+        type: "batch-2" as unknown,
         displayName: "Batch 2",
         description: "second",
         icon: "2",
         defaultSize: { w: 1, h: 1 },
-        component: null as any,
+        component: null as unknown,
         supportsDataSource: false,
         supportedDataSources: [],
       },
     ]);
-    expect(getWidgetConfig("batch-1" as any)).toBeDefined();
-    expect(getWidgetConfig("batch-2" as any)).toBeDefined();
+    expect(getWidgetConfig("batch-1" as unknown)).toBeDefined();
+    expect(getWidgetConfig("batch-2" as unknown)).toBeDefined();
   });
 
   it("WidgetConfig displayName 字符串", () => {

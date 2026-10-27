@@ -21,7 +21,7 @@ describe("useFloorStatistics", () => {
       total: 10,
       active: 7,
       inactive: 3,
-    } as any);
+    } as unknown);
     const { result } = renderHook(() => useFloorStatistics());
 
     await act(async () => {
@@ -33,7 +33,7 @@ describe("useFloorStatistics", () => {
   });
 
   it("loadStatistics null 字段兜底 0", async () => {
-    vi.spyOn(floorApi, "statistics").mockResolvedValue({} as any);
+    vi.spyOn(floorApi, "statistics").mockResolvedValue({} as unknown);
     const { result } = renderHook(() => useFloorStatistics());
 
     await act(async () => {
@@ -70,7 +70,7 @@ describe("useBuildingOptions", () => {
         ],
         total: 2,
       },
-    } as any);
+    } as unknown);
     const { result } = renderHook(() => useBuildingOptions());
 
     await act(async () => {
@@ -84,7 +84,7 @@ describe("useBuildingOptions", () => {
   });
 
   it("list 空时 options 空", async () => {
-    vi.spyOn(buildingApi, "list").mockResolvedValue({ data: { list: [], total: 0 } } as any);
+    vi.spyOn(buildingApi, "list").mockResolvedValue({ data: { list: [], total: 0 } } as unknown);
     const { result } = renderHook(() => useBuildingOptions());
 
     await act(async () => {

@@ -48,7 +48,7 @@ describe("jobLogColumns", () => {
 
   it("列包含基本列名", () => {
     const cols = getJobLogColumns({ getSortOrder: () => null });
-    const titles = cols.map((c: any) => c.title);
+    const titles = cols.map((c: unknown) => c.title);
     expect(titles).toContain("执行时间");
     expect(titles).toContain("执行时长");
     expect(titles).toContain("执行消息");

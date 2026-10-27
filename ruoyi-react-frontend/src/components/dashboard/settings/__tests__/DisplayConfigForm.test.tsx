@@ -15,7 +15,7 @@ vi.mock("@/lib/api", async () => {
 interface HarnessProps {
   value?: DisplayConfig;
   widgetType?: WidgetType;
-  onChange?: (v: any) => void;
+  onChange?: (v: unknown) => void;
 }
 
 function Harness({ value, widgetType, onChange }: HarnessProps) {
@@ -32,7 +32,7 @@ describe("DisplayConfigForm 渲染", () => {
   });
 
   it("widgetType=stat-card → 渲染 stat-card 配置", () => {
-    const value: DisplayConfig = { title: "统计卡片", showTitle: true } as any;
+    const value: DisplayConfig = { title: "统计卡片", showTitle: true } as unknown;
     const { baseElement } = renderWithProviders(<Harness value={value} widgetType="stat-card" />);
     expect(baseElement).toBeDefined();
   });

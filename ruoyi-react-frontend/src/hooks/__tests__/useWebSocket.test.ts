@@ -17,10 +17,10 @@ class MockWebSocket {
   static CLOSED = 3;
   readyState = 1;
   url: string;
-  onopen: ((e: any) => void) | null = null;
-  onclose: ((e: any) => void) | null = null;
-  onerror: ((e: any) => void) | null = null;
-  onmessage: ((e: any) => void) | null = null;
+  onopen: ((e: unknown) => void) | null = null;
+  onclose: ((e: unknown) => void) | null = null;
+  onerror: ((e: unknown) => void) | null = null;
+  onmessage: ((e: unknown) => void) | null = null;
   static instances: MockWebSocket[] = [];
   constructor(url: string) {
     this.url = url;
@@ -29,7 +29,7 @@ class MockWebSocket {
   send = vi.fn();
   close = vi.fn();
 }
-(globalThis as any).WebSocket = MockWebSocket;
+(globalThis as unknown).WebSocket = MockWebSocket;
 
 vi.mock("@/store/settingsStore", () => ({
   useSettingsStore: vi.fn(() => ({

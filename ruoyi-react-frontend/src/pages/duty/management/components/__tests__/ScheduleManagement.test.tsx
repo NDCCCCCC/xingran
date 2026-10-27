@@ -71,14 +71,14 @@ describe("ScheduleManagement 渲染", () => {
         userName: "Alice",
         shift: "day",
         status: 0,
-      } as any,
+      } as unknown,
     ];
     const { baseElement } = renderWithProviders(
       <Harness
         schedules={schedules}
         total={1}
-        pools={[{ id: "p1", name: "P1" } as any]}
-        users={[{ id: "u1", userName: "Alice" } as any]}
+        pools={[{ id: "p1", name: "P1" } as unknown]}
+        users={[{ id: "u1", userName: "Alice" } as unknown]}
       />
     );
     expect(baseElement.querySelector(".ant-table-row")).not.toBeNull();
@@ -91,8 +91,8 @@ describe("ScheduleManagement 渲染", () => {
 
   it("选中行 keys 不为空", () => {
     const schedules: DutySchedule[] = [
-      { id: "s1", scheduleDate: "2026-01-01", status: 0 } as any,
-      { id: "s2", scheduleDate: "2026-01-02", status: 0 } as any,
+      { id: "s1", scheduleDate: "2026-01-01", status: 0 } as unknown,
+      { id: "s2", scheduleDate: "2026-01-02", status: 0 } as unknown,
     ];
     const { baseElement } = renderWithProviders(
       <Harness schedules={schedules} total={2} selectedRowKeys={["s1"]} />

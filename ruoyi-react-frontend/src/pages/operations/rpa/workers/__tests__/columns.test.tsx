@@ -38,13 +38,13 @@ describe("getWorkerColumns", () => {
 
   it("getSortOrder → 注入到指定列", () => {
     const cols = getWorkerColumns({ getSortOrder: () => "ascend" });
-    const sorted = cols.filter((c: any) => c.sortOrder === "ascend");
+    const sorted = cols.filter((c: unknown) => c.sortOrder === "ascend");
     expect(sorted.length).toBeGreaterThan(0);
   });
 
   it("workerId 列: workerId 为空时回退到 record.id", () => {
     const cols = getWorkerColumns();
-    const workerIdCol = cols.find((c: any) => c.key === "workerId") as any;
+    const workerIdCol = cols.find((c: unknown) => c.key === "workerId") as unknown;
     const node = workerIdCol.render("", { id: "fallback-id" });
     expect(node).toBe("fallback-id");
     const dashNode = workerIdCol.render("", {});
@@ -55,7 +55,7 @@ describe("getWorkerColumns", () => {
 
   it("workerName 列 render: 空 → '-'", () => {
     const cols = getWorkerColumns();
-    const col = cols.find((c: any) => c.key === "workerName") as any;
+    const col = cols.find((c: unknown) => c.key === "workerName") as unknown;
     const node = col.render("", makeWorker());
     expect(node).toBeDefined();
   });
@@ -63,15 +63,15 @@ describe("getWorkerColumns", () => {
   it("ipAddress 列: 空 → record.workerId 回退", () => {
     const cols = getWorkerColumns();
     const col = cols.find(
-      (c: any) => c.key === "ipAddress" && c.width === 150 && c.title === "主机名"
-    ) as any;
+      (c: unknown) => c.key === "ipAddress" && c.width === 150 && c.title === "主机名"
+    ) as unknown;
     const node = col.render("", { workerId: "fback" });
     expect(node).toBeDefined();
   });
 
   it("status 列: busy 保留 busy;否则基于心跳判断 online/offline", () => {
     const cols = getWorkerColumns();
-    const col = cols.find((c: any) => c.key === "status") as any;
+    const col = cols.find((c: unknown) => c.key === "status") as unknown;
     const busyNode = col.render("busy", makeWorker({ status: "busy" }));
     expect(busyNode).toBeDefined();
     // heartbeat 太老 → offline
@@ -82,7 +82,7 @@ describe("getWorkerColumns", () => {
 
   it("currentTasks 列: count/max 拼接;无 record.capabilities 回退 3", () => {
     const cols = getWorkerColumns();
-    const col = cols.find((c: any) => c.key === "currentTasks") as any;
+    const col = cols.find((c: unknown) => c.key === "currentTasks") as unknown;
     const node = col.render(2, makeWorker({ maxConcurrency: 5 }));
     expect(node).toBeDefined();
     const fallback = col.render(undefined, { id: "x" });
@@ -91,21 +91,21 @@ describe("getWorkerColumns", () => {
 
   it("maxConcurrency 列 render", () => {
     const cols = getWorkerColumns();
-    const col = cols.find((c: any) => c.key === "maxConcurrency") as any;
+    const col = cols.find((c: unknown) => c.key === "maxConcurrency") as unknown;
     const node = col.render(undefined, { capabilities: {} });
     expect(node).toBeDefined();
   });
 
   it("port 列: undefined → '-'", () => {
     const cols = getWorkerColumns();
-    const col = cols.find((c: any) => c.key === "port") as any;
+    const col = cols.find((c: unknown) => c.key === "port") as unknown;
     const node = col.render(undefined, makeWorker());
     expect(node).toBeDefined();
   });
 
   it("lastHeartbeat 列: undefined → '-'; > 2 分钟带后缀", () => {
     const cols = getWorkerColumns();
-    const col = cols.find((c: any) => c.key === "lastHeartbeat") as any;
+    const col = cols.find((c: unknown) => c.key === "lastHeartbeat") as unknown;
     expect(col.render(undefined)).toBeDefined();
     const old = Math.floor(Date.now() / 1000) - 600;
     expect(col.render(old)).toBeDefined();
@@ -115,7 +115,7 @@ describe("getWorkerColumns", () => {
 
   it("createdAt 列: formatDateTime 路径", () => {
     const cols = getWorkerColumns();
-    const col = cols.find((c: any) => c.key === "createdAt") as any;
+    const col = cols.find((c: unknown) => c.key === "createdAt") as unknown;
     expect(col.render("2026-01-01T12:00:00Z")).toBeDefined();
     expect(col.render(undefined)).toBeDefined();
   });

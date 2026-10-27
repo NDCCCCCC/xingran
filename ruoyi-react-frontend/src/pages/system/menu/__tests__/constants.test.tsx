@@ -50,7 +50,7 @@ describe("system/menu/constants", () => {
   });
 
   it("getMenuIcon 未知 → MenuOutlined", () => {
-    const { baseElement } = render(<>{getMenuIcon("X" as any)}</>, { wrapper });
+    const { baseElement } = render(<>{getMenuIcon("X" as unknown)}</>, { wrapper });
     expect(baseElement.querySelector(".anticon")).toBeTruthy();
   });
 
@@ -70,7 +70,7 @@ describe("system/menu/constants", () => {
   });
 
   it("getMenuTypeTag 未知 → 未知", () => {
-    const { baseElement } = render(<>{getMenuTypeTag("X" as any)}</>, { wrapper });
+    const { baseElement } = render(<>{getMenuTypeTag("X" as unknown)}</>, { wrapper });
     expect(baseElement.textContent).toContain("未知");
   });
 

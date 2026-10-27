@@ -61,7 +61,7 @@ describe("workstations constants", () => {
       status: 0,
       type: 1,
       rotation: 90,
-    } as any);
+    } as unknown);
     expect(node.id).toBe("w1");
     expect(node.x).toBe(100);
     expect(node.y).toBe(200);
@@ -69,7 +69,7 @@ describe("workstations constants", () => {
   });
 
   it("toWorkstationNode 缺字段回退", () => {
-    const node = toWorkstationNode({ id: "w2", name: "WS002" } as any);
+    const node = toWorkstationNode({ id: "w2", name: "WS002" } as unknown);
     expect(node.x).toBe(0);
     expect(node.y).toBe(0);
     expect(node.rotation).toBe(0);

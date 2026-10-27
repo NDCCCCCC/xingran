@@ -11,17 +11,17 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-const persistedStore: any = {};
+const persistedStore: unknown = {};
 vi.mock("@/hooks/usePersistedState", () => ({
-  usePersistedStateController: vi.fn(({ defaultValue }: any) => {
+  usePersistedStateController: vi.fn(({ defaultValue }: unknown) => {
     const k = JSON.stringify(defaultValue);
     if (persistedStore[k] === undefined) persistedStore[k] = defaultValue;
     return [
       persistedStore[k],
-      (v: any) => {
+      (v: unknown) => {
         persistedStore[k] = v;
       },
-    ] as any;
+    ] as unknown;
   }),
 }));
 
@@ -45,27 +45,27 @@ describe("hooks/useServerSort", () => {
 });
 
 describe("resolveSorter", () => {
-  const metas: any = [{ field: "name" }, { field: "age" }];
+  const metas: unknown = [{ field: "name" }, { field: "age" }];
 
   it("ascend", () => {
-    const r = resolveSorter({ field: "name", order: "ascend" } as any, metas);
+    const r = resolveSorter({ field: "name", order: "ascend" } as unknown, metas);
     expect(r.orderByColumn).toBe("name");
     expect(r.isAsc).toBe(true);
   });
 
   it("descend", () => {
-    const r = resolveSorter({ field: "age", order: "descend" } as any, metas);
+    const r = resolveSorter({ field: "age", order: "descend" } as unknown, metas);
     expect(r.orderByColumn).toBe("age");
     expect(r.isAsc).toBe(false);
   });
 
   it("no order → undefined", () => {
-    const r = resolveSorter({ field: "name", order: null } as any, metas);
+    const r = resolveSorter({ field: "name", order: null } as unknown, metas);
     expect(r.orderByColumn).toBeUndefined();
   });
 
   it("empty sorter → undefined", () => {
-    const r = resolveSorter({} as any, metas);
+    const r = resolveSorter({} as unknown, metas);
     expect(r.orderByColumn).toBeUndefined();
   });
 
@@ -74,14 +74,14 @@ describe("resolveSorter", () => {
       [
         { field: "name", order: "ascend" },
         { field: "age", order: "descend" },
-      ] as any,
+      ] as unknown,
       metas
     );
     expect(r.orderByColumn).toBe("age");
   });
 
   it("未知字段 → undefined", () => {
-    const r = resolveSorter({ field: "unknown", order: "ascend" } as any, metas);
+    const r = resolveSorter({ field: "unknown", order: "ascend" } as unknown, metas);
     expect(r.orderByColumn).toBeUndefined();
   });
 });

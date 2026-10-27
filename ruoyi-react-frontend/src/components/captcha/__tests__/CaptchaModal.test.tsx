@@ -12,14 +12,14 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/components/captcha", () => ({
-  SliderCaptcha: ({ active, onVerified, onError }: any) => (
+  SliderCaptcha: ({ active, onVerified, onError }: unknown) => (
     <div data-testid="slider-captcha">
       <button onClick={() => onVerified?.("token-1", "captcha-id-1")}>verify-slider</button>
       <button onClick={() => onError?.("CAPTCHA_TYPE_MISMATCH")}>trigger-mismatch</button>
       <span data-testid="active">{String(active)}</span>
     </div>
   ),
-  TextCaptcha: ({ value, onChange, onError }: any) => (
+  TextCaptcha: ({ value, onChange, onError }: unknown) => (
     <div data-testid="text-captcha">
       <input
         data-testid="captcha-input"

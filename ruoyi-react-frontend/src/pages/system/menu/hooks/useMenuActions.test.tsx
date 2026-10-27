@@ -71,7 +71,7 @@ describe("useMenuActions — initial state & shape", () => {
 describe("useMenuActions — handleAdd/Edit/setEditingMenu", () => {
   it("handleAdd 清空 editingMenu", () => {
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
-    act(() => result.current.setEditingMenu({ id: "m1", menuName: "x" } as any));
+    act(() => result.current.setEditingMenu({ id: "m1", menuName: "x" } as unknown));
     expect(result.current.editingMenu?.id).toBe("m1");
     act(() => result.current.handleAdd());
     expect(result.current.editingMenu).toBeNull();
@@ -79,14 +79,14 @@ describe("useMenuActions — handleAdd/Edit/setEditingMenu", () => {
 
   it("handleEdit(record) 设 editingMenu", () => {
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
-    act(() => result.current.handleEdit({ id: "m2", menuName: "y" } as any));
+    act(() => result.current.handleEdit({ id: "m2", menuName: "y" } as unknown));
     expect(result.current.editingMenu?.id).toBe("m2");
     expect(result.current.editingMenu?.menuName).toBe("y");
   });
 
   it("setEditingMenu 直写 state", () => {
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
-    act(() => result.current.setEditingMenu({ id: "z" } as any));
+    act(() => result.current.setEditingMenu({ id: "z" } as unknown));
     expect(result.current.editingMenu?.id).toBe("z");
   });
 });
@@ -97,16 +97,16 @@ describe("useMenuActions — handleDeleteConfirm (via Modal.confirm)", () => {
     api.endpoint.mockResolvedValue({ data: {} });
     const onLoad = vi.fn();
     let capturedOnOk: (() => void | Promise<void>) | undefined;
-    const confirmSpy = vi.spyOn(Modal, "confirm").mockImplementation((config: any) => {
+    const confirmSpy = vi.spyOn(Modal, "confirm").mockImplementation((config: unknown) => {
       capturedOnOk = config.onOk;
       // 同时渲染 content,触发 DeleteConfirmContent 内部 useState
-      return { destroy: vi.fn(), update: vi.fn() } as any;
+      return { destroy: vi.fn(), update: vi.fn() } as unknown;
     });
     const { result } = renderHook(() => useMenuActions({ ...baseParams(), onLoad }), {
       wrapper: wrap,
     });
     act(() => {
-      result.current.handleDeleteConfirm({ id: "m1", menuName: "test" } as any);
+      result.current.handleDeleteConfirm({ id: "m1", menuName: "test" } as unknown);
     });
     expect(confirmSpy).toHaveBeenCalledTimes(1);
     await act(async () => {
@@ -121,9 +121,9 @@ describe("useMenuActions — handleDeleteConfirm (via Modal.confirm)", () => {
   it("handleDeleteConfirm cascade=true 调 cascade URL", async () => {
     const api = createApiMock("/system/menus/m1/delete");
     api.endpoint.mockResolvedValue({ data: { deletedCount: 3 } });
-    const confirmSpy = vi.spyOn(Modal, "confirm").mockImplementation((config: any) => {
+    const confirmSpy = vi.spyOn(Modal, "confirm").mockImplementation((config: unknown) => {
       // 模拟用户在 Modal 中点击 cascade 复选框
-      const inst = { destroy: vi.fn(), update: vi.fn() } as any;
+      const inst = { destroy: vi.fn(), update: vi.fn() } as unknown;
       inst.checkboxRef = { current: true };
       // 替换 config.onOk 使其使用 true
       const origOnOk = config.onOk;
@@ -136,7 +136,7 @@ describe("useMenuActions — handleDeleteConfirm (via Modal.confirm)", () => {
         id: "m1",
         menuName: "test",
         children: [{ id: "c1" }],
-      } as any);
+      } as unknown);
     });
     await act(async () => {
       // 通过 capturedSpy 调用
@@ -151,13 +151,13 @@ describe("useMenuActions — handleDelete error path (via handleDeleteConfirm)",
     const api = createApiMock("/system/menus/m1/delete");
     api.endpoint.mockRejectedValue({ response: { data: { message: "被引用" } } });
     let capturedOnOk: (() => void | Promise<void>) | undefined;
-    vi.spyOn(Modal, "confirm").mockImplementation((config: any) => {
+    vi.spyOn(Modal, "confirm").mockImplementation((config: unknown) => {
       capturedOnOk = config.onOk;
-      return { destroy: vi.fn(), update: vi.fn() } as any;
+      return { destroy: vi.fn(), update: vi.fn() } as unknown;
     });
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
     act(() => {
-      result.current.handleDeleteConfirm({ id: "m1", menuName: "x" } as any);
+      result.current.handleDeleteConfirm({ id: "m1", menuName: "x" } as unknown);
     });
     await act(async () => {
       if (capturedOnOk) {
@@ -175,13 +175,13 @@ describe("useMenuActions — handleDelete error path (via handleDeleteConfirm)",
     const api = createApiMock("/system/menus/m1/delete");
     api.endpoint.mockRejectedValue(new Error("network"));
     let capturedOnOk: (() => void | Promise<void>) | undefined;
-    vi.spyOn(Modal, "confirm").mockImplementation((config: any) => {
+    vi.spyOn(Modal, "confirm").mockImplementation((config: unknown) => {
       capturedOnOk = config.onOk;
-      return { destroy: vi.fn(), update: vi.fn() } as any;
+      return { destroy: vi.fn(), update: vi.fn() } as unknown;
     });
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
     act(() => {
-      result.current.handleDeleteConfirm({ id: "m1", menuName: "x" } as any);
+      result.current.handleDeleteConfirm({ id: "m1", menuName: "x" } as unknown);
     });
     await act(async () => {
       if (capturedOnOk) {
@@ -200,7 +200,7 @@ describe("useMenuActions — handleBatchDelete (via Modal.confirm)", () => {
   it("selectedRowKeys 空时弹 warning,不走 Modal.confirm", () => {
     const confirmSpy = vi
       .spyOn(Modal, "confirm")
-      .mockImplementation(() => ({ destroy: vi.fn() }) as any);
+      .mockImplementation(() => ({ destroy: vi.fn() }) as unknown);
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
     act(() => {
       result.current.handleBatchDelete();
@@ -213,9 +213,9 @@ describe("useMenuActions — handleBatchDelete (via Modal.confirm)", () => {
     const api = createApiMock("/system/menus/batch-delete");
     api.endpoint.mockResolvedValue({ data: { deletedCount: 2 } });
     let capturedOnOk: (() => void | Promise<void>) | undefined;
-    vi.spyOn(Modal, "confirm").mockImplementation((config: any) => {
+    vi.spyOn(Modal, "confirm").mockImplementation((config: unknown) => {
       capturedOnOk = config.onOk;
-      return { destroy: vi.fn(), update: vi.fn() } as any;
+      return { destroy: vi.fn(), update: vi.fn() } as unknown;
     });
     const onLoad = vi.fn();
     const setSelectedRowKeys = vi.fn();
@@ -241,9 +241,9 @@ describe("useMenuActions — handleBatchDelete (via Modal.confirm)", () => {
     const api = createApiMock("/system/menus/batch-delete");
     api.endpoint.mockRejectedValue(new Error("batch fail"));
     let capturedOnOk: (() => void | Promise<void>) | undefined;
-    vi.spyOn(Modal, "confirm").mockImplementation((config: any) => {
+    vi.spyOn(Modal, "confirm").mockImplementation((config: unknown) => {
       capturedOnOk = config.onOk;
-      return { destroy: vi.fn(), update: vi.fn() } as any;
+      return { destroy: vi.fn(), update: vi.fn() } as unknown;
     });
     const { result } = renderHook(
       () =>
@@ -276,7 +276,7 @@ describe("useMenuActions — handleSave create/update path", () => {
       { wrapper: wrap }
     );
     await act(async () => {
-      await result.current.handleSave(form as any);
+      await result.current.handleSave(form as unknown);
     });
     expect(form.validateFields).toHaveBeenCalledTimes(1);
     expect(api.endpoint).toHaveBeenCalledWith("/system/menus", { menuName: "new" });
@@ -290,9 +290,9 @@ describe("useMenuActions — handleSave create/update path", () => {
     api.endpoint.mockResolvedValue({ data: {} });
     const form = { validateFields: vi.fn().mockResolvedValue({ menuName: "edit" }) };
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
-    act(() => result.current.setEditingMenu({ id: "m1", menuName: "old" } as any));
+    act(() => result.current.setEditingMenu({ id: "m1", menuName: "old" } as unknown));
     await act(async () => {
-      await result.current.handleSave(form as any);
+      await result.current.handleSave(form as unknown);
     });
     expect(api.endpoint).toHaveBeenCalledWith("/system/menus/m1/update", {
       menuName: "edit",
@@ -307,7 +307,7 @@ describe("useMenuActions — handleSave create/update path", () => {
     };
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleSave(form as any);
+      await result.current.handleSave(form as unknown);
     });
     expect(api.endpoint).not.toHaveBeenCalled();
   });
@@ -322,7 +322,7 @@ describe("useMenuActions — handleSave visible/status 转换", () => {
     };
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleSave(form as any);
+      await result.current.handleSave(form as unknown);
     });
     expect(api.endpoint).toHaveBeenCalledWith("/system/menus", {
       menuName: "x",
@@ -339,7 +339,7 @@ describe("useMenuActions — handleSave visible/status 转换", () => {
     };
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleSave(form as any);
+      await result.current.handleSave(form as unknown);
     });
     expect(api.endpoint).toHaveBeenCalledWith("/system/menus", {
       menuName: "x",
@@ -356,7 +356,7 @@ describe("useMenuActions — handleSave visible/status 转换", () => {
     };
     const { result } = renderHook(() => useMenuActions(baseParams()), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleSave(form as any);
+      await result.current.handleSave(form as unknown);
     });
     expect(api.endpoint).toHaveBeenCalledWith("/system/menus", {
       menuName: "x",

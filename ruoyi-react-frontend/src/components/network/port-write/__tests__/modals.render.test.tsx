@@ -13,7 +13,7 @@ import PortBindingModal from "../PortBindingModal";
 import PortWriteModal from "../PortWriteModal";
 import SetAccessVlanModal from "../SetAccessVlanModal";
 
-const portRecord: any = {
+const portRecord: unknown = {
   id: "port-1",
   portName: "GigabitEthernet0/1",
   deviceName: "核心交换机",
@@ -42,7 +42,7 @@ describe("port-write Modal 渲染", () => {
     await expectRenders(
       <PortWriteModal
         open={false}
-        action={"shutdown" as any}
+        action={"shutdown" as unknown}
         portRecord={null}
         onClose={vi.fn()}
         onSuccess={vi.fn()}
@@ -53,7 +53,7 @@ describe("port-write Modal 渲染", () => {
     await expectRenders(
       <PortWriteModal
         open={true}
-        action={"shutdown" as any}
+        action={"shutdown" as unknown}
         portRecord={portRecord}
         onClose={vi.fn()}
         onSuccess={vi.fn()}

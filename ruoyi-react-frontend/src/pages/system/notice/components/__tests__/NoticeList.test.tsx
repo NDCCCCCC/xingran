@@ -22,7 +22,7 @@ interface HarnessProps {
   pageSize?: number;
   selectedRowKeys?: React.Key[];
   onPageChange?: (page: number, pageSize: number) => void;
-  onSearch?: (values: any) => void;
+  onSearch?: (values: unknown) => void;
   getColumnSortOrder?: (field: string) => "ascend" | "descend" | null;
   searchForm?: FormInstance;
 }
@@ -80,7 +80,7 @@ describe("NoticeList 组件渲染", () => {
         publishStatus: "1",
         createBy: "admin",
         createTime: "2026-01-01 12:00:00",
-      } as any,
+      } as unknown,
     ];
     const { baseElement } = renderWithProviders(
       <Harness notices={notices} total={1} getColumnSortOrder={() => "ascend"} />
@@ -94,12 +94,12 @@ describe("NoticeList 组件渲染", () => {
       noticeTitle: "t",
       noticeType: "1",
       noticeContent: "c",
-      priority: 0 as any,
+      priority: 0 as unknown,
       targetType: 1,
       publishStatus: "1",
       createBy: "admin",
       createTime: "2026-01-01",
-    } as any;
+    } as unknown;
     const { baseElement } = renderWithProviders(<Harness notices={[notice]} total={1} />);
     expect(baseElement.textContent).toContain("普通");
   });

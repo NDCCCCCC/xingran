@@ -21,7 +21,7 @@ describe("ComponentListTab 渲染", () => {
   it("parentAssetId 空 → list=[] 直接渲染", async () => {
     vi.mocked(componentApi.list).mockResolvedValueOnce({
       data: { list: [] },
-    } as any);
+    } as unknown);
     const { baseElement } = renderWithProviders(<ComponentListTab parentAssetId="" />);
     await new Promise((r) => setTimeout(r, 100));
     expect(baseElement).toBeDefined();
@@ -40,7 +40,7 @@ describe("ComponentListTab 渲染", () => {
           },
         ],
       },
-    } as any);
+    } as unknown);
     const { baseElement } = renderWithProviders(<ComponentListTab parentAssetId="a1" />);
     await new Promise((r) => setTimeout(r, 200));
     expect(componentApi.list).toHaveBeenCalledWith("a1");

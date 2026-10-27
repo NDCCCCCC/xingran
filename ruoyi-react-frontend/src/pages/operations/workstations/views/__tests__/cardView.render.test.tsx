@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
 import { renderPageWithEndpoints } from "@/test/utils/renderPage";
 import { WorkstationCardView } from "../CardView";
 
-const mockWs: any = (id: string, name: string) => ({
+const mockWs: unknown = (id: string, name: string) => ({
   id,
   name,
   code: name,

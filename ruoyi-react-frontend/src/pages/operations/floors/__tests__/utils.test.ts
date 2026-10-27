@@ -11,7 +11,7 @@ describe("processWorkstations", () => {
   });
 
   it("preserves existing positions from database", () => {
-    const ws: any = [
+    const ws: unknown = [
       { id: "ws-1", name: "A01", positionX: 100, positionY: 200, width: 80, depth: 60 },
     ];
     const result = processWorkstations(ws);
@@ -20,7 +20,7 @@ describe("processWorkstations", () => {
   });
 
   it("auto-assigns positions for workstations without position", () => {
-    const ws: any = [
+    const ws: unknown = [
       { id: "ws-1", name: "A01" },
       { id: "ws-2", name: "A02" },
     ];
@@ -32,14 +32,14 @@ describe("processWorkstations", () => {
   });
 
   it("applies default dimensions when width/depth missing", () => {
-    const ws: any = [{ id: "ws-1", name: "A01", positionX: 0, positionY: 0 }];
+    const ws: unknown = [{ id: "ws-1", name: "A01", positionX: 0, positionY: 0 }];
     const result = processWorkstations(ws);
     expect(result[0].width).toBe(WORKSTATION_LAYOUT.DEFAULT_WIDTH);
     expect(result[0].height).toBe(WORKSTATION_LAYOUT.DEFAULT_DEPTH);
   });
 
   it("defaults rotation to 0", () => {
-    const ws: any = [{ id: "ws-1", name: "A01", positionX: 10, positionY: 10 }];
+    const ws: unknown = [{ id: "ws-1", name: "A01", positionX: 10, positionY: 10 }];
     expect(processWorkstations(ws)[0].rotation).toBe(0);
   });
 });

@@ -43,11 +43,11 @@ describe("useDictActions", () => {
 
   it("handleCreateType 新建模式 → POST /system/dicts/types", async () => {
     const api = createApiMock("/system/dicts/types");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const fakeForm = {
       validateFields: vi.fn().mockResolvedValue({ name: "t" }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
       await result.current.handleCreateType(fakeForm);
@@ -57,13 +57,13 @@ describe("useDictActions", () => {
 
   it("handleCreateType 校验失败 → 不调 API", async () => {
     const api = createApiMock("/system/dicts/types");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const fakeForm = {
       validateFields: vi
         .fn()
         .mockRejectedValue({ errorFields: [{ name: "name", errors: ["required"] }] }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
       await result.current.handleCreateType(fakeForm);
@@ -73,13 +73,13 @@ describe("useDictActions", () => {
 
   it("handleCreateType 编辑模式 → POST update", async () => {
     const api = createApiMock("/system/dicts/types/d1/update");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const fakeForm = {
       validateFields: vi.fn().mockResolvedValue({ name: "t" }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
-    act(() => result.current.setEditingType({ id: "d1", name: "old", dictType: "x" } as any));
+    act(() => result.current.setEditingType({ id: "d1", name: "old", dictType: "x" } as unknown));
     await act(async () => {
       await result.current.handleCreateType(fakeForm);
     });
@@ -88,7 +88,7 @@ describe("useDictActions", () => {
 
   it("handleDeleteType → POST delete", async () => {
     const api = createApiMock("/system/dicts/types/d1/delete");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
       await result.current.handleDeleteType("d1");
@@ -98,7 +98,7 @@ describe("useDictActions", () => {
 
   it("handleBatchDeleteType → POST batch-delete", async () => {
     const api = createApiMock("/system/dicts/types/batch-delete");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const setKeys = vi.fn();
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
@@ -117,11 +117,11 @@ describe("useDictActions", () => {
 
   it("handleCreateData → POST /system/dicts/data", async () => {
     const api = createApiMock("/system/dicts/data");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const fakeForm = {
       validateFields: vi.fn().mockResolvedValue({ label: "x" }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
       await result.current.handleCreateData(fakeForm);
@@ -131,7 +131,7 @@ describe("useDictActions", () => {
 
   it("handleDeleteData → POST delete", async () => {
     const api = createApiMock("/system/dicts/data/d1/delete");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
       await result.current.handleDeleteData("d1");
@@ -141,7 +141,7 @@ describe("useDictActions", () => {
 
   it("handleBatchDeleteData → POST batch-delete", async () => {
     const api = createApiMock("/system/dicts/data/batch-delete");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const setKeys = vi.fn();
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
@@ -160,7 +160,7 @@ describe("useDictActions", () => {
 
   it("handleRefreshCache → POST refresh", async () => {
     const api = createApiMock("/system/dicts/refresh-cache");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     await act(async () => {
       await result.current.handleRefreshCache();
@@ -169,7 +169,7 @@ describe("useDictActions", () => {
   });
 
   it("openTypeModal 无 record → 新建模式", () => {
-    const fakeForm = { resetFields: vi.fn(), setFieldsValue: vi.fn() } as any;
+    const fakeForm = { resetFields: vi.fn(), setFieldsValue: vi.fn() } as unknown;
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     act(() => result.current.openTypeModal(undefined, fakeForm));
     expect(result.current.typeModalVisible).toBe(true);
@@ -177,16 +177,16 @@ describe("useDictActions", () => {
   });
 
   it("openTypeModal 有 record → 编辑模式", () => {
-    const fakeForm = { resetFields: vi.fn(), setFieldsValue: vi.fn() } as any;
-    const record = { id: "d1", name: "t1", dictType: "x" } as any;
+    const fakeForm = { resetFields: vi.fn(), setFieldsValue: vi.fn() } as unknown;
+    const record = { id: "d1", name: "t1", dictType: "x" } as unknown;
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     act(() => result.current.openTypeModal(record, fakeForm));
     expect(result.current.editingType).toEqual(record);
   });
 
   it("openDataModal 有 record → 编辑模式", () => {
-    const fakeForm = { resetFields: vi.fn(), setFieldsValue: vi.fn() } as any;
-    const record = { id: "d1", label: "x", value: "1" } as any;
+    const fakeForm = { resetFields: vi.fn(), setFieldsValue: vi.fn() } as unknown;
+    const record = { id: "d1", label: "x", value: "1" } as unknown;
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     act(() => result.current.openDataModal(record, fakeForm));
     expect(result.current.editingData).toEqual(record);
@@ -195,7 +195,7 @@ describe("useDictActions", () => {
   it("setEditingType/setTypeModalVisible 直接写入", () => {
     const { result } = renderHook(() => useDictActions(baseParams), { wrapper });
     act(() => {
-      result.current.setEditingType({ id: "d1" } as any);
+      result.current.setEditingType({ id: "d1" } as unknown);
       result.current.setTypeModalVisible(true);
       result.current.setDataModalVisible(true);
     });

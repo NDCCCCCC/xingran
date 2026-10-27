@@ -56,7 +56,7 @@ describe("ADGroupPage 渲染", () => {
   it("getADGroupList 失败 → message.error 路径", async () => {
     vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({
       data: { list: [{ id: "c1", name: "c1" }] },
-    } as any);
+    } as unknown);
     vi.mocked(adDomainApi.getADGroupList).mockRejectedValueOnce(new Error("fail"));
     const { baseElement } = renderWithProviders(<ADGroupPage />);
     await new Promise((r) => setTimeout(r, 500));
@@ -64,7 +64,7 @@ describe("ADGroupPage 渲染", () => {
   });
 
   it("selectedConfig 为空 → 不发请求", async () => {
-    vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({ data: { list: [] } } as any);
+    vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({ data: { list: [] } } as unknown);
     const { baseElement } = renderWithProviders(<ADGroupPage />);
     await new Promise((r) => setTimeout(r, 500));
     expect(baseElement).toBeDefined();

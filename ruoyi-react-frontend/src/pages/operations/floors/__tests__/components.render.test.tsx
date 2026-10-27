@@ -21,7 +21,7 @@ import { FloorModal } from "../components/FloorModal";
 import { createFloorTableColumns } from "../components/FloorTableColumns";
 import {  } from "../constants";
 
-const mockFloor = (id: string, name: string, overrides: Record<string, unknown> = {}): any => ({
+const mockFloor = (id: string, name: string, overrides: Record<string, unknown> = {}): unknown => ({
   id,
   name,
   floorNo: 1,
@@ -265,7 +265,7 @@ describe("createFloorTableColumns", () => {
   it("workstationStats 列空值/total=0 render '-'", () => {
     const cols = createFloorTableColumns(cbs);
     const col = cols.find((c) => c.key === "workstationStats");
-    const render = col?.render as (_: unknown, record: any) => unknown;
+    const render = col?.render as (_: unknown, record: unknown) => unknown;
     expect(render(undefined, {})).toBe("-");
     expect(
       render(undefined, { workstationStats: { total: 0, used: 0, unused: 0, maintenance: 0 } })
@@ -275,7 +275,7 @@ describe("createFloorTableColumns", () => {
   it("workstationStats 列渲染 总/已用/空闲 Tag，维护仅 >0 显示", async () => {
     const cols = createFloorTableColumns(cbs);
     const col = cols.find((c) => c.key === "workstationStats");
-    const render = col?.render as (_: unknown, record: any) => any;
+    const render = col?.render as (_: unknown, record: unknown) => unknown;
 
     const noMaint = renderWithProviders(
       render(undefined, { workstationStats: { total: 3, used: 2, unused: 1, maintenance: 0 } })
@@ -304,7 +304,7 @@ describe("createFloorTableColumns", () => {
   it("buildingName render 回退 buildingCode", () => {
     const cols = createFloorTableColumns(cbs);
     const col = cols.find((c) => c.key === "buildingName");
-    const render = col?.render as (_: unknown, record: any) => unknown;
+    const render = col?.render as (_: unknown, record: unknown) => unknown;
     expect(render(undefined, { buildingName: "", buildingCode: "BLD-X" })).toBe("BLD-X");
     expect(render(undefined, { buildingName: "A 栋", buildingCode: "BLD-A" })).toBe("A 栋");
   });

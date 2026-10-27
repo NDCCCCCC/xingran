@@ -20,7 +20,7 @@ describe("useGeocoding", () => {
 
   it("geocode: 空地址 → error & return null", async () => {
     const { result } = renderHook(() => useGeocoding());
-    let r: any;
+    let r: unknown;
     await act(async () => {
       r = await result.current.geocode("");
     });
@@ -41,11 +41,11 @@ describe("useGeocoding", () => {
         district: "洪山",
         street: "珞喻路",
       },
-    } as any);
+    } as unknown);
 
     const { result } = renderHook(() => useGeocoding());
 
-    let r1: any;
+    let r1: unknown;
     await act(async () => {
       r1 = await result.current.geocode("武汉", "武汉");
     });
@@ -53,7 +53,7 @@ describe("useGeocoding", () => {
     expect(api.endpoint).toHaveBeenCalledTimes(1);
 
     // 第二次相同地址 → 应该命中缓存,不再调用 API
-    let r2: any;
+    let r2: unknown;
     await act(async () => {
       r2 = await result.current.geocode("武汉", "武汉");
     });
@@ -73,10 +73,10 @@ describe("useGeocoding", () => {
         district: "朝阳区",
         street: "长安街",
       },
-    } as any);
+    } as unknown);
 
     const { result } = renderHook(() => useGeocoding());
-    let r: any;
+    let r: unknown;
     await act(async () => {
       r = await result.current.geocode("北京");
     });
@@ -86,10 +86,10 @@ describe("useGeocoding", () => {
 
   it("geocode: response.data 缺失 → error & null", async () => {
     const api = createApiMock("/ops/building/geocode");
-    api.endpoint.mockResolvedValueOnce({ data: null } as any);
+    api.endpoint.mockResolvedValueOnce({ data: null } as unknown);
 
     const { result } = renderHook(() => useGeocoding());
-    let r: any;
+    let r: unknown;
     await act(async () => {
       r = await result.current.geocode("未知地址xyz");
     });
@@ -102,7 +102,7 @@ describe("useGeocoding", () => {
     api.endpoint.mockRejectedValueOnce(new Error("net"));
 
     const { result } = renderHook(() => useGeocoding());
-    let r: any;
+    let r: unknown;
     await act(async () => {
       r = await result.current.geocode("上海");
     });

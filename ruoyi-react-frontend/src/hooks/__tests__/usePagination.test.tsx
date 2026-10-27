@@ -11,17 +11,17 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-let persistedStore: any = {};
+let persistedStore: unknown = {};
 vi.mock("@/hooks/usePersistedState", () => ({
-  usePersistedStateController: vi.fn(({ defaultValue }: any) => {
+  usePersistedStateController: vi.fn(({ defaultValue }: unknown) => {
     const k = JSON.stringify(defaultValue);
     if (persistedStore[k] === undefined) persistedStore[k] = defaultValue;
     return [
       persistedStore[k],
-      (v: any) => {
+      (v: unknown) => {
         persistedStore[k] = v;
       },
-    ] as any;
+    ] as unknown;
   }),
 }));
 

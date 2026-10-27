@@ -17,7 +17,7 @@ const baseWidget = {
   dataSource: { type: "static", data: { value: 42 } },
   display: { showTitle: true },
   position: { x: 0, y: 0, w: 4, h: 3 },
-} as any;
+} as unknown;
 
 describe("WidgetEditor 渲染", () => {
   it("visible=false 不渲染 Drawer 内容", () => {

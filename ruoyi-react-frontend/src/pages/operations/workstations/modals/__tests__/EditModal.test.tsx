@@ -12,14 +12,14 @@ vi.mock("@/lib/api", async () => {
 });
 
 interface Props {
-  editingWorkstation?: any;
-  typeDict?: any[];
-  orgTreeData?: any[];
-  deptTreeData?: any[];
-  aliasList?: any[];
-  userOptions?: any[];
-  cascaderOptions?: any[];
-  onOk?: (v: any) => Promise<void>;
+  editingWorkstation?: unknown;
+  typeDict?: unknown[];
+  orgTreeData?: unknown[];
+  deptTreeData?: unknown[];
+  aliasList?: unknown[];
+  userOptions?: unknown[];
+  cascaderOptions?: unknown[];
+  onOk?: (v: unknown) => Promise<void>;
   onCancel?: () => void;
 }
 

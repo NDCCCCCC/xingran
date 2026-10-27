@@ -18,7 +18,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-const baseVm: any = {
+const baseVm: unknown = {
   id: "vm1",
   name: "VM1",
   power_state: "in_use",

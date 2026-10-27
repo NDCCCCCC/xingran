@@ -4,10 +4,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock setInterval/clearInterval before importing the module
-const timers: any[] = [];
+const timers: unknown[] = [];
 vi.stubGlobal(
   "setInterval",
-  vi.fn((fn: any, _ms: number) => {
+  vi.fn((fn: unknown, _ms: number) => {
     const id = timers.length;
     timers.push(fn);
     return id;

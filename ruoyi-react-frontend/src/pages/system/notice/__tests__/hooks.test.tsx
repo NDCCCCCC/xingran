@@ -37,7 +37,7 @@ describe("useNoticeStatistics", () => {
 
   it("handles API rejection gracefully", async () => {
     const { getNoticeStatusStatistics } = await import("@/lib/noticeApi");
-    (getNoticeStatusStatistics as any).mockRejectedValueOnce(new Error("network"));
+    (getNoticeStatusStatistics as unknown).mockRejectedValueOnce(new Error("network"));
     const { result } = renderHook(() => useNoticeStatistics());
     await act(async () => {
       await result.current.loadStatistics();

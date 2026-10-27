@@ -17,7 +17,7 @@ import {
   isTopLevelMenu,
 } from "../sidebar-helper";
 
-const sampleMenus: any[] = [
+const sampleMenus: unknown[] = [
   {
     id: "m1",
     menuType: "C",

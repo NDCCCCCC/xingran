@@ -46,6 +46,6 @@ describe("Dashboard presets exports", () => {
   });
 
   it("getPresetTemplate returns undefined for unknown type", () => {
-    expect(getPresetTemplate("non-existent-template" as any)).toBeUndefined();
+    expect(getPresetTemplate("non-existent-template" as unknown)).toBeUndefined();
   });
 });

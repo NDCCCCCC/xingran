@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-const mockData: any = [
+const mockData: unknown = [
   { id: "d1", deptName: "Dept 1", children: [{ id: "d2", deptName: "Dept 2" }] },
 ];
 vi.mock("@/hooks/useDeptTree", () => ({

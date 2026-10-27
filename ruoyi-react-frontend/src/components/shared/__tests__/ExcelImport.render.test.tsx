@@ -102,7 +102,7 @@ describe("ExcelImport — handleDownloadTemplate 自定义 URL", () => {
       ok: true,
       headers: { get: () => null },
       blob: () => Promise.resolve(new Blob()),
-    } as any);
+    } as unknown);
     renderWithProviders(
       <ExcelImport entityType="custom" templateUrl="/api/v1/system/custom/template" visible />
     );
@@ -122,7 +122,7 @@ describe("ExcelImport — handleDownloadTemplate 自定义 URL", () => {
       ok: false,
       headers: { get: () => null },
       blob: () => Promise.resolve(new Blob()),
-    } as any);
+    } as unknown);
     renderWithProviders(
       <ExcelImport entityType="custom" templateUrl="/api/v1/custom/template" visible />
     );

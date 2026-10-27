@@ -106,7 +106,7 @@ const mockedBlobAxios = blobAxios as unknown as {
 };
 
 const blobRequestInterceptor = () =>
-  mockedBlobAxios.interceptors.request.use.mock.calls[0][0] as (config: any) => Promise<any>;
+  mockedBlobAxios.interceptors.request.use.mock.calls[0][0] as (config: unknown) => Promise<unknown>;
 
 beforeAll(() => {
   // jsdom 不实现 URL.createObjectURL — 打桩以覆盖 triggerBrowserDownload

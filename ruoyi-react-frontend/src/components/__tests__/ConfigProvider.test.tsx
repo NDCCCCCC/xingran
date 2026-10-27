@@ -10,8 +10,8 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-const mockAuthState: any = { isAuthenticated: false };
-const mockSettingsState: any = {
+const mockAuthState: unknown = { isAuthenticated: false };
+const mockSettingsState: unknown = {
   initialized: false,
   preferences: { theme: { mode: "light" }, layout: { type: "classic" } },
   initialize: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock("@/store/settingsStore", () => ({
 }));
 
 vi.mock("@/store/themeStore", () => ({
-  useThemeStore: vi.fn((selector: any) =>
+  useThemeStore: vi.fn((selector: unknown) =>
     typeof selector === "function"
       ? selector({ syncFromSettings: mockThemeSync })
       : { syncFromSettings: mockThemeSync }
@@ -44,7 +44,7 @@ vi.mock("@/store/themeStore", () => ({
 }));
 
 vi.mock("@/store/layoutStore", () => ({
-  useLayoutStore: vi.fn((selector: any) =>
+  useLayoutStore: vi.fn((selector: unknown) =>
     typeof selector === "function"
       ? selector({ syncFromSettings: mockLayoutSync })
       : { syncFromSettings: mockLayoutSync }

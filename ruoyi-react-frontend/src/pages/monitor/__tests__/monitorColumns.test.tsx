@@ -18,7 +18,7 @@ describe("getJobLogColumns", () => {
   it("status render 成功/失败 Tag", () => {
     const cols = getJobLogColumns({ getSortOrder: () => null });
     const col = cols.find((c) => c.key === "status");
-    const render = col?.render as (s: number) => any;
+    const render = col?.render as (s: number) => unknown;
     const ok = render(0);
     expect(ok.props.color).toBe("success");
     expect(ok.props.children).toBe("成功");
@@ -30,7 +30,7 @@ describe("getJobLogColumns", () => {
   it("duration render 委托 formatDuration", () => {
     const cols = getJobLogColumns({ getSortOrder: () => null });
     const col = cols.find((c) => c.key === "duration");
-    const render = col?.render as (d: number) => any;
+    const render = col?.render as (d: number) => unknown;
     expect(render(0)).toBe("-");
     expect(render(800)).toBe("800ms");
   });
@@ -60,7 +60,7 @@ describe("getJobColumns", () => {
       handleStatusChange: () => {},
       handleRun: () => {},
       getSortOrder: () => null,
-    } as any);
+    } as unknown);
     expect(Array.isArray(cols)).toBe(true);
     expect(cols.length).toBeGreaterThan(5);
   });

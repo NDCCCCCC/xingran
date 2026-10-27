@@ -28,13 +28,13 @@ const dashboardFixture = {
 
 function seedStore() {
   useDashboardStore.setState({
-    currentDashboard: dashboardFixture as any,
+    currentDashboard: dashboardFixture as unknown,
     currentLoading: false,
-    dashboards: [dashboardFixture] as any,
+    dashboards: [dashboardFixture] as unknown,
     listLoading: false,
     listError: null,
     selectedWidgetId: null,
-  } as any);
+  } as unknown);
 }
 
 describe("dashboard-system edit 页", () => {
@@ -52,7 +52,7 @@ describe("dashboard-system edit 页", () => {
     useDashboardStore.setState({
       currentDashboard: null,
       currentLoading: false,
-    } as any);
+    } as unknown);
     const { findByText } = renderWithProviders(<DashboardEdit />, {
       route: "/dashboard-system/missing/edit",
     });
@@ -73,7 +73,7 @@ describe("dashboard-system view 页", () => {
     useDashboardStore.setState({
       currentDashboard: null,
       currentLoading: false,
-    } as any);
+    } as unknown);
     const { findByText } = renderWithProviders(<DashboardView />, {
       route: "/dashboard-system/missing/view",
     });

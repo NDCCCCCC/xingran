@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 const mockStatistics = vi.fn();
 vi.mock("@/lib/opsApi", () => ({
   floorApi: {
-    statistics: (...args: any[]) => mockStatistics(...args),
+    statistics: (...args: unknown[]) => mockStatistics(...args),
   },
 }));
 

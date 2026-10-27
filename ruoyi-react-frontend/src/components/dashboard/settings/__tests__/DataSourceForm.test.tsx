@@ -18,12 +18,12 @@ vi.mock("@/lib/api", async () => {
 
 interface HarnessProps {
   value?: ApiDataSourceConfig | StaticDataSourceConfig | WebSocketDataSourceConfig;
-  onChange?: (v: any) => void;
+  onChange?: (v: unknown) => void;
 }
 
 function Harness({ value, onChange }: HarnessProps) {
   const [form] = Form.useForm();
-  return <DataSourceForm form={form} value={value as any} onChange={onChange} />;
+  return <DataSourceForm form={form} value={value as unknown} onChange={onChange} />;
 }
 
 describe("DataSourceForm 渲染", () => {

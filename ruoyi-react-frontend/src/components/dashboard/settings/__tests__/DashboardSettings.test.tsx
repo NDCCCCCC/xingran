@@ -11,9 +11,9 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-let storeState: Record<string, any> = {};
+let storeState: Record<string, unknown> = {};
 vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: (selector?: (s: Record<string, any>) => unknown) => {
+  useDashboardStore: (selector?: (s: Record<string, unknown>) => unknown) => {
     if (selector) {
       return selector(storeState);
     }
@@ -22,7 +22,7 @@ vi.mock("@/store/dashboardStore", () => ({
 }));
 
 vi.mock("@/components/dashboard/settings/DashboardScopeSelector", () => ({
-  default: ({ value, onChange }: any) => (
+  default: ({ value, onChange }: unknown) => (
     <div data-testid="scope-selector">
       <button onClick={() => onChange?.({ scope: "public" })}>change-scope</button>
       <span>{value?.scope}</span>

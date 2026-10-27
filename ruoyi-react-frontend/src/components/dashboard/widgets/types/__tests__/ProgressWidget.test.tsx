@@ -21,12 +21,12 @@ const baseWidget = {
   type: "progress",
   dataSource: { type: "static", data: {} },
   position: { x: 0, y: 0, w: 4, h: 3 },
-} as any;
+} as unknown;
 
 describe("ProgressWidget 渲染", () => {
   it("data=null → percent=0", () => {
     const { baseElement } = renderWithProviders(
-      <ProgressWidget widget={baseWidget} display={{ target: 100 } as any} />
+      <ProgressWidget widget={baseWidget} display={{ target: 100 } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -39,7 +39,7 @@ describe("ProgressWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ProgressWidget widget={baseWidget} display={{ target: 100 } as any} />
+      <ProgressWidget widget={baseWidget} display={{ target: 100 } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -52,7 +52,7 @@ describe("ProgressWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ProgressWidget widget={baseWidget} display={{ target: 100 } as any} />
+      <ProgressWidget widget={baseWidget} display={{ target: 100 } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -65,7 +65,7 @@ describe("ProgressWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ProgressWidget widget={baseWidget} display={{ target: 100 } as any} />
+      <ProgressWidget widget={baseWidget} display={{ target: 100 } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -78,7 +78,7 @@ describe("ProgressWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ProgressWidget widget={baseWidget} display={{ target: 100 } as any} />
+      <ProgressWidget widget={baseWidget} display={{ target: 100 } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -91,7 +91,7 @@ describe("ProgressWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ProgressWidget widget={baseWidget} display={{ target: 100 } as any} />
+      <ProgressWidget widget={baseWidget} display={{ target: 100 } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -114,7 +114,7 @@ describe("ProgressWidget 渲染", () => {
               { value: 50, color: "orange" },
               { value: 100, color: "green" },
             ],
-          } as any
+          } as unknown
         }
       />
     );
@@ -125,7 +125,7 @@ describe("ProgressWidget 渲染", () => {
     const { baseElement } = renderWithProviders(
       <ProgressWidget
         widget={baseWidget}
-        display={{ target: 100 } as any}
+        display={{ target: 100 } as unknown}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />

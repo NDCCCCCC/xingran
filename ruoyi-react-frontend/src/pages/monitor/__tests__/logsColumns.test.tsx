@@ -24,7 +24,7 @@ describe("getLoginLogColumns", () => {
   it("userName render: nickname 不同于 userName 时合并展示", () => {
     const cols = getLoginLogColumns(cbs);
     const col = cols.find((c) => c.key === "userName");
-    const render = col?.render as (_: unknown, r: any) => any;
+    const render = col?.render as (_: unknown, r: unknown) => unknown;
     const el = render(undefined, { userName: "alice", nickname: "Alice Zhang" });
     // Space 组件包裹 children 数组
     const text = JSON.stringify(el.props.children);
@@ -34,7 +34,7 @@ describe("getLoginLogColumns", () => {
   it("userName render: nickname 相同/缺失回退 userName", () => {
     const cols = getLoginLogColumns(cbs);
     const col = cols.find((c) => c.key === "userName");
-    const render = col?.render as (_: unknown, r: any) => any;
+    const render = col?.render as (_: unknown, r: unknown) => unknown;
     const el1 = render(undefined, { userName: "bob", nickname: "bob" });
     expect(JSON.stringify(el1.props.children)).toContain("bob");
     const el2 = render(undefined, { userName: "" });
@@ -70,7 +70,7 @@ describe("getOperLogColumns", () => {
   it("requestMethod render 委托 renderRequestMethodTag", () => {
     const cols = getOperLogColumns(cbs);
     const col = cols.find((c) => c.key === "requestMethod");
-    const render = col?.render as (m: string) => any;
+    const render = col?.render as (m: string) => unknown;
     expect(render("GET").props.color).toBe("blue");
   });
 

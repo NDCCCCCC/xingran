@@ -11,7 +11,7 @@ import {
   renderMenuName,
 } from "../utils";
 
-const sampleMenus: any[] = [
+const sampleMenus: unknown[] = [
   {
     id: "m1",
     menuName: "系统",
@@ -38,15 +38,15 @@ describe("pages/system/menu/utils", () => {
     });
 
     it("null → 空", () => {
-      expect(flattenTree(null as any)).toEqual([]);
+      expect(flattenTree(null as unknown)).toEqual([]);
     });
 
     it("undefined → 空", () => {
-      expect(flattenTree(undefined as any)).toEqual([]);
+      expect(flattenTree(undefined as unknown)).toEqual([]);
     });
 
     it("非数组 → 空", () => {
-      expect(flattenTree("not array" as any)).toEqual([]);
+      expect(flattenTree("not array" as unknown)).toEqual([]);
     });
 
     it("无 children 的项保留", () => {
@@ -68,7 +68,7 @@ describe("pages/system/menu/utils", () => {
     });
 
     it("null → 仅顶级", () => {
-      const result = buildParentOptions(null as any);
+      const result = buildParentOptions(null as unknown);
       expect(result.length).toBe(1);
     });
   });
@@ -106,27 +106,27 @@ describe("pages/system/menu/utils", () => {
   describe("renderMenuName", () => {
     it("有 icon 时渲染 icon span", () => {
       const { container } = render(
-        <>{renderMenuName({ id: "x", menuName: "X", menuType: "C", icon: "user" } as any)}</>
+        <>{renderMenuName({ id: "x", menuName: "X", menuType: "C", icon: "user" } as unknown)}</>
       );
       expect(container.textContent).toContain("X");
     });
 
     it("无 icon 走 menuType default", () => {
       const { container } = render(
-        <>{renderMenuName({ id: "x", menuName: "Y", menuType: "C" } as any)}</>
+        <>{renderMenuName({ id: "x", menuName: "Y", menuType: "C" } as unknown)}</>
       );
       expect(container.textContent).toContain("Y");
     });
 
     it("无 icon + menuType M", () => {
       const { container } = render(
-        <>{renderMenuName({ id: "x", menuName: "Z", menuType: "M" } as any)}</>
+        <>{renderMenuName({ id: "x", menuName: "Z", menuType: "M" } as unknown)}</>
       );
       expect(container.textContent).toContain("Z");
     });
 
     it("menuName 文本始终渲染", () => {
-      render(<>{renderMenuName({ id: "x", menuName: "TestName", menuType: "C" } as any)}</>);
+      render(<>{renderMenuName({ id: "x", menuName: "TestName", menuType: "C" } as unknown)}</>);
       expect(screen.getByText("TestName")).toBeInTheDocument();
     });
   });

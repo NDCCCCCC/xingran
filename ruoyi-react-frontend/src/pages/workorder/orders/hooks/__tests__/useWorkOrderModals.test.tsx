@@ -45,8 +45,8 @@ describe("useWorkOrderModals", () => {
 
   it("openEditModal → modalVisible=true + editingRecord=record", async () => {
     const { result } = renderHook(() => useWorkOrderModals(), { wrapper });
-    const editForm = { setFieldsValue: vi.fn() } as any;
-    const record = { id: "w1", title: "T" } as any;
+    const editForm = { setFieldsValue: vi.fn() } as unknown;
+    const record = { id: "w1", title: "T" } as unknown;
     act(() => result.current.openEditModal(record, editForm));
     expect(result.current.modalVisible).toBe(true);
     expect(result.current.editingRecord).toEqual(record);
@@ -58,7 +58,7 @@ describe("useWorkOrderModals", () => {
 
   it("openDetailDrawer → 加载 comments + history", async () => {
     const { result } = renderHook(() => useWorkOrderModals(), { wrapper });
-    const record = { id: "w1" } as any;
+    const record = { id: "w1" } as unknown;
     await act(async () => {
       await result.current.openDetailDrawer(record);
     });
@@ -74,7 +74,7 @@ describe("useWorkOrderModals", () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { result } = renderHook(() => useWorkOrderModals(), { wrapper });
     await act(async () => {
-      await result.current.openDetailDrawer({ id: "w1" } as any);
+      await result.current.openDetailDrawer({ id: "w1" } as unknown);
     });
     expect(errSpy).toHaveBeenCalled();
     expect(result.current.detailDrawerVisible).toBe(true);

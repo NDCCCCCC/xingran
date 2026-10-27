@@ -93,7 +93,7 @@ describe("port-write constants", () => {
   });
 
   it("validateReasonOptional: 未填返 resolve", async () => {
-    let form: any = null;
+    let form: unknown = null;
     renderHook(() => {
       form = Form.useForm()[0];
     });
@@ -101,7 +101,7 @@ describe("port-write constants", () => {
   });
 
   it("validateReasonOptional: 填了但 < REASON_MIN 拒", async () => {
-    let form: any = null;
+    let form: unknown = null;
     renderHook(() => {
       form = Form.useForm()[0];
     });
@@ -110,7 +110,7 @@ describe("port-write constants", () => {
   });
 
   it("validateReasonRequired: 空必填拒", async () => {
-    let form: any = null;
+    let form: unknown = null;
     renderHook(() => {
       form = Form.useForm()[0];
     });
@@ -120,7 +120,7 @@ describe("port-write constants", () => {
   });
 
   it("validateReasonRequired: 长度超限拒", async () => {
-    let form: any = null;
+    let form: unknown = null;
     renderHook(() => {
       form = Form.useForm()[0];
     });

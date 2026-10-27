@@ -58,7 +58,7 @@ describe("pages/monitor/cache/utils", () => {
   });
 
   describe("exportCacheAsJson", () => {
-    let clickSpy: any;
+    let clickSpy: unknown;
 
     beforeEach(() => {
       clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
@@ -79,7 +79,7 @@ describe("pages/monitor/cache/utils", () => {
     });
 
     it("非数组数据 JSON 化", () => {
-      exportCacheAsJson({ key: "v" } as any);
+      exportCacheAsJson({ key: "v" } as unknown);
       expect(clickSpy).toHaveBeenCalled();
     });
   });

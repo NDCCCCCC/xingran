@@ -6,7 +6,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import AssetRow from "../AssetRow";
 
 describe("components/table/AssetRow", () => {
-  const sampleAsset: any = { id: "a1", name: "Asset 1" };
+  const sampleAsset: unknown = { id: "a1", name: "Asset 1" };
 
   it("有 onEdit 时渲染编辑/删除按钮", () => {
     render(<AssetRow record={sampleAsset} onEdit={vi.fn()} />);
@@ -44,7 +44,7 @@ describe("components/table/AssetRow", () => {
   });
 
   it("memo 包裹", () => {
-    expect((AssetRow as any).$$typeof).toBeDefined();
+    expect((AssetRow as unknown).$$typeof).toBeDefined();
   });
 
   it("删除按钮有 danger 属性", () => {

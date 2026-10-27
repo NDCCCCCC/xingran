@@ -20,12 +20,12 @@ const baseWidget = {
   title: "测试表格",
   type: "table",
   dataSource: { type: "static", data: [] },
-} as any;
+} as unknown;
 
 const baseDisplay = {
   pageSize: 10,
   columns: [{ title: "名称", dataIndex: "name", key: "name" }],
-} as any;
+} as unknown;
 
 describe("TableWidget 渲染", () => {
   it("data=[] 渲染不抛错", () => {

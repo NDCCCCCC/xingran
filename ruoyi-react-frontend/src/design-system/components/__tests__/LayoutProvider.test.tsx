@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-const mockLayoutStore: any = {
+const mockLayoutStore: unknown = {
   currentLayout: "classic",
   sidebarCollapsed: false,
   density: "comfortable",

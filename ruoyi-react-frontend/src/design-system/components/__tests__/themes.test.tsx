@@ -15,7 +15,7 @@ import PageTitle from "../PageTitle";
 import { SettingsShell } from "../SettingsShell";
 
 vi.mock("@/store/settingsStore", () => ({
-  useSettingsStore: vi.fn((sel?: any) => {
+  useSettingsStore: vi.fn((sel?: unknown) => {
     const state = {
       preferences: {
         theme: { mode: "light" },
@@ -50,7 +50,7 @@ vi.mock("@/store/layoutStore", () => {
 });
 
 vi.mock("@/store/themeStore", () => ({
-  useThemeStore: vi.fn((sel?: any) => {
+  useThemeStore: vi.fn((sel?: unknown) => {
     const state = { mode: "light" as const, setMode: vi.fn() };
     return typeof sel === "function" ? sel(state) : state;
   }),

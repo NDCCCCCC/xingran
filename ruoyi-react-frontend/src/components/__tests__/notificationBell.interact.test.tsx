@@ -45,7 +45,7 @@ function resetNoticeStore() {
     notifications: [],
     unreadCount: 1,
     loading: false,
-  } as any);
+  } as unknown);
 }
 
 describe("NotificationBell 交互", () => {

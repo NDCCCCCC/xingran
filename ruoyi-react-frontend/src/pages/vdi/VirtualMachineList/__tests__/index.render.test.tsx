@@ -57,7 +57,7 @@ describe("VirtualMachineListPage 渲染", () => {
         ],
         total: 1,
       },
-    } as any);
+    } as unknown);
     const { baseElement } = renderVDI();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();

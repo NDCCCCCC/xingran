@@ -111,7 +111,7 @@ describe("ExcelExport — handleExport 自定义 URL 路径(fetch)", () => {
       ok: true,
       headers: { get: () => "attachment; filename=test.xlsx" },
       blob: () => Promise.resolve(new Blob()),
-    } as any);
+    } as unknown);
     renderWithProviders(
       <ExcelExport
         entityType="custom"
@@ -139,7 +139,7 @@ describe("ExcelExport — handleExport 自定义 URL 路径(fetch)", () => {
       ok: false,
       headers: { get: () => null },
       blob: () => Promise.resolve(new Blob()),
-    } as any);
+    } as unknown);
     renderWithProviders(
       <ExcelExport
         entityType="custom"

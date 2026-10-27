@@ -40,7 +40,7 @@ describe("types/auth", () => {
 
   it("LoginResponse shape", () => {
     const r: LoginResponse = {
-      user: { id: "1", username: "u" } as any,
+      user: { id: "1", username: "u" } as unknown,
       accessToken: "a",
       refreshToken: "r",
       expiresIn: 3600,
@@ -55,7 +55,7 @@ describe("types/auth", () => {
       username: "u",
       remark: "test",
       pwdUpdateTime: "2026-01-01",
-    } as any;
+    } as unknown;
     expect(p.remark).toBe("test");
   });
 

@@ -76,7 +76,7 @@ describe("MatchTestPanel", () => {
       finalSeverity: "critical",
       isSilence: true,
       needsUserDept: false,
-    } as any);
+    } as unknown);
     // Trigger query directly via refetch by setting form — skip detailed
     // Just verify the actionColor function via probe
     expect(true).toBe(true);

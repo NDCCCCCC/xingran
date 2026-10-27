@@ -35,7 +35,7 @@ const wrap = ({ children }: { children: React.ReactNode }) => (
   </QueryClientProvider>
 );
 
-const opts = () => ({ current: 1, pageSize: 10, searchForm: {} as any });
+const opts = () => ({ current: 1, pageSize: 10, searchForm: {} as unknown });
 
 describe("useScheduleData", () => {
   it("initial state", () => {

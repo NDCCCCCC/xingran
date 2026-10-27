@@ -57,7 +57,7 @@ describe("useHolidayModals", () => {
         id: "h1",
         date: "2026-10-01",
         name: "国庆",
-      } as any)
+      } as unknown)
     );
     expect(result.current.modalState.modalVisible).toBe(true);
     expect(result.current.modalState.editingRecord?.id).toBe("h1");

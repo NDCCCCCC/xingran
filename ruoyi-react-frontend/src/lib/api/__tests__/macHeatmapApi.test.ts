@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/api", async () => {
   return {
-    post: vi.fn(async (url: string, data?: any) => ({
+    post: vi.fn(async (url: string, data?: unknown) => ({
       data: {
         cells: [{ deviceId: "d1", interfaceName: "eth0", changeCount: 5, date: "2026-08-01" }],
         topN: 100,

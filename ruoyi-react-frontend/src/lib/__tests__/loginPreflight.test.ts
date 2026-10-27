@@ -32,9 +32,9 @@ describe("lib/loginPreflight", () => {
   });
 
   it("三项成功 → ok=true + captchaEnabled", async () => {
-    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
-    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
-    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as unknown);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as unknown);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as unknown);
 
     const r = await submitLoginPreflight();
     expect(r.ok).toBe(true);
@@ -42,9 +42,9 @@ describe("lib/loginPreflight", () => {
   });
 
   it("captcha=false 也 ok=true", async () => {
-    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
-    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: false } as any);
-    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as unknown);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: false } as unknown);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as unknown);
 
     const r = await submitLoginPreflight();
     expect(r.ok).toBe(true);
@@ -52,17 +52,17 @@ describe("lib/loginPreflight", () => {
   });
 
   it("encryption 失败 → ok=false", async () => {
-    vi.mocked(refreshEncryptionConfig).mockResolvedValue(false as any);
-    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
-    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(false as unknown);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as unknown);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as unknown);
 
     const r = await submitLoginPreflight();
     expect(r.ok).toBe(false);
   });
 
   it("publicKey 失败 → ok=false", async () => {
-    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
-    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as unknown);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as unknown);
     vi.mocked(fetchPublicKey).mockRejectedValue(new Error("net"));
 
     const r = await submitLoginPreflight();
@@ -71,27 +71,27 @@ describe("lib/loginPreflight", () => {
   });
 
   it("captcha 失败 → ok=false", async () => {
-    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as unknown);
     vi.mocked(getCaptchaConfig).mockRejectedValue(new Error("cap"));
-    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as unknown);
 
     const r = await submitLoginPreflight();
     expect(r.ok).toBe(false);
   });
 
   it("成功时 clearPublicKeyCache 被调用", async () => {
-    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
-    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
-    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as unknown);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as unknown);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as unknown);
 
     await submitLoginPreflight();
     expect(clearPublicKeyCache).toHaveBeenCalled();
   });
 
   it("fetchPublicKey 收到 true 参数", async () => {
-    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
-    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
-    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as unknown);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as unknown);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as unknown);
 
     await submitLoginPreflight();
     expect(fetchPublicKey).toHaveBeenCalledWith(true);

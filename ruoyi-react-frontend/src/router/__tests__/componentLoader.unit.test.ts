@@ -63,7 +63,7 @@ describe("createLazyComponent 路径处理", () => {
   it("moduleLoader 找不到时返错误组件(非 lazy)", () => {
     const ErrComp = createLazyComponent("pages/nonexistent/dir/index");
     // 错误组件 $$typeof 未定义(直接函数)
-    expect((ErrComp as any).$$typeof).toBeUndefined();
+    expect((ErrComp as unknown).$$typeof).toBeUndefined();
   });
 
   it("空 path + 路径不含 / 仍返函数(尝试加载)", () => {
@@ -74,14 +74,14 @@ describe("createLazyComponent 路径处理", () => {
 
 describe("ComponentLoader 静态属性", () => {
   it("ALLOWED_PREFIXES 含 pages/components", () => {
-    expect((ComponentLoader as any).ALLOWED_PREFIXES).toEqual(["pages/", "components/"]);
+    expect((ComponentLoader as unknown).ALLOWED_PREFIXES).toEqual(["pages/", "components/"]);
   });
 
   it("DANGEROUS_PATTERNS 长度 5", () => {
-    expect((ComponentLoader as any).DANGEROUS_PATTERNS.length).toBe(5);
+    expect((ComponentLoader as unknown).DANGEROUS_PATTERNS.length).toBe(5);
   });
 
   it("componentModules glob 含 pages/{index,detail}.tsx", () => {
-    expect(Object.keys((ComponentLoader as any).componentModules).length).toBeGreaterThan(50);
+    expect(Object.keys((ComponentLoader as unknown).componentModules).length).toBeGreaterThan(50);
   });
 });

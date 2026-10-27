@@ -32,14 +32,14 @@ describe("hooks/useImageUpload", () => {
 
   it("handleUploadChange 设置 fileList", () => {
     const { result } = renderHook(() => useImageUpload(), { wrapper });
-    const file: any = { uid: "1", name: "test.png", status: "uploading" };
+    const file: unknown = { uid: "1", name: "test.png", status: "uploading" };
     act(() => result.current.handleUploadChange([file]));
     expect(result.current.fileList.length).toBe(1);
   });
 
   it("handleUploadChange 清空 → imageId/imageUrl 复位", () => {
     const { result } = renderHook(() => useImageUpload(), { wrapper });
-    act(() => result.current.handleUploadChange([{ uid: "1", name: "x" } as any]));
+    act(() => result.current.handleUploadChange([{ uid: "1", name: "x" } as unknown]));
     act(() => result.current.handleUploadChange([]));
     expect(result.current.imageId).toBeUndefined();
     expect(result.current.imageUrl).toBeUndefined();
@@ -48,12 +48,12 @@ describe("hooks/useImageUpload", () => {
   it("handleUploadSuccess 设置 imageId/imageUrl + 调 onSuccess", () => {
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useImageUpload({ onSuccess }), { wrapper });
-    const file: any = { uid: "1", name: "test.png" };
+    const file: unknown = { uid: "1", name: "test.png" };
     act(() => {
       result.current.handleUploadSuccess(file, {
         id: "f1",
         storagePath: "x.png",
-      } as any);
+      } as unknown);
     });
     expect(result.current.imageId).toBe("f1");
     expect(result.current.imageUrl).toContain("x.png");
@@ -64,7 +64,7 @@ describe("hooks/useImageUpload", () => {
     const onError = vi.fn();
     const { result } = renderHook(() => useImageUpload({ onError }), { wrapper });
     act(() => {
-      result.current.handleUploadError({ uid: "1" } as any, new Error("upload failed"));
+      result.current.handleUploadError({ uid: "1" } as unknown, new Error("upload failed"));
     });
     expect(onError).toHaveBeenCalledWith(expect.any(Error));
   });
@@ -73,14 +73,14 @@ describe("hooks/useImageUpload", () => {
     const onError = vi.fn();
     const { result } = renderHook(() => useImageUpload({ onError }), { wrapper });
     act(() => {
-      result.current.handleUploadError({ uid: "1" } as any, "string error");
+      result.current.handleUploadError({ uid: "1" } as unknown, "string error");
     });
     expect(onError).toHaveBeenCalledWith(expect.any(Error));
   });
 
   it("resetUpload 清空所有状态", () => {
     const { result } = renderHook(() => useImageUpload(), { wrapper });
-    act(() => result.current.handleUploadChange([{ uid: "1", name: "x" } as any]));
+    act(() => result.current.handleUploadChange([{ uid: "1", name: "x" } as unknown]));
     act(() => result.current.resetUpload());
     expect(result.current.fileList).toEqual([]);
     expect(result.current.uploading).toBe(false);

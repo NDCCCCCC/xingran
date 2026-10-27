@@ -48,7 +48,7 @@ describe("useScheduleData", () => {
         list: [{ id: "s1", scheduleDate: "2026-01-01" }],
         total: 1,
       },
-    } as any);
+    } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
 
     await act(async () => {
@@ -72,7 +72,7 @@ describe("useScheduleData", () => {
     const { getDutyScheduleList } = await import("@/lib/dutyApi");
     vi.mocked(getDutyScheduleList).mockResolvedValueOnce({
       data: { list: [{ id: "a1", scheduleDate: "2026-01-01" }], total: 1 },
-    } as any);
+    } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
 
     await act(async () => {
@@ -85,10 +85,10 @@ describe("useScheduleData", () => {
     const { getMonthlyDutySchedule } = await import("@/lib/dutyApi");
     vi.mocked(getMonthlyDutySchedule).mockResolvedValueOnce({
       data: { "2026-01-06": [{ userName: "Alice" }] },
-    } as any);
+    } as unknown);
     vi.mocked(getMonthlyDutySchedule).mockResolvedValueOnce({
       data: { "2026-01-31": [{ userName: "Bob" }] },
-    } as any);
+    } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
 
     await act(async () => {
@@ -99,39 +99,39 @@ describe("useScheduleData", () => {
 
   it("generate: 成功 → refresh", async () => {
     const { generateSchedule, getDutyScheduleList } = await import("@/lib/dutyApi");
-    vi.mocked(generateSchedule).mockResolvedValueOnce({ code: 0 } as any);
-    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as any);
+    vi.mocked(generateSchedule).mockResolvedValueOnce({ code: 0 } as unknown);
+    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
     await act(async () => {
-      await result.current.generate({} as any);
+      await result.current.generate({} as unknown);
     });
     expect(generateSchedule).toHaveBeenCalled();
   });
 
   it("swap: 成功", async () => {
     const { swapDuty } = await import("@/lib/dutyApi");
-    vi.mocked(swapDuty).mockResolvedValueOnce({ code: 0 } as any);
+    vi.mocked(swapDuty).mockResolvedValueOnce({ code: 0 } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
     await act(async () => {
-      await result.current.swap({} as any);
+      await result.current.swap({} as unknown);
     });
     expect(swapDuty).toHaveBeenCalled();
   });
 
   it("manual: 成功", async () => {
     const { manualDuty } = await import("@/lib/dutyApi");
-    vi.mocked(manualDuty).mockResolvedValueOnce({ code: 0 } as any);
+    vi.mocked(manualDuty).mockResolvedValueOnce({ code: 0 } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
     await act(async () => {
-      await result.current.manual({} as any);
+      await result.current.manual({} as unknown);
     });
     expect(manualDuty).toHaveBeenCalled();
   });
 
   it("deleteOne: 成功 → refresh", async () => {
     const { deleteDutySchedule, getDutyScheduleList } = await import("@/lib/dutyApi");
-    vi.mocked(deleteDutySchedule).mockResolvedValueOnce({ code: 0 } as any);
-    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as any);
+    vi.mocked(deleteDutySchedule).mockResolvedValueOnce({ code: 0 } as unknown);
+    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
     await act(async () => {
       await result.current.deleteOne("s1");
@@ -141,8 +141,8 @@ describe("useScheduleData", () => {
 
   it("batchDelete: 成功 → refresh + 清空 selectedRowKeys", async () => {
     const { batchDeleteDutySchedules, getDutyScheduleList } = await import("@/lib/dutyApi");
-    vi.mocked(batchDeleteDutySchedules).mockResolvedValueOnce({ code: 0 } as any);
-    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as any);
+    vi.mocked(batchDeleteDutySchedules).mockResolvedValueOnce({ code: 0 } as unknown);
+    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
     act(() => result.current.setSelectedRowKeys(["s1", "s2"]));
 

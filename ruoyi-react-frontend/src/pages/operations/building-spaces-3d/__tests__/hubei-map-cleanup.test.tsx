@@ -129,9 +129,9 @@ beforeAll(async () => {
 
 beforeEach(() => {
   fakeMapGL = makeFakeMap();
-  (window as any).BMapGL = makeFakeGLNamespace(fakeMapGL);
+  (window as unknown).BMapGL = makeFakeGLNamespace(fakeMapGL);
   fakeMapBMap = makeFakeMap();
-  (window as any).BMap = makeFakeBMapNamespace(fakeMapBMap);
+  (window as unknown).BMap = makeFakeBMapNamespace(fakeMapBMap);
 });
 
 afterAll(() => {

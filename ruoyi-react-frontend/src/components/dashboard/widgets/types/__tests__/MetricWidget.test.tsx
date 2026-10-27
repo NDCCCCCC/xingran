@@ -13,7 +13,7 @@ vi.mock("@/lib/api", async () => {
 vi.mock("@/hooks/useWidgetData");
 
 vi.mock("../../base/BaseWidget", () => ({
-  BaseWidget: ({ children, data, loading, error }: any) => (
+  BaseWidget: ({ children, data, loading, error }: unknown) => (
     <div
       data-testid="base-widget"
       data-loading={loading}
@@ -27,7 +27,7 @@ vi.mock("../../base/BaseWidget", () => ({
 
 import { MetricWidget } from "../MetricWidget";
 
-const sampleWidget: any = {
+const sampleWidget: unknown = {
   id: "w1",
   type: "metric",
   title: "指标",
@@ -41,7 +41,7 @@ describe("components/dashboard/widgets/types/MetricWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     render(<MetricWidget widget={sampleWidget} display={{}} />);
     expect(screen.getByTestId("base-widget")).toBeInTheDocument();
   });
@@ -52,7 +52,7 @@ describe("components/dashboard/widgets/types/MetricWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     render(<MetricWidget widget={sampleWidget} display={{}} />);
     expect(screen.getByText("0%")).toBeInTheDocument();
   });
@@ -63,7 +63,7 @@ describe("components/dashboard/widgets/types/MetricWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     render(<MetricWidget widget={sampleWidget} display={{ target: 100 }} />);
     expect(screen.getByText("75%")).toBeInTheDocument();
   });
@@ -74,7 +74,7 @@ describe("components/dashboard/widgets/types/MetricWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     render(<MetricWidget widget={sampleWidget} display={{ target: 100 }} />);
     expect(screen.getByText("42%")).toBeInTheDocument();
   });
@@ -85,7 +85,7 @@ describe("components/dashboard/widgets/types/MetricWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     render(<MetricWidget widget={sampleWidget} display={{ target: 100 }} />);
     expect(screen.getByText("100%")).toBeInTheDocument();
   });
@@ -96,7 +96,7 @@ describe("components/dashboard/widgets/types/MetricWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     render(
       <MetricWidget
         widget={sampleWidget}
@@ -118,7 +118,7 @@ describe("components/dashboard/widgets/types/MetricWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     render(
       <MetricWidget widget={sampleWidget} display={{}} onEdit={() => {}} onDelete={() => {}} />
     );
