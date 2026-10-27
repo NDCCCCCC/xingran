@@ -138,7 +138,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
             onClick: () => {
               confirmDelete({
                 target: `定时任务 ${record.jobName}`,
-                onDelete: async () => { handleDelete(record); },
+                onDelete: async () => { await handleDelete(record); },
               });
             },
           },

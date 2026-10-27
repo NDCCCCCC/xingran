@@ -122,7 +122,7 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
             onClick: () =>
               confirmDelete({
                 target: `楼层 ${record.name || record.floorNo}`,
-                onDelete: async () => { onDelete(record.id); },
+                onDelete: async () => { await onDelete(record.id); },
               }),
           },
         ];

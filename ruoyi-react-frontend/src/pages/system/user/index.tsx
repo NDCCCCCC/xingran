@@ -287,7 +287,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
             onClick={() => {
               confirmDelete({
                 target: `用户 ${record.username}`,
-                onDelete: async () => { handleDelete(record.id); },
+                onDelete: async () => { await handleDelete(record.id); },
               });
             }}
           >

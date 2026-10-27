@@ -530,7 +530,8 @@ const AssetList: FC = () => {
   }, [columns, visibleColumns]);
 
   // 行操作：删除（数量/顺序与迁移前一致，唯一入口 createDeleteAction → ConfirmDelete；
-  // label 传对象名，作为确认弹窗的对象标识。操作列由 PageTable 统一追加在列尾部）
+  // target 传对象名，作为确认弹窗正文与 aria-label 的对象标识，按钮文字固定「删除」。
+  // 操作列由 PageTable 统一追加在列尾部）
   const rowActions = useCallback(
     (record: Asset) => [
       createDeleteAction(record.id, handleDelete, {

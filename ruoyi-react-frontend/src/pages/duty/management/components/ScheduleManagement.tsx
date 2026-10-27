@@ -172,7 +172,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
           onClick={() => {
             confirmDelete({
               target: `排班记录 ${record.scheduleDate}`,
-              onDelete: async () => { onDelete(record.id); },
+              onDelete: async () => { await onDelete(record.id); },
             });
           }}
         >
@@ -262,7 +262,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
                   target: `选中的 ${selectedRowKeys.length} 项排班记录`,
                   title: "确认批量删除",
                   actionContext: "批量删除",
-                  onDelete: async () => { onBatchDelete(); },
+                  onDelete: async () => { await onBatchDelete(); },
                 });
               }}
             >

@@ -140,7 +140,7 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
   // 返回
   const handleBack = () => {
     if (hasUnsavedChanges) {
-      // eslint-disable-next-line no-restricted-syntax -- 非删除语义：重置列配置为可逆的个人设置复位，UI-SPEC §1.1 判定规则排除
+      // eslint-disable-next-line no-restricted-syntax -- 非删除语义：离开前丢弃未保存更改的确认（handleBack 导航），不删除任何已持久化数据，UI-SPEC §1.1 判定规则排除
       Modal.confirm({
         title: "确认离开",
         content: "您有未保存的更改，确定要离开吗？",

@@ -111,7 +111,7 @@ export function getCaptchaColumns(params: CaptchaColumnsParams): ColumnsType<Cap
             onClick={() =>
               confirmDelete({
                 target: `验证码背景图 ${record.fileName}`,
-                onDelete: async () => { handleDelete(record.id); },
+                onDelete: async () => { await handleDelete(record.id); },
               })
             }
           >

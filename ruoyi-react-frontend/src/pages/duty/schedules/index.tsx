@@ -213,7 +213,7 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
           onClick={() => {
             confirmDelete({
               target: `排班记录 ${record.scheduleDate}`,
-              onDelete: async () => { handleDelete(record.id); },
+              onDelete: async () => { await handleDelete(record.id); },
             });
           }}
         >

@@ -189,7 +189,7 @@ function getTemplateTableColumns(
             onClick: () => {
               confirmDelete({
                 target: `周期工单模板 ${record.templateName}`,
-                onDelete: async () => { handleDelete(record.id); },
+                onDelete: async () => { await handleDelete(record.id); },
               });
             },
           },
