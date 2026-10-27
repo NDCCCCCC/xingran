@@ -180,6 +180,38 @@ func extractOUIPrefix(mac string) string {
 	return normalized
 }
 
+// macNormalizedColumnSQL 「对存储值做归一化」的 SQL 表达式（DBG-06 / #5 修复核心）。
+//
+// 归一化规则与 Go 侧 NormalizeMACAddress 等价：去 `:` `-` `.` 后转大写，得到 12 位 hex。
+// REPLACE/UPPER 在 PostgreSQL 与 SQLite（测试基建）双端通用，故不用 regexp_replace。
+const macNormalizedColumnSQL = "(REPLACE(REPLACE(REPLACE(UPPER(mac_address), ':', ''), '-', ''), '.', ''))"
+
+// macMatchSQL 双侧归一化等值匹配条件：任意输入格式都能命中任意存储格式。
+//
+// 根因（2026-10-27 PG 生产库实测，见 .planning/debug/mac-history-query-returns-empty.md）：
+// 存储格式为大写冒号（`B0:22:7A:2E:4A:4F`），而旧查询把入参 normalize 成无分隔大写
+// （`B0227A2E4A4F`）后直接做等值比较 → 永远空集（实测 无分隔 count=0 / 冒号 count=53）。
+//
+// 双分支设计（性能 + 兼容）：
+//   - 分支一 `mac_address = ?`：入参传 canonical 大写冒号，与实测存储格式一致，
+//     可继续走 device_id_mac_address_first_idx1 索引，不因函数包裹列而全表扫描；
+//   - 分支二 `归一化(存储值) = ?`：兜底点分 / 连字符 / 无分隔等历史脏格式。
+//
+// 传入参数顺序固定为 (canonical, compact)，见 macMatchArgs。
+const macMatchSQL = "(mac_address = ? OR " + macNormalizedColumnSQL + " = ?)"
+
+// macMatchArgs 把任意输入 MAC 转成 macMatchSQL 需要的两个绑定值。
+//
+// 返回 (canonical, compact, ok)：canonical = `AA:BB:CC:DD:EE:FF`，compact = `AABBCCDDEEFF`。
+// ok=false 表示输入不是合法 12 位 hex MAC（调用方须返回错误，不能退化成空结果集）。
+func macMatchArgs(input string) (string, string, bool) {
+	canonical := NormalizeMACAddress(input)
+	if canonical == "" {
+		return "", "", false
+	}
+	return canonical, strings.ReplaceAll(canonical, ":", ""), true
+}
+
 // validateMACAddress 验证MAC地址格式
 // 正则校验：12位十六进制字符
 func validateMACAddress(mac string) error {
@@ -563,7 +595,12 @@ func (s *macHistoryQueryServiceImpl) QueryHistory(ctx context.Context, req *MACH
 		query = query.Where("interface_name = ?", req.InterfaceName)
 	}
 	if req.MAC != "" {
-		query = query.Where("mac_address = ?", NormalizeMACAddress(req.MAC))
+		// DBG-06 双侧归一化: 任意输入格式都能命中任意存储格式(见 macMatchSQL 注释)
+		canonical, compact, ok := macMatchArgs(req.MAC)
+		if !ok {
+			return nil, fmt.Errorf("MAC地址验证失败: 无效的MAC地址格式")
+		}
+		query = query.Where(macMatchSQL, canonical, compact)
 	}
 	if req.VLANID != nil {
 		query = query.Where("vlan_id = ?", *req.VLANID)
@@ -710,7 +747,12 @@ func (s *macHistoryQueryServiceImpl) ExportHistory(ctx context.Context, req *MAC
 		query = query.Where("interface_name = ?", req.InterfaceName)
 	}
 	if req.MAC != "" {
-		query = query.Where("mac_address = ?", NormalizeMACAddress(req.MAC))
+		// DBG-06 双侧归一化(导出路径与列表路径必须同一契约)
+		canonical, compact, ok := macMatchArgs(req.MAC)
+		if !ok {
+			return fmt.Errorf("MAC地址验证失败: 无效的MAC地址格式")
+		}
+		query = query.Where(macMatchSQL, canonical, compact)
 	}
 	if req.VLANID != nil {
 		query = query.Where("vlan_id = ?", *req.VLANID)
@@ -897,10 +939,13 @@ func (s *macHistoryQueryServiceImpl) queryConnectionStatsFromDB(ctx context.Cont
 		if err := validateMACAddress(req.MACAddress); err != nil {
 			return nil, fmt.Errorf("MAC地址验证失败: %w", err)
 		}
-		// 规范化MAC地址
-		normalizedMAC := NormalizeMACAddress(req.MACAddress)
-		detailSQL += " AND mac_address = ?"
-		args = append(args, normalizedMAC)
+		// DBG-06 双侧归一化(明细): 存储值也归一化后再比较, 任意输入格式均可命中
+		canonical, compact, ok := macMatchArgs(req.MACAddress)
+		if !ok {
+			return nil, fmt.Errorf("MAC地址验证失败: 无效的MAC地址格式")
+		}
+		detailSQL += " AND " + macMatchSQL
+		args = append(args, canonical, compact)
 	}
 
 	detailSQL += `
@@ -956,9 +1001,13 @@ func (s *macHistoryQueryServiceImpl) queryConnectionStatsFromDB(ctx context.Cont
 
 	topByMACArgs := []interface{}{startTime, endTime}
 	if req.MACAddress != "" {
-		normalizedMAC := NormalizeMACAddress(req.MACAddress)
-		topByMACSQL += " AND mac_address = ?"
-		topByMACArgs = append(topByMACArgs, normalizedMAC)
+		// DBG-06 双侧归一化(TopByMAC)
+		canonical, compact, ok := macMatchArgs(req.MACAddress)
+		if !ok {
+			return nil, fmt.Errorf("MAC地址验证失败: 无效的MAC地址格式")
+		}
+		topByMACSQL += " AND " + macMatchSQL
+		topByMACArgs = append(topByMACArgs, canonical, compact)
 	}
 
 	topByMACSQL += `
@@ -1005,9 +1054,13 @@ func (s *macHistoryQueryServiceImpl) queryConnectionStatsFromDB(ctx context.Cont
 	// 注意：TopByPort不过滤MAC，因为用户可能想看特定MAC的端口热点
 	// 但如果请求指定了MAC，则只统计该MAC的端口连接
 	if req.MACAddress != "" {
-		normalizedMAC := NormalizeMACAddress(req.MACAddress)
-		topByPortSQL += " AND mac_address = ?"
-		topByPortArgs = append(topByPortArgs, normalizedMAC)
+		// DBG-06 双侧归一化(TopByPort)
+		canonical, compact, ok := macMatchArgs(req.MACAddress)
+		if !ok {
+			return nil, fmt.Errorf("MAC地址验证失败: 无效的MAC地址格式")
+		}
+		topByPortSQL += " AND " + macMatchSQL
+		topByPortArgs = append(topByPortArgs, canonical, compact)
 	}
 
 	topByPortSQL += `
