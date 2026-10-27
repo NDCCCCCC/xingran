@@ -23,9 +23,7 @@ import {
   Space,
   Modal,
   Form,
-  Input,
   InputNumber,
-  Select,
   Tag,
   Card,
   Row,
@@ -63,10 +61,10 @@ import { DepartmentTreeSelect } from "@/components/shared";
 import DeptTree from "@/components/DeptTree";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import { findDeptNode } from "@/utils/deptUtils";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// 状态枚举为 children 形态 → 改写 options 形态并显式 showSearch={false}（业务禁搜）。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { useBuildingGeocoding } from "./useBuildingGeocoding";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 type ViewMode = "table" | "card";
 
@@ -521,7 +519,7 @@ const BuildingManagement: FC = () => {
       <Sider
         width={360}
         className="dept-list-sider"
-        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid var(--theme-border-primary)" }}
+        style={{ background: "var(--theme-bg-surface)", padding: "0 16px 16px 0", borderRight: "1px solid var(--theme-border-primary)" }}
       >
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
@@ -531,7 +529,7 @@ const BuildingManagement: FC = () => {
       </Sider>
 
       {/* 右侧内容区 */}
-      <Content style={{ background: "#fff" }}>
+      <Content style={{ background: "var(--theme-bg-surface)" }}>
         <div>
           <PageTable<Building>
             request={request}
@@ -599,7 +597,7 @@ const BuildingManagement: FC = () => {
                 label="楼宇名称"
                 rules={[{ required: true, message: "请输入楼宇名称" }]}
               >
-                <Input allowClear placeholder="请输入楼宇名称" />
+                <AppInput placeholder="请输入楼宇名称" />
               </Form.Item>
 
               <Form.Item name="orgId" label="所属机构">
@@ -622,14 +620,15 @@ const BuildingManagement: FC = () => {
               </Form.Item>
 
               <Form.Item name="address" label="地址">
-                <Input allowClear placeholder="请输入地址（保存时将自动解析经纬度）" />
+                <AppInput placeholder="请输入地址（保存时将自动解析经纬度）" />
               </Form.Item>
 
               {/* 经纬度显示（只读，自动解析） */}
               {(geocoding.result || editingBuilding?.longitude) && (
                 <Form.Item label="经纬度">
-                  <Input allowClear
+                  <AppInput
                     disabled
+                    allowClear={false}
                     placeholder="经纬度（保存时根据地址自动解析）"
                     value={
                       geocoding.result
@@ -666,14 +665,17 @@ const BuildingManagement: FC = () => {
                 label="状态"
                 rules={[{ required: true, message: "请选择状态" }]}
               >
-                <Select allowClear placeholder="请选择状态" onSearch={() => {}}>
-                  <Option value={0}>正常</Option>
-                  <Option value={1}>停用</Option>
-                </Select>
+                {/* 形态分类器②④：楼宇状态枚举（业务禁搜），children → options */}
+                <AppSelect
+                  allowClear
+                  placeholder="请选择状态"
+                  showSearch={false}
+                  options={BUILDING_STATUS_OPTIONS}
+                />
               </Form.Item>
 
               <Form.Item name="remark" label="描述">
-                <TextArea rows={3} placeholder="请输入描述" />
+                <AppTextArea rows={3} placeholder="请输入描述" />
               </Form.Item>
 
               {/* 隐藏字段：确保经纬度被包含在表单值中 */}

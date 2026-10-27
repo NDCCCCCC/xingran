@@ -24,7 +24,6 @@ import {
   Button,
   Table,
   Space,
-  Input,
   Tooltip,
   Typography,
 } from "antd";
@@ -42,6 +41,9 @@ import {
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { useMenuStore } from "@/store/menuStore";
 import type { DeptTreeNode } from "./types";
+// Phase 71 (W3)：裸 Input/Input.TextArea → AppInput/AppTextArea。
+// scope 为隐藏字段（恒有初值，不受清空影响）；remark 为可选备注输入。
+import { AppInput, AppTextArea } from "@/components/ui";
 
 const { Text } = Typography;
 
@@ -271,10 +273,10 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
             </Form.Item>
             {/* scope 隐藏字段(后端默认 workstation,前端兜底) */}
             <Form.Item name="scope" hidden>
-              <Input allowClear />
+              <AppInput />
             </Form.Item>
             <Form.Item name="remark" label="备注">
-              <Input.TextArea rows={2} placeholder="选填,如:分公司本部 4F 工位映射" />
+              <AppTextArea rows={2} placeholder="选填,如:分公司本部 4F 工位映射" />
             </Form.Item>
             <Space>
               <Button type="primary" onClick={handleCreate}>

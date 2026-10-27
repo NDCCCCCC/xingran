@@ -3,7 +3,7 @@
  */
 
 import type { FC } from "react";
-import { Form, Input, Select, Button, Space, Radio, Card } from "antd";
+import { Form, Button, Space, Radio, Card } from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -18,8 +18,10 @@ import type { FormInstance } from "antd/es/form";
 import type { ViewMode } from "../constants";
 import { STATUS_OPTIONS } from "../constants";
 import type { Building } from "@/types";
-
-const { Option } = Select;
+// Phase 71 (W3)：裸 Input/Select → 契约组件。
+// 楼宇下拉原 children + showSearch（optionFilterProp="children"）→ options 改写（label 存在）；
+// 状态枚举业务禁搜 → 显式 showSearch={false}。
+import { AppInput, AppSelect } from "@/components/ui";
 
 // 楼宇选项基础类型（只需要 id 和 name）
 type BuildingOptionBase = Pick<Building, "id" | "name">;
@@ -76,29 +78,23 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
       >
         <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }} disabled={disabled}>
           <Form.Item name="buildingId" label="所属楼宇">
-            <Select
+            {/* 形态分类器②③：children + 复合子节点 → options 改写；楼宇 UUID 字段 */}
+            <AppSelect
               placeholder="请先选择部门"
               allowClear
               className="user-form-input"
               style={{ width: 150 }}
               showSearch
-              optionFilterProp="children"
               disabled={disabled || !selectedDeptId}
-              onChange={(value) => onBuildingChange?.(value)}
-              onSearch={() => {}}
-            >
-              {buildingOptionsByDept.map((b) => (
-                <Option key={b.id} value={b.id}>
-                  {b.name}
-                </Option>
-              ))}
-            </Select>
+              // AppSelect 的 onChange 值为 unknown；清空（null）时收敛成 "" 表示「未选楼宇」
+              onChange={(value) => onBuildingChange?.((value as string) ?? "")}
+              options={buildingOptionsByDept.map((b) => ({ value: b.id, label: b.name }))}
+            />
           </Form.Item>
 
           <Form.Item name="floorNo" label="楼层号">
-            <Input
+            <AppInput
               placeholder="请输入楼层号"
-              allowClear
               className="user-form-input"
               style={{ width: 120 }}
               disabled={disabled}
@@ -106,9 +102,8 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
           </Form.Item>
 
           <Form.Item name="name" label="楼层名称">
-            <Input
+            <AppInput
               placeholder="请输入楼层名称"
-              allowClear
               className="user-form-input"
               style={{ width: 150 }}
               disabled={disabled}
@@ -116,20 +111,16 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
           </Form.Item>
 
           <Form.Item name="status" label="状态">
-            <Select
+            {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+            <AppSelect
               placeholder="请选择状态"
               allowClear
               className="user-form-input"
               style={{ width: 120 }}
               disabled={disabled}
-              onSearch={() => {}}
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+              showSearch={false}
+              options={STATUS_OPTIONS}
+            />
           </Form.Item>
 
           <Form.Item>

@@ -15,7 +15,6 @@ import {
   Popconfirm,
   Modal,
   Form,
-  Input,
   Alert,
   Collapse,
   Tooltip,
@@ -32,6 +31,8 @@ import type { WorkstationDevice, DeviceFormData, Asset } from "@/types";
 import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
 import { HealthBadge } from "@/components/reconciliation";
 import { confirmDelete } from "@/components/shared/confirmDelete";
+// Phase 71 (W3)：裸 Input/Input.TextArea → AppInput/AppTextArea（本文件无 Select）。
+import { AppInput, AppTextArea } from "@/components/ui";
 
 export interface WorkstationDeviceTableProps {
   workstationId: string;
@@ -631,7 +632,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                   : "未在资产系统中找到"
             }
           >
-            <Input allowClear
+            <AppInput
               placeholder="请输入设备序列号"
               onBlur={(e) => handleSerialSearch(e.target.value)}
               disabled={!!editingDevice}
@@ -660,7 +661,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           )}
 
           <Form.Item name="description" label="备注">
-            <Input.TextArea placeholder="请输入备注（可选）" rows={2} />
+            <AppTextArea placeholder="请输入备注（可选）" rows={2} />
           </Form.Item>
 
           <Form.Item
@@ -674,7 +675,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
             ]}
           >
             {/* eslint-disable-next-line no-restricted-syntax -- placeholder hint, not an actual server URL */}
-            <Input allowClear placeholder="请输入IP地址（可选，如 192.168.1.10）" />
+            <AppInput placeholder="请输入IP地址（可选，如 192.168.1.10）" />
           </Form.Item>
         </Form>
       </Modal>

@@ -10,7 +10,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { FC } from "react";
 import type React from "react";
-import { Table, Button, Space, Form, Input, Select, Card, Alert, Radio, Layout } from "antd";
+import { Table, Button, Space, Form, Card, Alert, Radio, Layout } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -47,6 +47,10 @@ import { WorkstationEditModal } from "./modals";
 import { WorkstationCardView, WorkstationFloorPlanView } from "./views";
 import { LocationAliasDrawer } from "./LocationAliasDrawer";
 import { STATUS_OPTIONS } from "./constants";
+// Phase 71 (W3)：裸 Input/Select → 契约组件。
+// 楼层下拉本是 options 形态 + filterOption={false}（服务端搜索）→ 直接迁；
+// 状态枚举业务禁搜 → 显式 showSearch={false}，children → options。
+import { AppInput, AppSelect } from "@/components/ui";
 import type { FloorOption, UserOption, DeptTreeNode } from "./types";
 // ❌ 移除：import { workstationApi } from '@/lib/opsApi';
 // ✅ 优化：直接导入具体 API，避免 barrel 文件 (bundle-barrel-imports)
@@ -70,7 +74,6 @@ type CascaderOption = {
   isLeaf?: boolean;
 };
 
-const { Option } = Select;
 const { Content } = Layout;
 
 // 统计数据类型
@@ -726,7 +729,7 @@ const WorkstationManagement: FC = () => {
   return (
     <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: "#fff" }}>
+      <Content style={{ background: "var(--theme-bg-surface)" }}>
         <StatisticsCards
           show={total > 10}
           items={[
@@ -763,7 +766,9 @@ const WorkstationManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="floorId" label="所属楼层">
-                <Select
+                {/* 形态分类器②（options 形态）+ 服务端搜索：filterOption={false} 保留，
+                    AppSelect 的 optionFilterProp="label" 在此不参与过滤 */}
+                <AppSelect
                   placeholder={selectedDeptId ? "搜索楼层" : "请先选择部门"}
                   allowClear
                   className="user-form-input"
@@ -776,27 +781,22 @@ const WorkstationManagement: FC = () => {
                 />
               </Form.Item>
               <Form.Item name="name" label="工位名称">
-                <Input
+                <AppInput
                   placeholder="请输入工位名称"
-                  allowClear
                   className="user-form-input"
                   style={{ width: 150 }}
                 />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select
+                {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                <AppSelect
                   placeholder="请选择状态"
                   allowClear
                   className="user-form-input"
                   style={{ width: 120 }}
-                  onSearch={() => {}}
-                >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </Option>
-                  ))}
-                </Select>
+                  showSearch={false}
+                  options={STATUS_OPTIONS}
+                />
               </Form.Item>
               <Form.Item>
                 <Space>

@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Card, Button, Space, Spin, Select } from "antd";
+import { Card, Button, Space, Spin } from "antd";
 import {
   EyeOutlined,
   EditOutlined,
@@ -16,6 +16,8 @@ import {
   type TreeNode,
   type Department,
 } from "@/components/shared/DepartmentTreeSelect";
+// Phase 71 (W3)：裸 Select → AppSelect（本文件两处已是 options 形态，直接迁）。
+import { AppSelect } from "@/components/ui";
 
 export interface FloorOption {
   id: string;
@@ -104,35 +106,38 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
             </Space>
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
-              <AppstoreOutlined style={{ color: "var(--theme-purple, #722ed1)" }} />
-              <Select allowClear
+              <AppstoreOutlined style={{ color: "var(--theme-purple)" }} />
+              <AppSelect
+                allowClear
                 style={{ width: 150 }}
                 placeholder="选择楼宇"
                 value={selectedBuildingId}
-                onChange={onBuildingChange}
+                // AppSelect 的 onChange 值为 unknown；父级 handleEditorBuildingChange 对空值
+                // 直接 return，这里收敛成 "" 保持「未选择」语义，不引入新分支
+                onChange={(value) => onBuildingChange((value as string) ?? "")}
                 options={buildingOptions.map((b) => ({
                   label: b.name,
                   value: b.id,
                 }))}
                 showSearch
-                optionFilterProp="label"
                 onSearch={() => {}}
               />
             </Space>
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
               <AppstoreOutlined style={{ color: "var(--theme-success)" }} />
-              <Select allowClear
+              <AppSelect
+                allowClear
                 style={{ width: 150 }}
                 placeholder="选择楼层"
                 value={currentFloor?.id}
-                onChange={onFloorChange}
+                // 同上：清空收敛为 ""（父级 handleFloorChange 内部对 "" 自会处理空态）
+                onChange={(value) => onFloorChange((value as string) ?? "")}
                 options={floorOptions.map((f) => ({
                   label: f.name || `${f.floorNo}层`,
                   value: f.id,
                 }))}
                 showSearch
-                optionFilterProp="label"
                 onSearch={() => {}}
               />
             </Space>
