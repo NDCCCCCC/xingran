@@ -20,12 +20,14 @@ type mockWorkstationDeviceService struct {
 	GetADDevicesFunc            func(ctx context.Context, wsID string) ([]*models.WorkstationDevice, error)
 	GetAssetDevicesFunc         func(ctx context.Context, wsID string) ([]*models.WorkstationDevice, error)
 	GetPhysicalDevicesFunc      func(ctx context.Context, wsID string) ([]*models.WorkstationDevice, error)
-	SetPrimaryAndSaveFunc       func(ctx context.Context, id string, req *opsServices.SetPrimaryAndSaveRequest) error
-	SyncFromADFunc              func(ctx context.Context, wsID string) error
-	SyncFromAssetFunc           func(ctx context.Context, wsID string) error
-	UpdateDeviceFunc            func(ctx context.Context, id string, req *opsServices.UpdateDeviceRequest) error
-	DeleteDeviceFunc            func(ctx context.Context, id string) error
-	SetPrimaryDeviceFunc        func(ctx context.Context, id string) error
+	// Phase 73 / #7: 空因诊断入口（新增方法，旧 mock 行为不变）
+	GetPhysicalDevicesWithDiagnosisFunc func(ctx context.Context, wsID string) (*opsServices.PhysicalDevicesResult, error)
+	SetPrimaryAndSaveFunc               func(ctx context.Context, id string, req *opsServices.SetPrimaryAndSaveRequest) error
+	SyncFromADFunc                      func(ctx context.Context, wsID string) error
+	SyncFromAssetFunc                   func(ctx context.Context, wsID string) error
+	UpdateDeviceFunc                    func(ctx context.Context, id string, req *opsServices.UpdateDeviceRequest) error
+	DeleteDeviceFunc                    func(ctx context.Context, id string) error
+	SetPrimaryDeviceFunc                func(ctx context.Context, id string) error
 }
 
 func (m *mockWorkstationDeviceService) GetDevicesByWorkstation(ctx context.Context, wsID string, source ...string) ([]*models.WorkstationDevice, error) {
@@ -55,6 +57,12 @@ func (m *mockWorkstationDeviceService) GetAssetDevices(ctx context.Context, wsID
 func (m *mockWorkstationDeviceService) GetPhysicalDevices(ctx context.Context, wsID string) ([]*models.WorkstationDevice, error) {
 	if m.GetPhysicalDevicesFunc != nil {
 		return m.GetPhysicalDevicesFunc(ctx, wsID)
+	}
+	return nil, errNotImplemented
+}
+func (m *mockWorkstationDeviceService) GetPhysicalDevicesWithDiagnosis(ctx context.Context, wsID string) (*opsServices.PhysicalDevicesResult, error) {
+	if m.GetPhysicalDevicesWithDiagnosisFunc != nil {
+		return m.GetPhysicalDevicesWithDiagnosisFunc(ctx, wsID)
 	}
 	return nil, errNotImplemented
 }
@@ -120,6 +128,7 @@ func newWorkstationDeviceRouter(h *WorkstationDeviceHandler) *gin.Engine {
 		{http.MethodPost, "/workstation-device/:id/ad", h.GetADDevices},
 		{http.MethodPost, "/workstation-device/:id/asset", h.GetAssetDevices},
 		{http.MethodPost, "/workstation-device/:id/physical", h.GetPhysicalDevices},
+		{http.MethodPost, "/workstation-device/:id/physical-diagnosis", h.GetPhysicalDevicesWithDiagnosis},
 		{http.MethodPost, "/workstation-device/:id/set-primary-and-save", h.SetPrimaryAndSave},
 		{http.MethodPost, "/workstation-device/sync-ad", h.SyncAD},
 		{http.MethodPost, "/workstation-device/sync-asset", h.SyncAsset},
@@ -202,6 +211,64 @@ func TestWorkstationDeviceHandler_GetPhysicalDevices_Success(t *testing.T) {
 	w := httpDo(newWorkstationDeviceRouter(h), http.MethodPost, "/workstation-device/ws1/physical", "")
 	assert.Equal(t, http.StatusOK, w.Code)
 }
+
+// TestWorkstationDeviceHandler_GetPhysicalDevicesWithDiagnosis 覆盖 #7 的新端点：
+//   - user_id 为空时响应体带 emptyReason=no_user_bound（不是裸空数组）
+//   - 有数据时 emptyReason 字段不出现（omitempty），devices 正常返回
+func TestWorkstationDeviceHandler_GetPhysicalDevicesWithDiagnosis(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("空因:未绑定用户", func(t *testing.T) {
+		svc := &mockWorkstationDeviceService{
+			GetPhysicalDevicesWithDiagnosisFunc: func(_ context.Context, _ string) (*opsServices.PhysicalDevicesResult, error) {
+				return &opsServices.PhysicalDevicesResult{
+					Devices:      []*models.WorkstationDevice{},
+					Total:        0,
+					EmptyReason:  opsServices.PhysicalEmptyReasonNoUserBound,
+					EmptyMessage: "该工位未绑定用户（sys_workstation.user_id 为空）",
+					Diagnosis:    opsServices.PhysicalChainDiagnosis{WorkstationExists: true, UserBound: false},
+				}, nil
+			},
+		}
+		h := NewWorkstationDeviceHandler(svc).WithCore(newTestCore(t))
+		w := httpDo(newWorkstationDeviceRouter(h), http.MethodPost, "/workstation-device/ws1/physical-diagnosis", "")
+		assert.Equal(t, http.StatusOK, w.Code)
+		body := w.Body.String()
+		assert.Contains(t, body, "no_user_bound", "响应必须暴露可诊断空因")
+		assert.Contains(t, body, "emptyReason")
+		assert.Contains(t, body, "devices", "devices 字段必须保留（与旧端点同构）")
+	})
+
+	t.Run("正常有数据:emptyReason 省略", func(t *testing.T) {
+		svc := &mockWorkstationDeviceService{
+			GetPhysicalDevicesWithDiagnosisFunc: func(_ context.Context, _ string) (*opsServices.PhysicalDevicesResult, error) {
+				return &opsServices.PhysicalDevicesResult{
+					Devices:   []*models.WorkstationDevice{{BaseModel: models.BaseModel{ID: "physical-0"}}},
+					Total:     1,
+					Diagnosis: opsServices.PhysicalChainDiagnosis{WorkstationExists: true, UserBound: true, MACMatched: 1},
+				}, nil
+			},
+		}
+		h := NewWorkstationDeviceHandler(svc).WithCore(newTestCore(t))
+		w := httpDo(newWorkstationDeviceRouter(h), http.MethodPost, "/workstation-device/ws1/physical-diagnosis", "")
+		assert.Equal(t, http.StatusOK, w.Code)
+		body := w.Body.String()
+		assert.NotContains(t, body, "emptyReason", "有数据时不应出现空因字段")
+		assert.Contains(t, body, "physical-0")
+	})
+
+	t.Run("服务错误传播", func(t *testing.T) {
+		svc := &mockWorkstationDeviceService{
+			GetPhysicalDevicesWithDiagnosisFunc: func(_ context.Context, _ string) (*opsServices.PhysicalDevicesResult, error) {
+				return nil, errors.New("boom")
+			},
+		}
+		h := NewWorkstationDeviceHandler(svc).WithCore(newTestCore(t))
+		w := httpDo(newWorkstationDeviceRouter(h), http.MethodPost, "/workstation-device/ws1/physical-diagnosis", "")
+		assert.NotEqual(t, http.StatusOK, w.Code, "服务错误必须反映为非 200")
+	})
+}
+
 func TestWorkstationDeviceHandler_SetPrimaryAndSave_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	called := false

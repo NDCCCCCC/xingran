@@ -141,6 +141,10 @@ func (h *WorkstationDeviceHandler) GetAssetDevices(c *gin.Context) {
 // @Description 通过工位绑定的信息点反查物理链路 MAC→port→infoPoint→workstation
 // 解析出该工位物理接入的设备（与工位是否绑定用户无关），资产字段与域控字段合并时资产优先
 // （不保存到数据库）。
+//
+// 向后兼容说明（Phase 73 / DBG-07）：本端点**行为未变**，仍返回裸数组。
+// 需要「空因诊断」（未绑定用户 / 信息点错位 / 设备或 MAC 缺失 / 正常）请改调
+// POST /ops/workstation-device/{id}/physical-diagnosis。
 // @Tags 运维管理
 // @Accept json
 // @Produce json
@@ -163,6 +167,42 @@ func (h *WorkstationDeviceHandler) GetPhysicalDevices(c *gin.Context) {
 	}
 
 	response.Success(c, devices)
+}
+
+// GetPhysicalDevicesWithDiagnosis 实时查询物理链路设备（含空因诊断）
+// @Summary 实时查询工位关联的物理链路设备，并返回空因诊断
+// @Description Phase 73 / DBG-07：在 /physical 的数据基础上，额外返回 emptyReason /
+// emptyMessage / diagnosis 三段可诊断信息，用于把「物理链路为空」的空白变成可读结论。
+//
+// 空因取值（emptyReason）：
+//   - ""                        正常有数据
+//   - "no_user_bound"           工位未绑定 user_id
+//   - "info_point_misbound"     信息点绑定错位（无 active 信息点 / 未绑定端口）
+//   - "device_or_mac_missing"   设备或 MAC 数据缺失（端口/设备 orphan / 无 MAC 采集）
+//
+// 兼容性：新增端点，不动旧端点 /physical；devices 字段与 /physical 的返回值一致。
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "工位ID"
+// @Success 200 {object} response.Response{data=opsServices.PhysicalDevicesResult}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation-device/{id}/physical-diagnosis [post]
+func (h *WorkstationDeviceHandler) GetPhysicalDevicesWithDiagnosis(c *gin.Context) {
+	workstationID := c.Param("id")
+	if workstationID == "" {
+		response.Error(c, apperrors.ParamMissing("工位ID"))
+		return
+	}
+
+	result, err := h.service.GetPhysicalDevicesWithDiagnosis(c.Request.Context(), workstationID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, result)
 }
 
 // SetPrimaryAndSave 设置主设备并保存

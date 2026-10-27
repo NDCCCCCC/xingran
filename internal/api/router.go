@@ -697,6 +697,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstationDevices.POST("/:id/asset", workstationDeviceHandler.GetAssetDevices)
 			// Phase 45 R5: 物理链路设备(MAC→port→infoPoint→workstation 反推)
 			workstationDevices.POST("/:id/physical", workstationDeviceHandler.GetPhysicalDevices)
+			// Phase 73 / DBG-07: 物理链路 + 空因诊断(未绑定用户/信息点错位/设备或MAC缺失)。
+			// 新增端点，旧 /physical 的返回结构保持不变(向后兼容)
+			workstationDevices.POST("/:id/physical-diagnosis", workstationDeviceHandler.GetPhysicalDevicesWithDiagnosis)
 			workstationDevices.POST("/:id/set-primary-and-save", workstationDeviceHandler.SetPrimaryAndSave)
 			workstationDevices.POST("/manual", workstationDeviceHandler.AddManual)
 			workstationDevices.POST("/sync-ad", workstationDeviceHandler.SyncAD)
