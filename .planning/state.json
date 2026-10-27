@@ -1,48 +1,48 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.22 — 前端公用组件整治 (Frontend Shared Component Remediation)",
+  "milestone": "v1.23",
   "phases": [
     {
-      "number": "63",
-      "name": "P0 止血 — 数据可达与安全",
+      "number": "69",
+      "name": "后端 debug 重验 spike + 信息收集下发",
       "status": "pending"
     },
     {
-      "number": "64",
-      "name": "P1 修复 — 反馈与可访问性",
+      "number": "70",
+      "name": "TextArea 契约基建 (W0)",
       "status": "pending"
     },
     {
-      "number": "65",
-      "name": "基础契约组件 — 默认值与危险操作唯一入口",
+      "number": "71",
+      "name": "TextArea 存量迁移 + COMP-05 分域迁移 (W1-W6)",
       "status": "pending"
     },
     {
-      "number": "66",
-      "name": "高级契约组件 — PageTable 与 FormModal",
+      "number": "72",
+      "name": "后端 debug 修复 wave (#3→#2→#1-b)",
       "status": "pending"
     },
     {
-      "number": "67",
-      "name": "存量迁移 — 按 ROI 顺序落地契约组件",
+      "number": "73",
+      "name": "DB 实测日 + cron.go 双执行调查",
       "status": "pending"
     },
     {
-      "number": "68",
-      "name": "P2 一致性债务 — 颜色/日期/类型收敛",
+      "number": "74",
+      "name": "COMP-05 收口 + lint 清偿第一波 + 流程积压归档",
       "status": "pending"
     },
     {
-      "number": "68.1",
-      "name": "收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾",
+      "number": "75",
+      "name": "浏览器实机 UAT + 收档",
       "status": "pending"
     }
   ],
   "next": {
-    "command": "/gsd-progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd-discuss-phase",
+    "label": "Discuss the first phase",
+    "reason": "v1.23 roadmap created (Phases 69-75, 22/22 REQ mapped) — start with Phase 69 or 70"
   },
-  "updated_at": "2026-10-27T01:26:55.337Z"
+  "updated_at": "2026-10-27T07:35:01.765Z"
 }

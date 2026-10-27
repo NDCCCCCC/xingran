@@ -98,13 +98,40 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| （由 roadmapper 填充） | | |
+| TEXT-01 | 70 | Pending |
+| TEXT-02 | 71 | Pending |
+| TEXT-03 | 70 | Pending |
+| TEXT-04 | 70 | Pending |
+| MIG-01 | 71 | Pending |
+| MIG-02 | 71 | Pending |
+| MIG-03 | 74 | Pending |
+| MIG-04 | 71 | Pending |
+| DBG-01 | 69 | Pending |
+| DBG-02 | 72 | Pending |
+| DBG-03 | 72 | Pending |
+| DBG-04 | 72 | Pending |
+| DBG-05 | 73 | Pending |
+| DBG-06 | 73 | Pending |
+| DBG-07 | 73 | Pending |
+| UAT-01 | 75 | Pending |
+| UAT-02 | 75 | Pending |
+| HYG-01 | 74 | Pending |
+| HYG-02 | 74 | Pending |
+| HYG-03 | 74 | Pending |
+| HYG-04 | 74 | Pending |
+| HYG-05 | 70 | Pending |
 
 **Coverage:**
 - v1.23 requirements: 22 total
-- Mapped to phases: 待 roadmapper 填充
-- Unmapped: 待 roadmapper 填充 ⚠️
+- Mapped to phases: 22（TEXT×4 → 70/71/70/70 · MIG×4 → 71/71/74/71 · DBG×7 → 69/72/72/72/73/73/73 · UAT×2 → 75/75 · HYG×5 → 74/74/74/74/70）
+- Unmapped: 0 ✓（无孤儿、无重复；每条需求恰好映射到一个 phase）
+
+**Phase 归属说明（口径）:**
+- **DBG-01**（scrapligo 关单）归 **Phase 69**：重验 phase 本身就是「重新核验」的动作，#6 零代码、只需人工确认生产无复现即可关单；Phase 75 只做归档索引与收档核对，不重复计入。
+- **DBG-04**（Linux 日志）归 **Phase 72**：代码侧修复半段（文件侧双写 + 启动自检）落在修复 wave；诊断半段（6 条 Linux 诊断命令）在 Phase 69 下发、Phase 75 回填文档，不构成独立需求。
+- **HYG-05**（权威计数基线）归 **Phase 70**：基线必须在迁移开始**之前**落盘才有对账意义——Phase 70 是 TextArea selector 上线日，也是 lint/豁免计数基线快照点；Phase 74 用它做收口 delta 对账。
+- **TEXT-01** 归 **Phase 70**（契约提供默认清空能力），**TEXT-02** 归 **Phase 71**（存量 74 处接入），二者合起来才是用户主诉的完整闭环。
 
 ---
 *Requirements defined: 2026-10-27*
-*Last updated: 2026-10-27 after initial definition（用户确认：范围全纳入 / v2 延后项保持延后 / DBG-03 走 Go 侧防线）*
+*Last updated: 2026-10-27 after roadmap creation（Traceability 填充：22/22 映射到 Phases 69-75，无孤儿、无重复）*
