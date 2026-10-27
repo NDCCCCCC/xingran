@@ -1,13 +1,13 @@
 ---
-status: investigating
+status: root_cause_identified
 trigger: "MAC 轨迹查询无法查到任何 mac，在数据库里查是存在的"
 created: 2026-06-30T00:00:00Z
-updated: 2026-10-27T16:10:00+08:00
+updated: 2026-10-27T16:40:00+08:00
 goal: find_root_cause_only
 audit_acknowledged:
   milestone: v1.23
   at: 2026-10-26T10:00:00+08:00
-  status: investigating
+  status: root_cause_identified
 
 ---
 
@@ -208,3 +208,41 @@ files_changed: []
 2. 确认 `deleted_at` 列是否存在（information_schema 查询 B1 重跑一次）。
 
 在拿到新样本前，本档保持 **investigating**。
+
+---
+
+## 根因确认（2026-10-27 第二批实测，PG 生产库）
+
+用户执行第二批 SQL（现存样本抽样 + 格式对照），结果：
+
+| 验证项 | 结果 |
+|--------|------|
+| `sys_device_mac_history` 最新 5 行 | **存储格式 = 大写冒号分隔**（如 `00:E0:FC:09:BC:F9`、`A4:0C:66:2C:E9:44`，first_seen 2026-10-27 16:02） |
+| `sys_device_mac_address` 最新 5 行 | 同为大写冒号格式 |
+| `B0227A2E4A4F`（无分隔） | **0 行** |
+| `B0:22:7A:2E:4A:4F`（冒号） | **53 行** |
+| `deleted_at` 列 | **不存在**（information_schema count=0，migration_175 注释矛盾坐实） |
+
+### ROOT CAUSE（确认）
+
+**查询端把 MAC normalize 成无分隔大写（`QueryMACTrajectory` lines 849-852：移除 `.`、`:`、`-` + ToUpper），而 DB 存储是大写冒号分隔格式——等值匹配 `mac_address = 'B0227A2E4A4F'` 永远空集。**
+
+- 场景 (b) 命中：数据没问题，是**查询字面量与存储格式不一致**
+- 场景 (a) 证伪：`deleted_at` 列根本不存在，无软删过滤可言
+- 上方 Eliminated C 的结论**错误**：其推理「数据库样本值也是 `B0:22:7A:2E:4A:4F` 形式，标准化后会匹配」自相矛盾——normalize 成 `B0227A2E4A4F` 后与冒号存储**永不相等**。当年仅凭代码推理排除，未经 DB 实测，本轮实测推翻
+- 附带发现：EXPLAIN「Index Actual Rows=6」与 count=0 并存的疑团也解开——两条 SQL 字面量不同（EXPLAIN 版本用的条件与 count 版本存在差异），以本轮三格式对照为准
+
+### fix 方向（Phase 72/73 落地）
+
+双侧归一化统一（推荐①）：
+1. **查询侧**：SQL 等值条件改为对存储值做同样 normalize，如 `WHERE REPLACE(REPLACE(mac_address, ':', ''), '-', '') = ?`（或 PG 侧 `regexp_replace(upper(mac_address), '[^0-9A-F]', '', 'g') = ?`），使任意输入格式均可命中
+2. 写侧 normalize（DBG-03 的 Go 侧防线）产出格式与查询侧一致，杜绝新格式漂移
+3. 顺带修复：Raw SQL → GORM chainable + 错误传播（空 → 500，不再吞 error）——REQ DBG-06 的既定方案
+4. 文档修正：migration_175 注释声称「带 deleted_at 的软删除表」与实际 schema 不符，随修复一并更正注释
+
+### 现存样本（供修复后验证）
+
+- `A4:0C:66:2C:E9:44`（device `96aab2e4-65c5-464f-9ee2-c4645d8ae868`，iface GE0/40，first_seen 2026-10-27 16:02）
+- `00:E0:FC:09:BC:F9`（device `48d75b51-c495-4cd2-a3f8-2babbe396c84`，iface GE0/14）
+
+status 升级为 **root_cause_identified**，待 Phase 73 修复 + 用上样本回归验证后关闭。
