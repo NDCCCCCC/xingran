@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import type { FC } from "react";
-import { App, Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic } from "antd";
+import { App, Table, Button, Space, Form, Card, Row, Col, Statistic } from "antd";
+// Phase 71 (W2)：裸 Input/Select → 契约组件（状态枚举 children → options + 禁搜）
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -22,8 +24,6 @@ import ExcelExport from "@/components/shared/ExcelExport";
 
 import { post } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-const { Option } = Select;
-
 const DepartmentManagement: FC = () => {
   const { message } = App.useApp();
   const [searchForm] = Form.useForm();
@@ -236,21 +236,18 @@ const DepartmentManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deptName" label="部门名称">
-              <Input allowClear placeholder="请输入部门名称" />
+              <AppInput placeholder="请输入部门名称" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              {/* 形态分类器②④：部门状态枚举（业务禁搜）→ options 形态 + 显式 showSearch={false} */}
+              <AppSelect
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
                 onSearch={() => {}}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={STATUS_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>

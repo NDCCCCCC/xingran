@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FC } from "react";
-import { Button, Card, Col, Form, Input, InputNumber, Row, Statistic, Alert } from "antd";
+import { Button, Card, Col, Form, InputNumber, Row, Statistic, Alert } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -28,9 +28,7 @@ import { PageTable } from "@/components/shared";
 import type { PageTableRenderContext } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { FormModal, useFormModalForm } from "@/components/shared/FormModal";
-import { AppInput, AppSelect } from "@/components/ui";
-
-const { TextArea } = Input;
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
 const STATUS_OPTIONS = [
   { label: "正常", value: 0 },
@@ -258,7 +256,7 @@ const PostManagement: FC = () => {
           <AppSelect placeholder="请选择状态" className="user-form-input" options={STATUS_OPTIONS} />
         </Form.Item>
         <Form.Item name="remark" label="备注">
-          <TextArea rows={3} placeholder="请输入备注" />
+          <AppTextArea rows={3} placeholder="请输入备注" />
         </Form.Item>
       </FormModal>
     </div>

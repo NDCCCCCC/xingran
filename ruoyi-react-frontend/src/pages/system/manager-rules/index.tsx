@@ -6,15 +6,15 @@ import {
   Button,
   Space,
   Form,
-  Input,
   InputNumber,
   Radio,
-  Select,
   Switch,
   TreeSelect,
   Modal,
   Tag,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select → 契约组件（Select 全为 options 形态）
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -275,7 +275,7 @@ const ManagerRulesPage: FC = () => {
         <Space size={4}>
           <Tag color="blue">{MANAGER_SUBJECT_LABELS[r.subjectType] ?? r.subjectType}</Tag>
           {r.subjectType === "post_holder" && (
-            <span style={{ color: "#888" }}>{renderName(r.subjectPostName, r.subjectPostId)}</span>
+            <span style={{ color: "var(--theme-text-tertiary)" }}>{renderName(r.subjectPostName, r.subjectPostId)}</span>
           )}
         </Space>
       ),
@@ -288,7 +288,7 @@ const ManagerRulesPage: FC = () => {
         <Space size={4}>
           <Tag color="purple">{MANAGER_TYPE_LABELS[r.managerType] ?? r.managerType}</Tag>
           {(r.managerType === "post_holder" || r.managerType === "org_head") && (
-            <span style={{ color: "#888" }}>{renderName(r.managerPostName, r.managerPostId)}</span>
+            <span style={{ color: "var(--theme-text-tertiary)" }}>{renderName(r.managerPostName, r.managerPostId)}</span>
           )}
           {r.managerOrgId === MANAGER_ORG_TARGET_PARENT && <Tag>上级机构</Tag>}
         </Space>
@@ -329,10 +329,11 @@ const ManagerRulesPage: FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <Form form={searchForm} layout="inline">
           <Form.Item name="ruleName" label="规则名称">
-            <Input placeholder="请输入规则名称" allowClear style={{ width: 160 }} onPressEnter={handleSearch} />
+            {/* 搜索框：清空只改受控值，不触发 onPressEnter */}
+            <AppInput placeholder="请输入规则名称" style={{ width: 160 }} onPressEnter={handleSearch} />
           </Form.Item>
           <Form.Item name="subjectType" label="适用主体">
-            <Select
+            <AppSelect
               onSearch={() => {}}
               placeholder="请选择适用主体"
               allowClear
@@ -341,7 +342,7 @@ const ManagerRulesPage: FC = () => {
             />
           </Form.Item>
           <Form.Item name="enabled" label="状态">
-            <Select
+            <AppSelect
               onSearch={() => {}}
               placeholder="请选择状态"
               allowClear
@@ -407,7 +408,7 @@ const ManagerRulesPage: FC = () => {
             label="规则名称"
             rules={[{ required: true, message: "请输入规则名称" }]}
           >
-            <Input allowClear placeholder="请输入规则名称" />
+            <AppInput placeholder="请输入规则名称" />
           </Form.Item>
           <Form.Item
             name="priority"
@@ -424,7 +425,7 @@ const ManagerRulesPage: FC = () => {
             label="适用主体"
             rules={[{ required: true, message: "请选择适用主体" }]}
           >
-            <Select allowClear
+            <AppSelect allowClear
               onSearch={() => {}}
               options={SUBJECT_TYPES.map((t) => ({ value: t, label: MANAGER_SUBJECT_LABELS[t] }))}
               placeholder="请选择适用主体"
@@ -436,7 +437,7 @@ const ManagerRulesPage: FC = () => {
               label="主体岗位"
               rules={[{ required: true, message: "请选择主体岗位" }]}
             >
-              <Select allowClear
+              <AppSelect allowClear
                 onSearch={() => {}}
                 placeholder="请选择主体岗位"
                 showSearch
@@ -459,7 +460,7 @@ const ManagerRulesPage: FC = () => {
             label="经理来源"
             rules={[{ required: true, message: "请选择经理来源" }]}
           >
-            <Select allowClear
+            <AppSelect allowClear
               onSearch={() => {}}
               options={MANAGER_TYPES.map((t) => ({ value: t, label: MANAGER_TYPE_LABELS[t] }))}
               placeholder="请选择经理来源"
@@ -471,7 +472,7 @@ const ManagerRulesPage: FC = () => {
               label="经理岗位"
               rules={[{ required: true, message: "请选择经理岗位" }]}
             >
-              <Select allowClear
+              <AppSelect allowClear
                 onSearch={() => {}}
                 placeholder="请选择经理岗位"
                 showSearch
@@ -481,7 +482,7 @@ const ManagerRulesPage: FC = () => {
             </Form.Item>
           )}
           <Form.Item name="managerOrgMode" label="目标机构">
-            <Select allowClear
+            <AppSelect allowClear
               onSearch={() => {}}
               options={[
                 { value: "self", label: "自身机构" },

@@ -4,13 +4,18 @@
  */
 
 import { useEffect, useState } from "react";
-import { Modal, Form, Input, InputNumber, Select, Space, TreeSelect } from "antd";
+import { Modal, Form, InputNumber, Space, TreeSelect } from "antd";
+// 负责人下拉仍用 children <Option> 形态（带 label + 复合子节点），故保留 Option 解构
+import { Select } from "antd";
+const { Option } = Select;
+// Phase 71 (W2)：裸 Input/Select/Input.TextArea → 契约组件。
+// 负责人下拉为「children + label + 复合子节点」形态：原已显式 optionFilterProp="label"，
+// 且每个 <Option> 都带 label → 与 AppSelect 默认值同构，保留 children 写法（AppSelect 透传 children）。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { FormInstance } from "antd/es/form";
 import { UserOutlined } from "@ant-design/icons";
 import type { DeptUser, ParentOption, Department } from "../types";
 import { STATUS_OPTIONS, EXTERNAL_ORG_OPTIONS } from "../constants";
-
-const { Option } = Select;
 
 export interface DeptEditModalProps {
   open: boolean;
@@ -85,7 +90,7 @@ export function DeptEditModal({
           label="部门名称"
           rules={[{ required: true, message: "请输入部门名称" }]}
         >
-          <Input allowClear />
+          <AppInput />
         </Form.Item>
         <Form.Item
           name="deptCode"
@@ -93,7 +98,7 @@ export function DeptEditModal({
           rules={[{ required: true, message: "请输入部门编码" }]}
           tooltip="部门编码用于唯一标识部门，在Excel导入时作为关联键"
         >
-          <Input allowClear placeholder="请输入部门编码，如：DEV、TECH" />
+          <AppInput placeholder="请输入部门编码，如：DEV、TECH" />
         </Form.Item>
         <Form.Item
           name="orderNum"
@@ -104,13 +109,14 @@ export function DeptEditModal({
           <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>
         <Form.Item name="leader" label="负责人">
-          <Select
+          <AppSelect
             placeholder="请选择负责人"
             loading={loadingUsers}
             showSearch
             allowClear
             optionFilterProp="label"
-            onChange={onLeaderChange}
+            // AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型
+            onChange={(value) => onLeaderChange(value as string)}
             notFoundContent={loadingUsers ? "加载中..." : "请先选择上级部门"}
             onSearch={() => {}}
           >
@@ -129,13 +135,13 @@ export function DeptEditModal({
                 </Space>
               </Option>
             ))}
-          </Select>
+          </AppSelect>
         </Form.Item>
         <Form.Item name="phone" hidden>
-          <Input allowClear />
+          <AppInput />
         </Form.Item>
         <Form.Item name="email" hidden>
-          <Input allowClear />
+          <AppInput />
         </Form.Item>
         <Form.Item
           name="isExternalOrg"
@@ -143,25 +149,21 @@ export function DeptEditModal({
           initialValue={0}
           tooltip="标记为外部机构的部门可以作为楼宇的所属机构"
         >
-          <Select allowClear onSearch={() => {}}>
-            {EXTERNAL_ORG_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          {/* 形态分类器②④：外部机构固定枚举（业务禁搜） */}
+          <AppSelect
+            allowClear
+            onSearch={() => {}}
+            showSearch={false}
+            // as const 只读元组 → antd options 需可变数组
+            options={[...EXTERNAL_ORG_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item name="status" label="状态" initialValue={0}>
-          <Select allowClear onSearch={() => {}}>
-            {STATUS_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          {/* 形态分类器②④：状态枚举（业务禁搜） */}
+          <AppSelect allowClear onSearch={() => {}} showSearch={false} options={[...STATUS_OPTIONS]} />
         </Form.Item>
         <Form.Item name="remark" label="备注">
-          <Input.TextArea rows={4} />
+          <AppTextArea rows={4} />
         </Form.Item>
       </Form>
     </Modal>

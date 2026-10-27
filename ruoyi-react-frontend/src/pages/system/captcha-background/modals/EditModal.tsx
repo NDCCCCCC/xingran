@@ -3,13 +3,13 @@
  * 验证码背景编辑模态框
  */
 
-import { Modal, Form, Select, Input } from "antd";
+import { Modal, Form } from "antd";
+// Phase 71 (W2)：裸 Select/Input/TextArea → 契约组件。四处 Select 均为动态 children 固定
+// 枚举 → 改写 options 形态；形状/难度/状态业务禁搜 → 显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { useState } from "react";
 import type { CaptchaBackground } from "@/types/captcha";
 import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from "../constants";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 export interface CaptchaEditModalProps {
   open: boolean;
@@ -44,46 +44,45 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
     >
       <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
         <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
-          <Select allowClear onSearch={() => {}}>
-            {SHAPE_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          <AppSelect
+            allowClear
+            onSearch={() => {}}
+            showSearch={false}
+            options={[...SHAPE_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
-          <Select allowClear onSearch={() => {}}>
-            {DIFFICULTY_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          <AppSelect
+            allowClear
+            onSearch={() => {}}
+            showSearch={false}
+            options={[...DIFFICULTY_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item name="allowedShapes" label="允许的形状">
-          <Select allowClear mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
-            {SHAPE_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          {/* mode="multiple"：多选需搜索辅助定位，显式 showSearch */}
+          <AppSelect
+            allowClear
+            mode="multiple"
+            placeholder="不限制则使用默认"
+            onSearch={() => {}}
+            showSearch
+            options={[...SHAPE_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-          <Select allowClear onSearch={() => {}}>
-            {STATUS_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          <AppSelect
+            allowClear
+            onSearch={() => {}}
+            showSearch={false}
+            options={[...STATUS_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item name="sortOrder" label="排序" rules={[{ required: true }]}>
-          <Input allowClear type="number" placeholder="数字越小优先级越高" />
+          <AppInput type="number" placeholder="数字越小优先级越高" />
         </Form.Item>
         <Form.Item name="remark" label="备注">
-          <TextArea rows={3} placeholder="请输入备注" />
+          <AppTextArea rows={3} placeholder="请输入备注" />
         </Form.Item>
       </Form>
     </Modal>

@@ -1,4 +1,6 @@
-import { Table, Card, Form, Input, Select, Button, Space, Alert, Tag } from "antd";
+import { Table, Card, Form, Button, Space, Alert, Tag } from "antd";
+// Phase 71 (W2)：裸 Input/Select → 契约组件（公告类型 children → options + 禁搜）
+import { AppInput, AppSelect } from "@/components/ui";
 import type { FormInstance } from "antd";
 import {
   PlusOutlined,
@@ -27,7 +29,6 @@ import type { NoticePriority, TargetType } from "@/types/notice";
 import { formatDateTime } from "@/utils/datetime";
 import type { SortOrder } from "@/hooks/useServerSort";
 
-const { Option } = Select;
 
 export interface NoticeListProps {
   notices: Notice[];
@@ -293,24 +294,26 @@ export const NoticeList: React.FC<NoticeListProps> = ({
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="noticeTitle" label="公告标题">
-              <Input
+              <AppInput
                 placeholder="请输入公告标题"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="noticeType" label="公告类型">
-              <Select
+              {/* 形态分类器②④：公告类型固定 2 项，业务禁搜 */}
+              <AppSelect
                 placeholder="请选择"
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value="1">公告</Option>
-                <Option value="2">警告</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: "1", label: "公告" },
+                  { value: "2", label: "警告" },
+                ]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>

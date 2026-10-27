@@ -4,7 +4,9 @@
  */
 
 import { useState, useEffect } from "react";
-import { App, Form, Select, Button, Card, Space, Divider, ColorPicker } from "antd";
+import { App, Form, Button, Card, Space, Divider, ColorPicker } from "antd";
+// Phase 71 (W2)：裸 Select → AppSelect（options 形态固定枚举，均 <8 项；设置项显式禁搜）
+import { AppSelect } from "@/components/ui";
 import { BgColorsOutlined, SyncOutlined, SaveOutlined } from "@ant-design/icons";
 import type { ThemeConfiguration } from "@/types/config";
 import { getDefaultThemeConfig, setDefaultThemeConfig, syncUserThemeToDefault } from "@/lib/defaultThemeApi";
@@ -174,7 +176,7 @@ const DefaultThemePage: React.FC = () => {
           name="mode"
           rules={[{ required: true, message: "请选择主题模式" }]}
         >
-          <Select allowClear options={MODE_OPTIONS} placeholder="请选择主题模式"  onSearch={() => {}}/>
+          <AppSelect allowClear showSearch={false} options={MODE_OPTIONS} placeholder="请选择主题模式" />
         </Form.Item>
 
         <Form.Item
@@ -182,7 +184,7 @@ const DefaultThemePage: React.FC = () => {
           name="style"
           rules={[{ required: true, message: "请选择主题风格" }]}
         >
-          <Select allowClear options={STYLE_OPTIONS} placeholder="请选择主题风格"  onSearch={() => {}}/>
+          <AppSelect allowClear showSearch={false} options={STYLE_OPTIONS} placeholder="请选择主题风格" />
         </Form.Item>
 
         <Divider>自定义颜色（可选）</Divider>

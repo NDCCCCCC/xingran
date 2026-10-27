@@ -6,13 +6,14 @@ import {
   Button,
   Space,
   Form,
-  Input,
   Radio,
   Switch,
   TreeSelect,
   Modal,
   Tag,
 } from "antd";
+// Phase 71 (W2)：裸 Input → AppInput（搜索框带 onPressEnter，清空不误触搜索——见下注记）
+import { AppInput } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -277,7 +278,8 @@ const ManagerOrgsPage: FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <Form form={searchForm} layout="inline">
           <Form.Item name="orgName" label="机构名称">
-            <Input placeholder="请输入机构名称" allowClear style={{ width: 180 }} onPressEnter={handleSearch} />
+            {/* 搜索框：清空只改受控值，不触发 onPressEnter（该回调仅回车时进搜索） */}
+            <AppInput placeholder="请输入机构名称" style={{ width: 180 }} onPressEnter={handleSearch} />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -339,7 +341,7 @@ const ManagerOrgsPage: FC = () => {
             label="机构名称"
             rules={[{ required: true, message: "请输入机构名称" }]}
           >
-            <Input allowClear placeholder="请输入机构名称" />
+            <AppInput placeholder="请输入机构名称" />
           </Form.Item>
           <Form.Item
             name="deptId"

@@ -7,8 +7,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Tag,
   Card,
   Row,
@@ -16,6 +14,9 @@ import {
   Statistic,
   Alert,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。本文件 Select 全为 children 形态的
+// 固定枚举（Y/N、是/否）→ 一律改写 options 形态并显式禁搜（状态/开关类业务下拉）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -37,8 +38,19 @@ import { confirmDelete } from "@/components/shared";
 import { refreshEncryptionConfig } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
 
-const { Option } = Select;
-const { TextArea } = Input;
+// ==================== 形态分类器产物：children 形态 <Option> → options 常量 ====================
+
+/** 参数类型（Y=是 / N=否，固定 2 项） */
+const CONFIG_TYPE_OPTIONS = [
+  { value: "Y", label: "是" },
+  { value: "N", label: "否" },
+];
+
+/** 是否系统内置（0=否 / 1=是，固定 2 项） */
+const IS_SYSTEM_OPTIONS = [
+  { value: 0, label: "否" },
+  { value: 1, label: "是" },
+];
 
 const ConfigManagement: FC = () => {
   const { message } = App.useApp();
@@ -377,32 +389,30 @@ const ConfigManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="configName" label="参数名称">
-              <Input
+              <AppInput
                 placeholder="请输入参数名称"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="configKey" label="参数键名">
-              <Input
+              <AppInput
                 placeholder="请输入参数键名"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="configType" label="状态">
-              <Select
+              {/* 形态分类器②④：参数类型固定 2 项（业务禁搜） */}
+              <AppSelect
                 placeholder="请选择状态"
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value="Y">是</Option>
-                <Option value="N">否</Option>
-              </Select>
+                showSearch={false}
+                options={CONFIG_TYPE_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -504,7 +514,7 @@ const ConfigManagement: FC = () => {
             label="参数名称"
             rules={[{ required: true, message: "请输入参数名称" }]}
           >
-            <Input allowClear placeholder="请输入参数名称" className="user-form-input" />
+            <AppInput placeholder="请输入参数名称" className="user-form-input" />
           </Form.Item>
           <Form.Item
             name="configKey"
@@ -512,7 +522,7 @@ const ConfigManagement: FC = () => {
             rules={[{ required: true, message: "请输入参数键名" }]}
             extra="建议格式：sys.user.initPassword"
           >
-            <Input allowClear
+            <AppInput
               placeholder="请输入参数键名"
               disabled={!!editingConfig && editingConfig.isSystem === 1}
               className="user-form-input"
@@ -523,13 +533,17 @@ const ConfigManagement: FC = () => {
             label="参数键值"
             rules={[{ required: true, message: "请输入参数键值" }]}
           >
-            <Input allowClear placeholder="请输入参数键值" className="user-form-input" />
+            <AppInput placeholder="请输入参数键值" className="user-form-input" />
           </Form.Item>
           <Form.Item name="configType" label="状态" rules={[{ required: true }]}>
-            <Select allowClear className="user-form-input" onSearch={() => {}}>
-              <Option value="Y">是</Option>
-              <Option value="N">否</Option>
-            </Select>
+            {/* 形态分类器②④：参数类型固定 2 项（业务禁搜） */}
+            <AppSelect
+              allowClear
+              className="user-form-input"
+              onSearch={() => {}}
+              showSearch={false}
+              options={CONFIG_TYPE_OPTIONS}
+            />
           </Form.Item>
           <Form.Item
             name="isSystem"
@@ -537,13 +551,18 @@ const ConfigManagement: FC = () => {
             rules={[{ required: true }]}
             extra="系统内置参数不可删除"
           >
-            <Select allowClear disabled={!!editingConfig} className="user-form-input" onSearch={() => {}}>
-              <Option value={0}>否</Option>
-              <Option value={1}>是</Option>
-            </Select>
+            {/* 形态分类器②④：系统内置开关固定 2 项（业务禁搜） */}
+            <AppSelect
+              allowClear
+              disabled={!!editingConfig}
+              className="user-form-input"
+              onSearch={() => {}}
+              showSearch={false}
+              options={IS_SYSTEM_OPTIONS}
+            />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>

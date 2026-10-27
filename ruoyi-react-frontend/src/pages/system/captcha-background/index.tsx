@@ -5,7 +5,10 @@
 
 import { useEffect } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic } from "antd";
+import { Table, Button, Space, Form, Card, Row, Col, Statistic } from "antd";
+// Phase 71 (W2)：裸 Input/Select → 契约组件。三处搜索下拉均为动态 children 固定枚举
+// → 改写 options 形态；形状/难度/状态均为业务禁搜枚举 → 显式 showSearch={false}
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -18,8 +21,6 @@ import { getCaptchaColumns } from "./columns";
 import { CaptchaUploadModal, CaptchaEditModal } from "./modals";
 import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
-
-const { Option } = Select;
 
 const CaptchaBackgroundManagement: FC = () => {
   const [searchForm] = Form.useForm();
@@ -113,34 +114,40 @@ const CaptchaBackgroundManagement: FC = () => {
       {/* 搜索表单 */}
       <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
         <Form.Item name="fileName" label="文件名">
-          <Input placeholder="请输入文件名" allowClear className="user-form-input" />
+          <AppInput placeholder="请输入文件名" className="user-form-input" />
         </Form.Item>
         <Form.Item name="pieceShape" label="拼图形状">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
-            {SHAPE_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          <AppSelect
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 120 }}
+            onSearch={() => {}}
+            showSearch={false}
+            options={[...SHAPE_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
-            {DIFFICULTY_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          <AppSelect
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 100 }}
+            onSearch={() => {}}
+            showSearch={false}
+            options={[...DIFFICULTY_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item name="status" label="状态">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
-            {STATUS_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          <AppSelect
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 100 }}
+            onSearch={() => {}}
+            showSearch={false}
+            options={[...STATUS_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item>
           <Space>
