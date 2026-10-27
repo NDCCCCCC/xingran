@@ -43,13 +43,13 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
 
 ## Phases
 
-- [ ] **Phase 63: P0 止血 — 数据可达与安全** — 修 showTotal 分页根因 / total 恒 0 / OU 截断 / 双击重复提交 / 批量删除无确认 / 假功能入口 / fixed 列失效（STOP-01..07）
-- [ ] **Phase 64: P1 修复 — 反馈与可访问性** — 表格 loading / Modal 遮罩脏检查 / 本地排序误用 / console 错误出口收敛 / aria 可访问名（FIX-01..05）
-- [ ] **Phase 65: 基础契约组件 — 默认值与危险操作唯一入口** — AppInput/AppSelect 默认值下沉 + ConfirmDelete 统一危险删除入口（COMP-01, COMP-02）
-- [ ] **Phase 66: 高级契约组件 — PageTable 与 FormModal** — 列表/表单弹窗契约内建骨架，依赖 Phase 65 组件（COMP-03, COMP-04）
-- [ ] **Phase 67: 存量迁移 — 按 ROI 顺序落地契约组件** — C1 试点 discoveries → backups → devices/cache 巨型页，每页一个 PR（COMP-05）
-- [ ] **Phase 68: P2 一致性债务 — 颜色/日期/类型收敛** — design token 收敛 hex 硬编码 + 日期/状态 helper + any 类型消除（DEBT-01..03）
-- [ ] **Phase 68.1: 收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾** — 清偿 v1.22 审计登记的四组技术债，使里程碑以无债状态收档（DEBT-04）
+- [x] **Phase 63: P0 止血 — 数据可达与安全** — 修 showTotal 分页根因 / total 恒 0 / OU 截断 / 双击重复提交 / 批量删除无确认 / 假功能入口 / fixed 列失效（STOP-01..07）
+- [x] **Phase 64: P1 修复 — 反馈与可访问性** — 表格 loading / Modal 遮罩脏检查 / 本地排序误用 / console 错误出口收敛 / aria 可访问名（FIX-01..05）
+- [x] **Phase 65: 基础契约组件 — 默认值与危险操作唯一入口** — AppInput/AppSelect 默认值下沉 + ConfirmDelete 统一危险删除入口（COMP-01, COMP-02）
+- [x] **Phase 66: 高级契约组件 — PageTable 与 FormModal** — 列表/表单弹窗契约内建骨架，依赖 Phase 65 组件（COMP-03, COMP-04）
+- [x] **Phase 67: 存量迁移 — 按 ROI 顺序落地契约组件** — C1 试点 discoveries → backups → devices/cache 巨型页，每页一个 PR（COMP-05）
+- [x] **Phase 68: P2 一致性债务 — 颜色/日期/类型收敛** — design token 收敛 hex 硬编码 + 日期/状态 helper + any 类型消除（DEBT-01..03）
+- [x] **Phase 68.1: 收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾** — 清偿 v1.22 审计登记的四组技术债，使里程碑以无债状态收档（DEBT-04）
 
 ## Phase Details
 
@@ -173,7 +173,7 @@ previous_update: 2026-10-22 v1.21 SHIPPED & ARCHIVED
 | 66. 高级契约组件 — PageTable 与 FormModal | 1/1 | ✅ Complete | 2026-10-25 |
 | 67. 存量迁移 — 按 ROI 顺序落地契约组件 | 1/1 | ✅ Complete | 2026-10-26 |
 | 68. P2 一致性债务 — 颜色/日期/类型收敛 | 1/1 | ✅ Complete | 2026-10-26 |
-| 68.1 收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾 | 0/TBD | Not started | - |
+| 68.1 收尾清偿 — 危险操作收口 / 契约 minor 补课 / 豁免收缩 / 存量迁移收尾 | 1/1 | ✅ Complete | 2026-10-27 |
 
 ### Coverage Map (v1.22)
 
