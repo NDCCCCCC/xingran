@@ -149,7 +149,7 @@ const ConfigManagement: FC = () => {
   // 创建参数配置
   const handleCreate = async () => {
     try {
-      const values = (await editForm.validateFields()) as Record<string, any>;
+      const values = (await editForm.validateFields()) as Record<string, unknown>;
       if (editingConfig) {
         // F-17 Phase 31: 后端 UpdateConfigRequest 现已接受 configKey 字段(可选)。
         // 显式传 configKey 让后端校验"系统内置参数键不可改",获得二次确认保护。

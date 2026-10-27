@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type FC } from "react";
 import { Table, Button, Form, Card, Row, Col, Statistic, Space, App } from "antd";
+import type { FilterValue } from "antd/es/table/interface";
 // Phase 71 (W1)：裸 Input/Select → 契约组件（本页 Select 全为 children 形态，均改写为 options 形态，
 // 见各处的形态分类器注记——AppSelect 无条件 optionFilterProp="label"，children 形态下该 prop 破坏性）
 import { AppInput, AppSelect } from "@/components/ui";
@@ -161,7 +162,7 @@ const KnowledgeArticlePage: FC = () => {
   const handleTableChange = useCallback(
     (
       pagination: { current?: number; pageSize?: number },
-      _filters: Record<string, any>,
+      _filters: Record<string, FilterValue | null>,
       sorter:
         | import("antd/es/table/interface").SorterResult<KnowledgeArticle>
         | import("antd/es/table/interface").SorterResult<KnowledgeArticle>[]

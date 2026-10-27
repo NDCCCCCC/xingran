@@ -12,7 +12,7 @@ import { getAccessToken } from "@/utils/authHelpers";
 export interface NetworkExportProps {
   entityType: string; // 实体类型（用于拼接导出路径 /api/v1/network/${entityType}/export）
   entityName: string; // 实体名称（用于文件名和提示）
-  filters?: Record<string, any>; // 当前筛选条件
+  filters?: Record<string, unknown>; // 当前筛选条件
   current?: number; // 当前页码
   pageSize?: number; // 每页条数
 }
@@ -35,7 +35,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
       setExporting(true);
       try {
         const token = await getAccessToken();
-        const body: Record<string, any> = { exportMode: mode };
+        const body: Record<string, unknown> = { exportMode: mode };
 
         if (mode === "filtered") {
           // 筛选导出：带筛选条件，不分页

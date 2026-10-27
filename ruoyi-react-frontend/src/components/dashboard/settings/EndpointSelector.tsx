@@ -46,7 +46,7 @@ const iconMap: Record<string, React.ComponentType> = {
 };
 
 interface EndpointSelectorProps extends Omit<
-  SelectProps<any>,
+  SelectProps<unknown>,
   "options" | "children" | "onChange"
 > {
   /** 选中的端点路由 */

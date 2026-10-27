@@ -6,6 +6,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import type { FC } from "react";
 import { Table, Button, Space, Form, Card, Row, Col, Statistic, App } from "antd";
+import type { FilterValue } from "antd/es/table/interface";
 // Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
 import { AppInput, AppSelect } from "@/components/ui";
 import {
@@ -101,7 +102,7 @@ const TemplateManagement: FC = () => {
   const handleTableChange = useCallback(
     (
       pagination: { current?: number; pageSize?: number },
-      _filters: Record<string, any>,
+      _filters: Record<string, FilterValue | null>,
       sorter:
         | import("antd/es/table/interface").SorterResult<ConfigTemplate>
         | import("antd/es/table/interface").SorterResult<ConfigTemplate>[]
@@ -187,8 +188,8 @@ const TemplateManagement: FC = () => {
       const filename = await batchExport(entityTypes, {});
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
-    } catch (error: any) {
-      message.error(`批量导出失败：${error.message}`);
+    } catch (error: unknown) {
+      message.error(`批量导出失败：${(error as Error).message}`);
     } finally {
       setBatchExporting(false);
     }
@@ -328,7 +329,7 @@ const TemplateManagement: FC = () => {
               entityType="templates"
               entityName="配置模板"
               filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, any>).filter(
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
                   ([, v]) => v !== undefined && v !== null && v !== ""
                 )
               )}

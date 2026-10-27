@@ -138,8 +138,8 @@ const CommandDispatch: FC = () => {
       const filename = await batchExport(entityTypes, {});
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
-    } catch (error: any) {
-      message.error(`批量导出失败：${error.message}`);
+    } catch (error: unknown) {
+      message.error(`批量导出失败：${(error as Error).message}`);
     } finally {
       setBatchExporting(false);
     }

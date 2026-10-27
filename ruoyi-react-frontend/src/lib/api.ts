@@ -96,14 +96,14 @@ let isRefreshing = false;
  * 等待刷新的请求队列
  */
 const refreshQueue: Array<{
-  resolve: (value: any) => void;
-  reject: (reason?: any) => void;
+  resolve: (value: unknown) => void;
+  reject: (reason?: unknown) => void;
 }> = [];
 
 /**
  * 处理刷新队列
  */
-function processRefreshQueue(error?: any) {
+function processRefreshQueue(error?: unknown) {
   refreshQueue.forEach(({ resolve, reject }) => {
     if (error) {
       reject(error);

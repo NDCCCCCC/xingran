@@ -119,7 +119,7 @@ export interface ColumnConfig {
   key: string;
   width?: number;
   align?: "left" | "center" | "right";
-  sorter?: ((a: any, b: any) => number) | boolean;
+  sorter?: ((a: unknown, b: unknown) => number) | boolean;
   // 受控排序方向（配合 useTableManager.getColumnSortOrder 实现"高亮落所点列"）。
   // 与 antd Table sorter.order 一致：ascend/descend/null（null=未排序）。
   // 内联 union 而非 import useServerSort.SortOrder，避免 utils↔hooks type 循环。

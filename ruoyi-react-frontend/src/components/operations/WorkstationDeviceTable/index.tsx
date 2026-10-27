@@ -443,7 +443,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       title: "操作",
       key: "action",
       width: canEdit ? 110 : 80,
-      render: (_: any, record: WorkstationDevice) => (
+      render: (_: unknown, record: WorkstationDevice) => (
         <Space size={2}>
           {canEdit && (
             <Button

@@ -17,7 +17,7 @@ export interface ExcelExportProps {
   visible?: boolean;
   onClose?: () => void;
   // 接收页面当前筛选参数
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
 }
 
 const ExcelExport: FC<ExcelExportProps> = ({
@@ -145,7 +145,7 @@ function getFilterLabel(key: string): string {
   return labels[key] || key;
 }
 
-function formatFilterValue(key: string, value: any): string {
+function formatFilterValue(key: string, value: unknown): string {
   if (value === undefined || value === null || value === "") {
     return "-";
   }

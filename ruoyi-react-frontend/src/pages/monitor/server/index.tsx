@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
+import type { TablePaginationConfig } from "antd";
+import type { FilterValue, SorterResult } from "antd/es/table/interface";
 import {
   Card,
   Table,
@@ -149,15 +151,20 @@ const ServerMonitor: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: any, _filters: Record<string, any>, sorter: any) => {
-    if (sorter && sorter.field) {
-      setOrderByColumn(sorter.field);
-      setIsAsc(sorter.order === "ascend");
+  const handleTableChange = (
+    pagination: TablePaginationConfig,
+    _filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<ServerInfo> | SorterResult<ServerInfo>[]
+  ) => {
+    const s = Array.isArray(sorter) ? sorter[0] : sorter;
+    if (s && s.field) {
+      setOrderByColumn(String(s.field));
+      setIsAsc(s.order === "ascend");
     }
-    setCurrent(pagination.current);
-    setPageSize(pagination.pageSize);
-    const sortField = sorter && sorter.field ? sorter.field : undefined;
-    const sortAsc = sorter && sorter.field ? sorter.order === "ascend" : undefined;
+    setCurrent(pagination.current ?? 1);
+    setPageSize(pagination.pageSize ?? 10);
+    const sortField = s && s.field ? String(s.field) : undefined;
+    const sortAsc = s && s.field ? s.order === "ascend" : undefined;
     fetchServers(sortField, sortAsc);
   };
 

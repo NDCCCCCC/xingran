@@ -18,7 +18,7 @@ declare module "sm-crypto" {
     doSignature: (data: string, privateKey: string, hash: boolean) => string;
     doVerifySignature: (data: string, sign: string, publicKey: string, hash: boolean) => boolean;
     getPublicKeyFromPrivateKey: (privateKey: string) => string;
-    getPoint: () => any;
+    getPoint: () => unknown;
     verifyPublicKey: (publicKey: string) => boolean;
   };
 

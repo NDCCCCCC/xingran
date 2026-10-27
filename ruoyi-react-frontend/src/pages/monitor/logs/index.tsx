@@ -189,7 +189,7 @@ const LogMonitor: React.FC = () => {
       onDelete: async () => {
         const endpoint =
           activeTab === "oper" ? "/monitor/oper-logs/clear" : "/monitor/login-logs/clear";
-        await post<BaseResponse<any>>(endpoint, {});
+        await post<BaseResponse<unknown>>(endpoint, {});
         currentManager.handleRefresh();
       },
     });

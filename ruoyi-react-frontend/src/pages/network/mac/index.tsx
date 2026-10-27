@@ -246,8 +246,8 @@ const MACAddressPage: FC = () => {
       const filename = await batchExport(entityTypes, {}); // 可以根据需要添加筛选条件
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
-    } catch (error: any) {
-      message.error(`批量导出失败：${error.message}`);
+    } catch (error: unknown) {
+      message.error(`批量导出失败：${(error as Error).message}`);
     } finally {
       setBatchExporting(false);
     }

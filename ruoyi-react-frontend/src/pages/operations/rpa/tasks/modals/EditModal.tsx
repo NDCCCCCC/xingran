@@ -179,6 +179,9 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
         }
 
         // 转换为前端 Action 格式
+        // 后端 script 字段为动态 JSON（与前端 Action 接口不同构，含 attributes 等原始字段），
+        // 类型边界登记豁免（任务规范允许：动态结构不强行 unknown 化）
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 后端动态 JSON 结构边界
         const parsedActions: Action[] = (scriptData as any[]).map((item: any) => ({
           id: `action_${Date.now()}_${Math.random()}`,
           type: item.type || "click",
