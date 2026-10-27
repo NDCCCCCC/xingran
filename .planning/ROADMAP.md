@@ -154,30 +154,28 @@ previous_update: 2026-10-27 v1.22 SHIPPED & ARCHIVED
 
 ### Phase 72: 后端 debug 修复 wave
 
-**Goal**: 对 Phase 69 确认「根因已定位 / 方案就绪」的项落地修复，顺序严格为 **#3 → #2 → #1-b**：先在 `mac_collection_service.go` 上建立 MAC 格式写入防线（Go 侧），再叠加 Cisco 厂商采集扩展（同文件），最后补 Linux 日志落盘的代码侧。
+**Goal**: 对 Phase 69 确认「根因已定位 / 方案就绪」的项落地修复，顺序严格为 **#3 → #2**：先在 `mac_collection_service.go` 上建立 MAC 格式写入防线（Go 侧），再叠加 Cisco 厂商采集扩展（同文件）。（2026-10-27 更新：原 #1-b Linux 日志修复已随 spike 回填取消——实测 app.log 正常落盘、不复现，DBG-04 已 Satisfied，剩余仅部署文档项。）
 **Depends on**: Phase 69（spike 输出：#3 的确定性动作与 #2 的方案就绪确认；#1-b 的诊断结论已下发）
-**Requirements**: DBG-02, DBG-03, DBG-04
+**Requirements**: DBG-02, DBG-03（DBG-04 已 Satisfied——2026-10-27 实测日志正常落盘、不复现，剩余部署文档项）
 **Notes**: **#3 先于 #2**——同一文件 `mac_collection_service.go`，Cisco 双命令会改变写入行数与格式覆盖面，先落归一化防线再做厂商扩展，否则复发验证被新写入面污染（PITFALLS 3.2：R2 已实证单点修复会 R3 复发）。#3 方案 = **Go 侧防线**（全写入方枚举 → 显式 normalize → 写路径回归测试），**不用 DB TRIGGER**（locked 决策，维持 v1.19 路线）；`parseMACLine` 的 vendor switch 必须有 **default 分支显式报错 + 计数可观测**，把「静默丢弃」改成可观测失败。#2 = vendor 枚举 +1 + Cisco 双命令 + 解析分支（点分 `xxxx.xxxx.xxxx` 与 7 字段 port-security 行）+ 导出白名单同步（`network_export_handler.go` / `batch_export_handler.go`）+ 回归测试，验收用例 **`b022.7a2e.4a4f`**。#1-b = `pkg/logger/logger.go` + `cmd/main.go` 的文件侧双写 + 「启动即写文件」自检日志；HTTP 访问日志进 journald 不进 app.log 属**架构事实**，须在部署说明中写明。#3 的写路径回归测试落在 `internal/services/` 侧。
 **Success Criteria** (what must be TRUE):
   1. 运维人员在 Cisco 设备上执行 MAC 采集，接口 MAC 正常入库且格式统一（验收用例 `b022.7a2e.4a4f` 通过）；未知厂商 / 未知格式**不再被静默丢弃**，而是产生可观测的失败记录与计数。
   2. 无论采集侧喂进什么原始格式（点分 / 连字符 / 无分隔），写入 `sys_device_mac_address` / `sys_device_mac_history` 的 MAC 一律为统一大写连字符格式、接口名不含空格；**全部写入方**都经过归一化（枚举条数 = grep 出的全部 INSERT/Save/BatchUpsert 调用点数），且存在写路径回归测试锁定这一不变量。
-  3. 运维人员在 Linux 服务器启动应用，日志文件**启动即产生可读内容**；HTTP 访问日志的去向（journald）在部署说明中写清，不再出现「以为没落盘」的困惑。
-  4. `go build ./...` 与相关包 `go test` 全绿；MAC 采集相关既有 e2e / 单测零回归。
+  3. `go build ./...` 与相关包 `go test` 全绿；MAC 采集相关既有 e2e / 单测零回归。（原 Linux 日志 SC 已移除——DBG-04 于 2026-10-27 spike 回填后 Satisfied，部署文档项随 Phase 75 收档补记。）
 
 **Plans**: TBD
 **UI hint**: no
 
 ### Phase 73: DB 实测日 + cron.go 双执行调查
 
-**Goal**: 集中一次数据库实测环境，把 **#5 查询返回空**、**#7 物理链路为空**、**#4 物化视图双执行**三条线一次查清并修完——一次环境准备换三个清单。
+**Goal**: 集中一次数据库实测环境，把 **#5 查询返回空**、**#7 物理链路为空** 两条线一次查清并修完——一次环境准备换两个清单。（2026-10-27 更新：原 #4 物化视图双执行调查已取消——用户确认根因 = 10.62.10.39 上存在第二套实例并行运行（双实例部署），非代码缺陷，DBG-05 已 Satisfied；部署约束「调度器单实例」已记录在 debug 文档。）
 **Depends on**: Phase 72（#2/#3 落地后 MAC 数据可信，#7 复测才有判读力）+ Phase 69（SQL / 命令清单已下发并回填）
-**Requirements**: DBG-05, DBG-06, DBG-07
-**Notes**: **#5** = `mac_history_query_service.go:842-915` 的 Raw SQL → GORM chainable + 错误传播（空 → 500，不再吞 error）；执行场景 a-d 四组 verification SQL 判定根因；`sys_device_mac_history` 是 **PG 分区表**且 model 缺 `deleted_at`，改动前先跑基线 SQL 确认数据基线，半吊子加过滤会把存量数据「变没」。**#7** = 按 H1-H4 判读 §4.5 综合 SQL 结论后修数据，并做**可观测性增强**（区分「未绑定 user_id / 绑定错位 / 设备 orphan / 数据本身为空」四种空因），倾向单点数据修正而非 migration。**#4** = 唯一零进展文档，按全新调查估时；三步验证（搜注册点 / 查 sys_job 重复行 / 查独立 refresh goroutine），修复**只允许打在注册层**（`internal/scheduler/cron.go` + `internal/core/core.go:545` 注册点 + `sys_job` 唯一性），handler 层 guard 只能作纵深防御并注释说明；若确认 sys_job 双行，唯一索引 migration 一并裁决。**cron.go 是全部 job 的共享引擎 → 回归闸门锁 `go test ./internal/scheduler/` 全套**（cron_test / mac_tasks / ad_sync / vdi / workorder）。
+**Requirements**: DBG-06, DBG-07（DBG-05 已 Satisfied，见 Goal 更新说明）
+**Notes**: **#5** = `mac_history_query_service.go:842-915` 的 Raw SQL → GORM chainable + 错误传播（空 → 500，不再吞 error）；执行场景 a-d 四组 verification SQL 判定根因；`sys_device_mac_history` 是 **PG 分区表**且 model 缺 `deleted_at`，改动前先跑基线 SQL 确认数据基线，半吊子加过滤会把存量数据「变没」。**2026-10-27 spike 首批回填实测**：分区树 2026_06~2026_12 共 7 个月度分区、EXPLAIN 剪枝正常（只扫 2026_06 索引，Index Actual Rows=6）、但样本 MAC `B0227A2E4A4F` 全表/分区 count 均为 0——「Rows=6 与 count=0 并存」不能排除查询字面量格式与存储格式不一致（正是原始疑点）；**执行本 phase 前需用户更换现存样本 MAC 复查 + 确认 deleted_at 列是否存在**。**#7** = 按 H1-H4 判读 §4.5 综合 SQL 结论后修数据，并做**可观测性增强**（区分「未绑定 user_id / 绑定错位 / 设备 orphan / 数据本身为空」四种空因），倾向单点数据修正而非 migration。（原 #4 cron.go 调查已取消——双实例部署根因，本 phase 不再触碰共享调度引擎。）
 **Success Criteria** (what must be TRUE):
-  1. 运维人员查询 MAC 历史轨迹能返回**真实结果**；DB 错误不再被吞成空结果（查询失败时接口返回可见错误而不是空数组），#5 场景 a-d 四组实测结论逐条回填。
-  2. mac_history 物化视图刷新任务**每个 tick 只产生一条** `sys_job_log`（双行现象消失）；`go test ./internal/scheduler/` 全套测试通过，共享引擎的其它 job 零回归。
-  3. 工位 3F130 的「物理链路为空」能被区分出**具体空因**（未绑定用户 / 绑定错位 / 设备已删除 / 数据本身为空），运维人员看到的是可诊断结论而不是空白。
-  4. 三条线的实测结论（#5 场景判读 / #7 H1-H4 命中项 / #4 sys_job 双行与注册点结论）全部回填进对应 debug 文档的 Eliminated 与 Resolution 节，无一份仍是空白。
+  1. 运维人员查询 MAC 历史轨迹能返回**真实结果**；DB 错误不再被吞成空结果（查询失败时接口返回可见错误而不是空数组），#5 场景 a-d 四组实测结论逐条回填（含换用现存样本 MAC 的复查结论与 deleted_at 列确认）。
+  2. 工位 3F130 的「物理链路为空」能被区分出**具体空因**（未绑定用户 / 绑定错位 / 设备已删除 / 数据本身为空），运维人员看到的是可诊断结论而不是空白。
+  3. 两条线的实测结论（#5 场景判读 / #7 H1-H4 命中项）全部回填进对应 debug 文档的 Eliminated 与 Resolution 节，无一份仍是空白。
 
 **Plans**: TBD
 **UI hint**: no

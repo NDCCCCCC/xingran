@@ -39,11 +39,11 @@
 
 > ⚠️ 经逐份核读，**≥4 项调查实际未完成**（acknowledge ≠ 已定位）。第一波必须是重验 spike，而非直接修复。
 
-- [ ] **DBG-01**: scrapligo GetPrompt nil panic 经人工验证无复现后关单（零代码，2026-10-16 已修：scrapli_wrapper.go 4 处 + initrace_test.go + go.mod v1.4.2）
+- [x] **DBG-01**: scrapligo GetPrompt nil panic 经人工验证无复现后关单（✅ 2026-10-27 用户确认生产无复现，debug 文档 closed）
 - [ ] **DBG-02**: Cisco 设备 MAC 地址采集支持厂商模板（双命令 + `parseMACLine` Cisco 分支 + 导出白名单；验收用例 `b022.7a2e.4a4f`）
 - [ ] **DBG-03**: MAC 地址格式问题不再复发——写入方枚举 + 显式 normalize + 回归测试（**Go 侧防线，不用 DB TRIGGER**，维持 v1.19 决策）
-- [ ] **DBG-04**: Linux 环境应用日志正常落盘（`pkg/logger/logger.go` + `cmd/main.go` initializeLogger；HTTP 日志进 journald 非 app.log 属架构事实）
-- [ ] **DBG-05**: MAC 历史迁移任务不重复执行（`internal/scheduler/cron.go` 是全部 job 共享引擎 → 须独立 phase + 过全 `internal/scheduler/` 测试套件）
+- [x] **DBG-04**: Linux 环境应用日志正常落盘（✅ 2026-10-27 实测不复现：app.log 65MB 持续在写；误判根源 = 进程非 systemd 托管，journalctl 为空属预期；降级为部署文档项）
+- [x] **DBG-05**: MAC 历史迁移任务不重复执行（✅ 2026-10-27 根因确认 = 10.62.10.39 上有第二套实例并行运行（双实例部署共用同一 DB 调度器），非代码缺陷；部署约束「调度器单实例」已记录，多实例 HA 需分布式锁列为 future enhancement）
 - [ ] **DBG-06**: MAC 历史查询返回正确结果（`mac_history_query_service.go:842-915` Raw SQL → GORM chainable + 错误传播）
 - [ ] **DBG-07**: 工位 3F130 物理链路为空可区分空因状态（可诊断，`workstation_device_service.go:320/:339/:391-404`）
 
@@ -92,7 +92,7 @@
 | 引入 Playwright / jscodeshift 等新工具链 | 零新依赖原则；迁移用 Phase 67 别名降险先例，UAT 用 agent-browser skill |
 | 新增后端依赖 | 7 项 debug 修复经研究确认零新依赖 |
 | 改名 v1.22 冻结契约 | 分页口径 / ConfirmDelete 唯一入口 / handleApiError 唯一出口 / statusHelpers 均为 v1.22 锁定契约，迁移不得破坏 |
-| 修改 `sys_job` schema（`#4` 双执行根因未定位） | 根因未定即改 schema 属猜改；Phase 1 全新调查后再定，必要时加唯一索引 migration |
+| ~~修改 `sys_job` schema~~ | ✅ 争议消失：#4 双执行根因确认为双实例部署（非代码），无需 schema 变更（2026-10-27 用户裁定） |
 
 ## Traceability
 
@@ -106,11 +106,11 @@
 | MIG-02 | 71 | Pending |
 | MIG-03 | 74 | Pending |
 | MIG-04 | 71 | Pending |
-| DBG-01 | 69 | Pending |
+| DBG-01 | 69 | Satisfied (2026-10-27) |
 | DBG-02 | 72 | Pending |
 | DBG-03 | 72 | Pending |
-| DBG-04 | 72 | Pending |
-| DBG-05 | 73 | Pending |
+| DBG-04 | 72 | Satisfied (2026-10-27) |
+| DBG-05 | 73 | Satisfied (2026-10-27) |
 | DBG-06 | 73 | Pending |
 | DBG-07 | 73 | Pending |
 | UAT-01 | 75 | Pending |
@@ -134,4 +134,4 @@
 
 ---
 *Requirements defined: 2026-10-27*
-*Last updated: 2026-10-27 after roadmap creation（Traceability 填充：22/22 映射到 Phases 69-75，无孤儿、无重复）*
+*Last updated: 2026-10-27 after Phase 69 spike 回填批次 1（DBG-01/04/05 Satisfied：#6 关单、#1 不复现、#4 双实例部署根因；DBG-02/03 → Phase 72、DBG-06/07 → Phase 73 范围收缩）*
