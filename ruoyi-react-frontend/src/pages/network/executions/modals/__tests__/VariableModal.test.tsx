@@ -17,7 +17,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-function renderModal(props: any) {
+function renderModal(props: unknown) {
   function TestComp() {
     const [form] = Form.useForm();
     return <VariableModal {...props} form={form} />;

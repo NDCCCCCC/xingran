@@ -30,7 +30,7 @@ function Wrap({ children }: { children: React.ReactNode }) {
 
 beforeEach(() => {
   postSpy.mockReset();
-  vi.spyOn(apiModule, "post" as any).mockImplementation(postSpy as any);
+  vi.spyOn(apiModule, "post" as unknown).mockImplementation(postSpy as unknown);
 });
 
 describe("useCommandData", () => {
@@ -118,7 +118,7 @@ describe("useCommandData", () => {
     const { result } = renderHook(() => useCommandData(vi.fn(), { current: 1, pageSize: 10 }), {
       wrapper: Wrap,
     });
-    let ret: any;
+    let ret: unknown;
     await act(async () => {
       ret = await result.current.loadExecutionDetails("e1");
     });
@@ -150,7 +150,7 @@ describe("useCommandModals", () => {
     };
 
     await act(async () => {
-      await result.current.handleQuickCommand(["d1"], form as any, onSuccess);
+      await result.current.handleQuickCommand(["d1"], form as unknown, onSuccess);
     });
 
     expect(postSpy).toHaveBeenCalledWith("/network/command/quick", {
@@ -170,7 +170,7 @@ describe("useCommandModals", () => {
     };
 
     await act(async () => {
-      await result.current.handleQuickCommand(["d1"], form as any, onSuccess);
+      await result.current.handleQuickCommand(["d1"], form as unknown, onSuccess);
     });
 
     expect(postSpy).not.toHaveBeenCalled();
@@ -210,7 +210,7 @@ describe("CommandDetailDrawer", () => {
   });
 
   it("渲染 steps+progress+table", async () => {
-    const exec: any = {
+    const exec: unknown = {
       executionName: "批量巡检",
       status: "running",
       totalDevices: 10,
@@ -221,7 +221,7 @@ describe("CommandDetailDrawer", () => {
       <CommandDetailDrawer
         open
         execution={exec}
-        details={[{ id: "det1" } as any]}
+        details={[{ id: "det1" } as unknown]}
         onClose={vi.fn()}
       />
     );
@@ -237,7 +237,7 @@ describe("CommandDispatchModal", () => {
     const { findByText, baseElement } = render(
       <CommandDispatchModal
         open
-        devices={[{ id: "d1", deviceName: "核心交换机" } as any]}
+        devices={[{ id: "d1", deviceName: "核心交换机" } as unknown]}
         selectedRowKeys={["d1"]}
         onOk={vi.fn()}
         onCancel={vi.fn()}

@@ -21,7 +21,7 @@ const wrap = ({ children }: { children: React.ReactNode }) => (
   </ConfigProvider>
 );
 
-const opts = () => ({ current: 1, pageSize: 10, searchForm: {} as any });
+const opts = () => ({ current: 1, pageSize: 10, searchForm: {} as unknown });
 
 describe("useDiscoveryData", () => {
   it("initial state + 返回 16 handler/setter", () => {
@@ -65,11 +65,11 @@ describe("useDiscoveryData", () => {
   it("setters 直写 state", () => {
     const { result } = renderHook(() => useDiscoveryData(opts()), { wrapper: wrap });
     act(() => {
-      result.current.setDiscoveries([{ id: "d1" } as any]);
+      result.current.setDiscoveries([{ id: "d1" } as unknown]);
       result.current.setDiscoveredDevices([{ ip: "10.0.0.1" }]);
-      result.current.setDepartments([{ id: "dept1" } as any]);
-      result.current.setModalState({ createModalVisible: true } as any);
-      result.current.setCurrentDiscovery({ id: "d1" } as any);
+      result.current.setDepartments([{ id: "dept1" } as unknown]);
+      result.current.setModalState({ createModalVisible: true } as unknown);
+      result.current.setCurrentDiscovery({ id: "d1" } as unknown);
     });
     expect(result.current.discoveries.length).toBe(1);
     expect(result.current.discoveredDevices.length).toBe(1);

@@ -45,7 +45,7 @@ describe("pages/network/executions/constants", () => {
   });
 
   it("renderStatusTag unknown → pending", () => {
-    render(renderStatusTag("xyz" as any));
+    render(renderStatusTag("xyz" as unknown));
     expect(screen.getByText("待执行")).toBeInTheDocument();
   });
 
@@ -55,7 +55,7 @@ describe("pages/network/executions/constants", () => {
   });
 
   it("renderSimpleStatusTag unknown → pending", () => {
-    render(renderSimpleStatusTag("xyz" as any));
+    render(renderSimpleStatusTag("xyz" as unknown));
     expect(screen.getByText("待执行")).toBeInTheDocument();
   });
 });

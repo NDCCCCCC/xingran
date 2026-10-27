@@ -8,7 +8,7 @@ import type { ReactElement, ReactNode } from "react";
 
 vi.mock("@/lib/api", async () => {
   return {
-    post: vi.fn(async (url: string, data?: any) => ({ data: { url, payload: data } })),
+    post: vi.fn(async (url: string, data?: unknown) => ({ data: { url, payload: data } })),
   };
 });
 
@@ -22,7 +22,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 describe("pages/network/command/hooks/useCommandModals", () => {
   beforeEach(() => {
     vi.mocked(post).mockReset();
-    vi.mocked(post).mockResolvedValue({ data: {} } as any);
+    vi.mocked(post).mockResolvedValue({ data: {} } as unknown);
   });
 
   it("返回两个函数", () => {
@@ -35,7 +35,7 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     const validateFields = vi.fn(async () => ({ command: "show version" }));
     const resetFields = vi.fn();
     const onSuccess = vi.fn();
-    const form: any = { validateFields, resetFields };
+    const form: unknown = { validateFields, resetFields };
 
     const { result } = renderHook(() => useCommandModals(), { wrapper });
     await act(async () => {
@@ -57,7 +57,7 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     });
     const resetFields = vi.fn();
     const onSuccess = vi.fn();
-    const form: any = { validateFields, resetFields };
+    const form: unknown = { validateFields, resetFields };
 
     const { result } = renderHook(() => useCommandModals(), { wrapper });
     await act(async () => {
@@ -71,7 +71,7 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     const { post } = await import("@/lib/api");
     vi.mocked(post).mockRejectedValueOnce(new Error("net"));
     const validateFields = vi.fn(async () => ({ command: "x" }));
-    const form: any = { validateFields, resetFields: vi.fn() };
+    const form: unknown = { validateFields, resetFields: vi.fn() };
 
     const { result } = renderHook(() => useCommandModals(), { wrapper });
     await act(async () => {

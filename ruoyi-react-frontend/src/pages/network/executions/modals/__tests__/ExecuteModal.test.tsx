@@ -41,13 +41,13 @@ describe("ConfigExecuteModal", () => {
               id: "dev1",
               hostname: "switch1",
               ipAddress: "10.0.0.1",
-            } as any,
+            } as unknown,
           ]}
           templates={[
             {
               id: "tpl1",
               templateName: "基础配置",
-            } as any,
+            } as unknown,
           ]}
           selectedTemplate={null}
           selectedRowKeys={[]}

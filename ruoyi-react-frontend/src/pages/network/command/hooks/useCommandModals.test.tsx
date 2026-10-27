@@ -36,7 +36,7 @@ describe("useCommandModals", () => {
     };
     const { result } = renderHook(() => useCommandModals(), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleQuickCommand(["d1"], form as any, onSuccess);
+      await result.current.handleQuickCommand(["d1"], form as unknown, onSuccess);
     });
     expect(onSuccess).toHaveBeenCalled();
     expect(form.resetFields).toHaveBeenCalled();
@@ -50,7 +50,7 @@ describe("useCommandModals", () => {
     };
     const { result } = renderHook(() => useCommandModals(), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleQuickCommand(["d1"], form as any, onSuccess);
+      await result.current.handleQuickCommand(["d1"], form as unknown, onSuccess);
     });
     expect(onSuccess).not.toHaveBeenCalled();
   });

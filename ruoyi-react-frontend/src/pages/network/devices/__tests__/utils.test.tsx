@@ -21,7 +21,7 @@ describe("network/devices/utils", () => {
   });
 
   it("getOptionLabel 数字值", () => {
-    expect(getOptionLabel(VENDOR_OPTIONS as any, 1)).toBeUndefined();
+    expect(getOptionLabel(VENDOR_OPTIONS as unknown, 1)).toBeUndefined();
   });
 
   it("getStatusColor 0 → success", () => {

@@ -58,7 +58,7 @@ describe("useDeviceData", () => {
       result.current.ensureCredential({
         id: "c1",
         credentialName: "cred1",
-      } as any);
+      } as unknown);
     });
     expect(result.current.credentials.length).toBe(1);
   });
@@ -66,10 +66,10 @@ describe("useDeviceData", () => {
   it("ensureCredential 不重复(同 id 已在列表)", () => {
     const { result } = renderHook(() => useDeviceData(), { wrapper: wrap });
     act(() => {
-      result.current.ensureCredential({ id: "c1", credentialName: "cred1" } as any);
+      result.current.ensureCredential({ id: "c1", credentialName: "cred1" } as unknown);
     });
     act(() => {
-      result.current.ensureCredential({ id: "c1", credentialName: "cred1-updated" } as any);
+      result.current.ensureCredential({ id: "c1", credentialName: "cred1-updated" } as unknown);
     });
     expect(result.current.credentials.length).toBe(1);
   });
