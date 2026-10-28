@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-10-28
-update_trigger: v1.23 SHIPPED & ARCHIVED — ROADMAP 重构为紧凑分组
-previous_update: 2026-10-27 v1.23 roadmap CREATED
+update_trigger: v1.24 roadmap CREATED (视觉回归修复与遗留债务清偿, Phases 76-83, 18 REQ coverage)
+previous_update: 2026-10-28 v1.23 SHIPPED & ARCHIVED
 ---
 
 # Roadmap: RuoYi-Next 运维管理系统
@@ -32,8 +32,25 @@ previous_update: 2026-10-27 v1.23 roadmap CREATED
 - ✅ **v1.21 AD 双向同步 bug 修复** — Phases 57-62 (shipped 2026-10-22)
 - ✅ **v1.22 前端公用组件整治** — Phases 63-68.1 (shipped 2026-10-27)
 - ✅ **v1.23 前端契约全量收尾与遗留清偿** — Phases 69-75 (shipped 2026-10-28)
+- 🔄 **v1.24 视觉回归修复与遗留债务清偿** — Phases 76-83 (planning 2026-10-28)
 
 ## Phases
+
+### 🔄 v1.24 视觉回归修复与遗留债务清偿 (Phases 76-83) — IN PROGRESS
+
+> 需求基线：`.planning/REQUIREMENTS.md`（18 REQ）｜研究：`.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS}.md`
+> 执行波次（FEATURES 建议）：**W1 零依赖**（76/80/81/82）→ **W2 需 PG**（78/79）→ **W3 拆分**（83）；77（视觉验证）在 76 后收口
+
+- [ ] **Phase 76: 双框 P0 修复 + CSS 审计登记册** — wrapper 上下文复位规则（同步 4 个 CSS 块：:871-905 浅色主块 / :2252-2284 暗色含全局元素选择器 / :3717-3757 暗色二块）+ computed-style 断言脚本（修前取「双框>0」基线）+ CSS 一致性审计登记册（26 输入类 + 8 非输入类 + 12 条 Select 死规则）（VIS-01/02/03/04）
+- [ ] **Phase 77: 双框视觉回归验证** — 26 格截图矩阵（11 类型 × 明暗 × 默认/聚焦）+ 14 回归页面 + 「allowClear 开/关视觉同形」机械判据 + 与 v1.23 分页持久化联动验收（VIS-05）
+- [ ] **Phase 78: #16 前后端双端闭环** — ActionButton 契约扩 `permission` 字段（加法）+ 三态门控 helper（useActionPermission）+ 系统用户页接入 + 后端严格权限中间件（不做模块降级）+ `/system/users` 写操作拆独立子组（绑定 UserRemove 等既有常量）+ 权限码单一真相源与校验脚本（PERM-01..04/06）
+- [ ] **Phase 79: #16 PG 实机验收** — UI 正常路径建受限角色（有页面无按钮权限）→ 按钮不可见 + curl 直调写接口 403 + admin/xtgl 零变化（PERM-05；外部依赖：PG 环境已具备）
+- [ ] **Phase 80: 3f130 空因诊断前端接入** — `getPhysicalWithDiagnosis` 包装（调用方零改动）+ Table+Alert 双区渲染 + 后端矛盾注释修正 + 「有数据+空因」不变量测试 + 静默失败补提示（DIAG-01）
+- [ ] **Phase 81: F5 刷新落地页修复** — `menusReady` 三态 catch-all + `saveLastPath` 跳过兜底跳转 + 与 FAIL-1 分页持久化联动验收（NAV-01）
+- [ ] **Phase 82: lint 清零 + 豁免理由表修复** — 17 errors + 34 warnings → 0（预算双写同步 + AppSelect/local 规则冲突决策）+ react-refresh 33 三类分流（P1 拆 18 / P2 改代码 13 / P3 登记 2）+ `check-exemption-reasons.mjs` 123 项失配修复并接入 lint:ci（HYG-01/02/03/05）
+- [ ] **Phase 83: devices 页拆分** — buildRowActions+权限 gate → 列定义工厂 → 采集端口 → 快速创建 → searchFields；reloadRef 回填链路保持；收敛 ~250 行；v1.19 port-write 62 测试零回归（HYG-04）
+
+**Wave 划分**：W1 = 76→80→81→82（零外部依赖，可并行）；W2 = 78→79（PG）；W3 = 83（依赖 78 的权限 gate 模式）。收口 = 77。
 
 <details>
 <summary>✅ v1.23 前端契约全量收尾与遗留清偿 (Phases 69-75) — SHIPPED 2026-10-28</summary>

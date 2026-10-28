@@ -2,30 +2,30 @@
 gsd_state_version: "1.0"
 milestone: v1.24
 milestone_name: 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
-status: Planning — 4 维研究进行中（STACK/FEATURES/ARCHITECTURE/PITFALLS）
-stopped_at: v1.24 初始化完成；#16 已用生产 PG 实测定责（用户页操作列无权限判定）；双框根因已实证（index.css .ant-input !important 覆盖 antd 6 affix-wrapper 内层 border:none）
-last_updated: "2026-10-28T09:30:00+08:00"
+status: Roadmap CREATED (Phases 76-83, 18/18 REQ mapped) — ready to execute
+stopped_at: 规划定稿：REQUIREMENTS 18 需求 + ROADMAP 8 phases + 4 维研究 + 4 份实证 note；W1(76/80/81/82 零依赖可并行) → W2(78/79 需 PG) → W3(83)；收口=77
+last_updated: "2026-10-28T09:45:00+08:00"
 last_activity: 2026-10-28
-last_activity_desc: v1.24 milestone INITIATED — 4 维并行研究启动 + PG 权限基线落盘
-state_head: d52f01e5
+last_activity_desc: v1.24 roadmap CREATED — 双框 P0 根因实证 + #16 定责（前后端双缺口）+ 3f130/F5 完成判据
+state_head: b9f259ea
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
   percent: 0
 current_phase: 76
-current_phase_name: (待路线图定稿)
+current_phase_name: 双框 P0 修复 + CSS 审计登记册
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.24 milestone planning（视觉回归修复与遗留债务清偿）
+**Status**: v1.24 roadmap CREATED — ready to execute
 **Last activity**: 2026-10-28
-**Prior activity**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
-**Prior activity (2)**: 2026-10-28 — Phase 75 UAT 完成（18/19 实测 + FAIL-1 修复实机复验 + #16 需 PG 复测转债）
+**Prior activity**: 2026-10-28 — v1.24 规划定稿：18 需求（VIS×5/PERM×6/DIAG/NAV/HYG×5）+ 8 phases + 4 维研究 + PG 权限基线/双框根因/工位绑定 3 份实证
+**Prior activity (2)**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
 **Prior activity (3)**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）
 
 ## Current Milestone: v1.23 前端契约全量收尾与遗留清偿
