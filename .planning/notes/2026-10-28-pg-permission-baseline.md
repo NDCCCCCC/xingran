@@ -102,6 +102,8 @@
 
 ### 7.2 后端：权限中间件覆盖面
 
+> ⚠️ **口径修正（2026-10-28，ARCHITECTURE 研究交叉验证后）**：§7.2 的「`user_router.go` 12 路由零中间件」是**局部扫描口径**——权限是在**主路由挂载处**（`internal/api/router.go`）以 `users.Use(...)` 组级施加的，不在 `user_router.go` 文件内部。因此**不能**据此断言「后端完全无保护」。真实结论见 §7.8。
+
 全量扫描 `internal/api/**/*_router.go` 的 367 条路由注册：
 
 | 分类 | 数量 | 占比 |
@@ -115,7 +117,7 @@
 - `ad_domain_router.go`（12 处，v1.20 引入）
 - `manager_rule_router.go`（2 处）
 
-**`internal/api/v1/system/user_router.go` 全部 12 条路由零权限中间件**：
+**`internal/api/v1/system/user_router.go` 全部 12 条路由零权限中间件**（局部事实；组级保护在 `router.go`）：
 
 ```go
 r.POST("", handler.Create)                    // ← 无 RequirePermissions
@@ -215,3 +217,58 @@ Step 3  extractModulePermission('system:user:edit')
 | xtgl（有 edit/remove/resetPwd/add/import） | 同上；**导出按钮按现状**（xtgl 无 export 权限 → 需裁定：给 xtgl 补权限 or export 接口不加保护） |
 | 构造角色：仅 `system:user` + `system:user:list` | 编辑/重置密码/删除/批量删除按钮**不可见**；直调写接口返回 403 |
 | 构造角色：有 `system:user:edit` 无 remove | 编辑可见、删除不可见；delete 接口 403 |
+
+### 7.8 【最终修正】后端真实保护机制与**两个叠加病灶**
+
+（来源：ARCHITECTURE 研究 §1.5，与本 note §7.2 的局部口径交叉验证后修订）
+
+**真实机制**：用户路由在**主路由挂载处**受组级保护——`internal/api/router.go:157-162`：
+
+```go
+users.Use(middleware.RequirePermissionsWithQuery([]string{
+    string(permission.UserList),   // system:user:list
+    string(permission.UserAdd),    // system:user:add
+    string(permission.UserEdit),   // system:user:edit
+    string(permission.UserView),   // system:user:view
+}, []string{"ops:workstation:list", "ops:building:spaces:list"}, core))
+```
+
+**病灶 1 —— 组级 ANY-of 抹平了动作粒度（真实安全缺陷）**
+
+`RequirePermissions` 的语义是**任一命中即放行**（`pkg/middleware/permission.go:276-303`）：
+
+```go
+for _, permission := range permissions {
+    if checkUserPermission(core, userID, permission) { c.Next(); return }   // ← OR
+}
+```
+
+`RequirePermissionsWithQuery`（:316-350）同构——主数组**始终是 OR**，`isQueryPath` 只决定是否追加 `queryExtraPermissions`，**不改变主数组的 OR 语义**。
+
+> ⚠️ **注释与实现矛盾**：`permission.go:305-315` 的 doc 注释写「写操作仍只受严格权限保护，避免越权」，**实现并未做到**——写操作与读操作走同一个 OR 数组。
+
+**后果**：只持有 `system:user:list` 的用户，`POST /system/users/{id}/delete` 命中 `UserList` 分支 → `c.Next()` → **后端真的执行删除并返回 200**。这比「前端按钮多寡」严重得多。
+
+**病灶 2 —— 检查函数的模块级降级（§7.6）**
+
+即使把写操作拆成 `RequirePermissions([UserRemove])`（单元素 = 精确要求），`checkUserPermissionUncached` 的 **Step 3 模块级降级**仍会把 `system:user:remove` 降级匹配到 `system:user`（页面本体）→ 只读角色仍放行。
+
+**两个病灶叠加，必须同时解决**：
+
+| # | 病灶 | 位置 | 修法 |
+|---|---|---|---|
+| 1 | 组级 ANY-of | `internal/api/router.go:157-162`（及 roles/menus/depts/posts 4 个同类组，`:183-236`） | **写操作从 ANY-of 组拆出为独立子组**，参照 network 域范式 `internal/api/v1/network/port_write_router.go:51`（写操作单独子组 + 单一权限点） |
+| 2 | 模块级降级 | `pkg/middleware/permission.go:200-218` | 新增**不做 Step 3 降级**的严格检查（写操作用），或对写操作权限点做特殊处理 |
+
+**已有资产（可直接复用，不必新设计）**：
+
+- `pkg/permission/config.go:16,26,34,42,48` 已定义 `UserRemove` / `RoleRemove` / `MenuRemove` / `DeptRemove` / `PostRemove` **5 个常量，但在 `router.go` 挂载中一次都没被引用**
+- `pkg/permission/config.go:223-289` 的 `GetRoutePermissions()` 已有**完整动作级映射表**（`/system/users/:id/delete` → `UserRemove` 等），配套 `GetPermissionByPath`（:292-302）与 `matchPath`（:304-330）**已实现但生产路径从不消费** → 「团队已设计好动作级权限模型，只是没有接线」
+- **network 域已做正确示范**：`port_write_router.go:51` + `:183-192` 注释明写「RequirePermissions 为 ANY-of 语义：主组 4 权限点任一即放行，仅持 list 只读权限的用户曾可触发恢复。restore 必须单独强制专用权限点」→ **同一个仓里 network 域知道这个坑并已修，system 域没修**
+
+**v1.24 修复范围（据此收敛）**：
+
+- **后端**：`internal/api/router.go` 的 `/system/users` 组 → 读操作保留 ANY-of 组，写操作拆独立子组并逐动作绑定 `UserAdd`/`UserEdit`/`UserRemove`/`UserResetPwd`（复用已定义常量）；配「不做模块降级」的严格检查以封住病灶 2
+- **前端**：`src/pages/system/user/index.tsx` 按同一套权限点条件渲染
+- **其余 4 个同类组（roles/menus/depts/posts）**：v1.24 内**登记为同源债**，是否一并修由路线图阶段按风险定（roles/menus/depts 的写操作同样是 ANY-of → 同样可被只读角色触发）
+- **全站 340 条无保护路由**：v1.25 独立里程碑
