@@ -16,6 +16,7 @@ package permission
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -121,6 +122,245 @@ func TestRouteRegistryCoverage(t *testing.T) {
 			len(staleDeferred), strings.Join(staleDeferred, "\n"))
 	}
 	t.Logf("coverage 守卫通过: 写路由 %d 条, deferred %d 条", checked, len(reg.Deferred.Items))
+}
+
+// strictWriteGroups 85-02（RBAC-04）拆分为逐动作严格单一权限点的 system 4 组写路由
+// （path → 期望死表权限码）。写组若被改回挂 ANY-of 读组（或做成读组子组），
+// 扫描到的 permCodes 会合并父组 ANY-of 多码，本测试立即 FAIL。
+var strictWriteGroups = map[string]PermissionCode{
+	// roles
+	"/system/roles": RoleAdd,
+	"/system/roles/:id/update": RoleEdit,
+	"/system/roles/:id/status": RoleEdit,
+	"/system/roles/:id/delete": RoleRemove,
+	"/system/roles/batch":      RoleRemove,
+	// menus
+	"/system/menus": MenuAdd,
+	"/system/menus/:id/update": MenuEdit,
+	"/system/menus/:id/status": MenuEdit,
+	"/system/menus/:id/delete": MenuRemove,
+	"/system/menus/batch-delete": MenuRemove,
+	// departments
+	"/system/departments": DeptAdd,
+	"/system/departments/:id/update": DeptEdit,
+	"/system/departments/:id/status": DeptEdit,
+	"/system/departments/:id/delete": DeptRemove,
+	"/system/departments/batch":      DeptRemove,
+	"/system/departments/import":     DeptImport,
+	"/system/departments/export":     DeptExport,
+	// posts
+	"/system/posts": PostAdd,
+	"/system/posts/:id/update": PostEdit,
+	"/system/posts/:id/delete": PostRemove,
+	"/system/posts/batch-delete": PostRemove,
+
+	// 85-03 批次 A：ops 域 13 组写路由（internal/api/router.go 内联兄弟写组，
+	// 形态 var := strictUserRouteGroup(parent, permission.OpsXxx, core)）
+	"/ops/building":              OpsBuildingAdd,
+	"/ops/building/:id/update":   OpsBuildingEdit,
+	"/ops/building/:id/delete":   OpsBuildingDelete,
+	"/ops/building/batch":        OpsBuildingDelete,
+	"/ops/building/import":       OpsBuildingImport,
+	"/ops/building/export":       OpsBuildingExport,
+	"/ops/floor":                 OpsFloorAdd,
+	"/ops/floor/:id/update":      OpsFloorEdit,
+	"/ops/floor/:id/delete":      OpsFloorDelete,
+	"/ops/floor/batch":           OpsFloorDelete,
+	"/ops/floor/import":          OpsFloorImport,
+	"/ops/floor/export":          OpsFloorExport,
+	"/ops/workstation":           OpsWorkstationAdd,
+	"/ops/workstation/:id/update":  OpsWorkstationEdit,
+	"/ops/workstation/positions":   OpsWorkstationEdit,
+	"/ops/workstation/:id/delete":  OpsWorkstationDelete,
+	"/ops/workstation/batch":       OpsWorkstationDelete,
+	"/ops/workstation/import":      OpsWorkstationImport,
+	"/ops/workstation/export":      OpsWorkstationExport,
+	"/ops/workstation-device/manual":               OpsWorkstationAdd,
+	"/ops/workstation-device/sync-ad":              OpsWorkstationEdit,
+	"/ops/workstation-device/sync-asset":           OpsWorkstationEdit,
+	"/ops/workstation-device/:id/update":           OpsWorkstationEdit,
+	"/ops/workstation-device/:id/set-primary":      OpsWorkstationEdit,
+	"/ops/workstation-device/:id/set-primary-and-save": OpsWorkstationEdit,
+	"/ops/workstation-device/:id/delete":           OpsWorkstationDelete,
+	"/ops/asset":               OpsAssetAdd,
+	"/ops/asset/:id/update":    OpsAssetEdit,
+	"/ops/asset/:id/delete":    OpsAssetDelete,
+	"/ops/asset/batch":         OpsAssetDelete,
+	"/ops/asset/import":        OpsAssetImport,
+	"/ops/asset/export":        OpsAssetExport,
+	"/ops/infoPoint":           OpsInfoPointAdd,
+	"/ops/infoPoint/:id/update": OpsInfoPointEdit,
+	"/ops/infoPoint/:id/delete": OpsInfoPointDelete,
+	"/ops/infoPoint/batch":     OpsInfoPointDelete,
+	"/ops/infoPoint/import":    OpsInfoPointImport,
+	"/ops/infoPoint/export":    OpsInfoPointExport,
+	"/ops/serverRoom":          OpsServerRoomAdd,
+	"/ops/serverRoom/:id/update": OpsServerRoomEdit,
+	"/ops/serverRoom/:id/delete": OpsServerRoomDelete,
+	"/ops/serverRoom/batch":    OpsServerRoomDelete,
+	"/ops/serverRoom/import":   OpsServerRoomImport,
+	"/ops/serverRoom/export":   OpsServerRoomExport,
+	"/ops/dedicatedLine":       OpsDedicatedLineAdd,
+	"/ops/dedicatedLine/:id/update": OpsDedicatedLineEdit,
+	"/ops/dedicatedLine/:id/delete": OpsDedicatedLineDelete,
+	"/ops/dedicatedLine/batch": OpsDedicatedLineDelete,
+	"/ops/dedicatedLine/import": OpsDedicatedLineImport,
+	"/ops/dedicatedLine/export": OpsDedicatedLineExport,
+	"/ops/roomDevice":          OpsRoomDeviceAdd,
+	"/ops/roomDevice/:id/update": OpsRoomDeviceEdit,
+	"/ops/roomDevice/:id/delete": OpsRoomDeviceDelete,
+	"/ops/roomDevice/batch":    OpsRoomDeviceDelete,
+	"/ops/roomDevice/import":   OpsRoomDeviceImport,
+	"/ops/roomDevice/export":   OpsRoomDeviceExport,
+	"/ops/location-alias":          OpsLocationAliasAdd,
+	"/ops/location-alias/:id/update": OpsLocationAliasEdit,
+	"/ops/location-alias/:id/delete": OpsLocationAliasDelete,
+	"/ops/walls":             OpsWallAdd,
+	"/ops/walls/:id/update":  OpsWallEdit,
+	"/ops/walls/:id/delete":  OpsWallDelete,
+	"/ops/walls/batch":       OpsWallDelete,
+	"/ops/doors":             OpsDoorAdd,
+	"/ops/doors/:id/update":  OpsDoorEdit,
+	"/ops/doors/:id/delete":  OpsDoorDelete,
+	"/ops/doors/batch":       OpsDoorDelete,
+	"/ops/floor-plan-texts":          OpsFloorPlanEdit,
+	"/ops/floor-plan-texts/:id/update": OpsFloorPlanEdit,
+	"/ops/floor-plan-texts/:id/delete": OpsFloorPlanEdit,
+	"/ops/floor-plan-texts/batch":      OpsFloorPlanEdit,
+
+	// 85-03 批次 B：network 域 8 组写路由（network_router.go strictGroup 兄弟写组；
+	// 拓扑/mac/ports 读组为 PLAN 覆盖清单外，不在守护范围）
+	"/network/devices":               NetworkDeviceAdd,
+	"/network/devices/quick-create":  NetworkDeviceAdd,
+	"/network/devices/:id/update":    NetworkDeviceEdit,
+	"/network/devices/:id/delete":    NetworkDeviceDelete,
+	"/network/devices/batch-delete":  NetworkDeviceDelete,
+	"/network/devices/export":        NetworkDeviceExport,
+	"/network/credentials":           NetworkCredentialAdd,
+	"/network/credentials/:id/update":    NetworkCredentialEdit,
+	"/network/credentials/:id/set-default": NetworkCredentialEdit,
+	"/network/credentials/:id/delete":    NetworkCredentialDelete,
+	"/network/credentials/batch-delete":  NetworkCredentialDelete,
+	"/network/credentials/export":        NetworkCredentialExport,
+	"/network/templates":            NetworkTemplateAdd,
+	"/network/templates/:id/clone":  NetworkTemplateAdd,
+	"/network/templates/:id/update": NetworkTemplateEdit,
+	"/network/templates/:id/delete": NetworkTemplateDelete,
+	"/network/templates/batch-delete": NetworkTemplateDelete,
+	"/network/templates/:id/preview":  NetworkTemplateView,
+	"/network/templates/export":       NetworkTemplateExport,
+	"/network/command/dispatch": NetworkCommandExecute,
+	"/network/command/quick":    NetworkCommandExecute,
+	"/network/command/export":   NetworkCommandExport,
+	"/network/executions/template/execute": NetworkCommandExecute,
+	"/network/executions/:id/delete":       NetworkCommandExecute,
+	"/network/executions/batch-delete":     NetworkCommandExecute,
+	"/network/executions/export":           NetworkCommandExecute,
+	"/network/backups":              NetworkBackupAdd,
+	"/network/backups/batch":        NetworkBackupAdd,
+	"/network/backups/diff":         NetworkBackupDiff,
+	"/network/backups/:id/delete":   NetworkBackupDelete,
+	"/network/backups/batch-delete": NetworkBackupDelete,
+	"/network/backups/export":       NetworkBackupExport,
+	"/network/backups/:id/restore":  NetworkBackupRestore,
+	"/network/discoveries/create":    NetworkDiscoveryAdd,
+	"/network/discoveries/:id/execute": NetworkDiscoveryAdd,
+	"/network/discoveries/:id/import":  NetworkDiscoveryAdd,
+	"/network/discoveries/:id/delete":  NetworkDiscoveryDelete,
+	"/network/discoveries/batch-delete": NetworkDiscoveryDelete,
+	"/network/discoveries/export":       NetworkDiscoveryExport,
+
+	// 85-03 批次 C：system 其余组（apikeys/configs/dicts/notices 子 router 拆分 +
+	// manager/ad 内联 strict 兄弟组 + ad accounts Require→Strict 升级）
+	"/system/apikeys":           APIKeyAdd,
+	"/system/apikeys/:id/update": APIKeyEdit,
+	"/system/apikeys/:id/toggle": APIKeyEdit,
+	"/system/apikeys/:id/delete": APIKeyRemove,
+	"/system/configs":               ConfigAdd,
+	"/system/configs/:id/update":    ConfigEdit,
+	"/system/configs/:id/delete":    ConfigRemove,
+	"/system/configs/batch-delete":  ConfigRemove,
+	"/system/configs/refresh-cache": ConfigEdit,
+	"/system/dicts/types":            DictTypeAdd,
+	"/system/dicts/types/:id/update": DictTypeEdit,
+	"/system/dicts/types/:id/delete": DictTypeRemove,
+	"/system/dicts/data":             DictTypeAdd,
+	"/system/dicts/data/:id/update":  DictTypeEdit,
+	"/system/dicts/data/:id/delete":  DictTypeRemove,
+	"/system/notices":               NoticeAdd,
+	"/system/notices/:id/update":    NoticeEdit,
+	"/system/notices/:id/delete":    NoticeRemove,
+	"/system/notices/batch-delete":  NoticeRemove,
+	"/system/notices/:id/publish":   NoticeEdit,
+	"/system/notices/:id/withdraw":  NoticeEdit,
+	"/system/notices/:id/channels":  NoticeEdit,
+	"/system/manager-rules":               OpsManagerRuleEdit,
+	"/system/manager-rules/:id/update":    OpsManagerRuleEdit,
+	"/system/manager-rules/:id/delete":    OpsManagerRuleDelete,
+	"/system/manager-orgs":                OpsManagerOrgEdit,
+	"/system/manager-orgs/:id/update":     OpsManagerOrgEdit,
+	"/system/manager-orgs/:id/delete":     OpsManagerOrgDelete,
+	"/system/manager-orgs/generate-from-dept": OpsManagerOrgEdit,
+	"/ad-domain/configs":            OpsADConfigAdd,
+	"/ad-domain/configs/:id/update": OpsADConfigEdit,
+	"/ad-domain/configs/:id/delete": OpsADConfigEdit,
+	"/ad-domain/configs/:id/test":   OpsADConfigTest,
+	"/ad-domain/configs/:id/sync":   OpsADConfigSync,
+	"/ad-domain/groups/:id/update":  OpsADGroupEdit,
+	"/ad-domain/users/:id/update":   OpsADUserEdit,
+	"/ad-domain/users/:id/move":     OpsADUserEdit,
+	"/ad-domain/users/:id/enable":   OpsADUserEdit,
+	"/ad-domain/users/:id/disable":  OpsADUserEdit,
+	"/ad-domain/users/batch-sync":   OpsADUserEdit,
+	"/ad-domain/accounts/create": PermissionCode("ops:ad:config:account:edit"),
+	"/ad-domain/accounts/delete": PermissionCode("ops:ad:config:account:delete"),
+}
+
+// TestStrictWriteGroupsSingleCode 85-02 拆分守护：system 4 组写路由必须保持
+// RequireStrictPermissions 单一权限点，且死表登记码与实际挂载码一致（三对齐）。
+func TestStrictWriteGroupsSingleCode(t *testing.T) {
+	reg := loadRegistry(t)
+	byKey := make(map[string]struct {
+		PermKind  *string
+		PermCodes []string
+	})
+	for _, r := range reg.Routes {
+		byKey[r.Method+" "+r.Path] = struct {
+			PermKind  *string
+			PermCodes []string
+		}{r.PermKind, r.PermCodes}
+	}
+
+	var violations []string
+	for path, wantCode := range strictWriteGroups {
+		r, ok := byKey["POST "+path]
+		if !ok {
+			violations = append(violations, "POST "+path+" 路由消失（不得移除拆分后的写路由）")
+			continue
+		}
+		kind := ""
+		if r.PermKind != nil {
+			kind = *r.PermKind
+		}
+		if !strings.HasPrefix(kind, "RequireStrictPermissions") {
+			violations = append(violations, "POST "+path+" 权限中间件退化为 "+kind+"（必须是 RequireStrictPermissions 单一权限点）")
+			continue
+		}
+		if len(r.PermCodes) != 1 {
+			violations = append(violations, fmt.Sprintf("POST %s permCodes=%v（严格写路由必须恰为单一权限点）", path, r.PermCodes))
+			continue
+		}
+		if got := PermissionCode(r.PermCodes[0]); got != wantCode {
+			violations = append(violations, fmt.Sprintf("POST %s 挂载码 %s ≠ 死表码 %s", path, got, wantCode))
+		}
+		if dead := GetPermissionByPath(path, "POST"); dead != wantCode {
+			violations = append(violations, fmt.Sprintf("POST %s 死表命中 %s ≠ 期望 %s", path, dead, wantCode))
+		}
+	}
+	if len(violations) > 0 {
+		t.Fatalf("system 4 组严格写路由守护失败 %d 项:\n%s", len(violations), strings.Join(violations, "\n"))
+	}
+	t.Logf("严格写路由守护通过: %d 条逐动作单一权限点", len(strictWriteGroups))
 }
 
 // TestRouteRegistryFreshness 重扫比对守卫（防「代码改了表没重生成」）。
