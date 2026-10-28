@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   App,
   Card,
@@ -42,18 +42,18 @@ const SyncMonitor: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  // 获取同步状态
-  const fetchStatus = async () => {
+  // 获取同步状态（useCallback 稳定引用，message 来自 App.useApp() 生命周期内稳定）
+  const fetchStatus = useCallback(async () => {
     try {
       const result = await post("/api/v1/ad/groups/sync/status", {});
       setStatus(result.data as SyncStatus);
     } catch (error) {
       message.error("获取状态失败");
     }
-  };
+  }, [message]);
 
   // 获取同步日志
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const result = await post("/api/v1/ad/groups/sync/logs", {
@@ -66,7 +66,7 @@ const SyncMonitor: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
   // 手动触发同步
   const handleSync = async () => {
@@ -88,7 +88,7 @@ const SyncMonitor: React.FC = () => {
     fetchLogs();
     const interval = setInterval(fetchStatus, 10000); // 10秒轮询
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchStatus, fetchLogs]);
 
   const statusColumns = [
     { title: "配置名称", dataIndex: "configName", key: "configName", sorter: createSorter<SyncLog>("configName", "string") },

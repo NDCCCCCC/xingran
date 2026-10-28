@@ -27,8 +27,8 @@ const CaptchaBackgroundManagement: FC = () => {
   const [uploadForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  // 使用全局分页 hook
-  const { paginationProps, setTotal } = usePagination();
+  // 使用全局分页 hook（current/pageSize 为原始值，effect 依赖不会因 total 变化误触发）
+  const { paginationProps, current: pageNo, pageSize, setTotal } = usePagination();
 
   const {
     backgrounds,
@@ -59,13 +59,13 @@ const CaptchaBackgroundManagement: FC = () => {
   } = useCaptchaModals();
 
   useEffect(() => {
-    loadBackgrounds({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+    loadBackgrounds({ current: pageNo, pageSize });
     loadStatistics();
-  }, [paginationProps.current, paginationProps.pageSize]);
+  }, [pageNo, pageSize, loadBackgrounds, loadStatistics]);
 
   // 操作成功后刷新
   const handleSuccess = () => {
-    loadBackgrounds({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+    loadBackgrounds({ current: pageNo, pageSize });
     loadStatistics();
   };
 

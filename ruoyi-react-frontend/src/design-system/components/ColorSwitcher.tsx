@@ -90,23 +90,25 @@ const ColorSwitcher: FC<ColorSwitcherProps> = ({
 
 	// 从 preferences 读取当前颜色（如果有自定义颜色）
 	// 确保颜色值始终是字符串格式
-	const primaryColor = (typeof preferences.theme.customColors?.primary === "string"
-		? preferences.theme.customColors.primary
+	const customPrimary = preferences.theme.customColors?.primary;
+	const customSidebar = preferences.theme.customColors?.sidebar;
+	const primaryColor = (typeof customPrimary === "string"
+		? customPrimary
 		: "#4F46E5") as string;
-	const sidebarColor = (typeof preferences.theme.customColors?.sidebar === "string"
-		? preferences.theme.customColors.sidebar
+	const sidebarColor = (typeof customSidebar === "string"
+		? customSidebar
 		: "#1E293B") as string;
 	const [isOpen, setIsOpen] = useState(false);
 
-	// 初始化：如果有自定义颜色，应用它们
+	// 初始化 / 自定义色变化：应用主题色（原始值依赖，幂等 apply）
 	useEffect(() => {
-		if (preferences.theme.customColors?.primary && typeof preferences.theme.customColors.primary === "string") {
-			applyPrimaryColor(preferences.theme.customColors.primary);
+		if (customPrimary && typeof customPrimary === "string") {
+			applyPrimaryColor(customPrimary);
 		}
-		if (preferences.theme.customColors?.sidebar && typeof preferences.theme.customColors.sidebar === "string") {
-			applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
+		if (customSidebar && typeof customSidebar === "string") {
+			applySidebarBackgroundColor(customSidebar);
 		}
-	}, []);
+	}, [customPrimary, customSidebar]);
 
 	/**
 	 * 主色调变化处理

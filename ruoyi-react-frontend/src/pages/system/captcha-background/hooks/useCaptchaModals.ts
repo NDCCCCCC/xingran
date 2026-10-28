@@ -140,7 +140,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
         setUploading(false);
       }
     },
-    [closeUploadModal]
+    [closeUploadModal, message]
   );
 
   const handleUpdate = useCallback(
@@ -169,7 +169,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
         message.error("更新失败");
       }
     },
-    []
+    [message]
   );
 
   const handleDelete = useCallback(async (id: string, onSuccess: () => void) => {
@@ -180,7 +180,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
     } catch (error) {
       message.error("删除失败");
     }
-  }, []);
+  }, [message]);
 
   const handleToggle = useCallback(async (id: string, onSuccess: () => void) => {
     try {
@@ -190,7 +190,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
     } catch (error) {
       message.error("状态更新失败");
     }
-  }, []);
+  }, [message]);
 
   const handlePreload = useCallback(async () => {
     try {
@@ -199,7 +199,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
     } catch (error) {
       message.error("预加载失败");
     }
-  }, []);
+  }, [message]);
 
   return {
     uploadModalVisible,

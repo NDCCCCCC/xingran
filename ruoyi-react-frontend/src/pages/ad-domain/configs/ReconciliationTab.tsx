@@ -92,27 +92,33 @@ const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) =
   const [mismatchType, setMismatchType] = useState<DeptOUMismatchType | "">("");
   const [deptId, setDeptId] = useState("");
   const [keyword, setKeyword] = useState("");
-  // 相同筛选下重复点击「查询」也要重新拉取 → 用自增 tick 触发 loadList 身份变化
-  const [queryTick, setQueryTick] = useState(0);
+
+  // 参数化请求：事件驱动的唯一直连通道（相同筛选重复点击查询也重拉）
+  const fetchList = useCallback(
+    async (params: DeptOUMismatchListRequest) => {
+      if (!canView) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await getDeptOUMismatchList(params);
+        setList(res.data?.list ?? []);
+        setTotal(res.data?.total ?? 0);
+      } catch (e) {
+        setError(e instanceof Error ? e : new Error(String(e)));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [canView]
+  );
 
   const loadList = useCallback(async () => {
-    if (!canView) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const params: DeptOUMismatchListRequest = { current, pageSize };
-      if (mismatchType) params.mismatchType = mismatchType;
-      if (deptId) params.deptId = deptId;
-      if (keyword) params.keyword = keyword;
-      const res = await getDeptOUMismatchList(params);
-      setList(res.data?.list ?? []);
-      setTotal(res.data?.total ?? 0);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setLoading(false);
-    }
-  }, [canView, current, pageSize, mismatchType, deptId, keyword, queryTick]);
+    const params: DeptOUMismatchListRequest = { current, pageSize };
+    if (mismatchType) params.mismatchType = mismatchType;
+    if (deptId) params.deptId = deptId;
+    if (keyword) params.keyword = keyword;
+    await fetchList(params);
+  }, [current, pageSize, mismatchType, deptId, keyword, fetchList]);
 
   // 依赖只含 canView 与 loadList（后者依赖原始值）——CLAUDE.md useEffect 稳定性规则
   useEffect(() => {
@@ -120,22 +126,43 @@ const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) =
     void loadList();
   }, [canView, loadList]);
 
+  // 事件驱动：筛选未变化时 state 不动、effect 不重跑，直接经 fetchList 重拉
+  // （保持「相同筛选下重复点击查询也要重新拉取」的既有语义，替代原 queryTick 机制）
   const handleQuery = () => {
     const values = form.getFieldsValue();
-    setMismatchType(values.mismatchType ?? "");
-    setDeptId(values.deptId ?? "");
-    setKeyword((values.keyword ?? "").trim());
+    const next = {
+      mismatchType: (values.mismatchType ?? "") as DeptOUMismatchType | "",
+      deptId: values.deptId ?? "",
+      keyword: (values.keyword ?? "").trim(),
+    };
+    const unchanged =
+      next.mismatchType === mismatchType &&
+      next.deptId === deptId &&
+      next.keyword === keyword &&
+      current === 1;
+    setMismatchType(next.mismatchType);
+    setDeptId(next.deptId);
+    setKeyword(next.keyword);
     setCurrent(1);
-    setQueryTick((t) => t + 1);
+    if (unchanged) {
+      const params: DeptOUMismatchListRequest = { current: 1, pageSize };
+      if (next.mismatchType) params.mismatchType = next.mismatchType;
+      if (next.deptId) params.deptId = next.deptId;
+      if (next.keyword) params.keyword = next.keyword;
+      void fetchList(params);
+    }
   };
 
   const handleReset = () => {
     form.resetFields();
+    const unchanged = mismatchType === "" && deptId === "" && keyword === "" && current === 1;
     setMismatchType("");
     setDeptId("");
     setKeyword("");
     setCurrent(1);
-    setQueryTick((t) => t + 1);
+    if (unchanged) {
+      void fetchList({ current: 1, pageSize });
+    }
   };
 
   const columns: ColumnsType<DeptOUMismatchRow> = [

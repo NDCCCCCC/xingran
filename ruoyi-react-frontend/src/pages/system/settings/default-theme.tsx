@@ -67,7 +67,7 @@ const DefaultThemePage: React.FC = () => {
     };
 
     loadConfig();
-  }, [form]);
+  }, [form, message]);
 
   // 保存默认主题配置
   const handleSave = async (values: { mode?: string; style?: string; primaryColor?: string | { toHexString?: () => string }; sidebarColor?: string | { toHexString?: () => string } }) => {

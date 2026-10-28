@@ -44,7 +44,7 @@ export function useCaptchaData(searchForm: FormInstance<unknown>, setTotal: (tot
         setLoading(false);
       }
     },
-    [searchForm]
+    [searchForm, setTotal]
   );
 
   const loadStatistics = useCallback(async () => {
