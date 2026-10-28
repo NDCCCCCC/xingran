@@ -53,12 +53,9 @@ import DeptTreePanel from "./components/DeptTreePanel";
 import DeviceStatsCards from "./components/DeviceStatsCards";
 import DeviceModals from "./components/DeviceModals";
 import { getDeviceTableColumns } from "./components/DeviceTableColumns";
-import {
-  VENDOR_OPTIONS,
-  DEVICE_TYPE_OPTIONS,
-  STATUS_OPTIONS,
-} from "./constants";
+import { DEVICE_TYPE_OPTIONS } from "./constants";
 import { getOptionLabel } from "./utils";
+import { buildDeviceSearchFields } from "./searchFields";
 import { useDeviceData } from "./hooks/useDeviceData";
 import { useDeviceModals, type ProbeResult } from "./hooks/useDeviceModals";
 
@@ -430,31 +427,7 @@ const DeviceManagement = () => {
     [collectingDeviceId, canViewMACHistory, deviceTypeDict]
   );
 
-  const searchFields = [
-    { name: "deviceName", label: "设备名称", type: "input" as const, placeholder: "请输入设备名称" },
-    { name: "ipAddress", label: "IP地址", type: "input" as const, placeholder: "请输入IP地址" },
-    {
-      name: "vendor",
-      label: "厂商",
-      type: "select" as const,
-      placeholder: "请选择厂商",
-      options: VENDOR_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value })),
-    },
-    {
-      name: "deviceType",
-      label: "设备类型",
-      type: "select" as const,
-      placeholder: "请选择设备类型",
-      options: deviceTypeOptions,
-    },
-    {
-      name: "status",
-      label: "状态",
-      type: "select" as const,
-      placeholder: "请选择状态",
-      options: STATUS_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value })),
-    },
-  ];
+  const searchFields = buildDeviceSearchFields(deviceTypeOptions);
 
   return (
     <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
