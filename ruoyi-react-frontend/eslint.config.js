@@ -109,6 +109,17 @@ export default [
       "local/no-large-dropdown-list": "error",
     },
   },
+  // ===== AppSelect 契约豁免（HYG-02 既定决策，flat config 下以独立块实现
+  // eslintrc 时代的 excludedFiles 语义）=====
+  // AppSelect 契约自含过滤策略：客户端过滤（showSearch ?? count>=8 + optionFilterProp），
+  // 与本规则的「必须 onSearch 服务端搜索」正面冲突。契约组件是规则的实施者而非违规者
+  // ——业务页仍须用 AppSelect 并按契约声明 onSearch，仅契约组件目录自身豁免。
+  {
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "local/no-large-dropdown-list": "off",
+    },
+  },
   // ===== Phase 65 契约组件强制（独立 config 块，勿与上方主块合并——flat config
   // 同一 rules 对象内同名键互相覆盖）=====
   // 裸 antd Input/Select/Modal.confirm/Popconfirm 拦截，契约见
