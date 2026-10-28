@@ -11,7 +11,9 @@
  *      - doubleCount 必须 = 0（v1.24 修复前基线 = 3：浅色 Input 内层 / TextArea 内层 /
  *        暗色 Input 内层各 1，实测于 2026-10-28 静态 harness）
  *      - inner.shadow 必须 'none'，wrapperFocused.shadow 必须 ≠ 'none'
- *      - wrapperError.borderTopColor 必须 rgb(255, 77, 79)（antd colorError）
+ *      - wrapperError.borderTopColor 必须 rgb(186, 54, 48)（品牌红 --ant-color-error #BA3630，
+ *        由 AntdThemeBridge 显式设 colorError；暗色实测为 rgb(161, 49, 44)，仅作记录——
+ *        本脚本在 light fixture 上断言）
  *
  * 口径：STACK.md (e.1)。本片段会在页面里动态注入 5 个 fixture（不触碰真实表单），
  * 执行完自动清理。暗色断言会把 fixture 挂到 data-color-mode="dark" 容器下。
@@ -19,11 +21,15 @@
  * 验证记录（2026-10-28，file:// 静态 harness + antd 6.6.4 dist css + src/index.css）：
  *   修复前基线：doubleCount=3；内层 btw=1px/#dbd7ce 白底；wrapperError=#dbd7ce（F1 实证）
  *   修复后：doubleCount=0；内层 btw=0px/transparent/圆角 0/padding 0；
- *           wrapperFocused ring=#e9efeb 2px；wrapperError=rgb(255,77,79)
+ *           wrapperFocused ring=#e9efeb 2px；wrapperError=rgb(186,54,48)（品牌红 #BA3630）
  */
 (function () {
+  // fixture 宿主必须挂进 antd cssVar scope 容器（App/ConfigProvider 树内），
+  // 否则 var(--ant-color-error) 不可见 → VIS-03 还原块落到 fallback #ff4d4f，
+  // 与真实 App 错误态（品牌红 #BA3630）不符。真实页面里 html/body 上无该变量。
+  const cssVarScope = document.querySelector('.ant-app, [class*="css-var-"]');
   const host = document.createElement('div');
-  document.body.appendChild(host);
+  (cssVarScope || document.body).appendChild(host);
   const light = document.createElement('div');
   light.setAttribute('data-color-mode', 'light');
   const dark = document.createElement('div');
@@ -45,7 +51,7 @@
   const in3 = el('input', 'ant-input ant-input-outlined', w3);
   const w4 = el('span', 'ant-input-affix-wrapper ant-input-outlined ant-input-affix-wrapper-focused', light);
   const in4 = el('input', 'ant-input ant-input-outlined', w4);
-  const w5 = el('span', 'ant-input-affix-wrapper ant-input-outlined ant-input-affix-wrapper-status-error', light);
+  const w5 = el('span', 'ant-input-affix-wrapper ant-input-outlined ant-input-status-error', light);
 
   const cs = (n) => getComputedStyle(n);
   const report = {
@@ -66,7 +72,7 @@
       cs(in1).boxShadow === 'none' &&
       cs(in4).boxShadow === 'none' &&
       cs(w4).boxShadow !== 'none' &&
-      /255,\s*77,\s*79/.test(cs(w5).borderTopColor),
+      /186,\s*54,\s*48/.test(cs(w5).borderTopColor),
   };
   host.remove();
   console.log('[css-contract-assertions]', JSON.stringify(report, null, 1));
