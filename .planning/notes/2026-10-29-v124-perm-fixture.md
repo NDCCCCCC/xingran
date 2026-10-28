@@ -721,6 +721,36 @@ SELECT (SELECT count(*) FROM sys_role WHERE role_key = 'v124_audit_test') AS rol
 > 只删本次新增的行（按 `role_key='v124_audit_test'` / `username='v124_auditor_test'` 精确定位），
 > **不会**触碰任何既有角色/用户。
 
+#### 4.1 ✅ 清理执行记录（2026-10-28，用户确认后由主会话执行）
+
+用户选择「立即清理」→ 已按本节 SQL 在**单个事务**内执行（先子后父：user_post → user_role → user → role_menu → role_dept → role）：
+
+| 步骤 | 影响行数 |
+|---|---|
+| `DELETE sys_user_post` | 0 |
+| `DELETE sys_user_role` | **1** |
+| `DELETE sys_user` | **1** |
+| `DELETE sys_role_menu` | **2** |
+| `DELETE sys_role_dept` | 0 |
+| `DELETE sys_role` | **1** |
+
+**COMMIT_OK**，清理后自检 6 项**全为 0**：
+
+| 表 | 清理前夹具残留 | 清理后 | 期望 |
+|---|---|---|---|
+| `sys_role`（role_key） | 1 | **0** | 0 ✅ |
+| `sys_user`（username） | 1 | **0** | 0 ✅ |
+| `sys_role_menu` | 2 | **0** | 0 ✅ |
+| `sys_user_role` | 1 | **0** | 0 ✅ |
+| `sys_user_post` | 0 | **0** | 0 ✅ |
+| `sys_role_dept` | 0 | **0** | 0 ✅ |
+
+**全库总量对照**：`sys_role` 7 → **6**、`sys_user` 4232 → **4231** —— 差值恰为本次删除的 1 个夹具角色 + 1 个夹具用户，
+**其余既有行零改动**（与 §3.8.6 记录的清理前基线 `sys_role=7 / sys_user=4232 / sys_user_role=4242 / sys_role_menu=353` 减去夹具完全吻合）。
+
+⇒ **生产库已恢复原状**。证据（角色 id / perms 集合 / HTTP 返回码 / 前后对照表）全部固化在本 note，
+不影响后续回溯；如需重跑夹具，按 §2 的造数 SQL 幂等复跑即可。
+
 ---
 
 ## 5. 复测步骤（对齐 ARCHITECTURE 研究的 T1–T8 判据）
