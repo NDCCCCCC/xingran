@@ -14,7 +14,7 @@
  *   渲染期写入 → 提交回调读取之间存在中间态，且会多一次渲染）。
  *
  * 本组件是纯展示层：不持有业务 state、不发请求、不做权限判定
- * （行操作的权限门控在 hooks/useDeviceActions.tsx 内完成）。
+ * （行操作的权限门控在 hooks/useDeviceRowActions.tsx 内完成）。
  */
 
 import type { Key } from "react";

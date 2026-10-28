@@ -2,7 +2,7 @@
  * NetworkDevice 设备管理页面（v1.24 HYG-04 拆分后的页面装配层）。
  *
  * 已拆出：列定义工厂 → components/DeviceTableColumns.tsx；搜索区 schema → searchFields.ts；
- * 数据操作 + 行操作 + 行操作权限门控 → hooks/useDeviceActions.tsx；
+ * 数据操作 → hooks/useDeviceActions.tsx；行操作 + 行操作权限门控 → hooks/useDeviceRowActions.tsx；
  * 页面 JSX 外壳 → components/DeviceTablePanel.tsx。
  * components/DeviceModals.tsx **保持不拆**（v1.22 刚拆，68.1 验收基线）。
  *
@@ -160,8 +160,9 @@ const DeviceManagement = () => {
   //    提交/删除成功后由 handlers 读它来刷新列表。不得改成 state（会引入渲染时序差）。
   const [reloadRef] = useState<{ current: (() => void) | null }>({ current: null });
 
-  // v1.24 HYG-04 D3：数据操作 + 行操作抽到 hooks/useDeviceActions.tsx
-  //（行操作的权限门控随之接入 Phase 78 的 useActionPermission 三态门控）
+  // v1.24 HYG-04 D3/D5：数据操作抽到 hooks/useDeviceActions.tsx；
+  // 行操作 + 行操作权限门控抽到 hooks/useDeviceRowActions.tsx
+  //（行操作接入 Phase 78 的 useActionPermission 三态门控）
   const {
     handleProbe,
     handleQuickCreate,
