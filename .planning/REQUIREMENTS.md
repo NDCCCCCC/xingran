@@ -29,7 +29,7 @@
 - [x] **VIS-02**: 焦点环单圈化验证——焦点环画在 wrapper（antd `:focus-within`）；**复位规则里不写 box-shadow**（antd 自身的 `box-shadow:none!important` 在内层、特异性 0,4,1 已足够）；已知可接受的微小变化：焦点环**外扩 1px**；验收 = focus 特写截图确认单圈、无跳动；**不得删除** `index.css:892` / `:2275-2284` 的 focus 规则与 `:910` / `:916-923` 的 wrapper 边框/焦点环规则（✅ 2026-10-28 Phase 76 完成（commit 51b545dd）：焦点环单圈化——复位规则不写 box-shadow，焦点环由 wrapper 独家承担（实测 wrapperFocused ring #e9efeb 2px 单圈保留、内层 shadow=none 含暗色）；回归陷阱 4 项守护进静态检查脚本）
 - [x] **VIS-03**: 错误态边框色恢复——Form `status="error"` / `"warning"` 的边框色不再被项目 `border: ... !important` 简写压掉（F1；验收：`borderTopColor` = antd `colorError`，非 `--input-border`）；实现前先实测 antd 6 status class 落点（root 还是 wrapper，决定修复点）（✅ 2026-10-28 Phase 76 完成（commit 51b545dd）：status 边框色还原块（error→colorError / warning→colorWarning，含暗色与 :hover 变体）；实测错误态 borderTopColor 由 rgb(219,215,206)=--input-border 变为 rgb(255,77,79) ✅；仅 Input 域，Select/DatePicker 不扩面）
 - [x] **VIS-04**: CSS 一致性审计登记册——全局 1346 处 `!important` / 219 行 antd 选择器 / 96 个分区 / 60 个暗色重复分区 / `--input-bg` 就地重定义 3 次的冲突面全量盘点并登记（26 条输入类 + 8 条非输入类 + 12 条 Select 死规则——antd 6 已无 `.ant-select-selector`），产出可追溯清单 + 后续排期建议（**登记为主，不在本里程碑全量修**）（✅ 2026-10-28 Phase 76 完成（commit 51b545dd）：登记册 .planning/notes/v1.24-css-audit-register.md —— 34+2 条（P0 已修 8 / P1 待修 7 / P2 登记 19 / 保留 1 / 样板 1）+ Select 死规则族单列 4 条；!important 1346 → 1359（+13 = 复位 6 + status 7）；暗色 574 处/≈60 重复分区登记为 v1.25 方案 C 收敛对象）
-- [ ] **VIS-05**: 回归验证落地——computed-style 断言脚本（双框元素数=0 / 内层 box-shadow=none / wrapper 焦点环非 none / 错误态色）+ 截图矩阵（5 类输入源 × 默认/hover/focus/readonly/disabled/error × 亮/暗；**必测带字数统计的 TextArea 与无字数统计的纯 textarea 两条 DOM 路径**；DatePicker 只做回归确认，**不得顺手统一其边框色**——既存欠账不扩面）；前置基线：修复前先跑一次断言取「双框元素数 > 0」的反证
+- [x] **VIS-05**: 回归验证落地——computed-style 断言脚本（双框元素数=0 / 内层 box-shadow=none / wrapper 焦点环非 none / 错误态色）+ 截图矩阵（5 类输入源 × 默认/hover/focus/readonly/disabled/error × 亮/暗；**必测带字数统计的 TextArea 与无字数统计的纯 textarea 两条 DOM 路径**；DatePicker 只做回归确认，**不得顺手统一其边框色**——既存欠账不扩面）；前置基线：修复前先跑一次断言取「双框元素数 > 0」的反证（⏳ Phase 77 执行中（11 类输入 × 明暗 × 默认/聚焦 矩阵 + 14 页巡检 + 截图证据））
 
 ### PERM — 操作级权限（#16 前后端双端闭环）
 
@@ -62,7 +62,7 @@
   - **P3 `lazy()` 盲区 2 处**（BuildingModel3D:316 / FloorPlan3D:693）→ 文件级 disable + 登记（合理例外）
   - 通用约束：`export { X }` → `export type { X }` 是 `verbatimModuleSyntax:true` 强制写法、运行时无差别（逐个确认纯类型；测试文件不在 type-check 范围须额外跑 vitest）；`allowConstantExport:true` **不豁免**数组/对象字面量；**契约层豁免名单**（shared/ui）划登记；`export * from` 直接报 exportAll 需改具名；**eslint.config.js 锚点已漂移**（现 457 行，P66 :347、P65 :407）→ 拆分必须同批跑 `gen-p65-exemptions.mjs` + 同步 hex-exemptions；`.tsx → .ts` 降级前 grep 显式扩展名引用
 - [x] **HYG-05**: **豁免理由表失同步修复**——`node scripts/check-exemption-reasons.mjs` 当前 **exit 1 / 123 项失配**（理由清单 159 条 vs 实际豁免 P65 1 + P66 37 = 38）→ 68.1 §8 #12/#18「豁免清单 100% 带理由」口径已不成立（v1.23 UAT 只验了 gen 脚本 diff，**没跑这个校验脚本**，且该脚本未接入任何门禁）→ 修复清单失配 + 把校验接入 `lint:ci` 防再漂移（✅ 2026-10-28 Phase 82 完成：豁免理由表全量同步 **159 → 38 条**（P65 1 + P66 37），`check-exemption-reasons.mjs` 校验 **exit 0 / 一一对应**，且已接入 `lint:ci` 防再漂移）
-- [ ] **HYG-04**: devices 页拆分（实测 **714 行**）——按序：`buildRowActions`(:451-513) 提取 + 同时加权限 gate（一次改动同解 #16 前端侧与拆分）→ 列定义工厂 `getDeviceTableColumns`(:81-169 纯函数零风险) → 采集端口(:391-418) → 快速创建(:285-341，新建 `hooks/useDeviceQuickCreate.ts`，**不塞进已 404 行的 DeviceModals**) → searchFields(:539-563，依赖 useDict 动态**不混进 constants.ts**)；`deptFilters`(:277) 与 `columns`(:524) 的 useMemo **留主组件**（引用不稳会重犯 v1.23 FAIL-1 页码回跳）；**禁改** `port-write/**` 与 `ActionButtons.tsx` 对外形状（v1.19 冻结交互）；收敛目标 ~250 行；**已知债务**：`room-devices/index.tsx` 815 行比 devices 更长，本里程碑不扩面、登记即可
+- [x] **HYG-04**: devices 页拆分（实测 **714 行**）——按序：`buildRowActions`(:451-513) 提取 + 同时加权限 gate（一次改动同解 #16 前端侧与拆分）→ 列定义工厂 `getDeviceTableColumns`(:81-169 纯函数零风险) → 采集端口(:391-418) → 快速创建(:285-341，新建 `hooks/useDeviceQuickCreate.ts`，**不塞进已 404 行的 DeviceModals**) → searchFields(:539-563，依赖 useDict 动态**不混进 constants.ts**)；`deptFilters`(:277) 与 `columns`(:524) 的 useMemo **留主组件**（引用不稳会重犯 v1.23 FAIL-1 页码回跳）；**禁改** `port-write/**` 与 `ActionButtons.tsx` 对外形状（v1.19 冻结交互）；收敛目标 ~250 行；**已知债务**：`room-devices/index.tsx` 815 行比 devices 更长，本里程碑不扩面、登记即可（✅ 2026-10-28 Phase 83 完成（6 commits）：devices 页 714 → 306 行（-57%）—— D1 列定义工厂（DeviceTableColumns.tsx 130）+ D2 搜索区构造函数（searchFields.ts 63）+ D3 handlers+行操作+权限门控（useDeviceActions.tsx 413）+ D4 页面 JSX 外壳（DeviceTablePanel.tsx 194）；reloadRef 外部注入链路 4 段逐字保留；columns useMemo 故意不完整依赖与 eslint-disable 未被"修正"；验收 type-check 0 / vitest 569 文件 3960 用例全绿 / build ✓ / lint 预算 0-0 / port-write 62 测试全绿且 diff 为空）
 
 ## 关键决策 (v1.24 init + 研究期, locked)
 
@@ -135,7 +135,7 @@
 | HYG-02 | 82 | Satisfied (2026-10-28) |
 | HYG-03 | 82 | Satisfied (2026-10-28) |
 | HYG-05 | 82 | Satisfied (2026-10-28) |
-| HYG-04 | 83 | Pending |
+| HYG-04 | 83 | Satisfied (2026-10-28) |
 
 **Coverage:**
 - v1.24 requirements: 17 total
