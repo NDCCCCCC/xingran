@@ -525,7 +525,7 @@ const MACAddressPage: FC = () => {
           open={timelineDrawerOpen}
           onClose={() => setTimelineDrawerOpen(false)}
           width={480}
-          destroyOnClose
+          destroyOnHidden
         >
           {timelineDrawerMac && timelineDrawerRange && (
             <MACEventsTimeline

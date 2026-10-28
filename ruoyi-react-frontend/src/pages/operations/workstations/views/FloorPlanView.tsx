@@ -77,7 +77,7 @@ export function WorkstationFloorPlanView({
               type="default"
               icon={<CloseOutlined />}
               onClick={onCloseFloorPlan}
-              size="middle"
+              size="medium"
             >
               关闭平面图
             </Button>
@@ -133,7 +133,7 @@ export function WorkstationFloorPlanView({
       <Card
         title="工位列表"
         style={{ width: 320, flexShrink: 0, overflow: "hidden" }}
-        bodyStyle={{ padding: 0, height: "calc(100% - 57px)", overflow: "auto" }}
+        styles={{ body: { padding: 0, height: "calc(100% - 57px)", overflow: "auto" } }}
       >
         <div style={{ padding: "8px" }}>
           {floorPlanWorkstations.length === 0 ? (
@@ -157,7 +157,7 @@ export function WorkstationFloorPlanView({
                     hoverable
                     style={{ cursor: "pointer" }}
                     onClick={() => ws && onEdit(ws)}
-                    bodyStyle={{ padding: "12px" }}
+                    styles={{ body: { padding: "12px" } }}
                   >
                     <div
                       style={{

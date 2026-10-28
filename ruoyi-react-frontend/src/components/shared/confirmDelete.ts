@@ -11,7 +11,7 @@
  * Phase 68.1 T1 向后兼容扩展（全部可选，既有调用方零改动）：
  * - actionLabel / actionContext / contentText / successText（Q4 同一扩展面）；
  * - 提交中禁取消 + aria-busy（instance.update，沿用 buildings/index.tsx 既有写法）；
- * - maskClosable:false / keyboard:false（§1.7）；
+ * - mask.closable:false / keyboard:false（§1.7；Phase 88-04 起改用 antd 6 新形态）；
  * - focusable:{autoFocusButton:"ok"}（antd 6.6.4 新式写法）。
  */
 import { Modal } from "antd";
@@ -63,7 +63,7 @@ export function confirmDelete({
     okText: actionLabel,
     cancelText: "取消",
     okButtonProps: { danger: true },
-    maskClosable: false,
+    mask: { closable: false },
     keyboard: false,
     focusable: { autoFocusButton: "ok" },
     onOk: async () => {

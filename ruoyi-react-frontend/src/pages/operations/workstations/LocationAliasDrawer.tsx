@@ -221,9 +221,9 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
       onClose={onClose}
       size="large"
       destroyOnHidden
-      maskClosable
+      mask={{ closable: true }}
     >
-      <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="medium" style={{ width: "100%" }}>
         {/* 新增映射入口 + 折叠表单 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Text strong>映射列表({total} 条)</Text>

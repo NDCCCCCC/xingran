@@ -27,7 +27,7 @@ export function TemplateEditModal({
   return (
     <Modal
       title={editingTemplate ? "编辑配置模板" : "新增配置模板"}
-      maskClosable={false}
+      mask={{ closable: false }}
       keyboard={false}
       open={open}
       onOk={async () => {

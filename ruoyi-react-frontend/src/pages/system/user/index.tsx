@@ -865,7 +865,7 @@ const UserManagement: FC = () => {
                 onChange={handleTableChange}
                 scroll={{ x: "max-content" }}
                 className="xr-table-zebra"
-                size="middle"
+                size="medium"
               />
             </Card>
 

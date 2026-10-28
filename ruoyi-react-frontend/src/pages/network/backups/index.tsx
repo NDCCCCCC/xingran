@@ -592,7 +592,7 @@ const ConfigBackupPage: FC = () => {
               />
 
               {/* 创建备份弹窗 → FormModal（okText 显式「确定」，dirtyCheck 默认；
-                  68.1-T5 minor#7：FormModal 已补 maskClosable/keyboard 透传位，此处按迁移前
+                  68.1-T5 minor#7：FormModal 已补 maskClosable / keyboard 透传位（对外 prop 名冻结），此处按迁移前
                   原 Modal 取值显式声明 false/false（Phase 64 FIX-02 已收紧口径：不遮罩关闭、
                   不 ESC 关闭；与 BaseEditModal 默认一致，不放宽） */}
               <FormModal

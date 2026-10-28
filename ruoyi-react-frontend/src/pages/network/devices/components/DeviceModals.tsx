@@ -72,7 +72,7 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
     {/* 快速创建模态框 */}
     <Modal
       title="快速创建设备"
-      maskClosable={false}
+      mask={{ closable: false }}
       keyboard={false}
       open={quickCreateModalVisible}
       onOk={onQuickCreateOk}
@@ -185,7 +185,7 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
     {/* 手动新增/编辑模态框 */}
     <Modal
       title={editingDevice ? "编辑设备" : "手动新增设备"}
-      maskClosable={false}
+      mask={{ closable: false }}
       keyboard={false}
       open={modalVisible}
       onOk={onEditOk}
@@ -283,7 +283,7 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
     {/* 设备详情模态框 */}
     <Modal
       title="设备详细信息"
-      maskClosable={false}
+      mask={{ closable: false }}
       keyboard={false}
       open={detailModalVisible}
       onCancel={onCloseDetail}

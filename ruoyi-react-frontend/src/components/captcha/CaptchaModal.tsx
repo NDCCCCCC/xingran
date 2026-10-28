@@ -113,7 +113,7 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
       onCancel={onCancel}
       footer={null}
       closable={false}
-      maskClosable={false}
+      mask={{ closable: false }}
       width={getModalWidth()}
       centered
       destroyOnHidden

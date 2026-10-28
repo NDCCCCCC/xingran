@@ -484,7 +484,7 @@ const CredentialManagement: FC = () => {
       {/* 编辑模态框 */}
       <Modal
         title={editingCredential ? "编辑授权凭证" : "新增授权凭证"}
-        maskClosable={false}
+        mask={{ closable: false }}
         keyboard={false}
         open={editModalVisible}
         onOk={handleCreate}

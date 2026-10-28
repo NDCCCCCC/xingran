@@ -430,7 +430,7 @@ const LogMonitor: React.FC = () => {
       {/* 详情模态框 */}
       <Modal
         title="日志详情"
-        maskClosable={false}
+        mask={{ closable: false }}
         keyboard={false}
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}

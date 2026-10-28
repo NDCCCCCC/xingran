@@ -379,7 +379,7 @@ const ADOUPage: FC = () => {
                 loading={treeLoading}
               />
             }
-            bodyStyle={{ maxHeight: "calc(100vh - 280px)", overflow: "auto" }}
+            styles={{ body: { maxHeight: "calc(100vh - 280px)", overflow: "auto" } }}
           >
             <Space orientation="vertical" style={{ width: "100%" }} size="small">
               {/* Phase 71 W5：迁 AppSelect——原 antd 单选默认禁搜，显式 showSearch={false}；
@@ -431,7 +431,7 @@ const ADOUPage: FC = () => {
                 </Space>
               }
               size="small"
-              bodyStyle={{ maxHeight: "calc(100vh - 450px)", overflow: "auto" }}
+              styles={{ body: { maxHeight: "calc(100vh - 450px)", overflow: "auto" } }}
             >
               <Table
                 columns={userColumns}

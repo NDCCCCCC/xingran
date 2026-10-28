@@ -17,7 +17,7 @@ interface CacheStatsModalProps {
 const CacheStatsModal: FC<CacheStatsModalProps> = ({ open, onClose, monitor }) => (
   <Modal
     title="缓存统计信息"
-    maskClosable={false}
+    mask={{ closable: false }}
     keyboard={false}
     open={open}
     onCancel={onClose}

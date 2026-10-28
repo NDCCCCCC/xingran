@@ -282,6 +282,267 @@ const IMPORTANT_BUDGET = 1398;
   console.log(`${hits.length ? 'FAIL' : 'PASS'}  C12  data-color_mode 拼写死规则  → ${hits.length ? hits.join(' | ') : '0（全绿）'}`);
 }
 
+// ==========================================================================
+// Phase 88-04 (VISFIX-04) 新增断言：C14 — antd 6 弃用 prop 零命中（阻断）
+// ==========================================================================
+// 落地时序（PLAN 显式）：清理（Task 4.1 / 4.2）先完成 → 断言后落地阻断 → 落地即天然绿。
+//   （先上断言必常红——断言必须在清理完成之后才落地。）
+//
+// 明确**不进**清单（防误伤 / 关键决策）：
+//   - bordered：Descriptions / Table 未弃用（antd/es/card 仅 Card 弃用）→ 会大量误报，不进正则
+//   - onSearch：antd 6.6.4 未弃用（源码 deprecatedProps + 类型定义双向确认）→ 绝不进清单
+//
+// 弃用证据（node_modules/antd 6.6.4）：
+//   es/modal/Modal.js:126  bodyStyle→styles.body / maskStyle→styles.mask /
+//                          destroyOnClose→destroyOnHidden / maskClosable→mask.closable
+//   es/drawer/Drawer.d.ts:21,27  destroyOnClose / maskClosable 标 @deprecated
+//   es/card/Card.js:76,93   size="default"→"medium"；headStyle/bodyStyle/bordered→styles/variant
+//   es/select/index.d.ts:66,88,90,94,96,98  showArrow / popupClassName / dropdownClassName /
+//                          dropdownRender / onDropdownVisibleChange / dropdownMatchSelectWidth @deprecated
+
+// ---- 剥 TS/TSX 注释（保留行号/列号），避免注释里的示例文本误伤 ----
+// 字符串/模板串用「前置非标识符字符」启发式判定，避免 JSX 文本里的撇号被误判为字符串起点。
+const stripTsCommentsKeepLines = (text) => {
+  const out = text.split('');
+  const n = text.length;
+  const blank = (k) => {
+    if (k >= 0 && k < n && out[k] !== '\n') out[k] = ' ';
+  };
+  const isIdentChar = (ch) => /[\w$.]/.test(ch || '');
+  let i = 0;
+  let state = 'code';
+  while (i < n) {
+    const c = text[i];
+    const c2 = i + 1 < n ? text[i + 1] : '';
+    if (state === 'code') {
+      if (c === '/' && c2 === '/') {
+        blank(i); blank(i + 1); i += 2; state = 'line'; continue;
+      }
+      if (c === '/' && c2 === '*') {
+        blank(i); blank(i + 1); i += 2; state = 'block'; continue;
+      }
+      if ((c === '"' || c === "'" || c === '`') && !isIdentChar(text[i - 1])) {
+        state = c === '"' ? 'dq' : c === "'" ? 'sq' : 'tpl';
+        i++;
+        continue;
+      }
+      i++;
+      continue;
+    }
+    if (state === 'line') {
+      if (c === '\n') { state = 'code'; i++; continue; }
+      blank(i); i++; continue;
+    }
+    if (state === 'block') {
+      if (c === '*' && c2 === '/') { blank(i); blank(i + 1); i += 2; state = 'code'; continue; }
+      blank(i); i++; continue;
+    }
+    if (state === 'dq' || state === 'sq') {
+      if (c === '\\') { i += 2; continue; }
+      if ((state === 'dq' && c === '"') || (state === 'sq' && c === "'")) { state = 'code'; i++; continue; }
+      i++; continue;
+    }
+    // 模板串：${} 内不做注释剥离（罕见），整段按字符串处理
+    if (c === '\\') { i += 2; continue; }
+    if (c === '`') { state = 'code'; i++; continue; }
+    i++;
+  }
+  return out.join('');
+};
+
+// ---- 定位 JSX 开始标签（<Tag ...>）的 [start,end] 与标签名 ----
+// 用途：判定某个 JSX 属性到底传给了哪个组件（maskClosable 是否触达 antd Modal/Drawer）。
+// 同时记录标签内的花括号深度分段：**属性名位**在深度 0，**属性值里的 JS 引用**在深度 ≥1
+// （如 `mask={{ closable: maskClosable }}` 中的 maskClosable 是值引用，不是属性名）。
+const findJsxOpenTags = (text) => {
+  const tags = [];
+  const n = text.length;
+  let i = 0;
+  while (i < n) {
+    if (text[i] !== '<') { i++; continue; }
+    const m = /^<([A-Za-z_$][\w$.]*)/.exec(text.slice(i, i + 120));
+    if (!m) { i++; continue; }
+    const prev = i > 0 ? text[i - 1] : '';
+    if (/[\w$.]/.test(prev)) { i++; continue; } // a<b 之类，非标签
+    const name = m[1];
+    let j = i + 1 + name.length;
+    let depth = 0;
+    let quote = null;
+    let segStart = j;
+    const runs = [];
+    while (j < n) {
+      const ch = text[j];
+      if (quote) {
+        if (ch === '\\') { j += 2; continue; }
+        if (ch === quote) quote = null;
+        j++;
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === '`') { quote = ch; j++; continue; }
+      if (ch === '{') { runs.push({ from: segStart, to: j, depth }); depth++; segStart = j + 1; j++; continue; }
+      if (ch === '}') { runs.push({ from: segStart, to: j, depth }); depth--; segStart = j + 1; j++; continue; }
+      if (ch === '>' && depth === 0) break;
+      j++;
+    }
+    runs.push({ from: segStart, to: j, depth });
+    tags.push({ name, start: i, end: j, runs });
+    i = j + 1;
+  }
+  return tags;
+};
+
+// ---- C14 弃用清单（token → 弃用后的新形态；bordered / onSearch 刻意不入列） ----
+const C14_DEPRECATED_TOKENS = [
+  { key: 'destroyOnClose', re: /\bdestroyOnClose\b/g, note: 'antd 6 → destroyOnHidden' },
+  { key: 'bodyStyle', re: /\bbodyStyle\b/g, note: 'antd 6 → styles.body' },
+  { key: 'headStyle', re: /\bheadStyle\b/g, note: 'antd 6 → styles.header' },
+  { key: 'maskStyle', re: /\bmaskStyle\b/g, note: 'antd 6 → styles.mask' },
+  { key: 'footerStyle', re: /\bfooterStyle\b/g, note: 'antd 6 → styles.footer' },
+  { key: 'contentWrapperStyle', re: /\bcontentWrapperStyle\b/g, note: 'antd 6 → styles.wrapper' },
+  { key: 'dropdownRender', re: /\bdropdownRender\b/g, note: 'antd 6 → popupRender' },
+  { key: 'dropdownClassName', re: /\bdropdownClassName\b/g, note: 'antd 6 → classNames.popup.root' },
+  { key: 'popupClassName', re: /\bpopupClassName\b/g, note: 'antd 6 → classNames.popup.root' },
+  { key: 'onDropdownVisibleChange', re: /\bonDropdownVisibleChange\b/g, note: 'antd 6 → onOpenChange' },
+  { key: 'dropdownMatchSelectWidth', re: /\bdropdownMatchSelectWidth\b/g, note: 'antd 6 → popupMatchSelectWidth' },
+  { key: 'showArrow', re: /\bshowArrow\b/g, note: 'antd 6 → suffixIcon（Select 系）' },
+  { key: 'size="middle"', re: /\bsize\s*=\s*(["'])middle\1/g, note: 'antd 6 → size="medium"' },
+  { key: 'size="default"', re: /\bsize\s*=\s*(["'])default\1/g, note: 'antd 6 → size="medium"（Card）' },
+];
+
+// ---- C14 豁免登记（新增豁免必须写明理由与证据行号） ----
+const C14_EXEMPTIONS = [
+  {
+    file: 'src/pages/system/notice/components/StatisticsDrawer.tsx',
+    token: 'size="default"',
+    reason:
+      'antd/es/drawer/Drawer.d.ts:6 `declare const _SizeTypes: readonly ["default", "large"]` —— Drawer 的 size 枚举**无 "medium"**；' +
+      'antd/es/drawer/Drawer.js:90 `if (size === "default") return DEFAULT_SIZE` 证明 "default" 是 Drawer 合法基准尺寸；' +
+      'Drawer.js:93-97 其它字符串（如 "medium"）会被原样透传成非法 width → 迁移即视觉破损，故保留并登记豁免。',
+  },
+  {
+    file: 'src/design-system/components/ColorSwitcher.tsx',
+    token: 'size="middle"',
+    reason:
+      '本仓自研 design-system 组件的**自有 prop 枚举**（ColorSwitcherProps.size?: "small" | "middle" | "large" + 解构默认值），' +
+      '非 antd 弃用 prop：antd 6.6.4 的 SizeType（config-provider/SizeContext.d.ts:5）仍含 "middle"' +
+      '（\'small\' | \'medium\' | \'middle\' | \'large\'），Button/ColorPicker 对 "middle" 无弃用告警，' +
+      '且 Button.js:224 只对 large/small 加尺寸 class（middle 与 medium 同为默认尺寸 → 渲染等价）；' +
+      '改写会变更本组件对外 prop 契约（扩范围）→ 保留并登记豁免。',
+  },
+  {
+    file: 'src/components/shared/FormModal.tsx',
+    token: 'maskClosable',
+    reason:
+      'v1.22 契约冻结：对外 prop 名 maskClosable 保留（props 声明 + 解构默认值），' +
+      '内部转发 antd 6 新形态 mask={{ closable }} 收敛在 BaseEditModal 内部；调用方零改动。',
+  },
+  {
+    file: 'src/components/modal/BaseEditModal.tsx',
+    token: 'maskClosable',
+    reason:
+      'v1.22 契约冻结：对外 prop 名 maskClosable 保留（props 声明 + 解构默认值），' +
+      '内部转发 antd 6 新形态 mask={{ closable: maskClosable }} 传给 antd Modal。',
+  },
+];
+
+{
+  const c14Files = walkByExt(resolve(feRoot, 'src'), ['.ts', '.tsx']);
+  const violations = [];
+  const lineStartsOf = (text) => {
+    const ls = [0];
+    for (let i = 0; i < text.length; i++) if (text[i] === '\n') ls.push(i + 1);
+    return ls;
+  };
+  const lineOf = (ls, pos) => {
+    let lo = 0;
+    let hi = ls.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (ls[mid] <= pos) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo + 1;
+  };
+  for (const f of c14Files) {
+    const rel = relFe(f);
+    const text = stripTsCommentsKeepLines(readFileSync(f, 'utf8'));
+    const ls = lineStartsOf(text);
+    const jsxTags = findJsxOpenTags(text);
+    const report = (key, pos, note) => {
+      violations.push(`${rel}:${lineOf(ls, pos)}  弃用 prop「${key}」${note ? '（' + note + '）' : ''}`);
+    };
+    const isExempt = (token) => C14_EXEMPTIONS.some((e) => e.file === rel && e.token === token);
+
+    // 通用 token 清单
+    for (const item of C14_DEPRECATED_TOKENS) {
+      if (isExempt(item.key)) continue;
+      for (const m of text.matchAll(item.re)) report(item.key, m.index, item.note);
+    }
+
+    // maskClosable：只有「作为属性名传给 antd Modal/Drawer」或「写成 antd config 对象键」才算弃用命中。
+    // 允许位：props 类型声明 / 解构默认值 / 我方组件（FormModal/BaseEditModal/测试 Harness）的 JSX prop /
+    //          属性值里的 JS 引用（如 mask={{ closable: maskClosable }}）。
+    for (const m of text.matchAll(/\bmaskClosable\b/g)) {
+      const idx = m.index;
+      let attrTag = null;
+      for (const t of jsxTags) {
+        if (idx < t.start || idx > t.end) continue;
+        const run = t.runs.find((r) => idx >= r.from && idx <= r.to);
+        if (run && run.depth === 0) attrTag = t; // 深度 0 → 属性名位
+        break;
+      }
+      if (attrTag && (attrTag.name === 'Modal' || attrTag.name === 'Drawer')) {
+        report('maskClosable', idx, `仍传给 antd <${attrTag.name}>（antd 6 → mask.closable）`);
+        continue;
+      }
+      if (!attrTag) {
+        const rest = text.slice(idx + 'maskClosable'.length, idx + 'maskClosable'.length + 80);
+        // 对象字面量 / antd config 键（`maskClosable:`）；类型标注（`maskClosable?: boolean`）不算
+        if (/^\s*:\s*(?!boolean\b|string\b|number\b|unknown\b|any\b|never\b|void\b)/.test(rest)) {
+          report('maskClosable', idx, '对象字面量 / antd config 仍用旧形态（antd 6 → mask.closable）');
+        }
+      }
+    }
+  }
+  check(
+    'C14  antd 6 弃用 prop 零命中（阻断）',
+    violations.length === 0,
+    violations.length
+      ? violations.join(' | ')
+      : `C14 PASS：弃用清单 0 命中，豁免登记 ${C14_EXEMPTIONS.length} 项`,
+  );
+}
+
+// ---- C14b 冻结契约守护：FormModal / BaseEditModal 对外签名不得漂移 ----
+// v1.22 契约：对外 prop 名仍是 maskClosable（调用方零改动），内部转发 antd 6 新形态。
+{
+  const CONTRACT = [
+    {
+      file: 'src/components/shared/FormModal.tsx',
+      label: 'FormModal 对外 prop 名冻结 + 向 BaseEditModal 透传',
+      patterns: ['maskClosable?: boolean;', 'maskClosable = false,', 'maskClosable={maskClosable}'],
+    },
+    {
+      file: 'src/components/modal/BaseEditModal.tsx',
+      label: 'BaseEditModal 对外 prop 名冻结 + 内部转发 antd 6 新形态',
+      patterns: ['maskClosable?: boolean;', 'maskClosable = false,', 'mask={{ closable: maskClosable }}'],
+    },
+  ];
+  const bad = [];
+  for (const c of CONTRACT) {
+    const p = resolve(feRoot, c.file);
+    if (!existsSync(p)) {
+      bad.push(`${c.file} 缺失`);
+      continue;
+    }
+    const text = readFileSync(p, 'utf8');
+    for (const pat of c.patterns) {
+      if (!text.includes(pat)) bad.push(`${c.file} 缺少「${pat}」（${c.label}）`);
+    }
+  }
+  check('C14b FormModal/BaseEditModal 冻结契约签名保留（阻断）', bad.length === 0, bad.length ? bad.join(' | ') : 'C14b PASS：对外签名与内部转发形态均未被改动');
+}
+
 console.log('----');
 console.log(`结果: ${failures === 0 ? 'ALL PASS' : failures + ' 项 FAIL'}`);
 process.exit(failures === 0 ? 0 : 1);

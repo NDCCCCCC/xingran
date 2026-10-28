@@ -258,7 +258,7 @@ const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) =
   return (
     <div>
       <Form form={form} layout="inline" style={{ marginBottom: 16 }}>
-        <Space size="middle" wrap>
+        <Space size="medium" wrap>
           <Form.Item name="mismatchType" label="不一致类型">
             {/* Phase 71 W5：迁 AppSelect——原 antd 单选默认禁搜，显式 showSearch={false}；
                 契约要求显式 onSearch，补空函数不改变行为 */}

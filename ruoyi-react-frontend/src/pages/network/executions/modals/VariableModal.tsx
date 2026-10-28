@@ -27,7 +27,7 @@ export function VariableModal({
   return (
     <Modal
       title="模板变量"
-      maskClosable={false}
+      mask={{ closable: false }}
       keyboard={false}
       open={open}
       onOk={onOk}

@@ -91,7 +91,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
       <Card
         title={`${selectedDeptName || "机构"} - ${selectedBuildingName || currentFloor?.buildingName || "楼宇"} - ${currentFloor.name || `${currentFloor.floorNo}层`} - 平面图编辑`}
         extra={
-          <Space size="middle">
+          <Space size="medium">
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
               <BuildOutlined style={{ color: "var(--theme-info)" }} />
               <DepartmentTreeSelect

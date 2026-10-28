@@ -84,11 +84,13 @@ describe("components/shared/confirmDelete（68.1 扩展）", () => {
     setAppMessageInstance(messageMock);
   });
 
-  it("默认形态向后兼容：maskClosable=false / keyboard=false / focusable.autoFocusButton='ok'", () => {
+  it("默认形态向后兼容：mask.closable=false / keyboard=false / focusable.autoFocusButton='ok'", () => {
     const confirmSpy = spyConfirm();
     confirmDelete({ target: "x", onDelete: async () => {} });
     const opts = confirmSpy.mock.calls[0][0];
-    expect(opts.maskClosable).toBe(false);
+    // Phase 88-04（VISFIX-04）：antd 6 弃用 maskClosable → 新形态 mask.closable，
+    // 此处断言传给 antd Modal.confirm 的**新内部实现**。
+    expect(opts.mask).toEqual({ closable: false });
     expect(opts.keyboard).toBe(false);
     expect(opts.focusable).toEqual({ autoFocusButton: "ok" });
   });

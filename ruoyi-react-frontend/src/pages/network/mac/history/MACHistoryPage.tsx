@@ -417,7 +417,7 @@ const MACHistoryPage: React.FC = () => {
     return (
       <Table<MACHistoryRecord>
         rowKey="id"
-        size="middle"
+        size="medium"
         virtual
         scroll={{ x: 1200, y: 600 }}
         dataSource={list}
@@ -568,7 +568,7 @@ const MACHistoryPage: React.FC = () => {
     <div style={{ padding: isMobile ? 12 : 24 }}>
       <Card
         title="MAC 历史查询"
-        bordered={false}
+        variant="borderless"
         style={{ marginBottom: 16 }}
         extra={
           !isMobile && (
@@ -711,7 +711,7 @@ const MACHistoryPage: React.FC = () => {
       )}
 
       <Card
-        bordered={false}
+        variant="borderless"
         title={
           <Space>
             <span>查询结果</span>

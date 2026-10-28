@@ -119,7 +119,7 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
       title: "操作",
       key: "action",
       render: (_: unknown, record: Menu) => (
-        <Space size="middle">
+        <Space size="medium">
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>

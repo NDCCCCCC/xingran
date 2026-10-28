@@ -531,7 +531,7 @@ const ADComputerPage: FC = () => {
         ]}
         width={600}
       >
-        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="medium">
           <div style={{ color: "var(--theme-text-secondary)", fontSize: "14px" }}>
             点击下方OU标签快速筛选该OU下的电脑设备
           </div>
@@ -571,7 +571,7 @@ const ADComputerPage: FC = () => {
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         width={720}
-        destroyOnClose
+        destroyOnHidden
       >
         <Table
           rowKey="id"

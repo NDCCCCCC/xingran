@@ -539,7 +539,7 @@ const ADGroupPage: FC = () => {
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >
-        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="medium">
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddMember}>
               添加成员

@@ -238,7 +238,7 @@ export function BulkWriteDrawer({
       onClose={isExecuting ? () => {} : onClose}
       width={720}
       destroyOnHidden
-      maskClosable={!isExecuting}
+      mask={{ closable: !isExecuting }}
       closable={!isExecuting}
     >
       {phase === "select" && (

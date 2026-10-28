@@ -66,7 +66,7 @@ export const RollbackModal = ({ open, onCancel, onSubmit, submitting }: Rollback
       okText="确认回滚"
       okButtonProps={{ danger: true }}
       cancelButtonProps={{ disabled: !!submitting }}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" preserve={false}>
         <Form.Item

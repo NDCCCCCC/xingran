@@ -140,6 +140,9 @@ export function FormModal({
       okText={okText}
       // 68.1-T5 minor#7：maskClosable/keyboard 默认 false（BaseEditModal 口径，不改变已收紧行为），
       // 调用页可按原弹窗取值显式声明
+      // Phase 88-04（VISFIX-04）：对外 prop 名 maskClosable 冻结（v1.22 契约，调用方零改动）；
+      // antd 6 新形态（mask={{ closable }}）的转发统一收敛在 BaseEditModal 内部，
+      // 此处仍走本组件自有契约 prop，不新增 mask 透传（不扩契约）。
       maskClosable={maskClosable}
       keyboard={keyboard}
     >

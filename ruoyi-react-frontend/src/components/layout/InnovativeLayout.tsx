@@ -227,7 +227,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
             transition: "all var(--theme-transition-base)",
           }}
         >
-          <Space size="middle">
+          <Space size="medium">
             <span
               style={{
                 fontSize: "14px",
@@ -239,7 +239,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
             </span>
           </Space>
 
-          <Space size="middle" separator={<Divider orientation="vertical" style={{ margin: 0 }} />}>
+          <Space size="medium" separator={<Divider orientation="vertical" style={{ margin: 0 }} />}>
             <LayoutSwitcher />
             <DensitySwitcher />
             <span

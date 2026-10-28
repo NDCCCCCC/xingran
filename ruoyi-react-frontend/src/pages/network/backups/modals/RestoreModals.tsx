@@ -196,7 +196,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
             <span>选择还原版本 - {selectedDeviceGroup?.deviceName}</span>
           </Space>
         }
-        maskClosable={false}
+        mask={{ closable: false }}
         keyboard={false}
         open={restoreModalVisible}
         onCancel={() => {
@@ -422,7 +422,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
       {/* 差异对比模态框（原 :963-1104） */}
       <Modal
         title="配置差异对比"
-        maskClosable={false}
+        mask={{ closable: false }}
         keyboard={false}
         open={diffModalVisible}
         onCancel={closeDiffModal}

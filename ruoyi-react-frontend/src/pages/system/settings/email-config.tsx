@@ -401,7 +401,7 @@ const EmailConfigPage: FC = () => {
           scroll={{ x: 1200 }}
           pagination={paginationProps}
           className="xr-table-zebra"
-          size="middle"
+          size="medium"
           onChange={(pagination) => {
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);

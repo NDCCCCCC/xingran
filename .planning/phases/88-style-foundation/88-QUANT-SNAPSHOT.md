@@ -28,3 +28,45 @@ grep -c 'user-form-input'    src/index.css → 3（K8/K9 活规则 + 命中保�
 - fixture 挂载点：`.ant-app.css-var-*`（antd cssVar scope，88-01 启示）
 - 注意：初版 fixture 手写了旧版 antd `.ant-select-selector` DOM，会误中已删死规则产生 40 格伪差；
   已按 antd 6 真实 DOM（`.ant-select-content`/`.ant-select-input`，真实页该 class 命中为 0）修正后重取基线复测。
+
+---
+
+# Phase 88-04 量化快照（antd 6 弃用清理 + C14 断言收口后实测）
+
+> 采样时间：2026-10-28 18:20（本地 sqlite UAT 环境 + :4000 dev server）
+> 前置：88-03 快照（CSS 删除批）之上叠加本批**行为/属性层**清理；CSS 未动 → M1-M15 全部沿用 88-03 值
+
+| 指标 | 口径 | 88-04 前 | 88-04 后（实跑） | 备注 |
+|---|---|---|---|---|
+| **M16** | antd 弃用警告类数（浏览器 console `deprecated`） | **1**（`[antd: Modal] maskClosable is deprecated`，`/monitor/cache` 实测；PLAN 沿用 88-01 基线 2 类） | **0** | 三页（`/system/user`、`/monitor/cache`、`/network/credentials`）**清空 console + 强制刷新**实测 deprecated 行数 = **0**；验收口径 = 「无 deprecated 类警告」，**非**「零 Warning」（rc-select `onSearch` 提示在清理范围外） |
+| M1 | 全 `.css`/`.less` `!important` 计数 | 1398 | **1398**（未动 CSS） | C11 ratchet 仍为 1398，`lint:ci` PASS |
+| M2 | `index.css` `!important` 计数 | 1331 | **1331** | 未动 CSS |
+| M9 | `index.css` 行数 | 5548 | **5548** | 未动 CSS |
+| M14 | 死样式文件数 | 0 | **0** | C8 全绿 |
+| 弃用 prop 静态计数 | `destroyOnClose` / `bodyStyle` / `headStyle` / `maskStyle` / `footerStyle` / `contentWrapperStyle` / `size="middle"` / Select 六类 | 6 / 4 / 0 / 0 / 0 / 0 / 17 / 0 | **全 0** | C14 断言守护（`node scripts/css-contract-check.js` exit 0，输出含 `C14 PASS`） |
+| 冻结契约位 `maskClosable` | 我方组件对外 prop（声明/解构/透传/调用方） | 7 | **7（保留）** | v1.22 契约冻结；C14b 断言守护 |
+| `size="default"` | 唯一处（Drawer） | 1 | **1（豁免登记）** | `drawer/Drawer.d.ts:6` 枚举 `["default","large"]` → Drawer 无 medium |
+
+## 弃用 prop 迁移前后计数对照（速查）
+
+| 弃用类 | before | after |
+|---|---|---|
+| `maskClosable`（antd 组件上） | 22 | **0** |
+| `maskClosable`（我方冻结契约位 / 注释 / 测试） | 7 / 5 / 12 | 7 / 5 / 12（输入侧保留，**内部形态断言改 1 处**） |
+| `Card bordered={false}` | 6 | **0**（Table 7 处保留） |
+| `bodyStyle` | 4 | **0** |
+| `destroyOnClose` | 6 | **0** |
+| `size="middle"` | 17 | **0** |
+| `size="default"` | 1 | 1（Drawer 豁免） |
+
+## 第二轮矩阵视觉 diff（唯一硬判据）
+
+- 21 形态 × 明暗 × carrier/inner × 5 属性（bg/border/radius/shadow/btw）= **360 格**
+- before（88-03 基线）vs after（本批复采）：**0 差异**（`matrix-diff-result.txt`：`单元格 360，差异 0`）
+- 采信自检：after 明暗内部差异 **43** 格（基线 before 同为 43）→ 暗色捕获真实生效，非恒等空跑
+- fixture 挂载点：`.ant-app.css-var-_r_0_`（antd cssVar scope）
+- 第二轮截图 12 张：`88-visual-evidence/r2-*-{light,dark}.png`
+
+## 登记待后续（不属本 plan 锁定清单）
+
+- **`Drawer width` → `size`**：antd `drawer/Drawer.js:155` 弃用表含 `['width','size']`；实测 `/network/mac`、`/ad-domain/computers` 仍报该弃用告警，全仓 **9 处 / 8 文件**。迁移规则：`width={N}`（数字）→ `size={N}` 等价（`Drawer.js:84-85` `isNumber` 直返），但 `height` 与 placement 相关 → 需逐处核对。建议立 VISFIX-05。

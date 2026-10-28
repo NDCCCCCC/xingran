@@ -174,7 +174,7 @@ export function createActionColumn<T>(
     width: 200,
     fixed: "right",
     render: (_, record) => (
-      <Space size="middle">
+      <Space size="medium">
         {onEdit && (
           <Button type="link" icon={<EditOutlined />} onClick={() => onEdit(record)}>
             编辑

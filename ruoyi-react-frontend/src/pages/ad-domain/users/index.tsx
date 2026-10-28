@@ -743,7 +743,7 @@ const ADUserPage: FC = () => {
         ]}
         width={600}
       >
-        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="medium">
           <div style={{ color: "var(--theme-text-secondary)", fontSize: "14px" }}>点击下方OU标签快速筛选该OU下的用户</div>
           <div style={{ maxHeight: 400, overflowY: "auto" }}>
             <Space wrap>

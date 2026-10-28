@@ -131,7 +131,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   // 错误
   if (error) {
     return (
-      <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
+      <Card size="small" title={`MAC 事件时间线 — ${mac}`} variant="borderless">
         <ErrorAlertWithRetry
           error={error as Error}
           onRetry={() => {
@@ -145,7 +145,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   // 加载
   if (isLoading) {
     return (
-      <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
+      <Card size="small" title={`MAC 事件时间线 — ${mac}`} variant="borderless">
         <Skeleton active paragraph={{ rows: 4 }} />
       </Card>
     );
@@ -154,7 +154,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   // 空数据
   if (allEvents.length === 0) {
     return (
-      <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
+      <Card size="small" title={`MAC 事件时间线 — ${mac}`} variant="borderless">
         <Empty description="该 MAC 在此时间范围内无事件" />
       </Card>
     );
@@ -173,7 +173,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
           )}
         </Space>
       }
-      bordered={false}
+      variant="borderless"
     >
       <div style={{ contentVisibility: "auto", containIntrinsicSize: "64px" }}>
         <Timeline

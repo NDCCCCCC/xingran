@@ -6,7 +6,7 @@
  * - 双状态源（caches+setTotal+usePagination+useServerSort 手工管线）→ PageTable 单实例 request 管线
  * - 搜索卡（受控 Input/Select + 搜索/重置/刷新按钮）→ searchFields 3 字段（B 类：按钮文案统一内建 搜索/重置/刷新）
  * - 操作缓存 Modal → FormModal（okText="确定"；68.1-T5 minor#7：FormModal 已补
- *   maskClosable/keyboard 透传位，此处按迁移前原 Modal 取值显式声明 false/false；
+ *   maskClosable / keyboard 透传位（FormModal 冻结契约 prop），此处按迁移前原 Modal 取值显式声明 false/false；
  *   Form 布局 vertical → FormModal 内建 horizontal labelCol4/wrapperCol20）
  * - 单删 Popconfirm → 命令式 confirmDelete（68.1-T4：Modal 强确认，触发按钮原样保留）
  * - 清空全部缓存 → confirmDelete 非删除变体（actionLabel="清空"，68.1-T4 §1.9）
@@ -415,7 +415,7 @@ const CacheManager: FC = () => {
       </PageTable>
 
       {/* 操作缓存模态框（FormModal 契约）
-          68.1-T5 minor#7：按迁移前原 Modal 取值显式声明 maskClosable/keyboard = false */}
+          68.1-T5 minor#7：按迁移前原 Modal 取值显式声明 maskClosable / keyboard = false */}
       <FormModal
         title="缓存操作"
         open={operateModalVisible}

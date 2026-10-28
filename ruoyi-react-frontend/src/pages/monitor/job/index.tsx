@@ -278,7 +278,7 @@ const JobManager: FC = () => {
       {/* 新增/编辑模态框 */}
       <Modal
         title={modalTitle}
-        maskClosable={false}
+        mask={{ closable: false }}
         keyboard={false}
         open={modalVisible}
         onCancel={() => {
