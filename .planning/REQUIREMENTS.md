@@ -128,7 +128,7 @@
 | VIS-02 | 76 | Satisfied (2026-10-28) |
 | VIS-03 | 76 | Satisfied (2026-10-28) |
 | VIS-04 | 76 | Satisfied (2026-10-28) |
-| VIS-05 | 77 | Pending |
+| VIS-05 | 77 | Satisfied (2026-10-28) |
 | PERM-01 | 78 | Satisfied (2026-10-28) |
 | PERM-02 | 78 | Satisfied (2026-10-28) |
 | PERM-03 | 78 | Satisfied (2026-10-28) |
