@@ -94,6 +94,20 @@ func setupNoticeHub(r *gin.RouterGroup, core *core.Core) *websocket.NoticeHub {
 	return noticeHub
 }
 
+// strictUserRouteGroup 创建一个「单一权限点 + 严格权限」的写操作路由子组。
+//
+// v1.24 Phase 78（#16）：严格权限 = 只做 sys_menu.perms 精确匹配，
+// 跳过 F 型子权限继承（Step 2）与模块级降级（Step 3）——
+// 只持页面本体权限（如 system:user）的只读角色不会被放行。
+//
+// 父组必须**不含**任何 ANY-of 权限中间件（gin 的 Group 会继承父组中间件链），
+// 否则父组的 ANY-of 仍会先于严格权限放行写操作。
+func strictUserRouteGroup(parent *gin.RouterGroup, perm permission.PermissionCode, core *core.Core) *gin.RouterGroup {
+	g := parent.Group("")
+	g.Use(middleware.RequireStrictPermissions([]string{string(perm)}, core))
+	return g
+}
+
 // SetupRouter 设置路由
 func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	r.Use(middleware.RequestID())
@@ -150,25 +164,60 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			}
 
 			// 用户管理
-			users := authorized.Group("/users")
+			//
+			// v1.24 Phase 78（#16）：读组 / 写组**兄弟分离**。
+			//   ① 组级 ANY-of 病灶：写操作必须脱离 [list/add/edit/view] 的 ANY-of 组 ——
+			//      否则只持 system:user:list 的用户调 POST /system/users/{id}/delete
+			//      会命中 UserList 分支被放行（真删除）。
+			//   ② 模块级降级病灶：写操作改用 RequireStrictPermissions（跳过 Step 2 F 型
+			//      继承与 Step 3 模块降级）——否则只读角色会因持有页面本体 system:user 被放行。
+			//
+			// ⚠️ gin 的 Group() 会**继承父组中间件链**，因此写组必须是 authorized 的
+			//    **兄弟组**（而不是读组的子组）；若写成 usersRead.Group("")，读组的 ANY-of
+			//    依旧会作用在写路由上，病灶① 不会被修掉。
+			usersRead := authorized.Group("/users")
 			// 查询接口(/list)额外接受工位/空间读权限: 工位页面用户选择器(useWorkstationData)需要
 			// 读取用户列表做归属选择, 但运维角色通常不持有 system:user 权限。用户列表受
-			// DataScopePermission 限制可见数据; 写操作(create/update/delete)保持严格权限。
-			users.Use(middleware.RequirePermissionsWithQuery([]string{
+			// DataScopePermission 限制可见数据; 写操作走独立严格子组(见下)。
+			usersRead.Use(middleware.RequirePermissionsWithQuery([]string{
 				string(permission.UserList),
-				string(permission.UserAdd),
-				string(permission.UserEdit),
 				string(permission.UserView),
 			}, []string{"ops:workstation:list", "ops:building:spaces:list"}, core))
 			// 添加数据权限中间件
-			users.Use(middleware.DataScopePermission(core))
+			usersRead.Use(middleware.DataScopePermission(core))
 			{
-				// 新架构：结构体Handler + Service层
-				systemV1.SetupUserRouter(users, core)
-				// 用户 Excel 导入由 SetupUserRouter 内的 ImportUser 处理（带 AD 域控同步触发），
+				// 新架构：结构体Handler + Service层（读路由）
+				systemV1.SetupUserRouter(usersRead, core)
+				// 用户 Excel 导入由 SetupUserWriteRouter 内的 ImportUser 处理（带 AD 域控同步触发），
 				// 不复用 operations.SetupExcelRouter —— 后者的 importData 为通用导入，不触发
 				// AD 同步。模板下载同样在 user_router（GET /import/template）。
 				// 若将来需要用户导出(/export)，可单独接入 operations.exportData("user")。
+			}
+
+			// 用户写操作组：逐动作**单一权限点** + 严格权限（不做任何降级）。
+			// 逐动作映射（v1.24 #16 定稿，与 pkg/permission/config.go 常量一一对应）：
+			//   新增            POST /system/users                 → system:user:add
+			//   导入            POST /system/users/import          → system:user:import
+			//   导入模板        GET  /system/users/import/template → system:user:import
+			//   编辑            POST /system/users/:id/update      → system:user:edit
+			//   状态变更        POST /system/users/:id/status      → system:user:edit
+			//   同步经理        POST /system/users/sync-managers   → system:user:edit
+			//   删除            POST /system/users/:id/delete      → system:user:remove
+			//   批量删除        POST /system/users/batch-delete    → system:user:remove
+			//   重置密码        POST /system/users/:id/reset-password → system:user:resetPwd
+			// ⚠️ 导出接口不存在（用户模块未注册 /export 路由，前端也无导出按钮），
+			//    故 system:user:export 无需挂保护；xtgl 缺该权限不产生 403 风险。
+			usersWrite := authorized.Group("/users")
+			// 数据权限中间件沿用原行为（读组原本覆盖全部用户路由）
+			usersWrite.Use(middleware.DataScopePermission(core))
+			{
+				systemV1.SetupUserWriteRouter(systemV1.UserWriteRouteGroups{
+					Add:      strictUserRouteGroup(usersWrite, permission.UserAdd, core),
+					Import:   strictUserRouteGroup(usersWrite, permission.UserImport, core),
+					Edit:     strictUserRouteGroup(usersWrite, permission.UserEdit, core),
+					Remove:   strictUserRouteGroup(usersWrite, permission.UserRemove, core),
+					ResetPwd: strictUserRouteGroup(usersWrite, permission.UserResetPwd, core),
+				}, core)
 			}
 
 			// 用户解锁路由（管理员权限）
