@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	v1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
+	agentV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/agent"
 	assetV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/asset"
 	dutyV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/duty"
 	v1_knowledge "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/knowledge"
@@ -12,7 +13,6 @@ import (
 	rpaV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/rpa"
 	systemV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/system"
 	vdiV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/vdi"
-	agentV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/agent"
 	workorderV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	// AUTH-03 / D-01: MultiAuth + RateLimitByScope 位于 internal/middleware,
@@ -228,64 +228,107 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			}
 
 			// 角色管理
-			roles := authorized.Group("/roles")
-			roles.Use(middleware.RequirePermissions([]string{
+			//
+			// 85-02 RBAC-04：读组 / 写组**兄弟分离**（范式对齐 users，Phase 78 #16）。
+			// gin 的 Group() 会继承父组中间件链，写组必须是 authorized 的兄弟组——
+			// 若写成 rolesRead.Group("")，读组 ANY-of（含 list！）仍会先放行写操作。
+			// 写组逐动作 RequireStrictPermissions 单一权限点（窗口期声明见 85-02-PLAN：
+			// 87 播种前无 F 型码角色写操作 fail-closed = 预期行为）。
+			rolesRead := authorized.Group("/roles")
+			rolesRead.Use(middleware.RequirePermissions([]string{
 				string(permission.RoleList),
-				string(permission.RoleAdd),
-				string(permission.RoleEdit),
 				string(permission.RoleView),
 			}, core))
 			{
-				// 新架构：结构体Handler + Service层
-				systemV1.SetupRoleRouter(roles, core)
+				// 新架构：结构体Handler + Service层（读路由）
+				systemV1.SetupRoleRouter(rolesRead, core)
+			}
+			rolesWrite := authorized.Group("/roles")
+			{
+				systemV1.SetupRoleWriteRouter(systemV1.RoleWriteRouteGroups{
+					Add:    strictUserRouteGroup(rolesWrite, permission.RoleAdd, core),
+					Edit:   strictUserRouteGroup(rolesWrite, permission.RoleEdit, core),
+					Remove: strictUserRouteGroup(rolesWrite, permission.RoleRemove, core),
+				}, core)
 			}
 
 			// 用户菜单和权限接口（所有已登录用户可访问，不需要特定权限）
 			systemV1.SetupUserMenuRouter(authorized.Group("/my-menus"), core)
 
 			// 菜单管理（需要菜单管理权限）
-			menus := authorized.Group("/menus")
-			menus.Use(middleware.RequirePermissions([]string{
+			//
+			// 85-02 RBAC-04：读组 / 写组**兄弟分离**（同 roles，写组不得为读组子组）。
+			menusRead := authorized.Group("/menus")
+			menusRead.Use(middleware.RequirePermissions([]string{
 				string(permission.MenuList),
-				string(permission.MenuAdd),
-				string(permission.MenuEdit),
 				string(permission.MenuView),
 			}, core))
 			{
-				// 新架构：结构体Handler + Service层
-				systemV1.SetupMenuRouter(menus, core)
+				// 新架构：结构体Handler + Service层（读路由）
+				systemV1.SetupMenuRouter(menusRead, core)
+			}
+			menusWrite := authorized.Group("/menus")
+			{
+				systemV1.SetupMenuWriteRouter(systemV1.MenuWriteRouteGroups{
+					Add:    strictUserRouteGroup(menusWrite, permission.MenuAdd, core),
+					Edit:   strictUserRouteGroup(menusWrite, permission.MenuEdit, core),
+					Remove: strictUserRouteGroup(menusWrite, permission.MenuRemove, core),
+				}, core)
 			}
 
 			// 部门管理
-			depts := authorized.Group("/departments")
+			//
+			// 85-02 RBAC-04：读组 / 写组**兄弟分离**。读组保留 queryExtra
+			// （OpsSelectorReadPerms）与 DataScopePermission（运维页面部门树选择器
+			// 依赖，不得删）；写组为 authorized 兄弟组 + DataScopePermission
+			// （对齐 usersWrite 先例），逐动作严格单一权限点，完全脱离 queryExtra 作用面。
+			deptsRead := authorized.Group("/departments")
 			// 查询接口(/tree,/list,/tree-select)额外接受运维读权限(opsSelectorReadPerms):
 			// 楼宇/楼层/工位/机房等运维管理页面内嵌的 <DeptTree>/<DeptSidebar> 选择器需要读取部门树,
 			// 但运维角色通常不持有 system:dept 权限, 导致部门树在每个运维页面都 403。
-			// 部门树 GetTree 不应用数据权限, 返回组织结构全树(低敏感); 写操作保持严格权限。
-			depts.Use(middleware.RequirePermissionsWithQuery([]string{
+			// 部门树 GetTree 不应用数据权限, 返回组织结构全树(低敏感); 写操作走独立严格兄弟组(见下)。
+			deptsRead.Use(middleware.RequirePermissionsWithQuery([]string{
 				string(permission.DeptList),
-				string(permission.DeptAdd),
-				string(permission.DeptEdit),
 				string(permission.DeptView),
 			}, middleware.OpsSelectorReadPerms, core))
 			// 添加数据权限中间件
-			depts.Use(middleware.DataScopePermission(core))
+			deptsRead.Use(middleware.DataScopePermission(core))
 			{
-				// 新架构：结构体Handler + Service层
-				systemV1.SetupDepartmentRouter(depts, core)
+				// 新架构：结构体Handler + Service层（读路由）
+				systemV1.SetupDepartmentRouter(deptsRead, core)
+			}
+			deptsWrite := authorized.Group("/departments")
+			// 数据权限中间件沿用原行为（读组原本覆盖全部部门路由）
+			deptsWrite.Use(middleware.DataScopePermission(core))
+			{
+				systemV1.SetupDepartmentWriteRouter(systemV1.DeptWriteRouteGroups{
+					Add:    strictUserRouteGroup(deptsWrite, permission.DeptAdd, core),
+					Edit:   strictUserRouteGroup(deptsWrite, permission.DeptEdit, core),
+					Remove: strictUserRouteGroup(deptsWrite, permission.DeptRemove, core),
+					Import: strictUserRouteGroup(deptsWrite, permission.DeptImport, core),
+					Export: strictUserRouteGroup(deptsWrite, permission.DeptExport, core),
+				}, core)
 			}
 
 			// 岗位管理
-			posts := authorized.Group("/posts")
-			posts.Use(middleware.RequirePermissions([]string{
+			//
+			// 85-02 RBAC-04：读组 / 写组**兄弟分离**（同 roles，写组不得为读组子组）。
+			postsRead := authorized.Group("/posts")
+			postsRead.Use(middleware.RequirePermissions([]string{
 				string(permission.PostList),
-				string(permission.PostAdd),
-				string(permission.PostEdit),
 				string(permission.PostView),
 			}, core))
 			{
-				// 新架构：结构体Handler + Service层
-				systemV1.SetupPostRouter(posts, core)
+				// 新架构：结构体Handler + Service层（读路由）
+				systemV1.SetupPostRouter(postsRead, core)
+			}
+			postsWrite := authorized.Group("/posts")
+			{
+				systemV1.SetupPostWriteRouter(systemV1.PostWriteRouteGroups{
+					Add:    strictUserRouteGroup(postsWrite, permission.PostAdd, core),
+					Edit:   strictUserRouteGroup(postsWrite, permission.PostEdit, core),
+					Remove: strictUserRouteGroup(postsWrite, permission.PostRemove, core),
+				}, core)
 			}
 			// 经理同步规则/机构维护（权限在 SetupManagerRuleRouter 内按动作细分）
 			systemV1.SetupManagerRuleRouter(authorized, core)
@@ -784,16 +827,16 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// 资产统计(专用 COUNT 聚合,不依赖分页列表)
 			assets.POST("/statistics", assetHandler.Statistics)
 			assets.POST("/:id", assetHandler.GetByID)
-				assets.POST("/device-types", assetHandler.GetDeviceTypes)
-					assets.POST("/device-categories", assetHandler.GetDeviceCategories)
-					assets.POST("/status-values", assetHandler.GetStatusValues)
+			assets.POST("/device-types", assetHandler.GetDeviceTypes)
+			assets.POST("/device-categories", assetHandler.GetDeviceCategories)
+			assets.POST("/status-values", assetHandler.GetStatusValues)
 			assets.POST("/:id/update", assetHandler.Update)
 			assets.POST("/:id/delete", assetHandler.Delete)
-				assets.POST("/batch", assetHandler.BatchOperation)
+			assets.POST("/batch", assetHandler.BatchOperation)
 
-				// Excel导入导出
-				operations.SetupExcelRouter(assets, "asset", core)
-			}
+			// Excel导入导出
+			operations.SetupExcelRouter(assets, "asset", core)
+		}
 
 		// 信息点管理
 		infoPoints := ops.Group("/infoPoint")
@@ -977,36 +1020,36 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}
 	}
 
-			// VDI管理模块（虚拟桌面基础设施）
-			vdi := r.Group("/vdi")
-			vdi.Use(middleware.JWTAuth(core.JWTManager))
-			// 添加操作日志中间件
-			vdi.Use(middleware.OperLogMiddleware(core.OperLogService, core))
-			{
-				// 虚拟机管理
-				vms := vdi.Group("/vms")
-				vms.Use(middleware.DataScopePermission(core))
-				vms.Use(middleware.RequirePermissions([]string{
-					"vdi:vm:list",
-					"vdi:vm:add",
-					"vdi:vm:edit",
-				}, core))
-				{
-					vdiV1.SetupVMRouter(vms, core)
-				}
-
-			// VDI服务器管理
-			servers := vdi.Group("/servers")
-			servers.Use(middleware.RequirePermissions([]string{
-				"vdi:server:list",
-				"vdi:server:add",
-				"vdi:server:edit",
-				"vdi:server:delete",
-			}, core))
-			{
-				vdiV1.SetupVDIServerRouter(servers, core)
-			}
+	// VDI管理模块（虚拟桌面基础设施）
+	vdi := r.Group("/vdi")
+	vdi.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件
+	vdi.Use(middleware.OperLogMiddleware(core.OperLogService, core))
+	{
+		// 虚拟机管理
+		vms := vdi.Group("/vms")
+		vms.Use(middleware.DataScopePermission(core))
+		vms.Use(middleware.RequirePermissions([]string{
+			"vdi:vm:list",
+			"vdi:vm:add",
+			"vdi:vm:edit",
+		}, core))
+		{
+			vdiV1.SetupVMRouter(vms, core)
 		}
+
+		// VDI服务器管理
+		servers := vdi.Group("/servers")
+		servers.Use(middleware.RequirePermissions([]string{
+			"vdi:server:list",
+			"vdi:server:add",
+			"vdi:server:edit",
+			"vdi:server:delete",
+		}, core))
+		{
+			vdiV1.SetupVDIServerRouter(servers, core)
+		}
+	}
 
 	// RPA 管理模块
 	// 先设置公开的 worker 注册接口（不需要认证）

@@ -43,6 +43,45 @@ const MIGRATIONS_DIR = path.join(repoRoot, "internal", "core", "db", "migrations
 /** 权限码形态：至少两段、段内小写字母数字下划线（如 system:user:resetPwd 的 resetPwd 不匹配 → 用宽松段） */
 const PERM_LITERAL = /^[a-z][a-z0-9_]*(?::[A-Za-z0-9_]+)+$/;
 
+/**
+ * 85-02（RBAC-04）新码待播种白名单 —— **仅作用于 c 类**（TS 声明但 sys_menu 未声明）。
+ *
+ * 原因：85-02 把 system 4 组（roles/menus/departments/posts）写操作拆分为
+ * RequireStrictPermissions 单一权限点，Go 常量与 TS 声明同批落地，但这 4 组的
+ * sys_menu F 型按钮菜单当前为 0 声明（c 类技术性不可满足）——菜单播种归 Phase 87
+ * （GrantNewMenuToRolesHavingParent 届时补授）。
+ *
+ * 移除条件（硬性）：Phase 87 播种 migration 落地后**必须清空本白名单**，
+ * 否则 c 类漂移将被永久掩盖。脚本对非空白名单输出移除时限警告（见 main 末尾）。
+ */
+const PENDING_SEED_WHITELIST = [
+  { code: "system:role:add", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:role:edit", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:role:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:role:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:role:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:role:export", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:menu:add", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:menu:edit", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:menu:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:menu:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:menu:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:dept:add", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:dept:edit", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:dept:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:dept:import", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:dept:export", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:dept:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:dept:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:post:add", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:post:edit", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:post:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:post:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  { code: "system:post:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+];
+
+const PENDING_SEED_SET = new Set(PENDING_SEED_WHITELIST.map((w) => w.code));
+
 // ==================== TS 侧解析 ====================
 
 /**
@@ -316,11 +355,15 @@ function main() {
         errors.push(`[${module}] 后端常量 ${code} 存在，但 TS 映射表未声明`);
       }
     }
-    // c. TS 声明但 sys_menu 未声明
+    // c. TS 声明但 sys_menu 未声明（PENDING_SEED_WHITELIST 豁免码跳过——85-02
+    //    新码待播种，87 播种后清空白名单，届时漏报会自然恢复）
     for (const code of tsCodes) {
-      if (!menuAllScope.has(code)) {
-        errors.push(`[${module}] TS 声明了 ${code}，但 migrations 的 sys_menu.perms 未声明（该权限永远不会被授予）`);
+      if (menuAllScope.has(code)) continue;
+      if (PENDING_SEED_SET.has(code)) {
+        console.log(`  ⏳ ${code} 在 85 新码待播种白名单内（c 类跳过；87 播种后必须清空白名单）`);
+        continue;
       }
+      errors.push(`[${module}] TS 声明了 ${code}，但 migrations 的 sys_menu.perms 未声明（该权限永远不会被授予）`);
     }
     // d. 菜单 F 型按钮有但 TS 没声明
     for (const code of menuScope) {
@@ -331,6 +374,16 @@ function main() {
 
     console.log(`  TS 声明 ${tsCodes.size} 个：${[...tsCodes].sort().join(", ")}`);
     console.log(`  后端常量 ${backendScope.size} 个 / 菜单 F 型 ${menuScope.size} 个`);
+  }
+
+  // 白名单非空自检（防永久化）：白名单只在 85-02 → 87 播种之间的窗口期合法。
+  // 非空不阻断（保持 exit 0），但每次运行都输出移除时限警告。
+  if (PENDING_SEED_WHITELIST.length > 0) {
+    console.log(
+      `\n⚠ PENDING_SEED_WHITELIST 非空（${PENDING_SEED_WHITELIST.length} 项）——` +
+        "仅限 85-02 拆分 → 87 播种的窗口期。Phase 87 播种 migration 落地后必须清空" +
+        "本白名单，否则 c 类漂移将被永久掩盖。"
+    );
   }
 
   if (errors.length > 0) {

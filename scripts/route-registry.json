@@ -3,10 +3,10 @@
   "sourceOfTruth": "internal/api/** route registration source (rescan), not tmp_routes.json",
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
-    "mounts": 108,
+    "mounts": 123,
     "routes": 697,
     "writeRoutes": 306,
-    "deferredWriteRoutes": 271
+    "deferredWriteRoutes": 269
   },
   "routes": [
     {
@@ -4252,7 +4252,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 782
+      "line": 825
     },
     {
       "method": "POST",
@@ -4270,7 +4270,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 786
+      "line": 829
     },
     {
       "method": "POST",
@@ -4288,7 +4288,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 791
+      "line": 834
     },
     {
       "method": "POST",
@@ -4306,7 +4306,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 790
+      "line": 833
     },
     {
       "method": "POST",
@@ -4324,7 +4324,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 792
+      "line": 835
     },
     {
       "method": "GET",
@@ -4342,7 +4342,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 780
+      "line": 823
     },
     {
       "method": "POST",
@@ -4360,7 +4360,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 788
+      "line": 831
     },
     {
       "method": "POST",
@@ -4378,7 +4378,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 787
+      "line": 830
     },
     {
       "method": "POST",
@@ -4432,7 +4432,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 783
+      "line": 826
     },
     {
       "method": "GET",
@@ -4450,7 +4450,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 774
+      "line": 817
     },
     {
       "method": "POST",
@@ -4468,7 +4468,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 785
+      "line": 828
     },
     {
       "method": "POST",
@@ -4486,7 +4486,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 789
+      "line": 832
     },
     {
       "method": "GET",
@@ -4523,7 +4523,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 601
+      "line": 644
     },
     {
       "method": "POST",
@@ -4542,7 +4542,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 605
+      "line": 648
     },
     {
       "method": "POST",
@@ -4561,7 +4561,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 607
+      "line": 650
     },
     {
       "method": "POST",
@@ -4580,7 +4580,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 606
+      "line": 649
     },
     {
       "method": "POST",
@@ -4599,7 +4599,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 608
+      "line": 651
     },
     {
       "method": "POST",
@@ -4618,7 +4618,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 604
+      "line": 647
     },
     {
       "method": "POST",
@@ -4656,7 +4656,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 609
+      "line": 652
     },
     {
       "method": "POST",
@@ -4694,7 +4694,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 602
+      "line": 645
     },
     {
       "method": "POST",
@@ -4713,7 +4713,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 603
+      "line": 646
     },
     {
       "method": "GET",
@@ -4750,7 +4750,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 878
+      "line": 921
     },
     {
       "method": "POST",
@@ -4768,7 +4768,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 875
+      "line": 918
     },
     {
       "method": "POST",
@@ -4786,7 +4786,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 877
+      "line": 920
     },
     {
       "method": "POST",
@@ -4804,7 +4804,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 876
+      "line": 919
     },
     {
       "method": "POST",
@@ -4822,7 +4822,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 874
+      "line": 917
     },
     {
       "method": "POST",
@@ -4840,7 +4840,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 873
+      "line": 916
     },
     {
       "method": "POST",
@@ -4894,7 +4894,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 871
+      "line": 914
     },
     {
       "method": "POST",
@@ -4912,7 +4912,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 872
+      "line": 915
     },
     {
       "method": "GET",
@@ -4948,7 +4948,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 956
+      "line": 999
     },
     {
       "method": "POST",
@@ -4966,7 +4966,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 953
+      "line": 996
     },
     {
       "method": "POST",
@@ -4984,7 +4984,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 955
+      "line": 998
     },
     {
       "method": "POST",
@@ -5002,7 +5002,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 954
+      "line": 997
     },
     {
       "method": "POST",
@@ -5020,7 +5020,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 952
+      "line": 995
     },
     {
       "method": "POST",
@@ -5038,7 +5038,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 951
+      "line": 994
     },
     {
       "method": "POST",
@@ -5057,7 +5057,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 649
+      "line": 692
     },
     {
       "method": "POST",
@@ -5070,7 +5070,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 976
+      "line": 1019
     },
     {
       "method": "POST",
@@ -5083,7 +5083,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 973
+      "line": 1016
     },
     {
       "method": "POST",
@@ -5096,7 +5096,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 975
+      "line": 1018
     },
     {
       "method": "POST",
@@ -5109,7 +5109,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 974
+      "line": 1017
     },
     {
       "method": "POST",
@@ -5122,7 +5122,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 972
+      "line": 1015
     },
     {
       "method": "POST",
@@ -5135,7 +5135,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 971
+      "line": 1014
     },
     {
       "method": "POST",
@@ -5154,7 +5154,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 646
+      "line": 689
     },
     {
       "method": "POST",
@@ -5173,7 +5173,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 648
+      "line": 691
     },
     {
       "method": "POST",
@@ -5192,7 +5192,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 647
+      "line": 690
     },
     {
       "method": "POST",
@@ -5211,7 +5211,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 645
+      "line": 688
     },
     {
       "method": "POST",
@@ -5230,7 +5230,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 644
+      "line": 687
     },
     {
       "method": "POST",
@@ -5287,7 +5287,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 641
+      "line": 684
     },
     {
       "method": "POST",
@@ -5306,7 +5306,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 642
+      "line": 685
     },
     {
       "method": "GET",
@@ -5344,7 +5344,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 643
+      "line": 686
     },
     {
       "method": "POST",
@@ -5362,7 +5362,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 818
+      "line": 861
     },
     {
       "method": "POST",
@@ -5380,7 +5380,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 815
+      "line": 858
     },
     {
       "method": "POST",
@@ -5398,7 +5398,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 817
+      "line": 860
     },
     {
       "method": "POST",
@@ -5416,7 +5416,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 816
+      "line": 859
     },
     {
       "method": "POST",
@@ -5434,7 +5434,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 814
+      "line": 857
     },
     {
       "method": "POST",
@@ -5452,7 +5452,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 813
+      "line": 856
     },
     {
       "method": "POST",
@@ -5506,7 +5506,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 811
+      "line": 854
     },
     {
       "method": "POST",
@@ -5524,7 +5524,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 812
+      "line": 855
     },
     {
       "method": "GET",
@@ -5560,7 +5560,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 730
+      "line": 773
     },
     {
       "method": "POST",
@@ -5578,7 +5578,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 729
+      "line": 772
     },
     {
       "method": "POST",
@@ -5596,7 +5596,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 728
+      "line": 771
     },
     {
       "method": "POST",
@@ -5614,7 +5614,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 727
+      "line": 770
     },
     {
       "method": "POST",
@@ -5632,7 +5632,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 904
+      "line": 947
     },
     {
       "method": "POST",
@@ -5650,7 +5650,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 901
+      "line": 944
     },
     {
       "method": "POST",
@@ -5668,7 +5668,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 903
+      "line": 946
     },
     {
       "method": "POST",
@@ -5686,7 +5686,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 902
+      "line": 945
     },
     {
       "method": "POST",
@@ -5704,7 +5704,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 900
+      "line": 943
     },
     {
       "method": "POST",
@@ -5722,7 +5722,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 899
+      "line": 942
     },
     {
       "method": "POST",
@@ -5776,7 +5776,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 897
+      "line": 940
     },
     {
       "method": "POST",
@@ -5794,7 +5794,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 898
+      "line": 941
     },
     {
       "method": "GET",
@@ -5934,7 +5934,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 844
+      "line": 887
     },
     {
       "method": "POST",
@@ -5952,7 +5952,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 841
+      "line": 884
     },
     {
       "method": "POST",
@@ -5970,7 +5970,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 843
+      "line": 886
     },
     {
       "method": "POST",
@@ -5988,7 +5988,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 842
+      "line": 885
     },
     {
       "method": "POST",
@@ -6006,7 +6006,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 840
+      "line": 883
     },
     {
       "method": "POST",
@@ -6024,7 +6024,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 839
+      "line": 882
     },
     {
       "method": "POST",
@@ -6078,7 +6078,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 837
+      "line": 880
     },
     {
       "method": "POST",
@@ -6096,7 +6096,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 838
+      "line": 881
     },
     {
       "method": "GET",
@@ -6132,7 +6132,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 932
+      "line": 975
     },
     {
       "method": "POST",
@@ -6150,7 +6150,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 929
+      "line": 972
     },
     {
       "method": "POST",
@@ -6168,7 +6168,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 931
+      "line": 974
     },
     {
       "method": "POST",
@@ -6186,7 +6186,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 930
+      "line": 973
     },
     {
       "method": "POST",
@@ -6204,7 +6204,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 928
+      "line": 971
     },
     {
       "method": "POST",
@@ -6222,7 +6222,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 927
+      "line": 970
     },
     {
       "method": "POST",
@@ -6241,7 +6241,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 687
+      "line": 730
     },
     {
       "method": "POST",
@@ -6258,7 +6258,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 744
+      "line": 787
     },
     {
       "method": "POST",
@@ -6275,7 +6275,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 745
+      "line": 788
     },
     {
       "method": "POST",
@@ -6292,7 +6292,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 746
+      "line": 789
     },
     {
       "method": "POST",
@@ -6309,7 +6309,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 757
+      "line": 800
     },
     {
       "method": "POST",
@@ -6326,7 +6326,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 748
+      "line": 791
     },
     {
       "method": "POST",
@@ -6343,7 +6343,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 751
+      "line": 794
     },
     {
       "method": "POST",
@@ -6360,7 +6360,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 758
+      "line": 801
     },
     {
       "method": "POST",
@@ -6377,7 +6377,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 752
+      "line": 795
     },
     {
       "method": "POST",
@@ -6394,7 +6394,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 756
+      "line": 799
     },
     {
       "method": "POST",
@@ -6411,7 +6411,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 753
+      "line": 796
     },
     {
       "method": "POST",
@@ -6428,7 +6428,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 754
+      "line": 797
     },
     {
       "method": "POST",
@@ -6445,7 +6445,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 755
+      "line": 798
     },
     {
       "method": "GET",
@@ -6464,7 +6464,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 691
+      "line": 734
     },
     {
       "method": "POST",
@@ -6483,7 +6483,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 684
+      "line": 727
     },
     {
       "method": "POST",
@@ -6502,7 +6502,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 686
+      "line": 729
     },
     {
       "method": "POST",
@@ -6521,7 +6521,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 685
+      "line": 728
     },
     {
       "method": "POST",
@@ -6540,7 +6540,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 681
+      "line": 724
     },
     {
       "method": "POST",
@@ -6559,7 +6559,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 683
+      "line": 726
     },
     {
       "method": "GET",
@@ -6578,7 +6578,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 696
+      "line": 739
     },
     {
       "method": "POST",
@@ -6597,7 +6597,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 678
+      "line": 721
     },
     {
       "method": "POST",
@@ -6616,7 +6616,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 680
+      "line": 723
     },
     {
       "method": "POST",
@@ -6673,7 +6673,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 677
+      "line": 720
     },
     {
       "method": "POST",
@@ -6692,7 +6692,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 682
+      "line": 725
     },
     {
       "method": "POST",
@@ -6711,7 +6711,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 679
+      "line": 722
     },
     {
       "method": "GET",
@@ -8315,20 +8315,17 @@
     {
       "method": "POST",
       "path": "/system/departments",
-      "mountGroup": "r",
-      "setup": "SetupDepartmentRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupDepartmentWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
-        "system:dept:view"
+        "system:dept:add"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/department_router.go",
-      "line": 55
+      "line": 72
     },
     {
       "method": "POST",
@@ -8340,67 +8337,56 @@
       "permKind": "RequirePermissionsWithQuery",
       "permCodes": [
         "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
-        "system:dept:view"
-      ],
-      "registeredDeadTable": true,
-      "file": "internal/api/v1/system/department_router.go",
-      "line": 56
-    },
-    {
-      "method": "POST",
-      "path": "/system/departments/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupDepartmentRouter",
-      "isWrite": true,
-      "handler": "Delete",
-      "permKind": "RequirePermissionsWithQuery",
-      "permCodes": [
-        "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
-        "system:dept:view"
-      ],
-      "registeredDeadTable": true,
-      "file": "internal/api/v1/system/department_router.go",
-      "line": 58
-    },
-    {
-      "method": "POST",
-      "path": "/system/departments/:id/status",
-      "mountGroup": "r",
-      "setup": "SetupDepartmentRouter",
-      "isWrite": true,
-      "handler": "UpdateStatus",
-      "permKind": "RequirePermissionsWithQuery",
-      "permCodes": [
-        "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
-        "system:dept:view"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/system/department_router.go",
-      "line": 59
-    },
-    {
-      "method": "POST",
-      "path": "/system/departments/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupDepartmentRouter",
-      "isWrite": true,
-      "handler": "Update",
-      "permKind": "RequirePermissionsWithQuery",
-      "permCodes": [
-        "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
         "system:dept:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/department_router.go",
       "line": 57
+    },
+    {
+      "method": "POST",
+      "path": "/system/departments/:id/delete",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupDepartmentWriteRouter",
+      "isWrite": true,
+      "handler": "Delete",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "system:dept:remove"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/department_router.go",
+      "line": 77
+    },
+    {
+      "method": "POST",
+      "path": "/system/departments/:id/status",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupDepartmentWriteRouter",
+      "isWrite": true,
+      "handler": "UpdateStatus",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "system:dept:edit"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/department_router.go",
+      "line": 75
+    },
+    {
+      "method": "POST",
+      "path": "/system/departments/:id/update",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupDepartmentWriteRouter",
+      "isWrite": true,
+      "handler": "Update",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "system:dept:edit"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/department_router.go",
+      "line": 74
     },
     {
       "method": "GET",
@@ -8412,67 +8398,56 @@
       "permKind": "RequirePermissionsWithQuery",
       "permCodes": [
         "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
         "system:dept:view"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/department_router.go",
-      "line": 61
+      "line": 59
     },
     {
       "method": "POST",
       "path": "/system/departments/batch",
-      "mountGroup": "r",
-      "setup": "SetupDepartmentRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupDepartmentWriteRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
-        "system:dept:view"
+        "system:dept:remove"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/department_router.go",
-      "line": 53
+      "line": 78
     },
     {
       "method": "POST",
       "path": "/system/departments/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
-        "system:dept:view"
+        "system:dept:export"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/system/departments/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
-        "system:dept:view"
+        "system:dept:import"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -8484,13 +8459,11 @@
       "permKind": "RequirePermissionsWithQuery",
       "permCodes": [
         "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
         "system:dept:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/department_router.go",
-      "line": 52
+      "line": 55
     },
     {
       "method": "POST",
@@ -8502,31 +8475,27 @@
       "permKind": "RequirePermissionsWithQuery",
       "permCodes": [
         "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
         "system:dept:view"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/department_router.go",
-      "line": 60
+      "line": 58
     },
     {
       "method": "GET",
       "path": "/system/departments/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissionsWithQuery",
       "permCodes": [
         "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
         "system:dept:view"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
@@ -8538,13 +8507,11 @@
       "permKind": "RequirePermissionsWithQuery",
       "permCodes": [
         "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
         "system:dept:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/department_router.go",
-      "line": 51
+      "line": 54
     },
     {
       "method": "POST",
@@ -8556,13 +8523,11 @@
       "permKind": "RequirePermissionsWithQuery",
       "permCodes": [
         "system:dept:list",
-        "system:dept:add",
-        "system:dept:edit",
         "system:dept:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/department_router.go",
-      "line": 54
+      "line": 56
     },
     {
       "method": "POST",
@@ -9032,20 +8997,17 @@
     {
       "method": "POST",
       "path": "/system/menus",
-      "mountGroup": "r",
-      "setup": "SetupMenuRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupMenuWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
-        "system:menu:view"
+        "system:menu:add"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/menu_router.go",
-      "line": 35
+      "line": 44
     },
     {
       "method": "POST",
@@ -9057,85 +9019,71 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
-        "system:menu:view"
-      ],
-      "registeredDeadTable": true,
-      "file": "internal/api/v1/system/menu_router.go",
-      "line": 36
-    },
-    {
-      "method": "POST",
-      "path": "/system/menus/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupMenuRouter",
-      "isWrite": true,
-      "handler": "Delete",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
-        "system:menu:view"
-      ],
-      "registeredDeadTable": true,
-      "file": "internal/api/v1/system/menu_router.go",
-      "line": 38
-    },
-    {
-      "method": "POST",
-      "path": "/system/menus/:id/status",
-      "mountGroup": "r",
-      "setup": "SetupMenuRouter",
-      "isWrite": true,
-      "handler": "UpdateStatus",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
-        "system:menu:view"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/system/menu_router.go",
-      "line": 39
-    },
-    {
-      "method": "POST",
-      "path": "/system/menus/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupMenuRouter",
-      "isWrite": true,
-      "handler": "Update",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
-        "system:menu:view"
-      ],
-      "registeredDeadTable": true,
-      "file": "internal/api/v1/system/menu_router.go",
-      "line": 37
-    },
-    {
-      "method": "POST",
-      "path": "/system/menus/batch-delete",
-      "mountGroup": "r",
-      "setup": "SetupMenuRouter",
-      "isWrite": true,
-      "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
         "system:menu:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/menu_router.go",
       "line": 34
+    },
+    {
+      "method": "POST",
+      "path": "/system/menus/:id/delete",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupMenuWriteRouter",
+      "isWrite": true,
+      "handler": "Delete",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "system:menu:remove"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/menu_router.go",
+      "line": 49
+    },
+    {
+      "method": "POST",
+      "path": "/system/menus/:id/status",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupMenuWriteRouter",
+      "isWrite": true,
+      "handler": "UpdateStatus",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "system:menu:edit"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/menu_router.go",
+      "line": 47
+    },
+    {
+      "method": "POST",
+      "path": "/system/menus/:id/update",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupMenuWriteRouter",
+      "isWrite": true,
+      "handler": "Update",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "system:menu:edit"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/menu_router.go",
+      "line": 46
+    },
+    {
+      "method": "POST",
+      "path": "/system/menus/batch-delete",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupMenuWriteRouter",
+      "isWrite": true,
+      "handler": "BatchDelete",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "system:menu:remove"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/menu_router.go",
+      "line": 50
     },
     {
       "method": "POST",
@@ -9147,8 +9095,6 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
         "system:menu:view"
       ],
       "registeredDeadTable": true,
@@ -9165,8 +9111,6 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
         "system:menu:view"
       ],
       "registeredDeadTable": false,
@@ -9183,8 +9127,6 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
         "system:menu:view"
       ],
       "registeredDeadTable": true,
@@ -9201,8 +9143,6 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:menu:list",
-        "system:menu:add",
-        "system:menu:edit",
         "system:menu:view"
       ],
       "registeredDeadTable": true,
@@ -9220,7 +9160,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/menu_router.go",
-      "line": 65
+      "line": 97
     },
     {
       "method": "POST",
@@ -9233,7 +9173,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/menu_router.go",
-      "line": 66
+      "line": 98
     },
     {
       "method": "POST",
@@ -9246,7 +9186,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/menu_router.go",
-      "line": 67
+      "line": 99
     },
     {
       "method": "GET",
@@ -9576,20 +9516,17 @@
     {
       "method": "POST",
       "path": "/system/posts",
-      "mountGroup": "r",
-      "setup": "SetupPostRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupPostWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:post:list",
-        "system:post:add",
-        "system:post:edit",
-        "system:post:view"
+        "system:post:add"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/post_router.go",
-      "line": 36
+      "line": 45
     },
     {
       "method": "POST",
@@ -9601,49 +9538,41 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:post:list",
-        "system:post:add",
-        "system:post:edit",
         "system:post:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/post_router.go",
-      "line": 37
+      "line": 35
     },
     {
       "method": "POST",
       "path": "/system/posts/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupPostRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupPostWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:post:list",
-        "system:post:add",
-        "system:post:edit",
-        "system:post:view"
+        "system:post:remove"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/post_router.go",
-      "line": 39
+      "line": 49
     },
     {
       "method": "POST",
       "path": "/system/posts/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupPostRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupPostWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:post:list",
-        "system:post:add",
-        "system:post:edit",
-        "system:post:view"
+        "system:post:edit"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/post_router.go",
-      "line": 38
+      "line": 47
     },
     {
       "method": "POST",
@@ -9655,8 +9584,6 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:post:list",
-        "system:post:add",
-        "system:post:edit",
         "system:post:view"
       ],
       "registeredDeadTable": true,
@@ -9666,20 +9593,17 @@
     {
       "method": "POST",
       "path": "/system/posts/batch-delete",
-      "mountGroup": "r",
-      "setup": "SetupPostRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupPostWriteRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:post:list",
-        "system:post:add",
-        "system:post:edit",
-        "system:post:view"
+        "system:post:remove"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/post_router.go",
-      "line": 35
+      "line": 50
     },
     {
       "method": "POST",
@@ -9691,8 +9615,6 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:post:list",
-        "system:post:add",
-        "system:post:edit",
         "system:post:view"
       ],
       "registeredDeadTable": true,
@@ -9709,8 +9631,6 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:post:list",
-        "system:post:add",
-        "system:post:edit",
         "system:post:view"
       ],
       "registeredDeadTable": true,
@@ -9727,8 +9647,6 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:post:list",
-        "system:post:add",
-        "system:post:edit",
         "system:post:view"
       ],
       "registeredDeadTable": true,
@@ -9790,20 +9708,17 @@
     {
       "method": "POST",
       "path": "/system/roles",
-      "mountGroup": "r",
-      "setup": "SetupRoleRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupRoleWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:role:list",
-        "system:role:add",
-        "system:role:edit",
-        "system:role:view"
+        "system:role:add"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 34
+      "line": 50
     },
     {
       "method": "POST",
@@ -9815,67 +9730,56 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:role:list",
-        "system:role:add",
-        "system:role:edit",
         "system:role:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 35
+      "line": 40
     },
     {
       "method": "POST",
       "path": "/system/roles/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupRoleRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupRoleWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:role:list",
-        "system:role:add",
-        "system:role:edit",
-        "system:role:view"
+        "system:role:remove"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 37
+      "line": 55
     },
     {
       "method": "POST",
       "path": "/system/roles/:id/status",
-      "mountGroup": "r",
-      "setup": "SetupRoleRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupRoleWriteRouter",
       "isWrite": true,
       "handler": "UpdateStatus",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:role:list",
-        "system:role:add",
-        "system:role:edit",
-        "system:role:view"
+        "system:role:edit"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 38
+      "line": 53
     },
     {
       "method": "POST",
       "path": "/system/roles/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupRoleRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupRoleWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:role:list",
-        "system:role:add",
-        "system:role:edit",
-        "system:role:view"
+        "system:role:edit"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 36
+      "line": 52
     },
     {
       "method": "POST",
@@ -9887,31 +9791,26 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:role:list",
-        "system:role:add",
-        "system:role:edit",
         "system:role:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 32
+      "line": 39
     },
     {
       "method": "POST",
       "path": "/system/roles/batch",
-      "mountGroup": "r",
-      "setup": "SetupRoleRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupRoleWriteRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:role:list",
-        "system:role:add",
-        "system:role:edit",
-        "system:role:view"
+        "system:role:remove"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 33
+      "line": 56
     },
     {
       "method": "POST",
@@ -9923,13 +9822,11 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:role:list",
-        "system:role:add",
-        "system:role:edit",
         "system:role:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 30
+      "line": 37
     },
     {
       "method": "POST",
@@ -9941,13 +9838,11 @@
       "permKind": "RequirePermissions",
       "permCodes": [
         "system:role:list",
-        "system:role:add",
-        "system:role:edit",
         "system:role:view"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/system/role_router.go",
-      "line": 31
+      "line": 38
     },
     {
       "method": "POST",
@@ -12346,11 +12241,6 @@
         "handler": "GetBatchWidgetData"
       },
       {
-        "path": "/system/departments/:id/status",
-        "method": "POST",
-        "handler": "UpdateStatus"
-      },
-      {
         "path": "/system/dicts/data",
         "method": "POST",
         "handler": "Create"
@@ -12434,11 +12324,6 @@
         "path": "/system/manager-rules/manager-preview",
         "method": "POST",
         "handler": "ManagerPreview"
-      },
-      {
-        "path": "/system/menus/:id/status",
-        "method": "POST",
-        "handler": "UpdateStatus"
       },
       {
         "path": "/system/notices",

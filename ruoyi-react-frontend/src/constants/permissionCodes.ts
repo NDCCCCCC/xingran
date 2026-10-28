@@ -29,6 +29,41 @@ export const PERMISSION_CODES = {
     import: "system:user:import",
     export: "system:user:export",
   },
+  // 85-02（RBAC-04）：system 4 组写操作逐动作拆分，TS 侧提前声明（b 类零豁免）。
+  // ⚠️ 这些码的 sys_menu F 型菜单当前为 0 声明（Phase 87 播种后才有授权来源），
+  // c 类由 check-permission-codes.mjs 的 PENDING_SEED_WHITELIST 显式豁免；
+  // 87 播种 migration 落地后必须清空该白名单。
+  systemRole: {
+    list: "system:role:list",
+    view: "system:role:view",
+    add: "system:role:add",
+    edit: "system:role:edit",
+    remove: "system:role:remove",
+    export: "system:role:export",
+  },
+  systemMenu: {
+    list: "system:menu:list",
+    view: "system:menu:view",
+    add: "system:menu:add",
+    edit: "system:menu:edit",
+    remove: "system:menu:remove",
+  },
+  systemDept: {
+    list: "system:dept:list",
+    view: "system:dept:view",
+    add: "system:dept:add",
+    edit: "system:dept:edit",
+    remove: "system:dept:remove",
+    import: "system:dept:import",
+    export: "system:dept:export",
+  },
+  systemPost: {
+    list: "system:post:list",
+    view: "system:post:view",
+    add: "system:post:add",
+    edit: "system:post:edit",
+    remove: "system:post:remove",
+  },
 } as const;
 
 /** 模块键名（如 systemUser） */

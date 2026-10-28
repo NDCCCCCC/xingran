@@ -39,6 +39,10 @@ const (
 	DeptAdd    PermissionCode = "system:dept:add"
 	DeptEdit   PermissionCode = "system:dept:edit"
 	DeptRemove PermissionCode = "system:dept:remove"
+	// 85-02（RBAC-04）：部门 Excel 导入导出逐动作拆分新增（department_router.go
+	// SetupExcelRouter 的 POST /import、POST /export）。菜单 F 型播种归 Phase 87。
+	DeptImport PermissionCode = "system:dept:import"
+	DeptExport PermissionCode = "system:dept:export"
 
 	// 岗位管理权限
 	PostList   PermissionCode = "system:post:list"
@@ -235,43 +239,48 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/users/export", "POST", UserExport, "导出用户"},
 		{"/system/users/import", "POST", UserImport, "导入用户"},
 
-		// 角色管理
+		// 角色管理（85-02：batch 为 2 段具体路径，登记在 :id 之前防 matchPath
+		// 参数段遮蔽——GetPermissionByPath 按数组顺序返回首个命中）
+		{"/system/roles/batch", "POST", RoleRemove, "批量删除角色"},
 		{"/system/roles/list", "POST", RoleList, "查询角色列表"},
 		{"/system/roles/all", "POST", RoleList, "获取所有角色"},
 		{"/system/roles/:id", "POST", RoleView, "查看角色详情"},
 		{"/system/roles", "POST", RoleAdd, "新增角色"},
 		{"/system/roles/:id/update", "POST", RoleEdit, "编辑角色"},
 		{"/system/roles/:id/delete", "POST", RoleRemove, "删除角色"},
-		// 85-01 重建：批量删除实路为 POST /batch（role_router.go:33），旧登记
-		// /system/roles/batch-delete 已漂移；/:id/menus 与 /export 路由已不存在，
-		// 对应漂移登记随之删除（statistics/:id/status 待 85-02 拆分同批补齐）。
-		{"/system/roles/batch", "POST", RoleRemove, "批量删除角色"},
 		{"/system/roles/:id/status", "POST", RoleEdit, "更新角色状态"},
 
-		// 菜单管理
+		// 菜单管理（85-02 拆分同批补齐 batch-delete 与 :id/status；
+		// batch-delete 为 2 段具体路径，登记在 :id 之前防参数段遮蔽）
+		{"/system/menus/batch-delete", "POST", MenuRemove, "批量删除菜单"},
 		{"/system/menus/list", "POST", MenuList, "查询菜单列表"},
 		{"/system/menus/:id", "POST", MenuView, "查看菜单详情"},
 		{"/system/menus", "POST", MenuAdd, "新增菜单"},
 		{"/system/menus/:id/update", "POST", MenuEdit, "编辑菜单"},
+		{"/system/menus/:id/status", "POST", MenuEdit, "更新菜单状态"},
 		{"/system/menus/:id/delete", "POST", MenuRemove, "删除菜单"},
 
 		// 部门管理（85-01 重建：组前缀实为 /system/departments，router.go:260，
-		// 旧登记的 depts 旧前缀漂移已修正；批量删除实路 POST /system/departments/batch
-		// （department_router.go:53）。:id/status 等待 85-02 拆分同批补齐。）
+		// 旧登记的 depts 旧前缀漂移已修正；85-02 拆分同批补齐 :id/status 与
+		// Excel import/export（department_router.go SetupExcelRouter）。
+		// import/export/batch 为 2 段具体路径，登记在 :id 之前防参数段遮蔽。）
+		{"/system/departments/batch", "POST", DeptRemove, "批量删除部门"},
+		{"/system/departments/import", "POST", DeptImport, "导入部门"},
+		{"/system/departments/export", "POST", DeptExport, "导出部门"},
 		{"/system/departments/list", "POST", DeptList, "查询部门列表"},
 		{"/system/departments/:id", "POST", DeptView, "查看部门详情"},
 		{"/system/departments", "POST", DeptAdd, "新增部门"},
 		{"/system/departments/:id/update", "POST", DeptEdit, "编辑部门"},
+		{"/system/departments/:id/status", "POST", DeptEdit, "更新部门状态"},
 		{"/system/departments/:id/delete", "POST", DeptRemove, "删除部门"},
-		{"/system/departments/batch", "POST", DeptRemove, "批量删除部门"},
 
-		// 岗位管理
+		// 岗位管理（85-02：batch-delete 为 2 段具体路径，登记在 :id 之前防参数段遮蔽）
+		{"/system/posts/batch-delete", "POST", PostRemove, "批量删除岗位"}, // 85-01 补登记（post_router.go:35）
 		{"/system/posts/list", "POST", PostList, "查询岗位列表"},
 		{"/system/posts/:id", "POST", PostView, "查看岗位详情"},
 		{"/system/posts", "POST", PostAdd, "新增岗位"},
 		{"/system/posts/:id/update", "POST", PostEdit, "编辑岗位"},
 		{"/system/posts/:id/delete", "POST", PostRemove, "删除岗位"},
-		{"/system/posts/batch-delete", "POST", PostRemove, "批量删除岗位"}, // 85-01 补登记（post_router.go:35）
 
 		// 工位管理
 		{"/system/workstations/list", "POST", WorkstationList, "查询工位列表"},

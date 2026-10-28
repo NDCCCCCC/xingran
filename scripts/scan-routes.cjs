@@ -330,7 +330,8 @@ function scanRoutes() {
     // 3) 处理 setup 调用点：解析实参挂载并递归
     for (const call of calls) {
       // 形态 A：struct literal  SetupX(pkg.UserWriteRouteGroups{Field: strictUserRouteGroup(var, permission.X, ...), ...})
-      const litMatch = call.argsText.match(/UserWriteRouteGroups\s*\{([\s\S]*?)\}/);
+      // 85-02：泛化为 *WriteRouteGroups（Role/Menu/Post/Dept 各域写组结构体同名后缀）
+      const litMatch = call.argsText.match(/\w*WriteRouteGroups\s*\{([\s\S]*?)\}/);
       if (litMatch) {
         const fieldMounts2 = new Map();
         const fre = /(\w+)\s*:\s*(?:\w+\.)*strict\w*Group\(\s*([A-Za-z_]\w*)\s*,\s*permission\.([A-Za-z_]\w*)/g;
@@ -360,7 +361,9 @@ function scanRoutes() {
         continue;
       }
       // 形态 C：实参 = 标识符（取第一个标识符实参）
-      const argVar = call.argsText.match(/^\s*([A-Za-z_]\w*)\s*[,)]/);
+      // 85-02：支持「写组字段直传」形态 SetupX(groups.Import, ...)（如 departments
+      // 域 Excel import/export，字段经 resolveVar 的 <param>.<Field> 分支解析）
+      const argVar = call.argsText.match(/^\s*((?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*)\s*[,)]/);
       if (argVar) {
         const base = localResolve(argVar[1]);
         instantiate(call.name, { prefix: base.prefix, codes: [...base.codes], kinds: [...base.kinds] }, new Map(), depth + 1);
