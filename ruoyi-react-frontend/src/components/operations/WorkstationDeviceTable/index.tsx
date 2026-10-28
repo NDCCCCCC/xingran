@@ -19,6 +19,7 @@ import {
   Collapse,
   Tooltip,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
   EditOutlined,
@@ -28,7 +29,11 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import type { WorkstationDevice, DeviceFormData, Asset } from "@/types";
-import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
+import {
+  workstationDeviceApi,
+  assetApi,
+  type PhysicalDevicesResult,
+} from "@/lib/opsApi";
 import { HealthBadge } from "@/components/reconciliation";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 // Phase 71 (W3)：裸 Input/Input.TextArea → AppInput/AppTextArea（本文件无 Select）。
@@ -43,6 +48,112 @@ export interface WorkstationDeviceTableProps {
   onBadgeClick?: (assetId: string, conflictType: string) => void;
 }
 
+/**
+ * 物理链路设备面板（Phase 80 / DIAG-01）
+ *
+ * 渲染口径（**Table + Alert 双区，不渲染 Empty**）：
+ *   - 有设备 → 渲染 Table；若同时存在 emptyReason（如 no_user_bound），
+ *     在表格上方追加 warning Alert——「有数据但用户维度呈现仍受限」必须可见，
+ *     否则用户看到设备却不知为何与预期不符。
+ *   - 0 台 → 渲染 info Alert，文案取后端 emptyMessage（60-100 字，
+ *     用 <Empty> 排版拥挤；本页已有 Alert 先例）。
+ *   - warnings 任何组合下逐条可见。
+ *   - diagnosis 逐段计数默认不展示，折叠进 Tooltip（排查「有 1 台但少了几台」）。
+ *
+ * 空因分级（生产实测 75.3% 工位属 no_user_bound，属常态而非异常）：
+ *   no_user_bound → info（中性说明，不是错误）
+ *   其余空因      → warning（需人工处理）
+ */
+const PhysicalDevicesPanel: React.FC<{
+  devices: WorkstationDevice[];
+  diagnosis: PhysicalDevicesResult | null;
+  columns: ColumnsType<WorkstationDevice>;
+}> = ({ devices, diagnosis, columns }) => {
+  const emptyReason = diagnosis?.emptyReason ?? "";
+  const emptyMessage = diagnosis?.emptyMessage ?? "";
+  const warnings = diagnosis?.warnings ?? [];
+  const hasDevices = devices.length > 0;
+
+  // 空因分级：no_user_bound 是常态（工位未绑定使用人），用 info；其余用 warning
+  const alertType = emptyReason === "no_user_bound" ? "info" : "warning";
+  const alertTitle =
+    emptyReason === "no_user_bound"
+      ? "该工位未绑定使用人"
+      : emptyReason
+        ? "物理链路信息缺失"
+        : "";
+
+  const diagnosisTip = diagnosis?.diagnosis
+    ? [
+        `工位存在: ${diagnosis.diagnosis.workstationExists ? "是" : "否"}`,
+        `已绑用户: ${diagnosis.diagnosis.userBound ? "是" : "否"}`,
+        `信息点: ${diagnosis.diagnosis.infoPointActive}/${diagnosis.diagnosis.infoPointTotal} 可用`,
+        `已绑端口: ${diagnosis.diagnosis.infoPointWithPort}`,
+        `端口可解析: ${diagnosis.diagnosis.portResolved}`,
+        `设备可解析: ${diagnosis.diagnosis.deviceResolved}`,
+        `MAC 命中: ${diagnosis.diagnosis.macMatched}`,
+        `资产命中: ${diagnosis.diagnosis.assetMatched}`,
+        `域控命中: ${diagnosis.diagnosis.adMatched}`,
+      ].join(" · ")
+    : "";
+
+  return (
+    <div>
+      {/* 空因/告警区：有设备时也要展示（根因可见），0 台时替代空白 */}
+      {(emptyReason || warnings.length > 0) && (
+        <Alert
+          type={alertType}
+          showIcon
+          message={alertTitle}
+          description={
+            <div style={{ fontSize: 11 }}>
+              {emptyMessage && <div style={{ marginBottom: warnings.length > 0 ? 4 : 0 }}>{emptyMessage}</div>}
+              {warnings.length > 0 && (
+                <ul style={{ margin: 0, paddingLeft: 16 }}>
+                  {warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          }
+          style={{ marginBottom: 4 }}
+          action={
+            diagnosisTip ? (
+              <Tooltip title={diagnosisTip}>
+                <Button type="link" size="small" style={{ fontSize: 11, height: "auto" }}>
+                  诊断详情
+                </Button>
+              </Tooltip>
+            ) : undefined
+          }
+        />
+      )}
+
+      {hasDevices ? (
+        <Table
+          columns={columns}
+          dataSource={devices}
+          rowKey="id"
+          size="small"
+          pagination={false}
+          showHeader={false}
+          bordered={false}
+          style={{ fontSize: 11 }}
+        />
+      ) : (
+        !emptyReason &&
+        !warnings.length && (
+          <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "4px 0" }}>
+            该工位暂无通过 MAC→port→infoPoint 反推到的设备。请确认工位下是否已配置
+            ops_info_points 关联到网络设备端口。
+          </div>
+        )
+      )}
+    </div>
+  );
+};
+
 export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   workstationId,
   onDeviceChange,
@@ -56,6 +167,12 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   const [assetDevices, setAssetDevices] = useState<WorkstationDevice[]>([]);
   // Phase 45 R5: 物理链路设备(MAC→port→infoPoint→workstation 反推,user-anchored)
   const [physicalDevices, setPhysicalDevices] = useState<WorkstationDevice[]>([]);
+  // Phase 80 / DIAG-01: 物理链路空因诊断（emptyReason/emptyMessage/warnings/diagnosis）
+  // 空因口径：「未绑定用户」压过「有数据」——未绑 user_id 时即使链路能召回设备，
+  // 该面板按用户维度呈现仍无从归属，故 emptyReason=no_user_bound 属正常业务态。
+  const [physicalDiagnosis, setPhysicalDiagnosis] = useState<PhysicalDevicesResult | null>(
+    null,
+  );
 
   // 折叠面板展开状态
   const [adExpanded, setADExpanded] = useState(false);
@@ -82,7 +199,8 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         workstationDeviceApi.getManual(workstationId),
         workstationDeviceApi.getAD(workstationId).catch(() => ({ data: [] })),
         workstationDeviceApi.getAsset(workstationId).catch(() => ({ data: [] })),
-        workstationDeviceApi.getPhysical(workstationId).catch(() => ({ data: [] })),
+        // Phase 80 / DIAG-01：物理链路改走诊断端点，取回空因诊断信息
+        workstationDeviceApi.getPhysicalWithDiagnosis(workstationId),
       ]);
 
       // 处理手动设备（持久化）
@@ -106,11 +224,13 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         setAssetDevices([]);
       }
 
-      // Phase 45 R5: 处理物理链路设备（实时查询，失败时返回空数组）
+      // Phase 80 / DIAG-01: 处理物理链路设备（诊断端点；失败时清空设备与诊断）
       if (physicalResult.status === "fulfilled" && physicalResult.value.data) {
-        setPhysicalDevices(physicalResult.value.data);
+        setPhysicalDevices(physicalResult.value.data.devices ?? []);
+        setPhysicalDiagnosis(physicalResult.value.data);
       } else {
         setPhysicalDevices([]);
+        setPhysicalDiagnosis(null);
       }
 
       // 任一关键查询失败时给出提示
@@ -125,7 +245,10 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         console.warn("[WorkstationDeviceTable] 加载资产设备失败:", assetResult.reason);
       }
       if (physicalResult.status === "rejected") {
+        // Phase 80 / DIAG-01: 原实现只 console.warn → 用户看到误导性的「0 台」空态，
+        // 改为显式提示（静默失败是排障黑洞）。
         console.warn("[WorkstationDeviceTable] 加载物理链路设备失败:", physicalResult.reason);
+        message.warning("物理链路设备查询失败，请稍后重试");
       }
     } catch (error) {
       // 记录错误便于排查（之前的实现吞掉了真实错误，导致"无声失败"）
@@ -135,6 +258,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       setADDevices([]);
       setAssetDevices([]);
       setPhysicalDevices([]);
+      setPhysicalDiagnosis(null);
     } finally {
       setLoading(false);
     }
@@ -589,24 +713,13 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           {
             key: "physical",
             label: <span style={{ fontSize: 12 }}>物理链路设备（{physicalDevices.length}台）</span>,
-            children:
-              physicalDevices.length > 0 ? (
-                <Table
-                  columns={createColumns(false, true)}
-                  dataSource={physicalDevices}
-                  rowKey="id"
-                  size="small"
-                  pagination={false}
-                  showHeader={false}
-                  bordered={false}
-                  style={{ fontSize: 11 }}
-                />
-              ) : (
-                <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "4px 0" }}>
-                  该工位暂无通过 MAC→port→infoPoint 反推到的设备。 请确认工位下是否已配置
-                  ops_info_points 关联到网络设备端口。
-                </div>
-              ),
+            children: (
+              <PhysicalDevicesPanel
+                devices={physicalDevices}
+                diagnosis={physicalDiagnosis}
+                columns={createColumns(false, true)}
+              />
+            ),
           },
         ]}
       />
