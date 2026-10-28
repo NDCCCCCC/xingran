@@ -175,3 +175,43 @@ r.POST("/:id/reset-password", handler.ResetPassword)
 - 影响面：几乎所有业务域（duty / knowledge / network / operations / asset / monitor / dashboard / ad-domain / system）
 - 改造前置：① 全量角色-菜单-权限数据核对（`sys_role_menu` × `sys_menu.perms`）② 逐模块的权限标识设计 ③ 超管 bypass 口径确认 ④ 灰度与回滚方案
 - **v1.24 建议只做 B（系统用户模块样板）**，把全站治理明确登记为独立债务，避免在双框 P0 修复的里程碑里夹带高风险大改造
+
+### 7.6 ⚠️ 后端修复的关键阻碍：`RequirePermissions` 的模块级降级会放行只读角色
+
+读 `pkg/middleware/permission.go` 的 `checkUserPermissionUncached`（:136-222），它有**三级判定**：
+
+| 级 | 逻辑 | 位置 |
+|---|---|---|
+| 1 | 精确匹配 `m.perms = ?` | :145-157 |
+| 2 | **F 型子权限 → 父菜单页面权**继承（用户有任一子按钮权限 → 获得父菜单访问权） | :159-198 |
+| 3 | **模块级降级**：`extractModulePermission(perm)` 取最后冒号前的部分再匹配 | :200-218 |
+
+**第 3 级对写操作是致命的**。以「只有 `system:user`（页面本体）+ `system:user:list`，但无 `system:user:edit`」的角色为例，检查 `system:user:edit` 时：
+
+```
+Step 1  精确匹配 m.perms = 'system:user:edit'          → count=0，失败
+Step 2  查 'system:user:edit' 菜单的 F 型子菜单          → 该菜单本身即 F 型，无子 F → childPerms 为空，跳过
+Step 3  extractModulePermission('system:user:edit')
+        = 'system:user'  → 查 m.perms = 'system:user'   → count=1（能进页面就有）→ 通过 ❌
+```
+
+**即：只要能进「系统用户」页面，`RequirePermissions(["system:user:edit"])` 就会放行写操作。** 直接给 `user_router.go` 套现成中间件**达不到修复目的**。
+
+**结论：必须新增一个「不做模块级降级」的严格检查中间件**（如 `RequireStrictPermissions`），写操作（create/update/delete/batch-delete/reset-password/status/import）改用它；读操作沿用现有 `RequirePermissions`（保留 list→父菜单的兼容语义）。
+
+**设计约束（写进执行计划）**：
+
+1. 新中间件必须**跳过 Step 3**（模块降级），但**保留 Step 1**（精确匹配）与**跳过 Step 2**（F 型子权限继承对写操作同样会放行：`system:user:edit` 是 F 型，其「子 F」为空故本例安全，但其他模块需逐一确认）
+2. 超管 bypass 沿用 `isSuperAdmin`（`role_key = 'admin'`，:247-268）→ admin 不受影响
+3. 30s 短 TTL 缓存沿用现状（已接受的角色变更 30s 陈旧窗口，:30-32 注释）
+4. 新中间件需**单测覆盖**：超管放行 / 有精确权限放行 / 只有父菜单权限拒绝 / 只有子权限拒绝 / 无权限拒绝
+5. **数据前置核对**：上线前须查 `sys_role_menu` 中所有含 `system:user` 页面权限但缺对应 F 权限的角色（生产现为 admin + xtgl，两者 F 权限齐全，除 xtgl 缺 `system:user:export`）
+
+### 7.7 修复后的验收口径
+
+| 角色配置 | 期望 |
+|---|---|
+| admin（超管） | 全部按钮可见，全部接口 200 |
+| xtgl（有 edit/remove/resetPwd/add/import） | 同上；**导出按钮按现状**（xtgl 无 export 权限 → 需裁定：给 xtgl 补权限 or export 接口不加保护） |
+| 构造角色：仅 `system:user` + `system:user:list` | 编辑/重置密码/删除/批量删除按钮**不可见**；直调写接口返回 403 |
+| 构造角色：有 `system:user:edit` 无 remove | 编辑可见、删除不可见；delete 接口 403 |
