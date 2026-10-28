@@ -15,8 +15,8 @@ import { fileURLToPath } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const BUDGET = {
-  maxErrors: 17,
-  maxWarnings: 34, // 与 package.json lint --max-warnings 34 同口径（+1 warning 即门禁失败）
+  maxErrors: 0, // Phase 82（HYG-02）清零：17 → 0
+  maxWarnings: 0, // Phase 82（HYG-02/03）清零：34 → 0（与 package.json lint --max-warnings 0 同口径）
   zeroRules: ["@typescript-eslint/no-unused-vars", "no-console"],
   maxAny: 500,
 };
