@@ -25,7 +25,7 @@
 
 ### VIS — 视觉回归修复（P0，用户主诉）
 
-- [ ] **VIS-01**: 输入框「双重外框」消除——新增 wrapper 上下文复位规则（**方案 1，推荐写法**）：`.ant-input-affix-wrapper > input.ant-input, .ant-input-affix-wrapper > textarea.ant-input { border:none !important; border-radius:0 !important; background:transparent !important; color:inherit !important; font-size:inherit !important; padding:0 !important }`——组合子在 `:not()` 外（CSS3 合法），对 variant 类与暗色标签选择器免疫；**禁止**使用 `.ant-input:not(.ant-input-affix-wrapper > .ant-input)` 形态（CSS3 下整条规则被**静默丢弃**）
+- [ ] **VIS-01**: 输入框「双重外框」消除——新增 wrapper 上下文复位规则（**方案 1，推荐写法**）：`.ant-input-affix-wrapper > input.ant-input, .ant-input-affix-wrapper > textarea.ant-input { border:none !important; border-radius:0 !important; background:transparent !important; color:inherit !important; font-size:inherit !important; padding:0 !important }`——组合子在 `:not()` 外（CSS3 合法），对 variant 类与暗色标签选择器免疫；**禁止**使用 `.ant-input:not(.ant-input-affix-wrapper > .ant-input)` 形态（CSS3 下整条规则被**静默丢弃**）；**修法必须同步 4 个块**：`:871-905` 浅色主块、`:2252-2284` 暗色块（含全局 `input, textarea` **元素选择器**，特异性 0,1,1 会绕过类选择器收窄）、`:3717-3757` 暗色二块（可抄 `index.css:2056` 既有正确范式）；影响面精确 = **309 个输入框（235 AppInput + 74 AppTextArea，89 文件）全部双框**
 - [ ] **VIS-02**: 焦点环单圈化验证——焦点环画在 wrapper（antd `:focus-within`）；**复位规则里不写 box-shadow**（antd 自身的 `box-shadow:none!important` 在内层、特异性 0,4,1 已足够）；已知可接受的微小变化：焦点环**外扩 1px**；验收 = focus 特写截图确认单圈、无跳动；**不得删除** `index.css:892` / `:2275-2284` 的 focus 规则与 `:910` / `:916-923` 的 wrapper 边框/焦点环规则
 - [ ] **VIS-03**: 错误态边框色恢复——Form `status="error"` / `"warning"` 的边框色不再被项目 `border: ... !important` 简写压掉（F1；验收：`borderTopColor` = antd `colorError`，非 `--input-border`）；实现前先实测 antd 6 status class 落点（root 还是 wrapper，决定修复点）
 - [ ] **VIS-04**: CSS 一致性审计登记册——全局 1346 处 `!important` / 219 行 antd 选择器 / 96 个分区 / 60 个暗色重复分区 / `--input-bg` 就地重定义 3 次的冲突面全量盘点并登记（26 条输入类 + 8 条非输入类 + 12 条 Select 死规则——antd 6 已无 `.ant-select-selector`），产出可追溯清单 + 后续排期建议（**登记为主，不在本里程碑全量修**）
@@ -34,8 +34,8 @@
 ### PERM — 操作级权限（#16 前后端双端闭环）
 
 > **定责结论**：#16 是**两个独立缺陷叠加**——
-> ① 前端：52 个含「操作」列的文件中 **45 个完全不引用 permissions** → 编辑/删除按钮**恒显示**（根本不判定，而非加载中默认显示）；结构性成因 = `ActionButton` 契约（`ActionButtons.tsx:15-24`）**没有 permission 字段**
-> ② 后端：`internal/api/router.go:157-162` 给 `/system/users` 挂 `[UserList, UserAdd, UserEdit, UserView]` 的 **ANY-of** 组 → 只持 `system:user:list` 的用户调 `delete` **返回 200 并真的删除**（安全缺陷，非 UX 缺陷）；叠加 `permission.go:200-218` 的**模块级降级**（`system:user:remove` → 降级匹配 `system:user`）→ 只读角色仍放行；`permission.go:305-315` 的 doc 注释「写操作保持严格权限」**与实现矛盾**
+> ① 前端：52 个含「操作」列的文件中 **45 个完全不引用 permissions** → 编辑/删除按钮**恒显示**（根本不判定，而非加载中默认显示）；结构性成因 = `ActionButton` 契约（`ActionButtons.tsx:15-24`）**没有 permission 字段**；全仓仅 12 个文件用 `useMenuStore.permissions`（**逐页 opt-in**）；用户假设的 `canWrite` 派生层**不存在**（`menuStore.ts:21` 只有 `permissions: string[]`，`canWrite` 是 `network/ports/index.tsx:132` 的局部 const）
+> ② 后端：**不止 system 用户组**——全仓 **39 处路由组全部 ANY-of**、单权限严格语义 `Permission()` **用了 0 次**：`internal/api/router.go:157-162`（system users）+ `:541-546`（ops building）等；只持 `list` 的用户调 `delete` **返回 200 并真的删除**（安全缺陷，非 UX 缺陷）；叠加 `permission.go:200-218` 的**模块级降级**与 `:159-196` 的 F→C 继承放大 → 只读角色仍放行；`RequirePermissionsWithQuery` doc 注释「写操作保持严格权限」**与实现矛盾**；前端权限端点实为 `POST /system/my-menus/permissions`（`menuApi.ts:23-26`，无权限门）——v1.23 UAT 引用的 `/system/menus/permissions` 是管理员端点，**引用有误**
 
 - [ ] **PERM-01**: `ActionButton` 契约与 `createDeleteAction` options 新增**可选** `permission?: string` 字段（加法扩字段，存量调用点不传即保持原行为，不破坏 v1.22 冻结契约）
 - [ ] **PERM-02**: 新增**单一判定 helper**（建议 `src/components/shared/useActionPermission.ts`），**三态门控**：权限未就绪（显式 loading/error 位）→ 渲染但 disabled + title/aria 提示；就绪且含权限码 → 可用；就绪且不含 → **不渲染**。**禁用** `permissions.length === 0` 判「未就绪」（空权限集与未加载在数据上不可区分——接口失败时管理员也看不到按钮且无提示）
@@ -46,17 +46,22 @@
 
 ### DIAG — 工位物理链路空因展示（3f130）
 
-- [ ] **DIAG-01**: 工位管理页接入已交付的诊断端点（前端目前 **0 处调用**，仍用旧 `/physical` + 硬编码静态文案 `WorkstationDeviceTable/index.tsx:604-609`）；物理链路为空时展示**分级**原因——`no_user_bound` 中性 info（**75.3% 工位属此常态**，1238/1643）、数据缺失 warning、真实异常 error；**前置**：先对齐后端契约——`workstation_device_service.go:820` 与 `:871-874` 注释**自相矛盾**，实际代码（`:822`）无条件先判 `!UserBound` → 有数据也返回 `no_user_bound`；需补「有数据 + 空因」不变量测试；前端按 `devices.length` 分流「空态」与「有数据但带告警」两套 UI；只读诊断，**不写生产数据**
+- [ ] **DIAG-01**: 工位管理页接入已交付的诊断端点（前端目前 **0 处调用**，`opsApi.ts:617-620` 仍调裸 `/physical` + 硬编码静态文案 `WorkstationDeviceTable/index.tsx:604-609` 只覆盖 `info_point_misbound` 一种子情形、对其余空因是**误导性文案**）；实现口径：`getPhysical` 内部改调诊断端点但**对外仍返回数组**（调用方零改动）+ 另加 `getPhysicalWithDiagnosis`；**「有数据但 emptyReason=no_user_bound」是正常业务态**（`workstation_device_service.go:800-827` 明确「未绑用户压过有数据」，测试 :388 断言锁定；75.3% 工位属此常态）→ 渲染 **Table + warning Alert 双区**（不渲染 Empty、不用 Alert 替代表格）；0 台时 `<Alert type="info" showIcon description={emptyMessage}/>`（后端文案 60-100 字，Empty 排版拥挤）；`warnings` 任何组合下逐条可见；`diagnosis` 计数默认不展示、折叠进 Tooltip；**前置**：修正后端自相矛盾注释（`workstation_physical_diagnosis.go:63-65` 写「有数据时 EmptyReason 为空」与实现/测试相反，不修前端会照注释写错）+ 补「有数据 + 空因」不变量测试；顺带补 `WorkstationDeviceTable/index.tsx:127-129` 查询失败只 console.warn 的静默失败（加 message.warning）；只读诊断，**不写生产数据**
 
 ### NAV — F5 刷新落地页
 
-- [ ] **NAV-01**: F5 刷新保持当前路由——根因：深层 URL 落进 `DynamicRoutes.tsx:315` 的 `path="*"` 兜底（`routeElements` 首帧为空，:228-230）→ 跳 `/dashboard` → **`:243-247` 的 effect 再把 `/dashboard` 反写回 LAST_PATH（自毁循环）**→ `useTabSync.ts:86-88` 又把 activeTab 抢成 dashboard（二阶损伤）。修法（三件套）：① 菜单/路由未就绪时不渲染 `*` 兜底（或渲染 InitializingFallback）② 兜底跳转**不写回 LAST_PATH** ③ LAST_PATH 加版本号校验。**不改** `path="*"` 的 fallback 目标本体；不得影响未登录跳登录、无权限跳 403、deep link 直达
+- [ ] **NAV-01**: F5 刷新保持当前路由——根因时序链（FEATURES/ARCHITECTURE 双研究一致）：`DynamicRoutes.tsx:173` 同步读 sessionStorage 缓存 → `:179-186` **useEffect 里**水合 store（首帧 `allMenus` 仍为空）→ `:227-240` `routeElements=[]` → 首帧空 `<Routes>` 无路由可匹配 → `:315` 的 `path="*"` catch-all 抢先命中 → `<Navigate to="/dashboard" replace/>`（passive effect 子先父后，早于水合）→ `:243-247` `saveLastPath` 把 `/dashboard` **反写回 LAST_PATH（自毁）**→ `useTabSync.ts:86-88` 把 activeTab 抢成 dashboard。修法：**方案 B（推荐）**——`<Route path="*" element={menusReady ? <Navigate to="/dashboard"/> : <InitializingFallback/>} />`（`menusReady = allMenus.length > 0`，把「菜单未加载」与「用户无权限」区分）+ 配套小修：`saveLastPath` 跳过自动兜底跳转产生的 pathname；**单独 useLayoutEffect 水合无效**（`<Navigate>` 已挂载）；回归面：`:285` 根路径→lastPath、`:263-270` 未登录跳 /login、无权限路径仍跳 /dashboard、**与 v1.23 FAIL-1 分页持久化恢复强耦合（75-UAT.md:76）须一起验收**
 
 ### HYG — 规范与存量技术债
 
 - [ ] **HYG-01**: `ColumnConfigModal.tsx:136` 的 `Modal.confirm` **属合法调用**（`src/components/shared/` 命中 `eslint.config.js:271-283` 目录级封装层豁免 → 该处是豁免盲区「无人区」，不在 `exemption-reasons.json`）→ 补行内理由注释文档化；**不要**把该目录摘出豁免（会爆几十条 error）；若登记 json 必须双向同步 eslint 锚点
-- [ ] **HYG-02**: lint 存量 **17 errors + exhaustive-deps 12 处**清零——17 errors 构成：12 exhaustive-deps + `set-state-in-effect`（DashboardView.tsx:161）+ `immutability`（useRealtimeUpdates.ts:119）+ `globals`（ReconciliationTab.test.tsx:51）+ `preserve-manual-memoization`（useRPAProgress.ts:78）+ `local/no-large-dropdown-list`（**契约组件 AppSelect.tsx:16 自己违规**）；**同文件约束**：修 `useRealtimeUpdates.ts:130` 的 immutability 可能触发/加剧 compiler 错误 → 同文件一起改一起验；`useCaptchaModals.tsx` 5 处 `message` 依赖逐处判语义（机械加依赖会引出新 error）
-- [ ] **HYG-03**: `react-refresh` **33 处**清零（函数/hook 22 + 复合字面量常量 11；与 barrel index.ts 无关，全是 .tsx）——类 A 伪 constants 13 处/3 文件（workstations/dept/dict）+ 类 B 组件文件额外导出 20 处/14 文件；`export { X }` → `export type { X }` 既是清 warning 的必要手段也是 `verbatimModuleSyntax:true` 的强制写法、运行时无差别（但须逐个确认纯类型；测试文件不在 type-check 范围须额外跑 vitest）；`allowConstantExport:true` **不豁免**数组/对象字面量；**契约层豁免名单**（shared/ui 的 PageTable/FormModal/ActionButtons/statusHelpers/ModernTag）不宜拆散 → 划豁免登记；`export * from` 会被直接报 exportAll 需改具名；**eslint.config.js 锚点已漂移**（现 457 行，P66 :347、P65 :407）→ 拆分必须同批跑 `gen-p65-exemptions.mjs` + 同步 hex-exemptions；`.tsx → .ts` 降级前 grep 显式扩展名引用
+- [ ] **HYG-02**: lint 存量 **17 errors + 34 warnings** 全清零（目标 errors=0 / warnings=0；实测 `npx eslint .` = 51 problems）——17 errors 构成：12 exhaustive-deps + `set-state-in-effect`（DashboardView.tsx:161）+ `immutability`（useRealtimeUpdates.ts:119）+ `globals`（ReconciliationTab.test.tsx:51）+ `preserve-manual-memoization`（useRPAProgress.ts:78）+ `local/no-large-dropdown-list`（**契约组件 AppSelect.tsx:16 自己违规**）；⚠️ **lint 预算双写死必须同步改 0**：`package.json` 的 `--max-warnings 34` + `assert-lint-budget.mjs:20-21` 的 17/34，否则门禁形同虚设；⚠️ **AppSelect 契约与 `local/no-large-dropdown-list` 正面冲突**（规则要求必带 onSearch 服务端搜索，契约是客户端过滤 `showSearch ?? count>=8`）→ **需决策**：推荐规则加 `excludedFiles: ["src/components/ui/**"]`，否则 errors 降不到 0；**同文件约束**：修 `useRealtimeUpdates.ts:130` 的 immutability 可能触发/加剧 compiler 错误 → 同文件一起改一起验；`useCaptchaModals.tsx` 5 处 `message` 依赖逐处判语义（机械加依赖会引出新 error）；**门禁有效性回归**：故意注入 1 条 error 时 `npm run lint:ci` 必须 exit 1
+- [ ] **HYG-03**: `react-refresh` **33 处**清零（与 barrel index.ts 无关，全是 .tsx）——**三类分流**（P2 修法经同版本插件沙箱实测 9 样例验证）：
+  - **P1 真问题 18 处/14 文件**（组件+非组件同文件）→ 拆分：工具/常量搬 `utils/` `constants/` `hooks/`；含 `ActionButtons.tsx:114/:167`、`FormModal.tsx:61`、`statusHelpers.tsx:63/:68`（冻结契约，登记优先）、`PortWriteModal.tsx:78`（v1.19 冻结面，**只登记不拆**）、`DynamicRoutes.tsx:85/:95/:108`（**与 NAV-01 同文件建议合并改动**）、`ColorSwitcher`/`LayoutProvider`/`ThemeProvider`/`ReconciliationTab` 等
+  - **P2 规则误判 13 处/3 文件**（workstations/dept/dict 伪 constants.tsx，零组件导出；触发点 = `export const X = Y`（Identifier 初始化 + 大写名）被判为组件导出而连坐）→ **必须改代码、绝不用豁免**；实测 0 警告路径 = 改**字面量拷贝**（`export const X = [...Y]`）或改小写名或迁 `.ts`（规则只扫 .jsx/.tsx）；⚠️ **`export { Y as X }` 重导出无效（仍 3 警告）**——网上常见建议在此是错的；字面量拷贝前确认共享常量无就地 mutate（已 grep 未发现，但失去引用相等性）
+  - **P3 `lazy()` 盲区 2 处**（BuildingModel3D:316 / FloorPlan3D:693）→ 文件级 disable + 登记（合理例外）
+  - 通用约束：`export { X }` → `export type { X }` 是 `verbatimModuleSyntax:true` 强制写法、运行时无差别（逐个确认纯类型；测试文件不在 type-check 范围须额外跑 vitest）；`allowConstantExport:true` **不豁免**数组/对象字面量；**契约层豁免名单**（shared/ui）划登记；`export * from` 直接报 exportAll 需改具名；**eslint.config.js 锚点已漂移**（现 457 行，P66 :347、P65 :407）→ 拆分必须同批跑 `gen-p65-exemptions.mjs` + 同步 hex-exemptions；`.tsx → .ts` 降级前 grep 显式扩展名引用
+- [ ] **HYG-05**: **豁免理由表失同步修复**——`node scripts/check-exemption-reasons.mjs` 当前 **exit 1 / 123 项失配**（理由清单 159 条 vs 实际豁免 P65 1 + P66 37 = 38）→ 68.1 §8 #12/#18「豁免清单 100% 带理由」口径已不成立（v1.23 UAT 只验了 gen 脚本 diff，**没跑这个校验脚本**，且该脚本未接入任何门禁）→ 修复清单失配 + 把校验接入 `lint:ci` 防再漂移
 - [ ] **HYG-04**: devices 页拆分（实测 **714 行**）——按序：`buildRowActions`(:451-513) 提取 + 同时加权限 gate（一次改动同解 #16 前端侧与拆分）→ 列定义工厂 `getDeviceTableColumns`(:81-169 纯函数零风险) → 采集端口(:391-418) → 快速创建(:285-341，新建 `hooks/useDeviceQuickCreate.ts`，**不塞进已 404 行的 DeviceModals**) → searchFields(:539-563，依赖 useDict 动态**不混进 constants.ts**)；`deptFilters`(:277) 与 `columns`(:524) 的 useMemo **留主组件**（引用不稳会重犯 v1.23 FAIL-1 页码回跳）；**禁改** `port-write/**` 与 `ActionButtons.tsx` 对外形状（v1.19 冻结交互）；收敛目标 ~250 行；**已知债务**：`room-devices/index.tsx` 815 行比 devices 更长，本里程碑不扩面、登记即可
 
 ## 关键决策 (v1.24 init + 研究期, locked)
@@ -124,11 +129,12 @@
 | HYG-01 | 82 | Pending |
 | HYG-02 | 82 | Pending |
 | HYG-03 | 82 | Pending |
+| HYG-05 | 82 | Pending |
 | HYG-04 | 83 | Pending |
 
 **Coverage:**
 - v1.24 requirements: 17 total
-- Mapped to phases: 17（VIS×5 → 76/77 · PERM×6 → 78/79 · DIAG → 80 · NAV → 81 · HYG×4 → 82/83）
+- Mapped to phases: 17（VIS×5 → 76/77 · PERM×6 → 78/79 · DIAG → 80 · NAV → 81 · HYG×5 → 82/83）
 - Unmapped: 0 ✓
 
 ---
