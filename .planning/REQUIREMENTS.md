@@ -118,12 +118,36 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| RBAC-01 | 85 | Pending |
+| RBAC-02 | 86 | Pending |
+| RBAC-03 | 85 | Pending |
+| RBAC-04 | 85 | Pending |
+| RBAC-05 | 87 | Pending |
+| RBAC-06 | 87 | Pending |
+| STYLE-01 | 89 | Pending |
+| STYLE-02 | 92 | Pending |
+| STYLE-03 | 90 | Pending |
+| STYLE-04 | 89 | Pending |
+| STYLE-05 | 93 | Pending |
+| PMODEL-01 | 84 | Pending |
+| PMODEL-02 | 84 | Pending |
+| PMODEL-03 | 84 | Pending |
+| PMODEL-04 | 84 | Pending |
+| VISFIX-01 | 89 | Pending |
+| VISFIX-02 | 89 | Pending |
+| VISFIX-03 | 88 | Pending |
+| VISFIX-04 | 88 | Pending |
+| VISFIX-05 | 90 | Pending |
+| VISFIX-06 | 88 | Pending |
+| SPLIT-01 | 93 | Pending |
 
 **Coverage:**
-- v1.25 requirements: 26 total（RBAC×6 · STYLE×5 · PMODEL×4 · VISFIX×6 · SPLIT×1）
-- Mapped to phases: 待 roadmap 填充
-- Unmapped: 待 roadmap 填充
+- v1.25 requirements: **22 total**（RBAC×6 · STYLE×5 · PMODEL×4 · VISFIX×6 · SPLIT×1 = 6+5+4+6+1 = 22）
+  - ⚠️ **计数更正（2026-10-28 roadmap 阶段）**：本文档原 Coverage 段写「26 total」、`.planning/PROJECT.md` 写「共 25 条」，二者均与**本文档实际的 22 条需求条目**（`- [ ] **<REQ-ID>**` 逐条计数 = 22）不自洽 —— 分解 6+5+4+6+1 的算术结果是 22，**磁盘上不存在第 23-26 条需求条目**（已全量 grep 复核）。故以 **22** 为准，26 / 25 判定为需求定稿阶段的计数笔误；如后续确需补 4 条，须先在本文档正式立项再扩 Roadmap。
+- Mapped to phases: **22 / 22**（每条需求映射到**唯一** phase，无孤儿、无重复）
+- Unmapped: **0**
+- Phase 分布：84×4（PMODEL-01~04）· 85×3（RBAC-01/03/04）· 86×1（RBAC-02）· 87×2（RBAC-05/06）· 88×3（VISFIX-03/04/06）· 89×4（STYLE-01/04 + VISFIX-01/02）· 90×2（STYLE-03 + VISFIX-05）· 91×0（承接 STYLE-02 R8 与 VISFIX-04 剩余，主责分别登记在 92 / 88）· 92×1（STYLE-02）· 93×2（STYLE-05 + SPLIT-01）
 
 ---
 *Requirements defined: 2026-10-28*
-*Last updated: 2026-10-28 定稿（② 定向研究已回填：STACK.md + PITFALLS.md + SUMMARY.md；含**三条 v1.24 机制描述的源码实证更正**——`darkAlgorithm` 覆盖显式 token / antd 6 hash 特异性为 0 / `onSearch` 未弃用；含 STYLE-02 四批精确清单 + M1-M16 量化基线 + VISFIX-06 契约脚本自身修复）*
+*Last updated: 2026-10-28 roadmap 阶段回填（Traceability 表 **22/22** 映射完成，Status 全 Pending；对应 `.planning/ROADMAP.md` Phases 84-93）｜前序：2026-10-28 定稿（② 定向研究已回填：STACK.md + PITFALLS.md + SUMMARY.md；含**三条 v1.24 机制描述的源码实证更正**——`darkAlgorithm` 覆盖显式 token / antd 6 hash 特异性为 0 / `onSearch` 未弃用；含 STYLE-02 四批精确清单 + M1-M16 量化基线 + VISFIX-06 契约脚本自身修复）*

@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-10-28
-update_trigger: v1.24 milestone SHIPPED & ARCHIVED (视觉回归修复与遗留债务清偿, Phases 76-83, 18/18 REQ satisfied)
-previous_update: 2026-10-28 v1.24 roadmap CREATED
+update_trigger: v1.25 roadmap CREATED (全站权限治理与样式收敛, Phases 84-93, 22 REQ coverage)
+previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
 ---
 
 # Roadmap: RuoYi-Next 运维管理系统
@@ -33,8 +33,137 @@ previous_update: 2026-10-28 v1.24 roadmap CREATED
 - ✅ **v1.22 前端公用组件整治** — Phases 63-68.1 (shipped 2026-10-27)
 - ✅ **v1.23 前端契约全量收尾与遗留清偿** — Phases 69-75 (shipped 2026-10-28)
 - ✅ **v1.24 视觉回归修复与遗留债务清偿** — Phases 76-83 (shipped 2026-10-28, 18/18 REQ satisfied)
+- 🚧 **v1.25 全站权限治理与样式收敛** — Phases 84-93 (in progress, 22 REQ)
 
 ## Phases
+
+### 🚧 v1.25 全站权限治理与样式收敛 (Phases 84-93) — IN PROGRESS
+
+> 需求基线：`.planning/REQUIREMENTS.md`（**22 REQ**：RBAC×6 / STYLE×5 / PMODEL×4 / VISFIX×6 / SPLIT×1）｜研究：`.planning/research/{STACK,PITFALLS,SUMMARY}.md`｜事实基线：`.planning/milestones/v1.24-REQUIREMENTS.md`（v1.24 收档 Known Gaps 五项候选原文）
+> ⚠️ **需求计数更正（2026-10-28 roadmap 阶段）**：REQUIREMENTS.md 原 Coverage 段写「26 total」、PROJECT.md 写「共 25 条」，二者均与该文档**实际的 22 条需求条目**（6+5+4+6+1 = 22，已全量 grep 复核）不自洽 —— 磁盘上不存在第 23-26 条需求。故本路线图按 **22 条**映射（22/22 全覆盖，无孤儿无重复）。
+> **Core Value**：把 v1.24 只在 `/system/users` 单域完成的「操作级 RBAC 前后端双端闭环」推广到全站 76 页面 / 134 处后端路由挂载，并把样式层从手写 `!important` 规则收敛到 antd 6 官方 variant 机制 —— 让「谁能做什么」在前后端同一套语义下成立，让「页面长什么样」由 antd 6 的 theme token 单一决定。
+>
+> **执行波次（两条线并行，线内串行）**：
+> - 线 A · 权限：**84 → 85 → 86 → 87**（后端 → 后端严格化 → 前端铺开 → 授予闭环）
+> - 线 B · 样式：**88 → 89 → 90 → 91 → 92 → 93**（底座 → 变量层+色板 → Input 域 → 其它域 → 暗色合并 → 拆分+验收）
+> - 两线可全程并行（后端 Go vs 前端 CSS，文件面小重叠；仅 `room-devices` 页在 86/93 有交叠）
+>
+> **三处不可逆顺序约束（写死，不可交换）**：
+> 1. **Phase 89（F3 色板）必须先于 90 / 91 / 92** —— `AntdThemeBridge.tsx:83,86,122,130,164` 的显式 `cream.*` 是**模式无关**常量，`darkAlgorithm` 改不动 → 先删覆盖 = 暗色变白块
+> 2. **批次 C（拆 `border` 简写）必须先于批次 B（删 VIS-01 复位块）**，且二者**同 commit** —— `:875` 的 `border:…!important` 是 important 声明，**胜过一切非 important 规则且与特异性无关**；只要它还在，删 `:937-945` 复位块立即恢复 309 个输入框的双框
+> 3. **变量层（89 内先做）必须先于变体交还（90 / 91）** —— 否则暗色下 `var()` 引用未定义变量继续作废（暗色 placeholder 整条声明失效）
+>
+> **量化口径（M1-M16，每 phase 结束必须把快照落盘进 phase 报告）**：M1 全 `.css` `!important` 1435→≤480｜M2 `index.css` `!important` 1359→≤420｜M3 含 `.ant-` 顶层规则 748→≤420｜M4 暗色顶层规则 506(+8 拼写错)→≤150｜M5 暗色分区 64→≤12｜M6 重复暗色目标 class 80→0｜M7 `index.css` hex 311(去重 66)→≤60(去重 ≤20)｜M8 全 `.css` hex 465→≤120｜M9 `index.css` 行数 5632→≤3200｜M14 死文件 8 个/555 行→0｜M11 暗色 `--input-bg` `#fafaf9`→`#0f2e1b`｜M12 暗色 placeholder 变量非空｜M13 InputNumber 错误态边框 `rgb(219,215,206)`→`rgb(186,54,48)`｜M15 圆角 6px→8px｜M16 antd 弃用警告 2 类→0
+> 口径固定为 P-m7 决议：**M1 = `find src -name "*.css" -exec cat {} + | grep -o '!important' | wc -l`（全量出现次数）**，并**并列报告** M2（`index.css` 单文件数）。基线数字以 REQUIREMENTS 定稿口径为准，落地前以实跑复核为准。
+
+- [ ] **Phase 84: 权限模型三缺口** — `data_scope` 被列表查询真实消费 + `GetUserPermissions` 过滤 `menu.status` + Step 2「子菜单继承」语义命名固化 + 迁移记录表补齐 / GORM schema 漂移登记；后端为主、零 UI 依赖，可与全站并行。
+  - **Depends on**: —（零外部依赖；与样式线 88 无共享文件）
+  - **Requirements**: PMODEL-01, PMODEL-02, PMODEL-03, PMODEL-04
+  - **成功标准**:
+    1. `data_scope=3`（本部门）的用户查询用户列表，返回结果集全部落在本部门内（总数 ≤ 该部门实际人数），不再返回跨部门全量 —— v1.24 实测基线 `total=4231` 跨部门全量。
+    2. 已停用菜单（`sys_menu.status=1`）的权限码**不出现在** `GetUserPermissions` 返回的前端权限集中；菜单停用后其对应按钮不再渲染。
+    3. Step 2「子菜单继承」以**明确命名的函数 / 常量**固化（如 `resolveInheritedPerms`），并在代码注释与文档中写明真实语义是「**用户持有 F 型按钮 → 继承父页面权限**」（不是反向），杜绝复刻实现得出相反结论。
+    4. 生产库迁移版本可核对：存在迁移记录表且能列出全部已应用版本；GORM 模型与库表 schema 漂移项（`sys_role_menu` / `sys_user_role` 的 `id` / `created_at` 未映射、靠 DB default）被登记为**显式债务条目**。
+    5. `go build ./...` + 相关包 `go test` 全绿；新增至少 1 条 `data_scope` 消费用例 + 1 条 `menu.status` 过滤用例，且经红绿验证（回退实现即失败）。
+
+- [ ] **Phase 85: 后端动作级严格化** — `pkg/permission/config.go` 动作映射死表接线 + 133 处 ANY-of 逐动作拆分 + `system` 域其余 4 组（roles/menus/depts/posts）严格化。
+  - **Depends on**: 84（`data_scope` 消费改的是同一批 handler 查询，先做避免二次冲突）
+  - **Requirements**: RBAC-01, RBAC-03, RBAC-04
+  - **成功标准**:
+    1. 动作映射表**真实接线**：`GetRoutePermissions()` / `GetPermissionByPath()` 在权限判定链路中被调用（不再是零调用点的死表）；新增或改动的写路由若未登记到映射表，`scripts/check-permission-codes.mjs` 校验失败（exit ≠ 0）——映射表不得再次退化为死表。
+    2. 全站承载**写操作**的路由挂载点不再使用 ANY-of 组级语义，逐动作绑定单一权限点（`RequireStrictPermissions`）；只读路由组保持组级语义不变（不扩大回归面）。
+    3. `system` 域其余 4 组（roles / menus / depts / posts）写操作完成逐动作拆分，与 `/system/users` 已验证范式一致；不再存在「持任意一个系统权限即可写」的放行路径。
+    4. 只读角色在**任意业务模块**调写接口一律 HTTP 403 且**无数据变更**（写前写后行数 / 内容对照一致）；读接口仍 200。抽样 ≥ 8 个模块 × 每模块 ≥ 1 个写接口，8/8 = 403。
+    5. `go build ./...` + `go test ./pkg/... ./internal/api/...` 全绿；`scripts/check-permission-codes.mjs` exit 0。
+
+- [ ] **Phase 86: 前端操作入口三态门控铺开** — 76 个业务页面的行操作 / 批量操作 / 工具栏写入口按动作级权限码三态渲染。
+  - **Depends on**: 85（后端不放行时前端铺开无意义）+ 84
+  - **Requirements**: RBAC-02
+  - **UI hint**: yes
+  - **成功标准**:
+    1. `src/pages/**/index.tsx` 共 **76 个**业务页面全部接入 `useActionPermission` 三态门控：无权限 → **不渲染**；权限未就绪（loading / 接口失败）→ 渲染但 **disabled** + 可访问提示（`aria-disabled` / `title`）。
+    2. 接入覆盖率可量化：接入 `useMenuStore.permissions` / `useActionPermission` 的页面数 = **76 / 76**（v1.25 起点基线 = 14 / 76）。
+    3. 三态**可判真**（非探针式假绿）：组件测试断言「无权限 → 按钮不在 DOM」「未就绪 → 按钮在 DOM 且 disabled」「有权限 → 按钮可点击」三条路径全绿。
+    4. v1.22 冻结契约零破坏：`AppInput` / `AppSelect` / `AppTextArea` 默认值、`ConfirmDelete` 唯一入口、`handleApiError`、`statusHelpers`、`PageTable` / `FormModal` 契约测试全绿；`npm run lint` **0 problems**。
+    5. 权限码单一真相源不漂移：`scripts/check-permission-codes.mjs` exit 0（前端 `src/constants/permissionCodes.ts` ↔ 后端 `pkg/permission` ↔ 菜单 F 型种子三方零漂移）。
+
+- [ ] **Phase 87: 动作级权限授予闭环** — 动作级 F 型菜单播种 + 三层证据验收（仿 v1.24 Phase 78-79 范式）。
+  - **Depends on**: 85（权限码先存在）+ 86（前端入口按动作级码渲染）
+  - **Requirements**: RBAC-05, RBAC-06
+  - **成功标准**:
+    1. **可被真实授予**：管理员在角色页勾选动作权限 → 该角色用户在前端**看到**对应操作入口 → 后端**同步放行**；前端可见性与后端放行同源于一套权限码（任一侧改动另一侧同步）。
+    2. **三层证据**齐全：DB 层前后对照（授予前写接口放行 → 授予后写接口拒绝）+ HTTP 实测（受限角色写接口 403、读接口 200）+ 前端组件测试（入口出现 / 消失）。
+    3. **决定性对照**存在：临时追加一个写权限点 → 对应写接口从 403 转 200 且真实生效 → 排除「接口坏了 / 权限系统整体失效」的伪修复。
+    4. `scripts/check-permission-codes.mjs` 覆盖本轮**新铺开面**（新增写路由与新增动作码均被登记）并接入 CI 门禁（`lint:ci` 或等价脚本链 exit 0）。
+    5. 生产库**既有行零改动**：验收夹具在单事务内清理，清理后自检残留 = 0；受影响生产角色清单为空或逐条列明。
+
+- [ ] **Phase 88: 验证底座与零风险清理** — 修假红 fixture + 反转 C3b + 新增 C6-C15 静态断言 + 删死选择器 / 死文件 + antd 6 弃用清理；**本 phase 的唯一硬判据是「视觉 diff = 0」**。
+  - **Depends on**: —（样式线起点；与权限线 84-87 可并行）
+  - **Requirements**: VISFIX-03, VISFIX-04, VISFIX-06 ｜ 承接：STYLE-02 第 1 批（D1-D17）
+  - **UI hint**: yes
+  - **成功标准**:
+    1. **契约脚本自身修复（VISFIX-06）**：`scripts/css-contract-assertions.js:48` 的错误态 fixture 从 antd 6 **不存在**的 `ant-input-affix-wrapper-status-error` 改为真实 class `ant-input-status-error`，期望色改为品牌红 `rgb(186,54,48)`；浏览器粘贴运行 `passed === true` —— VIS-03 的动态断言**首次真正通过**（此前恒为 false，假红失守）。
+    2. **C3b 反转**：`scripts/css-contract-check.js` 的 C3b 改为**反向断言**「`.dept-tree-search .ant-input-affix-wrapper` 死规则**不得存在**」，C3c（`.user-form-input…`，**活规则**）保留为正向断言；`node scripts/css-contract-check.js` exit 0。
+    3. **新增静态断言** C6-C12 / C14 / C15 全部落地并通过：变量必须定义（C6）/ 暗色目标不重复（C7）/ 死文件检测（C8）/ 变量不重复赋值（C9）/ `module.css` 不含 `.ant-`（C10）/ `!important` 预算（C11）/ `data-color_mode` 拼写（C12）/ 弃用 prop 零命中（C14）/ `AntdThemeBridge` `useMemo` 依赖覆盖（C15）。C13（`.css` hex 全量检测）随 STYLE-04 门禁在 Phase 89 落地。
+    4. **STYLE-02 第 1 批 D1-D17 清零**：8 条死选择器规则 + 8 个从未 import 的死文件（555 行）+ 1 条死变量；删除前后取证 `document.querySelectorAll('.ant-select-selector').length === 0` 与 `.dept-tree-search .ant-input-affix-wrapper` 命中数 = 0；**21 形态 × 明暗矩阵视觉 diff = 0**（本 phase 唯一硬判据）。D1-D4 必须与 K8 / K9（活规则）成对处理，删前者不得伤后者。
+    5. **antd 6 弃用清理独立成批（VISFIX-04 段）**：`maskClosable` 46 处 → `mask={{ closable: false }}`、`Card bordered` ≈13 处 → `variant`、`size="middle"` 17 处 → `"medium"`、`bodyStyle` 4 处 → `styles.body`；`grep -rn 'maskClosable' src` = 0 命中；浏览器 console `Warning:` 条数 = 0（后续 phase 的「无新增 console error」判定基线因此干净）。**明确不迁 `onSearch`** —— antd 6.6.4 `deprecatedProps` 与类型定义双向确认其**未弃用**。
+
+- [ ] **Phase 89: 变量层与明暗色板重构** — F3 硬前置：`--input-bg` 串色修正 + 暗色未定义变量补齐 + 新增 `ruoyiBrand.dark` 常量组 + 去组件级写死 `colorBgContainer` + seed 层 `colorBgBase` 改按模式派生 + hex 门禁覆盖 `.css`。
+  - **Depends on**: 88（口径冻结与 C6-C15 断言是本 phase 的验收底座；死代码先行确保变量层的消费点可枚举）
+  - **Requirements**: STYLE-01, STYLE-04, VISFIX-01, VISFIX-02 ｜ 承接：STYLE-02 第 2 批（T1-T14 硬编码降级为 token 引用）
+  - **UI hint**: yes
+  - **成功标准**:
+    1. **VISFIX-01 达成**：暗色模式下 `getComputedStyle(document.documentElement).getPropertyValue('--input-bg')` 解析值 = **`#0f2e1b`**（现状 `#fafaf9`）；输入框底与页面底对比度 ≥ 3:1（WCAG UI 组件），不再是「浅底压深底」；`--input-bg-hover/-focus/-disabled` 不再形成「底浅态深」的半明半暗混合态。
+    2. **VISFIX-02 达成**：暗色下 `.ant-select` 的 `backgroundColor` **≠ `rgb(255,255,255)`**，且与同页其它 antd 容器底色**同源**（解析到同一 CSS 变量 / token）——同页不再并存两套边框体系。
+    3. **STYLE-01 两层同治落地**：新增暗色品牌中性色常量组 `ruoyiBrand.dark`（现不存在，需先做设计决策）；移除组件级写死的 `colorBgContainer`（`AntdThemeBridge.tsx:122 / 130 / 164`）；seed 层 `colorBgBase` 改为按模式派生；单测断言 dark 模式 `theme.token.colorBgContainer !== '#FFFFFF'` 且 `components.Select.colorBgContainer` 不再为 `#FFFFFF`。
+    4. **视觉 diff 受控**：除**已登记的 2 处有意变更**（暗色输入框底 / 暗色 Select 容器底）外，21 形态 × 明暗矩阵逐格 computed-style（`backgroundColor` / `borderColor` / `borderRadius` / `boxShadow`）差异 **= 0**；变量层与色板重构在 phase 内**分两步落地**（变量层先、色板后），避免「串色源被色板重构一起搬走、问题被掩盖」。
+    5. **STYLE-04 门禁生效**：`.css` hex 全量检测落地（C13 静态断言覆盖全量 `#rrggbb`，`exemption-reasons.json` 扩展 `layer: "CSS"` 豁免机制）；`scripts/check-hardcoded-colors.mjs` **exit 0** 且已接入 `lint:ci`；M7 / M8 快照较 Phase 88 基线**不增**（收敛期不得新增硬编码色）。
+
+- [ ] **Phase 90: Input 域交还 variant/token + 圆角统一** — **批次 C（拆 `border` 简写）与批次 B（删 VIS-01 复位块）同 commit**，VISFIX-05 与批次 C 同 commit，圆角 6px → 8px 走 computed-style 单值断言。
+  - **Depends on**: 89（F3 色板硬前置 + 变量层先于变体交还，两条均不可跳过）
+  - **Requirements**: STYLE-03, VISFIX-05 ｜ 承接：STYLE-02 第 4 批 R1-R5（含批次 B）
+  - **UI hint**: yes
+  - **成功标准**:
+    1. **批次 C 与批次 B 同 commit**：`index.css:871-880` 的 `border: … !important` **简写拆为 `border-width / border-style / border-color` 长属性**（R1），与 VIS-01 复位块（`:937-945`，K1）的删除 / 重写在**同一 commit** 落地 —— important 声明胜过一切非 important 规则且与特异性无关，顺序不可逆。
+    2. **VISFIX-05 达成**：InputNumber `status="error"` 的 `borderTopColor` = **`rgb(186,54,48)`**（现状 `rgb(219,215,206)`），与 Input / TextArea 错误态一致；成因确认为项目 `border` 简写压掉 antd 长属性 + 漏补 InputNumber status 规则（**不是** antd 缺陷）。
+    3. **STYLE-03 达成**：输入类组件圆角 computed-style `borderTopLeftRadius` = **8px**（现状 6px），含 wrapper 与分页器（`index.css:877 / 912 / 5563`）；wrapper = 8px / 内层 = 0px 且视觉连续；**肉眼不可作为判据**，必须 computed-style 单值断言。
+    4. **v1.24 契约零破坏**：双框元素数 = 0（`css-contract-assertions.js` 的 `doubleCount === 0`，明暗双测）；焦点环单圈（wrapper 有焦点环 / 内层 `boxShadow === 'none'`）；错误态边框色还原（C5a / C5c 断言 PASS）；`node scripts/css-contract-check.js` exit 0。
+    5. **量化**：M1 `!important` ≤ 1100、M2 `index.css` ≤ 1050、M3 含 `.ant-` 顶层规则 ≤ 690；M1-M16 快照逐 phase 落盘。
+
+- [ ] **Phase 91: Select / InputNumber / Form / Table / Modal 域交还** — 其余组件域的手写覆盖交还 antd token + antd 6 弃用清单剩余清零。
+  - **Depends on**: 90（Input 域先做，`useVariants` 解析链的实测结论可直接复用到 Select / InputNumber）
+  - **Requirements**: 承接 —— STYLE-02 第 4 批 R8（主责登记见 Phase 92）、VISFIX-04 剩余（Select 域六类弃用 prop，主责登记见 Phase 88）
+  - **UI hint**: yes
+  - **成功标准**:
+    1. **Select 域交还**：手写边框交还 antd CSS 变量机制（`--ant-select-border-color` 等）；`.ant-select-selector` 死选择器**零残留**（C7 / C12 断言 PASS）——antd 6.6.4 的 Select 根本不渲染该元素，继续按它写规则即完全不生效。
+    2. **InputNumber / Form / Table / Modal / Dropdown / Menu / Tabs / Tag / Alert / Pagination 域**手写覆盖交还对应 `components.*` token；`styles.module.css` 内 6 条 antd 全局选择器**迁出**（C10 断言 PASS，CSS Module 不会局部化 antd 全局类名）。
+    3. **VISFIX-04 剩余清零**：Select 域六类弃用 prop（`dropdownRender→popupRender` / `dropdownStyle→styles.popup.root` / `dropdownClassName|popupClassName→classNames.popup.root` / `onDropdownVisibleChange→onOpenChange` / `dropdownMatchSelectWidth→popupMatchSelectWidth` / `showArrow` / `destroyOnClose`）grep 零命中；**全站** antd 弃用警告（浏览器 console `Warning:`）= 0。
+    4. **量化**：M1 ≤ 900、M3 ≤ 560；M1-M16 快照逐 phase 落盘。
+    5. **无未登记视觉差异**：涉及组件的明暗双态逐格比对差异清单为空；变体**两态分别验收**（有 / 无 `bordered`、有 / 无 `borderless`），不得只测默认态。
+
+- [ ] **Phase 92: 暗色 mega-cluster 合并** — 431 条暗色手写规则整块交还 `darkAlgorithm` + 分色板 token；**STYLE-02 的终态验收在此收口**。
+  - **Depends on**: 91（前面各域交还 token 完成后，暗色手写副本才可安全删除 —— 否则暗色下组件瞬间回到 antd 默认色，全站破相）
+  - **Requirements**: STYLE-02（**主责**：四批清单全部处置 + M1-M16 终态达标）
+  - **UI hint**: yes
+  - **成功标准**:
+    1. **431 条规则整块清零**：R6（`index.css:2254-2742`，90 规则 / 138 `!important`）+ R7（`:2780-4517`，341 规则 / 503 `!important`）→ 删除为**块级操作**（按 cluster 边界整段删），不逐条手改（逐条手改必然误伤相邻有效规则）。
+    2. **等价性逐条确认**：被删的 431 条中每条都能指出 antd token 等价物，或被登记为**显式例外**（例外逐条给理由）；**零未确认项**。
+    3. **量化终态达标**：M1 1435 → ≤480｜M2 1359 → ≤420｜M3 748 → ≤420｜M4 506(+8 拼写错) → ≤150｜M5 暗色分区 64 → ≤12｜M6 重复暗色目标 class 80 → 0｜M9 `index.css` 行数 5632 → ≤3200｜M14 死文件 8 个 / 555 行 → 0。
+    4. **hex 治理终态（STYLE-04 承接项收口）**：M7 `index.css` hex 311 → ≤60（去重 ≤20）｜M8 全 `.css` hex 465 → ≤120；`scripts/check-hardcoded-colors.mjs` 保持 exit 0 且 `lint:ci` 绿灯。
+    5. **暗色无未登记差异**：暗色 21 形态 × 明暗矩阵 + 14 页巡检，差异清单逐条登记且**零未登记项**；`node scripts/css-contract-check.js` C1-C15 全 PASS 且 exit 0。
+
+- [ ] **Phase 93: room-devices 拆分 + 视觉回归验收** — 巨型文件拆分（零行为变化）+ 明暗双主题视觉回归终验。
+  - **Depends on**: 92（样式收敛稳定后截图基线才可用，否则截图对比不可判）
+  - **Requirements**: SPLIT-01, STYLE-05
+  - **UI hint**: yes
+  - **成功标准**:
+    1. **SPLIT-01 达成**：`room-devices/index.tsx` 主文件 **≤ 350 行**（v1.25 起点：Lead 实跑复核 **815 行**），每个新文件 ≤ 250 行；按列定义工厂 / 搜索区构造函数 / handlers+行操作 / 页面 JSX 外壳四段拆分，复用 v1.24 devices 页范式。
+    2. **拆分行为零变化**：拆分前后渲染输出与交互行为一致（组件测试 + 关键交互回归全绿）；`reloadRef` 外部注入链路逐字保留；`columns` 的 `useMemo` 依赖**故意不完整**未被「顺手修正」（v1.24 Phase 83 先例）。
+    3. **STYLE-05 硬指标全部达成**：暗色 `--input-bg` 解析值 = `#0f2e1b`｜暗色 placeholder 变量非空｜InputNumber 错误态边框 = `rgb(186,54,48)`｜输入类圆角 = `8px`（均为 computed-style 断言，不接受肉眼判定）。
+    4. **STYLE-05 双测通过**：明暗双主题下输入类 / 选择类 / 表格类组件与 antd 官方渲染一致 —— computed-style 断言 + 截图矩阵**双测**同时通过（复用 `.planning/notes/v1.24-visual-verification.md` 的 21 形态 × 明暗矩阵 + 14 页巡检清单），证据截图入库。
+    5. **不破坏 v1.24 已交付修复 + 回归基线守住**：VIS-01 双框元素数 = 0 / VIS-02 焦点环单圈 / VIS-03 错误态边框色 —— 三项断言全绿；`npm run lint` **0 problems**；vitest 569 文件 3960 用例全绿；vendor-react gzip ≤ 776 kB；`go build ./...` + `go test` 全绿。
+
+**Wave 划分**：线 A **84 → 85 → 86 → 87**；线 B **88 → 89 → 90 → 91 → 92 → 93**。两线并行（后端 Go vs 前端 CSS）；线 B 内部**严格串行**（每步都改 `index.css`，天然冲突面大）。收口 = 93。
 
 <details>
 <summary>✅ v1.24 视觉回归修复与遗留债务清偿 (Phases 76-83) — SHIPPED 2026-10-28</summary>
@@ -80,7 +209,7 @@ previous_update: 2026-10-28 v1.24 roadmap CREATED
 - [x] Phase 65: 基础契约组件 — AppInput/AppSelect/ConfirmDelete（COMP-01/02）
 - [x] Phase 66: 高级契约组件 — PageTable/FormModal（COMP-03/04）
 - [x] Phase 67: 存量迁移 — 按 ROI 落地（COMP-05）
-- [x] Phase 68: P2 一致性债务 — 颜色/日期/类型收敛（DEBT-01..03）
+- [x] Phase 68: P2 一致性债务 — 颜色/日期/类型收敛（DEBT-01/02/03）
 - [x] Phase 68.1: 收尾清偿 — 危险操作收口/契约 minor/豁免收缩（DEBT-04）
 
 详情: [milestones/v1.22-ROADMAP.md](milestones/v1.22-ROADMAP.md) ｜ [audit](milestones/v1.22-MILESTONE-AUDIT.md)
@@ -113,4 +242,4 @@ previous_update: 2026-10-28 v1.24 roadmap CREATED
 
 ---
 
-*Last updated: 2026-10-28 — v1.23 shipped & archived（Phases 69-75，22/22 REQ satisfied）。下一里程碑待定义（候选债：#16 PG 复测定责、3f130 绑定 user_id、F5 跳转 /dashboard 等，见 milestones/v1.23-REQUIREMENTS.md Known Gaps）。*
+*Last updated: 2026-10-28 — v1.25 roadmap CREATED（Phases 84-93，**22/22 REQ mapped**；线 A 权限 84-87 ∥ 线 B 样式 88-93，线内串行）。下一里程碑待定义（v1.26 候选见 `.planning/REQUIREMENTS.md` Future Requirements）。*

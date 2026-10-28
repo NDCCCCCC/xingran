@@ -321,7 +321,8 @@ estate.
 
 #### v1.25 全站权限治理与样式收敛（当前里程碑）
 
-> REQ-ID 已于需求定义阶段定稿；权威清单见 `.planning/REQUIREMENTS.md`（共 25 条）。
+> REQ-ID 已于需求定义阶段定稿；权威清单见 `.planning/REQUIREMENTS.md`（共 **22** 条）。
+> ⚠️ **计数更正（2026-10-28 roadmap 阶段）**：本行原写「共 25 条」、REQUIREMENTS.md 原写「26 total」，二者均与该文档**实际的 22 条需求条目**（RBAC×6 + STYLE×5 + PMODEL×4 + VISFIX×6 + SPLIT×1 = 22，已全量 grep 复核）不自洽 —— 磁盘上不存在第 23-26 条需求条目。Roadmap 按 **22 条**映射（22/22 全覆盖）。
 
 **RBAC — 操作级权限全站治理**
 - [ ] **RBAC-01**: 只读角色在任意业务模块调写接口一律 403 且无数据变更（写路由逐动作单一权限点，去 ANY-of）
