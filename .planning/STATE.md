@@ -1,14 +1,19 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.25
-milestone_name: 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence)
+milestone_name: 全站权限治理与样式收敛
+current_phase: 84
+current_phase_name: 权限模型三缺口
 status: planning
-last_updated: "2026-10-28T13:31:58.000Z"
+stopped_at: v1.25 roadmap CREATED（Phases 84-93，22/22 REQ mapped，Traceability 已回填 `.planning/REQUIREMENTS.md`）
+last_updated: "2026-10-28T06:48:20.510Z"
 last_activity: 2026-10-28
+last_activity_desc: v1.25 roadmap CREATED（Phases 84-93）
+state_head: bdaca98816d430be9f6f04461da09258c914b652
 progress:
   total_phases: 10
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -57,7 +62,7 @@ progress:
 
 ## Current Position
 
-Phase: 84（v1.25 起点）
+Phase: 84 (权限模型三缺口) — READY TO EXECUTE
 Plan: —
 Status: 路线图已创建待执行（ROADMAP Phases 84-93，22/22 REQ mapped，Traceability 已回填）
 Last activity: 2026-10-28 — v1.25 roadmap CREATED（Phases 84-93）
