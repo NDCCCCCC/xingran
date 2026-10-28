@@ -29,7 +29,7 @@ vi.mock("@/hooks/useDeptTree", () => ({
 
 import { Form } from "antd";
 import type { FormInstance } from "antd";
-import type {  } from "react";
+import { forwardRef, useImperativeHandle } from "react";
 import { act, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import ReconciliationTab, {
@@ -40,18 +40,25 @@ import ReconciliationTab, {
 import { getDeptOUMismatchList, type DeptOUMismatchRow } from "@/lib/adDomainApi";
 import { useMenuStore } from "@/store/menuStore";
 
+/** Host 对外暴露的 form 句柄 */
+interface HostHandle {
+  getForm: () => FormInstance;
+}
+
 /**
  * antd v6 的 Form.useForm 是真 React hook（不能在组件外调用）。
- * 测试用一个 Host 组件创建 form 实例并暴露给测试体（组件内 create + 捕获引用）。
+ * 测试用 Host 组件创建 form 实例，经 useImperativeHandle 暴露给测试体
+ * （不向组件外声明的变量赋值，满足 react-hooks/globals）。
  */
 function renderTabWithForm() {
-  let captured!: FormInstance;
-  function Host() {
+  // 普通 ref 容器（非 useRef —— renderTabWithForm 不是组件，不能调 hook）
+  const hostRef: { current: HostHandle | null } = { current: null };
+  const Host = forwardRef<HostHandle>((_props, ref) => {
     const [f] = Form.useForm();
-    captured = f;
+    useImperativeHandle(ref, () => ({ getForm: () => f }), [f]);
     return <ReconciliationTab form={f} />;
-  }
-  return { ...renderWithProviders(<Host />), getForm: () => captured };
+  });
+  return { ...renderWithProviders(<Host ref={hostRef} />), getForm: () => hostRef.current!.getForm() };
 }
 
 const mockGetList = vi.mocked(getDeptOUMismatchList);

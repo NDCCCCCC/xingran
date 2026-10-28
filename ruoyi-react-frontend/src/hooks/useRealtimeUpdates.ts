@@ -60,6 +60,10 @@ export function useRealtimeUpdates(
 		return `${protocol}//${host}${basePath}/dashboard`;
 	}, []);
 
+	// connect 的 latest-ref 桥接：ws.onclose 里的自动重连需要引用 connect 自身，
+	// 直接自引用会形成「声明前访问」（react-hooks/immutability）；ref 写入收敛在 effect 内
+	const connectRef = useRef<() => void>(() => {});
+
 	// 连接WebSocket
 	const connect = useCallback(() => {
 		if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -113,10 +117,10 @@ export function useRealtimeUpdates(
 				options?.onConnectionChange?.(false);
 				subscribedChannelsRef.current.clear();
 
-				// 自动重连
+				// 自动重连（经 ref 间接调用 connect，避免自引用）
 				if (options?.enabled !== false) {
 					reconnectTimerRef.current = setTimeout(() => {
-						connect();
+						connectRef.current();
 					}, 5000);
 				}
 			};
@@ -126,6 +130,11 @@ export function useRealtimeUpdates(
 			console.error("[Dashboard WebSocket] Connection error:", error);
 		}
 	}, [widgets, options, getWsUrl, cacheWidgetData]);
+
+	// 同步 connect 最新引用到 ref（effect 内写入，compiler 合规）
+	useEffect(() => {
+		connectRef.current = connect;
+	}, [connect]);
 
 	// 断开连接
 	const disconnect = useCallback(() => {
@@ -182,6 +191,7 @@ export function useRealtimeUpdates(
 		connect,
 		disconnect,
 		refreshSubscriptions,
-		connected: wsRef.current?.readyState === WebSocket.OPEN,
+		// 注意：不返回渲染期读取 wsRef 的 connected 字段（react-hooks/refs 禁止渲染期读 ref；
+		// 该 hook 当前无消费方，如需连接状态请改用 state 跟踪）
 	};
 }

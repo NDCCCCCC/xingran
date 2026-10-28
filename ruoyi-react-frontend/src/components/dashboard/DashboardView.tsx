@@ -148,19 +148,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			// 网络恢复后刷新数据
 			refresh();
 		}
-	}, [isOnline, wasOffline, resetWasOffline, refresh]);
+	}, [isOnline, wasOffline, resetWasOffline, refresh, message]);
 
 	// 更新刷新状态
 	useEffect(() => {
 		setIsRefreshing(loading);
 	}, [loading, setIsRefreshing]);
 
-	// 首次加载完成
-	useEffect(() => {
+	// 首次加载完成：渲染期条件派生（react.dev「adjusting state during render」模式），
+	// 避免 effect 内同步 setState 触发级联渲染
+	const [prevLoading, setPrevLoading] = useState(loading);
+	if (loading !== prevLoading) {
+		setPrevLoading(loading);
 		if (!loading && !initialLoadComplete) {
 			setInitialLoadComplete(true);
 		}
-	}, [loading, initialLoadComplete]);
+	}
 
 	// WebSocket 错误提示
 	useEffect(() => {

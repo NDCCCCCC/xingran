@@ -74,6 +74,11 @@ export function useRPAProgress(options?: UseRPAProgressOptions) {
 		options?.onFailed,
 	]);
 
+	// 过滤条件解构为局部常量：useCallback 依赖数组引用原始值，
+	// 便于 React Compiler 保持手动 memoization
+	const filterExecutionId = options?.executionId;
+	const filterTaskId = options?.taskId;
+
 	// 处理 RPA 进度消息
 	const handleRPAProgressMessage = useCallback((message: RPAProgressMessage) => {
 		const data: RPAProgressData = {
@@ -88,10 +93,10 @@ export function useRPAProgress(options?: UseRPAProgressOptions) {
 		};
 
 		// 应用过滤条件
-		if (options?.executionId && data.executionId !== options.executionId) {
+		if (filterExecutionId && data.executionId !== filterExecutionId) {
 			return;
 		}
-		if (options?.taskId && data.taskId !== options.taskId) {
+		if (filterTaskId && data.taskId !== filterTaskId) {
 			return;
 		}
 
@@ -110,7 +115,7 @@ export function useRPAProgress(options?: UseRPAProgressOptions) {
 			callbacks.onFailed?.(data);
 			break;
 		}
-	}, [options?.executionId, options?.taskId, callbacks]);
+	}, [filterExecutionId, filterTaskId, callbacks]);
 
 	// 订阅 RPA 进度事件
 	useEffect(() => {
