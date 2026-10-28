@@ -1,21 +1,16 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.24
-status: Awaiting next milestone
-stopped_at: 全部 8 phase 执行完毕：76 双框 P0 + 77 视觉验证收口（17 张证据入库）+ 78 权限双端闭环 + 79 PG 实机验收（三层证据）+ 80 工位诊断展示 + 81 F5 修复（红绿验证）+ 82 lint 清零（0 problems）+ 83 devices 拆分（714→306 行）
-last_updated: "2026-10-28T05:08:17.697Z"
+milestone: v1.25
+milestone_name: 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence)
+status: planning
+last_updated: "2026-10-28T05:15:08.422Z"
 last_activity: 2026-10-28
-last_activity_desc: Milestone v1.24 completed and archived
-state_head: 4477b2bc786739227f2c39de6b123601c6e1a6ba
 progress:
-  total_phases: 8
-  completed_phases: 8
+  total_phases: 0
+  completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 100
-milestone_name: 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
-current_phase: null
-current_phase_name: —
+  percent: 0
 ---
 
 # Project State
@@ -37,10 +32,10 @@ current_phase_name: —
 
 ## Current Position
 
-Phase: Milestone v1.24 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-28 — Milestone v1.24 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-28 — Milestone v1.25 started
 
 ### v1.24 Phase 依赖速查
 

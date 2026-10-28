@@ -11,6 +11,34 @@ previous_update: 2026-10-28 v1.24 milestone INITIATED
 **Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
 
 
+## Current Milestone: v1.25 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence)
+
+**Goal:** 把 v1.24 只在 `/system/users` 单域完成的「操作级 RBAC 前后端双端闭环」推广到全站 76 页面 / 134 处后端路由挂载，并把样式层从手写 `!important` 规则收敛到 antd 6 官方 variant 机制，同步清偿权限模型三缺口与 Phase 77 视觉新发现。
+
+**问题来源（v1.24 收档 Known Gaps 五项，用户裁定全部立项）:**
+- **① 操作级 RBAC 全站治理**：v1.24 只修 `/system/users` 一个域；全站 134 处 `RequirePermissions` 挂载仍是 ANY-of 组级语义 + `permission.go` 模块级降级 → 只读角色在全域都可能被放行写操作；前端仅 14/76 页面接入 `useMenuStore.permissions`（其余恒显示操作入口）；`pkg/permission/config.go:223-289` 动作级映射表已定义但从未接线；`system` 域其余 4 组（roles/menus/depts/posts）仍是 ANY-of
+- **② 样式层收敛到 antd 6 variant**（方案 C）：手写 `!important` 规则 1359 处 / 219 行 antd 选择器 / 60 个暗色重复分区；圆角 CSS 6px 与 token 8px 漂移；`AntdThemeBridge.tsx:83-84` 显式 `colorBgContainer=#FFFFFF` 使 `darkAlgorithm` 不覆盖 → 暗色炸白底（F3 前置）
+- **③ 权限模型三缺口**：`data_scope` 只塞 context 不被列表查询消费（实测 `data_scope=3` 仍返回跨部门 4231 条）；`GetUserPermissions` 不过滤 `menu.status`（已停用菜单的权限码仍进前端权限集）；Step 2「子菜单继承」语义易写反（真实是「用户持 F 型按钮 → 继承父页面权限」）＋附带缺口（生产库无迁移记录表 / GORM 模型与库表 schema 漂移）
+- **④ Phase 77 视觉新发现**：暗色 `--input-bg` 第 3 处就地重定义（`index.css:4807`，实测输入框底 rgb(250,250,249) 压在深绿底 rgb(15,46,27) 上对比度极低）；暗色 Select 白底 + 浅灰边（两套边框体系并存）；`.dept-tree-search` 补丁是死规则（实测命中 0）；antd 6 弃用警告 2 类（`onSearch→showSearch`、`Modal maskClosable→mask.closable`）污染「无新增 console error」自动化判定；InputNumber 错误态仍灰
+- **⑤ `room-devices/index.tsx` 815 行**：比已拆分的 devices 页（714→306）更长，v1.24 明确登记不扩面
+
+**Target features:**
+- **RBAC（核心）**：后端写操作路由组逐动作拆严格权限（`RequireStrictPermissions`）+ 前端 76 页面操作入口三态门控铺开（`useActionPermission`）+ `pkg/permission/config.go` 动作映射死表接线 + 动作级 F 型菜单播种
+- **STYLE**：先重构 `AntdThemeBridge` 明暗色板（F3，解冻 v1.22 冻结契约）+ 删/降级 4 批手写规则（≈-120 行）+ 统一圆角 6→8 + hex 治理覆盖 `.css`（现 selector 只匹配 JS/TS 节点）
+- **PMODEL**：`data_scope` 被列表查询消费 + `GetUserPermissions` 过滤 `menu.status` + Step 2 语义纠偏与文档化 + 迁移记录表补齐 / GORM schema 漂移登记
+- **VISFIX**：④ 五项视觉新发现逐项清偿（暗色输入框底 / 暗色 Select 两套边框体系 / 死规则清理 / antd 6 弃用警告 / InputNumber 错误态）
+- **SPLIT**：`room-devices/index.tsx` 815 行按 v1.24 devices 页范式拆分（列定义工厂 + 搜索区构造函数 + handlers/行操作 + 页面 JSX 外壳）
+
+**关键决策 (v1.25 init):**
+- **执行顺序 ①权限 → ②样式**（用户裁定）——避免样式波动与权限改造混在同一验证周期；权限先行可复用 v1.24 已建的三态门控基建
+- **研究范围仅 ② 定向**（用户裁定）——①③⑤ 靠本仓事实与既有实证 note，仅对 antd 6 官方 variant API 与暗色 token 派生规则做定向核验
+- **复用 v1.24 基建不重造**：`RequireStrictPermissions`（只做 Step1 精确匹配，跳过 F 型继承与模块级降级）/ `useActionPermission` 三态门控（ready 含→可用 / ready 不含→不渲染 / loading·error→disabled+提示）/ `src/constants/permissionCodes.ts` 单一真相源 + `scripts/check-permission-codes.mjs` 双向校验
+- **②须显式解冻 v1.22 冻结契约**——`AntdThemeBridge` 色值真相源变动属冻结面突破，须单独登记与验收
+- **零新依赖**——沿用 v1.23/v1.24 原则；不引 stylelint / Playwright / jscodeshift
+- **回归基线**：eslint 0 problems / vitest 569 文件 3960 用例全绿 / vendor-react gzip 776 kB / `go build ./...` + `go test` 全绿
+
+**事实基线:** `.planning/milestones/v1.24-REQUIREMENTS.md`（Future Requirements 段五项候选原文）+ `.planning/notes/v1.24-css-audit-register.md`（36 条 CSS 登记）+ `.planning/notes/2026-10-28-pg-permission-baseline.md`（#16 定责）+ `.planning/notes/v1.24-visual-verification.md`（21 形态 × 明暗矩阵）
+
 ## Current Milestone: v1.24 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance) — ✅ SHIPPED 2026-10-28
 
 **交付终态（2026-10-28 收档）:** 18/18 需求 Satisfied；用户主诉「输入框双重外框」根治（309 个输入框全站，双框元素数 3→0，错误态恢复品牌红）；#16 行操作权限**前后端双端闭环**（只读角色调写接口从 200 真删 → 403 拒绝，三层证据：DB 层前后对照 + HTTP 实测含决定性对照实验 + 前端组件测试）；lint 51 → **0 problems**；devices 页 714 → 306 行；生产库验收夹具已按用户指示清理、既有行零改动。Known Gaps 转 v1.25 候选（用户裁定暂不立项）：操作级 RBAC 全站治理 / 样式层收敛到 antd 6 variant / 权限模型三缺口 / 视觉新发现 / room-devices 拆分。
@@ -119,23 +147,28 @@ previous_update: 2026-10-28 v1.24 milestone INITIATED
 
 ## Current State (2026-10-28)
 
-- **Shipped**: v1.0 ~ **v1.24** — v1.24 = Phases 76-83（8 phases），**18/18 requirements satisfied**，SHIPPED 2026-10-28。46 commits / 104 files / +5,419 −2,232，约 3.5 小时（09:19 需求定稿 → 12:59 收口）。
+- **Shipped**: v1.0 ~ **v1.24** — v1.24 = Phases 76-83（8 phases），**18/18 requirements satisfied**，SHIPPED & ARCHIVED 2026-10-28。46 commits / 104 files / +5,419 −2,232，约 3.5 小时（09:19 需求定稿 → 12:59 收口）。归档：`milestones/v1.24-ROADMAP.md` + `milestones/v1.24-REQUIREMENTS.md` + `milestones/v1.24-phases/`。
+- **当前里程碑**: **v1.25 全站权限治理与样式收敛** — INITIATED 2026-10-28，五项候选全部立项（①操作级 RBAC 全站治理 / ②antd 6 variant 收敛 / ③权限模型三缺口 / ④Phase 77 视觉新发现 / ⑤room-devices 815 行拆分），执行顺序 ①→②。
 - **v1.24 终态**：用户主诉「输入框双重外框」根治（309 个输入框，双框元素数 3→0）；#16 行操作权限越权闭环（只读角色写接口 200 真删 → 403 拒绝）；lint 存量 51 → 0 problems 且门禁归零；devices 页 714 → 306 行；生产库验收夹具已清理、既有行零改动。
+- **v1.25 起点基线**：前端 76 个页面（index.tsx），仅 14 个接入 `useMenuStore.permissions`；后端 76 个路由组 / 134 处 `RequirePermissions` 挂载，`pkg/permission/config.go:223-289` 动作级映射表已定义未接线；`room-devices/index.tsx` 815 行；CSS `!important` 1359 处 / 219 行 antd 选择器。
+- **v1.22 终态**：前端公共层从"只有零件没有契约"补成"有契约"——AppInput/AppSelect 默认值下沉（allowClear/showSearch）、ConfirmDelete 危险操作唯一入口（68 处收口）、PageTable/FormModal/RemoteSelect 契约内建、hex/日期/any 三类债务收敛、handleApiError 唯一错误出口。
+- **v1.22 遗留（→ v1.23）**：TextArea 74 处零 allowClear 覆盖（用户主诉根因）+ 裸 Input/Select 存量迁移未完成（P65/P66 豁免 override 仍在）+ 7 项 debug acknowledge（≥4 项调查未完成）+ 浏览器实机 UAT 债 + `.planning/quick/` 94 个历史目录 + lint 1367 warnings / 83 errors。
+- **构建状态**：`go build ./...` clean；`go test ./internal/services/addomain/ ./internal/api/v1/... ./internal/scheduler/` 全绿；`go vet` 仅存量 `internal/core/security/ad_authenticator_test.go:159 unreachable code`（非本次影响面）。前端基线：eslint 0 problems / vitest 569 文件 3960 用例全绿 / vendor-react gzip 776 kB。
 - **v1.22 终态**：前端公共层从"只有零件没有契约"补成"有契约"——AppInput/AppSelect 默认值下沉（allowClear/showSearch）、ConfirmDelete 危险操作唯一入口（68 处收口）、PageTable/FormModal/RemoteSelect 契约内建、hex/日期/any 三类债务收敛、handleApiError 唯一错误出口。
 - **v1.22 遗留（→ v1.23）**：TextArea 74 处零 allowClear 覆盖（用户主诉根因）+ 裸 Input/Select 存量迁移未完成（P65/P66 豁免 override 仍在）+ 7 项 debug acknowledge（≥4 项调查未完成）+ 浏览器实机 UAT 债 + `.planning/quick/` 94 个历史目录 + lint 1367 warnings / 83 errors。
 - **构建状态**：`go build ./...` clean；`go test ./internal/services/addomain/ ./internal/api/v1/... ./internal/scheduler/` 全绿；`go vet` 仅存量 `internal/core/security/ad_authenticator_test.go:159 unreachable code`（非本次影响面）。
 - **（v1.21 历史）生产实锤**：全量同步轮 user_count=4177、error_count=0、67 组；嵌套组成员污染 8→0（重放自愈）；AD 部门变更 ≤30s 推送并 compare-and-move 落位（NormalizeDN 幂等短路）；登录回写守卫双半段（拦截 / 正常覆盖）与软删 DN 漂移拦截均端到端验证。
 - **（v1.21 历史）Phase 62 引入的生产回归已修复**：全嵌套组过滤后 kept 为空 → GORM ErrEmptySlice 中止整轮 → 补早返回 + 回归用例 + 二进制重建发版（14:22）→ 14:35 轮 full success。
 
-## Next Milestone Goals（v1.25 候选，用户裁定暂不立项）
+## Next Milestone Goals（v1.26 候选）
 
-**v1.24 结转的 5 笔候选债**（完整登记见 `.planning/REQUIREMENTS.md` 的 Future Requirements 与 `.planning/MILESTONES.md` 的 v1.24 条目 Known Gaps）：
+**v1.24 结转的 5 笔候选债 → 已全部立项为 v1.25（2026-10-28 用户裁定，五条全纳入，执行顺序 ①→②）**：
 
-1. **操作级 RBAC 全站治理** — 108 页面 + 340 路由；`roles/menus/depts/posts` 4 组 ANY-of 拆分（逐动作清单已备）+ `pkg/permission/config.go` 死表接线 + 动作级 F 型菜单播种（当前 devices 等模块因无菜单种子而无法授予动作级权限）
-2. **样式层收敛到 antd 6 variant**（方案 C）— 需先重构 AntdThemeBridge 明暗色板（F3：`colorBgContainer` 硬编码 `#FFFFFF`，darkAlgorithm 不改写显式 token）
-3. **权限模型三缺口** — `data_scope` 未被列表查询消费（实测 data_scope=3 仍返回 total=4231 跨部门）/ `GetUserPermissions` 不过滤 `menu.status`（停用菜单权限仍进前端权限集）/ Step 2「子菜单继承」语义易写反；附带生产库无迁移记录表 + GORM schema 漂移
-4. **Phase 77 视觉新发现** — 暗色 `--input-bg` 第 3 处就地重定义（`index.css:4807`）/ 暗色 Select 白底导致同页两套边框体系 / `.dept-tree-search` 死规则 / antd 6 弃用警告 2 类 / InputNumber 错误态仍灰
-5. **room-devices 页拆分** — 815 行，比已拆的 devices 更长
+1. **操作级 RBAC 全站治理** — 108 页面 + 340 路由；`roles/menus/depts/posts` 4 组 ANY-of 拆分（逐动作清单已备）+ `pkg/permission/config.go` 死表接线 + 动作级 F 型菜单播种（当前 devices 等模块因无菜单种子而无法授予动作级权限）→ **v1.25 RBAC 线**
+2. **样式层收敛到 antd 6 variant**（方案 C）— 需先重构 AntdThemeBridge 明暗色板（F3：`colorBgContainer` 硬编码 `#FFFFFF`，darkAlgorithm 不改写显式 token）→ **v1.25 STYLE 线**
+3. **权限模型三缺口** — `data_scope` 未被列表查询消费（实测 data_scope=3 仍返回 total=4231 跨部门）/ `GetUserPermissions` 不过滤 `menu.status`（停用菜单权限仍进前端权限集）/ Step 2「子菜单继承」语义易写反；附带生产库无迁移记录表 + GORM schema 漂移 → **v1.25 PMODEL 线**
+4. **Phase 77 视觉新发现** — 暗色 `--input-bg` 第 3 处就地重定义（`index.css:4807`）/ 暗色 Select 白底导致同页两套边框体系 / `.dept-tree-search` 死规则 / antd 6 弃用警告 2 类 / InputNumber 错误态仍灰 → **v1.25 VISFIX 线**
+5. **room-devices 页拆分** — 815 行，比已拆的 devices 更长 → **v1.25 SPLIT 线**
 
 **更早的 deferred（继续挂账）**：
 
@@ -280,7 +313,39 @@ estate.
 
 ### Active
 
-#### v1.24 视觉回归修复与遗留债务清偿（当前里程碑）
+#### v1.25 全站权限治理与样式收敛（当前里程碑）
+
+> REQ-ID 于 Step 9 需求定义阶段定稿并回填；权威清单见 `.planning/REQUIREMENTS.md`。
+
+**RBAC — 操作级权限全站治理**
+- 后端写操作路由组逐动作拆严格权限（ANY-of 组级 → 逐动作单一权限点，跳过模块级降级）
+- 前端 76 页面操作入口三态门控铺开（`useActionPermission`），消除「恒显示操作入口」
+- `pkg/permission/config.go:223-289` 动作级映射死表接线（路由 → 权限码）
+- 动作级 F 型菜单播种，使动作级权限可被真实授予
+- `system` 域其余 4 组（roles/menus/depts/posts）ANY-of 拆分
+
+**STYLE — 样式层收敛到 antd 6 variant**
+- `AntdThemeBridge` 明暗色板重构（F3，解冻 v1.22 冻结契约），解除暗色炸白底
+- 删/降级 4 批手写 antd 覆盖规则（≈-120 行），统一圆角 6→8
+- hex 治理覆盖 `.css`（现 selector 只匹配 JS/TS 节点）
+
+**PMODEL — 权限模型三缺口**
+- `data_scope` 被列表查询真实消费（本部门/本部门及以下等范围不再返回跨部门数据）
+- `GetUserPermissions` 过滤 `menu.status`（已停用菜单的权限码不再进前端权限集）
+- Step 2「子菜单继承」语义纠偏与文档化（真实语义：持 F 型按钮 → 继承父页面权限）
+- 生产库迁移记录表补齐 + GORM 模型与库表 schema 漂移登记
+
+**VISFIX — Phase 77 视觉新发现**
+- 暗色 `--input-bg` 第 3 处就地重定义消除（暗色输入框底对比度）
+- 暗色 Select 白底与浅灰边消除（消除同页两套边框体系）
+- `.dept-tree-search` 死规则清理
+- antd 6 弃用警告 2 类清理（`onSearch→showSearch`、`Modal maskClosable→mask.closable`）
+- InputNumber 错误态边框色还原
+
+**SPLIT — 巨型文件拆分**
+- `room-devices/index.tsx` 815 行按 devices 页范式拆分（列定义工厂 / 搜索区构造函数 / handlers+行操作 / 页面 JSX 外壳）
+
+#### v1.24 视觉回归修复与遗留债务清偿（已 SHIPPED 2026-10-28）
 
 - [x] **VIS-01**: affix-wrapper 内层复位，消除全站 309 个输入框的双重外框
 - [x] **VIS-02**: 焦点环单圈化（边框与焦点环唯一归 wrapper）
@@ -598,4 +663,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-10-28 after v1.24 milestone（视觉回归修复与遗留债务清偿 SHIPPED：双框根治 3→0 + #16 权限前后端双端闭环 + lint 清零 0 problems + F5 修复 + 3f130 诊断展示 + devices 拆分 714→306 行）*
+*Last updated: 2026-10-28 after v1.25 milestone INITIATED（全站权限治理与样式收敛：①操作级 RBAC 全站治理 / ②antd 6 variant 收敛 / ③权限模型三缺口 / ④Phase 77 视觉新发现 / ⑤room-devices 815 行拆分，五条全纳入，执行顺序 ①→②）*
