@@ -82,7 +82,7 @@ export const FixSuggestionDetailDrawer = ({
   const sugg: FixSuggestionListItem | undefined = data?.suggestion;
 
   return (
-    <Drawer title="修复建议详情" open={open} onClose={onClose} width={720} destroyOnHidden>
+    <Drawer title="修复建议详情" open={open} onClose={onClose} size={720} destroyOnHidden>
       <Spin spinning={isLoading}>
         {sugg ? (
           <Tabs

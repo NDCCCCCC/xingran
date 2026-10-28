@@ -467,7 +467,7 @@ const ExceptionRulesPage: React.FC = () => {
         title="命中测试"
         open={matchTestOpen}
         onClose={() => setMatchTestOpen(false)}
-        width={780}
+        size={780}
       >
         <MatchTestPanel embedded />
       </Drawer>

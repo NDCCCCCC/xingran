@@ -570,7 +570,7 @@ const ADComputerPage: FC = () => {
         title={`登录历史 - ${historyComputer?.computerName ?? ""}`}
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        width={720}
+        size={720}
         destroyOnHidden
       >
         <Table

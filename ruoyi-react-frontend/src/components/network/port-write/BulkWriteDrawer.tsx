@@ -236,7 +236,7 @@ export function BulkWriteDrawer({
       title="批量配置端口"
       open={open}
       onClose={isExecuting ? () => {} : onClose}
-      width={720}
+      size={720}
       destroyOnHidden
       mask={{ closable: !isExecuting }}
       closable={!isExecuting}

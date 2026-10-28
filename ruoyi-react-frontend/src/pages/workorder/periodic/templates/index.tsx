@@ -600,7 +600,7 @@ const PeriodicTemplatePage: FC = () => {
       <Drawer
         title="执行记录"
         placement="right"
-        width={500}
+        size={500}
         open={logsDrawerVisible}
         onClose={() => setLogsDrawerVisible(false)}
       >

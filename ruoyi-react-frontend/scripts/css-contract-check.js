@@ -2,9 +2,13 @@
 // ^ dev-only 工具脚本：scripts/*.mjs 被 eslint 全局忽略，本文件按任务规格命名为 .js，
 //   故以文件内禁用保持 lint 预算（errors≤17）不被本文件击穿。
 /**
- * v1.24 双框修复（VIS-01/02/03）CSS 契约静态检查 —— dev-only，node 运行、零依赖
+ * v1.24 双框修复（VIS-01/02/03）CSS 契约静态检查 —— dev-only，node 运行
  * ==============================================================================
  * 用法：node scripts/css-contract-check.js   （退出码 0 = 契约完好）
+ *
+ * 依赖口径：核心检查零依赖；仅 C14c（antd <Drawer> width 弃用守护）**可选**使用
+ *   devDependency `typescript` 编译器 API 做精确 AST 判定；typescript 不可用时
+ *   自动降级为正则 JSX 扫描（降级态会在输出中显式标注，且仍能覆盖绝大多数场景）。
  *
  * 职责分工（STACK.md (e.1) 口径）：
  *   - 本脚本：静态结构契约（规则存在性 / 禁用形态 / 回归陷阱守护），CI 可跑；
@@ -19,6 +23,8 @@
  *       user-form-input）不得删除
  *   C4  回归陷阱：`.ant-input:focus` 焦点环、wrapper 边框、wrapper 焦点环规则不得删除
  *   C5  VIS-03 status 边框色还原规则存在
+ *   C14 antd 6 弃用 prop 零命中（VISFIX-04）
+ *   C14c antd <Drawer> 的 width prop 零命中（VISFIX-05，antd 6 → size）
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -391,6 +397,24 @@ const findJsxOpenTags = (text) => {
   return tags;
 };
 
+// ---- 字符位置 → 行号（保留原始换行，剥注释后行号不变） ----
+// C14（maskClosable 上下文判定）与 C14c（降级扫描）共用。
+const lineStartsOf = (text) => {
+  const ls = [0];
+  for (let i = 0; i < text.length; i++) if (text[i] === '\n') ls.push(i + 1);
+  return ls;
+};
+const lineOf = (ls, pos) => {
+  let lo = 0;
+  let hi = ls.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (ls[mid] <= pos) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo + 1;
+};
+
 // ---- C14 弃用清单（token → 弃用后的新形态；bordered / onSearch 刻意不入列） ----
 const C14_DEPRECATED_TOKENS = [
   { key: 'destroyOnClose', re: /\bdestroyOnClose\b/g, note: 'antd 6 → destroyOnHidden' },
@@ -448,21 +472,6 @@ const C14_EXEMPTIONS = [
 {
   const c14Files = walkByExt(resolve(feRoot, 'src'), ['.ts', '.tsx']);
   const violations = [];
-  const lineStartsOf = (text) => {
-    const ls = [0];
-    for (let i = 0; i < text.length; i++) if (text[i] === '\n') ls.push(i + 1);
-    return ls;
-  };
-  const lineOf = (ls, pos) => {
-    let lo = 0;
-    let hi = ls.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-      if (ls[mid] <= pos) lo = mid;
-      else hi = mid - 1;
-    }
-    return lo + 1;
-  };
   for (const f of c14Files) {
     const rel = relFe(f);
     const text = stripTsCommentsKeepLines(readFileSync(f, 'utf8'));
@@ -510,6 +519,151 @@ const C14_EXEMPTIONS = [
     violations.length
       ? violations.join(' | ')
       : `C14 PASS：弃用清单 0 命中，豁免登记 ${C14_EXEMPTIONS.length} 项`,
+  );
+}
+
+// ==========================================================================
+// Phase 88-05 (VISFIX-05) 新增断言：C14c — antd <Drawer> 的 width prop 零命中（阻断）
+// ==========================================================================
+// 弃用证据（node_modules/antd 6.6.4）：
+//   es/drawer/Drawer.js:155  `[['width','size'], ['height','size']].forEach(...)`
+//   → `width` 与 `height` 均为 antd 6 Drawer 的 @deprecated prop。
+//
+// 迁移等价性（es/drawer/Drawer.js:83-103 drawerSize 计算）：
+//   - `size` 为数字 → `isNumber(size)` 直返该数字；
+//   - `size` 为非数字字符串 → 原样透传（不匹配 /^(\d+)(\.\d+)?$/ 时）；
+//   - `size` 缺省且 placement ∈ {left,right,undefined} → 取 `width`；
+//   - `size` 缺省且 placement ∈ {top,bottom} → 取 `height`（**height 与 placement 强相关**）。
+//   ⇒ 对 **数字** width：`width={N}` ≡ `size={N}`（两条路径产出同一个 `size={N}` 下传 rc-drawer）。
+//   本仓 9 处迁移目标全部是**数字** width，且 placement ∈ {right, 未设置}（rc-drawer 默认 'right'），
+//   故渲染宽度逐像素不变（rc-drawer DrawerPopup.js:135 `size ?? legacySize ?? …`，
+//   两侧最终都是同一个数字 size → wrapperStyle.width 相同）。
+//
+// 判定口径（**上下文感知**）：
+//   只判「antd <Drawer> 标签上的 width 属性」。antd <Modal> 的 width **不弃用**
+//   （antd 6.6.4 modal/Modal.js 弃用表无 width）→ Modal / Table 列宽 / 自研组件
+//   的 width 一律不得误报。
+//   「是不是 antd Drawer」的判定 = 该文件确实存在 `import { Drawer } from 'antd'`
+//   （本仓无本地同名 Drawer 组件，已全量核实）。
+//
+// 实现：优先用 typescript 编译器 API 做精确 AST 判定（JSX 元素 + 属性名 + import 来源）；
+//   typescript 不可用时降级为正则 JSX 扫描（findJsxOpenTags + 深度 0 属性名位），
+//   降级态在输出中显式标注（降级扫描存在已知盲区，见文末说明）。
+{
+  const C14C_EXEMPTIONS = [
+    // 结构：{ file, line, reason } —— 新增豁免必须写明「为何 width 不可迁」+ 证据行号
+  ];
+
+  const tsMod = await import('typescript').catch(() => null);
+  const useTs = !!tsMod && typeof tsMod.createSourceFile === 'function';
+  const violations = [];
+  const advisories = [];
+
+  const c14cFiles = walkByExt(resolve(feRoot, 'src'), ['.tsx']);
+  let scanned = 0;
+  let antdDrawerFiles = 0;
+
+  for (const f of c14cFiles) {
+    const rel = relFe(f);
+    const raw = readFileSync(f, 'utf8');
+    if (!raw.includes('Drawer')) continue; // 快速预筛：不含 Drawer 字样的文件无需解析
+    scanned++;
+
+    // ---- 收集「本文件的 <Drawer> 是否来自 antd」 ----
+    let importsAntdDrawer = false;
+    let hasAnyDrawerImport = false;
+
+    if (useTs) {
+      const ts = tsMod;
+      const sf = ts.createSourceFile(f, raw, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      for (const st of sf.statements) {
+        if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
+        const spec = st.moduleSpecifier.text;
+        if (!(spec === 'antd' || spec.startsWith('antd/es/drawer'))) continue;
+        const nb = st.importClause && st.importClause.namedBindings;
+        if (!nb || !ts.isNamedImports(nb)) continue;
+        for (const el of nb.elements) {
+          const importedName = el.propertyName ? el.propertyName.text : el.name.text;
+          if (importedName !== 'Drawer') continue;
+          hasAnyDrawerImport = true;
+          // 只有 `import { Drawer }`（未改名）才对应 JSX 标签名 <Drawer>
+          if (el.name.text === 'Drawer') importsAntdDrawer = true;
+        }
+      }
+      if (!importsAntdDrawer) continue; // 非 antd Drawer → 不在本断言范围
+
+      const lineOfPos = (pos) => sf.getLineAndCharacterOfPosition(pos).line + 1;
+      const visit = (node) => {
+        if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+          if (node.tagName.getText(sf) === 'Drawer') {
+            const line = lineOfPos(node.getStart(sf));
+            let widthAttr = null;
+            let hasSpread = false;
+            for (const p of node.attributes.properties) {
+              if (ts.isJsxSpreadAttribute(p)) {
+                hasSpread = true;
+                continue;
+              }
+              if (ts.isJsxAttribute(p) && p.name.text === 'width') widthAttr = p;
+            }
+            if (widthAttr) {
+              // 报告**属性所在行**（而非元素起始行），便于直接定位
+              const attrLine = lineOfPos(widthAttr.getStart(sf));
+              const exempt = C14C_EXEMPTIONS.some(
+                (e) => e.file === rel && e.line === attrLine,
+              );
+              if (!exempt) {
+                violations.push(
+                  `${rel}:${attrLine}  弃用 prop「width」仍传给 antd <Drawer>（antd 6 → size）`,
+                );
+              }
+            }
+            if (hasSpread) {
+              advisories.push(
+                `${rel}:${line}  antd <Drawer> 存在 JSX 展开属性（{...x}），width 需人工确认`,
+              );
+            }
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(sf);
+      antdDrawerFiles++;
+    } else {
+      // ---- 降级：正则 JSX 扫描 ----
+      const text = stripTsCommentsKeepLines(raw);
+      const ls = lineStartsOf(text);
+      if (!/import\s*\{[^}]*\bDrawer\b[^}]*\}\s*from\s*['"]antd['"]/.test(text)) continue;
+      importsAntdDrawer = true;
+      antdDrawerFiles++;
+      const jsxTags = findJsxOpenTags(text);
+      for (const t of jsxTags) {
+        if (t.name !== 'Drawer') continue;
+        const line = lineOf(ls, t.start);
+        for (const r of t.runs) {
+          if (r.depth !== 0) continue;
+          const seg = text.slice(r.from, r.to);
+          const m = /^\s*width\s*=/.exec(seg);
+          if (!m) continue;
+          const exempt = C14C_EXEMPTIONS.some((e) => e.file === rel && e.line === line);
+          if (!exempt) {
+            violations.push(
+              `${rel}:${line}  弃用 prop「width」仍传给 antd <Drawer>（antd 6 → size）`,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  check(
+    'C14c antd <Drawer> width 弃用零命中（阻断）',
+    violations.length === 0,
+    violations.length
+      ? violations.join(' | ')
+      : `C14c PASS：antd <Drawer> 0 处 width（扫描 ${scanned} 个含 Drawer 的 .tsx，命中 antd Drawer 的 ${antdDrawerFiles} 个）` +
+        (useTs ? '｜AST 精确判定' : '｜⚠ 降级为正则扫描（typescript 不可用）') +
+        (advisories.length ? `｜人工确认 ${advisories.length} 条：${advisories.join(' | ')}` : ''),
   );
 }
 

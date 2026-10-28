@@ -339,7 +339,7 @@ const MACAddressPage: FC = () => {
               title="选择部门"
               open={deptDrawerOpen}
               onClose={() => setDeptDrawerOpen(false)}
-              width={300}
+              size={300}
               styles={{ body: { padding: 0 } }}
             >
               <DeptSidebar
@@ -524,7 +524,7 @@ const MACAddressPage: FC = () => {
           title={timelineDrawerMac ? `MAC 事件时间线 — ${timelineDrawerMac}` : "MAC 事件时间线"}
           open={timelineDrawerOpen}
           onClose={() => setTimelineDrawerOpen(false)}
-          width={480}
+          size={480}
           destroyOnHidden
         >
           {timelineDrawerMac && timelineDrawerRange && (

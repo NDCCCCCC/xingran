@@ -114,7 +114,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
       placement="right"
       open={visible}
       onClose={handleCancel}
-      width={520}
+      size={520}
       footer={
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>

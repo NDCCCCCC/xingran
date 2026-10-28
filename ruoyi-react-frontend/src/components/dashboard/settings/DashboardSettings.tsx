@@ -111,7 +111,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
       placement="right"
       open={visible}
       onClose={handleCancel}
-      width={480}
+      size={480}
       footer={
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <Button icon={<CloseOutlined />} onClick={handleCancel}>
