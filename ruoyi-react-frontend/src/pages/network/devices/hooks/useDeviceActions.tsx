@@ -39,15 +39,17 @@ import { useMenuStore } from "@/store/menuStore";
 import { DEVICE_PERMISSION_CODES } from "../constants";
 import type { ProbeResult } from "./useDeviceModals";
 
-/** antd App.useApp() 的 message 实例类型（不深引 antd 内部路径） */
+/** useDeviceActions 的入参（全部由页面侧注入，hook 内部不持有业务 state） */
 export interface UseDeviceActionsParams {
+  // —— 表单与当前编辑对象 ——
   /** 快速创建表单实例 */
   quickCreateForm: FormInstance;
   /** 手动新增/编辑表单实例 */
   editForm: FormInstance;
   /** 当前编辑的设备（null = 新增）——handleCreate 判定走更新还是创建 */
   editingDevice: NetworkDevice | null;
-  /** 采集进行中的设备 id（行操作「采集端口」降级 disabled 的依据） */
+  // —— 行操作上下文 ——
+  /** 采集进行中的设备 id（「采集端口」降级 disabled 的依据） */
   collectingDeviceId: string | null;
   /** 是否展示「查看 MAC 历史」入口（network:mac:list，14-05b 联动） */
   canViewMACHistory: boolean;
@@ -55,12 +57,14 @@ export interface UseDeviceActionsParams {
   navigate: (path: string) => void;
   /** antd message 实例 */
   message: MessageInstance;
+  // —— 数据加载 ——
   /** 授权凭证列表加载 */
   loadCredentials: () => Promise<void>;
   /** 统计数据加载（任何列表刷新都联动统计） */
   loadStatistics: () => Promise<void>;
   /** 凭证兜底注入（编辑回填 Select 显示 raw UUID 的修复） */
   ensureCredential: (cred: Pick<AuthCredential, "id"> & Partial<AuthCredential>) => void;
+  // —— 弹窗 state（来自 useDeviceModals）——
   /** 快速创建弹窗可见性 */
   setQuickCreateModalVisible: (visible: boolean) => void;
   /** 探测结果 */
@@ -71,6 +75,7 @@ export interface UseDeviceActionsParams {
   closeQuickCreateModal: () => void;
   /** 打开详情弹窗 */
   openDetailModal: (device: NetworkDevice) => void;
+  // —— 页面本地 state setter ——
   /** 采集中的设备 id */
   setCollectingDeviceId: (deviceId: string | null) => void;
   /** 编辑弹窗可见性 */
