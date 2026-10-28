@@ -32,6 +32,11 @@ import (
 //     菜单缓存,不引入新的语义。需要立即生效时调用 InvalidateMiddlewarePermCache。
 const mwPermCacheTTL = 30 * time.Second
 
+// strictCacheKeyPrefix 严格权限检查(RequireStrictPermissions)的缓存键前缀。
+// 与 checkUserPermission 的 `userID + "|" + permission` 键形态区分,
+// 避免两种语义(精确 vs 降级)共用同一条缓存记录。
+const strictCacheKeyPrefix = "strict|"
+
 type mwPermCacheEntry struct {
 	allow     bool
 	expiresAt time.Time
@@ -61,11 +66,16 @@ func mwCacheStore(c *sync.Map, key string, allow bool) {
 
 // InvalidateMiddlewarePermCache 使指定用户的中间件权限缓存立即失效。
 // 供角色/用户角色变更路径调用;当前未接线 — 30s 短 TTL 陈旧已被接受(见上方注释)。
+//
+// v1.24 Phase 78:严格检查(checkUserPermissionStrict)的缓存键带 "strict|" 前缀,
+// 同样纳入失效范围(纯增量:只多删严格检查的条目,不放宽既有语义)。
 func InvalidateMiddlewarePermCache(userID string) {
 	mwSuperAdminCache.Delete(userID)
 	prefix := userID + "|"
+	strictPrefix := strictCacheKeyPrefix + userID + "|"
 	mwPermCheckCache.Range(func(k, _ interface{}) bool {
-		if key, ok := k.(string); ok && strings.HasPrefix(key, prefix) {
+		if key, ok := k.(string); ok &&
+			(strings.HasPrefix(key, prefix) || strings.HasPrefix(key, strictPrefix)) {
 			mwPermCheckCache.Delete(k)
 		}
 		return true
@@ -359,6 +369,72 @@ func isQueryPath(path string) bool {
 	}
 	last := p[idx+1:]
 	return last == "list" || last == "tree"
+}
+
+// RequireStrictPermissions 要求命中指定权限之一，且**不做任何权限降级**。
+//
+// 与 RequirePermissions 的差异（关键）：
+//   - RequirePermissions：精确匹配 → F 型子权限继承（Step 2）→ 模块级降级（Step 3）
+//   - RequireStrictPermissions：仅精确匹配（Step 1）
+//
+// 用途：写操作（create/update/delete/batch/reset/status）必须严格，
+// 否则只读角色会因「持有页面本体权限（如 system:user）」而被 Step 3 放行。
+//
+// 超管 bypass 与 30s TTL 缓存沿用现有实现，不新增语义。
+//
+// v1.24 Phase 78（#16）新增。不改动既有 RequirePermissions /
+// RequirePermissionsWithQuery / checkUserPermission 的任何行为。
+func RequireStrictPermissions(permissions []string, core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, ok := getUserIDAsString(c)
+		if !ok {
+			response.Error(c, response.ErrUnauthorized, "用户未认证")
+			c.Abort()
+			return
+		}
+
+		// 超级管理员直接通过（沿用 isSuperAdmin，role_key='admin'）
+		if isSuperAdmin(core, userID) {
+			c.Next()
+			return
+		}
+
+		// 精确命中任一权限即放行（不做降级）
+		for _, permission := range permissions {
+			if checkUserPermissionStrict(core, userID, permission) {
+				c.Next()
+				return
+			}
+		}
+
+		response.Error(c, response.ErrForbidden, "没有访问权限")
+		c.Abort()
+	}
+}
+
+// checkUserPermissionStrict 仅做精确匹配（sys_menu.perms = ?），
+// 不做 F 型子权限继承（Step 2）、不做模块级降级（Step 3）。
+//
+// 缓存键带 "strict|" 前缀，与 checkUserPermission 的缓存条目区分；
+// TTL 沿用 mwPermCacheTTL（30s），不新增失效逻辑。
+func checkUserPermissionStrict(core *core.Core, userID, permission string) bool {
+	cacheKey := strictCacheKeyPrefix + userID + "|" + permission
+	if allow, hit := mwCacheLookup(&mwPermCheckCache, cacheKey); hit {
+		return allow
+	}
+
+	var count int64
+	err := core.DB.GetDB().Raw(`
+		SELECT COUNT(DISTINCT rm.menu_id)
+		FROM sys_user_role ur
+		INNER JOIN sys_role_menu rm ON ur.role_id = rm.role_id
+		INNER JOIN sys_menu m ON rm.menu_id = m.id
+		WHERE ur.user_id = ? AND m.perms = ? AND m.status = ?
+	`, userID, permission, models.MenuStatusNormal).Scan(&count).Error
+
+	allow := err == nil && count > 0
+	mwCacheStore(&mwPermCheckCache, cacheKey, allow)
+	return allow
 }
 
 // RequireAllPermissions 需要所有权限
