@@ -128,7 +128,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
 
   return (
     <div className="refresh-interval-selector">
-      <Space direction="vertical" style={{ width: "100%" }}>
+      <Space orientation="vertical" style={{ width: "100%" }}>
         <AppSelect
           value={selectValue}
           onChange={handlePresetChange}

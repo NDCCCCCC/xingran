@@ -369,7 +369,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                             percent={percentage}
                             showInfo={false}
                             strokeColor="var(--theme-info)"
-                            trailColor="var(--theme-bg-tertiary)"
+                            railColor="var(--theme-bg-tertiary)"
                             size="small"
                           />
                         </div>

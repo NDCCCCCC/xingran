@@ -646,7 +646,7 @@ const WorkOrderPage: FC = () => {
         </div>
         {selectedRowKeys.length > 0 && (
           <Alert
-            message={
+            title={
               <span>
                 已选择 <strong>{selectedRowKeys.length}</strong> 个工单，
                 <Button
@@ -931,24 +931,26 @@ const WorkOrderPage: FC = () => {
               {comments.length === 0 ? (
                 <p className="text-gray-400">暂无评论</p>
               ) : (
-                <Timeline>
-                  {comments.map((comment: Comment) => (
-                    <Timeline.Item key={comment.id}>
-                      <div>
-                        <strong>{comment.user?.nickName || comment.user?.username}</strong>
-                        {comment.isInternal && (
-                          <Tag color="orange" className="ml-2">
-                            内部
-                          </Tag>
-                        )}
-                        <span className="text-gray-400 text-sm ml-2">
-                          {formatDateTime(comment.createdAt, FORMAT_DATETIME_MINUTE)}
-                        </span>
-                      </div>
-                      <p className="mt-1">{comment.content}</p>
-                    </Timeline.Item>
-                  ))}
-                </Timeline>
+                <Timeline
+                  items={comments.map((comment: Comment) => ({
+                    content: (
+                      <>
+                        <div>
+                          <strong>{comment.user?.nickName || comment.user?.username}</strong>
+                          {comment.isInternal && (
+                            <Tag color="orange" className="ml-2">
+                              内部
+                            </Tag>
+                          )}
+                          <span className="text-gray-400 text-sm ml-2">
+                            {formatDateTime(comment.createdAt, FORMAT_DATETIME_MINUTE)}
+                          </span>
+                        </div>
+                        <p className="mt-1">{comment.content}</p>
+                      </>
+                    ),
+                  }))}
+                />
               )}
             </Card>
 
@@ -956,26 +958,28 @@ const WorkOrderPage: FC = () => {
               {history.length === 0 ? (
                 <p className="text-gray-400">暂无历史</p>
               ) : (
-                <Timeline>
-                  {history.map((item: HistoryItem) => (
-                    <Timeline.Item key={item.id}>
-                      <div>
-                        <strong>{item.operator?.nickName || item.operator?.username}</strong>
-                        <span className="text-gray-400 text-sm ml-2">
-                          {formatDateTime(item.createdAt, FORMAT_DATETIME_MINUTE)}
-                        </span>
-                      </div>
-                      <p className="mt-1">
-                        {item.remark || item.action}
-                        {item.oldValue && item.newValue && (
-                          <span className="text-gray-500">
-                            （{item.oldValue} → {item.newValue}）
+                <Timeline
+                  items={history.map((item: HistoryItem) => ({
+                    content: (
+                      <>
+                        <div>
+                          <strong>{item.operator?.nickName || item.operator?.username}</strong>
+                          <span className="text-gray-400 text-sm ml-2">
+                            {formatDateTime(item.createdAt, FORMAT_DATETIME_MINUTE)}
                           </span>
-                        )}
-                      </p>
-                    </Timeline.Item>
-                  ))}
-                </Timeline>
+                        </div>
+                        <p className="mt-1">
+                          {item.remark || item.action}
+                          {item.oldValue && item.newValue && (
+                            <span className="text-gray-500">
+                              （{item.oldValue} → {item.newValue}）
+                            </span>
+                          )}
+                        </p>
+                      </>
+                    ),
+                  }))}
+                />
               )}
             </Card>
           </div>

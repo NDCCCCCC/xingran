@@ -196,7 +196,7 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
             <Alert
               type="info"
               showIcon
-              message="需指定 user/dept 才能评估 dept/user scope 规则"
+              title="需指定 user/dept 才能评估 dept/user scope 规则"
               description="当前未传 userID/deptID,仅 global 规则参与合并。dept/user scope 规则需双条件(IP CIDR + scopeID 匹配)才生效。"
               style={{ marginBottom: 12 }}
             />

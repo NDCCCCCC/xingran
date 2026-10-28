@@ -620,7 +620,7 @@ const DictManagement: FC = () => {
                   </div>
                   {selectedRowKeys.length > 0 && (
                     <Alert
-                      message={
+                      title={
                         <span>
                           已选择 <strong>{selectedRowKeys.length}</strong> 个字典类型，
                           <Button
@@ -790,7 +790,7 @@ const DictManagement: FC = () => {
                   </div>
                   {selectedRowKeys.length > 0 && (
                     <Alert
-                      message={
+                      title={
                         <span>
                           已选择 <strong>{selectedRowKeys.length}</strong> 个字典数据，
                           <Button

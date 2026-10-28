@@ -140,7 +140,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 		} else if (wasOffline) {
 			message.destroy("network-status");
 			notification.success({
-				message: "网络已恢复",
+				title: "网络已恢复",
 				description: "数据正在重新加载...",
 				duration: 3,
 			});
@@ -169,7 +169,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	useEffect(() => {
 		if (wsConnStatus === "error") {
 			notification.warning({
-				message: "WebSocket 连接错误",
+				title: "WebSocket 连接错误",
 				description: "实时数据推送不可用，将使用轮询模式",
 				duration: 5,
 			});

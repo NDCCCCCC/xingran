@@ -167,7 +167,7 @@ export const FixSuggestionDetailDrawer = ({
                         [
                           {
                             color: "gray",
-                            children: (
+                            content: (
                               <>
                                 <div>创建建议</div>
                                 <div style={{ fontSize: 12, color: "#999" }}>{sugg.createdAt}</div>
@@ -177,7 +177,7 @@ export const FixSuggestionDetailDrawer = ({
                           sugg.acceptedAt
                             ? {
                                 color: "blue",
-                                children: (
+                                content: (
                                   <>
                                     <div>接受</div>
                                     <div style={{ fontSize: 12, color: "#999" }}>
@@ -190,7 +190,7 @@ export const FixSuggestionDetailDrawer = ({
                           sugg.appliedAt
                             ? {
                                 color: "green",
-                                children: (
+                                content: (
                                   <>
                                     <div>应用</div>
                                     <div style={{ fontSize: 12, color: "#999" }}>
@@ -203,7 +203,7 @@ export const FixSuggestionDetailDrawer = ({
                           sugg.rolledBackAt
                             ? {
                                 color: "magenta",
-                                children: (
+                                content: (
                                   <>
                                     <div>回滚</div>
                                     <div style={{ fontSize: 12, color: "#999" }}>
@@ -213,7 +213,7 @@ export const FixSuggestionDetailDrawer = ({
                                 ),
                               }
                             : null,
-                        ].filter(Boolean) as Array<{ color: string; children: React.ReactNode }>
+                        ].filter(Boolean) as Array<{ color: string; content: React.ReactNode }>
                       }
                     />
                   </>
@@ -227,7 +227,7 @@ export const FixSuggestionDetailDrawer = ({
                     <Timeline
                       items={data.history.map((h) => ({
                         color: FIX_STATUS_TAG_CONFIG[h.fixStatus]?.color ?? "default",
-                        children: (
+                        content: (
                           <>
                             <div>
                               <Tag color={FIX_STATUS_TAG_CONFIG[h.fixStatus]?.color ?? "default"}>

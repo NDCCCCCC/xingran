@@ -71,7 +71,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
       {/* 示例参数提示 */}
       {showExampleHint && Object.keys(exampleParams).length > 0 && (
         <Alert
-          message="示例参数可用"
+          title="示例参数可用"
           description="点击下方按钮加载该端点的示例参数，可作为参考进行修改。"
           type="info"
           showIcon

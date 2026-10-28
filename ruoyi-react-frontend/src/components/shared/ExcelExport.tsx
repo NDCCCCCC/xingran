@@ -91,7 +91,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
     >
       {Object.keys(filters).length > 0 ? (
         <Alert
-          message="将导出以下筛选条件的数据"
+          title="将导出以下筛选条件的数据"
           description={
             <Descriptions size="small" column={1} bordered>
               {Object.entries(filters).map(([key, value]) => {
@@ -109,7 +109,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
         />
       ) : (
         <Alert
-          message="将导出全部数据"
+          title="将导出全部数据"
           description="当前页面没有设置任何筛选条件，将导出所有数据。"
           type="warning"
           showIcon

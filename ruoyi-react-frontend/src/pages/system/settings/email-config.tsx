@@ -411,7 +411,7 @@ const EmailConfigPage: FC = () => {
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  <Space direction="vertical" size={4}>
+                  <Space orientation="vertical" size={4}>
                     <span style={{ color: "var(--theme-text-primary)", fontWeight: 500 }}>
                       暂无邮箱配置
                     </span>

@@ -161,7 +161,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
     >
       <div style={{ padding: "16px 0" }}>
         <Alert
-          message="使用自然语言描述您的自动化任务，AI 将为您生成相应的脚本步骤"
+          title="使用自然语言描述您的自动化任务，AI 将为您生成相应的脚本步骤"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -197,7 +197,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
                 ),
                 description: (
                   <Card size="small" style={{ marginTop: 8 }}>
-                    <Space direction="vertical" style={{ width: "100%" }}>
+                    <Space orientation="vertical" style={{ width: "100%" }}>
                       {action.selector?.value && (
                         <Text code style={{ fontSize: 12 }}>
                           选择器: {action.selector.value}
@@ -219,7 +219,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
             />
 
             <Alert
-              message="请检查生成的脚本步骤，确认无误后点击「确认使用」按钮"
+              title="请检查生成的脚本步骤，确认无误后点击「确认使用」按钮"
               type="success"
               showIcon
               style={{ marginTop: 16 }}

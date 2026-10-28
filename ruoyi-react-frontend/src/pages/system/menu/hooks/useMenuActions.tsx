@@ -121,7 +121,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           <div>
             {hasChildren && (
               <Alert
-                message="该菜单下有子菜单，删除时请选择是否同时删除子菜单"
+                title="该菜单下有子菜单，删除时请选择是否同时删除子菜单"
                 type="warning"
                 showIcon
                 style={{ marginBottom: 16 }}
@@ -133,7 +133,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
               </Checkbox>
               {hasChildren && !checked && (
                 <Alert
-                  message="不启用级联删除时，如果菜单下有子菜单，删除将失败"
+                  title="不启用级联删除时，如果菜单下有子菜单，删除将失败"
                   type="error"
                   showIcon
                   style={{ marginTop: 12 }}
@@ -174,7 +174,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       return (
         <div>
           <Alert
-            message="删除后将无法恢复，请谨慎操作！"
+            title="删除后将无法恢复，请谨慎操作！"
             type="warning"
             showIcon
             style={{ marginBottom: 16 }}
@@ -185,7 +185,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
             </Checkbox>
             {checked && (
               <Alert
-                message="启用级联删除后，将同时删除所选菜单及其所有子菜单"
+                title="启用级联删除后，将同时删除所选菜单及其所有子菜单"
                 type="info"
                 showIcon
                 style={{ marginTop: 12 }}

@@ -169,7 +169,7 @@ const PostManagement: FC = () => {
         )}
         {selectedRowKeys.length > 0 && (
           <Alert
-            message={
+            title={
               <span>
                 已选择 <strong>{selectedRowKeys.length}</strong> 个岗位，
                 <Button

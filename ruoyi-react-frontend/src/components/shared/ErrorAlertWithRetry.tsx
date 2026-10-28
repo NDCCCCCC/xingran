@@ -117,7 +117,7 @@ const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry, des
     <Space orientation="vertical" style={{ width: "100%" }}>
       <Alert
         type="error"
-        message={alertMessage}
+        title={alertMessage}
         showIcon
         description={
           description ??

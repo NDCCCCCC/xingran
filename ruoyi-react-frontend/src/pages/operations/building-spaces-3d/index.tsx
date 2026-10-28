@@ -134,7 +134,7 @@ const BuildingSpaces3D: React.FC = () => {
 
       {!loading && buildings.length === 0 && (
         <Alert
-          message="暂无楼宇数据"
+          title="暂无楼宇数据"
           description="请先在楼宇管理中添加楼宇信息"
           type="info"
           showIcon

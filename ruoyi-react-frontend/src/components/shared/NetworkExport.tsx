@@ -144,7 +144,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
           onChange={(e) => setExportMode(e.target.value)}
           style={{ width: "100%" }}
         >
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space orientation="vertical" style={{ width: "100%" }}>
             <Radio value="filtered">
               筛选导出 — 按当前筛选条件导出所有匹配数据
               {Object.keys(filters).length > 0 && (

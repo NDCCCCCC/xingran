@@ -50,7 +50,7 @@ const TimelineItem = React.memo<{ event: MACHistoryRecord }>(({ event }) => {
 
   return (
     <div style={{ padding: "4px 8px", borderRadius: 4 }}>
-      <Space direction="vertical" size={2} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={2} style={{ width: "100%" }}>
         <Space size={8} wrap>
           <Typography.Text strong>
             {formatDateTime(event.firstSeen, FORMAT_DATETIME_MINUTE)}
@@ -184,10 +184,10 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
             const color = EVENT_COLORS[eventType];
             return {
               color,
-              dot: React.createElement(Icon, {
+              icon: React.createElement(Icon, {
                 style: { color, fontSize: 16 },
               }),
-              children: <TimelineItem event={event} />,
+              content: <TimelineItem event={event} />,
             };
           })}
         />

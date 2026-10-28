@@ -155,7 +155,7 @@ const DeviceTablePanel: React.FC<DeviceTablePanelProps> = ({
             <DeviceStatsCards statistics={statistics} />
             {ctx.selectedRowKeys.length > 0 && (
               <Alert
-                message={
+                title={
                   <span>
                     已选择 <strong>{ctx.selectedRowKeys.length}</strong> 个设备，
                     <Button

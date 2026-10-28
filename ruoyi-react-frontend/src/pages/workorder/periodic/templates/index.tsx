@@ -618,19 +618,23 @@ const PeriodicTemplatePage: FC = () => {
             {logs.length === 0 ? (
               <p className="text-gray-400 mt-4">暂无执行记录</p>
             ) : (
-              <Timeline className="mt-4">
-                {logs.map((log) => (
-                  <Timeline.Item key={log.id} color={log.status === "success" ? "green" : "red"}>
-                    <div>
-                      <strong>{formatDateTime(log.executedAt)}</strong>
-                      <Tag color={log.status === "success" ? "green" : "red"} className="ml-2">
-                        {log.status === "success" ? "成功" : "失败"}
-                      </Tag>
-                    </div>
-                    <p className="mt-1">{log.result || log.errorMsg}</p>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
+              <Timeline
+                className="mt-4"
+                items={logs.map((log) => ({
+                  color: log.status === "success" ? "green" : "red",
+                  content: (
+                    <>
+                      <div>
+                        <strong>{formatDateTime(log.executedAt)}</strong>
+                        <Tag color={log.status === "success" ? "green" : "red"} className="ml-2">
+                          {log.status === "success" ? "成功" : "失败"}
+                        </Tag>
+                      </div>
+                      <p className="mt-1">{log.result || log.errorMsg}</p>
+                    </>
+                  ),
+                }))}
+              />
             )}
           </div>
         )}

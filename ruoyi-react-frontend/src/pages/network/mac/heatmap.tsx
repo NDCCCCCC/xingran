@@ -187,7 +187,7 @@ const HeatmapPage: React.FC = () => {
           <Alert
             type="info"
             showIcon
-            message="请选择时间范围后点击查询"
+            title="请选择时间范围后点击查询"
             description="默认展示近 7 天数据,数据源: MV-04 (mv_mac_port_daily_count)"
           />
         ) : (

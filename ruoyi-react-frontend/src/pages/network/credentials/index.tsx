@@ -496,7 +496,7 @@ const CredentialManagement: FC = () => {
         width={600}
       >
         <Alert
-          message="提示"
+          title="提示"
           description="请选择协议类型（SSH 或 Telnet），并填写对应的配置信息。一个凭证可以同时包含 SSH/Telnet 配置和 SNMP 配置。"
           type="info"
           showIcon

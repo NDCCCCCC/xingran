@@ -100,7 +100,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
 
   return (
     <div>
-      <Space direction="vertical" style={{ width: "100%" }}>
+      <Space orientation="vertical" style={{ width: "100%" }}>
         {/* 城市选择 */}
         <Space>
           <EnvironmentOutlined />
@@ -148,13 +148,13 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
 
         {/* 错误提示 */}
         {error && (
-          <Alert message="解析失败" description={error.message} type="error" showIcon closable />
+          <Alert title="解析失败" description={error.message} type="error" showIcon closable />
         )}
 
         {/* 成功提示 */}
         {hasCoordinates && (
           <Alert
-            message={
+            title={
               <Space>
                 <CheckCircleOutlined />
                 <span>地址解析成功</span>

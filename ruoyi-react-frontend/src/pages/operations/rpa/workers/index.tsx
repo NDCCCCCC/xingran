@@ -292,7 +292,7 @@ const WorkerMonitor: FC = () => {
         <Card>
           {statistics.offline > 0 && statistics.offline === statistics.total && (
             <Alert
-              message="所有 Worker 离线"
+              title="所有 Worker 离线"
               description="请检查 Worker 服务是否正常运行，以及网络连接是否正常"
               type="warning"
               showIcon
@@ -301,7 +301,7 @@ const WorkerMonitor: FC = () => {
           )}
           {statistics.error > 0 && (
             <Alert
-              message={`${statistics.error} 个 Worker 处于错误状态`}
+              title={`${statistics.error} 个 Worker 处于错误状态`}
               description="请查看 Worker 日志获取详细错误信息"
               type="error"
               showIcon

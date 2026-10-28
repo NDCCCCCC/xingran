@@ -279,7 +279,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
             </Form.Item>
 
             <Alert
-              message="WebSocket 连接将在仪表盘加载时自动建立"
+              title="WebSocket 连接将在仪表盘加载时自动建立"
               type="info"
               showIcon
               icon={<InfoCircleOutlined />}
@@ -318,7 +318,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
             </Form.Item>
 
             <Alert
-              message="静态数据不会自动更新，适合展示固定内容"
+              title="静态数据不会自动更新，适合展示固定内容"
               type="info"
               showIcon
               icon={<InfoCircleOutlined />}

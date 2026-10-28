@@ -223,9 +223,9 @@ const ImageGallery: FC<ImageGalleryProps> = ({
       <Image
         style={{ display: "none" }}
         preview={{
-          visible: previewVisible,
+          open: previewVisible,
           src: previewImage,
-          onVisibleChange: (vis) => setPreviewVisible(vis),
+          onOpenChange: (vis) => setPreviewVisible(vis),
         }}
       />
 

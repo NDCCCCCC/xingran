@@ -104,7 +104,7 @@ const PhysicalDevicesPanel: React.FC<{
         <Alert
           type={alertType}
           showIcon
-          message={alertTitle}
+          title={alertTitle}
           description={
             <div style={{ fontSize: 11 }}>
               {emptyMessage && <div style={{ marginBottom: warnings.length > 0 ? 4 : 0 }}>{emptyMessage}</div>}

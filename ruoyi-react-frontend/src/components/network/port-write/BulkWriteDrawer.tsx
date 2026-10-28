@@ -315,7 +315,7 @@ function SelectView({
         <Alert
           type="error"
           showIcon
-          message="批量必须同设备"
+          title="批量必须同设备"
           description={`检测到 ${uniqueDeviceCount} 个不同设备, 后端会拒绝跨设备批量。请重新勾选, 确保所选端口属于同一设备 (same device)。`}
           style={{ marginBottom: 16 }}
         />

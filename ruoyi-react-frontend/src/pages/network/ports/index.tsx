@@ -83,7 +83,7 @@ const PortMACPanel: FC<PortMACPanelProps> = ({ bundle, adminStatus, operStatus, 
 
   if (bundle.current.length > 0) {
     return (
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={8} style={{ width: "100%" }}>
         <Typography.Text strong>当前 MAC 地址({bundle.current.length})</Typography.Text>
         <Space size={[8, 8]} wrap>
           {bundle.current.map((m) => (
@@ -101,7 +101,7 @@ const PortMACPanel: FC<PortMACPanelProps> = ({ bundle, adminStatus, operStatus, 
     const recent = bundle.recentHistory;
     const eventType = (recent.eventType ?? "appeared") as MACEventType;
     return (
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={8} style={{ width: "100%" }}>
         <Typography.Text strong>最近一次出现过的 MAC</Typography.Text>
         <Space size={8} wrap>
           <Tag color="blue">{recent.macAddress}</Tag>

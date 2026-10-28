@@ -127,7 +127,7 @@ export const ProgressWidget: React.FC<ProgressWidgetProps> = ({
             percent={percent}
             strokeColor={color}
             status={status}
-            width={120}
+            size={120}
           />
         ) : display.progressType === "dashboard" ? (
           <Progress

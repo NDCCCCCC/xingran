@@ -97,7 +97,7 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
   const showSystemOption = isAdmin;
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }}>
+    <Space orientation="vertical" style={{ width: "100%" }}>
       <Form.Item label="可见范围" style={{ marginBottom: 8 }}>
         <AppSelect
           value={value?.scope || "private"}

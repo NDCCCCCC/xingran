@@ -253,7 +253,7 @@ const Login: FC = () => {
               type="error"
               showIcon
               closable
-              message={loginError}
+              title={loginError}
               onClose={() => setLoginError("")}
             />
           )}

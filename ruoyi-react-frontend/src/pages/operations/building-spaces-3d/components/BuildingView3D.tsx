@@ -222,7 +222,7 @@ interface NoBuildingSelectedAlertProps {
 const NoBuildingSelectedAlert: React.FC<NoBuildingSelectedAlertProps> = ({ onBackToMap }) => (
   <div style={styles.centerContainer}>
     <Alert
-      message="未选择楼宇"
+      title="未选择楼宇"
       description="请先在地图上选择一个楼宇"
       type="info"
       showIcon
@@ -268,7 +268,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     </div>
 
     <div style={styles.headerInfo}>
-      <Space split={<span style={styles.splitter}>|</span>}>
+      <Space separator={<span style={styles.splitter}>|</span>}>
         <span>{building.cityName || "-"}</span>
         <span>{floorCount} 层</span>
         <span>{workstationCount} 工位</span>
@@ -304,7 +304,7 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
   >
     {/* 楼宇切换下拉框 */}
     <div style={styles.controlPanel}>
-      <Space direction="vertical" size="small" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="small" style={{ width: "100%" }}>
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={onBackToMap}

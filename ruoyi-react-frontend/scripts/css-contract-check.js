@@ -6,7 +6,8 @@
  * ==============================================================================
  * 用法：node scripts/css-contract-check.js   （退出码 0 = 契约完好）
  *
- * 依赖口径：核心检查零依赖；仅 C14c（antd <Drawer> width 弃用守护）**可选**使用
+ * 依赖口径：核心检查零依赖；仅 C14c / C14d / C14e（antd <Drawer> width、antd <Alert> message、
+ *   antd <Progress> width 弃用守护）**可选**使用
  *   devDependency `typescript` 编译器 API 做精确 AST 判定；typescript 不可用时
  *   自动降级为正则 JSX 扫描（降级态会在输出中显式标注，且仍能覆盖绝大多数场景）。
  *
@@ -25,6 +26,8 @@
  *   C5  VIS-03 status 边框色还原规则存在
  *   C14 antd 6 弃用 prop 零命中（VISFIX-04）
  *   C14c antd <Drawer> 的 width prop 零命中（VISFIX-05，antd 6 → size）
+ *   C14d antd <Alert> 的 message prop 零命中（VISFIX-05 收口补丁，antd 6 → title）
+ *   C14e antd <Progress> 的 width prop 零命中（VISFIX-05 收口补丁，antd 6 → size）
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -525,6 +528,8 @@ const C14_EXEMPTIONS = [
 // ==========================================================================
 // Phase 88-05 (VISFIX-05) 新增断言：C14c — antd <Drawer> 的 width prop 零命中（阻断）
 // ==========================================================================
+// 注：C14d / C14e（antd <Alert> message / antd <Progress> width）紧随本块之后，
+//     共用同一套 TS AST 判定思路（定位 JSX 元素 + 确认 antd import 绑定）。
 // 弃用证据（node_modules/antd 6.6.4）：
 //   es/drawer/Drawer.js:155  `[['width','size'], ['height','size']].forEach(...)`
 //   → `width` 与 `height` 均为 antd 6 Drawer 的 @deprecated prop。
@@ -664,6 +669,449 @@ const C14_EXEMPTIONS = [
       : `C14c PASS：antd <Drawer> 0 处 width（扫描 ${scanned} 个含 Drawer 的 .tsx，命中 antd Drawer 的 ${antdDrawerFiles} 个）` +
         (useTs ? '｜AST 精确判定' : '｜⚠ 降级为正则扫描（typescript 不可用）') +
         (advisories.length ? `｜人工确认 ${advisories.length} 条：${advisories.join(' | ')}` : ''),
+  );
+}
+
+// ==========================================================================
+// Phase 88-05 (VISFIX-05 收口补丁) 新增断言：C14d / C14e
+//   C14d — antd <Alert> 的 message prop 零命中（antd 6 → title）
+//   C14e — antd <Progress> 的 width prop 零命中（antd 6 → size）
+// ==========================================================================
+// 弃用证据（node_modules/antd 6.6.4）：
+//   es/alert/Alert.js:87-88
+//       [['closeText','closable.closeIcon'], ['message','title']].forEach(([deprecatedName, newName]) => {
+//         warning.deprecated(!(deprecatedName in props), deprecatedName, newName);
+//       });
+//       → `message` 是 antd 6 Alert 的 @deprecated prop，新形态为 `title`。
+//   es/alert/Alert.js:83  `const mergedTitle = title ?? message;`
+//       → message 仅是 title 的**旧形态回退**，两者最终都渲染进同一个 `${prefixCls}-title`
+//         节点（Alert.js:236-239）→ `message=` → `title=` 是**渲染等价**的纯改名
+//         （DOM 结构 / class / 内容全同），可安全迁移。
+//   es/progress/progress.js:120
+//       [['width','size'], ['trailColor','railColor'], ['gapPosition','gapPlacement']]
+//         → `width` 是 antd 6 Progress 的 @deprecated prop，新形态为 `size`。
+//
+// Progress 的 `width` → `size` 迁移等价性（本仓两处命中均为 type="circle"）：
+//   es/progress/Circle.js:25  `width: originWidth = 120,`
+//   es/progress/Circle.js:29  `size = originWidth,`   ← size 缺省时**回落到 width**
+//   es/progress/Circle.js:36  `const [width, height] = getSize(size, 'circle');`
+//   es/progress/utils.js:66-67  数字 size → `[width, height] = [size, size]`（= 直径）
+//   ⇒ 对 **circle/dashboard** 型：`width={N}`（不传 size）⇒ size=N ⇒ 直径 N；
+//     `size={N}` ⇒ 直径 N。两者产出同一 [N,N]，渲染逐像素一致。
+//     （唯一差异面：progress.js:166 `progress-inline-circle` 在 size ≤ 20 时才命中，
+//       仅影响 lineHeight/verticalAlign；本仓 N ∈ {100,120} > 20 → 不触发。）
+//   ⇒ 对 **line** 型：size 的数值形态是**条高**（utils.js:58-59 [w,h]=[size,size]），
+//     与 `width`（条宽百分比）语义不同，line 型须写 `size={{ width: N }}`（utils.js:61）。
+//     本仓无 line 型 width 命中，故无豁免登记需求。
+//
+// 判定口径（**上下文感知**，沿用 C14c 的 TS AST 思路）：
+//   只判「确实绑定到 antd 的 <Alert> / <Progress> 标签上的属性」，不碰其它任何东西：
+//   - antd <Modal> / <Popconfirm> 的 message **不弃用**（antd 6.6.4 modal/Modal.js
+//     弃用表无 message）→ 不得误报；
+//   - 自研组件的同名 prop（如 ErrorAlertWithRetry 自有的 `message?: string`）不得误报；
+//   - 变量名 / 对象键 / 属性值里的 `.message` 成员访问不得误报。
+//   「是不是 antd 的 Alert/Progress」判定 = 该文件存在
+//   `import { Alert } from 'antd'`（或 `antd/es/alert` 的 default 导入）且**未改名**，
+//   即 JSX 标签名与本地绑定名一致（`import { Alert as Foo }` 的标签名是 Foo，不在本范围）。
+{
+  // 豁免登记：{ file, line, reason } —— 新增豁免必须写明「为何不可迁」+ 证据行号
+  const C14D_EXEMPTIONS = []; // antd <Alert> 的 message
+  const C14E_EXEMPTIONS = []; // antd <Progress> 的 width
+
+  const tsMod = await import('typescript').catch(() => null);
+  const useTs = !!tsMod && typeof tsMod.createSourceFile === 'function';
+
+  const TARGETS = [
+    { tag: 'Alert', prop: 'message', newName: 'title', label: 'C14d' },
+    { tag: 'Progress', prop: 'width', newName: 'size', label: 'C14e' },
+  ];
+
+  const violations = { Alert: [], Progress: [] };
+  const advisories = [];
+  const stat = { Alert: { elements: 0, files: 0 }, Progress: { elements: 0, files: 0 } };
+
+  const c14deFiles = walkByExt(resolve(feRoot, 'src'), ['.tsx']);
+  let scanned = 0;
+
+  for (const f of c14deFiles) {
+    const rel = relFe(f);
+    const raw = readFileSync(f, 'utf8');
+    if (!/\b(Alert|Progress)\b/.test(raw)) continue; // 快速预筛
+    scanned++;
+
+    if (useTs) {
+      const ts = tsMod;
+      const sf = ts.createSourceFile(f, raw, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+      // ---- 收集「本地名 → antd 绑定」的映射 ----
+      const antdBind = new Map();
+      for (const st of sf.statements) {
+        if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
+        const spec = st.moduleSpecifier.text;
+        const isAntdRoot = spec === 'antd';
+        const isAntdSub = /^antd\/es\/(alert|progress)$/.test(spec);
+        if (!isAntdRoot && !isAntdSub) continue;
+        const ic = st.importClause;
+        if (!ic || ic.isTypeOnly) continue;
+        const nb = ic.namedBindings;
+        if (nb && ts.isNamedImports(nb)) {
+          for (const el of nb.elements) {
+            if (el.isTypeOnly) continue;
+            if (el.propertyName) continue; // `import { Alert as Foo }` → 标签名是 Foo，不在本范围
+            antdBind.set(el.name.text, { orig: el.name.text, spec });
+          }
+        }
+        // `import Alert from 'antd/es/alert'` → default 导出即 antd Alert
+        if (ic.name && isAntdSub) antdBind.set(ic.name.text, { orig: 'default', spec });
+      }
+
+      const lineOfPos = (pos) => sf.getLineAndCharacterOfPosition(pos).line + 1;
+      const visit = (node) => {
+        if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+          const tagName = node.tagName.getText(sf);
+          for (const t of TARGETS) {
+            if (tagName !== t.tag) continue;
+            const bind = antdBind.get(tagName);
+            if (!bind) continue; // 非 antd 绑定 → 不在断言范围（自研组件不误报）
+            if (bind.orig !== t.tag && bind.orig !== 'default') continue;
+            stat[t.tag].elements++;
+            let hit = null;
+            let hasSpread = false;
+            for (const p of node.attributes.properties) {
+              if (ts.isJsxSpreadAttribute(p)) {
+                hasSpread = true;
+                continue;
+              }
+              if (ts.isJsxAttribute(p) && p.name.text === t.prop) hit = p;
+            }
+            if (hit) {
+              const attrLine = lineOfPos(hit.getStart(sf));
+              const exemptList = t.tag === 'Alert' ? C14D_EXEMPTIONS : C14E_EXEMPTIONS;
+              const exempt = exemptList.some((e) => e.file === rel && e.line === attrLine);
+              if (!exempt) {
+                violations[t.tag].push(
+                  `${rel}:${attrLine}  弃用 prop「${t.prop}」仍传给 antd <${t.tag}>（antd 6 → ${t.newName}）`,
+                );
+              }
+            }
+            if (hasSpread) {
+              advisories.push(
+                `${rel}:${lineOfPos(node.getStart(sf))}  antd <${t.tag}> 存在 JSX 展开属性（{...x}），${t.prop} 需人工确认`,
+              );
+            }
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(sf);
+    } else {
+      // ---- 降级：正则 JSX 扫描（typescript 不可用时） ----
+      const text = stripTsCommentsKeepLines(raw);
+      const ls = lineStartsOf(text);
+      const jsxTags = findJsxOpenTags(text);
+      for (const t of TARGETS) {
+        const impRe = new RegExp(
+          `import\\s*\\{[^}]*\\b${t.tag}\\b[^}]*\\}\\s*from\\s*['"]antd['"]`,
+        );
+        if (!impRe.test(text)) continue;
+        stat[t.tag].files++;
+        for (const tag of jsxTags) {
+          if (tag.name !== t.tag) continue;
+          stat[t.tag].elements++;
+          const line = lineOf(ls, tag.start);
+          for (const r of tag.runs) {
+            if (r.depth !== 0) continue;
+            const seg = text.slice(r.from, r.to);
+            if (!new RegExp(`^\\s*${t.prop}\\s*=`).test(seg)) continue;
+            const exemptList = t.tag === 'Alert' ? C14D_EXEMPTIONS : C14E_EXEMPTIONS;
+            const exempt = exemptList.some((e) => e.file === rel && e.line === line);
+            if (!exempt) {
+              violations[t.tag].push(
+                `${rel}:${line}  弃用 prop「${t.prop}」仍传给 antd <${t.tag}>（antd 6 → ${t.newName}）`,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const summarize = (t) => {
+    const v = violations[t.tag];
+    return v.length
+      ? v.join(' | ')
+      : `${t.label} PASS：antd <${t.tag}> 0 处 ${t.prop}（扫描 ${scanned} 个含 ${t.tag} 的 .tsx，` +
+        `命中 antd ${t.tag} 的 ${stat[t.tag].elements} 个元素）` +
+        (useTs ? '｜AST 精确判定' : '｜⚠ 降级为正则扫描（typescript 不可用）') +
+        `｜豁免登记 ${(t.tag === 'Alert' ? C14D_EXEMPTIONS : C14E_EXEMPTIONS).length} 项`;
+  };
+
+  check(
+    'C14d antd <Alert> message 弃用零命中（阻断）',
+    violations.Alert.length === 0,
+    summarize(TARGETS[0]),
+  );
+  check(
+    'C14e antd <Progress> width 弃用零命中（阻断）',
+    violations.Progress.length === 0,
+    summarize(TARGETS[1]),
+  );
+  if (advisories.length) {
+    console.log(`NOTE  C14d/C14e 人工确认 ${advisories.length} 条：${advisories.join(' | ')}`);
+  }
+}
+
+// ==========================================================================
+// Phase 88-05 收口补丁 新增断言：C14f / C14g —— antd 6 弃用 prop **全表**零命中（阻断）
+// ==========================================================================
+// 背景：M16 的 must_have 是「antd 弃用警告 = 0」。C14d / C14e 只锁了 Alert.message 与
+//   Progress.width 两类；若只盯这两类，其余 antd 6 弃用残留（Space.direction、
+//   notification.message、Image.preview.visible、Timeline items[].children 等）
+//   仍会在浏览器 console 里报警 → must_have 不成立。
+//   故本块按 **antd 6.6.4 实际弃用表**（穷举 node_modules/antd/es/** 弃用声明）建立
+//   **数据驱动**的全表守护，一次性锁死所有组件级 / 配置对象级弃用 prop。
+//
+// 证据来源（antd 6.6.4 es/**/ 弃用声明行）：
+//   alert/Alert.js:87            message → title
+//   progress/progress.js:120     width → size / trailColor → railColor / gapPosition → gapPlacement
+//   space/index.js:94            direction → orientation / split → separator
+//   drawer/Drawer.js:155         width → size / height → size / destroyInactivePanel → destroyOnHidden
+//   card/Card.js:93              bordered → variant
+//   input/Input.js:49            bordered → variant
+//   input-number/index.js:149    bordered → variant
+//   modal/Modal.js:126           destroyOnClose → destroyOnHidden
+//   collapse/Collapse.js:64      destroyInactivePanel → destroyOnHidden / expandIconPosition → expandIconPlacement
+//   tooltip/index.js:97          destroyTooltipOnHide → destroyOnHidden
+//   tabs/index.js:86             tabPosition → tabPlacement
+//   divider/index.js:107         type → orientation
+//   transfer/index.js:290        operations → actions
+//   slider/index.js:116          tooltipPrefixCls → prefixCls / getTooltipPopupContainer → getPopupContainer
+//                                 tipFormatter → formatter / tooltipPlacement → placement / tooltipVisible → open
+//   calendar/generateCalendar.js:102  dateCellRender → cellRender / dateFullCellRender → fullCellRender
+//                                 monthCellRender → cellRender / monthFullCellRender → fullCellRender
+//   image/hooks/usePreviewConfig.js:68   （**preview 配置对象**内）visible → open / onVisibleChange → onOpenChange
+//                                 toolbarRender → actionsRender / maskClassName → classNames.cover
+//                                 rootClassName → classNames.root
+//   notification/useNotification.js:155  （**配置对象**内）message → title / btn → actions
+//   timeline/Timeline.js:107     （<Timeline> 的 <Timeline.Item> 子元素形态）Timeline.Item → items
+//   timeline/Timeline.js:116-117 （**items[] 条目**内）label → title / children → content
+//                                 dot → icon / position → placement
+//
+// 判定口径（**上下文感知**，与 C14c/C14d/C14e 一致）：
+//   - 只判「确实绑定到 antd 导出」的 JSX 元素；自研同名组件不误报；
+//   - 同名 prop 在**别的** antd 组件上合法（如 Alert 的 type、Divider 的 titlePlacement）→ 不误报；
+//   - Timeline 的 label/children/dot/position 弃用作用于 **items[] 条目**而非 JSX 属性
+//     （Timeline.js:115-117 的 warning 文本即 `items.<prop>`），故不在 JSX 属性表内，
+//     由 C14g 的 items[] 规则覆盖；
+//   - 配置对象类（Image.preview / notification / Timeline.items）按**对象键**判定。
+{
+  // ---- C14f：antd 组件级弃用 prop（JSX 属性形态） ----
+  const ANTD6_JSX_DEPRECATED = {
+    Alert: { message: 'title' },
+    Progress: { width: 'size', trailColor: 'railColor', gapPosition: 'gapPlacement' },
+    Space: { direction: 'orientation', split: 'separator' },
+    Drawer: { width: 'size', height: 'size', destroyInactivePanel: 'destroyOnHidden' },
+    Card: { bordered: 'variant' },
+    Input: { bordered: 'variant' },
+    InputNumber: { bordered: 'variant' },
+    Modal: { destroyOnClose: 'destroyOnHidden' },
+    Collapse: { destroyInactivePanel: 'destroyOnHidden', expandIconPosition: 'expandIconPlacement' },
+    Tooltip: { destroyTooltipOnHide: 'destroyOnHidden' },
+    Tabs: { tabPosition: 'tabPlacement' },
+    Divider: { type: 'orientation' },
+    Transfer: { operations: 'actions' },
+    Slider: {
+      tooltipPrefixCls: 'prefixCls',
+      getTooltipPopupContainer: 'getPopupContainer',
+      tipFormatter: 'formatter',
+      tooltipPlacement: 'placement',
+      tooltipVisible: 'open',
+    },
+    Calendar: {
+      dateCellRender: 'cellRender',
+      dateFullCellRender: 'fullCellRender',
+      monthCellRender: 'cellRender',
+      monthFullCellRender: 'fullCellRender',
+    },
+  };
+
+  // ---- C14g：antd 配置对象级弃用 prop（对象键形态） ----
+  // 结构：{ antd导出名: { 配置prop名: { 弃用键: 新形态 } } }
+  const ANTD6_CONFIG_DEPRECATED = {
+    Image: {
+      preview: {
+        visible: 'open',
+        onVisibleChange: 'onOpenChange',
+        toolbarRender: 'actionsRender',
+        maskClassName: 'classNames.cover',
+        rootClassName: 'classNames.root',
+      },
+    },
+    Timeline: {
+      items: { label: 'title', children: 'content', dot: 'icon', position: 'placement' },
+    },
+  };
+  // notification 的配置对象是**函数调用实参**形态（非 JSX 属性），单独一条规则
+  const NOTIFICATION_DEPRECATED = { message: 'title', btn: 'actions' };
+
+  const tsMod2 = await import('typescript').catch(() => null);
+  const useTs2 = !!tsMod2 && typeof tsMod2.createSourceFile === 'function';
+
+  const fViolations = [];
+  const gViolations = [];
+  const fElements = new Map(); // 组件名 → 命中元素数
+  const gScanned = { Image: 0, Timeline: 0, notification: 0 };
+
+  if (useTs2) {
+    const ts = tsMod2;
+    const files2 = walkByExt(resolve(feRoot, 'src'), ['.tsx']);
+    for (const f2 of files2) {
+      const rel2 = relFe(f2);
+      const raw2 = readFileSync(f2, 'utf8');
+      if (!/\b(Alert|Progress|Space|Drawer|Card|Input|InputNumber|Modal|Collapse|Tooltip|Tabs|Divider|Transfer|Slider|Calendar|Timeline|Image|notification)\b/.test(raw2)) {
+        continue;
+      }
+      const sf2 = ts.createSourceFile(f2, raw2, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+      // ---- antd 绑定：本地名 → antd 原始导出名 ----
+      const bind = new Map();
+      for (const st of sf2.statements) {
+        if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
+        const spec = st.moduleSpecifier.text;
+        if (!(spec === 'antd' || spec.startsWith('antd/'))) continue;
+        const ic = st.importClause;
+        if (!ic || ic.isTypeOnly) continue;
+        const nb = ic.namedBindings;
+        if (nb && ts.isNamedImports(nb)) {
+          for (const el of nb.elements) {
+            if (el.isTypeOnly || el.propertyName) continue;
+            bind.set(el.name.text, el.name.text);
+          }
+        }
+      }
+      const lineOf2 = (p) => sf2.getLineAndCharacterOfPosition(p).line + 1;
+
+      // ---- C14f：JSX 属性 ----
+      const visitJsx2 = (node) => {
+        if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+          const tag = node.tagName.getText(sf2);
+          const orig = bind.get(tag);
+          if (orig && ANTD6_JSX_DEPRECATED[orig]) {
+            const rule = ANTD6_JSX_DEPRECATED[orig];
+            fElements.set(orig, (fElements.get(orig) || 0) + 1);
+            for (const p of node.attributes.properties) {
+              if (!ts.isJsxAttribute(p)) continue;
+              const np = rule[p.name.text];
+              if (!np) continue;
+              fViolations.push(
+                `${rel2}:${lineOf2(p.name.getStart(sf2))}  弃用 prop「${p.name.text}」仍传给 antd <${orig}>（antd 6 → ${np}）`,
+              );
+            }
+          }
+        }
+        ts.forEachChild(node, visitJsx2);
+      };
+      visitJsx2(sf2);
+
+      // ---- C14g：配置对象键（Image.preview / Timeline.items） ----
+      const visitCfg = (node) => {
+        if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+          const tag = node.tagName.getText(sf2);
+          const orig = bind.get(tag);
+          if (orig && ANTD6_CONFIG_DEPRECATED[orig]) {
+            const cfgs = ANTD6_CONFIG_DEPRECATED[orig];
+            for (const p of node.attributes.properties) {
+              if (!ts.isJsxAttribute(p) || !p.initializer) continue;
+              const cfgName = p.name.text;
+              const banned = cfgs[cfgName];
+              if (!banned) continue;
+              if (!ts.isJsxExpression(p.initializer) || !p.initializer.expression) continue;
+              gScanned[orig] = (gScanned[orig] || 0) + 1;
+              // 递归找该配置对象下的对象字面量键
+              const scanObj = (n) => {
+                if (ts.isObjectLiteralExpression(n)) {
+                  for (const prop of n.properties) {
+                    if (!ts.isPropertyAssignment(prop)) continue;
+                    const kn = prop.name;
+                    const key = ts.isIdentifier(kn) ? kn.text : ts.isStringLiteral(kn) ? kn.text : null;
+                    if (!key || !banned[key]) continue;
+                    gViolations.push(
+                      `${rel2}:${lineOf2(prop.getStart(sf2))}  弃用配置键「${key}」仍传给 antd <${orig} ${cfgName}>（antd 6 → ${banned[key]}）`,
+                    );
+                  }
+                }
+                ts.forEachChild(n, scanObj);
+              };
+              scanObj(p.initializer.expression);
+            }
+          }
+        }
+        // <Timeline> 的 <Timeline.Item> 子元素形态（antd 6 → items 数组）
+        if (ts.isJsxElement(node)) {
+          const tag = node.openingElement.tagName.getText(sf2);
+          if (tag === 'Timeline' && bind.get('Timeline') === 'Timeline') {
+            const hasItem = node.children.some(
+              (c) => ts.isJsxElement(c) && c.openingElement.tagName.getText(sf2) === 'Timeline.Item',
+            );
+            if (hasItem) {
+              gViolations.push(
+                `${rel2}:${lineOf2(node.openingElement.getStart(sf2))}  antd <Timeline> 仍用 <Timeline.Item> 子元素形态（antd 6 → items 数组）`,
+              );
+            }
+          }
+        }
+        ts.forEachChild(node, visitCfg);
+      };
+      visitCfg(sf2);
+
+      // ---- C14g：notification 配置对象（函数实参形态） ----
+      const visitCall2 = (node) => {
+        if (ts.isCallExpression(node)) {
+          const callee = node.expression;
+          if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression)) {
+            const orig = bind.get(callee.expression.text);
+            if (orig === 'notification' || orig === 'Notification') {
+              for (const arg of node.arguments) {
+                if (!ts.isObjectLiteralExpression(arg)) continue;
+                gScanned.notification = (gScanned.notification || 0) + 1;
+                for (const prop of arg.properties) {
+                  if (!ts.isPropertyAssignment(prop)) continue;
+                  const kn = prop.name;
+                  const key = ts.isIdentifier(kn) ? kn.text : ts.isStringLiteral(kn) ? kn.text : null;
+                  if (!key || !NOTIFICATION_DEPRECATED[key]) continue;
+                  gViolations.push(
+                    `${rel2}:${lineOf2(prop.getStart(sf2))}  弃用配置键「${key}」仍传给 antd notification（antd 6 → ${NOTIFICATION_DEPRECATED[key]}）`,
+                  );
+                }
+              }
+            }
+          }
+        }
+        ts.forEachChild(node, visitCall2);
+      };
+      visitCall2(sf2);
+    }
+  } else {
+    console.log('NOTE  C14f/C14g 未执行：typescript 不可用（无法做 AST 精确判定）');
+  }
+
+  const covered = Object.keys(ANTD6_JSX_DEPRECATED).length;
+  check(
+    'C14f antd 6 组件级弃用 prop 全表零命中（阻断）',
+    fViolations.length === 0,
+    fViolations.length
+      ? fViolations.join(' | ')
+      : `C14f PASS：${covered} 个 antd 组件的弃用 prop 全表 0 命中` +
+        (useTs2 ? '｜AST 精确判定' : '｜⚠ typescript 不可用，本项未执行'),
+  );
+  check(
+    'C14g antd 6 配置对象级弃用 prop 零命中（阻断）',
+    gViolations.length === 0,
+    gViolations.length
+      ? gViolations.join(' | ')
+      : `C14g PASS：Image.preview / Timeline.items / notification 配置对象 0 命中` +
+        `（已扫描 Image.preview ${gScanned.Image || 0} 处、Timeline.items ${gScanned.Timeline || 0} 处、notification ${gScanned.notification || 0} 处）` +
+        (useTs2 ? '｜AST 精确判定' : '｜⚠ typescript 不可用，本项未执行'),
   );
 }
 

@@ -240,7 +240,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
               <Alert
                 type="error"
                 showIcon
-                message="恢复失败"
+                title="恢复失败"
                 description={
                   <div>
                     {restoreTask.errorMessage && <div>错误信息：{restoreTask.errorMessage}</div>}
@@ -252,7 +252,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
               <Alert
                 type="success"
                 showIcon
-                message="恢复成功"
+                title="恢复成功"
                 description={
                   <div>
                     <div>

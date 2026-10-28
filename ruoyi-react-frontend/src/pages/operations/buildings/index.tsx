@@ -644,7 +644,7 @@ const BuildingManagement: FC = () => {
               {/* 地址解析警告提示 */}
               {geocoding.warning && (
                 <Alert
-                  message={geocoding.warning}
+                  title={geocoding.warning}
                   type="warning"
                   showIcon
                   style={{ marginBottom: 16 }}
