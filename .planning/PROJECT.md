@@ -315,35 +315,38 @@ estate.
 
 #### v1.25 全站权限治理与样式收敛（当前里程碑）
 
-> REQ-ID 于 Step 9 需求定义阶段定稿并回填；权威清单见 `.planning/REQUIREMENTS.md`。
+> REQ-ID 已于需求定义阶段定稿；权威清单见 `.planning/REQUIREMENTS.md`（共 25 条）。
 
 **RBAC — 操作级权限全站治理**
-- 后端写操作路由组逐动作拆严格权限（ANY-of 组级 → 逐动作单一权限点，跳过模块级降级）
-- 前端 76 页面操作入口三态门控铺开（`useActionPermission`），消除「恒显示操作入口」
-- `pkg/permission/config.go:223-289` 动作级映射死表接线（路由 → 权限码）
-- 动作级 F 型菜单播种，使动作级权限可被真实授予
-- `system` 域其余 4 组（roles/menus/depts/posts）ANY-of 拆分
+- [ ] **RBAC-01**: 只读角色在任意业务模块调写接口一律 403 且无数据变更（写路由逐动作单一权限点，去 ANY-of）
+- [ ] **RBAC-02**: 前端 76 页面操作入口按动作级权限码三态渲染（无权限不渲染 / 未就绪禁用+提示）
+- [ ] **RBAC-03**: `pkg/permission/config.go` 动作映射表真实接线并可校验（未登记的写路由 → 校验失败）
+- [ ] **RBAC-04**: `system` 域其余 4 组（roles/menus/depts/posts）写操作 ANY-of → 逐动作单一权限点
+- [ ] **RBAC-05**: 动作级 F 型菜单播种，权限可被真实授予（前端可见性与后端放行同源）
+- [ ] **RBAC-06**: 权限码单一真相源三方零漂移，校验脚本覆盖新铺开面并接入 CI 门禁
 
 **STYLE — 样式层收敛到 antd 6 variant**
-- `AntdThemeBridge` 明暗色板重构（F3，解冻 v1.22 冻结契约），解除暗色炸白底
-- 删/降级 4 批手写 antd 覆盖规则（≈-120 行），统一圆角 6→8
-- hex 治理覆盖 `.css`（现 selector 只匹配 JS/TS 节点）
+- [ ] **STYLE-01**: `AntdThemeBridge` 明暗色板重构（品牌 token 交算法派生，暗色容器不再白底）
+- [ ] **STYLE-02**: 手写 antd 覆盖规则按四批清单收敛（可删批清零 / 可降级批替换 / 需重写批重写 / 必须保留批登记）
+- [ ] **STYLE-03**: 输入类组件圆角统一 6px → 8px 设计 token
+- [ ] **STYLE-04**: hex 治理覆盖 `.css`（现 eslint selector 只匹配 JS/TS 节点），收敛期不新增硬编码色
+- [ ] **STYLE-05**: 明暗双主题下与 antd 官方渲染一致（computed-style 断言 + 截图矩阵），且不破坏 VIS-01/02/03
 
 **PMODEL — 权限模型三缺口**
-- `data_scope` 被列表查询真实消费（本部门/本部门及以下等范围不再返回跨部门数据）
-- `GetUserPermissions` 过滤 `menu.status`（已停用菜单的权限码不再进前端权限集）
-- Step 2「子菜单继承」语义纠偏与文档化（真实语义：持 F 型按钮 → 继承父页面权限）
-- 生产库迁移记录表补齐 + GORM 模型与库表 schema 漂移登记
+- [ ] **PMODEL-01**: `data_scope` 被列表查询真实消费（data_scope=3 不再返回跨部门全量）
+- [ ] **PMODEL-02**: `GetUserPermissions` 过滤 `menu.status`（停用菜单权限码不进前端权限集）
+- [ ] **PMODEL-03**: Step 2「子菜单继承」语义文档化并以明确命名/注释固化
+- [ ] **PMODEL-04**: 迁移记录表补齐（版本可核对）+ GORM schema 漂移项登记为显式债务
 
 **VISFIX — Phase 77 视觉新发现**
-- 暗色 `--input-bg` 第 3 处就地重定义消除（暗色输入框底对比度）
-- 暗色 Select 白底与浅灰边消除（消除同页两套边框体系）
-- `.dept-tree-search` 死规则清理
-- antd 6 弃用警告 2 类清理（`onSearch→showSearch`、`Modal maskClosable→mask.closable`）
-- InputNumber 错误态边框色还原
+- [ ] **VISFIX-01**: 暗色输入框底色不再被 `--input-bg` 第 3 处就地重定义覆写（对比度达标）
+- [ ] **VISFIX-02**: 暗色 Select 容器底色与边框随色板派生（与 STYLE-01 联动）
+- [ ] **VISFIX-03**: `.dept-tree-search` 死规则清理
+- [ ] **VISFIX-04**: antd 6 弃用警告 2 类清零（`onSearch→showSearch` / `Modal maskClosable→mask.closable`）
+- [ ] **VISFIX-05**: InputNumber 错误态边框色还原
 
 **SPLIT — 巨型文件拆分**
-- `room-devices/index.tsx` 815 行按 devices 页范式拆分（列定义工厂 / 搜索区构造函数 / handlers+行操作 / 页面 JSX 外壳）
+- [ ] **SPLIT-01**: `room-devices/index.tsx` 815 行按 devices 页范式拆分，主文件 ≤ 350 行，每新文件 ≤ 250 行，行为零变化
 
 #### v1.24 视觉回归修复与遗留债务清偿（已 SHIPPED 2026-10-28）
 
