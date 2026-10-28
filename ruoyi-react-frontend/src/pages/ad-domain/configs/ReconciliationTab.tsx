@@ -34,17 +34,12 @@ import EmptyStateWithAction from "@/components/shared/EmptyStateWithAction";
 import ErrorAlertWithRetry from "@/components/shared/ErrorAlertWithRetry";
 // 本 Tab 专属样式：空态标题字重 600 !important 覆盖共享组件的 inline 16px/500（见 css 文件头注释）
 import "./ReconciliationTab.css";
+// v1.24 P82：MISMATCH_TYPE_META / rowKeyOf 拆至 constants.ts / rowKey.ts（react-refresh 边界）
+import { MISMATCH_TYPE_META } from "./constants";
+import { rowKeyOf } from "./rowKey";
 
 /** D-15 锁定的权限点（与后端 RequirePermissions / migration_218 同一字面） */
 export const RECONCILIATION_PERM = "ops:ad:config:reconciliation:list";
-
-/** mismatch_type → 中文标签 / antd 预设 Tag color（UI-SPEC Color 契约，禁 hex） */
-export const MISMATCH_TYPE_META: Record<DeptOUMismatchType, { label: string; color: string }> = {
-  user_ou_mismatch: { label: "用户 OU 与部门映射不一致", color: "orange" },
-  dept_soft_deleted: { label: "映射指向已删除部门", color: "red" },
-  mapping_disabled: { label: "映射已停用", color: "gold" },
-  config_unrouted: { label: "配置无法归属", color: "blue" },
-};
 
 /** 筛选下拉选项（与 MISMATCH_TYPE_META 单一事实源派生） */
 const MISMATCH_TYPE_OPTIONS = (Object.keys(MISMATCH_TYPE_META) as DeptOUMismatchType[]).map(
@@ -57,14 +52,6 @@ const EMPTY_DEPTS: SimpleDept[] = [];
 /** 空值统一渲染 "-"（UI-SPEC partial 规则） */
 function renderText(value?: string | null) {
   return value ? value : "-";
-}
-
-/**
- * 组合 rowKey（UI-SPEC 锁定）：部门级与用户级行都唯一，
- * NULL 键统一落空串，避免 undefined 参与拼接。
- */
-export function rowKeyOf(row: DeptOUMismatchRow) {
-  return `${row.mismatchType}-${row.deptId ?? ""}-${row.userId ?? ""}-${row.adConfigId ?? ""}`;
 }
 
 export interface ReconciliationTabProps {

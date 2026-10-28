@@ -14,7 +14,8 @@ vi.mock("@/utils/errorHandler", () => ({
     Boolean(e && typeof e === "object" && "errorFields" in (e as Record<string, unknown>)),
 }));
 
-import { FormModal, useFormModalForm } from "../FormModal";
+import { FormModal } from "../FormModal";
+import { useFormModalForm } from "../hooks/useFormModalForm";
 import { handleApiError } from "@/utils/errorHandler";
 
 function Harness({

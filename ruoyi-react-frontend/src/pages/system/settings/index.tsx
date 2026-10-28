@@ -19,34 +19,9 @@
  */
 
 import type { FC } from "react";
-import { ApiOutlined, MailOutlined, PictureOutlined } from "@ant-design/icons";
-import { SettingsShell, type SettingsCategory } from "@/design-system/components/SettingsShell";
-import EmailConfigPage from "./email-config";
-import APIConfigPage from "./api-config";
-import CaptchaBackgroundSettingsPage from "./captcha-background";
-
-// ---------- 分类注册表（模块级常量：CLAUDE.md useEffect 依赖稳定纪律） ----------
-
-export const systemSettingsCategories: SettingsCategory[] = [
-  {
-    key: "email",
-    label: "邮箱配置",
-    icon: <MailOutlined />,
-    content: <EmailConfigPage />,
-  },
-  {
-    key: "api",
-    label: "API配置",
-    icon: <ApiOutlined />,
-    content: <APIConfigPage />,
-  },
-  {
-    key: "captcha",
-    label: "验证码背景图",
-    icon: <PictureOutlined />,
-    content: <CaptchaBackgroundSettingsPage />,
-  },
-];
+import { SettingsShell } from "@/design-system/components/SettingsShell";
+// 分类注册表自 v1.24 P82 拆至 ./categories（react-refresh 组件文件只导组件）
+import { systemSettingsCategories } from "./categories";
 
 // ---------- 页面入口 ----------
 

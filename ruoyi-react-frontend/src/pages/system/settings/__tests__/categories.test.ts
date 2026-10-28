@@ -17,8 +17,8 @@
 
 import { describe, it, expect } from "vitest";
 import { isValidElement } from "react";
-import { systemSettingsCategories } from "@/pages/system/settings";
-import { userSettingsCategories } from "@/pages/settings";
+import { systemSettingsCategories } from "@/pages/system/settings/categories";
+import { userSettingsCategories } from "@/pages/settings/categories";
 
 describe("systemSettingsCategories（系统设置注册表）", () => {
   it("恰好 3 个分类：邮箱 / API / 验证码背景图", () => {

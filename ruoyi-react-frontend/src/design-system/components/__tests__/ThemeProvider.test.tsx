@@ -18,7 +18,8 @@ vi.mock("@/store/themeStore", () => ({
   }),
 }));
 
-import { ThemeProvider, useThemeContext } from "../ThemeProvider";
+import { ThemeProvider } from "../ThemeProvider";
+import { useThemeContext } from "../themeContext";
 
 describe("design-system/components/ThemeProvider", () => {
   beforeEach(() => {

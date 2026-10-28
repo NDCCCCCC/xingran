@@ -6,7 +6,8 @@ import { render, screen } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import type { ReactElement, ReactNode } from "react";
 
-import ModernTag, { renderStatusTag } from "../ModernTag";
+import ModernTag from "../ModernTag";
+import { renderStatusTag } from "../renderStatusTag";
 
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;

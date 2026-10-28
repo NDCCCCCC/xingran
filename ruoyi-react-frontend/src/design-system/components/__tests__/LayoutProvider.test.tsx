@@ -27,7 +27,8 @@ vi.mock("@/store/layoutStore", () => ({
   ),
 }));
 
-import LayoutProvider, { useLayoutContext } from "../LayoutProvider";
+import LayoutProvider from "../LayoutProvider";
+import { useLayoutContext } from "../layoutContext";
 
 describe("design-system/components/LayoutProvider", () => {
   beforeEach(() => {

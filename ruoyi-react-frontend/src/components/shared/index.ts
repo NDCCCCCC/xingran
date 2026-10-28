@@ -70,8 +70,10 @@ export { SearchForm } from "./SearchForm";
 export type { SearchFormProps, SearchField, SearchFieldOption } from "./SearchForm";
 
 // Phase 66：FormModal（编辑弹窗封装：脏检查 + 统一提交/错误分流）
-export { FormModal, useFormModalForm } from "./FormModal";
+// useFormModalForm 自 v1.24 P82 拆至独立 hook 文件（react-refresh 边界）
+export { FormModal } from "./FormModal";
 export type { FormModalProps } from "./FormModal";
+export { useFormModalForm } from "./hooks/useFormModalForm";
 
 // Phase 68 DEBT-02a：状态展示统一 helper（唯一落点裁定 shared/，勿移 utils/）
 export {

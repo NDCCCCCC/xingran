@@ -87,7 +87,8 @@ vi.mock("@/store/settingsStore", () => {
   };
 });
 
-import SettingsPage, { userSettingsCategories } from "@/pages/settings";
+import SettingsPage from "@/pages/settings";
+import { userSettingsCategories } from "@/pages/settings/categories";
 
 function renderPage(cat?: string): void {
   const initialUrl = cat ? `/user/settings?cat=${cat}` : "/user/settings";

@@ -57,10 +57,7 @@ export interface FormModalProps {
   children: React.ReactNode | ((form: FormInstance) => React.ReactNode);
 }
 
-/** FormModal 专用 FormInstance（与 useTableManager.editForm 同型，hook 须在组件体内调用） */
-export function useFormModalForm(): FormInstance {
-  return Form.useForm()[0];
-}
+/** FormModal 专用 FormInstance 已拆至 ./hooks/useFormModalForm（react-refresh 组件文件只导组件） */
 
 /**
  * FormModal — 63 惯例编辑弹窗封装（Form horizontal labelCol 4 / wrapperCol 20）。

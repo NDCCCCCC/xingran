@@ -32,11 +32,9 @@ import type { FormInstance } from "antd";
 import { forwardRef, useImperativeHandle } from "react";
 import { act, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
-import ReconciliationTab, {
-  MISMATCH_TYPE_META,
-  RECONCILIATION_PERM,
-  rowKeyOf,
-} from "../ReconciliationTab";
+import ReconciliationTab, { RECONCILIATION_PERM } from "../ReconciliationTab";
+import { MISMATCH_TYPE_META } from "../constants";
+import { rowKeyOf } from "../rowKey";
 import { getDeptOUMismatchList, type DeptOUMismatchRow } from "@/lib/adDomainApi";
 import { useMenuStore } from "@/store/menuStore";
 
