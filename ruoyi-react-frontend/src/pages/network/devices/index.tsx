@@ -26,7 +26,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import { Layout, App, Form, Button, Alert, Tag } from "antd";
+import { Layout, App, Form, Button, Alert } from "antd";
 import {
   PlusOutlined,
   ThunderboltOutlined,
@@ -45,7 +45,6 @@ import NetworkExport from "@/components/shared/NetworkExport";
 import { PageTable } from "@/components/shared";
 import { BatchExportModal } from "@/components/shared";
 import type { ActionButton } from "@/components/shared/ActionButtons";
-import type { ColumnsType } from "antd/es/table";
 import type {  } from "@/utils/tableHelpers";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { useMenuStore } from "@/store/menuStore";
@@ -53,120 +52,15 @@ import { useDict } from "@/hooks/useDict";
 import DeptTreePanel from "./components/DeptTreePanel";
 import DeviceStatsCards from "./components/DeviceStatsCards";
 import DeviceModals from "./components/DeviceModals";
+import { getDeviceTableColumns } from "./components/DeviceTableColumns";
 import {
   VENDOR_OPTIONS,
   DEVICE_TYPE_OPTIONS,
   STATUS_OPTIONS,
-  DEVICE_TYPE_TAG_COLOR,
-  VENDOR_TAG_COLOR,
 } from "./constants";
-import { formatDateTime, getOptionLabel, getStatusColor } from "./utils";
+import { getOptionLabel } from "./utils";
 import { useDeviceData } from "./hooks/useDeviceData";
 import { useDeviceModals, type ProbeResult } from "./hooks/useDeviceModals";
-
-// ==================== 表格列定义 ====================
-
-interface DeviceTableColumnsProps {
-  navigate: (path: string) => void;
-  handleCollectPorts: (device: NetworkDevice) => void;
-  openDetailModal: (device: NetworkDevice) => void;
-  openModal: (record?: NetworkDevice) => void;
-  collectingDeviceId: string | null;
-  canViewMACHistory: boolean;
-  /** Phase 69 DICT-03: 设备类型 label 渲染（优先字典，回退静态 DEVICE_TYPE_OPTIONS） */
-  getDeviceTypeText: (type: string) => string | undefined;
-}
-
-/** 列 sorter:true 由 PageTable/useTableManager 排序管线承接；原手工 sortOrder 视觉字段随契约删除 */
-function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<NetworkDevice> {
-  const { navigate, getDeviceTypeText } = props;
-
-  return [
-    {
-      title: "设备名称",
-      dataIndex: "deviceName",
-      key: "deviceName",
-      width: 200,
-      sorter: true,
-      render: (deviceName: string, record: NetworkDevice) => (
-        <a
-          onClick={() => navigate(`/network/ports?deviceId=${record.id}`)}
-          style={{ color: "var(--theme-info)", cursor: "pointer" }}
-        >
-          {deviceName}
-        </a>
-      ),
-    },
-    {
-      title: "设备类型",
-      dataIndex: "deviceType",
-      key: "deviceType",
-      width: 120,
-      sorter: true,
-      render: (deviceType: string) => (
-        <Tag color={DEVICE_TYPE_TAG_COLOR}>{getDeviceTypeText(deviceType)}</Tag>
-      ),
-    },
-    {
-      title: "厂商",
-      dataIndex: "vendor",
-      key: "vendor",
-      width: 100,
-      sorter: true,
-      render: (vendor: string) => (
-        <Tag color={VENDOR_TAG_COLOR}>{getOptionLabel(VENDOR_OPTIONS, vendor)}</Tag>
-      ),
-    },
-    {
-      title: "型号",
-      dataIndex: "model",
-      key: "model",
-      width: 150,
-      sorter: true,
-    },
-    {
-      title: "IP地址",
-      dataIndex: "ipAddress",
-      key: "ipAddress",
-      width: 140,
-      sorter: true,
-    },
-    {
-      title: "端口",
-      dataIndex: "port",
-      key: "port",
-      width: 80,
-      sorter: true,
-    },
-    {
-      title: "状态",
-      dataIndex: "status",
-      key: "status",
-      width: 90,
-      sorter: true,
-      render: (status: number) => (
-        <Tag color={getStatusColor(status)}>{getOptionLabel(STATUS_OPTIONS, status)}</Tag>
-      ),
-    },
-    { title: "部门", dataIndex: "deptName", key: "deptName", width: 180 },
-    {
-      title: "最后连接",
-      dataIndex: "lastSeenAt",
-      key: "lastSeenAt",
-      width: 180,
-      sorter: true,
-      render: (lastSeenAt: string) => formatDateTime(lastSeenAt),
-    },
-    {
-      title: "创建时间",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 180,
-      sorter: true,
-      render: (createdAt: string) => formatDateTime(createdAt),
-    },
-  ];
-}
 
 // ==================== 主组件 ====================
 
