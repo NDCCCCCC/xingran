@@ -7,9 +7,10 @@
 import { Space, Button, Dropdown } from "antd";
 import { DownOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
-import type { FC } from "react";
+import { useMemo, type FC } from "react";
 import { DELETE_CONFIRM } from "@/constants/buttonStyles";
 import { ConfirmDelete } from "./ConfirmDelete.tsx"; // 显式扩展名：Windows 大小写不敏感解析会命中 confirmDelete.ts
+import { useActionPermission } from "./useActionPermission";
 import "@/components/shared/ActionButtons.css";
 
 export interface ActionButton {
@@ -20,6 +21,13 @@ export interface ActionButton {
   danger?: boolean;
   type?: "link" | "text" | "primary" | "default" | "dashed";
   disabled?: boolean;
+  /**
+   * v1.24 PERM-01（可选字段）：权限码。
+   * 不传 = 不做权限判定（保持既有调用方行为，v1.19 冻结交互面不变）。
+   * 传了则由组件内的三态门控（useActionPermission）处理：
+   * 权限就绪且不含该码 → 不渲染；权限未就绪 → 渲染但 disabled + 提示。
+   */
+  permission?: string;
   render?: () => React.ReactNode;
 }
 
@@ -30,15 +38,25 @@ interface ActionButtonsProps {
 }
 
 const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = "small" }) => {
-  if (actions.length === 0) {
+  // v1.24 PERM-01/02：逐按钮的门控决策。
+  // 未传 permission 的按钮（既有 45 个调用点）决策恒为「可见 + 不禁用」，
+  // 对外形状与既有行为完全不变。
+  const gate = useActionPermission();
+  const gated = useMemo(
+    () => actions.map((action) => ({ action, decision: gate.decide(action.permission) })),
+    [actions, gate]
+  );
+  const visible = gated.filter(({ decision }) => decision.visible);
+
+  if (visible.length === 0) {
     return null;
   }
 
   // 按钮数量 < 阈值，直接显示所有按钮
-  if (actions.length < threshold) {
+  if (visible.length < threshold) {
     return (
       <Space size="small">
-        {actions.map((action) => (
+        {visible.map(({ action, decision }) => (
           <div
             key={action.key}
             // 阻止点击冒泡到外层 <Table onRow.onClick>，避免触发行级副作用
@@ -46,17 +64,28 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = 
             onClick={(e) => e.stopPropagation()}
           >
             {action.render ? (
-              action.render()
+              decision.disabled ? (
+                // 未就绪：渲染但不可交互 + 提示（与普通按钮的 disabled 语义一致）
+                <span
+                  title={decision.hint}
+                  aria-disabled="true"
+                  style={{ pointerEvents: "none", opacity: 0.6 }}
+                >
+                  {action.render()}
+                </span>
+              ) : (
+                action.render()
+              )
             ) : (
               <Button
                 type={action.type ?? "link"}
                 size={size}
                 icon={action.icon}
                 onClick={action.onClick}
-                disabled={action.disabled}
+                disabled={action.disabled || decision.disabled}
                 className={action.danger ? "action-btn-link-danger" : "action-btn-link"}
-                aria-label={action.label}
-                title={action.label}
+                aria-label={decision.hint ?? action.label}
+                title={decision.hint ?? action.label}
               >
                 {action.label}
               </Button>            )}
@@ -67,20 +96,35 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = 
   }
 
   // 按钮数量 >= 阈值，所有按钮都放到下拉菜单中
-  const menuItems: MenuProps["items"] = actions.map((action) => {
+  const menuItems: MenuProps["items"] = visible.map(({ action, decision }) => {
     if (action.render) {
+      const rendered = decision.disabled ? (
+        // 未就绪：渲染但不可交互 + 提示
+        <span title={decision.hint} aria-disabled="true" style={{ pointerEvents: "none", opacity: 0.6 }}>
+          {action.render()}
+        </span>
+      ) : (
+        action.render()
+      );
       return {
         key: action.key,
-        label: <div onClick={(e) => e.stopPropagation()}>{action.render()}</div>,
+        label: <div onClick={(e) => e.stopPropagation()}>{rendered}</div>,
       };
     }
 
     return {
       key: action.key,
-      label: action.label,
+      // 未就绪时把提示挂到菜单项上（title/aria）；已就绪时保持既有纯文本形态
+      label: decision.hint ? (
+        <span title={decision.hint} aria-label={decision.hint}>
+          {action.label}
+        </span>
+      ) : (
+        action.label
+      ),
       icon: action.icon,
       danger: action.danger,
-      disabled: action.disabled,
+      disabled: action.disabled || decision.disabled,
       onClick: action.onClick,
       className: action.danger ? "action-dropdown-item-danger" : "action-dropdown-item",
     };
@@ -133,6 +177,12 @@ export const createDeleteAction = <T extends string | number>(
     disabled?: boolean;
     /** 是否使用 ghost 样式（红色边框+文字） */
     ghost?: boolean;
+    /**
+     * v1.24 PERM-01（可选）：权限码。
+     * 不传 = 不做权限判定（保持既有调用方行为）；传了则由 ActionButtons 的
+     * 三态门控处理（就绪且无权限 → 不渲染；未就绪 → 渲染但 disabled + 提示）。
+     */
+    permission?: string;
   }
 ): ActionButton => ({
   key: "delete",
@@ -140,6 +190,7 @@ export const createDeleteAction = <T extends string | number>(
   icon: <DeleteOutlined />,
   danger: true,
   disabled: options?.disabled,
+  permission: options?.permission,
   // Phase 65：render 内部切换到唯一声明式入口 ConfirmDelete（不再使用裸二次确认组件）。
   // 降级注记：原 ghost 视觉（红边框）不再支持——ConfirmDelete 呈现 type=link danger；
   // title 语义保留（覆盖确认标题，默认值消费升级后的 DELETE_CONFIRM.title="确认删除"）。

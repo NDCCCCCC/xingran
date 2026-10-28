@@ -22,6 +22,16 @@ interface MenuState {
   loading: boolean;
   lastFetchTime: number | null;
   error: Error | null;
+  /**
+   * v1.24 PERM-02：权限集是否**已就绪**（显式位）。
+   *
+   * 为什么必须显式：权限集为空（用户确实没有任何权限）与「权限还没加载完」
+   * 在数据上不可区分 —— 若用 `permissions.length === 0` 判未就绪，
+   * 权限接口失败时管理员会看到「按钮全部消失且没有任何提示」的静默失效页。
+   */
+  permissionsLoaded: boolean;
+  /** v1.24 PERM-02：权限接口失败原因（error 态提示用）；null 表示无失败 */
+  permissionsError: Error | null;
 }
 
 interface MenuActions {
@@ -56,6 +66,8 @@ export const useMenuStore = create<MenuStore>()((set, get) => ({
   loading: false,
   lastFetchTime: null,
   error: null,
+  permissionsLoaded: false,
+  permissionsError: null,
 
   fetchMenus: async (forceRefresh = false) => {
     const cache = getMenuCache();
@@ -105,7 +117,11 @@ export const useMenuStore = create<MenuStore>()((set, get) => ({
     if (!forceRefresh) {
       const cachedPermissions = cache.getPermissions();
       if (cachedPermissions) {
-        set({ permissions: cachedPermissions });
+        set({
+          permissions: cachedPermissions,
+          permissionsLoaded: true,
+          permissionsError: null,
+        });
         return;
       }
     }
@@ -118,9 +134,14 @@ export const useMenuStore = create<MenuStore>()((set, get) => ({
       const currentAllMenus = cache.getAllMenus() ?? [];
       cache.setMenus(currentMenus, currentAllMenus, permissions);
 
-      set({ permissions, error: null });
+      set({
+        permissions,
+        error: null,
+        permissionsLoaded: true,
+        permissionsError: null,
+      });
     } catch (error) {
-      set({ error: error as Error });
+      set({ error: error as Error, permissionsError: error as Error });
       throw error;
     }
   },
@@ -137,8 +158,11 @@ export const useMenuStore = create<MenuStore>()((set, get) => ({
           menus: cachedMenus,
           allMenus: cachedAllMenus,
           permissions: cachedPermissions,
+          loading: false,
           lastFetchTime: Date.now(),
           error: null,
+          permissionsLoaded: true,
+          permissionsError: null,
         });
         return;
       }
@@ -157,12 +181,16 @@ export const useMenuStore = create<MenuStore>()((set, get) => ({
         loading: false,
         lastFetchTime: Date.now(),
         error: null,
+        permissionsLoaded: true,
+        permissionsError: null,
       });
     } catch (error) {
       set({
         loading: false,
         error: error as Error,
         lastFetchTime: null,
+        permissionsLoaded: false,
+        permissionsError: error as Error,
       });
       throw error;
     }
@@ -181,7 +209,7 @@ export const useMenuStore = create<MenuStore>()((set, get) => ({
     const menus = cache.getMenus() ?? [];
     const allMenus = cache.getAllMenus() ?? [];
     cache.setMenus(menus, allMenus, permissions);
-    set({ permissions });
+    set({ permissions, permissionsLoaded: true, permissionsError: null });
   },
 
   clearMenus: () => {
@@ -201,6 +229,8 @@ export const useMenuStore = create<MenuStore>()((set, get) => ({
       permissions: [],
       lastFetchTime: null,
       error: null,
+      permissionsLoaded: false,
+      permissionsError: null,
     });
   },
 

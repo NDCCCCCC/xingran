@@ -5,6 +5,15 @@
 export { default as ActionButtons } from "./ActionButtons";
 export type { ActionButton } from "./ActionButtons";
 
+// v1.24 PERM-02 —— 操作级权限门控（唯一判定入口，三态：ready/loading/error）
+export { useActionPermission } from "./useActionPermission";
+export type {
+  ActionPermissionDecision,
+  ActionPermissionResult,
+  PermissionGateState,
+  UseActionPermissionOptions,
+} from "./useActionPermission";
+
 export { default as ExcelImport } from "./ExcelImport";
 export type { ExcelImportProps } from "./ExcelImport";
 

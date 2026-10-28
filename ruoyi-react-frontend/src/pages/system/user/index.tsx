@@ -41,11 +41,13 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useDict, type DictItem } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import { DepartmentTreeSelect, confirmDelete } from "@/components/shared";
+import { DepartmentTreeSelect, confirmDelete, useActionPermission } from "@/components/shared";
+import type { ActionPermissionDecision } from "@/components/shared";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import type { SortOrder } from "@/hooks/useServerSort";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 // 导入提取的文件
 import { GENDER_OPTIONS, STATUS_OPTIONS } from "./constants";
@@ -71,6 +73,13 @@ interface UserTableColumnsProps {
   genderDict: DictItem[];
   /** 经理预览映射（key=用户 id；纯计算不落库，规则变更后由后端缓存失效保证准实时） */
   managerMap: Record<string, ManagerPreviewItem>;
+  /**
+   * v1.24 #16（PERM-02/03）：操作列门控决策。
+   * 三态语义：visible=false → 不渲染；disabled=true → 渲染但禁用（hint 作提示）。
+   */
+  permEdit: ActionPermissionDecision;
+  permResetPwd: ActionPermissionDecision;
+  permRemove: ActionPermissionDecision;
 }
 
 function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
@@ -82,6 +91,9 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
     getColumnSortOrder,
     genderDict,
     managerMap,
+    permEdit,
+    permResetPwd,
+    permRemove,
   } = props;
 
   return [
@@ -252,9 +264,12 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       sorter: true,
       sortOrder: getColumnSortOrder("status"),
       // 原型复刻：状态用 Switch 直改（0=启用 / 1=禁用），替代旧 Tag + 操作列「禁用/启用」
+      // v1.24 #16：状态变更走 POST /system/users/:id/status（后端绑定 system:user:edit），
+      // 前端同步门控——无 edit 权限时 Switch 不可交互（禁用而非隐藏：状态是只读信息）。
       render: (status, record) => (
         <Switch
           checked={status === 0}
+          disabled={permEdit.disabled || !permEdit.visible}
           onChange={(checked) => handleUpdateStatus(record.id, checked ? 0 : 1)}
         />
       ),
@@ -276,27 +291,48 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       minWidth: 180,
       fixed: "right" as const,
       // 原型复刻：纯文字链接（demo .row-ops，无图标不折叠）
+      // v1.24 #16：编辑 / 重置密码 / 删除 分别按 system:user:edit / resetPwd / remove 门控
       render: (_, record) => (
         <div className="xr-row-ops">
-          <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" onClick={() => handleResetPassword(record)}>
-            重置密码
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            className="xr-op-danger"
-            onClick={() => {
-              confirmDelete({
-                target: `用户 ${record.username}`,
-                onDelete: async () => { await handleDelete(record.id); },
-              });
-            }}
-          >
-            删除
-          </Button>
+          {permEdit.visible && (
+            <Button
+              type="link"
+              size="small"
+              disabled={permEdit.disabled}
+              title={permEdit.hint}
+              onClick={() => handleEdit(record)}
+            >
+              编辑
+            </Button>
+          )}
+          {permResetPwd.visible && (
+            <Button
+              type="link"
+              size="small"
+              disabled={permResetPwd.disabled}
+              title={permResetPwd.hint}
+              onClick={() => handleResetPassword(record)}
+            >
+              重置密码
+            </Button>
+          )}
+          {permRemove.visible && (
+            <Button
+              type="link"
+              size="small"
+              className="xr-op-danger"
+              disabled={permRemove.disabled}
+              title={permRemove.hint}
+              onClick={() => {
+                confirmDelete({
+                  target: `用户 ${record.username}`,
+                  onDelete: async () => { await handleDelete(record.id); },
+                });
+              }}
+            >
+              删除
+            </Button>
+          )}
         </div>
       ),
     },
@@ -307,6 +343,18 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
 
 const UserManagement: FC = () => {
   const { message: _message } = App.useApp();
+
+  // v1.24 #16（PERM-02/03）：操作级权限门控（三态 ready/loading/error）。
+  // 权限码来自单一真相源 src/constants/permissionCodes.ts。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.systemUser.edit);
+  const permResetPwd = permGate.decide(PERMISSION_CODES.systemUser.resetPwd);
+  const permRemove = permGate.decide(PERMISSION_CODES.systemUser.remove);
+  const permAdd = permGate.decide(PERMISSION_CODES.systemUser.add);
+  const permImport = permGate.decide(PERMISSION_CODES.systemUser.import);
+  // 注：system:user:export 已登记在权限码表，但用户模块**未注册导出路由**、
+  // 前端也无导出按钮（xtgl 缺 export 权限也不会 403）——待导出功能落地时接入。
   // 自定义状态
   const location = useLocation();
   const [selectedDeptId, setSelectedDeptId] = usePersistedStateController<string>({
@@ -642,6 +690,9 @@ const UserManagement: FC = () => {
     getColumnSortOrder,
     genderDict,
     managerMap,
+    permEdit,
+    permResetPwd,
+    permRemove,
   });
 
   // 给 DeptTree 喂稳定引用 — selectedKeys 在 selectedDeptId 不变时复用同一数组，
@@ -745,10 +796,12 @@ const UserManagement: FC = () => {
                   </Form.Item>
                 </Form>
                 <Space>
-                  {selectedRowKeys.length > 0 && (
+                  {selectedRowKeys.length > 0 && permRemove.visible && (
                     <Button
                       icon={<DeleteOutlined />}
                       onClick={handleBatchDelete}
+                      disabled={permRemove.disabled}
+                      title={permRemove.hint}
                       style={{
                         color: "var(--theme-error)",
                       }}
@@ -756,12 +809,27 @@ const UserManagement: FC = () => {
                       批量删除 ({selectedRowKeys.length})
                     </Button>
                   )}
-                  <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
-                    导入用户
-                  </Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
-                    新增用户
-                  </Button>
+                  {permImport.visible && (
+                    <Button
+                      icon={<ImportOutlined />}
+                      onClick={() => setImportModalVisible(true)}
+                      disabled={permImport.disabled}
+                      title={permImport.hint}
+                    >
+                      导入用户
+                    </Button>
+                  )}
+                  {permAdd.visible && (
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleAddUser}
+                      disabled={permAdd.disabled}
+                      title={permAdd.hint}
+                    >
+                      新增用户
+                    </Button>
+                  )}
                 </Space>
               </div>
               {selectedRowKeys.length > 0 && (
