@@ -35,11 +35,15 @@
 
 ## STYLE — 样式层收敛到 antd 6 variant
 
-> **前置障碍（F3，机制已在 v1.25 定向研究中源码实证并更正）**：暗色炸白底由**两层**叠加——
-> ① **组件级 token 在算法之后 merge**（`@ant-design/cssinjs-utils/es/util/getComponentToken.js:28`：`mergedToken = {...defaultToken, ...customToken}`）→ `AntdThemeBridge.tsx:122/130/164` 的 `components.Input/Select/Card.colorBgContainer = cream.surface(#FFFFFF)` **暗色算法改不动**；
-> ② **Map Token 覆盖显式值**（`antd/es/theme/themes/default/index.js:30-45`：`genColorMapToken` 展开在 `...token` **之后**）→ `colorBgContainer`/`colorBorder` 是 Map Token，显式设置**本就无效**，真凶是 **seed 层 `colorBgBase = cream.canvas(#F0ECE3)` 浅奶油**，算法从浅色 seed 派生 → 暗色下仍是浅灰边框。
+> **前置障碍（F3，机制经三轮源码实证最终定稿——89 定向研究 X-1 发现 alias 回填层）**：暗色炸白底的**完整机制**是——
+> ① `config-provider/index.js:412-422` 把显式 token（seed+用户）整体挂进 `override.override`；
+> ② 算法派生时 Map Token 确实覆盖显式值（`themes/default/index.js:30-45`，STACK 研究看到的层）；
+> ③ **但 `alias.js:10-22` 的 `formatToken` 最后把 `override` 中非 seed 名的显式 token 盖回**（`colorBgContainer`/`colorBorder` 等不在 `seed.js` 名单内，grep=0）→ **显式 `cream.surface(#FFFFFF)` 在暗色下生效**。
+> ⇒ 修法**不是**「删掉显式值让它派生」（从浅奶油 seed 派生的暗色边框是刺眼绿 `#20a252`，实跑 C 组实证），而是「**按模式分支显式给值**」——全局 token 的中性色按 `themeMode` 切换 `cream.*` ↔ 新增 `ruoyiBrand.dark.*`，seed 层 `colorBgBase` 同步按模式分支。
 >
-> **机制更正（v1.25 研究期，源码实证）**：v1.24 登记的「`darkAlgorithm` 不改写显式 token」**机制描述不成立**（症状对、机制错）；文件真实路径为 `src/design-system/components/AntdThemeBridge.tsx`（**不存在** `src/components/theme/`），`colorBgContainer` 在 `:83`、`colorBorder` 在 `:86`（非 84）。
+> **实现硬约束（X-1b）**：`components.Input/Select/Card.colorBgContainer = cream.surface` 当前与全局同值 → 被 `getComponentToken.js:26-30`「与全局同值即删除」剔除 → **今天是纯 no-op，不是病灶**；但全局改为分模式后它们不再同值 → 会被保留 → **暗色白底从组件作用域重新长出** ⇒ **必须与全局改造同 commit 删除**。
+>
+> **机制更正历史（供审计）**：v1.24 原表述「darkAlgorithm 不改写显式 token」（错误）；88 期 STACK 研究「Map Token 覆盖显式值 → 显式设无效」（**漏看 alias 回填层，亦不成立**）；89 期 X-1 定稿「override 回填 → 显式 Map Token 生效」（源码 + 4 组实跑双证，HIGH）。文件真实路径 `src/design-system/components/AntdThemeBridge.tsx`。
 >
 > **同时更正 v1.24 的「写在后面就能覆盖不成立」**：antd 6 默认 `hashPriority:'low'`（`@ant-design/cssinjs/es/StyleContext.js:47`）→ 生成 `:where(.css-xxx)`，**hash 特异性为 0**（`util/index.js:145`）→ 同特异性下**后写的项目 CSS 胜**。1359 处 `!important` 的真因是「`border` 简写压掉 antd `border-color` 长属性」+「antd 复合选择器达 (0,3,0)」，**不是** hash 加特异性。这条更正直接决定 STYLE-02 的批次划分与修法优先级。
 

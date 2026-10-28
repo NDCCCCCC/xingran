@@ -225,14 +225,17 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
 **UI hint**: yes
 
 ### Phase 89: 变量层与明暗色板重构
-**Goal**: F3 硬前置——`--input-bg` 串色修正（VISFIX-01）+ 暗色未定义变量补齐 + `ruoyiBrand.dark` 常量组 + 去组件级写死 `colorBgContainer`（STYLE-01）+ 暗色 Select 派生（VISFIX-02）+ hex 门禁覆盖 `.css`（STYLE-04）
+**Goal**: F3 硬前置——`--input-bg` 串色修正（VISFIX-01）+ 暗色未定义变量补齐 + `ruoyiBrand.dark` 常量组 + 全局 token 按模式分支显式给值（STYLE-01）+ 暗色 Select 派生（VISFIX-02）+ hex 门禁覆盖 `.css`（STYLE-04）
 **Depends on**: Phase 88
 **Requirements**: STYLE-01, STYLE-04, VISFIX-01, VISFIX-02
 **Success Criteria** (what must be TRUE):
-  1. 暗色 `--input-bg` 解析值 = `#0f2e1b`（现状 `#fafaf9`）
-  2. 暗色 Select 底色 ≠ 白，与同页容器同源
-  3. dark 模式 `theme.token.colorBgContainer ≠ '#FFFFFF'`；变量层与色板分两步落地
+  1. 暗色 `--input-bg` 解析值 = `#0f2e1b`（现状 `#fafaf9`）；同变量四兄弟（hover/focus/disabled）迁入明暗双分区，「底浅态深」混合态消除
+  2. 暗色 Select 底色 ≠ 白，与同页容器同源；`theme.token.colorBgContainer`（dark 模式）≠ `'#FFFFFF'`（单测断言）
+  3. **全局 token 中性色按模式分支显式给值**（`cream.*` ↔ `ruoyiBrand.dark.*`）+ seed 层 `colorBgBase` 按模式分支；**组件级 `Input/Select/Card.colorBgContainer` 三项与全局改造同 commit 删除**（X-1b：不同步删则暗色白底从组件作用域重新长出）
   4. 除已登记 2 处有意变更外视觉差异 = 0；`check-hardcoded-colors.mjs` exit 0 接入 lint:ci
+> ⚠️ **89 研究先行结论（X-1/X-1b/X-2/X-3，Lead 已裁定采纳，详见 89-RESEARCH.md §0）**：
+> **X-2** — 原成功标准「暗色输入框底对比度 ≥3:1」**数学上不可满足**（页面底与输入框底同为 `#0f2e1b` → 1:1；该色对任何背景上限 1.43:1）。3:1 判据移至**描边**（WCAG 1.4.11 管组件边界），暗色描边提亮属 Phase 92 范围 → 89 登记显式例外并移交。
+> **X-3** — T1/T2/T3（圆角）移交 **Phase 90**（89 执行会击穿自身 diff=0 硬判据并抢跑 90 的 STYLE-03）；89 的 T 批次只做色值类降级。
 **Plans**: TBD
 **UI hint**: yes
 
