@@ -1013,71 +1013,85 @@ func (d *Database) AutoMigrate() error {
 		}
 		defer d.releaseMigrationAdvisoryLock()
 
-		if err := migrations.Migrate175ReconciliationPhysicalLink(d.DB); err != nil {
+		// Phase 84 PMODEL-04: 迁移记录表 —— 必须先于所有 runAndRecord 执行（建表 + seed）。
+		// 非阻断：表建不出来时后续 upsert 只 WARN，迁移照常执行（记录失败不阻断启动）。
+		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
+			applogger.Errorf("迁移记录表建表失败 (非阻断,启动继续,对账能力缺失): %v", err)
+		}
+
+		if err := d.runAndRecord(175, "reconciliation_physical_link", migrations.Migrate175ReconciliationPhysicalLink); err != nil {
 			applogger.Errorf("reconciliation 前置视图重建失败 (非阻断,留待下次启动): %v", err)
 		}
-		if err := migrations.Migrate176ReconciliationPhysicalMV(d.DB); err != nil {
+		if err := d.runAndRecord(176, "reconciliation_physical_mv", migrations.Migrate176ReconciliationPhysicalMV); err != nil {
 			applogger.Errorf("reconciliation_normalized MV 重建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// Phase 52: 端口写审计表(由 AutoMigrate 建表) + 菜单 seed + 角色授权
-		if err := migrations.Migrate202PortWriteAudit(d.DB); err != nil {
+		if err := d.runAndRecord(202, "port_write_audit", migrations.Migrate202PortWriteAudit); err != nil {
 			applogger.Errorf("端口写审计迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 连接池配置 sys_config seed (max_connections / max_idle_seconds, web 可配, 默认 50/300s)
-		if err := migrations.Migrate203ConnectionPoolSysConfig(d.DB); err != nil {
+		if err := d.runAndRecord(203, "connection_pool_sys_config", migrations.Migrate203ConnectionPoolSysConfig); err != nil {
 			applogger.Errorf("连接池配置 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 锐捷 dot1x default-user-limit 缓存列 (enable 必须显式恢复 N)
-		if err := migrations.Migrate204AddDot1xUserLimit(d.DB); err != nil {
+		if err := d.runAndRecord(204, "dot1x_user_limit", migrations.Migrate204AddDot1xUserLimit); err != nil {
 			applogger.Errorf("dot1x_user_limit 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// RPA Worker id 列补 DEFAULT gen_random_uuid()
 		// (Register 原生 SQL 路径绕过 BeforeCreate, 列需自带 DEFAULT 与全库 UUID 惯例对齐, 防 23502)
-		if err := migrations.Migrate205RpaWorkerIdDefault(d.DB); err != nil {
+		if err := d.runAndRecord(205, "rpa_worker_id_default", migrations.Migrate205RpaWorkerIdDefault); err != nil {
 			applogger.Errorf("sys_rpa_workers.id DEFAULT 迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 登录菜单加载慢: 为关联表增加复合索引, 缓解远程 DB 全表扫描导致的超时
-		if err := migrations.Migrate206AddUserRoleRoleMenuIndexes(d.DB); err != nil {
+		if err := d.runAndRecord(206, "user_role_role_menu_indexes", migrations.Migrate206AddUserRoleRoleMenuIndexes); err != nil {
 			applogger.Errorf("sys_user_role / sys_role_menu / sys_menu 索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 规范菜单目录种子 (239 条, 幂等; debug admin-role-incomplete-menus 修复)
 		// 必须在 InitData 的 createOperationsManagementMenus 之前执行:
 		// 规范「运维管理」根就位后, Go 种子按 (name, parent) 查重自然全部跳过
-		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
+		if err := d.runAndRecord(207, "seed_canonical_menu_catalog", migrations.Migrate207SeedCanonicalMenuCatalog); err != nil {
 			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 字典 seed (11 组, 幂等; Phase 69 DICT-02: dev 库字典表为空的修复)
-		if err := migrations.Migrate208DictSeed(d.DB); err != nil {
+		if err := d.runAndRecord(208, "dict_seed", migrations.Migrate208DictSeed); err != nil {
 			applogger.Errorf("字典 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 系统设置菜单 component 路径修正 (Phase 70 D-11: 前端 settings-page 目录
 		// 并入 system/settings; 幂等 UPDATE, changed 标志供 core.go 失效菜单缓存)
-		if changed, err := migrations.Migrate209UpdateSettingsMenuComponent(d.DB); err != nil {
+		changed209 := false
+		if err := d.runAndRecord(209, "update_settings_menu_component", func(db *gorm.DB) error {
+			var err error
+			changed209, err = migrations.Migrate209UpdateSettingsMenuComponent(db)
+			return err
+		}); err != nil {
 			applogger.Errorf("系统设置菜单 component 修正失败 (非阻断,留待下次启动): %v", err)
-		} else if changed {
+		} else if changed209 {
 			d.SettingsMenuComponentChanged = true
 		}
 		// Q-11: 归一化 sys_menu.parent_id='0' 为 NULL(幂等,修复 Update 路径落库字面 "0" 造成的孤儿节点)
-		if _, err := migrations.Migrate210NormalizeMenuParentID(d.DB); err != nil {
+		if err := d.runAndRecord(210, "normalize_menu_parent_id", func(db *gorm.DB) error {
+			_, err := migrations.Migrate210NormalizeMenuParentID(db)
+			return err
+		}); err != nil {
 			applogger.Errorf("sys_menu parent_id='0' 归一失败 (非阻断,留待下次启动): %v", err)
 		}
 		// Phase 93: 配置恢复任务表 (PG 显式建表,幂等;sqlite 由 AutoMigrate 建表,分支无需注册)
-		if err := migrations.Migrate211CreateConfigRestoreTask(d.DB); err != nil {
+		if err := d.runAndRecord(211, "create_config_restore_task", migrations.Migrate211CreateConfigRestoreTask); err != nil {
 			applogger.Errorf("配置恢复任务表创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// v129-recheck C-1: 同设备活跃恢复任务部分唯一索引 (双方言;PG 分支在 advisory-lock 块内执行)
-		if err := migrations.Migrate212CreateRestoreTaskActiveUniqueIndex(d.DB); err != nil {
+		if err := d.runAndRecord(212, "restore_task_active_unique_index", migrations.Migrate212CreateRestoreTaskActiveUniqueIndex); err != nil {
 			applogger.Errorf("恢复任务活跃唯一索引创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 261013-lqb: 楼栋 total_floors 存量漂移一次性归正 (双方言纯 SQL,幂等,无常驻对象)
-		if err := migrations.Migrate213RecomputeBuildingTotalFloors(d.DB); err != nil {
+		if err := d.runAndRecord(213, "recompute_building_total_floors", migrations.Migrate213RecomputeBuildingTotalFloors); err != nil {
 			applogger.Errorf("楼栋 total_floors 存量重算失败 (非阻断,留待下次启动): %v", err)
 		}
 		// quick 261016-ad-login-history: AD 设备登录历史月分区表 (PG-only,幂等;
 		// sqlite 不建表,writer/query 侧由 addomain 包 isPostgres 守卫跳过。
 		// 对应模型禁止加入 AutoMigrate 列表 — GORM 对分区父表
 		// 做 ALTER 会触发 42P16 类问题)
-		if err := migrations.Migrate214CreateADLoginHistory(d.DB); err != nil {
+		if err := d.runAndRecord(214, "create_ad_login_history", migrations.Migrate214CreateADLoginHistory); err != nil {
 			applogger.Errorf("AD登录历史分区表创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// Phase 57 F-04: AD 推送队列表 + 部分唯一索引 (双方言 DDL,幂等)。
@@ -1091,81 +1105,93 @@ func (d *Database) AutoMigrate() error {
 		// Phase 58 D-05: ad_push_queue 排水间隔单旋钮 seed（幂等）。
 		// **非阻断**：缺旋钮只会让 LoadDrainIntervalSeconds 回落默认 30s，
 		// 与队列表建表的"失败阻断启动"档（uq_ad_push_queue_active 是入队硬前提）不同档。
-		if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
+		if err := d.runAndRecord(216, "ad_push_drain_sys_config", migrations.Migrate216ADPushDrainSysConfig); err != nil {
 			applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// Phase 59 GUARD-02: 部门↔OU 对账普通视图 v_dept_ou_mismatch（双方言 DDL，幂等）。
 		// **非阻断**：视图缺失只让对账端点 500，不影响登录 / 入队 / 排水主链路。
 		// 视图在 AutoMigrate 之前被 dropDependentMaterializedViews() DROP 过，此处重建。
-		if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
+		if err := d.runAndRecord(217, "dept_ou_mismatch_view", migrations.Migrate217DeptOUMismatchView); err != nil {
 			applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// Phase 59 GUARD-02: 对账查询按钮权限 seed（幂等，精准授权）。
 		// **非阻断**：缺权限行只让普通角色对账端点 403 / 前端 Tab 不渲染，
 		// 不影响登录 / 入队 / 排水主链路；父菜单缺失时迁移内部降级返回 nil。
-		if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
+		if err := d.runAndRecord(218, "ad_reconciliation_permission", migrations.Migrate218ADReconciliationPermission); err != nil {
 			applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// AD 域控用户同步修复: sys_user 补 mobile/title/ad_config_id 列 + sys_ad_user 补 manager 列
 		// (双方言幂等,走 GORM Migrator 的 HasColumn/AddColumn)。
 		// **非阻断**：缺列只让 AD 同步丢弃手机号/职位、多域隔离退化为按用户名匹配。
-		if err := migrations.Migrate219UserADSyncFields(d.DB); err != nil {
+		if err := d.runAndRecord(219, "user_ad_sync_fields", migrations.Migrate219UserADSyncFields); err != nil {
 			applogger.Errorf("用户/AD影子表 AD 同步列补建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 通用经理同步: sys_manager_org / sys_manager_rule 两张表 (AutoMigrate 建表,幂等)。
 		// **非阻断**：缺表只让经理同步端点 500,不影响登录 / 入队 / 排水主链路。
-		if err := migrations.Migrate220ManagerRuleTables(d.DB); err != nil {
+		if err := d.runAndRecord(220, "manager_rule_tables", migrations.Migrate220ManagerRuleTables); err != nil {
 			applogger.Errorf("经理同步规则表创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 通用经理同步: 经理同步规则/机构两个菜单 + 按钮权限 seed (幂等,精准授权)。
 		// **非阻断**：缺菜单只让普通角色无入口(admin 超管旁路可见),不影响主链路。
-		if err := migrations.Migrate221ManagerSyncMenus(d.DB); err != nil {
+		if err := d.runAndRecord(221, "manager_sync_menus", migrations.Migrate221ManagerSyncMenus); err != nil {
 			applogger.Errorf("经理同步菜单 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 清理 4 张幻影关联表 (user_posts/user_roles/role_menus/role_depts):
 		// many2many 标签早期写错表名导致 GORM 额外建表,真实关联表是
 		// sys_user_post/sys_user_role/sys_role_menu/sys_role_dept。
 		// 仅删 0 行表;有数据则只告警。**非阻断**：失败只留残余空表,不影响主链路。
-		if err := migrations.Migrate222DropPhantomJoinTables(d.DB); err != nil {
+		if err := d.runAndRecord(222, "drop_phantom_join_tables", migrations.Migrate222DropPhantomJoinTables); err != nil {
 			applogger.Errorf("幻影关联表清理失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 通用经理同步: sys_manager_org.dept_id 唯一索引改为部分唯一 (WHERE deleted_at IS NULL),
 		// 并物理清理已软删机构行——修复「删除机构后无法重建同部门机构」(23505)。
 		// **非阻断**：失败只保留旧索引语义,不影响主链路。
-		if err := migrations.Migrate223ManagerOrgPartialUnique(d.DB); err != nil {
+		if err := d.runAndRecord(223, "manager_org_partial_unique", migrations.Migrate223ManagerOrgPartialUnique); err != nil {
 			applogger.Errorf("机构表部分唯一索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// 域控审查: seed dept_to_ad_sync 定时任务(P1-1) + sys_ou_group_mapping
 		// 唯一键扩展加入 ad_config_id(P1-7 多域支持)。**非阻断**：失败降级 WARN。
-		if err := migrations.Migrate224DeptSyncSeedAndOUGroupUnique(d.DB); err != nil {
+		if err := d.runAndRecord(224, "dept_sync_seed_and_ou_group_unique", migrations.Migrate224DeptSyncSeedAndOUGroupUnique); err != nil {
 			applogger.Errorf("部门同步seed与OU组唯一键迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 	} else {
+		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
+		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
+			applogger.Errorf("迁移记录表建表失败 (非阻断,启动继续,对账能力缺失): %v", err)
+		}
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
-		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
+		if err := d.runAndRecord(207, "seed_canonical_menu_catalog", migrations.Migrate207SeedCanonicalMenuCatalog); err != nil {
 			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 字典 seed (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
-		if err := migrations.Migrate208DictSeed(d.DB); err != nil {
+		if err := d.runAndRecord(208, "dict_seed", migrations.Migrate208DictSeed); err != nil {
 			applogger.Errorf("字典 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 系统设置菜单 component 路径修正 (双方言迁移; PG 分支在上方
 		// advisory-lock 块内执行)
-		if changed, err := migrations.Migrate209UpdateSettingsMenuComponent(d.DB); err != nil {
+		changed209 := false
+		if err := d.runAndRecord(209, "update_settings_menu_component", func(db *gorm.DB) error {
+			var err error
+			changed209, err = migrations.Migrate209UpdateSettingsMenuComponent(db)
+			return err
+		}); err != nil {
 			applogger.Errorf("系统设置菜单 component 修正失败 (非阻断,留待下次启动): %v", err)
-		} else if changed {
+		} else if changed209 {
 			d.SettingsMenuComponentChanged = true
 		}
 		// sqlite 分支: Q-11 归一化 sys_menu.parent_id='0' 为 NULL
-		if _, err := migrations.Migrate210NormalizeMenuParentID(d.DB); err != nil {
+		if err := d.runAndRecord(210, "normalize_menu_parent_id", func(db *gorm.DB) error {
+			_, err := migrations.Migrate210NormalizeMenuParentID(db)
+			return err
+		}); err != nil {
 			applogger.Errorf("sys_menu parent_id='0' 归一失败 (非阻断,留待下次启动): %v", err)
 		}
 		// v129-recheck C-1: 同设备活跃恢复任务部分唯一索引 (双方言;sqlite 3.8+ 支持 partial index)
-		if err := migrations.Migrate212CreateRestoreTaskActiveUniqueIndex(d.DB); err != nil {
+		if err := d.runAndRecord(212, "restore_task_active_unique_index", migrations.Migrate212CreateRestoreTaskActiveUniqueIndex); err != nil {
 			applogger.Errorf("恢复任务活跃唯一索引创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 261013-lqb 楼栋 total_floors 存量漂移一次性归正 (双方言纯 SQL,幂等)
-		if err := migrations.Migrate213RecomputeBuildingTotalFloors(d.DB); err != nil {
+		if err := d.runAndRecord(213, "recompute_building_total_floors", migrations.Migrate213RecomputeBuildingTotalFloors); err != nil {
 			applogger.Errorf("楼栋 total_floors 存量重算失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: Phase 57 AD 推送队列表 + 部分唯一索引 (与 PG 分支同款调用 + 同样阻断,
@@ -1175,43 +1201,43 @@ func (d *Database) AutoMigrate() error {
 		}
 		// sqlite 分支: Phase 58 D-05 排水间隔单旋钮 seed（与 PG 分支同款调用 + 同款非阻断档；
 		// 只注册 PG 分支会让 sqlite dev/测试环境无旋钮行、行为与生产不一致）。
-		if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
+		if err := d.runAndRecord(216, "ad_push_drain_sys_config", migrations.Migrate216ADPushDrainSysConfig); err != nil {
 			applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: Phase 59 GUARD-02 部门↔OU 对账视图（与 PG 分支同款调用 + 同款非阻断档）。
 		// sqlite 既是 dev 运行时也是测试运行时；只注册 PG 分支会让 dev 环境缺视图。
 		// 视图在 AutoMigrate 之前被 dropSQLiteReconciliationViews() DROP 过，此处重建。
-		if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
+		if err := d.runAndRecord(217, "dept_ou_mismatch_view", migrations.Migrate217DeptOUMismatchView); err != nil {
 			applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: Phase 59 GUARD-02 对账查询按钮权限 seed（与 PG 分支同款调用 + 同款非阻断档）。
 		// sqlite 既是 dev 运行时也是测试运行时；只注册 PG 分支会让 dev 环境缺权限行。
-		if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
+		if err := d.runAndRecord(218, "ad_reconciliation_permission", migrations.Migrate218ADReconciliationPermission); err != nil {
 			applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: AD 域控用户同步修复补列 (与 PG 分支同款调用 + 同款非阻断档)。
 		// sqlite 既是 dev 运行时也是测试运行时;只注册 PG 分支会让 dev 环境缺列。
-		if err := migrations.Migrate219UserADSyncFields(d.DB); err != nil {
+		if err := d.runAndRecord(219, "user_ad_sync_fields", migrations.Migrate219UserADSyncFields); err != nil {
 			applogger.Errorf("用户/AD影子表 AD 同步列补建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 通用经理同步两张表 (与 PG 分支同款调用 + 同款非阻断档)。
-		if err := migrations.Migrate220ManagerRuleTables(d.DB); err != nil {
+		if err := d.runAndRecord(220, "manager_rule_tables", migrations.Migrate220ManagerRuleTables); err != nil {
 			applogger.Errorf("经理同步规则表创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 经理同步菜单 seed (与 PG 分支同款调用 + 同款非阻断档)。
-		if err := migrations.Migrate221ManagerSyncMenus(d.DB); err != nil {
+		if err := d.runAndRecord(221, "manager_sync_menus", migrations.Migrate221ManagerSyncMenus); err != nil {
 			applogger.Errorf("经理同步菜单 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 幻影关联表清理 (与 PG 分支同款调用 + 同款非阻断档)。
-		if err := migrations.Migrate222DropPhantomJoinTables(d.DB); err != nil {
+		if err := d.runAndRecord(222, "drop_phantom_join_tables", migrations.Migrate222DropPhantomJoinTables); err != nil {
 			applogger.Errorf("幻影关联表清理失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 机构表部分唯一索引 (与 PG 分支同款调用 + 同款非阻断档)。
-		if err := migrations.Migrate223ManagerOrgPartialUnique(d.DB); err != nil {
+		if err := d.runAndRecord(223, "manager_org_partial_unique", migrations.Migrate223ManagerOrgPartialUnique); err != nil {
 			applogger.Errorf("机构表部分唯一索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: 部门同步 seed + OU 组唯一键扩展 (与 PG 分支同款 + 非阻断档)。
-		if err := migrations.Migrate224DeptSyncSeedAndOUGroupUnique(d.DB); err != nil {
+		if err := d.runAndRecord(224, "dept_sync_seed_and_ou_group_unique", migrations.Migrate224DeptSyncSeedAndOUGroupUnique); err != nil {
 			applogger.Errorf("部门同步seed与OU组唯一键迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
@@ -1280,6 +1306,33 @@ func (d *Database) releaseMigrationAdvisoryLock() {
 	}
 	_ = d.migrationLockConn.Close()
 	d.migrationLockConn = nil
+}
+
+// runAndRecord 执行单个迁移函数并在成功后把版本 upsert 进 sys_schema_migrations
+// （Phase 84 PMODEL-04：迁移记录表）。
+//
+// 方向锁定（TestRunAndRecord_NonBlocking）：
+//   - fn（迁移本身）的错误**原样返回** —— 记录层绝不能吞掉迁移错误；
+//   - 记录（upsert）失败只 WARN，**绝不返回 error、绝不阻断启动** —— 记录表是纯观测面，
+//     表缺失 / 写失败时迁移照常执行、启动照常继续；
+//   - **不做任何 skip / 版本比较 / 执行控制**：迁移每次启动照常无条件执行
+//     （幂等重跑语义零改变），记录只用于事后对账（migrations.MissingRecords）。
+func (d *Database) runAndRecord(version int, name string, fn func(*gorm.DB) error) error {
+	if err := fn(d.DB); err != nil {
+		return err
+	}
+	upsertSQL := `INSERT INTO sys_schema_migrations (version, name, applied_at)
+		VALUES (?, ?, now())
+		ON CONFLICT (version) DO UPDATE SET name = EXCLUDED.name, applied_at = now()`
+	if d.Type != "postgres" {
+		upsertSQL = `INSERT INTO sys_schema_migrations (version, name, applied_at)
+			VALUES (?, ?, CURRENT_TIMESTAMP)
+			ON CONFLICT (version) DO UPDATE SET name = EXCLUDED.name, applied_at = CURRENT_TIMESTAMP`
+	}
+	if err := d.DB.Exec(upsertSQL, version, name).Error; err != nil {
+		applogger.Warnf("[migration-record] 记录迁移版本 %d (%s) 失败（非阻断，迁移本身已执行）: %v", version, name, err)
+	}
+	return nil
 }
 
 // auditConstraintNaming 启动期审计 unique 约束命名一致性
@@ -1397,21 +1450,28 @@ func (d *Database) BootstrapMissingTables() error {
 		return err
 	}
 
+	// Phase 84 PMODEL-04：SKIP_AUTOMIGRATE 旁路同样建迁移记录表并 seed（否则旁路库
+	// 永无对账能力，且后续 runAndRecord upsert 只能 WARN）。非阻断同档。
+	if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
+		applogger.Errorf("迁移记录表建表失败 (非阻断,启动继续,对账能力缺失): %v", err)
+	}
+
 	// Phase 58：SKIP_AUTOMIGRATE 旁路同样要 seed 排水间隔旋钮（F-03 同款盲区）。
 	// 非阻断：缺旋钮只会让 LoadDrainIntervalSeconds 回落默认 30s。
-	if err := migrations.Migrate216ADPushDrainSysConfig(d.DB); err != nil {
+	// 旁路同样经 runAndRecord 留痕 —— 只记录其真实执行的子集（215-220）。
+	if err := d.runAndRecord(216, "ad_push_drain_sys_config", migrations.Migrate216ADPushDrainSysConfig); err != nil {
 		applogger.Errorf("ad_push_queue 排水间隔 sys_config seed 失败 (非阻断,留待下次启动): %v", err)
 	}
 
 	// Phase 59 GUARD-02：SKIP_AUTOMIGRATE 旁路同样要建部门↔OU 对账视图（F-03 同款盲区）。
 	// 非阻断：视图缺失只让对账端点 500；该旁路不跑 AutoMigrate，故也不存在视图阻塞 ALTER 的问题。
-	if err := migrations.Migrate217DeptOUMismatchView(d.DB); err != nil {
+	if err := d.runAndRecord(217, "dept_ou_mismatch_view", migrations.Migrate217DeptOUMismatchView); err != nil {
 		applogger.Errorf("v_dept_ou_mismatch 视图创建失败 (非阻断,留待下次启动): %v", err)
 	}
 
 	// Phase 59 GUARD-02：SKIP_AUTOMIGRATE 旁路同样要 seed 对账查询按钮权限（F-03 同款盲区）。
 	// 非阻断：缺权限行只让普通角色对账端点 403 / 前端 Tab 不渲染。
-	if err := migrations.Migrate218ADReconciliationPermission(d.DB); err != nil {
+	if err := d.runAndRecord(218, "ad_reconciliation_permission", migrations.Migrate218ADReconciliationPermission); err != nil {
 		applogger.Errorf("对账查询按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 	}
 
@@ -1419,13 +1479,13 @@ func (d *Database) BootstrapMissingTables() error {
 	// 该旁路不跑 AutoMigrate，models.User 新增的 mobile/title/ad_config_id 列不会被
 	// 自动补上 —— 缺列会让所有 sys_user 查询（GORM 自动 SELECT 新列）报 42703/无此列，
 	// 用户管理整体不可用，故此处**失败阻断**（与 ensureADPushQueue 同档）。
-	if err := migrations.Migrate219UserADSyncFields(d.DB); err != nil {
+	if err := d.runAndRecord(219, "user_ad_sync_fields", migrations.Migrate219UserADSyncFields); err != nil {
 		return fmt.Errorf("用户/AD影子表 AD 同步列补建失败: %w", err)
 	}
 
 	// 通用经理同步：SKIP_AUTOMIGRATE 旁路同样要建 sys_manager_org / sys_manager_rule。
 	// 非阻断：缺表只让经理同步端点 500，不影响登录 / 入队 / 排水主链路。
-	if err := migrations.Migrate220ManagerRuleTables(d.DB); err != nil {
+	if err := d.runAndRecord(220, "manager_rule_tables", migrations.Migrate220ManagerRuleTables); err != nil {
 		applogger.Errorf("经理同步规则表创建失败 (非阻断,留待下次启动): %v", err)
 	}
 
@@ -1460,7 +1520,8 @@ func (d *Database) ensureADPushQueue() error {
 	if !d.DB.Migrator().HasTable(&models.ADPushQueue{}) {
 		applogger.Infof("[ad_push_queue] 表缺失,经 migration_215 显式 DDL 补建(含 uq_ad_push_queue_active)")
 	}
-	if err := migrations.Migrate215CreateADPushQueue(d.DB); err != nil {
+	// 阻断的是迁移本身的失败；版本记录（runAndRecord 内部）失败只 WARN 不阻断。
+	if err := d.runAndRecord(215, "create_ad_push_queue", migrations.Migrate215CreateADPushQueue); err != nil {
 		return fmt.Errorf("ad_push_queue 表/索引创建失败: %w", err)
 	}
 	return nil
