@@ -928,6 +928,40 @@ body {
     0 0 12px rgba(21, 96, 49, 0.1) !important;
 }
 
+/* antd 6 affix-wrapper 内层复位：边框/圆角/背景只归 wrapper（v1.24 双框修复 VIS-01）
+   antd 原生契约：.ant-input-affix-wrapper > input.ant-input { border:none; ... }（antd.css）
+   项目 :871 的 .ant-input !important 曾覆盖它 → 内层画边框 = 双框
+   注意：故意不写 box-shadow——焦点环画在 wrapper（:916-929），antd 自身在内层的
+   box-shadow:none!important（特异性 0,4,1）已足够；特异性 (0,3,1)+important
+   可压过暗色块 :2252-2284（最高 0,2,0）与 :3717-3757 的 !important 残留 */
+.ant-input-affix-wrapper > input.ant-input,
+.ant-input-affix-wrapper > textarea.ant-input {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  padding: 0 !important;
+}
+
+/* VIS-03（F1）：Form status 边框色还原。antd 的 status 色是普通声明，
+   被 :871/:910 的 border !important 简写压掉 → 错误态不变红。
+   以同级 !important + 更高特异性还原；只覆盖 Input 域，不动 Select/DatePicker（既存欠账不扩面） */
+.ant-input.ant-input-status-error,
+.ant-input-affix-wrapper.ant-input-affix-wrapper-status-error,
+.ant-input-affix-wrapper.ant-input-affix-wrapper-status-error:hover,
+[data-color-mode="dark"] .ant-input.ant-input-status-error,
+[data-color-mode="dark"] .ant-input-affix-wrapper.ant-input-affix-wrapper-status-error,
+[data-color-mode="dark"] .ant-input-affix-wrapper.ant-input-affix-wrapper-status-error:hover {
+  border-color: var(--ant-color-error, #ff4d4f) !important;
+}
+
+.ant-input.ant-input-status-warning,
+.ant-input-affix-wrapper.ant-input-affix-wrapper-status-warning,
+.ant-input-affix-wrapper.ant-input-affix-wrapper-status-warning:hover {
+  border-color: var(--ant-color-warning, #faad14) !important;
+}
+
 /* ========================================
    Table 表格
    ======================================== */
