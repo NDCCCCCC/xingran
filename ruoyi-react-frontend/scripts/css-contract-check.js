@@ -84,6 +84,199 @@ check(
   /\.ant-input-affix-wrapper\.ant-input-status-warning/.test(indexCss),
 );
 
+// ==========================================================================
+// Phase 88 (VISFIX-06) 新增断言：C6 / C11 / C8 / C12
+// ==========================================================================
+// CLI: node scripts/css-contract-check.js [--strict]
+//   默认态：C6/C11 阻断（failures 计入 exit code）；C8/C12 warn-only（仅告警）。
+//   --strict：C8/C12 命中同样阻断（Plan 03 删除完成后由 Plan 03 翻转为默认阻断）。
+
+const STRICT = process.argv.includes('--strict');
+
+const { readdirSync, statSync } = await import('node:fs');
+const { join, relative } = await import('node:path');
+// 递归枚举 src 下指定后缀文件（Windows 分隔符归一为 /）
+const walkByExt = (dir, exts, out = []) => {
+  for (const e of readdirSync(dir)) {
+    const p = join(dir, e);
+    if (statSync(p).isDirectory()) walkByExt(p, exts, out);
+    else if (exts.some((x) => e.endsWith(x))) out.push(p);
+  }
+  return out;
+};
+const relFe = (p) => relative(feRoot, p).replace(/\\/g, '/');
+
+// 剥注释但保持行号/列号不变（注释替换为等长空白，含换行），避免注释里的示例文本误伤。
+const stripCommentsKeepLines = (text) =>
+  text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+
+// ---------- C6 变量必须定义（阻断 + 豁免清单） ----------
+// 扫 index.css：按块作用域收集 `--x:` 定义与 `var(--x[, fallback])` 引用。
+// 引用有效 = 有 fallback，或定义块作用域为 universal（:root/html 等），
+// 或定义块与引用块同属一个明暗分区（light / dark）。
+// 近似口径说明：index.css 的明暗变量均为顶层平铺块（无 @media 嵌套作用域），
+// 故按选择器内的 [data-color-mode="dark"|"light"] 前缀推断作用域。
+const EXEMPTED_UNREF_VARS = [
+  // Phase 89 R11：--input-placeholder 仅在 light 块定义，暗色 2 处引用声明整条作废
+  //（清偿 = 统一为 --input-text-placeholder 并 :root 兜底，之后删除这 2 条豁免）
+  { name: '--input-placeholder', line: 2306, reason: 'Phase 89 R11 暗色 placeholder 引用未定义变量' },
+  { name: '--input-placeholder', line: 2336, reason: 'Phase 89 R11 暗色 placeholder 引用未定义变量' },
+  // --theme-warning-text：2 处引用 0 定义（4553 无 fallback 命中；5259 有 fallback 不命中）
+  { name: '--theme-warning-text', line: 4553, reason: 'Phase 89 R11 变量无定义，需补 :root 定义' },
+];
+
+const checkC6 = (() => {
+  const text = stripCommentsKeepLines(indexCss);
+  const lineStarts = [0];
+  for (let i = 0; i < text.length; i++) if (text[i] === '\n') lineStarts.push(i + 1);
+  const lineOf = (pos) => {
+    let lo = 0, hi = lineStarts.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (lineStarts[mid] <= pos) lo = mid; else hi = mid - 1; }
+    return lo + 1;
+  };
+  const scopeOf = (selector) => {
+    if (/\[data-color-mode=["']dark["']\]/.test(selector)) return 'dark';
+    if (/\[data-color-mode=["']light["']\]/.test(selector)) return 'light';
+    return 'universal';
+  };
+  // 块解析：栈式扫描，收集每块的 selector / defs / refs
+  const blocks = [];
+  const stack = [];
+  let segStart = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '{') {
+      // 取上一个 `}`/`;` 之后的段作为 selector（文件头 @import 等语句不得并入，
+      // 否则 :root 块会以 '@import…' 开头被误判为 at-rule 而丢弃全部变量定义）
+      const seg = text.slice(segStart, i);
+      const selector = seg.slice(seg.lastIndexOf(';') + 1).trim();
+      stack.push({ selector, start: i, contentStart: i + 1 });
+      segStart = i + 1;
+    } else if (ch === '}') {
+      const top = stack.pop();
+      if (top) {
+        const content = text.slice(top.contentStart, i);
+        const isAtRule = top.selector.startsWith('@');
+        const isDeclBlock = !isAtRule && content.includes(':');
+        const defs = isDeclBlock
+          ? [...content.matchAll(/(^|[;{\s])(--[a-zA-Z0-9-]+)\s*:/g)].map((m) => m[2])
+          : [];
+        const refs = isDeclBlock
+          ? [...content.matchAll(/var\(\s*(--[a-zA-Z0-9-]+)\s*(,)?/g)].map((m) => ({
+              name: m[1], hasFallback: !!m[2], line: lineOf(top.contentStart + m.index),
+            }))
+          : [];
+        if (defs.length || refs.length) {
+          blocks.push({ selector: top.selector, scope: scopeOf(top.selector), start: top.start, end: i, defs, refs });
+        }
+      }
+      segStart = i + 1;
+    }
+  }
+  // 定义索引：name → [{scope}]（@keyframes 等内部块已按 decl-block 过滤）
+  const defsIndex = new Map();
+  for (const b of blocks) for (const d of b.defs) {
+    if (!defsIndex.has(d)) defsIndex.set(d, []);
+    defsIndex.get(d).push(b.scope);
+  }
+  const refValid = (name, refScope, hasFallback) => {
+    if (hasFallback) return true;
+    const scopes = defsIndex.get(name);
+    if (!scopes) return false;
+    // html 上必然挂着 data-color-mode（light/dark 其一激活），因此：
+    //   - universal 引用（body/.ant-* 等）：light/dark/universal 任意定义均可达；
+    //   - dark 块内引用：需 universal 或 dark 定义（只定义在 light = 失效，反之亦然）。
+    if (refScope === 'universal') return true;
+    return scopes.some((s) => s === 'universal' || s === refScope);
+  };
+  const violations = [];
+  for (const b of blocks) {
+    for (const r of b.refs) {
+      if (refValid(r.name, b.scope, r.hasFallback)) continue;
+      const line = r.line;
+      if (EXEMPTED_UNREF_VARS.some((e) => e.name === r.name && e.line === line)) continue;
+      violations.push(`index.css:${line} 引用未定义变量 ${r.name}${r.hasFallback ? '' : '（无 fallback）'} @ ${b.selector.trim().slice(0, 80)}`);
+    }
+  }
+  check(
+    'C6  var() 引用的变量均已定义（含豁免清单）',
+    violations.length === 0,
+    violations.length ? violations.join(' | ') : `豁免登记 ${EXEMPTED_UNREF_VARS.length} 处（Phase 89 R11）`,
+  );
+})();
+
+// ---------- C11 !important 预算 ratchet（阻断，只降不升） ----------
+// ratchet：只允许下调，Phase 92 终值 ≤480；上调视为回归。
+// 当前基线 = 1435（Phase 88 落地时的 HEAD 实跑值，M1 全 .css 口径）；
+// Phase 88 Plan 03 删除第 1 批死规则后由 Plan 03 下调至 1395。
+const IMPORTANT_BUDGET = 1435;
+{
+  const allCss = walkByExt(resolve(feRoot, 'src'), ['.css', '.less']);
+  let importantCount = 0;
+  for (const f of allCss) importantCount += (readFileSync(f, 'utf8').match(/!important/g) || []).length;
+  check(
+    'C11  !important 预算 ratchet（只降不升）',
+    importantCount <= IMPORTANT_BUDGET,
+    `当前 ${importantCount} / 预算 ${IMPORTANT_BUDGET}`,
+  );
+}
+
+// ---------- C8 死文件检测（warn-only + --strict） ----------
+{
+  const styleFiles = walkByExt(resolve(feRoot, 'src'), ['.css', '.less']);
+  const refFiles = walkByExt(resolve(feRoot, 'src'), ['.ts', '.tsx', '.css', '.less'])
+    .map((p) => ({ path: p, dir: resolve(p, '..'), text: readFileSync(p, 'utf8') }));
+  // 入口白名单：src/index.css 由 main.tsx 引入（按相对路径精确匹配，避免 basename 碰撞）；
+  // allowlist 兜底动态 import 场景（basename 口径）
+  const C8_ENTRY_ALLOWLIST = ['src/index.css'];
+  const C8_ALLOWLIST = [];
+  const dead = [];
+  for (const f of styleFiles) {
+    const rel = relFe(f);
+    const base = f.split(/[\\/]/).pop();
+    if (C8_ENTRY_ALLOWLIST.includes(rel) || C8_ALLOWLIST.includes(base)) continue;
+    const parentName = resolve(f, '..').split(/[\\/]/).pop();
+    const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const quotedRe = new RegExp(`['"]([^'"]*\\/?${escapedBase})['"]`);
+    const referenced = refFiles.some(({ path, dir, text }) => {
+      if (resolve(path) === resolve(f)) return false;
+      // 仅 import 语句口径：`import "…<basename>"` / `from "…<basename>"` / `@import "…<basename>"`
+      const importRe = new RegExp(
+        /(^|\n)\s*(?:@import\s+[^;]*?|import\s+[^;'"]*?from\s*[^;'"]*?|import\s*)/.source + quotedRe.source,
+      );
+      const m = text.match(importRe);
+      if (!m) return false;
+      const p = m[1];
+      // 目录感知：basename 碰撞消歧（如 main.tsx 的 "./index.css" ≠ dashboard-system/index.css）
+      //   - 同目录相对导入（"./xxx.css"）→ 真引用
+      //   - 路径含目标父目录名（"@/pages/dashboard-system/index.css"）→ 真引用
+      if (dir === resolve(f, '..')) return true;
+      return p.includes(`${parentName}/${base}`) || p.includes(`\\${parentName}\\${base}`);
+    });
+    if (!referenced) dead.push(relFe(f));
+  }
+  // 默认 warn-only：只告警不阻断；--strict 时命中即 exit 1（Plan 03 翻转为默认阻断）
+  if (STRICT) failures++;
+  console.log(`${STRICT ? 'FAIL' : 'WARN'}  C8  CSS/LESS 死文件（无 import 引用）  → ${dead.length ? dead.join(' | ') : '0（全绿）'}`);
+}
+
+// ---------- C12 data-color_mode 拼写（warn-only + --strict） ----------
+// 正确属性名为 data-color-mode；data-color_mode（下划线）在 DOM 上永不命中 = 死规则。
+{
+  const hits = [];
+  for (const f of walkByExt(resolve(feRoot, 'src'), ['.css'])) {
+    const text = readFileSync(f, 'utf8');
+    let idx = text.indexOf('data-color_mode');
+    while (idx !== -1) {
+      hits.push(`${relFe(f)}:${text.slice(0, idx).split('\n').length}`);
+      idx = text.indexOf('data-color_mode', idx + 1);
+    }
+  }
+  // 默认 warn-only：只告警不阻断；--strict 时命中即 exit 1（Plan 03 翻转为默认阻断）
+  if (STRICT) failures++;
+  console.log(`${STRICT ? 'FAIL' : 'WARN'}  C12  data-color_mode 拼写死规则  → ${hits.length ? hits.join(' | ') : '0（全绿）'}`);
+}
+
 console.log('----');
 console.log(`结果: ${failures === 0 ? 'ALL PASS' : failures + ' 项 FAIL'}`);
 process.exit(failures === 0 ? 0 : 1);
