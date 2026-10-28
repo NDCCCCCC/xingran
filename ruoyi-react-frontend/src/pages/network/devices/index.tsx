@@ -27,24 +27,13 @@ import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { Layout, App, Form, Button, Alert } from "antd";
-import {
-  PlusOutlined,
-  ThunderboltOutlined,
-  CloudUploadOutlined,
-  EditOutlined,
-  EyeOutlined,
-  HistoryOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import type { NetworkDevice } from "@/types";
 import type { PageResponse } from "@/types";
 import { post } from "@/lib/api";
-import { batchExport } from "@/lib/api/networkApi";
-import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import { createDeleteAction } from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { PageTable } from "@/components/shared";
 import { BatchExportModal } from "@/components/shared";
-import type { ActionButton } from "@/components/shared/ActionButtons";
 import type {  } from "@/utils/tableHelpers";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { useMenuStore } from "@/store/menuStore";
@@ -57,7 +46,8 @@ import { DEVICE_TYPE_OPTIONS } from "./constants";
 import { getOptionLabel } from "./utils";
 import { buildDeviceSearchFields } from "./searchFields";
 import { useDeviceData } from "./hooks/useDeviceData";
-import { useDeviceModals, type ProbeResult } from "./hooks/useDeviceModals";
+import { useDeviceModals } from "./hooks/useDeviceModals";
+import { useDeviceActions } from "./hooks/useDeviceActions";
 
 // ==================== 主组件 ====================
 
@@ -172,239 +162,49 @@ const DeviceManagement = () => {
 
   // ==================== 数据操作 ====================
 
-  // 探测设备
-  const handleProbe = async () => {
-    try {
-      const values = await quickCreateForm.validateFields(["ipAddress", "credentialId"]);
-      setProbing(true);
-      setProbeResult(null);
-
-      const result = await post<ProbeResult>("/network/devices/discover", {
-        ipAddress: values.ipAddress,
-        credentialId: values.credentialId,
-      });
-
-      if (result.data?.success) {
-        setProbeResult(result.data);
-        handleSuccess("设备探测");
-      } else {
-        handleApiError(result.data?.message || "探测失败", "探测");
-      }
-    } catch (error) {
-      if (error && typeof error === "object" && "errorFields" in error) {
-        handleApiError(error, "请先填写 IP 地址和授权凭证", false);
-      } else {
-        handleApiError(error, "探测");
-      }
-    } finally {
-      setProbing(false);
-    }
-  };
-
-  // 快速创建设备（reloadRef 承接：提交成功后由 ctx 转发的 loadData 刷新）
-  const handleQuickCreate = async (loadData: () => void) => {
-    try {
-      const values = await quickCreateForm.validateFields();
-
-      await post("/network/devices/quick-create", {
-        ipAddress: values.ipAddress,
-        credentialId: values.credentialId,
-        snmpPort: values.snmpPort || 161,
-        communities: values.communities || [],
-        deptId: values.deptId || undefined,
-        location: values.location || "",
-        description: values.description || "",
-      });
-
-      handleSuccess("设备创建");
-      closeQuickCreateModal();
-      quickCreateForm.resetFields();
-      setProbeResult(null);
-
-      loadData();
-      void loadStatistics();
-    } catch (error) {
-      if (error && typeof error === "object" && "errorFields" in error) {
-        return;
-      }
-      handleApiError(error, "创建");
-    }
-  };
-
-  // 创建/更新设备
-  const handleCreate = async (loadData: () => void) => {
-    try {
-      const values = await editForm.validateFields();
-      if (editingDevice) {
-        await post(`/network/devices/${editingDevice.id}/update`, values);
-        handleSuccess("更新");
-      } else {
-        await post("/network/devices", values);
-        handleSuccess("创建");
-      }
-      setModalVisibleState(false);
-      editForm.resetFields();
-      loadData();
-      void loadStatistics();
-    } catch (error) {
-      if (error && typeof error === "object" && "errorFields" in error) {
-        return;
-      }
-      handleApiError(error, "操作");
-    }
-  };
-
   // 编辑弹窗开关（原 useTableManager editModalVisible 承接：本地 state 桥接）
   const [modalVisible, setModalVisibleState] = useState(false);
   const [editingDevice, setEditingDevice] = useState<NetworkDevice | null>(null);
 
-  // 删除设备（createDeleteAction → ConfirmDelete 契约：失败 helper 承接并保持弹窗）
-  const handleDelete = async (id: string, loadData: () => void) => {
-    await post(`/network/devices/${id}/delete`, {});
-    handleSuccess("删除");
-    loadData();
-    void loadStatistics();
-  };
-
-  const handleBatchExport = async (entityTypes: string[]) => {
-    setBatchExporting(true);
-    try {
-      const filename = await batchExport(entityTypes, {}); // 可以根据需要添加筛选条件
-      message.success(`批量导出成功，文件: ${filename}`);
-      setBatchModalVisible(false);
-    } catch (error: unknown) {
-      message.error(`批量导出失败：${(error as Error).message}`);
-    } finally {
-      setBatchExporting(false);
-    }
-  };
-
-  // 采集设备端口
-  const handleCollectPorts = async (device: NetworkDevice) => {
-    try {
-      setCollectingDeviceId(device.id);
-      const result = await post<{
-        errorMessage?: string;
-        successCount?: number;
-        failedCount?: number;
-      }>("/network/ports/collect", { deviceId: device.id });
-
-      const data = result.data;
-      if (!data) {
-        handleApiError("采集失败: 未获取到端口数据", "采集");
-      } else if (data.errorMessage) {
-        handleApiError(data.errorMessage, "采集", false);
-      } else if (data.successCount && data.successCount > 0) {
-        handleSuccess(
-          `采集成功: 成功 ${data.successCount} 个端口${data.failedCount && data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ""}`
-        );
-      } else {
-        handleApiError("采集失败: 未获取到端口数据", "采集");
-      }
-    } catch (error) {
-      handleApiError(error, "采集");
-    } finally {
-      setCollectingDeviceId(null);
-    }
-  };
-
-  // 打开编辑模态框
-  const openModal = (record?: NetworkDevice) => {
-    if (record) {
-      setEditingDevice(record);
-      // 凭证兜底注入(2026-06-30,同 info-points):loadCredentials 异步且 pageSize:50
-      // 可能不覆盖当前凭证 → 编辑回填 Select 显示 raw UUID。用 record.credentialName 注入。
-      if (record.credentialId) {
-        ensureCredential({ id: record.credentialId, credentialName: record.credentialName });
-      }
-      editForm.setFieldsValue({
-        ...record,
-        deptId: record.deptId || undefined,
-        credentialId: record.credentialId || undefined,
-      });
-    } else {
-      setEditingDevice(null);
-      editForm.setFieldsValue({ port: 22, snmpPort: 161, status: 0 });
-    }
-    setModalVisibleState(true);
-    void loadCredentials();
-  };
-
-  // 打开快速创建模态框
-  const openQuickCreateModal = () => {
-    quickCreateForm.resetFields();
-    setProbeResult(null);
-    setQuickCreateModalVisible(true);
-    void loadCredentials();
-  };
-
-  // 行操作（PageTable ctx 注入 loadData 后组装；操作列由 PageTable 追加）
-  const buildRowActions = useCallback(
-    (record: NetworkDevice, loadData: () => void): ActionButton[] => [
-      {
-        key: "collect-ports",
-        label: "采集端口",
-        icon: <CloudUploadOutlined />,
-        onClick: () => handleCollectPorts(record),
-        // 契约 ActionButton 无 loading 位：采集进行中降级为 disabled（记 PR 偏差）
-        disabled: collectingDeviceId === record.id,
-        // 68.1-T5 minor#1：降级语义保持不变，仅补「进行中」状态语义（UI-SPEC §2 #1 / §7）。
-        // 走 render 而非 ActionButton 顶层字段的原因：
-        // 1) ActionButton 契约（T1 冻结）无 aria-busy/title 透传位；
-        // 2) 本页动作数 ≥3 时 ActionButtons 收进「操作」下拉，普通动作的 aria 属性不会落到 DOM。
-        // 渲染参数与 ActionButtons 普通按钮分支保持一致（type=link/size=small/className）。
-        render: () => {
-          const collecting = collectingDeviceId === record.id;
-          return (
-            <Button
-              type="link"
-              size="small"
-              icon={<CloudUploadOutlined />}
-              onClick={() => handleCollectPorts(record)}
-              disabled={collecting}
-              className="action-btn-link"
-              aria-label="采集端口"
-              aria-busy={collecting}
-              title={collecting ? "采集中" : "采集端口"}
-            >
-              采集端口
-            </Button>
-          );
-        },
-      },
-      {
-        key: "detail",
-        label: "详情",
-        icon: <EyeOutlined />,
-        onClick: () => openDetailModal(record),
-      },
-      // 14-05b:网络设备 → MAC 历史联动入口(D-16 锁定)
-      ...(canViewMACHistory
-        ? [
-            {
-              key: "mac-history",
-              label: "查看 MAC 历史",
-              icon: <HistoryOutlined />,
-              onClick: () => navigate(`/network/mac/history?deviceId=${record.id}`),
-            },
-          ]
-        : []),
-      {
-        key: "edit",
-        label: "编辑",
-        icon: <EditOutlined />,
-        onClick: () => openModal(record),
-      },
-      createDeleteAction(record.id, () => handleDelete(record.id, loadData), {
-        target: record.deviceName,
-      }),
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 采集/详情/编辑 handler 均为稳定闭包
-    [collectingDeviceId, canViewMACHistory, navigate]
-  );
-
   // 批量导出弹窗触发按钮（原 toolbar 位）
+  // ⚠️ reloadRef 是**外部注入的 ref**（不是 state）：PageTable 的 children 渲染函数
+  //    在渲染期把 ctx.loadData 回填进它（见 components/DeviceTablePanel.tsx），
+  //    提交/删除成功后由 handlers 读它来刷新列表。不得改成 state（会引入渲染时序差）。
   const [reloadRef] = useState<{ current: (() => void) | null }>({ current: null });
+
+  // v1.24 HYG-04 D3：数据操作 + 行操作抽到 hooks/useDeviceActions.ts
+  //（行操作的权限门控随之接入 Phase 78 的 useActionPermission 三态门控）
+  const {
+    handleProbe,
+    handleQuickCreate,
+    handleCreate,
+    handleBatchExport,
+    handleCollectPorts,
+    openModal,
+    openQuickCreateModal,
+    buildRowActions,
+  } = useDeviceActions({
+    quickCreateForm,
+    editForm,
+    editingDevice,
+    collectingDeviceId,
+    canViewMACHistory,
+    navigate,
+    message,
+    loadCredentials,
+    loadStatistics,
+    ensureCredential,
+    setQuickCreateModalVisible,
+    setProbeResult,
+    setProbing,
+    closeQuickCreateModal,
+    openDetailModal,
+    setCollectingDeviceId,
+    setModalVisible: setModalVisibleState,
+    setEditingDevice,
+    setBatchModalVisible,
+    setBatchExporting,
+  });
 
   // mount 统计首载（列表首载由 PageTable extraFilters effect 承接）
   useEffect(() => {
