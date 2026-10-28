@@ -23,6 +23,12 @@ type UserListParams struct {
 	RecursiveDeptID *string `json:"recursiveDeptId"`
 	BeginTime       *string `json:"beginTime"`
 	EndTime         *string `json:"endTime"`
+	// DataScopeUserID 当前请求用户 ID，由 handler 从 gin context 提取（DataScopePermission
+	// 中间件写入），用于 data_scope 过滤。json:"-"：客户端不可通过请求体注入（防伪造 scope）。
+	DataScopeUserID string `json:"-"`
+	// DataScope 当前请求用户的数据范围（models/base.go 枚举 1-5）。
+	// 0 = 不过滤（未挂 DataScopePermission 或超管早退），行为与接入前完全一致。
+	DataScope models.DataScope `json:"-"`
 }
 
 // DefaultUserListParams 默认列表参数

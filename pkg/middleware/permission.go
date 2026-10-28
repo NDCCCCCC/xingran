@@ -596,6 +596,11 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 		return db.Where("1=0")
 	case models.DataScopeSelf:
 		// 仅本人数据权限
+		// ⚠️ PMODEL-01 标注（零行为改动）：此处 deptField + " = ?", userID 的语义
+		// 仅当 deptField 为用户维度字段（如 vdi bound_user_id）才正确；若 deptField
+		// 是部门列（如 dept_id）则构成 id 空间错位（user id ≠ dept id）。
+		// sys_user 列表场景的正确实现见 internal/services/system/user_service.go
+		// applyUserDataScope 的 DataScopeSelf 分支（sys_user.id = ?）。
 		return db.Where(deptField+" = ?", userID)
 	default:
 		return db.Where("1=0") // 默认无权限

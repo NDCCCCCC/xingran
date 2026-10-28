@@ -78,6 +78,25 @@ func (h *UserHandler) Create(c *gin.Context) {
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
+// extractDataScopeParams 从 gin context 提取 data_scope 信息（PMODEL-01，
+// 仿 vdi/vm_handler.go：DataScopePermission 中间件写入 user_id / data_scope）。
+// 类型断言失败保持零值（string "" / DataScope 0 = 不过滤）。
+func extractDataScopeParams(c *gin.Context) (string, models.DataScope) {
+	var userID string
+	var dataScope models.DataScope
+	if uid, exists := c.Get("user_id"); exists {
+		if uidStr, ok := uid.(string); ok {
+			userID = uidStr
+		}
+	}
+	if ds, exists := c.Get("data_scope"); exists {
+		if dsVal, ok := ds.(models.DataScope); ok {
+			dataScope = dsVal
+		}
+	}
+	return userID, dataScope
+}
+
 // List 查询用户列表（类型安全版本）
 // @Summary 查询用户列表
 // @Description 分页查询用户列表，支持多条件过滤
@@ -100,6 +119,10 @@ func (h *UserHandler) List(c *gin.Context) {
 	params.Current = current
 	params.PageSize = pageSize
 
+	// PMODEL-01：从中间件写入的 gin context 提取 data_scope（客户端不可经请求体注入，
+	// params 两字段均 json:"-"）；DataScope=0 时 service 不过滤，旧行为零变化
+	params.DataScopeUserID, params.DataScope = extractDataScopeParams(c)
+
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
 		response.Error(c, err)
@@ -117,7 +140,9 @@ func (h *UserHandler) List(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/users/statistics [post]
 func (h *UserHandler) Statistics(c *gin.Context) {
-	result, err := h.service.Statistics(c.Request.Context())
+	// PMODEL-01：与 List 同批同款提取，统计走带 scope 过滤的同一构造（数字不与列表矛盾）
+	scopeUserID, dataScope := extractDataScopeParams(c)
+	result, err := h.service.StatisticsWithDataScope(c.Request.Context(), scopeUserID, dataScope)
 	if err != nil {
 		response.Error(c, err)
 		return

@@ -28,6 +28,8 @@ type UserService interface {
 	GetByID(ctx context.Context, id string) (*models.User, error)
 	List(ctx context.Context, params requests.UserListParams) (*PageResult, error)
 	Statistics(ctx context.Context) (*UserStatisticsResult, error)
+	// StatisticsWithDataScope 带 data_scope 过滤的用户统计（与 List 复用同一过滤构造）。
+	StatisticsWithDataScope(ctx context.Context, scopeUserID string, dataScope models.DataScope) (*UserStatisticsResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	ResetPassword(ctx context.Context, id string, newPassword string) error
@@ -445,6 +447,10 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		}
 	}
 
+	// PMODEL-01：data_scope 过滤必须在 Count 之前插入，否则 total 仍是全量（假过滤）。
+	// DataScope=0（未挂 DataScopePermission / 超管早退）与 DataScopeAll 不过滤——旧行为零变化。
+	query = s.applyUserDataScope(query, ctx, params.DataScopeUserID, params.DataScope)
+
 	// 统计总数
 	if err := query.Count(&total).Error; err != nil {
 		return nil, apperrors.DatabaseError(err)
@@ -554,6 +560,88 @@ func (s *userService) Statistics(ctx context.Context) (*UserStatisticsResult, er
 			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS inactive", int(models.UserStatusDisabled)),
 		).
 		Scan(&result).Error
+	if err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+	return &result, nil
+}
+
+// applyUserDataScope 对用户列表查询应用 data_scope 过滤（PMODEL-01）。
+// 仿 vdi 模式由 handler 显式传参（scope 信息不进 gin context 之外的自定义机制）：
+//   - DataScopeAll(1) / 0（零值：未挂中间件或超管）→ 不过滤（旧行为零变化）
+//   - DataScopeCustom(2) → dept_id IN (sys_role_dept ⋈ sys_user_role 映射部门)
+//   - DataScopeDept(3) → dept_id = (SELECT dept_id FROM sys_user WHERE id = ?)
+//   - DataScopeDeptChild(4) → ancestors 5 条件子查询（同 RecursiveDeptID 模式，
+//     对 3 层及以上深树正确；不用递归 getChildDepts，避免每请求 N 次往返）
+//   - DataScopeSelf(5) → sys_user.id = ?（按用户主键）。
+//     注意：pkg/middleware/permission.go ApplyDataScope 的 Self 分支是
+//     deptField = userID 形态，仅当 deptField 为用户维度字段（如 vdi bound_user_id）
+//     才正确；对 sys_user 场景必须用本函数的 id 主键语义。
+//   - 未知枚举值 → fail-closed（1=0 空集）
+func (s *userService) applyUserDataScope(query *gorm.DB, ctx context.Context, scopeUserID string, dataScope models.DataScope) *gorm.DB {
+	switch dataScope {
+	case models.DataScopeAll, 0:
+		// 全部数据权限 / 未挂中间件：不过滤
+		return query
+
+	case models.DataScopeCustom:
+		// 自定义数据权限：按 sys_role_dept 映射部门过滤
+		if scopeUserID == "" {
+			return query.Where("1=0")
+		}
+		return query.Where(
+			"dept_id IN (SELECT rd.dept_id FROM sys_role_dept rd JOIN sys_user_role ur ON ur.role_id = rd.role_id WHERE ur.user_id = ?)",
+			scopeUserID,
+		)
+
+	case models.DataScopeDept:
+		// 本部门数据权限
+		if scopeUserID == "" {
+			return query.Where("1=0")
+		}
+		return query.Where("dept_id = (SELECT dept_id FROM sys_user WHERE id = ?)", scopeUserID)
+
+	case models.DataScopeDeptChild:
+		// 本部门及子部门数据权限：先解析当前用户 dept_id，再对 sys_dept 用
+		// ancestors 5 条件（id / 全等 / 三种 LIKE，同 RecursiveDeptID 模式，3 层以上深树正确）
+		if scopeUserID == "" {
+			return query.Where("1=0")
+		}
+		var deptID string
+		if err := s.db.WithContext(ctx).Raw("SELECT dept_id FROM sys_user WHERE id = ?", scopeUserID).Scan(&deptID).Error; err != nil {
+			return query.Where("1=0")
+		}
+		if deptID == "" {
+			return query.Where("1=0")
+		}
+		return query.Where(
+			"dept_id IN (SELECT id FROM sys_dept WHERE id = ? OR ancestors = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors LIKE ?)",
+			deptID, deptID, deptID+",%", "%,"+deptID+",%", "%,"+deptID,
+		)
+
+	case models.DataScopeSelf:
+		// 仅本人数据权限：按 sys_user.id 主键（不是 dept_id = userID 的错位形态）
+		if scopeUserID == "" {
+			return query.Where("1=0")
+		}
+		return query.Where("sys_user.id = ?", scopeUserID)
+
+	default:
+		// 未知枚举值：fail-closed
+		return query.Where("1=0")
+	}
+}
+
+// StatisticsWithDataScope 带 data_scope 过滤的用户统计（与 List 复用同一
+// applyUserDataScope 过滤构造，保证统计数字不与列表行集矛盾）。
+func (s *userService) StatisticsWithDataScope(ctx context.Context, scopeUserID string, dataScope models.DataScope) (*UserStatisticsResult, error) {
+	var result UserStatisticsResult
+	query := s.applyUserDataScope(s.db.WithContext(ctx).Model(&models.User{}), ctx, scopeUserID, dataScope)
+	err := query.Select(
+		"COUNT(*) AS total",
+		fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS active", int(models.UserStatusEnabled)),
+		fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS inactive", int(models.UserStatusDisabled)),
+	).Scan(&result).Error
 	if err != nil {
 		return nil, apperrors.DatabaseError(err)
 	}
