@@ -160,7 +160,7 @@ const DeviceManagement = () => {
   //    提交/删除成功后由 handlers 读它来刷新列表。不得改成 state（会引入渲染时序差）。
   const [reloadRef] = useState<{ current: (() => void) | null }>({ current: null });
 
-  // v1.24 HYG-04 D3：数据操作 + 行操作抽到 hooks/useDeviceActions.ts
+  // v1.24 HYG-04 D3：数据操作 + 行操作抽到 hooks/useDeviceActions.tsx
   //（行操作的权限门控随之接入 Phase 78 的 useActionPermission 三态门控）
   const {
     handleProbe,
