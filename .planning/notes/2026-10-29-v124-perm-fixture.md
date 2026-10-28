@@ -904,6 +904,14 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST \
 | 10 | **起本地后端连生产库的最小旁路开关** | `SERVER_MODE=test` + `SKIP_AUTOMIGRATE=true`（**release 模式下该开关会 fatal 拒绝启动**，`internal/core/core.go:286-291`）+ `SERVER_SKIP_SETUP=true`（跳过 InitData / 默认角色菜单 seed）+ `DB_PASSWORD`。副作用仍在：scheduler 会跑（AD 同步/工单/对账/MAC 物化视图刷新），会写生产表 |
 | 11 | 请求体加密的**真实开关在 DB** | `sys.request.encryption.enabled`（生产实测 `false`）⇒ 明文 JSON 请求直通；`security.request_encryption.require_encryption=false` 亦为兜底。若生产改为 `true`，T4 的 curl 必须改走 SM2+SM4 加密体 |
 | 12 | `sys_user` 的列名与直觉不同 | 主键列是 **`id`**（不是 `user_id`）、昵称列是 **`nickname`**（不是 `nick_name`）、另有 `auth_source`（`local`/`ad`，本地认证会拒绝 `ad` 来源账号）——写 SQL 前先 `information_schema` 核列名 |
+<!-- V124-PITFALL-BLOCK -->
+| 13 | **Step 2「子菜单继承」的语义极易写反** | 真实实现（`git show 51f5e69e^:pkg/middleware/permission.go` 第 2 步，注释「子菜单权限自动包含父菜单权限」）= **用户持有 F 型按钮 → 继承其父页面权限**（查 `perms=?` 的菜单的 **F 型子菜单** 的 perms，看用户是否持有其中之一）。**不是**反向的「持有父页面 → 继承 F 型按钮」。本会话第一版模拟写反了，得出 `step2=true` 的错误结论；改正后 8/8 全 `false`（本夹具一个 F 型都没持有）。§3.8.3 的 SQL 已按正确语义写死 |
+| 14 | 关联表有 **UNIQUE 索引**（不止普通索引） | 实测：`sys_role_menu` 有 `sys_role_menu_role_id_menu_id_key (role_id, menu_id)` UNIQUE、`sys_user_role` 有 `sys_user_role_user_id_role_id_key (user_id, role_id)` UNIQUE、`sys_role` 有 `idx_sys_role_role_key(role_key)` 与 `idx_sys_role_role_name(role_name)` UNIQUE ⇒ **重复 INSERT 会报 23505 unique violation**（不只是「多一行」）。`WHERE NOT EXISTS` 幂等仍是必须（否则事务回滚） |
+| 15 | `sys_menu` / `sys_role` / `sys_user` **都有 `deleted_at` 软删列** | 查角色/用户/菜单必须带 `deleted_at IS NULL`（GORM 默认软删过滤）。本会话的等价 SQL 全部显式带上，避免读到软删行导致 perms 集合虚高 |
+| 16 | T1 端点 `GetUserPermissions` **不过滤 `menu.status`** | `menu_service.go:547-550` 只过滤 `perms IS NOT NULL AND perms != ''`（+ GORM 软删），**不看 status** ⇒ **已停用菜单的 perms 仍会出现在前端权限集**。本夹具 2 条菜单均为 `status=0`，当前无影响；一旦菜单被停用，T1 仍会返回其 perms（前端按钮可能仍显示） |
+| 17 | **生产后端当前不可用** | `10.62.10.34:9000` 实测返回 `Server: MinIO`（**是 MinIO 不是后端**）；`http://10.62.10.34/`（nginx/1.18.0）返回 **502 Bad Gateway** ⇒ **生产后端进程未运行**，走生产 HTTP 复测 T1/T4 现在做不到，必须起本地实例或用 §3.8 的只读 SQL |
+| 18 | **生产库没有迁移记录表** | `information_schema` 里 `%migration%/%version%/%schema%` 只匹配到 `sys_dashboard_versions`（仪表盘版本，无关）⇒ **无法核对「生产库已应用的迁移版本 vs 仓库最新（`migration_224_*`）」** ⇒ §8 坑位 #6 的前置条件**无法满足** ⇒ 本会话**跳过本地起后端**，改走 §3.8 只读判据 |
+| 19 | **并行会话并发改同一夹具 ⇒ 读到中间态快照** | 实测见 §3.9：T1 等价 SQL 一次读到 **35 行**权限（含全部 8 个 F 型 + 横跨 5 个模块），根因是 11:03:50 `sys_user_role` 被另一会话重挂。**取证必须前后各取一次快照**，两次一致才认 |
 
 ---
 
@@ -911,7 +919,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST \
 
 | 项 | 结论 |
 |---|---|
-| 🔴 阻断 | `apply()` 的 `INSERT INTO sys_role_menu (id, role_id, menu_id, created_at)` 与 `ensureUserRole()` 的 `INSERT INTO sys_user_role (id, user_id, role_id, created_at)` **多写了不存在的 `id` 列**（`sys_role_menu` 还多写了 `created_at`）→ 会报 `column "id" does not exist`。正确写法见 §8 坑位 #1 |
+| ⚠️ **已更正** | 原判「🔴 阻断」**不成立**：`apply()` 的 `INSERT INTO sys_role_menu (id, role_id, menu_id, created_at)` 与 `ensureUserRole()` 的 `INSERT INTO sys_user_role (id, user_id, role_id, created_at)` 在**生产 PG 下实测成功**——生产库表**实有** `id`/`created_at` 列（Lead 曾据 Go 模型未映射而误推断为「表无该列」，详见 §3.6.1）。仅 **sqlite / 按 GORM 模型新建的库**才会报 `column "id" does not exist`。仍建议用 `WHERE NOT EXISTS` 幂等（`sys_role_menu` 只有普通索引、非 unique） |
 | ✅ 通过 | 事务包裹；`NOT EXISTS` 幂等；F 型计数校验；重复行校验；递归 CTE 取 `system:user` 祖先链且只保留 `C`/`M`；`cleanup` 按 `role_id` / `username` 精确定位、不误删既有数据 |
 | 🟡 小瑕疵 | ① `data_scope` 注释（"user = 1 本人"）与代码值 `3` 不符（`models/base.go`：3=本部门数据、5=仅本人）——**代码值 3 正确**，改注释即可；② `mkuser` 未开事务，`INSERT sys_user` 成功但后续失败会留半成品；③ `cleanup` 只校验角色残留，建议补 `sys_role_menu` / `sys_user_role` / `sys_user` 三表残留校验 |
 
