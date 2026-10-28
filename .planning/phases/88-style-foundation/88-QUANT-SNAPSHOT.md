@@ -43,6 +43,30 @@ grep -c 'user-form-input'    src/index.css → 3（K8/K9 活规则 + 命中保�
 | M2 | `index.css` `!important` 计数 | 1331 | **1331** | 未动 CSS |
 | M9 | `index.css` 行数 | 5548 | **5548** | 未动 CSS |
 | M14 | 死样式文件数 | 0 | **0** | C8 全绿 |
+
+### M16 口径更正（88-05 / 88-06 收口后）
+
+原基线「2 类（`maskClosable` / `onSearch`）」**不成立**——穷举 antd 6.6.4 全库弃用表（`node_modules/antd/es/**`，17 组件 36 条声明）后，实际有 **8 类**会触发 console 弃用警告：
+
+| 类 | 弃用 prop → 新形态 | 处数 | antd 证据 |
+|---|---|---|---|
+| Modal / Drawer | `maskClosable` → `mask.closable` | 22（antd 侧） | `es/modal/Modal.js`、`es/drawer/Drawer.js:155` |
+| Modal | `destroyOnClose` → `destroyOnHidden` | 6 | `es/modal/Modal.js` |
+| Card | `bodyStyle` → `styles.body` | 4（全是 Card） | `es/card/Card.js` |
+| Card | `bordered={false}` → `variant="borderless"` | 6 | `es/form/hooks/useVariants.js:15-18` |
+| Drawer | `width` → `size` | 9 | `es/drawer/Drawer.js:83-103,155` |
+| Progress | `width` → `size` / `trailColor` → `railColor` | 2 + 1 | `es/progress/progress.js:120` |
+| Alert | `message` → `title` | 37 | `es/alert/Alert.js:83`（`title ?? message`） |
+| Space | `direction` → `orientation` / `split` → `separator` | 17 + 1 | `es/space/index.js:94` |
+| notification | `message` → `title` | 2 | `es/notification/useNotification.js:155` |
+| Image | `preview.visible` → `open` / `preview.onVisibleChange` → `onOpenChange` | 1 + 1 | `es/image/hooks/usePreviewConfig.js:68` |
+| Timeline | `items[].children` → `content` / `items[].dot` → `icon` / `<Timeline.Item>` → `items` 数组 | 6 + 2 + 4 | `es/timeline/Timeline.js:107,116` |
+
+**合计 74 处弃用用法清零**（88-04 六类 + 88-05 Drawer.width + 88-06 其余）；浏览器 **26 页遍历 deprecated = 0**（迁移前基线 11 条——走 `git worktree` 检出 HEAD + 同构探针页复现）。
+
+**M16 终态口径** = 「**全仓 antd 6 弃用警告 = 0**」，由 `css-contract-check.js` 的 **C14 / C14c / C14d / C14e / C14f / C14g** 七项数据驱动守护锁死（`lint:ci` 链尾执行，任何弃用 prop 回潮即 exit 1）。
+
+**不在 M16 口径内**（非 deprecated 类，非本次引入）：rc-select `onSearch should work with showSearch`、`useForm is not connected to any Form element`、Divider `orientation is used for direction` usage 提示。
 | 弃用 prop 静态计数 | `destroyOnClose` / `bodyStyle` / `headStyle` / `maskStyle` / `footerStyle` / `contentWrapperStyle` / `size="middle"` / Select 六类 | 6 / 4 / 0 / 0 / 0 / 0 / 17 / 0 | **全 0** | C14 断言守护（`node scripts/css-contract-check.js` exit 0，输出含 `C14 PASS`） |
 | 冻结契约位 `maskClosable` | 我方组件对外 prop（声明/解构/透传/调用方） | 7 | **7（保留）** | v1.22 契约冻结；C14b 断言守护 |
 | `size="default"` | 唯一处（Drawer） | 1 | **1（豁免登记）** | `drawer/Drawer.d.ts:6` 枚举 `["default","large"]` → Drawer 无 medium |
