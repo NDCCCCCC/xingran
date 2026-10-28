@@ -15,16 +15,24 @@ import "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 //   - **向后兼容**：`GetPhysicalDevices` 的签名/返回值零改动；诊断走新增方法 +
 //     新增端点，前端不接也不影响现有行为。
 //   - **四类空因必须互斥且可判定**（判定顺序即下面的常量顺序，先命中先返回）：
-//       1. no_user_bound            未绑定用户
+//       1. no_user_bound            未绑定用户（**压过「有数据」**——见下）
 //       2. info_point_misbound      信息点绑定错位（未绑定 / 已软删 / 状态非正常）
 //       3. device_or_mac_missing    设备或 MAC 数据缺失（信息点/端口/MAC/设备 orphan）
 //       4. has_devices              正常有数据（EmptyReason 为空）
-//   - **nil 与空串语义**：EmptyReason 用空串 "" 表示「有数据」，用 *string 会让前端
-//     多一层判空；这里选 string + `omitempty`，JSON 里有数据时该字段直接不出现。
+//
+//     ⚠️ 第 1 条「压过有数据」是**有意设计**（勿改回「数据优先」）：
+//     3f130 实测 mac_match_count=1（链路通）但前端面板空白——面板按「用户→物理链路」
+//     维度呈现，未绑用户时召回结果无从归属。故「未绑用户」就是该现象的真实空因，
+//     必须报 no_user_bound；设备数据本身不丢，仍在 Devices 里。
+//     实现见 classifyPhysicalEmptyReason（workstation_device_service.go）。
+//
+//   - **nil 与空串语义**：EmptyReason 用空串 "" 表示「已绑用户且有数据」，
+//     用 *string 会让前端多一层判空；这里选 string + `omitempty`，
+//     JSON 里有数据时该字段直接不出现。
 
 // 物理链路空因枚举（可诊断状态机）。取值固定，前端可按字面量分支展示。
 const (
-	// PhysicalEmptyReasonNone 有数据，不是空因（EmptyReason 的正常值）
+	// PhysicalEmptyReasonNone 已绑定用户且召回到设备，不是空因（EmptyReason 的正常值）
 	PhysicalEmptyReasonNone = ""
 	// PhysicalEmptyReasonNoUserBound 工位未绑定 user_id —— 3f130 的实际命中项。
 	// 物理链路本身可由「工位→信息点」推出，但页面呈现维度是用户，
@@ -52,17 +60,25 @@ type PhysicalDevicesResult struct {
 	Devices []*models.WorkstationDevice `json:"devices"`
 	// Total 设备数量（= len(Devices)），方便前端直接显示「N 台」
 	Total int `json:"total"`
-	// EmptyReason 空因代码。有数据时为 ""（JSON 中省略）。
+	// EmptyReason 空因代码。
+	//
+	// ⚠️ 取值口径（v1.24 Phase 80 修正旧注释的表述矛盾）：
+	// **「未绑定用户」压过「有数据」** —— 工位未绑 user_id 时，
+	// 即使物理链路能召回设备，EmptyReason 仍为 no_user_bound，
+	// 因为该面板按「用户→物理链路」维度呈现，未绑用户时召回结果无从归属。
+	// 只有「已绑定用户 + 召回到设备」时 EmptyReason 才是空串（JSON 中省略）。
+	// 判定实现见 classifyPhysicalEmptyReason（workstation_device_service.go）。
+	//
 	// 取值见 PhysicalEmptyReason* 常量。
 	EmptyReason string `json:"emptyReason,omitempty"`
 	// EmptyMessage 面向运维人员的中文可读结论（有数据时省略）。
 	// 例："该工位未绑定用户（user_id 为空），物理链路面板按用户维度展示，因此为空。"
 	EmptyMessage string `json:"emptyMessage,omitempty"`
-	// Warnings 非致命告警（**有数据时也会有**）。
+	// Warnings 非致命告警（**任何情况下都可能有**，包括有数据时）。
 	//
 	// 典型场景（3f130）：物理链路能召回设备，但工位未绑定 user_id —— 此时
-	// emptyReason 为空（因为确实有数据），但「未绑用户」这个根因必须仍然可见，
-	// 否则前端按用户维度展示时依旧会看到空白而无法解释。故用 Warnings 单独承载。
+	// emptyReason 已是 no_user_bound（同上，根因可见），Warnings 仍单独承载该告警，
+	// 两个通道语义互补：emptyReason 给「结论」，warnings 给「逐条提示」。
 	Warnings []string `json:"warnings,omitempty"`
 	// Diagnosis 逐段链路计数，用于区分「数据缺失」与「绑定错位」——
 	// 即使有数据也返回，便于排查「有 1 台但少了几台」。
