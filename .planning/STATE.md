@@ -2,46 +2,79 @@
 gsd_state_version: "1.0"
 milestone: v1.24
 milestone_name: 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
-status: Roadmap CREATED (Phases 76-83, 18/18 REQ mapped) — ready to execute
-stopped_at: 规划定稿：REQUIREMENTS 18 需求 + ROADMAP 8 phases + 4 维研究 + 4 份实证 note；W1(76/80/81/82 零依赖可并行) → W2(78/79 需 PG) → W3(83)；收口=77
-last_updated: "2026-10-28T09:45:00+08:00"
+status: All phases complete (Phases 76-83, 18/18 REQ satisfied) — ready for milestone review & archive
+stopped_at: 全部 8 phase 执行完毕：76 双框 P0 + 77 视觉验证收口（17 张证据入库）+ 78 权限双端闭环 + 79 PG 实机验收（三层证据）+ 80 工位诊断展示 + 81 F5 修复（红绿验证）+ 82 lint 清零（0 problems）+ 83 devices 拆分（714→306 行）
+last_updated: "2026-10-28T12:40:00+08:00"
 last_activity: 2026-10-28
-last_activity_desc: v1.24 roadmap CREATED — 双框 P0 根因实证 + #16 定责（前后端双缺口）+ 3f130/F5 完成判据
-state_head: b9f259ea
+last_activity_desc: v1.24 全部 phase 完成（18/18 REQ satisfied）——Phase 77 实测查出并修复 VIS-03 死规则（antd 6 status class 名误用），Phase 83 拆分达标，证据与登记册全量入库
+state_head: e72cef86
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 8
   total_plans: 0
   completed_plans: 0
-  percent: 0
-current_phase: 76
-current_phase_name: 双框 P0 修复 + CSS 审计登记册
+  percent: 100
+current_phase: null
+current_phase_name: —
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.24 roadmap CREATED — ready to execute
+**Status**: v1.24 全部 phase 完成（18/18 REQ satisfied）—— 待里程碑评审与收档
 **Last activity**: 2026-10-28
-**Prior activity**: 2026-10-28 — v1.24 规划定稿：18 需求（VIS×5/PERM×6/DIAG/NAV/HYG×5）+ 8 phases + 4 维研究 + PG 权限基线/双框根因/工位绑定 3 份实证
-**Prior activity (2)**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
-**Prior activity (3)**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）
+**Prior activity**: 2026-10-28 — v1.24 全量执行完成（Phase 77 视觉验证 + Phase 83 拆分收口 + VIS-03 死规则修复）
+**Prior activity (2)**: 2026-10-28 — v1.24 执行期：78 权限双端闭环（后端严格中间件 + 前端三态门控）+ 79 PG 实机验收（三层证据）+ 82 lint 清零
+**Prior activity (3)**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
+**Prior activity (4)**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）
 
-## Current Milestone: v1.23 前端契约全量收尾与遗留清偿
+## Current Milestone: v1.24 视觉回归修复与遗留债务清偿
 
-**Core value**: 把 v1.22 建立但未落地的契约真正推到全量——修复用户主诉的「文本输入框无法一键删除」，并清偿 v1.22 收档结转的 debug / UAT / 流程积压，让里程碑以「无债、无盲区」收档。
+**Core value**: 修复用户主诉的「输入框双重外框」（309 个输入框全站受影响）并清偿三类遗留债务——#16 行操作权限越权（前后端双缺口）、3f130 工位物理链路诊断缺失、F5 刷新回退 dashboard；同时把 lint 存量清零（51 → 0）。
 
-**事实基线**: `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY}.md`（4 维并行研究, commit b5b3aeaf）+ `.planning/v1.23-seeds.md`（A/B/C/D 四类结转项）+ `.planning/debug/` 7 份 debug 文档。
-
-**用户主诉根因**: TextArea 74 处 0 allowClear 覆盖——`AppInput` 契约只包单行 `Input`, `eslint.config.js:114` 注释又明确 `Input.TextArea`「有意不拦」, 形成零约束盲区。
+**事实基线**: `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS}.md`（4 维并行研究）+ 4 份实证 note（`2026-10-28-pg-permission-baseline.md` / `2026-10-28-double-border-rootcause.md` / `2026-10-28-workstation-binding-facts.md` / `2026-10-29-v124-perm-fixture.md`）+ `v1.24-css-audit-register.md`（36 条 CSS 登记）+ `v1.24-visual-verification.md`（21 形态 × 明暗矩阵 + 17 张截图）+ `v1.24-phase78-spec.md`（Lead 审定的执行规格）
 
 ## Current Position
 
-Phase: Milestone v1.23 complete
+Phase: Milestone v1.24 complete（Phases 76-83）
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-28 — Milestone v1.23 completed and archived
+Status: Awaiting milestone review & archive
+Last activity: 2026-10-28 — v1.24 全部 phase 完成，18/18 REQ satisfied
+
+### v1.24 Phase 依赖速查
+
+| Phase | 主题 | 硬依赖 | 需求 | 关键产出 |
+|-------|------|--------|------|---------|
+| 76 | 双框 P0 修复 + CSS 审计登记册 | — | VIS-01~04 | 复位块 + status 还原；双框 3→0；登记册 36 条 |
+| 77 | 视觉回归验证收口 | 76 | VIS-05 | 21 形态 × 明暗矩阵；双框 = 0；17 张证据图入库 |
+| 78 | #16 权限双端闭环 | — | PERM-01~04, 06 | 严格权限中间件 + 读/写兄弟分离 + 三态门控 |
+| 79 | PG 实机验收 | 78 | PERM-05 | HTTP 8/8 403 + 对照实验；DB 层前后对照 |
+| 80 | 3f130 工位物理诊断展示 | — | DIAG-01 | Table+Alert 分级渲染 + 静默失败补提示 |
+| 81 | F5 刷新落 /dashboard 修复 | — | NAV-01 | catch-all 语义区分 + LAST_PATH 防自毁（红绿验证） |
+| 82 | lint 存量清零 | — | HYG-01~03, 05 | eslint **0 problems**；豁免表 159→38 接入 lint:ci |
+| 83 | devices 页拆分 | 78 | HYG-04 | 714 → 306 行（-57%）+ 行操作再拆至 192 行 |
+
+**并行区间**：76/80/81/82 零依赖并行（Wave 1）→ 78/79（Wave 2）→ 83（Wave 3）→ 77 收口。
+
+### v1.24 执行期关键决策（locked）
+
+- **双框根因**：`index.css:871` 的 `.ant-input{border:...!important}` 命中 antd 6 affix-wrapper 的**内层** `input.ant-input`（antd 原生契约要求内层 `border:none`）→ 双框。`:not(组合子)` 在 CSS3 下整条规则静默丢弃 ⇒ 必须用 `.ant-input-affix-wrapper > input.ant-input`
+- **复位块不写 box-shadow**：焦点环归 wrapper（antd 内层 `box-shadow:none!important` 特异性 0,4,1 自足）
+- **#16 双病灶必须同时修**：组级 ANY-of（`router.go`）+ 模块级降级（`permission.go` Step 3）；只藏前端按钮 = 假修复
+- **gin `Group()` 继承父组中间件链** ⇒ 写组必须是 `authorized` 的**兄弟组**（写成读组的子组则读组 ANY-of 仍放行写操作）
+- **三态门控禁用 `permissions.length===0` 判未就绪**：空权限集与未加载完在数据上不可区分
+- **hydrate 路径必须同步置 `permissionsLoaded`**：直接 `setState` 绕过 `setPermissions` ⇒ 硬刷新后所有操作按钮灰一阵
+- **CSS status class 名**：antd 6 把 status 打在 wrapper **自身**（`ant-input-status-error`），**不存在** `ant-input-affix-wrapper-status-error`（该写法 = 永不命中的死规则，契约检查必须双向断言）
+- **权限判定有 30s TTL 缓存**且 `InvalidateMiddlewarePermCache` 未接线 ⇒ 改权限后须等 ≤30s 生效
+
+### v1.25 已立项候选（v1.24 结转）
+
+- **候选①**：操作级 RBAC 全站治理（108 页面 + 340 路由；`roles/menus/depts/posts` 4 组 ANY-of 拆分 + `pkg/permission/config.go` 死表接线 + 动作级 F 型菜单播种）
+- **候选②**：样式层收敛到 antd 6 variant（方案 C）
+- **候选③**：权限模型三缺口（`data_scope` 未被列表消费 / `GetUserPermissions` 不断过滤 `menu.status` / Step 2 语义易写反）+ 生产库无迁移记录表 + GORM schema 漂移
+- **候选④**：Phase 77 视觉新发现（暗色 `--input-bg` 第 3 处就地重定义 / 暗色 Select 白底两套边框体系 / `.dept-tree-search` 死规则 / antd 6 弃用警告 2 类 / InputNumber 错误态仍灰）
+- **候选⑤**（待议）：`room-devices/index.tsx` 815 行（比 devices 更长，未扩面）
 
 ### Phase 依赖速查（v1.23）
 
