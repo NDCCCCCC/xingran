@@ -308,9 +308,30 @@ function scanRoutes() {
       if (!lm.has(m[1])) lm.set(m[1], []);
       lm.get(m[1]).push({ kind: m[2], codes });
     }
+    // 85-03：局部 strict 写组赋值形态 var := (pkg.)strictUserRouteGroup(parent, permission.X, core)
+    // （router.go 内联兄弟写组，非 struct-literal 实参形态）。prefix 继承 parent 组
+    // （strictUserRouteGroup 是 parent.Group("")），权限码 = 单一常量，kind = Strict。
+    const localStrict = new Map(); // var -> { parentVar, code }
+    const reLocalStrict = /([A-Za-z_]\w*)\s*:?=\s*(?:[A-Za-z_][\w.]*\.)?strict\w*Group\(\s*([A-Za-z_]\w*)\s*,\s*(?:permission\.)?([A-Za-z_]\w*)/g;
+    while ((m = reLocalStrict.exec(bodyText)) !== null) {
+      const code = constMap.get(m[3]);
+      localStrict.set(m[1], { parentVar: m[2], code: code || null });
+    }
 
     // 局部 use 叠加：包装 resolveVar（局部组/局部 use 优先查函数体切片）
     const localResolve = (varName) => {
+      // 85-03：局部 strict 写组（strictUserRouteGroup 赋值形态）——prefix 继承
+      // parent 组（Group("")），叠加单一严格权限码后即止（不继承 parent 的 ANY-of）。
+      const ls = localStrict.get(varName);
+      if (ls) {
+        const base = localResolve(ls.parentVar);
+        return {
+          prefix: base.prefix,
+          codes: ls.code ? [ls.code] : [],
+          kinds: ["RequireStrictPermissions(local)"],
+          leafVar: varName,
+        };
+      }
       const mount = resolveVar(ctx, varName, 0);
       const lm = analysis.usesLocal && analysis.usesLocal.get(analysis.file + "@" + setupName);
       if (lm) {

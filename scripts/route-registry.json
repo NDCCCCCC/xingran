@@ -3,10 +3,10 @@
   "sourceOfTruth": "internal/api/** route registration source (rescan), not tmp_routes.json",
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
-    "mounts": 123,
+    "mounts": 207,
     "routes": 697,
     "writeRoutes": 306,
-    "deferredWriteRoutes": 269
+    "deferredWriteRoutes": 138
   },
   "routes": [
     {
@@ -16,13 +16,13 @@
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "ops:ad:config:account:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 65
+      "line": 80
     },
     {
       "method": "POST",
@@ -31,13 +31,13 @@
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "ops:ad:config:account:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 76
+      "line": 91
     },
     {
       "method": "POST",
@@ -46,13 +46,13 @@
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "Disable",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "ops:ad:config:account:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 68
+      "line": 83
     },
     {
       "method": "POST",
@@ -61,13 +61,13 @@
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "Enable",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "ops:ad:config:account:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 67
+      "line": 82
     },
     {
       "method": "POST",
@@ -76,13 +76,13 @@
       "setup": "SetupADDomainRouter",
       "isWrite": false,
       "handler": "List",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "ops:ad:config:account:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 57
+      "line": 72
     },
     {
       "method": "POST",
@@ -91,13 +91,13 @@
       "setup": "SetupADDomainRouter",
       "isWrite": false,
       "handler": "Stats",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "ops:ad:config:account:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 58
+      "line": 73
     },
     {
       "method": "POST",
@@ -106,13 +106,13 @@
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "Unlock",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "ops:ad:config:account:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 69
+      "line": 84
     },
     {
       "method": "POST",
@@ -121,13 +121,13 @@
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "ops:ad:config:account:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 66
+      "line": 81
     },
     {
       "method": "POST",
@@ -143,7 +143,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 135
+      "line": 163
     },
     {
       "method": "POST",
@@ -159,7 +159,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 134
+      "line": 162
     },
     {
       "method": "POST",
@@ -175,27 +175,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 138
+      "line": 166
     },
     {
       "method": "POST",
       "path": "/ad-domain/configs",
-      "mountGroup": "configs",
+      "mountGroup": "configAdd",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "CreateConfig",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:config:list",
-        "ops:ad:config:add",
-        "ops:ad:config:edit",
-        "ops:ad:config:delete",
-        "ops:ad:config:test",
-        "ops:ad:config:sync"
+        "ops:ad:config:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 37
+      "line": 45
     },
     {
       "method": "GET",
@@ -215,87 +210,67 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 38
+      "line": 39
     },
     {
       "method": "POST",
       "path": "/ad-domain/configs/:id/delete",
-      "mountGroup": "configs",
+      "mountGroup": "configEdit",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "DeleteConfig",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:config:list",
-        "ops:ad:config:add",
-        "ops:ad:config:edit",
-        "ops:ad:config:delete",
-        "ops:ad:config:test",
-        "ops:ad:config:sync"
+        "ops:ad:config:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 40
+      "line": 49
     },
     {
       "method": "POST",
       "path": "/ad-domain/configs/:id/sync",
-      "mountGroup": "configs",
+      "mountGroup": "configSync",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "SyncData",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:config:list",
-        "ops:ad:config:add",
-        "ops:ad:config:edit",
-        "ops:ad:config:delete",
-        "ops:ad:config:test",
         "ops:ad:config:sync"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 42
+      "line": 55
     },
     {
       "method": "POST",
       "path": "/ad-domain/configs/:id/test",
-      "mountGroup": "configs",
+      "mountGroup": "configTest",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "TestConnection",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:config:list",
-        "ops:ad:config:add",
-        "ops:ad:config:edit",
-        "ops:ad:config:delete",
-        "ops:ad:config:test",
-        "ops:ad:config:sync"
+        "ops:ad:config:test"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 41
+      "line": 52
     },
     {
       "method": "POST",
       "path": "/ad-domain/configs/:id/update",
-      "mountGroup": "configs",
+      "mountGroup": "configEdit",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "UpdateConfig",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:config:list",
-        "ops:ad:config:add",
-        "ops:ad:config:edit",
-        "ops:ad:config:delete",
-        "ops:ad:config:test",
-        "ops:ad:config:sync"
+        "ops:ad:config:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 39
+      "line": 48
     },
     {
       "method": "POST",
@@ -315,7 +290,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 36
+      "line": 38
     },
     {
       "method": "POST",
@@ -331,7 +306,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 98
+      "line": 114
     },
     {
       "method": "POST",
@@ -347,23 +322,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 100
+      "line": 115
     },
     {
       "method": "POST",
       "path": "/ad-domain/groups/:id/update",
-      "mountGroup": "groups",
+      "mountGroup": "groupEdit",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "UpdateGroup",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:group:view",
         "ops:ad:group:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 99
+      "line": 121
     },
     {
       "method": "POST",
@@ -379,7 +353,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 94
+      "line": 110
     },
     {
       "method": "POST",
@@ -395,7 +369,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 97
+      "line": 113
     },
     {
       "method": "POST",
@@ -410,7 +384,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 124
+      "line": 152
     },
     {
       "method": "POST",
@@ -529,7 +503,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 84
+      "line": 99
     },
     {
       "method": "POST",
@@ -544,7 +518,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 151
+      "line": 179
     },
     {
       "method": "GET",
@@ -560,87 +534,82 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 112
+      "line": 135
     },
     {
       "method": "POST",
       "path": "/ad-domain/users/:id/disable",
-      "mountGroup": "users",
+      "mountGroup": "userEdit",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "DisableUser",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:user:view",
         "ops:ad:user:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 116
+      "line": 144
     },
     {
       "method": "POST",
       "path": "/ad-domain/users/:id/enable",
-      "mountGroup": "users",
+      "mountGroup": "userEdit",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "EnableUser",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:user:view",
         "ops:ad:user:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 115
+      "line": 143
     },
     {
       "method": "POST",
       "path": "/ad-domain/users/:id/move",
-      "mountGroup": "users",
+      "mountGroup": "userEdit",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "MoveUser",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:user:view",
         "ops:ad:user:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 114
+      "line": 142
     },
     {
       "method": "POST",
       "path": "/ad-domain/users/:id/update",
-      "mountGroup": "users",
+      "mountGroup": "userEdit",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "UpdateUser",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:user:view",
         "ops:ad:user:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 113
+      "line": 141
     },
     {
       "method": "POST",
       "path": "/ad-domain/users/batch-sync",
-      "mountGroup": "users",
+      "mountGroup": "userEdit",
       "setup": "SetupADDomainRouter",
       "isWrite": true,
       "handler": "BatchSyncADUsers",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:ad:user:view",
         "ops:ad:user:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 117
+      "line": 145
     },
     {
       "method": "POST",
@@ -656,7 +625,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 111
+      "line": 134
     },
     {
       "method": "POST",
@@ -672,7 +641,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/ad_domain_router.go",
-      "line": 110
+      "line": 133
     },
     {
       "method": "POST",
@@ -2483,20 +2452,17 @@
     {
       "method": "POST",
       "path": "/network/backups",
-      "mountGroup": "backups",
+      "mountGroup": "backupsAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:backup:list",
-        "network:backup:add",
-        "network:backup:restore",
-        "network:backup:diff"
+        "network:backup:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 167
+      "line": 227
     },
     {
       "method": "POST",
@@ -2514,25 +2480,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 169
+      "line": 216
     },
     {
       "method": "POST",
       "path": "/network/backups/:id/delete",
-      "mountGroup": "backups",
+      "mountGroup": "backupsDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:backup:list",
-        "network:backup:add",
-        "network:backup:restore",
-        "network:backup:diff"
+        "network:backup:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 170
+      "line": 232
     },
     {
       "method": "POST",
@@ -2541,52 +2504,43 @@
       "setup": "SetupNetworkRouter",
       "isWrite": false,
       "handler": "Restore",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "network:backup:list",
-        "network:backup:add",
-        "network:backup:restore",
-        "network:backup:diff"
+        "network:backup:restore"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 191
+      "line": 247
     },
     {
       "method": "POST",
       "path": "/network/backups/batch",
-      "mountGroup": "backups",
+      "mountGroup": "backupsAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "BatchBackup",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:backup:list",
-        "network:backup:add",
-        "network:backup:restore",
-        "network:backup:diff"
+        "network:backup:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 177
+      "line": 228
     },
     {
       "method": "POST",
       "path": "/network/backups/batch-delete",
-      "mountGroup": "backups",
+      "mountGroup": "backupsDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:backup:list",
-        "network:backup:add",
-        "network:backup:restore",
-        "network:backup:diff"
+        "network:backup:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 171
+      "line": 233
     },
     {
       "method": "POST",
@@ -2604,43 +2558,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 168
+      "line": 215
     },
     {
       "method": "POST",
       "path": "/network/backups/diff",
-      "mountGroup": "backups",
+      "mountGroup": "backupsDiff",
       "setup": "SetupNetworkRouter",
       "isWrite": false,
       "handler": "Diff",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:backup:list",
-        "network:backup:add",
-        "network:backup:restore",
         "network:backup:diff"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 172
+      "line": 230
     },
     {
       "method": "POST",
       "path": "/network/backups/export",
-      "mountGroup": "backups",
+      "mountGroup": "backupsExport",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ExportBackups",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:backup:list",
-        "network:backup:add",
-        "network:backup:restore",
-        "network:backup:diff"
+        "network:backup:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 180
+      "line": 235
     },
     {
       "method": "GET",
@@ -2658,7 +2606,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 179
+      "line": 222
     },
     {
       "method": "POST",
@@ -2676,7 +2624,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 166
+      "line": 214
     },
     {
       "method": "POST",
@@ -2694,7 +2642,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 175
+      "line": 219
     },
     {
       "method": "POST",
@@ -2712,7 +2660,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 174
+      "line": 218
     },
     {
       "method": "GET",
@@ -2730,7 +2678,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 176
+      "line": 220
     },
     {
       "method": "GET",
@@ -2748,7 +2696,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 178
+      "line": 221
     },
     {
       "method": "POST",
@@ -2761,7 +2709,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 237
+      "line": 299
     },
     {
       "method": "POST",
@@ -2777,7 +2725,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 136
+      "line": 172
     },
     {
       "method": "POST",
@@ -2793,39 +2741,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 137
+      "line": 173
     },
     {
       "method": "POST",
       "path": "/network/command/dispatch",
-      "mountGroup": "command",
+      "mountGroup": "commandExec",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Dispatch",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:command:execute",
-        "network:command:view"
+        "network:command:execute"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 132
+      "line": 178
     },
     {
       "method": "POST",
       "path": "/network/command/export",
-      "mountGroup": "command",
+      "mountGroup": "commandExport",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ExportCommands",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:command:execute",
-        "network:command:view"
+        "network:command:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 138
+      "line": 181
     },
     {
       "method": "POST",
@@ -2841,23 +2787,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 134
+      "line": 170
     },
     {
       "method": "POST",
       "path": "/network/command/quick",
-      "mountGroup": "command",
+      "mountGroup": "commandExec",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "QuickCommand",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:command:execute",
-        "network:command:view"
+        "network:command:execute"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 133
+      "line": 179
     },
     {
       "method": "POST",
@@ -2873,25 +2818,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 135
+      "line": 171
     },
     {
       "method": "POST",
       "path": "/network/credentials",
-      "mountGroup": "credentials",
+      "mountGroup": "credentialsAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:credential:list",
-        "network:credential:add",
-        "network:credential:edit",
-        "network:credential:delete"
+        "network:credential:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 93
+      "line": 122
     },
     {
       "method": "POST",
@@ -2909,25 +2851,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 94
+      "line": 116
     },
     {
       "method": "POST",
       "path": "/network/credentials/:id/delete",
-      "mountGroup": "credentials",
+      "mountGroup": "credentialsDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:credential:list",
-        "network:credential:add",
-        "network:credential:edit",
         "network:credential:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 96
+      "line": 127
     },
     {
       "method": "POST",
@@ -2945,79 +2884,67 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 99
+      "line": 117
     },
     {
       "method": "POST",
       "path": "/network/credentials/:id/set-default",
-      "mountGroup": "credentials",
+      "mountGroup": "credentialsEdit",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "SetDefault",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:credential:list",
-        "network:credential:add",
-        "network:credential:edit",
-        "network:credential:delete"
+        "network:credential:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 98
+      "line": 125
     },
     {
       "method": "POST",
       "path": "/network/credentials/:id/update",
-      "mountGroup": "credentials",
+      "mountGroup": "credentialsEdit",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:credential:list",
-        "network:credential:add",
-        "network:credential:edit",
-        "network:credential:delete"
+        "network:credential:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 95
+      "line": 124
     },
     {
       "method": "POST",
       "path": "/network/credentials/batch-delete",
-      "mountGroup": "credentials",
+      "mountGroup": "credentialsDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:credential:list",
-        "network:credential:add",
-        "network:credential:edit",
         "network:credential:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 97
+      "line": 128
     },
     {
       "method": "POST",
       "path": "/network/credentials/export",
-      "mountGroup": "credentials",
+      "mountGroup": "credentialsExport",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ExportCredentials",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:credential:list",
-        "network:credential:add",
-        "network:credential:edit",
-        "network:credential:delete"
+        "network:credential:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 100
+      "line": 130
     },
     {
       "method": "POST",
@@ -3035,7 +2962,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 91
+      "line": 114
     },
     {
       "method": "POST",
@@ -3053,25 +2980,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 92
+      "line": 115
     },
     {
       "method": "POST",
       "path": "/network/devices",
-      "mountGroup": "devices",
+      "mountGroup": "devicesAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:device:list",
-        "network:device:add",
-        "network:device:edit",
-        "network:device:delete"
+        "network:device:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 72
+      "line": 94
     },
     {
       "method": "POST",
@@ -3089,61 +3013,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 75
+      "line": 89
     },
     {
       "method": "POST",
       "path": "/network/devices/:id/delete",
-      "mountGroup": "devices",
+      "mountGroup": "devicesDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:device:list",
-        "network:device:add",
-        "network:device:edit",
         "network:device:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 77
+      "line": 99
     },
     {
       "method": "POST",
       "path": "/network/devices/:id/update",
-      "mountGroup": "devices",
+      "mountGroup": "devicesEdit",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:device:list",
-        "network:device:add",
-        "network:device:edit",
-        "network:device:delete"
+        "network:device:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 76
+      "line": 97
     },
     {
       "method": "POST",
       "path": "/network/devices/batch-delete",
-      "mountGroup": "devices",
+      "mountGroup": "devicesDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:device:list",
-        "network:device:add",
-        "network:device:edit",
         "network:device:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 78
+      "line": 100
     },
     {
       "method": "POST",
@@ -3161,25 +3076,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 73
+      "line": 88
     },
     {
       "method": "POST",
       "path": "/network/devices/export",
-      "mountGroup": "devices",
+      "mountGroup": "devicesExport",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ExportDevices",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:device:list",
-        "network:device:add",
-        "network:device:edit",
-        "network:device:delete"
+        "network:device:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 79
+      "line": 102
     },
     {
       "method": "POST",
@@ -3197,25 +3109,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 70
+      "line": 86
     },
     {
       "method": "POST",
       "path": "/network/devices/quick-create",
-      "mountGroup": "devices",
+      "mountGroup": "devicesAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "QuickCreate",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:device:list",
-        "network:device:add",
-        "network:device:edit",
-        "network:device:delete"
+        "network:device:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 74
+      "line": 95
     },
     {
       "method": "POST",
@@ -3233,7 +3142,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 71
+      "line": 87
     },
     {
       "method": "POST",
@@ -3249,7 +3158,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 204
+      "line": 259
     },
     {
       "method": "POST",
@@ -3265,55 +3174,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 207
+      "line": 261
     },
     {
       "method": "POST",
       "path": "/network/discoveries/:id/delete",
-      "mountGroup": "discoveries",
+      "mountGroup": "discoveryDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:discovery:add",
-        "network:discovery:view"
+        "network:discovery:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 208
+      "line": 270
     },
     {
       "method": "POST",
       "path": "/network/discoveries/:id/execute",
-      "mountGroup": "discoveries",
+      "mountGroup": "discoveryAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Execute",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:discovery:add",
-        "network:discovery:view"
+        "network:discovery:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 206
+      "line": 267
     },
     {
       "method": "POST",
       "path": "/network/discoveries/:id/import",
-      "mountGroup": "discoveries",
+      "mountGroup": "discoveryAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ImportDevices",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:discovery:add",
-        "network:discovery:view"
+        "network:discovery:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 211
+      "line": 268
     },
     {
       "method": "POST",
@@ -3329,55 +3235,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 205
+      "line": 260
     },
     {
       "method": "POST",
       "path": "/network/discoveries/batch-delete",
-      "mountGroup": "discoveries",
+      "mountGroup": "discoveryDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:discovery:add",
-        "network:discovery:view"
+        "network:discovery:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 210
+      "line": 271
     },
     {
       "method": "POST",
       "path": "/network/discoveries/create",
-      "mountGroup": "discoveries",
+      "mountGroup": "discoveryAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:discovery:add",
-        "network:discovery:view"
+        "network:discovery:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 203
+      "line": 266
     },
     {
       "method": "POST",
       "path": "/network/discoveries/export",
-      "mountGroup": "discoveries",
+      "mountGroup": "discoveryExport",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ExportDiscoveries",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:discovery:add",
-        "network:discovery:view"
+        "network:discovery:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 209
+      "line": 273
     },
     {
       "method": "POST",
@@ -3393,7 +3296,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 201
+      "line": 257
     },
     {
       "method": "POST",
@@ -3409,7 +3312,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 202
+      "line": 258
     },
     {
       "method": "POST",
@@ -3424,7 +3327,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 150
+      "line": 192
     },
     {
       "method": "POST",
@@ -3439,52 +3342,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 151
+      "line": 193
     },
     {
       "method": "POST",
       "path": "/network/executions/:id/delete",
-      "mountGroup": "executions",
+      "mountGroup": "executionsExec",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
         "network:command:execute"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 152
+      "line": 200
     },
     {
       "method": "POST",
       "path": "/network/executions/batch-delete",
-      "mountGroup": "executions",
+      "mountGroup": "executionsExec",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
         "network:command:execute"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 153
+      "line": 201
     },
     {
       "method": "POST",
       "path": "/network/executions/export",
-      "mountGroup": "executions",
+      "mountGroup": "executionsExec",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ExportExecutions",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
         "network:command:execute"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 154
+      "line": 202
     },
     {
       "method": "POST",
@@ -3499,7 +3402,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 147
+      "line": 190
     },
     {
       "method": "POST",
@@ -3514,22 +3417,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 148
+      "line": 191
     },
     {
       "method": "POST",
       "path": "/network/executions/template/execute",
-      "mountGroup": "executions",
+      "mountGroup": "executionsExec",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ExecuteByTemplate",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
         "network:command:execute"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 149
+      "line": 199
     },
     {
       "method": "POST",
@@ -3963,20 +3866,17 @@
     {
       "method": "POST",
       "path": "/network/templates",
-      "mountGroup": "templates",
+      "mountGroup": "templatesAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:template:list",
-        "network:template:add",
-        "network:template:edit",
-        "network:template:delete"
+        "network:template:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 114
+      "line": 150
     },
     {
       "method": "POST",
@@ -3994,79 +3894,67 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 115
+      "line": 144
     },
     {
       "method": "POST",
       "path": "/network/templates/:id/clone",
-      "mountGroup": "templates",
+      "mountGroup": "templatesAdd",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Clone",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:template:list",
-        "network:template:add",
-        "network:template:edit",
-        "network:template:delete"
+        "network:template:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 120
+      "line": 151
     },
     {
       "method": "POST",
       "path": "/network/templates/:id/delete",
-      "mountGroup": "templates",
+      "mountGroup": "templatesDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:template:list",
-        "network:template:add",
-        "network:template:edit",
         "network:template:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 117
+      "line": 155
     },
     {
       "method": "POST",
       "path": "/network/templates/:id/preview",
-      "mountGroup": "templates",
+      "mountGroup": "templatesView",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Preview",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:template:list",
-        "network:template:add",
-        "network:template:edit",
-        "network:template:delete"
+        "network:template:view"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 119
+      "line": 158
     },
     {
       "method": "POST",
       "path": "/network/templates/:id/update",
-      "mountGroup": "templates",
+      "mountGroup": "templatesEdit",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:template:list",
-        "network:template:add",
-        "network:template:edit",
-        "network:template:delete"
+        "network:template:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 116
+      "line": 153
     },
     {
       "method": "POST",
@@ -4084,43 +3972,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 121
+      "line": 145
     },
     {
       "method": "POST",
       "path": "/network/templates/batch-delete",
-      "mountGroup": "templates",
+      "mountGroup": "templatesDelete",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:template:list",
-        "network:template:add",
-        "network:template:edit",
         "network:template:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 118
+      "line": 156
     },
     {
       "method": "POST",
       "path": "/network/templates/export",
-      "mountGroup": "templates",
+      "mountGroup": "templatesExport",
       "setup": "SetupNetworkRouter",
       "isWrite": true,
       "handler": "ExportTemplates",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "network:template:list",
-        "network:template:add",
-        "network:template:edit",
-        "network:template:delete"
+        "network:template:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 122
+      "line": 160
     },
     {
       "method": "POST",
@@ -4138,7 +4020,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 112
+      "line": 142
     },
     {
       "method": "POST",
@@ -4156,7 +4038,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 113
+      "line": 143
     },
     {
       "method": "POST",
@@ -4239,20 +4121,17 @@
     {
       "method": "POST",
       "path": "/ops/asset",
-      "mountGroup": "assets",
+      "mountGroup": "assetAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:asset:list",
-        "ops:asset:add",
-        "ops:asset:edit",
-        "ops:asset:delete"
+        "ops:asset:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 825
+      "line": 953
     },
     {
       "method": "POST",
@@ -4270,61 +4149,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 829
+      "line": 940
     },
     {
       "method": "POST",
       "path": "/ops/asset/:id/delete",
-      "mountGroup": "assets",
+      "mountGroup": "assetDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:asset:list",
-        "ops:asset:add",
-        "ops:asset:edit",
         "ops:asset:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 834
+      "line": 957
     },
     {
       "method": "POST",
       "path": "/ops/asset/:id/update",
-      "mountGroup": "assets",
+      "mountGroup": "assetEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:asset:list",
-        "ops:asset:add",
-        "ops:asset:edit",
-        "ops:asset:delete"
+        "ops:asset:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 833
+      "line": 955
     },
     {
       "method": "POST",
       "path": "/ops/asset/batch",
-      "mountGroup": "assets",
+      "mountGroup": "assetDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:asset:list",
-        "ops:asset:add",
-        "ops:asset:edit",
         "ops:asset:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 835
+      "line": 958
     },
     {
       "method": "GET",
@@ -4342,7 +4212,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 823
+      "line": 935
     },
     {
       "method": "POST",
@@ -4360,7 +4230,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 831
+      "line": 942
     },
     {
       "method": "POST",
@@ -4378,43 +4248,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 830
+      "line": 941
     },
     {
       "method": "POST",
       "path": "/ops/asset/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:asset:list",
-        "ops:asset:add",
-        "ops:asset:edit",
-        "ops:asset:delete"
+        "ops:asset:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/ops/asset/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:asset:list",
-        "ops:asset:add",
-        "ops:asset:edit",
-        "ops:asset:delete"
+        "ops:asset:import"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -4432,7 +4296,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 826
+      "line": 937
     },
     {
       "method": "GET",
@@ -4450,7 +4314,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 817
+      "line": 929
     },
     {
       "method": "POST",
@@ -4468,7 +4332,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 828
+      "line": 939
     },
     {
       "method": "POST",
@@ -4486,13 +4350,13 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 832
+      "line": 943
     },
     {
       "method": "GET",
       "path": "/ops/asset/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissions",
@@ -4504,26 +4368,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
       "path": "/ops/building",
-      "mountGroup": "buildings",
+      "mountGroup": "buildingAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:building:list",
-        "ops:building:add",
-        "ops:building:edit",
-        "ops:building:delete",
-        "ops:building:spaces:list"
+        "ops:building:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 644
+      "line": 716
     },
     {
       "method": "POST",
@@ -4542,64 +4402,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 648
+      "line": 703
     },
     {
       "method": "POST",
       "path": "/ops/building/:id/delete",
-      "mountGroup": "buildings",
+      "mountGroup": "buildingDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:building:list",
-        "ops:building:add",
-        "ops:building:edit",
-        "ops:building:delete",
-        "ops:building:spaces:list"
+        "ops:building:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 650
+      "line": 720
     },
     {
       "method": "POST",
       "path": "/ops/building/:id/update",
-      "mountGroup": "buildings",
+      "mountGroup": "buildingEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:building:list",
-        "ops:building:add",
-        "ops:building:edit",
-        "ops:building:delete",
-        "ops:building:spaces:list"
+        "ops:building:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 649
+      "line": 718
     },
     {
       "method": "POST",
       "path": "/ops/building/batch",
-      "mountGroup": "buildings",
+      "mountGroup": "buildingDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:building:list",
-        "ops:building:add",
-        "ops:building:edit",
-        "ops:building:delete",
-        "ops:building:spaces:list"
+        "ops:building:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 651
+      "line": 721
     },
     {
       "method": "POST",
@@ -4618,26 +4466,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 647
+      "line": 702
     },
     {
       "method": "POST",
       "path": "/ops/building/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:building:list",
-        "ops:building:add",
-        "ops:building:edit",
-        "ops:building:delete",
-        "ops:building:spaces:list"
+        "ops:building:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
@@ -4656,26 +4500,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 652
+      "line": 705
     },
     {
       "method": "POST",
       "path": "/ops/building/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:building:list",
-        "ops:building:add",
-        "ops:building:edit",
-        "ops:building:delete",
-        "ops:building:spaces:list"
+        "ops:building:import"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -4694,7 +4534,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 645
+      "line": 700
     },
     {
       "method": "POST",
@@ -4713,13 +4553,13 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 646
+      "line": 701
     },
     {
       "method": "GET",
       "path": "/ops/building/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissionsWithQuery",
@@ -4732,25 +4572,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
       "path": "/ops/dedicatedLine",
-      "mountGroup": "dedicatedLines",
+      "mountGroup": "dedicatedLineAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:dedicatedline:list",
-        "ops:dedicatedline:add",
-        "ops:dedicatedline:edit",
-        "ops:dedicatedline:delete"
+        "ops:dedicatedline:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 921
+      "line": 1073
     },
     {
       "method": "POST",
@@ -4768,61 +4605,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 918
+      "line": 1063
     },
     {
       "method": "POST",
       "path": "/ops/dedicatedLine/:id/delete",
-      "mountGroup": "dedicatedLines",
+      "mountGroup": "dedicatedLineDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:dedicatedline:list",
-        "ops:dedicatedline:add",
-        "ops:dedicatedline:edit",
         "ops:dedicatedline:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 920
+      "line": 1077
     },
     {
       "method": "POST",
       "path": "/ops/dedicatedLine/:id/update",
-      "mountGroup": "dedicatedLines",
+      "mountGroup": "dedicatedLineEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:dedicatedline:list",
-        "ops:dedicatedline:add",
-        "ops:dedicatedline:edit",
-        "ops:dedicatedline:delete"
+        "ops:dedicatedline:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 919
+      "line": 1075
     },
     {
       "method": "POST",
       "path": "/ops/dedicatedLine/batch",
-      "mountGroup": "dedicatedLines",
+      "mountGroup": "dedicatedLineDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:dedicatedline:list",
-        "ops:dedicatedline:add",
-        "ops:dedicatedline:edit",
         "ops:dedicatedline:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 917
+      "line": 1078
     },
     {
       "method": "POST",
@@ -4840,43 +4668,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 916
+      "line": 1062
     },
     {
       "method": "POST",
       "path": "/ops/dedicatedLine/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:dedicatedline:list",
-        "ops:dedicatedline:add",
-        "ops:dedicatedline:edit",
-        "ops:dedicatedline:delete"
+        "ops:dedicatedline:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/ops/dedicatedLine/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:dedicatedline:list",
-        "ops:dedicatedline:add",
-        "ops:dedicatedline:edit",
-        "ops:dedicatedline:delete"
+        "ops:dedicatedline:import"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -4894,7 +4716,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 914
+      "line": 1060
     },
     {
       "method": "POST",
@@ -4912,13 +4734,13 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 915
+      "line": 1061
     },
     {
       "method": "GET",
       "path": "/ops/dedicatedLine/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissions",
@@ -4930,25 +4752,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
       "path": "/ops/doors",
-      "mountGroup": "doors",
+      "mountGroup": "doorsAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:doors:list",
-        "ops:doors:add",
-        "ops:doors:edit",
-        "ops:doors:delete"
+        "ops:doors:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 999
+      "line": 1179
     },
     {
       "method": "POST",
@@ -4966,61 +4785,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 996
+      "line": 1172
     },
     {
       "method": "POST",
       "path": "/ops/doors/:id/delete",
-      "mountGroup": "doors",
+      "mountGroup": "doorsDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:doors:list",
-        "ops:doors:add",
-        "ops:doors:edit",
         "ops:doors:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 998
+      "line": 1183
     },
     {
       "method": "POST",
       "path": "/ops/doors/:id/update",
-      "mountGroup": "doors",
+      "mountGroup": "doorsEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:doors:list",
-        "ops:doors:add",
-        "ops:doors:edit",
-        "ops:doors:delete"
+        "ops:doors:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 997
+      "line": 1181
     },
     {
       "method": "POST",
       "path": "/ops/doors/batch",
-      "mountGroup": "doors",
+      "mountGroup": "doorsDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:doors:list",
-        "ops:doors:add",
-        "ops:doors:edit",
         "ops:doors:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 995
+      "line": 1184
     },
     {
       "method": "POST",
@@ -5038,39 +4848,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 994
+      "line": 1171
     },
     {
       "method": "POST",
       "path": "/ops/floor",
-      "mountGroup": "floors",
+      "mountGroup": "floorAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:floor:list",
-        "ops:floor:add",
-        "ops:floor:edit",
-        "ops:floor:delete",
-        "ops:building:spaces:list"
+        "ops:floor:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 692
+      "line": 767
     },
     {
       "method": "POST",
       "path": "/ops/floor-plan-texts",
-      "mountGroup": "texts",
+      "mountGroup": "textsEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
-      "permCodes": [],
-      "registeredDeadTable": false,
+      "permKind": "RequireStrictPermissions(local)",
+      "permCodes": [
+        "ops:floor-plan:edit"
+      ],
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1019
+      "line": 1207
     },
     {
       "method": "POST",
@@ -5083,46 +4891,52 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1016
+      "line": 1200
     },
     {
       "method": "POST",
       "path": "/ops/floor-plan-texts/:id/delete",
-      "mountGroup": "texts",
+      "mountGroup": "textsEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
-      "permCodes": [],
-      "registeredDeadTable": false,
+      "permKind": "RequireStrictPermissions(local)",
+      "permCodes": [
+        "ops:floor-plan:edit"
+      ],
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1018
+      "line": 1209
     },
     {
       "method": "POST",
       "path": "/ops/floor-plan-texts/:id/update",
-      "mountGroup": "texts",
+      "mountGroup": "textsEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
-      "permCodes": [],
-      "registeredDeadTable": false,
+      "permKind": "RequireStrictPermissions(local)",
+      "permCodes": [
+        "ops:floor-plan:edit"
+      ],
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1017
+      "line": 1208
     },
     {
       "method": "POST",
       "path": "/ops/floor-plan-texts/batch",
-      "mountGroup": "texts",
+      "mountGroup": "textsEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissions",
-      "permCodes": [],
-      "registeredDeadTable": false,
+      "permKind": "RequireStrictPermissions(local)",
+      "permCodes": [
+        "ops:floor-plan:edit"
+      ],
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1015
+      "line": 1210
     },
     {
       "method": "POST",
@@ -5135,7 +4949,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1014
+      "line": 1199
     },
     {
       "method": "POST",
@@ -5154,64 +4968,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 689
+      "line": 757
     },
     {
       "method": "POST",
       "path": "/ops/floor/:id/delete",
-      "mountGroup": "floors",
+      "mountGroup": "floorDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:floor:list",
-        "ops:floor:add",
-        "ops:floor:edit",
-        "ops:floor:delete",
-        "ops:building:spaces:list"
+        "ops:floor:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 691
+      "line": 771
     },
     {
       "method": "POST",
       "path": "/ops/floor/:id/update",
-      "mountGroup": "floors",
+      "mountGroup": "floorEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:floor:list",
-        "ops:floor:add",
-        "ops:floor:edit",
-        "ops:floor:delete",
-        "ops:building:spaces:list"
+        "ops:floor:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 690
+      "line": 769
     },
     {
       "method": "POST",
       "path": "/ops/floor/batch",
-      "mountGroup": "floors",
+      "mountGroup": "floorDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:floor:list",
-        "ops:floor:add",
-        "ops:floor:edit",
-        "ops:floor:delete",
-        "ops:building:spaces:list"
+        "ops:floor:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 688
+      "line": 772
     },
     {
       "method": "POST",
@@ -5230,45 +5032,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 687
+      "line": 756
     },
     {
       "method": "POST",
       "path": "/ops/floor/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:floor:list",
-        "ops:floor:add",
-        "ops:floor:edit",
-        "ops:floor:delete",
-        "ops:building:spaces:list"
+        "ops:floor:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/ops/floor/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:floor:list",
-        "ops:floor:add",
-        "ops:floor:edit",
-        "ops:floor:delete",
-        "ops:building:spaces:list"
+        "ops:floor:import"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -5287,7 +5081,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 684
+      "line": 753
     },
     {
       "method": "POST",
@@ -5306,13 +5100,13 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 685
+      "line": 754
     },
     {
       "method": "GET",
       "path": "/ops/floor/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissionsWithQuery",
@@ -5325,7 +5119,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
@@ -5344,25 +5138,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 686
+      "line": 755
     },
     {
       "method": "POST",
       "path": "/ops/infoPoint",
-      "mountGroup": "infoPoints",
+      "mountGroup": "infoPointAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:infopoint:list",
-        "ops:infopoint:add",
-        "ops:infopoint:edit",
-        "ops:infopoint:delete"
+        "ops:infopoint:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 861
+      "line": 990
     },
     {
       "method": "POST",
@@ -5380,61 +5171,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 858
+      "line": 980
     },
     {
       "method": "POST",
       "path": "/ops/infoPoint/:id/delete",
-      "mountGroup": "infoPoints",
+      "mountGroup": "infoPointDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:infopoint:list",
-        "ops:infopoint:add",
-        "ops:infopoint:edit",
         "ops:infopoint:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 860
+      "line": 994
     },
     {
       "method": "POST",
       "path": "/ops/infoPoint/:id/update",
-      "mountGroup": "infoPoints",
+      "mountGroup": "infoPointEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:infopoint:list",
-        "ops:infopoint:add",
-        "ops:infopoint:edit",
-        "ops:infopoint:delete"
+        "ops:infopoint:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 859
+      "line": 992
     },
     {
       "method": "POST",
       "path": "/ops/infoPoint/batch",
-      "mountGroup": "infoPoints",
+      "mountGroup": "infoPointDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:infopoint:list",
-        "ops:infopoint:add",
-        "ops:infopoint:edit",
         "ops:infopoint:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 857
+      "line": 995
     },
     {
       "method": "POST",
@@ -5452,43 +5234,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 856
+      "line": 979
     },
     {
       "method": "POST",
       "path": "/ops/infoPoint/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:infopoint:list",
-        "ops:infopoint:add",
-        "ops:infopoint:edit",
-        "ops:infopoint:delete"
+        "ops:infopoint:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/ops/infoPoint/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:infopoint:list",
-        "ops:infopoint:add",
-        "ops:infopoint:edit",
-        "ops:infopoint:delete"
+        "ops:infopoint:import"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -5506,7 +5282,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 854
+      "line": 977
     },
     {
       "method": "POST",
@@ -5524,13 +5300,13 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 855
+      "line": 978
     },
     {
       "method": "GET",
       "path": "/ops/infoPoint/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissions",
@@ -5542,61 +5318,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
       "path": "/ops/location-alias",
-      "mountGroup": "locationAlias",
+      "mountGroup": "locationAliasAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:location:alias:list",
-        "ops:location:alias:add",
-        "ops:location:alias:edit",
-        "ops:location:alias:delete"
+        "ops:location:alias:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 773
+      "line": 871
     },
     {
       "method": "POST",
       "path": "/ops/location-alias/:id/delete",
-      "mountGroup": "locationAlias",
+      "mountGroup": "locationAliasDelete",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:location:alias:list",
-        "ops:location:alias:add",
-        "ops:location:alias:edit",
         "ops:location:alias:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 772
+      "line": 875
     },
     {
       "method": "POST",
       "path": "/ops/location-alias/:id/update",
-      "mountGroup": "locationAlias",
+      "mountGroup": "locationAliasEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:location:alias:list",
-        "ops:location:alias:add",
-        "ops:location:alias:edit",
-        "ops:location:alias:delete"
+        "ops:location:alias:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 771
+      "line": 873
     },
     {
       "method": "POST",
@@ -5614,25 +5381,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 770
+      "line": 864
     },
     {
       "method": "POST",
       "path": "/ops/roomDevice",
-      "mountGroup": "roomDevices",
+      "mountGroup": "roomDeviceAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:roomdevice:list",
-        "ops:roomdevice:add",
-        "ops:roomdevice:edit",
-        "ops:roomdevice:delete"
+        "ops:roomdevice:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 947
+      "line": 1110
     },
     {
       "method": "POST",
@@ -5650,61 +5414,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 944
+      "line": 1100
     },
     {
       "method": "POST",
       "path": "/ops/roomDevice/:id/delete",
-      "mountGroup": "roomDevices",
+      "mountGroup": "roomDeviceDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:roomdevice:list",
-        "ops:roomdevice:add",
-        "ops:roomdevice:edit",
         "ops:roomdevice:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 946
+      "line": 1114
     },
     {
       "method": "POST",
       "path": "/ops/roomDevice/:id/update",
-      "mountGroup": "roomDevices",
+      "mountGroup": "roomDeviceEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:roomdevice:list",
-        "ops:roomdevice:add",
-        "ops:roomdevice:edit",
-        "ops:roomdevice:delete"
+        "ops:roomdevice:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 945
+      "line": 1112
     },
     {
       "method": "POST",
       "path": "/ops/roomDevice/batch",
-      "mountGroup": "roomDevices",
+      "mountGroup": "roomDeviceDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:roomdevice:list",
-        "ops:roomdevice:add",
-        "ops:roomdevice:edit",
         "ops:roomdevice:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 943
+      "line": 1115
     },
     {
       "method": "POST",
@@ -5722,43 +5477,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 942
+      "line": 1099
     },
     {
       "method": "POST",
       "path": "/ops/roomDevice/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:roomdevice:list",
-        "ops:roomdevice:add",
-        "ops:roomdevice:edit",
-        "ops:roomdevice:delete"
+        "ops:roomdevice:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/ops/roomDevice/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:roomdevice:list",
-        "ops:roomdevice:add",
-        "ops:roomdevice:edit",
-        "ops:roomdevice:delete"
+        "ops:roomdevice:import"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -5776,7 +5525,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 940
+      "line": 1097
     },
     {
       "method": "POST",
@@ -5794,13 +5543,13 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 941
+      "line": 1098
     },
     {
       "method": "GET",
       "path": "/ops/roomDevice/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissions",
@@ -5812,7 +5561,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "DELETE",
@@ -5921,20 +5670,17 @@
     {
       "method": "POST",
       "path": "/ops/serverRoom",
-      "mountGroup": "serverRooms",
+      "mountGroup": "serverRoomAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:serverroom:list",
-        "ops:serverroom:add",
-        "ops:serverroom:edit",
-        "ops:serverroom:delete"
+        "ops:serverroom:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 887
+      "line": 1027
     },
     {
       "method": "POST",
@@ -5952,61 +5698,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 884
+      "line": 1017
     },
     {
       "method": "POST",
       "path": "/ops/serverRoom/:id/delete",
-      "mountGroup": "serverRooms",
+      "mountGroup": "serverRoomDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:serverroom:list",
-        "ops:serverroom:add",
-        "ops:serverroom:edit",
         "ops:serverroom:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 886
+      "line": 1031
     },
     {
       "method": "POST",
       "path": "/ops/serverRoom/:id/update",
-      "mountGroup": "serverRooms",
+      "mountGroup": "serverRoomEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:serverroom:list",
-        "ops:serverroom:add",
-        "ops:serverroom:edit",
-        "ops:serverroom:delete"
+        "ops:serverroom:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 885
+      "line": 1029
     },
     {
       "method": "POST",
       "path": "/ops/serverRoom/batch",
-      "mountGroup": "serverRooms",
+      "mountGroup": "serverRoomDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:serverroom:list",
-        "ops:serverroom:add",
-        "ops:serverroom:edit",
         "ops:serverroom:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 883
+      "line": 1032
     },
     {
       "method": "POST",
@@ -6024,43 +5761,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 882
+      "line": 1016
     },
     {
       "method": "POST",
       "path": "/ops/serverRoom/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:serverroom:list",
-        "ops:serverroom:add",
-        "ops:serverroom:edit",
-        "ops:serverroom:delete"
+        "ops:serverroom:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/ops/serverRoom/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:serverroom:list",
-        "ops:serverroom:add",
-        "ops:serverroom:edit",
-        "ops:serverroom:delete"
+        "ops:serverroom:import"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -6078,7 +5809,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 880
+      "line": 1014
     },
     {
       "method": "POST",
@@ -6096,13 +5827,13 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 881
+      "line": 1015
     },
     {
       "method": "GET",
       "path": "/ops/serverRoom/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissions",
@@ -6114,25 +5845,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
       "path": "/ops/walls",
-      "mountGroup": "walls",
+      "mountGroup": "wallsAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:walls:list",
-        "ops:walls:add",
-        "ops:walls:edit",
-        "ops:walls:delete"
+        "ops:walls:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 975
+      "line": 1147
     },
     {
       "method": "POST",
@@ -6150,61 +5878,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 972
+      "line": 1140
     },
     {
       "method": "POST",
       "path": "/ops/walls/:id/delete",
-      "mountGroup": "walls",
+      "mountGroup": "wallsDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:walls:list",
-        "ops:walls:add",
-        "ops:walls:edit",
         "ops:walls:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 974
+      "line": 1151
     },
     {
       "method": "POST",
       "path": "/ops/walls/:id/update",
-      "mountGroup": "walls",
+      "mountGroup": "wallsEdit",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:walls:list",
-        "ops:walls:add",
-        "ops:walls:edit",
-        "ops:walls:delete"
+        "ops:walls:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 973
+      "line": 1149
     },
     {
       "method": "POST",
       "path": "/ops/walls/batch",
-      "mountGroup": "walls",
+      "mountGroup": "wallsDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:walls:list",
-        "ops:walls:add",
-        "ops:walls:edit",
         "ops:walls:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 971
+      "line": 1152
     },
     {
       "method": "POST",
@@ -6222,26 +5941,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 970
+      "line": 1139
     },
     {
       "method": "POST",
       "path": "/ops/workstation",
-      "mountGroup": "workstations",
+      "mountGroup": "workstationAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit",
-        "ops:workstation:delete",
-        "ops:building:spaces:list"
+        "ops:workstation:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 730
+      "line": 822
     },
     {
       "method": "POST",
@@ -6258,7 +5973,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 787
+      "line": 889
     },
     {
       "method": "POST",
@@ -6275,7 +5990,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 788
+      "line": 890
     },
     {
       "method": "POST",
@@ -6292,24 +6007,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 789
+      "line": 891
     },
     {
       "method": "POST",
       "path": "/ops/workstation-device/:id/delete",
-      "mountGroup": "workstationDevices",
+      "mountGroup": "wdDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit"
+        "ops:workstation:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 800
+      "line": 914
     },
     {
       "method": "POST",
@@ -6326,7 +6039,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 791
+      "line": 893
     },
     {
       "method": "POST",
@@ -6343,109 +6056,97 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 794
+      "line": 896
     },
     {
       "method": "POST",
       "path": "/ops/workstation-device/:id/set-primary",
-      "mountGroup": "workstationDevices",
+      "mountGroup": "wdEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "SetPrimary",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
         "ops:workstation:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 801
+      "line": 911
     },
     {
       "method": "POST",
       "path": "/ops/workstation-device/:id/set-primary-and-save",
-      "mountGroup": "workstationDevices",
+      "mountGroup": "wdEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "SetPrimaryAndSave",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
         "ops:workstation:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 795
+      "line": 912
     },
     {
       "method": "POST",
       "path": "/ops/workstation-device/:id/update",
-      "mountGroup": "workstationDevices",
+      "mountGroup": "wdEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
         "ops:workstation:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 799
+      "line": 910
     },
     {
       "method": "POST",
       "path": "/ops/workstation-device/manual",
-      "mountGroup": "workstationDevices",
+      "mountGroup": "workstationDeviceAdd",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "AddManual",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit"
+        "ops:workstation:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 796
+      "line": 906
     },
     {
       "method": "POST",
       "path": "/ops/workstation-device/sync-ad",
-      "mountGroup": "workstationDevices",
+      "mountGroup": "wdEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "SyncAD",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
         "ops:workstation:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 797
+      "line": 908
     },
     {
       "method": "POST",
       "path": "/ops/workstation-device/sync-asset",
-      "mountGroup": "workstationDevices",
+      "mountGroup": "wdEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "SyncAsset",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
         "ops:workstation:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 798
+      "line": 909
     },
     {
       "method": "GET",
@@ -6464,7 +6165,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 734
+      "line": 810
     },
     {
       "method": "POST",
@@ -6483,64 +6184,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 727
+      "line": 806
     },
     {
       "method": "POST",
       "path": "/ops/workstation/:id/delete",
-      "mountGroup": "workstations",
+      "mountGroup": "workstationDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit",
-        "ops:workstation:delete",
-        "ops:building:spaces:list"
+        "ops:workstation:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 729
+      "line": 827
     },
     {
       "method": "POST",
       "path": "/ops/workstation/:id/update",
-      "mountGroup": "workstations",
+      "mountGroup": "workstationEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit",
-        "ops:workstation:delete",
-        "ops:building:spaces:list"
+        "ops:workstation:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 728
+      "line": 824
     },
     {
       "method": "POST",
       "path": "/ops/workstation/batch",
-      "mountGroup": "workstations",
+      "mountGroup": "workstationDeletes",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchOperation",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit",
-        "ops:workstation:delete",
-        "ops:building:spaces:list"
+        "ops:workstation:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 724
+      "line": 828
     },
     {
       "method": "POST",
@@ -6559,7 +6248,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 726
+      "line": 805
     },
     {
       "method": "GET",
@@ -6578,7 +6267,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 739
+      "line": 815
     },
     {
       "method": "POST",
@@ -6597,7 +6286,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 721
+      "line": 802
     },
     {
       "method": "POST",
@@ -6616,45 +6305,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 723
+      "line": 804
     },
     {
       "method": "POST",
       "path": "/ops/workstation/export",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelExportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit",
-        "ops:workstation:delete",
-        "ops:building:spaces:list"
+        "ops:workstation:export"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 49
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/ops/workstation/import",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelImportRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit",
-        "ops:workstation:delete",
-        "ops:building:spaces:list"
+        "ops:workstation:import"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 48
+      "line": 58
     },
     {
       "method": "POST",
@@ -6673,26 +6354,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 720
+      "line": 801
     },
     {
       "method": "POST",
       "path": "/ops/workstation/positions",
-      "mountGroup": "workstations",
+      "mountGroup": "workstationEdits",
       "setup": "SetupRouter",
       "isWrite": true,
       "handler": "BatchUpdatePositions",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "ops:workstation:list",
-        "ops:workstation:add",
-        "ops:workstation:edit",
-        "ops:workstation:delete",
-        "ops:building:spaces:list"
+        "ops:workstation:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 725
+      "line": 825
     },
     {
       "method": "POST",
@@ -6711,13 +6388,13 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 722
+      "line": 803
     },
     {
       "method": "GET",
       "path": "/ops/workstation/template",
       "mountGroup": "r",
-      "setup": "SetupExcelRouter",
+      "setup": "SetupExcelReadRouter",
       "isWrite": false,
       "handler": "core",
       "permKind": "RequirePermissionsWithQuery",
@@ -6730,7 +6407,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/excel_handler.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
@@ -7450,20 +7127,17 @@
     {
       "method": "POST",
       "path": "/system/apikeys",
-      "mountGroup": "r",
-      "setup": "SetupAPIKeyRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupAPIKeyWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:apikey:list",
-        "system:apikey:add",
-        "system:apikey:edit",
-        "system:apikey:remove"
+        "system:apikey:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/apikey_router.go",
-      "line": 18
+      "line": 32
     },
     {
       "method": "POST",
@@ -7481,25 +7155,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/apikey_router.go",
-      "line": 20
+      "line": 23
     },
     {
       "method": "POST",
       "path": "/system/apikeys/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupAPIKeyRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupAPIKeyWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:apikey:list",
-        "system:apikey:add",
-        "system:apikey:edit",
         "system:apikey:remove"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/apikey_router.go",
-      "line": 22
+      "line": 35
     },
     {
       "method": "POST",
@@ -7540,38 +7211,32 @@
     {
       "method": "POST",
       "path": "/system/apikeys/:id/toggle",
-      "mountGroup": "r",
-      "setup": "SetupAPIKeyRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupAPIKeyWriteRouter",
       "isWrite": true,
       "handler": "ToggleStatus",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:apikey:list",
-        "system:apikey:add",
-        "system:apikey:edit",
-        "system:apikey:remove"
+        "system:apikey:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/apikey_router.go",
-      "line": 23
+      "line": 34
     },
     {
       "method": "POST",
       "path": "/system/apikeys/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupAPIKeyRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupAPIKeyWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:apikey:list",
-        "system:apikey:add",
-        "system:apikey:edit",
-        "system:apikey:remove"
+        "system:apikey:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/apikey_router.go",
-      "line": 21
+      "line": 33
     },
     {
       "method": "POST",
@@ -7589,7 +7254,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/apikey_router.go",
-      "line": 19
+      "line": 22
     },
     {
       "method": "POST",
@@ -7880,20 +7545,17 @@
     {
       "method": "POST",
       "path": "/system/configs",
-      "mountGroup": "r",
-      "setup": "SetupConfigRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupConfigWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:config:list",
-        "system:config:add",
-        "system:config:edit",
-        "system:config:view"
+        "system:config:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 34
+      "line": 33
     },
     {
       "method": "POST",
@@ -7911,61 +7573,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 35
+      "line": 24
     },
     {
       "method": "POST",
       "path": "/system/configs/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupConfigRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupConfigWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:config:list",
-        "system:config:add",
-        "system:config:edit",
-        "system:config:view"
+        "system:config:remove"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 38
+      "line": 36
     },
     {
       "method": "POST",
       "path": "/system/configs/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupConfigRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupConfigWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:config:list",
-        "system:config:add",
-        "system:config:edit",
-        "system:config:view"
+        "system:config:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 37
+      "line": 34
     },
     {
       "method": "POST",
       "path": "/system/configs/batch-delete",
-      "mountGroup": "r",
-      "setup": "SetupConfigRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupConfigWriteRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:config:list",
-        "system:config:add",
-        "system:config:edit",
-        "system:config:view"
+        "system:config:remove"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 32
+      "line": 37
     },
     {
       "method": "GET",
@@ -7983,7 +7636,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 36
+      "line": 25
     },
     {
       "method": "POST",
@@ -8001,25 +7654,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 29
+      "line": 21
     },
     {
       "method": "POST",
       "path": "/system/configs/refresh-cache",
-      "mountGroup": "r",
-      "setup": "SetupConfigRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupConfigWriteRouter",
       "isWrite": true,
       "handler": "RefreshCache",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:config:list",
-        "system:config:add",
-        "system:config:edit",
-        "system:config:view"
+        "system:config:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 33
+      "line": 35
     },
     {
       "method": "POST",
@@ -8037,7 +7687,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/config_router.go",
-      "line": 31
+      "line": 23
     },
     {
       "method": "POST",
@@ -8532,20 +8182,17 @@
     {
       "method": "POST",
       "path": "/system/dicts/data",
-      "mountGroup": "data",
-      "setup": "SetupDictRouter",
+      "mountGroup": "DataAdd>groups.DataAdd",
+      "setup": "SetupDictWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dict:list",
-        "system:dict:add",
-        "system:dict:edit",
-        "system:dict:view"
+        "system:dict:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 59
+      "line": 107
     },
     {
       "method": "POST",
@@ -8563,43 +8210,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 60
+      "line": 71
     },
     {
       "method": "POST",
       "path": "/system/dicts/data/:id/delete",
-      "mountGroup": "data",
-      "setup": "SetupDictRouter",
+      "mountGroup": "DataRemove>groups.DataRemove",
+      "setup": "SetupDictWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dict:list",
-        "system:dict:add",
-        "system:dict:edit",
-        "system:dict:view"
+        "system:dict:remove"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 62
+      "line": 109
     },
     {
       "method": "POST",
       "path": "/system/dicts/data/:id/update",
-      "mountGroup": "data",
-      "setup": "SetupDictRouter",
+      "mountGroup": "DataEdit>groups.DataEdit",
+      "setup": "SetupDictWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dict:list",
-        "system:dict:add",
-        "system:dict:edit",
-        "system:dict:view"
+        "system:dict:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 61
+      "line": 108
     },
     {
       "method": "POST",
@@ -8617,7 +8258,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 56
+      "line": 68
     },
     {
       "method": "POST",
@@ -8635,25 +8276,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 58
+      "line": 70
     },
     {
       "method": "POST",
       "path": "/system/dicts/types",
-      "mountGroup": "types",
-      "setup": "SetupDictRouter",
+      "mountGroup": "TypesAdd>groups.TypesAdd",
+      "setup": "SetupDictWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dict:list",
-        "system:dict:add",
-        "system:dict:edit",
-        "system:dict:view"
+        "system:dict:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 34
+      "line": 102
     },
     {
       "method": "POST",
@@ -8671,43 +8309,37 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 35
+      "line": 49
     },
     {
       "method": "POST",
       "path": "/system/dicts/types/:id/delete",
-      "mountGroup": "types",
-      "setup": "SetupDictRouter",
+      "mountGroup": "TypesRemove>groups.TypesRemove",
+      "setup": "SetupDictWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dict:list",
-        "system:dict:add",
-        "system:dict:edit",
-        "system:dict:view"
+        "system:dict:remove"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 37
+      "line": 104
     },
     {
       "method": "POST",
       "path": "/system/dicts/types/:id/update",
-      "mountGroup": "types",
-      "setup": "SetupDictRouter",
+      "mountGroup": "TypesEdit>groups.TypesEdit",
+      "setup": "SetupDictWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissionsWithQuery",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:dict:list",
-        "system:dict:add",
-        "system:dict:edit",
-        "system:dict:view"
+        "system:dict:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 36
+      "line": 103
     },
     {
       "method": "POST",
@@ -8725,7 +8357,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 33
+      "line": 48
     },
     {
       "method": "POST",
@@ -8743,7 +8375,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 30
+      "line": 45
     },
     {
       "method": "POST",
@@ -8761,7 +8393,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/dict_router.go",
-      "line": 32
+      "line": 47
     },
     {
       "method": "GET",
@@ -8831,70 +8463,62 @@
     {
       "method": "POST",
       "path": "/system/manager-orgs",
-      "mountGroup": "orgs",
+      "mountGroup": "orgEdit",
       "setup": "SetupManagerRuleRouter",
       "isWrite": true,
       "handler": "CreateOrg",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:manager:org:list",
-        "ops:manager:org:edit",
-        "ops:manager:org:delete"
+        "ops:manager:org:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 49
+      "line": 66
     },
     {
       "method": "POST",
       "path": "/system/manager-orgs/:id/delete",
-      "mountGroup": "orgs",
+      "mountGroup": "orgDelete",
       "setup": "SetupManagerRuleRouter",
       "isWrite": true,
       "handler": "DeleteOrg",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:manager:org:list",
-        "ops:manager:org:edit",
         "ops:manager:org:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 51
+      "line": 72
     },
     {
       "method": "POST",
       "path": "/system/manager-orgs/:id/update",
-      "mountGroup": "orgs",
+      "mountGroup": "orgEdit",
       "setup": "SetupManagerRuleRouter",
       "isWrite": true,
       "handler": "UpdateOrg",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:manager:org:list",
-        "ops:manager:org:edit",
-        "ops:manager:org:delete"
+        "ops:manager:org:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 50
+      "line": 67
     },
     {
       "method": "POST",
       "path": "/system/manager-orgs/generate-from-dept",
-      "mountGroup": "orgs",
+      "mountGroup": "orgEdit",
       "setup": "SetupManagerRuleRouter",
       "isWrite": true,
       "handler": "GenerateOrgsFromDept",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:manager:org:list",
-        "ops:manager:org:edit",
-        "ops:manager:org:delete"
+        "ops:manager:org:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 53
+      "line": 69
     },
     {
       "method": "POST",
@@ -8911,58 +8535,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 48
+      "line": 60
     },
     {
       "method": "POST",
       "path": "/system/manager-rules",
-      "mountGroup": "rules",
+      "mountGroup": "ruleEdit",
       "setup": "SetupManagerRuleRouter",
       "isWrite": true,
       "handler": "CreateRule",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:manager:rule:list",
-        "ops:manager:rule:edit",
-        "ops:manager:rule:delete"
+        "ops:manager:rule:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 28
+      "line": 36
     },
     {
       "method": "POST",
       "path": "/system/manager-rules/:id/delete",
-      "mountGroup": "rules",
+      "mountGroup": "ruleDelete",
       "setup": "SetupManagerRuleRouter",
       "isWrite": true,
       "handler": "DeleteRule",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:manager:rule:list",
-        "ops:manager:rule:edit",
         "ops:manager:rule:delete"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 30
+      "line": 40
     },
     {
       "method": "POST",
       "path": "/system/manager-rules/:id/update",
-      "mountGroup": "rules",
+      "mountGroup": "ruleEdit",
       "setup": "SetupManagerRuleRouter",
       "isWrite": true,
       "handler": "UpdateRule",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
-        "ops:manager:rule:list",
-        "ops:manager:rule:edit",
-        "ops:manager:rule:delete"
+        "ops:manager:rule:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 29
+      "line": 37
     },
     {
       "method": "POST",
@@ -8979,7 +8597,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 27
+      "line": 30
     },
     {
       "method": "POST",
@@ -8992,7 +8610,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/manager_rule_router.go",
-      "line": 37
+      "line": 47
     },
     {
       "method": "POST",
@@ -9282,20 +8900,17 @@
     {
       "method": "POST",
       "path": "/system/notices",
-      "mountGroup": "r",
-      "setup": "SetupNoticeRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupNoticeWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:notice:list",
-        "system:notice:add",
-        "system:notice:edit",
-        "system:notice:view"
+        "system:notice:add"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 30
+      "line": 35
     },
     {
       "method": "POST",
@@ -9313,7 +8928,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 31
+      "line": 26
     },
     {
       "method": "GET",
@@ -9331,61 +8946,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 37
+      "line": 28
     },
     {
       "method": "POST",
       "path": "/system/notices/:id/channels",
-      "mountGroup": "r",
-      "setup": "SetupNoticeRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupNoticeWriteRouter",
       "isWrite": false,
       "handler": "SetChannels",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:notice:list",
-        "system:notice:add",
-        "system:notice:edit",
-        "system:notice:view"
+        "system:notice:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 38
+      "line": 39
     },
     {
       "method": "POST",
       "path": "/system/notices/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupNoticeRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupNoticeWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:notice:list",
-        "system:notice:add",
-        "system:notice:edit",
-        "system:notice:view"
+        "system:notice:remove"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 33
+      "line": 40
     },
     {
       "method": "POST",
       "path": "/system/notices/:id/publish",
-      "mountGroup": "r",
-      "setup": "SetupNoticeRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupNoticeWriteRouter",
       "isWrite": true,
       "handler": "Publish",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:notice:list",
-        "system:notice:add",
-        "system:notice:edit",
-        "system:notice:view"
+        "system:notice:edit"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 35
+      "line": 37
     },
     {
       "method": "GET",
@@ -9403,61 +9009,52 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 34
+      "line": 27
     },
     {
       "method": "POST",
       "path": "/system/notices/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupNoticeRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupNoticeWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:notice:list",
-        "system:notice:add",
-        "system:notice:edit",
-        "system:notice:view"
+        "system:notice:edit"
       ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/system/notice_router.go",
-      "line": 32
-    },
-    {
-      "method": "POST",
-      "path": "/system/notices/:id/withdraw",
-      "mountGroup": "r",
-      "setup": "SetupNoticeRouter",
-      "isWrite": true,
-      "handler": "Withdraw",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "system:notice:list",
-        "system:notice:add",
-        "system:notice:edit",
-        "system:notice:view"
-      ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/notice_router.go",
       "line": 36
     },
     {
       "method": "POST",
+      "path": "/system/notices/:id/withdraw",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupNoticeWriteRouter",
+      "isWrite": true,
+      "handler": "Withdraw",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "system:notice:edit"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/notice_router.go",
+      "line": 38
+    },
+    {
+      "method": "POST",
       "path": "/system/notices/batch-delete",
-      "mountGroup": "r",
-      "setup": "SetupNoticeRouter",
+      "mountGroup": "Remove>groups.Remove",
+      "setup": "SetupNoticeWriteRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:notice:list",
-        "system:notice:add",
-        "system:notice:edit",
-        "system:notice:view"
+        "system:notice:remove"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 28
+      "line": 41
     },
     {
       "method": "GET",
@@ -9475,7 +9072,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 29
+      "line": 25
     },
     {
       "method": "POST",
@@ -9493,7 +9090,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 26
+      "line": 23
     },
     {
       "method": "POST",
@@ -9511,7 +9108,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/system/notice_router.go",
-      "line": 27
+      "line": 24
     },
     {
       "method": "POST",
@@ -11241,36 +10838,6 @@
         "handler": "Update"
       },
       {
-        "path": "/ad-domain/configs",
-        "method": "POST",
-        "handler": "CreateConfig"
-      },
-      {
-        "path": "/ad-domain/configs/:id/delete",
-        "method": "POST",
-        "handler": "DeleteConfig"
-      },
-      {
-        "path": "/ad-domain/configs/:id/sync",
-        "method": "POST",
-        "handler": "SyncData"
-      },
-      {
-        "path": "/ad-domain/configs/:id/test",
-        "method": "POST",
-        "handler": "TestConnection"
-      },
-      {
-        "path": "/ad-domain/configs/:id/update",
-        "method": "POST",
-        "handler": "UpdateConfig"
-      },
-      {
-        "path": "/ad-domain/groups/:id/update",
-        "method": "POST",
-        "handler": "UpdateGroup"
-      },
-      {
         "path": "/ad-domain/groups/sync-status",
         "method": "POST",
         "handler": "GetGroupSyncStatus"
@@ -11299,31 +10866,6 @@
         "path": "/ad-domain/ou/:ouDn/dept-mapping",
         "method": "POST",
         "handler": "UpdateOUDeptMapping"
-      },
-      {
-        "path": "/ad-domain/users/:id/disable",
-        "method": "POST",
-        "handler": "DisableUser"
-      },
-      {
-        "path": "/ad-domain/users/:id/enable",
-        "method": "POST",
-        "handler": "EnableUser"
-      },
-      {
-        "path": "/ad-domain/users/:id/move",
-        "method": "POST",
-        "handler": "MoveUser"
-      },
-      {
-        "path": "/ad-domain/users/:id/update",
-        "method": "POST",
-        "handler": "UpdateUser"
-      },
-      {
-        "path": "/ad-domain/users/batch-sync",
-        "method": "POST",
-        "handler": "BatchSyncADUsers"
       },
       {
         "path": "/asset/reconciliation/exception-rule/:id/delete",
@@ -11571,159 +11113,9 @@
         "handler": "Clean"
       },
       {
-        "path": "/network/backups",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/network/backups/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/network/backups/batch",
-        "method": "POST",
-        "handler": "BatchBackup"
-      },
-      {
-        "path": "/network/backups/batch-delete",
-        "method": "POST",
-        "handler": "BatchDelete"
-      },
-      {
-        "path": "/network/backups/export",
-        "method": "POST",
-        "handler": "ExportBackups"
-      },
-      {
         "path": "/network/batch-export",
         "method": "POST",
         "handler": "BatchExport"
-      },
-      {
-        "path": "/network/command/dispatch",
-        "method": "POST",
-        "handler": "Dispatch"
-      },
-      {
-        "path": "/network/command/export",
-        "method": "POST",
-        "handler": "ExportCommands"
-      },
-      {
-        "path": "/network/command/quick",
-        "method": "POST",
-        "handler": "QuickCommand"
-      },
-      {
-        "path": "/network/credentials",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/network/credentials/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/network/credentials/:id/set-default",
-        "method": "POST",
-        "handler": "SetDefault"
-      },
-      {
-        "path": "/network/credentials/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/network/credentials/batch-delete",
-        "method": "POST",
-        "handler": "BatchDelete"
-      },
-      {
-        "path": "/network/credentials/export",
-        "method": "POST",
-        "handler": "ExportCredentials"
-      },
-      {
-        "path": "/network/devices",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/network/devices/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/network/devices/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/network/devices/batch-delete",
-        "method": "POST",
-        "handler": "BatchDelete"
-      },
-      {
-        "path": "/network/devices/export",
-        "method": "POST",
-        "handler": "ExportDevices"
-      },
-      {
-        "path": "/network/devices/quick-create",
-        "method": "POST",
-        "handler": "QuickCreate"
-      },
-      {
-        "path": "/network/discoveries/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/network/discoveries/:id/execute",
-        "method": "POST",
-        "handler": "Execute"
-      },
-      {
-        "path": "/network/discoveries/:id/import",
-        "method": "POST",
-        "handler": "ImportDevices"
-      },
-      {
-        "path": "/network/discoveries/batch-delete",
-        "method": "POST",
-        "handler": "BatchDelete"
-      },
-      {
-        "path": "/network/discoveries/create",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/network/discoveries/export",
-        "method": "POST",
-        "handler": "ExportDiscoveries"
-      },
-      {
-        "path": "/network/executions/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/network/executions/batch-delete",
-        "method": "POST",
-        "handler": "BatchDelete"
-      },
-      {
-        "path": "/network/executions/export",
-        "method": "POST",
-        "handler": "ExportExecutions"
-      },
-      {
-        "path": "/network/executions/template/execute",
-        "method": "POST",
-        "handler": "ExecuteByTemplate"
       },
       {
         "path": "/network/mac/batch-delete",
@@ -11756,41 +11148,6 @@
         "handler": "ExportPorts"
       },
       {
-        "path": "/network/templates",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/network/templates/:id/clone",
-        "method": "POST",
-        "handler": "Clone"
-      },
-      {
-        "path": "/network/templates/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/network/templates/:id/preview",
-        "method": "POST",
-        "handler": "Preview"
-      },
-      {
-        "path": "/network/templates/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/network/templates/batch-delete",
-        "method": "POST",
-        "handler": "BatchDelete"
-      },
-      {
-        "path": "/network/templates/export",
-        "method": "POST",
-        "handler": "ExportTemplates"
-      },
-      {
         "path": "/network/topology/rules",
         "method": "POST",
         "handler": "CreateRule"
@@ -11804,281 +11161,6 @@
         "path": "/network/topology/rules/:id/update",
         "method": "POST",
         "handler": "UpdateRule"
-      },
-      {
-        "path": "/ops/asset",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/asset/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/asset/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/asset/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/building",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/building/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/building/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/building/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/dedicatedLine",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/dedicatedLine/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/dedicatedLine/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/dedicatedLine/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/doors",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/doors/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/doors/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/doors/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/floor",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/floor-plan-texts",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/floor-plan-texts/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/floor-plan-texts/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/floor-plan-texts/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/floor/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/floor/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/floor/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/infoPoint",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/infoPoint/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/infoPoint/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/infoPoint/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/location-alias",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/location-alias/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/location-alias/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/roomDevice",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/roomDevice/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/roomDevice/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/roomDevice/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/serverRoom",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/serverRoom/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/serverRoom/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/serverRoom/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/walls",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/walls/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/walls/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/walls/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/workstation",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/ops/workstation-device/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/workstation-device/:id/set-primary",
-        "method": "POST",
-        "handler": "SetPrimary"
-      },
-      {
-        "path": "/ops/workstation-device/:id/set-primary-and-save",
-        "method": "POST",
-        "handler": "SetPrimaryAndSave"
-      },
-      {
-        "path": "/ops/workstation-device/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/workstation-device/manual",
-        "method": "POST",
-        "handler": "AddManual"
-      },
-      {
-        "path": "/ops/workstation-device/sync-ad",
-        "method": "POST",
-        "handler": "SyncAD"
-      },
-      {
-        "path": "/ops/workstation-device/sync-asset",
-        "method": "POST",
-        "handler": "SyncAsset"
-      },
-      {
-        "path": "/ops/workstation/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/ops/workstation/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/ops/workstation/batch",
-        "method": "POST",
-        "handler": "BatchOperation"
-      },
-      {
-        "path": "/ops/workstation/positions",
-        "method": "POST",
-        "handler": "BatchUpdatePositions"
       },
       {
         "path": "/rpa/ai/generate",
@@ -12146,54 +11228,9 @@
         "handler": "UpdateAutoScaleConfig"
       },
       {
-        "path": "/system/apikeys",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/system/apikeys/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/system/apikeys/:id/toggle",
-        "method": "POST",
-        "handler": "ToggleStatus"
-      },
-      {
-        "path": "/system/apikeys/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
         "path": "/system/column-config/:page_key",
         "method": "DELETE",
         "handler": "Reset"
-      },
-      {
-        "path": "/system/configs",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/system/configs/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/system/configs/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/system/configs/batch-delete",
-        "method": "POST",
-        "handler": "BatchDelete"
-      },
-      {
-        "path": "/system/configs/refresh-cache",
-        "method": "POST",
-        "handler": "RefreshCache"
       },
       {
         "path": "/system/dashboards",
@@ -12241,36 +11278,6 @@
         "handler": "GetBatchWidgetData"
       },
       {
-        "path": "/system/dicts/data",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/system/dicts/data/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/system/dicts/data/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/system/dicts/types",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/system/dicts/types/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/system/dicts/types/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
         "path": "/system/files/:id",
         "method": "DELETE",
         "handler": "Delete"
@@ -12286,74 +11293,9 @@
         "handler": "Upload"
       },
       {
-        "path": "/system/manager-orgs",
-        "method": "POST",
-        "handler": "CreateOrg"
-      },
-      {
-        "path": "/system/manager-orgs/:id/delete",
-        "method": "POST",
-        "handler": "DeleteOrg"
-      },
-      {
-        "path": "/system/manager-orgs/:id/update",
-        "method": "POST",
-        "handler": "UpdateOrg"
-      },
-      {
-        "path": "/system/manager-orgs/generate-from-dept",
-        "method": "POST",
-        "handler": "GenerateOrgsFromDept"
-      },
-      {
-        "path": "/system/manager-rules",
-        "method": "POST",
-        "handler": "CreateRule"
-      },
-      {
-        "path": "/system/manager-rules/:id/delete",
-        "method": "POST",
-        "handler": "DeleteRule"
-      },
-      {
-        "path": "/system/manager-rules/:id/update",
-        "method": "POST",
-        "handler": "UpdateRule"
-      },
-      {
         "path": "/system/manager-rules/manager-preview",
         "method": "POST",
         "handler": "ManagerPreview"
-      },
-      {
-        "path": "/system/notices",
-        "method": "POST",
-        "handler": "Create"
-      },
-      {
-        "path": "/system/notices/:id/delete",
-        "method": "POST",
-        "handler": "Delete"
-      },
-      {
-        "path": "/system/notices/:id/publish",
-        "method": "POST",
-        "handler": "Publish"
-      },
-      {
-        "path": "/system/notices/:id/update",
-        "method": "POST",
-        "handler": "Update"
-      },
-      {
-        "path": "/system/notices/:id/withdraw",
-        "method": "POST",
-        "handler": "Withdraw"
-      },
-      {
-        "path": "/system/notices/batch-delete",
-        "method": "POST",
-        "handler": "BatchDelete"
       },
       {
         "path": "/system/profile/avatar",

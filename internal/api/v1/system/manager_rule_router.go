@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
 )
 
 // SetupManagerRuleRouter 经理同步规则/机构维护路由。
@@ -17,6 +18,8 @@ func SetupManagerRuleRouter(r *gin.RouterGroup, core *core.Core) {
 	orgHandler := NewManagerOrgHandler(core, orgSvc)
 
 	// 规则维护
+	// 85-03 RBAC-01：读组保留 ANY-of，写操作走 strict 兄弟组（域内无独立 add 码，
+	// 创建规则归 ops:manager:rule:edit——与 executions 域同款零新码裁定）。
 	rules := r.Group("/manager-rules")
 	rules.Use(middleware.RequirePermissions([]string{
 		"ops:manager:rule:list",
@@ -25,9 +28,16 @@ func SetupManagerRuleRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		rules.POST("/list", ruleHandler.ListRules)
-		rules.POST("", ruleHandler.CreateRule)
-		rules.POST("/:id/update", ruleHandler.UpdateRule)
-		rules.POST("/:id/delete", ruleHandler.DeleteRule)
+	}
+	rulesWrites := r.Group("/manager-rules")
+	{
+		ruleEdit := rulesWrites.Group("")
+		ruleEdit.Use(middleware.RequireStrictPermissions([]string{string(permission.OpsManagerRuleEdit)}, core))
+		ruleEdit.POST("", ruleHandler.CreateRule)
+		ruleEdit.POST("/:id/update", ruleHandler.UpdateRule)
+		ruleDelete := rulesWrites.Group("")
+		ruleDelete.Use(middleware.RequireStrictPermissions([]string{string(permission.OpsManagerRuleDelete)}, core))
+		ruleDelete.POST("/:id/delete", ruleHandler.DeleteRule)
 	}
 
 	// 经理预览（用户列表「经理」列展示用）：仅要求登录态（父组已挂 auth），
@@ -38,6 +48,8 @@ func SetupManagerRuleRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 机构维护
+	// 85-03 RBAC-01：读组保留 ANY-of，写操作走 strict 兄弟组（create/generate 归
+	// ops:manager:org:edit，域内无独立 add 码）。
 	orgs := r.Group("/manager-orgs")
 	orgs.Use(middleware.RequirePermissions([]string{
 		"ops:manager:org:list",
@@ -46,10 +58,17 @@ func SetupManagerRuleRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		orgs.POST("/list", orgHandler.ListOrgs)
-		orgs.POST("", orgHandler.CreateOrg)
-		orgs.POST("/:id/update", orgHandler.UpdateOrg)
-		orgs.POST("/:id/delete", orgHandler.DeleteOrg)
-		// 从部门架构自动生成机构映射（幂等，不覆盖手工修改）
-		orgs.POST("/generate-from-dept", orgHandler.GenerateOrgsFromDept)
+	}
+	orgsWrites := r.Group("/manager-orgs")
+	{
+		orgEdit := orgsWrites.Group("")
+		orgEdit.Use(middleware.RequireStrictPermissions([]string{string(permission.OpsManagerOrgEdit)}, core))
+		orgEdit.POST("", orgHandler.CreateOrg)
+		orgEdit.POST("/:id/update", orgHandler.UpdateOrg)
+		// 从部门架构自动生成机构映射（幂等，不覆盖手工修改）=批量创建映射，归编辑语义
+		orgEdit.POST("/generate-from-dept", orgHandler.GenerateOrgsFromDept)
+		orgDelete := orgsWrites.Group("")
+		orgDelete.Use(middleware.RequireStrictPermissions([]string{string(permission.OpsManagerOrgDelete)}, core))
+		orgDelete.POST("/:id/delete", orgHandler.DeleteOrg)
 	}
 }

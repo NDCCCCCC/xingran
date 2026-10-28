@@ -78,6 +78,68 @@ const PENDING_SEED_WHITELIST = [
   { code: "system:post:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
   { code: "system:post:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
   { code: "system:post:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
+  // 85-03 批次 A（ops 域）：import/export 16 新码 + walls/doors/floor-plan 7 个
+  // 既有字面量码（TS 同批补声明），sys_menu F 型菜单均 0 声明，87 播种后移除。
+  // 其余 ops 写码（9 域 add/edit/delete）有 F 型授权来源，不在白名单（零窗口期）。
+  { code: "ops:building:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:building:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:floor:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:floor:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:workstation:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:workstation:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:asset:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:asset:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:infopoint:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:infopoint:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:serverroom:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:serverroom:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:dedicatedline:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:dedicatedline:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:roomdevice:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:roomdevice:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:walls:add", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:walls:edit", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:walls:delete", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:doors:add", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:doors:edit", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:doors:delete", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:floor-plan:edit", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  // 85-03 批次 B（network 域）：F 型非零的仅 backup:add/restore/diff、command:execute、
+  // discovery:add（拆分后现役角色零感知）；以下码 F 型 0 声明，87 播种后移除。
+  { code: "network:device:add", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:device:edit", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:device:delete", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:device:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:credential:add", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:credential:edit", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:credential:delete", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:credential:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:template:add", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:template:edit", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:template:delete", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:template:view", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:template:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:command:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:backup:delete", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:backup:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:discovery:delete", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:discovery:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:device:list", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:device:view", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:credential:list", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:credential:view", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:template:list", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:command:view", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:backup:list", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "network:discovery:view", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  // 85-03 批次 C（manager 域）：migration_221 菜单 seed 的 F 型声明为 0（tmp_ftype 实证），
+  // 87 播种后移除。ad 域声明码 F 型非零，不在白名单。
+  { code: "ops:manager:rule:list", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:manager:rule:edit", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:manager:rule:delete", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:manager:org:list", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:manager:org:edit", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:manager:org:delete", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
 ];
 
 const PENDING_SEED_SET = new Set(PENDING_SEED_WHITELIST.map((w) => w.code));
@@ -326,12 +388,18 @@ function main() {
 
   for (const { module, entries } of tsModules) {
     const codes = entries.map((e) => e.code);
-    const prefixes = new Set(codes.map((c) => c.slice(0, c.lastIndexOf(":"))));
-    if (prefixes.size !== 1) {
-      errors.push(`模块 ${module}：权限码前缀不一致（${[...prefixes].join(" / ")}）`);
+    // 85-03：允许「主前缀的更深嵌套」同区块（如 opsBuilding 区块内的
+    // ops:building:spaces:query / ops:building:spaces:3d:query —— scope 圈定
+    // 按主前缀 ops:building: 本来就会把这两个 F 型码圈进 opsBuilding，
+    // 若禁止深嵌套则 c/d 类与前缀一致性结构性互斥）。仅放宽嵌套深度，
+    // 不同命名空间仍然报错；漂移检查（a-d）语义零变化。
+    const mainPrefix = codes[0].slice(0, codes[0].lastIndexOf(":"));
+    const foreign = codes.filter((c) => !c.startsWith(`${mainPrefix}:`));
+    if (foreign.length > 0) {
+      errors.push(`模块 ${module}：权限码前缀不一致（${mainPrefix} 之外出现 ${[...new Set(foreign)].join(" / ")}）`);
       continue;
     }
-    const prefix = [...prefixes][0];
+    const prefix = mainPrefix;
     const scope = `${prefix}:`;
 
     const tsCodes = new Set(codes);

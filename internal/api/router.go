@@ -333,6 +333,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// 经理同步规则/机构维护（权限在 SetupManagerRuleRouter 内按动作细分）
 			systemV1.SetupManagerRuleRouter(authorized, core)
 			// API密钥管理
+			// 85-03 RBAC-01：读组保留 ANY-of + MultiAuth/RateLimit 链；写操作走
+			// 下方 apikeysWrites 严格兄弟组（写组同为管理面，保留 MultiAuth——
+			// X-API-Key 客户端仍可调写端点，行为面不收紧）。
 			apikeys := authorized.Group("/apikeys")
 			// WR-01 修复(Phase 61 review): 删除权限词汇统一为 system:* 模块的 remove
 			// 约定(与 pkg/permission/config.go APIKeyRemove 常量 + resource_action_map
@@ -362,7 +365,26 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				systemV1.SetupAPIKeyRouter(apikeys, core)
 			}
 
+			// API密钥写操作组（85-03 RBAC-01：逐动作 RequireStrictPermissions 单一权限点，
+			// 兄弟组保留 MultiAuth/X-API-Key 认证链，见上注释）
+			apikeysWrites := authorized.Group("/apikeys")
+			apikeysWrites.Use(internalmw.MultiAuth(
+				systemServices.NewAPIKeyService(core.GetDB()),
+				services.NewUsageLogger(core.GetDB()),
+				permission.NewService(),
+				core.GetDB(),
+			))
+			{
+				systemV1.SetupAPIKeyWriteRouter(systemV1.APIKeyWriteRouteGroups{
+					Add:    strictUserRouteGroup(apikeysWrites, permission.APIKeyAdd, core),
+					Edit:   strictUserRouteGroup(apikeysWrites, permission.APIKeyEdit, core),
+					Remove: strictUserRouteGroup(apikeysWrites, permission.APIKeyRemove, core),
+				}, core)
+			}
+
 			// 字典管理
+			// 85-03 RBAC-01：读组保留 ANY-of（含 OpsSelectorReadPerms queryExtra），
+			// 写操作见下方 dictsWrites 严格兄弟组。
 			dicts := authorized.Group("/dicts")
 			// 查询接口(/list,/data/list)额外接受 ops 读权限(opsSelectorReadPerms):
 			// 字典是全局基础数据, useDict hook 几乎每个页面都调用 /system/dicts/data/list,
@@ -377,6 +399,19 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				systemV1.SetupDictRouter(dicts, core)
 			}
 
+			// 字典写操作组（85-03 RBAC-01：类型/数据子资源共用 system:dict:* 码族）
+			dictsWrites := authorized.Group("/dicts")
+			{
+				systemV1.SetupDictWriteRouter(systemV1.DictWriteRouteGroups{
+					TypesAdd:    strictUserRouteGroup(dictsWrites, permission.DictTypeAdd, core),
+					TypesEdit:   strictUserRouteGroup(dictsWrites, permission.DictTypeEdit, core),
+					TypesRemove: strictUserRouteGroup(dictsWrites, permission.DictTypeRemove, core),
+					DataAdd:     strictUserRouteGroup(dictsWrites, permission.DictTypeAdd, core),
+					DataEdit:    strictUserRouteGroup(dictsWrites, permission.DictTypeEdit, core),
+					DataRemove:  strictUserRouteGroup(dictsWrites, permission.DictTypeRemove, core),
+				}, core)
+			}
+
 			// 参数配置
 			configs := authorized.Group("/configs")
 			configs.Use(middleware.RequirePermissions([]string{
@@ -389,11 +424,22 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				systemV1.SetupConfigRouter(configs, core)
 			}
 
+			// 参数配置写操作组（85-03 RBAC-01 严格兄弟组）
+			configsWrites := authorized.Group("/configs")
+			{
+				systemV1.SetupConfigWriteRouter(systemV1.ConfigWriteRouteGroups{
+					Add:    strictUserRouteGroup(configsWrites, permission.ConfigAdd, core),
+					Edit:   strictUserRouteGroup(configsWrites, permission.ConfigEdit, core),
+					Remove: strictUserRouteGroup(configsWrites, permission.ConfigRemove, core),
+				}, core)
+			}
+
 			// 验证码背景图管理（所有已登录用户可访问，作为系统设置的一部分）
 			captchaBackgrounds := authorized.Group("/captcha-backgrounds")
 			v1.SetupCaptchaBackgroundRouter(captchaBackgrounds, core)
 
 			// 通知公告
+			// 85-03 RBAC-01：读组保留 ANY-of，写操作见下方 noticesWrites 严格兄弟组。
 			notices := authorized.Group("/notices")
 			notices.Use(middleware.RequirePermissions([]string{
 				string(permission.NoticeList),
@@ -403,6 +449,16 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			}, core))
 			{
 				systemV1.SetupNoticeRouter(notices, core)
+			}
+
+			// 通知公告写操作组（85-03 RBAC-01 严格兄弟组；publish/withdraw/channels=编辑语义）
+			noticesWrites := authorized.Group("/notices")
+			{
+				systemV1.SetupNoticeWriteRouter(systemV1.NoticeWriteRouteGroups{
+					Add:    strictUserRouteGroup(noticesWrites, permission.NoticeAdd, core),
+					Edit:   strictUserRouteGroup(noticesWrites, permission.NoticeEdit, core),
+					Remove: strictUserRouteGroup(noticesWrites, permission.NoticeRemove, core),
+				}, core)
 			}
 
 			// 用户端通知（所有已登录用户可访问，不需要特定权限）
@@ -627,9 +683,13 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	ops.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 楼宇管理
-		buildings := ops.Group("/building")
 		// 查询接口(/list)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list，
-		// 解决只读可视化页面复用 building list 接口的权限命名空间割裂；写操作仍受严格权限保护。
+		// 解决只读可视化页面复用 building list 接口的权限命名空间割裂；
+		// 写操作见下方 buildingWrites 严格兄弟组（85-03 RBAC-01）。
+		buildingService := opsServices.NewBuildingService(core.DB.GetDB())
+		geocodingService := opsServices.NewGeocodingService(core.Config.Baidu.MapAK)
+		buildingHandler := operations.NewBuildingHandler(buildingService, geocodingService).WithCore(core)
+		buildings := ops.Group("/building")
 		buildings.Use(middleware.RequirePermissionsWithQuery([]string{
 			"ops:building:list",
 			"ops:building:add",
@@ -637,27 +697,51 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:building:delete",
 		}, []string{"ops:building:spaces:list"}, core))
 		{
-			buildingService := opsServices.NewBuildingService(core.DB.GetDB())
-			geocodingService := opsServices.NewGeocodingService(core.Config.Baidu.MapAK)
-			buildingHandler := operations.NewBuildingHandler(buildingService, geocodingService).WithCore(core)
-
-			buildings.POST("", buildingHandler.Create)
 			buildings.POST("/list", buildingHandler.List)
 			buildings.POST("/statistics", buildingHandler.Statistics)
 			buildings.POST("/dropdown-options", buildingHandler.SearchBuildingOptions)
 			buildings.POST("/:id", buildingHandler.GetByID)
-			buildings.POST("/:id/update", buildingHandler.Update)
-			buildings.POST("/:id/delete", buildingHandler.Delete)
-			buildings.POST("/batch", buildingHandler.BatchOperation)
+			// 读语义端点（POST 但仅为地址解析查询，带缓存），留在读组
 			buildings.POST("/geocode", buildingHandler.Geocode)
 
-			// Excel导入导出
-			operations.SetupExcelRouter(buildings, "building", core)
+			// Excel 模板下载（读操作，保留在读组）
+			operations.SetupExcelReadRouter(buildings, "building", core)
+		}
+
+		// 楼宇管理写路由（85-03 RBAC-01：逐动作 RequireStrictPermissions 单一权限点，
+		// 与读组互为兄弟组——写组绝不做成读组子组，防 ANY-of 父中间件先放行）
+		buildingWrites := ops.Group("/building")
+		{
+			buildingAdd := strictUserRouteGroup(buildingWrites, permission.OpsBuildingAdd, core)
+			buildingAdd.POST("", buildingHandler.Create)
+			buildingEdit := strictUserRouteGroup(buildingWrites, permission.OpsBuildingEdit, core)
+			buildingEdit.POST("/:id/update", buildingHandler.Update)
+			buildingDeletes := strictUserRouteGroup(buildingWrites, permission.OpsBuildingDelete, core)
+			buildingDeletes.POST("/:id/delete", buildingHandler.Delete)
+			buildingDeletes.POST("/batch", buildingHandler.BatchOperation) // action=delete 批量删除
+			buildingImport := strictUserRouteGroup(buildingWrites, permission.OpsBuildingImport, core)
+			operations.SetupExcelImportRouter(buildingImport, "building", core)
+			buildingExport := strictUserRouteGroup(buildingWrites, permission.OpsBuildingExport, core)
+			operations.SetupExcelExportRouter(buildingExport, "building", core)
 		}
 
 		// 楼层管理
-		floors := ops.Group("/floor")
 		// 查询接口(/list,/tree)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list。
+		// 写操作见下方 floorWrites 严格兄弟组（85-03 RBAC-01）。
+		var floorService opsServices.FloorService
+		if core.DataCacheService != nil {
+			// 创建缓存提供者（NewCacheProvider 已处理 nil 情况）
+			cacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
+			floorService = opsServices.NewFloorServiceWithCache(
+				core.DB.GetDB(),
+				cacheProvider,
+				core.CacheConfigService,
+			)
+		} else {
+			floorService = opsServices.NewFloorService(core.DB.GetDB())
+		}
+		floorHandler := operations.NewFloorHandler(floorService).WithCore(core)
+		floors := ops.Group("/floor")
 		floors.Use(middleware.RequirePermissionsWithQuery([]string{
 			"ops:floor:list",
 			"ops:floor:add",
@@ -665,39 +749,47 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:floor:delete",
 		}, []string{"ops:building:spaces:list"}, core))
 		{
-			// 创建带缓存的楼层服务
-			var floorService opsServices.FloorService
-			if core.DataCacheService != nil {
-				// 创建缓存提供者（NewCacheProvider 已处理 nil 情况）
-				cacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
-				floorService = opsServices.NewFloorServiceWithCache(
-					core.DB.GetDB(),
-					cacheProvider,
-					core.CacheConfigService,
-				)
-			} else {
-				floorService = opsServices.NewFloorService(core.DB.GetDB())
-			}
-			floorHandler := operations.NewFloorHandler(floorService).WithCore(core)
-
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			floors.POST("/list", floorHandler.List)
 			floors.POST("/statistics", floorHandler.Statistics)
 			floors.POST("/tree", floorHandler.GetTree)
 			floors.POST("/dropdown-options", floorHandler.SearchFloorOptions)
-			floors.POST("/batch", floorHandler.BatchOperation)
 			floors.POST("/:id", floorHandler.GetByID)
-			floors.POST("/:id/update", floorHandler.Update)
-			floors.POST("/:id/delete", floorHandler.Delete)
-			floors.POST("", floorHandler.Create) // 放在最后，作为兜底路由
 
-			// Excel导入导出
-			operations.SetupExcelRouter(floors, "floor", core)
+			// Excel 模板下载（读操作，保留在读组）
+			operations.SetupExcelReadRouter(floors, "floor", core)
+		}
+
+		// 楼层管理写路由（85-03 RBAC-01 严格兄弟组）
+		floorWrites := ops.Group("/floor")
+		{
+			floorAdd := strictUserRouteGroup(floorWrites, permission.OpsFloorAdd, core)
+			floorAdd.POST("", floorHandler.Create) // 兜底路由
+			floorEdit := strictUserRouteGroup(floorWrites, permission.OpsFloorEdit, core)
+			floorEdit.POST("/:id/update", floorHandler.Update)
+			floorDeletes := strictUserRouteGroup(floorWrites, permission.OpsFloorDelete, core)
+			floorDeletes.POST("/:id/delete", floorHandler.Delete)
+			floorDeletes.POST("/batch", floorHandler.BatchOperation)
+			floorImport := strictUserRouteGroup(floorWrites, permission.OpsFloorImport, core)
+			operations.SetupExcelImportRouter(floorImport, "floor", core)
+			floorExport := strictUserRouteGroup(floorWrites, permission.OpsFloorExport, core)
+			operations.SetupExcelExportRouter(floorExport, "floor", core)
 		}
 
 		// 工位管理
-		workstations := ops.Group("/workstation")
 		// 查询接口(/list)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list。
+		// 写操作见下方 workstationWrites 严格兄弟组（85-03 RBAC-01）。
+		workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
+		// R4 (Phase 45) — 跨模块注入 ReconciliationService 到 WorkstationHandler
+		// GetByID 内根据 hasReconciliationPerm 决定是否拉对账健康度 (D-A1-01/03)
+		// Phase 45 R4: 注入 exceptionSvc 用于 per-asset 命中 (D-A4-02)
+		// Phase 103 CONV-02 (D-103-20): core.Cache → systemServices.NewCacheProvider(core.DataCacheService)
+		exceptionSvcForWs := asset.NewReconciliationExceptionService(core.DB.GetDB())
+		reconciliationSvc := asset.NewReconciliationService(core.DB.GetDB(), systemServices.NewCacheProvider(core.DataCacheService), exceptionSvcForWs)
+		workstationHandler := operations.NewWorkstationHandler(workstationService).
+			WithCore(core).
+			WithReconciliationService(reconciliationSvc)
+		workstations := ops.Group("/workstation")
 		workstations.Use(middleware.RequirePermissionsWithQuery([]string{
 			"ops:workstation:list",
 			"ops:workstation:add",
@@ -705,41 +797,61 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:workstation:delete",
 		}, []string{"ops:building:spaces:list"}, core))
 		{
-			workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
-			// R4 (Phase 45) — 跨模块注入 ReconciliationService 到 WorkstationHandler
-			// GetByID 内根据 hasReconciliationPerm 决定是否拉对账健康度 (D-A1-01/03)
-			// Phase 45 R4: 注入 exceptionSvc 用于 per-asset 命中 (D-A4-02)
-			// Phase 103 CONV-02 (D-103-20): core.Cache → systemServices.NewCacheProvider(core.DataCacheService)
-			exceptionSvcForWs := asset.NewReconciliationExceptionService(core.DB.GetDB())
-			reconciliationSvc := asset.NewReconciliationService(core.DB.GetDB(), systemServices.NewCacheProvider(core.DataCacheService), exceptionSvcForWs)
-			workstationHandler := operations.NewWorkstationHandler(workstationService).
-				WithCore(core).
-				WithReconciliationService(reconciliationSvc)
-
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			workstations.POST("/list", workstationHandler.List)
 			workstations.POST("/dept-options", workstationHandler.GetWorkstationDeptOptions)
 			workstations.POST("/statistics", workstationHandler.Statistics)
 			workstations.POST("/dropdown-options", workstationHandler.SearchWorkstationOptions)
-			workstations.POST("/batch", workstationHandler.BatchOperation)
-			workstations.POST("/positions", workstationHandler.BatchUpdatePositions)
 			workstations.POST("/counts-by-floor", workstationHandler.CountsByFloor)
 			workstations.POST("/:id", workstationHandler.GetByID)
-			workstations.POST("/:id/update", workstationHandler.Update)
-			workstations.POST("/:id/delete", workstationHandler.Delete)
-			workstations.POST("", workstationHandler.Create) // 放在最后
 
 			// V130R-09 D-03-6: 楼层全部工位全集端点（CAD/3D/平面图专用，无分页，
 			// 替代前端以 pageSize:1000/10000 滥用 List 分页做全集下拉的反模式）
 			workstations.GET("/:floorId/workstations-all", workstationHandler.GetFloorWorkstationsAll)
 
-			// Excel导入导出
-			operations.SetupExcelRouter(workstations, "workstation", core)
-			// 部门名称↔代码映射表 (quick 260713-df0, 工位导入辅助)
+			// Excel 模板下载（读操作，保留在读组）
+			operations.SetupExcelReadRouter(workstations, "workstation", core)
+			// 部门名称↔代码映射表 (quick 260713-df0, 工位导入辅助，读)
 			workstations.GET("/dept-mapping-template", operations.DownloadDeptMappingTemplate(core))
 		}
 
+		// 工位管理写路由（85-03 RBAC-01 严格兄弟组；positions 为批量更新物理位置=编辑）
+		workstationWrites := ops.Group("/workstation")
+		{
+			workstationAdd := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationAdd, core)
+			workstationAdd.POST("", workstationHandler.Create) // 兜底路由
+			workstationEdits := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationEdit, core)
+			workstationEdits.POST("/:id/update", workstationHandler.Update)
+			workstationEdits.POST("/positions", workstationHandler.BatchUpdatePositions) // 批量更新物理位置=编辑
+			workstationDeletes := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationDelete, core)
+			workstationDeletes.POST("/:id/delete", workstationHandler.Delete)
+			workstationDeletes.POST("/batch", workstationHandler.BatchOperation)
+			workstationImport := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationImport, core)
+			operations.SetupExcelImportRouter(workstationImport, "workstation", core)
+			workstationExport := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationExport, core)
+			operations.SetupExcelExportRouter(workstationExport, "workstation", core)
+		}
+
 		// 工位部门物理位置映射 (Phase 39)
+		// 写操作见下方 locationAliasWrites 严格兄弟组（85-03 RBAC-01）。
+		locationAliasService := opsServices.NewLocationAliasService(core.DB.GetDB())
+
+		// 构造 DepartmentService 用于 alias 写操作后触发 dept 缓存失效 (D-03 决策)。
+		// core 不直接持有 DepartmentService, 在路由组现场构造 — 与 department_router.go 一致。
+		aliasCacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
+		var aliasDeptSvc systemServices.DepartmentService
+		if core.DataCacheService != nil {
+			aliasDeptSvc = systemServices.NewDepartmentServiceWithCache(
+				core.DB.GetDB(), aliasCacheProvider, core.CacheConfigService,
+			)
+		} else {
+			aliasDeptSvc = systemServices.NewDepartmentService(core.DB.GetDB())
+		}
+
+		locationAliasHandler := operations.NewLocationAliasHandler(locationAliasService).
+			WithCore(core).
+			WithDeptCacheInvalidator(aliasDeptSvc)
+
 		locationAlias := ops.Group("/location-alias")
 		locationAlias.Use(middleware.RequirePermissions([]string{
 			"ops:location:alias:list",
@@ -748,32 +860,22 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:location:alias:delete",
 		}, core))
 		{
-			locationAliasService := opsServices.NewLocationAliasService(core.DB.GetDB())
-
-			// 构造 DepartmentService 用于 alias 写操作后触发 dept 缓存失效 (D-03 决策)。
-			// core 不直接持有 DepartmentService, 在路由组现场构造 — 与 department_router.go 一致。
-			aliasCacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
-			var aliasDeptSvc systemServices.DepartmentService
-			if core.DataCacheService != nil {
-				aliasDeptSvc = systemServices.NewDepartmentServiceWithCache(
-					core.DB.GetDB(), aliasCacheProvider, core.CacheConfigService,
-				)
-			} else {
-				aliasDeptSvc = systemServices.NewDepartmentService(core.DB.GetDB())
-			}
-
-			locationAliasHandler := operations.NewLocationAliasHandler(locationAliasService).
-				WithCore(core).
-				WithDeptCacheInvalidator(aliasDeptSvc)
-
 			// 注意:更具体的路由放在前面,避免被通用路由匹配
 			locationAlias.POST("/list", locationAliasHandler.List)
-			locationAlias.POST("/:id/update", locationAliasHandler.Update)
-			locationAlias.POST("/:id/delete", locationAliasHandler.Delete)
-			locationAlias.POST("", locationAliasHandler.Create) // 放在最后,作为兜底路由
 		}
 
-		// 工位设备关联
+		// 位置映射写路由（85-03 RBAC-01 严格兄弟组）
+		locationAliasWrites := ops.Group("/location-alias")
+		{
+			locationAliasAdd := strictUserRouteGroup(locationAliasWrites, permission.OpsLocationAliasAdd, core)
+			locationAliasAdd.POST("", locationAliasHandler.Create) // 兜底路由
+			locationAliasEdit := strictUserRouteGroup(locationAliasWrites, permission.OpsLocationAliasEdit, core)
+			locationAliasEdit.POST("/:id/update", locationAliasHandler.Update)
+			locationAliasDelete := strictUserRouteGroup(locationAliasWrites, permission.OpsLocationAliasDelete, core)
+			locationAliasDelete.POST("/:id/delete", locationAliasHandler.Delete)
+		}
+
+		// 工位设备关联（域码借用 ops:workstation:*；写操作见下方严格兄弟组 85-03 RBAC-01）
 		workstationDevices := ops.Group("/workstation-device")
 		workstationDevices.Use(middleware.RequirePermissions([]string{
 			"ops:workstation:list",
@@ -792,16 +894,29 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// Phase 73 / DBG-07: 物理链路 + 空因诊断(未绑定用户/信息点错位/设备或MAC缺失)。
 			// 新增端点，旧 /physical 的返回结构保持不变(向后兼容)
 			workstationDevices.POST("/:id/physical-diagnosis", workstationDeviceHandler.GetPhysicalDevicesWithDiagnosis)
-			workstationDevices.POST("/:id/set-primary-and-save", workstationDeviceHandler.SetPrimaryAndSave)
-			workstationDevices.POST("/manual", workstationDeviceHandler.AddManual)
-			workstationDevices.POST("/sync-ad", workstationDeviceHandler.SyncAD)
-			workstationDevices.POST("/sync-asset", workstationDeviceHandler.SyncAsset)
-			workstationDevices.POST("/:id/update", workstationDeviceHandler.Update)
-			workstationDevices.POST("/:id/delete", workstationDeviceHandler.Delete)
-			workstationDevices.POST("/:id/set-primary", workstationDeviceHandler.SetPrimary)
 		}
 
-		// 资产管理
+		// 工位设备关联写路由（85-03 RBAC-01 严格兄弟组；manual=新增绑定、
+		// sync-*/update/set-primary=编辑、delete=删除，均挂 ops:workstation:* 域码）
+		workstationDeviceService := opsServices.NewWorkstationDeviceService(core.DB.GetDB())
+		workstationDeviceHandler := operations.NewWorkstationDeviceHandler(workstationDeviceService).WithCore(core)
+		workstationDeviceWrites := ops.Group("/workstation-device")
+		{
+			workstationDeviceAdd := strictUserRouteGroup(workstationDeviceWrites, permission.OpsWorkstationAdd, core)
+			workstationDeviceAdd.POST("/manual", workstationDeviceHandler.AddManual)
+			wdEdits := strictUserRouteGroup(workstationDeviceWrites, permission.OpsWorkstationEdit, core)
+			wdEdits.POST("/sync-ad", workstationDeviceHandler.SyncAD)
+			wdEdits.POST("/sync-asset", workstationDeviceHandler.SyncAsset)
+			wdEdits.POST("/:id/update", workstationDeviceHandler.Update)
+			wdEdits.POST("/:id/set-primary", workstationDeviceHandler.SetPrimary)
+			wdEdits.POST("/:id/set-primary-and-save", workstationDeviceHandler.SetPrimaryAndSave)
+			wdDeletes := strictUserRouteGroup(workstationDeviceWrites, permission.OpsWorkstationDelete, core)
+			wdDeletes.POST("/:id/delete", workstationDeviceHandler.Delete)
+		}
+
+		// 资产管理（写操作见下方 assetWrites 严格兄弟组，85-03 RBAC-01）
+		assetService := opsServices.NewAssetService(core.DB.GetDB())
+		assetHandler := operations.NewAssetHandler(assetService).WithCore(core)
 		assets := ops.Group("/asset")
 		assets.Use(middleware.RequirePermissions([]string{
 			"ops:asset:list",
@@ -810,9 +925,6 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:asset:delete",
 		}, core))
 		{
-			assetService := opsServices.NewAssetService(core.DB.GetDB())
-			assetHandler := operations.NewAssetHandler(assetService).WithCore(core)
-
 			// 注意：更具体的路由要放在前面
 			assets.GET("/search-by-serial/:serial", assetHandler.SearchBySerial)
 
@@ -822,7 +934,6 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			assetComponentHandler := operations.NewAssetComponentHandler(core)
 			assets.GET("/components", assetComponentHandler.ListComponents)
 
-			assets.POST("", assetHandler.Create)
 			assets.POST("/list", assetHandler.List)
 			// 资产统计(专用 COUNT 聚合,不依赖分页列表)
 			assets.POST("/statistics", assetHandler.Statistics)
@@ -830,15 +941,30 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			assets.POST("/device-types", assetHandler.GetDeviceTypes)
 			assets.POST("/device-categories", assetHandler.GetDeviceCategories)
 			assets.POST("/status-values", assetHandler.GetStatusValues)
-			assets.POST("/:id/update", assetHandler.Update)
-			assets.POST("/:id/delete", assetHandler.Delete)
-			assets.POST("/batch", assetHandler.BatchOperation)
 
-			// Excel导入导出
-			operations.SetupExcelRouter(assets, "asset", core)
+			// Excel 模板下载（读操作，保留在读组）
+			operations.SetupExcelReadRouter(assets, "asset", core)
 		}
 
-		// 信息点管理
+		// 资产管理写路由（85-03 RBAC-01 严格兄弟组）
+		assetWrites := ops.Group("/asset")
+		{
+			assetAdd := strictUserRouteGroup(assetWrites, permission.OpsAssetAdd, core)
+			assetAdd.POST("", assetHandler.Create)
+			assetEdit := strictUserRouteGroup(assetWrites, permission.OpsAssetEdit, core)
+			assetEdit.POST("/:id/update", assetHandler.Update)
+			assetDeletes := strictUserRouteGroup(assetWrites, permission.OpsAssetDelete, core)
+			assetDeletes.POST("/:id/delete", assetHandler.Delete)
+			assetDeletes.POST("/batch", assetHandler.BatchOperation)
+			assetImport := strictUserRouteGroup(assetWrites, permission.OpsAssetImport, core)
+			operations.SetupExcelImportRouter(assetImport, "asset", core)
+			assetExport := strictUserRouteGroup(assetWrites, permission.OpsAssetExport, core)
+			operations.SetupExcelExportRouter(assetExport, "asset", core)
+		}
+
+		// 信息点管理（写操作见下方 infoPointWrites 严格兄弟组，85-03 RBAC-01）
+		infoPointService := opsServices.NewInfoPointService(core.DB.GetDB())
+		infoPointHandler := operations.NewInfoPointHandler(infoPointService).WithCore(core)
 		infoPoints := ops.Group("/infoPoint")
 		infoPoints.Use(middleware.RequirePermissions([]string{
 			"ops:infopoint:list",
@@ -847,24 +973,35 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:infopoint:delete",
 		}, core))
 		{
-			infoPointService := opsServices.NewInfoPointService(core.DB.GetDB())
-			infoPointHandler := operations.NewInfoPointHandler(infoPointService).WithCore(core)
-
 			// 注意：更具体的路由要放在前面
 			infoPoints.POST("/list", infoPointHandler.List)
 			infoPoints.POST("/statistics", infoPointHandler.Statistics)
 			infoPoints.POST("/dropdown-options", infoPointHandler.SearchInfoPointOptions)
-			infoPoints.POST("/batch", infoPointHandler.BatchOperation)
 			infoPoints.POST("/:id", infoPointHandler.GetByID)
-			infoPoints.POST("/:id/update", infoPointHandler.Update)
-			infoPoints.POST("/:id/delete", infoPointHandler.Delete)
-			infoPoints.POST("", infoPointHandler.Create) // 放在最后
 
-			// Excel导入导出
-			operations.SetupExcelRouter(infoPoints, "infoPoint", core)
+			// Excel 模板下载（读操作，保留在读组）
+			operations.SetupExcelReadRouter(infoPoints, "infoPoint", core)
 		}
 
-		// 机房管理
+		// 信息点管理写路由（85-03 RBAC-01 严格兄弟组）
+		infoPointWrites := ops.Group("/infoPoint")
+		{
+			infoPointAdd := strictUserRouteGroup(infoPointWrites, permission.OpsInfoPointAdd, core)
+			infoPointAdd.POST("", infoPointHandler.Create) // 兜底路由
+			infoPointEdit := strictUserRouteGroup(infoPointWrites, permission.OpsInfoPointEdit, core)
+			infoPointEdit.POST("/:id/update", infoPointHandler.Update)
+			infoPointDeletes := strictUserRouteGroup(infoPointWrites, permission.OpsInfoPointDelete, core)
+			infoPointDeletes.POST("/:id/delete", infoPointHandler.Delete)
+			infoPointDeletes.POST("/batch", infoPointHandler.BatchOperation)
+			infoPointImport := strictUserRouteGroup(infoPointWrites, permission.OpsInfoPointImport, core)
+			operations.SetupExcelImportRouter(infoPointImport, "infoPoint", core)
+			infoPointExport := strictUserRouteGroup(infoPointWrites, permission.OpsInfoPointExport, core)
+			operations.SetupExcelExportRouter(infoPointExport, "infoPoint", core)
+		}
+
+		// 机房管理（写操作见下方 serverRoomWrites 严格兄弟组，85-03 RBAC-01）
+		serverRoomService := opsServices.NewServerRoomService(core.DB.GetDB())
+		serverRoomHandler := operations.NewServerRoomHandler(serverRoomService).WithCore(core)
 		serverRooms := ops.Group("/serverRoom")
 		serverRooms.Use(middleware.RequirePermissions([]string{
 			"ops:serverroom:list",
@@ -873,21 +1010,30 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:serverroom:delete",
 		}, core))
 		{
-			serverRoomService := opsServices.NewServerRoomService(core.DB.GetDB())
-			serverRoomHandler := operations.NewServerRoomHandler(serverRoomService).WithCore(core)
-
 			// 注意：更具体的路由要放在前面
 			serverRooms.POST("/list", serverRoomHandler.List)
 			serverRooms.POST("/statistics", serverRoomHandler.Statistics)
 			serverRooms.POST("/dropdown-options", serverRoomHandler.SearchServerRoomOptions)
-			serverRooms.POST("/batch", serverRoomHandler.BatchOperation)
 			serverRooms.POST("/:id", serverRoomHandler.GetByID)
-			serverRooms.POST("/:id/update", serverRoomHandler.Update)
-			serverRooms.POST("/:id/delete", serverRoomHandler.Delete)
-			serverRooms.POST("", serverRoomHandler.Create) // 放在最后
 
-			// Excel导入导出
-			operations.SetupExcelRouter(serverRooms, "serverRoom", core)
+			// Excel 模板下载（读操作，保留在读组）
+			operations.SetupExcelReadRouter(serverRooms, "serverRoom", core)
+		}
+
+		// 机房管理写路由（85-03 RBAC-01 严格兄弟组）
+		serverRoomWrites := ops.Group("/serverRoom")
+		{
+			serverRoomAdd := strictUserRouteGroup(serverRoomWrites, permission.OpsServerRoomAdd, core)
+			serverRoomAdd.POST("", serverRoomHandler.Create) // 兜底路由
+			serverRoomEdit := strictUserRouteGroup(serverRoomWrites, permission.OpsServerRoomEdit, core)
+			serverRoomEdit.POST("/:id/update", serverRoomHandler.Update)
+			serverRoomDeletes := strictUserRouteGroup(serverRoomWrites, permission.OpsServerRoomDelete, core)
+			serverRoomDeletes.POST("/:id/delete", serverRoomHandler.Delete)
+			serverRoomDeletes.POST("/batch", serverRoomHandler.BatchOperation)
+			serverRoomImport := strictUserRouteGroup(serverRoomWrites, permission.OpsServerRoomImport, core)
+			operations.SetupExcelImportRouter(serverRoomImport, "serverRoom", core)
+			serverRoomExport := strictUserRouteGroup(serverRoomWrites, permission.OpsServerRoomExport, core)
+			operations.SetupExcelExportRouter(serverRoomExport, "serverRoom", core)
 		}
 
 		// 机房照片管理
@@ -897,9 +1043,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}
 
 		// 专线管理
-		dedicatedLines := ops.Group("/dedicatedLine")
 		// perms 对齐: 专线模块统一用 ops:dedicatedline:* (单数无连字符),
 		// 与菜单 seed / sys_menu 一致, 避免命名空间割裂导致 403。
+		// 写操作见下方 dedicatedLineWrites 严格兄弟组（85-03 RBAC-01）。
+		dedicatedLineService := opsServices.NewDedicatedLineService(core.DB.GetDB())
+		dedicatedLineHandler := operations.NewDedicatedLineHandler(dedicatedLineService).WithCore(core)
+		dedicatedLines := ops.Group("/dedicatedLine")
 		dedicatedLines.Use(middleware.RequirePermissions([]string{
 			"ops:dedicatedline:list",
 			"ops:dedicatedline:add",
@@ -907,24 +1056,35 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:dedicatedline:delete",
 		}, core))
 		{
-			dedicatedLineService := opsServices.NewDedicatedLineService(core.DB.GetDB())
-			dedicatedLineHandler := operations.NewDedicatedLineHandler(dedicatedLineService).WithCore(core)
-
 			// 注意：更具体的路由要放在前面
 			dedicatedLines.POST("/list", dedicatedLineHandler.List)
 			dedicatedLines.POST("/statistics", dedicatedLineHandler.Statistics)
 			dedicatedLines.POST("/dropdown-options", dedicatedLineHandler.SearchDedicatedLineOptions)
-			dedicatedLines.POST("/batch", dedicatedLineHandler.BatchOperation)
 			dedicatedLines.POST("/:id", dedicatedLineHandler.GetByID)
-			dedicatedLines.POST("/:id/update", dedicatedLineHandler.Update)
-			dedicatedLines.POST("/:id/delete", dedicatedLineHandler.Delete)
-			dedicatedLines.POST("", dedicatedLineHandler.Create) // 放在最后
 
-			// Excel导入导出
-			operations.SetupExcelRouter(dedicatedLines, "dedicatedLine", core)
+			// Excel 模板下载（读操作，保留在读组）
+			operations.SetupExcelReadRouter(dedicatedLines, "dedicatedLine", core)
 		}
 
-		// room-devices - 机房设备管理
+		// 专线管理写路由（85-03 RBAC-01 严格兄弟组）
+		dedicatedLineWrites := ops.Group("/dedicatedLine")
+		{
+			dedicatedLineAdd := strictUserRouteGroup(dedicatedLineWrites, permission.OpsDedicatedLineAdd, core)
+			dedicatedLineAdd.POST("", dedicatedLineHandler.Create) // 兜底路由
+			dedicatedLineEdit := strictUserRouteGroup(dedicatedLineWrites, permission.OpsDedicatedLineEdit, core)
+			dedicatedLineEdit.POST("/:id/update", dedicatedLineHandler.Update)
+			dedicatedLineDeletes := strictUserRouteGroup(dedicatedLineWrites, permission.OpsDedicatedLineDelete, core)
+			dedicatedLineDeletes.POST("/:id/delete", dedicatedLineHandler.Delete)
+			dedicatedLineDeletes.POST("/batch", dedicatedLineHandler.BatchOperation)
+			dedicatedLineImport := strictUserRouteGroup(dedicatedLineWrites, permission.OpsDedicatedLineImport, core)
+			operations.SetupExcelImportRouter(dedicatedLineImport, "dedicatedLine", core)
+			dedicatedLineExport := strictUserRouteGroup(dedicatedLineWrites, permission.OpsDedicatedLineExport, core)
+			operations.SetupExcelExportRouter(dedicatedLineExport, "dedicatedLine", core)
+		}
+
+		// room-devices - 机房设备管理（写操作见下方 roomDeviceWrites 严格兄弟组，85-03 RBAC-01）
+		roomDeviceService := opsServices.NewRoomDeviceService(core.DB.GetDB())
+		roomDeviceHandler := operations.NewRoomDeviceHandler(roomDeviceService).WithCore(core)
 		roomDevices := ops.Group("/roomDevice")
 		roomDevices.Use(middleware.RequirePermissions([]string{
 			"ops:roomdevice:list",
@@ -933,25 +1093,37 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:roomdevice:delete",
 		}, core))
 		{
-			roomDeviceService := opsServices.NewRoomDeviceService(core.DB.GetDB())
-			roomDeviceHandler := operations.NewRoomDeviceHandler(roomDeviceService).WithCore(core)
-
 			// 注意：更具体的路由要放在前面
 			roomDevices.POST("/list", roomDeviceHandler.List)
 			roomDevices.POST("/statistics", roomDeviceHandler.Statistics)
 			roomDevices.POST("/dropdown-options", roomDeviceHandler.SearchRoomDeviceOptions)
-			roomDevices.POST("/batch", roomDeviceHandler.BatchOperation)
 			roomDevices.POST("/:id", roomDeviceHandler.GetByID)
-			roomDevices.POST("/:id/update", roomDeviceHandler.Update)
-			roomDevices.POST("/:id/delete", roomDeviceHandler.Delete)
-			roomDevices.POST("", roomDeviceHandler.Create) // 放在最后
 
-			// Excel导入导出
-			operations.SetupExcelRouter(roomDevices, "roomDevice", core)
+			// Excel 模板下载（读操作，保留在读组）
+			operations.SetupExcelReadRouter(roomDevices, "roomDevice", core)
+		}
+
+		// 机房设备管理写路由（85-03 RBAC-01 严格兄弟组）
+		roomDeviceWrites := ops.Group("/roomDevice")
+		{
+			roomDeviceAdd := strictUserRouteGroup(roomDeviceWrites, permission.OpsRoomDeviceAdd, core)
+			roomDeviceAdd.POST("", roomDeviceHandler.Create) // 兜底路由
+			roomDeviceEdit := strictUserRouteGroup(roomDeviceWrites, permission.OpsRoomDeviceEdit, core)
+			roomDeviceEdit.POST("/:id/update", roomDeviceHandler.Update)
+			roomDeviceDeletes := strictUserRouteGroup(roomDeviceWrites, permission.OpsRoomDeviceDelete, core)
+			roomDeviceDeletes.POST("/:id/delete", roomDeviceHandler.Delete)
+			roomDeviceDeletes.POST("/batch", roomDeviceHandler.BatchOperation)
+			roomDeviceImport := strictUserRouteGroup(roomDeviceWrites, permission.OpsRoomDeviceImport, core)
+			operations.SetupExcelImportRouter(roomDeviceImport, "roomDevice", core)
+			roomDeviceExport := strictUserRouteGroup(roomDeviceWrites, permission.OpsRoomDeviceExport, core)
+			operations.SetupExcelExportRouter(roomDeviceExport, "roomDevice", core)
 		}
 
 		// CAD平面图编辑器（包含墙体、门等元素）
 		// 使用平面图编辑器和墙体、门的权限标识符
+		// 写操作见下方 wallsWrites 严格兄弟组（85-03 RBAC-01）。
+		wallService := opsServices.NewWallService(core.DB.GetDB())
+		wallHandler := operations.NewWallHandler(wallService).WithCore(core)
 		walls := ops.Group("/walls")
 		walls.Use(middleware.RequirePermissions([]string{
 			"ops:floor-plan:list",
@@ -964,18 +1136,26 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:walls:delete",
 		}, core))
 		{
-			wallService := opsServices.NewWallService(core.DB.GetDB())
-			wallHandler := operations.NewWallHandler(wallService).WithCore(core)
-
 			walls.POST("/list", wallHandler.List)
-			walls.POST("/batch", wallHandler.BatchOperation)
 			walls.POST("/:id", wallHandler.GetByID)
-			walls.POST("/:id/update", wallHandler.Update)
-			walls.POST("/:id/delete", wallHandler.Delete)
-			walls.POST("", wallHandler.Create)
+		}
+
+		// 墙体写路由（85-03 RBAC-01 严格兄弟组）
+		wallsWrites := ops.Group("/walls")
+		{
+			wallsAdd := strictUserRouteGroup(wallsWrites, permission.OpsWallAdd, core)
+			wallsAdd.POST("", wallHandler.Create)
+			wallsEdit := strictUserRouteGroup(wallsWrites, permission.OpsWallEdit, core)
+			wallsEdit.POST("/:id/update", wallHandler.Update)
+			wallsDeletes := strictUserRouteGroup(wallsWrites, permission.OpsWallDelete, core)
+			wallsDeletes.POST("/:id/delete", wallHandler.Delete)
+			wallsDeletes.POST("/batch", wallHandler.BatchOperation)
 		}
 
 		// 门管理（CAD平面图）- 使用平面图编辑器和门权限
+		// 写操作见下方 doorsWrites 严格兄弟组（85-03 RBAC-01）。
+		doorService := opsServices.NewDoorService(core.DB.GetDB())
+		doorHandler := operations.NewDoorHandler(doorService).WithCore(core)
 		doors := ops.Group("/doors")
 		doors.Use(middleware.RequirePermissions([]string{
 			"ops:floor-plan:list",
@@ -988,18 +1168,26 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:doors:delete",
 		}, core))
 		{
-			doorService := opsServices.NewDoorService(core.DB.GetDB())
-			doorHandler := operations.NewDoorHandler(doorService).WithCore(core)
-
 			doors.POST("/list", doorHandler.List)
-			doors.POST("/batch", doorHandler.BatchOperation)
 			doors.POST("/:id", doorHandler.GetByID)
-			doors.POST("/:id/update", doorHandler.Update)
-			doors.POST("/:id/delete", doorHandler.Delete)
-			doors.POST("", doorHandler.Create)
+		}
+
+		// 门写路由（85-03 RBAC-01 严格兄弟组）
+		doorsWrites := ops.Group("/doors")
+		{
+			doorsAdd := strictUserRouteGroup(doorsWrites, permission.OpsDoorAdd, core)
+			doorsAdd.POST("", doorHandler.Create)
+			doorsEdit := strictUserRouteGroup(doorsWrites, permission.OpsDoorEdit, core)
+			doorsEdit.POST("/:id/update", doorHandler.Update)
+			doorsDeletes := strictUserRouteGroup(doorsWrites, permission.OpsDoorDelete, core)
+			doorsDeletes.POST("/:id/delete", doorHandler.Delete)
+			doorsDeletes.POST("/batch", doorHandler.BatchOperation)
 		}
 
 		// 平面图文本管理（CAD平面图）
+		// 写操作见下方 textsWrites 严格兄弟组（85-03 RBAC-01，归平面图编辑码）。
+		textService := opsServices.NewFloorPlanTextService(core.DB.GetDB())
+		textHandler := operations.NewFloorPlanTextHandler(textService).WithCore(core)
 		texts := ops.Group("/floor-plan-texts")
 		texts.Use(middleware.RequirePermissions([]string{
 			"ops:floor-plan:list",
@@ -1008,15 +1196,18 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:floor-plan:save",
 		}, core))
 		{
-			textService := opsServices.NewFloorPlanTextService(core.DB.GetDB())
-			textHandler := operations.NewFloorPlanTextHandler(textService).WithCore(core)
-
 			texts.POST("/list", textHandler.List)
-			texts.POST("/batch", textHandler.BatchOperation)
 			texts.POST("/:id", textHandler.GetByID)
-			texts.POST("/:id/update", textHandler.Update)
-			texts.POST("/:id/delete", textHandler.Delete)
-			texts.POST("", textHandler.Create)
+		}
+
+		// 平面图文本写路由（85-03 RBAC-01 严格兄弟组；域内无专属写码，归 ops:floor-plan:edit）
+		textsWrites := ops.Group("/floor-plan-texts")
+		{
+			textsEdits := strictUserRouteGroup(textsWrites, permission.OpsFloorPlanEdit, core)
+			textsEdits.POST("", textHandler.Create)
+			textsEdits.POST("/:id/update", textHandler.Update)
+			textsEdits.POST("/:id/delete", textHandler.Delete)
+			textsEdits.POST("/batch", textHandler.BatchOperation)
 		}
 	}
 

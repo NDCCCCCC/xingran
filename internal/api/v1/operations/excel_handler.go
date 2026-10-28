@@ -50,6 +50,23 @@ func SetupExcelRouter(r *gin.RouterGroup, entityType string, core *core.Core) {
 	r.GET("/template", downloadTemplate(entityType, core))
 }
 
+// SetupExcelImportRouter / SetupExcelExportRouter —— 85-02 RBAC-04 逐动作拆分用：
+// system departments 域的 import/export 各挂到独立单一权限点严格子组
+// （system:dept:import / system:dept:export），与本通用入口解耦。既有调用方
+// （挂 ANY-of 组）不受影响，仍用 SetupExcelRouter。
+func SetupExcelImportRouter(r *gin.RouterGroup, entityType string, core *core.Core) {
+	r.POST("/import", importData(entityType, core))
+}
+
+func SetupExcelExportRouter(r *gin.RouterGroup, entityType string, core *core.Core) {
+	r.POST("/export", exportData(entityType, core))
+}
+
+// SetupExcelReadRouter 设置 Excel **读**路由（模板下载）。
+func SetupExcelReadRouter(r *gin.RouterGroup, entityType string, core *core.Core) {
+	r.GET("/template", downloadTemplate(entityType, core))
+}
+
 func getExcelService(core *core.Core) *opsServices.ExcelService {
 	cacheProvider := system.NewCacheAdapter(core.Cache)
 	geocodingService := opsServices.NewGeocodingService(core.Config.Baidu.MapAK)
