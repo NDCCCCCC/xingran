@@ -153,13 +153,26 @@ CSS 规则优先级中，**`!important` 优先于非 `!important`**（与特异�
 
 项目里早已存在 3 处针对同一问题的**局部修复**，它们无双框，其余全双框：
 
-| 位置 | 内容 |
-|---|---|
-| `src/pages/login/login.css:351-358` | `.login-form .ant-input-affix-wrapper > input.ant-input { border:none; ... }` |
-| `src/index.css:2056-2060` | `.dept-tree-search` 域的同款还原 |
-| `src/index.css:2077-2081` | `.user-form-input` 域的同款还原 |
+| 位置 | 内容 | Phase 77 实测复核 |
+|---|---|---|
+| `src/pages/login/login.css:351-358` | `.login-form .ant-input-affix-wrapper > input.ant-input { border:none; ... }` | ✅ **生效**（真实 DOM 命中 2 处；内层 0 框 / 透明底 / shadow none；登录页双框 = 0） |
+| `src/index.css:2056-2060`（基线行号；Phase 76 加 13 处 `!important` 后下移，现 `:2084-2108`） | `.dept-tree-search` 域的同款还原 | ❌ **死规则，从未命中**（见下） |
+| `src/index.css:2077-2081`（现 `:2111-2122`） | `.user-form-input` 域的同款还原 | ✅ **生效**（buildings / system-user 各命中 1） |
 
 → **这些补丁的存在本身就是「同一 bug 已被零散修过」的证据**；v1.24 修复时**不得删除这 3 处**（否则该 3 处回退成双框）。
+
+#### ⚠️ v1.24 Phase 77 实测更正：第 2 处补丁是**从未生效的死规则**
+
+第 2 处用的是**后代选择器** `.dept-tree-search .ant-input-affix-wrapper`（要求 `.dept-tree-search` 是**祖先**），
+但实际 `className="dept-tree-search user-form-input"` 落在 **AppInput 自身**上（`DeptTree/index.tsx:205`），
+即该 class 与 `.ant-input-affix-wrapper` **是同一个元素** → 后代选择器永不命中（实测命中数 = 0）。
+
+**含义修正**：本节原表述「这 3 处都是已修过同一 bug 的证据 / 该 3 处修复前无双框」**不准确**——
+**部门树搜索框在 Phase 76 之前其实也是双框**，它是靠 VIS-01 复位块才变成单框的（属于**改善**而非**保持**）。
+该死规则无害，但**会误导维护者**以为该处已修过。
+
+⇒ 后续维护提示：第 2 处应改写为**同元素选择器**（`.dept-tree-search.ant-input-affix-wrapper > input.ant-input`）
+或直接删除（VIS-01 复位块已全局覆盖）——**本 phase 未改动**（Phase 77 边界为「不改业务代码」），登记为后续项。
 
 ### 8.2 TextArea **100% 双框**（比 Input 更严重）
 
