@@ -37,12 +37,12 @@
 > ① 前端：52 个含「操作」列的文件中 **45 个完全不引用 permissions** → 编辑/删除按钮**恒显示**（根本不判定，而非加载中默认显示）；结构性成因 = `ActionButton` 契约（`ActionButtons.tsx:15-24`）**没有 permission 字段**；全仓仅 12 个文件用 `useMenuStore.permissions`（**逐页 opt-in**）；用户假设的 `canWrite` 派生层**不存在**（`menuStore.ts:21` 只有 `permissions: string[]`，`canWrite` 是 `network/ports/index.tsx:132` 的局部 const）
 > ② 后端：**不止 system 用户组**——全仓 **39 处路由组全部 ANY-of**、单权限严格语义 `Permission()` **用了 0 次**：`internal/api/router.go:157-162`（system users）+ `:541-546`（ops building）等；只持 `list` 的用户调 `delete` **返回 200 并真的删除**（安全缺陷，非 UX 缺陷）；叠加 `permission.go:200-218` 的**模块级降级**与 `:159-196` 的 F→C 继承放大 → 只读角色仍放行；`RequirePermissionsWithQuery` doc 注释「写操作保持严格权限」**与实现矛盾**；前端权限端点实为 `POST /system/my-menus/permissions`（`menuApi.ts:23-26`，无权限门）——v1.23 UAT 引用的 `/system/menus/permissions` 是管理员端点，**引用有误**
 
-- [ ] **PERM-01**: `ActionButton` 契约与 `createDeleteAction` options 新增**可选** `permission?: string` 字段（加法扩字段，存量调用点不传即保持原行为，不破坏 v1.22 冻结契约）
-- [ ] **PERM-02**: 新增**单一判定 helper**（建议 `src/components/shared/useActionPermission.ts`），**三态门控**：权限未就绪（显式 loading/error 位）→ 渲染但 disabled + title/aria 提示；就绪且含权限码 → 可用；就绪且不含 → **不渲染**。**禁用** `permissions.length === 0` 判「未就绪」（空权限集与未加载在数据上不可区分——接口失败时管理员也看不到按钮且无提示）
-- [ ] **PERM-03**: 前端系统用户页接入三态门控——新增 `system:user:add`、编辑 `system:user:edit`、删除/批量删除 `system:user:remove`、重置密码 `system:user:resetPwd`、导入 `system:user:import`、导出 `system:user:export`
-- [ ] **PERM-04**: 后端新增**不做模块级降级**的严格权限中间件（跳过 `permission.go` Step 3；Step 2 的 F→C 继承对写操作同样须跳过）+ `/system/users` 写操作从 ANY-of 组拆出为独立子组，逐动作绑定 `pkg/permission/config.go` 已定义但从未被引用的 `UserRemove` 等常量；参照 network 域范式 `port_write_router.go:51`（同仓 `network_router.go:183-192` 注释已明写 ANY-of 陷阱与修法）
-- [ ] **PERM-05**: 受限角色验收——PG 环境走 **UI 正常路径**建角色（避开 sqlite ON CONFLICT 500 与 `menu:user:perms:{id}` 30 分钟缓存不失效；**绝不能挂 admin 角色**——isSuperAdmin 旁路）；构造「有 `system:user` 页面权限、无 F 型按钮权限」：按钮不可见、curl 直调写接口 **403**（T4 判据：200 ⇒ 后端 ANY-of 缺陷坐实）；admin 与 xtgl 行为零变化；改权限后等 30s（后端 TTL）再验证
-- [ ] **PERM-06**: 「模块 × 操作 → 权限码」映射表**单一真相源** + 一致性校验脚本（对照后端 `init_data.go` / `pkg/permission/config.go`；migration_159 已证明权限码命名会漂移）——防止 45 个文件的后续铺开各自为政
+- [x] **PERM-01**: `ActionButton` 契约与 `createDeleteAction` options 新增**可选** `permission?: string` 字段（加法扩字段，存量调用点不传即保持原行为，不破坏 v1.22 冻结契约）（✅ 2026-10-28 Phase 78 完成（commit 837c2989）：ActionButton 契约 + createDeleteAction options 新增可选 permission 字段（加法扩字段，45 个既有调用点不传即行为不变，v1.19 冻结面对外形状零变化））
+- [x] **PERM-02**: 新增**单一判定 helper**（建议 `src/components/shared/useActionPermission.ts`），**三态门控**：权限未就绪（显式 loading/error 位）→ 渲染但 disabled + title/aria 提示；就绪且含权限码 → 可用；就绪且不含 → **不渲染**。**禁用** `permissions.length === 0` 判「未就绪」（空权限集与未加载在数据上不可区分——接口失败时管理员也看不到按钮且无提示）（✅ 2026-10-28 Phase 78 完成（commit 837c2989）：useActionPermission 三态门控 helper——ready 含权限码→可用 / ready 不含→不渲染 / loading|error→渲染但 disabled+提示；**禁用 permissions.length===0 判未就绪**（组件测试 A6-3 证明空权限集与未就绪行为可区分）；menuStore 在 fetchAll/fetchPermissions/setPermissions/clearMenus 四处维护 permissionsLoaded/permissionsError 就绪位）
+- [x] **PERM-03**: 前端系统用户页接入三态门控——新增 `system:user:add`、编辑 `system:user:edit`、删除/批量删除 `system:user:remove`、重置密码 `system:user:resetPwd`、导入 `system:user:import`、导出 `system:user:export`（✅ 2026-10-28 Phase 78 完成（commit 837c2989）：系统用户页接入三态门控——编辑 system:user:edit / 重置密码 system:user:resetPwd / 删除+批量删除 system:user:remove / 新增 system:user:add / 导入 system:user:import / 状态 Switch system:user:edit；组件测试 7/7 通过）
+- [x] **PERM-04**: 后端新增**不做模块级降级**的严格权限中间件（跳过 `permission.go` Step 3；Step 2 的 F→C 继承对写操作同样须跳过）+ `/system/users` 写操作从 ANY-of 组拆出为独立子组，逐动作绑定 `pkg/permission/config.go` 已定义但从未被引用的 `UserRemove` 等常量；参照 network 域范式 `port_write_router.go:51`（同仓 `network_router.go:183-192` 注释已明写 ANY-of 陷阱与修法）（✅ 2026-10-28 Phase 78 完成（commits 51f5e69e + 48a6920c）：新增 RequireStrictPermissions（只做 Step1 精确匹配，跳过 F 型继承与模块降级）+ /system/users 读组与写组**兄弟分离**（写组 5 个子组各挂单一权限点严格中间件，逐动作映射 add/import/edit/remove/resetPwd）；HTTP 实测 8/8 写接口 403 + 对照实验（临时加 xtgl→200 且真删除））
+- [x] **PERM-05**: 受限角色验收——PG 环境走 **UI 正常路径**建角色（避开 sqlite ON CONFLICT 500 与 `menu:user:perms:{id}` 30 分钟缓存不失效；**绝不能挂 admin 角色**——isSuperAdmin 旁路）；构造「有 `system:user` 页面权限、无 F 型按钮权限」：按钮不可见、curl 直调写接口 **403**（T4 判据：200 ⇒ 后端 ANY-of 缺陷坐实）；admin 与 xtgl 行为零变化；改权限后等 30s（后端 TTL）再验证（✅ 2026-10-28 三层证据齐备：① **DB 层前后对照**——同受限角色同真实数据下旧中间件 8/8 放行(缺陷) → 严格中间件 8/8 拒绝；② **HTTP 实测**——8/8 写接口 403、读接口 200、跨模块 403，**决定性对照**（临时追加 xtgl 角色→delete 200 且真删除→排除「接口坏了」）；③ **前端组件测试 7/7**——权限不足时编辑/重置/删除/新增/导入按钮不存在。夹具：角色 v124_audit_test（F 型=0）+ 用户 v124_auditor_test（仅挂该角色）；**受影响生产角色清单为空**（能进该页的只有 admin/xtgl，都持全权 → 零误伤）
+- [x] **PERM-06**: 「模块 × 操作 → 权限码」映射表**单一真相源** + 一致性校验脚本（对照后端 `init_data.go` / `pkg/permission/config.go`；migration_159 已证明权限码命名会漂移）——防止 45 个文件的后续铺开各自为政（✅ 2026-10-28 Phase 78 完成（commit b1c06c31）：权限码映射表单一真相源 src/constants/permissionCodes.ts + scripts/check-permission-codes.mjs 双向校验（TS 8 / 后端常量 8 / 菜单 F 型 8 零漂移），并做反向验证（插 bogus 码→报漂移 exit 1→还原））
 
 ### DIAG — 工位物理链路空因展示（3f130）
 
@@ -123,12 +123,12 @@
 | VIS-03 | 76 | Satisfied (2026-10-28) |
 | VIS-04 | 76 | Satisfied (2026-10-28) |
 | VIS-05 | 77 | Pending |
-| PERM-01 | 78 | Pending |
-| PERM-02 | 78 | Pending |
-| PERM-03 | 78 | Pending |
-| PERM-04 | 78 | Pending |
-| PERM-05 | 79 | Pending |
-| PERM-06 | 78 | Pending |
+| PERM-01 | 78 | Satisfied (2026-10-28) |
+| PERM-02 | 78 | Satisfied (2026-10-28) |
+| PERM-03 | 78 | Satisfied (2026-10-28) |
+| PERM-04 | 78 | Satisfied (2026-10-28) |
+| PERM-05 | 79 | Satisfied (2026-10-28) |
+| PERM-06 | 78 | Satisfied (2026-10-28) |
 | DIAG-01 | 80 | Satisfied (2026-10-28) |
 | NAV-01 | 81 | Satisfied (2026-10-28) |
 | HYG-01 | 82 | Satisfied (2026-10-28) |
