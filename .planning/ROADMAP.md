@@ -165,6 +165,120 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
 
 **Wave 划分**：线 A **84 → 85 → 86 → 87**；线 B **88 → 89 → 90 → 91 → 92 → 93**。两线并行（后端 Go vs 前端 CSS）；线 B 内部**严格串行**（每步都改 `index.css`，天然冲突面大）。收口 = 93。
 
+## Phase Details
+
+> 本节为 downstream 工具（plan-phase / execute-phase）解析所需的 `### Phase N:` 详情节；成功标准的完整量化判据见上方 v1.25 段各 phase 列表项（两处同源，此处为精简版）。
+
+### Phase 84: 权限模型三缺口
+**Goal**: `data_scope` 被列表查询真实消费 + `GetUserPermissions` 过滤 `menu.status` + Step 2「子菜单继承」语义固化 + 迁移记录表补齐 / GORM schema 漂移登记
+**Depends on**: —
+**Requirements**: PMODEL-01, PMODEL-02, PMODEL-03, PMODEL-04
+**Success Criteria** (what must be TRUE):
+  1. `data_scope=3` 角色查询用户列表只返回本部门数据（不再 total=4231 跨部门）
+  2. 已停用菜单的权限码不进 `GetUserPermissions` 返回集
+  3. Step 2 语义以明确命名/注释固化（持 F 型按钮 → 继承父页面权限）
+  4. 迁移记录表可列出已应用版本；GORM schema 漂移登记为显式债务
+**Plans**: TBD
+
+### Phase 85: 后端动作级严格化
+**Goal**: `pkg/permission/config.go` 死表接线 + 133 处 ANY-of 逐动作拆分 + system 域 4 组（roles/menus/depts/posts）严格化
+**Depends on**: Phase 84
+**Requirements**: RBAC-01, RBAC-03, RBAC-04
+**Success Criteria** (what must be TRUE):
+  1. 映射表真实接线；未登记写路由 → `check-permission-codes.mjs` exit ≠ 0
+  2. 全站写操作路由逐动作绑定单一权限点；只读组保持组级语义
+  3. system 域 4 组写操作完成逐动作拆分
+  4. 只读角色调写接口一律 403 且无数据变更（抽样 ≥8 模块 8/8 = 403）
+**Plans**: TBD
+
+### Phase 86: 前端操作入口三态门控铺开
+**Goal**: 76 个业务页面的行操作 / 批量操作 / 工具栏写入口按动作级权限码三态渲染（无权限不渲染 / 未就绪 disabled+提示 / 有权限可用）
+**Depends on**: Phase 84, Phase 85
+**Requirements**: RBAC-02
+**Success Criteria** (what must be TRUE):
+  1. 76/76 页面接入 `useActionPermission` 三态门控（起点 14/76）
+  2. 组件测试三路径全绿（无权限不在 DOM / 未就绪 disabled / 有权限可点）
+  3. v1.22 冻结契约零破坏；lint 0 problems
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 87: 动作级权限授予闭环
+**Goal**: 动作级 F 型菜单播种 + 三层证据验收（DB 前后对照 / HTTP 实测 / 组件测试）+ 决定性对照实验
+**Depends on**: Phase 85, Phase 86
+**Requirements**: RBAC-05, RBAC-06
+**Success Criteria** (what must be TRUE):
+  1. 角色页勾选动作权限 → 前端可见 + 后端放行（同源权限码）
+  2. 三层证据齐全 + 决定性对照（临时加权限点 → 403 转 200）
+  3. 校验脚本覆盖新铺开面并接入 CI 门禁；生产库既有行零改动
+**Plans**: TBD
+
+### Phase 88: 验证底座与零风险清理
+**Goal**: 修 CSS 契约脚本假红 fixture（VISFIX-06）+ 反转 C3b + 新增 C6-C15 断言 + 删死选择器/死文件（STYLE-02 第 1 批 D1-D17 + VISFIX-03）+ antd 6 弃用清理（VISFIX-04）
+**Depends on**: —
+**Requirements**: VISFIX-03, VISFIX-04, VISFIX-06
+**Success Criteria** (what must be TRUE):
+  1. `css-contract-assertions.js` 用真实 class `ant-input-status-error`，`passed === true`（首次真正通过）
+  2. C3b 反转为反向断言；C6-C12/C14/C15 落地全过（C13 归 89）
+  3. D1-D17 清零；21 形态 × 明暗矩阵**视觉 diff = 0**（唯一硬判据）
+  4. `maskClosable` 等弃用 prop grep 零命中；**不迁 `onSearch`**（未弃用）
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 89: 变量层与明暗色板重构
+**Goal**: F3 硬前置——`--input-bg` 串色修正（VISFIX-01）+ 暗色未定义变量补齐 + `ruoyiBrand.dark` 常量组 + 去组件级写死 `colorBgContainer`（STYLE-01）+ 暗色 Select 派生（VISFIX-02）+ hex 门禁覆盖 `.css`（STYLE-04）
+**Depends on**: Phase 88
+**Requirements**: STYLE-01, STYLE-04, VISFIX-01, VISFIX-02
+**Success Criteria** (what must be TRUE):
+  1. 暗色 `--input-bg` 解析值 = `#0f2e1b`（现状 `#fafaf9`）
+  2. 暗色 Select 底色 ≠ 白，与同页容器同源
+  3. dark 模式 `theme.token.colorBgContainer ≠ '#FFFFFF'`；变量层与色板分两步落地
+  4. 除已登记 2 处有意变更外视觉差异 = 0；`check-hardcoded-colors.mjs` exit 0 接入 lint:ci
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 90: Input 域交还 variant/token + 圆角统一
+**Goal**: 批次 C（拆 `border` 简写 `:871-880`）与批次 B（处置 VIS-01 复位块 `:937-945`）**同 commit**；hover/focus 交还 antd token（R1-R5）；圆角 6→8px（STYLE-03）；InputNumber 错误态还原（VISFIX-05）
+**Depends on**: Phase 89
+**Requirements**: STYLE-03, VISFIX-05
+**Success Criteria** (what must be TRUE):
+  1. 批次 C 与批次 B 同 commit 落地（顺序不可逆）
+  2. InputNumber 错误态边框 = `rgb(186,54,48)`；圆角 computed-style = 8px
+  3. 双框 = 0 / 焦点环单圈 / 错误态断言全绿（v1.24 契约零破坏）
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 91: Select / InputNumber / Form / Table / Modal 域交还
+**Goal**: 其余组件域手写覆盖交还 antd token（R8 承接）+ Select 域弃用 prop 清零（VISFIX-04 剩余承接）
+**Depends on**: Phase 90
+**Requirements**: 承接 STYLE-02 R8（主责 92）与 VISFIX-04 剩余（主责 88）
+**Success Criteria** (what must be TRUE):
+  1. Select 边框交还 CSS 变量机制；`.ant-select-selector` 零残留
+  2. 全站 antd 弃用警告 = 0；变体两态分别验收
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 92: 暗色 mega-cluster 合并
+**Goal**: 431 条暗色手写规则（R6: `:2254-2742` + R7: `:2780-4517`）整块交还 `darkAlgorithm` + token；STYLE-02 终态收口（M1-M16 达标）
+**Depends on**: Phase 91
+**Requirements**: STYLE-02
+**Success Criteria** (what must be TRUE):
+  1. 431 条块级清零，每条有 token 等价物或显式例外登记
+  2. M1 ≤480 / M2 ≤420 / M4 ≤150 / M5 ≤12 / M6 = 0 / M9 ≤3200 / M14 = 0
+  3. 暗色矩阵 + 14 页巡检零未登记差异；C1-C15 全 PASS
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 93: room-devices 拆分 + 视觉回归验收
+**Goal**: `room-devices/index.tsx` 815 → ≤350 行按 devices 页范式拆分（SPLIT-01，零行为变化）+ 明暗双主题 computed-style + 截图矩阵终验（STYLE-05）
+**Depends on**: Phase 92
+**Requirements**: SPLIT-01, STYLE-05
+**Success Criteria** (what must be TRUE):
+  1. 主文件 ≤350 行、每新文件 ≤250 行；`reloadRef` 链路逐字保留；行为零变化
+  2. STYLE-05 硬指标全达（`--input-bg`=#0f2e1b / InputNumber=rgb(186,54,48) / 圆角 8px）
+  3. VIS-01/02/03 断言全绿；lint 0 / vitest 3960 全绿 / gzip ≤776 kB / go build+test 绿
+**Plans**: TBD
+**UI hint**: yes
+
 <details>
 <summary>✅ v1.24 视觉回归修复与遗留债务清偿 (Phases 76-83) — SHIPPED 2026-10-28</summary>
 
