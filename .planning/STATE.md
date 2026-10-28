@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.24
-milestone_name: 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
-status: All phases complete (Phases 76-83, 18/18 REQ satisfied) — ready for milestone review & archive
+status: Awaiting next milestone
 stopped_at: 全部 8 phase 执行完毕：76 双框 P0 + 77 视觉验证收口（17 张证据入库）+ 78 权限双端闭环 + 79 PG 实机验收（三层证据）+ 80 工位诊断展示 + 81 F5 修复（红绿验证）+ 82 lint 清零（0 problems）+ 83 devices 拆分（714→306 行）
-last_updated: "2026-10-28T12:40:00+08:00"
+last_updated: "2026-10-28T05:08:17.697Z"
 last_activity: 2026-10-28
-last_activity_desc: v1.24 全部 phase 完成（18/18 REQ satisfied）——Phase 77 实测查出并修复 VIS-03 死规则（antd 6 status class 名误用），Phase 83 拆分达标，证据与登记册全量入库
-state_head: e72cef86
+last_activity_desc: Milestone v1.24 completed and archived
+state_head: 4477b2bc786739227f2c39de6b123601c6e1a6ba
 progress:
   total_phases: 8
   completed_phases: 8
   total_plans: 0
   completed_plans: 0
   percent: 100
+milestone_name: 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
 current_phase: null
 current_phase_name: —
 ---
@@ -22,7 +22,7 @@ current_phase_name: —
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.24 全部 phase 完成（18/18 REQ satisfied）—— 待里程碑评审与收档
+**Status**: v1.24 milestone complete
 **Last activity**: 2026-10-28
 **Prior activity**: 2026-10-28 — v1.24 全量执行完成（Phase 77 视觉验证 + Phase 83 拆分收口 + VIS-03 死规则修复）
 **Prior activity (2)**: 2026-10-28 — v1.24 执行期：78 权限双端闭环（后端严格中间件 + 前端三态门控）+ 79 PG 实机验收（三层证据）+ 82 lint 清零
@@ -37,10 +37,10 @@ current_phase_name: —
 
 ## Current Position
 
-Phase: Milestone v1.24 complete（Phases 76-83）
+Phase: Milestone v1.24 complete
 Plan: —
-Status: Awaiting milestone review & archive
-Last activity: 2026-10-28 — v1.24 全部 phase 完成，18/18 REQ satisfied
+Status: Awaiting next milestone
+Last activity: 2026-10-28 — Milestone v1.24 completed and archived
 
 ### v1.24 Phase 依赖速查
 

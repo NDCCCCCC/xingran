@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-10-28
-update_trigger: v1.24 milestone INITIATED (视觉回归修复与遗留债务清偿)
-previous_update: 2026-10-28 v1.23 milestone SHIPPED & ARCHIVED
+update_trigger: v1.24 milestone SHIPPED & ARCHIVED (视觉回归修复与遗留债务清偿)
+previous_update: 2026-10-28 v1.24 milestone INITIATED
 ---
 
 **Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
@@ -11,7 +11,9 @@ previous_update: 2026-10-28 v1.23 milestone SHIPPED & ARCHIVED
 **Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
 
 
-## Current Milestone: v1.24 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
+## Current Milestone: v1.24 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance) — ✅ SHIPPED 2026-10-28
+
+**交付终态（2026-10-28 收档）:** 18/18 需求 Satisfied；用户主诉「输入框双重外框」根治（309 个输入框全站，双框元素数 3→0，错误态恢复品牌红）；#16 行操作权限**前后端双端闭环**（只读角色调写接口从 200 真删 → 403 拒绝，三层证据：DB 层前后对照 + HTTP 实测含决定性对照实验 + 前端组件测试）；lint 51 → **0 problems**；devices 页 714 → 306 行；生产库验收夹具已按用户指示清理、既有行零改动。Known Gaps 转 v1.25 候选（用户裁定暂不立项）：操作级 RBAC 全站治理 / 样式层收敛到 antd 6 variant / 权限模型三缺口 / 视觉新发现 / room-devices 拆分。
 
 **Goal:** 修复 v1.23 引入的输入框「双重外框」视觉回归并做 CSS 一致性审计，同时清偿 v1.23 收档结转的 4 项遗留债务（#16 行操作权限 / 3f130 空因展示 / F5 跳 /dashboard / ColumnConfigModal 豁免注释）与 2 项延后技术债（lint 存量 errors / react-refresh + devices 拆分）。
 
@@ -115,18 +117,29 @@ previous_update: 2026-10-28 v1.23 milestone SHIPPED & ARCHIVED
 
 **Archived:** `.planning/milestones/v1.21-ROADMAP.md` + `.planning/milestones/v1.21-REQUIREMENTS.md` + `.planning/milestones/v1.21-MILESTONE-AUDIT.md`（里程碑审计 passed：6 phase VERIFICATION 全 passed、19/19 REQ、8/8 集成点 VERIFIED、E2E 流 A-D 全通过）
 
-## Current State (2026-10-27)
+## Current State (2026-10-28)
 
-- **Shipped**: v1.0 ~ v1.23 — v1.23 = Phases 69-75（7 phases），22/22 requirements satisfied，SHIPPED 2026-10-28（待 /gsd-complete-milestone tag 归档）。
+- **Shipped**: v1.0 ~ **v1.24** — v1.24 = Phases 76-83（8 phases），**18/18 requirements satisfied**，SHIPPED 2026-10-28。46 commits / 104 files / +5,419 −2,232，约 3.5 小时（09:19 需求定稿 → 12:59 收口）。
+- **v1.24 终态**：用户主诉「输入框双重外框」根治（309 个输入框，双框元素数 3→0）；#16 行操作权限越权闭环（只读角色写接口 200 真删 → 403 拒绝）；lint 存量 51 → 0 problems 且门禁归零；devices 页 714 → 306 行；生产库验收夹具已清理、既有行零改动。
 - **v1.22 终态**：前端公共层从"只有零件没有契约"补成"有契约"——AppInput/AppSelect 默认值下沉（allowClear/showSearch）、ConfirmDelete 危险操作唯一入口（68 处收口）、PageTable/FormModal/RemoteSelect 契约内建、hex/日期/any 三类债务收敛、handleApiError 唯一错误出口。
 - **v1.22 遗留（→ v1.23）**：TextArea 74 处零 allowClear 覆盖（用户主诉根因）+ 裸 Input/Select 存量迁移未完成（P65/P66 豁免 override 仍在）+ 7 项 debug acknowledge（≥4 项调查未完成）+ 浏览器实机 UAT 债 + `.planning/quick/` 94 个历史目录 + lint 1367 warnings / 83 errors。
 - **构建状态**：`go build ./...` clean；`go test ./internal/services/addomain/ ./internal/api/v1/... ./internal/scheduler/` 全绿；`go vet` 仅存量 `internal/core/security/ad_authenticator_test.go:159 unreachable code`（非本次影响面）。
 - **（v1.21 历史）生产实锤**：全量同步轮 user_count=4177、error_count=0、67 组；嵌套组成员污染 8→0（重放自愈）；AD 部门变更 ≤30s 推送并 compare-and-move 落位（NormalizeDN 幂等短路）；登录回写守卫双半段（拦截 / 正常覆盖）与软删 DN 漂移拦截均端到端验证。
 - **（v1.21 历史）Phase 62 引入的生产回归已修复**：全嵌套组过滤后 kept 为空 → GORM ErrEmptySlice 中止整轮 → 补早返回 + 回归用例 + 二进制重建发版（14:22）→ 14:35 轮 full success。
 
-## Next Milestone Goals（v1.23 之外，仍 deferred）
+## Next Milestone Goals（v1.25 候选，用户裁定暂不立项）
 
-以下候选源自 v1.21/v1.22 收口审计与历史 deferred，**v1.23 未纳入**，继续挂账：
+**v1.24 结转的 5 笔候选债**（完整登记见 `.planning/REQUIREMENTS.md` 的 Future Requirements 与 `.planning/MILESTONES.md` 的 v1.24 条目 Known Gaps）：
+
+1. **操作级 RBAC 全站治理** — 108 页面 + 340 路由；`roles/menus/depts/posts` 4 组 ANY-of 拆分（逐动作清单已备）+ `pkg/permission/config.go` 死表接线 + 动作级 F 型菜单播种（当前 devices 等模块因无菜单种子而无法授予动作级权限）
+2. **样式层收敛到 antd 6 variant**（方案 C）— 需先重构 AntdThemeBridge 明暗色板（F3：`colorBgContainer` 硬编码 `#FFFFFF`，darkAlgorithm 不改写显式 token）
+3. **权限模型三缺口** — `data_scope` 未被列表查询消费（实测 data_scope=3 仍返回 total=4231 跨部门）/ `GetUserPermissions` 不过滤 `menu.status`（停用菜单权限仍进前端权限集）/ Step 2「子菜单继承」语义易写反；附带生产库无迁移记录表 + GORM schema 漂移
+4. **Phase 77 视觉新发现** — 暗色 `--input-bg` 第 3 处就地重定义（`index.css:4807`）/ 暗色 Select 白底导致同页两套边框体系 / `.dept-tree-search` 死规则 / antd 6 弃用警告 2 类 / InputNumber 错误态仍灰
+5. **room-devices 页拆分** — 815 行，比已拆的 devices 更长
+
+**更早的 deferred（继续挂账）**：
+
+以下候选源自 v1.21/v1.22 收口审计与历史 deferred，**v1.23/v1.24 均未纳入**：
 
 1. **AD 方向补齐** — ad_push_queue 目前只有 update_user / disable 两个动作方向，缺 enable（软删用户恢复后重新启用 AD 账号），见 `.planning/seeds/SEED-ad-push-enable-direction.md`。
 2. **同组管理员 OU 写权限** — 域控 ACL 导致同组管理员互相改 OU 报 LDAP Result Code 50，属域控侧策略（已裁决不作为代码缺陷），若要放开需域控授权流程。
@@ -247,6 +260,12 @@ estate.
   - R4 工位详情：健康度卡片 + ReconciliationDrawer 3 Tab
   - R5 半自动修复：6 状态机 + 7d 回滚 + 误修复率告警三通道
 - ✓ **Phase 47 根因修复** (infoPoint drift / Layer3 UPSERT / port_status 漂移 / MAC parser 校验) — 2026-07-03
+- ✓ **v1.24 视觉回归修复与遗留债务清偿** (Visual Regression Fix & Legacy Debt Clearance) — Phases 76-83 — 2026-10-28 (8 phases, 18/18 REQ satisfied, 46 commits / 104 files / +5,419 −2,232 in ~3.5h)
+  - 双框根治：affix-wrapper 内层复位块（6 项、无 box-shadow，焦点环归 wrapper）+ status 还原；**双框元素数 3 → 0**（harness 42 行 + 15 真实页 + 登录页，明暗双测）；错误态恢复品牌红
+  - CSS 一致性审计登记册 36 条（P0 已修 8 / P1 待修 7 / P2 登记 19 / 保留 1 / 样板 1）
+  - #16 前后端双端闭环：严格权限中间件（跳过 F 型继承与模块降级）+ `/system/users` 读组/写组**兄弟分离** + 三态门控 + 权限码单一真相源；三层证据（DB 前后对照 / HTTP 8/8 403 含决定性对照 / 组件测试 7/7）
+  - F5 刷新回退修复（红绿验证）+ 3f130 空因诊断展示 + lint 51 → 0 problems + devices 714 → 306 行
+  - **Phase 77 反查出 Phase 76 自身的 P0 死规则**（antd 6 status class 名误用 → 错误态不变红），契约检查同步升级为双向断言
 - ✓ **v1.18 网络设备硬件清单** (Device Component Serials) — Phase 48 — 2026-07-04 (1 phase / 3 plans / 3 waves, 14/14 D-id 覆盖 + 3 site-visit UAT 推迟)
   - Wave 1 Schema：migration_201 给 `ops_asset` 加 4 列 (parent_asset_id / source_device_id / component_type / component_slot) + `sys_data_reconciliation.recon_category`
   - Wave 2 Collectors：`internal/services/component_collector/` 17 文件包,SNMP ENTITY-MIB 单 GET + Ruijie `temprature*` 噪声过滤 + Huawei dual-class 去重 + OwnerResolver stack containtedIn tree + Huawei/Ruijie CLI 双厂商 + 6 TextFSM 模板
@@ -261,7 +280,28 @@ estate.
 
 ### Active
 
-#### v1.23 前端契约全量收尾与遗留清偿（当前里程碑）
+#### v1.24 视觉回归修复与遗留债务清偿（当前里程碑）
+
+- [x] **VIS-01**: affix-wrapper 内层复位，消除全站 309 个输入框的双重外框
+- [x] **VIS-02**: 焦点环单圈化（边框与焦点环唯一归 wrapper）
+- [x] **VIS-03**: Form 错误态边框色还原（status → colorError）
+- [x] **VIS-04**: 全局 CSS 与 antd 6 变体的一致性审计登记册（36 条）
+- [x] **VIS-05**: 浏览器实机视觉回归验证（21 形态 × 明暗矩阵 + 15 页巡检 + 17 张证据）
+- [x] **PERM-01**: ActionButton 契约扩可选 permission 字段（加法，v1.19 冻结面对外形状不变）
+- [x] **PERM-02**: 三态权限门控 helper（ready/loading/error，禁用 permissions.length===0 判未就绪）
+- [x] **PERM-03**: 系统用户页操作入口按权限码门控
+- [x] **PERM-04**: 后端严格权限中间件（不做模块降级）+ /system/users 写操作拆独立子组
+- [x] **PERM-05**: 受限角色 PG 实机验收（HTTP 8/8 写接口 403 + 对照实验）
+- [x] **PERM-06**: 权限码映射表单一真相源 + 双向漂移校验脚本
+- [x] **DIAG-01**: 3f130 工位物理链路空因诊断前端展示（Table+Alert 分级）
+- [x] **NAV-01**: F5 刷新保留当前落地页（catch-all 语义区分 + LAST_PATH 防自毁反写）
+- [x] **HYG-01**: ColumnConfigModal:136 豁免理由注释补齐
+- [x] **HYG-02**: lint errors + warnings 清零（51 → 0 problems）
+- [x] **HYG-03**: react-refresh 33 处清零
+- [x] **HYG-04**: devices 页拆分（714 → 306 行）
+- [x] **HYG-05**: 豁免理由表全量同步（159 → 38）并接入 lint:ci
+
+#### v1.23 前端契约全量收尾与遗留清偿（已 SHIPPED 2026-10-28）
 
 - [ ] **TEXT-01**: 用户在任意表单弹窗的多行输入框（备注/描述/原因）能一键清空内容，无需手动逐字删除
 - [ ] **TEXT-02**: 存量 74 处多行输入框全部接入 AppTextArea 契约，行为一致
@@ -384,6 +424,9 @@ See `.planning/ROADMAP.md` for current state + `.planning/MILESTONES.md` for shi
 - **仪表盘系统统一** — 保留两套系统：固定监控仪表盘（/monitor/dashboard）和可配置仪表盘（/dashboard-system）
 - 复杂图表类型（3D 图表、地图）— 超出本期范围
 - 告警规则配置 — 属于监控系统，非仪表盘核心
+- **roles/menus/depts/posts 4 组 ANY-of 拆分** — 与 #16 同族但属「全站治理」范围，v1.24 只闭环 system/user 一个模块（写路由逐动作清单已登记待用）
+- **3f130 绑定 user_id 数据修复** — 用户裁定本里程碑只做前端诊断展示，不写生产数据
+- **room-devices 页拆分** — 本轮只拆 devices（714→306），room-devices 815 行登记为候选债
 - Zabbix 告警集成 — 超出本期范围
 
 ## Context
@@ -458,6 +501,15 @@ See `.planning/ROADMAP.md` for current state + `.planning/MILESTONES.md` for shi
 | BATCH-05 indeterminate Spin MVP (v1.19 W4 D-05) | 诚实进度，不伪造 X/Y；批量同步阻塞无后端推送 | ⚠ Revisit (FUTURE-11 SSE/WS) |
 | execSinglePort DRY helper (v1.19 W3) | 5 单端口 handler 公共流程合并；operlog.Record 物理调用点 6→2，语义等价 | ✓ Good |
 | eslint-disable placement 教训 (v1.19 W4 Phase 55) | directive 紧贴 `}, []);` 而非 `useEffect(` 开头 | — Pending (Pattern doc) |
+| 双框修根因而非遮盖 (v1.24) | 用户裁定「修根因 + CSS 一致性审计」；审计全局 `!important` 与 antd 6 结构冲突面，不做一处覆盖了事 | ✓ Good (双框 3→0，登记册 36 条) |
+| CSS 复位块不写 box-shadow (v1.24) | 焦点环归 wrapper（antd 内层 `box-shadow:none!important` 特异性 0,4,1 自足）；写 box-shadow 会与焦点环叠加出双圈 | ✓ Good (焦点环单圈实测确认) |
+| `:not(组合子)` 禁用 (v1.24) | CSS3 下整条规则静默丢弃 → 必须用 `.ant-input-affix-wrapper > input.ant-input` | ✓ Good |
+| #16 双病灶同时修 (v1.24) | 组级 ANY-of + 模块级降级叠加；只藏前端按钮 = 假修复（API 直调仍可写） | ✓ Good (DB 前后对照 8/8 翻转) |
+| gin Group 继承父组中间件链 → 写组必须是兄弟组 (v1.24) | 写组若挂在读组之下，读组 ANY-of 仍放行写操作，病灶① 不会被修掉 | ✓ Good (实施方识破 Lead 规格中的此错) |
+| 三态门控禁用 `permissions.length===0` 判未就绪 (v1.24) | 空权限集与未加载完在数据上不可区分 → 接口失败时管理员也看不到按钮且无提示 | ✓ Good (组件测试 A6-3 证明两者可区分) |
+| hydrate 路径须同步置 permissionsLoaded (v1.24) | 直接 setState 绕过 setPermissions → 硬刷新后所有操作按钮在 API 返回前一直 disabled | ✓ Good (Phase 83 实测发现根因) |
+| CSS status class 用 antd 6 真实名 (v1.24) | antd 把 status class 打在 wrapper 自身（`ant-input-status-error`）；`ant-input-affix-wrapper-status-error` 在 antd 6 不存在 = 永不命中的死规则 | ✓ Good (契约检查升级为双向断言) |
+| 契约检查须校验「能命中」而非「规则存在」 (v1.24) | Phase 76 的 C5 校验的正是死规则 → 检查通过而规则从未生效 | ✓ Good (Lesson) |
 
 ## Constraints
 
@@ -546,4 +598,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-10-28 after v1.23 milestone（前端契约全量收尾与遗留清偿 SHIPPED：TextArea 契约闭环 + 121 文件迁移 + 7 项 debug 终结 + lint 清偿与门禁 + 实机 UAT）*
+*Last updated: 2026-10-28 after v1.24 milestone（视觉回归修复与遗留债务清偿 SHIPPED：双框根治 3→0 + #16 权限前后端双端闭环 + lint 清零 0 problems + F5 修复 + 3f130 诊断展示 + devices 拆分 714→306 行）*

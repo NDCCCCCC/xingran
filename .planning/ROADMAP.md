@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-10-28
-update_trigger: v1.24 roadmap CREATED (视觉回归修复与遗留债务清偿, Phases 76-83, 18 REQ coverage)
-previous_update: 2026-10-28 v1.23 SHIPPED & ARCHIVED
+update_trigger: v1.24 milestone SHIPPED & ARCHIVED (视觉回归修复与遗留债务清偿, Phases 76-83, 18/18 REQ satisfied)
+previous_update: 2026-10-28 v1.24 roadmap CREATED
 ---
 
 # Roadmap: RuoYi-Next 运维管理系统
@@ -32,11 +32,12 @@ previous_update: 2026-10-28 v1.23 SHIPPED & ARCHIVED
 - ✅ **v1.21 AD 双向同步 bug 修复** — Phases 57-62 (shipped 2026-10-22)
 - ✅ **v1.22 前端公用组件整治** — Phases 63-68.1 (shipped 2026-10-27)
 - ✅ **v1.23 前端契约全量收尾与遗留清偿** — Phases 69-75 (shipped 2026-10-28)
-- ✅ **v1.24 视觉回归修复与遗留债务清偿** — Phases 76-83 (completed 2026-10-28, 18/18 REQ satisfied)
+- ✅ **v1.24 视觉回归修复与遗留债务清偿** — Phases 76-83 (shipped 2026-10-28, 18/18 REQ satisfied)
 
 ## Phases
 
-### ✅ v1.24 视觉回归修复与遗留债务清偿 (Phases 76-83) — COMPLETE
+<details>
+<summary>✅ v1.24 视觉回归修复与遗留债务清偿 (Phases 76-83) — SHIPPED 2026-10-28</summary>
 
 > 需求基线：`.planning/REQUIREMENTS.md`（18 REQ **全部 Satisfied**）｜研究：`.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS}.md`
 > 执行波次（FEATURES 建议）：**W1 零依赖**（76/80/81/82）→ **W2 需 PG**（78/79）→ **W3 拆分**（83）；77（视觉验证）在 76 后收口
@@ -51,6 +52,10 @@ previous_update: 2026-10-28 v1.23 SHIPPED & ARCHIVED
 - [x] **Phase 83: devices 页拆分** — **714 → 306 行（-57%）**：D1 列定义工厂(130) + D2 搜索区构造函数(63) + D3 handlers+行操作+权限门控(413→278) + D4 页面 JSX 外壳(194) + D5 行操作再拆(192)；`reloadRef` 外部注入链路 4 段逐字保留；`columns` useMemo 故意不完整依赖未被"修正"；v1.19 port-write 62 测试零回归且 diff 为空（HYG-04）
 
 **Wave 划分**：W1 = 76→80→81→82（零外部依赖，可并行）；W2 = 78→79（PG）；W3 = 83（依赖 78 的权限 gate 模式）。收口 = 77。
+
+详情: [milestones/v1.24-ROADMAP.md](milestones/v1.24-ROADMAP.md) ｜ [requirements](milestones/v1.24-REQUIREMENTS.md)（18/18 REQ satisfied）
+
+</details>
 
 <details>
 <summary>✅ v1.23 前端契约全量收尾与遗留清偿 (Phases 69-75) — SHIPPED 2026-10-28</summary>

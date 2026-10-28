@@ -1,5 +1,35 @@
 # Milestones
 
+## v1.24 视觉回归修复与遗留债务清偿 (Shipped: 2026-10-28)
+
+**Phases completed:** 8 phases (76-83) | **Plans:** 0（subagent 直接执行，按刀原子提交） | **Tasks:** 8 phase × 9 项闸门
+**Requirements:** 18/18 Satisfied | **Git range:** `dbdd1707` (roadmap CREATED) → `4477b2bc` (夹具清理记录) | 46 commits / 104 files / +5,419 −2,232
+**Timeline:** 2026-10-28 09:19（需求定稿）→ 12:59（收口），约 3.5 小时
+
+**Delivered**: 修复用户主诉「文本输入框双重外框」（309 个输入框全站受影响），并清偿 v1.23 收档结转的 4 项遗留债务（#16 行操作权限越权 / 3f130 空因展示 / F5 跳 /dashboard / ColumnConfigModal 豁免注释）与 2 项延后技术债（lint 存量 / react-refresh + devices 拆分）。
+
+**Key Accomplishments**:
+
+1. ✅ **双框根治 + 全局 CSS 一致性审计（用户主诉闭环）** — 根因是 `index.css:871` 的 `.ant-input{border:...!important}` 命中 antd 6 affix-wrapper 的**内层** input（antd 原生契约要求内层 `border:none`）；复位块 `.ant-input-affix-wrapper > input.ant-input`（6 项、**刻意不写 box-shadow**，焦点环归 wrapper）+ CSS 审计登记册 **36 条**（P0 已修 8 / P1 待修 7 / P2 登记 19 / 保留 1 / 样板 1）；**双框元素数 3 → 0**（harness 42 行 + 15 真实页 + 登录页，明暗双测）；错误态由灰 `rgb(219,215,206)` → 品牌红 `rgb(186,54,48)`
+2. ✅ **Phase 77 视觉验证反查出 Phase 76 自身的 P0 缺陷** — VIS-03 的选择器写成 antd 6 **不存在**的 `ant-input-affix-wrapper-status-error`（antd 把 status class 打在 wrapper **自身**，名为 `ant-input-status-error`）→ 永不命中的死规则，叠加 `allowClear` 默认开 → **站内绝大多数输入框错误态一直不变红**；更糟的是契约检查 C5 **校验的正是这条死规则** → 检查通过而规则从未生效。已修并把 C5 升级为**双向断言**（正确 class 必须存在 + 死变体不得出现）
+3. ✅ **#16 行操作权限前后端双端闭环（三层证据）** — 根因是**两个叠加病灶**：组级 ANY-of（`router.go`）+ 模块级降级（`permission.go` Step 3 把 `system:user:remove` 降级匹配到页面本体）→ 只读角色调 delete **200 且真删数据**；新增 `RequireStrictPermissions`（只做 Step1 精确匹配）+ `/system/users` 读组/写组**兄弟分离**（逐动作单一权限点）+ 前端 `useActionPermission` 三态门控 + 权限码单一真相源双向校验；证据：**DB 层前后对照**（旧 8/8 放行 → 严格 8/8 拒绝）+ **HTTP 实测**（8/8 写接口 403，含决定性对照：临时加 `xtgl` → delete 200 且真删除）+ **前端组件测试 7/7**
+4. ✅ **F5 刷新回退 /dashboard 修复（红绿验证）** — catch-all 区分「菜单未就绪」(InitializingFallback) 与「真无路由」(跳 dashboard) + `saveLastPath` 加守卫防自毁反写 + 抽出 `lastPathStorage.ts`（顺带清 3 处 react-refresh）；**新增 3 条回归测试并做红绿验证**（回退实现 2 条失败 / 修复后 3 条全绿）
+5. ✅ **lint 存量清零 + 门禁防回退** — 51（17 errors + 34 warnings）→ **eslint 0 problems**；预算双写归零（`package.json --max-warnings 0` + `assert-lint-budget` 0/0）+ react-refresh 33 三类分流 + 豁免理由表 159 → 38 且 `check-exemption-reasons.mjs` exit 0 并接入 `lint:ci`
+6. ✅ **devices 页拆分（HYG-04）+ #16 前端侧复用** — 714 → **306 行（-57%）**：D1 列定义工厂(130) + D2 搜索区构造函数(63) + D3 handlers+行操作+权限门控(413→278) + D4 页面 JSX 外壳(194) + D5 行操作再拆(192)；`reloadRef` 外部注入链路 4 段逐字保留；`columns` useMemo **故意不完整**依赖未被"修正"；v1.19 port-write 62 测试零回归且 diff 为空
+
+**Verification**: 收口前由 Lead **独立复核**（不只采信 agent 报告）——闸门六道全绿：type-check 0 / eslint **0 problems** / lint 预算 0-0 / 豁免表 38↔38 / 权限码双向零漂移 / CSS 契约 ALL PASS；`go build ./...` + `go test` 相关包 PASS；**vitest 569 文件 3960 用例全绿**（独立复跑，确认 1 例超时为环境 flaky 非回归）；`npm run build` ✓
+
+**Known Gaps（转 v1.25 候选，用户裁定暂不立项）**:
+- ① 操作级 RBAC 全站治理（108 页面 + 340 路由；`roles/menus/depts/posts` 4 组 ANY-of 拆分 + `pkg/permission/config.go` 死表接线 + 动作级 F 型菜单播种）
+- ② 样式层收敛到 antd 6 variant（方案 C，需先重构 AntdThemeBridge 明暗色板）
+- ③ 权限模型三缺口（`data_scope` 未被列表查询消费 / `GetUserPermissions` 不过滤 `menu.status` / Step 2 语义易写反）+ 生产库无迁移记录表 + GORM schema 漂移
+- ④ Phase 77 视觉新发现（暗色 `--input-bg` 第 3 处就地重定义 / 暗色 Select 白底两套边框体系 / `.dept-tree-search` 死规则 / antd 6 弃用警告 2 类 / InputNumber 错误态仍灰）
+- ⑤ `room-devices/index.tsx` 815 行（比 devices 更长，未扩面）
+
+**生产库状态**: #16 验收夹具已按用户指示在单事务内清理，6 项残留自检全 0，`sys_role` 7→6、`sys_user` 4232→4231（恰为夹具本身），**既有行零改动**；证据（角色 id / perms 集合 / HTTP 返回码 / 前后对照表）已固化在 `.planning/notes/2026-10-29-v124-perm-fixture.md`
+
+---
+
 ## v1.23 前端契约全量收尾与遗留清偿 (Shipped: 2026-10-28)
 
 **Phases completed:** 7 phases (69-75), 121+ 文件迁移 | **Requirements:** 22/22 Satisfied
