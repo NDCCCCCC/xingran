@@ -130,14 +130,10 @@ const stripCommentsKeepLines = (text) =>
 // 近似口径说明：index.css 的明暗变量均为顶层平铺块（无 @media 嵌套作用域），
 // 故按选择器内的 [data-color-mode="dark"|"light"] 前缀推断作用域。
   // 行号为 Phase 88-03 删除第 1 批死规则后的实测行号（88-02 版为 2306/2336/4553，删除后前移）
-  const EXEMPTED_UNREF_VARS = [
-    // Phase 89 R11：--input-placeholder 仅在 light 块定义，暗色 2 处引用声明整条作废
-    //（清偿 = 统一为 --input-text-placeholder 并 :root 兜底，之后删除这 2 条豁免）
-    { name: '--input-placeholder', line: 2276, reason: 'Phase 89 R11 暗色 placeholder 引用未定义变量' },
-    { name: '--input-placeholder', line: 2301, reason: 'Phase 89 R11 暗色 placeholder 引用未定义变量' },
-    // --theme-warning-text：2 处引用 0 定义（1 处无 fallback 命中；另 1 处有 fallback 不命中）
-    { name: '--theme-warning-text', line: 4472, reason: 'Phase 89 R11 变量无定义，需补 :root 定义' },
-  ];
+  // Phase 89 Plan 01 R11 收缩：原 3 条豁免（--input-placeholder@2276/@2301、--theme-warning-text@4472）
+  // 已清偿 —— placeholder 统一为 --input-text-placeholder（:root 兜底 + light/dark 双分区），
+  // --theme-warning-text 已在 :root 定义，豁免表清空转为阻断。
+  const EXEMPTED_UNREF_VARS = [];
 
 const checkC6 = (() => {
   const text = stripCommentsKeepLines(indexCss);

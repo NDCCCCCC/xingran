@@ -88,6 +88,9 @@
   --theme-text-inverse: #ffffff;
   --theme-text-accent: #156031;
 
+  /* 输入框占位符兜底（R11：任何作用域都有定义，C6 天然通过；值同 --theme-neutral-400） */
+  --input-text-placeholder: var(--theme-neutral-400);
+
   /* ===== 边框色系统 ===== */
   --theme-border-primary: #dbd7ce; /* 暖灰描边 (实测) */
   --theme-border-secondary: #e9efeb;
@@ -99,6 +102,7 @@
   --theme-success-bg: #e9efeb;
   --theme-warning: #b07a20;
   --theme-warning-bg: #fef3c7; /* SM2/SM3/SM4 标签底 (实测) */
+  --theme-warning-text: #905d00; /* 警告文字 (= 5178 原 fallback 值，R11 补定义 → 渲染零差异) */
   --theme-error: #ba3630; /* 白字 5.74:1 (实测) */
   --theme-error-bg: #f7d8d5; /* 错误背景（奶油系淡红，与 --theme-error 协调） */
   --theme-info: #337ab0;
@@ -181,12 +185,15 @@
   --component-bg-hover: #f0ece3;
 
   /* 输入框 */
-  --input-bg: #ffffff;
+  --input-bg: #fafaf9; /* 输入框底（原型实测，迁自后置 :root，VISFIX-01 串色修正） */
+  --input-bg-hover: #f4f2ec; /* 结构对称补齐（对应 dark 块四兄弟），当前无引用点 → 零渲染影响 */
+  --input-bg-focus: var(--input-bg); /* var 化引用（= #fafaf9），hex ratchet 不净增 */
+  --input-bg-disabled: #eceae4; /* 结构对称补齐，当前无引用点 → 零渲染影响 */
   --input-border: #dbd7ce;
   --input-border-hover: #598e5e;
   --input-border-focus: #156031; /* COMP-04: 聚焦边框品牌绿（原 light 块漏定义致 fallback 黑色） */
   --input-text: #101010;
-  --input-placeholder: #707068;
+  --input-text-placeholder: #707068; /* 占位符（R11：由 --input-placeholder 改名，值不变） */
   --table-header-bg: #e9efeb; /* COMP-02: 表头专用绿灰淡彩（原借 --bg-elevated 白色） */
 }
 
@@ -897,7 +904,7 @@ body {
 }
 
 .ant-input::placeholder {
-  color: var(--input-placeholder) !important;
+  color: var(--input-text-placeholder) !important;
 }
 
 /* 输入框组 */
@@ -2273,7 +2280,7 @@ body {
 
 [data-color-mode="dark"] .ant-input::placeholder,
 [data-color-mode="dark"] textarea::placeholder {
-  color: var(--input-placeholder) !important;
+  color: var(--input-text-placeholder) !important;
 }
 
 /* 暗色模式：输入框悬停和聚焦 */
@@ -2296,10 +2303,6 @@ body {
 }
 
 /* 暗色模式：Select 选择器 */
-
-[data-color-mode="dark"] .ant-select-selection-placeholder {
-  color: var(--input-placeholder) !important;
-}
 
 [data-color-mode="dark"] .ant-select-selection-item {
   color: var(--input-text) !important;
@@ -4731,7 +4734,6 @@ body {
 :root {
   --theme-font-display: Georgia, "Songti SC", "Source Han Serif SC", serif;
   --theme-zebra: #faf8f3; /* 表格斑马纹（原型 --zebra 实测） */
-  --input-bg: #fafaf9; /* 输入框底（原型实测） */
   --sidebar-gradient: linear-gradient(168deg, #14532d 0%, #156031 58%, #1a6839 100%);
 }
 [data-color-mode="dark"] {
@@ -5175,7 +5177,7 @@ body {
 .xr-tag-gold {
   background: var(--theme-warning-bg);
   border-color: rgba(144, 93, 0, 0.2);
-  color: var(--theme-warning-text, #905d00);
+  color: var(--theme-warning-text);
 }
 
 /* ---------- 行操作（demo .row-ops：纯文字链接，无图标无边框） ---------- */
