@@ -514,6 +514,29 @@ func TestMenuService_GetUserPermissions(t *testing.T) {
 	assert.Contains(t, permsList, "user:create")
 }
 
+// TC23b: GetUserPermissions - 已停用菜单（status=1）的 perms 不得进入前端权限集（PMODEL-02）
+// 命名以 TestGetUserPermissions 开头，保证 `go test -run TestGetUserPermissions` 可匹配
+func TestGetUserPermissions_StatusDisabledMenuExcluded(t *testing.T) {
+	db := setupMenuServiceDB(t)
+	svc := NewMenuService(db).(*menuService)
+	userID := uuid.NewString()
+	roleID := uuid.NewString()
+
+	normalPerms := "menu:normal:perm"
+	stoppedPerms := "menu:stopped:perm"
+	normalID := seedMenuDirect(t, db, &models.Menu{MenuName: "NormalBtn", MenuType: models.MenuTypeButton, Visible: models.VisibleShow, Status: models.MenuStatusNormal, Perms: &normalPerms})
+	stoppedID := seedMenuDirect(t, db, &models.Menu{MenuName: "StoppedBtn", MenuType: models.MenuTypeButton, Visible: models.VisibleShow, Status: models.MenuStatusStop, Perms: &stoppedPerms})
+
+	require.NoError(t, db.Exec("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)", userID, roleID).Error)
+	require.NoError(t, db.Exec("INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)", roleID, normalID).Error)
+	require.NoError(t, db.Exec("INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)", roleID, stoppedID).Error)
+
+	permsList, err := svc.GetUserPermissions(context.Background(), userID)
+	require.NoError(t, err)
+	assert.Contains(t, permsList, normalPerms, "正常菜单的 perms 应包含在权限集")
+	assert.NotContains(t, permsList, stoppedPerms, "已停用菜单的 perms 不应包含在权限集")
+}
+
 // TC24: GetUserMenus - empty user (no roles)
 func TestMenuService_GetUserMenus_NoRoles(t *testing.T) {
 	db := setupMenuServiceDB(t)

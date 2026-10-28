@@ -546,7 +546,9 @@ func (s *menuService) GetUserPermissions(ctx context.Context, userID string) ([]
 	var perms []string
 	if err := s.db.WithContext(ctx).
 		Model(&models.Menu{}).
-		Where("id IN ? AND perms IS NOT NULL AND perms != ''", menuIDs).
+		// 【PMODEL-02】停用菜单（status=1）的权限码不进入前端权限集；
+	// 对齐后端判定路径（pkg/permission/service.go）语义：只过滤 status，不过滤 visible。
+	Where("id IN ? AND perms IS NOT NULL AND perms != '' AND status = ?", menuIDs, models.MenuStatusNormal).
 		Pluck("perms", &perms).Error; err != nil {
 		return nil, fmt.Errorf("查询权限列表失败: %w", err)
 	}
