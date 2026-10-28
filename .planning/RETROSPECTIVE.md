@@ -2,6 +2,62 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.24 — 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
+
+**Shipped:** 2026-10-28
+**Phases:** 8 (76-83) | **Requirements:** 18/18 Satisfied | **Timeline:** 单日完成（09:19 需求定稿 → 12:59 收口，约 3.5 小时）
+**Git:** 46 commits / 104 files / +5,419 −2,232
+
+### What Was Built
+
+- **双框根治** — 复位块 `.ant-input-affix-wrapper > input.ant-input`（6 项、**刻意不写 box-shadow**，焦点环归 wrapper）；**双框元素数 3 → 0**（harness 42 行 + 15 真实页 + 登录页，明暗双测）；错误态恢复品牌红
+- **CSS 一致性审计登记册** — 36 条（P0 已修 8 / P1 待修 7 / P2 登记 19 / 保留 1 / 样板 1）；契约检查脚本 ALL PASS
+- **#16 行操作权限前后端双端闭环** — `RequireStrictPermissions`（只做 Step1 精确匹配）+ `/system/users` 读组/写组**兄弟分离** + `useActionPermission` 三态门控 + 权限码单一真相源；三层证据（DB 前后对照 / HTTP 8/8 403 含决定性对照实验 / 组件测试 7/7）
+- **F5 刷新回退修复** — catch-all 语义区分 + LAST_PATH 防自毁反写，**红绿验证通过**
+- **3f130 空因诊断展示** — Table+Alert 分级渲染（`no_user_bound` → info 常态 / 其余 → warning）+ 静默失败补提示
+- **lint 51 → 0 problems** + devices 页 714 → 306 行（-57%）
+
+### What Worked
+
+- **波次化并行** — W1（76/80/81/82 零依赖）→ W2（78/79 需 PG）→ W3（83 依赖 78 的 gate 模式）；8 phase 在 3.5 小时内跑完，文件域零重叠让并行成为常态而非例外
+- **Lead 先定规格再派发** — Phase 78 的执行规格（含完整代码草案 + 8 项验收 + 边界清单）先于派发写死，避免执行 agent 自由发挥导致口径漂移
+- **实机验证反查实现** — Phase 77 用真实浏览器把 Phase 76 自己没发现的 P0 死规则查了出来（见 Key Lessons #1）
+- **决定性对照实验** — #16 验收不满足于「403」，追加「临时授予 xtgl → 200 且真删除」的反向实验，排除「403 只是接口坏了」的解释
+- **收口前 Lead 独立复核** — 不只采信 agent 报告：全量 vitest 独立复跑（确认 1 例超时是环境 flaky 非回归）+ 闸门六道全绿
+
+### What Was Inefficient
+
+- **4 个 subagent 崩溃** — 82/80/81/76 相继崩溃；80 与 81 由主会话亲自接管（81 的遗留改动需逐行审阅后补完测试）
+- **凭据传递绕了三轮弯路** — 环境变量继承失败 → 仓库外 TEMP 文件 → 直接贴明文；正确做法应是首次即贴明文（agent 无法被 steer，补发无门）
+- **两个 agent 重复做同一份造数** — 幂等（`WHERE NOT EXISTS`）兜住了重复行，但浪费了一个 agent 的运行时间
+- **我在自己规格里写错了一个真陷阱** — gin `Group()` 继承父组中间件链 → 写组若挂在读组之下，病灶① 不会被修掉；由实施方识破并修正（见 Key Lessons #4）
+
+### Patterns Established
+
+- **实现 → 实机验证的反查机制** — 静态断言与 computed-style 单点断言都覆盖不到「class 名在当前库版本不存在」这类错误；真实浏览器 + 真实页面是不可替代的验证层
+- **契约断言必须双向** — 正向「规则存在」不够，还要反向「不得出现已知死形态」；只看正向会得到「检查通过而功能从未生效」
+- **证据图入库** — `.gitignore` 的全局 `*.png` 会让验收凭证只存本地工作区，必须为证据目录加精确例外
+- **前后对照表** — 修复类工作必须留「修复前 / 修复后」两套实测数据（DB 层 + HTTP 层），否则修复后无法证明缺陷曾经存在
+
+### Key Lessons
+
+1. **契约检查校验「规则存在」≠ 校验「规则能命中」** — Phase 76 的 VIS-03 写成 `.ant-input-affix-wrapper.ant-input-affix-wrapper-status-error`，而 antd 6.6.4 把 status class 打在 wrapper **自身**（`ant-input-status-error`）→ 该 class 根本不存在 → 永不命中；叠加 `allowClear` 默认开 → **站内绝大多数输入框错误态一直不变红**。而 Phase 76 的 C5 检查**校验的正是这条死规则** → 检查通过、功能从未生效。**教训：契约检查必须双向断言，且断言目标要锚定「当前依赖版本里真实存在的选择器」，不能凭印象写。**
+2. **红绿验证是识别「假绿」的唯一手段** — 我第一版 NAV-01 回归测试在**回退实现**下仍然通过（fixture 用 `name` 而非 `menuName` → 菜单被 `validateMenu` 静默跳过；且未预置菜单缓存时组件在 `:246` 提前 return，根本走不到 catch-all）。**教训：写完回归测试必须先回退实现验证它会红，否则测的是空气。**
+3. **代码结构体 ≠ 库表结构** — 从 `models/role.go` 的 `RoleMenu{RoleID, MenuID}` 推断「表无 id 列」并据此判另一 agent 的 INSERT 会失败，实测生产库**实有** `id`/`created_at` 列（模型未映射 ≠ 表无列）。**教训：跨模型/迁移场景不得凭结构体推断库表结构；且 PG 能跑 ≠ sqlite 新库能跑。**
+4. **Lead 的规格也会写错** — Phase 78 规格里的 `usersWrite := users.Group("")` 有安全 bug（gin 继承父组中间件链 → 读组 ANY-of 仍放行写操作）。**教训：规格定稿不等于免于审查；执行方有义务在实现时指出规格缺陷（本次实施方正确地做了）。**
+5. **真实浏览器验证能查出静态断言查不出的东西** — VIS-03 死规则、`.dept-tree-search` 补丁从未命中、暗色 token 就地重定义，三项都只有真浏览器 + computed-style 才暴露。**教训：CSS/视觉类修复的验收层不能只有静态检查。**
+6. **PowerShell 的 GBK 显示会制造「文件损坏」假象** — `Get-Content` 把 UTF-8 中文显示成乱码，多次让我误判文件被写坏（实测均正常）。**教训：判定文件编码必须用 node 读 UTF-8，禁用 PowerShell 的 Get-Content 读中文文件。**
+7. **subagent 无法被 steer** — `send_message` 对已启动的 subagent 报 not found（它们不在 teammate 树内）。**教训：subagent 的任务书必须一次给全（凭据、路径、方法、边界），不能指望中途补充。**
+8. **生产环境知识必须入库** — `SKIP_AUTOMIGRATE` 在 release 模式会 fatal（须同时降 `SERVER_MODE=test`）、JWT 密钥环境变量真名是 `JWT_SM2_*` 而非 config 注释里的 `RUOYI_JWT_SM2_*`、`10.62.10.34:9000` 是 MinIO 不是后端。**教训：这类「试错换来的」环境事实必须落 MEMORY，否则每个新会话都要重踩。**
+
+### Cost Observations
+
+- 8 phases / 46 commits / 104 files / 约 3.5 小时（单日）
+- 4 个 subagent（其中 4 个崩溃需重派）+ 主会话亲自接管 Phase 80 与 Phase 81
+- Notable: 崩溃率偏高（约 4/9 次派发崩溃）——**单会话内串行完成两个 phase（80/81）反而比反复重派更快**，且接管遗留改动时发现了 agent 遗漏（如 hydrate 未置 `permissionsLoaded`、NAV-01 缺测试）
+
+---
+
 ## Milestone: v1.23 — 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance)
 
 **Shipped:** 2026-10-28
@@ -125,6 +181,8 @@
 | v1.16 Tech-Debt | ~5 | 2 (40/41) | TECH-05/06 闭环 + validator 100% pass |
 | v1.17 Recon | ~8 | 5 (42-46) + Phase 47 | observe-only 对账引擎 + 5 R-rounds 演进 + UAT 9/10 PASS |
 | v1.18 Components | 1 | 1 (48) | 3-wave 隔离 + D-id 全覆盖 + site-visit UAT 推迟 |
+| v1.23 Contract | ~6 | 7 (69-75) | 契约全量落地 + lint 门禁上线 + 实机 UAT |
+| v1.24 Visual+Debt | ~9 | 8 (76-83) | 波次化并行（零重叠文件域）+ 契约双向断言 + 红绿验证 + 收口前 Lead 独立复核 |
 | v1.19 Port Write | 1 main + 1 audit | 6 (50-54 + 55) | 5-phase build order + Phase 51 mock 漏洞 Phase 54 闭环 + Phase 55 tech-deb 闭环 |
 
 ### Cumulative Quality
@@ -134,6 +192,8 @@
 | v1.16 | validator 165/165 pass | n/a | n/a |
 | v1.17 | recon 5-layer test set | n/a | 6 backend recon 端点 + 4 frontend drawer + R5 state machine |
 | v1.18 | 21 collector + 5 pipeline + 3 handler + 5 operlog regression | n/a | 1 pkg + 6 textfsm + 1 cron helper + 1 endpoint + 1 tab |
+| v1.23 | 3960 用例（vitest 全量） | n/a | eslint 0 problems + 门禁归零 |
+| v1.24 | 3960 用例（vitest 全量，独立复跑）+ 5 严格权限单测 + 7 门控组件测试 + 3 NAV-01 回归（红绿验证） | n/a | 1 中间件 + 1 门控 helper + 1 权限码真相源 + 2 契约脚本（CSS / 权限码） |
 | v1.19 | 28 mock + 10 e2e + 7 handler + 5 router + 11 migration + 25 operlog + 64 vitest | n/a | 1 pkg + 15 template + 1 menu helper + 1 model + 1 migration + 6 endpoint + 2 component + 6 wrapper + 1 constants |
 
 ### Top Lessons (Verified Across Milestones)
@@ -327,4 +387,8 @@
 2. **Migration layered idempotency(Phase 33/44/48 共验证)** — DROP IF EXISTS 在 GORM AutoMigrate 上不工作,改用 `pg_indexes` 探测 + count-then-insert
 3. **operlog module/chinese-name 双轨(Phase 34 + 48 共验证)** — 强制使用 ops asset 中文常量,避免 module 字段在审计回路漂移
 4. **基线审计后允许部分 deferred(Phase 41 29→ + Phase 48 3 site-visit)** — observe-only 策略延续,真机/外部依赖类 UAT 显式 partial 而非阻塞代码合入
+5. **契约断言必须双向(Phase 76→77 反查)** — 正向「规则存在」会让「永不命中的死规则」通过检查；须同时断言「不得出现已知死形态」，且锚定当前依赖版本里真实存在的选择器
+6. **回归测试必须红绿验证(Phase 81)** — 写完先回退实现确认它会红；否则测的是空气（本轮曾因 fixture 字段名错误 + 缺少缓存预置而假绿）
+7. **修复类工作必须留前后对照(Phase 79)** — DB 层 + HTTP 层各留「修复前/修复后」实测，否则修复后无法证明缺陷曾经存在
+8. **收口前 Lead 独立复核全量闸门(Phase 83 D5 后)** — 不采信 agent 的「全绿」声明；独立复跑 vitest 确认 flaky 与真回归之别
 5. **CR + Lint 在 phase 末尾加入,不在开头(Phase 32 P1+P2 + 48)** — 实施期先跑通,review 期 catch 全,避免过度返工
