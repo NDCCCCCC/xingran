@@ -52,9 +52,14 @@ if (resetMatch) {
 // C2 禁止 :not(组合子)
 check('C2 无 :not(含空格组合子) 形态', !/:not\([^)]*[\s>+~][^)]*\)/.test(indexCss));
 
-// C3 局部补丁守护
+// C3 局部补丁守护（Phase 88-03 更新：C3b 由「正向锁死死规则」反转为反向断言，
+// 与 D1-D4 删除同一变更集落地——先反转不删 = 断言红；先删后反转 = 中间窗口红）
+const indexCssNoComment = indexCss.replace(/\/\*[\s\S]*?\*\//g, '');
 check('C3a login.css affix 内层补丁保留', /\.ant-input-affix-wrapper\s*>\s*input\.ant-input/.test(loginCss));
-check('C3b dept-tree-search 补丁保留', /\.dept-tree-search \.ant-input-affix-wrapper \.ant-input/.test(indexCss));
+check(
+  'C3b dept-tree-search 死规则不得存在（VISFIX-03，反向断言）',
+  !/\.dept-tree-search[^\n]*\.ant-input-affix-wrapper/.test(indexCssNoComment),
+);
 check('C3c user-form-input 补丁保留', /\.user-form-input\.ant-input-affix-wrapper \.ant-input/.test(indexCss));
 
 // C4 焦点/边框来源守护
@@ -74,7 +79,6 @@ check(
   /\.ant-input-affix-wrapper\.ant-input-status-error/.test(indexCss),
 );
 // 剥掉 CSS 注释后再判定（注释里会提到这个 class 名，不能算命中）
-const indexCssNoComment = indexCss.replace(/\/\*[\s\S]*?\*\//g, '');
 check(
   'C5b 不得出现 antd 6 不存在的 affix-wrapper-status 变体（死规则）',
   !/ant-input-affix-wrapper-status-(error|warning)/.test(indexCssNoComment),
@@ -88,8 +92,8 @@ check(
 // Phase 88 (VISFIX-06) 新增断言：C6 / C11 / C8 / C12
 // ==========================================================================
 // CLI: node scripts/css-contract-check.js [--strict]
-//   默认态：C6/C11 阻断（failures 计入 exit code）；C8/C12 warn-only（仅告警）。
-//   --strict：C8/C12 命中同样阻断（Plan 03 删除完成后由 Plan 03 翻转为默认阻断）。
+//   默认态：C6/C11/C8/C12 全部阻断（failures 计入 exit code）。
+//   --strict：Phase 88-03 收口后保留为冗余标志（C8/C12 已默认阻断）。
 
 const STRICT = process.argv.includes('--strict');
 
@@ -116,14 +120,15 @@ const stripCommentsKeepLines = (text) =>
 // 或定义块与引用块同属一个明暗分区（light / dark）。
 // 近似口径说明：index.css 的明暗变量均为顶层平铺块（无 @media 嵌套作用域），
 // 故按选择器内的 [data-color-mode="dark"|"light"] 前缀推断作用域。
-const EXEMPTED_UNREF_VARS = [
-  // Phase 89 R11：--input-placeholder 仅在 light 块定义，暗色 2 处引用声明整条作废
-  //（清偿 = 统一为 --input-text-placeholder 并 :root 兜底，之后删除这 2 条豁免）
-  { name: '--input-placeholder', line: 2306, reason: 'Phase 89 R11 暗色 placeholder 引用未定义变量' },
-  { name: '--input-placeholder', line: 2336, reason: 'Phase 89 R11 暗色 placeholder 引用未定义变量' },
-  // --theme-warning-text：2 处引用 0 定义（4553 无 fallback 命中；5259 有 fallback 不命中）
-  { name: '--theme-warning-text', line: 4553, reason: 'Phase 89 R11 变量无定义，需补 :root 定义' },
-];
+  // 行号为 Phase 88-03 删除第 1 批死规则后的实测行号（88-02 版为 2306/2336/4553，删除后前移）
+  const EXEMPTED_UNREF_VARS = [
+    // Phase 89 R11：--input-placeholder 仅在 light 块定义，暗色 2 处引用声明整条作废
+    //（清偿 = 统一为 --input-text-placeholder 并 :root 兜底，之后删除这 2 条豁免）
+    { name: '--input-placeholder', line: 2276, reason: 'Phase 89 R11 暗色 placeholder 引用未定义变量' },
+    { name: '--input-placeholder', line: 2301, reason: 'Phase 89 R11 暗色 placeholder 引用未定义变量' },
+    // --theme-warning-text：2 处引用 0 定义（1 处无 fallback 命中；另 1 处有 fallback 不命中）
+    { name: '--theme-warning-text', line: 4472, reason: 'Phase 89 R11 变量无定义，需补 :root 定义' },
+  ];
 
 const checkC6 = (() => {
   const text = stripCommentsKeepLines(indexCss);
@@ -207,9 +212,9 @@ const checkC6 = (() => {
 
 // ---------- C11 !important 预算 ratchet（阻断，只降不升） ----------
 // ratchet：只允许下调，Phase 92 终值 ≤480；上调视为回归。
-// 当前基线 = 1435（Phase 88 落地时的 HEAD 实跑值，M1 全 .css 口径）；
-// Phase 88 Plan 03 删除第 1 批死规则后由 Plan 03 下调至 1395。
-const IMPORTANT_BUDGET = 1435;
+// 基线沿革：1435（Phase 88 落地时 HEAD 实跑值）→ 1398（Phase 88-03 删除第 1 批死规则后实跑值；
+// PLAN 预估 ≈1395，实跑 1398——ratchet 只许低不许高，故定值取实测）。
+const IMPORTANT_BUDGET = 1398;
 {
   const allCss = walkByExt(resolve(feRoot, 'src'), ['.css', '.less']);
   let importantCount = 0;
@@ -255,9 +260,9 @@ const IMPORTANT_BUDGET = 1435;
     });
     if (!referenced) dead.push(relFe(f));
   }
-  // 默认 warn-only：只告警不阻断；--strict 时命中即 exit 1（Plan 03 翻转为默认阻断）
-  if (STRICT) failures++;
-  console.log(`${STRICT ? 'FAIL' : 'WARN'}  C8  CSS/LESS 死文件（无 import 引用）  → ${dead.length ? dead.join(' | ') : '0（全绿）'}`);
+  // Phase 88-03 收口：默认阻断（命中即失败）；命中为 0 时不计 failures
+  if (dead.length) failures++;
+  console.log(`${dead.length ? 'FAIL' : 'PASS'}  C8  CSS/LESS 死文件（无 import 引用）  → ${dead.length ? dead.join(' | ') : '0（全绿）'}`);
 }
 
 // ---------- C12 data-color_mode 拼写（warn-only + --strict） ----------
@@ -272,9 +277,9 @@ const IMPORTANT_BUDGET = 1435;
       idx = text.indexOf('data-color_mode', idx + 1);
     }
   }
-  // 默认 warn-only：只告警不阻断；--strict 时命中即 exit 1（Plan 03 翻转为默认阻断）
-  if (STRICT) failures++;
-  console.log(`${STRICT ? 'FAIL' : 'WARN'}  C12  data-color_mode 拼写死规则  → ${hits.length ? hits.join(' | ') : '0（全绿）'}`);
+  // Phase 88-03 收口：默认阻断（命中即失败）；命中为 0 时不计 failures
+  if (hits.length) failures++;
+  console.log(`${hits.length ? 'FAIL' : 'PASS'}  C12  data-color_mode 拼写死规则  → ${hits.length ? hits.join(' | ') : '0（全绿）'}`);
 }
 
 console.log('----');

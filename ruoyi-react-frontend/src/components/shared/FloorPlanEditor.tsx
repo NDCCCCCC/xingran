@@ -15,7 +15,6 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import { getWorkstationStatusColor, getWorkstationTypeColor } from "@/utils/three/colors";
-import "./FloorPlanEditor.less";
 
 // 导入提取的类型、常量和 Hooks
 import type { WorkstationNode, FloorPlanEditorProps } from "./FloorPlanEditor.types";

@@ -869,8 +869,7 @@ body {
    Input 输入框
    ======================================== */
 .ant-input,
-.ant-input-number,
-.ant-select-selector {
+.ant-input-number {
   background: var(--input-bg) !important;
   border: 1px solid var(--input-border) !important;
   color: var(--input-text) !important;
@@ -880,21 +879,18 @@ body {
 }
 
 .ant-input:hover,
-.ant-input-number:hover,
-.ant-select:hover .ant-select-selector {
+.ant-input-number:hover {
   border-color: var(--input-border-hover) !important;
 }
 
 .ant-input:focus,
-.ant-input-number:focus,
-.ant-select-focused .ant-select-selector {
+.ant-input-number:focus {
   border-color: var(--input-border-focus) !important;
   box-shadow: 0 0 0 2px var(--theme-primary-lighter) !important;
 }
 
 [data-color-mode="dark"] .ant-input:focus,
-[data-color-mode="dark"] .ant-input-number:focus,
-[data-color-mode="dark"] .ant-select-focused .ant-select-selector {
+[data-color-mode="dark"] .ant-input-number:focus {
   box-shadow:
     0 0 0 2px rgba(21, 96, 49, 0.15),
     0 0 12px rgba(21, 96, 49, 0.1) !important;
@@ -2089,32 +2085,6 @@ body {
   max-width: 100%;
 }
 
-/* 部门树搜索框样式 */
-.dept-tree-search .ant-input-affix-wrapper {
-  border: none !important;
-  background: transparent !important;
-}
-
-.dept-tree-search .ant-input-affix-wrapper .ant-input {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.dept-tree-search .ant-input-affix-wrapper:focus,
-.dept-tree-search .ant-input-affix-wrapper-focused {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.dept-tree-search .ant-input-affix-wrapper:focus .ant-input,
-.dept-tree-search .ant-input-affix-wrapper-focused .ant-input {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
 /* 用户表单输入框样式 */
 .user-form-input.ant-input-affix-wrapper .ant-input {
   border: none !important;
@@ -2326,11 +2296,6 @@ body {
 }
 
 /* 暗色模式：Select 选择器 */
-[data-color-mode="dark"] .ant-select-selector {
-  background-color: var(--input-bg) !important;
-  color: var(--input-text) !important;
-  border-color: var(--input-border) !important;
-}
 
 [data-color-mode="dark"] .ant-select-selection-placeholder {
   color: var(--input-placeholder) !important;
@@ -3520,29 +3485,6 @@ body {
 /* ========================================
    Anchor 锚点暗色模式
    ======================================== */
-[data-color_mode="dark"] .ant-anchor {
-  color: var(--text-secondary) !important;
-}
-
-[data-color_mode="dark"] .ant-anchor-wrapper {
-  color: var(--text-primary) !important;
-}
-
-[data-color_mode="dark"] .ant-anchor-ink::before {
-  background-color: var(--border-base) !important;
-}
-
-[data-color_mode="dark"] .ant-anchor-link {
-  color: var(--text-primary) !important;
-}
-
-[data-color_mode="dark"] .ant-anchor-link:hover {
-  color: var(--sidebar-accent) !important;
-}
-
-[data-color_mode="dark"] .ant-anchor-link-active {
-  color: var(--sidebar-accent) !important;
-}
 
 /* ========================================
    Space 间距暗色模式
@@ -3599,13 +3541,6 @@ body {
   color: var(--text-secondary) !important;
 }
 
-[data-color_mode="dark"] .ant-popconfirm .ant-popconfirm-buttons .ant-btn {
-  color: var(--text-secondary) !important;
-}
-
-[data-color_mode="dark"] .ant-popconfirm .ant-popconfirm-buttons .ant-btn-primary {
-  color: #ffffff !important;
-}
 
 /* ========================================
    身份验证暗色模式
@@ -3959,22 +3894,6 @@ body {
 }
 
 /* Select */
-[data-color-mode="dark"] .ant-select-selector {
-  background: var(--input-bg) !important;
-  border-color: var(--input-border) !important;
-  color: var(--input-text) !important;
-}
-
-[data-color-mode="dark"] .ant-select:hover .ant-select-selector {
-  border-color: var(--input-border-hover) !important;
-}
-
-[data-color-mode="dark"] .ant-select-focused .ant-select-selector {
-  border-color: var(--input-border-focus) !important;
-  box-shadow:
-    0 0 0 2px rgba(21, 96, 49, 0.15),
-    var(--glow-subtle) !important;
-}
 
 [data-color-mode="dark"] .ant-select-dropdown {
   background: var(--bg-overlay) !important;
@@ -5575,9 +5494,6 @@ body {
 }
 .ant-pagination .ant-pagination-item-active a {
   color: #ffffff !important;
-}
-.ant-pagination .ant-pagination-options .ant-select-selector {
-  font-family: var(--theme-font-mono);
 }
 /* 表格底部分页：「共 X 页」靠左、翻页/跳转靠右（默认 antd 把整行 flex-end 推到右侧） */
 .ant-table-pagination.ant-pagination {
