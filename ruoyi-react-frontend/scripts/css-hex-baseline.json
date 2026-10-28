@@ -1,0 +1,23 @@
+{
+  "updated": "2026-10-29",
+  "note": "Phase 89 W3 C13 per-file hex 基线（T 批次处置后终态）。总量 ratchet 上限=W0 实跑起点 M7<=310 / M8<=452 只降不升；任何文件超本基线=新增硬编码色即阻断，豁免走 exemption-reasons.json layer:\"CSS\"。只许随下降刷新（re-baseline 须在报告中留痕）。",
+  "files": {
+    "src/App.css": 0,
+    "src/components/cad-editor/CADLayersPanel.css": 0,
+    "src/components/captcha/SliderCaptcha.css": 11,
+    "src/components/captcha/TextCaptcha.css": 2,
+    "src/components/dashboard/DashboardView.css": 0,
+    "src/components/dashboard/layout/DashboardGrid.css": 13,
+    "src/components/dashboard/layout/GridItem.css": 14,
+    "src/components/dashboard/layout/LayoutToolbar.css": 4,
+    "src/components/dashboard/layout/TemplateSelector.css": 12,
+    "src/components/dashboard/widgets/base/BaseWidget.css": 13,
+    "src/components/shared/ActionButtons.css": 9,
+    "src/index.css": 304,
+    "src/pages/ad-domain/configs/ReconciliationTab.css": 0,
+    "src/pages/dashboard-system/edit.css": 1,
+    "src/pages/dashboard-system/view.css": 0,
+    "src/pages/login/login.css": 45,
+    "src/pages/operations/building-spaces/components/styles.module.css": 12
+  }
+}
