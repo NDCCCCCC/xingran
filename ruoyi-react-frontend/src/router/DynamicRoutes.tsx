@@ -150,6 +150,13 @@ export function DynamicRoutes() {
       menus: cachedMenuData.menus,
       allMenus: cachedMenuData.allMenus,
       permissions: cachedMenuData.permissions,
+      // v1.24 PERM-02：缓存里的权限集此刻**已就绪**（30 分钟 TTL 内的有效快照），
+      // 必须同步置位 permissionsLoaded —— 否则走 setPermissions 的语义在这里被绕过，
+      // 三态门控会停在 "loading"，导致硬刷新后所有操作按钮在 hydrate→fetchAll
+      // 完成前一直是 disabled（用户看到的是"按钮灰着但没提示为什么"）。
+      // 后台 revalidate 完成后 fetchAll 会再写一次（权限集以 API 为准）。
+      permissionsLoaded: true,
+      permissionsError: null,
     });
   }, [cachedMenuData, isAuthenticated]);
 
