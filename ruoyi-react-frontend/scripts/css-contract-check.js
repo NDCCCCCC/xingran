@@ -63,7 +63,26 @@ check('C4b wrapper 边框规则保留', /\.ant-input-affix-wrapper\s*\{[\s\S]*?b
 check('C4c wrapper 焦点环规则保留', /\.ant-input-affix-wrapper-focused\s*\{[\s\S]*?box-shadow/.test(indexCss));
 
 // C5 VIS-03 status 边框色还原
-check('C5 status-error 边框色还原存在', /\.ant-input-affix-wrapper\.ant-input-affix-wrapper-status-error/.test(indexCss));
+//
+// ⚠️ v1.24 Phase 77 实测修正：antd 6 把 status class 打在 wrapper 元素**自身**，
+// 名为 `ant-input-status-error`；`ant-input-affix-wrapper-status-error` 这个 class
+// 在 antd 6.6.4 的 antd.css 中**根本不存在** → 写成它 = 永不命中的死规则
+// （Phase 76 的原 C5 恰好校验的正是这条死规则 → 契约检查形同虚设，本轮一并修正）。
+// 真实 DOM：class="ant-input-affix-wrapper ant-input-outlined ant-input-status-error"
+check(
+  'C5a status-error 边框色还原存在（正确 class）',
+  /\.ant-input-affix-wrapper\.ant-input-status-error/.test(indexCss),
+);
+// 剥掉 CSS 注释后再判定（注释里会提到这个 class 名，不能算命中）
+const indexCssNoComment = indexCss.replace(/\/\*[\s\S]*?\*\//g, '');
+check(
+  'C5b 不得出现 antd 6 不存在的 affix-wrapper-status 变体（死规则）',
+  !/ant-input-affix-wrapper-status-(error|warning)/.test(indexCssNoComment),
+);
+check(
+  'C5c status-warning 边框色还原存在（正确 class）',
+  /\.ant-input-affix-wrapper\.ant-input-status-warning/.test(indexCss),
+);
 
 console.log('----');
 console.log(`结果: ${failures === 0 ? 'ALL PASS' : failures + ' 项 FAIL'}`);

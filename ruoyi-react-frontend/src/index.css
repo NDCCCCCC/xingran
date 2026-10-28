@@ -946,19 +946,27 @@ body {
 
 /* VIS-03（F1）：Form status 边框色还原。antd 的 status 色是普通声明，
    被 :871/:910 的 border !important 简写压掉 → 错误态不变红。
-   以同级 !important + 更高特异性还原；只覆盖 Input 域，不动 Select/DatePicker（既存欠账不扩面） */
+   以同级 !important + 更高特异性还原；只覆盖 Input 域，不动 Select/DatePicker（既存欠账不扩面）
+
+   ⚠️ v1.24 Phase 77 实测修正：antd 6 把 status class 打在 **wrapper 元素自身**，
+   名为 `ant-input-status-error`（**不是** `ant-input-affix-wrapper-status-error`——
+   该 class 在 antd 6.6.4 的 antd.css 中根本不存在，写它 = 永不命中的死规则）。
+   真实 DOM：class="ant-input-affix-wrapper ant-input-outlined ant-input-status-error"
+   antd 自身的规则形如 `.ant-input-outlined.ant-input-status-error:not(.ant-input-disabled)`
+   （wrapper 与 input 共用同一个 status class）。
+   特异性：本规则 (0,2,0)+important > 项目 :910 的 (0,1,0)+important 简写 → 压得过。 */
 .ant-input.ant-input-status-error,
-.ant-input-affix-wrapper.ant-input-affix-wrapper-status-error,
-.ant-input-affix-wrapper.ant-input-affix-wrapper-status-error:hover,
+.ant-input-affix-wrapper.ant-input-status-error,
+.ant-input-affix-wrapper.ant-input-status-error:hover,
 [data-color-mode="dark"] .ant-input.ant-input-status-error,
-[data-color-mode="dark"] .ant-input-affix-wrapper.ant-input-affix-wrapper-status-error,
-[data-color-mode="dark"] .ant-input-affix-wrapper.ant-input-affix-wrapper-status-error:hover {
+[data-color-mode="dark"] .ant-input-affix-wrapper.ant-input-status-error,
+[data-color-mode="dark"] .ant-input-affix-wrapper.ant-input-status-error:hover {
   border-color: var(--ant-color-error, #ff4d4f) !important;
 }
 
 .ant-input.ant-input-status-warning,
-.ant-input-affix-wrapper.ant-input-affix-wrapper-status-warning,
-.ant-input-affix-wrapper.ant-input-affix-wrapper-status-warning:hover {
+.ant-input-affix-wrapper.ant-input-status-warning,
+.ant-input-affix-wrapper.ant-input-status-warning:hover {
   border-color: var(--ant-color-warning, #faad14) !important;
 }
 
