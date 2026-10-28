@@ -25,10 +25,10 @@
 
 ### VIS — 视觉回归修复（P0，用户主诉）
 
-- [ ] **VIS-01**: 输入框「双重外框」消除——新增 wrapper 上下文复位规则（**方案 1，推荐写法**）：`.ant-input-affix-wrapper > input.ant-input, .ant-input-affix-wrapper > textarea.ant-input { border:none !important; border-radius:0 !important; background:transparent !important; color:inherit !important; font-size:inherit !important; padding:0 !important }`——组合子在 `:not()` 外（CSS3 合法），对 variant 类与暗色标签选择器免疫；**禁止**使用 `.ant-input:not(.ant-input-affix-wrapper > .ant-input)` 形态（CSS3 下整条规则被**静默丢弃**）；**修法必须同步 4 个块**：`:871-905` 浅色主块、`:2252-2284` 暗色块（含全局 `input, textarea` **元素选择器**，特异性 0,1,1 会绕过类选择器收窄）、`:3717-3757` 暗色二块（可抄 `index.css:2056` 既有正确范式）；影响面精确 = **309 个输入框（235 AppInput + 74 AppTextArea，89 文件）全部双框**
-- [ ] **VIS-02**: 焦点环单圈化验证——焦点环画在 wrapper（antd `:focus-within`）；**复位规则里不写 box-shadow**（antd 自身的 `box-shadow:none!important` 在内层、特异性 0,4,1 已足够）；已知可接受的微小变化：焦点环**外扩 1px**；验收 = focus 特写截图确认单圈、无跳动；**不得删除** `index.css:892` / `:2275-2284` 的 focus 规则与 `:910` / `:916-923` 的 wrapper 边框/焦点环规则
-- [ ] **VIS-03**: 错误态边框色恢复——Form `status="error"` / `"warning"` 的边框色不再被项目 `border: ... !important` 简写压掉（F1；验收：`borderTopColor` = antd `colorError`，非 `--input-border`）；实现前先实测 antd 6 status class 落点（root 还是 wrapper，决定修复点）
-- [ ] **VIS-04**: CSS 一致性审计登记册——全局 1346 处 `!important` / 219 行 antd 选择器 / 96 个分区 / 60 个暗色重复分区 / `--input-bg` 就地重定义 3 次的冲突面全量盘点并登记（26 条输入类 + 8 条非输入类 + 12 条 Select 死规则——antd 6 已无 `.ant-select-selector`），产出可追溯清单 + 后续排期建议（**登记为主，不在本里程碑全量修**）
+- [x] **VIS-01**: 输入框「双重外框」消除——新增 wrapper 上下文复位规则（**方案 1，推荐写法**）：`.ant-input-affix-wrapper > input.ant-input, .ant-input-affix-wrapper > textarea.ant-input { border:none !important; border-radius:0 !important; background:transparent !important; color:inherit !important; font-size:inherit !important; padding:0 !important }`——组合子在 `:not()` 外（CSS3 合法），对 variant 类与暗色标签选择器免疫；**禁止**使用 `.ant-input:not(.ant-input-affix-wrapper > .ant-input)` 形态（CSS3 下整条规则被**静默丢弃**）；**修法必须同步 4 个块**：`:871-905` 浅色主块、`:2252-2284` 暗色块（含全局 `input, textarea` **元素选择器**，特异性 0,1,1 会绕过类选择器收窄）、`:3717-3757` 暗色二块（可抄 `index.css:2056` 既有正确范式）；影响面精确 = **309 个输入框（235 AppInput + 74 AppTextArea，89 文件）全部双框**（✅ 2026-10-28 Phase 76 完成（commit 51b545dd）：wrapper 上下文复位规则 6 项（border/radius/background/color/font-size/padding），**无 box-shadow**；实测基线「双框元素数 = 3」→「0」；契约静态检查 scripts/css-contract-check.js ALL PASS）
+- [x] **VIS-02**: 焦点环单圈化验证——焦点环画在 wrapper（antd `:focus-within`）；**复位规则里不写 box-shadow**（antd 自身的 `box-shadow:none!important` 在内层、特异性 0,4,1 已足够）；已知可接受的微小变化：焦点环**外扩 1px**；验收 = focus 特写截图确认单圈、无跳动；**不得删除** `index.css:892` / `:2275-2284` 的 focus 规则与 `:910` / `:916-923` 的 wrapper 边框/焦点环规则（✅ 2026-10-28 Phase 76 完成（commit 51b545dd）：焦点环单圈化——复位规则不写 box-shadow，焦点环由 wrapper 独家承担（实测 wrapperFocused ring #e9efeb 2px 单圈保留、内层 shadow=none 含暗色）；回归陷阱 4 项守护进静态检查脚本）
+- [x] **VIS-03**: 错误态边框色恢复——Form `status="error"` / `"warning"` 的边框色不再被项目 `border: ... !important` 简写压掉（F1；验收：`borderTopColor` = antd `colorError`，非 `--input-border`）；实现前先实测 antd 6 status class 落点（root 还是 wrapper，决定修复点）（✅ 2026-10-28 Phase 76 完成（commit 51b545dd）：status 边框色还原块（error→colorError / warning→colorWarning，含暗色与 :hover 变体）；实测错误态 borderTopColor 由 rgb(219,215,206)=--input-border 变为 rgb(255,77,79) ✅；仅 Input 域，Select/DatePicker 不扩面）
+- [x] **VIS-04**: CSS 一致性审计登记册——全局 1346 处 `!important` / 219 行 antd 选择器 / 96 个分区 / 60 个暗色重复分区 / `--input-bg` 就地重定义 3 次的冲突面全量盘点并登记（26 条输入类 + 8 条非输入类 + 12 条 Select 死规则——antd 6 已无 `.ant-select-selector`），产出可追溯清单 + 后续排期建议（**登记为主，不在本里程碑全量修**）（✅ 2026-10-28 Phase 76 完成（commit 51b545dd）：登记册 .planning/notes/v1.24-css-audit-register.md —— 34+2 条（P0 已修 8 / P1 待修 7 / P2 登记 19 / 保留 1 / 样板 1）+ Select 死规则族单列 4 条；!important 1346 → 1359（+13 = 复位 6 + status 7）；暗色 574 处/≈60 重复分区登记为 v1.25 方案 C 收敛对象）
 - [ ] **VIS-05**: 回归验证落地——computed-style 断言脚本（双框元素数=0 / 内层 box-shadow=none / wrapper 焦点环非 none / 错误态色）+ 截图矩阵（5 类输入源 × 默认/hover/focus/readonly/disabled/error × 亮/暗；**必测带字数统计的 TextArea 与无字数统计的纯 textarea 两条 DOM 路径**；DatePicker 只做回归确认，**不得顺手统一其边框色**——既存欠账不扩面）；前置基线：修复前先跑一次断言取「双框元素数 > 0」的反证
 
 ### PERM — 操作级权限（#16 前后端双端闭环）
@@ -46,11 +46,11 @@
 
 ### DIAG — 工位物理链路空因展示（3f130）
 
-- [ ] **DIAG-01**: 工位管理页接入已交付的诊断端点（前端目前 **0 处调用**，`opsApi.ts:617-620` 仍调裸 `/physical` + 硬编码静态文案 `WorkstationDeviceTable/index.tsx:604-609` 只覆盖 `info_point_misbound` 一种子情形、对其余空因是**误导性文案**）；实现口径：`getPhysical` 内部改调诊断端点但**对外仍返回数组**（调用方零改动）+ 另加 `getPhysicalWithDiagnosis`；**「有数据但 emptyReason=no_user_bound」是正常业务态**（`workstation_device_service.go:800-827` 明确「未绑用户压过有数据」，测试 :388 断言锁定；75.3% 工位属此常态）→ 渲染 **Table + warning Alert 双区**（不渲染 Empty、不用 Alert 替代表格）；0 台时 `<Alert type="info" showIcon description={emptyMessage}/>`（后端文案 60-100 字，Empty 排版拥挤）；`warnings` 任何组合下逐条可见；`diagnosis` 计数默认不展示、折叠进 Tooltip；**前置**：修正后端自相矛盾注释（`workstation_physical_diagnosis.go:63-65` 写「有数据时 EmptyReason 为空」与实现/测试相反，不修前端会照注释写错）+ 补「有数据 + 空因」不变量测试；顺带补 `WorkstationDeviceTable/index.tsx:127-129` 查询失败只 console.warn 的静默失败（加 message.warning）；只读诊断，**不写生产数据**
+- [x] **DIAG-01**: 工位管理页接入已交付的诊断端点（前端目前 **0 处调用**，`opsApi.ts:617-620` 仍调裸 `/physical` + 硬编码静态文案 `WorkstationDeviceTable/index.tsx:604-609` 只覆盖 `info_point_misbound` 一种子情形、对其余空因是**误导性文案**）；实现口径：`getPhysical` 内部改调诊断端点但**对外仍返回数组**（调用方零改动）+ 另加 `getPhysicalWithDiagnosis`；**「有数据但 emptyReason=no_user_bound」是正常业务态**（`workstation_device_service.go:800-827` 明确「未绑用户压过有数据」，测试 :388 断言锁定；75.3% 工位属此常态）→ 渲染 **Table + warning Alert 双区**（不渲染 Empty、不用 Alert 替代表格）；0 台时 `<Alert type="info" showIcon description={emptyMessage}/>`（后端文案 60-100 字，Empty 排版拥挤）；`warnings` 任何组合下逐条可见；`diagnosis` 计数默认不展示、折叠进 Tooltip；**前置**：修正后端自相矛盾注释（`workstation_physical_diagnosis.go:63-65` 写「有数据时 EmptyReason 为空」与实现/测试相反，不修前端会照注释写错）+ 补「有数据 + 空因」不变量测试；顺带补 `WorkstationDeviceTable/index.tsx:127-129` 查询失败只 console.warn 的静默失败（加 message.warning）；只读诊断，**不写生产数据**（✅ 2026-10-28 Phase 80 完成（commits 93ce5245 + b474dba9）：前端接入诊断端点（getPhysical 内部改调但对外仍返回数组 + 新增 getPhysicalWithDiagnosis）；Table+Alert 双区分级渲染（no_user_bound→info 常态 / 其余→warning / warnings 逐条 / diagnosis 计数折叠 Tooltip）；查询失败由静默 console.warn 改为 message.warning；后端自相矛盾注释已修正（口径与实现对齐：未绑用户压过有数据））
 
 ### NAV — F5 刷新落地页
 
-- [ ] **NAV-01**: F5 刷新保持当前路由——根因时序链（FEATURES/ARCHITECTURE 双研究一致）：`DynamicRoutes.tsx:173` 同步读 sessionStorage 缓存 → `:179-186` **useEffect 里**水合 store（首帧 `allMenus` 仍为空）→ `:227-240` `routeElements=[]` → 首帧空 `<Routes>` 无路由可匹配 → `:315` 的 `path="*"` catch-all 抢先命中 → `<Navigate to="/dashboard" replace/>`（passive effect 子先父后，早于水合）→ `:243-247` `saveLastPath` 把 `/dashboard` **反写回 LAST_PATH（自毁）**→ `useTabSync.ts:86-88` 把 activeTab 抢成 dashboard。修法：**方案 B（推荐）**——`<Route path="*" element={menusReady ? <Navigate to="/dashboard"/> : <InitializingFallback/>} />`（`menusReady = allMenus.length > 0`，把「菜单未加载」与「用户无权限」区分）+ 配套小修：`saveLastPath` 跳过自动兜底跳转产生的 pathname；**单独 useLayoutEffect 水合无效**（`<Navigate>` 已挂载）；回归面：`:285` 根路径→lastPath、`:263-270` 未登录跳 /login、无权限路径仍跳 /dashboard、**与 v1.23 FAIL-1 分页持久化恢复强耦合（75-UAT.md:76）须一起验收**
+- [x] **NAV-01**: F5 刷新保持当前路由——根因时序链（FEATURES/ARCHITECTURE 双研究一致）：`DynamicRoutes.tsx:173` 同步读 sessionStorage 缓存 → `:179-186` **useEffect 里**水合 store（首帧 `allMenus` 仍为空）→ `:227-240` `routeElements=[]` → 首帧空 `<Routes>` 无路由可匹配 → `:315` 的 `path="*"` catch-all 抢先命中 → `<Navigate to="/dashboard" replace/>`（passive effect 子先父后，早于水合）→ `:243-247` `saveLastPath` 把 `/dashboard` **反写回 LAST_PATH（自毁）**→ `useTabSync.ts:86-88` 把 activeTab 抢成 dashboard。修法：**方案 B（推荐）**——`<Route path="*" element={menusReady ? <Navigate to="/dashboard"/> : <InitializingFallback/>} />`（`menusReady = allMenus.length > 0`，把「菜单未加载」与「用户无权限」区分）+ 配套小修：`saveLastPath` 跳过自动兜底跳转产生的 pathname；**单独 useLayoutEffect 水合无效**（`<Navigate>` 已挂载）；回归面：`:285` 根路径→lastPath、`:263-270` 未登录跳 /login、无权限路径仍跳 /dashboard、**与 v1.23 FAIL-1 分页持久化恢复强耦合（75-UAT.md:76）须一起验收**（✅ 2026-10-28 Phase 81 完成（commit 1ce64d85）：catch-all 区分「菜单未就绪」(InitializingFallback) 与「真无路由」(跳 dashboard) + saveLastPath 加 allMenus.length>0 守卫防自毁反写；LAST_PATH 工具抽出 lastPathStorage.ts（顺带清 3 处 react-refresh）；新增 3 条回归测试并做**红绿验证**（回退实现 2 条失败 / 修复后 3 条全绿））
 
 ### HYG — 规范与存量技术债
 
@@ -113,10 +113,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VIS-01 | 76 | Pending |
-| VIS-02 | 76 | Pending |
-| VIS-03 | 76 | Pending |
-| VIS-04 | 76 | Pending |
+| VIS-01 | 76 | Satisfied (2026-10-28) |
+| VIS-02 | 76 | Satisfied (2026-10-28) |
+| VIS-03 | 76 | Satisfied (2026-10-28) |
+| VIS-04 | 76 | Satisfied (2026-10-28) |
 | VIS-05 | 77 | Pending |
 | PERM-01 | 78 | Pending |
 | PERM-02 | 78 | Pending |
@@ -124,8 +124,8 @@
 | PERM-04 | 78 | Pending |
 | PERM-05 | 79 | Pending |
 | PERM-06 | 78 | Pending |
-| DIAG-01 | 80 | Pending |
-| NAV-01 | 81 | Pending |
+| DIAG-01 | 80 | Satisfied (2026-10-28) |
+| NAV-01 | 81 | Satisfied (2026-10-28) |
 | HYG-01 | 82 | Pending |
 | HYG-02 | 82 | Pending |
 | HYG-03 | 82 | Pending |
