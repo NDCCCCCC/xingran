@@ -17,9 +17,9 @@ previous_update: 2026-10-28 v1.24 milestone INITIATED
 
 **问题来源（v1.24 收档 Known Gaps 五项，用户裁定全部立项）:**
 - **① 操作级 RBAC 全站治理**：v1.24 只修 `/system/users` 一个域；全站 134 处 `RequirePermissions` 挂载仍是 ANY-of 组级语义 + `permission.go` 模块级降级 → 只读角色在全域都可能被放行写操作；前端仅 14/76 页面接入 `useMenuStore.permissions`（其余恒显示操作入口）；`pkg/permission/config.go:223-289` 动作级映射表已定义但从未接线；`system` 域其余 4 组（roles/menus/depts/posts）仍是 ANY-of
-- **② 样式层收敛到 antd 6 variant**（方案 C）：手写 `!important` 规则 1359 处 / 219 行 antd 选择器 / 60 个暗色重复分区；圆角 CSS 6px 与 token 8px 漂移；`AntdThemeBridge.tsx:83-84` 显式 `colorBgContainer=#FFFFFF` 使 `darkAlgorithm` 不覆盖 → 暗色炸白底（F3 前置）
+- **② 样式层收敛到 antd 6 variant**（方案 C）：手写 `!important` 规则 1359 处 / 219 行 antd 选择器 / 60 个暗色重复分区；圆角 CSS 6px 与 token 8px 漂移；暗色炸白底的**真实成因是两层**（见 STYLE-01）；`!important` 的真因是「`border` 简写压掉长属性」+「antd 复合选择器达 (0,3,0)」，**不是** hash 加特异性
 - **③ 权限模型三缺口**：`data_scope` 只塞 context 不被列表查询消费（实测 `data_scope=3` 仍返回跨部门 4231 条）；`GetUserPermissions` 不过滤 `menu.status`（已停用菜单的权限码仍进前端权限集）；Step 2「子菜单继承」语义易写反（真实是「用户持 F 型按钮 → 继承父页面权限」）＋附带缺口（生产库无迁移记录表 / GORM 模型与库表 schema 漂移）
-- **④ Phase 77 视觉新发现**：暗色 `--input-bg` 第 3 处就地重定义（`index.css:4807`，实测输入框底 rgb(250,250,249) 压在深绿底 rgb(15,46,27) 上对比度极低）；暗色 Select 白底 + 浅灰边（两套边框体系并存）；`.dept-tree-search` 补丁是死规则（实测命中 0）；antd 6 弃用警告 2 类（`onSearch→showSearch`、`Modal maskClosable→mask.closable`）污染「无新增 console error」自动化判定；InputNumber 错误态仍灰
+- **④ Phase 77 视觉新发现**：暗色 `--input-bg` 第 3 处就地重定义（`index.css:4807`，实测输入框底 rgb(250,250,249) 压在深绿底 rgb(15,46,27) 上对比度极低）；暗色 Select 白底 + 浅灰边（两套边框体系并存）；`.dept-tree-search` 补丁是死规则（实测命中 0）；antd 6 真实弃用清单（`maskClosable→mask.closable`、`bordered→variant`、`dropdownRender→popupRender` 等 9 类，**`onSearch` 未弃用**——v1.24 口径有误，见下）；InputNumber 错误态仍灰（成因是项目 `border` 简写压掉 antd `border-color` 长属性 + 只给 Input 域补 status 规则漏补 InputNumber）
 - **⑤ `room-devices/index.tsx` 815 行**：比已拆分的 devices 页（714→306）更长，v1.24 明确登记不扩面
 
 **Target features:**
@@ -42,6 +42,12 @@ previous_update: 2026-10-28 v1.24 milestone INITIATED
 ## Current Milestone: v1.24 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance) — ✅ SHIPPED 2026-10-28
 
 **交付终态（2026-10-28 收档）:** 18/18 需求 Satisfied；用户主诉「输入框双重外框」根治（309 个输入框全站，双框元素数 3→0，错误态恢复品牌红）；#16 行操作权限**前后端双端闭环**（只读角色调写接口从 200 真删 → 403 拒绝，三层证据：DB 层前后对照 + HTTP 实测含决定性对照实验 + 前端组件测试）；lint 51 → **0 problems**；devices 页 714 → 306 行；生产库验收夹具已按用户指示清理、既有行零改动。Known Gaps 转 v1.25 候选（用户裁定暂不立项）：操作级 RBAC 全站治理 / 样式层收敛到 antd 6 variant / 权限模型三缺口 / 视觉新发现 / room-devices 拆分。
+
+> ⚠️ **机制更正（2026-10-28 v1.25 定向研究期，antd 6.6.4 源码实证）**：本段及 v1.24 REQUIREMENTS 中的两条**机制归因不成立**（**症状与修法均正确，仅机制需更正**）——
+> ① 「antd 6 的 cssinjs hash 前缀使 antd 规则特异性 +1 类 → 写在后面就能覆盖不成立」→ antd 6 默认 `hashPriority:'low'`（`@ant-design/cssinjs/es/StyleContext.js:47`）生成 `:where(.css-xxx)`，**hash 特异性为 0**（`util/index.js:145`），同特异性下**后写者胜**；`!important` 的真因是「`border` 简写压掉长属性」+「antd 复合选择器达 (0,3,0)」。
+> ② 「`darkAlgorithm` 不改写显式 token」→ `genColorMapToken` 展开在 `...token` **之后**（`antd/es/theme/themes/default/index.js:30-45`），**Map Token 覆盖显式值**（`colorBgContainer`/`colorBorder` 显式设**本就无效**）；暗色白底的真凶是**组件级 token 在算法之后 merge**（`getComponentToken.js:28`）+ **seed 层 `colorBgBase` 为浅奶油**。真实文件路径为 `src/design-system/components/AntdThemeBridge.tsx`（不存在 `src/components/theme/`）。
+> ③ v1.24 登记的「antd 6 弃用警告 `onSearch→showSearch`」**不成立**——antd 6.6.4 源码 `deprecatedProps` 与类型定义 `@deprecated` 清单双向确认 `onSearch` **未弃用**。
+> 详见 `.planning/REQUIREMENTS.md`（v1.25）STYLE-01 前置障碍段与关键决策表。
 
 **Goal:** 修复 v1.23 引入的输入框「双重外框」视觉回归并做 CSS 一致性审计，同时清偿 v1.23 收档结转的 4 项遗留债务（#16 行操作权限 / 3f130 空因展示 / F5 跳 /dashboard / ColumnConfigModal 豁免注释）与 2 项延后技术债（lint 存量 errors / react-refresh + devices 拆分）。
 
@@ -344,6 +350,7 @@ estate.
 - [ ] **VISFIX-03**: `.dept-tree-search` 死规则清理
 - [ ] **VISFIX-04**: antd 6 弃用警告 2 类清零（`onSearch→showSearch` / `Modal maskClosable→mask.closable`）
 - [ ] **VISFIX-05**: InputNumber 错误态边框色还原
+- [ ] **VISFIX-06**: CSS 契约脚本自身修复（`css-contract-assertions.js` 错误态 fixture 用了 antd 6 不存在的 class → VIS-03 动态断言从未真正通过；`css-contract-check.js` C3b 反转 + 新增 C6-C15 断言）
 
 **SPLIT — 巨型文件拆分**
 - [ ] **SPLIT-01**: `room-devices/index.tsx` 815 行按 devices 页范式拆分，主文件 ≤ 350 行，每新文件 ≤ 250 行，行为零变化

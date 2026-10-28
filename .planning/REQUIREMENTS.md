@@ -35,13 +35,19 @@
 
 ## STYLE — 样式层收敛到 antd 6 variant
 
-> **前置障碍（F3）**：`AntdThemeBridge.tsx:83-84` 显式设 `colorBgContainer='#FFFFFF'` / `colorBorder='#dbd7ce'`；antd `darkAlgorithm` **不改写显式传入的 token** → 暗色下容器仍白底 + 浅灰边，同页并存两套边框体系。**必须先重构明暗色板，才能谈 variant 收敛**。
+> **前置障碍（F3，机制已在 v1.25 定向研究中源码实证并更正）**：暗色炸白底由**两层**叠加——
+> ① **组件级 token 在算法之后 merge**（`@ant-design/cssinjs-utils/es/util/getComponentToken.js:28`：`mergedToken = {...defaultToken, ...customToken}`）→ `AntdThemeBridge.tsx:122/130/164` 的 `components.Input/Select/Card.colorBgContainer = cream.surface(#FFFFFF)` **暗色算法改不动**；
+> ② **Map Token 覆盖显式值**（`antd/es/theme/themes/default/index.js:30-45`：`genColorMapToken` 展开在 `...token` **之后**）→ `colorBgContainer`/`colorBorder` 是 Map Token，显式设置**本就无效**，真凶是 **seed 层 `colorBgBase = cream.canvas(#F0ECE3)` 浅奶油**，算法从浅色 seed 派生 → 暗色下仍是浅灰边框。
+>
+> **机制更正（v1.25 研究期，源码实证）**：v1.24 登记的「`darkAlgorithm` 不改写显式 token」**机制描述不成立**（症状对、机制错）；文件真实路径为 `src/design-system/components/AntdThemeBridge.tsx`（**不存在** `src/components/theme/`），`colorBgContainer` 在 `:83`、`colorBorder` 在 `:86`（非 84）。
+>
+> **同时更正 v1.24 的「写在后面就能覆盖不成立」**：antd 6 默认 `hashPriority:'low'`（`@ant-design/cssinjs/es/StyleContext.js:47`）→ 生成 `:where(.css-xxx)`，**hash 特异性为 0**（`util/index.js:145`）→ 同特异性下**后写的项目 CSS 胜**。1359 处 `!important` 的真因是「`border` 简写压掉 antd `border-color` 长属性」+「antd 复合选择器达 (0,3,0)」，**不是** hash 加特异性。这条更正直接决定 STYLE-02 的批次划分与修法优先级。
 
-- [ ] **STYLE-01**: `AntdThemeBridge` 明暗色板重构——品牌 token 交由算法派生而非硬编码，暗色下 `colorBgContainer` / `colorBorder` 正确派生，**暗色 Select 等容器不再白底**，同页不再并存两套边框体系
-- [ ] **STYLE-02**: 手写 antd 覆盖规则按四批清单收敛：**可整块删除**批清零（antd 6 已不存在的选择器 + 零命中死规则）、**可降级为 token 引用**批完成替换、**需重写为 variant 机制**批完成重写；**必须保留**批逐条登记理由（含 v1.24 已交付的 wrapper 复位规则与焦点环）
-- [ ] **STYLE-03**: 输入类组件圆角统一由 6px 收敛到设计 token 的 8px
-- [ ] **STYLE-04**: hex 治理覆盖 `.css` 文件（现 eslint selector 只匹配 JS/TS 节点，对样式文件失明），**收敛过程不得新增硬编码色**
-- [ ] **STYLE-05**: 收敛后明暗双主题下输入类 / 选择类 / 表格类组件与 antd 官方渲染一致——computed-style 断言 + 截图矩阵双测通过，且**不破坏 v1.24 已交付的 VIS-01/02/03 修复**（双框消除 / 焦点环单圈 / 错误态边框色）
+- [ ] **STYLE-01**: `AntdThemeBridge` 明暗色板重构（**两层同治**）——**新增暗色品牌中性色常量组**（项目现缺 `ruoyiBrand.dark`，需先做设计决策）+ 去掉组件级写死的 `colorBgContainer` + seed 层 `colorBgBase` 改为按模式派生；验收 = 暗色下 Select / Input / Card 容器不再白底，同页不再并存两套边框体系
+- [ ] **STYLE-02**: 手写 antd 覆盖规则按**四批清单**收敛（清单已定稿于 `.planning/research/PITFALLS.md` §四批规则清单，逐条带 `文件:行号` 与「删除前必须验证的无害性证据」）：**可整块删除 17 条**（D1-D17 = 8 条死选择器规则 + 8 个从未被 import 的死文件 470 行 + 1 条死变量）、**可降级为 token 引用 14 条**（T1-T14）、**必须保留并登记 11 条**（K1-K11 = VIS-01/02/03 契约守护 + 焦点环 + 2 处活补丁）、**需重写而非删除 11 条**（R1-R11 = 交还 antd variant/token）。**量化验收（M1-M16 口径，每 phase 报告落盘）**：全 `.css` `!important` **1435 → ≤480**、`index.css` `!important` **1359 → ≤420**、含 `.ant-` 顶层规则 **748 → ≤420**、暗色顶层规则 **506（+8 条拼写错误）→ ≤150**、暗色分区 **64 → ≤12**、重复暗色 class **80 → 0**、`index.css` hex **311（去重 66）→ ≤60（去重 ≤20）**、全 `.css` hex **465 → ≤120**、`index.css` 行数 **5632 → ≤3200**、死文件 **8 个 / 555 行 → 0**。⚠️ **批次排序硬约束（两份研究分歧已裁定）**：**批次 C（`border` 简写拆长属性，`:871-880`）必须先于批次 B（VIS-01 内层复位块 `:937-945`）**——`:875` 的 `border:…!important` 是 important 声明，**胜过一切非 important 规则且与特异性无关**，只要它还在，删复位块立即恢复 309 个输入框的双框；B 与 C 须**同 commit 或 C 先落地**。另：① `scripts/css-contract-check.js` 的 **C3b 正在锁死 `.dept-tree-search` 这条死规则** → 删除前须改为**反向断言**「该选择器不得存在」，并保留 C3c（`.user-form-input…` 活规则）为正向断言；② `scripts/css-contract-assertions.js` 的错误态 fixture 用了 antd 6 **不存在**的 class → 该断言**永远 FAIL**（假红），须先修（见 VISFIX-06）
+- [ ] **STYLE-03**: 输入类组件圆角统一由 6px 收敛到设计 token 的 8px（含 wrapper 与分页器；`index.css:877/912/5563`）——⚠️ 视觉上只差 2px，**肉眼不可作为验收依据**，必须用 computed-style `borderTopLeftRadius` 单值断言
+- [ ] **STYLE-04**: hex 治理覆盖 `.css` 文件——`eslint.config.js:132` 的 hex 禁令块 `files: ["src/**/*.{ts,tsx}"]` **不含 `.css`**，导致 `index.css` 311 处 hex 中 **309 处（99.4%）不受任何门禁**；须让 `scripts/check-hardcoded-colors.mjs`（当前 **exit=1**、18 个文件命中、**未接入 `lint:ci`**）成为有效门禁，且**收敛过程不得新增硬编码色**
+- [ ] **STYLE-05**: 收敛后明暗双主题下输入类 / 选择类 / 表格类组件与 antd 官方渲染一致——computed-style 断言 + 截图矩阵双测通过，且**不破坏 v1.24 已交付的 VIS-01/02/03 修复**（双框消除 / 焦点环单圈 / 错误态边框色）；验收含硬指标：暗色 `--input-bg` 解析值 `#fafaf9` → `#0f2e1b`、暗色 placeholder 变量非空、InputNumber 错误态边框 `rgb(219,215,206)` → `rgb(186,54,48)`、圆角 8px
 
 ## PMODEL — 权限模型三缺口
 
@@ -55,8 +61,9 @@
 - [ ] **VISFIX-01**: 暗色模式下输入框底色不再被 `--input-bg` 第 3 处就地重定义（`index.css:4807`）覆写回浅色 —— 暗色输入框底与页面底对比度达标（v1.24 实测 `rgb(250,250,249)` 压在 `rgb(15,46,27)` 上）
 - [ ] **VISFIX-02**: 暗色模式 Select 容器底色与边框随色板派生，不再白底 + 浅灰边（与 STYLE-01 联动，一次改动同时消两债）
 - [ ] **VISFIX-03**: `.dept-tree-search` 死规则清理（v1.24 实测命中数 0 —— 后代选择器要求祖先持有该 class，实际 class 落在 AppInput 自身上）
-- [ ] **VISFIX-04**: antd 6 弃用警告 2 类清零（`onSearch→showSearch`、`Modal maskClosable→mask.closable`）——「无新增 console error」的自动化判定不再被污染
-- [ ] **VISFIX-05**: InputNumber 错误态边框色还原，与 Input / TextArea 错误态一致（v1.24 登记册 #16 欠账）
+- [ ] **VISFIX-04**: antd 6 **真实弃用清单**清零（`Modal maskClosable→mask.closable` 46 处、`Card bordered→variant` ≈13 处、`Select dropdownRender→popupRender` / `dropdownStyle→styles.popup.root` / `dropdownClassName|popupClassName→classNames.popup.root` / `onDropdownVisibleChange→onOpenChange` / `dropdownMatchSelectWidth→popupMatchSelectWidth` / `showArrow`、`destroyOnClose` 6 处、`bodyStyle` 4 处、`size="middle"→"medium"` 17 处）——「无新增 console error」的自动化判定不再被污染。**更正**：v1.24 口径的「`onSearch→showSearch`」**不成立**——antd 6.6.4 的 `Select.onSearch` / `Input.Search.onSearch` **均未弃用**（源码 `deprecatedProps` 清单 + 类型定义 `@deprecated` 清单双向确认），`showSearch` 是「开启可搜索」的开关而非替代品
+- [ ] **VISFIX-05**: InputNumber 错误态边框色还原，与 Input / TextArea 错误态一致（v1.24 登记册 #16 欠账）——成因**不是 antd 缺陷**（antd 6.6.4 状态规则完整，status 类落在 `.ant-input-number` 根）：是项目 `index.css:875` 的 `border: … !important` **简写**压掉 antd 的 `border-color` **长属性**，且项目只给 Input 域补了 status 规则（`index.css:958-965`）**漏补 InputNumber**，另有暗色块 `:2297` 二次覆盖。验收 = InputNumber 错误态边框 `rgb(219,215,206)` → `rgb(186,54,48)`
+- [ ] **VISFIX-06**: **CSS 契约脚本自身修复**（收敛的验证底座，不修则 STYLE-02/05 的验收不可信）——① `scripts/css-contract-assertions.js:48` 的错误态 fixture 用了 antd 6 **不存在**的 `ant-input-affix-wrapper-status-error`（而 C5b 明令禁止该形态）→ `passed` **恒为 false**，即 **VIS-03 的动态断言从未真正通过**（假红失守），须改用真实 class `ant-input-status-error`；② `scripts/css-contract-check.js` 的 **C3b 正在锁死命中数 0 的死规则** → 反转为反向断言（保留 C3c 活规则为正向断言）；③ 新增静态断言 C6-C15（变量必须定义 / 暗色目标不重复 / 死文件检测 / 变量不重复赋值 / module.css 不含 `.ant-` / `!important` 预算 / `data-color_mode` 拼写 / css hex 全量检测 / 弃用 prop 零命中 / AntdThemeBridge `useMemo` 依赖覆盖）
 
 ## SPLIT — 巨型文件拆分
 
@@ -72,7 +79,9 @@
 | **执行顺序 ①权限 → ②样式**（用户裁定） | 权限改造动 JSX、样式收敛动 CSS，文件面小重叠；权限先行可复用 v1.24 三态门控基建，避免样式波动与权限改造混在同一验证周期 |
 | **研究范围仅 ② 定向**（用户裁定） | ①③⑤ 靠本仓事实与既有实证 note；仅 ② 的 antd 6 官方 API 语义需外部核验，避免为已知债务做无产出的域外研究 |
 | **复用 v1.24 基建不重造** | `RequireStrictPermissions`（只做 Step1 精确匹配，跳过 F 型继承与模块降级）/ `useActionPermission` 三态门控 / `permissionCodes.ts` 单一真相源 + 双向校验脚本——均为 v1.24 已验证资产 |
-| **STYLE-01 必须先于 STYLE-02** | 显式 token 击穿 `darkAlgorithm` 是 F3；在色板重构前做规则收敛，会把暗色炸白底固化进新规则 |
+| **STYLE-01 必须先于 STYLE-02** | 暗色炸白底是两层成因（组件级 token 在算法后 merge + seed 层浅奶油 `colorBgBase`）；在色板重构前做规则收敛，会把暗色白底固化进新规则 |
+| **机制更正（v1.25 研究期，源码实证）** | v1.24 登记的「`darkAlgorithm` 不改写显式 token」与「写在后面就能覆盖不成立」**两条机制描述均不成立**——前者真因是 Map Token 覆盖 + 组件 token 后 merge + 浅奶油 seed；后者真因是 antd 6 `hashPriority:'low'` 使 hash 特异性为 0。**症状对、机制错**，若照旧机制做收敛会修错地方 |
+| **不迁 `onSearch`** | antd 6.6.4 源码 `deprecatedProps` 与类型定义 `@deprecated` 清单双向确认 `onSearch` **未弃用**；`showSearch` 是开关不是替代品。v1.24 的「`onSearch→showSearch`」是未核验断言，不得实施 |
 | **门控取三态而非纯 fail-closed** | 沿用 v1.24 决策：空权限集与未加载在数据上不可区分，纯 fail-closed 会在接口失败时把管理员也锁死且无提示 |
 | **零新依赖** | 沿用 v1.23 / v1.24 原则；不引 stylelint / Playwright / jscodeshift；视觉验证用现有 computed-style 断言 + agent-browser |
 | **不破坏 v1.22 / v1.24 冻结契约** | v1.22 公共组件契约与 v1.24 VIS-01/02/03 修复均为已验收资产；STYLE-01 涉及 `AntdThemeBridge` 色值真相源（v1.22 冻结面），须单独登记与验收 |
@@ -111,10 +120,10 @@
 |-------------|-------|--------|
 
 **Coverage:**
-- v1.25 requirements: 25 total（RBAC×6 · STYLE×5 · PMODEL×4 · VISFIX×5 · SPLIT×1）
+- v1.25 requirements: 26 total（RBAC×6 · STYLE×5 · PMODEL×4 · VISFIX×6 · SPLIT×1）
 - Mapped to phases: 待 roadmap 填充
 - Unmapped: 待 roadmap 填充
 
 ---
 *Requirements defined: 2026-10-28*
-*Last updated: 2026-10-28 初版（起点基线为本次实测复核：76 页面 / 76 路由组 / 134 处权限挂载 / 严格权限 1 处 / 死表零调用点 / data_scope 零消费点；STYLE 量化目标待 ② 定向研究回填后校订）*
+*Last updated: 2026-10-28 定稿（② 定向研究已回填：STACK.md + PITFALLS.md + SUMMARY.md；含**三条 v1.24 机制描述的源码实证更正**——`darkAlgorithm` 覆盖显式 token / antd 6 hash 特异性为 0 / `onSearch` 未弃用；含 STYLE-02 四批精确清单 + M1-M16 量化基线 + VISFIX-06 契约脚本自身修复）*

@@ -1,1131 +1,1026 @@
-# Pitfalls Research — v1.24「视觉回归修复 + 遗留定责与清偿」
+# PITFALLS: 项目 CSS 冲突面盘点与 antd 6 variant 收敛路径
 
-**Domain:** 前端样式层回归修复（antd 6.6.4）+ 权限定责（#16）+ 诊断展示（3f130）+ 路由行为（F5）+ lint/react-refresh 清偿（RuoYi-Next v1.24）
+**Project:** RuoYi-Next 运维管理系统
+**Milestone:** v1.25 全站权限治理与样式收敛（② 样式层收敛定向研究 · 项目 CSS 侧）
 **Researched:** 2026-10-28
-**Confidence:** HIGH（样式层与 lint 层结论全部基于实际读取的 `node_modules/antd@6.6.4` 源码、`node_modules/@rc-component/input`、`node_modules/@ant-design/cssinjs`、`node_modules/eslint-plugin-react-refresh` 实现，以及 `npm run lint` 的实测输出（17 errors / 34 warnings）；功能层基于 `pkg/permission/config.go`、`internal/services/system/menu_service.go`、`internal/api/v1/operations/workstation_device_handler.go`、`src/router/DynamicRoutes.tsx` 等源码原文。个别断言标注 MEDIUM）
+**Confidence:** 总体 HIGH（盘点数字实跑得出；落地效果仍需实机验证）
 
-**Note:** 本文件此前为 v1.23 版本（研究对象为「前端契约全量收尾与遗留清偿」），已按 v1.24 范围**整体覆盖重写**；v1.23 原文可从 git 历史找回。
+> 本文件是 **只读研究**产出：未修改任何业务代码、未 git commit。所有统计数字来自下文
+> [Sources § 实跑命令](#sources) 中列出的真实命令输出。行号以当前 HEAD
+> (`ruoyi-react-frontend/src/index.css` = **5632 行**) 为准。
+> 标注约定：**HIGH** = 实跑统计 / 源码实证；**MEDIUM** = 由实证推导；**LOW** = 需人工实机验证。
 
-**v1.24 范围与 phase 命名（本文用逻辑 phase 名，ROADMAP 定稿时对号入座）：**
+---
 
-| Phase | 内容 |
-|---|---|
-| **P1 样式修复** | 输入框双重外框（v1.23 引入的回归） |
-| **P2 #16 定责** | 行操作权限 PG 复测定责 + 修复 |
-| **P3 3f130 展示** | 空因诊断前端展示 |
-| **P4 F5 落地页** | F5 刷新落 `/dashboard` |
-| **P5 豁免注释** | `ColumnConfigModal.tsx:136` |
-| **P6 lint 清偿** | 17 errors + exhaustive-deps 12 处 |
-| **P7 结构整理** | react-refresh 33 处清零 + devices 页拆分 |
+## 0. 执行摘要（先读这页）
+
+### 0.1 与 v1.24 既有事实的复核结果
+
+| v1.24 给出的数字 | 本次实跑复核 | 结论 |
+|---|---|---|
+| `index.css` 约 5000+ 行 | **5632 行** | ✅ 成立（比 v1.24 记录的 5622 又多 10 行） |
+| `index.css` 中 `!important` **1359 处** | **1359 处** | ✅ **完全一致** |
+| 命中 antd 选择器约 **219 行** | **798 行**含 `.ant-` / **748 条**顶层规则含 `.ant-` | ⚠️ **口径不同**（219 疑为 v1.24 当时的抽样或另一口径），本文件改用「规则条数」为准 |
+| 全文件 **96 个分区** | **97 个** `/* =====` 分区块 | ⚠️ 差 1（文件自 v1.24 后有增补） |
+| 暗色重复分区约 **60 个** | **44**（间隙 >12 行）/ **64**（间隙 >5 行）/ **100**（间隙 >3 行） | ✅ 「约 60」成立（对应间隙 >5 口径 = 64） |
+| `--input-bg` 第 3 处就地重定义 `index.css:4807` | **实际在 `index.css:4815`**（`:root` 块起于 4812） | ⚠️ 行号有 8 行偏差，**结论不变** |
+| 暗色重复分区用 `[data-color-mode="dark"]` | ✅ 574 处正确 + **8 处拼写错误 `[data-color_mode="dark"]`**（`index.css:3523-3545`, `3602-3608`） | ➕ **新发现：8 条必然死规则** |
+
+### 0.2 五条关键发现（新增，v1.24 登记册未覆盖）
+
+1. **F-01 · `--input-bg` 串色坐实且已定位到根因行**
+   `index.css:4815` 的 `:root { --input-bg: #fafaf9 }` 与 `index.css:198` 的
+   `[data-color-mode="dark"] { --input-bg: #0f2e1b }`（第 254 行）**特异性相同 (0,1,0)**，
+   后者在前、前者在后 → **暗色下 `--input-bg` 最终解析为浅色 `#fafaf9`**。
+   连锁效应：`--input-bg-hover` / `--input-bg-focus` / `--input-bg-disabled` **只在暗色块定义**
+   （255/256/257），未被覆写 → 暗色下形成「底色浅、悬停/聚焦深」的**半明半暗混合态**。
+   影响面：`--input-bg` 被 **22 处** `var()` 引用（`index.css` 内 22 行）。
+
+2. **F-02 · 7 个 CSS 文件是「从未被 import 的死文件」**（共 **470 行** + **9 处 `!important`**）
+   `theme-styles.css`（97 行 / 7 important）、`dashboard-system/index.css`（129 行）、
+   `ChartWidget.css`（23 行 / 2 important）、`ListWidget.css`（77 行）、
+   `MetricWidget.css`（24 行）、`ProgressWidget.css`（53 行）、`StatCardWidget.css`（67 行）。
+   另有 `CADFloorPlanEditor.less`（85 行）**未被 import**，`FloorPlanEditor.less` 为 **0 字节空文件**。
+   → 这是本里程碑「可整块删除」批次中**风险最低、收益最高**的一批。
+
+3. **F-03 · `.ant-select-selector` 在 antd 6.6.4 已完全不存在 —— 死规则族扩大到 9 行 / 7 条规则**
+   实证：`grep -r 'select-selector' node_modules/antd` 唯一命中在
+   `node_modules/antd/dist/antd.css`，且形态是
+   `.ant-color-picker .ant-color-picker-inner … .ant-color-picker-format-select.ant-select-single .ant-select-selector{…}`
+   —— 是 **ColorPicker 内部的后代选择器**，普通 Select **不渲染** `.ant-select-selector` 元素。
+   `node_modules/@rc-component/select/es/` 全目录 **零命中** `-selector`。
+   → v1.24 登记册 S1-S4 全部坐实，可直接进「第 1 批｜可删」。
+
+4. **F-04 · 暗色下有 2 处 `var()` 引用了「只在浅色块定义」的变量 → 声明直接失效**
+   `index.css:2304`（`.ant-input::placeholder`）与 `index.css:2335`
+   （`.ant-select-selection-placeholder`）使用 `var(--input-placeholder)`，
+   而该变量**只在 `[data-color-mode="light"]`（184-190 区间）定义**，暗色块定义的是
+   `--input-text-placeholder`。CSS 变量未定义时 `var()` 整条声明在计算值阶段作废 →
+   **暗色 placeholder 颜色回落到继承值**，与设计意图（`#707068`）不符。
+   另有 `--theme-warning-text`（2 次）与 `--radius`（1 次，有 fallback）**全局从未定义**。
+
+5. **F-05 · hex 治理对 `.css` 近乎完全失明，且现有 CSS 扫描脚本本身已在失败态**
+   `eslint.config.js:132` 的 hex 禁令块 `files: ["src/**/*.{ts,tsx}"]` —— **不含 `.css`**；
+   而真正扫 `.css` 的 `scripts/check-hardcoded-colors.mjs` 虽有 31 条 hex 映射，
+   但 `index.css` 里 311 处 6 位 hex 中**只有 2 处命中 denylist**（`#ff4d4f`@964、`#faad14`@970）
+   → **309 / 311 = 99.4% 的硬编码色不受任何门禁约束**。
+   且该脚本**当前 exit code = 1**（18 个文件命中），**未被接入 `lint:ci`** → 现状是「有扫描器、无门禁」。
+
+### 0.3 四批规则清单规模（详见 [§ 四批规则清单](#四批规则清单)）
+
+| 批次 | 条数 | 说明 |
+|---|---|---|
+| 第 1 批｜可整块删除 | **17** | 8 条死选择器规则 + 8 个死文件 + 1 条死变量 |
+| 第 2 批｜可降级为 token 引用 | **14** | 硬编码 hex / 圆角 / 字号 / 阴影 |
+| 第 3 批｜必须保留并登记 | **11** | 契约守护、焦点环、错误态还原 |
+| 第 4 批｜需重写而非删除 | **11** | 必须迁到 variant / token 机制 |
+
+### 0.4 与并行 `STACK.md`（同批 v1.25 CSS 定向研究）的对齐与**分歧**
+
+对齐（双方实跑结论一致，可直接合并）：
+`index.css:871-880` 的 `border` 简写压掉 status 色 / `index.css:958-965` 的 VIS-03 还原
+只覆盖 Input 域 / `index.css:937-945` 的 VIS-01 复位块 / `index.css:2297-2301` 暗色 InputNumber
+再压一次 / `AntdThemeBridge.tsx:82,122,130,164` 的浅色常量 / 1359 `!important` /
+574 处 `[data-color-mode="dark"]` / 9 处 `.ant-select-selector` —— **行号与结论全部一致**。
+
+**分歧 1（重要）· `STACK.md` §7 批次 B 建议「立刻删除 `index.css:937-945`」——本报告反对。**
+`STACK.md` 的理由是「antd `input/style/index.js:382-395` 已声明同样的复位」。
+但那个复位规则的**特异性只有 (0,1,1)**，而项目 `index.css:875` 的
+`.ant-input { border: … !important }` 是 **(0,1,0) + `!important`** ——
+`!important` 直接压过一切非 `!important` 规则，与特异性无关。
+→ **只要 `:875` 还在，删掉 `:937-945` 就会立刻恢复双框**（309 个输入框）。
+正确顺序是：先删/改 `:875`（第 4 批 R1），**同一 commit 内**再重估 `:937-945`。
+（`STACK.md` 批次 C 与 B 顺序相反：B 在 C 之前。）**本报告把 `:937-945` 列入第 3 批（K1），
+并在 Phase 4 明确「删覆盖与保留复位块必须同 commit」。**
+
+**分歧 2 · `STACK.md` 未提及的三项本报告新增发现**：
+① `index.css:4815` 的 `:root { --input-bg: #fafaf9 }` 串色（`STACK.md` 引用了
+`index.css:1-5632` 的整体统计但未定位到这一行）；② 7 个从未 import 的死 CSS/`.less` 文件
+（555 行）；③ `css-contract-assertions.js:48` 的 fixture 用了 antd 6 不存在的 class
+→ 该动态断言**恒为 false**，VIS-03 实际处于失守状态。
 
 ---
 
 ## Critical Pitfalls
 
-### 领域 A：样式层（输入框双重外框）
+## Critical Pitfalls
 
-### Pitfall A1：`:not()` 内含组合子 —— CSS3 下整条规则被**丢弃**，不是"不匹配"
+### P-C1 · 收敛中途态「删一半破相」：边框/焦点环/错误态三源并存
 
-**What goes wrong:**
-拟用 `.ant-input:not(.ant-input-affix-wrapper > .ant-input)` 收窄主题规则、排除 affix-wrapper 内层 input。CSS Selectors Level 3 规定 `:not()` 只接受**简单选择器**（元素名/通配/属性/类/ID/伪类），**组合子（`>`、空格、`+`、`~`）不允许出现在 `:not()` 参数中**。在 CSS3 解析器下，这条规则不是"匹配不到任何元素"，而是**整条声明被丢弃**（等价于该规则不存在）→ 收窄完全失效，双框原样保留，而且**开发/生产浏览器都不会报错**（无控制台告警）。
+- **What goes wrong:** 项目手写 CSS 与 antd 6 同时为同一属性提供边框与焦点环。若先删项目层
+  而 antd 侧（`variant` / `colorBgContainer` / `colorBorder`）尚未就位，输入框会瞬间回到
+  antd 默认 6px 圆角 + 默认蓝灰边框 + antd 默认焦点环，与 v1.24 已验收的「单圈 2px 绿焦点环 /
+  错误态红框」不符；若先动 antd 侧而项目层还在，则出现**双框**（v1.24 P0 原症状复发）。
+- **Why it happens:** `index.css:871-880`（`.ant-input` 边框/底/圆角，`!important`）、
+  `index.css:908-914`（`.ant-input-affix-wrapper` 边框，`!important`）、
+  `index.css:937-945`（VIS-01 内层复位）、`index.css:958-971`（VIS-03 错误态还原）
+  四条规则构成一个**互相咬合的最小闭环**。任何一条被单独移除，闭环即破。
+- **Consequences:** v1.24 已交付的 VIS-01/02/03 回归（双框数 3→0、焦点环单圈、错误态红框
+  `rgb(186,54,48)`）全部失效；`scripts/css-contract-check.js` 的 C1/C4/C5 三项断言转为 FAIL。
+- **Prevention:** 严格按 [§ 收敛顺序](#收敛顺序建议) 的 **Phase 3 → Phase 4** 顺序：先由
+  `AntdThemeBridge` 把 antd 侧 token 调到与项目层**逐像素等价**（灰度等价期，两层同时生效且值相同），
+  再在同一个 commit 内删除项目层对应规则。**禁止**出现「antd 侧已改、项目层未删」跨 commit 的窗口。
+- **Detection:** 每个 commit 必跑 `node scripts/css-contract-check.js`（静态结构，退出码 0）
+  + `scripts/css-contract-assertions.js`（浏览器 computed-style，`doubleCount` 必须 = 0）。
 
-更危险的是"半生效"：如果只把 `border` 挪进 `:not()` 块而 `background`/`border-radius` 留在块外，规则被丢弃后会出现"边框规则没生效、其它规则生效"的错位认知，排查方向被带偏。
+### P-C2 · 双 ConfigProvider 嵌套：主题 token 的真实生效点不在你以为的地方
 
-**Why it happens:**
-CSS3 的 `:not()` 限制写进规范时还没有 `:is()`/`:where()`，开发者习惯用"排除型选择器"表达"排除某结构内的元素"，而 CSS 直到 Level 4 才放宽（`:not()` 接受 complex-real-selector-list）。
+- **What goes wrong:** `src/App.tsx:47-48` 是 `<AntdThemeBridge>` 包裹 `<ConfigProvider>`；
+  `AntdThemeBridge.tsx:178` 内部才是真正的 antd `<ConfigProvider theme={antdThemeConfig}>`。
+  项目自有的 `src/components/ConfigProvider.tsx` **不渲染任何 Provider**，它只是
+  `useEffect` 同步 `settingsStore → themeStore/layoutStore` 的**副作用组件**（返回 `children`）。
+  → 任何「我改了 ConfigProvider 的 theme 为什么没生效」的排查都会走错方向；
+  任何在 `AntdThemeBridge` 之外的层级写 antd token 都无效。
+- **Why it happens:** 两处都叫 `ConfigProvider`（`@/components/ConfigProvider` 与 antd 的），
+  命名相同、语义完全不同；且 `AntdThemeBridge` 用 `useMemo([themeMode, density])` 缓存
+  themeConfig —— **token 只在这两个值变化时重算**。若把「明暗色板」改成依赖其它 store 字段，
+  必须同步扩 `useMemo` 依赖数组，否则 token 不更新。
+- **Consequences:** 收敛期改 token 全部「看起来没反应」，浪费 phase；
+  更糟的是有人会去改 `src/components/ConfigProvider.tsx`（改 themeStore 同步），
+  造成**明暗切换延迟一帧**或**首次进入暗色闪烁**。
+- **Prevention:** 收敛期只允许在 `AntdThemeBridge.tsx` 的 `antdThemeConfig` 内改 token；
+  `src/components/ConfigProvider.tsx` **冻结**（只读）。
+  若新增 token 输入源，必须在同一个 commit 内扩 `useMemo` 依赖并加一条断言。
+- **Detection:** 在 `AntdThemeBridge.tsx` 的 `useMemo` deps 上加单测断言（见
+  [§ 量化基线 § 3.3](#33-契约脚本扩展点)）；浏览器侧断言
+  `getComputedStyle(document.querySelector('.ant-btn-primary')).backgroundColor`。
 
-**How to avoid:**
-**不要用 `:not()` 收窄**。改用下面三种之一（详见文末《附录 A：`:not()` 替代方案矩阵》）：
-1. **wrapper 上下文 + 直接子元素组合器**（推荐，CSS3 合法）：
-   ```css
-   .ant-input-affix-wrapper > input.ant-input,
-   .ant-input-affix-wrapper > textarea.ant-input { border: none !important; ... }
-   ```
-   特异性 (0,3,1)，组合子在 `:not()` **之外**，CSS3 完全合法。
-2. **`:where()` 包裹 + 组合子在 `:where()` 外**（CSS3 合法，`:where()` 零特异性）：
-   ```css
-   :where(.ant-input-affix-wrapper) > :where(input.ant-input) { ... }
-   ```
-   用于「不要压制 antd 其它状态样式」的场合。
-3. **antd 6 的 variant 类**（`.ant-input-outlined` 等）—— 语义最准，但对 `ConfigProvider` 全局 variant 变更敏感（见 A3）。
+### P-C3 · 暗色 `--input-bg` 串色：不修这一条，后面所有「暗色对比度验收」都无意义
 
-若确实必须用 `:not()` 收窄，**必须**同时：
-- 确认 `browserslist` 全部目标 ≥ Chrome 88 / Firefox 84 / Safari 9；
-- 加 `@supports selector(:not(* > *))` 包裹做能力探测；
-- 在 CI 里加一条「`:not()` 参数内不得出现组合子」的 lint/脚本检查（`scripts/` 下已有 `check-*.mjs` 家族可扩展）。
+- **What goes wrong:** `index.css:4815` 的 `:root { --input-bg: #fafaf9 }` 与
+  `index.css:254` 的暗色 `--input-bg: #0f2e1b` 特异性相同、后者在前 → 暗色下解析为 `#fafaf9`。
+  实测（v1.24 记录）输入框底 `rgb(250,250,249)` 压在深绿页面底 `rgb(15,46,27)` 上，
+  对比度约 **1.15:1**（远低于 WCAG AA 4.5:1 与 UI 组件 3:1）。
+- **Why it happens:** `:root` 与 `[data-color-mode="dark"]` **特异性相同**（均为 0,1,0），
+  纯靠**源码顺序**决胜；而项目把「原型实测」的浅色输入框底写进了后置的 `:root` 块，
+  暗色块无法覆盖它。同时 `--input-bg-hover/-focus/-disabled` **只在暗色块定义**，
+  于是形成「底浅、态深」的割裂。
+- **Consequences:** 暗色模式下**全部 22 处** `var(--input-bg)` 引用点（`index.css` 内 22 行）
+  拿到浅色底 —— 输入框/InputNumber/ColorPicker/Checkbox/Radio/Pagination 等一起失真；
+  任何「暗色对比度达标」的验收都会被这一条单独判负。
+- **Prevention:** 收敛 Phase 2 单独修这一条，且**不与任何 antd 覆盖改动同 commit**：
+  1) 把 `--input-bg` 的浅色实测值移出后置 `:root`，改放 `:root`（第 27 行那个）并保留
+     `[data-color-mode="light"]`（184 行）与 `[data-color-mode="dark"]`（254 行）两处；
+  2) 或把 `:root`@4812 里的 `--input-bg` 改为 `--input-bg-light` 并只在 light 块引用；
+  3) 补齐暗色块的 `--input-placeholder` → `--input-text-placeholder`（见 P-C4）。
+- **Detection:** 浏览器控制台执行
+  `getComputedStyle(document.documentElement).getPropertyValue('--input-bg')`
+  在 `data-color-mode="dark"` 下必须返回 `#0f2e1b`（或等价暗色值），**不是** `#fafaf9`。
 
-**Warning signs:**
-- 规则"看起来写了但一点效果都没有"，且浏览器控制台无任何报错；
-- DevTools 里该规则被标为灰色（无效）；
-- 同一元素上，块内第一条声明生效、后续不生效。
+### P-C4 · 暗色下 `var()` 引用未定义变量 → 声明整条作废（颜色回落到继承值）
 
-**Phase to address:** P1 样式修复（方案选型阶段就要定，不要留到实现期）。
+- **What goes wrong:** `index.css:2304`（`[data-color-mode="dark"] .ant-input::placeholder`）
+  与 `index.css:2335`（`.ant-select-selection-placeholder`）使用 `var(--input-placeholder)`，
+  该变量**只在浅色块 `[data-color-mode="light"]` 定义**（`index.css:184-190` 区间），
+  暗色块定义的是 `--input-text-placeholder`。CSS 变量未定义 → `var()` 所在声明
+  在**计算值阶段**作废 → 该属性回落到继承值 / 初始值。
+- **Why it happens:** 变量命名不统一（`--input-placeholder` vs `--input-text-placeholder`），
+  而 `:root` 主块里也**没有**兜底定义 → 浅色能用（light 块定义了）、暗色失效（dark 块没定义）。
+  静态审查容易漏，因为「在 CSS 里能找到这个变量名」。
+- **Consequences:** 暗色下 placeholder 文字颜色不可控（可能与背景同色而**完全不可见**）；
+  暗色 Select 的 placeholder 同样受影响 —— 而 Select 恰好是 v1.24 已知白底高风险区。
+- **Prevention:** 收敛 Phase 2 与 P-C3 一起修：统一变量名，并在 `:root`（27 行）补全
+  `--input-placeholder` 的默认值，使任何作用域都有兜底。
+  顺带清理全局未定义变量：`--theme-warning-text`（2 处）、`--radius`（1 处，已有 fallback）。
+- **Detection:** 新增静态检查「`var(--x)` 引用的变量必须在 `:root` 中出现」
+  （见 [§ 量化基线 § 3.3](#33-契约脚本扩展点) C6）；浏览器侧断言
+  `getComputedStyle(input).getPropertyValue('--input-placeholder')` 非空。
+
+### P-C5 · `.dept-tree-search` 是死规则，而 `css-contract-check.js` C3b 正在**锁死这条死规则**
+
+- **What goes wrong:** `index.css:2093-2116` 的 4 条规则形如
+  `.dept-tree-search .ant-input-affix-wrapper { … }` —— **后代选择器**，
+  要求存在一个「既是 `.dept-tree-search` 的后代、又带 `.ant-input-affix-wrapper`」的元素。
+  但 `src/components/DeptTree/index.tsx:205` 把 `className="dept-tree-search user-form-input"`
+  直接传给 `<AppInput>`。antd 6 的 `@rc-component/input@1.3.1`
+  `es/BaseInput.js:129-131` 明确注释「`className` and `style` are always on the root element」，
+  且 `es/utils/commonUtils.js` 的 `hasPrefixSuffix = !!(prefix || suffix || allowClear)`
+  —— **AppInput 默认 `allowClear=true`** → 根元素就是 `.ant-input-affix-wrapper` 本身。
+  ⇒ `class="ant-input-affix-wrapper ant-input-outlined dept-tree-search user-form-input"`
+  ⇒ `.dept-tree-search .ant-input-affix-wrapper` **永不命中**（命中数 0，v1.24 已实测）。
+- **Why it happens:** antd 5 → 6 把 `className` 从内层 `<input>` 移到了根元素（affix wrapper），
+  而项目补丁是按 antd 5 的 DOM 假设写的；`!important` 让它「看起来在生效」（因为同位置的
+  `.user-form-input.ant-input-affix-wrapper .ant-input` 规则**恰好命中**），掩盖了死规则。
+- **Consequences:** 双向风险：
+  1) 若按「登记册 #26 陷阱：勿删」处理 → 死规则长期占用契约预算，且**误导后续收敛者**；
+  2) 若直接删 → `css-contract-check.js:57` 的 **C3b 断言会 FAIL**，
+     使 CI 红灯，团队可能被迫「把死规则加回来」。
+- **Prevention:** 收敛 Phase 1 同时做两件事：① 删除 `index.css:2093-2116`；
+  ② **同步修改 `scripts/css-contract-check.js` 的 C3b 断言**，改为断言「`.dept-tree-search`
+  死规则**不得存在**」（反向断言），并把 C3c（`.user-form-input.ant-input-affix-wrapper .ant-input`，
+  **该规则是活的**）保留为正向断言。
+- **Detection:** `node scripts/css-contract-check.js`（改后仍须 exit 0）；
+  浏览器侧 `document.querySelectorAll('.dept-tree-search').length` 与
+  `document.querySelector('.dept-tree-search').className` 取证，确认 class 落在 wrapper 上。
+
+### P-C6 · `.ant-input-affix-wrapper` 内层复位（VIS-01）是「高特异性 + 契约双守护」，不可当普通覆盖处理
+
+- **What goes wrong:** `index.css:937-945` 的复位规则
+  （`border:none / border-radius:0 / background:transparent / color:inherit /
+  font-size:inherit / padding:0`，全 `!important`，特异性 (0,3,1)）
+  是 v1.24 修掉「双框（309 输入框）」的核心。收敛时若按「antd 6 已有 `border:none`」的直觉删掉它，
+  或把它降级为 token 引用 → **双框立刻回归**。
+- **Why it happens:** antd 自带的内层 `border:none` 特异性不足（antd 6 的内层规则形如
+  `.ant-input-affix-wrapper > input.ant-input`，特异性 (0,1,1)），
+  压不过项目 `:875` 的 `.ant-input { border: … !important }`（(0,1,0)+important）。
+  换言之：**在项目层覆盖被删之前，复位规则必须存在**；删掉项目层覆盖之后，复位规则才变成冗余。
+- **Consequences:** 双框回归（309 个输入框）、TextArea 100% 双框；
+  `css-contract-check.js` C1a-C1c + C5 全 FAIL；
+  `css-contract-assertions.js` 的 `doubleCount` 从 0 回到 3。
+- **Prevention:** 把复位规则**移到最后**：Phase 4 把 `:875` / `:910` 的边框交还给 antd
+  `variant` + `colorBorder` token 后，**同一 commit 内**才允许重新评估复位块。
+  推荐的终局形态是：antd 6 的 `variant="outlined"` + `Input.activeShadow` token 接管，
+  复位块**只保留 `padding:0` 与 `font-size:inherit`**（这两条 antd 不提供）。
+  任何情况下 **C1 断言不得删除**。
+- **Detection:** `css-contract-assertions.js`（浏览器）—— `doubleCount===0`、
+  `inner.boxShadow==='none'`、`wrapperFocused.shadow!=='none'`。
+
+## Moderate Pitfalls
+
+### P-M1 · 暗色 mega-cluster（`index.css:2254-4517`，431 条规则 / 641 处 `!important`）是「双真相源」的物理载体
+
+- **What goes wrong:** 暗色样式在项目里有**两套**完整实现：`index.css:198-384`（暗色 CSS 变量根）
+  之外，`index.css:2254-4517` 又用 **431 条顶层规则 / 641 处 `!important`** 把每个 antd 组件
+  的暗色外观手写了一遍。同一组件在两套里被定义（如 `.ant-tag` 出现在 `1230` / `2517` / `3823`，
+  `.ant-card` 出现在 `608` / `2432` / `2853` / `3942`）。删任一套，另一套会「补位」，
+  表现为**改了没反应 / 删了又变**。
+- **Why it happens:** 逐组件手写暗色，而不是让 `darkAlgorithm` + token 接管。
+  实测统计：**250 个不同的暗色目标组件，其中 80 个出现在 >1 个 cluster**
+  （gap>12 口径共 44 个 cluster；gap>5 口径 64 个 ≈「约 60」）。
+  两个巨型 cluster：C39 = `2254-2742`（90 规则 / 138 important）、
+  C40 = `2780-4517`（341 规则 / 503 important）。
+- **Consequences:** ① 收敛期任何「删除暗色覆盖」都会被后一个 cluster 复活 → 出现「看似没改」；
+  ② 暗色下 antd 6 的新特性（`variant` 状态色、`status` 语义色、`cssVar` token）全部被压掉；
+  ③ 收敛工时估算被严重低估（431 条规则 × 明暗两态 × 14 页面巡检）。
+- **Prevention:** 收敛 Phase 6 把它当**一个原子单元**处理：先把 `AntdThemeBridge` 的
+  `darkAlgorithm` token 调成与现有手写暗色**等效**（逐组件比对），再整块删除手写 cluster。
+  **不允许**按组件分批删除 —— 因为每个组件的浅色规则也在别处，拆开必然中间态破相。
+- **Detection:** 新增静态检查「同一 antd 目标 class 在 ≥2 个暗色 cluster 中出现」计数
+  （见 §3.3 C7）；浏览器侧用 `css-contract-assertions.js` 的暗色 fixture 断言
+  `innerDark.background` 必须等于暗色底。
+
+### P-M2 · `!important` 总量 1435 处，但**分布极不均衡**——先删长尾，收益/风险比最优
+
+- **What goes wrong:** 「从 1359 降到多少」的直觉做法是从头到尾逐条审 `!important`，
+  会把工期拖成不可完成的审计；实际上 **94.7% 集中在 `index.css` 单文件**，
+  且其中 620 处是 `box-shadow`、37 处是 `transition`（v1.24 登记册 §5 口径），
+  属**跨分区集中现象**、低语义密度。
+- **Why it happens:** 项目早期用 `!important` 兜住「antd 与手写层抢同一个属性」，
+  于是**每个**声明都加了，包括纯装饰性的 `box-shadow` / `transition`。
+- **Consequences:** 若不先做长尾清理，Phase 4-6 每动一个组件都要面对
+  「这个 `!important` 是装饰性的还是语义性的」判断，吞吐极低。
+- **Prevention:** 按 §3.1 的「**优先清理顺序**」执行：
+  1) 死文件（470 行 / 9 important）→ 2) 死选择器（8 条规则）→ 3) 装饰性 `box-shadow`/`transition`
+  → 4) 组件语义性 `!important`。前 3 步可在**不触碰任何活规则**的前提下砍掉可观数量。
+- **Detection:** 每 phase 结束跑一次全量 `!important` 计数（§3.1 口径命令），
+  目标值见 [§ 量化基线](#量化基线)。
+
+### P-M3 · 圆角漂移 6px vs 8px：项目 token 与 antd token 打架，且**视觉上只差 2px 极难肉眼验收**
+
+- **What goes wrong:** `index.css:125` 定义 `--theme-radius-md: 6px`，
+  而 `AntdThemeBridge.tsx:89` 设 `borderRadius: 8`。
+  项目在 `index.css:877`（`.ant-input`）与 `index.css:912`（`.ant-input-affix-wrapper`）
+  用 `var(--theme-radius-md)` = **6px** 覆盖 antd 的 **8px**；
+  `index.css:5563` 更是硬写 `border-radius: 6px !important`（分页器）。
+  → 同一个输入框，**外层 wrapper 6px、内层 antd 期望 8px**；
+  收敛到 variant 后若 antd 侧用 8px、项目侧仍 6px，就是「同组件双圆角」。
+- **Why it happens:** v1.22 品牌化时 antd 侧按设计 token 走 8px，
+  项目 CSS 侧沿用早期更紧凑的 6px 体系，两套体系在同一属性上并存。
+- **Consequences:** ① 收敛期切换瞬间 Input/Select/Button 圆角从 6 跳到 8，
+  被误判为「破相」而回滚；② `css-contract-assertions.js` 记录的内层 `radius` 期望值
+  也会随之内移，需要同步更新断言基线。
+- **Prevention:** 收敛 Phase 3（`AntdThemeBridge` 重构）里**先统一圆角**：
+  把 `--theme-radius-md` 改为 8px，或把 antd `borderRadius` 改为 6px；
+  **二选一，同一 commit 内完成并全站同步**，避免半程两种圆角并存。
+  建议统一为 **8px**（与 antd 默认 + 设计 token 一致，且 `index.css:126` 的
+  `--theme-radius-lg` 已经是 8px，体系更自洽）。
+- **Detection:** 浏览器断言 `getComputedStyle(wrapper).borderTopLeftRadius`
+  与 `getComputedStyle(input).borderTopLeftRadius` **必须相等**（现在应为 0，
+  因为内层被 VIS-01 复位为 0 —— 收敛后应改为「wrapper 8px / 内层 0px 且视觉连续」）。
+
+### P-M4 · `InputNumber` 边框锁死：`border` 简写 + `!important` 压掉 antd 6 的 status 色
+
+- **What goes wrong:** `index.css:871-880` 的选择器组里含 `.ant-input-number`，
+  其中 `border: 1px solid var(--input-border) !important` 是**简写**，
+  一次性重置 `border-width/style/color`。antd 6.6.4 的状态边框规则是
+  `.ant-input-number-outlined.ant-input-number-status-error:not(.ant-input-number-disabled)`
+  （特异性 0,3,0，**无** `!important`）→ 项目的 `!important` 简写**直接压掉**，
+  InputNumber 的错误态边框**永远不会变红**。
+- **Why it happens:** antd 6 把 InputNumber 的边框画在**根元素**
+  （`.ant-input-number-outlined`，实测 `node_modules/antd/dist/antd.css`：
+  `.ant-input-number-outlined{background:…;border-width:…;border-style:…;border-color:…}`），
+  与普通 Input 的「边框在 wrapper、内层透明」结构**不同**；
+  v1.24 的 VIS-03 修复只覆盖了 `.ant-input*` 域（登记册 #16 已登记为 P1 欠账）。
+- **Consequences:** InputNumber 错误态持续是灰边框（v1.24 实测 `rgb(219,215,206)`），
+  用户无从判断校验失败；收敛期若把 VIS-03「顺手扩面」到 InputNumber 而不加
+  status 专用选择器，会把 antd 的 `colorError` 一并压掉。
+- **Prevention:** 收敛 Phase 5 单独处理 InputNumber：
+  - **不要**把 `.ant-input-number` 塞进 VIS-03 的 `.ant-input` 选择器组；
+  - 改用 antd 6 的 InputNumber 组件 token（`components.InputNumber.colorError` / `activeBorderColor`），
+    或写一条同特异性的 status 还原：
+    `.ant-input-number.ant-input-number-status-error { border-color: var(--ant-color-error) !important }`
+    （特异性 0,2,0 + important，可压过 `:875` 的 0,1,0+important）。
+- **Detection:** 浏览器断言 InputNumber（`status="error"`）的
+  `borderTopColor` 必须等于 `rgb(186,54,48)`；当前是 `rgb(219,215,206)`（**FAIL 现状**）。
+
+### P-M5 · antd 6 弃用警告 2 类会污染「无新增 console error」的自动化判定
+
+- **What goes wrong:** 收敛期大量新增/改动 antd 组件用法，若引入或保留弃用 prop，
+  浏览器控制台会持续打印 warning，导致「本次收敛零新增 console error」的验收条件**永远 FAIL**。
+  已实证的两类：
+  1. **`maskClosable` → `mask.closable`**：`node_modules/antd/es/modal/Modal.js:126`
+     明确列出 `[['maskClosable','mask.closable']]` 的 deprecated 映射；
+     `node_modules/antd/es/modal/interface.d.ts:71-74` 标注 `@deprecated Please use \`mask.closable\` instead`。
+     项目命中：`src/components/shared/FormModal.tsx:143`、`src/components/modal/BaseEditModal.tsx:61`、
+     `src/components/shared/confirmDelete.ts:66`、`src/components/captcha/CaptchaModal.tsx:116`、
+     `src/components/network/port-write/BulkWriteDrawer.tsx:241`。
+  2. **`onSearch` → `showSearch.onSearch`**：`node_modules/@rc-component/select/es/Select.d.ts:85`
+     标注 `@deprecated please use showSearch.onSearch`；antd 6 的 Select
+     `showSearch?: boolean | (SearchConfig<OptionType> & {…})`（`antd/es/select/index.d.ts:78`）
+     已是**对象形态**。同时 `node_modules/@rc-component/select/es/utils/warningPropsUtil.js:54-55`
+     会打印运行时 warning：「`onSearch` should work with `showSearch` instead of use alone.」
+     项目命中：`src/components/CronSelector/index.tsx:206`、
+     `src/components/dashboard/settings/EndpointSelector.tsx:211`
+     （两者都传了 `onSearch`；而 `AppSelect.tsx:18` 的
+     `showSearch={showSearch ?? count >= 8}` 在选项 <8 时会传 `false` → 触发该 warning）。
+     ⚠️ **口径更正**：任务书写的「`onSearch→showSearch`」在 antd 6.6.4 的 Select
+     deprecated 列表（`antd/es/select/index.js:217-225`）中**并不存在**；
+     真正的形态是 `showSearch.onSearch`（rc-select 的对象化 API）+ 上述运行时 warning。
+- **Why it happens:** 弃用警告由 antd 在 dev 构建的 `devUseWarning` 中打印，
+  与业务错误同级出现在 console；收敛期若同时改了 `FormModal` 等共享组件的 props，
+  警告会**在每个页面复现**。
+- **Consequences:** 自动化判定「无新增 console error」被污染 → 误判为回归；
+  或为消除警告而**乱改共享组件 props**，破坏 v1.22 冻结契约（见 P-M7）。
+- **Prevention:** 收敛 Phase 0 就把这两类弃用**单独清理**（改 `mask={{ closable: false }}`、
+  改 `showSearch={{ onSearch }}`），**与样式收敛分离成独立 commit**；
+  这样后续 phase 的 console 判定基线是干净的。
+  注意 `FormModal` / `BaseEditModal` 的 `maskClosable` **默认值本身就是 `false`**
+  （`FormModal.tsx:78`、`BaseEditModal.tsx:46`）→ 迁移是**纯等价**改动，风险低。
+- **Detection:** 浏览器 Console 过滤 `Warning:` 前缀，断言 0 条；
+  另加 `grep -rn 'maskClosable' src` 与 `grep -rn 'onSearch=' src` 的静态零命中断言。
+
+### P-M6 · `.dept-tree-search` 之外的另外两条「局部补丁」是**活规则**，不能跟死规则一起删
+
+- **What goes wrong:** v1.24 登记册 #26 把 `index.css:2051-2088` 的 2 条局部补丁
+  一律标为「保留（陷阱）」。实测其中 2 条**是活的**、2 条**是死的**：
+  - **活**：`index.css:2119-2123` `.user-form-input.ant-input-affix-wrapper .ant-input`
+    —— 复合选择器要求同一元素同时具备 `user-form-input` + `ant-input-affix-wrapper`，
+    而 antd 6 把 `className` 放在**根元素**（affix wrapper）上 → **命中**；
+  - **活**：`index.css:2125-2130` 同族的 focus 变体；
+  - **死**：`index.css:2093-2116` `.dept-tree-search …`（见 P-C5）。
+  若把 4 条一起删 → 部门树搜索框**丢失透明底/无边框**样式（回到 antd 描边输入框），
+  登录/部门树两处外观回归。
+- **Why it happens:** 同一个 `className="dept-tree-search user-form-input"`
+  同时挂了两组补丁，其中一组用了**后代选择器**（antd 5 时代 class 在内层 `<input>` 时成立），
+  另一组用了**复合选择器**（antd 6 时代 class 在根元素时成立）——
+  迁移期两套写法并存，只有其中一套在 antd 6 下活着。
+- **Consequences:** 误删活规则 → 部门树搜索框外观回归（用户在登录后第一屏可见）。
+- **Prevention:** Phase 1 删除前**逐条**用
+  `document.querySelectorAll('<选择器>').length` 在浏览器取证；
+  只有命中数为 0 的才进删除清单，并同步更新 `css-contract-check.js` 的 C3b/C3c 断言方向。
+- **Detection:** `css-contract-check.js` C3c（`.user-form-input.ant-input-affix-wrapper .ant-input`）
+  保持为正向断言；新增 C3b 反向断言（死规则不得存在）。
+
+### P-M7 · v1.22 冻结契约在样式收敛中的间接破坏面
+
+- **What goes wrong:** 收敛会触碰 `AppInput` / `AppSelect` / `AppTextArea` 的默认 props
+  （`allowClear` / `showSearch`）以适配 antd 6 variant；若在收敛中「顺手」改了默认 props，
+  就会破坏 v1.22 冻结契约（`eslint.config.js:132-196` 的 `no-restricted-syntax` 强制
+  裸 antd Input/Select/Modal.confirm/Popconfirm 一律禁止，全站必须走封装层）。
+- **Why it happens:** 收敛 Phase 4/5 要判断「输入框到底要不要 `variant` 显式传」，
+  而 `AppInput` 是**全站唯一入口** —— 改一个默认值 = 改全站 309 个输入框。
+  且 `AppInput.tsx:12` 的 `allowClear = true` 默认值**直接决定 DOM 是否生成 affix wrapper**
+  （`hasPrefixSuffix` 含 `allowClear`）→ **改默认值会让 VIS-01 复位规则的匹配面整体消失**
+  （`.ant-input-affix-wrapper > input.ant-input` 无 wrapper 可选）。
+- **Consequences:** ① 契约失效（eslint 豁免链 `scripts/exemption-reasons.json` 失配）；
+  ② 双框回归（affix wrapper 消失后，内层 input 成为 carrier，项目 `:875` 的
+  `.ant-input { border !important }` 立刻画出边框）；
+  ③ 焦点环从 wrapper 迁移到 input，与 v1.24「焦点环归 wrapper」的 VIS-02 契约冲突。
+- **Prevention:** 收敛期间 **冻结 `AppInput`/`AppSelect`/`AppTextArea` 的默认值**；
+  确需变更时（例如 antd 6 variant 需要显式 `variant` prop），
+  应通过 **`<ConfigProvider>` 的 `variant` 全局配置**或 `components.Input.variant` token 实现，
+  **不要**在封装层逐个传 prop。
+- **Detection:** `node scripts/check-exemption-reasons.mjs`（退出码 0）；
+  `node scripts/css-contract-check.js`；`npm run lint`；
+  `src/components/ui/__tests__/` 下契约测试全绿。
+
+### P-M8 · 双 ConfigProvider + `darkAlgorithm` 不改写显式 token → 暗色 Select 仍是白底
+
+- **What goes wrong:** `AntdThemeBridge.tsx:83-87` 显式设置
+  `colorBgContainer: ruoyiBrand.cream.surface`（`#FFFFFF`）、
+  `colorBgElevated: ruoyiBrand.cream.surface`、`colorBorder: ruoyiBrand.cream.border`（`#DBD7CE`）、
+  `colorBorderSecondary: ruoyiBrand.cream.borderStrong`。
+  antd 的 `darkAlgorithm` **只改写它自己派生的 token**，对**显式提供**的 token 值原样保留
+  （`ruoyiBrand.cream.*` 是常量对象，与主题模式无关）。
+  → 暗色下 `colorBgContainer` 仍是 `#FFFFFF`、`colorBorder` 仍是 `#DBD7CE`。
+  加上 `AntdThemeBridge.tsx:130` 的 `Select.colorBgContainer` 同样写死 `#FFFFFF`，
+  以及项目侧 `.ant-select-selector` 死规则导致**没有任何项目规则接管 Select 边框**
+  → 暗色 Select 白底浅灰边。
+- **Why it happens:** token 覆盖发生在 `algorithm` 之后应用（`ThemeConfig.token` 是最终值），
+  而 `ruoyiBrand` 是**模式无关**的常量 —— 把「品牌常量」当「主题 token」用是根因。
+- **Consequences:** 暗色 Select / InputNumber / 部分 Card 在深绿页面上呈白块，
+  对比度不达标；这是 v1.25 F3（明暗色板重构）必须**先于**样式收敛解决的根因。
+- **Prevention:** 收敛 Phase 3 必须把 `AntdThemeBridge` 的 `token` 改成
+  **按 `themeMode` 分支的函数**（`themeMode === 'dark' ? darkTokens : lightTokens`），
+  即「暗色不再复用 `ruoyiBrand.cream.*`」。这是 P-M1 暗色 cluster 收敛的**硬前置**。
+- **Detection:** 浏览器断言暗色下
+  `getComputedStyle(document.querySelector('.ant-select')).backgroundColor`
+  ≠ `rgb(255,255,255)`；并对 `AntdThemeBridge` 增加「dark 模式不返回 cream.* 常量」的单元测试。
+
+### P-M9 · `!important` 治理与「hex 治理」是两件事，收敛期会引入新的硬编码色
+
+- **What goes wrong:** 收敛期把 CSS 规则改写成 token 引用时，开发者容易**临时**写死一个
+  hex「先把效果调对」。而 hex 门禁对 `.css` 几乎失明（P-F05 / §0.2 第 5 条），
+  这些临时值会**静默沉淀**为新的技术债，且比原来的规则更难发现。
+- **Why it happens:** `eslint.config.js:132` 的 `no-restricted-syntax` 块
+  `files: ["src/**/*.{ts,tsx}"]` —— **不含 `.css`**；
+  `scripts/check-hardcoded-colors.mjs` 虽扫 `.css`，但只有 **31 条**固定 hex 映射，
+  `index.css` 中 311 处 6 位 hex 只有 2 处命中（`#ff4d4f`@964、`#faad14`@970），
+  即 **99.4% 不在 denylist**；且该脚本**当前 exit=1**、**未接入 `lint:ci`**。
+- **Consequences:** 收敛完成后 `!important` 降了一半，但硬编码 hex 反而增加，
+  「样式层收敛」的实际成果被稀释；且这些新 hex 没有 antd token 对应物，
+  **暗色模式无法自动跟随** → 制造新的串色。
+- **Prevention:** 收敛 Phase 0 扩展门禁：
+  1) 把 `scripts/check-hardcoded-colors.mjs` 接入 `lint:ci`（先修它当前的 18 个失败文件）；
+  2) 为 `.css` 增加**通用** hex 检测（`#rrggbb` 全量，不只是 31 条映射），
+     允许清单用 `scripts/exemption-reasons.json` 同款「文件+理由」机制豁免；
+  3) 约定收敛期新增的 CSS 声明**一律用 `var(--theme-*)` 或 `var(--ant-*)`**。
+- **Detection:** `node scripts/check-hardcoded-colors.mjs`（exit 0）；
+  新增 `.css` 通用 hex 计数基线（§3.1）。
+
+### P-M10 · 静态契约脚本的能力边界：`css-contract-check.js` 只查「文本存在性」，不查「DOM 命中数」
+
+- **What goes wrong:** `scripts/css-contract-check.js` 的 C1/C3/C4/C5 全部是
+  **对 CSS 文本做正则匹配**（`indexCss.match(...)` / `indexCss.includes(...)`），
+  **不解析 DOM、不计算特异性、不验证选择器是否命中**。
+  → 一个规则**文本在**就 PASS，哪怕它是死规则（P-C5 的 C3b 就是活例子：
+  它正在守护一条命中数 0 的死规则）；反过来，一个规则被改成无效语法也可能 PASS。
+  `scripts/css-contract-assertions.js` 是**浏览器 Console 粘贴片段**，
+  依赖 `document.getComputedStyle`，且**无法在 CI 自动跑**（jsdom 无法解析 antd 6 的 `@layer` 嵌套）。
+- **Why it happens:** 契约脚本是在 v1.24「双框修复」这一具体场景下写的，
+  目标是**防止已修好的东西被改坏**，不是**校验 CSS 语义正确性**。
+- **Consequences:** 收敛期若依赖它判断「这条规则能不能删」，会得到假阳性；
+  且新增的 variant 收敛规则**完全没有契约守护** —— 收敛成果不可回归验证。
+- **Prevention:** 收敛 Phase 0 **扩展契约脚本**（见 §3.3）：
+  增加「死选择器不得存在」「CSS 变量必须有定义」「同一 antd 目标不得有 ≥2 处暗色定义」
+  三类静态断言；并在 `css-contract-assertions.js` 中**修正已有的错误 fixture**
+  （见 P-M11）。
+- **Detection:** `node scripts/css-contract-check.js` 退出码 0 即全部静态断言通过。
+
+### P-M11 · `css-contract-assertions.js` 的错误态 fixture 用了 antd 6 **不存在**的 class → 该断言永远 FAIL
+
+- **What goes wrong:** `scripts/css-contract-assertions.js:48` 构造
+  `ant-input-affix-wrapper ant-input-outlined ant-input-affix-wrapper-status-error`，
+  而 `css-contract-check.js:79-81`（C5b）**明令禁止**出现
+  `ant-input-affix-wrapper-status-error`（该 class 在 antd 6.6.4 中不存在）。
+  → 动态断言的 `wrapperError.borderTopColor` 永远拿不到错误态红框，
+  `passed` 条件（`:69` 要求 `/255,\s*77,\s*79/`）**恒为 false**。
+- **Why it happens:** C5b 是在 v1.24 Phase 77 才修正的（从 `affix-wrapper-status-error`
+  改成 `ant-input-status-error`），但 `css-contract-assertions.js` 的 fixture **没有同步更新**。
+  实测 antd 6 把 status class 打在 wrapper **自身**，名为 `ant-input-status-error`
+  （`node_modules/antd/es/input/Input.js:161` → `getStatusClassNames(prefixCls, mergedStatus)`）。
+- **Consequences:** 动态断言脚本**不可用**（永远报 `passed: false`），
+  团队可能因此误以为「错误态断言失败 = 有回归」，
+  或干脆不再运行它 —— **VIS-03 的回归守护实际处于失守状态**。
+- **Prevention:** 收敛 Phase 0 修正 fixture：
+  `el('span', 'ant-input-affix-wrapper ant-input-outlined ant-input-status-error', light)`
+  并把 `passed` 判定的期望色从 `rgb(255,77,79)` 改为**品牌红 `rgb(186,54,48)`**
+  （实测 antd `colorError` = `ruoyiBrand.functional.danger` = `#BA3630`；
+  v1.24 实测普通 Input 错误态边框 = `rgb(186,54,48)`）。
+- **Detection:** 浏览器粘贴运行 `css-contract-assertions.js`，断言 `passed === true`。
+
+### P-M12 · 阶段拆分风险：把「删规则」与「改 token」拆到不同 phase 会制造**双份真相**
+
+- **What goes wrong:** 若 Phase A 先删一批手写规则、Phase B 再改 `AntdThemeBridge`，
+  中间态里「antd 默认样式」和「项目剩余覆盖」会短暂共存，
+  用户看到的是**既不是 v1.24 的样子、也不是收敛后的样子**。
+  典型表现：删掉 `.ant-input` 边框覆盖后、antd token 还没调 → 输入框边框从
+  `#DBD7CE` 变成 antd 默认 `#D9D9D9`（`--ant-color-border`），圆角从 6 变 8，颜色略偏 —— **极难肉眼判定为回归**。
+- **Why it happens:** 收敛天然是「双侧同时移动」的动作，但项目管理习惯是「一个 phase 一个可验收产物」。
+- **Consequences:** 中间态截图对比会得到「轻微差异」的模糊结论，
+  验收者倾向于「再改一点」，最终回到原点。
+- **Prevention:** 每个 phase 必须**自带完整可验收态**：
+  「改 token + 删对应覆盖」放在**同一个 commit**；
+  phase 边界只在**组件域**上切（Input 域一个 phase、Select 域一个 phase），
+  绝不在**同一组件域内部**切两次。
+- **Detection:** 每个 phase 结束时跑 §3.1 的全部度量，
+  并把 phase 末截图与 v1.24 视觉验证记录（`.planning/notes/v1.24-visual-verification.md` 的
+  21 形态 × 明暗矩阵）逐格比对。
 
 ---
 
-### Pitfall A2：`!important` 无条件压过非 important —— 这才是双框的确切机制
-
-**What goes wrong:**
-误以为 antd 的 `border: none`（写在 `.ant-input-affix-wrapper > input.ant-input` 上，特异性 (0,2,1) 起步）会压过项目的 `.ant-input { border: 1px solid ... !important }`（特异性只有 (0,1,0)）。**事实相反**：CSS 的层叠顺序中，**带 `!important` 的作者声明优先于不带 `!important` 的作者声明，与特异性无关**。项目的 `!important` 无条件胜出 → affix-wrapper 内层 input 被画上 1px 边框 → 双框。
-
-**项目内确证（`src/index.css`）：**
-- `:871-880` — `.ant-input, .ant-input-number, .ant-select-selector { background / border: 1px solid var(--input-border) / color / border-radius / font-size / transition }` **全部带 `!important`**
-- `:882-886` hover、`:888-893` focus、`:895-901` 暗色 focus、`:903-905` placeholder、`:908-914` affix-wrapper、`:916-918` affix hover、`:920-923` affix-focused、`:925-929` 暗色 affix-focused —— **同样全部 `!important`**
-
-**antd 侧确证（`node_modules/antd/es/input/style/index.js`）：**
-- `:379-395` —
-  ```js
-  [`> input${componentCls}, > textarea${componentCls}`]: {
-    fontSize: 'inherit', border: 'none', borderRadius: 0, outline: 'none',
-    background: 'transparent', color: 'inherit',
-    '&:focus': { boxShadow: 'none !important' }
-  }
-  ```
-  → `border: 'none'` **没有 `!important`** → 被项目 `!important` 击穿。
-- 同理 `node_modules/antd/es/input/style/textarea.js:50-60`（TextArea 的 affix-wrapper 内层 textarea 也是 `border: 'none'`，无 `!important`）。
-
-**Why it happens:**
-`src/index.css` 共 5590 行，其中 `!important` 出现 1362 处。这个密度不是风格偏好，而是被 antd 6 的 cssinjs **hash 前缀**逼出来的（见 A4）。当一个项目所有覆盖规则都带 `!important` 时，任何一条漏掉 `!important` 的上游规则都会被击穿 —— 而 antd 自己的 `border: none` 恰恰就是这种"上游不带 important"的规则。
-
-**How to avoid:**
-- **修复必须同样带 `!important`**，且**特异性要高于 `.ant-input`**，否则会输给 antd 的 `> input.ant-input`（0,2,1）或项目的其它规则。
-- 推荐写法（**新增到 `index.css` 末尾**，或在 `:871-880` 附近成组改写）：
-  ```css
-  /* affix-wrapper 内层 input/textarea 复位：antd 原生要求内层无边框 */
-  .ant-input-affix-wrapper > input.ant-input,
-  .ant-input-affix-wrapper > textarea.ant-input {
-    border: none !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    color: inherit !important;
-    font-size: inherit !important;
-    padding: 0 !important;
-  }
-  ```
-  特异性 (0,3,1)，全部 `!important` → 同时压过项目 `.ant-input` (0,1,0)、项目暗色块 `[data-color-mode="dark"] input` (0,1,1)、antd 自身 (0,2,1)。
-- **不要**只把 `border` 拆出去、留下 `background`/`border-radius`/`font-size` 在 `.ant-input` 上 —— 这些属性同样会让内层 input 出现**圆角裂边**（内层圆角 + wrapper 圆角不同心）、**字号不一致**（内层被强制 14px 而 antd 期望 `inherit`）、**背景不透明**（filled/hover 变体下会与 wrapper 露出色差）。必须**成组复位**。
-
-**Warning signs:**
-- 修完仍有"细边框"残留 → 只改了 `border` 没改 `border-radius`；
-- 修复后输入框内部出现**两个圆角**或**四角接缝** → 内层 `border-radius` 未复位；
-- 修复后输入框内文字与右侧 prefix 图标基线不齐 → `font-size` 未复位为 `inherit`。
-
-**Phase to address:** P1 样式修复。
-
----
-
-### Pitfall A3：antd 6 的 `variant` 体系 —— `.ant-input` 本身**没有边框**，边框只在变体类上
-
-**What goes wrong:**
-沿用 antd 5 的心智模型（`.ant-input` 自带边框），写出 `.ant-input-outlined` / `:not(.ant-input-outlined)` 之类的收窄规则，结果在 antd 6 上大面积失效。
-
-**antd 6.6.4 实测事实：**
-- `node_modules/antd/es/input/style/index.js:296-318` — `genInputStyle` 的结构是
-  ```js
-  [componentCls]: { ...resetComponent(token), ...genBasicInputStyle(token),
-                    ...genOutlinedStyle(token), ...genFilledStyle(token),
-                    ...genBorderlessStyle(token), ...genUnderlinedStyle(token) }
-  ```
-  而 `genBasicInputStyle`（同文件 `:46-71`）**不含任何 border 声明**。
-  → **antd 6 的 `.ant-input` 基础类没有边框**；边框只存在于 `.ant-input-outlined` / `.ant-input-filled` / `.ant-input-underlined` 三个变体类里（`variants.js:25-40 / 177-193 / 280-295`）。
-- `node_modules/antd/es/config-provider/context.js:4` — `Variants = ['outlined', 'borderless', 'filled', 'underlined']`。
-- `node_modules/antd/es/form/hooks/useVariants.js:7-28` — 变体解析优先级：
-  ```
-  variant prop  >  bordered={false} → 'borderless'
-                >  Form VariantContext
-                >  config.components[component].variant
-                >  config.variant（全局）
-                >  'outlined'（默认）
-  ```
-  `enableVariantCls = Variants.includes(mergedVariant)`。
-
-**本项目现状：** `src/design-system/components/AntdThemeBridge.tsx:178` 是**唯一**的 antd `<ConfigProvider>`，其 `theme.components.Input`（`:121-128`）只配了 `colorBgContainer / activeBorderColor / hoverBorderColor / activeShadow / borderRadius / controlHeight`，**没有 `variant`**；也没有设全局 `theme.variant`。
-→ **当前所有 Input 都是 `outlined`**。但这是"恰好"，不是"契约"。
-
-**为什么这是个陷阱：**
-一旦有人给 `ConfigProvider` 加 `variant="borderless"`（或 `components.Input.variant`），则：
-- 所有 Input 变 `ant-input-borderless` → **`.ant-input-outlined` 收窄规则全部失配** → 项目主题（背景/圆角/字号/边框色）**整体消失**；
-- antd 的 borderless 变体是 `background: transparent; border: none`（`variants.js:141-150`），与项目 `--input-bg` 主题**语义冲突** → 输入框会"消失"在背景里。
-
-**How to avoid:**
-- 若采用「variant 类收窄」路线（`.ant-input-outlined`），**必须**同时：
-  1. 在 `AntdThemeBridge.tsx` 显式锁死 `variant: "outlined"`（写进 `theme.components.Input`），并加注释说明"项目主题只适配 outlined"；
-  2. 或者把主题样式写成 `:where(.ant-input-outlined, .ant-input-borderless, .ant-input-filled, .ant-input-underlined)` 的并集，再按变体分别覆写 border/background。
-- 若采用「wrapper 上下文复位」路线（推荐，见 A2），**对 variant 完全免疫** —— 不依赖任何变体类名。
-- 任何时候改 `AntdThemeBridge` 的 `theme` 结构，都要重新截图验证输入框（antd `hashed: true` 会重新生成 hash，`:173`）。
-
-**Warning signs:**
-- 某次改 `AntdThemeBridge` 后输入框"没有边框了"或"背景和页面一样"；
-- 改动 `ConfigProvider` 后 `useVariants` 的 `mergedVariant` 变了但没人察觉；
-- 变体类只出现在部分组件上（Input 有、TextArea 没有）→ 组件名 key 不同（`useVariant('input', ...)` vs `useVariant('textArea', ...)`，`TextArea.js:94`），TextArea **不 fallback** 到 `components.Input.variant`。
-
-**Phase to address:** P1 样式修复（若走 variant 路线）；P6/P7 的任何 `AntdThemeBridge` 改动都要重跑视觉验证。
-
----
-
-### Pitfall A4：antd 6 cssinjs 的 hash 前缀让 antd 规则特异性 **+1 类** —— 「顺序依赖」其实是「特异性依赖」
-
-**What goes wrong:**
-按 CSS 常规经验推断"新写的规则放在 `index.css` 后面就能覆盖 antd"。在 antd 6 下这个推断**不成立**。
-
-**实测事实：** `node_modules/@ant-design/cssinjs/es/hooks/useStyleRegister.js:27-47` 的 `injectSelectorHash` 把 hashId 注入到 selector **第一个 compound 之后**：
-```js
-const firstPath = fullPath[0] || '';
-const htmlElement = firstPath.match(/^\w+/)?.[0] || '';
-firstPath = `${htmlElement}${hashSelector}${firstPath.slice(htmlElement.length)}`;
-```
-→ antd 生成的规则形如 `.css-dev-only-do-not-override-xxxx.ant-input-outlined`、`.css-dev-only-xxxx.ant-input-affix-wrapper > input.ant-input`，**每个都多一个类**。
-
-**后果：**
-| 规则 | 实际特异性 | 胜负 |
-|---|---|---|
-| 项目 `.ant-input { border: ... !important }` | (0,1,0) + important | **赢**（important 优先） |
-| antd `.hash.ant-input-outlined { border-width/style/color }` | (0,2,0) 非 important | 输 |
-| antd `.hash.ant-input-affix-wrapper > input.ant-input { border: none }` | (0,3,1) 非 important | 输（important 优先） |
-| antd `.hash.ant-input-affix-wrapper > input.ant-input:focus { box-shadow: none !important }` | (0,4,1) **important** | **赢**（important 相等时比特异性） |
-| 项目 `.ant-input:focus { box-shadow: 0 0 0 2px ... !important }` | (0,2,0) important | 输 → 内层 input 无焦点环 |
-
-**这解释了为什么 `src/index.css` 里 `!important` 密度高达 1362 处** —— 不带 `!important` 的项目规则在 antd 6 下**几乎必然失效**。
-
-**Why it happens:**
-antd 5 时代 `hashed` 也存在，但很多项目只覆盖"根类"；antd 6 引入了 `cssVar` 模式 + 变体类 + 更细的子选择器，antd 侧特异性整体抬高，项目侧被迫全面升级为 `!important`。
-
-**How to avoid:**
-- 新增/修改 antd 覆盖规则时，**一律带 `!important`**，并**核算特异性**（不要只靠"写在后面"）。
-- 需要**降低**特异性以避免压制 antd 其它状态样式时，用 `:where()`（零特异性），而不是靠选择器缩短。
-- 反过来，需要**提高**特异性压住 antd 时，用「上下文 + 直接子元素」而不是靠堆类名。
-- CI 可加一条：新增的 `.ant-*` 覆盖规则若不带 `!important` 且特异性 < (0,2,0) → 告警。
-
-**Warning signs:**
-- 规则"写了没效果"，但把 `!important` 加上就立刻生效 → 命中 antd hashed 规则；
-- 同一条规则在 dev server 有效、在 `npm run build` 产物失效 → hash 变化导致特异性/顺序变化；
-- 改 antd 主题 token 后部分覆盖失效 → `hashed: true`（`AntdThemeBridge.tsx:173`）重新生成 hash。
-
-**Phase to address:** P1 样式修复 + P6 lint 清偿（可加自定义 lint 规则）。
-
----
-
-### Pitfall A5：affix wrapper 的结构差异 —— 修 Input 时会漏掉 TextArea / InputNumber / Select / DatePicker / Cascader / TreeSelect
-
-**What goes wrong:**
-只盯着 `Input` 修，修完发现「带字数统计的多行输入框」还是双框；再修 TextArea，发现 `InputNumber` 加了前后缀按钮时也双框。**因为 antd 6 里"边框承载元素"因组件而异，且 affix 场景下 variant 类会"搬家"。**
-
-**antd 6.6.4 实测的边框承载表：**
-
-| 组件 / 场景 | 边框承载元素 | 该元素 class | 内层元素 class |
-|---|---|---|---|
-| Input 无 affix | `input` 自身 | `ant-input` + **`ant-input-outlined`** | — |
-| Input 有 affix（allowClear/prefix/suffix） | wrapper `span` | `ant-input-affix-wrapper` + `ant-input-outlined` | `input.ant-input`（**无 variant 类**） |
-| TextArea 无 affix | `textarea` 自身 | `ant-input` + `ant-input-outlined` | — |
-| TextArea 有 showCount/allowClear | wrapper `span` | `ant-input-textarea-affix-wrapper` + `ant-input-affix-wrapper` + `ant-input-outlined` | `textarea.ant-input`（**无 variant 类**） |
-| InputNumber | 根 `.ant-input-number` | `ant-input-number` | `.ant-input-number-input`（**不带 `ant-input`**，不命中项目 `.ant-input`） |
-| Select / Cascader / TreeSelect | `.ant-select-selector` | — | — |
-| DatePicker | `.ant-picker` 根 | — | `.ant-picker-input > input` |
-
-**关键机制（variant 类"搬家"）** —— `node_modules/@rc-component/input/es/BaseInput.js`：
-- `:43-45` — `className: clsx(inputElement.props?.className, !hasAffix && classNames?.variant)`
-  → **有 affix 时，内层 input/textarea 拿不到 variant 类**
-- `:79-88` — wrapper 的 className 合并 `classNames?.variant`
-  → **variant 类落在 wrapper 上**
-- 佐证：`node_modules/@rc-component/input/es/TextArea.js:137` — `isPureTextArea = !autoSize && !showCount && !allowClear`；`:179` textarea 元素 class 只取 `classNames?.textarea`；`node_modules/@rc-component/input/es/ResizableTextArea.js:114` — `className: clsx(prefixCls, className, ...)` → textarea 元素 = `ant-input` + size/hash 类。
-
-**项目侧已有的不一致：** `src/index.css:871-873` 把 `.ant-input` / `.ant-input-number` / `.ant-select-selector` 并列当边框承载 —— **漏了 `.ant-picker`（DatePicker）**。DatePicker 走 antd 默认边框（`index.css:2321-2323` 只在暗色块里给 `.ant-picker` 设了 `background-color`/`border-color`，亮色下完全不管）→ **DatePicker 的边框色与 Input 不一致**（暗色用 `--input-border` #2d4d33，亮色用 antd token `colorBorder` = `ruoyiBrand.cream.border`）。这是既存不一致，v1.24 修双框时很容易被"顺手统一"或"顺手再引入回归"。
-
-**How to avoid:**
-- 修复规则必须**成对覆盖 Input 与 TextArea** 的 affix 内层：
-  ```css
-  .ant-input-affix-wrapper > input.ant-input,
-  .ant-input-affix-wrapper > textarea.ant-input { ... }
-  ```
-  （`textarea.ant-input` 这一条覆盖 TextArea 的 showCount/allowClear 场景）
-- 修复前先跑一遍**全站 affix 使用面统计**：`allowClear`（AppInput 默认开！见 A6）、`prefix`、`suffix`、`showCount`、`InputNumber` 的 `addonBefore/addonAfter`、`Select` 的 `showSearch`。
-- **不要**顺手把 `.ant-picker` 加进边框规则 —— 那是独立的一致性议题，应单开条目，否则 DatePicker 的 hover/focus 态会与 Input 不匹配（项目没有 `.ant-picker:hover` / `:focus` 规则）。
-- Select 侧确认无需改：项目已正确地把 `.ant-select-selector` 当承载元素（`index.css:873`），且 `.ant-select-selector` 内不含 `ant-input` 类 → 不会被 `.ant-input` 误伤。
-
-**Warning signs:**
-- 修复后「新建楼宇」弹窗里带字数统计的描述框仍双框 → 漏了 `textarea.ant-input`；
-- InputNumber 加了 formatter/前后缀后双框；
-- DatePicker 与相邻 Input 的边框粗细/颜色不一致（既存问题，别在本次扩大）。
-
-**Phase to address:** P1 样式修复（覆盖矩阵见文末《附录 B：双框修复最小充分视觉验证矩阵》）。
-
----
-
-### Pitfall A6：`AppInput` 默认 `allowClear=true` → 全站 Input 都走 affix-wrapper → 双框影响面 = 100%
-
-**What goes wrong:**
-低估影响面。`src/components/ui/AppInput.tsx:12`：
-```tsx
-export function AppInput({ allowClear = true, ...rest }: AppInputProps) {
-  return <Input allowClear={allowClear} {...rest} />;
-}
-```
-→ **所有契约输入框都带 allowClear → antd 一律渲染成 affix-wrapper → 内层 input 一定拿到项目 `.ant-input` 的边框 → 100% 双框**。
-
-这解释了为什么 v1.23 上线 AppInput 契约后双框立刻成为"全站可见"的问题，而不是零星现象。也意味着：**修复的验收面 = 全站每一个输入框**，而不是"某个页面的某个输入框"。
-
-**Why it happens:**
-v1.22 契约把 `allowClear` 默认值下沉（见 v1.23 PITFALLS 的 Pitfall 1.1/2.3），而 antd 的 `allowClear` 必然触发 affix-wrapper 结构 —— 契约层的一个"体验增强"，在样式层触发了一次结构切换。**契约默认值与组件库 DOM 结构之间没有隔离层**。
-
-**How to avoid:**
-- 视觉验证必须按"**所有输入框都是 affix**"的前提设计，不能只测裸 `<Input>`。
-- 反向检查：是否存在**没有** allowClear 的 Input（例如显式 `allowClear={false}`）→ 那些是"顶层 input"，走 `.ant-input-outlined` 分支 → **两条渲染路径都要验证**。
-- 排查既有裸 Input 存量：`eslint.config.js:126` 的 P65 selector 已拦截裸 `<Input>`，v1.23 已把 P65 豁免清零 → 存量裸 Input 理论上为 0；仍应 grep 一次 `from "antd"` 里的 `Input` 直接使用作为交叉验证。
-
-**Warning signs:**
-- 修复只测了「显式 allowClear={false}」的输入框 → 恰好测的是没问题的分支；
-- 某个页面输入框没有 clear 图标却仍是双框 → 它的 DOM 结构与其它不同（可能是 Input.Search / Input.Password / Input.OTP 等包装组件）。
-
-**Phase to address:** P1 样式修复（验收矩阵的输入源选择）。
-
----
-
-### Pitfall A7：暗色模式 —— 裸标签选择器 `[data-color-mode="dark"] input` 会绕过所有类选择器收窄
-
-**What goes wrong:**
-**暗色块里有一批「元素标签选择器」规则**（`src/index.css`）：
-
-| 行号 | 选择器 | 特异性 | 作用 |
-|---|---|---|---|
-| `:2252-2259` | `[data-color-mode="dark"] input, textarea, .ant-input, .ant-input-number, .ant-input-affix-wrapper` | (0,1,1) / (0,1,0) | `background-color` / `color` / `border-color` `!important` |
-| `:2268-2272` | `[data-color-mode="dark"] input:hover, textarea:hover, .ant-input:hover, .ant-input-affix-wrapper:hover` | (0,2,1) | `border-color` `!important` |
-| `:2275-2281` | `[data-color-mode="dark"] input:focus, textarea:focus, .ant-input:focus, .ant-input-affix-wrapper:focus, .ant-input-affix-wrapper-focused` | (0,2,1) | `border-color` `!important` |
-
-**关键点：`** `[data-color-mode="dark"] input` 是**标签选择器**，特异性 (0,1,1) **高于**任何单个类选择器（如 `.ant-input-outlined` (0,1,0)）。它会命中**所有** input 元素，**包括 affix-wrapper 内层 input**。
-
-**因此：**
-- 如果采用「把 `.ant-input` 改成 `.ant-input-outlined`」的收窄路线 → 亮色下内层 input 确实没有边框了（因为 `.ant-input-outlined` 不命中内层），**但暗色下 `[data-color-mode="dark"] input { border-color: var(--input-border) !important }` 仍然命中内层**。虽然只有 `border-color` 没有 `border-width/style`，**视觉上不会出边框**（border-color 单独不生成边框）→ 侥幸不炸。
-- 但 `background-color: var(--input-bg) !important` 会**让内层 input 背景不透明**。在 antd 的 `filled` 变体或未来任何 wrapper 背景 ≠ input 背景的场景下 → **wrapper 与内层出现色差**（"边框内一圈灰"）。
-- 采用「wrapper 上下文复位」路线（`.ant-input-affix-wrapper > input.ant-input`，特异性 (0,3,1)）→ **稳压** (0,1,1) 的标签规则 ✓ 暗色同样正确。
-
-**暗色 token 事实**（`src/index.css`）：
-- light 块 `:150-196`：`--input-bg: #ffffff`（`:184`）、`--input-border: #dbd7ce`（`:185`）、`--input-border-hover: #598e5e`（`:186`）、`--input-border-focus: #156031`（`:187`，注释标 COMP-04）、`--input-text: #101010`（`:188`）、`--input-placeholder: #707068`（`:189`）
-- dark 块 `:198-268`：`--input-bg: #0f2e1b`（`:254`）、`--input-bg-hover`（`:255`）、`--input-bg-focus`（`:256`）、`--input-bg-disabled`（`:257`）、`--input-border: #2d4d33`（`:260`）、`--input-border-hover: #598e5e`（`:261`）、`--input-border-focus: #1a6839`（`:262`）、`--input-text: #f0ece3`（`:266`）
-- **注意**：dark 块定义了 `--input-bg-hover` / `--input-bg-focus` / `--input-bg-disabled` / `--input-border-error` / `--input-border-disabled` / `--input-text-placeholder` / `--input-text-disabled`，但**项目 CSS 里没有任何规则消费它们**（`.ant-input` 规则用的是 `--input-bg` / `--input-border` 单一值）→ 一批死 token。
-
-**How to avoid:**
-- 选「wrapper 上下文复位」路线，天然规避标签选择器问题。
-- 修复后**必须**在暗色下截图验证：① 输入框内层与 wrapper 背景是否同色；② 内层是否还有任何 1px 线；③ hover/focus 时内层是否变色（`[data-color-mode="dark"] input:hover` 会给内层改 `border-color` —— 无 border-width 则无视觉，但若未来内层有了 border-width 就会立刻暴露）。
-- 顺手把 `--input-bg-hover` / `--input-bg-focus` / `--input-border-error` 等**死 token**登记为已知欠账（不要在本次顺手接线，会扩大回归面）。
-
-**Warning signs:**
-- 暗色下输入框内部有一圈比外部略浅/略深的矩形；
-- 暗色下 hover 时输入框"内层"颜色变深；
-- 只在暗色下出现的双框（多半是标签选择器与新规则的特异性竞争）。
-
-**Phase to address:** P1 样式修复。
-
----
-
-### Pitfall A8：焦点环 —— 修复后焦点环会**外扩 1px**，且必须确认只出现一层
-
-**What goes wrong:**
-对 `Input` 焦点态做判断时，误以为会看到"两圈焦点环"。实际机制：
-
-**焦点环画在哪个元素上：**
-- antd 的 `genBaseOutlinedStyle`（`node_modules/antd/es/input/style/variants.js:34-39`）：
-  ```js
-  '&:focus, &:focus-within': { borderColor: options.activeBorderColor, boxShadow: options.activeShadow, outline: 0, backgroundColor: token.activeBg }
-  ```
-  → **wrapper 上的 `:focus-within` 会在焦点落在内部 input 时命中** → 焦点环由 **wrapper** 承担。
-- antd 显式关掉内层焦点环：`input/style/index.js:392-394` `&:focus { boxShadow: 'none !important' }` → 实际特异性 (0,4,1)（含 hash）。
-- 项目 `.ant-input:focus { box-shadow: 0 0 0 2px var(--theme-primary-lighter) !important }`（`index.css:888-893`）(0,2,0) → **打不过 antd 的 (0,4,1)** → 内层无焦点环。
-- 项目 `.ant-input-affix-wrapper-focused { box-shadow: 0 0 0 2px var(--theme-primary-lighter) !important }`（`index.css:920-923`）→ wrapper 上的焦点环。
-- 暗色块 `:895-901` / `:925-929` 给两处各加了一层 `0 0 12px rgba(21,96,49,0.1)` 的外发光。
-
-**结论：现状（双框）下焦点环本来就只有一圈（wrapper 上的），但它紧贴内层那条多余边框的外沿。** 修复后内层边框消失 → **焦点环整体向外扩 1px**。这在视觉上是一个"细微但可察觉"的位移，**必须截图对比确认没有"跳动感"**。
-
-**另一个必须防的坑：** 若修复时顺手给内层 input 加了 `box-shadow: none`（不带 `!important`），会被 antd 的 `:focus-within` 逻辑绕过；若加的 `box-shadow: none !important` 落在**过宽的选择器**上（例如 `.ant-input:focus`），会把 **wrapper 上的焦点环也一起干掉**（因为 `:focus-within` 匹配的元素是 wrapper，但 `.ant-input:focus` 匹配的是内层 —— 两者不同元素，但如果规则写成 `.ant-input-affix-wrapper:focus-within` 就会误伤）。
-
-**How to avoid:**
-- 修复规则里**不要出现 `box-shadow`**（内层焦点环交给 antd 的 `none !important`）。
-- 验收时逐个状态截图：默认 / hover / focus（wrapper 上应恰好一圈 2px 品牌绿光晕 + 一圈 12px 外发光，暗色下叠加）。
-- 同时验证 **TextArea 的 focus**（antd 走 `textarea.js:58-60` 的 `boxShadow: 'none !important'`）与 **InputNumber 的 focus**（项目 `.ant-input-number:focus` 规则 (0,2,0) 与 antd InputNumber 根的 focus 态竞争）。
-
-**Warning signs:**
-- 聚焦后焦点环变成"双层"（内层一圈 + 外层一圈）；
-- 聚焦后焦点环消失；
-- 暗色下焦点环的颜色与亮色不一致（两套 box-shadow 定义分散在 `:888-901` 和 `:920-929` 两处，容易只改一处）。
-
-**Phase to address:** P1 样式修复。
-
----
-
-### Pitfall A9：视觉层没有自动化守卫 —— v1.23 的四道闸门全部对双框失明
-
-**What goes wrong:**
-双框是 v1.23 引入的回归，而 v1.23 的所有闸门（`npm run type-check` / `npm run test` / `npm run lint` / `npm run build`）**全部通过**。原因不是闸门坏了，而是**闸门覆盖的是"代码正确性"，双框是"渲染正确性"**：
-- type-check：CSS 语法合法 → 绿；
-- vitest：jsdom **不加载 `src/index.css`**，也不做布局计算 → 无边框概念 → 绿；
-- eslint：本项目 eslint 规则集里**没有 CSS 规则**（`eslint.config.js` 只有 JS/TS 规则 + 一个自定义 `local/no-large-dropdown-list`）→ 绿；
-- build：CSS 会被打包，但 Vite 不校验视觉效果 → 绿。
-
-**Why it happens:**
-"闸门全绿 = 没问题"是流程惯性。实际上**没有任何一道闸门能看见"多了一条 1px 边框"**。
-
-**How to avoid:**
-本里程碑**建议**补一条**轻量**守卫（二选一，按成本排序）：
-1. **CSS 契约单测（推荐，成本最低）**：用 vitest 读取 `src/index.css` 文本，断言「不存在对 `.ant-input` 无条件设置 `border` 的规则」/「存在 affix-wrapper 内层复位规则」。这类"样式契约测试"不需要浏览器，秒级，能挡住**同形态复发**（有人再写一条 `.ant-input { border: ... !important }`）。
-2. **结构断言测试**：用 jsdom 渲染 `<AppInput />`，断言 affix-wrapper 的内层 input **不存在**（antd 的 `allowClear` 在 jsdom 下会渲染出 `.ant-input-affix-wrapper` 与内层 `input.ant-input`）→ 至少锁住"结构"这一半。
-3. （不推荐本次做）截图对比基线：需要引入 Playwright/Puppeteer，与本项目"零新依赖"约定冲突（见 v1.23 UAT 约定用 `agent-browser` skill）。
-
-**Warning signs:**
-- 修完之后任何人往 `src/index.css` 加一条 `.ant-input { ... }` 都能再次引入双框，而 CI 全绿；
-- 下一个里程碑再次出现"视觉回归"类问题。
-
-**Phase to address:** P1 样式修复（守卫与修复同 phase 落地，不要留到收尾）；P7 结构整理（拆分文件时一并加断言）。
-
----
-
-### 领域 B：功能层
-
-### Pitfall B1：#16 的真正根因不是 fail-open，而是**行操作层根本没有权限门控**
-
-**What goes wrong:**
-v1.23 UAT（`.planning/milestones/v1.23-phases/75-uat/75-UAT.md:51, 84-87`）给出两个根因候选：
-> ① 前端 `hasPerm` 类判定在权限列表获取失败/为空时默认放行危险按钮（fail-open）；② 本地 sqlite 手工插库角色未触发权限缓存加载，后端下发的权限集异常。
-
-**两个候选经源码核对都不成立**：
-
-**候选①不成立 —— 楼宇页没有 hasPerm，也没有 fail-open：**
-- `src/pages/operations/buildings/index.tsx:374-378`：
-  ```tsx
-  const rowActions = (record: Building) => [
-    { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
-    createDeleteAction(record.id, handleDelete, { target: `楼宇 ${record.name}` }),
-  ];
-  ```
-  → **无条件渲染**，没有任何权限判断。整个 `src/pages/operations/buildings/` 目录 grep `permission` **零命中**。
-- `src/components/shared/ActionButtons.tsx:15-24` —— `ActionButton` 接口**根本没有 `permission` 字段**；`:114-159` `createDeleteAction` 的 options 里也没有权限参数 → **共享组件层也不具备门控能力**。
-- 对照组证明"部分页面有门控"：`src/pages/network/ports/index.tsx:131-132`
-  ```ts
-  const hasPermission = (perm: string) => menuPermissions.includes(perm);
-  const canWrite = hasPermission("network:port:write");
-  ```
-  → 端口页做了，楼宇页没做。所以**#16 是"契约缺失"而不是"实现 bug"**。
-
-**候选②不成立 —— 权限链路本身是自洽的：**
-- 前端权限来源：`src/lib/menuApi.ts:23-26` → `POST /system/my-menus/permissions`
-- 后端 handler：`internal/api/v1/system/menu_handler.go:335-348`
-- 后端聚合：`internal/services/system/menu_service.go:509-569`
-  `sys_user_role` → `sys_role_menu` → **`:543` `appendAncestorMenuIDs`（自动补所有祖先菜单）** → `sys_menu.perms` 去重
-  → **不区分菜单类型**（菜单/按钮都收）、**不过滤 `status`**、**`perms` 直接 Pluck 整串（不拆逗号）**
-- 后端权限码口径（`internal/core/db/init_data.go:693, 752-755`）：
-  ```
-  楼宇管理菜单   ops:building:list
-  楼宇查询       ops:building:query
-  楼宇新增       ops:building:add
-  楼宇修改       ops:building:edit
-  楼宇删除       ops:building:delete
-  ```
-  → **编辑 = `:edit`、删除 = `:delete`**，天然就是行操作门控所需的映射。
-- `pkg/permission/config.go:223-290` 的 `GetRoutePermissions()` 是**静态的「路由 → 权限码」表**（路由级授权用），**不是**用户权限集，且**每次调用返回新切片、无任何缓存** → 用户猜测的"后端 GetRoutePermissions 缓存"**不存在**。真正有缓存的是 `internal/services/system/menu_cache_impl.go:115-120`：
-  ```go
-  GetMenuUserPermissionsKey(userID)  // menu:user:perms:{userID}
-  s.GetExpiration(services.CacheConfigMenuTree, 30*time.Minute)  // 30 分钟 TTL
-  ```
-
-**Why it happens:**
-UAT 的排查在 sqlite 环境 + 手工插库的环境下进行，两个变量叠加导致"看起来像权限问题"，实际是"根本没做权限控制"。**行操作权限从来不是契约的一部分** —— v1.22 契约体系（AppInput/AppSelect/PageTable/SearchForm/FormModal/ConfirmDelete）里**没有"行操作权限"这一维**。
-
-**How to avoid（v1.24 定责的判别方法，按顺序执行，每步都能单独终止）：**
-1. **先查库，判定"后端是否发了写权限"**（这是区分"后端发了写权限给只读角色" vs "前端没门控"的唯一硬判据）：
-   ```sql
-   SELECT m.id, m.name, m.menu_type, m.perms
-   FROM sys_user_role ur
-   JOIN sys_role_menu rm ON rm.role_id = ur.role_id
-   JOIN sys_menu m ON m.id = rm.menu_id
-   WHERE ur.user_id = '<受限用户UUID>';
-   ```
-   - 结果里出现 `ops:building:edit` / `ops:building:delete` → **后端把写权限发给了只读角色**（数据问题：角色勾选了按钮菜单，或 `appendAncestorMenuIDs` 补祖先时带上了带 perms 的父菜单）→ 修数据，不改前端。
-   - 结果里**只有** `ops:building:list` / `ops:building:query` → **后端口径正确，前端缺门控** → 走第 2 步。
-2. **再查后端实际下发**（用正确端点！）：`POST /system/my-menus/permissions`。
-   > ⚠️ UAT 记录（`75-UAT.md:51`）写的是「`/system/menus/permissions` 对该用户 403」——**这个端点前端根本不调用**（`src/lib/menuApi.ts:24` 用的是 `/system/my-menus/permissions`）。用错端点会得出"后端不下发权限"的错误结论。
-3. **再查缓存**：`menu:user:perms:{userID}` 有 30 分钟 TTL（`menu_cache_impl.go:118`）。角色↔菜单变更走 `InvalidateUserMenuCache`（`menu_cache_impl.go:157-162`），菜单本身的写操作走 `InvalidateMenuCache`（`:122-136`）。**手工插库绕过全部失效路径** → PG 复测时必须走 UI 正常路径，或手动清 key。
-
-**Warning signs:**
-- 任何"看起来像 fail-open"的表述都要先被"这里到底有没有 hasPerm"证伪/证实；
-- UAT 记录里引用了前端不调用的端点；
-- 排查时把"路由→权限码静态表"（`pkg/permission/config.go`）与"用户权限集"混为一谈。
-
-**Phase to address:** P2 #16 定责（第 1~3 步是"定责"，不写代码）。
-
----
-
-### Pitfall B2：#16 的两难 —— fail-closed 会造成"本该能用的按钮也看不见"
-
-**What goes wrong:**
-若 #16 定责为"前端缺门控"，最直接的修法是"默认隐藏危险按钮，权限到了才显示"（fail-closed）。但这会引入**可用性回归**：
-- 权限列表来自 `POST /system/my-menus/permissions`，**是一次异步网络请求**。在它返回之前 `menuStore.permissions` 是 `[]`（`src/store/menuStore.ts:55` 初始值）→ **首屏所有危险按钮全部消失**；
-- 权限请求失败（网络抖动、token 刷新失败、后端 5xx）→ `permissions` 永远为空 → **管理员也看不到删除按钮**，且**没有任何提示**（用户只会以为"系统没有这个功能"）；
-- 菜单缓存（`MENU_CACHE` sessionStorage）能缓解首屏空窗，但 `DynamicRoutes.tsx:179-186` 的 hydrate 写的是 `cachedMenuData.permissions`，**缓存缺失或版本不匹配（`MENU_CACHE_VERSION`）时仍然为空窗**。
-
-反过来，若采用 fail-open（默认显示），就等于没修 #16。
-
-**业界常见折中（按本项目适配度排序）：**
-
-| 方案 | 机制 | 适配度 |
-|---|---|---|
-| **A. 三态门控（推荐）** | `permissions` 未加载完成 → 按钮**禁用**（保留可见性 + `aria-disabled`），加载完成且有权限 → 可用；加载完成且无权限 → **不渲染** | 高。既不误显示，也不误隐藏；用户看得见"这里有个删除"但暂时点不动 |
-| B. 后端推送式能力 | 由后端在列表数据里回传 `canEdit/canDelete` 标志 | 低。需要改 N 个列表接口，范围失控 |
-| C. 页面级 `AuthGate` | 在列表页外层包一次权限判定，缺权限则整块降级 | 中。粒度粗（整个操作列一起没），但实现简单 |
-| D. 纯 fail-closed + 显式错误态 | 权限加载失败时显示"权限信息加载失败，点击重试" | 中。诚实但需要额外 UI |
-
-**本项目推荐做法（A 的具体落地）：**
-1. `ActionButton` 接口新增**可选** `permission?: string`（**向后兼容**，存量调用点不传即保持原行为）；
-2. `createDeleteAction` 的 options 新增**可选** `permission?: string`；
-3. 门控判定集中到**一个** helper（不要在每个页面各写一遍）：
-   ```
-   权限未就绪 → 渲染按钮但 disabled（title/aria-label 说明"权限加载中"）
-   权限就绪 & 含该码 → 正常
-   权限就绪 & 不含该码 → 不渲染
-   ```
-4. 「权限未就绪」的判定必须基于**明确的加载态**（`menuStore` 的 `loading` / `error` 字段 + `permissions` 长度），**不能**用 `permissions.length === 0` 判空 —— 空权限集与未加载完在数据上不可区分。
-5. 危险操作（删除）**必须**在**服务端**也校验（后端 `pkg/middleware/permission.go` + `internal/api/router.go` 已有 `ops:building:delete` 授权）→ **前端门控是 UX，不是安全边界**（与 `src/router/RouteGuard.tsx:5` 的既有注释口径一致）。
-
-**Why it happens:**
-"隐藏按钮"看起来是零成本的 UX 修补，但它把一个**同步可判定**的问题（这个用户有没有这个权限）变成了**依赖异步状态**的问题。权限数据未就绪这个中间态被忽略，就会把"偶尔按钮消失"变成"用户投诉功能丢失"。
-
-**Warning signs:**
-- 修复后用户报"刷新页面后删除按钮闪一下才出现"；
-- 修复后弱网/接口失败时管理员也看不到删除按钮，且无提示；
-- 修复只改了 1~2 个页面，其它页面仍然无门控（**#16 复测必须覆盖多个列表页**，否则只是"点过"而不是"修好"）。
-
-**Phase to address:** P2 #16（门控契约 + helper 落地）。
-
----
-
-### Pitfall B3：#16 的范围膨胀 —— 「行操作权限」在 v1.24 是**全站契约化**，不是单点 bug
-
-**What goes wrong:**
-把 #16 当成"修一个楼宇页"来做。实际盘点后：
-- `src/components/shared/ActionButtons.tsx` 的 `ActionButton` / `createDeleteAction` 是**全站行操作唯一入口**（契约组件）；
-- 行操作分布：楼宇、工位、机房、楼层、网络设备、用户/角色/部门/岗位/字典/菜单、通知、值班、工单、对账……**数十个页面**；
-- 每个页面的权限码**不统一**：ops 走 `ops:building:edit` / `ops:building:delete`（`init_data.go:752-755`），system 走 `system:user:edit` / `system:user:remove`（`pkg/permission/config.go` 里 `UserEdit` / `UserRemove`），network 走 `network:port:write`（**单一码覆盖全部写操作**，`config.go:280-288`）→ **不存在统一的「行操作 → 权限码」约定**。
-
-**Why it happens:**
-UAT 把 #16 记成一条"行操作权限不变"的回归条目，读者会以为曾经有过这个契约。实际上 v1.22 的契约体系里没有这一维。
-
-**How to avoid:**
-- v1.24 **明确切范围**：P2 只做「**契约 + 样板 + N 个代表页面**」，并在 phase 验收里写清"本里程碑不覆盖全部页面"，剩余页面登记为 Known Gaps。
-- 建立**权限码映射表**（模块 × 操作 → 权限码），作为契约的单一真相源；映射缺失的模块**默认 fail-closed + 显示禁用态**，而不是"默认显示"。
-- 特别处理 `network:port:write` 这类**一码多操作**的情况：要么拆分权限码（后端改动大），要么在契约层允许"一个 permission 覆盖一组操作"。
-
-**Warning signs:**
-- PR diff 出现 30+ 文件的权限改动；
-- 映射表靠"猜"（前端自己写字符串字面量，与后端 `init_data.go` 不同步）→ 必须有一致性校验脚本；
-- 只测了 1 个页面就宣布 #16 关闭。
-
-**Phase to address:** P2 #16（先切范围，再定契约）。
-
----
-
-### Pitfall B4：3f130 空因诊断 —— 后端注释自相矛盾，且"有数据 + 空因"会同时出现
-
-**What goes wrong:**
-v1.24 要做「3f130 空因诊断前端展示」。后端已就绪（commit `8b85fe6b`）：
-- 路由：`internal/api/router.go:702` → `POST /ops/workstation-device/:id/physical-diagnosis`
-- handler：`internal/api/v1/operations/workstation_device_handler.go:147-191`
-- 空因常量：`internal/services/operations/workstation_physical_diagnosis.go:27-43`
-  ```
-  PhysicalEmptyReasonNone                = ""                 // 有数据
-  PhysicalEmptyReasonNoUserBound         = "no_user_bound"
-  PhysicalEmptyReasonInfoPointMisbound   = "info_point_misbound"
-  PhysicalEmptyReasonDeviceOrMACMissing  = "device_or_mac_missing"
-  ```
-  字段 `EmptyReason string \`json:"emptyReason,omitempty"\``（`:57`）→ **空串即 JSON 省略**。
-- 判定：`internal/services/operations/workstation_device_service.go:800-867` `classifyPhysicalEmptyReason`
-- 告警：同文件 `:869-887` `collectPhysicalWarnings`
-
-**⚠️ 后端注释自相矛盾（必须先对齐再写前端）：**
-- `:804` 「未绑定用户 → no_user_bound ← **最高优先级，压过「有数据」**」
-- `:809-812` 「**未绑用户压过「有数据」**……设备本身的数据不丢，仍在 Devices 里，同时 Warnings 也会提示该告警，两个通道互补」
-- `:820` 「若此处对 deviceCount>0 返回 ""，需求「可区分空因状态」对 3f130 就没有解决」
-- **但** `:871-874`（`collectPhysicalWarnings` 的注释）却写：「此时 devices 非空 → **emptyReason 必须为空串**（否则就是误报空因）……故用 Warnings 承载」
-
-**以代码为准的实际行为：**
-`classifyPhysicalEmptyReason` 的 `:822` `if !diag.UserBound { return no_user_bound, ... }` 是**无条件先判**（在 `deviceCount > 0` 判断之前）→ 3f130 的实际响应是：
-> `devices` **非空**（mac_match_count=1）+ `emptyReason = "no_user_bound"` + `warnings` 里**也**有「未绑定用户」告警（`:879` 无条件追加）。
-
-**这正是用户描述的 UI 矛盾：「有数据但 emptyReason=no_user_bound」——用户看到设备列表，却同时看到"导致为空"的空因与警告。**
-
-**前端展示的正确做法：**
-- **`devices.length > 0` 时**：把 `emptyReason` 当成**根因告警**而不是"空的原因"；UI 上用 **warning 样式（Alert warning）** 呈现，标题措辞用「该工位未绑定用户，物理链路按用户维度归属，可能显示不全」，**不要**用"为空/无数据"的空态文案。
-- **`devices.length === 0` 时**：用 `emptyReason` + `emptyMessage` 渲染**空态**（这是它被设计出来的场景）。
-- **不要**在有数据时同时渲染「空态组件」+「有数据的列表」—— 那是把两套互斥的语义叠在同一块 UI 上。
-
-**前端现状（尚未接入）：**
-- `src/components/operations/WorkstationDeviceTable/index.tsx:109-128` —— 物理链路仍走**旧端点**，失败时只 `console.warn(physicalResult.reason)`；`:580-591` 折叠面板标题写死「物理链路设备（{physicalDevices.length}台）」，**0 行也显示**。
-- 全仓 `grep emptyReason|no_user_bound` 在 `ruoyi-react-frontend/src` **零命中** → 前端完全没接。
-
-**How to avoid:**
-- **第一步不是写 UI，是对齐契约**：把 `workstation_device_service.go:871-874` 的矛盾注释修正（或明确"emptyReason 是根因，允许与 devices 共存"），并加一条**不变量测试**锁住"有数据 + 未绑用户 → emptyReason 仍为 no_user_bound 且 devices 非空"（现有测试 `workstation_physical_diagnosis_test.go:271-303` 只锁了"0 台设备必带非空 emptyReason"，**没锁"有数据时空因仍可非空"**）。
-- 前端新增**明确的类型**（不要用 `any` 接 JSON），例如把 `emptyReason` 建模为判别联合：`{ code: "" } | { code: "no_user_bound" | ... }`。
-- 3f130 本身**还没绑 user_id**（数据侧动作，见 `.planning/debug/workstation-3f130-physical-link-empty.md:106`）→ **验收前必须先做数据绑定，否则复验必然还是"空白 + 空因"**，会被误判为"前端没修好"。
-
-**Warning signs:**
-- UI 上出现"共 1 台设备" + "无数据" 空态卡片并存；
-- 空因文案说"因此为空"但列表里明明有设备；
-- 修复后截图仍显示空白 → 是数据没绑（不是代码问题）。
-
-**Phase to address:** P3 3f130 展示（先契约对齐 → 再前端接入 → 最后绑数据复验）。
-
----
-
-### Pitfall B5：F5 落 `/dashboard` 的根因不是"缺默认落地页"，而是「深层 URL 落进 `path="*"` 兜底」+「兜底路径反写 LAST_PATH」
-
-**What goes wrong:**
-`src/router/DynamicRoutes.tsx`：
-- `:283-286` — `<Route path="/" element={<Navigate to={lastPath && lastPath !== "/" ? lastPath : "/dashboard"} replace />} />`
-  → 只有 **URL 恰好是 `/`** 时才用 `lastPath`。
-- `:315` — `<Route path="*" element={<Navigate to="/dashboard" replace />} />`（Layout 内兜底）
-- `:227-240` — `routeElements` = `RouteGenerator.generate(allMenus)` 再 `.filter(routeConfigManager.hasPermission(...))`
-  → **无权限的路由根本不进路由树**。
-- `:258-260` — `!initialized` → `InitializingFallback`；`:275-277` — `allMenus.length === 0 && !cachedMenuData` → `InitializingFallback`。
-- `:243-247` — `useEffect` **无条件** `saveLastPath(location.pathname)`（只排除 `/login`，见 `:95-105`）。
-- `:85-92` `getLastPath` / `:108-115` `clearLastPath` / `src/constants/storage.ts:37` `LAST_PATH = "ruoyi_last_visited_path"`。
-
-**F5 掉到 `/dashboard` 的完整链路：**
-1. 用户在 `/operations/buildings` → LAST_PATH = `/operations/buildings`。
-2. F5 → **URL 仍是 `/operations/buildings`**（不是 `/`）→ `:283` 的 `/` 路由**不匹配**。
-3. 若此刻动态路由尚未就绪（`allMenus` 仍空、或该路径因无权限被 filter 掉）→ 命中 `:315` 的 `*` → **强制跳 `/dashboard`**。
-4. 跳转完成后 `:243-247` 的 effect 把 `/dashboard` **写回 LAST_PATH** → **原路径被自毁式覆盖**，再也回不去。
-5. UAT 已实证第 4 步：「F5 刷新后 SPA 落到 `/dashboard` 且 `ruoyi_last_visited_path` 被覆盖为 `/dashboard`」（`75-UAT.md:76`）。
-
-**所以「改路由 fallback 让 F5 落 `/dashboard`」这个命题本身就是错的** —— F5 **已经**在落 `/dashboard`，问题是**不该落**。
-
-**改 `path="*"` 的 fallback 会连带破坏的既有行为：**
-| 既有行为 | 位置 | 改 fallback 的影响 |
-|---|---|---|
-| 未登录 → 跳登录页 | `:263-270`（`*` → `/login`） | 若把兜底统一改成"落 dashboard"，未登录用户会被送到需要鉴权的页面 → 无限重定向 |
-| 无权限 deep link → 落到某处 | `:238` 把无权限路由 filter 掉 → 命中 `*` | 无权限用户应看到 403/提示，而不是被静默送到 dashboard（"看起来有权限"） |
-| deep link 直达（`/system/notice/:id`） | `:299-306` `RouteGuard` + `fallback="/system/notice"` | `RouteGuard` 的 fallback 依赖"匹配不到"时的行为；改兜底会与之抢路由 |
-| 静态资源路径 | `:249-255` `isUploadsPath` → `UploadsFallback` | 不受影响，但需保留该早退分支 |
-
-**How to avoid:**
-- **正确的修法是三件事一起做**：
-  1. **菜单/路由未就绪时不要渲染 `*` 兜底**：`:275-277` 已经用 `InitializingFallback` 挡住了一部分情况，但**只挡住了 `allMenus` 为空**；一旦 `allMenus` 有内容而**目标路径不在其中**（无权限/路径写错/菜单还在加载），仍会命中 `*` → 应当在"目标路径尚未在 `routeElements` 中出现"时保持 loading 或渲染 403，而不是立刻跳 dashboard。
-  2. **不要把兜底跳转产生的路径写回 LAST_PATH**：`:243-247` 需要排除"由 `*` 兜底触发的跳转"（例如在跳转前记录一个"正在兜底"的 ref，或改为只在 `routeElements` 命中当前路径时保存）。
-  3. **LAST_PATH 要有版本号**：`MENU_CACHE` 有 `MENU_CACHE_VERSION`（`DynamicRoutes.tsx:74-78`），而 `LAST_PATH` **没有** → 跨版本/跨发布残留的旧路径会被直接 `Navigate` 过去（可能 404 → 又命中 `*` → 又跳 dashboard，形成"弹跳"）。
-- **回归验证矩阵**（每条都要实际点一遍）：
-  | 场景 | 期望 |
-  |---|---|
-  | 在 `/operations/buildings` 按 F5 | 仍停 `/operations/buildings`，LAST_PATH 不变 |
-  | 在 `/dashboard` 按 F5 | 停 `/dashboard` |
-  | 直接粘贴 URL 打开一个**有权限**的深层路径 | 直达该页 |
-  | 直接粘贴 URL 打开一个**无权限**的深层路径 | 403 / 明确提示，**不是**静默跳 dashboard |
-  | 未登录时打开任意深层 URL | 跳 `/login`，登录后回到原路径（`LAST_PATH` 语义） |
-  | 登出 | `authStore.ts:130` 清 LAST_PATH → 再登录不回旧页 |
-  | 直接访问 `/` | 跳 `lastPath` 或 `/dashboard`（现有语义不变） |
-
-**Warning signs:**
-- 修完 F5 后，用户刷新会看到"闪一下 dashboard 再跳回原页"（说明是 `*` 兜底 + `Navigate` 的竞态）；
-- LAST_PATH 里出现 `/dashboard` 且用户抱怨"回不去刚才的页面"；
-- 未登录用户被送到 dashboard 后白屏/无限重定向。
-
-**Phase to address:** P4 F5 落地页（先做回归矩阵，再改代码）。
-
----
-
-### Pitfall B6：react-refresh 清零 —— `export type` 会被 `verbatimModuleSyntax` 强制要求，且**运行时完全无差别**
-
-**What goes wrong:**
-react-refresh 规则要求"一个文件只导出组件"。清零 33 处 warning 的自然做法是"把非组件导出改成 `export type`"（对类型导出）或"把常量/函数挪到单独文件"（对值导出）。这里有一个**编译期与运行时的关键分界**：
-
-**结论（基于 `node_modules/eslint-plugin-react-refresh/index.js` 实测）：**
-- `:193-194` —
-  ```js
-  } else if (node.type === "ExportNamedDeclaration") {
-    if (node.exportKind === "type") continue;   // ← 类型导出直接跳过
-  ```
-- `:177-178` — `ExportAllDeclaration` 同样 `if (node.exportKind === "type") continue;`
-
-→ **`exportKind === "type"` 的导出既不计入"非组件导出"，也不触发 warning。**
-
-**因此：**
-| 写法 | `exportKind` | react-refresh | 运行时 | `verbatimModuleSyntax: true` |
-|---|---|---|---|---|
-| `export { SomeType }` | `"value"` | **触发 warning** | 保留 import（TS 会保留，因为无法确认是类型） | **TS 报错**（须用 type-only） |
-| `export type { SomeType }` | `"type"` | **跳过，不触发** | **完全擦除** | 正确写法 ✓ |
-| `export { type SomeType }` | `"type"` | 同上 | 完全擦除 | 正确写法 ✓ |
-
-**编译期交互结论：**
-- 项目 `tsconfig.app.json:14` — `"verbatimModuleSyntax": true`（**且未单独设 `isolatedModules`**，TS 5.9 下 `verbatimModuleSyntax` 已隐含其语义）。
-- `verbatimModuleSyntax: true` 的含义：**import/export 语句不做类型擦除**——凡是没有 `type` 修饰符的绑定，一律按运行时绑定处理并保留。
-- 因此 `export { SomeType }`（SomeType 是纯接口/类型别名）在 `verbatimModuleSyntax` 下**会被 TS 报错**（TS1205 "Re-exporting a type when 'verbatimModuleSyntax' is enabled requires using 'export type'" / TS1484 同类）。
-- **运行时无差别**：`export type` 在转译阶段（Vite/esbuild）被完全擦除，产物里不存在该导出 → 任何运行时行为（import 该符号并使用）都会变成 `undefined`/构建错误 —— 所以**只有当该符号确实是纯类型时**改写才安全。
-
-**关键前提（改写前必须逐个确认）：**
-1. 该导出**确实是纯类型**（interface / type alias），**不是**「同名 interface + const」的合并导出；
-2. **没有**任何 `.js`/`.mjs`/运行时消费方按值引用它；
-3. `tsconfig.app.json:39` 的 `exclude` 排除了 `src/**/*.test.ts(x)` —— **测试文件不在 type-check 范围内** → 测试里的 import 写法不会被 `tsc` 拦，但会被 vitest/esbuild 拦 → **改写导出后必须跑测试**。
-
-**How to avoid（清零路线，按类型分流）：**
-| 导出种类 | 处理方式 | 影响面 |
-|---|---|---|
-| 纯类型（interface / type alias） | `export { X }` → `export type { X }` | 零运行时影响；warning 直接消失 |
-| 字面量常量（`export const X = "abc"`） | **已豁免**（`eslint.config.js:59` `allowConstantExport: true`，规则实现 `index.js:95` `constantExportExpressions.has(init.type)`） | 无需动 |
-| 对象/数组/函数常量 | 挪到 `constants.ts`（非 `.tsx`）或 `xxx.constants.ts` | 需要改 import 路径 |
-| Hook / 工具函数 | 挪到 `hooks/` 或 `utils/` | 需要改 import 路径 |
-| `export * from "./x"` | 规则 `index.js:180` 直接报 `exportAll` → 必须改成具名 re-export，或把 barrel 排除出 lint 范围 | 需逐个确认 |
-
-**barrel 文件的豁免边界：** `src/components/shared/`（PageTable / FormModal / ActionButtons / statusHelpers / ModernTag）**本身就是 33 处里的重灾区**（5 个文件 7 处）。这些是**契约组件**，`src/components/shared/**` 在 `eslint.config.js:271-283` 已被整目录豁免（只保留内网 IP selector）→ 但**react-refresh 规则不在 no-restricted-syntax 里，不受该目录豁免影响**。→ 契约组件的"常量与组件同文件"是**有意设计**（收拢契约），把它们拆散会破坏"契约组件自包含"的原则。
-→ **建议**：react-refresh 33 处清零应**先划出"契约层豁免名单"**（`src/components/shared/**` + `src/components/ui/**`），其余文件再逐一清零；否则会把契约组件拆成一堆碎片文件，违背 v1.22 契约化的初衷。
-
-**Warning signs:**
-- 改完后 `npm run type-check` 报 TS1205/TS1484 → 漏改；
-- 改完后 vitest 报 "does not provide an export named X" → 某个测试或运行时消费方依赖了该值导出；
-- 文件数激增（每个常量一个文件）→ 过度拆分，违背契约意图；
-- 契约组件被拆散后，`src/components/shared/` 不再"自包含"。
-
-**Phase to address:** P7 react-refresh 清零（先定豁免边界，再逐文件改）。
-
----
-
-### Pitfall B7：devices 页拆分 —— `useMemo`/`useCallback` 依赖面 + 共享契约组件的冻结交互
-
-**What goes wrong:**
-`src/pages/network/devices/index.tsx` 实测 **714 行**（用户口径 692 行，接近但不等 —— 以实测为准）。结构：
-
-| 行 | 内容 |
-|---|---|
-| `:81-169` | `getDeviceTableColumns(props)` —— 纯函数（89 行） |
-| `:173` | 主组件 `DeviceManagement` |
-| `:192-197` | 5 个 `useState` |
-| `:205` | `getDeviceTypeText` `useCallback` |
-| `:214` | `deviceTypeOptions` `useMemo` |
-| `:246` | `sorterMetas` `useMemo` |
-| `:262` | `request` `useCallback`（数据请求） |
-| `:277` | `deptFilters` `useMemo`（**被 `:16` 注释标为"引用稳定"的联动关键**） |
-| `:367-368` | 弹窗态 `useState` |
-| `:451` | `buildRowActions` `useCallback`（行操作） |
-| `:516` | `reloadRef`（可变 ref 桥接） |
-| `:519` | `useEffect` |
-| `:524-713` | `columns` `useMemo`（**~190 行**） |
-
-**拆分的连带风险：**
-1. **`columns` 的 `useMemo` 依赖面爆炸**：`:524` 的 `columns` 依赖 `getDeviceTableColumns` 的全部入参 + `buildRowActions` + `request` + `sorterMetas` … 拆分后若把 `buildRowActions` 挪到子文件，`useCallback` 的稳定性依赖链会变 → **`columns` 每次渲染都重建 → 表格全量 re-render**（本仓库 `AGENTS.md` 明确警告过 useEffect 依赖不稳定导致无限请求）。
-2. **`deptFilters`（`:277`）的引用稳定性是左侧部门树联动的命脉**（`:16` 注释：「左侧部门树 → extraFilters={deptFilters}（useMemo 引用稳定）联动」）→ 拆开后若 `deptFilters` 变成新对象 → `PageTable` 的 `extraFilters` 引用变化 → **触发 `applyFilters` 回第 1 页**（正是 v1.23 FAIL-1 刚修的 `keepPage` 语义所在，`75-UAT.md:74-81`）→ **v1.24 拆分 devices 页会重新引入 v1.23 刚关掉的 bug**。
-3. **共享契约组件的冻结交互**：`src/components/network/port-write/` 下 4 个文件承载 v1.19/v1.20.1 的**冻结交互**（`PortWriteModal.tsx:21`、`PortBindingModal.tsx:24`、`SetAccessVlanModal.tsx:21`、`BulkWriteDrawer.tsx:41` 注释明写「submitting 防重 / reason `__custom__` 状态机 / batchInProgress」）。它们与 devices 页**不直接共享文件**，但**共享 `src/components/shared/ActionButtons.tsx` / `ConfirmDelete.tsx`**；devices 页 `:462` 注释还写明「ActionButton 契约（T1 冻结）无 aria-busy/title 透传位」→ **拆分时若"顺手"给 `ActionButton` 加 aria-busy 透传位，会波及 port-write 的冻结交互**（它依赖 ActionButton 现有形状）。
-4. **`src/pages/operations/room-devices/index.tsx` 实测 815 行，比 devices 还长** → 只拆 devices 会立刻产出一个新的"超长文件"债务。
-
-**How to avoid:**
-- 拆分按**纯函数优先**：`getDeviceTableColumns`（`:81-169`）是纯函数 → 挪到 `components/DeviceTableColumns.tsx`（或 `columns.tsx`）**零 hook 风险**，先做这一刀。
-- `columns` 的 `useMemo` **留在主组件**，只把列定义数据挪出去；搬出去后 `useMemo` 依赖**必须逐个核对**（`getDeviceTableColumns` 的入参全部列出来）。
-- `buildRowActions`（`:451`）**不要**跨文件搬运 `useCallback` 依赖 —— 若必须搬，把 `handleDelete` / `openModal` 一起搬，否则 `useCallback` 捕获到旧闭包。
-- 拆分的**验收**必须包含：① 左侧部门树联动后仍停在当前页（`keepPage` 语义）；② 表格排序/筛选；③ 行操作；④ 弹窗提交后刷新；⑤ `useMemo` 依赖稳定（用 React DevTools Profiler 或加一个"渲染次数"断言）。
-- **v1.19 冻结交互**：本里程碑**禁止**修改 `src/components/network/port-write/**` 与 `src/components/shared/ActionButtons.tsx` 的对外形状；如确需改动，单开一个 phase 并附冻结交互回归用例。
-
-**Warning signs:**
-- 拆分后部门树联动把页码打回第 1 页（v1.23 FAIL-1 复发）；
-- 表格在每次父组件渲染时整体重绘（性能退化）；
-- port-write 的 submitting 防重失效（重复提交）。
-
-**Phase to address:** P7 结构整理。
-
----
-
-### 领域 C：流程层
-
-### Pitfall C1：v1.23 教训复用 —— 四条已付出代价的规则必须变成 v1.24 的执行纪律
-
-**What goes wrong:**
-v1.23 的四条教训在 v1.24 会被重新触犯，因为 v1.24 的任务形态高度相似（批量改代码 + 闸门 + 实机验证）：
-
-**① 契约默认值下沉必须配 selector 拦截。**
-v1.23 的 `AppInput` 默认 `allowClear=true`（`src/components/ui/AppInput.tsx:12`）落地时**没有**任何 CSS 层面的守卫 → 双框直到 UAT 才发现。
-→ v1.24 推论：**任何"默认行为下沉"（CSS 默认值、props 默认值、hook 默认值）都必须同时落一条"可检测的守卫"**（lint selector / 契约单测 / 脚本），否则下一次样式重构会静默破坏它。
-
-**② grep 检测面漏检换行形态。**
-v1.23 的 `<Select\n` 漏检教训 → v1.24 的 CSS 检测尤其危险：CSS 选择器**换行等价**（`.ant-input,\n.ant-input-number { }` 是一个规则），任何按行 grep `.ant-input` 的脚本都会**漏掉多选择器规则**，或**把一个选择器行误当成一个完整规则**。
-→ 推论：样式守卫脚本必须**按规则块解析**（先按 `{}` 切分再提取选择器），不能按行 grep。
-同理，`index.css` 的多行规则（`:871-880` 就是三行选择器 + 一块声明）必须整体识别。
-
-**③ 中文规划文件禁用 PowerShell 管道读写（GBK 控制台静默毁文件）。**
-v1.24 要写 `.planning/research/PITFALLS.md`（**简体中文**）、以及 phase/plan 文档。
-→ 纪律：**写文件用 `write` 工具或 UTF-8 明确编码的脚本**；**不要**用 `Get-Content | ... | Set-Content`（Windows PowerShell 5.1 默认读取按 ANSI/GBK 解释 → 中文变乱码且**不报错**）。
-→ 读写后**必须**回读校验（`read` 一遍关键段落），不要相信"命令成功"。
-
-**④ subagent 崩溃后要「验收遗留 → 接管或重派」。**
-v1.24 范围大（7 个 phase），若用 subagent 并行：
-→ 纪律：每个 subagent 交付后**先验收产出物是否落盘**（文件存在 + 内容对得上），再决定接管或重派；**不要**因为"收到完成通知"就认为任务完成。
-
-**How to avoid:**
-把上述四条**写进 P1/P6/P7 的 plan 头部**作为执行前置，而不是指望执行 agent 记得。
-
-**Warning signs:**
-- 规划文件出现 `锟斤拷` / `�` 字符；
-- CSS 守卫脚本报告"0 命中"但 `index.css` 明显有对应规则；
-- subagent 报告"完成"但工作区文件没变。
-
-**Phase to address:** P1 / P6 / P7 全部（写进各自 plan 的前置清单）。
-
----
-
-### Pitfall C2：子代理/并行执行的"完成"不可信 —— 交付物必须先验收再采信
-
-**What goes wrong:**
-并行推进 7 个 phase 时，每个 phase 都有"看起来完成"的产出（commit、报告、文件）。若不验收就采信，错误会**沉淀到收档**，且 v1.23 已有先例：UAT 记录里的「`/system/menus/permissions` 对该用户 403」**引用了一个前端不调用的端点**（`src/lib/menuApi.ts:24` 用的是 `/system/my-menus/permissions`）→ 一条**从未执行过**的验证被写成了失败证据，直接把 #16 的定责带偏。
-
-**Why it happens:**
-"报告里写了"被当成"验证过"；且失败项在总结文档里往往被压缩成一句话（"端点 403"），细节（哪个端点、什么参数、什么身份）丢失。
-
-**How to avoid:**
-- 任何 UAT / 复测记录**必须**包含：① 复用的**准确** URL/端点/接口路径；② 身份与权限集（受限于哪个角色）；③ 环境（prod build？sqlite/PG？加密开/关？）；④ 复现步骤；⑤ 截图。
-- 定责类结论**必须**有可重跑的 SQL/命令，而不是结论句。
-- 每条 v1.24 验收项在关闭前，对照**源码/配置**复核一次端点与常量（本 pitfall 就是这么发现的）。
-
-**Warning signs:**
-- 报告里出现「某接口 403」但没有写完整路径；
-- 复测环境与生产配置不一致（sqlite vs PG、加密关 vs 开、dev server vs prod build）；
-- 结论引用了代码里不存在的标识符。
-
-**Phase to address:** P2 / P3 / P4（每个 phase 的验收清单都加"端点/常量复核"一步）。
-
----
-
-### Pitfall C3：eslint-plugin-react-hooks v7 的新规则族 —— 清偿 exhaustive-deps 会**引出新 error**
-
-**What goes wrong:**
-`eslint.config.js:106` 把 `react-hooks/exhaustive-deps` 设为 **error**（不是 warn）→ 12 处存量 error 必须在 v1.24 清零。但实测 lint 的 **17 errors** 里，**只有 12 处是 exhaustive-deps**，另外 5 处是**别的规则**：
-
-| 规则 | 位置 | 说明 |
-|---|---|---|
-| `react-hooks/set-state-in-effect` | `src/components/dashboard/DashboardView.tsx:161` | 新规则：effect 内同步 setState |
-| `react-hooks/immutability` | `src/hooks/useRealtimeUpdates.ts:130` | 新规则：渲染期改捕获的变量 |
-| `react-hooks/globals` | `src/pages/ad-domain/configs/__tests__/ReconciliationTab.test.tsx:51` | 新规则：改写组件外声明的变量 |
-| `react-hooks/compiler` | `src/hooks/useRPAProgress.ts:78`（Compilation Skipped: Existing memoization could not be preserved） | **React Compiler 规则族** |
-| `react-hooks/compiler` | `src/hooks/useRealtimeUpdates.ts:119`（Cannot access variable before it is declared） | React Compiler 规则族 |
-| `local/no-large-dropdown-list` | `src/components/ui/AppSelect.tsx:16` | **项目自定义规则** |
-
-安装版本：**`eslint-plugin-react-hooks@7.0.1`**（v6+ 引入 React Compiler 规则族，v7 继续扩展）。
-
-**关键陷阱：**
-1. **改代码引出连锁 error**：`useRealtimeUpdates.ts:119` 的 compiler 错误是 "Cannot access variable before it is declared" —— 修 `useRealtimeUpdates.ts:130` 的 immutability 错误，很可能**触发或加剧** compiler 错误 → 需要在**同一个文件**上一起改并一起验。
-2. **exhaustive-deps 的"正确修法"本身会撞新规则**：把 `message`（antd `App.useApp()` 返回值）加进 `useCallback` 依赖 → 依赖数组变化 → 但 antd 的 `message` 实例在 `<App>` 重新挂载时会变 → 可能引发 `useCaptchaModals.tsx` 的 5 处回调频繁重建 → **反而制造新的性能/闭包问题**。→ 这 5 处（`useCaptchaModals.tsx:143/172/183/193/202`）**必须逐处判断语义**，不能机械加依赖。
-3. **契约组件自身违规**：`src/components/ui/AppSelect.tsx:16` 报 `local/no-large-dropdown-list`（"Select/AutoComplete/Cascader 缺少 onSearch prop;必须使用服务端搜索 + 防抖"）。而 `AppSelect.tsx:18` 的契约是 `showSearch = showSearch ?? count >= 8` —— **契约自己开了搜索却没有 onSearch**。清零这条 error 只有三条路：① 改契约（加 onSearch/去掉自动开搜索）；② 给契约组件加豁免；③ 放宽自定义规则。
-   > 附带发现（文档漂移）：`75-UAT.md:66` 记「AppSelect showSearch + optionFilterProp="value"」，而 `AppSelect.tsx:19` 实际是 `optionFilterProp="label"` → **UAT 记录与代码不符**（v1.23 PITFALLS Pitfall 2.2 早已预警过 `optionFilterProp="label"` 的破坏性，这里正好是同一条）。
-
-**How to avoid:**
-- 12 处 exhaustive-deps **按语义分组**清偿，不要一把梭：
-  | 组 | 文件 | 修法方向 |
-  |---|---|---|
-  | A. `message` 依赖（6 处） | `useCaptchaModals.tsx`×5、`default-theme.tsx:70` | 用 `useMemo` 稳定引用（`const stableMessage = useMemo(() => message, [message])`）或加 `eslint-disable-next-line` + 理由（**必须写明"message 实例稳定"**） |
-  | B. 内部函数依赖（3 处） | `useCaptchaData.ts:47`、`ad/SyncMonitor/index.tsx:91`、`captcha-background/index.tsx:64` | 把内联函数提成 `useCallback` 或改用 ref |
-  | C. 不必要依赖（1 处） | `ReconciliationTab.tsx:115`（`queryTick` 多余） | 直接删依赖 |
-  | D. 其它（2 处） | `DashboardView.tsx:151`、`ColorSwitcher.tsx:109` | 逐处判断 |
-- **清零的判据必须是「errors 17 → 0」且「warnings 34 → 不上升」**，并把计数写成脚本断言（`scripts/assert-lint-budget.mjs` 已存在，可扩展）。
-- 5 处非 exhaustive-deps 的 error **同期清偿**（否则 lint 永远不是 0，且它们的修法会互相干扰）。
-- `AppSelect` 的 `local/no-large-dropdown-list`：**先决定契约方向**再改。若保留"≥8 自动开搜索"，则必须补 `onSearch`（服务端搜索）或给契约组件加显式豁免（因为 AppSelect 是"契约"本身，不是业务页）。
-
-**Warning signs:**
-- 修完 12 处 exhaustive-deps 后 errors 反而变多（compiler / set-state-in-effect 被引出）；
-- `npm run lint` 的 warning 数从 34 上升（改代码引出新 warning）；
-- `useCaptchaModals` 的回调引用每次渲染都变 → 弹窗里的 effect 反复触发。
-
-**Phase to address:** P6 lint 清偿。
-
----
-
-### Pitfall C4：封装层「目录级」豁免是契约的盲区 —— `src/components/shared/**` 里发生什么都看不见
-
-**What goes wrong:**
-`eslint.config.js:271-283` 的「封装层豁免 override」把 `src/components/ui/**` 与 `src/components/shared/**` 的 `no-restricted-syntax` **整条重声明为只剩内网 IP selector** → 这两个目录里：
-- 裸 `<Input>` / `<Select>` / `<TextArea>` / `<Modal.confirm>` / `<Popconfirm>` / 裸 hex —— **全部不被拦**。
-
-后果与 v1.24 的两处任务直接相关：
-1. **`ColumnConfigModal.tsx:136` 的 `Modal.confirm`**（重置列配置，非删除）**正是因为在 `src/components/shared/**` 才没被拦**。v1.22 契约要求「剩余 8 处 `Modal.confirm` 合法点全部带行内理由注释」—— 但目录级豁免让"哪几处是合法点"**无法被工具区分**。UAT 记的「[低] `ColumnConfigModal.tsx:136` 补豁免理由注释」实际是：**在这个目录级豁免的掩护下，这一处 `Modal.confirm` 需要行内理由注释来声明"我不是危险删除入口"**。
-   > 补充事实：`scripts/exemption-reasons.json` **没有** `ColumnConfigModal` 条目，`scripts/check-exemption-reasons.mjs:101-104` 校验的是「eslint 锚点数组 ↔ json 条目」双向相等 —— 该文件根本不在锚点数组里，所以校验脚本不会报错。→ **登记制与目录级豁免之间存在一个"无人区"**。
-2. **`AppSelect.tsx:16` 触发 `local/no-large-dropdown-list`** —— 该规则是**独立规则**（不在 `no-restricted-syntax` 里），所以**不受封装层豁免保护** → 契约组件自己被自家规则拦下。
-
-**How to avoid:**
-- P5（`ColumnConfigModal:136`）的最小正确做法：**加行内理由注释**，说明"此处是列配置重置（非数据删除），不走 ConfirmDelete 契约"，并**在 `scripts/exemption-reasons.json` 之外另设"封装层合法点清单"**（或把该文件登记进 json 并同步 eslint 锚点，**注意两个方向都要改** —— `check-exemption-reasons.mjs:103-104` 会双向报错）。
-- **不要**为了"让 lint 过"而把 `src/components/shared/**` 从豁免里摘掉 —— 一摘就爆出该目录里所有裸用法（契约组件内部本来就该用裸 antd），**会瞬间引入几十条新 error**。这正是 `eslint.config.js:146-149` 注释警告的 flat config 覆盖事故的同款陷阱。
-- 长期方案：把封装层豁免从"目录级"改成"文件级 + 具体 selector 白名单"，但这是独立工程，v1.24 不做。
-
-**Warning signs:**
-- 有人把 `src/components/shared/**` 从豁免列表里删掉 → lint error 数暴涨；
-- `ColumnConfigModal` 加了注释但没登记 json → `check-exemption-reasons.mjs` 报「[多理由]」；
-- json 加了条目但没同步 eslint 锚点 → 报「[缺理由]」。
-
-**Phase to address:** P5 豁免注释（同时把"封装层合法点登记"的口径写进注释）。
-
----
-
-## Technical Debt Patterns
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|---|---|---|---|
-| 用 `.ant-input:not(.ant-input-affix-wrapper > .ant-input)` 收窄 | 看起来最"精准" | CSS3 下整条规则被**静默丢弃**，收窄完全失效且无任何报错 | **Never**（改用 wrapper 上下文直接子元素） |
-| 用 `:not()` 内含组合子 + `@supports` 兜底 | 保留 `:not()` 语义 | 需维护双份规则；browserslist 变更时静默退化 | 仅当明确锁定 Chrome 88+ 且有 CI 断言 |
-| 把 `.ant-input` 改成 `.ant-input-outlined` | 语义精确、代码最短 | `ConfigProvider` 全局 variant 一变，主题样式**整体消失**；暗色标签选择器 `[data-color-mode="dark"] input` 仍命中内层 | 仅当同时在 `AntdThemeBridge` 锁死 `variant: "outlined"` |
-| 修双框时只改 `border`，不动 `border-radius`/`background`/`font-size` | 改动最小 | 输入框出现四角接缝 / 字号不齐 / 背景色差 | **Never**（成组复位） |
-| 顺手把 `.ant-picker`（DatePicker）也纳入边框规则 | 主题统一 | 项目没有 `.ant-picker:hover/:focus` 规则 → DatePicker 交互态与 Input 不匹配 | Never（单独立项） |
-| 给 12 处 exhaustive-deps 机械加依赖 | 立刻清零 | `message` 依赖不稳定 → 回调频繁重建 → 引出新 error（compiler / set-state-in-effect） | Never（按语义分组，见 C3） |
-| 用 `eslint-disable-next-line` 压掉 5 处非 exhaustive-deps error | 数字归零 | 把 React Compiler 规则族的问题永久掩盖 | 仅限"确认语义安全 + 写明理由" |
-| 把 `src/components/shared/**` 从封装层豁免里摘掉 | "契约纯净" | 契约组件内部本来就用裸 antd → 瞬间几十条新 error | **Never** |
-| 为清 react-refresh 把契约组件拆成几十个碎片文件 | warning 归零 | 破坏"契约组件自包含"（v1.22 契约化的初衷） | Never（先划契约层豁免名单） |
-| `#16` 只修楼宇页 | 一天收工 | 其它列表页仍无门控 → 复测再开一条债 | Never（要么切范围明说，要么全站契约化） |
-| 权限门控用 `permissions.length === 0` 判断"未就绪" | 一行代码 | 空权限集与未加载完不可区分 → 接口失败时管理员也看不到按钮 | Never（用显式 loading/error 态） |
-| #16 复测用手工插库的角色 | 绕开 sqlite 500 | 绕过 `InvalidateUserMenuCache` → 权限集 30 分钟缓存不失效 → 复测结论无效 | Never（走 UI 正常路径，或手动清 `menu:user:perms:{id}`） |
-| 用 `/system/menus/permissions` 复测 | 看起来像在查权限 | **前端根本不调这个端点**（`src/lib/menuApi.ts:24` 用的是 `/system/my-menus/permissions`）→ 结论无效 | **Never** |
-| 3f130 前端只按 `emptyReason` 渲染空态 | 契约直白 | 有数据时同时显示"共 1 台"+"因未绑用户而为空" → 语义打架 | Never（按 `devices.length` 分流空态/告警） |
-| F5 问题改 `path="*"` 的 fallback | 三行改完 | 破坏未登录跳登录 / 无权限跳 403 / deep link 直达 / 未就绪 loading 四条既有行为 | **Never**（改就绪判定 + 停止反写 LAST_PATH） |
-| 直接把 `export { X }` 改成 `export type { X }` | warning 消失 | 若 X 同时是值（同名 const）→ 运行时 undefined | 仅当逐个确认是纯类型 + 跑测试 |
-| 在 `tsconfig` 里加 `isolatedModules` | 强化模块边界 | `verbatimModuleSyntax: true` 已隐含该语义，加了不改变任何行为 | Never（无收益） |
-| 用 PowerShell `Get-Content | Set-Content` 改中文规划文件 | 顺手 | **GBK 静默毁文件**，不报错 | **Never**（用 `write` 工具 + 回读校验） |
-| CSS 守卫脚本按行 grep `.ant-input` | 写得快 | 多行选择器规则（`index.css:871-880`）会被漏检或误判 | **Never**（按 `{}` 切规则块再解析选择器） |
-
-## Integration Gotchas
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| antd 6.6.4 Input 结构 | 以为 `.ant-input` 自带边框 | antd 6 的 `.ant-input` **无 border**；边框在 `.ant-input-outlined/-filled/-underlined`（`input/style/index.js:296-318`） |
-| antd 6.6.4 affix 结构 | 以为 variant 类总在内层 input | 有 affix 时 variant 类**落在 wrapper**，内层只有 `ant-input`（`@rc-component/input/es/BaseInput.js:43-45, 79-88`） |
-| antd 6.6.4 cssinjs | 以为"写在后面就能覆盖 antd" | hash 前缀让 antd 规则特异性 **+1 类**（`@ant-design/cssinjs/es/hooks/useStyleRegister.js:27-47`）→ 必须 `!important` + 算特异性 |
-| antd 6.6.4 `ConfigProvider` | 以为项目那个 `src/components/ConfigProvider.tsx` 是 antd 的 | 项目那个是"配置同步 Provider"；真正的 antd ConfigProvider 在 `src/design-system/components/AntdThemeBridge.tsx:178` |
-| antd 6 `useVariant` | 以为 `components.Input.variant` 会影响 TextArea | TextArea 走 `useVariant('textArea', ...)`（`TextArea.js:94`），**不 fallback** 到 Input 的 variant |
-| 后端用户权限集 | 查 `pkg/permission/config.go` 的 `GetRoutePermissions()` | 那是**路由→权限码静态表**（无缓存、每次新切片），**不是**用户权限集；用户权限集在 `internal/services/system/menu_service.go:509-569` |
-| 后端权限缓存 | 以为改了角色立即生效 | `menu:user:perms:{userID}` **30 分钟 TTL**（`menu_cache_impl.go:115-120`）；手工插库绕过全部失效路径 |
-| 后端 `sys_menu.perms` | 以为可以用逗号多值 | `Pluck("perms", &perms)` **整串取出不拆逗号**（`menu_service.go:547-552`）→ 前端必须精确匹配 |
-| 后端权限码历史 | 直接用当前命名 | migration_159 曾把 `ops:buildings:*` 迁到 `ops:building:*`（`migration_159_align_ops_perms.go:14-38`）→ 老库可能仍是旧命名 |
-| 前端权限数据 | 用 `/system/menus/permissions` | 前端调的是 `POST /system/my-menus/permissions`（`src/lib/menuApi.ts:24`） |
-| 物理链路诊断端点 | 只用旧的 `/physical` | 新端点 `POST /ops/workstation-device/:id/physical-diagnosis`（`router.go:702`）才带 emptyReason/warnings |
-| 物理链路空因语义 | 认为 emptyReason 只在空时有值 | `classifyPhysicalEmptyReason` 无条件先判 `!UserBound`（`workstation_device_service.go:822`）→ **有数据也会带空因** |
-| eslint-plugin-react-hooks | 以为只有 exhaustive-deps | v7.0.1 还有 `set-state-in-effect` / `immutability` / `globals` / `compiler` 规则族，均为 error |
-| eslint-plugin-react-refresh | 以为 `export type` 仍会触发 | 规则实现 `if (node.exportKind === "type") continue;`（`index.js:178,194`）→ **类型导出不触发** |
-| tsconfig 模块语义 | 以为没开 `isolatedModules` 就能随便 re-export 类型 | `verbatimModuleSyntax: true`（`tsconfig.app.json:14`）**强制** `export type` |
-
-## Performance Traps
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|-----------------|
-| devices 拆分后 `deptFilters` 引用不稳 | 部门树联动把页码打回第 1 页（v1.23 FAIL-1 复发） | `deptFilters` 留在主组件 `useMemo`；拆分只搬纯函数 | 拆分后首次联动 |
-| devices 拆分后 `columns` useMemo 失效 | 表格每次父渲染全量重绘 | `columns` 的 useMemo 留主组件，依赖逐个核对 | 拆分后任意状态更新 |
-| `useCaptchaModals.tsx` 5 处回调加 `message` 依赖 | 回调引用每次渲染变 → effect 反复触发 | 用 `useMemo` 稳定引用或写明理由的 disable | 清偿 exhaustive-deps 时 |
-| 权限门控改成"每次渲染读 permissions" | 无（React 会跳过同引用） | 保持 `useMenuStore((s) => s.permissions)` 订阅 | — |
-| `menu:user:perms` 30 分钟 TTL | 改了角色权限但界面不变 | 走 UI 正常路径（触发失效）或手动清 key | 权限变更后 30 分钟内 |
-| 全站 Input 都走 affix-wrapper | 每次渲染多一层 wrapper DOM | antd 结构决定，无法避免；注意不要在 wrapper 内再包测量逻辑 | 已发生（AppInput 默认 allowClear） |
-
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| 只做前端行操作门控，后端不加校验 | 门控只是 UX，用户可直接调 API 删除 | 后端 `internal/api/router.go` 已按 `ops:building:delete` 等校验 → **必须保持**；前端门控永远标注"非安全边界"（同 `src/router/RouteGuard.tsx:5` 口径） |
-| 为 #16 把 `network:port:write` 拆成多个权限码但只改前端 | 后端仍认旧码 → 新码无效或旧码仍放行 | 权限码是**前后端契约**，改码必须同步 `init_data.go` + `router.go` + 前端映射表 + 一致性校验脚本 |
-| 引入「后端在列表里回传 canEdit/canDelete」方案 | N 个列表接口全改 → 范围失控、易漏 | v1.24 不选该方案（见 B2 折中表） |
-| 在前端日志里打印完整权限集 | 权限结构泄露 | 用 dev-only 且脱敏；参考 v1.23 对 hardcoded color 的同类纪律 |
-| 为"方便复测"在生产库手工插 `sys_role_menu` | 权限绕过审计，且 30 分钟缓存不一致 | 复测走 UI 正常路径；必须插库时记录到测试记录并事后清理 |
-
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| 权限未就绪时直接隐藏删除按钮 | 用户以为系统没有删除功能，且无提示 | 三态门控：未就绪 → 禁用 + 说明；就绪无权限 → 不渲染 |
-| 3f130 页面同时显示"共 1 台"和"因未绑用户而为空" | 用户看不懂，怀疑数据错乱 | 有数据 → warning Alert 措辞改为"未绑定用户，链路按用户维度归属，可能显示不全"；无数据 → 空态用 emptyMessage |
-| 修复双框后焦点环外扩 1px | 聚焦瞬间"跳一下" | 视觉验证必须覆盖 focus 态截图对比 |
-| DatePicker 与 Input 边框色不一致 | 同一表单里控件风格割裂（既存问题） | 登记为独立欠账，v1.24 不顺手改 |
-| F5 后被静默送到 dashboard 且原路径被覆盖 | 用户"回不去刚才的页面" | 修就绪判定 + 不反写 LAST_PATH；否则至少在 403 时明确提示 |
-| 清空搜索框触发 `onChange(undefined)` | 表单提交 400 | 封装层归一化 undefined（v1.23 契约精神延续） |
-| 契约组件 `AppSelect` 无 `onSearch` 却自动开搜索 | 大列表卡顿、过滤行为不符业务 | 先定契约方向（见 C3），不要让规则与契约互相打脸 |
-
-## "Looks Done But Isn't" Checklist
-
-- [ ] **双框修复**：是否同时覆盖 `input.ant-input` 与 `textarea.ant-input` 两种内层（`> input` / `> textarea`）—— 只修 Input 会漏 TextArea 的 showCount/allowClear 场景
-- [ ] **双框修复**：是否成组复位 `border` + `border-radius` + `background` + `color` + `font-size`（只改 border → 四角接缝 / 字号不齐 / 背景色差）
-- [ ] **双框修复**：新规则是否带 `!important` 且特异性 ≥ (0,3,1)（否则输给 antd hashed 规则与暗色标签选择器）
-- [ ] **双框修复**：是否在 `index.css` 中引入 `:not()` 内含组合子的写法（CSS3 静默丢弃）
-- [ ] **双框修复**：暗色模式是否单独截图（`[data-color-mode="dark"] input` 标签选择器会绕过类收窄）
-- [ ] **双框修复**：focus 态是否确认**只有一圈**焦点环（wrapper 承担），且修复后外扩 1px 可接受
-- [ ] **双框修复**：是否有**样式契约单测**（防止有人再写一条 `.ant-input { border: ... !important }`）—— 没有守卫 = 下次还会回归
-- [ ] **#16 定责**：是否先跑 `sys_menu.perms` 查询判定"后端是否发了写权限"，再谈前端（顺序反了会修错地方）
-- [ ] **#16 定责**：复测端点是否为 `POST /system/my-menus/permissions`（**不是** `/system/menus/permissions`）
-- [ ] **#16 定责**：是否走 UI 正常路径建角色（否则 30 分钟权限缓存不失效）
-- [ ] **#16 修复**：权限"未就绪"与"权限为空"是否用**不同状态**区分（不能用 `length === 0`）
-- [ ] **#16 修复**：是否复测了**多个**列表页（只测 1 页 = 点过不是修好）
-- [ ] **3f130 展示**：后端 `workstation_device_service.go:871-874` 的矛盾注释是否已对齐（否则前端按哪套理解都可能错）
-- [ ] **3f130 展示**：是否有"有数据 + 空因"的**不变量测试**（现有测试只锁了"0 台必带空因"）
-- [ ] **3f130 展示**：3f130 的 `user_id` 是否**已绑定**（没绑 → 复验必然仍空白 → 被误判为前端没修好）
-- [ ] **3f130 展示**：前端是否按 `devices.length` 分流「空态」与「告警」两套 UI
-- [ ] **F5**：是否**没有**改 `path="*"` 的 fallback（改了会破坏未登录/403/deep link/loading 四条行为）
-- [ ] **F5**：兜底跳转产生的路径是否**不再写回** `ruoyi_last_visited_path`
-- [ ] **F5**：LAST_PATH 是否加版本号（跨版本残留会弹跳）
-- [ ] **F5**：回归矩阵 7 条是否逐条实测（尤其"无权限 deep link 应 403 而非静默跳 dashboard"）
-- [ ] **react-refresh**：是否先划出「契约层豁免名单」（`src/components/shared/**` + `src/components/ui/**`）再清零
-- [ ] **react-refresh**：`export { X }` → `export type { X }` 是否逐个确认 X 是**纯类型**、无运行时消费方
-- [ ] **react-refresh**：改完后是否跑了 `npm run type-check` **和** `npm run test`（测试文件不在 `tsconfig.app.json` 的 include 内，type-check 不会拦）
-- [ ] **lint 清偿**：17 处 error 是否**按规则分组**（12 exhaustive-deps + set-state-in-effect + immutability + globals + compiler×2 + local/no-large-dropdown-list）而不是按文件凑
-- [ ] **lint 清偿**：`useCaptchaModals.tsx` 的 5 处 `message` 依赖是否逐处判断语义（机械加依赖会引出新 error）
-- [ ] **lint 清偿**：`AppSelect.tsx:16` 的 `local/no-large-dropdown-list` 是否**先定契约方向**再改
-- [ ] **lint 清偿**：errors 是否 0、warnings 是否**未上升**（用 `scripts/assert-lint-budget.mjs` 断言，不靠人眼）
-- [ ] **devices 拆分**：`deptFilters`（`:277`）引用是否仍稳定（否则 v1.23 FAIL-1 复发）
-- [ ] **devices 拆分**：`columns`（`:524`）的 `useMemo` 依赖是否逐个核对
-- [ ] **devices 拆分**：`src/components/network/port-write/**` 与 `ActionButtons.tsx` 的对外形状是否**未被改动**（v1.19 冻结交互）
-- [ ] **ColumnConfigModal:136**：是否加了行内理由注释；是否需要同时登记 `scripts/exemption-reasons.json` 与 eslint 锚点（**双向**，否则 `check-exemption-reasons.mjs` 报「[多理由]」/「[缺理由]」）
-- [ ] **全局**：中文规划文件写入后是否回读校验（GBK 静默毁文件）
-- [ ] **全局**：subagent 交付是否先验收落盘再采信
-
-## Recovery Strategies
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| `:not()` 规则被静默丢弃 | LOW | 换成 `.ant-input-affix-wrapper > input.ant-input` 形态 → DevTools 确认规则不再灰 → 重新截图 |
-| 修复后出现双焦点环 | LOW | 移除复位规则里的 `box-shadow` 声明 → 确认内层焦点环仍由 antd 的 `box-shadow: none !important` 关闭 |
-| 修复后输入框四角接缝 | LOW | 复位规则补 `border-radius: 0 !important` |
-| 暗色下内层背景色差 | LOW | 复位规则补 `background: transparent !important`（特异性 (0,3,1) 稳压暗色标签选择器） |
-| 收窄方案（variant 类）后主题整体消失 | MEDIUM | 在 `AntdThemeBridge.tsx` 显式锁 `variant: "outlined"` → 重新截图全站输入框 |
-| 契约组件被拆成碎片 | MEDIUM | `git revert` 拆分 commit → 改为划「契约层豁免名单」→ 重新清零其余文件 |
-| `export type` 改错导致运行时 undefined | MEDIUM | `git revert` 该文件 → 逐个确认是纯类型 → 跑 `npm run test` |
-| #16 门控导致"按钮消失"投诉 | MEDIUM | 改为三态门控（未就绪 → 禁用 + 提示）→ 补"权限加载慢"的实机复验 |
-| #16 修错地方（改了前端但后端发了写权限） | MEDIUM | 跑 `sys_menu.perms` 查询判定 → 若后端确实发了写权限 → 回滚前端改动，改数据（角色菜单勾选） |
-| #16 复测结论无效（手工插库/用错端点） | MEDIUM | 重走 UI 正常路径 + 用 `POST /system/my-menus/permissions` 取权限集 + 截图 + 重写复测记录 |
-| 3f130 页面出现"有数据 + 空态"并存 | LOW | 按 `devices.length` 分流渲染 → 空态/告警二选一 |
-| 3f130 复验仍空白 | LOW | 先查 `sys_workstation.user_id` 是否为空（**数据侧动作未做**），不要改前端 |
-| F5 修完变成"闪一下 dashboard 再跳回" | MEDIUM | 改为"目标路径未在 routeElements 中时保持 loading/403"，不靠 `*` 兜底 |
-| F5 修完未登录用户被送进需鉴权页 | MEDIUM | 恢复 `:263-270` 的未登录分支（`*` → `/login`），只在已认证分支改兜底 |
-| 拆 devices 后页码被打回第 1 页 | LOW | 把 `deptFilters` / `columns` 的 `useMemo` 移回主组件 → 复测部门树联动 |
-| exhaustive-deps 清偿引出新 error | MEDIUM | `git revert` 单文件 → 按 C3 分组表重做 → 跑 `npm run lint` 对账 |
-| 中文规划文件被 GBK 毁 | MEDIUM | 从 git 历史恢复 → 用 `write` 工具重写 → 回读校验 |
-| 样式回归再次发生 | MEDIUM | 补 CSS 契约单测（A9 方案 1）→ 在 CI 中作为 error |
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| A1 `:not()` 组合子 | P1 样式修复（方案选型） | 代码审查 + DevTools 确认规则非灰 + CI 断言 `:not()` 参数内无组合子 |
-| A2 `!important` 压过非 important | P1 样式修复 | 复位规则带 `!important` 且特异性 ≥ (0,3,1) |
-| A3 antd 6 variant 体系 | P1 样式修复（若走 variant 路线） | `AntdThemeBridge` 锁 `variant`；全站输入框截图无主题丢失 |
-| A4 cssinjs hash 前缀 | P1 样式修复 + P6（可加 lint 规则） | 新增 `.ant-*` 覆盖规则均带 `!important`；dev 与 prod build 产物均验 |
-| A5 affix 结构差异 | P1 样式修复 | `> input.ant-input` 与 `> textarea.ant-input` 双分支都验；InputNumber/Select 不回归 |
-| A6 AppInput 默认 allowClear | P1 样式修复 | 视觉验证矩阵同时覆盖「有 clear icon」与「无 clear icon」两类输入框 |
-| A7 暗色标签选择器 | P1 样式修复 | 暗色模式截图（默认/hover/focus） |
-| A8 焦点环 | P1 样式修复 | focus 态截图对比，确认单圈 + 外扩 1px 可接受 |
-| A9 视觉层无守卫 | P1 样式修复（与修复同 phase） | CSS 契约单测进 CI |
-| B1 #16 根因是"无门控" | P2 #16 定责 | `sys_menu.perms` 查询 + `POST /system/my-menus/permissions` 双证据 |
-| B2 fail-closed 可用性回归 | P2 #16 修复 | 权限慢/失败场景实机复验：按钮禁用但可见 + 有提示 |
-| B3 #16 范围膨胀 | P2 #16（切范围） | 契约文档写明覆盖页面清单与 Known Gaps；一致性校验脚本通过 |
-| B4 3f130 空因语义矛盾 | P3 3f130 展示 | 后端注释对齐 + 不变量测试 + 前端按 `devices.length` 分流截图 |
-| B5 F5 落 dashboard | P4 F5 落地页 | 7 条回归矩阵逐条实测 + LAST_PATH 不被反写 |
-| B6 `export type` 与 verbatimModuleSyntax | P7 react-refresh | `npm run type-check` + `npm run test` 双绿；warning 数下降且 errors 不上升 |
-| B7 devices 拆分 | P7 结构整理 | 部门树联动保页码 + 表格不整体重绘 + port-write 冻结交互未动 |
-| C1 v1.23 教训复用 | P1 / P6 / P7（写进 plan 前置） | 规划文件回读校验；CSS 守卫按规则块解析 |
-| C2 交付物先验收 | P2 / P3 / P4 | 复测记录含准确端点/身份/环境/截图 |
-| C3 react-hooks v7 新规则族 | P6 lint 清偿 | errors 17→0 且 warnings 34→不上升（脚本断言） |
-| C4 封装层目录级豁免盲区 | P5 豁免注释 | 行内理由注释 + `check-exemption-reasons.mjs` 双向通过 |
-
----
-
-## 附录 A：`:not()` 替代方案矩阵
-
-> 背景：CSS Selectors Level 3 的 `:not()` 只接受**简单选择器**；含组合子（`>`、空格、`+`、`~`）的参数在 CSS3 解析器下导致**整条规则被丢弃**。Level 4 放宽为 complex-real-selector-list（Chrome 88+ / Firefox 84+ / Safari 9+），但构建链不会为老浏览器降级 `:not()` 内的复杂选择器 —— 老浏览器上同样**静默丢弃整条规则**。
-
-| # | 写法 | CSS3 合法性 | 特异性 | 运行时效果 | 评价 |
+## Minor Pitfalls
+
+### P-m1 · 8 条 `[data-color_mode="dark"]` 拼写错误的死规则（`index.css:3523-3545`, `3602-3608`）
+
+- **What goes wrong:** 选择器写成了 `[data-color_mode="dark"]`（下划线而非连字符），
+  与项目实际使用的 `[data-color-mode="dark"]` 不匹配 → **永不命中**。
+  影响的是 Anchor 组件（6 条，3523/3527/3531/3535/3539/3543）与 Popconfirm 按钮（2 条，3602/3606）。
+- **Why it happens:** 复制粘贴时把连字符写成下划线，且因为这些规则**只影响暗色**
+  （浅色下无对应规则），明色下看不出异常，暗色下 Anchor/Popconfirm 缺样式也**不显眼**。
+- **Consequences:** 暗色 Anchor 链接色 / Popconfirm 按钮色退化为 antd 默认。
+  本身无害，但**污染暗色规则计数**，让「暗色重复分区」的真实数量被高估。
+- **Prevention:** 收敛 Phase 1 直接**删除**这 8 条（它们从无效果）；
+  若将来要恢复 Anchor/Popconfirm 暗色样式，应走 token 而非补拼写。
+- **Detection:** 静态断言「`.css` 中不得出现 `data-color_mode`」。
+
+### P-m2 · 7 个未 import 的 CSS 死文件（470 行 / 9 `!important`）+ 1 个未 import 的 `.less`（85 行）+ 1 个 0 字节 `.less`
+
+- **What goes wrong:** `src/design-system/themes/theme-styles.css`（97 行 / 7 important）
+  内含 `.ant-menu-item-selected` / `.ant-tabs-ink-bar` / `.layout-sidebar` / `.layout-header`
+  等**与 `index.css` 平行重复**的手写主题规则，并带有**旧 Tailwind 灰蓝 fallback**
+  （`#e5e7eb` / `#1f2937` / `#6b7280` / `#3b82f6`）。它**从未被 import**，
+  → 死代码 + 误导性「第二套主题层」假象。
+  其余 6 个：`src/pages/dashboard-system/index.css`（129 行）、
+  `src/components/dashboard/widgets/types/{ChartWidget,ListWidget,MetricWidget,ProgressWidget,StatCardWidget}.css`
+  （23+77+24+53+67 = 244 行），同样从未被 import。
+  `src/components/cad-editor/CADFloorPlanEditor.less`（85 行）也未 import；
+  `src/components/shared/FloorPlanEditor.less` 虽被 import（`FloorPlanEditor.tsx:18`）但**0 字节**。
+- **Why it happens:** 组件重构后样式文件被遗留；`theme-styles.css` 的注释（`index.css:4721-4722`）
+  说明其规则**已被合并进 `index.css`**（「Theme Component Overrides (merged from theme-styles.css)」）
+  → 文件本身是历史残留，但**未被删除**。
+- **Consequences:** ① 收敛者可能误读 `theme-styles.css` 当作「要收敛的第二套主题层」，
+  浪费工时或做出错误改动；② `check-hardcoded-colors.mjs` 扫到这些死文件里的旧色值并报错
+  （它是当前 18 个失败文件之一）；③ 死文件里的 `!important` 计入基线，虚高。
+- **Prevention:** 收敛 Phase 1 直接删除 7 个 CSS 死文件 + 1 个死 `.less`；
+  `FloorPlanEditor.less`（0 字节）删除并同时移除 `FloorPlanEditor.tsx:18` 的 import。
+  **删除前先确认无引用**（已用 `grep -rn "<basename>" src` 全量确认）。
+- **Detection:** 新增静态检查「`.css`/`.less` 文件必须被至少一个 `.tsx/.ts` import」
+  （见 §3.3 C8）。
+
+### P-m3 · `index.css:4806` 与 `1879/1885/1891` 的 `--sidebar-width` 双定义（布局漂移，非色串）
+
+- **What goes wrong:** `index.css:4806-4808` 的
+  `[data-layout="classic"], [data-layout="hybrid"] { --sidebar-width: 240px; }`
+  与 `index.css:1879`（classic → 200px）、`1885`（hybrid → 200px）
+  特异性相同 (0,1,0)，后者在**前** → **240px 胜出**，
+  而 `index.css:1891` 的 `[data-layout="innovative"]`（80px）不受影响。
+  这是**布局维度**的重复真相源（不是颜色串色），但同属「同一变量多处就地重定义」的模式。
+- **Why it happens:** 侧栏宽度在「原型实测 240px」时于文件尾部补写，忘了收敛前面那组。
+- **Consequences:** 侧栏宽度比设计值宽 40px；在窄屏下挤压主区。
+- **Prevention:** 收敛 Phase 2 把 `--sidebar-width` 的三处定义**合并到一处**
+  （保留 `[data-layout=...]` 家族，删掉尾部那处），或把尾部那处改为
+  `--sidebar-width: var(--sidebar-width-prototype)` 之类明确的单一来源。
+- **Detection:** 静态断言「同一 CSS 变量在多个选择器块中重复赋值」计数归零
+  （见 §3.3 C9，注意要给 `--input-bg` 这类**有意的明暗双写**留白名单）。
+
+### P-m4 · `index.css:5563` 硬写 `border-radius: 6px !important`（分页器）与 `:5577` 的 `#ffffff`
+
+- **What goes wrong:** 同一区块内既有 token 引用（`var(--theme-bg-primary)`、`var(--theme-text-primary)`）
+  又有硬编码（`6px`、`#ffffff`）→ 圆角漂移（P-M3）与 hex 治理盲区（P-M9）在此叠加。
+- **Why it happens:** 分页器区块（`index.css:5556-5588`）是「原型 demo 复刻」，
+  按像素抄了一份，抄的时候没走 token。
+- **Consequences:** 收敛到 token 后分页器圆角会从 6px 跳到 8px，需在验收矩阵里单列一格。
+- **Prevention:** Phase 2 改为 `var(--theme-radius-lg)`（8px）与 `var(--theme-text-inverse)`；
+  圆角变化需在验收记录里显式声明为「有意变更」。
+- **Detection:** §3.1 的「`.css` 内 hex 字面量计数」应从 311 降至个位数量级。
+
+### P-m5 · `login.css` 的登录页补丁是**硬编码琥珀金体系**，与品牌绿体系并行
+
+- **What goes wrong:** `src/pages/login/login.css:340-370` 整块使用
+  `#e7e5e4`（边框）、`#fafaf9`（底）、`#d4a574`（悬停/聚焦边框 + 3px 焦点环）
+  —— 这是一套**登录页专属的琥珀金体系**，与全站品牌绿（`#156031`）不同源，
+  且**完全不受任何 hex 门禁约束**。收敛时若「统一到品牌绿」，登录页视觉会明显改变；
+  若不统一，它就继续是 token 化收容之外的孤岛。
+- **Why it happens:** 登录页是「原型复刻」页，色值来自原型截图而非 `brand-spec.md`。
+  另注：`#fafaf9` 与 `index.css:4815` 的 `--input-bg: #fafaf9` **同值** —— 说明
+  `4815` 那处 `:root` 重定义是**从登录页复制过来的**，这解释了它为什么被误放进全局 `:root`。
+- **Consequences:** 收敛范围蔓延到登录页 → 工期与风险显著上升。
+- **Prevention:** 明确**边界**：v1.25 ② 收敛**不改登录页视觉**；
+  但允许把其硬编码色**提取为 CSS 变量**（如 `--login-input-border` / `--login-accent`），
+  值保持不变 —— 治理收益（可追溯）拿到，视觉风险为零。
+  同时修正 `index.css:4815` 的来源（见 P-C3）。
+- **Detection:** 登录页 3 个形态（明/暗 × 聚焦/错误）× 焦点环颜色截图比对，
+  要求与 v1.24 视觉记录逐像素一致。
+
+### P-m6 · `styles.module.css` 的 CSS Module 与全局 `index.css` 的**层级竞争**
+
+- **What goes wrong:** `src/pages/operations/building-spaces/components/styles.module.css`（370 行）
+  使用 CSS Module（局部类名），但它**同时**含 6 条 antd 选择器规则
+  （Modal 域）—— CSS Module 只对**本地类名**做作用域化，**antd 的全局类名不会被改写**，
+  → 这 6 条规则实际是**全局规则**，会泄漏到全站 Modal。
+- **Why it happens:** 开发者以为放进 `.module.css` 就自动局部化。
+- **Consequences:** 楼宇/工位页面的 Modal 样式会覆盖全站 Modal 样式（收敛后表现会变化）。
+- **Prevention:** 收敛 Phase 5（Modal 域）**必须**把 `styles.module.css` 中这 6 条
+  antd 选择器**迁出**到 `index.css` 的 Modal 域统一治理，或改用 `antd` 的 `classNames`/`styles` 语义化 API。
+- **Detection:** 静态断言「`.module.css` 内不得出现 `.ant-` 选择器」（见 §3.3 C10）。
+
+### P-m7 · `!important` 计数的 6 处口径差（1435 vs 1429 vs 1359）
+
+- **What goes wrong:** 报告/验收用不同的 grep 口径会得到不同数字（1359 / 1429 / 1435），
+  导致「到底降了多少」无法比对。
+- **Why it happens:** ① `grep -o '!important' | wc -l` = **1435**（全 `.css`，按出现次数）；
+  ② 按规则块统计 = **1429**（含死文件里的 9 处）；③ 仅 `index.css` = **1359**；
+  ④ 解析器按规则体统计 = 1353（差 6 处是落在注释/字符串里的 `!important` 文本）。
+- **Consequences:** 验收口径不统一 → 争议。
+- **Prevention:** **在 Phase 0 固定一个口径**并在所有报告中沿用：
+  **「`find src -name '*.css' -exec cat {} + | grep -o '!important' | wc -l` = 全量出现次数」**，
+  同时**并列报告**「`index.css` 单文件数」。本文件 §3.1 采用该口径。
+- **Detection:** 把 §3.1 的命令写进 CI，每次 phase 记录快照。
+
+### P-m8 · antd 6 `variant` 的可用取值与作用域（收敛的技术前提）
+
+- **What goes wrong:** 误以为 `variant` 只能逐组件传 prop，导致要给 309 个输入框逐个加 `variant`。
+- **Why it happens:** 不了解 antd 6 的 `useVariants` 解析顺序。
+- **Consequences:** 大量样板代码；或为了少改而继续手写覆盖。
+- **Prevention:** 掌握 antd 6 的 `useVariants`（`node_modules/antd/es/form/hooks/useVariants.js`）解析顺序：
+  **组件 `variant` prop → `legacyBordered === false` → `Form` 上下文 `VariantContext`
+  → `components.<Comp>.variant` → 全局 `config.variant` → 默认 `'outlined'`**。
+  → **最优解**：在 `AntdThemeBridge` 的 `ConfigProvider theme` 里设置
+  `components.Input.variant` / `components.Select.variant` / 全局 `variant`，
+  **零样板**。可用取值为 `Variants` 数组（`'outlined' | 'filled' | 'borderless'`）。
+- **Detection:** 浏览器断言 `document.querySelector('.ant-input').className`
+  含 `ant-input-outlined`。
+
+## 四批规则清单
+
+> 口径：文件:行号 全部来自当前 HEAD 实跑（`index.css` = 5632 行）。
+> 每条都给出**删除/降级前必须验证的无害性证据**。
+> 置信度：第 1 批 **HIGH**（死类名/死文件有源码或 grep 实证）；第 2 批 **HIGH**（取值实跑）；
+> 第 3 批 **HIGH**（契约脚本 + 注释实证）；第 4 批 **MEDIUM**（重写方向为推导，需实机验证）。
+
+### 第 1 批｜可整块删除（17 条）
+
+| # | 文件:行号 | 规则原文摘要 | 删除理由 | 删除前必须验证的无害性证据 | 置信度 |
 |---|---|---|---|---|---|
-| **1（推荐）** | `.ant-input-affix-wrapper > input.ant-input,`<br>`.ant-input-affix-wrapper > textarea.ant-input { border: none !important; ... }` | ✅ 合法（组合子在 `:not()` 外） | (0,3,1) | 精确命中「antd 要求无边框」的两个内层元素 | **首选**：不依赖 variant 类、对 `ConfigProvider` 变更免疫、对暗色标签选择器免疫 |
-| 2 | `:where(.ant-input-affix-wrapper) > :where(input.ant-input) { ... }` | ✅ 合法 | (0,0,1) + `!important` | 同上 | 适合"要压住 antd 状态样式但不提高特异性"的场合 |
-| 3 | `.ant-input-outlined { /* 主题边框 */ }` | ✅ 合法 | (0,1,0) | 命中顶层 input/textarea（**有 variant 类**），不命中 affix 内层 | 语义最准，但 `ConfigProvider` 全局 variant 一变就整体失效 → 必须配套锁 `variant: "outlined"` |
-| 4 | `.ant-input:not(:where(.ant-input-affix-wrapper > .ant-input)) { ... }` | ⚠️ 需 Level 4 | (0,1,0) | 语义正确 | **不推荐**：`:not()` 内仍含组合子 → CSS3 丢弃；需 `@supports selector(:not(* > *))` 兜底 + browserslist 锁定 |
-| 5 | `.ant-input:not(.ant-input-affix-wrapper > .ant-input) { ... }` | ❌ **CSS3 无效** | — | **整条规则被丢弃** | **禁用**（用户原始提法） |
-| 6 | 语义化钩子类：`AppInput` 传 `className="app-input"` / `rootClassName="app-input-root"`，CSS 用 `.app-input` / `.app-input-root` | ✅ | 可控 | 完全由项目掌控 | 结构性最优，但需改代码 + 覆盖存量裸 Input（v1.23 后存量应为 0） |
+| D1 | `index.css:2093-2096` | `.dept-tree-search .ant-input-affix-wrapper { border:none!important; background:transparent!important }` | **后代选择器**，class 落在 wrapper 自身 → 命中数 0 | ① `node_modules/@rc-component/input/es/BaseInput.js:129-131` 明示 className 在 root；② `hasPrefixSuffix` 含 `allowClear` → root = wrapper；③ 浏览器 `document.querySelectorAll('.dept-tree-search .ant-input-affix-wrapper').length === 0`；④ 同元素的 `.user-form-input.ant-input-affix-wrapper .ant-input` 命中数 > 0（活规则顶上） | HIGH |
+| D2 | `index.css:2098-2102` | `.dept-tree-search .ant-input-affix-wrapper .ant-input { border/background/box-shadow:none!important }` | 同 D1，命中数 0 | 同 D1 ③（`.dept-tree-search .ant-input-affix-wrapper .ant-input` 命中数 === 0） | HIGH |
+| D3 | `index.css:2104-2109` | `.dept-tree-search .ant-input-affix-wrapper:focus, ...-focused { border/background/box-shadow:none!important }` | 同 D1，命中数 0 | 同 D1 ③ | HIGH |
+| D4 | `index.css:2111-2116` | `.dept-tree-search ...:focus .ant-input, ...-focused .ant-input { … }` | 同 D1，命中数 0 | 同 D1 ③ | HIGH |
+| D5 | `index.css:3523,3527,3531,3535,3539,3543`（6 条规则） | `[data-color_mode="dark"] .ant-anchor` / `-wrapper` / `-ink::before` / `-link` / `-link:hover` / `-link-active` | **拼写错误**（下划线），与实际 `[data-color-mode="dark"]` 不匹配 → 命中数 0 | `grep -c 'data-color_mode' src/index.css` = 8；项目全站仅用 `data-color-mode`（`themeStore` / `AntdThemeBridge` / `settingsStore` 统一） | HIGH |
+| D6 | `index.css:3602-3604, 3606-3608`（2 条规则） | `[data-color_mode="dark"] .ant-popconfirm .ant-popconfirm-buttons .ant-btn` / `.ant-btn-primary` | 同 D5，命中数 0 | 同 D5 | HIGH |
+| D7 | `index.css:873`（在 871-880 规则组内） | `.ant-input, .ant-input-number, .ant-select-selector { background/border/color/border-radius/font-size/transition !important }` 中的 `.ant-select-selector` 分支 | antd 6.6.4 的 Select **不渲染** `.ant-select-selector` 元素 | `grep -r 'select-selector' node_modules/@rc-component/select/es/` **零命中**；`node_modules/antd/dist/antd.css` 中唯一命中是 ColorPicker 内部后代选择器 `.ant-color-picker … .ant-select-selector`；浏览器 `document.querySelectorAll('.ant-select-selector').length === 0` | HIGH |
+| D8 | `index.css:884` | `.ant-select:hover .ant-select-selector { border-color !important }` | 同 D7（死后代） | 同 D7 | HIGH |
+| D9 | `index.css:890` | `.ant-select-focused .ant-select-selector { border-color/box-shadow !important }` | 同 D7 | 同 D7 | HIGH |
+| D10 | `index.css:897`（在 895-901 规则内） | `[data-color-mode="dark"] .ant-select-focused .ant-select-selector { box-shadow !important }` | 同 D7 | 同 D7 | HIGH |
+| D11 | `index.css:2329-2333` | `[data-color-mode="dark"] .ant-select-selector { background-color/color/border-color !important }` | 同 D7 | 同 D7 | HIGH |
+| D12 | `index.css:3962-3966` | `[data-color-mode="dark"] .ant-select-selector { background/border/color !important }`（暗色二块） | 同 D7 | 同 D7 | HIGH |
+| D13 | `index.css:3968-3970` | `[data-color-mode="dark"] .ant-select:hover .ant-select-selector { … }` | 同 D7 | 同 D7 | HIGH |
+| D14 | `index.css:3972-3977` | `[data-color-mode="dark"] .ant-select-focused .ant-select-selector { border-color/box-shadow !important }` | 同 D7 | 同 D7 | HIGH |
+| D15 | `index.css:5579-5581` | `.ant-pagination .ant-pagination-options .ant-select-selector { font-family: var(--theme-font-mono) }` | 同 D7（且无 `!important`，纯装饰） | 同 D7 | HIGH |
+| D16 | `src/design-system/themes/theme-styles.css`（97 行 / 7 `!important`） | `.ant-menu-item-selected` / `.ant-tabs-ink-bar` / `.layout-sidebar` / `.layout-header` / `.layout-tab-bar` / `.tab-scroll-button` 手写主题层 + 旧灰蓝 fallback | **从未被 import**（`grep -rn 'theme-styles' src` 仅命中 `index.css` 的注释） | ① `grep -rn "theme-styles" src --include=*.tsx --include=*.ts` = 0 命中；② `index.css:4721-4722` 注释明写其规则已 merged 进 `index.css` | HIGH |
+| D17 | `src/pages/dashboard-system/index.css`（129 行）<br>`src/components/dashboard/widgets/types/{ChartWidget,ListWidget,MetricWidget,ProgressWidget,StatCardWidget}.css`（244 行 / 2 `!important`）<br>`src/components/cad-editor/CADFloorPlanEditor.less`（85 行）<br>`src/components/shared/FloorPlanEditor.less`（0 字节） | 组件样式残留 | **全部从未被 import**；`FloorPlanEditor.less` 虽被 import 但为空文件 | ① 逐文件 `grep -rn "<basename>" src --include=*.tsx --include=*.ts` = 0 命中；② `wc -c FloorPlanEditor.less` = 0；③ `index.css` / `BaseWidget.css` 已覆盖其全部视觉 | HIGH |
 
-**本项目推荐组合：方案 1（复位）+ 保持 `.ant-input` 主题规则不动。**
-理由：改动最小、不依赖 antd 变体类、对 `ConfigProvider` 与暗色标签选择器都免疫，且能同时覆盖 Input 与 TextArea。
+> **D1-D4 的连带动作**：删除后必须同步修改 `scripts/css-contract-check.js:57` 的
+> **C3b** 断言（当前它在守护这条死规则）→ 改为**反向断言**「`.dept-tree-search .ant-input-affix-wrapper` 不得存在」，
+> 同时保留 **C3c**（`.user-form-input.ant-input-affix-wrapper .ant-input`，**活规则**）为正向断言。
 
-**如果将来要"收窄主题规则"而非"复位内层"**（即让 `.ant-input` 不再命中内层），则用**方案 3**，并强制在 `AntdThemeBridge.tsx` 写死：
-```ts
-Input: { /* ...现有 token... */, variant: "outlined" }   // 项目主题只适配 outlined
+### 第 2 批｜可降级为 token 引用（14 条）
+
+| # | 文件:行号 | 现状（硬编码） | 建议替换为 | 降级理由 | 验证方式 | 置信度 |
+|---|---|---|---|---|---|---|
+| T1 | `index.css:877` | `border-radius: var(--theme-radius-md) !important` → **6px** | `var(--theme-radius-lg)`（**8px**）或改为 antd `borderRadius` token | 项目 token 6px 与 antd `AntdThemeBridge.tsx:89` 的 `borderRadius: 8` 冲突 | `getComputedStyle(input).borderTopLeftRadius` 单值断言（当前 6px） | HIGH |
+| T2 | `index.css:912` | 同 T1（wrapper） | 同 T1 | 同 T1 | wrapper radius 断言 | HIGH |
+| T3 | `index.css:5563` | `border-radius: 6px !important`（分页器） | `var(--theme-radius-lg)` | 裸 px，绕过 token 体系 | 分页按钮 radius 断言 | HIGH |
+| T4 | `index.css:878` | `font-size: 14px !important` | `inherit`（antd 内层已是 `inherit`）/ antd `fontSize` token | 锁死字号 → `size="large"` 不放大（登记册 #5/#6） | `<Input size="large">` 的 `fontSize` 断言 | HIGH |
+| T5 | `index.css:879` | `transition: all var(--theme-transition-fast) !important` | antd motion token / `transition: border-color .2s` | `transition: all` 触发全属性过渡（登记册 #5） | DevTools 观察过渡属性数 | HIGH |
+| T6 | `index.css:964` | `var(--ant-color-error, #ff4d4f)` | `var(--ant-color-error)`（去掉 fallback） | antd 6 默认 `cssVar` 已注入 `--ant-color-error:#ff4d4f`（`node_modules/antd/dist/antd.css` 实测）→ fallback 永不生效，是**死色** | 浏览器 `getComputedStyle(el).getPropertyValue('--ant-color-error')` 非空 | HIGH |
+| T7 | `index.css:970` | `var(--ant-color-warning, #faad14)` | `var(--ant-color-warning)` | 同 T6 | 同 T6 | HIGH |
+| T8 | `index.css:5577` | `color: #ffffff !important`（分页激活页码文字） | `var(--theme-text-inverse)` | `#ffffff` 是 `--theme-text-inverse` 的字面值 | 暗色下断言文字色 | HIGH |
+| T9 | `login.css:345` | `border: 1px solid #e7e5e4 !important` | `var(--login-input-border)`（新增变量，**值不变**） | 登录页专用色板需可追溯，但**不并入品牌绿**（避免扩大范围，见 P-m5） | 登录页截图逐像素比对 | HIGH |
+| T10 | `login.css:346` | `background: #fafaf9 !important` | `var(--login-input-bg)` | 同 T9；**注意该值与 `index.css:4815` 同源** → 修 P-C3 时不要把登录页色误引入全局 `:root` | 同 T9 | HIGH |
+| T11 | `login.css:361, 367` | `border-color: #d4a574 !important`（hover / focus） | `var(--login-accent)` | 同 T9 | 同 T9 | HIGH |
+| T12 | `login.css:362, 368` | `background-color:#ffffff` / `rgba(212,165,116,0.15)` | `var(--login-input-bg)` / `var(--login-focus-ring)` | 同 T9；`rgba` 也是 hex 治理盲区 | 同 T9 | HIGH |
+| T13 | `ActionButtons.css:14,18,23,28,32,40`（6 条） | `#262626` / `#000000` / `#ba3630` / `#cf1322` | `var(--theme-text-primary)` / `var(--theme-text-inverse)` / `var(--theme-error)` / `var(--theme-error-hover)` | 全部是 `ruoyiBrand` 已有值的字面复制 | 表格操作列明暗两态截图 | HIGH |
+| T14 | `index.css:4814` | `--theme-zebra: #faf8f3`（在**后置 `:root`**） | 并入 `--table-header-bg` / `--theme-bg-tertiary`（`:root` 已有同义变量） | 第 3 处同名变量体系的雏形；与 D16 同属「原型复刻值渗入全局 `:root`」 | 静态断言「`:root` 不得新增颜色变量（白名单外）」 | MEDIUM |
+
+### 第 3 批｜必须保留并登记（11 条）
+
+| # | 文件:行号 | 规则摘要 | 必须保留的理由 | 登记位置 |
+|---|---|---|---|---|
+| K1 | `index.css:937-945` | VIS-01 内层复位（6 项 `!important`，特异性 (0,3,1)） | antd 6 内层 `border:none` 特异性 (0,1,1) 压不过项目 `:875` 的 `!important`；在项目层覆盖被删之前它**必须存在**，否则双框回归 | `css-contract-check.js` **C1a-C1c**（已守护）；建议升级为「Phase 4 后重新评估」条目 |
+| K2 | `index.css:958-965` | VIS-03 `status-error` 边框色还原（`var(--ant-color-error) !important`） | 错误态红框是 v1.24 已交付验收项；antd 的 status 色是普通声明，会被 `border` 简写 `!important` 压掉 | `css-contract-check.js` **C5a** |
+| K3 | `index.css:967-971` | `status-warning` 边框色还原 | 同 K2 | `css-contract-check.js` **C5c** |
+| K4 | `index.css:888-893` | `.ant-input:focus` 焦点环 `0 0 0 2px var(--theme-primary-lighter) !important` | 焦点环唯一来源之一 | `css-contract-check.js` **C4a** |
+| K5 | `index.css:920-923` | `.ant-input-affix-wrapper-focused` 焦点环 | 焦点环**归 wrapper**（VIS-02 契约） | `css-contract-check.js` **C4c** |
+| K6 | `index.css:895-901` | 暗色 `.ant-input:focus` 双层焦点环（2px + 12px glow） | 暗色焦点环需更强可见度 | v1.24 视觉记录 |
+| K7 | `index.css:925-929` | 暗色 `.ant-input-affix-wrapper-focused` 焦点环 | 同 K6 | v1.24 视觉记录 |
+| K8 | `index.css:2119-2123` | `.user-form-input.ant-input-affix-wrapper .ant-input { border:none!important; background:transparent!important; box-shadow:none!important }` | **活规则**（复合选择器命中 antd 6 的 root=wrapper），删则部门树搜索框外观回归 | `css-contract-check.js` **C3c** |
+| K9 | `index.css:2125-2130` | `.user-form-input…:focus .ant-input, …-focused .ant-input` | 同 K8 | 需**新增**正向断言（当前 C3 只覆盖非 focus 变体） |
+| K10 | `login.css:351-358` | `.login-form .ant-input-affix-wrapper > input.ant-input { font-size/background/border/box-shadow/padding/height }` | 登录页内层复位；误删 → 登录页双框回归（登记册 #25「陷阱」） | `css-contract-check.js` **C3a** |
+| K11 | `index.css:5557-5578` | 分页器 `.ant-pagination .ant-pagination-item` 透明边框 + active 绿底白字 | 登记册 #23：**刻意设计**（原型 demo 复刻），非缺陷；`border:none` 会移除 antd 分页边框，是产品决策 | v1.24 登记册 #23（保留项）；建议在 Phase 5 用 `variant="borderless"` 等价表达 |
+
+### 第 4 批｜需重写而非删除（11 条）
+
+| # | 文件:行号 | 现状 | 重写方向 | 依赖前置 | 置信度 |
+|---|---|---|---|---|---|
+| R1 | `index.css:871-880` | `.ant-input, .ant-input-number, .ant-select-selector { background/border/color/border-radius/font-size/transition !important }` | 拆成三份：① 边框/底色 → 交还 antd `variant` + `Input.colorBgContainer`/`colorBorder`/`hoverBorderColor`/`activeBorderColor`；② 圆角 → 统一 8px（T1）；③ font-size/transition → 移除（antd 已 `inherit`） | Phase 3（F3）+ Phase 4 | MEDIUM |
+| R2 | `index.css:882-886` | `.ant-input:hover … { border-color !important }` | 交还 antd `Input.hoverBorderColor`（`AntdThemeBridge.tsx:124` 已设 `#156031`） | Phase 3 | MEDIUM |
+| R3 | `index.css:888-893` | `.ant-input:focus … { border-color + box-shadow !important }` | 交还 antd `Input.activeBorderColor` + `activeShadow`（`AntdThemeBridge.tsx:123,125` 已设） | Phase 3 + Phase 4 | MEDIUM |
+| R4 | `index.css:908-914` | `.ant-input-affix-wrapper { background/border/color/border-radius/transition !important }` | 同 R1（wrapper 侧） | Phase 3 + Phase 4 | MEDIUM |
+| R5 | `index.css:916-918, 920-923` | wrapper hover / focused 边框与焦点环 | hover → token；focused 环 → antd `activeShadow`（**但 VIS-02「焦点环归 wrapper」契约需保留** → 需 antd 侧 wrapper 焦点环或保留手写） | Phase 3 + Phase 4 | MEDIUM |
+| R6 | `index.css:2254-2742` | 暗色 cluster **C39**：90 规则 / 138 `!important` | 整块迁到 `darkAlgorithm` + 明暗分色板 token（F3） | **F3 硬前置** | MEDIUM |
+| R7 | `index.css:2780-4517` | 暗色 cluster **C40**：341 规则 / 503 `!important` | 同 R6 | **F3 硬前置** | MEDIUM |
+| R8 | `index.css:976-979, 2407-2429` | `.ant-table` 背景/圆角 + 暗色 thead/tbody/container | 交还 antd `Table.headerBg` / `rowHoverBg` / `rowSelectedBg`（`AntdThemeBridge.tsx:107-118` 已设 `cream.*`） | Phase 3 + Phase 6 | MEDIUM |
+| R9 | `index.css:4806-4808` + `1879/1885/1891` | `--sidebar-width` 两处真相（200px vs 240px） | 合并为单一来源（保留 `[data-layout=…]` 家族，删除尾部重复定义） | 无（Phase 2 即可） | HIGH |
+| R10 | `index.css:4815` | `:root { --input-bg: #fafaf9 }`（第 3 处，暗色被覆写） | 把浅色实测值并入 `[data-color-mode="light"]`（184 行）或 `:root`（27 行）+ 暗色 254 行；**绝不能留在 4812 这个后置 `:root`** | 无（Phase 2 即可，**必须最先做**） | HIGH |
+| R11 | `index.css:2304, 2335` | 暗色规则使用 `var(--input-placeholder)`（只在 light 定义） | 统一变量名为 `--input-text-placeholder`（暗色块已有），并在 `:root` 补兜底 | 无（Phase 2 即可） | HIGH |
+
+## 量化基线
+
+### 3.1 当前值 → 收敛目标值
+
+> 口径固定（见 P-m7）：**M1** = `find src -name "*.css" -exec cat {} + | grep -o '!important' | wc -l`
+> （全 `.css` 出现次数）；**M2** = 仅 `src/index.css`；**M3** = 顶层规则条数（含 `.ant-` 选择器）；
+> **M4** = 暗色顶层规则条数；**M5** = `index.css` 内 6 位 hex 字面量出现次数。
+> **每次 phase 结束跑一遍并把数字记入 phase 报告。**
+
+| 指标 | 当前值 | 目标值 | 降幅 | 达成路径 | 验证命令 / 方法 |
+|---|---|---|---|---|---|
+| **M1** `!important`（全 `.css`） | **1435** | **≤ 480** | −67% | 第 1 批 −40（死规则 31 + 死文件 9）；第 2 批 −12；第 4 批 R1-R8（Input/Select/Table/Modal 域交还 token）≈ −900 | `find src -name "*.css" -exec cat {} + \| grep -o '!important' \| wc -l` |
+| **M2** `!important`（`index.css`） | **1359** | **≤ 420** | −69% | 同上 | `grep -o '!important' src/index.css \| wc -l` |
+| **M3** 含 `.ant-` 的顶层规则条数（全 `.css`） | **748** | **≤ 420** | −44% | 第 1 批删 D5-D15 共 15 条；第 4 批 R1-R8 覆盖 Input(38)/Select(28)/Table(79)/Modal(45)/Form(10) 共 200 条 | 本文件 [§ 3.3](#33-契约脚本扩展点) 的 C11 计数断言 |
+| **M3'** 含 `.ant-` 的**行数**（`index.css`） | **798** | **≤ 460** | −42% | 同上 | `grep -c '\.ant-' src/index.css` |
+| **M4** 暗色顶层规则条数 | **506**（正确拼写）+ **8**（拼写错误） | **≤ 150** | −72% | D5/D6 删 8 条死规则；R6/R7 整块删除 C39+C40（**431 条**），改由 `darkAlgorithm` token 接管 | `grep -c 'data-color-mode="dark"' src/index.css`（当前 574） |
+| **M5** 暗色分区（cluster，间隙 >5 行） | **64**（≈「约 60」） | **≤ 12** | −81% | R6/R7 合并后，暗色样式只剩「:root 变量块」+「少量 token 例外」 | 附录 §3.2 的聚类脚本 |
+| **M6** 重复暗色目标 class（出现在 >1 个 cluster） | **80** | **0** | −100% | 同 M4 | §3.2 聚类脚本 |
+| **M7** `index.css` 6 位 hex 字面量 | **311**（去重 **66**） | **≤ 60**（去重 **≤ 20**） | −81% | 第 2 批 T1-T14 | `grep -oE '#[0-9a-fA-F]{6}\b' src/index.css \| wc -l` |
+| **M8** 全 `.css` 6 位 hex 字面量 | **465** | **≤ 120** | −74% | 第 1 批删死文件（含 `theme-styles.css` 的旧灰蓝 fallback）+ 第 2 批 | `find src -name "*.css" -exec cat {} + \| grep -oE '#[0-9a-fA-F]{6}\b' \| wc -l` |
+| **M9** `index.css` 行数 | **5632** | **≤ 3200** | −43% | 第 1 批（死规则 ~45 行）+ R6/R7（431 条规则 ≈ 1100 行）+ R1-R5 | `wc -l src/index.css` |
+| **M10** `index.css` 分区块（`/* =====`） | **97** | **≤ 97**（只重组不增） | — | — | `grep -cE '^\/\* ={5,}' src/index.css` |
+| **M11** 暗色下 `--input-bg` 解析值 | **`#fafaf9`（错）** | **`#0f2e1b`（对）** | — | R10 | 浏览器 `getComputedStyle(document.documentElement).getPropertyValue('--input-bg')` |
+| **M12** 暗色 placeholder 变量 | **未定义（声明作废）** | **非空** | — | R11 | 浏览器 `getComputedStyle(input).getPropertyValue('--input-placeholder')` |
+| **M13** InputNumber 错误态边框 | **`rgb(219,215,206)`（错）** | **`rgb(186,54,48)`（对）** | — | 第 4 批 InputNumber 专项 | 浏览器 computed-style |
+| **M14** 死文件（从未 import 的 `.css`/`.less`） | **8 个 / 555 行** | **0** | −100% | D16/D17 | §3.3 C8 静态断言 |
+| **M15** 圆角（Input/wrapper） | **6px（项目）/ 8px（antd）不一致** | **8px 统一** | — | T1/T2 + Phase 3 | 浏览器 `borderTopLeftRadius` |
+| **M16** 浏览器 console 的 antd 弃用警告 | **2 类**（`maskClosable` / `onSearch`） | **0** | — | Phase 0 单独清理 | DevTools Console 过滤 `Warning:` |
+
+### 3.2 暗色聚类脚本（用于复算 M5 / M6）
+
+```bash
+# 暗色 cluster（间隙 > N 行切分）与「重复暗色目标 class」计数
+# 依赖：本文件同目录的 cssparse.py（见 Sources）
+python - <<'PY'
+import sys, re, collections
+sys.path.insert(0, r'<TEMP>/cssparse.py')
+from cssparse import parse_css
+blocks, _ = parse_css('src/index.css')
+rules = [b for b in blocks if b['type'] == 'rule']
+dark = [b for b in rules if 'data-color-mode="dark"' in b['sel'] or 'data-color_mode="dark"' in b['sel']]
+GAP = 5
+clusters, cur, prev = [], [], None
+for b in dark:
+    if prev is not None and b['start'] - prev > GAP:
+        clusters.append(cur); cur = []
+    cur.append(b); prev = b['end']
+if cur: clusters.append(cur)
+print('M5 暗色分区数(gap>%d):' % GAP, len(clusters))
+tmap = collections.defaultdict(set)
+for i, c in enumerate(clusters, 1):
+    for b in c:
+        for m in re.finditer(r'\.ant-([a-z0-9-]+)', b['sel']):
+            tmap[m.group(1)].add(i)
+print('M6 重复暗色目标 class:', sum(1 for v in tmap.values() if len(v) > 1))
+PY
 ```
 
----
+### 3.3 契约脚本扩展点（收敛的「可度量」基础设施）
 
-## 附录 B：双框修复的最小充分视觉验证矩阵
+#### 现有脚本的**实际能力**（已实跑验证）
 
-**前置**：prod build（`npm run build && npm run preview`）+ 真实数据 + 暗色模式可切（`settingsStore.preferences.theme.mode`）。
-
-| # | 页面 / 状态 | 组件形态 | 必看点 |
+| 脚本 | 能力 | 盲区 | 实跑结果 |
 |---|---|---|---|
-| 1 | 楼宇管理列表页搜索区（`/operations/buildings`） | `AppInput`（**有 clear icon** → affix-wrapper） | 内层无 1px 边框；无四角接缝；字号 14px；placeholder 颜色正确 |
-| 2 | 新增/编辑楼宇弹窗 —— 名称输入框 | `AppInput` 有 affix | 同上；焦点态只有一圈 2px 绿环 |
-| 3 | 同一弹窗 —— **描述 TextArea（带字数统计）** | `Input.TextArea` + `showCount` → textarea affix-wrapper | **最易漏的一格**：内层 textarea 无边框；count 角标位置不偏移 |
-| 4 | 同一弹窗 —— **描述 TextArea（无字数统计）** | 纯 textarea（顶层） | **必须单列**：这是"顶层 textarea"分支，与 #3 的 DOM 结构完全不同 |
-| 5 | 任意含 `InputNumber` 的表单 | `InputNumber`（可能带 formatter / 前后缀） | `.ant-input-number` 根的边框正常；内层 `.ant-input-number-input` 不被误伤 |
-| 6 | 任意含 `Select` 的表单 | `AppSelect`（`optionFilterProp="label"`） | `.ant-select-selector` 边框/背景与 Input 一致；`showSearch` 开启后下拉正常 |
-| 7 | 任意含 `DatePicker` 的表单 | `.ant-picker` | **只做回归确认**（既存不一致，本次不改）：边框色与 Input 不同属已知欠账，不得在本次被"顺手统一" |
-| 8 | 表格内联编辑单元格 | `AppInput` / `AppSelect` 嵌在 `Table` 内 | 单元格高度不塌陷（复位 `padding: 0` 不得影响顶层 input）；无错位 |
-| 9 | **暗色模式**下重复 #1 / #2 / #3 | 同上 | 内层与 wrapper **背景同色**；hover/focus 时内层不变色；边框色 `--input-border` #2d4d33 |
-| 10 | **readonly** 输入框 | `readOnly` | antd 的 readonly 样式（`input[readonly]`）不被复位规则破坏；文字仍可选中 |
-| 11 | **disabled** 输入框 | `disabled` | 背景 `--input-bg-disabled`、文字 `--input-text-disabled`（暗色 token 已定义但项目未接线 → 记录为欠账）；无边框加深 |
-| 12 | 错误态表单 | `status="error"` | antd 的 error 边框（`--input-border-error` #ba3630）未被复位规则压掉 |
-| 13 | 焦点态特写（放大截图） | 任意 affix Input | **只有一圈** 2px 焦点环 + 一圈 12px 外发光（暗色下两层叠加）；修复后环外扩 1px 与修复前对比无"跳动" |
-| 14 | 密码框 / 搜索框（`Input.Password` / `Input.Search`） | 特殊包装 | 图标不与边框重叠；无额外内框 |
+| `scripts/css-contract-check.js`（89 行） | **纯文本正则**：C1a-C1c（VIS-01 复位块存在 + 6 项复位 + 不写 box-shadow）、C2（禁 `:not(组合子)`）、C3a/C3b/C3c（3 处局部补丁）、C4a-C4c（焦点环 / wrapper 边框 / wrapper 焦点环）、C5a-C5c（status 边框色还原） | **不解析 DOM、不算特异性、不验证选择器命中数** → 死规则照样 PASS（见 P-C5 / P-M10）；只覆盖 `index.css` + `login.css` 两个文件 | 需在改动后实跑确认（本 Phase 只读，未运行修改后的脚本） |
+| `scripts/css-contract-assertions.js`（74 行） | 浏览器 computed-style 断言：`doubleCount`、`inner`、`innerTextarea`、`innerDark`、`wrapperFocused`、`wrapperError` | **不是 CI 脚本**（需人工粘贴到 Console）；jsdom 无法解析 antd 6 的 `@layer` 嵌套；**fixture 用了不存在的 class**（`:48` `ant-input-affix-wrapper-status-error`）→ `passed` 恒 false（见 P-M11） | 需人工实机验证 |
+| `scripts/check-exemption-reasons.mjs`（122 行） | 校验 `eslint.config.js` 的 `__P65_EXEMPTION_FILES__` / `__P66_EXEMPTION_FILES__` 两个锚点数组与 `scripts/exemption-reasons.json` **一一对应**（缺/多/重复/理由空/维度空/userVisible 无 difference 全查） | **只管 JS/TS 的 eslint 豁免**，**完全不涉及 `.css`** → hex 治理对 CSS 失明的根因就在这里 | `node scripts/check-exemption-reasons.mjs` 退出码 0（未改动） |
+| `scripts/check-hardcoded-colors.mjs`（190 行） | 递归扫 `src/` 下 `.ts/.tsx/.css`；31 条 hex 映射 + 7 条 rgba 映射；路径白名单（`src/utils/three/colors.ts` / `src/design-system/tokens/` / `scripts/`）；值白名单 4 个 | ① **只拦 31 个已知 hex**，任意新 hex 直接漏过（`index.css` 311 处只命中 2 处）；② **未接入 `lint:ci`** | **实跑 exit code = 1**，18 个文件命中（含 `src/index.css:964` `#ff4d4f`、`src/index.css:970` `#faad14`） |
+| `eslint.config.js:132-196` | `no-restricted-syntax` 对 `src/**/*.{ts,tsx}` 禁裸 hex（`Literal[value=/#[0-9a-fA-F]{3,8}\b/]`）、裸 `<Input>`/`<Select>`/`Modal.confirm`/`<Popconfirm>`/`<Input.TextArea>` | **`files` 不含 `.css`** → CSS 完全不在射程 | `npm run lint` 现为绿（`lint:ci` 另含 `assert-lint-budget.mjs` + `check-exemption-reasons.mjs`） |
 
-**每个格子必须记录**：截图文件名、build commit、暗/亮、浏览器窗口宽度（≥1280，验证 fixed 列不受影响）。
+#### 建议的扩展点（收敛 Phase 0 落地，作为「可度量」的载体）
 
----
+| 编号 | 新增断言 | 实现位置 | 覆盖的风险 |
+|---|---|---|---|
+| **C6** | `var(--x)` 引用的变量必须在 `:root` 中出现（否则声明作废） | `css-contract-check.js` 新增 C6 | P-C4 / M11 |
+| **C7** | 同一 antd 目标 class 不得出现在 ≥2 个暗色 cluster | `css-contract-check.js` 新增 C7 | P-M1 / M5、M6 |
+| **C8** | `.css`/`.less` 文件必须被至少一个 `.tsx/.ts` import | `css-contract-check.js` 新增 C8 | P-m2 / M14 |
+| **C9** | 同一 CSS 变量在多个选择器块中重复赋值（白名单除外） | `css-contract-check.js` 新增 C9 | P-m3 / R9、R10 |
+| **C10** | `.module.css` 内不得出现 `.ant-` 选择器 | `css-contract-check.js` 新增 C10 | P-m6 |
+| **C11** | `!important` 总量上限（Phase 0 → Phase N 递减阶梯） | `css-contract-check.js` 新增 C11 或独立 `scripts/css-budget-check.mjs` | P-M2 / M1、M2 |
+| **C12** | `.css` 内不得出现 `data-color_mode`（连字符拼写） | `css-contract-check.js` 新增 C12 | P-m1 / D5、D6 |
+| **C13** | `.css` 内 hex 字面量**全量**检测（非 31 条映射），走 `exemption-reasons.json` 同款豁免机制 | 新增 `scripts/css-hex-check.mjs`（或扩展 `check-hardcoded-colors.mjs`） | P-M9 / M7、M8 |
+| **C14** | `maskClosable` / `onSearch` 零命中 | `css-contract-check.js` 或 `check-exemption-reasons.mjs` | P-M5 / M16 |
+| **C15** | `AntdThemeBridge` 的 `useMemo` 依赖数组必须覆盖其读取的全部外部状态 | 新增单测 `src/design-system/components/__tests__/AntdThemeBridge.test.tsx` | P-C2 |
 
-## 附录 C：#16 两难的最优折中建议（可直接进 plan）
-
-**结论：采用「三态门控 + 后端保持强校验」，不采用纯 fail-closed。**
-
-1. **契约层**：在 `src/components/shared/ActionButtons.tsx` 的 `ActionButton` 与 `createDeleteAction` 的 options 上新增**可选** `permission?: string`（向后兼容，存量调用点不传即保持现状）。
-2. **判定层**：新增**单一** helper（建议 `src/components/shared/useActionPermission.ts`）：
-   ```
-   权限未就绪（loading 或 error） → 渲染按钮但 disabled，title/aria-label 提示"权限信息加载中"
-   权限就绪且含该码              → 正常可用
-   权限就绪且不含该码            → 不渲染
-   ```
-   **"未就绪"必须用显式状态位**（`menuStore` 的 `loading` / `error`），**禁止**用 `permissions.length === 0` 判定。
-3. **映射层**：建立「模块 × 操作 → 权限码」单一真相源（建议 `.planning/phases/<P2>/action-permission-map.json`），**由脚本从后端 `init_data.go` / `pkg/permission/config.go` 校验一致性**（防止前后端漂移 —— migration_159 的历史已经证明这条命名会漂）。
-4. **范围**：P2 交付「契约 + helper + N 个代表页面（楼宇/工位/用户/网络设备）」，其余页面登记 Known Gaps；**不**在本里程碑做全站铺开。
-5. **安全边界**：前端门控在 UI 与注释中明确标注"非安全边界"；后端 `internal/api/router.go` 的权限中间件**不改**（已是真正的边界）。
-6. **验收**：① PG 环境走 UI 正常路径建受限角色；② 用 `POST /system/my-menus/permissions` 取权限集作为证据；③ 覆盖"有权限 / 无权限 / 权限接口失败"三种状态；④ 覆盖 ≥2 个列表页。
+> **注意**：C13 若直接落地会让 `check-hardcoded-colors.mjs` 的失败文件数从 18 暴涨，
+> 必须**先**把 `scripts/exemption-reasons.json` 的机制扩展到 `.css`（新增 `layer: "CSS"`），
+> 否则 Phase 0 就会因为「新增硬编码色」被自己的门禁卡死。
 
 ---
 
-## 附录 D：react-refresh 33 处清零的 `export type` 编译期交互结论
+## 收敛顺序建议
 
-**结论一句话**：
-> 在 `verbatimModuleSyntax: true`（`tsconfig.app.json:14`）下，把 `export { X }` 改成 `export type { X }` **既是清除 react-refresh warning 的必要手段，也是 TS 强制要求的写法**，且**运行时完全无差别**（type-only 导出在转译期被完全擦除）；但**必须逐个确认 X 是纯类型**，否则运行时引用会变成 `undefined`。
+> 总原则：**每个 phase 内部「改 token + 删对应覆盖」必须在同一个 commit**；
+> phase 边界只切在**组件域**上；**绝不**把同一个组件域拆成两个 phase。
 
-**依据**：
-- `node_modules/eslint-plugin-react-refresh/index.js:193-194`（以及 `:177-178` 对 `exportAll`）—— `if (node.exportKind === "type") continue;` → **类型导出被规则显式跳过**。
-- `tsconfig.app.json:14` `"verbatimModuleSyntax": true` → import/export 语句不做类型擦除，没有 `type` 修饰符的绑定按运行时绑定处理 → `export { SomeType }` 会报 TS1205/TS1484 → **必须** `export type { SomeType }` 或 `export { type SomeType }`。
-- `tsconfig.app.json:16` `"noEmit": true` + Vite/esbuild 转译 → `export type` 在产物中不存在 → 运行时行为不变。
-- `tsconfig.app.json:39` `exclude` 排除了 `src/**/*.test.ts(x)` → **测试文件不在 type-check 范围内** → 改写导出后必须额外跑 `npm run test`。
+### Phase 0 · 基础设施与口径冻结（**无视觉变更**）
 
-**"纯类型"判定清单**（逐个执行）：
-1. 该符号在源文件里的声明是 `interface` / `type X = ...`（不是 `const` / `function` / `class`）？
-2. 源文件里**没有**同名的值导出（`export const X` + `export interface X` 合并）？
-3. 全仓（含 `*.test.ts` / `*.test.tsx`）grep 该符号的**所有** import 点，逐个确认是**仅用于类型位置**（`import type` 或类型注解）？
-4. 没有 `.js` / `.mjs` / 动态 `import()` 按值引用它？
+| 项 | 内容 |
+|---|---|
+| 做什么 | ① 固定 M1-M16 口径并把 §3.2 聚类脚本落到 `scripts/`；② 修正 `css-contract-assertions.js:48` 的错误 fixture（P-M11）；③ 新增 C6-C12 静态断言；④ **单独**清理 2 类 antd 弃用（`maskClosable` → `mask={{closable:false}}`；`onSearch` → `showSearch={{onSearch}}`），与样式改动**分开 commit**；⑤ 把 `check-hardcoded-colors.mjs` 接入 `lint:ci`（先修其 18 个失败文件） |
+| 如何验证 | `node scripts/css-contract-check.js`（exit 0）→ `node scripts/check-exemption-reasons.mjs`（exit 0）→ `npm run lint:ci`（exit 0）→ 浏览器 Console 零 `Warning:` → 视觉零变化（截图 diff = 0） |
+| 如何回滚 | 单 commit revert；无 CSS 语义变更，回滚零风险 |
 
-**改造后的验证三件套**：`npm run type-check`（绿）+ `npm run test`（绿）+ `npm run lint`（errors 不升、warnings 按预期下降）。
+### Phase 1 · 零风险删除（**第 1 批 17 条**，无语义变更）
+
+| 项 | 内容 |
+|---|---|
+| 做什么 | 删除 D1-D15（死规则）+ D16/D17（死文件）；同步**反转** `css-contract-check.js` 的 C3b 断言；删除 `FloorPlanEditor.tsx:18` 的空 `.less` import |
+| 为什么这个顺序安全 | 这些规则**命中数全为 0**（死类名 / 拼写错误 / 从未 import），删除前后 computed-style **完全相同**；不触碰任何活规则 → 不可能破相 |
+| 如何验证 | ① `node scripts/css-contract-check.js`（exit 0，含反转后的 C3b）；② 浏览器 `document.querySelectorAll('.ant-select-selector').length === 0`、`.dept-tree-search .ant-input-affix-wrapper` 命中 0（删除前后均应为 0）；③ **21 形态 × 明暗矩阵**截图 diff = 0（复用 `.planning/notes/v1.24-visual-verification.md` 的形态清单）；④ M1: 1435 → **1395**；M2: 1359 → **1328**；M4: 506 → **498** |
+| 如何回滚 | 单 commit revert；因为无视觉变更，回滚零风险 |
+
+### Phase 2 · 变量层修正（**串色与未定义变量**，无语义变更）
+
+| 项 | 内容 |
+|---|---|
+| 做什么 | R10（`--input-bg` 串色）、R11（`--input-placeholder` → `--input-text-placeholder`）、R9（`--sidebar-width` 双定义）、T6/T7（去掉死的 hex fallback）、T1/T2/T3（圆角统一 8px）、T8（`#ffffff` → token）、T14（`--theme-zebra` 合并） |
+| 为什么这个顺序安全 | 只改 **CSS 变量层**，不碰任何 antd 覆盖规则；影响面由「变量的所有消费点」决定，可枚举、可推理。**必须在 Phase 1 之后、Phase 3 之前** —— 否则 Phase 3 重构色板时会把这个串色源一起搬走，问题被掩盖而不是解决 |
+| 如何验证 | ① 浏览器：暗色 `--input-bg` === `#0f2e1b`；`--input-placeholder` 非空；② 明暗各 14 页巡检（v1.24 已有巡检清单）；③ M1 目标 ≤ 1383；M7 目标 ≤ 300 |
+| 如何回滚 | 单 commit revert；变量层回滚即刻恢复 |
+
+### Phase 3 · `AntdThemeBridge` 明暗色板重构（**F3 硬前置**）
+
+| 项 | 内容 |
+|---|---|
+| 做什么 | ① `antdThemeConfig.token` 改为**按 `themeMode` 分支**（暗色不再复用 `ruoyiBrand.cream.*` —— 解决 P-M8 的白底 Select）；② `components.*` 的暗色 token 补齐；③ 圆角统一（`borderRadius: 8` 与 `--theme-radius-lg` 对齐）；④ 扩展 `useMemo` 依赖 + 加 C15 单测 |
+| 为什么必须在此之前 | R1-R8（把项目覆盖交还 antd token）**只有在 antd 侧 token 已经与现有手写样式等效时**才安全。若先删覆盖再改 token，中间态就是「antd 默认蓝灰 + 8px 圆角」—— 与 v1.24 验收差距巨大，必然被误判为破相 |
+| 如何验证 | ① **等价性比对**：在 Phase 3 前后，对 21 个形态 × 明暗矩阵逐格比对 computed-style（`backgroundColor` / `borderColor` / `borderRadius` / `boxShadow`），差异**必须为 0**（本 phase 不改视觉）；② 单测：dark 模式下 `theme.token.colorBgContainer !== '#FFFFFF'`；③ M1 不变（纯 TS 改动） |
+| 如何回滚 | 单 commit revert；不涉及 CSS，零风险 |
+
+### Phase 4 · Input 域收敛到 variant（**最大收益块**）
+
+| 项 | 内容 |
+|---|---|
+| 做什么 | R1-R5：`index.css:871-880 / 882-886 / 888-893 / 908-914 / 916-923` 交还 antd `variant` + `Input` token；同步重估 K1（VIS-01 复位块）—— antd 6 内层已有 `border:none`，若 `.ant-input` 覆盖被删则复位块仅保留 `padding:0` + `font-size:inherit`；**K2/K3（VIS-03 错误态）按 M13 同样要重测**（因为 antd status 色会重新被看到） |
+| 为什么这个顺序 | Input 是全站 309 个输入框的载体，且是 v1.24 验收最密集的域（21 形态中 11 个是 Input）；先做它能让 K1-K7 这批「必须保留」的规则一次性定型，后续域不再反复 |
+| 如何验证 | ① `css-contract-check.js` C1/C4/C5 全 PASS（**若复位块被重写，需同步更新 C1 的期望字符串**）；② `css-contract-assertions.js`（修好 fixture 后）`passed === true`；③ 21 形态中 11 个 Input 形态 × 明暗逐格比对；④ M1 目标 ≤ 1100；M3 目标 ≤ 690 |
+| 如何回滚 | 单 commit revert；若复位块被重写，需**同时** revert C1 断言改动 |
+
+### Phase 5 · Select / InputNumber / Form 域收敛
+
+| 项 | 内容 |
+|---|---|
+| 做什么 | Select：D7-D15 已删 → 现在把 `.ant-select` 相关的手写边框交还 `Select` token（`AntdThemeBridge.tsx:129-136` 已设 `colorBgContainer` 等，**但暗色仍是白底 —— 依赖 Phase 3 的分色板**）；InputNumber：R1 中拆出的 `.ant-input-number` 分支单独处理，加 status 还原（0,2,0+important）→ 修 M13；Form：`.ant-form-item-explain-error`（`index.css:1582`）交还 `Form` token；`styles.module.css` 的 6 条 antd Modal 选择器迁出（P-m6） |
+| 为什么在 Phase 4 之后 | Select 与 Input 共享 `Input` 域的 token 语义与 variant 解析链（`useVariants`）；先做 Input 可把「variant 在 DOM 上落成什么 class」的实测结论复用到 Select/InputNumber |
+| 如何验证 | ① 浏览器：暗色 Select 背景 ≠ `rgb(255,255,255)`；InputNumber `status="error"` 边框 = `rgb(186,54,48)`；② Select / InputNumber / Cascader / TreeSelect / AutoComplete / Mentions 6 个形态 × 明暗；③ M1 目标 ≤ 900 |
+| 如何回滚 | 单 commit revert |
+
+### Phase 6 · Table / Modal / Nav / Feedback 域收敛
+
+| 项 | 内容 |
+|---|---|
+| 做什么 | R8（Table thead/tbody/container → `Table.headerBg`/`rowHoverBg`/`rowSelectedBg`）；Modal content/header/title/close-x → `Modal` token；Dropdown / Menu / Tabs / Tag / Alert / Pagination 等 → 对应 `components.*` token |
+| 为什么在最后 | 这些域的**手写覆盖与 antd 默认差异最小**（v1.24 登记册 #27-#33 全部是 P2），风险最低、收益也最低 → 放在最后，用前面 phase 积累的 token 等价性经验兜底 |
+| 如何验证 | 14 页巡检 + v1.24 视觉记录逐页比对；M1 目标 ≤ 600；M3 目标 ≤ 500 |
+| 如何回滚 | 单 commit revert |
+
+### Phase 7 · 暗色 mega-cluster 合并（**最后的原子操作**）
+
+| 项 | 内容 |
+|---|---|
+| 做什么 | R6（`index.css:2254-2742`，90 规则）+ R7（`index.css:2780-4517`，341 规则）→ 整块删除，改为由 Phase 3 的分色板 token + 少量例外承担 |
+| 为什么必须最后 | 这是**唯一一个「一次性删 431 条规则」**的操作。若在 Phase 4-6 之前做，暗色下所有组件会瞬间回到 antd `darkAlgorithm` 默认色 → 全站暗色破相；Phase 4-6 完成后，浅色侧已被 token 化，暗色侧的删除才只是「去掉冗余副本」 |
+| 如何验证 | ① 暗色 21 形态 × 逐格比对；② 暗色 14 页巡检；③ M4 目标 ≤ 150；M5 目标 ≤ 12；M6 目标 = 0；M1 目标 ≤ 480；M9 ≤ 3200 |
+| 如何回滚 | 单 commit revert（文件级回滚，`git revert` 即恢复到 Phase 6 末态） |
+
+### 收敛顺序的「为什么不会中间态破相」——三条保证
+
+1. **死代码先行（Phase 1）**：第一刀砍掉的是**命中数 0** 的规则 → computed-style 逐格 diff 必为 0，
+   不存在「看起来变了但说不清哪里变」的情况。
+2. **变量层先行（Phase 2）**：变量层的变更**可枚举**（`--input-bg` 有 22 个消费点），
+   每个消费点都能单独断言 → 变更影响可预测。
+3. **token 等价 → 再删覆盖（Phase 3 → 4-6）**：
+   Phase 3 的**验收标准就是「视觉 diff = 0」**。只有当 antd 侧 token 已经被证明能
+   **一模一样**地复现现有手写样式时，Phase 4-6 才有资格删除覆盖。
+   这是整个顺序的**核心保险** —— 它把「删除」这个不可逆动作推迟到「等效」被证明之后。
+
+### 哪些改动**必须**等 F3（Phase 3）之后才能做
+
+| 改动 | 为什么必须等 F3 |
+|---|---|
+| R1-R5（Input 域交还 token） | antd 侧 `Input.colorBgContainer` / `colorBorder` 在暗色下仍是 `#FFFFFF`/`#DBD7CE`（`AntdThemeBridge.tsx:83,86,122,130`）→ 先删项目覆盖 = 暗色输入框变白块 |
+| R6/R7（暗色 mega-cluster 删除） | 同上；且暗色手写 cluster 目前是**唯一**提供暗色底色/边框的来源 |
+| Select 域收敛（Phase 5） | `Select.colorBgContainer` 同样写死 `#FFFFFF` |
+| Table 域收敛（R8） | `Table.headerBg` 等全部指向 `cream.*` 常量，暗色下恒为浅色 |
+| 圆角统一（T1/T2/T3） | antd `borderRadius: 8` 已在 `AntdThemeBridge.tsx:89`；但**同一 token 也被暗色 cluster 依赖**，需先完成分色板 |
+
+**不必等 F3 的**：Phase 0（工具）、Phase 1（死代码）、Phase 2（变量层）、
+`maskClosable`/`onSearch` 弃用清理、`.module.css` 的 antd 选择器迁出。
+
+---
+
+## Phase-Specific Warnings
+
+> 对应 v1.25 ② 线可能拆出的 8 个 phase（Phase 0-7，与上节一一对应）。
+
+| Phase | 最可能的坑 | 触发信号 | 缓解措施 |
+|---|---|---|---|
+| **P0 · 工具与口径** | ① `css-contract-assertions.js` 的 fixture 用了 antd 6 不存在的 class → `passed` 恒 false，团队误以为「错误态断言失败 = 有回归」而放弃该脚本；② 新增的 C13（CSS hex 全量检测）会让 `check-hardcoded-colors.mjs` 失败文件数暴涨，**Phase 0 把自己卡死** | 断言脚本输出 `passed: false` 但 computed-style 看起来正常 | ① 先修 fixture（`:48` → `ant-input-status-error`，期望色改 `rgb(186,54,48)`）；② C13 **延后**到 Phase 1/2 之后，或先扩展 `exemption-reasons.json` 支持 `layer: "CSS"` |
+| **P1 · 零风险删除** | ① 删 D1-D4 后，部门树搜索框**同时**失去 `.user-form-input` 那条活规则的兜底 —— 若两条一起被误判为死规则，搜索框会变回带边框的 antd 输入框；② 删 `theme-styles.css` 时有人误以为 `.ant-menu-item-selected` 的样式会丢 —— 实际它在 `index.css:463-489` 等处已有等价实现 | 部门树搜索框出现描边/白底 | 删除前对每条死规则跑 `document.querySelectorAll('<完整选择器>').length === 0`；D1-D4 与 K8/K9 成对处理，只删前者 |
+| **P2 · 变量层** | ① 修 `--input-bg` 时误把登录页的 `#fafaf9` 提升为全局 `--input-bg` 的浅色值（它本就是登录页色板，源自 `login.css:346`）；② 变量改名 `--input-placeholder` → `--input-text-placeholder` 时漏改浅色块 → 浅色 placeholder 反向失效 | 浅色/暗色出现「一个好一个坏」的镜像症状 | ① 只在 `[data-color-mode="light"]` 保留 `--input-placeholder` 别名指向 `--input-text-placeholder`；② 改名后**两个方向**都断言（浅色 + 暗色） |
+| **P3 · F3 色板重构** | ① `useMemo` 依赖数组漏加新状态源 → token 不更新，表现为「切了暗色但颜色没变」；② 暗色 Select 变成**另一种**错误色（把 `#FFFFFF` 换成深绿但 `--border` 没同步）→ 比现在的白底更难判断 | 「主题切换后样式没反应」或「暗色下边框和底色不同源」 | ① C15 单测断言 `useMemo` deps 覆盖全部外部读取；② 分色板必须**成组**定义（bg / border / text 三件套），不允许只改其一 |
+| **P4 · Input 域** | ① 删 `.ant-input` 覆盖后，antd 内层 `border:none`（特异性 0,1,1）**不足以**压过什么 → 若同时有别的规则给内层上边框，双框回归；② 重写 K1（VIS-01 复位块）时把 `box-shadow` 也写进去 → **焦点环变双圈**（VIS-02 回归）；③ `font-size: inherit` 被移除 → `size="large"` 不放大 | 内层 input 出现 1px 边框；焦点环变 2 圈 | ① 删覆盖与**保留**复位块必须同 commit；② 复位块**永远不写 box-shadow**（C1b 断言）；③ `css-contract-assertions.js` 的 `doubleCount` 必须 = 0 |
+| **P5 · Select / InputNumber / Form** | ① Select 在 antd 6 的边框画在 `.ant-select` 根上，项目若继续按 `.ant-select-selector` 写规则 → **完全不生效**且没人发现（因为死规则不报错）；② InputNumber 的 status 还原选择器写错特异性（写成 0,1,0 + important）→ 压不过 `:875` | Select 边框在暗色下消失或恒白；InputNumber 错误态仍灰 | ① 收敛后**禁止**再出现 `.ant-select-selector`（C13/C12 扩展断言）；② InputNumber status 还原用 0,2,0 + important，并加浏览器断言 M13 |
+| **P6 · Table / Modal / 其它** | ① Table thead 交还 token 后，`bordered` 变体的分隔线位置变化（登记册 #27 已登记「bordered/排序列对齐被强制」）；② Modal content 交还 token 后，`borderless` 变体不再被强制去边框 | 表格列宽/对齐错位、Modal 出现多余边框 | 逐个变体做「有/无 bordered」「有/无 borderless」两态验收，不能只测默认态 |
+| **P7 · 暗色 mega-cluster** | ① 431 条规则一次性删除，若其中有**唯一**提供某组件暗色样式的规则 → 该组件暗色下彻底裸奔（antd 默认）；② 删除后 `index.css` 从 5632 行骤降到 ~3000 行，**极易误删相邻的有效规则** | 某组件暗色下变成 antd 默认外观；或整个暗色块消失 | ① 删除前用 §3.2 脚本导出被删规则清单，逐条确认「antd token 能提供等价样式」；② 删除**只做块级操作**（按 cluster 边界整段删），不逐条手改；③ 删除后立刻跑暗色 21 形态 + 14 页巡检 |
 
 ---
 
 ## Sources
 
-- `ruoyi-react-frontend/src/index.css`（5590 行；`:150-196` light token、`:198-268` dark token、`:871-929` Input 主题块、`:2212-2600+` 暗色覆盖块、`:2321-2323` `.ant-picker`）
-- `ruoyi-react-frontend/src/design-system/components/AntdThemeBridge.tsx:63-190`（antd ConfigProvider 唯一入口、`components.Input` token、`hashed: true`）
-- `ruoyi-react-frontend/src/components/ConfigProvider.tsx`（项目自有 ConfigProvider，**非** antd 的）
-- `ruoyi-react-frontend/src/components/ui/AppInput.tsx`（默认 `allowClear=true`）、`AppSelect.tsx:16-19`（契约组件自身触发 `local/no-large-dropdown-list`）
-- `ruoyi-react-frontend/src/components/shared/ActionButtons.tsx:15-24,114-159`（`ActionButton` 无 permission 字段）、`ColumnConfigModal.tsx:136`（封装层内的 `Modal.confirm`）
-- `ruoyi-react-frontend/src/pages/operations/buildings/index.tsx:374-378`（行操作无门控）、`src/pages/network/ports/index.tsx:131-132`（对照：有门控）
-- `ruoyi-react-frontend/src/lib/menuApi.ts:23-26`、`src/store/menuStore.ts`、`src/router/DynamicRoutes.tsx`（路由/LAST_PATH/菜单缓存）、`src/router/RouteGuard.tsx`、`src/constants/storage.ts:37`
-- `ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/index.tsx:109-128,580-591`（物理链路面板，尚未接诊断端点）
-- `ruoyi-react-frontend/src/pages/network/devices/index.tsx`（714 行；`:81-169` 纯函数、`:277` `deptFilters`、`:451` `buildRowActions`、`:524` `columns`）；`src/components/network/port-write/*.tsx`（v1.19/v1.20.1 冻结交互）
-- `ruoyi-react-frontend/eslint.config.js`（`:59` react-refresh、`:106` exhaustive-deps、`:120-183` P65 契约块、`:184-263` hex 豁免块、`:271-283` 封装层豁免、`:291-317` P66 块）+ `scripts/exemption-reasons.json` / `scripts/check-exemption-reasons.mjs` / `scripts/assert-lint-budget.mjs`
-- `ruoyi-react-frontend/tsconfig.app.json:14,16,39`（`verbatimModuleSyntax` / `noEmit` / `exclude`）
-- `node_modules/antd@6.6.4`：`es/input/style/index.js:46-71,296-318,361-452`、`es/input/style/variants.js:25-40,122-175,177-231,280-345`、`es/input/style/textarea.js:4-60`、`es/input/Input.js:129,159-176`、`es/input/TextArea.js:82-161`、`es/form/hooks/useVariants.js:7-28`、`es/config-provider/context.js:4`
-- `node_modules/@rc-component/input/es/BaseInput.js:43-45,79-88`、`es/TextArea.js:137,179`、`es/ResizableTextArea.js:114`
-- `node_modules/@ant-design/cssinjs/es/hooks/useStyleRegister.js:27-47`（hash 前缀注入）
-- `node_modules/eslint-plugin-react-refresh/index.js:95,178,194`；`node_modules/eslint-plugin-react-hooks@7.0.1`
-- `pkg/permission/config.go:223-290`（静态路由权限表，无缓存）、`internal/services/system/menu_service.go:509-569`（用户权限聚合）、`internal/services/system/menu_cache_impl.go:115-136,157-162`（30 分钟权限缓存 + 失效路径）、`internal/services/system/cache_keys.go:414-420`
-- `internal/core/db/init_data.go:693,752-755`（`ops:building:*` 权限码）、`internal/core/db/migrations/archive/applied/migration_159_align_ops_perms.go`（权限码命名漂移前科）、`internal/api/router.go:539-546,702`
-- `internal/services/operations/workstation_device_service.go:800-887`（空因分类与告警，**注释自相矛盾**）、`internal/services/operations/workstation_physical_diagnosis.go:21-64`（空因常量与字段）、`internal/api/v1/operations/workstation_device_handler.go:147-191`
-- `.planning/milestones/v1.23-phases/75-uat/75-UAT.md:51,74-87,105-106`（#16 FAIL-2 与环境限制）；`.planning/debug/workstation-3f130-physical-link-empty.md:89,106,113`；`.planning/milestones/v1.23-REQUIREMENTS.md:55,59,83,136-137`
-- 本次实测：`npm run lint` → **17 errors / 34 warnings**（33 处 `react-refresh/only-export-components`，12 处 `react-hooks/exhaustive-deps`）
+### 读过的文件（前端）
 
----
-*Pitfalls research for: RuoYi-Next v1.24 视觉回归修复 + 遗留定责与清偿*
-*Researched: 2026-10-28*
+| 文件 | 用途 |
+|---|---|
+| `ruoyi-react-frontend/src/index.css`（5632 行） | 主战场：全量盘点、死规则定位、变量作用域分析 |
+| `ruoyi-react-frontend/src/pages/login/login.css`（504 行） | 登录页局部补丁（K10）、硬编码琥珀金色板（T9-T12） |
+| `ruoyi-react-frontend/src/components/shared/ActionButtons.css`（80 行） | 表格操作按钮（8 条暗色规则 / 18 `!important`，T13） |
+| `ruoyi-react-frontend/src/design-system/themes/theme-styles.css`（97 行） | 死文件 D16（含旧灰蓝 fallback） |
+| `ruoyi-react-frontend/src/components/dashboard/widgets/base/BaseWidget.css`（311 行） | 4 条通用 antd 选择器 |
+| `ruoyi-react-frontend/src/pages/operations/building-spaces/components/styles.module.css`（370 行） | CSS Module 内混入 6 条 antd 全局选择器（P-m6） |
+| `ruoyi-react-frontend/src/design-system/components/AntdThemeBridge.tsx`（192 行） | **真 antd ConfigProvider**（`:178`）；token 映射（`:74-92`）；8 组件覆盖（`:93-168`）；`darkAlgorithm`（`:65`）；`hashed: true`（`:173`） |
+| `ruoyi-react-frontend/src/design-system/tokens/colors.ts`（134 行） | `ruoyiBrand` 真相源：`cream.surface=#FFFFFF`、`cream.border=#DBD7CE`、`functional.danger=#BA3630` 等 |
+| `ruoyi-react-frontend/src/design-system/components/ThemeProvider.tsx` | `data-color-mode` 属性写入方 |
+| `ruoyi-react-frontend/src/components/ConfigProvider.tsx`（72 行） | 项目自有 Provider（**仅副作用同步**，不渲染 Provider）→ P-C2 |
+| `ruoyi-react-frontend/src/App.tsx`（67 行） | **双 Provider 嵌套点**：`:47` AntdThemeBridge / `:48` 项目 ConfigProvider |
+| `ruoyi-react-frontend/src/components/ui/AppInput.tsx`（16 行） | `allowClear = true` 默认 → 决定 DOM 是否有 affix wrapper（P-C5 的关键前提） |
+| `ruoyi-react-frontend/src/components/ui/AppSelect.tsx`（26 行） | `showSearch ?? count >= 8`（P-M5 的 warning 触发条件） |
+| `ruoyi-react-frontend/src/components/DeptTree/index.tsx:190-220` | `className="dept-tree-search user-form-input"` 落在 `AppInput` 上（P-C5 / P-M6） |
+| `ruoyi-react-frontend/src/components/shared/FormModal.tsx` / `src/components/modal/BaseEditModal.tsx` / `src/components/shared/confirmDelete.ts` / `src/components/captcha/CaptchaModal.tsx` / `src/components/network/port-write/BulkWriteDrawer.tsx` | `maskClosable` 弃用命中点（P-M5） |
+| `ruoyi-react-frontend/src/components/CronSelector/index.tsx:206` / `src/components/dashboard/settings/EndpointSelector.tsx:211` | `onSearch` 弃用命中点（P-M5） |
+| `ruoyi-react-frontend/scripts/css-contract-check.js`（89 行） | 现有静态契约能力与盲区（§3.3） |
+| `ruoyi-react-frontend/scripts/css-contract-assertions.js`（74 行） | computed-style 断言 + **错误 fixture**（P-M11） |
+| `ruoyi-react-frontend/scripts/check-exemption-reasons.mjs`（122 行） | 豁免 ↔ 理由一一对应校验（**只管 JS/TS**） |
+| `ruoyi-react-frontend/scripts/check-hardcoded-colors.mjs`（190 行） | CSS hex 扫描器（**当前 exit=1**） |
+| `ruoyi-react-frontend/eslint.config.js:118-200` | hex 禁令块 `files: ["src/**/*.{ts,tsx}"]`（**不含 .css**） |
+| `ruoyi-react-frontend/package.json` | `lint:ci` 组成（**不含** `check-hardcoded-colors.mjs`） |
+| `.planning/notes/v1.24-css-audit-register.md`（99 行） | 36 条既有登记（34+2），本文件第 3/4 批与其对齐 |
+| `.planning/notes/v1.24-visual-verification.md`（25.8 KB） | 21 形态 × 明暗矩阵 + 14 页巡检清单（验收基线） |
+
+### 读过的 node_modules 源码（用于「antd 6 是否有该 class / 该 prop」的实证）
+
+| 文件 | 结论 |
+|---|---|
+| `node_modules/antd/package.json` | antd **6.6.4** |
+| `node_modules/antd/es/input/Input.js:129-176` | status class 由 `getStatusClassNames(prefixCls, mergedStatus)` 生成 → `ant-input-status-error`（**wrapper 自身**）；`className` 传给 `RcInput` 作为 root class |
+| `node_modules/@rc-component/input@1.3.1/es/BaseInput.js:129-131` | 注释明示「`className` and `style` are always on the root element」 |
+| `node_modules/@rc-component/input@1.3.1/es/utils/commonUtils.js` | `hasPrefixSuffix = !!(prefix \|\| suffix \|\| allowClear)` → **`allowClear=true` 即生成 affix wrapper** |
+| `node_modules/antd/dist/antd.css` | ① `.ant-select-selector` 唯一命中在 ColorPicker 内部后代选择器；② `.ant-input-number-outlined` 承载 InputNumber 边框；③ `.ant-input-number-outlined.ant-input-number-status-error:not(...)` 承载状态边框（0,3,0，**无 important**）；④ `--ant-color-error:#ff4d4f` 存在（cssVar 运行时注入） |
+| `node_modules/@rc-component/select/es/**` | `-selector` 零命中 → Select 不渲染 `.ant-select-selector` |
+| `node_modules/antd/es/select/index.js:104,217-229` | `useVariants('select', …)`；deprecated 列表 = `dropdownMatchSelectWidth / dropdownStyle / dropdownClassName / popupClassName / dropdownRender / onDropdownVisibleChange / bordered` + `showArrow` |
+| `node_modules/antd/es/select/index.d.ts:78` | `showSearch?: boolean \| (SearchConfig<OptionType> & {...})` → antd 6 的对象形态 |
+| `node_modules/@rc-component/select/es/Select.d.ts:85-104` | `onSearch` / `searchValue` / `autoClearSearchValue` / `filterOption` / `filterSort` / `optionFilterProp` 均标注 `@deprecated please use showSearch.*` |
+| `node_modules/@rc-component/select/es/utils/warningPropsUtil.js:53-55` | 运行时 warning：「`onSearch` should work with `showSearch` instead of use alone.」 |
+| `node_modules/antd/es/modal/Modal.js:126` / `es/modal/interface.d.ts:71-74` | `maskClosable` → `mask.closable` 弃用映射与 `@deprecated` 标注 |
+| `node_modules/antd/es/form/hooks/useVariants.js` | variant 解析顺序：prop → `bordered===false` → `VariantContext` → `components.<C>.variant` → 全局 `variant` → `'outlined'` |
+
+### 实跑命令（全部在本仓库 `ruoyi-react-frontend/` 目录下执行，Windows Git Bash）
+
+```bash
+# —— A1 样式文件清单与行数 ——
+find src -type f \( -name "*.css" -o -name "*.less" -o -name "*.scss" -o -name "*.sass" \) | sort
+find src -type f -name "*.css" | sort | while read f; do printf "%6d  %s\n" "$(wc -l < "$f")" "$f"; done
+find src -type f -name "*.css" -exec cat {} + | wc -l          # 8494
+
+# —— A2 !important 分布 ——
+find src -type f -name "*.css" | sort | while read f; do n=$(grep -o '!important' "$f" | wc -l); [ "$n" -gt 0 ] && printf "%6d  %s\n" "$n" "$f"; done
+find src -type f -name "*.css" -exec cat {} + | grep -o '!important' | wc -l   # 1435
+grep -o '!important' src/index.css | wc -l                                     # 1359
+
+# —— A3 antd 选择器分布与域分类 ——
+find src -type f -name "*.css" | sort | while read f; do n=$(grep -c '\.ant-' "$f"); [ "$n" -gt 0 ] && printf "%6d  %s\n" "$n" "$f"; done
+grep -o '\.ant-[a-zA-Z0-9_-]*' src/index.css | sort -u | wc -l                  # 286 唯一类名
+python <TEMP>/domain.py $(find src -name "*.css" | sort)                       # 748 条规则 × 10 域
+
+# —— A4 暗色分区 ——
+grep -nE '\[data-color-mode="dark"\]|\[data-color_mode="dark"\]' src/index.css
+grep -c 'data-color-mode="dark"' src/index.css                                 # 574
+grep -c 'data-color_mode="dark"' src/index.css                                 # 8
+python <TEMP>/cssparse.py src/index.css summary                                # 506 + 8 条暗色规则
+python <TEMP>/darkcluster.py src/index.css                                      # 44/64/100 cluster + 80 重复目标
+
+# —— A5 变量作用域与未定义变量 ——
+python <TEMP>/cssparse.py src/index.css vars                                    # :root 之外的就地重定义
+python <TEMP>/varuse.py src/index.css                                           # 未定义 var + 暗色作用域缺失
+grep -n -- '--input-bg' src/index.css                                           # 184 / 254 / 4815 三处
+grep -n ':root' src/index.css                                                   # 27 / 4812
+
+# —— B 死规则 / 死文件 ——
+grep -rn 'dept-tree-search' src                                                # 1 处 TSX + 6 处 CSS
+grep -rn 'import .*\.css' src --include=*.tsx --include=*.ts
+grep -r 'select-selector' node_modules/@rc-component/select/es/                 # 零命中
+grep -o 'ant-select-selector' node_modules/antd/dist/antd.css | wc -l           # 20（全部在 ColorPicker 上下文）
+grep -rn 'hasPrefixSuffix\|className.*root element' node_modules/@rc-component/input/es/
+
+# —— C 门禁能力 ——
+node scripts/css-contract-check.js          # 静态契约（改动前）
+node scripts/check-exemption-reasons.mjs    # 豁免 ↔ 理由
+node scripts/check-hardcoded-colors.mjs; echo "exit=$?"   # 实跑 exit=1，18 个文件
+grep -n 'no-restricted-syntax\|files:\|Literal\[value=/#' eslint.config.js
+node -e "console.log(JSON.stringify(require('./package.json').scripts,null,1))"
+```
+
+> **说明**：本 Phase 为**只读研究**。除本文件 `.planning/research/PITFALLS.md` 外，
+> 未修改任何源码，未执行 `git commit`。§3.2/§3.3 中引用的 `cssparse.py` / `domain.py` /
+> `varuse.py` / `darkcluster.py` 为本次研究用的临时解析脚本（位于系统临时目录，
+> 未写入仓库）；落地时建议正式化为 `scripts/css-analyze.mjs`（Node 版，与项目工具链一致）。
