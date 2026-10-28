@@ -148,21 +148,33 @@ Last activity: 2026-10-28 — Milestone v1.24 completed and archived
 
 ### Roadmap Evolution
 
+- Phases 76-83 created for v1.24「视觉回归修复与遗留债务清偿」: 76 双框 P0 修复 + CSS 审计登记册（VIS-01~04）→ 77 视觉回归验证收口（VIS-05）→ 78 #16 前后端双端闭环（PERM-01~04/06）→ 79 PG 实机验收（PERM-05）→ 80 3f130 空因诊断前端接入（DIAG-01）→ 81 F5 刷新落 /dashboard 修复（NAV-01）→ 82 lint 清零 + 豁免理由表修复（HYG-01/02/03/05）→ 83 devices 页拆分（HYG-04）。18/18 需求映射，无孤儿无重复；**全部 SHIPPED 2026-10-28**（tag `v1.24`）。 (CRITICAL)
 - Phases 69-75 created for v1.23「前端契约全量收尾与遗留清偿」: 69 后端 debug 重验 spike（DBG-01）→ 70 TextArea 契约基建 W0（TEXT-01/03/04 + HYG-05）→ 71 TextArea 存量 + COMP-05 分域迁移 W1-W6（TEXT-02 + MIG-01/02/04）→ 72 后端 debug 修复 wave（DBG-02/03/04，#3 先于 #2）→ 73 DB 实测日 + cron.go 双执行调查（DBG-05/06/07）→ 74 COMP-05 收口 + lint 清偿 + quick 目录归档（MIG-03 + HYG-01~04）→ 75 浏览器实机 UAT + 收档（UAT-01/02）。22/22 需求映射，无孤儿无重复。 (CRITICAL)
 - Phase 68.1 inserted after Phase 68: v1.22 收尾清偿 phase：危险操作收口 + 契约 minor 补课 + 豁免收缩 + 存量迁移收尾（DEBT-04） (URGENT)
 
+## Project Reference
+
+See: `.planning/PROJECT.md`（updated 2026-10-28 after v1.24）
+
+**Core value:** 端到端的运维可观测与可审计——每个写操作都留下可追溯记录（谁、何时、改了什么、从哪来、改前改后），敏感字段自动脱敏；配合 Excel 批量管理与引用自动解析（部门名 → UUID），运维人员对整个 IT 资产域拥有唯一可信的系统记录。
+**Current focus:** v1.24 SHIPPED & ARCHIVED（tag `v1.24`）——**等待下个里程碑立项**（v1.25 候选 5 笔已完整登记，用户裁定暂不立项；`.planning/REQUIREMENTS.md` 已按流程删除，由 `/gsd-new-milestone` 重建）
+
 ## Session
 
-**Last session:** 2026-10-27T07:55:48.462Z
-**Stopped at:** Phase 69 context gathered
-**Resume file:** .planning/phases/69-debug-spike/69-CONTEXT.md
+**Last session:** 2026-10-28T13:10:00+08:00
+**Stopped at:** v1.24 milestone completed and archived（tag `v1.24`）
+**Resume file:** 无（里程碑已收档；下次从 `/gsd-new-milestone` 起）
 
 ## Performance Metrics
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
-| (v1.23 尚无 plan 执行记录) | — | — | — |
+| v1.24（8 phase，subagent 直接执行，按刀原子提交） | ~3.5 h（09:19→12:59，单日） | 8 phase × 9 项闸门 | 104（+5,419 −2,232，46 commits） |
+| v1.23（7 phase） | 单日 | 121 文件迁移 | — |
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- **v1.24 已 SHIPPED & ARCHIVED**（tag `v1.24`，归档至 `.planning/milestones/v1.24-{ROADMAP,REQUIREMENTS}.md`）
+- 下个里程碑用 `/gsd-new-milestone` 起（会重建 `.planning/REQUIREMENTS.md`）
+- **待用户决定是否 push tag**（remote `origin` = gitcode.com/ninedrunk/go_react，upstream `origin/main`）
+- v1.25 的 5 笔候选债已完整登记（`REQUIREMENTS.md` 归档版 + `MILESTONES.md` v1.24 条目 Known Gaps），随时可启
