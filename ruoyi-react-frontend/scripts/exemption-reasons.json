@@ -4,6 +4,14 @@
   "description": "Phase 68.1 T7 结构化豁免理由清单。与 eslint.config.js 的 __P65_EXEMPTION_FILES__ / __P66_EXEMPTION_FILES__ 一一对应（由 scripts/check-exemption-reasons.mjs 强制校验）。本文件由人工维护，生成脚本不写此文件。 Phase 82（HYG-05）：以 eslint 锚点实际豁免（P65 1 占位 + P66 37）为准全量同步，删除 121 条已收缩的过期 P65 条目。",
   "entries": [
     {
+      "file": "src/components/dashboard/widgets/types/__tests__/statAndProgress.test.tsx",
+      "layer": "CSS",
+      "dimension": "hex:chart-palette",
+      "reason": "ECharts 数据可视化色板断言期望值（#1890ff = 图表系列色），非 UI 主题色；改值即改测试断言语义。Phase 89 W3·A3 放行，与 scripts/check-hardcoded-colors.mjs 的 PATH_ALLOW 条目双向对账（check-exemption-reasons.mjs）",
+      "userVisible": false,
+      "difference": "无 —— 仅测试夹具的期望色板值"
+    },
+    {
       "file": "src/pages/ad-domain/computers/index.tsx",
       "layer": "P66",
       "dimension": "Input+Select+usePagination",

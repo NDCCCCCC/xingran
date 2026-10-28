@@ -26,11 +26,31 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const FE = path.resolve(here, "..");
 const CONFIG = path.join(FE, "eslint.config.js");
 const REASONS = path.join(FE, "scripts", "exemption-reasons.json");
+const SCANNER = path.join(FE, "scripts", "check-hardcoded-colors.mjs");
 
 const ANCHORS = {
   P65: "__P65_EXEMPTION_FILES__",
   P66: "__P66_EXEMPTION_FILES__",
 };
+
+// Phase 89 (W3) layer:"CSS" 对账基准：
+// check-hardcoded-colors.mjs 的 PATH_ALLOW 中属于「结构性基础白名单」的条目（不需要理由登记）。
+// 数组中减去本集合后的条目 = 「理由型豁免」，必须与 exemption-reasons.json 的 layer:"CSS" 一一对应。
+const BASE_PATH_ALLOW = ["src/utils/three/colors.ts", "src/design-system/tokens/", "scripts/"];
+
+/** 从扫描器源码提取 PATH_ALLOW 数组内的字符串字面量 */
+function parseScannerPathAllow(scannerText) {
+  const start = scannerText.indexOf("const PATH_ALLOW");
+  if (start < 0) throw new Error("未找到 check-hardcoded-colors.mjs 的 PATH_ALLOW（扫描器结构已变，校验脚本需同步）");
+  const end = scannerText.indexOf("];", start);
+  if (end < 0) throw new Error("PATH_ALLOW 数组结束标记未找到");
+  const segment = scannerText.slice(start, end);
+  const items = [];
+  const re = /"(src\/[^"]+)"/g;
+  let m;
+  while ((m = re.exec(segment)) !== null) items.push(m[1]);
+  return items;
+}
 
 /** 从 eslint.config.js 的锚点段解析文件路径数组 */
 function parseExemptionFiles(configText, anchor) {
@@ -82,10 +102,15 @@ function main() {
       errors.push(`[结构] 条目缺少 file 或 layer：${JSON.stringify(e)}`);
       continue;
     }
-    if (!["P65", "P66"].includes(layer)) errors.push(`[结构] ${file} 的 layer=${layer} 非法（只允许 P65 / P66）`);
+    if (!["P65", "P66", "CSS"].includes(layer)) errors.push(`[结构] ${file} 的 layer=${layer} 非法（只允许 P65 / P66 / CSS）`);
+    if (layer === "CSS" && !(dimension || "").startsWith("hex:")) {
+      errors.push(`[结构] ${file} 的 layer=CSS 条目 dimension 必须以 hex: 开头`);
+    }
     const key = `${layer}|${file}`;
-    if (reasonSet.has(key)) errors.push(`[重复] 理由清单重复登记：${layer} ${file}`);
-    reasonSet.add(key);
+    if (layer !== "CSS") {
+      if (reasonSet.has(key)) errors.push(`[重复] 理由清单重复登记：${layer} ${file}`);
+      reasonSet.add(key);
+    }
 
     if (!reason || !String(reason).trim()) errors.push(`[理由] ${layer} ${file} 的 reason 为空`);
     if (!dimension || !String(dimension).trim()) errors.push(`[维度] ${layer} ${file} 的 dimension 为空`);
@@ -97,11 +122,20 @@ function main() {
     }
   }
 
-  // 3) 集合相等（缺一 / 多一）
+  // 3) 集合相等（缺一 / 多一）—— P65/P66 对 eslint 锚点；CSS 对扫描器 PATH_ALLOW
   const onlyConfig = [...configSet].filter((k) => !reasonSet.has(k));
   const onlyReasons = [...reasonSet].filter((k) => !configSet.has(k));
   for (const k of onlyConfig) errors.push(`[缺理由] 仍被豁免但理由清单无对应条目：${k}`);
   for (const k of onlyReasons) errors.push(`[多理由] 理由清单有条目但已不在豁免清单（已收缩，应删除）：${k}`);
+
+  // 3b) Phase 89：layer:"CSS" ↔ 扫描器 PATH_ALLOW（双向）
+  const cssEntries = entries.filter((e) => e?.layer === "CSS");
+  const scannerItems = parseScannerPathAllow(fs.readFileSync(SCANNER, "utf8"));
+  const scannerExemptions = scannerItems.filter((p) => !BASE_PATH_ALLOW.includes(p));
+  const cssReasonSet = new Set(cssEntries.map((e) => e.file));
+  const scannerSet = new Set(scannerExemptions);
+  for (const f of cssReasonSet) if (!scannerSet.has(f)) errors.push(`[CSS缺放行] layer:"CSS" 条目未加入 check-hardcoded-colors.mjs 的 PATH_ALLOW：${f}`);
+  for (const f of scannerSet) if (!cssReasonSet.has(f)) errors.push(`[CSS缺理由] 扫描器 PATH_ALLOW 有理由型豁免但理由清单无 layer:"CSS" 条目：${f}`);
 
   const p65 = [...configSet].filter((k) => k.startsWith("P65|")).length;
   const p66 = [...configSet].filter((k) => k.startsWith("P66|")).length;

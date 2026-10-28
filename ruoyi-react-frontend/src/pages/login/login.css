@@ -337,13 +337,22 @@
   letter-spacing: 0.02em;
 }
 
+/* T9–T12（Phase 89）: 登录页输入态色值提取为局部变量 —— 全部保值，视觉零改动（B-10） */
+:root {
+  --login-input-border: #e7e5e4;
+  --login-input-bg: #fafaf9;
+  --login-input-bg-active: #ffffff; /* hover/focus 态底色（原值 #ffffff ≠ #fafaf9，保值提取） */
+  --login-accent: #d4a574;
+  --login-focus-ring: rgba(212, 165, 116, 0.15);
+}
+
 .login-form .ant-input,
 .login-form .ant-input-affix-wrapper {
   height: 48px !important;
   padding: 0 16px !important;
   border-radius: 8px !important;
-  border: 1px solid #e7e5e4 !important;
-  background: #fafaf9 !important;
+  border: 1px solid var(--login-input-border) !important;
+  background: var(--login-input-bg) !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   box-shadow: none !important;
 }
@@ -358,15 +367,15 @@
 }
 
 .login-form .ant-input-affix-wrapper:hover:not(.ant-input-affix-wrapper-disabled) {
-  border-color: #d4a574 !important;
-  background: #ffffff !important;
+  border-color: var(--login-accent) !important;
+  background: var(--login-input-bg-active) !important;
 }
 
 .login-form .ant-input-affix-wrapper:focus,
 .login-form .ant-input-affix-wrapper-focused {
-  border-color: #d4a574 !important;
-  background: #ffffff !important;
-  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.15) !important;
+  border-color: var(--login-accent) !important;
+  background: var(--login-input-bg-active) !important;
+  box-shadow: 0 0 0 3px var(--login-focus-ring) !important;
 }
 
 .login-form .ant-input-prefix {

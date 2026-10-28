@@ -195,6 +195,7 @@
   --input-text: #101010;
   --input-text-placeholder: #707068; /* 占位符（R11：由 --input-placeholder 改名，值不变） */
   --table-header-bg: #e9efeb; /* COMP-02: 表头专用绿灰淡彩（原借 --bg-elevated 白色） */
+  --theme-zebra: #faf8f3; /* T14（Phase 89）: 迁自后置 :root@4736，值不变 */
 }
 
 /* ========================================
@@ -263,6 +264,7 @@
   --input-bg-focus: #0f2e1b; /* 输入聚焦背景 */
   --input-bg-disabled: #0a1f12; /* 输入禁用背景 */
   --table-header-bg: #1f3524; /* COMP-02: 表头专用深色（保持 dark 视觉层次） */
+  --theme-zebra: #faf8f3; /* T14（Phase 89）: dark 补同值（原后置 :root 两模式共用同值 → 零渲染差异；≠--theme-bg-tertiary） */
 
   --input-border: #2d4d33; /* 输入边框 */
   --input-border-hover: #598e5e; /* 悬停边框 */
@@ -882,7 +884,11 @@ body {
   color: var(--input-text) !important;
   border-radius: var(--theme-radius-md) !important;
   font-size: 14px !important;
-  transition: all var(--theme-transition-fast) !important;
+  transition:
+    background var(--theme-transition-fast),
+    border-color var(--theme-transition-fast),
+    color var(--theme-transition-fast),
+    box-shadow var(--theme-transition-fast) !important; /* T5: all → 具体属性（Phase 89，视觉无差异） */
 }
 
 .ant-input:hover,
@@ -964,13 +970,13 @@ body {
 [data-color-mode="dark"] .ant-input.ant-input-status-error,
 [data-color-mode="dark"] .ant-input-affix-wrapper.ant-input-status-error,
 [data-color-mode="dark"] .ant-input-affix-wrapper.ant-input-status-error:hover {
-  border-color: var(--ant-color-error, #ff4d4f) !important;
+  border-color: var(--ant-color-error) !important; /* T6: antd cssVar 默认注入，死 fallback 删除（Phase 89） */
 }
 
 .ant-input.ant-input-status-warning,
 .ant-input-affix-wrapper.ant-input-status-warning,
 .ant-input-affix-wrapper.ant-input-status-warning:hover {
-  border-color: var(--ant-color-warning, #faad14) !important;
+  border-color: var(--ant-color-warning) !important; /* T7: 同 T6（Phase 89） */
 }
 
 /* ========================================
@@ -4733,7 +4739,6 @@ body {
 /* ---------- 展示字体栈（page-title / brand / stat-value） ---------- */
 :root {
   --theme-font-display: Georgia, "Songti SC", "Source Han Serif SC", serif;
-  --theme-zebra: #faf8f3; /* 表格斑马纹（原型 --zebra 实测） */
   --sidebar-gradient: linear-gradient(168deg, #14532d 0%, #156031 58%, #1a6839 100%);
 }
 [data-color-mode="dark"] {
@@ -5495,7 +5500,7 @@ body {
   border: none !important;
 }
 .ant-pagination .ant-pagination-item-active a {
-  color: #ffffff !important;
+  color: var(--theme-text-inverse) !important; /* T8: :root@78=#ffffff 且暗色未重定义 → 值不变（Phase 89） */
 }
 /* 表格底部分页：「共 X 页」靠左、翻页/跳转靠右（默认 antd 把整行 flex-end 推到右侧） */
 .ant-table-pagination.ant-pagination {

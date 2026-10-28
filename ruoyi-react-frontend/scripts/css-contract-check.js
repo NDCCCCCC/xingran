@@ -191,6 +191,9 @@ const checkC6 = (() => {
   }
   const refValid = (name, refScope, hasFallback) => {
     if (hasFallback) return true;
+    // --ant-* 前缀：antd cssVar 模式运行时注入（--ant-color-error/-warning 等），静态扫描不识别。
+    // Phase 89 T6/T7 删除死 fallback 后首次引用该前缀；运行时由 ConfigProvider cssVar 保证有值。
+    if (name.startsWith('--ant-')) return true;
     const scopes = defsIndex.get(name);
     if (!scopes) return false;
     // html 上必然挂着 data-color-mode（light/dark 其一激活），因此：
@@ -218,8 +221,8 @@ const checkC6 = (() => {
 // ---------- C11 !important 预算 ratchet（阻断，只降不升） ----------
 // ratchet：只允许下调，Phase 92 终值 ≤480；上调视为回归。
 // 基线沿革：1435（Phase 88 落地时 HEAD 实跑值）→ 1398（Phase 88-03 删除第 1 批死规则后实跑值；
-// PLAN 预估 ≈1395，实跑 1398——ratchet 只许低不许高，故定值取实测）。
-const IMPORTANT_BUDGET = 1398;
+// PLAN 预估 ≈1395，实跑 1398——ratchet 只许低不许高，故定值取实测）→ 1397（Phase 89 T5 落地 -1）。
+const IMPORTANT_BUDGET = 1397;
 {
   const allCss = walkByExt(resolve(feRoot, 'src'), ['.css', '.less']);
   let importantCount = 0;
@@ -228,6 +231,61 @@ const IMPORTANT_BUDGET = 1398;
     'C11  !important 预算 ratchet（只降不升）',
     importantCount <= IMPORTANT_BUDGET,
     `当前 ${importantCount} / 预算 ${IMPORTANT_BUDGET}`,
+  );
+}
+
+// ---------- C13 .css/.less hex 全量计数 + ratchet（阻断，只降不升，Phase 89 W3 新增） ----------
+// 口径：
+//   1) 扫描 src 下全部 .css/.less，逐行剥离 /* */ 与 // 注释后统计 6 位 hex（#rrggbb）出现次数
+//   2) M7 = index.css hex 总数；M8 = 全部 .css/.less hex 总数（与 89-QUANT-SNAPSHOT W0 实跑口径一致）
+//   3) ratchet = W0 实跑起点（M7=310 / M8=452，89-01 落盘值），本 phase 只降不升；
+//      92 终态（M7 去重 ≤60 / M8 ≤120）不在本 phase 设绝对下降目标（Lead 裁定：89 只要求「不增」）
+//   4) CSS 层逐条豁免走 exemption-reasons.json 的 layer:"CSS" 条目，由 check-exemption-reasons.mjs
+//      与 check-hardcoded-colors.mjs 的 PATH_ALLOW 双向对账（本 phase 的 CSS 层豁免集合为空：
+//      A3 图表色板是 .tsx 测试文件，归扫描器 PATH_ALLOW，不占 C13 预算）
+// 职责边界：本断言只管「总量与新增」，不管「某个已知 hex 是不是坏色」——那是
+//   scripts/check-hardcoded-colors.mjs 的 lint 职责（已接入 lint:ci）。两者互补，不重复。
+const C13_M7_BUDGET = 310; // index.css 6 位 hex（W0 实跑起点，只降不升）
+const C13_M8_BUDGET = 452; // 全 .css/.less 6 位 hex（W0 实跑起点，只降不升）
+const C13_M9_BUDGET = 5558; // index.css 行数不增（±10 内）
+const C13_BASELINE = resolve(here, 'css-hex-baseline.json');
+{
+  const stripComments = (line) => line.replace(/\/\*.*?\*\//g, '').replace(/(^|[^:])\/\/.*$/, '$1');
+  const countHex = (text) => (stripComments(text).match(/#[0-9a-fA-F]{6}\b/g) || []).length;
+  const cssFiles = walkByExt(resolve(feRoot, 'src'), ['.css', '.less']);
+  const counts = new Map(); // rel → n
+  let m7 = 0;
+  let m8 = 0;
+  for (const f of cssFiles) {
+    const n = countHex(readFileSync(f, 'utf8'));
+    const rel = relFe(f);
+    counts.set(rel, n);
+    m8 += n;
+    if (rel === 'src/index.css') m7 = n;
+  }
+  const m9 = readFileSync(resolve(feRoot, 'src/index.css'), 'utf8').split('\n').length;
+  // 新增检测：任一文件 hex 计数超 per-file 基线（W3 终态快照）= 新增硬编码色，
+  // 未在 exemption-reasons.json 登记 layer:"CSS"（css 文件维度，本 phase 为空集）即阻断。
+  const newHits = [];
+  if (existsSync(C13_BASELINE)) {
+    const baseline = JSON.parse(readFileSync(C13_BASELINE, 'utf8')).files || {};
+    for (const [rel, n] of counts) {
+      if (rel in baseline && n > baseline[rel]) newHits.push(`${rel}: ${baseline[rel]} → ${n}（新增 ${n - baseline[rel]}）`);
+      if (!(rel in baseline)) newHits.push(`${rel}: 新文件 ${n} 处 hex（基线无此文件）`);
+    }
+  }
+  const ok13 = m7 <= C13_M7_BUDGET && m8 <= C13_M8_BUDGET && m9 <= C13_M9_BUDGET && newHits.length === 0;
+  check(
+    'C13  .css/.less hex 全量 ratchet（W0 起点 M7≤310 / M8≤452 只降不升 + per-file 新增阻断）',
+    ok13,
+    ok13
+      ? `C13 PASS：M7=${m7} ≤ ${C13_M7_BUDGET} / M8=${m8} ≤ ${C13_M8_BUDGET} / M9=${m9} ≤ ${C13_M9_BUDGET}，per-file 基线无新增（92 终态 ≤60/≤120 不在 89 追）`
+      : `C13 FAIL：${[
+          m7 > C13_M7_BUDGET ? `M7=${m7}>${C13_M7_BUDGET}` : null,
+          m8 > C13_M8_BUDGET ? `M8=${m8}>${C13_M8_BUDGET}` : null,
+          m9 > C13_M9_BUDGET ? `M9=${m9}>${C13_M9_BUDGET}` : null,
+          ...newHits,
+        ].filter(Boolean).join('  ')}（新增 hex 须删除或登记 layer:"CSS" 豁免）`,
   );
 }
 
