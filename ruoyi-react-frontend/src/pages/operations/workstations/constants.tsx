@@ -10,7 +10,9 @@ import { WORKSTATION_STATUS_OPTIONS, WORKSTATION_STATUS_TAG_CONFIG } from "@/con
 
 // 工位状态选项（Phase 69 DICT-03: 共享常量别名引用——工位状态是三态业务簇
 // （对齐 models.WorkstationStatus: 0=空闲/1=占用/2=维护），非通用启停 0/1，独立成组）
-export const STATUS_OPTIONS = WORKSTATION_STATUS_OPTIONS;
+// 字面量拷贝（浅拷贝，元素共享引用）：react-refresh 对「export const X = 大写标识符」
+// 误判为组件导出，ArrayExpression 初始化可消除误判；无就地 mutate、无引用相等比较
+export const STATUS_OPTIONS = [...WORKSTATION_STATUS_OPTIONS];
 
 // 工位类型选项（Phase 69 DICT-03: 降级为静态 fallback——编辑弹窗下拉已迁
 // useDict("ops_workstation_type")，字典空态/接口异常时回退渲染本数组；导出保留不删除）

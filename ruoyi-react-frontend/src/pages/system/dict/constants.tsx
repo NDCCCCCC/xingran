@@ -8,11 +8,13 @@ import { Tag } from "antd";
 import { ENABLE_DISABLE_OPTIONS, ENABLE_DISABLE_TAG_CONFIG } from "@/constants/status";
 
 /** 状态选项（Phase 69 DICT-03: 共享常量别名引用，本地导出名不变） */
-export const STATUS_OPTIONS = ENABLE_DISABLE_OPTIONS;
+// 字面量拷贝（浅拷贝）：react-refresh 对 Identifier 初始化误判为组件导出；无 mutate/引用比较
+export const STATUS_OPTIONS = [...ENABLE_DISABLE_OPTIONS];
 
 /** 状态配置 */
-export const STATUS_CONFIG: Record<number, { text: string; color: BadgeProps["color"] }> =
-  ENABLE_DISABLE_TAG_CONFIG;
+export const STATUS_CONFIG: Record<number, { text: string; color: BadgeProps["color"] }> = {
+  ...ENABLE_DISABLE_TAG_CONFIG,
+};
 
 /** 默认表单值 */
 export const DEFAULT_TYPE_FORM_VALUES = {
