@@ -1,53 +1,63 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.25",
+  "milestone": "v1.25 — 全站权限治理与样式收敛",
   "phases": [
     {
-      "number": "76",
-      "name": "双框 P0 修复 + CSS 审计登记册",
-      "status": "complete"
+      "number": "84",
+      "name": "权限模型三缺口",
+      "status": "in_progress"
     },
     {
-      "number": "77",
-      "name": "双框视觉回归验证",
-      "status": "complete"
+      "number": "85",
+      "name": "后端动作级严格化",
+      "status": "pending"
     },
     {
-      "number": "78",
-      "name": "#16 前后端双端闭环",
-      "status": "complete"
+      "number": "86",
+      "name": "前端操作入口三态门控铺开",
+      "status": "pending"
     },
     {
-      "number": "79",
-      "name": "#16 PG 实机验收",
-      "status": "complete"
+      "number": "87",
+      "name": "动作级权限授予闭环",
+      "status": "pending"
     },
     {
-      "number": "80",
-      "name": "3f130 空因诊断前端接入",
-      "status": "complete"
+      "number": "88",
+      "name": "验证底座与零风险清理",
+      "status": "pending"
     },
     {
-      "number": "81",
-      "name": "F5 刷新落地页修复",
-      "status": "complete"
+      "number": "89",
+      "name": "变量层与明暗色板重构",
+      "status": "pending"
     },
     {
-      "number": "82",
-      "name": "lint 清零 + 豁免理由表修复",
-      "status": "complete"
+      "number": "90",
+      "name": "Input 域交还 variant/token + 圆角统一",
+      "status": "pending"
     },
     {
-      "number": "83",
-      "name": "devices 页拆分",
-      "status": "complete"
+      "number": "91",
+      "name": "Select / InputNumber / Form / Table / Modal 域交还",
+      "status": "pending"
+    },
+    {
+      "number": "92",
+      "name": "暗色 mega-cluster 合并",
+      "status": "pending"
+    },
+    {
+      "number": "93",
+      "name": "room-devices 拆分 + 视觉回归验收",
+      "status": "pending"
     }
   ],
   "next": {
-    "command": "/gsd-discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step (plan phase 84)",
+    "reason": "Phase 1 of 10 — needs a plan"
   },
-  "updated_at": "2026-10-28T05:15:08.430Z"
+  "updated_at": "2026-10-28T06:48:20.627Z"
 }
