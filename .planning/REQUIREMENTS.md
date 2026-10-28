@@ -54,14 +54,14 @@
 
 ### HYG — 规范与存量技术债
 
-- [ ] **HYG-01**: `ColumnConfigModal.tsx:136` 的 `Modal.confirm` **属合法调用**（`src/components/shared/` 命中 `eslint.config.js:271-283` 目录级封装层豁免 → 该处是豁免盲区「无人区」，不在 `exemption-reasons.json`）→ 补行内理由注释文档化；**不要**把该目录摘出豁免（会爆几十条 error）；若登记 json 必须双向同步 eslint 锚点
-- [ ] **HYG-02**: lint 存量 **17 errors + 34 warnings** 全清零（目标 errors=0 / warnings=0；实测 `npx eslint .` = 51 problems）——17 errors 构成：12 exhaustive-deps + `set-state-in-effect`（DashboardView.tsx:161）+ `immutability`（useRealtimeUpdates.ts:119）+ `globals`（ReconciliationTab.test.tsx:51）+ `preserve-manual-memoization`（useRPAProgress.ts:78）+ `local/no-large-dropdown-list`（**契约组件 AppSelect.tsx:16 自己违规**）；⚠️ **lint 预算双写死必须同步改 0**：`package.json` 的 `--max-warnings 34` + `assert-lint-budget.mjs:20-21` 的 17/34，否则门禁形同虚设；⚠️ **AppSelect 契约与 `local/no-large-dropdown-list` 正面冲突**（规则要求必带 onSearch 服务端搜索，契约是客户端过滤 `showSearch ?? count>=8`）→ **需决策**：推荐规则加 `excludedFiles: ["src/components/ui/**"]`，否则 errors 降不到 0；**同文件约束**：修 `useRealtimeUpdates.ts:130` 的 immutability 可能触发/加剧 compiler 错误 → 同文件一起改一起验；`useCaptchaModals.tsx` 5 处 `message` 依赖逐处判语义（机械加依赖会引出新 error）；**门禁有效性回归**：故意注入 1 条 error 时 `npm run lint:ci` 必须 exit 1
-- [ ] **HYG-03**: `react-refresh` **33 处**清零（与 barrel index.ts 无关，全是 .tsx）——**三类分流**（P2 修法经同版本插件沙箱实测 9 样例验证）：
+- [x] **HYG-01**: `ColumnConfigModal.tsx:136` 的 `Modal.confirm` **属合法调用**（`src/components/shared/` 命中 `eslint.config.js:271-283` 目录级封装层豁免 → 该处是豁免盲区「无人区」，不在 `exemption-reasons.json`）→ 补行内理由注释文档化；**不要**把该目录摘出豁免（会爆几十条 error）；若登记 json 必须双向同步 eslint 锚点（✅ 2026-10-28 Phase 82 完成：ColumnConfigModal.tsx:136 的 Modal.confirm 属封装层豁免（src/components/shared/ 目录级豁免块）→ 补行内理由注释文档化；未把目录摘出豁免）
+- [x] **HYG-02**: lint 存量 **17 errors + 34 warnings** 全清零（目标 errors=0 / warnings=0；实测 `npx eslint .` = 51 problems）——17 errors 构成：12 exhaustive-deps + `set-state-in-effect`（DashboardView.tsx:161）+ `immutability`（useRealtimeUpdates.ts:119）+ `globals`（ReconciliationTab.test.tsx:51）+ `preserve-manual-memoization`（useRPAProgress.ts:78）+ `local/no-large-dropdown-list`（**契约组件 AppSelect.tsx:16 自己违规**）；⚠️ **lint 预算双写死必须同步改 0**：`package.json` 的 `--max-warnings 34` + `assert-lint-budget.mjs:20-21` 的 17/34，否则门禁形同虚设；⚠️ **AppSelect 契约与 `local/no-large-dropdown-list` 正面冲突**（规则要求必带 onSearch 服务端搜索，契约是客户端过滤 `showSearch ?? count>=8`）→ **需决策**：推荐规则加 `excludedFiles: ["src/components/ui/**"]`，否则 errors 降不到 0；**同文件约束**：修 `useRealtimeUpdates.ts:130` 的 immutability 可能触发/加剧 compiler 错误 → 同文件一起改一起验；`useCaptchaModals.tsx` 5 处 `message` 依赖逐处判语义（机械加依赖会引出新 error）；**门禁有效性回归**：故意注入 1 条 error 时 `npm run lint:ci` 必须 exit 1（✅ 2026-10-28 Phase 82 完成：eslint **0 problems**（原 51 = 17 errors + 34 warnings）——exhaustive-deps 11 处语义清偿 + 其余 4 errors（set-state-in-effect/immutability/globals/preserve-manual-memoization）+ AppSelect 契约与 local/no-large-dropdown-list 冲突按既定决策 excludedFiles; 预算双写归零（package.json --max-warnings 0 + assert-lint-budget maxErrors/maxWarnings=0）+ 门禁有效性回归通过）
+- [x] **HYG-03**: `react-refresh` **33 处**清零（与 barrel index.ts 无关，全是 .tsx）——**三类分流**（P2 修法经同版本插件沙箱实测 9 样例验证）：（✅ 2026-10-28 Phase 82 完成：react-refresh **33 处清零**——P2 规则误判 13 处（3 个伪 constants.tsx 改字面量拷贝，实测 0 警告）+ P1 真问题拆分（hook/context/presets/categories 独立文件）+ 冻结契约登记豁免（PortWriteModal/statusHelpers/ActionButtons）+ lazy() 盲区 2 处登记）
   - **P1 真问题 18 处/14 文件**（组件+非组件同文件）→ 拆分：工具/常量搬 `utils/` `constants/` `hooks/`；含 `ActionButtons.tsx:114/:167`、`FormModal.tsx:61`、`statusHelpers.tsx:63/:68`（冻结契约，登记优先）、`PortWriteModal.tsx:78`（v1.19 冻结面，**只登记不拆**）、`DynamicRoutes.tsx:85/:95/:108`（**与 NAV-01 同文件建议合并改动**）、`ColorSwitcher`/`LayoutProvider`/`ThemeProvider`/`ReconciliationTab` 等
   - **P2 规则误判 13 处/3 文件**（workstations/dept/dict 伪 constants.tsx，零组件导出；触发点 = `export const X = Y`（Identifier 初始化 + 大写名）被判为组件导出而连坐）→ **必须改代码、绝不用豁免**；实测 0 警告路径 = 改**字面量拷贝**（`export const X = [...Y]`）或改小写名或迁 `.ts`（规则只扫 .jsx/.tsx）；⚠️ **`export { Y as X }` 重导出无效（仍 3 警告）**——网上常见建议在此是错的；字面量拷贝前确认共享常量无就地 mutate（已 grep 未发现，但失去引用相等性）
   - **P3 `lazy()` 盲区 2 处**（BuildingModel3D:316 / FloorPlan3D:693）→ 文件级 disable + 登记（合理例外）
   - 通用约束：`export { X }` → `export type { X }` 是 `verbatimModuleSyntax:true` 强制写法、运行时无差别（逐个确认纯类型；测试文件不在 type-check 范围须额外跑 vitest）；`allowConstantExport:true` **不豁免**数组/对象字面量；**契约层豁免名单**（shared/ui）划登记；`export * from` 直接报 exportAll 需改具名；**eslint.config.js 锚点已漂移**（现 457 行，P66 :347、P65 :407）→ 拆分必须同批跑 `gen-p65-exemptions.mjs` + 同步 hex-exemptions；`.tsx → .ts` 降级前 grep 显式扩展名引用
-- [ ] **HYG-05**: **豁免理由表失同步修复**——`node scripts/check-exemption-reasons.mjs` 当前 **exit 1 / 123 项失配**（理由清单 159 条 vs 实际豁免 P65 1 + P66 37 = 38）→ 68.1 §8 #12/#18「豁免清单 100% 带理由」口径已不成立（v1.23 UAT 只验了 gen 脚本 diff，**没跑这个校验脚本**，且该脚本未接入任何门禁）→ 修复清单失配 + 把校验接入 `lint:ci` 防再漂移
+- [x] **HYG-05**: **豁免理由表失同步修复**——`node scripts/check-exemption-reasons.mjs` 当前 **exit 1 / 123 项失配**（理由清单 159 条 vs 实际豁免 P65 1 + P66 37 = 38）→ 68.1 §8 #12/#18「豁免清单 100% 带理由」口径已不成立（v1.23 UAT 只验了 gen 脚本 diff，**没跑这个校验脚本**，且该脚本未接入任何门禁）→ 修复清单失配 + 把校验接入 `lint:ci` 防再漂移（✅ 2026-10-28 Phase 82 完成：豁免理由表全量同步 **159 → 38 条**（P65 1 + P66 37），`check-exemption-reasons.mjs` 校验 **exit 0 / 一一对应**，且已接入 `lint:ci` 防再漂移）
 - [ ] **HYG-04**: devices 页拆分（实测 **714 行**）——按序：`buildRowActions`(:451-513) 提取 + 同时加权限 gate（一次改动同解 #16 前端侧与拆分）→ 列定义工厂 `getDeviceTableColumns`(:81-169 纯函数零风险) → 采集端口(:391-418) → 快速创建(:285-341，新建 `hooks/useDeviceQuickCreate.ts`，**不塞进已 404 行的 DeviceModals**) → searchFields(:539-563，依赖 useDict 动态**不混进 constants.ts**)；`deptFilters`(:277) 与 `columns`(:524) 的 useMemo **留主组件**（引用不稳会重犯 v1.23 FAIL-1 页码回跳）；**禁改** `port-write/**` 与 `ActionButtons.tsx` 对外形状（v1.19 冻结交互）；收敛目标 ~250 行；**已知债务**：`room-devices/index.tsx` 815 行比 devices 更长，本里程碑不扩面、登记即可
 
 ## 关键决策 (v1.24 init + 研究期, locked)
@@ -126,10 +126,10 @@
 | PERM-06 | 78 | Pending |
 | DIAG-01 | 80 | Satisfied (2026-10-28) |
 | NAV-01 | 81 | Satisfied (2026-10-28) |
-| HYG-01 | 82 | Pending |
-| HYG-02 | 82 | Pending |
-| HYG-03 | 82 | Pending |
-| HYG-05 | 82 | Pending |
+| HYG-01 | 82 | Satisfied (2026-10-28) |
+| HYG-02 | 82 | Satisfied (2026-10-28) |
+| HYG-03 | 82 | Satisfied (2026-10-28) |
+| HYG-05 | 82 | Satisfied (2026-10-28) |
 | HYG-04 | 83 | Pending |
 
 **Coverage:**
