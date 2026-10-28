@@ -109,6 +109,10 @@ fix_*.sql
 数据/
 *.xlsx
 *.png
+# 例外：v1.24 Phase 77 视觉回归的验收证据图（17 张，共 ~456KB）必须入库，
+# 否则「视觉验证已收口」的凭证只存在于本地工作区，评审与回溯时不可得。
+!.planning/notes/v1.24-visual-evidence/
+!.planning/notes/v1.24-visual-evidence/*.png
 .trae/
 
 # 调试残留归档（debug_*.js / temp-fix.sh 等临时脚本的归档，不入仓）
