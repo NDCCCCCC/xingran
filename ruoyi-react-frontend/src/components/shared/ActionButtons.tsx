@@ -111,6 +111,7 @@ export default ActionButtons;
  * @param options 配置选项
  * @returns 删除按钮 Action 配置
  */
+// eslint-disable-next-line react-refresh/only-export-components -- ActionButtons 对外形状 v1.19 冻结（T1 契约，禁改 import 路径/导出形状），只登记不拆
 export const createDeleteAction = <T extends string | number>(
   id: T,
   handleDelete: (id: T) => void | Promise<void>,
@@ -164,6 +165,7 @@ export const createDeleteAction = <T extends string | number>(
  * @param render 自定义渲染函数
  * @returns 删除按钮 Action 配置
  */
+// eslint-disable-next-line react-refresh/only-export-components -- ActionButtons 对外形状 v1.19 冻结（T1 契约，禁改 import 路径/导出形状），只登记不拆
 export const createCustomDeleteAction = (render: () => React.ReactNode): ActionButton => ({
   key: "delete",
   label: "删除",

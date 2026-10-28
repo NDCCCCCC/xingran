@@ -160,7 +160,11 @@ function PageTableImpl<T extends object>({
   // FAIL-1 修复：mount 首载走 keepPage——保留 sessionStorage 恢复的页码，
   // 不得硬编码回第 1 页（tab 切换 remount 后恢复语义优先）；extraFilters 引用变化才回第 1 页。
   const applyFiltersRef = useRef(applyFilters);
-  applyFiltersRef.current = applyFilters;
+  // latest-ref 同步收敛进 effect（react-hooks/refs：禁止渲染期写 ref；
+  // 声明在下方的 extraFilters effect 之前，保证其执行时已拿到最新 applyFilters）
+  useEffect(() => {
+    applyFiltersRef.current = applyFilters;
+  }, [applyFilters]);
   const isFirstMountRef = useRef(true);
   useEffect(() => {
     if (isFirstMountRef.current) {
@@ -177,7 +181,6 @@ function PageTableImpl<T extends object>({
     } else {
       void applyFiltersRef.current();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 以 extraFilters 引用为唯一触发器（该 suppression 同时使 React Compiler 跳过本 hook 分析，移除会暴露 refs 误报）
   }, [extraFilters]);
 
   // 行操作列：追加到 columns 末尾（经 ActionButtons 渲染，<3 平铺 / >=3 收下拉）
@@ -216,13 +219,16 @@ function PageTableImpl<T extends object>({
   const showEmptyAction = emptyAction !== undefined && !loading && loadError === null && total === 0;
 
   // searchFields 与 searchChildren 二选一：同时传时 schema 优先并警告一次
+  // （ref 读写收敛进 effect，react-hooks/refs：禁止渲染期访问 ref）
   const warnedRef = useRef(false);
-  if (searchFields !== undefined && searchChildren !== undefined && !warnedRef.current) {
-    warnedRef.current = true;
-    console.warn(
-      "[PageTable] searchFields 与 searchChildren 同时传入，schema 优先，searchChildren 将被忽略。"
-    );
-  }
+  useEffect(() => {
+    if (searchFields !== undefined && searchChildren !== undefined && !warnedRef.current) {
+      warnedRef.current = true;
+      console.warn(
+        "[PageTable] searchFields 与 searchChildren 同时传入，schema 优先，searchChildren 将被忽略。"
+      );
+    }
+  }, [searchFields, searchChildren]);
   const showSearchCard = searchFields !== undefined || searchChildren !== undefined;
   const effectiveChildren =
     searchFields !== undefined

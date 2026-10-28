@@ -74,7 +74,11 @@ export interface PortWriteModalProps {
  *   - e.preventDefault() 阻止浏览器硬跳转
  *   - message.destroy() 路由切换前关 toast，避免 portal 在另一个路由下残留 DOM
  *   - navigate() 走 SPA history.pushState，页面不刷新
+ * eslint-disable 理由（v1.24 P82 登记）：本文件属 v1.19 port-write 冻结面
+ * （62 测试全绿交付），拆动 showAuditLinkToast 会触碰冻结交互（见 PITFALLS B7），
+ * 优先登记豁免不拆文件。
  */
+// eslint-disable-next-line react-refresh/only-export-components -- v1.19 port-write 冻结面，只登记不拆
 export function showAuditLinkToast(
   message: MessageInstance,
   navigate: (path: string) => void

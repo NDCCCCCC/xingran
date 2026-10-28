@@ -312,7 +312,11 @@ export default BuildingModel3D;
 
 // Lazy wrapper — keeps Three.js ecosystem out of the initial bundle.
 // Used by BuildingView3D via BuildingScene.tsx re-export.
+// react-refresh 盲区豁免（v1.24 P82 登记）：规则不识别 lazy() 为 HOC（reactHOCs 仅
+// memo/forwardRef），将 lazy 包装组件误判为非组件导出；Fast Refresh 对 lazy 边界
+// 本就不适用，属合理例外，不改代码。
 import { lazy } from "react";
+// eslint-disable-next-line react-refresh/only-export-components -- lazy() 包装组件，规则盲区（见上）
 export const BuildingModel3DLazy = lazy(() =>
   import("./BuildingModel3D").then((m) => ({ default: m.default }))
 );

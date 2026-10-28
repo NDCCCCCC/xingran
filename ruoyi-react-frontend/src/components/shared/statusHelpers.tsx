@@ -60,11 +60,13 @@ const STATUS_MAP: Record<StatusDomain, Record<number, StatusEntry>> = {
 export const UNKNOWN_STATUS_LABEL = "未知";
 
 /** 状态 → 统一文案（未知值返回「未知」，不 crash） */
+// eslint-disable-next-line react-refresh/only-export-components -- v1.22 契约组件（68 §2.6「唯一落点裁定 shared/」），helper 与组件同文件是有意收拢，只登记不拆
 export function statusLabel(status: number, domain: StatusDomain): string {
   return STATUS_MAP[domain][status]?.label ?? UNKNOWN_STATUS_LABEL;
 }
 
 /** 状态 → antd Tag 语义色（未知值返回 default） */
+// eslint-disable-next-line react-refresh/only-export-components -- v1.22 契约组件（68 §2.6「唯一落点裁定 shared/」），helper 与组件同文件是有意收拢，只登记不拆
 export function statusColor(status: number, domain: StatusDomain): StatusColor {
   return STATUS_MAP[domain][status]?.color ?? "default";
 }
