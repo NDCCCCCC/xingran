@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-10-27
-update_trigger: v1.23 milestone INITIATED (前端契约全量收尾与遗留清偿)
-previous_update: 2026-10-27 v1.22 milestone SHIPPED & ARCHIVED
+last_updated: 2026-10-28
+update_trigger: v1.24 milestone INITIATED (视觉回归修复与遗留债务清偿)
+previous_update: 2026-10-28 v1.23 milestone SHIPPED & ARCHIVED
 ---
 
 **Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
@@ -10,6 +10,33 @@ previous_update: 2026-10-27 v1.22 milestone SHIPPED & ARCHIVED
 
 **Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
 
+
+## Current Milestone: v1.24 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
+
+**Goal:** 修复 v1.23 引入的输入框「双重外框」视觉回归并做 CSS 一致性审计，同时清偿 v1.23 收档结转的 4 项遗留债务（#16 行操作权限 / 3f130 空因展示 / F5 跳 /dashboard / ColumnConfigModal 豁免注释）与 2 项延后技术债（lint 存量 errors / react-refresh + devices 拆分）。
+
+**问题来源（用户实机截图 + v1.23 收档 Known Gaps）:**
+- **用户实机反馈（2026-10-28）**：「文本输入框的一键删除已经有了，但是有的输入框出现这种双重外框的情况」——外层浅灰圆角框内又套一层白色圆角输入框
+- **根因（已实证）**：`ruoyi-react-frontend/src/index.css:871` 的 `.ant-input { border: 1px solid var(--input-border) !important }` 命中了 antd 6 affix-wrapper 的**内层** input，antd 原生要求内层 `border: none`（边框只画在 wrapper 上）→ **双框**。v1.23 把 `allowClear` 默认化后，几乎所有 Input 都渲染为 affix-wrapper → 双框从少数变普遍
+- **#16 行操作权限**：v1.23 UAT 实测「受限用户仍见 9 行编辑/删除按钮」。**已定责**：`src/pages/system/user/index.tsx:279-301` 操作列**无任何权限判定**（对比 `network/ports:132`、`asset/reconciliation:86`、`ad-domain:77` 均有判定）；生产 PG 实证：能进该页的只有 admin 与 xtgl 且都持完整写权限，故生产不复现，但配置只读角色即越权显示入口
+- **3f130 空因**：后端诊断端点 `POST /ops/workstation-device/:id/physical-diagnosis` 已交付（v1.23 commit `8b85fe6b`），**前端未接**——用户裁定本里程碑只做前端诊断展示，不写生产数据
+- **F5 刷新落 /dashboard**：v1.23 UAT 顺带发现的独立债
+- **ColumnConfigModal:136**：缺 eslint-disable 理由注释（契约登记完整性）
+
+**Target features:**
+- **VIS（核心）**：消除 affix-wrapper 内层边框（双框消失）+ 全局 CSS 与 antd 6 变体的一致性审计（同类隐患一次性收口）
+- **PERM**：系统用户页按 `system:user:edit/remove/resetPwd/add/import/export` 条件渲染操作入口（fail-closed）+ 权限矩阵单测
+- **DIAG**：工位管理页「物理链路设备」为空时展示可诊断原因（emptyReason/emptyMessage/warnings），把后端已交付的诊断能力暴露到 UI
+- **NAV**：F5 刷新保留当前落地页（不回退 /dashboard），且不影响未登录跳登录、无权限跳 403、deep link 直达
+- **HYG**：ColumnConfigModal:136 豁免注释补齐；lint 存量 17 errors + exhaustive-deps 12 处清零；react-refresh 33 处清零 + devices 页 692 行拆分
+
+**关键决策 (v1.24 init):**
+- **双框修根因而非遮盖**——审计全局 `!important` 规则与 antd 6 结构的冲突面，不做「一处覆盖了事」（用户裁定「修根因 + CSS 一致性审计」）
+- **#16 修复取 fail-closed**——权限集合为空/未加载时默认隐藏写操作入口（与「操作入口不该存在」契约一致），代价是权限加载完成前按钮不出现，需在 UI 上可接受
+- **3f130 只做前端展示**——不动生产数据（用户裁定），数据侧绑定留用户动作
+- **零新依赖**——沿用 v1.23 原则，不引视觉回归自动化工具链
+
+**研究基线:** `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS}.md`（4 维并行研究，2026-10-28）｜ **权限基线:** `.planning/notes/2026-10-28-pg-permission-baseline.md`（生产 PG 只读实测 + #16 定责）
 
 ## Current Milestone: v1.23 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance) — ✅ SHIPPED 2026-10-28
 
