@@ -1,47 +1,35 @@
 /**
- * NetworkDevice 设备管理页面
+ * NetworkDevice 设备管理页面（v1.24 HYG-04 拆分后的页面装配层）。
  *
- * Phase 67-T3: 迁移 66 契约组件（PageTable 单实例 + 子组件拆分）
- * PR 差异记录（对照迁移前 1282 行版本）：
- * - Table+useTableManager 双实例化骨架 → PageTable（request 直连
- *   /network/devices/list，搜索值/extraFilters/排序由 PageTable 合参）；
- *   usePagination+setTotal 外部分页链路删除（PageTable 内建 total 承接，SC2）。
- * - 单删 Modal.confirm（cancelButton 防抖 confirmInstance.update 写法）→
- *   createDeleteAction → ConfirmDelete（65 模板文案，B 类对齐）。
- * - 批删 confirmDelete 手工按钮 → batchDelete={{onDelete,target:"设备"}}
- *   （INV-8 逐字文案：确认批量删除/将删除选中的 {N} 项，删除后不可恢复，
- *   是否继续？/删除/取消/danger）。
- * - 搜索卡 5 字段 → searchFields（查询→搜索 B 类；重置/刷新内建）；
- *   deviceType options 保留 useDict 字典回退静态语义。
- * - 左侧部门树 → extraFilters={deptFilters}（useMemo 引用稳定）联动，
- *   handleDeptSelect 仅 setState，刷新由 PageTable extraFilters 触发。
- * - virtual + scroll={{x:1600,y:600}} 经 rest 透传（PAGE_TABLE 契约不吞）。
- * - 统计刷新：原 request 内 loadStatistics() 保留——任何列表刷新均联动统计。
- * - 已选择 Alert → children ctx.selectedRowKeys/clearSelection。
- * - 三弹窗纯搬迁至 components/DeviceModals.tsx（Modal 原样，未改 FormModal——
- *   原「提交中禁用取消按钮」防抖是契约外增强，保持原状）。
+ * 已拆出：列定义工厂 → components/DeviceTableColumns.tsx；搜索区 schema → searchFields.ts；
+ * 数据操作 + 行操作 + 行操作权限门控 → hooks/useDeviceActions.tsx；
+ * 页面 JSX 外壳 → components/DeviceTablePanel.tsx。
+ * components/DeviceModals.tsx **保持不拆**（v1.22 刚拆，68.1 验收基线）。
+ *
+ * 三条必须保持的引用/时序纪律（v1.23 FAIL-1 同源风险）：
+ *   1. `deptFilters` 与 `columns` 的 useMemo **留在本组件**——引用不稳 → 页码被打回第 1 页；
+ *   2. `columns` 的依赖数组**故意不完整**（见下方 eslint-disable）：`collectingDeviceId` 变化会
+ *      重建整列定义，这是已知的性能债，**拆分时不得顺手"修正"**（会引入无限渲染）；
+ *   3. `reloadRef` 是**外部注入的 ref**（不是 state）：由页面持有、由 DeviceTablePanel 的
+ *      PageTable children 渲染函数回填 `ctx.loadData`，提交/删除后据此刷新列表。
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import type { Key } from "react";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import { Layout, App, Form, Button, Alert } from "antd";
-import { PlusOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import { App, Form } from "antd";
 import type { NetworkDevice } from "@/types";
 import type { PageResponse } from "@/types";
 import { post } from "@/lib/api";
-import NetworkExport from "@/components/shared/NetworkExport";
-import { PageTable } from "@/components/shared";
-import { BatchExportModal } from "@/components/shared";
 import type {  } from "@/utils/tableHelpers";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { useMenuStore } from "@/store/menuStore";
 import { useDict } from "@/hooks/useDict";
-import DeptTreePanel from "./components/DeptTreePanel";
-import DeviceStatsCards from "./components/DeviceStatsCards";
-import DeviceModals from "./components/DeviceModals";
 import { getDeviceTableColumns } from "./components/DeviceTableColumns";
+import DeviceTablePanel from "./components/DeviceTablePanel";
+import type { DeviceModalsProps } from "./components/DeviceModals";
 import { DEVICE_TYPE_OPTIONS } from "./constants";
 import { getOptionLabel } from "./utils";
 import { buildDeviceSearchFields } from "./searchFields";
@@ -229,152 +217,89 @@ const DeviceManagement = () => {
 
   const searchFields = buildDeviceSearchFields(deviceTypeOptions);
 
+  // 左侧部门树选择（引用每次渲染新建，与拆分前的内联箭头函数语义一致）
+  const handleDeptSelect = (selectedKeys: Key[]) => {
+    if (selectedKeys.length > 0) {
+      setSelectedDeptId(selectedKeys[0] as string);
+    } else {
+      setSelectedDeptId("");
+    }
+  };
+
+  // 三弹窗 props（DeviceModals 本 phase 不拆，props 组装留在页面侧）
+  const modalsProps: DeviceModalsProps = {
+    quickCreateModalVisible,
+    quickCreateForm,
+    credentials,
+    probeResult,
+    probing,
+    submitting,
+    departments,
+    onProbe: handleProbe,
+    onQuickCreateOk: async () => {
+      setSubmitting(true);
+      try {
+        await handleQuickCreate(reloadRef.current as () => void);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    onQuickCreateCancel: () => {
+      closeQuickCreateModal();
+      quickCreateForm.resetFields();
+    },
+    onClearProbeResult: () => setProbeResult(null),
+    modalVisible,
+    editingDevice,
+    editForm,
+    deviceTypeOptions,
+    onEditOk: async () => {
+      setSubmitting(true);
+      try {
+        await handleCreate(reloadRef.current as () => void);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    onEditCancel: () => {
+      setModalVisibleState(false);
+      editForm.resetFields();
+    },
+    detailModalVisible,
+    viewingDevice,
+    canViewMACHistory,
+    navigate,
+    getDeviceTypeText,
+    onCloseDetail: () => setDetailModalVisible(false),
+  };
+
   return (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
-      {/* 左侧部门树 */}
-      <DeptTreePanel
-        selectedDeptId={selectedDeptId}
-        onSelect={(selectedKeys) => {
-          if (selectedKeys.length > 0) {
-            setSelectedDeptId(selectedKeys[0] as string);
-          } else {
-            setSelectedDeptId("");
-          }
-        }}
-      />
-
-      <PageTable<NetworkDevice>
-        request={request}
-        columns={columns}
-        rowKey={(r) => r.id}
-        searchFields={searchFields}
-        sorterMetas={sorterMetas}
-        extraFilters={deptFilters}
-        virtual
-        scroll={{ x: 1600, y: 600 }}
-        batchDelete={{
-          target: "设备",
-          onDelete: async (keys) => {
-            await post("/network/devices/batch-delete", { ids: keys });
-            void loadStatistics();
-          },
-        }}
-        rowActions={(record) => buildRowActions(record, reloadRef.current as () => void)}
-        toolbar={
-          <>
-            <NetworkExport
-              entityType="devices"
-              entityName="网络设备"
-              current={exportPage.current}
-              pageSize={exportPage.pageSize}
-            />
-            <Button
-              aria-label="快速创建设备"
-              title="快速创建设备"
-              type="primary"
-              icon={<ThunderboltOutlined />}
-              onClick={openQuickCreateModal}
-            >
-              快速创建
-            </Button>
-            <Button
-              type="default"
-              icon={<PlusOutlined />}
-              onClick={() => openModal()}
-              aria-label="新增设备"
-              title="新增设备"
-            >
-              手动新增
-            </Button>
-          </>
-        }
-      >
-        {(ctx) => {
-          // loadData / searchForm 转发（提交后刷新 + children 内接线）
-          reloadRef.current = ctx.loadData;
-          return (
-            <>
-              <DeviceStatsCards statistics={statistics} />
-              {ctx.selectedRowKeys.length > 0 && (
-                <Alert
-                  message={
-                    <span>
-                      已选择 <strong>{ctx.selectedRowKeys.length}</strong> 个设备，
-                      <Button
-                        type="link"
-                        size="small"
-                        onClick={ctx.clearSelection}
-                        style={{ padding: 0 }}
-                      >
-                        取消选择
-                      </Button>
-                    </span>
-                  }
-                  type="info"
-                  showIcon
-                  style={{ marginBottom: 16 }}
-                />
-              )}
-            </>
-          );
-        }}
-      </PageTable>
-
-      {/* 批量导出 Modal */}
-      <BatchExportModal
-        visible={batchModalVisible}
-        onConfirm={handleBatchExport}
-        onCancel={() => setBatchModalVisible(false)}
-        loading={batchExporting}
-      />
-
-      {/* 三弹窗（快速创建/编辑/详情） */}
-      <DeviceModals
-        quickCreateModalVisible={quickCreateModalVisible}
-        quickCreateForm={quickCreateForm}
-        credentials={credentials}
-        probeResult={probeResult}
-        probing={probing}
-        submitting={submitting}
-        departments={departments}
-        onProbe={handleProbe}
-        onQuickCreateOk={async () => {
-          setSubmitting(true);
-          try {
-            await handleQuickCreate(reloadRef.current as () => void);
-          } finally {
-            setSubmitting(false);
-          }
-        }}
-        onQuickCreateCancel={() => {
-          closeQuickCreateModal();
-          quickCreateForm.resetFields();
-        }}
-        onClearProbeResult={() => setProbeResult(null)}
-        modalVisible={modalVisible}
-        editingDevice={editingDevice}
-        editForm={editForm}
-        deviceTypeOptions={deviceTypeOptions}
-        onEditOk={async () => {
-          setSubmitting(true);
-          try {
-            await handleCreate(reloadRef.current as () => void);
-          } finally {
-            setSubmitting(false);
-          }
-        }}
-        onEditCancel={() => {
-          setModalVisibleState(false);
-          editForm.resetFields();
-        }}
-        detailModalVisible={detailModalVisible}
-        viewingDevice={viewingDevice}
-        canViewMACHistory={canViewMACHistory}
-        navigate={navigate}
-        getDeviceTypeText={getDeviceTypeText}
-        onCloseDetail={() => setDetailModalVisible(false)}
-      />
-    </Layout>
+    <DeviceTablePanel
+      selectedDeptId={selectedDeptId}
+      onDeptSelect={handleDeptSelect}
+      request={request}
+      columns={columns}
+      searchFields={searchFields}
+      sorterMetas={sorterMetas}
+      extraFilters={deptFilters}
+      onBatchDelete={async (keys) => {
+        await post("/network/devices/batch-delete", { ids: keys });
+        void loadStatistics();
+      }}
+      rowActions={buildRowActions}
+      reloadRef={reloadRef}
+      statistics={statistics}
+      exportPage={exportPage}
+      onQuickCreate={openQuickCreateModal}
+      onManualCreate={() => openModal()}
+      batchExportModal={{
+        visible: batchModalVisible,
+        loading: batchExporting,
+        onConfirm: handleBatchExport,
+        onCancel: () => setBatchModalVisible(false),
+      }}
+      modals={modalsProps}
+    />
   );
 };
 
