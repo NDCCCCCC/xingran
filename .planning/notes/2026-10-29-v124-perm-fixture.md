@@ -314,6 +314,29 @@ WHERE u.username = 'v124_auditor_test';
 
 **修复后的期望**：严格中间件（跳过 Step 2/3）下，上表全部 8 行应变为 **step1=false / step2=false / step3=false → 403 拒绝**。Phase 78 落地后需用**同一脚本、同一角色**复跑一次，形成前后对照（复跑工具：仓库内临时目录 `tmp_t4check/`，验证后删除）。
 
+#### 3.4.1 ⭐ 前后对照（Phase 78 落地后，同脚本同角色复跑 —— 已完成）
+
+修复实现：`51f5e69e`（`RequireStrictPermissions` 只做精确匹配）+ `48a6920c`（`/system/users` 读组与写组**兄弟分离**）。
+
+| perm | step1 | step2 | step3 匹配 | **旧中间件（修复前）** | **严格中间件（修复后）** |
+|---|---|---|---|---|---|
+| `system:user:list` | false | false | true | 200 放行（缺陷） | **403 拒绝 ✅** |
+| `system:user:view` | false | false | true | 200 放行（缺陷） | **403 拒绝 ✅** |
+| `system:user:add` | false | false | true | 200 放行（缺陷） | **403 拒绝 ✅** |
+| `system:user:edit` | false | false | true | 200 放行（缺陷） | **403 拒绝 ✅** |
+| `system:user:remove` | false | false | true | 200 放行（缺陷，会真删数据） | **403 拒绝 ✅** |
+| `system:user:resetPwd` | false | false | true | 200 放行（缺陷） | **403 拒绝 ✅** |
+| `system:user:import` | false | false | true | 200 放行（缺陷） | **403 拒绝 ✅** |
+| `system:user:export` | false | false | true | 200 放行（缺陷） | **403 拒绝 ✅** |
+
+**同脚本、同角色、同真实 PG 数据**下的判定差异 —— 严格中间件只保留 Step 1（精确匹配），而该受限角色 step1 全 false → 全部 403。
+
+**独立佐证**：`pkg/middleware/permission_strict_test.go` 的 5 个单测全绿（`TestStrictPermission_SkipsModuleDowngrade` / `SuperAdminBypass` / `ExactMatchPasses` / `UnauthenticatedRejected` / `CacheKeyIsolated`），其中首个即锁定「严格检查跳过模块降级」。
+
+⚠️ **一个被实施方识破的关键陷阱**（Lead 规格里原本写错、实施方修正）：gin 的 `Group()` **会继承父组中间件链** → 写组若写成 `usersRead.Group("")`，读组的 ANY-of 仍会作用在写路由上，**病灶①（组级 ANY-of）不会被修掉**。正确做法是写组成为 `authorized` 的**兄弟组**（见 `48a6920c` 的 `strictUserRouteGroup`）。
+
+**剩余待验（Phase 79 UI 实机）**：前端按钮可见性 + 真实 HTTP 返回码（T1/T4 HTTP 层）。DB 层判定已闭合（中间件唯一数据源即这三段 SQL）。
+
 ### 3.5 部门 / 岗位可用值
 
 `11_fixture_user.sql` 已用 `ORDER BY order_num LIMIT 1` 自动取首个可用部门，故无需人工填。
