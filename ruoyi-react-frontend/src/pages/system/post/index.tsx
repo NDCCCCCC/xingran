@@ -27,7 +27,8 @@ import {
 import { PageTable } from "@/components/shared";
 import type { PageTableRenderContext } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
-import { FormModal, useFormModalForm } from "@/components/shared/FormModal";
+import { FormModal } from "@/components/shared/FormModal";
+import { useFormModalForm } from "@/components/shared/hooks/useFormModalForm";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
 const STATUS_OPTIONS = [
