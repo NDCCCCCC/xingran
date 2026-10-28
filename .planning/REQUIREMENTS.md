@@ -85,6 +85,11 @@
 ## Future Requirements（延后）
 
 - **v1.25 候选①**：**操作级 RBAC 全站治理**——前端 108/119 页面 + 后端 340/367 路由；system 域其余 4 组（roles/menus/depts/posts）ANY-of 拆分；`pkg/permission/config.go:223-289` 动作级映射死表接线
+- **v1.25 候选③**：**权限模型的三处剩余缺口**（2026-10-28 Phase 79 PG 实测新发现，与 #16 同族但独立）——
+  ① **数据范围（data_scope）未被列表查询消费**：`DataScopePermission` 中间件只把 scope 塞进 context，查询侧未使用 → 实测夹具角色 `data_scope=3`（本部门）时 `POST /system/users/list` 仍返回 `total=4231` 的**跨部门**用户（含 admin）
+  ② **`GetUserPermissions` 不过滤 `menu.status`**（`internal/services/system/menu_service.go:547-550` 只过滤 perms 非空 + 软删）→ **已停用菜单的权限码仍会进前端权限集**，菜单停用后前端按钮可能仍显示
+  ③ **Step 2「子菜单继承」语义易写反**：真实实现是「用户持有 F 型按钮 → 继承父页面权限」，**不是**反向；任何复刻/审计该逻辑的实现都可能得出相反结论（本轮曾因此得到错误中间态）
+  ④ 附带发现（部署/运维缺口）：**生产库无迁移记录表** → 迁移版本无法核对「已应用 vs 仓库最新」；**GORM 模型与库表 schema 漂移**（`sys_role_menu` / `sys_user_role` 的 `id`/`created_at` 未映射，靠 DB default）
 - **v1.25 候选②**：**样式层收敛到 antd 6 variant**（方案 C）——先重构 AntdThemeBridge 明暗色板（F3）、删/降级 4 批手写规则（≈-120 行）、统一圆角（6→8）、hex 治理对 .css 失明（`eslint.config.js:150` selector 只匹配 JS/TS 节点）
 - **sqlite `ON CONFLICT` 方言泄漏**——`role_service.go:425-430` + `migration_206:29-33` 的 `isPostgreSQL` 守卫 + `models/role.go:24-27` 无唯一索引 → sqlite 下无法创建带菜单授权的角色（#16 无法在 sqlite 复测的根因）
 - **权限缓存陈旧**——后端 30s TTL 且 `InvalidateMiddlewarePermCache` 未接线（`permission.go:68`）；前端双层缓存（menuStore 5min + sessionStorage 30min `DynamicRoutes.tsx:34`）；`sys_menu.perms` 整串取出不拆逗号（`menu_service.go:547-552`）
