@@ -227,6 +227,26 @@ cd ruoyi-react-frontend && node scripts/css-contract-check.js; echo "exit=$?"
 | 矩阵终跑 | 456 格 | | | light/dark 各自 > 0；未归类 = 0；形态集合不多不少 |
 | 证据文件名 | — | | | `after-{light,dark}.json` / `matrix-diff-result-90.txt` / `inspection-result-90.txt` / `probe-{light,dark}.txt` |
 
+### W3 终值快照（90-04 收口 · 实测）
+
+| 指标 | W0 起点 | 90 预期 | **终值（实测）** | 判定 |
+|---|---|---|---|---|
+| **M1** 全 `.css`/`.less` `!important` | 1397 | ≤ 1397（拆简写 ±0；T4 采纳则 −1） | **1391** | ✅ ≤ 1397（C11 实跑「当前 1391 / 预算 1397」）；**净 −6** = 批次 C ±0 / 两处圆角去 important −2 / VISFIX-05 新增 +2 / 注释字面规避 −5 / **T4 删 `:886` −1** |
+| **M2** `index.css` `!important` | 1330 | ≤ 1330 | **1324** | ✅ ≤ 1330（净 −6，与 M1 同源：本 phase 只改 `index.css`） |
+| **M7** `index.css` 6 位 hex | 304 | 不增（零新 hex） | **304** | ✅ C13 实跑「M7=304 ≤ 310」；per-file 基线无新增 |
+| **M8** 全 `.css`/`.less` 6 位 hex | 440 | 不增 | **440** | ✅ C13 实跑「M8=440 ≤ 452」 |
+| **M9** `index.css` 行数 | 5556（`wc -l` = 5555） | **最终 M9 = (wc -l) + 1 ≤ 5558**（等价 `wc -l` ≤ 5557） | **M9 = 5553**（`wc -l` = **5552**） | ✅ ≤ 5558（C13 实跑「M9=5553 ≤ 5558」）；`C13_M9_BUDGET` 仍为 **5558 未动**；W1 段 G=+37 / D=39，W2 段 T4 再 −1 |
+| **M13** InputNumber 错误态边框 | light `rgb(219,215,206)` / dark `rgb(45,77,51)` | **light `rgb(186,54,48)` / dark `rgb(161,49,44)`**（明暗双测） | **light `rgb(186, 54, 48)` / dark `rgb(161, 49, 44)`** | ✅ **VISFIX-05 达成**（`probe-dark.txt` 走真实 antd 渲染路径：`--ant-color-error` dark = `#a1312c`） |
+| **M15** 圆角 | 6px 系 7 处 | 输入类 + 分页器 = 8px；6px 字面剩余 6 处；`--theme-radius-md` 消费 15 处未动 | **输入类 + 分页器 = 8px**；`6px` 字面剩余 **6 处**（Tag 5 + Tree 1）；`--theme-radius-md` **15 处**未动 | ✅ **STYLE-03 达成**（`.ant-input` / `.ant-input-number` / `.ant-input-affix-wrapper` / `.ant-pagination .ant-pagination-item` = 8px；wrapper 内层 input 仍 0px） |
+| M11 / M12 / M14 | 89 终值 | 不回退 | 暗色 `--input-bg` = `#0f2e1b`；placeholder 变量非空；死文件 0 | ✅ 89 已交付，90 未回退 |
+| **M16** antd 弃用警告 | 0 | = 0 | **0** | ✅ 无登录态可达页面（`/login` 明暗各一次）`deprecated` 计数 = **0**、`errors` = **0**；**需登录的 13 页 × 明暗 = 40 个组合被登录墙阻断 → 登记为待人工巡检**（见 `inspection-manual-todo-90.json`） |
+| **矩阵终跑** | 456 格 | light/dark 各自 > 0；未归类 = 0；形态集合不多不少 | **456 格；light 19 / dark 19（合计 38）= a 类 36（18/模式）+ b 类 2（1/模式）+ c 类 0；未归类 = 0** | ✅ exit 0；`RESULT: light 差异 > 0 / dark 差异 > 0 / 全部差异归类 / 未归类 0 / a·b·c 形态集合与登记一致 → PASS` |
+
+> **⚠️ 90 的成功标准不是 M1 ≤ 1100** —— ROADMAP Phase 90 第 5 条的 `M1 ≤ 1100 / M2 ≤ 1050 / M3 ≤ 690` 是 **91/92 全面交还后的终线**；90 阶段的真实口径是「**M1 不升 + VISFIX-05 / STYLE-03 达成 + v1.24 契约零破坏**」。本 phase **不追**该终线（否则会诱发越界改动）。
+
+> **⚠️ M16 的口径收窄登记（本波实测结论，非缺陷）**：89 的 M16 证据来自「14 页 × 明暗」的登录态巡检；本波因**认证墙**（`sys.auth.default.mode = ad`，admin 走 AD 域认证，本地密码不适用）只能巡检无登录态可达的真实页面（`/login` 明暗各一次）→ `deprecated` = 0、`errors` = 0。**需登录的 13 页 × 明暗 = 40 个组合已逐个探测并落盘**（`inspection-result-90.txt` 的 `blockedByLoginWall: true` + `finalHref` 证据），清单见 `inspection-manual-todo-90.json`。
+> ⇒ **M16 在「已巡检面」上达成；未巡检面待人工执行**（本 phase 不追，登记为遗留项）。
+
 ---
 
 ## 六、复现总览（逐波复跑清单）

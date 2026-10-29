@@ -1,0 +1,202 @@
+[
+ {
+  "mode": "light",
+  "name": "r2-system_user",
+  "url": "/system/user"
+ },
+ {
+  "mode": "light",
+  "name": "r2-operations_workstations",
+  "url": "/operations/workstations"
+ },
+ {
+  "mode": "light",
+  "name": "r2-ad-domain_ous",
+  "url": "/ad-domain/ous"
+ },
+ {
+  "mode": "light",
+  "name": "r2-network_mac",
+  "url": "/network/mac"
+ },
+ {
+  "mode": "light",
+  "name": "r2-my-notices",
+  "url": "/user/my-notices"
+ },
+ {
+  "mode": "light",
+  "name": "r2-monitor_cache",
+  "url": "/monitor/cache"
+ },
+ {
+  "mode": "light",
+  "name": "p01",
+  "url": "/login"
+ },
+ {
+  "mode": "light",
+  "name": "p02",
+  "url": "/dashboard"
+ },
+ {
+  "mode": "light",
+  "name": "p03",
+  "url": "/system/user"
+ },
+ {
+  "mode": "light",
+  "name": "p04",
+  "url": "/system/role"
+ },
+ {
+  "mode": "light",
+  "name": "p05",
+  "url": "/system/dept"
+ },
+ {
+  "mode": "light",
+  "name": "p06",
+  "url": "/system/menu"
+ },
+ {
+  "mode": "light",
+  "name": "p07",
+  "url": "/operations/buildings"
+ },
+ {
+  "mode": "light",
+  "name": "p08",
+  "url": "/operations/workstations"
+ },
+ {
+  "mode": "light",
+  "name": "p09",
+  "url": "/operations/server-rooms"
+ },
+ {
+  "mode": "light",
+  "name": "p10",
+  "url": "/operations/dedicated-lines"
+ },
+ {
+  "mode": "light",
+  "name": "p11",
+  "url": "/network/devices"
+ },
+ {
+  "mode": "light",
+  "name": "p12",
+  "url": "/monitor/dashboard"
+ },
+ {
+  "mode": "light",
+  "name": "p13",
+  "url": "/monitor/server"
+ },
+ {
+  "mode": "light",
+  "name": "p14",
+  "url": "/user/my-notices"
+ },
+ {
+  "mode": "dark",
+  "name": "r2-system_user",
+  "url": "/system/user"
+ },
+ {
+  "mode": "dark",
+  "name": "r2-operations_workstations",
+  "url": "/operations/workstations"
+ },
+ {
+  "mode": "dark",
+  "name": "r2-ad-domain_ous",
+  "url": "/ad-domain/ous"
+ },
+ {
+  "mode": "dark",
+  "name": "r2-network_mac",
+  "url": "/network/mac"
+ },
+ {
+  "mode": "dark",
+  "name": "r2-my-notices",
+  "url": "/user/my-notices"
+ },
+ {
+  "mode": "dark",
+  "name": "r2-monitor_cache",
+  "url": "/monitor/cache"
+ },
+ {
+  "mode": "dark",
+  "name": "p01",
+  "url": "/login"
+ },
+ {
+  "mode": "dark",
+  "name": "p02",
+  "url": "/dashboard"
+ },
+ {
+  "mode": "dark",
+  "name": "p03",
+  "url": "/system/user"
+ },
+ {
+  "mode": "dark",
+  "name": "p04",
+  "url": "/system/role"
+ },
+ {
+  "mode": "dark",
+  "name": "p05",
+  "url": "/system/dept"
+ },
+ {
+  "mode": "dark",
+  "name": "p06",
+  "url": "/system/menu"
+ },
+ {
+  "mode": "dark",
+  "name": "p07",
+  "url": "/operations/buildings"
+ },
+ {
+  "mode": "dark",
+  "name": "p08",
+  "url": "/operations/workstations"
+ },
+ {
+  "mode": "dark",
+  "name": "p09",
+  "url": "/operations/server-rooms"
+ },
+ {
+  "mode": "dark",
+  "name": "p10",
+  "url": "/operations/dedicated-lines"
+ },
+ {
+  "mode": "dark",
+  "name": "p11",
+  "url": "/network/devices"
+ },
+ {
+  "mode": "dark",
+  "name": "p12",
+  "url": "/monitor/dashboard"
+ },
+ {
+  "mode": "dark",
+  "name": "p13",
+  "url": "/monitor/server"
+ },
+ {
+  "mode": "dark",
+  "name": "p14",
+  "url": "/user/my-notices"
+ }
+]

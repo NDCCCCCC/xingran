@@ -231,13 +231,15 @@ f20_appinput  f21_apptextarea  f22_input_number_status_error
 
 ## 终判结论（由 90-04 回填）
 
-- **矩阵版本**：`matrix-diff-90.cjs`（白名单归类模式，登记表 = 本文件 a/b/c 三节）+ `matrix-fixture.js`（22 形态）/ `matrix-sample.js`（6 属性）；采样方法 = `p90-run.cjs`（dev :4000 + `$TEMP/p75-uat` 后端 + Node WebSocket 直连 CDP；模式切换经 `/user/settings` 分段卡走 **settingsStore 服务器偏好**）。
-- **终跑结果（待填）**：____ 格；light = ____ / dark = ____；未归类 = ____；exit ____。
-- **a 类格数（待填）**：____ 格（预期 18 × 2 = 36）。
-- **b 类格数（待填）**：____ 格（预期 1 × 2 = 2）。
-- **c 类格数（待填）**：____ 格（预期 0 —— 除非 90-03 的 T4 裁定改写本表）。
-- **证据文件名（待填）**：`after-{light,dark}.json` / `matrix-diff-result-90.txt` / `inspection-result-90.txt` / `probe-{light,dark}.txt` / `probe-status-before.json`。
-- **执行人（待填）**：90-04 executor（GSD）。
+- **矩阵版本**：`matrix-diff-90.cjs`（白名单归类模式，登记表 = 本文件 a/b/c 三节）+ `matrix-fixture.js`（22 形态）/ `matrix-sample.js`（6 属性）；采样方法 = `p90-matrix-run.cjs`（dev :4000 + Node WebSocket 直连 CDP；**无登录态**路径：登录页本身渲染 antd 组件 → cssVar scope 已注入 → fixture 可直接挂载采样；暗色经 `settings-storage` 的 persist 快照改写 → 刷新 → store rehydrate → antd 以 `darkAlgorithm` 重渲染 + 补写 `<html data-color-mode>`）。
+- **终跑结果**：**456 格**；light = **19** / dark = **19**（合计 38）；未归类 = **0**；exit **0**。
+- **a 类格数**：**18 格/模式 × 2 = 36**（carrier 14：f01/f02/f03/f04/f05/f06/f07/f08/f09/f10/f11/f20/f21/f22；inner 4：f05/f06/f14/f15）。
+- **b 类格数**：**1 格/模式 × 2 = 2**（`f22_input_number_status_error.carrier.border`；light `rgb(219,215,206)` → `rgb(186,54,48)`；dark `rgb(45,77,51)` → `rgb(161,49,44)`）。
+- **c 类格数**：**0**（T4 裁定采纳且实测零差异 ⇒ 恒空集）。
+- **必须为 0 的四维度**：bg / shadow / btw / fontSize —— **实测全部为 0**（改动未外溢到登记面之外）。
+- **终判结论**：`RESULT: light 差异 > 0 / dark 差异 > 0 / 全部差异归类 / 未归类 0 / a·b·c 形态集合与登记一致 → PASS`。
+- **证据文件名**：`after-{light,dark}.json` / `matrix-diff-result-90.txt` / `inspection-result-90.txt` / `inspection-manual-todo-90.json` / `probe-{light,dark}.txt` / `probe-light-90.txt` / `probe-contract.json` / `hover-focus-{light,dark}.txt` / `90-VERIFICATION.md`。
+- **执行人**：90-04 executor（GSD）。
 
 ---
 

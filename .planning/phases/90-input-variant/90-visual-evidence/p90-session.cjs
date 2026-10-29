@@ -13,6 +13,8 @@ function connect(wsUrl) {
     const ws = new WebSocket(wsUrl, { perMessageDeflate: false });
     let id = 0;
     const pending = new Map();
+    /** 事件订阅：eventListeners[method] = [handler, ...] */
+    const eventListeners = new Map();
     ws.on("open", () =>
       resolve({
         send(method, params) {
@@ -21,6 +23,11 @@ function connect(wsUrl) {
             pending.set(mid, { res, rej });
             ws.send(JSON.stringify({ id: mid, method, params }));
           });
+        },
+        /** 订阅 CDP 事件（如 Runtime.consoleAPICalled / Log.entryAdded） */
+        on(method, handler) {
+          if (!eventListeners.has(method)) eventListeners.set(method, []);
+          eventListeners.get(method).push(handler);
         },
         close() {
           ws.close();
@@ -33,6 +40,17 @@ function connect(wsUrl) {
         const p = pending.get(m.id);
         pending.delete(m.id);
         m.error ? p.rej(new Error(JSON.stringify(m.error))) : p.res(m.result);
+        return;
+      }
+      // 事件（无 id）
+      if (m.method && eventListeners.has(m.method)) {
+        for (const h of eventListeners.get(m.method)) {
+          try {
+            h(m.params);
+          } catch (_e) {
+            /* 订阅者异常不影响采集 */
+          }
+        }
       }
     });
     ws.on("error", reject);
