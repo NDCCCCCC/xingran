@@ -81,7 +81,13 @@ describe("dedicated-lines → PageTable 契约", () => {
     expect(src).not.toMatch(/from "@\/hooks\/useTableManager"/);
     expect(src).not.toMatch(/from "@\/hooks\/usePagination"/);
     expect(src).toMatch(/<PageTable<DedicatedLine>/);
-    expect(src).toContain('batchDelete={{ onDelete: handleBatchDelete, target: "专线" }}');
+    // Phase 86 W2：batchDelete 改为**条件传参**（PageTable 的 batchDelete 契约无 permission 位
+    // → 页面层按 permDelete.visible 传 / 不传）。契约意图不变：仍走 PageTable.batchDelete，
+    // 仍以 handleBatchDelete + target="专线" 为载荷；断言随之放宽为「载荷片段 + 条件传参」。
+    expect(src).toMatch(/batchDelete=\{/);
+    expect(src).toContain('{ onDelete: handleBatchDelete, target: "专线" }');
+    // 门控通道必须在场（本波新增契约）：条件传参由 permDelete.visible 驱动
+    expect(src).toMatch(/permDelete\.visible[\s\S]{0,120}batchDelete|batchDelete[\s\S]{0,200}permDelete\.visible/);
     // 搜索 schema 六字段与迁移前 searchForm 字段同名（红线 1）
     for (const field of ["name", "sourceRoomId", "destRoomId", "lineType", "isp", "status"]) {
       expect(src).toContain(`name: "${field}"`);

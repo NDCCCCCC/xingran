@@ -14,7 +14,7 @@
  * 共用同一数据层（PageTableRenderContext 不暴露 data，故镜像一份快照）。
  */
 
-import { useState, useCallback, useRef, useMemo, type FC, type Key } from "react";
+import { useState, useCallback, useRef, useMemo, type FC, type Key, type CSSProperties } from "react";
 import type { FormInstance } from "antd";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
@@ -51,8 +51,9 @@ import type { Building } from "@/types/operations";
 import { buildingApi } from "@/lib/opsApi";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
-import { PageTable } from "@/components/shared";
+import { PageTable, useActionPermission } from "@/components/shared";
 import type { PageTableRenderContext, SearchField } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -74,7 +75,29 @@ const BUILDING_STATUS_OPTIONS = [
   { label: "停用", value: 1 },
 ];
 
+/**
+ * 卡片视图图标动作的禁用态样式（Phase 86 W2）。
+ * antd `Card.actions` 只接受 ReactNode，无法给图标挂 `disabled` 属性 →
+ * 未就绪（loading/error）时用「不响应指针 + 降透明度」表达禁用态，
+ * 并配合 `title={decision.hint}` 提示原因（与表格视图 ActionButtons 的三态同源）。
+ */
+const cardActionStyle = (disabled: boolean): CSSProperties => ({
+  opacity: disabled ? 0.45 : 1,
+  pointerEvents: disabled ? "none" : "auto",
+  cursor: disabled ? "not-allowed" : "pointer",
+});
+
 const BuildingManagement: FC = () => {
+  // Phase 86 W2（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // 权限码单一真相源 = src/constants/permissionCodes.ts；⚠️ ops 八组只有 delete 键，
+  // 没有 remove 键 —— 删除类入口一律用 .delete（写 .remove 会 TS2339）。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.opsBuilding.edit);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsBuilding.delete);
+  const permAdd = permGate.decide(PERMISSION_CODES.opsBuilding.add);
+  const permImport = permGate.decide(PERMISSION_CODES.opsBuilding.import);
+  const permExport = permGate.decide(PERMISSION_CODES.opsBuilding.export);
+
   // 左侧部门树选中态（列表过滤经 PageTable extraFilters 联动）
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
 
@@ -372,9 +395,19 @@ const BuildingManagement: FC = () => {
   ];
 
   // 行操作：编辑 + 删除（数量/顺序与迁移前一致；删除走 createDeleteAction 唯一入口）
+  // permission 由 ActionButtons 内建三态门控：ready 无码 → 不渲染；未就绪 → disabled + 提示
   const rowActions = (record: Building) => [
-    { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
-    createDeleteAction(record.id, handleDelete, { target: `楼宇 ${record.name}` }),
+    {
+      key: "edit",
+      label: "编辑",
+      icon: <EditOutlined />,
+      onClick: () => openModal(record),
+      permission: PERMISSION_CODES.opsBuilding.edit,
+    },
+    createDeleteAction(record.id, handleDelete, {
+      target: `楼宇 ${record.name}`,
+      permission: PERMISSION_CODES.opsBuilding.delete,
+    }),
   ];
 
   const renderCardView = () => {
@@ -397,17 +430,43 @@ const BuildingManagement: FC = () => {
             <Card
               hoverable
               actions={[
-                <EditOutlined key="edit" onClick={() => openModal(building)} />,
-                <DeleteOutlined
-                  key="delete"
-                  style={{ color: "var(--theme-error)" }}
-                  onClick={() =>
-                    confirmDelete({
-                      target: `楼宇 ${building.name}`,
-                      onDelete: () => handleDelete(building.id),
-                    })
-                  }
-                />,
+                // 卡片视图与表格视图是同一页的两种渲染形态 → 同一组门控决策：
+                // ready 无码 → 不渲染；未就绪 → 渲染但禁用（图标无 disabled 位，用
+                // pointerEvents + opacity 表达禁用态，并挂 title 提示）
+                ...(permEdit.visible
+                  ? [
+                      <EditOutlined
+                        key="edit"
+                        title={permEdit.hint}
+                        style={cardActionStyle(permEdit.disabled)}
+                        onClick={() => {
+                          if (permEdit.disabled) return;
+                          openModal(building);
+                        }}
+                      />,
+                    ]
+                  : []),
+                ...(permDelete.visible
+                  ? [
+                      <DeleteOutlined
+                        key="delete"
+                        title={permDelete.hint}
+                        style={{
+                          ...cardActionStyle(permDelete.disabled),
+                          color: permDelete.disabled
+                            ? "var(--theme-text-tertiary)"
+                            : "var(--theme-error)",
+                        }}
+                        onClick={() => {
+                          if (permDelete.disabled) return;
+                          confirmDelete({
+                            target: `楼宇 ${building.name}`,
+                            onDelete: () => handleDelete(building.id),
+                          });
+                        }}
+                      />,
+                    ]
+                  : []),
               ]}
             >
               <Card.Meta
@@ -539,7 +598,13 @@ const BuildingManagement: FC = () => {
             sorterMetas={sorterMetas}
             extraFilters={extraFilters}
             rowActions={rowActions}
-            batchDelete={{ onDelete: handleBatchDelete, target: "楼宇" }}
+            // 批量删除：PageTable 的 batchDelete 契约无 permission 位 → 页面层条件传参
+            // （ready 无权限 → 不传 → 内建 BatchDeleteButton 与 rowSelection 都不渲染）
+            batchDelete={
+              permDelete.visible
+                ? { onDelete: handleBatchDelete, target: "楼宇" }
+                : undefined
+            }
             toolbar={
               <Space>
                 <Radio.Group
@@ -554,15 +619,39 @@ const BuildingManagement: FC = () => {
                     <AppstoreOutlined /> 卡片
                   </Radio.Button>
                 </Radio.Group>
-                <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-                  导入
-                </Button>
-                <Button icon={<ExportOutlined />} onClick={handleOpenExport}>
-                  导出
-                </Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-                  新增楼宇
-                </Button>
+                {/* Excel 导入/导出的门控点落在触发按钮（modal 容器 :690/:697 保留无条件渲染，
+                    按钮不渲染 ⇒ 弹窗永远打不开） */}
+                {permImport.visible && (
+                  <Button
+                    icon={<ImportOutlined />}
+                    onClick={() => setImportVisible(true)}
+                    disabled={permImport.disabled}
+                    title={permImport.hint}
+                  >
+                    导入
+                  </Button>
+                )}
+                {permExport.visible && (
+                  <Button
+                    icon={<ExportOutlined />}
+                    onClick={handleOpenExport}
+                    disabled={permExport.disabled}
+                    title={permExport.hint}
+                  >
+                    导出
+                  </Button>
+                )}
+                {permAdd.visible && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => openModal()}
+                    disabled={permAdd.disabled}
+                    title={permAdd.hint}
+                  >
+                    新增楼宇
+                  </Button>
+                )}
               </Space>
             }
             // 卡片模式：表格由 PageTable 承载但隐藏（搜索/排序/分页/批删/三态保持同一数据层）

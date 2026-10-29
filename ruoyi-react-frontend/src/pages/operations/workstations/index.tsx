@@ -35,6 +35,8 @@ import { useDict, type DictItem } from "@/hooks/useDict";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useAliasByLocation } from "@/hooks/useAliasByLocation";
 import { ExcelImportLazy } from "@/components/shared";
+import { useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
@@ -57,7 +59,6 @@ import type { FloorOption, UserOption, DeptTreeNode } from "./types";
 import { buildingApi, floorApi, workstationApi, deptApi } from "@/lib/opsApi";
 import WorkstationDeviceTable from "@/components/operations/WorkstationDeviceTable";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { useMenuStore } from "@/store/menuStore";
 import {
   HealthCard,
   ReconciliationDrawer,
@@ -118,8 +119,23 @@ const WorkstationManagement: FC = () => {
 
   // Phase 39-07: 工位部门物理位置映射 Drawer 状态
   const [aliasDrawerOpen, setAliasDrawerOpen] = useState(false);
-  const menuPermissions = useMenuStore((s) => s.permissions);
-  const canListAlias = menuPermissions.includes("ops:location:alias:list");
+  // Phase 86 W2（RBAC-02）：操作级权限门控（三态）。
+  // 本页原有两处旧式判定（menuStore 权限集直读 + 硬编码字面量）已全部迁为本 hook：
+  //   ① alias 抽屉入口 `canListAlias`（原 `menuPermissions.includes("ops:location:alias:list")`）；
+  //   ② 抽屉内部 add/delete（原 LocationAliasDrawer 内自造 hasPermission）。
+  // ⚠️ 三态语义差异：旧写法「权限集不含该码 → 入口不渲染」；新写法「ready 无码 → 不渲染；
+  //    未就绪 → 渲染但 disabled + hint」。这是本波唯一的行为变更，属收紧到更安全一侧
+  //    （不再让用户「看不到入口也无从得知原因」），与 v1.24 PERM-02 设计意图一致。
+  // ⚠️ ops 码组只有 delete 键，没有 remove 键。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.opsWorkstation.edit);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsWorkstation.delete);
+  const permAdd = permGate.decide(PERMISSION_CODES.opsWorkstation.add);
+  const permImport = permGate.decide(PERMISSION_CODES.opsWorkstation.import);
+  // ⚠️ NEW-02（数据外带面）：「下载部门映射表」是**导出类写入口**，归 opsWorkstation.export
+  const permExport = permGate.decide(PERMISSION_CODES.opsWorkstation.export);
+  // alias 抽屉入口：ready 无 opsLocationAlias.list → 不渲染；未就绪 → 渲染但 disabled
+  const permAliasList = permGate.decide(PERMISSION_CODES.opsLocationAlias.list);
 
   // 派生:仅外部机构(isExternalOrg===1 的节点)的部门树。
   // 模态框"所属机构"与左侧 DeptSidebar(默认 externalOnly=true)共用同一份外部机构视图。
@@ -361,6 +377,8 @@ const WorkstationManagement: FC = () => {
         handleEdit: (r) => handleEditRef.current(r),
         handleDelete: (id) => handleDeleteRef.current(id),
         getColumnSortOrder,
+        editPermission: PERMISSION_CODES.opsWorkstation.edit,
+        deletePermission: PERMISSION_CODES.opsWorkstation.delete,
       }),
     [getColumnSortOrder]
   );
@@ -705,6 +723,9 @@ const WorkstationManagement: FC = () => {
             handleOpenModal(record);
           }}
           onDelete={(id) => handleDelete(id, handleSuccess)}
+          // 卡片视图与表格视图共用页面层同一组门控决策
+          editDecision={permEdit}
+          deleteDecision={permDelete}
         />
       );
     }
@@ -822,50 +843,94 @@ const WorkstationManagement: FC = () => {
                 <Radio.Button value="card">
                   <AppstoreOutlined /> 卡片
                 </Radio.Button>
-                <Radio.Button value="floorplan">
-                  <BgColorsOutlined /> 平面图
-                </Radio.Button>
+                {/* Phase 86 W2：平面图视图是**可保存的编辑器** —— 拖动工位会调
+                    `workstationApi.updatePositions`（`useWorkstationView.ts:60`）写工位位置，
+                    因此与 floors 平面图同一口径：归 `opsWorkstation.edit`。
+                    ready 无码 → 不渲染该视图入口；未就绪 → 渲染但 disabled + hint。 */}
+                {permEdit.visible && (
+                  <Radio.Button
+                    value="floorplan"
+                    disabled={permEdit.disabled}
+                    title={permEdit.hint}
+                  >
+                    <BgColorsOutlined /> 平面图
+                  </Radio.Button>
+                )}
               </Radio.Group>
-              <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-                导入
-              </Button>
+              {/* Excel 导入/导出的门控点 = 触发按钮（modal 容器 :929/:936 保留无条件渲染） */}
+              {permImport.visible && (
+                <Button
+                  icon={<ImportOutlined />}
+                  onClick={() => setImportVisible(true)}
+                  disabled={permImport.disabled}
+                  title={permImport.hint}
+                >
+                  导入
+                </Button>
+              )}
               {/* quick 260713-df0: 工位导入辅助 — 下载 sys_dept dept_name|code 映射表,
-                  用户填 Excel 时不必再翻部门列表查 dept_code */}
-              <Button icon={<DownloadOutlined />} onClick={() => deptApi.exportMapping()}>
-                下载部门映射表
-              </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => {
-                  setExportFilters(buildSearchParams({ searchForm }));
-                  setExportVisible(true);
-                }}
-              >
-                导出
-              </Button>
-              {canListAlias && (
-                <Button icon={<SettingOutlined />} onClick={() => setAliasDrawerOpen(true)}>
+                  用户填 Excel 时不必再翻部门列表查 dept_code
+                  Phase 86 W2（NEW-02）：这是**导出类写入口**（数据外带面 —— 下载 sys_dept
+                  的 dept_name|code 映射表），不因「不是 ExcelExport 容器」而被排除
+                  → 归 opsWorkstation.export */}
+              {permExport.visible && (
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={() => deptApi.exportMapping()}
+                  disabled={permExport.disabled}
+                  title={permExport.hint}
+                >
+                  下载部门映射表
+                </Button>
+              )}
+              {permExport.visible && (
+                <Button
+                  icon={<ExportOutlined />}
+                  onClick={() => {
+                    setExportFilters(buildSearchParams({ searchForm }));
+                    setExportVisible(true);
+                  }}
+                  disabled={permExport.disabled}
+                  title={permExport.hint}
+                >
+                  导出
+                </Button>
+              )}
+              {/* alias 抽屉入口：旧式 `canListAlias` 已迁为三态 helper */}
+              {permAliasList.visible && (
+                <Button
+                  icon={<SettingOutlined />}
+                  onClick={() => setAliasDrawerOpen(true)}
+                  disabled={permAliasList.disabled}
+                  title={permAliasList.hint}
+                >
                   映射
                 </Button>
               )}
-              {selectedRowKeys.length > 0 && (
+              {selectedRowKeys.length > 0 && permDelete.visible && (
                 <Button
                   icon={<DeleteOutlined />}
                   style={{ color: "var(--theme-error)" }}
                   onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
+                  disabled={permDelete.disabled}
+                  title={permDelete.hint}
                 >
                   批量删除 ({selectedRowKeys.length})
                 </Button>
               )}
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  handleOpenModal(undefined);
-                }}
-              >
-                新增工位
-              </Button>
+              {permAdd.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    handleOpenModal(undefined);
+                  }}
+                  disabled={permAdd.disabled}
+                  title={permAdd.hint}
+                >
+                  新增工位
+                </Button>
+              )}
             </Space>
           </div>
           {selectedRowKeys.length > 0 && (

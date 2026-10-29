@@ -29,8 +29,9 @@ import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { PageTable } from "@/components/shared";
+import { PageTable, useActionPermission } from "@/components/shared";
 import type { PageTableRenderContext, SearchField } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import {
   ReconciliationDrawer,
@@ -58,6 +59,15 @@ interface DeviceTypeOption {
 export type { AssetColumnConfig };
 
 const AssetList: FC = () => {
+  // Phase 86 W2（RBAC-02）：操作级权限门控（三态）。ops 码组只有 delete 键 → 删除用 .delete。
+  const permGate = useActionPermission();
+  const permDelete = permGate.decide(PERMISSION_CODES.opsAsset.delete);
+  const permAdd = permGate.decide(PERMISSION_CODES.opsAsset.add);
+  const permImport = permGate.decide(PERMISSION_CODES.opsAsset.import);
+  // ⚠️ 导出类写入口（数据外带面）：本页有 2 处 —— 「下载模板」与「导出」，
+  // 均归 opsAsset.export（本页导出走 handleExport 内联按钮，无 ExcelExport 容器）。
+  const permExport = permGate.decide(PERMISSION_CODES.opsAsset.export);
+
   const { message } = App.useApp();
   const [statistics, setStatistics] = useState<Statistics>({
     total: 0,
@@ -536,6 +546,7 @@ const AssetList: FC = () => {
     (record: Asset) => [
       createDeleteAction(record.id, handleDelete, {
         target: `资产 ${record.devicesn || record.id}`,
+        permission: PERMISSION_CODES.opsAsset.delete,
       }),
     ],
     [handleDelete]
@@ -627,37 +638,68 @@ const AssetList: FC = () => {
         searchFields={searchFields}
         sorterMetas={sorterMetas}
         rowActions={rowActions}
-        batchDelete={{ onDelete: handleBatchDelete, target: "资产" }}
+        batchDelete={
+          permDelete.visible ? { onDelete: handleBatchDelete, target: "资产" } : undefined
+        }
         toolbar={
           <Space>
             {/* Phase 63 STOP-06 遗留：本页未渲染资产表单弹窗，新增入口保持可见
                 （迁移前由列表数据层内建弹窗承接，但该弹窗从未在本页渲染） */}
-            <Button type="primary" icon={<PlusOutlined />}>
-              新增资产
-            </Button>
-            {/* STOP-06: 下载模板兑现真实下载（原为假入口，复用导入弹层） */}
-            <Button
-              icon={<DownloadOutlined />}
-              loading={templateDownloading}
-              onClick={async () => {
-                setTemplateDownloading(true);
-                try {
-                  await excelApi.downloadTemplate("asset");
-                } catch (error) {
-                  handleApiError(error, "下载模板");
-                } finally {
-                  setTemplateDownloading(false);
-                }
-              }}
-            >
-              下载模板
-            </Button>
-            <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-              导入
-            </Button>
-            <Button icon={<ExportOutlined />} loading={exporting} onClick={handleExport}>
-              导出
-            </Button>
+            {permAdd.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                disabled={permAdd.disabled}
+                title={permAdd.hint}
+              >
+                新增资产
+              </Button>
+            )}
+            {/* STOP-06: 下载模板兑现真实下载（原为假入口，复用导入弹层）
+                Phase 86 W2（NEW-02）：这是**导出类写入口**（数据外带面 —— 模板可反推
+                导入字段口径），不因「本页无 ExcelExport 容器」而被排除 → 归 opsAsset.export */}
+            {permExport.visible && (
+              <Button
+                icon={<DownloadOutlined />}
+                loading={templateDownloading}
+                disabled={permExport.disabled}
+                title={permExport.hint}
+                onClick={async () => {
+                  setTemplateDownloading(true);
+                  try {
+                    await excelApi.downloadTemplate("asset");
+                  } catch (error) {
+                    handleApiError(error, "下载模板");
+                  } finally {
+                    setTemplateDownloading(false);
+                  }
+                }}
+              >
+                下载模板
+              </Button>
+            )}
+            {/* Excel 门控点 = 触发按钮（modal 容器保留无条件渲染） */}
+            {permImport.visible && (
+              <Button
+                icon={<ImportOutlined />}
+                onClick={() => setImportVisible(true)}
+                disabled={permImport.disabled}
+                title={permImport.hint}
+              >
+                导入
+              </Button>
+            )}
+            {permExport.visible && (
+              <Button
+                icon={<ExportOutlined />}
+                loading={exporting}
+                onClick={handleExport}
+                disabled={permExport.disabled}
+                title={permExport.hint}
+              >
+                导出
+              </Button>
+            )}
             <Button icon={<SettingOutlined />} onClick={() => setShowColumnConfig(true)}>
               列设置
             </Button>

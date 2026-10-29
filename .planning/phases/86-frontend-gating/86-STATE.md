@@ -335,3 +335,116 @@ Lead 的「16」若按「7 页里 user 复核也算一页覆盖」的算法得�
 - `src/pages/system/menu/__tests__/permission.gate.test.tsx`：8 例（全绿，含 `<Switch>` 形态三态）；
 - `src/pages/system/user/__tests__/permission.gate.test.tsx`：既有 7 例**零回归**（未改动该文件）。
 
+---
+
+## 十四、W2 铺开进度（Plan 02 / 2026-10-29）
+
+### 覆盖率推进（脚本实跑）
+
+| 项 | W1 完成后 | W2 完成后 | 变化 |
+|---|---:|---:|---|
+| 已门控页面 | 8 | **16** | +8 |
+| 未覆盖页面 | 17 | **9** | −8 |
+| 豁免条数 | 51 | **51** | 0（未变动） |
+| 应门控页面 | 25 | 25 | 0 |
+
+**恒等式复核**：`16 已门控 + 9 未覆盖 = 25 应门控`；`25 + 51 = 76 页面` —— 两条恒等式均保持。
+未覆盖 9 页 = network 6（backups / command / credentials / discoveries / executions / mac-history... 见脚本清单）+ ad-domain 3（configs / groups / users）。
+`EXPECTED_EXEMPTION_COUNT`（= 51）**未改动**（豁免清单零增减）。
+
+### W2 逐页门控入口与权限码（施工图落地结果）
+
+| 页 | 门控入口（含 Excel 触发按钮 + 导出类入口） | 权限码 |
+|---|---|---|
+| **buildings** | 行编辑 / 行删除 / 批量删除 / 导入触发 / 导出触发 / 新增 / 卡片视图编辑·删除（7） | `opsBuilding.edit / .delete / .delete / .import / .export / .add` |
+| **floors** | 行编辑 / 行「查看平面图」/ 行删除 / 批量删除 / 导入触发（`FloorSearchForm`）/ 导出触发（`FloorSearchForm`）/ 新增 / 平面图编辑模式（`FloorPlanEditorView`）/ 卡片视图编辑·平面图·删除（9） | `opsFloor.edit / .delete / .import / .export / .add`；平面图 → **四码合并**（见下） |
+| **workstations** | 行编辑 / 行删除 / 批量删除 / 导入触发 / 「下载部门映射表」/ 导出触发 / alias 抽屉入口 / 新增 / **平面图视图入口** / 卡片视图编辑·删除（10） | `opsWorkstation.edit / .delete / .import / .export / .export / .add`；alias → `opsLocationAlias.list/add/delete` |
+| **info-points** | 行编辑 / 行删除 / 批量删除 / 导入触发 / 导出触发 / 新增 / 卡片视图编辑·删除（7） | `opsInfoPoint.edit / .delete / .import / .export / .add` |
+| **server-rooms** | 行编辑 / 行删除 / 批量删除 / 导入触发 / 导出触发 / 新增 / 卡片视图编辑·删除（7） | `opsServerRoom.edit / .delete / .import / .export / .add` |
+| **room-devices** | 行编辑 / 行删除 / 批量删除 / 导入触发 / 导出触发 / 新增 / 卡片视图编辑·删除（7） | `opsRoomDevice.edit / .delete / .import / .export / .add` |
+| **dedicated-lines** | 行编辑 / 行删除 / 批量删除 / 导入触发 / 导出触发 / 新增 / 卡片视图编辑·删除（7） | `opsDedicatedLine.edit / .delete / .import / .export / .add` |
+| **assets** | 行删除 / 批量删除 / 「下载模板」/ 导入触发 / 导出触发 / 新增（6） | `opsAsset.delete / .import / .export / .export / .add`（本页无行编辑入口） |
+
+**合计门控入口 60 个**（buildings 7 + floors 9 + workstations 10 + info-points 7 + server-rooms 7 + room-devices 7 + dedicated-lines 7 + assets 6）。
+
+### 导出类写入口逐页 grep 复核（NEW-02 两处）
+
+| 页 | 导出类入口 | 门控码 | 复核方式 |
+|---|---|---|---|
+| **assets** | 「下载模板」`index.tsx:639-654` → `excelApi.downloadTemplate("asset")` | `opsAsset.export` | `grep -rn "downloadTemplate\|excelApi" src/pages/operations/assets/` → 仅此一处，已条件渲染 + disabled + title |
+| **workstations** | 「下载部门映射表」`index.tsx:834-836` → `deptApi.exportMapping()` | `opsWorkstation.export` | `grep -rn "exportMapping" src/pages/operations/workstations/` → 仅此一处，已条件渲染 + disabled + title |
+| 其余 6 页 | 均只有 `ExportOutlined` 触发按钮（无额外下载/模板入口） | 各页 `.export` | 逐页 grep `ExportOutlined / DownloadOutlined / downloadTemplate / exportMapping`，无漏网 |
+
+**额外发现并补齐 1 处施工图未列的写入口**：workstations「平面图」视图（`Radio.Button value="floorplan"`）—— 该视图内拖动工位会调 `workstationApi.updatePositions`（`hooks/useWorkstationView.ts:60`）**写工位位置**，与 floors 平面图同一性质（可保存编辑器）→ 归 `opsWorkstation.edit`，已条件渲染 + disabled + hint，并在抽样测试中覆盖。
+
+### `FloorSearchForm` 三通道契约（本波唯一组件契约加法）
+
+最终 TS 签名：
+
+```ts
+export interface FloorSearchFormProps {
+  // …既有字段零变更…
+  onImport?: () => void;          // 通道①：必填 → 可选（不传 ⇒ 按钮不渲染）
+  onExport?: () => void;          // 通道①：必填 → 可选
+  importDisabled?: boolean;       // 通道①：新增可选位（默认 false）
+  exportDisabled?: boolean;       // 通道①：新增可选位（默认 false）
+  notReadyHint?: string;          // 通道①：未就绪提示（透传到触发按钮 title）
+  onBatchDelete: () => void;      // 通道②：保持必填（页面层 noop 包装兜底）
+  batchDeleteDisabled?: boolean;  // 通道②：新增可选位（默认 false）
+  showBatchDelete?: boolean;      // 通道②：新增可选位（默认 true —— 决定渲不渲染）
+}
+```
+
+三态语义核对（批删按钮「批量删除 (N)」）：
+
+| 权限态 | `decide()` 返回 | `showBatchDelete` | `batchDeleteDisabled` | 实测按钮表现 |
+|---|---|---|---|---|
+| ready + 有 `opsFloor.delete` | `{visible:true, disabled:false}` | `true` | `false` | 渲染且可用 |
+| ready + **无**权限 | `{visible:false, disabled:false}` | **`false`** | `false` | **不渲染（不在 DOM）** |
+| **未就绪**（loading / error） | `{visible:true, disabled:true}` | `true` | **`true`** | **渲染但 disabled + hint** |
+
+通道③（shared 零 diff 边界）：上述加法**全部落在** `src/pages/operations/floors/components/FloorSearchForm.tsx`；`src/components/shared/**` 实跑 `git diff --stat` = **空**。
+
+### 平面图四码合并口径的落地
+
+- 决策对象在 `floors/index.tsx` 内构造（页面层唯一判定点）：
+  `permFloorPlanEdit ∧ permWall(opsWall.edit) ∧ permDoor(opsDoor.edit) ∧ permWorkstationEdit`；
+- 合并语义：任一码**未就绪** → `{visible:true, disabled:true, hint}`（渲染但禁用）；
+  四码全就绪且**全持** → 可用；全就绪但**缺任一码** → `{visible:false}`（不渲染）；
+- 同一决策对象同时喂给**三处入口**：① 行「查看平面图」（经 `FloorTableColumns` 的 `floorPlanDecision` prop）；
+  ② 平面图工具栏「编辑模式」按钮（经 `FloorPlanEditorView` 的 `editDecision` prop）；③ 卡片视图平面图图标；
+- 源码注释写明合并口径与「漏 `opsWorkstation.edit` 即越权」的理由（`useFloorPlanEditor.ts:249-255`
+  的 `saveWorkstations` 在同一次保存里改写工位位置）。
+
+### alias 旧式直判迁移（本波唯一迁移项）
+
+- `workstations/index.tsx:122` 的 `menuPermissions.includes("ops:location:alias:list")` → `permAliasList = permGate.decide(PERMISSION_CODES.opsLocationAlias.list)`；
+- `LocationAliasDrawer.tsx:62-65` 的 `useMenuStore` + 自造 `hasPermission` + 硬编码字面量 → `permGate.decide(opsLocationAlias.add / .delete)`；
+- `grep -rn "useMenuStore" src/pages/operations/workstations/` 命中数 = **0**；
+- **行为变更登记（本波唯一）**：旧写法「权限集不含该码 → 入口不渲染」→ 新写法「ready 无码 → 不渲染；
+  **未就绪 → 渲染但 disabled + hint**」。属收紧到更安全一侧（不再让用户「看不到入口也无从得知原因」），与 v1.24 PERM-02 设计意图一致。
+
+### W2 组件测试
+
+- `src/pages/operations/buildings/__tests__/permission.gate.test.tsx`：**5 例**（全绿）—— ① ready 只持读码全部入口不在 DOM；② 未就绪 loading → 在 DOM 且 disabled + hint；②-2 未就绪 error → 同上；③ 全写码 → 可用；④ ready 空权限集 → 不渲染（与未就绪可区分）；
+- `src/pages/operations/workstations/__tests__/permission.gate.test.tsx`：**5 例**（全绿）—— 同上四路径 + 覆盖「列在 `columns.tsx` 的接法」与「alias 抽屉入口条件渲染的接法」+ 「下载部门映射表」+ 平面图视图入口；
+- **两个新测试文件专项类型检查错误数 = 0**（临时 tsconfig：`extends ./tsconfig.app.json` + `types` 加 `vitest/globals` + 指定 include + `exclude: []`）；
+- **floors 测试目录类型债基线 36 未新增**（复跑仍 = 36）；
+- floors 既有测试 **10 files / 71 tests 零回归**；workstations 既有 14 files / 86 tests 零回归。
+
+### 既有测试的语义适配（未删任何断言）
+
+| 测试文件 | 适配内容 | 理由 |
+|---|---|---|
+| `operations/dedicated-lines/__tests__/index.pageTable.test.tsx:84` | 源码字面量断言 `batchDelete={{ onDelete: handleBatchDelete, target: "专线" }}` → 放宽为「`batchDelete={` + 载荷片段 + `permDelete.visible` 条件传参在场」 | `batchDelete` 已改为**条件传参**（PageTable 契约无 permission 位）；契约意图（仍走 PageTable.batchDelete / 仍以 handleBatchDelete+target 为载荷）不变 |
+| `pages/__tests__/batch53.modalOpen.test.tsx` | `openModalAndAssert` 前置显式构造 `permissionsLoaded:true` + 授予 ops 8 页写码 | 三态语义下「未就绪」按设计 disabled，而该 helper 的判定对象是「点新增 → Modal 打开」交互分支 |
+
+### 结构性局限（页级判定器 ≠ 入口级判定）—— W2 实证
+
+`check-gating-coverage.mjs` 是**页级**判定器（详见第八节）：它只判「该页是否命中写入口特征 且 是否出现门控特征」，
+**不判单个入口是否已门控**。W2 实证：施工图曾遗漏 **2 处导出类写入口**（assets「下载模板」`index.tsx:639-654`、
+workstations「下载部门映射表」`index.tsx:834-836`，均为**数据外带面**）与 **1 处视图内写入口**
+（workstations 平面图视图 `updatePositions`）—— 脚本对这三处**全部无感**，是**逐页 grep 写 API 调用点**才发现的。
+→ 归口 86-05 收口时做一次**全 ops 域导出类入口 + 视图内写入口**抽样复核；入口级覆盖只能靠
+**施工图 + 人工 review + 抽样测试**三层兜底（脚本绿灯 ≠ 门控覆盖 100%）。
+

@@ -15,7 +15,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import type { FC, Key } from "react";
+import type { FC, Key, CSSProperties } from "react";
 import type { FormInstance } from "antd";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
@@ -53,8 +53,9 @@ import { roomDeviceApi, serverRoomApi } from "@/lib/opsApi";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
-import { PageTable } from "@/components/shared";
+import { PageTable, useActionPermission } from "@/components/shared";
 import type { PageTableRenderContext, SearchField } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -69,6 +70,17 @@ import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
 const { Content } = Layout;
+
+/**
+ * 卡片视图图标动作的禁用态样式（Phase 86 W2，与 buildings 页同口径）。
+ * antd `Card.actions` 只接受 ReactNode → 未就绪时用「不响应指针 + 降透明度」
+ * 表达禁用态，并配合 `title={decision.hint}` 提示原因。
+ */
+const cardActionStyle = (disabled: boolean): CSSProperties => ({
+  opacity: disabled ? 0.45 : 1,
+  pointerEvents: disabled ? "none" : "auto",
+  cursor: disabled ? "not-allowed" : "pointer",
+});
 
 // 模块级静态映射（Phase m76-js-misc 6.3）
 const ROOM_DEVICE_STATUS_MAP: Record<number, string> = { 0: "正常", 1: "故障", 2: "报废" };
@@ -121,6 +133,14 @@ interface Statistics {
 }
 
 const RoomDeviceManagement: FC = () => {
+  // Phase 86 W2（RBAC-02）：操作级权限门控（三态）。ops 码组只有 delete 键 → 删除用 .delete。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.opsRoomDevice.edit);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsRoomDevice.delete);
+  const permAdd = permGate.decide(PERMISSION_CODES.opsRoomDevice.add);
+  const permImport = permGate.decide(PERMISSION_CODES.opsRoomDevice.import);
+  const permExport = permGate.decide(PERMISSION_CODES.opsRoomDevice.export);
+
   const location = useLocation();
   const [viewMode, setViewMode] = usePersistedStateController<ViewMode>({
     keyPrefix: location.pathname,
@@ -456,9 +476,19 @@ const RoomDeviceManagement: FC = () => {
   ];
 
   // 行操作：编辑 + 删除（数量/顺序与迁移前一致；删除走 createDeleteAction 唯一入口）
+  // permission 由 ActionButtons 内建三态门控
   const rowActions = (record: RoomDevice) => [
-    { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
-    createDeleteAction(record.id, handleDelete, { target: `机房设备 ${record.name}` }),
+    {
+      key: "edit",
+      label: "编辑",
+      icon: <EditOutlined />,
+      onClick: () => openModal(record),
+      permission: PERMISSION_CODES.opsRoomDevice.edit,
+    },
+    createDeleteAction(record.id, handleDelete, {
+      target: `机房设备 ${record.name}`,
+      permission: PERMISSION_CODES.opsRoomDevice.delete,
+    }),
   ];
 
   const renderCardView = () => {
@@ -481,17 +511,41 @@ const RoomDeviceManagement: FC = () => {
             <Card
               hoverable
               actions={[
-                <EditOutlined key="edit" onClick={() => openModal(device)} />,
-                <DeleteOutlined
-                  key="delete"
-                  style={{ color: "var(--theme-error)" }}
-                  onClick={() => {
-                    confirmDelete({
-                      target: `机房设备 ${device.name}`,
-                      onDelete: () => handleDelete(device.id),
-                    });
-                  }}
-                />,
+                // 卡片视图与表格视图是同一页的两种形态 → 共用同一组门控决策
+                ...(permEdit.visible
+                  ? [
+                      <EditOutlined
+                        key="edit"
+                        title={permEdit.hint}
+                        style={cardActionStyle(permEdit.disabled)}
+                        onClick={() => {
+                          if (permEdit.disabled) return;
+                          openModal(device);
+                        }}
+                      />,
+                    ]
+                  : []),
+                ...(permDelete.visible
+                  ? [
+                      <DeleteOutlined
+                        key="delete"
+                        title={permDelete.hint}
+                        style={{
+                          ...cardActionStyle(permDelete.disabled),
+                          color: permDelete.disabled
+                            ? "var(--theme-text-tertiary)"
+                            : "var(--theme-error)",
+                        }}
+                        onClick={() => {
+                          if (permDelete.disabled) return;
+                          confirmDelete({
+                            target: `机房设备 ${device.name}`,
+                            onDelete: () => handleDelete(device.id),
+                          });
+                        }}
+                      />,
+                    ]
+                  : []),
               ]}
             >
               <Card.Meta
@@ -617,7 +671,11 @@ const RoomDeviceManagement: FC = () => {
           sorterMetas={sorterMetas}
           extraFilters={extraFilters}
           rowActions={rowActions}
-          batchDelete={{ onDelete: handleBatchDelete, target: "机房设备" }}
+          batchDelete={
+            permDelete.visible
+              ? { onDelete: handleBatchDelete, target: "机房设备" }
+              : undefined
+          }
           toolbar={
             <Space>
               <Radio.Group
@@ -632,15 +690,38 @@ const RoomDeviceManagement: FC = () => {
                   <AppstoreOutlined /> 卡片
                 </Radio.Button>
               </Radio.Group>
-              <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-                导入
-              </Button>
-              <Button icon={<ExportOutlined />} onClick={handleOpenExport}>
-                导出
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-                新增设备
-              </Button>
+              {/* Excel 门控点 = 触发按钮（modal 容器保留无条件渲染） */}
+              {permImport.visible && (
+                <Button
+                  icon={<ImportOutlined />}
+                  onClick={() => setImportVisible(true)}
+                  disabled={permImport.disabled}
+                  title={permImport.hint}
+                >
+                  导入
+                </Button>
+              )}
+              {permExport.visible && (
+                <Button
+                  icon={<ExportOutlined />}
+                  onClick={handleOpenExport}
+                  disabled={permExport.disabled}
+                  title={permExport.hint}
+                >
+                  导出
+                </Button>
+              )}
+              {permAdd.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => openModal()}
+                  disabled={permAdd.disabled}
+                  title={permAdd.hint}
+                >
+                  新增设备
+                </Button>
+              )}
             </Space>
           }
           // 卡片模式：表格由 PageTable 承载但隐藏（搜索/排序/分页/批删/三态保持同一数据层）

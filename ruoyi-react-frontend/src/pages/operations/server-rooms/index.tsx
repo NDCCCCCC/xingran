@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import type { FC } from "react";
+import type { FC, CSSProperties } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -42,6 +42,8 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { confirmDelete } from "@/components/shared/confirmDelete";
@@ -55,6 +57,17 @@ import { NORMAL_STOP_TAG_CONFIG } from "@/constants/status";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
 const { Content } = Layout;
+
+/**
+ * 卡片视图图标动作的禁用态样式（Phase 86 W2，与 buildings/room-devices/dedicated-lines/info-points 同口径）。
+ * antd `Card.actions` 只接受 ReactNode → 未就绪时用「不响应指针 + 降透明度」
+ * 表达禁用态，并配合 `title={decision.hint}` 提示原因。
+ */
+const cardActionStyle = (disabled: boolean): CSSProperties => ({
+  opacity: disabled ? 0.45 : 1,
+  pointerEvents: disabled ? "none" : "auto",
+  cursor: disabled ? "not-allowed" : "pointer",
+});
 
 type ViewMode = "table" | "card";
 
@@ -77,6 +90,14 @@ interface Statistics {
 }
 
 const ServerRoomManagement: FC = () => {
+  // Phase 86 W2（RBAC-02）：操作级权限门控（三态）。ops 码组只有 delete 键 → 删除用 .delete。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.opsServerRoom.edit);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsServerRoom.delete);
+  const permAdd = permGate.decide(PERMISSION_CODES.opsServerRoom.add);
+  const permImport = permGate.decide(PERMISSION_CODES.opsServerRoom.import);
+  const permExport = permGate.decide(PERMISSION_CODES.opsServerRoom.export);
+
   const location = useLocation();
   const [viewMode, setViewMode] = usePersistedStateController<ViewMode>({
     keyPrefix: location.pathname,
@@ -349,12 +370,19 @@ const ServerRoomManagement: FC = () => {
       key: "action",
       render: (_, record) => {
         const actions = [
-          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
+          {
+            key: "edit",
+            label: "编辑",
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+            permission: PERMISSION_CODES.opsServerRoom.edit,
+          },
           {
             key: "delete",
             label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
+            permission: PERMISSION_CODES.opsServerRoom.delete,
             onClick: () => {
               confirmDelete({
                 target: `机房 ${record.name}`,
@@ -388,17 +416,41 @@ const ServerRoomManagement: FC = () => {
             <Card
               hoverable
               actions={[
-                <EditOutlined key="edit" onClick={() => openModal(room)} />,
-                <DeleteOutlined
-                  key="delete"
-                  style={{ color: "var(--theme-error)" }}
-                  onClick={() => {
-                    confirmDelete({
-                      target: `机房 ${room.name}`,
-                      onDelete: () => handleDelete(room.id),
-                    });
-                  }}
-                />,
+                // 卡片视图与表格视图是同一页的两种形态 → 共用同一组门控决策
+                ...(permEdit.visible
+                  ? [
+                      <EditOutlined
+                        key="edit"
+                        title={permEdit.hint}
+                        style={cardActionStyle(permEdit.disabled)}
+                        onClick={() => {
+                          if (permEdit.disabled) return;
+                          openModal(room);
+                        }}
+                      />,
+                    ]
+                  : []),
+                ...(permDelete.visible
+                  ? [
+                      <DeleteOutlined
+                        key="delete"
+                        title={permDelete.hint}
+                        style={{
+                          ...cardActionStyle(permDelete.disabled),
+                          color: permDelete.disabled
+                            ? "var(--theme-text-tertiary)"
+                            : "var(--theme-error)",
+                        }}
+                        onClick={() => {
+                          if (permDelete.disabled) return;
+                          confirmDelete({
+                            target: `机房 ${room.name}`,
+                            onDelete: () => handleDelete(room.id),
+                          });
+                        }}
+                      />,
+                    ]
+                  : []),
               ]}
             >
               <Card.Meta
@@ -520,39 +572,61 @@ const ServerRoomManagement: FC = () => {
                   <AppstoreOutlined /> 卡片
                 </Radio.Button>
               </Radio.Group>
-              <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-                导入
-              </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => {
-                  // 获取当前筛选条件
-                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                  const currentFilters: Record<string, unknown> = {};
-                  Object.keys(values).forEach((key) => {
-                    const value = values[key];
-                    if (value !== undefined && value !== null && value !== "") {
-                      currentFilters[key] = value;
-                    }
-                  });
-                  setExportFilters(currentFilters);
-                  setExportVisible(true);
-                }}
-              >
-                导出
-              </Button>
-              {selectedRowKeys.length > 0 && (
+              {/* Excel 门控点 = 触发按钮（modal 容器保留无条件渲染） */}
+              {permImport.visible && (
+                <Button
+                  icon={<ImportOutlined />}
+                  onClick={() => setImportVisible(true)}
+                  disabled={permImport.disabled}
+                  title={permImport.hint}
+                >
+                  导入
+                </Button>
+              )}
+              {permExport.visible && (
+                <Button
+                  icon={<ExportOutlined />}
+                  onClick={() => {
+                    // 获取当前筛选条件
+                    const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                    const currentFilters: Record<string, unknown> = {};
+                    Object.keys(values).forEach((key) => {
+                      const value = values[key];
+                      if (value !== undefined && value !== null && value !== "") {
+                        currentFilters[key] = value;
+                      }
+                    });
+                    setExportFilters(currentFilters);
+                    setExportVisible(true);
+                  }}
+                  disabled={permExport.disabled}
+                  title={permExport.hint}
+                >
+                  导出
+                </Button>
+              )}
+              {selectedRowKeys.length > 0 && permDelete.visible && (
                 <Button
                   icon={<DeleteOutlined />}
                   style={{ color: "var(--theme-error)" }}
                   onClick={handleBatchDelete}
+                  disabled={permDelete.disabled}
+                  title={permDelete.hint}
                 >
                   批量删除 ({selectedRowKeys.length})
                 </Button>
               )}
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-                新增机房
-              </Button>
+              {permAdd.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => openModal()}
+                  disabled={permAdd.disabled}
+                  title={permAdd.hint}
+                >
+                  新增机房
+                </Button>
+              )}
             </Space>
           </div>
           {selectedRowKeys.length > 0 && (

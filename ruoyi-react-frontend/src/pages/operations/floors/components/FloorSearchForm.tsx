@@ -38,9 +38,30 @@ interface FloorSearchFormProps {
   onReset: () => void;
   onRefresh: () => void;
   onViewModeChange: (mode: ViewMode) => void;
-  onImport: () => void;
-  onExport: () => void;
+  /**
+   * Phase 86 W2 通道①：导入触发回调 —— 由**必填放宽为可选**。
+   * 不传 ⇒ 「导入」按钮**不渲染**（页面层用「ready 无权限 → 不传」表达「不在 DOM」）；
+   * 既有调用方传了回调时行为零变更。
+   */
+  onImport?: () => void;
+  /** Phase 86 W2 通道①：导出触发回调 —— 同上，由必填放宽为可选。 */
+  onExport?: () => void;
+  /** Phase 86 W2 通道①：导入按钮 disabled 位（未就绪 → 渲染但禁用）。 */
+  importDisabled?: boolean;
+  /** Phase 86 W2 通道①：导出按钮 disabled 位（未就绪 → 渲染但禁用）。 */
+  exportDisabled?: boolean;
+  /** 未就绪提示（透传到导入/导出按钮 title）。 */
+  notReadyHint?: string;
+  /** 批量删除回调（保持**必填** —— 页面层用 noop 包装兜底）。 */
   onBatchDelete: () => void;
+  /** Phase 86 W2 通道②：批量删除按钮 disabled 位（未就绪 → 渲染但禁用）。 */
+  batchDeleteDisabled?: boolean;
+  /**
+   * Phase 86 W2 通道②：批量删除按钮**渲不渲染**。
+   * ready 无权限 → `false` → 按钮不在 DOM；未就绪 → `true` + `batchDeleteDisabled`
+   * → 渲染但禁用（三态语义）。默认 `true` 保持既有调用方行为零变更。
+   */
+  showBatchDelete?: boolean;
   onAdd: () => void;
   onBuildingChange?: (buildingId: string) => void;
   selectedCount: number;
@@ -60,7 +81,12 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
   onViewModeChange,
   onImport,
   onExport,
+  importDisabled = false,
+  exportDisabled = false,
+  notReadyHint,
   onBatchDelete,
+  batchDeleteDisabled = false,
+  showBatchDelete = true,
   onAdd,
   onBuildingChange,
   selectedCount,
@@ -157,16 +183,36 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
               <AppstoreOutlined /> 卡片
             </Radio.Button>
           </Radio.Group>
-          <Button icon={<ImportOutlined />} onClick={onImport}>
-            导入
-          </Button>
-          <Button icon={<ExportOutlined />} onClick={onExport}>
-            导出
-          </Button>
-          {selectedCount > 0 && (
+          {/* Phase 86 W2 通道①：导入/导出的门控点在**触发按钮**（不是 modal 容器）。
+              `onImport` 不传 ⇒ 按钮不渲染（ready 无权限）；未就绪 ⇒ 渲染但 disabled + hint。 */}
+          {onImport && (
+            <Button
+              icon={<ImportOutlined />}
+              onClick={onImport}
+              disabled={importDisabled}
+              title={importDisabled ? notReadyHint : undefined}
+            >
+              导入
+            </Button>
+          )}
+          {onExport && (
+            <Button
+              icon={<ExportOutlined />}
+              onClick={onExport}
+              disabled={exportDisabled}
+              title={exportDisabled ? notReadyHint : undefined}
+            >
+              导出
+            </Button>
+          )}
+          {/* Phase 86 W2 通道②：`showBatchDelete` 决定渲不渲染（ready 无权限 → 不在 DOM）；
+              `batchDeleteDisabled` 决定禁不禁用（未就绪 → 渲染但 disabled + hint）。 */}
+          {showBatchDelete && selectedCount > 0 && (
             <Button
               icon={<DeleteOutlined />}
               onClick={onBatchDelete}
+              disabled={batchDeleteDisabled}
+              title={batchDeleteDisabled ? notReadyHint : undefined}
               style={{ color: "var(--theme-error)" }}
             >
               批量删除 ({selectedCount})

@@ -11,6 +11,7 @@ import {
 import type { Floor, Building } from "@/types";
 import { CADFloorPlanEditor } from "@/components/cad-editor";
 import type { FloorPlanData } from "@/components/cad-editor/types";
+import type { ActionPermissionDecision } from "@/components/shared";
 import {
   DepartmentTreeSelect,
   type TreeNode,
@@ -45,6 +46,13 @@ interface FloorPlanEditorViewProps {
   onDepartmentChange: (deptId: string) => void;
   onBuildingChange: (buildingId: string) => void;
   onFloorChange: (floorId: string) => void;
+  /**
+   * Phase 86 W2：平面图保存/编辑的**四码合并决策**
+   * （`opsFloorPlan.edit ∧ opsWall.* ∧ opsDoor.* ∧ opsWorkstation.edit`）。
+   * `visible=false` → 不渲染「编辑模式」按钮（ready 缺任一码）；
+   * `disabled=true` → 渲染但禁用（未就绪）。不传 = 不做判定（既有调用方行为零变更）。
+   */
+  editDecision?: ActionPermissionDecision;
 }
 
 export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
@@ -67,6 +75,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
   onDepartmentChange,
   onBuildingChange,
   onFloorChange,
+  editDecision,
 }) => {
   if (!currentFloor || !floorPlanData) {
     return (
@@ -142,12 +151,20 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
               />
             </Space>
 
-            <Button
-              icon={isEditMode ? <EyeOutlined /> : <EditOutlined />}
-              onClick={() => onEditModeChange(!isEditMode)}
-            >
-              {isEditMode ? "预览模式" : "编辑模式"}
-            </Button>
+            {/* Phase 86 W2：平面图编辑/保存入口 —— 四码合并决策。
+                ready 缺任一码 → 不渲染（该入口直通可保存的编辑器）；
+                未就绪 → 渲染但 disabled + hint（三态语义）。
+                不传 editDecision 时保持既有行为（恒可见可用）。 */}
+            {(editDecision?.visible ?? true) && (
+              <Button
+                icon={isEditMode ? <EyeOutlined /> : <EditOutlined />}
+                disabled={editDecision?.disabled}
+                title={editDecision?.hint}
+                onClick={() => onEditModeChange(!isEditMode)}
+              >
+                {isEditMode ? "预览模式" : "编辑模式"}
+              </Button>
+            )}
             <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={loading}>
               刷新
             </Button>
