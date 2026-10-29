@@ -57,6 +57,11 @@ const DeviceDiscoveryPage: FC = () => {
   // 导出类写入口（数据外带面）：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
   // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
   const permExport = permGate.decide(PERMISSION_CODES.networkDiscovery.export);
+  // Phase 86 W3 补漏：ResultModal 的「导入设备」按钮（`modals/ResultModal.tsx:50-60`
+  // 的 `onClick={onImport}`）会 `POST /network/discoveries/{id}/import` **落库**把发现
+  // 设备导入为正式设备 —— 属写入口，原施工图未列（页级扫描器亦无感）。
+  // 域内无独立 import 码 → 就近归 `networkDiscovery.add`（与「新增发现任务」同码）。
+  const permImport = permGate.decide(PERMISSION_CODES.networkDiscovery.add);
 
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
@@ -354,6 +359,9 @@ const DeviceDiscoveryPage: FC = () => {
         discoveredDevices={discoveredDevices}
         loading={resultsLoading}
         onImport={handleImport}
+        importVisible={permImport.visible}
+        importDisabled={permImport.disabled}
+        importHint={permImport.hint}
         onClose={() => setModalState((prev) => ({ ...prev, resultModalVisible: false }))}
       />
     </div>

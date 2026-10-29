@@ -15,6 +15,11 @@ export interface ResultModalProps {
   /** FIX-01: 结果请求中，内嵌表显示 loading 蒙层 */
   loading?: boolean;
   onImport: () => Promise<void>;
+  /** Phase 86 W3 补漏：三态门控（`networkDiscovery.add` 就近归码）。
+   *  ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + hint；有权限 → 可用。 */
+  importVisible?: boolean;
+  importDisabled?: boolean;
+  importHint?: string;
   onClose: () => void;
 }
 
@@ -33,6 +38,9 @@ export function ResultModal({
   discoveredDevices,
   loading = false,
   onImport,
+  importVisible = true,
+  importDisabled = false,
+  importHint,
   onClose,
 }: ResultModalProps) {
   return (
@@ -47,17 +55,20 @@ export function ResultModal({
         <Button key="close" onClick={onClose}>
           关闭
         </Button>,
-        <Button
-          aria-label="导入结果"
-          title="导入结果"
-          key="import"
-          type="primary"
-          icon={<ImportOutlined />}
-          onClick={onImport}
-          disabled={discoveredDevices.length === 0}
-        >
-          导入设备 ({discoveredDevices.length})
-        </Button>,
+        // Phase 86 W3 补漏：写入口三态门控（ready 无权限 → 不渲染；未就绪 → disabled + hint）
+        importVisible && (
+          <Button
+            aria-label="导入结果"
+            title={importDisabled ? (importHint ?? "导入结果") : "导入结果"}
+            key="import"
+            type="primary"
+            icon={<ImportOutlined />}
+            onClick={onImport}
+            disabled={importDisabled || discoveredDevices.length === 0}
+          >
+            导入设备 ({discoveredDevices.length})
+          </Button>
+        ),
       ]}
     >
       <div style={{ marginBottom: 16 }}>
