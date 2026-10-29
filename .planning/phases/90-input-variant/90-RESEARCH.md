@@ -110,7 +110,7 @@ antd 内层本就 `font-size: inherit`（`input/style/index.js:379-381`），car
 |---|---|---|
 | **变量源头** | `:129` `--theme-radius-md: 6px;` | 全部「var 化的 6px」的根 |
 | 主组 / wrapper（T1/T2） | `:885` / `:921` | 输入类圆角本体（STYLE-03 主目标） |
-| `--theme-radius-md` 其它消费 | `:692, :851-857, :1180, :1193, :1366, :1430, :1504, :1521, :1773`（共 12 处引用，除 :885/:921 外 10 处） | 非 Input 域（按钮组/卡片/表格部件等），**不属于 STYLE-03 判据面**，90 不动（改源头 `--theme-radius-md: 8px` 一行就能全站统一，但会波及 10 处非输入组件 → 属未登记变更面扩大，**90 不改源头**） |
+| `--theme-radius-md` 其它消费 | `:692, :851-857, :1180, :1193, :1366, :1430, :1504, :1521, :1773, :5278`（CSS 侧共 **15 处**引用，除 `:885` / `:921` 两处输入类外，**非输入域消费 = 13 处 CSS**）+ TSX 侧 2 处（`GlobalSearch.tsx:281` / `:298`）→ **合计 15 处非输入域消费（13 CSS + 2 TSX）** | 非 Input 域（按钮组/卡片/表格部件等），**不属于 STYLE-03 判据面**，90 不动（改源头 `--theme-radius-md: 8px` 一行就能全站统一，但会波及 15 处非输入组件 → 属未登记变更面扩大，**90 不改源头**）；**以实测 15 处为准**（本节旧记「10 处」为旧口径，已被 §7.3 推翻） |
 | `border-radius: 6px` 字面（M15 口径 7 处） | `:4458, :4470, :4482, :4494, :4506, :5234, :5489` | 前 5 处在暗色/日期区段（执行者需逐处读上下文判归属组件）；`:5234` 无 important；`:5489` = 分页器（K11 组） |
 | 89-QUANT M15 口径 | 「`border-radius: 6px` 系仍 7 处」 | 与本盘点一致 ✅ |
 
@@ -145,17 +145,19 @@ antd 内层本就 `font-size: inherit`（`input/style/index.js:379-381`），car
 
 #### D.2 修复方案（与批次 C 同 commit；对照 88-03 修 VIS-03 的手法）
 
+> ⚠️ **本节示例为旧 3 变体口径，已被 §7.2 与 90-02 任务 2.3 的 6 选择器方案取代**（旧示例**缺 `:focus` 档** → **暗色交互态红框丢失**；旧特异性标注 `(0,2,1)` / `(0,1,1)` 也已按「伪类按 CLASS 级计」更正为 `(0,3,0)` / `(0,2,0)`）。**执行口径以 90-02 任务 2.3 的核对表与 6 选择器（error / warning 各 6 个 = 3 档 × 常态/hover/focus）为准**，本节仅保留为研究留痕。
+
 **88-03 的先例手法 = 「同级/更高特异性 + important 补 status 规则」，90 直接复用**：
 
 ```css
-/* 在 :967-974 的选择器组内追加 3 个变体（同 commit）： */
+/* 在 :967-974 的选择器组内追加 3 个变体（同 commit）—— ⚠️ 旧 3 变体示例，仅作留痕；实际落地用 6 选择器版 */
 .ant-input-number.ant-input-number-status-error,                        /* (0,2,0)+imp > :883 (0,1,0)+imp ✅ */
 .ant-input-number.ant-input-number-status-error:hover,                  /* (0,2,1)+imp > :896 hover (0,1,1)+imp ✅ */
 [data-color-mode="dark"] .ant-input-number.ant-input-number-status-error /* (0,3,0)+imp > 暗色 :2284 (0,2,0)+imp ✅ */
 ```
 
-- **特异性链已逐条算过**（上表注释）：三态（常态/hover/暗色）全部压得过现存 important 源；
-  `:976-980` 的 warning 组同理追加 3 个变体（保持 K3 对称，防止修完 error 漏 warning）。
+- **特异性链已逐条算过**（上表注释）：旧示例的**三态**（常态/hover/暗色）全部压得过现存 important 源；
+  `:976-980` 的 warning 组同理追加（旧示例 3 个变体；**实际落地 = error / warning 各 6 个选择器 = 3 档 × 常态/hover/focus**，补 `:focus` 档以免暗色交互态红框丢失，见 §7.2 与 90-02 任务 2.3）。
 - 色值走 `var(--ant-color-error)`（与 K2 同源，`rgb(186,54,48)`；antd 6 cssVar 注入已由 88/89 实证）。
   注意 light 下 `--input-border-error`（`:272` 仅 dark 定义）**不可用**——沿用 K2 的 `var(--ant-color-error)` 才是明暗一致的唯一来源。
 - **「拆完 C 后 antd status 规则自然生效吗？」——甲方案下不会**（`border-color` 仍带 important，A.2），
@@ -177,14 +179,15 @@ antd 内层本就 `font-size: inherit`（`input/style/index.js:379-381`），car
 
 复用基建：`.planning/phases/89-theme-refactor/89-visual-evidence/{matrix-fixture.js, matrix-sample.js, matrix-diff-89.cjs}`
 （89 已把 `matrix-diff.cjs` 改造为「白名单 + 归类、未归类 = FAIL」模式；90 直接复制为
-`.planning/phases/90-input-variant/90-visual-evidence/matrix-diff-90.cjs`，before 取 89 的 `after-{light,dark}.json`）。
+`.planning/phases/90-input-variant/90-visual-evidence/matrix-diff-90.cjs`）。
+**before 快照一律在 90 的 fixture 下重采**（不复制 89 的 `after-{light,dark}.json`）—— 90 的 fixture 新增 `f22_input_number_status_error` 形态，89 的 21 形态快照缺该形态，复制后 f22 会被判「结构缺失」而误 FAIL。
 
 ⚠️ **与 89 的关键差别：90 的变更是明暗双向的**（圆角 6→8 两种模式都变），不像 89 是「light=0 / dark⊆白名单」。
 
 | 变更类别 | 触发源 | 预期落点（形态 × part × 属性） | light | dark |
 |---|---|---|---|---|
 | **R-90a · 圆角 6→8** | `:885`/`:921` 改 `--theme-radius-lg` | Input 族全部形态（f01-f11, f14-f15, f20-f21）的 `carrier.radius`（wrapper/根），`inner.radius` 保持 0 不变 | radius 差异**必须 >0**（防空跑）且**全部归类为 a** | 同 light |
-| **R-90b · InputNumber 错误态红** | §D 补的 3 变体 | 若 fixture 含 status=error 形态：error 形态 `carrier.border`；否则矩阵不变，靠 computed 探针（§2）覆盖 | border 差异归类 b | 同 |
+| **R-90b · InputNumber 错误态红** | §D 补的 **6 选择器**（3 档 × 常态/hover/focus，§7.2 / 90-02 任务 2.3） | 若 fixture 含 status=error 形态：error 形态 `carrier.border`；否则矩阵不变，靠 computed 探针（§2）覆盖 | border 差异归类 b | 同 |
 | **R-90c ·（可选，若执行者采纳 §B.4 删 font-size）** | `:886` 删除 | 仅 size=large 形态的 `fontSize`（21 形态矩阵若全为默认 size 则 diff=0） | 0 或归类 c | 同 |
 | hover/focus/底色/文字色 | §A.4/§B 有意保留 | **不得出现任何差异** | 0 | 0 |
 
@@ -220,20 +223,20 @@ antd 内层本就 `font-size: inherit`（`input/style/index.js:379-381`），car
 
 | 指标 | 90 起点（实跑） | **90 预期** | 说明 |
 |---|---|---|---|
-| M1 / M2 | 1397 / 1330 | **≈ 1396-1399 / 1329-1332**（ROADMAP 终线 M1≤1100 / M2≤1050 不在本 phase 达成——那是 R1-R5 全面交还+暗色块删除后的 91/92 结果；90 的成功标准实为「不升」） | 拆简写 `1→3 长属性但仅 color 保 important` ⇒ ±0；补 InputNumber status 3 变体共用 1 声明 ⇒ +0；圆角改 var ⇒ ±0；§B.4 删 font-size ⇒ **-1**；批次 B 甲方案 ⇒ ±0。**结论：C11=1397 不动，实测值应 ≤1397** |
+| M1 / M2 | 1397 / 1330 | **≈ 1396-1399 / 1329-1332**（ROADMAP 终线 M1≤1100 / M2≤1050 不在本 phase 达成——那是 R1-R5 全面交还+暗色块删除后的 91/92 结果；90 的成功标准实为「不升」） | 拆简写 `1→3 长属性但仅 color 保 important` ⇒ ±0；补 InputNumber status **6 选择器**共用 1 声明 ⇒ +0；圆角改 var ⇒ ±0；§B.4 删 font-size ⇒ **-1**；批次 B 甲方案 ⇒ ±0。**结论：C11=1397 不动，实测值应 ≤1397** |
 | M3 | 未清偿（89 沿用 725/702） | 不增（90 不删规则条目，只改声明） | |
 | M7 / M8 | 304 / 440（C13 口径，89 W4） | **不增**（零新 hex；`--theme-radius-lg` 是 var） | C13 per-file 基线零新条目 |
-| M9 | 5556（`split('\n').length` 口径；`wc -l`=5555） | **≤5558 但必须净减恰好 30 行**：C13 预算无容差、只剩 +2 行，而 W1 净增 ≥+30（拆简写 +2 / status 新块 +26 / 注释重写 +2~6）→ 同 commit 压缩 `index.css` 纯冗余空行（实测空行 859、块内空行 58 处），**净减恰好 30 行**（`wc -l`=5525、M9=5526 ≤5558 ✓）；全删 58 行会跌到 5497 < 5525 反违反下限。`C13_M9_BUDGET` 保持 5558 一行不动 |
+| M9 | 5556（`split('\n').length` 口径，**= `wc -l` + 1**；`wc -l`=5555） | **最终 M9 ≤ 5558**（等价 `wc -l` ≤ 5557；**唯一硬判据**）：C13 预算无容差、只剩 +2 行，而 W1 净增 ≥+28（拆简写 +2 / status 新块 +24~26 / 注释重写 +2~8）→ 同 commit 压缩 `index.css` 纯冗余空行（实测空行 859、**块内空行 58 处**、**块间单空行 801 处**）；**删除量 D 不设任何绝对值**（绝对删除量在净增 G > 0 时推不出可行解，属错误口径）→ **D 由 M9 判据反推：最终 M9 = 5556 + G − D ≤ 5558 ⟺ D ≥ G − 2**（建议 D = G − 2 + 4 余量），且 **D ≤ 58**、被删行**全部为块内空行**、**块间单空行计数 === 801 不变**。`C13_M9_BUDGET` 保持 5558 一行不动 |
 | **M13** | `rgb(219,215,206)` | **`rgb(186,54,48)`** ✅ | VISFIX-05 |
-| **M15** | 6px 系 7 处 + md 系混合 | **输入类 + 分页器 = 8px**；`--theme-radius-md` 非输入域 10 处消费**不变**（登记为 92 前的口径残留） | STYLE-03 |
+| **M15** | 6px 系 7 处 + md 系混合 | **输入类 + 分页器 = 8px**；`--theme-radius-md` 非输入域 **15 处**消费（13 CSS + 2 TSX）**不变**（登记为 92 前的口径残留） | STYLE-03 |
 | M11 / M12 / M14 / M16 | 已达标 | 保持 | 89 已交付，90 不回退 |
 
 ### 6. 波次建议（C → B → R5 扩面 → 圆角 → R1-R5 收尾评估）
 
 | 波 | 内容 | 闸门（全绿才进下一波） |
 |---|---|---|
-| **W0** | 落 `90-QUANT-SNAPSHOT.md` 起点；复制 89 `after-*.json` → 90 `before-*.json`；`css-contract-check.js` exit 0 基线 | checker ALL PASS |
-| **W1 · 批次 C + 批次 B + R5 扩面 + 圆角（单一 commit，不可拆）** | ① `:883`/`:919` 拆简写（仅 color 保 important）；② 复位块 `:946-954` 注释重写（保留本体，§A.3）；③ `:967-980` 追加 InputNumber error/warning 各 3 变体（§D.2）；④ `:885`/`:921`/`:5489` 6→8（§C.2）；⑤ 若 §B.4 grep 判定成立，删 `:886` font-size | checker exit 0 + §2 断言 1-6 全过 + 矩阵差异 ⊆ {a,b,c} + M13/M15 探针过 + lint/test 绿。**顺序敏感点：③ 的暗色变体选择器必须写在 `:2276-2285` 之前的位置即可（特异性已分胜负，与源码顺序无关，但按 §D.2 的 (0,3,0) 写法放置于 :967 组最稳）** |
+| **W0** | 落 `90-QUANT-SNAPSHOT.md` 起点；**在 90 的 fixture 下重采** `before-{light,dark}.json`（22 形态，**不复制 89 的 `after-*.json`** —— 89 的 21 形态快照缺 f22，复制后 f22 会被判「结构缺失」误 FAIL；与 89 after 的 21 形态交集只作**防串基线核对**用）；`css-contract-check.js` exit 0 基线 | checker ALL PASS |
+| **W1 · 批次 C + 批次 B + R5 扩面 + 圆角 + M9 空行压缩（单一 commit，不可拆）** | ① **只拆 `:883` 一处** `border` 简写（仅 color 保 important；**`:919` wrapper 简写因 C4b 字面依赖不拆 → 债 D-f**）；② 复位块 `:946-954` 注释重写（保留本体，§A.3）+ **VIS-03 注释块 `:956-966` 重写**（去绝对行号 + 语义改为「border 已拆三属性」）；③ `:980` 之后追加 InputNumber error/warning **各 6 个选择器**（3 档 × 常态/hover/focus，§7.2 / 90-02 任务 2.3）；④ `:885`/`:921`/`:5489` 6→8（§C.2）；⑤ **同 commit 内压缩 `index.css` 纯冗余空行**（删除量 D 由 M9 ≤ 5558 反推，D ≤ 58，块间单空行计数 801 不变） | checker exit 0 + §2 断言 1-5 全过 + 矩阵差异 ⊆ {a,b} + M13/M15 探针过 + lint/test 绿。**顺序敏感点：③ 的暗色变体选择器必须写在 `:2276-2285` 之前的位置即可（特异性已分胜负，与源码顺序无关，但按 §7.2 的 (0,3,0) 写法放置于 `:980` 之后组最稳）**；**T4（删 `:886` font-size）不在 W1**（移出，W2 单独裁定） |
 | **W2 · R1-R5 剩余评估收尾** | §B 显式不改清单复核（hover/focus/disabled/底色）+ §B.4 T4 裁定 + 登记移交 91/92 的续办清单（hoverBorderColor 对齐 / colorBorder 交还的 light-disabled 变更 / 乙方案路径） | `90-CHANGESET.md` + 未清偿债落盘 |
 | **W3 · 收口** | 14 页巡检截图入库 `90-visual-evidence/`；M1-M16 终值快照；`matrix-diff-result-90.txt` | 巡检无未登记差异；快照与预期偏差逐条说明 |
 
@@ -257,7 +260,7 @@ antd 内层本就 `font-size: inherit`（`input/style/index.js:379-381`），car
 | B-3 | 不做页面拆分 | Phase 93 |
 | B-4 | **不去掉 `border-color` 的 important（乙方案）**、不删 VIS-01 复位块 | §A.2/§A.3：连锁 hover/disabled/焦点环渲染面大，登记为 91/92 路径 |
 | B-5 | 不交还 `colorBorder` / `hoverBorderColor`（`--input-border*` 全组保留） | §A.4：disabled light 态不等价，交还须带登记变更，归 91/92 |
-| B-6 | 不改 `--theme-radius-md: 6px` 源头值、不动其非输入域 10 处消费 | 波及面未登记；`--theme-radius-md` 的最终废存归 92 终态盘点 |
+| B-6 | 不改 `--theme-radius-md: 6px` 源头值、不动其非输入域 **15 处**消费（13 CSS + 2 TSX） | 波及面未登记；`--theme-radius-md` 的最终废存归 92 终态盘点 |
 | B-7 | 不动 `components.InputNumber`（Bridge 不新增组件块） | §D.3 |
 | B-8 | 不动 `AppInput`/`AppSelect`/`AppTextArea` 默认 props（P-M7 冻结）；不碰 `src/components/ConfigProvider.tsx`（P-C2 冻结） | 契约 |
 | B-9 | 不扩 Bridge `useMemo` deps（C15 length===2） | 契约；推荐形态下 Bridge 本就零改动 |
@@ -268,7 +271,7 @@ antd 内层本就 `font-size: inherit`（`input/style/index.js:379-381`），car
 D-a `Input.hoverBorderColor` 需对齐 `#598e5e`（现为 #156031）后才能删手写 hover 规则；
 D-b `colorBorder` 交还时 light disabled 边框 `#dbd7ce`→`#C2BDB2` 是必然登记变更；
 D-c 乙方案（去 important 全交还 + 删复位块 + C1a 反转）路径图；
-D-d `--theme-radius-md` 非 Input 域 10 处消费的 6px 残留（92 终态归口）；
+D-d `--theme-radius-md` 非 Input 域 **15 处**消费（13 CSS + 2 TSX）的 6px 残留（92 终态归口）；
 D-e `:4458-4506/:5234` 六处圆角的归属组件清单（W1 执行时补全进 CHANGESET）。
 
 ## Sources
@@ -314,17 +317,20 @@ D-e `:4458-4506/:5234` 六处圆角的归属组件清单（W1 执行时补全进
 
 | # | 问题 | 最终解 |
 |---|---|---|
-| **1** | M9 预算不可达（C13 硬上限 5558 无容差，起点 M9=5556 只剩 +2 行，W1 净增 ≥+30） | 同 commit 压缩 `index.css` **纯冗余空行**，**净减恰好 30 行**（`wc -l`=5525、M9=5526 ≤5558 ✓）。压缩规则限定两类：连续 ≥2 空行折叠为 1（实测仅 1 组且在暗色只读区内 → 可减 0）；**规则块/注释块内部**的空行（实测 58 处，全在暗色只读区外）。**块间单空行一个不删**；禁改任何 CSS 声明与注释内容、禁碰暗色只读区 `:2254-2742`/`:2780-4517`、禁碰六处非输入域 6px。`C13_M9_BUDGET` 保持 5558 一行不动 |
+| **1** | M9 预算不可达（C13 硬上限 5558 无容差，起点 M9=5556 只剩 +2 行，W1 净增 ≥+28） | **唯一硬判据 = 最终 M9 ≤ 5558**（**M9 = `split('\n').length` = `wc -l` + 1**，等价 **`wc -l` ≤ 5557**）。**删除量 D 不设绝对值**（绝对删除量在净增 G > 0 时推不出可行解 → 错误口径，已作废）→ **D 由 M9 判据反推**：最终 M9 = 5556 + G − D ≤ 5558 ⟺ **D ≥ G − 2**（建议 D = G − 2 + 4 余量）。**三条可执行约束**：① **D ≤ 58**（实测块内空行 58 处，全在暗色只读区外）；② 被删行**全部为块内空行**（前后两个非空行缩进均 > 0），**块间空行计数 === 801 不变**（连续 ≥2 空行折叠的那 1 组在暗色只读区内 → 不动）；③ D 由 M9 反推。压缩规则只许删空行：禁改任何 CSS 声明与注释内容、禁碰暗色只读区 `:2254-2742`/`:2780-4517`、禁碰六处非输入域 6px。`C13_M9_BUDGET` 保持 5558 一行不动 |
 | **2** | 注释内的 hex 触发 C13 per-file FAIL | C13 的 stripComments 用 `/\/\*.*?\*\//g`（`.` **不跨行**）→ **多行注释块内的 hex 被计入**（实测 raw 311 vs strip 后 304，差 7；per-file 基线 `index.css`=304 硬上限）。故 PLAN 给定的注释块**不得含任何 6 位 hex**（`#dbd7ce`→`--input-border`、`#BA3630`→`ruoyiBrand.functional.danger`）。**债 D-g**：修法为把正则改为 `[\s\S]*?`——本 phase **不动 C13** |
 | **3** | verify 自撞（查 `--input-border-error` 不出现，而自己的注释恰好写着它） | verify 改在**剥注释文本**上判定（`t.replace(/\/\*[\s\S]*?\*\//g,'')`，与既有 C5b 同风格）；注释文本改为「light 侧无对应错误态变量」 |
 | **4** | 行号漂移（拆 `:883` 一行→三行 ⇒其后全部 +2，8 处硬编码 verify 全误红） | 90-02 的 verify **全部改内容锚点定位**（按选择器文本/regex 找行）；90-03 的清单行号列标注「**W1 前 HEAD 基准，仅参考**」+ 另设「**选择器锚点（权威）**」列；PLAN 内所有 `:NNN` 均声明以 W1 前 HEAD 为基准 |
 
 ### 7.2 竞争源核对表的最终更正
 
-原表把 `:2295`/`:2302` 列为 InputNumber 竞争源——**实读不成立**：这两块选择器只含 `input / textarea / .ant-input / .ant-input-affix-wrapper(-focused)`，**不含 `.ant-input-number`**。真实竞争源 5 条：
+原表把 `:2295`/`:2302` 列为 InputNumber 竞争源——**实读不成立**：这两块选择器只含 `input / textarea / .ant-input / .ant-input-affix-wrapper(-focused)`，**不含 `.ant-input-number`**。
+
+**口径统一（Lead 裁定）**：**5 条危险竞争源 + 1 条 base 块** —— **5 条危险竞争源** = `:894-897` hover (0,2,0) / `:899-903` focus (0,2,0) / `:2276-2285` 暗色 base (0,2,0) / `:3745-3748` 暗色专项 (0,2,0) / `:3750-3755` 暗色专项 focus (0,3,0)；另 **1 条 base 块** = `:880-892`（`.ant-input, .ant-input-number`，**(0,1,0)**，被 light 常态档 (0,2,0) **严格压过** → **不计入危险竞争源**）。PLAN（90-02 任务 2.3）与本节一律按此口径表述。
 
 | 竞争源 | 选择器 | 特异性 | 胜负 |
 |---|---|---|---|
+| base 块（**不计入危险竞争源**） | `:880-892` `.ant-input, .ant-input-number` | (0,1,0) | 被 light 常态档 (0,2,0) **严格压过** |
 | `:894-897` | `.ant-input:hover, .ant-input-number:hover` | (0,2,0) | light 常态 (0,2,0) **同级 → 靠源码顺序取胜**（本块在 `:980` 之后，晚于全部项目级源；空行压缩只删空行不改块相对顺序 → 依赖稳定） |
 | `:899-903` | `.ant-input:focus, .ant-input-number:focus` | (0,2,0) | 同上 |
 | 暗色 base | `:2276-2285` | (0,2,0) | dark 常态 (0,3,0) **严格胜** |
@@ -337,8 +343,10 @@ D-e `:4458-4506/:5234` 六处圆角的归属组件清单（W1 执行时补全进
 
 - **格数**：89 终跑 **360 格**（每模式 180 = (21×2−6)×5，6 个 inner=null 形态被跳过）——不是 210。90 理论 528 格、**实测 456 格**（(22×2−6)×6×2）
 - **矩阵判据 90 化**：89 的「light 差异必须 = 0」红线在 90 **必然误 FAIL**（圆角变更明暗双向）→ 改为「light/dark 各自差异 > 0 + 全归类 + 形态集合不多不少」
-- **before 快照重采**：不复制 89 的 after-*.json（缺 f22 会被判「结构缺失」误 FAIL）；以「与 89 after-*.json 的 21 形态交集 210 格逐格全等」作防串基线核对
+- **before 快照一律重采**：**before 快照一律在 90 的 fixture 下重采**（不复制 89 的 `after-*.json` —— 缺 f22 会被判「结构缺失」误 FAIL）；**研究 §1 与 §6 的「复制 89 after → 90 before」为旧口径，已被本条推翻**；与 89 `after-*.json` 的核对只作**防串基线**，结论必须写成「**每模式 180 格 / 明暗合计 360 格逐格全等**」（**不是 210 格**）
 - **C4b 字面依赖**：`css-contract-check.js:76` 用字面正则守护 `border: 1px solid var(--input-border)` → **wrapper 的 `:919` 简写不得拆**，批次 C **只拆 `:883`**；wrapper 处置登记为债 **D-f**
 - **antd 6.6.4 真实类名**：`ant-input-number-status-error`（`getStatusClassNames` 落在 `.ant-input-number` **根**，边框也画在根）——写成 `ant-input-status-error` 对 InputNumber 不命中（VISFIX-06 同型陷阱）
 - **色值**：`--ant-color-error` 明暗同值 `#BA3630` → 「明暗双测 rgb(186,54,48)」成立；`css-contract-assertions.js:14` 旧注释的「暗色 rgb(161,49,44)」是**静态 harness（无 ConfigProvider cssVar scope）的记录、非真实 App 值** → 执行期必须**实测**后按实测改判据，**不得伪造**
 - **态数**：InputNumber 错误态 = **常态 + hover + focus（明暗各一次）= 6 态**
+- **`--theme-radius-md` 非输入域消费口径**：**以实测 15 处为准（13 CSS + 2 TSX）**；**研究 §C.1 与 §B-6 的「10 处」为旧口径，已被本条推翻**（旧口径漏了 `:5278` 与 2 处 TSX 消费）
+- **§D.2 旧 3 变体示例**：**已被 §7.2 与 90-02 任务 2.3 的 6 选择器方案取代**（旧示例缺 `:focus` 档 → 暗色交互态红框丢失；旧 `(0,2,1)` / `(0,1,1)` 标注亦已按「伪类按 CLASS 级计」更正）→ 执行口径以 90-02 任务 2.3 的核对表为准，§D.2 仅留痕
