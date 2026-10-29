@@ -31,6 +31,21 @@
  * 退出码：
  *   0 = 应门控页面全部已门控（绿）；1 = 存在未覆盖页面 或 脚本自身错误（红）。
  *
+ * 86-05（Task 5.2）硬断言升级：把「未覆盖即 exit 1」升为三条同时成立的硬断言 ——
+ *   ① 覆盖率恒等式：已门控（不含豁免）+ 豁免 == EXPECTED_PAGE_COUNT（76）；
+ *   ② 已门控覆盖完整：应门控页面数 == 已门控页面数；
+ *   ③ 未覆盖页面数 == 0。
+ *   另：豁免与已门控**双向互斥**（豁免里挂着已门控页 → exit 1；未豁免且未门控 → exit 1），
+ *   使白名单**不能靠无限扩张让脚本变绿**。
+ *
+ * ⚠️ **能力边界登记（86-05 Task 5.2 第 5 条 —— 这是登记，不是待办）**：
+ *   本脚本是**页级**门控判定器 —— 它只判「该页归属文件是否命中写入口特征集」且
+ *   「是否出现门控特征（useActionPermission / permission: + PERMISSION_CODES）」，
+ *   **不判单个入口是否已门控** ⇒ **施工图遗漏的入口不会被脚本捕获**。
+ *   **入口级覆盖靠施工图 + 人工 review + 抽样测试兜底**。
+ *   实证：86-02 曾漏列 assets「下载模板」`index.tsx:639-654`、workstations
+ *   「下载部门映射表」`index.tsx:834-836` 两处导出类写入口，已由 86-02 补齐。
+ *
  * 用法：node scripts/check-gating-coverage.mjs
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -260,6 +275,29 @@ function main() {
   console.log(`已门控页面：${gatedPages.size}（${[...gatedPages].sort().join(", ") || "无"}）`);
   console.log(`已门控 ∩ 豁免：${coveredExempt.length}${coveredExempt.length ? `（${coveredExempt.join(", ")}）` : ""}`);
   console.log(`未覆盖页面：${uncovered.length}`);
+
+  // ---------- 4b. 覆盖率硬断言（86-05 Task 5.2：把「软提示」升为「硬失败」）----------
+  // 恒等式：已门控（不含豁免）+ 豁免 == EXPECTED_PAGE_COUNT
+  // 三条同时成立才算覆盖率达成；任一不满足 → errors → exit 1
+  const coveredOnly = shouldGate.filter((p) => gatedPages.has(p)).length;
+  if (gatedPages.size !== EXPECTED_PAGE_COUNT - exemptByPage.size) {
+    errors.push(
+      `覆盖率恒等式不成立：已门控 ${gatedPages.size} + 豁免 ${exemptByPage.size} = ` +
+        `${gatedPages.size + exemptByPage.size} ≠ ${EXPECTED_PAGE_COUNT}（断言 EXPECTED_PAGE_COUNT）`,
+    );
+  }
+  if (coveredOnly !== shouldGate.length) {
+    errors.push(
+      `已门控覆盖率不足：应门控 ${shouldGate.length} 页中仅 ${coveredOnly} 页命中门控特征`,
+    );
+  }
+  if (uncovered.length !== 0) {
+    errors.push(`未覆盖页面 ${uncovered.length} 页 —— 应门控页面必须全部接入三态门控`);
+  }
+  console.log(
+    `覆盖率恒等式：已门控 ${coveredOnly} + 豁免 ${exemptByPage.size} = ${coveredOnly + exemptByPage.size}` +
+      `（断言 ${EXPECTED_PAGE_COUNT}）${coveredOnly + exemptByPage.size === EXPECTED_PAGE_COUNT ? " ✓" : " ✗"}`,
+  );
 
   // ---------- 5. 未覆盖清单（业务性未完成 —— 与「脚本自身错误」分区呈现）----------
   if (uncovered.length) {

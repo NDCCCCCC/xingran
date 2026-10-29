@@ -797,3 +797,125 @@ grep 证据：`grep -rn "setBatchModalVisible(true)" src/pages/network/ | wc -l`
 
 ---
 
+## 十七、W5 收口（Plan 05 / 2026-10-29）
+
+### 17.1 豁免清单定稿（R1~R6 逐条核对）
+
+**结构校验（脚本实跑）**：
+
+```
+exemptions= 51  unique= 51
+categories= {"no-permission-code":26, "legacy-two-source":5, "read-only":12, "non-route-page":8}
+missing fields= 0
+```
+
+| 规则 | 判据 | 实跑结果 |
+|---|---|---|
+| **R1 悬空** | 豁免条目指向的页面必须存在于 76 页清单 | ✅ 脚本「悬空豁免」检查 0 命中 |
+| **R2 重叠** | 同一页面不得同时在「已门控」与「豁免」两侧 | ✅ 脚本「门控/豁免冲突」检查 0 命中（已门控 ∩ 豁免 = 0） |
+| **R3 无写入口** | `read-only` 类必须确实无业务写入口特征命中 | ✅ 12 条逐条复核；**`<Switch` 人工判定口子已执行** —— `operations/building-spaces-3d/index.tsx` 的 Switch 为**视图切换 Switch，非业务写**（`onChange={setUseWebGL}` 只切 WebGL/普通渲染，不落库、不触发后端写请求），其 `reason` 已注明该措辞 → **保留 `read-only` 豁免，未被 R3 强制改判**；其余 11 条均为「扫描器写入口特征零命中 + 人工复核无写向按钮」 |
+| **R4 无码可证** | `no-permission-code` 类的码必须确实不在 `permissionCodes.ts` 任何区块中 | ✅ 26 条逐条 grep 核，0 条命中（后端有对应常量但前端无区块者归 `legacy-two-source`） |
+| **R4′ 码键存在性** | 所有 `PERMISSION_CODES.<组>.<键>` 引用的键必须真实存在（TS2339 防线） | ✅ **全仓实跑 0 非法引用**：解析 `permissionCodes.ts` 得 28 个组、逐键比对全部 `PERMISSION_CODES.<组>.<键>` 引用 → **非法引用数 = 0**（尤其 `ops*.remove` —— 八组 ops 码只有 `delete`，实测零处 `.remove` 误用） |
+| **R5 理由非空** | 每条 `reason` + `evidence` 非空 | ✅ missing fields = 0 |
+| **R6 总量** | 豁免数 + 已门控数 = 76 | ✅ 25 + 51 = 76（脚本硬断言，恒等式成立） |
+
+**豁免总数未变动**（51 → 51）→ `EXPECTED_EXEMPTION_COUNT` **无需改动**。
+
+⚠️ **W4 的 5 条 `legacy-two-source` 理由做了措辞补强**（内容语义不变）：统一补上「含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口」这半句，使 `scripts/check-exemption-reasons.mjs` 的理由格式校验一致（5 条 `legacy-two-source` 原本已含「等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控」，但被该脚本判定为措辞不统一 → 补齐后仍走同一归口语义，**不新增豁免、不删豁免**）。
+
+### 17.2 扫描脚本硬断言升级 + 挂 `lint:ci`
+
+**`scripts/check-gating-coverage.mjs` 新增三条硬断言**（不改变判据语义，只把「软提示」升为「硬失败」）：
+
+| # | 断言 | 失败条件 |
+|---|---|---|
+| ① | 覆盖率恒等式：已门控（不含豁免）+ 豁免 == `EXPECTED_PAGE_COUNT`（76） | `25 + 50 = 75 ≠ 76` → exit 1 |
+| ② | 已门控覆盖完整：应门控页面数 == 已门控页面数 | 应门控 26 页中仅 25 页命中 → exit 1 |
+| ③ | 未覆盖页面数 == 0 | 未覆盖 1 页 → exit 1 |
+
+另有原有的**双向互斥**检查（豁免里挂着已门控页 → exit 1；未豁免且未门控 → exit 1）→ 白名单**不能靠无限扩张让脚本变绿**。
+
+**红绿自检（Task 5.2 验收要求，必做）**：人为从豁免清单删除 `src/pages/knowledge/view/index.tsx` 一条 → 实跑输出：
+
+```
+未覆盖页面：1
+覆盖率恒等式：已门控 25 + 豁免 50 = 75（断言 76） ✗
+=== 未覆盖页面清单（1 页，需铺开三态门控）===
+  ✗ src/pages/knowledge/view/index.tsx
+  ✗ 豁免条数漂移：实测 50，断言 51 —— 页数增减须同批改 EXPECTED_EXEMPTION_COUNT 并在 86-STATE.md 说明理由
+  ✗ 覆盖率恒等式不成立：已门控 25 + 豁免 50 = 75 ≠ 76（断言 EXPECTED_PAGE_COUNT）
+  ✗ 已门控覆盖率不足：应门控 26 页中仅 25 页命中门控特征
+  ✗ 未覆盖页面 1 页 —— 应门控页面必须全部接入三态门控
+✗ 门控覆盖未达成：未覆盖 1 页 / 脚本错误 4 项 —— 退出码 1
+```
+
+→ **四条硬断言全部命中，exit 1** ✅；还原豁免清单后复跑 → **exit 0** ✅（红→绿链完整）。
+
+**挂 `lint:ci`**：`package.json` 的 `lint:ci` 链追加 `&& node scripts/check-gating-coverage.mjs`（置于 `check-exemption-reasons` 之后、`check-hardcoded-colors` 之前）：
+
+```
+"lint:ci": "eslint . --max-warnings 0 && node scripts/assert-lint-budget.mjs && node scripts/check-exemption-reasons.mjs && node scripts/check-gating-coverage.mjs && node scripts/check-hardcoded-colors.mjs && node scripts/css-contract-check.js && node ../scripts/check-route-registry.mjs"
+```
+
+**`package.json` 的 `dependencies` / `devDependencies` 零 diff**（只加 scripts 一段）。
+
+### 17.3 结构性局限登记（第八节口径的第四次复现 —— 这是登记，不是待办）
+
+⚠️ **`check-gating-coverage.mjs` 是「页级」门控判定器 ⇒ 「入口级」覆盖靠施工图 + 人工 review + 抽样测试兜底，施工图遗漏的入口不会被脚本捕获**。
+
+**本 phase 的四次实证**（同一局限在四个波次各暴露一次）：
+
+| 波次 | 脚本绿灯 | 人工 review 发现的漏网入口 |
+|---|---|---|
+| 86-02 | 该域 8 页判「已门控」 | assets「下载模板」`index.tsx:639-654`、workstations「下载部门映射表」`index.tsx:834-836` 两处**导出类写入口**（数据外带面） |
+| 86-03 | 该域 7 页判「已门控」 | network/discoveries 的 `ResultModal.tsx:50-60`「导入设备」（`POST /network/discoveries/{id}/import`，**落库**写入口） |
+| 86-04 | ad-domain 3 页判「已门控」 | users「批量同步」写入口（施工图未列，已补齐） |
+| **86-05（本波）** | **25 页全判「已门控」，脚本 exit 0** | 人工逐入口复核**未发现新的漏网入口**（导出类抽样复核见 17.4） |
+
+⇒ **本 phase 不新增入口级扫描器**（超出范围，且 86-05 禁止新增 npm 依赖）。**该局限已在本文件与 `86-VERIFICATION.md` 各登记一次**（Task 5.2 第 5 条要求）。
+
+### 17.4 导出类入口抽样复核（ops 域，收口动作 —— 入口级覆盖的人工兜底）
+
+对 `src/pages/operations/**` 逐页 grep 导出/下载类触发点（`downloadTemplate` / `exportMapping` / `excelApi.export` / `BatchExportModal` / `handleExport` / `ExportOutlined` / `DownloadOutlined`），逐个确认其权限码已接入 `decide` 决策：
+
+| 页 | 导出类入口 | 权限码 | 复核结果 |
+|---|---|---|---|
+| `operations/assets/index.tsx` | 「下载模板」`:639-654` | `opsAsset.export` | ✅ 已接入 |
+| `operations/workstations/index.tsx` | 「下载部门映射表」`:834-836` | `opsWorkstation.export` | ✅ 已接入（86-02 补齐项） |
+| `operations/buildings/index.tsx` | Excel 导入/导出 | `opsBuilding.import` / `opsBuilding.export` | ✅ 门控点落**触发按钮**（非 modal 容器） |
+| `operations/floors/index.tsx` | Excel 导入/导出 | `opsFloor.import` / `opsFloor.export` | ✅ 同上 |
+| `operations/workstations/index.tsx` | Excel 导入/导出 | `opsWorkstation.import` / `opsWorkstation.export` | ✅ 同上 |
+| `operations/info-points/index.tsx` | Excel 导入/导出 | `opsInfoPoint.import` / `opsInfoPoint.export` | ✅ 同上 |
+| `operations/server-rooms/index.tsx` | Excel 导入/导出 | `opsServerRoom.import` / `opsServerRoom.export` | ✅ 同上 |
+| `operations/room-devices/index.tsx` | Excel 导入/导出 | `opsRoomDevice.import` / `opsRoomDevice.export` | ✅ 同上 |
+| `operations/dedicated-lines/index.tsx` | Excel 导入/导出 | `opsDedicatedLine.import` / `opsDedicatedLine.export` | ✅ 同上 |
+
+**结论**：ops 域 **9 页**的导出/下载类入口**全部**已挂权限码并接入三态决策，**零漏网**。导出类「数据外带面」已被完整覆盖。
+
+### 17.5 W5 闸门结果
+
+| 闸门 | 结果 |
+|---|---|
+| `npm run check:gating` | **exit 0**（已门控 25 / 豁免 51 / 未覆盖 0 / 恒等式 `25 + 51 = 76` ✓） |
+| `npm run lint:ci`（含新增 check:gating） | **exit 0**（eslint 0 problems → assert-lint-budget → check-exemption-reasons → **check-gating-coverage** → check-hardcoded-colors → css-contract-check ALL PASS → check-route-registry OK） |
+| `npm run lint` | **0 problems**（0 error / 0 warning） |
+| `npm run type-check` | **0 错误**（`tsc --noEmit -p tsconfig.app.json` exit 0） |
+| `npx vitest run`（8 页抽样 + shared + user 既有） | **100 files / 680 tests 全绿** |
+| `npx vitest run`（全量） | **578 files / 4022 tests 全绿**（exit 0） |
+| `npm run build` | **✓ built in 45.55s**；vendor-react gzip **650.74 kB** ≤ 776 kB 基线 ✅ |
+| `git diff --stat -- src/constants/permissionCodes.ts` | **空（零改动）** |
+| `git diff --name-only \| grep -E "\.css$\|src/design-system/"` | **空（零交叠）** —— `src/index.css` 的改动属 90 线 commit `89c2f62d`，**不在 86 的改动面内** |
+| `package.json` dependencies / devDependencies | **零 diff**（只加 scripts 一段） |
+
+### 17.6 零交叠声明（与 90 线）
+
+- 86 的改动面**仅限**：`src/pages/ad-domain/**`、`src/pages/operations/buildings/__tests__/**`、`scripts/check-gating-coverage.mjs`、`scripts/gating-exemptions.json`、`package.json`（仅 `scripts` 段）、`.planning/phases/86-frontend-gating/**`、`.planning/{ROADMAP,REQUIREMENTS}.md`。
+- **未触碰** `src/index.css`、**未触碰**任何 `.css` / `.module.css`、**未触碰** `src/design-system/**` → 与 90 线（CSS/设计令牌）**零交叠**。
+- 90 线的 `src/index.css` 改动已在 commit `89c2f62d` 中独立成 commit，**86 的任何 commit 均不含 CSS 文件** ⇒ **86 与 90 可完全并行，无文件锁**。
+
+### 17.7 遗留（不阻塞 phase 完成）
+
+| 项 | 为何人工 | 状态 |
+|---|---|---|
+| 51 条豁免的逐条移除 | 豁免的「回补时限」依赖**后端动作级拆分 / 权限码播种**（Phase 87）落地 → 属跨 phase 依赖 | ⏳ 移交 Phase 87（`86-STATE.md` 第十节「缺码待回补登记」已列全量清单） |
+| 6 处旧式直判（第二真相源） | 直判码不在前端 `PERMISSION_CODES` → 迁移等于自造权限码，须后端先出码 | ⏳ 移交 Phase 87（`legacy-two-source` 5 条 + `ad-domain/configs/ReconciliationTab` 1 条） |

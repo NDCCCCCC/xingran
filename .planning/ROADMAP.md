@@ -178,7 +178,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
   2. 已停用菜单的权限码不进 `GetUserPermissions` 返回集
   3. Step 2 语义以明确命名/注释固化（持 F 型按钮 → 继承父页面权限）
   4. 迁移记录表可列出已应用版本；GORM schema 漂移登记为显式债务
-**Plans**: TBD
+**Plans**: 4 plans（4/4 已执行完成 — subagent 直执行先例，无 per-plan SUMMARY.md；验收见 `84-VERIFICATION.md`，其中 2 项 PG 实机验证待用户执行）
 
 ### Phase 85: 后端动作级严格化
 **Goal**: `pkg/permission/config.go` 死表接线 + 133 处 ANY-of 逐动作拆分 + system 域 4 组（roles/menus/depts/posts）严格化
@@ -189,17 +189,17 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
   2. 全站写操作路由逐动作绑定单一权限点；只读组保持组级语义
   3. system 域 4 组写操作完成逐动作拆分
   4. 只读角色调写接口一律 403 且无数据变更（抽样 ≥8 模块 8/8 = 403）
-**Plans**: TBD
+**Plans**: 4 plans（4/4 已执行完成 — 同上先例；验收见 `85-VERIFICATION.md`）
 
 ### Phase 86: 前端操作入口三态门控铺开
 **Goal**: 76 个业务页面的行操作 / 批量操作 / 工具栏写入口按动作级权限码三态渲染（无权限不渲染 / 未就绪 disabled+提示 / 有权限可用）
 **Depends on**: Phase 84, Phase 85
 **Requirements**: RBAC-02
 **Success Criteria** (what must be TRUE):
-  1. 76/76 页面接入 `useActionPermission` 三态门控（起点 14/76）
+  1. 76/76 页面接入 `useActionPermission` 三态门控（起点 14/76）—— ⚠️ **口径更正（Phase 86 执行期裁定，原措辞保留）**：ROADMAP 原写「76/76 页面接入（起点 14/76）」，实跑复核证明**该起点不成立**（全站仅 **2** 页真正接入 `useActionPermission`；原「14」系把 `useMenuStore.permissions` 的引用数误计为接入数）。Phase 86 的真实达成口径为「**25/25 有码页面接入三态门控 + 51 页带理由 N/A 豁免 = 76/76**」——即**每一个需要门控的页面都已门控，每一个不需要门控的页面都有可核实的豁免理由**，恒等式 `25 + 51 = 76` 由 `scripts/check-gating-coverage.mjs` 硬断言守护。详见 `.planning/phases/86-frontend-gating/86-STATE.md` 与 `86-VERIFICATION.md`
   2. 组件测试三路径全绿（无权限不在 DOM / 未就绪 disabled / 有权限可点）
   3. v1.22 冻结契约零破坏；lint 0 problems
-**Plans**: TBD
+**Plans**: 6 plans（00, 01, 02, 03, 04, 05 —— 全部执行完成；验收见 `86-VERIFICATION.md`）
 **UI hint**: yes
 
 ### Phase 87: 动作级权限授予闭环
@@ -221,7 +221,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
   2. C3b 反转为反向断言；C6-C12/C14/C15 落地全过（C13 归 89）
   3. D1-D17 清零；21 形态 × 明暗矩阵**视觉 diff = 0**（唯一硬判据）
   4. `maskClosable` 等弃用 prop grep 零命中；**不迁 `onSearch`**（未弃用）
-**Plans**: TBD
+**Plans**: 4 plans（4/4 已执行完成 — 同上先例；验收见 `88-VERIFICATION.md`）
 **UI hint**: yes
 
 ### Phase 89: 变量层与明暗色板重构
@@ -236,7 +236,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
 > ⚠️ **89 研究先行结论（X-1/X-1b/X-2/X-3，Lead 已裁定采纳，详见 89-RESEARCH.md §0）**：
 > **X-2** — 原成功标准「暗色输入框底对比度 ≥3:1」**数学上不可满足**（页面底与输入框底同为 `#0f2e1b` → 1:1；该色对任何背景上限 1.43:1）。3:1 判据移至**描边**（WCAG 1.4.11 管组件边界），暗色描边提亮属 Phase 92 范围 → 89 登记显式例外并移交。
 > **X-3** — T1/T2/T3（圆角）移交 **Phase 90**（89 执行会击穿自身 diff=0 硬判据并抢跑 90 的 STYLE-03）；89 的 T 批次只做色值类降级。
-**Plans**: TBD
+**Plans**: 4 plans（4/4 已执行完成 — 同上先例；验收见 `89-VERIFICATION.md`）
 **UI hint**: yes
 
 ### Phase 90: Input 域交还 variant/token + 圆角统一
@@ -247,7 +247,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
   1. 批次 C 与批次 B 同 commit 落地（顺序不可逆）
   2. InputNumber 错误态边框 = `rgb(186,54,48)`；圆角 computed-style = 8px
   3. 双框 = 0 / 焦点环单圈 / 错误态断言全绿（v1.24 契约零破坏）
-**Plans**: TBD
+**Plans**: 4 plans（W0 已执行完成，W1-W3 执行中；见 `90-QUANT-SNAPSHOT.md`）
 **UI hint**: yes
 
 ### Phase 91: Select / InputNumber / Form / Table / Modal 域交还

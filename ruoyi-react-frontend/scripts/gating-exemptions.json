@@ -160,31 +160,31 @@
     {
       "page": "src/pages/network/ports/index.tsx",
       "category": "legacy-two-source",
-      "reason": "端口页用旧式权限码 network:port:write 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑（改了等于自造权限码），等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。",
+      "reason": "端口页用旧式权限码 network:port:write 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑（改了等于自造权限码），等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
       "evidence": "src/pages/network/ports/index.tsx:130-132 使用字面量 network:port:write；src/constants/permissionCodes.ts 无 networkPort 区块；pkg/permission/config.go 有 network:port:* 常量"
     },
     {
       "page": "src/pages/network/mac/history/index.tsx",
       "category": "legacy-two-source",
-      "reason": "MAC 历史页用旧式权限码 network:mac:export 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。",
+      "reason": "MAC 历史页用旧式权限码 network:mac:export 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
       "evidence": "src/pages/network/mac/history/MACHistoryPage.tsx:117-119 使用字面量 network:mac:export；src/constants/permissionCodes.ts 无 networkMac 区块；pkg/permission/config.go 有 network:mac:* 常量"
     },
     {
       "page": "src/pages/vdi/VirtualMachineList/index.tsx",
       "category": "legacy-two-source",
-      "reason": "虚拟机列表页用旧式权限码 vdi:vm:* 直判（useMenuStore().permissions，共 vdi:vm:add/bind/remove/restart/start/stop/sync 七个），这些码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。",
+      "reason": "虚拟机列表页用旧式权限码 vdi:vm:* 直判（useMenuStore().permissions，共 vdi:vm:add/bind/remove/restart/start/stop/sync 七个），这些码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
       "evidence": "src/pages/vdi/VirtualMachineList/index.tsx:46,52,109,929-935 使用字面量 vdi:vm:*；src/constants/permissionCodes.ts 无 vdi 区块；pkg/permission/config.go 无 vdi: 前缀"
     },
     {
       "page": "src/pages/asset/reconciliation/exceptions/index.tsx",
       "category": "legacy-two-source",
-      "reason": "对账异常页用旧式权限码 asset:reconciliation:resolve 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。该页 Switch 命中为表单字段 Switch（显示已静默 <Form.Item name=\"showSilenced\" valuePropName=\"checked\"> 内、无 onChange），随搜索表单生效，不构成独立业务写入口。",
+      "reason": "对账异常页用旧式权限码 asset:reconciliation:resolve 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。该页 Switch 命中为表单字段 Switch（显示已静默 <Form.Item name=\"showSilenced\" valuePropName=\"checked\"> 内、无 onChange），随搜索表单生效，不构成独立业务写入口。",
       "evidence": "src/pages/asset/reconciliation/exceptions/index.tsx:85-86 使用字面量 asset:reconciliation:resolve；src/constants/permissionCodes.ts 无 asset 区块；pkg/permission/config.go 无 asset: 前缀；Switch 命中 src/pages/asset/reconciliation/exceptions/index.tsx:477"
     },
     {
       "page": "src/pages/asset/reconciliation/fix-suggestion/index.tsx",
       "category": "legacy-two-source",
-      "reason": "修复建议页用旧式权限码 asset:reconciliation:fix:{accept,reject,rollback} 直判（useMenuStore().permissions），这些码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。",
+      "reason": "修复建议页用旧式权限码 asset:reconciliation:fix:{accept,reject,rollback} 直判（useMenuStore().permissions），这些码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
       "evidence": "src/pages/asset/reconciliation/fix-suggestion/index.tsx:64-67 使用字面量 asset:reconciliation:fix:*；src/constants/permissionCodes.ts 无 asset 区块；pkg/permission/config.go 无 asset: 前缀"
     },
     {
