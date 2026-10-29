@@ -97,6 +97,19 @@ check(
   /\.ant-input-affix-wrapper\.ant-input-status-warning/.test(indexCss),
 );
 
+// ---------- C16 VISFIX-05：InputNumber status 边框色还原规则必须存在（防回潮） ----------
+// 背景：antd 6 把 status class 打在 .ant-input-number 根（ant-input-number-status-error），
+//   而项目的 border-color … !important 会压掉 antd 的 border-color 长属性 →
+//   InputNumber 错误态不回红（VISFIX-05）。本断言锁死「还原规则必须存在」，
+//   防止后续 phase（91/92 暗色 mega-cluster 合并）误删。
+check('C16a InputNumber status-error 还原规则存在（VISFIX-05）',
+  /\.ant-input-number\.ant-input-number-status-error/.test(indexCssNoComment));
+check('C16b InputNumber status-warning 还原规则存在（VISFIX-05）',
+  /\.ant-input-number\.ant-input-number-status-warning/.test(indexCssNoComment));
+check('C16c InputNumber status 还原使用 --ant-color-error/warning（无字面 hex）',
+  /\.ant-input-number\.ant-input-number-status-error[\s\S]*?\{[\s\S]*?var\(--ant-color-error\)/.test(indexCssNoComment) &&
+  /\.ant-input-number\.ant-input-number-status-warning[\s\S]*?\{[\s\S]*?var\(--ant-color-warning\)/.test(indexCssNoComment));
+
 // ==========================================================================
 // Phase 88 (VISFIX-06) 新增断言：C6 / C11 / C8 / C12
 // ==========================================================================

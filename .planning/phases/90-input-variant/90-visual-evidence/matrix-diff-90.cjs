@@ -158,7 +158,10 @@ for (const cls of Object.keys(EXPECTED)) {
 fs.writeFileSync(path.join(__dirname, 'matrix-diff-result-90.txt'),
   `单元格 ${total}，差异 ${diffs.length}（light=${lightDiffs.length}/dark=${darkDiffs.length}），归类 ${classified.length}，未归类 ${unclassified.length}\n` +
   `形态数 before=${formsBefore.size} / after=${formsAfter.size}\n` +
-  diffs.map((d) => (d.cls ? `[${d.cls}] ` : 'UNCLASSIFIED ') + d.text).join('\n') + '\n');
+  [
+    ...classified.map((d) => `[${d.cls}] ${d.text}`),
+    ...unclassified.map((d) => `UNCLASSIFIED ${d.text}`),
+  ].join('\n') + '\n');
 
 if (fail) process.exit(1);
 console.log('RESULT: light 差异 > 0 / dark 差异 > 0 / 全部差异归类 / 未归类 0 / a·b·c 形态集合与登记一致 → PASS');

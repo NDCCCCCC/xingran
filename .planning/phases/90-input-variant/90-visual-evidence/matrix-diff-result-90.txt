@@ -1,0 +1,40 @@
+单元格 456，差异 38（light=19/dark=19），归类 38，未归类 0
+形态数 before=22 / after=22
+[a] light/f01_input_plain/carrier.radius: 6px -> 8px
+[a] light/f02_input_prefix/carrier.radius: 6px -> 8px
+[a] light/f03_input_suffix/carrier.radius: 6px -> 8px
+[a] light/f04_input_allowclear/carrier.radius: 6px -> 8px
+[a] light/f05_input_addonbefore/carrier.radius: 6px -> 8px
+[a] light/f05_input_addonbefore/inner.radius: 6px -> 8px
+[a] light/f06_input_addonafter/carrier.radius: 6px -> 8px
+[a] light/f06_input_addonafter/inner.radius: 6px -> 8px
+[a] light/f07_input_password/carrier.radius: 6px -> 8px
+[a] light/f08_input_search/carrier.radius: 6px -> 8px
+[a] light/f09_textarea/carrier.radius: 6px -> 8px
+[a] light/f10_textarea_showcount/carrier.radius: 6px -> 8px
+[a] light/f11_input_number/carrier.radius: 6px -> 8px
+[a] light/f14_datepicker/inner.radius: 6px -> 8px
+[a] light/f15_range_picker/inner.radius: 6px -> 8px
+[a] light/f20_appinput/carrier.radius: 6px -> 8px
+[a] light/f21_apptextarea/carrier.radius: 6px -> 8px
+[b] light/f22_input_number_status_error/carrier.border: rgb(219, 215, 206) -> rgb(186, 54, 48)
+[a] light/f22_input_number_status_error/carrier.radius: 6px -> 8px
+[a] dark/f01_input_plain/carrier.radius: 6px -> 8px
+[a] dark/f02_input_prefix/carrier.radius: 6px -> 8px
+[a] dark/f03_input_suffix/carrier.radius: 6px -> 8px
+[a] dark/f04_input_allowclear/carrier.radius: 6px -> 8px
+[a] dark/f05_input_addonbefore/carrier.radius: 6px -> 8px
+[a] dark/f05_input_addonbefore/inner.radius: 6px -> 8px
+[a] dark/f06_input_addonafter/carrier.radius: 6px -> 8px
+[a] dark/f06_input_addonafter/inner.radius: 6px -> 8px
+[a] dark/f07_input_password/carrier.radius: 6px -> 8px
+[a] dark/f08_input_search/carrier.radius: 6px -> 8px
+[a] dark/f09_textarea/carrier.radius: 6px -> 8px
+[a] dark/f10_textarea_showcount/carrier.radius: 6px -> 8px
+[a] dark/f11_input_number/carrier.radius: 6px -> 8px
+[a] dark/f14_datepicker/inner.radius: 6px -> 8px
+[a] dark/f15_range_picker/inner.radius: 6px -> 8px
+[a] dark/f20_appinput/carrier.radius: 6px -> 8px
+[a] dark/f21_apptextarea/carrier.radius: 6px -> 8px
+[b] dark/f22_input_number_status_error/carrier.border: rgb(45, 77, 51) -> rgb(161, 49, 44)
+[a] dark/f22_input_number_status_error/carrier.radius: 6px -> 8px

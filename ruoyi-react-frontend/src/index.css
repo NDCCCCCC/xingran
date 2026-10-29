@@ -3,18 +3,15 @@
 /* ========================================
    现代企业设计系统 - Premium Dark Mode
    Modern Enterprise Design System
-
    v1.22 品牌化落地（Phase 64 · TOKEN-01）
    - 色值真相源：`655aa291-9bfe-4e94-ad5d-b3c8b2d24984/brand-spec.md`
    - 实测来源：登录页像素取色 + OKLch 派生 + WCAG AA 校验
    - D-02 锁定：标注「实测」直接采用；「推导」须通过 QA-01 对比度校验
    - D-03 锁定：主按钮永远 `#156031` 绿底白字；铜金 `#C09058` 不做实心主按钮
-
    设计理念：专业、清晰、高效
    配色方案：深绿主色 + 铜金点缀 + 奶油纸感画布
    暗色模式：深邃、层次分明、细节精致
    ========================================
-
    暗色模式设计语言：
    - 基础背景：深绿加深 (#0F2E1B) - 深绿品牌底
    - 表面层递：#1A2E1F → #1F3524 → #243A29
@@ -32,7 +29,6 @@
   --theme-primary-light: #1a6839; /* 渐变亮端 (实测) */
   --theme-primary-lighter: #e9efeb; /* 浅色背景 (实测绿灰淡彩) */
   --theme-primary-subtle: #598e5e; /* 柔和边框 (实测深底图标绿) */
-
   /* ===== 品牌色静态定义 (Phase 65 · THEME-01) =====
      原由 design-system/themes/index.ts 运行时注入；多主题移除后由本文件静态提供。
      色值唯一来源：655aa291-9bfe-4e94-ad5d-b3c8b2d24984/brand-spec.md (per D-02) */
@@ -44,7 +40,6 @@
   --theme-primary-500: #156031; /* 品牌主色 (InnovativeLayout/GlobalSearch 消费) */
   --theme-primary-600: #14532d; /* 侧边栏深绿 */
   --theme-primary-700: #14542e; /* 激活深端 */
-
   /* ===== 中性色 - 奶油纸感色阶 (实测+推导) ===== */
   --theme-neutral-white: #ffffff; /* 白卡 surface */
   --theme-neutral-50: #f0ece3; /* 奶油画布 (实测) */
@@ -57,7 +52,6 @@
   --theme-neutral-700: #3b784c; /* 次级绿 */
   --theme-neutral-800: #14532d; /* 侧边栏深绿 (实测) */
   --theme-neutral-900: #0f2e1b; /* 深绿加深 (暗色模式) */
-
   /* ===== 侧边栏专用色 ===== */
   --sidebar-bg: #14532d; /* 深绿侧栏底 (实测) */
   --sidebar-bg-hover: #156031; /* 悬停态 */
@@ -67,11 +61,9 @@
   --sidebar-text-hover: #ffffff;
   --sidebar-text-active: #e0e0b0; /* 浅黄强调 (实测, 深绿底 5.62:1) */
   --sidebar-accent: #c09058; /* 铜金点缀 (实测) */
-
   /* ===== 顶栏专用色 (Phase 66 · COMP-01 解耦) =====
      顶栏必须与侧栏变量解耦, 否则 light 模式深绿侧栏会染绿 64px 白顶栏 */
   --header-bg: #ffffff; /* 顶栏底 (light) */
-
   /* ===== 背景色系统 ===== */
   --theme-bg-primary: #f0ece3; /* 奶油画布 (实测) */
   --theme-bg-secondary: #f0ece3;
@@ -79,7 +71,6 @@
   --theme-bg-surface: #ffffff; /* 白卡 (实测) */
   --theme-bg-elevated: #ffffff;
   --theme-bg-accent: #e9efeb;
-
   /* ===== 文字色系统 ===== */
   --theme-text-primary: #101010; /* 主文字 (实测) */
   --theme-text-secondary: #707068; /* 次级文字 (实测) */
@@ -87,16 +78,13 @@
   --theme-text-disabled: #c2bdb2;
   --theme-text-inverse: #ffffff;
   --theme-text-accent: #156031;
-
   /* 输入框占位符兜底（R11：任何作用域都有定义，C6 天然通过；值同 --theme-neutral-400） */
   --input-text-placeholder: var(--theme-neutral-400);
-
   /* ===== 边框色系统 ===== */
   --theme-border-primary: #dbd7ce; /* 暖灰描边 (实测) */
   --theme-border-secondary: #e9efeb;
   --theme-border-divider: #dbd7ce;
   --theme-border-accent: #598e5e;
-
   /* ===== 功能色系统 (推导 + WCAG 验证) ===== */
   --theme-success: #2d8949; /* 图标/大字 4.39:1 */
   --theme-success-bg: #e9efeb;
@@ -106,7 +94,6 @@
   --theme-error: #ba3630; /* 白字 5.74:1 (实测) */
   --theme-error-bg: #f7d8d5; /* 错误背景（奶油系淡红，与 --theme-error 协调） */
   --theme-info: #337ab0;
-
   /* ===== 间距系统 ===== */
   --theme-spacing-xs: 4px;
   --theme-spacing-sm: 8px;
@@ -115,7 +102,6 @@
   --theme-spacing-xl: 20px;
   --theme-spacing-2xl: 24px;
   --theme-spacing-3xl: 32px;
-
   /* ===== 阴影系统 - 柔和现代 ===== */
   --theme-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
   --theme-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -123,7 +109,6 @@
   --theme-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
   --theme-shadow-xl:
     0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
-
   /* ===== 圆角系统 ===== */
   --theme-radius-sm: 4px;
   --theme-radius-md: 6px;
@@ -131,17 +116,14 @@
   --theme-radius-xl: 12px;
   --theme-radius-2xl: 16px;
   --theme-radius-full: 9999px;
-
   /* ===== 过渡系统 ===== */
   --theme-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --theme-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --theme-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-
   /* ===== 字体系统 ===== */
   --theme-font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
   --theme-font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
-
   /* ===== 布局变量 ===== */
   --sidebar-width: 200px;
   --sidebar-collapsed-width: 56px;
@@ -162,28 +144,23 @@
   --sidebar-text-hover: #ffffff;
   --sidebar-text-active: #e0e0b0;
   --sidebar-accent: #c09058;
-
   /* 背景层（奶油画布 + 白卡 surface） */
   --bg-base: #f0ece3;
   --bg-surface: #ffffff;
   --bg-elevated: #ffffff;
   --bg-overlay: #ffffff;
   --bg-overlay-hover: #f0ece3;
-
   /* 文字 */
   --text-primary: #101010;
   --text-secondary: #707068;
   --text-tertiary: #598e5e;
   --text-disabled: #c2bdb2;
-
   /* 边框 */
   --border-base: #dbd7ce;
   --border-subtle: #e9efeb;
-
   /* 组件背景 */
   --component-bg: #ffffff;
   --component-bg-hover: #f0ece3;
-
   /* 输入框 */
   --input-bg: #fafaf9; /* 输入框底（原型实测，迁自后置 :root，VISFIX-01 串色修正） */
   --input-bg-hover: #f4f2ec; /* 结构对称补齐（对应 dark 块四兄弟），当前无引用点 → 零渲染影响 */
@@ -211,14 +188,12 @@
   --bg-overlay: #243a29; /* Level 3 - 覆盖层 - 弹窗/抽屉 */
   --bg-overlay-hover: #2d4d33; /* Level 4 - 悬停层 - 交互反馈 */
   --bg-overlay-active: #345b3a; /* Level 5 - 激活层 - 最高优先级 */
-
   /* ===== 背景色映射到主题系统 ===== */
   --theme-bg-primary: #0f2e1b;
   --theme-bg-secondary: #1a2e1f;
   --theme-bg-tertiary: #1f3524;
   --theme-bg-surface: #1a2e1f;
   --theme-bg-elevated: #243a29;
-
   /* ===== 品牌色暗色推导 (Phase 65 · THEME-02，深底提亮 per brand-spec) =====
      深绿底上 500/600 提亮为次级绿/深底图标绿；50/100/700 沿用 :root 值 */
   --theme-brand: #598e5e; /* 深底图标绿（提亮） */
@@ -226,7 +201,6 @@
   --theme-brand-alpha-10: rgba(89, 142, 94, 0.15); /* 深底选中底 */
   --theme-primary-500: #3b784c; /* 次级绿 */
   --theme-primary-600: #598e5e; /* 深底图标绿 */
-
   /* ===== 文字系统 - 5级对比度层次（奶油文字） ===== */
   --text-primary: #f0ece3; /* Level 1 - 主文字 - 奶油 */
   --text-secondary: #dbd7ce; /* Level 2 - 次要 - 暖灰描边 */
@@ -234,30 +208,25 @@
   --text-quaternary: #e0e0b0; /* Level 4 - 描述 - 浅黄强调 */
   --text-disabled: #707068; /* Level 5 - 禁用 */
   --text-inverse: #0f2e1b; /* 反色文字 */
-
   /* ===== 文字色映射到主题系统 ===== */
   --theme-text-primary: #f0ece3;
   --theme-text-secondary: #dbd7ce;
   --theme-text-tertiary: #c2bdb2;
   --theme-text-disabled: #707068;
-
   /* ===== 边框系统 - 4级微妙界定（深绿低饱和） ===== */
   --border-base: #2d4d33; /* Level 1 - 主边框 */
   --border-subtle: #1a2e1f; /* Level 2 - 次边框 */
   --border-strong: #345b3a; /* Level 3 - 强调边框 */
   --border-focus: #1a6839; /* Level 4 - 聚焦边框 - 品牌绿 */
-
   /* ===== 边框色映射到主题系统 ===== */
   --theme-border-primary: #2d4d33;
   --theme-border-secondary: #1a2e1f;
   --theme-border-divider: #2d4d33;
-
   /* ===== 组件背景系统 ===== */
   --component-bg: #1f3524; /* 组件基础背景 */
   --component-bg-hover: #243a29; /* 组件悬停背景 */
   --component-bg-active: #2d4d33; /* 组件激活背景 */
   --component-bg-disabled: #0f2e1b; /* 组件禁用背景 */
-
   /* ===== 输入框系统 - 深绿可读 ===== */
   --input-bg: #0f2e1b; /* 输入背景 - 与主背景融合 */
   --input-bg-hover: #1a2e1f; /* 输入悬停背景 */
@@ -265,37 +234,29 @@
   --input-bg-disabled: #0a1f12; /* 输入禁用背景 */
   --table-header-bg: #1f3524; /* COMP-02: 表头专用深色（保持 dark 视觉层次） */
   --theme-zebra: #faf8f3; /* T14（Phase 89）: dark 补同值（原后置 :root 两模式共用同值 → 零渲染差异；≠--theme-bg-tertiary） */
-
   --input-border: #2d4d33; /* 输入边框 */
   --input-border-hover: #598e5e; /* 悬停边框 */
   --input-border-focus: #1a6839; /* 聚焦边框 - 品牌绿 */
   --input-border-error: #ba3630; /* 错误边框 */
   --input-border-disabled: #1a2e1f; /* 禁用边框 */
-
   --input-text: #f0ece3; /* 输入文字 */
   --input-text-placeholder: #707068; /* 占位符 */
   --input-text-disabled: #64645c; /* 禁用文字 */
-
   /* ===== 侧边栏系统 - 深绿品牌 ===== */
   --sidebar-bg: #0a2418; /* 侧边栏背景 - 品牌深绿加深 */
   --sidebar-bg-hover: #14532d; /* 侧边栏悬停 */
   --sidebar-bg-active: #156031; /* 侧边栏激活 */
   --sidebar-bg-disabled: #0a1f12; /* 侧边栏禁用 */
-
   /* 顶栏专用色 (Phase 66 · COMP-01 解耦) */
   --header-bg: #0a2418; /* 顶栏底 (dark) 沿用深绿视觉 */
-
   --sidebar-border: #2d4d33; /* 侧边栏边框 */
   --sidebar-border-hover: #598e5e; /* 侧边栏悬停边框 */
-
   --sidebar-text: #f0ece3; /* 侧边栏文字 - 奶油 */
   --sidebar-text-hover: #ffffff; /* 侧边栏悬停文字 */
   --sidebar-text-active: #e0e0b0; /* 侧边栏激活文字 - 浅黄 */
   --sidebar-text-disabled: #707068; /* 侧边栏禁用文字 */
-
   --sidebar-accent: #c09058; /* 侧边栏强调色 - 铜金 */
   --sidebar-accent-glow: rgba(192, 144, 88, 0.3); /* 侧边栏发光 */
-
   /* ===== 按钮系统（品牌绿） ===== */
   --btn-primary-bg: #2e7444; /* 主按钮背景（深色模式 hover 态） */
   --btn-primary-hover: #1a6839; /* 主按钮悬停 */
@@ -880,9 +841,11 @@ body {
 .ant-input,
 .ant-input-number {
   background: var(--input-bg) !important;
-  border: 1px solid var(--input-border) !important;
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--input-border) !important;
   color: var(--input-text) !important;
-  border-radius: var(--theme-radius-md) !important;
+  border-radius: var(--theme-radius-lg);
   font-size: 14px !important;
   transition:
     background var(--theme-transition-fast),
@@ -918,7 +881,7 @@ body {
   background: var(--input-bg) !important;
   border: 1px solid var(--input-border) !important;
   color: var(--input-text) !important;
-  border-radius: var(--theme-radius-md) !important;
+  border-radius: var(--theme-radius-lg);
   transition: all var(--theme-transition-fast) !important;
 }
 
@@ -939,10 +902,16 @@ body {
 
 /* antd 6 affix-wrapper 内层复位：边框/圆角/背景只归 wrapper（v1.24 双框修复 VIS-01）
    antd 原生契约：.ant-input-affix-wrapper > input.ant-input { border:none; ... }（antd.css）
-   项目 :871 的 .ant-input !important 曾覆盖它 → 内层画边框 = 双框
-   注意：故意不写 box-shadow——焦点环画在 wrapper（:916-929），antd 自身在内层的
-   box-shadow:none!important（特异性 0,4,1）已足够；特异性 (0,3,1)+important
-   可压过暗色块 :2252-2284（最高 0,2,0）与 :3717-3757 的 !important 残留 */
+   为何仍需保留：Input 输入框章节 `.ant-input, .ant-input-number` 块的 border-color
+   仍以 important 声明压住 antd 内层 border:none 与 antd 的 status 长属性 → 复位块是 VIS-01
+   双框契约的唯一守护（删掉即恢复 309 个输入框的双框）。
+   批次 C 已落地：该块的 border 简写已拆为 border-width / border-style / border-color，
+   仅 border-color 保留 important → 但 color 仍 important → 仍压 status 色 →
+   VIS-03 / VISFIX-05 只能靠更高特异性的 status 还原规则补回（拆简写 ≠ 交还 color）。
+   注意：故意不写 box-shadow——焦点环归 wrapper（VIS-02），antd 自身在内层的
+   box-shadow:none（antd 侧带 important，特异性 0,4,1）已足够；本块特异性 (0,2,1) 且带 important
+   可压过暗色 mega-cluster 输入域块与暗色 InputNumber 专项块的 important 残留。
+   本块在 91/92 之前不得删除（乙方案路径见 90-CHANGESET 债 D-c）。 */
 .ant-input-affix-wrapper > input.ant-input,
 .ant-input-affix-wrapper > textarea.ant-input {
   border: none !important;
@@ -954,16 +923,20 @@ body {
 }
 
 /* VIS-03（F1）：Form status 边框色还原。antd 的 status 色是普通声明，
-   被 :871/:910 的 border !important 简写压掉 → 错误态不变红。
-   以同级 !important + 更高特异性还原；只覆盖 Input 域，不动 Select/DatePicker（既存欠账不扩面）
+   被项目 Input 输入框章节 `.ant-input, .ant-input-number` 块的 border-color
+   （important 声明）压掉 → 错误态不变红。
+   以同级 important + 更高特异性还原；只覆盖 Input 域，不动 Select/DatePicker（既存欠账不扩面）
+
+   批次 C 已落地：该块的 border 简写已拆为 border-width / border-style / border-color
+   三属性，仅 border-color 保留 important（宽度/样式交还 antd variant 机制）→
+   color 仍以 important 压住 antd 的 status 长属性 → 故仍需本组 status 还原规则补回红框。
 
    ⚠️ v1.24 Phase 77 实测修正：antd 6 把 status class 打在 **wrapper 元素自身**，
    名为 `ant-input-status-error`（**不是** `ant-input-affix-wrapper-status-error`——
    该 class 在 antd 6.6.4 的 antd.css 中根本不存在，写它 = 永不命中的死规则）。
    真实 DOM：class="ant-input-affix-wrapper ant-input-outlined ant-input-status-error"
    antd 自身的规则形如 `.ant-input-outlined.ant-input-status-error:not(.ant-input-disabled)`
-   （wrapper 与 input 共用同一个 status class）。
-   特异性：本规则 (0,2,0)+important > 项目 :910 的 (0,1,0)+important 简写 → 压得过。 */
+   （wrapper 与 input 共用同一个 status class）。 */
 .ant-input.ant-input-status-error,
 .ant-input-affix-wrapper.ant-input-status-error,
 .ant-input-affix-wrapper.ant-input-status-error:hover,
@@ -977,6 +950,31 @@ body {
 .ant-input-affix-wrapper.ant-input-status-warning,
 .ant-input-affix-wrapper.ant-input-status-warning:hover {
   border-color: var(--ant-color-warning) !important; /* T7: 同 T6（Phase 89） */
+}
+/* VISFIX-05：InputNumber status 边框色还原（补 antd 6 漏补的 InputNumber 域）
+   antd 6 的 status class 落在 .ant-input-number 根（ant-input-number-status-error），
+   而项目 Input 输入框块的 border-color（important 声明）压掉了 antd 的 border-color 长属性 →
+   错误态边框停在 --input-border（品牌中性边框色）而非品牌红。
+   色值用 var(--ant-color-error)（= ruoyiBrand.functional.danger 品牌危险色，
+   AntdThemeBridge 显式 colorError；但 colorError 是 seed 名 → 不被 alias 回填，
+   故暗色取 darkAlgorithm 派生值 —— 该变量明暗解析值不同，断言必须按模式取值）；
+   light 侧无对应错误态变量，不可用。
+   特异性链（逐条核对见 PLAN 任务 2.3 核对表）。 */
+.ant-input-number.ant-input-number-status-error,
+.ant-input-number.ant-input-number-status-error:hover,
+.ant-input-number.ant-input-number-status-error:focus,
+[data-color-mode="dark"] .ant-input-number.ant-input-number-status-error,
+[data-color-mode="dark"] .ant-input-number.ant-input-number-status-error:hover,
+[data-color-mode="dark"] .ant-input-number.ant-input-number-status-error:focus {
+  border-color: var(--ant-color-error) !important;
+}
+.ant-input-number.ant-input-number-status-warning,
+.ant-input-number.ant-input-number-status-warning:hover,
+.ant-input-number.ant-input-number-status-warning:focus,
+[data-color-mode="dark"] .ant-input-number.ant-input-number-status-warning,
+[data-color-mode="dark"] .ant-input-number.ant-input-number-status-warning:hover,
+[data-color-mode="dark"] .ant-input-number.ant-input-number-status-warning:focus {
+  border-color: var(--ant-color-warning) !important;
 }
 
 /* ========================================
@@ -5486,7 +5484,7 @@ body {
   min-width: 32px;
   height: 32px;
   line-height: 32px;
-  border-radius: 6px !important;
+  border-radius: var(--theme-radius-lg) !important;
   font-family: var(--theme-font-mono);
 }
 .ant-pagination .ant-pagination-item:hover {

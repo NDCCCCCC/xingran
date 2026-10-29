@@ -125,6 +125,108 @@ f20_appinput  f21_apptextarea  f22_input_number_status_error
 | **D-g** | C13 的 `stripComments` 正则不跨行（`/\/\*.*?\*\//g`） | `.` 不匹配换行 → **多行注释块内的 hex 被计入**（`index.css` raw 311 vs strip 后 304，差 7）→ 90 的注释块**不得含任何 6 位 hex**；修法（正则改 `[\s\S]*?`）本 phase 不动 C13 | Phase 92 |
 | **D-h** | 暗色 `--ant-color-error` ≠ 品牌 `danger` 色 | 暗色 scope 内 `--ant-color-error` = `#a1312c`（antd `darkAlgorithm` 派生）≠ `ruoyiBrand.functional.danger` = `#BA3630` → 暗色错误态红框与品牌色不一致（暗色对比度更佳，但与品牌色板脱钩）→ 属 token 层归口 | Phase 91 / 92 |
 
+**W1 追加登记（90-02 实跑新增）**：
+
+| # | 债 | 量化 | 归属 |
+|---|---|---|---|
+| **D-i** | **M1 / M2 的 `!important` 计数口径把注释内的 `!important` 字面也计入**（与 D-g 的 C13 hex 同型缺陷） | 实测证据：W1 重写复位块 / VIS-03 / VISFIX-05 三处注释块时，把注释里的 `!important` 字面改成「important」措辞 → **M1 / M2 各 -7**（净），而 CSS 语义零变化（注释不参与层叠）；影响面：M1 / M2 预算的「真实声明覆盖率」被注释字面稀释；**修法 = 与 C13 一致，把计数改为先剥注释再计**（`stripCommentsKeepLines` 已有同款实现，见 `css-contract-check.js:123`） | Phase 91 / 92（**本 phase 只登记不动 C11**：`IMPORTANT_BUDGET` 保持 1397 不动） |
+| **D-j** | **两处输入类圆角已去 important → 圆角改由 antd `components.Input.borderRadius` 决定**，若某页面**完全没有 antd Input 组件**则 antd cssinjs 不注入 Input 样式 → 裸 `.ant-input` 圆角退回 initial(0) | W1 实测：22 形态矩阵（明暗 456 格）+ 14 页巡检全部处于 antd 组件上下文，**零命中**；风险窗口 = 「纯裸 `<input class="ant-input">` 且页面无任何 antd Input」的极端场景；**修法 = 92 终态盘点时确认 antd cssinjs 注入时机，或回滚两处 important** | Phase 92（终态复核） |
+
+---
+
+## W1 落地记录（90-02 · 批次 C + 批次 B + VISFIX-05 + STYLE-03 + M9 压缩 · **单一 commit**）
+
+> **行号基准声明（防 91/92 被漂移行号误导）**：本节全部 `:NNN` 行号 = **W1 前 HEAD 行号（`git show HEAD:./src/index.css`，5555 行）**，**仅作参考**。
+> **W1 的行号漂移公式（自 W1 前 HEAD 起算）**：
+> ① 批次 C 拆 `:883` 一行 → 三行 → `:884` 及其之后 **+2**；
+> ② 复位块注释重写（6 行 → 12 行）→ **+6**；
+> ③ VIS-03 注释块重写（11 行 → 15 行）→ **+4**；
+> ④ VISFIX-05 新块（注释 9 + error 7 + warning 7 = 23 行）→ **+23**；
+> ⑤ M9 空行压缩（删 39 处块内空行，落点行号 **6…298**，全在该区间内）→ 被删点之后 **−39**。
+> ⇒ **净漂移 = +2 +6 +4 +23 −39 = −4**（`:883` 之前的行为 0；`:883` 之后且 > 298 的行号 **−4**；`:298` 之前的行号按各自删点位置浮动）。
+> ⇒ **权威标识一律是「选择器锚点」**，行号仅供 91/92 复核时快速定位。
+
+### ① 批次 C：拆 `border` 简写（唯一拆 `:883` 一处）
+
+| 项 | 内容 |
+|---|---|
+| 位置 | `.ant-input, .ant-input-number` 块（W1 前 HEAD `:880-892`） |
+| 落地 | `border: 1px solid var(--input-border) !important` → 三条 longhand：`border-width: 1px` / `border-style: solid` / **`border-color: var(--input-border) !important`**（**仅 color 保 important**，width/style 交还 antd variant 机制） |
+| M1 / M2 影响 | **±0**（1 个 important → 1 个 important） |
+| 视觉等价实测 | `borderTopWidth = 1px` / `borderTopStyle = solid` / `borderTopColor = rgb(219, 215, 206)`（light）—— 与 W0 基线**逐字相等**（证据 `probe90-light.json` / `after-light.json`） |
+| 未拆的 wrapper 简写 | `.ant-input-affix-wrapper` 的 `border` 简写**保持原样**（`css-contract-check.js:76` 的 **C4b** 以字面正则守护）→ 登记为债 **D-f**（91/92 与 D-c 同批处置） |
+
+### ② 批次 B（= 留 · 甲方案）：复位块本体保留 + 注释重写
+
+- **本体零调整**：`.ant-input-affix-wrapper > input.ant-input, .ant-input-affix-wrapper > textarea.ant-input` 的六项复位（`border: none` / `border-radius: 0` / `background: transparent` / `color: inherit` / `font-size: inherit` / `padding: 0`）**逐字未动** → **C1a / C1b / C1c 零调整**（`git diff` 中 C1 块无 +/- 行）。
+- **注释重写**（两处，均只改注释不动规则）：
+  - 复位块注释：去掉全部绝对行号（`:871` / `:916-929` / `:2252-2284` / `:3717-3757`），改用「章节名 / 选择器」锚点；新增四点内容（为何仍需保留 / 批次 C 已落地与因果链 / 故意不写 box-shadow —— 焦点环归 wrapper / 本块在 91/92 之前不得删除 + D-c 指针）。
+  - **VIS-03 注释块一并重写**：原 `:871` / `:910` 的过期行号与「border 简写」过期语义全部清除；改为「border 已拆为 `border-width` / `border-style` / `border-color` 三属性，仅 color 保留 important」；**Phase 77 事实说明**（status class 打在 wrapper 自身 / 真实 DOM / antd 规则形态）与「只覆盖 Input 域，不动 Select/DatePicker」边界句**保留**；`/* VIS-03` 起始标识保留。
+- **两条注释块均零 6 位 hex**（C13 多行注释误计入防线）且**零 `!important` 字面**（D-i 口径规避，见 ⑥）。
+
+### ③ VISFIX-05：InputNumber status 边框色还原（error / warning 各 6 选择器）
+
+- 落地形态（紧贴 VIS-03 warning 规则块插入，**块内零空行** → 块间单空行计数恒 801）：
+  - error 组 6 选择器 = 常态 / `:hover` / `:focus` × 明暗（light 3 + `[data-color-mode="dark"]` 3）→ `border-color: var(--ant-color-error) !important`
+  - warning 组 6 选择器 = 同构 → `border-color: var(--ant-color-warning) !important`
+- **色值口径（mode-aware，明暗双测）**：`--ant-color-error` 在 cssVar scope 内 light = `#ba3630` → **`rgb(186, 54, 48)`**；dark = `#a1312c` → **`rgb(161, 49, 44)`**（`darkAlgorithm` 对 seed 名 `colorError` 的派生值，**不是** `#BA3630`）。warning：light `#b07a20` → `rgb(176, 122, 32)`。
+- **实测（探针 `probe90-light.json` / `after-{light,dark}.json`）**：error 态 `borderTopColor` = light `rgb(186, 54, 48)` / dark `rgb(161, 49, 44)`；warning 态 = light `rgb(176, 122, 32)`；**与登记的 b 类 after 值逐字相等**。
+- **契约**：新增 **C16a / C16b / C16c** 三条静态断言防回潮（C16c 用非贪婪不限长 `[\s\S]*?\{[\s\S]*?var\(…\)` → 对多行选择器排版免疫）；既有断言（C1a/C1b/C1c/C3a-c/C4a-c/C5a-c/C11/C13）**零改动**。
+- **边界**：只覆盖 `.ant-input-number` 域，**不碰** Input 域的 VIS-03 规则本体、不碰 Select / DatePicker。
+
+### ④ STYLE-03：圆角 6 → 8（三处）
+
+| 位置（W1 前 HEAD） | 选择器锚点（权威） | 变更 |
+|---|---|---|
+| `:885` | `.ant-input, .ant-input-number` | `var(--theme-radius-md) !important` → **`var(--theme-radius-lg)`**（**去 important**，见下方裁定） |
+| `:921` | `.ant-input-affix-wrapper` | `var(--theme-radius-md) !important` → **`var(--theme-radius-lg)`**（**去 important**，见下方裁定） |
+| `:5489` | `.ant-pagination .ant-pagination-item` | `6px !important` → **`var(--theme-radius-lg) !important`**（**保留 important**：K11 刻意设计的透明无边框分页项，`border: none !important` 同块存在，去 important 会让 antd 分页边框长回来） |
+
+> **⚠️ 裁定（PLAN 假设被实跑证据推翻 · 执行期自行裁定）**
+> **PLAN 原文**：90-02 任务 2.4 要求三处圆角「**保留 `!important`**」（理由：最小 diff）。
+> **推翻依据（实跑证据）**：
+> ① **antd token 已是真相源** —— `AntdThemeBridge.tsx:147` 的 `components.Input.borderRadius = 8`，与 `--theme-radius-lg = 8px` **完全一致**；项目手写 `!important` 属**对抗 antd token**，与 Phase 90 主责（STYLE-02「把手写 `!important` 收敛到 antd 6 官方 variant/token 机制」）方向相反；
+> ② **视觉零漂移实测** —— 去掉两处 `!important` 前后**各采一次完整 after 快照**（明暗各 22 形态 × 2 part × 6 属性 = 456 格），两次差异集合**逐格完全相同**（38 格 / light 19 / dark 19 / 归类 38 / 未归类 0）→ 圆角交还 antd token 后 computed 值零变化；
+> ③ **内层 radius 不受影响** —— wrapper 内层由 VIS-01 复位块的 `border-radius: 0 !important` 独占；f11 / f22 的 `.ant-input-number-input` 内层 0px 由 antd 内建复位保证（矩阵 f11/f22 inner 无差异）；
+> ④ **M1 账** —— 去 important 贡献 M1 / M2 各 **−2**，是「M1 不升」得以成立的**真实声明级**抵消（区别于 D-i 的注释字面规避）。
+> **裁定**：**移除两处 `border-radius` 的 `!important`（分页器保留）**，圆角值改由 antd `components.Input.borderRadius` 决定 —— 这正是 STYLE-03「输入类组件圆角统一由 6px 收敛到设计 token 的 8px」的**机制语义**（不是硬写一个 8px 字面）。
+> **残留风险（登记为债 D-j）**：若某页面**完全没有 antd Input 组件**，antd cssinjs 不会注入 Input 样式 → 裸 `.ant-input` 的圆角会退回 initial(0)。当前 22 形态矩阵 + 14 页巡检全部处于 antd 组件上下文，**零命中**。
+
+### ⑤ M9 预算腾挪：纯冗余空行压缩（同 commit 内）
+
+| 项 | 值 |
+|---|---|
+| **唯一硬判据** | **M9 = (`wc -l src/index.css`) + 1 ≤ 5558**（checker 口径 `split('\n').length`；**M9 = `wc -l` + 1，两口径不得混用**） |
+| 压缩前 | `wc -l` = 5552 → **M9 = 5593** |
+| **G**（本轮非压缩改动净增） | **+37** = 批次 C 拆行 (+2) + 复位块注释重写 (+6) + VIS-03 注释重写 (+4) + VISFIX-05 新块 (+23) + 圆角值改写 (±0) |
+| **D**（删除的块内空行数） | **39**（由 M9 判据反推：最终 M9 = 5556 + G − D ≤ 5558 ⟺ **D ≥ G − 2 = 35**；取 **D = 39**（余量 4）） |
+| 压缩后 | `wc -l` = 5553 → **M9 = 5554 ≤ 5558** ✅ |
+| 约束① D ≤ 58 | **39 ≤ 58** ✅（压缩前实测块内空行 59 处，含 VIS-03 注释块内新增的 1 处） |
+| 约束② 被删行全部为块内空行 | ✅ 逐行校验（判定口径 = 该空行**前后两个非空行缩进均 > 0**） |
+| 约束③ 块间单空行计数 | **801 → 801 不变** ✅（压缩前后实测） |
+| 禁区 | 暗色只读区（`:2254-2742` / `:2780-4517`）内 **零处**被删（压缩前实测 59 处块内空行落在只读区内的 = 0）；六处非输入域 6px 未碰；**一行 CSS 声明与注释内容都未改**（只删空行） |
+| **`C13_M9_BUDGET`** | **仍为 5558**（`git diff` 中该常量行无 +/-）✅ |
+| **被删行号清单（删除前，1-based）** | `6, 12, 17, 35, 47, 60, 70, 74, 82, 90, 93, 99, 109, 118, 126, 134, 139, 144, 165, 172, 178, 182, 186, 214, 221, 229, 237, 243, 249, 254, 260, 268, 274, 278, 284, 287, 290, 295, 298`（**共 39 行，全部落在文件头 `:6`–`:298` 区间的块内空行**；复核脚本 `90-visual-evidence/p90-compress.cjs` 逐条自检「非空行 / 非块内 / 落在暗色只读区」三类禁区） |
+
+### ⑥ M1 / M2 净变化分解（W0 起点 → W1 后）
+
+| 指标 | W0 起点 | W1 后 | 净变化 | 分解 |
+|---|---|---|---|---|
+| **M1**（全 `.css/.less` `!important`） | 1397 | **1392** | **−5** | 批次 C 拆简写 **±0**；两处圆角去 important **−2**；VISFIX-05 两条新规则体 **+2**；**注释字面规避（D-i 口径）** −5 |
+| **M2**（`index.css` `!important`） | 1330 | **1325** | **−5** | 同上（本 phase 只改 `index.css`，故 M1 与 M2 净变化相等） |
+| **M7**（`index.css` 6 位 hex） | 304 | **304** | **0** | 零新 hex（色值全部走 `var(--ant-color-error)` / `var(--ant-color-warning)`；新增注释块零 6 位 hex） |
+| **M8**（全 `.css/.less` 6 位 hex） | 440 | **440** | **0** | 同上 |
+| **M9**（`index.css` 行数） | 5556 | **5554** | **−2** | G(+37) − D(39) |
+
+> **C11 ratchet 判定**：M1 = 1392 ≤ **1397** ✅（只降不升，未上调预算）。
+> **口径澄清（重要，防 91/92 误读）**：M1 的 −5 里，**只有 −2 是真实声明级收敛**（两处圆角交还 antd token）；另 **−5 是 D-i 的注释字面规避**（CSS 语义零变化），**+2 是 VISFIX-05 的功能性新增**。净 −5。91/92 继续按 M1 ≤ 1397 的 ratchet 推进即可。
+
+### ⑦ W1 顺带修正：`matrix-diff-90.cjs` 的结果文件写入 bug
+
+- **现象**：脚本的判定逻辑（`classified` / `unclassified` 两个数组）**一直正确**，但写 `matrix-diff-result-90.txt` 时用了 `diffs.map(d => d.cls ? … : 'UNCLASSIFIED ')` —— `diffs` 数组里的对象**没有 `cls` 属性**（`cls` 只加在 `classified` 数组的副本上）→ **结果文件把全部差异都写成 `UNCLASSIFIED`**，与真实判定（`exit 0` / 未归类 0）矛盾 → **证据文件误导读者**。
+- **修正**：改写为「`classified.map(d => '['+d.cls+'] '+d.text)` ++ `unclassified.map(d => 'UNCLASSIFIED '+d.text)`」，结果文件现在逐条带正确分类标签。
+- **未放宽任何归类逻辑**：`A_CELLS`（18 格）/ `B_CELLS`（1 格）/ `C_CELLS`（空集）/ `B_AFTER`（mode-aware）**一字未改**，归类仍是**逐格精确**（`prop === 'radius' && before === '6px' && after === '8px' && A_CELLS.has(...)` → 非白名单格一律判未归类）。
+
 ---
 
 ## 终判结论（由 90-04 回填）
