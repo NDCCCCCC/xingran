@@ -11,6 +11,7 @@ import { formatDateTime } from "@/utils/datetime";
 import { STATUS_CONFIG } from "./constants";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { confirmDelete } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 export interface ExecutionColumnsParams {
   handleViewDetail: (record: ConfigExecution) => void;
@@ -112,6 +113,7 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       render: (_, record) => {
         const actions = [
           {
+            // Phase 86 W3：读动作（查看执行详情只读）→ 不加门控
             key: "view",
             label: "查看",
             icon: <EyeOutlined />,
@@ -126,6 +128,7 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
                   danger: true,
                   onClick: () => {
                     // 68.1-T4 §1.9 非删除破坏性变体：取消执行
+                    // （confirmDelete 只是二次确认 helper，语义 = 取消执行）
                     confirmDelete({
                       title: "确认取消执行",
                       target: "该命令的执行任务",
@@ -138,6 +141,10 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
                       },
                     });
                   },
+                  // Phase 86 W3：执行记录的取消**复用** `networkCommand.execute`
+                  // —— 取消执行属于命令执行动作域，执行记录域无独立码。
+                  // 本 phase 零新增码（不自造 `network:execution:cancel` / `network:command:cancel`）。
+                  permission: PERMISSION_CODES.networkCommand.execute,
                 },
               ]
             : []),

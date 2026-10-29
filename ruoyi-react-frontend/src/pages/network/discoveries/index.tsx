@@ -38,9 +38,10 @@ import type { FormInstance } from "antd/es/form";
 import type { PageResponse } from "@/types";
 import type { DeviceDiscovery } from "@/types";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, useActionPermission } from "@/components/shared";
 import { PageTable } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { handleApiError, isFormValidationError } from "@/utils/errorHandler";
 
@@ -48,6 +49,14 @@ const statusSearchOptions = STATUS_OPTIONS.map((opt) => ({ label: opt.label, val
 
 const DeviceDiscoveryPage: FC = () => {
   const { message } = App.useApp();
+
+  // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permAdd = permGate.decide(PERMISSION_CODES.networkDiscovery.add);
+  // 导出类写入口（数据外带面）：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
+  // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
+  const permExport = permGate.decide(PERMISSION_CODES.networkDiscovery.export);
 
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
@@ -222,26 +231,47 @@ const DeviceDiscoveryPage: FC = () => {
         sorterMetas={sorterMetas}
         rowActions={(record) => [
           {
+            // Phase 86 W3：读动作（查看结果只读，不落库）→ 不加门控
             key: "view-result",
             label: "查看结果",
             icon: <EyeOutlined />,
             onClick: () => handleViewResult(record),
             disabled: record.status === "pending",
           },
-          createDeleteAction(record.id, handleDelete, { target: record.taskName }),
+          createDeleteAction(record.id, handleDelete, {
+            target: record.taskName,
+            permission: PERMISSION_CODES.networkDiscovery.delete,
+          }),
         ]}
         toolbar={
           <>
-            <NetworkExport
-              entityType="discoveries"
-              entityName="设备发现"
-              filters={{}}
-              current={exportPage.current}
-              pageSize={exportPage.pageSize}
-            />
-            <Button type="primary" icon={<PlusOutlined />} onClick={openModal} aria-label="新增任务" title="新增任务">
-              创建发现任务
-            </Button>
+            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                ready 无 networkDiscovery.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+            {permExport.visible && (
+              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                <NetworkExport
+                  entityType="discoveries"
+                  entityName="设备发现"
+                  filters={{}}
+                  current={exportPage.current}
+                  pageSize={exportPage.pageSize}
+                />
+              </span>
+            )}
+            {/* Phase 86 W3：新增任务 —— 条件渲染（networkDiscovery.add） */}
+            {permAdd.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openModal}
+                aria-label="新增任务"
+                title={permAdd.hint ?? "新增任务"}
+                disabled={permAdd.disabled}
+              >
+                创建发现任务
+              </Button>
+            )}
           </>
         }
       >

@@ -448,3 +448,109 @@ workstations「下载部门映射表」`index.tsx:834-836`，均为**数据外�
 → 归口 86-05 收口时做一次**全 ops 域导出类入口 + 视图内写入口**抽样复核；入口级覆盖只能靠
 **施工图 + 人工 review + 抽样测试**三层兜底（脚本绿灯 ≠ 门控覆盖 100%）。
 
+---
+
+## 十五、W3 铺开进度（Plan 03 / 2026-10-29）
+
+### 覆盖率推进（脚本实跑）
+
+| 项 | W2 完成后 | W3 完成后 | 变化 |
+|---|---:|---:|---|
+| 已门控页面 | 16 | **22** | +6（devices 属基线 2 页，不重复计数） |
+| 未覆盖页面 | 9 | **3** | −6 |
+| 豁免条数 | 51 | **51** | 0（未变动） |
+| 应门控页面 | 25 | 25 | 0 |
+
+**恒等式复核**：`22 已门控 + 3 未覆盖 = 25 应门控`；`25 + 51 = 76 页面` —— 两条恒等式均保持。
+未覆盖 3 页 = ad-domain 3（`ad-domain/configs` / `ad-domain/groups` / `ad-domain/users`）。
+`EXPECTED_EXEMPTION_COUNT`（= 51）与 `EXPECTED_PAGE_COUNT`（= 76）**均未改动**。
+
+### W3 逐页门控入口与权限码（施工图落地结果）
+
+| 页 | 门控入口 | 权限码 |
+|---|---|---|
+| **devices**（复核扩面） | 行「采集端口」（`useDeviceRowActions.tsx:131-140`，走降级解析 `collectPerm`）/ 批量删除（`DeviceTablePanel` 的 `batchDelete` 条件传参）/ **批量导出**（`DeviceTablePanel.tsx:157` 的 `<NetworkExport>` 条件渲染）/ 「快速创建」+「手动新增」（`permission.add` 条件渲染） | `networkDevice.edit`（采集端口）/ `.delete` / `.export` / `.add`；编辑·删除沿用既有 `editPerm`/`removePerm` |
+| **credentials** | 行「设为默认」/ 行编辑 / 行删除 / 批量删除 / **批量导出**（`:477` 的 `<NetworkExport>`）/ 新增 | `networkCredential.edit`（设为默认就近归码）/ `.edit` / `.delete` / `.delete` / `.export` / `.add` |
+| **templates** | 行「克隆」/ 行编辑 / 行删除 / 批量删除 / **批量导出**（`index.tsx:352` 的 `<NetworkExport>`）/ 新增；「预览」**不门控**（读） | `networkTemplate.edit`（克隆就近归码）/ `.edit` / `.delete` / `.delete` / `.export` / `.add` |
+| **backups** | 行「还原」/ 行「版本对比」/ 还原确认（`RestoreModals.tsx` 的「确认还原」页脚）/ 版本抽屉「恢复到指定版本」/ 新增备份 / **批量导出**（`:523` 的 `<NetworkExport>`）；「版本列表」**不门控**（读） | `networkBackup.restore`（**不是 delete**）/ `.diff` / `.restore` / `.restore` / `.add` / `.export` |
+| **discoveries** | 行删除（`createDeleteAction` 的 `permission` 位）/ 新增任务 / **批量导出**（`:253` 的 `<NetworkExport>`）；「查看结果」**不门控**（读） | `networkDiscovery.delete` / `.add` / `.export` |
+| **command** | 「快速命令」/ 行「取消」/ **批量导出**（`:275` 的 `<NetworkExport>`）；行「查看」**不门控**（读） | `networkCommand.execute` / `.execute` / `.export` |
+| **executions** | 「执行配置模板」/ 行「取消执行」/ **批量导出**（`:291` 的 `<NetworkExport>`）；行「查看」**不门控**（读） | `networkCommand.execute`（执行记录取消**复用**命令执行码）/ `.execute` / `.export` |
+
+**合计门控入口 31 个**（devices 5 + credentials 6 + templates 6 + backups 6 + discoveries 3 + command 3 + executions 3）。
+
+### backups「还原 ≠ 删除」语义核对证据（MEDIUM-4）
+
+| 位置 | 实际语义证据 | 正确归码 |
+|---|---|---|
+| `backups/index.tsx:197` `handleConfirmRestore` | `title:"确认恢复配置"` / `actionLabel:"恢复"` / `actionContext:"恢复配置"` / `successText:"已恢复配置"` / `onDelete: async () => { await confirmRestore(); }` | `networkBackup.restore` |
+| `backups/index.tsx:240` `handleRestore` | 同上文案 + `openRestoreModal(backup)` + `confirmRestore(backup)` | `networkBackup.restore` |
+| `backups/modals/RestoreModals.tsx` 版本抽屉「恢复」行操作 | `title:"确认恢复到此版本"` / `actionLabel:"恢复"` / `successText:"已恢复配置"` | `networkBackup.restore` |
+
+**证据结论**：`confirmDelete` 只是二次确认 helper（形参名 `onDelete` 与业务语义无关），三处的业务动作都是**还原（下发配置）**。
+本页**无任何删除入口**（无 `handleDelete` / 无 `createDeleteAction` / 无 `batch-delete` 端点调用）。
+
+- `grep -rn "networkBackup\.delete" src/pages/network/backups/ | wc -l` → **0**（源码中不出现该键，注释也改写为「删除类码」避免字面量命中）；
+- 决策变量名：`permRestore`（**不叫** `permDelete`），源码注释写明「本页无删除入口，这两处 confirmDelete 承载的是还原动作」；
+- 回归防线：`backups/__tests__/permission.gate.test.tsx` 用例 ③-3（持 restore **无** delete → 还原仍可用）与 ③-4（持 delete **无** restore → 还原不在 DOM）双向锁定。
+
+### 死 modal 债登记（`<BatchExportModal>` × 7，本波**不门控不改逻辑**）
+
+grep 证据：`grep -rn "setBatchModalVisible(true)" src/pages/network/ | wc -l` → **0**；
+`grep -rn "setBatchModalVisible(false)" src/pages/network/ | wc -l` → **18**（全部是关闭路径）。
+
+| 页 | `<BatchExportModal>` 位置 | `setBatchModalVisible` 调用 | 判定 |
+|---|---|---|---|
+| devices | `components/DeviceTablePanel.tsx:226` | `useDeviceActions.tsx` + `index.tsx`（均 `false`） | **死 modal**（`visible` 恒 false） |
+| credentials | `index.tsx:493` | `:197` `:460`（`false`） | **死 modal** |
+| templates | `index.tsx:361` | `:190` `:347`（`false`） | **死 modal** |
+| backups | `index.tsx:590` | `:262` `:556`（`false`） | **死 modal** |
+| discoveries | `index.tsx:335` | `:196` `:308`（`false`） | **死 modal** |
+| command | `index.tsx:288` | `:140` `:270`（`false`） | **死 modal** |
+| executions | `index.tsx:307` | `:136` `:284`（`false`） | **死 modal** |
+
+**结论**：7 处 `BatchExportModal` 的 `visible` 永远为 `false`（无任何 `(true)` 调用）→ **永远打不开**。
+真正的导出入口是 `<NetworkExport>`（按钮在 `NetworkExport.tsx:120` 组件内部）。
+本波对 7 处死 modal **零改动**（不改即无行为变化），登记为**死 modal 债**，交由后续 phase 决定删除或接线。
+
+### 导出类 / 视图内写入口逐页 grep 复核
+
+复核方式：对 7 页各目录 grep `NetworkExport` / `ExcelExport` / `ExcelImport` / `downloadTemplate` / `exportMapping` / `batchExport` / `await post(` / `onImport`。
+
+| 页 | 导出类入口 | 门控 | 复核结果 |
+|---|---|---|---|
+| devices | `DeviceTablePanel.tsx:157` `<NetworkExport>` | ✓ `networkDevice.export` | 组件目录内 `NetworkExport` 仅 1 处；`batchExport` 仅 `useDeviceActions`（死 modal 的 `handleBatchExport`，已随 modal 一起不门控） |
+| credentials | `index.tsx:477` `<NetworkExport>` | ✓ `.export` | `batchExport` 调用仅在 `handleBatchExport`（死 modal 通道） |
+| templates | `index.tsx:352` `<NetworkExport>` | ✓ `.export` | 同上 |
+| backups | `index.tsx:523` `<NetworkExport>` | ✓ `.export` | 同上 |
+| discoveries | `index.tsx:253` `<NetworkExport>` | ✓ `.export` | **另发现 `ResultModal` 的「导入设备」按钮**（`onImport` → `POST /network/discoveries/{id}/import`，落库导入发现的设备）—— 见下方遗留缺口 |
+| command | `index.tsx:275` `<NetworkExport>` | ✓ `.export` | 无额外导出/导入入口 |
+| executions | `index.tsx:291` `<NetworkExport>` | ✓ `.export` | 无额外导出/导入入口 |
+
+**结构性局限复核结论**：7 页均无 `ExcelExport` / `ExcelImport` / `downloadTemplate` / `exportMapping`（network 域导出统一走 `NetworkExport` + 后端 `/api/v1/network/{entity}/export`）。
+**视图内写入口**：7 页均无平面图/画布类视图（network 域无 `saveFloorPlan` / `updatePositions` 类调用）→ 本波无「视图内写入口」缺口。
+
+### W3 组件测试
+
+| 文件 | 用例数 | 覆盖 |
+|---|---:|---|
+| `network/credentials/__tests__/permission.gate.test.tsx` | **5** | ① 只持 `.list` → 新增/行操作/批删/导出均不在 DOM；② loading → 新增 disabled + 导出被 `aria-disabled` 包裹 + 行操作禁用；②-2 error 同上；③ 全写码 → 新增/导出可用 + 下拉含「设为默认·编辑·删除」且未禁用；④ ready 空权限集 → 不渲染 |
+| `network/backups/__tests__/permission.gate.test.tsx` | **9** | ① 只持 `.list` → 创建备份/导出不在 DOM、只读「版本列表」保留；② loading / ②-2 error → 入口 disabled；③ 持 restore 无 diff / ③-2 持 diff 无 restore（两码**不得互换**）；**③-3 越权回归（持 restore 无 delete → 还原仍可用）**；**③-4 反向越权（持 delete 无 restore → 还原不在 DOM）**；③-5 全码；④ ready 空权限集 |
+| `network/devices/__tests__/permission.gate.test.tsx` | **6** | ① **降级解析路径**（只持页面级 `network:device` → 采集端口/编辑/删除/快速创建/手动新增全部仍可见）；② 动作码路径（持 `network:device:edit` → 编辑可见、删除不在）；②-2 只持 `network:device:view` → 编辑不在 DOM（证明已切动作码判定）；③ loading → 快速创建 disabled + 行操作禁用；③-2 error；④ 导出码门控（无 `.export` → 「导出」按钮不在 DOM；持该码 → 可用） |
+
+- **三个新测试文件专项类型检查错误数 = 0**（临时 tsconfig `tsconfig.gate-test.check.json`：`extends ./tsconfig.app.json` + `types` 加 `vitest/globals` + 指定 include + `exclude: []`）；
+- `npx vitest run src/pages/network` → **50 files / 274 tests 全绿**（devices 既有测试零回归）；
+- 既有测试语义适配 **1 处**（`pages/__tests__/batch53.modalOpen.test.tsx`：`OPS_WRITE_PERMISSIONS` 前置集追加 `networkDevice.list/add/edit/delete/export` —— devices 的「手动新增」在 W3 接入 `networkDevice.add` 降级解析，未删任何断言）。
+
+### W3 结构性局限复核（页级判定器 vs 入口级判定）
+
+`check-gating-coverage.mjs` 对 network 7 页的判定：本波铺开后 7 页全部判「已门控」。
+逐页 grep 复核**未发现**新的导出类/视图内写入口漏网（network 域导出统一走 `NetworkExport`，无 Excel 容器、无画布视图）。
+
+**唯一登记项（未纳入本波门控，需后续裁定）**：`network/discoveries/modals/ResultModal.tsx:50-60` 的「导入设备」按钮
+（`onImport` → `POST /network/discoveries/{id}/import`，把发现的设备**落库**为正式设备）—— 这是**写入口**（数据入库），
+但 PLAN 3.1 的施工图未列该入口（PLAN 只列了「查看结果（读）/ 删除 / 新增任务 / 导出」四类）。
+按纪律「不扩范围」，本波**未改动**该文件；登记为 **W3 遗留缺口**，建议 86-04 或 86-05 收口时按
+`networkDiscovery.add`（发现任务创建/导入同属 discovery 写动作域）补门控。
+
+

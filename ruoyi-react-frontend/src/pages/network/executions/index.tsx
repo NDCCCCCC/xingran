@@ -21,11 +21,22 @@ import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry, useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import type { ConfigExecution } from "@/types";
 
 const ConfigExecutionPage: FC = () => {
   const { message } = App.useApp();
+
+  // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  // 本页写码：执行配置模板 / 取消执行 → `networkCommand.execute`（复用）；
+  // 导出 → `networkCommand.export`。执行记录域无独立码，本 phase 零新增码。
+  const permGate = useActionPermission();
+  const permExecute = permGate.decide(PERMISSION_CODES.networkCommand.execute);
+  // 导出类写入口：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
+  // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
+  const permExport = permGate.decide(PERMISSION_CODES.networkCommand.export);
   const [executeForm] = Form.useForm();
   const [searchForm] = Form.useForm();
   const [batchModalVisible, setBatchModalVisible] = useState(false);
@@ -259,20 +270,37 @@ const ConfigExecutionPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlayCircleOutlined />} onClick={openExecuteModal} aria-label="执行模板" title="执行模板" >
-              执行配置模板
-            </Button>
-            <NetworkExport
-              entityType="executions"
-              entityName="配置执行"
-              filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                  ([, v]) => v !== undefined && v !== null && v !== ""
-                )
-              )}
-              current={paginationProps?.current ?? 1}
-              pageSize={paginationProps?.pageSize ?? 10}
-            />
+            {/* Phase 86 W3：执行配置模板 —— 条件渲染（networkCommand.execute） */}
+            {permExecute.visible && (
+              <Button
+                type="primary"
+                icon={<PlayCircleOutlined />}
+                onClick={openExecuteModal}
+                aria-label="执行模板"
+                title={permExecute.hint ?? "执行模板"}
+                disabled={permExecute.disabled}
+              >
+                执行配置模板
+              </Button>
+            )}
+            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                ready 无 networkCommand.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+            {permExport.visible && (
+              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                <NetworkExport
+                  entityType="executions"
+                  entityName="配置执行"
+                  filters={Object.fromEntries(
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                      ([, v]) => v !== undefined && v !== null && v !== ""
+                    )
+                  )}
+                  current={paginationProps?.current ?? 1}
+                  pageSize={paginationProps?.pageSize ?? 10}
+                />
+              </span>
+            )}
           </Space>
           {/* 批量导出 Modal */}
 

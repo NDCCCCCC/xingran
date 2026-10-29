@@ -104,6 +104,11 @@ export function useDeviceRowActions(
   // v1.24 #16 前端侧：行操作权限门控（三态 ready/loading/error）。
   // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
   const permGate = useActionPermission();
+  // ⚠️ Phase 86 W3 说明：此处 `permissions` 仅用于**门控键降级解析**
+  // （见下方 resolveDeviceActionPerm：环境有无动作级码决定用动作码还是页面级码）；
+  // 门控判定（三态 visible/disabled/hint）仍由 `useActionPermission` 的 `decide` 承担。
+  // 保留这处直读是**降级语义的前提**（删了就无法区分「环境已播种动作码」与「只有页面级码」），
+  // 它不构成第二判定入口。
   const menuPermissions = useMenuStore((s) => s.permissions);
 
   // 门控键：权限集已就绪且环境具备动作粒度 ⇒ 用动作级码；否则用页面级码（行为不变）。
@@ -115,6 +120,10 @@ export function useDeviceRowActions(
     readyPermissions,
     DEVICE_PERMISSION_CODES.remove
   );
+  // Phase 86 W3（扩面）：采集端口是对设备连接的**写**操作（落库采集结果），
+  // networkDevice 码组无独立 `collect` 键 → 就近归 `edit`（本 phase 零新增码），
+  // 且与 edit 共用同一套降级解析结果（窗口期语义一致）。
+  const collectPerm = resolveDeviceActionPerm(readyPermissions, DEVICE_PERMISSION_CODES.edit);
 
   // 行操作（PageTable ctx 注入 loadData 后组装；操作列由 PageTable 追加）
   const buildRowActions = useCallback(
@@ -124,6 +133,9 @@ export function useDeviceRowActions(
         label: "采集端口",
         icon: <CloudUploadOutlined />,
         onClick: () => handleCollectPorts(record),
+        // Phase 86 W3（扩面）：采集端口 = 写入口（落库采集结果）→ 归 networkDevice.edit
+        // （无独立 `collect` 码；走同一套降级解析 collectPerm，窗口期语义与编辑一致）。
+        permission: collectPerm,
         // 契约 ActionButton 无 loading 位：采集进行中降级为 disabled（记 PR 偏差）
         disabled: collectingDeviceId === record.id,
         // 68.1-T5 minor#1：降级语义保持不变，仅补「进行中」状态语义（UI-SPEC §2 #1 / §7）。
@@ -182,7 +194,7 @@ export function useDeviceRowActions(
       }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 采集/详情/编辑 handler 均为稳定闭包
-    [collectingDeviceId, canViewMACHistory, navigate, editPerm, removePerm]
+    [collectingDeviceId, canViewMACHistory, navigate, editPerm, removePerm, collectPerm]
   );
 
   // permGate 的三态由 ActionButtons 侧同源 helper 消费（ActionButton.permission 契约字段）：

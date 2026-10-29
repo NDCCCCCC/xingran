@@ -27,10 +27,21 @@ import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry, useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const CommandDispatch: FC = () => {
   const { message } = App.useApp();
+
+  // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  // 本页写码只有 networkCommand.execute（命令执行动作域）与 networkCommand.export（数据外带面）；
+  // 行「取消」由 columns.tsx 的 `permission:` 传参承担判定。
+  const permGate = useActionPermission();
+  const permExecute = permGate.decide(PERMISSION_CODES.networkCommand.execute);
+  // 导出类写入口：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
+  // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
+  const permExport = permGate.decide(PERMISSION_CODES.networkCommand.export);
   const [execLoading, setExecLoading] = useState(false);
   const [dispatchModalVisible, setDispatchModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
@@ -243,20 +254,37 @@ const CommandDispatch: FC = () => {
                 >
                   刷新
                 </Button>
-                <Button type="primary" icon={<ThunderboltOutlined />} onClick={openDispatchModal} aria-label="快速命令" title="快速命令" >
-                  快速命令
-                </Button>
-                <NetworkExport
-                  entityType="command"
-                  entityName="命令分发"
-                  filters={Object.fromEntries(
-                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                      ([, v]) => v !== undefined && v !== null && v !== ""
-                    )
-                  )}
-                  current={paginationProps?.current ?? 1}
-                  pageSize={paginationProps?.pageSize ?? 10}
-                />
+                {/* Phase 86 W3：快速命令 —— 条件渲染（networkCommand.execute） */}
+                {permExecute.visible && (
+                  <Button
+                    type="primary"
+                    icon={<ThunderboltOutlined />}
+                    onClick={openDispatchModal}
+                    aria-label="快速命令"
+                    title={permExecute.hint ?? "快速命令"}
+                    disabled={permExecute.disabled}
+                  >
+                    快速命令
+                  </Button>
+                )}
+                {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                    （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                    ready 无 networkCommand.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+                {permExport.visible && (
+                  <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                    <NetworkExport
+                      entityType="command"
+                      entityName="命令分发"
+                      filters={Object.fromEntries(
+                        Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                          ([, v]) => v !== undefined && v !== null && v !== ""
+                        )
+                      )}
+                      current={paginationProps?.current ?? 1}
+                      pageSize={paginationProps?.pageSize ?? 10}
+                    />
+                  </span>
+                )}
               </Space>
             </Form.Item>
           </Form>

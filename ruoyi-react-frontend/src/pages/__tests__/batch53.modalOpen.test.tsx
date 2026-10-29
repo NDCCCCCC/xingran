@@ -32,8 +32,19 @@ import BackupsPage from "../network/backups";
  * 本测试的判定对象是「点新增 → Modal 打开」这条交互分支，因此这里显式构造
  * **ready + 授予本波 ops 页写码**（对无码豁免页零影响 —— 它们的入口不做判定）。
  * ⚠️ 这是按三态语义更新测试前置条件，**未删除任何断言**。
+ *
+ * Phase 86 W3 追加：`network/devices` 页的「手动新增 / 快速创建」在 W3 接入
+ * `networkDevice.add`（走**降级解析** `resolveDeviceActionPerm`：权限集含任一
+ * `network:device:*` 动作级码 → 用动作码；否则退回页面级 `network:device`）。
+ * 该页的 DevicesPage 用例也走本 helper，故这里必须同批授予 networkDevice 写码，
+ * 否则降级解析拿不到动作码 → 按钮不渲染 → helper 找不到可点按钮（与 W2 同一适配口径）。
  */
 const OPS_WRITE_PERMISSIONS = [
+  PERMISSION_CODES.networkDevice.list,
+  PERMISSION_CODES.networkDevice.add,
+  PERMISSION_CODES.networkDevice.edit,
+  PERMISSION_CODES.networkDevice.delete,
+  PERMISSION_CODES.networkDevice.export,
   PERMISSION_CODES.opsBuilding.add,
   PERMISSION_CODES.opsBuilding.edit,
   PERMISSION_CODES.opsBuilding.delete,

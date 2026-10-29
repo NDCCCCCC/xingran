@@ -19,7 +19,8 @@ import {
 import type { ConfigBackup } from "@/types";
 import type { ConfigRestoreTask, DeviceBackupGroup, DiffLine, DiffResult } from "../types";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { confirmDelete } from "@/components/shared";
+import { confirmDelete, useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { formatDateTime } from "@/utils/datetime";
 
 // 形态分类器⑤专用：还原版本下拉为「children + 复合子节点（Space/Tag/时间）」，
@@ -115,9 +116,16 @@ export default function RestoreModals(props: RestoreModalsProps) {
     backupContent,
   } = props;
 
+  // Phase 86 W3（RBAC-02）：本组件内的写入口 = 「恢复到指定版本」（版本列表抽屉行操作）
+  // 与还原 Modal 的「确认还原」页脚按钮 —— 两者都是**还原（恢复配置）**动作，
+  // 归 `networkBackup.restore`（决策变量名 `permRestore`，**不得**叫 permDelete：
+  // 本页无删除入口，误挂 `.delete` 会造成「持 restore 无 delete 被误拒」+
+  // 「持 delete 无 restore 可越权还原」的双向错误）。
+  const permGate = useActionPermission();
+  const permRestore = permGate.decide(PERMISSION_CODES.networkBackup.restore);
+
   // 版本列表表格列（原 index.tsx :478-541，操作列含 B 类豁免确认「确认恢复到此版本?」原文保留）
-  const versionColumns: ColumnsType<ConfigBackup> = [
-    { title: "版本号", dataIndex: "version", key: "version", width: 80 },
+  const versionColumns: ColumnsType<ConfigBackup> = [    { title: "版本号", dataIndex: "version", key: "version", width: 80 },
     {
       title: "备份类型",
       dataIndex: "backupType",
@@ -166,6 +174,7 @@ export default function RestoreModals(props: RestoreModalsProps) {
             icon: <DownloadOutlined />,
             onClick: () => {
               // 68.1-T4 §1.9 非删除破坏性变体：恢复到指定版本
+              // Phase 86 W3：`confirmDelete` 只是二次确认 helper，语义 = **还原**（非删除）
               confirmDelete({
                 title: "确认恢复到此版本",
                 target: `把设备当前配置恢复到版本 ${record.version}`,
@@ -178,6 +187,8 @@ export default function RestoreModals(props: RestoreModalsProps) {
                 },
               });
             },
+            // Phase 86 W3：还原 → networkBackup.restore（**不是** 删除类码）
+            permission: PERMISSION_CODES.networkBackup.restore,
           },
         ];
 
@@ -226,9 +237,20 @@ export default function RestoreModals(props: RestoreModalsProps) {
                 >
                   取消
                 </Button>,
-                <Button key="confirm" type="primary" danger onClick={handleConfirmRestore}>
-                  确认还原
-                </Button>,
+                // Phase 86 W3：还原 Modal 的「确认还原」= 还原确认（networkBackup.restore）
+                // ready 无码 → 不渲染；未就绪 → 渲染但 disabled + 提示。
+                permRestore.visible && (
+                  <Button
+                    key="confirm"
+                    type="primary"
+                    danger
+                    onClick={handleConfirmRestore}
+                    disabled={permRestore.disabled}
+                    title={permRestore.hint}
+                  >
+                    确认还原
+                  </Button>
+                ),
               ]
         }
         width={800}

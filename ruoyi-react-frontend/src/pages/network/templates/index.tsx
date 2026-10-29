@@ -30,10 +30,21 @@ import { TemplateEditModal, TemplatePreviewModal, TemplateVariablesModal } from 
 import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry, useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const TemplateManagement: FC = () => {
   const { message } = App.useApp();
+
+  // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permAdd = permGate.decide(PERMISSION_CODES.networkTemplate.add);
+  const permDelete = permGate.decide(PERMISSION_CODES.networkTemplate.delete);
+  // 导出类写入口（数据外带面）：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
+  // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
+  const permExport = permGate.decide(PERMISSION_CODES.networkTemplate.export);
+
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [batchModalVisible, setBatchModalVisible] = useState(false);
@@ -306,36 +317,50 @@ const TemplateManagement: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button
-              aria-label="新增模板"
-              title="新增模板"
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => openModal(undefined, editForm)}
-            >
-              新增
-            </Button>
-            <Button
-              aria-label="批量删除"
-              title="批量删除"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess)}
-              disabled={selectedRowKeys.length === 0}
-            >
-              批量删除
-            </Button>
-            <NetworkExport
-              entityType="templates"
-              entityName="配置模板"
-              filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                  ([, v]) => v !== undefined && v !== null && v !== ""
-                )
-              )}
-              current={paginationProps?.current ?? 1}
-              pageSize={paginationProps?.pageSize ?? 10}
-            />
+            {/* Phase 86 W3：新增入口 —— ready 无码不渲染；未就绪渲染但 disabled + 提示 */}
+            {permAdd.visible && (
+              <Button
+                aria-label="新增模板"
+                title={permAdd.hint ?? "新增模板"}
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => openModal(undefined, editForm)}
+                disabled={permAdd.disabled}
+              >
+                新增
+              </Button>
+            )}
+            {/* Phase 86 W3：批量删除 —— 条件渲染（networkTemplate.delete） */}
+            {permDelete.visible && (
+              <Button
+                aria-label="批量删除"
+                title={permDelete.hint ?? "批量删除"}
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess)}
+                disabled={permDelete.disabled || selectedRowKeys.length === 0}
+              >
+                批量删除
+              </Button>
+            )}
+            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                ready 无 networkTemplate.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+            {permExport.visible && (
+              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                <NetworkExport
+                  entityType="templates"
+                  entityName="配置模板"
+                  filters={Object.fromEntries(
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                      ([, v]) => v !== undefined && v !== null && v !== ""
+                    )
+                  )}
+                  current={paginationProps?.current ?? 1}
+                  pageSize={paginationProps?.pageSize ?? 10}
+                />
+              </span>
+            )}
           </Space>
           {/* 批量导出 Modal */}
 

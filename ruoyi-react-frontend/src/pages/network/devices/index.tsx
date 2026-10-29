@@ -30,7 +30,10 @@ import { useDict } from "@/hooks/useDict";
 import { getDeviceTableColumns } from "./components/DeviceTableColumns";
 import DeviceTablePanel from "./components/DeviceTablePanel";
 import type { DeviceModalsProps } from "./components/DeviceModals";
-import { DEVICE_TYPE_OPTIONS } from "./constants";
+import { DEVICE_PERMISSION_CODES, DEVICE_TYPE_OPTIONS } from "./constants";
+import { resolveDeviceActionPerm } from "./hooks/useDeviceRowActions";
+import { useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { getOptionLabel } from "./utils";
 import { buildDeviceSearchFields } from "./searchFields";
 import { useDeviceData } from "./hooks/useDeviceData";
@@ -44,8 +47,28 @@ const DeviceManagement = () => {
   const navigate = useNavigate();
 
   // 权限(14-05b:查看 MAC 历史联动入口)— 与 history 页主权限点 network:mac:list 保持一致
+  // ⚠️ Phase 86 W3：这处直读是**只读入口**（MAC 历史跳转）的可见性判断，
+  // 不是写入口门控（写入口的门控判定由下方 useActionPermission 承担）。
   const menuPermissions = useMenuStore((s) => s.permissions);
   const canViewMACHistory = menuPermissions.includes("network:mac:list");
+
+  // Phase 86 W3（RBAC-02）：工具栏写入口的三态门控（批量删除 / 批量导出 / 快速创建+手动新增）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  // ⚠️ 门控键沿用**降级解析**（resolveDeviceActionPerm，87 播种前多数角色只有页面级码）：
+  //    环境已播种动作级码 → 用动作码；否则 → 退回页面级码，与拆分前行为一致。
+  //    不得在此改为硬绑动作码（会让现役角色看不到入口，比后端 fail-closed 更严）。
+  const permGate = useActionPermission();
+  const readyPermissions = permGate.state === "ready" ? menuPermissions : [];
+  const batchDeletePerm = permGate.decide(
+    resolveDeviceActionPerm(readyPermissions, DEVICE_PERMISSION_CODES.remove)
+  );
+  const addPerm = permGate.decide(
+    resolveDeviceActionPerm(readyPermissions, DEVICE_PERMISSION_CODES.add)
+  );
+  // 导出：`networkDevice.export` 是 85-03 新增码（87 播种前**无授权来源**）→
+  // 不走降级解析，直接按码门控：ready 无码 → 不渲染，与后端 fail-closed 同向
+  // （若也降级到页面级码，窗口期用户会看到导出按钮但点了必 403 —— 反向不一致）。
+  const exportPerm = permGate.decide(PERMISSION_CODES.networkDevice.export);
 
   // 表单实例
   const [quickCreateForm] = Form.useForm();
@@ -293,6 +316,11 @@ const DeviceManagement = () => {
       exportPage={exportPage}
       onQuickCreate={openQuickCreateModal}
       onManualCreate={() => openModal()}
+      permission={{
+        batchDelete: batchDeletePerm,
+        export: exportPerm,
+        add: addPerm,
+      }}
       batchExportModal={{
         visible: batchModalVisible,
         loading: batchExporting,

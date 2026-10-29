@@ -37,7 +37,8 @@ import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, confirmDelete } from "@/components/shared";
+import { BatchExportModal, confirmDelete, useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { formatDateTime } from "@/utils/datetime";
 import {
@@ -58,6 +59,25 @@ const BACKUP_TYPE_SEARCH_OPTIONS = [
 
 const ConfigBackupPage: FC = () => {
   const { message } = App.useApp();
+
+  // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permAdd = permGate.decide(PERMISSION_CODES.networkBackup.add);
+  // ⚠️ 本页**无删除入口**：`networkBackup` 码组里的 `delete` 键（permissionCodes.ts:194）虽已声明，
+  // 但配置备份页只有「还原 / 版本列表 / 版本对比 / 创建备份 / 导出」五类入口。
+  // 两处 `confirmDelete`（`handleConfirmRestore` / `handleRestore`）与
+  // `modals/RestoreModals.tsx` 的「恢复到指定版本」承载的都是**还原（恢复配置）**动作 ——
+  // 它们只是复用了 confirmDelete 这个二次确认 helper（形参名 `onDelete` 与业务语义无关）。
+  // 因此还原类入口一律用 `networkBackup.restore`（决策变量名 `permRestore`，**不叫 permDelete**）：
+  //   ❌ 若误挂 `.delete` → ① 持 restore 无 delete 者被误拒（有权还原却看不到按钮）；
+  //                          ② 持 delete 无 restore 者可越权还原（把配置恢复到任意历史版本）。
+  // 门控落点：行「还原」走 ActionButtons 的 `permission:` 传参（见下方列定义）；
+  // 还原确认的两处触发按钮在 `modals/RestoreModals.tsx`（`permRestore` 在那里决定）。
+  // 导出类写入口（数据外带面）：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
+  // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
+  const permExport = permGate.decide(PERMISSION_CODES.networkBackup.export);
+
   // PageTable loadData 转发引用（useBackupModals onLoad 需在 hook 初始化前可用）
   const reloadRef = useRef<(() => void) | null>(null);
   // PageTable 内部 searchForm 引用（NetworkExport filters 承接当前搜索条件）
@@ -438,8 +458,11 @@ const ConfigBackupPage: FC = () => {
             label: "还原",
             icon: <DownloadOutlined />,
             onClick: () => handleOpenRestoreModal(record),
+            // Phase 86 W3：还原 = networkBackup.restore（**不是** 删除类码）
+            permission: PERMISSION_CODES.networkBackup.restore,
           },
           {
+            // Phase 86 W3：读动作（版本列表只读，不落库）→ 不加门控
             key: "versions",
             label: "版本列表",
             icon: <HistoryOutlined />,
@@ -450,6 +473,7 @@ const ConfigBackupPage: FC = () => {
             label: "版本对比",
             icon: <DiffOutlined />,
             onClick: () => handleOpenDiffModal(record),
+            permission: PERMISSION_CODES.networkBackup.diff,
           },
         ];
 
@@ -478,26 +502,37 @@ const ConfigBackupPage: FC = () => {
         sorterMetas={sorterMetas}
         toolbar={
           <Space>
-            <Button
-              type="primary"
-              icon={<CloudUploadOutlined />}
-              onClick={handleOpenBackupModal}
-              aria-label="创建备份"
-              title="创建备份"
-            >
-              创建备份
-            </Button>
-            <NetworkExport
-              entityType="backups"
-              entityName="配置备份"
-              filters={Object.fromEntries(
-                Object.entries(
-                  (searchFormRef.current?.getFieldsValue() as Record<string, unknown>) ?? {}
-                ).filter(([, v]) => v !== undefined && v !== null && v !== "")
-              )}
-              current={exportPage.current}
-              pageSize={exportPage.pageSize}
-            />
+            {/* Phase 86 W3：创建备份 —— 条件渲染（networkBackup.add） */}
+            {permAdd.visible && (
+              <Button
+                type="primary"
+                icon={<CloudUploadOutlined />}
+                onClick={handleOpenBackupModal}
+                aria-label="创建备份"
+                title={permAdd.hint ?? "创建备份"}
+                disabled={permAdd.disabled}
+              >
+                创建备份
+              </Button>
+            )}
+            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                ready 无 networkBackup.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+            {permExport.visible && (
+              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                <NetworkExport
+                  entityType="backups"
+                  entityName="配置备份"
+                  filters={Object.fromEntries(
+                    Object.entries(
+                      (searchFormRef.current?.getFieldsValue() as Record<string, unknown>) ?? {}
+                    ).filter(([, v]) => v !== undefined && v !== null && v !== "")
+                  )}
+                  current={exportPage.current}
+                  pageSize={exportPage.pageSize}
+                />
+              </span>
+            )}
           </Space>
         }
       >
