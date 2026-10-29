@@ -24,12 +24,14 @@ import {
   createDateTimeColumn,
   createSorterMeta,
 } from "@/utils/tableHelpers";
-import { PageTable } from "@/components/shared";
+import { PageTable, useActionPermission } from "@/components/shared";
 import type { PageTableRenderContext } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { FormModal } from "@/components/shared/FormModal";
 import { useFormModalForm } from "@/components/shared/hooks/useFormModalForm";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
+// Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const STATUS_OPTIONS = [
   { label: "正常", value: 0 },
@@ -43,6 +45,13 @@ const PostManagement: FC = () => {
   const form = useFormModalForm();
   // PageTable ctx.loadData 提升到提交回调（弹窗 onFinish 成功后刷新列表）
   const reloadRef = useRef<() => void>(() => {});
+
+  // Phase 86 W1（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  // 工具栏「新增岗位」→ system:post:add；批量删除 → system:post:remove（与行删除同键）。
+  const permAdd = permGate.decide(PERMISSION_CODES.systemPost.add);
+  const permRemove = permGate.decide(PERMISSION_CODES.systemPost.remove);
 
   // 服务端排序:field 对应后端 postAllowedSortFields 白名单 key
   const sorterMetas = useMemo(
@@ -204,20 +213,46 @@ const PostManagement: FC = () => {
         ]}
         sorterMetas={sorterMetas}
         rowActions={(record) => [
-          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openEdit(record) },
-          createDeleteAction(record.id, handleDelete, { target: record.postName }),
-        ]}
-        batchDelete={{
-          onDelete: async (keys: Key[]) => {
-            await post("/system/posts/batch-delete", { ids: keys });
-            loadStatistics();
+          {
+            key: "edit",
+            label: "编辑",
+            icon: <EditOutlined />,
+            onClick: () => openEdit(record),
+            // Phase 86 W1（RBAC-02）：行编辑 → system:post:edit（ActionButtons 内建三态门控）。
+            permission: PERMISSION_CODES.systemPost.edit,
           },
-          target: "岗位",
-        }}
+          createDeleteAction(record.id, handleDelete, {
+            target: record.postName,
+            // 行删除 → system:post:remove。
+            permission: PERMISSION_CODES.systemPost.remove,
+          }),
+        ]}
+        // Phase 86 W1：批量删除走页面层条件传参（PageTable.batchDelete 契约无 permission 位，
+        // 不改 shared 组件契约）—— ready 无权限 → 不传 batchDelete（按钮不入 DOM）。
+        batchDelete={
+          permRemove.visible
+            ? {
+                onDelete: async (keys: Key[]) => {
+                  await post("/system/posts/batch-delete", { ids: keys });
+                  loadStatistics();
+                },
+                target: "岗位",
+              }
+            : undefined
+        }
         toolbar={
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            新增岗位
-          </Button>
+          // Phase 86 W1：工具栏新增按权限码条件渲染（ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + 提示）。
+          permAdd.visible ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={openCreate}
+              disabled={permAdd.disabled}
+              title={permAdd.hint}
+            >
+              新增岗位
+            </Button>
+          ) : undefined
         }
       >
         {renderBusinessArea}

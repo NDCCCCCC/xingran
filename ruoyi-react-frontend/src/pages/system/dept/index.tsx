@@ -24,6 +24,10 @@ import ExcelExport from "@/components/shared/ExcelExport";
 
 import { post } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
+// Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
+import { useActionPermission } from "@/components/shared";
+
 const DepartmentManagement: FC = () => {
   const { message } = App.useApp();
   const [searchForm] = Form.useForm();
@@ -33,6 +37,14 @@ const DepartmentManagement: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
+
+  // Phase 86 W1（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  // 新增 → system:dept:add；导入 → system:dept:import；导出 → system:dept:export。
+  const permAdd = permGate.decide(PERMISSION_CODES.systemDept.add);
+  const permImport = permGate.decide(PERMISSION_CODES.systemDept.import);
+  const permExport = permGate.decide(PERMISSION_CODES.systemDept.export);
 
   const {
     departments,
@@ -262,15 +274,40 @@ const DepartmentManagement: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增部门
-            </Button>
-            <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-              导入
-            </Button>
-            <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>
-              导出
-            </Button>
+            {/* Phase 86 W1（RBAC-02）：Excel 入口的门控点必须落在**触发按钮**上。
+                下方 <ExcelImportLazy> / <ExcelExport> 是 modal 容器（visible 由按钮状态驱动），
+                触发按钮不渲染 ⇒ 弹窗永远打不开；二者等价于「按钮不渲染」的可观察行为。 */}
+            {permAdd.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAdd}
+                disabled={permAdd.disabled}
+                title={permAdd.hint}
+              >
+                新增部门
+              </Button>
+            )}
+            {permImport.visible && (
+              <Button
+                icon={<ImportOutlined />}
+                onClick={() => setImportVisible(true)}
+                disabled={permImport.disabled}
+                title={permImport.hint}
+              >
+                导入
+              </Button>
+            )}
+            {permExport.visible && (
+              <Button
+                icon={<ExportOutlined />}
+                onClick={() => setExportVisible(true)}
+                disabled={permExport.disabled}
+                title={permExport.hint}
+              >
+                导出
+              </Button>
+            )}
           </Space>
         </div>
       </Card>

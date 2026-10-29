@@ -36,6 +36,9 @@ import { useRoleData, useRoleActions } from "./hooks";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
+// Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
+import { useActionPermission } from "@/components/shared";
 
 // ==================== 主组件 ====================
 
@@ -44,6 +47,13 @@ const RoleManagement: FC = () => {
   const [submitting, setSubmitting] = useState(false);
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // Phase 86 W1（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  // 工具栏「新增角色」→ system:role:add；批量删除 → system:role:remove（与行删除同键）。
+  const permAdd = permGate.decide(PERMISSION_CODES.systemRole.add);
+  const permRemove = permGate.decide(PERMISSION_CODES.systemRole.remove);
 
   // 服务端排序：field 对应后端 roleAllowedSortFields 白名单 key
   const sorterMetas = useMemo(
@@ -306,14 +316,25 @@ const RoleManagement: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增角色
-            </Button>
-            {selectedRowKeys.length > 0 && (
+            {/* Phase 86 W1：工具栏写入口按权限码条件渲染（ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + 提示） */}
+            {permAdd.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAdd}
+                disabled={permAdd.disabled}
+                title={permAdd.hint}
+              >
+                新增角色
+              </Button>
+            )}
+            {selectedRowKeys.length > 0 && permRemove.visible && (
               <Button
                 icon={<DeleteOutlined />}
                 style={{ color: "var(--theme-error)" }}
                 onClick={() => handleBatchDelete(selectedRowKeys)}
+                disabled={permRemove.disabled}
+                title={permRemove.hint}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>

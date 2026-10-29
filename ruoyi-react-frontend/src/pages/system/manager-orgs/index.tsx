@@ -39,7 +39,9 @@ import {
 import type { SimpleDept } from "@/lib/dutyApi";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
-import { confirmDelete } from "@/components/shared";
+import { confirmDelete, useActionPermission } from "@/components/shared";
+// Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 /** 把部门树转成 TreeSelect 数据 */
 function toTreeData(
@@ -81,6 +83,16 @@ const ManagerOrgsPage: FC = () => {
   const [saving, setSaving] = useState(false);
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
+
+  // Phase 86 W1（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  // 归码说明（opsManagerOrg 码组只有 list/edit/delete，**无 add / generate 键**）：
+  //   · 删除机构 → ops:manager:org:delete
+  //   · 新增机构 / 从部门架构生成机构 / 行编辑 / 启停 → ops:manager:org:edit
+  //     （写动作就近归最接近的既有键，不自造新码 —— Phase 86 零新增权限码）
+  const permEdit = permGate.decide(PERMISSION_CODES.opsManagerOrg.edit);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsManagerOrg.delete);
 
   const { data: deptTree = [] } = useDeptTree();
 
@@ -262,12 +274,33 @@ const ManagerOrgsPage: FC = () => {
       width: 140,
       render: (_, record) => (
         <Space>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
-            删除
-          </Button>
+          {/* Phase 86 W1：行编辑 → ops:manager:org:edit；行删除 → ops:manager:org:delete。
+              ready 无权限 → 入口不在 DOM；未就绪 → 渲染但 disabled + 提示。 */}
+          {permEdit.visible && (
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => openModal(record)}
+              disabled={permEdit.disabled}
+              title={permEdit.hint}
+            >
+              编辑
+            </Button>
+          )}
+          {permDelete.visible && (
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record)}
+              disabled={permDelete.disabled}
+              title={permDelete.hint}
+            >
+              删除
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -298,12 +331,31 @@ const ManagerOrgsPage: FC = () => {
       <Card
         extra={
           <Space>
-            <Button icon={<ThunderboltOutlined />} onClick={handleGenerateFromDept}>
-              从部门架构生成
-            </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-              新增机构
-            </Button>
+            {/* Phase 86 W1：「从部门架构生成机构」是**写动作**（内部落库 generateManagerOrgsFromDept），
+                归 ops:manager:org:edit（该码组无 generate 键，就近归最接近的 edit 键，不自造新码）。
+                ⚠️ 不可归 delete —— 否则持 delete 无 edit 的用户可批量生成机构（越权写）。 */}
+            {permEdit.visible && (
+              <Button
+                icon={<ThunderboltOutlined />}
+                onClick={handleGenerateFromDept}
+                disabled={permEdit.disabled}
+                title={permEdit.hint}
+              >
+                从部门架构生成
+              </Button>
+            )}
+            {/* 新增机构 → ops:manager:org:edit（该码组无 add 键，按最近码归属，不自造新码）。 */}
+            {permEdit.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => openModal()}
+                disabled={permEdit.disabled}
+                title={permEdit.hint}
+              >
+                新增机构
+              </Button>
+            )}
           </Space>
         }
       >
@@ -374,9 +426,18 @@ const ManagerOrgsPage: FC = () => {
               <Radio value={MANAGER_ORG_TYPE.SUB_BRANCH}>支公司</Radio>
             </Radio.Group>
           </Form.Item>
-          <Form.Item name="enabled" label="是否启用" valuePropName="checked">
-            <Switch checkedChildren="启用" unCheckedChildren="停用" />
-          </Form.Item>
+          {/* Phase 86 W1：弹窗内「是否启用」Switch 是表单字段（随新增/编辑机构提交生效），
+              归 ops:manager:org:edit；ready 无权限 → 整个 Switch 不渲染（不是只禁用）。 */}
+          {permEdit.visible && (
+            <Form.Item name="enabled" label="是否启用" valuePropName="checked">
+              <Switch
+                checkedChildren="启用"
+                unCheckedChildren="停用"
+                disabled={permEdit.disabled}
+                title={permEdit.hint}
+              />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </div>

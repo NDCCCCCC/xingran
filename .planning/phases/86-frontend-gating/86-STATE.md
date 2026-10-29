@@ -264,3 +264,74 @@ PLAN 裁定 7：**「绑定写 handler 的状态切换 Switch」**才算写入�
 5. **人工 review（R3）**：逐入口核对 25 页的权限码选型与三态语义（脚本管不到，见第八节）。
 6. **零改动核验**：`git diff --stat -- src/constants/permissionCodes.ts` 必须为空；`git diff --stat -- src/index.css src/design-system/**` 必须为空。
 7. **ROADMAP / REQUIREMENTS 勾选** + `86-VERIFICATION.md` 落盘。
+
+---
+
+## 十三、W1 铺开进度（Plan 01 / 2026-10-29）
+
+### 覆盖率推进（脚本实跑）
+
+| 项 | W0 基线 | W1 完成后 | 变化 |
+|---|---:|---:|---|
+| 已门控页面 | 2 | **8** | +6 |
+| 未覆盖页面 | 23 | **17** | −6 |
+| 豁免条数 | 51 | **51** | 0（未变动） |
+| 应门控页面 | 25 | 25 | 0 |
+
+**恒等式复核**：`8 已门控 + 17 未覆盖 = 25 应门控`；`25 + 51 = 76 页面` —— 两条恒等式均保持。
+`EXPECTED_EXEMPTION_COUNT`（= 51）**未改动**（豁免清单零增减，故无须登记理由）。
+
+### ⚠️ 与 Lead 裁定「23 → 16」的偏差登记（口径澄清）
+
+Lead（父 agent）给 W1 的预期是「未覆盖 23 → **16**（system 域 7 页铺开）」；**脚本实跑为 17**，差 1 页。原因是**计数口径**而非实现缺陷：
+
+- `system/user` 页在 W0 就**已门控**（它是「已门控 2」基线之一：`system/user` + `network/devices`），
+  因此**不在 23 页未覆盖清单内**；W1 对它做的是**复核**（补齐遗漏入口），复核不改变覆盖计数。
+- W1 真正**新增**门控的只有 6 页：role / menu / dept / post / manager-orgs / manager-rules。
+- 故：`2 基线 + 6 新增 = 8 已门控`，`25 − 8 = 17 未覆盖`（= ops 8 + network 6 + ad-domain 3）。
+
+**裁定**：以脚本实跑的 **8 / 17** 为准（与 86-01-PLAN Task 1.6 的 acceptance_criteria「已门控计数 = 8」完全一致）；
+Lead 的「16」若按「7 页里 user 复核也算一页覆盖」的算法得出，则与「已门控 2」基线重复计数，**不采纳**。
+后续 W2~W4 请沿用同一口径：**新增门控页数 = 未覆盖页数下降数**。
+
+### W1 逐页门控入口与权限码（施工图落地结果）
+
+| 页 | 门控入口 | 权限码 |
+|---|---|---|
+| **user**（复核） | 行编辑 / 行重置密码 / 行删除 / 批量删除 / 新增 / 导入 / 状态 Switch（7） | `systemUser.edit / resetPwd / remove / add / import`（**零改动**，既有 7 用例全绿） |
+| **role** | 工具栏新增 / 批量删除 / 行编辑 / 行停用·启用 / 行删除（5） | `systemRole.add / remove / edit / edit / remove` |
+| **menu** | 工具栏新增 / 批量删除 / 行编辑 / 行删除 / 弹窗显示状态 Switch / 弹窗菜单状态 Switch（6） | `systemMenu.add / remove / edit / remove / edit·add / edit·add` |
+| **dept** | 工具栏新增 / **导入触发按钮** / **导出触发按钮** / 行编辑 / 行删除（5） | `systemDept.add / import / export / edit / remove` |
+| **post** | 工具栏新增 / 批量删除 / 行编辑 / 行删除（4） | `systemPost.add / remove / edit / remove` |
+| **manager-orgs** | 工具栏「从部门架构生成」 / 工具栏「新增机构」 / 行编辑 / 行删除 / 弹窗启停 Switch（5） | `opsManagerOrg.edit / edit / edit / delete / edit` |
+| **manager-rules** | 工具栏「新增规则」 / 行编辑 / 行删除 / 弹窗启停 Switch（4） | `opsManagerRule.edit / edit / delete / edit` |
+
+**合计门控入口 38 个**（user 7 + role 5 + menu 6 + dept 5 + post 4 + manager-orgs 5 + manager-rules 4）。
+
+### 非 CRUD 写入口的归码理由（逐处）
+
+| 入口 | 归码 | 理由 |
+|---|---|---|
+| role 行「停用/启用」 | `systemRole.edit` | `systemRole` 码组只有 list/view/add/edit/remove/export，**无独立 status 键**；启停属状态写动作，就近归 `edit`（不自造新码） |
+| manager-orgs「新增机构」 | `opsManagerOrg.edit` | `opsManagerOrg` 码组只有 list/edit/delete，**无 add 键**；按「归最接近既有码」裁定归 `edit` |
+| manager-orgs「从部门架构生成机构」 | `opsManagerOrg.edit` | 同上（无 generate 键）；⚠️ **不可归 delete** —— 否则持 delete 无 edit 的用户可批量生成机构（越权写） |
+| manager-orgs 弹窗「是否启用」Switch | `opsManagerOrg.edit` | 表单字段，随新增/编辑机构提交生效 → 就近归所属写动作 |
+| manager-rules「新增规则」 | `opsManagerRule.edit` | `opsManagerRule` 码组只有 list/edit/delete，**无 add 键** |
+| manager-rules 弹窗「是否启用」Switch | `opsManagerRule.edit` | 表单字段，随新增/编辑规则提交生效 → 就近归所属写动作 |
+| menu 弹窗「显示状态 / 菜单状态」Switch | `systemMenu.edit`（编辑弹窗）/ `systemMenu.add`（新增弹窗） | 表单字段，随新增/编辑菜单提交生效 → **随弹窗上下文归所属写动作**（避免「有 add 无 edit 的用户新增菜单时看不到状态字段」的功能退化） |
+
+### 实现模式核对（对照 PLAN「实现模式」段）
+
+- 每页 **1 行** `useActionPermission()` hook（`permGate`）+ 每入口 1 个 `permission:` 传参 / 条件渲染；
+- **无** PageTable 级 hook、**无** 路由→码映射表、**无** 自造权限码字符串；
+- `src/components/shared/**` 与 `src/constants/permissionCodes.ts` **零 diff**；
+- `ActionButtons` 行操作走其内建 `permission:` 字段（组件内已有三态门控）；**裸 `<Button>` 行操作**（menu / manager-orgs / manager-rules）走页面层条件渲染 + `disabled` + `title`；
+- Excel 类入口（dept 导入/导出）门控点落在**触发按钮**，modal 容器保留无条件渲染（触发按钮不渲染 ⇒ 弹窗永远打不开）；
+- 批量删除全部走**页面层条件传参**（role/menu/dept 独立 Button 条件渲染；post 走 `PageTable.batchDelete={visible ? {...} : undefined}`）。
+
+### W1 组件测试
+
+- `src/pages/system/role/__tests__/permission.gate.test.tsx`：7 例（全绿）；
+- `src/pages/system/menu/__tests__/permission.gate.test.tsx`：8 例（全绿，含 `<Switch>` 形态三态）；
+- `src/pages/system/user/__tests__/permission.gate.test.tsx`：既有 7 例**零回归**（未改动该文件）。
+
