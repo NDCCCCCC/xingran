@@ -42,6 +42,11 @@ import {
 } from "@/lib/adDomainApi";
 import type { UnknownError } from "@/types/common";
 import ActionButtons from "@/components/shared/ActionButtons";
+// ⚠️ 直接引模块路径（不走 @/components/shared 桶文件）：桶文件 re-export 了
+// FloorPlanEditor → @react-three/fiber → three.js，引入它会让本页的动态 import
+// （既有测试的 `await import(...)`）显著变慢并触发超时（实测）。
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { useADConfigs } from "@/hooks/useADConfigs";
 
 import type { FC } from "react";
@@ -50,6 +55,25 @@ import { usePagination } from "@/hooks/usePagination";
 const ADUserPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
+
+  // Phase 86 W4（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  /**
+   * 本页**全部**写操作归 `ops:ad:user:edit` 单一码 —— 该码组在
+   * `src/constants/permissionCodes.ts` 里**只有 `edit` 一个写键**
+   * （无独立 `enable` / `move` / `sync` 键）。
+   *
+   * 归码的后端依据（`internal/api/v1/system/ad_domain_router.go:137-146`）：
+   * ```
+   * // 85-03 RBAC-01：读组保留 ANY-of，用户写操作走 strict 兄弟组（move/enable/
+   * // disable/batch-sync 均为编辑语义，归 ops:ad:user:edit）。
+   * userEdit.Use(middleware.RequireStrictPermissions([]string{string(permission.OpsADUserEdit)}, core))
+   * ```
+   * 即后端把 move / enable / disable / batch-sync **四条写路由挂在同一个 strict 单码**下
+   * → 前端四条写入口必须同码，否则会出现「前端放行 / 后端 403」的错配。
+   */
+  const permUserEdit = permGate.decide(PERMISSION_CODES.opsADUser.edit);
 
   // 使用共享的 AD 配置 Hook
   const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
@@ -523,18 +547,26 @@ const ADUserPage: FC = () => {
             label: user.isEnabled ? "禁用" : "启用",
             icon: user.isEnabled ? <StopOutlined /> : <CheckCircleOutlined />,
             onClick: () => handleEnable(user),
+            // Phase 86 W4：启用/禁用是**状态写**（POST /users/:id/enable|disable）
+            // → 归 ops:ad:user:edit（该码组无独立 enable 键；后端同挂此码）。
+            permission: PERMISSION_CODES.opsADUser.edit,
           },
           {
             key: "move",
             label: "移动",
             icon: <SwapOutlined />,
             onClick: () => handleMove(user),
+            // Phase 86 W4：移动是**位置写**（POST /users/:id/move，改 OU）
+            // → 归 ops:ad:user:edit（该码组无独立 move 键；后端同挂此码）。
+            permission: PERMISSION_CODES.opsADUser.edit,
           },
           {
             key: "edit",
             label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(user),
+            // Phase 86 W4：编辑用户资料 → ops:ad:user:edit
+            permission: PERMISSION_CODES.opsADUser.edit,
           },
         ];
 
@@ -624,15 +656,28 @@ const ADUserPage: FC = () => {
                 {selectAllMode ? "取消全选" : "全选所有"}
                 {selectAllMode && ` (${selectAllTotal})`}
               </Button>
-              <Button
-                type="primary"
-                icon={<SyncOutlined />}
-                disabled={selectedUsers.length === 0 && !selectAllMode}
-                onClick={handleBatchSync}
-                loading={batchSyncLoading}
-              >
-                批量同步 ({selectAllMode ? selectAllTotal : selectedUsers.length})
-              </Button>
+              {/*
+                Phase 86 W4 —— **施工图（86-04 PLAN）未列的写入口，本波按后端硬证据补齐**：
+                「批量同步」调 `batchSyncADUsersDirect` → POST /users/batch-sync，
+                把 AD 用户**写进系统用户表**（落库）→ 是业务写入口，不是只读。
+                后端 `ad_domain_router.go:137-146` 已把它与 move/enable/disable
+                挂在同一个 strict 单码 `ops:ad:user:edit` 下（注释原文：
+                「move/enable/disable/batch-sync 均为编辑语义，归 ops:ad:user:edit」）
+                → 前端归 `opsADUser.edit`，与本页其余三条行操作同码。
+                （施工图遗漏已登记在 86-STATE.md 的「W4 施工图外发现」节。）
+              */}
+              {permUserEdit.visible && (
+                <Button
+                  type="primary"
+                  icon={<SyncOutlined />}
+                  disabled={permUserEdit.disabled || selectedUsers.length === 0 && !selectAllMode}
+                  title={permUserEdit.hint}
+                  onClick={handleBatchSync}
+                  loading={batchSyncLoading}
+                >
+                  批量同步 ({selectAllMode ? selectAllTotal : selectedUsers.length})
+                </Button>
+              )}
             </Space>
           </Form.Item>
         </Form>

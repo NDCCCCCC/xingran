@@ -41,12 +41,25 @@ import {
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
 import { confirmDelete } from "@/components/shared/confirmDelete";
+// ⚠️ 直接引模块路径（不走 @/components/shared 桶文件）：桶文件 re-export 了
+// FloorPlanEditor → @react-three/fiber → three.js，引入它会让本页的动态 import
+// （既有测试的 `await import(...)`）显著变慢并触发超时（实测）。
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 import type { FC } from "react";
 import { usePagination } from "@/hooks/usePagination";
 
 const ADGroupPage: FC = () => {
   const [form] = Form.useForm();
+
+  // Phase 86 W4（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  // 组编辑 / 成员增删 → ops:ad:group:edit（后端 POST /groups/:id/update 同一码组）
+  const permGroupEdit = permGate.decide(PERMISSION_CODES.opsADGroup.edit);
+  // 工具栏「同步组」→ ops:ad:group:mapping:sync（独立的映射同步码）
+  const permMappingSync = permGate.decide(PERMISSION_CODES.opsADGroup.mappingSync);
 
   // 使用共享的 AD 配置 Hook
   const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
@@ -375,12 +388,22 @@ const ADGroupPage: FC = () => {
       width: 180,
       render: (_: unknown, record: ADGroup) => (
         <Space>
+          {/* 查看成员是读入口 → 不门控 */}
           <Button type="link" size="small" onClick={() => handleViewMembers(record)}>
             查看成员
           </Button>
-          <Button type="link" size="small" onClick={() => handleEditGroup(record)}>
-            编辑
-          </Button>
+          {/* Phase 86 W4：编辑组是写入口 → ops:ad:group:edit */}
+          {permGroupEdit.visible && (
+            <Button
+              type="link"
+              size="small"
+              disabled={permGroupEdit.disabled}
+              title={permGroupEdit.hint}
+              onClick={() => handleEditGroup(record)}
+            >
+              编辑
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -411,20 +434,27 @@ const ADGroupPage: FC = () => {
       title: "操作",
       key: "action",
       render: (_: unknown, record: ADUser) => (
-        <Button
-          type="link"
-          size="small"
-          danger
-          icon={<MinusCircleOutlined />}
-          onClick={() => {
-            confirmDelete({
-              target: `AD 成员 ${record.userDn}`,
-              onDelete: () => handleRemoveMember(record.userDn),
-            });
-          }}
-        >
-          移除
-        </Button>
+        // Phase 86 W4：移除成员是写入口（改组成员关系）→ ops:ad:group:edit；
+        // 触发器是裸 Button + confirmDelete → 门控点落在触发按钮本身
+        // （条件渲染 + disabled + 提示），confirmDelete.ts 零改动。
+        permGroupEdit.visible && (
+          <Button
+            type="link"
+            size="small"
+            danger
+            icon={<MinusCircleOutlined />}
+            disabled={permGroupEdit.disabled}
+            title={permGroupEdit.hint}
+            onClick={() => {
+              confirmDelete({
+                target: `AD 成员 ${record.userDn}`,
+                onDelete: () => handleRemoveMember(record.userDn),
+              });
+            }}
+          >
+            移除
+          </Button>
+        )
       ),
     },
   ];
@@ -475,15 +505,19 @@ const ADGroupPage: FC = () => {
               <Button icon={<ReloadOutlined />} onClick={() => fetchGroups(searchGroupName)}>
                 刷新
               </Button>
-              <Button
-                type="primary"
-                icon={<SyncOutlined spin={syncLoading} />}
-                loading={syncLoading}
-                onClick={handleSyncGroups}
-                disabled={!selectedConfig}
-              >
-                同步组
-              </Button>
+              {/* Phase 86 W4：同步组是写入口 → ops:ad:group:mapping:sync（独立码，不归 edit） */}
+              {permMappingSync.visible && (
+                <Button
+                  type="primary"
+                  icon={<SyncOutlined spin={syncLoading} />}
+                  loading={syncLoading}
+                  onClick={handleSyncGroups}
+                  disabled={permMappingSync.disabled || !selectedConfig}
+                  title={permMappingSync.hint}
+                >
+                  同步组
+                </Button>
+              )}
               {syncStatus && (
                 <Tooltip
                   title={
@@ -541,9 +575,18 @@ const ADGroupPage: FC = () => {
       >
         <Space orientation="vertical" style={{ width: "100%" }} size="medium">
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddMember}>
-              添加成员
-            </Button>
+            {/* Phase 86 W4：添加成员是写入口 → ops:ad:group:edit */}
+            {permGroupEdit.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                disabled={permGroupEdit.disabled}
+                title={permGroupEdit.hint}
+                onClick={handleAddMember}
+              >
+                添加成员
+              </Button>
+            )}
           </Space>
           <Table
             columns={memberColumns}
@@ -604,13 +647,20 @@ const ADGroupPage: FC = () => {
               title: "操作",
               key: "action",
               render: (_: unknown, record: ADUser) => (
-                <Button
-                  type="link"
-                  icon={<PlusOutlined />}
-                  onClick={() => handleAddMemberConfirm(record.userDn)}
-                >
-                  添加
-                </Button>
+                // Phase 86 W4：弹窗内「添加」是真正的写触发点（调 addADGroupMember）
+                // → ops:ad:group:edit。抽屉里的「添加成员」入口已门控，此处再门控一次
+                // （纵深防御：弹窗内的确认点不能只依赖触发按钮）。
+                permGroupEdit.visible && (
+                  <Button
+                    type="link"
+                    icon={<PlusOutlined />}
+                    disabled={permGroupEdit.disabled}
+                    title={permGroupEdit.hint}
+                    onClick={() => handleAddMemberConfirm(record.userDn)}
+                  >
+                    添加
+                  </Button>
+                )
               ),
             },
           ]}

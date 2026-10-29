@@ -53,6 +53,25 @@ vi.mock("@/components/shared/ExcelExport", () => ({
   default: () => null,
 }));
 
+/**
+ * Phase 86 W4 —— **测试隔离缺陷修复**（既有测试语义适配，登记在 86-STATE.md）：
+ *
+ * 本文件此前**未** mock `useDeptTree`，而 `buildings/index.tsx:107` 直接消费它
+ * → `getDeptTree()`（`@/lib/dutyApi`）→ `@/lib/api` 的**真实** post 请求。
+ * 当开发机**有后端在跑**（实测 :8080 / :9000 LISTENING）时，该请求返回
+ * `INVALID_TOKEN` → `@/lib/api` 的失效处理链调用 `menuStore.clearMenus()`
+ * → `permissionsLoaded` 被重置为 **false** → 门控翻成「未就绪」态
+ * → 用例 ③ 的 `addBtn.disabled` 变成 `true` → **假红**。
+ *
+ * 即该用例的成败取决于「本机有没有后端在跑」，属**环境依赖型 flaky**。
+ * 修法与同目录既有测试（`hooks.test.tsx:17` / `useDepartmentData.test.tsx:17`）一致：
+ * mock 掉 `useDeptTree`，切断真实网络请求。
+ * ⚠️ **未删任何断言**，未改门控语义；仅补齐测试隔离。
+ */
+vi.mock("@/hooks/useDeptTree", () => ({
+  useDeptTree: vi.fn(() => ({ data: [], isLoading: false })),
+}));
+
 import BuildingPage from "../index";
 import { buildingApi } from "@/lib/opsApi";
 

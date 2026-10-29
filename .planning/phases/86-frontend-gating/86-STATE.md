@@ -553,4 +553,247 @@ grep 证据：`grep -rn "setBatchModalVisible(true)" src/pages/network/ | wc -l`
 按纪律「不扩范围」，本波**未改动**该文件；登记为 **W3 遗留缺口**，建议 86-04 或 86-05 收口时按
 `networkDiscovery.add`（发现任务创建/导入同属 discovery 写动作域）补门控。
 
+> ✅ **该缺口已闭环**：commit `499b2991`（`fix(86-03)`）按 `networkDiscovery.add` 补齐了
+> `ResultModal` 的「导入设备」入口门控（新增 `importVisible/importDisabled/importHint` 三个可选 prop，
+> 默认值保持既有调用方零改动）。W4 复核：该文件已含 `useActionPermission` + `PERMISSION_CODES.networkDiscovery.add`，
+> 不再是遗留项。
+
+---
+
+## 十六、W4 铺开进度（Plan 04 / 2026-10-29）
+
+### 覆盖率推进（脚本实跑）
+
+| 项 | W3 完成后 | W4 完成后 | 变化 |
+|---|---:|---:|---|
+| 已门控页面 | 22 | **25** | +3（ad-domain 3 页） |
+| 未覆盖页面 | 3 | **0** | −3 |
+| 豁免条数 | 51 | **51** | 0（未变动） |
+| 应门控页面 | 25 | 25 | 0 |
+
+**恒等式复核**：`25 已门控 + 0 未覆盖 = 25 应门控`；`25 + 51 = 76 页面` —— 两条恒等式均保持。
+`EXPECTED_EXEMPTION_COUNT`（= 51）与 `EXPECTED_PAGE_COUNT`（= 76）**均未改动**。
+
+**🔴 先红后绿链条在本波闭合**：`npm run check:gating` 由 W3 的 **exit 1（未覆盖 3 页）** → **exit 0（未覆盖 0 页）**。
+红→绿证据链完整：W0（红：已门控 2 / 未覆盖 23）→ W1（8/17）→ W2（16/9）→ W3（22/3）→ **W4（25/0，转绿）** → W5（挂 `lint:ci`）。
+
+### W4 施工图对照表 —— configs 页 + AccountPoolTab（PLAN 的 14 行逐条回填）
+
+> PLAN「3 页 × 入口 × 权限码映射」中 configs 一节的 **14 行追溯清单**，逐条回填三态结论。
+> **无空缺行**。行号列同时给出 PLAN 施工图行号与**落地后实际行号**（W4 改动使行号整体下移）。
+
+| # | 入口 | PLAN 行号 → 落地行号 | 权限码 | 门控形态 | **结论** |
+|---|---|---|---|---|---|
+| 1 | 测试连接 | `configs/index.tsx:297-300` → `:325-332` | `opsADConfig.test` | ActionButtons 的 `permission:` | ✅ 已门控 |
+| 2 | 同步数据 | `:304-307` → `:334-341` | `opsADConfig.sync` | ActionButtons 的 `permission:` | ✅ 已门控 |
+| 3 | 详情 | `:311-314` → `:343-349` | —（读） | **读 → 不门控** | ✅ 已登记不门控 |
+| 4 | 删除 | `:317-325` → `:350-365` | `opsADConfig.delete` | ActionButtons 的 `permission:`（**见 W4-偏离 ②**） | ✅ 已门控 |
+| 5 | 新增AD配置 | `:348` → `:387-397` | `opsADConfig.add` | 条件渲染 + disabled + title | ✅ 已门控 |
+| 6 | 刷新 | `:351` → `:399-401` | —（读） | **读 → 不门控** | ✅ 已登记不门控 |
+| 7 | 使用SSL (LDAPS) Switch | `:437` → `:487-491` | **随弹窗上下文**：新增→`add` / 编辑→`edit`（**见 W4-偏离 ③**） | 条件渲染 + disabled + title | ✅ 已门控 |
+| 8 | 使用TLS (StartTLS) Switch | `:441` → `:493-497` | 同上 | 条件渲染 + disabled + title | ✅ 已门控 |
+| 9 | 启用自动同步 Switch | `:445` → `:499-503` | 同上 | 条件渲染 + disabled + title | ✅ 已门控 |
+| 10 | **编辑此配置（详情 Drawer 内）** | `:505-515` → `:563-583` | `opsADConfig.edit` | 条件渲染 + disabled + title | ✅ 已门控（HIGH-1 闭环） |
+| 11 | 账号池：编辑 / 立即解锁 / 启用·停用 | `AccountPoolTab.tsx:323-348` → `:359-393` | `opsADConfig.edit` | 条件渲染 + disabled + title（**见 W4-偏离 ①**） | ✅ 已门控 |
+| 12 | 账号池：删除 | `:349-359` → `:395-414` | `opsADConfig.delete` | 条件渲染 + disabled + title（裸 Button + confirmDelete 触发器） | ✅ 已门控 |
+| 13 | 账号池：新增账号 | `:406-408` → `:459-469` | `opsADConfig.add` | 条件渲染 + disabled + title | ✅ 已门控 |
+| 14 | 账号池：刷新 | `:397-405` → `:449-457` | —（读） | **读 → 不门控** | ✅ 已登记不门控 |
+
+**第 14 行再次确认**：账号池的「刷新」是**只读入口**（`onClick` → `loadList()` / `loadStats()`，不落库），
+与第 13 行的「新增账号」（`onClick` → `handleCreate`，落库）**分列为两行**，未合并 —— 与 PLAN NEW-03 的拆分要求一致。
+
+### W4 施工图对照表 —— groups 页
+
+| # | 入口 | PLAN 行号 → 落地行号 | 权限码 | 门控形态 | **结论** |
+|---|---|---|---|---|---|
+| 1 | 行「查看成员」 | `groups/index.tsx:378` → `:391-394` | —（读） | **读 → 不门控** | ✅ 已登记不门控 |
+| 2 | 行「编辑」 | `:381` → `:396-405` | `opsADGroup.edit` | 条件渲染 + disabled + title | ✅ 已门控 |
+| 3 | 成员行「移除」（`confirmDelete` 触发器） | `:414-427` → `:437-456` | `opsADGroup.edit` | 条件渲染 + disabled + title（**触发按钮前置条件渲染**，非 handler 内 return） | ✅ 已门控 |
+| 4 | 工具栏「同步组」 | `:478-486` → `:508-520` | `opsADGroup.mappingSync` | 条件渲染 + disabled + title | ✅ 已门控 |
+| 5 | 抽屉「添加成员」 | `:544` → `:578-589` | `opsADGroup.edit` | 条件渲染 + disabled + title | ✅ 已门控 |
+| 6 | 弹窗内「添加」 | `:607-613` → `:648-666` | `opsADGroup.edit` | 条件渲染 + disabled + title | ✅ 已门控 |
+
+### W4 施工图对照表 —— users 页
+
+| # | 入口 | PLAN 行号 → 落地行号 | 权限码 | 门控形态 | **结论** |
+|---|---|---|---|---|---|
+| 1 | 行「禁用/启用」 | `users/index.tsx:521-526` → `:545-552` | `opsADUser.edit` | ActionButtons 的 `permission:` | ✅ 已门控 |
+| 2 | 行「移动」 | `:527-532` → `:555-561` | `opsADUser.edit` | ActionButtons 的 `permission:` | ✅ 已门控 |
+| 3 | 行「编辑」 | `:534-541` → `:564-569` | `opsADUser.edit` | ActionButtons 的 `permission:` | ✅ 已门控 |
+| 4 | **工具栏「批量同步」** | **施工图未列** → `:659-679` | `opsADUser.edit` | 条件渲染 + disabled + title | ✅ 已门控（**施工图外补齐**，见下节 W4-外-①） |
+| 5 | 行状态 Select（筛选条件） | `:595-615` | —（筛选，不是写入口） | **不门控** | ✅ 已登记不门控 |
+| 6 | 移动弹窗的 TreeSelect 确认 | `:708-732` | —（随触发按钮不可达） | **不单独门控** | ✅ 已登记（见 W4-登记 ③） |
+
+### W4 施工图外发现（1 处，已补齐 + 登记）
+
+**① `ad-domain/users` 工具栏「批量同步」按钮**（落地行号 `users/index.tsx:659-679`）
+
+- **实跑证据**：该按钮 `onClick` → `handleBatchSync` → `batchSyncADUsersDirect` → `POST /ad-domain/users/batch-sync`，
+  把 AD 用户**写进系统用户表**（落库）→ 是**业务写入口**，不是只读。
+- **后端硬证据**（`internal/api/v1/system/ad_domain_router.go:125-146`，原文注释）：
+
+  ```go
+  // 85-03 RBAC-01：读组保留 ANY-of，用户写操作走 strict 兄弟组（move/enable/
+  // disable/batch-sync 均为编辑语义，归 ops:ad:user:edit）。
+  userEdit.Use(middleware.RequireStrictPermissions([]string{string(permission.OpsADUserEdit)}, core))
+  userEdit.POST("/:id/move", handler.MoveUser)
+  userEdit.POST("/:id/enable", handler.EnableUser)
+  userEdit.POST("/:id/disable", handler.DisableUser)
+  userEdit.POST("/batch-sync", syncHandler.BatchSyncADUsers)
+  ```
+
+  即后端把 **move / enable / disable / batch-sync 四条写路由挂在同一个 strict 单码** `ops:ad:user:edit` 下
+  → 前端四条写入口必须同码，否则会出现「前端放行 / 后端 403」的错配。
+- **处置裁定**：**补门控**（归 `opsADUser.edit`），而非仅登记。依据：
+  1. PLAN 自身的「结构性局限」节已写明「施工图遗漏的入口不会被页级扫描器捕获，入口级覆盖靠施工图 + 人工 review + 抽样测试兜底」
+     —— 本波正是「人工 review」环节，且已拿到后端硬证据；
+  2. W2 已有同型先例（assets「下载模板」、workstations「下载部门映射表」两处施工图外写入口**直接补齐**并写进 86-STATE）；
+  3. W4 是本 phase 的最后一个铺开波次，**若只登记则该写入口将永久裸露**（RBAC-02 破口）；
+  4. 改动面极小（1 个按钮），同页同码组，无跨域影响。
+- **本条已在本节与 `86-VERIFICATION.md` 双登记**，请 Lead 复核该裁定（若 Lead 裁定「只登记不改」，回退成本 = 删 `users/index.tsx:659-679` 一段）。
+
+### W4 偏离登记（PLAN 施工图与实跑的三处冲突，均已自行裁定并写明依据）
+
+| 编号 | PLAN 原文 | 实跑事实 | 裁定 | 依据 |
+|---|---|---|---|---|
+| **W4-偏离 ①** | 第 11 行「账号池：编辑 / 解锁 / 启用停用 … 门控形态 = `permission:`」 | `AccountPoolTab.tsx` 的行操作是**裸 `<Button>`**（不是 `ActionButtons`），`ActionButton.permission` 位只存在于 `ActionButtons` 组件的 action 形参上 | 改为**页面层条件渲染 + disabled + title**（与该页其余裸 Button 一致） | 裸 Button 无处传 `permission:`；条件渲染的三态效果与 `permission:` 完全等价（ready 无权限→不渲染 / 未就绪→渲染但 disabled+提示） |
+| **W4-偏离 ②** | 第 4 行「删除 … 门控形态 = 触发按钮前置条件渲染（`confirmDelete` 无 permission 位）」 | configs 页的删除是 **`ActionButtons` 的 action**（`onClick` → `confirmDelete`），**不是裸 Button** | 用 ActionButtons 内建的 `permission:` 位 | `ActionButtons` 的 `permission` 位本身即「逐按钮三态门控」（`ActionButtons.tsx:44-49`），ready 无权限→该 action 被 `visible` 过滤掉（不渲染）、未就绪→渲染但 disabled + 提示。**`confirmDelete.ts` 零改动**（PLAN 的硬约束「不改 confirmDelete.ts」成立） |
+| **W4-偏离 ③** | 第 7~9 行「三个 Switch → `opsADConfig.edit` 决策（`visible===false` 时整个 Switch 不渲染）」 | 新增弹窗与编辑弹窗**共用同一个 Form**（`editingConfig ? "编辑AD配置" : "新增AD配置"`），三个 Switch 是**表单字段**，随弹窗提交生效 | 改为**随弹窗上下文归所属写动作**：新增弹窗 → `opsADConfig.add`，编辑弹窗 → `opsADConfig.edit` | 若一律归 `edit`：「有 `add` 无 `edit`」的用户点「新增AD配置」后**看不到 SSL / TLS / 自动同步三个字段** → 提交时三字段缺失 → **新建的配置被迫走明文 + 不自动同步 = 功能退化**。该口径与 86-01 `system/menu` 页的 `permFormStatus`（`editingMenu ? edit : add`）**逐字一致**，是同一 phase 内的既有先例；抽样测试用例 ⑥ 锁定该行为 |
+
+### W4 旧式判定登记表（第二真相源）—— 6 处逐处定论 + 1 处已迁对照
+
+> **登记 ≠ 改造**：本波 6 处**一律不改判定逻辑**（改了要么自造码、要么改变现有可见性行为）。
+> 本表是「第二真相源债」的正式登记处，回补归口统一为**后端动作级拆分 phase**。
+
+| # | 位置 | 判定用的码 | TS 清单有？ | 后端 `pkg/permission/config.go` 有？ | **定论** | 回补归口 |
+|---|---|---|---|---|---|---|
+| 1 | `src/pages/network/ports/index.tsx:130-132` | `network:port:write` | ❌ 无 `networkPort` 区块 | ✅ 有 `network:port:` 前缀 | **登记（不迁）**：迁它需新增 TS 码 → 违反「零新增码」；且后端 `network:port:write` 是组级单码，与逐动作拆分方向冲突 | 后端动作级拆分 phase（补 TS `networkPort` 区块 + 后端按动作拆 `network:port:{write→list/edit/...}`） |
+| 2 | `src/pages/vdi/VirtualMachineList/index.tsx:46,52,109,929-935` | `vdi:vm:add/bind/remove/restart/start/stop/sync`（7 个） | ❌ 无 `vdi` 区块 | ❌ 无 `vdi:` 前缀 | **登记（不迁）**：码在后端**根本不存在** → 前端判的是一个**永远拿不到的码**（入口对所有人隐藏）→ 登记为「**疑似死判定**」显式债 | 后端先拆出 `vdi:vm:*` 动作码（后端也没有 → 需先有码） |
+| 3 | `src/pages/asset/reconciliation/exceptions/index.tsx:85-86` | `asset:reconciliation:resolve` | ❌ | ❌ | **登记（不迁）**：同上（死判定） | 后端拆出 `asset:reconciliation:*` 动作码 |
+| 4 | `src/pages/asset/reconciliation/fix-suggestion/index.tsx:64-67` | `asset:reconciliation:fix:{accept,reject,rollback}` | ❌ | ❌ | **登记（不迁）**：同上（死判定） | 后端拆出 `asset:reconciliation:fix:*` 动作码 |
+| 5 | `src/pages/network/mac/history/MACHistoryPage.tsx:117-119` | `network:mac:export` | ❌ 无 `networkMac` 区块 | ✅ 有 `network:mac:` 前缀 | **登记（不迁）**：同 #1 | 后端动作级拆分 phase（补 TS `networkMac` 区块 + 后端按动作拆） |
+| 6 | `src/pages/ad-domain/configs/ReconciliationTab.tsx:42,63-64` | `ops:ad:config:reconciliation:list` | ❌（`opsADConfig` 无该子码） | ❌ | **登记（不迁）**：该子组件是**读**门控（非写入口），保留判定；本波只把**同页的写入口**门控化 | 后端拆出 `ops:ad:config:reconciliation:*`（后端 `ad_domain_router.go:177` 现挂 `ops:ad:config:reconciliation:list` 只读码） |
+| — | ✅ **已迁 1 处**：`src/pages/operations/workstations/LocationAliasDrawer.tsx` + `src/pages/operations/workstations/index.tsx`（`ops:location:alias:*` 在 TS 清单内） | — | ✅ `opsLocationAlias` 区块存在 | ✅ | **86-02 已迁为三态门控**，本波复核未被回退 | 已闭环 |
+
+**为什么豁免清单里带「旧式直判」字样的恰为 **5** 条**：全站旧式直判共 6 处，但第 6 处
+`ad-domain/configs/ReconciliationTab.tsx` 所在页 `src/pages/ad-domain/configs/index.tsx` 在本波**已门控**（有码页）
+→ 按 86-00 的 R2「同一页面不得同时出现在已门控与豁免两侧」→ **不进豁免清单**（只在表里登记子组件）。
+故豁免清单中带「旧式直判（第二真相源）」字样的条目恰为 **5** 条
+（`network/ports`、`network/mac/history`、`vdi/VirtualMachineList`、`asset/reconciliation/exceptions`、`asset/reconciliation/fix-suggestion`）。
+
+**实跑校验**：`grep -c "旧式直判" scripts/gating-exemptions.json` → **5**；
+`node -e "…filter(e=>(e.reason||'').includes('旧式直判')).length"` → **5**；
+`git diff --stat` 对 6 个旧式直判文件 → **空（零 diff）**。
+
+### W4 其他登记项
+
+**① `ReconciliationTab.tsx` 零 diff**：`ReconciliationTab.tsx` 与其既有测试 `ReconciliationTab.test.tsx` **零改动、全绿**
+（本波只登记，不改判定逻辑）。该子组件的读门控仍按 `RECONCILIATION_PERM`（`ops:ad:config:reconciliation:list`）字面量直判。
+
+**② 账号池码归属裁决（已落源码注释）**：`AccountPoolTab.tsx` 文件头注释写明「账号池**无独立 TS 码区块**（后端有
+`ops:ad:config:account:list/edit/delete`，TS 未声明）→ 按 AD 配置域操作码 add/edit/delete 归属；后端 account 子码回补归后端拆分 phase」。
+后端证据：`pkg/permission/config.go:531-538` + `ad_domain_router.go:66-93`（三组已 `RequireStrictPermissions` 逐动作单码）。
+⚠️ 该归属是**前端侧就近归码**，与后端 account 子码**不等价**（后端 `account:edit` 与 `config:edit` 是两个不同码），
+回补 TS 声明后应改回 `ops:ad:config:account:*` 精确码。
+
+**③ 弹窗内确认点「随触发按钮不可达」的登记**：
+`ad-domain/users` 的移动弹窗内确认（`TreeSelect onChange` → `handleMoveConfirm`，落地 `:708-732`）**未单独门控** —— 理由：
+移动弹窗只能由行操作「移动」打开，而「移动」已挂 `opsADUser.edit` 的 `permission:`（ready 无权限 → 该 action 不渲染
+⇒ 弹窗永不打开）。同理，configs / AccountPoolTab / groups 的弹窗 `onOk` 提交按钮（`handleSubmit` / `handleSubmit` 账号池 /
+`handleUpdateGroup`）**未单独门控**，理由相同：**触发按钮已门控 ⇒ 弹窗不可达**。
+（与 W1~W3 的既有口径一致：Excel 类入口门控点落在**触发按钮**，modal 容器保留无条件渲染。）
+
+**④ 组写路由的后端缺口（备查，本波不改）**：实跑发现 `ad_domain_router.go` **未注册**以下前端在调用的写路由：
+
+| 前端调用 | 后端路由 | 状态 |
+|---|---|---|
+| `addADGroupMember` → `POST /ad-domain/groups/:id/members/add` | 未注册 | ⚠️ 404 |
+| `removeADGroupMember` → `POST /ad-domain/groups/:id/members/remove` | 未注册 | ⚠️ 404 |
+| `syncADGroups` → `POST /ad-domain/groups/sync-by-config/:configId` | 未注册 | ⚠️ 404 |
+| `updateADGroup` → `POST /ad-domain/groups/:id/update` | 已注册（`ops:ad:group:edit` strict） | ✅ |
+
+即「组成员增删」与「按配置同步组」三个入口**当前在后端无路由**（前端调用恒 404）。
+**与本 phase 门控无关**（门控只管前端入口可见性），本波**不改任何后端代码**，仅登记备查 → 归 85/87 线的后端拆分 phase。
+
+**⑤ `useActionPermission` 的导入路径偏离（桶文件 → 直接模块路径）**：
+本波 4 个 ad-domain 文件统一改为 `import { useActionPermission } from "@/components/shared/useActionPermission";`，
+**不走** `@/components/shared` 桶文件。实跑依据：桶文件 re-export 了 `FloorPlanEditor` → `@react-three/fiber` → **three.js**，
+引入它会让 `AccountPoolTab` 的动态 import 从 **~6.3s** 涨到 **>15s 直接超时**（`AccountPoolTab.render.test.tsx` /
+`ad-domain/__tests__/modules.test.tsx` 两个既有测试由绿转红，实测已复现并修复）。
+`useActionPermission` 本身零依赖（只依赖 `react` + `menuStore`），直接引模块路径更轻。
+（注：其余页面仍走桶文件，属既有风格；本波只对本 phase 新增的 4 个文件采用直接路径。）
+
+**⑥ 并行线噪音登记（Phase 90 线 B，非本波改动）**：W4 执行期间工作区存在 **Phase 90 线 B 的并行改动**：
+`ruoyi-react-frontend/src/index.css`（100 行变更）与 `ruoyi-react-frontend/scripts/css-contract-check.js`（13 行变更）。
+**这两个文件不属于本波改动面**，本波**未触碰**（红线 1：不得修改 `src/index.css` 与任何 `.module.css`），
+且**不纳入本波 commit**。W4 的 `git diff --name-only -- src/ scripts/` 中这两项为并行线产物，已在本节登记。
+
+### W4 测试用例表
+
+**新增文件**：`src/pages/ad-domain/configs/__tests__/permission.gate.test.tsx`（**8 例**，全绿）
+
+| # | 用例 | 覆盖路径 | 关键断言 |
+|---|---|---|---|
+| ① | 只持 `opsADConfig.list` | ready + 只有读码 | 「新增AD配置」「测试连接」「同步数据」「删除」**均不在 DOM**；「详情」（读）保留 |
+| ④ | ready + 空权限集 | ready + 空 | 四个写入口**均不渲染**（与「未就绪」在数据上可区分） |
+| ② | 未就绪（`permissionsLoaded=false`） | loading | 「新增AD配置」在 DOM 且 `disabled` + `title` 含「权限」；行操作 4 项全可见 → 收进「操作」下拉，菜单项 `.ant-dropdown-menu-item-disabled` > 0 且带 `title` 含「权限」 |
+| ②-2 | 未就绪（`permissionsError` 非空） | error | 同上 |
+| ③ | 持 `opsADConfig.test` | ready + 单写码 | 「测试连接」存在且 `disabled === false`；**「同步数据」「删除」「新增AD配置」仍不在 DOM**（逐码断言，不是一揽子） |
+| ⑤ | 只持 `list`（无 `edit`） | HIGH-1 | 点「详情」打开抽屉（以抽屉标题 `AD 配置详情: 公司主AD域` 为锚点，避免「抽屉没打开」被误判成「按钮被门控掉」）→「编辑此配置」**不在 DOM** |
+| ⑤-2 | 持 `opsADConfig.edit` | HIGH-1 正向 | 「编辑此配置」存在且 `disabled === false` |
+| ⑥ | 只持 `opsADConfig.add`（无 `edit`） | 偏离 ③ | 点「新增AD配置」→ 新增弹窗内三个 Switch（使用SSL / 使用TLS / 启用自动同步）**均可见且未禁用** |
+
+**专项类型检查**：临时 tsconfig `tsconfig.gate-test.check.json`（`extends ./tsconfig.app.json` + `types` 加 `vitest/globals`
++ 指定 include + `exclude: []`）跑 `npx tsc --noEmit` → **错误数 0**；该临时文件跑完即删（不入 commit）。
+
+**既有测试零回归**：`npx vitest run src/pages/ad-domain` → **15 files / 49 tests 全绿**（含 `ReconciliationTab.test.tsx`、
+`AccountPoolTab.render.test.tsx`、`modules.test.tsx` 等）。
+
+**既有测试语义适配**：本波 **1 处**（未删任何断言、未改门控语义，仅补齐测试隔离）：
+
+| 测试文件 | 适配内容 | 理由（根因，非「为了让测试变绿」） |
+|---|---|---|
+| `src/pages/operations/buildings/__tests__/permission.gate.test.tsx`（**W2 产出，非本波产出**） | 新增 `vi.mock("@/hooks/useDeptTree", …)` 一段（与同目录既有 `hooks.test.tsx:17` / `useDepartmentData.test.tsx:17` **完全同款**） | **该用例是环境依赖型 flaky，在 HEAD（499b2991）上即已假红**（本波用 `git stash` 把**全部**工作区改动（含 90 线并行改动）暂存后复跑，失败完全一致 → 证明与本波无关）。根因链：`buildings/index.tsx:107` 消费 `useDeptTree()` → `getDeptTree()`（`@/lib/dutyApi`）→ `@/lib/api` 的**真实** post → 开发机**有后端在跑**（实测 `:8080` / `:9000` LISTENING）时返回 `INVALID_TOKEN` → `@/lib/api` 失效处理链调用 `menuStore.clearMenus()` → `permissionsLoaded` 被重置为 `false` → 门控翻成「未就绪」→ 用例 ③ 的 `addBtn.disabled` 变 `true` → **假红**。即该用例的成败取决于「本机有没有后端在跑」。修法是切断真实网络请求（mock `useDeptTree`），**不删任何断言、不降任何断言** |
+
+> 该修复的**归属说明**：`buildings` 页属 86-05 Task 5.3 的 8 页抽样清单之一，原计划在 W5 收口；本波提前修复的原因是
+> 86-04 Task 4.5 的验收判据要求 `npx vitest run` **全绿**，且该红是 W4 开工前既已存在的红（不得留一个「红的 HEAD」给 W5）。
+> 修复内容是**测试隔离**（与产品代码零关系），已逐条登记。
+
+**其他既有测试语义适配**：**0 处**（ad-domain 3 页的既有测试全部零改动通过，未删任何断言）。
+
+### W4 结构性局限复核（页级判定器 vs 入口级判定）
+
+`check-gating-coverage.mjs` 对 ad-domain 3 页的判定：本波铺开后 3 页全部判「已门控」，**未覆盖清单为空 → 脚本 exit 0（转绿）**。
+
+⚠️ **本节的页级绿灯 ≠ 入口级覆盖 100%**（第八节口径的第三次复现）：
+本波**人工逐入口复核**（页 × 入口 × 权限码）时，发现了 **1 处施工图未列的写入口**（users「批量同步」，已补齐）。
+这再次证明 `check-gating-coverage.mjs` **只判页级**（该页是否出现 `useActionPermission` / `permission:` + `PERMISSION_CODES`），
+**不判单个入口是否已门控** → 施工图遗漏的入口不会被脚本捕获。
+入口级覆盖仍只能靠 **施工图 + 人工 review + 抽样测试** 三层兜底。
+
+### W4 闸门结果
+
+| 闸门 | 结果 |
+|---|---|
+| `npm run check:gating` | **exit 0**（已门控 25 / 豁免 51 / 未覆盖 0） |
+| `npx tsc --noEmit -p tsconfig.app.json` | **0 错误** |
+| `npm run lint` | **0 problems**（0 error / 0 warning） |
+| `npx vitest run src/pages/ad-domain` | **15 files / 49 tests 全绿**（含新增 8 例） |
+| `npx vitest run`（全量） | **578 files / 4022 tests，0 failed**（首跑 2 failed → 均已定位并修复：① buildings 门控测试的**既有**环境依赖假红，已修；② `operations/rpa/tasks/__tests__/columns.test.tsx` 的 `await import("../columns")` **15s 超时**——单独复跑 **6.4s 通过**，属全量并行下的**机器负载产物**（`import` 总耗时 2651s），非真实回归，登记为噪音） |
+| `git diff --stat -- src/constants/permissionCodes.ts` | **空（零改动）** |
+| `git diff --stat -- src/components/shared/**` | **空（零改动）** |
+| 6 处旧式直判文件 diff | **空（零改动）** |
+| `grep -rn "useMenuStore" src/pages/operations/workstations/ --include=*.ts --include=*.tsx \| grep -v __tests__ \| wc -l` | **0**（86-02 的迁移未被回退） |
+
+⚠️ **PLAN 的一处期望值与实跑不符（登记）**：86-04 Task 4.4 的 verify 命令写作
+`grep -rn "useMenuStore" src/pages/operations/workstations/ | wc -l` 期望 **0**，实跑为 **2**。
+实跑证据：2 处命中**全部**在 `src/pages/operations/workstations/__tests__/permission.gate.test.tsx`
+（`import { useMenuStore } from "@/store/menuStore"` + `useMenuStore.setState({...})`）——
+即 **86-02 自己新建的抽样测试**用于构造三态权限集的 harness，**不是旧式直判**。
+排除 `__tests__` 后的业务源码命中数 = **0**（PLAN 的实质判据成立）。
+原因：86-STATE 记录的「命中数 = 0」是在 86-02 **创建该测试文件之前**测得的，测试文件落地后计数自然变为 2。
+
+
+
+---
 

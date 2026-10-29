@@ -38,6 +38,12 @@ import {
 } from "@/lib/adDomainApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { confirmDelete } from "@/components/shared/confirmDelete";
+// ⚠️ 直接引模块路径（不走 @/components/shared 桶文件）：桶文件 re-export 了
+// FloorPlanEditor → @react-three/fiber → three.js，引入它会让本页的动态 import
+// （既有测试的 `await import(...)`）显著变慢并触发超时（实测）。
+// useActionPermission 本身零依赖，直接引更轻。
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { formatDateTime } from "@/utils/datetime";
 import { useADConfigs } from "@/hooks/useADConfigs";
 import type { ADConfig } from "@/lib/adDomainApi";
@@ -77,6 +83,28 @@ const ADConfigPage: FC = () => {
   // 排序状态
   const [_orderByColumn, setOrderByColumn] = useState<string>("createdAt");
   const [_isAsc, setIsAsc] = useState<boolean>(false);
+
+  // Phase 86 W4（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」
+  //    （空权限集与「权限还没加载完」在数据上不可区分）。
+  const permGate = useActionPermission();
+  // 工具栏「新增AD配置」→ 后端 POST /configs（RequireStrictPermissions ops:ad:config:add）
+  const permAdd = permGate.decide(PERMISSION_CODES.opsADConfig.add);
+  // 编辑类（详情 Drawer 的「编辑此配置」+ 弹窗表单的三个 Switch）→ ops:ad:config:edit
+  const permEdit = permGate.decide(PERMISSION_CODES.opsADConfig.edit);
+  // ⚠️ 行操作「删除 / 测试连接 / 同步数据」不取 decision 对象 —— 它们是 ActionButtons 的
+  // action，走组件内建的 `permission:` 字段三态门控（ready 无权限 → 该 action 不渲染；
+  // 未就绪 → 渲染但 disabled + 提示），页面层不重复 decide。
+  /**
+   * 弹窗表单内的三个 Switch（使用SSL / 使用TLS / 启用自动同步）是**表单字段**，
+   * 随「新增AD配置 / 编辑AD配置」弹窗提交生效 → **随弹窗上下文归所属写动作**：
+   * 新增弹窗 → opsADConfig.add；编辑弹窗 → opsADConfig.edit。
+   *
+   * 口径沿用 86-01 system/menu 页的同一裁定（见其 permFormStatus）：
+   * 若一律归 edit，则「有 add 无 edit」的用户新增配置时看不到 SSL/TLS/自动同步字段
+   * → 提交时这三个字段缺失 → **功能退化**（新建的配置被迫走明文 + 不自动同步）。
+   */
+  const permFormWrite = editingConfig ? permEdit : permAdd;
 
   // 统一错误处理
   const handleApiError = (error: unknown, defaultMessage: string) => {
@@ -299,6 +327,8 @@ const ADConfigPage: FC = () => {
             icon: <CheckCircleOutlined />,
             onClick: () => handleTest(record.id),
             loading: testingConfig === record.id,
+            // Phase 86 W4：测试连接是写动作（触发 AD 域控连接测试）→ 挂 ops:ad:config:test
+            permission: PERMISSION_CODES.opsADConfig.test,
           },
           {
             key: "sync",
@@ -306,12 +336,15 @@ const ADConfigPage: FC = () => {
             icon: <SyncOutlined />,
             onClick: () => handleSync(record.id),
             loading: syncingConfig === record.id,
+            // Phase 86 W4：同步数据是写动作（拉取 AD 数据落库）→ 挂 ops:ad:config:sync
+            permission: PERMISSION_CODES.opsADConfig.sync,
           },
           {
             key: "detail",
             label: "详情",
             icon: <EyeOutlined />,
             onClick: () => handleDetail(record),
+            // 读入口（打开详情 Drawer，只读展示）→ **不门控**
           },
           {
             key: "delete",
@@ -324,6 +357,11 @@ const ADConfigPage: FC = () => {
                 onDelete: () => handleDelete(record.id),
               });
             },
+            // Phase 86 W4：删除是写动作 → 挂 ops:ad:config:delete。
+            // 本行的触发器是 ActionButtons 的 action（内建三态门控位），
+            // ready 无权限 → 该 action 不渲染；未就绪 → 渲染但 disabled + 提示。
+            // confirmDelete.ts 本身零改动（它只是二次确认 helper，不承担权限判定）。
+            permission: PERMISSION_CODES.opsADConfig.delete,
           },
         ];
 
@@ -345,9 +383,19 @@ const ADConfigPage: FC = () => {
               <>
                 <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            新增AD配置
-          </Button>
+          {/* Phase 86 W4：新增AD配置 → ops:ad:config:add（写入口 → 条件渲染 + disabled + 提示） */}
+          {permAdd.visible && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleCreate}
+              disabled={permAdd.disabled}
+              title={permAdd.hint}
+            >
+              新增AD配置
+            </Button>
+          )}
+          {/* 刷新是读入口（重新拉列表，不落库）→ 不门控 */}
           <Button icon={<ReloadOutlined />} onClick={() => fetchConfigs()}>
             刷新
           </Button>
@@ -433,17 +481,26 @@ const ADConfigPage: FC = () => {
           </Form.Item>
 
           {/* 账号管理改用「服务账号池」（详情 Drawer 的服务账号池 Tab） */}
-          <Form.Item label="使用SSL (LDAPS)" name="useSsl" valuePropName="checked">
-            <Switch />
-          </Form.Item>
+          {/* Phase 86 W4：三个 Switch 是弹窗表单字段，随弹窗提交生效 →
+              随弹窗上下文归所属写动作（新增 → add / 编辑 → edit）；
+              ready 无权限 → 整个 Switch 不渲染（不是只禁用）。 */}
+          {permFormWrite.visible && (
+            <Form.Item label="使用SSL (LDAPS)" name="useSsl" valuePropName="checked">
+              <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
+            </Form.Item>
+          )}
 
-          <Form.Item label="使用TLS (StartTLS)" name="useTls" valuePropName="checked">
-            <Switch />
-          </Form.Item>
+          {permFormWrite.visible && (
+            <Form.Item label="使用TLS (StartTLS)" name="useTls" valuePropName="checked">
+              <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
+            </Form.Item>
+          )}
 
-          <Form.Item label="启用自动同步" name="syncEnabled" valuePropName="checked">
-            <Switch />
-          </Form.Item>
+          {permFormWrite.visible && (
+            <Form.Item label="启用自动同步" name="syncEnabled" valuePropName="checked">
+              <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
+            </Form.Item>
+          )}
 
           <Form.Item
             label="同步间隔(秒)"
@@ -502,17 +559,28 @@ const ADConfigPage: FC = () => {
                       <strong>状态：</strong>
                       {detailConfig.status === 0 ? "启用" : "停用"}
                     </p>
-                    <Button
-                      type="primary"
-                      icon={<EditOutlined />}
-                      style={{ marginTop: 16 }}
-                      onClick={() => {
-                        setDetailDrawerVisible(false);
-                        handleEdit(detailConfig);
-                      }}
-                    >
-                      编辑此配置
-                    </Button>
+                    {/*
+                      Phase 86 W4（HIGH-1）：详情 Drawer 内的「编辑此配置」是**写入口**
+                      —— 它关闭抽屉并打开编辑弹窗（handleEdit），用户随后可提交保存。
+                      不门控 ⇒ 无 ops:ad:config:edit 的用户可「详情 → 编辑此配置 → 提交」
+                      绕过整页门控。门控点落在按钮本身（条件渲染 + disabled + 提示）。
+                      ⚠️ 详情 Drawer **本身不门控**（读入口）。
+                    */}
+                    {permEdit.visible && (
+                      <Button
+                        type="primary"
+                        icon={<EditOutlined />}
+                        style={{ marginTop: 16 }}
+                        disabled={permEdit.disabled}
+                        title={permEdit.hint}
+                        onClick={() => {
+                          setDetailDrawerVisible(false);
+                          handleEdit(detailConfig);
+                        }}
+                      >
+                        编辑此配置
+                      </Button>
+                    )}
                   </div>
                 ),
               },
