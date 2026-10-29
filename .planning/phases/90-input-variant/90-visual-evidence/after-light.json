@@ -1,5 +1,17 @@
 {
  "mode": "light",
+ "domMode": "light",
+ "scope": "css-dev-only-do-not-override-19u5a7b ant-app css-var-_r_0_",
+ "capturedAt": "2026-10-29T11:45:38.120Z",
+ "cssVars": {
+  "inputBg": "#fafaf9",
+  "radiusLg": "8px",
+  "radiusMd": "6px",
+  "antColorError": "#ba3630",
+  "antColorWarning": "#b07a20",
+  "antColorBgContainer": "#FFFFFF",
+  "antColorBorder": "#DBD7CE"
+ },
  "forms": {
   "f01_input_plain": {
    "carrier": {

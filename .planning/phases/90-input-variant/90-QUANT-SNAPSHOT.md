@@ -197,10 +197,21 @@ cd ruoyi-react-frontend && node scripts/css-contract-check.js; echo "exit=$?"
 
 | 指标 | 起点 | 终值 | 变化 | 判定 |
 |---|---|---|---|---|
-| M1 / M2 | 1397 / 1330 | | | T4 删 `:886` font-size ⇒ M1/M2 各 −1（若采纳） |
-| M7 / M8 | 304 / 440 | | | 不增 |
-| M9 | 5556 | | | ≤ 5558 |
-| c 类（font-size）登记表 | 空集占位 | | | T4 裁定后回填（采纳且零差异 ⇒ 恒空集；采纳且有差异 ⇒ 登记 before/after 与形态集合） |
+| M1 / M2 | 1397 / 1330 | **1391 / 1329** | **−6 / −1**（W1 后 1392/1325 再各 −1） | ✅ T4 删 `:886` 的 `font-size: 14px !important` ⇒ M1/M2 各 −1；**C11 实跑 `当前 1391 / 预算 1397`**（ratchet 未上调） |
+| M7 / M8 | 304 / 440 | **304 / 440** | **0** | ✅ 不增（T4 未引入任何 hex） |
+| M9 | 5556 | **M9 = 5553**（`wc -l` = 5552） | **−3** | ✅ ≤ 5558（**C13 实跑 `M9=5553 ≤ 5558`**；`C13_M9_BUDGET` 仍为 5558 未动） |
+| **c 类（font-size）登记表** | 空集占位 | **空集（确认）** | — | ✅ **T4 采纳**（删除 `:886`）且**实测零差异** ⇒ c 类恒空集。实测证据：矩阵 `fontSize` 维度 before/after 逐格比对 **light 0 / dark 0**（其他维度差异 19 = a/b 两类登记变更）；明暗双侧实测 fontSize 均 `14px`，前后逐字相等 |
+| M13（错误态边框） | `rgb(219,215,206)` / `rgb(45,77,51)` | **light `rgb(186,54,48)` / dark `rgb(161,49,44)`** | 换色 | ✅ VISFIX-05 达成（权威取证 `probe-dark.txt` 走**真实 antd 渲染路径**：暗色 `--ant-color-error` = `#a1312c` → `rgb(161,49,44)`） |
+| M15（圆角） | 6px 系 7 处 | **输入类 + 分页器 = 8px**；`6px` 字面剩余 **6 处**；`--theme-radius-md` 非输入域 **15 处**未动 | 6→8 | ✅ STYLE-03 达成（归属清单已逐处落盘，含选择器锚点 + 行号基准声明） |
+
+**T4 裁定的实测方法学（可复现）** —— 本 phase 的浏览器取证全部走**无登录态**路径，原因与口径如下：
+
+> **环境约束（实测）**：本机 `/system/auth/captcha/config` 返回 `{"enabled":"slider"}` → **登录需滑块验证码，无法自动化**；`/user/settings` 在未登录时被路由守卫踢回 `/login` → **设置页的分段卡不可达**。
+> **破解口径（不是 workaround，是更准的等价路径）**：矩阵 fixture 只需 antd 的 **cssVar scope**（`[class*="css-var-"]`），而**登录页本身就渲染 antd 组件**（Input / Button）→ antd cssinjs 样式已注入 → fixture 可直接挂载采样。**实测证据**：无登录态采集的 `after-light` 与 90-01 登录态采集的 `after-light.json` **逐格 0 差异**（22 形态全等）。
+> **暗色切换**：改写 `settings-storage` 的 persist 快照（`preferences.theme.mode = 'dark'`）→ 刷新 → store rehydrate → **antd 以 `darkAlgorithm` 重渲染**（实测 `--ant-color-error` = `#a1312c`、`--ant-color-bg-container` = `#1a2e1f`）→ 再补写 `<html data-color-mode="dark">` 让**项目 CSS 的暗色分区**同步（实测 `--input-bg` = `#0f2e1b`）。⚠️ **两条通道必须都做**：antd algorithm 由 store 决定、项目暗色变量由 DOM 属性决定，只做其一都会得到半暗的混合值。
+> **focus 态取证的踩坑（三条，已固化为脚本注释）**：① `el.focus()` 在 `Runtime.evaluate` 的求值上下文里执行后，求值一结束焦点即被重置 → `document.activeElement === el` 为 true 但 `el.matches(':focus')` 为 **false**；② CDP 的 `DOM.focus` 同样不生效；③ `Input.dispatchKeyEvent(Tab)` 会把焦点移到**页面上别的**元素（登录页自身有输入框，fixture 不是第一个可聚焦项）→ `isActive: false`。⇒ **唯一可靠路径 = `CSS.forcePseudoState`**（与 `:hover` 同一机制，直接给元素打伪类标记）。
+
+**探针踩坑记录（`scripts/css-contract-assertions.js` 的暗色侧限制）**：该权威断言片段的 fixture **自带 light / dark 两个子容器**，但 `--ant-color-error` 等 antd cssVar 变量是**从外层 scope 继承**的 —— 子容器上的 `data-color-mode="dark"` 只切**项目 CSS 的暗色分区选择器**，**不会**让 antd 重新计算 cssVar 派生值 ⇒ 该片段在暗色子容器里读到的仍是**当前页面模式**的值（其自身注释也写明「本脚本在 light fixture 上断言」）。⇒ **暗色权威值必须走真实 antd 渲染路径**（`p90-dark-authoritative.cjs`），不能靠手搭 fixture 子容器。
 
 ### W3 终值（90-04 收口）
 
