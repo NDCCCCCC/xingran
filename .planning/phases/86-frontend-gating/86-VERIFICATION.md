@@ -132,7 +132,7 @@ requirements_total: 1
 
 | 测试文件 | 适配内容 | 根因（非「为了让测试变绿」） |
 |---|---|---|
-| `src/pages/operations/buildings/__tests__/permission.gate.test.tsx` | 新增 `vi.mock("@/hooks/useDeptTree", …)` 一段（与同目录既有 `hooks.test.tsx:17` / `useDepartmentData.test.tsx:17` **完全同款**） | **环境依赖型 flaky，在 HEAD 即已假红**（把全部工作区改动 stash 后复跑，失败完全一致 → 与本波无关）。根因链：`buildings/index.tsx:107` 消费 `useDeptTree()` → `getDeptTree()`（`@/lib/dutyApi`）→ `@/lib/api` **真实** post → 开发机有后端在跑（实测 `:8080`/`:9000` LISTENING）时返回 `INVALID_TOKEN` → `@/lib/api` 失效链调用 `menuStore.clearMenus()` → `permissionsLoaded` 重置为 `false` → 门控翻「未就绪」→ 用例 ③ 的 `addBtn.disabled` 变 `true` → **假红**。修法是切断真实网络请求，**未删任何断言、未降任何断言、未改门控语义** | 
+| `src/pages/operations/buildings/__tests__/permission.gate.test.tsx` | 新增 `vi.mock("@/hooks/useDeptTree", …)` 一段（与同目录既有 `hooks.test.tsx:17` / `useDepartmentData.test.tsx:17` **完全同款**） | **环境依赖型 flaky，在 HEAD 即已假红**（把全部工作区改动 stash 后复跑，失败完全一致 → 与本波无关）。根因链：`buildings/index.tsx:107` 消费 `useDeptTree()` → `getDeptTree()`（`@/lib/dutyApi`）→ `@/lib/api` **真实** post → 开发机有后端在跑（实测 `:8080`/`:9000` LISTENING）时返回 `INVALID_TOKEN` → `@/lib/api` 失效链调用 `menuStore.clearMenus()` → `permissionsLoaded` 重置为 `false` → 门控翻「未就绪」→ 用例 ③ 的 `addBtn.disabled` 变 `true` → **假红**。修法是切断真实网络请求，**未删任何断言、未降任何断言、未改门控语义** |
 
 **其他既有测试语义适配**：**0 处**（ad-domain 3 页既有测试零改动通过）。
 
@@ -169,8 +169,8 @@ requirements_total: 1
 | 86-02 | `e98f469f` |
 | 86-03 | `2d3ce848` |
 | 86-03 补漏 | `499b2991` |
-| 86-04 | 本波 commit（W4：ad-domain 3 页 + 旧式判定登记） |
-| 86-05 | 本波 commit（W5：豁免定稿 + 硬断言 + 挂 `lint:ci` + 验收报告） |
+| 86-04 | `4a437667` |
+| 86-05 | `397da415` |
 
 **Phase 完成判定**：1/1 需求 Satisfied + 恒等式 `25 + 51 = 76` 被脚本硬断言守护 + 红绿自检证明「绿」不可回退 + 11 项闸门全绿 + 零改动/零交叠/零依赖三项核验通过 → **phase_complete: true**
 
