@@ -846,7 +846,6 @@ body {
   border-color: var(--input-border) !important;
   color: var(--input-text) !important;
   border-radius: var(--theme-radius-lg);
-  font-size: 14px !important;
   transition:
     background var(--theme-transition-fast),
     border-color var(--theme-transition-fast),
