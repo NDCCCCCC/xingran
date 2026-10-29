@@ -1,7 +1,7 @@
 ---
 phase: "84"
 slug: "pmodel-gaps"
-status: validated
+status: human_needed
 nyquist_compliant: true
 wave_0_complete: true
 verified: "2026-10-28"

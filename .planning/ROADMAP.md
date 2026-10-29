@@ -247,7 +247,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
   1. 批次 C 与批次 B 同 commit 落地（顺序不可逆）
   2. InputNumber 错误态边框 = `rgb(186,54,48)`；圆角 computed-style = 8px
   3. 双框 = 0 / 焦点环单圈 / 错误态断言全绿（v1.24 契约零破坏）
-**Plans**: 4 plans（W0 已执行完成，W1-W3 执行中；见 `90-QUANT-SNAPSHOT.md`）
+**Plans**: 4 plans（00, 01, 02, 03 —— 全部执行完成；验收见 `90-VERIFICATION.md`，其中 40 个「需登录页面 × 明暗」巡检组合待用户人工执行，见 `90-visual-evidence/inspection-manual-todo-90.json`）
 **UI hint**: yes
 
 ### Phase 91: Select / InputNumber / Form / Table / Modal 域交还

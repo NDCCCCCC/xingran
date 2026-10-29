@@ -2,28 +2,28 @@
 gsd_state_version: "1.0"
 milestone: v1.25
 milestone_name: 全站权限治理与样式收敛
-current_phase: 88
-current_phase_name: 验证底座与零风险清理
+current_phase: 87
+current_phase_name: 动作级权限授予闭环
 status: planning
-stopped_at: v1.25 roadmap CREATED（Phases 84-93，22/22 REQ mapped，Traceability 已回填 `.planning/REQUIREMENTS.md`）
-last_updated: "2026-10-28T13:12:25.411Z"
-last_activity: 2026-10-28
-last_activity_desc: v1.25 roadmap CREATED（Phases 84-93）
-state_head: 1b34b0f94572175f9e4b71a46acbc5c595e34c4f
+stopped_at: Phase 86（W4+W5）与 Phase 90（W0~W3）全部执行完成并验收；下一步 Phase 87（动作级权限授予闭环，前置 85+86 均已就绪）
+last_updated: "2026-10-29T12:50:00.000Z"
+last_activity: 2026-10-29
+last_activity_desc: v1.25 执行期——86（前端三态门控全站铺开 + 硬断言挂 lint:ci）与 90（Input 域交还 + 圆角统一 + 矩阵终跑 PASS）收口
+state_head: 3d7ac902
 progress:
   total_phases: 10
-  completed_phases: 0
-  total_plans: 8
-  completed_plans: 0
-  percent: 0
+  completed_phases: 6
+  total_plans: 28
+  completed_plans: 24
+  percent: 86
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.25 milestone planning（路线图已创建，待执行）
-**Last activity**: 2026-10-28 — v1.25 roadmap CREATED（Phases 84-93，22/22 REQ mapped）
+**Status**: v1.25 执行中（线 A 权限 84→87 ∥ 线 B 样式 88→93）
+**Last activity**: 2026-10-29 — Phase 86（W4+W5）与 Phase 90（W0~W3）全部收口并验收；下一步 Phase 87
 **Prior activity**: 2026-10-28 — v1.24 全量执行完成（Phase 77 视觉验证 + Phase 83 拆分收口 + VIS-03 死规则修复）
 **Prior activity (2)**: 2026-10-28 — v1.24 执行期：78 权限双端闭环（后端严格中间件 + 前端三态门控）+ 79 PG 实机验收（三层证据）+ 82 lint 清零
 **Prior activity (3)**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
@@ -62,10 +62,35 @@ progress:
 
 ## Current Position
 
-Phase: 88 (验证底座与零风险清理) — READY TO EXECUTE
+Phase: 87 (动作级权限授予闭环) — READY TO PLAN（前置 85 + 86 均已交付）
 Plan: —
-Status: 路线图已创建待执行（ROADMAP Phases 84-93，22/22 REQ mapped，Traceability 已回填）
-Last activity: 2026-10-28 — v1.25 roadmap CREATED（Phases 84-93）
+Status: 线 A 权限线的最后一步（后端逐动作权限点 + 前端入口门控均已就绪，F 型菜单播种可立即开工）
+Last activity: 2026-10-29 — Phase 86 / 90 双线收口，验收报告落地
+
+### v1.25 真实进度快照（2026-10-29 晚，Lead 实跑复核）
+
+| Phase | 主题 | Plans | 已执行 | 验证状态 | 状态 |
+|---|---|---|---|---|---|
+| 84 | 权限模型三缺口 | 4 | 4/4 | human_needed | ✅ 执行完成（2 项 PG 实机验证待用户执行，方法见 `.planning/notes/2026-10-29-pg-data-scope-verification.md`） |
+| 85 | 后端动作级严格化 | 4 | 4/4 | passed | ✅ 完成 |
+| 86 | 前端操作入口三态门控铺开 | 6 | 6/6 | passed | ✅ 完成（`check:gating` 恒等式 `25 已门控 + 51 豁免 = 76` 被脚本硬断言守护 + 红绿自检；已挂 `lint:ci`） |
+| 87 | 动作级权限授予闭环 | 0 | — | — | ○ 未开始（依赖 85 + 86 → **两前置均已就绪，可立即开工**） |
+| 88 | 验证底座与零风险清理 | 4 | 4/4 | passed | ✅ 完成 |
+| 89 | 变量层与明暗色板重构 | 4 | 4/4 | passed | ✅ 完成 |
+| 90 | Input 域交还 + 圆角统一 | 4 | 4/4 | human_needed | ✅ 执行完成（矩阵终跑 PASS / 权威断言 passed / 11 项闸门全绿；40 个巡检组合待人工） |
+| 91 | Select/Form/Table/Modal 域交还 | 0 | — | — | ○ 未开始（依赖 90 → **硬前置已交付**） |
+| 92 | 暗色 mega-cluster 合并 | 0 | — | — | ○ 未开始（依赖 91） |
+| 93 | room-devices 拆分 + 视觉回归验收 | 0 | — | — | ○ 未开始（依赖 92） |
+
+> ⚠️ **plan 级计数口径失真（已知先例，非缺陷）**：本 milestone 起沿用 v1.24「subagent 直执行 + 按刀原子提交」先例 —— 每个 plan 由 subagent 直接执行并原子提交，**不产出 per-plan `SUMMARY.md`**，phase 级上下文改由 `NN-VERIFICATION.md`（REQ 对照表 + 闸门输出 + commit 链）承载。因此 GSD CLI 的 `completed_plans` / `percent` 恒为 0（它以 SUMMARY.md 存在性判定 plan 完成）→ **真实 plan 级完成度 = 24/28（86%）**，以本表为准。
+
+> ⚠️ **VERIFICATION 状态值契约（2026-10-29 修复）**：84/85/88/89 四份 VERIFICATION 原用 `status: validated`（该值属补丁子系统枚举，非验证报告枚举），导致 GSD CLI 的 `init.progress` / `roadmap.analyze` / `verification.status` **全部硬失败**。已按闭合集合 `passed | gaps_found | human_needed` 规范化：85/88/89 → `passed`；84 → `human_needed`（2 项 PG 实机验证待用户执行，方法已登记在 `84-VALIDATION.md`）。
+
+> ⚠️ **两项人工验证债（当前唯一阻塞 Phase 87 全量推进的事项）**：
+> ① **Phase 84 的 PG 实机验证**（data_scope=3 复测 total + `sys_role_menu`/`sys_user_role` 列集实查）—— 本机无 PG/psql，且远程 PG 需密码（安全网拦截）⇒ 方法已整理为可直接执行的清单 `.planning/notes/2026-10-29-pg-data-scope-verification.md`（含 A~F 六步 + 三个已知坑：多角色 MAX 取值污染 / 30s TTL 假失败 / 403≠过滤失败）。
+> ② **Phase 90 的 40 个巡检组合**（13 页 × 明暗）—— 本波已实现并跑通**滑块验证码自动识别 + 拖动 + 服务端校验**（`p90-captcha-solve.cjs` / `p90-login.cjs`，实测 verify/slider 返回 200），但登录被 AD 认证拒（生产库 `sys.auth.default.mode = ad`）⇒ 切换属生产数据写入，不擅自执行；待人工清单见 `90-visual-evidence/inspection-manual-todo-90.json`。
+
+> 📌 **本波新增的自动化能力（可复用）**：无登录态的 antd 组件取证链路（`p90-session.cjs` / `p90-matrix-run.cjs` / `p90-dark-authoritative.cjs` / `p90-contract-assert.cjs` / `p90-hover-focus-probe.cjs`）+ 滑块验证码缺口识别（`p90-captcha-solve.cjs`）⇒ 91/92 的视觉验收可**不再依赖登录态**（矩阵 456 格逐格 computed-style 比对比 14 页截图更强）。
 
 ### v1.25 Phase 依赖速查
 
