@@ -1825,28 +1825,6 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
-.ant-select-item-option-selected {
-  background: var(--bg-overlay-hover) !important;
-  color: var(--theme-primary) !important;
-}
-
-.ant-select-item-option-active {
-  background: var(--bg-overlay-hover) !important;
-}
-
-[data-color-mode="dark"] .ant-select-item {
-  color: var(--text-primary) !important;
-}
-
-[data-color-mode="dark"] .ant-select-item-option-selected {
-  background: var(--bg-overlay-hover) !important;
-  color: var(--sidebar-accent) !important;
-}
-
-[data-color-mode="dark"] .ant-select-item-option-active {
-  background: var(--bg-overlay-hover) !important;
-}
-
 /* ========================================
    颜色平滑过渡
    ======================================== */

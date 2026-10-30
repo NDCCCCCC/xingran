@@ -147,12 +147,25 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           borderRadius: 8,
           controlHeight: 36,
         },
+        InputNumber: {
+          activeBorderColor: ruoyiBrand.greenPrimary,
+          hoverBorderColor: ruoyiBrand.greenPrimary,
+          activeShadow: "0 0 0 2px rgba(21, 96, 49, 0.15)",
+          borderRadius: 8,
+          controlHeight: 36,
+        },
         Select: {
           activeBorderColor: ruoyiBrand.greenPrimary,
           hoverBorderColor: ruoyiBrand.greenPrimary,
           borderRadius: 8,
           controlHeight: 36,
-          optionSelectedBg: ruoyiBrand.cream.headerBg,
+          selectorBg: board.surface,
+          optionSelectedBg: isDark ? ruoyiBrand.dark.active : ruoyiBrand.cream.headerBg,
+          optionActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
+        },
+        Form: {
+          labelColor: board.fg,
+          itemMarginBottom: 16,
         },
         // 菜单: 浅色底用绿灰 / 深色侧栏用品牌深绿
         // (Phase 66 · QA-02 卫生 — darkItem* 改为 ruoyiBrand 引用)
