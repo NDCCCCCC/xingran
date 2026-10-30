@@ -237,7 +237,8 @@ const checkC6 = (() => {
 // PLAN 预估 ≈1395，实跑 1398——ratchet 只许低不许高，故定值取实测）→ 1397（Phase 89 T5 落地 -1）
 // → 1385（Phase 91 表单/表格/弹窗交还 token，当前实测 1381）
 // → 671（Phase 92 R6/R7 mega-cluster + 散存量块级删除，实测 671（含 C16 恢复 2 处）；92 终态目标 ≤480 由后续收敛达成）
-const IMPORTANT_BUDGET = 671;
+// → 455（Phase 92 Gap 4 浅色区精简与高频 hex 变量化收敛，当前实测 452 ≤ 480 终态达标）。
+const IMPORTANT_BUDGET = 455;
 {
   const allCss = walkByExt(resolve(feRoot, 'src'), ['.css', '.less']);
   let importantCount = 0;
@@ -260,9 +261,9 @@ const IMPORTANT_BUDGET = 671;
 //      A3 图表色板是 .tsx 测试文件，归扫描器 PATH_ALLOW，不占 C13 预算）
 // 职责边界：本断言只管「总量与新增」，不管「某个已知 hex 是不是坏色」——那是
 //   scripts/check-hardcoded-colors.mjs 的 lint 职责（已接入 lint:ci）。两者互补，不重复。
-const C13_M7_BUDGET = 310; // index.css 6 位 hex（W0 实跑起点，只降不升）
-const C13_M8_BUDGET = 452; // 全 .css/.less 6 位 hex（W0 实跑起点，只降不升）
-const C13_M9_BUDGET = 5558; // index.css 行数不增（±10 内）
+const C13_M7_BUDGET = 60; // index.css 6 位 hex（Phase 92 终态锁定，实测 26 ≤ 60）
+const C13_M8_BUDGET = 452; // 全 .css/.less 6 位 hex（W0 实跑起点，只降不升，实测 160）
+const C13_M9_BUDGET = 3200; // index.css 行数终态（Phase 92 终态锁定，实测 3194 ≤ 3200）
 const C13_BASELINE = resolve(here, 'css-hex-baseline.json');
 {
   const stripComments = (line) => line.replace(/\/\*.*?\*\//g, '').replace(/(^|[^:])\/\/.*$/, '$1');
