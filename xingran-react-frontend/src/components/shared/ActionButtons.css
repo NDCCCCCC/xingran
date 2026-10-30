@@ -3,6 +3,14 @@
  * 表格操作按钮固定颜色，不受主题色影响
  */
 
+/* T13（Phase 89）: 固定色提取为局部变量保值 —— 原值不变（禁止并入 --theme-text-primary：#101010 ≠ #262626 会变色） */
+:root {
+  --action-text: #262626;
+  --action-text-hover: #000000;
+  --action-danger: #ba3630;
+  --action-danger-hover: #cf1322;
+}
+
 /* 操作列容器 */
 .action-buttons-container {
   display: flex;
@@ -11,25 +19,25 @@
 
 /* 链接型操作按钮 - 固定黑色 */
 .action-btn-link {
-  color: #262626 !important;
+  color: var(--action-text) !important;
 }
 
 .action-btn-link:hover {
-  color: #000000 !important;
+  color: var(--action-text-hover) !important;
 }
 
 /* 危险操作按钮（删除）- 固定红色 */
 .action-btn-link-danger {
-  color: #ba3630 !important;
+  color: var(--action-danger) !important;
 }
 
 .action-btn-link-danger:hover {
-  color: #cf1322 !important;
+  color: var(--action-danger-hover) !important;
 }
 
 /* 下拉菜单项 */
 .action-dropdown-item {
-  color: #262626 !important;
+  color: var(--action-text) !important;
 }
 
 .action-dropdown-item:hover {
@@ -37,7 +45,7 @@
 }
 
 .action-dropdown-item-danger {
-  color: #ba3630 !important;
+  color: var(--action-danger) !important;
 }
 
 .action-dropdown-item-danger:hover {
@@ -59,7 +67,7 @@
 }
 
 [data-color-mode="dark"] .action-btn-link-danger:hover {
-  color: #ba3630 !important;
+  color: var(--action-danger) !important;
   background-color: rgba(186, 54, 48, 0.15) !important;
 }
 

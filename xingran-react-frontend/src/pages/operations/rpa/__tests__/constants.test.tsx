@@ -33,12 +33,12 @@ describe("rpa constants (D-12)", () => {
 
 describe("getTriggerTypeText/Color", () => {
   it("returns text for first known trigger type", () => {
-    const first = TRIGGER_TYPE_OPTIONS[0] as any;
+    const first = TRIGGER_TYPE_OPTIONS[0] as unknown;
     expect(getTriggerTypeText(first.value)).toBe(first.label);
   });
 
   it("returns color for known trigger type", () => {
-    const first = TRIGGER_TYPE_OPTIONS[0] as any;
+    const first = TRIGGER_TYPE_OPTIONS[0] as unknown;
     expect(getTriggerTypeColor(first.value)).toBeTruthy();
   });
 });

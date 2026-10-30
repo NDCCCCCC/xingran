@@ -12,7 +12,9 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("../HealthBadge", () => ({
-  HealthBadge: ({ conflictType }: any) => <span data-testid="health-badge">{conflictType}</span>,
+  HealthBadge: ({ conflictType }: unknown) => (
+    <span data-testid="health-badge">{conflictType}</span>
+  ),
 }));
 
 import { ReconciliationTimeline } from "../ReconciliationTimeline";

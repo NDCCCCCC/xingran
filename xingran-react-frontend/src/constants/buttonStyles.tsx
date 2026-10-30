@@ -63,20 +63,21 @@ export const BUTTON_STYLES = {
 } as const;
 
 /**
- * 删除确认框配置
+ * 删除确认框配置（Phase 65 契约：与 components/shared/confirmDelete.ts 文案模板对齐；
+ * 消费方收敛到封装层内部，业务代码禁止直接 import）
  */
 export const DELETE_CONFIRM = {
-  title: "确定要删除吗？",
-  okText: "确定",
+  title: "确认删除",
+  okText: "删除",
   cancelText: "取消",
 };
 
 /**
- * 批量删除确认框配置
+ * 批量删除确认框配置（Phase 65 契约：与 confirmDelete 批量场景 title 对齐）
  */
 export const BATCH_DELETE_CONFIRM = {
-  title: "确定要批量删除选中项吗？",
-  okText: "确定",
+  title: "确认批量删除",
+  okText: "删除",
   cancelText: "取消",
 };
 

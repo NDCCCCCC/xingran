@@ -2,11 +2,13 @@
  * 批量添加节假日模态框组件
  */
 
-import { Modal, Form, Select, DatePicker, App } from "antd";
+import { Modal, Form, DatePicker, App } from "antd";
+// Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
+import { useState } from "react";
 import { BATCH_HOLIDAY_NAME_OPTIONS, MAX_BATCH_DAYS } from "../constants";
 import type { BatchHolidayFormValues } from "../types";
 
-const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 interface BatchHolidayModalProps {
@@ -18,8 +20,10 @@ interface BatchHolidayModalProps {
 export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModalProps) {
   const { message } = App.useApp();
   const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
 
   const handleOk = async () => {
+    setSubmitting(true);
     try {
       const values = await form.validateFields();
       const { dateRange } = values;
@@ -38,6 +42,8 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
       form.resetFields();
     } catch (_error) {
       // 表单验证失败
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -46,6 +52,7 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
       title="批量添加节假日"
       open={visible}
       onOk={handleOk}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={onCancel}
       destroyOnHidden
     >
@@ -63,13 +70,18 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
           label="名称"
           rules={[{ required: true, message: "请输入名称" }]}
         >
-          <Select placeholder="选择假期名称" onSearch={() => {}}>
-            {BATCH_HOLIDAY_NAME_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，显式
+              showSearch={false} 保持不变 */}
+          <AppSelect
+            allowClear
+            placeholder="选择假期名称"
+            showSearch={false}
+            onSearch={() => {}}
+            options={BATCH_HOLIDAY_NAME_OPTIONS.map((opt) => ({
+              value: opt.value,
+              label: opt.label,
+            }))}
+          />
         </Form.Item>
         <Form.Item
           name="holidayType"
@@ -77,16 +89,26 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
           rules={[{ required: true }]}
           initialValue="legal"
         >
-          <Select onSearch={() => {}}>
-            <Option value="legal">法定节假日</Option>
-            <Option value="custom">自定义</Option>
-          </Select>
+          <AppSelect
+            allowClear
+            showSearch={false}
+            onSearch={() => {}}
+            options={[
+              { value: "legal", label: "法定节假日" },
+              { value: "custom", label: "自定义" },
+            ]}
+          />
         </Form.Item>
         <Form.Item name="isOffday" label="是否休息" valuePropName="checked" initialValue={true}>
-          <Select onSearch={() => {}}>
-            <Option value={true}>休息</Option>
-            <Option value={false}>工作</Option>
-          </Select>
+          <AppSelect
+            allowClear
+            showSearch={false}
+            onSearch={() => {}}
+            options={[
+              { value: true, label: "休息" },
+              { value: false, label: "工作" },
+            ]}
+          />
         </Form.Item>
       </Form>
     </Modal>

@@ -1,13 +1,14 @@
 import React from "react";
-import { Card, Select, Table, Button, Space, Tag, Upload, Modal } from "antd";
+import { Card, Table, Button, Space, Tag, Upload } from "antd";
+// Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import type { ColumnsType } from "antd/es/table";
 import { PlusOutlined, ReloadOutlined, FileExcelOutlined, UploadOutlined } from "@ant-design/icons";
 import { formatDate } from "@/utils/datetime";
 import type { Holiday } from "@/lib/dutyApi";
 import { usePagination } from "@/hooks/usePagination";
 import { createSorter } from "@/utils/tableHelpers";
-
-const { Option } = Select;
 
 interface ImportOptions {
   file: File;
@@ -121,12 +122,11 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
             size="small"
             danger
             onClick={() => {
-              Modal.confirm({
-                title: "确定删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => onDelete(record.id),
+              confirmDelete({
+                target: `节假日 ${record.holidayName}`,
+                onDelete: async () => {
+                  await onDelete(record.id);
+                },
               });
             }}
           >
@@ -149,18 +149,18 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
       >
         <Space>
           <span>年份：</span>
-          <Select
+          {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，显式
+              showSearch={false} 保持不变（年份数可能 ≥8，避免契约自动开搜索） */}
+          <AppSelect
+            allowClear
             value={holidayYear}
-            onChange={onYearChange}
+            // AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型
+            onChange={(value) => onYearChange(value as number)}
             style={{ width: 120 }}
+            showSearch={false}
             onSearch={() => {}}
-          >
-            {availableYears.map((y) => (
-              <Option key={y} value={y}>
-                {y}年
-              </Option>
-            ))}
-          </Select>
+            options={availableYears.map((y) => ({ value: y, label: `${y}年` }))}
+          />
         </Space>
         <Space>
           <Button icon={<PlusOutlined />} onClick={onAdd}>
@@ -201,6 +201,7 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
         pagination={paginationProps}
         columns={columns}
         size="small"
+        scroll={{ x: "max-content" }}
       />
     </Card>
   );

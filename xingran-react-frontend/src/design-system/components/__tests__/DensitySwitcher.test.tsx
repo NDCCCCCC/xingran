@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-let currentDensity: any = "comfortable";
+let currentDensity: unknown = "comfortable";
 const mockSetDensity = vi.fn();
 
 vi.mock("@/store/layoutStore", () => ({

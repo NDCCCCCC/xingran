@@ -6,7 +6,8 @@ import { render, screen } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import type { ReactElement, ReactNode } from "react";
 
-import ModernTag, { renderStatusTag } from "../ModernTag";
+import ModernTag from "../ModernTag";
+import { renderStatusTag } from "../renderStatusTag";
 
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
@@ -60,9 +61,9 @@ describe("shared/ModernTag", () => {
     expect(screen.getByText("默认")).toBeInTheDocument();
   });
 
-  it("renderStatusTag status=0 → 正常", () => {
+  it("renderStatusTag status=0 → 启用（Phase 68 收敛为 helper 口径）", () => {
     render(renderStatusTag(0), { wrapper });
-    expect(screen.getByText("正常")).toBeInTheDocument();
+    expect(screen.getByText("启用")).toBeInTheDocument();
   });
 
   it("renderStatusTag status=1 → 停用", () => {

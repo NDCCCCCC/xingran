@@ -4,6 +4,7 @@
  */
 
 import { Tag } from "antd";
+import type { Dayjs } from "dayjs";
 import { LogStatus } from "./types";
 import { BUSINESS_TYPE_OPTIONS } from "./constants";
 
@@ -46,7 +47,10 @@ export function renderLogStatusTag(status: number, type: "oper" | "login" = "ope
 }
 
 /** 处理时间范围参数 */
-export function processTimeRangeParams(timeRange: any, params: Record<string, any>) {
+export function processTimeRangeParams(
+  timeRange: [Dayjs, Dayjs] | null | undefined,
+  params: Record<string, unknown>
+) {
   if (timeRange && timeRange.length === 2) {
     params.startTime = timeRange[0].toISOString();
     params.endTime = timeRange[1].toISOString();

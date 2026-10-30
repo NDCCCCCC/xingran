@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
@@ -32,7 +33,7 @@ func setupProfileServiceDB(t *testing.T) *gorm.DB {
 			password TEXT,
 			nickname TEXT,
 			email TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			avatar TEXT,
 			gender INTEGER NOT NULL DEFAULT 2,
 			status INTEGER NOT NULL DEFAULT 0,
@@ -51,6 +52,20 @@ func setupProfileServiceDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME
 		)
 	`).Error)
+	// Phase 57 GAP-02/HYGIENE-06: UpdateUserInfo 已接线同事务入队（无启用 AD 配置时
+	// WARN + 放行，业务行为不变），触碰该写路径的 sqlite 环境必须有 sys_ad_config 与
+	// ad_push_queue 两张表，否则 IsADSyncEnabled 报表不存在让既有用例整体转红。
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_ad_config (
+			id TEXT PRIMARY KEY,
+			sync_enabled INTEGER NOT NULL DEFAULT 0,
+			status INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)
+	`).Error)
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
 	return db
 }
 

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -54,7 +54,10 @@ func setupSecurityTestDB(t *testing.T) *gorm.DB {
 			ad_username TEXT,
 			ad_dn TEXT,
 			ad_ou_dn TEXT,
-			ad_synced_at DATETIME
+			ad_synced_at DATETIME,
+			mobile TEXT,
+			title TEXT,
+			ad_config_id TEXT
 		)
 	`).Error
 	require.NoError(t, err, "Failed to create sys_user table")

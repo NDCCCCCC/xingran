@@ -74,7 +74,7 @@ export function createResourceApi<T>(config: CrudApiConfig) {
      * @example
      *   const [opts, setOpts] = useState<DropdownOption[]>([]);
      *   const debouncedSearch = useMemo(() => debounce(setOpts, 300), []);
-     *   <Select showSearch filterOption={false} options={opts}
+     *   <Select allowClear showSearch filterOption={false} options={opts}
      *           onSearch={(kw) => workstationApi.searchOptions({ name: kw }).then(setOpts)} />
      */
     searchOptions: async (params: Record<string, unknown> = {}) => {

@@ -3,6 +3,7 @@ import { App } from "antd";
 import { getDutyConfig, updateDutyConfig, type DutyConfig } from "@/lib/dutyApi";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import { formatDateTime, FORMAT_TIME_MINUTE } from "@/utils/datetime";
 
 export function useDutyConfig() {
   const { message } = App.useApp();
@@ -38,7 +39,7 @@ export function useDutyConfig() {
       try {
         const data = {
           reminderEnabled: values.reminderEnabled,
-          reminderTime: values.reminderTime.format("HH:mm"),
+          reminderTime: formatDateTime(values.reminderTime.toDate(), FORMAT_TIME_MINUTE),
           reminderChannels: Array.isArray(values.reminderChannels)
             ? values.reminderChannels.join(",")
             : values.reminderChannels,

@@ -2,10 +2,12 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
@@ -249,10 +251,16 @@ func (s *OUGroupMappingService) UpdateSyncStatus(ctx context.Context, mappingID 
 	return nil
 }
 
-// isUniqueConstraintError 检查是否是唯一约束冲突错误
+// isUniqueConstraintError 检查是否是唯一约束冲突错误。
+// 域控审查 P2-5：优先用 pgconn.PgError 按 SQLSTATE 23505 判定（类型安全），
+// 字符串匹配保留作 sqlite/驱动包装错误的兜底。
 func isUniqueConstraintError(err error) bool {
 	if err == nil {
 		return false
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23505"
 	}
 	// PostgreSQL 唯一约束错误代码
 	// "unique constraint" 错误消息

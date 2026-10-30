@@ -9,8 +9,6 @@ import {
   Button,
   Space,
   Form,
-  Input,
-  Select,
   Card,
   Row,
   Col,
@@ -37,8 +35,10 @@ import { usePagination } from "@/hooks/usePagination";
 import { getWorkerColumns } from "./columns";
 import { WORKER_STATUS_OPTIONS } from "../constants";
 import { post } from "@/lib/api";
+// Phase 71 (W3)：裸 Input/Select → 契约组件。
+// Worker 状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
+import { AppInput, AppSelect } from "@/components/ui";
 
-const { Option } = Select;
 const { Content } = Layout;
 
 const WorkerMonitor: FC = () => {
@@ -174,8 +174,8 @@ const WorkerMonitor: FC = () => {
     statistics.totalCapacity > 0 ? (statistics.usedCapacity / statistics.totalCapacity) * 100 : 0;
 
   return (
-    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
-      <Content style={{ background: "#fff", padding: 16 }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
+      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
         {/* 统计卡片 */}
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={4}>
@@ -184,7 +184,7 @@ const WorkerMonitor: FC = () => {
                 title="Worker 总数"
                 value={statistics.total}
                 prefix={<CloudServerOutlined />}
-                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                styles={{ content: { color: "var(--theme-info)" } }}
               />
             </Card>
           </Col>
@@ -194,7 +194,7 @@ const WorkerMonitor: FC = () => {
                 title="在线"
                 value={statistics.online}
                 prefix={<CheckCircleOutlined />}
-                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Card>
           </Col>
@@ -204,7 +204,7 @@ const WorkerMonitor: FC = () => {
                 title="忙碌"
                 value={statistics.busy}
                 prefix={<LoadingOutlined />}
-                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                styles={{ content: { color: "var(--theme-info)" } }}
               />
             </Card>
           </Col>
@@ -214,7 +214,7 @@ const WorkerMonitor: FC = () => {
                 title="离线"
                 value={statistics.offline}
                 prefix={<ClockCircleOutlined />}
-                styles={{ content: { color: "var(--theme-text-tertiary, #707068)" } }}
+                styles={{ content: { color: "var(--theme-text-tertiary)" } }}
               />
             </Card>
           </Col>
@@ -224,7 +224,7 @@ const WorkerMonitor: FC = () => {
                 title="错误"
                 value={statistics.error}
                 prefix={<CloseCircleOutlined />}
-                styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
+                styles={{ content: { color: "var(--theme-error)" } }}
               />
             </Card>
           </Col>
@@ -261,16 +261,18 @@ const WorkerMonitor: FC = () => {
         <Card style={{ marginBottom: 16 }}>
           <Form form={searchForm} layout="inline">
             <Form.Item name="name" label="Worker 名称">
-              <Input placeholder="请输入Worker名称" allowClear style={{ width: 200 }} />
+              <AppInput placeholder="请输入Worker名称" style={{ width: 200 }} />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择" allowClear style={{ width: 150 }} onSearch={() => {}}>
-                {WORKER_STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+              {/* 形态分类器②④：Worker 状态枚举（业务禁搜），children → options */}
+              <AppSelect
+                placeholder="请选择"
+                allowClear
+                style={{ width: 150 }}
+                showSearch={false}
+                onSearch={() => {}}
+                options={WORKER_STATUS_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -290,7 +292,7 @@ const WorkerMonitor: FC = () => {
         <Card>
           {statistics.offline > 0 && statistics.offline === statistics.total && (
             <Alert
-              message="所有 Worker 离线"
+              title="所有 Worker 离线"
               description="请检查 Worker 服务是否正常运行，以及网络连接是否正常"
               type="warning"
               showIcon
@@ -299,7 +301,7 @@ const WorkerMonitor: FC = () => {
           )}
           {statistics.error > 0 && (
             <Alert
-              message={`${statistics.error} 个 Worker 处于错误状态`}
+              title={`${statistics.error} 个 Worker 处于错误状态`}
               description="请查看 Worker 日志获取详细错误信息"
               type="error"
               showIcon
@@ -342,10 +344,10 @@ const WorkerMonitor: FC = () => {
 
         <style>{`
         .row-offline {
-          background-color: #fafafa;
+          background-color: var(--theme-bg-secondary);
         }
         .row-error {
-          background-color: #fff2f0;
+          background-color: var(--theme-error-bg);
         }
       `}</style>
       </Content>

@@ -126,7 +126,7 @@ export function getWorkerColumns(options?: {
         const now = dayjs();
         const diffMinutes = now.diff(date, "minute");
 
-        let timeStr = date.format("YYYY-MM-DD HH:mm:ss");
+        let timeStr = formatDateTime(date.toDate());
         if (diffMinutes > 2) {
           timeStr += ` (${diffMinutes}分钟前)`;
         }

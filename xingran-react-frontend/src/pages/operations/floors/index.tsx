@@ -16,6 +16,8 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
+import { useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -37,6 +39,39 @@ import { DEFAULT_FORM_VALUES } from "./constants";
 const { Content } = Layout;
 
 const FloorManagement: FC = () => {
+  // Phase 86 W2（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // 权限码单一真相源 = src/constants/permissionCodes.ts；ops 码组只有 delete 键 → 删除用 .delete。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.opsFloor.edit);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsFloor.delete);
+  const permAdd = permGate.decide(PERMISSION_CODES.opsFloor.add);
+  const permImport = permGate.decide(PERMISSION_CODES.opsFloor.import);
+  const permExport = permGate.decide(PERMISSION_CODES.opsFloor.export);
+
+  // ⚠️ 平面图保存 = **四码合并口径**（取逻辑与：四码全持才可用）。
+  // 依据 `useFloorPlanEditor.ts:249-255`：一次 saveFloorPlan 会同时
+  //   ① saveWalls → opsWall.*；② saveDoors → opsDoor.*；③ saveTexts → 平面图；④
+  //   saveWorkstations → **opsWorkstation.edit**（同一次保存里改写工位位置）。
+  // 漏掉 opsWorkstation.edit 即越权（持平面图三码但无工位写权者仍能改工位位置）。
+  // 「查看平面图」行操作打开的就是这个**可保存**的编辑器 → 共用同一决策对象。
+  const permFloorPlanEdit = permGate.decide(PERMISSION_CODES.opsFloorPlan.edit);
+  const permWall = permGate.decide(PERMISSION_CODES.opsWall.edit);
+  const permDoor = permGate.decide(PERMISSION_CODES.opsDoor.edit);
+  const permWorkstationEdit = permGate.decide(PERMISSION_CODES.opsWorkstation.edit);
+  // 四码合并：任一码「未就绪」→ 渲染但禁用（三态语义优先）；四码全就绪 → 全持才可用；
+  // 全就绪但缺任一码 → 不渲染（visible=false）。
+  const planDecisions = [permFloorPlanEdit, permWall, permDoor, permWorkstationEdit];
+  const planNotReady = planDecisions.some((d) => d.disabled);
+  const floorPlanDecision = planNotReady
+    ? {
+        visible: true,
+        disabled: true,
+        hint: planDecisions.find((d) => d.hint)?.hint,
+      }
+    : planDecisions.every((d) => d.visible)
+      ? { visible: true, disabled: false, hint: undefined }
+      : { visible: false, disabled: false, hint: undefined };
+
   const location = useLocation();
   const [pageMode, setPageMode] = usePersistedStateController<PageMode>({
     keyPrefix: location.pathname,
@@ -473,6 +508,10 @@ const FloorManagement: FC = () => {
     onEditFloorPlan: handleEditFloorPlan,
     onDelete: handleDelete,
     getColumnSortOrder,
+    editPermission: PERMISSION_CODES.opsFloor.edit,
+    deletePermission: PERMISSION_CODES.opsFloor.delete,
+    // 「查看平面图」与平面图保存按钮共用同一个四码合并决策对象
+    floorPlanDecision,
   });
 
   const renderFloorPlanEditor = () => (
@@ -495,11 +534,13 @@ const FloorManagement: FC = () => {
       onDepartmentChange={(deptId) => handleEditorDepartmentChange(deptId, "")}
       onBuildingChange={handleEditorBuildingChange}
       onFloorChange={handleFloorChange}
+      // 四码合并决策（与行操作「查看平面图」共用同一对象）
+      editDecision={floorPlanDecision}
     />
   );
 
   const renderListView = () => (
-    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar
         selectedDeptId={selectedDeptId}
         onSelect={(keys, info) => {
@@ -516,12 +557,12 @@ const FloorManagement: FC = () => {
             {
               title: "正常",
               value: statistics.active,
-              styles: { content: { color: "var(--theme-success, #2d8949)" } },
+              styles: { content: { color: "var(--theme-success)" } },
             },
             {
               title: "停用",
               value: statistics.inactive,
-              styles: { content: { color: "var(--theme-error, #ba3630)" } },
+              styles: { content: { color: "var(--theme-error)" } },
             },
           ]}
         />
@@ -538,22 +579,41 @@ const FloorManagement: FC = () => {
           onReset={handleReset}
           onRefresh={handleRefresh}
           onViewModeChange={setViewMode}
-          onImport={() => setImportVisible(true)}
-          onExport={() => {
-            // 获取当前筛选条件
-            const values = searchForm.getFieldsValue() as Record<string, unknown>;
-            const currentFilters: Record<string, unknown> = {};
-            Object.keys(values).forEach((key) => {
-              const value = values[key];
-              if (value !== undefined && value !== null && value !== "") {
-                currentFilters[key] = value;
-              }
-            });
-            setExportFilters(currentFilters);
-            setExportVisible(true);
+          // Phase 86 W2 通道①：`onImport`/`onExport` 由必填放宽为可选 —— ready 无权限 → 不传
+          // → 触发按钮不渲染（不在 DOM）；未就绪 → 传回调 + `importDisabled` → 渲染但 disabled
+          onImport={permImport.visible ? () => setImportVisible(true) : undefined}
+          onExport={
+            permExport.visible
+              ? () => {
+                  // 获取当前筛选条件
+                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                  const currentFilters: Record<string, unknown> = {};
+                  Object.keys(values).forEach((key) => {
+                    const value = values[key];
+                    if (value !== undefined && value !== null && value !== "") {
+                      currentFilters[key] = value;
+                    }
+                  });
+                  setExportFilters(currentFilters);
+                  setExportVisible(true);
+                }
+              : undefined
+          }
+          importDisabled={permImport.disabled}
+          exportDisabled={permExport.disabled}
+          notReadyHint={permImport.hint ?? permExport.hint}
+          // Phase 86 W2 通道②：`onBatchDelete` 保持必填（noop 兜底）+
+          // `showBatchDelete` 决定渲不渲染 + `batchDeleteDisabled` 决定禁不禁用
+          onBatchDelete={() => {
+            if (!permDelete.visible) return;
+            handleBatchDelete();
           }}
-          onBatchDelete={handleBatchDelete}
-          onAdd={() => openModal()}
+          showBatchDelete={permDelete.visible}
+          batchDeleteDisabled={permDelete.disabled}
+          onAdd={() => {
+            if (!permAdd.visible) return;
+            openModal();
+          }}
           onBuildingChange={handleFilterBuildingChange}
           selectedCount={selectedRowKeys.length}
         />
@@ -596,6 +656,10 @@ const FloorManagement: FC = () => {
               onEdit={openModal}
               onEditFloorPlan={handleEditFloorPlan}
               onDelete={handleDelete}
+              // 卡片视图与表格视图共用页面层同一组门控决策
+              editDecision={permEdit}
+              deleteDecision={permDelete}
+              floorPlanDecision={floorPlanDecision}
             />
           )}
         </Card>

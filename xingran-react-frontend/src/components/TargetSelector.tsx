@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import type { FC, Key } from "react";
-import { App, Form, Select, Tree, Checkbox, Spin } from "antd";
+import { App, Form, Tree, Checkbox, Spin } from "antd";
+import { AppSelect } from "@/components/ui";
 import { post } from "@/lib/api";
 import type { TargetType, RoleOption, UserOption } from "@/types/notice";
 import { useDeptTree, type DeptTreeNode } from "@/hooks/useDeptTree";
@@ -150,10 +151,10 @@ const TargetSelector: FC<TargetSelectorProps> = ({
       case 3: // 指定用户
         return (
           <Spin spinning={loading}>
-            <Select
+            <AppSelect
               mode="multiple"
               value={targetUsers}
-              onChange={onTargetUsersChange}
+              onChange={(v: unknown) => onTargetUsersChange(v as string[])}
               placeholder="请选择用户"
               showSearch
               filterOption={(input, option) => {
@@ -182,10 +183,10 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   return (
     <div className="space-y-4">
       <Form.Item label="接收范围" rules={[{ required: true, message: "请选择接收范围" }]}>
-        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select
+        <AppSelect
           value={targetType}
-          onChange={onTargetTypeChange}
+          onChange={(v: unknown) => onTargetTypeChange(v as TargetType)}
+          showSearch={false}
           options={[
             { label: "全部用户", value: 0 },
             { label: "指定部门", value: 1 },

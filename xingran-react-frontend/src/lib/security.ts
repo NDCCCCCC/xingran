@@ -281,11 +281,13 @@ export function secureLog(
     }
     // 生产环境不输出 info 和 warn，也不输出 data
   } else {
-    // 开发环境：完整输出
+    // 开发环境：完整输出。显式静态方法映射（no-console 白名单仅允许 warn/error；
+    // info 走 warn 通道保证开发期可见性，error 保持 error）。
+    const log = category === "error" ? console.error : console.warn;
     if (data) {
-      console[category](`[${category}] ${message}`, data);
+      log(`[${category}] ${message}`, data);
     } else {
-      console[category](`[${category}] ${message}`);
+      log(`[${category}] ${message}`);
     }
   }
 }

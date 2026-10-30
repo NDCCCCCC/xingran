@@ -32,7 +32,7 @@ func TestUserList_RecursiveDeptID(t *testing.T) {
 			id TEXT PRIMARY KEY,
 			username TEXT,
 			nickname TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			status INTEGER NOT NULL,
 			dept_id TEXT,
 			password TEXT,
@@ -70,10 +70,10 @@ func TestUserList_RecursiveDeptID(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO sys_dept VALUES ('X','无关部门','',0,?,?,NULL)`, now, now).Error)
 
 	// 每个部门各放 1 个用户
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('uA','alice','Alice','13800000000',0,'A','x',?,?,NULL)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('uB','bob','Bob','13900000000',0,'B','x',?,?,NULL)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('uC','carol','Carol','13700000000',0,'C','x',?,?,NULL)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('uX','dave','Dave','13600000000',0,'X','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('uA','alice','Alice','13800000000',0,'A','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('uB','bob','Bob','13900000000',0,'B','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('uC','carol','Carol','13700000000',0,'C','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('uX','dave','Dave','13600000000',0,'X','x',?,?,NULL)`, now, now).Error)
 
 	svc := &userService{db: db, pwdManager: nil}
 
@@ -143,7 +143,7 @@ func TestUserList_RecursiveDeptID_DoesNotConflictWithDeptID(t *testing.T) {
 
 	require.NoError(t, db.Exec(`
 		CREATE TABLE sys_user (
-			id TEXT PRIMARY KEY, username TEXT, nickname TEXT, phone TEXT,
+			id TEXT PRIMARY KEY, username TEXT, nickname TEXT, phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			status INTEGER NOT NULL, dept_id TEXT, password TEXT,
 			created_at DATETIME, updated_at DATETIME, deleted_at DATETIME
 		)
@@ -166,8 +166,8 @@ func TestUserList_RecursiveDeptID_DoesNotConflictWithDeptID(t *testing.T) {
 	now := "2024-01-01 00:00:00"
 	require.NoError(t, db.Exec(`INSERT INTO sys_dept VALUES ('A','根','',0,?,?,NULL)`, now, now).Error)
 	require.NoError(t, db.Exec(`INSERT INTO sys_dept VALUES ('B','子','A',0,?,?,NULL)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('uA','alice','A','1',0,'A','x',?,?,NULL)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('uB','bob','B','2',0,'B','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('uA','alice','A','1',0,'A','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('uB','bob','B','2',0,'B','x',?,?,NULL)`, now, now).Error)
 
 	svc := &userService{db: db, pwdManager: nil}
 	rid, did := "A", "A"

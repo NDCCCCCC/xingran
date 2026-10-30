@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { downloadHolidayTemplate, handleHolidayImport } from "../excelUtils";
-import { getAppMessage } from "@/utils/antdMessage";
+import {} from "@/utils/antdMessage";
 
 const msgApi = {
   success: vi.fn(),
@@ -31,9 +31,9 @@ const xlsxMocks = {
 vi.mock("xlsx", () => xlsxMocks);
 
 class MockFileReader {
-  onload: ((e: any) => void) | null = null;
-  onerror: ((e: any) => void) | null = null;
-  onprogress: ((e: any) => void) | null = null;
+  onload: ((e: unknown) => void) | null = null;
+  onerror: ((e: unknown) => void) | null = null;
+  onprogress: ((e: unknown) => void) | null = null;
   readAsBinaryString(_file: Blob) {
     /* set per-test */
   }
@@ -77,7 +77,7 @@ beforeEach(() => {
   xlsxMocks.utils.book_append_sheet.mockClear();
   xlsxMocks.read.mockClear();
   xlsxMocks.writeFile.mockClear();
-  (globalThis as any).FileReader = function () {
+  (globalThis as unknown).FileReader = function () {
     return new MockFileReader();
   };
 });
@@ -101,7 +101,7 @@ describe("duty excelUtils", () => {
       function Reader() {
         return r;
       }
-      (globalThis as any).FileReader = Reader as any;
+      (globalThis as unknown).FileReader = Reader as unknown;
     }
 
     it("1 行合法 → batchCreate + onSuccess", async () => {
@@ -113,7 +113,7 @@ describe("duty excelUtils", () => {
           "是否休息(true/false)": "true",
           备注: "",
         },
-      ] as any);
+      ] as unknown);
       installReader(makeReader("load"));
 
       const batchCreate = vi.fn().mockResolvedValueOnce(true);
@@ -126,7 +126,7 @@ describe("duty excelUtils", () => {
     });
 
     it("数据为空 → onError + 'Excel 文件为空'", async () => {
-      xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([] as any);
+      xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([] as unknown);
       installReader(makeReader("load"));
 
       const onError = vi.fn();
@@ -140,7 +140,7 @@ describe("duty excelUtils", () => {
     it("日期字段为空 → onError 含行号", async () => {
       xlsxMocks.utils.sheet_to_json.mockReturnValueOnce([
         { 名称: "x", "类型(legal/workday/custom)": "custom" },
-      ] as any);
+      ] as unknown);
       installReader(makeReader("load"));
 
       const onError = vi.fn();
@@ -158,7 +158,7 @@ describe("duty excelUtils", () => {
           名称: "x",
           "类型(legal/workday/custom)": "bogus",
         },
-      ] as any);
+      ] as unknown);
       installReader(makeReader("load"));
 
       const onError = vi.fn();
@@ -188,7 +188,7 @@ describe("duty excelUtils", () => {
           名称: "x",
           "类型(legal/workday/custom)": "legal",
         },
-      ] as any);
+      ] as unknown);
 
       const onProgress = vi.fn();
       const batchCreate = vi.fn().mockResolvedValueOnce(true);
@@ -205,7 +205,7 @@ describe("duty excelUtils", () => {
           名称: "劳动节",
           "是否休息(true/false)": "true",
         },
-      ] as any);
+      ] as unknown);
       installReader(makeReader("load"));
 
       const batchCreate = vi.fn().mockResolvedValueOnce(true);
@@ -224,7 +224,7 @@ describe("duty excelUtils", () => {
           名称: "x",
           "类型(legal/workday/custom)": "legal",
         },
-      ] as any);
+      ] as unknown);
       installReader(makeReader("load"));
 
       const onError = vi.fn();

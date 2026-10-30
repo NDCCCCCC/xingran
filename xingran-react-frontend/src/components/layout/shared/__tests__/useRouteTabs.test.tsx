@@ -2,7 +2,7 @@
  * Phase 88 Batch369 — components/layout/shared/useRouteTabs 测试
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement, ReactNode } from "react";
 
@@ -14,7 +14,7 @@ vi.mock("@/lib/api", async () => {
 const mockAddTab = vi.fn();
 const mockUpdateTab = vi.fn();
 const mockSetActiveTab = vi.fn();
-const mockUseTabsReturn: any = {
+const mockUseTabsReturn: unknown = {
   tabs: [],
   activeTab: "",
   addTab: mockAddTab,
@@ -23,7 +23,7 @@ const mockUseTabsReturn: any = {
 };
 vi.mock("@/store/tabsStore", () => {
   // 兼容 selector 调用（useTabsStore(s => s.addTab)）与无参调用（useTabs()）两种形态
-  const useTabsStoreFn: any = (selector?: (s: unknown) => unknown) =>
+  const useTabsStoreFn: unknown = (selector?: (s: unknown) => unknown) =>
     selector ? selector(mockUseTabsReturn) : mockUseTabsReturn;
   useTabsStoreFn.getState = vi.fn(() => ({
     ...mockUseTabsReturn,
@@ -37,7 +37,7 @@ vi.mock("@/store/tabsStore", () => {
 
 vi.mock("@/store/dashboardStore", () => {
   const dashboardState = { currentDashboard: { name: "My Dashboard" } };
-  const useDashboardStoreFn: any = (selector?: (s: unknown) => unknown) =>
+  const useDashboardStoreFn: unknown = (selector?: (s: unknown) => unknown) =>
     selector ? selector(dashboardState) : dashboardState;
   return { useDashboardStore: useDashboardStoreFn };
 });
@@ -74,7 +74,7 @@ describe("components/layout/shared/useRouteTabs", () => {
         <MemoryRouter initialEntries={["/login"]}>{children}</MemoryRouter>
       ),
     });
-    const loginCalls = mockAddTab.mock.calls.filter((call: any[]) => call[0]?.key === "/login");
+    const loginCalls = mockAddTab.mock.calls.filter((call: unknown[]) => call[0]?.key === "/login");
     expect(loginCalls.length).toBe(0);
   });
 
@@ -105,7 +105,7 @@ describe("components/layout/shared/useRouteTabs", () => {
     });
     // 没有调用 addTab 添加 dashboard key
     const dashboardAdds = mockAddTab.mock.calls.filter(
-      (call: any[]) => call[0]?.key === "/dashboard"
+      (call: unknown[]) => call[0]?.key === "/dashboard"
     );
     expect(dashboardAdds.length).toBe(0);
   });

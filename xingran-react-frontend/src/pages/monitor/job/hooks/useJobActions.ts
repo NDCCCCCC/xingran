@@ -8,6 +8,7 @@ import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type { JobInfo, SearchFormState } from "../types";
 import { post, postLongRequest } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 
 export interface UseJobActionsParams {
   fetchJobs: () => Promise<void>;
@@ -98,7 +99,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
         setModalVisible(false);
         fetchJobs();
       } catch (error) {
-        console.error("提交失败:", error);
+        handleApiError(error, isEdit ? "更新任务" : "新增任务");
       }
     },
     [isEdit, fetchJobs, message]
@@ -112,7 +113,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
         message.success("删除成功");
         fetchJobs();
       } catch (error) {
-        console.error("删除失败:", error);
+        handleApiError(error, "删除任务");
       }
     },
     [fetchJobs, message]
@@ -129,7 +130,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
         message.success(record.status === 0 ? "暂停成功" : "启动成功");
         fetchJobs();
       } catch (error) {
-        console.error("操作失败:", error);
+        handleApiError(error, "切换任务状态");
       }
     },
     [fetchJobs, message]
@@ -146,7 +147,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
           fetchJobLogs(record.jobName, record.jobGroup);
         }
       } catch (error) {
-        console.error("执行失败:", error);
+        handleApiError(error, "执行任务");
       }
     },
     [selectedJob, fetchJobLogs, message]

@@ -15,6 +15,8 @@ export function TemplatePreviewModal({ open, content, onClose }: TemplatePreview
   return (
     <Modal
       title="模板预览"
+      mask={{ closable: false }}
+      keyboard={false}
       open={open}
       onCancel={onClose}
       footer={[
@@ -26,7 +28,7 @@ export function TemplatePreviewModal({ open, content, onClose }: TemplatePreview
     >
       <pre
         style={{
-          background: "#f5f5f5",
+          background: "var(--theme-bg-secondary)",
           padding: 16,
           borderRadius: 4,
           maxHeight: 500,

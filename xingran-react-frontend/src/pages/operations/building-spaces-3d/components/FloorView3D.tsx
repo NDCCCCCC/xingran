@@ -146,7 +146,7 @@ interface NoFloorSelectedAlertProps {
 const NoFloorSelectedAlert: React.FC<NoFloorSelectedAlertProps> = ({ onBackToMap }) => (
   <div style={styles.centerContainer}>
     <Alert
-      message="未选择楼层"
+      title="未选择楼层"
       description="请先选择一个楼层"
       type="info"
       showIcon

@@ -19,13 +19,17 @@ export interface BaseEditModalProps {
   onCancel: () => void;
   /** 确认按钮 loading 状态 */
   confirmLoading?: boolean;
+  /** 提交期间禁用取消按钮 */
+  cancelButtonDisabled?: boolean;
   /** Modal 宽度（默认 520） */
   width?: number;
   /** 底部按钮文案 */
   okText?: string;
   cancelText?: string;
-  /** 是否允许点击蒙层关闭（默认 true） */
+  /** 是否允许点击蒙层关闭（默认 false，防误关丢失表单内容） */
   maskClosable?: boolean;
+  /** 是否允许按 ESC 关闭（默认 false，防误关丢失表单内容） */
+  keyboard?: boolean;
   children: ReactNode;
 }
 
@@ -35,10 +39,12 @@ function BaseEditModalImpl({
   onOk,
   onCancel,
   confirmLoading = false,
+  cancelButtonDisabled = false,
   width = 520,
   okText = "确定",
   cancelText = "取消",
-  maskClosable = true,
+  maskClosable = false,
+  keyboard = false,
   children,
 }: BaseEditModalProps) {
   return (
@@ -48,10 +54,14 @@ function BaseEditModalImpl({
       onOk={onOk}
       onCancel={onCancel}
       confirmLoading={confirmLoading}
+      cancelButtonProps={{ disabled: cancelButtonDisabled }}
       width={width}
       okText={okText}
       cancelText={cancelText}
-      maskClosable={maskClosable}
+      // Phase 88-04（VISFIX-04）：antd 6 弃用 maskClosable → 新形态 mask.closable。
+      // 对外 prop 名 maskClosable 冻结（v1.22 契约，调用方零改动），仅内部转发形态变更。
+      mask={{ closable: maskClosable }}
+      keyboard={keyboard}
       destroyOnHidden
     >
       {children}

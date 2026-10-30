@@ -11,11 +11,11 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-let mockUser: any = { isAdmin: false, dataScope: "dept", deptId: "d1" };
+let mockUser: unknown = { isAdmin: false, dataScope: "dept", deptId: "d1" };
 vi.mock("@/store/authStore", () => {
   // 兼容 selector 调用（useAuthStore(s => s.user)）与无参调用两种形态；
   // 函数体内读取 let 变量，保持调用时求值（用例内重赋值 mockUser 继续生效）
-  const useAuthStoreFn: any = (selector?: (s: unknown) => unknown) =>
+  const useAuthStoreFn: unknown = (selector?: (s: unknown) => unknown) =>
     selector ? selector({ user: mockUser }) : { user: mockUser };
   return { useAuthStore: useAuthStoreFn };
 });

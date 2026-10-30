@@ -2,6 +2,7 @@ import React from "react";
 import { Card, Row, Col, Space, Badge, Typography } from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
+import { formatDateTime, FORMAT_DATE_SHORT } from "@/utils/datetime";
 import type { MonthlyDutyMember } from "@/lib/dutyApi";
 
 const { Text } = Typography;
@@ -70,7 +71,7 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weekly
                 size="small"
                 style={{
                   height: "120px",
-                  borderColor: isToday ? "var(--theme-info, #337ab0)" : undefined,
+                  borderColor: isToday ? "var(--theme-info)" : undefined,
                   backgroundColor: isToday ? "#e6f7ff" : undefined,
                 }}
                 styles={{ body: { padding: "8px", height: "100%", overflow: "auto" } }}
@@ -81,7 +82,7 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weekly
                       strong
                       style={{
                         fontSize: "13px",
-                        color: isToday ? "var(--theme-info, #337ab0)" : undefined,
+                        color: isToday ? "var(--theme-info)" : undefined,
                         display: "block",
                       }}
                     >
@@ -90,11 +91,11 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weekly
                     <Text
                       style={{
                         fontSize: "12px",
-                        color: "var(--theme-text-tertiary, #999)",
+                        color: "var(--theme-text-tertiary)",
                         display: "block",
                       }}
                     >
-                      {day.format("MM-DD")}
+                      {formatDateTime(day.toDate(), FORMAT_DATE_SHORT)}
                     </Text>
                   </div>
                   <div style={{ flex: 1 }}>

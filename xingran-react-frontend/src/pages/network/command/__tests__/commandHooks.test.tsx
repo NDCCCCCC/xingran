@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { App, Form } from "antd";
+import { App } from "antd";
 import { render } from "@testing-library/react";
 import { ConfigProvider } from "antd";
 
@@ -30,7 +30,7 @@ function Wrap({ children }: { children: React.ReactNode }) {
 
 beforeEach(() => {
   postSpy.mockReset();
-  vi.spyOn(apiModule, "post" as any).mockImplementation(postSpy as any);
+  vi.spyOn(apiModule, "post" as unknown).mockImplementation(postSpy as unknown);
 });
 
 describe("useCommandData", () => {
@@ -118,7 +118,7 @@ describe("useCommandData", () => {
     const { result } = renderHook(() => useCommandData(vi.fn(), { current: 1, pageSize: 10 }), {
       wrapper: Wrap,
     });
-    let ret: any;
+    let ret: unknown;
     await act(async () => {
       ret = await result.current.loadExecutionDetails("e1");
     });
@@ -150,7 +150,7 @@ describe("useCommandModals", () => {
     };
 
     await act(async () => {
-      await result.current.handleQuickCommand(["d1"], form as any, onSuccess);
+      await result.current.handleQuickCommand(["d1"], form as unknown, onSuccess);
     });
 
     expect(postSpy).toHaveBeenCalledWith("/network/command/quick", {
@@ -170,7 +170,7 @@ describe("useCommandModals", () => {
     };
 
     await act(async () => {
-      await result.current.handleQuickCommand(["d1"], form as any, onSuccess);
+      await result.current.handleQuickCommand(["d1"], form as unknown, onSuccess);
     });
 
     expect(postSpy).not.toHaveBeenCalled();
@@ -190,14 +190,13 @@ describe("useCommandModals", () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it("handleCancelExecution 失败静默", async () => {
+  // 68.1-T4：失败上抛（错误反馈由 confirmDelete helper 承接），不调 onSuccess
+  it("handleCancelExecution 失败上抛", async () => {
     postSpy.mockRejectedValue(new Error("boom"));
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useCommandModals(), { wrapper: Wrap });
 
-    await act(async () => {
-      await result.current.handleCancelExecution("e1", onSuccess);
-    });
+    await expect(result.current.handleCancelExecution("e1", onSuccess)).rejects.toThrow("boom");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });
@@ -211,7 +210,7 @@ describe("CommandDetailDrawer", () => {
   });
 
   it("渲染 steps+progress+table", async () => {
-    const exec: any = {
+    const exec: unknown = {
       executionName: "批量巡检",
       status: "running",
       totalDevices: 10,
@@ -222,7 +221,7 @@ describe("CommandDetailDrawer", () => {
       <CommandDetailDrawer
         open
         execution={exec}
-        details={[{ id: "det1" } as any]}
+        details={[{ id: "det1" } as unknown]}
         onClose={vi.fn()}
       />
     );
@@ -238,7 +237,7 @@ describe("CommandDispatchModal", () => {
     const { findByText, baseElement } = render(
       <CommandDispatchModal
         open
-        devices={[{ id: "d1", deviceName: "核心交换机" } as any]}
+        devices={[{ id: "d1", deviceName: "核心交换机" } as unknown]}
         selectedRowKeys={["d1"]}
         onOk={vi.fn()}
         onCancel={vi.fn()}

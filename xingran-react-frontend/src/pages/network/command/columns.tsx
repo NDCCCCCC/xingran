@@ -8,6 +8,8 @@ import { Progress, Button, Modal, Tooltip } from "antd";
 import { EyeOutlined, StopOutlined } from "@ant-design/icons";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { formatDateTime } from "@/utils/datetime";
 import { renderExecutionStatusTag, renderSimpleStatusTag } from "./constants";
 
@@ -85,6 +87,7 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       render: (_: unknown, record: ConfigExecution) => {
         const actions = [
           {
+            // Phase 86 W3：读动作（查看执行详情只读）→ 不加门控
             key: "view",
             label: "查看",
             icon: <EyeOutlined />,
@@ -98,14 +101,23 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
                   icon: <StopOutlined />,
                   danger: true,
                   onClick: () => {
-                    Modal.confirm({
-                      title: "确认取消执行?",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleCancel(record.id),
+                    // 68.1-T4 §1.9 非删除破坏性变体：取消执行
+                    // （confirmDelete 只是二次确认 helper，语义 = 取消执行）
+                    confirmDelete({
+                      title: "确认取消执行",
+                      target: "该命令的执行任务",
+                      actionLabel: "取消执行",
+                      actionContext: "取消执行",
+                      contentText: "将{target}，操作不可恢复，是否继续？",
+                      successText: "已取消执行",
+                      onDelete: async () => {
+                        await handleCancel(record.id);
+                      },
                     });
                   },
+                  // Phase 86 W3：取消执行属**命令执行动作域** → 归 networkCommand.execute
+                  // （本 phase 零新增码，不自造 `network:command:cancel`）。
+                  permission: PERMISSION_CODES.networkCommand.execute,
                 },
               ]
             : []),
@@ -155,7 +167,7 @@ export const detailColumns: ColumnsType<ConfigExecutionDetail> = [
                   style={{
                     maxHeight: 400,
                     overflow: "auto",
-                    background: "#f5f5f5",
+                    background: "var(--theme-bg-secondary)",
                     padding: 12,
                   }}
                 >
@@ -180,7 +192,7 @@ export const detailColumns: ColumnsType<ConfigExecutionDetail> = [
     render: (msg: string) =>
       msg ? (
         <Tooltip title={msg}>
-          <span style={{ color: "var(--theme-error, #ba3630)" }}>{msg}</span>
+          <span style={{ color: "var(--theme-error)" }}>{msg}</span>
         </Tooltip>
       ) : (
         "-"

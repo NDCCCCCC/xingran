@@ -17,7 +17,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-const sampleDevice: any = { id: "d1", deviceName: "Switch-01" };
+const sampleDevice: unknown = { id: "d1", deviceName: "Switch-01" };
 
 describe("network/devices/hooks/useDeviceModals", () => {
   it("初始 visible=false + null", () => {

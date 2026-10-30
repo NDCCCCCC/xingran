@@ -61,7 +61,7 @@ describe("monitor/logs/types", () => {
   it("SearchFormState shape", () => {
     const s: SearchFormState = {
       title: "登录",
-      timeRange: null as any,
+      timeRange: null as unknown,
     };
     expect(s.title).toBe("登录");
   });

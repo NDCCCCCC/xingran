@@ -23,8 +23,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Drawer,
   Form,
-  Select,
-  Input,
   Button,
   Space,
   Alert,
@@ -39,6 +37,10 @@ import {
   Typography,
   App,
 } from "antd";
+// Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
+// ⚠️ 本文件承载 v1.19 批量写 drawer 冻结交互（提交中状态机 / batchInProgress），
+// 本波仅换 UI 组件名，不改任何状态/条件渲染/disabled 逻辑。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { useNavigate } from "react-router-dom";
 import type {
   DevicePortStatus,
@@ -60,6 +62,7 @@ import {
   validateReasonRequired,
 } from "./constants";
 import { showAuditLinkToast } from "./PortWriteModal";
+import { handleApiError } from "@/utils/errorHandler";
 
 type DrawerPhase = "select" | "executing" | "result";
 
@@ -179,7 +182,7 @@ export function BulkWriteDrawer({
       // validateFields 校验失败抛含 errorFields 的对象, antd 自动标红字段, 直接 return
       if (err && typeof err === "object" && "errorFields" in err) return;
       // WR-01: 非预期校验异常不再 throw 冒泡到 antd onOk/onClick 形成未处理 Promise rejection
-      console.error("[BulkWriteDrawer] validateFields unexpected error:", err);
+      handleApiError(err, "表单校验", false);
       return;
     }
 
@@ -233,9 +236,9 @@ export function BulkWriteDrawer({
       title="批量配置端口"
       open={open}
       onClose={isExecuting ? () => {} : onClose}
-      width={720}
+      size={720}
       destroyOnHidden
-      maskClosable={!isExecuting}
+      mask={{ closable: !isExecuting }}
       closable={!isExecuting}
     >
       {phase === "select" && (
@@ -312,7 +315,7 @@ function SelectView({
         <Alert
           type="error"
           showIcon
-          message="批量必须同设备"
+          title="批量必须同设备"
           description={`检测到 ${uniqueDeviceCount} 个不同设备, 后端会拒绝跨设备批量。请重新勾选, 确保所选端口属于同一设备 (same device)。`}
           style={{ marginBottom: 16 }}
         />
@@ -323,8 +326,9 @@ function SelectView({
         label="操作类型"
         rules={[{ required: true, message: "请选择操作类型" }]}
       >
-        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select placeholder="请选择操作类型" options={ACTION_OPTIONS} />
+        {/* fixed option list, no server search needed（AppSelect 不受 local/no-large-dropdown-list
+            的 Select 名拦截，原 eslint-disable 已随迁移失效，故移除） */}
+        <AppSelect placeholder="请选择操作类型" options={ACTION_OPTIONS} />
       </Form.Item>
 
       {/* D-03 description action 时多一个"新描述"必填字段 */}
@@ -339,7 +343,7 @@ function SelectView({
                 { max: DESCRIPTION_MAX, message: `描述不超过 ${DESCRIPTION_MAX} 字符` },
               ]}
             >
-              <Input maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
+              <AppInput maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
             </Form.Item>
           ) : null
         }
@@ -367,8 +371,8 @@ function SelectView({
               ]
         }
       >
-        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select
+        {/* fixed option list, no server search needed（同上，disable 注释已随迁移失效） */}
+        <AppSelect
           placeholder="请选择操作原因"
           options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}
         />
@@ -387,7 +391,7 @@ function SelectView({
                 { max: REASON_MAX, message: `操作原因不超过 ${REASON_MAX} 个字符` },
               ]}
             >
-              <Input.TextArea
+              <AppTextArea
                 rows={2}
                 maxLength={REASON_MAX}
                 showCount
@@ -431,7 +435,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
             <Statistic
               title="✓ 成功"
               value={result.succeeded.length}
-              valueStyle={{ color: "var(--theme-success, #3f8600)" }}
+              valueStyle={{ color: "var(--theme-success)" }}
             />
           </Card>
         </Col>
@@ -440,7 +444,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
             <Statistic
               title="⚠ 跳过"
               value={result.skipped.length}
-              valueStyle={{ color: "var(--theme-text-secondary, #707068)" }}
+              valueStyle={{ color: "var(--theme-text-secondary)" }}
             />
             {result.skipped.length > 0 && (
               <Tag color="default" style={{ marginTop: 8 }}>
@@ -454,7 +458,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
             <Statistic
               title="✗ 失败"
               value={result.failed.length}
-              valueStyle={{ color: "var(--theme-error, #cf1322)" }}
+              valueStyle={{ color: "var(--theme-error)" }}
             />
           </Card>
         </Col>

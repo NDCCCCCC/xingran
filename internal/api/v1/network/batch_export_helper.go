@@ -165,7 +165,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 
 		statusMap := map[int]string{0: "在线", 1: "离线", 2: "未知"}
 		deviceTypeMap := map[string]string{"router": "路由器", "switch": "交换机", "firewall": "防火墙", "ap": "AP", "loadbalancer": "负载均衡"}
-		vendorMap := map[string]string{"huawei": "华为", "h3c": "H3C", "ruijie": "锐捷", "maipu": "迈普"}
+		vendorMap := map[string]string{"huawei": "华为", "h3c": "H3C", "ruijie": "锐捷", "maipu": "迈普", "cisco": "思科"}
 
 		for _, device := range devices {
 			status := statusMap[int(device.Status)]
@@ -224,7 +224,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		}
 
 		templateTypeMap := map[string]string{"init": "初始化", "config": "配置", "backup": "备份"}
-		vendorMap := map[string]string{"huawei": "华为", "h3c": "H3C", "ruijie": "锐捷", "maipu": "迈普"}
+		vendorMap := map[string]string{"huawei": "华为", "h3c": "H3C", "ruijie": "锐捷", "maipu": "迈普", "cisco": "思科"}
 		deviceTypeMap := map[string]string{"router": "路由器", "switch": "交换机", "firewall": "防火墙", "ap": "AP", "loadbalancer": "负载均衡"}
 
 		for _, tmpl := range templates {

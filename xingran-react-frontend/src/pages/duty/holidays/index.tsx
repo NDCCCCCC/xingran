@@ -1,5 +1,7 @@
 import type { FC } from "react";
-import { Button, Table, Card, Space, Select, Alert, Upload } from "antd";
+import { Button, Table, Card, Space, Alert, Upload } from "antd";
+// Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -12,8 +14,6 @@ import { useHolidayData, useHolidayModals } from "./hooks";
 import { getHolidayColumns } from "./columns";
 import { HolidayEditModal, HolidayBatchModal } from "./modals";
 import { handleExcelImport, downloadTemplate } from "./utils";
-
-const { Option } = Select;
 
 const DutyHolidayPage: FC = () => {
   // Phase 69 DICT-03: 假日类型下拉迁 useDict("duty_holiday_type")——字典管理页改 label
@@ -62,19 +62,19 @@ const DutyHolidayPage: FC = () => {
         }
         extra={
           <Space>
-            <Select
+            {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，
+                显式 showSearch={false} 保持不变（年份数可能 ≥8，避免契约自动开搜索） */}
+            <AppSelect
+              allowClear
               value={year}
-              onChange={(y) => fetchList(y)}
+              // AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型
+              onChange={(y) => fetchList(y as number)}
               style={{ width: 120 }}
               suffixIcon={null}
+              showSearch={false}
               onSearch={() => {}}
-            >
-              {availableYears.map((y) => (
-                <Option key={y} value={y}>
-                  {y}年
-                </Option>
-              ))}
-            </Select>
+              options={availableYears.map((y) => ({ value: y, label: `${y}年` }))}
+            />
             <Button icon={<ReloadOutlined />} onClick={() => fetchList()}>
               刷新
             </Button>

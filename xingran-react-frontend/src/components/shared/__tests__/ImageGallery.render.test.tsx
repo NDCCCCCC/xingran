@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { Modal } from "antd";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -180,47 +181,55 @@ describe("ImageGallery — handleEditDescription / handleSaveDescription", () =>
   });
 });
 
-describe("ImageGallery — handleDelete (Popconfirm)", () => {
-  it("点删除 → Popconfirm 确认后 onDelete 调", async () => {
+describe("ImageGallery — handleDelete (confirmDelete Modal 强确认, 68.1-T3)", () => {
+  // static Modal.confirm 的 portal 容器会跨用例残留在 body 上，先清除避免查询串扰
+  const purgeLeftoverModals = () => {
+    document
+      .querySelectorAll<HTMLElement>(".ant-modal-container")
+      .forEach((n) => n.parentElement?.remove());
+  };
+
+  it("点删除 → Modal 确认后 onDelete 调", async () => {
+    purgeLeftoverModals();
     const onDelete = vi.fn().mockResolvedValue(undefined);
-    const { baseElement } = renderWithProviders(
-      <ImageGallery photos={basePhotos} onDelete={onDelete} />
-    );
+    renderWithProviders(<ImageGallery photos={basePhotos} onDelete={onDelete} />);
     fireEvent.click(screen.getAllByText("删除")[0]);
-    // Popconfirm 弹出
+    // Modal 强确认弹出（68.1-T3：Popconfirm 升级为 confirmDelete）
     await waitFor(() => {
-      expect(screen.getByText("确定要删除这张照片吗？")).toBeDefined();
+      expect(screen.getAllByText("确认删除").length).toBeGreaterThan(0);
     });
-    // Popconfirm 按钮在 portal
-    const confirmBtn = Array.from(
-      baseElement.querySelectorAll(
-        ".ant-popover-buttons .ant-btn, .ant-popconfirm-buttons .ant-btn, .ant-popover .ant-btn-primary, .ant-popconfirm .ant-btn-primary"
-      )
-    ).find((b) => b.textContent?.replace(/\s+/g, "") === "确定") as HTMLElement;
-    expect(confirmBtn).toBeDefined();
+    let confirmBtn: HTMLElement | undefined;
+    await waitFor(() => {
+      // static Modal.confirm 实例跨用例残留，取最后一个（当前用例）弹窗的确认按钮
+      const all = Array.from(
+        document.querySelectorAll<HTMLElement>(".ant-modal-confirm-btns button")
+      ).filter((b) => (b.textContent ?? "").replace(/\s/g, "") === "删除");
+      confirmBtn = all[all.length - 1];
+      expect(confirmBtn).toBeDefined();
+    });
     fireEvent.click(confirmBtn);
     await waitFor(() => {
       expect(onDelete).toHaveBeenCalledWith("p1");
     });
   });
 
-  it("onDelete 抛错 → message.error", async () => {
+  // antd 6.6.4 缺陷：ActionButton.handlePromiseOnOk 的 rejection 分支 `return Promise.reject(e)`
+  // （node_modules/antd/es/_util/ActionButton.js:51-60）返回的 promise 无人消费，真实点击会让
+  // vitest 记为 unhandled error。而 onOk 返回 rejected 恰是「弹窗保持打开可重试」的唯一实现方式，
+  // 故此处取 Modal.confirm 的配置直接执行 onOk，断言契约本身而不触发 antd 内部 promise 链。
+  it("onDelete 抛错 → handleApiError 反馈且 onOk 上抛（弹窗保持打开）", async () => {
+    purgeLeftoverModals();
+    const confirmSpy = vi.spyOn(Modal, "confirm");
     const onDelete = vi.fn().mockRejectedValue(new Error("delete fail"));
-    const { baseElement } = renderWithProviders(
-      <ImageGallery photos={basePhotos} onDelete={onDelete} />
-    );
+    renderWithProviders(<ImageGallery photos={basePhotos} onDelete={onDelete} />);
     fireEvent.click(screen.getAllByText("删除")[0]);
     await waitFor(() => {
-      expect(screen.getByText("确定要删除这张照片吗？")).toBeDefined();
+      expect(confirmSpy).toHaveBeenCalled();
     });
-    const confirmBtn = Array.from(
-      baseElement.querySelectorAll(
-        ".ant-popover-buttons .ant-btn, .ant-popconfirm-buttons .ant-btn, .ant-popover .ant-btn-primary, .ant-popconfirm .ant-btn-primary"
-      )
-    ).find((b) => b.textContent?.replace(/\s+/g, "") === "确定") as HTMLElement;
-    fireEvent.click(confirmBtn);
-    await waitFor(() => {
-      expect(onDelete).toHaveBeenCalled();
-    });
+    const cfg = confirmSpy.mock.calls.at(-1)![0] as { onOk?: () => Promise<unknown> };
+    expect(cfg.onOk).toBeTypeOf("function");
+    await expect(cfg.onOk!()).rejects.toThrow("delete fail");
+    expect(onDelete).toHaveBeenCalledWith("p1");
+    confirmSpy.mockRestore();
   });
 });

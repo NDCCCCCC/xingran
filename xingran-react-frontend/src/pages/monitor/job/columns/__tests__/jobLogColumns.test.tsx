@@ -2,7 +2,7 @@
  * Phase 88 Batch179 — pages/monitor/job/columns/jobLogColumns 测试
  */
 import { describe, it, expect } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { App as AntdApp, Table } from "antd";
 import type { ReactElement, ReactNode } from "react";
 
@@ -42,13 +42,13 @@ const dataSource = [
 
 describe("jobLogColumns", () => {
   it("getJobLogColumns 返回 5 列", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     expect(cols.length).toBeGreaterThanOrEqual(5);
   });
 
   it("列包含基本列名", () => {
-    const cols = getJobLogColumns();
-    const titles = cols.map((c: any) => c.title);
+    const cols = getJobLogColumns({ getSortOrder: () => null });
+    const titles = cols.map((c: unknown) => c.title);
     expect(titles).toContain("执行时间");
     expect(titles).toContain("执行时长");
     expect(titles).toContain("执行消息");
@@ -56,7 +56,7 @@ describe("jobLogColumns", () => {
   });
 
   it("完整表格渲染 + 各列 render", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const { baseElement } = render(<Table dataSource={dataSource} columns={cols} rowKey="id" />, {
       wrapper,
     });
@@ -72,7 +72,7 @@ describe("jobLogColumns", () => {
   });
 
   it("执行状态 → 成功/失败 Tag", () => {
-    const cols = getJobLogColumns();
+    const cols = getJobLogColumns({ getSortOrder: () => null });
     const { baseElement } = render(<Table dataSource={dataSource} columns={cols} rowKey="id" />, {
       wrapper,
     });

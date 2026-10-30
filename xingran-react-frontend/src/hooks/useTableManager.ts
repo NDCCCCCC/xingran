@@ -52,8 +52,9 @@ export interface TableManagerReturn<T> {
   setEditingItem: (item: T | null) => void;
   // 操作方法
   handleSearch: () => void;
-  /** 合并额外筛选条件(如外部选择的 deptId)到当前 filters，回到第 1 页并加载 */
-  applyFilters: (extra?: Record<string, unknown>) => void;
+  /** 合并额外筛选条件(如外部选择的 deptId)到当前 filters，回到第 1 页并加载；
+   *  opts.keepPage=true 时保留当前页码（mount 恢复持久化页码的首次加载用，FAIL-1） */
+  applyFilters: (extra?: Record<string, unknown>, opts?: { keepPage?: boolean }) => void;
   handleReset: () => void;
   handleRefresh: () => void;
   handleAdd: () => void;
@@ -272,12 +273,18 @@ export function useTableManager<T>(
 
   // applyFilters：读 searchForm + 合并 extra → filtersRef（持久化），回第 1 页并加载。
   // 供外部筛选联动（如部门树点击）显式调用；handleSearch 是它的无参便捷形式。
+  // opts.keepPage=true：保留当前页码加载（不回写 1）——PageTable mount 首载用，
+  // 使 sessionStorage 持久化恢复的页码不被 mount 硬编码覆写（UAT FAIL-1 修复点）。
   const applyFilters = useCallback(
-    (extra?: Record<string, unknown>) => {
+    (extra?: Record<string, unknown>, opts?: { keepPage?: boolean }) => {
       persistFilters({
         ...filterEmpty(searchForm.getFieldsValue() as Record<string, unknown>),
         ...filterEmpty(extra),
       });
+      if (opts?.keepPage) {
+        loadData();
+        return;
+      }
       currentRef.current = 1;
       setCurrent(1);
       loadData({ current: 1 });

@@ -20,7 +20,8 @@
  *   - D-C4 缓存失效(InvalidateWorkstationHealth by wsID)
  */
 
-import { Form, Input, Modal } from "antd";
+import { Form, Modal } from "antd";
+import { AppTextArea } from "@/components/ui";
 
 interface RollbackModalProps {
   open: boolean;
@@ -60,12 +61,12 @@ export const RollbackModal = ({ open, onCancel, onSubmit, submitting }: Rollback
     <Modal
       title="回滚修复"
       open={open}
-      confirmLoading={submitting}
       onCancel={handleCancel}
       onOk={handleOk}
       okText="确认回滚"
       okButtonProps={{ danger: true }}
-      destroyOnClose
+      cancelButtonProps={{ disabled: !!submitting }}
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" preserve={false}>
         <Form.Item
@@ -76,7 +77,7 @@ export const RollbackModal = ({ open, onCancel, onSubmit, submitting }: Rollback
             { min: 10, message: "回滚原因至少 10 字符" },
           ]}
         >
-          <Input.TextArea
+          <AppTextArea
             rows={3}
             placeholder="请说明回滚原因(≥10 字符,7d 窗口内才允许)"
             maxLength={500}

@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/api", async () => {
   return {
-    post: vi.fn(async (url: string, data?: any) => ({ data: { url, payload: data } })),
+    post: vi.fn(async (url: string, data?: unknown) => ({ data: { url, payload: data } })),
   };
 });
 
@@ -14,30 +14,30 @@ import { infoPointApi } from "../info-points";
 
 describe("services/operations/info-points", () => {
   it("list", async () => {
-    const r: any = await infoPointApi.list({ current: 1, pageSize: 10 });
+    const r: unknown = await infoPointApi.list({ current: 1, pageSize: 10 });
     expect(r.data.url).toBe("/ops/info-points/list");
   });
 
   it("create", async () => {
-    const r: any = await infoPointApi.create({
+    const r: unknown = await infoPointApi.create({
       code: "ip-1",
       name: "Info Point 1",
-    } as any);
+    } as unknown);
     expect(r.data.url).toBe("/ops/info-points");
   });
 
   it("update", async () => {
-    const r: any = await infoPointApi.update("ip-1", { name: "X" });
+    const r: unknown = await infoPointApi.update("ip-1", { name: "X" });
     expect(r.data.url).toContain("/ip-1/update");
   });
 
   it("delete", async () => {
-    const r: any = await infoPointApi.delete("ip-1");
+    const r: unknown = await infoPointApi.delete("ip-1");
     expect(r.data.url).toContain("/ip-1/delete");
   });
 
   it("batchDelete", async () => {
-    const r: any = await infoPointApi.batchDelete(["a", "b"]);
+    const r: unknown = await infoPointApi.batchDelete(["a", "b"]);
     expect(r.data.url).toBe("/ops/info-points/batch");
     expect(r.data.payload.action).toBe("delete");
   });

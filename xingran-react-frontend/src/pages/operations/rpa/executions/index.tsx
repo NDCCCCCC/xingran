@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Input, Select, Card, Tag, Layout } from "antd";
+import { Table, Button, Space, Form, Card, Tag, Layout } from "antd";
 import { SearchOutlined, ReloadOutlined, FilterOutlined } from "@ant-design/icons";
 import type { Execution } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
@@ -16,8 +16,10 @@ import { getExecutionColumns } from "./columns";
 import { ExecutionDetailModal } from "./ExecutionDetailModal";
 import { EXECUTION_STATUS_OPTIONS } from "../constants";
 import { post } from "@/lib/api";
+// Phase 71 (W3)：裸 Input/Select → 契约组件。
+// 执行状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
+import { AppInput, AppSelect } from "@/components/ui";
 
-const { Option } = Select;
 const { Content } = Layout;
 
 const ExecutionManagement: FC = () => {
@@ -145,8 +147,8 @@ const ExecutionManagement: FC = () => {
   );
 
   return (
-    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
-      <Content style={{ background: "#fff", padding: 16 }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
+      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
         <Card style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -159,19 +161,21 @@ const ExecutionManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="taskName" label="任务名称">
-                <Input placeholder="请输入任务名称" allowClear style={{ width: 200 }} />
+                <AppInput placeholder="请输入任务名称" style={{ width: 200 }} />
               </Form.Item>
               <Form.Item name="status" label="执行状态">
-                <Select placeholder="请选择" allowClear style={{ width: 150 }} onSearch={() => {}}>
-                  {EXECUTION_STATUS_OPTIONS.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </Option>
-                  ))}
-                </Select>
+                {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                <AppSelect
+                  placeholder="请选择"
+                  allowClear
+                  style={{ width: 150 }}
+                  showSearch={false}
+                  onSearch={() => {}}
+                  options={EXECUTION_STATUS_OPTIONS}
+                />
               </Form.Item>
               <Form.Item name="workerId" label="Worker">
-                <Input placeholder="请输入Worker ID" allowClear style={{ width: 150 }} />
+                <AppInput placeholder="请输入Worker ID" style={{ width: 150 }} />
               </Form.Item>
               <Form.Item>
                 <Space>
@@ -188,7 +192,13 @@ const ExecutionManagement: FC = () => {
           </div>
 
           {/* 统计信息 */}
-          <Space style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e9efeb" }}>
+          <Space
+            style={{
+              marginTop: 12,
+              paddingTop: 12,
+              borderTop: "1px solid var(--theme-border-primary)",
+            }}
+          >
             <Tag icon={<FilterOutlined />} color="blue">
               总计: {statistics.total}
             </Tag>

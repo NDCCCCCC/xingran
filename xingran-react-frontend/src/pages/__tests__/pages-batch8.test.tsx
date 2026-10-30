@@ -10,13 +10,13 @@ vi.mock("@/lib/api", async () => {
 
 import { renderPageWithEndpoints } from "@/test/utils/renderPage";
 import VDIServerConfig from "../vdi/VDIServerConfig";
-import VirtualMachineDetail from "../vdi/VirtualMachineDetail";
+import "../vdi/VirtualMachineDetail";
 import WorkOrderStatisticsPage from "../workorder/statistics";
 import WorkOrderCategoryPage from "../workorder/categories";
 import ADOuPage from "../ad-domain/ous";
 import ADConfigPage from "../ad-domain/configs";
 import ADLogsPage from "../ad-domain/logs";
-import RpaExecutions from "../operations/rpa/executions";
+import "../operations/rpa/executions";
 
 async function expectRenders(ui: React.ReactElement, endpoints: Record<string, unknown> = {}) {
   const { rendered } = renderPageWithEndpoints(ui, { endpoints });

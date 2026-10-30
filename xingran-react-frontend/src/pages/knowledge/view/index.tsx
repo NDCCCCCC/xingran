@@ -15,7 +15,7 @@ import {
   likeKnowledgeArticle,
   type KnowledgeArticle,
 } from "@/lib/knowledgeApi";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import type { UnknownError } from "@/types/common";
 import { getKnowledgeCategoryList, type KnowledgeCategory } from "@/lib/knowledgeApi";
 import { getAllKnowledgeTags, type KnowledgeTag } from "@/lib/knowledgeApi";
@@ -336,7 +336,7 @@ const KnowledgeViewPage: FC = () => {
                         点赞: {selectedArticle.likeCount || 0}
                       </span>
                     </Space>
-                    <span>{formatDateTime(selectedArticle.createdAt, "YYYY-MM-DD HH:mm")}</span>
+                    <span>{formatDateTime(selectedArticle.createdAt, FORMAT_DATETIME_MINUTE)}</span>
                   </div>
                 </Space>
               </div>

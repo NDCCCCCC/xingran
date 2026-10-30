@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/store/menuStore", () => ({
-  useMenuStore: vi.fn((selector: any) => {
+  useMenuStore: vi.fn((selector: unknown) => {
     const state = { permissions: mockPermissions };
     return typeof selector === "function" ? selector(state) : state;
   }),

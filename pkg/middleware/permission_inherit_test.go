@@ -192,6 +192,63 @@ func TestPermissionCheck_DoesNotInheritCTypeChild(t *testing.T) {
 	}
 }
 
+// TestStep2_InheritDirection 锁死 Step 2（hasInheritedButtonPerm）的继承方向：
+//   - 正向（成立）：持 F 型子按钮 perms 的角色 → 判父页面 perms = true；
+//   - 反向（不成立）：持父页面 perms 的角色 → 判子按钮 perms = false。
+//
+// 反向断言防未来被『补全』成双向继承（双向会让持页面本体的角色获得全部按钮权限）。
+func TestStep2_InheritDirection(t *testing.T) {
+	setup := func(t *testing.T, grantParent bool) (*core.Core, string) {
+		t.Helper()
+		userID := uuid.New().String()
+		roleID := uuid.New().String()
+		parentMenuID := uuid.New().String()
+		childMenuID := uuid.New().String()
+
+		coreInst := newTestCoreWithSQLite(t, func(gormDB *gorm.DB) {
+			assert.NoError(t, gormDB.Exec(
+				`INSERT INTO sys_role (id, role_name, role_key, status, del_flag) VALUES (?, ?, ?, 0, 0)`,
+				roleID, "test-role", "test_role",
+			).Error)
+			assert.NoError(t, gormDB.Exec(
+				`INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)`,
+				userID, roleID,
+			).Error)
+			// 父页面菜单 (perms='system:user:list')，子按钮 (perms='system:user:query', F 型)
+			assert.NoError(t, gormDB.Exec(
+				`INSERT INTO sys_menu (id, menu_name, parent_id, menu_type, perms, status) VALUES (?, ?, NULL, 'M', 'system:user:list', 0)`,
+				parentMenuID, "用户管理",
+			).Error)
+			assert.NoError(t, gormDB.Exec(
+				`INSERT INTO sys_menu (id, menu_name, parent_id, menu_type, perms, status) VALUES (?, ?, ?, 'F', 'system:user:query', 0)`,
+				childMenuID, "用户查询", parentMenuID,
+			).Error)
+			if grantParent {
+				assert.NoError(t, gormDB.Exec(
+					`INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)`,
+					roleID, parentMenuID,
+				).Error)
+			} else {
+				assert.NoError(t, gormDB.Exec(
+					`INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)`,
+					roleID, childMenuID,
+				).Error)
+			}
+		})
+		return coreInst, userID
+	}
+
+	// 正向：持 F 型子按钮 → 判父页面 perms = true（既有行为仍绿）
+	forwardCore, forwardUser := setup(t, false)
+	assert.True(t, checkUserPermission(forwardCore, forwardUser, "system:user:list"),
+		"正向：持 F 型子按钮权限应继承父页面权限")
+
+	// 反向：持父页面 perms → 判子按钮 perms = false（锁死反向不成立）
+	reverseCore, reverseUser := setup(t, true)
+	assert.False(t, checkUserPermission(reverseCore, reverseUser, "system:user:query"),
+		"反向：持父页面权限不应自动获得子按钮权限")
+}
+
 // TestPermissionCheck_ExactMatchStillWorks 验证精确权限匹配未被破坏
 func TestPermissionCheck_ExactMatchStillWorks(t *testing.T) {
 	userID := uuid.New().String()

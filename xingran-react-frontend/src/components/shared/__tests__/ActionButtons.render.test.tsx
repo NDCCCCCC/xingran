@@ -165,11 +165,11 @@ describe("ActionButtons — helpers", () => {
     expect(action.disabled).toBe(true);
   });
 
-  it("createDeleteAction 渲染 Popconfirm + 删除按钮", () => {
+  it("createDeleteAction 渲染 ConfirmDelete + 删除按钮（Phase 65 内部切换，无裸 Popconfirm）", () => {
     const handleDelete = vi.fn().mockResolvedValue(undefined);
     const action = createDeleteAction("id-3", handleDelete);
     const { baseElement } = renderWithProviders(<div>{action.render!()}</div>);
-    // Popconfirm 子组件渲染了带 .action-btn-link-danger className 的按钮
+    // ConfirmDelete 渲染带 .action-btn-link-danger className 的 danger 删除按钮
     expect(baseElement.querySelector(".action-btn-link-danger")).not.toBeNull();
   });
 

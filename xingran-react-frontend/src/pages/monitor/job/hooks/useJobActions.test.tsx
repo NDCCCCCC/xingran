@@ -50,7 +50,7 @@ describe("useJobActions — initial state", () => {
 describe("useJobActions — openModal / handleViewLogs", () => {
   it("openModal(undefined, form) 设新增标题 + selectedJob=null", () => {
     const { result } = renderHook(() => useJobActions(baseParams()), { wrapper: wrap });
-    const form = { setFieldsValue: vi.fn(), resetFields: vi.fn() } as any;
+    const form = { setFieldsValue: vi.fn(), resetFields: vi.fn() } as unknown;
     act(() => result.current.openModal(undefined, form));
     expect(result.current.modalVisible).toBe(true);
     expect(result.current.modalTitle).toContain("新增");
@@ -60,7 +60,7 @@ describe("useJobActions — openModal / handleViewLogs", () => {
 
   it("openModal(record, form) 设编辑标题", () => {
     const { result } = renderHook(() => useJobActions(baseParams()), { wrapper: wrap });
-    const form = { setFieldsValue: vi.fn(), resetFields: vi.fn() } as any;
+    const form = { setFieldsValue: vi.fn(), resetFields: vi.fn() } as unknown;
     act(() =>
       result.current.openModal(
         {
@@ -72,7 +72,7 @@ describe("useJobActions — openModal / handleViewLogs", () => {
           misfirePolicy: 1,
           concurrent: false,
           status: 0,
-        } as any,
+        } as unknown,
         form
       )
     );
@@ -106,7 +106,7 @@ describe("useJobActions — handleSubmit", () => {
       validateFields: vi.fn().mockResolvedValue({ jobName: "new", cron: "0 0 * * *" }),
       resetFields: vi.fn(),
       setFieldsValue: vi.fn(),
-    } as any;
+    } as unknown;
     await act(async () => {
       await result.current.handleSubmit(form);
     });
@@ -125,7 +125,7 @@ describe("useJobActions — handleSubmit", () => {
       validateFields: vi.fn().mockResolvedValue({ jobName: "edit" }),
       resetFields: vi.fn(),
       setFieldsValue: vi.fn(),
-    } as any;
+    } as unknown;
     await act(async () => {
       await result.current.handleSubmit(form);
     });
@@ -137,7 +137,7 @@ describe("useJobActions — handleSubmit", () => {
       validateFields: vi.fn().mockRejectedValue({ errorFields: [] }),
       resetFields: vi.fn(),
       setFieldsValue: vi.fn(),
-    } as any;
+    } as unknown;
     const { result } = renderHook(() => useJobActions(baseParams()), { wrapper: wrap });
     await act(async () => {
       await result.current.handleSubmit(form);

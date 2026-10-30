@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 const mockPost = vi.fn();
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ...actual, post: (...args: any[]) => mockPost(...args) };
+  return { ...actual, post: (...args: unknown[]) => mockPost(...args) };
 });
 
 import { useMenuData } from "../useMenuData";

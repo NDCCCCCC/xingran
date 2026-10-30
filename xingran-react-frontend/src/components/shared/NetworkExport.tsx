@@ -12,7 +12,7 @@ import { getAccessToken } from "@/utils/authHelpers";
 export interface NetworkExportProps {
   entityType: string; // 实体类型（用于拼接导出路径 /api/v1/network/${entityType}/export）
   entityName: string; // 实体名称（用于文件名和提示）
-  filters?: Record<string, any>; // 当前筛选条件
+  filters?: Record<string, unknown>; // 当前筛选条件
   current?: number; // 当前页码
   pageSize?: number; // 每页条数
 }
@@ -35,7 +35,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
       setExporting(true);
       try {
         const token = await getAccessToken();
-        const body: Record<string, any> = { exportMode: mode };
+        const body: Record<string, unknown> = { exportMode: mode };
 
         if (mode === "filtered") {
           // 筛选导出：带筛选条件，不分页
@@ -144,13 +144,11 @@ const NetworkExport: FC<NetworkExportProps> = ({
           onChange={(e) => setExportMode(e.target.value)}
           style={{ width: "100%" }}
         >
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space orientation="vertical" style={{ width: "100%" }}>
             <Radio value="filtered">
               筛选导出 — 按当前筛选条件导出所有匹配数据
               {Object.keys(filters).length > 0 && (
-                <span style={{ color: "var(--theme-info, #337ab0)", marginLeft: 8 }}>
-                  (已设置筛选条件)
-                </span>
+                <span style={{ color: "var(--theme-info)", marginLeft: 8 }}>(已设置筛选条件)</span>
               )}
             </Radio>
             <Radio value="currentPage">

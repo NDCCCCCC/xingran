@@ -218,7 +218,7 @@ cp configs/config.prod.yaml configs/config.yaml
 
 ### Docker 部署
 
-仓库根目录当前未提供 `docker-compose.yml`；如需容器化部署，请参考 `docs/deployment/deployment.md` 自行构建镜像。
+仓库根目录当前未提供 `docker-compose.yml`（详见 `docs/部署和运维文档.md`）；如需容器化部署，请参考该文档自行构建镜像。
 
 ### 部署前检查清单
 
@@ -234,22 +234,26 @@ cp configs/config.prod.yaml configs/config.yaml
 
 | 文档 | 涵盖内容 |
 |------|----------|
-| [项目概述和架构设计](docs/architecture/项目概述和架构设计.md) | 系统分层、模块划分、关键设计 |
-| [开发规范](docs/standards/开发规范.md) | Go/React 编码规范、状态值约定、API 约定 |
-| [API 响应规范](docs/standards/API响应规范.md) | 统一响应格式、错误码、分页 |
-| [安全和认证设计（国密）](docs/architecture/安全和认证设计（国密）.md) | JWT 双 Token、SM2/SM3/SM4 加解密、RBAC |
-| [数据库设计](docs/architecture/数据库设计.md) | 表结构、命名、迁移管理 |
-| [部署/生产部署指南](docs/deployment/deployment.md) | 生产环境 systemd 部署与密钥管理 |
-| [EXCEL_IMPORT_GUIDE](docs/guides/EXCEL_IMPORT_GUIDE.md) | Excel 批量导入指南（含工位 dept/user 关联） |
-| [cache_usage](docs/guides/cache_usage.md) | 双层缓存设计、Redis 键前缀（含 Legacy 演进附录） |
-| [RPA 系统设计方案](docs/modules/rpa/RPA系统设计方案.md) | RPA 分布式架构 |
-| [上传下载功能设计](docs/guides/上传下载功能设计.md) | 文件上传下载方案 |
-| [文档地图](docs/README.md) | docs/ 全量分类索引 |
+| [项目概述和架构设计](docs/项目概述和架构设计.md) | 系统分层、模块划分、关键设计 |
+| [开发规范](docs/开发规范.md) | Go/React 编码规范、状态值约定、API 约定 |
+| [API 响应规范](docs/API响应规范.md) | 统一响应格式、错误码、分页 |
+| [安全和认证设计（国密）](docs/安全和认证设计（国密）.md) | JWT 双 Token、SM2/SM3/SM4 加解密、RBAC |
+| [数据库设计](docs/数据库设计.md) | 表结构、命名、迁移管理 |
+| [部署和运维文档](docs/部署和运维文档.md) | 生产环境部署、监控、备份 |
+| [EXCEL_IMPORT_GUIDE](docs/EXCEL_IMPORT_GUIDE.md) | Excel 批量导入指南 |
+| [缓存架构演进说明](docs/缓存架构演进说明.md) / [cache_usage](docs/cache_usage.md) | 双层缓存设计、Redis 键前缀 |
+| [Swagger 文档实施总结](docs/Swagger文档实施总结.md) | Swagger 注解与生成流程 |
+| [统一错误处理实施总结](docs/统一错误处理实施总结.md) | 错误码与异常处理 |
+| [网络设备批量管理功能实施计划](docs/网络设备批量管理功能实施计划.md) / [网络设备连接状态机设计文档](docs/网络设备连接状态机设计文档.md) | Scrapli/SNMP/TextFSM 集成 |
+| [RPA 系统设计方案](docs/RPA系统设计方案.md) / [RPA 系统完成状态报告](docs/RPA系统完成状态报告.md) | RPA 架构与开发进度 |
+| [上传下载功能设计](docs/上传下载功能设计.md) | 文件上传下载方案 |
+| [部署/login-encryption-deployment](docs/deployment/login-encryption-deployment.md) | 登录加密部署说明 |
+| [安全/login-encryption-security](docs/security/login-encryption-security.md) | 登录加密安全设计 |
 
 ## 贡献指南
 
 1. Fork 仓库并创建特性分支：`git checkout -b feature/your-feature`
-2. 遵循 `docs/standards/开发规范.md` 编写代码（Handler-Service 模式、接口+私有实现、状态值约定）
+2. 遵循 `docs/开发规范.md` 编写代码（Handler-Service 模式、接口+私有实现、状态值约定）
 3. 提交前本地验证：
    ```bash
    go build ./...      # 后端编译

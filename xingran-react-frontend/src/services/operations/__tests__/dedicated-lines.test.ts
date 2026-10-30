@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/api", async () => {
   return {
-    post: vi.fn(async (url: string, data?: any) => ({
+    post: vi.fn(async (url: string, data?: unknown) => ({
       code: 0,
       data: { url, payload: data },
     })),
@@ -17,38 +17,38 @@ import { dedicatedLineApi } from "../dedicated-lines";
 
 describe("services/operations/dedicated-lines", () => {
   it("list", async () => {
-    const r: any = await dedicatedLineApi.list({ current: 1, pageSize: 10 });
+    const r: unknown = await dedicatedLineApi.list({ current: 1, pageSize: 10 });
     expect(r.data.url).toBe("/ops/dedicated-lines/list");
   });
 
   it("create", async () => {
-    const r: any = await dedicatedLineApi.create({ name: "L1" } as any);
+    const r: unknown = await dedicatedLineApi.create({ name: "L1" } as unknown);
     expect(r.data.url).toBe("/ops/dedicated-lines");
   });
 
   it("update", async () => {
-    const r: any = await dedicatedLineApi.update("d1", { name: "L2" });
+    const r: unknown = await dedicatedLineApi.update("d1", { name: "L2" });
     expect(r.data.url).toContain("/d1/update");
   });
 
   it("delete", async () => {
-    const r: any = await dedicatedLineApi.delete("d1");
+    const r: unknown = await dedicatedLineApi.delete("d1");
     expect(r.data.url).toContain("/d1/delete");
   });
 
   it("batchDelete", async () => {
-    const r: any = await dedicatedLineApi.batchDelete(["a"]);
+    const r: unknown = await dedicatedLineApi.batchDelete(["a"]);
     expect(r.data.url).toBe("/ops/dedicated-lines/batch");
   });
 
   it("export + import + downloadTemplate", async () => {
-    const e: any = await dedicatedLineApi.export({ current: 1, pageSize: 10 });
+    const e: unknown = await dedicatedLineApi.export({ current: 1, pageSize: 10 });
     expect(e.data.url).toBe("/ops/dedicated-lines/export");
 
-    const i: any = await dedicatedLineApi.import(new File(["x"], "dl.xlsx"));
+    const i: unknown = await dedicatedLineApi.import(new File(["x"], "dl.xlsx"));
     expect(i.data.url).toBe("/ops/dedicated-lines/import");
 
-    const t: any = await dedicatedLineApi.downloadTemplate();
+    const t: unknown = await dedicatedLineApi.downloadTemplate();
     expect(t.data.url).toBe("/ops/dedicated-lines/template");
   });
 

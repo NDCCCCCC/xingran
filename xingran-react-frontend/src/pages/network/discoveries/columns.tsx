@@ -1,25 +1,18 @@
 /**
  * Device Discovery Table Columns
  * 设备发现表格列定义
+ *
+ * Phase 67 T1 迁移收窄：操作列整体挪至页面 rowActions（查看结果 + createDeleteAction
+ * → ConfirmDelete）；getSortOrder 手工视觉与删除 confirm 块删除——排序视觉/确认
+ * 由 antd 原生受控排序与 ConfirmDelete 唯一入口承接。其余列逐字未动。
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Tag, Progress, Modal } from "antd";
-import { EyeOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Tag, Progress } from "antd";
 import type { DeviceDiscovery, NetworkDevice } from "@/types";
 import { DISCOVERY_TYPE_OPTIONS, renderStatusTag } from "./constants";
-import ActionButtons from "@/components/shared/ActionButtons";
 
-export interface DiscoveryColumnsParams {
-  handleViewResult: (record: DeviceDiscovery) => void;
-  handleDelete: (id: string) => Promise<void>;
-  /** 由 useServerSort 注入,返回字段当前排序方向 */
-  getSortOrder?: (field: string) => "ascend" | "descend" | null;
-}
-
-export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType<DeviceDiscovery> {
-  const { handleViewResult, handleDelete, getSortOrder } = params;
-
+export function getDiscoveryColumns(): ColumnsType<DeviceDiscovery> {
   return [
     {
       title: "任务名称",
@@ -27,7 +20,6 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       key: "taskName",
       width: 200,
       sorter: true,
-      sortOrder: getSortOrder?.("taskName"),
     },
     {
       title: "发现类型",
@@ -35,7 +27,6 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       key: "discoveryType",
       width: 100,
       sorter: true,
-      sortOrder: getSortOrder?.("discoveryType"),
       render: (type: string) => {
         const option = DISCOVERY_TYPE_OPTIONS.find((o) => o.value === type);
         return <Tag color="blue">{option?.label}</Tag>;
@@ -72,7 +63,6 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       key: "status",
       width: 100,
       sorter: true,
-      sortOrder: getSortOrder?.("status"),
       render: (status: string) =>
         renderStatusTag(status as "pending" | "running" | "completed" | "failed"),
     },
@@ -82,7 +72,6 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       key: "startedAt",
       width: 180,
       sorter: true,
-      sortOrder: getSortOrder?.("startedAt"),
     },
     {
       title: "完成时间",
@@ -90,40 +79,6 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       key: "completedAt",
       width: 180,
       sorter: true,
-      sortOrder: getSortOrder?.("completedAt"),
-    },
-    {
-      title: "操作",
-      key: "action",
-      fixed: "right",
-      width: 180,
-      render: (_, record) => {
-        const actions = [
-          {
-            key: "view-result",
-            label: "查看结果",
-            icon: <EyeOutlined />,
-            onClick: () => handleViewResult(record),
-            disabled: record.status === "pending",
-          },
-          {
-            key: "delete",
-            label: "删除",
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
-              Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
-              });
-            },
-          },
-        ];
-        return <ActionButtons actions={actions} />;
-      },
     },
   ];
 }

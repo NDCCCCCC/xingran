@@ -11,8 +11,6 @@ import {
   Table,
   Button,
   Space,
-  Input,
-  Select,
   DatePicker,
   Row,
   Col,
@@ -20,8 +18,9 @@ import {
   Modal,
   Typography,
   Form,
-  App,
 } from "antd";
+// Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -30,7 +29,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 
-import type { OperLog, LoginLog } from "./types";
+import type { OperLog, LoginLog, SearchFormState } from "./types";
 import { BUSINESS_TYPE_OPTIONS, LOG_STATUS_OPTIONS, LOGIN_STATUS_OPTIONS } from "./constants";
 import { formatLocalTime, renderLogStatusTag } from "./utils";
 import { getOperLogColumns, getLoginLogColumns } from "./columns";
@@ -38,6 +37,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import type { BaseResponse, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { confirmDelete } from "@/components/shared";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -45,8 +45,10 @@ const { RangePicker } = DatePicker;
 // ==================== 数据加载函数 ====================
 
 // 加载操作日志
-const loadOperLogs = async (params: any): Promise<{ list: OperLog[]; total: number }> => {
-  const requestParams: any = {
+const loadOperLogs = async (
+  params: SearchFormState & { current?: number; pageSize?: number }
+): Promise<{ list: OperLog[]; total: number }> => {
+  const requestParams: Record<string, unknown> = {
     ...params,
   };
 
@@ -66,8 +68,10 @@ const loadOperLogs = async (params: any): Promise<{ list: OperLog[]; total: numb
 };
 
 // 加载登录日志
-const loadLoginLogs = async (params: any): Promise<{ list: LoginLog[]; total: number }> => {
-  const requestParams: any = {
+const loadLoginLogs = async (
+  params: SearchFormState & { current?: number; pageSize?: number }
+): Promise<{ list: LoginLog[]; total: number }> => {
+  const requestParams: Record<string, unknown> = {
     ...params,
   };
 
@@ -89,7 +93,6 @@ const loadLoginLogs = async (params: any): Promise<{ list: LoginLog[]; total: nu
 // ==================== 主组件 ====================
 
 const LogMonitor: React.FC = () => {
-  const { message } = App.useApp();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = usePersistedStateController<"oper" | "login">({
@@ -174,25 +177,23 @@ const LogMonitor: React.FC = () => {
     setDetailModalVisible(true);
   }, []);
 
-  // 清空日志
-  const handleClearLogs = useCallback(async () => {
-    Modal.confirm({
+  // 清空日志（68.1-T4 §1.9 非删除破坏性变体）
+  const handleClearLogs = useCallback(() => {
+    confirmDelete({
       title: "确认清空",
-      content: `确定要清空${activeTab === "oper" ? "操作" : "登录"}日志吗？此操作不可恢复！`,
-      onOk: async () => {
-        try {
-          const endpoint =
-            activeTab === "oper" ? "/monitor/oper-logs/clear" : "/monitor/login-logs/clear";
-          await post<BaseResponse<any>>(endpoint, {});
-          message.success("清空成功");
-          currentManager.handleRefresh();
-        } catch (error) {
-          console.error("清空日志失败:", error);
-          message.error("清空失败");
-        }
+      target: activeTab === "oper" ? "全部操作日志" : "全部登录日志",
+      actionLabel: "清空",
+      actionContext: "清空日志",
+      contentText: "将{target}，操作不可恢复，是否继续？",
+      successText: "已清空日志",
+      onDelete: async () => {
+        const endpoint =
+          activeTab === "oper" ? "/monitor/oper-logs/clear" : "/monitor/login-logs/clear";
+        await post<BaseResponse<unknown>>(endpoint, {});
+        currentManager.handleRefresh();
       },
     });
-  }, [activeTab, currentManager, message]);
+  }, [activeTab, currentManager]);
 
   // 刷新
   const handleRefresh = useCallback(() => {
@@ -244,12 +245,12 @@ const LogMonitor: React.FC = () => {
               <Row gutter={16}>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="title">
-                    <Input placeholder="操作模块" allowClear className="user-form-input" />
+                    <AppInput placeholder="操作模块" allowClear className="user-form-input" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="businessType">
-                    <Select
+                    <AppSelect
                       placeholder="业务类型"
                       allowClear
                       className="user-form-input"
@@ -261,7 +262,7 @@ const LogMonitor: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="status">
-                    <Select
+                    <AppSelect
                       placeholder="操作状态"
                       allowClear
                       className="user-form-input"
@@ -273,7 +274,7 @@ const LogMonitor: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="operName">
-                    <Input placeholder="操作人员" allowClear className="user-form-input" />
+                    <AppInput placeholder="操作人员" allowClear className="user-form-input" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={16} md={6}>
@@ -287,14 +288,31 @@ const LogMonitor: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Space>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    <Button
+                      type="primary"
+                      icon={<SearchOutlined />}
+                      onClick={handleSearch}
+                      aria-label="搜索"
+                      title="搜索"
+                    >
                       搜索
                     </Button>
                     <Button onClick={handleReset}>重置</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={handleRefresh}
+                      aria-label="刷新"
+                      title="刷新"
+                    >
                       刷新
                     </Button>
-                    <Button danger icon={<DeleteOutlined />} onClick={handleClearLogs}>
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={handleClearLogs}
+                      aria-label="清空日志"
+                      title="清空日志"
+                    >
                       清空
                     </Button>
                   </Space>
@@ -311,17 +329,17 @@ const LogMonitor: React.FC = () => {
               <Row gutter={16}>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="userName">
-                    <Input placeholder="用户名称" allowClear className="user-form-input" />
+                    <AppInput placeholder="用户名称" allowClear className="user-form-input" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="ipAddr">
-                    <Input placeholder="IP地址" allowClear className="user-form-input" />
+                    <AppInput placeholder="IP地址" allowClear className="user-form-input" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Form.Item name="status">
-                    <Select
+                    <AppSelect
                       placeholder="登录状态"
                       allowClear
                       className="user-form-input"
@@ -342,14 +360,31 @@ const LogMonitor: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Space>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    <Button
+                      type="primary"
+                      icon={<SearchOutlined />}
+                      onClick={handleSearch}
+                      aria-label="搜索"
+                      title="搜索"
+                    >
                       搜索
                     </Button>
                     <Button onClick={handleReset}>重置</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={handleRefresh}
+                      aria-label="刷新"
+                      title="刷新"
+                    >
                       刷新
                     </Button>
-                    <Button danger icon={<DeleteOutlined />} onClick={handleClearLogs}>
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={handleClearLogs}
+                      aria-label="清空日志"
+                      title="清空日志"
+                    >
                       清空
                     </Button>
                   </Space>
@@ -429,6 +464,8 @@ const LogMonitor: React.FC = () => {
       {/* 详情模态框 */}
       <Modal
         title="日志详情"
+        mask={{ closable: false }}
+        keyboard={false}
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={null}
@@ -526,10 +563,13 @@ const LogMonitor: React.FC = () => {
             {(selectedLog as OperLog).operParam && (
               <>
                 <Title level={5}>请求参数</Title>
-                <Input.TextArea
+                <AppTextArea
                   value={(selectedLog as OperLog).operParam}
                   rows={10}
                   readOnly
+                  // PITFALLS 1.2：只读展示区（受控 value、无 onChange）——契约默认 allowClear
+                  // 会渲染一个点了既清不掉内容也无副作用的清空按钮，属纯 UI 倒退，显式关闭。
+                  allowClear={false}
                   className="mb-4"
                 />
               </>
@@ -538,10 +578,12 @@ const LogMonitor: React.FC = () => {
             {(selectedLog as OperLog).errorMessage && (
               <>
                 <Title level={5}>错误信息</Title>
-                <Input.TextArea
+                <AppTextArea
                   value={(selectedLog as OperLog).errorMessage}
                   rows={5}
                   readOnly
+                  // 同上：只读展示区，显式关闭契约默认 allowClear
+                  allowClear={false}
                   className="text-red-500"
                 />
               </>

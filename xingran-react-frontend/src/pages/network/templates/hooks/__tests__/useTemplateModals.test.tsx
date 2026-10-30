@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { App as AntdApp, Form } from "antd";
+import { App as AntdApp } from "antd";
 import type { ReactElement, ReactNode } from "react";
 
 vi.mock("@/lib/api", async () => {
@@ -14,32 +14,8 @@ vi.mock("@/lib/api", async () => {
 import { useTemplateModals } from "../useTemplateModals";
 import { createApiMock } from "@/test/utils/createApiMock";
 
-function HookWrapper() {
-  const { result } = useTemplateModalsTest();
-  return (
-    <span data-testid="state">
-      {JSON.stringify({
-        editing: result.editingTemplate,
-        editVisible: result.editModalVisible,
-        previewVisible: result.previewVisible,
-        previewContent: result.previewContent,
-      })}
-    </span>
-  );
-}
-
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
-}
-
-interface UseTemplateModalsTestHook {
-  result: ReturnType<typeof useTemplateModals>;
-}
-
-// Re-export hook for direct testing via wrapper that passes an App
-function useTemplateModalsTest(): UseTemplateModalsTestHook {
-  const r = useTemplateModals();
-  return { result: r };
 }
 
 describe("useTemplateModals", () => {
@@ -61,11 +37,11 @@ describe("useTemplateModals", () => {
 
   it("openModal 有 record + editForm → 编辑模式", () => {
     const { result } = renderHook(() => useTemplateModals(), { wrapper });
-    const record = { id: "t1", name: "模板1", content: "abc" } as any;
+    const record = { id: "t1", name: "模板1", content: "abc" } as unknown;
     const fakeForm = {
       setFieldsValue: vi.fn(),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     act(() => result.current.openModal(record, fakeForm));
     expect(result.current.editingTemplate).toEqual(record);
     expect(result.current.editModalVisible).toBe(true);
@@ -81,15 +57,15 @@ describe("useTemplateModals", () => {
 
   it("handleCreate: 编辑模式 → POST /templates/{id}/update", async () => {
     const api = createApiMock("/network/templates/t1/update");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
-    const editingTemplate = { id: "t1", name: "old", content: "old" } as any;
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
+    const editingTemplate = { id: "t1", name: "old", content: "old" } as unknown;
     const { result } = renderHook(() => useTemplateModals(), { wrapper });
 
     // Stub a FormInstance that returns valid form values
     const fakeForm = {
       validateFields: vi.fn().mockResolvedValue({ name: "new", content: "new" }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     await act(async () => {
       await result.current.handleCreate(editingTemplate, fakeForm, vi.fn());
     });
@@ -98,12 +74,12 @@ describe("useTemplateModals", () => {
 
   it("handleCreate: 新建模式 → POST /templates", async () => {
     const api = createApiMock("/network/templates");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const { result } = renderHook(() => useTemplateModals(), { wrapper });
     const fakeForm = {
       validateFields: vi.fn().mockResolvedValue({ name: "new", content: "c" }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     await act(async () => {
       await result.current.handleCreate(null, fakeForm, vi.fn());
     });
@@ -112,14 +88,14 @@ describe("useTemplateModals", () => {
 
   it("handleCreate: 校验失败 (errorFields) → 不调 API", async () => {
     const api = createApiMock("/network/templates");
-    api.endpoint.mockResolvedValueOnce({ code: 0 } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0 } as unknown);
     const { result } = renderHook(() => useTemplateModals(), { wrapper });
     const fakeForm = {
       validateFields: vi
         .fn()
         .mockRejectedValue({ errorFields: [{ name: "name", errors: ["required"] }] }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     await act(async () => {
       await result.current.handleCreate(null, fakeForm, vi.fn());
     });
@@ -128,7 +104,7 @@ describe("useTemplateModals", () => {
 
   it("handlePreview: 成功 → previewVisible=true + 写入 content", async () => {
     const api = createApiMock("/network/templates/t1/preview");
-    api.endpoint.mockResolvedValueOnce({ code: 0, data: { content: "rendered" } } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0, data: { content: "rendered" } } as unknown);
     const { result } = renderHook(() => useTemplateModals(), { wrapper });
     await act(async () => {
       await result.current.handlePreview("t1");
@@ -149,7 +125,7 @@ describe("useTemplateModals", () => {
 
   it("handleGetVariables: 成功 → 打开变量 modal + 写入变量", async () => {
     const api = createApiMock("/network/templates/t1/variables");
-    api.endpoint.mockResolvedValueOnce({ code: 0, data: { variables: { a: 1 } } } as any);
+    api.endpoint.mockResolvedValueOnce({ code: 0, data: { variables: { a: 1 } } } as unknown);
     const { result } = renderHook(() => useTemplateModals(), { wrapper });
     await act(async () => {
       await result.current.handleGetVariables("t1");

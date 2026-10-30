@@ -43,10 +43,7 @@ export const StatisticsDrawer: React.FC<StatisticsDrawerProps> = ({
               suffix="%"
               styles={{
                 content: {
-                  color:
-                    statistics.readRate >= 50
-                      ? "var(--theme-success, #3f8600)"
-                      : "var(--theme-error, #cf1322)",
+                  color: statistics.readRate >= 50 ? "var(--theme-success)" : "var(--theme-error)",
                 },
               }}
             />

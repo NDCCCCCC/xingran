@@ -4,7 +4,8 @@
 
 import type { FC } from "react";
 import type { RadioChangeEvent } from "antd";
-import { Radio, Select, Space, Checkbox } from "antd";
+import { Radio, Space, Checkbox } from "antd";
+import { AppSelect } from "@/components/ui";
 import type { CronFieldConfig, PeriodType } from "../constants";
 
 interface WeekFieldProps {
@@ -42,8 +43,8 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
               <span>指定:</span>
               <Checkbox.Group
                 value={value.specific || []}
-                onChange={(values: number[]) =>
-                  onChange({ ...value, periodType: "specific", specific: values })
+                onChange={(values: unknown) =>
+                  onChange({ ...value, periodType: "specific", specific: values as number[] })
                 }
                 style={{ marginLeft: 24, display: "flex", flexWrap: "wrap", gap: "8px" }}
               >
@@ -60,35 +61,30 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
             <Space align="center" wrap>
               <span>周期:</span>
               <span>从</span>
-              <Select
+              <AppSelect
                 style={{ width: 100 }}
                 value={value.cycleStart ?? 1}
-                onChange={(cycleStart: number) =>
-                  onChange({ ...value, periodType: "cycle", cycleStart })
+                onChange={(cycleStart: unknown) =>
+                  onChange({ ...value, periodType: "cycle", cycleStart: cycleStart as number })
                 }
-                onSearch={() => {}}
-              >
-                {WEEK_OPTIONS.map((opt) => (
-                  <Select.Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={WEEK_OPTIONS}
+              />
               <span>开始，每</span>
-              <Select
+              <AppSelect
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
-                onChange={(cycleInterval: number) =>
-                  onChange({ ...value, periodType: "cycle", cycleInterval })
+                onChange={(cycleInterval: unknown) =>
+                  onChange({
+                    ...value,
+                    periodType: "cycle",
+                    cycleInterval: cycleInterval as number,
+                  })
                 }
-                onSearch={() => {}}
-              >
-                {Array.from({ length: 7 }, (_, i) => i + 1).map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {v}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={Array.from({ length: 7 }, (_, i) => i + 1).map((v) => ({
+                  value: v,
+                  label: v,
+                }))}
+              />
               <span>周</span>
             </Space>
           </Radio>
@@ -97,35 +93,23 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
             <Space align="center" wrap>
               <span>范围:</span>
               <span>从</span>
-              <Select
+              <AppSelect
                 style={{ width: 100 }}
                 value={value.rangeStart ?? 1}
-                onChange={(rangeStart: number) =>
-                  onChange({ ...value, periodType: "range", rangeStart })
+                onChange={(rangeStart: unknown) =>
+                  onChange({ ...value, periodType: "range", rangeStart: rangeStart as number })
                 }
-                onSearch={() => {}}
-              >
-                {WEEK_OPTIONS.map((opt) => (
-                  <Select.Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={WEEK_OPTIONS}
+              />
               <span>到</span>
-              <Select
+              <AppSelect
                 style={{ width: 100 }}
                 value={value.rangeEnd ?? 7}
-                onChange={(rangeEnd: number) =>
-                  onChange({ ...value, periodType: "range", rangeEnd })
+                onChange={(rangeEnd: unknown) =>
+                  onChange({ ...value, periodType: "range", rangeEnd: rangeEnd as number })
                 }
-                onSearch={() => {}}
-              >
-                {WEEK_OPTIONS.map((opt) => (
-                  <Select.Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={WEEK_OPTIONS}
+              />
             </Space>
           </Radio>
         </Space>

@@ -10,11 +10,11 @@ vi.mock("@/lib/api", async () => {
 });
 
 import { renderPageWithEndpoints } from "@/test/utils/renderPage";
-import WorkorderOrders from "../workorder/orders";
+import "../workorder/orders";
 import CachePage from "../monitor/cache";
 import AdConfigsPage from "../ad-domain/configs";
 
-async function openNewModal(
+async function _openNewModal(
   page: React.ReactElement,
   endpoints: Record<string, unknown>,
   btnRegex: RegExp

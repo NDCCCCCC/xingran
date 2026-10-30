@@ -129,7 +129,7 @@ describe("useExecutionModals — handleExecuteByTemplate", () => {
       resetFields: vi.fn(),
     };
     await act(async () => {
-      await result.current.handleExecuteByTemplate(form as any);
+      await result.current.handleExecuteByTemplate(form as unknown);
     });
     expect(api.endpoint).toHaveBeenCalledWith("/network/executions/template/execute", {
       executionName: "exec1",
@@ -151,7 +151,7 @@ describe("useExecutionModals — handleExecuteByTemplate", () => {
     };
     const { result } = renderHook(() => useExecutionModals(baseParams()), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleExecuteByTemplate(form as any);
+      await result.current.handleExecuteByTemplate(form as unknown);
     });
     expect(api.endpoint).not.toHaveBeenCalled();
   });
@@ -165,7 +165,7 @@ describe("useExecutionModals — handleExecuteByTemplate", () => {
     };
     const { result } = renderHook(() => useExecutionModals(baseParams()), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleExecuteByTemplate(form as any);
+      await result.current.handleExecuteByTemplate(form as unknown);
     });
     expect(api.endpoint).toHaveBeenCalled();
   });
@@ -207,7 +207,9 @@ describe("useExecutionModals — handleViewDetail / handleViewOutput", () => {
   });
 
   it("handleViewOutput 调 Modal.info 带 <pre> output", () => {
-    const infoSpy = vi.spyOn(Modal, "info").mockImplementation(() => ({ destroy: vi.fn() }) as any);
+    const infoSpy = vi
+      .spyOn(Modal, "info")
+      .mockImplementation(() => ({ destroy: vi.fn() }) as unknown);
     const { result } = renderHook(() => useExecutionModals(baseParams()), { wrapper: wrap });
     act(() => result.current.handleViewOutput("hello world"));
     expect(infoSpy).toHaveBeenCalledTimes(1);

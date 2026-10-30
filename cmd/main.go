@@ -70,7 +70,7 @@ func setTimeZone() {
 	time.Local = tz
 }
 
-// @title Xingran Next API
+// @title XingRan Next API
 // @version 1.0
 // @description 企业级权限管理系统 API
 // @termsOfService https://github.com/xingran-next/xingran-next
@@ -104,7 +104,13 @@ func main() {
 	allowedOrigins := cfg.Server.AllowedOrigins
 	// D-02: Fail-fast in production if no origins configured (empty list or only "*")
 	if len(allowedOrigins) == 0 {
-		applogger.Fatalf("server.allowed_origins must be configured in production: at least one origin is required")
+		if cfg.Server.Mode == "release" {
+			applogger.Fatalf("server.allowed_origins must be configured in production: at least one origin is required")
+		}
+		// 非 release(开发/测试): 恢复历史 dev 兜底行为(通配放行 + 告警),
+		// 不要求 dev config.yaml 显式配置 allowed_origins。
+		allowedOrigins = []string{"*"}
+		applogger.Warnf("server.allowed_origins not configured — falling back to '*' wildcard (dev mode). Configure specific origins in production.")
 	}
 	// Warn if only wildcard is configured (still allows, but warns about insecure setup)
 	for _, origin := range allowedOrigins {
@@ -182,6 +188,13 @@ func setupGinEngine(cfg *config.Config) *gin.Engine {
 	engine.Use(middleware.Logger())
 	engine.Use(middleware.Recovery())
 
+	// 子路径剥离:直连 :9000 时浏览器按 Vite base 发 /xingran/... 路径到后端,
+	// 这里把后端路由前缀上的 /xingran 剥掉(与 nginx 剥前缀部署语义一致)。
+	// 注意 gin 在中间件之前就完成了路由匹配,真正让 /xingran/api/... 命中
+	// engine.Group("/api/v1") 的是 startServer 里的 StripSubPathHandler;
+	// 本中间件保证 handler 看到的也是剥掉前缀的路径。
+	engine.Use(server.StripSubPathMiddleware())
+
 	// CORS配置：生产环境应该配置具体的域名列表
 	// 开发环境使用 "*" 允许所有来源
 	engine.Use(middleware.Cors([]string{"*"}))
@@ -243,7 +256,7 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, 
 	// 否则 /assets/*filepath 可能会匹配到 /assets/... 的 API 路径
 	engine.GET("/assets/*filepath", server.ServeFrontend)
 	engine.GET("/index.html", server.ServeFrontend)
-	engine.GET("/", server.ServeFrontend)
+	engine.GET("/", server.ServeRoot)
 
 	// SPA catch-all：所有未匹配的路由返回 index.html
 	// 这确保 /login, /dashboard, /system/users 等客户端路由正常工作
@@ -256,8 +269,11 @@ func startServer(cfg *config.Config, engine *gin.Engine) *http.Server {
 	// Phase 62-DBG-01: 加 WriteTimeout=75s（前端 axios=60s，后端稍长以让前端先超时，
 	// 同时避免向已关闭 socket 长时间 block；为 cache-miss 长查询场景提供 fast-fail 路径）。
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      engine,
+		Addr: fmt.Sprintf(":%d", cfg.Server.Port),
+		// StripSubPathHandler 在进入 gin 路由匹配之前剥掉后端路由路径上的
+		// /xingran 前缀(直连 :9000 时前端按 Vite base 发 /xingran/api/...)。
+		// 必须在 gin 之外生效 —— gin 先按 URL.Path 查路由树,再执行中间件。
+		Handler:      server.StripSubPathHandler(engine),
 		WriteTimeout: 75 * time.Second,
 		ReadTimeout:  75 * time.Second,
 	}

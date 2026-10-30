@@ -99,7 +99,7 @@ export function renderPageWithEndpoints(
     handles[endpoint] = handle;
   }
   // 内置形状端点:显式 endpoints 未覆盖时按语义注册(树=数组/统计=对象)
-  const routeCall = (url: string): unknown =>
+  const _routeCall = (url: string): unknown =>
     options.endpoints?.[url] ?? COMMON_ENDPOINT_SHAPES[url] ?? shapeForUrl(url);
   for (const [url, response] of Object.entries(COMMON_ENDPOINT_SHAPES)) {
     if (options.endpoints?.[url] === undefined) {

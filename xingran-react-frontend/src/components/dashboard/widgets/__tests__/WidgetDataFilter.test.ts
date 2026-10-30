@@ -31,19 +31,21 @@ describe("dashboard/widgets/WidgetDataFilter", () => {
   });
 
   it("applyWidgetDataFilter 未启用 → 返回原 params", () => {
-    const widget: any = { dataFilter: { enabled: false, filterType: "dept", filterConfig: {} } };
+    const widget: unknown = {
+      dataFilter: { enabled: false, filterType: "dept", filterConfig: {} },
+    };
     const result = applyWidgetDataFilter(widget, { x: 1 });
     expect(result).toEqual({ x: 1 });
   });
 
   it("applyWidgetDataFilter 无 dataFilter → 原 params", () => {
-    const widget: any = {};
+    const widget: unknown = {};
     const result = applyWidgetDataFilter(widget, { x: 1 });
     expect(result).toEqual({ x: 1 });
   });
 
   it("applyWidgetDataFilter dept 过滤", () => {
-    const widget: any = {
+    const widget: unknown = {
       dataFilter: {
         enabled: true,
         filterType: "dept",
@@ -55,7 +57,7 @@ describe("dashboard/widgets/WidgetDataFilter", () => {
   });
 
   it("applyWidgetDataFilter dept 默认 field", () => {
-    const widget: any = {
+    const widget: unknown = {
       dataFilter: {
         enabled: true,
         filterType: "dept",
@@ -67,7 +69,7 @@ describe("dashboard/widgets/WidgetDataFilter", () => {
   });
 
   it("applyWidgetDataFilter user 过滤", () => {
-    const widget: any = {
+    const widget: unknown = {
       dataFilter: {
         enabled: true,
         filterType: "user",
@@ -79,7 +81,7 @@ describe("dashboard/widgets/WidgetDataFilter", () => {
   });
 
   it("applyWidgetDataFilter custom 合并 filterConfig", () => {
-    const widget: any = {
+    const widget: unknown = {
       dataFilter: {
         enabled: true,
         filterType: "custom",
@@ -91,7 +93,7 @@ describe("dashboard/widgets/WidgetDataFilter", () => {
   });
 
   it("applyWidgetDataFilter 未知 filterType → 原 params", () => {
-    const widget: any = {
+    const widget: unknown = {
       dataFilter: {
         enabled: true,
         filterType: "unknown",
@@ -104,8 +106,8 @@ describe("dashboard/widgets/WidgetDataFilter", () => {
 
   it("user 为 null → 原 params", async () => {
     const authStore = await import("@/store/authStore");
-    vi.mocked(authStore.useAuthStore.getState).mockReturnValueOnce({ user: null } as any);
-    const widget: any = {
+    vi.mocked(authStore.useAuthStore.getState).mockReturnValueOnce({ user: null } as unknown);
+    const widget: unknown = {
       dataFilter: {
         enabled: true,
         filterType: "dept",

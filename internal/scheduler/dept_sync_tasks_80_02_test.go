@@ -99,8 +99,8 @@ func TestDst8002_PoolSeam(t *testing.T) {
 	assert.NotNil(t, pool)
 }
 
-// TestDst8002_GetDefaultADConfigIDForDept 空 config / 有 config 两分支。
-func TestDst8002_GetDefaultADConfigIDForDept(t *testing.T) {
+// TestDst8002_ResolveADConfigIDFromParams 空 config / 有 config 两分支。
+func TestDst8002_ResolveADConfigIDFromParams(t *testing.T) {
 	db := newSchedDB8002_DST(t)
 	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_ad_config (
 		id TEXT PRIMARY KEY,
@@ -111,14 +111,14 @@ func TestDst8002_GetDefaultADConfigIDForDept(t *testing.T) {
 	)`).Error)
 
 	// 分支 1:空表
-	_, err := getDefaultADConfigIDForDept(context.Background(), db, nil)
+	_, err := resolveADConfigIDFromParams(context.Background(), db, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "未找到启用的AD配置")
 
 	// 分支 2:有启用配置
 	require.NoError(t, db.Exec(`INSERT INTO sys_ad_config (id, config_name, status) VALUES (?, ?, ?)`,
 		"cfg-dst", "测试配置", models.ADConfigStatusEnabled).Error)
-	id, err := getDefaultADConfigIDForDept(context.Background(), db, nil)
+	id, err := resolveADConfigIDFromParams(context.Background(), db, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "cfg-dst", id)
 }
@@ -293,27 +293,27 @@ func TestDst8002_HandlerDispatch(t *testing.T) {
 // 缺口补足 Round 2 — 参数键分支 / 查询错误分支 / 同步失败分支
 // ============================================================================
 
-// TestDst8002_GetDefaultADConfigIDForDept_ParamKeys adConfigId 参数键分支。
-func TestDst8002_GetDefaultADConfigIDForDept_ParamKeys(t *testing.T) {
+// TestDst8002_ResolveADConfigIDFromParams_ParamKeys adConfigId 参数键分支。
+func TestDst8002_ResolveADConfigIDFromParams_ParamKeys(t *testing.T) {
 	db := newSchedDB8002_DST(t)
 	ctx := context.Background()
 
 	// adConfigId 命中
-	id, err := getDefaultADConfigIDForDept(ctx, db, map[string]any{"adConfigId": "via-adcfg"})
+	id, err := resolveADConfigIDFromParams(ctx, db, map[string]any{"adConfigId": "via-adcfg"})
 	require.NoError(t, err)
 	assert.Equal(t, "via-adcfg", id)
 
 	// configId 优先
-	id, err = getDefaultADConfigIDForDept(ctx, db, map[string]any{"configId": "a", "adConfigId": "b"})
+	id, err = resolveADConfigIDFromParams(ctx, db, map[string]any{"configId": "a", "adConfigId": "b"})
 	require.NoError(t, err)
 	assert.Equal(t, "a", id)
 }
 
-// TestDst8002_GetDefaultADConfigIDForDept_QueryError 查询非 NotFound 错误分支(表缺失)。
-func TestDst8002_GetDefaultADConfigIDForDept_QueryError(t *testing.T) {
+// TestDst8002_ResolveADConfigIDFromParams_QueryError 查询非 NotFound 错误分支(表缺失)。
+func TestDst8002_ResolveADConfigIDFromParams_QueryError(t *testing.T) {
 	db := newSchedDB8002_DST(t) // 不建 sys_ad_config 表
 
-	_, err := getDefaultADConfigIDForDept(context.Background(), db, nil)
+	_, err := resolveADConfigIDFromParams(context.Background(), db, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "查询AD配置失败")
 }

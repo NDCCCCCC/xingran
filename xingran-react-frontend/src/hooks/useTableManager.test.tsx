@@ -211,6 +211,31 @@ describe("useTableManager", () => {
     h.unmount();
   });
 
+  // UAT FAIL-1（Phase 75）：keepPage 语义——mount 恢复持久化页码的首载路径，
+  // 不得把 current 硬编码回写为 1（默认行为仍回第 1 页，向后兼容）。
+  it("applyFilters({ keepPage: true }) 保留当前页码加载且不覆写持久化 current", async () => {
+    sessionStorage.setItem("xingran_table_state_system_user_current", "2");
+    const loadFunction = vi.fn().mockResolvedValue({ list: [], total: 0 });
+    const h = createHarness(loadFunction);
+    // mount 时 usePersistedStateController 已从 sessionStorage 恢复 current=2
+    expect(h.api().current).toBe(2);
+
+    act(() => {
+      h.api().searchForm.setFieldsValue({ username: "alice" });
+    });
+    await act(async () => {
+      h.api().applyFilters({ deptId: "d1" }, { keepPage: true });
+    });
+
+    const call = loadFunction.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(call.current).toBe(2); // 保留恢复页码
+    expect(call.username).toBe("alice"); // filters 合并照常
+    expect(call.deptId).toBe("d1");
+    expect(h.api().current).toBe(2);
+    expect(sessionStorage.getItem("xingran_table_state_system_user_current")).toBe("2"); // 未被覆写
+    h.unmount();
+  });
+
   it("首次 loadData 触发 lazy sessionStorage 读取并回填表单", async () => {
     // MISC-03: filters 是惰性初始化的——mount 时不再同步读 sessionStorage。
     // 首次 loadData 触发 readInitialFilters，restore 到表单 + 走 persistFilters 路径。

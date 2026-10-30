@@ -7,16 +7,22 @@ import type { ColumnsType } from "antd/es/table";
 import type { JobLog } from "../types";
 import { formatDateTime } from "@/utils/datetime";
 import { formatDuration, renderExceptionInfo } from "../utils";
-import { createSorter } from "@/utils/tableHelpers";
 
-export function getJobLogColumns(): ColumnsType<JobLog> {
+interface GetJobLogColumnsParams {
+  /** 服务端排序受控箭头（字段名对齐后端 jobLogAllowedSortFields；startTime 列映射 createdAt） */
+  getSortOrder: (field: string) => "ascend" | "descend" | null;
+}
+
+export function getJobLogColumns(params: GetJobLogColumnsParams): ColumnsType<JobLog> {
+  const { getSortOrder } = params;
   return [
     {
       title: "执行时间",
       dataIndex: "startTime",
       key: "startTime",
       width: 180,
-      sorter: createSorter<JobLog>("startTime", "date"),
+      sorter: true,
+      sortOrder: getSortOrder("startTime"),
       render: (text: string) => formatDateTime(text),
     },
     {
@@ -24,7 +30,6 @@ export function getJobLogColumns(): ColumnsType<JobLog> {
       dataIndex: "duration",
       key: "duration",
       width: 100,
-      sorter: createSorter<JobLog>("duration", "number"),
       render: formatDuration,
     },
     {
@@ -33,14 +38,14 @@ export function getJobLogColumns(): ColumnsType<JobLog> {
       key: "jobMessage",
       width: 200,
       ellipsis: true,
-      sorter: createSorter<JobLog>("jobMessage", "string"),
     },
     {
       title: "执行状态",
       dataIndex: "status",
       key: "status",
       width: 100,
-      sorter: createSorter<JobLog>("status", "number"),
+      sorter: true,
+      sortOrder: getSortOrder("status"),
       render: (status: number) => (
         <Tag color={status === 0 ? "success" : "error"}>{status === 0 ? "成功" : "失败"}</Tag>
       ),
@@ -50,7 +55,6 @@ export function getJobLogColumns(): ColumnsType<JobLog> {
       dataIndex: "exceptionInfo",
       key: "exceptionInfo",
       ellipsis: true,
-      sorter: createSorter<JobLog>("exceptionInfo", "string"),
       render: renderExceptionInfo,
     },
   ];

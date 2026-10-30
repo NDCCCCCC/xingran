@@ -8,7 +8,7 @@ import type { ReactElement, ReactNode } from "react";
 
 vi.mock("@/lib/api", async () => {
   return {
-    post: vi.fn(async (url: string, data?: any) => ({ data: { url, payload: data } })),
+    post: vi.fn(async (url: string, data?: unknown) => ({ data: { url, payload: data } })),
   };
 });
 
@@ -22,7 +22,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 describe("pages/network/command/hooks/useCommandModals", () => {
   beforeEach(() => {
     vi.mocked(post).mockReset();
-    vi.mocked(post).mockResolvedValue({ data: {} } as any);
+    vi.mocked(post).mockResolvedValue({ data: {} } as unknown);
   });
 
   it("返回两个函数", () => {
@@ -35,7 +35,7 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     const validateFields = vi.fn(async () => ({ command: "show version" }));
     const resetFields = vi.fn();
     const onSuccess = vi.fn();
-    const form: any = { validateFields, resetFields };
+    const form: unknown = { validateFields, resetFields };
 
     const { result } = renderHook(() => useCommandModals(), { wrapper });
     await act(async () => {
@@ -57,7 +57,7 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     });
     const resetFields = vi.fn();
     const onSuccess = vi.fn();
-    const form: any = { validateFields, resetFields };
+    const form: unknown = { validateFields, resetFields };
 
     const { result } = renderHook(() => useCommandModals(), { wrapper });
     await act(async () => {
@@ -71,7 +71,7 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     const { post } = await import("@/lib/api");
     vi.mocked(post).mockRejectedValueOnce(new Error("net"));
     const validateFields = vi.fn(async () => ({ command: "x" }));
-    const form: any = { validateFields, resetFields: vi.fn() };
+    const form: unknown = { validateFields, resetFields: vi.fn() };
 
     const { result } = renderHook(() => useCommandModals(), { wrapper });
     await act(async () => {
@@ -91,14 +91,13 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it("handleCancelExecution 失败 → error toast + 不调 onSuccess", async () => {
+  // 68.1-T4：失败上抛（错误反馈由 confirmDelete helper 内 handleApiError 统一承接），不调 onSuccess
+  it("handleCancelExecution 失败 → 上抛错误 + 不调 onSuccess", async () => {
     const { post } = await import("@/lib/api");
     vi.mocked(post).mockRejectedValueOnce(new Error("net"));
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useCommandModals(), { wrapper });
-    await act(async () => {
-      await result.current.handleCancelExecution("exec-2", onSuccess);
-    });
+    await expect(result.current.handleCancelExecution("exec-2", onSuccess)).rejects.toThrow("net");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

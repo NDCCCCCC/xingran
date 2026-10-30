@@ -61,7 +61,7 @@ describe("ADUserPage 渲染", () => {
   });
 
   it("无 configs → 不请求 users", async () => {
-    vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({ data: { list: [] } } as any);
+    vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({ data: { list: [] } } as unknown);
     const { baseElement } = renderWithProviders(<ADUserPage />);
     await new Promise((r) => setTimeout(r, 300));
     expect(baseElement).toBeDefined();

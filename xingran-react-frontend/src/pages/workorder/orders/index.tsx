@@ -3,17 +3,15 @@
  */
 
 import { useState, useCallback, useMemo, type FC } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Button,
   Form,
-  Input,
-  Select,
   Table,
   Modal,
   Space,
   Tag,
   App,
-  Popconfirm,
   Card,
   Statistic,
   Row,
@@ -24,6 +22,7 @@ import {
   TreeSelect,
   Alert,
 } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   EditOutlined,
@@ -57,14 +56,12 @@ import ActionButtons from "@/components/shared/ActionButtons";
 // 导入提取的常量、工具和 Hook
 import { STATUS_CONFIG, PRIORITY_CONFIG, TYPE_CONFIG } from "./constants";
 import { formatDateTime, buildCategoryTree } from "@/lib/workorderApi";
+import { FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { useWorkOrderData } from "./hooks/useWorkOrderData";
 import { useWorkOrderModals, type Comment, type HistoryItem } from "./hooks/useWorkOrderModals";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 // ==================== 表格列定义 ====================
 
@@ -199,21 +196,24 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
             icon: <DeleteOutlined />,
             danger: true,
             render: () => (
-              <Popconfirm
-                title="确定要删除吗？"
-                onConfirm={() => handleDelete(record.id)}
-                okText="确定"
-                cancelText="取消"
+              <Button
+                type="link"
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error)" }}
+                size="small"
+                aria-label={`删除 工单 ${record.id}`}
+                title={`删除 工单 ${record.id}`}
+                onClick={() =>
+                  confirmDelete({
+                    target: `该工单（${record.title || record.id}）`,
+                    onDelete: async () => {
+                      await handleDelete(record.id);
+                    },
+                  })
+                }
               >
-                <Button
-                  type="link"
-                  icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ba3630)" }}
-                  size="small"
-                >
-                  删除
-                </Button>
-              </Popconfirm>
+                删除
+              </Button>
             ),
           },
         ];
@@ -233,6 +233,7 @@ const WorkOrderPage: FC = () => {
   const [commentForm] = Form.useForm();
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize } = usePagination();
@@ -327,15 +328,11 @@ const WorkOrderPage: FC = () => {
     [openEditModal, editForm]
   );
 
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = useCallback(
     async (id: string) => {
-      try {
-        await deleteWorkOrder(id);
-        message.success("删除成功");
-        fetchList(paginationProps.current, paginationProps.pageSize);
-      } catch (_error) {
-        message.error("删除失败");
-      }
+      await deleteWorkOrder(id);
+      fetchList(paginationProps.current, paginationProps.pageSize);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps from usePagination is stable
     [fetchList, message]
@@ -496,28 +493,28 @@ const WorkOrderPage: FC = () => {
               <Statistic
                 title="待处理"
                 value={stats.pending}
-                styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+                styles={{ content: { color: "var(--theme-warning)" } }}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="处理中"
                 value={stats.processing}
-                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                styles={{ content: { color: "var(--theme-info)" } }}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="已完成"
                 value={stats.completed}
-                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="已关闭"
                 value={stats.closed}
-                styles={{ content: { color: "var(--theme-text-tertiary, #707068)" } }}
+                styles={{ content: { color: "var(--theme-text-tertiary)" } }}
               />
             </Col>
             <Col span={4}>
@@ -547,17 +544,15 @@ const WorkOrderPage: FC = () => {
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="workOrderNo" label="工单编号">
-              <Input
+              <AppInput
                 placeholder="请输入工单编号"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="title" label="标题">
-              <Input
+              <AppInput
                 placeholder="请输入标题"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
@@ -574,68 +569,56 @@ const WorkOrderPage: FC = () => {
               />
             </Form.Item>
             <Form.Item name="type" label="类型">
-              <Select
+              <AppSelect
                 placeholder="请选择类型"
-                allowClear
+                showSearch={false}
                 className="user-form-input"
                 style={{ width: 100 }}
-                onSearch={() => {}}
-              >
-                {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
-                  <Option key={key} value={key}>
-                    {text}
-                  </Option>
-                ))}
-              </Select>
+                options={Object.entries(TYPE_CONFIG).map(([key, { text }]) => ({
+                  value: key,
+                  label: text,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="priority" label="优先级">
-              <Select
+              <AppSelect
                 placeholder="请选择优先级"
-                allowClear
+                showSearch={false}
                 className="user-form-input"
                 style={{ width: 100 }}
-                onSearch={() => {}}
-              >
-                {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
-                  <Option key={key} value={Number(key)}>
-                    {text}
-                  </Option>
-                ))}
-              </Select>
+                options={Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => ({
+                  value: Number(key),
+                  label: text,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
+                showSearch={false}
                 className="user-form-input"
                 style={{ width: 100 }}
-                onSearch={() => {}}
-              >
-                {Object.entries(STATUS_CONFIG).map(([key, { text }]) => (
-                  <Option key={key} value={Number(key)}>
-                    {text}
-                  </Option>
-                ))}
-              </Select>
+                options={Object.entries(STATUS_CONFIG).map(([key, { text }]) => ({
+                  value: Number(key),
+                  label: text,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="assigneeId" label="处理人">
-              <Select
+              <AppSelect
                 placeholder="请选择处理人"
-                allowClear
-                className="user-form-input"
                 showSearch
+                className="user-form-input"
                 style={{ width: 120 }}
-                optionFilterProp="children"
+                optionFilterProp="label"
                 onSearch={() => {}}
-              >
-                {(users || [])
+                options={(users || [])
                   .filter((user) => user.id)
-                  .map((user) => (
-                    <Option key={user.id} value={user.id}>
-                      {user.nickName || user.username}
-                    </Option>
-                  ))}
-              </Select>
+                  .map((user) => ({
+                    value: user.id,
+                    label: user.nickName || user.username,
+                  }))}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -653,7 +636,7 @@ const WorkOrderPage: FC = () => {
               <Button
                 type="primary"
                 onClick={handleBatchDelete}
-                style={{ color: "var(--theme-error, #ba3630)", borderColor: "#ba3630" }}
+                style={{ color: "var(--theme-error)", borderColor: "var(--theme-error)" }}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>
@@ -665,7 +648,7 @@ const WorkOrderPage: FC = () => {
         </div>
         {selectedRowKeys.length > 0 && (
           <Alert
-            message={
+            title={
               <span>
                 已选择 <strong>{selectedRowKeys.length}</strong> 个工单，
                 <Button
@@ -706,7 +689,15 @@ const WorkOrderPage: FC = () => {
       <Modal
         title={editingRecord ? "编辑工单" : "新增工单"}
         open={modalVisible}
-        onOk={handleModalOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleModalOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setModalVisible(false)}
         width={700}
         destroyOnHidden
@@ -725,7 +716,7 @@ const WorkOrderPage: FC = () => {
                 label="工单标题"
                 rules={[{ required: true, message: "请输入工单标题" }]}
               >
-                <Input placeholder="请输入工单标题" className="user-form-input" />
+                <AppInput placeholder="请输入工单标题" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -751,17 +742,15 @@ const WorkOrderPage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: "请选择工单类型" }]}
               >
-                <Select
+                <AppSelect
                   placeholder="请选择工单类型"
+                  showSearch={false}
                   className="user-form-input"
-                  onSearch={() => {}}
-                >
-                  {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
-                    <Option key={key} value={key}>
-                      {text}
-                    </Option>
-                  ))}
-                </Select>
+                  options={Object.entries(TYPE_CONFIG).map(([key, { text }]) => ({
+                    value: key,
+                    label: text,
+                  }))}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -770,65 +759,58 @@ const WorkOrderPage: FC = () => {
                 label="优先级"
                 rules={[{ required: true, message: "请选择优先级" }]}
               >
-                <Select placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
-                  {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
-                    <Option key={key} value={Number(key)}>
-                      {text}
-                    </Option>
-                  ))}
-                </Select>
+                <AppSelect
+                  placeholder="请选择优先级"
+                  showSearch={false}
+                  className="user-form-input"
+                  options={Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => ({
+                    value: Number(key),
+                    label: text,
+                  }))}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="deptId" label="所属部门">
-                <Select
+                <AppSelect
                   placeholder="请选择部门"
-                  allowClear
+                  showSearch={false}
                   className="user-form-input"
-                  onSearch={() => {}}
-                >
-                  {depts
+                  options={depts
                     .filter((dept) => dept.id)
-                    .map((dept) => (
-                      <Option key={dept.id} value={dept.id}>
-                        {dept.deptName}
-                      </Option>
-                    ))}
-                </Select>
+                    .map((dept) => ({ value: dept.id, label: dept.deptName }))}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="assigneeId" label="处理人">
-                <Select
+                <AppSelect
                   placeholder="请选择处理人"
-                  allowClear
                   showSearch
-                  optionFilterProp="children"
+                  optionFilterProp="label"
                   className="user-form-input"
                   onSearch={() => {}}
-                >
-                  {(users || [])
+                  options={(users || [])
                     .filter((user) => user.id)
-                    .map((user) => (
-                      <Option key={user.id} value={user.id}>
-                        {user.nickName || user.username}
-                      </Option>
-                    ))}
-                </Select>
+                    .map((user) => ({
+                      value: user.id,
+                      label: user.nickName || user.username,
+                    }))}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item name="expectedResolveAt" label="期望解决时间">
-            <Input type="datetime-local" className="user-form-input" />
+            <AppInput type="datetime-local" className="user-form-input" />
           </Form.Item>
           <Form.Item name="description" label="工单描述">
-            <TextArea rows={4} placeholder="请输入工单描述" />
+            <AppTextArea rows={4} placeholder="请输入工单描述" />
           </Form.Item>
           {editingRecord && (
             <Form.Item name="solution" label="解决方案">
-              <TextArea rows={4} placeholder="请输入解决方案" />
+              <AppTextArea rows={4} placeholder="请输入解决方案" />
             </Form.Item>
           )}
         </Form>
@@ -928,7 +910,7 @@ const WorkOrderPage: FC = () => {
             <Card title="添加评论" size="small" className="mb-4">
               <Form form={commentForm} layout="vertical">
                 <Form.Item name="content" rules={[{ required: true, message: "请输入评论内容" }]}>
-                  <TextArea rows={3} placeholder="请输入评论内容" />
+                  <AppTextArea rows={3} placeholder="请输入评论内容" />
                 </Form.Item>
                 <Form.Item>
                   <Space>
@@ -951,24 +933,26 @@ const WorkOrderPage: FC = () => {
               {comments.length === 0 ? (
                 <p className="text-gray-400">暂无评论</p>
               ) : (
-                <Timeline>
-                  {comments.map((comment: Comment) => (
-                    <Timeline.Item key={comment.id}>
-                      <div>
-                        <strong>{comment.user?.nickName || comment.user?.username}</strong>
-                        {comment.isInternal && (
-                          <Tag color="orange" className="ml-2">
-                            内部
-                          </Tag>
-                        )}
-                        <span className="text-gray-400 text-sm ml-2">
-                          {formatDateTime(comment.createdAt, "YYYY-MM-DD HH:mm")}
-                        </span>
-                      </div>
-                      <p className="mt-1">{comment.content}</p>
-                    </Timeline.Item>
-                  ))}
-                </Timeline>
+                <Timeline
+                  items={comments.map((comment: Comment) => ({
+                    content: (
+                      <>
+                        <div>
+                          <strong>{comment.user?.nickName || comment.user?.username}</strong>
+                          {comment.isInternal && (
+                            <Tag color="orange" className="ml-2">
+                              内部
+                            </Tag>
+                          )}
+                          <span className="text-gray-400 text-sm ml-2">
+                            {formatDateTime(comment.createdAt, FORMAT_DATETIME_MINUTE)}
+                          </span>
+                        </div>
+                        <p className="mt-1">{comment.content}</p>
+                      </>
+                    ),
+                  }))}
+                />
               )}
             </Card>
 
@@ -976,26 +960,28 @@ const WorkOrderPage: FC = () => {
               {history.length === 0 ? (
                 <p className="text-gray-400">暂无历史</p>
               ) : (
-                <Timeline>
-                  {history.map((item: HistoryItem) => (
-                    <Timeline.Item key={item.id}>
-                      <div>
-                        <strong>{item.operator?.nickName || item.operator?.username}</strong>
-                        <span className="text-gray-400 text-sm ml-2">
-                          {formatDateTime(item.createdAt, "YYYY-MM-DD HH:mm")}
-                        </span>
-                      </div>
-                      <p className="mt-1">
-                        {item.remark || item.action}
-                        {item.oldValue && item.newValue && (
-                          <span className="text-gray-500">
-                            （{item.oldValue} → {item.newValue}）
+                <Timeline
+                  items={history.map((item: HistoryItem) => ({
+                    content: (
+                      <>
+                        <div>
+                          <strong>{item.operator?.nickName || item.operator?.username}</strong>
+                          <span className="text-gray-400 text-sm ml-2">
+                            {formatDateTime(item.createdAt, FORMAT_DATETIME_MINUTE)}
                           </span>
-                        )}
-                      </p>
-                    </Timeline.Item>
-                  ))}
-                </Timeline>
+                        </div>
+                        <p className="mt-1">
+                          {item.remark || item.action}
+                          {item.oldValue && item.newValue && (
+                            <span className="text-gray-500">
+                              （{item.oldValue} → {item.newValue}）
+                            </span>
+                          )}
+                        </p>
+                      </>
+                    ),
+                  }))}
+                />
               )}
             </Card>
           </div>

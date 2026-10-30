@@ -525,6 +525,13 @@ func (c *Core) initSchedulerAndTasks() error {
 			applogger.Infof("MAC历史清理任务注册完成")
 		}
 
+		// quick 261016-ad-login-history: AD 登录历史分区维护(每日 02:30)。
+		// 单独构造,不挂 Core 字段(同 MAC purge 服务模式:服务无状态,即用即弃);
+		// 不依赖 c.PartitionService(AD 分区服务自带 isPostgres 守卫,sqlite 下整体跳过)。
+		scheduler.SetADLoginHistoryPartitionService(addomain.NewADLoginHistoryPartitionService(c.GetDB()))
+		scheduler.RegisterADLoginHistoryTasks(c.Scheduler, c.GetDB())
+		applogger.Infof("AD登录历史分区维护任务注册完成")
+
 		// 注意:Phase 45 R5 数据治理 (2026-06-30) 的"对账-port_status漂移检测"已整合到
 		// 上方 scheduler.RegisterReconciliationTasks(...) 调用中,作为 reconciliation 框架
 		// 的子任务 reconciliation:checkPortStatusDrift,与现有对账任务共用 sys_job 表

@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { FC } from "react";
-import { Modal, Form, Input, InputNumber, Select } from "antd";
+import { Modal, Form, InputNumber } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type { Floor, Building } from "@/types";
 import { STATUS_OPTIONS, DEFAULT_FORM_VALUES } from "../constants";
@@ -8,9 +8,10 @@ import { DepartmentTreeSelect, type Department } from "@/components/shared/Depar
 import FileUpload from "@/components/shared/FileUpload";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { MAX_IMAGE_SIZE } from "@/constants/upload";
-
-const { Option } = Select;
-const { TextArea } = Input;
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// 楼宇下拉原为 children + showSearch（optionFilterProp="children"）→ 改写 options 形态，
+// 由 AppSelect 统一下沉 optionFilterProp="label"；状态枚举业务禁搜 → 显式 showSearch={false}。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
 // 楼宇选项基础类型（只需要 id 和 name）
 type BuildingOptionBase = Pick<Building, "id" | "name">;
@@ -71,6 +72,7 @@ export const FloorModal: FC<FloorModalProps> = ({
   };
 
   const isDisabled = !!editingFloor;
+  const [submitting, setSubmitting] = useState(false);
 
   // 合并楼宇选项：优先使用部门特定选项，如果为空则使用全部选项
   const effectiveBuildingOptions =
@@ -80,7 +82,15 @@ export const FloorModal: FC<FloorModalProps> = ({
     <Modal
       title={editingFloor ? "编辑楼层" : "新增楼层"}
       open={visible}
-      onOk={handleOk}
+      onOk={async () => {
+        setSubmitting(true);
+        try {
+          await handleOk();
+        } finally {
+          setSubmitting(false);
+        }
+      }}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={handleCancel}
       width={600}
     >
@@ -101,19 +111,16 @@ export const FloorModal: FC<FloorModalProps> = ({
           label="所属楼宇"
           rules={[{ required: true, message: "请选择所属楼宇" }]}
         >
-          <Select
+          {/* 形态分类器②③：children + 复合子节点（属性过滤）→ options 改写。
+              楼宇 ID 为 UUID：allowClear 原就有，清空后表单值 undefined，由
+              Form rules={required} 在提交前拦截，不会把 undefined 送进 UUID 校验。 */}
+          <AppSelect
+            allowClear
             placeholder="请选择所属楼宇"
             disabled={isDisabled}
             showSearch
-            optionFilterProp="children"
-            onSearch={() => {}}
-          >
-            {effectiveBuildingOptions.map((b) => (
-              <Option key={b.id} value={b.id}>
-                {b.name}
-              </Option>
-            ))}
-          </Select>
+            options={effectiveBuildingOptions.map((b) => ({ value: b.id, label: b.name }))}
+          />
         </Form.Item>
 
         <Form.Item
@@ -121,11 +128,11 @@ export const FloorModal: FC<FloorModalProps> = ({
           label="楼层号"
           rules={[{ required: true, message: "请输入楼层号" }]}
         >
-          <Input placeholder="请输入楼层号，如：1F" disabled={!!editingFloor} />
+          <AppInput placeholder="请输入楼层号，如：1F" disabled={!!editingFloor} />
         </Form.Item>
 
         <Form.Item name="name" label="楼层名称">
-          <Input placeholder="请输入楼层名称" />
+          <AppInput placeholder="请输入楼层名称" />
         </Form.Item>
 
         <Form.Item name="area" label="面积">
@@ -138,17 +145,17 @@ export const FloorModal: FC<FloorModalProps> = ({
           rules={[{ required: true, message: "请选择状态" }]}
           initialValue={DEFAULT_FORM_VALUES.status}
         >
-          <Select placeholder="请选择状态" onSearch={() => {}}>
-            {STATUS_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+          <AppSelect
+            allowClear
+            placeholder="请选择状态"
+            showSearch={false}
+            options={STATUS_OPTIONS}
+          />
         </Form.Item>
 
         <Form.Item name="description" label="描述">
-          <TextArea rows={3} placeholder="请输入描述" />
+          <AppTextArea rows={3} placeholder="请输入描述" />
         </Form.Item>
 
         <Form.Item label="平面图">

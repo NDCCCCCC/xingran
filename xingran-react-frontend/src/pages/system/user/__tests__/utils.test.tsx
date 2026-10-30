@@ -2,7 +2,7 @@
  * Phase 88 Batch339 — pages/system/user/utils 测试
  */
 import { describe, it, expect } from "vitest";
-import { renderToString } from "react-dom/server";
+import {} from "react-dom/server";
 import { renderDeptTreeOptions, formatGender, formatStatus } from "../utils";
 
 describe("pages/system/user/utils", () => {
@@ -13,12 +13,12 @@ describe("pages/system/user/utils", () => {
     });
 
     it("null → 暂无部门数据", () => {
-      const result = renderDeptTreeOptions(null as any);
+      const result = renderDeptTreeOptions(null as unknown);
       expect(result.length).toBe(1);
     });
 
     it("undefined → 暂无部门数据", () => {
-      const result = renderDeptTreeOptions(undefined as any);
+      const result = renderDeptTreeOptions(undefined as unknown);
       expect(result.length).toBe(1);
     });
 

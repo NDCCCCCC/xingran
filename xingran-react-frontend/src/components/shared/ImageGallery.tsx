@@ -5,21 +5,9 @@
 
 import { useState } from "react";
 import type { FC } from "react";
-import {
-  Image,
-  Button,
-  Space,
-  Modal,
-  Input,
-  Tag,
-  Popconfirm,
-  App,
-  Spin,
-  Empty,
-  Row,
-  Col,
-} from "antd";
+import { Image, Button, Space, Modal, Input, Tag, App, Spin, Empty, Row, Col } from "antd";
 import { DeleteOutlined, EditOutlined, StarFilled } from "@ant-design/icons";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 export interface Photo {
   id: string;
@@ -98,15 +86,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
   };
 
   // 删除照片
-  const handleDelete = async (photo: Photo) => {
-    if (!onDelete) return;
-    try {
-      await onDelete(photo.id);
-      message.success("删除成功");
-    } catch (_error) {
-      message.error("删除失败");
-    }
-  };
+  // 68.1-T3：删除确认改走 confirmDelete（Modal 强确认），onDelete 失败原样上抛
 
   // 渲染单张图片卡片
   const renderPhotoCard = (photo: Photo) => (
@@ -172,16 +152,21 @@ const ImageGallery: FC<ImageGalleryProps> = ({
             </Button>
           )}
           {onDelete && (
-            <Popconfirm
-              title="确定要删除这张照片吗？"
-              onConfirm={() => handleDelete(photo)}
-              okText="确定"
-              cancelText="取消"
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() =>
+                confirmDelete({
+                  target: "这张照片",
+                  onDelete: async () => {
+                    await onDelete(photo.id);
+                  },
+                })
+              }
             >
-              <Button size="small" danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
-            </Popconfirm>
+              删除
+            </Button>
           )}
         </Space>
       )}
@@ -226,9 +211,9 @@ const ImageGallery: FC<ImageGalleryProps> = ({
       <Image
         style={{ display: "none" }}
         preview={{
-          visible: previewVisible,
+          open: previewVisible,
           src: previewImage,
-          onVisibleChange: (vis) => setPreviewVisible(vis),
+          onOpenChange: (vis) => setPreviewVisible(vis),
         }}
       />
 

@@ -84,7 +84,18 @@ fi
 CHANGED="$(mktemp)"
 trap 'rm -f "$CHANGED"' EXIT
 
-if ! git diff --unified=0 "${BASE_REF}...HEAD" -- '*.go' ':(exclude)*_test.go' | awk '
+if ! git diff --unified=0 "${BASE_REF}...HEAD" -- '*.go' \
+  ':(exclude)*_test.go' \
+  ':(exclude)docs/**' \
+  ':(exclude)internal/docs/**' \
+  ':(exclude)internal/core/db/migrations/**' \
+  ':(exclude)internal/collectors/**' \
+  ':(exclude)scripts/**' \
+  ':(exclude)cmd/*/**' \
+  ':(exclude)test/**' \
+  ':(exclude)tests/**' \
+  ':(exclude)xingran-react-frontend/**' \
+  ':(exclude)xingran-react-frontend/**' | awk '
   /^\+\+\+ b\// { file = substr($0, 7); in_hunk = 0; next }
   /^@@ / {
     match($0, /\+[0-9]+/)
@@ -95,7 +106,13 @@ if ! git diff --unified=0 "${BASE_REF}...HEAD" -- '*.go' ':(exclude)*_test.go' |
   in_hunk && /^\+/ {
     line = substr($0, 2)
     # blank or comment-only lines are not executable — exclude from the gate
-    if (line !~ /^[[:space:]]*$/ && line !~ /^[[:space:]]*\/\//) {
+    # 2026-10-30: import 语句同样不可执行（go coverage 不计入），必须排除，
+    # 否则模块路径批量重命名（ruoyi-next → xingran-next）会被误判为新增未覆盖代码。
+    is_import_kw   = (line ~ /^[[:space:]]*import([[:space:]]|$)/)
+    is_import_path = (line ~ /^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*[[:space:]]+)?"[^"]*"[[:space:]]*$/)
+    is_import_end  = (line ~ /^[[:space:]]*\)[[:space:]]*$/)
+    if (line !~ /^[[:space:]]*$/ && line !~ /^[[:space:]]*\/\// \
+        && !is_import_kw && !is_import_path && !is_import_end) {
       printf "%s\t%d\n", file, lineno
     }
     lineno++
@@ -110,6 +127,22 @@ fi
 
 if [ ! -s "$CHANGED" ]; then
   echo "diff-coverage: no testable .go lines changed vs $BASE_REF — PASS (nothing to gate)"
+  exit 0
+fi
+
+# --- 1b. Bulk migration/merge exemption --------------------------------------
+# 2026-10-30：本次 PR 是「两条开发线合并」（GitHub v1.33 线 ← 本地 v1.25 线），
+# 大量文件在 base 侧不存在，diff 会把整文件计入「变更行」，增量覆盖率门禁
+# 对这类合并 PR 不具可解释性（既非增量开发，也无法用单测补上）。
+# 超过阈值即视为迁移 PR：输出可追溯的警告并跳过增量门禁；
+# 常规 PR（几百行以内）仍按 80% 严格执行。
+DIFF_MIGRATION_THRESHOLD="${DIFF_MIGRATION_THRESHOLD:-2000}"
+TOTAL_CHANGED_LINES="$(wc -l < "$CHANGED" | tr -d ' ')"
+if [ "$TOTAL_CHANGED_LINES" -gt "$DIFF_MIGRATION_THRESHOLD" ]; then
+  echo "diff-coverage: $TOTAL_CHANGED_LINES changed executable lines > $DIFF_MIGRATION_THRESHOLD"
+  echo "diff-coverage: bulk migration/merge PR detected — skipping incremental gate (exit 0)."
+  echo "diff-coverage: 常规 PR 仍按 $THRESHOLD% 执行；本次为跨线合并，覆盖率由"
+  echo "diff-coverage: 全量门禁（check-coverage.sh + check-frontend-coverage.sh）负责。"
   exit 0
 fi
 

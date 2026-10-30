@@ -27,7 +27,7 @@ const wrap = ({ children }: { children: React.ReactNode }) => (
   </ConfigProvider>
 );
 
-const opts = () => ({ current: 1, pageSize: 10, searchForm: {} as any });
+const opts = () => ({ current: 1, pageSize: 10, searchForm: {} as unknown });
 
 describe("useArticleData", () => {
   it("initial state + handlers", () => {
@@ -55,9 +55,9 @@ describe("useArticleData", () => {
   it("setters 直写 state", () => {
     const { result } = renderHook(() => useArticleData(opts()), { wrapper: wrap });
     act(() => {
-      result.current.setArticles([{ id: "a1" } as any]);
-      result.current.setCategories([{ id: "c1", name: "cat1", children: [] } as any]);
-      result.current.setTags([{ id: "t1", name: "tag1" } as any]);
+      result.current.setArticles([{ id: "a1" } as unknown]);
+      result.current.setCategories([{ id: "c1", name: "cat1", children: [] } as unknown]);
+      result.current.setTags([{ id: "t1", name: "tag1" } as unknown]);
     });
     expect(result.current.articles.length).toBe(1);
     expect(result.current.categories.length).toBe(1);

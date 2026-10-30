@@ -38,6 +38,12 @@ const (
 	// scheduler/ad_sync_tasks.go:164 (inline 1*time.Minute extracted, D-08).
 	ADSyncTaskTimeout = 1 * time.Minute
 
+	// JobExecutionTimeout is the context timeout applied by the sys_job executor
+	// wrapper (scheduler/cron.go addJob, 域控审查 P0-3). Bounds every registered
+	// cron job so a hung task cannot pin a goroutine forever; combined with
+	// cron.SkipIfStillRunning it also prevents overlap on short-period jobs.
+	JobExecutionTimeout = 15 * time.Minute
+
 	// RestoreBackupTimeout is the context timeout for the pre-restore backup phase
 	// (CreateBackup in runRestore, Phase 97 V130R-01 D-01). Short TTL because
 	// CreateBackup just reads the device config and stores it — typically <10s.

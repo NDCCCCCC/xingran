@@ -21,7 +21,7 @@ const wrap = ({ children }: { children: React.ReactNode }) => (
   </ConfigProvider>
 );
 
-const bk = (id: string) => ({ id, deviceId: "d1", fileName: "config.tar.gz" }) as any;
+const bk = (id: string) => ({ id, deviceId: "d1", fileName: "config.tar.gz" }) as unknown;
 
 describe("useBackupDiff", () => {
   it("initial state + 9 handler/ref", () => {
@@ -57,7 +57,7 @@ describe("useBackupDiff", () => {
     act(() => {
       result.current.handleLeftScroll({
         target: { scrollTop: 100 },
-      } as any);
+      } as unknown);
     });
     // 不抛错即通过(ref 操作内部状态)
     expect(true).toBe(true);
@@ -68,7 +68,7 @@ describe("useBackupDiff", () => {
     act(() => {
       result.current.handleRightScroll({
         target: { scrollTop: 200 },
-      } as any);
+      } as unknown);
     });
     expect(true).toBe(true);
   });

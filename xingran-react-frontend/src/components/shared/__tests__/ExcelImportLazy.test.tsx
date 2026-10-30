@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("../ExcelImport", () => ({
-  default: ({ entityType, entityName }: any) => (
+  default: ({ entityType, entityName }: unknown) => (
     <div data-testid="excel-import">
       <span>{entityType}</span>
       <span>{entityName}</span>

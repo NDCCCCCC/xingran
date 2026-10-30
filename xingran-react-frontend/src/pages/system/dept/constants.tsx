@@ -7,7 +7,8 @@ import { Tag } from "antd";
 import { NORMAL_STOP_OPTIONS } from "@/constants/status";
 
 /** 状态选项（Phase 69 DICT-03: 共享常量别名引用，本地导出名不变） */
-export const STATUS_OPTIONS = NORMAL_STOP_OPTIONS;
+// 字面量拷贝（浅拷贝）：react-refresh 对 Identifier 初始化误判为组件导出；无 mutate/引用比较
+export const STATUS_OPTIONS = [...NORMAL_STOP_OPTIONS];
 
 /** 外部机构选项 */
 export const EXTERNAL_ORG_OPTIONS = [

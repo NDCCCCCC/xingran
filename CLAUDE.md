@@ -12,11 +12,11 @@ XingRan-Next is a modern enterprise permission management system based on the Xi
 - Security: SM2/SM3/SM4 national cryptography algorithms
 
 **Important Files:**
-- 详细架构文档: `docs/architecture/项目概述和架构设计.md`
-- 开发规范: `docs/standards/开发规范.md`
-- API响应规范: `docs/standards/API响应规范.md`
-- 安全设计: `docs/architecture/安全和认证设计（国密）.md`
-- 数据库设计: `docs/architecture/数据库设计.md`
+- 详细架构文档: `docs/项目概述和架构设计.md`
+- 开发规范: `docs/开发规范.md`
+- API响应规范: `docs/API响应规范.md`
+- 安全设计: `docs/安全和认证设计（国密）.md`
+- 数据库设计: `docs/数据库设计.md`
 
 ---
 
@@ -25,12 +25,6 @@ XingRan-Next is a modern enterprise permission management system based on the Xi
 ### Backend (Go)
 
 ```bash
-# First-time setup: create config from dev template, then edit DB/Redis/SM4_KEY
-cp configs/config.dev.yaml configs/config.yaml
-
-# Run directly (no build) — server listens on :9000
-go run ./cmd/main.go
-
 # Build for Windows
 go build -o xingran-backend.exe ./cmd/main.go
 
@@ -48,7 +42,7 @@ go test ./internal/api/v1/
 .\xingran-backend.exe
 ```
 
-### Frontend (React) — requires Node.js 24+
+### Frontend (React)
 
 ```bash
 cd xingran-react-frontend
@@ -89,8 +83,8 @@ npm run test:coverage
 
 ```bash
 # Generate Swagger docs
-./scripts/build/generate_swagger.bat   # Windows
-./scripts/build/generate_swagger.sh    # Linux/Mac
+./scripts/generate_swagger.bat   # Windows
+./scripts/generate_swagger.sh    # Linux/Mac
 
 # Access Swagger UI after starting server
 # http://localhost:9000/swagger/index.html
@@ -118,9 +112,6 @@ REDIS_PASSWORD=
 
 # Baidu Maps (for geocoding)
 BAIDU_MAP_AK=your_api_key_here
-
-# National crypto — SM4 key (generate via: openssl rand -base64 16)
-SM4_KEY=
 ```
 
 ---
@@ -185,12 +176,13 @@ pkg/                 # Public packages (reusable)
      }
      ```
 
-2. **Unified Cache Architecture (Phase 92)**
-   - **Single authority**: `internal/services/base` — `CacheProvider` interface + `CacheServiceBase` (thin `TTLResolver` base class) + generic functions `GetOrSetJSON[T]` / `Invalidate` / `InvalidatePattern`
-   - `internal/services/system/cache_provider.go` keeps only `type` aliases to base (zero-impact migration facade)
-   - `*_cache_impl.go` decorators (system/, operations/) embed `base.CacheServiceBase` and call `base.GetOrSetJSON` — no interface{} closure boilerplate (guarded by invariants scan)
-   - `DataCacheService` (services root) stays in place as infrastructure: `pkg/cache.Cache` business wrapper + `base.CacheProvider` implementation base (via `system.NewCacheProvider` adapter)
-   - `monitor.CacheOperator` is a raw-operations interface (Get/Set/Keys/FlushDB) for the cache monitor page — NOT the business cache abstraction
+2. **Dual Cache Architecture**
+   - **Legacy**: Root-level `*_cache_service.go` files (dept, role, dict, menu, user, post)
+     - Used by `core.Core` for backward compatibility
+     - Wrap `DataCacheService` with business logic
+   - **New**: `internal/services/system/*_cache_impl.go`
+     - Use `CacheProvider` interface for decoupling
+     - Support both cached and non-cached implementations
 
 3. **Middleware Chain**: Auth → Permission → Encryption → Handler
 
@@ -301,175 +293,16 @@ operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "API密钥管�
 
 **Universal Rule:** `0 = enabled/normal/visible, 1 = disabled/stopped/hidden`
 
-**Exception - Menu Visibility:** `1 = visible, 0 = hidden` (boolean semantics; see `models.VisibleShow` / `models.VisibleHidden`)
+**Exception - Menu Visibility:** `1 = visible, 0 = hidden` (boolean semantics)
 
-**Source of truth (do not hard-code values):**
-
-1. **状态常量唯一真相源** — `internal/models/` (e.g. `internal/models/base.go`)。所有模块的 `status` / `visible` / 业务三态字段都以具名常量引用(如 `models.UserStatusEnabled = 0`、`models.VisibleShow = 1`、`models.WorkstationStatus*`)。
-2. **常量值由回归测试锁定** — `internal/models/status_constants_test.go` AST 扫描所有 `models.XxxStatus*` / `Visible*` 字面量,任何静默改动(包括 0/1 调换、跨包同名异值)立即测试失败。修改值先改测试再改常量。
-3. **运营可维护枚举(type / category / 业务选项)真相源** — `sys_dict_type` / `sys_dict_data`,通过字典管理页维护。Seed 见 `internal/core/db/migrations/migration_208_dict_seed.go`(sqlite / postgres 双分支均注册)。
-4. **前端通用启停选项共享常量** — `xingran-react-frontend/src/constants/status.ts`(ENABLE_DISABLE / NORMAL_STOP / 三态工作组等),不再每页重复 `[{value: 0, label: '启用'}, ...]`。
-5. **status 0/1 不入字典** — 通用规则的 0/1 是代码分支语义(管理员可配值会破坏 `if status == 0` 逻辑);type / category / 业务选项等可选项才走 sys_dict。**Menu visible 例外**仅保留文档提示,不破坏普适规则。
-
-新增 status / visible 常量:先在 `internal/models/<file>.go` 命名常量 → 同步 `status_constants_test.go` 期望表 → 业务代码按常量引用。
-
-### Pagination Constants Convention
-
-All pagination defaults and caps in the project are centralized in `pkg/constants/pagination.go`:
-
-```go
-package constants
-
-const (
-    DefaultCurrent     = 1
-    DefaultPageSize    = 10
-    MaxPageSize        = 200
-    MinPageSize        = 10
-    MaxListPageSize    = 100
-    MaxOptionsPageSize = 10000
-)
-```
-
-**Rule:** All business code that needs pagination defaults or max caps MUST reference these constants via `pkg/query.NormalizePagination(current, pageSize int) (int, int)`. Inline literals (`current = 1`, `pageSize = 10`, `pageSize = 100`, etc.) are prohibited in source files (test fixtures exempt).
-
-**Key invariants:**
-- `NormalizePagination` is the only entry point for pagination normalization
-- `PaginationRequest.Normalize()` delegates to `NormalizePagination`
-- No file should contain `*current = 1` or `pageSize = 10` as a literal assignment without referencing `pkg/constants`
-
-**Migration status:** Phase 89 (PAGINATION) centralized all 12+ hardcoded pagination literals across handler and service layers. internal/constants 已于 V130R-09 合并入 pkg/constants（D-03-10）——pkg/constants 是全项目唯一的常量包。
-
-### Timeout/Port/Protocol Constants Convention
-
-All timeout, port, protocol, and concurrency constants in the project are centralized in `pkg/constants/`:
-
-**timeouts.go** — `time.Duration` constants:
-```go
-package constants
-
-const (
-    CommandExecTimeout         = 300 * time.Second  // device command execution (shared by command_handler + execution_handler)
-    CommandReadTimeout         =  60 * time.Second  // quick command read
-    LDAPConnTimeout            =  30 * time.Second  // LDAP/AD connection
-    ADSyncTimeout             =  30 * time.Minute  // AD full sync context
-    SchedulerShutdownTimeout  =   5 * time.Second  // cron engine graceful shutdown
-    ADSyncTaskTimeout         =   1 * time.Minute  // AD sync single task
-)
-```
-
-**ports.go** — `int` constants (see `pkg/constants/ports.go`):
-```go
-package constants
-
-const (
-    SNMPPort = 161  // SNMP default UDP port
-)
-```
-
-**protocol.go** — `string` constants (see `pkg/constants/protocol.go`):
-```go
-package constants
-
-const (
-    HTTPProto  = "http"   // plain-text HTTP
-    HTTPSProto = "https"  // TLS-protected HTTPS
-)
-```
-
-**concurrency.go** — `int` constants (see `pkg/constants/concurrency.go`):
-```go
-package constants
-
-const (
-    CommandConcurrency = 10  // default concurrent command limit
-)
-```
-
-**Rules:**
-- All timeout values use `time.Duration` strong typing. When assigning to an `int` field (e.g., `req.Timeout`), use `int(constants.Xxx.Seconds())`.
-- All business code MUST reference these constants. Inline literals are prohibited:
-  - `time.Second * N` / `time.Minute * N`
-  - `Timeout = 300` / `Timeout = 60`
-  - `SNMPPort = 161`
-  - `Concurrency = 10`
-  - `"http://"+` / `"https://"+`
-
-**Reference patterns:**
-```go
-// time.Duration -> int conversion for handler fields
-req.Timeout = int(constants.CommandExecTimeout.Seconds())
-
-// Direct time.Duration use (context, SetTimeout)
-ctx, cancel := context.WithTimeout(ctx, constants.ADSyncTaskTimeout)
-c.conn.SetTimeout(constants.LDAPConnTimeout)
-
-// Bare const concatenation (D-03: no helper function)
-if strings.HasPrefix(origin, constants.HTTPProto+"://"+host) { ... }
-```
-
-**Migration status:** Phase 90 (TIMEOUTS) centralized 10 constants across 8 files.
-
-### Cache Service Convention
-
-All business caching MUST go through the single-authority abstraction in `internal/services/base` (Phase 92):
-
-```go
-// Read-through cache (replaces 12-15 line interface{} closure boilerplate with one return):
-return base.GetOrSetJSON(ctx, s.cache, key, s.GetExpiration(cfgKey, 30*time.Minute),
-    func() (*models.User, error) { return s.userService.GetByID(ctx, id) })
-
-// Invalidation (nil-guard + unified warn logging built in):
-base.Invalidate(ctx, s.cache, keys, "MODULE")
-base.InvalidatePattern(ctx, s.cache, patterns, "MODULE")
-```
-
-**Rules:**
-- `base.GetOrSetJSON[T]` / `Invalidate` / `InvalidatePattern` + `base.CacheProvider` are the ONLY authority for business caching. `internal/services/system/cache_provider.go` keeps type aliases only. (A `SetJSON` write-through helper was removed post-review — zero callers + delete-then-write races under concurrent read-through; revisit only with a native-Set provider extension, out of scope.)
-- `*_cache_impl.go` files MUST NOT contain interface{} closure-style GetOrSet (`func() (interface{}, error)`) — guarded by `internal/services/system/cache_invariants_92_test.go` (`TestNoInterfaceGetOrSetResidue`: hard-fail for system/operations, warning-count for duty/knowledge/network/workorder).
-- `monitor.CacheOperator` is the cache monitor page's raw operations interface (Get/Set/Keys/FlushDB) — it is NOT the business cache abstraction. Do not confuse it with `base.CacheProvider`.
-- Do NOT add new direct `DataCacheService` call sites — it is infrastructure (`pkg/cache.Cache` wrapper + `base.CacheProvider` implementation base). New business cache code goes through `base.GetOrSetJSON` + `CacheProvider`.
-- Cache key construction: single source of truth `internal/services/system/cache_keys.go`. TTL resolution: `CacheServiceBase.GetExpiration` (config key + default; `CacheConfigService` implicitly satisfies `base.TTLResolver`).
-
-**Migration status:** Phase 92 unified the former three-way duplication (legacy root services / system impls / operations impls) into the base authority.
-
-### Frontend API Factory Convention
-
-All frontend resource CRUD must go through the single-authority factory in `xingran-react-frontend/src/lib/apiFactory.ts` (Phase 94):
-
-```typescript
-// Create a resource API — 8 methods: list/get/create/update/delete/batch/statistics/searchOptions
-const categoryCrud = createResourceApi<WorkOrderCategory>({ basePath: "/workorder/categories" });
-
-// Object form with custom methods — spread + override is the only extension idiom:
-export const floorApi = { ...floorCrud, tree: async () => post<Floor[]>("/ops/floor/tree", {}) };
-
-// Flat-file delegation — export signatures (incl. return annotations) must stay identical:
-export function getWorkOrderList(
-  params: WorkOrderListRequest
-): Promise<BaseResponse<PageResponse<WorkOrder>>> {
-  return orderCrud.list(params as unknown as PageParams & Record<string, unknown>);
-}
-```
-
-**Rules:**
-- `createResourceApi<T>` (8 methods) in `src/lib/apiFactory.ts` is the ONLY factory authority — do not create new private `createCrudApi` copies (Phase 94 deleted the opsApi and rpaApi private duplicates).
-- New resources MUST use the factory — never hand-write the CRUD five-piece (list/get/create/update/delete) by calling `post` directly (D-10 template zeroing). create/update params use `Partial<CreatePayload<T>>` (`src/types/apiFactory.ts`), so mis-sending id/audit timestamps fails at compile time.
-- Blob downloads go through `src/lib/download.ts` (`blobAxios` 5-min timeout + `downloadFile` / `downloadFilePost`) — do not hand-roll fetch/axios download chains.
-- Factory methods stay pure pass-through: default-value injection / pre-processing (e.g. adDomainApi `withDefaultPagination`, dutyApi `getUserList` default pagination) lives in the caller wrapper, never inside the factory.
-- Regression guard: `src/lib/apiFactory.invariants.test.ts` (D-12) AST-scans all 15 `src/lib/*Api.ts` (recursive, includes `src/lib/api/*`) — hard tier (opsApi/rpaApi/vdiApi) locks the registered KEEP baseline and warning tier locks per-file whitelist counts; any new hand-written CRUD template (or silent KEEP removal) turns it red. Since Phase 100 the rpaApi/vdiApi hard-tier baselines are both 0 (ghost methods and the accounts family removed), and the Phase 100 object-keys baseline (`POST_CLEANUP_BASELINE`) additionally locks each exported object's method set bidirectionally (add-back or silent deletion both fail).
-- KEEP exceptions (do not force-fit the factory): `notificationConfigApi` (GET list / PUT `/{id}` / DELETE verbs all differ from the factory), `assetApi` (unwraps `res.data` raw-data contract), `menuApi`/`profileApi`/`columnConfigApi` (no CRUD semantics, D-06), and heterogeneous functions whose request types are decoupled from the entity (`publishNotice` / `generateSchedule` / `createWorkOrder` with `WorkOrderCreateRequest`, etc.).
-
-**Migration status:** Phase 94 promoted the opsApi private factory and merged the rpaApi second copy into `apiFactory.ts`; all 13 `*Api.ts` handled per the migration matrix (3 object-form migrated + 5 flat files cluster-delegated + 5 KEEP), export signatures unchanged.
-
-### Config Backup Restore Convention
-
-All three config-backup restore paths are locked as of Phase 93 (TODO 闭环 D-32). **Rules:**
-
-1. **压缩/解压唯一走 `gzipCompress`/`gzipDecompress` helper**（`internal/services/config_backup_service.go`）——`.conf.gz` 后缀 + `Compressed` 标志双检查（`GetBackupContent` 解压路径），解压含 64MB 上限防线（zip bomb 防护），文件名经 `sanitizeBackupFileName` 清洗防路径逃逸。禁止在别处直接 `gzip.New*` 处理备份内容。
-2. **设备配置下发唯一入口 `DeviceExecutor.RestoreConfig`**（`internal/device/restore_config.go`）——内部 `cleanConfigLines` 基础清洗（D-03）+ `SendConfigsStopOnFailed` 一次 AcquirePriv 批量下发（D-12 fail-fast）+ vendor 退出命令 `exitConfigCommand`（huawei/h3c→quit，其余→exit，禁用 end）。禁止绕过该入口直接调 wrapper 或逐行 `SendConfig` 下发配置。
-3. **恢复必须走异步任务模式**（`ConfigRestoreTaskService.StartRestore`，detached context + 四态状态机 pending→running→success/failed，D-34 不支持取消）——禁止同步下发实现。恢复流程链：发起校验/互斥（同设备 D-04 + `status IN (pending,running)` D-08）→ 恢复前自动备份（失败即中止 D-14）→ 清洗下发 fail-fast → 回读 hash **仅警告不算失败**（D-11）→ 版本链恢复记录（`BackupTypeManual` + ChangeReason "恢复自版本 N" D-09）→ 任务终态。operlog 在 handler 发起时记一次（D-18）。
-
-**Regression guards:** `config_backup_service_93_NN_test.go`（93_01 压缩/解压 + 93_02 restore FileTransport e2e 断言链：备份→恢复→hash 一致，D-29/D-30）+ `configBackupAllowedSortFields` 无 status 列（D-33②）。
+| Module | Field | 0 Value | 1 Value | Default |
+|--------|-------|---------|---------|---------|
+| User | status | Enabled | Disabled | 0 |
+| Role | status | Normal | Stopped | 0 |
+| Menu | status | Normal | Stopped | 0 |
+| Menu | visible | Hidden | Visible | 1 |
+| Dept | status | Normal | Stopped | 0 |
+| Post | status | Normal | Stopped | 0 |
 
 ### API Response Format
 
@@ -525,17 +358,6 @@ await excelApi.export('building', { status: 0 });
 
 // ❌ WRONG - don't use raw post for operations module
 await post('/ops/building/list', params); // Use buildingApi.list instead
-```
-
-**For NEW resources in any domain, create the API with the shared factory — do not hand-write CRUD wrappers:**
-
-```typescript
-// ✅ CORRECT - createResourceApi (see Frontend API Factory Convention)
-import { createResourceApi } from '@/lib/apiFactory';
-export const categoryApi = createResourceApi<WorkOrderCategory>({ basePath: '/workorder/categories' });
-
-// ❌ WRONG - hand-written CRUD five-piece calling post directly
-const list = (params) => post('/workorder/categories/list', params);
 ```
 
 **Token management with authHelpers:**
@@ -660,29 +482,18 @@ func GetDictDataByTypeKey(dictType string) string {
 
 ### Request Encryption (SM2+SM4)
 
-- **Enabled for sensitive endpoints** (configurable via `security.request_encryption.exclude_paths`; login is NOT excluded)
+- **Enabled for sensitive endpoints** (configurable via `security.request_encryption.exclude_paths`)
 - **SM4-CBC** encrypts request body
 - **SM2** encrypts SM4 key
 - **Anti-replay:** timestamp (300s window) + nonce
-- Frontend toggle: `VITE_ENABLE_REQUEST_ENCRYPTION`
-
-### Response Encryption (default disabled)
-
-- `security.response_encryption.enabled` controls SM4-CBC response body encryption
-- Dynamically toggled at runtime via param `sys.request.encryption.enabled` (not just the YAML flag)
-
-### SM4 Key (`security.sm4_key`)
-
-- Base64-encoded 16-byte key; encrypts device passwords, AD passwords, RPA credentials
-- Generate a fresh key for production: `export SM4_KEY="$(openssl rand -base64 16)"`
 
 ### LDAP/AD Connections
 
-**CRITICAL:** Current code uses `InsecureSkipVerify: true` for LDAPS/StartTLS. This should be addressed for production.
+LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify` config key (default `true` for dev convenience). **Set it to `false` in production yaml** to enforce certificate validation. The login authentication path additionally honors env `AD_AUTH_TLS_INSECURE_SKIP_VERIFY` (default `false` = strict verification, see `internal/core/security/ad_authenticator.go`).
 
 ### Authentication
 
-- JWT dual-token mechanism (config: `jwt.access_key_expire` 7200s, `jwt.refresh_key_expire` 604800s, `jwt.use_sm2`)
+- JWT dual-token mechanism
 - SM3 for password hashing
 - RBAC permission model
 - All API endpoints require auth (except configured exclusions)
@@ -705,7 +516,7 @@ func GetDictDataByTypeKey(dictType string) string {
 - **Sync tasks** via scheduler
 - **Modular services**: config, group, user, OU, sync
 - **Location**: `internal/services/addomain/`
-- **Warning**: Uses `InsecureSkipVerify: true` for LDAPS/StartTLS
+- **Note**: TLS verification for LDAPS/StartTLS is governed by `ad.tls_skip_verify` config (default true; set false in production)
 
 ### AD Service Account Pool (Phase 36)
 
@@ -756,29 +567,22 @@ func GetDictDataByTypeKey(dictType string) string {
 
 ### Cache System
 
-**Single authority path (Phase 92):**
+**Two-tier architecture:**
 
-1. **internal/services/base/** - Cache abstraction single authority (zero-dependency package)
-   - `CacheProvider` interface (9 methods) + `NoOpCacheProvider`
-   - `CacheServiceBase` thin base class with `TTLResolver` interface
-   - Generic functions: `GetOrSetJSON[T]` / `Invalidate` / `InvalidatePattern`
-   - Guarded by invariants scan: `internal/services/system/cache_invariants_92_test.go`
-
-2. **pkg/cache/** - Low-level cache engine (below the abstraction)
+1. **pkg/cache/** - Low-level cache interface
    - `Cache` interface with Get/Set/Delete methods
    - Redis implementation in `redis.go`
    - **Important**: Redis uses prefix `xingran:` for all keys
    - When calling cache methods, use keys WITHOUT prefix, the prefix is added automatically
 
-3. **services root (infrastructure, in place per D-06/D-07)**
-   - `DataCacheService` - `pkg/cache.Cache` business wrapper (JSON serialization) + `base.CacheProvider` implementation base (via `system.NewCacheProvider` adapter); new code should NOT add direct call sites
-   - `CacheConfigService` - Dynamic cache TTL configuration (implicitly satisfies `base.TTLResolver`)
-
-4. **Module cache decorators** - `internal/services/system/*_cache_impl.go` + `internal/services/operations/floor_cache_impl.go` embed `CacheServiceBase` and read through `base.GetOrSetJSON`; invalidation goes through `base.Invalidate` / `base.InvalidatePattern` (operations `CacheInvalidator` keeps its Excel-pipeline entityType dispatch but delegates the underlying loop to base)
+2. **services/** - High-level caching
+   - `DataCacheService` - Generic caching with JSON serialization
+   - `CacheConfigService` - Dynamic cache TTL configuration
+   - Module-specific cache services (dept, role, dict, menu, user, post)
 
 **Cache key patterns:**
 - Use helper functions like `GetDictDataByTypeKey(dictType)` instead of hardcoding
-- Single source of truth: `internal/services/system/cache_keys.go`
+- Constants defined in root-level `*_cache_service.go` files
 
 **CRITICAL: Cache Key Prefix Handling**
 - Redis prefix is set to `xingran` in `internal/core/core.go:342`
@@ -848,17 +652,18 @@ func GetDictDataByTypeKey(dictType string) string {
 - Stores: `xingran-react-frontend/src/store/`
 
 **Documentation:**
-- Architecture: `docs/architecture/项目概述和架构设计.md`
-- Standards: `docs/standards/开发规范.md`
-- API: `docs/standards/API响应规范.md`
-- Security: `docs/architecture/安全和认证设计（国密）.md`
+- Architecture: `docs/项目概述和架构设计.md`
+- Standards: `docs/开发规范.md`
+- API: `docs/API响应规范.md`
+- Security: `docs/安全和认证设计（国密）.md`
 
-**Legacy Root Cache Files (infrastructure, kept in place):**
-- `internal/services/data_cache_service.go` — `DataCacheService` (pkg/cache wrapper + adapter Adaptee, D-06/D-07)
-- `internal/services/cache_config_service.go` — `CacheConfigService` (TTL config source of truth)
-- `internal/services/mac_history_cache_decorator.go` / `template_cache.go` — standalone root cache helpers (no CacheServiceBase pattern)
-
-Note: dept/role/dict/menu/user/post cache services were migrated into `internal/services/system/*_cache_impl.go` in v1.27 Phase 79; the root cache abstraction was unified into `internal/services/base` in v1.29 Phase 92.
+**Legacy Services (still used by core):**
+- `internal/services/dept_service.go`
+- `internal/services/role_cache_service.go`
+- `internal/services/dict_cache_service.go`
+- `internal/services/menu_cache_service.go`
+- `internal/services/user_cache_service.go`
+- `internal/services/post_cache_service.go`
 
 ---
 
@@ -887,14 +692,15 @@ Note: dept/role/dict/menu/user/post cache services were migrated into `internal/
 
 ### Working with Cache
 
-- **New code**: Always use `base.GetOrSetJSON[T]` + `base.CacheProvider` — never add interface{} closure-style GetOrSet or direct `DataCacheService` call sites
-- **Cache keys**: Use helper functions from `internal/services/system/cache_keys.go` (single source of truth), don't hardcode strings
-- **Invalidation**: Use `base.Invalidate` / `base.InvalidatePattern` after mutations (nil-guard + unified logging built in)
+- **New code**: Use `internal/services/system/` pattern with `CacheProvider` interface
+- **Existing code**: May use legacy `*_cache_service.go` files in root
+- **Cache keys**: Use helper functions, don't hardcode strings
+- **Invalidation**: Call `Invalidate*Cache()` methods after mutations
 
 ### Common Gotchas
 
 - **Scheduler confusion**: `internal/scheduler/` (engine) ≠ `api/v1/scheduler/` (job management)
-- **Cache authority confusion**: business cache = `base.CacheProvider` (via `internal/services/base`); `monitor.CacheOperator` is only the raw monitor-page operations interface
+- **Cache dual architecture**: Legacy root files vs new `system/` implementations
 - **Import paths**: Use full module path `github.com/xingran-next/xingran-go-backend/...`
 - **Context propagation**: Always pass `c.Request.Context()` to service methods
 - **Response wrapper**: Use `response.Success()` and `response.Error()`, not raw JSON
@@ -1183,17 +989,171 @@ Use TodoWrite to track progress. Ask for my approval only before starting and fo
 - **Response Format**: 使用 `response.Success()` / `response.Error()` 包装
 <!-- GSD:project-end -->
 
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
-## Architecture (reference)
+<!-- GSD:stack-start source:codebase/STACK.md -->
+## Technology Stack
 
-### Core Dependency Injection
+## Overview
+## Backend Stack
+### Language & Runtime
+- **Go 1.24** (toolchain go1.24.5)
+- Module: `github.com/xingran-next/xingran-go-backend`
+- Entry point: `cmd/main.go`
+### Web Framework
+- **Gin v1.10.0** — HTTP routing, middleware, JSON binding
+- **gin-contrib/cors v1.7.0** — CORS middleware
+- **gin-contrib/gzip v0.0.6** — Response compression
+- **swaggo/gin-swagger v1.6.0** — Swagger UI integration
+### Database
+- **PostgreSQL** (primary) via `gorm.io/driver/postgres v1.5.9`
+- **SQLite** (alternate) via `gorm.io/driver/sqlite v1.5.4` + `modernc.org/sqlite v1.40.1`
+- **GORM v1.30.5** — ORM with auto-migration
+- Connection pooling: configurable max_open_conns, max_idle_conns, max_lifetime
+### Cache
+- **Redis 7.4** via `redis/go-redis/v9 v9.7.0`
+- Two-tier: L1 (in-memory) + L2 (Redis) with async writer pool
+- Prefix: `xingran:` for all keys
+- L2 writer pool: configurable workers, queue size, retry with exponential backoff
+### Authentication & Security
+- **JWT v5.2.1** — Dual token (access + refresh)
+- **tjfoc/gmsm v1.4.1** — SM2/SM3/SM4 national cryptography
+- **SM2** — Key exchange, digital signatures
+- **SM3** — Password hashing
+- **SM4-CBC** — Request body encryption
+- **base64Captcha v1.3.6** — Login captcha
+### Task Scheduling
+- **robfig/cron/v3 v3.0.1** — Cron job engine
+- Built-in scheduler in `internal/scheduler/`
+- AD sync tasks, periodic work orders
+### Network Device Management
+- **scrapli/scrapligo v1.3.3** — Network device SSH/Telnet connections
+- **gosnmp/gosnmp v1.35.0** — SNMP operations
+- **sirikothe/gotextfsm v1.0.1** — TextFSM template parsing
+### Excel Processing
+- **xuri/excelize/v2 v2.10.0** — Excel import/export
+- Supports building, floor, workstation, infopoint batch operations
+### Real-time
+- **gorilla/websocket v1.5.3** — WebSocket connections for real-time features
+### Configuration
+- **spf13/viper v1.19.0** — YAML config with env var overrides
+- Config files: `configs/config.yaml`, `config.dev.yaml`, `config.prod.yaml`
+### Logging
+- **sirupsen/logrus v1.9.3** — Structured logging
+- **natefinch/lumberjack v2.2.1** — Log rotation
+### Other Libraries
+- **google/uuid v1.6.0** — UUID generation (primary keys)
+- **go-ldap/ldap/v3 v3.4.12** — AD/LDAP integration
+- **golang.org/x/sync v0.19.0** — Concurrency primitives (errgroup, singleflight)
+- **swaggo/swag v1.16.4** — Swagger doc generation
+## Frontend Stack
+### Core
+- **React 19.2** with TypeScript 5.9
+- **Vite 7.2** — Build tool and dev server
+- **ESLint** — Code linting
+### UI Framework
+- **Ant Design 6.1** — Component library
+- **Tailwind CSS 4.1.18** — Utility-first styling
+### State Management
+- **Zustand 5.0.9** — Lightweight state stores (7 stores)
+- **TanStack React Query v5.90.12** — Server state management
+### Routing
+- **react-router-dom v7.10.1** — Client-side routing
+### 3D Visualization
+- **Three.js v0.182.0** — 3D rendering
+- **@react-three/fiber v9.5.0** — React renderer for Three.js
+- **@react-three/drei v10.7.7** — Three.js helpers
+- Used for building/floor 3D visualization and CAD-style floor plan editor
+### Charts & Data
+- **ECharts 6.0** via `echarts-for-react v3.0.5`
+- **xlsx v0.18.5** — Client-side Excel processing
+### Maps
+- **@uiw/react-baidu-map v2.7.5** — Baidu Maps integration
+- **react-baidu-map v1.3.5** — Alternative map component
+### Other Frontend
+- **sm-crypto v0.3.13** — Client-side SM2/SM4 encryption
+- **axios v1.13.2** — HTTP client
+- **dayjs v1.11.19** — Date/time handling
+- **react-markdown v10.1.0** — Markdown rendering
+- **@uiw/react-md-editor v4.0.11** — Markdown editor
+- **react-grid-layout v2.2.2** — Drag-and-drop grid
+- **jsonata v2.1.0** — JSON query/transformation
+- **cron-parser/cron-validate** — Cron expression handling
+- **vitest** — Testing framework
+### Code Statistics
+- **485 Go files** (backend)
+- **506 TS/TSX files** (frontend)
+<!-- GSD:stack-end -->
+
+<!-- GSD:conventions-start source:CONVENTIONS.md -->
+## Conventions
+
+## Go Code Style
+### Handler-Service Pattern (Mandatory)
+### Response Wrapping
+### Error Handling
+- Service layer returns `error` (not response codes)
+- Handler layer translates errors to HTTP status codes
+- Use `fmt.Errorf("context: %w", err)` for wrapping
+- Use `pkg/errors` for typed errors where needed
+### Context Propagation
+### Request Binding
+### GORM Patterns
+- Always use soft delete (GORM default with `deleted_at`)
+- UUID primary keys via `gen_random_uuid()`
+- Use GORM scopes for reusable query logic
+- Avoid raw SQL; prefer GORM chainable API
+### Cache Key Helpers
+### Cache Prefix Handling
+- Store: `cache.Set(ctx, "user:1", value)` → Redis key `xingran:user:1`
+- When user input includes `xingran:` prefix, strip it before cache operations:
+## Status Value Convention
+## API Convention
+### Route Pattern
+- `POST /list` — List with pagination
+- `POST /` — Create
+- `POST /:id` — Get by ID
+- `POST /:id/update` — Update
+- `POST /:id/delete` — Delete
+### Response Format
+### Pagination
+## Frontend Conventions
+### API Calling
+### Token Management
+### State Management (Zustand)
+- 7 stores in `src/store/`
+- `authStore` includes `TokenManager` for auto-refresh
+- Use `useStore` hook for component access
+### useEffect Dependencies
+### Import Organization
+## Database Conventions
+- Table prefix: `sys_` for system tables
+- Column names: `snake_case`
+- Primary keys: UUID with `gen_random_uuid()`
+- Timestamps: `created_at`, `updated_at`, `deleted_at`
+- Soft delete: GORM default with `deleted_at` field
+- Migrations: auto-run on startup, versioned in `internal/core/db/migrations/`
+## Git Conventions
+- Commit messages: conventional commits format (`fix:`, `feat:`, `chore:`, `docs:`)
+- Build check before commit: `go build ./...`
+- Test check before commit: `go test ./...`
+- Always ask user before committing
+<!-- GSD:conventions-end -->
+
+<!-- GSD:architecture-start source:ARCHITECTURE.md -->
+## Architecture
+
+## Pattern: Layered Handler-Service with Core DI
+
+```
+Request → Router → Middleware → Handler → Service → Repository/Cache
+```
+## Core Dependency Injection
 
 ```go
 // Core struct holds all core dependencies
 type Core struct {
-    Config     *config.Config
-    DB         *db.Database
-    Cache      cache.Cache
+    Config    *config.Config
+    DB        *db.Database
+    Cache     cache.Cache
     JWTManager *security.JWTManager
     PwdManager *security.PasswordManager
     // ... other services
@@ -1206,32 +1166,34 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
     // ...
 }
 ```
-
-### Data Flow
-
+## Data Flow
+### Request Flow
 ```
-# Request Flow
 Client Request → Gin Router → Auth Middleware → Permission Middleware
 → Encryption Middleware → Handler → Service → Repository/Cache → Database
 → Response Wrapper → JSON Response
-
-# Cache Flow
+```
+### Cache Flow
+```
 Service.GetOrSet() → CacheProvider.GetOrSet()
 → Check L1 (in-memory) → Hit? Return
 → Check L2 (Redis) → Hit? Return & populate L1
 → Execute query() → Store to L2 → Store to L1 → Return
-
-# Import Flow (Workstation/Building)
+```
+### Import Flow (Workstation/Building)
+```
 Excel Upload → ExcelService.Parse() → Validate rows
 → ReferenceResolver.ResolveDept() → ReferenceResolver.ResolveUser()
 → GeocodingService.Geocode() (optional) → BatchUpsert()
 → CacheInvalidator.Invalidate() → Return ImportResult
 ```
-
+## Key Abstractions
+### Service Interface Pattern
+- Interface defined in service file (e.g., `UserService interface`)
+- Private implementation struct (`userServiceImpl`)
+- Constructor function (`NewUserService`)
+- Dependencies injected via constructor
 ### CacheProvider Interface
-
-Defined in `internal/services/base/cache_provider.go` (single authority since Phase 92):
-
 ```go
 type CacheProvider interface {
     // GetOrSet 获取缓存，如果不存在则执行查询函数并缓存结果
@@ -1247,23 +1209,19 @@ type CacheProvider interface {
     // MGet/MDelete 批量操作
     MGet(ctx context.Context, keys ...string) (map[string]string, error)
     MDelete(ctx context.Context, keys ...string) error
-
-    // Exists 检查缓存是否存在
-    Exists(ctx context.Context, key string) (bool, error)
-
-    // SetTTL/GetTTL 缓存过期时间
-    SetTTL(ctx context.Context, key string, expiration time.Duration) error
-    GetTTL(ctx context.Context, key string) (time.Duration, error)
-
-    // GetStats 获取缓存统计信息
-    GetStats(ctx context.Context) (*CacheStats, error)
 }
 ```
-- Cached version (Redis path): `DataCacheService` Adaptee via `system.NewCacheProvider` adapter
-- Non-cached version: `base.NoOpCacheProvider` pass-through (query executes, cache skipped)
-
-### Module Boundaries
-
+- Cached version: reads/writes Redis
+- Non-cached version: pass-through to DB
+### Dual Cache Architecture
+- **Legacy**: Root-level `*_cache_service.go` files wrapping `DataCacheService`
+- **New**: `internal/services/system/*_cache_impl.go` using `CacheProvider` interface
+## Entry Points
+- **HTTP**: `cmd/main.go` → `internal/api/router.go` → module routers
+- **WebSocket**: `internal/websocket/` for real-time connections
+- **Scheduler**: `internal/scheduler/` for cron-based tasks (AD sync, work orders)
+- **Migrations**: `internal/core/db/migrations/` auto-run on startup
+## Module Boundaries
 | Module | API Layer | Service Layer | Models |
 |--------|-----------|---------------|--------|
 | System | `api/v1/system/` | `services/system/` | `models/` |

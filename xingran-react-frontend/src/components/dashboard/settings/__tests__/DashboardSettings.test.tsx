@@ -11,9 +11,9 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-let storeState: Record<string, any> = {};
+let storeState: Record<string, unknown> = {};
 vi.mock("@/store/dashboardStore", () => ({
-  useDashboardStore: (selector?: (s: Record<string, any>) => unknown) => {
+  useDashboardStore: (selector?: (s: Record<string, unknown>) => unknown) => {
     if (selector) {
       return selector(storeState);
     }
@@ -22,7 +22,7 @@ vi.mock("@/store/dashboardStore", () => ({
 }));
 
 vi.mock("@/components/dashboard/settings/DashboardScopeSelector", () => ({
-  default: ({ value, onChange }: any) => (
+  default: ({ value, onChange }: unknown) => (
     <div data-testid="scope-selector">
       <button onClick={() => onChange?.({ scope: "public" })}>change-scope</button>
       <span>{value?.scope}</span>
@@ -93,9 +93,12 @@ describe("DashboardSettings", () => {
 
   it("点击 保存 + 校验通过 → 调用 updateDashboard + onClose", async () => {
     const onClose = vi.fn();
-    const { baseElement, getByText } = render(<DashboardSettings visible onClose={onClose} />, {
-      wrapper,
-    });
+    const { baseElement: _baseElement, getByText } = render(
+      <DashboardSettings visible onClose={onClose} />,
+      {
+        wrapper,
+      }
+    );
     await act(async () => {});
     await act(async () => {
       fireEvent.click(getByText("保存"));
@@ -106,9 +109,12 @@ describe("DashboardSettings", () => {
 
   it("点击 取消 → onClose + resetFields", async () => {
     const onClose = vi.fn();
-    const { baseElement, getByText } = render(<DashboardSettings visible onClose={onClose} />, {
-      wrapper,
-    });
+    const { baseElement: _baseElement, getByText } = render(
+      <DashboardSettings visible onClose={onClose} />,
+      {
+        wrapper,
+      }
+    );
     await act(async () => {});
     fireEvent.click(getByText("取消"));
     expect(onClose).toHaveBeenCalled();

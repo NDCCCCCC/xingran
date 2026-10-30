@@ -87,7 +87,7 @@ func (h *NetworkExportHandler) ExportDevices(c *gin.Context) {
 
 	statusMap := map[int]string{0: "在线", 1: "离线", 2: "未知"}
 	deviceTypeMap := map[string]string{"router": "路由器", "switch": "交换机", "firewall": "防火墙", "ap": "AP", "loadbalancer": "负载均衡"}
-	vendorMap := map[string]string{"huawei": "华为", "h3c": "H3C", "ruijie": "锐捷", "maipu": "迈普"}
+	vendorMap := map[string]string{"huawei": "华为", "h3c": "H3C", "ruijie": "锐捷", "maipu": "迈普", "cisco": "思科"}
 
 	for i, device := range devices {
 		row := i + 2
@@ -203,7 +203,7 @@ func (h *NetworkExportHandler) ExportTemplates(c *gin.Context) {
 	}
 
 	templateTypeMap := map[string]string{"init": "初始化", "config": "配置", "backup": "备份"}
-	vendorMap := map[string]string{"huawei": "华为", "h3c": "H3C", "ruijie": "锐捷", "maipu": "迈普"}
+	vendorMap := map[string]string{"huawei": "华为", "h3c": "H3C", "ruijie": "锐捷", "maipu": "迈普", "cisco": "思科"}
 	deviceTypeMap := map[string]string{"router": "路由器", "switch": "交换机", "firewall": "防火墙", "ap": "AP", "loadbalancer": "负载均衡"}
 
 	for i, tmpl := range templates {

@@ -11,7 +11,7 @@ describe("components/modal/BaseEditModal", () => {
   });
 
   it("memo 包裹", () => {
-    expect((BaseEditModal as any).$$typeof).toBeDefined();
+    expect((BaseEditModal as unknown).$$typeof).toBeDefined();
   });
 
   it("open=true + title → 渲染", () => {

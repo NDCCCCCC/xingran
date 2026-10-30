@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Modal } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
@@ -16,12 +16,19 @@ export interface WorkstationColumnsParams {
   handleEdit: (record: WorkstationOps) => void;
   handleDelete: (id: string) => void;
   getColumnSortOrder: (field: string) => SortOrder | undefined;
+  /**
+   * Phase 86 W2：行操作权限码**由页面层传入**（列工厂内不得调 hook）。
+   * 不传 = 不做权限判定（保持既有调用方行为零变更）。
+   * ⚠️ ops 码组只有 delete 键，没有 remove 键。
+   */
+  editPermission?: string;
+  deletePermission?: string;
 }
 
 export function getWorkstationColumns(
   params: WorkstationColumnsParams
 ): ColumnsType<WorkstationOps> {
-  const { handleEdit, handleDelete, getColumnSortOrder } = params;
+  const { handleEdit, handleDelete, getColumnSortOrder, editPermission, deletePermission } = params;
 
   return [
     {
@@ -122,21 +129,23 @@ export function getWorkstationColumns(
             label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
+            permission: editPermission,
           },
           {
             key: "delete",
             label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
-            onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个工位吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
-              });
-            },
+            // Phase 86 W2：confirmDelete 无 permission 位 → 由 ActionButtons 的
+            // permission 字段承担三态门控（ready 无码不渲染 / 未就绪 disabled）
+            permission: deletePermission,
+            onClick: () =>
+              confirmDelete({
+                target: `工位 ${record.name}`,
+                onDelete: async () => {
+                  await handleDelete(record.id);
+                },
+              }),
           },
         ];
         return <ActionButtons actions={actions} />;

@@ -25,6 +25,8 @@ var expectedTimeoutsValues = map[string]string{
 	// v129-recheck WR-04: ad_domain_handler 三处内联 duration 上移收编
 	"ADGroupSyncTimeout":       "10m0s",
 	"ADSingleGroupSyncTimeout": "2m0s",
+	// 域控审查 P0-3: sys_job 执行器包装的超时上限（scheduler/cron.go addJob）
+	"JobExecutionTimeout": "15m0s",
 }
 
 // readTimeoutsConsts parses timeouts.go and returns the map of constant
@@ -150,11 +152,12 @@ func TestTimeoutsConstantStability(t *testing.T) {
 	}
 }
 
-// TestTimeoutsConstantCount asserts exactly 10 constants exist.
-// (Phase 97 V130R-01: RestoreConfigTimeout split into RestoreBackupTimeout + RestoreConfigExecTimeout)
+// TestTimeoutsConstantCount asserts exactly 11 constants exist.
+// (Phase 97 V130R-01: RestoreConfigTimeout split into RestoreBackupTimeout + RestoreConfigExecTimeout;
+// 域控审查 P0-3: added JobExecutionTimeout.)
 func TestTimeoutsConstantCount(t *testing.T) {
 	t.Parallel()
-	const want = 10
+	const want = 11
 	actual, err := readTimeoutsConsts("timeouts.go")
 	if err != nil {
 		t.Fatalf("failed to parse timeouts.go: %v", err)

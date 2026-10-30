@@ -7,7 +7,8 @@
  */
 
 import { useState, useEffect } from "react";
-import { Select, InputNumber, Space } from "antd";
+import { InputNumber, Space } from "antd";
+import { AppSelect, type AppSelectProps } from "@/components/ui";
 import type { SelectProps } from "antd";
 
 export interface RefreshIntervalSelectorProps extends Omit<
@@ -97,7 +98,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
   }, [value]);
 
   // 处理预设选项选择
-  const handlePresetChange = (val: number) => {
+  const handlePresetChange = (val: unknown) => {
     if (val === CUSTOM_VALUE) {
       setIsCustom(true);
       // 默认自定义值为 1 分钟
@@ -105,7 +106,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
       onChange?.(defaultValue);
     } else {
       setIsCustom(false);
-      onChange?.(val);
+      onChange?.(val as number);
     }
   };
 
@@ -117,9 +118,9 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
   };
 
   // 处理自定义单位变化
-  const handleCustomUnitChange = (val: number) => {
-    setCustomUnit(val);
-    onChange?.(customNumber * val);
+  const handleCustomUnitChange = (val: unknown) => {
+    setCustomUnit(val as number);
+    onChange?.(customNumber * (val as number));
   };
 
   // 计算当前显示的 Select 值
@@ -127,22 +128,15 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
 
   return (
     <div className="refresh-interval-selector">
-      <Space direction="vertical" style={{ width: "100%" }}>
-        <Select
+      <Space orientation="vertical" style={{ width: "100%" }}>
+        <AppSelect
           value={selectValue}
           onChange={handlePresetChange}
           disabled={disabled}
           style={{ width: "100%" }}
-          {...selectProps}
-          onSearch={() => {}}
-        >
-          {PRESET_OPTIONS.map((opt) => (
-            <Select.Option key={opt.value} value={opt.value}>
-              {opt.label}
-            </Select.Option>
-          ))}
-          <Select.Option value={CUSTOM_VALUE}>自定义</Select.Option>
-        </Select>
+          {...(selectProps as AppSelectProps)}
+          options={[...PRESET_OPTIONS, { value: CUSTOM_VALUE, label: "自定义" }]}
+        />
 
         {isCustom && (
           <Space>
@@ -154,19 +148,14 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
               disabled={disabled}
               style={{ width: 100 }}
             />
-            <Select
+            <AppSelect
               value={customUnit}
               onChange={handleCustomUnitChange}
               disabled={disabled}
               style={{ width: 80 }}
-              onSearch={() => {}}
-            >
-              {UNIT_OPTIONS.map((opt) => (
-                <Select.Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Select.Option>
-              ))}
-            </Select>
+              showSearch={false}
+              options={UNIT_OPTIONS}
+            />
           </Space>
         )}
       </Space>

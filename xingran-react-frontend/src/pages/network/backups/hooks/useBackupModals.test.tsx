@@ -34,14 +34,14 @@ describe("useBackupModals — open/close 系列", () => {
     const { result } = renderHook(() => useBackupModals(opts()), { wrapper: wrap });
     const form = { resetFields: vi.fn() };
     act(() => result.current.openBackupModal());
-    act(() => result.current.closeBackupModal(form as any));
+    act(() => result.current.closeBackupModal(form as unknown));
     expect(result.current.backupModalVisible).toBe(false);
     expect(form.resetFields).toHaveBeenCalled();
   });
 
   it("openRestoreModal + closeRestoreModal", () => {
     const { result } = renderHook(() => useBackupModals(opts()), { wrapper: wrap });
-    act(() => result.current.openRestoreModal({ id: "b1" } as any));
+    act(() => result.current.openRestoreModal({ id: "b1" } as unknown));
     expect(result.current.restoreModalVisible).toBe(true);
     expect(result.current.selectedRestoreBackup?.id).toBe("b1");
     act(() => result.current.closeRestoreModal());
@@ -53,7 +53,7 @@ describe("useBackupModals — open/close 系列", () => {
     vi.mocked(post).mockResolvedValueOnce({ data: { content: "config text" } });
     const { result } = renderHook(() => useBackupModals(opts()), { wrapper: wrap });
     await act(async () => {
-      await result.current.openContentDrawer({ id: "b1" } as any);
+      await result.current.openContentDrawer({ id: "b1" } as unknown);
     });
     expect(result.current.contentDrawerVisible).toBe(true);
     expect(result.current.backupContent).toBe("config text");
@@ -65,7 +65,7 @@ describe("useBackupModals — open/close 系列", () => {
       result.current.openVersionListDrawer({
         deviceId: "d1",
         backups: [],
-      } as any)
+      } as unknown)
     );
     expect(result.current.versionListDrawerVisible).toBe(true);
     act(() => result.current.closeVersionListDrawer());
@@ -80,7 +80,7 @@ describe("useBackupModals — handle 系列", () => {
     const form = {
       validateFields: vi.fn().mockResolvedValue({ deviceIds: ["d1"] }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     await act(async () => {
       await result.current.handleBackup(form);
     });
@@ -91,7 +91,7 @@ describe("useBackupModals — handle 系列", () => {
     const form = {
       validateFields: vi.fn().mockRejectedValue({ errorFields: [] }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     const { result } = renderHook(() => useBackupModals(opts()), { wrapper: wrap });
     await act(async () => {
       await result.current.handleBackup(form);
@@ -105,7 +105,7 @@ describe("useBackupModals — handle 系列", () => {
       data: { taskId: "task-93", status: "pending", message: "恢复任务已创建" },
     });
     const { result } = renderHook(() => useBackupModals({ onLoad }), { wrapper: wrap });
-    act(() => result.current.openRestoreModal({ id: "b1", deviceId: "dev-1" } as any));
+    act(() => result.current.openRestoreModal({ id: "b1", deviceId: "dev-1" } as unknown));
     await act(async () => {
       await result.current.handleRestore();
     });
@@ -123,7 +123,7 @@ describe("useBackupModals — handle 系列", () => {
       data: { taskId: "task-93", status: "pending", message: "恢复任务已创建" },
     });
     const { result } = renderHook(() => useBackupModals(opts()), { wrapper: wrap });
-    act(() => result.current.openRestoreModal({ id: "b1", deviceId: "dev-1" } as any));
+    act(() => result.current.openRestoreModal({ id: "b1", deviceId: "dev-1" } as unknown));
     await act(async () => {
       await result.current.handleRestore();
     });

@@ -25,7 +25,7 @@ import {
   processTimeRangeParams,
 } from "../logs/utils";
 import { useLogActions } from "../logs/hooks/useLogActions";
-import * as apiModule from "@/lib/api";
+import "@/lib/api";
 
 describe("monitor/job/utils", () => {
   it("formatLocalTime null 返回占位", () => {
@@ -43,31 +43,31 @@ describe("monitor/job/utils", () => {
 
   it("renderJobStatusTag 正常/暂停", () => {
     // React 元素断言 props
-    const normal: any = renderJobStatusTag(0);
+    const normal: unknown = renderJobStatusTag(0);
     expect(normal.props.color).toBe("success");
     expect(normal.props.children).toBe("正常");
-    const paused: any = renderJobStatusTag(1);
+    const paused: unknown = renderJobStatusTag(1);
     expect(paused.props.color).toBe("warning");
     expect(paused.props.children).toBe("暂停");
   });
 
   it("renderConcurrentTag 允许/禁止", () => {
-    const yes: any = renderConcurrentTag(true);
+    const yes: unknown = renderConcurrentTag(true);
     expect(yes.props.color).toBe("green");
     expect(yes.props.children).toBe("允许");
-    const no: any = renderConcurrentTag(false);
+    const no: unknown = renderConcurrentTag(false);
     expect(no.props.color).toBe("orange");
     expect(no.props.children).toBe("禁止");
   });
 
   it("renderCronExpression 返回 Tooltip 包裹 code", () => {
-    const el: any = renderCronExpression("0 0 * * *");
+    const el: unknown = renderCronExpression("0 0 * * *");
     expect(el.type.displayName ?? el.type.name).toMatch(/Tooltip/);
   });
 
   it("renderExceptionInfo 空值 '-' 非空 Tooltip", () => {
     expect(renderExceptionInfo("")).toBe("-");
-    const el: any = renderExceptionInfo("boom");
+    const el: unknown = renderExceptionInfo("boom");
     expect(el).toBeDefined();
   });
 });
@@ -80,36 +80,36 @@ describe("monitor/logs/utils", () => {
   });
 
   it("renderRequestMethodTag 色彩映射", () => {
-    const get: any = renderRequestMethodTag("GET");
+    const get: unknown = renderRequestMethodTag("GET");
     expect(get.props.color).toBe("blue");
-    const post: any = renderRequestMethodTag("POST");
+    const post: unknown = renderRequestMethodTag("POST");
     expect(post.props.color).toBe("green");
-    const put: any = renderRequestMethodTag("PUT");
+    const put: unknown = renderRequestMethodTag("PUT");
     expect(put.props.color).toBe("orange");
-    const del: any = renderRequestMethodTag("DELETE");
+    const del: unknown = renderRequestMethodTag("DELETE");
     expect(del.props.color).toBe("red");
-    const other: any = renderRequestMethodTag("PATCH");
+    const other: unknown = renderRequestMethodTag("PATCH");
     expect(other.props.color).toBe("default");
   });
 
   it("renderLogStatusTag oper/login 双语义", () => {
-    const ok: any = renderLogStatusTag(0, "oper");
+    const ok: unknown = renderLogStatusTag(0, "oper");
     expect(ok.props.children).toBe("正常");
-    const bad: any = renderLogStatusTag(1, "oper");
+    const bad: unknown = renderLogStatusTag(1, "oper");
     expect(bad.props.children).toBe("异常");
-    const loginOk: any = renderLogStatusTag(0, "login");
+    const loginOk: unknown = renderLogStatusTag(0, "login");
     expect(loginOk.props.children).toBe("成功");
-    const loginBad: any = renderLogStatusTag(1, "login");
+    const loginBad: unknown = renderLogStatusTag(1, "login");
     expect(loginBad.props.children).toBe("失败");
   });
 
   it("renderLogStatusTag 默认 type=oper", () => {
-    const d: any = renderLogStatusTag(0);
+    const d: unknown = renderLogStatusTag(0);
     expect(d.props.children).toBe("正常");
   });
 
   it("processTimeRangeParams 双元素写入 ISO 时间", () => {
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
     const start = new Date("2026-08-01T00:00:00Z");
     const end = new Date("2026-08-28T00:00:00Z");
     processTimeRangeParams([start, end], params);
@@ -118,7 +118,7 @@ describe("monitor/logs/utils", () => {
   });
 
   it("processTimeRangeParams 空不写", () => {
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
     processTimeRangeParams(null, params);
     processTimeRangeParams([new Date()], params); // 长度 1 不写
     expect(params.startTime).toBeUndefined();

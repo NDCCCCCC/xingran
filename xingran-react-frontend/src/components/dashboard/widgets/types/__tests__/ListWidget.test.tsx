@@ -21,12 +21,12 @@ const baseWidget = {
   type: "list",
   dataSource: { type: "static", data: [] },
   position: { x: 0, y: 0, w: 4, h: 3 },
-} as any;
+} as unknown;
 
 describe("ListWidget 渲染", () => {
   it("data=[] → 渲染空", () => {
     const { baseElement } = renderWithProviders(
-      <ListWidget widget={baseWidget} display={{} as any} />
+      <ListWidget widget={baseWidget} display={{} as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -42,7 +42,7 @@ describe("ListWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ListWidget widget={baseWidget} display={{} as any} />
+      <ListWidget widget={baseWidget} display={{} as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -55,14 +55,14 @@ describe("ListWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ListWidget widget={baseWidget} display={{} as any} />
+      <ListWidget widget={baseWidget} display={{} as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
 
   it("onEdit + onDelete 传入", () => {
     const { baseElement } = renderWithProviders(
-      <ListWidget widget={baseWidget} display={{} as any} onEdit={vi.fn()} onDelete={vi.fn()} />
+      <ListWidget widget={baseWidget} display={{} as unknown} onEdit={vi.fn()} onDelete={vi.fn()} />
     );
     expect(baseElement).toBeDefined();
   });

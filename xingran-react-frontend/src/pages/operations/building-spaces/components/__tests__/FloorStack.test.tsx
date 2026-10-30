@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("../FloorCard3D", () => ({
-  default: ({ floor, onClick, isSelected }: any) => (
+  default: ({ floor, onClick, isSelected }: unknown) => (
     <div data-testid={`floor-card-${floor.id}`} data-selected={isSelected} onClick={onClick}>
       {floor.name}
     </div>
@@ -27,7 +27,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-const sampleFloors: any[] = [
+const sampleFloors: unknown[] = [
   { id: "f1", name: "Floor 1", buildingId: "b1", floorNo: "F1", workstationCount: 10 },
   { id: "f2", name: "Floor 2", buildingId: "b1", floorNo: "F2", workstationCount: 20 },
 ];

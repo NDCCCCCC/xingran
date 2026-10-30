@@ -20,7 +20,8 @@
  */
 
 import { useMemo, useState } from "react";
-import { Form, Input, Button, Card, Table, Tag, Badge, Alert, Space, Empty, App } from "antd";
+import { Form, Button, Card, Table, Tag, Badge, Alert, Space, Empty, App } from "antd";
+import { AppInput } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import { ExperimentOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
@@ -158,14 +159,13 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
       <Card title="输入" size="small" style={{ marginBottom: 12 }}>
         <Form form={form} layout="inline">
           <Form.Item name="ip" label="IP" rules={[{ required: true, message: "请输入 IP" }]}>
-            {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
-            <Input placeholder="192.168.0.10" style={{ width: 200 }} />
+            <AppInput placeholder="192.168.x.x" style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="userId" label="User ID">
-            <Input placeholder="可选 UUID" style={{ width: 220 }} />
+            <AppInput placeholder="可选 UUID" style={{ width: 220 }} />
           </Form.Item>
           <Form.Item name="deptId" label="Dept ID">
-            <Input placeholder="可选 UUID" style={{ width: 220 }} />
+            <AppInput placeholder="可选 UUID" style={{ width: 220 }} />
           </Form.Item>
           <Form.Item>
             <Button
@@ -196,16 +196,16 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
             <Alert
               type="info"
               showIcon
-              message="需指定 user/dept 才能评估 dept/user scope 规则"
+              title="需指定 user/dept 才能评估 dept/user scope 规则"
               description="当前未传 userID/deptID,仅 global 规则参与合并。dept/user scope 规则需双条件(IP CIDR + scopeID 匹配)才生效。"
               style={{ marginBottom: 12 }}
             />
           )}
           <Space size={12} wrap>
             <div>
-              <span style={{ color: "#999", marginRight: 8 }}>合并动作:</span>
+              <span style={{ color: "var(--theme-text-tertiary)", marginRight: 8 }}>合并动作:</span>
               {mergedActions.length === 0 ? (
-                <span style={{ color: "#999" }}>(无)</span>
+                <span style={{ color: "var(--theme-text-tertiary)" }}>(无)</span>
               ) : (
                 mergedActions.map((a) => (
                   <Tag key={a} color={actionColor(a)}>
@@ -215,7 +215,9 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
               )}
             </div>
             <div>
-              <span style={{ color: "#999", marginRight: 8 }}>最终严重度:</span>
+              <span style={{ color: "var(--theme-text-tertiary)", marginRight: 8 }}>
+                最终严重度:
+              </span>
               <Tag color={severityColor(finalSeverity)}>{finalSeverity || "-"}</Tag>
             </div>
           </Space>

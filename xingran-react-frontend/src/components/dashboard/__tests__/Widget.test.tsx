@@ -10,14 +10,14 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("../widgets/WidgetRenderer", () => ({
-  WidgetRenderer: ({ widget }: any) => <div data-testid="widget-renderer">{widget.title}</div>,
+  WidgetRenderer: ({ widget }: unknown) => <div data-testid="widget-renderer">{widget.title}</div>,
 }));
 
 import Widget from "../Widget";
 
 describe("components/dashboard/Widget", () => {
   it("渲染 WidgetRenderer", () => {
-    render(<Widget widget={{ id: "w1", type: "stat", title: "标题", display: {} } as any} />);
+    render(<Widget widget={{ id: "w1", type: "stat", title: "标题", display: {} } as unknown} />);
     expect(screen.getByTestId("widget-renderer")).toBeInTheDocument();
     expect(screen.getByText("标题")).toBeInTheDocument();
   });
@@ -28,13 +28,13 @@ describe("components/dashboard/Widget", () => {
 
   it("memo 包裹", () => {
     // Confirm it's a memo component (has $$typeof Symbol(react.memo))
-    expect((Widget as any).$$typeof).toBeDefined();
+    expect((Widget as unknown).$$typeof).toBeDefined();
   });
 
   it("onEdit/onDelete 传递", () => {
     render(
       <Widget
-        widget={{ id: "w2", type: "stat", title: "T2", display: {} } as any}
+        widget={{ id: "w2", type: "stat", title: "T2", display: {} } as unknown}
         onEdit={() => {}}
         onDelete={() => {}}
       />

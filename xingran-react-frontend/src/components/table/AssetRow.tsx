@@ -22,9 +22,12 @@ export interface AssetRowProps {
 function AssetRowImpl({ record, onEdit, onDelete }: AssetRowProps) {
   return (
     <Space size="small">
-      <Button type="link" size="small" onClick={() => onEdit?.(record)}>
-        编辑
-      </Button>
+      {/* STOP-06: onEdit 未提供时隐藏编辑入口，禁止假入口占位 */}
+      {onEdit && (
+        <Button type="link" size="small" onClick={() => onEdit(record)}>
+          编辑
+        </Button>
+      )}
       <Button type="link" size="small" danger onClick={() => onDelete?.(record.id)}>
         删除
       </Button>

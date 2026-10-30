@@ -24,17 +24,19 @@ async function expectRenders(ui: React.ReactElement, endpoints: Record<string, u
 
 describe("batch11 渲染", () => {
   it("notice/NoticeList(空)", async () => {
-    await expectRenders((<NoticeList notices={[]} selectedRowKeys={[]} loading={false} />) as any);
+    await expectRenders(
+      (<NoticeList notices={[]} selectedRowKeys={[]} loading={false} />) as unknown
+    );
   });
   it("notice/NoticeStatisticsCard", async () => {
     await expectRenders(
       <NoticeStatisticsCard
-        statistics={{ total: 10, published: 5, draft: 3, scheduled: 2 } as any}
+        statistics={{ total: 10, published: 5, draft: 3, scheduled: 2 } as unknown}
       />
     );
   });
   it("notice/ChannelSelector", async () => {
-    await expectRenders((<ChannelSelector selectedChannels={[]} onChange={vi.fn()} />) as any);
+    await expectRenders((<ChannelSelector selectedChannels={[]} onChange={vi.fn()} />) as unknown);
   });
   it("duty/config 页", async () => {
     await expectRenders(<DutyConfigPage />);

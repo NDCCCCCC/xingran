@@ -31,6 +31,63 @@ import type {
  */
 export type { DropdownOption } from "./apiFactory";
 
+// ==================== 工位物理链路诊断（Phase 80 / DIAG-01） ====================
+
+/**
+ * 物理链路逐段计数（只读诊断，不参与业务判定）。
+ *
+ * 链路口径：sys_workstation → ops_info_points → sys_device_port_status
+ *          → sys_device_mac_address → ops_asset / sys_ad_computer
+ */
+export interface PhysicalChainDiagnosis {
+  /** 工位是否存在于 sys_workstation（且未软删） */
+  workstationExists: boolean;
+  /** 工位是否绑定了 user_id（3f130 的断点就在此） */
+  userBound: boolean;
+  /** 该工位关联的信息点总数（含软删/停用） */
+  infoPointTotal: number;
+  /** 其中 status=0 且未软删的数量（CTE 实际用到的部分） */
+  infoPointActive: number;
+  /** active 信息点中已绑定 port_id 的数量 */
+  infoPointWithPort: number;
+  /** active 信息点的 port_id 在 sys_device_port_status 中真实存在的数量 */
+  portResolved: number;
+  /** port 所指设备在 sys_network_device 中存在的数量 */
+  deviceResolved: number;
+  /** 该链路上命中 MAC（实测或历史）的设备条数 */
+  macMatched: number;
+  /** 其中还命中 ops_asset（有资产详情）的条数 */
+  assetMatched: number;
+  /** 其中还命中 sys_ad_computer（有域控详情）的条数 */
+  adMatched: number;
+}
+
+/**
+ * 物理链路空因枚举（与后端常量一一对应，取值固定，前端按字面量分支展示）。
+ *
+ * ⚠️ 口径提醒：「未绑定用户」**压过「有数据」**——工位未绑 user_id 时，
+ * 即使链路能召回设备，emptyReason 仍为 no_user_bound（面板按用户维度呈现，
+ * 未绑用户时召回结果无从归属）。仅「已绑用户 + 有数据」时 emptyReason 才为空串。
+ */
+export type PhysicalEmptyReason =
+  "" | "no_user_bound" | "info_point_misbound" | "device_or_mac_missing";
+
+/** 物理链路设备查询结果（含空因诊断） */
+export interface PhysicalDevicesResult {
+  /** 设备列表（语义与 getPhysical 完全一致，可为空数组） */
+  devices: WorkstationDevice[];
+  /** 设备数量（= devices.length） */
+  total: number;
+  /** 空因代码；已绑用户且有数据时为空串（JSON 中省略） */
+  emptyReason?: PhysicalEmptyReason;
+  /** 面向运维人员的中文可读结论（空因时给出） */
+  emptyMessage?: string;
+  /** 非致命告警（任何情况下都可能有，逐条展示） */
+  warnings?: string[];
+  /** 逐段链路计数（用于「有 1 台但少了几台」的排查） */
+  diagnosis: PhysicalChainDiagnosis;
+}
+
 // ==================== 楼宇管理 ====================
 
 export interface BuildingListParams extends PageParams {
@@ -616,8 +673,24 @@ export const workstationDeviceApi = {
 
   // 实时查询工位关联的物理链路设备(Phase 45 R5)
   // MAC→port→infoPoint→workstation 反推链,资产字段优先、AD 字段补全
+  //
+  // Phase 80 / DIAG-01：内部改走诊断端点（带回空因诊断），但**对外仍返回数组**，
+  // 调用方零改动；需要诊断信息的调用方用 getPhysicalWithDiagnosis。
   getPhysical: async (workstationId: string) => {
-    return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}/physical`, {});
+    const result = await post<PhysicalDevicesResult>(
+      `/ops/workstation-device/${workstationId}/physical-diagnosis`,
+      {}
+    );
+    return { ...result, data: result.data?.devices ?? [] };
+  },
+
+  // 实时查询工位关联的物理链路设备 + 空因诊断（Phase 80 / DIAG-01）
+  // 返回 {devices, total, emptyReason, emptyMessage, warnings, diagnosis}
+  getPhysicalWithDiagnosis: async (workstationId: string) => {
+    return await post<PhysicalDevicesResult>(
+      `/ops/workstation-device/${workstationId}/physical-diagnosis`,
+      {}
+    );
   },
 
   // 查询工位下全部设备（手动持久化部分），与 getManual 等价；保留为兼容旧调用

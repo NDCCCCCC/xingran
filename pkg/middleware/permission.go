@@ -32,6 +32,11 @@ import (
 //     菜单缓存,不引入新的语义。需要立即生效时调用 InvalidateMiddlewarePermCache。
 const mwPermCacheTTL = 30 * time.Second
 
+// strictCacheKeyPrefix 严格权限检查(RequireStrictPermissions)的缓存键前缀。
+// 与 checkUserPermission 的 `userID + "|" + permission` 键形态区分,
+// 避免两种语义(精确 vs 降级)共用同一条缓存记录。
+const strictCacheKeyPrefix = "strict|"
+
 type mwPermCacheEntry struct {
 	allow     bool
 	expiresAt time.Time
@@ -61,11 +66,16 @@ func mwCacheStore(c *sync.Map, key string, allow bool) {
 
 // InvalidateMiddlewarePermCache 使指定用户的中间件权限缓存立即失效。
 // 供角色/用户角色变更路径调用;当前未接线 — 30s 短 TTL 陈旧已被接受(见上方注释)。
+//
+// v1.24 Phase 78:严格检查(checkUserPermissionStrict)的缓存键带 "strict|" 前缀,
+// 同样纳入失效范围(纯增量:只多删严格检查的条目,不放宽既有语义)。
 func InvalidateMiddlewarePermCache(userID string) {
 	mwSuperAdminCache.Delete(userID)
 	prefix := userID + "|"
+	strictPrefix := strictCacheKeyPrefix + userID + "|"
 	mwPermCheckCache.Range(func(k, _ interface{}) bool {
-		if key, ok := k.(string); ok && strings.HasPrefix(key, prefix) {
+		if key, ok := k.(string); ok &&
+			(strings.HasPrefix(key, prefix) || strings.HasPrefix(key, strictPrefix)) {
 			mwPermCheckCache.Delete(k)
 		}
 		return true
@@ -156,45 +166,9 @@ func checkUserPermissionUncached(core *core.Core, userID, permission string) boo
 		return true
 	}
 
-	// 2. 如果精确匹配失败，尝试通过子菜单权限检查父菜单权限
-	// 支持子菜单权限自动包含父菜单权限：勾选子菜单时，自动拥有父菜单的页面访问权限
-	// 例如：用户有 vdi:vm:query 权限，检查 vdi:vm:list 时应该通过
-	//
-	// P1 fix (权限提升): 仅允许"按钮类(F)子权限 → 父菜单页面访问权"继承,
-	// 不允许"菜单类(C)子权限 → 父菜单",否则用户拥有任一子页面就自动获得父页面
-	// 的全部 :list/:view 权限,在精细化数据权限场景构成越权读取。
-	var menu models.Menu
-	err = core.DB.GetDB().Where("perms = ? AND status = ?", permission, models.MenuStatusNormal).First(&menu).Error
-	if err == nil && menu.ID != "" {
-		// 查找该菜单的所有"按钮"子菜单 (menu_type='F')
-		var childMenus []models.Menu
-		err = core.DB.GetDB().Where("parent_id = ? AND menu_type = ? AND status = ?",
-			menu.ID, models.MenuTypeButton, models.MenuStatusNormal).Find(&childMenus).Error
-		if err == nil {
-			// 提取子菜单的权限标识
-			childPerms := make([]interface{}, 0)
-			for _, child := range childMenus {
-				if child.Perms != nil && *child.Perms != "" {
-					childPerms = append(childPerms, *child.Perms)
-				}
-			}
-			// 检查用户是否有任意子菜单的权限
-			if len(childPerms) > 0 {
-				err = core.DB.GetDB().Raw(`
-					SELECT COUNT(DISTINCT rm.menu_id)
-					FROM sys_user_role ur
-					INNER JOIN sys_role_menu rm ON ur.role_id = rm.role_id
-					INNER JOIN sys_menu m ON rm.menu_id = m.id
-					WHERE ur.user_id = ? AND m.perms IN ? AND m.status = ?
-				`, userID, childPerms, models.MenuStatusNormal).Scan(&count).Error
-
-				applogger.Infof("[Permission Check] child menu match: count=%d, childPerms=%v, err=%v", count, childPerms, err)
-				if err == nil && count > 0 {
-					applogger.Infof("[Permission Check] child menu match PASS (子菜单权限自动包含父菜单权限)")
-					return true
-				}
-			}
-		}
+	// 2. 如果精确匹配失败，尝试通过子菜单权限检查父菜单权限（Step 2）
+	if hasInheritedButtonPerm(core, userID, permission) {
+		return true
 	}
 
 	// 3. 如果精确匹配失败，检查模块级权限
@@ -218,6 +192,66 @@ func checkUserPermissionUncached(core *core.Core, userID, permission string) boo
 	}
 
 	applogger.Infof("[Permission Check] ALL CHECKS FAILED, returning false")
+	return false
+}
+
+// hasInheritedButtonPerm 判定「F 型子按钮权限 → 父页面权限」继承（checkUserPermissionUncached 的 Step 2）。
+//
+// 权威语义（四步链路）：
+//  1. 输入：待判权限串 permission（Step 1 精确匹配失败后）；
+//  2. 查 sys_menu 中 perms = permission AND status = normal 的那条菜单；
+//  3. 查它的子菜单 parent_id = menu.id AND menu_type = 'F' AND status = normal，收集非空 perms；
+//  4. 查用户角色是否绑定任一子按钮的 perms，有 → 放行父页面权限。
+//
+// 等价表述：用户持有某页面（C 型/M 型）下任一 F 型按钮权限 → 自动获得该页面的访问权限（list/view 等）。
+//
+// **方向：持 F 型按钮 → 继承父页面权限；反向（持父页面 → 自动获得子按钮权限）不成立。**
+//
+// P1 防提权约束：仅允许 F 型（按钮）子 → 父放行，不允许 C 型（菜单）子 → 父，
+// 否则用户拥有任一子页面就自动获得父页面的全部 :list/:view 权限，构成越权读取。
+//
+// Step 3 的模块级降级（system:user:list → system:user）是另一层，不在此函数内。
+func hasInheritedButtonPerm(core *core.Core, userID, permission string) bool {
+	var menu models.Menu
+	err := core.DB.GetDB().Where("perms = ? AND status = ?", permission, models.MenuStatusNormal).First(&menu).Error
+	if err != nil || menu.ID == "" {
+		return false
+	}
+
+	// 查找该菜单的所有"按钮"子菜单 (menu_type='F')
+	var childMenus []models.Menu
+	err = core.DB.GetDB().Where("parent_id = ? AND menu_type = ? AND status = ?",
+		menu.ID, models.MenuTypeButton, models.MenuStatusNormal).Find(&childMenus).Error
+	if err != nil {
+		return false
+	}
+
+	// 提取子菜单的权限标识
+	childPerms := make([]interface{}, 0)
+	for _, child := range childMenus {
+		if child.Perms != nil && *child.Perms != "" {
+			childPerms = append(childPerms, *child.Perms)
+		}
+	}
+	if len(childPerms) == 0 {
+		return false
+	}
+
+	// 检查用户是否有任意子菜单的权限
+	var count int64
+	err = core.DB.GetDB().Raw(`
+		SELECT COUNT(DISTINCT rm.menu_id)
+		FROM sys_user_role ur
+		INNER JOIN sys_role_menu rm ON ur.role_id = rm.role_id
+		INNER JOIN sys_menu m ON rm.menu_id = m.id
+		WHERE ur.user_id = ? AND m.perms IN ? AND m.status = ?
+	`, userID, childPerms, models.MenuStatusNormal).Scan(&count).Error
+
+	applogger.Infof("[Permission Check] child menu match: count=%d, childPerms=%v, err=%v", count, childPerms, err)
+	if err == nil && count > 0 {
+		applogger.Infof("[Permission Check] child menu match PASS (子菜单权限自动包含父菜单权限)")
+		return true
+	}
 	return false
 }
 
@@ -361,6 +395,72 @@ func isQueryPath(path string) bool {
 	return last == "list" || last == "tree"
 }
 
+// RequireStrictPermissions 要求命中指定权限之一，且**不做任何权限降级**。
+//
+// 与 RequirePermissions 的差异（关键）：
+//   - RequirePermissions：精确匹配 → F 型子权限继承（Step 2，hasInheritedButtonPerm）→ 模块级降级（Step 3）
+//   - RequireStrictPermissions：仅精确匹配（Step 1）
+//
+// 用途：写操作（create/update/delete/batch/reset/status）必须严格，
+// 否则只读角色会因「持有页面本体权限（如 system:user）」而被 Step 3 放行。
+//
+// 超管 bypass 与 30s TTL 缓存沿用现有实现，不新增语义。
+//
+// v1.24 Phase 78（#16）新增。不改动既有 RequirePermissions /
+// RequirePermissionsWithQuery / checkUserPermission 的任何行为。
+func RequireStrictPermissions(permissions []string, core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, ok := getUserIDAsString(c)
+		if !ok {
+			response.Error(c, response.ErrUnauthorized, "用户未认证")
+			c.Abort()
+			return
+		}
+
+		// 超级管理员直接通过（沿用 isSuperAdmin，role_key='admin'）
+		if isSuperAdmin(core, userID) {
+			c.Next()
+			return
+		}
+
+		// 精确命中任一权限即放行（不做降级）
+		for _, permission := range permissions {
+			if checkUserPermissionStrict(core, userID, permission) {
+				c.Next()
+				return
+			}
+		}
+
+		response.Error(c, response.ErrForbidden, "没有访问权限")
+		c.Abort()
+	}
+}
+
+// checkUserPermissionStrict 仅做精确匹配（sys_menu.perms = ?），
+// 不做 F 型子权限继承（Step 2）、不做模块级降级（Step 3）。
+//
+// 缓存键带 "strict|" 前缀，与 checkUserPermission 的缓存条目区分；
+// TTL 沿用 mwPermCacheTTL（30s），不新增失效逻辑。
+func checkUserPermissionStrict(core *core.Core, userID, permission string) bool {
+	cacheKey := strictCacheKeyPrefix + userID + "|" + permission
+	if allow, hit := mwCacheLookup(&mwPermCheckCache, cacheKey); hit {
+		return allow
+	}
+
+	var count int64
+	err := core.DB.GetDB().Raw(`
+		SELECT COUNT(DISTINCT rm.menu_id)
+		FROM sys_user_role ur
+		INNER JOIN sys_role_menu rm ON ur.role_id = rm.role_id
+		INNER JOIN sys_menu m ON rm.menu_id = m.id
+		WHERE ur.user_id = ? AND m.perms = ? AND m.status = ?
+	`, userID, permission, models.MenuStatusNormal).Scan(&count).Error
+
+	allow := err == nil && count > 0
+	mwCacheStore(&mwPermCheckCache, cacheKey, allow)
+	return allow
+}
+
 // RequireAllPermissions 需要所有权限
 func RequireAllPermissions(permissions []string, core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -496,6 +596,11 @@ func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core
 		return db.Where("1=0")
 	case models.DataScopeSelf:
 		// 仅本人数据权限
+		// ⚠️ PMODEL-01 标注（零行为改动）：此处 deptField + " = ?", userID 的语义
+		// 仅当 deptField 为用户维度字段（如 vdi bound_user_id）才正确；若 deptField
+		// 是部门列（如 dept_id）则构成 id 空间错位（user id ≠ dept id）。
+		// sys_user 列表场景的正确实现见 internal/services/system/user_service.go
+		// applyUserDataScope 的 DataScopeSelf 分支（sys_user.id = ?）。
 		return db.Where(deptField+" = ?", userID)
 	default:
 		return db.Where("1=0") // 默认无权限

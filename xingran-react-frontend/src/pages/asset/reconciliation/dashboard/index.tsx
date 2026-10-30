@@ -39,10 +39,10 @@ import { queryKeys } from "@/lib/queryKeys";
 const DEFAULT_WINDOW_DAYS = 7;
 
 const SEVERITY_COLORS: Record<string, string> = {
-  low: "var(--theme-success, #2d8949)",
-  medium: "var(--theme-info, #337ab0)",
-  high: "var(--theme-warning, #b07a20)",
-  critical: "var(--theme-error, #f5222d)",
+  low: "var(--theme-success)",
+  medium: "var(--theme-info)",
+  high: "var(--theme-warning)",
+  critical: "var(--theme-error)",
 };
 
 /** 饼图按冲突类型 fallback 顺序(保证 seed merge 6 keys 都在) */
@@ -258,7 +258,7 @@ const Dashboard = () => {
           <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
             <Card>
               <div className="flex items-center gap-3">
-                <AppstoreOutlined style={{ fontSize: 32, color: "#337ab0" }} />
+                <AppstoreOutlined style={{ fontSize: 32, color: "var(--theme-info)" }} />
                 <div>
                   <div className="text-2xl font-bold">{summary.data?.totalAssets ?? 0}</div>
                   <div className="text-gray-500">全量资产数</div>
@@ -269,9 +269,9 @@ const Dashboard = () => {
           <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
             <Card>
               <div className="flex items-center gap-3">
-                <WarningOutlined style={{ fontSize: 32, color: "#b07a20" }} />
+                <WarningOutlined style={{ fontSize: 32, color: "var(--theme-warning)" }} />
                 <div>
-                  <div className="text-2xl font-bold" style={{ color: "#b07a20" }}>
+                  <div className="text-2xl font-bold" style={{ color: "var(--theme-warning)" }}>
                     {summary.data?.openExceptions ?? 0}
                   </div>
                   <div className="text-gray-500">未解决异常数</div>
@@ -282,9 +282,9 @@ const Dashboard = () => {
           <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
             <Card>
               <div className="flex items-center gap-3">
-                <AlertOutlined style={{ fontSize: 32, color: "#f5222d" }} />
+                <AlertOutlined style={{ fontSize: 32, color: "var(--theme-error)" }} />
                 <div>
-                  <div className="text-2xl font-bold" style={{ color: "#f5222d" }}>
+                  <div className="text-2xl font-bold" style={{ color: "var(--theme-error)" }}>
                     {summary.data?.criticalOpen ?? 0}
                   </div>
                   <div className="text-gray-500">critical 级未解决</div>
@@ -295,7 +295,7 @@ const Dashboard = () => {
           <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
             <Card>
               <div className="flex items-center gap-3">
-                <RiseOutlined style={{ fontSize: 32, color: "#2d8949" }} />
+                <RiseOutlined style={{ fontSize: 32, color: "var(--theme-success)" }} />
                 <div>
                   <div className="text-2xl font-bold">{summary.data?.last7dNew ?? 0}</div>
                   <div className="text-gray-500">7d 新增异常数</div>
@@ -366,9 +366,14 @@ const Dashboard = () => {
                 value={reductions.excPct}
                 precision={1}
                 suffix="%"
-                styles={{ content: { color: reductions.excPct >= 60 ? "#2d8949" : "#b07a20" } }}
+                styles={{
+                  content: {
+                    color:
+                      reductions.excPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
+                  },
+                }}
               />
-              <small style={{ color: "var(--theme-text-secondary, #888)" }}>
+              <small style={{ color: "var(--theme-text-secondary)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.total_exceptions ?? 0} → current{" "}
                 {baselineCompareQuery.data?.current?.total_exceptions ?? 0}
               </small>
@@ -379,9 +384,13 @@ const Dashboard = () => {
                 value={reductions.woPct}
                 precision={1}
                 suffix="%"
-                styles={{ content: { color: reductions.woPct >= 60 ? "#2d8949" : "#b07a20" } }}
+                styles={{
+                  content: {
+                    color: reductions.woPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
+                  },
+                }}
               />
-              <small style={{ color: "var(--theme-text-secondary, #888)" }}>
+              <small style={{ color: "var(--theme-text-secondary)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.total_workorders ?? 0} → current{" "}
                 {baselineCompareQuery.data?.current?.total_workorders ?? 0}
               </small>
@@ -392,9 +401,14 @@ const Dashboard = () => {
                 value={reductions.critPct}
                 precision={1}
                 suffix="%"
-                styles={{ content: { color: reductions.critPct >= 60 ? "#2d8949" : "#b07a20" } }}
+                styles={{
+                  content: {
+                    color:
+                      reductions.critPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
+                  },
+                }}
               />
-              <small style={{ color: "var(--theme-text-secondary, #888)" }}>
+              <small style={{ color: "var(--theme-text-secondary)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.critical_exceptions ?? 0} → current{" "}
                 {baselineCompareQuery.data?.current?.critical_exceptions ?? 0}
               </small>

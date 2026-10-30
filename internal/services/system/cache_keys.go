@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // CacheKeyManager 缓存键管理器
@@ -82,6 +84,10 @@ const (
 	CacheKeyUserByUserName = "user:name" // 用户名查询: user:name:{username}
 	CacheKeyUserList       = "user:list" // 用户列表: user:list
 	CacheKeyUserListByDept = "user:dept" // 部门用户: user:dept:{deptId}
+
+	// CacheKeyUserListScopeAll 用户列表缓存 key 中 data_scope 维度段的"无个性化"占位 uid
+	// （scope=All 或零值时 uid 段统一为 "all"，key 形态稳定）。
+	CacheKeyUserListScopeAll = "all"
 
 	// 角色相关
 	CacheKeyRoleByID      = "role:id"      // 角色详情: role:id:{uuid}
@@ -631,4 +637,17 @@ func GetRpaSelectorBestKey(pageURL, elementID string) string {
 // separate username="bob" + status=1 params that produce "bob:status:1".
 func EscapeCacheKeyValue(value string) string {
 	return strings.ReplaceAll(value, ":", "%3A")
+}
+
+// UserListScopeKeySection 返回用户列表缓存 key 的 data_scope 维度段（PMODEL-01）。
+// 格式：:ds:<scope>:uid:<userID>；scope=All/零值或 uid 为空时 uid 段统一 "all"。
+// 该段必须紧跟 CacheKeyUserList 前缀之后插入（由 buildListCacheKey 调用方保证），
+// 使 InvalidatePattern(CacheKeyUserList + "*") 的失效覆盖不受影响；缺此段会导致
+// 不同 data_scope 用户互相命中同一缓存 → 跨用户数据泄漏。
+func UserListScopeKeySection(dataScope models.DataScope, scopeUserID string) string {
+	uid := scopeUserID
+	if uid == "" || dataScope <= models.DataScopeAll {
+		uid = CacheKeyUserListScopeAll
+	}
+	return fmt.Sprintf(":ds:%d:uid:%s", int(dataScope), EscapeCacheKeyValue(uid))
 }

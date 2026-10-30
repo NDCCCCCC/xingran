@@ -42,6 +42,12 @@ type SyncResult struct {
 	GroupCount    int `json:"groupCount"`
 	UserCount     int `json:"userCount"`
 	ComputerCount int `json:"computerCount"`
+	// Phase 61 SHADOW-01: 全量同步末尾清理的软删计数（纯增量可观测性字段,
+	// 前端不读则忽略）。清理拒绝时保持 0。
+	DeletedUserCount int `json:"deletedUserCount"`
+	DeletedOUCount   int `json:"deletedOUCount"`
+	//nolint:revive // 与既有 CamelCase JSON tag 风格保持一致
+	DeletedComputerCount int `json:"deletedComputerCount"`
 }
 
 // SyncDataByID 根据配置ID同步数据
@@ -159,6 +165,15 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 		return nil, err
 	}
 
+	// Phase 61 SHADOW-01/SHADOW-03: 全量同步四类 upsert 全部成功后，软删 AD 端已消失的
+	// 影子行。清理拒绝/内部失败均为非阻断 —— 对齐 group_sync_service.go:80-83 的调用方
+	// 非 fatal 口径:四类 upsert 已各自提交不可回滚,清理失败只 WARN,整轮同步仍 success。
+	// 挂载处于 singleflight.Do 闭包内 + cleanupAfterFullSync 的 syncType 守卫共同构成
+	// SHADOW-03（清理与全量同步互斥不并发;增量分支 no-op）。
+	if err := s.cleanupAfterFullSync(ctx, config, syncType, ous, users, computers, result); err != nil {
+		applogger.Warnf("[AD同步] 影子表过期清理失败(非阻断,不影响本轮同步结果): %v", err)
+	}
+
 	// 更新配置最后同步时间
 	now := time.Now()
 	updateResult := s.db.WithContext(ctx).Model(config).Updates(map[string]interface{}{
@@ -218,9 +233,18 @@ func safeAttr(s string, maxLen int) string {
 }
 
 // getExistingOUs 获取已存在的OU
+//
+// SHADOW-01 复活配套：查询 Unscoped 化,软删行一并纳入 existing 集 —— 软删行同 DN
+// 在 AD 复现时进入 update 分支复活,而非走 Create 撞不含 deleted_at 的唯一约束。
+// 命中行 DeletedAt 随即清零 → INSERT 值 deleted_at 为 NULL → ON CONFLICT
+// SET deleted_at = EXCLUDED.deleted_at(NULL) → 行复活;活行 SET NULL 与库中现值
+// 一致,无副作用。读路径(List/Get 默认作用域)不受影响。
 func (s *SyncService) getExistingOUs(ctx context.Context, configID string, ouDNs []string) []models.ADOU {
 	var existingOUs []models.ADOU
-	s.db.WithContext(ctx).Where("ad_config_id = ? AND ou_dn IN ?", configID, ouDNs).Find(&existingOUs)
+	s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND ou_dn IN ?", configID, ouDNs).Find(&existingOUs)
+	for i := range existingOUs {
+		existingOUs[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+	}
 	return existingOUs
 }
 
@@ -299,6 +323,10 @@ func (s *SyncService) batchUpdateOUs(ctx context.Context, ous map[string]*models
 				Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "ou_dn"}},
 				DoUpdates: clause.AssignmentColumns([]string{
 					"ou_name", "description", "parent_dn", "ou_path", "last_sync_at",
+					// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+					// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活
+					//（活行 SET NULL 与库中现值一致,无副作用）。
+					"deleted_at",
 				}),
 			}).Create(batch).Error; err != nil {
 				return fmt.Errorf("批量更新OU失败: %w", err)
@@ -317,7 +345,13 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 
 	groupDNs := extractDNs(entries)
 	var existingGroups []models.ADGroup
-	s.db.WithContext(ctx).Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
+	// SHADOW-01 复活配套:Unscoped 纳入软删行(同 DN 复现走 update 分支复活,而非
+	// createGroupsInBatches 裸 Create 撞 UNIQUE(ad_config_id, group_dn));命中行
+	// DeletedAt 清零 → INSERT 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
+	s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND group_dn IN ?", config.ID, groupDNs).Find(&existingGroups)
+	for i := range existingGroups {
+		existingGroups[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+	}
 
 	existingGroupMap := make(map[string]*models.ADGroup, len(existingGroups))
 	for i := range existingGroups {
@@ -370,8 +404,13 @@ func (s *SyncService) syncGroups(ctx context.Context, config *models.ADConfig, e
 		return err
 	}
 
+	// HYGIENE-04:建组已在上一步完成，此处加载的集合已含本轮全部组
+	groupDNSet, err := s.loadKnownGroupDNSet(ctx, config.ID)
+	if err != nil {
+		return fmt.Errorf("加载已知组 DN 集合失败: %w", err)
+	}
 	for groupDN, members := range groupMembersMap {
-		if err := s.syncGroupMembers(ctx, config, groupDN, members); err != nil {
+		if err := s.syncGroupMembers(ctx, config, groupDN, members, groupDNSet); err != nil {
 			return err
 		}
 	}
@@ -421,6 +460,9 @@ func (s *SyncService) updateGroupsInBatches(ctx context.Context, groups map[stri
 			Columns: []clause.Column{{Name: "ad_config_id"}, {Name: "group_dn"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"group_name", "description", "member_count", "ou_dn", "group_scope", "group_type", "last_sync_at",
+				// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+				// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活。
+				"deleted_at",
 			}),
 		}).Create(batch).Error; err != nil {
 			return fmt.Errorf("批量更新用户组失败: %w", err)
@@ -462,7 +504,13 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 		}
 		batch := userDNs[i:end]
 		var batchUsers []models.ADUser
-		s.db.WithContext(ctx).Where("ad_config_id = ? AND user_dn IN ?", config.ID, batch).Find(&batchUsers)
+		// SHADOW-01 复活配套:Unscoped 纳入软删行(同 DN 复现走 update 分支复活,而非
+		// 裸 Create 撞 UNIQUE(ad_config_id, user_dn));命中行 DeletedAt 清零 → INSERT
+		// 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
+		s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND user_dn IN ?", config.ID, batch).Find(&batchUsers)
+		for i := range batchUsers {
+			batchUsers[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+		}
 		existingUsers = append(existingUsers, batchUsers...)
 	}
 
@@ -522,6 +570,7 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 			existingUser.Department = safeAttr(entry.GetAttributeValue("department"), 255)
 			existingUser.Company = safeAttr(entry.GetAttributeValue("company"), 255)
 			existingUser.Description = safeAttr(entry.GetAttributeValue("description"), 4000)
+			existingUser.Manager = safeAttr(entry.GetAttributeValue("manager"), 500)
 			existingUser.OUN = ouDN
 			existingUser.UserAccountControl = userAccountControl
 			existingUser.IsEnabled = !existingUser.IsDisabledByUAC()
@@ -546,6 +595,7 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 				Department:         safeAttr(entry.GetAttributeValue("department"), 255),
 				Company:            safeAttr(entry.GetAttributeValue("company"), 255),
 				Description:        safeAttr(entry.GetAttributeValue("description"), 4000),
+				Manager:            safeAttr(entry.GetAttributeValue("manager"), 500),
 				OUN:                ouDN,
 				UserAccountControl: userAccountControl,
 				MemberOf:           memberOf,
@@ -596,9 +646,13 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 					DoUpdates: clause.AssignmentColumns([]string{
 						"username", "display_name", "email", "phone", "mobile",
 						"title", "department", "company", "description", "ou_dn",
+						"manager",
 						"user_account_control", "is_enabled", "is_locked",
 						"password_expired", "member_of", "last_logon",
 						"password_last_set", "last_sync_at",
+						// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+						// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活。
+						"deleted_at",
 					}),
 				}).Create(batch).Error; err != nil {
 					return fmt.Errorf("批量更新用户失败: %w", err)
@@ -613,32 +667,65 @@ func (s *SyncService) syncUsers(ctx context.Context, config *models.ADConfig, en
 }
 
 // syncGroupMembers 同步用户组成员关系
-func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADConfig, groupDN string, memberDNs []string) error {
-	// 先删除旧的成员关系
-	if err := s.db.WithContext(ctx).Unscoped().Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
-		Delete(&models.ADGroupMember{}).Error; err != nil {
-		return fmt.Errorf("清理旧成员关系失败: %w", err)
-	}
+//
+// P1 fix: 把「先 Delete 旧成员 → 再 Create 新成员」包在单事务中。
+// 原实现两步独立提交:Delete 成功后 crash/网络抖动会让旧成员消失而新成员未建,
+// 等同于丢失整组关系;且两步之间外部查询可见空成员窗口(SHADOW-02)。
+// 事务化后 PG READ COMMITTED 下要么旧成员集要么新成员集,无可观测空窗;
+// Create 半途失败时 Delete 自动回滚。每组一个事务,由调用方逐组调用
+// (sync.go syncGroups / group_sync_service.go SyncSingleGroup / syncGroupEntries),
+// 不把整轮所有组合成一个大事务(锁面扩大且违背「重放以组为单位」语义)。
+// Unscoped 硬删语义保留:sys_ad_group_member 是派生数据,随 LDAP 全量重放;
+// 改软删会导致行数爆炸 + GetGroupSyncStatus 计数虚高。
+// groupDNSet 为本轮已知 group DN 集合（loadKnownGroupDNSet 产出）；nil 时不过滤（防御语义，
+// 生产调用方必须显式加载传入）。嵌套组 DN 被过滤不写入用户成员关系（HYGIENE-04）。
+func (s *SyncService) syncGroupMembers(ctx context.Context, config *models.ADConfig, groupDN string, memberDNs []string, groupDNSet map[string]struct{}) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 先删除旧的成员关系
+		if err := tx.Unscoped().Where("ad_config_id = ? AND group_dn = ?", config.ID, groupDN).
+			Delete(&models.ADGroupMember{}).Error; err != nil {
+			return fmt.Errorf("清理旧成员关系失败: %w", err)
+		}
 
-	if len(memberDNs) == 0 {
+		// 空成员集语义不变:Delete 已随事务提交,Create 跳过
+		if len(memberDNs) == 0 {
+			return nil
+		}
+
+		// HYGIENE-04:过滤嵌套组 DN，不写入用户成员关系（重放 delete+insert 天然自愈存量污染行）
+		if groupDNSet == nil {
+			applogger.Warnf("[组同步] 组 %s 未提供 group DN 集合，跳过嵌套组过滤（防御路径，生产不应出现）", groupDN)
+		} else {
+			var filtered []string
+			memberDNs, filtered = filterNestedGroupMemberDNs(memberDNs, groupDNSet)
+			if len(filtered) > 0 {
+				applogger.Infof("[组同步] 组 %s 过滤嵌套组成员 %d 个（不写入用户成员关系）", groupDN, len(filtered))
+			}
+		}
+
+		// HYGIENE-04 边界:组成员可能"全部"是嵌套组(生产实例 CN=CXHUB-人资条线),
+		// 过滤后为空时 Create 会返回 GORM ErrEmptySlice("empty slice found"),
+		// 事务回滚并让整轮 syncGroups 中止。Delete 已在事务内生效,直接提交即可。
+		if len(memberDNs) == 0 {
+			return nil
+		}
+
+		// 准备批量数据
+		members := make([]models.ADGroupMember, 0, len(memberDNs))
+		for _, userDN := range memberDNs {
+			members = append(members, models.ADGroupMember{
+				ADConfigID: config.ID,
+				GroupDN:    groupDN,
+				UserDN:     userDN,
+			})
+		}
+
+		if err := tx.Create(&members).Error; err != nil {
+			return fmt.Errorf("批量添加组成员失败: %w", err)
+		}
+
 		return nil
-	}
-
-	// 准备批量数据
-	members := make([]models.ADGroupMember, 0, len(memberDNs))
-	for _, userDN := range memberDNs {
-		members = append(members, models.ADGroupMember{
-			ADConfigID: config.ID,
-			GroupDN:    groupDN,
-			UserDN:     userDN,
-		})
-	}
-
-	if err := s.db.WithContext(ctx).Create(&members).Error; err != nil {
-		return fmt.Errorf("批量添加组成员失败: %w", err)
-	}
-
-	return nil
+	})
 }
 
 // updateSyncLog 更新同步日志

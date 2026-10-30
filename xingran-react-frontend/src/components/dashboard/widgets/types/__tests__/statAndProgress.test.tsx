@@ -36,7 +36,7 @@ describe("StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     const { container } = renderWithProviders(
       <StatCardWidget widget={baseWidget} display={{ iconColor: "#1890ff" }} />
     );
@@ -49,7 +49,7 @@ describe("StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     const { container } = renderWithProviders(
       <StatCardWidget widget={baseWidget} display={{ iconColor: "#1890ff" }} />
     );
@@ -62,7 +62,7 @@ describe("StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     const { container } = renderWithProviders(
       <StatCardWidget widget={baseWidget} display={{ iconColor: "#1890ff", showTrend: true }} />
     );
@@ -77,7 +77,7 @@ describe("ProgressWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     const { container } = renderWithProviders(<ProgressWidget widget={baseWidget} display={{}} />);
     expect(container.textContent).toContain("75");
   });
@@ -88,7 +88,7 @@ describe("ProgressWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     const { container } = renderWithProviders(<ProgressWidget widget={baseWidget} display={{}} />);
     // widget 标题或占位 — 仅断言不 crash
     expect(container).not.toBeNull();
@@ -100,7 +100,7 @@ describe("ProgressWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
+    } as unknown);
     const { container } = renderWithProviders(<ProgressWidget widget={baseWidget} display={{}} />);
     expect(container).not.toBeNull();
   });

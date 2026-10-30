@@ -16,7 +16,7 @@ describe("pages/network/discoveries/hooks/useDiscoveryPolling", () => {
 
   it("无 running tasks → 不启动 polling", () => {
     const onPoll = vi.fn();
-    const discoveries = [{ id: "d1", status: "completed" } as any];
+    const discoveries = [{ id: "d1", status: "completed" } as unknown];
     renderHook(() => useDiscoveryPolling({ discoveries, onPoll }));
     vi.advanceTimersByTime(5000);
     expect(onPoll).not.toHaveBeenCalled();
@@ -24,7 +24,7 @@ describe("pages/network/discoveries/hooks/useDiscoveryPolling", () => {
 
   it("含 running task → 启动 polling", () => {
     const onPoll = vi.fn();
-    const discoveries = [{ id: "d1", status: "running" } as any];
+    const discoveries = [{ id: "d1", status: "running" } as unknown];
     renderHook(() => useDiscoveryPolling({ discoveries, onPoll }));
     vi.advanceTimersByTime(3000);
     expect(onPoll).toHaveBeenCalled();
@@ -32,7 +32,7 @@ describe("pages/network/discoveries/hooks/useDiscoveryPolling", () => {
 
   it("3 秒间隔触发 onPoll", () => {
     const onPoll = vi.fn();
-    const discoveries = [{ id: "d1", status: "running" } as any];
+    const discoveries = [{ id: "d1", status: "running" } as unknown];
     renderHook(() => useDiscoveryPolling({ discoveries, onPoll }));
     vi.advanceTimersByTime(6000);
     expect(onPoll).toHaveBeenCalledTimes(2);
@@ -40,7 +40,7 @@ describe("pages/network/discoveries/hooks/useDiscoveryPolling", () => {
 
   it("卸载时清理 polling", () => {
     const onPoll = vi.fn();
-    const discoveries = [{ id: "d1", status: "running" } as any];
+    const discoveries = [{ id: "d1", status: "running" } as unknown];
     const { unmount } = renderHook(() => useDiscoveryPolling({ discoveries, onPoll }));
     unmount();
     vi.advanceTimersByTime(5000);
@@ -49,7 +49,7 @@ describe("pages/network/discoveries/hooks/useDiscoveryPolling", () => {
 
   it("running 完成后 → 停止 polling", () => {
     const onPoll = vi.fn();
-    let discoveries = [{ id: "d1", status: "running" } as any];
+    let discoveries = [{ id: "d1", status: "running" } as unknown];
     const { rerender } = renderHook(({ d }) => useDiscoveryPolling({ discoveries: d, onPoll }), {
       initialProps: { d: discoveries },
     });
@@ -59,7 +59,7 @@ describe("pages/network/discoveries/hooks/useDiscoveryPolling", () => {
     expect(onPoll).toHaveBeenCalled();
 
     // running 变为 completed
-    discoveries = [{ id: "d1", status: "completed" } as any];
+    discoveries = [{ id: "d1", status: "completed" } as unknown];
     rerender({ d: discoveries });
 
     // 后续不应再触发

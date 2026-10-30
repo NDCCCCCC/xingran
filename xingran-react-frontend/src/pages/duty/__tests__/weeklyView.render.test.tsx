@@ -21,7 +21,7 @@ function wrap(ui: React.ReactElement) {
   );
 }
 
-const member = (username: string, dutyType: string, userId = "u1"): any => ({
+const member = (username: string, dutyType: string, userId = "u1"): unknown => ({
   userId,
   username,
   nickname: username,
@@ -90,7 +90,7 @@ describe("SwapScheduleModal", () => {
       <SwapScheduleModal
         visible={false}
         allSchedules={[
-          { id: "s1", scheduleDate: "2026-08-24", user: { username: "zhang" } } as any,
+          { id: "s1", scheduleDate: "2026-08-24", user: { username: "zhang" } } as unknown,
         ]}
         onCancel={vi.fn()}
         onOk={vi.fn()}

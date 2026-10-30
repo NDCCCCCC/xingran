@@ -3,14 +3,14 @@
  * 知识文章模态框组件
  */
 
-import { Modal, Form, Input, Select, Row, Col, Space } from "antd";
+import { Modal, Form, Row, Col, Space } from "antd";
+// Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件。本文件 Select 全为 children 形态，
+// 一律改写为 options 形态（AppSelect 无条件 optionFilterProp="label"，children 下破坏性）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { EyeOutlined, LikeOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
 import type { KnowledgeArticle, KnowledgeCategory, KnowledgeTag } from "@/lib/knowledgeApi";
 import { STATUS_OPTIONS } from "../constants";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 export interface EditModalProps {
   open: boolean;
@@ -56,7 +56,7 @@ export function EditModal({
           label="文章标题"
           rules={[{ required: true, message: "请输入文章标题" }]}
         >
-          <Input placeholder="请输入文章标题" className="user-form-input" />
+          <AppInput placeholder="请输入文章标题" className="user-form-input" />
         </Form.Item>
 
         <Row gutter={16}>
@@ -66,13 +66,17 @@ export function EditModal({
               label="文章分类"
               rules={[{ required: true, message: "请选择文章分类" }]}
             >
-              <Select placeholder="请选择文章分类" className="user-form-input" onSearch={() => {}}>
-                {flatCategories.map((cat) => (
-                  <Option key={cat.id} value={cat.id}>
-                    {cat.categoryName}
-                  </Option>
-                ))}
-              </Select>
+              {/* 形态分类器③：动态 children → options 改写（label 真实存在） */}
+              <AppSelect
+                allowClear
+                placeholder="请选择文章分类"
+                className="user-form-input"
+                onSearch={() => {}}
+                options={flatCategories.map((cat) => ({
+                  label: cat.categoryName,
+                  value: cat.id,
+                }))}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -81,35 +85,38 @@ export function EditModal({
               label="状态"
               rules={[{ required: true, message: "请选择状态" }]}
             >
-              <Select placeholder="请选择状态" className="user-form-input" onSearch={() => {}}>
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+              {/* 形态分类器②④：状态枚举（业务禁搜）→ options 形态 + 显式 showSearch={false} */}
+              <AppSelect
+                allowClear
+                placeholder="请选择状态"
+                className="user-form-input"
+                onSearch={() => {}}
+                showSearch={false}
+                // STATUS_OPTIONS 为 as const 只读元组，antd options 需可变数组 → 展开复制
+                options={[...STATUS_OPTIONS]}
+              />
             </Form.Item>
           </Col>
         </Row>
 
         <Form.Item name="tagIds" label="标签">
-          <Select
+          {/* 形态分类器③ + mode="tags"：tags 模式自建输入项，配合 options 形态需保证
+              label 存在（否则 optionFilterProp="label" 破坏性）；tags 模式下搜索是核心
+              交互，显式 showSearch 保持开启（不依赖 count>=8 自动策略） */}
+          <AppSelect
+            allowClear
             mode="tags"
             placeholder="请选择标签"
             style={{ width: "100%" }}
             className="user-form-input"
             onSearch={() => {}}
-          >
-            {tags.map((tag) => (
-              <Option key={tag.id} value={tag.id}>
-                {tag.tagName}
-              </Option>
-            ))}
-          </Select>
+            showSearch
+            options={tags.map((tag) => ({ label: tag.tagName, value: tag.id }))}
+          />
         </Form.Item>
 
         <Form.Item name="summary" label="摘要">
-          <TextArea rows={2} placeholder="请输入摘要" />
+          <AppTextArea rows={2} placeholder="请输入摘要" />
         </Form.Item>
 
         <Form.Item
@@ -117,7 +124,7 @@ export function EditModal({
           label="文章内容"
           rules={[{ required: true, message: "请输入文章内容" }]}
         >
-          <TextArea rows={10} placeholder="请输入文章内容（支持Markdown格式）" />
+          <AppTextArea rows={10} placeholder="请输入文章内容（支持Markdown格式）" />
         </Form.Item>
       </Form>
     </Modal>

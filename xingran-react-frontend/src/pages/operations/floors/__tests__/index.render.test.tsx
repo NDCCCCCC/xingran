@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import FloorPage from "../index";
-import { floorApi, buildingApi } from "@/lib/opsApi";
+import { floorApi } from "@/lib/opsApi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/lib/api", async () => {
@@ -42,8 +42,8 @@ function renderFloor() {
 
 describe("FloorPage 渲染", () => {
   it("空数据 → 渲染不抛错", async () => {
-    vi.mocked(floorApi.list).mockResolvedValueOnce({ data: { list: [], total: 0 } } as any);
-    vi.mocked(floorApi.statistics).mockResolvedValueOnce({ data: { total: 0 } } as any);
+    vi.mocked(floorApi.list).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
+    vi.mocked(floorApi.statistics).mockResolvedValueOnce({ data: { total: 0 } } as unknown);
     const { baseElement } = renderFloor();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();
@@ -64,8 +64,8 @@ describe("FloorPage 渲染", () => {
         ],
         total: 1,
       },
-    } as any);
-    vi.mocked(floorApi.statistics).mockResolvedValueOnce({ data: { total: 1 } } as any);
+    } as unknown);
+    vi.mocked(floorApi.statistics).mockResolvedValueOnce({ data: { total: 1 } } as unknown);
     const { baseElement } = renderFloor();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();

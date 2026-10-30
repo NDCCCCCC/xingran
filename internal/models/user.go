@@ -35,10 +35,15 @@ type User struct {
 	AdOuDn     *string `gorm:"type:text;column:ad_ou_dn" json:"adOuDn,omitempty"`
 	AdSyncedAt *time.Time `gorm:"column:ad_synced_at" json:"adSyncedAt,omitempty"`
 
+	// AD 同步补充字段（迁移 219 补列）
+	Mobile     *string `gorm:"size:20" json:"mobile,omitempty"`             // 手机号（来自 AD mobile）
+	Title      *string `gorm:"size:100" json:"title,omitempty"`             // 职位（来自 AD title）
+	AdConfigID *string `gorm:"type:uuid;index" json:"adConfigId,omitempty"` // 来源 AD 配置 ID（多域隔离）
+
 	// 关联
 	Roles   []string    `gorm:"-" json:"roles"`           // 简化为字符串数组，避免复杂关联
 	RoleIds []string    `gorm:"-" json:"roleIds,omitempty"` // 角色ID数组，用于前端表单回显
-	Posts   []Post      `gorm:"many2many:user_posts;" json:"posts,omitempty"`
+	Posts   []Post      `gorm:"many2many:sys_user_post;" json:"posts,omitempty"`
 	Dept    *Department `gorm:"foreignKey:DeptID" json:"department,omitempty"`
 }
 

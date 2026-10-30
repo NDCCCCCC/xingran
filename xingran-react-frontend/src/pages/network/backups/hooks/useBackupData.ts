@@ -21,6 +21,8 @@ interface UseBackupDataReturn {
   statistics: BackupStatistics;
   loading: boolean;
   total: number;
+  /** FIX-04a：列表加载失败的可见错误（渲染 ErrorAlertWithRetry） */
+  error: unknown;
   loadDevices: () => Promise<void>;
   loadBackups: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
@@ -39,6 +41,7 @@ export function useBackupData(options: UseBackupDataOptions): UseBackupDataRetur
   });
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  const [error, setError] = useState<unknown>(null);
 
   // 加载设备列表
   const loadDevices = useCallback(async () => {
@@ -48,8 +51,9 @@ export function useBackupData(options: UseBackupDataOptions): UseBackupDataRetur
         pageSize: 50,
       });
       setDevices(result.data?.list || []);
+      setError(null);
     } catch (error) {
-      console.error("加载设备列表失败:", error);
+      setError(error);
     }
   }, []);
 
@@ -75,8 +79,9 @@ export function useBackupData(options: UseBackupDataOptions): UseBackupDataRetur
 
         setDeviceGroups(groups);
         setTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("加载备份列表失败:", error);
+        setError(error);
       } finally {
         setLoading(false);
       }
@@ -100,8 +105,9 @@ export function useBackupData(options: UseBackupDataOptions): UseBackupDataRetur
         manual: data.manualBackups ?? 0,
         devices: data.uniqueDevices ?? 0,
       });
+      setError(null);
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      setError(error);
     }
   }, []);
 
@@ -111,6 +117,7 @@ export function useBackupData(options: UseBackupDataOptions): UseBackupDataRetur
     statistics,
     loading,
     total,
+    error,
     loadDevices,
     loadBackups,
     loadStatistics,

@@ -78,4 +78,23 @@ describe("usePagination 持久化", () => {
     expect(sessionStorage.getItem("xingran_table_state_system_user_current")).toBeNull();
     expect(result.current.current).toBe(1);
   });
+
+  // UAT FAIL-1 回归（Phase 75）：模拟「切 tab → 切回」的卸载→重挂载场景。
+  // 实机缺陷在页面数据加载层把恢复后的页码覆写回 1；本用例锁 hook 层
+  // remount 恢复语义：重挂载必须回到持久化页码，且 sessionStorage 不被覆写。
+  it("tab 切换卸载→重挂载：恢复持久化页码且 sessionStorage 未被覆写", () => {
+    const { unmount } = renderHook(() => usePagination(), {
+      wrapper: wrapper("/operations/buildings"),
+    });
+    // 首次挂载翻到第 2 页（持久化写入）
+    sessionStorage.setItem("xingran_table_state_operations_buildings_current", "2");
+    unmount(); // 切走 tab → 组件卸载
+
+    // 切回 tab → 重挂载
+    const second = renderHook(() => usePagination(), {
+      wrapper: wrapper("/operations/buildings"),
+    });
+    expect(second.result.current.current).toBe(2); // 恢复页码，而非重置 1
+    expect(sessionStorage.getItem("xingran_table_state_operations_buildings_current")).toBe("2"); // 未被覆写
+  });
 });

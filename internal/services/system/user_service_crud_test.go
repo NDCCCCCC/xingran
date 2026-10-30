@@ -159,12 +159,27 @@ func TestUserServiceCRUD_UpdateFullPaths(t *testing.T) {
 	require.NoError(t, db.Raw("SELECT post_id FROM sys_user_post WHERE user_id = ?", id).Scan(&posts).Error)
 	assert.Equal(t, []string{"np1"}, posts)
 
-	// DeptID 置 nil → DeptName 清空
+	// F-06 契约修正：省略 deptId（nil）= 未提供 = 不写库，dept_id/dept_name 保持不变。
+	// 原断言"DeptID 置 nil → DeptName 清空"锁定的正是 Phase 57 F-06 指出的不一致
+	// （Save 全字段覆盖把 nil 当零值清库，而入队 diff 把 nil 当"无变更"），已按新契约改写；
+	// 显式空串仍是"清空部门"的表达方式（下一段断言）。
 	err = svc.Update(ctx, &requests.UserUpdateRequest{ID: id, Nickname: &nick})
 	require.NoError(t, err)
 	var deptName *string
 	require.NoError(t, db.Raw("SELECT dept_name FROM sys_user WHERE id = ?", id).Scan(&deptName).Error)
-	assert.Nil(t, deptName)
+	require.NotNil(t, deptName, "省略 deptId 不得清空 dept_name")
+	assert.Equal(t, "研发部", *deptName)
+	var deptID *string
+	require.NoError(t, db.Raw("SELECT dept_id FROM sys_user WHERE id = ?", id).Scan(&deptID).Error)
+	require.NotNil(t, deptID, "省略 deptId 不得清空 dept_id")
+	assert.Equal(t, "d1", *deptID)
+
+	// 显式空串 = 清空部门
+	emptyDept := ""
+	require.NoError(t, svc.Update(ctx, &requests.UserUpdateRequest{ID: id, Nickname: &nick, DeptID: &emptyDept}))
+	require.NoError(t, db.Raw("SELECT dept_name FROM sys_user WHERE id = ?", id).Scan(&deptName).Error)
+	require.NotNil(t, deptName)
+	assert.Equal(t, "", *deptName, "显式空串 deptId 应清空 dept_name")
 
 	// 清空角色/岗位(空数组 → 只删不建)
 	require.NoError(t, svc.Update(ctx, &requests.UserUpdateRequest{ID: id, Nickname: &nick}))

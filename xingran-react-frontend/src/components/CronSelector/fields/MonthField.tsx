@@ -4,7 +4,8 @@
 
 import type { FC } from "react";
 import type { RadioChangeEvent } from "antd";
-import { Radio, Select, Space } from "antd";
+import { Radio, Space } from "antd";
+import { AppSelect } from "@/components/ui";
 import type { CronFieldConfig, PeriodType } from "../constants";
 import { FIELD_RANGES, MONTH_NAMES } from "../constants";
 
@@ -34,13 +35,12 @@ const MonthField: FC<MonthFieldProps> = ({ value, onChange }) => {
           <Radio value="specific">
             <Space align="center">
               <span>指定:</span>
-              {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-              <Select
+              <AppSelect
                 mode="multiple"
                 style={{ width: 300 }}
                 value={value.specific || [1]}
-                onChange={(values: number[]) =>
-                  onChange({ ...value, periodType: "specific", specific: values })
+                onChange={(values: unknown) =>
+                  onChange({ ...value, periodType: "specific", specific: values as number[] })
                 }
                 options={options.map((v) => ({ label: MONTH_NAMES[v - 1], value: v }))}
                 placeholder="选择月份"
@@ -52,35 +52,30 @@ const MonthField: FC<MonthFieldProps> = ({ value, onChange }) => {
             <Space align="center">
               <span>周期:</span>
               <span>从</span>
-              <Select
+              <AppSelect
                 style={{ width: 100 }}
                 value={value.cycleStart ?? 1}
-                onChange={(cycleStart: number) =>
-                  onChange({ ...value, periodType: "cycle", cycleStart })
+                onChange={(cycleStart: unknown) =>
+                  onChange({ ...value, periodType: "cycle", cycleStart: cycleStart as number })
                 }
-                onSearch={() => {}}
-              >
-                {options.map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {MONTH_NAMES[v - 1]}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={options.map((v) => ({ value: v, label: MONTH_NAMES[v - 1] }))}
+              />
               <span>开始，每</span>
-              <Select
+              <AppSelect
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
-                onChange={(cycleInterval: number) =>
-                  onChange({ ...value, periodType: "cycle", cycleInterval })
+                onChange={(cycleInterval: unknown) =>
+                  onChange({
+                    ...value,
+                    periodType: "cycle",
+                    cycleInterval: cycleInterval as number,
+                  })
                 }
-                onSearch={() => {}}
-              >
-                {Array.from({ length: 6 }, (_, i) => i + 1).map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {v}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={Array.from({ length: 6 }, (_, i) => i + 1).map((v) => ({
+                  value: v,
+                  label: v,
+                }))}
+              />
               <span>个月</span>
             </Space>
           </Radio>
@@ -89,35 +84,23 @@ const MonthField: FC<MonthFieldProps> = ({ value, onChange }) => {
             <Space align="center">
               <span>范围:</span>
               <span>从</span>
-              <Select
+              <AppSelect
                 style={{ width: 100 }}
                 value={value.rangeStart ?? 1}
-                onChange={(rangeStart: number) =>
-                  onChange({ ...value, periodType: "range", rangeStart })
+                onChange={(rangeStart: unknown) =>
+                  onChange({ ...value, periodType: "range", rangeStart: rangeStart as number })
                 }
-                onSearch={() => {}}
-              >
-                {options.map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {MONTH_NAMES[v - 1]}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={options.map((v) => ({ value: v, label: MONTH_NAMES[v - 1] }))}
+              />
               <span>到</span>
-              <Select
+              <AppSelect
                 style={{ width: 100 }}
                 value={value.rangeEnd ?? 12}
-                onChange={(rangeEnd: number) =>
-                  onChange({ ...value, periodType: "range", rangeEnd })
+                onChange={(rangeEnd: unknown) =>
+                  onChange({ ...value, periodType: "range", rangeEnd: rangeEnd as number })
                 }
-                onSearch={() => {}}
-              >
-                {options.map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {MONTH_NAMES[v - 1]}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={options.map((v) => ({ value: v, label: MONTH_NAMES[v - 1] }))}
+              />
             </Space>
           </Radio>
         </Space>

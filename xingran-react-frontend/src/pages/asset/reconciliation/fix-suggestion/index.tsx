@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 修复建议 admin 页面 (Phase 46 R5)
  *
  * 内容:
@@ -17,21 +17,8 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-  Table,
-  Form,
-  Select,
-  Button,
-  Space,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  App,
-  Modal,
-  Input,
-} from "antd";
+import { Table, Form, Button, Space, Tag, Card, Row, Col, Statistic, App, Modal } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   ReloadOutlined,
@@ -322,7 +309,8 @@ const FixSuggestion = () => {
       dataIndex: "currentUserId",
       key: "currentUserId",
       width: 140,
-      render: (v: string | null) => v ?? <span style={{ color: "#999" }}>-</span>,
+      render: (v: string | null) =>
+        v ?? <span style={{ color: "var(--theme-text-tertiary)" }}>-</span>,
     },
     {
       title: "建议 user_id",
@@ -476,8 +464,7 @@ const FixSuggestion = () => {
       <Card style={{ marginBottom: 16 }}>
         <Form form={form} layout="inline" onFinish={handleSearch}>
           <Form.Item name="fixStatus" label="状态">
-            <Select
-              allowClear
+            <AppSelect
               placeholder="全部"
               style={{ width: 140 }}
               showSearch
@@ -486,8 +473,7 @@ const FixSuggestion = () => {
             />
           </Form.Item>
           <Form.Item name="conflictType" label="冲突类型">
-            <Select
-              allowClear
+            <AppSelect
               placeholder="全部"
               style={{ width: 120 }}
               showSearch
@@ -499,7 +485,7 @@ const FixSuggestion = () => {
             />
           </Form.Item>
           <Form.Item name="responsibleDeptId" label="责任部门">
-            <Input placeholder="部门 ID" style={{ width: 180 }} />
+            <AppInput placeholder="部门 ID" style={{ width: 180 }} />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -553,9 +539,9 @@ const FixSuggestion = () => {
       <Modal
         title="拒绝修复建议"
         open={rejectModal.open}
-        confirmLoading={rejectModal.submitting}
         onCancel={() => setRejectModal({ open: false, suggestionId: null, submitting: false })}
         onOk={handleRejectSubmit}
+        cancelButtonProps={{ disabled: rejectModal.submitting }}
         okText="确认拒绝"
         okButtonProps={{ danger: true }}
       >
@@ -565,7 +551,7 @@ const FixSuggestion = () => {
             label="拒绝原因"
             rules={[{ required: true, min: 10, message: "至少 10 字符" }]}
           >
-            <Input.TextArea rows={4} placeholder="请说明拒绝原因(至少 10 字符)" />
+            <AppTextArea rows={4} placeholder="请说明拒绝原因(至少 10 字符)" />
           </Form.Item>
         </Form>
       </Modal>

@@ -4,7 +4,8 @@
 
 import type { FC } from "react";
 import type { RadioChangeEvent } from "antd";
-import { Radio, Select, Space } from "antd";
+import { Radio, Space } from "antd";
+import { AppSelect } from "@/components/ui";
 import type { CronFieldConfig, PeriodType } from "../constants";
 import { FIELD_RANGES } from "../constants";
 
@@ -34,13 +35,12 @@ const HourField: FC<HourFieldProps> = ({ value, onChange }) => {
           <Radio value="specific">
             <Space align="center">
               <span>指定:</span>
-              {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-              <Select
+              <AppSelect
                 mode="multiple"
                 style={{ width: 300 }}
                 value={value.specific || [0]}
-                onChange={(values: number[]) =>
-                  onChange({ ...value, periodType: "specific", specific: values })
+                onChange={(values: unknown) =>
+                  onChange({ ...value, periodType: "specific", specific: values as number[] })
                 }
                 options={options.map((v) => ({ label: `${v}点`, value: v }))}
                 placeholder="选择小时"
@@ -52,35 +52,32 @@ const HourField: FC<HourFieldProps> = ({ value, onChange }) => {
             <Space align="center">
               <span>周期:</span>
               <span>从</span>
-              <Select
+              <AppSelect
                 style={{ width: 80 }}
                 value={value.cycleStart ?? 0}
-                onChange={(cycleStart: number) =>
-                  onChange({ ...value, periodType: "cycle", cycleStart })
+                onChange={(cycleStart: unknown) =>
+                  onChange({ ...value, periodType: "cycle", cycleStart: cycleStart as number })
                 }
-                onSearch={() => {}}
-              >
-                {options.map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {v}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={options.map((v) => ({ value: v, label: v }))}
+              />
               <span>点开始，每</span>
-              <Select
+              <AppSelect
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
-                onChange={(cycleInterval: number) =>
-                  onChange({ ...value, periodType: "cycle", cycleInterval })
+                onChange={(cycleInterval: unknown) =>
+                  onChange({
+                    ...value,
+                    periodType: "cycle",
+                    cycleInterval: cycleInterval as number,
+                  })
                 }
-                onSearch={() => {}}
-              >
-                {Array.from({ length: Math.min(12, range.max) }, (_, i) => i + 1).map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {v}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={Array.from({ length: Math.min(12, range.max) }, (_, i) => i + 1).map(
+                  (v) => ({
+                    value: v,
+                    label: v,
+                  })
+                )}
+              />
               <span>小时</span>
             </Space>
           </Radio>
@@ -89,35 +86,23 @@ const HourField: FC<HourFieldProps> = ({ value, onChange }) => {
             <Space align="center">
               <span>范围:</span>
               <span>从</span>
-              <Select
+              <AppSelect
                 style={{ width: 80 }}
                 value={value.rangeStart ?? 0}
-                onChange={(rangeStart: number) =>
-                  onChange({ ...value, periodType: "range", rangeStart })
+                onChange={(rangeStart: unknown) =>
+                  onChange({ ...value, periodType: "range", rangeStart: rangeStart as number })
                 }
-                onSearch={() => {}}
-              >
-                {options.map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {v}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={options.map((v) => ({ value: v, label: v }))}
+              />
               <span>到</span>
-              <Select
+              <AppSelect
                 style={{ width: 80 }}
                 value={value.rangeEnd ?? 23}
-                onChange={(rangeEnd: number) =>
-                  onChange({ ...value, periodType: "range", rangeEnd })
+                onChange={(rangeEnd: unknown) =>
+                  onChange({ ...value, periodType: "range", rangeEnd: rangeEnd as number })
                 }
-                onSearch={() => {}}
-              >
-                {options.map((v) => (
-                  <Select.Option key={v} value={v}>
-                    {v}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={options.map((v) => ({ value: v, label: v }))}
+              />
               <span>点</span>
             </Space>
           </Radio>

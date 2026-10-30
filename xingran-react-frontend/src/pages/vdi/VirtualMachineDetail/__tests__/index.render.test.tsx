@@ -43,7 +43,7 @@ describe("VirtualMachineDetail 渲染", () => {
         status: "running",
         ipAddress: "10.0.0.5",
       },
-    } as any);
+    } as unknown);
     const { baseElement } = renderDetail();
     await new Promise((r) => setTimeout(r, 300));
     expect(baseElement).toBeDefined();

@@ -9,7 +9,7 @@ import AssetRow from "../AssetRow";
 import { vmOperationButtons } from "@/pages/vdi/VirtualMachineList/vmOperationButtons";
 
 describe("VDIRow", () => {
-  const mockVm: any = {
+  const mockVm: unknown = {
     id: "vm-1",
     name: "测试VM",
     power_state: "stopped",
@@ -100,7 +100,7 @@ describe("VDIRow", () => {
 });
 
 describe("AssetRow", () => {
-  const record: any = { id: "a1", name: "设备A" };
+  const record: unknown = { id: "a1", name: "设备A" };
 
   it("渲染编辑/删除按钮 + 点击触发回调", () => {
     const onEdit = vi.fn();
@@ -117,8 +117,9 @@ describe("AssetRow", () => {
   it("onEdit/onDelete undefined 时不 throw", () => {
     const { container } = render(<AssetRow record={record} />);
     const btns = container.querySelectorAll("button");
+    // STOP-06: 无 onEdit 时编辑按钮隐藏，仅剩删除按钮
+    expect(btns.length).toBe(1);
     fireEvent.click(btns[0]);
-    fireEvent.click(btns[1]);
     expect(container).not.toBeNull();
   });
 });

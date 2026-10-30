@@ -2,7 +2,7 @@
  * Phase 88 Batch233 — pages/operations/floors/useFloorStatistics 测试
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 const mockStatistics = vi.fn();
 vi.mock("@/lib/opsApi", () => ({
   floorApi: {
-    statistics: (...args: any[]) => mockStatistics(...args),
+    statistics: (...args: unknown[]) => mockStatistics(...args),
   },
 }));
 

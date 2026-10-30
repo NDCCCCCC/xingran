@@ -12,7 +12,14 @@ export interface ResultModalProps {
   open: boolean;
   currentDiscovery: DeviceDiscovery | null;
   discoveredDevices: Record<string, unknown>[];
+  /** FIX-01: 结果请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onImport: () => Promise<void>;
+  /** Phase 86 W3 补漏：三态门控（`networkDiscovery.add` 就近归码）。
+   *  ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + hint；有权限 → 可用。 */
+  importVisible?: boolean;
+  importDisabled?: boolean;
+  importHint?: string;
   onClose: () => void;
 }
 
@@ -29,12 +36,18 @@ export function ResultModal({
   open,
   currentDiscovery,
   discoveredDevices,
+  loading = false,
   onImport,
+  importVisible = true,
+  importDisabled = false,
+  importHint,
   onClose,
 }: ResultModalProps) {
   return (
     <Modal
       title={`发现结果 - ${currentDiscovery?.taskName || ""}`}
+      mask={{ closable: false }}
+      keyboard={false}
       open={open}
       onCancel={onClose}
       width={900}
@@ -42,15 +55,20 @@ export function ResultModal({
         <Button key="close" onClick={onClose}>
           关闭
         </Button>,
-        <Button
-          key="import"
-          type="primary"
-          icon={<ImportOutlined />}
-          onClick={onImport}
-          disabled={discoveredDevices.length === 0}
-        >
-          导入设备 ({discoveredDevices.length})
-        </Button>,
+        // Phase 86 W3 补漏：写入口三态门控（ready 无权限 → 不渲染；未就绪 → disabled + hint）
+        importVisible && (
+          <Button
+            aria-label="导入结果"
+            title={importDisabled ? (importHint ?? "导入结果") : "导入结果"}
+            key="import"
+            type="primary"
+            icon={<ImportOutlined />}
+            onClick={onImport}
+            disabled={importDisabled || discoveredDevices.length === 0}
+          >
+            导入设备 ({discoveredDevices.length})
+          </Button>
+        ),
       ]}
     >
       <div style={{ marginBottom: 16 }}>
@@ -61,6 +79,7 @@ export function ResultModal({
       </div>
 
       <Table
+        loading={loading}
         columns={resultColumns}
         dataSource={discoveredDevices}
         rowKey={(record) => String(record.ipAddress || record.id || Math.random())}

@@ -50,7 +50,7 @@ describe("ComputerPage 渲染", () => {
   });
 
   it("无 config → 不请求 computer list", async () => {
-    vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({ data: { list: [] } } as any);
+    vi.mocked(adDomainApi.getADConfigList).mockResolvedValueOnce({ data: { list: [] } } as unknown);
     const { baseElement } = renderWithProviders(<ComputerPage />);
     await new Promise((r) => setTimeout(r, 300));
     expect(baseElement).toBeDefined();

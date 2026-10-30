@@ -289,25 +289,36 @@ func Fatal(args ...interface{}) {
 
 // Fatalf 记录格式化致命错误日志并退出程序
 //
-// 关键修补:logrus.Fatal/Fatalf 走 os.Exit(1),不等 hook 刷盘,导致 fileMirrorHook
-// 的镜像日志丢失。手动写一条带 Fatal level 的镜像 + sync(确保文件落盘)再 exit。
+// 关键修补(2026-10-15):原实现先调 fileLogger.Fatal(msg)——logrus Fatal 内部
+// 立即 os.Exit(1),导致后续 stdout 输出成为死代码,终端永远看不到 Fatal 原因
+// (仅 logs/app.log 有记录)。
+// 现顺序:① stdout 先行(Error 级,保留原终端格式;不用 Fatal 级是避免
+// fileMirrorHook 对 Fatal 级的镜像在 hook 链路内触发 exit);② 文件镜像用
+// Log(FatalLevel) 写入(Log 不触发 logrus 自带 exit);③ 关闭文件 writer 确保
+// flush/sync 落盘;④ 最后 exit。
 func Fatalf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	// 直接写一条 Fatal 到 fileLogger(绕过 stdout logger 的 hook 链路,避免 os.Exit
-	// 在 hook 执行前切断 flush 时机)。
+	// ① 先写 stdout——必须在进程退出前到达终端
+	GetLogger().Error(msg)
+	// ② 直接写一条 Fatal 到 fileLogger(绕过 stdout logger 的 hook 链路,
+	// 避免 fileMirrorHook 递归触发 exit)。
 	logMu.RLock()
 	fl, fw := fileLogger, fileWriter
 	logMu.RUnlock()
 	if fl != nil {
-		fl.Fatal(msg)
+		fl.Log(logrus.FatalLevel, msg)
 	}
-	// 同时写 stdout,保留原终端输出格式
-	GetLogger().Error(msg)
+	// ③ 关闭文件 writer,确保 fatal 镜像 flush/sync 落盘
 	if fw != nil {
 		_ = fw.Close()
 	}
-	os.Exit(1)
+	// ④ 最后退出(exitFunc 可注入,回归测试用桩替换)
+	exitFunc(1)
 }
+
+// exitFunc Fatalf 的退出出口,默认 os.Exit;测试可替换为不退出的桩,
+// 以验证"stdout 先于退出"的输出顺序(原 QUIRK-80-05-E Fatal 系豁免就此解除)。
+var exitFunc = os.Exit
 
 // Panic 记录恐慌日志并触发panic
 func Panic(args ...interface{}) {

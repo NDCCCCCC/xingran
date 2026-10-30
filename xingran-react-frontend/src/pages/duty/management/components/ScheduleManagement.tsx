@@ -1,5 +1,8 @@
 import React from "react";
-import { Card, Form, Select, Table, Button, Space, Modal, Tag, DatePicker } from "antd";
+import { Card, Form, Table, Button, Space, Tag, DatePicker } from "antd";
+// Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -169,12 +172,11 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
           danger
           icon={<DeleteOutlined />}
           onClick={() => {
-            Modal.confirm({
-              title: "确定要删除这条排班吗？",
-              okText: "确定",
-              cancelText: "取消",
-              okButtonProps: { danger: true },
-              onOk: () => onDelete(record.id),
+            confirmDelete({
+              target: `排班记录 ${record.scheduleDate}`,
+              onDelete: async () => {
+                await onDelete(record.id);
+              },
             });
           }}
         >
@@ -187,36 +189,57 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
   return (
     <Card variant="borderless">
       <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
+        {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，显式
+            showSearch={false} 保持不变。poolId / userId 为 UUID 外键，原 allowClear=true 行为不变 */}
         <Form.Item name="poolId">
-          <Select placeholder="值班池" allowClear style={{ width: 140 }} onSearch={() => {}}>
-            {pools.map((pool) => (
-              <Select.Option key={pool.id} value={pool.id}>
-                {pool.poolName}
-              </Select.Option>
-            ))}
-          </Select>
+          <AppSelect
+            placeholder="值班池"
+            allowClear
+            style={{ width: 140 }}
+            showSearch={false}
+            onSearch={() => {}}
+            options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
+          />
         </Form.Item>
         <Form.Item name="userId">
-          <Select placeholder="值班人员" allowClear style={{ width: 120 }} onSearch={() => {}}>
-            {users.map((user) => (
-              <Select.Option key={user.id} value={user.id}>
-                {user.nickname || user.username}
-              </Select.Option>
-            ))}
-          </Select>
+          <AppSelect
+            placeholder="值班人员"
+            allowClear
+            style={{ width: 120 }}
+            showSearch={false}
+            onSearch={() => {}}
+            options={users.map((user) => ({
+              value: user.id,
+              label: user.nickname || user.username,
+            }))}
+          />
         </Form.Item>
         <Form.Item name="dutyType">
-          <Select placeholder="值班类型" allowClear style={{ width: 120 }} onSearch={() => {}}>
-            <Select.Option value="weekday">工作日</Select.Option>
-            <Select.Option value="weekend">周末</Select.Option>
-            <Select.Option value="holiday">节假日</Select.Option>
-          </Select>
+          <AppSelect
+            placeholder="值班类型"
+            allowClear
+            style={{ width: 120 }}
+            showSearch={false}
+            onSearch={() => {}}
+            options={[
+              { value: "weekday", label: "工作日" },
+              { value: "weekend", label: "周末" },
+              { value: "holiday", label: "节假日" },
+            ]}
+          />
         </Form.Item>
         <Form.Item name="expired">
-          <Select placeholder="排班状态" allowClear style={{ width: 120 }} onSearch={() => {}}>
-            <Select.Option value={0}>未过期</Select.Option>
-            <Select.Option value={1}>已过期</Select.Option>
-          </Select>
+          <AppSelect
+            placeholder="排班状态"
+            allowClear
+            style={{ width: 120 }}
+            showSearch={false}
+            onSearch={() => {}}
+            options={[
+              { value: 0, label: "未过期" },
+              { value: 1, label: "已过期" },
+            ]}
+          />
         </Form.Item>
         <Form.Item name="dateRange">
           <RangePicker style={{ width: 240 }} />
@@ -260,12 +283,13 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
               danger
               icon={<DeleteOutlined />}
               onClick={() => {
-                Modal.confirm({
-                  title: "确定要批量删除选中的排班记录吗？",
-                  okText: "确定",
-                  cancelText: "取消",
-                  okButtonProps: { danger: true },
-                  onOk: onBatchDelete,
+                confirmDelete({
+                  target: `选中的 ${selectedRowKeys.length} 项排班记录`,
+                  title: "确认批量删除",
+                  actionContext: "批量删除",
+                  onDelete: async () => {
+                    await onBatchDelete();
+                  },
                 });
               }}
             >

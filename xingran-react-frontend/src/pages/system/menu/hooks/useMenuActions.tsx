@@ -3,21 +3,14 @@
  * 菜单操作管理 Hook
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { App, Modal, Alert, Checkbox } from "antd";
-import { WarningOutlined } from "@ant-design/icons";
+import { useState, useCallback } from "react";
+import { App, Alert, Checkbox } from "antd";
 import type { Menu } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
 import type { CheckboxChangeEvent } from "antd/es/checkbox";
 import { refreshMenuCache } from "@/store/menuStore";
-
-// 扩展 Modal 实例类型以支持 checkboxRef
-interface ModalInstanceWithCheckbox {
-  destroy: () => void;
-  update: (configUpdate: Record<string, unknown>) => void;
-  checkboxRef?: React.MutableRefObject<boolean>;
-}
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 export interface UseMenuActionsParams {
   onLoad: () => void;
@@ -113,38 +106,22 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
     (record: Menu) => {
       const hasChildren = record.children && record.children.length > 0;
 
-      // 创建一个可响应状态更新的确认框
-      let _localCascade = false;
-      let modalInstance: ModalInstanceWithCheckbox | null = null;
+      // 级联选项状态由 extra 内的 checkbox 更新，onDelete 读取最新值
+      let cascade = false;
 
-      const DeleteConfirmContent = () => {
+      const CascadeDeleteExtra = () => {
         const [checked, setChecked] = useState(false);
 
-        // 使用 ref 来保存最新的状态值，供 onOk 回调使用
-        const checkboxRef = useRef(false);
-
         const handleChange = (e: CheckboxChangeEvent) => {
-          const newValue = e.target.checked;
-          setChecked(newValue);
-          checkboxRef.current = newValue;
-          _localCascade = newValue;
+          cascade = e.target.checked;
+          setChecked(e.target.checked);
         };
-
-        // 将 checkboxRef 挂载到 modalInstance 上，供 onOk 访问
-        useEffect(() => {
-          if (modalInstance) {
-            modalInstance.checkboxRef = checkboxRef;
-          }
-        }, [checkboxRef]);
 
         return (
           <div>
-            <p>
-              确定要删除菜单 <strong>{record.menuName}</strong> 吗？
-            </p>
             {hasChildren && (
               <Alert
-                message="该菜单下有子菜单，删除时请选择是否同时删除子菜单"
+                title="该菜单下有子菜单，删除时请选择是否同时删除子菜单"
                 type="warning"
                 showIcon
                 style={{ marginBottom: 16 }}
@@ -156,7 +133,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
               </Checkbox>
               {hasChildren && !checked && (
                 <Alert
-                  message="不启用级联删除时，如果菜单下有子菜单，删除将失败"
+                  title="不启用级联删除时，如果菜单下有子菜单，删除将失败"
                   type="error"
                   showIcon
                   style={{ marginTop: 12 }}
@@ -167,19 +144,11 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
         );
       };
 
-      modalInstance = Modal.confirm({
-        title: "删除菜单",
-        icon: <WarningOutlined style={{ color: "var(--theme-warning, #b07a20)" }} />,
-        content: <DeleteConfirmContent />,
-        okText: "确定删除",
-        okType: "danger",
-        cancelText: "取消",
-        onOk: () => {
-          // 从 modalInstance 获取最新的 checkbox 状态
-          const cascadeValue = modalInstance?.checkboxRef?.current || false;
-          return handleDelete(record.id, cascadeValue);
-        },
-      }) as unknown as ModalInstanceWithCheckbox;
+      confirmDelete({
+        target: `菜单 ${record.menuName}`,
+        extra: <CascadeDeleteExtra />,
+        onDelete: () => handleDelete(record.id, cascade),
+      });
     },
     [handleDelete]
   );
@@ -191,33 +160,21 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       return;
     }
 
-    // 创建一个可响应状态更新的确认框
-    let modalInstance: ModalInstanceWithCheckbox | null = null;
+    // 级联选项状态由 extra 内的 checkbox 更新，onDelete 读取最新值
+    let cascade = false;
 
-    const BatchDeleteConfirmContent = () => {
+    const BatchDeleteExtra = () => {
       const [checked, setChecked] = useState(false);
-      const checkboxRef = useRef(false);
 
       const handleChange = (e: CheckboxChangeEvent) => {
-        const newValue = e.target.checked;
-        setChecked(newValue);
-        checkboxRef.current = newValue;
+        cascade = e.target.checked;
+        setChecked(e.target.checked);
       };
-
-      // 将 checkboxRef 挂载到 modalInstance 上，供 onOk 访问
-      useEffect(() => {
-        if (modalInstance) {
-          modalInstance.checkboxRef = checkboxRef;
-        }
-      }, [checkboxRef]);
 
       return (
         <div>
-          <p>
-            您已选择 <strong>{selectedRowKeys.length}</strong> 个菜单，确定要删除吗？
-          </p>
           <Alert
-            message="删除后将无法恢复，请谨慎操作！"
+            title="删除后将无法恢复，请谨慎操作！"
             type="warning"
             showIcon
             style={{ marginBottom: 16 }}
@@ -228,7 +185,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
             </Checkbox>
             {checked && (
               <Alert
-                message="启用级联删除后，将同时删除所选菜单及其所有子菜单"
+                title="启用级联删除后，将同时删除所选菜单及其所有子菜单"
                 type="info"
                 showIcon
                 style={{ marginTop: 12 }}
@@ -239,20 +196,16 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       );
     };
 
-    modalInstance = Modal.confirm({
-      title: "批量删除菜单",
-      icon: <WarningOutlined style={{ color: "var(--theme-warning, #b07a20)" }} />,
-      content: <BatchDeleteConfirmContent />,
-      okText: "确定删除",
-      okType: "danger",
-      cancelText: "取消",
-      onOk: async () => {
+    confirmDelete({
+      title: "确认批量删除",
+      target: `选中的 ${selectedRowKeys.length} 项菜单`,
+      extra: <BatchDeleteExtra />,
+      actionContext: "批量删除",
+      onDelete: async () => {
         try {
-          // 从 modalInstance 获取最新的 checkbox 状态
-          const cascadeValue = modalInstance?.checkboxRef?.current || false;
           const result = (await post("/system/menus/batch-delete", {
             ids: selectedRowKeys,
-            cascade: cascadeValue,
+            cascade,
           })) as { data?: { deletedCount?: number } };
 
           if (result.data?.deletedCount) {
@@ -274,7 +227,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           throw error; // 重新抛出错误以保持 Modal 打开
         }
       },
-    }) as unknown as ModalInstanceWithCheckbox;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [selectedRowKeys, onLoad, setSelectedRowKeys]);
 

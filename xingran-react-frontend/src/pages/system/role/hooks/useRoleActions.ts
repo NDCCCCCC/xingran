@@ -10,6 +10,8 @@ import type { Role } from "@/types";
 import type { Key } from "antd/es/table/interface";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
+import {} from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface UseRoleActionsParams {
@@ -136,16 +138,18 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
         return;
       }
 
-      try {
-        await post("/system/roles/batch-delete", { ids: keys });
-        message.success("批量删除成功");
-        setSelectedRowKeys([]);
-        loadRoles();
-        loadStatistics();
-        invalidateAllRoles();
-      } catch (error) {
-        console.error("批量删除失败:", error);
-      }
+      // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+      confirmDelete({
+        title: "确认批量删除",
+        target: `选中的 ${keys.length} 项`,
+        onDelete: async () => {
+          await post("/system/roles/batch-delete", { ids: keys });
+          setSelectedRowKeys([]);
+          loadRoles();
+          loadStatistics();
+          invalidateAllRoles();
+        },
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadRoles, loadStatistics, invalidateAllRoles]

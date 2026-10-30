@@ -7,6 +7,10 @@ package services
 import (
 	"regexp"
 	"strings"
+
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // canonicalMACPattern 匹配标准大写冒号格式 MAC 地址: AA:BB:CC:DD:EE:FF
@@ -62,4 +66,78 @@ func isCanonicalMAC(mac string) bool {
 		return false
 	}
 	return canonicalMACPattern.MatchString(mac)
+}
+
+// sanitizeMACRecord 对单条 DeviceMACAddress 写入记录做显式归一化 + canonical 校验
+// (Phase 72 #3 / DBG-03: MAC 格式写路径防线)。
+//
+// 归一目标格式 = 大写冒号 `AA:BB:CC:DD:EE:FF`，与 DB 存量一致
+// (2026-10-27 DB 实测: sys_device_mac_address / sys_device_mac_history 存储格式
+// 均为大写冒号分隔，如 00:E0:FC:09:BC:F9)。
+//
+// 返回 false 表示该记录不合格(MAC 非法或接口名为空)，调用方必须丢弃并计数——
+// 绝不原样写入: R2 复发实证 pkg/normalize 对非法输入原样返回，hook 兜底可被穿透。
+func sanitizeMACRecord(d *models.DeviceMACAddress) bool {
+	if d == nil {
+		return false
+	}
+	d.MACAddress = NormalizeMACAddress(d.MACAddress)
+	d.InterfaceName = portcollection.NormalizeInterfaceName(d.InterfaceName)
+	if d.MACAddress == "" || !isCanonicalMAC(d.MACAddress) || d.InterfaceName == "" {
+		return false
+	}
+	return true
+}
+
+// SanitizeMACRecords 批量归一化 + 校验 DeviceMACAddress 写入记录 (W1 写路径防线)。
+// 不合格记录被丢弃并返回 rejected 计数; rejected > 0 时打 Warn 日志
+// (把「静默丢弃」改成可观测失败)。返回净化后的切片(可直接 Create)。
+func SanitizeMACRecords(deviceName string, records []*models.DeviceMACAddress) ([]*models.DeviceMACAddress, int) {
+	clean := make([]*models.DeviceMACAddress, 0, len(records))
+	rejected := 0
+	for _, r := range records {
+		if sanitizeMACRecord(r) {
+			clean = append(clean, r)
+		} else {
+			rejected++
+		}
+	}
+	if rejected > 0 {
+		applogger.Warnf("[MAC写防线] %s: %d 条 MAC 记录格式不合格被拦截(原样入库会污染 sys_device_mac_address),仅写入 %d 条",
+			deviceName, rejected, len(clean))
+	}
+	return clean, rejected
+}
+
+// sanitizeMACHistoryRecord 对单条 DeviceMACHistory 写入记录做显式归一化 + canonical 校验。
+// 语义与 sanitizeMACRecord 一致 (W2 写路径防线)。
+func sanitizeMACHistoryRecord(d *models.DeviceMACHistory) bool {
+	if d == nil {
+		return false
+	}
+	d.MACAddress = NormalizeMACAddress(d.MACAddress)
+	d.InterfaceName = portcollection.NormalizeInterfaceName(d.InterfaceName)
+	if d.MACAddress == "" || !isCanonicalMAC(d.MACAddress) || d.InterfaceName == "" {
+		return false
+	}
+	return true
+}
+
+// SanitizeMACHistoryRecords 批量归一化 + 校验 DeviceMACHistory 写入记录 (W2 写路径防线)。
+// 不合格记录被丢弃并返回 rejected 计数; rejected > 0 时打 Warn 日志。
+func SanitizeMACHistoryRecords(deviceName string, records []*models.DeviceMACHistory) ([]*models.DeviceMACHistory, int) {
+	clean := make([]*models.DeviceMACHistory, 0, len(records))
+	rejected := 0
+	for _, r := range records {
+		if sanitizeMACHistoryRecord(r) {
+			clean = append(clean, r)
+		} else {
+			rejected++
+		}
+	}
+	if rejected > 0 {
+		applogger.Warnf("[MAC写防线] %s: %d 条 MAC 历史记录格式不合格被拦截(原样入库会污染 sys_device_mac_history),仅写入 %d 条",
+			deviceName, rejected, len(clean))
+	}
+	return clean, rejected
 }

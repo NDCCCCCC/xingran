@@ -3,7 +3,8 @@
  */
 
 import { useMemo, useCallback, useEffect } from "react";
-import { Card, Form, InputNumber, Input, Select, ColorPicker, Divider, Empty } from "antd";
+import { Card, Form, InputNumber, ColorPicker, Divider, Empty } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { Wall, Door, TextElement } from "./types";
 import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
 
@@ -190,15 +191,19 @@ export function CADPropertyPanel({
       case "text":
         if (field.rows) {
           return (
-            <Input.TextArea
+            // 只读属性面板受控区：显式禁用清空
+            <AppTextArea
               key={String(field.name)}
               placeholder={field.placeholder}
               rows={field.rows}
+              allowClear={false}
               {...commonProps}
             />
           );
         }
-        return <Input key={String(field.name)} placeholder={field.placeholder} {...commonProps} />;
+        return (
+          <AppInput key={String(field.name)} placeholder={field.placeholder} {...commonProps} />
+        );
 
       case "number":
         return (
@@ -212,8 +217,14 @@ export function CADPropertyPanel({
         );
 
       case "select":
-        // eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed
-        return <Select key={String(field.name)} options={field.options} {...commonProps} />;
+        return (
+          <AppSelect
+            key={String(field.name)}
+            showSearch={false}
+            options={field.options}
+            {...commonProps}
+          />
+        );
 
       case "color":
         return <ColorPicker key={String(field.name)} showText disabled={readOnly} format="hex" />;

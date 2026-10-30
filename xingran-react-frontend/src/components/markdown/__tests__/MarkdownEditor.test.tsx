@@ -10,7 +10,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@uiw/react-md-editor/nohighlight", () => ({
-  default: ({ value, height }: any) => (
+  default: ({ value, height }: unknown) => (
     <div data-testid="md-editor" data-value={value} data-height={height}>
       {value}
     </div>

@@ -7,7 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
@@ -203,6 +206,26 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 		}()
 	}
 
+	// 楼栋 total_floors 重算（修复漂移路径 A：floor Update 换楼 261013-lqb 之前全程零重算，
+	// 91-03 修好了换楼工位同步但漏了计数）：
+	//   ① 换楼后新旧楼栋计数都要重算——旧楼失一层、新楼得一层，只算一侧必漂移；
+	//   ② 普通编辑也重算当前楼栋是自愈设计——Update 非事务（乐观锁已保证换楼 UPDATE 本身
+	//      原子），重算幂等，任何部分失败后的重试走 Save 分支仍会触发重算，历史漂移楼栋
+	//      在任意一次楼层编辑后归正；
+	//   ③ updateBuildingFloorCount 用 Model(&OpsFloor{}) 实时 COUNT（自动软删过滤），
+	//      幂等可重入——禁止改成 ±1 增量（会把历史脏值固化）。
+	// error 上抛（对齐 Delete 路径 fail-loud 行为）。
+	if floor.BuildingID != "" {
+		if err := s.updateBuildingFloorCount(ctx, floor.BuildingID); err != nil {
+			return err
+		}
+		if oldBuildingID != "" && oldBuildingID != floor.BuildingID {
+			if err := s.updateBuildingFloorCount(ctx, oldBuildingID); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -232,7 +255,10 @@ func (s *floorService) joinScope() base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
 			Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id").
-			Joins("LEFT JOIN sys_files ON CAST(sys_files.id AS TEXT) = ops_floors.plan_image_id")
+			// plan_image_id 在 PG 是 uuid 类型(model tag type:uuid,与 sys_files.id 同型),
+			// 直接 uuid=uuid 比较;包 CAST(... AS TEXT) 会变 text=uuid → SQLSTATE 42883。
+			// SQLite 两侧均为 TEXT,直接比较同样成立(双方言安全)。
+			Joins("LEFT JOIN sys_files ON sys_files.id = ops_floors.plan_image_id")
 	}
 }
 
@@ -278,11 +304,90 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 	// base.PageParams，repo 直信入参；排序 B 型排他默认（白名单 + ops_floors.order_num ASC）。
 	// floor 起链本就是 Model 形态，无 building/asset 的 F3 软删 Count 分歧。
 	sortReq := extractSortRequest(params)
-	return s.listRepo().List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+	result, err := s.listRepo().List(ctx, base.PageParams{Current: current, PageSize: pageSize},
 		s.filterScope(params),
 		s.joinScope(),
 		base.SortScope(sortReq, floorAllowedSortFields, "ops_floors.order_num ASC"),
 	)
+	if err != nil {
+		return nil, err
+	}
+	// 每行工位统计注入（只读增强）：类型断言失败或空页直接返回原 result。
+	if floors, ok := result.List.([]operations.OpsFloor); ok && len(floors) > 0 {
+		s.attachWorkstationStats(ctx, floors)
+	}
+	return result, nil
+}
+
+// attachWorkstationStats 批量回填楼层工位统计（单条 GROUP BY 聚合，零 N+1）。
+//
+// 状态语义（sys_workstation.status 独立枚举，非全局 0=正常/1=停用惯例）：
+//
+//	0=空闲(未使用) / 1=占用(已使用) / 2=维护
+//
+// 实现要点：
+//   - floor_id 为 varchar(64) 存楼层 UUID 字符串，按页内 id 集合 IN 过滤 + GROUP BY，
+//     无需 JOIN（规避 PG uuid/varchar 类型转换问题）。
+//   - Model(&models.Workstation{}) 让 GORM 自动附加 deleted_at IS NULL 软删过滤。
+//   - 状态值引用 models.WorkstationStatus* 常量（禁止魔法数字内联）。
+//   - 无工位的楼层保持 WorkstationStats=nil（json omitempty 不出键，前端渲染 "-"）。
+//   - 只读增强：聚合失败仅告警降级（行保持 nil），不影响 List 主流程。
+func (s *floorService) attachWorkstationStats(ctx context.Context, floors []operations.OpsFloor) {
+	floorIDs := make([]string, 0, len(floors))
+	seen := make(map[string]struct{}, len(floors))
+	for i := range floors {
+		id := floors[i].ID
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		floorIDs = append(floorIDs, id)
+	}
+	if len(floorIDs) == 0 {
+		return
+	}
+
+	var rows []struct {
+		FloorID     string
+		Total       int64
+		Used        int64
+		Unused      int64
+		Maintenance int64
+	}
+	err := s.db.WithContext(ctx).
+		Model(&models.Workstation{}).
+		Select(
+			"floor_id",
+			"COUNT(*) AS total",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS used", int(models.WorkstationStatusOccupied)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS unused", int(models.WorkstationStatusAvailable)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS maintenance", int(models.WorkstationStatusMaintain)),
+		).
+		Where("floor_id IN ?", floorIDs).
+		Group("floor_id").
+		Scan(&rows).Error
+	if err != nil {
+		logrus.WithError(err).Warn("[floor] 工位统计聚合失败，按无统计降级")
+		return
+	}
+
+	statsByFloor := make(map[string]*operations.FloorWorkstationStats, len(rows))
+	for _, r := range rows {
+		statsByFloor[r.FloorID] = &operations.FloorWorkstationStats{
+			Total:       r.Total,
+			Used:        r.Used,
+			Unused:      r.Unused,
+			Maintenance: r.Maintenance,
+		}
+	}
+	for i := range floors {
+		if st, ok := statsByFloor[floors[i].ID]; ok {
+			floors[i].WorkstationStats = st
+		}
+	}
 }
 
 // SearchFloorOptions 楼层下拉数据源(name LIKE 模糊 + buildingId/orgId/status 筛选,LIMIT 50)。
@@ -423,11 +528,48 @@ func (s *floorService) validateBuilding(ctx context.Context, buildingID string) 
 }
 
 func (s *floorService) updateBuildingFloorCount(ctx context.Context, buildingID string) error {
+	return recomputeBuildingTotalFloorsByID(ctx, s.db, buildingID)
+}
+
+// recomputeBuildingTotalFloorsByID 单楼栋 total_floors 实时重算（包级共享 helper，
+// 261014-ctp 抽取自 updateBuildingFloorCount，供 floor_service 与 building_service
+// Create/Update 两侧共用）。
+//
+// 口径（与 recomputeAllBuildingTotalFloors 一致）：
+//   - 实时 COUNT ops_floors 非软删行数（Model(&OpsFloor{}) 自动附软删过滤），
+//     禁止 ±1 增量——会把历史脏值固化；
+//   - 幂等可重入：重复执行结果一致，失败重试安全。
+func recomputeBuildingTotalFloorsByID(ctx context.Context, db *gorm.DB, buildingID string) error {
 	var count int64
-	if err := s.db.WithContext(ctx).Model(&operations.OpsFloor{}).Where("building_id = ?", buildingID).Count(&count).Error; err != nil {
+	if err := db.WithContext(ctx).Model(&operations.OpsFloor{}).Where("building_id = ?", buildingID).Count(&count).Error; err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("id = ?", buildingID).Update("total_floors", count).Error
+	return db.WithContext(ctx).Model(&operations.OpsBuilding{}).Where("id = ?", buildingID).Update("total_floors", count).Error
+}
+
+// recomputeAllBuildingTotalFloors 全量重算所有未删楼栋的 total_floors 反范式列
+// （SQL 形状拷贝 BatchDelete 的关联子查询 UPDATE，去掉 id 限定 + 加楼栋软删过滤）。
+//
+// 设计要点：
+//   ① 供 Excel 导入事务收尾调用（building + floor 双实体，修漂移路径 B/C）——
+//     building 导入直写用户上传的 totalFloors 值、floor 导入经通用 BatchUpsert
+//     绕过 floorService.Create 的重算，两者都会污染派生列，导入完成统一归正；
+//   ② 幂等可重入：重复执行结果一致，事务重试/并发导入均安全；
+//   ③ 实时 COUNT 口径与 updateBuildingFloorCount 一致（ops_floors 非软删行数，
+//     禁止 ±1 增量——会把历史脏值固化）；
+//   ④ ops_buildings 量级小（百级行），全表重算无性能顾虑。
+func recomputeAllBuildingTotalFloors(ctx context.Context, db *gorm.DB) error {
+	sql := `
+		UPDATE ops_buildings
+		SET total_floors = (
+			SELECT COUNT(*)
+			FROM ops_floors
+			WHERE ops_floors.building_id = ops_buildings.id
+				AND ops_floors.deleted_at IS NULL
+		)
+		WHERE deleted_at IS NULL
+	`
+	return db.WithContext(ctx).Exec(sql).Error
 }
 
 // syncWorkstationBuildingID 同步更新工位的楼宇ID

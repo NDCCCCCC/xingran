@@ -20,7 +20,7 @@ import { workstationApi } from "@/lib/opsApi";
 
 describe("useWorkstationModals", () => {
   it("handleDelete 调用 api.delete + onSuccess", async () => {
-    const spy = vi.spyOn(workstationApi, "delete").mockResolvedValue(undefined as any);
+    const spy = vi.spyOn(workstationApi, "delete").mockResolvedValue(undefined as unknown);
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useWorkstationModals());
 
@@ -46,7 +46,7 @@ describe("useWorkstationModals", () => {
   });
 
   it("handleBatchDelete 空数组是 no-op", async () => {
-    const spy = vi.spyOn(workstationApi, "batch").mockResolvedValue(undefined as any);
+    const spy = vi.spyOn(workstationApi, "batch").mockResolvedValue(undefined as unknown);
     const onSuccess = vi.fn();
     const resetSelection = vi.fn();
     const { result } = renderHook(() => useWorkstationModals());
@@ -61,7 +61,7 @@ describe("useWorkstationModals", () => {
   });
 
   it("handleBatchDelete 非空触发 api.batch", async () => {
-    const spy = vi.spyOn(workstationApi, "batch").mockResolvedValue(undefined as any);
+    const spy = vi.spyOn(workstationApi, "batch").mockResolvedValue(undefined as unknown);
     const onSuccess = vi.fn();
     const resetSelection = vi.fn();
     const { result } = renderHook(() => useWorkstationModals());
@@ -79,7 +79,7 @@ describe("useWorkstationModals", () => {
     const form = { resetFields: vi.fn() };
     const { result } = renderHook(() => useWorkstationModals());
     act(() => {
-      result.current.closeModal(form as any);
+      result.current.closeModal(form as unknown);
     });
     expect(form.resetFields).toHaveBeenCalled();
   });
@@ -95,7 +95,7 @@ describe("useWorkstationModals", () => {
   it("openModal 有 deptId 则触发 loadUserOptions", async () => {
     const loadUserOptions = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useWorkstationModals(loadUserOptions));
-    const record = { id: "ws-1", deptId: "d-1" } as any;
+    const record = { id: "ws-1", deptId: "d-1" } as unknown;
     await act(async () => {
       const ret = await result.current.openModal(record);
       expect(ret).toBe(record);
@@ -107,7 +107,7 @@ describe("useWorkstationModals", () => {
     const loadUserOptions = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useWorkstationModals(loadUserOptions));
     await act(async () => {
-      const ret = await result.current.openModal({ id: "ws-1" } as any);
+      const ret = await result.current.openModal({ id: "ws-1" } as unknown);
       expect(ret).toBeDefined();
     });
     expect(loadUserOptions).not.toHaveBeenCalled();
@@ -133,7 +133,7 @@ describe("useWorkstationView", () => {
   it("handleFloorChangeForPlan 设置 selectedFloorForPlan + code→id 解析拉取全集数据", async () => {
     const spy = vi
       .spyOn(workstationApi, "getFloorWorkstationsAll")
-      .mockResolvedValue([{ id: "w1", positionX: 0, positionY: 0, status: 0 } as any]);
+      .mockResolvedValue([{ id: "w1", positionX: 0, positionY: 0, status: 0 } as unknown]);
     const { result } = renderHook(() =>
       useWorkstationView([{ id: "floor-uuid-1", code: "floor-1", name: "一层" }])
     );
@@ -161,7 +161,7 @@ describe("useWorkstationView", () => {
   });
 
   it("handlePositionUpdate 调用 updatePositions + 更新本地 state", async () => {
-    const spy = vi.spyOn(workstationApi, "updatePositions").mockResolvedValue(undefined as any);
+    const spy = vi.spyOn(workstationApi, "updatePositions").mockResolvedValue(undefined as unknown);
     const { result } = renderHook(() => useWorkstationView([]));
     // seed 一个 floor plan workstation
     act(() => {
@@ -177,9 +177,9 @@ describe("useWorkstationView", () => {
   it("handleFloorPlanEdit 委托给 openModal", () => {
     const { result } = renderHook(() => useWorkstationView([]));
     const openModal = vi.fn();
-    const ws = { id: "ws-1" } as any;
+    const ws = { id: "ws-1" } as unknown;
     act(() => {
-      result.current.handleFloorPlanEdit(ws as any, openModal);
+      result.current.handleFloorPlanEdit(ws as unknown, openModal);
     });
     expect(openModal).toHaveBeenCalledWith(ws);
   });

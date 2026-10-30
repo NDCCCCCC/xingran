@@ -93,7 +93,7 @@ describe("pages/monitor/logs/utils", () => {
   });
 
   it("processTimeRangeParams 含两个时间 → 注入 startTime/endTime", () => {
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
     const start = new Date("2026-08-01T00:00:00Z");
     const end = new Date("2026-08-31T23:59:59Z");
     processTimeRangeParams([start, end], params);
@@ -103,14 +103,14 @@ describe("pages/monitor/logs/utils", () => {
   });
 
   it("processTimeRangeParams 空数组 → 不注入", () => {
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
     processTimeRangeParams([], params);
     expect(params.startTime).toBeUndefined();
     expect(params.endTime).toBeUndefined();
   });
 
   it("processTimeRangeParams undefined → 不注入", () => {
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
     processTimeRangeParams(undefined, params);
     expect(params.startTime).toBeUndefined();
   });

@@ -68,15 +68,17 @@ const HARD_ALLOWED: Record<string, number> = {
   "vdiApi.ts": 0,
 };
 
-/** 15 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试 */
+/** 16 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试 */
 const EXPECTED_FILES = [
   "adDomainApi.ts",
   "api/macHeatmapApi.ts",
   "api/networkApi.ts",
   "assetApi.ts",
   "columnConfigApi.ts",
+  "defaultThemeApi.ts",
   "dutyApi.ts",
   "knowledgeApi.ts",
+  "managerApi.ts",
   "menuApi.ts",
   "noticeApi.ts",
   "notificationConfigApi.ts",
@@ -94,9 +96,11 @@ const EXPECTED_FILES = [
  */
 const WARNING_WHITELIST: Record<string, number> = {
   // —— KEEP 整文件 ——
+  managerApi: 0, // 经理同步 API：async 函数体内 await post()（无 return 语句），不满足「单 return 直调」口径，模板命中 0
   menuApi: 0, // D-06 非 CRUD：3 个只读函数（my-menus 树/全量/权限）
   profileApi: 0, // D-06 非 CRUD：单例 profile + 密码 + 头像，无资源集合语义
   columnConfigApi: 0, // D-06 非 CRUD：按 pageKey 存取，无标准 CRUD 路径形状
+  defaultThemeApi: 0, // 合并入仓：3 个配置同步函数（getDefaultThemeConfig/setDefaultThemeConfig/syncUserThemeToDefault），plain-literal URL 不含 CRUD 后缀
   notificationConfigApi: 0, // 整文件 KEEP：GET list / PUT /{id} / DELETE 动词 + page 参数，传输语义四处与工厂不同构（模板字符串 URL 亦无 CRUD 后缀）
   assetApi: 0, // 整文件 KEEP：reconciliation/fixSuggestion 全部解包 res.data 返回裸数据，与工厂「返回 BaseResponse」契约不同；无 CRUD 后缀形状模板命中
   // —— 部分委托文件的 KEEP 残留（delete 统一保持单参 post 直调：既有测试锁定
@@ -242,7 +246,7 @@ describe("apiFactory invariants — src/lib/*Api.ts 手写 CRUD 模板扫描（D
     files.map((f) => [f, scanFile(f, readFileSync(join(LIB_DIR, f), "utf-8"))])
   );
 
-  it("扫描范围恰为 15 个业务 *Api.ts（3 对象形态 + 10 扁平/KEEP + 2 子目录），不越 src/lib 半步", () => {
+  it("扫描范围恰为 16 个业务 *Api.ts（3 对象形态 + 11 扁平/KEEP + 2 子目录），不越 src/lib 半步", () => {
     expect(files).toEqual(EXPECTED_FILES);
   });
 

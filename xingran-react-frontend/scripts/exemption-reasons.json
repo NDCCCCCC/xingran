@@ -1,0 +1,319 @@
+{
+  "version": 1,
+  "updated": "2026-10-28",
+  "description": "Phase 68.1 T7 结构化豁免理由清单。与 eslint.config.js 的 __P65_EXEMPTION_FILES__ / __P66_EXEMPTION_FILES__ 一一对应（由 scripts/check-exemption-reasons.mjs 强制校验）。本文件由人工维护，生成脚本不写此文件。 Phase 82（HYG-05）：以 eslint 锚点实际豁免（P65 1 占位 + P66 37）为准全量同步，删除 121 条已收缩的过期 P65 条目。",
+  "entries": [
+    {
+      "file": "src/components/dashboard/widgets/types/__tests__/statAndProgress.test.tsx",
+      "layer": "CSS",
+      "dimension": "hex:chart-palette",
+      "reason": "ECharts 数据可视化色板断言期望值（#1890ff = 图表系列色），非 UI 主题色；改值即改测试断言语义。Phase 89 W3·A3 放行，与 scripts/check-hardcoded-colors.mjs 的 PATH_ALLOW 条目双向对账（check-exemption-reasons.mjs）",
+      "userVisible": false,
+      "difference": "无 —— 仅测试夹具的期望色板值"
+    },
+    {
+      "file": "src/pages/ad-domain/computers/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/ad-domain/groups/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/ad-domain/ous/index.tsx",
+      "layer": "P66",
+      "dimension": "Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/ad-domain/users/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+Modal.confirm+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/duty/management/components/HolidayManagement.tsx",
+      "layer": "P66",
+      "dimension": "Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/duty/my-duty/index.tsx",
+      "layer": "P66",
+      "dimension": "Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/duty/pools/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/duty/schedules/index.tsx",
+      "layer": "P66",
+      "dimension": "Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/knowledge/articles/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/monitor/job/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/monitor/logs/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/monitor/server/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/my-notices/index.tsx",
+      "layer": "P66",
+      "dimension": "usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/network/command/index.tsx",
+      "layer": "P66",
+      "dimension": "Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/network/credentials/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/network/executions/index.tsx",
+      "layer": "P66",
+      "dimension": "Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/network/mac/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/network/ports/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/network/templates/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/operations/floors/index.tsx",
+      "layer": "P66",
+      "dimension": "usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/operations/info-points/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/operations/rpa/executions/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/operations/rpa/tasks/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+Modal.confirm+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/operations/rpa/workers/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/operations/server-rooms/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/operations/workstations/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/captcha-background/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/config/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/dict/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/notice/index.tsx",
+      "layer": "P66",
+      "dimension": "usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/role/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/settings/api-config.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/settings/captcha-background.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/settings/email-config.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/system/user/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination+useTableManager",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/workorder/orders/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/pages/workorder/periodic/templates/index.tsx",
+      "layer": "P66",
+      "dimension": "Input+Select+usePagination",
+      "reason": "存量列表页仍由页面级 usePagination/useTableManager 自建数据层，未迁 PageTable 契约；登记 v1.23 迁移清单",
+      "userVisible": true,
+      "difference": "分页文案可能非「共 N 条 / M 页」口径，空/错误态与行操作确认形态与契约页不一致"
+    },
+    {
+      "file": "src/__p65_no_exemptions__/**",
+      "layer": "P65",
+      "dimension": "占位哨兵",
+      "reason": "P65 豁免已全部清偿后的占位哨兵条目（防空数组导致 flat config 解析歧义），非真实豁免",
+      "userVisible": false,
+      "difference": "无用户可感知差异（占位哨兵，不匹配任何真实文件）"
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import type { FC } from "react";
-import { App, Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic } from "antd";
+import { App, Table, Button, Space, Form, Card, Row, Col, Statistic } from "antd";
+// Phase 71 (W2)：裸 Input/Select → 契约组件（状态枚举 children → options + 禁搜）
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -22,7 +24,9 @@ import ExcelExport from "@/components/shared/ExcelExport";
 
 import { post } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-const { Option } = Select;
+// Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
+import { useActionPermission } from "@/components/shared";
 
 const DepartmentManagement: FC = () => {
   const { message } = App.useApp();
@@ -33,6 +37,14 @@ const DepartmentManagement: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
+
+  // Phase 86 W1（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  // 新增 → system:dept:add；导入 → system:dept:import；导出 → system:dept:export。
+  const permAdd = permGate.decide(PERMISSION_CODES.systemDept.add);
+  const permImport = permGate.decide(PERMISSION_CODES.systemDept.import);
+  const permExport = permGate.decide(PERMISSION_CODES.systemDept.export);
 
   const {
     departments,
@@ -207,7 +219,7 @@ const DepartmentManagement: FC = () => {
             <Statistic
               title="顶级部门"
               value={statistics.topLevel}
-              styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<TeamOutlined />}
             />
           </Card>
@@ -217,7 +229,7 @@ const DepartmentManagement: FC = () => {
             <Statistic
               title="子部门"
               value={statistics.subLevel}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<ApartmentOutlined />}
             />
           </Card>
@@ -236,21 +248,18 @@ const DepartmentManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deptName" label="部门名称">
-              <Input placeholder="请输入部门名称" />
+              <AppInput placeholder="请输入部门名称" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              {/* 形态分类器②④：部门状态枚举（业务禁搜）→ options 形态 + 显式 showSearch={false} */}
+              <AppSelect
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
                 onSearch={() => {}}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={STATUS_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -265,15 +274,40 @@ const DepartmentManagement: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增部门
-            </Button>
-            <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-              导入
-            </Button>
-            <Button icon={<ExportOutlined />} onClick={() => setExportVisible(true)}>
-              导出
-            </Button>
+            {/* Phase 86 W1（RBAC-02）：Excel 入口的门控点必须落在**触发按钮**上。
+                下方 <ExcelImportLazy> / <ExcelExport> 是 modal 容器（visible 由按钮状态驱动），
+                触发按钮不渲染 ⇒ 弹窗永远打不开；二者等价于「按钮不渲染」的可观察行为。 */}
+            {permAdd.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAdd}
+                disabled={permAdd.disabled}
+                title={permAdd.hint}
+              >
+                新增部门
+              </Button>
+            )}
+            {permImport.visible && (
+              <Button
+                icon={<ImportOutlined />}
+                onClick={() => setImportVisible(true)}
+                disabled={permImport.disabled}
+                title={permImport.hint}
+              >
+                导入
+              </Button>
+            )}
+            {permExport.visible && (
+              <Button
+                icon={<ExportOutlined />}
+                onClick={() => setExportVisible(true)}
+                disabled={permExport.disabled}
+                title={permExport.hint}
+              >
+                导出
+              </Button>
+            )}
           </Space>
         </div>
       </Card>

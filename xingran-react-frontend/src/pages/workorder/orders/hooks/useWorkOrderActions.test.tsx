@@ -43,7 +43,7 @@ beforeEach(() => {
 
 const baseOpts = () => ({
   fetchList: vi.fn(),
-  openDetailDrawer: vi.fn().mockResolvedValue(undefined as any),
+  openDetailDrawer: vi.fn().mockResolvedValue(undefined as unknown),
   selectedRecord: null,
 });
 
@@ -101,7 +101,7 @@ describe("useWorkOrderActions", () => {
   it("handleStatusChange 有 selectedRecord 时调 API + fetchList + openDetailDrawer", async () => {
     const opts = {
       ...baseOpts(),
-      selectedRecord: { id: "w-1" } as any,
+      selectedRecord: { id: "w-1" } as unknown,
     };
     const { result } = renderHook(() => useWorkOrderActions(opts), { wrapper: wrap });
     await act(async () => {
@@ -124,7 +124,7 @@ describe("useWorkOrderActions", () => {
     const opts = baseOpts();
     const { result } = renderHook(() => useWorkOrderActions(opts), { wrapper: wrap });
     act(() => {
-      result.current.handleEdit({ id: "w-1" } as any);
+      result.current.handleEdit({ id: "w-1" } as unknown);
     });
     expect(opts.fetchList).not.toHaveBeenCalled();
   });
@@ -136,7 +136,7 @@ describe("useWorkOrderActions", () => {
       validateFields: vi.fn().mockResolvedValue({ title: "任务", priority: 1 }),
     };
     await act(async () => {
-      await result.current.handleModalOk(form as any, null, vi.fn());
+      await result.current.handleModalOk(form as unknown, null, vi.fn());
     });
     expect(opts.fetchList).toHaveBeenCalledTimes(1);
   });
@@ -147,9 +147,9 @@ describe("useWorkOrderActions", () => {
     const form = {
       validateFields: vi.fn().mockResolvedValue({ title: "改后", priority: 2 }),
     };
-    const editing = { id: "w-existing" } as any;
+    const editing = { id: "w-existing" } as unknown;
     await act(async () => {
-      await result.current.handleModalOk(form as any, editing, vi.fn());
+      await result.current.handleModalOk(form as unknown, editing, vi.fn());
     });
     expect(opts.fetchList).toHaveBeenCalledTimes(1);
   });
@@ -161,7 +161,7 @@ describe("useWorkOrderActions", () => {
       validateFields: vi.fn().mockRejectedValue({ errorFields: [{ name: "title" }] }),
     };
     await act(async () => {
-      await result.current.handleModalOk(form as any, null, vi.fn());
+      await result.current.handleModalOk(form as unknown, null, vi.fn());
     });
     expect(opts.fetchList).not.toHaveBeenCalled();
   });
@@ -174,7 +174,7 @@ describe("useWorkOrderActions", () => {
       resetFields: vi.fn(),
     };
     await act(async () => {
-      await result.current.handleAddComment(form as any, false, vi.fn());
+      await result.current.handleAddComment(form as unknown, false, vi.fn());
     });
   });
 
@@ -186,7 +186,7 @@ describe("useWorkOrderActions", () => {
       resetFields: vi.fn(),
     };
     await act(async () => {
-      await result.current.handleAddComment(form as any, false, vi.fn());
+      await result.current.handleAddComment(form as unknown, false, vi.fn());
     });
   });
 
@@ -198,7 +198,7 @@ describe("useWorkOrderActions", () => {
       resetFields: vi.fn(),
     };
     await act(async () => {
-      await result.current.handleAddComment(form as any, true, vi.fn());
+      await result.current.handleAddComment(form as unknown, true, vi.fn());
     });
   });
 });

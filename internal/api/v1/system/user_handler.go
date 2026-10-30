@@ -3,11 +3,8 @@ package system
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"math/big"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
@@ -24,12 +21,12 @@ import (
 
 // UserHandler 用户处理器
 type UserHandler struct {
-	service           systemServices.UserService
+	service systemServices.UserService
+	// userADSyncService Phase 58 SC6 后只剩 SyncManagers 一个使用方
+	// （导入批量直推与单用户编辑直推均已删除），故此字段与 NewUserHandler 的
+	// 可变参构造一并保留。
 	userADSyncService *addomain.UserADSyncService
 	core              *core.Core
-	// adSyncInFlight P0 #10: 按用户 ID 去重 AD 同步，避免短时间内
-	// 多次更新同一用户触发并发 LDAP 连接。sync.Map 零值可用，无需初始化。
-	adSyncInFlight sync.Map
 }
 
 // NewUserHandler 创建用户处理器实例
@@ -81,6 +78,25 @@ func (h *UserHandler) Create(c *gin.Context) {
 	response.Success(c, gin.H{"message": "创建成功"})
 }
 
+// extractDataScopeParams 从 gin context 提取 data_scope 信息（PMODEL-01，
+// 仿 vdi/vm_handler.go：DataScopePermission 中间件写入 user_id / data_scope）。
+// 类型断言失败保持零值（string "" / DataScope 0 = 不过滤）。
+func extractDataScopeParams(c *gin.Context) (string, models.DataScope) {
+	var userID string
+	var dataScope models.DataScope
+	if uid, exists := c.Get("user_id"); exists {
+		if uidStr, ok := uid.(string); ok {
+			userID = uidStr
+		}
+	}
+	if ds, exists := c.Get("data_scope"); exists {
+		if dsVal, ok := ds.(models.DataScope); ok {
+			dataScope = dsVal
+		}
+	}
+	return userID, dataScope
+}
+
 // List 查询用户列表（类型安全版本）
 // @Summary 查询用户列表
 // @Description 分页查询用户列表，支持多条件过滤
@@ -103,6 +119,10 @@ func (h *UserHandler) List(c *gin.Context) {
 	params.Current = current
 	params.PageSize = pageSize
 
+	// PMODEL-01：从中间件写入的 gin context 提取 data_scope（客户端不可经请求体注入，
+	// params 两字段均 json:"-"）；DataScope=0 时 service 不过滤，旧行为零变化
+	params.DataScopeUserID, params.DataScope = extractDataScopeParams(c)
+
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
 		response.Error(c, err)
@@ -120,7 +140,9 @@ func (h *UserHandler) List(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /system/users/statistics [post]
 func (h *UserHandler) Statistics(c *gin.Context) {
-	result, err := h.service.Statistics(c.Request.Context())
+	// PMODEL-01：与 List 同批同款提取，统计走带 scope 过滤的同一构造（数字不与列表矛盾）
+	scopeUserID, dataScope := extractDataScopeParams(c)
+	result, err := h.service.StatisticsWithDataScope(c.Request.Context(), scopeUserID, dataScope)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -186,77 +208,18 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// 系统更新成功后，异步同步到AD域控（降级处理：不阻断系统更新）
-	// P0 #10: 在原有 panic recover 基础上增加 (1) dedupe 防止短时间内对同一
-	// 用户的多次更新触发并发 LDAP 连接；(2) 有限重试 + 指数退避，吸收 AD
-	// 连接/网络的瞬时抖动。SyncUserUpdateToAD 每次调用都新建 LDAP 连接，
-	// 故重试在 handler 层做最稳妥。
-	if h.userADSyncService != nil {
-		adSyncReq := h.buildADSyncMap(&req)
-		// dedupe：若该用户的同步仍在飞行中，跳过本次重复触发
-		if _, inFlight := h.adSyncInFlight.LoadOrStore(id, struct{}{}); inFlight {
-			applogger.Infof("[AD-SYNC] 用户 %s 的 AD 同步仍在进行中，跳过本次重复触发", id)
-		} else {
-			go func() {
-				defer func() {
-					h.adSyncInFlight.Delete(id) // 释放去重标记（无论成功/失败/panic）
-					if r := recover(); r != nil {
-						applogger.Errorf("[AD-SYNC] SyncUserUpdateToAD panic 已恢复 [ID=%s]: panic=%v", id, r)
-					}
-				}()
-				ctx := context.Background()
-				const maxRetries = 3
-				var lastErr error
-				for attempt := 0; attempt < maxRetries; attempt++ {
-					if attempt > 0 {
-						// 指数退避：1s, 2s（仅阻塞本 goroutine,不影响请求）
-						time.Sleep(time.Duration(1<<uint(attempt-1)) * time.Second)
-					}
-					err := h.userADSyncService.SyncUserUpdateToAD(ctx, id, adSyncReq)
-					if err == nil {
-						lastErr = nil
-						break
-					}
-					lastErr = err
-					applogger.Warnf("[AD-SYNC] 同步失败 [ID=%s] 第%d/%d次: %v", id, attempt+1, maxRetries, err)
-					// Fix 2 (debug session ad-update-attr-no-such-object):
-					// 目标 DN 在 AD 端不存在（LDAP code 32）属于"对象不存在"语义,
-					// 重试无意义且会让 FailoverClient.MarkFailure 累加触发
-					// 应用层 breaker 熔断 30 分钟 → 用户看到"管理员账号被锁"。
-					// 短路 break,避免放大。
-					if errors.Is(err, addomain.ErrADTargetNotFound) {
-						applogger.Infof("[AD-SYNC] 目标 DN 在 AD 端不存在,短路重试 [ID=%s]", id)
-						break
-					}
-					continue
-				}
-				if lastErr != nil && !errors.Is(lastErr, addomain.ErrADTargetNotFound) {
-					applogger.Errorf("[AD-SYNC] 同步用户到AD最终失败（已重试%d次）[ID=%s]: %v", maxRetries, id, lastErr)
-				}
-			}()
-		}
-	}
+	// Phase 58 D-01/SC6：原此处有 goroutine 直推 AD（按用户 ID 的 in-flight 去重 +
+	// 3 次重试 + code 32 短路 break）+ 四字段 map 构造方法，已**整块删除**。
+	// ⚠ 注释刻意不写出被删符号的字面名：SC6 的残留证据由 grep 静态证伪断言承担
+	//   （该 grep 的期望值是 0），注释自指会让这条断言失去意义。
+	// AD 推送的唯一通路改为 ad_push_queue → in-process 排水器（compare-and-move 幂等）。
+	// 代价（已知并接受）：AD 侧更新延迟到排水时才可见（默认 ≤1min）。
+	// 与队列写入的关系：Update 的 service 层已在业务事务内入队（Phase 57 QUEUE-01），
+	// 删除直推不影响该事务内入队 —— 唯一变化是"入队后由谁推"从 handler goroutine
+	// 换成了排水器。
 
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"message": "更新成功"})
-}
-
-// buildADSyncMap 将UserUpdateRequest转换为AD同步用的map
-func (h *UserHandler) buildADSyncMap(req *requests.UserUpdateRequest) map[string]interface{} {
-	m := make(map[string]interface{})
-	if req.Nickname != nil {
-		m["nickname"] = *req.Nickname
-	}
-	if req.Email != nil {
-		m["email"] = *req.Email
-	}
-	if req.Phone != nil {
-		m["phone"] = *req.Phone
-	}
-	if req.DeptID != nil {
-		m["deptId"] = *req.DeptID
-	}
-	return m
 }
 
 // Delete 删除用户

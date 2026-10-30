@@ -3,22 +3,10 @@
  * Job Manager Page
  */
 
-import { useState, useEffect, useMemo, type FC } from "react";
-import {
-  Card,
-  Table,
-  Button,
-  Space,
-  Input,
-  Select,
-  Modal,
-  Form,
-  Switch,
-  Row,
-  Col,
-  Statistic,
-  Drawer,
-} from "antd";
+import { useState, useEffect, useMemo, useCallback, type FC } from "react";
+import { Card, Table, Button, Space, Modal, Form, Switch, Row, Col, Statistic, Drawer } from "antd";
+// Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -36,8 +24,10 @@ import { getJobColumns, getJobLogColumns } from "./columns";
 import { useJobData, useJobActions } from "./hooks";
 import CronSelector from "@/components/CronSelector";
 import { usePagination } from "@/hooks/usePagination";
-
-const { TextArea } = Input;
+import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
+import { ErrorAlertWithRetry } from "@/components/shared";
+import type { JobInfo, JobLog } from "./types";
 
 // ==================== 主组件 ====================
 
@@ -48,6 +38,37 @@ const JobManager: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize } = usePagination();
 
+  // FIX-03b: job 主表服务端排序（字段对齐后端 jobAllowedSortFields：jobName/jobGroup/status/createdAt）
+  const jobSorterMetas = useMemo(
+    () => [
+      createSorterMeta<JobInfo>("jobName"),
+      createSorterMeta<JobInfo>("jobGroup"),
+      createSorterMeta<JobInfo>("status", "number"),
+      createSorterMeta<JobInfo>("createdAt", "date"),
+    ],
+    []
+  );
+  const {
+    orderByColumn: jobOrderByColumn,
+    isAsc: jobIsAsc,
+    sortOrder: jobSortOrder,
+    handleTableChange: handleJobSortChange,
+  } = useServerSort<JobInfo>({ sorterMetas: jobSorterMetas });
+
+  // FIX-03b: jobLog 日志表服务端排序（本地 state，字段映射 startTime→createdAt 对齐 jobLogAllowedSortFields）
+  const [jobLogSort, setJobLogSort] = useState<{ orderByColumn?: string; isAsc?: boolean }>({});
+  const jobLogSorterMetas = useMemo(
+    () => [
+      createSorterMeta<JobLog>("status", "number"),
+      createSorterMeta<JobLog>("startTime", "date"),
+    ],
+    []
+  );
+  const mapJobLogSortField = useCallback(
+    (field?: string) => (field === "startTime" ? "createdAt" : field),
+    []
+  );
+
   // 使用数据管理 Hook
   const {
     jobs,
@@ -55,12 +76,15 @@ const JobManager: FC = () => {
     jobLogStats,
     loading,
     total: _total,
+    error: jobError,
     fetchJobs,
     fetchJobLogs,
   } = useJobData({
     searchForm,
     current: paginationProps.current ?? 1,
     pageSize: paginationProps.pageSize ?? 10,
+    orderByColumn: jobOrderByColumn,
+    isAsc: jobIsAsc,
   });
 
   // 使用操作管理 Hook
@@ -100,11 +124,35 @@ const JobManager: FC = () => {
         handleViewLogs,
         openModal: (record) => openModal(record, form),
         handleDelete,
+        getSortOrder: (field) =>
+          jobOrderByColumn === field
+            ? ((jobSortOrder ?? null) as "ascend" | "descend" | null)
+            : null,
       }),
-    [handleToggleStatus, handleExecute, handleViewLogs, openModal, handleDelete, form]
+    [
+      handleToggleStatus,
+      handleExecute,
+      handleViewLogs,
+      openModal,
+      handleDelete,
+      form,
+      jobOrderByColumn,
+      jobSortOrder,
+    ]
   );
 
-  const jobLogColumns = useMemo(() => getJobLogColumns(), []);
+  const jobLogGetSortOrder = useCallback(
+    (field: string) => {
+      const mapped = mapJobLogSortField(field);
+      if (jobLogSort.orderByColumn !== mapped) return null;
+      return jobLogSort.isAsc === false ? "descend" : "ascend";
+    },
+    [jobLogSort, mapJobLogSortField]
+  );
+  const jobLogColumns = useMemo(
+    () => getJobLogColumns({ getSortOrder: jobLogGetSortOrder }),
+    [jobLogGetSortOrder]
+  );
 
   // 搜索
   const handleSearch = () => {
@@ -126,6 +174,8 @@ const JobManager: FC = () => {
 
   return (
     <div className="p-6">
+      {/* FIX-04b: 列表加载失败可重试错误条 */}
+      {!!jobError && <ErrorAlertWithRetry error={jobError} onRetry={() => fetchJobs()} />}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-4">定时任务管理</h1>
 
@@ -133,7 +183,7 @@ const JobManager: FC = () => {
         <Card>
           <Row gutter={16}>
             <Col xs={24} sm={8} md={6}>
-              <Input
+              <AppInput
                 placeholder="任务名称"
                 value={searchForm.jobName}
                 onChange={(e) => setSearchForm({ ...searchForm, jobName: e.target.value })}
@@ -142,7 +192,7 @@ const JobManager: FC = () => {
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <Input
+              <AppInput
                 placeholder="任务组"
                 value={searchForm.jobGroup}
                 onChange={(e) => setSearchForm({ ...searchForm, jobGroup: e.target.value })}
@@ -151,10 +201,13 @@ const JobManager: FC = () => {
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <Select
+              <AppSelect
                 placeholder="状态"
                 value={searchForm.status}
-                onChange={(value) => setSearchForm({ ...searchForm, status: value })}
+                // AppSelect 由 ComponentProps 派生，泛型被擦除 → onChange 值为 unknown，收敛回业务类型
+                onChange={(value) =>
+                  setSearchForm({ ...searchForm, status: value as number | undefined })
+                }
                 allowClear
                 className="user-form-input"
                 style={{ width: "100%" }}
@@ -165,19 +218,31 @@ const JobManager: FC = () => {
             <Col xs={24} sm={24} md={6}>
               <Space>
                 <Button
+                  aria-label="新增任务"
+                  title="新增任务"
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={() => openModal(undefined, form)}
                 >
                   新增
                 </Button>
-                <Button icon={<SearchOutlined />} onClick={handleSearch}>
+                <Button
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                  aria-label="搜索"
+                  title="搜索"
+                >
                   搜索
                 </Button>
                 <Button onClick={() => handleReset(setSearchForm, setCurrent, fetchJobs)}>
                   重置
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleRefresh}
+                  aria-label="刷新"
+                  title="刷新"
+                >
                   刷新
                 </Button>
               </Space>
@@ -194,10 +259,18 @@ const JobManager: FC = () => {
           rowKey="id"
           loading={loading}
           pagination={paginationProps}
-          onChange={(pagination) => {
-            setCurrent(pagination.current ?? 1);
-            setPageSize(pagination.pageSize ?? 10);
-            fetchJobs();
+          onChange={(pagination, _filters, sorter) => {
+            handleJobSortChange(pagination, _filters, sorter);
+            const resolved = resolveSorter(sorter, jobSorterMetas);
+            const activeSorter = Array.isArray(sorter) ? sorter[sorter.length - 1] : sorter;
+            if (activeSorter && activeSorter.column) {
+              // 排序操作回第 1 页
+              setCurrent(1);
+            } else {
+              setCurrent(pagination.current ?? 1);
+              setPageSize(pagination.pageSize ?? 10);
+            }
+            fetchJobs(undefined, { orderByColumn: resolved.orderByColumn, isAsc: resolved.isAsc });
           }}
           scroll={{ x: 1500 }}
         />
@@ -206,6 +279,8 @@ const JobManager: FC = () => {
       {/* 新增/编辑模态框 */}
       <Modal
         title={modalTitle}
+        mask={{ closable: false }}
+        keyboard={false}
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);
@@ -216,21 +291,21 @@ const JobManager: FC = () => {
       >
         <Form form={form} layout="vertical" initialValues={DEFAULT_FORM_VALUES}>
           <Form.Item name="id" hidden>
-            <Input />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item
             label="任务名称"
             name="jobName"
             rules={[{ required: true, message: "请输入任务名称" }]}
           >
-            <Input placeholder="请输入任务名称" />
+            <AppInput allowClear placeholder="请输入任务名称" />
           </Form.Item>
           <Form.Item
             label="任务组"
             name="jobGroup"
             rules={[{ required: true, message: "请输入任务组" }]}
           >
-            <Input placeholder="请输入任务组，如：DEFAULT" />
+            <AppInput allowClear placeholder="请输入任务组，如：DEFAULT" />
           </Form.Item>
           <Form.Item
             label="调用目标"
@@ -238,7 +313,7 @@ const JobManager: FC = () => {
             rules={[{ required: true, message: "请输入调用目标字符串" }]}
             extra="任务执行时调用的目标方法或脚本"
           >
-            <TextArea placeholder="请输入调用目标字符串" rows={3} />
+            <AppTextArea placeholder="请输入调用目标字符串" rows={3} />
           </Form.Item>
           <Form.Item
             label="Cron表达式"
@@ -253,7 +328,7 @@ const JobManager: FC = () => {
             rules={[{ required: true }]}
             extra="任务错过执行时间的处理策略"
           >
-            <Select options={MISFIRE_POLICY_OPTIONS} onSearch={() => {}} />
+            <AppSelect allowClear options={MISFIRE_POLICY_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item
             label="并发执行"
@@ -264,10 +339,10 @@ const JobManager: FC = () => {
             <Switch checkedChildren="允许" unCheckedChildren="禁止" />
           </Form.Item>
           <Form.Item label="状态" name="status" rules={[{ required: true }]}>
-            <Select options={STATUS_OPTIONS} onSearch={() => {}} />
+            <AppSelect allowClear options={STATUS_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item label="备注" name="remark">
-            <TextArea placeholder="请输入备注" rows={3} />
+            <AppTextArea placeholder="请输入备注" rows={3} />
           </Form.Item>
         </Form>
       </Modal>
@@ -282,6 +357,8 @@ const JobManager: FC = () => {
         extra={
           <Space>
             <Button
+              aria-label="刷新日志"
+              title="刷新日志"
               icon={<ReloadOutlined />}
               onClick={() => fetchJobLogs(selectedJob?.jobName, selectedJob?.jobGroup)}
             >
@@ -306,7 +383,7 @@ const JobManager: FC = () => {
                 <Statistic
                   title="成功次数"
                   value={jobLogStats.success}
-                  styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+                  styles={{ content: { color: "var(--theme-success)" } }}
                 />
               </Card>
             </Col>
@@ -315,7 +392,7 @@ const JobManager: FC = () => {
                 <Statistic
                   title="失败次数"
                   value={jobLogStats.fail}
-                  styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+                  styles={{ content: { color: "var(--theme-error)" } }}
                 />
               </Card>
             </Col>
@@ -327,6 +404,21 @@ const JobManager: FC = () => {
           dataSource={jobLogs}
           rowKey="id"
           size="small"
+          onChange={(_pagination, _filters, sorter) => {
+            const resolved = resolveSorter(sorter, jobLogSorterMetas);
+            setJobLogSort({
+              orderByColumn: resolved.orderByColumn
+                ? mapJobLogSortField(resolved.orderByColumn)
+                : undefined,
+              isAsc: resolved.isAsc,
+            });
+            fetchJobLogs(selectedJob?.jobName, selectedJob?.jobGroup, {
+              orderByColumn: resolved.orderByColumn
+                ? mapJobLogSortField(resolved.orderByColumn)
+                : undefined,
+              isAsc: resolved.isAsc,
+            });
+          }}
           pagination={{
             pageSize: 50,
             showSizeChanger: true,

@@ -7,7 +7,7 @@ import { flattenTreeToList, transformToParentTreeOptions, renderTreeData } from 
 describe("pages/system/dept/utils", () => {
   describe("flattenTreeToList", () => {
     it("扁平化嵌套树", () => {
-      const tree: any[] = [
+      const tree: unknown[] = [
         {
           id: "d1",
           deptName: "Root",
@@ -28,19 +28,19 @@ describe("pages/system/dept/utils", () => {
     });
 
     it("null → []", () => {
-      expect(flattenTreeToList(null as any)).toEqual([]);
+      expect(flattenTreeToList(null as unknown)).toEqual([]);
     });
 
     it("undefined → []", () => {
-      expect(flattenTreeToList(undefined as any)).toEqual([]);
+      expect(flattenTreeToList(undefined as unknown)).toEqual([]);
     });
 
     it("非数组 → []", () => {
-      expect(flattenTreeToList("x" as any)).toEqual([]);
+      expect(flattenTreeToList("x" as unknown)).toEqual([]);
     });
 
     it("深层递归", () => {
-      const tree: any[] = [
+      const tree: unknown[] = [
         {
           id: "d1",
           deptName: "L1",
@@ -59,13 +59,13 @@ describe("pages/system/dept/utils", () => {
 
   describe("transformToParentTreeOptions", () => {
     it("转 title/value/key", () => {
-      const tree: any[] = [{ id: "d1", deptName: "Root", children: [] }];
+      const tree: unknown[] = [{ id: "d1", deptName: "Root", children: [] }];
       const result = transformToParentTreeOptions(tree);
       expect(result[0]).toEqual({ title: "Root", value: "d1", key: "d1", children: undefined });
     });
 
     it("递归 children", () => {
-      const tree: any[] = [
+      const tree: unknown[] = [
         {
           id: "d1",
           deptName: "Root",
@@ -82,18 +82,18 @@ describe("pages/system/dept/utils", () => {
     });
 
     it("null → []", () => {
-      expect(transformToParentTreeOptions(null as any)).toEqual([]);
+      expect(transformToParentTreeOptions(null as unknown)).toEqual([]);
     });
 
     it("无 children → children undefined", () => {
-      const result = transformToParentTreeOptions([{ id: "x", deptName: "X" } as any]);
+      const result = transformToParentTreeOptions([{ id: "x", deptName: "X" } as unknown]);
       expect(result[0].children).toBeUndefined();
     });
   });
 
   describe("renderTreeData", () => {
     it("递归 + key", () => {
-      const tree: any[] = [
+      const tree: unknown[] = [
         { id: "d1", deptName: "Root", children: [{ id: "d2", deptName: "Child" }] },
       ];
       const result = renderTreeData(tree);
@@ -106,7 +106,7 @@ describe("pages/system/dept/utils", () => {
     });
 
     it("null → []", () => {
-      expect(renderTreeData(null as any)).toEqual([]);
+      expect(renderTreeData(null as unknown)).toEqual([]);
     });
   });
 });

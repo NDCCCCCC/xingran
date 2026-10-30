@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { App, Tree, Card, Select, Spin, Tag, Space, Button, Table, Col, Row, Modal } from "antd";
+import { App, Tree, Card, Spin, Tag, Space, Button, Table, Col, Row, Modal } from "antd";
+// Phase 71 (W5)：裸 Select → 契约组件；P68 裸 hex 同步清偿为主题变量
+import { AppSelect } from "@/components/ui";
 import {
   ReloadOutlined,
   FolderOutlined,
@@ -377,15 +379,20 @@ const ADOUPage: FC = () => {
                 loading={treeLoading}
               />
             }
-            bodyStyle={{ maxHeight: "calc(100vh - 280px)", overflow: "auto" }}
+            styles={{ body: { maxHeight: "calc(100vh - 280px)", overflow: "auto" } }}
           >
             <Space orientation="vertical" style={{ width: "100%" }} size="small">
-              <Select
+              {/* Phase 71 W5：迁 AppSelect——原 antd 单选默认禁搜，显式 showSearch={false}；
+                  configId 为 UUID 外键，原 allowClear=true 行为不变；
+                  AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型 */}
+              <AppSelect
+                allowClear
                 style={{ width: "100%" }}
                 placeholder="选择AD配置"
                 value={selectedConfig}
-                onChange={setSelectedConfig}
+                onChange={(value) => setSelectedConfig(value as string)}
                 options={configs.map((c) => ({ label: c.configName, value: c.id }))}
+                showSearch={false}
                 onSearch={() => {}}
               />
               <Spin spinning={treeLoading}>
@@ -398,7 +405,13 @@ const ADOUPage: FC = () => {
                     style={{ fontSize: "13px" }}
                   />
                 ) : (
-                  <div style={{ textAlign: "center", color: "#999", padding: "20px" }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      color: "var(--theme-text-tertiary)",
+                      padding: "20px",
+                    }}
+                  >
                     {selectedConfig ? "暂无OU数据，请先同步" : "请选择AD配置"}
                   </div>
                 )}
@@ -409,7 +422,7 @@ const ADOUPage: FC = () => {
 
         {/* 右侧：用户列表和部门映射 */}
         <Col span={18} style={{ height: "100%", overflow: "auto" }}>
-          <Space direction="vertical" style={{ width: "100%" }} size="small">
+          <Space orientation="vertical" style={{ width: "100%" }} size="small">
             {/* 用户列表卡片 */}
             <Card
               title={
@@ -424,7 +437,7 @@ const ADOUPage: FC = () => {
                 </Space>
               }
               size="small"
-              bodyStyle={{ maxHeight: "calc(100vh - 450px)", overflow: "auto" }}
+              styles={{ body: { maxHeight: "calc(100vh - 450px)", overflow: "auto" } }}
             >
               <Table
                 columns={userColumns}
@@ -460,15 +473,15 @@ const ADOUPage: FC = () => {
               loading={mappingLoading}
             >
               {deptMapping?.hasMapping ? (
-                <Space direction="vertical" style={{ width: "100%" }}>
+                <Space orientation="vertical" style={{ width: "100%" }}>
                   <div>
-                    <span style={{ color: "#999" }}>关联部门：</span>
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>关联部门：</span>
                     <Tag color="blue" style={{ marginLeft: 8 }}>
                       {deptMapping.mapping?.deptName}
                     </Tag>
                   </div>
                   <div>
-                    <span style={{ color: "#999" }}>同步状态：</span>
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>同步状态：</span>
                     <Tag
                       color={getSyncStatusColor(deptMapping.mapping?.syncStatus || "")}
                       style={{ marginLeft: 8 }}
@@ -478,7 +491,13 @@ const ADOUPage: FC = () => {
                   </div>
                 </Space>
               ) : (
-                <div style={{ color: "#999", textAlign: "center", padding: "20px" }}>
+                <div
+                  style={{
+                    color: "var(--theme-text-tertiary)",
+                    textAlign: "center",
+                    padding: "20px",
+                  }}
+                >
                   {selectedOU ? "该 OU 尚未关联部门" : "请选择 OU"}
                 </div>
               )}
@@ -504,7 +523,13 @@ const ADOUPage: FC = () => {
                   size="small"
                 />
               ) : (
-                <div style={{ color: "#999", textAlign: "center", padding: "20px" }}>
+                <div
+                  style={{
+                    color: "var(--theme-text-tertiary)",
+                    textAlign: "center",
+                    padding: "20px",
+                  }}
+                >
                   {selectedOU ? "该 OU 下暂无用户组" : "请选择 OU"}
                 </div>
               )}

@@ -3,25 +3,10 @@
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import type { FC } from "react";
+import type { FC, CSSProperties } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Alert,
-  Radio,
-  Layout,
-} from "antd";
+import { Table, Button, Space, Modal, Form, Tag, Card, Row, Col, Alert, Radio, Layout } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -44,15 +29,32 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import { NORMAL_STOP_TAG_CONFIG } from "@/constants/status";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// 楼宇/楼层均为 UUID 下拉：原 allowClear 已有，清空后表单值 undefined，
+// 由 Form rules={required} 在提交前拦截（不改 UUID 校验契约）。
+// 状态枚举业务禁搜 → 显式 showSearch={false}。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
-const { Option } = Select;
-const { TextArea } = Input;
 const { Content } = Layout;
+
+/**
+ * 卡片视图图标动作的禁用态样式（Phase 86 W2，与 buildings/room-devices/dedicated-lines/info-points 同口径）。
+ * antd `Card.actions` 只接受 ReactNode → 未就绪时用「不响应指针 + 降透明度」
+ * 表达禁用态，并配合 `title={decision.hint}` 提示原因。
+ */
+const cardActionStyle = (disabled: boolean): CSSProperties => ({
+  opacity: disabled ? 0.45 : 1,
+  pointerEvents: disabled ? "none" : "auto",
+  cursor: disabled ? "not-allowed" : "pointer",
+});
 
 type ViewMode = "table" | "card";
 
@@ -75,6 +77,14 @@ interface Statistics {
 }
 
 const ServerRoomManagement: FC = () => {
+  // Phase 86 W2（RBAC-02）：操作级权限门控（三态）。ops 码组只有 delete 键 → 删除用 .delete。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.opsServerRoom.edit);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsServerRoom.delete);
+  const permAdd = permGate.decide(PERMISSION_CODES.opsServerRoom.add);
+  const permImport = permGate.decide(PERMISSION_CODES.opsServerRoom.import);
+  const permExport = permGate.decide(PERMISSION_CODES.opsServerRoom.export);
+
   const location = useLocation();
   const [viewMode, setViewMode] = usePersistedStateController<ViewMode>({
     keyPrefix: location.pathname,
@@ -82,6 +92,7 @@ const ServerRoomManagement: FC = () => {
     defaultValue: "table",
   });
   const [importVisible, setImportVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [buildingOptions, setBuildingOptions] = useState<BuildingOption[]>([]);
@@ -236,7 +247,6 @@ const ServerRoomManagement: FC = () => {
     searchForm.setFieldValue("floorNo", undefined);
     searchForm.setFieldValue("name", undefined);
     searchForm.setFieldValue("status", undefined);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBuildingOptions(selectedDeptId || undefined);
   }, [selectedDeptId, searchForm, loadBuildingOptions]);
 
@@ -347,19 +357,23 @@ const ServerRoomManagement: FC = () => {
       key: "action",
       render: (_, record) => {
         const actions = [
-          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
+          {
+            key: "edit",
+            label: "编辑",
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+            permission: PERMISSION_CODES.opsServerRoom.edit,
+          },
           {
             key: "delete",
             label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
+            permission: PERMISSION_CODES.opsServerRoom.delete,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个机房吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `机房 ${record.name}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },
@@ -376,7 +390,7 @@ const ServerRoomManagement: FC = () => {
           style={{
             textAlign: "center",
             padding: "40px",
-            color: "var(--theme-text-tertiary, #999)",
+            color: "var(--theme-text-tertiary)",
           }}
         >
           暂无数据
@@ -389,20 +403,41 @@ const ServerRoomManagement: FC = () => {
             <Card
               hoverable
               actions={[
-                <EditOutlined key="edit" onClick={() => openModal(room)} />,
-                <DeleteOutlined
-                  key="delete"
-                  style={{ color: "var(--theme-error, #ba3630)" }}
-                  onClick={() => {
-                    Modal.confirm({
-                      title: "确定要删除这个机房吗？",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleDelete(room.id),
-                    });
-                  }}
-                />,
+                // 卡片视图与表格视图是同一页的两种形态 → 共用同一组门控决策
+                ...(permEdit.visible
+                  ? [
+                      <EditOutlined
+                        key="edit"
+                        title={permEdit.hint}
+                        style={cardActionStyle(permEdit.disabled)}
+                        onClick={() => {
+                          if (permEdit.disabled) return;
+                          openModal(room);
+                        }}
+                      />,
+                    ]
+                  : []),
+                ...(permDelete.visible
+                  ? [
+                      <DeleteOutlined
+                        key="delete"
+                        title={permDelete.hint}
+                        style={{
+                          ...cardActionStyle(permDelete.disabled),
+                          color: permDelete.disabled
+                            ? "var(--theme-text-tertiary)"
+                            : "var(--theme-error)",
+                        }}
+                        onClick={() => {
+                          if (permDelete.disabled) return;
+                          confirmDelete({
+                            target: `机房 ${room.name}`,
+                            onDelete: () => handleDelete(room.id),
+                          });
+                        }}
+                      />,
+                    ]
+                  : []),
               ]}
             >
               <Card.Meta
@@ -438,9 +473,9 @@ const ServerRoomManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: "#fff" }}>
+      <Content style={{ background: "var(--theme-bg-surface)" }}>
         <StatisticsCards
           show={total > 10}
           items={[
@@ -448,13 +483,13 @@ const ServerRoomManagement: FC = () => {
             {
               title: "正常机房",
               value: statistics.active,
-              styles: { content: { color: "var(--theme-success, #3f8600)" } },
+              styles: { content: { color: "var(--theme-success)" } },
               prefix: <CheckCircleOutlined />,
             },
             {
               title: "停用机房",
               value: statistics.inactive,
-              styles: { content: { color: "var(--theme-error, #cf1322)" } },
+              styles: { content: { color: "var(--theme-error)" } },
               prefix: <StopOutlined />,
             },
           ]}
@@ -471,7 +506,9 @@ const ServerRoomManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="buildingId" label="所在楼宇">
-                <Select
+                {/* 形态分类器②：已是 options 形态，直接迁；楼宇 UUID 字段 */}
+                <AppSelect
+                  allowClear
                   placeholder="请先选择部门"
                   options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
                   disabled={!selectedDeptId}
@@ -479,16 +516,23 @@ const ServerRoomManagement: FC = () => {
                 />
               </Form.Item>
               <Form.Item name="floorNo" label="楼层">
-                <Input placeholder="请输入楼层" />
+                <AppInput placeholder="请输入楼层" />
               </Form.Item>
               <Form.Item name="name" label="机房名称">
-                <Input placeholder="请输入机房名称" />
+                <AppInput placeholder="请输入机房名称" />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" onSearch={() => {}}>
-                  <Option value={0}>正常</Option>
-                  <Option value={1}>停用</Option>
-                </Select>
+                {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                <AppSelect
+                  allowClear
+                  placeholder="请选择状态"
+                  showSearch={false}
+                  onSearch={() => {}}
+                  options={[
+                    { label: "正常", value: 0 },
+                    { label: "停用", value: 1 },
+                  ]}
+                />
               </Form.Item>
               <Form.Item>
                 <Space>
@@ -515,39 +559,61 @@ const ServerRoomManagement: FC = () => {
                   <AppstoreOutlined /> 卡片
                 </Radio.Button>
               </Radio.Group>
-              <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-                导入
-              </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => {
-                  // 获取当前筛选条件
-                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                  const currentFilters: Record<string, unknown> = {};
-                  Object.keys(values).forEach((key) => {
-                    const value = values[key];
-                    if (value !== undefined && value !== null && value !== "") {
-                      currentFilters[key] = value;
-                    }
-                  });
-                  setExportFilters(currentFilters);
-                  setExportVisible(true);
-                }}
-              >
-                导出
-              </Button>
-              {selectedRowKeys.length > 0 && (
+              {/* Excel 门控点 = 触发按钮（modal 容器保留无条件渲染） */}
+              {permImport.visible && (
+                <Button
+                  icon={<ImportOutlined />}
+                  onClick={() => setImportVisible(true)}
+                  disabled={permImport.disabled}
+                  title={permImport.hint}
+                >
+                  导入
+                </Button>
+              )}
+              {permExport.visible && (
+                <Button
+                  icon={<ExportOutlined />}
+                  onClick={() => {
+                    // 获取当前筛选条件
+                    const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                    const currentFilters: Record<string, unknown> = {};
+                    Object.keys(values).forEach((key) => {
+                      const value = values[key];
+                      if (value !== undefined && value !== null && value !== "") {
+                        currentFilters[key] = value;
+                      }
+                    });
+                    setExportFilters(currentFilters);
+                    setExportVisible(true);
+                  }}
+                  disabled={permExport.disabled}
+                  title={permExport.hint}
+                >
+                  导出
+                </Button>
+              )}
+              {selectedRowKeys.length > 0 && permDelete.visible && (
                 <Button
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ba3630)" }}
+                  style={{ color: "var(--theme-error)" }}
                   onClick={handleBatchDelete}
+                  disabled={permDelete.disabled}
+                  title={permDelete.hint}
                 >
                   批量删除 ({selectedRowKeys.length})
                 </Button>
               )}
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-                新增机房
-              </Button>
+              {permAdd.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => openModal()}
+                  disabled={permAdd.disabled}
+                  title={permAdd.hint}
+                >
+                  新增机房
+                </Button>
+              )}
             </Space>
           </div>
           {selectedRowKeys.length > 0 && (
@@ -589,7 +655,15 @@ const ServerRoomManagement: FC = () => {
         <Modal
           title={editingServerRoom ? "编辑机房" : "新增机房"}
           open={modalVisible}
-          onOk={handleSave}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSave();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           onCancel={() => {
             setModalVisible(false);
             serverRoomForm.resetFields();
@@ -609,12 +683,15 @@ const ServerRoomManagement: FC = () => {
               label="所在楼宇"
               rules={[{ required: true, message: "请选择所在楼宇" }]}
             >
-              <Select
+              <AppSelect
+                allowClear
                 placeholder="请选择所在楼宇"
                 className="user-form-input"
                 options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
                 onChange={(value) => {
-                  loadFloorOptions(value);
+                  // AppSelect 的 onChange 值为 unknown；loadFloorOptions 对空值
+                  // 已有「清空楼层选项」的既有分支，收敛成 "" 不引入新语义
+                  loadFloorOptions((value as string) ?? "");
                   serverRoomForm.setFieldValue("floorId", undefined);
                 }}
                 onSearch={() => {}}
@@ -625,7 +702,8 @@ const ServerRoomManagement: FC = () => {
               label="楼层"
               rules={[{ required: true, message: "请选择楼层" }]}
             >
-              <Select
+              <AppSelect
+                allowClear
                 placeholder="请选择楼层"
                 className="user-form-input"
                 disabled={floorOptions.length === 0}
@@ -641,16 +719,18 @@ const ServerRoomManagement: FC = () => {
               label="机房名称"
               rules={[{ required: true, message: "请输入机房名称" }]}
             >
-              <Input placeholder="请输入机房名称" className="user-form-input" />
+              <AppInput placeholder="请输入机房名称" className="user-form-input" />
             </Form.Item>
             <Form.Item
               name="status"
               label="状态"
               rules={[{ required: true, message: "请选择状态" }]}
             >
-              <Select
+              <AppSelect
+                allowClear
                 placeholder="请选择状态"
                 className="user-form-input"
+                showSearch={false}
                 options={[
                   { label: "正常", value: 0 },
                   { label: "停用", value: 1 },
@@ -659,7 +739,7 @@ const ServerRoomManagement: FC = () => {
               />
             </Form.Item>
             <Form.Item name="remark" label="描述">
-              <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
+              <AppTextArea rows={3} placeholder="请输入描述" className="user-form-input" />
             </Form.Item>
           </Form>
         </Modal>

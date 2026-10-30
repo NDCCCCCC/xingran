@@ -47,7 +47,7 @@ describe("TargetSelector", () => {
         targetDepts={["d1", "d2"]}
         targetRoles={[]}
         targetUsers={[]}
-        deptTree={[{ id: "d1", title: "Dept1", children: [] } as any]}
+        deptTree={[{ id: "d1", title: "Dept1", children: [] } as unknown]}
         roles={[]}
         users={[]}
         loadingDepts={false}
@@ -74,7 +74,7 @@ describe("TargetSelector", () => {
           [
             { id: "r1", roleName: "管理员", roleKey: "admin" },
             { id: "r2", roleName: "用户", roleKey: "user" },
-          ] as any
+          ] as unknown
         }
         users={[]}
         loadingDepts={false}
@@ -99,7 +99,7 @@ describe("TargetSelector", () => {
         targetRoles={[]}
         targetUsers={[]}
         deptTree={[]}
-        roles={[{ id: "r1", roleName: "管理员", roleKey: "admin" }] as any}
+        roles={[{ id: "r1", roleName: "管理员", roleKey: "admin" }] as unknown}
         users={[]}
         loadingDepts={false}
         loadingRoles={false}
@@ -128,7 +128,7 @@ describe("TargetSelector", () => {
           [
             { id: "u1", username: "alice", nickname: "Alice" },
             { id: "u2", username: "bob", nickname: "Bob" },
-          ] as any
+          ] as unknown
         }
         loadingDepts={false}
         loadingRoles={false}

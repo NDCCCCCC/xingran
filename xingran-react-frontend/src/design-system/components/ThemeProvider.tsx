@@ -7,20 +7,12 @@
  * 品牌色值由 index.css 静态定义，本组件只负责 data-color-mode 与切换动画。
  */
 
-import { useEffect, createContext, useContext, useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { FC, ReactNode } from "react";
 import { useThemeStore } from "@/store/themeStore";
 import type { ColorMode } from "@/types/config";
-
-interface ThemeContextValue {
-  mode: ColorMode;
-}
-
-const ThemeContext = createContext<ThemeContextValue>({
-  mode: "light",
-});
-
-export const useThemeContext = () => useContext(ThemeContext);
+// v1.24 P82：Context 与 hook 拆至 themeContext.ts（react-refresh 组件文件只导组件）
+import { ThemeContext, type ThemeContextValue } from "./themeContext";
 
 const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const mode = useThemeStore((state) => state.mode);

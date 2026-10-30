@@ -52,21 +52,21 @@ describe("getHolidayColumns", () => {
   it("weekday render: 2026-08-28 是周五", () => {
     const cols = getHolidayColumns(cbs);
     const col = cols.find((c) => c.key === "weekday");
-    const render = col?.render as (_: unknown, r: any) => string;
+    const render = col?.render as (_: unknown, r: unknown) => string;
     expect(render(undefined, { holidayDate: "2026-08-28" })).toBe("周五");
   });
 
   it("weekday render: 2026-08-30 是周日", () => {
     const cols = getHolidayColumns(cbs);
     const col = cols.find((c) => c.key === "weekday");
-    const render = col?.render as (_: unknown, r: any) => string;
+    const render = col?.render as (_: unknown, r: unknown) => string;
     expect(render(undefined, { holidayDate: "2026-08-30" })).toBe("周日");
   });
 
   it("holidayDate sorter 按 unix 排序", () => {
     const cols = getHolidayColumns(cbs);
     const col = cols.find((c) => c.key === "holidayDate");
-    const sorter = col?.sorter as (a: any, b: any) => number;
+    const sorter = col?.sorter as (a: unknown, b: unknown) => number;
     const a = { holidayDate: "2026-01-01" };
     const b = { holidayDate: "2026-10-01" };
     expect(sorter(a, b)).toBeLessThan(0);

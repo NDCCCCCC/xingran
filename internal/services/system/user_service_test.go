@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
@@ -48,6 +49,9 @@ func setupUserServiceTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
+	// ⚠ Phase 57 接线新增：Update 走 tx.Save(&user) 会写满 models.User 全部列，
+	// 缺列即 "no such column"（1），该 fixture 此前只能跑 NotFound 用例。
+	// 补齐 models.User 的全部列（纯增量，不影响既有用例）。
 	require.NoError(t, db.Exec(`
 		CREATE TABLE sys_user (
 			id TEXT PRIMARY KEY,
@@ -55,15 +59,30 @@ func setupUserServiceTestDB(t *testing.T) *gorm.DB {
 			password TEXT,
 			nickname TEXT,
 			email TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
+			avatar TEXT,
 			gender INTEGER NOT NULL DEFAULT 2,
 			status INTEGER NOT NULL DEFAULT 0,
 			dept_id TEXT,
 			dept_name TEXT,
+			employee_no TEXT,
 			remark TEXT,
 			salt TEXT,
+			login_ip TEXT,
+			login_time DATETIME,
+			pwd_update_time DATETIME,
+			pwd_expire_days INTEGER NOT NULL DEFAULT 0,
+			init_flag INTEGER NOT NULL DEFAULT 0,
+			auth_source TEXT,
+			ad_username TEXT,
+			ad_dn TEXT,
+			ad_ou_dn TEXT,
+			ad_synced_at DATETIME,
 			created_at DATETIME,
 			updated_at DATETIME,
+			created_by TEXT DEFAULT '',
+			updated_by TEXT DEFAULT '',
+			version INTEGER NOT NULL DEFAULT 0,
 			deleted_at DATETIME
 		)
 	`).Error)
@@ -90,6 +109,26 @@ func setupUserServiceTestDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME
 		)
 	`).Error)
+
+	// Phase 57 D-02/HYGIENE-06: sys_ad_config 供入队前置条件查询；ad_push_queue 由
+	// migration_215 直调建表。UserService 的 Update/Delete/BatchDelete 已接线入队，
+	// 缺这两张表会让这些用例因 IsADSyncEnabled 报表不存在而整体转红。
+	// deleted_at 必须存在：models.ADConfig 内嵌 BaseModel，GORM 软删作用域引用它。
+	// Phase 58 F-F: 补 config_name / base_dn 两列 —— D-02 的最长后缀匹配测试要读 base_dn，
+	// 缺列则只能绕开 GORM（退化成裸 SQL 断言，测试价值打折）。
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_ad_config (
+			id TEXT PRIMARY KEY,
+			config_name TEXT,
+			base_dn TEXT,
+			sync_enabled INTEGER NOT NULL DEFAULT 0,
+			status INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)
+	`).Error)
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
 	return db
 }
 

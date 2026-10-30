@@ -17,7 +17,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-const sampleUser: any = { id: "u1", username: "test" };
+const sampleUser: unknown = { id: "u1", username: "test" };
 
 describe("system/user/hooks/useUserModals", () => {
   it("初始 visible=false + user=null", () => {

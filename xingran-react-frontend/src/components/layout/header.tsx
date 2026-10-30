@@ -85,7 +85,7 @@ const Header: FC = () => {
         ))}
       </nav>
 
-      <Space size="middle">
+      <Space size="medium">
         {/* 全局搜索触发器（原型 .search-trigger 260px，铃铛左侧） */}
         <GlobalSearch />
 

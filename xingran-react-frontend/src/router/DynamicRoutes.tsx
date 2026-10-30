@@ -27,6 +27,7 @@ import AdminNoticeDetailPage from "@/pages/system/notice/detail";
 import MyNoticeDetailPage from "@/pages/my-notices/detail";
 import { Spin } from "antd";
 import { STORAGE_KEYS, MENU_CACHE_VERSION } from "@/constants/storage";
+import { getLastPath, saveLastPath } from "./lastPathStorage";
 
 // ==================== DATA-02: 菜单+权限 sessionStorage 缓存(hydrate-then-revalidate) ====================
 
@@ -78,39 +79,6 @@ const writeMenuCache = (
     sessionStorage.setItem(STORAGE_KEYS.MENU_CACHE, JSON.stringify(payload));
   } catch {
     // 静默失败 — 下次刷新时无 hydrate 但会走 API 回退
-  }
-};
-
-// Get last visited path from sessionStorage
-export const getLastPath = (): string | null => {
-  if (typeof window === "undefined") return null;
-  try {
-    return sessionStorage.getItem(STORAGE_KEYS.LAST_PATH);
-  } catch {
-    return null;
-  }
-};
-
-// Save current path to sessionStorage
-export const saveLastPath = (path: string): void => {
-  if (typeof window === "undefined") return;
-  try {
-    // 保存所有路径，除了 /login
-    if (path && path !== "/login") {
-      sessionStorage.setItem(STORAGE_KEYS.LAST_PATH, path);
-    }
-  } catch {
-    // Ignore sessionStorage errors
-  }
-};
-
-// Clear last path (for logout)
-export const clearLastPath = (): void => {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.removeItem(STORAGE_KEYS.LAST_PATH);
-  } catch {
-    // Ignore sessionStorage errors
   }
 };
 
@@ -182,6 +150,13 @@ export function DynamicRoutes() {
       menus: cachedMenuData.menus,
       allMenus: cachedMenuData.allMenus,
       permissions: cachedMenuData.permissions,
+      // v1.24 PERM-02：缓存里的权限集此刻**已就绪**（30 分钟 TTL 内的有效快照），
+      // 必须同步置位 permissionsLoaded —— 否则走 setPermissions 的语义在这里被绕过，
+      // 三态门控会停在 "loading"，导致硬刷新后所有操作按钮在 hydrate→fetchAll
+      // 完成前一直是 disabled（用户看到的是"按钮灰着但没提示为什么"）。
+      // 后台 revalidate 完成后 fetchAll 会再写一次（权限集以 API 为准）。
+      permissionsLoaded: true,
+      permissionsError: null,
     });
   }, [cachedMenuData, isAuthenticated]);
 
@@ -240,11 +215,14 @@ export function DynamicRoutes() {
   }, [allMenus, permissions]);
 
   // 保存当前路径到 sessionStorage (外部系统同步)
+  // NAV-01 防自毁: 菜单未就绪时(allMenus 为空) pathname 一定来自 catch-all 兜底的
+  // /dashboard 重定向——此时写回 LAST_PATH 会覆盖用户真实落点, 导致下次刷新又从
+  // dashboard 开始。等 hydrate/API 就绪后, 用户真实导航才会被记录。
   useEffect(() => {
-    if (isAuthenticated && location.pathname) {
+    if (isAuthenticated && allMenus.length > 0 && location.pathname) {
       saveLastPath(location.pathname);
     }
-  }, [location.pathname, isAuthenticated]);
+  }, [location.pathname, isAuthenticated, allMenus.length]);
 
   // 检查是否是上传文件路径
   const isUploadsPath = location.pathname.startsWith("/uploads/");
@@ -312,7 +290,19 @@ export function DynamicRoutes() {
             </RouteGuard>
           }
         />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/*
+         * NAV-01: catch-all 兜底区分两种语义——
+         *  - 菜单未就绪(allMenus 空): 首帧 routeElements=[] 导致深层 URL 无路由可匹配,
+         *    此时绝不渲染 <Navigate>, 否则 F5 会被抢先跳 /dashboard;
+         *    渲染 InitializingFallback 等 hydrate/API effect 完成后自然重渲染。
+         *  - 菜单已就绪仍匹配不到: 真正的无效/无权限路径, 保持跳 /dashboard。
+         */}
+        <Route
+          path="*"
+          element={
+            allMenus.length > 0 ? <Navigate to="/dashboard" replace /> : <InitializingFallback />
+          }
+        />
       </Route>
     </Routes>
   );

@@ -26,7 +26,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-const baseWidget: any = {
+const baseWidget: unknown = {
   id: "w1",
   type: "stat-card",
   title: "Default Title",
@@ -34,7 +34,7 @@ const baseWidget: any = {
 
 describe("dashboard/StatCardWidget", () => {
   it("渲染 value + label", () => {
-    const display: any = { iconColor: "#000" };
+    const display: unknown = { iconColor: "#000" };
     render(<StatCardWidget widget={baseWidget} display={display} />, { wrapper });
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("Total")).toBeInTheDocument();
@@ -47,8 +47,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: true,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#000" };
+    } as unknown);
+    const display: unknown = { iconColor: "#000" };
     const { container } = render(<StatCardWidget widget={baseWidget} display={display} />, {
       wrapper,
     });
@@ -62,8 +62,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: "加载失败",
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#000" };
+    } as unknown);
+    const display: unknown = { iconColor: "#000" };
     render(<StatCardWidget widget={baseWidget} display={display} />, { wrapper });
     expect(screen.getByText("加载失败")).toBeInTheDocument();
   });
@@ -75,8 +75,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#000" };
+    } as unknown);
+    const display: unknown = { iconColor: "#000" };
     render(<StatCardWidget widget={baseWidget} display={display} />, { wrapper });
     expect(screen.getByText("Default Title")).toBeInTheDocument();
   });
@@ -88,8 +88,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#000" };
+    } as unknown);
+    const display: unknown = { iconColor: "#000" };
     render(<StatCardWidget widget={baseWidget} display={display} />, { wrapper });
     expect(screen.getByText("Default Title")).toBeInTheDocument();
   });
@@ -101,8 +101,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#000" };
+    } as unknown);
+    const display: unknown = { iconColor: "#000" };
     render(<StatCardWidget widget={baseWidget} display={display} />, { wrapper });
     expect(screen.getByText("99")).toBeInTheDocument();
   });
@@ -114,8 +114,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { prefix: "$", suffix: "k", percentage: true, decimals: 2 };
+    } as unknown);
+    const display: unknown = { prefix: "$", suffix: "k", percentage: true, decimals: 2 };
     render(<StatCardWidget widget={baseWidget} display={display} />, { wrapper });
     // 12.345 → "$12.35k%"
     expect(screen.getByText(/\$12\.35k%/)).toBeInTheDocument();
@@ -128,8 +128,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#000" };
+    } as unknown);
+    const display: unknown = { iconColor: "#000" };
     const { container } = render(<StatCardWidget widget={baseWidget} display={display} />, {
       wrapper,
     });
@@ -144,8 +144,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#000" };
+    } as unknown);
+    const display: unknown = { iconColor: "#000" };
     const { container } = render(<StatCardWidget widget={baseWidget} display={display} />, {
       wrapper,
     });
@@ -159,8 +159,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#000" };
+    } as unknown);
+    const display: unknown = { iconColor: "#000" };
     render(<StatCardWidget widget={baseWidget} display={display} />, { wrapper });
     expect(screen.getByText("0")).toBeInTheDocument();
   });
@@ -172,8 +172,8 @@ describe("dashboard/StatCardWidget", () => {
       loading: false,
       error: null,
       refresh: vi.fn(),
-    } as any);
-    const display: any = { iconColor: "#00ff00", icon: <span>📊</span> };
+    } as unknown);
+    const display: unknown = { iconColor: "#00ff00", icon: <span>📊</span> };
     render(<StatCardWidget widget={baseWidget} display={display} />, { wrapper });
     expect(screen.getByText("📊")).toBeInTheDocument();
   });

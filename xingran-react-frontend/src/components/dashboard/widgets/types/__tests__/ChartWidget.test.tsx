@@ -25,12 +25,12 @@ const baseWidget = {
   type: "chart",
   dataSource: { type: "static", data: {} },
   position: { x: 0, y: 0, w: 4, h: 3 },
-} as any;
+} as unknown;
 
 describe("ChartWidget 渲染", () => {
   it("data=null → 渲染空 option", () => {
     const { baseElement } = renderWithProviders(
-      <ChartWidget widget={baseWidget} display={{ chartType: "line" } as any} />
+      <ChartWidget widget={baseWidget} display={{ chartType: "line" } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -43,7 +43,7 @@ describe("ChartWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ChartWidget widget={baseWidget} display={{ chartType: "line" } as any} />
+      <ChartWidget widget={baseWidget} display={{ chartType: "line" } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -56,7 +56,7 @@ describe("ChartWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ChartWidget widget={baseWidget} display={{ chartType: "bar" } as any} />
+      <ChartWidget widget={baseWidget} display={{ chartType: "bar" } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -74,7 +74,7 @@ describe("ChartWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ChartWidget widget={baseWidget} display={{ chartType: "pie" } as any} />
+      <ChartWidget widget={baseWidget} display={{ chartType: "pie" } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -87,7 +87,7 @@ describe("ChartWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ChartWidget widget={baseWidget} display={{ chartType: "area" } as any} />
+      <ChartWidget widget={baseWidget} display={{ chartType: "area" } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -100,7 +100,7 @@ describe("ChartWidget 渲染", () => {
       refresh: vi.fn(),
     });
     const { baseElement } = renderWithProviders(
-      <ChartWidget widget={baseWidget} display={{ chartType: "unknown" } as any} />
+      <ChartWidget widget={baseWidget} display={{ chartType: "unknown" } as unknown} />
     );
     expect(baseElement).toBeDefined();
   });
@@ -109,7 +109,7 @@ describe("ChartWidget 渲染", () => {
     const { baseElement } = renderWithProviders(
       <ChartWidget
         widget={baseWidget}
-        display={{ chartType: "line" } as any}
+        display={{ chartType: "line" } as unknown}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />

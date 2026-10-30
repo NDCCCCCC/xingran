@@ -38,7 +38,7 @@ export default function DutyManagement() {
   const dutyConfig = useDutyConfig();
 
   // 用户选项（共享缓存，5min stale）
-  const { data: users = [] } = useUserOptions();
+  const { data: _users = [] } = useUserOptions();
 
   // ==================== 其他状态 ====================
   const location = useLocation();

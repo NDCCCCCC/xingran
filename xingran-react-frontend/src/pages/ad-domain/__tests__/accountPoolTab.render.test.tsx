@@ -57,10 +57,11 @@ import { listADServiceAccounts, getADServiceAccountStats } from "@/lib/adDomainA
 
 describe("ad-domain AccountPoolTab 渲染", () => {
   it("挂载拉取 list+stats,渲染统计卡与三状态 tag", async () => {
-    const { container, findByText, findAllByText } = renderWithProviders(
-      <AccountPoolTab configId="cfg-1" />,
-      { route: "/ad-domain/configs" }
-    );
+    const {
+      container,
+      findByText: _findByText,
+      findAllByText,
+    } = renderWithProviders(<AccountPoolTab configId="cfg-1" />, { route: "/ad-domain/configs" });
 
     // 等表格出现(统计卡 + 表格)
     await vi.waitFor(

@@ -10,8 +10,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Tag,
   Card,
   Row,
@@ -22,6 +20,9 @@ import {
   TreeSelect,
   Alert,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/Input.TextArea → 契约组件。菜单类型/状态为固定枚举
+// → children 改写 options 形态；状态类业务下拉显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   EditOutlined,
@@ -47,18 +48,27 @@ import {
 } from "./constants";
 import { renderTreeData, renderMenuName } from "./utils";
 import { useMenuData, useMenuActions } from "./hooks";
-
-const { Option } = Select;
+// Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
+import { useActionPermission } from "@/components/shared";
+import type { ActionPermissionDecision } from "@/components/shared";
 
 // ==================== 表格列定义 ====================
 
 interface MenuTableColumnsProps {
   handleEdit: (record: Menu) => void;
   handleDeleteConfirm: (record: Menu) => void;
+  /**
+   * Phase 86 W1（RBAC-02）：操作列门控决策（由页面层 decide 后透传，列工厂保持纯函数、
+   * 不在内部调 hook）。
+   * 三态：visible=false → 不渲染；disabled=true → 渲染但禁用（hint 作提示）。
+   */
+  permEdit: ActionPermissionDecision;
+  permRemove: ActionPermissionDecision;
 }
 
 function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
-  const { handleEdit, handleDeleteConfirm } = props;
+  const { handleEdit, handleDeleteConfirm, permEdit, permRemove } = props;
 
   return [
     {
@@ -120,18 +130,32 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
       title: "操作",
       key: "action",
       render: (_: unknown, record: Menu) => (
-        <Space size="middle">
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          <Button
-            type="link"
-            icon={<DeleteOutlined />}
-            style={{ color: "var(--theme-error, #ba3630)" }}
-            onClick={() => handleDeleteConfirm(record)}
-          >
-            删除
-          </Button>
+        <Space size="medium">
+          {/* Phase 86 W1：行编辑 → system:menu:edit；行删除 → system:menu:remove。
+              ready 无权限 → 入口不在 DOM；未就绪 → 渲染但 disabled + 提示。 */}
+          {permEdit.visible && (
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={permEdit.disabled}
+              title={permEdit.hint}
+            >
+              编辑
+            </Button>
+          )}
+          {permRemove.visible && (
+            <Button
+              type="link"
+              icon={<DeleteOutlined />}
+              style={{ color: "var(--theme-error)" }}
+              onClick={() => handleDeleteConfirm(record)}
+              disabled={permRemove.disabled}
+              title={permRemove.hint}
+            >
+              删除
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -144,7 +168,15 @@ const MenuManagement: FC = () => {
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+
+  // Phase 86 W1（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permAdd = permGate.decide(PERMISSION_CODES.systemMenu.add);
+  const permEdit = permGate.decide(PERMISSION_CODES.systemMenu.edit);
+  const permRemove = permGate.decide(PERMISSION_CODES.systemMenu.remove);
 
   // 使用数据管理 Hook
   const { menus, parentOptions, statistics, loading, loadMenus } = useMenuData();
@@ -168,6 +200,13 @@ const MenuManagement: FC = () => {
       setEditModalVisible(false);
     },
   });
+
+  // 弹窗内「显示状态 / 菜单状态」两个 Switch 是**表单字段**（随弹窗提交生效），
+  // 归所属写动作：编辑弹窗 → system:menu:edit；新增弹窗 → system:menu:add。
+  // 门控点落在 Switch 本身：ready 无权限 → 整个 Switch 不渲染（不是只禁用）。
+  const permFormStatus = permGate.decide(
+    editingMenu ? PERMISSION_CODES.systemMenu.edit : PERMISSION_CODES.systemMenu.add
+  );
 
   // 初始化加载
   useEffect(() => {
@@ -221,7 +260,12 @@ const MenuManagement: FC = () => {
   };
 
   // 表格列
-  const columns = getMenuTableColumns({ handleEdit: handleOpenEditModal, handleDeleteConfirm });
+  const columns = getMenuTableColumns({
+    handleEdit: handleOpenEditModal,
+    handleDeleteConfirm,
+    permEdit,
+    permRemove,
+  });
 
   return (
     <div>
@@ -237,7 +281,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="目录数量"
               value={statistics.directories}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<FolderOutlined />}
             />
           </Card>
@@ -247,7 +291,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="菜单数量"
               value={statistics.menus}
-              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<FileOutlined />}
             />
           </Card>
@@ -257,7 +301,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="按钮数量"
               value={statistics.buttons}
-              styles={{ content: { color: "#fa8c16" } }}
+              styles={{ content: { color: "var(--theme-warning)" } }}
               prefix={<AppstoreOutlined />}
             />
           </Card>
@@ -277,21 +321,18 @@ const MenuManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="menuName" label="菜单名称">
-              <Input placeholder="请输入菜单名称" />
+              <AppInput placeholder="请输入菜单名称" />
             </Form.Item>
             <Form.Item name="status" label="菜单状态">
-              <Select
+              {/* 形态分类器②④：菜单状态枚举（业务禁搜） */}
+              <AppSelect
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
                 onSearch={() => {}}
-              >
-                {MENU_STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={MENU_STATUS_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -306,23 +347,34 @@ const MenuManagement: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            {selectedRowKeys.length > 0 && (
+            {/* Phase 86 W1：工具栏写入口按权限码条件渲染（ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + 提示） */}
+            {selectedRowKeys.length > 0 && permRemove.visible && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
                 onClick={handleBatchDelete}
+                disabled={permRemove.disabled}
+                title={permRemove.hint}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAddModal}>
-              新增菜单
-            </Button>
+            {permAdd.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleOpenAddModal}
+                disabled={permAdd.disabled}
+                title={permAdd.hint}
+              >
+                新增菜单
+              </Button>
+            )}
           </Space>
         </div>
         {selectedRowKeys.length > 0 && (
           <Alert
-            message={
+            title={
               <span>
                 已选择 <strong>{selectedRowKeys.length}</strong> 个菜单，
                 <Button
@@ -365,7 +417,15 @@ const MenuManagement: FC = () => {
       <Modal
         title={editingMenu ? "编辑菜单" : "新增菜单"}
         open={editModalVisible}
-        onOk={() => handleSave(editForm)}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleSave(editForm);
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         afterOpenChange={handleModalOpenChange}
         onCancel={() => {
           setEditModalVisible(false);
@@ -393,13 +453,15 @@ const MenuManagement: FC = () => {
                 label="菜单类型"
                 rules={[{ required: true, message: "请选择菜单类型" }]}
               >
-                <Select placeholder="请选择菜单类型" onSearch={() => {}}>
-                  {MENU_TYPE_OPTIONS.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </Option>
-                  ))}
-                </Select>
+                {/* 形态分类器②④：菜单类型固定 3 项（业务禁搜）。MENU_TYPE_OPTIONS 为 as const
+                    只读元组 → 展开复制以匹配 antd 可变数组类型 */}
+                <AppSelect
+                  allowClear
+                  placeholder="请选择菜单类型"
+                  onSearch={() => {}}
+                  showSearch={false}
+                  options={[...MENU_TYPE_OPTIONS]}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -411,7 +473,7 @@ const MenuManagement: FC = () => {
                 label="菜单名称"
                 rules={[{ required: true, message: "请输入菜单名称" }]}
               >
-                <Input />
+                <AppInput />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -428,12 +490,12 @@ const MenuManagement: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="path" label="路由地址">
-                <Input placeholder="请输入路由地址" />
+                <AppInput placeholder="请输入路由地址" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="component" label="组件路径">
-                <Input placeholder="请输入组件路径" />
+                <AppInput placeholder="请输入组件路径" />
               </Form.Item>
             </Col>
           </Row>
@@ -441,7 +503,7 @@ const MenuManagement: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="perms" label="权限标识">
-                <Input placeholder="请输入权限标识" />
+                <AppInput placeholder="请输入权限标识" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -453,24 +515,46 @@ const MenuManagement: FC = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="visible"
-                label="显示状态"
-                valuePropName="checked"
-                initialValue={true}
-              >
-                <Switch checkedChildren="显示" unCheckedChildren="隐藏" />
-              </Form.Item>
+              {/* Phase 86 W1：显示状态 Switch 是弹窗表单字段，随「新增/编辑菜单」提交生效，
+                  归所属写动作的权限码；ready 无权限 → 整个 Switch 不渲染（不是只禁用）。 */}
+              {permFormStatus.visible && (
+                <Form.Item
+                  name="visible"
+                  label="显示状态"
+                  valuePropName="checked"
+                  initialValue={true}
+                >
+                  <Switch
+                    checkedChildren="显示"
+                    unCheckedChildren="隐藏"
+                    disabled={permFormStatus.disabled}
+                    title={permFormStatus.hint}
+                  />
+                </Form.Item>
+              )}
             </Col>
             <Col span={12}>
-              <Form.Item name="status" label="菜单状态" valuePropName="checked" initialValue={true}>
-                <Switch checkedChildren="正常" unCheckedChildren="停用" />
-              </Form.Item>
+              {/* Phase 86 W1：菜单状态 Switch 同上（与显示状态同归所属写动作）。 */}
+              {permFormStatus.visible && (
+                <Form.Item
+                  name="status"
+                  label="菜单状态"
+                  valuePropName="checked"
+                  initialValue={true}
+                >
+                  <Switch
+                    checkedChildren="正常"
+                    unCheckedChildren="停用"
+                    disabled={permFormStatus.disabled}
+                    title={permFormStatus.hint}
+                  />
+                </Form.Item>
+              )}
             </Col>
           </Row>
 
           <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={4} />
+            <AppTextArea rows={4} />
           </Form.Item>
         </Form>
       </Modal>

@@ -2,7 +2,7 @@
  * Phase 88 Batch146 — components/network/port-write/PortBindingModal 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement, ReactNode } from "react";
@@ -37,7 +37,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 const portRecord = {
   id: "p1",
   interfaceName: "eth0",
-} as any;
+} as unknown;
 
 describe("PortBindingModal", () => {
   it("open=true + portRecord → 渲染 Modal + 表单字段", () => {

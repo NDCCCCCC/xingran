@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-let mockCaptcha: any = null;
+let mockCaptcha: unknown = null;
 vi.mock("@/services/captcha", () => ({
   getCaptcha: vi.fn(async () => mockCaptcha),
 }));

@@ -5,19 +5,18 @@ import {
   Col,
   Form,
   Switch,
-  Select,
   InputNumber,
   Button,
   Descriptions,
   Tag,
   TimePicker,
 } from "antd";
+// Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
 import { BellOutlined, SaveOutlined } from "@ant-design/icons";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import type { DutyConfig as DutyConfigType } from "@/lib/dutyApi";
-
-const { Option } = Select;
 
 interface DutyConfigProps {
   config: DutyConfigType | null;
@@ -113,15 +112,20 @@ export const DutyConfig: React.FC<DutyConfigProps> = ({ config, loading, saving,
               name="reminderChannels"
               rules={[{ required: true, message: "请选择渠道" }]}
             >
-              <Select mode="multiple" placeholder="选择渠道" onSearch={() => {}}>
-                <Option value="websocket">站内通知</Option>
-                <Option value="email" disabled>
-                  邮件（未开放）
-                </Option>
-                <Option value="sms" disabled>
-                  短信（未开放）
-                </Option>
-              </Select>
+              {/* 形态分类器②⑦：children 写法改写 options；mode="multiple" 显式 showSearch
+                （antd 多选默认开搜索，保持不变） */}
+              <AppSelect
+                allowClear
+                mode="multiple"
+                placeholder="选择渠道"
+                showSearch
+                onSearch={() => {}}
+                options={[
+                  { value: "websocket", label: "站内通知" },
+                  { value: "email", label: "邮件（未开放）", disabled: true },
+                  { value: "sms", label: "短信（未开放）", disabled: true },
+                ]}
+              />
             </Form.Item>
             <Form.Item label="提前提醒(分钟)" name="beforeReminderMinutes">
               <InputNumber placeholder="当天提醒请留空" style={{ width: "100%" }} min={0} />

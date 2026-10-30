@@ -9,7 +9,18 @@ import (
 	networkServices "github.com/xingran-next/xingran-go-backend/internal/services/network"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 )
+
+// strictGroup 创建一个「单一权限点 + 严格权限」的写操作路由子组
+// （85-03 RBAC-01，与 internal/api/router.go 的 strictUserRouteGroup 同构：
+// RequireStrictPermissions 只做 sys_menu.perms 精确匹配，跳过 F 型子权限
+// 继承与模块级降级）。父组必须不含 ANY-of 权限中间件。
+func strictGroup(parent *gin.RouterGroup, perm permission.PermissionCode, core *core.Core) *gin.RouterGroup {
+	g := parent.Group("")
+	g.Use(middleware.RequireStrictPermissions([]string{string(perm)}, core))
+	return g
+}
 
 // SetupNetworkRouter 设置网络设备管理路由
 func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
@@ -56,10 +67,15 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	exportHandler := NewNetworkExportHandler(core)
 
 	// ==================== 网络设备路由 ====================
+	// 85-03 RBAC-01：读组保留组级 ANY-of（含 OpsSelectorReadPerms queryExtra 放行），
+	// 写路由搬出到**兄弟**写组逐动作 RequireStrictPermissions 单一权限点
+	// （写组绝不做成读组子组——gin Group 继承父中间件链会先放行 ANY-of）。
+	// 域内 strict 兄弟写组复用 router.go 的 strictUserRouteGroup 同构写法，
+	// 本文件用局部 helper strictGroup 保持一致。
 	devices := r.Group("/devices")
 	// 查询接口(/list)额外接受 ops 读权限(OpsSelectorReadPerms): 信息点管理等运维页面
 	// 关联网络设备时需要读取设备列表做选择器, 但运维角色不持有 network:device 权限。
-	// 放宽只读路径; 写操作(增删改网络设备/发现/导出)保持严格。
+	// 放宽只读路径; 写操作见下方 devicesWrites 严格兄弟组。
 	devices.Use(middleware.RequirePermissionsWithQuery([]string{
 		"network:device:list",
 		"network:device:add",
@@ -69,14 +85,21 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		devices.POST("/list", deviceHandler.List)
 		devices.POST("/statistics", deviceHandler.Statistics)
-		devices.POST("", deviceHandler.Create)
 		devices.POST("/discover", discoveryHandler.Probe)
-		devices.POST("/quick-create", deviceHandler.QuickCreate)
 		devices.POST("/:id", deviceHandler.GetByID)
-		devices.POST("/:id/update", deviceHandler.Update)
-		devices.POST("/:id/delete", deviceHandler.Delete)
-		devices.POST("/batch-delete", deviceHandler.BatchDelete)
-		devices.POST("/export", exportHandler.ExportDevices)
+	}
+	devicesWrites := r.Group("/devices")
+	{
+		devicesAdd := strictGroup(devicesWrites, permission.NetworkDeviceAdd, core)
+		devicesAdd.POST("", deviceHandler.Create)
+		devicesAdd.POST("/quick-create", deviceHandler.QuickCreate)
+		devicesEdit := strictGroup(devicesWrites, permission.NetworkDeviceEdit, core)
+		devicesEdit.POST("/:id/update", deviceHandler.Update)
+		devicesDelete := strictGroup(devicesWrites, permission.NetworkDeviceDelete, core)
+		devicesDelete.POST("/:id/delete", deviceHandler.Delete)
+		devicesDelete.POST("/batch-delete", deviceHandler.BatchDelete)
+		devicesExport := strictGroup(devicesWrites, permission.NetworkDeviceExport, core)
+		devicesExport.POST("/export", exportHandler.ExportDevices)
 	}
 
 	// ==================== 授权凭证路由 ====================
@@ -90,14 +113,21 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		credentials.POST("/list", credentialHandler.List)
 		credentials.POST("/statistics", credentialHandler.Statistics)
-		credentials.POST("", credentialHandler.Create)
 		credentials.POST("/:id", credentialHandler.GetByID)
-		credentials.POST("/:id/update", credentialHandler.Update)
-		credentials.POST("/:id/delete", credentialHandler.Delete)
-		credentials.POST("/batch-delete", credentialHandler.BatchDelete)
-		credentials.POST("/:id/set-default", credentialHandler.SetDefault)
 		credentials.POST("/:id/devices", credentialHandler.GetDevicesByCredential)
-		credentials.POST("/export", exportHandler.ExportCredentials)
+	}
+	credentialsWrites := r.Group("/credentials")
+	{
+		credentialsAdd := strictGroup(credentialsWrites, permission.NetworkCredentialAdd, core)
+		credentialsAdd.POST("", credentialHandler.Create)
+		credentialsEdit := strictGroup(credentialsWrites, permission.NetworkCredentialEdit, core)
+		credentialsEdit.POST("/:id/update", credentialHandler.Update)
+		credentialsEdit.POST("/:id/set-default", credentialHandler.SetDefault)
+		credentialsDelete := strictGroup(credentialsWrites, permission.NetworkCredentialDelete, core)
+		credentialsDelete.POST("/:id/delete", credentialHandler.Delete)
+		credentialsDelete.POST("/batch-delete", credentialHandler.BatchDelete)
+		credentialsExport := strictGroup(credentialsWrites, permission.NetworkCredentialExport, core)
+		credentialsExport.POST("/export", exportHandler.ExportCredentials)
 	}
 
 	// ==================== 配置模板路由 ====================
@@ -111,15 +141,23 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		templates.POST("/list", templateHandler.List)
 		templates.POST("/statistics", templateHandler.Statistics)
-		templates.POST("", templateHandler.Create)
 		templates.POST("/:id", templateHandler.GetByID)
-		templates.POST("/:id/update", templateHandler.Update)
-		templates.POST("/:id/delete", templateHandler.Delete)
-		templates.POST("/batch-delete", templateHandler.BatchDelete)
-		templates.POST("/:id/preview", templateHandler.Preview)
-		templates.POST("/:id/clone", templateHandler.Clone)
 		templates.POST("/:id/variables", templateHandler.GetVariables)
-		templates.POST("/export", exportHandler.ExportTemplates)
+	}
+	templatesWrites := r.Group("/templates")
+	{
+		templatesAdd := strictGroup(templatesWrites, permission.NetworkTemplateAdd, core)
+		templatesAdd.POST("", templateHandler.Create)
+		templatesAdd.POST("/:id/clone", templateHandler.Clone) // 克隆=创建副本
+		templatesEdit := strictGroup(templatesWrites, permission.NetworkTemplateEdit, core)
+		templatesEdit.POST("/:id/update", templateHandler.Update)
+		templatesDelete := strictGroup(templatesWrites, permission.NetworkTemplateDelete, core)
+		templatesDelete.POST("/:id/delete", templateHandler.Delete)
+		templatesDelete.POST("/batch-delete", templateHandler.BatchDelete)
+		templatesView := strictGroup(templatesWrites, permission.NetworkTemplateView, core)
+		templatesView.POST("/:id/preview", templateHandler.Preview) // 读语义端点（写路由口径挂 view 严格单码）
+		templatesExport := strictGroup(templatesWrites, permission.NetworkTemplateExport, core)
+		templatesExport.POST("/export", exportHandler.ExportTemplates)
 	}
 
 	// ==================== 命令分发路由 ====================
@@ -129,13 +167,18 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		"network:command:view",
 	}, core))
 	{
-		command.POST("/dispatch", commandHandler.Dispatch)
-		command.POST("/quick", commandHandler.QuickCommand)
 		command.POST("/list", commandHandler.List)
 		command.POST("/statistics", commandHandler.Statistics)
 		command.POST("/:id", commandHandler.GetExecutionResult)
 		command.POST("/:id/device/:deviceId", commandHandler.GetDeviceExecutionDetail)
-		command.POST("/export", exportHandler.ExportCommands)
+	}
+	commandWrites := r.Group("/command")
+	{
+		commandExec := strictGroup(commandWrites, permission.NetworkCommandExecute, core)
+		commandExec.POST("/dispatch", commandHandler.Dispatch)
+		commandExec.POST("/quick", commandHandler.QuickCommand)
+		commandExport := strictGroup(commandWrites, permission.NetworkCommandExport, core)
+		commandExport.POST("/export", exportHandler.ExportCommands)
 	}
 
 	// ==================== 配置执行路由 ====================
@@ -146,12 +189,17 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		executions.POST("/list", executionHandler.List)
 		executions.POST("/statistics", executionHandler.Statistics)
-		executions.POST("/template/execute", executionHandler.ExecuteByTemplate)
 		executions.POST("/:id", executionHandler.GetByID)
 		executions.POST("/:id/cancel", executionHandler.Cancel)
-		executions.POST("/:id/delete", executionHandler.Delete)
-		executions.POST("/batch-delete", executionHandler.BatchDelete)
-		executions.POST("/export", exportHandler.ExportExecutions)
+	}
+	// 执行写操作严格组（执行记录删除/导出归 execute 域码——85-03 裁定零新码）
+	executionsWrites := r.Group("/executions")
+	{
+		executionsExec := strictGroup(executionsWrites, permission.NetworkCommandExecute, core)
+		executionsExec.POST("/template/execute", executionHandler.ExecuteByTemplate)
+		executionsExec.POST("/:id/delete", executionHandler.Delete)
+		executionsExec.POST("/batch-delete", executionHandler.BatchDelete)
+		executionsExec.POST("/export", exportHandler.ExportExecutions)
 	}
 
 	// ==================== 配置备份路由 ====================
@@ -164,27 +212,35 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		backups.POST("/list", backupHandler.List)
-		backups.POST("", backupHandler.Create)
 		backups.POST("/content", backupHandler.GetContentFromBody)
 		backups.POST("/:id", backupHandler.GetContent)
-		backups.POST("/:id/delete", backupHandler.Delete)
-		backups.POST("/batch-delete", backupHandler.BatchDelete)
-		backups.POST("/diff", backupHandler.Diff)
-		// Phase 93: 恢复任务查询双端点（组内继承 4 权限点，D-31 零新权限点）
+		// Phase 93: 恢复任务查询双端点（读，D-31）
 		backups.POST("/restore-tasks/list", backupHandler.ListRestoreTasks)
 		backups.POST("/restore-tasks/:id", backupHandler.GetRestoreTask)
 		backups.GET("/statistics", backupHandler.GetStatistics)
-		backups.POST("/batch", backupHandler.BatchBackup)
 		backups.GET("/version", backupHandler.GetByVersion)
 		backups.GET("/history", backupHandler.GetHistory)
-		backups.POST("/export", exportHandler.ExportBackups)
+	}
+	backupsWrites := r.Group("/backups")
+	{
+		backupsAdd := strictGroup(backupsWrites, permission.NetworkBackupAdd, core)
+		backupsAdd.POST("", backupHandler.Create)
+		backupsAdd.POST("/batch", backupHandler.BatchBackup)
+		backupsDiff := strictGroup(backupsWrites, permission.NetworkBackupDiff, core)
+		backupsDiff.POST("/diff", backupHandler.Diff)
+		backupsDelete := strictGroup(backupsWrites, permission.NetworkBackupDelete, core)
+		backupsDelete.POST("/:id/delete", backupHandler.Delete)
+		backupsDelete.POST("/batch-delete", backupHandler.BatchDelete)
+		backupsExport := strictGroup(backupsWrites, permission.NetworkBackupExport, core)
+		backupsExport.POST("/export", exportHandler.ExportBackups)
 	}
 
 	// ==================== 配置恢复路由（高危下发，单独收口 v129-recheck C-3） ====================
-	// RequirePermissions 为 ANY-of 语义：主组 4 权限点任一即放行，仅持 list 只读权限的
-	// 用户曾可触发恢复。restore 必须单独强制专用权限点（与 ports write 子组同模式）。
-	restores := backups.Group("")
-	restores.Use(middleware.RequirePermissions([]string{
+	// 85-03：原 restores 为 backups ANY-of 读组的**子组**，父组 ANY-of 先于组内
+	// 单码检查放行（且 RequirePermissions 非 Strict）。改为兄弟组 + RequireStrictPermissions
+	// 单一权限点（Phase 52/56 端口写同模式），封掉 Step2 F 型继承与 Step3 模块降级。
+	restores := r.Group("/backups")
+	restores.Use(middleware.RequireStrictPermissions([]string{
 		"network:backup:restore",
 	}, core))
 	{
@@ -200,15 +256,21 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		discoveries.POST("/list", discoveryHandler.List)
 		discoveries.POST("/statistics", discoveryHandler.Statistics)
-		discoveries.POST("/create", discoveryHandler.Create)
 		discoveries.POST("/:id", discoveryHandler.GetByID)
 		discoveries.POST("/:id/results", discoveryHandler.GetResults)
-		discoveries.POST("/:id/execute", discoveryHandler.Execute)
 		discoveries.POST("/:id/cancel", discoveryHandler.Cancel)
-		discoveries.POST("/:id/delete", discoveryHandler.Delete)
-		discoveries.POST("/export", exportHandler.ExportDiscoveries)
-		discoveries.POST("/batch-delete", discoveryHandler.BatchDelete)
-		discoveries.POST("/:id/import", discoveryHandler.ImportDevices)
+	}
+	discoveriesWrites := r.Group("/discoveries")
+	{
+		discoveryAdd := strictGroup(discoveriesWrites, permission.NetworkDiscoveryAdd, core)
+		discoveryAdd.POST("/create", discoveryHandler.Create)
+		discoveryAdd.POST("/:id/execute", discoveryHandler.Execute)
+		discoveryAdd.POST("/:id/import", discoveryHandler.ImportDevices)
+		discoveryDelete := strictGroup(discoveriesWrites, permission.NetworkDiscoveryDelete, core)
+		discoveryDelete.POST("/:id/delete", discoveryHandler.Delete)
+		discoveryDelete.POST("/batch-delete", discoveryHandler.BatchDelete)
+		discoveryExport := strictGroup(discoveriesWrites, permission.NetworkDiscoveryExport, core)
+		discoveryExport.POST("/export", exportHandler.ExportDiscoveries)
 	}
 
 	// ==================== MAC地址管理路由（独立权限） ====================

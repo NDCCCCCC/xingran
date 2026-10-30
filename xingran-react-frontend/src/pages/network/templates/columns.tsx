@@ -4,10 +4,11 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Modal } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { EyeOutlined, CopyOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ConfigTemplate } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { formatDateTime } from "@/utils/datetime";
 import {
   renderVendorTag,
@@ -117,6 +118,7 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
       render: (_: unknown, record: ConfigTemplate) => {
         const actions = [
           {
+            // Phase 86 W3：读动作（预览不落库）→ 不加门控（只读入口不是 RBAC-02 的对象）
             key: "preview",
             label: "预览",
             icon: <EyeOutlined />,
@@ -127,12 +129,17 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
             label: "克隆",
             icon: <CopyOutlined />,
             onClick: () => handleClone(record.id),
+            // Phase 86 W3：非标准动作归码 —— 「克隆」会**落库**（复制出新的模板记录），
+            // 但 networkTemplate 码组无独立 `clone` 键 → 就近归 `edit`
+            // （本 phase 零新增码，不自造 `network:template:clone`）。
+            permission: PERMISSION_CODES.networkTemplate.edit,
           },
           {
             key: "edit",
             label: "编辑",
             icon: <EditOutlined />,
             onClick: () => openModal(record),
+            permission: PERMISSION_CODES.networkTemplate.edit,
           },
           ...(!record.isSystem
             ? [
@@ -142,14 +149,14 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
                   icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => {
-                    Modal.confirm({
-                      title: "确认删除?",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleDelete(record.id),
+                    confirmDelete({
+                      target: `命令模板 ${record.templateName}`,
+                      onDelete: async () => {
+                        await handleDelete(record.id);
+                      },
                     });
                   },
+                  permission: PERMISSION_CODES.networkTemplate.delete,
                 },
               ]
             : []),

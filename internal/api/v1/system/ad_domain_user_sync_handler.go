@@ -64,6 +64,7 @@ func (h *ADUserSyncHandler) getADUsersByDNs(ctx context.Context, config *models.
 			Mobile:      adUser.Mobile,
 			Title:       adUser.Title,
 			Department:  adUser.Department,
+			ConfigID:    config.ID, // 多域隔离：批量路径由 handler 直接填（P1-5）
 		})
 	}
 
@@ -78,7 +79,7 @@ func (h *ADUserSyncHandler) getDefaultRoleID(ctx context.Context) string {
 	err := h.core.GetDB().WithContext(ctx).
 		Table("sys_config").
 		Select("config_value").
-		Where("config_key = ?", "sys.auth.ad.default_role_id").
+		Where("config_key = ? AND deleted_at IS NULL", "sys.auth.ad.default_role_id").
 		First(&config).Error
 
 	if err != nil {

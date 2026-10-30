@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
 import { App, Form, Input, Button, Alert } from "antd";
+import { AppInput } from "@/components/ui";
 import {
   UserOutlined,
   LockOutlined,
@@ -178,7 +179,7 @@ const Login: FC = () => {
 
         <div className="login-brand__top">
           <div className="login-brand__mark">星</div>
-          <span className="login-brand__wordmark">星苒 · XINGRAN</span>
+          <span className="login-brand__wordmark">数智化平台 · RUOYI-NEXT</span>
         </div>
 
         <div className="login-brand__center">
@@ -234,7 +235,7 @@ const Login: FC = () => {
           <span className="login-brand__badge">SM2</span>
           <span className="login-brand__badge">SM3</span>
           <span className="login-brand__badge">SM4</span>
-          <span className="login-brand__copyright">© 2026 XingRan-Next</span>
+          <span className="login-brand__copyright">© 2026 数智化平台</span>
         </div>
       </aside>
 
@@ -252,7 +253,7 @@ const Login: FC = () => {
               type="error"
               showIcon
               closable
-              message={loginError}
+              title={loginError}
               onClose={() => setLoginError("")}
             />
           )}
@@ -271,7 +272,7 @@ const Login: FC = () => {
               label={<span className="login-label">账号</span>}
               rules={[{ required: true, message: "请输入用户名" }]}
             >
-              <Input prefix={<UserOutlined />} placeholder="用户名" autoComplete="username" />
+              <AppInput prefix={<UserOutlined />} placeholder="用户名" autoComplete="username" />
             </Form.Item>
 
             <Form.Item

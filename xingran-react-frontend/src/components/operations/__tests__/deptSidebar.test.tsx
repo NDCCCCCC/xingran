@@ -10,7 +10,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/components/DeptTree", () => ({
-  default: ({ selectedKeys, externalOnly }: any) => (
+  default: ({ selectedKeys, externalOnly }: unknown) => (
     <div
       data-testid="dept-tree"
       data-selected-keys={JSON.stringify(selectedKeys)}

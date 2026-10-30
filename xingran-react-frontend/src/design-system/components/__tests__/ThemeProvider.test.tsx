@@ -12,13 +12,14 @@ vi.mock("@/lib/api", async () => {
 
 let currentMode: string = "light";
 vi.mock("@/store/themeStore", () => ({
-  useThemeStore: vi.fn((selector: any) => {
+  useThemeStore: vi.fn((selector: unknown) => {
     const state = { mode: currentMode };
     return typeof selector === "function" ? selector(state) : state;
   }),
 }));
 
-import { ThemeProvider, useThemeContext } from "../ThemeProvider";
+import { ThemeProvider } from "../ThemeProvider";
+import { useThemeContext } from "../themeContext";
 
 describe("design-system/components/ThemeProvider", () => {
   beforeEach(() => {

@@ -44,6 +44,8 @@ export function TemplateVariablesModal({ open, variables, onClose }: TemplateVar
   return (
     <Modal
       title="模板变量"
+      mask={{ closable: false }}
+      keyboard={false}
       open={open}
       onCancel={onClose}
       footer={[
@@ -62,7 +64,7 @@ export function TemplateVariablesModal({ open, variables, onClose }: TemplateVar
           rowKey="key"
         />
       ) : (
-        <p style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)" }}>
+        <p style={{ textAlign: "center", color: "var(--theme-text-tertiary)" }}>
           此模板没有定义变量
         </p>
       )}

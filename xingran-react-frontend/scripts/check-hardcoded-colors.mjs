@@ -29,7 +29,16 @@ const SRC = join(ROOT, "src");
 const FIX_MODE = process.argv.includes("--fix");
 
 // 路径 allowlist (相对 ROOT, 跳过扫描)
-const PATH_ALLOW = ["src/utils/three/colors.ts", "src/design-system/tokens/", "scripts/"];
+// Phase 89 (W3·A3) 新增 statAndProgress.test.tsx —— ECharts 图表色板断言期望值（#1890ff），
+// 属数据可视化语义非 UI 主题色；改值即改测试断言语义。豁免理由登记于
+// scripts/exemption-reasons.json 的 layer:"CSS" 条目（dimension: hex:chart-palette），
+// 由 check-exemption-reasons.mjs 双向对账（登记表有↔本数组有）。
+const PATH_ALLOW = [
+  "src/components/dashboard/widgets/types/__tests__/statAndProgress.test.tsx",
+  "src/utils/three/colors.ts",
+  "src/design-system/tokens/",
+  "scripts/",
+];
 
 // 值 allowlist (允许这些 hex / rgba 出现, 例如 modern-tag dark 浅化文字)
 const VALUE_ALLOW_HEX = new Set(["#95de64", "#ff7875", "#ffc53d", "#69c0ff"]);

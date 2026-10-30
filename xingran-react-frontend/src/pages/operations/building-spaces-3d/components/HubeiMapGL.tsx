@@ -453,7 +453,9 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   // ============ 全局函数 ============
 
   useEffect(() => {
-    (window as any).viewBuildingDetailsGL = (buildingId: string) => {
+    (
+      window as Window & { viewBuildingDetailsGL?: (buildingId: string) => void }
+    ).viewBuildingDetailsGL = (buildingId: string) => {
       const building = buildings.find((b) => b.id === buildingId);
       if (building) {
         navigateToBuilding({

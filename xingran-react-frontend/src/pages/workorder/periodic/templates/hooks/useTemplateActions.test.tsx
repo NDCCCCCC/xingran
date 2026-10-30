@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { App, Form } from "antd";
+import { App } from "antd";
 import { ConfigProvider } from "antd";
 
 vi.mock("@/lib/api", async () => {
@@ -65,14 +65,14 @@ describe("useTemplateActions", () => {
   it("handleToggleEnabled isEnabled=true 调 disable", async () => {
     const { result } = renderHook(() => useTemplateActions({ onLoad: vi.fn() }), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleToggleEnabled({ id: "t1", isEnabled: true } as any);
+      await result.current.handleToggleEnabled({ id: "t1", isEnabled: true } as unknown);
     });
   });
 
   it("handleToggleEnabled isEnabled=false 调 enable", async () => {
     const { result } = renderHook(() => useTemplateActions({ onLoad: vi.fn() }), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleToggleEnabled({ id: "t1", isEnabled: false } as any);
+      await result.current.handleToggleEnabled({ id: "t1", isEnabled: false } as unknown);
     });
   });
 
@@ -88,7 +88,7 @@ describe("useTemplateActions", () => {
   it("setEditingRecord 直写 state", () => {
     const { result } = renderHook(() => useTemplateActions({ onLoad: vi.fn() }), { wrapper: wrap });
     act(() => {
-      result.current.setEditingRecord({ id: "x" } as any);
+      result.current.setEditingRecord({ id: "x" } as unknown);
     });
     expect(result.current.editingRecord?.id).toBe("x");
   });
@@ -99,7 +99,7 @@ describe("useTemplateActions", () => {
       validateFields: vi.fn().mockRejectedValue({ errorFields: [{ name: "templateName" }] }),
     };
     await act(async () => {
-      await result.current.handleSave(form as any);
+      await result.current.handleSave(form as unknown);
     });
   });
 

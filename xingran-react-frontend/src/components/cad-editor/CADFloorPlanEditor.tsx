@@ -3,7 +3,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { App, Modal, Input } from "antd";
+import { App, Modal } from "antd";
+import { AppTextArea } from "@/components/ui";
 import { CADToolbar } from "./CADToolbar";
 import { CADPropertyPanel } from "./CADPropertyPanel";
 import { CADLayersPanel } from "./CADLayersPanel";
@@ -1522,7 +1523,7 @@ export function CADFloorPlanEditor({
         okText="确定"
         cancelText="取消"
       >
-        <Input.TextArea
+        <AppTextArea
           value={tempTextContent}
           onChange={(e) => setTempTextContent(e.target.value)}
           placeholder="请输入文本内容..."

@@ -23,14 +23,18 @@ async function expectRenders(ui: React.ReactElement) {
 describe("零散组件渲染", () => {
   it("AssetRow", async () => {
     await expectRenders(
-      <AssetRow record={{ id: "a1", assetName: "笔记本", ipAddress: "1.1.1.1" } as any} />
+      <AssetRow record={{ id: "a1", assetName: "笔记本", ipAddress: "1.1.1.1" } as unknown} />
     );
   });
   it("VDIRow", async () => {
     await expectRenders(
       (
-        <VDIRow record={{ id: "v1", vmName: "虚拟机-01" } as any} buttons={[]} permissions={[]} />
-      ) as any
+        <VDIRow
+          record={{ id: "v1", vmName: "虚拟机-01" } as unknown}
+          buttons={[]}
+          permissions={[]}
+        />
+      ) as unknown
     );
   });
   it("IconSelect", async () => {

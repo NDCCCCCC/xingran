@@ -74,6 +74,8 @@ export const xingranBrand = {
     canvas: "#F0ECE3",
     /** 白卡 surface（实测）— oklch(1 0 0) */
     surface: "#FFFFFF",
+    /** 悬浮层（同构键，对齐 dark.elevated；Phase 89 前等于 surface，值不变零漂移） */
+    elevated: "#FFFFFF",
     /** 主文字 / 标题（实测）— oklch(0.173 0 0) */
     fg: "#101010",
     /** 次级文字（仅用于白卡上，4.99:1 ✓ AA）— oklch(0.543 0.012 106.8) */
@@ -88,6 +90,48 @@ export const xingranBrand = {
     headerBg: "#E9EFEB",
     /** 斑马纹 / 浅交互底（推导自 canvas + 5% 白） */
     zebraBg: "#F7F5EE",
+  },
+
+  /**
+   * 暗色中性色板（v1.25 Phase 89 · STYLE-01）
+   * 来源：index.css `[data-color-mode="dark"]` 块逐值对齐 —— **值不变**，仅提升为 TS 侧真相源。
+   * 推导：深绿低饱和纸感；层级 = canvas < surface < elevated < overlay < hover < active。
+   * 对比度（WCAG）：fg 12.25:1 / fgMuted 9.94:1 / fgSubtle 7.71:1 / fgDisabled 2.95:1（占位符，见 89-RESEARCH §2.3.3 预警）。
+   * 同构约束：键名与 cream 组一一对应（AntdThemeBridge 按 `board.*` 消费），缺键会让暗色下取值 undefined。
+   */
+  dark: {
+    /** 页面画布底 — 等价 --bg-base（实测 rgb(15,46,27)）→ antd colorBgBase / colorBgLayout */
+    canvas: "#0f2e1b",
+    /** 容器面（卡片/输入框/Select 底）— 等价 --bg-surface → antd colorBgContainer */
+    surface: "#1a2e1f",
+    /** 悬浮层（弹层/抽屉）— 等价 --bg-elevated → antd colorBgElevated */
+    elevated: "#1f3524",
+    /** 覆盖层（下拉面板）— 等价 --bg-overlay */
+    overlay: "#243a29",
+    /** 悬停面 — 等价 --bg-overlay-hover */
+    hover: "#2d4d33",
+    /** 激活面 — 等价 --bg-overlay-active */
+    active: "#345b3a",
+    /** 主描边 — 等价 --border-base → antd colorBorder */
+    border: "#2d4d33",
+    /** 次级描边 / 分割线 — 等价 --border-subtle → antd colorBorderSecondary */
+    borderSubtle: "#1a2e1f",
+    /** 强调描边 — 等价 --border-strong */
+    borderStrong: "#345b3a",
+    /** 聚焦描边（品牌绿）— 等价 --border-focus */
+    borderFocus: "#1a6839",
+    /** 主文字（奶油白）— 等价 --text-primary → antd colorTextBase */
+    fg: "#f0ece3",
+    /** 次级文字 — 等价 --text-secondary */
+    fgMuted: "#dbd7ce",
+    /** 三级文字 — 等价 --text-tertiary */
+    fgSubtle: "#c2bdb2",
+    /** 禁用文字 — 等价 --text-disabled */
+    fgDisabled: "#707068",
+    /** 表头底（同构键，对齐 cream.headerBg）— 等价 --table-header-bg 暗色值 */
+    headerBg: "#1f3524",
+    /** 斑马纹 / 深交互底（同构键，对齐 cream.zebraBg）— 等价 --bg-surface 暗色值 */
+    zebraBg: "#1a2e1f",
   },
 
   /**

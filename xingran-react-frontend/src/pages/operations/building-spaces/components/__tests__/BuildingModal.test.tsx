@@ -27,7 +27,7 @@ vi.mock("@/lib/opsApi", () => ({
 }));
 
 vi.mock("../FloorStack", () => ({
-  default: ({ floors, onFloorClick }: any) => (
+  default: ({ floors, onFloorClick }: unknown) => (
     <div data-testid="floor-stack">
       <button onClick={() => onFloorClick?.(floors[0])}>Click F1</button>
       <span data-testid="floor-count">{floors.length}</span>
@@ -36,7 +36,7 @@ vi.mock("../FloorStack", () => ({
 }));
 
 vi.mock("../WorkstationView", () => ({
-  default: ({ floor, onBack }: any) => (
+  default: ({ floor, onBack }: unknown) => (
     <div data-testid="workstation-view">
       <span>{floor?.name}</span>
       <button onClick={onBack}>Back</button>
@@ -51,7 +51,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 }
 
 describe("BuildingModal", () => {
-  const building = { id: "b1", name: "B1" } as any;
+  const building = { id: "b1", name: "B1" } as unknown;
 
   it("visible=true → 渲染标题 + 触发 loadFloors", async () => {
     const { baseElement } = render(
@@ -116,7 +116,7 @@ describe("BuildingModal", () => {
 
   it("Modal 取消 → 调用 onClose + 重置状态", async () => {
     const onClose = vi.fn();
-    const { baseElement, getByText } = render(
+    const { baseElement, getByText: _getByText } = render(
       <BuildingModal building={building} visible onClose={onClose} />,
       { wrapper }
     );

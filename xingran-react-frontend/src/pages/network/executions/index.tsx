@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { FC } from "react";
 import { batchExport } from "@/lib/api/networkApi";
-import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
+import { Table, Button, Space, Form, Card, Row, Col, Statistic, App } from "antd";
+// Phase 71 (W4)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
 import {
   PlayCircleOutlined,
   SearchOutlined,
@@ -19,13 +21,22 @@ import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry, useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import type { ConfigExecution } from "@/types";
-
-const { Option } = Select;
 
 const ConfigExecutionPage: FC = () => {
   const { message } = App.useApp();
+
+  // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  // 本页写码：执行配置模板 / 取消执行 → `networkCommand.execute`（复用）；
+  // 导出 → `networkCommand.export`。执行记录域无独立码，本 phase 零新增码。
+  const permGate = useActionPermission();
+  const permExecute = permGate.decide(PERMISSION_CODES.networkCommand.execute);
+  // 导出类写入口：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
+  // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
+  const permExport = permGate.decide(PERMISSION_CODES.networkCommand.export);
   const [executeForm] = Form.useForm();
   const [searchForm] = Form.useForm();
   const [batchModalVisible, setBatchModalVisible] = useState(false);
@@ -56,7 +67,11 @@ const ConfigExecutionPage: FC = () => {
   // 数据管理
   const {
     dataState,
+    setDataState,
     execLoading,
+    error: executionError,
+    devicesLoading,
+    detailsLoading,
     statistics,
     loadDevices,
     loadTemplates,
@@ -90,16 +105,20 @@ const ConfigExecutionPage: FC = () => {
   });
 
   // 打开执行模态框时加载设备和模板
+  // FIX-01: 先开弹窗再加载，加载期间内嵌表显示 loading 蒙层
   const openExecuteModal = async () => {
-    await Promise.all([loadDevices(), loadTemplates()]);
     openExecuteModalBase();
+    await Promise.all([loadDevices(), loadTemplates()]);
   };
 
   // 查看详情时加载执行详情
+  // FIX-01: 先开抽屉再加载，加载期间内嵌表显示 loading 蒙层
   const handleViewDetail = useCallback(
     async (record: ConfigExecution) => {
-      await loadExecutionDetails(record.id);
+      // 先用列表行数据填充 currentExecution，抽屉立即可见，明细表 loading
+      setDataState((prev) => ({ ...prev, currentExecution: record, executionDetails: [] }));
       handleViewDetailBase(record);
+      await loadExecutionDetails(record.id);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handleViewDetailBase is a stable modal handler
     [loadExecutionDetails]
@@ -126,8 +145,8 @@ const ConfigExecutionPage: FC = () => {
       const filename = await batchExport(entityTypes, {});
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
-    } catch (error: any) {
-      message.error(`批量导出失败：${error.message}`);
+    } catch (error: unknown) {
+      message.error(`批量导出失败：${(error as Error).message}`);
     } finally {
       setBatchExporting(false);
     }
@@ -140,6 +159,13 @@ const ConfigExecutionPage: FC = () => {
 
   return (
     <div>
+      {/* FIX-04a: 列表加载失败可重试错误条 */}
+      {!!executionError && (
+        <ErrorAlertWithRetry
+          error={executionError}
+          onRetry={() => Promise.all([loadExecutions(), loadStatistics()])}
+        />
+      )}
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={5}>
@@ -152,7 +178,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="待执行"
               value={statistics.pending}
-              styles={{ content: { color: "var(--theme-text-tertiary, #999)" } }}
+              styles={{ content: { color: "var(--theme-text-tertiary)" } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -162,7 +188,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="执行中"
               value={statistics.running}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -172,7 +198,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="成功"
               value={statistics.success}
-              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -182,7 +208,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
+              styles={{ content: { color: "var(--theme-error)" } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>
@@ -202,9 +228,9 @@ const ConfigExecutionPage: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；状态固定枚举 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onChange={() => {
@@ -212,17 +238,15 @@ const ConfigExecutionPage: FC = () => {
                   loadStatistics();
                 }}
                 onSearch={() => {}}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={[...STATUS_OPTIONS]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
                 <Button
+                  aria-label="查询"
+                  title="查询"
                   icon={<SearchOutlined />}
                   onClick={() => {
                     loadExecutions();
@@ -232,6 +256,8 @@ const ConfigExecutionPage: FC = () => {
                   查询
                 </Button>
                 <Button
+                  aria-label="刷新"
+                  title="刷新"
                   icon={<ReloadOutlined />}
                   onClick={() => {
                     loadExecutions();
@@ -244,20 +270,37 @@ const ConfigExecutionPage: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlayCircleOutlined />} onClick={openExecuteModal}>
-              执行配置模板
-            </Button>
-            <NetworkExport
-              entityType="executions"
-              entityName="配置执行"
-              filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                  ([, v]) => v !== undefined && v !== null && v !== ""
-                )
-              )}
-              current={paginationProps?.current ?? 1}
-              pageSize={paginationProps?.pageSize ?? 10}
-            />
+            {/* Phase 86 W3：执行配置模板 —— 条件渲染（networkCommand.execute） */}
+            {permExecute.visible && (
+              <Button
+                type="primary"
+                icon={<PlayCircleOutlined />}
+                onClick={openExecuteModal}
+                aria-label="执行模板"
+                title={permExecute.hint ?? "执行模板"}
+                disabled={permExecute.disabled}
+              >
+                执行配置模板
+              </Button>
+            )}
+            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                ready 无 networkCommand.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+            {permExport.visible && (
+              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                <NetworkExport
+                  entityType="executions"
+                  entityName="配置执行"
+                  filters={Object.fromEntries(
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                      ([, v]) => v !== undefined && v !== null && v !== ""
+                    )
+                  )}
+                  current={paginationProps?.current ?? 1}
+                  pageSize={paginationProps?.pageSize ?? 10}
+                />
+              </span>
+            )}
           </Space>
           {/* 批量导出 Modal */}
 
@@ -310,6 +353,7 @@ const ConfigExecutionPage: FC = () => {
         templates={dataState.templates}
         selectedTemplate={dataState.selectedTemplate}
         selectedRowKeys={selectedRowKeys}
+        loading={devicesLoading}
         onOk={async () => {
           await handleExecuteByTemplate(executeForm);
         }}
@@ -335,6 +379,7 @@ const ConfigExecutionPage: FC = () => {
         open={modalState.detailDrawerVisible}
         currentExecution={dataState.currentExecution}
         executionDetails={dataState.executionDetails}
+        loading={detailsLoading}
         onClose={closeDetailDrawer}
         handleViewOutput={handleViewOutput}
       />

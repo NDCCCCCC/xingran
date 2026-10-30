@@ -27,9 +27,7 @@ import {
   Button,
   Space,
   Form,
-  Input,
   InputNumber,
-  Select,
   Tag,
   Card,
   DatePicker,
@@ -40,6 +38,8 @@ import {
   Typography,
   App,
 } from "antd";
+// Phase 71 (W4)：裸 Input/Select → 契约组件
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 
 type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
@@ -54,6 +54,7 @@ import {
 } from "@ant-design/icons";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import { formatDateTime } from "@/utils/datetime";
 import type { Dayjs } from "dayjs";
 import { useTableQuery } from "@/hooks/useTableQuery";
 import { useColumnConfig, type ColumnConfig } from "@/hooks/useColumnConfig";
@@ -236,8 +237,7 @@ const MACHistoryPage: React.FC = () => {
         title: "时间",
         key: "time",
         width: 160,
-        render: (_: unknown, record: MACHistoryRecord) =>
-          dayjs(record.firstSeen).format("YYYY-MM-DD HH:mm:ss"),
+        render: (_: unknown, record: MACHistoryRecord) => formatDateTime(record.firstSeen),
       },
       mac: {
         title: "MAC 地址",
@@ -302,6 +302,8 @@ const MACHistoryPage: React.FC = () => {
         render: (_: unknown, record: MACHistoryRecord) => (
           <Space size={4} wrap>
             <Button
+              aria-label="查看详情"
+              title="查看详情"
               type="link"
               size="small"
               icon={<EyeOutlined />}
@@ -415,7 +417,7 @@ const MACHistoryPage: React.FC = () => {
     return (
       <Table<MACHistoryRecord>
         rowKey="id"
-        size="middle"
+        size="medium"
         virtual
         scroll={{ x: 1200, y: 600 }}
         dataSource={list}
@@ -486,10 +488,10 @@ const MACHistoryPage: React.FC = () => {
             key={record.id}
             style={{
               padding: "12px",
-              background: "#fff",
+              background: "var(--theme-bg-elevated)",
               marginBottom: 8,
               borderRadius: 6,
-              border: "1px solid #e9efeb",
+              border: "1px solid var(--theme-border-primary)",
             }}
             actions={[
               <Button
@@ -514,6 +516,8 @@ const MACHistoryPage: React.FC = () => {
                   <Typography.Text code>{record.macAddress}</Typography.Text>
                   <Tooltip title="复制 MAC">
                     <Button
+                      aria-label="复制"
+                      title="复制"
                       type="text"
                       size="small"
                       icon={<CopyOutlined />}
@@ -540,7 +544,7 @@ const MACHistoryPage: React.FC = () => {
                   <div>设备: {record.deviceNameSnapshot || record.deviceId}</div>
                   <div>端口: {record.interfaceName}</div>
                   <div>VLAN: {record.vlanId ?? "-"}</div>
-                  <div>时间: {dayjs(record.firstSeen).format("YYYY-MM-DD HH:mm:ss")}</div>
+                  <div>时间: {formatDateTime(record.firstSeen)}</div>
                 </div>
               }
             />
@@ -564,7 +568,7 @@ const MACHistoryPage: React.FC = () => {
     <div style={{ padding: isMobile ? 12 : 24 }}>
       <Card
         title="MAC 历史查询"
-        bordered={false}
+        variant="borderless"
         style={{ marginBottom: 16 }}
         extra={
           !isMobile && (
@@ -623,18 +627,18 @@ const MACHistoryPage: React.FC = () => {
 
         <Form form={form} layout={isMobile ? "vertical" : "inline"} onFinish={handleSearch}>
           <Form.Item name="mac" label="MAC 地址">
-            <Input placeholder="AA:BB:CC:DD:EE:FF" style={{ width: 180 }} allowClear />
+            <AppInput placeholder="AA:BB:CC:DD:EE:FF" style={{ width: 180 }} />
           </Form.Item>
           <Form.Item name="deviceId" label="设备 ID">
-            <Input placeholder="设备 UUID" style={{ width: 220 }} allowClear />
+            <AppInput placeholder="设备 UUID" style={{ width: 220 }} />
           </Form.Item>
           <Form.Item name="interfaceName" label="端口">
-            <Input placeholder="如 GigabitEthernet0/0/1" style={{ width: 180 }} allowClear />
+            <AppInput placeholder="如 GigabitEthernet0/0/1" style={{ width: 180 }} />
           </Form.Item>
           <Form.Item name="eventType" label="事件类型">
-            <Select
+            {/* 形态分类器①：已是 options 形态 → 直接迁；事件类型固定 4 项 → 显式禁搜 */}
+            <AppSelect
               placeholder="全部"
-              allowClear
               style={{ width: 130 }}
               options={[
                 { value: "appeared", label: "出现" },
@@ -643,35 +647,50 @@ const MACHistoryPage: React.FC = () => {
                 { value: "vlan_changed", label: "VLAN 变更" },
               ]}
               onSearch={() => {}}
+              showSearch={false}
             />
           </Form.Item>
           <Form.Item name="vlanId" label="VLAN">
             <InputNumber min={0} max={4094} placeholder="VLAN" style={{ width: 100 }} />
           </Form.Item>
           <Form.Item name="status" label="状态">
-            <Select
+            {/* 形态分类器①：已是 options 形态 → 直接迁；状态固定 2 项 → 显式禁搜 */}
+            <AppSelect
               placeholder="全部"
-              allowClear
               style={{ width: 110 }}
               options={[
                 { value: 0, label: "正常" },
                 { value: 1, label: "停用" },
               ]}
               onSearch={() => {}}
+              showSearch={false}
             />
           </Form.Item>
           <Form.Item>
             <Space wrap>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={handleSearch}
+                aria-label="搜索"
+                title="搜索"
+              >
                 查询
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleReset}
+                aria-label="重置"
+                title="重置"
+              >
                 重置
               </Button>
               {/* 14-04 注入的导出按钮 — prop 名称 exportScope='current'|'all' 保留,工具栏查询/重置按钮之后位置不变 */}
               {canExport && (
                 <>
                   <Button
+                    aria-label="导出"
+                    title="导出"
                     type="primary"
                     icon={<DownloadOutlined />}
                     onClick={() => handleExport("current")}
@@ -680,6 +699,8 @@ const MACHistoryPage: React.FC = () => {
                     导出当前查询
                   </Button>
                   <Button
+                    aria-label="导出"
+                    title="导出"
                     icon={<DownloadOutlined />}
                     onClick={() => handleExport("all")}
                     loading={exporting}
@@ -701,7 +722,7 @@ const MACHistoryPage: React.FC = () => {
       )}
 
       <Card
-        bordered={false}
+        variant="borderless"
         title={
           <Space>
             <span>查询结果</span>
@@ -712,6 +733,8 @@ const MACHistoryPage: React.FC = () => {
           isMobile && (
             <Tooltip title={isMobile ? "已切换卡片视图" : "切换为表格视图"}>
               <Button
+                aria-label="切换视图"
+                title="切换视图"
                 type="text"
                 icon={isMobile ? <TableOutlined /> : <AppstoreOutlined />}
                 disabled

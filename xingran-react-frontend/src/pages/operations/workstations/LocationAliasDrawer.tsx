@@ -8,26 +8,16 @@
  * - Drawer width = 600(D-02 Claude's discretion)
  * - 2 个独立 TreeSelect:dept(全量部门树) + location(仅外部机构)
  * - scope 字段在 UI 隐藏(后端默认 "workstation",前端兜底)
- * - 权限 gating 严格对齐 D-08:
- *   - canListAlias=false → 由 index.tsx 控制 [⚙ 映射] 按钮不渲染(本组件默认信任父级 gating)
- *   - canAdd=false → "新增映射"按钮 disabled + Tooltip "无新增权限"
- *   - canDelete=false → 操作列删除按钮 hidden
+ * - 权限 gating 严格对齐 D-08（Phase 86 W2 已迁为 useActionPermission 三态门控）:
+ *   - opsLocationAlias.list 缺失 → 由 index.tsx 控制 [⚙ 映射] 按钮不渲染（本组件默认信任父级 gating）
+ *   - opsLocationAlias.add 缺失 → "新增映射"按钮**不渲染**；未就绪 → 渲染但 disabled + 提示
+ *   - opsLocationAlias.delete 缺失 → 操作列删除按钮**不渲染**；未就绪 → 渲染但 disabled + 提示
  * - 写操作成功后调 useInvalidateDept + invalidate locationAlias(双失效)
  */
 
 import { useCallback, useMemo, useState } from "react";
-import {
-  Drawer,
-  Form,
-  TreeSelect,
-  Button,
-  Table,
-  Space,
-  Popconfirm,
-  Input,
-  Tooltip,
-  Typography,
-} from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
+import { Drawer, Form, TreeSelect, Button, Table, Space, Tooltip, Typography } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationAliasApi, type LocationAlias } from "@/lib/opsApi";
@@ -40,8 +30,12 @@ import {
   trimTitleToLastSegment,
 } from "@/utils/deptUtils";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import { useMenuStore } from "@/store/menuStore";
+import { useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import type { DeptTreeNode } from "./types";
+// Phase 71 (W3)：裸 Input/Input.TextArea → AppInput/AppTextArea。
+// scope 为隐藏字段（恒有初值，不受清空影响）；remark 为可选备注输入。
+import { AppInput, AppTextArea } from "@/components/ui";
 
 const { Text } = Typography;
 
@@ -56,11 +50,13 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   const [pageSize, setPageSize] = useState(10);
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // 权限(D-08):复用 menuStore.permissions(已 established pattern,见 MACHistoryPage)
-  const permissions = useMenuStore((s) => s.permissions);
-  const hasPermission = (perm: string) => permissions.includes(perm);
-  const canAdd = hasPermission("ops:location:alias:add");
-  const canDelete = hasPermission("ops:location:alias:delete");
+  // 权限(Phase 86 W2 / D-08)：旧式判定（menuStore 权限集直读 + 自造 hasPermission + 硬编码字面量）
+  // 已迁为 useActionPermission 三态门控 —— 消除第二真相源，并拿到「未就绪 → 渲染但 disabled」
+  // 的语义。权限码来自单一真相源 src/constants/permissionCodes.ts。
+  // ⚠️ 行为变更登记：旧写法在未就绪时隐藏入口；新写法渲染但 disabled + hint（收紧到更安全一侧）。
+  const permGate = useActionPermission();
+  const permAdd = permGate.decide(PERMISSION_CODES.opsLocationAlias.add);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsLocationAlias.delete);
 
   // 数据:部门树(SimpleDept 形状,与 DeptTreeNode 结构兼容 — title/value/key + isExternalOrg)
   const { data: deptTreeData = [] } = useDeptTree();
@@ -142,15 +138,11 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
     }
   };
 
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = useCallback(
     async (id: string) => {
-      try {
-        await locationAliasApi.delete(id);
-        handleSuccess("映射删除");
-        await refreshAfterMutation();
-      } catch (err) {
-        handleApiError(err, "删除映射");
-      }
+      await locationAliasApi.delete(id);
+      await refreshAfterMutation();
     },
     [refreshAfterMutation]
   );
@@ -191,21 +183,34 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
         key: "action",
         width: 80,
         render: (_: unknown, record: LocationAlias) =>
-          canDelete ? (
-            <Popconfirm
-              title="确认删除该映射?"
-              description="删除后,工位编辑下拉将立即不再追加该 alias 部门。"
-              okText="删除"
-              okButtonProps={{ danger: true }}
-              cancelText="取消"
-              onConfirm={() => handleDelete(record.id)}
-            >
-              <Button type="link" danger icon={<DeleteOutlined />} size="small" />
-            </Popconfirm>
+          // 三态：ready 无 opsLocationAlias.delete → 不渲染；未就绪 → 渲染但 disabled + hint
+          permDelete.visible ? (
+            <Tooltip title={permDelete.hint ?? "删除映射"}>
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+                disabled={permDelete.disabled}
+                aria-label={`删除 位置别名映射（${record.originDeptName || record.deptId}）`}
+                title={
+                  permDelete.hint ??
+                  `删除 位置别名映射（${record.originDeptName || record.deptId}）`
+                }
+                onClick={() =>
+                  confirmDelete({
+                    target: `该工位位置别名映射（${record.originDeptName || record.deptId}）`,
+                    // 业务语义说明，不得丢失
+                    extra: "删除后,工位编辑下拉将立即不再追加该 alias 部门。",
+                    onDelete: () => handleDelete(record.id),
+                  })
+                }
+              />
+            </Tooltip>
           ) : null,
       },
     ],
-    [canDelete, handleDelete]
+    [permDelete, handleDelete]
   );
 
   return (
@@ -215,22 +220,25 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
       onClose={onClose}
       size="large"
       destroyOnHidden
-      maskClosable
+      mask={{ closable: true }}
     >
-      <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="medium" style={{ width: "100%" }}>
         {/* 新增映射入口 + 折叠表单 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Text strong>映射列表({total} 条)</Text>
-          <Tooltip title={canAdd ? "" : "无新增权限"}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              disabled={!canAdd}
-              onClick={() => setShowAddForm((v) => !v)}
-            >
-              {showAddForm ? "收起新增" : "新增映射"}
-            </Button>
-          </Tooltip>
+          {/* 三态：ready 无 opsLocationAlias.add → 不渲染；未就绪 → 渲染但 disabled + hint */}
+          {permAdd.visible && (
+            <Tooltip title={permAdd.hint ?? ""}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                disabled={permAdd.disabled}
+                onClick={() => setShowAddForm((v) => !v)}
+              >
+                {showAddForm ? "收起新增" : "新增映射"}
+              </Button>
+            </Tooltip>
+          )}
         </div>
 
         {showAddForm && (
@@ -267,10 +275,10 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
             </Form.Item>
             {/* scope 隐藏字段(后端默认 workstation,前端兜底) */}
             <Form.Item name="scope" hidden>
-              <Input />
+              <AppInput />
             </Form.Item>
             <Form.Item name="remark" label="备注">
-              <Input.TextArea rows={2} placeholder="选填,如:分公司本部 4F 工位映射" />
+              <AppTextArea rows={2} placeholder="选填,如:分公司本部 4F 工位映射" />
             </Form.Item>
             <Space>
               <Button type="primary" onClick={handleCreate}>

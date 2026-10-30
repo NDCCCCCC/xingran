@@ -70,6 +70,7 @@ func TestNoProductionForTestingReferences(t *testing.T) {
 				name == "vendor" ||
 				name == "node_modules" ||
 				name == "xingran-react-frontend" ||
+				name == "rpa-worker" ||
 				name == "testdata" ||
 				name == "tests" {
 				return fs.SkipDir

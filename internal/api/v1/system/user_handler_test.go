@@ -17,6 +17,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
@@ -33,15 +34,16 @@ func TestUpdateUserWithADSync(t *testing.T) {
 
 		// 这个测试需要：
 		// - Mock UserHandler
-		// - Mock UserADSyncService
 		// - 测试数据库
 
 		// 验证点：
 		// - 1. 用户更新成功
-		// - 2. UserADSyncService.SyncUserUpdateToAD被调用（异步）
-		// - 3. 返回成功响应
+		// - 2. 返回成功响应
+		//
+		// ⚠ Phase 58 D-01/D-03：编辑后的直推路径（SyncUserUpdateToAD 异步调用）已删除，
+		//   取而代之的是 ad_push_queue 入队 + 排水器推送。此处不再有"直推被调用"的断言点。
 
-		_ = router // TODO: 集成测试需要完整的环境配置（Mock UserHandler / UserADSyncService / 测试数据库）
+		_ = router // TODO: 集成测试需要完整的环境配置（Mock UserHandler / 测试数据库）
 		assert.True(t, true, "集成测试需要完整的环境配置")
 	})
 }
@@ -118,7 +120,7 @@ func setupUserTestDB(t *testing.T) *gorm.DB {
 			password TEXT,
 			nickname TEXT,
 			email TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			gender INTEGER NOT NULL DEFAULT 2,
 			status INTEGER NOT NULL DEFAULT 0,
 			dept_id TEXT,
@@ -152,6 +154,26 @@ func setupUserTestDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME
 		)
 	`).Error)
+
+	// Phase 57 HYGIENE-06: 第二套 sqlite 环境（本 helper 与
+	// internal/services/system/user_service_test.go 的 setupUserServiceTestDB 同构）。
+	// sys_ad_config 供入队前置条件查询；ad_push_queue 由 migration_215 直调建表。
+	// 缺这两张表，真实 system.NewUserService 的 Delete/BatchDelete 事务内入队会因
+	// IsADSyncEnabled 报表不存在而报错上抛，TC9/TC12 的 require 200 断言直接失败。
+	// deleted_at 必须存在：models.ADConfig 内嵌 BaseModel，GORM 软删作用域引用它。
+	// Phase 58 F-15: 此处刻意不 seed sys_ad_config 行 —— TC9/TC12 断言的正是
+	// "无启用 AD 配置时入队为 no-op"分支，seed 了反而会让该断言失去意义。
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_ad_config (
+			id TEXT PRIMARY KEY,
+			sync_enabled INTEGER NOT NULL DEFAULT 0,
+			status INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)
+	`).Error)
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
 	return db
 }
 
@@ -546,25 +568,11 @@ func TestUserHandler_ResetPassword_DBError(t *testing.T) {
 	assert.NotEmpty(t, pwd)
 }
 
-// TC22: TestUserHandler_BuildADSyncMap 验证 buildADSyncMap 只填充非 nil 字段。
-func TestUserHandler_BuildADSyncMap(t *testing.T) {
-	h := &UserHandler{}
-	nick := "newNick"
-	email := "new@example.com"
-	dept := "newDept"
-
-	req := &requests.UserUpdateRequest{
-		Nickname: &nick,
-		Email:    &email,
-		DeptID:   &dept,
-	}
-	m := h.buildADSyncMap(req)
-	assert.Equal(t, "newNick", m["nickname"])
-	assert.Equal(t, "new@example.com", m["email"])
-	assert.Equal(t, "newDept", m["deptId"])
-	_, hasPhone := m["phone"]
-	assert.False(t, hasPhone, "phone not set → not in map")
-}
+// TC22（Phase 58 Wave 0 / F-G 已删除）：原 TestUserHandler_BuildADSyncMap 用例。
+// 被删原因：Phase 58 D-01/D-03 终态是两条直推路径全部删除（ROADMAP SC6），该私有映射函数
+// 随 user_handler.go 的 AD 直推 goroutine 一并下线（Phase 58 Plan 07）。先删用例可避免
+// Plan 07 删函数时 go test ./... 编译红。覆盖损失为零：四字段 diff 契约已由 Phase 57 的
+// TestPhase57_HasADFieldChanged_Boundaries（internal/services/system/ad_push_queue_test.go）锁定。
 
 // TC23: TestUserHandler_PickRandom_FromCharset 验证 pickRandom 从字符集中取一个字符。
 func TestUserHandler_PickRandom_FromCharset(t *testing.T) {

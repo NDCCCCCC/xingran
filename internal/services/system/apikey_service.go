@@ -134,6 +134,9 @@ const apiKeySaltLen = 16
 
 // hashAPIKey 用 SM3 单次哈希计算 key+salt 的摘要（hex 编码，64 字符）。
 // 单次哈希对 256-bit 熵的 API Key 足够（无字典攻击面），不可逆，且不依赖 SM4_KEY 保护。
+//
+// ⚠️ 存量迁移副本: internal/core/db/database.go backfillAPIKeyHash（SEC-01 存量回填路径）
+// 必须与本函数逐字节一致（key 在前 salt 在后），改一处必须同步另一处。
 func hashAPIKey(key, salt string) string {
 	h := sm3.New()
 	h.Write([]byte(key))

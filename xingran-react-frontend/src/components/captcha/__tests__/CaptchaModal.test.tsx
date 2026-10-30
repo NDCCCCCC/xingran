@@ -12,14 +12,14 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/components/captcha", () => ({
-  SliderCaptcha: ({ active, onVerified, onError }: any) => (
+  SliderCaptcha: ({ active, onVerified, onError }: unknown) => (
     <div data-testid="slider-captcha">
       <button onClick={() => onVerified?.("token-1", "captcha-id-1")}>verify-slider</button>
       <button onClick={() => onError?.("CAPTCHA_TYPE_MISMATCH")}>trigger-mismatch</button>
       <span data-testid="active">{String(active)}</span>
     </div>
   ),
-  TextCaptcha: ({ value, onChange, onError }: any) => (
+  TextCaptcha: ({ value, onChange, onError }: unknown) => (
     <div data-testid="text-captcha">
       <input
         data-testid="captcha-input"
@@ -57,7 +57,7 @@ describe("CaptchaModal", () => {
 
   it("slider 验证成功 → 500ms 后调用 onSuccess", () => {
     const onSuccess = vi.fn();
-    const { baseElement, getByText } = render(
+    const { baseElement: _baseElement, getByText } = render(
       <CaptchaModal visible captchaType="slider" onSuccess={onSuccess} onCancel={vi.fn()} />,
       { wrapper }
     );
@@ -99,7 +99,7 @@ describe("CaptchaModal", () => {
   });
 
   it("visible=true + normal → 渲染 TextCaptcha + 确定按钮", () => {
-    const { baseElement, getByText } = render(
+    const { baseElement, getByText: _getByText } = render(
       <CaptchaModal visible captchaType="normal" onSuccess={vi.fn()} onCancel={vi.fn()} />,
       { wrapper }
     );

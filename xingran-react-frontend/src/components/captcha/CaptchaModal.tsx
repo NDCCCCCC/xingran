@@ -113,7 +113,7 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
       onCancel={onCancel}
       footer={null}
       closable={false}
-      maskClosable={false}
+      mask={{ closable: false }}
       width={getModalWidth()}
       centered
       destroyOnHidden
@@ -138,7 +138,7 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
                 onClick={handleNormalConfirm}
                 style={{
                   padding: "8px 24px",
-                  background: "var(--theme-primary, #337ab0)",
+                  background: "var(--theme-primary)",
                   color: "white",
                   border: "none",
                   borderRadius: "4px",

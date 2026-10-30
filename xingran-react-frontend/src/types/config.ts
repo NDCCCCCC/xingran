@@ -15,10 +15,18 @@ export type ColorMode = "light" | "dark";
 /**
  * 主题配置（v1.22 Phase 65 · D-01 收窄版：仅明暗模式）
  * 旧持久化数据中的 style / customColors 多余键运行时静默忽略。
+ * 合并自 xingran 远程：新增 style/customColors 字段以支持主题切换器。
  */
 export interface ThemeConfiguration {
   /** 颜色模式：light / dark */
   mode: ColorMode;
+  /** 视觉风格 */
+  style?: "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet";
+  /** 自定义颜色 */
+  customColors?: {
+    primary?: string;
+    sidebar?: string;
+  };
 }
 
 // ============= 布局配置 =============

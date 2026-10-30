@@ -11,6 +11,8 @@ export interface CommandDetailDrawerProps {
   open: boolean;
   execution: ConfigExecution | null;
   details: ConfigExecutionDetail[];
+  /** FIX-01: 明细请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onClose: () => void;
 }
 
@@ -18,6 +20,7 @@ export function CommandDetailDrawer({
   open,
   execution,
   details,
+  loading = false,
   onClose,
 }: CommandDetailDrawerProps) {
   if (!execution) {
@@ -54,17 +57,14 @@ export function CommandDetailDrawer({
           />
           <div style={{ marginTop: 8, display: "flex", gap: 24 }}>
             <span>总设备: {execution.totalDevices}</span>
-            <span style={{ color: "var(--theme-success, #2d8949)" }}>
-              成功: {execution.successCount}
-            </span>
-            <span style={{ color: "var(--theme-error, #ba3630)" }}>
-              失败: {execution.failureCount}
-            </span>
+            <span style={{ color: "var(--theme-success)" }}>成功: {execution.successCount}</span>
+            <span style={{ color: "var(--theme-error)" }}>失败: {execution.failureCount}</span>
           </div>
         </div>
       </Card>
 
       <Table
+        loading={loading}
         columns={detailColumns}
         dataSource={details}
         rowKey="id"

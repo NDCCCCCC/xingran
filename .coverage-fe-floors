@@ -11,56 +11,48 @@
 # .planning/frontend-coverage-baseline.md (floors only move UP).
 GLOBAL 3.8
 (src root)	0.0
-api	0.0
-components	25.4
-constants	38.8
-design-system	86.7
-hooks	91.7
-lib	87.2
-pages/ad-domain	27.6
-pages/asset	40.15
-pages/dashboard-system	34.9
-pages/duty	68.1
-pages/knowledge	57.1
-pages/login	61.6
-pages/monitor	57.3
-pages/my-notices	50.7
-pages/network	50.1
-pages/operations	39.4
-pages/profile	36.3
-pages/settings	82.6
-pages/system	46.3
-pages/vdi	30.4
-pages/workorder	57.0
-router	74.5
-services	42.3
-store	95.0
-types	12.0
-utils	94.0
-# Phase 84 D-04/D-05/D-07: components 二级 subdir 独立 floor。D-05 起聚合逻辑
-# 与 pages/<subdir> 完全镜像——每个 components 一级子目录各自成 key,gate 方向 b
-# 要求全部登记;顶层 components 行继续覆盖全部 components 文件(父子双计,分母
-# 不缩水),故其 4.9 floor 不动。
-#   - P1 五组件组目标行(下方前 8 行):初值 0.0,由各 wave plan 完成后按实测
-#     -0.5pp ratchet(D-14);wave 3 收口时 components/design-system 聚合行 bump
-#     至终点值(D-15)。
-#   - 散件子目录 DeptTree/IconSelect/NoticeDetail/asset/charts/markdown/modal/
-#     table/three:同 commit 新增的 0.0 校准行(新 key 初始校准,非下调),
-#     后续 wave 3 / P2 阶段补测后逐 plan bump。
-components/shared	40.0
-components/dashboard	70.6
-components/layout	49.4
-components/CronSelector	63.4
-components/captcha	44.9
-components/operations	36.2
-components/network	74.1
-components/reconciliation	66.8
-components/DeptTree	44.8
+api	12.0
+components	61.2
+components/CronSelector	65.1
+components/DeptTree	93.6
 components/IconSelect	37.0
-components/NoticeDetail	16.1
-components/asset	42.7
-components/charts	0.0
-components/markdown	49.5
+components/NoticeDetail	49.5
+components/asset	40.5
+components/captcha	63.8
+components/charts	99.5
+components/dashboard	67.4
+components/layout	60.8
+components/markdown	99.5
 components/modal	99.5
-components/table	88.7
-components/three	0.0
+components/network	74.3
+components/operations	39.3
+components/reconciliation	84.7
+components/shared	47.9
+components/table	96.1
+components/three	99.5
+components/ui	99.5
+constants	95.2
+design-system	93.0
+hooks	76.8
+lib	93.8
+pages/ad	0.0
+pages/ad-domain	33.4
+pages/asset	47.9
+pages/dashboard-system	69.6
+pages/duty	68.3
+pages/knowledge	58.4
+pages/login	64.8
+pages/monitor	63.0
+pages/my-notices	65.7
+pages/network	58.1
+pages/operations	50.7
+pages/profile	38.6
+pages/settings	85.7
+pages/system	45.4
+pages/vdi	31.1
+pages/workorder	59.8
+router	86.6
+services	84.4
+store	95.3
+types	77.6
+utils	94.9

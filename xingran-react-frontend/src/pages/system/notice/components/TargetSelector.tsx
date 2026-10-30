@@ -1,4 +1,8 @@
-import { Spin, Tree, Checkbox, Select } from "antd";
+import { Spin, Tree, Checkbox } from "antd";
+// Phase 71 (W2)：裸 Select → AppSelect。本处为「自定义 filterOption + mode=multiple」
+// 形态：AppSelect 无条件 optionFilterProp="label" 会被显式 filterOption 覆盖（antd 中
+// filterOption 优先），且 options 均带 label，故安全；showSearch 本已显式传，保持。
+import { AppSelect } from "@/components/ui";
 import type { DataNode } from "antd/es/tree";
 import type { Target } from "../hooks/useTargetSelector";
 
@@ -92,7 +96,8 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
   if (targetType === 3) {
     return (
       <Spin spinning={loadingUsers}>
-        <Select
+        <AppSelect
+          allowClear
           mode="multiple"
           value={targetUsers as string[]}
           onChange={(values) => onUserChange(values as string[])}

@@ -39,7 +39,7 @@ function reset(viewMode: "view" | "edit" = "view") {
     viewMode,
     selectedWidgetId: null,
     selectWidget: vi.fn(),
-  } as any);
+  } as unknown);
 }
 
 const baseWidget: WidgetConfig = {

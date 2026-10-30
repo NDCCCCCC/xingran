@@ -19,7 +19,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 
 describe("operations/floors/FloorStatisticsCards", () => {
   it("show=false → 不渲染", () => {
-    const { container } = render(
+    const { container: _container } = render(
       <FloorStatisticsCards statistics={{ total: 0, active: 0, inactive: 0 }} show={false} />,
       { wrapper }
     );

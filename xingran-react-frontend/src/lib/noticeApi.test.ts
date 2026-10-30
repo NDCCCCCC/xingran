@@ -19,14 +19,12 @@ vi.mock("./api", () => ({
   del: (...args: unknown[]) => mockDel(...args),
 }));
 
-// buildWebSocketUrl 经 SecureTokenStorageImpl 读取 accessToken
+// buildWebSocketUrl 经 authStore 的全局 token 存储单例读取 accessToken
 const mockGetAccessToken = vi.fn();
-vi.mock("@/utils/token/SecureTokenStorageImpl", () => ({
-  SecureTokenStorageImpl: class {
-    getAccessToken() {
-      return mockGetAccessToken();
-    }
-  },
+vi.mock("@/store/authStore", () => ({
+  getTokenStorage: () => ({
+    getAccessToken: () => mockGetAccessToken(),
+  }),
 }));
 
 import {
@@ -169,32 +167,45 @@ describe("noticeApi — buildWebSocketUrl", () => {
     vi.unstubAllEnvs();
   });
 
-  it("从 API base 推导:去掉 /api/vN 后缀并转换 http→ws", () => {
+  it("从 API base 推导:保留 /api/v1 前缀（WS 端点与 REST 同前缀）并转换 http→ws", () => {
     vi.stubEnv("VITE_API_BASE_URL", "http://ops.example.com/api/v1");
     vi.stubEnv("VITE_WS_BASE_URL", "");
     mockGetAccessToken.mockReturnValue("tok");
 
     const url = buildWebSocketUrl();
 
-    expect(url).toBe("ws://ops.example.com/system/ws/notices?token=tok");
+    // 后端路由: /api/v1/system/ws/notices（router.go: system→authorized→ws→/notices）
+    expect(url).toBe("ws://ops.example.com/api/v1/system/ws/notices?token=tok");
   });
 
-  it("优先使用独立 VITE_WS_BASE_URL", () => {
+  it("无 token(未登录)返回空串 —— 由 useWebSocket 空 URL 守卫跳过连接", () => {
     vi.stubEnv("VITE_WS_BASE_URL", "wss://ws.example.com");
     mockGetAccessToken.mockReturnValue("");
 
     const url = buildWebSocketUrl();
 
-    expect(url).toBe("wss://ws.example.com/system/ws/notices?token=");
+    // 后端对空 token 握手直接 401;未登录就不该发起连接(避免重连风暴)
+    expect(url).toBe("");
   });
 
-  it("相对路径 /api/v1 保持原样(走同源反代)", () => {
+  it("根相对 API base /api/v1 → 补全为 ws://host 绝对 URL 且保留 /api/v1", () => {
     vi.stubEnv("VITE_API_BASE_URL", "");
     vi.stubEnv("VITE_WS_BASE_URL", "");
     mockGetAccessToken.mockReturnValue("tok");
 
     const url = buildWebSocketUrl();
 
-    expect(url).toBe("/system/ws/notices?token=tok");
+    // WebSocket 构造器拒绝相对 URL(DOMException)，必须绝对化
+    expect(url).toBe("ws://localhost:3000/api/v1/system/ws/notices?token=tok");
+  });
+
+  it("根相对 API base 推导出子路径 → 同样补全为 ws://host 绝对 URL", () => {
+    vi.stubEnv("VITE_API_BASE_URL", "/xingran/api/v1");
+    vi.stubEnv("VITE_WS_BASE_URL", "");
+    mockGetAccessToken.mockReturnValue("tok");
+
+    const url = buildWebSocketUrl();
+
+    expect(url).toBe("ws://localhost:3000/xingran/api/v1/system/ws/notices?token=tok");
   });
 });

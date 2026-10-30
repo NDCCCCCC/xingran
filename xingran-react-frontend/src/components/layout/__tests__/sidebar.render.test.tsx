@@ -47,30 +47,37 @@ const menuFixture: Menu[] = [
 
 describe("Sidebar 渲染", () => {
   it("menus 非空渲染菜单", async () => {
-    useMenuStore.setState({ menus: menuFixture, loading: false } as any);
-    useLayoutStore.setState({ sidebarCollapsed: false, isMobile: false } as any);
+    useMenuStore.setState({ menus: menuFixture, loading: false } as unknown);
+    useLayoutStore.setState({ sidebarCollapsed: false, isMobile: false } as unknown);
     const { baseElement } = renderWithProviders(<Sidebar />);
     expect(baseElement.querySelector(".ant-menu")).not.toBeNull();
   });
 
   it("menus=[] 渲染空菜单不抛错", () => {
-    useMenuStore.setState({ menus: [], loading: false } as any);
-    useLayoutStore.setState({ sidebarCollapsed: false, isMobile: false } as any);
+    useMenuStore.setState({ menus: [], loading: false } as unknown);
+    useLayoutStore.setState({ sidebarCollapsed: false, isMobile: false } as unknown);
     const { baseElement } = renderWithProviders(<Sidebar />);
     expect(baseElement).toBeDefined();
   });
 
   it("sidebarCollapsed=true 渲染折叠菜单", () => {
-    useMenuStore.setState({ menus: menuFixture, loading: false } as any);
-    useLayoutStore.setState({ sidebarCollapsed: true, isMobile: false } as any);
+    useMenuStore.setState({ menus: menuFixture, loading: false } as unknown);
+    useLayoutStore.setState({ sidebarCollapsed: true, isMobile: false } as unknown);
     const { baseElement } = renderWithProviders(<Sidebar />);
     expect(baseElement.querySelector(".ant-menu-inline-collapsed, .ant-menu")).not.toBeNull();
   });
 
   it("loading=true 渲染 Spin", () => {
-    useMenuStore.setState({ menus: [], loading: true } as any);
-    useLayoutStore.setState({ sidebarCollapsed: false, isMobile: false } as any);
+    useMenuStore.setState({ menus: [], loading: true } as unknown);
+    useLayoutStore.setState({ sidebarCollapsed: false, isMobile: false } as unknown);
     const { baseElement } = renderWithProviders(<Sidebar />);
     expect(baseElement.querySelector(".ant-spin, .ant-menu")).not.toBeNull();
+  });
+
+  it("无子菜单的叶子菜单项不渲染误导性向右小箭头(menu-sub-chevron)", () => {
+    useMenuStore.setState({ menus: menuFixture, loading: false } as unknown);
+    useLayoutStore.setState({ sidebarCollapsed: false, isMobile: false } as unknown);
+    const { baseElement } = renderWithProviders(<Sidebar />);
+    expect(baseElement.querySelector(".menu-sub-chevron")).toBeNull();
   });
 });

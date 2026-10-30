@@ -1,11 +1,12 @@
-/**
+﻿/**
  * 参数编辑器组件
  * Params Editor Component
  *
  * 用于编辑API请求参数，支持动态添加/删除参数键值对
  */
 import { useCallback, useEffect } from "react";
-import { Form, Input, Button, Space, Alert, Empty } from "antd";
+import { Form, Button, Space, Alert, Empty } from "antd";
+import { AppInput } from "@/components/ui";
 import { PlusOutlined, MinusCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
 import type { EndpointDetail } from "@/types/dashboard";
@@ -70,7 +71,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
       {/* 示例参数提示 */}
       {showExampleHint && Object.keys(exampleParams).length > 0 && (
         <Alert
-          message="示例参数可用"
+          title="示例参数可用"
           description="点击下方按钮加载该端点的示例参数，可作为参考进行修改。"
           type="info"
           showIcon
@@ -112,7 +113,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
                   rules={[{ required: true, message: "请输入参数名" }]}
                   style={{ marginBottom: 0 }}
                 >
-                  <Input placeholder="参数名" style={{ width: 150 }} aria-label="参数名" />
+                  <AppInput placeholder="参数名" style={{ width: 150 }} aria-label="参数名" />
                 </Form.Item>
 
                 <Form.Item
@@ -121,14 +122,14 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
                   rules={[{ required: true, message: "请输入参数值" }]}
                   style={{ marginBottom: 0 }}
                 >
-                  <Input placeholder="参数值" style={{ width: 200 }} aria-label="参数值" />
+                  <AppInput placeholder="参数值" style={{ width: 200 }} aria-label="参数值" />
                 </Form.Item>
 
                 <MinusCircleOutlined
                   onClick={() => remove(name)}
                   style={{
                     fontSize: 16,
-                    color: "var(--theme-text-tertiary, #999)",
+                    color: "var(--theme-text-tertiary)",
                     cursor: "pointer",
                     marginTop: 8,
                   }}
@@ -152,11 +153,18 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 
       {/* 参数说明 */}
       {endpoint && (
-        <div style={{ marginTop: 16, padding: "12px", background: "#f5f5f5", borderRadius: 4 }}>
-          <div style={{ fontSize: 12, color: "#666" }}>
+        <div
+          style={{
+            marginTop: 16,
+            padding: "12px",
+            background: "var(--theme-bg-secondary)",
+            borderRadius: 4,
+          }}
+        >
+          <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>
             <strong>参数说明：</strong>
           </div>
-          <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)", marginTop: 4 }}>
             添加的参数将作为请求参数发送到API端点。支持动态变量替换， 如使用{" "}
             <code>{"{{userId}}"}</code> 将在请求时替换为当前用户ID。
           </div>

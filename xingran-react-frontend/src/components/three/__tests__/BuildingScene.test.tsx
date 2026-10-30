@@ -12,10 +12,10 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/pages/operations/building-spaces-3d/components/BuildingModel3D", () => ({
-  default: (props: any) => <div data-testid="model3d">Model3D {props.id || ""}</div>,
+  default: (props: unknown) => <div data-testid="model3d">Model3D {props.id || ""}</div>,
 }));
 vi.mock("@/pages/operations/building-spaces-3d/components/FloorPlan3D", () => ({
-  default: (props: any) => <div data-testid="floorplan3d">FloorPlan3D {props.id || ""}</div>,
+  default: (props: unknown) => <div data-testid="floorplan3d">FloorPlan3D {props.id || ""}</div>,
 }));
 vi.mock("@/pages/operations/building-spaces-3d/components/FloorView3D", () => ({
   default: () => <div data-testid="floorview3d">FloorView3D</div>,

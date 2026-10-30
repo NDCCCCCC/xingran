@@ -20,7 +20,7 @@ vi.mock("@/lib/authApi", () => ({
 vi.mock("@/store/authStore", () => {
   // 兼容 selector 调用（useAuthStore(s => s.login)）与无参调用两种形态
   const state = { login: vi.fn() };
-  const useAuthStoreFn: any = (selector?: (s: unknown) => unknown) =>
+  const useAuthStoreFn: unknown = (selector?: (s: unknown) => unknown) =>
     selector ? selector(state) : state;
   return { useAuthStore: useAuthStoreFn };
 });

@@ -7,6 +7,7 @@ import type { ConfigBackup } from "@/types";
 import type { DiffResult } from "../types";
 import { computeDiff } from "../utils";
 import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 
 interface UseBackupDiffReturn {
   diffModalVisible: boolean;
@@ -54,7 +55,7 @@ export function useBackupDiff(): UseBackupDiffReturn {
       setCompareBackup2(backup2);
       setDiffModalVisible(true);
     } catch (error) {
-      console.error("加载备份内容失败:", error);
+      handleApiError(error, "加载备份内容");
     }
   }, []);
 

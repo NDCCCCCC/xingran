@@ -4,9 +4,9 @@
  */
 
 import { useCallback, useState } from "react";
-import { Modal, App } from "antd";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
+import type { OperLog, LoginLog } from "../types";
+import { confirmDelete } from "@/components/shared";
 
 export interface UseLogActionsParams {
   activeTab: string;
@@ -16,57 +16,47 @@ export interface UseLogActionsParams {
 
 export interface UseLogActionsReturn {
   detailModalVisible: boolean;
-  selectedLog: any;
+  selectedLog: OperLog | LoginLog | null;
   setDetailModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
-  setSelectedLog: React.Dispatch<React.SetStateAction<any>>;
-  handleViewDetail: (record: any) => void;
+  setSelectedLog: React.Dispatch<React.SetStateAction<OperLog | LoginLog | null>>;
+  handleViewDetail: (record: OperLog | LoginLog) => void;
   handleClearLogs: () => void;
   handleRefresh: () => void;
 }
 
 export function useLogActions(params: UseLogActionsParams): UseLogActionsReturn {
   const { activeTab, fetchOperLogs, fetchLoginLogs } = params;
-  const { message } = App.useApp();
 
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [selectedLog, setSelectedLog] = useState<OperLog | LoginLog | null>(null);
 
   // 查看详情
-  const handleViewDetail = useCallback((record: any) => {
+  const handleViewDetail = useCallback((record: OperLog | LoginLog) => {
     setSelectedLog(record);
     setDetailModalVisible(true);
   }, []);
 
-  // 清空日志
+  // 清空日志（68.1-T4 §1.9 非删除破坏性变体）
   const handleClearLogs = useCallback(() => {
-    Modal.confirm({
+    confirmDelete({
       title: "确认清空",
-      icon: <ExclamationCircleOutlined />,
-      content:
-        activeTab === "oper"
-          ? "确定要清空所有操作日志吗？此操作不可恢复！"
-          : "确定要清空所有登录日志吗？此操作不可恢复！",
-      onOk: async () => {
-        try {
-          const url =
-            activeTab === "oper" ? "/monitor/oper-logs/clean" : "/monitor/login-logs/clean";
-
-          await post(url, {});
-
-          message.success("清空成功");
-          if (activeTab === "oper") {
-            fetchOperLogs();
-          } else {
-            fetchLoginLogs();
-          }
-        } catch (error) {
-          console.error("清空日志失败:", error);
-          message.error("网络错误，请稍后重试");
+      target: activeTab === "oper" ? "全部操作日志" : "全部登录日志",
+      actionLabel: "清空",
+      actionContext: "清空日志",
+      contentText: "将{target}，操作不可恢复，是否继续？",
+      successText: "已清空日志",
+      onDelete: async () => {
+        const url = activeTab === "oper" ? "/monitor/oper-logs/clean" : "/monitor/login-logs/clean";
+        await post(url, {});
+        if (activeTab === "oper") {
+          fetchOperLogs();
+        } else {
+          fetchLoginLogs();
         }
       },
     });
     // activeTab 仅为闭包读取,变化由调用方触发(handleClearLogs 依赖 activeTab)
-  }, [activeTab, fetchOperLogs, fetchLoginLogs, message]);
+  }, [activeTab, fetchOperLogs, fetchLoginLogs]);
 
   // 刷新
   const handleRefresh = useCallback(() => {

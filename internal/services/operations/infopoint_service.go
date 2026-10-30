@@ -146,13 +146,17 @@ func (s *infoPointService) GetByID(ctx context.Context, id string) (*operations.
 // count(*) 并在 Find 恢复（TestBase91 契约锁定）。
 func (s *infoPointService) joinScope() base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
-		// JOIN 楼宇和楼层表获取关联信息（需要类型转换：floor_id/building_id是varchar，而floors/buildings的id是UUID）
+		// JOIN 楼宇和楼层表获取关联信息。
+		// 列类型实测(PG):ops_info_points.workstation_id 与 sys_workstation.floor_id 是
+		// varchar(64) → 用 CAST(主键 AS TEXT) = fk;sys_workstation.building_id 是 uuid
+		// (历史迁移 192/193 即如此,非 varchar) → 与 ops_buildings.id 直接 uuid=uuid,
+		// 包 CAST 会变 text=uuid → SQLSTATE 42883。SQLite 下两侧均为 TEXT,两种写法皆成立。
 		// 注意：device_name和port_name是ops_info_points表的冗余字段，通过ops_info_points.*已经包含
 		return db.
 			Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
 			Joins("LEFT JOIN sys_workstation ON CAST(sys_workstation.id AS TEXT) = ops_info_points.workstation_id").
 			Joins("LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id").
-			Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = sys_workstation.building_id")
+			Joins("LEFT JOIN ops_buildings ON ops_buildings.id = sys_workstation.building_id")
 	}
 }
 

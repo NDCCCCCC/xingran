@@ -29,7 +29,7 @@ func TestUserList_StatusNotAmbiguous_AfterJoinSysDept(t *testing.T) {
 			id TEXT PRIMARY KEY,
 			username TEXT,
 			nickname TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			status INTEGER NOT NULL,
 			dept_id TEXT,
 			password TEXT,
@@ -60,9 +60,9 @@ func TestUserList_StatusNotAmbiguous_AfterJoinSysDept(t *testing.T) {
 	now := "2024-01-01 00:00:00"
 	require.NoError(t, db.Exec(`INSERT INTO sys_dept VALUES ('d1','研发部','',0,?,?,NULL)`, now, now).Error)
 	require.NoError(t, db.Exec(`INSERT INTO sys_dept VALUES ('d2','已停用部门','',1,?,?,NULL)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('u1','alice','Alice','13800000000',0,'d1','x',?,?,NULL)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('u2','bob','Bob','13900000000',1,'d1','x',?,?,NULL)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO sys_user VALUES ('u3','carol','Carol','13700000000',0,'d2','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('u1','alice','Alice','13800000000',0,'d1','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('u2','bob','Bob','13900000000',1,'d1','x',?,?,NULL)`, now, now).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id,username,nickname,phone,status,dept_id,password,created_at,updated_at,deleted_at) VALUES ('u3','carol','Carol','13700000000',0,'d2','x',?,?,NULL)`, now, now).Error)
 
 	// 构造 userService(用最小依赖,只关心 db)
 	svc := &userService{db: db, pwdManager: nil}

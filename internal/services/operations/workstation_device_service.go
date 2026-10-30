@@ -30,6 +30,13 @@ type WorkstationDeviceService interface {
 	// Phase 45 R5: MAC→port→infoPoint→workstation 反推链汇总
 	GetPhysicalDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error)
 
+	// GetPhysicalDevicesWithDiagnosis 实时查询物理链路设备 + **空因诊断**（DBG-07 / #7）。
+	//
+	// 与 GetPhysicalDevices 的关系：数据完全一致（Devices 字段与 GetPhysicalDevices 返回值相同），
+	// 额外返回 EmptyReason / EmptyMessage / Diagnosis 三块可诊断信息。
+	// GetPhysicalDevices 的签名与语义保持不变（向后兼容，旧调用方/旧前端零改动）。
+	GetPhysicalDevicesWithDiagnosis(ctx context.Context, workstationID string) (*PhysicalDevicesResult, error)
+
 	// GetADDevicesByWorkstations 批量查询多工位的 AD 设备 (Phase 35: 导出优化)
 	// 返回 map[workstationID][]*WorkstationDevice; 工位无 AD 设备时返回空切片 (不报错)
 	// 内部使用 ~3 次批量 SQL 而非 N 次单工位 SQL, 工位数 100+ 时性能差异显著
@@ -150,6 +157,16 @@ type AssetDeviceMatch struct {
 type workstationDeviceService struct {
 	db            *gorm.DB
 	uuidValidator *regexp.Regexp
+
+	// physicalDevicesFetcher **仅测试注入用**：非 nil 时
+	// GetPhysicalDevicesWithDiagnosis 改用它取设备列表。
+	//
+	// 为什么需要：GetPhysicalDevices 的 CTE 含 PG 专属语法（::text / REGEXP_REPLACE /
+	// DISTINCT ON ... NULLS LAST），SQLite 测试基建无法执行。诊断逻辑本身（逐段计数 +
+	// 空因分类）已刻意写成 GORM chainable 以便双端可跑，此钩子让回归测试也能覆盖
+	// 「Total/EmptyReason 组装」这一段，同时生产路径仍只走 GetPhysicalDevices 一份实现
+	// （不存在第二套 recall 逻辑，不会口径分叉）。生产恒为 nil。
+	physicalDevicesFetcher func(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error)
 }
 
 // NewWorkstationDeviceService 创建工位设备服务实例
@@ -588,6 +605,297 @@ SELECT DISTINCT ON (COALESCE(a.devicesn, COALESCE(mac.mac_address, hist.mac_addr
 	}
 
 	return devices, nil
+}
+
+// GetPhysicalDevicesWithDiagnosis 实时查询物理链路设备 + 空因诊断（DBG-07 / #7）。
+//
+// 契约：
+//   - `Devices` 与 `GetPhysicalDevices` 的返回值**逐条一致**（同一实现、同一次查询）；
+//   - 旧方法 `GetPhysicalDevices` 签名/语义零改动 → 旧调用方与旧前端不受影响；
+//   - 空因四分类互斥判定，见 PhysicalEmptyReason* 常量。
+//
+// 为什么需要它：3f130 的实测读数是「信息点/端口/MAC 全通、仅 user_id=NULL」，
+// 旧实现无论哪种断点都只回裸 `[]`，前端只能显示空白，无法区分是没绑用户、
+// 信息点绑错、还是 MAC 没采到。诊断把「空白」变成可读结论。
+func (s *workstationDeviceService) GetPhysicalDevicesWithDiagnosis(ctx context.Context, workstationID string) (*PhysicalDevicesResult, error) {
+	// 0. 参数校验与旧方法保持一致（注入路径下也必须有，不能因测试钩子放宽入口约束）
+	if workstationID == "" {
+		return nil, apperrors.ParamMissing("工位ID")
+	}
+	if !s.uuidValidator.MatchString(workstationID) {
+		return nil, apperrors.ParamInvalid("工位ID")
+	}
+
+	// 1. 设备列表：复用原实现，保证两个入口的数据绝不分叉
+	//
+	// （physicalDevicesFetcher 非 nil = 测试注入，见字段注释；生产恒为 nil 走原路径）
+	devices, err := func() ([]*models.WorkstationDevice, error) {
+		if s.physicalDevicesFetcher != nil {
+			return s.physicalDevicesFetcher(ctx, workstationID)
+		}
+		return s.GetPhysicalDevices(ctx, workstationID)
+	}()
+	if err != nil {
+		return nil, err
+	}
+	if devices == nil {
+		devices = make([]*models.WorkstationDevice, 0)
+	}
+
+	// 2. 取工位绑定信息（GetPhysicalDevices 已校验过存在性与 UUID 格式，此处必成功）
+	var workstation models.Workstation
+	if err := s.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", workstationID).
+		First(&workstation).Error; err != nil {
+		return nil, fmt.Errorf("工位不存在: %w", err)
+	}
+
+	// 3. 逐段链路计数
+	diag, err := s.diagnosePhysicalChain(ctx, workstationID, &workstation, devices)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &PhysicalDevicesResult{
+		Devices:   devices,
+		Total:     len(devices),
+		Diagnosis: diag,
+	}
+
+	// 4. 空因判定（先命中先返回，顺序即优先级）+ 非致命告警
+	result.EmptyReason, result.EmptyMessage = classifyPhysicalEmptyReason(diag, len(devices))
+	result.Warnings = collectPhysicalWarnings(diag, len(devices))
+
+	logger.Infof("[GetPhysicalDevicesWithDiagnosis] 工位 %s: total=%d emptyReason=%q 链路计数=%+v",
+		workstationID, result.Total, result.EmptyReason, diag)
+
+	return result, nil
+}
+
+// diagnosePhysicalChain 逐段计数物理链路（与 GetPhysicalDevices 的 CTE 口径对齐）。
+//
+// 实现刻意用 GORM chainable + Go 侧集合求交，而不是再写一条 PG 专属 CTE：
+//   - 避免 `id::text` / REGEXP_REPLACE / DISTINCT ON 等 PG 语法，使诊断可在
+//     SQLite 测试基建上真实执行（回归测试不依赖真实 PG，见任务边界）；
+//   - 不改变原有 CTE 任何行为（诊断是纯读、纯旁路）。
+func (s *workstationDeviceService) diagnosePhysicalChain(
+	ctx context.Context,
+	workstationID string,
+	workstation *models.Workstation,
+	devices []*models.WorkstationDevice,
+) (PhysicalChainDiagnosis, error) {
+	diag := PhysicalChainDiagnosis{WorkstationExists: true}
+
+	// 4.1 用户绑定（3f130 的断点）
+	diag.UserBound = workstation.UserID != nil && *workstation.UserID != ""
+
+	// 4.2 信息点总数（含软删/停用）
+	var total int64
+	if err := s.db.WithContext(ctx).
+		Table("ops_info_points").
+		Where("workstation_id = ?", workstationID).
+		Count(&total).Error; err != nil {
+		return diag, fmt.Errorf("诊断：统计信息点总数失败: %w", err)
+	}
+	diag.InfoPointTotal = int(total)
+
+	// 4.3 active 信息点明细（status=0 且未软删，与 CTE 的 WHERE 一致）
+	type infoPointRow struct {
+		DeviceID *string
+		PortID   *string
+	}
+	var points []infoPointRow
+	if err := s.db.WithContext(ctx).
+		Table("ops_info_points").
+		Select("device_id, port_id").
+		Where("workstation_id = ? AND deleted_at IS NULL AND status = ?",
+			workstationID, int(operations.InfoPointStatusNormal)).
+		Scan(&points).Error; err != nil {
+		return diag, fmt.Errorf("诊断：查询信息点明细失败: %w", err)
+	}
+	diag.InfoPointActive = len(points)
+
+	// 4.4 已绑定端口的信息点
+	portIDs := make([]string, 0, len(points))
+	for _, p := range points {
+		if p.PortID != nil && *p.PortID != "" {
+			diag.InfoPointWithPort++
+			portIDs = append(portIDs, *p.PortID)
+		}
+	}
+
+	// 4.5 端口是否真实存在于 sys_device_port_status（CTE 的 JOIN 条件）
+	existingPorts := make(map[string]struct{}, len(portIDs))
+	if len(portIDs) > 0 {
+		var resolved []string
+		if err := s.db.WithContext(ctx).
+			Table("sys_device_port_status").
+			Where("id IN ?", portIDs).
+			Pluck("id", &resolved).Error; err != nil {
+			return diag, fmt.Errorf("诊断：查询端口存在性失败: %w", err)
+		}
+		for _, id := range resolved {
+			existingPorts[id] = struct{}{}
+		}
+	}
+
+	// 4.6 端口在 + 设备在（CTE 的 EXISTS(sys_network_device) 防御）
+	// 注意：CTE 的 EXISTS 不额外过滤 sys_network_device.deleted_at，此处保持一致。
+	deviceIDs := make([]string, 0, len(points))
+	for _, p := range points {
+		if p.PortID == nil || *p.PortID == "" {
+			continue
+		}
+		if _, ok := existingPorts[*p.PortID]; !ok {
+			continue
+		}
+		diag.PortResolved++
+		if p.DeviceID != nil && *p.DeviceID != "" {
+			deviceIDs = append(deviceIDs, *p.DeviceID)
+		}
+	}
+
+	if len(deviceIDs) > 0 {
+		var resolved []string
+		if err := s.db.WithContext(ctx).
+			Table("sys_network_device").
+			Where("id IN ?", deviceIDs).
+			Pluck("id", &resolved).Error; err != nil {
+			return diag, fmt.Errorf("诊断：查询设备存在性失败: %w", err)
+		}
+		existingDevices := make(map[string]struct{}, len(resolved))
+		for _, id := range resolved {
+			existingDevices[id] = struct{}{}
+		}
+		for _, p := range points {
+			if p.PortID == nil || *p.PortID == "" || p.DeviceID == nil || *p.DeviceID == "" {
+				continue
+			}
+			if _, ok := existingPorts[*p.PortID]; !ok {
+				continue
+			}
+			if _, ok := existingDevices[*p.DeviceID]; ok {
+				diag.DeviceResolved++
+			}
+		}
+	}
+
+	// 4.7 MAC / 资产 / 域控命中数直接取自 devices（与返回给前端的数据同源，不会口径分叉）
+	for _, d := range devices {
+		if d == nil {
+			continue
+		}
+		diag.MACMatched++
+		if d.AssetID != nil && *d.AssetID != "" {
+			diag.AssetMatched++
+		}
+		if d.ADComputerID != nil && *d.ADComputerID != "" {
+			diag.ADMatched++
+		}
+	}
+
+	return diag, nil
+}
+
+// classifyPhysicalEmptyReason 把链路计数映射为「空因」结论。
+//
+// 判定顺序（先命中先返回，任务是约定的四类）：
+//
+//	未绑定用户       → no_user_bound        ← **最高优先级，压过「有数据」**
+//	有数据且已绑用户  → ""（正常）
+//	信息点绑定错位    → info_point_misbound
+//	设备/MAC 数据缺失 → device_or_mac_missing
+//
+// 关键决策：**未绑用户压过「有数据」**。3f130 实测 mac_match_count=1（链路是通的）
+// 但前端面板仍空白——因为面板按「用户→物理链路」维度呈现，未绑用户时召回结果无从归属。
+// 因此「未绑用户」就是该现象的真实空因，必须报 no_user_bound；设备本身的数据不丢，
+// 仍在 Devices 里，同时 Warnings 也会提示该告警，两个通道互补。
+func classifyPhysicalEmptyReason(diag PhysicalChainDiagnosis, deviceCount int) (string, string) {
+	// ① 未绑定用户（3f130 的实际命中项）——**最高优先级，压过「有数据」**
+	//
+	// 决策依据（重要，勿轻易改回「数据优先」）：
+	//   3f130 实测 mac_match_count=1（链路确实是通的），但前端"物理链路"面板仍为空白——
+	//   因为该面板按「用户→物理链路」维度呈现，工位未绑用户时召回结果无法归属到任何人。
+	//   所以「未绑用户」不是"有数据就不用管"的旁注，而是**这一现象的真实空因**。
+	//   若此处对 deviceCount>0 返回 ""，需求「可区分空因状态」对 3f130 就没有解决。
+	//   同时 Warnings 仍会输出该告警，两个通道语义互补。
+	if !diag.UserBound {
+		return PhysicalEmptyReasonNoUserBound,
+			"该工位未绑定用户（sys_workstation.user_id 为空）。物理链路面板按" +
+				"「用户→信息点→端口→MAC」维度呈现，未绑定用户时链路无法归属，故为空。" +
+				"请先在工位管理中为该工位绑定使用人。"
+	}
+
+	// 有数据且已绑定用户 → 正常（此时 emptyReason 必须为空，不得误报空因）
+	if deviceCount > 0 {
+		return PhysicalEmptyReasonNone, ""
+	}
+
+	// ② 信息点绑定错位：无 active 信息点，或信息点未绑定端口
+	if diag.InfoPointActive == 0 {
+		if diag.InfoPointTotal == 0 {
+			return PhysicalEmptyReasonInfoPointMisbound,
+				"该工位没有任何关联信息点（ops_info_points.workstation_id 未指向本工位）。" +
+					"请检查信息点的工位绑定是否正确。"
+		}
+		return PhysicalEmptyReasonInfoPointMisbound,
+			"该工位关联的信息点均不可用（已软删除或 status≠0 正常）。" +
+				"请在信息点管理中恢复或启用，并确认 status=0。"
+	}
+	if diag.InfoPointWithPort == 0 {
+		return PhysicalEmptyReasonInfoPointMisbound,
+			"该工位的信息点未绑定网络端口（port_id 为空），物理链路在第一步即断开。" +
+				"请在信息点管理中关联对应的设备端口。"
+	}
+
+	// ③ 设备 / MAC 数据缺失
+	if diag.PortResolved == 0 {
+		return PhysicalEmptyReasonDeviceOrMACMissing,
+			"信息点绑定的端口在端口表（sys_device_port_status）中不存在，链路断开。" +
+				"端口可能已被重新采集或删除，请重新采集该设备端口或重新绑定信息点。"
+	}
+	if diag.DeviceResolved == 0 {
+		return PhysicalEmptyReasonDeviceOrMACMissing,
+			"信息点指向的网络设备在设备表（sys_network_device）中不存在（orphan 绑定）。" +
+				"请修正信息点的 device_id，指向真实存在的网络设备。"
+	}
+
+	// 端口与设备都在，但没有任何 MAC 命中（实测与历史都没有）
+	return PhysicalEmptyReasonDeviceOrMACMissing,
+		"端口与网络设备均正常，但该端口没有任何 MAC 采集记录（实测与历史均未命中）。" +
+			"请确认该端口下接入终端在线，并检查 MAC 地址采集任务是否正常执行。"
+}
+
+// collectPhysicalWarnings 收集「非致命但必须可见」的告警（有数据时也会产生）。
+//
+// 为什么独立于 EmptyReason：3f130 的实况是「MAC 链路完全通（mac_match_count=1）
+// 但工位未绑定 user_id」。此时 devices 非空 → emptyReason 必须为空串（否则就是误报空因），
+// 但「未绑用户」恰恰是前端看到空白的根因，不能就此消失。故用 Warnings 承载，
+// 让前端可以在「有 N 台」的同时提示「该工位未绑定用户」。
+func collectPhysicalWarnings(diag PhysicalChainDiagnosis, deviceCount int) []string {
+	warnings := make([]string, 0, 3)
+
+	// ① 未绑定用户：无论有没有数据都要提示（这是 3f130 的根因）
+	if !diag.UserBound {
+		warnings = append(warnings,
+			"该工位未绑定用户（sys_workstation.user_id 为空）。物理链路面板按用户维度展示，"+
+				"即使后端能召回设备，前端仍可能显示为空；请为工位绑定使用人。")
+	}
+
+	// ② 有数据但资产详情缺失：设备能显示，只是没有型号/责任人之类的资产字段
+	if deviceCount > 0 && diag.AssetMatched == 0 {
+		warnings = append(warnings,
+			"物理链路设备未匹配到资产记录（ops_asset 未登记对应 MAC），设备详情将是空壳。"+
+				"建议补录资产或核对 MAC。")
+	}
+
+	// ③ 有数据但纯靠历史 MAC：设备可能已离线
+	if deviceCount > 0 && diag.MACMatched > 0 && diag.AssetMatched == 0 && diag.ADMatched == 0 {
+		warnings = append(warnings,
+			"物理链路既无资产也有无域控记录，设备来源仅靠 MAC 采集，信息可信度较低。")
+	}
+
+	return warnings
 }
 
 // GetADDevicesByUser 获取用户的域控设备（通过用户DN关联）

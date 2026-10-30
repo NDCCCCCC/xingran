@@ -116,7 +116,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
       afterOpenChange={(open) => open && handleOpen()}
       destroyOnHidden
     >
-      <Space direction="vertical" style={{ width: "100%" }} size="middle">
+      <Space orientation="vertical" style={{ width: "100%" }} size="medium">
         {/* 快捷操作按钮 */}
         <Space>
           <Button size="small" onClick={handleSelectAll} disabled={loading}>

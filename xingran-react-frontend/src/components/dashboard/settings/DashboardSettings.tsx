@@ -6,14 +6,13 @@
  */
 
 import { useState, useEffect } from "react";
-import { App, Drawer, Form, Input, Button, Spin, Divider } from "antd";
+import { App, Drawer, Form, Button, Spin, Divider } from "antd";
+import { AppInput, AppTextArea } from "@/components/ui";
 import { SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import { useDashboardStore } from "@/store/dashboardStore";
 import DashboardScopeSelector from "./DashboardScopeSelector";
 import RefreshIntervalSelector from "./RefreshIntervalSelector";
 import type { DashboardScope, UpdateDashboardRequest } from "@/types/dashboard";
-
-const { TextArea } = Input;
 
 export interface DashboardSettingsProps {
   /** 是否可见 */
@@ -112,7 +111,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
       placement="right"
       open={visible}
       onClose={handleCancel}
-      width={480}
+      size={480}
       footer={
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <Button icon={<CloseOutlined />} onClick={handleCancel}>
@@ -139,7 +138,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
               { max: 100, message: "名称不能超过 100 个字符" },
             ]}
           >
-            <Input placeholder="请输入仪表盘名称" />
+            <AppInput placeholder="请输入仪表盘名称" />
           </Form.Item>
 
           <Form.Item
@@ -147,7 +146,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
             name="description"
             rules={[{ max: 500, message: "描述不能超过 500 个字符" }]}
           >
-            <TextArea rows={3} placeholder="请输入仪表盘描述（可选）" />
+            <AppTextArea rows={3} placeholder="请输入仪表盘描述（可选）" />
           </Form.Item>
 
           {/* 权限设置 */}
@@ -178,7 +177,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
             仪表盘信息
           </Divider>
 
-          <div style={{ color: "var(--theme-text-tertiary, #666)", fontSize: 12 }}>
+          <div style={{ color: "var(--theme-text-tertiary)", fontSize: 12 }}>
             <p>
               <strong>ID:</strong> {currentDashboard.id}
             </p>
@@ -193,12 +192,12 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
               <strong>更新时间:</strong> {currentDashboard.updatedAt}
             </p>
             {currentDashboard.isDefault && (
-              <p style={{ color: "var(--theme-info, #337ab0)" }}>
+              <p style={{ color: "var(--theme-info)" }}>
                 <strong>★ 这是默认仪表盘</strong>
               </p>
             )}
             {currentDashboard.isTemplate && (
-              <p style={{ color: "var(--theme-success, #2d8949)" }}>
+              <p style={{ color: "var(--theme-success)" }}>
                 <strong>📋 这是一个模板</strong>
               </p>
             )}

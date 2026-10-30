@@ -87,7 +87,8 @@ func (f *AuthStrategyFactory) GetAuthenticator(mode string) (Authenticator, erro
 		if f.accountPool != nil {
 			ad.SetAccountPool(f.accountPool)
 		}
-		return NewHybridAuthenticator(local, ad), nil
+		// 注入数据库：hybrid 需按 sys_user.auth_source 分流（AD 账号只走 AD，本地账号只走本地）
+		return NewHybridAuthenticator(local, ad, f.db), nil
 
 	default:
 		return nil, errors.New("不支持的认证模式: " + mode)

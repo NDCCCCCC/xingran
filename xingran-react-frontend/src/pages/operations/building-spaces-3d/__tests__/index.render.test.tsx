@@ -39,7 +39,7 @@ function renderBS3D() {
   );
 }
 
-let BuildingSpaces3D: any;
+let BuildingSpaces3D: unknown;
 beforeAll(async () => {
   BuildingSpaces3D = (await import("../index")).default;
 });
@@ -67,7 +67,7 @@ describe("BuildingSpaces3D 渲染", () => {
         ],
         total: 1,
       },
-    } as any);
+    } as unknown);
     const { baseElement } = renderBS3D();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();

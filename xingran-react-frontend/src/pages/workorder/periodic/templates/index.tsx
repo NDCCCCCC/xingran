@@ -7,8 +7,6 @@ import { useState, useEffect, type FC } from "react";
 import {
   Button,
   Form,
-  Input,
-  Select,
   Table,
   Modal,
   Space,
@@ -22,6 +20,7 @@ import {
   Switch,
   TreeSelect,
 } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   EditOutlined,
@@ -37,6 +36,7 @@ import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
 import type { PeriodicWorkOrderTemplate } from "@/lib/workorderApi";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import CronSelector from "@/components/CronSelector";
 import { PeriodicAssignType } from "@/lib/workorderApi";
 
@@ -46,9 +46,6 @@ import { formatDateTime, buildCategoryTree } from "@/lib/workorderApi";
 import { useTemplateData, useTemplateActions } from "./hooks";
 import { VARIABLE_HELP_CONTENT } from "./utils";
 import { usePagination } from "@/hooks/usePagination";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 // ==================== 表格列定义 ====================
 
@@ -186,12 +183,11 @@ function getTemplateTableColumns(
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `周期工单模板 ${record.templateName}`,
+                onDelete: async () => {
+                  await handleDelete(record.id);
+                },
               });
             },
           },
@@ -230,6 +226,7 @@ const PeriodicTemplatePage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [logsDrawerVisible, setLogsDrawerVisible] = useState(false);
 
   // 使用全局分页 hook
@@ -337,14 +334,14 @@ const PeriodicTemplatePage: FC = () => {
               <Statistic
                 title="已启用"
                 value={statistics.enabled}
-                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Col>
             <Col span={6}>
               <Statistic
                 title="已禁用"
                 value={statistics.disabled}
-                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+                styles={{ content: { color: "var(--theme-error)" } }}
               />
             </Col>
             <Col span={6}>
@@ -367,24 +364,23 @@ const PeriodicTemplatePage: FC = () => {
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="模板名称">
-              <Input
+              <AppInput
                 placeholder="请输入模板名称"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="isEnabled" label="状态">
-              <Select
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
+                showSearch={false}
                 className="user-form-input"
                 style={{ width: 100 }}
-                onSearch={() => {}}
-              >
-                <Option value={true}>已启用</Option>
-                <Option value={false}>已禁用</Option>
-              </Select>
+                options={[
+                  { value: true, label: "已启用" },
+                  { value: false, label: "已禁用" },
+                ]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -422,7 +418,15 @@ const PeriodicTemplatePage: FC = () => {
       <Modal
         title={editingRecord ? "编辑模板" : "新增模板"}
         open={modalVisible}
-        onOk={handleModalOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleModalOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           setModalVisible(false);
           setEditingRecord(null);
@@ -437,7 +441,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="模板名称"
                 rules={[{ required: true, message: "请输入模板名称" }]}
               >
-                <Input placeholder="请输入模板名称" className="user-form-input" />
+                <AppInput placeholder="请输入模板名称" className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -464,7 +468,7 @@ const PeriodicTemplatePage: FC = () => {
             rules={[{ required: true, message: "请输入工单标题" }]}
             extra={<VariableHelp content={VARIABLE_HELP_CONTENT} />}
           >
-            <Input placeholder="例如：{date} 日例行检" className="user-form-input" />
+            <AppInput placeholder="例如：{date} 日例行检" className="user-form-input" />
           </Form.Item>
 
           <Row gutter={16}>
@@ -474,17 +478,15 @@ const PeriodicTemplatePage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: "请选择工单类型" }]}
               >
-                <Select
+                <AppSelect
                   placeholder="请选择工单类型"
+                  showSearch={false}
                   className="user-form-input"
-                  onSearch={() => {}}
-                >
-                  {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
-                    <Option key={key} value={key}>
-                      {text}
-                    </Option>
-                  ))}
-                </Select>
+                  options={Object.entries(TYPE_CONFIG).map(([key, { text }]) => ({
+                    value: key,
+                    label: text,
+                  }))}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -493,13 +495,15 @@ const PeriodicTemplatePage: FC = () => {
                 label="优先级"
                 rules={[{ required: true, message: "请选择优先级" }]}
               >
-                <Select placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
-                  {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
-                    <Option key={key} value={Number(key)}>
-                      {text}
-                    </Option>
-                  ))}
-                </Select>
+                <AppSelect
+                  placeholder="请选择优先级"
+                  showSearch={false}
+                  className="user-form-input"
+                  options={Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => ({
+                    value: Number(key),
+                    label: text,
+                  }))}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -519,17 +523,15 @@ const PeriodicTemplatePage: FC = () => {
                 label="分配类型"
                 rules={[{ required: true, message: "请选择分配类型" }]}
               >
-                <Select
+                <AppSelect
                   placeholder="请选择分配类型"
+                  showSearch={false}
                   className="user-form-input"
-                  onSearch={() => {}}
-                >
-                  {Object.entries(ASSIGN_TYPE_CONFIG).map(([key, { text }]) => (
-                    <Option key={key} value={key}>
-                      {text}
-                    </Option>
-                  ))}
-                </Select>
+                  options={Object.entries(ASSIGN_TYPE_CONFIG).map(([key, { text }]) => ({
+                    value: key,
+                    label: text,
+                  }))}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -544,20 +546,17 @@ const PeriodicTemplatePage: FC = () => {
                   if (assignType === PeriodicAssignType.Manual) {
                     return (
                       <Form.Item name="assignTargetId" label="指定处理人">
-                        <Select
+                        <AppSelect
                           placeholder="请选择处理人"
-                          allowClear
                           showSearch
-                          optionFilterProp="children"
+                          optionFilterProp="label"
                           className="user-form-input"
                           onSearch={() => {}}
-                        >
-                          {(users || []).map((user) => (
-                            <Option key={user.id} value={user.id}>
-                              {user.nickName || user.username}
-                            </Option>
-                          ))}
-                        </Select>
+                          options={(users || []).map((user) => ({
+                            value: user.id,
+                            label: user.nickName || user.username,
+                          }))}
+                        />
                       </Form.Item>
                     );
                   } else if (assignType === PeriodicAssignType.DutyPool) {
@@ -567,22 +566,19 @@ const PeriodicTemplatePage: FC = () => {
                         label="选择值班池"
                         rules={[{ required: true, message: "请选择值班池" }]}
                       >
-                        <Select
+                        <AppSelect
                           placeholder="请选择值班池"
-                          allowClear
                           showSearch
-                          optionFilterProp="children"
+                          optionFilterProp="label"
                           className="user-form-input"
                           onSearch={() => {}}
-                        >
-                          {dutyPools
+                          options={dutyPools
                             .filter((p) => p.status === 0)
-                            .map((pool) => (
-                              <Option key={pool.id} value={pool.id}>
-                                {pool.poolName} ({pool.members?.length || 0}人)
-                              </Option>
-                            ))}
-                        </Select>
+                            .map((pool) => ({
+                              value: pool.id,
+                              label: `${pool.poolName} (${pool.members?.length || 0}人)`,
+                            }))}
+                        />
                       </Form.Item>
                     );
                   }
@@ -597,7 +593,7 @@ const PeriodicTemplatePage: FC = () => {
           </Form.Item>
 
           <Form.Item name="description" label="描述">
-            <TextArea rows={3} placeholder="请输入描述" />
+            <AppTextArea rows={3} placeholder="请输入描述" />
           </Form.Item>
         </Form>
       </Modal>
@@ -606,7 +602,7 @@ const PeriodicTemplatePage: FC = () => {
       <Drawer
         title="执行记录"
         placement="right"
-        width={500}
+        size={500}
         open={logsDrawerVisible}
         onClose={() => setLogsDrawerVisible(false)}
       >
@@ -624,19 +620,23 @@ const PeriodicTemplatePage: FC = () => {
             {logs.length === 0 ? (
               <p className="text-gray-400 mt-4">暂无执行记录</p>
             ) : (
-              <Timeline className="mt-4">
-                {logs.map((log) => (
-                  <Timeline.Item key={log.id} color={log.status === "success" ? "green" : "red"}>
-                    <div>
-                      <strong>{formatDateTime(log.executedAt)}</strong>
-                      <Tag color={log.status === "success" ? "green" : "red"} className="ml-2">
-                        {log.status === "success" ? "成功" : "失败"}
-                      </Tag>
-                    </div>
-                    <p className="mt-1">{log.result || log.errorMsg}</p>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
+              <Timeline
+                className="mt-4"
+                items={logs.map((log) => ({
+                  color: log.status === "success" ? "green" : "red",
+                  content: (
+                    <>
+                      <div>
+                        <strong>{formatDateTime(log.executedAt)}</strong>
+                        <Tag color={log.status === "success" ? "green" : "red"} className="ml-2">
+                          {log.status === "success" ? "成功" : "失败"}
+                        </Tag>
+                      </div>
+                      <p className="mt-1">{log.result || log.errorMsg}</p>
+                    </>
+                  ),
+                }))}
+              />
             )}
           </div>
         )}

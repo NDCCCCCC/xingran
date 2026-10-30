@@ -1,7 +1,7 @@
 /**
  * Phase 88 Batch98 — BaiduMapScript 测试(36 stmts, 0% → 高)
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   loadBaiduMapGLScript,
   loadBaiduMapScript,
@@ -12,22 +12,22 @@ import {
 describe("BaiduMapScript", () => {
   beforeEach(() => {
     // 重置 globalThis.BMap / BMapGL
-    delete (window as any).BMapGL;
-    delete (window as any).BMap;
+    delete (window as unknown).BMapGL;
+    delete (window as unknown).BMap;
   });
 
   it("loadBaiduMapGLScript: 已加载 BMapGL → 立即 resolve", async () => {
-    (window as any).BMapGL = {};
+    (window as unknown).BMapGL = {};
     await expect(loadBaiduMapGLScript("test-ak")).resolves.toBeUndefined();
   });
 
   it("loadBaiduMapScript: 已加载 BMap → 立即 resolve", async () => {
-    (window as any).BMap = {};
+    (window as unknown).BMap = {};
     await expect(loadBaiduMapScript("test-ak")).resolves.toBeUndefined();
   });
 
   it("isBaiduMapLoaded: BMap 存在 → true", () => {
-    (window as any).BMap = {};
+    (window as unknown).BMap = {};
     expect(isBaiduMapLoaded()).toBe(true);
   });
 
@@ -36,7 +36,7 @@ describe("BaiduMapScript", () => {
   });
 
   it("isBaiduMapGLLoaded: BMapGL 存在 → true", () => {
-    (window as any).BMapGL = {};
+    (window as unknown).BMapGL = {};
     expect(isBaiduMapGLLoaded()).toBe(true);
   });
 

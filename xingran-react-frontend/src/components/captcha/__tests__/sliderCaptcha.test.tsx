@@ -21,7 +21,7 @@ import { getCaptcha } from "@/services/captcha";
 
 describe("SliderCaptcha", () => {
   it("active=true 挂载即拉取验证码", async () => {
-    (getCaptcha as any).mockResolvedValue({
+    (getCaptcha as unknown).mockResolvedValue({
       captchaId: "c1",
       captchaType: "slider",
       backgroundImage: "data:image/png;base64,x",
@@ -38,7 +38,7 @@ describe("SliderCaptcha", () => {
   }, 15000);
 
   it("captchaType 非 slider 触发 onError", async () => {
-    (getCaptcha as any).mockResolvedValue({ captchaId: "c2", captchaType: "text" });
+    (getCaptcha as unknown).mockResolvedValue({ captchaId: "c2", captchaType: "text" });
     const onError = vi.fn();
     renderWithProviders(<SliderCaptcha onVerified={vi.fn()} onError={onError} active />);
 
@@ -48,7 +48,7 @@ describe("SliderCaptcha", () => {
   }, 15000);
 
   it("空 captchaType 静默(未启用验证码)", async () => {
-    (getCaptcha as any).mockResolvedValue({});
+    (getCaptcha as unknown).mockResolvedValue({});
     const onError = vi.fn();
     const { container } = renderWithProviders(
       <SliderCaptcha onVerified={vi.fn()} onError={onError} active />
@@ -61,7 +61,7 @@ describe("SliderCaptcha", () => {
   }, 15000);
 
   it("getCaptcha throw 静默", async () => {
-    (getCaptcha as any).mockRejectedValue(new Error("boom"));
+    (getCaptcha as unknown).mockRejectedValue(new Error("boom"));
     const { container } = renderWithProviders(<SliderCaptcha onVerified={vi.fn()} active />);
     await vi.waitFor(() => {
       expect(getCaptcha).toHaveBeenCalled();
@@ -70,9 +70,9 @@ describe("SliderCaptcha", () => {
   }, 15000);
 
   it("active=false 不拉取", () => {
-    (getCaptcha as any).mockClear();
-    (getCaptcha as any).mockResolvedValue({});
+    (getCaptcha as unknown).mockClear();
+    (getCaptcha as unknown).mockResolvedValue({});
     renderWithProviders(<SliderCaptcha onVerified={vi.fn()} active={false} />);
-    expect((getCaptcha as any).mock.calls.length).toBe(0);
+    expect((getCaptcha as unknown).mock.calls.length).toBe(0);
   });
 });

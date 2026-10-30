@@ -174,6 +174,11 @@ func (s *userCacheService) buildListCacheKey(params requests.UserListParams) str
 	baseKey := CacheKeyUserList
 	var keyPart string
 
+	// PMODEL-01：data_scope 维度段必须紧跟前缀（段插在 CacheKeyUserList 之后，
+	// InvalidatePattern(CacheKeyUserList+"*") 失效覆盖不变）。缺此段 = 不同
+	// data_scope 用户互相同命中缓存 → 跨用户数据泄漏。
+	keyPart += UserListScopeKeySection(params.DataScope, params.DataScopeUserID)
+
 	if params.Username != nil && *params.Username != "" {
 		keyPart += ":username:" + EscapeCacheKeyValue(*params.Username)
 	}

@@ -1,5 +1,7 @@
 import React from "react";
-import { Modal, Form, Select, DatePicker, Switch, Alert } from "antd";
+import { Modal, Form, DatePicker, Switch, Alert } from "antd";
+// Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
 import type { DutyPool } from "@/lib/dutyApi";
 
 const { RangePicker } = DatePicker;
@@ -61,13 +63,15 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
           label="值班池"
           rules={[{ required: true, message: "请选择值班池" }]}
         >
-          <Select placeholder="请选择值班池" onSearch={() => {}}>
-            {pools.map((pool) => (
-              <Select.Option key={pool.id} value={pool.id}>
-                {pool.poolName}
-              </Select.Option>
-            ))}
-          </Select>
+          {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，显式
+              showSearch={false} 保持不变。poolId 为 UUID 外键，原 allowClear=true 行为不变 */}
+          <AppSelect
+            allowClear
+            placeholder="请选择值班池"
+            showSearch={false}
+            onSearch={() => {}}
+            options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
+          />
         </Form.Item>
         <Form.Item
           name="dateRange"
@@ -82,11 +86,17 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
           rules={[{ required: true, message: "请选择值班类型" }]}
           initialValue="weekday"
         >
-          <Select placeholder="请选择值班类型" onSearch={() => {}}>
-            <Select.Option value="weekday">工作日值班</Select.Option>
-            <Select.Option value="weekend">周末值班</Select.Option>
-            <Select.Option value="holiday">节假日值班</Select.Option>
-          </Select>
+          <AppSelect
+            allowClear
+            placeholder="请选择值班类型"
+            showSearch={false}
+            onSearch={() => {}}
+            options={[
+              { value: "weekday", label: "工作日值班" },
+              { value: "weekend", label: "周末值班" },
+              { value: "holiday", label: "节假日值班" },
+            ]}
+          />
         </Form.Item>
         <Form.Item
           name="clearExists"

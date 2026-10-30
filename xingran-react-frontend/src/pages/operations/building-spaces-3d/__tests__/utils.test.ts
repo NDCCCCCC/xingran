@@ -133,7 +133,7 @@ describe("building-spaces-3d utils", () => {
         type: 0,
         positionX: 100,
         positionY: 200,
-      } as any;
+      } as unknown;
       const r = convertApiWorkstation(api);
       expect(r.id).toBe("w1");
       expect(r.positionX).toBe(100);
@@ -143,13 +143,13 @@ describe("building-spaces-3d utils", () => {
       const apis = [
         { id: "w1", name: "WS001" },
         { id: "w2", name: "WS002" },
-      ] as any[];
+      ] as unknown[];
       const r = convertApiWorkstations(apis);
       expect(r).toHaveLength(2);
     });
 
     it("calculateWorkstationStats", () => {
-      const workstations = [{ status: 0 }, { status: 1 }, { status: 2 }] as any[];
+      const workstations = [{ status: 0 }, { status: 1 }, { status: 2 }] as unknown[];
       const stats = calculateWorkstationStats(workstations);
       expect(stats.total).toBe(3);
     });
@@ -157,14 +157,14 @@ describe("building-spaces-3d utils", () => {
 
   describe("calculateWorkstationPositions", () => {
     it("空数组 → 空 Map", () => {
-      expect(calculateWorkstationPositions([], { width: 200, height: 100 } as any)).toEqual(
+      expect(calculateWorkstationPositions([], { width: 200, height: 100 } as unknown)).toEqual(
         new Map()
       );
     });
 
     it("1 个工位 → 1 个位置", () => {
-      const workstations = [{ id: "w1" }] as any;
-      const r = calculateWorkstationPositions(workstations, { width: 200, height: 100 } as any);
+      const workstations = [{ id: "w1" }] as unknown;
+      const r = calculateWorkstationPositions(workstations, { width: 200, height: 100 } as unknown);
       expect(r).toHaveLength(1);
     });
   });

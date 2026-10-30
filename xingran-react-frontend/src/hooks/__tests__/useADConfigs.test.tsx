@@ -31,7 +31,7 @@ describe("hooks/useADConfigs", () => {
     vi.mocked(getADConfigList).mockResolvedValue({
       code: 0,
       data: { list: [{ id: "c1", name: "AD-1" }], total: 1 },
-    } as any);
+    } as unknown);
   });
 
   it("初始返回 configs=[] + selectedConfig=''", () => {
@@ -52,7 +52,7 @@ describe("hooks/useADConfigs", () => {
     vi.mocked(getADConfigList).mockResolvedValue({
       code: 0,
       data: { list: [{ id: "c2", name: "AD-2" }], total: 1 },
-    } as any);
+    } as unknown);
     const { result } = renderHook(() => useADConfigs({ autoSelectFirst: false }), { wrapper });
     await waitFor(() => {
       expect(result.current.configs.length).toBe(1);

@@ -227,12 +227,12 @@ describe("secureLog", () => {
     vi.restoreAllMocks();
   });
 
-  it("非生产环境完整输出(带/不带 data)", () => {
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+  it("非生产环境完整输出(带/不带 data)——info 走 warn 通道（no-console 白名单仅 warn/error）", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     secureLog("info", "with-data", { k: 1 });
-    expect(infoSpy).toHaveBeenCalledWith("[info] with-data", { k: 1 });
+    expect(warnSpy).toHaveBeenCalledWith("[info] with-data", { k: 1 });
 
     secureLog("error", "no-data");
     expect(errorSpy).toHaveBeenCalledWith("[error] no-data");

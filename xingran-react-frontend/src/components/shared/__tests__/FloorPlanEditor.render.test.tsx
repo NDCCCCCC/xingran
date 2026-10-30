@@ -2,7 +2,7 @@
  * Phase 88 Batch426 — FloorPlanEditor render 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import {} from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import type { ReactElement, ReactNode } from "react";
 
@@ -14,7 +14,7 @@ vi.mock("@/lib/api", async () => {
 
 import FloorPlanEditor from "../FloorPlanEditor";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
+function _wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 

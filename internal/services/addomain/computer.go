@@ -410,6 +410,12 @@ func (s *ComputerService) syncComputers(ctx context.Context, config *models.ADCo
 	computersToUpdate := make(map[string]*models.ADComputer)
 	now := time.Now()
 
+	// 登录历史事件收集(quick 261016-ad-login-history):同步全程内存收集,
+	// batchCreate/batchUpdate 成功后一次性批量 flush(避免同步失败后下次重复记录);
+	// initial 事件按 computerKey 去重(配合 toCreate 同名保留第一条)。
+	var pending []pendingLoginEvent
+	initialSeen := make(map[string]bool)
+
 	for _, entry := range entries {
 		computerName := entry.GetAttributeValue("cn")
 		if computerName == "" {
@@ -426,7 +432,7 @@ func (s *ComputerService) syncComputers(ctx context.Context, config *models.ADCo
 
 		status := determineComputerStatus(lastOnlineTime)
 
-		s.processComputerEntry(entry, config.ID, parsedDesc, status, now, existingComputerMap, existingComputerNameMap, &computersToCreate, computersToUpdate)
+		s.processComputerEntry(entry, config.ID, parsedDesc, status, now, existingComputerMap, existingComputerNameMap, &computersToCreate, computersToUpdate, &pending, initialSeen)
 	}
 
 	// 关键修复:F-02 — computersToCreate 也必须按 (config_id, computer_name) 去重。
@@ -469,6 +475,19 @@ func (s *ComputerService) syncComputers(ctx context.Context, config *models.ADCo
 	}
 	applogger.Infof("[电脑同步] 步骤7-批量更新: 耗时 %.2fs", time.Since(step7Start).Seconds())
 
+	// 8. 刷新登录历史(quick 261016-ad-login-history)
+	// 必须在 batchCreate/batchUpdate 都成功之后:同步失败则不记录,下次同步重新检测;
+	// toCreate 记录的 ID 由 BeforeCreate hook 在 batchCreate 时回填,此处从最终切片
+	// (dedup 后)建 computerKey→ID 映射;flush 失败仅 Errorf,不阻断主同步。
+	if len(pending) > 0 {
+		computerIDByKey := make(map[string]string, len(computersToCreate))
+		for i := range computersToCreate {
+			c := &computersToCreate[i]
+			computerIDByKey[c.ADConfigID+"/"+c.ComputerName] = c.ID
+		}
+		NewADLoginHistoryWriter(s.db).Flush(ctx, pending, computerIDByKey)
+	}
+
 	applogger.Infof("[电脑同步] 完成同步，总耗时: %.2fs", time.Since(totalStart).Seconds())
 	return nil
 }
@@ -503,9 +522,15 @@ func (s *ComputerService) queryExistingComputers(ctx context.Context, configID s
 		batch := uniqueDNs[i:end]
 
 		var computers []models.ADComputer
-		s.db.WithContext(ctx).
+		// SHADOW-01 复活配套:Unscoped 纳入软删行(同 DN 复现走 update 分支复活,而非
+		// batchCreate 撞 UNIQUE(ad_config_id, computer_name));命中行 DeletedAt 清零 →
+		// INSERT 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
+		s.db.WithContext(ctx).Unscoped().
 			Where("ad_config_id = ? AND distinguished_name IN ?", configID, batch).
 			Find(&computers)
+		for j := range computers {
+			computers[j].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+		}
 		allComputers = append(allComputers, computers...)
 	}
 
@@ -513,12 +538,20 @@ func (s *ComputerService) queryExistingComputers(ctx context.Context, configID s
 }
 
 // queryAllComputerNames 查询所有计算机名称
+//
+// SHADOW-01 复活配套:Unscoped 化并移除显式 deleted_at IS NULL 谓词 —— Unscoped 已解除
+// GORM 默认过滤,保留谓词会继续过滤软删行使复活失效;同名行至多一条
+// (UNIQUE(ad_config_id, computer_name)),name-map 纳入软删行无遮蔽风险。命中行
+// DeletedAt 清零 → INSERT 值 deleted_at=NULL → ON CONFLICT SET 后行复活。
 func (s *ComputerService) queryAllComputerNames(ctx context.Context, configID string) []models.ADComputer {
 	start := time.Now()
 	var computers []models.ADComputer
-	s.db.WithContext(ctx).
-		Where("ad_config_id = ? AND deleted_at IS NULL", configID).
+	s.db.WithContext(ctx).Unscoped().
+		Where("ad_config_id = ?", configID).
 		Find(&computers)
+	for i := range computers {
+		computers[i].DeletedAt = gorm.DeletedAt{} // struct 零值 → INSERT deleted_at=NULL → 冲突更新时行复活
+	}
 	applogger.Infof("[电脑同步-queryAllComputerNames] 查询耗时 %.2fs，返回 %d 条记录", time.Since(start).Seconds(), len(computers))
 	return computers
 }
@@ -545,6 +578,11 @@ func (s *ComputerService) buildComputerMaps(existingByDN []models.ADComputer, al
 // 与 batchUpdate 的 ON CONFLICT (ad_config_id, computer_name) 对齐。
 // 这样可以避免 LDAP 返回多个同名 cn 但不同 DN 的 entry 时,batch upsert
 // 在同一 batch 内多次冲突同一行导致 SQLSTATE 21000。
+//
+// quick 261016-ad-login-history:两个 existing 分支在 updateComputerFields
+// 覆盖指针前快照旧 lastLogon,调用后跑 detectLoginEvent 命中则收集事件;
+// toCreate 分支对 lastLogon 非空的新设备收集 initial 事件(按 computerKey 去重)。
+// loginUser/ipAddress 复用 parseComputerDescription 已解析字段,不重复切 description。
 func (s *ComputerService) processComputerEntry(
 	entry *ldap.Entry,
 	configID string,
@@ -555,6 +593,8 @@ func (s *ComputerService) processComputerEntry(
 	existingNameMap map[string]*models.ADComputer,
 	toCreate *[]models.ADComputer,
 	toUpdate map[string]*models.ADComputer,
+	pending *[]pendingLoginEvent,
+	initialSeen map[string]bool,
 ) {
 	computerDN := entry.DN
 	computerName := entry.GetAttributeValue("cn")
@@ -562,17 +602,48 @@ func (s *ComputerService) processComputerEntry(
 	// 复合 key:configID + "/" + computerName
 	conflictKey := configID + "/" + computerName
 
+	// 登录事件收集 helper(仅内存 append,批量 flush 在 syncComputers 步骤 8)
+	collectEvent := func(eventType models.ADLoginEventType, computerID string, loginTime time.Time) {
+		*pending = append(*pending, pendingLoginEvent{
+			computerKey:  conflictKey,
+			computerID:   computerID,
+			configID:     configID,
+			computerName: safeAttr(computerName, 255),
+			eventType:    eventType,
+			loginTime:    loginTime,
+			loginUser:    safeAttr(parsedDesc["lastLogonUser"], 255),
+			ipAddress:    safeAttr(parsedDesc["ipAddress"], 50),
+			detectedAt:   now,
+		})
+	}
+
 	if existingComputer, exists := existingDNMap[computerDN]; exists {
+		// 旧值快照必须在 updateComputerFields 覆盖指针之前
+		oldLL := existingComputer.LastLogon
 		updateComputerFields(existingComputer, entry, parsedDesc, status, now)
+		if eventType, hit := detectLoginEvent(oldLL, existingComputer.LastLogon); hit {
+			collectEvent(eventType, existingComputer.ID, *existingComputer.LastLogon)
+		}
 		toUpdate[conflictKey] = existingComputer
 	} else if existingByName, nameExists := existingNameMap[computerName]; nameExists {
+		// 旧值快照必须在 updateComputerFields 覆盖指针之前
+		oldLL := existingByName.LastLogon
 		updateComputerFields(existingByName, entry, parsedDesc, status, now)
+		if eventType, hit := detectLoginEvent(oldLL, existingByName.LastLogon); hit {
+			collectEvent(eventType, existingByName.ID, *existingByName.LastLogon)
+		}
 		// 用现有记录的 DN 更新其内部字段,但 map key 改为复合键。
 		// 这样如果另一个 LDAP entry 也命中这个现有记录,后写覆盖前者
 		// (同一指针),最终 toUpdate 中只占一个 slot,避免 ON CONFLICT 重复。
 		toUpdate[conflictKey] = existingByName
 	} else {
 		newComputer := buildComputerFromEntry(configID, entry, parsedDesc, status)
+		// 首次发现且 lastLogon 非空 → initial 基线事件;
+		// 按 computerKey 去重(同名冲突保留第一条,与 toCreate dedup 一致)。
+		if newComputer.LastLogon != nil && !initialSeen[conflictKey] {
+			initialSeen[conflictKey] = true
+			collectEvent(models.ADLoginEventInitial, "", *newComputer.LastLogon)
+		}
 		*toCreate = append(*toCreate, newComputer)
 	}
 }
@@ -610,6 +681,9 @@ func (s *ComputerService) batchUpdate(ctx context.Context, computers map[string]
 					"cpu_model", "architecture", "memory_capacity", "hard_disk_capacity",
 					"serial_number", "system_info", "last_logon", "password_last_set",
 					"logon_count", "last_online_time", "status", "updated_at",
+					// deleted_at 入列 = 复活机制本体:复活行 struct DeletedAt 为零值 →
+					// INSERT 值 deleted_at=NULL → 冲突更新 SET deleted_at=NULL → 行复活。
+					"deleted_at",
 				}),
 			}).Create(batch).Error; err != nil {
 				return fmt.Errorf("批量更新电脑设备失败: %w", err)

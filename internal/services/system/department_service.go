@@ -7,6 +7,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -32,10 +33,20 @@ type DepartmentService interface {
 
 type departmentService struct {
 	db *gorm.DB
+	// adCascade 部门删除/改名 → AD OU 级联（域控审查 P0-2）。nil 时跳过级联
+	// （单测/未启用 AD 场景），生产由 router 装配处 WithADCascade 注入。
+	adCascade *addomain.DeptADCascadeService
 }
 
 func NewDepartmentService(db *gorm.DB) DepartmentService {
 	return &departmentService{db: db}
+}
+
+// SetADCascade 注入 AD OU 级联服务。
+// 生产由 router 装配处通过匿名接口断言注入（缓存包装 departmentCacheService 内嵌
+// *departmentService，方法集透传）；单测不注入则跳过级联。
+func (s *departmentService) SetADCascade(cascade *addomain.DeptADCascadeService) {
+	s.adCascade = cascade
 }
 
 func (s *departmentService) Create(ctx context.Context, req *requests.DepartmentCreateRequest) error {
@@ -113,11 +124,72 @@ func (s *departmentService) Update(ctx context.Context, req *requests.Department
 	dept.Status = req.Status
 	dept.Remark = toStringPtr(req.Remark)
 
-	if err := s.db.WithContext(ctx).Save(&dept).Error; err != nil {
-		return fmt.Errorf("更新部门失败: %w", err)
+	// 域控审查 P0-2：改名前记录旧名，用于判断是否触发 AD OU 重命名
+	oldDeptName := ""
+	nameChanged := false
+	{
+		var before models.Department
+		if err := s.db.WithContext(ctx).First(&before, "id = ?", req.ID).Error; err == nil {
+			oldDeptName = before.DeptName
+			nameChanged = oldDeptName != req.DeptName
+		}
+	}
+
+	// 同事务落库 + 经理重算入队（QUEUE-01 同生共死）。
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&dept).Error; err != nil {
+			return fmt.Errorf("更新部门失败: %w", err)
+		}
+
+		// 经理重算（经理同步规则引擎）：部门 leader 是 dept_leader 来源经理的解析输入，
+		// leader 变更 → 本部门及其子树全部活跃用户重算 AD manager。
+		// 子树匹配沿用 operations/dept_filter.go 的 ancestors 三段 LIKE 模式。
+		if leaderChanged := deptLeaderChanged(dept.Leader, req.Leader); leaderChanged {
+			likeMid := "%," + dept.ID + ",%"
+			likeEnd := "%," + dept.ID
+			likeStart := dept.ID + ",%"
+			var userIDIDs []string
+			if err := tx.Model(&models.User{}).
+				Where("dept_id IN (?)", tx.Model(&models.Department{}).
+					Select("id").
+					Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors LIKE ?",
+						dept.ID, likeMid, likeEnd, likeStart)).
+				Pluck("id", &userIDIDs).Error; err != nil {
+				return fmt.Errorf("查询部门子树用户失败: %w", err)
+			}
+			if len(userIDIDs) > 0 {
+				if err := addomain.NewADPushEnqueuer().EnqueueUpdateManager(tx, userIDIDs); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// 域控审查 P0-2：部门改名 → AD OU 重命名（ModifyDN 子树随动 + DB DN 字符串替换）。
+	// 级联失败只 WARN 不回滚本地改名（本地已生效，可手动执行部门同步纠正）。
+	if nameChanged && s.adCascade != nil {
+		if err := s.adCascade.RenameDeptOU(ctx, dept.ID, req.DeptName); err != nil {
+			applogger.Warnf("部门 %s 改名后的 AD OU 重命名失败（不影响本地保存）: %v", dept.ID, err)
+		}
 	}
 
 	return nil
+}
+
+// deptLeaderChanged 判断部门负责人是否发生变更（nil 与空串视为等价）。
+func deptLeaderChanged(old, new *string) bool {
+	oldV, newV := "", ""
+	if old != nil {
+		oldV = *old
+	}
+	if new != nil {
+		newV = *new
+	}
+	return oldV != newV
 }
 
 // Delete 删除部门
@@ -147,6 +219,15 @@ func (s *departmentService) Delete(ctx context.Context, id string) error {
 
 	if err := s.db.WithContext(ctx).Delete(&dept).Error; err != nil {
 		return fmt.Errorf("删除部门失败: %w", err)
+	}
+
+	// 域控审查 P0-2：本地删除成功后级联删除 AD OU（前提：OU 下无用户，双空检在
+	// DeleteDeptOU 内）。级联失败只 WARN —— 本地删除已生效，AD 侧残留可由管理员
+	// 手动清理或下轮部门同步纠正。
+	if s.adCascade != nil {
+		if err := s.adCascade.DeleteDeptOU(ctx, id); err != nil {
+			applogger.Warnf("部门 %s 删除后的 AD OU 级联删除失败（不影响本地删除）: %v", id, err)
+		}
 	}
 
 	return nil
@@ -295,6 +376,16 @@ func (s *departmentService) BatchDelete(ctx context.Context, ids []string) error
 
 	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Delete(&models.Department{}).Error; err != nil {
 		return fmt.Errorf("批量删除部门失败: %w", err)
+	}
+
+	// 域控审查 P0-2：批量删除同样级联删 AD OU（逐个走 DeleteDeptOU 的双空检；
+	// 级联失败只 WARN，与单个删除一致）。
+	if s.adCascade != nil {
+		for _, id := range ids {
+			if err := s.adCascade.DeleteDeptOU(ctx, id); err != nil {
+				applogger.Warnf("部门 %s 批量删除后的 AD OU 级联删除失败（不影响本地删除）: %v", id, err)
+			}
+		}
 	}
 
 	return nil

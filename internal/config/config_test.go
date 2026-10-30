@@ -117,7 +117,7 @@ func TestGetDSN_URLEscape(t *testing.T) {
 				Port:     5432,
 				User:     "postgres",
 				Password: "secret",
-				DBName:   "xingran",
+				DBName: "xingran",
 				SSLMode:  "disable",
 			},
 			wantSubs: []string{

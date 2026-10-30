@@ -31,7 +31,8 @@ type AuthResult struct {
 	ADUserInfo *ADUserInfo // AD用户信息（AD认证时有值，用于自动同步）
 	NeedsSync  bool        // 是否需要同步用户信息到sys_user
 	// SyncErrorReason 当 AD 用户 bind 成功但后续 admin 搜索/sync 失败时,
-	// 记录失败原因短码（admin_dial / admin_bind / user_search / user_sync）,
+	// 记录失败原因短码（admin_dial / admin_bind / user_search / user_sync /
+	// SyncReasonSoftDeleteMismatch）,
 	// 供 login handler 如实反馈给用户,避免误导性"认证成功但用户信息缺失"。
 	SyncErrorReason string
 }
@@ -88,4 +89,13 @@ var (
 	ErrUserDisabled       = errors.New("用户已被禁用")
 	ErrADConfigNotFound   = errors.New("AD配置不存在")
 	ErrADConnectionFailed = errors.New("AD连接失败")
+
+	// 软删用户恢复被安全策略拒绝：AD 当前 DN 与 sys_user.ad_dn
+	// 存量值归一化后不一致（SAFE-01）。上层用 errors.Is 识别。
+	ErrSoftDeleteIdentityMismatch = errors.New("软删用户恢复被拒绝: AD 身份不一致")
 )
+
+// SyncReasonSoftDeleteMismatch 是 AuthResult.SyncErrorReason 的专用原因码，
+// 由 api/v1/auth.go syncErrorReasonMessage 映射为对用户的提示。
+// 用于让运维在登录报错上区分「安全策略拦截」与「AD 基础设施故障」。
+const SyncReasonSoftDeleteMismatch = "soft_delete_mismatch"

@@ -1,19 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
-import {
-  Button,
-  Form,
-  Input,
-  Modal,
-  InputNumber,
-  Select,
-  Space,
-  Tag,
-  App,
-  Card,
-  Tree,
-  Radio,
-} from "antd";
+import { Button, Form, Modal, InputNumber, Space, Tag, App, Card, Tree, Radio } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { DataNode } from "antd/es/tree";
 import {
   PlusOutlined,
@@ -32,8 +20,7 @@ import {
   type WorkOrderCategoryUpdateRequest,
 } from "@/lib/workorderApi";
 import { isFormValidationError } from "@/utils/errorHandler";
-
-const { Option } = Select;
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
 const WorkOrderCategoryPage: FC = () => {
   const { message } = App.useApp();
@@ -43,6 +30,7 @@ const WorkOrderCategoryPage: FC = () => {
   const [treeData, setTreeData] = useState<DataNode[]>([]);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [editingRecord, setEditingRecord] = useState<WorkOrderCategory | null>(null);
 
   // 统一错误处理
@@ -232,15 +220,12 @@ const WorkOrderCategoryPage: FC = () => {
                     type="link"
                     size="small"
                     icon={<DeleteOutlined />}
-                    style={{ color: "var(--theme-error, #ba3630)" }}
+                    style={{ color: "var(--theme-error)" }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      Modal.confirm({
-                        title: "确定要删除吗？",
-                        okText: "确定",
-                        cancelText: "取消",
-                        okButtonProps: { danger: true },
-                        onOk: () => handleDelete(node.data?.id || ""),
+                      confirmDelete({
+                        target: `工单分类 ${node.data?.categoryName ?? ""}`,
+                        onDelete: () => handleDelete(node.data?.id || ""),
                       });
                     }}
                   >
@@ -257,7 +242,15 @@ const WorkOrderCategoryPage: FC = () => {
       <Modal
         title={editingRecord ? "编辑分类" : "新增分类"}
         open={modalVisible}
-        onOk={handleModalOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleModalOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setModalVisible(false)}
         width={600}
         destroyOnHidden
@@ -268,19 +261,18 @@ const WorkOrderCategoryPage: FC = () => {
             label="分类名称"
             rules={[{ required: true, message: "请输入分类名称" }]}
           >
-            <Input placeholder="请输入分类名称" />
+            <AppInput placeholder="请输入分类名称" />
           </Form.Item>
 
           <Form.Item name="parentId" label="父分类">
-            <Select placeholder="请选择父分类" allowClear onSearch={() => {}}>
-              {flatCategories(categories)
+            <AppSelect
+              placeholder="请选择父分类"
+              showSearch
+              onSearch={() => {}}
+              options={flatCategories(categories)
                 .filter((cat) => cat.id !== editingRecord?.id) // 不能选择自己作为父分类
-                .map((cat) => (
-                  <Option key={cat.id} value={cat.id}>
-                    {cat.categoryName}
-                  </Option>
-                ))}
-            </Select>
+                .map((cat) => ({ value: cat.id, label: cat.categoryName }))}
+            />
           </Form.Item>
 
           <Form.Item
@@ -299,7 +291,7 @@ const WorkOrderCategoryPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="请输入描述" />
+            <AppTextArea rows={3} placeholder="请输入描述" />
           </Form.Item>
         </Form>
       </Modal>

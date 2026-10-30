@@ -15,11 +15,11 @@ import {
   Popconfirm,
   Modal,
   Form,
-  Input,
   Alert,
   Collapse,
   Tooltip,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
   EditOutlined,
@@ -29,8 +29,11 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import type { WorkstationDevice, DeviceFormData, Asset } from "@/types";
-import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
+import { workstationDeviceApi, assetApi, type PhysicalDevicesResult } from "@/lib/opsApi";
 import { HealthBadge } from "@/components/reconciliation";
+import { confirmDelete } from "@/components/shared/confirmDelete";
+// Phase 71 (W3)：裸 Input/Input.TextArea → AppInput/AppTextArea（本文件无 Select）。
+import { AppInput, AppTextArea } from "@/components/ui";
 
 export interface WorkstationDeviceTableProps {
   workstationId: string;
@@ -40,6 +43,110 @@ export interface WorkstationDeviceTableProps {
   conflictTypeMap?: Map<string, string>;
   onBadgeClick?: (assetId: string, conflictType: string) => void;
 }
+
+/**
+ * 物理链路设备面板（Phase 80 / DIAG-01）
+ *
+ * 渲染口径（**Table + Alert 双区，不渲染 Empty**）：
+ *   - 有设备 → 渲染 Table；若同时存在 emptyReason（如 no_user_bound），
+ *     在表格上方追加 warning Alert——「有数据但用户维度呈现仍受限」必须可见，
+ *     否则用户看到设备却不知为何与预期不符。
+ *   - 0 台 → 渲染 info Alert，文案取后端 emptyMessage（60-100 字，
+ *     用 <Empty> 排版拥挤；本页已有 Alert 先例）。
+ *   - warnings 任何组合下逐条可见。
+ *   - diagnosis 逐段计数默认不展示，折叠进 Tooltip（排查「有 1 台但少了几台」）。
+ *
+ * 空因分级（生产实测 75.3% 工位属 no_user_bound，属常态而非异常）：
+ *   no_user_bound → info（中性说明，不是错误）
+ *   其余空因      → warning（需人工处理）
+ */
+const PhysicalDevicesPanel: React.FC<{
+  devices: WorkstationDevice[];
+  diagnosis: PhysicalDevicesResult | null;
+  columns: ColumnsType<WorkstationDevice>;
+}> = ({ devices, diagnosis, columns }) => {
+  const emptyReason = diagnosis?.emptyReason ?? "";
+  const emptyMessage = diagnosis?.emptyMessage ?? "";
+  const warnings = diagnosis?.warnings ?? [];
+  const hasDevices = devices.length > 0;
+
+  // 空因分级：no_user_bound 是常态（工位未绑定使用人），用 info；其余用 warning
+  const alertType = emptyReason === "no_user_bound" ? "info" : "warning";
+  const alertTitle =
+    emptyReason === "no_user_bound" ? "该工位未绑定使用人" : emptyReason ? "物理链路信息缺失" : "";
+
+  const diagnosisTip = diagnosis?.diagnosis
+    ? [
+        `工位存在: ${diagnosis.diagnosis.workstationExists ? "是" : "否"}`,
+        `已绑用户: ${diagnosis.diagnosis.userBound ? "是" : "否"}`,
+        `信息点: ${diagnosis.diagnosis.infoPointActive}/${diagnosis.diagnosis.infoPointTotal} 可用`,
+        `已绑端口: ${diagnosis.diagnosis.infoPointWithPort}`,
+        `端口可解析: ${diagnosis.diagnosis.portResolved}`,
+        `设备可解析: ${diagnosis.diagnosis.deviceResolved}`,
+        `MAC 命中: ${diagnosis.diagnosis.macMatched}`,
+        `资产命中: ${diagnosis.diagnosis.assetMatched}`,
+        `域控命中: ${diagnosis.diagnosis.adMatched}`,
+      ].join(" · ")
+    : "";
+
+  return (
+    <div>
+      {/* 空因/告警区：有设备时也要展示（根因可见），0 台时替代空白 */}
+      {(emptyReason || warnings.length > 0) && (
+        <Alert
+          type={alertType}
+          showIcon
+          title={alertTitle}
+          description={
+            <div style={{ fontSize: 11 }}>
+              {emptyMessage && (
+                <div style={{ marginBottom: warnings.length > 0 ? 4 : 0 }}>{emptyMessage}</div>
+              )}
+              {warnings.length > 0 && (
+                <ul style={{ margin: 0, paddingLeft: 16 }}>
+                  {warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          }
+          style={{ marginBottom: 4 }}
+          action={
+            diagnosisTip ? (
+              <Tooltip title={diagnosisTip}>
+                <Button type="link" size="small" style={{ fontSize: 11, height: "auto" }}>
+                  诊断详情
+                </Button>
+              </Tooltip>
+            ) : undefined
+          }
+        />
+      )}
+
+      {hasDevices ? (
+        <Table
+          columns={columns}
+          dataSource={devices}
+          rowKey="id"
+          size="small"
+          pagination={false}
+          showHeader={false}
+          bordered={false}
+          style={{ fontSize: 11 }}
+        />
+      ) : (
+        !emptyReason &&
+        !warnings.length && (
+          <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "4px 0" }}>
+            该工位暂无通过 MAC→port→infoPoint 反推到的设备。请确认工位下是否已配置 ops_info_points
+            关联到网络设备端口。
+          </div>
+        )
+      )}
+    </div>
+  );
+};
 
 export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   workstationId,
@@ -54,6 +161,10 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   const [assetDevices, setAssetDevices] = useState<WorkstationDevice[]>([]);
   // Phase 45 R5: 物理链路设备(MAC→port→infoPoint→workstation 反推,user-anchored)
   const [physicalDevices, setPhysicalDevices] = useState<WorkstationDevice[]>([]);
+  // Phase 80 / DIAG-01: 物理链路空因诊断（emptyReason/emptyMessage/warnings/diagnosis）
+  // 空因口径：「未绑定用户」压过「有数据」——未绑 user_id 时即使链路能召回设备，
+  // 该面板按用户维度呈现仍无从归属，故 emptyReason=no_user_bound 属正常业务态。
+  const [physicalDiagnosis, setPhysicalDiagnosis] = useState<PhysicalDevicesResult | null>(null);
 
   // 折叠面板展开状态
   const [adExpanded, setADExpanded] = useState(false);
@@ -80,7 +191,8 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         workstationDeviceApi.getManual(workstationId),
         workstationDeviceApi.getAD(workstationId).catch(() => ({ data: [] })),
         workstationDeviceApi.getAsset(workstationId).catch(() => ({ data: [] })),
-        workstationDeviceApi.getPhysical(workstationId).catch(() => ({ data: [] })),
+        // Phase 80 / DIAG-01：物理链路改走诊断端点，取回空因诊断信息
+        workstationDeviceApi.getPhysicalWithDiagnosis(workstationId),
       ]);
 
       // 处理手动设备（持久化）
@@ -104,11 +216,13 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         setAssetDevices([]);
       }
 
-      // Phase 45 R5: 处理物理链路设备（实时查询，失败时返回空数组）
+      // Phase 80 / DIAG-01: 处理物理链路设备（诊断端点；失败时清空设备与诊断）
       if (physicalResult.status === "fulfilled" && physicalResult.value.data) {
-        setPhysicalDevices(physicalResult.value.data);
+        setPhysicalDevices(physicalResult.value.data.devices ?? []);
+        setPhysicalDiagnosis(physicalResult.value.data);
       } else {
         setPhysicalDevices([]);
+        setPhysicalDiagnosis(null);
       }
 
       // 任一关键查询失败时给出提示
@@ -123,7 +237,10 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         console.warn("[WorkstationDeviceTable] 加载资产设备失败:", assetResult.reason);
       }
       if (physicalResult.status === "rejected") {
+        // Phase 80 / DIAG-01: 原实现只 console.warn → 用户看到误导性的「0 台」空态，
+        // 改为显式提示（静默失败是排障黑洞）。
         console.warn("[WorkstationDeviceTable] 加载物理链路设备失败:", physicalResult.reason);
+        message.warning("物理链路设备查询失败，请稍后重试");
       }
     } catch (error) {
       // 记录错误便于排查（之前的实现吞掉了真实错误，导致"无声失败"）
@@ -133,6 +250,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       setADDevices([]);
       setAssetDevices([]);
       setPhysicalDevices([]);
+      setPhysicalDiagnosis(null);
     } finally {
       setLoading(false);
     }
@@ -213,15 +331,11 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   };
 
   // 删除设备
+  // 68.1-T3：删除确认改走 confirmDelete（Modal 强确认），失败上抛由 helper 统一反馈
   const handleDelete = async (id: string) => {
-    try {
-      await workstationDeviceApi.delete(id);
-      message.success("删除成功");
-      fetchAllDevices();
-      onDeviceChange?.();
-    } catch (_error) {
-      message.error("删除失败");
-    }
+    await workstationDeviceApi.delete(id);
+    fetchAllDevices();
+    onDeviceChange?.();
   };
 
   // 设置主设备（手动设备直接设置，AD/资产设备弹窗确认）
@@ -233,6 +347,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       setPrimaryDirect(device.id);
     } else {
       // AD/资产设备弹窗确认
+      // eslint-disable-next-line no-restricted-syntax -- 非删除语义：设置主设备是正向指派（可再次更改），UI-SPEC §1.1 判定规则排除
       Modal.confirm({
         title: "设置主设备",
         content: "是否将此设备信息同步到数据库？同步后可手动编辑。",
@@ -436,15 +551,13 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       width: 50,
       align: "center" as const,
       render: (isPrimary: boolean) =>
-        isPrimary ? (
-          <StarOutlined style={{ color: "var(--theme-warning, #b07a20)", fontSize: 11 }} />
-        ) : null,
+        isPrimary ? <StarOutlined style={{ color: "var(--theme-warning)", fontSize: 11 }} /> : null,
     },
     {
       title: "操作",
       key: "action",
       width: canEdit ? 110 : 80,
-      render: (_: any, record: WorkstationDevice) => (
+      render: (_: unknown, record: WorkstationDevice) => (
         <Space size={2}>
           {canEdit && (
             <Button
@@ -458,24 +571,24 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
             </Button>
           )}
           {canEdit && (
-            <Popconfirm
-              title="确定删除？"
-              onConfirm={() => handleDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              style={{ padding: 0, fontSize: 11, height: "auto" }}
+              onClick={() =>
+                confirmDelete({
+                  target: `该设备绑定关系（${record.deviceName || record.id}）`,
+                  onDelete: () => handleDelete(record.id),
+                })
+              }
             >
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                style={{ padding: 0, fontSize: 11, height: "auto" }}
-              >
-                删除
-              </Button>
-            </Popconfirm>
+              删除
+            </Button>
           )}
           {!record.isPrimary && (
+            // eslint-disable-next-line no-restricted-syntax -- 非删除语义：设为主设备为正向指派，非危险删除，保留 Popconfirm 轻确认
             <Popconfirm
               title="设为主设备？"
               onConfirm={() => handleSetPrimary(record)}
@@ -500,7 +613,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   // 注:删除 currentPageData 分页切片,直接渲染 manualDevices(最多 1-2 条无需分页)
 
   return (
-    <div style={{ padding: "4px 8px", backgroundColor: "#fafafa" }}>
+    <div style={{ padding: "4px 8px", backgroundColor: "var(--theme-bg-secondary)" }}>
       <Space style={{ marginBottom: 4 }} size="small">
         <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAdd}>
           手动添加
@@ -590,24 +703,13 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           {
             key: "physical",
             label: <span style={{ fontSize: 12 }}>物理链路设备（{physicalDevices.length}台）</span>,
-            children:
-              physicalDevices.length > 0 ? (
-                <Table
-                  columns={createColumns(false, true)}
-                  dataSource={physicalDevices}
-                  rowKey="id"
-                  size="small"
-                  pagination={false}
-                  showHeader={false}
-                  bordered={false}
-                  style={{ fontSize: 11 }}
-                />
-              ) : (
-                <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "4px 0" }}>
-                  该工位暂无通过 MAC→port→infoPoint 反推到的设备。 请确认工位下是否已配置
-                  ops_info_points 关联到网络设备端口。
-                </div>
-              ),
+            children: (
+              <PhysicalDevicesPanel
+                devices={physicalDevices}
+                diagnosis={physicalDiagnosis}
+                columns={createColumns(false, true)}
+              />
+            ),
           },
         ]}
       />
@@ -633,7 +735,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                   : "未在资产系统中找到"
             }
           >
-            <Input
+            <AppInput
               placeholder="请输入设备序列号"
               onBlur={(e) => handleSerialSearch(e.target.value)}
               disabled={!!editingDevice}
@@ -641,7 +743,14 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           </Form.Item>
 
           {autoFilledAsset && (
-            <div style={{ marginBottom: 16, padding: 12, background: "#f5f5f5", borderRadius: 4 }}>
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                background: "var(--theme-bg-secondary)",
+                borderRadius: 4,
+              }}
+            >
               <div style={{ marginBottom: 8, fontWeight: "bold" }}>自动匹配的设备信息：</div>
               <div>设备名称: {autoFilledAsset.devicesn || "-"}</div>
               <div>设备型号: {autoFilledAsset.deviceModelName || "-"}</div>
@@ -662,7 +771,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           )}
 
           <Form.Item name="description" label="备注">
-            <Input.TextArea placeholder="请输入备注（可选）" rows={2} />
+            <AppTextArea placeholder="请输入备注（可选）" rows={2} />
           </Form.Item>
 
           <Form.Item
@@ -675,8 +784,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
               },
             ]}
           >
-            {/* eslint-disable-next-line no-restricted-syntax -- placeholder hint, not an actual server URL */}
-            <Input placeholder="请输入IP地址（可选，如 192.168.1.10）" />
+            <AppInput placeholder="请输入IP地址（可选，如 192.168.1.10）" />
           </Form.Item>
         </Form>
       </Modal>

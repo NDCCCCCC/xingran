@@ -39,7 +39,7 @@ describe("useWorkstationData", () => {
     const setStatistics = vi.fn();
     const spy = vi
       .spyOn(workstationApi, "statistics")
-      .mockResolvedValue({ total: 10, available: 3, occupied: 5, maintain: 2 } as any);
+      .mockResolvedValue({ total: 10, available: 3, occupied: 5, maintain: 2 } as unknown);
 
     const { result } = renderHook(() =>
       useWorkstationData(setStatistics, vi.fn(), vi.fn(), vi.fn())
@@ -61,7 +61,7 @@ describe("useWorkstationData", () => {
   it("loadStatistics 传 orgId 透传到 api", async () => {
     const spy = vi
       .spyOn(workstationApi, "statistics")
-      .mockResolvedValue({ total: 0, available: 0, occupied: 0, maintain: 0 } as any);
+      .mockResolvedValue({ total: 0, available: 0, occupied: 0, maintain: 0 } as unknown);
 
     const { result } = renderHook(() => useWorkstationData(vi.fn(), vi.fn(), vi.fn(), vi.fn()));
 
@@ -77,7 +77,7 @@ describe("useWorkstationData", () => {
     const spy = vi.spyOn(floorApi, "searchOptions").mockResolvedValue([
       { value: "f-1", label: "1F" },
       { value: "f-2", label: "2F" },
-    ] as any);
+    ] as unknown);
 
     const { result } = renderHook(() =>
       useWorkstationData(vi.fn(), setFloorOptions, vi.fn(), vi.fn())
@@ -95,7 +95,7 @@ describe("useWorkstationData", () => {
   });
 
   it("loadFloorOptions 透传 name keyword", async () => {
-    const spy = vi.spyOn(floorApi, "searchOptions").mockResolvedValue([] as any);
+    const spy = vi.spyOn(floorApi, "searchOptions").mockResolvedValue([] as unknown);
     const { result } = renderHook(() => useWorkstationData(vi.fn(), vi.fn(), vi.fn(), vi.fn()));
 
     await act(async () => {
@@ -110,7 +110,7 @@ describe("useWorkstationData", () => {
     const postSpy = vi.fn().mockResolvedValue({
       data: { list: [{ id: "u1", username: "alice", nickname: "Al" }] },
     });
-    vi.spyOn(apiModule, "post" as any).mockImplementation(postSpy as any);
+    vi.spyOn(apiModule, "post" as unknown).mockImplementation(postSpy as unknown);
 
     const { result } = renderHook(() =>
       useWorkstationData(vi.fn(), vi.fn(), vi.fn(), setUserOptions)
@@ -140,7 +140,7 @@ describe("useWorkstationData", () => {
   it("loadFloorPlanWorkstations 有值时走全集端点 + 返回 list", async () => {
     const spy = vi
       .spyOn(workstationApi, "getFloorWorkstationsAll")
-      .mockResolvedValue([{ id: "w1" } as any]);
+      .mockResolvedValue([{ id: "w1" } as unknown]);
 
     const { result } = renderHook(() => useWorkstationData(vi.fn(), vi.fn(), vi.fn(), vi.fn()));
 
@@ -153,8 +153,8 @@ describe("useWorkstationData", () => {
   });
 
   it("ensureUser 重复 id 保持原引用", () => {
-    let state: any[] = [{ id: "u-1", username: "u1" }];
-    const setter = (updater: any) => {
+    let state: unknown[] = [{ id: "u-1", username: "u1" }];
+    const setter = (updater: unknown) => {
       state = typeof updater === "function" ? updater(state) : updater;
     };
     const { result } = renderHook(() => useWorkstationData(vi.fn(), vi.fn(), vi.fn(), setter));
@@ -174,8 +174,8 @@ describe("useWorkstationData", () => {
   });
 
   it("ensureUser 无 username 兜底 '未命名用户'", () => {
-    let state: any[] = [];
-    const setter = (updater: any) => {
+    let state: unknown[] = [];
+    const setter = (updater: unknown) => {
       state = typeof updater === "function" ? updater(state) : updater;
     };
     const { result } = renderHook(() => useWorkstationData(vi.fn(), vi.fn(), vi.fn(), setter));
