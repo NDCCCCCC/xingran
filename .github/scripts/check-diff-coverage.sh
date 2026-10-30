@@ -95,7 +95,13 @@ if ! git diff --unified=0 "${BASE_REF}...HEAD" -- '*.go' ':(exclude)*_test.go' |
   in_hunk && /^\+/ {
     line = substr($0, 2)
     # blank or comment-only lines are not executable — exclude from the gate
-    if (line !~ /^[[:space:]]*$/ && line !~ /^[[:space:]]*\/\//) {
+    # 2026-10-30: import 语句同样不可执行（go coverage 不计入），必须排除，
+    # 否则模块路径批量重命名（ruoyi-next → xingran-next）会被误判为新增未覆盖代码。
+    is_import_kw   = (line ~ /^[[:space:]]*import([[:space:]]|$)/)
+    is_import_path = (line ~ /^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*[[:space:]]+)?"[^"]*"[[:space:]]*$/)
+    is_import_end  = (line ~ /^[[:space:]]*\)[[:space:]]*$/)
+    if (line !~ /^[[:space:]]*$/ && line !~ /^[[:space:]]*\/\// \
+        && !is_import_kw && !is_import_path && !is_import_end) {
       printf "%s\t%d\n", file, lineno
     }
     lineno++
