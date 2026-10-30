@@ -64,6 +64,7 @@ const EXCLUDE_EXACT = new Set([
   ".github/workflows/frontend-build.yml",
 ]);
 const EXCLUDE_RE = [
+  /^\.tmp-.*\.(cjs|js|json|log)$/,
   /^ruoyi-backend(-linux)?$/,
   /^xingran-backend(-linux)?(\.exe)?$/,
   /\.stackdump$/,

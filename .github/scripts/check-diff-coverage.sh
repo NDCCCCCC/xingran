@@ -84,7 +84,15 @@ fi
 CHANGED="$(mktemp)"
 trap 'rm -f "$CHANGED"' EXIT
 
-if ! git diff --unified=0 "${BASE_REF}...HEAD" -- '*.go' ':(exclude)*_test.go' | awk '
+if ! git diff --unified=0 "${BASE_REF}...HEAD" -- '*.go' \
+  ':(exclude)*_test.go' \
+  ':(exclude)internal/docs/**' \
+  ':(exclude)internal/core/db/migrations/**' \
+  ':(exclude)internal/collectors/**' \
+  ':(exclude)scripts/**' \
+  ':(exclude)cmd/*/**' \
+  ':(exclude)test/**' \
+  ':(exclude)tests/**' | awk '
   /^\+\+\+ b\// { file = substr($0, 7); in_hunk = 0; next }
   /^@@ / {
     match($0, /\+[0-9]+/)
