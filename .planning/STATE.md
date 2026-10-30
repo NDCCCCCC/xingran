@@ -4,18 +4,18 @@ milestone: v1.25
 milestone_name: 全站权限治理与样式收敛
 current_phase: 93
 current_phase_name: room-devices 拆分 + 视觉回归验收
-status: ready_to_plan
-stopped_at: Phase 93 规划完成（93-RESEARCH / 93-UI-SPEC / 93-01~02 全套计划与验证矩阵已提交）；下一步执行 Phase 93（/gsd-execute-phase 93）
-last_updated: "2026-10-30T15:50:00.000Z"
+status: completed
+stopped_at: v1.25（全站权限治理与样式收敛）全部 10 个 Phase（84~93）全量执行完成并通过全系统双端终验（93-VERIFICATION.md 已归档）；全里程碑圆满封板！
+last_updated: "2026-10-30T16:15:00.000Z"
 last_activity: 2026-10-30
-last_activity_desc: v1.25 执行期——Phase 93 规划完成（SPLIT-01 room-devices 解耦 + STYLE-05 视觉终验与里程碑收官计划已就绪）
-state_head: fb8889cb
+last_activity_desc: v1.25 终局收官——Phase 93 完成（room-devices 解耦至 342 行，STYLE-05 视觉终验与 14 页巡检完成，全系统测试与门禁 100% 达成）
+state_head: 4cc69add
 progress:
   total_phases: 10
-  completed_phases: 9
-  total_plans: 35
-  completed_plans: 34
-  percent: 97
+  completed_phases: 10
+  total_plans: 37
+  completed_plans: 37
+  percent: 100
 progress:
   total_phases: 10
   completed_phases: 8

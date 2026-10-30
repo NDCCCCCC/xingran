@@ -152,7 +152,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
     4. **hex 治理终态（STYLE-04 承接项收口）**：M7 `index.css` hex 311 → ≤60（去重 ≤20）｜M8 全 `.css` hex 465 → ≤120；`scripts/check-hardcoded-colors.mjs` 保持 exit 0 且 `lint:ci` 绿灯。
     5. **暗色无未登记差异**：暗色 21 形态 × 明暗矩阵 + 14 页巡检，差异清单逐条登记且**零未登记项**；`node scripts/css-contract-check.js` C1-C15 全 PASS 且 exit 0。
 
-- [ ] **Phase 93: room-devices 拆分 + 视觉回归验收** — 巨型文件拆分（零行为变化）+ 明暗双主题视觉回归终验。
+- [x] **Phase 93: room-devices 拆分 + 视觉回归验收** — 巨型文件拆分（零行为变化）+ 明暗双主题视觉回归终验。
   - **Depends on**: 92（样式收敛稳定后截图基线才可用，否则截图对比不可判）
   - **Requirements**: SPLIT-01, STYLE-05
   - **UI hint**: yes
