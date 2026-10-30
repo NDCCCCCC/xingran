@@ -1,0 +1,45 @@
+{
+ "mode": "light",
+ "antColorError": "#ba3630",
+ "antColorWarning": "#b07a20",
+ "antColorBgContainer": "#FFFFFF",
+ "antColorBorder": "#DBD7CE",
+ "inputBorder": "#dbd7ce",
+ "inputBg": "#fafaf9",
+ "numError": {
+  "borderTopColor": "rgb(186, 54, 48)",
+  "borderTopWidth": "1px",
+  "borderTopStyle": "solid",
+  "borderTopLeftRadius": "8px",
+  "boxShadow": "none",
+  "fontSize": "14px",
+  "backgroundColor": "rgb(250, 250, 249)"
+ },
+ "inp": {
+  "borderTopColor": "rgb(219, 215, 206)",
+  "borderTopWidth": "1px",
+  "borderTopStyle": "solid",
+  "borderTopLeftRadius": "8px",
+  "boxShadow": "none",
+  "fontSize": "14px",
+  "backgroundColor": "rgb(250, 250, 249)"
+ },
+ "wrap": {
+  "borderTopColor": "rgb(219, 215, 206)",
+  "borderTopWidth": "1px",
+  "borderTopStyle": "solid",
+  "borderTopLeftRadius": "8px",
+  "boxShadow": "none",
+  "fontSize": "14px",
+  "backgroundColor": "rgb(250, 250, 249)"
+ },
+ "wrapInner": {
+  "borderTopColor": "rgb(16, 16, 16)",
+  "borderTopWidth": "0px",
+  "borderTopStyle": "none",
+  "borderTopLeftRadius": "0px",
+  "boxShadow": "none",
+  "fontSize": "14px",
+  "backgroundColor": "rgba(0, 0, 0, 0)"
+ }
+}

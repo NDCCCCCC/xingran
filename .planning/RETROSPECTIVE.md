@@ -2,6 +2,46 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.25 — 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence)
+
+**Shipped:** 2026-10-30
+**Phases:** 10 (84-93) | **Requirements:** 22/22 Satisfied | **Timeline:** 2.5 天 (2026-10-28 13:11 → 2026-10-30 16:17)
+**Git:** 99 commits / 399 files / +56,653 −9,836
+
+### What Was Built
+
+- **线 A·操作级 RBAC 全站治理**：
+  - 133 处写路由 ANY-of 拆分为逐动作单一权限点（`RequireStrictPermissions`）；
+  - 全站 76 个业务页面操作入口按动作级权限码三态门控全覆盖（恒等式 25 已门控 + 51 豁免 = 76 锁死）；
+  - 72 个 F 型按钮权限码全量入库播种，映射死表真实接线，未登记写路由归零；
+  - 权限模型三缺口修复（`data_scope` 真实消费、`menu.status` 过滤、子菜单继承语义命名固化）。
+- **线 B·样式收敛与巨型单体拆分**：
+  - 453 条暗色 mega-cluster 手写覆盖整块交还 antd token 与 `darkAlgorithm`；
+  - 量化终态达标锁死：全仓 `!important` 1435 → **452**（≤455 预算，净降 983 处，-68.5%），Hex 311 → **26**（≤60 预算），`index.css` 行数 5632 → **3194**（≤3200 预算）；
+  - `room-devices/index.tsx` 896 行大单体解耦为 342 行（≤350 行，子文件均 ≤250 行，零行为变化）；
+  - C1~C16c 样式静态契约全部 PASS（双框元素数 0，单圈焦点环，8px 统一圆角）；
+  - 14 个核心业务页面视觉巡检零异常断层。
+
+### What Worked
+
+- **双线分治，线内严格串行**：线 A（Go 后端权限）与线 B（前端 CSS 样式）在阶段前期并行推进；样式线内部（88 基础断言 → 89 变量重构 → 90 Input 域 → 91 Select/Table 域 → 92 暗色 mega-cluster → 93 拆分与终验）严格串行，三处不可逆顺序约束写死，极大避免了跨阶段样式冲突与假绿。
+- **AST 精确扫描与自动化批处理**：自制 `scan-dark-rules.cjs` 对 570 行暗色规则做 AST 语法级边界识别，区分 453 条可删除覆盖与 46 条合法例外，实现了整块安全清零，无一误伤活规则。
+- **量化预算硬锁（Ratchet Guard）**：把 `IMPORTANT_BUDGET`、`C13_M7_BUDGET`、`C13_M9_BUDGET` 写入 CI 契约检查脚本，每攻克一个波次立即下调并锁死预算，形成「只降不升」的机械防线。
+- **矩阵采样机器断言先行**：搭建 computed-style 21 形态断言工具链，机器对比毫秒级反馈，确保组件视觉基线零破坏。
+
+### What Was Inefficient
+
+- **大单体暗色清除后的空章节残留**：在 Phase 92 清理完 453 条规则后，遗留了 30 余个空章节注释，导致 M9（代码行数）一度逼近 3440 行，不得不追加 Gap 计划做二次空白与死注释收敛。
+- **次级 Hex 的隐蔽扩散**：历史 CSS 中大量存在阴影与边框使用的裸 Hex，在样式收敛晚期才触发 per-file 与全量阈值预警，后续应在前期变量层重构时尽早统一转为标准 `rgb(...)`。
+
+### Key Lessons
+
+1. **样式的根基在 Token，不在选择器覆盖**：手写 `!important` 选择器覆盖只能解决一时，但会破坏 antd 内部算法，最终演变为 1400 多处的债务大山；正解是按 Antd 规范分层配置 Component Token 和 Map Token。
+2. **重构大文件必须先锁定外部注入契约**：在拆分 `room-devices` 时，先精确定位 `reloadRef` 注入链路和 `columns` 的缓存依赖，保证重构过程中外部组件调用协议零变动，确保 100% 行为保真。
+3. **机器断言比肉眼巡检更可靠**：6px 到 8px 的圆角差异肉眼极难辨识，依托 computed-style 物理单值断言才能铸造不可逾越的质量底座。
+
+---
+
 ## Milestone: v1.24 — 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
 
 **Shipped:** 2026-10-28

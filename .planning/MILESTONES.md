@@ -1,5 +1,14 @@
 # Milestones
 
+## v1.25 全站权限治理与样式收敛 (Shipped: 2026-10-30)
+
+**Phases completed:** 10 phases, 41 plans, 0 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
 ## v1.24 视觉回归修复与遗留债务清偿 (Shipped: 2026-10-28)
 
 **Phases completed:** 8 phases (76-83) | **Plans:** 0（subagent 直接执行，按刀原子提交） | **Tasks:** 8 phase × 9 项闸门

@@ -2,34 +2,28 @@
 gsd_state_version: "1.0"
 milestone: v1.25
 milestone_name: 全站权限治理与样式收敛
-current_phase: 93
-current_phase_name: room-devices 拆分 + 视觉回归验收
-status: completed
+status: Awaiting next milestone
 stopped_at: v1.25（全站权限治理与样式收敛）全部 10 个 Phase（84~93）全量执行完成并通过全系统双端终验（93-VERIFICATION.md 已归档）；全里程碑圆满封板！
-last_updated: "2026-10-30T16:15:00.000Z"
+last_updated: "2026-10-30T08:59:58.358Z"
 last_activity: 2026-10-30
-last_activity_desc: v1.25 终局收官——Phase 93 完成（room-devices 解耦至 342 行，STYLE-05 视觉终验与 14 页巡检完成，全系统测试与门禁 100% 达成）
-state_head: 4cc69add
-progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 37
-  completed_plans: 37
-  percent: 100
+last_activity_desc: Milestone v1.25 completed and archived
+state_head: 27ac078e18b72d83b9690eaed617328c390687cd
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 33
+  total_plans: 41
   completed_plans: 32
-  percent: 97
+  percent: 78
+current_phase: 93
+current_phase_name: room-devices 拆分 + 视觉回归验收
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.25 执行中（线 A 权限 84→87 全部收口 ｜ 线 B 样式 88→93 推进中）
-**Last activity**: 2026-10-30 — Phase 87（动作级权限授予闭环，Plan 87-01~87-05）全部执行完成并验收；白名单清零归零；权限线 A（84~87）完结；下一步 Phase 91
+**Status**: v1.25 milestone complete
+**Last activity**: 2026-10-30
 **Prior activity**: 2026-10-29 — Phase 86（W4+W5）与 Phase 90（W0~W3）全部收口并验收；下一步 Phase 87
 **Prior activity (2)**: 2026-10-28 — v1.24 全量执行完成（Phase 77 视觉验证 + Phase 83 拆分收口 + VIS-03 死规则修复）
 **Prior activity (2)**: 2026-10-28 — v1.24 执行期：78 权限双端闭环（后端严格中间件 + 前端三态门控）+ 79 PG 实机验收（三层证据）+ 82 lint 清零
@@ -69,10 +63,10 @@ progress:
 
 ## Current Position
 
-Phase: 87 (动作级权限授予闭环) — READY TO PLAN（前置 85 + 86 均已交付）
+Phase: Milestone v1.25 complete
 Plan: —
-Status: 线 A 权限线的最后一步（后端逐动作权限点 + 前端入口门控均已就绪，F 型菜单播种可立即开工）
-Last activity: 2026-10-29 — Phase 86 / 90 双线收口，验收报告落地
+Status: Awaiting next milestone
+Last activity: 2026-10-30 — Milestone v1.25 completed and archived
 
 ### v1.25 真实进度快照（2026-10-29 晚，Lead 实跑复核）
 
@@ -273,6 +267,16 @@ See: `.planning/PROJECT.md`（updated 2026-10-28 after v1.24）
 **Stopped at:** v1.25 roadmap CREATED（Phases 84-93，22/22 REQ mapped，Traceability 已回填 `.planning/REQUIREMENTS.md`）
 **Resume file:** 无（路线图已就绪，下一步 `/gsd-plan-phase 84` 与 `/gsd-plan-phase 88` 并行起草）
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close, most recent first:
+
+| Category | Item | Status | Deferred At | Milestone |
+|----------|------|--------|-------------|-----------|
+| verification_gaps | 84/84-VERIFICATION.md | human_needed | 2026-10-30 | v1.25 |
+| verification_gaps | 87/87-VERIFICATION.md | human_needed | 2026-10-30 | v1.25 |
+| verification_gaps | 90/90-VERIFICATION.md | human_needed | 2026-10-30 | v1.25 |
+
 ## Performance Metrics
 
 | Plan | Duration | Tasks | Files |
@@ -283,9 +287,4 @@ See: `.planning/PROJECT.md`（updated 2026-10-28 after v1.24）
 
 ## Operator Next Steps
 
-- **v1.25 路线图已创建**（`.planning/ROADMAP.md` Phases 84-93；`.planning/REQUIREMENTS.md` Traceability 22/22 回填，Status 全 `Pending`）
-- 立即可并行起草：**Phase 84**（权限模型三缺口，后端）与 **Phase 88**（验证底座与零风险清理，前端 CSS）——两条线零外部依赖、零共享文件
-- 样式线**严格串行**：88 → 89 → 90 → 91 → 92 → 93；**三处不可逆顺序约束**已写进 ROADMAP 与 STATE 速查表，不得交换
-- **不要 git commit** —— 提交由 orchestrator 负责
-- **待用户决定是否 push tag**（remote `origin` = gitcode.com/ninedrunk/go_react，upstream `origin/main`）
-- v1.26 候选债已登记在 `.planning/REQUIREMENTS.md` Future Requirements（sqlite `ON CONFLICT` 方言泄漏 / 权限缓存陈旧 / `responsible_user_id` 恒空 / React Compiler 约束适配 / 双 ConfigProvider 嵌套 / 文档漂移 / AD 方向补齐 / 残留现场 UAT 债）
+- Start the next milestone with /gsd-new-milestone

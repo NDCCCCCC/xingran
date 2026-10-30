@@ -1,17 +1,15 @@
 ---
-last_updated: 2026-10-28
-update_trigger: v1.24 milestone SHIPPED & ARCHIVED (视觉回归修复与遗留债务清偿)
-previous_update: 2026-10-28 v1.24 milestone INITIATED
+last_updated: 2026-10-30
+update_trigger: v1.25 milestone SHIPPED & ARCHIVED (全站权限治理与样式收敛)
+previous_update: 2026-10-28 v1.25 milestone INITIATED
 ---
 
-**Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
+## Current Milestone: v1.25 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence) — ✅ SHIPPED 2026-10-30
 
-**Phase 53 (2026-07-07)**: W4 frontend layer complete — 6 port-write API wrappers (`networkApi.ts`) + 3 TS types mirroring backend `portwrite` Go structs (`types/network.ts`) + shared constants (`port-write/constants.ts`) + `PortWriteModal` (5 single-port actions, reason Select+TextArea, description special-case, audit-link Toast) + `BulkWriteDrawer` (select→executing→result state machine, indeterminate Spin per D-05, three Statistic cards, retry-only-failed per D-06) + `ports/index.tsx` wiring (`useMenuStore` canWrite gating per D-09, operation column, batch-config button, `batchInProgress` disables refresh+collect per D-07/LANDMINE #4) + `monitor/logs` URL query `?module=` prefetch. 8/8 must-haves verified, zero gaps. Code review found 2 BLOCKERs (CR-01/CR-02: BulkWriteDrawer retry `deviceId` snapshot drift → potential cross-device write) — fixed in commit `9b01cc68` (cache `lastDeviceId` + `lastInterfaceMap` at submit). WR-02 (custom-reason validator signature) deferred to Phase 54 UAT. Real-device/browser UAT deferred to Phase 54 (W5) per v1.18 Phase 48 site-visit precedent. `npm run build` exit 0, vendor-react gzip 774.96 kB (zero regression vs Phase 48 baseline 776 kB).
-
-**Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
-
-
-## Current Milestone: v1.25 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence)
+**交付终态（2026-10-30 收档）:** 全部 10 个 Phase（84~93）全量执行完毕并通过全系统双端终验，22/22 需求 Satisfied，99 个提交原子入库。
+- **线 A（权限线）**：`data_scope` 本部门隔离生效；133 处写路由 ANY-of 拆分，`RequireStrictPermissions` 严格单点放行；全站 76 页面操作级三态门控全覆盖（恒等式 25+51=76）；72 个 F 型按钮权限码全播种，白名单彻底归零，授权链路闭环。
+- **线 B（样式收敛线）**：453 条暗色 mega-cluster 手写规则彻底清零，手写覆盖交还 antd token；**!important 净降 983 处（降至 452 处 ≤ 455 预算），Hex 降至 26 处 ≤ 60 预算，`index.css` 行数降至 3194 行 ≤ 3200 预算**；`room-devices/index.tsx` 单体大文件由 896 行成功解耦拆分为 342 行（≤350行，子文件均≤250行，零行为变化）；C1~C16c 样式静态契约 ALL PASS；全站 14 页核心业务界面视觉巡检零异常断层。
+- **全仓质量**：前端 Vitest 579 文件 4025 用例全绿，`lint:ci` 0 problems，生产打包 `vendor-react` gzip 650.74 kB ≤ 776 kB；后端 `go build` 0 错误，测试全过。
 
 **Goal:** 把 v1.24 只在 `/system/users` 单域完成的「操作级 RBAC 前后端双端闭环」推广到全站 76 页面 / 134 处后端路由挂载，并把样式层从手写 `!important` 规则收敛到 antd 6 官方 variant 机制，同步清偿权限模型三缺口与 Phase 77 视觉新发现。
 
