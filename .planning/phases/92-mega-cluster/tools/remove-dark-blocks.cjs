@@ -14,8 +14,9 @@ const CSS = path.join(ROOT, 'ruoyi-react-frontend/src/index.css');
 const DATA = path.join(__dirname, '../92-EQUIVALENCE-DATA.json');
 
 const SCOPES = {
-  r6: { start: 2225, end: 2798 },
-  r7: { start: 2799, end: 4434 },
+  r6: { start: 2225, end: 2798 },   // Wave 2 已消费（旧行号基线）
+  r7: { start: 2300, end: 3940 },   // Wave 3：R6 删除 500 行后的新行号基线（Premium Glow → Modern Tag 前）
+  all: { start: 1, end: Infinity }, // 终扫：清除全部非例外暗色散存量（cluster 外围散点）
 };
 
 const scope = process.argv[2];

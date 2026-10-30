@@ -235,8 +235,9 @@ const checkC6 = (() => {
 // ratchet：只允许下调，Phase 92 终值 ≤480；上调视为回归。
 // 基线沿革：1435（Phase 88 落地时 HEAD 实跑值）→ 1398（Phase 88-03 删除第 1 批死规则后实跑值；
 // PLAN 预估 ≈1395，实跑 1398——ratchet 只许低不许高，故定值取实测）→ 1397（Phase 89 T5 落地 -1）
-// → 1385（Phase 91 表单/表格/弹窗交还 token，当前实测 1381）。
-const IMPORTANT_BUDGET = 1385;
+// → 1385（Phase 91 表单/表格/弹窗交还 token，当前实测 1381）
+// → 671（Phase 92 R6/R7 mega-cluster + 散存量块级删除，实测 671（含 C16 恢复 2 处）；92 终态目标 ≤480 由后续收敛达成）
+const IMPORTANT_BUDGET = 671;
 {
   const allCss = walkByExt(resolve(feRoot, 'src'), ['.css', '.less']);
   let importantCount = 0;
