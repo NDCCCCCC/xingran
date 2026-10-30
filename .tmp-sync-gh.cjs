@@ -11,6 +11,13 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const crypto = require("crypto");
 const path = require("path");
+const https = require("https");
+
+// 2026-10-31 本机内网 DNS（10.193.16.105）不解析 github.com；Node fetch(undici) 的
+// DNS 行为无法可靠 patch。改用「固定 IP + SNI/Host 头」的 https.request 直连：
+// TCP(443) 与 TLS 均可达（curl --resolve 验证 200），只需绕过 DNS 解析。
+const API_HOST = "api.github.com";
+const API_IP = "20.205.243.168";
 
 const REPO = "NDCCCCCC/xingran";
 const BRANCH = process.env.SYNC_BRANCH || "main";
@@ -74,17 +81,45 @@ const BINARY_EXT = new Set([
 ]);
 
 function ghApi(method, endpoint, body) {
-  const url = `https://api.github.com${endpoint}`;
-  return fetch(url, {
-    method,
-    headers: {
+  return new Promise((resolve, reject) => {
+    const payload = body ? JSON.stringify(body) : null;
+    const headers = {
+      Host: API_HOST,
       Authorization: `Bearer ${TOKEN}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json",
       "User-Agent": "xingran-sync",
-    },
-    body: body ? JSON.stringify(body) : undefined,
+      "Content-Type": "application/json",
+    };
+    if (payload) headers["Content-Length"] = Buffer.byteLength(payload);
+    const req = https.request(
+      {
+        host: API_IP,
+        servername: API_HOST, // SNI + 证书校验仍按 api.github.com
+        port: 443,
+        path: endpoint,
+        method,
+        headers,
+        timeout: 120000,
+      },
+      (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => {
+          const text = Buffer.concat(chunks).toString("utf8");
+          resolve({
+            ok: res.statusCode >= 200 && res.statusCode < 300,
+            status: res.statusCode,
+            text: async () => text,
+            json: async () => JSON.parse(text),
+          });
+        });
+      }
+    );
+    req.on("timeout", () => req.destroy(new Error("request timeout")));
+    req.on("error", reject);
+    if (payload) req.write(payload);
+    req.end();
   });
 }
 
