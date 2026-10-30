@@ -96,6 +96,15 @@ NR > 1 {
     if (pkg ~ /^scripts\//) next
     if (pkg ~ /^tests\/scripts\//) next
     if (pkg ~ /^node_modules\//) next
+    # 2026-10-30 xingran v1.25 同步口径：以下三类不计入产品覆盖率加权平均
+    #   1) cmd/<子目录>：一次性诊断/清理工具（mac_purge_*、diag_* 等），
+    #      随本地开发产生、无单测属正常；cmd 主程序本身（pkg=="cmd"）仍计入。
+    #   2) internal/core/db/migrations：SQL 迁移载体，8% 覆盖属结构性质。
+    #   3) internal/collectors：采集器框架骨架，当前无测试。
+    # 目的：门禁反映"应测产品代码"的真实质量，而非被工具代码稀释。
+    if (pkg ~ /^cmd\//) next
+    if (pkg ~ /^internal\/core\/db\/migrations/) next
+    if (pkg ~ /^internal\/collectors/) next
     if (pkg == "") next
     num_stmts  = $2 + 0
     hit_count  = $3 + 0
