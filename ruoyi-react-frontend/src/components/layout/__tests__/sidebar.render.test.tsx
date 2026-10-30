@@ -73,4 +73,11 @@ describe("Sidebar 渲染", () => {
     const { baseElement } = renderWithProviders(<Sidebar />);
     expect(baseElement.querySelector(".ant-spin, .ant-menu")).not.toBeNull();
   });
+
+  it("无子菜单的叶子菜单项不渲染误导性向右小箭头(menu-sub-chevron)", () => {
+    useMenuStore.setState({ menus: menuFixture, loading: false } as unknown);
+    useLayoutStore.setState({ sidebarCollapsed: false, isMobile: false } as unknown);
+    const { baseElement } = renderWithProviders(<Sidebar />);
+    expect(baseElement.querySelector(".menu-sub-chevron")).toBeNull();
+  });
 });
