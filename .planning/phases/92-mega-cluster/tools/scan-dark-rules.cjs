@@ -144,23 +144,33 @@ function main() {
   }
 
   if (mode === '--check-r6-cleared') {
-    const remain = classified.filter((r) => r.startLine >= R6.start && r.startLine <= R6.end);
-    if (remain.length > 0) {
-      console.error(`FAIL R6 区间仍有 ${remain.length} 条暗色规则（起始行 ${remain[0].startLine}）`);
+    // 口径：非例外暗色规则总数 = 全量基线 - R6 区间非例外数（不受删除后行号漂移影响）
+    const base = JSON.parse(fs.readFileSync(path.join(__dirname, '../92-EQUIVALENCE-DATA.json'), 'utf8'));
+    const r6NonEx = base.rules.filter((r) => r.startLine >= R6.start && r.startLine <= R6.end && r.cls !== 'exception').length;
+    const now = extractDarkRules(text);
+    const nowNonEx = now.filter((r) => classify(r) !== 'exception').length;
+    const expected = base.rules.filter((r) => r.cls !== 'exception').length - r6NonEx;
+    if (nowNonEx > expected) {
+      console.error(`FAIL R6 未清干净：当前非例外 ${nowNonEx} 条 > 预期 ${expected} 条`);
       process.exit(1);
     }
-    console.log(`OK R6 区间（:${R6.start}-${R6.end}）暗色规则零残留`);
+    console.log(`OK R6 清零达成：非例外暗色规则 ${nowNonEx} / 预期 ≤${expected}`);
     process.exit(0);
   }
 
   if (mode === '--check-r7-cleared') {
-    const remain = classified.filter((r) => r.startLine >= R7.start && r.startLine <= R7.end && r.cls !== 'exception');
-    if (remain.length > 0) {
-      console.error(`FAIL R7 区间仍有 ${remain.length} 条非例外暗色规则（起始行 ${remain[0].startLine}: ${remain[0].selector.slice(0, 60)}）`);
+    // 口径：非例外暗色规则仅剩 R6+R7 之外的部分（:4434 后与 R6 前的存量）
+    const base = JSON.parse(fs.readFileSync(path.join(__dirname, '../92-EQUIVALENCE-DATA.json'), 'utf8'));
+    const scopeNonEx = base.rules.filter((r) => ((r.startLine >= R6.start && r.startLine <= R6.end) || (r.startLine >= R7.start && r.startLine <= R7.end)) && r.cls !== 'exception').length;
+    const now = extractDarkRules(text);
+    const nowNonEx = now.filter((r) => classify(r) !== 'exception').length;
+    const expected = base.rules.filter((r) => r.cls !== 'exception').length - scopeNonEx;
+    if (nowNonEx > expected) {
+      console.error(`FAIL R7 未清干净：当前非例外 ${nowNonEx} 条 > 预期 ${expected} 条`);
       process.exit(1);
     }
-    const exceptions = classified.filter((r) => r.startLine >= R7.start && r.startLine <= R7.end && r.cls === 'exception');
-    console.log(`OK R7 区间仅剩 ${exceptions.length} 条例外暗色规则`);
+    const exceptions = now.filter((r) => classify(r) === 'exception');
+    console.log(`OK R6+R7 清零达成：非例外暗色规则 ${nowNonEx} / 预期 ≤${expected}；例外保留 ${exceptions.length} 条`);
     process.exit(0);
   }
 
