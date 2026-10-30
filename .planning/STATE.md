@@ -5,11 +5,11 @@ milestone_name: 全站权限治理与样式收敛
 current_phase: 92
 current_phase_name: 暗色 mega-cluster 合并
 status: executing
-stopped_at: Phase 92 核心达成（R6+R7+散存量 453 条暗色规则清零，非例外=0；!important 1381→671 锁预算；M4/M5 达标）——量化终态缺口（M1 -191/M9 -240/M7 -202）与矩阵机器验收登记 92-HANDOFF.md；全量回归后台验证中
-last_updated: "2026-10-30T12:35:00.000Z"
+stopped_at: Phase 92 缺口收敛规划完成（92-04 浅色精简/hex变量化 + 92-05 矩阵机器验收与归档已编制提交）；下一步执行 Gap Closure 计划（/gsd-execute-phase 92 --gaps-only）
+last_updated: "2026-10-30T14:50:00.000Z"
 last_activity: 2026-10-30
-last_activity_desc: v1.25 执行期——Phase 92 三波执行（W1 AST 扫描 499 条零漏项 / W2 R6 删除 / W3 R7+散存量删除+预算锁定）
-state_head: 74f1f2ae
+last_activity_desc: v1.25 执行期——Phase 92 规划 92-04 与 92-05 缺口收口计划 (M1≤480 / M9≤3200 / M7≤60 与矩阵验收)
+state_head: 0831ab0f
 progress:
   total_phases: 10
   completed_phases: 8
