@@ -2,29 +2,30 @@
 gsd_state_version: "1.0"
 milestone: v1.25
 milestone_name: 全站权限治理与样式收敛
-current_phase: 87
-current_phase_name: 动作级权限授予闭环
-status: planning
-stopped_at: Phase 86（W4+W5）与 Phase 90（W0~W3）全部执行完成并验收；下一步 Phase 87（动作级权限授予闭环，前置 85+86 均已就绪）
-last_updated: "2026-10-29T12:50:00.000Z"
-last_activity: 2026-10-29
-last_activity_desc: v1.25 执行期——86（前端三态门控全站铺开 + 硬断言挂 lint:ci）与 90（Input 域交还 + 圆角统一 + 矩阵终跑 PASS）收口
-state_head: 3d7ac902
+current_phase: 91
+current_phase_name: Select / InputNumber / Form / Table / Modal 域交还
+status: ready_to_plan
+stopped_at: Phase 87（W1~W4，5 个 plan）全部执行完成并验收收口；权限线 A（Phase 84~87）全部完结；下一步进入样式线 B 的 Phase 91（Select/InputNumber/Form/Table/Modal 域交还 + 弃用清零）
+last_updated: "2026-10-30T10:48:00.000Z"
+last_activity: 2026-10-30
+last_activity_desc: v1.25 执行期——Phase 87（动作级权限授予闭环，65+7码播种，白名单归零，三层证据与组件测试通过）全量收口，线 A 完结
+state_head: 800a40aa
 progress:
   total_phases: 10
-  completed_phases: 6
-  total_plans: 28
-  completed_plans: 24
-  percent: 86
+  completed_phases: 7
+  total_plans: 33
+  completed_plans: 29
+  percent: 88
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.25 执行中（线 A 权限 84→87 ∥ 线 B 样式 88→93）
-**Last activity**: 2026-10-29 — Phase 86（W4+W5）与 Phase 90（W0~W3）全部收口并验收；下一步 Phase 87
-**Prior activity**: 2026-10-28 — v1.24 全量执行完成（Phase 77 视觉验证 + Phase 83 拆分收口 + VIS-03 死规则修复）
+**Status**: v1.25 执行中（线 A 权限 84→87 全部收口 ｜ 线 B 样式 88→93 推进中）
+**Last activity**: 2026-10-30 — Phase 87（动作级权限授予闭环，Plan 87-01~87-05）全部执行完成并验收；白名单清零归零；权限线 A（84~87）完结；下一步 Phase 91
+**Prior activity**: 2026-10-29 — Phase 86（W4+W5）与 Phase 90（W0~W3）全部收口并验收；下一步 Phase 87
+**Prior activity (2)**: 2026-10-28 — v1.24 全量执行完成（Phase 77 视觉验证 + Phase 83 拆分收口 + VIS-03 死规则修复）
 **Prior activity (2)**: 2026-10-28 — v1.24 执行期：78 权限双端闭环（后端严格中间件 + 前端三态门控）+ 79 PG 实机验收（三层证据）+ 82 lint 清零
 **Prior activity (3)**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
 **Prior activity (4)**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）

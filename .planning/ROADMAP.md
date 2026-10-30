@@ -87,7 +87,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
     4. v1.22 冻结契约零破坏：`AppInput` / `AppSelect` / `AppTextArea` 默认值、`ConfirmDelete` 唯一入口、`handleApiError`、`statusHelpers`、`PageTable` / `FormModal` 契约测试全绿；`npm run lint` **0 problems**。
     5. 权限码单一真相源不漂移：`scripts/check-permission-codes.mjs` exit 0（前端 `src/constants/permissionCodes.ts` ↔ 后端 `pkg/permission` ↔ 菜单 F 型种子三方零漂移）。
 
-- [ ] **Phase 87: 动作级权限授予闭环** — 动作级 F 型菜单播种 + 三层证据验收（仿 v1.24 Phase 78-79 范式）。
+- [x] **Phase 87: 动作级权限授予闭环** — 动作级 F 型菜单播种 + 三层证据验收（仿 v1.24 Phase 78-79 范式）。
   - **Depends on**: 85（权限码先存在）+ 86（前端入口按动作级码渲染）
   - **Requirements**: RBAC-05, RBAC-06
   - **成功标准**:
