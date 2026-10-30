@@ -40,106 +40,40 @@ const TS_FILE = path.join(frontendRoot, "src", "constants", "permissionCodes.ts"
 const GO_CONFIG = path.join(repoRoot, "pkg", "permission", "config.go");
 const MIGRATIONS_DIR = path.join(repoRoot, "internal", "core", "db", "migrations");
 
-/** 权限码形态：至少两段、段内小写字母数字下划线（如 system:user:resetPwd 的 resetPwd 不匹配 → 用宽松段） */
-const PERM_LITERAL = /^[a-z][a-z0-9_]*(?::[A-Za-z0-9_]+)+$/;
+/** 权限码形态：至少两段、段内小写字母数字下划线连字符（放宽支持连字符 - 以适配 ops:floor-plan:edit 等码） */
+const PERM_LITERAL = /^[a-z][a-z0-9_-]*(?::[A-Za-z0-9_-]+)+$/;
 
 /**
- * 85-02（RBAC-04）新码待播种白名单 —— **仅作用于 c 类**（TS 声明但 sys_menu 未声明）。
+ * 挂起集合（Phase 87 · OQ-6 · 用户裁定 2026-10-30）——
+ * 第二批待补播的 7 个动作码：其父菜单（CAD 平面图编辑器 / 墙体 / 门的实际管理入口页）
+ * 尚未人工确认，猜错会导致「树展示错位 + Step 2 继承错位」⇒ 挂起优于猜错。
  *
- * 原因：85-02 把 system 4 组（roles/menus/departments/posts）写操作拆分为
- * RequireStrictPermissions 单一权限点，Go 常量与 TS 声明同批落地，但这 4 组的
- * sys_menu F 型按钮菜单当前为 0 声明（c 类技术性不可满足）——菜单播种归 Phase 87
- * （GrantNewMenuToRolesHavingParent 届时补授）。
- *
- * 移除条件（硬性）：Phase 87 播种 migration 落地后**必须清空本白名单**，
- * 否则 c 类漂移将被永久掩盖。脚本对非空白名单输出移除时限警告（见 main 末尾）。
+ * 这 7 条在 87-05 补播完成后**必须**从本集合与 PENDING_SEED_WHITELIST 一并清空
+ * （清空后脚本自动进入「白名单必须归零」的严格态 —— 规则 B）。
+ */
+const PENDING_SEED_HOLD_CODES = [
+  "ops:walls:add",
+  "ops:walls:edit",
+  "ops:walls:delete",
+  "ops:doors:add",
+  "ops:doors:edit",
+  "ops:doors:delete",
+  "ops:floor-plan:edit",
+];
+const PENDING_SEED_HOLD_SET = new Set(PENDING_SEED_HOLD_CODES);
+
+/**
+ * Phase 87 动作码待播种白名单 —— **仅作用于 c 类**（TS 声明但 sys_menu 未声明）。
+ * 第一批 65 条已通过 Migration 226 播种，白名单收窄为恰好 OQ-6 挂起的 7 条。
  */
 const PENDING_SEED_WHITELIST = [
-  { code: "system:role:add", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:role:edit", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:role:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:role:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:role:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:role:export", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:menu:add", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:menu:edit", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:menu:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:menu:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:menu:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:dept:add", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:dept:edit", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:dept:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:dept:import", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:dept:export", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:dept:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:dept:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:post:add", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:post:edit", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:post:remove", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:post:list", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  { code: "system:post:view", reason: "system 4 组 F 型菜单 0 声明，87 播种后移除", evidence: "85-RESEARCH §B4 / tmp_ftype.json" },
-  // 85-03 批次 A（ops 域）：import/export 16 新码 + walls/doors/floor-plan 7 个
-  // 既有字面量码（TS 同批补声明），sys_menu F 型菜单均 0 声明，87 播种后移除。
-  // 其余 ops 写码（9 域 add/edit/delete）有 F 型授权来源，不在白名单（零窗口期）。
-  { code: "ops:building:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:building:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:floor:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:floor:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:workstation:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:workstation:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:asset:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:asset:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:infopoint:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:infopoint:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:serverroom:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:serverroom:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:dedicatedline:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:dedicatedline:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:roomdevice:import", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:roomdevice:export", reason: "85-03 ops 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:walls:add", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:walls:edit", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:walls:delete", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:doors:add", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:doors:edit", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:doors:delete", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:floor-plan:edit", reason: "85-03 ops 既有字面量码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  // 85-03 批次 B（network 域）：F 型非零的仅 backup:add/restore/diff、command:execute、
-  // discovery:add（拆分后现役角色零感知）；以下码 F 型 0 声明，87 播种后移除。
-  { code: "network:device:add", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:device:edit", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:device:delete", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:device:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:credential:add", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:credential:edit", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:credential:delete", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:credential:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:template:add", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:template:edit", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:template:delete", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:template:view", reason: "85-03 network 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:template:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:command:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:backup:delete", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:backup:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:discovery:delete", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:discovery:export", reason: "85-03 network 新码，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:device:list", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:device:view", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:credential:list", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:credential:view", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:template:list", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:command:view", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:backup:list", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "network:discovery:view", reason: "85-03 network 读码 TS 补声明，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  // 85-03 批次 C（manager 域）：migration_221 菜单 seed 的 F 型声明为 0（tmp_ftype 实证），
-  // 87 播种后移除。ad 域声明码 F 型非零，不在白名单。
-  { code: "ops:manager:rule:list", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:manager:rule:edit", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:manager:rule:delete", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:manager:org:list", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:manager:org:edit", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
-  { code: "ops:manager:org:delete", reason: "85-03 manager 码，F 型 0 声明，87 播种后移除", evidence: "85-RESEARCH §B / tmp_ftype.json" },
+  { code: "ops:walls:add", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
+  { code: "ops:walls:edit", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
+  { code: "ops:walls:delete", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
+  { code: "ops:doors:add", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
+  { code: "ops:doors:edit", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
+  { code: "ops:doors:delete", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
+  { code: "ops:floor-plan:edit", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
 ];
 
 const PENDING_SEED_SET = new Set(PENDING_SEED_WHITELIST.map((w) => w.code));
@@ -372,8 +306,8 @@ function main() {
       for (const code of parsed.fType) menuFType.add(code);
       for (const code of parsed.untyped) menuUntyped.add(code);
     } else {
-      // Go migration：权限码以字符串字面量出现（类型未知 → 仅参与存在性判断）
-      const re = /["']([a-z][a-z0-9_]*(?::[A-Za-z0-9_]+)+)["']/g;
+      // Go migration：权限码以字符串字面量出现（类型未知 → 仅参与存在性判断；放宽支持连字符 -）
+      const re = /["']([a-z][a-z0-9_-]*(?::[A-Za-z0-9_-]+)+)["']/g;
       let m;
       while ((m = re.exec(text)) !== null) {
         menuUntyped.add(m[1]);
@@ -384,7 +318,7 @@ function main() {
       const fBlockMatch = /\/\/\s*F_TYPE_SEED_BEGIN([\s\S]*?)\/\/\s*F_TYPE_SEED_END/.exec(text);
       if (fBlockMatch) {
         const blockText = fBlockMatch[1];
-        const blockRe = /["']([a-z][a-z0-9_]*(?::[A-Za-z0-9_]+)+)["']/g;
+        const blockRe = /["']([a-z][a-z0-9_-]*(?::[A-Za-z0-9_-]+)+)["']/g;
         let bm;
         while ((bm = blockRe.exec(blockText)) !== null) {
           menuFType.add(bm[1]);
@@ -457,13 +391,40 @@ function main() {
     console.log(`  后端常量 ${backendScope.size} 个 / 菜单 F 型 ${menuScope.size} 个`);
   }
 
-  // 白名单非空自检（防永久化）：白名单只在 85-02 → 87 播种之间的窗口期合法。
-  // 非空不阻断（保持 exit 0），但每次运行都输出移除时限警告。
+  // 白名单硬断言（RBAC-06 防永久化）。
+  // 规则 A：白名单每一条都必须在「挂起集合」内 —— 挂起集合之外任何一条残留即 exit 1。
+  // 规则 B：挂起集合已清空（87-05 收口）⇒ 白名单必须完全为空。
+  // 规则 C：白名单里的码若已在 F_TYPE_SEED 块中（其实已播种）⇒ 警告提示移除（不阻断）。
+  const illegalWhitelistEntries = PENDING_SEED_WHITELIST.filter(
+    (w) => !PENDING_SEED_HOLD_SET.has(w.code),
+  );
+  if (illegalWhitelistEntries.length > 0) {
+    errors.push(
+      `PENDING_SEED_WHITELIST 含挂起集合之外的条目（${illegalWhitelistEntries.length} 项：` +
+        `${illegalWhitelistEntries.map((w) => w.code).join(", ")}）—— ` +
+        `Phase 87 第一批已播种，豁免只允许保留在挂起集合内（OQ-6 裁定）`,
+    );
+  }
+  if (PENDING_SEED_HOLD_CODES.length === 0 && PENDING_SEED_WHITELIST.length > 0) {
+    errors.push(
+      `PENDING_SEED_WHITELIST 非空（${PENDING_SEED_WHITELIST.length} 项）但挂起集合已清空 —— ` +
+        `第二批补播完成后白名单必须归零`,
+    );
+  }
+  const alreadySeededHoldCodes = PENDING_SEED_WHITELIST.filter((w) =>
+    PENDING_SEED_HOLD_SET.has(w.code) && menuFType.has(w.code),
+  );
+  if (alreadySeededHoldCodes.length > 0) {
+    console.log(
+      `\n⚠ 挂起集合中已有 ${alreadySeededHoldCodes.length} 条出现在 F 型声明块内（说明已播种）：` +
+        `${alreadySeededHoldCodes.map((w) => w.code).join(", ")} —— 请从白名单移除`,
+    );
+  }
+
   if (PENDING_SEED_WHITELIST.length > 0) {
     console.log(
-      `\n⚠ PENDING_SEED_WHITELIST 非空（${PENDING_SEED_WHITELIST.length} 项）——` +
-        "仅限 85-02 拆分 → 87 播种的窗口期。Phase 87 播种 migration 落地后必须清空" +
-        "本白名单，否则 c 类漂移将被永久掩盖。"
+      `\nℹ 当前白名单仅保留挂起集合（${PENDING_SEED_WHITELIST.length} 项，OQ-6 用户裁定挂起）——` +
+        "待第二批补播完成后白名单归零。"
     );
   }
 
