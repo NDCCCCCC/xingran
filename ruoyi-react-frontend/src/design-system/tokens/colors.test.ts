@@ -373,16 +373,17 @@ describe("phase-64 UAT gap tokens in AntdThemeBridge (COMP-02/03/04)", () => {
     expect(block).toContain("hoverBorderColor: ruoyiBrand.greenPrimary");
   });
 
-  it("G1/COMP-02: Table sort/filter/selected states use cream zebra/header tokens", () => {
+  it("G1/COMP-02: Table sort/filter/selected states use board zebra/header tokens (Phase 91 board 化)", () => {
     const block = extractTsBlock(source, "Table: {");
-    expect(block).toContain("headerBg: ruoyiBrand.cream.headerBg");
-    expect(block).toContain("headerColor: ruoyiBrand.cream.fg");
-    expect(block).toContain("borderColor: ruoyiBrand.cream.border");
-    expect(block).toContain("headerSortActiveBg: ruoyiBrand.cream.zebraBg");
-    expect(block).toContain("headerFilterHoverBg: ruoyiBrand.cream.zebraBg");
-    expect(block).toContain("fixedHeaderSortActiveBg: ruoyiBrand.cream.zebraBg");
-    expect(block).toContain("rowSelectedBg: ruoyiBrand.cream.headerBg");
-    expect(block).toContain("rowSelectedHoverBg: ruoyiBrand.cream.zebraBg");
+    // Phase 91 R8 交还：Table token 由写死 cream.* 改为 board 明暗分板派生
+    expect(block).toContain("headerBg: board.headerBg");
+    expect(block).toContain("headerColor: board.fg");
+    expect(block).toContain("borderColor: board.border");
+    expect(block).toContain("headerSortActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg");
+    expect(block).toContain("headerFilterHoverBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg");
+    expect(block).toContain("fixedHeaderSortActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg");
+    expect(block).toContain("rowSelectedBg: board.headerBg");
+    expect(block).toContain("rowSelectedHoverBg: isDark ? ruoyiBrand.dark.active : ruoyiBrand.cream.zebraBg");
   });
 
   it("QA-02 hygiene: Menu.dark* tokens read from ruoyiBrand, not string literals", () => {
