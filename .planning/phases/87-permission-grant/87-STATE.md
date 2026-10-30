@@ -47,7 +47,7 @@
 
 ---
 
-## 三、批次二（7 条）挂起登记
+## 三、批次二（7 条）确认与补播登记
 
 - **码清单**：
   1. `ops:walls:add`
@@ -57,10 +57,11 @@
   5. `ops:doors:edit`
   6. `ops:doors:delete`
   7. `ops:floor-plan:edit`
-- **推断父菜单**：`ops:floor:list`（楼层管理，**仅为推断，未确认**）。
-- **待确认事项**：CAD 平面图编辑器、墙体和门的实际业务管理入口页。如果挂在「楼宇空间」或其它页面下，父菜单必须重新指定。
-- **归口与时序**：由 **Plan 87-05** 处理（`autonomous: false`，阻塞式人工确认）。
-- **校验脚本对待方式**：在 Plan 87-03 中显式声明为 `PENDING_SEED_HOLD_CODES` 常量（带 OQ-6 引用），白名单中仅允许保留这 7 条，避免 c 类规则误报红。
+- **父菜单确认结论（OQ-6）**：
+  - **用户确认日期**：2026-10-30
+  - **用户确认结论**：**全部挂在「楼层管理」**（`perms='ops:floor:list' AND menu_type='C' AND status=0`）。CAD 平面图编辑器属于楼层管理页面的子功能模块，7 个动作码统一挂载在楼层管理菜单之下。
+- **落地载体**：由 **Plan 87-05** 的 **`migration_227_action_permission_f_type_seed_hold.go`** 独立执行补播，保证审计与回溯清晰独立。
+- **校验脚本与白名单收口**：补播完成后，`check-permission-codes.mjs` 中的 `PENDING_SEED_HOLD_CODES` 与 `PENDING_SEED_WHITELIST` 同时清空归零，激活规则 B（白名单必须归零）严格态。
 
 ---
 

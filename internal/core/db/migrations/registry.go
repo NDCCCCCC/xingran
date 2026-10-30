@@ -48,6 +48,7 @@ var ActiveMigrations = []struct {
 	{224, "dept_sync_seed_and_ou_group_unique"},
 	{225, "schema_migrations_table"},
 	{226, "action_permission_f_type_seed"},
+	{227, "action_permission_f_type_seed_hold"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

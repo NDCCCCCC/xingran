@@ -1159,6 +1159,10 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(226, "action_permission_f_type_seed", migrations.Migrate226ActionPermissionFTypeSeed); err != nil {
 			applogger.Errorf("动作级权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// Phase 87 批次二 7 条动作级权限补播 (OQ-6 用户确认值，RBAC-05)。**非阻断**。
+		if err := d.runAndRecord(227, "action_permission_f_type_seed_hold", migrations.Migrate227ActionPermissionFTypeSeedHold); err != nil {
+			applogger.Errorf("批次二动作级权限补播迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1249,6 +1253,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 既是 dev 运行时也是测试运行时；只注册 PG 分支会让 dev 环境缺权限行。
 		if err := d.runAndRecord(226, "action_permission_f_type_seed", migrations.Migrate226ActionPermissionFTypeSeed); err != nil {
 			applogger.Errorf("动作级权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: Phase 87 批次二 7 条动作级权限补播 (OQ-6 用户确认值，RBAC-05，双方言迁移)。
+		if err := d.runAndRecord(227, "action_permission_f_type_seed_hold", migrations.Migrate227ActionPermissionFTypeSeedHold); err != nil {
+			applogger.Errorf("批次二动作级权限补播迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only

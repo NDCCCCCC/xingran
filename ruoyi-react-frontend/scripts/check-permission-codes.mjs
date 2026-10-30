@@ -45,36 +45,17 @@ const PERM_LITERAL = /^[a-z][a-z0-9_-]*(?::[A-Za-z0-9_-]+)+$/;
 
 /**
  * 挂起集合（Phase 87 · OQ-6 · 用户裁定 2026-10-30）——
- * 第二批待补播的 7 个动作码：其父菜单（CAD 平面图编辑器 / 墙体 / 门的实际管理入口页）
- * 尚未人工确认，猜错会导致「树展示错位 + Step 2 继承错位」⇒ 挂起优于猜错。
- *
- * 这 7 条在 87-05 补播完成后**必须**从本集合与 PENDING_SEED_WHITELIST 一并清空
- * （清空后脚本自动进入「白名单必须归零」的严格态 —— 规则 B）。
+ * 第二批 7 个动作码已于 87-05 经用户确认父菜单为「楼层管理」并通过 Migration 227 完成补播。
+ * 本集合与 PENDING_SEED_WHITELIST 已完全归零，进入规则 B「白名单必须归零」严格态。
  */
-const PENDING_SEED_HOLD_CODES = [
-  "ops:walls:add",
-  "ops:walls:edit",
-  "ops:walls:delete",
-  "ops:doors:add",
-  "ops:doors:edit",
-  "ops:doors:delete",
-  "ops:floor-plan:edit",
-];
+const PENDING_SEED_HOLD_CODES = [];
 const PENDING_SEED_HOLD_SET = new Set(PENDING_SEED_HOLD_CODES);
 
 /**
- * Phase 87 动作码待播种白名单 —— **仅作用于 c 类**（TS 声明但 sys_menu 未声明）。
- * 第一批 65 条已通过 Migration 226 播种，白名单收窄为恰好 OQ-6 挂起的 7 条。
+ * Phase 87 动作码待播种白名单 —— **已彻底归零**。
+ * 第一批 65 条（Migration 226）+ 第二批 7 条（Migration 227）已全部完成 F 型按钮播种。
  */
-const PENDING_SEED_WHITELIST = [
-  { code: "ops:walls:add", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
-  { code: "ops:walls:edit", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
-  { code: "ops:walls:delete", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
-  { code: "ops:doors:add", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
-  { code: "ops:doors:edit", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
-  { code: "ops:doors:delete", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
-  { code: "ops:floor-plan:edit", reason: "OQ-6 挂起：父菜单待人工确认（用户裁定 2026-10-30）⇒ 第一批 65 条已播，本条留待 87-05 第二批补播；补播后必须从白名单移除", evidence: ".planning/phases/87-permission-grant/87-STATE.md 批次二（7 条）挂起登记 + 87-VALIDATION.md OQ-6 裁定" },
-];
+const PENDING_SEED_WHITELIST = [];
 
 const PENDING_SEED_SET = new Set(PENDING_SEED_WHITELIST.map((w) => w.code));
 
