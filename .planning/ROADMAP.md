@@ -210,7 +210,17 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
   1. 角色页勾选动作权限 → 前端可见 + 后端放行（同源权限码）
   2. 三层证据齐全 + 决定性对照（临时加权限点 → 403 转 200）
   3. 校验脚本覆盖新铺开面并接入 CI 门禁；生产库既有行零改动
-**Plans**: TBD
+**Plans**: 5 plans（01, 02, 03, 04, 05 —— **05 默认挂起**，待 OQ-6 用户确认批次二 7 条动作码的父菜单后开工）
+- `87-01` wave 1 — **W0 底座（tracer）**：migration 226 骨架（双方言 / 幂等 / `perms+menu_type=C+status=0` 精确父定位 / `NOT EXISTS` 精准授权 / 非阻断降级 / `visible` 显式归零）+ sqlite 原生 DDL 测试基建 + 校验脚本 Go 侧 `F_TYPE_SEED` 块解析；**1 条试点码 `system:role:add` 端到端打通**
+- `87-02` wave 2 — **播种第一批 65 条** + 精准授权 + 幂等 + 父缺失降级 + 多父集合 + 7 个 sqlite 用例 + `87-STATE.md` 落盘
+- `87-03` wave 3 — **校验脚本改造 + CI 门禁接入**：挂起集合机制 + 三条硬断言 + `lint:ci` + GitHub Actions + `check-ci-local.sh`
+- `87-04` wave 3 — **授权闭环组件测试 + 三层证据台账 + 决定性对照实验**（只读 SQL 口径）
+- `87-05` wave 4 — **第二批 7 条补播（migration 227）+ 白名单归零**（`autonomous: false`，首 task 为 `checkpoint:human-verify`）
+
+> ⚠️ **口径更正（Lead 实测复核，2026-10-30）**：本 phase 的核心缺口是**数据**而非前端 —— F 型按钮**在角色页本来就可见可勾选**（`internal/services/system/menu_service.go:181-190` 的 `GetTree` 无 `menu_type` 过滤）⇒ **前端授权组件零改造**，Phase 87 = 纯后端数据播种 + 校验脚本改造。
+> ⚠️ **播种清单三段拆分**：白名单 78 条 = **65 条立即播**（system 23 + ops 16 + network 26）+ **7 条挂起**（`ops:walls:{add,edit,delete}` / `ops:doors:{add,edit,delete}` / `ops:floor-plan:edit`，父待人工确认，OQ-6）+ **6 条不播**（`ops:manager:*`，`migration_221` 已覆盖，OQ-2）。
+> ⚠️ **白名单不能一次全清**：挂起的 7 条在 87-05 补播前仍无 F 行 ⇒ 脚本用「挂起集合」机制承载，**集合外任何一条残留即 exit 1**；「白名单归零」由 87-05 关闭。
+> ⚠️ **两条落地陷阱（PATTERNS.md 实测，研究文档未覆盖）**：① `models.Menu.Visible` 的 GORM tag 是 `default:1` ⇒ `db.Create` 落 **visible=1**（违反 AGENTS.md「Menu visible 1=visible/0=hidden」），必须显式归零；② 权限码正则段内字符类 `[A-Za-z0-9_]` **不含 `-`** ⇒ `ops:floor-plan:edit` 既进不了 c 类也进不了 d 类 ⇒ **必须放宽字符类**，否则 87-05 白名单归零时必然 exit 1（放宽后实测 72/72 全中且零误报）。
 
 ### Phase 88: 验证底座与零风险清理
 **Goal**: 修 CSS 契约脚本假红 fixture（VISFIX-06）+ 反转 C3b + 新增 C6-C15 断言 + 删死选择器/死文件（STYLE-02 第 1 批 D1-D17 + VISFIX-03）+ antd 6 弃用清理（VISFIX-04）
