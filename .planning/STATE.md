@@ -4,12 +4,12 @@ milestone: v1.25
 milestone_name: 全站权限治理与样式收敛
 current_phase: 91
 current_phase_name: Select / InputNumber / Form / Table / Modal 域交还
-status: ready_to_plan
-stopped_at: Phase 87（W1~W4，5 个 plan）全部执行完成并验收收口；权限线 A（Phase 84~87）全部完结；下一步进入样式线 B 的 Phase 91（Select/InputNumber/Form/Table/Modal 域交还 + 弃用清零）
-last_updated: "2026-10-30T10:48:00.000Z"
+status: ready_to_execute
+stopped_at: Phase 91 规划完成（91-RESEARCH / 91-UI-SPEC / 91-01~03 全套计划与验证矩阵已提交）；下一步执行 Phase 91（/gsd-execute-phase 91）
+last_updated: "2026-10-30T11:40:00.000Z"
 last_activity: 2026-10-30
-last_activity_desc: v1.25 执行期——Phase 87（动作级权限授予闭环，65+7码播种，白名单归零，三层证据与组件测试通过）全量收口，线 A 完结
-state_head: 800a40aa
+last_activity_desc: v1.25 执行期——Phase 91 完成 UI-SPEC 设计契约与 3 波执行计划编制 (91-01~03)，准备就绪
+state_head: 075d7a24
 progress:
   total_phases: 10
   completed_phases: 7
