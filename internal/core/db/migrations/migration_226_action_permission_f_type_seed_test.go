@@ -8,15 +8,18 @@ import (
 )
 
 // ============================================================================
-// Phase 87 / RBAC-05 迁移 226 测试
+// Phase 87 / RBAC-05 迁移 226 测试（全量 65 条动作权限）
 //
 // 覆盖：
-//   - 87-NN-01: F 型按钮权限行恰好 1 条（menu_type='F', status=0, visible=0）
+//   - 87-NN-01: 65 条动作码在 sys_menu 各有且仅有 1 行（menu_type='F', status=0, visible=0, parent_id 指向 live 父）
 //   - 87-NN-02: 迁移幂等性（连跑 2 次行数不变）
 //   - 87-NN-03: 精准授权（持 live 父角色获授权，持 status=1 停用父角色与未持父角色不获授权）
 //   - 87-NN-04: 父菜单缺失优雅降级（返回 nil，不 panic，零新增行）
+//   - 87-NN-05: 多父集合支持（network:command 的 2 个父 C 菜单角色都能获授权）
+//   - AGENTS.md P1: visible 显式归零（所有 F 按钮 visible 必为 0）
+//   - 87-NN-16: 既有行零改动（SC3 自动化等价值：既有菜单与角色关联字段逐字未改）
 //
-// 原生 DDL（不走 GORM AutoMigrate）：避免模型中 PG 专有定义在 sqlite 报错。
+// OQ-11 防假绿约束：测试文件不得硬编码 65 码字面量列表，统一引用包内 actionPermissionSeeds。
 // ============================================================================
 
 var migrate226Statements = []string{
@@ -85,67 +88,153 @@ func countMigrate226Rows(t *testing.T, db *gorm.DB, query string, args ...interf
 	return n
 }
 
-// seedTracerParentAndRoles 建立试点码的父 C 菜单（包含 live 与停用副本）和测试角色
-func seedTracerParentAndRoles(t *testing.T, db *gorm.DB) {
+// seedFullParentsAndRoles 为全量 65 码准备对应所有的 live 父菜单、停用旧树副本以及测试角色
+func seedFullParentsAndRoles(t *testing.T, db *gorm.DB) {
 	t.Helper()
-	execMigrate226(t, db, []string{
-		// 1) live 角色管理父菜单 (status=0)
-		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible)
-		 VALUES ('m-role-live', '角色管理', 'system:role', 'C', 0, 1)`,
-		// 2) 停用旧树角色管理副本 (status=1) —— 越权防护断言用
-		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible)
-		 VALUES ('m-role-stopped', '角色管理', 'system:role', 'C', 1, 1)`,
-		// 3) 角色 r-holder 持有 live 父
-		`INSERT INTO sys_role (id, role_name, status) VALUES ('r-holder', '持有者角色', 0)`,
-		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-holder', 'm-role-live')`,
-		// 4) 角色 r-stopped-holder 仅持有停用父
-		`INSERT INTO sys_role (id, role_name, status) VALUES ('r-stopped-holder', '停用父持有者', 0)`,
-		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stopped-holder', 'm-role-stopped')`,
-		// 5) 角色 r-other 未关联任何父菜单
-		`INSERT INTO sys_role (id, role_name, status) VALUES ('r-other', '未授权角色', 0)`,
-	})
+	stmts := []string{
+		// 1. system 4 组父菜单 (live)
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-sys-role', '角色管理', 'system:role', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-sys-menu', '菜单管理', 'system:menu', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-sys-dept', '部门管理', 'system:dept', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-sys-post', '岗位管理', 'system:post', 'C', 0, 1)`,
+
+		// 2. ops 8 组父菜单 (各造 live status=0 与 stopped status=1 两套平行树)
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-building-live', '楼宇管理', 'ops:building:list', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-building-stop', '楼宇管理', 'ops:building:list', 'C', 1, 1)`,
+
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-floor-live', '楼层管理', 'ops:floor:list', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-floor-stop', '楼层管理', 'ops:floor:list', 'C', 1, 1)`,
+
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-workstation-live', '工位管理', 'ops:workstation:list', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-workstation-stop', '工位管理', 'ops:workstation:list', 'C', 1, 1)`,
+
+		// ops:asset 特例父菜单 (perms 为 NULL)
+		`INSERT INTO sys_menu (id, menu_name, perms, component, menu_type, status, visible) VALUES ('p-ops-asset-live', '资产列表', NULL, 'operations/assets/index', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, component, menu_type, status, visible) VALUES ('p-ops-asset-stop', '资产列表', NULL, 'operations/assets/index', 'C', 1, 1)`,
+
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-infopoint-live', '信息点管理', 'ops:infopoint:list', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-infopoint-stop', '信息点管理', 'ops:infopoint:list', 'C', 1, 1)`,
+
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-serverroom-live', '机房管理', 'ops:serverroom:list', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-serverroom-stop', '机房管理', 'ops:serverroom:list', 'C', 1, 1)`,
+
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-dedicatedline-live', '专线管理', 'ops:dedicatedline:list', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-dedicatedline-stop', '专线管理', 'ops:dedicatedline:list', 'C', 1, 1)`,
+
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-roomdevice-live', '机房设备管理', 'ops:roomdevice:list', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-ops-roomdevice-stop', '机房设备管理', 'ops:roomdevice:list', 'C', 1, 1)`,
+
+		// 3. network 6 组父菜单
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-net-device', '设备管理', 'network:device', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-net-credential', '授权凭据', 'network:credential', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-net-template', '配置模板', 'network:template', 'C', 0, 1)`,
+
+		// network:command 包含两个 status=0 的父菜单：命令分发 + 配置执行 (多父集合)
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-net-cmd-dist', '命令分发', 'network:command', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-net-cmd-exec', '配置执行', 'network:command', 'C', 0, 1)`,
+
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-net-backup', '配置备份', 'network:backup', 'C', 0, 1)`,
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible) VALUES ('p-net-discovery', '设备发现', 'network:discovery', 'C', 0, 1)`,
+
+		// 4. 测试角色准备
+		`INSERT INTO sys_role (id, role_name, status) VALUES ('r-all-parents', '全持 live 父角色', 0)`,
+		`INSERT INTO sys_role (id, role_name, status) VALUES ('r-stop-parents', '全持 stopped 父角色', 0)`,
+		`INSERT INTO sys_role (id, role_name, status) VALUES ('r-cmd-dist-only', '仅持命令分发角色', 0)`,
+		`INSERT INTO sys_role (id, role_name, status) VALUES ('r-cmd-exec-only', '仅持配置执行角色', 0)`,
+		`INSERT INTO sys_role (id, role_name, status) VALUES ('r-none', '无任何权限角色', 0)`,
+
+		// r-all-parents 关联全部 live 父
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-sys-role')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-sys-menu')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-sys-dept')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-sys-post')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-ops-building-live')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-ops-floor-live')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-ops-workstation-live')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-ops-asset-live')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-ops-infopoint-live')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-ops-serverroom-live')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-ops-dedicatedline-live')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-ops-roomdevice-live')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-net-device')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-net-credential')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-net-template')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-net-cmd-dist')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-net-cmd-exec')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-net-backup')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'p-net-discovery')`,
+
+		// r-stop-parents 仅关联全部停用父
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stop-parents', 'p-ops-building-stop')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stop-parents', 'p-ops-floor-stop')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stop-parents', 'p-ops-workstation-stop')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stop-parents', 'p-ops-asset-stop')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stop-parents', 'p-ops-infopoint-stop')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stop-parents', 'p-ops-serverroom-stop')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stop-parents', 'p-ops-dedicatedline-stop')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-stop-parents', 'p-ops-roomdevice-stop')`,
+
+		// 多父细分验证角色
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-cmd-dist-only', 'p-net-cmd-dist')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-cmd-exec-only', 'p-net-cmd-exec')`,
+	}
+	execMigrate226(t, db, stmts)
 }
 
-// TestMigrate226_SeedsAllCodes 验证试点码正确播种且字段口径符合约定。
+// TestMigrate226_SeedsAllCodes 验证全量 65 码在 sys_menu 各有且仅有 1 行，且 parent_id 全部指向 live 父
 func TestMigrate226_SeedsAllCodes(t *testing.T) {
 	db := freshSQLiteDBForMigrate226(t)
-	seedTracerParentAndRoles(t, db)
+	seedFullParentsAndRoles(t, db)
 
 	if err := Migrate226ActionPermissionFTypeSeed(db); err != nil {
-		t.Fatalf("Migrate226 失败: %v", err)
+		t.Fatalf("Migrate226 执行失败: %v", err)
 	}
 
-	// 断言试点码在 sys_menu 有且仅有 1 行
-	totalButtons := countMigrate226Rows(t, db,
-		"SELECT count(*) FROM sys_menu WHERE menu_type = 'F' AND perms = 'system:role:add'")
-	if totalButtons != 1 {
-		t.Fatalf("期望试点码按钮行数=1, 实际=%d", totalButtons)
+	// 1) 验证总 F 行数正好为 65
+	totalButtons := countMigrate226Rows(t, db, "SELECT count(*) FROM sys_menu WHERE menu_type = 'F'")
+	if totalButtons != int64(len(actionPermissionSeeds)) {
+		t.Fatalf("期望创建 %d 条 F 按钮, 实际创建=%d", len(actionPermissionSeeds), totalButtons)
 	}
 
-	// 断言 status=0, visible=0, parent_id 指向 live 父菜单
-	var menu struct {
-		ParentID string
-		Status   int
-		Visible  int
-	}
-	if err := db.Raw("SELECT parent_id, status, visible FROM sys_menu WHERE perms = 'system:role:add'").Scan(&menu).Error; err != nil {
-		t.Fatalf("查询试点码字段失败: %v", err)
-	}
-	if menu.Status != 0 {
-		t.Errorf("期望 status=0, 实际=%d", menu.Status)
-	}
-	if menu.Visible != 0 {
-		t.Errorf("期望 visible=0, 实际=%d", menu.Visible)
-	}
-	if menu.ParentID != "m-role-live" {
-		t.Errorf("期望 parent_id='m-role-live', 实际=%s", menu.ParentID)
+	// 2) 逐条验证包内 actionPermissionSeeds 中的每个码
+	for _, seed := range actionPermissionSeeds {
+		var row struct {
+			ID       string
+			ParentID string
+			Status   int
+			Visible  int
+		}
+		err := db.Raw("SELECT id, parent_id, status, visible FROM sys_menu WHERE perms = ? AND menu_type = 'F'",
+			seed.perms).Scan(&row).Error
+		if err != nil {
+			t.Fatalf("查询码 %s 失败: %v", seed.perms, err)
+		}
+		if row.ID == "" {
+			t.Errorf("码 %s 未被创建", seed.perms)
+		}
+		if row.Status != 0 {
+			t.Errorf("码 %s 期望 status=0, 实际=%d", seed.perms, row.Status)
+		}
+		if row.Visible != 0 {
+			t.Errorf("码 %s 期望 visible=0, 实际=%d", seed.perms, row.Visible)
+		}
+
+		// 断言 parent_id 指向 live 父菜单（不能包含 -stop）
+		var parentStatus int
+		err = db.Raw("SELECT status FROM sys_menu WHERE id = ?", row.ParentID).Scan(&parentStatus).Error
+		if err != nil {
+			t.Fatalf("查询父菜单 %s 状态失败: %v", row.ParentID, err)
+		}
+		if parentStatus != 0 {
+			t.Errorf("码 %s 挂接到了非 live 父菜单(status=%d, parent_id=%s)", seed.perms, parentStatus, row.ParentID)
+		}
 	}
 }
 
-// TestMigrate226_Idempotent 验证连续执行两次迁移具有严格幂等性。
+// TestMigrate226_Idempotent 验证连续执行两次迁移具有严格幂等性
 func TestMigrate226_Idempotent(t *testing.T) {
 	db := freshSQLiteDBForMigrate226(t)
-	seedTracerParentAndRoles(t, db)
+	seedFullParentsAndRoles(t, db)
 
 	// 第 1 次执行
 	if err := Migrate226ActionPermissionFTypeSeed(db); err != nil {
@@ -169,43 +258,44 @@ func TestMigrate226_Idempotent(t *testing.T) {
 	}
 }
 
-// TestMigrate226_GrantsOnlyParentHolders 验证精准授权与停用副本防越权。
+// TestMigrate226_GrantsOnlyParentHolders 验证精准授权与停用副本防越权
 func TestMigrate226_GrantsOnlyParentHolders(t *testing.T) {
 	db := freshSQLiteDBForMigrate226(t)
-	seedTracerParentAndRoles(t, db)
+	seedFullParentsAndRoles(t, db)
 
 	if err := Migrate226ActionPermissionFTypeSeed(db); err != nil {
 		t.Fatalf("Migrate226 失败: %v", err)
 	}
 
-	var buttonID string
-	if err := db.Raw("SELECT id FROM sys_menu WHERE perms = 'system:role:add'").Scan(&buttonID).Error; err != nil {
-		t.Fatalf("获取按钮 ID 失败: %v", err)
+	// 1) 持有全部 live 父的角色应该获得全部 65 条 F 行的授权
+	grantedToHolder := countMigrate226Rows(t, db,
+		`SELECT count(*) FROM sys_role_menu rm
+		 JOIN sys_menu m ON rm.menu_id = m.id
+		 WHERE rm.role_id = 'r-all-parents' AND m.menu_type = 'F'`)
+	if grantedToHolder != 65 {
+		t.Errorf("期望 r-all-parents 获得全部 65 条 F 行授权, 实际=%d", grantedToHolder)
 	}
 
-	// 1) 持有 live 父的角色获得授权
-	holderGranted := countMigrate226Rows(t, db,
-		"SELECT count(*) FROM sys_role_menu WHERE role_id = 'r-holder' AND menu_id = ?", buttonID)
-	if holderGranted != 1 {
-		t.Errorf("期望 r-holder 获得授权, 实际计数=%d", holderGranted)
+	// 2) 仅持有停用副本的角色，绝不能获得任何新增 F 行授权（停用旧树防越权）
+	grantedToStopHolder := countMigrate226Rows(t, db,
+		`SELECT count(*) FROM sys_role_menu rm
+		 JOIN sys_menu m ON rm.menu_id = m.id
+		 WHERE rm.role_id = 'r-stop-parents' AND m.menu_type = 'F'`)
+	if grantedToStopHolder != 0 {
+		t.Errorf("越权漏洞：r-stop-parents 获得了 F 行授权, 实际计数=%d", grantedToStopHolder)
 	}
 
-	// 2) 越权防线：持有 status=1 停用副本角色的不获授权
-	stoppedHolderGranted := countMigrate226Rows(t, db,
-		"SELECT count(*) FROM sys_role_menu WHERE role_id = 'r-stopped-holder' AND menu_id = ?", buttonID)
-	if stoppedHolderGranted != 0 {
-		t.Errorf("越权漏洞：r-stopped-holder 获得了授权, 计数=%d", stoppedHolderGranted)
-	}
-
-	// 3) 未持有任何父的角色不获授权
-	otherGranted := countMigrate226Rows(t, db,
-		"SELECT count(*) FROM sys_role_menu WHERE role_id = 'r-other' AND menu_id = ?", buttonID)
-	if otherGranted != 0 {
-		t.Errorf("越权漏洞：r-other 获得了授权, 计数=%d", otherGranted)
+	// 3) 无任何权限的角色，绝不能获得任何新增 F 行授权
+	grantedToNone := countMigrate226Rows(t, db,
+		`SELECT count(*) FROM sys_role_menu rm
+		 JOIN sys_menu m ON rm.menu_id = m.id
+		 WHERE rm.role_id = 'r-none' AND m.menu_type = 'F'`)
+	if grantedToNone != 0 {
+		t.Errorf("越权漏洞：r-none 获得了 F 行授权, 实际计数=%d", grantedToNone)
 	}
 }
 
-// TestMigrate226_MissingParentDegradesGracefully 验证父菜单不存在时优雅降级。
+// TestMigrate226_MissingParentDegradesGracefully 验证父菜单缺失时的优雅降级
 func TestMigrate226_MissingParentDegradesGracefully(t *testing.T) {
 	db := freshSQLiteDBForMigrate226(t)
 	// 不插入任何父菜单与角色
@@ -225,5 +315,110 @@ func TestMigrate226_MissingParentDegradesGracefully(t *testing.T) {
 	}
 	if roleMenuCountBefore != roleMenuCountAfter {
 		t.Errorf("父缺失时 sys_role_menu 产生新增行: 前=%d, 后=%d", roleMenuCountBefore, roleMenuCountAfter)
+	}
+}
+
+// TestMigrate226_MultiParent 验证 network:command 的 2 个父 C 菜单角色都能获授权
+func TestMigrate226_MultiParent(t *testing.T) {
+	db := freshSQLiteDBForMigrate226(t)
+	seedFullParentsAndRoles(t, db)
+
+	if err := Migrate226ActionPermissionFTypeSeed(db); err != nil {
+		t.Fatalf("Migrate226 执行失败: %v", err)
+	}
+
+	// 查询 network:command 的 2 个按钮菜单 ID
+	var cmdMenuIDs []string
+	if err := db.Raw("SELECT id FROM sys_menu WHERE parent_id IN ('p-net-cmd-dist', 'p-net-cmd-exec') AND menu_type = 'F'").Scan(&cmdMenuIDs).Error; err != nil {
+		t.Fatalf("查询命令按钮 ID 失败: %v", err)
+	}
+	if len(cmdMenuIDs) != 2 {
+		t.Fatalf("期望找到 2 个 network:command 按钮, 实际=%d", len(cmdMenuIDs))
+	}
+
+	// 1) 仅持有命令分发(p-net-cmd-dist)的角色获得这 2 个按钮的授权
+	distGranted := countMigrate226Rows(t, db,
+		"SELECT count(*) FROM sys_role_menu WHERE role_id = 'r-cmd-dist-only' AND menu_id IN ?", cmdMenuIDs)
+	if distGranted != 2 {
+		t.Errorf("期望 r-cmd-dist-only 获得 2 个命令按钮授权, 实际=%d", distGranted)
+	}
+
+	// 2) 仅持有配置执行(p-net-cmd-exec)的角色也获得这 2 个按钮的授权
+	execGranted := countMigrate226Rows(t, db,
+		"SELECT count(*) FROM sys_role_menu WHERE role_id = 'r-cmd-exec-only' AND menu_id IN ?", cmdMenuIDs)
+	if execGranted != 2 {
+		t.Errorf("期望 r-cmd-exec-only 获得 2 个命令按钮授权, 实际=%d", execGranted)
+	}
+}
+
+// TestMigrate226_VisibleIsZero 验证所有 65 条 F 按钮在落库后 visible 必须严格为 0
+func TestMigrate226_VisibleIsZero(t *testing.T) {
+	db := freshSQLiteDBForMigrate226(t)
+	seedFullParentsAndRoles(t, db)
+
+	if err := Migrate226ActionPermissionFTypeSeed(db); err != nil {
+		t.Fatalf("Migrate226 执行失败: %v", err)
+	}
+
+	nonZeroVisible := countMigrate226Rows(t, db,
+		"SELECT count(*) FROM sys_menu WHERE menu_type = 'F' AND visible != 0")
+	if nonZeroVisible != 0 {
+		t.Errorf("违反 AGENTS.md P1 规范：有 %d 条 F 按钮菜单 visible != 0", nonZeroVisible)
+	}
+}
+
+// TestMigrate226_ExistingRowsUntouched 验证既有行零改动（SC3 自动化等价值）
+func TestMigrate226_ExistingRowsUntouched(t *testing.T) {
+	db := freshSQLiteDBForMigrate226(t)
+	seedFullParentsAndRoles(t, db)
+
+	// 预置既有非本批 F 型行、既有 C 型行、既有授权行
+	execMigrate226(t, db, []string{
+		`INSERT INTO sys_menu (id, menu_name, perms, menu_type, status, visible, parent_id)
+		 VALUES ('m-exist-f', '既有用户导出', 'system:user:export', 'F', 0, 0, 'p-sys-role')`,
+		`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r-all-parents', 'm-exist-f')`,
+	})
+
+	// 获取既有行特征
+	var beforeMenu struct {
+		MenuName string
+		Perms    string
+		MenuType string
+		Status   int
+		Visible  int
+		ParentID string
+	}
+	if err := db.Raw("SELECT menu_name, perms, menu_type, status, visible, parent_id FROM sys_menu WHERE id = 'm-exist-f'").Scan(&beforeMenu).Error; err != nil {
+		t.Fatalf("查询既有行失败: %v", err)
+	}
+
+	initialMenuCount := countMigrate226Rows(t, db, "SELECT count(*) FROM sys_menu")
+
+	// 执行迁移
+	if err := Migrate226ActionPermissionFTypeSeed(db); err != nil {
+		t.Fatalf("Migrate226 执行失败: %v", err)
+	}
+
+	// 1) 验证既有行字段逐字未变
+	var afterMenu struct {
+		MenuName string
+		Perms    string
+		MenuType string
+		Status   int
+		Visible  int
+		ParentID string
+	}
+	if err := db.Raw("SELECT menu_name, perms, menu_type, status, visible, parent_id FROM sys_menu WHERE id = 'm-exist-f'").Scan(&afterMenu).Error; err != nil {
+		t.Fatalf("查询迁移后既有行失败: %v", err)
+	}
+
+	if beforeMenu != afterMenu {
+		t.Errorf("SC3 破坏：既有菜单行被篡改! 前=%+v, 后=%+v", beforeMenu, afterMenu)
+	}
+
+	// 2) 验证总数增量恰好等于 65
+	afterMenuCount := countMigrate226Rows(t, db, "SELECT count(*) FROM sys_menu")
+	if afterMenuCount != initialMenuCount+65 {
+		t.Errorf("sys_menu 总数增量不等于 65: 前=%d, 后=%d", initialMenuCount, afterMenuCount)
 	}
 }

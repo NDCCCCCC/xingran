@@ -23,24 +23,216 @@ type actionPermissionSeed struct {
 // ============================================================================
 // F 型声明块（由 ruoyi-react-frontend/scripts/check-permission-codes.mjs 解析）：
 // 块内所有权限码字面量按 F 型按钮权限计入 menuFType，不再只当 untyped 字面量。
-// 必须与下方 actionPermissionSeeds 保持 1:1 严格一致。
+// 必须与下方 actionPermissionSeeds 保持 1:1 严格一致（逐条相等且数量一致）。
 // 父 perms 必须留在块外，避免被误判为 F 型按钮。
 // ============================================================================
 // F_TYPE_SEED_BEGIN
 var actionPermissionFTypeSeedCodes = []string{
-	// 试点码（87-01 tracer）：角色新增按钮
+	// 1. system:role (6 条)
+	"system:role:list",
+	"system:role:view",
 	"system:role:add",
+	"system:role:edit",
+	"system:role:remove",
+	"system:role:export",
+
+	// 2. system:menu (5 条)
+	"system:menu:list",
+	"system:menu:view",
+	"system:menu:add",
+	"system:menu:edit",
+	"system:menu:remove",
+
+	// 3. system:dept (7 条)
+	"system:dept:list",
+	"system:dept:view",
+	"system:dept:add",
+	"system:dept:edit",
+	"system:dept:remove",
+	"system:dept:import",
+	"system:dept:export",
+
+	// 4. system:post (5 条)
+	"system:post:list",
+	"system:post:view",
+	"system:post:add",
+	"system:post:edit",
+	"system:post:remove",
+
+	// 5. ops:building (2 条)
+	"ops:building:import",
+	"ops:building:export",
+
+	// 6. ops:floor (2 条)
+	"ops:floor:import",
+	"ops:floor:export",
+
+	// 7. ops:workstation (2 条)
+	"ops:workstation:import",
+	"ops:workstation:export",
+
+	// 8. ops:asset (2 条 - 特例父菜单)
+	"ops:asset:import",
+	"ops:asset:export",
+
+	// 9. ops:infopoint (2 条)
+	"ops:infopoint:import",
+	"ops:infopoint:export",
+
+	// 10. ops:serverroom (2 条)
+	"ops:serverroom:import",
+	"ops:serverroom:export",
+
+	// 11. ops:dedicatedline (2 条)
+	"ops:dedicatedline:import",
+	"ops:dedicatedline:export",
+
+	// 12. ops:roomdevice (2 条)
+	"ops:roomdevice:import",
+	"ops:roomdevice:export",
+
+	// 13. network:device (6 条)
+	"network:device:list",
+	"network:device:view",
+	"network:device:add",
+	"network:device:edit",
+	"network:device:delete",
+	"network:device:export",
+
+	// 14. network:credential (6 条)
+	"network:credential:list",
+	"network:credential:view",
+	"network:credential:add",
+	"network:credential:edit",
+	"network:credential:delete",
+	"network:credential:export",
+
+	// 15. network:template (6 条)
+	"network:template:list",
+	"network:template:view",
+	"network:template:add",
+	"network:template:edit",
+	"network:template:delete",
+	"network:template:export",
+
+	// 16. network:command (2 条 - 多父集合)
+	"network:command:view",
+	"network:command:export",
+
+	// 17. network:backup (3 条)
+	"network:backup:list",
+	"network:backup:delete",
+	"network:backup:export",
+
+	// 18. network:discovery (3 条)
+	"network:discovery:view",
+	"network:discovery:delete",
+	"network:discovery:export",
 }
 // F_TYPE_SEED_END
 
-// actionPermissionSeeds 动作级权限种子表（87-01 仅试点码，87-02 铺开第一批 65 条）。
+// actionPermissionSeeds 动作级权限种子表（第一批 65 条）。
 var actionPermissionSeeds = []actionPermissionSeed{
-	{
-		name:        "角色新增",
-		perms:       "system:role:add",
-		parentPerms: "system:role",
-		orderNum:    1,
-	},
+	// 1. system:role (6 条)
+	{name: "角色查询", perms: "system:role:list", parentPerms: "system:role", orderNum: 1},
+	{name: "角色详情", perms: "system:role:view", parentPerms: "system:role", orderNum: 2},
+	{name: "角色新增", perms: "system:role:add", parentPerms: "system:role", orderNum: 3},
+	{name: "角色修改", perms: "system:role:edit", parentPerms: "system:role", orderNum: 4},
+	{name: "角色删除", perms: "system:role:remove", parentPerms: "system:role", orderNum: 5},
+	{name: "角色导出", perms: "system:role:export", parentPerms: "system:role", orderNum: 6},
+
+	// 2. system:menu (5 条)
+	{name: "菜单查询", perms: "system:menu:list", parentPerms: "system:menu", orderNum: 1},
+	{name: "菜单详情", perms: "system:menu:view", parentPerms: "system:menu", orderNum: 2},
+	{name: "菜单新增", perms: "system:menu:add", parentPerms: "system:menu", orderNum: 3},
+	{name: "菜单修改", perms: "system:menu:edit", parentPerms: "system:menu", orderNum: 4},
+	{name: "菜单删除", perms: "system:menu:remove", parentPerms: "system:menu", orderNum: 5},
+
+	// 3. system:dept (7 条)
+	{name: "部门查询", perms: "system:dept:list", parentPerms: "system:dept", orderNum: 1},
+	{name: "部门详情", perms: "system:dept:view", parentPerms: "system:dept", orderNum: 2},
+	{name: "部门新增", perms: "system:dept:add", parentPerms: "system:dept", orderNum: 3},
+	{name: "部门修改", perms: "system:dept:edit", parentPerms: "system:dept", orderNum: 4},
+	{name: "部门删除", perms: "system:dept:remove", parentPerms: "system:dept", orderNum: 5},
+	{name: "部门导入", perms: "system:dept:import", parentPerms: "system:dept", orderNum: 6},
+	{name: "部门导出", perms: "system:dept:export", parentPerms: "system:dept", orderNum: 7},
+
+	// 4. system:post (5 条)
+	{name: "岗位查询", perms: "system:post:list", parentPerms: "system:post", orderNum: 1},
+	{name: "岗位详情", perms: "system:post:view", parentPerms: "system:post", orderNum: 2},
+	{name: "岗位新增", perms: "system:post:add", parentPerms: "system:post", orderNum: 3},
+	{name: "岗位修改", perms: "system:post:edit", parentPerms: "system:post", orderNum: 4},
+	{name: "岗位删除", perms: "system:post:remove", parentPerms: "system:post", orderNum: 5},
+
+	// 5. ops:building (2 条)
+	{name: "楼宇导入", perms: "ops:building:import", parentPerms: "ops:building:list", orderNum: 10},
+	{name: "楼宇导出", perms: "ops:building:export", parentPerms: "ops:building:list", orderNum: 11},
+
+	// 6. ops:floor (2 条)
+	{name: "楼层导入", perms: "ops:floor:import", parentPerms: "ops:floor:list", orderNum: 10},
+	{name: "楼层导出", perms: "ops:floor:export", parentPerms: "ops:floor:list", orderNum: 11},
+
+	// 7. ops:workstation (2 条)
+	{name: "工位导入", perms: "ops:workstation:import", parentPerms: "ops:workstation:list", orderNum: 10},
+	{name: "工位导出", perms: "ops:workstation:export", parentPerms: "ops:workstation:list", orderNum: 11},
+
+	// 8. ops:asset (2 条 - 特例父菜单，perms 为 NULL，通过 parentName + parentComponent 定位)
+	{name: "资产导入", perms: "ops:asset:import", parentName: "资产列表", parentComponent: "operations/assets/index", orderNum: 10},
+	{name: "资产导出", perms: "ops:asset:export", parentName: "资产列表", parentComponent: "operations/assets/index", orderNum: 11},
+
+	// 9. ops:infopoint (2 条)
+	{name: "信息点导入", perms: "ops:infopoint:import", parentPerms: "ops:infopoint:list", orderNum: 10},
+	{name: "信息点导出", perms: "ops:infopoint:export", parentPerms: "ops:infopoint:list", orderNum: 11},
+
+	// 10. ops:serverroom (2 条)
+	{name: "机房导入", perms: "ops:serverroom:import", parentPerms: "ops:serverroom:list", orderNum: 10},
+	{name: "机房导出", perms: "ops:serverroom:export", parentPerms: "ops:serverroom:list", orderNum: 11},
+
+	// 11. ops:dedicatedline (2 条)
+	{name: "专线导入", perms: "ops:dedicatedline:import", parentPerms: "ops:dedicatedline:list", orderNum: 10},
+	{name: "专线导出", perms: "ops:dedicatedline:export", parentPerms: "ops:dedicatedline:list", orderNum: 11},
+
+	// 12. ops:roomdevice (2 条)
+	{name: "机房设备导入", perms: "ops:roomdevice:import", parentPerms: "ops:roomdevice:list", orderNum: 10},
+	{name: "机房设备导出", perms: "ops:roomdevice:export", parentPerms: "ops:roomdevice:list", orderNum: 11},
+
+	// 13. network:device (6 条)
+	{name: "设备查询", perms: "network:device:list", parentPerms: "network:device", orderNum: 1},
+	{name: "设备详情", perms: "network:device:view", parentPerms: "network:device", orderNum: 2},
+	{name: "设备新增", perms: "network:device:add", parentPerms: "network:device", orderNum: 3},
+	{name: "设备修改", perms: "network:device:edit", parentPerms: "network:device", orderNum: 4},
+	{name: "设备删除", perms: "network:device:delete", parentPerms: "network:device", orderNum: 5},
+	{name: "设备导出", perms: "network:device:export", parentPerms: "network:device", orderNum: 6},
+
+	// 14. network:credential (6 条)
+	{name: "凭据查询", perms: "network:credential:list", parentPerms: "network:credential", orderNum: 1},
+	{name: "凭据详情", perms: "network:credential:view", parentPerms: "network:credential", orderNum: 2},
+	{name: "凭据新增", perms: "network:credential:add", parentPerms: "network:credential", orderNum: 3},
+	{name: "凭据修改", perms: "network:credential:edit", parentPerms: "network:credential", orderNum: 4},
+	{name: "凭据删除", perms: "network:credential:delete", parentPerms: "network:credential", orderNum: 5},
+	{name: "凭据导出", perms: "network:credential:export", parentPerms: "network:credential", orderNum: 6},
+
+	// 15. network:template (6 条)
+	{name: "模板查询", perms: "network:template:list", parentPerms: "network:template", orderNum: 1},
+	{name: "模板详情", perms: "network:template:view", parentPerms: "network:template", orderNum: 2},
+	{name: "模板新增", perms: "network:template:add", parentPerms: "network:template", orderNum: 3},
+	{name: "模板修改", perms: "network:template:edit", parentPerms: "network:template", orderNum: 4},
+	{name: "模板删除", perms: "network:template:delete", parentPerms: "network:template", orderNum: 5},
+	{name: "模板导出", perms: "network:template:export", parentPerms: "network:template", orderNum: 6},
+
+	// 16. network:command (2 条 - 命令分发/配置执行多父集合)
+	{name: "命令查看", perms: "network:command:view", parentPerms: "network:command", orderNum: 1},
+	{name: "命令导出", perms: "network:command:export", parentPerms: "network:command", orderNum: 2},
+
+	// 17. network:backup (3 条)
+	{name: "备份查询", perms: "network:backup:list", parentPerms: "network:backup", orderNum: 1},
+	{name: "备份删除", perms: "network:backup:delete", parentPerms: "network:backup", orderNum: 2},
+	{name: "备份导出", perms: "network:backup:export", parentPerms: "network:backup", orderNum: 3},
+
+	// 18. network:discovery (3 条)
+	{name: "发现查看", perms: "network:discovery:view", parentPerms: "network:discovery", orderNum: 1},
+	{name: "发现删除", perms: "network:discovery:delete", parentPerms: "network:discovery", orderNum: 2},
+	{name: "发现导出", perms: "network:discovery:export", parentPerms: "network:discovery", orderNum: 3},
 }
 
 // Migrate226ActionPermissionFTypeSeed 播种动作级 F 型菜单并精准授权给持父菜单的角色。
