@@ -11,6 +11,40 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const crypto = require("crypto");
 const path = require("path");
+const dns = require("dns");
+
+// 2026-10-31 本机内网 DNS（10.193.16.105）不解析 github.com（Non-existent domain），
+// 但物理网络可达公共 DNS。Node 的 fetch 走系统 getaddrinfo（dns.lookup），
+// dns.setServers 只影响 c-ares（dns.resolve*），因此这里把 lookup 重定向到
+// resolve4（走 8.8.8.8），并缓存结果。
+try {
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+  const originalLookup = dns.lookup;
+  const addrCache = new Map();
+  dns.lookup = function patchedLookup(hostname, options, callback) {
+    let opts = options;
+    let cb = callback;
+    if (typeof opts === "function") {
+      cb = opts;
+      opts = {};
+    }
+    if (opts && opts.all) {
+      dns.resolve4(hostname, (err, addrs) => {
+        if (err || !addrs || addrs.length === 0) return originalLookup(hostname, opts, cb);
+        cb(null, addrs.map((a) => ({ address: a, family: 4 })));
+      });
+      return;
+    }
+    if (addrCache.has(hostname)) return cb(null, addrCache.get(hostname), 4);
+    dns.resolve4(hostname, (err, addrs) => {
+      if (err || !addrs || addrs.length === 0) return originalLookup(hostname, opts, cb);
+      addrCache.set(hostname, addrs[0]);
+      cb(null, addrs[0], 4);
+    });
+  };
+} catch {
+  /* 平台不支持时静默降级到系统解析 */
+}
 
 const REPO = "NDCCCCCC/xingran";
 const BRANCH = process.env.SYNC_BRANCH || "main";
