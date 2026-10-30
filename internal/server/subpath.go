@@ -14,12 +14,10 @@ import (
 // 改这里时要同步更新 xingran-react-frontend/.env.production 的 VITE_BASE。
 const frontendSubPath = "/xingran"
 
-// stripSubPath 若路径以 frontendSubPath 开头则剥离并返回剩余路径;
-// 否则原样返回。剥离后空字符串视为 "/"。
+// stripSubPath 剥离 frontendSubPath 前缀后返回剩余路径;
+// 不匹配时原样返回。剥离后空字符串视为 "/"。
 func stripSubPath(p string) string {
-	if strings.HasPrefix(p, frontendSubPath) {
-		p = strings.TrimPrefix(p, frontendSubPath)
-	}
+	p = strings.TrimPrefix(p, frontendSubPath)
 	if p == "" {
 		p = "/"
 	}

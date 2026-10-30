@@ -9,7 +9,7 @@
  *   - 同源码串断言：前端 TS 常量与后端权限码字面量完全一致（RBAC-05 / RBAC-06）
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen, waitFor, fireEvent, act, cleanup } from "@testing-library/react";
+import { screen, waitFor, fireEvent, cleanup } from "@testing-library/react";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import {
   mockApiBatch,
@@ -134,10 +134,14 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     fireEvent.click(editBtn);
 
     // 验证 Modal 弹出且菜单树正常加载展示（T-1）
-    await waitFor(() => {
-      expect(screen.getByText("编辑角色")).toBeInTheDocument();
-      expect(screen.getByText("角色管理")).toBeInTheDocument();
-    });
+    // CI（Linux + coverage）下 antd Modal/Tree 挂载明显慢于本地，放宽等待窗口
+    await waitFor(
+      () => {
+        expect(screen.getByText("编辑角色")).toBeInTheDocument();
+        expect(screen.getByText("角色管理")).toBeInTheDocument();
+      },
+      { timeout: 15000 }
+    );
 
     // 点击展开 switcher
     const switcher = document.querySelector(".ant-tree-switcher");
@@ -150,23 +154,52 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     expect(fNode).toBeInTheDocument();
 
     // 勾选 F 节点复选框（点击与「角色新增」紧邻的前驱 checkbox）
-    const titleElement = screen.getByTitle("角色新增");
-    const nodeWrapper = titleElement.closest(".ant-tree-treenode") || titleElement.parentElement;
-    const checkbox = nodeWrapper?.querySelector(".ant-tree-checkbox");
-    expect(checkbox).not.toBeNull();
-    if (checkbox) {
-      fireEvent.click(checkbox);
-    }
+    // CI 慢环境下 antd Tree 受控 checkedKeys 同步可能滞后，且重渲染会让旧引用失效；
+    // 因此每次重新查询节点，并在点击后等待 checked class 真正生效再提交。
+    const clickFNodeCheckbox = () => {
+      const titleEl = screen.getByTitle("角色新增");
+      const wrapper = titleEl.closest(".ant-tree-treenode") || titleEl.parentElement;
+      const cb = wrapper?.querySelector(".ant-tree-checkbox");
+      expect(cb).not.toBeNull();
+      fireEvent.click(cb as HTMLElement);
+    };
+    await waitFor(
+      () => {
+        clickFNodeCheckbox();
+        const titleEl = screen.getByTitle("角色新增");
+        const wrapper = titleEl.closest(".ant-tree-treenode") || titleEl.parentElement;
+        expect(wrapper?.querySelector(".ant-tree-checkbox-checked")).not.toBeNull();
+      },
+      { timeout: 15000, interval: 400 }
+    );
 
     // 补全表单必填项（jsdom 环境中 afterOpenChange 动画回调可能不触发）
-    const roleNameInput = document.querySelector("#roleName");
-    const roleKeyInput = document.querySelector("#roleKey");
-    expect(roleNameInput).not.toBeNull();
-    expect(roleKeyInput).not.toBeNull();
-    await act(async () => {
-      fireEvent.change(roleNameInput!, { target: { value: "运维专员" } });
-      fireEvent.change(roleKeyInput!, { target: { value: "ops_admin" } });
-    });
+    // CI 慢环境下 Modal 内 Form 实例可能尚未 connect，单次 change 会被丢弃；
+    // 用「重复 change 直到 value 生效」消除时序依赖，超时则暴露真实问题。
+    const roleNameEl = await waitFor(
+      () => {
+        const el = document.querySelector("#roleName");
+        expect(el).not.toBeNull();
+        return el as HTMLInputElement;
+      },
+      { timeout: 15000 }
+    );
+    await waitFor(
+      () => {
+        fireEvent.change(roleNameEl, { target: { value: "运维专员" } });
+        expect(roleNameEl.value).toBe("运维专员");
+      },
+      { timeout: 15000, interval: 300 }
+    );
+    const roleKeyEl = document.querySelector("#roleKey") as HTMLInputElement;
+    expect(roleKeyEl).not.toBeNull();
+    await waitFor(
+      () => {
+        fireEvent.change(roleKeyEl, { target: { value: "ops_admin" } });
+        expect(roleKeyEl.value).toBe("ops_admin");
+      },
+      { timeout: 15000, interval: 300 }
+    );
 
     // 提交编辑表单：查找 Modal 底部确定按钮（支持「确 定」或「OK」）
     const submitBtn = screen.getByRole("button", { name: /确\s*定|OK/ });
