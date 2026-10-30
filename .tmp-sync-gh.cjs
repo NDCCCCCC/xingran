@@ -18,7 +18,10 @@ const DRY = process.argv.includes("--dry-run");
 const CWD = "D:\\CODE\\ClaudeCode\\ruoyi-go-backend";
 
 // 需要从远端删除的文件（本地已不存在 / 与本地重构冲突）
-const DELETE_PREFIX = ["xingran-react-frontend/.planning/"];
+const DELETE_PREFIX = [
+  "xingran-react-frontend/.planning/",
+  "xingran-react-frontend/coverage/",
+];
 const DELETE_EXACT = new Set([
   "xingran-react-frontend/14-04-SUMMARY.md",
   "xingran-react-frontend/14-05b-SUMMARY.md",
