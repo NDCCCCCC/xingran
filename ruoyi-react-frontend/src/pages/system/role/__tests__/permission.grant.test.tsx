@@ -178,7 +178,7 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
       // 父子级联必须同时包含父 C 菜单 id（T-2）
       expect(payload.menuIds).toContain("m-role-c");
     });
-  });
+  }, 30000); // antd Tree 全量渲染在慢机/高并发下可达 ~12s，默认 15s 阈值偏紧
 
   it("T-4: 回读一致性 —— 角色既有权限含 F 节点时，树组件正常加载该勾选状态", async () => {
     // 覆盖角色已有 m-role-add-f 的 checked 态
@@ -220,5 +220,5 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     await waitFor(() => {
       expect(checkbox).toHaveClass("ant-tree-checkbox-checked");
     });
-  });
+  }, 30000); // 与 T-1 同因：Tree 展开 + 勾选态回读在慢机下耗时可超默认阈值
 });
