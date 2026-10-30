@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.25
 milestone_name: 全站权限治理与样式收敛
-current_phase: 91
-current_phase_name: Select / InputNumber / Form / Table / Modal 域交还
-status: ready_to_execute
-stopped_at: Phase 91 规划完成（91-RESEARCH / 91-UI-SPEC / 91-01~03 全套计划与验证矩阵已提交）；下一步执行 Phase 91（/gsd-execute-phase 91）
-last_updated: "2026-10-30T11:40:00.000Z"
+current_phase: 92
+current_phase_name: 暗色 mega-cluster 合并
+status: ready_to_plan
+stopped_at: Phase 91（W1~W3，全 3 plan）全部执行完成并验收（91-VERIFICATION 已归档）；各组件域手写覆盖交还 token，styles.module.css 违规选择器清零；下一步推进 Phase 92（暗色 mega-cluster C39/C40 整体合并收敛）
+last_updated: "2026-10-30T11:50:00.000Z"
 last_activity: 2026-10-30
-last_activity_desc: v1.25 执行期——Phase 91 完成 UI-SPEC 设计契约与 3 波执行计划编制 (91-01~03)，准备就绪
-state_head: 075d7a24
+last_activity_desc: v1.25 执行期——Phase 91 完成（Select/Table R8/InputNumber/Form/Modal/Dropdown 域交还 token，C11 预算下调至 1385）
+state_head: bf133844
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 33
-  completed_plans: 29
-  percent: 88
+  completed_plans: 32
+  percent: 97
 ---
 
 # Project State

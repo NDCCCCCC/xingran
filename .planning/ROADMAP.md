@@ -130,7 +130,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
     4. **v1.24 契约零破坏**：双框元素数 = 0（`css-contract-assertions.js` 的 `doubleCount === 0`，明暗双测）；焦点环单圈（wrapper 有焦点环 / 内层 `boxShadow === 'none'`）；错误态边框色还原（C5a / C5c 断言 PASS）；`node scripts/css-contract-check.js` exit 0。
     5. **量化**：M1 `!important` ≤ 1100、M2 `index.css` ≤ 1050、M3 含 `.ant-` 顶层规则 ≤ 690；M1-M16 快照逐 phase 落盘。
 
-- [ ] **Phase 91: Select / InputNumber / Form / Table / Modal 域交还** — 其余组件域的手写覆盖交还 antd token + antd 6 弃用清单剩余清零。
+- [x] **Phase 91: Select / InputNumber / Form / Table / Modal 域交还** — 其余组件域的手写覆盖交还 antd token + antd 6 弃用清单剩余清零。
   - **Depends on**: 90（Input 域先做，`useVariants` 解析链的实测结论可直接复用到 Select / InputNumber）
   - **Requirements**: 承接 —— STYLE-02 第 4 批 R8（主责登记见 Phase 92）、VISFIX-04 剩余（Select 域六类弃用 prop，主责登记见 Phase 88）
   - **UI hint**: yes
