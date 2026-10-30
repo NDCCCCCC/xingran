@@ -201,6 +201,15 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           headerBg: "transparent",
           borderRadiusLG: 12,
         },
+        Modal: {
+          contentBg: isDark ? ruoyiBrand.dark.overlay : ruoyiBrand.cream.elevated,
+          headerBg: "transparent",
+          titleColor: board.fg,
+          borderRadiusLG: 16,
+        },
+        Dropdown: {
+          colorBgElevated: isDark ? ruoyiBrand.dark.overlay : ruoyiBrand.cream.elevated,
+        },
       },
       algorithm: algorithms,
       // 主题变更时改变 hashed 标识，强制 AntD 重新生成 CSS（防止主题切换残留）

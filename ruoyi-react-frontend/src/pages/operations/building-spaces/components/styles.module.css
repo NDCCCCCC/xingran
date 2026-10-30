@@ -110,37 +110,6 @@
   margin-top: 4px;
 }
 
-/* 模态框 */
-.buildingModal :global(.ant-modal-wrap) {
-  z-index: 1000;
-}
-
-.buildingModal :global(.ant-modal-content) {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.buildingModal :global(.ant-modal-header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  padding: 20px 24px;
-}
-
-.buildingModal :global(.ant-modal-title) {
-  color: white;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.buildingModal :global(.ant-modal-close) {
-  color: white;
-  opacity: 0.8;
-}
-
-.buildingModal :global(.ant-modal-close:hover) {
-  opacity: 1;
-}
-
 .buildingModalContent {
   display: flex;
   min-height: 600px;

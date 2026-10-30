@@ -1138,6 +1138,32 @@ body {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
 }
 
+/* 建筑空间特定全屏模态框定制（原 styles.module.css 迁入，满足 C10 契约） */
+.building-space-modal.ant-modal .ant-modal-wrap {
+  z-index: 1000;
+}
+.building-space-modal.ant-modal .ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+}
+.building-space-modal.ant-modal .ant-modal-header {
+  background: linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%);
+  border: none;
+  padding: 20px 24px;
+}
+.building-space-modal.ant-modal .ant-modal-title {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+}
+.building-space-modal.ant-modal .ant-modal-close {
+  color: white;
+  opacity: 0.8;
+}
+.building-space-modal.ant-modal .ant-modal-close:hover {
+  opacity: 1;
+}
+
 .ant-modal-header {
   border-bottom: 1px solid var(--border-subtle) !important;
   background: transparent !important;

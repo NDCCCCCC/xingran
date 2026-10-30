@@ -76,7 +76,7 @@ const BuildingModal: React.FC<BuildingModalProps> = ({ building, visible, onClos
       onCancel={handleModalClose}
       width={1400}
       footer={null}
-      className={styles.buildingModal}
+      className={`${styles.buildingModal} building-space-modal`}
       destroyOnHidden
     >
       <div className={styles.buildingModalContent}>

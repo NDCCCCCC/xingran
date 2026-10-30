@@ -234,8 +234,9 @@ const checkC6 = (() => {
 // ---------- C11 !important 预算 ratchet（阻断，只降不升） ----------
 // ratchet：只允许下调，Phase 92 终值 ≤480；上调视为回归。
 // 基线沿革：1435（Phase 88 落地时 HEAD 实跑值）→ 1398（Phase 88-03 删除第 1 批死规则后实跑值；
-// PLAN 预估 ≈1395，实跑 1398——ratchet 只许低不许高，故定值取实测）→ 1397（Phase 89 T5 落地 -1）。
-const IMPORTANT_BUDGET = 1397;
+// PLAN 预估 ≈1395，实跑 1398——ratchet 只许低不许高，故定值取实测）→ 1397（Phase 89 T5 落地 -1）
+// → 1385（Phase 91 表单/表格/弹窗交还 token，当前实测 1381）。
+const IMPORTANT_BUDGET = 1385;
 {
   const allCss = walkByExt(resolve(feRoot, 'src'), ['.css', '.less']);
   let importantCount = 0;
