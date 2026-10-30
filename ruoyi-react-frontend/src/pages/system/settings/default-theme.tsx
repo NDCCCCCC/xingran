@@ -9,7 +9,11 @@ import { App, Form, Button, Card, Space, Divider, ColorPicker } from "antd";
 import { AppSelect } from "@/components/ui";
 import { SyncOutlined, SaveOutlined } from "@ant-design/icons";
 import type { ThemeConfiguration } from "@/types/config";
-import { getDefaultThemeConfig, setDefaultThemeConfig, syncUserThemeToDefault } from "@/lib/defaultThemeApi";
+import {
+  getDefaultThemeConfig,
+  setDefaultThemeConfig,
+  syncUserThemeToDefault,
+} from "@/lib/defaultThemeApi";
 import { useSettingsStore } from "@/store/settingsStore";
 
 /**
@@ -70,7 +74,12 @@ const DefaultThemePage: React.FC = () => {
   }, [form, message]);
 
   // 保存默认主题配置
-  const handleSave = async (values: { mode?: string; style?: string; primaryColor?: string | { toHexString?: () => string }; sidebarColor?: string | { toHexString?: () => string } }) => {
+  const handleSave = async (values: {
+    mode?: string;
+    style?: string;
+    primaryColor?: string | { toHexString?: () => string };
+    sidebarColor?: string | { toHexString?: () => string };
+  }) => {
     try {
       setLoading(true);
 
@@ -79,7 +88,8 @@ const DefaultThemePage: React.FC = () => {
       const toHex = (v?: string | { toHexString?: () => string }): string | undefined => {
         if (!v) return undefined;
         if (typeof v === "string") return v;
-        if (typeof v === "object" && v && typeof v.toHexString === "function") return v.toHexString();
+        if (typeof v === "object" && v && typeof v.toHexString === "function")
+          return v.toHexString();
         return undefined;
       };
 
@@ -148,10 +158,7 @@ const DefaultThemePage: React.FC = () => {
       title="默认主题配置"
       extra={
         <Space>
-          <Button
-            icon={<SyncOutlined />}
-            onClick={handleSyncFromCurrentSettings}
-          >
+          <Button icon={<SyncOutlined />} onClick={handleSyncFromCurrentSettings}>
             从当前设置加载
           </Button>
           <Button
@@ -166,17 +173,18 @@ const DefaultThemePage: React.FC = () => {
         </Space>
       }
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSave}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSave}>
         <Form.Item
           label="主题模式"
           name="mode"
           rules={[{ required: true, message: "请选择主题模式" }]}
         >
-          <AppSelect allowClear showSearch={false} options={MODE_OPTIONS} placeholder="请选择主题模式" />
+          <AppSelect
+            allowClear
+            showSearch={false}
+            options={MODE_OPTIONS}
+            placeholder="请选择主题模式"
+          />
         </Form.Item>
 
         <Form.Item
@@ -184,38 +192,30 @@ const DefaultThemePage: React.FC = () => {
           name="style"
           rules={[{ required: true, message: "请选择主题风格" }]}
         >
-          <AppSelect allowClear showSearch={false} options={STYLE_OPTIONS} placeholder="请选择主题风格" />
+          <AppSelect
+            allowClear
+            showSearch={false}
+            options={STYLE_OPTIONS}
+            placeholder="请选择主题风格"
+          />
         </Form.Item>
 
         <Divider>自定义颜色（可选）</Divider>
 
-        <Form.Item
-          label="主色调"
-          name="primaryColor"
-        >
+        <Form.Item label="主色调" name="primaryColor">
           <ColorPicker showText />
         </Form.Item>
 
-        <Form.Item
-          label="侧边栏颜色"
-          name="sidebarColor"
-        >
+        <Form.Item label="侧边栏颜色" name="sidebarColor">
           <ColorPicker showText />
         </Form.Item>
 
         <Form.Item style={{ marginTop: 24 }}>
           <Space>
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={<SaveOutlined />}
-              loading={loading}
-            >
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading}>
               保存配置
             </Button>
-            <Button onClick={() => form.resetFields()}>
-              重置
-            </Button>
+            <Button onClick={() => form.resetFields()}>重置</Button>
           </Space>
         </Form.Item>
       </Form>

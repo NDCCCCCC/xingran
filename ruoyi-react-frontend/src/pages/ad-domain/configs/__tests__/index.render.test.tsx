@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import ADConfigPage from "../index";
-import {  } from "@/test/utils/createApiMock";
+import {} from "@/test/utils/createApiMock";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");

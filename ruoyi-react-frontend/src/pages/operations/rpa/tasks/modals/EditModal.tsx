@@ -3,18 +3,7 @@
  */
 
 import { useLayoutEffect, useState, useCallback } from "react";
-import {
-  App,
-  Modal,
-  Form,
-  InputNumber,
-  Switch,
-  Tabs,
-  Button,
-  Card,
-  Row,
-  Col,
-} from "antd";
+import { App, Modal, Form, InputNumber, Switch, Tabs, Button, Card, Row, Col } from "antd";
 import { PlusOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
 import type { Task, Action, ActionType } from "@/types/rpa";

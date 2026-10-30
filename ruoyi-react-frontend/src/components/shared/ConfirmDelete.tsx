@@ -39,7 +39,16 @@ export function ConfirmDelete({
 
   const handleClick = () => {
     if (isDisabled || !onDelete) return;
-    confirmDelete({ target, onDelete, title, extra, actionLabel, actionContext, contentText, successText });
+    confirmDelete({
+      target,
+      onDelete,
+      title,
+      extra,
+      actionLabel,
+      actionContext,
+      contentText,
+      successText,
+    });
   };
 
   return (

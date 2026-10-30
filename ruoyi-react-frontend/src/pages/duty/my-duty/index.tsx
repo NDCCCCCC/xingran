@@ -1,18 +1,7 @@
 import { useState, useEffect } from "react";
 // Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
 import { AppSelect } from "@/components/ui";
-import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Tag,
-  Table,
-  Form,
-  Empty,
-  Typography,
-  Space,
-} from "antd";
+import { Card, Row, Col, Statistic, Tag, Table, Form, Empty, Typography, Space } from "antd";
 import {
   CalendarOutlined,
   ClockCircleOutlined,
@@ -297,7 +286,9 @@ const MyDutyPage: FC = () => {
               prefix={stats?.isOnDutyToday ? <ClockCircleOutlined /> : <CoffeeOutlined />}
               styles={{
                 content: {
-                  color: stats?.isOnDutyToday ? "var(--theme-success)" : "var(--theme-text-secondary)",
+                  color: stats?.isOnDutyToday
+                    ? "var(--theme-success)"
+                    : "var(--theme-text-secondary)",
                   fontSize: "20px",
                 },
               }}

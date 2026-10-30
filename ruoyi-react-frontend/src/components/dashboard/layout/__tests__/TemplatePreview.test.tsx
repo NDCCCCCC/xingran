@@ -71,7 +71,12 @@ describe("TemplatePreview", () => {
 
   it("visible=true + template → 渲染 Modal + DashboardGrid", async () => {
     const { baseElement } = render(
-      <TemplatePreview visible template={template as unknown} onClose={vi.fn()} onApply={vi.fn()} />,
+      <TemplatePreview
+        visible
+        template={template as unknown}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
       { wrapper }
     );
     await waitFor(() => {
@@ -85,7 +90,12 @@ describe("TemplatePreview", () => {
   it("点击 使用此模板 → 调用 onApply(templateId, name+副本)", async () => {
     const onApply = vi.fn();
     const { baseElement, getByText } = render(
-      <TemplatePreview visible template={template as unknown} onClose={vi.fn()} onApply={onApply} />,
+      <TemplatePreview
+        visible
+        template={template as unknown}
+        onClose={vi.fn()}
+        onApply={onApply}
+      />,
       { wrapper }
     );
     await waitFor(() => {
@@ -98,7 +108,12 @@ describe("TemplatePreview", () => {
   it("点击 取消 → 调用 onClose", async () => {
     const onClose = vi.fn();
     const { baseElement, getByText } = render(
-      <TemplatePreview visible template={template as unknown} onClose={onClose} onApply={vi.fn()} />,
+      <TemplatePreview
+        visible
+        template={template as unknown}
+        onClose={onClose}
+        onApply={vi.fn()}
+      />,
       { wrapper }
     );
     await waitFor(() => {
@@ -126,7 +141,12 @@ describe("TemplatePreview", () => {
     vi.mocked(dashboardService.getBatchWidgetData).mockClear();
     const emptyTpl = { ...template, layout: { widgets: [] } };
     const { baseElement } = render(
-      <TemplatePreview visible template={emptyTpl as unknown} onClose={vi.fn()} onApply={vi.fn()} />,
+      <TemplatePreview
+        visible
+        template={emptyTpl as unknown}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
       { wrapper }
     );
     await waitFor(() => {
@@ -140,7 +160,12 @@ describe("TemplatePreview", () => {
     vi.mocked(dashboardService.getBatchWidgetData).mockRejectedValueOnce(new Error("网络错误"));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { baseElement, getByText } = render(
-      <TemplatePreview visible template={template as unknown} onClose={vi.fn()} onApply={vi.fn()} />,
+      <TemplatePreview
+        visible
+        template={template as unknown}
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
       { wrapper }
     );
     await waitFor(() => {

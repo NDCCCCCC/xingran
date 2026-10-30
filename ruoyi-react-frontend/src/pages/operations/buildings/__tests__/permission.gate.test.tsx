@@ -180,9 +180,9 @@ describe("楼宇管理页操作级权限门控（Phase 86 W2）", () => {
 
     const deleteEntry = screen.getByRole("button", { name: /删除/ });
     expect(deleteEntry.closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(
-      deleteEntry.closest('[aria-disabled="true"]')?.getAttribute("title") ?? ""
-    ).toContain("权限");
+    expect(deleteEntry.closest('[aria-disabled="true"]')?.getAttribute("title") ?? "").toContain(
+      "权限"
+    );
   });
 
   it("②-2 未就绪（error）→ 入口在 DOM 且 disabled + 提示", async () => {

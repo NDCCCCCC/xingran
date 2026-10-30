@@ -314,32 +314,32 @@ const CacheManager: FC = () => {
 
   // 行操作（普通函数组装；handleDelete/handleViewDetail 稳定闭包语义）
   const buildRowActions = (record: CacheInfo) => [
-      {
-        key: "view",
-        label: "查看详情",
-        icon: <EyeOutlined />,
-        onClick: () => void handleViewDetail(record.key),
-      },
-      {
-        key: "delete",
-        label: "删除",
-        icon: <DeleteOutlined />,
-        danger: true,
-        render: () => (
-          <Button
-            aria-label="删除缓存键"
-            title="删除缓存键"
-            type="link"
-            icon={<DeleteOutlined />}
-            style={{ color: "var(--theme-error)" }}
-            size="small"
-            onClick={() => handleDelete(record.key)}
-          >
-            删除
-          </Button>
-        ),
-      },
-    ];
+    {
+      key: "view",
+      label: "查看详情",
+      icon: <EyeOutlined />,
+      onClick: () => void handleViewDetail(record.key),
+    },
+    {
+      key: "delete",
+      label: "删除",
+      icon: <DeleteOutlined />,
+      danger: true,
+      render: () => (
+        <Button
+          aria-label="删除缓存键"
+          title="删除缓存键"
+          type="link"
+          icon={<DeleteOutlined />}
+          style={{ color: "var(--theme-error)" }}
+          size="small"
+          onClick={() => handleDelete(record.key)}
+        >
+          删除
+        </Button>
+      ),
+    },
+  ];
 
   const columns = useMemo(() => getCacheTableColumns({ handleViewDetail }), [handleViewDetail]);
 
@@ -350,7 +350,9 @@ const CacheManager: FC = () => {
       </div>
 
       {/* FIX-04b: 监控数据加载失败可重试错误条（列表错误由 PageTable 内建承接） */}
-      {!!monitorError && <ErrorAlertWithRetry error={monitorError} onRetry={() => void fetchMonitor()} />}
+      {!!monitorError && (
+        <ErrorAlertWithRetry error={monitorError} onRetry={() => void fetchMonitor()} />
+      )}
 
       <PageTable<CacheInfo>
         request={async (params) => {

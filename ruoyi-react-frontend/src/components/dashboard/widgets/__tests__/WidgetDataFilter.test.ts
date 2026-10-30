@@ -31,7 +31,9 @@ describe("dashboard/widgets/WidgetDataFilter", () => {
   });
 
   it("applyWidgetDataFilter 未启用 → 返回原 params", () => {
-    const widget: unknown = { dataFilter: { enabled: false, filterType: "dept", filterConfig: {} } };
+    const widget: unknown = {
+      dataFilter: { enabled: false, filterType: "dept", filterConfig: {} },
+    };
     const result = applyWidgetDataFilter(widget, { x: 1 });
     expect(result).toEqual({ x: 1 });
   });

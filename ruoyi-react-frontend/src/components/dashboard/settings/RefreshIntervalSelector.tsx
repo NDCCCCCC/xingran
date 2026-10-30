@@ -135,10 +135,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
           disabled={disabled}
           style={{ width: "100%" }}
           {...(selectProps as AppSelectProps)}
-          options={[
-            ...PRESET_OPTIONS,
-            { value: CUSTOM_VALUE, label: "自定义" },
-          ]}
+          options={[...PRESET_OPTIONS, { value: CUSTOM_VALUE, label: "自定义" }]}
         />
 
         {isCustom && (

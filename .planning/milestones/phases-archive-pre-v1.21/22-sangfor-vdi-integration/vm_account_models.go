@@ -4,7 +4,7 @@ package vdi
 
 import (
 	"time"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/base"
+	"github.com/xingran-next/xingran-go-backend/internal/models/base"
 )
 
 // VDIVirtualMachine 虚拟机模型（扩展版）

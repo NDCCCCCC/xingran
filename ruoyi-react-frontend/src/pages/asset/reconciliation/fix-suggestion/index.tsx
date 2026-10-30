@@ -17,19 +17,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-  Table,
-  Form,
-  Button,
-  Space,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  App,
-  Modal,
-} from "antd";
+import { Table, Form, Button, Space, Tag, Card, Row, Col, Statistic, App, Modal } from "antd";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -321,7 +309,8 @@ const FixSuggestion = () => {
       dataIndex: "currentUserId",
       key: "currentUserId",
       width: 140,
-      render: (v: string | null) => v ?? <span style={{ color: "var(--theme-text-tertiary)" }}>-</span>,
+      render: (v: string | null) =>
+        v ?? <span style={{ color: "var(--theme-text-tertiary)" }}>-</span>,
     },
     {
       title: "建议 user_id",

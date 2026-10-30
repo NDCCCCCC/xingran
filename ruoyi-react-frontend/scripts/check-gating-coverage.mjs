@@ -62,7 +62,12 @@ const EXPECTED_PAGE_COUNT = 76;
 /** 口径断言：N/A 豁免页数（增减须同批改本常量并在 86-STATE.md 说明理由） */
 const EXPECTED_EXEMPTION_COUNT = 51;
 /** 豁免分类白名单 */
-const EXEMPTION_CATEGORIES = ["no-permission-code", "read-only", "non-route-page", "legacy-two-source"];
+const EXEMPTION_CATEGORIES = [
+  "no-permission-code",
+  "read-only",
+  "non-route-page",
+  "legacy-two-source",
+];
 
 /** 写入口特征集（PLAN 判据表全集） */
 const WRITE_ENTRY_FEATURES = [
@@ -115,17 +120,21 @@ function collectOwnedFiles(pageRel) {
   const isCode = (n) => /\.tsx?$/.test(n) && !/[.](test|spec)[.]/.test(n);
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isFile() && isCode(entry.name)) out.push(toPosix(path.relative(feRoot, path.join(dir, entry.name))));
+    if (entry.isFile() && isCode(entry.name))
+      out.push(toPosix(path.relative(feRoot, path.join(dir, entry.name))));
   }
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name === "__tests__") continue;
     const sub = path.join(dir, entry.name);
     // 一级子目录若自身是子页面目录（含 index.tsx），不并入父页 —— 否则父页会吞掉子页代码
-    const isSubPage = readdirSync(sub, { withFileTypes: true }).some((f) => f.isFile() && f.name === "index.tsx");
+    const isSubPage = readdirSync(sub, { withFileTypes: true }).some(
+      (f) => f.isFile() && f.name === "index.tsx"
+    );
     if (isSubPage) continue;
     for (const f of readdirSync(sub, { withFileTypes: true })) {
-      if (f.isFile() && isCode(f.name)) out.push(toPosix(path.relative(feRoot, path.join(sub, f.name))));
+      if (f.isFile() && isCode(f.name))
+        out.push(toPosix(path.relative(feRoot, path.join(sub, f.name))));
     }
   }
   return out.sort();
@@ -177,7 +186,7 @@ function main() {
   if (pages.length !== EXPECTED_PAGE_COUNT) {
     errors.push(
       `页面总数漂移：实测 ${pages.length}，断言 ${EXPECTED_PAGE_COUNT} —— 口径漂移必须重新裁决，` +
-        `不许悄悄改数字（若确为口径变更，须同批改 EXPECTED_PAGE_COUNT 并在 86-STATE.md 说明理由）`,
+        `不许悄悄改数字（若确为口径变更，须同批改 EXPECTED_PAGE_COUNT 并在 86-STATE.md 说明理由）`
     );
   }
 
@@ -213,17 +222,19 @@ function main() {
     }
     if (!EXEMPTION_CATEGORIES.includes(entry.category)) {
       errors.push(
-        `[豁免分类] ${page} 的 category=${entry.category} 非法（只允许 ${EXEMPTION_CATEGORIES.join(" / ")}）`,
+        `[豁免分类] ${page} 的 category=${entry.category} 非法（只允许 ${EXEMPTION_CATEGORIES.join(" / ")}）`
       );
     }
-    if (!entry.reason || !String(entry.reason).trim()) errors.push(`[豁免理由] ${page} 的 reason 为空`);
-    if (!entry.evidence || !String(entry.evidence).trim()) errors.push(`[豁免证据] ${page} 的 evidence 为空`);
+    if (!entry.reason || !String(entry.reason).trim())
+      errors.push(`[豁免理由] ${page} 的 reason 为空`);
+    if (!entry.evidence || !String(entry.evidence).trim())
+      errors.push(`[豁免证据] ${page} 的 evidence 为空`);
     exemptByPage.set(page, entry);
   }
   if (exemptByPage.size !== EXPECTED_EXEMPTION_COUNT) {
     errors.push(
       `豁免条数漂移：实测 ${exemptByPage.size}，断言 ${EXPECTED_EXEMPTION_COUNT} —— ` +
-        `页数增减须同批改 EXPECTED_EXEMPTION_COUNT 并在 86-STATE.md 说明理由`,
+        `页数增减须同批改 EXPECTED_EXEMPTION_COUNT 并在 86-STATE.md 说明理由`
     );
   }
 
@@ -269,11 +280,15 @@ function main() {
   console.log(
     `豁免清单：${exemptByPage.size} 条（` +
       EXEMPTION_CATEGORIES.map((c) => `${c} ${byCategory.get(c) ?? 0}`).join(" / ") +
-      "）",
+      "）"
   );
-  console.log(`应门控页面：${shouldGate.length}（= ${pages.length} 页面 − ${exemptByPage.size} 豁免）`);
+  console.log(
+    `应门控页面：${shouldGate.length}（= ${pages.length} 页面 − ${exemptByPage.size} 豁免）`
+  );
   console.log(`已门控页面：${gatedPages.size}（${[...gatedPages].sort().join(", ") || "无"}）`);
-  console.log(`已门控 ∩ 豁免：${coveredExempt.length}${coveredExempt.length ? `（${coveredExempt.join(", ")}）` : ""}`);
+  console.log(
+    `已门控 ∩ 豁免：${coveredExempt.length}${coveredExempt.length ? `（${coveredExempt.join(", ")}）` : ""}`
+  );
   console.log(`未覆盖页面：${uncovered.length}`);
 
   // ---------- 4b. 覆盖率硬断言（86-05 Task 5.2：把「软提示」升为「硬失败」）----------
@@ -283,12 +298,12 @@ function main() {
   if (gatedPages.size !== EXPECTED_PAGE_COUNT - exemptByPage.size) {
     errors.push(
       `覆盖率恒等式不成立：已门控 ${gatedPages.size} + 豁免 ${exemptByPage.size} = ` +
-        `${gatedPages.size + exemptByPage.size} ≠ ${EXPECTED_PAGE_COUNT}（断言 EXPECTED_PAGE_COUNT）`,
+        `${gatedPages.size + exemptByPage.size} ≠ ${EXPECTED_PAGE_COUNT}（断言 EXPECTED_PAGE_COUNT）`
     );
   }
   if (coveredOnly !== shouldGate.length) {
     errors.push(
-      `已门控覆盖率不足：应门控 ${shouldGate.length} 页中仅 ${coveredOnly} 页命中门控特征`,
+      `已门控覆盖率不足：应门控 ${shouldGate.length} 页中仅 ${coveredOnly} 页命中门控特征`
     );
   }
   if (uncovered.length !== 0) {
@@ -296,7 +311,7 @@ function main() {
   }
   console.log(
     `覆盖率恒等式：已门控 ${coveredOnly} + 豁免 ${exemptByPage.size} = ${coveredOnly + exemptByPage.size}` +
-      `（断言 ${EXPECTED_PAGE_COUNT}）${coveredOnly + exemptByPage.size === EXPECTED_PAGE_COUNT ? " ✓" : " ✗"}`,
+      `（断言 ${EXPECTED_PAGE_COUNT}）${coveredOnly + exemptByPage.size === EXPECTED_PAGE_COUNT ? " ✓" : " ✗"}`
   );
 
   // ---------- 5. 未覆盖清单（业务性未完成 —— 与「脚本自身错误」分区呈现）----------
@@ -306,12 +321,12 @@ function main() {
       console.log(`  ✗ ${u.page}`);
       console.log(`      归属文件：${u.files.join(", ")}`);
       console.log(
-        `      写入口特征：${u.featureHits.length ? u.featureHits.join(", ") : "（无 —— 需人工确认该页写入口形态）"}`,
+        `      写入口特征：${u.featureHits.length ? u.featureHits.join(", ") : "（无 —— 需人工确认该页写入口形态）"}`
       );
       for (const s of u.switches) {
         console.log(
           `      Switch 命中：${s.file}:${s.line} onChange=${s.binding || "(无 —— 表单字段)"} ` +
-            `[${s.kind}]${s.kind === "write-cand" ? " ← 业务写候选，必须门控" : ""}`,
+            `[${s.kind}]${s.kind === "write-cand" ? " ← 业务写候选，必须门控" : ""}`
         );
       }
     }
@@ -319,11 +334,15 @@ function main() {
 
   // ---------- 6. Switch 人工判定台账（脚本不判定，仅列证据）----------
   if (switchPages.length) {
-    console.log(`\n=== Switch 命中台账（${switchPages.length} 页 —— 需人工标注「视图切换 / 表单字段 / 业务写」）===`);
+    console.log(
+      `\n=== Switch 命中台账（${switchPages.length} 页 —— 需人工标注「视图切换 / 表单字段 / 业务写」）===`
+    );
     for (const sp of switchPages) {
       for (const s of sp.switches) {
         console.log(`  · ${sp.page}`);
-        console.log(`      ${s.file}:${s.line} onChange=${s.binding || "(无 —— 表单字段)"} [${s.kind}]`);
+        console.log(
+          `      ${s.file}:${s.line} onChange=${s.binding || "(无 —— 表单字段)"} [${s.kind}]`
+        );
       }
     }
   }
@@ -333,7 +352,7 @@ function main() {
     console.log(
       `\n⚠ 豁免清单非空（${exemptByPage.size} 条）—— 仅限 Phase 86 铺开期间的窗口期。` +
         "各条豁免的 reason 已写明「等后端拆分 phase 回补」的时限；后端拆分 / 权限码回补落地后" +
-        "必须逐条移除对应豁免，否则门控缺口将被永久掩盖。",
+        "必须逐条移除对应豁免，否则门控缺口将被永久掩盖。"
     );
   }
 
@@ -345,7 +364,7 @@ function main() {
 
   if (errors.length > 0 || uncovered.length > 0) {
     console.error(
-      `\n✗ 门控覆盖未达成：未覆盖 ${uncovered.length} 页 / 脚本错误 ${errors.length} 项 —— 退出码 1`,
+      `\n✗ 门控覆盖未达成：未覆盖 ${uncovered.length} 页 / 脚本错误 ${errors.length} 项 —— 退出码 1`
     );
     process.exit(1);
   }

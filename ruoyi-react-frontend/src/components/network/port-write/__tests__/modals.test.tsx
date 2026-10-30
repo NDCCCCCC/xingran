@@ -42,7 +42,12 @@ describe("components/network/port-write — SetAccessVlanModal", () => {
 
   it("renders form with port record", async () => {
     await renderPageWithEndpoints(
-      <SetAccessVlanModal open portRecord={portRec as unknown} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      <SetAccessVlanModal
+        open
+        portRecord={portRec as unknown}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
       {}
     );
     expect(
@@ -64,7 +69,12 @@ describe("components/network/port-write — PortBindingModal", () => {
 
   it("renders form with port record", async () => {
     await renderPageWithEndpoints(
-      <PortBindingModal open portRecord={portRec as unknown} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      <PortBindingModal
+        open
+        portRecord={portRec as unknown}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
       {}
     );
     expect(

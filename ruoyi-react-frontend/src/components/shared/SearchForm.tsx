@@ -40,7 +40,13 @@ export type SearchField =
       rows?: number;
       autoSize?: boolean | { minRows: number; maxRows: number };
     }
-  | { type: "select"; name: string; label: string; options: SearchFieldOption[]; placeholder?: string }
+  | {
+      type: "select";
+      name: string;
+      label: string;
+      options: SearchFieldOption[];
+      placeholder?: string;
+    }
   | {
       type: "remoteSelect";
       name: string;
@@ -122,9 +128,8 @@ function renderField(field: SearchField, onSearch: () => void): ReactNode {
       return (
         <Form.Item key={field.name} noStyle shouldUpdate>
           {(form) =>
-            field.render(
-              form.getFieldValue(field.name),
-              (v: unknown) => form.setFieldsValue({ [field.name]: v })
+            field.render(form.getFieldValue(field.name), (v: unknown) =>
+              form.setFieldsValue({ [field.name]: v })
             )
           }
         </Form.Item>
@@ -138,7 +143,14 @@ function renderField(field: SearchField, onSearch: () => void): ReactNode {
  * SearchForm — 63 惯例内联搜索卡（layout="inline"，Card marginBottom:16）；
  * 按钮 搜索/重置/刷新（刷新 icon 按钮 aria-label+title，64 FIX-05 口径）。
  */
-export function SearchForm({ form, fields, children, onSearch, onReset, onRefresh }: SearchFormProps) {
+export function SearchForm({
+  form,
+  fields,
+  children,
+  onSearch,
+  onReset,
+  onRefresh,
+}: SearchFormProps) {
   return (
     <Card style={{ marginBottom: 16 }}>
       <Form form={form} layout="inline">
@@ -153,7 +165,13 @@ export function SearchForm({ form, fields, children, onSearch, onReset, onRefres
           <Button onClick={onReset}>重置</Button>
         </Form.Item>
         <Form.Item>
-          <Button type="text" icon={<ReloadOutlined />} aria-label="刷新" title="刷新" onClick={onRefresh} />
+          <Button
+            type="text"
+            icon={<ReloadOutlined />}
+            aria-label="刷新"
+            title="刷新"
+            onClick={onRefresh}
+          />
         </Form.Item>
       </Form>
     </Card>

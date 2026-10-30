@@ -1,20 +1,7 @@
 import { useState, useEffect } from "react";
 // Phase 71 (W5)：裸 Select → 契约组件；P68 裸 hex 同步清偿为主题变量
 import { AppSelect } from "@/components/ui";
-import {
-  App,
-  Tree,
-  Card,
-  Spin,
-  Tag,
-  Space,
-  Button,
-  Table,
-  Col,
-  Row,
-  Modal,
-  Transfer,
-} from "antd";
+import { App, Tree, Card, Spin, Tag, Space, Button, Table, Col, Row, Modal, Transfer } from "antd";
 import {
   ReloadOutlined,
   FolderOutlined,
@@ -531,7 +518,13 @@ const ADOUPage: FC = () => {
                     style={{ fontSize: "13px" }}
                   />
                 ) : (
-                  <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "20px" }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      color: "var(--theme-text-tertiary)",
+                      padding: "20px",
+                    }}
+                  >
                     {selectedConfig ? "暂无OU数据，请先同步" : "请选择AD配置"}
                   </div>
                 )}
@@ -606,7 +599,13 @@ const ADOUPage: FC = () => {
                   </div>
                 </Space>
               ) : (
-                <div style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: "20px" }}>
+                <div
+                  style={{
+                    color: "var(--theme-text-tertiary)",
+                    textAlign: "center",
+                    padding: "20px",
+                  }}
+                >
                   {selectedOU ? "该 OU 尚未关联部门" : "请选择 OU"}
                 </div>
               )}
@@ -644,7 +643,13 @@ const ADOUPage: FC = () => {
                   size="small"
                 />
               ) : (
-                <div style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: "20px" }}>
+                <div
+                  style={{
+                    color: "var(--theme-text-tertiary)",
+                    textAlign: "center",
+                    padding: "20px",
+                  }}
+                >
                   {selectedOU ? "该 OU 尚未关联用户组" : "请选择 OU"}
                 </div>
               )}
@@ -703,7 +708,9 @@ const ADOUPage: FC = () => {
             render={(item) => (
               <div>
                 <div>{item.title}</div>
-                <div style={{ fontSize: "12px", color: "var(--theme-text-tertiary)" }}>{item.description}</div>
+                <div style={{ fontSize: "12px", color: "var(--theme-text-tertiary)" }}>
+                  {item.description}
+                </div>
               </div>
             )}
             listStyle={{

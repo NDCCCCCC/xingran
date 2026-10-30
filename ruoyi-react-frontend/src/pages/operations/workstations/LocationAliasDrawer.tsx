@@ -17,16 +17,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import {
-  Drawer,
-  Form,
-  TreeSelect,
-  Button,
-  Table,
-  Space,
-  Tooltip,
-  Typography,
-} from "antd";
+import { Drawer, Form, TreeSelect, Button, Table, Space, Tooltip, Typography } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationAliasApi, type LocationAlias } from "@/lib/opsApi";
@@ -202,7 +193,10 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
                 size="small"
                 disabled={permDelete.disabled}
                 aria-label={`删除 位置别名映射（${record.originDeptName || record.deptId}）`}
-                title={permDelete.hint ?? `删除 位置别名映射（${record.originDeptName || record.deptId}）`}
+                title={
+                  permDelete.hint ??
+                  `删除 位置别名映射（${record.originDeptName || record.deptId}）`
+                }
                 onClick={() =>
                   confirmDelete({
                     target: `该工位位置别名映射（${record.originDeptName || record.deptId}）`,

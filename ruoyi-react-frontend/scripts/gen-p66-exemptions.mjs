@@ -41,9 +41,7 @@ const ANCHOR = "      // __P66_EXEMPTION_FILES__（脚本替换锚点）";
 const PLACEHOLDER = '      "src/__p66_no_exemptions__/**",';
 
 // Phase 66 两条 hook import 拦截的 message 前缀（与 eslint.config.js 保持同步）
-const P66_MESSAGE_MARKS = [
-  "新列表页请使用 @/components/shared 的 PageTable",
-];
+const P66_MESSAGE_MARKS = ["新列表页请使用 @/components/shared 的 PageTable"];
 
 // 生成「禁用存量豁免」的临时扫描 config；同时校验正式 config 锚点存在
 const config = readFileSync(configPath, "utf8");
@@ -63,7 +61,15 @@ writeFileSync(scanConfigPath, scanConfigText, "utf8");
 
 const res = spawnSync(
   "npx",
-  ["eslint", "src", "--config", "eslint.config.p66-scan.js", "--format", "json", "--no-error-on-unmatched-pattern"],
+  [
+    "eslint",
+    "src",
+    "--config",
+    "eslint.config.p66-scan.js",
+    "--format",
+    "json",
+    "--no-error-on-unmatched-pattern",
+  ],
   {
     cwd: root,
     shell: process.platform === "win32",
@@ -102,14 +108,14 @@ try {
 const hitFiles = [];
 for (const r of results) {
   const has = r.messages.some(
-    (m) => m.ruleId === "no-restricted-imports" && P66_MESSAGE_MARKS.some((k) => (m.message ?? "").includes(k))
+    (m) =>
+      m.ruleId === "no-restricted-imports" &&
+      P66_MESSAGE_MARKS.some((k) => (m.message ?? "").includes(k))
   );
   if (has) hitFiles.push(r.filePath);
 }
 
-const rel = hitFiles
-  .map((f) => path.relative(root, f).replaceAll("\\", "/"))
-  .sort();
+const rel = hitFiles.map((f) => path.relative(root, f).replaceAll("\\", "/")).sort();
 
 console.log(`命中 Phase 66 hook import 拦截的文件数: ${rel.length}`);
 for (const f of rel) console.log("  " + f);
@@ -118,7 +124,7 @@ for (const f of rel) console.log("  " + f);
 const anchorSection = config.slice(anchorIdx, endIdx);
 const listed = [...anchorSection.matchAll(/"([^"]+)"/g)].map((m) => m[1]).sort();
 const missing = rel.filter((f) => !listed.includes(f)); // 真实命中但清单未登记
-const stale = listed.filter((f) => !rel.includes(f));   // 清单登记但已无命中
+const stale = listed.filter((f) => !rel.includes(f)); // 清单登记但已无命中
 if (missing.length || stale.length) {
   console.error("\n[校验失败] 豁免清单与真实命中不一致:");
   for (const f of missing) console.error("  缺登记: " + f);

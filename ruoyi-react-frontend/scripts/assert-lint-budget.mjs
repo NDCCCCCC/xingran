@@ -54,13 +54,15 @@ for (const f of results) {
 
 const failures = [];
 if (errors > BUDGET.maxErrors) failures.push(`errors ${errors} > 预算 ${BUDGET.maxErrors}`);
-if (warnings > BUDGET.maxWarnings) failures.push(`warnings ${warnings} > 预算 ${BUDGET.maxWarnings}`);
+if (warnings > BUDGET.maxWarnings)
+  failures.push(`warnings ${warnings} > 预算 ${BUDGET.maxWarnings}`);
 for (const rule of BUDGET.zeroRules) {
   const n = byRule[rule] ?? 0;
   if (n !== 0) failures.push(`${rule} ${n} ≠ 0（HYG-02 硬承诺）`);
 }
 const anyCount = byRule["@typescript-eslint/no-explicit-any"] ?? 0;
-if (anyCount >= BUDGET.maxAny) failures.push(`no-explicit-any ${anyCount} ≥ ${BUDGET.maxAny}（HYG-03 软目标）`);
+if (anyCount >= BUDGET.maxAny)
+  failures.push(`no-explicit-any ${anyCount} ≥ ${BUDGET.maxAny}（HYG-03 软目标）`);
 
 console.log("=== lint 预算断言（Phase 74）===");
 console.log(`errors:    ${errors} / ≤ ${BUDGET.maxErrors}`);

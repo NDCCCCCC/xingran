@@ -28,12 +28,12 @@
   // 否则 var(--ant-color-error) 不可见 → VIS-03 还原块落到 fallback #ff4d4f，
   // 与真实 App 错误态（品牌红 #BA3630）不符。真实页面里 html/body 上无该变量。
   const cssVarScope = document.querySelector('.ant-app, [class*="css-var-"]');
-  const host = document.createElement('div');
+  const host = document.createElement("div");
   (cssVarScope || document.body).appendChild(host);
-  const light = document.createElement('div');
-  light.setAttribute('data-color-mode', 'light');
-  const dark = document.createElement('div');
-  dark.setAttribute('data-color-mode', 'dark');
+  const light = document.createElement("div");
+  light.setAttribute("data-color-mode", "light");
+  const dark = document.createElement("div");
+  dark.setAttribute("data-color-mode", "dark");
   host.append(light, dark);
 
   function el(tag, cls, parent) {
@@ -42,20 +42,24 @@
     parent.appendChild(n);
     return n;
   }
-  const w1 = el('span', 'ant-input-affix-wrapper ant-input-outlined', light);
-  const in1 = el('input', 'ant-input ant-input-outlined', w1);
-  el('span', 'ant-input-suffix', w1);
-  const w2 = el('span', 'ant-input-affix-wrapper ant-input-outlined', light);
-  const ta = el('textarea', 'ant-input ant-input-outlined', w2);
-  const w3 = el('span', 'ant-input-affix-wrapper ant-input-outlined', dark);
-  const in3 = el('input', 'ant-input ant-input-outlined', w3);
-  const w4 = el('span', 'ant-input-affix-wrapper ant-input-outlined ant-input-affix-wrapper-focused', light);
-  const in4 = el('input', 'ant-input ant-input-outlined', w4);
-  const w5 = el('span', 'ant-input-affix-wrapper ant-input-outlined ant-input-status-error', light);
+  const w1 = el("span", "ant-input-affix-wrapper ant-input-outlined", light);
+  const in1 = el("input", "ant-input ant-input-outlined", w1);
+  el("span", "ant-input-suffix", w1);
+  const w2 = el("span", "ant-input-affix-wrapper ant-input-outlined", light);
+  const ta = el("textarea", "ant-input ant-input-outlined", w2);
+  const w3 = el("span", "ant-input-affix-wrapper ant-input-outlined", dark);
+  const in3 = el("input", "ant-input ant-input-outlined", w3);
+  const w4 = el(
+    "span",
+    "ant-input-affix-wrapper ant-input-outlined ant-input-affix-wrapper-focused",
+    light
+  );
+  const in4 = el("input", "ant-input ant-input-outlined", w4);
+  const w5 = el("span", "ant-input-affix-wrapper ant-input-outlined ant-input-status-error", light);
 
   const cs = (n) => getComputedStyle(n);
   const report = {
-    doubleCount: [in1, ta, in3].filter((n) => cs(n).borderTopWidth !== '0px').length,
+    doubleCount: [in1, ta, in3].filter((n) => cs(n).borderTopWidth !== "0px").length,
     inner: {
       borderTopWidth: cs(in1).borderTopWidth,
       background: cs(in1).backgroundColor,
@@ -68,13 +72,13 @@
     wrapperFocused: { shadow: cs(w4).boxShadow },
     wrapperError: { borderTopColor: cs(w5).borderTopColor },
     passed:
-      [in1, ta, in3].every((n) => cs(n).borderTopWidth === '0px') &&
-      cs(in1).boxShadow === 'none' &&
-      cs(in4).boxShadow === 'none' &&
-      cs(w4).boxShadow !== 'none' &&
+      [in1, ta, in3].every((n) => cs(n).borderTopWidth === "0px") &&
+      cs(in1).boxShadow === "none" &&
+      cs(in4).boxShadow === "none" &&
+      cs(w4).boxShadow !== "none" &&
       /186,\s*54,\s*48/.test(cs(w5).borderTopColor),
   };
   host.remove();
-  console.log('[css-contract-assertions]', JSON.stringify(report, null, 1));
+  console.log("[css-contract-assertions]", JSON.stringify(report, null, 1));
   return report;
 })();

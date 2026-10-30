@@ -207,7 +207,9 @@ describe("useExecutionModals — handleViewDetail / handleViewOutput", () => {
   });
 
   it("handleViewOutput 调 Modal.info 带 <pre> output", () => {
-    const infoSpy = vi.spyOn(Modal, "info").mockImplementation(() => ({ destroy: vi.fn() }) as unknown);
+    const infoSpy = vi
+      .spyOn(Modal, "info")
+      .mockImplementation(() => ({ destroy: vi.fn() }) as unknown);
     const { result } = renderHook(() => useExecutionModals(baseParams()), { wrapper: wrap });
     act(() => result.current.handleViewOutput("hello world"));
     expect(infoSpy).toHaveBeenCalledTimes(1);

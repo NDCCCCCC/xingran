@@ -70,10 +70,7 @@ export interface PhysicalChainDiagnosis {
  * 未绑用户时召回结果无从归属）。仅「已绑用户 + 有数据」时 emptyReason 才为空串。
  */
 export type PhysicalEmptyReason =
-  | ""
-  | "no_user_bound"
-  | "info_point_misbound"
-  | "device_or_mac_missing";
+  "" | "no_user_bound" | "info_point_misbound" | "device_or_mac_missing";
 
 /** 物理链路设备查询结果（含空因诊断） */
 export interface PhysicalDevicesResult {
@@ -682,7 +679,7 @@ export const workstationDeviceApi = {
   getPhysical: async (workstationId: string) => {
     const result = await post<PhysicalDevicesResult>(
       `/ops/workstation-device/${workstationId}/physical-diagnosis`,
-      {},
+      {}
     );
     return { ...result, data: result.data?.devices ?? [] };
   },
@@ -692,7 +689,7 @@ export const workstationDeviceApi = {
   getPhysicalWithDiagnosis: async (workstationId: string) => {
     return await post<PhysicalDevicesResult>(
       `/ops/workstation-device/${workstationId}/physical-diagnosis`,
-      {},
+      {}
     );
   },
 

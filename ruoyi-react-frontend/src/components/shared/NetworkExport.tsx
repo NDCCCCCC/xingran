@@ -148,9 +148,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
             <Radio value="filtered">
               筛选导出 — 按当前筛选条件导出所有匹配数据
               {Object.keys(filters).length > 0 && (
-                <span style={{ color: "var(--theme-info)", marginLeft: 8 }}>
-                  (已设置筛选条件)
-                </span>
+                <span style={{ color: "var(--theme-info)", marginLeft: 8 }}>(已设置筛选条件)</span>
               )}
             </Radio>
             <Radio value="currentPage">

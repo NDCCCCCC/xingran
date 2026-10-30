@@ -142,7 +142,9 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
             onClick: () => {
               confirmDelete({
                 target: `字典类型 ${record.dictName}`,
-                onDelete: async () => { await handleDeleteType(record.id); },
+                onDelete: async () => {
+                  await handleDeleteType(record.id);
+                },
               });
             },
           },
@@ -241,7 +243,9 @@ function getDictDataTableColumns(props: DictDataTableColumnsProps): ColumnsType<
             onClick: () => {
               confirmDelete({
                 target: `字典数据 ${record.dictLabel}`,
-                onDelete: async () => { await handleDeleteData(record.id); },
+                onDelete: async () => {
+                  await handleDeleteData(record.id);
+                },
               });
             },
           },

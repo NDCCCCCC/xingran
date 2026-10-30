@@ -117,9 +117,9 @@ describe("NetworkDevicePage 渲染", () => {
     const moreButton = screen.getAllByRole("button", { name: "操作" }).at(-1) as HTMLElement;
     fireEvent.click(moreButton);
     const deleteMenuButton = await waitFor(() => {
-      const btn = [...document.querySelectorAll<HTMLButtonElement>(".ant-dropdown-menu-item button")].find(
-        (el) => el.getAttribute("aria-label")?.includes("switch-01")
-      );
+      const btn = [
+        ...document.querySelectorAll<HTMLButtonElement>(".ant-dropdown-menu-item button"),
+      ].find((el) => el.getAttribute("aria-label")?.includes("switch-01"));
       expect(btn).toBeTruthy();
       return btn as HTMLButtonElement;
     });

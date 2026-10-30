@@ -19,7 +19,8 @@ vi.mock("@/utils/errorHandler", () => ({
 
 const messageMock = { success: vi.fn(), error: vi.fn() } as never;
 
-const spyConfirm = () => vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() } as never);
+const spyConfirm = () =>
+  vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() } as never);
 
 describe("components/shared/confirmDelete（命令式）", () => {
   beforeEach(() => {
@@ -116,7 +117,13 @@ describe("components/shared/confirmDelete（68.1 扩展）", () => {
   it("actionContext='批量删除' → 失败 handleApiError 收到「批量删除」", async () => {
     spyConfirm();
     const boom = new Error("boom");
-    confirmDelete({ target: "x", onDelete: async () => { throw boom; }, actionContext: "批量删除" });
+    confirmDelete({
+      target: "x",
+      onDelete: async () => {
+        throw boom;
+      },
+      actionContext: "批量删除",
+    });
     const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
     await expect(opts.onOk()).rejects.toBe(boom);
     expect(handleApiError).toHaveBeenCalledWith(boom, "批量删除");
@@ -124,7 +131,11 @@ describe("components/shared/confirmDelete（68.1 扩展）", () => {
 
   it("contentText 覆盖正文且 {target} 占位符被替换", () => {
     spyConfirm();
-    confirmDelete({ target: "缓存数据", onDelete: async () => {}, contentText: "将清空{target}，操作不可恢复，是否继续？" });
+    confirmDelete({
+      target: "缓存数据",
+      onDelete: async () => {},
+      contentText: "将清空{target}，操作不可恢复，是否继续？",
+    });
     const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
     expect(opts.content).toBe("将清空缓存数据，操作不可恢复，是否继续？");
   });
@@ -133,7 +144,12 @@ describe("components/shared/confirmDelete（68.1 扩展）", () => {
     const update = vi.fn();
     vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update } as never);
     let resolveDelete: () => void = () => {};
-    const onDelete = vi.fn().mockImplementation(() => new Promise<void>((r) => { resolveDelete = r; }));
+    const onDelete = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          resolveDelete = r;
+        })
+    );
     confirmDelete({ target: "x", onDelete });
     const opts = vi.mocked(Modal.confirm).mock.calls[0][0];
     const pending = opts.onOk();
@@ -191,7 +207,11 @@ describe("components/shared/ConfirmDelete（声明式）", () => {
   });
 
   it("disabled=true 或 onDelete 未传 → 按钮 disabled；children 替换默认内容", () => {
-    render(<ConfirmDelete target="x" onDelete={async () => {}} disabled>移除</ConfirmDelete>);
+    render(
+      <ConfirmDelete target="x" onDelete={async () => {}} disabled>
+        移除
+      </ConfirmDelete>
+    );
     expect(screen.getByRole("button", { name: "删除x" })).toBeDisabled();
     expect(screen.getByText("移除")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button"));
@@ -210,7 +230,10 @@ describe("components/shared/ConfirmDelete（声明式）", () => {
 
   it("删除失败 → Modal 保持打开可重试（helper rethrow 语义经组件路径保持）", async () => {
     spyConfirm();
-    const onDelete = vi.fn().mockRejectedValueOnce(new Error("网络错误")).mockResolvedValue(undefined);
+    const onDelete = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("网络错误"))
+      .mockResolvedValue(undefined);
     render(<ConfirmDelete target="z" onDelete={onDelete} />);
     fireEvent.click(screen.getByRole("button"));
     const opts = vi.mocked(Modal.confirm).mock.calls[0][0];

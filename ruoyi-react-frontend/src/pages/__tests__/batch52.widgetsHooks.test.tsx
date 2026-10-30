@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
-import {  } from "antd";
+import {} from "antd";
 import type { ReactElement } from "react";
 
 vi.mock("@/lib/api", async () => {
@@ -20,7 +20,7 @@ import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import { ChartWidget } from "@/components/dashboard/widgets/types/ChartWidget";
 import { ListWidget } from "@/components/dashboard/widgets/types/ListWidget";
 import { MetricWidget } from "@/components/dashboard/widgets/types/MetricWidget";
-import {  } from "../monitor/logs/hooks/useLogData";
+import {} from "../monitor/logs/hooks/useLogData";
 import type { WidgetConfig } from "@/types/dashboard";
 
 beforeEach(() => {

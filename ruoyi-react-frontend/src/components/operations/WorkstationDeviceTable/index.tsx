@@ -29,11 +29,7 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import type { WorkstationDevice, DeviceFormData, Asset } from "@/types";
-import {
-  workstationDeviceApi,
-  assetApi,
-  type PhysicalDevicesResult,
-} from "@/lib/opsApi";
+import { workstationDeviceApi, assetApi, type PhysicalDevicesResult } from "@/lib/opsApi";
 import { HealthBadge } from "@/components/reconciliation";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 // Phase 71 (W3)：裸 Input/Input.TextArea → AppInput/AppTextArea（本文件无 Select）。
@@ -77,11 +73,7 @@ const PhysicalDevicesPanel: React.FC<{
   // 空因分级：no_user_bound 是常态（工位未绑定使用人），用 info；其余用 warning
   const alertType = emptyReason === "no_user_bound" ? "info" : "warning";
   const alertTitle =
-    emptyReason === "no_user_bound"
-      ? "该工位未绑定使用人"
-      : emptyReason
-        ? "物理链路信息缺失"
-        : "";
+    emptyReason === "no_user_bound" ? "该工位未绑定使用人" : emptyReason ? "物理链路信息缺失" : "";
 
   const diagnosisTip = diagnosis?.diagnosis
     ? [
@@ -107,7 +99,9 @@ const PhysicalDevicesPanel: React.FC<{
           title={alertTitle}
           description={
             <div style={{ fontSize: 11 }}>
-              {emptyMessage && <div style={{ marginBottom: warnings.length > 0 ? 4 : 0 }}>{emptyMessage}</div>}
+              {emptyMessage && (
+                <div style={{ marginBottom: warnings.length > 0 ? 4 : 0 }}>{emptyMessage}</div>
+              )}
               {warnings.length > 0 && (
                 <ul style={{ margin: 0, paddingLeft: 16 }}>
                   {warnings.map((w, i) => (
@@ -145,8 +139,8 @@ const PhysicalDevicesPanel: React.FC<{
         !emptyReason &&
         !warnings.length && (
           <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "4px 0" }}>
-            该工位暂无通过 MAC→port→infoPoint 反推到的设备。请确认工位下是否已配置
-            ops_info_points 关联到网络设备端口。
+            该工位暂无通过 MAC→port→infoPoint 反推到的设备。请确认工位下是否已配置 ops_info_points
+            关联到网络设备端口。
           </div>
         )
       )}
@@ -170,9 +164,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   // Phase 80 / DIAG-01: 物理链路空因诊断（emptyReason/emptyMessage/warnings/diagnosis）
   // 空因口径：「未绑定用户」压过「有数据」——未绑 user_id 时即使链路能召回设备，
   // 该面板按用户维度呈现仍无从归属，故 emptyReason=no_user_bound 属正常业务态。
-  const [physicalDiagnosis, setPhysicalDiagnosis] = useState<PhysicalDevicesResult | null>(
-    null,
-  );
+  const [physicalDiagnosis, setPhysicalDiagnosis] = useState<PhysicalDevicesResult | null>(null);
 
   // 折叠面板展开状态
   const [adExpanded, setADExpanded] = useState(false);
@@ -559,9 +551,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       width: 50,
       align: "center" as const,
       render: (isPrimary: boolean) =>
-        isPrimary ? (
-          <StarOutlined style={{ color: "var(--theme-warning)", fontSize: 11 }} />
-        ) : null,
+        isPrimary ? <StarOutlined style={{ color: "var(--theme-warning)", fontSize: 11 }} /> : null,
     },
     {
       title: "操作",
@@ -753,7 +743,14 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           </Form.Item>
 
           {autoFilledAsset && (
-            <div style={{ marginBottom: 16, padding: 12, background: "var(--theme-bg-secondary)", borderRadius: 4 }}>
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                background: "var(--theme-bg-secondary)",
+                borderRadius: 4,
+              }}
+            >
               <div style={{ marginBottom: 8, fontWeight: "bold" }}>自动匹配的设备信息：</div>
               <div>设备名称: {autoFilledAsset.devicesn || "-"}</div>
               <div>设备型号: {autoFilledAsset.deviceModelName || "-"}</div>

@@ -2,7 +2,7 @@
  * Phase 84 84-02a — Layout constants + HybridLayout 静态断言
  */
 import { describe, it, expect, vi } from "vitest";
-import {  } from "@/test/utils/renderWithProviders";
+import {} from "@/test/utils/renderWithProviders";
 import {
   DEFAULT_SIDEBAR_WIDTH,
   HEADER_HEIGHT,

@@ -668,10 +668,21 @@ const MACHistoryPage: React.FC = () => {
           </Form.Item>
           <Form.Item>
             <Space wrap>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={handleSearch}
+                aria-label="搜索"
+                title="搜索"
+              >
                 查询
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleReset}
+                aria-label="重置"
+                title="重置"
+              >
                 重置
               </Button>
               {/* 14-04 注入的导出按钮 — prop 名称 exportScope='current'|'all' 保留,工具栏查询/重置按钮之后位置不变 */}

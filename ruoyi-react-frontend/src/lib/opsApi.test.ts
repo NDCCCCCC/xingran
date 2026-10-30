@@ -106,7 +106,9 @@ const mockedBlobAxios = blobAxios as unknown as {
 };
 
 const blobRequestInterceptor = () =>
-  mockedBlobAxios.interceptors.request.use.mock.calls[0][0] as (config: unknown) => Promise<unknown>;
+  mockedBlobAxios.interceptors.request.use.mock.calls[0][0] as (
+    config: unknown
+  ) => Promise<unknown>;
 
 beforeAll(() => {
   // jsdom 不实现 URL.createObjectURL — 打桩以覆盖 triggerBrowserDownload
@@ -587,7 +589,11 @@ describe("workstationDeviceApi(工位设备关联)", () => {
     // Phase 80 / DIAG-01：getPhysical 内部改走诊断端点，但对外仍返回 devices 数组
     mockPost.mockResolvedValue({ code: 0, data: { devices: [], total: 0 } });
     const physical = await workstationDeviceApi.getPhysical("w1");
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/ops/workstation-device/w1/physical-diagnosis", {});
+    expect(mockPost).toHaveBeenNthCalledWith(
+      4,
+      "/ops/workstation-device/w1/physical-diagnosis",
+      {}
+    );
     expect(physical.data).toEqual([]);
     await workstationDeviceApi.getByWorkstation("w1");
     expect(mockPost).toHaveBeenNthCalledWith(5, "/ops/workstation-device/w1", {});
@@ -619,7 +625,7 @@ describe("workstationDeviceApi(工位设备关联)", () => {
     expect(mockPost).toHaveBeenNthCalledWith(
       1,
       "/ops/workstation-device/w1/physical-diagnosis",
-      {},
+      {}
     );
     expect(result.data).toEqual(payload);
     expect(result.data?.emptyReason).toBe("no_user_bound");

@@ -29,7 +29,11 @@ describe("零散组件渲染", () => {
   it("VDIRow", async () => {
     await expectRenders(
       (
-        <VDIRow record={{ id: "v1", vmName: "虚拟机-01" } as unknown} buttons={[]} permissions={[]} />
+        <VDIRow
+          record={{ id: "v1", vmName: "虚拟机-01" } as unknown}
+          buttons={[]}
+          permissions={[]}
+        />
       ) as unknown
     );
   });

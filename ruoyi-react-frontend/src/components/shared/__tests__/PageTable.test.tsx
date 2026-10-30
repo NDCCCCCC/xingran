@@ -17,8 +17,7 @@ import { createDeleteAction } from "../ActionButtons";
 vi.mock("@/utils/errorHandler", () => ({
   handleApiError: vi.fn(),
   handleSuccess: vi.fn(),
-  isFormValidationError: (e: unknown) =>
-    Boolean(e && typeof e === "object" && "errorFields" in e),
+  isFormValidationError: (e: unknown) => Boolean(e && typeof e === "object" && "errorFields" in e),
 }));
 
 import { handleApiError } from "@/utils/errorHandler";
@@ -50,10 +49,9 @@ afterEach(() => {
 describe("components/shared/PageTable（T1 最小骨架）", () => {
   it("传 request+columns+rowKey 渲染表格；total=128 → 共 128 条 / 13 页", async () => {
     const request = vi.fn(async () => ({ list: makeRows(10), total: 128 }));
-    const { container } = render(
-      <PageTable request={request} columns={columns} rowKey="id" />,
-      { wrapper: Wrap }
-    );
+    const { container } = render(<PageTable request={request} columns={columns} rowKey="id" />, {
+      wrapper: Wrap,
+    });
     await waitFor(() => {
       expect(screen.getByText("行1")).toBeTruthy();
     });
@@ -64,10 +62,9 @@ describe("components/shared/PageTable（T1 最小骨架）", () => {
 
   it("total=0 → 不渲染分页总文案且显示 antd 空态（.ant-empty，locale 无关）", async () => {
     const request = vi.fn(async () => ({ list: [], total: 0 }));
-    const { container } = render(
-      <PageTable request={request} columns={columns} rowKey="id" />,
-      { wrapper: Wrap }
-    );
+    const { container } = render(<PageTable request={request} columns={columns} rowKey="id" />, {
+      wrapper: Wrap,
+    });
     await waitFor(() => {
       expect(container.querySelector(".ant-empty")).not.toBeNull();
     });
@@ -80,10 +77,9 @@ describe("components/shared/PageTable（T1 最小骨架）", () => {
       .fn<() => Promise<{ list: { id: string; name: string }[]; total: number }>>()
       .mockRejectedValueOnce(new Error("网络炸了"))
       .mockResolvedValueOnce({ list: makeRows(2), total: 2 });
-    const { container } = render(
-      <PageTable request={request} columns={columns} rowKey="id" />,
-      { wrapper: Wrap }
-    );
+    const { container } = render(<PageTable request={request} columns={columns} rowKey="id" />, {
+      wrapper: Wrap,
+    });
     await waitFor(() => {
       expect(handleApiError).toHaveBeenCalled();
       expect((handleApiError as ReturnType<typeof vi.fn>).mock.calls[0][1]).toBe("加载列表数据");
@@ -109,10 +105,9 @@ describe("components/shared/PageTable（T1 最小骨架）", () => {
           resolveFn = resolve;
         })
     );
-    const { container } = render(
-      <PageTable request={request} columns={columns} rowKey="id" />,
-      { wrapper: Wrap }
-    );
+    const { container } = render(<PageTable request={request} columns={columns} rowKey="id" />, {
+      wrapper: Wrap,
+    });
     await waitFor(() => {
       expect(container.querySelector(".ant-spin")).not.toBeNull();
     });
@@ -154,7 +149,12 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
       .mockResolvedValueOnce({ list: makeRows(2), total: 2 })
       .mockResolvedValueOnce({ list: makeRows(3), total: 3 });
     render(
-      <PageTable request={request} columns={columns2} rowKey="id" toolbar={<button>新增</button>} />,
+      <PageTable
+        request={request}
+        columns={columns2}
+        rowKey="id"
+        toolbar={<button>新增</button>}
+      />,
       { wrapper: Wrap }
     );
     await waitFor(() => expect(screen.getByText("行1")).toBeTruthy());
@@ -239,7 +239,9 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
   });
 
   it("batchDelete.target 透传（68.1 minor #2）：确认正文含「选中的 N 项资产」", async () => {
-    const confirmSpy = vi.spyOn(Modal, "confirm").mockReturnValue({ destroy: vi.fn(), update: vi.fn() } as never);
+    const confirmSpy = vi
+      .spyOn(Modal, "confirm")
+      .mockReturnValue({ destroy: vi.fn(), update: vi.fn() } as never);
     const onDelete = vi.fn(async () => {});
     const request = vi.fn(async () => ({ list: makeRows(3), total: 3 }));
     render(
@@ -267,7 +269,11 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
 
   it("sorterMetas+defaultSort：defaultSort 进首次请求参数；表头点击触发带 orderByColumn/isAsc 的请求", async () => {
     const request = vi
-      .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()
+      .fn<
+        (
+          p: Record<string, unknown>
+        ) => Promise<{ list: { id: string; name: string }[]; total: number }>
+      >()
       .mockResolvedValue({ list: makeRows(3), total: 3 });
     const sorterMetas = [createSorterMeta<{ id: string; name: string }>("name")];
     render(
@@ -292,7 +298,11 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
 
   it("extraFilters 引用变化 → 回第 1 页重载且并入请求参数；不变则不触发", async () => {
     const request = vi
-      .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()
+      .fn<
+        (
+          p: Record<string, unknown>
+        ) => Promise<{ list: { id: string; name: string }[]; total: number }>
+      >()
       .mockResolvedValue({ list: makeRows(2), total: 2 });
     const renderNode = (extraFilters: Record<string, unknown> | undefined) => (
       <PageTable request={request} columns={columns2} rowKey="id" extraFilters={extraFilters} />
@@ -320,7 +330,11 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
   it("UAT FAIL-1：sessionStorage 有持久化页码时 mount 首载恢复该页码且不覆写 storage", async () => {
     sessionStorage.setItem("xingran_table_state_test_current", "2");
     const request = vi
-      .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()
+      .fn<
+        (
+          p: Record<string, unknown>
+        ) => Promise<{ list: { id: string; name: string }[]; total: number }>
+      >()
       .mockResolvedValue({ list: makeRows(10), total: 25 });
     const { container, unmount } = render(
       <PageTable request={request} columns={columns} rowKey="id" />,
@@ -336,10 +350,9 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
 
     // 模拟「切 tab → 切回」：卸载 → 重挂载，页码仍恢复为 2
     unmount();
-    const remount = render(
-      <PageTable request={request} columns={columns} rowKey="id" />,
-      { wrapper: Wrap }
-    );
+    const remount = render(<PageTable request={request} columns={columns} rowKey="id" />, {
+      wrapper: Wrap,
+    });
     await waitFor(() => expect(screen.getAllByText("行1").length).toBeGreaterThan(0));
     expect(remount.container.querySelector(".ant-pagination-item-active")?.textContent).toBe("2");
     expect(sessionStorage.getItem("xingran_table_state_test_current")).toBe("2");
@@ -365,7 +378,11 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
 
   it("searchFields schema 渲染搜索卡；搜索/重置走 handleSearch/handleReset 语义", async () => {
     const request = vi
-      .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()
+      .fn<
+        (
+          p: Record<string, unknown>
+        ) => Promise<{ list: { id: string; name: string }[]; total: number }>
+      >()
       .mockResolvedValue({ list: makeRows(2), total: 2 });
     const { container } = render(
       <PageTable
@@ -424,7 +441,11 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
 
   it("searchChildren 函数形态收到 searchForm，其 Form.Item 值进入请求参数", async () => {
     const request = vi
-      .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()
+      .fn<
+        (
+          p: Record<string, unknown>
+        ) => Promise<{ list: { id: string; name: string }[]; total: number }>
+      >()
       .mockResolvedValue({ list: makeRows(1), total: 1 });
     const { container } = render(
       <PageTable

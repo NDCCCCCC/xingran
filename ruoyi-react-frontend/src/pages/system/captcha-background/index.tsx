@@ -9,12 +9,7 @@ import { Table, Button, Space, Form, Card, Row, Col, Statistic } from "antd";
 // Phase 71 (W2)：裸 Input/Select → 契约组件。三处搜索下拉均为动态 children 固定枚举
 // → 改写 options 形态；形状/难度/状态均为业务禁搜枚举 → 显式 showSearch={false}
 import { AppInput, AppSelect } from "@/components/ui";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined, ReloadOutlined, UploadOutlined } from "@ant-design/icons";
 import type { CaptchaBackground } from "@/types/captcha";
 import { useCaptchaData, useCaptchaModals } from "./hooks";
 import { getCaptchaColumns } from "./columns";

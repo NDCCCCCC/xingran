@@ -1,14 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  App,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Button,
-  Table,
-  Tag
-} from "antd";
+import { App, Card, Row, Col, Statistic, Button, Table, Tag } from "antd";
 import { ReloadOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
 import { createSorter } from "@/utils/tableHelpers";
@@ -58,7 +49,7 @@ const SyncMonitor: React.FC = () => {
     try {
       const result = await post("/api/v1/ad/groups/sync/logs", {
         current: 1,
-        pageSize: 10
+        pageSize: 10,
       });
       setLogs((result.data as { list: SyncLog[] }).list);
     } catch (error) {
@@ -91,23 +82,60 @@ const SyncMonitor: React.FC = () => {
   }, [fetchStatus, fetchLogs]);
 
   const statusColumns = [
-    { title: "配置名称", dataIndex: "configName", key: "configName", sorter: createSorter<SyncLog>("configName", "string") },
-    { title: "同步类型", dataIndex: "syncType", key: "syncType", sorter: createSorter<SyncLog>("syncType", "string") },
+    {
+      title: "配置名称",
+      dataIndex: "configName",
+      key: "configName",
+      sorter: createSorter<SyncLog>("configName", "string"),
+    },
+    {
+      title: "同步类型",
+      dataIndex: "syncType",
+      key: "syncType",
+      sorter: createSorter<SyncLog>("syncType", "string"),
+    },
     {
       title: "状态",
       dataIndex: "status",
       key: "status",
       sorter: createSorter<SyncLog>("status", "string"),
       render: (status: string) => {
-        const color = status === "success" ? "success" : status === "failed" ? "error" : "processing";
+        const color =
+          status === "success" ? "success" : status === "failed" ? "error" : "processing";
         return <Tag color={color}>{status}</Tag>;
-      }
+      },
     },
-    { title: "开始时间", dataIndex: "startTime", key: "startTime", sorter: createSorter<SyncLog>("startTime", "date") },
-    { title: "耗时(秒)", dataIndex: "duration", key: "duration", sorter: createSorter<SyncLog>("duration", "number") },
-    { title: "成功数", dataIndex: "successCount", key: "successCount", sorter: createSorter<SyncLog>("successCount", "number") },
-    { title: "失败数", dataIndex: "failureCount", key: "failureCount", sorter: createSorter<SyncLog>("failureCount", "number") },
-    { title: "错误信息", dataIndex: "errorMessage", key: "errorMessage", sorter: createSorter<SyncLog>("errorMessage", "string"), ellipsis: true }
+    {
+      title: "开始时间",
+      dataIndex: "startTime",
+      key: "startTime",
+      sorter: createSorter<SyncLog>("startTime", "date"),
+    },
+    {
+      title: "耗时(秒)",
+      dataIndex: "duration",
+      key: "duration",
+      sorter: createSorter<SyncLog>("duration", "number"),
+    },
+    {
+      title: "成功数",
+      dataIndex: "successCount",
+      key: "successCount",
+      sorter: createSorter<SyncLog>("successCount", "number"),
+    },
+    {
+      title: "失败数",
+      dataIndex: "failureCount",
+      key: "failureCount",
+      sorter: createSorter<SyncLog>("failureCount", "number"),
+    },
+    {
+      title: "错误信息",
+      dataIndex: "errorMessage",
+      key: "errorMessage",
+      sorter: createSorter<SyncLog>("errorMessage", "string"),
+      ellipsis: true,
+    },
   ];
 
   return (
@@ -115,10 +143,7 @@ const SyncMonitor: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="映射总数"
-              value={status?.totalMappings || 0}
-            />
+            <Statistic title="映射总数" value={status?.totalMappings || 0} />
           </Card>
         </Col>
         <Col span={6}>
@@ -135,7 +160,9 @@ const SyncMonitor: React.FC = () => {
             <Statistic
               title="同步状态"
               value={status?.enabled ? "已启用" : "已禁用"}
-              valueStyle={{ color: status?.enabled ? "var(--theme-success)" : "var(--theme-error)" }}
+              valueStyle={{
+                color: status?.enabled ? "var(--theme-success)" : "var(--theme-error)",
+              }}
             />
           </Card>
         </Col>
@@ -157,10 +184,7 @@ const SyncMonitor: React.FC = () => {
       <Card
         title="同步历史"
         extra={
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={fetchLogs}
-          >
+          <Button icon={<ReloadOutlined />} onClick={fetchLogs}>
             刷新
           </Button>
         }

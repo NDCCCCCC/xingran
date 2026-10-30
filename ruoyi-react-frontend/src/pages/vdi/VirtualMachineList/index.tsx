@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {  } from "@/store/authStore";
+import {} from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
 import { vmOperationButtons } from "./vmOperationButtons";
 import {
@@ -908,7 +908,10 @@ const VirtualMachineList: React.FC = () => {
             style={{ width: 120 }}
             showSearch={false}
             onChange={(value) =>
-              setFilters({ ...filters, powerState: value as "pending" | "stopped" | "suspended" | "in_use" | undefined })
+              setFilters({
+                ...filters,
+                powerState: value as "pending" | "stopped" | "suspended" | "in_use" | undefined,
+              })
             }
             options={[
               { value: "pending", label: "等待Agent" },
@@ -1144,7 +1147,11 @@ const VirtualMachineList: React.FC = () => {
 
                 <Form.Item label="主机位置" name="host_id">
                   {/* UUID 外键回显只读区：不提供清空能力 */}
-                  <AppInput allowClear={false} disabled placeholder="自动从运行位置获取 (father_id)" />
+                  <AppInput
+                    allowClear={false}
+                    disabled
+                    placeholder="自动从运行位置获取 (father_id)"
+                  />
                 </Form.Item>
 
                 <Form.Item label="内存" name="memory" initialValue={4096}>
@@ -1205,7 +1212,12 @@ const VirtualMachineList: React.FC = () => {
           <Form form={quickCreateForm} layout="vertical">
             {quickConfig && (
               <div
-                style={{ marginBottom: 16, padding: 12, background: "var(--theme-bg-secondary)", borderRadius: 4 }}
+                style={{
+                  marginBottom: 16,
+                  padding: 12,
+                  background: "var(--theme-bg-secondary)",
+                  borderRadius: 4,
+                }}
               >
                 <div>
                   <strong>已加载的默认配置：</strong>

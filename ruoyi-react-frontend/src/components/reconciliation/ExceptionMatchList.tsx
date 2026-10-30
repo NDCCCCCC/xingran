@@ -124,7 +124,9 @@ const ListInner: React.FC<ExceptionMatchListProps> = ({
               ))}
             </Space>
             {rule.reason && (
-              <div style={{ marginTop: 4, fontSize: 12, color: "var(--theme-text-secondary)" }}>{rule.reason}</div>
+              <div style={{ marginTop: 4, fontSize: 12, color: "var(--theme-text-secondary)" }}>
+                {rule.reason}
+              </div>
             )}
             {rule.expiresAt && (
               <div style={{ marginTop: 4, fontSize: 12, color: "var(--theme-text-secondary)" }}>

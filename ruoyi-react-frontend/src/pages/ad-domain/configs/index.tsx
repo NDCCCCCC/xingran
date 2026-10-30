@@ -1,18 +1,7 @@
 import { useState } from "react";
 // Phase 71 (W5)：裸 Input → 契约组件
 import { AppInput } from "@/components/ui";
-import {
-  Button,
-  Table,
-  Modal,
-  Form,
-  InputNumber,
-  Switch,
-  Space,
-  message,
-  Card,
-  Tag,
-} from "antd";
+import { Button, Table, Modal, Form, InputNumber, Switch, Space, message, Card, Tag } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -382,217 +371,218 @@ const ADConfigPage: FC = () => {
             children: (
               <>
                 <div style={{ marginBottom: 16 }}>
-        <Space>
-          {/* Phase 86 W4：新增AD配置 → ops:ad:config:add（写入口 → 条件渲染 + disabled + 提示） */}
-          {permAdd.visible && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleCreate}
-              disabled={permAdd.disabled}
-              title={permAdd.hint}
-            >
-              新增AD配置
-            </Button>
-          )}
-          {/* 刷新是读入口（重新拉列表，不落库）→ 不门控 */}
-          <Button icon={<ReloadOutlined />} onClick={() => fetchConfigs()}>
-            刷新
-          </Button>
-        </Space>
-      </div>
+                  <Space>
+                    {/* Phase 86 W4：新增AD配置 → ops:ad:config:add（写入口 → 条件渲染 + disabled + 提示） */}
+                    {permAdd.visible && (
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={handleCreate}
+                        disabled={permAdd.disabled}
+                        title={permAdd.hint}
+                      >
+                        新增AD配置
+                      </Button>
+                    )}
+                    {/* 刷新是读入口（重新拉列表，不落库）→ 不门控 */}
+                    <Button icon={<ReloadOutlined />} onClick={() => fetchConfigs()}>
+                      刷新
+                    </Button>
+                  </Space>
+                </div>
 
-      <Table
-        columns={columns}
-        dataSource={configs}
-        loading={loading}
-        rowKey="id"
-        pagination={false}
-        scroll={{ x: "max-content" }}
-        onChange={(pagination, filters, sorter) => {
-          // 用 local const 持有新值传 fetchConfigs，规避 React 18 setState 异步时序
-          // （fetchConfigs 不在 useMemo 依赖链，setState 后读 state 仍为旧值——commit 7ab1189 同类坑）
-          const s = sorter && !Array.isArray(sorter) ? sorter : null;
-          const col = s && s.field ? String(s.field) : "";
-          const asc = s ? s.order === "ascend" : false;
-          setOrderByColumn(col || "createdAt");
-          setIsAsc(col ? asc : false);
-          // fetchConfigs(sortColumn?, sortAsc?)：col 为空时传 undefined 走后端默认排序
-          fetchConfigs(col || undefined, col ? asc : undefined);
-        }}
-      />
+                <Table
+                  columns={columns}
+                  dataSource={configs}
+                  loading={loading}
+                  rowKey="id"
+                  pagination={false}
+                  scroll={{ x: "max-content" }}
+                  onChange={(pagination, filters, sorter) => {
+                    // 用 local const 持有新值传 fetchConfigs，规避 React 18 setState 异步时序
+                    // （fetchConfigs 不在 useMemo 依赖链，setState 后读 state 仍为旧值——commit 7ab1189 同类坑）
+                    const s = sorter && !Array.isArray(sorter) ? sorter : null;
+                    const col = s && s.field ? String(s.field) : "";
+                    const asc = s ? s.order === "ascend" : false;
+                    setOrderByColumn(col || "createdAt");
+                    setIsAsc(col ? asc : false);
+                    // fetchConfigs(sortColumn?, sortAsc?)：col 为空时传 undefined 走后端默认排序
+                    fetchConfigs(col || undefined, col ? asc : undefined);
+                  }}
+                />
 
-      <Modal
-        title={editingConfig ? "编辑AD配置" : "新增AD配置"}
-        open={modalVisible}
-        onOk={async () => {
-          setSubmitting(true);
-          try {
-            await handleSubmit();
-          } finally {
-            setSubmitting(false);
-          }
-        }}
-        cancelButtonProps={{ disabled: submitting }}
-        onCancel={() => setModalVisible(false)}
-        afterOpenChange={handleModalOpenChange}
-        width={600}
-        destroyOnHidden
-      >
-        <Form form={editForm} layout="vertical" preserve={false}>
-          <Form.Item
-            label="配置名称"
-            name="configName"
-            rules={[{ required: true, message: "请输入配置名称" }]}
-          >
-            <AppInput allowClear placeholder="如: 公司主AD域" />
-          </Form.Item>
+                <Modal
+                  title={editingConfig ? "编辑AD配置" : "新增AD配置"}
+                  open={modalVisible}
+                  onOk={async () => {
+                    setSubmitting(true);
+                    try {
+                      await handleSubmit();
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                  cancelButtonProps={{ disabled: submitting }}
+                  onCancel={() => setModalVisible(false)}
+                  afterOpenChange={handleModalOpenChange}
+                  width={600}
+                  destroyOnHidden
+                >
+                  <Form form={editForm} layout="vertical" preserve={false}>
+                    <Form.Item
+                      label="配置名称"
+                      name="configName"
+                      rules={[{ required: true, message: "请输入配置名称" }]}
+                    >
+                      <AppInput allowClear placeholder="如: 公司主AD域" />
+                    </Form.Item>
 
-          <Form.Item
-            label="服务器地址"
-            name="serverAddress"
-            rules={[{ required: true, message: "请输入AD服务器地址" }]}
-          >
-            <AppInput allowClear placeholder="如: ad.example.com 或 192.168.1.100" />
-          </Form.Item>
+                    <Form.Item
+                      label="服务器地址"
+                      name="serverAddress"
+                      rules={[{ required: true, message: "请输入AD服务器地址" }]}
+                    >
+                      <AppInput allowClear placeholder="如: ad.example.com 或 192.168.1.100" />
+                    </Form.Item>
 
-          <Form.Item
-            label="端口"
-            name="serverPort"
-            rules={[{ required: true, message: "请输入端口" }]}
-          >
-            <InputNumber min={1} max={65535} style={{ width: "100%" }} />
-          </Form.Item>
+                    <Form.Item
+                      label="端口"
+                      name="serverPort"
+                      rules={[{ required: true, message: "请输入端口" }]}
+                    >
+                      <InputNumber min={1} max={65535} style={{ width: "100%" }} />
+                    </Form.Item>
 
-          <Form.Item
-            label="域名"
-            name="domainName"
-            rules={[{ required: true, message: "请输入域名" }]}
-          >
-            <AppInput allowClear placeholder="如: example.com" />
-          </Form.Item>
+                    <Form.Item
+                      label="域名"
+                      name="domainName"
+                      rules={[{ required: true, message: "请输入域名" }]}
+                    >
+                      <AppInput allowClear placeholder="如: example.com" />
+                    </Form.Item>
 
-          <Form.Item
-            label="基础DN"
-            name="baseDn"
-            rules={[{ required: true, message: "请输入基础DN" }]}
-          >
-            <AppInput allowClear placeholder="如: DC=example,DC=com" />
-          </Form.Item>
+                    <Form.Item
+                      label="基础DN"
+                      name="baseDn"
+                      rules={[{ required: true, message: "请输入基础DN" }]}
+                    >
+                      <AppInput allowClear placeholder="如: DC=example,DC=com" />
+                    </Form.Item>
 
-          {/* 账号管理改用「服务账号池」（详情 Drawer 的服务账号池 Tab） */}
-          {/* Phase 86 W4：三个 Switch 是弹窗表单字段，随弹窗提交生效 →
+                    {/* 账号管理改用「服务账号池」（详情 Drawer 的服务账号池 Tab） */}
+                    {/* Phase 86 W4：三个 Switch 是弹窗表单字段，随弹窗提交生效 →
               随弹窗上下文归所属写动作（新增 → add / 编辑 → edit）；
               ready 无权限 → 整个 Switch 不渲染（不是只禁用）。 */}
-          {permFormWrite.visible && (
-            <Form.Item label="使用SSL (LDAPS)" name="useSsl" valuePropName="checked">
-              <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
-            </Form.Item>
-          )}
+                    {permFormWrite.visible && (
+                      <Form.Item label="使用SSL (LDAPS)" name="useSsl" valuePropName="checked">
+                        <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
+                      </Form.Item>
+                    )}
 
-          {permFormWrite.visible && (
-            <Form.Item label="使用TLS (StartTLS)" name="useTls" valuePropName="checked">
-              <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
-            </Form.Item>
-          )}
+                    {permFormWrite.visible && (
+                      <Form.Item label="使用TLS (StartTLS)" name="useTls" valuePropName="checked">
+                        <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
+                      </Form.Item>
+                    )}
 
-          {permFormWrite.visible && (
-            <Form.Item label="启用自动同步" name="syncEnabled" valuePropName="checked">
-              <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
-            </Form.Item>
-          )}
+                    {permFormWrite.visible && (
+                      <Form.Item label="启用自动同步" name="syncEnabled" valuePropName="checked">
+                        <Switch disabled={permFormWrite.disabled} title={permFormWrite.hint} />
+                      </Form.Item>
+                    )}
 
-          <Form.Item
-            label="同步间隔(秒)"
-            name="syncInterval"
-            initialValue={3600}
-            rules={[{ required: true, message: "请输入同步间隔" }]}
-          >
-            <InputNumber min={60} style={{ width: "100%" }} />
-          </Form.Item>
-        </Form>
-      </Modal>
+                    <Form.Item
+                      label="同步间隔(秒)"
+                      name="syncInterval"
+                      initialValue={3600}
+                      rules={[{ required: true, message: "请输入同步间隔" }]}
+                    >
+                      <InputNumber min={60} style={{ width: "100%" }} />
+                    </Form.Item>
+                  </Form>
+                </Modal>
 
-      {/* Phase 36: 详情 Drawer（含「基本信息」+「服务账号池」Tab） */}
-      <Drawer
-        title={detailConfig ? `AD 配置详情: ${detailConfig.configName}` : "AD 配置详情"}
-        open={detailDrawerVisible}
-        onClose={() => setDetailDrawerVisible(false)}
-        size={1100}
-        destroyOnHidden
-      >
-        {detailConfig && (
-          <Tabs
-            defaultActiveKey="basic"
-            items={[
-              {
-                key: "basic",
-                label: "基本信息",
-                children: (
-                  <div>
-                    <p>
-                      <strong>配置名：</strong>
-                      {detailConfig.configName}
-                    </p>
-                    <p>
-                      <strong>服务器：</strong>
-                      {detailConfig.serverAddress}:{detailConfig.serverPort}
-                    </p>
-                    <p>
-                      <strong>域名：</strong>
-                      {detailConfig.domainName}
-                    </p>
-                    <p>
-                      <strong>BaseDN：</strong>
-                      {detailConfig.baseDn}
-                    </p>
-                    <p>
-                      <strong>SSL/TLS：</strong>
-                      SSL={String(detailConfig.useSsl)} / TLS={String(detailConfig.useTls)}
-                    </p>
-                    <p>
-                      <strong>同步：</strong>
-                      {detailConfig.syncEnabled ? "启用" : "停用"} / 间隔{" "}
-                      {detailConfig.syncInterval}s
-                    </p>
-                    <p>
-                      <strong>状态：</strong>
-                      {detailConfig.status === 0 ? "启用" : "停用"}
-                    </p>
-                    {/*
+                {/* Phase 36: 详情 Drawer（含「基本信息」+「服务账号池」Tab） */}
+                <Drawer
+                  title={detailConfig ? `AD 配置详情: ${detailConfig.configName}` : "AD 配置详情"}
+                  open={detailDrawerVisible}
+                  onClose={() => setDetailDrawerVisible(false)}
+                  size={1100}
+                  destroyOnHidden
+                >
+                  {detailConfig && (
+                    <Tabs
+                      defaultActiveKey="basic"
+                      items={[
+                        {
+                          key: "basic",
+                          label: "基本信息",
+                          children: (
+                            <div>
+                              <p>
+                                <strong>配置名：</strong>
+                                {detailConfig.configName}
+                              </p>
+                              <p>
+                                <strong>服务器：</strong>
+                                {detailConfig.serverAddress}:{detailConfig.serverPort}
+                              </p>
+                              <p>
+                                <strong>域名：</strong>
+                                {detailConfig.domainName}
+                              </p>
+                              <p>
+                                <strong>BaseDN：</strong>
+                                {detailConfig.baseDn}
+                              </p>
+                              <p>
+                                <strong>SSL/TLS：</strong>
+                                SSL={String(detailConfig.useSsl)} / TLS=
+                                {String(detailConfig.useTls)}
+                              </p>
+                              <p>
+                                <strong>同步：</strong>
+                                {detailConfig.syncEnabled ? "启用" : "停用"} / 间隔{" "}
+                                {detailConfig.syncInterval}s
+                              </p>
+                              <p>
+                                <strong>状态：</strong>
+                                {detailConfig.status === 0 ? "启用" : "停用"}
+                              </p>
+                              {/*
                       Phase 86 W4（HIGH-1）：详情 Drawer 内的「编辑此配置」是**写入口**
                       —— 它关闭抽屉并打开编辑弹窗（handleEdit），用户随后可提交保存。
                       不门控 ⇒ 无 ops:ad:config:edit 的用户可「详情 → 编辑此配置 → 提交」
                       绕过整页门控。门控点落在按钮本身（条件渲染 + disabled + 提示）。
                       ⚠️ 详情 Drawer **本身不门控**（读入口）。
                     */}
-                    {permEdit.visible && (
-                      <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        style={{ marginTop: 16 }}
-                        disabled={permEdit.disabled}
-                        title={permEdit.hint}
-                        onClick={() => {
-                          setDetailDrawerVisible(false);
-                          handleEdit(detailConfig);
-                        }}
-                      >
-                        编辑此配置
-                      </Button>
-                    )}
-                  </div>
-                ),
-              },
-              {
-                key: "accounts",
-                label: "服务账号池",
-                children: <AccountPoolTab configId={detailConfig.id} />,
-              },
-            ]}
-          />
-        )}
-      </Drawer>
+                              {permEdit.visible && (
+                                <Button
+                                  type="primary"
+                                  icon={<EditOutlined />}
+                                  style={{ marginTop: 16 }}
+                                  disabled={permEdit.disabled}
+                                  title={permEdit.hint}
+                                  onClick={() => {
+                                    setDetailDrawerVisible(false);
+                                    handleEdit(detailConfig);
+                                  }}
+                                >
+                                  编辑此配置
+                                </Button>
+                              )}
+                            </div>
+                          ),
+                        },
+                        {
+                          key: "accounts",
+                          label: "服务账号池",
+                          children: <AccountPoolTab configId={detailConfig.id} />,
+                        },
+                      ]}
+                    />
+                  )}
+                </Drawer>
               </>
             ),
           },

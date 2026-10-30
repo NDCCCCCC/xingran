@@ -97,7 +97,9 @@ export function getRoleColumns(params: GetRoleColumnsParams): ColumnsType<Role> 
             onClick: () => {
               confirmDelete({
                 target: `角色 ${record.roleName}`,
-                onDelete: async () => { await handleDelete(record.id); },
+                onDelete: async () => {
+                  await handleDelete(record.id);
+                },
               });
             },
           },

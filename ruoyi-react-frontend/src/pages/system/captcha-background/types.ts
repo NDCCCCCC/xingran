@@ -4,10 +4,8 @@
  */
 
 import type { UploadFile } from "antd";
-import type {  } from "antd";
-import type {
-  CaptchaBackground,
-  } from "@/types/captcha";
+import type {} from "antd";
+import type { CaptchaBackground } from "@/types/captcha";
 
 // 统计数据
 export interface CaptchaStatistics {

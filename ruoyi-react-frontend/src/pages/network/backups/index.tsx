@@ -113,29 +113,26 @@ const ConfigBackupPage: FC = () => {
   });
 
   // 列表请求（PageTable 契约：返回 {list,total}；分组逻辑沿用 utils）
-  const request = useCallback(
-    async (params: Record<string, unknown>) => {
-      const { current, pageSize, orderByColumn, isAsc, ...rest } = params as {
-        current: number;
-        pageSize: number;
-        orderByColumn?: string;
-        isAsc?: boolean;
-      } & Record<string, unknown>;
-      const result = await post<PageResponse<ConfigBackup>>("/network/backups/list", {
-        current,
-        pageSize,
-        // v129-recheck WR-02 语义保留：仅显式排序时透传（undefined 时无排序语义）
-        ...(orderByColumn !== undefined ? { orderByColumn, isAsc } : {}),
-        ...rest,
-      });
-      setExportPage({ current, pageSize });
-      return {
-        list: groupBackupsByDevice(result.data?.list || []),
-        total: result.data?.total || 0,
-      };
-    },
-    []
-  );
+  const request = useCallback(async (params: Record<string, unknown>) => {
+    const { current, pageSize, orderByColumn, isAsc, ...rest } = params as {
+      current: number;
+      pageSize: number;
+      orderByColumn?: string;
+      isAsc?: boolean;
+    } & Record<string, unknown>;
+    const result = await post<PageResponse<ConfigBackup>>("/network/backups/list", {
+      current,
+      pageSize,
+      // v129-recheck WR-02 语义保留：仅显式排序时透传（undefined 时无排序语义）
+      ...(orderByColumn !== undefined ? { orderByColumn, isAsc } : {}),
+      ...rest,
+    });
+    setExportPage({ current, pageSize });
+    return {
+      list: groupBackupsByDevice(result.data?.list || []),
+      total: result.data?.total || 0,
+    };
+  }, []);
 
   const {
     diffModalVisible,

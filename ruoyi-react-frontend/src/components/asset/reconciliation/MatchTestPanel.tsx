@@ -215,7 +215,9 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
               )}
             </div>
             <div>
-              <span style={{ color: "var(--theme-text-tertiary)", marginRight: 8 }}>最终严重度:</span>
+              <span style={{ color: "var(--theme-text-tertiary)", marginRight: 8 }}>
+                最终严重度:
+              </span>
               <Tag color={severityColor(finalSeverity)}>{finalSeverity || "-"}</Tag>
             </div>
           </Space>

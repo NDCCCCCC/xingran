@@ -151,7 +151,9 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
                   onClick: () => {
                     confirmDelete({
                       target: `命令模板 ${record.templateName}`,
-                      onDelete: async () => { await handleDelete(record.id); },
+                      onDelete: async () => {
+                        await handleDelete(record.id);
+                      },
                     });
                   },
                   permission: PERMISSION_CODES.networkTemplate.delete,

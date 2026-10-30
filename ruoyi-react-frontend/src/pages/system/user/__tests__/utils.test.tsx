@@ -2,7 +2,7 @@
  * Phase 88 Batch339 — pages/system/user/utils 测试
  */
 import { describe, it, expect } from "vitest";
-import {  } from "react-dom/server";
+import {} from "react-dom/server";
 import { renderDeptTreeOptions, formatGender, formatStatus } from "../utils";
 
 describe("pages/system/user/utils", () => {

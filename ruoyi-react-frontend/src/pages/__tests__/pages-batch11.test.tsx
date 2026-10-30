@@ -24,7 +24,9 @@ async function expectRenders(ui: React.ReactElement, endpoints: Record<string, u
 
 describe("batch11 渲染", () => {
   it("notice/NoticeList(空)", async () => {
-    await expectRenders((<NoticeList notices={[]} selectedRowKeys={[]} loading={false} />) as unknown);
+    await expectRenders(
+      (<NoticeList notices={[]} selectedRowKeys={[]} loading={false} />) as unknown
+    );
   });
   it("notice/NoticeStatisticsCard", async () => {
     await expectRenders(

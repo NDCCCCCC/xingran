@@ -41,7 +41,7 @@ export function getCaptchaColumns(params: CaptchaColumnsParams): ColumnsType<Cap
       dataIndex: "fileName",
       key: "fileName",
       width: 80,
-      ellipsis: true
+      ellipsis: true,
     },
     {
       title: "拼图形状",
@@ -89,7 +89,7 @@ export function getCaptchaColumns(params: CaptchaColumnsParams): ColumnsType<Cap
       dataIndex: "remark",
       key: "remark",
       width: 80,
-      ellipsis: true
+      ellipsis: true,
     },
     {
       title: "操作",
@@ -98,7 +98,12 @@ export function getCaptchaColumns(params: CaptchaColumnsParams): ColumnsType<Cap
       width: 180,
       render: (_: unknown, record: CaptchaBackground) => (
         <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
             编辑
           </Button>
           <Button type="link" size="small" onClick={() => handleToggle(record.id)}>
@@ -111,7 +116,9 @@ export function getCaptchaColumns(params: CaptchaColumnsParams): ColumnsType<Cap
             onClick={() =>
               confirmDelete({
                 target: `验证码背景图 ${record.fileName}`,
-                onDelete: async () => { await handleDelete(record.id); },
+                onDelete: async () => {
+                  await handleDelete(record.id);
+                },
               })
             }
           >

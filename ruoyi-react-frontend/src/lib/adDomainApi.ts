@@ -795,10 +795,7 @@ export function getADServiceAccountStats(
  * 单一事实源在后端 `addomain.MismatchTypes`（59-03），前端仅做展示与筛选选项。
  */
 export type DeptOUMismatchType =
-  | "user_ou_mismatch"
-  | "dept_soft_deleted"
-  | "mapping_disabled"
-  | "config_unrouted";
+  "user_ou_mismatch" | "dept_soft_deleted" | "mapping_disabled" | "config_unrouted";
 
 /**
  * 视图 v_dept_ou_mismatch 的一行（D-11 十一列，与后端 DeptOUMismatchRow json tag 逐字对齐）。

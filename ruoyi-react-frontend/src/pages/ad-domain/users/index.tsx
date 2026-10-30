@@ -1,18 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 // Phase 71 (W5)：裸 Input/Select/TextArea → 契约组件（children 形态改写 options）
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
-import {
-  Card,
-  Table,
-  TreeSelect,
-  Space,
-  Button,
-  Tag,
-  Form,
-  Modal,
-  message,
-  Tooltip,
-} from "antd";
+import { Card, Table, TreeSelect, Space, Button, Tag, Form, Modal, message, Tooltip } from "antd";
 import type { TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import {
@@ -670,7 +659,7 @@ const ADUserPage: FC = () => {
                 <Button
                   type="primary"
                   icon={<SyncOutlined />}
-                  disabled={permUserEdit.disabled || selectedUsers.length === 0 && !selectAllMode}
+                  disabled={permUserEdit.disabled || (selectedUsers.length === 0 && !selectAllMode)}
                   title={permUserEdit.hint}
                   onClick={handleBatchSync}
                   loading={batchSyncLoading}
@@ -789,7 +778,9 @@ const ADUserPage: FC = () => {
         width={600}
       >
         <Space orientation="vertical" style={{ width: "100%" }} size="medium">
-          <div style={{ color: "var(--theme-text-secondary)", fontSize: "14px" }}>点击下方OU标签快速筛选该OU下的用户</div>
+          <div style={{ color: "var(--theme-text-secondary)", fontSize: "14px" }}>
+            点击下方OU标签快速筛选该OU下的用户
+          </div>
           <div style={{ maxHeight: 400, overflowY: "auto" }}>
             <Space wrap>
               {commonOUs.map((ou) => (
@@ -813,7 +804,9 @@ const ADUserPage: FC = () => {
             </Space>
           </div>
           {commonOUs.length === 0 && (
-            <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "40px" }}>
+            <div
+              style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "40px" }}
+            >
               暂无常用OU配置
             </div>
           )}

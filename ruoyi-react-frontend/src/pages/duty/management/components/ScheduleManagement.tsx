@@ -174,7 +174,9 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
           onClick={() => {
             confirmDelete({
               target: `排班记录 ${record.scheduleDate}`,
-              onDelete: async () => { await onDelete(record.id); },
+              onDelete: async () => {
+                await onDelete(record.id);
+              },
             });
           }}
         >
@@ -206,7 +208,10 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
             style={{ width: 120 }}
             showSearch={false}
             onSearch={() => {}}
-            options={users.map((user) => ({ value: user.id, label: user.nickname || user.username }))}
+            options={users.map((user) => ({
+              value: user.id,
+              label: user.nickname || user.username,
+            }))}
           />
         </Form.Item>
         <Form.Item name="dutyType">
@@ -282,7 +287,9 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
                   target: `选中的 ${selectedRowKeys.length} 项排班记录`,
                   title: "确认批量删除",
                   actionContext: "批量删除",
-                  onDelete: async () => { await onBatchDelete(); },
+                  onDelete: async () => {
+                    await onBatchDelete();
+                  },
                 });
               }}
             >

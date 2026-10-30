@@ -556,8 +556,8 @@ const DutyPoolPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="description" label="描述">
-          {/* 只读展示语义的备注编辑框：显式 allowClear={false}（原 antd TextArea 无清空能力，保持不变） */}
-          <AppTextArea rows={3} placeholder="请输入描述" allowClear={false} />
+            {/* 只读展示语义的备注编辑框：显式 allowClear={false}（原 antd TextArea 无清空能力，保持不变） */}
+            <AppTextArea rows={3} placeholder="请输入描述" allowClear={false} />
           </Form.Item>
         </Form>
       </Modal>

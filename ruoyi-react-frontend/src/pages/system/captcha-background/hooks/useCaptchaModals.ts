@@ -7,10 +7,16 @@ import { useState, useCallback } from "react";
 import { App, Upload } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import type { FormInstance } from "antd/es/form";
-import type { CaptchaBackground, CaptchaBackgroundUpdateRequest, PieceShape, DifficultyLevel, CaptchaBackgroundStatus } from "@/types/captcha";
+import type {
+  CaptchaBackground,
+  CaptchaBackgroundUpdateRequest,
+  PieceShape,
+  DifficultyLevel,
+  CaptchaBackgroundStatus,
+} from "@/types/captcha";
 import * as captchaService from "@/services/captcha";
-import {  } from "../constants";
-import type {  } from "@/types/common";
+import {} from "../constants";
+import type {} from "@/types/common";
 
 // 表单字段类型
 interface UploadFormValues {
@@ -46,8 +52,16 @@ export interface UseCaptchaModalsReturn {
   openEditModal: (record: CaptchaBackground, editForm: FormInstance<unknown>) => void;
   closeUploadModal: (uploadForm: FormInstance<unknown>) => void;
   closeEditModal: (editForm: FormInstance<unknown>) => void;
-  handleUpload: (fileList: UploadFile[], uploadForm: FormInstance<unknown>, onSuccess: () => void) => Promise<void>;
-  handleUpdate: (editingBg: CaptchaBackground, editForm: FormInstance<unknown>, onSuccess: () => void) => Promise<void>;
+  handleUpload: (
+    fileList: UploadFile[],
+    uploadForm: FormInstance<unknown>,
+    onSuccess: () => void
+  ) => Promise<void>;
+  handleUpdate: (
+    editingBg: CaptchaBackground,
+    editForm: FormInstance<unknown>,
+    onSuccess: () => void
+  ) => Promise<void>;
   handleDelete: (id: string, onSuccess: () => void) => Promise<void>;
   handleToggle: (id: string, onSuccess: () => void) => Promise<void>;
   handlePreload: () => Promise<void>;
@@ -83,18 +97,21 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
     maxCount: 1,
   };
 
-  const openEditModal = useCallback((record: CaptchaBackground, editForm: FormInstance<unknown>) => {
-    setEditingBg(record);
-    editForm.setFieldsValue({
-      pieceShape: record.pieceShape,
-      difficultyLevel: record.difficultyLevel,
-      allowedShapes: record.allowedShapes,
-      status: record.status,
-      sortOrder: record.sortOrder,
-      remark: record.remark,
-    });
-    setEditModalVisible(true);
-  }, []);
+  const openEditModal = useCallback(
+    (record: CaptchaBackground, editForm: FormInstance<unknown>) => {
+      setEditingBg(record);
+      editForm.setFieldsValue({
+        pieceShape: record.pieceShape,
+        difficultyLevel: record.difficultyLevel,
+        allowedShapes: record.allowedShapes,
+        status: record.status,
+        sortOrder: record.sortOrder,
+        remark: record.remark,
+      });
+      setEditModalVisible(true);
+    },
+    []
+  );
 
   const closeUploadModal = useCallback((uploadForm: FormInstance<unknown>) => {
     setUploadModalVisible(false);
@@ -144,9 +161,13 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
   );
 
   const handleUpdate = useCallback(
-    async (editingBg: CaptchaBackground, editForm: FormInstance<unknown>, onSuccess: () => void) => {
+    async (
+      editingBg: CaptchaBackground,
+      editForm: FormInstance<unknown>,
+      onSuccess: () => void
+    ) => {
       try {
-        const values = await editForm.validateFields() as EditFormValues;
+        const values = (await editForm.validateFields()) as EditFormValues;
         const updateData: CaptchaBackgroundUpdateRequest = {
           pieceShape: values.pieceShape as PieceShape | undefined,
           difficultyLevel: values.difficultyLevel as DifficultyLevel | undefined,
@@ -172,25 +193,31 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
     [message]
   );
 
-  const handleDelete = useCallback(async (id: string, onSuccess: () => void) => {
-    try {
-      await captchaService.deleteCaptchaBackground(id);
-      message.success("删除成功");
-      onSuccess();
-    } catch (error) {
-      message.error("删除失败");
-    }
-  }, [message]);
+  const handleDelete = useCallback(
+    async (id: string, onSuccess: () => void) => {
+      try {
+        await captchaService.deleteCaptchaBackground(id);
+        message.success("删除成功");
+        onSuccess();
+      } catch (error) {
+        message.error("删除失败");
+      }
+    },
+    [message]
+  );
 
-  const handleToggle = useCallback(async (id: string, onSuccess: () => void) => {
-    try {
-      await captchaService.toggleCaptchaBackgroundStatus(id);
-      message.success("状态更新成功");
-      onSuccess();
-    } catch (error) {
-      message.error("状态更新失败");
-    }
-  }, [message]);
+  const handleToggle = useCallback(
+    async (id: string, onSuccess: () => void) => {
+      try {
+        await captchaService.toggleCaptchaBackgroundStatus(id);
+        message.success("状态更新成功");
+        onSuccess();
+      } catch (error) {
+        message.error("状态更新失败");
+      }
+    },
+    [message]
+  );
 
   const handlePreload = useCallback(async () => {
     try {

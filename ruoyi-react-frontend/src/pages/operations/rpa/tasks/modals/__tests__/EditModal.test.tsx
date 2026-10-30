@@ -6,7 +6,7 @@ import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import { TaskEditModal } from "../EditModal";
 import { Form } from "antd";
 import type { Task } from "@/types/rpa";
-import {  } from "react";
+import {} from "react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");

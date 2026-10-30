@@ -236,7 +236,8 @@ export const PERMISSION_CODES = {
 export type PermissionModuleKey = keyof typeof PERMISSION_CODES;
 
 /** 单个权限码字面量类型 */
-export type PermissionCodeValue = (typeof PERMISSION_CODES)[PermissionModuleKey][keyof (typeof PERMISSION_CODES)[PermissionModuleKey]];
+export type PermissionCodeValue =
+  (typeof PERMISSION_CODES)[PermissionModuleKey][keyof (typeof PERMISSION_CODES)[PermissionModuleKey]];
 
 /** 系统用户模块的权限码（页面内最常用的一组） */
 export const SYSTEM_USER_PERMS = PERMISSION_CODES.systemUser;

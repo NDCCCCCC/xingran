@@ -5,19 +5,7 @@
 
 import { useState } from "react";
 import type { FC } from "react";
-import {
-  Image,
-  Button,
-  Space,
-  Modal,
-  Input,
-  Tag,
-  App,
-  Spin,
-  Empty,
-  Row,
-  Col,
-} from "antd";
+import { Image, Button, Space, Modal, Input, Tag, App, Spin, Empty, Row, Col } from "antd";
 import { DeleteOutlined, EditOutlined, StarFilled } from "@ant-design/icons";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 

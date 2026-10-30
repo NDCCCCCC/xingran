@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import type {  } from "react";
+import type {} from "react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");

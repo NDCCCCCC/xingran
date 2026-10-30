@@ -96,7 +96,9 @@ describe("MACHeatmapChart", () => {
       total: 2,
       snapshot: "snap",
     };
-    const { baseElement } = render(<MACHeatmapChart data={data as unknown} isMobile />, { wrapper });
+    const { baseElement } = render(<MACHeatmapChart data={data as unknown} isMobile />, {
+      wrapper,
+    });
     expect(baseElement.querySelector('[data-testid="mac-heatmap-mobile"]')).toBeTruthy();
     expect(baseElement.textContent).toContain("Top-20");
     expect(baseElement.textContent).toContain("dev1");
@@ -122,7 +124,9 @@ describe("MACHeatmapChart", () => {
       total: 1,
       snapshot: "snap",
     };
-    const { baseElement } = render(<MACHeatmapChart data={data as unknown} isMobile />, { wrapper });
+    const { baseElement } = render(<MACHeatmapChart data={data as unknown} isMobile />, {
+      wrapper,
+    });
     expect(baseElement.textContent).toContain("1 次");
   });
 });

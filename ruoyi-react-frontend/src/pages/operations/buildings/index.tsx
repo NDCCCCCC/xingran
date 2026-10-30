@@ -14,7 +14,15 @@
  * 共用同一数据层（PageTableRenderContext 不暴露 data，故镜像一份快照）。
  */
 
-import { useState, useCallback, useRef, useMemo, type FC, type Key, type CSSProperties } from "react";
+import {
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+  type FC,
+  type Key,
+  type CSSProperties,
+} from "react";
 import type { FormInstance } from "antd";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
@@ -578,7 +586,11 @@ const BuildingManagement: FC = () => {
       <Sider
         width={360}
         className="dept-list-sider"
-        style={{ background: "var(--theme-bg-surface)", padding: "0 16px 16px 0", borderRight: "1px solid var(--theme-border-primary)" }}
+        style={{
+          background: "var(--theme-bg-surface)",
+          padding: "0 16px 16px 0",
+          borderRight: "1px solid var(--theme-border-primary)",
+        }}
       >
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
@@ -601,9 +613,7 @@ const BuildingManagement: FC = () => {
             // 批量删除：PageTable 的 batchDelete 契约无 permission 位 → 页面层条件传参
             // （ready 无权限 → 不传 → 内建 BatchDeleteButton 与 rowSelection 都不渲染）
             batchDelete={
-              permDelete.visible
-                ? { onDelete: handleBatchDelete, target: "楼宇" }
-                : undefined
+              permDelete.visible ? { onDelete: handleBatchDelete, target: "楼宇" } : undefined
             }
             toolbar={
               <Space>

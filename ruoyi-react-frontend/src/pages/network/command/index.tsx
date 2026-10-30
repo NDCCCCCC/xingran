@@ -276,9 +276,9 @@ const CommandDispatch: FC = () => {
                       entityType="command"
                       entityName="命令分发"
                       filters={Object.fromEntries(
-                        Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                          ([, v]) => v !== undefined && v !== null && v !== ""
-                        )
+                        Object.entries(
+                          searchForm.getFieldsValue() as Record<string, unknown>
+                        ).filter(([, v]) => v !== undefined && v !== null && v !== "")
                       )}
                       current={paginationProps?.current ?? 1}
                       pageSize={paginationProps?.pageSize ?? 10}

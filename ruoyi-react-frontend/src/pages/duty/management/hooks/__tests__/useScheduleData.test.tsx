@@ -100,7 +100,9 @@ describe("useScheduleData", () => {
   it("generate: 成功 → refresh", async () => {
     const { generateSchedule, getDutyScheduleList } = await import("@/lib/dutyApi");
     vi.mocked(generateSchedule).mockResolvedValueOnce({ code: 0 } as unknown);
-    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
+    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({
+      data: { list: [], total: 0 },
+    } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
     await act(async () => {
       await result.current.generate({} as unknown);
@@ -131,7 +133,9 @@ describe("useScheduleData", () => {
   it("deleteOne: 成功 → refresh", async () => {
     const { deleteDutySchedule, getDutyScheduleList } = await import("@/lib/dutyApi");
     vi.mocked(deleteDutySchedule).mockResolvedValueOnce({ code: 0 } as unknown);
-    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
+    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({
+      data: { list: [], total: 0 },
+    } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
     await act(async () => {
       await result.current.deleteOne("s1");
@@ -142,7 +146,9 @@ describe("useScheduleData", () => {
   it("batchDelete: 成功 → refresh + 清空 selectedRowKeys", async () => {
     const { batchDeleteDutySchedules, getDutyScheduleList } = await import("@/lib/dutyApi");
     vi.mocked(batchDeleteDutySchedules).mockResolvedValueOnce({ code: 0 } as unknown);
-    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
+    vi.mocked(getDutyScheduleList).mockResolvedValueOnce({
+      data: { list: [], total: 0 },
+    } as unknown);
     const { result } = renderHook(() => useScheduleData(), { wrapper });
     act(() => result.current.setSelectedRowKeys(["s1", "s2"]));
 

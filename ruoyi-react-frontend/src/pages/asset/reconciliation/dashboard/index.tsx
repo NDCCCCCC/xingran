@@ -366,7 +366,12 @@ const Dashboard = () => {
                 value={reductions.excPct}
                 precision={1}
                 suffix="%"
-                styles={{ content: { color: reductions.excPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)" } }}
+                styles={{
+                  content: {
+                    color:
+                      reductions.excPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
+                  },
+                }}
               />
               <small style={{ color: "var(--theme-text-secondary)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.total_exceptions ?? 0} → current{" "}
@@ -379,7 +384,11 @@ const Dashboard = () => {
                 value={reductions.woPct}
                 precision={1}
                 suffix="%"
-                styles={{ content: { color: reductions.woPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)" } }}
+                styles={{
+                  content: {
+                    color: reductions.woPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
+                  },
+                }}
               />
               <small style={{ color: "var(--theme-text-secondary)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.total_workorders ?? 0} → current{" "}
@@ -392,7 +401,12 @@ const Dashboard = () => {
                 value={reductions.critPct}
                 precision={1}
                 suffix="%"
-                styles={{ content: { color: reductions.critPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)" } }}
+                styles={{
+                  content: {
+                    color:
+                      reductions.critPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
+                  },
+                }}
               />
               <small style={{ color: "var(--theme-text-secondary)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.critical_exceptions ?? 0} → current{" "}

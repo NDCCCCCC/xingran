@@ -536,7 +536,12 @@ const MenuManagement: FC = () => {
             <Col span={12}>
               {/* Phase 86 W1：菜单状态 Switch 同上（与显示状态同归所属写动作）。 */}
               {permFormStatus.visible && (
-                <Form.Item name="status" label="菜单状态" valuePropName="checked" initialValue={true}>
+                <Form.Item
+                  name="status"
+                  label="菜单状态"
+                  valuePropName="checked"
+                  initialValue={true}
+                >
                   <Switch
                     checkedChildren="正常"
                     unCheckedChildren="停用"

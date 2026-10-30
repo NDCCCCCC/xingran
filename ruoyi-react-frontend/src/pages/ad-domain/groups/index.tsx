@@ -433,7 +433,7 @@ const ADGroupPage: FC = () => {
     {
       title: "操作",
       key: "action",
-      render: (_: unknown, record: ADUser) => (
+      render: (_: unknown, record: ADUser) =>
         // Phase 86 W4：移除成员是写入口（改组成员关系）→ ops:ad:group:edit；
         // 触发器是裸 Button + confirmDelete → 门控点落在触发按钮本身
         // （条件渲染 + disabled + 提示），confirmDelete.ts 零改动。
@@ -454,8 +454,7 @@ const ADGroupPage: FC = () => {
           >
             移除
           </Button>
-        )
-      ),
+        ),
     },
   ];
 
@@ -646,7 +645,7 @@ const ADGroupPage: FC = () => {
             {
               title: "操作",
               key: "action",
-              render: (_: unknown, record: ADUser) => (
+              render: (_: unknown, record: ADUser) =>
                 // Phase 86 W4：弹窗内「添加」是真正的写触发点（调 addADGroupMember）
                 // → ops:ad:group:edit。抽屉里的「添加成员」入口已门控，此处再门控一次
                 // （纵深防御：弹窗内的确认点不能只依赖触发按钮）。
@@ -660,8 +659,7 @@ const ADGroupPage: FC = () => {
                   >
                     添加
                   </Button>
-                )
-              ),
+                ),
             },
           ]}
           dataSource={availableUsers}

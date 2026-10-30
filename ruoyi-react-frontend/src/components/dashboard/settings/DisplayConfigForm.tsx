@@ -410,9 +410,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
         return renderProgressConfig();
       default:
         return (
-          <div
-            style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: 20 }}
-          >
+          <div style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: 20 }}>
             暂无额外配置项
           </div>
         );

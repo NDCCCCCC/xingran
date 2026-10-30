@@ -66,7 +66,7 @@ function renderRoutes(path: string) {
     <MemoryRouter initialEntries={[path]}>
       <DynamicRoutes />
       <LocationProbe />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -118,7 +118,7 @@ function seedMenuCache() {
         permissions: ["dashboard:view", "system:user:list"],
         cachedAt: Date.now(),
       },
-    }),
+    })
   );
 }
 

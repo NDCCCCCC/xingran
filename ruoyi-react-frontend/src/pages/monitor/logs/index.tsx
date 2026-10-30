@@ -288,14 +288,31 @@ const LogMonitor: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Space>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
+                    <Button
+                      type="primary"
+                      icon={<SearchOutlined />}
+                      onClick={handleSearch}
+                      aria-label="搜索"
+                      title="搜索"
+                    >
                       搜索
                     </Button>
                     <Button onClick={handleReset}>重置</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={handleRefresh}
+                      aria-label="刷新"
+                      title="刷新"
+                    >
                       刷新
                     </Button>
-                    <Button danger icon={<DeleteOutlined />} onClick={handleClearLogs} aria-label="清空日志" title="清空日志" >
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={handleClearLogs}
+                      aria-label="清空日志"
+                      title="清空日志"
+                    >
                       清空
                     </Button>
                   </Space>
@@ -343,14 +360,31 @@ const LogMonitor: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8} md={6}>
                   <Space>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
+                    <Button
+                      type="primary"
+                      icon={<SearchOutlined />}
+                      onClick={handleSearch}
+                      aria-label="搜索"
+                      title="搜索"
+                    >
                       搜索
                     </Button>
                     <Button onClick={handleReset}>重置</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={handleRefresh}
+                      aria-label="刷新"
+                      title="刷新"
+                    >
                       刷新
                     </Button>
-                    <Button danger icon={<DeleteOutlined />} onClick={handleClearLogs} aria-label="清空日志" title="清空日志" >
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={handleClearLogs}
+                      aria-label="清空日志"
+                      title="清空日志"
+                    >
                       清空
                     </Button>
                   </Space>

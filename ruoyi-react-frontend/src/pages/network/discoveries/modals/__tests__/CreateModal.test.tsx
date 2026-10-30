@@ -34,7 +34,12 @@ describe("network/discoveries — CreateModal", () => {
 
   it("renders form open with departments", async () => {
     await renderPageWithEndpoints(
-      <DiscoveryCreateModal open departments={depts as unknown} onOk={vi.fn()} onCancel={vi.fn()} />,
+      <DiscoveryCreateModal
+        open
+        departments={depts as unknown}
+        onOk={vi.fn()}
+        onCancel={vi.fn()}
+      />,
       {}
     );
     expect(

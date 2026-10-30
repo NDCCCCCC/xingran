@@ -104,7 +104,8 @@ const IconSelect: FC<IconSelectProps> = ({
     <>
       {/* 输入框 */}
       {/* 只读回显区：不提供清空能力 */}
-      <AppInput allowClear={false}
+      <AppInput
+        allowClear={false}
         value={value ? `${value} (${iconDescriptionMap[value] || value})` : ""}
         readOnly
         disabled={disabled}

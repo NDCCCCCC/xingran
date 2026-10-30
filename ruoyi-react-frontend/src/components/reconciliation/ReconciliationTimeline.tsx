@@ -65,7 +65,8 @@ const TimelineInner: React.FC<ReconciliationTimelineProps> = ({ records, loading
               </span>
             </div>
             <div style={{ marginTop: 4 }}>
-              由 {r.resolvedByUsername} 于 {formatDateTime(r.resolvedAt, FORMAT_DATETIME_MINUTE)} 解决
+              由 {r.resolvedByUsername} 于 {formatDateTime(r.resolvedAt, FORMAT_DATETIME_MINUTE)}{" "}
+              解决
             </div>
             <div style={{ marginTop: 4, fontSize: 12, color: "var(--theme-text-secondary)" }}>
               说明: {r.resolutionNote || "(无)"}

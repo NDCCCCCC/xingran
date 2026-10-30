@@ -87,7 +87,9 @@ describe("dedicated-lines → PageTable 契约", () => {
     expect(src).toMatch(/batchDelete=\{/);
     expect(src).toContain('{ onDelete: handleBatchDelete, target: "专线" }');
     // 门控通道必须在场（本波新增契约）：条件传参由 permDelete.visible 驱动
-    expect(src).toMatch(/permDelete\.visible[\s\S]{0,120}batchDelete|batchDelete[\s\S]{0,200}permDelete\.visible/);
+    expect(src).toMatch(
+      /permDelete\.visible[\s\S]{0,120}batchDelete|batchDelete[\s\S]{0,200}permDelete\.visible/
+    );
     // 搜索 schema 六字段与迁移前 searchForm 字段同名（红线 1）
     for (const field of ["name", "sourceRoomId", "destRoomId", "lineType", "isp", "status"]) {
       expect(src).toContain(`name: "${field}"`);
@@ -123,7 +125,9 @@ describe("dedicated-lines → PageTable 契约", () => {
     ) as HTMLElement | null;
     expect(okButton).toBeTruthy();
     fireEvent.click(okButton as HTMLElement);
-    await waitFor(() => expect(dedicatedLineApi.batch).toHaveBeenCalledWith("delete", { ids: ["l1"] }));
+    await waitFor(() =>
+      expect(dedicatedLineApi.batch).toHaveBeenCalledWith("delete", { ids: ["l1"] })
+    );
     await waitConfirmClosed();
   });
 

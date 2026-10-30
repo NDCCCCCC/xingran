@@ -13,7 +13,9 @@ vi.mock("@/lib/api", async () => {
 describe("dashboardService", () => {
   it("getDefaultDashboard 成功 → 返回 dashboard", async () => {
     const api = createApiMock("/system/dashboards/default");
-    api.endpoint.mockResolvedValueOnce({ data: { dashboard: { id: "d1", name: "默认" } } } as unknown);
+    api.endpoint.mockResolvedValueOnce({
+      data: { dashboard: { id: "d1", name: "默认" } },
+    } as unknown);
     const r = await dashboardService.getDefaultDashboard();
     expect(r?.id).toBe("d1");
   });

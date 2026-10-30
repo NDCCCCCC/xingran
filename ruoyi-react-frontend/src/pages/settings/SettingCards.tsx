@@ -160,7 +160,9 @@ export const LayoutSettingsCard: FC = () => {
             options={DENSITY_OPTIONS}
             onSearch={() => {}}
             // AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型
-            onChange={(value) => handleUpdate(() => updateLayout({ density: value as DensityMode }))}
+            onChange={(value) =>
+              handleUpdate(() => updateLayout({ density: value as DensityMode }))
+            }
           />
         </div>
       </div>

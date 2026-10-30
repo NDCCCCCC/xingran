@@ -4,19 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, type FC } from "react";
-import {
-  Card,
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Switch,
-  Row,
-  Col,
-  Statistic,
-  Drawer,
-} from "antd";
+import { Card, Table, Button, Space, Modal, Form, Switch, Row, Col, Statistic, Drawer } from "antd";
 // Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
@@ -70,7 +58,10 @@ const JobManager: FC = () => {
   // FIX-03b: jobLog 日志表服务端排序（本地 state，字段映射 startTime→createdAt 对齐 jobLogAllowedSortFields）
   const [jobLogSort, setJobLogSort] = useState<{ orderByColumn?: string; isAsc?: boolean }>({});
   const jobLogSorterMetas = useMemo(
-    () => [createSorterMeta<JobLog>("status", "number"), createSorterMeta<JobLog>("startTime", "date")],
+    () => [
+      createSorterMeta<JobLog>("status", "number"),
+      createSorterMeta<JobLog>("startTime", "date"),
+    ],
     []
   );
   const mapJobLogSortField = useCallback(
@@ -235,13 +226,23 @@ const JobManager: FC = () => {
                 >
                   新增
                 </Button>
-                <Button icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
+                <Button
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                  aria-label="搜索"
+                  title="搜索"
+                >
                   搜索
                 </Button>
                 <Button onClick={() => handleReset(setSearchForm, setCurrent, fetchJobs)}>
                   重置
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleRefresh}
+                  aria-label="刷新"
+                  title="刷新"
+                >
                   刷新
                 </Button>
               </Space>

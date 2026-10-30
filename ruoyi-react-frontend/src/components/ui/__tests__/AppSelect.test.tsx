@@ -66,10 +66,9 @@ describe("components/ui/AppSelect", () => {
   });
 
   it("显式 optionFilterProp 覆盖默认 label（按 value 过滤）", async () => {
-    const { container } = render(
-      <AppSelect options={makeOptions(10)} optionFilterProp="value" />,
-      { wrapper }
-    );
+    const { container } = render(<AppSelect options={makeOptions(10)} optionFilterProp="value" />, {
+      wrapper,
+    });
     await openDropdown(container);
     const searchInput = container.querySelector(
       "input.ant-select-input"
