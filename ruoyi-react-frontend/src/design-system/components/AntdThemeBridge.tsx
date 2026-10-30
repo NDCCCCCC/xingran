@@ -123,20 +123,23 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           controlHeight: 36,
           fontWeight: 500,
         },
-        // 表格: 表头 #E9EFEB 绿灰淡彩 / 行 hover #F7F5EE 浅交互底
-        // (Phase 66 · G1/COMP-02 排序/筛选/选中态令牌补齐)
+        // 表格 (R8 交还): 随 board 明暗模式自适应
         Table: {
-          headerBg: ruoyiBrand.cream.headerBg,
-          headerColor: ruoyiBrand.cream.fg,
-          borderColor: ruoyiBrand.cream.border,
-          rowHoverBg: ruoyiBrand.cream.zebraBg,
-          headerSortActiveBg: ruoyiBrand.cream.zebraBg,
-          headerSortHoverBg: ruoyiBrand.cream.zebraBg,
-          headerFilterHoverBg: ruoyiBrand.cream.zebraBg,
-          fixedHeaderSortActiveBg: ruoyiBrand.cream.zebraBg,
-          rowSelectedBg: ruoyiBrand.cream.headerBg,
-          rowSelectedHoverBg: ruoyiBrand.cream.zebraBg,
+          headerBg: board.headerBg,
+          headerColor: board.fg,
+          borderColor: board.border,
+          rowHoverBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
+          headerSortActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
+          headerSortHoverBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
+          headerFilterHoverBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
+          fixedHeaderSortActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
+          rowSelectedBg: board.headerBg,
+          rowSelectedHoverBg: isDark ? ruoyiBrand.dark.active : ruoyiBrand.cream.zebraBg,
           borderRadius: 8,
+        },
+        Pagination: {
+          borderRadius: 8,
+          itemActiveBg: "transparent",
         },
         // 输入框: focus 环用品牌绿 (Phase 66 · G2/COMP-04 焦点环 2px)
         // Phase 89 · X-1b: colorBgContainer 已删除，回落全局 token（分模式色板）

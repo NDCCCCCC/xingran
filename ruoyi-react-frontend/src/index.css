@@ -1039,16 +1039,6 @@ body {
   background: transparent !important;
 }
 
-/* 悬停效果（原型 hover #F3EEE3） */
-.ant-table-tbody > tr:hover > td {
-  background: #f3eee3 !important;
-  transition: background-color 0.15s ease-in-out !important;
-}
-
-[data-color-mode="dark"] .ant-table-tbody > tr:hover > td {
-  background: var(--bg-overlay-hover) !important;
-}
-
 /* 表格边框 */
 .ant-table-container {
   border: 1px solid var(--border-base) !important;
