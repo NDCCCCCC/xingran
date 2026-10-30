@@ -123,6 +123,7 @@ uploads/
 
 # 前端测试覆盖率输出
 xingran-react-frontend/coverage/
+xingran-react-frontend/coverage/
 
 # RPA Worker 运行时配置（含明文 Redis 密码 / 内网地址）
 # 模板请使用 rpa-worker/configs/config.example.yaml
