@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import DedicatedLines from "../index";
-import { dedicatedLineApi, serverRoomApi } from "@/lib/opsApi";
+import { dedicatedLineApi } from "@/lib/opsApi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as fs from "fs";
 import * as path from "path";
@@ -39,8 +39,8 @@ function renderLines() {
 
 describe("DedicatedLines 渲染", () => {
   it("空数据 → 渲染不抛错", async () => {
-    vi.mocked(dedicatedLineApi.list).mockResolvedValueOnce({ data: { list: [], total: 0 } } as any);
-    vi.mocked(dedicatedLineApi.statistics).mockResolvedValueOnce({ data: {} } as any);
+    vi.mocked(dedicatedLineApi.list).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
+    vi.mocked(dedicatedLineApi.statistics).mockResolvedValueOnce({ data: {} } as unknown);
     const { baseElement } = renderLines();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();
@@ -60,8 +60,8 @@ describe("DedicatedLines 渲染", () => {
         ],
         total: 1,
       },
-    } as any);
-    vi.mocked(dedicatedLineApi.statistics).mockResolvedValueOnce({ data: {} } as any);
+    } as unknown);
+    vi.mocked(dedicatedLineApi.statistics).mockResolvedValueOnce({ data: {} } as unknown);
     const { baseElement } = renderLines();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cron表达式选择器主组件
  *
  * 布局:
@@ -14,7 +14,8 @@ import {
   useRef,
   useEffect,
 } from "react";
-import { Input, Select, Tabs, Alert, Space, Row, Col } from "antd";
+import { Select, Tabs, Alert, Space, Row, Col } from "antd";
+import { AppInput, AppSelect } from "@/components/ui";
 import { InfoCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { CronConfig, CronFieldType } from "./constants";
 import {
@@ -34,11 +35,12 @@ import MonthField from "./fields/MonthField";
 import WeekField from "./fields/WeekField";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
+import { formatDateTime } from "@/utils/datetime";
 
 dayjs.extend(utc);
 
 const formatTime = (date: Date) => {
-  return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
+  return formatDateTime(date);
 };
 
 const FIELD_ORDER: CronFieldType[] = ["second", "minute", "hour", "day", "month", "week"];
@@ -183,7 +185,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
         {/* 顶部输入框 + 预设下拉框 */}
         <Row gutter={8} style={{ marginBottom: 12 }}>
           <Col flex="1">
-            <Input
+            <AppInput
               placeholder="请输入Cron表达式，如: 0 0 9 * * ?"
               value={cronExpression}
               onChange={(e) => handleExpressionInputChange(e.target.value)}
@@ -192,12 +194,12 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
             />
           </Col>
           <Col style={{ width: 200 }}>
-            <Select
+            {/* 复合 label 子节点：保留 children 形态 + 显式 optionFilterProp */}
+            <AppSelect
               placeholder="选择预设"
               value={CRON_PRESETS.find((p) => p.value === cronExpression)?.value}
-              onChange={handlePresetSelect}
+              onChange={(v: unknown) => handlePresetSelect(v as string)}
               disabled={disabled}
-              allowClear
               showSearch
               optionFilterProp="label"
               style={{ width: "100%" }}
@@ -208,7 +210,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                   {preset.label}
                   <span
                     style={{
-                      color: "var(--theme-text-tertiary, #999)",
+                      color: "var(--theme-text-tertiary)",
                       fontSize: 12,
                       marginLeft: 8,
                     }}
@@ -217,13 +219,13 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                   </span>
                 </Select.Option>
               ))}
-            </Select>
+            </AppSelect>
           </Col>
         </Row>
 
         {/* 中文描述 */}
         {isValid && (
-          <div style={{ marginBottom: 12, color: "var(--theme-info, #337ab0)", fontSize: 13 }}>
+          <div style={{ marginBottom: 12, color: "var(--theme-info)", fontSize: 13 }}>
             {chineseDesc}
           </div>
         )}
@@ -252,17 +254,17 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           <div style={{ marginTop: 16 }}>
             <Space orientation="vertical" style={{ width: "100%" }} size="small">
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <ClockCircleOutlined style={{ color: "var(--theme-info, #337ab0)" }} />
+                <ClockCircleOutlined style={{ color: "var(--theme-info)" }} />
                 <span style={{ fontWeight: 500 }}>最近五次执行时间</span>
               </div>
-              <div style={{ background: "#fafafa", padding: "8px 16px", borderRadius: 4 }}>
+              <div style={{ background: "var(--theme-bg-secondary)", padding: "8px 16px", borderRadius: 4 }}>
                 {getNextRunTimes(cronExpression, 5).map((item, index) => (
                   <div key={index} style={{ padding: "4px 0" }}>
                     <Space>
-                      <span style={{ color: "var(--theme-text-tertiary, #999)", minWidth: 60 }}>
+                      <span style={{ color: "var(--theme-text-tertiary)", minWidth: 60 }}>
                         第{index + 1}次
                       </span>
-                      <span style={{ fontFamily: "monospace", color: "#333" }}>
+                      <span style={{ fontFamily: "monospace", color: "var(--theme-text-tertiary)" }}>
                         {formatTime(item)}
                       </span>
                     </Space>

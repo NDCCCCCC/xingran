@@ -5,7 +5,10 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, App } from "antd";
+import { Table, Button, Space, Form, Card, Row, Col, Statistic, App } from "antd";
+import type { FilterValue } from "antd/es/table/interface";
+// Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -27,12 +30,21 @@ import { TemplateEditModal, TemplatePreviewModal, TemplateVariablesModal } from 
 import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
-
-const { Option } = Select;
+import { BatchExportModal, ErrorAlertWithRetry, useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const TemplateManagement: FC = () => {
   const { message } = App.useApp();
+
+  // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permAdd = permGate.decide(PERMISSION_CODES.networkTemplate.add);
+  const permDelete = permGate.decide(PERMISSION_CODES.networkTemplate.delete);
+  // 导出类写入口（数据外带面）：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
+  // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
+  const permExport = permGate.decide(PERMISSION_CODES.networkTemplate.export);
+
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [batchModalVisible, setBatchModalVisible] = useState(false);
@@ -46,6 +58,7 @@ const TemplateManagement: FC = () => {
     loading,
     total: _total,
     statistics,
+    error: templateError,
     loadTemplates,
     loadStatistics,
   } = useTemplateData(searchForm, setTotal);
@@ -100,7 +113,7 @@ const TemplateManagement: FC = () => {
   const handleTableChange = useCallback(
     (
       pagination: { current?: number; pageSize?: number },
-      _filters: Record<string, any>,
+      _filters: Record<string, FilterValue | null>,
       sorter:
         | import("antd/es/table/interface").SorterResult<ConfigTemplate>
         | import("antd/es/table/interface").SorterResult<ConfigTemplate>[]
@@ -186,8 +199,8 @@ const TemplateManagement: FC = () => {
       const filename = await batchExport(entityTypes, {});
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
-    } catch (error: any) {
-      message.error(`批量导出失败：${error.message}`);
+    } catch (error: unknown) {
+      message.error(`批量导出失败：${(error as Error).message}`);
     } finally {
       setBatchExporting(false);
     }
@@ -195,6 +208,13 @@ const TemplateManagement: FC = () => {
 
   return (
     <div>
+      {/* FIX-04a: 列表加载失败可重试错误条 */}
+      {!!templateError && (
+        <ErrorAlertWithRetry
+          error={templateError}
+          onRetry={() => Promise.all([loadTemplates(), loadStatistics()])}
+        />
+      )}
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
@@ -207,7 +227,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="系统模板"
               value={statistics.system}
-              styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+              styles={{ content: { color: "var(--theme-warning)" } }}
               prefix={<AppstoreOutlined />}
             />
           </Card>
@@ -217,7 +237,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="自定义模板"
               value={statistics.custom}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<SettingOutlined />}
             />
           </Card>
@@ -227,7 +247,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="初始化模板"
               value={statistics.init}
-              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<FundOutlined />}
             />
           </Card>
@@ -247,92 +267,100 @@ const TemplateManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="templateName" label="模板名称">
-              <Input
+              <AppInput
                 placeholder="请输入模板名称"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="templateCode" label="模板编码">
-              <Input
+              <AppInput
                 placeholder="请输入模板编码"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="templateType" label="模板类型">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；固定 3 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择模板类型"
-                allowClear
                 className="user-form-input"
                 style={{ width: 130 }}
                 onSearch={() => {}}
-              >
-                {TEMPLATE_TYPE_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={TEMPLATE_TYPE_OPTIONS}
+              />
             </Form.Item>
             <Form.Item name="vendor" label="厂商">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；厂商固定 5 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择厂商"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                {VENDOR_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={VENDOR_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
                   查询
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
                   重置
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
                   刷新
                 </Button>
               </Space>
             </Form.Item>
           </Form>
           <Space>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => openModal(undefined, editForm)}
-            >
-              新增
-            </Button>
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess)}
-              disabled={selectedRowKeys.length === 0}
-            >
-              批量删除
-            </Button>
-            <NetworkExport
-              entityType="templates"
-              entityName="配置模板"
-              filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, any>).filter(
-                  ([, v]) => v !== undefined && v !== null && v !== ""
-                )
-              )}
-              current={paginationProps?.current ?? 1}
-              pageSize={paginationProps?.pageSize ?? 10}
-            />
+            {/* Phase 86 W3：新增入口 —— ready 无码不渲染；未就绪渲染但 disabled + 提示 */}
+            {permAdd.visible && (
+              <Button
+                aria-label="新增模板"
+                title={permAdd.hint ?? "新增模板"}
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => openModal(undefined, editForm)}
+                disabled={permAdd.disabled}
+              >
+                新增
+              </Button>
+            )}
+            {/* Phase 86 W3：批量删除 —— 条件渲染（networkTemplate.delete） */}
+            {permDelete.visible && (
+              <Button
+                aria-label="批量删除"
+                title={permDelete.hint ?? "批量删除"}
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess)}
+                disabled={permDelete.disabled || selectedRowKeys.length === 0}
+              >
+                批量删除
+              </Button>
+            )}
+            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                ready 无 networkTemplate.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+            {permExport.visible && (
+              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                <NetworkExport
+                  entityType="templates"
+                  entityName="配置模板"
+                  filters={Object.fromEntries(
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                      ([, v]) => v !== undefined && v !== null && v !== ""
+                    )
+                  )}
+                  current={paginationProps?.current ?? 1}
+                  pageSize={paginationProps?.pageSize ?? 10}
+                />
+              </span>
+            )}
           </Space>
           {/* 批量导出 Modal */}
 

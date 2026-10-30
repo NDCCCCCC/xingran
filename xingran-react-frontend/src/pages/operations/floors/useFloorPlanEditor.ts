@@ -138,7 +138,7 @@ export function useFloorPlanEditor(
   );
 
   // 分批并行保存（每批 10 个元素），收集失败项统一提示
-  const BATCH_SIZE = 10;
+  const _BATCH_SIZE = 10;
 
   const saveWalls = useCallback(
     async (walls: Wall[], floorId: string) => {

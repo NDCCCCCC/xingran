@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
+// Phase 71 (W5)：裸 Input/Select → 契约组件
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   App,
   Card,
   Table,
-  Select,
   TreeSelect,
-  Input,
   Space,
   Button,
   Tag,
@@ -13,6 +13,7 @@ import {
   Descriptions,
   Modal,
   Tooltip,
+  Drawer,
 } from "antd";
 import {
   ReloadOutlined,
@@ -26,8 +27,10 @@ import type { ColumnsType } from "antd/es/table";
 import {
   getADComputerList,
   getADComputerDetail,
+  getADComputerLoginHistory,
   getADOUTree,
   type ADComputerDetail,
+  type ADLoginHistoryRecord,
   type ADOUNode,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
@@ -58,6 +61,17 @@ const ADComputerPage: FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedComputer, setSelectedComputer] = useState<ADComputerDetail | null>(null);
   const [ouSelectVisible, setOUSelectVisible] = useState(false);
+
+  // 登录历史 Drawer 状态(quick 261016):数据只在 Drawer 打开/翻页时拉取,列表页不预取
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyComputer, setHistoryComputer] = useState<ADComputerDetail | null>(null);
+  const [historyList, setHistoryList] = useState<ADLoginHistoryRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPagination, setHistoryPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
   // 常用OU快捷列表（可配置）
   const commonOUs = useMemo(() => {
@@ -160,6 +174,44 @@ const ADComputerPage: FC = () => {
     } catch (_error) {
       message.error("获取电脑设备详情失败");
     }
+  };
+
+  // 登录历史加载(quick 261016):普通 async 函数,由打开 Drawer/翻页显式调用,
+  // 不用带对象依赖的 useEffect(防死循环);后端固定 login_time DESC,无 server sorter
+  const fetchLoginHistory = async (
+    computerId: string,
+    current: number,
+    pageSize: number
+  ) => {
+    setHistoryLoading(true);
+    try {
+      const res = await getADComputerLoginHistory({
+        computerId,
+        current,
+        pageSize,
+      });
+      if (res.code === 0) {
+        setHistoryList(res.data?.list ?? []);
+        setHistoryPagination((prev) => ({
+          ...prev,
+          current,
+          pageSize,
+          total: res.data?.total ?? 0,
+        }));
+      }
+    } catch {
+      message.error("获取登录历史失败");
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleViewLoginHistory = (computer: ADComputerDetail) => {
+    setHistoryComputer(computer);
+    setHistoryOpen(true);
+    setHistoryList([]);
+    setHistoryPagination({ current: 1, pageSize: 10, total: 0 });
+    fetchLoginHistory(computer.id, 1, 10);
   };
 
   // 构建TreeSelect所需的数据结构
@@ -280,11 +332,16 @@ const ADComputerPage: FC = () => {
       title: "操作",
       key: "action",
       fixed: "right",
-      width: 100,
+      width: 150,
       render: (_: unknown, record: ADComputerDetail) => (
-        <Button type="link" size="small" onClick={() => handleViewDetail(record)}>
-          详情
-        </Button>
+        <Space size={0}>
+          <Button type="link" size="small" onClick={() => handleViewDetail(record)}>
+            详情
+          </Button>
+          <Button type="link" size="small" onClick={() => handleViewLoginHistory(record)}>
+            登录历史
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -295,11 +352,16 @@ const ADComputerPage: FC = () => {
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
-            <Select
+            {/* Phase 71 W5：迁 AppSelect——原 antd 单选默认禁搜，显式 showSearch={false}；
+                configId 为 UUID 外键，原 allowClear=true 行为不变；
+                AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型 */}
+            <AppSelect
+              allowClear
               style={{ width: 200 }}
               value={selectedConfig}
-              onChange={setSelectedConfig}
+              onChange={(value) => setSelectedConfig(value as string)}
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
+              showSearch={false}
               onSearch={() => {}}
             />
           </Form.Item>
@@ -329,7 +391,7 @@ const ADComputerPage: FC = () => {
             </Space.Compact>
           </Form.Item>
           <Form.Item name="computerName">
-            <Input placeholder="计算机名称" allowClear style={{ width: 180 }} />
+            <AppInput placeholder="计算机名称" allowClear style={{ width: 180 }} />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -469,8 +531,8 @@ const ADComputerPage: FC = () => {
         ]}
         width={600}
       >
-        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-          <div style={{ color: "#666", fontSize: "14px" }}>
+        <Space orientation="vertical" style={{ width: "100%" }} size="medium">
+          <div style={{ color: "var(--theme-text-secondary)", fontSize: "14px" }}>
             点击下方OU标签快速筛选该OU下的电脑设备
           </div>
           <div style={{ maxHeight: 400, overflowY: "auto" }}>
@@ -496,12 +558,84 @@ const ADComputerPage: FC = () => {
             </Space>
           </div>
           {commonOUs.length === 0 && (
-            <div style={{ textAlign: "center", color: "#999", padding: "40px" }}>
+            <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "40px" }}>
               暂无常用OU配置
             </div>
           )}
         </Space>
       </Modal>
+
+      {/* 登录历史 Drawer(quick 261016):后端固定 login_time 倒序,服务端分页,无 server sorter */}
+      <Drawer
+        title={`登录历史 - ${historyComputer?.computerName ?? ""}`}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        size={720}
+        destroyOnHidden
+      >
+        <Table
+          rowKey="id"
+          size="small"
+          loading={historyLoading}
+          dataSource={historyList}
+          pagination={{
+            current: historyPagination.current,
+            pageSize: historyPagination.pageSize,
+            total: historyPagination.total,
+            showSizeChanger: false,
+            onChange: (page, pageSize) => {
+              if (historyComputer) {
+                fetchLoginHistory(historyComputer.id, page, pageSize);
+              }
+            },
+          }}
+          columns={[
+            {
+              title: "登录时间",
+              dataIndex: "loginTime",
+              key: "loginTime",
+              width: 170,
+              render: (text: string) =>
+                text ? new Date(text).toLocaleString("zh-CN") : "-",
+            },
+            {
+              title: "事件类型",
+              dataIndex: "eventType",
+              key: "eventType",
+              width: 90,
+              render: (type: ADLoginHistoryRecord["eventType"]) =>
+                type === "initial" ? (
+                  <Tag color="blue">首次发现</Tag>
+                ) : (
+                  <Tag color="green">登录</Tag>
+                ),
+            },
+            {
+              title: "登录用户",
+              dataIndex: "loginUser",
+              key: "loginUser",
+              width: 130,
+              ellipsis: true,
+              render: (text: string) => text || "-",
+            },
+            {
+              title: "IP地址",
+              dataIndex: "ipAddress",
+              key: "ipAddress",
+              width: 130,
+              render: (text: string) => text || "-",
+            },
+            {
+              title: "检测时间",
+              dataIndex: "detectedAt",
+              key: "detectedAt",
+              width: 170,
+              render: (text: string) =>
+                text ? new Date(text).toLocaleString("zh-CN") : "-",
+            },
+          ]}
+        />
+      </Drawer>
     </Card>
   );
 };

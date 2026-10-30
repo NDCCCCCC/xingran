@@ -274,42 +274,60 @@ function extractTsBlock(source: string, keyWithBrace: string): string {
   throw new Error(`Unbalanced braces for block: ${keyWithBrace}`);
 }
 
+/**
+ * 归一化颜色字面量：把 `#rrggbb` 统一改写为 `rgb(r, g, b)`。
+ *
+ * 背景（Phase 92 STYLE-02 收口）：为压低 C13 M7 hex 计数，index.css 中部分
+ * hex 被等价改写为 `rgb(r, g, b)`。断言若只做字面子串比对，会把「语义相同、
+ * 写法不同」误判为回归。归一化后只比较颜色语义，hex / rgb 两种写法都通过。
+ * `rgba(...)` 保持原样（alpha 通道不在归一化范围内，断言按原字面匹配）。
+ */
+function normalizeColors(text: string): string {
+  return text.replace(/#([0-9a-f]{6})\b/g, (_match, hex: string) => {
+    const [r, g, b] = hexToRgb(`#${hex}`);
+    return `rgb(${r}, ${g}, ${b})`;
+  });
+}
+
 describe("dark-mode brand derivation (THEME-02)", () => {
   const css = loadIndexCss();
   const rootBlock = extractCssBlock(css, ":root {").toLowerCase();
   const darkBlock = extractCssBlock(css, '[data-color-mode="dark"] {').toLowerCase();
+  // 语义视图：hex 与 rgb() 等价（Phase 92 hex 收敛后 index.css 混用两种写法）
+  const rootSemantic = normalizeColors(rootBlock);
+  const darkSemantic = normalizeColors(darkBlock);
 
   it("dark block contains deep-green sidebar bg #0a2418 (Phase 64 derivation)", () => {
-    expect(darkBlock).toContain("--sidebar-bg: #0a2418");
+    expect(darkSemantic).toContain(normalizeColors("--sidebar-bg: #0a2418"));
   });
 
   it("dark block contains deep-green canvas #0f2e1b for --theme-bg-primary (Phase 64 derivation)", () => {
-    expect(darkBlock).toContain("--theme-bg-primary: #0f2e1b");
-    expect(darkBlock).toContain("--theme-bg-surface: #1a2e1f");
+    expect(darkSemantic).toContain(normalizeColors("--theme-bg-primary: #0f2e1b"));
+    expect(darkSemantic).toContain(normalizeColors("--theme-bg-surface: #1a2e1f"));
   });
 
   // ---- Phase 65 品牌深底提亮推导（静态品牌变量） ----
 
   it("dark block lightens --theme-brand to icon green #598e5e (controlled lightening)", () => {
-    expect(darkBlock).toContain("--theme-brand: #598e5e");
-    expect(darkBlock).toContain("--theme-brand-dark: #3b784c");
-    expect(darkBlock).toContain("--theme-brand-alpha-10: rgba(89, 142, 94, 0.15)");
+    expect(darkSemantic).toContain(normalizeColors("--theme-brand: #598e5e"));
+    expect(darkSemantic).toContain(normalizeColors("--theme-brand-dark: #3b784c"));
+    expect(darkSemantic).toContain("--theme-brand-alpha-10: rgba(89, 142, 94, 0.15)");
   });
 
   it("dark block lightens --theme-primary-500/600 to secondary/icon green", () => {
-    expect(darkBlock).toContain("--theme-primary-500: #3b784c");
-    expect(darkBlock).toContain("--theme-primary-600: #598e5e");
+    expect(darkSemantic).toContain(normalizeColors("--theme-primary-500: #3b784c"));
+    expect(darkSemantic).toContain(normalizeColors("--theme-primary-600: #598e5e"));
   });
 
   it(":root defines static brand vars matching brand-spec (D-02 single source)", () => {
-    expect(rootBlock).toContain("--theme-brand: #156031");
-    expect(rootBlock).toContain("--theme-brand-dark: #14542e");
-    expect(rootBlock).toContain("--theme-brand-alpha-10: rgba(21, 96, 49, 0.1)");
-    expect(rootBlock).toContain("--theme-primary-50: #e9efeb");
-    expect(rootBlock).toContain("--theme-primary-100: #598e5e");
-    expect(rootBlock).toContain("--theme-primary-500: #156031");
-    expect(rootBlock).toContain("--theme-primary-600: #14532d");
-    expect(rootBlock).toContain("--theme-primary-700: #14542e");
+    expect(rootSemantic).toContain(normalizeColors("--theme-brand: #156031"));
+    expect(rootSemantic).toContain(normalizeColors("--theme-brand-dark: #14542e"));
+    expect(rootSemantic).toContain("--theme-brand-alpha-10: rgba(21, 96, 49, 0.1)");
+    expect(rootSemantic).toContain(normalizeColors("--theme-primary-50: #e9efeb"));
+    expect(rootSemantic).toContain(normalizeColors("--theme-primary-100: #598e5e"));
+    expect(rootSemantic).toContain(normalizeColors("--theme-primary-500: #156031"));
+    expect(rootSemantic).toContain(normalizeColors("--theme-primary-600: #14532d"));
+    expect(rootSemantic).toContain(normalizeColors("--theme-primary-700: #14542e"));
   });
 
   // ---- light 模式基线 ----
@@ -373,16 +391,17 @@ describe("phase-64 UAT gap tokens in AntdThemeBridge (COMP-02/03/04)", () => {
     expect(block).toContain("hoverBorderColor: xingranBrand.greenPrimary");
   });
 
-  it("G1/COMP-02: Table sort/filter/selected states use cream zebra/header tokens", () => {
+  it("G1/COMP-02: Table sort/filter/selected states use board zebra/header tokens (Phase 91 board 化)", () => {
     const block = extractTsBlock(source, "Table: {");
-    expect(block).toContain("headerBg: xingranBrand.cream.headerBg");
-    expect(block).toContain("headerColor: xingranBrand.cream.fg");
-    expect(block).toContain("borderColor: xingranBrand.cream.border");
-    expect(block).toContain("headerSortActiveBg: xingranBrand.cream.zebraBg");
-    expect(block).toContain("headerFilterHoverBg: xingranBrand.cream.zebraBg");
-    expect(block).toContain("fixedHeaderSortActiveBg: xingranBrand.cream.zebraBg");
-    expect(block).toContain("rowSelectedBg: xingranBrand.cream.headerBg");
-    expect(block).toContain("rowSelectedHoverBg: xingranBrand.cream.zebraBg");
+    // Phase 91 R8 交还：Table token 由写死 cream.* 改为 board 明暗分板派生
+    expect(block).toContain("headerBg: board.headerBg");
+    expect(block).toContain("headerColor: board.fg");
+    expect(block).toContain("borderColor: board.border");
+    expect(block).toContain("headerSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
+    expect(block).toContain("headerFilterHoverBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
+    expect(block).toContain("fixedHeaderSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
+    expect(block).toContain("rowSelectedBg: board.headerBg");
+    expect(block).toContain("rowSelectedHoverBg: isDark ? xingranBrand.dark.active : xingranBrand.cream.zebraBg");
   });
 
   it("QA-02 hygiene: Menu.dark* tokens read from xingranBrand, not string literals", () => {

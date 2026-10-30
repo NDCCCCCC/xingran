@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+// Phase 71 (W5)：裸 Select → 契约组件；P68 裸 hex 同步清偿为主题变量
+import { AppSelect } from "@/components/ui";
 import {
   App,
   Tree,
   Card,
-  Select,
   Spin,
   Tag,
   Space,
@@ -39,6 +40,7 @@ import {
   type OUDeptMappingResponse,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
+import { usePagination } from "@/hooks/usePagination";
 import { useDeptTree, type DeptTreeNode } from "@/hooks/useDeptTree";
 import { createSorter } from "@/utils/tableHelpers";
 
@@ -57,6 +59,14 @@ const ADOUPage: FC = () => {
   const [selectedOU, setSelectedOU] = useState<string>("");
   const [selectedOUName, setSelectedOUName] = useState<string>("");
   const [users, setUsers] = useState<ADUser[]>([]);
+  // STOP-03: 用户表改服务端分页（pageSize 硬约束沿用 50，与后端 MaxPageSize=100 兼容）
+  const {
+    current: userCurrent,
+    pageSize: userPageSize,
+    paginationProps: userPaginationProps,
+    setCurrent: userSetCurrent,
+    setTotal: userSetTotal,
+  } = usePagination({ pageSize: 50 });
   const [treeLoading, setTreeLoading] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
 
@@ -64,6 +74,7 @@ const ADOUPage: FC = () => {
   const [deptMapping, setDeptMapping] = useState<OUDeptMappingResponse | null>(null);
   const [mappingLoading, setMappingLoading] = useState(false);
   const [deptModalVisible, setDeptModalVisible] = useState(false);
+  const [mappingSubmitting, setMappingSubmitting] = useState(false);
   // 部门树 — 通过 React Query 全局共享缓存 (D-13 Step 2)
   const { data: deptTreeData, isLoading: deptTreeLoading } = useDeptTree();
   const deptTree: Department[] = (deptTreeData ?? []) as Department[];
@@ -106,7 +117,7 @@ const ADOUPage: FC = () => {
       const ouNode = ouTree.find((n) => n.dn === ouDn);
       setSelectedOU(ouDn);
       setSelectedOUName(ouNode?.name || ouDn);
-      fetchUsers(ouDn);
+      userSetCurrent(1); // 切换 OU 时页码重置第 1 页
       fetchDeptMapping(ouDn);
       fetchOUGroupMappings(ouDn);
       fetchAllGroups();
@@ -127,11 +138,12 @@ const ADOUPage: FC = () => {
       const res = await getADUserList({
         configId: selectedConfig,
         ouDn: ouDn || selectedOU,
-        current: 1,
-        pageSize: 100,
+        current: userCurrent,
+        pageSize: userPageSize,
       });
       if (res.code === 0) {
         setUsers(res.data?.list ?? []);
+        userSetTotal(res.data?.total ?? 0);
       }
     } catch {
       message.error("获取用户列表失败");
@@ -139,6 +151,13 @@ const ADOUPage: FC = () => {
       setUsersLoading(false);
     }
   };
+
+  // STOP-03: OU / 配置 / 分页任一变化时按服务端分页重新拉取用户
+  useEffect(() => {
+    if (!selectedConfig || !selectedOU) return;
+    fetchUsers(selectedOU);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchUsers uses latest closure state
+  }, [selectedConfig, selectedOU, userCurrent, userPageSize]);
 
   const fetchDeptMapping = async (ouDn: string) => {
     setMappingLoading(true);
@@ -487,11 +506,15 @@ const ADOUPage: FC = () => {
             styles={{ body: { maxHeight: "calc(100vh - 280px)", overflow: "auto" } }}
           >
             <Space orientation="vertical" style={{ width: "100%" }} size="small">
-              <Select
+              {/* Phase 71 W5：迁 AppSelect——原显式 showSearch 保持；configId 为 UUID 外键，
+                  原 allowClear=true 行为不变；AppSelect 泛型被 ComponentProps 擦除 →
+                  onChange 值为 unknown，收敛回业务类型 */}
+              <AppSelect
+                allowClear
                 style={{ width: "100%" }}
                 placeholder="选择AD配置"
                 value={selectedConfig}
-                onChange={setSelectedConfig}
+                onChange={(value) => setSelectedConfig(value as string)}
                 options={configs.map((c) => ({ label: c.configName, value: c.id }))}
                 showSearch
                 // noop 满足 local/no-large-dropdown-list(要求 Select 带 onSearch);
@@ -508,7 +531,7 @@ const ADOUPage: FC = () => {
                     style={{ fontSize: "13px" }}
                   />
                 ) : (
-                  <div style={{ textAlign: "center", color: "#999", padding: "20px" }}>
+                  <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "20px" }}>
                     {selectedConfig ? "暂无OU数据，请先同步" : "请选择AD配置"}
                   </div>
                 )}
@@ -536,7 +559,7 @@ const ADOUPage: FC = () => {
                 dataSource={users}
                 loading={usersLoading}
                 rowKey="id"
-                pagination={{ pageSize: 50, size: "small" }}
+                pagination={{ ...userPaginationProps, showSizeChanger: false, size: "small" }}
                 scroll={{ x: 1200 }}
                 size="small"
               />
@@ -567,13 +590,13 @@ const ADOUPage: FC = () => {
               {deptMapping?.hasMapping ? (
                 <Space orientation="vertical" style={{ width: "100%" }}>
                   <div>
-                    <span style={{ color: "#999" }}>关联部门：</span>
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>关联部门：</span>
                     <Tag color="blue" style={{ marginLeft: 8 }}>
                       {deptMapping.mapping?.deptName}
                     </Tag>
                   </div>
                   <div>
-                    <span style={{ color: "#999" }}>同步状态：</span>
+                    <span style={{ color: "var(--theme-text-tertiary)" }}>同步状态：</span>
                     <Tag
                       color={getSyncStatusColor(deptMapping.mapping?.syncStatus || "")}
                       style={{ marginLeft: 8 }}
@@ -583,7 +606,7 @@ const ADOUPage: FC = () => {
                   </div>
                 </Space>
               ) : (
-                <div style={{ color: "#999", textAlign: "center", padding: "20px" }}>
+                <div style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: "20px" }}>
                   {selectedOU ? "该 OU 尚未关联部门" : "请选择 OU"}
                 </div>
               )}
@@ -621,7 +644,7 @@ const ADOUPage: FC = () => {
                   size="small"
                 />
               ) : (
-                <div style={{ color: "#999", textAlign: "center", padding: "20px" }}>
+                <div style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: "20px" }}>
                   {selectedOU ? "该 OU 尚未关联用户组" : "请选择 OU"}
                 </div>
               )}
@@ -634,7 +657,15 @@ const ADOUPage: FC = () => {
       <Modal
         title="选择关联部门"
         open={deptModalVisible}
-        onOk={handleUpdateMapping}
+        onOk={async () => {
+          setMappingSubmitting(true);
+          try {
+            await handleUpdateMapping();
+          } finally {
+            setMappingSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: mappingSubmitting }}
         onCancel={() => {
           setDeptModalVisible(false);
           setSelectedDeptId("");
@@ -672,7 +703,7 @@ const ADOUPage: FC = () => {
             render={(item) => (
               <div>
                 <div>{item.title}</div>
-                <div style={{ fontSize: "12px", color: "#999" }}>{item.description}</div>
+                <div style={{ fontSize: "12px", color: "var(--theme-text-tertiary)" }}>{item.description}</div>
               </div>
             )}
             listStyle={{

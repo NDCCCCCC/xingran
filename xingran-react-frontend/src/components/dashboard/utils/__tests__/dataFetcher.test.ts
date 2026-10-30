@@ -48,7 +48,7 @@ describe("components/dashboard/utils/dataFetcher", () => {
   });
 
   it("API 业务错误 → error", async () => {
-    vi.mocked(api.get).mockResolvedValueOnce({ code: 500, message: "失败" } as any);
+    vi.mocked(api.get).mockResolvedValueOnce({ code: 500, message: "失败" } as unknown);
     const result = await fetcher.fetch({
       type: "api",
       method: "GET",
@@ -76,7 +76,7 @@ describe("components/dashboard/utils/dataFetcher", () => {
   });
 
   it("无效 type → error", async () => {
-    const result = await fetcher.fetch({ type: "unknown" } as any);
+    const result = await fetcher.fetch({ type: "unknown" } as unknown);
     expect(result.error).toBe("无效的数据源配置");
   });
 

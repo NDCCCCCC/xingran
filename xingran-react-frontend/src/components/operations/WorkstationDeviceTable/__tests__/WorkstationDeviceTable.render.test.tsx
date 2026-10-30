@@ -30,7 +30,7 @@ describe("WorkstationDeviceTable 渲染", () => {
             macAddress: "AA:BB:CC:DD:EE:FF",
             deviceType: "switch",
             isPrimary: true,
-          } as any,
+          } as unknown,
         ]}
       />
     );

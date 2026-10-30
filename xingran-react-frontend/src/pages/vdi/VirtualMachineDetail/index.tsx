@@ -90,7 +90,7 @@ const VirtualMachineDetail: React.FC = () => {
               style={{
                 padding: "20px",
                 textAlign: "center",
-                color: "var(--theme-text-tertiary, #999)",
+                color: "var(--theme-text-tertiary)",
               }}
             >
               操作记录功能（未来实现）
@@ -103,7 +103,7 @@ const VirtualMachineDetail: React.FC = () => {
               style={{
                 padding: "20px",
                 textAlign: "center",
-                color: "var(--theme-text-tertiary, #999)",
+                color: "var(--theme-text-tertiary)",
               }}
             >
               监控数据功能（未来实现）

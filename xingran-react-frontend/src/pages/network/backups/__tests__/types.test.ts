@@ -39,7 +39,7 @@ describe("network/backups/types", () => {
       deviceName: "D1",
       ipAddress: "10.0.0.1",
       backups: [],
-      latestBackup: {} as any,
+      latestBackup: {} as unknown,
       backupCount: 5,
       autoCount: 3,
       manualCount: 2,

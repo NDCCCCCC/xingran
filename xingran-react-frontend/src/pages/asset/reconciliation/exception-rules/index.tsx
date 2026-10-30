@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 例外规则 admin 页 (Phase 44 R3 / Plan 44-01 Task 6b)
  *
  * 内容:
@@ -20,11 +20,10 @@
  */
 
 import { useMemo, useState, useCallback } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Table,
   Form,
-  Input,
-  Select,
   Button,
   Space,
   Tag,
@@ -34,8 +33,8 @@ import {
   Statistic,
   Row,
   Col,
-  Popconfirm,
 } from "antd";
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -164,13 +163,12 @@ const ExceptionRulesPage: React.FC = () => {
     onError: (err) => message.error((err as Error)?.message ?? "更新失败"),
   });
 
+  // 68.1-T3：成功/失败反馈改由 confirmDelete 统一承载，此处仅做缓存失效
   const deleteMutation = useMutation({
     mutationFn: (id: string) => reconciliationApi.exceptionRule.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.ruleList() });
-      message.success("已删除");
     },
-    onError: (err) => message.error((err as Error)?.message ?? "删除失败"),
   });
 
   // 降噪基线 snapshot (D-R3-A4-01) — UI 先到位,后端 44-02 实现
@@ -264,7 +262,7 @@ const ExceptionRulesPage: React.FC = () => {
           <Space size={4}>
             <Tag color={record.scopeType === "global" ? "green" : "orange"}>{record.scopeType}</Tag>
             {record.scopeId && (
-              <span style={{ fontSize: 12, color: "#999" }}>{record.scopeId.slice(0, 8)}...</span>
+              <span style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>{record.scopeId.slice(0, 8)}...</span>
             )}
           </Space>
         ),
@@ -316,17 +314,22 @@ const ExceptionRulesPage: React.FC = () => {
             >
               编辑
             </Button>
-            <Popconfirm
-              title="确认删除该规则?"
-              description="软删除,历史审计链不断(D-R3-A4-03)"
-              onConfirm={() => deleteMutation.mutate(record.id)}
-              okText="确认"
-              cancelText="取消"
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() =>
+                confirmDelete({
+                  target: `该异常处置规则（${record.name}）`,
+                  // 业务语义说明，不得丢失（D-R3-A4-03）
+                  extra: "软删除,历史审计链不断(D-R3-A4-03)",
+                  onDelete: async () => { await deleteMutation.mutateAsync(record.id); },
+                })
+              }
             >
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
-            </Popconfirm>
+              删除
+            </Button>
           </Space>
         ),
       },
@@ -350,7 +353,7 @@ const ExceptionRulesPage: React.FC = () => {
             <Statistic
               title="启用中"
               value={stats.enabled}
-              styles={{ content: { color: "#2d8949" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
             />
           </Card>
         </Col>
@@ -359,7 +362,7 @@ const ExceptionRulesPage: React.FC = () => {
             <Statistic
               title="已停用"
               value={stats.disabled}
-              styles={{ content: { color: "#707068" } }}
+              styles={{ content: { color: "var(--theme-text-secondary)" } }}
             />
           </Card>
         </Col>
@@ -374,7 +377,7 @@ const ExceptionRulesPage: React.FC = () => {
             >
               记录当前为基线
             </Button>
-            <div style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
+            <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)", marginTop: 8 }}>
               降噪对比基准 (D-R3-A4-01)
             </div>
           </Card>
@@ -385,22 +388,28 @@ const ExceptionRulesPage: React.FC = () => {
       <Card className="mb-4">
         <Form form={form} layout="inline" onFinish={handleSearch}>
           <Form.Item name="name" label="规则名称">
-            <Input placeholder="模糊匹配" allowClear style={{ width: 200 }} />
+            <AppInput placeholder="模糊匹配" style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="isActive" label="状态">
-            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-            <Select placeholder="全部" allowClear style={{ width: 120 }}>
-              <Select.Option value={0}>启用</Select.Option>
-              <Select.Option value={1}>停用</Select.Option>
-            </Select>
+            <AppSelect
+              placeholder="全部"
+              showSearch={false}
+              options={[
+                { value: 0, label: "启用" },
+                { value: 1, label: "停用" },
+              ]}
+            />
           </Form.Item>
           <Form.Item name="scopeType" label="范围">
-            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-            <Select placeholder="全部" allowClear style={{ width: 140 }}>
-              <Select.Option value="global">global</Select.Option>
-              <Select.Option value="dept">dept</Select.Option>
-              <Select.Option value="user">user</Select.Option>
-            </Select>
+            <AppSelect
+              placeholder="全部"
+              showSearch={false}
+              options={[
+                { value: "global", label: "global" },
+                { value: "dept", label: "dept" },
+                { value: "user", label: "user" },
+              ]}
+            />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -458,7 +467,7 @@ const ExceptionRulesPage: React.FC = () => {
         title="命中测试"
         open={matchTestOpen}
         onClose={() => setMatchTestOpen(false)}
-        width={780}
+        size={780}
       >
         <MatchTestPanel embedded />
       </Drawer>

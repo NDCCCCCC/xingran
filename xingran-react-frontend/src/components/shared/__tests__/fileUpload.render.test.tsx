@@ -6,7 +6,7 @@
  * handleUploadSuccess/handleUploadError + handleChange + value 同步。
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -105,7 +105,7 @@ describe("FileUpload — handleUploadSuccess/Error(通过回调验证)", () => {
 
 describe("FileUpload — handleRemove(fetch DELETE)", () => {
   it("文件带 response.data.id 时 onRemove 走 fetch DELETE", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({ ok: true } as any);
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({ ok: true } as unknown);
     renderWithProviders(
       <FileUpload
         value={[

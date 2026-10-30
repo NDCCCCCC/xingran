@@ -5,18 +5,18 @@ import { describe, it, expect, vi } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import type { ReactElement, ReactNode } from "react";
+import type {  } from "react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
   return createApiTestingModule();
 });
 
-let noticeStoreState: Record<string, any> = {};
+let noticeStoreState: Record<string, unknown> = {};
 vi.mock("@/store/noticeStore", () => {
   // 兼容 selector 调用（useNoticeStore(s => s.markAsRead)）与无参调用两种形态；
   // 函数体内读取 let 变量，保持调用时求值（beforeEach 重赋值继续生效）
-  const useNoticeStoreFn: any = (selector?: (s: unknown) => unknown) =>
+  const useNoticeStoreFn: unknown = (selector?: (s: unknown) => unknown) =>
     selector ? selector(noticeStoreState) : noticeStoreState;
   return { useNoticeStore: useNoticeStoreFn };
 });
@@ -27,7 +27,7 @@ vi.mock("@/lib/noticeApi", () => ({
 }));
 
 vi.mock("@/components/NoticeDetail/NoticeDetailContent", () => ({
-  default: ({ notice, showMarkAsReadButton, onMarkAsRead }: any) => (
+  default: ({ notice, showMarkAsReadButton, onMarkAsRead }: unknown) => (
     <div data-testid="notice-detail">
       <span data-testid="notice-title">{notice?.title}</span>
       <span data-testid="notice-read">{String(notice?.isRead)}</span>
@@ -63,7 +63,7 @@ describe("NoticeDetailPage", () => {
   });
 
   it("loading 状态 → 渲染 Spin", async () => {
-    vi.mocked(getMyNoticeDetail).mockReturnValue(new Promise(() => {}) as any);
+    vi.mocked(getMyNoticeDetail).mockReturnValue(new Promise(() => {}) as unknown);
     const { baseElement } = renderPage();
     await waitFor(() => {
       expect(baseElement.querySelector(".ant-spin")).toBeTruthy();
@@ -73,7 +73,7 @@ describe("NoticeDetailPage", () => {
   it("加载成功 + 未读 → 渲染 detail + 调用 markAsRead", async () => {
     vi.mocked(getMyNoticeDetail).mockResolvedValue({
       data: { id: "n1", title: "T1", isRead: false },
-    } as any);
+    } as unknown);
     const { baseElement } = renderPage();
     await waitFor(() => {
       expect(baseElement.querySelector('[data-testid="notice-detail"]')).toBeTruthy();
@@ -85,7 +85,7 @@ describe("NoticeDetailPage", () => {
   it("加载成功 + 已读 → 不调 markNoticeAsRead", async () => {
     vi.mocked(getMyNoticeDetail).mockResolvedValue({
       data: { id: "n1", title: "T1", isRead: true },
-    } as any);
+    } as unknown);
     const { markNoticeAsRead } = await import("@/lib/noticeApi");
     vi.mocked(markNoticeAsRead).mockClear();
     const { baseElement } = renderPage();
@@ -108,7 +108,7 @@ describe("NoticeDetailPage", () => {
   it("点击 返回通知中心 → 不抛错", async () => {
     vi.mocked(getMyNoticeDetail).mockResolvedValue({
       data: { id: "n1", title: "T1", isRead: true },
-    } as any);
+    } as unknown);
     const { baseElement, getByText } = renderPage();
     await waitFor(() => {
       expect(baseElement.querySelector('[data-testid="notice-detail"]')).toBeTruthy();
@@ -119,7 +119,7 @@ describe("NoticeDetailPage", () => {
   // WR-01 regression: when API returns data=null, loading must become false
   // (not permanent Spin)
   it("data=null → 不显示 Spin（setLoading false on empty data）", async () => {
-    vi.mocked(getMyNoticeDetail).mockResolvedValue({ data: null } as any);
+    vi.mocked(getMyNoticeDetail).mockResolvedValue({ data: null } as unknown);
     const { baseElement } = renderPage();
     await waitFor(() => {
       // Spin must be gone (loading=false), and "通知不存在" renders instead

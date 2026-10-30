@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { Form } from "antd";
-import { screen, fireEvent } from "@testing-library/react";
+import {  } from "@testing-library/react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -19,9 +19,9 @@ import { FloorStatisticsCards } from "../components/FloorStatisticsCards";
 import { FloorSearchForm } from "../components/FloorSearchForm";
 import { FloorModal } from "../components/FloorModal";
 import { createFloorTableColumns } from "../components/FloorTableColumns";
-import { STATUS_OPTIONS } from "../constants";
+import {  } from "../constants";
 
-const mockFloor = (id: string, name: string, overrides: Record<string, unknown> = {}): any => ({
+const mockFloor = (id: string, name: string, overrides: Record<string, unknown> = {}): unknown => ({
   id,
   name,
   floorNo: 1,
@@ -243,9 +243,9 @@ describe("createFloorTableColumns", () => {
     getColumnSortOrder: (_: string) => undefined as never,
   };
 
-  it("返回 8 列含主键", () => {
+  it("返回 9 列含主键", () => {
     const cols = createFloorTableColumns(cbs);
-    expect(cols.length).toBe(8);
+    expect(cols.length).toBe(9);
     const keys = cols.map((c) => c.key as string);
     expect(keys).toEqual(
       expect.arrayContaining([
@@ -253,12 +253,44 @@ describe("createFloorTableColumns", () => {
         "floorNo",
         "buildingName",
         "area",
+        "workstationStats",
         "status",
         "description",
         "createdAt",
         "action",
       ])
     );
+  });
+
+  it("workstationStats 列空值/total=0 render '-'", () => {
+    const cols = createFloorTableColumns(cbs);
+    const col = cols.find((c) => c.key === "workstationStats");
+    const render = col?.render as (_: unknown, record: unknown) => unknown;
+    expect(render(undefined, {})).toBe("-");
+    expect(
+      render(undefined, { workstationStats: { total: 0, used: 0, unused: 0, maintenance: 0 } })
+    ).toBe("-");
+  });
+
+  it("workstationStats 列渲染 总/已用/空闲 Tag，维护仅 >0 显示", async () => {
+    const cols = createFloorTableColumns(cbs);
+    const col = cols.find((c) => c.key === "workstationStats");
+    const render = col?.render as (_: unknown, record: unknown) => unknown;
+
+    const noMaint = renderWithProviders(
+      render(undefined, { workstationStats: { total: 3, used: 2, unused: 1, maintenance: 0 } })
+    );
+    expect(noMaint.getByText("总 3")).toBeDefined();
+    expect(noMaint.getByText("已用 2")).toBeDefined();
+    expect(noMaint.getByText("空闲 1")).toBeDefined();
+    expect(noMaint.queryByText("维护 0")).toBeNull();
+    noMaint.unmount();
+
+    const withMaint = renderWithProviders(
+      render(undefined, { workstationStats: { total: 2, used: 1, unused: 0, maintenance: 1 } })
+    );
+    expect(withMaint.getByText("维护 1")).toBeDefined();
+    withMaint.unmount();
   });
 
   it("area 列空值 render '-'", () => {
@@ -272,7 +304,7 @@ describe("createFloorTableColumns", () => {
   it("buildingName render 回退 buildingCode", () => {
     const cols = createFloorTableColumns(cbs);
     const col = cols.find((c) => c.key === "buildingName");
-    const render = col?.render as (_: unknown, record: any) => unknown;
+    const render = col?.render as (_: unknown, record: unknown) => unknown;
     expect(render(undefined, { buildingName: "", buildingCode: "BLD-X" })).toBe("BLD-X");
     expect(render(undefined, { buildingName: "A 栋", buildingCode: "BLD-A" })).toBe("A 栋");
   });

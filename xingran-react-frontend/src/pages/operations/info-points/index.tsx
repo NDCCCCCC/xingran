@@ -1,9 +1,9 @@
-﻿/**
+/**
  * 信息点管理页面
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import type { FC } from "react";
+import type { FC, CSSProperties } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -12,8 +12,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Tag,
   Card,
   Row,
@@ -50,18 +48,42 @@ import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/er
 import { debounce } from "@/utils/debounce";
 import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { useActionPermission } from "@/components/shared";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import ExcelExport from "@/components/shared/ExcelExport";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import { post } from "@/lib/api";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// - workstationId/deviceId/portId：UUID 字段，原 allowClear + showSearch 与自定义
+//   filterOption 原样保留（自定义 filterOption 覆盖 AppSelect 的 optionFilterProp）
+// - infoPointType/status：字典/枚举 children → options；枚举类显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
-const { Option } = Select;
-const { TextArea } = Input;
 const { Content } = Layout;
+
+/**
+ * 卡片视图图标动作的禁用态样式（Phase 86 W2，与 buildings/room-devices/dedicated-lines 同口径）。
+ * antd `Card.actions` 只接受 ReactNode → 未就绪时用「不响应指针 + 降透明度」
+ * 表达禁用态，并配合 `title={decision.hint}` 提示原因。
+ */
+const cardActionStyle = (disabled: boolean): CSSProperties => ({
+  opacity: disabled ? 0.45 : 1,
+  pointerEvents: disabled ? "none" : "auto",
+  cursor: disabled ? "not-allowed" : "pointer",
+});
 
 // 模块级静态映射（Phase m76-js-misc 6.3）
 const INFO_POINT_STATUS_MAP: Record<number, string> = { 0: "正常", 1: "故障", 2: "停用" };
+
+// 状态枚举 options 形态（AppSelect 需 options；children 写法已弃用）
+const INFO_POINT_STATUS_OPTIONS = [
+  { label: "正常", value: 0 },
+  { label: "故障", value: 1 },
+  { label: "停用", value: 2 },
+];
 
 type ViewMode = "table" | "card";
 
@@ -104,6 +126,14 @@ interface Statistics {
 }
 
 const InfoPointManagement: FC = () => {
+  // Phase 86 W2（RBAC-02）：操作级权限门控（三态）。ops 码组只有 delete 键 → 删除用 .delete。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.opsInfoPoint.edit);
+  const permDelete = permGate.decide(PERMISSION_CODES.opsInfoPoint.delete);
+  const permAdd = permGate.decide(PERMISSION_CODES.opsInfoPoint.add);
+  const permImport = permGate.decide(PERMISSION_CODES.opsInfoPoint.import);
+  const permExport = permGate.decide(PERMISSION_CODES.opsInfoPoint.export);
+
   const [statistics, setStatistics] = useState<Statistics>({
     total: 0,
     normal: 0,
@@ -117,6 +147,7 @@ const InfoPointManagement: FC = () => {
     defaultValue: "table",
   });
   const [importVisible, setImportVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [workstationOptions, setWorkstationOptions] = useState<WorkstationOption[]>([]);
@@ -707,19 +738,25 @@ const InfoPointManagement: FC = () => {
       key: "action",
       render: (_, record) => {
         const actions = [
-          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
+          {
+            key: "edit",
+            label: "编辑",
+            icon: <EditOutlined />,
+            onClick: () => openModal(record),
+            permission: PERMISSION_CODES.opsInfoPoint.edit,
+          },
           {
             key: "delete",
             label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
+            // Phase 86 W2：confirmDelete 无 permission 位 → 由 ActionButtons 的
+            // permission 字段承担三态门控（ready 无码不渲染 / 未就绪 disabled）
+            permission: PERMISSION_CODES.opsInfoPoint.delete,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个信息点吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `信息点 ${record.name}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },
@@ -736,7 +773,7 @@ const InfoPointManagement: FC = () => {
           style={{
             textAlign: "center",
             padding: "40px",
-            color: "var(--theme-text-tertiary, #999)",
+            color: "var(--theme-text-tertiary)",
           }}
         >
           暂无数据
@@ -749,20 +786,41 @@ const InfoPointManagement: FC = () => {
             <Card
               hoverable
               actions={[
-                <EditOutlined key="edit" onClick={() => openModal(infoPoint)} />,
-                <DeleteOutlined
-                  key="delete"
-                  style={{ color: "var(--theme-error, #ba3630)" }}
-                  onClick={() => {
-                    Modal.confirm({
-                      title: "确定要删除这个信息点吗？",
-                      okText: "确定",
-                      cancelText: "取消",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleDelete(infoPoint.id),
-                    });
-                  }}
-                />,
+                // 卡片视图与表格视图是同一页的两种形态 → 共用同一组门控决策
+                ...(permEdit.visible
+                  ? [
+                      <EditOutlined
+                        key="edit"
+                        title={permEdit.hint}
+                        style={cardActionStyle(permEdit.disabled)}
+                        onClick={() => {
+                          if (permEdit.disabled) return;
+                          openModal(infoPoint);
+                        }}
+                      />,
+                    ]
+                  : []),
+                ...(permDelete.visible
+                  ? [
+                      <DeleteOutlined
+                        key="delete"
+                        title={permDelete.hint}
+                        style={{
+                          ...cardActionStyle(permDelete.disabled),
+                          color: permDelete.disabled
+                            ? "var(--theme-text-tertiary)"
+                            : "var(--theme-error)",
+                        }}
+                        onClick={() => {
+                          if (permDelete.disabled) return;
+                          confirmDelete({
+                            target: `信息点 ${infoPoint.name}`,
+                            onDelete: () => handleDelete(infoPoint.id),
+                          });
+                        }}
+                      />,
+                    ]
+                  : []),
               ]}
             >
               <Card.Meta
@@ -821,9 +879,9 @@ const InfoPointManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: "#fff" }}>
+      <Content style={{ background: "var(--theme-bg-surface)" }}>
         <StatisticsCards
           show={total > 10}
           items={[
@@ -831,19 +889,19 @@ const InfoPointManagement: FC = () => {
             {
               title: "正常",
               value: statistics.normal,
-              styles: { content: { color: "var(--theme-success, #3f8600)" } },
+              styles: { content: { color: "var(--theme-success)" } },
               prefix: <CheckCircleOutlined />,
             },
             {
               title: "故障",
               value: statistics.fault,
-              styles: { content: { color: "var(--theme-error, #cf1322)" } },
+              styles: { content: { color: "var(--theme-error)" } },
               prefix: <WarningOutlined />,
             },
             {
               title: "停用",
               value: statistics.disabled,
-              styles: { content: { color: "var(--theme-text-tertiary, #707068)" } },
+              styles: { content: { color: "var(--theme-text-tertiary)" } },
               prefix: <StopOutlined />,
             },
           ]}
@@ -860,7 +918,9 @@ const InfoPointManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="workstationId" label="所属工位">
-                <Select
+                {/* 形态分类器②+⑦：children → options；服务端搜索（filterOption={false}）
+                    保留，AppSelect 的 optionFilterProp="label" 在此不参与过滤 */}
+                <AppSelect
                   placeholder={selectedDeptId ? "搜索工位名称" : "请先选择部门"}
                   allowClear
                   className="user-form-input"
@@ -872,51 +932,44 @@ const InfoPointManagement: FC = () => {
                   showSearch
                   filterOption={false}
                   onSearch={debouncedWorkstationSearch}
-                >
-                  {workstationOptions
+                  options={workstationOptions
                     .filter((w) => w.id)
-                    .map((w) => (
-                      <Option key={w.id} value={w.id}>
-                        {w.name}
-                      </Option>
-                    ))}
-                </Select>
+                    .map((w) => ({ value: w.id, label: w.name }))}
+                />
               </Form.Item>
               <Form.Item name="name" label="信息点名称">
-                <Input
+                <AppInput
                   placeholder="请输入信息点名称"
-                  allowClear
                   className="user-form-input"
                   style={{ width: 150 }}
                 />
               </Form.Item>
               <Form.Item name="infoPointType" label="信息点类型">
-                <Select
+                {/* 形态分类器②④：字典 children → options；业务禁搜 */}
+                <AppSelect
                   placeholder="请选择类型"
                   allowClear
                   className="user-form-input"
                   style={{ width: 120 }}
+                  showSearch={false}
                   onSearch={() => {}}
-                >
-                  {infoPointTypeDict.map((d) => (
-                    <Option key={d.dictValue} value={d.dictValue}>
-                      {d.dictLabel}
-                    </Option>
-                  ))}
-                </Select>
+                  options={infoPointTypeDict.map((d) => ({
+                    value: d.dictValue,
+                    label: d.dictLabel,
+                  }))}
+                />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select
+                {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                <AppSelect
                   placeholder="请选择状态"
                   allowClear
                   className="user-form-input"
                   style={{ width: 100 }}
+                  showSearch={false}
                   onSearch={() => {}}
-                >
-                  <Option value={0}>正常</Option>
-                  <Option value={1}>故障</Option>
-                  <Option value={2}>停用</Option>
-                </Select>
+                  options={INFO_POINT_STATUS_OPTIONS}
+                />
               </Form.Item>
               <Form.Item>
                 <Space>
@@ -943,38 +996,60 @@ const InfoPointManagement: FC = () => {
                   <AppstoreOutlined /> 卡片
                 </Radio.Button>
               </Radio.Group>
-              <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
-                导入
-              </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={() => {
-                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                  const currentFilters: Record<string, unknown> = {};
-                  Object.keys(values).forEach((key) => {
-                    const value = values[key];
-                    if (value !== undefined && value !== null && value !== "") {
-                      currentFilters[key] = value;
-                    }
-                  });
-                  setExportFilters(currentFilters);
-                  setExportVisible(true);
-                }}
-              >
-                导出
-              </Button>
-              {selectedRowKeys.length > 0 && (
+              {/* Excel 门控点 = 触发按钮（modal 容器保留无条件渲染） */}
+              {permImport.visible && (
+                <Button
+                  icon={<ImportOutlined />}
+                  onClick={() => setImportVisible(true)}
+                  disabled={permImport.disabled}
+                  title={permImport.hint}
+                >
+                  导入
+                </Button>
+              )}
+              {permExport.visible && (
+                <Button
+                  icon={<ExportOutlined />}
+                  onClick={() => {
+                    const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                    const currentFilters: Record<string, unknown> = {};
+                    Object.keys(values).forEach((key) => {
+                      const value = values[key];
+                      if (value !== undefined && value !== null && value !== "") {
+                        currentFilters[key] = value;
+                      }
+                    });
+                    setExportFilters(currentFilters);
+                    setExportVisible(true);
+                  }}
+                  disabled={permExport.disabled}
+                  title={permExport.hint}
+                >
+                  导出
+                </Button>
+              )}
+              {selectedRowKeys.length > 0 && permDelete.visible && (
                 <Button
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ba3630)" }}
+                  style={{ color: "var(--theme-error)" }}
                   onClick={handleBatchDelete}
+                  disabled={permDelete.disabled}
+                  title={permDelete.hint}
                 >
                   批量删除 ({selectedRowKeys.length})
                 </Button>
               )}
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-                新增信息点
-              </Button>
+              {permAdd.visible && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => openModal()}
+                  disabled={permAdd.disabled}
+                  title={permAdd.hint}
+                >
+                  新增信息点
+                </Button>
+              )}
             </Space>
           </div>
           {selectedRowKeys.length > 0 && (
@@ -1018,7 +1093,15 @@ const InfoPointManagement: FC = () => {
         <Modal
           title={editingInfoPoint ? "编辑信息点" : "新增信息点"}
           open={modalVisible}
-          onOk={handleSave}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSave();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           onCancel={() => {
             setModalVisible(false);
             infoPointForm.resetFields();
@@ -1058,42 +1141,52 @@ const InfoPointManagement: FC = () => {
                   label="名称"
                   rules={[{ required: true, message: "请输入名称" }]}
                 >
-                  <Input placeholder="请输入名称" />
+                  <AppInput placeholder="请输入名称" />
                 </Form.Item>
                 <Form.Item
                   name="infoPointType"
                   label="类型"
                   rules={[{ required: true, message: "请选择类型" }]}
                 >
-                  <Select placeholder="请选择类型" onSearch={() => {}}>
-                    {infoPointTypeDict.map((d) => (
-                      <Option key={d.dictValue} value={d.dictValue}>
-                        {d.dictLabel}
-                      </Option>
-                    ))}
-                  </Select>
+                  {/* 形态分类器②④：字典 children → options；业务禁搜 */}
+                  <AppSelect
+                    allowClear
+                    placeholder="请选择类型"
+                    showSearch={false}
+                    onSearch={() => {}}
+                    options={infoPointTypeDict.map((d) => ({
+                      value: d.dictValue,
+                      label: d.dictLabel,
+                    }))}
+                  />
                 </Form.Item>
                 <Form.Item
                   name="status"
                   label="状态"
                   rules={[{ required: true, message: "请选择状态" }]}
                 >
-                  <Select placeholder="请选择状态" onSearch={() => {}}>
-                    <Option value={0}>正常</Option>
-                    <Option value={1}>故障</Option>
-                    <Option value={2}>停用</Option>
-                  </Select>
+                  {/* 形态分类器②④：状态枚举（业务禁搜），children → options */}
+                  <AppSelect
+                    allowClear
+                    placeholder="请选择状态"
+                    showSearch={false}
+                    onSearch={() => {}}
+                    options={INFO_POINT_STATUS_OPTIONS}
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="deviceId" label="所属设备">
-                  <Select
+                  {/* 形态分类器②+③：children（复合子节点 Tooltip）→ options 改写。
+                      自定义 filterOption（按设备名+IP 搜索）与 optionLabelProp 原样保留；
+                      deviceId 为 UUID 字段，allowClear 原已有。 */}
+                  <AppSelect
                     placeholder="请选择网络设备"
                     allowClear
                     showSearch
                     onChange={(value) => {
-                      setSelectedDeviceId(value);
-                      loadDevicePorts(value);
+                      setSelectedDeviceId((value as string) ?? "");
+                      loadDevicePorts((value as string) ?? "");
                     }}
                     filterOption={(input, option) => {
                       const device = networkDevices.find((d) => d.id === option?.value);
@@ -1104,26 +1197,27 @@ const InfoPointManagement: FC = () => {
                     }}
                     optionLabelProp="label"
                     onSearch={() => {}}
-                  >
-                    {networkDevices.map((d) => {
+                    options={networkDevices.map((d) => {
                       const deviceName = d.deviceName || "未命名设备";
                       const fullName = `${deviceName} (${d.ipAddress})`;
                       const displayName =
                         deviceName.length > 12
                           ? `${deviceName.substring(0, 12)}... (${d.ipAddress})`
                           : fullName;
-                      return (
-                        <Option key={d.id} value={d.id} label={deviceName}>
-                          <Tooltip title={fullName} placement="right">
-                            <span>{displayName}</span>
-                          </Tooltip>
-                        </Option>
-                      );
+                      // label = 选中框展示（与原 Option label 属性一致）；下拉项视觉
+                      // 由 optionRender 还原原复合子节点（Tooltip + 截断名）
+                      return { value: d.id, label: deviceName, fullName, displayName };
                     })}
-                  </Select>
+                    optionRender={(option) => (
+                      <Tooltip title={option.data.fullName} placement="right">
+                        <span>{option.data.displayName}</span>
+                      </Tooltip>
+                    )}
+                  />
                 </Form.Item>
                 <Form.Item name="portId" label="所属端口">
-                  <Select
+                  {/* 形态分类器②：children → options；UUID 字段，allowClear 原已有 */}
+                  <AppSelect
                     placeholder={selectedDeviceId ? "请选择端口" : "请先选择设备"}
                     allowClear
                     disabled={!selectedDeviceId}
@@ -1136,16 +1230,11 @@ const InfoPointManagement: FC = () => {
                     }
                     optionLabelProp="label"
                     onSearch={() => {}}
-                  >
-                    {devicePorts.map((p) => {
-                      const displayLabel = p.interfaceName || p.id || "未命名端口";
-                      return (
-                        <Option key={p.id} value={p.id} label={displayLabel}>
-                          {displayLabel}
-                        </Option>
-                      );
-                    })}
-                  </Select>
+                    options={devicePorts.map((p) => ({
+                      value: p.id,
+                      label: p.interfaceName || p.id || "未命名端口",
+                    }))}
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -1155,7 +1244,7 @@ const InfoPointManagement: FC = () => {
               labelCol={{ span: 4 }}
               wrapperCol={{ span: 20 }}
             >
-              <TextArea rows={3} placeholder="请输入描述" />
+              <AppTextArea rows={3} placeholder="请输入描述" />
             </Form.Item>
           </Form>
         </Modal>

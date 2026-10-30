@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
@@ -94,7 +96,15 @@ func (s *buildingService) Create(ctx context.Context, building *operations.OpsBu
 		return err
 	}
 
-	return s.repo.Create(ctx, building)
+	if err := s.repo.Create(ctx, building); err != nil {
+		return err
+	}
+
+	// total_floors 是派生列而非用户输入位：表单声明的 totalFloors 一律被实时 COUNT
+	// 覆盖（新建楼栋无楼层 → 0），关闭 261013-lqb SUMMARY 记录的最后一个写路径漂移
+	// 向量（楼栋表单手工 Create/Update 直写声明值）。重算失败上抛（fail-loud，
+	// 对齐 261013-lqb 路径 A 行为），不静默吞掉。
+	return recomputeBuildingTotalFloorsByID(ctx, s.db, building.ID)
 }
 
 // Update 更新楼宇
@@ -111,7 +121,13 @@ func (s *buildingService) Update(ctx context.Context, building *operations.OpsBu
 
 	// 使用 Omit 排除 CreatedAt 字段，只更新其他字段
 	// UpdatedAt 会被 GORM 自动更新
-	return s.db.WithContext(ctx).Omit("CreatedAt").Save(building).Error
+	if err := s.db.WithContext(ctx).Omit("CreatedAt").Save(building).Error; err != nil {
+		return err
+	}
+
+	// total_floors 派生列覆盖（同 Create）：声明值一律被实时 COUNT（软删排除）
+	// 覆盖为当前真实楼层数，幂等可重入；重算失败上抛 fail-loud。
+	return recomputeBuildingTotalFloorsByID(ctx, s.db, building.ID)
 }
 
 // Delete 删除楼宇
@@ -141,11 +157,75 @@ func (s *buildingService) List(ctx context.Context, params map[string]interface{
 	pageSize := extractIntParam(params, "pageSize", constants.DefaultPageSize)
 	current, pageSize = pkgquery.NormalizePaginationWithMax(current, pageSize, constants.MaxOptionsPageSize)
 	sortReq := extractSortRequest(params)
-	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+	result, err := s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
 		s.filterScope(params),
 		s.selectScope(),
 		base.SortScope(sortReq, buildingAllowedSortFields, "order_num ASC"),
 	)
+	if err != nil {
+		return nil, err
+	}
+	// 每行楼层数注入（只读增强，quick 261013-jf1）：类型断言失败或空页直接返回原 result。
+	if buildings, ok := result.List.([]operations.OpsBuilding); ok && len(buildings) > 0 {
+		s.attachFloorCount(ctx, buildings)
+	}
+	return result, nil
+}
+
+// attachFloorCount 批量回填楼栋楼层数（单条 GROUP BY 聚合，零 N+1）。
+//
+// 口径（orchestrator 锁定）：楼层数 = ops_floors 中该楼栋非软删行数。
+// 实时 COUNT 使显示层对既有 total_floors 漂移路径免疫（floor Update 换楼不重算、
+// Excel 导入直写上传值）；total_floors 持久化字段及其事件同步零改动。
+//
+// 实现要点（floor_service.go attachWorkstationStats 同构）：
+//   - ops_floors.building_id 为 varchar(64) 存楼栋 UUID 字符串，按页内 id 集合
+//     IN 过滤 + GROUP BY，无需 JOIN（规避 PG uuid/varchar 类型转换问题）。
+//   - Model(&operations.OpsFloor{}) 让 GORM 自动附加 deleted_at IS NULL 软删过滤。
+//   - 无楼层的楼栋保持 FloorCount=nil（json omitempty 不出键，前端渲染 "-"）。
+//   - 只读增强：聚合失败仅告警降级（行保持 nil），不影响 List 主流程。
+func (s *buildingService) attachFloorCount(ctx context.Context, buildings []operations.OpsBuilding) {
+	buildingIDs := make([]string, 0, len(buildings))
+	seen := make(map[string]struct{}, len(buildings))
+	for i := range buildings {
+		id := buildings[i].ID
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		buildingIDs = append(buildingIDs, id)
+	}
+	if len(buildingIDs) == 0 {
+		return
+	}
+
+	var rows []struct {
+		BuildingID string
+		FloorCount int64
+	}
+	err := s.db.WithContext(ctx).
+		Model(&operations.OpsFloor{}).
+		Select("building_id", "COUNT(*) AS floor_count").
+		Where("building_id IN ?", buildingIDs).
+		Group("building_id").
+		Scan(&rows).Error
+	if err != nil {
+		logrus.WithError(err).Warn("[building] 楼层数聚合失败，按无统计降级")
+		return
+	}
+
+	countByBuilding := make(map[string]int64, len(rows))
+	for _, r := range rows {
+		countByBuilding[r.BuildingID] = r.FloorCount
+	}
+	for i := range buildings {
+		if c, ok := countByBuilding[buildings[i].ID]; ok {
+			buildings[i].FloorCount = &c
+		}
+	}
 }
 
 // filterScope List 筛选条件 scope（Statistics 仍直调 applyFilters，故 helper 保留原位，

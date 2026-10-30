@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -171,6 +172,16 @@ func (h *OUGroupMappingHandler) DeleteMapping(c *gin.Context) {
 	if id == "" {
 		response.Error(c, http.StatusBadRequest, "缺少映射ID")
 		return
+	}
+
+	// 域控审查 P1-6：删除映射前先把 AD 组中属于该 OU 的成员清掉（Purge 需要读映射，
+	// 必须在 DeleteMapping 之前）。清理失败仅 WARN 不阻断删除 —— 与部门级联一致，
+	// 残留成员可由「组成员同步」任务按影子表多退少补纠正（该 OU 用户移走后即被清理）。
+	if h.core != nil && h.core.DB != nil && h.core.AuthFactory != nil {
+		cascade := addomainServices.NewDeptADCascadeService(h.core.GetDB(), h.core.AuthFactory.GetAccountPool())
+		if err := cascade.PurgeMappingMembers(c.Request.Context(), id); err != nil {
+			applogger.Warnf("清理 OU 组映射 %s 的 AD 成员失败（继续删除映射）: %v", id, err)
+		}
 	}
 
 	if err := h.mappingService.DeleteMapping(c.Request.Context(), id); err != nil {

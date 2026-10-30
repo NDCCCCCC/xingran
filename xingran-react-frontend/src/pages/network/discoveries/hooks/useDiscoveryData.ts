@@ -7,6 +7,7 @@ import { useState, useCallback } from "react";
 import { App } from "antd";
 import type { DeviceDiscovery, Department, PageResponse } from "@/types";
 import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 import type { DiscoveryStatistics, ModalState } from "../types";
 
 export interface UseDiscoveryDataParams {
@@ -17,8 +18,11 @@ export interface UseDiscoveryDataParams {
 export interface UseDiscoveryDataReturn {
   discoveries: DeviceDiscovery[];
   discoveredDevices: Record<string, unknown>[];
+  resultsLoading: boolean;
   departments: Department[];
   loading: boolean;
+  /** FIX-04a: 列表加载失败的可见错误（渲染 ErrorAlertWithRetry） */
+  error: unknown;
   total: number;
   statistics: DiscoveryStatistics;
   modalState: ModalState;
@@ -42,8 +46,11 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const [discoveries, setDiscoveries] = useState<DeviceDiscovery[]>([]);
   const [discoveredDevices, setDiscoveredDevices] = useState<Record<string, unknown>[]>([]);
+  /** FIX-01: 发现结果请求中状态，供 ResultModal 内嵌表 loading */
+  const [resultsLoading, setResultsLoading] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [total, setTotal] = useState(0);
   const [statistics, setStatistics] = useState<DiscoveryStatistics>({
     total: 0,
@@ -71,8 +78,9 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
         });
         setDiscoveries(result.data?.list || []);
         setTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("加载发现任务失败:", error);
+        setError(error);
       } finally {
         setLoading(false);
       }
@@ -92,8 +100,9 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
         failed: result.data?.failed ?? 0,
         totalDevices: result.data?.totalDevices ?? 0,
       });
+      setError(null);
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      setError(error);
     }
   }, []);
 
@@ -105,11 +114,12 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
       });
       setDepartments(result.data?.list || []);
     } catch (error) {
-      console.error("加载部门列表失败:", error);
+      handleApiError(error, "加载部门列表");
     }
   }, []);
 
   const loadDiscoveryResults = useCallback(async (id: string) => {
+    setResultsLoading(true);
     try {
       const result = await post<{ devices: Record<string, unknown>[] }>(
         `/network/discoveries/${id}/results`,
@@ -118,6 +128,8 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
       setDiscoveredDevices(result.data?.devices || []);
     } catch (_error) {
       message.error("获取结果失败");
+    } finally {
+      setResultsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
@@ -125,10 +137,12 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   return {
     discoveries,
     discoveredDevices,
+    resultsLoading,
     departments,
     loading,
     total,
     statistics,
+    error,
     modalState,
     currentDiscovery,
     setDiscoveries,

@@ -1,8 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Form,
-  Input,
-  Select,
   Button,
   Modal,
   Row,
@@ -12,6 +10,9 @@ import {
   DatePicker,
   Checkbox,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。本文件 Select 全为 children 形态，
+// 一律改写为 options 形态（AppSelect 无条件 optionFilterProp="label"，children 下破坏性）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { FormInstance } from "antd/es/form";
 import { MarkdownEditor as MDEditor } from "@/components/markdown/MarkdownEditor";
 import CronSelector from "@/components/CronSelector";
@@ -20,9 +21,6 @@ import type { Notice } from "@/types/notice";
 import type { APINotificationConfig } from "@/lib/notificationConfigApi";
 import type { Target } from "../hooks/useTargetSelector";
 import type { ExecutionType } from "@/types/notice";
-
-const { Option } = Select;
-const { TextArea } = Input;
 
 // 内部组件：使用 Form.useWatch 订阅 noticeContent 字段，
 // 避免在 Form 未连接时调用 getFieldValue 触发告警
@@ -46,7 +44,7 @@ const NoticeContentField: React.FC<{
       height={400}
     />
   ) : (
-    <TextArea
+    <AppTextArea
       rows={10}
       placeholder="请输入公告内容"
       value={noticeContent ?? ""}
@@ -56,6 +54,35 @@ const NoticeContentField: React.FC<{
     />
   );
 };
+
+// ==================== 形态分类器产物：children 形态 <Option> → options 常量 ====================
+
+/** 公告类型（固定 2 项） */
+const NOTICE_TYPE_OPTIONS = [
+  { value: "1", label: "公告" },
+  { value: "2", label: "警告" },
+];
+
+/** 重要程度（固定 3 项） */
+const NOTICE_LEVEL_OPTIONS = [
+  { value: 0, label: "普通" },
+  { value: 1, label: "重要" },
+  { value: 2, label: "紧急" },
+];
+
+/** 公告状态（固定 2 项） */
+const NOTICE_STATUS_OPTIONS = [
+  { value: 0, label: "正常" },
+  { value: 1, label: "关闭" },
+];
+
+/** 接收范围（固定 4 项） */
+const TARGET_TYPE_OPTIONS = [
+  { value: 0, label: "全部用户" },
+  { value: 1, label: "指定部门" },
+  { value: 2, label: "指定角色" },
+  { value: 3, label: "指定用户" },
+];
 
 export interface NoticeFormProps {
   visible: boolean;
@@ -73,7 +100,7 @@ export interface NoticeFormProps {
   markdownContent: string;
   form: FormInstance;
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
   onExecutionTypeChange: (type: ExecutionType) => void;
   onChannelsChange: (channels: string[]) => void;
   onMarkdownContentChange: (content: string) => void;
@@ -117,19 +144,28 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
   const targetRoles = Form.useWatch("targetRoles", form) || [];
   const targetUsers = Form.useWatch("targetUsers", form) || [];
   const isMarkdown = Form.useWatch("isMarkdown", form) || false;
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await onSubmit();
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Modal
       title={editingNotice ? "编辑通知公告" : "新增通知公告"}
       open={visible}
-      onOk={onSubmit}
       onCancel={onCancel}
       width={900}
       footer={[
-        <Button key="cancel" onClick={onCancel}>
+        <Button key="cancel" onClick={onCancel} disabled={submitting}>
           取消
         </Button>,
-        <Button key="submit" type="primary" onClick={onSubmit}>
+        <Button key="submit" type="primary" onClick={handleSubmit} loading={submitting}>
           {editingNotice ? "更新" : "创建"}
         </Button>,
       ]}
@@ -145,7 +181,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 14 }}
               rules={[{ required: true, message: "请输入公告标题" }]}
             >
-              <Input placeholder="请输入公告标题" />
+              <AppInput placeholder="请输入公告标题" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -156,10 +192,8 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 14 }}
               rules={[{ required: true, message: "请选择公告类型" }]}
             >
-              <Select onSearch={() => {}}>
-                <Option value="1">公告</Option>
-                <Option value="2">警告</Option>
-              </Select>
+              {/* 形态分类器②④：公告类型固定 2 项，业务禁搜 */}
+              <AppSelect allowClear onSearch={() => {}} showSearch={false} options={NOTICE_TYPE_OPTIONS} />
             </Form.Item>
           </Col>
         </Row>
@@ -174,11 +208,8 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 14 }}
               initialValue={0}
             >
-              <Select onSearch={() => {}}>
-                <Option value={0}>普通</Option>
-                <Option value={1}>重要</Option>
-                <Option value={2}>紧急</Option>
-              </Select>
+              {/* 形态分类器②④：重要程度固定 3 项，业务禁搜 */}
+              <AppSelect allowClear onSearch={() => {}} showSearch={false} options={NOTICE_LEVEL_OPTIONS} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -189,10 +220,8 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               wrapperCol={{ span: 14 }}
               initialValue={0}
             >
-              <Select onSearch={() => {}}>
-                <Option value={0}>正常</Option>
-                <Option value={1}>关闭</Option>
-              </Select>
+              {/* 形态分类器②④：公告状态固定 2 项，业务禁搜 */}
+              <AppSelect allowClear onSearch={() => {}} showSearch={false} options={NOTICE_STATUS_OPTIONS} />
             </Form.Item>
           </Col>
         </Row>
@@ -271,10 +300,10 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
 
         {/* 隐藏字段 */}
         <Form.Item name="executionType" hidden>
-          <Input />
+          <AppInput />
         </Form.Item>
         <Form.Item name="recurrenceConfig" hidden>
-          <Input />
+          <AppInput />
         </Form.Item>
 
         {/* 接收范围配置 */}
@@ -284,12 +313,14 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               <Row gutter={8}>
                 <Col span={6}>
                   <Form.Item name="targetType" noStyle initialValue={0}>
-                    <Select onChange={onTargetTypeChange} onSearch={() => {}}>
-                      <Option value={0}>全部用户</Option>
-                      <Option value={1}>指定部门</Option>
-                      <Option value={2}>指定角色</Option>
-                      <Option value={3}>指定用户</Option>
-                    </Select>
+                    {/* 形态分类器②：接收范围固定 4 项 */}
+                    <AppSelect
+                      allowClear
+                      // AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型
+                      onChange={(value) => onTargetTypeChange(value as number)}
+                      onSearch={() => {}}
+                      options={TARGET_TYPE_OPTIONS}
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={18}>
@@ -319,13 +350,13 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         </Row>
 
         <Form.Item name="targetDepts" hidden>
-          <Input />
+          <AppInput />
         </Form.Item>
         <Form.Item name="targetRoles" hidden>
-          <Input />
+          <AppInput />
         </Form.Item>
         <Form.Item name="targetUsers" hidden>
-          <Input />
+          <AppInput />
         </Form.Item>
 
         {/* 发送渠道配置 */}
@@ -360,7 +391,8 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                 labelCol={{ span: 5 }}
                 wrapperCol={{ span: 19 }}
               >
-                <Select
+                {/* 形态分类器③：动态 children → options 改写；label 拼接原样保留 */}
+                <AppSelect
                   placeholder="请选择企微机器人配置"
                   loading={loadingAPIConfigs}
                   allowClear
@@ -368,16 +400,15 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                     form.setFieldValue("apiConfigId", value);
                   }}
                   onSearch={() => {}}
-                >
-                  {apiConfigs
+                  options={apiConfigs
                     .filter((config) => config.id != null)
-                    .map((config) => (
-                      <Option key={config.id} value={config.id}>
-                        {config.configName}
-                        {config.configType === "webhook" && ` (${config.apiMethod})`}
-                      </Option>
-                    ))}
-                </Select>
+                    .map((config) => ({
+                      value: config.id,
+                      label: `${config.configName}${
+                        config.configType === "webhook" ? ` (${config.apiMethod})` : ""
+                      }`,
+                    }))}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -393,10 +424,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                 labelCol={{ span: 5 }}
                 wrapperCol={{ span: 19 }}
               >
-                <Input
-                  placeholder="多个邮箱用逗号分隔，如: user1@example.com, user2@example.com"
-                  allowClear
-                />
+                <AppInput placeholder="多个邮箱用逗号分隔，如: user1@example.com, user2@example.com" />
               </Form.Item>
             </Col>
           </Row>
@@ -412,7 +440,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                 labelCol={{ span: 5 }}
                 wrapperCol={{ span: 19 }}
               >
-                <Input placeholder="多个用户代码用逗号分隔，如: USER001, USER002" allowClear />
+                <AppInput placeholder="多个用户代码用逗号分隔，如: USER001, USER002" />
               </Form.Item>
             </Col>
           </Row>

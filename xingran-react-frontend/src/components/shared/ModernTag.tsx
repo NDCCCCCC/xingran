@@ -66,31 +66,4 @@ export const ModernTag: FC<ModernTagProps> = ({
   );
 };
 
-/**
- * 渲染状态标签的便捷函数
- * @param status 状态值 (0=正常/启用, 1=停用/禁用)
- * @param config 可选配置
- */
-export function renderStatusTag(
-  status: number,
-  config?: {
-    /** 正常状态的文本 */
-    normalText?: string;
-    /** 停用状态的文本 */
-    stopText?: string;
-    /** 是否显示图标 */
-    showIcon?: boolean;
-    /** 是否使用现代化样式 */
-    modern?: boolean;
-  }
-) {
-  const { normalText = "正常", stopText = "停用", showIcon = true, modern = true } = config || {};
-
-  return (
-    <ModernTag status={status === 0 ? "success" : "error"} showIcon={showIcon} modern={modern}>
-      {status === 0 ? normalText : stopText}
-    </ModernTag>
-  );
-}
-
 export default ModernTag;

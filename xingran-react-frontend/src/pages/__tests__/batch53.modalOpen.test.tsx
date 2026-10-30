@@ -13,6 +13,8 @@ vi.mock("@/lib/api", async () => {
 });
 
 import { renderPageWithEndpoints } from "@/test/utils/renderPage";
+import { useMenuStore } from "@/store/menuStore";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import NoticePage from "../system/notice";
 import InfoPointsPage from "../operations/info-points";
 import AdUsersPage from "../ad-domain/users";
@@ -24,10 +26,87 @@ import VirtualMachineList from "../vdi/VirtualMachineList";
 import ApiKeysPage from "../system/apikeys";
 import BackupsPage from "../network/backups";
 
+/**
+ * Phase 86 W2：operations 8 页接入三态门控后，「权限未就绪」
+ * （menuStore 默认 `permissionsLoaded:false`）态下写入口按设计**渲染但 disabled**。
+ * 本测试的判定对象是「点新增 → Modal 打开」这条交互分支，因此这里显式构造
+ * **ready + 授予本波 ops 页写码**（对无码豁免页零影响 —— 它们的入口不做判定）。
+ * ⚠️ 这是按三态语义更新测试前置条件，**未删除任何断言**。
+ *
+ * Phase 86 W3 追加：`network/devices` 页的「手动新增 / 快速创建」在 W3 接入
+ * `networkDevice.add`（走**降级解析** `resolveDeviceActionPerm`：权限集含任一
+ * `network:device:*` 动作级码 → 用动作码；否则退回页面级 `network:device`）。
+ * 该页的 DevicesPage 用例也走本 helper，故这里必须同批授予 networkDevice 写码，
+ * 否则降级解析拿不到动作码 → 按钮不渲染 → helper 找不到可点按钮（与 W2 同一适配口径）。
+ */
+const OPS_WRITE_PERMISSIONS = [
+  PERMISSION_CODES.networkDevice.list,
+  PERMISSION_CODES.networkDevice.add,
+  PERMISSION_CODES.networkDevice.edit,
+  PERMISSION_CODES.networkDevice.delete,
+  PERMISSION_CODES.networkDevice.export,
+  PERMISSION_CODES.opsBuilding.add,
+  PERMISSION_CODES.opsBuilding.edit,
+  PERMISSION_CODES.opsBuilding.delete,
+  PERMISSION_CODES.opsBuilding.import,
+  PERMISSION_CODES.opsBuilding.export,
+  PERMISSION_CODES.opsFloor.add,
+  PERMISSION_CODES.opsFloor.edit,
+  PERMISSION_CODES.opsFloor.delete,
+  PERMISSION_CODES.opsFloor.import,
+  PERMISSION_CODES.opsFloor.export,
+  PERMISSION_CODES.opsWorkstation.add,
+  PERMISSION_CODES.opsWorkstation.edit,
+  PERMISSION_CODES.opsWorkstation.delete,
+  PERMISSION_CODES.opsWorkstation.import,
+  PERMISSION_CODES.opsWorkstation.export,
+  PERMISSION_CODES.opsInfoPoint.add,
+  PERMISSION_CODES.opsInfoPoint.edit,
+  PERMISSION_CODES.opsInfoPoint.delete,
+  PERMISSION_CODES.opsInfoPoint.import,
+  PERMISSION_CODES.opsInfoPoint.export,
+  PERMISSION_CODES.opsServerRoom.add,
+  PERMISSION_CODES.opsServerRoom.edit,
+  PERMISSION_CODES.opsServerRoom.delete,
+  PERMISSION_CODES.opsServerRoom.import,
+  PERMISSION_CODES.opsServerRoom.export,
+  PERMISSION_CODES.opsRoomDevice.add,
+  PERMISSION_CODES.opsRoomDevice.edit,
+  PERMISSION_CODES.opsRoomDevice.delete,
+  PERMISSION_CODES.opsRoomDevice.import,
+  PERMISSION_CODES.opsRoomDevice.export,
+  PERMISSION_CODES.opsDedicatedLine.add,
+  PERMISSION_CODES.opsDedicatedLine.edit,
+  PERMISSION_CODES.opsDedicatedLine.delete,
+  PERMISSION_CODES.opsDedicatedLine.import,
+  PERMISSION_CODES.opsDedicatedLine.export,
+  PERMISSION_CODES.opsAsset.add,
+  PERMISSION_CODES.opsAsset.edit,
+  PERMISSION_CODES.opsAsset.delete,
+  PERMISSION_CODES.opsAsset.import,
+  PERMISSION_CODES.opsAsset.export,
+  PERMISSION_CODES.opsLocationAlias.list,
+  PERMISSION_CODES.opsLocationAlias.add,
+  PERMISSION_CODES.opsLocationAlias.delete,
+  PERMISSION_CODES.opsFloorPlan.edit,
+  PERMISSION_CODES.opsWall.edit,
+  PERMISSION_CODES.opsDoor.edit,
+];
+
+function grantOpsWritePermissions(): void {
+  useMenuStore.setState({
+    permissions: OPS_WRITE_PERMISSIONS,
+    permissionsLoaded: true,
+    permissionsError: null,
+  });
+}
+
 async function openModalAndAssert(
   page: React.ReactElement,
   endpoints: Record<string, unknown> = {}
 ): Promise<void> {
+  // Phase 86 W2：显式 ready 态（否则写入口 disabled，helper 找不到可点按钮）
+  grantOpsWritePermissions();
   const { rendered } = renderPageWithEndpoints(page, { endpoints });
   await vi.waitFor(
     () => {

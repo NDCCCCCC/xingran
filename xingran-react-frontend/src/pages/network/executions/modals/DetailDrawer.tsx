@@ -12,6 +12,8 @@ export interface DetailDrawerProps {
   open: boolean;
   currentExecution: ConfigExecution | null;
   executionDetails: ConfigExecutionDetail[];
+  /** FIX-01: 明细请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onClose: () => void;
   handleViewOutput: (output: string) => void;
 }
@@ -20,6 +22,7 @@ export function DetailDrawer({
   open,
   currentExecution,
   executionDetails,
+  loading = false,
   onClose,
   handleViewOutput,
 }: DetailDrawerProps) {
@@ -63,16 +66,17 @@ export function DetailDrawer({
             />
             <div style={{ marginTop: 8, display: "flex", gap: 24 }}>
               <span>总设备: {currentExecution.totalDevices}</span>
-              <span style={{ color: "var(--theme-success, #2d8949)" }}>
+              <span style={{ color: "var(--theme-success)" }}>
                 成功: {currentExecution.successCount}
               </span>
-              <span style={{ color: "var(--theme-error, #ba3630)" }}>
+              <span style={{ color: "var(--theme-error)" }}>
                 失败: {currentExecution.failureCount}
               </span>
             </div>
           </Card>
 
           <Table
+            loading={loading}
             columns={detailColumns}
             dataSource={executionDetails}
             rowKey="id"

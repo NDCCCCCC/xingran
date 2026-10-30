@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   Table,
   Button,
@@ -6,13 +7,13 @@ import {
   Tag,
   Modal,
   App,
-  Popconfirm,
   Input,
   Card,
   Form,
   InputNumber,
   Switch,
 } from "antd";
+import { AppInput } from "@/components/ui";
 import {
   ReloadOutlined,
   PlusOutlined,
@@ -33,6 +34,7 @@ const VDIServerConfig: React.FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedServer, setSelectedServer] = useState<VDIServer | null>(null);
   const [form] = Form.useForm();
@@ -119,14 +121,12 @@ const VDIServerConfig: React.FC = () => {
   };
 
   // 删除服务器
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = async (id: string) => {
     setLoading(true);
     try {
       await vdiServerApi.delete(id);
-      message.success("删除成功");
       queryClient.invalidateQueries({ queryKey: queryKeys.vdi.servers() });
-    } catch (_error) {
-      message.error("删除失败");
     } finally {
       setLoading(false);
     }
@@ -212,16 +212,19 @@ const VDIServerConfig: React.FC = () => {
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Popconfirm
-            title="确定要删除这个 VDI 服务器吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() =>
+              confirmDelete({
+                target: `该 VDI 服务器（${record.name || record.id}）`,
+                onDelete: () => handleDelete(record.id),
+              })
+            }
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
+            删除
+          </Button>
         </Space>
       ),
     },
@@ -266,9 +269,16 @@ const VDIServerConfig: React.FC = () => {
       <Modal
         title={modalMode === "create" ? "添加 VDI 服务器" : "编辑 VDI 服务器"}
         open={modalVisible}
-        onOk={handleSubmit}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleSubmit();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => setModalVisible(false)}
-        confirmLoading={loading}
         width={600}
       >
         <Form form={form} layout="vertical">
@@ -277,7 +287,7 @@ const VDIServerConfig: React.FC = () => {
             name="name"
             rules={[{ required: true, message: "请输入服务器名称" }]}
           >
-            <Input placeholder="例如：生产环境 VDI" />
+            <AppInput placeholder="例如：生产环境 VDI" />
           </Form.Item>
           <Form.Item
             label="服务端点"
@@ -287,14 +297,14 @@ const VDIServerConfig: React.FC = () => {
               { type: "url", message: "请输入有效的 URL" },
             ]}
           >
-            <Input placeholder="https://vdi.example.com" />
+            <AppInput placeholder="https://vdi.example.com" />
           </Form.Item>
           <Form.Item
             label="用户名"
             name="username"
             rules={[{ required: true, message: "请输入用户名" }]}
           >
-            <Input placeholder="VDI 管理员用户名" />
+            <AppInput placeholder="VDI 管理员用户名" />
           </Form.Item>
           <Form.Item
             label="密码"

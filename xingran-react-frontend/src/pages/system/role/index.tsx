@@ -3,21 +3,22 @@
  * Role Management Page
  */
 
-import { useEffect, useCallback, useRef, useMemo, type FC } from "react";
+import { useEffect, useCallback, useRef, useMemo, useState, type FC } from "react";
 import {
   Table,
   Button,
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   Card,
   Row,
   Col,
   Statistic,
   Tree,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/Input.TextArea → 契约组件。状态/数据范围为固定枚举
+// → children 改写 options 形态；状态类业务下拉显式 showSearch={false}
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -35,14 +36,24 @@ import { useRoleData, useRoleActions } from "./hooks";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
-
-const { Option } = Select;
+// Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
+import { useActionPermission } from "@/components/shared";
 
 // ==================== 主组件 ====================
 
 const RoleManagement: FC = () => {
+  // STOP-04 B1: 提交中标记，用于禁用编辑弹窗取消按钮
+  const [submitting, setSubmitting] = useState(false);
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // Phase 86 W1（RBAC-02）：操作级权限门控（三态 ready/loading/error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  // 工具栏「新增角色」→ system:role:add；批量删除 → system:role:remove（与行删除同键）。
+  const permAdd = permGate.decide(PERMISSION_CODES.systemRole.add);
+  const permRemove = permGate.decide(PERMISSION_CODES.systemRole.remove);
 
   // 服务端排序：field 对应后端 roleAllowedSortFields 白名单 key
   const sorterMetas = useMemo(
@@ -149,14 +160,14 @@ const RoleManagement: FC = () => {
     }
 
     loadingDeptsRef.current.add(roleId);
-    console.log("[loadRoleDepts] 开始加载角色部门权限:", roleId);
+    console.warn("[loadRoleDepts] 开始加载角色部门权限:", roleId);
 
     try {
       const result = (await post(`/system/departments/role-dept-tree-select/${roleId}`)) as {
         data: { checkedKeys: string[] };
       };
       const checkedKeys = result.data.checkedKeys || [];
-      console.log("[loadRoleDepts] 加载完成，权限数量:", checkedKeys.length, "roleId:", roleId);
+      console.warn("[loadRoleDepts] 加载完成，权限数量:", checkedKeys.length, "roleId:", roleId);
       return checkedKeys;
     } catch (error) {
       console.error("[loadRoleDepts] 加载失败:", error);
@@ -246,7 +257,7 @@ const RoleManagement: FC = () => {
             <Statistic
               title="正常角色"
               value={statistics.active}
-              styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<SafetyCertificateOutlined />}
             />
           </Card>
@@ -256,7 +267,7 @@ const RoleManagement: FC = () => {
             <Statistic
               title="停用角色"
               value={statistics.inactive}
-              styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+              styles={{ content: { color: "var(--theme-error)" } }}
               prefix={<DeleteOutlined />}
             />
           </Card>
@@ -276,24 +287,21 @@ const RoleManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="roleName" label="角色名称">
-              <Input placeholder="请输入角色名称" />
+              <AppInput placeholder="请输入角色名称" />
             </Form.Item>
             <Form.Item name="roleKey" label="权限字符">
-              <Input placeholder="请输入权限字符" />
+              <AppInput placeholder="请输入权限字符" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              {/* 形态分类器②④：角色状态枚举（业务禁搜） */}
+              <AppSelect
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
                 onSearch={() => {}}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={[...STATUS_OPTIONS]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -308,14 +316,25 @@ const RoleManagement: FC = () => {
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增角色
-            </Button>
-            {selectedRowKeys.length > 0 && (
+            {/* Phase 86 W1：工具栏写入口按权限码条件渲染（ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + 提示） */}
+            {permAdd.visible && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAdd}
+                disabled={permAdd.disabled}
+                title={permAdd.hint}
+              >
+                新增角色
+              </Button>
+            )}
+            {selectedRowKeys.length > 0 && permRemove.visible && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
                 onClick={() => handleBatchDelete(selectedRowKeys)}
+                disabled={permRemove.disabled}
+                title={permRemove.hint}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>
@@ -344,7 +363,15 @@ const RoleManagement: FC = () => {
       <Modal
         title={editingRole ? "编辑角色" : "新增角色"}
         open={editModalVisible}
-        onOk={() => handleSave(editForm)}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleSave(editForm);
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         afterOpenChange={(open) => handleModalOpenChange(open, editForm)}
         onCancel={() => setEditModalVisible(false)}
         width={800}
@@ -360,7 +387,7 @@ const RoleManagement: FC = () => {
                   label="角色名称"
                   rules={[{ required: true, message: "请输入角色名称" }]}
                 >
-                  <Input />
+                  <AppInput />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -369,7 +396,7 @@ const RoleManagement: FC = () => {
                   label="权限字符"
                   rules={[{ required: true, message: "请输入权限字符" }]}
                 >
-                  <Input />
+                  <AppInput />
                 </Form.Item>
               </Col>
             </Row>
@@ -380,23 +407,22 @@ const RoleManagement: FC = () => {
                   label="显示顺序"
                   rules={[{ required: true, message: "请输入显示顺序" }]}
                 >
-                  <Input type="number" />
+                  <AppInput type="number" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="status" label="状态">
-                  <Select onSearch={() => {}}>
-                    {STATUS_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
-                  </Select>
+                  <AppSelect
+                    allowClear
+                    onSearch={() => {}}
+                    showSearch={false}
+                    options={[...STATUS_OPTIONS]}
+                  />
                 </Form.Item>
               </Col>
             </Row>
             <Form.Item name="remark" label="备注">
-              <Input.TextArea rows={2} />
+              <AppTextArea rows={2} />
             </Form.Item>
           </Card>
 
@@ -420,7 +446,7 @@ const RoleManagement: FC = () => {
                     }}
                     treeData={menuTree}
                     style={{
-                      background: "#f5f5f5",
+                      background: "var(--theme-bg-secondary)",
                       padding: "8px",
                       borderRadius: "4px",
                       maxHeight: "400px",
@@ -435,16 +461,14 @@ const RoleManagement: FC = () => {
             <Col span={12}>
               <Card title="数据权限" size="small">
                 <Form.Item name="dataScope" label="数据范围">
-                  <Select
-                    onChange={(value) => handleDataScopeChange(value, editForm)}
+                  {/* 形态分类器②④：数据范围固定枚举（业务禁搜） */}
+                  <AppSelect
+                    allowClear
+                    onChange={(value) => handleDataScopeChange(value as number, editForm)}
                     onSearch={() => {}}
-                  >
-                    {DATA_SCOPE_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
-                  </Select>
+                    showSearch={false}
+                    options={[...DATA_SCOPE_OPTIONS]}
+                  />
                 </Form.Item>
 
                 {currentDataScope === 2 && (
@@ -463,7 +487,7 @@ const RoleManagement: FC = () => {
                       }}
                       treeData={deptTree}
                       style={{
-                        background: "#f5f5f5",
+                        background: "var(--theme-bg-secondary)",
                         padding: "8px",
                         borderRadius: "4px",
                         maxHeight: "400px",

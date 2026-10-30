@@ -106,7 +106,7 @@ const mockedBlobAxios = blobAxios as unknown as {
 };
 
 const blobRequestInterceptor = () =>
-  mockedBlobAxios.interceptors.request.use.mock.calls[0][0] as (config: any) => Promise<any>;
+  mockedBlobAxios.interceptors.request.use.mock.calls[0][0] as (config: unknown) => Promise<unknown>;
 
 beforeAll(() => {
   // jsdom 不实现 URL.createObjectURL — 打桩以覆盖 triggerBrowserDownload
@@ -584,10 +584,46 @@ describe("workstationDeviceApi(工位设备关联)", () => {
     expect(mockPost).toHaveBeenNthCalledWith(2, "/ops/workstation-device/w1/ad", {});
     await workstationDeviceApi.getAsset("w1");
     expect(mockPost).toHaveBeenNthCalledWith(3, "/ops/workstation-device/w1/asset", {});
-    await workstationDeviceApi.getPhysical("w1");
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/ops/workstation-device/w1/physical", {});
+    // Phase 80 / DIAG-01：getPhysical 内部改走诊断端点，但对外仍返回 devices 数组
+    mockPost.mockResolvedValue({ code: 0, data: { devices: [], total: 0 } });
+    const physical = await workstationDeviceApi.getPhysical("w1");
+    expect(mockPost).toHaveBeenNthCalledWith(4, "/ops/workstation-device/w1/physical-diagnosis", {});
+    expect(physical.data).toEqual([]);
     await workstationDeviceApi.getByWorkstation("w1");
     expect(mockPost).toHaveBeenNthCalledWith(5, "/ops/workstation-device/w1", {});
+  });
+
+  it("getPhysicalWithDiagnosis:返回完整诊断结果（devices/total/emptyReason/warnings/diagnosis）", async () => {
+    mockPost.mockReset();
+    const payload = {
+      devices: [{ id: "d1", deviceName: "PC-1" }],
+      total: 1,
+      emptyReason: "no_user_bound",
+      emptyMessage: "该工位未绑定用户…",
+      warnings: ["工位未绑定用户"],
+      diagnosis: {
+        workstationExists: true,
+        userBound: false,
+        infoPointTotal: 1,
+        infoPointActive: 1,
+        infoPointWithPort: 1,
+        portResolved: 1,
+        deviceResolved: 1,
+        macMatched: 1,
+        assetMatched: 0,
+        adMatched: 0,
+      },
+    };
+    mockPost.mockResolvedValue({ code: 0, data: payload });
+    const result = await workstationDeviceApi.getPhysicalWithDiagnosis("w1");
+    expect(mockPost).toHaveBeenNthCalledWith(
+      1,
+      "/ops/workstation-device/w1/physical-diagnosis",
+      {},
+    );
+    expect(result.data).toEqual(payload);
+    expect(result.data?.emptyReason).toBe("no_user_bound");
+    expect(result.data?.diagnosis.userBound).toBe(false);
   });
 
   it("写入族:addManual/syncAD/syncAsset/setPrimaryAndSave/update/delete/setPrimary", async () => {

@@ -5,7 +5,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import type { FC } from "react";
-import { App, Input, Modal, Tabs } from "antd";
+import { App, Modal, Tabs } from "antd";
+import { AppInput } from "@/components/ui";
 import { SearchOutlined } from "@ant-design/icons";
 import { getIconComponent, iconCategories, iconDescriptionMap } from "@/utils/iconUtils";
 
@@ -102,7 +103,8 @@ const IconSelect: FC<IconSelectProps> = ({
   return (
     <>
       {/* 输入框 */}
-      <Input
+      {/* 只读回显区：不提供清空能力 */}
+      <AppInput allowClear={false}
         value={value ? `${value} (${iconDescriptionMap[value] || value})` : ""}
         readOnly
         disabled={disabled}
@@ -124,13 +126,12 @@ const IconSelect: FC<IconSelectProps> = ({
         okButtonProps={{ disabled: !selectedIcon }}
       >
         {/* 搜索框 */}
-        <Input
+        <AppInput
           placeholder="搜索图标名称或描述..."
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           style={{ marginBottom: 16 }}
-          allowClear
         />
 
         {/* 搜索结果统计 */}

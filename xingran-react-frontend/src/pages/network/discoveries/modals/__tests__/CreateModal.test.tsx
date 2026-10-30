@@ -34,7 +34,7 @@ describe("network/discoveries — CreateModal", () => {
 
   it("renders form open with departments", async () => {
     await renderPageWithEndpoints(
-      <DiscoveryCreateModal open departments={depts as any} onOk={vi.fn()} onCancel={vi.fn()} />,
+      <DiscoveryCreateModal open departments={depts as unknown} onOk={vi.fn()} onCancel={vi.fn()} />,
       {}
     );
     expect(
@@ -65,7 +65,7 @@ describe("network/templates — EditModal", () => {
             name: "标准模板",
             vendor: "Cisco",
             description: "默认配置",
-          } as any
+          } as unknown
         }
         onOk={vi.fn()}
         onCancel={vi.fn()}

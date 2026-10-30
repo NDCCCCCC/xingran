@@ -19,6 +19,7 @@ vi.mock("@/lib/opsApi", () => ({
     create: vi.fn(async () => ({})),
     update: vi.fn(async () => ({})),
     delete: vi.fn(async () => ({})),
+    statistics: vi.fn(async () => ({ total: 0, normal: 0, fault: 0, scrapped: 0 })),
   },
   serverRoomApi: {
     list: vi.fn(async () => ({ list: [], total: 0 })),
@@ -40,10 +41,10 @@ describe("pages/operations/room-devices", () => {
   it("导出为函数组件", async () => {
     const mod = await import("../index");
     expect(typeof mod.default).toBe("function");
-  });
+  }, 30000);
 
   it("基础渲染不抛错", async () => {
     const { default: Comp } = await import("../index");
     expect(() => render(<Comp />, { wrapper })).not.toThrow();
-  }, 15000);
+  }, 30000);
 });

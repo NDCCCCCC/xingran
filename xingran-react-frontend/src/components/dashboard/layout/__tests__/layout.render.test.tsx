@@ -14,7 +14,7 @@ import { GridItem } from "../GridItem";
 import { LayoutToolbar } from "../LayoutToolbar";
 import { TemplateSelector } from "../TemplateSelector";
 
-const widget: any = {
+const widget: unknown = {
   id: "w1",
   type: "stat-card",
   title: "测试 Widget",

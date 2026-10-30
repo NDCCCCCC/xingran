@@ -6,7 +6,7 @@ import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import { TaskEditModal } from "../EditModal";
 import { Form } from "antd";
 import type { Task } from "@/types/rpa";
-import { useState } from "react";
+import {  } from "react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -19,7 +19,7 @@ function Harness({
   onCancel = vi.fn(),
 }: {
   task: Task | null;
-  onOk?: (v: any) => Promise<void>;
+  onOk?: (v: unknown) => Promise<void>;
   onCancel?: () => void;
 }) {
   const [form] = Form.useForm();
@@ -59,7 +59,7 @@ describe("TaskEditModal 渲染", () => {
       actions: [{ id: "a1", type: "navigate", value: "https://example.com" }],
       enabled: true,
       timeout: 300,
-    } as any;
+    } as unknown;
     const { baseElement } = renderWithProviders(<Harness task={task} />);
     await new Promise((r) => setTimeout(r, 200));
     expect(baseElement).toBeDefined();

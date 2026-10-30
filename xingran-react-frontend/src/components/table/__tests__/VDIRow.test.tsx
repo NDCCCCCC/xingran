@@ -18,7 +18,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-const baseVm: any = {
+const baseVm: unknown = {
   id: "vm1",
   name: "VM1",
   power_state: "in_use",
@@ -169,7 +169,7 @@ describe("table/VDIRow", () => {
     expect(onBind).toHaveBeenCalledWith(baseVm);
   });
 
-  it("delete 按钮 → Popconfirm", () => {
+  it("delete 按钮 → confirmDelete Modal 强确认（68.1-T3）", async () => {
     const onDelete = vi.fn();
     render(
       <VDIRow
@@ -184,10 +184,15 @@ describe("table/VDIRow", () => {
       { wrapper }
     );
     const btn = screen.getByRole("button");
+    // FIX-05：icon-only 触发器须带 aria-label（动作名 + 对象名）
+    expect(btn).toHaveAttribute("aria-label", `删除 虚拟机 ${baseVm.name}`);
     fireEvent.click(btn);
-    // Popconfirm 弹出
+    // 68.1-T3：Popconfirm 气泡升级为 Modal 强确认，含对象名 + VDI API 警示
+    expect((await screen.findAllByText("确认删除")).length).toBeGreaterThan(0);
+    // content 为 [正文, extra] 数组，同级文本节点被归一化拼接，按子串断言
     expect(
-      screen.getByText("确定要删除这个虚拟机吗？此操作将调用 VDI API 删除虚拟机。")
+      await screen.findByText(`将删除虚拟机 ${baseVm.name}`, { exact: false })
     ).toBeInTheDocument();
+    expect(screen.getByText(/此操作将调用 VDI API 删除虚拟机/)).toBeInTheDocument();
   });
 });

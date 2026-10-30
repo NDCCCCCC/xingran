@@ -45,8 +45,8 @@ export const StatisticsDrawer: React.FC<StatisticsDrawerProps> = ({
                 content: {
                   color:
                     statistics.readRate >= 50
-                      ? "var(--theme-success, #3f8600)"
-                      : "var(--theme-error, #cf1322)",
+                      ? "var(--theme-success)"
+                      : "var(--theme-error)",
                 },
               }}
             />

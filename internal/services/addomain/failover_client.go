@@ -59,6 +59,11 @@ func (f *FailoverClient) ExecuteWithFailover(
 	}
 
 	var lastErr error
+	// dialedAny 记录"本轮是否至少有一个账号拨号成功"。
+	// ⚠ H-04：拨号全失败与"拨号成功但业务操作全失败"是两类故障，必须能区分 ——
+	//   前者是池侧/基础设施故障（域控宕机、网络中断、DNS 故障、服务账号全被锁），
+	//   可恢复；后者是业务失败，code 32 之类必须原样上抛给调用方的分流逻辑。
+	var dialedAny bool
 	for i := 0; i < maxAttempts; i++ {
 		acct := &available[i]
 
@@ -71,6 +76,7 @@ func (f *FailoverClient) ExecuteWithFailover(
 				acct.Username, acct.ID, err)
 			continue
 		}
+		dialedAny = true
 
 		err := operation(client)
 		client.Close()
@@ -88,6 +94,22 @@ func (f *FailoverClient) ExecuteWithFailover(
 		lastErr = err
 		applogger.Warnf("[Failover] 账号 %s 操作失败，尝试下一个 [ID=%s, err=%v]",
 			acct.Username, acct.ID, err)
+	}
+
+	if !dialedAny {
+		// ⚠ H-04：**一个账号都没拨通**。此前这条路径返回 "账号池 N 个账号均失败: %w"，
+		//   包的是最后一次拨号错误、不带任何池侧哨兵，于是排水器把它当成业务失败：
+		//   poolExhausted=false → 烧 attempts → 第 5 轮整批转 dead 终态。一次 ~15min
+		//   的 AD 宕机会永久杀死单轮最多 100 行，且 dead 行不会被任何后续编辑复活。
+		//   显式包上 ErrAllAccountsDialFailed → 排水器识别为池侧故障 → 纯退避、不判死。
+		//   ⚠ 业务操作全失败（dialedAny=true）**不得**走这条分支：code 32 等语义必须
+		//   原样上抛到 handlePushError 的不可恢复分支。
+		// ⚠ 区分两类故障靠的是**哨兵**而非文案：文案保留既有的「N 个账号均失败」
+		//   形状（Phase 78 排障 grep 与既有断言依赖它），故障阶段用括号补充说明。
+		if lastErr != nil {
+			return fmt.Errorf("账号池 %d 个账号均失败（均拨号失败）: %w: %w", maxAttempts, ErrAllAccountsDialFailed, lastErr)
+		}
+		return fmt.Errorf("账号池 %d 个账号均失败（均拨号失败）: %w", maxAttempts, ErrAllAccountsDialFailed)
 	}
 	return fmt.Errorf("账号池 %d 个账号均失败: %w", maxAttempts, lastErr)
 }

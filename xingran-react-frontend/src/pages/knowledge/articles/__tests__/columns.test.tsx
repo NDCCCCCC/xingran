@@ -12,9 +12,9 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/components/shared/ActionButtons", () => ({
-  default: ({ actions }: any) => (
+  default: ({ actions }: unknown) => (
     <div data-testid="action-buttons">
-      {actions.map((a: any) => (
+      {actions.map((a: unknown) => (
         <button key={a.key} data-testid={`action-${a.key}`} onClick={a.onClick}>
           {a.label}
         </button>
@@ -25,6 +25,9 @@ vi.mock("@/components/shared/ActionButtons", () => ({
 
 vi.mock("@/utils/datetime", () => ({
   formatDateTime: vi.fn(() => "2026-08-30 10:00"),
+  FORMAT_DATETIME_MINUTE: "YYYY-MM-DD HH:mm",
+  FORMAT_DATE_SHORT: "MM-DD",
+  FORMAT_TIME_MINUTE: "HH:mm",
 }));
 
 import { getArticleColumns } from "../columns";
@@ -52,7 +55,7 @@ describe("getArticleColumns", () => {
 
   it("包含基本列", () => {
     const cols = getArticleColumns(params);
-    const titles = cols.map((c) => (c as any).title);
+    const titles = cols.map((c) => (c as unknown).title);
     expect(titles).toContain("序号");
     expect(titles).toContain("标题");
     expect(titles).toContain("分类");
@@ -69,13 +72,13 @@ describe("getArticleColumns", () => {
       ...params,
       getColumnSortOrder: (field) => (field === "title" ? "ascend" : null),
     });
-    const titleCol = cols.find((c: any) => c.key === "title");
-    expect((titleCol as any).sortOrder).toBe("ascend");
+    const titleCol = cols.find((c: unknown) => c.key === "title");
+    expect((titleCol as unknown).sortOrder).toBe("ascend");
   });
 
   it("草稿状态 → 显示 发布按钮", () => {
     const cols = getArticleColumns(params);
-    const actionCol = cols.find((c: any) => c.key === "action") as any;
+    const actionCol = cols.find((c: unknown) => c.key === "action") as unknown;
     const record = {
       id: "a1",
       title: "T",
@@ -88,7 +91,7 @@ describe("getArticleColumns", () => {
 
   it("已发布状态 → 无 发布按钮", () => {
     const cols = getArticleColumns(params);
-    const actionCol = cols.find((c: any) => c.key === "action") as any;
+    const actionCol = cols.find((c: unknown) => c.key === "action") as unknown;
     const record = {
       id: "a1",
       title: "T",
@@ -101,14 +104,14 @@ describe("getArticleColumns", () => {
 
   it("序号列 render 计算 (current-1)*pageSize+index+1", () => {
     const cols = getArticleColumns({ ...params, current: 2, pageSize: 10 });
-    const indexCol = cols.find((c: any) => c.key === "index") as any;
+    const indexCol = cols.find((c: unknown) => c.key === "index") as unknown;
     expect(indexCol.render(undefined, undefined, 0)).toBe(11);
     expect(indexCol.render(undefined, undefined, 5)).toBe(16);
   });
 
   it("标签 render: 0 tags → -", () => {
     const cols = getArticleColumns(params);
-    const tagsCol = cols.find((c: any) => c.key === "tags") as any;
+    const tagsCol = cols.find((c: unknown) => c.key === "tags") as unknown;
     const record = { id: "a1", title: "T", tags: [] };
     const { container } = render(<>{tagsCol.render({}, record)}</>);
     expect(container.textContent).toBe("-");
@@ -116,7 +119,7 @@ describe("getArticleColumns", () => {
 
   it("标签 render: 多 tags → 显示 tag", () => {
     const cols = getArticleColumns(params);
-    const tagsCol = cols.find((c: any) => c.key === "tags") as any;
+    const tagsCol = cols.find((c: unknown) => c.key === "tags") as unknown;
     const record = {
       id: "a1",
       title: "T",
@@ -132,7 +135,7 @@ describe("getArticleColumns", () => {
 
   it("状态 render: 草稿 → Tag", () => {
     const cols = getArticleColumns(params);
-    const statusCol = cols.find((c: any) => c.key === "status") as any;
+    const statusCol = cols.find((c: unknown) => c.key === "status") as unknown;
     const { container } = render(<>{statusCol.render(KnowledgeArticleStatus.Draft)}</>);
     expect(container.querySelector(".ant-tag")).toBeTruthy();
   });
@@ -151,7 +154,7 @@ describe("getArticleColumns", () => {
         createdAt: "2026-01-01",
       },
     ];
-    const { container, getByTestId } = render(
+    const { container, getByTestId: _getByTestId } = render(
       <Table dataSource={dataSource} columns={cols} rowKey="id" />,
       { wrapper }
     );

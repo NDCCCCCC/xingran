@@ -46,7 +46,7 @@ describe("utils/sm2", () => {
   describe("fetchPublicKey", () => {
     it("缓存命中 → 不发请求", async () => {
       const api = createApiMock("/system/auth/public-key");
-      api.endpoint.mockResolvedValueOnce({ code: 0, data: { publicKey: "abc" } } as any);
+      api.endpoint.mockResolvedValueOnce({ code: 0, data: { publicKey: "abc" } } as unknown);
       await fetchPublicKey();
       api.endpoint.mockClear();
       const r2 = await fetchPublicKey();
@@ -56,7 +56,7 @@ describe("utils/sm2", () => {
 
     it("forceRefresh → 重新请求", async () => {
       const api = createApiMock("/system/auth/public-key");
-      api.endpoint.mockResolvedValue({ code: 0, data: { publicKey: "new" } } as any);
+      api.endpoint.mockResolvedValue({ code: 0, data: { publicKey: "new" } } as unknown);
       const r = await fetchPublicKey(true);
       expect(r).toBe("new");
       expect(api.endpoint).toHaveBeenCalled();
@@ -64,13 +64,13 @@ describe("utils/sm2", () => {
 
     it("code != 0 → 抛错", async () => {
       const api = createApiMock("/system/auth/public-key");
-      api.endpoint.mockResolvedValueOnce({ code: 1, message: "fail" } as any);
+      api.endpoint.mockResolvedValueOnce({ code: 1, message: "fail" } as unknown);
       await expect(fetchPublicKey(true)).rejects.toThrow(/获取公钥失败/);
     });
 
     it("response.data 缺失 → 抛错", async () => {
       const api = createApiMock("/system/auth/public-key");
-      api.endpoint.mockResolvedValueOnce({ code: 0, data: null } as any);
+      api.endpoint.mockResolvedValueOnce({ code: 0, data: null } as unknown);
       await expect(fetchPublicKey(true)).rejects.toThrow(/获取公钥失败/);
     });
   });
@@ -103,7 +103,7 @@ describe("utils/sm2", () => {
   describe("clearPublicKeyCache", () => {
     it("清除后下次重新请求", async () => {
       const api = createApiMock("/system/auth/public-key");
-      api.endpoint.mockResolvedValue({ code: 0, data: { publicKey: "x" } } as any);
+      api.endpoint.mockResolvedValue({ code: 0, data: { publicKey: "x" } } as unknown);
       await fetchPublicKey();
       clearPublicKeyCache();
       api.endpoint.mockClear();
@@ -115,7 +115,7 @@ describe("utils/sm2", () => {
   describe("getEncryptedLoginRequest", () => {
     it("成功 → encryptedPassword=true", async () => {
       const api = createApiMock("/system/auth/public-key");
-      api.endpoint.mockResolvedValueOnce({ code: 0, data: { publicKey: "00pub" } } as any);
+      api.endpoint.mockResolvedValueOnce({ code: 0, data: { publicKey: "00pub" } } as unknown);
       const r = await getEncryptedLoginRequest("admin", "pass");
       expect(r).toEqual({
         username: "admin",

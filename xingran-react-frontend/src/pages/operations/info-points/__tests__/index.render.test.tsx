@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import InfoPointPage from "../index";
-import { infoPointApi, workstationApi, buildingApi, floorApi } from "@/lib/opsApi";
+import { infoPointApi } from "@/lib/opsApi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/lib/api", async () => {
@@ -41,10 +41,10 @@ function renderInfo() {
 
 describe("InfoPointPage 渲染", () => {
   it("空数据 → 渲染不抛错", async () => {
-    vi.mocked(infoPointApi.list).mockResolvedValueOnce({ data: { list: [], total: 0 } } as any);
+    vi.mocked(infoPointApi.list).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
     vi.mocked(infoPointApi.statistics).mockResolvedValueOnce({
       data: { total: 0, active: 0 },
-    } as any);
+    } as unknown);
     const { baseElement } = renderInfo();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();
@@ -65,10 +65,10 @@ describe("InfoPointPage 渲染", () => {
         ],
         total: 1,
       },
-    } as any);
+    } as unknown);
     vi.mocked(infoPointApi.statistics).mockResolvedValueOnce({
       data: { total: 1, active: 1 },
-    } as any);
+    } as unknown);
     const { baseElement } = renderInfo();
     await new Promise((r) => setTimeout(r, 400));
     expect(baseElement).toBeDefined();

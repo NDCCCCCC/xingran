@@ -287,6 +287,13 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 	}
 
 	// Step 8: 批量插入新的MAC地址记录
+	// Phase 72 #3 (DBG-03): 写路径最后防线 — Create 前显式归一化(大写冒号) + canonical
+	// 校验,不合格记录丢弃并计数(Warn 可观测),保证 sys_device_mac_address 无论上游喂进
+	// 什么格式(点分/连字符/无分隔/垃圾)入库一律 canonical。禁用 DB TRIGGER 路线(v1.19 决策)。
+	macRecords, rejectedMACRecords := SanitizeMACRecords(device.DeviceName, macRecords)
+	if rejectedMACRecords > 0 {
+		result.FailedCount += rejectedMACRecords
+	}
 	if len(macRecords) > 0 {
 		if err := s.db.WithContext(ctx).
 			Create(&macRecords).Error; err != nil {
@@ -362,6 +369,9 @@ func (s *MACCollectionService) getMACCommand(vendor models.DeviceVendor) string 
 // getMACCommands 根据厂商返回所有需要执行的 MAC 采集命令（含格式提示）
 // Ruijie/Maipu 返回双命令:show mac-address-table + show port-security address,
 // 后者输出与 mac-address-table 字段顺序不同,需要 MACCommandTypePortSecurity 解析路径。
+// Cisco(Phase 72 #2 / DBG-02)同样双命令:Cisco IOS/NX-OS 用 "show mac address-table"
+// (无连字符,与锐捷的 show mac-address-table 不同),port-security 表里存放
+// sticky/dynamic secure MAC(验收样本 b022.7a2e.4a4f 只在 port-security 表可见)。
 // 其他厂商保持单命令。
 func (s *MACCollectionService) getMACCommands(vendor models.DeviceVendor) []MACCommand {
 	switch vendor {
@@ -372,14 +382,35 @@ func (s *MACCollectionService) getMACCommands(vendor models.DeviceVendor) []MACC
 			{Cmd: "show mac-address-table", Type: MACCommandTypeMacTable},
 			{Cmd: "show port-security address", Type: MACCommandTypePortSecurity},
 		}
+	case models.VendorCisco:
+		return []MACCommand{
+			{Cmd: "show mac address-table", Type: MACCommandTypeMacTable},
+			{Cmd: "show port-security address", Type: MACCommandTypePortSecurity},
+		}
 	}
 	return []MACCommand{{Cmd: "show mac-address-table", Type: MACCommandTypeMacTable}}
+}
+
+// isKnownMACVendor 判定 vendor 是否已有 parseMACLine 解析分支。
+// Phase 72 #3 (DBG-03): 未知厂商在 parseMACAddressTable 入口显式报错,
+// 把「静默丢弃」改成可观测失败——不允许任何 vendor 的行无声消失。
+func isKnownMACVendor(vendor models.DeviceVendor) bool {
+	switch vendor {
+	case models.VendorHuawei, models.VendorH3C, models.VendorRuijie, models.VendorMaipu, models.VendorCisco:
+		return true
+	}
+	return false
 }
 
 // parseMACAddressTable 解析MAC地址表
 // cmdType 指定输出格式:Ruijie 的 show port-security address 与 show mac-address-table
 // 字段顺序不同,需要独立解析路径。
+// Phase 72 #3 (DBG-03): 未知厂商显式返回 error(可观测失败),不再静默产出空 entries。
 func (s *MACCollectionService) parseMACAddressTable(output string, vendor models.DeviceVendor, cmdType MACCommandType) ([]MACAddressEntry, error) {
+	if !isKnownMACVendor(vendor) {
+		return nil, fmt.Errorf("未知厂商 %q 无 MAC 解析分支,拒绝静默丢弃 — 请扩展 parseMACLine vendor switch", vendor)
+	}
+
 	var entries []MACAddressEntry
 	lines := strings.Split(output, "\n")
 
@@ -494,6 +525,25 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 				entry.InterfaceName = portcollection.NormalizeInterfaceName(fields[3])
 			}
 		}
+
+	case models.VendorCisco:
+		// Phase 72 #2 (DBG-02): Cisco IOS/NX-OS 分支。
+		// 两种输出共用同一套 token 扫描逻辑(VLAN 列在 MAC 前一列,接口在 MAC 之后),
+		// 因为 show mac address-table 与 show port-security address 在 MAC 之后的
+		// 字段集合差异只是"多出 LearnAge/Action 两列",而这两列都不是接口名。
+		//
+		// show mac address-table 典型行:
+		//   308    b022.7a2e.4a4f    DYNAMIC     Gi2/25
+		// show port-security address 典型行(带 Index 列,实测样本):
+		//   56    308   b022.7a2e.4a4f  GigabitEthernet 2/25   Dynamic   --   active
+		// 注意 Cisco 的 MAC 是点分 xxxx.xxxx.xxxx,NormalizeMACAddress 已支持。
+		return s.parseCiscoLine(fields)
+
+	default:
+		// Phase 72 #3 (DBG-03): default 分支显式拒绝 — 未知厂商的行不允许静默丢弃。
+		// parseMACAddressTable 已在入口对未知厂商整体报错,此处是行级兜底(双保险);
+		// 新增 vendor 时必须先扩展本 switch 再开放采集。
+		return MACAddressEntry{}, false
 	}
 
 	// 2026-07-01: 校验 MAC 是标准大写冒号格式,过滤设备 display mac-address 输出里的
@@ -503,6 +553,124 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 		return entry, true
 	}
 	return MACAddressEntry{}, false
+}
+
+// parseCiscoLine 解析 Cisco IOS/NX-OS 的 MAC 行（Phase 72 #2 / DBG-02）。
+//
+// 支持两种真实输出形态：
+//
+//	show mac address-table:        VLAN  MAC  TYPE  PORTS
+//	  308   b022.7a2e.4a4f   DYNAMIC   Gi2/25
+//
+//	show port-security address:    Idx  VLAN  MAC  INTERFACE  TYPE  LEARNAGE  ACTION
+//	  56   308   b022.7a2e.4a4f  GigabitEthernet 2/25  Dynamic  --  active
+//
+// 两者 MAC 之后的列顺序不同（前者 TYPE 在前、后者 INTERFACE 在前），故不固定下标，
+// 而是：① 扫描出第一个能归一化为 canonical 的 token 作为 MAC 列（点分
+// `xxxx.xxxx.xxxx` 由 NormalizeMACAddress 归一为 `B0:22:7A:2E:4A:4F`）；
+// ② MAC 前一列为数字则视为 VLAN（port-security 的 Index 在更前一列，不会被误取）；
+// ③ MAC 之后先找 MAC 类型关键字：若紧邻即为类型，则接口在其后（mac-address-table）；
+// 否则接口在类型之前（port-security），类型之后的 LearnAge/Action 一律丢弃。
+func (s *MACCollectionService) parseCiscoLine(fields []string) (MACAddressEntry, bool) {
+	if len(fields) < 2 {
+		return MACAddressEntry{}, false
+	}
+
+	// ① 定位 MAC 列：NormalizeMACAddress 只对 12 位 hex（任意常见分隔符）返回非空，
+	// 因而 Index/VLAN/接口名/`--` 都会被自然排除。
+	macIdx := -1
+	normalizedMAC := ""
+	for i, f := range fields {
+		if nm := NormalizeMACAddress(f); nm != "" {
+			macIdx = i
+			normalizedMAC = nm
+			break
+		}
+	}
+	if macIdx < 0 {
+		return MACAddressEntry{}, false
+	}
+
+	entry := MACAddressEntry{MACAddress: normalizedMAC}
+
+	// ② VLAN：MAC 前一列（Cisco 两种表都以 VLAN 紧邻 MAC 左侧）
+	if macIdx >= 1 {
+		if vlan, err := strconv.Atoi(fields[macIdx-1]); err == nil {
+			entry.VLANID = vlan
+		}
+	}
+
+	// ③ MAC 类型 + 接口
+	rest := fields[macIdx+1:]
+	typeIdx := -1
+	for i, f := range rest {
+		if isCiscoMACTypeToken(strings.ToLower(f)) {
+			typeIdx = i
+			break
+		}
+	}
+
+	var interfaceParts []string
+	if typeIdx == 0 {
+		// TYPE 紧邻 MAC → 接口在类型之后（两种真实输出都属此类:
+		//   `308 b022... DYNAMIC Gi2/25` 与
+		//   `56 308 b022... Dynamic GigabitEthernet 2/25 -- active`）
+		// 尾部 LearnAge/Action 噪声(-- / active)必须剔除,否则接口名变 GE2/25--active。
+		entry.MACType = rest[typeIdx]
+		for _, f := range rest[typeIdx+1:] {
+			if isCiscoLearnAgeOrAction(f) {
+				continue
+			}
+			interfaceParts = append(interfaceParts, f)
+		}
+	} else if typeIdx > 0 {
+		// 接口在类型之前（少数 NX-OS/port-security 变体）
+		entry.MACType = rest[typeIdx]
+		interfaceParts = rest[:typeIdx]
+	} else {
+		// 无类型列：剔除尾部 LearnAge/Action 噪声后整体当作接口名
+		for _, f := range rest {
+			if isCiscoLearnAgeOrAction(f) {
+				continue
+			}
+			interfaceParts = append(interfaceParts, f)
+		}
+	}
+
+	if len(interfaceParts) > 0 {
+		entry.InterfaceName = portcollection.NormalizeInterfaceName(
+			s.cleanTimestampFromInterface(strings.Join(interfaceParts, " ")))
+	}
+	if entry.InterfaceName == "" {
+		return MACAddressEntry{}, false
+	}
+
+	// canonical 守卫（与 parseMACLine / parseRuijiePortSecurityLine 丢弃语义对齐）
+	if !isCanonicalMAC(entry.MACAddress) {
+		return MACAddressEntry{}, false
+	}
+
+	return entry, true
+}
+
+// isCiscoMACTypeToken 判定 token 是否为 Cisco MAC 类型列取值（小写）。
+func isCiscoMACTypeToken(lower string) bool {
+	switch lower {
+	case "dynamic", "static", "sticky", "secure", "secure-dynamic", "securedynamic", "secure-dynamic-static":
+		return true
+	}
+	return false
+}
+
+// isCiscoLearnAgeOrAction 判定 token 是否为 port-security 表的 LearnAge/Action 列
+// （`--` 或 active/inactive 等），用于无类型列时的尾部噪声剔除。
+func isCiscoLearnAgeOrAction(token string) bool {
+	lower := strings.ToLower(token)
+	switch lower {
+	case "--", "-", "active", "inactive", "n/a", "":
+		return true
+	}
+	return false
 }
 
 // parseRuijiePortSecurityLine 解析锐捷 show port-security address 输出

@@ -1,20 +1,8 @@
 import type { FC } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Alert,
-  App,
-} from "antd";
+// Input 仍需保留：Input.Password 为成员表达式形态，不在 Phase 65 selector 命中面（有意不拦）
+import { Table, Button, Space, Modal, Form, Input, Tag, Card, Row, Col, Statistic, Alert, App } from "antd";
+// Phase 71 (W4)：裸 Input/Select/TextArea → 契约组件（Select 全部 children 形态改写为 options）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -31,18 +19,28 @@ import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { withErrorHandling } from "@/utils/errorHandler";
+import { handleApiError, withErrorHandling } from "@/utils/errorHandler";
 import { useState, useEffect, useMemo } from "react";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, confirmDelete, useActionPermission } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
-
-const { Option } = Select;
-const { TextArea } = Input;
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const CredentialManagement: FC = () => {
   const { message } = App.useApp();
+
+  // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permAdd = permGate.decide(PERMISSION_CODES.networkCredential.add);
+  // 行操作（编辑 / 设为默认）与删除走 ActionButtons 的 `permission:` 传参，
+  // 由组件内建三态门控承担判定，页面层不重复 decide。
+  const permDelete = permGate.decide(PERMISSION_CODES.networkCredential.delete);
+  // 导出类写入口（数据外带面）：真实触发按钮在 `NetworkExport.tsx:120` 组件内部，
+  // 页面上没有独立导出按钮 → 门控点落在 `<NetworkExport>` 元素本身。
+  const permExport = permGate.decide(PERMISSION_CODES.networkCredential.export);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showEnablePassword, setShowEnablePassword] = useState(false);
   const [batchModalVisible, setBatchModalVisible] = useState(false);
@@ -131,7 +129,7 @@ const CredentialManagement: FC = () => {
         telnet: result.data?.telnet ?? 0,
       });
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      handleApiError(error, "加载统计数据");
     }
   };
 
@@ -185,24 +183,23 @@ const CredentialManagement: FC = () => {
   };
 
   // 批量删除凭证
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       message.warning("请选择要删除的数据");
       return;
     }
-    await withErrorHandling(
-      async () => {
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper；
+    // 原 withErrorHandling 包装由 helper 内建成功/失败提示替代——记 SUMMARY 偏差）
+    confirmDelete({
+      title: "确认批量删除",
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
         await post("/network/credentials/batch-delete", { ids: selectedRowKeys });
-        return "批量删除成功";
+        setSelectedRowKeys([]);
+        loadCredentials();
+        loadStatistics();
       },
-      {
-        onSuccess: () => {
-          setSelectedRowKeys([]);
-          loadCredentials();
-          loadStatistics();
-        },
-      }
-    );
+    });
   };
 
   const handleBatchExport = async (entityTypes: string[]) => {
@@ -211,8 +208,8 @@ const CredentialManagement: FC = () => {
       const filename = await batchExport(entityTypes, {}); // 可以根据需要添加筛选条件
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
-    } catch (error: any) {
-      message.error(`批量导出失败：${error.message}`);
+    } catch (error: unknown) {
+      message.error(`批量导出失败：${(error as Error).message}`);
     } finally {
       setBatchExporting(false);
     }
@@ -340,12 +337,17 @@ const CredentialManagement: FC = () => {
             label: "设为默认",
             onClick: () => handleSetDefault(record.id),
             hidden: record.isDefault,
+            // Phase 86 W3：非标准动作归码 —— 「设为默认」是**状态写动作**（落库改默认标记），
+            // 但 networkCredential 码组无独立 `setDefault` 键 → 就近归 `edit`
+            // （本 phase 零新增码，不自造 `network:credential:set-default`）。
+            permission: PERMISSION_CODES.networkCredential.edit,
           },
           {
             key: "edit",
             label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
+            permission: PERMISSION_CODES.networkCredential.edit,
           },
           {
             key: "delete",
@@ -353,14 +355,12 @@ const CredentialManagement: FC = () => {
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `设备凭据 ${record.credentialName}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
+            permission: PERMISSION_CODES.networkCredential.delete,
           },
         ];
         return <ActionButtons actions={actions} />;
@@ -385,7 +385,7 @@ const CredentialManagement: FC = () => {
             <Statistic
               title="SSH凭证"
               value={statistics.ssh}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -395,7 +395,7 @@ const CredentialManagement: FC = () => {
             <Statistic
               title="Telnet凭证"
               value={statistics.telnet}
-              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -415,66 +415,78 @@ const CredentialManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="searchCredentialName" label="凭证名称">
-              <Input
-                placeholder="请输入凭证名称"
-                allowClear
-                className="user-form-input"
-                style={{ width: 150 }}
-              />
+              <AppInput placeholder="请输入凭证名称" className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="searchProtocolType" label="协议类型">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；协议类型固定 2 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择协议类型"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                {protocolTypeOptions.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+                showSearch={false}
+                options={protocolTypeOptions}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
                   查询
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
                   重置
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
                   刷新
                 </Button>
               </Space>
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增
-            </Button>
-            {selectedRowKeys.length > 0 && (
+            {/* Phase 86 W3：新增入口 —— ready 无码不渲染；未就绪渲染但 disabled + 提示 */}
+            {permAdd.visible && (
               <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAdd}
+                aria-label="新增"
+                title={permAdd.hint ?? "新增"}
+                disabled={permAdd.disabled}
+              >
+                新增
+              </Button>
+            )}
+            {/* Phase 86 W3：批量删除 —— 条件渲染（networkCredential.delete） */}
+            {permDelete.visible && selectedRowKeys.length > 0 && (
+              <Button
+                aria-label="批量删除"
+                title={permDelete.hint ?? "批量删除"}
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
                 onClick={handleBatchDelete}
+                disabled={permDelete.disabled}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}
-            <NetworkExport
-              entityType="credentials"
-              entityName="授权凭证"
-              filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
-                  ([, v]) => v !== undefined && v !== null && v !== ""
-                )
-              )}
-              current={paginationProps?.current ?? 1}
-              pageSize={paginationProps?.pageSize ?? 10}
-            />
+            {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                ready 无 networkCredential.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+            {permExport.visible && (
+              <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                <NetworkExport
+                  entityType="credentials"
+                  entityName="授权凭证"
+                  filters={Object.fromEntries(
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                      ([, v]) => v !== undefined && v !== null && v !== ""
+                    )
+                  )}
+                  current={paginationProps?.current ?? 1}
+                  pageSize={paginationProps?.pageSize ?? 10}
+                />
+              </span>
+            )}
           </Space>
           {/* 批量导出 Modal */}
 
@@ -510,6 +522,8 @@ const CredentialManagement: FC = () => {
       {/* 编辑模态框 */}
       <Modal
         title={editingCredential ? "编辑授权凭证" : "新增授权凭证"}
+        mask={{ closable: false }}
+        keyboard={false}
         open={editModalVisible}
         onOk={handleCreate}
         onCancel={() => {
@@ -520,7 +534,7 @@ const CredentialManagement: FC = () => {
         width={600}
       >
         <Alert
-          message="提示"
+          title="提示"
           description="请选择协议类型（SSH 或 Telnet），并填写对应的配置信息。一个凭证可以同时包含 SSH/Telnet 配置和 SNMP 配置。"
           type="info"
           showIcon
@@ -532,20 +546,20 @@ const CredentialManagement: FC = () => {
             label="凭证名称"
             rules={[{ required: true, message: "请输入凭证名称" }]}
           >
-            <Input placeholder="请输入凭证名称" />
+            <AppInput placeholder="请输入凭证名称" />
           </Form.Item>
           <Form.Item
             name="protocolType"
             label="协议类型"
             rules={[{ required: true, message: "请选择协议类型" }]}
           >
-            <Select placeholder="请选择协议类型 (SSH 或 Telnet)" onSearch={() => {}}>
-              {protocolTypeOptions.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            {/* 形态分类器①/②：children 写法改写 options；固定 2 项 → 显式禁搜 */}
+            <AppSelect
+              placeholder="请选择协议类型 (SSH 或 Telnet)"
+              onSearch={() => {}}
+              showSearch={false}
+              options={protocolTypeOptions}
+            />
           </Form.Item>
 
           {/* SSH/Telnet 字段 - 始终显示 */}
@@ -554,7 +568,7 @@ const CredentialManagement: FC = () => {
             label="用户名"
             rules={[{ required: true, message: "请输入用户名" }]}
           >
-            <Input placeholder="请输入用户名" />
+            <AppInput placeholder="请输入用户名" />
           </Form.Item>
           <Form.Item
             name="password"
@@ -585,25 +599,22 @@ const CredentialManagement: FC = () => {
             label="SNMP Communities"
             extra="用于设备状态检查和自动发现，可留空"
           >
-            <Select
+            {/* 形态分类器⑦：mode="tags" 多值输入 → 显式 showSearch 保持可输入检索 */}
+            <AppSelect
               mode="tags"
               placeholder="请输入 SNMP Community，可添加多个"
               tokenSeparators={[","]}
               onSearch={() => {}}
-            ></Select>
+              showSearch
+            />
           </Form.Item>
           <Form.Item name="snmpVersion" label="SNMP版本" rules={[{ required: true }]}>
-            <Select onSearch={() => {}}>
-              {snmpVersionOptions.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
+            {/* 形态分类器①/②：children 写法改写 options；固定 3 项 → 显式禁搜 */}
+            <AppSelect onSearch={() => {}} showSearch={false} options={snmpVersionOptions} />
           </Form.Item>
 
           <Form.Item name="description" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>

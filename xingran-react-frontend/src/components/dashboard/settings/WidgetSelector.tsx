@@ -7,7 +7,8 @@
  */
 
 import { useState, useEffect } from "react";
-import { Modal, Card, Col, Row, Input, Button, Form, Select, Divider } from "antd";
+import { Modal, Card, Col, Row, Button, Form, Divider } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { widgetRegistry, getWidgetTypes } from "../widgets/configs/widgetRegistry";
 
 import DataSourceForm from "./DataSourceForm";
@@ -28,8 +29,6 @@ interface WidgetSelectorProps {
   editingWidgetId?: string | null;
   editingWidget?: WidgetConfig | null;
 }
-
-const { TextArea } = Input;
 
 export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
   visible,
@@ -109,7 +108,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
             return {
               type: "stat-card",
               icon: "📊",
-              iconColor: "var(--theme-info, #337ab0)",
+              iconColor: "var(--theme-info)",
               decimals: 0,
             };
           case "chart":
@@ -140,7 +139,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
             return {
               type: "stat-card",
               icon: "📊",
-              iconColor: "var(--theme-info, #337ab0)",
+              iconColor: "var(--theme-info)",
             };
         }
       };
@@ -233,13 +232,14 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
               </Form.Item>
 
               <Form.Item label="Widget类型" name="type" rules={[{ required: true }]}>
-                <Select disabled onSearch={() => {}}>
-                  {widgetTypes.map((type: WidgetType) => (
-                    <Select.Option key={type} value={type}>
-                      {widgetRegistry[type]?.displayName}
-                    </Select.Option>
-                  ))}
-                </Select>
+                <AppSelect
+                  disabled
+                  showSearch={false}
+                  options={widgetTypes.map((type: WidgetType) => ({
+                    value: type,
+                    label: widgetRegistry[type]?.displayName,
+                  }))}
+                />
               </Form.Item>
 
               <Form.Item
@@ -247,7 +247,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
                 name="title"
                 rules={[{ required: true, message: "请输入Widget标题" }]}
               >
-                <Input placeholder="请输入Widget标题" />
+                <AppInput placeholder="请输入Widget标题" />
               </Form.Item>
 
               <Divider titlePlacement="left">数据源配置</Divider>
@@ -275,7 +275,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
               <Divider titlePlacement="left">其他</Divider>
 
               <Form.Item label="说明" name="description">
-                <TextArea rows={2} placeholder="可选的Widget说明" />
+                <AppTextArea rows={2} placeholder="可选的Widget说明" />
               </Form.Item>
             </Form>
           </div>

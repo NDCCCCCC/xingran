@@ -20,7 +20,7 @@ const baseWidget = (dataFilter?: WidgetConfig["dataFilter"]): WidgetConfig =>
 
 beforeEach(() => {
   useAuthStore.setState({
-    user: { id: "u1", deptId: "d1", username: "tester" } as any,
+    user: { id: "u1", deptId: "d1", username: "tester" } as unknown,
   });
 });
 
@@ -39,7 +39,7 @@ describe("applyWidgetDataFilter", () => {
   });
 
   it("user 为 null → 原样返回", () => {
-    useAuthStore.setState({ user: null as any });
+    useAuthStore.setState({ user: null as unknown });
     const result = applyWidgetDataFilter(
       baseWidget({ enabled: true, filterType: "dept", filterConfig: {} }),
       { page: 1 }
@@ -93,7 +93,7 @@ describe("applyWidgetDataFilter", () => {
 
   it("filterType 未知 → 原样返回(default 分支)", () => {
     const result = applyWidgetDataFilter(
-      baseWidget({ enabled: true, filterType: "unknown" as any, filterConfig: {} }),
+      baseWidget({ enabled: true, filterType: "unknown" as unknown, filterConfig: {} }),
       { page: 1 }
     );
     expect(result).toEqual({ page: 1 });

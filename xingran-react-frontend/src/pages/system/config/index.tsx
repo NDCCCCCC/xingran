@@ -7,9 +7,6 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
-  Popconfirm,
   Tag,
   Card,
   Row,
@@ -17,6 +14,9 @@ import {
   Statistic,
   Alert,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。本文件 Select 全为 children 形态的
+// 固定枚举（Y/N、是/否）→ 一律改写 options 形态并显式禁搜（状态/开关类业务下拉）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -34,11 +34,23 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { confirmDelete } from "@/components/shared";
 import { refreshEncryptionConfig } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
 
-const { Option } = Select;
-const { TextArea } = Input;
+// ==================== 形态分类器产物：children 形态 <Option> → options 常量 ====================
+
+/** 参数类型（Y=是 / N=否，固定 2 项） */
+const CONFIG_TYPE_OPTIONS = [
+  { value: "Y", label: "是" },
+  { value: "N", label: "否" },
+];
+
+/** 是否系统内置（0=否 / 1=是，固定 2 项） */
+const IS_SYSTEM_OPTIONS = [
+  { value: 0, label: "否" },
+  { value: 1, label: "是" },
+];
 
 const ConfigManagement: FC = () => {
   const { message } = App.useApp();
@@ -47,6 +59,7 @@ const ConfigManagement: FC = () => {
     active: 0,
     inactive: 0,
   });
+  const [submitting, setSubmitting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -136,7 +149,7 @@ const ConfigManagement: FC = () => {
   // 创建参数配置
   const handleCreate = async () => {
     try {
-      const values = (await editForm.validateFields()) as Record<string, any>;
+      const values = (await editForm.validateFields()) as Record<string, unknown>;
       if (editingConfig) {
         // F-17 Phase 31: 后端 UpdateConfigRequest 现已接受 configKey 字段(可选)。
         // 显式传 configKey 让后端校验"系统内置参数键不可改",获得二次确认保护。
@@ -170,36 +183,34 @@ const ConfigManagement: FC = () => {
   };
 
   // 删除参数配置
+  // 68.1-T3：删除确认改走 confirmDelete，失败上抛由 helper 统一反馈
   const handleDelete = async (id: string, isSystem: number) => {
     if (isSystem === 1) {
-      message.warning("系统内置参数不能删除");
-      return;
+      throw new Error("系统内置参数不能删除");
     }
-    try {
-      await post(`/system/configs/${id}/delete`, {});
-      handleSuccess("删除");
-      loadConfigs();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "删除");
-    }
+    await post(`/system/configs/${id}/delete`, {});
+    handleSuccess("删除");
+    loadConfigs();
+    loadStatistics();
   };
 
   // 批量删除参数配置
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       message.warning("请选择要删除的数据");
       return;
     }
-    try {
-      await post("/system/configs/batch-delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      setSelectedRowKeys([]);
-      loadConfigs();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+    confirmDelete({
+      title: "确认批量删除",
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
+        await post("/system/configs/batch-delete", { ids: selectedRowKeys });
+        setSelectedRowKeys([]);
+        loadConfigs();
+        loadStatistics();
+      },
+    });
   };
 
   // 刷新缓存
@@ -304,20 +315,21 @@ const ConfigManagement: FC = () => {
             danger: true,
             disabled: record.isSystem === 1,
             render: () => (
-              <Popconfirm
-                title="确认删除?"
-                onConfirm={() => handleDelete(record.id, record.isSystem)}
+              <Button
+                type="link"
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error)" }}
+                size="small"
+                disabled={record.isSystem === 1}
+                onClick={() =>
+                  confirmDelete({
+                    target: `该参数配置（${record.configName || record.configKey}）`,
+                    onDelete: () => handleDelete(record.id, record.isSystem),
+                  })
+                }
               >
-                <Button
-                  type="link"
-                  icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ba3630)" }}
-                  size="small"
-                  disabled={record.isSystem === 1}
-                >
-                  删除
-                </Button>
-              </Popconfirm>
+                删除
+              </Button>
             ),
           },
         ];
@@ -346,7 +358,7 @@ const ConfigManagement: FC = () => {
               <Statistic
                 title="启用配置"
                 value={statistics.active}
-                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
                 prefix={<CheckCircleOutlined />}
               />
             </Card>
@@ -356,7 +368,7 @@ const ConfigManagement: FC = () => {
               <Statistic
                 title="禁用配置"
                 value={statistics.inactive}
-                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+                styles={{ content: { color: "var(--theme-error)" } }}
                 prefix={<StopOutlined />}
               />
             </Card>
@@ -377,32 +389,30 @@ const ConfigManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="configName" label="参数名称">
-              <Input
+              <AppInput
                 placeholder="请输入参数名称"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="configKey" label="参数键名">
-              <Input
+              <AppInput
                 placeholder="请输入参数键名"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="configType" label="状态">
-              <Select
+              {/* 形态分类器②④：参数类型固定 2 项（业务禁搜） */}
+              <AppSelect
                 placeholder="请选择状态"
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value="Y">是</Option>
-                <Option value="N">否</Option>
-              </Select>
+                showSearch={false}
+                options={CONFIG_TYPE_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -426,7 +436,7 @@ const ConfigManagement: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -442,7 +452,7 @@ const ConfigManagement: FC = () => {
         </div>
         {selectedRowKeys.length > 0 && (
           <Alert
-            message={
+            title={
               <span>
                 已选择 <strong>{selectedRowKeys.length}</strong> 个参数配置，
                 <Button
@@ -478,6 +488,7 @@ const ConfigManagement: FC = () => {
           rowKey="id"
           pagination={paginationProps}
           onChange={handleTableChange}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 
@@ -485,7 +496,15 @@ const ConfigManagement: FC = () => {
       <Modal
         title={editingConfig ? "编辑参数配置" : "新增参数配置"}
         open={editModalVisible}
-        onOk={handleCreate}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleCreate();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={handleModalClose}
         width={600}
       >
@@ -495,7 +514,7 @@ const ConfigManagement: FC = () => {
             label="参数名称"
             rules={[{ required: true, message: "请输入参数名称" }]}
           >
-            <Input placeholder="请输入参数名称" className="user-form-input" />
+            <AppInput placeholder="请输入参数名称" className="user-form-input" />
           </Form.Item>
           <Form.Item
             name="configKey"
@@ -503,7 +522,7 @@ const ConfigManagement: FC = () => {
             rules={[{ required: true, message: "请输入参数键名" }]}
             extra="建议格式：sys.user.initPassword"
           >
-            <Input
+            <AppInput
               placeholder="请输入参数键名"
               disabled={!!editingConfig && editingConfig.isSystem === 1}
               className="user-form-input"
@@ -514,13 +533,17 @@ const ConfigManagement: FC = () => {
             label="参数键值"
             rules={[{ required: true, message: "请输入参数键值" }]}
           >
-            <Input placeholder="请输入参数键值" className="user-form-input" />
+            <AppInput placeholder="请输入参数键值" className="user-form-input" />
           </Form.Item>
           <Form.Item name="configType" label="状态" rules={[{ required: true }]}>
-            <Select className="user-form-input" onSearch={() => {}}>
-              <Option value="Y">是</Option>
-              <Option value="N">否</Option>
-            </Select>
+            {/* 形态分类器②④：参数类型固定 2 项（业务禁搜） */}
+            <AppSelect
+              allowClear
+              className="user-form-input"
+              onSearch={() => {}}
+              showSearch={false}
+              options={CONFIG_TYPE_OPTIONS}
+            />
           </Form.Item>
           <Form.Item
             name="isSystem"
@@ -528,13 +551,18 @@ const ConfigManagement: FC = () => {
             rules={[{ required: true }]}
             extra="系统内置参数不可删除"
           >
-            <Select disabled={!!editingConfig} className="user-form-input" onSearch={() => {}}>
-              <Option value={0}>否</Option>
-              <Option value={1}>是</Option>
-            </Select>
+            {/* 形态分类器②④：系统内置开关固定 2 项（业务禁搜） */}
+            <AppSelect
+              allowClear
+              disabled={!!editingConfig}
+              className="user-form-input"
+              onSearch={() => {}}
+              showSearch={false}
+              options={IS_SYSTEM_OPTIONS}
+            />
           </Form.Item>
           <Form.Item name="remark" label="备注">
-            <TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>

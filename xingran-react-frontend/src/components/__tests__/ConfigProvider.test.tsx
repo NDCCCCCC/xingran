@@ -2,23 +2,23 @@
  * Phase 88 Batch321 — components/ConfigProvider 测试
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, act } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { render } from "@testing-library/react";
+import type {  } from "react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
   return createApiTestingModule();
 });
 
-const mockAuthState: any = { isAuthenticated: false };
-const mockSettingsState: any = {
+const mockAuthState: unknown = { isAuthenticated: false };
+const mockSettingsState: unknown = {
   initialized: false,
   preferences: { theme: { mode: "light" }, layout: { type: "classic" } },
   initialize: vi.fn(),
 };
 const mockThemeSync = vi.fn();
 const mockLayoutSync = vi.fn();
-const mockUpdateLayout = vi.fn();
+const _mockUpdateLayout = vi.fn();
 
 vi.mock("@/store/authStore", () => ({
   // 兼容 selector 调用（useAuthStore(s => s.isAuthenticated)）与无参调用两种形态
@@ -36,7 +36,7 @@ vi.mock("@/store/settingsStore", () => ({
 }));
 
 vi.mock("@/store/themeStore", () => ({
-  useThemeStore: vi.fn((selector: any) =>
+  useThemeStore: vi.fn((selector: unknown) =>
     typeof selector === "function"
       ? selector({ syncFromSettings: mockThemeSync })
       : { syncFromSettings: mockThemeSync }
@@ -44,7 +44,7 @@ vi.mock("@/store/themeStore", () => ({
 }));
 
 vi.mock("@/store/layoutStore", () => ({
-  useLayoutStore: vi.fn((selector: any) =>
+  useLayoutStore: vi.fn((selector: unknown) =>
     typeof selector === "function"
       ? selector({ syncFromSettings: mockLayoutSync })
       : { syncFromSettings: mockLayoutSync }

@@ -14,15 +14,16 @@ import (
 type DeptToADSyncService struct {
 	db     *gorm.DB
 	pool   AccountPool // Phase 38 Wave 1 DI 脚手架（38-02 将用于 FailoverClient 闭包改造）
-	ldap   *LDAPClient
 	mapper *DeptOUmapper
 }
 
-func NewDeptToADSyncService(db *gorm.DB, pool AccountPool, ldapClient *LDAPClient, mapper *DeptOUmapper) *DeptToADSyncService {
+// NewDeptToADSyncService 创建部门→AD OU 同步服务。
+// 域控审查 P2-3：移除从未使用的 ldapClient 参数（LDAP 连接统一由 FailoverClient 在
+// ExecuteWithFailover 闭包内注入，服务实例不持有连接）。
+func NewDeptToADSyncService(db *gorm.DB, pool AccountPool, mapper *DeptOUmapper) *DeptToADSyncService {
 	return &DeptToADSyncService{
 		db:     db,
 		pool:   pool,
-		ldap:   ldapClient,
 		mapper: mapper,
 	}
 }
@@ -78,11 +79,11 @@ func (s *DeptToADSyncService) SyncDeptStructureToAD(ctx context.Context, adConfi
 	fc := NewFailoverClient(s.pool, &adConfig)
 	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
 		// 5. 递归同步二级部门树到AD OU（所有 LDAP CreateOU 在闭包内，Pitfall 3）
+		// 域控审查 P1-4：单树失败不再 break 中断其余树，也不再把整任务置为 failed ——
+		// 单树失败计 result.FailedDepts，其余树照常同步；任务整体成败由 FailedDepts 体现。
 		for _, dept := range secondLevelDepts {
 			if err := s.syncDeptTree(ctx, ldapClient, &adConfig, dept, adConfig.BaseDN, result); err != nil {
-				applogger.Errorf("同步部门树失败: %v", err)
-				result.Status = "failed"
-				break
+				applogger.Errorf("同步部门树失败 [%s]，继续处理其余部门树: %v", dept.DeptName, err)
 			}
 		}
 		return nil
@@ -110,11 +111,18 @@ func (s *DeptToADSyncService) SyncDeptStructureToAD(ctx context.Context, adConfi
 }
 
 // syncDeptTree 递归同步部门树
+//
+// Phase 58 HYGIENE-02: OU DN 拼接走 BuildOUDN（全仓唯一拼接点），部门名特殊字符按 RFC4514 转义。
+// 存量 sys_dept_ou_mapping.ou_dn 为未转义值，含特殊字符的部门需重跑部门同步后才会写入转义 DN
+// （Q4 决策：不做存量数据迁移）。
 func (s *DeptToADSyncService) syncDeptTree(ctx context.Context, ldapClient LDAPClientIface, config *models.ADConfig, dept *models.Department, parentOUDN string, result *DeptSyncResult) error {
 	// 1. 构建当前部门的OU DN
-	ouDN := fmt.Sprintf("OU=%s,%s", dept.DeptName, parentOUDN)
+	ouDN := BuildOUDN(dept.DeptName, parentOUDN)
 
 	// 2. 在AD中创建OU（如果不存在）
+	// 域控审查 P1-4 说明：CreateOU 失败时必须 return —— AD 的 DN 层级要求父 OU
+	// 真实存在，父 OU 建不出来时子部门必然逐个失败（产生 N 个重复错误），此处提前
+	// 止损只报一条错误；调用方（SyncDeptStructureToAD）已改为 continue 其余部门树。
 	if err := ldapClient.CreateOU(ouDN, dept.DeptName); err != nil {
 		result.FailedDepts++
 		result.Errors = append(result.Errors, DeptSyncError{
@@ -140,7 +148,16 @@ func (s *DeptToADSyncService) syncDeptTree(ctx context.Context, ldapClient LDAPC
 	mapping.LastSyncAt = &now
 
 	if err := s.mapper.UpsertMapping(ctx, mapping); err != nil {
-		applogger.Warnf("更新映射关系失败 [%s]: %v", dept.DeptName, err)
+		var conflict *OUDNConflictError
+		if errors.As(err, &conflict) {
+			// HYGIENE-05:同名兄弟部门争用同一 OU DN —— 显式计失败 + Errorf 双部门名，不静默覆盖
+			applogger.Errorf("部门 OU DN 冲突: 部门 [%s] 与部门 [%s] 争用同一 OU DN %s，映射保留给 [%s]，本次不同步该部门",
+				conflict.IncomingDeptName, conflict.ExistingDeptName, conflict.OUDN, conflict.ExistingDeptName)
+			result.FailedDepts++
+			result.Errors = append(result.Errors, DeptSyncError{DeptID: dept.ID, DeptName: dept.DeptName, Error: conflict.Error()})
+		} else {
+			applogger.Warnf("更新映射关系失败 [%s]: %v", dept.DeptName, err)
+		}
 		// 不中断同步流程，继续处理子部门
 	} else {
 		result.SuccessDepts++
@@ -159,15 +176,42 @@ func (s *DeptToADSyncService) syncDeptTree(ctx context.Context, ldapClient LDAPC
 	return nil
 }
 
-// getRootDepartments 获取根部门（parentId为空的部门）
+// getRootDepartments 获取根部门（parentId为空的部门）及其完整子树。
+//
+// 域控审查 P1-7：原实现 `Preload("Children.Children.Children")` 只加载固定 3 层，
+// 第 4 层及更深的部门被静默排除在同步之外（且子树计数也少算）。改为一次查询全部
+// 正常部门后在内存中按 parent_id 建树：任何深度都能覆盖，查询也从 N 层 N 次
+// Preload 降为 1 次全表查询。
 func (s *DeptToADSyncService) getRootDepartments(ctx context.Context) ([]*models.Department, error) {
-	var depts []*models.Department
-	err := s.db.WithContext(ctx).
-		Preload("Children.Children.Children"). // 预加载3层子部门
-		Where("parent_id IS NULL").            // UUID字段不能使用空字符串比较
+	var all []*models.Department
+	if err := s.db.WithContext(ctx).
+		Select("id", "dept_name", "parent_id", "ancestors").
 		Where("status = ?", models.DeptStatusNormal).
-		Find(&depts).Error
-	return depts, err
+		Find(&all).Error; err != nil {
+		return nil, err
+	}
+
+	// 先为每个部门建一个独立节点（Children 清空，避免复用 Preload 残留）
+	nodes := make(map[string]*models.Department, len(all))
+	for _, d := range all {
+		node := *d
+		node.Children = nil
+		nodes[d.ID] = &node
+	}
+
+	// 按 parent_id 挂接：父不在集合中（父被停用/删除）的部门成为孤儿，
+	// 不挂在任何根下 —— 与原 Preload 语义一致（停用父的子部门不同步）。
+	var roots []*models.Department
+	for _, node := range nodes {
+		if node.ParentID == nil || *node.ParentID == "" {
+			roots = append(roots, node)
+			continue
+		}
+		if parent, ok := nodes[*node.ParentID]; ok {
+			parent.Children = append(parent.Children, node)
+		}
+	}
+	return roots, nil
 }
 
 // countTotalDepts 递归计算部门总数

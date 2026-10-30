@@ -71,7 +71,7 @@ describe("duty/management/types", () => {
       isOffday: true,
       holidayType: "legal",
       year: 2026,
-    } as any;
+    } as unknown;
     expect(d.holidayName).toBe("元旦");
   });
 

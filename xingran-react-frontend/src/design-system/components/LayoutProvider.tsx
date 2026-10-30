@@ -3,21 +3,11 @@
  * 在应用根部包裹，提供布局功能
  */
 
-import { useEffect, createContext, useContext, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { FC, ReactNode } from "react";
 import { useLayoutStore } from "@/store/layoutStore";
-
-interface LayoutContextValue {
-  layout: string;
-  sidebarCollapsed: boolean;
-}
-
-const LayoutContext = createContext<LayoutContextValue>({
-  layout: "classic",
-  sidebarCollapsed: false,
-});
-
-export const useLayoutContext = () => useContext(LayoutContext);
+// v1.24 P82：Context 与 hook 拆至 layoutContext.ts（react-refresh 组件文件只导组件）
+import { LayoutContext } from "./layoutContext";
 
 const LayoutProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const currentLayout = useLayoutStore((s) => s.currentLayout);

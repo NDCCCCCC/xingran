@@ -34,6 +34,16 @@ type mockLDAPClient struct {
 	removeMembersErr    error
 	createGroupErr      error
 	deleteGroupErr      error
+	// 域控审查 P0-1/P0-2 新增方法
+	getGroupMembersRes map[string][]string // groupDN → 成员 DN 列表
+	getGroupMembersErr error
+	deleteOUErr        error
+	deleteOUCalls      int
+	deleteOULastDN     string
+	renameOUErr        error
+	renameOUCalls      int
+	renameOULastDN     string
+	renameOULastName   string
 	updateUserAttrErr   error
 	moveUserErr         error
 	enableUserErr       error
@@ -54,6 +64,24 @@ type mockLDAPClient struct {
 	createOUCalls      int
 	dnExistsCalls      int
 	searchWithReqCalls int
+
+	// Phase 58（共 4 个，compare-and-move 幂等断言的前提）：
+	//   - moveUserCalls / moveUserTargets：断言"目标 OU 相同则不调 MoveUser"以及
+	//     "移到了哪个 OU"（moveUserTargets 按调用顺序记录每次的 newOUDN）
+	//   - disableUserCalls / updateUserAttrCalls：断言终态路径是否触达对应 LDAP 写操作
+	moveUserCalls       int
+	moveUserTargets     []string
+	disableUserCalls    int
+	updateUserAttrCalls int
+	// updateUserAttrLastAttrs 记录**最后一次** UpdateUserAttribute 的 attrs 实参
+	// （Phase 58 Plan 04 追加）：排水器"闭包内重读最新值"的可观测证据 ——
+	// 只有落到 AD 属性上的值才是真的推了最新值，仅计数无法断言。
+	// 追加字段不改任何既有方法签名（既有用例零影响）。
+	updateUserAttrLastAttrs map[string]string
+	// deleteUserAttr* 记录 DeleteUserAttribute 调用次数与最近一次实参（经理同步测试用）
+	deleteUserAttrCalls    int
+	deleteUserAttrLastDN   string
+	deleteUserAttrLastAttr string
 }
 
 func (m *mockLDAPClient) Connect() error {
@@ -102,6 +130,32 @@ func (m *mockLDAPClient) RemoveGroupMembers(groupDN string, userDNs []string) er
 	return m.removeMembersErr
 }
 
+// GetGroupMembers 实现 P0-1 新增接口；getGroupMembersRes[groupDN] 非空时返回对应列表。
+func (m *mockLDAPClient) GetGroupMembers(groupDN string) ([]string, error) {
+	if m.getGroupMembersErr != nil {
+		return nil, m.getGroupMembersErr
+	}
+	if m.getGroupMembersRes == nil {
+		return nil, nil
+	}
+	return m.getGroupMembersRes[groupDN], nil
+}
+
+// DeleteOU 实现 P0-2 新增接口（部门删除联动）。
+func (m *mockLDAPClient) DeleteOU(ouDN string) error {
+	m.deleteOUCalls++
+	m.deleteOULastDN = ouDN
+	return m.deleteOUErr
+}
+
+// RenameOU 实现 P0-2 新增接口（部门改名联动）。
+func (m *mockLDAPClient) RenameOU(ouDN, newOUName string) error {
+	m.renameOUCalls++
+	m.renameOULastDN = ouDN
+	m.renameOULastName = newOUName
+	return m.renameOUErr
+}
+
 func (m *mockLDAPClient) CreateGroup(groupDN, groupName, description string, groupType int) error {
 	return m.createGroupErr
 }
@@ -110,11 +164,29 @@ func (m *mockLDAPClient) DeleteGroup(groupDN string) error {
 	return m.deleteGroupErr
 }
 
+// DeleteUserAttribute 实现 LDAPClientIface 新增的删属性接口（经理同步清空 manager 用）。
+func (m *mockLDAPClient) DeleteUserAttribute(userDN, attr string) error {
+	m.deleteUserAttrCalls++
+	m.deleteUserAttrLastDN = userDN
+	m.deleteUserAttrLastAttr = attr
+	return nil
+}
+
 func (m *mockLDAPClient) UpdateUserAttribute(userDN string, attrs map[string]string) error {
+	m.updateUserAttrCalls++
+	// 拷贝一份快照：调用方的 attributes map 在同一轮内不会复用，但拷贝能杜绝
+	// "测试断言时被后续调用覆写"的隐式耦合（Phase 58 Plan 04）。
+	snapshot := make(map[string]string, len(attrs))
+	for k, v := range attrs {
+		snapshot[k] = v
+	}
+	m.updateUserAttrLastAttrs = snapshot
 	return m.updateUserAttrErr
 }
 
 func (m *mockLDAPClient) MoveUser(userDN, newOUDN string) error {
+	m.moveUserCalls++
+	m.moveUserTargets = append(m.moveUserTargets, newOUDN)
 	return m.moveUserErr
 }
 
@@ -123,6 +195,7 @@ func (m *mockLDAPClient) EnableUser(userDN string) error {
 }
 
 func (m *mockLDAPClient) DisableUser(userDN string) error {
+	m.disableUserCalls++
 	return m.disableUserErr
 }
 

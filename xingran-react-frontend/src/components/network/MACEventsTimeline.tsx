@@ -19,7 +19,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { Timeline, Empty, Skeleton, Tag, Card, Space, Typography, Button } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { DownOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
+import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { getMACEvents } from "@/lib/api/networkApi";
 import type { MACHistoryRecord } from "@/lib/api/networkApi";
 import {
@@ -50,10 +50,10 @@ const TimelineItem = React.memo<{ event: MACHistoryRecord }>(({ event }) => {
 
   return (
     <div style={{ padding: "4px 8px", borderRadius: 4 }}>
-      <Space direction="vertical" size={2} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={2} style={{ width: "100%" }}>
         <Space size={8} wrap>
           <Typography.Text strong>
-            {dayjs(event.firstSeen).format("YYYY-MM-DD HH:mm")}
+            {formatDateTime(event.firstSeen, FORMAT_DATETIME_MINUTE)}
           </Typography.Text>
           <Tag color={EVENT_TAG_COLOR[eventType]}>{label}</Tag>
           {event.vlanId != null && <Tag> VLAN {event.vlanId} </Tag>}
@@ -131,7 +131,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   // 错误
   if (error) {
     return (
-      <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
+      <Card size="small" title={`MAC 事件时间线 — ${mac}`} variant="borderless">
         <ErrorAlertWithRetry
           error={error as Error}
           onRetry={() => {
@@ -145,7 +145,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   // 加载
   if (isLoading) {
     return (
-      <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
+      <Card size="small" title={`MAC 事件时间线 — ${mac}`} variant="borderless">
         <Skeleton active paragraph={{ rows: 4 }} />
       </Card>
     );
@@ -154,7 +154,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   // 空数据
   if (allEvents.length === 0) {
     return (
-      <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
+      <Card size="small" title={`MAC 事件时间线 — ${mac}`} variant="borderless">
         <Empty description="该 MAC 在此时间范围内无事件" />
       </Card>
     );
@@ -173,7 +173,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
           )}
         </Space>
       }
-      bordered={false}
+      variant="borderless"
     >
       <div style={{ contentVisibility: "auto", containIntrinsicSize: "64px" }}>
         <Timeline
@@ -184,10 +184,10 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
             const color = EVENT_COLORS[eventType];
             return {
               color,
-              dot: React.createElement(Icon, {
+              icon: React.createElement(Icon, {
                 style: { color, fontSize: 16 },
               }),
-              children: <TimelineItem event={event} />,
+              content: <TimelineItem event={event} />,
             };
           })}
         />
@@ -195,6 +195,8 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
       {hasMore && (
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <Button
+            aria-label="加载更多"
+            title="加载更多"
             type="link"
             icon={<DownOutlined />}
             onClick={handleLoadMore}

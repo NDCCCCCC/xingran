@@ -44,7 +44,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "仪表盘",
     icon: <DashboardOutlined />,
     path: DASHBOARD,
-    color: "var(--theme-info, #156031)",
+    color: "var(--theme-info)",
     description: "数据概览与统计",
   },
   {
@@ -60,7 +60,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "系统监控",
     icon: <MonitorOutlined />,
     path: MONITOR_DASHBOARD,
-    color: "#b07a20",
+    color: "var(--theme-warning)",
     description: "服务器、日志、任务",
   },
   {
@@ -84,7 +84,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "工单管理",
     icon: <FileTextOutlined />,
     path: "/workorder/orders",
-    color: "#ba3630",
+    color: "var(--theme-error)",
     description: "工单、分类、统计",
   },
   {
@@ -100,7 +100,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "个人中心",
     icon: <UserOutlined />,
     path: "/user/profile",
-    color: "#156031",
+    color: "var(--theme-primary)",
     description: "个人信息、设置",
   },
   {
@@ -171,7 +171,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
             fontWeight: "bold",
             marginBottom: "16px",
             background:
-              "linear-gradient(135deg, var(--theme-primary-500, #156031) 0%, var(--theme-primary-600, #14542e) 100%)",
+              "linear-gradient(135deg, var(--theme-primary-500) 0%, var(--theme-primary-600) 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
@@ -227,7 +227,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
             transition: "all var(--theme-transition-base)",
           }}
         >
-          <Space size="middle">
+          <Space size="medium">
             <span
               style={{
                 fontSize: "14px",
@@ -235,11 +235,11 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
                 color: "var(--theme-text-secondary)",
               }}
             >
-              XingRan
+              数智化平台
             </span>
           </Space>
 
-          <Space size="middle" separator={<Divider orientation="vertical" style={{ margin: 0 }} />}>
+          <Space size="medium" separator={<Divider orientation="vertical" style={{ margin: 0 }} />}>
             <LayoutSwitcher />
             <DensitySwitcher />
             <span

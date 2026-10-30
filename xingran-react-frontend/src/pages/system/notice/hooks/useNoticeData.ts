@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import { App } from "antd";
+import {  } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   getNoticeList,
   createNotice,
@@ -102,9 +104,15 @@ export function useNoticeData(): UseNoticeDataResult {
       message.warning("请选择要删除的数据");
       return;
     }
-    await batchDeleteNotices(keys as string[]);
-    message.success("批量删除成功");
-    setSelectedRowKeys([]);
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+    confirmDelete({
+      title: "确认批量删除",
+      target: `选中的 ${keys.length} 项`,
+      onDelete: async () => {
+        await batchDeleteNotices(keys as string[]);
+        setSelectedRowKeys([]);
+      },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 

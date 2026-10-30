@@ -104,7 +104,7 @@ describe("useWorkstationView", () => {
   it("handleFloorPlanEdit → 调用 openModal(record)", () => {
     const openModal = vi.fn();
     const { result } = renderHook(() => useWorkstationView([]), { wrapper });
-    result.current.handleFloorPlanEdit({ id: "w1" } as any, openModal);
+    result.current.handleFloorPlanEdit({ id: "w1" } as unknown, openModal);
     expect(openModal).toHaveBeenCalledWith({ id: "w1" });
   });
 

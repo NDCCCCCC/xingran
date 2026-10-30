@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
-import { App, Table, Button, Space, Form, Input, Select, Card, Modal, Layout } from "antd";
+import { App, Table, Button, Space, Form, Card, Modal, Layout } from "antd";
 import { PlusOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Task } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
@@ -16,9 +16,23 @@ import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
 import { getTaskColumns } from "./columns";
 import { TaskEditModal } from "./modals";
 import { post } from "@/lib/api";
+// Phase 71 (W3)：裸 Input/Select → 契约组件。
+// 任务状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
+// 注意：搜索区这组值是「执行态」字符串（pending/running/completed/failed/cancelled），
+// 与 constants.tsx 里 TASK_STATUS_OPTIONS（0/1/2 草稿/启用/禁用）和
+// EXECUTION_STATUS_OPTIONS（success 而非 completed）都不同，故就地命名保留原值。
+import { AppInput, AppSelect } from "@/components/ui";
 
-const { Option } = Select;
 const { Content } = Layout;
+
+// 搜索区任务状态（沿用本页原有值，勿与 constants.tsx 的两组枚举混用）
+const TASK_SEARCH_STATUS_OPTIONS = [
+  { label: "等待中", value: "pending" },
+  { label: "运行中", value: "running" },
+  { label: "已完成", value: "completed" },
+  { label: "失败", value: "failed" },
+  { label: "已取消", value: "cancelled" },
+];
 
 const TaskManagement: FC = () => {
   const { message } = App.useApp();
@@ -107,6 +121,7 @@ const TaskManagement: FC = () => {
 
   const handleExecute = useCallback(
     async (id: string, name: string) => {
+      // eslint-disable-next-line no-restricted-syntax -- 非删除语义：执行 RPA 任务为发起动作，UI-SPEC §1.1 判定规则排除
       Modal.confirm({
         title: "确认执行",
         content: `确定要执行任务 "${name}" 吗？`,
@@ -166,8 +181,8 @@ const TaskManagement: FC = () => {
   );
 
   return (
-    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
-      <Content style={{ background: "#fff", padding: 16 }}>
+    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
+      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
         <Card style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -180,16 +195,18 @@ const TaskManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="name" label="任务名称">
-                <Input placeholder="请输入任务名称" allowClear style={{ width: 200 }} />
+                <AppInput placeholder="请输入任务名称" style={{ width: 200 }} />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择" allowClear style={{ width: 150 }} onSearch={() => {}}>
-                  <Option value="pending">等待中</Option>
-                  <Option value="running">运行中</Option>
-                  <Option value="completed">已完成</Option>
-                  <Option value="failed">失败</Option>
-                  <Option value="cancelled">已取消</Option>
-                </Select>
+                {/* 形态分类器②④：任务状态枚举（业务禁搜），children → options */}
+                <AppSelect
+                  placeholder="请选择"
+                  allowClear
+                  style={{ width: 150 }}
+                  showSearch={false}
+                  onSearch={() => {}}
+                  options={TASK_SEARCH_STATUS_OPTIONS}
+                />
               </Form.Item>
               <Form.Item>
                 <Space>
@@ -217,7 +234,7 @@ const TaskManagement: FC = () => {
             </Space>
           </div>
           {selectedRowKeys.length > 0 && (
-            <div style={{ marginTop: 12, color: "var(--theme-info, #337ab0)" }}>
+            <div style={{ marginTop: 12, color: "var(--theme-info)" }}>
               已选择 <strong>{selectedRowKeys.length}</strong> 个任务
             </div>
           )}

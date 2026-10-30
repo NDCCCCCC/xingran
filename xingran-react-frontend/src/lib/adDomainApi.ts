@@ -74,6 +74,8 @@ export interface ADUser {
   department?: string;
   company?: string;
   ouDn?: string;
+  /** 域控 manager 属性（DN 字符串），后端 models.ADUser.Manager */
+  manager?: string;
   userAccountControl?: number;
   isEnabled: boolean;
   isLocked: boolean;
@@ -445,6 +447,29 @@ export function getADComputerDetail(
   return post("/ad-domain/computers/detail", { configId, computerDn });
 }
 
+// ==================== 设备登录历史 API (quick 261016) ====================
+
+export interface ADLoginHistoryRecord {
+  id: string;
+  computerId: string;
+  computerNameSnapshot: string;
+  adConfigId: string;
+  loginTime: string;
+  detectedAt: string;
+  loginUser?: string;
+  ipAddress?: string;
+  eventType: "initial" | "login";
+  createdAt: string;
+}
+
+export function getADComputerLoginHistory(params: {
+  computerId: string;
+  current?: number;
+  pageSize?: number;
+}): Promise<BaseResponse<PageResponse<ADLoginHistoryRecord>>> {
+  return post("/ad-domain/computers/login-history", withDefaultPagination(params));
+}
+
 // ==================== 部门组映射 API ====================
 
 export interface DeptGroupMapping {
@@ -761,4 +786,56 @@ export function getADServiceAccountStats(
   configId: string
 ): Promise<BaseResponse<ADServiceAccountStats>> {
   return post("/ad-domain/accounts/stats", { configId });
+}
+
+// ==================== Phase 59 / GUARD-02: 部门↔OU 对账（只读） ====================
+
+/**
+ * mismatch_type 四值枚举（D-10）。
+ * 单一事实源在后端 `addomain.MismatchTypes`（59-03），前端仅做展示与筛选选项。
+ */
+export type DeptOUMismatchType =
+  | "user_ou_mismatch"
+  | "dept_soft_deleted"
+  | "mapping_disabled"
+  | "config_unrouted";
+
+/**
+ * 视图 v_dept_ou_mismatch 的一行（D-11 十一列，与后端 DeptOUMismatchRow json tag 逐字对齐）。
+ * 除 mismatchType / mismatchDetail 外全部可空：
+ * 部门级口径（软删/停用）的 user 三列为 NULL，用户级口径的配置三列可为 NULL。
+ */
+export interface DeptOUMismatchRow {
+  deptId?: string | null;
+  deptName?: string | null;
+  deptDeletedAt?: string | null;
+  adConfigId?: string | null;
+  configName?: string | null;
+  mappedOuDn?: string | null;
+  userId?: string | null;
+  username?: string | null;
+  userAdOuDn?: string | null;
+  mismatchType: DeptOUMismatchType;
+  mismatchDetail: string;
+}
+
+export interface DeptOUMismatchListRequest {
+  current?: number;
+  pageSize?: number;
+  mismatchType?: DeptOUMismatchType;
+  deptId?: string;
+  keyword?: string;
+}
+
+/**
+ * 部门↔OU 对账分页查询（只读，59-03 端点）。
+ *
+ * 路径契约（D-14 对齐）：后端 AD 路由组实际挂载在 `/ad-domain`（router.go:519），
+ * 前端沿用模块内既有 `/ad-domain/...` 前缀，不加 `/system/ad-config` 别名。
+ * 后端 handler 负责分页归一（默认 1/10、上限 200）；前端未传分页时注入默认值。
+ */
+export function getDeptOUMismatchList(
+  params: DeptOUMismatchListRequest = {}
+): Promise<BaseResponse<PageResponse<DeptOUMismatchRow>>> {
+  return post("/ad-domain/reconciliation/mismatch", withDefaultPagination(params));
 }

@@ -112,9 +112,12 @@ func (h *OUMappingHandler) UpdateOUDeptMapping(c *gin.Context) {
 		return
 	}
 
-	// 查询现有的 AD 配置（取第一个启用的配置）
-	var adConfig models.ADConfig
-	if err := h.db.WithContext(c.Request.Context()).Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).First(&adConfig).Error; err != nil {
+	// Phase 58 D-03（HYGIENE-01）：收敛到 addomain 公共 helper。
+	// 这里**必须**用 FirstSyncEnabledADConfigID（原语义判 sync_enabled + status），
+	// 不是 FirstEnabledADConfigID —— 它是"当前操作的 AD 配置"，无 dn 可依据；
+	// 收敛只消除重复实现，不改语义。
+	adConfigID, err := addomain.FirstSyncEnabledADConfigID(c.Request.Context(), h.db)
+	if err != nil {
 		applogger.Errorf("查询 AD 配置失败: %v", err)
 		response.Error(c, http.StatusInternalServerError, "查询 AD 配置失败")
 		return
@@ -132,7 +135,7 @@ func (h *OUMappingHandler) UpdateOUDeptMapping(c *gin.Context) {
 
 	mapping := &models.DeptOUMapping{
 		DeptID:      req.DeptID,
-		ADConfigID:  adConfig.ID,
+		ADConfigID:  adConfigID,
 		OUDN:        ouDn,
 		OUName:      ouName,
 		ParentOUDN:  parentOUDNPtr,
@@ -140,7 +143,11 @@ func (h *OUMappingHandler) UpdateOUDeptMapping(c *gin.Context) {
 		SyncStatus:  "pending",
 	}
 
-	if err := h.mapper.UpsertMapping(c.Request.Context(), mapping); err != nil {
+	// HYGIENE-05:手工重绑走 Force + 预检告警（操作员可合法覆盖，但必须显式留痕）
+	if existing, err := h.mapper.GetMappingByOU(c.Request.Context(), ouDn); err == nil && existing != nil && existing.DeptID != req.DeptID {
+		applogger.Warnf("手工重绑 OU %s: 原部门 %s → 新部门 %s（操作员显式覆盖，原映射将被替换）", ouDn, existing.DeptID, req.DeptID)
+	}
+	if err := h.mapper.UpsertMappingForce(c.Request.Context(), mapping); err != nil {
 		applogger.Errorf("更新 OU 部门映射失败: %v", err)
 		response.Error(c, http.StatusInternalServerError, "更新映射关系失败")
 		return

@@ -13,7 +13,7 @@
  */
 
 import { useLayoutEffect, useMemo } from "react";
-import { Form, Input, InputNumber, Select, Row, Col, Cascader, TreeSelect } from "antd";
+import { Form, InputNumber, Row, Col, Cascader, TreeSelect } from "antd";
 import type { FormInstance } from "antd";
 import type { WorkstationOps } from "@/types";
 import type { DeptOption } from "@/lib/opsApi";
@@ -22,9 +22,14 @@ import type { DeptTreeNode, UserOption } from "../types";
 import { findDeptNode, trimTitleToLastSegment } from "@/utils/deptUtils";
 import { STATUS_OPTIONS, TYPE_OPTIONS } from "../constants";
 import { BaseEditModal } from "@/components/modal/BaseEditModal";
+// Phase 71 (W3)：裸 Input/Select/TextArea → 契约组件。
+// - type：children（字典/常量双分支）→ options 改写；业务禁搜 → showSearch={false}
+// - userId：UUID 字段，原 allowClear + showSearch + optionFilterProp="children" → options 改写；
+//   清空语义本就有（onChange 里按 value 有无切换 status），保留 allowClear
+// - status：业务禁搜 → showSearch={false}，children → options
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 
-const { Option } = Select;
-const { TextArea } = Input;
+import { useState } from "react";
 
 // Cascader 选项类型(机构→楼宇→楼层)
 type CascaderOption = {
@@ -76,6 +81,7 @@ export function WorkstationEditModal({
   onDeptChange,
   onOrgChange,
 }: WorkstationEditModalProps) {
+  const [submitting, setSubmitting] = useState(false);
   // Phase 69 DICT-03: 新增默认工位类型取字典 isDefault 项（seed 为 "0" 固定工位，
   // 对齐 Workstation.WorkstationType gorm default:0）；字典空态回退静态 0（迁移前行为）
   const defaultType = useMemo(() => {
@@ -142,11 +148,17 @@ export function WorkstationEditModal({
       title={editingWorkstation ? "编辑工位" : "新增工位"}
       open={open}
       onOk={async () => {
-        // 验证表单并获取值
-        const values = await form.validateFields();
-        // 将表单值传递给父组件的 onOk 处理
-        await onOk(values);
+        setSubmitting(true);
+        try {
+          // 验证表单并获取值
+          const values = await form.validateFields();
+          // 将表单值传递给父组件的 onOk 处理
+          await onOk(values);
+        } finally {
+          setSubmitting(false);
+        }
       }}
+      cancelButtonDisabled={submitting}
       onCancel={() => {
         onCancel();
         form.resetFields();
@@ -201,26 +213,24 @@ export function WorkstationEditModal({
           label="工位名称"
           rules={[{ required: true, message: "请输入工位名称" }]}
         >
-          <Input placeholder="请输入工位名称" />
+          <AppInput placeholder="请输入工位名称" />
         </Form.Item>
         <Form.Item
           name="type"
           label="工位类型"
           rules={[{ required: true, message: "请选择工位类型" }]}
         >
-          <Select placeholder="请选择工位类型" onSearch={() => {}}>
-            {typeDict.length > 0
-              ? typeDict.map((d) => (
-                  <Option key={d.dictValue} value={Number(d.dictValue)}>
-                    {d.dictLabel}
-                  </Option>
-                ))
-              : TYPE_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-          </Select>
+          {/* 形态分类器②④：字典/常量双分支 children → options 改写；业务禁搜 */}
+          <AppSelect
+            allowClear
+            placeholder="请选择工位类型"
+            showSearch={false}
+            options={
+              typeDict.length > 0
+                ? typeDict.map((d) => ({ value: Number(d.dictValue), label: d.dictLabel }))
+                : TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))
+            }
+          />
         </Form.Item>
         <Row gutter={16}>
           <Col span={12}>
@@ -242,12 +252,16 @@ export function WorkstationEditModal({
           </Col>
           <Col span={12}>
             <Form.Item name="userId" label="所属用户">
-              {/* eslint-disable-next-line local/no-large-dropdown-list -- dept-filtered bounded user list, client-side search via optionFilterProp */}
-              <Select
+              {/* local/no-large-dropdown-list 只匹配 <Select>/<AutoComplete> JSX 名，
+                  迁到 AppSelect 后该 disable 指令必然失效（报 unused-directive），故移除 */}
+              <AppSelect
                 placeholder="请先选择部门"
                 allowClear
                 showSearch
-                optionFilterProp="children"
+                options={userOptions.map((u) => ({
+                  value: u.id,
+                  label: u.nickname ? `${u.username} (${u.nickname})` : u.username,
+                }))}
                 onChange={(value) => {
                   // ✨ 联动: 选择/清空用户时自动切换 status (Maintain=2 保留)
                   // 后端 Service 层为兜底,绕过前端无效
@@ -257,13 +271,7 @@ export function WorkstationEditModal({
                     status: value ? 1 : 0,
                   });
                 }}
-              >
-                {userOptions.map((u) => (
-                  <Option key={u.id} value={u.id}>
-                    {u.nickname ? `${u.username} (${u.nickname})` : u.username}
-                  </Option>
-                ))}
-              </Select>
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -297,17 +305,18 @@ export function WorkstationEditModal({
           rules={[{ required: true, message: "请选择状态" }]}
           extra="选择/清空所属用户时,状态会自动切换为占用/空闲(维护状态除外)"
         >
-          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select placeholder="请选择状态">
-            {STATUS_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
+          {/* 形态分类器②④：状态枚举（业务禁搜），children → options。
+              local/no-large-dropdown-list 只认 <Select> JSX 名，迁到 AppSelect 后
+              该 disable 指令失效，故一并移除 */}
+          <AppSelect
+            allowClear
+            placeholder="请选择状态"
+            showSearch={false}
+            options={STATUS_OPTIONS}
+          />
         </Form.Item>
         <Form.Item name="description" label="描述">
-          <TextArea rows={3} placeholder="请输入描述" />
+          <AppTextArea rows={3} placeholder="请输入描述" />
         </Form.Item>
       </Form>
     </BaseEditModal>

@@ -2,7 +2,7 @@
  * Phase 88 Batch140 — components/asset/reconciliation/MatchTestPanel 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
@@ -76,7 +76,7 @@ describe("MatchTestPanel", () => {
       finalSeverity: "critical",
       isSilence: true,
       needsUserDept: false,
-    } as any);
+    } as unknown);
     // Trigger query directly via refetch by setting form — skip detailed
     // Just verify the actionColor function via probe
     expect(true).toBe(true);

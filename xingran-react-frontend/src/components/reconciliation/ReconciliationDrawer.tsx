@@ -20,8 +20,8 @@
  */
 import React, { useCallback, useState } from "react";
 import { Drawer, Tabs, Tag, Descriptions, Button, Skeleton, Empty, message } from "antd";
-import { ReconciliationTimeline, type TimelineRecord } from "./ReconciliationTimeline";
-import { ExceptionMatchList, type ExceptionRuleItem } from "./ExceptionMatchList";
+import { type TimelineRecord } from "./ReconciliationTimeline";
+import { type ExceptionRuleItem } from "./ExceptionMatchList";
 import { useAssetHealth } from "./hooks/useAssetHealth";
 import { useReconciliationVisibility } from "./hooks/useReconciliationVisibility";
 
@@ -64,10 +64,10 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
   onApplyException,
 }) => {
   const visible = useReconciliationVisibility();
-  const [timeline] = useState<TimelineRecord[]>([]);
-  const [timelineLoading] = useState(false);
-  const [rules] = useState<ExceptionRuleItem[]>([]);
-  const [rulesLoading] = useState(false);
+  const [_timeline] = useState<TimelineRecord[]>([]);
+  const [_timelineLoading] = useState(false);
+  const [_rules] = useState<ExceptionRuleItem[]>([]);
+  const [_rulesLoading] = useState(false);
 
   const asset = useAssetHealth(selectedAssetId, workstationId ?? "");
 
@@ -150,18 +150,8 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
     </div>
   );
 
-  const timelineTab = <ReconciliationTimeline records={timeline} loading={timelineLoading} />;
-
-  // 🆕 Plan 02: 例外规则 Tab 传入 assetIp + conflictType 让空态"去创建"按钮携带预填
-  const exceptionTab = (
-    <ExceptionMatchList
-      rules={rules}
-      loading={rulesLoading}
-      assetIp={asset?.ip}
-      conflictType={asset?.conflictType}
-      onCreateRule={onApplyException}
-    />
-  );
+  // STOP-06: timelineTab / exceptionTab 渲染逻辑随 Tab 一并隐藏（原为永久空态），
+  // TODO(P67) 接入数据源后随 Tab 恢复。
 
   return (
     <Drawer
@@ -177,14 +167,12 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
       destroyOnHidden
     >
       <Tabs
-        activeKey={activeTab}
+        // STOP-06: timeline / exception 数据源未接入（原为永久空态），接入前不展示空 Tab
+        // TODO(P67): 接入 useReconciliationTimeline / 例外规则接口后恢复这两个 Tab
+        activeKey={activeTab === "summary" ? activeTab : "summary"}
         onChange={(k) => onTabChange(k as DrawerTabKey)}
         tabBarGutter={24}
-        items={[
-          { key: "summary", label: "冲突摘要", children: summaryTab },
-          { key: "timeline", label: "历史变更", children: timelineTab },
-          { key: "exception", label: "例外规则", children: exceptionTab },
-        ]}
+        items={[{ key: "summary", label: "冲突摘要", children: summaryTab }]}
       />
     </Drawer>
   );

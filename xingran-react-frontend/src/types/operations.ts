@@ -17,6 +17,8 @@ export interface Building {
   code: string;
   address?: string;
   totalFloors?: number;
+  /** 实时楼层数（ops_floors 行数，软删排除），与 totalFloors 反范式字段并存 */
+  floorCount?: number | null;
   totalArea?: number;
   description?: string;
   longitude?: number;
@@ -29,6 +31,17 @@ export interface Building {
 }
 
 export type FloorStatus = Status;
+
+/**
+ * 楼层工位统计（后端 List 批量聚合注入，无工位楼层为 undefined）。
+ * 状态语义跟随 sys_workstation 独立枚举：0=空闲(未使用) / 1=占用(已使用) / 2=维护。
+ */
+export interface FloorWorkstationStats {
+  total: number;
+  used: number;
+  unused: number;
+  maintenance: number;
+}
 
 export interface Floor {
   id: string;
@@ -43,6 +56,7 @@ export interface Floor {
   status: FloorStatus;
   planImageId?: string;
   planImageUrl?: string;
+  workstationStats?: FloorWorkstationStats | null;
   createdAt: string;
   updatedAt: string;
 }

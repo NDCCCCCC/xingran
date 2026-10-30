@@ -3,13 +3,14 @@
  * 节假日批量新增模态框
  */
 
-import { Modal, Button, DatePicker, Input, Select, Switch } from "antd";
+import { Modal, Button, DatePicker, Switch } from "antd";
+// Phase 71 (W5)：裸 Input/Select → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect } from "@/components/ui";
+import { useState } from "react";
 import { PlusOutlined } from "@ant-design/icons";
 import type { DictItem } from "@/hooks/useDict";
 import type { BatchHolidayRow } from "../types";
 import { HOLIDAY_TYPE_OPTIONS } from "../constants";
-
-const { Option } = Select;
 
 export interface HolidayBatchModalProps {
   open: boolean;
@@ -34,11 +35,20 @@ export function HolidayBatchModal({
   onRemoveRow,
   onUpdateRow,
 }: HolidayBatchModalProps) {
+  const [submitting, setSubmitting] = useState(false);
   return (
     <Modal
       title="批量新增节假日"
       open={open}
-      onOk={onOk}
+      onOk={async () => {
+        setSubmitting(true);
+        try {
+          await onOk();
+        } finally {
+          setSubmitting(false);
+        }
+      }}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={onCancel}
       width={800}
       destroyOnHidden
@@ -71,31 +81,28 @@ export function HolidayBatchModal({
                   />
                 </td>
                 <td className="border p-2">
-                  <Input
+                  <AppInput allowClear
                     value={row.holidayName}
                     onChange={(e) => onUpdateRow(index, "holidayName", e.target.value)}
                     placeholder="节假日名称"
                   />
                 </td>
                 <td className="border p-2">
-                  <Select
+                  {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，
+                      显式 showSearch={false} 保持不变 */}
+                  <AppSelect
+                    allowClear
                     value={row.holidayType}
                     onChange={(v) => onUpdateRow(index, "holidayType", v)}
                     style={{ width: "100%" }}
+                    showSearch={false}
                     onSearch={() => {}}
-                  >
-                    {holidayTypeDict.length > 0
-                      ? holidayTypeDict.map((d) => (
-                          <Option key={d.dictValue} value={d.dictValue}>
-                            {d.dictLabel}
-                          </Option>
-                        ))
-                      : HOLIDAY_TYPE_OPTIONS.map((opt) => (
-                          <Option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </Option>
-                        ))}
-                  </Select>
+                    options={
+                      holidayTypeDict.length > 0
+                        ? holidayTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))
+                        : HOLIDAY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))
+                    }
+                  />
                 </td>
                 <td className="border p-2 text-center">
                   <Switch
@@ -109,7 +116,7 @@ export function HolidayBatchModal({
                   <Button
                     type="link"
                     size="small"
-                    style={{ color: "var(--theme-error, #ba3630)" }}
+                    style={{ color: "var(--theme-error)" }}
                     onClick={() => onRemoveRow(index)}
                   >
                     删除

@@ -6,7 +6,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { RouteGuard } from "../RouteGuard";
 import { useMenuStore } from "@/store/menuStore";
-import { getLastPath, saveLastPath, clearLastPath } from "../DynamicRoutes";
+import { getLastPath, saveLastPath, clearLastPath } from "../lastPathStorage";
 
 describe("RouteGuard", () => {
   beforeEach(() => {

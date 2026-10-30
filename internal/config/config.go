@@ -550,16 +550,14 @@ func (c *DatabaseConfig) GetDSN() string {
 	q := u.Query()
 	q.Set("sslmode", c.SSLMode)
 	q.Set("timezone", "Asia/Shanghai")
-	// 连接健壮性(debug backend-hang-on-automigrate):握手超时 + TCP keepalive。
-	// 底层走 pgx(pgx.ParseConfig),解析器把这些 libpq 关键字映射到 net.Dialer。
-	// Supabase 新加坡 pooler 链路存在随机 TCP 黑洞:server 端确认无锁无 active
-	// query,查询在网络层被静默丢弃,无 keepalive 时被丢弃连接上的 Read 永久阻塞
-	// => 启动挂死在 AutoMigrate 内省 / InitData seed。配置后 idle 10s 探测,每 5s
-	// 一次,3 次无 ACK 判死(~25s)返回 error,把无限挂起转化为有界错误。
+	// 连接健壮性(debug backend-hang-on-automigrate):握手超时。
+	// connect_timeout 被 pgx 原生消费(有界握手,超时返回 error 而非无限挂起)。
+	// TCP keepalive 基线由 pgx 默认 Dialer 提供(net.Dialer KeepAlive=5min),无需配置。
+	// 若需激进 keepalive(如 Supabase pooler 链路黑洞场景),必须经 gorm postgres driver
+	// 的 Conn 配置注入 pgconn.Config.DialFunc 自定义 net.Dialer —— pgx v5 不支持任何
+	// keepalive DSN 参数(无论 keepalive_* 还是 libpq 的 keepalives_* 拼写,均落入
+	// RuntimeParams 随 startup packet 发给服务器,被拒: FATAL 42704)。
 	q.Set("connect_timeout", "20")
-	q.Set("keepalive_idle", "10")
-	q.Set("keepalive_interval", "5")
-	q.Set("keepalive_count", "3")
 	u.RawQuery = q.Encode()
 	return u.String()
 }

@@ -3,11 +3,11 @@
  * 配置执行模态框
  */
 
-import { Modal, Form, Input, Select, Table, Card } from "antd";
+import { Modal, Form, Table, Card } from "antd";
+// Phase 71 (W4)：裸 Input/Select → 契约组件
+import { AppInput, AppSelect } from "@/components/ui";
 import type { NetworkDevice, ConfigTemplate } from "@/types";
 import { deviceColumns } from "../columns";
-
-const { Option } = Select;
 
 export interface ConfigExecuteModalProps {
   open: boolean;
@@ -15,6 +15,8 @@ export interface ConfigExecuteModalProps {
   templates: ConfigTemplate[];
   selectedTemplate: ConfigTemplate | null;
   selectedRowKeys: string[];
+  /** FIX-01: 设备列表请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onOk: () => Promise<void>;
   onCancel: () => void;
   onTemplateChange: (templateId: string) => void;
@@ -27,6 +29,7 @@ export function ConfigExecuteModal({
   templates,
   selectedTemplate,
   selectedRowKeys,
+  loading = false,
   onOk,
   onCancel,
   onTemplateChange,
@@ -37,6 +40,8 @@ export function ConfigExecuteModal({
   return (
     <Modal
       title="执行配置模板"
+      mask={{ closable: false }}
+      keyboard={false}
       open={open}
       onOk={async () => {
         await onOk();
@@ -55,7 +60,7 @@ export function ConfigExecuteModal({
           label="任务名称"
           rules={[{ required: true, message: "请输入任务名称" }]}
         >
-          <Input placeholder="请输入任务名称" />
+          <AppInput placeholder="请输入任务名称" />
         </Form.Item>
 
         <Form.Item
@@ -63,19 +68,19 @@ export function ConfigExecuteModal({
           label="选择模板"
           rules={[{ required: true, message: "请选择模板" }]}
         >
-          <Select
+          {/* 形态分类器①/②：children 写法改写 options；原 showSearch + optionFilterProp="children"
+              改为 options 形态后由 AppSelect 契约的 optionFilterProp="label" 承接（均带 label），
+              模板可能较多 → 保留显式 showSearch */}
+          <AppSelect
             placeholder="请选择配置模板"
             showSearch
-            optionFilterProp="children"
-            onChange={onTemplateChange}
+            onChange={(value) => onTemplateChange(value as string)}
             onSearch={() => {}}
-          >
-            {templates.map((t) => (
-              <Option key={t.id} value={t.id}>
-                {t.templateName} ({t.templateCode})
-              </Option>
-            ))}
-          </Select>
+            options={templates.map((t) => ({
+              value: t.id,
+              label: `${t.templateName} (${t.templateCode})`,
+            }))}
+          />
         </Form.Item>
 
         {selectedTemplate && (
@@ -87,7 +92,7 @@ export function ConfigExecuteModal({
               style={{
                 maxHeight: 200,
                 overflow: "auto",
-                background: "#fafafa",
+                background: "var(--theme-bg-secondary)",
                 padding: 12,
                 marginTop: 8,
               }}
@@ -99,6 +104,7 @@ export function ConfigExecuteModal({
 
         <Form.Item label="选择目标设备" required>
           <Table
+            loading={loading}
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => onSelectedRowKeysChange(keys as string[]),
@@ -111,7 +117,7 @@ export function ConfigExecuteModal({
             size="small"
             scroll={{ y: 200 }}
           />
-          <div style={{ marginTop: 8, color: "var(--theme-text-tertiary, #999)" }}>
+          <div style={{ marginTop: 8, color: "var(--theme-text-tertiary)" }}>
             已选择 {selectedRowKeys.length} 台设备
           </div>
         </Form.Item>
@@ -122,7 +128,7 @@ export function ConfigExecuteModal({
           initialValue={300}
           rules={[{ required: true }]}
         >
-          <Input type="number" min={10} max={3600} style={{ width: 200 }} />
+          <AppInput type="number" min={10} max={3600} style={{ width: 200 }} />
         </Form.Item>
       </Form>
     </Modal>

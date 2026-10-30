@@ -15,20 +15,20 @@ vi.mock("@/lib/api", async () => {
 let mockLayout = "classic";
 
 vi.mock("@/store/layoutStore", () => ({
-  useLayoutStore: (sel?: any) =>
+  useLayoutStore: (sel?: unknown) =>
     sel ? sel({ currentLayout: mockLayout }) : { currentLayout: mockLayout },
 }));
 
 vi.mock("../ClassicLayout", () => ({
-  default: ({ children }: any) => <div data-testid="classic-layout">{children}</div>,
+  default: ({ children }: unknown) => <div data-testid="classic-layout">{children}</div>,
 }));
 
 vi.mock("../HybridLayout", () => ({
-  default: ({ children }: any) => <div data-testid="hybrid-layout">{children}</div>,
+  default: ({ children }: unknown) => <div data-testid="hybrid-layout">{children}</div>,
 }));
 
 vi.mock("../InnovativeLayout", () => ({
-  default: ({ children }: any) => <div data-testid="innovative-layout">{children}</div>,
+  default: ({ children }: unknown) => <div data-testid="innovative-layout">{children}</div>,
 }));
 
 import Layout from "../index";

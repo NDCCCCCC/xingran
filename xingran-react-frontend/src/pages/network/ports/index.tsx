@@ -4,8 +4,6 @@ import {
   Button,
   Space,
   Form,
-  Input,
-  Select,
   Tag,
   Card,
   Row,
@@ -16,6 +14,8 @@ import {
   Skeleton,
   Typography,
 } from "antd";
+// Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   SearchOutlined,
@@ -34,11 +34,11 @@ import { batchExport, getPortMACBundle, type PortMACBundle } from "@/lib/api/net
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { useTableManager } from "@/hooks/useTableManager";
-import { withErrorHandling } from "@/utils/errorHandler";
+import { handleApiError, withErrorHandling } from "@/utils/errorHandler";
 import { formatDateTime } from "@/utils/datetime";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry, confirmDelete } from "@/components/shared";
 import ActionButtons, { type ActionButton } from "@/components/shared/ActionButtons";
 import { SettingOutlined } from "@ant-design/icons";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -48,8 +48,6 @@ import { BulkWriteDrawer } from "@/components/network/port-write/BulkWriteDrawer
 import { SetAccessVlanModal } from "@/components/network/port-write/SetAccessVlanModal";
 import { PortBindingModal } from "@/components/network/port-write/PortBindingModal";
 import { EVENT_LABEL, EVENT_TAG_COLOR, type MACEventType } from "@/components/network/macEventMeta";
-
-const { Option } = Select;
 
 // ==================== PortMACPanel (quick 260712-vpj, D-05/D-06) ====================
 //
@@ -85,7 +83,7 @@ const PortMACPanel: FC<PortMACPanelProps> = ({ bundle, adminStatus, operStatus, 
 
   if (bundle.current.length > 0) {
     return (
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={8} style={{ width: "100%" }}>
         <Typography.Text strong>当前 MAC 地址({bundle.current.length})</Typography.Text>
         <Space size={[8, 8]} wrap>
           {bundle.current.map((m) => (
@@ -103,7 +101,7 @@ const PortMACPanel: FC<PortMACPanelProps> = ({ bundle, adminStatus, operStatus, 
     const recent = bundle.recentHistory;
     const eventType = (recent.eventType ?? "appeared") as MACEventType;
     return (
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={8} style={{ width: "100%" }}>
         <Typography.Text strong>最近一次出现过的 MAC</Typography.Text>
         <Space size={8} wrap>
           <Tag color="blue">{recent.macAddress}</Tag>
@@ -270,7 +268,7 @@ const PortStatusPage: FC = () => {
         dot1xEnabled: stats.dot1xEnabledCount || 0,
       });
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      handleApiError(error, "加载统计数据");
     }
   };
 
@@ -283,7 +281,7 @@ const PortStatusPage: FC = () => {
       })) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
-      console.error("加载设备列表失败:", error);
+      handleApiError(error, "加载设备列表");
     }
   };
 
@@ -319,24 +317,23 @@ const PortStatusPage: FC = () => {
   };
 
   // 批量删除
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       message.warning("请选择要删除的数据");
       return;
     }
-    await withErrorHandling(
-      async () => {
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper；
+    // 原 withErrorHandling 包装由 helper 内建成功/失败提示替代——记 SUMMARY 偏差）
+    confirmDelete({
+      title: "确认批量删除",
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
         await post("/network/ports/batch-delete", { ids: selectedRowKeys });
-        return "批量删除成功";
+        setSelectedRowKeys([]);
+        loadPortStatus();
+        loadStatistics();
       },
-      {
-        onSuccess: () => {
-          setSelectedRowKeys([]);
-          loadPortStatus();
-          loadStatistics();
-        },
-      }
-    );
+    });
   };
 
   const handleBatchExport = async (entityTypes: string[]) => {
@@ -516,6 +513,8 @@ const PortStatusPage: FC = () => {
       {/* 返回按钮（仅当从设备页面跳转时显示） */}
       {isFromDevice && (
         <Button
+          aria-label="返回"
+          title="返回"
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate("/network/devices")}
           style={{ marginBottom: 16 }}
@@ -536,7 +535,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="UP端口"
               value={statistics.up}
-              styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -546,7 +545,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="DOWN端口"
               value={statistics.down}
-              styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+              styles={{ content: { color: "var(--theme-error)" } }}
               prefix={<WarningOutlined />}
             />
           </Card>
@@ -556,7 +555,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="802.1X启用"
               value={statistics.dot1xEnabled}
-              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+              styles={{ content: { color: "var(--theme-info)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -576,87 +575,95 @@ const PortStatusPage: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options（均带 label，optionFilterProp="label" 生效）。
+                  设备为 UUID 外键，原 allowClear=true → 清空即「不按设备筛选」，行为保持不变 */}
+              <AppSelect
                 placeholder="请选择设备"
                 allowClear
                 className="user-form-input"
                 style={{ width: 200 }}
                 showSearch
-                optionFilterProp="label"
                 onSearch={() => {}}
-              >
-                {devices.map((device) => (
-                  <Option key={device.id} value={device.id} label={device.deviceName}>
-                    {device.deviceName}
-                  </Option>
-                ))}
-              </Select>
+                options={devices.map((device) => ({
+                  value: device.id,
+                  label: device.deviceName,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="interfaceName" label="接口">
-              <Input
+              <AppInput
                 placeholder="请输入接口名称"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="adminStatus" label="管理状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；状态固定 2 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value="up">UP</Option>
-                <Option value="down">DOWN</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: "up", label: "UP" },
+                  { value: "down", label: "DOWN" },
+                ]}
+              />
             </Form.Item>
             <Form.Item name="operStatus" label="操作状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；状态固定 2 项 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择状态"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value="up">UP</Option>
-                <Option value="down">DOWN</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: "up", label: "UP" },
+                  { value: "down", label: "DOWN" },
+                ]}
+              />
             </Form.Item>
             <Form.Item name="dot1xEnabled" label="802.1X状态">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；布尔开关类 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value={true}>已启用</Option>
-                <Option value={false}>未启用</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: true, label: "已启用" },
+                  { value: false, label: "未启用" },
+                ]}
+              />
             </Form.Item>
             <Form.Item name="portSecurityEnabled" label="端口安全">
-              <Select
+              {/* 形态分类器①/②：children 写法改写 options；布尔开关类 → 显式禁搜 */}
+              <AppSelect
                 placeholder="请选择"
-                allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                <Option value={true}>已启用</Option>
-                <Option value={false}>未启用</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { value: true, label: "已启用" },
+                  { value: false, label: "未启用" },
+                ]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
                   查询
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
                   重置
                 </Button>
                 <Button
+                  aria-label="刷新"
+                  title="刷新"
                   icon={<ReloadOutlined />}
                   onClick={handleRefresh}
                   disabled={batchInProgress}
@@ -685,6 +692,8 @@ const PortStatusPage: FC = () => {
               pageSize={paginationProps.pageSize}
             />
             <Button
+              aria-label="全量采集"
+              title="全量采集"
               icon={<CloudSyncOutlined />}
               onClick={handleCollectAll}
               loading={collecting}
@@ -693,15 +702,19 @@ const PortStatusPage: FC = () => {
               采集所有设备
             </Button>
             <Button
+              aria-label="批量删除"
+              title="批量删除"
               icon={<DeleteOutlined />}
               onClick={handleBatchDelete}
               disabled={selectedRowKeys.length === 0}
-              style={{ color: "var(--theme-error, #ba3630)" }}
+              style={{ color: "var(--theme-error)" }}
             >
               批量删除 ({selectedRowKeys.length})
             </Button>
             {/* Phase 53 W4 D-04: 批量配置入口 — 与批量删除 UX 一致, 额外加 !canWrite 防 */}
             <Button
+              aria-label="批量写入"
+              title="批量写入"
               icon={<SettingOutlined />}
               onClick={() => setBulkWriteDrawerOpen(true)}
               disabled={selectedRowKeys.length === 0 || !canWrite}
@@ -753,7 +766,7 @@ const PortStatusPage: FC = () => {
               }
             },
             expandedRowRender: (record) => (
-              <div style={{ padding: 16, background: "#fafafa" }}>
+              <div style={{ padding: 16, background: "var(--theme-bg-secondary)" }}>
                 <p>
                   <strong>接口详情:</strong>
                 </p>

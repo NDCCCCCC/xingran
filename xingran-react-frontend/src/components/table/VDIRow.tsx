@@ -10,8 +10,9 @@
  */
 
 import { memo } from "react";
-import { Button, Popconfirm, Space, Tooltip } from "antd";
+import { Button, Space, Tooltip } from "antd";
 import type { VirtualMachine } from "@/types/vdi";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import type { VMOprationButton } from "@/pages/vdi/VirtualMachineList/vmOperationButtons";
 
 export interface VDIRowProps {
@@ -46,17 +47,24 @@ function VDIRowImpl({
       {allowedButtons.map((btn) => {
         if (btn.action === "delete") {
           return (
-            <Popconfirm
-              key={btn.action}
-              title="确定要删除这个虚拟机吗？此操作将调用 VDI API 删除虚拟机。"
-              onConfirm={() => onDelete(vm.id)}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Tooltip title={btn.label}>
-                <Button type="text" danger icon={btn.icon} />
-              </Tooltip>
-            </Popconfirm>
+            <Tooltip key={btn.action} title={btn.label}>
+              <Button
+                type="text"
+                danger
+                icon={btn.icon}
+                aria-label={`删除 虚拟机 ${vm.name}`}
+                title={`删除 虚拟机 ${vm.name}`}
+                onClick={() =>
+                  confirmDelete({
+                    target: `虚拟机 ${vm.name}`,
+                    extra: "此操作将调用 VDI API 删除虚拟机。",
+                    onDelete: async () => {
+                      await onDelete(vm.id);
+                    },
+                  })
+                }
+              />
+            </Tooltip>
           );
         }
 

@@ -114,7 +114,7 @@ if [ "$SCOPE" = "frontend" ] || [ "$SCOPE" = "all" ]; then
     step "frontend npm ci 跳过(--no-npm-ci,复用 node_modules)"
   fi
 
-  for s in format:check lint type-check test build; do
+  for s in format:check lint lint:ci type-check test build; do
     step "frontend npm run $s"
     if npm run "$s" --silent; then pass "$s"; else fail "$s — 输出即 CI 将看到的失败"; fi
   done

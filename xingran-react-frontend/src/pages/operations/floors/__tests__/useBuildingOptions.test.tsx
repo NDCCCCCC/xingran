@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 const mockList = vi.fn();
 vi.mock("@/lib/opsApi", () => ({
   buildingApi: {
-    list: (...args: any[]) => mockList(...args),
+    list: (...args: unknown[]) => mockList(...args),
   },
 }));
 

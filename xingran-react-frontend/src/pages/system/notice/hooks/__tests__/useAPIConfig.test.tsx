@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
 
 const mockList = vi.fn();
 vi.mock("@/lib/notificationConfigApi", () => ({
-  getAPINotificationConfigList: (...args: any[]) => mockList(...args),
+  getAPINotificationConfigList: (...args: unknown[]) => mockList(...args),
 }));
 
 import { useAPIConfig } from "../useAPIConfig";

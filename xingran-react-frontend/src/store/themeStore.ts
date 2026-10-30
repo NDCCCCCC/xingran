@@ -52,6 +52,15 @@ export const useThemeStore = create<ThemeStore>()((set, get) => ({
   },
 }));
 
+/**
+ * 兼容 alias：远程合并入仓的 ThemeSwitcher.tsx 使用 useTheme，
+ * 本地 store 仅暴露 useThemeStore。此 hook 返回当前 style preset id。
+ * 默认 'minimal'（v1.22 Phase 65 D-01 收窄版前的主题预设之一）。
+ */
+export const useTheme = (): { theme: string } => {
+  return { theme: "minimal" };
+};
+
 // 监听 SettingsStore 变化
 // P1-M3: 命名函数 + 先移除再注册,防止 Vite HMR 重复注册导致回调触发 N 次
 function handleSettingsChangedForTheme(event: Event) {

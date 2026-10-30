@@ -21515,7 +21515,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "Xingran Next API",
+	Title:            "XingRan Next API",
 	Description:      "企业级权限管理系统 API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

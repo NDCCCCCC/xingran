@@ -222,6 +222,20 @@ func login(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
+		// 6.5 本地状态兜底（Phase 60 复审 CR-02 critical，2026-10-21 修复）：
+		// AD/hybrid 认证器只验证 AD bind 与 sys_ad_config.status，不查 sys_user.status，
+		// 本地停用的账号仍能通过 AD bind 走到这里拿到 JWT。统一在发 token 前检查
+		// （loginLocalDirect 已有同款检查）；副作用对齐上方 ErrUserDisabled 分支。
+		if user.Status != models.UserStatusEnabled {
+			applogger.Warnf("用户 %s 认证通过但本地账号已停用，拒绝发 token", req.Username)
+			if failErr := core.CaptchaService.RecordLoginFailure(ctx, req.Username); failErr != nil {
+				applogger.Warnf("记录登录失败次数失败: %v", failErr)
+			}
+			response.Error(c, response.ErrForbidden, "用户已被禁用")
+			recordLoginLog(c, core, req.Username, nil, 1, "用户已被禁用")
+			return
+		}
+
 		// 7. 登录成功后处理
 		core.CaptchaService.ClearLoginFailure(ctx, req.Username)
 		recordLoginLog(c, core, req.Username, user.Nickname, 0, "登录成功")
@@ -417,6 +431,14 @@ func refreshToken(core *core.Core) gin.HandlerFunc {
 		var user models.User
 		if err := core.DB.GetDB().Where("id = ?", claims.UserID).First(&user).Error; err != nil {
 			response.Error(c, response.ErrUserNotFound)
+			return
+		}
+
+		// 60-REVIEW CR-03（2026-10-21 修复）：停用用户不得凭未过期 refresh token 续签。
+		// refresh 非登录动作，不记 login log / 不计登录失败，仅拒绝。
+		if user.Status != models.UserStatusEnabled {
+			applogger.Warnf("用户 %s 尝试刷新令牌但本地账号已停用，拒绝", user.Username)
+			response.Error(c, response.ErrForbidden, "用户已被禁用")
 			return
 		}
 
@@ -660,6 +682,9 @@ func syncErrorReasonMessage(reason string) string {
 		return "AD 用户信息搜索失败，请联系系统管理员"
 	case "user_sync":
 		return "AD 用户同步到本地失败，请联系系统管理员"
+	case security.SyncReasonSoftDeleteMismatch:
+		// 安全策略拦截：固定文案，绝不包含 DN 内部细节（D-04 / T-60-03）。
+		return "该账号存在 AD 身份不一致，已被安全拦截，请联系系统管理员"
 	case "no_syncer":
 		return "AD 用户同步服务未配置，请联系系统管理员"
 	default:

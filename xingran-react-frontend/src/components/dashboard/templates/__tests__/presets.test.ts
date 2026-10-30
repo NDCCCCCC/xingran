@@ -52,7 +52,7 @@ describe("dashboard/templates/presets", () => {
   });
 
   it("getPresetTemplate 不存在类型返回 undefined", () => {
-    const t = getPresetTemplate("non-existent-type" as any);
+    const t = getPresetTemplate("non-existent-type" as unknown);
     expect(t).toBeUndefined();
   });
 
@@ -64,7 +64,7 @@ describe("dashboard/templates/presets", () => {
 
   it("所有 dashboard.widgets 包含必要的字段", () => {
     presetDashboardTemplates.forEach((t) => {
-      t.dashboard.layout.widgets.forEach((w: any) => {
+      t.dashboard.layout.widgets.forEach((w: unknown) => {
         expect(typeof w.id).toBe("string");
         expect(typeof w.type).toBe("string");
         expect(typeof w.title).toBe("string");

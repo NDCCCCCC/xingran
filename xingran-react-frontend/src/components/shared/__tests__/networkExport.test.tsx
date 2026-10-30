@@ -2,7 +2,7 @@
  * Phase 88 Batch142 — components/shared/NetworkExport 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent, waitFor } from "@testing-library/react";
+import { render, fireEvent } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import type { ReactElement, ReactNode } from "react";
 
@@ -76,7 +76,7 @@ describe("NetworkExport", () => {
       ok: false,
       blob: async () => new Blob(),
       headers: { get: () => null },
-    })) as any;
+    })) as unknown;
     try {
       const { getByText } = render(<NetworkExport entityType="devices" entityName="设备" />, {
         wrapper,
@@ -94,7 +94,7 @@ describe("NetworkExport", () => {
       headers: { get: () => 'attachment; filename="devices.xlsx"' },
     }));
     const origFetch = globalThis.fetch;
-    globalThis.fetch = fetchMock as any;
+    globalThis.fetch = fetchMock as unknown;
     try {
       const { getByText } = render(<NetworkExport entityType="devices" entityName="设备" />, {
         wrapper,

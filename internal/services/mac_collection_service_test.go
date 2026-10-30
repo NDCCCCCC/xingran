@@ -677,6 +677,120 @@ Total items displayed = 1`
 	assert.Equal(t, "GE0/0/1", entries[0].InterfaceName)
 }
 
+// ==================== Phase 72 #2 (DBG-02): Cisco 厂商 MAC 采集 ====================
+
+// TestIsKnownMACVendor_Cisco 锁定 Cisco 已进入已知厂商白名单。
+// 回归背景: 入口 isKnownMACVendor 白名单漏 Cisco 时, Cisco 设备采集在
+// parseMACAddressTable 入口整体报错("未知厂商 ... 拒绝静默丢弃"), 链路不通。
+func TestIsKnownMACVendor_Cisco(t *testing.T) {
+	assert.True(t, isKnownMACVendor(models.VendorCisco), "Cisco 必须在已知厂商白名单内")
+	for _, v := range []models.DeviceVendor{
+		models.VendorHuawei, models.VendorH3C, models.VendorRuijie, models.VendorMaipu,
+	} {
+		assert.True(t, isKnownMACVendor(v), "既有厂商 %s 不应被移除", v)
+	}
+	assert.False(t, isKnownMACVendor(models.DeviceVendor("juniper")), "未知厂商仍须拒绝")
+}
+
+// TestGetMACCommands_Cisco 锁定 Cisco 双命令:
+// show mac address-table(IOS/NX-OS 无连字符) + show port-security address。
+func TestGetMACCommands_Cisco(t *testing.T) {
+	service := &MACCollectionService{}
+
+	cmds := service.getMACCommands(models.VendorCisco)
+	assert.Equal(t, []MACCommand{
+		{Cmd: "show mac address-table", Type: MACCommandTypeMacTable},
+		{Cmd: "show port-security address", Type: MACCommandTypePortSecurity},
+	}, cmds)
+
+	// 向后兼容 getMACCommand 仍返回首条
+	assert.Equal(t, "show mac address-table", service.getMACCommand(models.VendorCisco))
+}
+
+// TestParseMACLine_Cisco_PortSecurity 核心验收用例(Phase 72 #2 / DBG-02):
+// 输入点分格式 b022.7a2e.4a4f(7 字段 port-security 行)
+// → 归一化为大写冒号 B0:22:7A:2E:4A:4F, VLAN 308, 接口 GE2/25。
+func TestParseMACLine_Cisco_PortSecurity(t *testing.T) {
+	service := &MACCollectionService{}
+
+	// 真实设备输出样本(CX-WH-WH-04F-FL-RS8607E-03, 2026-06-29)
+	line := "56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active"
+
+	entry, ok := service.parseMACLine(line, models.VendorCisco, MACCommandTypePortSecurity)
+	assert.True(t, ok, "Cisco port-security 行必须可解析(此前被 vendor switch 静默丢弃)")
+	assert.Equal(t, "B0:22:7A:2E:4A:4F", entry.MACAddress, "点分 b022.7a2e.4a4f → 大写冒号")
+	assert.Equal(t, 308, entry.VLANID, "VLAN 取 MAC 前一列,不能被 Index 56 误取")
+	assert.Equal(t, "GE2/25", entry.InterfaceName, "接口名归一化为大写短名")
+	assert.Equal(t, "Dynamic", entry.MACType)
+}
+
+// TestParseMACAddressTable_Cisco_EndToEnd 走 parseMACAddressTable 全链路(含入口白名单),
+// 断言两种 Cisco 输出都能产出 MAC, 且合并去重后 b022.7a2e.4a4f 只出现一条。
+func TestParseMACAddressTable_Cisco_EndToEnd(t *testing.T) {
+	svc := &MACCollectionService{}
+
+	macTableOutput := `          Mac Address Table
+-------------------------------------------
+
+Vlan    Mac Address       Type        Ports
+----    -----------       --------    -----
+ 308    b022.7a2e.4a4f    DYNAMIC     Gi2/25
+ 100    0011.2233.4455    DYNAMIC     Gi0/1
+Total Mac Addresses for this criterion: 2`
+
+	portSecurityOutput := `          Secure Mac Address Table
+-------------------------------------------------------------------
+Idx  VLAN  Mac Address       Type         Interface      LearnAge  Action
+--------------------------------------------------------------------------------
+56   308   b022.7a2e.4a4f   Dynamic      GigabitEthernet 2/25   --    active`
+
+	macEntries, err := svc.parseMACAddressTable(macTableOutput, models.VendorCisco, MACCommandTypeMacTable)
+	assert.NoError(t, err, "已知厂商 Cisco 不应报错")
+	assert.Len(t, macEntries, 2, "表头/分隔/汇总行须被过滤,只留 2 条真实 MAC")
+	assert.Equal(t, "B0:22:7A:2E:4A:4F", macEntries[0].MACAddress)
+	assert.Equal(t, 308, macEntries[0].VLANID)
+	assert.Equal(t, "GE2/25", macEntries[0].InterfaceName)
+	assert.Equal(t, "00:11:22:33:44:55", macEntries[1].MACAddress)
+
+	psEntries, err := svc.parseMACAddressTable(portSecurityOutput, models.VendorCisco, MACCommandTypePortSecurity)
+	assert.NoError(t, err)
+	assert.Len(t, psEntries, 1)
+	assert.Equal(t, "B0:22:7A:2E:4A:4F", psEntries[0].MACAddress)
+	assert.Equal(t, 308, psEntries[0].VLANID)
+	assert.Equal(t, "GE2/25", psEntries[0].InterfaceName)
+
+	merged := svc.mergeMACEntries([][]MACAddressEntry{macEntries, psEntries})
+	count := 0
+	for _, e := range merged {
+		if e.MACAddress == "B0:22:7A:2E:4A:4F" && e.VLANID == 308 {
+			count++
+		}
+	}
+	assert.Equal(t, 1, count, "同一 MAC 双命令结果须按 (MAC,VLAN,Interface) 去重")
+}
+
+// TestParseMACLine_Cisco_NegativeCases 锁定 Cisco 分支的丢弃语义(不产出垃圾)。
+func TestParseMACLine_Cisco_NegativeCases(t *testing.T) {
+	service := &MACCollectionService{}
+
+	tests := []struct {
+		name string
+		line string
+	}{
+		{"表头行", "Vlan    Mac Address       Type        Ports"},
+		{"分隔行", "----    -----------       --------    -----"},
+		{"无 MAC 行", "308     DYNAMIC             Gi2/25"},
+		{"字段不足", "b022.7a2e.4a4f"},
+		{"空行", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, ok := service.parseMACLine(tt.line, models.VendorCisco, MACCommandTypeMacTable)
+			assert.False(t, ok, "垃圾行必须丢弃")
+		})
+	}
+}
+
 // BenchmarkParseMACLine 基准测试MAC地址解析性能
 func BenchmarkParseMACLine(b *testing.B) {
 	service := &MACCollectionService{}

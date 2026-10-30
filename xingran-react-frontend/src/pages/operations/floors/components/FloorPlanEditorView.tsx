@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Card, Button, Space, Spin, Select } from "antd";
+import { Card, Button, Space, Spin } from "antd";
 import {
   EyeOutlined,
   EditOutlined,
@@ -11,11 +11,14 @@ import {
 import type { Floor, Building } from "@/types";
 import { CADFloorPlanEditor } from "@/components/cad-editor";
 import type { FloorPlanData } from "@/components/cad-editor/types";
+import type { ActionPermissionDecision } from "@/components/shared";
 import {
   DepartmentTreeSelect,
   type TreeNode,
   type Department,
 } from "@/components/shared/DepartmentTreeSelect";
+// Phase 71 (W3)：裸 Select → AppSelect（本文件两处已是 options 形态，直接迁）。
+import { AppSelect } from "@/components/ui";
 
 export interface FloorOption {
   id: string;
@@ -43,6 +46,13 @@ interface FloorPlanEditorViewProps {
   onDepartmentChange: (deptId: string) => void;
   onBuildingChange: (buildingId: string) => void;
   onFloorChange: (floorId: string) => void;
+  /**
+   * Phase 86 W2：平面图保存/编辑的**四码合并决策**
+   * （`opsFloorPlan.edit ∧ opsWall.* ∧ opsDoor.* ∧ opsWorkstation.edit`）。
+   * `visible=false` → 不渲染「编辑模式」按钮（ready 缺任一码）；
+   * `disabled=true` → 渲染但禁用（未就绪）。不传 = 不做判定（既有调用方行为零变更）。
+   */
+  editDecision?: ActionPermissionDecision;
 }
 
 export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
@@ -65,6 +75,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
   onDepartmentChange,
   onBuildingChange,
   onFloorChange,
+  editDecision,
 }) => {
   if (!currentFloor || !floorPlanData) {
     return (
@@ -79,7 +90,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
         }}
       >
         <Spin size="large" />
-        <span style={{ color: "var(--theme-text-tertiary, #999)" }}>加载中...</span>
+        <span style={{ color: "var(--theme-text-tertiary)" }}>加载中...</span>
       </div>
     );
   }
@@ -89,9 +100,9 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
       <Card
         title={`${selectedDeptName || "机构"} - ${selectedBuildingName || currentFloor?.buildingName || "楼宇"} - ${currentFloor.name || `${currentFloor.floorNo}层`} - 平面图编辑`}
         extra={
-          <Space size="middle">
+          <Space size="medium">
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
-              <BuildOutlined style={{ color: "var(--theme-info, #337ab0)" }} />
+              <BuildOutlined style={{ color: "var(--theme-info)" }} />
               <DepartmentTreeSelect
                 style={{ width: 180 }}
                 placeholder="选择机构"
@@ -104,45 +115,56 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
             </Space>
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
-              <AppstoreOutlined style={{ color: "var(--theme-purple, #722ed1)" }} />
-              <Select
+              <AppstoreOutlined style={{ color: "var(--theme-purple)" }} />
+              <AppSelect
+                allowClear
                 style={{ width: 150 }}
                 placeholder="选择楼宇"
                 value={selectedBuildingId}
-                onChange={onBuildingChange}
+                // AppSelect 的 onChange 值为 unknown；父级 handleEditorBuildingChange 对空值
+                // 直接 return，这里收敛成 "" 保持「未选择」语义，不引入新分支
+                onChange={(value) => onBuildingChange((value as string) ?? "")}
                 options={buildingOptions.map((b) => ({
                   label: b.name,
                   value: b.id,
                 }))}
                 showSearch
-                optionFilterProp="label"
                 onSearch={() => {}}
               />
             </Space>
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
-              <AppstoreOutlined style={{ color: "var(--theme-success, #2d8949)" }} />
-              <Select
+              <AppstoreOutlined style={{ color: "var(--theme-success)" }} />
+              <AppSelect
+                allowClear
                 style={{ width: 150 }}
                 placeholder="选择楼层"
                 value={currentFloor?.id}
-                onChange={onFloorChange}
+                // 同上：清空收敛为 ""（父级 handleFloorChange 内部对 "" 自会处理空态）
+                onChange={(value) => onFloorChange((value as string) ?? "")}
                 options={floorOptions.map((f) => ({
                   label: f.name || `${f.floorNo}层`,
                   value: f.id,
                 }))}
                 showSearch
-                optionFilterProp="label"
                 onSearch={() => {}}
               />
             </Space>
 
-            <Button
-              icon={isEditMode ? <EyeOutlined /> : <EditOutlined />}
-              onClick={() => onEditModeChange(!isEditMode)}
-            >
-              {isEditMode ? "预览模式" : "编辑模式"}
-            </Button>
+            {/* Phase 86 W2：平面图编辑/保存入口 —— 四码合并决策。
+                ready 缺任一码 → 不渲染（该入口直通可保存的编辑器）；
+                未就绪 → 渲染但 disabled + hint（三态语义）。
+                不传 editDecision 时保持既有行为（恒可见可用）。 */}
+            {(editDecision?.visible ?? true) && (
+              <Button
+                icon={isEditMode ? <EyeOutlined /> : <EditOutlined />}
+                disabled={editDecision?.disabled}
+                title={editDecision?.hint}
+                onClick={() => onEditModeChange(!isEditMode)}
+              >
+                {isEditMode ? "预览模式" : "编辑模式"}
+              </Button>
+            )}
             <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={loading}>
               刷新
             </Button>

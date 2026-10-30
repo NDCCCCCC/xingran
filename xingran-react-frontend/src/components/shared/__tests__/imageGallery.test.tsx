@@ -65,7 +65,7 @@ describe("ImageGallery", () => {
   });
 
   it("editable=false → 不渲染设为主图/编辑/删除按钮", () => {
-    const { baseElement, queryByText } = render(<ImageGallery photos={photos} editable={false} />, {
+    const { baseElement: _baseElement, queryByText } = render(<ImageGallery photos={photos} editable={false} />, {
       wrapper,
     });
     expect(queryByText("设为主图")).toBeNull();

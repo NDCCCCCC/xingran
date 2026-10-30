@@ -8,11 +8,14 @@ import { App } from "antd";
 import type { ConfigTemplate, PageResponse } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
+import {  } from "@/utils/errorHandler";
 import type { TemplateStatistics } from "../types";
 
 export interface UseTemplateDataReturn {
   templates: ConfigTemplate[];
   loading: boolean;
+  /** FIX-04a: 列表加载失败的可见错误（渲染 ErrorAlertWithRetry） */
+  error: unknown;
   total: number;
   statistics: TemplateStatistics;
 
@@ -31,6 +34,7 @@ export function useTemplateData(
   const { message } = App.useApp();
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [total, setTotalLocal] = useState(0);
   const [statistics, setStatistics] = useState<TemplateStatistics>({
     total: 0,
@@ -61,8 +65,9 @@ export function useTemplateData(
         setTemplates(result.data?.list || []);
         setTotalLocal(result.data?.total || 0);
         setTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("加载模板列表失败:", error);
+        setError(error);
       } finally {
         setLoading(false);
       }
@@ -80,14 +85,16 @@ export function useTemplateData(
         custom: result.data?.custom ?? 0,
         init: result.data?.init ?? 0,
       });
+      setError(null);
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      setError(error);
     }
   }, []);
 
   return {
     templates,
     loading,
+    error,
     total: total,
     statistics,
     loadTemplates,

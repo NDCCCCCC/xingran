@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
@@ -27,6 +28,8 @@ type UserService interface {
 	GetByID(ctx context.Context, id string) (*models.User, error)
 	List(ctx context.Context, params requests.UserListParams) (*PageResult, error)
 	Statistics(ctx context.Context) (*UserStatisticsResult, error)
+	// StatisticsWithDataScope 带 data_scope 过滤的用户统计（与 List 复用同一过滤构造）。
+	StatisticsWithDataScope(ctx context.Context, scopeUserID string, dataScope models.DataScope) (*UserStatisticsResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	ResetPassword(ctx context.Context, id string, newPassword string) error
@@ -153,29 +156,70 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 		return apperrors.DatabaseError(err)
 	}
 
+	// Phase 57 D-01: diff 旧值快照，须在写 sys_user 之前捕获。
+	//
+	// ⚠ 不变量（F-06 / F-13）：oldUserSnapshot 的四个 *string 字段（nickname/email/phone/
+	// dept_id）**不得被原地解引用改写**（`*oldUserSnapshot.Nickname = ...`），否则新旧值
+	// 共享同一字符串，HasADFieldChanged 恒返回 false → 入队静默失效且无任何测试转红。
+	// 当前写路径不再改动 user 结构体（改为 selective Updates 字段映射），该不变量自然成立。
+	oldUserSnapshot := user
+
 	// 使用事务更新用户及其关联
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 更新用户基本信息
-		user.Nickname = req.Nickname
-		user.EmployeeNo = req.EmployeeNo
-		user.Email = req.Email
-		user.Phone = req.Phone
-		user.Gender = req.Gender
-		user.Status = req.Status
-		user.DeptID = req.DeptID
-		user.Remark = toStringPtr(req.Remark)
-
-		// 如果部门发生变化，同步更新部门名称
-		if req.DeptID != nil {
-			var dept models.Department
-			if err := tx.Select("dept_name").First(&dept, "id = ?", *req.DeptID).Error; err == nil {
-				user.DeptName = &dept.DeptName
-			}
-		} else {
-			user.DeptName = nil
+		// Phase 57 F-06: 只写请求**显式提供**的字段。
+		//
+		// 原实现是 tx.Save(&user) 全字段覆盖 —— 指针字段 nil 被 GORM 写成 NULL，
+		// 而入队 diff（adFieldDiffers）把 nil 解释为"无变更、不入队"。两条路径对 nil 的
+		// 解释不一致，于是任何只带部分字段的请求（curl / 第三方脚本 / 前端漏传）都会静默
+		// 清空 sys_user 的 nickname/email/phone/dept_id/dept_name/employee_no/remark，
+		// 却不产生任何队列行 → 系统与 AD 侧进一步分叉。
+		//
+		// 现在两侧语义一致：**nil = 未提供 = 不写 = 无变更**。
+		updates := map[string]interface{}{}
+		if req.Nickname != nil {
+			updates["nickname"] = *req.Nickname
 		}
+		if req.EmployeeNo != nil {
+			updates["employee_no"] = *req.EmployeeNo
+		}
+		if req.Email != nil {
+			updates["email"] = *req.Email
+		}
+		if req.Phone != nil {
+			updates["phone"] = *req.Phone
+		}
+		if req.Mobile != nil {
+			updates["mobile"] = *req.Mobile
+		}
+		if req.Title != nil {
+			updates["title"] = *req.Title
+		}
+		if req.Remark != nil {
+			updates["remark"] = *req.Remark
+		}
+		if req.DeptID != nil {
+			updates["dept_id"] = *req.DeptID
+			// 显式空串 = 清空部门（前端清空选择器后提交的就是空串/缺省）；
+			// nil = 未提供 = 不动（见上方 F-06 说明）。
+			if *req.DeptID == "" {
+				updates["dept_name"] = ""
+			} else {
+				// 部门变化时同步部门名称；查不到部门（已删/无权限）时保持旧 dept_name 不动，
+				// 避免把一个有效字段写成 NULL。
+				var dept models.Department
+				if err := tx.Select("dept_name").First(&dept, "id = ?", *req.DeptID).Error; err == nil {
+					updates["dept_name"] = dept.DeptName
+				}
+			}
+		}
+		// gender / status 是值类型：ShouldBindJSON 无法区分"未传"与"零值"
+		// （0 既是合法值也是零值），故保持既有的全量写语义 —— 前端表单始终携带这两项，
+		// 且 status 跃迁由 F-02 的入队逻辑显式 diff（oldUserSnapshot.Status vs req.Status），
+		// 不依赖"是否写入"。
+		updates["gender"] = req.Gender
+		updates["status"] = req.Status
 
-		if err := tx.Save(&user).Error; err != nil {
+		if err := tx.Model(&models.User{}).Where("id = ?", req.ID).Updates(updates).Error; err != nil {
 			return apperrors.DatabaseError(err)
 		}
 
@@ -215,6 +259,30 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 			}
 		}
 
+		// Phase 57 D-01/D-02: 同事务入队（四字段 diff + AD 配置前置条件）；
+		// 失败返回 error 使 tx.Commit() 跳过 —— 业务写与队列行同生共死（QUEUE-01）
+		enqueuer := addomain.NewADPushEnqueuer()
+		if err := enqueuer.EnqueueUpdateIfChanged(tx, &oldUserSnapshot, req); err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		// Phase 57 F-02: 停用（status 0→1）必须同时入队 disable —— 编辑表单保存会带 status，
+		// 该入口此前既不入队也无任何 AD 侧动作，导致系统已停用而域账号仍可登录。
+		// 语义与 UpdateStatus 的停用一致（启用方向不在 v1.21 范围内）。
+		if err := enqueuer.EnqueueDisableOnStatusTransition(tx, oldUserSnapshot.Status, req.Status, req.ID); err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		// 经理重算（经理同步规则引擎）：部门或岗位是经理解析的输入，
+		// 任一变更 → 重算该用户的 AD manager（排水器 update_manager 动作实时解析规则）。
+		deptChanged := req.DeptID != nil &&
+			(oldUserSnapshot.DeptID == nil || *oldUserSnapshot.DeptID != *req.DeptID)
+		if deptChanged || req.PostIds != nil {
+			if err := enqueuer.EnqueueUpdateManager(tx, []string{req.ID}); err != nil {
+				return apperrors.DatabaseError(err)
+			}
+		}
+
 		return nil
 	})
 
@@ -250,6 +318,12 @@ func (s *userService) Delete(ctx context.Context, id string) error {
 
 		// 软删除用户
 		if err := tx.Delete(&user).Error; err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		// Phase 57 D-04/QUEUE-06: 软删同事务入队 disable AD 账号动作行
+		// （Phase 58 排水器调 ldap_client.DisableUser 执行，幂等可重放）
+		if err := addomain.NewADPushEnqueuer().EnqueueDisable(tx, []string{id}); err != nil {
 			return apperrors.DatabaseError(err)
 		}
 
@@ -373,6 +447,10 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		}
 	}
 
+	// PMODEL-01：data_scope 过滤必须在 Count 之前插入，否则 total 仍是全量（假过滤）。
+	// DataScope=0（未挂 DataScopePermission / 超管早退）与 DataScopeAll 不过滤——旧行为零变化。
+	query = s.applyUserDataScope(query, ctx, params.DataScopeUserID, params.DataScope)
+
 	// 统计总数
 	if err := query.Count(&total).Error; err != nil {
 		return nil, apperrors.DatabaseError(err)
@@ -488,6 +566,88 @@ func (s *userService) Statistics(ctx context.Context) (*UserStatisticsResult, er
 	return &result, nil
 }
 
+// applyUserDataScope 对用户列表查询应用 data_scope 过滤（PMODEL-01）。
+// 仿 vdi 模式由 handler 显式传参（scope 信息不进 gin context 之外的自定义机制）：
+//   - DataScopeAll(1) / 0（零值：未挂中间件或超管）→ 不过滤（旧行为零变化）
+//   - DataScopeCustom(2) → dept_id IN (sys_role_dept ⋈ sys_user_role 映射部门)
+//   - DataScopeDept(3) → dept_id = (SELECT dept_id FROM sys_user WHERE id = ?)
+//   - DataScopeDeptChild(4) → ancestors 5 条件子查询（同 RecursiveDeptID 模式，
+//     对 3 层及以上深树正确；不用递归 getChildDepts，避免每请求 N 次往返）
+//   - DataScopeSelf(5) → sys_user.id = ?（按用户主键）。
+//     注意：pkg/middleware/permission.go ApplyDataScope 的 Self 分支是
+//     deptField = userID 形态，仅当 deptField 为用户维度字段（如 vdi bound_user_id）
+//     才正确；对 sys_user 场景必须用本函数的 id 主键语义。
+//   - 未知枚举值 → fail-closed（1=0 空集）
+func (s *userService) applyUserDataScope(query *gorm.DB, ctx context.Context, scopeUserID string, dataScope models.DataScope) *gorm.DB {
+	switch dataScope {
+	case models.DataScopeAll, 0:
+		// 全部数据权限 / 未挂中间件：不过滤
+		return query
+
+	case models.DataScopeCustom:
+		// 自定义数据权限：按 sys_role_dept 映射部门过滤
+		if scopeUserID == "" {
+			return query.Where("1=0")
+		}
+		return query.Where(
+			"dept_id IN (SELECT rd.dept_id FROM sys_role_dept rd JOIN sys_user_role ur ON ur.role_id = rd.role_id WHERE ur.user_id = ?)",
+			scopeUserID,
+		)
+
+	case models.DataScopeDept:
+		// 本部门数据权限
+		if scopeUserID == "" {
+			return query.Where("1=0")
+		}
+		return query.Where("dept_id = (SELECT dept_id FROM sys_user WHERE id = ?)", scopeUserID)
+
+	case models.DataScopeDeptChild:
+		// 本部门及子部门数据权限：先解析当前用户 dept_id，再对 sys_dept 用
+		// ancestors 5 条件（id / 全等 / 三种 LIKE，同 RecursiveDeptID 模式，3 层以上深树正确）
+		if scopeUserID == "" {
+			return query.Where("1=0")
+		}
+		var deptID string
+		if err := s.db.WithContext(ctx).Raw("SELECT dept_id FROM sys_user WHERE id = ?", scopeUserID).Scan(&deptID).Error; err != nil {
+			return query.Where("1=0")
+		}
+		if deptID == "" {
+			return query.Where("1=0")
+		}
+		return query.Where(
+			"dept_id IN (SELECT id FROM sys_dept WHERE id = ? OR ancestors = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors LIKE ?)",
+			deptID, deptID, deptID+",%", "%,"+deptID+",%", "%,"+deptID,
+		)
+
+	case models.DataScopeSelf:
+		// 仅本人数据权限：按 sys_user.id 主键（不是 dept_id = userID 的错位形态）
+		if scopeUserID == "" {
+			return query.Where("1=0")
+		}
+		return query.Where("sys_user.id = ?", scopeUserID)
+
+	default:
+		// 未知枚举值：fail-closed
+		return query.Where("1=0")
+	}
+}
+
+// StatisticsWithDataScope 带 data_scope 过滤的用户统计（与 List 复用同一
+// applyUserDataScope 过滤构造，保证统计数字不与列表行集矛盾）。
+func (s *userService) StatisticsWithDataScope(ctx context.Context, scopeUserID string, dataScope models.DataScope) (*UserStatisticsResult, error) {
+	var result UserStatisticsResult
+	query := s.applyUserDataScope(s.db.WithContext(ctx).Model(&models.User{}), ctx, scopeUserID, dataScope)
+	err := query.Select(
+		"COUNT(*) AS total",
+		fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS active", int(models.UserStatusEnabled)),
+		fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS inactive", int(models.UserStatusDisabled)),
+	).Scan(&result).Error
+	if err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+	return &result, nil
+}
+
 // buildDepartmentPaths 为用户列表构建完整部门路径（从二级部门开始）
 func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.User) {
 	// 收集所有唯一的祖先部门ID
@@ -583,8 +743,32 @@ func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 			return apperrors.DatabaseError(err)
 		}
 
+		// Phase 58 F-07: 入队前 Pluck 存在性 —— 只对真实存在的行入队。
+		// 堵住"重复/已删 id 无限刷孤儿 disable 行"（排水器侧另有 user-not-found → dead 兜底，
+		// 但入队侧掐根更省：一行查询 + "入队数 == 软删数"的口径可断言）。
+		//
+		// 不变量：**入队 disable 行数 == 本轮实际软删的用户数 == len(existing)**。
+		//
+		// ⚠ 位置铁律：必须在**软删语句之前**。
+		//   tx.Model(&models.User{}) 走 GORM 默认软删作用域，SQL 自动追加 deleted_at IS NULL；
+		//   若把 Pluck 排在软删之后，本轮刚软删的行已被作用域过滤掉 → existing 恒空 →
+		//   EnqueueDisable 变 no-op → 上面那条不变量静默失效，且 Phase 57 既有用例
+		//   TestPhase57_UserService_BatchDelete_EnqueuesDisable 必红。
+		//   放在软删之前时，默认作用域恰好表达"仍存在（未被软删）的行" = 本轮将被软删的那批行。
+		// ⚠ 备选方案 tx.Unscoped().Model(...) **禁采用**：它会把历史上已软删、而本轮并未删除的
+		//   id 也算进 existing，与"本轮实际删掉的集合"不再一一对应，破坏入队口径的可断言性。
+		var existing []string
+		if err := tx.Model(&models.User{}).Where("id IN ?", ids).Pluck("id", &existing).Error; err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
 		// 批量软删除用户
 		if err := tx.Where("id IN ?", ids).Delete(&models.User{}).Error; err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		// Phase 57 D-04/QUEUE-06: 批量软删同事务入队 disable 动作行（一次成型 + 重复 id 去重）
+		if err := addomain.NewADPushEnqueuer().EnqueueDisable(tx, existing); err != nil {
 			return apperrors.DatabaseError(err)
 		}
 
@@ -598,9 +782,19 @@ func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 	return nil
 }
 
-// UpdateStatus 更新用户状态
+// UpdateStatus 更新用户状态（Phase 57 GAP-01：停用同事务入队 disable）
+//
+// 与 Update / Delete / BatchDelete 保持同一形状：状态写与队列写在**同一个事务**里。
+// 决策理由：outbox-lite 的全部价值在于"业务状态与待推送记录同生共死"。若把入队放在事务
+// 之外（或干脆不接），就会出现"系统已停用、AD 账号仍启用"且**无任何记录**的静默分叉 ——
+// 正是本 phase 要消灭的失败模式；且 Phase 59 GUARD-01 信号守卫以 pending/failed 队列行
+// 为判据，缺行的分叉会被判成"无待推送 → 一致"，比不接线更危险。
+//
+// 方向性：仅 0→1（停用）入队。1→0（重新启用）在 v1.21 无对应动作
+// （models.ADPushActionEnable 不存在），0→0 / 1→1 为 no-op。
+// 事务外的 First 只为取旧状态（diff 输入），不参与写。
 func (s *userService) UpdateStatus(ctx context.Context, id string, status int) error {
-	// 检查用户是否存在
+	// 检查用户是否存在（事务外：仅用于取旧状态做 0→1 diff）
 	var user models.User
 	if err := s.db.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -608,13 +802,23 @@ func (s *userService) UpdateStatus(ctx context.Context, id string, status int) e
 		}
 		return apperrors.DatabaseError(err)
 	}
+	oldStatus := user.Status
 
-	// 更新状态
-	if err := s.db.WithContext(ctx).Model(&user).Update("status", status).Error; err != nil {
-		return apperrors.DatabaseError(err)
-	}
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 更新状态
+		if err := tx.Model(&user).Update("status", status).Error; err != nil {
+			return apperrors.DatabaseError(err)
+		}
 
-	return nil
+		// 同事务入队 disable；入队失败 → 返回 error 使 tx.Commit() 被跳过
+		if err := addomain.NewADPushEnqueuer().EnqueueDisableOnStatusTransition(tx, oldStatus, models.UserStatus(status), id); err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // ResetPassword 重置用户密码

@@ -14,7 +14,7 @@ vi.mock("@/lib/api", async () => {
 vi.mock("@/lib/assetApi", () => ({
   reconciliationApi: {
     exceptionRule: {
-      test: vi.fn(async ({ ip }: any) => ({
+      test: vi.fn(async ({ ip }: unknown) => ({
         matchedRules: [],
         mergedActions: ["allow"],
         finalSeverity: "info",

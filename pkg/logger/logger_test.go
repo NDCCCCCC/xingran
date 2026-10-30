@@ -273,3 +273,42 @@ func TestGetLogger_ConcurrentLazyInit(t *testing.T) {
 	wg.Wait()
 	assert.NotNil(t, GetLogger())
 }
+
+// TestFatalf_StdoutBeforeExit_FatalMirrorFlushed(2026-10-15 修复回归,
+// debug session allowed-origins-silent-exit):
+// 原实现先调 fileLogger.Fatal(msg)——logrus Fatal 内部 os.Exit(1),后续
+// GetLogger().Error(stdout) 是死代码 → 终端静默,只能翻 logs/app.log。
+// 修复后契约:① stdout 收到消息;② 文件以 fatal 级别落盘(经 Close flush);
+// ③ 退出码 1;④ exitFunc 可注入使本测试可在不终止测试进程的前提下验证全流程。
+// (解除 logger_hook_80_05_test.go 记录的 QUIRK-80-05-E Fatal 系豁免。)
+func TestFatalf_StdoutBeforeExit_FatalMirrorFlushed(t *testing.T) {
+	Close()
+	dir := t.TempDir()
+	cfg := DefaultConfig()
+	cfg.LogDir = dir
+	cfg.ConsoleOutput = true
+	require.NoError(t, Init(cfg))
+	defer Close()
+
+	var buf bytes.Buffer
+	restore := SetTestBuffer(&buf)
+	defer restore()
+
+	// 注入 exitFunc:记录退出码但不真正退出
+	origExit := exitFunc
+	exitCalled := make(chan int, 1)
+	exitFunc = func(code int) { exitCalled <- code }
+	defer func() { exitFunc = origExit }()
+
+	Fatalf("fatal-ordering-regression %d", 42)
+
+	assert.Contains(t, buf.String(), "fatal-ordering-regression 42",
+		"stdout 应在退出前收到 Fatalf 消息(原实现此处为死代码)")
+	assert.Equal(t, 1, <-exitCalled, "退出码应为 1")
+
+	data, err := os.ReadFile(filepath.Join(dir, "app.log"))
+	require.NoError(t, err)
+	logStr := string(data)
+	assert.Contains(t, logStr, `"level":"fatal"`, "文件镜像应以 fatal 级别落盘")
+	assert.Contains(t, logStr, "fatal-ordering-regression 42", "文件镜像应包含完整消息")
+}

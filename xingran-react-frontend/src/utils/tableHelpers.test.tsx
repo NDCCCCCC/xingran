@@ -69,11 +69,11 @@ describe("createSorter（客户端排序工厂）", () => {
 });
 
 describe("createStatusColumn", () => {
-  it("status 0 渲染正常（success Tag），1 渲染停用（error Tag）", () => {
+  it("status 0 渲染启用（success Tag），1 渲染停用（error Tag）——Phase 68 收敛为 statusHelpers 口径", () => {
     const col = createStatusColumn<Row>();
     expect(col.title).toBe("状态");
     const { container, rerender } = render(<>{col.render!(0, {}, 0) as React.ReactElement}</>);
-    expect(container.textContent).toBe("正常");
+    expect(container.textContent).toBe("启用");
     rerender(<>{col.render!(1, {}, 0) as React.ReactElement}</>);
     expect(container.textContent).toBe("停用");
   });

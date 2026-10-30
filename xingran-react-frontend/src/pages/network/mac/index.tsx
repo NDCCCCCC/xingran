@@ -4,9 +4,7 @@ import {
   Button,
   Space,
   Form,
-  Input,
   InputNumber,
-  Select,
   Card,
   Row,
   Col,
@@ -16,7 +14,9 @@ import {
   Drawer,
   Grid,
   App,
-} from "antd";
+  } from "antd";
+// Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   SearchOutlined,
@@ -31,19 +31,18 @@ import { get, post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { withErrorHandling } from "@/utils/errorHandler";
+import { handleApiError } from "@/utils/errorHandler";
 import { useState, useEffect, useMemo } from "react";
 import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import { BatchExportModal, confirmDelete } from "@/components/shared";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { MACEventsTimeline } from "@/components/network";
 import { MAC_TYPE_TAG_CONFIG } from "@/constants/status";
 
-const { Option } = Select;
 const { Content } = Layout;
 const { useBreakpoint } = Grid;
 
@@ -189,7 +188,7 @@ const MACAddressPage: FC = () => {
         secure: data.secure ?? 0,
       });
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      handleApiError(error, "加载统计数据");
     }
   };
 
@@ -206,7 +205,7 @@ const MACAddressPage: FC = () => {
       const list = result.data?.list || [];
       setDevices(list);
     } catch (error) {
-      console.error("加载设备列表失败:", error);
+      handleApiError(error, "加载设备列表");
     }
   };
 
@@ -223,23 +222,22 @@ const MACAddressPage: FC = () => {
   }, [selectedDeptId]);
 
   // 批量删除
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       message.warning("请选择要删除的数据");
       return;
     }
-    await withErrorHandling(
-      async () => {
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper；
+    // 原 withErrorHandling 包装由 helper 内建成功/失败提示替代——记 SUMMARY 偏差）
+    confirmDelete({
+      title: "确认批量删除",
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
         await post("/network/mac/batch-delete", { ids: selectedRowKeys });
-        return "批量删除成功";
+        setSelectedRowKeys([]);
+        loadMACAddresses();
       },
-      {
-        onSuccess: () => {
-          setSelectedRowKeys([]);
-          loadMACAddresses();
-        },
-      }
-    );
+    });
   };
 
   const handleBatchExport = async (entityTypes: string[]) => {
@@ -248,8 +246,8 @@ const MACAddressPage: FC = () => {
       const filename = await batchExport(entityTypes, {}); // 可以根据需要添加筛选条件
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
-    } catch (error: any) {
-      message.error(`批量导出失败：${error.message}`);
+    } catch (error: unknown) {
+      message.error(`批量导出失败：${(error as Error).message}`);
     } finally {
       setBatchExporting(false);
     }
@@ -330,18 +328,18 @@ const MACAddressPage: FC = () => {
           onSelect={handleDeptChangeWithUrl}
         />
       )}
-      <Content style={{ background: "#fff", padding: isMobile ? 12 : 24 }}>
+      <Content style={{ background: "var(--theme-bg-elevated)", padding: isMobile ? 12 : 24 }}>
         {/* 移动端:Dept tree 折叠进 Drawer,通过按钮触发(与 workstations 同步) */}
         {isMobile && (
           <div style={{ marginBottom: 16 }}>
-            <Button icon={<ApartmentOutlined />} onClick={() => setDeptDrawerOpen(true)}>
+            <Button icon={<ApartmentOutlined />} onClick={() => setDeptDrawerOpen(true)} aria-label="选择部门" title="选择部门" >
               {selectedDeptId ? `已选部门:${selectedDeptId.slice(0, 8)}...` : "选择部门"}
             </Button>
             <Drawer
               title="选择部门"
               open={deptDrawerOpen}
               onClose={() => setDeptDrawerOpen(false)}
-              width={300}
+              size={300}
               styles={{ body: { padding: 0 } }}
             >
               <DeptSidebar
@@ -367,7 +365,7 @@ const MACAddressPage: FC = () => {
               <Statistic
                 title="动态MAC"
                 value={statistics.dynamic}
-                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
+                styles={{ content: { color: "var(--theme-info)" } }}
               />
             </Card>
           </Col>
@@ -376,7 +374,7 @@ const MACAddressPage: FC = () => {
               <Statistic
                 title="静态MAC"
                 value={statistics.static}
-                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Card>
           </Col>
@@ -385,7 +383,7 @@ const MACAddressPage: FC = () => {
               <Statistic
                 title="安全MAC"
                 value={statistics.secure}
-                styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+                styles={{ content: { color: "var(--theme-warning)" } }}
               />
             </Card>
           </Col>
@@ -404,35 +402,31 @@ const MACAddressPage: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="deviceId" label="设备">
-                <Select
+                {/* 形态分类器①/②：children 写法改写 options。设备下拉为 UUID 外键
+                    （deviceId），原 allowClear=true → 清空即「不按设备筛选」，行为保持不变；
+                    options 均带 label，过滤由 AppSelect 契约 optionFilterProp="label" 承接。
+                    注：原 optionFilterProp="deviceName" 指向的是 Option.children 之外的
+                    自定义字段，实际无效（antd 只认 children/label/value），改写后过滤才真正可用 */}
+                <AppSelect
                   placeholder={selectedDeptId ? "请选择设备" : "请先选择部门"}
                   disabled={!selectedDeptId}
                   allowClear
                   className="user-form-input"
                   style={{ width: 200 }}
                   showSearch
-                  optionFilterProp="deviceName"
                   onSearch={() => {}}
-                >
-                  {devices.map((device) => (
-                    <Option key={device.id} value={device.id}>
-                      {device.deviceName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item name="macAddress" label="MAC地址">
-                <Input
-                  placeholder="请输入MAC地址"
-                  allowClear
-                  className="user-form-input"
-                  style={{ width: 180 }}
+                  options={devices.map((device) => ({
+                    value: device.id,
+                    label: device.deviceName,
+                  }))}
                 />
               </Form.Item>
+              <Form.Item name="macAddress" label="MAC地址">
+                <AppInput placeholder="请输入MAC地址" className="user-form-input" style={{ width: 180 }} />
+              </Form.Item>
               <Form.Item name="interfaceName" label="接口">
-                <Input
+                <AppInput
                   placeholder="请输入接口名称"
-                  allowClear
                   className="user-form-input"
                   style={{ width: 150 }}
                 />
@@ -441,29 +435,25 @@ const MACAddressPage: FC = () => {
                 <InputNumber placeholder="VLAN ID" style={{ width: 120 }} />
               </Form.Item>
               <Form.Item name="macType" label="MAC类型">
-                <Select
+                {/* 形态分类器①/②：children 写法改写 options；MAC 类型固定 2 项 → 显式禁搜 */}
+                <AppSelect
                   placeholder="请选择类型"
-                  allowClear
                   className="user-form-input"
                   style={{ width: 120 }}
                   onSearch={() => {}}
-                >
-                  {MAC_TYPE_OPTIONS.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </Option>
-                  ))}
-                </Select>
+                  showSearch={false}
+                  options={MAC_TYPE_OPTIONS}
+                />
               </Form.Item>
               <Form.Item>
                 <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
                     查询
                   </Button>
-                  <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                  <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
                     重置
                   </Button>
-                  <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
                     刷新
                   </Button>
                 </Space>
@@ -488,10 +478,12 @@ const MACAddressPage: FC = () => {
                 pageSize={paginationProps.pageSize}
               />
               <Button
+                aria-label="批量删除"
+                title="批量删除"
                 icon={<DeleteOutlined />}
                 onClick={handleBatchDelete}
                 disabled={selectedRowKeys.length === 0}
-                style={{ color: "var(--theme-error, #ba3630)" }}
+                style={{ color: "var(--theme-error)" }}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>
@@ -532,8 +524,8 @@ const MACAddressPage: FC = () => {
           title={timelineDrawerMac ? `MAC 事件时间线 — ${timelineDrawerMac}` : "MAC 事件时间线"}
           open={timelineDrawerOpen}
           onClose={() => setTimelineDrawerOpen(false)}
-          width={480}
-          destroyOnClose
+          size={480}
+          destroyOnHidden
         >
           {timelineDrawerMac && timelineDrawerRange && (
             <MACEventsTimeline

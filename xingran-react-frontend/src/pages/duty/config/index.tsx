@@ -4,7 +4,6 @@ import {
   Card,
   Form,
   Switch,
-  Input,
   TimePicker,
   Select,
   Button,
@@ -14,10 +13,19 @@ import {
   Divider,
   Descriptions,
 } from "antd";
+// Phase 71 (W5)：裸 Input/Select → 契约组件（children 形态改写 options / 复合子节点保留写法）
+import { AppInput, AppSelect } from "@/components/ui";
 import { SaveOutlined, ReloadOutlined, BellOutlined, SettingOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { formatDateTime, FORMAT_TIME_MINUTE } from "@/utils/datetime";
 import { getDutyConfig, updateDutyConfig, type DutyConfig } from "@/lib/dutyApi";
 import { isFormValidationError } from "@/utils/errorHandler";
+
+// 形态分类器⑤专用：提醒渠道下拉为「children + 复合子节点（Space + 图标）」，
+// 按 W1/W2 口径保留 children 写法（不改写为 options），故仍需 antd Select.Option。
+// 注意：本文件已无裸 <Select> JSX（P65 selector 按 JSXOpeningElement 名匹配，
+// Select.Option 为成员表达式，不在命中面），Select 仅用于取 Option。
+const { Option } = Select;
 
 const DutyConfigPage: FC = () => {
   const { message } = App.useApp();
@@ -56,7 +64,7 @@ const DutyConfigPage: FC = () => {
       const values = await form.validateFields();
       const data = {
         reminderEnabled: values.reminderEnabled,
-        reminderTime: values.reminderTime.format("HH:mm"),
+        reminderTime: formatDateTime(values.reminderTime, FORMAT_TIME_MINUTE),
         reminderChannels: Array.isArray(values.reminderChannels)
           ? values.reminderChannels.join(",")
           : values.reminderChannels,
@@ -152,26 +160,37 @@ const DutyConfigPage: FC = () => {
             tooltip="可选择多种提醒方式"
             rules={[{ required: true, message: "请选择提醒渠道" }]}
           >
-            <Select mode="multiple" placeholder="请选择提醒渠道" onSearch={() => {}}>
-              <Select.Option value="websocket">
+            {/* 形态分类器⑤⑦：children + 复合子节点（Space/图标），保留写法；
+                mode="multiple" 显式 showSearch（antd 多选默认开搜索）；
+                显式 optionFilterProp="label" —— 每个 Option 补 label 属性，
+                否则契约过滤指向不存在字段、过滤失效 */}
+            <AppSelect
+              allowClear
+              mode="multiple"
+              placeholder="请选择提醒渠道"
+              showSearch
+              optionFilterProp="label"
+              onSearch={() => {}}
+            >
+              <Option value="websocket" label="站内通知（WebSocket）">
                 <Space>
                   <BellOutlined />
                   站内通知（WebSocket）
                 </Space>
-              </Select.Option>
-              <Select.Option value="email" disabled>
+              </Option>
+              <Option value="email" label="邮件通知（暂未开放）" disabled>
                 <Space>
                   <BellOutlined />
                   邮件通知（暂未开放）
                 </Space>
-              </Select.Option>
-              <Select.Option value="sms" disabled>
+              </Option>
+              <Option value="sms" label="短信通知（暂未开放）" disabled>
                 <Space>
                   <BellOutlined />
                   短信通知（暂未开放）
                 </Space>
-              </Select.Option>
-            </Select>
+              </Option>
+            </AppSelect>
           </Form.Item>
 
           <Form.Item
@@ -179,7 +198,7 @@ const DutyConfigPage: FC = () => {
             name="beforeReminderMinutes"
             tooltip="设置提前多少分钟提醒，留空则表示当天提醒"
           >
-            <Input
+            <AppInput allowClear
               type="number"
               placeholder="留空表示当天提醒"
               suffix="分钟"

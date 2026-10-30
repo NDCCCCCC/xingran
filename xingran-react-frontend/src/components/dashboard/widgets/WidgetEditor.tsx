@@ -1,4 +1,4 @@
-/**
+﻿/**
  * WidgetEditor - Widget 编辑侧边抽屉组件
  *
  * 实现 Widget 编辑和删除功能
@@ -7,14 +7,14 @@
  */
 
 import { useState, useEffect } from "react";
-import { App, Drawer, Form, Input, Button, Modal, Spin, Divider, Space } from "antd";
+import { App, Drawer, Form, Button, Spin, Divider, Space } from "antd";
+import { AppInput, AppTextArea } from "@/components/ui";
 import { SaveOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { useDashboardStore } from "@/store/dashboardStore";
 import DataSourceForm from "../settings/DataSourceForm";
 import DisplayConfigForm from "../settings/DisplayConfigForm";
 import type { WidgetConfig, DataSourceConfig, DisplayConfig } from "@/types/dashboard";
-
-const { TextArea } = Input;
 
 export interface WidgetEditorProps {
   /** 是否可见 */
@@ -88,21 +88,11 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
   const handleDelete = () => {
     if (!widget) return;
 
-    Modal.confirm({
-      title: "确认删除",
-      content: (
-        <div>
-          <p>确定要删除 Widget 吗？</p>
-          <p style={{ fontWeight: "bold", marginTop: 8 }}>「{widget.title}」</p>
-          <p style={{ color: "var(--theme-text-tertiary, #999)", marginTop: 8 }}>此操作不可撤销</p>
-        </div>
-      ),
-      okText: "删除",
-      okType: "danger",
-      cancelText: "取消",
-      onOk: () => {
+    confirmDelete({
+      target: `Widget ${widget.title}`,
+      successText: "Widget 已删除",
+      onDelete: async () => {
         removeWidget(widget.id);
-        message.success("Widget 已删除");
         onClose();
       },
     });
@@ -124,7 +114,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
       placement="right"
       open={visible}
       onClose={handleCancel}
-      width={520}
+      size={520}
       footer={
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
@@ -156,7 +146,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
               { max: 100, message: "标题不能超过 100 个字符" },
             ]}
           >
-            <Input placeholder="请输入 Widget 标题" />
+            <AppInput placeholder="请输入 Widget 标题" />
           </Form.Item>
 
           <Form.Item
@@ -164,7 +154,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
             name="description"
             rules={[{ max: 500, message: "描述不能超过 500 个字符" }]}
           >
-            <TextArea rows={2} placeholder="可选的 Widget 描述" />
+            <AppTextArea rows={2} placeholder="可选的 Widget 描述" />
           </Form.Item>
 
           {/* 数据源配置 */}
@@ -200,7 +190,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
             Widget 信息
           </Divider>
 
-          <div style={{ color: "#666", fontSize: 12 }}>
+          <div style={{ color: "var(--theme-text-tertiary)", fontSize: 12 }}>
             <p>
               <strong>ID:</strong> {widget.id}
             </p>

@@ -15,6 +15,12 @@
 //   - entry78(dn, kv):ldap.Entry 构造
 //   - newSyncSvc78(t):(SyncService, *gorm.DB) 返回
 //   - insertConfig78(t, db):启用状态 ADConfig 行
+//
+// Phase 61 注记:D-78-05c 对「软删行 + 同 DN → UNIQUE 冲突」的文档化(可能为生产
+// bug,78 期不修)自 Phase 61 SHADOW-01 影子表清理上线起被推翻 —— 清理会软删行,
+// 软删行同 DN 在 AD 复现时必须自愈复活,故 GetExistingOUs /
+// SyncUsers_RestoreSoftDeleted 两用例已按复活语义翻转(upsert 写路径 existing
+// 查询 Unscoped 化 + OnConflict 冲突更新清 deleted_at;读路径默认作用域不变)。
 
 package addomain
 
@@ -138,6 +144,7 @@ func setupSync78DB(t *testing.T) *gorm.DB {
 			phone TEXT,
 			mobile TEXT,
 			title TEXT,
+			manager TEXT,
 			department TEXT,
 			company TEXT,
 			description TEXT,
@@ -162,7 +169,11 @@ func setupSync78DB(t *testing.T) *gorm.DB {
 	`).Error)
 
 	// 5. sys_ad_group_member (syncGroupMembers)
-	// 含 BaseModel 列(ADGroupMember 嵌入 BaseModel)
+	// 含 BaseModel 列(ADGroupMember 嵌入 BaseModel)。
+	// Phase 61 SHADOW-02:表级 CHECK 是 Create 半途失败的注入点——重放成员集
+	// 含 user_dn='FORCED_FAIL' 时 INSERT 整句被拒,用于证伪「Delete 已生效而
+	// Create 失败」的丢数据形态(事务回滚断言)。其余既有用例从不插入该字面值,
+	// 共享 fixture 零副作用(fixture 零副本纪律:改既有 DDL 而非建第二套表)。
 	require.NoError(t, db.Exec(`
 		CREATE TABLE sys_ad_group_member (
 			id TEXT PRIMARY KEY,
@@ -174,7 +185,8 @@ func setupSync78DB(t *testing.T) *gorm.DB {
 			version INTEGER,
 			created_at DATETIME,
 			updated_at DATETIME,
-			deleted_at DATETIME
+			deleted_at DATETIME,
+			CHECK (user_dn != 'FORCED_FAIL')
 		)
 	`).Error)
 
@@ -309,8 +321,11 @@ func TestSync78_ExtractDNs_And_SafeAttr(t *testing.T) {
 	assert.Contains(t, truncated, "…", "超长应追加 ellipsis 标记")
 }
 
-// TestSync78_GetExistingOUs 三形态:全部命中 / 部分命中 / 空列表;
-// 此外断言 deleted_at IS NULL 过滤(预置一条软删行不应被查到)。
+// TestSync78_GetExistingOUs 三形态:全部命中 / 部分命中 / 空列表。
+//
+// Phase 61 SHADOW-01 复活配套翻转(D-78-05c「软删行不入 existing 集」文档化自本 phase
+// 起被推翻,依据 = SHADOW-01 清理上线后软删行同 DN 复现必须自愈):查询 Unscoped 化,
+// 软删行一并被命中 —— 返回条数 = 命中 DN 的全部行(活行 + 软删行)。
 func TestSync78_GetExistingOUs(t *testing.T) {
 	svc, db := newSyncSvc78(t)
 	defer closeDB(t, db)
@@ -328,12 +343,16 @@ func TestSync78_GetExistingOUs(t *testing.T) {
 	require.NoError(t, db.Create(ouB).Error)
 	require.NoError(t, db.Delete(ouB).Error) // 软删
 
-	// 1) 全部命中(只命中未删的)
+	// 1) 全部命中(Unscoped 纳入软删行:活行 + 软删行共 2 条)
 	got := svc.getExistingOUs(ctx, cfg.ID, []string{"OU=A,DC=example,DC=com", "OU=B,DC=example,DC=com"})
-	assert.Equal(t, 1, len(got), "软删行不应被 getExistingOUs 命中(GORM 默认过滤)")
-	assert.Equal(t, "OU=A,DC=example,DC=com", got[0].OUN)
+	assert.Equal(t, 2, len(got), "复活配套:软删行同 DN 也被 getExistingOUs 命中(Unscoped 纳入 existing 集)")
+	dns := map[string]bool{}
+	for _, ou := range got {
+		dns[ou.OUN] = true
+	}
+	assert.True(t, dns["OU=B,DC=example,DC=com"], "软删行 OU=B 应被命中")
 
-	// 2) 部分命中
+	// 2) 部分命中(仅列表内实际存在的行命中,活/软删同权)
 	got = svc.getExistingOUs(ctx, cfg.ID, []string{"OU=A,DC=example,DC=com", "OU=Z,DC=example,DC=com"})
 	assert.Equal(t, 1, len(got))
 	assert.Equal(t, "OU=A,DC=example,DC=com", got[0].OUN)
@@ -959,15 +978,13 @@ func TestSync78_SyncUsers_UpdateExisting(t *testing.T) {
 	require.NotNil(t, row.LastSyncAt, "LastSyncAt 应被刷新")
 }
 
-// TestSync78_SyncUsers_RestoreSoftDeleted 覆盖"软删行 + 同 DN entry"分支。
+// TestSync78_SyncUsers_RestoreSoftDeleted 覆盖"软删行 + 同 DN entry"分支(复活语义)。
 //
-// 按 D-78-05c "无据不改" + 实测 syncUsers 在 sync.go:443-449 的行为:
-//   - getExistingOUs (Find) 过滤 deleted_at IS NULL → 软删行不命中
-//   - 新 entry 进 usersToCreate → 走 s.db.Create(usersToCreate[i:end])
-//   - sqlite UNIQUE 约束 (ad_config_id, user_dn) **不**忽略软删行
-//   - 结果:syncUsers 返回 UNIQUE constraint failed 错误
-//
-// 这是 sync.go 现状;D-78-05c 文档化(可能为生产 bug,本期不修)。
+// Phase 61 SHADOW-01 复活配套翻转:D-78-05c 文档化的「软删行 + 同 DN → UNIQUE 冲突」
+// 自本 phase 起被推翻(依据 = SHADOW-01 清理上线后软删行复现必须自愈)。现有行为:
+//   - existing 批查 Unscoped 化 → 软删行命中并进入 update 分支(DeletedAt 清零)
+//   - OnConflict AssignmentColumns 含 deleted_at → 冲突更新 SET deleted_at=NULL
+//   - 结果:syncUsers 返回 nil,行恢复可见,字段按 entry 更新,无新行产生
 func TestSync78_SyncUsers_RestoreSoftDeleted(t *testing.T) {
 	svc, db := newSyncSvc78(t)
 	defer closeDB(t, db)
@@ -988,19 +1005,29 @@ func TestSync78_SyncUsers_RestoreSoftDeleted(t *testing.T) {
 
 	entries := []*ldap.Entry{
 		entry78("CN=u1,OU=Staff,DC=example,DC=com", map[string][]string{
-			"sAMAccountName": {"u1"},
+			"sAMAccountName":     {"u1"},
+			"displayName":        {"RevivedName"},
+			"mail":               {"revived@example.com"},
+			"userAccountControl": {"512"},
 		}),
 	}
 
-	// 现行为:UNIQUE 约束失败(sync.go:574 包装返回)
-	err := svc.syncUsers(ctx, cfg, entries)
-	assert.Error(t, err, "软删行 + 同 DN 新 entry 触发 UNIQUE 约束冲突(sync.go 当前行为,D-78-05c 文档化)")
-	assert.Contains(t, err.Error(), "UNIQUE", "应包装 UNIQUE constraint failed")
+	// 复活语义:无错误返回,行恢复可见
+	require.NoError(t, svc.syncUsers(ctx, cfg, entries),
+		"软删行 + 同 DN entry → syncUsers 应复活该行,而非撞 UNIQUE 约束")
 
-	// 数据库中应仍是 1 软删行(创建失败,无新行写入)
+	// 默认作用域可查到该行(deleted_at 已置空)
+	var row models.ADUser
+	require.NoError(t, db.Where("user_dn = ? AND ad_config_id = ?", "CN=u1,OU=Staff,DC=example,DC=com", cfgID).First(&row).Error,
+		"复活后行对默认作用域可见")
+	assert.Equal(t, "RevivedName", row.DisplayName, "DisplayName 已按 entry 更新")
+	assert.Equal(t, "revived@example.com", row.Email, "Email 已按 entry 更新")
+	assert.False(t, row.IsDisabledByUAC(), "UAC=512 → IsDisabledByUAC()=false(UAC 推导已按 entry 更新)")
+
+	// Unscoped 计数仍为 1(复活而非新建)
 	var allCount int64
 	db.Unscoped().Model(&models.ADUser{}).Where("ad_config_id = ?", cfgID).Count(&allCount)
-	assert.Equal(t, int64(1), allCount, "创建失败 → 仍 1 软删行(Unscoped 含 deleted_at)")
+	assert.Equal(t, int64(1), allCount, "Unscoped 计数仍 1:同 DN 复现走 update 复活,无新行")
 }
 
 // TestSync78_SyncUsers_FilterDuplicatePrefix 覆盖 sAMAccountName="$DUPLICATE-xxx"
@@ -1246,7 +1273,7 @@ func TestSync78_SyncGroupMembers_FullDiff(t *testing.T) {
 		"CN=A,DC=example,DC=com",
 		"CN=B,DC=example,DC=com",
 		"CN=D,DC=example,DC=com",
-	}))
+	}, nil))
 
 	// 最终 3 行
 	var liveMembers []models.ADGroupMember
@@ -1260,7 +1287,7 @@ func TestSync78_SyncGroupMembers_FullDiff(t *testing.T) {
 		"A/B 保留,C 移除,D 新增")
 
 	// 空 memberDNs → 全部清空
-	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, []string{}))
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, []string{}, nil))
 	var remaining []models.ADGroupMember
 	require.NoError(t, db.Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Find(&remaining).Error)
 	assert.Empty(t, remaining, "空 memberDNs → 清空")
@@ -1270,8 +1297,87 @@ func TestSync78_SyncGroupMembers_FullDiff(t *testing.T) {
 	require.NoError(t, err)
 	_, err = sqlDB.Exec(`DROP TABLE sys_ad_group_member`)
 	require.NoError(t, err)
-	err = svc.syncGroupMembers(ctx, cfg, groupDN, []string{"CN=X,DC=example,DC=com"})
+	err = svc.syncGroupMembers(ctx, cfg, groupDN, []string{"CN=X,DC=example,DC=com"}, nil)
 	assert.Error(t, err, "DROP TABLE 后应返回包装错误")
+}
+
+// TestSyncGroupMembers_CreateFailRollsBackDelete 证伪「Delete 已生效而 Create
+// 半途失败」的丢数据形态(SHADOW-02):预置 2 条旧成员 → 重放成员集含 1 条正常
+// + 1 条 user_dn='FORCED_FAIL'(fixture 表级 CHECK 注入点 → Create 整句被拒)
+// → syncGroupMembers 返回 error,且 Unscoped 查询该组仍是原 2 条旧成员
+// (Delete 已随事务回滚——「无空窗」的进程内可证伪代理,PG 跨连接真观察
+// 归 61-VALIDATION Manual-Only)。
+func TestSyncGroupMembers_CreateFailRollsBackDelete(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+	groupDN := "CN=GF,OU=Groups,DC=example,DC=com"
+
+	oldA := "CN=OldA,DC=example,DC=com"
+	oldB := "CN=OldB,DC=example,DC=com"
+	pre := []models.ADGroupMember{
+		{ADConfigID: cfg.ID, GroupDN: groupDN, UserDN: oldA},
+		{ADConfigID: cfg.ID, GroupDN: groupDN, UserDN: oldB},
+	}
+	for i := range pre {
+		pre[i].ID = uuid.NewString()
+		require.NoError(t, db.Create(&pre[i]).Error)
+	}
+
+	// 重放:1 正常 + 1 FORCED_FAIL(CHECK 注入 Create 失败)
+	err := svc.syncGroupMembers(ctx, cfg, groupDN, []string{
+		"CN=New,DC=example,DC=com",
+		"FORCED_FAIL",
+	}, nil)
+	require.Error(t, err, "CHECK 注入点应使 Create 失败并返回 error")
+	assert.Contains(t, err.Error(), "批量添加组成员失败", "错误包装前缀必须保留")
+
+	// Delete 已回滚:旧 2 条原样(Unscoped 硬查询,不经过软删过滤)
+	var old []models.ADGroupMember
+	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Find(&old).Error)
+	require.Len(t, old, 2, "Create 失败后 Delete 必须回滚——旧成员原样(无空窗可证伪代理)")
+	got := make([]string, 0, len(old))
+	for _, m := range old {
+		got = append(got, m.UserDN)
+	}
+	assert.ElementsMatch(t, []string{oldA, oldB}, got)
+}
+
+// TestSyncGroupMembers_ReplayIdempotent 锁定重放幂等(SHADOW-02 idempotency
+// 探针的回答):同一成员集重放两次 → 两次后 Unscoped 成员行集逐字段一致、
+// 行数等于成员数(Delete-all + Create-all 语义天然幂等:不翻倍、不残留)。
+func TestSyncGroupMembers_ReplayIdempotent(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+	groupDN := "CN=GR,OU=Groups,DC=example,DC=com"
+	members := []string{
+		"CN=A,DC=example,DC=com",
+		"CN=B,DC=example,DC=com",
+		"CN=C,DC=example,DC=com",
+	}
+
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, members, nil))
+	var afterFirst []models.ADGroupMember
+	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Order("user_dn").Find(&afterFirst).Error)
+	require.Len(t, afterFirst, len(members))
+
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, members, nil))
+	var afterSecond []models.ADGroupMember
+	require.NoError(t, db.Unscoped().Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Order("user_dn").Find(&afterSecond).Error)
+
+	require.Len(t, afterSecond, len(members), "重放两次行数不变(不翻倍、不残留)")
+	for i := range afterFirst {
+		assert.Equal(t, afterFirst[i].UserDN, afterSecond[i].UserDN, "行 %d:两次重放 user_dn 一致", i)
+		assert.Equal(t, afterFirst[i].GroupDN, afterSecond[i].GroupDN, "行 %d:两次重放 group_dn 一致", i)
+	}
+	dns := make([]string, 0, len(afterSecond))
+	for _, m := range afterSecond {
+		dns = append(dns, m.UserDN)
+	}
+	assert.ElementsMatch(t, members, dns)
 }
 
 // TestSync78_UpdateSyncLog_StatusMatrix 覆盖 updateSyncLog 状态机:

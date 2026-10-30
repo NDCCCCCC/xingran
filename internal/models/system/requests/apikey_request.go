@@ -16,7 +16,7 @@ type CreateAPIKeyRequest struct {
 
 // UpdateAPIKeyRequest 更新API密钥请求
 type UpdateAPIKeyRequest struct {
-	ID           string   `json:"id" binding:"required"`                   // 密钥ID
+	ID           string   `json:"id"`                                       // 密钥ID（取自 URL 路径参数，body 中的同名字段不参与校验）
 	Name         *string  `json:"name"`                                    // 密钥名称
 	Description  *string  `json:"description"`                             // 描述信息
 	Scopes       []string `json:"scopes"`                                  // 作用域数组

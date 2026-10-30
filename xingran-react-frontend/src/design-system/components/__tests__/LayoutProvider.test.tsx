@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, renderHook } from "@testing-library/react";
-import { act } from "react";
+import {  } from "react";
 import type { ReactNode } from "react";
 
 vi.mock("@/lib/api", async () => {
@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-const mockLayoutStore: any = {
+const mockLayoutStore: unknown = {
   currentLayout: "classic",
   sidebarCollapsed: false,
   density: "comfortable",
@@ -27,7 +27,8 @@ vi.mock("@/store/layoutStore", () => ({
   ),
 }));
 
-import LayoutProvider, { useLayoutContext } from "../LayoutProvider";
+import LayoutProvider from "../LayoutProvider";
+import { useLayoutContext } from "../layoutContext";
 
 describe("design-system/components/LayoutProvider", () => {
   beforeEach(() => {

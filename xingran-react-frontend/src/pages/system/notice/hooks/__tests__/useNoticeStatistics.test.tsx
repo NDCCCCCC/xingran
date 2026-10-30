@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
 
 const mockStatistics = vi.fn();
 vi.mock("@/lib/noticeApi", () => ({
-  getNoticeStatusStatistics: (...args: any[]) => mockStatistics(...args),
+  getNoticeStatusStatistics: (...args: unknown[]) => mockStatistics(...args),
 }));
 
 import { useNoticeStatistics } from "../useNoticeStatistics";

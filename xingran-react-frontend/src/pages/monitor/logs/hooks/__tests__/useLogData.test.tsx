@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 import { useLogData, type UseLogDataParams } from "../useLogData";
-import { createApiMock, resetApiMocks } from "@/test/utils/createApiMock";
+import { createApiMock } from "@/test/utils/createApiMock";
 
 function wrapper({ children }: { children: React.ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
@@ -21,8 +21,8 @@ function wrapper({ children }: { children: React.ReactNode }): ReactElement {
 function defaultParams(): UseLogDataParams {
   return {
     activeTab: "oper",
-    searchForm: { timeRange: undefined as any } as any,
-    loginSearchForm: { timeRange: undefined as any } as any,
+    searchForm: { timeRange: undefined as unknown } as unknown,
+    loginSearchForm: { timeRange: undefined as unknown } as unknown,
     current: 1,
     pageSize: 10,
   };
@@ -40,12 +40,12 @@ describe("useLogData", () => {
   it("fetchOperLogs 成功 → 写入 operLogs + total", async () => {
     const api = createApiMock("/monitor/oper-logs/list");
     api.endpoint.mockResolvedValueOnce({
-      data: { list: [{ id: "1", module: "m", action: "create" } as any], total: 5 },
+      data: { list: [{ id: "1", module: "m", action: "create" } as unknown], total: 5 },
       code: 0,
       message: "",
       timestamp: 0,
       request_id: "",
-    } as any);
+    } as unknown);
 
     const { result } = renderHook(() => useLogData(defaultParams()), { wrapper });
 
@@ -69,12 +69,12 @@ describe("useLogData", () => {
       message: "",
       timestamp: 0,
       request_id: "",
-    } as any);
+    } as unknown);
 
     const params = defaultParams();
     const start = new Date("2026-01-01T00:00:00Z");
     const end = new Date("2026-01-31T23:59:59Z");
-    params.searchForm = { ...params.searchForm, timeRange: [start, end] as any };
+    params.searchForm = { ...params.searchForm, timeRange: [start, end] as unknown };
 
     const { result } = renderHook(() => useLogData(params), { wrapper });
 
@@ -101,12 +101,12 @@ describe("useLogData", () => {
   it("fetchLoginLogs 成功 → 写入 loginLogs", async () => {
     const api = createApiMock("/monitor/login-logs/list");
     api.endpoint.mockResolvedValueOnce({
-      data: { list: [{ id: "l1", userName: "alice" } as any], total: 3 },
+      data: { list: [{ id: "l1", userName: "alice" } as unknown], total: 3 },
       code: 0,
       message: "",
       timestamp: 0,
       request_id: "",
-    } as any);
+    } as unknown);
 
     const { result } = renderHook(() => useLogData(defaultParams()), { wrapper });
 
@@ -132,8 +132,8 @@ describe("useLogData", () => {
   it("setOperLogs/setLoginLogs/setTotal 直接写入", () => {
     const { result } = renderHook(() => useLogData(defaultParams()), { wrapper });
     act(() => {
-      result.current.setOperLogs([{ id: "x" } as any]);
-      result.current.setLoginLogs([{ id: "y" } as any]);
+      result.current.setOperLogs([{ id: "x" } as unknown]);
+      result.current.setLoginLogs([{ id: "y" } as unknown]);
       result.current.setTotal(42);
     });
     expect(result.current.operLogs).toHaveLength(1);

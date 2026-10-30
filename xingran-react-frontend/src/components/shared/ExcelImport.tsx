@@ -8,7 +8,7 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import type { UploadFile } from "antd";
+import type { UploadFile, UploadProps } from "antd";
 import type { UploadRequestOption } from "./FileUpload";
 import { getAuthHeaders } from "@/utils/authHelpers";
 import { excelApi } from "@/lib/opsApi";
@@ -258,7 +258,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
               fileList={fileList}
               onChange={({ fileList: newFileList }) => setFileList(newFileList)}
               beforeUpload={beforeUpload}
-              customRequest={customRequest as any}
+              customRequest={customRequest as UploadProps["customRequest"]}
               accept=".xlsx"
               maxCount={1}
               disabled={importing}

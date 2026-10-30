@@ -5,6 +5,7 @@
 
 import cronValidate from "cron-validate";
 import later from "@breejs/later";
+import { handleApiError } from "@/utils/errorHandler";
 import type { CronConfig, CronFieldConfig, CronFieldType } from "./constants";
 import { WEEK_DAY_NAMES, MONTH_NAMES } from "./constants";
 
@@ -253,7 +254,8 @@ export function getNextRunTimes(expression: string, count: number = 5): Date[] {
     // 确保返回的是 Date 数组
     return Array.isArray(times) ? times : [];
   } catch (e) {
-    console.error("getNextRunTimes error:", e);
+    // FIX-04b: 计算失败静默兜底，调用方以空列表展示
+    handleApiError(e, "计算下次执行时间", false);
     return [];
   }
 }

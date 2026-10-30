@@ -109,51 +109,6 @@ func TestFindDeptByOUDN(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestFindOUDNByDeptID(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	assert.NoError(t, err)
-
-	// 创建表
-	db.Exec(`CREATE TABLE sys_dept_ou_mapping (
-		id TEXT PRIMARY KEY,
-		dept_id TEXT NOT NULL,
-		ad_config_id TEXT NOT NULL,
-		ou_dn TEXT NOT NULL,
-		ou_name TEXT NOT NULL,
-		parent_ou_dn TEXT,
-		sync_enabled INTEGER DEFAULT 1,
-		sync_status TEXT DEFAULT 'pending',
-		last_sync_at DATETIME,
-		created_at DATETIME,
-		updated_at DATETIME,
-		UNIQUE(dept_id, ad_config_id)
-	)`)
-
-	mapper := NewDeptOUmapper(db)
-
-	ctx := context.Background()
-	mapping := &models.DeptOUMapping{
-		ID:          "test-id-2",
-		DeptID:      "dept-1",
-		ADConfigID:  "config-1",
-		OUDN:        "OU=TestDept,DC=company,DC=com",
-		OUName:      "TestDept",
-		SyncEnabled: true,
-		SyncStatus:  "synced",
-	}
-	err = mapper.UpsertMapping(ctx, mapping)
-	assert.NoError(t, err)
-
-	// 测试查找
-	ouDN, err := mapper.FindOUDNByDeptID(ctx, "dept-1")
-	assert.NoError(t, err)
-	assert.Equal(t, "OU=TestDept,DC=company,DC=com", ouDN)
-
-	// 测试未找到
-	_, err = mapper.FindOUDNByDeptID(ctx, "non-existent")
-	assert.Error(t, err)
-}
-
 func TestUpsertMapping(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
@@ -365,4 +320,76 @@ func TestUpdateSyncStatus(t *testing.T) {
 	result, err := mapper.GetMappingByOU(ctx, "OU=ToStatus,DC=company,DC=com")
 	require.NoError(t, err)
 	assert.Equal(t, "synced", result.SyncStatus)
+}
+
+// ─── Phase 58 Plan 04 Task 1：F-B 配置作用域 OU 查询 ──────────────────────
+
+// setupOUMapperDBWithHandle 与 setupOUMapperDB 同构，但额外把 *gorm.DB 暴露出来，
+// 供需要按 ad_config_id 铺多行（同 dept_id 不同配置）的用例直接写库。
+// 复用 user_ou_service_test.go 的 createDeptOUMappingTable（含 ad_config_id 列）。
+func setupOUMapperDBWithHandle(t *testing.T) (*DeptOUmapper, *gorm.DB, context.Context) {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Exec(createDeptOUMappingTable).Error)
+	return NewDeptOUmapper(db), db, context.Background()
+}
+
+// seedOUMappingRow 直接插一行 sys_dept_ou_mapping（同 dept_id 多配置场景的必要铺法：
+// UpsertMapping 的 ON CONFLICT 目标也会命中 (dept_id, ad_config_id)，但直插更直白可控）。
+func seedOUMappingRow(t *testing.T, db *gorm.DB, id, deptID, adConfigID, ouDN string, syncEnabled bool) {
+	t.Helper()
+	enabled := 0
+	if syncEnabled {
+		enabled = 1
+	}
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_dept_ou_mapping (id, dept_id, ad_config_id, ou_dn, ou_name, sync_enabled, sync_status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, 'synced', '2026-01-01 00:00:00', '2026-01-01 00:00:00')`,
+		id, deptID, adConfigID, ouDN, ouDN, enabled,
+	).Error)
+}
+
+// TestPhase58_FindOUDNByDeptIDForConfig_ScopedByConfig F-B：同 dept_id 在 N 个配置下
+// 有 N 行合法记录，按 ad_config_id 收敛必须各取各的。
+func TestPhase58_FindOUDNByDeptIDForConfig_ScopedByConfig(t *testing.T) {
+	mapper, db, ctx := setupOUMapperDBWithHandle(t)
+
+	// 刻意让 cfg-b 的行 id 排序在前（GORM 的 First() 会补 `ORDER BY id LIMIT 1`）：
+	// 不收敛 ad_config_id 的旧实现会稳定返回 cfg-b 的 ou_dn，
+	// 因此下面"cfg-a 必须取到 cfg-a 自己的 ou_dn"是真判别器，而不是碰巧命中。
+	seedOUMappingRow(t, db, "m-aaa-cfgb", "dept-1", "cfg-b", "OU=IT,DC=na,DC=corp,DC=com", true)
+	seedOUMappingRow(t, db, "m-zzz-cfga", "dept-1", "cfg-a", "OU=IT,DC=corp,DC=com", true)
+
+	gotA, err := mapper.FindOUDNByDeptIDForConfig(ctx, "dept-1", "cfg-a")
+	require.NoError(t, err)
+	assert.Equal(t, "OU=IT,DC=corp,DC=com", gotA, "cfg-a 必须取到 cfg-a 自己的 ou_dn（F-B：禁跨配置取首行）")
+
+	gotB, err := mapper.FindOUDNByDeptIDForConfig(ctx, "dept-1", "cfg-b")
+	require.NoError(t, err)
+	assert.Equal(t, "OU=IT,DC=na,DC=corp,DC=com", gotB, "cfg-b 必须取到 cfg-b 自己的 ou_dn")
+}
+
+// TestPhase58_FindOUDNByDeptIDForConfig_IgnoresDisabledMapping 唯一行 sync_enabled=0
+// → 视为"无映射"（与排水器的 no-ou-mapping 终态对齐）。
+func TestPhase58_FindOUDNByDeptIDForConfig_IgnoresDisabledMapping(t *testing.T) {
+	mapper, db, ctx := setupOUMapperDBWithHandle(t)
+
+	seedOUMappingRow(t, db, "m-disabled", "dept-1", "cfg-a", "OU=IT,DC=corp,DC=com", false)
+
+	_, err := mapper.FindOUDNByDeptIDForConfig(ctx, "dept-1", "cfg-a")
+	require.Error(t, err, "sync_enabled=0 的映射不得被当成有效目标 OU")
+	assert.Contains(t, err.Error(), "未找到部门", "文案须与旧方法的无映射语义一致（排水器靠 error 判定 no-ou-mapping）")
+}
+
+// TestPhase58_FindOUDNByDeptIDForConfig_WrongConfigIsNotFound 配置作用域真的生效：
+// 用不属于该配置的 adConfigID 调用必须查不到（而不是回落到任一其它配置的行）。
+func TestPhase58_FindOUDNByDeptIDForConfig_WrongConfigIsNotFound(t *testing.T) {
+	mapper, db, ctx := setupOUMapperDBWithHandle(t)
+
+	seedOUMappingRow(t, db, "m-cfga", "dept-1", "cfg-a", "OU=IT,DC=corp,DC=com", true)
+
+	_, err := mapper.FindOUDNByDeptIDForConfig(ctx, "dept-1", "cfg-other")
+	require.Error(t, err, "不属于该配置的 dept 映射必须查不到（证明 ad_config_id 真的进了 WHERE）")
+	assert.Contains(t, err.Error(), "未找到部门")
 }

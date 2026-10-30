@@ -45,7 +45,7 @@ export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
     if (!initialized) return;
 
     // 同步主题配置
-    syncTheme(preferences.theme);
+    syncTheme({ mode: preferences.theme.mode });
 
     // 同步布局配置
     syncLayout(preferences.layout);

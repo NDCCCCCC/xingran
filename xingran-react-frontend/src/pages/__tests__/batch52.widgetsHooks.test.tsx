@@ -5,9 +5,9 @@
  * useLogData(33,0%) renderHook — useWidgetData 走真实 hook(mock 端点)。
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ConfigProvider, App } from "antd";
+import { waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import {  } from "antd";
 import type { ReactElement } from "react";
 
 vi.mock("@/lib/api", async () => {
@@ -20,7 +20,7 @@ import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import { ChartWidget } from "@/components/dashboard/widgets/types/ChartWidget";
 import { ListWidget } from "@/components/dashboard/widgets/types/ListWidget";
 import { MetricWidget } from "@/components/dashboard/widgets/types/MetricWidget";
-import { useLogData } from "../monitor/logs/hooks/useLogData";
+import {  } from "../monitor/logs/hooks/useLogData";
 import type { WidgetConfig } from "@/types/dashboard";
 
 beforeEach(() => {
@@ -46,7 +46,7 @@ function wrapQuery(ui: ReactElement) {
 describe("ChartWidget", () => {
   it("空数据渲染 empty option 分支", async () => {
     const rendered = wrapQuery(
-      <ChartWidget widget={makeWidget()} display={{ chartType: "line" } as any} />
+      <ChartWidget widget={makeWidget()} display={{ chartType: "line" } as unknown} />
     );
     await waitFor(() => {
       expect(rendered.container.firstChild).not.toBeNull();
@@ -57,7 +57,7 @@ describe("ChartWidget", () => {
     const api = createApiMock("/dashboard/fake");
     api.endpoint.mockResolvedValue({ data: { categories: ["a", "b"], values: [1, 2] } });
     const rendered = wrapQuery(
-      <ChartWidget widget={makeWidget()} display={{ chartType: "line" } as any} />
+      <ChartWidget widget={makeWidget()} display={{ chartType: "line" } as unknown} />
     );
     await waitFor(() => {
       expect(rendered.container.firstChild).not.toBeNull();
@@ -68,7 +68,7 @@ describe("ChartWidget", () => {
     const api = createApiMock("/dashboard/fake");
     api.endpoint.mockResolvedValue({ data: { categories: ["x"], values: [5] } });
     const rendered = wrapQuery(
-      <ChartWidget widget={makeWidget()} display={{ chartType: "bar" } as any} />
+      <ChartWidget widget={makeWidget()} display={{ chartType: "bar" } as unknown} />
     );
     await waitFor(() => {
       expect(rendered.container.firstChild).not.toBeNull();
@@ -79,7 +79,7 @@ describe("ChartWidget", () => {
 describe("ListWidget", () => {
   it("空数据渲染空列表", async () => {
     const rendered = wrapQuery(
-      <ListWidget widget={makeWidget()} display={{ maxItems: 5 } as any} />
+      <ListWidget widget={makeWidget()} display={{ maxItems: 5 } as unknown} />
     );
     await waitFor(() => {
       expect(rendered.container.firstChild).not.toBeNull();
@@ -89,7 +89,7 @@ describe("ListWidget", () => {
 
 describe("MetricWidget", () => {
   it("空数据 percent=0", async () => {
-    const rendered = wrapQuery(<MetricWidget widget={makeWidget()} display={{} as any} />);
+    const rendered = wrapQuery(<MetricWidget widget={makeWidget()} display={{} as unknown} />);
     await waitFor(() => {
       expect(rendered.container.firstChild).not.toBeNull();
     });
@@ -98,7 +98,7 @@ describe("MetricWidget", () => {
   it("数值数据渲染 percent", async () => {
     const api = createApiMock("/dashboard/fake");
     api.endpoint.mockResolvedValue({ data: { value: 65 } });
-    const rendered = wrapQuery(<MetricWidget widget={makeWidget()} display={{} as any} />);
+    const rendered = wrapQuery(<MetricWidget widget={makeWidget()} display={{} as unknown} />);
     await waitFor(() => {
       expect(rendered.container.firstChild).not.toBeNull();
     });

@@ -3,7 +3,7 @@
  * 工位平面图视图
  */
 
-import { Card, Space, Tag, Button, Select } from "antd";
+import { Card, Space, Tag, Button } from "antd";
 import { CloseOutlined, BgColorsOutlined, DesktopOutlined } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
@@ -14,8 +14,8 @@ import {
   getWorkstationStatusColor,
 } from "../constants";
 import type { FloorOption } from "../types";
-
-const { Option } = Select;
+// Phase 71 (W3)：裸 Select → AppSelect。children → options 改写（label 真实存在）。
+import { AppSelect } from "@/components/ui";
 
 export interface WorkstationFloorPlanViewProps {
   selectedFloorForPlan: string;
@@ -34,7 +34,7 @@ export function WorkstationFloorPlanView({
   selectedFloorForPlan,
   floorOptions,
   floorPlanWorkstations,
-  allWorkstations,
+  allWorkstations: _allWorkstations,
   onFloorChange,
   onPositionUpdate,
   onEdit,
@@ -56,20 +56,17 @@ export function WorkstationFloorPlanView({
         >
           <Space wrap>
             <span>选择楼层：</span>
-            <Select
+            {/* 形态分类器②③：children → options 改写；楼层编码（非 UUID），原 allowClear 行为不变 */}
+            <AppSelect
               style={{ width: 200 }}
               placeholder="请选择要查看的楼层"
               value={selectedFloorForPlan}
-              onChange={onFloorChange}
+              // AppSelect 的 onChange 值为 unknown；handleFloorChangeForPlan 的
+              // loadFloorPlanWorkstations("") 已是既有空态路径，收敛成 "" 不引入新分支
+              onChange={(value) => onFloorChange((value as string) ?? "")}
               allowClear
-              onSearch={() => {}}
-            >
-              {floorOptions.map((f) => (
-                <Option key={f.code} value={f.code}>
-                  {f.name}
-                </Option>
-              ))}
-            </Select>
+              options={floorOptions.map((f) => ({ value: f.code, label: f.name }))}
+            />
             {selectedFloorForPlan && (
               <Tag color="blue">
                 当前楼层：{floorOptions.find((f) => f.code === selectedFloorForPlan)?.name}
@@ -80,7 +77,7 @@ export function WorkstationFloorPlanView({
               type="default"
               icon={<CloseOutlined />}
               onClick={onCloseFloorPlan}
-              size="middle"
+              size="medium"
             >
               关闭平面图
             </Button>
@@ -136,7 +133,7 @@ export function WorkstationFloorPlanView({
       <Card
         title="工位列表"
         style={{ width: 320, flexShrink: 0, overflow: "hidden" }}
-        bodyStyle={{ padding: 0, height: "calc(100% - 57px)", overflow: "auto" }}
+        styles={{ body: { padding: 0, height: "calc(100% - 57px)", overflow: "auto" } }}
       >
         <div style={{ padding: "8px" }}>
           {floorPlanWorkstations.length === 0 ? (
@@ -160,7 +157,7 @@ export function WorkstationFloorPlanView({
                     hoverable
                     style={{ cursor: "pointer" }}
                     onClick={() => ws && onEdit(ws)}
-                    bodyStyle={{ padding: "12px" }}
+                    styles={{ body: { padding: "12px" } }}
                   >
                     <div
                       style={{

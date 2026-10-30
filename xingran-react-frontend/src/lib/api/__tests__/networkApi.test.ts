@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/api", async () => {
   return {
-    post: vi.fn(async (url: string, params?: any) => ({
+    post: vi.fn(async (url: string, params?: unknown) => ({
       data: {
         list: [{ id: "r1", macAddress: "00:11:22" }],
         total: 1,
@@ -133,7 +133,7 @@ describe("lib/api/networkApi", () => {
       deviceId: "d1",
       action: "shutdown",
       portIds: ["p1", "p2"],
-    } as any);
+    } as unknown);
     expect(post).toHaveBeenCalledWith("/network/ports/write/batch", {
       deviceId: "d1",
       action: "shutdown",

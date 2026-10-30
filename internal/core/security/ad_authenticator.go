@@ -128,16 +128,26 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 		defaultRoleID := a.getDefaultRoleID()
 		applogger.Infof("[ADAuth] 开始同步AD用户: username=%s, defaultRoleID=%s", adUserInfo.Username, defaultRoleID)
 
+		// 多域隔离：把本次认证使用的 AD 配置 ID 注入 context，
+		// 用户同步层据此判定存量行是否属于其它 AD 域（classifyADUser 规则 2a 例外）。
+		ctx = WithADConfigID(ctx, a.configID)
+
 		syncedUser, err := a.userSyncer.SyncADUser(ctx, adUserInfo, defaultRoleID)
 		if err != nil {
-			// 同步失败不影响认证成功，但标记需要同步
-			applogger.Errorf("[ADAuth] 同步AD用户失败: username=%s, error=%v", adUserInfo.Username, err)
+			// 同步失败不影响认证成功，但标记需要同步。
+			// 安全策略拒绝与 AD 基础设施故障分级：前者是预期的策略行为（WARN），
+			// 后者才是需要排查的故障（ERROR）。
+			if errors.Is(err, ErrSoftDeleteIdentityMismatch) {
+				applogger.Warnf("[SECURITY] 软删恢复被安全策略拒绝: username=%s, error=%v", adUserInfo.Username, err)
+			} else {
+				applogger.Errorf("[ADAuth] 同步AD用户失败: username=%s, error=%v", adUserInfo.Username, err)
+			}
 			return &AuthResult{
 				User:            nil,
 				AuthSource:      "ad",
 				ADUserInfo:      adUserInfo,
 				NeedsSync:       true,
-				SyncErrorReason: "user_sync",
+				SyncErrorReason: syncErrorReasonFor(err),
 			}, nil
 		}
 
@@ -281,6 +291,19 @@ func (a *ADAuthenticator) searchUserInfo(conn *ldap.Conn, config *models.ADConfi
 		Title:       entry.GetAttributeValue("title"),
 		Department:  entry.GetAttributeValue("department"),
 	}, nil
+}
+
+// syncErrorReasonFor 把用户同步错误映射为 AuthResult.SyncErrorReason。
+//   - 安全策略拒绝（软删恢复身份不一致）→ 专用原因码，登录页可给出区别于
+//     AD 基础设施故障的提示；
+//   - 其余错误 → 既有默认原因码。
+//
+// 纯函数，便于单测；不读取任何状态。
+func syncErrorReasonFor(err error) string {
+	if errors.Is(err, ErrSoftDeleteIdentityMismatch) {
+		return SyncReasonSoftDeleteMismatch
+	}
+	return "user_sync"
 }
 
 // getDefaultRoleID 获取默认角色ID（从sys_config读取）

@@ -44,7 +44,7 @@ describe("findMenuById", () => {
   ];
 
   it("findMenuById is callable", () => {
-    const found = findMenuById(menus, "1");
+    const _found = findMenuById(menus, "1");
   });
 
   it("returns null for missing id", () => {

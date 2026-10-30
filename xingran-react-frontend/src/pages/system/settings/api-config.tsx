@@ -9,7 +9,6 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Switch,
   InputNumber,
   Tabs,
@@ -17,6 +16,10 @@ import {
   Empty,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+// Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。
+// 跳过项：<Input.Password>（成员表达式，不在本波 selector 命中面）→ 保留 antd Input 导入。
+// 配置类型 / 状态 / 认证方式均为固定枚举 children → 改写 options 形态；状态类禁搜。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import { formatDateTime } from "@/utils/datetime";
 import {
@@ -34,9 +37,28 @@ import {
 } from "@/lib/notificationConfigApi";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
-const { Option } = Select;
-const { TextArea } = Input;
+// 配置类型枚举（形态分类器产物：children <Option> → options）
+const CONFIG_TYPE_OPTIONS = [
+  { value: APIConfigTypes.SMS, label: "短信" },
+  { value: APIConfigTypes.WEBHOOK, label: "Webhook" },
+  { value: APIConfigTypes.PUSH, label: "推送" },
+];
+
+// 状态枚举（形态分类器产物）
+const STATUS_ENUM_OPTIONS = [
+  { value: 0, label: "正常" },
+  { value: 1, label: "停用" },
+];
+
+// 认证方式枚举（形态分类器产物）
+const AUTH_TYPE_OPTIONS = [
+  { value: AuthTypes.NONE, label: "无需认证" },
+  { value: AuthTypes.BASIC, label: "Basic Auth" },
+  { value: AuthTypes.BEARER, label: "Bearer Token" },
+  { value: AuthTypes.APIKEY, label: "API Key" },
+];
 
 const APIConfigPage: FC = () => {
   const { message } = App.useApp();
@@ -282,13 +304,9 @@ const APIConfigPage: FC = () => {
             className="xr-op-danger"
             icon={<DeleteOutlined />}
             onClick={() => {
-              Modal.confirm({
-                title: "删除 API 配置？",
-                content: "删除后不可恢复，使用该配置的通知推送将失败。",
-                okText: "删除",
-                okButtonProps: { danger: true },
-                cancelText: "取消",
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `API 配置 ${record.configName}`,
+                onDelete: () => handleDelete(record.id),
               });
             }}
           >
@@ -339,17 +357,26 @@ const APIConfigPage: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="configType" label="配置类型">
-              <Select placeholder="全部类型" style={{ width: 140 }} allowClear onSearch={() => {}}>
-                <Option value={APIConfigTypes.SMS}>短信</Option>
-                <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
-                <Option value={APIConfigTypes.PUSH}>推送</Option>
-              </Select>
+              {/* 形态分类器②④：配置类型固定 3 项（业务禁搜） */}
+              <AppSelect
+                placeholder="全部类型"
+                style={{ width: 140 }}
+                allowClear
+                onSearch={() => {}}
+                showSearch={false}
+                options={CONFIG_TYPE_OPTIONS}
+              />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="全部状态" style={{ width: 140 }} allowClear onSearch={() => {}}>
-                <Option value={0}>正常</Option>
-                <Option value={1}>停用</Option>
-              </Select>
+              {/* 形态分类器②④：状态固定 2 项（业务禁搜） */}
+              <AppSelect
+                placeholder="全部状态"
+                style={{ width: 140 }}
+                allowClear
+                onSearch={() => {}}
+                showSearch={false}
+                options={STATUS_ENUM_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -376,7 +403,7 @@ const APIConfigPage: FC = () => {
           scroll={{ x: 1200 }}
           pagination={paginationProps}
           className="xr-table-zebra"
-          size="middle"
+          size="medium"
           onChange={(pagination) => {
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
@@ -386,7 +413,7 @@ const APIConfigPage: FC = () => {
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  <Space direction="vertical" size={4}>
+                  <Space orientation="vertical" size={4}>
                     <span style={{ color: "var(--theme-text-primary)", fontWeight: 500 }}>
                       暂无 API 通知配置
                     </span>
@@ -406,12 +433,12 @@ const APIConfigPage: FC = () => {
         title={editingConfig ? "编辑API配置" : "新增API配置"}
         open={modalVisible}
         onOk={handleSubmit}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           setModalVisible(false);
           editForm.resetFields();
           setEditingConfig(null);
         }}
-        confirmLoading={submitting}
         width={800}
       >
         <Form form={editForm} labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
@@ -420,7 +447,7 @@ const APIConfigPage: FC = () => {
             label="配置名称"
             rules={[{ required: true, message: "请输入配置名称" }]}
           >
-            <Input placeholder="请输入配置名称，如：阿里云短信" />
+            <AppInput placeholder="请输入配置名称，如：阿里云短信" />
           </Form.Item>
 
           <Form.Item
@@ -428,11 +455,13 @@ const APIConfigPage: FC = () => {
             label="配置类型"
             rules={[{ required: true, message: "请选择配置类型" }]}
           >
-            <Select placeholder="请选择配置类型" onSearch={() => {}}>
-              <Option value={APIConfigTypes.SMS}>短信</Option>
-              <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
-              <Option value={APIConfigTypes.PUSH}>推送</Option>
-            </Select>
+            <AppSelect
+              allowClear
+              placeholder="请选择配置类型"
+              onSearch={() => {}}
+              showSearch={false}
+              options={CONFIG_TYPE_OPTIONS}
+            />
           </Form.Item>
 
           <Form.Item
@@ -440,7 +469,7 @@ const APIConfigPage: FC = () => {
             label="API地址"
             rules={[{ required: true, message: "请输入API地址" }]}
           >
-            <Input placeholder="请输入API调用地址" />
+            <AppInput placeholder="请输入API调用地址" />
           </Form.Item>
 
           <Form.Item name="apiMethod" label="请求方法" rules={[{ required: true }]}>
@@ -458,7 +487,7 @@ const APIConfigPage: FC = () => {
                 label: "请求头",
                 children: (
                   <Form.Item name="headers" label="请求头配置">
-                    <TextArea
+                    <AppTextArea
                       rows={4}
                       placeholder='JSON格式，如：{"Content-Type": "application/json"}'
                     />
@@ -470,7 +499,7 @@ const APIConfigPage: FC = () => {
                 label: "模板内容",
                 children: (
                   <Form.Item name="templateBody" label="模板内容">
-                    <TextArea
+                    <AppTextArea
                       rows={6}
                       placeholder='支持变量：{{title}}、{{content}}、{{recipients}}等
 示例：{"title": "{{title}}", "content": "{{content}}"}'
@@ -484,12 +513,12 @@ const APIConfigPage: FC = () => {
                 children: (
                   <>
                     <Form.Item name="authType" label="认证方式" rules={[{ required: true }]}>
-                      <Select onSearch={() => {}}>
-                        <Option value={AuthTypes.NONE}>无需认证</Option>
-                        <Option value={AuthTypes.BASIC}>Basic Auth</Option>
-                        <Option value={AuthTypes.BEARER}>Bearer Token</Option>
-                        <Option value={AuthTypes.APIKEY}>API Key</Option>
-                      </Select>
+                      <AppSelect
+                        allowClear
+                        onSearch={() => {}}
+                        showSearch={false}
+                        options={AUTH_TYPE_OPTIONS}
+                      />
                     </Form.Item>
                     <Form.Item
                       noStyle
@@ -501,7 +530,7 @@ const APIConfigPage: FC = () => {
                           return (
                             <>
                               <Form.Item name={["authConfig", "username"]} label="用户名">
-                                <Input placeholder="请输入用户名" />
+                                <AppInput placeholder="请输入用户名" />
                               </Form.Item>
                               <Form.Item name={["authConfig", "password"]} label="密码">
                                 <Input.Password placeholder="请输入密码" />
@@ -512,7 +541,7 @@ const APIConfigPage: FC = () => {
                         if (authType === AuthTypes.BEARER) {
                           return (
                             <Form.Item name={["authConfig", "token"]} label="Token">
-                              <Input placeholder="请输入Bearer Token" />
+                              <AppInput placeholder="请输入Bearer Token" />
                             </Form.Item>
                           );
                         }
@@ -520,10 +549,10 @@ const APIConfigPage: FC = () => {
                           return (
                             <>
                               <Form.Item name={["authConfig", "key"]} label="Key名称">
-                                <Input placeholder="如：X-API-Key" />
+                                <AppInput placeholder="如：X-API-Key" />
                               </Form.Item>
                               <Form.Item name={["authConfig", "value"]} label="Key值">
-                                <Input placeholder="请输入API Key的值" />
+                                <AppInput placeholder="请输入API Key的值" />
                               </Form.Item>
                             </>
                           );
@@ -550,14 +579,16 @@ const APIConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <Select onSearch={() => {}}>
-              <Option value={0}>正常</Option>
-              <Option value={1}>停用</Option>
-            </Select>
+            <AppSelect
+              allowClear
+              onSearch={() => {}}
+              showSearch={false}
+              options={STATUS_ENUM_OPTIONS}
+            />
           </Form.Item>
 
           <Form.Item name="remark" label="备注">
-            <TextArea rows={2} placeholder="请输入备注信息" />
+            <AppTextArea rows={2} placeholder="请输入备注信息" />
           </Form.Item>
         </Form>
       </Modal>

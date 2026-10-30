@@ -36,7 +36,7 @@ describe("useCommandModals", () => {
     };
     const { result } = renderHook(() => useCommandModals(), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleQuickCommand(["d1"], form as any, onSuccess);
+      await result.current.handleQuickCommand(["d1"], form as unknown, onSuccess);
     });
     expect(onSuccess).toHaveBeenCalled();
     expect(form.resetFields).toHaveBeenCalled();
@@ -50,7 +50,7 @@ describe("useCommandModals", () => {
     };
     const { result } = renderHook(() => useCommandModals(), { wrapper: wrap });
     await act(async () => {
-      await result.current.handleQuickCommand(["d1"], form as any, onSuccess);
+      await result.current.handleQuickCommand(["d1"], form as unknown, onSuccess);
     });
     expect(onSuccess).not.toHaveBeenCalled();
   });
@@ -64,14 +64,18 @@ describe("useCommandModals", () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it("handleCancelExecution 抛错 → message.error + 不调 onSuccess", async () => {
+  // 68.1-T4：失败不再就地吞掉，改为上抛由 confirmDelete helper 的 handleApiError 唯一承接
+  //（Modal 保持打开可重试），故断言上抛而非 message.error。
+  it("handleCancelExecution 抛错 → 上抛给 confirmDelete 承接 + 不调 onSuccess", async () => {
     const { post } = await import("@/lib/api");
     vi.mocked(post).mockRejectedValueOnce(new Error("cancel fail"));
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useCommandModals(), { wrapper: wrap });
-    await act(async () => {
-      await result.current.handleCancelExecution("e1", onSuccess);
-    });
+    await expect(
+      act(async () => {
+        await result.current.handleCancelExecution("e1", onSuccess);
+      })
+    ).rejects.toThrow("cancel fail");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

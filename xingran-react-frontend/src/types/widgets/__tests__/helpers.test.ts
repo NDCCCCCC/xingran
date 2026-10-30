@@ -6,7 +6,7 @@ import { asWidgetComponent, createLazyWidget } from "../helpers";
 
 describe("types/widgets/helpers", () => {
   it("asWidgetComponent 返回传入组件", () => {
-    const Comp: any = () => null;
+    const Comp: unknown = () => null;
     const wrapped = asWidgetComponent(Comp);
     expect(wrapped).toBe(Comp);
   });

@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from "react";
 import { App } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import type { ConfigTemplate } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
@@ -132,17 +133,19 @@ export function useTemplateModals(): UseTemplateModalsReturn {
         message.warning("请选择要删除的数据");
         return;
       }
-      try {
-        await post("/network/templates/batch-delete", { ids: selectedRowKeys });
-        handleSuccess("批量删除成功");
-        setSelectedRowKeys([]);
-        onSuccess();
-      } catch (error) {
-        handleApiError(error, "批量删除失败");
-      }
+      // STOP-05: 确认闸门下沉到 hook 内——任何调用点都无法绕过二次确认（Phase 65 走 helper）
+      confirmDelete({
+        title: "确认批量删除",
+        target: `选中的 ${selectedRowKeys.length} 项`,
+        onDelete: async () => {
+          await post("/network/templates/batch-delete", { ids: selectedRowKeys });
+          setSelectedRowKeys([]);
+          onSuccess();
+        },
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
-    [handleSuccess, handleApiError]
+    [handleApiError]
   );
 
   const handlePreview = useCallback(

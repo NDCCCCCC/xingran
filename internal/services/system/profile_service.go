@@ -13,6 +13,8 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"gorm.io/gorm"
 )
 
@@ -103,39 +105,70 @@ func (s *profileService) GetUserInfo(ctx context.Context, userID string) (*UserI
 	}, nil
 }
 
-// UpdateUserInfo 更新用户信息
+// UpdateUserInfo 更新用户信息（Phase 57 GAP-02：自助资料修改与 AD 入队同事务）
+//
+// 信任边界决策（为什么自助路径也入队，而不是按"管理员专用"排除）：
+//   - 该路径的 userID 来自会话（profile_handler.go `c.Get("user_id")`），不是请求体 ——
+//     用户只能为"自己"入队，不存在跨用户写面；nickname/email/phone 本就是自助可改字段，
+//     队列行只是把这次自编辑的既有效果延伸到自己的 AD 账号。
+//   - 若不入队：AD 同步用户（auth_source='ad'）的 email/phone 在每次 AD 同步时被 AD 侧值
+//     无条件覆盖（user_sync_service.go updateExistingUser；nickname 为空才回填），自助
+//     改动会被下次同步**静默回滚**，且不产生任何队列行 —— Phase 59 GUARD-01 以
+//     pending/failed 行判据，会把这次分叉判成"一致"。入队让 Phase 58 排水器把编辑推到
+//     AD、下次同步读回同一值，分叉闭环。
+//   - AD 侧写权限：排水器按 D-05 重读 DB 全量推送（属性 Modify 幂等），与管理员路径
+//     同一执行面，本路径不新增任何 LDAP 语义；v1.21 的门控仍是全局 D-02
+//     （sync_enabled + 配置启用），不按"自助/管理员"区分 —— 与 Phase 57 既有契约一致。
 func (s *profileService) UpdateUserInfo(ctx context.Context, userID string, req *UpdateUserInfoRequest) error {
-	// 使用 map 仅更新非空字段
-	updates := make(map[string]interface{})
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 旧值快照：diff 输入，必须与写入同一事务读取（同 snapshot，T-57-02 同款约束）。
+		var oldUser models.User
+		if err := tx.Where("id = ?", userID).First(&oldUser).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return fmt.Errorf("用户不存在")
+			}
+			return fmt.Errorf("查询用户信息失败: %w", err)
+		}
 
-	if req.Nickname != nil {
-		updates["nickname"] = *req.Nickname
-	}
-	if req.Email != nil {
-		updates["email"] = *req.Email
-	}
-	if req.Phone != nil {
-		updates["phone"] = *req.Phone
-	}
-	if req.Remark != nil {
-		updates["remark"] = *req.Remark
-	}
-	updates["gender"] = req.Gender
+		// 使用 map 仅更新非空字段
+		updates := make(map[string]interface{})
 
-	if len(updates) == 0 {
-		return fmt.Errorf("没有需要更新的字段")
-	}
+		if req.Nickname != nil {
+			updates["nickname"] = *req.Nickname
+		}
+		if req.Email != nil {
+			updates["email"] = *req.Email
+		}
+		if req.Phone != nil {
+			updates["phone"] = *req.Phone
+		}
+		if req.Remark != nil {
+			updates["remark"] = *req.Remark
+		}
+		updates["gender"] = req.Gender
 
-	result := s.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", userID).Updates(updates)
-	if result.Error != nil {
-		return fmt.Errorf("更新用户信息失败: %w", result.Error)
-	}
+		result := tx.Model(&models.User{}).Where("id = ?", userID).Updates(updates)
+		if result.Error != nil {
+			return fmt.Errorf("更新用户信息失败: %w", result.Error)
+		}
 
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("用户不存在")
-	}
+		// Phase 57 GAP-02: nickname/email/phone 实际变更时同事务入队 update_user。
+		// 复用 addomain.HasADFieldChanged / EnqueueUpdateIfChanged —— 与管理员 Update
+		// 路径完全相同的 diff（nil = 未提供 = 无变更、TrimSpace 比较）与 D-02 两层降级。
+		// gender / remark 不在 AD 四字段契约内，改了也不入队；DeptID 留 nil（自助路径
+		// 无部门字段）→ 不参与 diff。入队失败 → 返回 error 使事务整体回滚（业务写与
+		// 队列行同生共死，QUEUE-01）。
+		if err := addomain.NewADPushEnqueuer().EnqueueUpdateIfChanged(tx, &oldUser, &requests.UserUpdateRequest{
+			ID:       userID,
+			Nickname: req.Nickname,
+			Email:    req.Email,
+			Phone:    req.Phone,
+		}); err != nil {
+			return err
+		}
 
-	return nil
+		return nil
+	})
 }
 
 // ChangePassword 修改密码

@@ -14,7 +14,7 @@ export interface UseCommandModalsReturn {
     form: FormInstance<unknown>,
     onSuccess: () => void
   ) => Promise<void>;
-  handleCancelExecution: (id: string, onSuccess: () => void) => Promise<void>;
+  handleCancelExecution: (id: string, onSuccess?: () => void) => Promise<void>;
 }
 
 export function useCommandModals(): UseCommandModalsReturn {
@@ -41,15 +41,11 @@ export function useCommandModals(): UseCommandModalsReturn {
     []
   );
 
-  const handleCancelExecution = useCallback(async (id: string, onSuccess: () => void) => {
-    try {
-      await post(`/network/executions/${id}/cancel`, {});
-      message.success("取消成功");
-      onSuccess();
-    } catch (_error) {
-      message.error("取消失败");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+  // 68.1-T4：取消执行的确认/成功/失败反馈统一由 confirmDelete helper 承接——
+  // 失败上抛（helper 内 handleApiError("取消执行") 唯一出口，弹窗保持打开可重试）
+  const handleCancelExecution = useCallback(async (id: string, onSuccess?: () => void) => {
+    await post(`/network/executions/${id}/cancel`, {});
+    onSuccess?.();
   }, []);
 
   return {

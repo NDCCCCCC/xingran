@@ -53,7 +53,7 @@ func setupUser78DB(t *testing.T) (*gorm.DB, *models.ADConfig) {
 	require.NoError(t, db.Exec(`
 		CREATE TABLE sys_ad_user (
 			id TEXT PRIMARY KEY, ad_config_id TEXT, user_dn TEXT, username TEXT,
-			display_name TEXT, email TEXT, phone TEXT, mobile TEXT, title TEXT,
+			display_name TEXT, email TEXT, phone TEXT, mobile TEXT, title TEXT, manager TEXT,
 			department TEXT, description TEXT, ou_dn TEXT, is_enabled INTEGER,
 			ad_sync_log_id TEXT, last_sync_at DATETIME,
 			created_by TEXT, updated_by TEXT, version INTEGER,

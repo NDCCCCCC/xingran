@@ -53,7 +53,7 @@ export const MetricWidget = memo(({ widget, display, onEdit, onDelete }: MetricW
           type="circle"
           percent={percent}
           strokeColor={color}
-          width={100}
+          size={100}
           format={(p) => <span className="metric-widget-value">{p}%</span>}
         />
       </div>

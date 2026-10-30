@@ -29,7 +29,7 @@ describe("components/operations 子组件渲染", () => {
     await expectRenders(
       <StatisticsCards
         items={[]}
-        statistics={{ totalWorkstations: 0, occupied: 0, vacant: 0, occupancyRate: 0 } as any}
+        statistics={{ totalWorkstations: 0, occupied: 0, vacant: 0, occupancyRate: 0 } as unknown}
       />
     );
   });
@@ -43,7 +43,7 @@ describe("components/operations 子组件渲染", () => {
   });
   it("WorkstationDeviceTable(有数据+loading)", async () => {
     await expectRenders(
-      <WorkstationDeviceTable workstations={[{ id: "w1", name: "A01" } as any]} loading={true} />
+      <WorkstationDeviceTable workstations={[{ id: "w1", name: "A01" } as unknown]} loading={true} />
     );
   });
 });

@@ -70,7 +70,7 @@ describe("useHolidayData", () => {
           isOffday: true,
         },
       ],
-    } as any);
+    } as unknown);
 
     const { result } = renderHook(() => useHolidayData(), { wrapper });
     act(() => result.current.setHolidayYear(2026));
@@ -98,8 +98,8 @@ describe("useHolidayData", () => {
 
   it("fetchYears: 成功 → 写入 availableYears + 自动选 firstYear", async () => {
     const { getHolidayYears, getHolidayList } = await import("@/lib/dutyApi");
-    vi.mocked(getHolidayYears).mockResolvedValueOnce({ data: [2024, 2025, 2026] } as any);
-    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as any);
+    vi.mocked(getHolidayYears).mockResolvedValueOnce({ data: [2024, 2025, 2026] } as unknown);
+    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as unknown);
 
     const { result } = renderHook(() => useHolidayData(), { wrapper });
 
@@ -123,8 +123,8 @@ describe("useHolidayData", () => {
 
   it("create: 成功 → refresh", async () => {
     const { createHoliday, getHolidayList } = await import("@/lib/dutyApi");
-    vi.mocked(createHoliday).mockResolvedValueOnce({ code: 0 } as any);
-    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as any);
+    vi.mocked(createHoliday).mockResolvedValueOnce({ code: 0 } as unknown);
+    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as unknown);
 
     const { result } = renderHook(() => useHolidayData(), { wrapper });
     act(() => result.current.setHolidayYear(2026));
@@ -136,29 +136,29 @@ describe("useHolidayData", () => {
         holidayType: "legal",
         year: 2026,
         isOffday: true,
-      } as any);
+      } as unknown);
     });
     expect(createHoliday).toHaveBeenCalled();
   });
 
   it("update: 成功 → refresh", async () => {
     const { updateHoliday, getHolidayList } = await import("@/lib/dutyApi");
-    vi.mocked(updateHoliday).mockResolvedValueOnce({ code: 0 } as any);
-    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as any);
+    vi.mocked(updateHoliday).mockResolvedValueOnce({ code: 0 } as unknown);
+    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as unknown);
 
     const { result } = renderHook(() => useHolidayData(), { wrapper });
     act(() => result.current.setHolidayYear(2026));
 
     await act(async () => {
-      await result.current.update("h1", { holidayName: "测试" } as any);
+      await result.current.update("h1", { holidayName: "测试" } as unknown);
     });
     expect(updateHoliday).toHaveBeenCalled();
   });
 
   it("deleteOne: 成功 → refresh", async () => {
     const { deleteHoliday, getHolidayList } = await import("@/lib/dutyApi");
-    vi.mocked(deleteHoliday).mockResolvedValueOnce({ code: 0 } as any);
-    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as any);
+    vi.mocked(deleteHoliday).mockResolvedValueOnce({ code: 0 } as unknown);
+    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as unknown);
 
     const { result } = renderHook(() => useHolidayData(), { wrapper });
     act(() => result.current.setHolidayYear(2026));
@@ -171,9 +171,9 @@ describe("useHolidayData", () => {
 
   it("batchCreate: 成功 → fetchYears + fetchList", async () => {
     const { batchCreateHolidays, getHolidayYears, getHolidayList } = await import("@/lib/dutyApi");
-    vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as any);
-    vi.mocked(getHolidayYears).mockResolvedValueOnce({ data: [2026] } as any);
-    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as any);
+    vi.mocked(batchCreateHolidays).mockResolvedValueOnce({ code: 0 } as unknown);
+    vi.mocked(getHolidayYears).mockResolvedValueOnce({ data: [2026] } as unknown);
+    vi.mocked(getHolidayList).mockResolvedValueOnce({ data: [] } as unknown);
 
     const { result } = renderHook(() => useHolidayData(), { wrapper });
 
@@ -186,7 +186,7 @@ describe("useHolidayData", () => {
           year: 2026,
           isOffday: true,
         },
-      ] as any);
+      ] as unknown);
     });
     expect(batchCreateHolidays).toHaveBeenCalled();
     expect(getHolidayYears).toHaveBeenCalled();

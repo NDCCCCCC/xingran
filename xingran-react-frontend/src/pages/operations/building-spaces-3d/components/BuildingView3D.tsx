@@ -4,13 +4,16 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { Button, Space, Spin, Alert, Tag, Select } from "antd";
+import { Button, Space, Spin, Alert, Tag } from "antd";
 import { ArrowLeftOutlined, DesktopOutlined, BuildOutlined } from "@ant-design/icons";
 import { useVisualizationStore } from "@/store/visualizationStore";
 import { floorApi, workstationApi, buildingApi } from "@/lib/opsApi";
 import type { Floor } from "@/types/operations";
 import { handleApiError } from "@/utils/errorHandler";
 import { convertApiWorkstations } from "../utils";
+// Phase 71 (W3)：裸 Select → AppSelect（只换 UI 组件，不碰 Three.js 渲染逻辑）。
+// 楼宇切换下拉本是 options 形态；buildingId 为 UUID，allowClear 原已有。
+import { AppSelect } from "@/components/ui";
 // Use lazy wrappers from BuildingScene so Three.js stays out of the initial bundle.
 import { BuildingModel3DLazy, FloorPlan3DLazy } from "@/components/three/BuildingScene";
 
@@ -219,7 +222,7 @@ interface NoBuildingSelectedAlertProps {
 const NoBuildingSelectedAlert: React.FC<NoBuildingSelectedAlertProps> = ({ onBackToMap }) => (
   <div style={styles.centerContainer}>
     <Alert
-      message="未选择楼宇"
+      title="未选择楼宇"
       description="请先在地图上选择一个楼宇"
       type="info"
       showIcon
@@ -265,7 +268,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     </div>
 
     <div style={styles.headerInfo}>
-      <Space split={<span style={styles.splitter}>|</span>}>
+      <Space separator={<span style={styles.splitter}>|</span>}>
         <span>{building.cityName || "-"}</span>
         <span>{floorCount} 层</span>
         <span>{workstationCount} 工位</span>
@@ -301,7 +304,7 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
   >
     {/* 楼宇切换下拉框 */}
     <div style={styles.controlPanel}>
-      <Space direction="vertical" size="small" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="small" style={{ width: "100%" }}>
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={onBackToMap}
@@ -313,11 +316,14 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
         {buildings.length > 1 && (
           <>
             <div style={styles.controlLabel}>切换楼宇</div>
-            <Select
+            <AppSelect
+              allowClear
               style={{ width: "100%" }}
               placeholder="选择楼宇"
               value={currentBuilding?.id}
-              onChange={onBuildingChange}
+              // AppSelect 的 onChange 值为 unknown；handleBuildingChange 对查不到的 id
+              // 已有「不切换」分支，清空收敛成 "" 走同一分支，不引入新语义
+              onChange={(value) => onBuildingChange((value as string) ?? "")}
               options={buildings.map((b) => ({
                 label: b.name,
                 value: b.id,

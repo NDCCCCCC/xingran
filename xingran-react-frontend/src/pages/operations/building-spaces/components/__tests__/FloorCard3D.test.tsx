@@ -27,7 +27,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-const sampleFloor: any = {
+const sampleFloor: unknown = {
   id: "f1",
   buildingId: "b1",
   floorNo: "F1",

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
@@ -96,7 +97,7 @@ func setupUserCacheTestDB(t *testing.T) *gorm.DB {
 			password TEXT,
 			nickname TEXT,
 			email TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			gender INTEGER NOT NULL DEFAULT 2,
 			status INTEGER NOT NULL DEFAULT 0,
 			dept_id TEXT,
@@ -149,6 +150,24 @@ func setupUserCacheTestDB(t *testing.T) *gorm.DB {
 			deleted_at DATETIME
 		)
 	`).Error)
+
+	// Phase 57 HYGIENE-06（第三套 sqlite 环境）：userCacheService 内嵌 userService，
+	// 复用同一套 Delete / BatchDelete 写路径，事务内会调 IsADSyncEnabled 查
+	// sys_ad_config 并写 ad_push_queue。缺这两张表会让
+	// TestUserCache_Delete_TriggersInvalidate 等用例因报表不存在而失败。
+	// Phase 58 F-15: 此处刻意不 seed sys_ad_config 行 —— 用例断言的正是
+	// "无启用 AD 配置时入队为 no-op"分支，seed 了反而会让该断言失去意义。
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_ad_config (
+			id TEXT PRIMARY KEY,
+			sync_enabled INTEGER NOT NULL DEFAULT 0,
+			status INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)
+	`).Error)
+	require.NoError(t, migrations.Migrate215CreateADPushQueue(db))
 	return db
 }
 

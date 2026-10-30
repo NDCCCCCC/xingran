@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { DictType, DictData } from "@/types";
 import { post } from "@/lib/api";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface UseDictActionsParams {
@@ -117,16 +118,18 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
         message.warning("请选择要删除的数据");
         return;
       }
-      try {
-        await post("/system/dicts/types/batch-delete", { ids: selectedRowKeys });
-        handleSuccess("批量删除");
-        setSelectedRowKeys([]);
-        loadDictTypes();
-        loadTypeStatistics();
-        invalidateAllDicts();
-      } catch (error) {
-        handleApiError(error, "批量删除");
-      }
+      // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+      confirmDelete({
+        title: "确认批量删除",
+        target: `选中的 ${selectedRowKeys.length} 项`,
+        onDelete: async () => {
+          await post("/system/dicts/types/batch-delete", { ids: selectedRowKeys });
+          setSelectedRowKeys([]);
+          loadDictTypes();
+          loadTypeStatistics();
+          invalidateAllDicts();
+        },
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadDictTypes, loadTypeStatistics, invalidateAllDicts]
@@ -183,16 +186,18 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
         message.warning("请选择要删除的数据");
         return;
       }
-      try {
-        await post("/system/dicts/data/batch-delete", { ids: selectedRowKeys });
-        handleSuccess("批量删除");
-        setSelectedRowKeys([]);
-        loadDictData();
-        loadDataStatistics();
-        invalidateAllDicts();
-      } catch (error) {
-        handleApiError(error, "批量删除");
-      }
+      // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+      confirmDelete({
+        title: "确认批量删除",
+        target: `选中的 ${selectedRowKeys.length} 项`,
+        onDelete: async () => {
+          await post("/system/dicts/data/batch-delete", { ids: selectedRowKeys });
+          setSelectedRowKeys([]);
+          loadDictData();
+          loadDataStatistics();
+          invalidateAllDicts();
+        },
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadDictData, loadDataStatistics, invalidateAllDicts]

@@ -3,16 +3,15 @@
  * 节假日编辑模态框
  */
 
-import { Form, Input, InputNumber, Select, Switch, Modal, DatePicker } from "antd";
+import { Form, InputNumber, Switch, Modal, DatePicker } from "antd";
+// Phase 71 (W5)：裸 Input/Select/TextArea → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { FormInstance } from "antd/es/form";
 import type { Holiday } from "@/lib/dutyApi";
 import type { DictItem } from "@/hooks/useDict";
 import { HOLIDAY_TYPE_OPTIONS } from "../constants";
 import dayjs from "dayjs";
-import { useEffect } from "react";
-
-const { Option } = Select;
-const { TextArea } = Input;
+import { useEffect, useState } from "react";
 
 export interface HolidayEditModalProps {
   open: boolean;
@@ -36,6 +35,7 @@ export function HolidayEditModal({
   onCancel,
 }: HolidayEditModalProps) {
   const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
 
   const getDefaultYear = () => year ?? availableYears[0] ?? new Date().getFullYear();
 
@@ -73,7 +73,15 @@ export function HolidayEditModal({
     <Modal
       title={editingRecord ? "编辑节假日" : "新增节假日"}
       open={open}
-      onOk={() => onOk(form)}
+      onOk={async () => {
+        setSubmitting(true);
+        try {
+          await onOk(form);
+        } finally {
+          setSubmitting(false);
+        }
+      }}
+      cancelButtonProps={{ disabled: submitting }}
       onCancel={onCancel}
       destroyOnHidden
     >
@@ -91,7 +99,7 @@ export function HolidayEditModal({
           label="节假日名称"
           rules={[{ required: true, message: "请输入节假日名称" }]}
         >
-          <Input placeholder="请输入节假日名称" />
+          <AppInput allowClear placeholder="请输入节假日名称" />
         </Form.Item>
 
         <Form.Item
@@ -99,19 +107,19 @@ export function HolidayEditModal({
           label="类型"
           rules={[{ required: true, message: "请选择类型" }]}
         >
-          <Select placeholder="请选择类型" onSearch={() => {}}>
-            {holidayTypeDict.length > 0
-              ? holidayTypeDict.map((d) => (
-                  <Option key={d.dictValue} value={d.dictValue}>
-                    {d.dictLabel}
-                  </Option>
-                ))
-              : HOLIDAY_TYPE_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-          </Select>
+          {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，
+              显式 showSearch={false} 保持不变 */}
+          <AppSelect
+            allowClear
+            placeholder="请选择类型"
+            showSearch={false}
+            onSearch={() => {}}
+            options={
+              holidayTypeDict.length > 0
+                ? holidayTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))
+                : HOLIDAY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))
+            }
+          />
         </Form.Item>
 
         <Form.Item name="isOffday" label="是否休息日" valuePropName="checked">
@@ -123,7 +131,7 @@ export function HolidayEditModal({
         </Form.Item>
 
         <Form.Item name="remark" label="备注">
-          <TextArea rows={3} placeholder="请输入备注" />
+          <AppTextArea rows={3} placeholder="请输入备注" />
         </Form.Item>
       </Form>
     </Modal>

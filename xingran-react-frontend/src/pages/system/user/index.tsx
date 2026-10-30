@@ -12,12 +12,18 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Switch,
   Layout,
   Alert,
   Card,
+  App,
 } from "antd";
+// Phase 71 (W2)：裸 Input/Select → 契约组件。
+// 跳过项：<Input.Password>（成员表达式）不在本波 selector 命中面，保留 antd Input 导入。
+// Select 形态：状态/性别为固定枚举（children → options + 禁搜）；角色多选为 children 带
+// label（→ options 形态）；职位下拉 options 无 label 字段且显式 optionFilterProp="value"，
+// 该显式值经 AppSelect 的 {...rest} 覆盖默认 "label"，行为不变。
+import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -29,16 +35,19 @@ import {
 import type { User } from "@/types";
 import { post } from "@/lib/api";
 import type { PageResponse } from "@/types";
+import { previewManagers, type ManagerPreviewItem } from "@/lib/managerApi";
 import DeptTree from "@/components/DeptTree";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useDict, type DictItem } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import { DepartmentTreeSelect } from "@/components/shared";
+import { DepartmentTreeSelect, confirmDelete, useActionPermission } from "@/components/shared";
+import type { ActionPermissionDecision } from "@/components/shared";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import type { SortOrder } from "@/hooks/useServerSort";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 // 导入提取的文件
 import { GENDER_OPTIONS, STATUS_OPTIONS } from "./constants";
@@ -46,7 +55,6 @@ import { formatGender } from "./utils.tsx";
 import { useUserData } from "./hooks/useUserData";
 import { useUserModals } from "./hooks/useUserModals";
 
-const { Option } = Select;
 const { Sider, Content } = Layout;
 
 // 模块级稳定空数组 — 给 DeptTree.selectedKeys 在"未选部门"时复用，
@@ -63,6 +71,15 @@ interface UserTableColumnsProps {
   getColumnSortOrder: (field: string) => SortOrder | undefined;
   /** Phase 69 DICT-03: sys_user_sex 字典数据（空数组时 formatGender 回退静态映射） */
   genderDict: DictItem[];
+  /** 经理预览映射（key=用户 id；纯计算不落库，规则变更后由后端缓存失效保证准实时） */
+  managerMap: Record<string, ManagerPreviewItem>;
+  /**
+   * v1.24 #16（PERM-02/03）：操作列门控决策。
+   * 三态语义：visible=false → 不渲染；disabled=true → 渲染但禁用（hint 作提示）。
+   */
+  permEdit: ActionPermissionDecision;
+  permResetPwd: ActionPermissionDecision;
+  permRemove: ActionPermissionDecision;
 }
 
 function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
@@ -73,6 +90,10 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
     handleDelete,
     getColumnSortOrder,
     genderDict,
+    managerMap,
+    permEdit,
+    permResetPwd,
+    permRemove,
   } = props;
 
   return [
@@ -117,13 +138,32 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       sortOrder: getColumnSortOrder("email"),
     },
     {
-      title: "手机号",
+      // phone 为后端「联系电话」字段；mobile 为后端新增的「手机号」字段（AD 同步写入）
+      title: "联系电话",
       dataIndex: "phone",
       key: "phone",
       width: 130,
       minWidth: 120,
       sorter: true,
       sortOrder: getColumnSortOrder("phone"),
+      render: (text) => <span className="xr-cell-id">{text || "—"}</span>,
+    },
+    {
+      title: "手机号",
+      dataIndex: "mobile",
+      key: "mobile",
+      width: 130,
+      minWidth: 120,
+      ellipsis: true,
+      render: (text) => <span className="xr-cell-id">{text || "—"}</span>,
+    },
+    {
+      title: "职位",
+      dataIndex: "title",
+      key: "title",
+      width: 140,
+      minWidth: 120,
+      ellipsis: true,
       render: (text) => <span className="xr-cell-id">{text || "—"}</span>,
     },
     {
@@ -149,6 +189,41 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       render: (_, record) => record.deptFullName || record.deptName || "-",
     },
     {
+      // 经理预览：按当前生效的经理同步规则纯内存计算（不落库），
+      // 显示「姓名(账号)」；未配置规则或未解析出时显示 "—"，
+      // hover 提示给出原因（如“未命中任何机构定义”）。
+      title: "经理",
+      dataIndex: "manager",
+      key: "manager",
+      width: 140,
+      minWidth: 120,
+      ellipsis: true,
+      render: (_, record) => {
+        const preview = managerMap[record.id];
+        if (!preview) return <span className="xr-cell-id">—</span>;
+        const label =
+          preview.managerName || preview.managerUsername
+            ? `${preview.managerName || preview.managerUsername}${
+                preview.managerUsername && preview.managerName
+                  ? `(${preview.managerUsername})`
+                  : ""
+              }`
+            : "—";
+        const tip =
+          preview.reason ||
+          (preview.warnings && preview.warnings.length > 0
+            ? preview.warnings.join("；")
+            : preview.ruleName
+              ? `命中规则：${preview.ruleName}`
+              : "");
+        return (
+          <span className="xr-cell-id" title={tip}>
+            {label}
+          </span>
+        );
+      },
+    },
+    {
       title: "角色",
       dataIndex: "roles",
       key: "roles",
@@ -157,7 +232,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       // 原型复刻：品牌圆点 tag（demo .tag-green / .tag-gold，超级管理员=金）
       render: (roles: string[] | Array<{ roleName?: string; roleKey?: string; id?: string }>) => {
         if (!roles || roles.length === 0) {
-          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>无角色</span>;
+          return <span style={{ color: "var(--theme-text-tertiary)" }}>无角色</span>;
         }
         return (
           <Space size="small" wrap>
@@ -189,9 +264,12 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       sorter: true,
       sortOrder: getColumnSortOrder("status"),
       // 原型复刻：状态用 Switch 直改（0=启用 / 1=禁用），替代旧 Tag + 操作列「禁用/启用」
+      // v1.24 #16：状态变更走 POST /system/users/:id/status（后端绑定 system:user:edit），
+      // 前端同步门控——无 edit 权限时 Switch 不可交互（禁用而非隐藏：状态是只读信息）。
       render: (status, record) => (
         <Switch
           checked={status === 0}
+          disabled={permEdit.disabled || !permEdit.visible}
           onChange={(checked) => handleUpdateStatus(record.id, checked ? 0 : 1)}
         />
       ),
@@ -213,30 +291,48 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       minWidth: 180,
       fixed: "right" as const,
       // 原型复刻：纯文字链接（demo .row-ops，无图标不折叠）
+      // v1.24 #16：编辑 / 重置密码 / 删除 分别按 system:user:edit / resetPwd / remove 门控
       render: (_, record) => (
         <div className="xr-row-ops">
-          <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" onClick={() => handleResetPassword(record)}>
-            重置密码
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            className="xr-op-danger"
-            onClick={() => {
-              Modal.confirm({
-                title: "确定要删除这个用户吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
-              });
-            }}
-          >
-            删除
-          </Button>
+          {permEdit.visible && (
+            <Button
+              type="link"
+              size="small"
+              disabled={permEdit.disabled}
+              title={permEdit.hint}
+              onClick={() => handleEdit(record)}
+            >
+              编辑
+            </Button>
+          )}
+          {permResetPwd.visible && (
+            <Button
+              type="link"
+              size="small"
+              disabled={permResetPwd.disabled}
+              title={permResetPwd.hint}
+              onClick={() => handleResetPassword(record)}
+            >
+              重置密码
+            </Button>
+          )}
+          {permRemove.visible && (
+            <Button
+              type="link"
+              size="small"
+              className="xr-op-danger"
+              disabled={permRemove.disabled}
+              title={permRemove.hint}
+              onClick={() => {
+                confirmDelete({
+                  target: `用户 ${record.username}`,
+                  onDelete: async () => { await handleDelete(record.id); },
+                });
+              }}
+            >
+              删除
+            </Button>
+          )}
         </div>
       ),
     },
@@ -246,6 +342,19 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
 // ==================== 主组件 ====================
 
 const UserManagement: FC = () => {
+  const { message: _message } = App.useApp();
+
+  // v1.24 #16（PERM-02/03）：操作级权限门控（三态 ready/loading/error）。
+  // 权限码来自单一真相源 src/constants/permissionCodes.ts。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permEdit = permGate.decide(PERMISSION_CODES.systemUser.edit);
+  const permResetPwd = permGate.decide(PERMISSION_CODES.systemUser.resetPwd);
+  const permRemove = permGate.decide(PERMISSION_CODES.systemUser.remove);
+  const permAdd = permGate.decide(PERMISSION_CODES.systemUser.add);
+  const permImport = permGate.decide(PERMISSION_CODES.systemUser.import);
+  // 注：system:user:export 已登记在权限码表，但用户模块**未注册导出路由**、
+  // 前端也无导出按钮（xtgl 缺 export 权限也不会 403）——待导出功能落地时接入。
   // 自定义状态
   const location = useLocation();
   const [selectedDeptId, setSelectedDeptId] = usePersistedStateController<string>({
@@ -267,6 +376,7 @@ const UserManagement: FC = () => {
 
   // 用户导入模态框
   const [importModalVisible, setImportModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Phase 69 DICT-03: 性别下拉迁 useDict("sys_user_sex")——字典管理页改 label 后
   // 搜索/编辑下拉与表格渲染随之变化；字典空态/接口异常时回退静态 GENDER_OPTIONS
@@ -336,6 +446,61 @@ const UserManagement: FC = () => {
     },
     sorterMetas,
   });
+
+  // ==================== 经理预览（当前页） ====================
+
+  // 经理预览映射（key=用户 id）。监听当前页数据变化批量查询；
+  // previewManagers 内部静默降级，失败不阻塞用户列表展示。
+  const [managerMap, setManagerMap] = useState<Record<string, ManagerPreviewItem>>({});
+
+  const userIdsKey = useMemo(
+    () => (users ?? []).map((u) => u.id).join(","),
+    [users]
+  );
+
+  useEffect(() => {
+    const ids = userIdsKey ? userIdsKey.split(",") : [];
+    if (ids.length === 0) {
+      setManagerMap({});
+      return;
+    }
+    let cancelled = false;
+    previewManagers(ids).then((items) => {
+      if (cancelled) return;
+      const next: Record<string, ManagerPreviewItem> = {};
+      for (const item of items) next[item.userId] = item;
+      setManagerMap(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userIdsKey]);
+
+  // ==================== 职位下拉（数据源：岗位管理 sys_post） ====================
+
+  // 职位下拉选项 = 启用中的岗位名称。title 列本身是自由文本（AD 同步会写入
+  // AD 侧 title 原文），值不在岗位列表时 Select 直接显示原文本，不丢数据。
+  const [postTitleOptions, setPostTitleOptions] = useState<{ value: string }[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    post<{ list: { postName: string }[]; total: number }>("/system/posts/list", {
+      current: 1,
+      pageSize: 200,
+      status: 0,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        const names = Array.from(new Set((res.data?.list ?? []).map((p) => p.postName)));
+        setPostTitleOptions(names.map((n) => ({ value: n })));
+      })
+      .catch(() => {
+        /* 拉取失败降级为无选项的可输入下拉，不阻塞表单 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ==================== 初始化 ====================
 
@@ -428,20 +593,22 @@ const UserManagement: FC = () => {
     [loadUsers, loadStatistics]
   );
 
-  const handleBatchDelete = useCallback(async () => {
+  const handleBatchDelete = useCallback(() => {
     if (selectedRowKeys.length === 0) {
       return;
     }
 
-    try {
-      await post("/system/users/batch-delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      resetSelection();
-      loadUsers();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
+    // STOP-05: 批删前二次确认（Phase 65 统一走 confirmDelete helper）
+    confirmDelete({
+      title: "确认批量删除",
+      target: `选中的 ${selectedRowKeys.length} 项`,
+      onDelete: async () => {
+        await post("/system/users/batch-delete", { ids: selectedRowKeys });
+        resetSelection();
+        loadUsers();
+        loadStatistics();
+      },
+    });
   }, [selectedRowKeys, resetSelection, loadUsers, loadStatistics]);
 
   const handleUpdateStatus = useCallback(
@@ -522,6 +689,10 @@ const UserManagement: FC = () => {
     handleDelete,
     getColumnSortOrder,
     genderDict,
+    managerMap,
+    permEdit,
+    permResetPwd,
+    permRemove,
   });
 
   // 给 DeptTree 喂稳定引用 — selectedKeys 在 selectedDeptId 不变时复用同一数组，
@@ -598,21 +769,21 @@ const UserManagement: FC = () => {
               >
                 <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                   <Form.Item name="username" label="用户名">
-                    <Input placeholder="用户名 / 昵称 / 手机号" />
+                    <AppInput placeholder="用户名 / 昵称 / 手机号" />
                   </Form.Item>
                   <Form.Item name="status" label="状态">
-                    <Select
+                    {/* 形态分类器②④：用户状态枚举（业务禁搜）。注意原值经 String() 转换 */}
+                    <AppSelect
                       placeholder="全部状态"
                       style={{ width: 140 }}
                       allowClear
                       onSearch={() => {}}
-                    >
-                      {STATUS_OPTIONS.map((opt) => (
-                        <Option key={opt.value} value={String(opt.value)}>
-                          {opt.label}
-                        </Option>
-                      ))}
-                    </Select>
+                      showSearch={false}
+                      options={STATUS_OPTIONS.map((opt) => ({
+                        value: String(opt.value),
+                        label: opt.label,
+                      }))}
+                    />
                   </Form.Item>
                   <Form.Item>
                     <Space>
@@ -625,28 +796,45 @@ const UserManagement: FC = () => {
                   </Form.Item>
                 </Form>
                 <Space>
-                  {selectedRowKeys.length > 0 && (
+                  {selectedRowKeys.length > 0 && permRemove.visible && (
                     <Button
                       icon={<DeleteOutlined />}
                       onClick={handleBatchDelete}
+                      disabled={permRemove.disabled}
+                      title={permRemove.hint}
                       style={{
-                        color: "var(--theme-error, #ba3630)",
+                        color: "var(--theme-error)",
                       }}
                     >
                       批量删除 ({selectedRowKeys.length})
                     </Button>
                   )}
-                  <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
-                    导入用户
-                  </Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
-                    新增用户
-                  </Button>
+                  {permImport.visible && (
+                    <Button
+                      icon={<ImportOutlined />}
+                      onClick={() => setImportModalVisible(true)}
+                      disabled={permImport.disabled}
+                      title={permImport.hint}
+                    >
+                      导入用户
+                    </Button>
+                  )}
+                  {permAdd.visible && (
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleAddUser}
+                      disabled={permAdd.disabled}
+                      title={permAdd.hint}
+                    >
+                      新增用户
+                    </Button>
+                  )}
                 </Space>
               </div>
               {selectedRowKeys.length > 0 && (
                 <Alert
-                  message={
+                  title={
                     <span>
                       已选择 <strong>{selectedRowKeys.length}</strong> 个用户，
                       <Button
@@ -675,8 +863,9 @@ const UserManagement: FC = () => {
                 loading={loading}
                 pagination={paginationProps}
                 onChange={handleTableChange}
+                scroll={{ x: "max-content" }}
                 className="xr-table-zebra"
-                size="middle"
+                size="medium"
               />
             </Card>
 
@@ -700,7 +889,15 @@ const UserManagement: FC = () => {
         <Modal
           title={editingUser ? "编辑用户" : "新增用户"}
           open={editModalVisible}
-          onOk={handleSave}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSave();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           afterOpenChange={handleModalOpenChange}
           onCancel={() => setEditModalVisible(false)}
           width={600}
@@ -716,7 +913,7 @@ const UserManagement: FC = () => {
               label="用户名"
               rules={[{ required: true, message: "请输入用户名" }]}
             >
-              <Input disabled={!!editingUser} className="user-form-input" />
+              <AppInput disabled={!!editingUser} className="user-form-input" />
             </Form.Item>
             {!editingUser && (
               <Form.Item
@@ -732,37 +929,57 @@ const UserManagement: FC = () => {
               label="昵称"
               rules={[{ required: true, message: "请输入昵称" }]}
             >
-              <Input className="user-form-input" />
+              <AppInput className="user-form-input" />
             </Form.Item>
             <Form.Item name="employeeNo" label="工号">
-              <Input placeholder="请输入工号" className="user-form-input" />
+              <AppInput placeholder="请输入工号" className="user-form-input" />
             </Form.Item>
             <Form.Item name="email" label="邮箱">
-              <Input className="user-form-input" />
+              <AppInput className="user-form-input" />
             </Form.Item>
-            <Form.Item name="phone" label="手机号">
-              <Input className="user-form-input" />
+            <Form.Item name="phone" label="联系电话">
+              <AppInput className="user-form-input" />
+            </Form.Item>
+            {/* mobile / title 为后端新增字段：手机号与职位（AD 同步写入） */}
+            <Form.Item name="mobile" label="手机号">
+              <AppInput placeholder="请输入手机号" className="user-form-input" />
+            </Form.Item>
+            <Form.Item name="title" label="职位">
+              {/* 形态分类器③：options 仅有 value 无 label → 显式 optionFilterProp="value"
+                  （AppSelect 的 {...rest} 展开在后，覆盖其默认 "label"，过滤行为与迁移前一致） */}
+              <AppSelect
+                className="user-form-input"
+                showSearch
+                allowClear
+                placeholder="请选择职位"
+                options={postTitleOptions}
+                optionFilterProp="value"
+              />
             </Form.Item>
             <Form.Item name="gender" label="性别" initialValue={2}>
-              <Select className="user-form-input" onSearch={() => {}}>
-                {genderDict.length > 0
-                  ? genderDict.map((d) => (
-                      <Option key={d.dictValue} value={Number(d.dictValue)}>
-                        {d.dictLabel}
-                      </Option>
-                    ))
-                  : GENDER_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
-              </Select>
+              {/* 形态分类器②③④：性别枚举（业务禁搜）。字典优先、常量兜底的取值逻辑原样保留 */}
+              <AppSelect
+                allowClear
+                className="user-form-input"
+                onSearch={() => {}}
+                showSearch={false}
+                options={
+                  genderDict.length > 0
+                    ? genderDict.map((d) => ({
+                        value: Number(d.dictValue),
+                        label: d.dictLabel,
+                      }))
+                    : GENDER_OPTIONS
+                }
+              />
             </Form.Item>
             <Form.Item name="deptId" label="部门">
               <DepartmentTreeSelect departments={departments} className="user-form-input" />
             </Form.Item>
             <Form.Item name="roleIds" label="角色">
-              <Select
+              {/* 形态分类器③：children 带 label → options 形态（label 真实存在，
+                  与原显式 optionFilterProp="label" 同构）；多选需搜索，显式 showSearch */}
+              <AppSelect
                 mode="multiple"
                 placeholder="请选择角色"
                 allowClear
@@ -770,22 +987,17 @@ const UserManagement: FC = () => {
                 showSearch
                 className="user-form-input"
                 onSearch={() => {}}
-              >
-                {roles.map((role) => (
-                  <Option key={role.id} value={role.id} label={role.roleName}>
-                    {role.roleName}
-                  </Option>
-                ))}
-              </Select>
+                options={roles.map((role) => ({ value: role.id, label: role.roleName }))}
+              />
             </Form.Item>
             <Form.Item name="status" label="状态" initialValue={0}>
-              <Select className="user-form-input" onSearch={() => {}}>
-                {STATUS_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
-              </Select>
+              <AppSelect
+                allowClear
+                className="user-form-input"
+                onSearch={() => {}}
+                showSearch={false}
+                options={STATUS_OPTIONS}
+              />
             </Form.Item>
           </Form>
         </Modal>
@@ -794,7 +1006,15 @@ const UserManagement: FC = () => {
         <Modal
           title={`重置密码 - ${resettingUser?.username || ""}`}
           open={resetPasswordModalVisible}
-          onOk={handleSaveResetPassword}
+          onOk={async () => {
+            setSubmitting(true);
+            try {
+              await handleSaveResetPassword();
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          cancelButtonProps={{ disabled: submitting }}
           onCancel={closeResetPasswordModal}
           width={400}
         >

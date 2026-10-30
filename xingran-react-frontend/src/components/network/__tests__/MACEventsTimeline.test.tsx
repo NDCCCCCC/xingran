@@ -9,10 +9,10 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-import MACEventsTimeline from "../MACEventsTimeline";
+import "../MACEventsTimeline";
 import { HealthBadge } from "@/components/reconciliation/HealthBadge";
 
-async function waitText(text: string, timeoutMs = 6000): Promise<boolean> {
+async function _waitText(text: string, timeoutMs = 6000): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (document.body.innerHTML.includes(text)) return true;

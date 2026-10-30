@@ -111,7 +111,9 @@ import type { FC } from "react";
 
 // Static registry — all icons from iconCategories, plus SearchOutlined (used directly)
 // Using FC<any> to accommodate ForwardRefExoticComponent (antd icons) which is
-// not assignable to ComponentType<unknown> but is to FC<any>
+// not assignable to ComponentType<unknown> but is to FC<any>（antd 图标类型边界契约，
+// unknown 会破坏全部 antd 图标赋值——登记保留）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- antd 图标组件类型边界（见上注释）
 export const STATIC_ICON_REGISTRY: Record<string, FC<any>> = {
   DashboardOutlined,
   HomeOutlined,

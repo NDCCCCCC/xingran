@@ -32,13 +32,13 @@ describe("HybridLayout 渲染", () => {
       isMobile: false,
       sidebarCollapsed: false,
       currentLayout: "hybrid",
-    } as any);
+    } as unknown);
     useMenuStore.setState({
       menus: [],
       permissions: [],
       flatMenus: [],
       loading: false,
-    } as any);
+    } as unknown);
 
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } },

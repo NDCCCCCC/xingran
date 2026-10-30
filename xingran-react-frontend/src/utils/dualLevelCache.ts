@@ -423,19 +423,9 @@ export class DualLevelCache<T> {
    * 打印统计信息
    */
   printStats(): void {
-    const stats = this.getStats();
-    console.table({
-      "Memory Hits": stats.memoryHits,
-      "Storage Hits": stats.storageHits,
-      Misses: stats.misses,
-      "Total Hits": stats.totalHits,
-      "Total Requests": stats.totalRequests,
-      "Hit Rate": stats.hitRate,
-      "Memory Size": stats.memorySize,
-      "Storage Size": stats.storageSize,
-      "Total Size": stats.totalSize,
-    });
-  }
+    // no-console 白名单仅允许 warn/error：调试统计走 warn 通道
+    console.warn("[DualLevelCache] stats", this.getStats());
+    }
 }
 
 // 导出单例实例

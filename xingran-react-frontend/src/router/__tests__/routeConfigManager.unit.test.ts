@@ -31,7 +31,7 @@ function seed() {
       path: "dashboard",
       component: "pages/dashboard/index",
       visible: 1,
-      meta: { title: "仪表盘" } as any,
+      meta: { title: "仪表盘" } as unknown,
     }),
     makeMenu({
       id: 2,
@@ -39,7 +39,7 @@ function seed() {
       path: "user",
       component: "pages/system/user/index",
       visible: 1,
-      meta: { title: "用户管理", permissions: ["system:user:list"] } as any,
+      meta: { title: "用户管理", permissions: ["system:user:list"] } as unknown,
     }),
     makeMenu({
       id: 3,
@@ -47,7 +47,7 @@ function seed() {
       path: "hidden",
       component: "pages/x/index",
       visible: 0,
-      meta: { title: "隐藏" } as any,
+      meta: { title: "隐藏" } as unknown,
     }),
     makeMenu({
       id: 4,
@@ -56,7 +56,7 @@ function seed() {
       component: "",
       menuType: "F",
       visible: 1,
-      meta: { title: "按钮" } as any,
+      meta: { title: "按钮" } as unknown,
     }),
     makeMenu({
       id: 5,
@@ -64,7 +64,7 @@ function seed() {
       path: "sub",
       component: "pages/sub/index",
       visible: 1,
-      meta: { title: "嵌套父" } as any,
+      meta: { title: "嵌套父" } as unknown,
       children: [
         makeMenu({
           id: 6,
@@ -72,7 +72,7 @@ function seed() {
           path: "child",
           component: "pages/sub/child/index",
           visible: 1,
-          meta: { title: "嵌套子" } as any,
+          meta: { title: "嵌套子" } as unknown,
         }),
       ],
     }),

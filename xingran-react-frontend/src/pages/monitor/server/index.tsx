@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
+import type { TablePaginationConfig } from "antd";
+import type { FilterValue, SorterResult } from "antd/es/table/interface";
 import {
   Card,
   Table,
   Button,
   Space,
   Tag,
-  Input,
-  Select,
   Row,
   Col,
   Statistic,
@@ -16,6 +16,8 @@ import {
   Descriptions,
   App,
 } from "antd";
+// Phase 71 (W1)：裸 Input/Select → 契约组件
+import { AppInput, AppSelect } from "@/components/ui";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -28,6 +30,8 @@ import { usePagination } from "@/hooks/usePagination";
 import type { ColumnsType } from "antd/es/table";
 import type { PageResponse } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { ErrorAlertWithRetry } from "@/components/shared";
+import { handleApiError } from "@/utils/errorHandler";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
 
@@ -59,10 +63,14 @@ interface ServerMetrics {
 }
 
 const ServerMonitor: FC = () => {
-  const { message } = App.useApp();
+  const { message: _message } = App.useApp();
   const [servers, setServers] = useState<ServerInfo[]>([]);
+  // FIX-04b: 列表加载失败的可重试错误
+  const [serverError, setServerError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
-  const [searchForm, setSearchForm] = useState({
+  // Phase 71：status 显式标注为 number | undefined —— 原字面量 undefined 会把类型收窄成
+  // undefined 本身，导致 AppSelect onChange（unknown）无法回写
+  const [searchForm, setSearchForm] = useState<{ hostName: string; status: number | undefined }>({
     hostName: "",
     status: undefined,
   });
@@ -88,9 +96,9 @@ const ServerMonitor: FC = () => {
 
       setServers(result.data?.list || []);
       setTotal(result.data?.total || 0);
+      setServerError(null);
     } catch (error) {
-      console.error("获取服务器列表失败:", error);
-      message.error("网络错误，请稍后重试");
+      setServerError(error);
     } finally {
       setLoading(false);
     }
@@ -110,7 +118,7 @@ const ServerMonitor: FC = () => {
       });
       // 历史指标数据已获取但暂未使用
     } catch (error) {
-      console.error("获取服务器指标历史失败:", error);
+      handleApiError(error, "获取服务器指标历史", false);
     }
   };
 
@@ -143,15 +151,20 @@ const ServerMonitor: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: any, _filters: Record<string, any>, sorter: any) => {
-    if (sorter && sorter.field) {
-      setOrderByColumn(sorter.field);
-      setIsAsc(sorter.order === "ascend");
+  const handleTableChange = (
+    pagination: TablePaginationConfig,
+    _filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<ServerInfo> | SorterResult<ServerInfo>[]
+  ) => {
+    const s = Array.isArray(sorter) ? sorter[0] : sorter;
+    if (s && s.field) {
+      setOrderByColumn(String(s.field));
+      setIsAsc(s.order === "ascend");
     }
-    setCurrent(pagination.current);
-    setPageSize(pagination.pageSize);
-    const sortField = sorter && sorter.field ? sorter.field : undefined;
-    const sortAsc = sorter && sorter.field ? sorter.order === "ascend" : undefined;
+    setCurrent(pagination.current ?? 1);
+    setPageSize(pagination.pageSize ?? 10);
+    const sortField = s && s.field ? String(s.field) : undefined;
+    const sortAsc = s && s.field ? s.order === "ascend" : undefined;
     fetchServers(sortField, sortAsc);
   };
 
@@ -320,6 +333,8 @@ const ServerMonitor: FC = () => {
 
   return (
     <div className="p-6">
+      {/* FIX-04b: 列表加载失败可重试错误条 */}
+      {!!serverError && <ErrorAlertWithRetry error={serverError} onRetry={fetchServers} />}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-4">服务器监控</h1>
 
@@ -327,7 +342,7 @@ const ServerMonitor: FC = () => {
         <Card>
           <Row gutter={16}>
             <Col xs={24} sm={8} md={6}>
-              <Input
+              <AppInput
                 placeholder="主机名"
                 value={searchForm.hostName}
                 onChange={(e) => setSearchForm({ ...searchForm, hostName: e.target.value })}
@@ -336,10 +351,13 @@ const ServerMonitor: FC = () => {
               />
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <Select
+              <AppSelect
                 placeholder="状态"
                 value={searchForm.status}
-                onChange={(value) => setSearchForm({ ...searchForm, status: value })}
+                // AppSelect 由 ComponentProps 派生，泛型被擦除 → onChange 值为 unknown，收敛回业务类型
+                onChange={(value) =>
+                  setSearchForm({ ...searchForm, status: value as number | undefined })
+                }
                 allowClear
                 className="user-form-input"
                 style={{ width: "100%" }}
@@ -352,11 +370,11 @@ const ServerMonitor: FC = () => {
             </Col>
             <Col xs={24} sm={8} md={12}>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
                   搜索
                 </Button>
                 <Button onClick={handleReset}>重置</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
                   刷新
                 </Button>
               </Space>
@@ -374,6 +392,7 @@ const ServerMonitor: FC = () => {
           loading={loading}
           pagination={paginationProps}
           onChange={handleTableChange} // replaced with handleTableChange
+          scroll={{ x: "max-content" }}
         />
       </Card>
 
@@ -426,7 +445,7 @@ const ServerMonitor: FC = () => {
                     value={75.2}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: "#cf1322" } }}
+                    styles={{ content: { color: "var(--theme-error)" } }}
                   />
                   <Progress percent={75.2} className="mt-2" />
                 </Col>
@@ -436,7 +455,7 @@ const ServerMonitor: FC = () => {
                     value={68.5}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: "#3f8600" } }}
+                    styles={{ content: { color: "var(--theme-success)" } }}
                   />
                   <Progress percent={68.5} className="mt-2" />
                 </Col>
@@ -446,7 +465,7 @@ const ServerMonitor: FC = () => {
                     value={45.8}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: "#3f8600" } }}
+                    styles={{ content: { color: "var(--theme-success)" } }}
                   />
                   <Progress percent={45.8} className="mt-2" />
                 </Col>
@@ -470,7 +489,7 @@ const ServerMonitor: FC = () => {
                     value={1234.56}
                     precision={2}
                     suffix="MB/s"
-                    styles={{ content: { color: "#337ab0" } }}
+                    styles={{ content: { color: "var(--theme-info)" } }}
                   />
                 </Col>
                 <Col span={12}>
@@ -479,7 +498,7 @@ const ServerMonitor: FC = () => {
                     value={987.32}
                     precision={2}
                     suffix="MB/s"
-                    styles={{ content: { color: "#2d8949" } }}
+                    styles={{ content: { color: "var(--theme-success)" } }}
                   />
                 </Col>
               </Row>

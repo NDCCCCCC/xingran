@@ -19,6 +19,7 @@ const (
 	VendorH3C    DeviceVendor = "h3c"    // 华三
 	VendorRuijie DeviceVendor = "ruijie" // 锐捷
 	VendorMaipu  DeviceVendor = "maipu"  // 迈普
+	VendorCisco  DeviceVendor = "cisco"  // 思科(Phase 72 #2 / DBG-02: MAC 采集支持)
 )
 
 // DeviceStatus 设备状态枚举

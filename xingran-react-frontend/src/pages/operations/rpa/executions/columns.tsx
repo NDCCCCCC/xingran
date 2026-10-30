@@ -100,7 +100,7 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       ellipsis: true,
       render: (text) =>
         text ? (
-          <span title={text} style={{ color: "var(--theme-error, #ba3630)" }}>
+          <span title={text} style={{ color: "var(--theme-error)" }}>
             {text}
           </span>
         ) : (

@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
-import { useTabsStore, useTabs } from "@/store/tabsStore";
+import { useTabsStore } from "@/store/tabsStore";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -22,7 +22,7 @@ describe("TabBar 渲染", () => {
       tabs: [],
       activeTab: "",
       tabHistory: {},
-    } as any);
+    } as unknown);
     const { baseElement } = renderWithProviders(<TabBar />);
     expect(baseElement).toBeDefined();
   });
@@ -35,7 +35,7 @@ describe("TabBar 渲染", () => {
       ],
       activeTab: "/home",
       tabHistory: { "/home": "/home", "/system": "/system" },
-    } as any);
+    } as unknown);
     const { baseElement } = renderWithProviders(<TabBar />);
     expect(baseElement.querySelector(".ant-tabs")).not.toBeNull();
   });

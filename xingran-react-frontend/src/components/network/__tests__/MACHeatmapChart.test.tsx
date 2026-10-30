@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/components/charts/EChartsWrapper", () => ({
-  default: ({ option }: any) => (
+  default: ({ option }: unknown) => (
     <div data-testid="echarts-mock">
       <span data-testid="echarts-cells">{option?.series?.[0]?.data?.length ?? 0}</span>
     </div>
@@ -29,7 +29,7 @@ describe("MACHeatmapChart", () => {
   it("loading=true → 渲染 Spin", () => {
     const { baseElement } = render(
       <MACHeatmapChart
-        data={{ cells: [], topN: 0, start: "", end: "", total: 0, snapshot: "" } as any}
+        data={{ cells: [], topN: 0, start: "", end: "", total: 0, snapshot: "" } as unknown}
         loading
       />,
       { wrapper }
@@ -40,7 +40,7 @@ describe("MACHeatmapChart", () => {
   it("data.cells 空 → Empty", () => {
     const { baseElement } = render(
       <MACHeatmapChart
-        data={{ cells: [], topN: 0, start: "", end: "", total: 0, snapshot: "" } as any}
+        data={{ cells: [], topN: 0, start: "", end: "", total: 0, snapshot: "" } as unknown}
       />,
       { wrapper }
     );
@@ -65,7 +65,7 @@ describe("MACHeatmapChart", () => {
       total: 1,
       snapshot: "snap",
     };
-    const { baseElement } = render(<MACHeatmapChart data={data as any} />, { wrapper });
+    const { baseElement } = render(<MACHeatmapChart data={data as unknown} />, { wrapper });
     expect(baseElement.querySelector('[data-testid="mac-heatmap-desktop"]')).toBeTruthy();
     expect(baseElement.querySelector('[data-testid="echarts-mock"]')).toBeTruthy();
   });
@@ -96,7 +96,7 @@ describe("MACHeatmapChart", () => {
       total: 2,
       snapshot: "snap",
     };
-    const { baseElement } = render(<MACHeatmapChart data={data as any} isMobile />, { wrapper });
+    const { baseElement } = render(<MACHeatmapChart data={data as unknown} isMobile />, { wrapper });
     expect(baseElement.querySelector('[data-testid="mac-heatmap-mobile"]')).toBeTruthy();
     expect(baseElement.textContent).toContain("Top-20");
     expect(baseElement.textContent).toContain("dev1");
@@ -122,7 +122,7 @@ describe("MACHeatmapChart", () => {
       total: 1,
       snapshot: "snap",
     };
-    const { baseElement } = render(<MACHeatmapChart data={data as any} isMobile />, { wrapper });
+    const { baseElement } = render(<MACHeatmapChart data={data as unknown} isMobile />, { wrapper });
     expect(baseElement.textContent).toContain("1 次");
   });
 });

@@ -96,7 +96,7 @@ describe("components/cad-editor/editorUtils", () => {
   });
 
   it("findNearbyWallNode 数组", () => {
-    const walls: any[] = [
+    const walls: unknown[] = [
       {
         id: "w1",
         points: [
@@ -111,7 +111,7 @@ describe("components/cad-editor/editorUtils", () => {
   });
 
   it("findNearbyWallNode 无临近 → null", () => {
-    const walls: any[] = [
+    const walls: unknown[] = [
       {
         id: "w1",
         points: [

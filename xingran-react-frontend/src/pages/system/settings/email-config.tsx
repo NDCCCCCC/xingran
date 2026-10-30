@@ -9,12 +9,15 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Switch,
   InputNumber,
   Empty,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from "@ant-design/icons";
+// Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。
+// 跳过项：<Input.Password>（成员表达式，不在本波 selector 命中面）→ 保留 antd Input 导入。
+// 状态枚举 children → options + 禁搜。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import { formatDateTime } from "@/utils/datetime";
 import {
@@ -29,9 +32,13 @@ import {
 } from "@/lib/notificationConfigApi";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 
-const { Option } = Select;
-const { TextArea } = Input;
+// 状态枚举（形态分类器产物：children <Option> → options）
+const STATUS_ENUM_OPTIONS = [
+  { value: 0, label: "正常" },
+  { value: 1, label: "停用" },
+];
 
 const EmailConfigPage: FC = () => {
   const { message } = App.useApp();
@@ -306,13 +313,9 @@ const EmailConfigPage: FC = () => {
             className="xr-op-danger"
             icon={<DeleteOutlined />}
             onClick={() => {
-              Modal.confirm({
-                title: "删除邮箱配置？",
-                content: "删除后不可恢复，使用该配置的通知邮件将发送失败。",
-                okText: "删除",
-                okButtonProps: { danger: true },
-                cancelText: "取消",
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `邮件配置 ${record.configName}`,
+                onDelete: () => handleDelete(record.id),
               });
             }}
           >
@@ -363,10 +366,15 @@ const EmailConfigPage: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="status" label="状态">
-              <Select placeholder="全部状态" style={{ width: 140 }} allowClear onSearch={() => {}}>
-                <Option value={0}>正常</Option>
-                <Option value={1}>停用</Option>
-              </Select>
+              {/* 形态分类器②④：邮件配置状态（业务禁搜） */}
+              <AppSelect
+                placeholder="全部状态"
+                style={{ width: 140 }}
+                allowClear
+                onSearch={() => {}}
+                showSearch={false}
+                options={STATUS_ENUM_OPTIONS}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -393,7 +401,7 @@ const EmailConfigPage: FC = () => {
           scroll={{ x: 1200 }}
           pagination={paginationProps}
           className="xr-table-zebra"
-          size="middle"
+          size="medium"
           onChange={(pagination) => {
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
@@ -403,7 +411,7 @@ const EmailConfigPage: FC = () => {
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  <Space direction="vertical" size={4}>
+                  <Space orientation="vertical" size={4}>
                     <span style={{ color: "var(--theme-text-primary)", fontWeight: 500 }}>
                       暂无邮箱配置
                     </span>
@@ -423,12 +431,12 @@ const EmailConfigPage: FC = () => {
         title={editingConfig ? "编辑邮箱配置" : "新增邮箱配置"}
         open={modalVisible}
         onOk={handleSubmit}
+        cancelButtonProps={{ disabled: submitting }}
         onCancel={() => {
           setModalVisible(false);
           editForm.resetFields();
           setEditingConfig(null);
         }}
-        confirmLoading={submitting}
         width={700}
       >
         <Form form={editForm} labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
@@ -437,7 +445,7 @@ const EmailConfigPage: FC = () => {
             label="配置名称"
             rules={[{ required: true, message: "请输入配置名称" }]}
           >
-            <Input placeholder="请输入配置名称，如：企业邮箱" />
+            <AppInput placeholder="请输入配置名称，如：企业邮箱" />
           </Form.Item>
 
           <Form.Item
@@ -445,7 +453,7 @@ const EmailConfigPage: FC = () => {
             label="SMTP服务器"
             rules={[{ required: true, message: "请输入SMTP服务器地址" }]}
           >
-            <Input placeholder="如：smtp.example.com" />
+            <AppInput placeholder="如：smtp.example.com" />
           </Form.Item>
 
           <Form.Item name="port" label="端口" rules={[{ required: true, message: "请输入端口" }]}>
@@ -457,7 +465,7 @@ const EmailConfigPage: FC = () => {
             label="邮箱账号"
             rules={[{ required: true, message: "请输入邮箱账号" }]}
           >
-            <Input placeholder="请输入发件人邮箱账号" />
+            <AppInput placeholder="请输入发件人邮箱账号" />
           </Form.Item>
 
           <Form.Item
@@ -469,11 +477,11 @@ const EmailConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="fromName" label="发件名称">
-            <Input placeholder="发件人显示名称" />
+            <AppInput placeholder="发件人显示名称" />
           </Form.Item>
 
           <Form.Item name="fromEmail" label="发件邮箱">
-            <Input placeholder="发件人显示邮箱（可不同于登录邮箱）" />
+            <AppInput placeholder="发件人显示邮箱（可不同于登录邮箱）" />
           </Form.Item>
 
           <Form.Item name="useSsl" label="启用SSL" valuePropName="checked">
@@ -494,14 +502,16 @@ const EmailConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <Select onSearch={() => {}}>
-              <Option value={0}>正常</Option>
-              <Option value={1}>停用</Option>
-            </Select>
+            <AppSelect
+              allowClear
+              onSearch={() => {}}
+              showSearch={false}
+              options={STATUS_ENUM_OPTIONS}
+            />
           </Form.Item>
 
           <Form.Item name="remark" label="备注">
-            <TextArea rows={3} placeholder="请输入备注信息" />
+            <AppTextArea rows={3} placeholder="请输入备注信息" />
           </Form.Item>
         </Form>
       </Modal>
@@ -511,19 +521,19 @@ const EmailConfigPage: FC = () => {
         title="测试邮件发送"
         open={testModalVisible}
         onOk={handleTest}
+        cancelButtonProps={{ disabled: testing }}
         onCancel={() => setTestModalVisible(false)}
-        confirmLoading={testing}
       >
         <Form form={testForm} labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
           <Form.Item name="configId" hidden>
-            <Input />
+            <AppInput />
           </Form.Item>
           <Form.Item
             name="testTo"
             label="收件人"
             rules={[{ required: true, message: "请输入收件人邮箱" }]}
           >
-            <Input placeholder="请输入测试邮件的收件人邮箱" />
+            <AppInput placeholder="请输入测试邮件的收件人邮箱" />
           </Form.Item>
         </Form>
       </Modal>

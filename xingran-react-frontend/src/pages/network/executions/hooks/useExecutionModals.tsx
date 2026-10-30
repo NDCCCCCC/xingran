@@ -132,7 +132,7 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
             {
               maxHeight: 500,
               overflow: "auto",
-              background: "#f5f5f5",
+              background: "var(--theme-bg-secondary)",
               padding: 12,
               ["white-space"]: "pre-wrap",
             } as React.CSSProperties

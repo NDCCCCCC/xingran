@@ -29,7 +29,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 describe("useWorkstationModals", () => {
   it("openModal 无 record → 返回 undefined", async () => {
     const { result } = renderHook(() => useWorkstationModals(), { wrapper });
-    let r: any;
+    let r: unknown;
     await act(async () => {
       r = await result.current.openModal();
     });
@@ -40,13 +40,13 @@ describe("useWorkstationModals", () => {
     const loadUserOptions = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useWorkstationModals(loadUserOptions), { wrapper });
     await act(async () => {
-      await result.current.openModal({ id: "w1", deptId: "d1" } as any);
+      await result.current.openModal({ id: "w1", deptId: "d1" } as unknown);
     });
     expect(loadUserOptions).toHaveBeenCalledWith("d1");
   });
 
   it("closeModal 有 form → resetFields", () => {
-    const form = { resetFields: vi.fn() } as any;
+    const form = { resetFields: vi.fn() } as unknown;
     const { result } = renderHook(() => useWorkstationModals(), { wrapper });
     act(() => result.current.closeModal(form));
     expect(form.resetFields).toHaveBeenCalled();
@@ -60,7 +60,7 @@ describe("useWorkstationModals", () => {
   it("handleSave 新建模式 → POST create", async () => {
     const { workstationApi } = await import("@/lib/opsApi");
     vi.mocked(workstationApi.create).mockClear();
-    const form = { validateFields: vi.fn().mockResolvedValue({ name: "w1" }) } as any;
+    const form = { validateFields: vi.fn().mockResolvedValue({ name: "w1" }) } as unknown;
     const { result } = renderHook(() => useWorkstationModals(), { wrapper });
     await act(async () => {
       await result.current.handleSave(null, form, vi.fn());
@@ -71,10 +71,10 @@ describe("useWorkstationModals", () => {
   it("handleSave 编辑模式 → POST update", async () => {
     const { workstationApi } = await import("@/lib/opsApi");
     vi.mocked(workstationApi.update).mockClear();
-    const form = { validateFields: vi.fn().mockResolvedValue({ name: "w1" }) } as any;
+    const form = { validateFields: vi.fn().mockResolvedValue({ name: "w1" }) } as unknown;
     const { result } = renderHook(() => useWorkstationModals(), { wrapper });
     await act(async () => {
-      await result.current.handleSave({ id: "w1" } as any, form, vi.fn());
+      await result.current.handleSave({ id: "w1" } as unknown, form, vi.fn());
     });
     expect(workstationApi.update).toHaveBeenCalledWith("w1", { name: "w1" });
   });
@@ -87,7 +87,7 @@ describe("useWorkstationModals", () => {
         .fn()
         .mockRejectedValue({ errorFields: [{ name: "name", errors: ["required"] }] }),
       resetFields: vi.fn(),
-    } as any;
+    } as unknown;
     const { result } = renderHook(() => useWorkstationModals(), { wrapper });
     await act(async () => {
       await result.current.handleSave(null, form, vi.fn());

@@ -26,8 +26,8 @@ describe("services/cache/TTLMenuCache", () => {
 
   it("setMenus + getMenus", () => {
     const c = new TTLMenuCache();
-    const menus = [{ id: "1", menuName: "M1" } as any];
-    const all = [{ id: "1" } as any, { id: "2" } as any];
+    const menus = [{ id: "1", menuName: "M1" } as unknown];
+    const all = [{ id: "1" } as unknown, { id: "2" } as unknown];
     const perms = ["user:add"];
     c.setMenus(menus, all, perms);
     expect(c.getMenus()).toEqual(menus);
@@ -45,7 +45,7 @@ describe("services/cache/TTLMenuCache", () => {
 
   it("clear 清空", () => {
     const c = new TTLMenuCache();
-    c.setMenus([{ id: "1" } as any], [], []);
+    c.setMenus([{ id: "1" } as unknown], [], []);
     c.clear();
     expect(c.getMenus()).toBeNull();
     expect(c.isValid()).toBe(false);
@@ -54,7 +54,7 @@ describe("services/cache/TTLMenuCache", () => {
   it("过期 → null", () => {
     vi.useFakeTimers();
     const c = new TTLMenuCache(1000);
-    c.setMenus([{ id: "1" } as any], [], []);
+    c.setMenus([{ id: "1" } as unknown], [], []);
     expect(c.getMenus()).not.toBeNull();
     vi.advanceTimersByTime(2000);
     expect(c.getMenus()).toBeNull();

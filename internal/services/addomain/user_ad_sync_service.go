@@ -39,105 +39,6 @@ func NewUserADSyncService(db *gorm.DB, pool AccountPool, ldapClient *LDAPClient,
 	}
 }
 
-// SyncUserUpdateToAD 同步用户更新到AD域控
-// 在系统更新成功后调用，降级处理：AD同步失败不回滚系统更新
-func (s *UserADSyncService) SyncUserUpdateToAD(ctx context.Context, userID string, updateReq map[string]interface{}) error {
-	// 1. 获取用户信息
-	var user models.User
-	if err := s.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error; err != nil {
-		return fmt.Errorf("查询用户失败: %w", err)
-	}
-
-	// 如果用户没有AD DN，跳过同步
-	if user.AdDn == nil || *user.AdDn == "" {
-		applogger.Infof("用户 %s 无AD DN，跳过AD同步", user.Username)
-		return nil
-	}
-
-	// 2. 获取AD配置
-	var adConfig models.ADConfig
-	if err := s.db.WithContext(ctx).Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).First(&adConfig).Error; err != nil {
-		return fmt.Errorf("获取AD配置失败: %w", err)
-	}
-	// Phase 36 后 admin_password 为 SM4 密文存储，绑定前必须解密
-	// （遗漏会导致密文当明文绑定 → LDAP 49 data 52e → 重试触发账号锁定 775）
-
-	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
-	// 所有 LDAP 操作（MoveUser + UpdateUserAttribute）必须在闭包内完成（Pitfall 3）
-	fc := NewFailoverClient(s.pool, &adConfig)
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
-		// 3. 如果部门变更，需要移动用户到新OU
-		if newDeptID, ok := updateReq["deptId"]; ok {
-			if newDeptIDStr, ok := newDeptID.(string); ok && newDeptIDStr != "" {
-				currentDeptID := ""
-				if user.DeptID != nil {
-					currentDeptID = *user.DeptID
-				}
-				if newDeptIDStr != currentDeptID {
-					if err := s.moveUserToNewOU(ctx, ldapClient, userID, newDeptIDStr); err != nil {
-						applogger.Errorf("移动用户 %s 到新OU失败: %v", user.Username, err)
-						// 继续处理属性更新，不因OU移动失败而中断
-					}
-				}
-			}
-		}
-
-		// 4. 更新其他属性到AD
-		if err := s.syncUserAttributes(ctx, ldapClient, &user, updateReq); err != nil {
-			return fmt.Errorf("同步用户属性失败: %w", err)
-		}
-		return nil
-	}); err != nil {
-		if errors.Is(err, ErrAllAccountsUnavailable) {
-			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
-		}
-		return fmt.Errorf("连接AD失败: %w", err)
-	}
-
-	// 5. 更新同步时间戳
-	if err := s.updateSyncTimestamp(ctx, userID); err != nil {
-		applogger.Warnf("更新同步时间戳失败: %v", err)
-	}
-
-	applogger.Infof("用户 %s 信息同步到AD成功", user.Username)
-	return nil
-}
-
-// moveUserToNewOU 移动用户到新OU
-func (s *UserADSyncService) moveUserToNewOU(ctx context.Context, ldapClient LDAPClientIface, userID, newDeptID string) error {
-	// 1. 查找新部门的OU DN
-	ouDN, err := s.mapper.FindOUDNByDeptID(ctx, newDeptID)
-	if err != nil {
-		return fmt.Errorf("查找部门OU失败: %w", err)
-	}
-
-	// 2. 获取用户信息
-	var user models.User
-	if err := s.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error; err != nil {
-		return err
-	}
-
-	if user.AdDn == nil || *user.AdDn == "" {
-		return fmt.Errorf("用户无AD DN，无法移动")
-	}
-
-	// 3. 移动用户到新OU
-	if err := ldapClient.MoveUser(*user.AdDn, ouDN); err != nil {
-		return fmt.Errorf("移动用户到新OU失败: %w", err)
-	}
-
-	// 4. 更新用户的ad_ou_dn
-	if err := s.db.WithContext(ctx).
-		Model(&models.User{}).
-		Where("id = ?", userID).
-		Update("ad_ou_dn", ouDN).Error; err != nil {
-		applogger.Warnf("更新用户ad_ou_dn失败: %v", err)
-	}
-
-	applogger.Infof("用户 %s 已移动到新OU: %s", user.Username, ouDN)
-	return nil
-}
-
 // syncUserAttributes 同步用户属性到AD
 func (s *UserADSyncService) syncUserAttributes(ctx context.Context, ldapClient LDAPClientIface, user *models.User, updateReq map[string]interface{}) error {
 	attributes := make(map[string]string)
@@ -236,95 +137,6 @@ func (s *UserADSyncService) updateSyncTimestamp(ctx context.Context, userID stri
 		Model(&models.User{}).
 		Where("id = ?", userID).
 		Update("ad_synced_at", time.Now()).Error
-}
-
-// BatchMoveUsersToNewOU 批量移动用户到新OU
-// 为未来功能预留的批量操作接口
-func (s *UserADSyncService) BatchMoveUsersToNewOU(ctx context.Context, userIDs []string, newDeptID string) error {
-	// 1. 查找新部门的OU DN
-	ouDN, err := s.mapper.FindOUDNByDeptID(ctx, newDeptID)
-	if err != nil {
-		return fmt.Errorf("查找部门OU失败: %w", err)
-	}
-
-	// 2. 获取AD配置
-	var adConfig models.ADConfig
-	if err := s.db.WithContext(ctx).Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).First(&adConfig).Error; err != nil {
-		return fmt.Errorf("获取AD配置失败: %w", err)
-	}
-	// Phase 36 后 admin_password 为 SM4 密文存储，绑定前必须解密
-	// （遗漏会导致密文当明文绑定 → LDAP 49 data 52e → 重试触发账号锁定 775）
-
-	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
-	// operation 边界 = 整个批量任务（SP-3：单次批量一个 operation，非每用户）
-	// 所有 LDAP 操作（MoveUser）必须在闭包内（Pitfall 3）；单用户失败计入 failedCount 不中断批量
-	successCount := 0
-	failedCount := 0
-	fc := NewFailoverClient(s.pool, &adConfig)
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
-		// 批量移动用户（分批处理，每批10个）
-		batchSize := 10
-		for i := 0; i < len(userIDs); i += batchSize {
-			end := i + batchSize
-			if end > len(userIDs) {
-				end = len(userIDs)
-			}
-
-			batch := userIDs[i:end]
-			for _, userID := range batch {
-				if err := s.moveSingleUserToOU(ctx, ldapClient, userID, ouDN); err != nil {
-					applogger.Errorf("移动用户失败 [ID=%s]: %v", userID, err)
-					failedCount++
-				} else {
-					successCount++
-				}
-			}
-
-			// 每批之间暂停1秒，避免AD压力过大
-			if i+batchSize < len(userIDs) {
-				time.Sleep(1 * time.Second)
-			}
-		}
-		return nil
-	}); err != nil {
-		if errors.Is(err, ErrAllAccountsUnavailable) {
-			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
-		}
-		return fmt.Errorf("连接AD失败: %w", err)
-	}
-
-	applogger.Infof("批量移动用户完成: 成功=%d, 失败=%d, 目标OU=%s", successCount, failedCount, ouDN)
-
-	if failedCount > 0 {
-		return fmt.Errorf("批量移动完成，部分失败: 成功=%d, 失败=%d", successCount, failedCount)
-	}
-	return nil
-}
-
-// moveSingleUserToOU 移动单个用户到指定OU
-func (s *UserADSyncService) moveSingleUserToOU(ctx context.Context, ldapClient LDAPClientIface, userID, ouDN string) error {
-	var user models.User
-	if err := s.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error; err != nil {
-		return fmt.Errorf("查询用户失败: %w", err)
-	}
-
-	if user.AdDn == nil || *user.AdDn == "" {
-		return fmt.Errorf("用户 %s 无AD DN，跳过移动", user.Username)
-	}
-
-	if err := ldapClient.MoveUser(*user.AdDn, ouDN); err != nil {
-		return fmt.Errorf("LDAP移动失败: %w", err)
-	}
-
-	// 更新用户的ad_ou_dn
-	if err := s.db.WithContext(ctx).
-		Model(&models.User{}).
-		Where("id = ?", userID).
-		Update("ad_ou_dn", ouDN).Error; err != nil {
-		applogger.Warnf("更新用户 %s ad_ou_dn失败: %v", user.Username, err)
-	}
-
-	return nil
 }
 
 // ManagerSyncResult AD manager 同步结果统计
@@ -447,78 +259,111 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 		return result, nil
 	}
 
-	// 3. 预加载所有用户所在部门（含 ancestors + leader）
-	deptIDs := make([]string, 0, len(users))
-	for _, u := range users {
-		if u.DeptID != nil && *u.DeptID != "" {
-			deptIDs = append(deptIDs, *u.DeptID)
-		}
-	}
-	deptMap := make(map[string]*models.Department)
-	if len(deptIDs) > 0 {
-		var depts []models.Department
-		if err := s.db.WithContext(ctx).
-			Table("sys_dept").
-			Where("id IN ?", deptIDs).
-			Find(&depts).Error; err != nil {
-			return nil, fmt.Errorf("查询部门失败: %w", err)
-		}
-		for i := range depts {
-			deptMap[depts[i].ID] = &depts[i]
-		}
+	// 3. 经理解析：**规则优先**，无规则时回退旧「部门 leader 递归祖先」逻辑。
+	//
+	// ⚠ 规则优先是必需的：手动「同步经理」与排水器 update_manager 必须用同一套判定，
+	//   否则手动全量会用 leader 逻辑覆盖规则引擎写入的 manager（规则形同虚设）。
+	//   排水器侧的同款判定见 ManagerRuleService.ResolveManagerDN。
+	hasRules, err := NewManagerRuleService(s.db).HasEnabledRules(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("查询经理同步规则失败: %w", err)
 	}
 
-	// 4. 解析每个用户的 leaderID，收集所有 leader user.id（用于批量查 ad_dn）
-	type userLeader struct {
-		user     models.User
-		leaderID string
+	// userManager：待写 AD manager 属性的用户 + 其经理的 sys_user.id
+	type userManager struct {
+		user      models.User
+		managerID string
 	}
-	resolved := make([]userLeader, 0, len(users))
-	leaderIDSet := make(map[string]bool)
-	for _, u := range users {
-		if u.DeptID == nil || *u.DeptID == "" {
-			result.Skipped++
-			continue
-		}
-		dept, ok := deptMap[*u.DeptID]
-		if !ok {
-			result.Skipped++
-			continue
-		}
-		leaderID, err := s.resolveLeaderByAncestors(ctx, dept)
+	resolved := make([]userManager, 0, len(users))
+	managerIDSet := make(map[string]bool)
+
+	if hasRules {
+		// 3a. 规则引擎：一次性预加载（规则/机构/部门/用户/岗位），之后纯内存解析
+		resolver, err := NewManagerRuleService(s.db).LoadResolver(ctx)
 		if err != nil {
-			result.Failed++
-			result.Errors = append(result.Errors, fmt.Sprintf("%s: 解析 leader 失败: %v", u.Username, err))
-			continue
+			return nil, fmt.Errorf("加载经理同步规则失败: %w", err)
 		}
-		resolved = append(resolved, userLeader{user: u, leaderID: leaderID})
-		if leaderID != "" && leaderID != u.ID {
-			leaderIDSet[leaderID] = true
+		for _, u := range users {
+			res := resolver.Resolve(&u)
+			if res.Skipped || res.ManagerID == "" {
+				result.Skipped++
+				applogger.Infof("[AD-MANAGER-SYNC] 用户 %s 跳过（规则「%s」）：%s",
+					u.Username, res.RuleName, res.Reason)
+				continue
+			}
+			for _, w := range res.Warnings {
+				applogger.Warnf("[AD-MANAGER-SYNC] 用户 %s 规则告警: %s", u.Username, w)
+			}
+			resolved = append(resolved, userManager{user: u, managerID: res.ManagerID})
+			managerIDSet[res.ManagerID] = true
+		}
+	} else {
+		// 3b. 回退旧逻辑：预加载所有用户所在部门（含 ancestors + leader）
+		deptIDs := make([]string, 0, len(users))
+		for _, u := range users {
+			if u.DeptID != nil && *u.DeptID != "" {
+				deptIDs = append(deptIDs, *u.DeptID)
+			}
+		}
+		deptMap := make(map[string]*models.Department)
+		if len(deptIDs) > 0 {
+			var depts []models.Department
+			if err := s.db.WithContext(ctx).
+				Table("sys_dept").
+				Where("id IN ?", deptIDs).
+				Find(&depts).Error; err != nil {
+				return nil, fmt.Errorf("查询部门失败: %w", err)
+			}
+			for i := range depts {
+				deptMap[depts[i].ID] = &depts[i]
+			}
+		}
+
+		for _, u := range users {
+			if u.DeptID == nil || *u.DeptID == "" {
+				result.Skipped++
+				continue
+			}
+			dept, ok := deptMap[*u.DeptID]
+			if !ok {
+				result.Skipped++
+				continue
+			}
+			leaderID, err := s.resolveLeaderByAncestors(ctx, dept)
+			if err != nil {
+				result.Failed++
+				result.Errors = append(result.Errors, fmt.Sprintf("%s: 解析 leader 失败: %v", u.Username, err))
+				continue
+			}
+			resolved = append(resolved, userManager{user: u, managerID: leaderID})
+			if leaderID != "" && leaderID != u.ID {
+				managerIDSet[leaderID] = true
+			}
 		}
 	}
 
-	// 5. 批量查 leader 用户的 ad_dn（manager 值需为 DN 格式）
-	leaderAdDnMap := make(map[string]string)
-	if len(leaderIDSet) > 0 {
-		ids := make([]string, 0, len(leaderIDSet))
-		for id := range leaderIDSet {
+	// 4. 批量查经理用户的 ad_dn（manager 值需为 DN 格式）
+	managerAdDnMap := make(map[string]string)
+	if len(managerIDSet) > 0 {
+		ids := make([]string, 0, len(managerIDSet))
+		for id := range managerIDSet {
 			ids = append(ids, id)
 		}
-		type leaderRow struct {
+		type managerRow struct {
 			ID   string
 			AdDn *string
 		}
-		var leaders []leaderRow
+		var managers []managerRow
 		if err := s.db.WithContext(ctx).
 			Table("sys_user").
 			Select("id, ad_dn").
 			Where("id IN ?", ids).
-			Scan(&leaders).Error; err != nil {
-			return nil, fmt.Errorf("查询 leader 用户失败: %w", err)
+			Scan(&managers).Error; err != nil {
+			return nil, fmt.Errorf("查询经理用户失败: %w", err)
 		}
-		for _, l := range leaders {
-			if l.AdDn != nil && *l.AdDn != "" {
-				leaderAdDnMap[l.ID] = *l.AdDn
+		for _, m := range managers {
+			if m.AdDn != nil && *m.AdDn != "" {
+				managerAdDnMap[m.ID] = *m.AdDn
 			}
 		}
 	}
@@ -541,18 +386,18 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 			for _, r := range resolved {
 				r := r
 				// 跳过逻辑（主 goroutine 内，无并发）
-				if r.leaderID == "" {
+				if r.managerID == "" {
 					result.Skipped++ // 部门链均无 leader
 					continue
 				}
-				if r.leaderID == r.user.ID {
+				if r.managerID == r.user.ID {
 					result.Skipped++ // 自指，保持原值
 					continue
 				}
-				leaderAdDn, ok := leaderAdDnMap[r.leaderID]
-				if !ok || leaderAdDn == "" {
-					result.Skipped++ // leader 无 ad_dn，无法设 manager
-					applogger.Warnf("[AD-MANAGER-SYNC] 用户 %s 的 leader(%s) 无 ad_dn，跳过", r.user.Username, r.leaderID)
+				managerAdDn, ok := managerAdDnMap[r.managerID]
+				if !ok || managerAdDn == "" {
+					result.Skipped++ // 经理无 ad_dn，无法设 manager
+					applogger.Warnf("[AD-MANAGER-SYNC] 用户 %s 的经理(%s) 无 ad_dn，跳过", r.user.Username, r.managerID)
 					continue
 				}
 
@@ -567,7 +412,7 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 					if r.user.AdDn != nil {
 						userDN = *r.user.AdDn
 					}
-					err := updateAttr(userDN, map[string]string{"manager": leaderAdDn})
+					err := updateAttr(userDN, map[string]string{"manager": managerAdDn})
 
 					// 成功才更新时间戳（持锁外执行，减少临界区）
 					if err == nil {
@@ -605,18 +450,18 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 		var mu sync.Mutex
 		for _, r := range resolved {
 			r := r
-			if r.leaderID == "" {
+			if r.managerID == "" {
 				result.Skipped++
 				continue
 			}
-			if r.leaderID == r.user.ID {
+			if r.managerID == r.user.ID {
 				result.Skipped++
 				continue
 			}
-			leaderAdDn, ok := leaderAdDnMap[r.leaderID]
-			if !ok || leaderAdDn == "" {
+			managerAdDn, ok := managerAdDnMap[r.managerID]
+			if !ok || managerAdDn == "" {
 				result.Skipped++
-				applogger.Warnf("[AD-MANAGER-SYNC] 用户 %s 的 leader(%s) 无 ad_dn，跳过", r.user.Username, r.leaderID)
+				applogger.Warnf("[AD-MANAGER-SYNC] 用户 %s 的经理(%s) 无 ad_dn，跳过", r.user.Username, r.managerID)
 				continue
 			}
 			g.Go(func() error {
@@ -629,7 +474,7 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 				if r.user.AdDn != nil {
 					userDN = *r.user.AdDn
 				}
-				err := updateAttr(userDN, map[string]string{"manager": leaderAdDn})
+				err := updateAttr(userDN, map[string]string{"manager": managerAdDn})
 				if err == nil {
 					if tsErr := s.updateSyncTimestamp(gctx, r.user.ID); tsErr != nil {
 						applogger.Warnf("[AD-MANAGER-SYNC] 更新时间戳失败 [user=%s]: %v", r.user.Username, tsErr)
@@ -652,152 +497,5 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 
 	applogger.Infof("[AD-MANAGER-SYNC] 完成: total=%d synced=%d skipped=%d failed=%d",
 		result.Total, result.Synced, result.Skipped, result.Failed)
-	return result, nil
-}
-
-// BatchSyncResult 批量同步结果统计
-type BatchSyncResult struct {
-	Total   int      `json:"total"`
-	Synced  int      `json:"synced"`
-	Skipped int      `json:"skipped"`
-	Failed  int      `json:"failed"`
-	Errors  []string `json:"errors,omitempty"`
-}
-
-// BatchSyncUsersToAD 批量同步用户属性到 AD（导入后/全量场景）。
-//
-// 性能：复用单个已绑定 LDAP 连接（ExecuteWithFailover 拿一个账号绑定），
-// errgroup + 信号量（MaxConcurrentADSync）并发，避免逐用户新建连接的
-// ~100ms 拨号+绑定开销。2274 用户从 ~10 分钟降到 ~10 秒。
-//
-// 行为（属性同步；不移动 OU）：
-//   - 只处理 ad_dn 非空的用户（无 ad_dn 的本地用户跳过）
-//   - 同步属性到 AD：displayName（nickname）/mail（email）/telephoneNumber（phone）/department（deptId→deptName）
-//   - 单用户失败不中断批量（收集到 Errors）
-//   - 成功后更新 ad_synced_at
-//
-// 为什么不在这里移动 OU（ModifyDN）：
-//
-//	批量场景无"导入前旧 dept"快照，updateReq 只能从用户当前字段构造，
-//	与 DB 中的 dept_id 恒等，无法判断是否变更。OU 移动留给单用户编辑路径
-//	SyncUserUpdateToAD（请求体携带新旧值，由调用方判定）。
-//
-// 与 SyncUserUpdateToAD 关系：单用户编辑用 SyncUserUpdateToAD（含 OU 移动判断），
-// 导入/全量用本方法（仅属性同步）。
-func (s *UserADSyncService) BatchSyncUsersToAD(ctx context.Context, userIDs []string) (*BatchSyncResult, error) {
-	result := &BatchSyncResult{}
-
-	// 1. ADConfig（无启用配置则跳过，返回空 result）
-	var adConfig models.ADConfig
-	if err := s.db.WithContext(ctx).
-		Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).
-		First(&adConfig).Error; err != nil {
-		applogger.Warnf("[AD-BATCH-SYNC] 未找到启用的 AD 配置，跳过同步: %v", err)
-		return result, nil
-	}
-
-	// 2. 批量查用户（ad_dn 非空，一次 DB；无 ad_dn 的本地用户跳过）
-	query := s.db.WithContext(ctx).
-		Model(&models.User{}).
-		Where("ad_dn IS NOT NULL AND ad_dn <> ''")
-	if len(userIDs) > 0 {
-		query = query.Where("id IN ?", userIDs)
-	}
-	var users []models.User
-	if err := query.Find(&users).Error; err != nil {
-		return nil, fmt.Errorf("查询用户失败: %w", err)
-	}
-	result.Total = len(users)
-	if len(users) == 0 {
-		return result, nil
-	}
-
-	// 3. ExecuteWithFailover 闭包内 errgroup 并发（operation 边界 = 整个批量，同 SyncManagersToAD）。
-	//    errgroup 在此仅用于 gctx 取消传播 + SetLimit 信号量；错误聚合走 result struct
-	//    （每个 goroutine 必返 nil，不中断批量），故 _ = g.Wait() 是有意的。
-	fc := NewFailoverClient(s.pool, &adConfig)
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
-		g, gctx := errgroup.WithContext(ctx)
-		g.SetLimit(constants.MaxConcurrentADSync)
-		var mu sync.Mutex
-
-		for i := range users {
-			u := users[i] // 显式捕获循环变量（读起来意图清晰；Go 1.22+ 实际不必要）
-
-			g.Go(func() error {
-				// syncErr 捕获本用户同步结果，goroutine 结束时由聚合 defer 写入 result
-				var syncErr error
-
-				// defer 顺序 LIFO：先 panic-recover（设 syncErr），再聚合（写 result）。
-				// 这样 panic 正确计入 Failed 而非 Synced。
-				defer func() {
-					mu.Lock()
-					if syncErr != nil {
-						result.Failed++
-						result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", u.Username, syncErr))
-					} else {
-						result.Synced++
-					}
-					mu.Unlock()
-				}()
-
-				defer func() {
-					if rec := recover(); rec != nil {
-						applogger.Errorf("[AD-BATCH-SYNC] panic [user=%s]: %v", u.Username, rec)
-						syncErr = fmt.Errorf("panic: %v", rec)
-					}
-				}()
-
-				// 构造 updateReq（从 user 字段）。导入场景下 updateReq["deptId"] == u.DeptID，
-				// 无"导入前旧 dept"快照，无法判断是否变更，所以批量路径不做 OU 移动——
-				// OU 移动交给单用户编辑路径 SyncUserUpdateToAD（请求体携带新旧值）。
-				updateReq := make(map[string]interface{})
-				if u.DeptID != nil {
-					updateReq["deptId"] = *u.DeptID
-				}
-				if u.Email != nil {
-					updateReq["email"] = *u.Email
-				}
-				if u.Phone != nil {
-					updateReq["phone"] = *u.Phone
-				}
-				if u.Nickname != nil {
-					updateReq["nickname"] = *u.Nickname
-				}
-
-				// 同步属性（复用 ldapClient；department 文本由 syncUserAttributes 内部查 dept_name 填充）
-				if err := s.syncUserAttributes(gctx, ldapClient, &u, updateReq); err != nil {
-					syncErr = err
-					return nil
-				}
-				// 时间戳失败仅 WARN（属性已成功，不算同步失败）
-				if tsErr := s.updateSyncTimestamp(gctx, u.ID); tsErr != nil {
-					applogger.Warnf("[AD-BATCH-SYNC] 更新时间戳失败 [user=%s]: %v", u.Username, tsErr)
-				}
-				return nil
-			})
-		}
-
-		_ = g.Wait() // 错误聚合已在各 goroutine 的 defer 里完成；此处仅等待
-		return nil
-	}); err != nil {
-		if errors.Is(err, ErrAllAccountsUnavailable) {
-			return nil, fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
-		}
-		return nil, fmt.Errorf("连接 AD 失败: %w", err)
-	}
-
-	applogger.Infof("[AD-BATCH-SYNC] 完成: total=%d synced=%d failed=%d",
-		result.Total, result.Synced, result.Failed)
-
-	// 失败明细：逐条 WARN 输出，便于 grep 定位失败用户 / AD 错误。
-	// 不设上限：业务上需要看到全部失败（如 129/2274）；如未来批次 >10000
-	// 需考虑分批 / 文件落盘，但当前规模直接日志即可。
-	if result.Failed > 0 {
-		applogger.Warnf("[AD-BATCH-SYNC] 失败明细（共 %d 条）:", len(result.Errors))
-		for _, e := range result.Errors {
-			applogger.Warnf("[AD-BATCH-SYNC]   - %s", e)
-		}
-	}
 	return result, nil
 }

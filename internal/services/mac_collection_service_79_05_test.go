@@ -145,9 +145,12 @@ func TestMcl7905_ParseMACTable_ByVendor(t *testing.T) {
 		assert.Equal(t, "GE2/25", secEntries[0].InterfaceName, "接口名应被 NormalizeInterfaceName 压短")
 	})
 
-	t.Run("unknown_vendor_returns_empty", func(t *testing.T) {
-		entries, err := svc.parseMACAddressTable("aa bb cc", models.DeviceVendor("cisco"), MACCommandTypeMacTable)
-		require.NoError(t, err, "未知 vendor 走 default 分支,entry 为零值 → 被 canonical 守卫丢弃")
+	t.Run("unknown_vendor_fails_loudly", func(t *testing.T) {
+		// Phase 72 #3 (DBG-03): 未知厂商从「静默返回空」改为「显式报错」——
+		// 把静默丢弃改成可观测失败(R2 复发根因之一)。cisco 已在 #2 落地支持,
+		// 故用真正未知的 vendor 样本。
+		entries, err := svc.parseMACAddressTable("aa bb cc", models.DeviceVendor("juniper"), MACCommandTypeMacTable)
+		require.Error(t, err, "未知 vendor 必须显式报错,不允许静默丢弃")
 		assert.Empty(t, entries)
 	})
 
@@ -343,11 +346,25 @@ func TestMcl7905_GetMACCommand_Vendors(t *testing.T) {
 		}
 	})
 
+	t.Run("cisco_dual", func(t *testing.T) {
+		// Phase 72 #2 (DBG-02): Cisco 升为已知厂商,走双命令
+		// (Cisco IOS/NX-OS 是 "show mac address-table",无连字符)
+		cmds := svc.getMACCommands(models.VendorCisco)
+		require.Len(t, cmds, 2, "cisco 应双命令(mac-table + port-security)")
+		assert.Equal(t, "show mac address-table", cmds[0].Cmd)
+		assert.Equal(t, MACCommandTypeMacTable, cmds[0].Type)
+		assert.Equal(t, "show port-security address", cmds[1].Cmd)
+		assert.Equal(t, MACCommandTypePortSecurity, cmds[1].Type)
+		assert.Equal(t, "show mac address-table", svc.getMACCommand(models.VendorCisco), "首条命令向后兼容")
+	})
+
 	t.Run("unknown_vendor_fallback", func(t *testing.T) {
-		cmds := svc.getMACCommands(models.DeviceVendor("cisco"))
+		// 注: 原样本用 "cisco" 充当未知厂商,Phase 72 #2 起 cisco 已是已知厂商,
+		// 改用确实无解析分支的 vendor 继续保持该兜底断言。
+		cmds := svc.getMACCommands(models.DeviceVendor("juniper"))
 		require.Len(t, cmds, 1)
 		assert.Equal(t, "show mac-address-table", cmds[0].Cmd)
-		assert.Equal(t, "show mac-address-table", svc.getMACCommand(models.DeviceVendor("cisco")))
+		assert.Equal(t, "show mac-address-table", svc.getMACCommand(models.DeviceVendor("juniper")))
 	})
 }
 

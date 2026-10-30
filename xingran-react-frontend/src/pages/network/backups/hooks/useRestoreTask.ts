@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { get } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 import type { ConfigRestoreTask, RestoreTaskStatus } from "../types";
 
 const POLL_INTERVAL_MS = 3000;
@@ -51,8 +52,9 @@ export function useRestoreTask(taskId: string | null): UseRestoreTaskResult {
           timer = null;
         }
       } catch (error) {
-        // 单次查询失败不中断轮询（后端瞬时错误/网络抖动），仅记录
-        console.error("查询恢复任务失败:", error);
+        // 单次查询失败不中断轮询（后端瞬时错误/网络抖动）；
+        // 统一出口记录但不弹 toast（轮询中重复弹窗会刷屏，用户无可行动项）
+        handleApiError(error, "查询恢复任务", false);
       }
     };
 

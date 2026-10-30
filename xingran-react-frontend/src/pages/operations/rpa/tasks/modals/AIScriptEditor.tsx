@@ -8,7 +8,6 @@ import {
   App,
   Modal,
   Form,
-  Input,
   Button,
   Steps,
   Card,
@@ -27,8 +26,11 @@ import {
 } from "@ant-design/icons";
 import type { Action } from "@/types/rpa";
 import { ACTION_TYPE_TEXT_MAP } from "../../constants";
+// Phase 71 (W3)：裸 TextArea → AppTextArea。
+// 任务描述是受控 Form.Item（disabled 依赖生成状态），显式 allowClear={false}
+// 保持原有「无清空按钮」交互（清空会绕过 disabled 的生成态约束）。
+import { AppTextArea } from "@/components/ui";
 
-const { TextArea } = Input;
 const { Text } = Typography;
 
 export interface AIScriptEditorProps {
@@ -136,7 +138,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
       width={800}
       footer={
         <Space>
-          <Button onClick={handleCancel}>取消</Button>
+          <Button onClick={handleCancel} disabled={loading}>取消</Button>
           <Button
             type="primary"
             icon={<ThunderboltOutlined />}
@@ -159,7 +161,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
     >
       <div style={{ padding: "16px 0" }}>
         <Alert
-          message="使用自然语言描述您的自动化任务，AI 将为您生成相应的脚本步骤"
+          title="使用自然语言描述您的自动化任务，AI 将为您生成相应的脚本步骤"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -171,8 +173,9 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
             label="任务描述"
             rules={[{ required: true, message: "请描述您的自动化任务" }]}
           >
-            <TextArea
+            <AppTextArea
               rows={4}
+              allowClear={false}
               placeholder="例如：打开登录页面，输入用户名和密码，点击登录按钮，验证登录成功"
               disabled={loading || generatedActions.length > 0}
             />
@@ -194,7 +197,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
                 ),
                 description: (
                   <Card size="small" style={{ marginTop: 8 }}>
-                    <Space direction="vertical" style={{ width: "100%" }}>
+                    <Space orientation="vertical" style={{ width: "100%" }}>
                       {action.selector?.value && (
                         <Text code style={{ fontSize: 12 }}>
                           选择器: {action.selector.value}
@@ -216,7 +219,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
             />
 
             <Alert
-              message="请检查生成的脚本步骤，确认无误后点击「确认使用」按钮"
+              title="请检查生成的脚本步骤，确认无误后点击「确认使用」按钮"
               type="success"
               showIcon
               style={{ marginTop: 16 }}

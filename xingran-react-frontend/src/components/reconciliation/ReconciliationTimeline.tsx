@@ -16,7 +16,7 @@
  */
 import React from "react";
 import { Timeline, Skeleton, Empty, Tag } from "antd";
-import dayjs from "dayjs";
+import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { HealthBadge } from "./HealthBadge";
 
 export interface TimelineRecord {
@@ -52,27 +52,28 @@ const TimelineInner: React.FC<ReconciliationTimelineProps> = ({ records, loading
   }
 
   return (
-    <Timeline mode="left">
-      {records.map((r) => (
-        <Timeline.Item
-          key={r.id}
-          dot={<HealthBadge assetId={r.id} conflictType={r.conflictType} onClick={() => {}} />}
-        >
-          <div>
-            <Tag color="default">{CONFLICT_TYPE_LABELS[r.conflictType] ?? r.conflictType}</Tag>
-            <span style={{ marginLeft: 8 }}>
-              检出: {dayjs(r.detectedAt).format("YYYY-MM-DD HH:mm")}
-            </span>
-          </div>
-          <div style={{ marginTop: 4 }}>
-            由 {r.resolvedByUsername} 于 {dayjs(r.resolvedAt).format("YYYY-MM-DD HH:mm")} 解决
-          </div>
-          <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-            说明: {r.resolutionNote || "(无)"}
-          </div>
-        </Timeline.Item>
-      ))}
-    </Timeline>
+    <Timeline
+      mode="left"
+      items={records.map((r) => ({
+        icon: <HealthBadge assetId={r.id} conflictType={r.conflictType} onClick={() => {}} />,
+        content: (
+          <>
+            <div>
+              <Tag color="default">{CONFLICT_TYPE_LABELS[r.conflictType] ?? r.conflictType}</Tag>
+              <span style={{ marginLeft: 8 }}>
+                检出: {formatDateTime(r.detectedAt, FORMAT_DATETIME_MINUTE)}
+              </span>
+            </div>
+            <div style={{ marginTop: 4 }}>
+              由 {r.resolvedByUsername} 于 {formatDateTime(r.resolvedAt, FORMAT_DATETIME_MINUTE)} 解决
+            </div>
+            <div style={{ marginTop: 4, fontSize: 12, color: "var(--theme-text-secondary)" }}>
+              说明: {r.resolutionNote || "(无)"}
+            </div>
+          </>
+        ),
+      }))}
+    />
   );
 };
 

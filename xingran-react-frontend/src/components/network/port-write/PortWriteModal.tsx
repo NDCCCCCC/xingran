@@ -16,7 +16,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { Modal, Form, Select, Input, App } from "antd";
+import { Modal, Form, App } from "antd";
+// Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
+// ⚠️ 本文件承载 v1.19 端口写命令冻结交互（submitting 防重 / reason __custom__ 状态机），
+// 本波仅换 UI 组件名，不改任何状态/条件渲染/校验逻辑。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus, PortWriteAction } from "@/types/network";
@@ -27,6 +31,7 @@ import {
   writeDot1xEnable,
   writeDot1xDisable,
 } from "@/lib/api/networkApi";
+import { handleApiError } from "@/utils/errorHandler";
 import {
   PRESET_REASONS,
   ACTION_TITLE,
@@ -69,7 +74,11 @@ export interface PortWriteModalProps {
  *   - e.preventDefault() 阻止浏览器硬跳转
  *   - message.destroy() 路由切换前关 toast，避免 portal 在另一个路由下残留 DOM
  *   - navigate() 走 SPA history.pushState，页面不刷新
+ * eslint-disable 理由（v1.24 P82 登记）：本文件属 v1.19 port-write 冻结面
+ * （62 测试全绿交付），拆动 showAuditLinkToast 会触碰冻结交互（见 PITFALLS B7），
+ * 优先登记豁免不拆文件。
  */
+// eslint-disable-next-line react-refresh/only-export-components -- v1.19 port-write 冻结面，只登记不拆
 export function showAuditLinkToast(
   message: MessageInstance,
   navigate: (path: string) => void
@@ -128,7 +137,7 @@ export function PortWriteModal({
         // validateFields 失败抛 errorFields, antd 自动标红字段, 不需 Toast
         if (err && typeof err === "object" && "errorFields" in err) return;
         // WR-01: 非预期校验异常不再 throw 冒泡到 antd onOk 形成未处理 Promise rejection
-        console.error("[PortWriteModal] validateFields unexpected error:", err);
+        handleApiError(err, "表单校验", false);
         return;
       }
 
@@ -202,14 +211,15 @@ export function PortWriteModal({
               { max: DESCRIPTION_MAX, message: `描述不超过 ${DESCRIPTION_MAX} 字符` },
             ]}
           >
-            <Input maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
+            <AppInput maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
           </Form.Item>
         )}
 
         {/* D-02 reason 字段 — 外层 reasonSelect Select + 内层 reasonText TextArea (仅 __custom__ 时展开) */}
         <Form.Item name="reasonSelect" label="操作原因" rules={reasonRules}>
-          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select
+          {/* fixed option list, no server search needed（AppSelect 不受 local/no-large-dropdown-list
+              的 Select 名拦截，原 eslint-disable 已随迁移失效，故移除） */}
+          <AppSelect
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}
           />
@@ -224,7 +234,7 @@ export function PortWriteModal({
                 label="自定义原因"
                 rules={[{ max: REASON_MAX, message: `操作原因不超过 ${REASON_MAX} 个字符` }]}
               >
-                <Input.TextArea
+                <AppTextArea
                   rows={2}
                   maxLength={REASON_MAX}
                   showCount

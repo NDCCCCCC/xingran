@@ -113,9 +113,13 @@ func TestFailover_MaxHops_CapsAtDefaultMaxHops(t *testing.T) {
 		"12 个可用账号但尝试次数应封顶 DefaultMaxHops（常量断言，非魔法数）")
 	// 真实语义（Rule 1 修正计划笔误）：封顶耗尽返回「账号池 N 个账号均失败」聚合错误，
 	// ErrAllAccountsUnavailable 仅在池空（len(available)==0）时返回。
+	// ⚠ Phase 58 H-04：全部拨号失败现在额外包 ErrAllAccountsDialFailed（**不**包
+	//   ErrAllAccountsUnavailable）—— 两者对管理员的处置动作不同，本断言的区分意图保留。
 	assert.Contains(t, err.Error(), "均失败")
 	assert.NotErrorIs(t, err, ErrAllAccountsUnavailable,
 		"池非空时封顶路径不应返回 ErrAllAccountsUnavailable")
+	assert.ErrorIs(t, err, ErrAllAccountsDialFailed,
+		"全部拨号失败必须带上「池里有账号但都连不上」的专属哨兵（Phase 58 H-04）")
 }
 
 // TestFailover_MockSearchUsersFn_MultiBatch mock walk/分页驱动能力：

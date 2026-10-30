@@ -486,6 +486,18 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 				}
 			}
 		}
+
+		// 261013-lqb: 楼宇/楼层导入完成后全量重算楼栋 total_floors 派生列。
+		// 双实体触发原因：building 导入直写用户上传的 totalFloors 值（路径 B）、
+		// floor 导入经通用 BatchUpsert 直写 ops_floors 不触发 floorService.Create
+		// 的重算（路径 C）——两者都会让派生列漂移，导入事务收尾统一幂等归正。
+		// error 直接 return → 整个导入事务回滚（P2-A8 all-or-nothing，
+		// 对齐上方 user 默认角色 hook 的错误处理语义）。
+		if entityType == "building" || entityType == "floor" {
+			if err := recomputeAllBuildingTotalFloors(ctx, tx); err != nil {
+				return err
+			}
+		}
 		return nil
 	}); err != nil {
 		return nil, err

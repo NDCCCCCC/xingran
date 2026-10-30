@@ -4,13 +4,14 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Space, Tag, Modal } from "antd";
+import { Space, Tag } from "antd";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { EyeOutlined, LikeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { KnowledgeArticle } from "@/lib/knowledgeApi";
 import { KnowledgeArticleStatus } from "@/lib/knowledgeApi";
 import { STATUS_CONFIG } from "./constants";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import type { SorterMeta } from "@/utils/tableHelpers";
 
 export interface ArticleColumnsParams {
@@ -131,7 +132,7 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
       width: 160,
       sorter: true,
       sortOrder: getColumnSortOrder?.("createdAt"),
-      render: (date: string) => formatDateTime(date, "YYYY-MM-DD HH:mm"),
+      render: (date: string) => formatDateTime(date, FORMAT_DATETIME_MINUTE),
     },
     {
       title: "操作",
@@ -173,12 +174,9 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
-              Modal.confirm({
-                title: "确定要删除吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `知识库文章 ${record.title}`,
+                onDelete: () => handleDelete(record.id),
               });
             },
           },

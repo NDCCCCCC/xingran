@@ -1,5 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type FC } from "react";
-import { Table, Button, Form, Input, Select, Card, Row, Col, Statistic, Space, App } from "antd";
+import { Table, Button, Form, Card, Row, Col, Statistic, Space, App } from "antd";
+import type { FilterValue } from "antd/es/table/interface";
+// Phase 71 (W1)：裸 Input/Select → 契约组件（本页 Select 全为 children 形态，均改写为 options 形态，
+// 见各处的形态分类器注记——AppSelect 无条件 optionFilterProp="label"，children 形态下该 prop 破坏性）
+import { AppInput, AppSelect } from "@/components/ui";
 import { PlusOutlined, SearchOutlined, ReloadOutlined, FileTextOutlined } from "@ant-design/icons";
 import { useArticleData } from "./hooks";
 import { getArticleColumns } from "./columns";
@@ -10,8 +14,6 @@ import type { SorterMeta } from "@/utils/tableHelpers";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
-
-const { Option } = Select;
 
 const KnowledgeArticlePage: FC = () => {
   const { message } = App.useApp();
@@ -160,7 +162,7 @@ const KnowledgeArticlePage: FC = () => {
   const handleTableChange = useCallback(
     (
       pagination: { current?: number; pageSize?: number },
-      _filters: Record<string, any>,
+      _filters: Record<string, FilterValue | null>,
       sorter:
         | import("antd/es/table/interface").SorterResult<KnowledgeArticle>
         | import("antd/es/table/interface").SorterResult<KnowledgeArticle>[]
@@ -199,14 +201,14 @@ const KnowledgeArticlePage: FC = () => {
               <Statistic
                 title="草稿"
                 value={statistics.draft}
-                styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
+                styles={{ content: { color: "var(--theme-warning)" } }}
               />
             </Col>
             <Col span={5}>
               <Statistic
                 title="已发布"
                 value={statistics.published}
-                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
+                styles={{ content: { color: "var(--theme-success)" } }}
               />
             </Col>
             <Col span={4}>
@@ -232,54 +234,52 @@ const KnowledgeArticlePage: FC = () => {
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="标题">
-              <Input
+              <AppInput
                 placeholder="请输入标题"
-                allowClear
                 className="user-form-input"
                 style={{ width: 150 }}
               />
             </Form.Item>
             <Form.Item name="categoryId" label="分类">
-              <Select
+              {/* 形态分类器③：动态 children → options 改写（label 字段真实存在，
+                  optionFilterProp="label" 从破坏性变正确）；分类数 ≥8 时自动开搜索 */}
+              <AppSelect
                 placeholder="请选择分类"
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                {flatCategories.map((cat) => (
-                  <Option key={cat.id} value={cat.id}>
-                    {cat.categoryName}
-                  </Option>
-                ))}
-              </Select>
+                options={flatCategories.map((cat) => ({
+                  label: cat.categoryName,
+                  value: cat.id,
+                }))}
+              />
             </Form.Item>
             <Form.Item name="tagId" label="标签">
-              <Select
+              {/* 形态分类器③：动态 children → options 改写（同分类，标签多时靠 label 过滤） */}
+              <AppSelect
                 placeholder="请选择标签"
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
                 onSearch={() => {}}
-              >
-                {tags.map((tag) => (
-                  <Option key={tag.id} value={tag.id}>
-                    {tag.tagName}
-                  </Option>
-                ))}
-              </Select>
+                options={tags.map((tag) => ({ label: tag.tagName, value: tag.id }))}
+              />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              {/* 形态分类器②④：固定 2 项状态枚举 + 业务禁搜（状态类）——显式 showSearch={false} */}
+              <AppSelect
                 placeholder="请选择状态"
                 allowClear
                 className="user-form-input"
                 style={{ width: 100 }}
                 onSearch={() => {}}
-              >
-                <Option value={KnowledgeArticleStatus.Draft}>草稿</Option>
-                <Option value={KnowledgeArticleStatus.Published}>已发布</Option>
-              </Select>
+                showSearch={false}
+                options={[
+                  { label: "草稿", value: KnowledgeArticleStatus.Draft },
+                  { label: "已发布", value: KnowledgeArticleStatus.Published },
+                ]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>

@@ -6,7 +6,7 @@ import { renderWithProviders } from "@/test/utils/renderWithProviders";
 import DashboardList from "../DashboardList";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
+import type {  } from "react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -29,7 +29,7 @@ vi.mock("@/store/dashboardStore", () => ({
   },
 }));
 
-function renderList(props: { onNavigateToView?: any; onNavigateToEdit?: any } = {}) {
+function renderList(props: { onNavigateToView?: unknown; onNavigateToEdit?: unknown } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderWithProviders(
     <QueryClientProvider client={qc}>

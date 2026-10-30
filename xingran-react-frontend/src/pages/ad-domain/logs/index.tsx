@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import { App, Card, Table, Tag, Space, Button, Select } from "antd";
+import { App, Card, Table, Tag, Space, Button } from "antd";
+// Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
+import { AppSelect } from "@/components/ui";
 import {
   ReloadOutlined,
   CheckCircleOutlined,
@@ -165,7 +167,7 @@ const ADSyncLogsPage: React.FC = () => {
       key: "errorMessage",
       ellipsis: true,
       render: (msg: string | undefined) =>
-        msg ? <span style={{ color: "#ba3630" }}>{msg}</span> : "-",
+        msg ? <span style={{ color: "var(--theme-error)" }}>{msg}</span> : "-",
     },
   ];
 
@@ -173,20 +175,19 @@ const ADSyncLogsPage: React.FC = () => {
     <Card>
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Select
+          {/* Phase 71 W5：children 写法改写 options；原 antd 单选默认禁搜，显式
+              showSearch={false} 保持不变。configId 为 UUID 外键，原 allowClear=true 行为不变；
+              AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型 */}
+          <AppSelect
             placeholder="选择AD配置"
             style={{ width: 200 }}
             allowClear
             value={selectedConfigId}
-            onChange={setSelectedConfigId}
+            onChange={(value) => setSelectedConfigId(value as string | undefined)}
+            showSearch={false}
             onSearch={() => {}}
-          >
-            {configs.map((config) => (
-              <Select.Option key={config.id} value={config.id}>
-                {config.configName}
-              </Select.Option>
-            ))}
-          </Select>
+            options={configs.map((config) => ({ value: config.id, label: config.configName }))}
+          />
           <Button icon={<ReloadOutlined />} onClick={fetchLogs}>
             刷新
           </Button>

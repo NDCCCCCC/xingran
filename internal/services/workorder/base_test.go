@@ -209,7 +209,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			password_hash TEXT,
 			nickname TEXT,
 			email TEXT,
-			phone TEXT,
+			phone TEXT, mobile TEXT, title TEXT, ad_config_id TEXT,
 			avatar TEXT,
 			status INTEGER DEFAULT 0,
 			dept_id TEXT

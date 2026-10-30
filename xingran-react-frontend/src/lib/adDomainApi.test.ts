@@ -46,6 +46,7 @@ import {
   getADUserDetail,
   getADUserIds,
   getADUserList,
+  getDeptOUMismatchList,
   getMapping,
   getMappingList,
   getOUDeptMapping,
@@ -396,5 +397,35 @@ describe("adDomainApi — 批量同步与服务账号池", () => {
     });
     await getADServiceAccountStats("c1");
     expect(mockPost).toHaveBeenNthCalledWith(8, "/ad-domain/accounts/stats", { configId: "c1" });
+  });
+});
+
+describe("adDomainApi — 部门↔OU 对账 (Phase 59 GUARD-02)", () => {
+  beforeEach(() => {
+    mockGet.mockReset();
+    mockPost.mockReset();
+  });
+
+  it("getDeptOUMismatchList POST /ad-domain/reconciliation/mismatch 且未传分页时注入 current=1/pageSize=10", async () => {
+    mockPost.mockResolvedValue({ code: 0, data: { list: [], total: 0, current: 1, pageSize: 10 } });
+    await getDeptOUMismatchList();
+    expect(mockPost).toHaveBeenNthCalledWith(1, "/ad-domain/reconciliation/mismatch", {
+      current: 1,
+      pageSize: 10,
+    });
+    await getDeptOUMismatchList({
+      current: 2,
+      pageSize: 20,
+      mismatchType: "mapping_disabled",
+      deptId: "d1",
+      keyword: "OU=x",
+    });
+    expect(mockPost).toHaveBeenNthCalledWith(2, "/ad-domain/reconciliation/mismatch", {
+      current: 2,
+      pageSize: 20,
+      mismatchType: "mapping_disabled",
+      deptId: "d1",
+      keyword: "OU=x",
+    });
   });
 });

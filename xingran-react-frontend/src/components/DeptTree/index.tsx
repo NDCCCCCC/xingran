@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { FC, Key, CSSProperties } from "react";
-import { Tree, Card, Spin, Input } from "antd";
+import { Tree, Card, Spin } from "antd";
+import { AppInput } from "@/components/ui";
 import type { DataNode, EventDataNode } from "antd/es/tree";
 import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons";
 import { useDeptTree } from "@/hooks/useDeptTree";
@@ -193,14 +194,13 @@ const DeptTree: FC<DeptTreeProps> = ({
       style={style}
       styles={{ body: { padding: "16px" } }}
     >
-      <Input
+      <AppInput
         placeholder="搜索部门"
         value={searchValue}
         onChange={(e) => {
           setSearchValue(e.target.value);
           onSearch(e.target.value);
         }}
-        allowClear
         prefix={<SearchOutlined />}
         className="dept-tree-search user-form-input"
         style={{ marginBottom: 8 }}

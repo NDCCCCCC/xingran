@@ -58,7 +58,7 @@ describe("pages/network/discoveries/constants", () => {
   });
 
   it("renderStatusTag unknown → pending", () => {
-    render(renderStatusTag("xyz" as any));
+    render(renderStatusTag("xyz" as unknown));
     expect(screen.getByText("待执行")).toBeInTheDocument();
   });
 });

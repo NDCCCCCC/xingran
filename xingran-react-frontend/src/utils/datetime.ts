@@ -4,6 +4,13 @@ import utc from "dayjs/plugin/utc";
 dayjs.extend(utc);
 
 /**
+ * 附加格式常量（Phase 68 DEBT-02b：分档展示格式统一从本文件取，禁止散落字面量）
+ */
+export const FORMAT_DATETIME_MINUTE = "YYYY-MM-DD HH:mm";
+export const FORMAT_DATE_SHORT = "MM-DD";
+export const FORMAT_TIME_MINUTE = "HH:mm";
+
+/**
  * 统一时间格式化函数
  * 默认格式: YYYY-MM-DD HH:mm:ss
  */

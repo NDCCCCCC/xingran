@@ -23,6 +23,12 @@ type UserListParams struct {
 	RecursiveDeptID *string `json:"recursiveDeptId"`
 	BeginTime       *string `json:"beginTime"`
 	EndTime         *string `json:"endTime"`
+	// DataScopeUserID 当前请求用户 ID，由 handler 从 gin context 提取（DataScopePermission
+	// 中间件写入），用于 data_scope 过滤。json:"-"：客户端不可通过请求体注入（防伪造 scope）。
+	DataScopeUserID string `json:"-"`
+	// DataScope 当前请求用户的数据范围（models/base.go 枚举 1-5）。
+	// 0 = 不过滤（未挂 DataScopePermission 或超管早退），行为与接入前完全一致。
+	DataScope models.DataScope `json:"-"`
 }
 
 // DefaultUserListParams 默认列表参数
@@ -65,6 +71,8 @@ type UserCreateRequest struct {
 	EmployeeNo *string           `json:"employeeNo"`
 	Email      *string           `json:"email"`
 	Phone      *string           `json:"phone"`
+	Mobile     *string           `json:"mobile"`
+	Title      *string           `json:"title"`
 	Gender     models.Gender     `json:"gender"`
 	Status     models.UserStatus `json:"status"`
 	DeptID     *string           `json:"deptId"`
@@ -82,6 +90,8 @@ func (r *UserCreateRequest) ToModel(hashedPassword string) models.User {
 		EmployeeNo: r.EmployeeNo,
 		Email:      r.Email,
 		Phone:      r.Phone,
+		Mobile:     r.Mobile,
+		Title:      r.Title,
 		Gender:     r.Gender,
 		Status:     r.Status,
 		DeptID:     r.DeptID,
@@ -96,6 +106,8 @@ type UserUpdateRequest struct {
 	EmployeeNo *string           `json:"employeeNo"`
 	Email      *string           `json:"email"`
 	Phone      *string           `json:"phone"`
+	Mobile     *string           `json:"mobile"`
+	Title      *string           `json:"title"`
 	Gender     models.Gender     `json:"gender"`
 	Status     models.UserStatus `json:"status"`
 	DeptID     *string           `json:"deptId"`
@@ -112,6 +124,8 @@ func (r *UserUpdateRequest) ToModel() models.User {
 		EmployeeNo: r.EmployeeNo,
 		Email:      r.Email,
 		Phone:      r.Phone,
+		Mobile:     r.Mobile,
+		Title:      r.Title,
 		Gender:     r.Gender,
 		Status:     r.Status,
 		DeptID:     r.DeptID,

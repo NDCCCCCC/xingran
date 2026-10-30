@@ -61,11 +61,11 @@ describe("design-system/animations/keyframes", () => {
   });
 
   it("pulse 含 50% opacity", () => {
-    expect((kf.pulse as any)["50%"]).toEqual({ opacity: 0.5 });
+    expect((kf.pulse as unknown)["50%"]).toEqual({ opacity: 0.5 });
   });
 
   it("pulseScale 含 scale", () => {
-    expect((kf.pulseScale as any)["50%"]).toHaveProperty("transform");
+    expect((kf.pulseScale as unknown)["50%"]).toHaveProperty("transform");
   });
 
   it("shake 含 translateX", () => {

@@ -32,7 +32,7 @@ function renderNotice(endpoints: Record<string, unknown> = {}) {
 describe("NoticeManagement 渲染", () => {
   it("空数据 → 渲染不抛错", async () => {
     const api = createApiMock("/system/notice/list");
-    api.endpoint.mockResolvedValueOnce({ data: { list: [], total: 0 } } as any);
+    api.endpoint.mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
     const { baseElement } = renderNotice({
       "/system/notice/list": { data: { list: [], total: 0 } },
       "/system/notice/statistics": { data: {} },

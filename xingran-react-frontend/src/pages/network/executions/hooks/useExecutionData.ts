@@ -7,6 +7,7 @@ import { useState, useCallback } from "react";
 import { App } from "antd";
 import type { ConfigExecution, NetworkDevice, ConfigTemplate, PageResponse } from "@/types";
 import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 import type { ExecutionStatistics, ExecutionDataState } from "../types";
 
 export interface UseExecutionDataParams {
@@ -19,7 +20,11 @@ export interface UseExecutionDataReturn {
   // 数据状态
   dataState: ExecutionDataState;
   loading: boolean;
+  /** FIX-04a: 列表加载失败的可见错误（渲染 ErrorAlertWithRetry） */
+  error: unknown;
   execLoading: boolean;
+  devicesLoading: boolean;
+  detailsLoading: boolean;
   total: number;
   execTotal: number;
   statistics: ExecutionStatistics;
@@ -54,7 +59,12 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   });
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [execLoading, setExecLoading] = useState(false);
+  /** FIX-01: 设备列表请求中，供 ExecuteModal 内嵌表 loading */
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  /** FIX-01: 执行明细请求中，供 DetailDrawer 内嵌表 loading */
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [execTotal, setExecTotal] = useState(0);
 
@@ -68,6 +78,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
 
   // 加载设备列表
   const loadDevices = useCallback(async () => {
+    setDevicesLoading(true);
     try {
       const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
         current: 1,
@@ -76,7 +87,9 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       });
       setDataState((prev) => ({ ...prev, devices: result.data?.list || [] }));
     } catch (error) {
-      console.error("加载设备列表失败:", error);
+      handleApiError(error, "加载设备列表");
+    } finally {
+      setDevicesLoading(false);
     }
   }, []);
 
@@ -90,7 +103,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       });
       setDataState((prev) => ({ ...prev, templates: result.data?.list || [] }));
     } catch (error) {
-      console.error("加载模板列表失败:", error);
+      handleApiError(error, "加载模板列表");
     }
   }, []);
 
@@ -110,8 +123,9 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
         });
         setDataState((prev) => ({ ...prev, executions: result.data?.list || [] }));
         setExecTotal(result.data?.total || 0);
+        setError(null);
       } catch (error) {
-        console.error("加载执行记录失败:", error);
+        setError(error);
       } finally {
         setExecLoading(false);
       }
@@ -130,13 +144,15 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
         success: result.data?.success ?? 0,
         failed: result.data?.failed ?? 0,
       });
+      setError(null);
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      setError(error);
     }
   }, []);
 
   // 加载执行明细
   const loadExecutionDetails = useCallback(async (executionId: string) => {
+    setDetailsLoading(true);
     try {
       const result = await post<ConfigExecution>(`/network/executions/${executionId}`, {});
       setDataState((prev) => ({
@@ -146,6 +162,8 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       }));
     } catch (_error) {
       message.error("加载执行明细失败");
+    } finally {
+      setDetailsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
@@ -153,7 +171,10 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   return {
     dataState,
     loading,
+    error,
     execLoading,
+    devicesLoading,
+    detailsLoading,
     total,
     execTotal,
     statistics,

@@ -6,6 +6,7 @@ bin/
 *.so
 *.dylib
 xingran-backend-embedded*
+xingran-backend-linux
 
 # 嵌入式前端构建产物（复制到 internal/server 用于 embed）
 internal/server/xingran-react-frontend/
@@ -108,6 +109,10 @@ fix_*.sql
 数据/
 *.xlsx
 *.png
+# 例外：v1.24 Phase 77 视觉回归的验收证据图（17 张，共 ~456KB）必须入库，
+# 否则「视觉验证已收口」的凭证只存在于本地工作区，评审与回溯时不可得。
+!.planning/notes/v1.24-visual-evidence/
+!.planning/notes/v1.24-visual-evidence/*.png
 .trae/
 
 # 调试残留归档（debug_*.js / temp-fix.sh 等临时脚本的归档，不入仓）
@@ -128,3 +133,18 @@ rpa-worker/configs/config.yaml
 
 # root-level accidental artifacts
 cov_*.out
+
+# 崩溃转储（Git Bash / bash.exe 残留）
+*.stackdump
+
+# 嵌入式后端构建产物（新旧命名均覆盖）
+*-backend-embedded
+*-backend-embedded-*
+
+# 一次性生成数据（scripts/tmp_menuimport -mode=gen 可再生）
+xingran_menus_dedup.sql
+
+# 前端依赖与测试缓存
+node_modules/
+.vite/
+.vitest-cache/

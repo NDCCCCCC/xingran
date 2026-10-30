@@ -66,7 +66,11 @@ CREATE INDEX IF NOT EXISTS idx_ops_asset_physical_user
 	//    注意 sys_device_mac_address 是 **不带 deleted_at** 的 GORM 表 —— MAC 采集采用硬删除
 	//    (mac_collection_service.go:CollectAllDevices 的 DELETE + INSERT 策略),所以这里
 	//    不需要加 AND deleted_at IS NULL。
-	//    而 sys_device_mac_history 才是带 deleted_at 的软删除表(见 internal/models/device_mac_history.go)。
+	//    sys_device_mac_history **同样不带 deleted_at** —— 它是 PG 分区表(PARTITION BY RANGE
+	//    first_seen),DDL 见 migration_mac_history.go,model 见 models/device_mac_history.go,
+	//    均无该列;2026-10-27 生产库 information_schema 实测 count=0 已坐实。
+	//    (勘误 2026-10-27: 此前本注释称"sys_device_mac_history 才是带 deleted_at 的软删除表",
+	//    与实际 schema 不符,已更正;query 侧不得为它加 deleted_at 过滤。)
 	//    (勘误 2026-06-29: 此前注释误说"sys_device_mac_address 带 deleted_at",导致 migration_178
 	//    错误加 WHERE m.deleted_at IS NULL 触发 SQLSTATE 42703,已修正。)
 	createPhysicalChainSQL := `

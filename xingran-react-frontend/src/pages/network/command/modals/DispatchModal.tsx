@@ -3,16 +3,18 @@
  * 网络命令分发模态框
  */
 
-import { Modal, Form, Input, Table } from "antd";
+import { Modal, Form, Table } from "antd";
+// Phase 71 (W4)：裸 Input/TextArea → 契约组件
+import { AppInput, AppTextArea } from "@/components/ui";
 import type { NetworkDevice } from "@/types";
 import { deviceColumns } from "../columns";
-
-const { TextArea } = Input;
 
 export interface CommandDispatchModalProps {
   open: boolean;
   devices: NetworkDevice[];
   selectedRowKeys: string[];
+  /** FIX-01: 设备列表请求中，内嵌表显示 loading 蒙层 */
+  loading?: boolean;
   onOk: () => Promise<void>;
   onCancel: () => void;
   onSelectionChange: (keys: React.Key[]) => void;
@@ -22,6 +24,7 @@ export function CommandDispatchModal({
   open,
   devices,
   selectedRowKeys,
+  loading = false,
   onOk,
   onCancel,
   onSelectionChange,
@@ -31,6 +34,8 @@ export function CommandDispatchModal({
   return (
     <Modal
       title="快速命令分发"
+      mask={{ closable: false }}
+      keyboard={false}
       open={open}
       onOk={async () => {
         await onOk();
@@ -46,6 +51,7 @@ export function CommandDispatchModal({
       <Form form={form} layout="vertical">
         <Form.Item label="选择设备" required>
           <Table
+            loading={loading}
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => onSelectionChange(keys),
@@ -58,7 +64,7 @@ export function CommandDispatchModal({
             size="small"
             scroll={{ y: 200 }}
           />
-          <div style={{ marginTop: 8, color: "var(--theme-text-tertiary, #999)" }}>
+          <div style={{ marginTop: 8, color: "var(--theme-text-tertiary)" }}>
             已选择 {selectedRowKeys.length} 台设备
           </div>
         </Form.Item>
@@ -69,7 +75,7 @@ export function CommandDispatchModal({
           rules={[{ required: true, message: "请输入命令内容" }]}
           extra="每行一条命令，支持标准网络设备命令"
         >
-          <TextArea
+          <AppTextArea
             rows={8}
             placeholder={`示例：
 display version
@@ -89,7 +95,7 @@ show running-config
           initialValue={300}
           rules={[{ required: true }]}
         >
-          <Input type="number" min={10} max={3600} />
+          <AppInput type="number" min={10} max={3600} />
         </Form.Item>
       </Form>
     </Modal>

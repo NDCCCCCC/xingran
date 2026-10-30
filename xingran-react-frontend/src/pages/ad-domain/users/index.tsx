@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
+// Phase 71 (W5)：裸 Input/Select/TextArea → 契约组件（children 形态改写 options）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   Card,
   Table,
-  Select,
   TreeSelect,
-  Input,
   Space,
   Button,
   Tag,
@@ -13,6 +13,8 @@ import {
   message,
   Tooltip,
 } from "antd";
+import type { TablePaginationConfig } from "antd/es/table";
+import type { SorterResult } from "antd/es/table/interface";
 import {
   ReloadOutlined,
   CheckCircleOutlined,
@@ -40,6 +42,11 @@ import {
 } from "@/lib/adDomainApi";
 import type { UnknownError } from "@/types/common";
 import ActionButtons from "@/components/shared/ActionButtons";
+// ⚠️ 直接引模块路径（不走 @/components/shared 桶文件）：桶文件 re-export 了
+// FloorPlanEditor → @react-three/fiber → three.js，引入它会让本页的动态 import
+// （既有测试的 `await import(...)`）显著变慢并触发超时（实测）。
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { useADConfigs } from "@/hooks/useADConfigs";
 
 import type { FC } from "react";
@@ -48,6 +55,25 @@ import { usePagination } from "@/hooks/usePagination";
 const ADUserPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
+
+  // Phase 86 W4（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  /**
+   * 本页**全部**写操作归 `ops:ad:user:edit` 单一码 —— 该码组在
+   * `src/constants/permissionCodes.ts` 里**只有 `edit` 一个写键**
+   * （无独立 `enable` / `move` / `sync` 键）。
+   *
+   * 归码的后端依据（`internal/api/v1/system/ad_domain_router.go:137-146`）：
+   * ```
+   * // 85-03 RBAC-01：读组保留 ANY-of，用户写操作走 strict 兄弟组（move/enable/
+   * // disable/batch-sync 均为编辑语义，归 ops:ad:user:edit）。
+   * userEdit.Use(middleware.RequireStrictPermissions([]string{string(permission.OpsADUserEdit)}, core))
+   * ```
+   * 即后端把 move / enable / disable / batch-sync **四条写路由挂在同一个 strict 单码**下
+   * → 前端四条写入口必须同码，否则会出现「前端放行 / 后端 403」的错配。
+   */
+  const permUserEdit = permGate.decide(PERMISSION_CODES.opsADUser.edit);
 
   // 使用共享的 AD 配置 Hook
   const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
@@ -69,6 +95,7 @@ const ADUserPage: FC = () => {
   const [ouSelectVisible, setOUSelectVisible] = useState(false);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const [editingUser, setEditingUser] = useState<ADUser | null>(null);
 
   const [moveModalVisible, setMoveModalVisible] = useState(false);
@@ -167,11 +194,16 @@ const ADUserPage: FC = () => {
   };
 
   // 表格排序双向关联
-  const handleTableChange = (pagination: any, _filters: any, sorter: any) => {
+  const handleTableChange = (
+    _pagination: TablePaginationConfig,
+    _filters: Record<string, unknown>,
+    sorter: SorterResult<ADUser> | SorterResult<ADUser>[]
+  ) => {
     // 用 local const 持有新值传 fetchUsers，规避 React 18 setState 异步时序
     // （setState 后立即读 state 仍为旧值——加 deep 一层避坑）
-    const newCol = sorter?.field || "";
-    const newAsc = sorter?.order === "ascend";
+    const s = Array.isArray(sorter) ? sorter[0] : sorter;
+    const newCol = s?.field != null ? String(s.field) : "";
+    const newAsc = s?.order === "ascend";
     setOrderByColumn(newCol);
     setIsAsc(newAsc);
     fetchUsers(newCol, newAsc);
@@ -289,6 +321,7 @@ const ADUserPage: FC = () => {
     const syncCount = selectAllMode ? selectAllTotal : selectedUsers.length;
     if (syncCount === 0) return;
 
+    // eslint-disable-next-line no-restricted-syntax -- 非删除语义：同步用户到系统用户表为幂等补写，不删除任何数据，UI-SPEC §1.1 判定规则排除
     Modal.confirm({
       title: `确定同步选中的 ${syncCount} 个用户到系统用户表？`,
       content: selectAllMode
@@ -461,6 +494,22 @@ const ADUserPage: FC = () => {
       width: 120,
     },
     {
+      // 域控 manager 属性（DN 字符串），为空时显示 "-"
+      title: "域控经理",
+      dataIndex: "manager",
+      key: "manager",
+      width: 260,
+      ellipsis: true,
+      render: (manager?: string) =>
+        manager ? (
+          <span title={manager} style={{ cursor: "help" }}>
+            {manager}
+          </span>
+        ) : (
+          "-"
+        ),
+    },
+    {
       title: "办公电话",
       dataIndex: "phone",
       key: "phone",
@@ -498,18 +547,26 @@ const ADUserPage: FC = () => {
             label: user.isEnabled ? "禁用" : "启用",
             icon: user.isEnabled ? <StopOutlined /> : <CheckCircleOutlined />,
             onClick: () => handleEnable(user),
+            // Phase 86 W4：启用/禁用是**状态写**（POST /users/:id/enable|disable）
+            // → 归 ops:ad:user:edit（该码组无独立 enable 键；后端同挂此码）。
+            permission: PERMISSION_CODES.opsADUser.edit,
           },
           {
             key: "move",
             label: "移动",
             icon: <SwapOutlined />,
             onClick: () => handleMove(user),
+            // Phase 86 W4：移动是**位置写**（POST /users/:id/move，改 OU）
+            // → 归 ops:ad:user:edit（该码组无独立 move 键；后端同挂此码）。
+            permission: PERMISSION_CODES.opsADUser.edit,
           },
           {
             key: "edit",
             label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(user),
+            // Phase 86 W4：编辑用户资料 → ops:ad:user:edit
+            permission: PERMISSION_CODES.opsADUser.edit,
           },
         ];
 
@@ -524,10 +581,14 @@ const ADUserPage: FC = () => {
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
-            <Select
+            {/* Phase 71 W5：迁 AppSelect——原显式 showSearch 保持；configId 为 UUID 外键，
+                原 allowClear=true 行为不变；AppSelect 泛型被 ComponentProps 擦除 →
+                onChange 值为 unknown，收敛回业务类型 */}
+            <AppSelect
+              allowClear
               style={{ width: 200 }}
               value={selectedConfig}
-              onChange={setSelectedConfig}
+              onChange={(value) => setSelectedConfig(value as string)}
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
               showSearch
               // noop 满足 local/no-large-dropdown-list(要求 Select 带 onSearch);
@@ -561,19 +622,22 @@ const ADUserPage: FC = () => {
             </Space.Compact>
           </Form.Item>
           <Form.Item name="username">
-            <Input placeholder="用户名" allowClear style={{ width: 150 }} />
+            <AppInput placeholder="用户名" allowClear style={{ width: 150 }} />
           </Form.Item>
           <Form.Item name="isEnabled">
-            <Select
+            {/* Phase 71 W5：children 写法改写 options；原显式 showSearch（boolean 值下拉，
+                契约过滤走 label）保持 */}
+            <AppSelect
               placeholder="状态"
               allowClear
               style={{ width: 120 }}
               showSearch
               onSearch={() => {}}
-            >
-              <Select.Option value={true}>启用</Select.Option>
-              <Select.Option value={false}>禁用</Select.Option>
-            </Select>
+              options={[
+                { value: true, label: "启用" },
+                { value: false, label: "禁用" },
+              ]}
+            />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -592,15 +656,28 @@ const ADUserPage: FC = () => {
                 {selectAllMode ? "取消全选" : "全选所有"}
                 {selectAllMode && ` (${selectAllTotal})`}
               </Button>
-              <Button
-                type="primary"
-                icon={<SyncOutlined />}
-                disabled={selectedUsers.length === 0 && !selectAllMode}
-                onClick={handleBatchSync}
-                loading={batchSyncLoading}
-              >
-                批量同步 ({selectAllMode ? selectAllTotal : selectedUsers.length})
-              </Button>
+              {/*
+                Phase 86 W4 —— **施工图（86-04 PLAN）未列的写入口，本波按后端硬证据补齐**：
+                「批量同步」调 `batchSyncADUsersDirect` → POST /users/batch-sync，
+                把 AD 用户**写进系统用户表**（落库）→ 是业务写入口，不是只读。
+                后端 `ad_domain_router.go:137-146` 已把它与 move/enable/disable
+                挂在同一个 strict 单码 `ops:ad:user:edit` 下（注释原文：
+                「move/enable/disable/batch-sync 均为编辑语义，归 ops:ad:user:edit」）
+                → 前端归 `opsADUser.edit`，与本页其余三条行操作同码。
+                （施工图遗漏已登记在 86-STATE.md 的「W4 施工图外发现」节。）
+              */}
+              {permUserEdit.visible && (
+                <Button
+                  type="primary"
+                  icon={<SyncOutlined />}
+                  disabled={permUserEdit.disabled || selectedUsers.length === 0 && !selectAllMode}
+                  title={permUserEdit.hint}
+                  onClick={handleBatchSync}
+                  loading={batchSyncLoading}
+                >
+                  批量同步 ({selectAllMode ? selectAllTotal : selectedUsers.length})
+                </Button>
+              )}
             </Space>
           </Form.Item>
         </Form>
@@ -611,7 +688,7 @@ const ADUserPage: FC = () => {
           dataSource={users}
           loading={loading}
           rowKey="id"
-          scroll={{ x: 1500 }}
+          scroll={{ x: 1900 }}
           pagination={paginationProps}
           onChange={handleTableChange}
           rowSelection={
@@ -631,31 +708,43 @@ const ADUserPage: FC = () => {
       <Modal
         title="编辑用户"
         open={editModalVisible}
-        onOk={handleUpdateUser}
+        onOk={async () => {
+          setEditSubmitting(true);
+          try {
+            await handleUpdateUser();
+          } finally {
+            setEditSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: editSubmitting }}
         onCancel={() => setEditModalVisible(false)}
         width={600}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item label="显示名" name="displayName">
-            <Input />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="邮箱" name="email">
-            <Input />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="办公电话" name="phone">
-            <Input />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="手机" name="mobile">
-            <Input />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="职位" name="title">
-            <Input />
+            <AppInput allowClear />
+          </Form.Item>
+          {/* 域控 manager 属性（DN）为只读展示，不参与提交 */}
+          <Form.Item label="域控经理">
+            <AppInput allowClear readOnly value={editingUser?.manager || ""} placeholder="未设置" />
           </Form.Item>
           <Form.Item label="部门" name="department">
-            <Input />
+            <AppInput allowClear />
           </Form.Item>
           <Form.Item label="描述" name="description">
-            <Input.TextArea rows={3} />
+            <AppTextArea rows={3} />
           </Form.Item>
         </Form>
       </Modal>
@@ -699,8 +788,8 @@ const ADUserPage: FC = () => {
         ]}
         width={600}
       >
-        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-          <div style={{ color: "#666", fontSize: "14px" }}>点击下方OU标签快速筛选该OU下的用户</div>
+        <Space orientation="vertical" style={{ width: "100%" }} size="medium">
+          <div style={{ color: "var(--theme-text-secondary)", fontSize: "14px" }}>点击下方OU标签快速筛选该OU下的用户</div>
           <div style={{ maxHeight: 400, overflowY: "auto" }}>
             <Space wrap>
               {commonOUs.map((ou) => (
@@ -724,7 +813,7 @@ const ADUserPage: FC = () => {
             </Space>
           </div>
           {commonOUs.length === 0 && (
-            <div style={{ textAlign: "center", color: "#999", padding: "40px" }}>
+            <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "40px" }}>
               暂无常用OU配置
             </div>
           )}

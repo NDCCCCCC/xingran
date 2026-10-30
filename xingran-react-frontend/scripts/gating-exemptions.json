@@ -1,0 +1,311 @@
+{
+  "$comment": "Phase 86 W0 —— 门控覆盖 N/A 豁免白名单。分类口径：no-permission-code=有写入口但前端单一真相源无对应码；read-only=无写入口（只读列表/统计/视图）；non-route-page=非路由页/个人页/Modal 聚合；legacy-two-source=页面内存在旧式权限码直判（第二真相源），待后端拆分 phase 统一收口。校验：node scripts/check-gating-coverage.mjs",
+  "exemptions": [
+    {
+      "page": "src/pages/system/dict/index.tsx",
+      "category": "no-permission-code",
+      "reason": "字典管理有新增/编辑/删除等写入口，但前端权限码清单无 systemDict 区块；按 PERM-06 单一真相源，86 不自造权限码，等后端拆分 phase 回补 TS 声明后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 systemDict 区块（仅 systemUser/systemRole/systemMenu/systemDept/systemPost）；pkg/permission/config.go 有 system:dict:* 常量 → 缺的是 TS 侧声明"
+    },
+    {
+      "page": "src/pages/system/notice/index.tsx",
+      "category": "no-permission-code",
+      "reason": "通知公告页有新增/编辑/删除/批量删除写入口，但前端权限码清单无 systemNotice 区块；86 不自造权限码，等后端拆分 phase 回补 TS 声明后再铺开门控。该页 Switch 命中为表单字段 Switch（<Form.Item name=\"isMarkdown\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 systemNotice 区块；pkg/permission/config.go 有 system:notice:* 常量；Switch 命中 src/pages/system/notice/components/NoticeForm.tsx:278"
+    },
+    {
+      "page": "src/pages/system/config/index.tsx",
+      "category": "no-permission-code",
+      "reason": "参数配置页有新增/编辑/删除写入口，但前端权限码清单无 systemConfig 区块；86 不自造权限码，等后端拆分 phase 回补 TS 声明后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 systemConfig 区块；pkg/permission/config.go 有 system:config:* 常量"
+    },
+    {
+      "page": "src/pages/system/apikeys/index.tsx",
+      "category": "no-permission-code",
+      "reason": "API 密钥管理页有新增/编辑/删除写入口，但前端权限码清单无 systemApiKey 区块；86 不自造权限码，等后端拆分 phase 回补 TS 声明后再铺开门控。该页 Switch 命中为表单字段 Switch（继承权限 <Form.Item name=\"inheritPerms\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 systemApiKey 区块；pkg/permission/config.go 有 system:apikey:* 常量；Switch 命中 src/pages/system/apikeys/index.tsx:785"
+    },
+    {
+      "page": "src/pages/system/captcha-background/index.tsx",
+      "category": "no-permission-code",
+      "reason": "验证码背景图页有上传/删除写入口，但前端权限码清单无 systemCaptchaBackground 区块；86 不自造权限码，等后端拆分 phase 回补 TS 声明后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 systemCaptchaBackground 区块；pkg/permission/config.go 有 system:captchaBackground:* 常量"
+    },
+    {
+      "page": "src/pages/duty/config/index.tsx",
+      "category": "no-permission-code",
+      "reason": "值班提醒配置页有保存写入口，但 duty 域整体无权限码（85 已明确 duty 为范围外域），前端权限码清单无 duty 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（启用值班提醒 <Form.Item name=\"reminderEnabled\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 duty 区块；pkg/permission/config.go 无 duty: 前缀；85-RESEARCH.md 范围外域；Switch 命中 src/pages/duty/config/index.tsx:140"
+    },
+    {
+      "page": "src/pages/duty/holidays/index.tsx",
+      "category": "no-permission-code",
+      "reason": "节假日页有新增/编辑/删除/Excel 导入写入口，但 duty 域无权限码，前端权限码清单无 duty 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（是否休息日）与批量行内更新 Switch（onUpdateRow 仅改表单行数据，最终由批量保存提交），均不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 duty 区块；pkg/permission/config.go 无 duty: 前缀；Switch 命中 src/pages/duty/holidays/modals/EditModal.tsx:126 与 src/pages/duty/holidays/modals/BatchModal.tsx:108"
+    },
+    {
+      "page": "src/pages/duty/pools/index.tsx",
+      "category": "no-permission-code",
+      "reason": "值班池页有新增/编辑/删除写入口，但 duty 域无权限码，前端权限码清单无 duty 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 duty 区块；pkg/permission/config.go 无 duty: 前缀"
+    },
+    {
+      "page": "src/pages/duty/schedules/index.tsx",
+      "category": "no-permission-code",
+      "reason": "排班页有新增/编辑/删除写入口，但 duty 域无权限码，前端权限码清单无 duty 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（清除已有排班 <Form.Item name=\"clearExists\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 duty 区块；pkg/permission/config.go 无 duty: 前缀；Switch 命中 src/pages/duty/schedules/index.tsx:650"
+    },
+    {
+      "page": "src/pages/duty/management/index.tsx",
+      "category": "no-permission-code",
+      "reason": "值班管理页含值班配置 CRUD 与「生成排班」写入口（写入口特征命中 handleXxx / confirmDelete / onBatchDelete / batchDelete=），但 duty 域无权限码，前端权限码清单无 duty 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（启用提醒 / 清除已有排班，均无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 duty 区块；pkg/permission/config.go 无 duty: 前缀；写入口命中 src/pages/duty/management/components/DutyConfig.tsx 与 GenerateScheduleModal.tsx；Switch 命中 DutyConfig.tsx:101 / GenerateScheduleModal.tsx:107"
+    },
+    {
+      "page": "src/pages/workorder/categories/index.tsx",
+      "category": "no-permission-code",
+      "reason": "工单分类页有新增/编辑/删除写入口，但前端权限码清单无 workorder 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 workorder 区块；pkg/permission/config.go 无 workorder: 前缀"
+    },
+    {
+      "page": "src/pages/workorder/orders/index.tsx",
+      "category": "no-permission-code",
+      "reason": "工单列表页有处理/审批等写入口，但前端权限码清单无 workorder 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 workorder 区块；pkg/permission/config.go 无 workorder: 前缀"
+    },
+    {
+      "page": "src/pages/workorder/periodic/templates/index.tsx",
+      "category": "no-permission-code",
+      "reason": "周期工单模板页有新增/编辑/删除写入口，但前端权限码清单无 workorder 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（通知处理人 <Form.Item name=\"notifyAssignee\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 workorder 区块；pkg/permission/config.go 无 workorder: 前缀；Switch 命中 src/pages/workorder/periodic/templates/index.tsx:590"
+    },
+    {
+      "page": "src/pages/knowledge/articles/index.tsx",
+      "category": "no-permission-code",
+      "reason": "知识库文章页有新增/编辑/删除写入口，但前端权限码清单无 knowledge 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 knowledge 区块；pkg/permission/config.go 无 knowledge: 前缀"
+    },
+    {
+      "page": "src/pages/operations/rpa/tasks/index.tsx",
+      "category": "no-permission-code",
+      "reason": "RPA 任务页有新增/编辑/删除写入口，但前端权限码清单无 rpa 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（失败重试 <Form.Item name=\"retryOnFailure\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 rpa 区块；pkg/permission/config.go 无 ops:rpa:/rpa: 前缀；Switch 命中 src/pages/operations/rpa/tasks/modals/EditModal.tsx:324"
+    },
+    {
+      "page": "src/pages/operations/rpa/executions/index.tsx",
+      "category": "no-permission-code",
+      "reason": "RPA 执行记录页有操作按钮（命中 ActionButtons），但前端权限码清单无 rpa 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 rpa 区块；pkg/permission/config.go 无 ops:rpa:/rpa: 前缀"
+    },
+    {
+      "page": "src/pages/monitor/cache/index.tsx",
+      "category": "no-permission-code",
+      "reason": "缓存监控页有清理/删除写入口，但前端权限码清单无 monitor 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 monitor 区块；pkg/permission/config.go 有 monitor:cache:* 常量 → 缺的是 TS 侧声明"
+    },
+    {
+      "page": "src/pages/monitor/job/index.tsx",
+      "category": "no-permission-code",
+      "reason": "定时任务页有新增/编辑/删除写入口，但前端权限码清单无 monitor 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（并发执行 <Form.Item name=\"concurrent\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 monitor 区块；pkg/permission/config.go 有 monitor:job:* 常量；Switch 命中 src/pages/monitor/job/index.tsx:338"
+    },
+    {
+      "page": "src/pages/monitor/logs/index.tsx",
+      "category": "no-permission-code",
+      "reason": "操作日志页有导出/清理写入口，但前端权限码清单无 monitor 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 monitor 区块；pkg/permission/config.go 有 monitor:log*/monitor:operlog 常量"
+    },
+    {
+      "page": "src/pages/monitor/server/index.tsx",
+      "category": "no-permission-code",
+      "reason": "服务器监控页有操作按钮（命中 ActionButtons），但前端权限码清单无 monitor 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 monitor 区块；pkg/permission/config.go 有 monitor:server:* 常量"
+    },
+    {
+      "page": "src/pages/vdi/VDIServerConfig/index.tsx",
+      "category": "no-permission-code",
+      "reason": "VDI 服务器配置页有新增/编辑/删除写入口，但前端权限码清单无 vdi 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（状态 <Form.Item name=\"status\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/constants/permissionCodes.ts 无 vdi 区块；pkg/permission/config.go 无 vdi: 前缀；Switch 命中 src/pages/vdi/VDIServerConfig/index.tsx:326"
+    },
+    {
+      "page": "src/pages/network/mac/index.tsx",
+      "category": "no-permission-code",
+      "reason": "MAC 地址页有删除与导出写入口，但前端权限码清单无 networkMac 区块；等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 networkMac 区块；pkg/permission/config.go 有 network:mac:* 常量 → 缺的是 TS 侧声明"
+    },
+    {
+      "page": "src/pages/ad-domain/ous/index.tsx",
+      "category": "no-permission-code",
+      "reason": "AD 组织单元页有写入口，但前端权限码清单的 AD 域只有 opsADConfig / opsADGroup / opsADUser 三组，无 ops:ad:ou:* 区块；86 不自造权限码，等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts AD 相关仅 opsADConfig(ops:ad:config:*)/opsADGroup(ops:ad:group:*)/opsADUser(ops:ad:user:*)，无 ou/computer 组；pkg/permission/config.go 的 ops:ad 二级前缀下无 ou/computer 操作码"
+    },
+    {
+      "page": "src/pages/ad-domain/computers/index.tsx",
+      "category": "no-permission-code",
+      "reason": "AD 计算机页有写入口，但前端权限码清单的 AD 域只有 opsADConfig / opsADGroup / opsADUser 三组，无 ops:ad:computer:* 区块；86 不自造权限码，等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts AD 相关仅 opsADConfig/opsADGroup/opsADUser，无 computer 组；pkg/permission/config.go 的 ops:ad 二级前缀下无 computer 操作码"
+    },
+    {
+      "page": "src/pages/ad/SyncMonitor/index.tsx",
+      "category": "no-permission-code",
+      "reason": "旧 ad 目录的同步监控页有写入口（src/pages/ad/ 与 src/pages/ad-domain/ 是两套目录，都按 index.tsx 计为页面）；前端权限码清单无旧 ad 域同步区块，86 不自造权限码，等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 ad 同步区块；pkg/permission/config.go 无 ad: 前缀（旧目录域，未进 85 拆分范围）"
+    },
+    {
+      "page": "src/pages/asset/reconciliation/exception-rules/index.tsx",
+      "category": "no-permission-code",
+      "reason": "对账异常规则页有新增/编辑/删除写入口，但前端权限码清单无 asset 区块；86 不自造权限码，等后端拆分 phase 回补后再铺开门控。",
+      "evidence": "src/constants/permissionCodes.ts 无 asset 区块（仅有 opsAsset = ops:asset:*）；pkg/permission/config.go 无 asset: 前缀"
+    },
+    {
+      "page": "src/pages/network/ports/index.tsx",
+      "category": "legacy-two-source",
+      "reason": "端口页用旧式权限码 network:port:write 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑（改了等于自造权限码），等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
+      "evidence": "src/pages/network/ports/index.tsx:130-132 使用字面量 network:port:write；src/constants/permissionCodes.ts 无 networkPort 区块；pkg/permission/config.go 有 network:port:* 常量"
+    },
+    {
+      "page": "src/pages/network/mac/history/index.tsx",
+      "category": "legacy-two-source",
+      "reason": "MAC 历史页用旧式权限码 network:mac:export 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
+      "evidence": "src/pages/network/mac/history/MACHistoryPage.tsx:117-119 使用字面量 network:mac:export；src/constants/permissionCodes.ts 无 networkMac 区块；pkg/permission/config.go 有 network:mac:* 常量"
+    },
+    {
+      "page": "src/pages/vdi/VirtualMachineList/index.tsx",
+      "category": "legacy-two-source",
+      "reason": "虚拟机列表页用旧式权限码 vdi:vm:* 直判（useMenuStore().permissions，共 vdi:vm:add/bind/remove/restart/start/stop/sync 七个），这些码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
+      "evidence": "src/pages/vdi/VirtualMachineList/index.tsx:46,52,109,929-935 使用字面量 vdi:vm:*；src/constants/permissionCodes.ts 无 vdi 区块；pkg/permission/config.go 无 vdi: 前缀"
+    },
+    {
+      "page": "src/pages/asset/reconciliation/exceptions/index.tsx",
+      "category": "legacy-two-source",
+      "reason": "对账异常页用旧式权限码 asset:reconciliation:resolve 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。该页 Switch 命中为表单字段 Switch（显示已静默 <Form.Item name=\"showSilenced\" valuePropName=\"checked\"> 内、无 onChange），随搜索表单生效，不构成独立业务写入口。",
+      "evidence": "src/pages/asset/reconciliation/exceptions/index.tsx:85-86 使用字面量 asset:reconciliation:resolve；src/constants/permissionCodes.ts 无 asset 区块；pkg/permission/config.go 无 asset: 前缀；Switch 命中 src/pages/asset/reconciliation/exceptions/index.tsx:477"
+    },
+    {
+      "page": "src/pages/asset/reconciliation/fix-suggestion/index.tsx",
+      "category": "legacy-two-source",
+      "reason": "修复建议页用旧式权限码 asset:reconciliation:fix:{accept,reject,rollback} 直判（useMenuStore().permissions），这些码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
+      "evidence": "src/pages/asset/reconciliation/fix-suggestion/index.tsx:64-67 使用字面量 asset:reconciliation:fix:*；src/constants/permissionCodes.ts 无 asset 区块；pkg/permission/config.go 无 asset: 前缀"
+    },
+    {
+      "page": "src/pages/workorder/statistics/index.tsx",
+      "category": "read-only",
+      "reason": "工单统计页为纯统计/图表视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0；页面无 ActionButtons / 删除 / 保存类操作"
+    },
+    {
+      "page": "src/pages/knowledge/view/index.tsx",
+      "category": "read-only",
+      "reason": "知识库只读查看页，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/duty/my-duty/index.tsx",
+      "category": "read-only",
+      "reason": "我的值班页为个人只读视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/operations/rpa/index.tsx",
+      "category": "read-only",
+      "reason": "RPA 总览页为统计/导航视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/operations/rpa/workers/index.tsx",
+      "category": "read-only",
+      "reason": "RPA 执行器节点列表为只读列表，唯一操作按钮是「重置」（重置搜索条件，非业务写）；扫描器写入口特征零命中，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0；src/pages/operations/rpa/workers/index.tsx:282 仅 <Button onClick={handleReset}>重置</Button>"
+    },
+    {
+      "page": "src/pages/vdi/VirtualMachineDetail/index.tsx",
+      "category": "read-only",
+      "reason": "虚拟机详情页为单对象只读视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/ad-domain/logs/index.tsx",
+      "category": "read-only",
+      "reason": "AD 同步日志页为只读日志视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/asset/reconciliation/index.tsx",
+      "category": "read-only",
+      "reason": "对账总览页为只读汇总视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/asset/reconciliation/dashboard/index.tsx",
+      "category": "read-only",
+      "reason": "对账仪表盘为纯图表视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/operations/building-spaces/index.tsx",
+      "category": "read-only",
+      "reason": "楼宇空间列表为只读列表视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/operations/building-spaces-3d/index.tsx",
+      "category": "read-only",
+      "reason": "3D 空间视图页无可门控写入口；其 Switch 为**视图切换 Switch，非业务写**（onChange={setUseWebGL} 只切换 WebGL / 普通渲染，不落库、不触发后端写请求），按 86-00 裁定 7 不计入写入口命中，保留 read-only 豁免。",
+      "evidence": "src/pages/operations/building-spaces-3d/index.tsx:116 <Switch checked={useWebGL} onChange={setUseWebGL}>（本地视图状态）；扫描器 Switch 台账标记为 view-toggle"
+    },
+    {
+      "page": "src/pages/monitor/dashboard/index.tsx",
+      "category": "read-only",
+      "reason": "监控总览仪表盘为纯图表视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/login/index.tsx",
+      "category": "non-route-page",
+      "reason": "登录页是未认证态的认证入口（表单 submit 走登录接口），不是受 RBAC 菜单权限管辖的业务页；其唯一提交动作不属于「业务写入口」范畴，无可门控写入口。",
+      "evidence": "src/pages/login/index.tsx:303 唯一按钮为 <Button type=\"primary\" htmlType=\"submit\"> 登录提交；该页不挂 useMenuStore 权限判定"
+    },
+    {
+      "page": "src/pages/profile/index.tsx",
+      "category": "non-route-page",
+      "reason": "个人中心页是当前登录用户自身信息的查看/维护页（个人域，非业务资源），不属于 RBAC 业务页口径，扫描器写入口特征零命中。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0；页面语义为个人中心（profile）"
+    },
+    {
+      "page": "src/pages/settings/index.tsx",
+      "category": "non-route-page",
+      "reason": "个人偏好设置页只改本地 UI 偏好（layoutStore），不触发后端业务写请求；其 Switch 为**本地状态 Switch，非业务写**（onChange 调 updateLayout 更新侧边栏折叠态）。",
+      "evidence": "src/pages/settings/SettingCards.tsx:173-182 <Switch checked={preferences.layout.sidebar.collapsed} onChange={... updateLayout({sidebar:{...collapsed}})}>（本地偏好，无后端请求）；扫描器 Switch 台账标记为 local-state"
+    },
+    {
+      "page": "src/pages/system/settings/index.tsx",
+      "category": "non-route-page",
+      "reason": "系统设置聚合页（API 配置 / 邮箱配置 / 验证码背景 / 默认主题等子配置）是个人/系统设置聚合入口，不是独立路由业务页；其 Switch 命中均为表单字段 Switch（<Form.Item valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
+      "evidence": "src/pages/system/settings/ 同目录聚合多个子配置文件（api-config.tsx / email-config.tsx / captcha-background.tsx / default-theme.tsx）；Switch 命中 api-config.tsx:578、email-config.tsx:488/497/501"
+    },
+    {
+      "page": "src/pages/system/settings-page/index.tsx",
+      "category": "non-route-page",
+      "reason": "系统设置页是 settings 聚合路由的展示壳页，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/my-notices/index.tsx",
+      "category": "non-route-page",
+      "reason": "我的通知页是当前用户自身消息的收件箱视图（个人域），扫描器写入口特征零命中、无可门控的写入口。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
+    },
+    {
+      "page": "src/pages/dashboard-system/index.tsx",
+      "category": "non-route-page",
+      "reason": "系统仪表盘页是首页聚合看板（含同目录 edit.tsx 仪表盘编辑器），属聚合/个人页而非独立 RBAC 业务资源页；写入口特征命中来自编辑器内的 widget 配置添加，不构成业务资源写操作。",
+      "evidence": "check-gating-coverage.mjs 实测写入口命中来自 src/pages/dashboard-system/edit.tsx:54 handleAddWidget（看板 widget 配置）"
+    },
+    {
+      "page": "src/pages/knowledge/articles/modals/index.tsx",
+      "category": "non-route-page",
+      "reason": "知识库文章 Modal 聚合目录，是被 knowledge/articles 调用的弹窗集合，不是独立路由页；扫描器写入口特征零命中。",
+      "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0；目录形态为 modals/ 下的弹窗集合"
+    }
+  ]
+}

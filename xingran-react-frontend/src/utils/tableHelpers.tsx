@@ -3,6 +3,8 @@ import type { ColumnType, ColumnGroupType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { formatDateTime } from "@/utils/datetime";
+// Phase 68 DEBT-02a：状态列渲染统一走 statusHelpers（enable 域：0=启用/1=停用）
+import { StatusTag } from "@/components/shared/statusHelpers";
 
 /**
  * Sorter 类型：标识字段的排序语义
@@ -117,7 +119,7 @@ export interface ColumnConfig {
   key: string;
   width?: number;
   align?: "left" | "center" | "right";
-  sorter?: ((a: any, b: any) => number) | boolean;
+  sorter?: ((a: unknown, b: unknown) => number) | boolean;
   // 受控排序方向（配合 useTableManager.getColumnSortOrder 实现"高亮落所点列"）。
   // 与 antd Table sorter.order 一致：ascend/descend/null（null=未排序）。
   // 内联 union 而非 import useServerSort.SortOrder，避免 utils↔hooks type 循环。
@@ -142,9 +144,7 @@ export function createStatusColumn<T>(
     dataIndex: field,
     key: field,
     width: 80,
-    render: (status: number) => (
-      <Tag color={status === 0 ? "success" : "error"}>{status === 0 ? "正常" : "停用"}</Tag>
-    ),
+    render: (status: number) => <StatusTag status={status} domain="enable" />,
     ...config,
   };
 }
@@ -174,7 +174,7 @@ export function createActionColumn<T>(
     width: 200,
     fixed: "right",
     render: (_, record) => (
-      <Space size="middle">
+      <Space size="medium">
         {onEdit && (
           <Button type="link" icon={<EditOutlined />} onClick={() => onEdit(record)}>
             编辑

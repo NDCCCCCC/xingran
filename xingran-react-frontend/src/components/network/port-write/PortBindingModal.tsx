@@ -19,7 +19,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { Modal, Form, Select, Input, Radio, App } from "antd";
+import { Modal, Form, Radio, App } from "antd";
+// Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
+// ⚠️ 本文件承载 v1.20.1 端口绑定冻结交互（submitting 防重 / reason __custom__ 状态机），
+// 本波仅换 UI 组件名，不改任何状态/条件渲染/校验逻辑。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus } from "@/types/network";
 import { writePortBinding } from "@/lib/api/networkApi";
@@ -36,6 +40,7 @@ import {
   validateReasonRequired,
 } from "./constants";
 import { showAuditLinkToast } from "./PortWriteModal";
+import { handleApiError } from "@/utils/errorHandler";
 
 export interface PortBindingModalProps {
   open: boolean;
@@ -85,7 +90,7 @@ export function PortBindingModal({ open, portRecord, onClose, onSuccess }: PortB
         // validateFields 失败抛 errorFields, antd 自动标红字段, 不需 Toast
         if (err && typeof err === "object" && "errorFields" in err) return;
         // WR-01: 非预期校验异常不再 throw 冒泡到 antd onOk 形成未处理 Promise rejection
-        console.error("[PortBindingModal] validateFields unexpected error:", err);
+        handleApiError(err, "表单校验", false);
         return;
       }
 
@@ -155,13 +160,14 @@ export function PortBindingModal({ open, portRecord, onClose, onSuccess }: PortB
             { required: true, message: "请输入 IP 地址" },
             {
               pattern: IPV4_REGEX,
-              // eslint-disable-next-line no-restricted-syntax -- 错误提示示例 IP, 仅 UI 文本
+              // 错误提示里的示例 IP 仅为 UI 文案：内网 IP selector 实测不匹配这类
+              // 短示例串（P65 豁免块移出后定向 eslint 无命中），故不再需要 disable 指令
               message: "请输入合法 IPv4 地址（如 10.62.25.5）",
             },
           ]}
         >
-          {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
-          <Input placeholder="例如 10.62.25.5" allowClear />
+          {/* placeholder 中的示例 IP 同上，仅为 UI 提示，无需 disable 指令 */}
+          <AppInput placeholder="例如 10.62.25.5" />
         </Form.Item>
 
         {/* macAddress 主字段: Input optional + MAC_REGEX pattern (UX hint) */}
@@ -176,7 +182,7 @@ export function PortBindingModal({ open, portRecord, onClose, onSuccess }: PortB
           ]}
           extra="不填则仅 IP 绑定；后端 service 会归一化为各厂商格式"
         >
-          <Input placeholder="例如 AA:BB:CC:DD:EE:FF（不填则仅 IP 绑定）" allowClear />
+          <AppInput placeholder="例如 AA:BB:CC:DD:EE:FF（不填则仅 IP 绑定）" />
         </Form.Item>
 
         {/* D-02 reason 字段 — 外层 reasonSelect Select + 内层 reasonText TextArea (仅 __custom__ 时展开) */}
@@ -191,8 +197,9 @@ export function PortBindingModal({ open, portRecord, onClose, onSuccess }: PortB
             },
           ]}
         >
-          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-          <Select
+          {/* fixed option list, no server search needed（AppSelect 不受 local/no-large-dropdown-list
+              的 Select 名拦截，原 eslint-disable 已随迁移失效，故移除） */}
+          <AppSelect
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({
               label: opt.label,
@@ -215,7 +222,7 @@ export function PortBindingModal({ open, portRecord, onClose, onSuccess }: PortB
                   },
                 ]}
               >
-                <Input.TextArea
+                <AppTextArea
                   rows={2}
                   maxLength={REASON_MAX}
                   showCount

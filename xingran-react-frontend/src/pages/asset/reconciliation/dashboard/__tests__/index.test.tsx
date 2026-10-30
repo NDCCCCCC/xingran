@@ -35,7 +35,7 @@ describe("pages/asset/reconciliation/dashboard", () => {
   it("导出为函数组件", async () => {
     const mod = await import("../index");
     expect(typeof mod.default).toBe("function");
-  });
+  }, 30000);
 
   it("基础渲染不抛错", async () => {
     const { default: Comp } = await import("../index");

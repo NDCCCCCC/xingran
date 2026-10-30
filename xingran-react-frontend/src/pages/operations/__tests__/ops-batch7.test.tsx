@@ -33,25 +33,25 @@ describe("operations 子模块渲染", () => {
   });
   it("building-spaces BuildingCard", async () => {
     await expectRenders(
-      <BuildingCard building={{ id: "b1", name: "一号楼", status: 0 } as any} onClick={vi.fn()} />
+      <BuildingCard building={{ id: "b1", name: "一号楼", status: 0 } as unknown} onClick={vi.fn()} />
     );
   });
   it("building-spaces FloorStack", async () => {
-    await expectRenders((<FloorStack floors={[]} />) as any);
+    await expectRenders((<FloorStack floors={[]} />) as unknown);
   });
   it("building-spaces WorkstationView", async () => {
-    await expectRenders((<WorkstationView floor={{ id: "f1", name: "F1" } as any} />) as any);
+    await expectRenders((<WorkstationView floor={{ id: "f1", name: "F1" } as unknown} />) as unknown);
   });
   it("building-spaces BuildingModal(closed)", async () => {
     await expectRenders(
       (
         <BuildingModal
-          building={{ id: "b1", name: "一号楼" } as any}
+          building={{ id: "b1", name: "一号楼" } as unknown}
           open={false}
           onClose={vi.fn()}
           onSave={vi.fn()}
         />
-      ) as any
+      ) as unknown
     );
   });
 });

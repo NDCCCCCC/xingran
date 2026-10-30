@@ -12,6 +12,7 @@ export const VENDOR_OPTIONS: SelectOption[] = [
   { label: "H3C", value: "h3c" },
   { label: "Ruijie", value: "ruijie" },
   { label: "Maipu", value: "maipu" },
+  { label: "Cisco", value: "cisco" },
 ];
 
 // 设备类型选项

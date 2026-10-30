@@ -22,27 +22,9 @@ type MenuItem = NonNullable<MenuProps["items"]>[number];
 
 const getIcon = (iconName?: string | null): React.ReactNode => getIconComponent(iconName);
 
-/**
- * 子菜单项默认细右箭头（原型 shell.js makeLink L202：无 icon 时默认 i-chev）
- */
-const SubChevron: React.FC = () => (
-  <span className="menu-sub-chevron" aria-hidden="true">
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M9 6l6 6-6 6" />
-    </svg>
-  </span>
-);
-
-const convertToMenuItem = (menu: MenuType, parentPath: string = "", depth = 0): MenuItem => {
-  // 原型 shell.js：子菜单项统一用小箭头（无视后端配置的图标）；仅顶层保留配置图标
-  const icon = depth >= 1 ? <SubChevron /> : getIcon(menu.icon);
+const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem => {
+  // 无子菜单项与普通菜单项统一使用配置的图标（无 icon 则为 undefined，不渲染易引起展开误导的箭头）
+  const icon = getIcon(menu.icon);
 
   if (menu.menuType === "F" || menu.visible !== 1) {
     return null;
@@ -62,7 +44,7 @@ const convertToMenuItem = (menu: MenuType, parentPath: string = "", depth = 0): 
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
       .filter((child) => child.menuType !== "F" && child.visible === 1)
-      .map((child) => convertToMenuItem(child, menuPath, depth + 1))
+      .map((child) => convertToMenuItem(child, menuPath))
       .filter((item): item is MenuItem => item !== null);
 
     if (validChildren.length > 0 || menu.menuType === "M") {
@@ -310,7 +292,7 @@ const Sidebar = () => {
           <span className="brand-mark" aria-hidden="true">
             星
           </span>
-          {!sidebarCollapsed && <span className="brand-wordmark">星苒 · XINGRAN</span>}
+          {!sidebarCollapsed && <span className="brand-wordmark">数智化平台 · RUOYI-NEXT</span>}
         </div>
 
         {loading ? (

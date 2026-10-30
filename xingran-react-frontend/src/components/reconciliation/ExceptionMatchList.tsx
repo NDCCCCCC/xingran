@@ -17,7 +17,7 @@
  */
 import React, { useCallback } from "react";
 import { List, Tag, Empty, Spin, Button, Space } from "antd";
-import dayjs from "dayjs";
+import { formatDate } from "@/utils/datetime";
 
 export interface ExceptionRuleItem {
   id: string;
@@ -124,11 +124,11 @@ const ListInner: React.FC<ExceptionMatchListProps> = ({
               ))}
             </Space>
             {rule.reason && (
-              <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>{rule.reason}</div>
+              <div style={{ marginTop: 4, fontSize: 12, color: "var(--theme-text-secondary)" }}>{rule.reason}</div>
             )}
             {rule.expiresAt && (
-              <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                有效期至 {dayjs(rule.expiresAt).format("YYYY-MM-DD")}
+              <div style={{ marginTop: 4, fontSize: 12, color: "var(--theme-text-secondary)" }}>
+                有效期至 {formatDate(rule.expiresAt)}
               </div>
             )}
           </div>

@@ -121,6 +121,7 @@ type ADUser struct {
 	Phone              string     `gorm:"size:50" json:"phone,omitempty"`
 	Mobile             string     `gorm:"size:50" json:"mobile,omitempty"`
 	Title              string     `gorm:"size:100" json:"title,omitempty"`
+	Manager            string     `gorm:"size:500" json:"manager,omitempty"` // 域控 manager 属性（DN 格式）
 	Department         string     `gorm:"size:255" json:"department,omitempty"`
 	Company            string     `gorm:"size:255" json:"company,omitempty"`
 	OUN                string     `gorm:"size:500;index:idx_ad_user_ou;column:ou_dn" json:"ouDn,omitempty"`

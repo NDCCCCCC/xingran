@@ -3,7 +3,8 @@
  * 根据用户数据范围权限动态显示可用选项
  */
 import { useMemo } from "react";
-import { Form, Select, Switch, Space } from "antd";
+import { Form, Switch, Space } from "antd";
+import { AppSelect } from "@/components/ui";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardScope } from "@/types/dashboard";
 
@@ -96,12 +97,12 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
   const showSystemOption = isAdmin;
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }}>
+    <Space orientation="vertical" style={{ width: "100%" }}>
       <Form.Item label="可见范围" style={{ marginBottom: 8 }}>
-        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-        <Select
+        <AppSelect
           value={value?.scope || "private"}
-          onChange={handleScopeChange}
+          onChange={(v: unknown) => handleScopeChange(v as DashboardScope)}
+          showSearch={false}
           options={scopeOptions}
           style={{ width: "100%" }}
           disabled={disabled || (value?.isSystem && value?.scope === "global")}
@@ -117,7 +118,7 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
             checkedChildren="是"
             unCheckedChildren="否"
           />
-          <div style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 12, marginTop: 4 }}>
+          <div style={{ color: "var(--theme-text-tertiary)", fontSize: 12, marginTop: 4 }}>
             系统仪表盘将作为无默认仪表盘用户的兜底选项
           </div>
         </Form.Item>

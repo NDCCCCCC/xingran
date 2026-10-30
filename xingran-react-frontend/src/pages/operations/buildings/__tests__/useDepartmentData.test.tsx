@@ -1,7 +1,7 @@
 /**
  * Phase 88 Batch296 — pages/operations/buildings/useDepartmentData 测试
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-const mockData: any = [
+const mockData: unknown = [
   { id: "d1", deptName: "Dept 1", children: [{ id: "d2", deptName: "Dept 2" }] },
 ];
 vi.mock("@/hooks/useDeptTree", () => ({

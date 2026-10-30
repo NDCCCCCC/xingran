@@ -25,11 +25,10 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
+import { formatDateTime } from "@/utils/datetime";
 import {
   Table,
   Form,
-  Input,
-  Select,
   DatePicker,
   Button,
   Space,
@@ -40,6 +39,7 @@ import {
   Modal,
   Switch,
 } from "antd";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import type { TablePaginationConfig, FilterValue, SorterResult } from "antd/es/table/interface";
 import { SearchOutlined, ReloadOutlined, LinkOutlined, CheckOutlined } from "@ant-design/icons";
@@ -223,7 +223,7 @@ const Exceptions = () => {
         width: 170,
         sorter: createSorter<ExceptionListItem>("detectedAt", "date"),
         sortOrder: getColumnSortOrder("detectedAt"),
-        render: (val: string) => (val ? dayjs(val).format("YYYY-MM-DD HH:mm:ss") : "-"),
+        render: (val: string) => formatDateTime(val),
       },
       {
         title: "冲突类型",
@@ -443,37 +443,31 @@ const Exceptions = () => {
       <Card className="mb-4">
         <Form form={form} layout="inline" onFinish={handleSearch}>
           <Form.Item name="conflictType" label="冲突类型">
-            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-            <Select
+            <AppSelect
               placeholder="请选择"
-              allowClear
+              showSearch={false}
               style={{ width: 160 }}
               loading={conflictTypeDict.isLoading}
-            >
-              {conflictTypeDict.data?.map((it) => (
-                <Select.Option key={it.dictValue} value={it.dictValue}>
-                  {it.dictLabel}
-                </Select.Option>
-              ))}
-            </Select>
+              options={(conflictTypeDict.data ?? []).map((it) => ({
+                value: it.dictValue,
+                label: it.dictLabel,
+              }))}
+            />
           </Form.Item>
           <Form.Item name="severity" label="严重级别">
-            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
-            <Select
+            <AppSelect
               placeholder="请选择"
-              allowClear
+              showSearch={false}
               style={{ width: 140 }}
               loading={severityDict.isLoading}
-            >
-              {severityDict.data?.map((it) => (
-                <Select.Option key={it.dictValue} value={it.dictValue}>
-                  {it.dictLabel}
-                </Select.Option>
-              ))}
-            </Select>
+              options={(severityDict.data ?? []).map((it) => ({
+                value: it.dictValue,
+                label: it.dictLabel,
+              }))}
+            />
           </Form.Item>
           <Form.Item name="assetCode" label="资产编号">
-            <Input placeholder="请输入资产编号" allowClear style={{ width: 200 }} />
+            <AppInput placeholder="请输入资产编号" style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="detectedAt" label="检测时间">
             <RangePicker style={{ width: 280 }} placeholder={["开始日期", "结束日期"]} />
@@ -519,7 +513,7 @@ const Exceptions = () => {
         title="标记异常已解决"
         open={resolveModal.open}
         onOk={handleResolveSubmit}
-        confirmLoading={resolveModal.submitting}
+        cancelButtonProps={{ disabled: resolveModal.submitting }}
         onCancel={() => {
           if (resolveModal.submitting) return;
           setResolveModal({ open: false, exceptionId: null, note: "", submitting: false });
@@ -535,7 +529,7 @@ const Exceptions = () => {
             name="resolutionNote"
             extra="请简要说明解决方式,如:已修正责任人 / 已同步 AD 域账号 等"
           >
-            <Input.TextArea
+            <AppTextArea
               rows={4}
               maxLength={500}
               showCount

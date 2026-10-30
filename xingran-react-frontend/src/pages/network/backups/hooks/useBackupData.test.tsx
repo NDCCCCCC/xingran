@@ -22,7 +22,7 @@ const wrap = ({ children }: { children: React.ReactNode }) => (
   </ConfigProvider>
 );
 
-const opts = () => ({ current: 1, pageSize: 10, searchForm: { validateFields: vi.fn() } as any });
+const opts = () => ({ current: 1, pageSize: 10, searchForm: { validateFields: vi.fn() } as unknown });
 
 describe("useBackupData", () => {
   it("initial state", () => {

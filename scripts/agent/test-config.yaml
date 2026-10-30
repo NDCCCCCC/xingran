@@ -1,0 +1,29 @@
+# Agent 测试配置示例
+# 将此文件复制到 test-agent-config.yaml 并根据需要修改
+
+# 后端服务器配置
+backend_url: "http://localhost:9000"  # 后端服务器地址
+
+# Agent 标识
+agent_id: "test-agent-001"             # Agent 唯一标识
+vm_id: "test-vm-001"                   # 虚拟机唯一标识
+
+# HTTP 服务器配置
+listen_addr: ":8443"                   # 监听地址和端口
+
+# TLS 配置 (生产环境使用)
+tls_cert_file: ""                      # TLS 证书文件路径
+tls_key_file: ""                       # TLS 私钥文件路径
+
+# 心跳配置
+heartbeat_interval: "30s"              # 心跳间隔
+
+# JWT 配置 (仅测试使用)
+jwt_secret: "test-secret-key-for-development-only"
+
+# 日志配置
+log_level: "debug"                     # 日志级别: debug, info, warn, error
+log_path: "./logs"                     # 日志目录
+
+# 平台配置 (自动检测，通常不需要手动设置)
+platform: "linux"                      # linux 或 windows

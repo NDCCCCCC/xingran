@@ -12,7 +12,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 let mockVisible = true;
-let mockHealth: any = undefined;
+let mockHealth: unknown = undefined;
 let mockLoading = false;
 let mockError = false;
 let mockRefetch = vi.fn();

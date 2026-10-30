@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Space, Tag, Modal } from "antd";
+import { Space, Tag } from "antd";
 import {
   ApartmentOutlined,
   PhoneOutlined,
@@ -14,8 +14,11 @@ import {
 } from "@ant-design/icons";
 import type { Department } from "@/types";
 import { renderStatusTag, renderExternalOrgTag } from "./constants";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import { formatDateTime } from "@/utils/datetime";
 import ActionButtons from "@/components/shared/ActionButtons";
+// Phase 86 W1（RBAC-02）：行操作权限码单一真相源（不在列工厂内调 hook —— 列工厂保持纯函数）。
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 export interface DeptColumnsParams {
   handleEdit: (record: Department) => void;
@@ -115,6 +118,9 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
             disabled: record.accessible === false,
+            // Phase 86 W1（RBAC-02）：行编辑 → system:dept:edit。
+            // permission 字段由 ActionButtons 内建三态门控消费（就绪且无码 → 不渲染；未就绪 → 渲染但 disabled + 提示）。
+            permission: PERMISSION_CODES.systemDept.edit,
           },
           {
             key: "delete",
@@ -122,15 +128,13 @@ export function getDeptColumns(params: DeptColumnsParams): ColumnsType<Departmen
             icon: <DeleteOutlined />,
             danger: true,
             disabled: record.accessible === false,
-            onClick: () => {
-              Modal.confirm({
-                title: "确定要删除这个部门吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
-              });
-            },
+            // 行删除 → system:dept:remove。
+            permission: PERMISSION_CODES.systemDept.remove,
+            onClick: () =>
+              confirmDelete({
+                target: `部门 ${record.deptName}`,
+                onDelete: () => handleDelete(record.id),
+              }),
           },
         ];
         return <ActionButtons actions={actions} />;

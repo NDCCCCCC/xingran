@@ -10,11 +10,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
+	"gorm.io/gorm"
 )
 
 // ImportUser 批量导入用户
@@ -23,7 +25,8 @@ import (
 //   - 新用户：创建（性别默认 2=保密，状态默认 0=启用）
 //   - 已存在用户：更新部门/email/手机号/工号/昵称等信息
 //
-// 导入成功后异步触发 AD 域控同步（降级处理，失败不影响导入结果）。
+// 导入成功后同步批量入队 AD 推送队列（Phase 58 D-01；原「异步直推 AD」已删除，
+// 入队失败仅记日志，不影响导入结果）。
 //
 // @Summary 批量导入用户
 // @Description 通过 Excel 批量导入用户，以用户名为唯一标识，重复用户更新相关信息，导入后触发 AD 同步
@@ -74,10 +77,20 @@ func (h *UserHandler) ImportUser(c *gin.Context) {
 		return
 	}
 
-	// 导入成功后异步触发 AD 域控同步（降级处理，不阻断导入响应）
-	// AffectedKeys 为本次真正写入记录的 username 列表（ImportData 内部收集）
-	if h.userADSyncService != nil && len(result.AffectedKeys) > 0 {
-		h.triggerADSyncAfterImport(result.AffectedKeys)
+	// Phase 58 D-01/SC6: 导入成功后改为**同步批量入队** ad_push_queue（直推已删）。
+	// AffectedKeys 为本次真正写入记录的 username 列表（ImportData 内部收集）。
+	//
+	// ⚠ 事务边界（已接受的例外，必须写明）：ExcelService.ImportData 内部的
+	// Transaction 已提交（operations/excel_service.go:427），此处入队在事务**外** ——
+	// 这是 outbox-lite「同生共死」不变量的**一处例外**（进程崩溃窗口会丢推送）。
+	// D-01 否决「纯删除不补」的理由：导入更新存量 AD 用户部门后，5 分钟全量同步窗口内
+	// 会被 AD 登录回写冲回（F1 乒乓土壤，Phase 59 守卫落地前无防护）。
+	//
+	// 降级：入队失败仅记日志，不影响导入结果（用户仍可在 UI 重新编辑触发入队）。
+	if len(result.AffectedKeys) > 0 {
+		if err := h.enqueueImportUsersToAD(result.AffectedKeys); err != nil {
+			applogger.Errorf("[AD-SYNC] 导入后批量入队失败（不影响导入结果）: %v", err)
+		}
 	}
 
 	// 操作日志：只记录 filename + 行数统计，绝不记录原始 Excel 行数据（信息泄露缓解）
@@ -101,50 +114,33 @@ func (h *UserHandler) buildExcelService() *opsServices.ExcelService {
 	return opsServices.NewExcelService(h.core.DB.GetDB(), h.core.PwdManager, cacheProvider, nil)
 }
 
-// triggerADSyncAfterImport 导入成功后异步触发 AD 域控批量同步。
+// enqueueImportUsersToAD 导入后批量入队（D-01，替代已删除的导入后直推方法）。
 //
-// 性能：调 BatchSyncUsersToAD 复用单个已绑定 LDAP 连接 + errgroup 并发
-// （MaxConcurrentADSync=3），2274 用户从 ~10 分钟降到 ~10 秒。取代原先的
-// 「逐用户串行 + 每用户新建连接 + 重试3次」模式。
+// ⚠ 注释刻意不写出被删方法名的字面：SC6 的残留证据由 grep 静态证伪断言承担
+//   （该 grep 的期望值是 0），注释自指会让这条断言失去意义。
 //
-// 行为：
-//   - 查有 ad_dn 的用户 ID（导入新增的本地用户无 ad_dn 跳过）
-//   - BatchSyncUsersToAD 复用单连接批量同步（单失败不中断，收集到 Errors）
-//   - 降级：任何同步失败仅记录日志，不影响导入结果
-func (h *UserHandler) triggerADSyncAfterImport(usernames []string) {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				applogger.Errorf("[AD-SYNC] 导入后批量同步 panic 已恢复: %v", r)
-			}
-		}()
-
-		ctx := context.Background()
-		// 查有 ad_dn 的用户 ID（导入新增的本地用户无 ad_dn 跳过；BatchSyncUsersToAD
-		// 内部也会过滤，这里提前过滤减少传入量）
+// AffectedKeys 是 **username** 列表 → 先 Pluck 转 userID（Pluck 逻辑从被删的直推方法
+// 原样平移），并预过滤 ad_dn 非空（导入新增的本地用户无 ad_dn，
+// 排水器见到 ad_dn 为空会直接判 dead —— 入队侧过滤比排水侧清理更省）。
+//
+// 自开一个短事务：ExcelService 的事务已提交，此处无法复用（见 ImportUser 调用点的
+// 事务外例外说明）。
+func (h *UserHandler) enqueueImportUsersToAD(usernames []string) error {
+	return h.core.GetDB().Transaction(func(tx *gorm.DB) error {
 		var userIDs []string
-		if err := h.core.GetDB().WithContext(ctx).
+		if err := tx.WithContext(context.Background()).
 			Model(&models.User{}).
 			Where("username IN ?", usernames).
 			Where("ad_dn IS NOT NULL AND ad_dn <> ''").
 			Pluck("id", &userIDs).Error; err != nil {
-			applogger.Errorf("[AD-SYNC] 查询导入用户失败: %v", err)
-			return
+			return err
 		}
 		if len(userIDs) == 0 {
-			applogger.Infof("[AD-SYNC] 导入后无待同步用户（ad_dn 非空），跳过")
-			return
+			applogger.Infof("[AD-SYNC] 导入后无待同步用户（ad_dn 非空），跳过入队")
+			return nil
 		}
-
-		applogger.Infof("[AD-SYNC] 导入后批量同步开始，待同步用户 %d 个", len(userIDs))
-		result, err := h.userADSyncService.BatchSyncUsersToAD(ctx, userIDs)
-		if err != nil {
-			applogger.Errorf("[AD-SYNC] 批量同步失败: %v", err)
-			return
-		}
-		applogger.Infof("[AD-SYNC] 导入后批量同步完成: total=%d synced=%d failed=%d",
-			result.Total, result.Synced, result.Failed)
-	}()
+		return addomain.NewADPushEnqueuer().EnqueueUpdateBatch(tx, userIDs)
+	})
 }
 
 // userExcelUploadSizeLimit 用户导入 Excel 上传大小上限(50 MB)，防止超大文件 OOM。

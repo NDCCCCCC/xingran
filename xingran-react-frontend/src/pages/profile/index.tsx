@@ -11,12 +11,15 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Upload,
   Statistic,
   Tag,
   Space,
 } from "antd";
+// Phase 71 (W1)：裸 Input/Select/Input.TextArea → 契约组件。
+// 说明：本页 Input 仍在 antd 导入中——因为 <Input.Password>（成员表达式）不在
+// 本波迁移面（P65/P70 selector 只拦 TextArea 形态的成员表达式），见 SUMMARY 跳过项。
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   UserOutlined,
   EditOutlined,
@@ -30,10 +33,15 @@ import { useAuthStore } from "@/store/authStore";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { LOGIN, DUTY_MY_DUTY } from "@/constants/routes";
 import type { UserProfile } from "@/types";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDateTime, FORMAT_DATE_SHORT } from "@/utils/datetime";
 import { Link } from "react-router-dom";
 
-const { Option } = Select;
+// 性别枚举（形态分类器产物：options 形态，供 AppSelect 使用）
+const GENDER_OPTIONS: { label: string; value: number }[] = [
+  { value: 0, label: "未知" },
+  { value: 1, label: "男" },
+  { value: 2, label: "女" },
+];
 
 const ProfilePage: FC = () => {
   const { message } = App.useApp();
@@ -254,8 +262,8 @@ const ProfilePage: FC = () => {
                     styles={{
                       content: {
                         color: dutyStats.isOnDutyToday
-                          ? "var(--theme-success, #3f8600)"
-                          : "var(--theme-text-tertiary, #707068)",
+                          ? "var(--theme-success)"
+                          : "var(--theme-text-tertiary)",
                       },
                     }}
                   />
@@ -276,13 +284,13 @@ const ProfilePage: FC = () => {
                     <div style={{ fontSize: "20px", fontWeight: 500 }}>
                       {dutyStats.nextDutyDate ? (
                         <Space>
-                          <span>{formatDateTime(dutyStats.nextDutyDate, "MM-DD")}</span>
+                          <span>{formatDateTime(dutyStats.nextDutyDate, FORMAT_DATE_SHORT)}</span>
                           {dutyStats.nextDutyPoolName && (
                             <Tag color="blue">{dutyStats.nextDutyPoolName}</Tag>
                           )}
                         </Space>
                       ) : (
-                        <span style={{ color: "var(--theme-text-tertiary, #707068)" }}>
+                        <span style={{ color: "var(--theme-text-tertiary)" }}>
                           暂无排班
                         </span>
                       )}
@@ -331,7 +339,7 @@ const ProfilePage: FC = () => {
             name="nickname"
             rules={[{ max: 64, message: "昵称长度不能超过64个字符" }]}
           >
-            <Input placeholder="请输入昵称" />
+            <AppInput placeholder="请输入昵称" />
           </Form.Item>
 
           <Form.Item
@@ -339,7 +347,7 @@ const ProfilePage: FC = () => {
             name="email"
             rules={[{ type: "email", message: "请输入有效的邮箱地址" }]}
           >
-            <Input placeholder="请输入邮箱" />
+            <AppInput placeholder="请输入邮箱" />
           </Form.Item>
 
           <Form.Item
@@ -347,15 +355,14 @@ const ProfilePage: FC = () => {
             name="phone"
             rules={[{ max: 32, message: "手机号长度不能超过32个字符" }]}
           >
-            <Input placeholder="请输入手机号" />
+            <AppInput placeholder="请输入手机号" />
           </Form.Item>
 
           <Form.Item label="性别" name="gender" initialValue={0}>
-            <Select onSearch={() => {}}>
-              <Option value={0}>未知</Option>
-              <Option value={1}>男</Option>
-              <Option value={2}>女</Option>
-            </Select>
+            {/* 形态分类器：原 children 形态 <Option> 改写为 options 形态——AppSelect 无条件
+                设 optionFilterProp="label"，children 形态下该 prop 指向不存在的字段（破坏性，
+                PITFALLS 2.2）。3 项固定枚举 < 8，故 showSearch 自动为 false。 */}
+            <AppSelect options={GENDER_OPTIONS} onSearch={() => {}} />
           </Form.Item>
 
           <Form.Item
@@ -363,7 +370,7 @@ const ProfilePage: FC = () => {
             name="remark"
             rules={[{ max: 500, message: "备注长度不能超过500个字符" }]}
           >
-            <Input.TextArea rows={3} placeholder="请输入备注" />
+            <AppTextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>
       </Modal>

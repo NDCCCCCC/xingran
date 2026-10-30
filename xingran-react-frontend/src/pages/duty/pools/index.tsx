@@ -1,12 +1,13 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { FC } from "react";
+// Phase 71 (W5)：裸 Input/Select/TextArea → 契约组件（children 复合子节点保留写法）
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   Button,
   Form,
-  Input,
-  Select,
   Table,
   Modal,
+  Select,
   InputNumber,
   Space,
   Tag,
@@ -26,13 +27,14 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
 import { useQuery } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/usePagination";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import { queryKeys } from "@/lib/queryKeys";
 import { DepartmentTreeSelect } from "@/components/shared";
+import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   getDutyPoolList,
   getDutyPoolStatistics,
@@ -46,6 +48,8 @@ import {
 } from "@/lib/dutyApi";
 import { isFormValidationError } from "@/utils/errorHandler";
 
+// 形态分类器⑤专用：值班成员下拉为「children + 复合子节点」，保留写法，故仍需 antd Select 取 Option。
+// 本文件已无裸 <Select> JSX（Select.Option 为成员表达式，不在 P65 selector 命中面）。
 const { Option } = Select;
 
 const DutyPoolPage: FC = () => {
@@ -67,6 +71,7 @@ const DutyPoolPage: FC = () => {
     sortField === field ? (sortOrder ?? undefined) : undefined;
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DutyPool | null>(null);
 
   // 统计数据
@@ -322,7 +327,7 @@ const DutyPoolPage: FC = () => {
       width: 160,
       sorter: true,
       sortOrder: getColumnSortOrder("createdAt"),
-      render: (date: string) => formatDateTime(date, "YYYY-MM-DD HH:mm"),
+      render: (date: string) => formatDateTime(date, FORMAT_DATETIME_MINUTE),
     },
     {
       title: "操作",
@@ -343,14 +348,11 @@ const DutyPoolPage: FC = () => {
             type="link"
             size="small"
             icon={<DeleteOutlined />}
-            style={{ color: "#ba3630" }}
+            style={{ color: "var(--theme-error)" }}
             onClick={() => {
-              Modal.confirm({
-                title: "确定要删除吗？",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
+              confirmDelete({
+                target: `值班池 ${record.poolName}`,
+                onDelete: () => handleDelete(record.id),
               });
             }}
           >
@@ -372,14 +374,14 @@ const DutyPoolPage: FC = () => {
             <Statistic
               title="启用中"
               value={stats.enabled}
-              styles={{ content: { color: "#3f8600" } }}
+              styles={{ content: { color: "var(--theme-success)" } }}
             />
           </Col>
           <Col span={6}>
             <Statistic
               title="已停用"
               value={stats.disabled}
-              styles={{ content: { color: "#cf1322" } }}
+              styles={{ content: { color: "var(--theme-error)" } }}
             />
           </Col>
           <Col span={6}>
@@ -400,7 +402,7 @@ const DutyPoolPage: FC = () => {
         >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolName" label="值班池名称">
-              <Input
+              <AppInput
                 placeholder="请输入值班池名称"
                 allowClear
                 className="user-form-input"
@@ -416,16 +418,20 @@ const DutyPoolPage: FC = () => {
               />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
+              {/* 形态分类器②：children 写法改写 options；原 antd 单选默认禁搜，
+                  显式 showSearch={false} 保持不变 */}
+              <AppSelect
                 placeholder="请选择状态"
                 allowClear
                 className="user-form-input"
                 style={{ width: 100 }}
+                showSearch={false}
                 onSearch={() => {}}
-              >
-                <Option value={0}>启用</Option>
-                <Option value={1}>停用</Option>
-              </Select>
+                options={[
+                  { value: 0, label: "启用" },
+                  { value: 1, label: "停用" },
+                ]}
+              />
             </Form.Item>
             <Form.Item>
               <Space>
@@ -471,7 +477,15 @@ const DutyPoolPage: FC = () => {
       <Modal
         title={editingRecord ? "编辑值班池" : "新增值班池"}
         open={modalVisible}
-        onOk={handleModalOk}
+        onOk={async () => {
+          setSubmitting(true);
+          try {
+            await handleModalOk();
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        cancelButtonProps={{ disabled: submitting }}
         afterOpenChange={handleModalOpenChange}
         onCancel={() => setModalVisible(false)}
         width={600}
@@ -483,7 +497,7 @@ const DutyPoolPage: FC = () => {
             label="值班池名称"
             rules={[{ required: true, message: "请输入值班池名称" }]}
           >
-            <Input placeholder="请输入值班池名称" />
+            <AppInput allowClear placeholder="请输入值班池名称" />
           </Form.Item>
 
           <Form.Item name="deptId" label="所属部门">
@@ -515,10 +529,14 @@ const DutyPoolPage: FC = () => {
             label="值班成员"
             rules={[{ required: true, message: "请选择值班成员" }]}
           >
-            <Select
+            {/* 形态分类器⑤：children + 复合子节点（账号-昵称-部门拼接），保留写法；
+                mode="multiple" 显式 showSearch（antd 多选默认开搜索，保持不变）；
+                显式 optionFilterProp="label" —— 每个 Option 已带 label 属性 */}
+            <AppSelect
+              allowClear
               mode="multiple"
               showSearch
-              optionFilterProp="children"
+              optionFilterProp="label"
               placeholder={
                 filteredUsers.length === 0
                   ? "请先选择所属部门"
@@ -534,11 +552,12 @@ const DutyPoolPage: FC = () => {
                   {user.username} - {user.nickname} {user.deptName ? `(${user.deptName})` : ""}
                 </Option>
               ))}
-            </Select>
+            </AppSelect>
           </Form.Item>
 
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="请输入描述" />
+          {/* 只读展示语义的备注编辑框：显式 allowClear={false}（原 antd TextArea 无清空能力，保持不变） */}
+          <AppTextArea rows={3} placeholder="请输入描述" allowClear={false} />
           </Form.Item>
         </Form>
       </Modal>

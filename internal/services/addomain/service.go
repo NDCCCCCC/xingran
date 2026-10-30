@@ -4,9 +4,11 @@ package addomain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -108,6 +110,19 @@ type ADDomainService struct {
 	// MemberSync 依赖部门-组映射，已移除
 	Log      *LogService
 	Computer *ComputerService
+
+	// db 直连句柄（P1-3）：AD → sys_user 状态联动 helper 需要它。
+	// 各 sub-service 各自持有 DB，ADDomainService 此前不持有；此处仅供本文件
+	// 底部的联动 helper 使用，不参与任何 sub-service 的构造。
+	db *gorm.DB
+
+	// enableUserFn / disableUserFn：AD 端"启用/禁用用户"写操作的注入点。
+	// 生产路径恒为 nil → 委托 s.User.Enable / s.User.Disable（走 FailoverClient
+	// 账号池写 LDAP + 更新 sys_ad_user.is_enabled）。
+	// 仅测试注入假实现，用于在无真实域控的环境下驱动 P1-3 的联动分支
+	// （AD 写成功 → 停用 sys_user；AD 写失败 → 不联动）。
+	enableUserFn  func(ctx context.Context, config *models.ADConfig, userDN string) error
+	disableUserFn func(ctx context.Context, config *models.ADConfig, userDN string) error
 }
 
 // NewADDomainService creates the AD domain service.
@@ -133,6 +148,7 @@ func NewADDomainService(db *gorm.DB, pool AccountPool, cipher ...PasswordCipher)
 		// MemberSync 已移除 - 依赖部门-组映射
 		Log:      NewLogService(db),
 		Computer: NewComputerService(db),
+		db:       db,
 	}
 }
 
@@ -289,13 +305,55 @@ func (s *ADDomainService) MoveADUser(ctx context.Context, config *models.ADConfi
 }
 
 // EnableADUser 启用AD用户（兼容旧API）
+//
+// P1-3 决策（刻意不做 sys_user 联动）：AD 端启用**不**自动把 sys_user.status
+// 改回 0（不"复活"系统账号）。理由：
+//  1. sys_user.status 可能被管理员**人工**停用（离职、安全冻结、审计冻结），
+//     AD 端的一次启用不应越过人工决策把本地账号解锁；
+//  2. 反向对称性：停用是"AD → 系统"单向收敛的保守策略，恢复系统账号必须走
+//     系统用户管理页显式操作（system.UserService.Update），形成可审计的操作留痕；
+//  3. 避免 AD 端误操作（批量启用脚本）批量解锁本地被停用的账号。
+// 恢复系统账号的正规路径：在「系统管理 → 用户管理」把该账号状态改回"正常"。
 func (s *ADDomainService) EnableADUser(ctx context.Context, config *models.ADConfig, userDN string) error {
+	if s.enableUserFn != nil {
+		return s.enableUserFn(ctx, config, userDN)
+	}
 	return s.User.Enable(ctx, config, userDN)
 }
 
 // DisableADUser 禁用AD用户（兼容旧API）
+//
+// P1-3 修复：AD 端禁用成功后**联动停用 sys_user**（status 0→1），
+// 否则 AD 账号被禁用/离职后，AD 登录仍能通过 auth.go 的本地状态兜底拿到 Token。
+//
+// 顺序：先写 AD（LDAP DisableUser），成功后再联动停用本地账号。
+//   - AD 写失败 → 直接返回错误，**不动** sys_user（AD 侧没禁用就不该停本地，
+//     否则 AD 抖动会误杀本地账号）；
+//   - AD 写成功 → 联动停用；联动失败只记 ERROR 日志、不阻断（AD 侧禁用已生效，
+//     对外语义仍是"禁用成功"，重复调用幂等）。
+//
+// ⚠ 联动走**绕过 service 层**的直接 DB 更新（见 disableSysUsersForADDNs 的注释），
+// 目的正是避免"AD 禁用 → sys_user 停用 → sys_ad_push_queue 入队 disable →
+// 排水器再推 AD"的反向同步循环。
 func (s *ADDomainService) DisableADUser(ctx context.Context, config *models.ADConfig, userDN string) error {
-	return s.User.Disable(ctx, config, userDN)
+	if s.disableUserFn != nil {
+		if err := s.disableUserFn(ctx, config, userDN); err != nil {
+			return err
+		}
+	} else if err := s.User.Disable(ctx, config, userDN); err != nil {
+		return err
+	}
+
+	// P1-3：联动停用 sys_user（best-effort）。
+	disabled, err := disableSysUsersForADDNs(ctx, s.db, config, []string{userDN})
+	if err != nil {
+		applogger.Warnf("[AD用户] AD 端禁用已生效，但联动停用 sys_user 失败 [dn=%s]: %v", userDN, err)
+		return nil
+	}
+	if disabled > 0 {
+		applogger.Infof("[AD用户] AD 端禁用已生效，联动停用 %d 个 sys_user 账号 [dn=%s]", disabled, userDN)
+	}
+	return nil
 }
 
 // GetADUserIds 获取AD用户ID列表（用于全选功能）
@@ -307,4 +365,150 @@ func (s *ADDomainService) GetADUserIds(ctx context.Context, req *ADUserListReque
 		Username:        req.Username,
 		IsEnabled:       req.IsEnabled,
 	})
+}
+
+// ==================== P1-3：AD → sys_user 状态联动 ====================
+//
+// 背景（P1-3）：AD 侧禁用/删除此前**只写 AD**，从不联动 sys_user.status，
+// 而登录鉴权（internal/api/v1/auth.go:229）在发 Token 前只查 sys_user.Status，
+// 于是"AD 已禁用/已离职删除"的账号在系统里照样能登录。
+//
+// 本节提供两条链路的共用实现：
+//   - DisableADUser（service.go）：AD 端手动禁用 → 停用本地账号
+//   - cleanupVanishedUsers（shadow_cleanup_service.go）：AD 端对象消失 → 停用本地账号
+
+// sysUserADRefRow sys_user 的 AD 关联投影（只取联动判定需要的列）。
+//
+// ⚠ 用独立结构体而非 models.User：models.User 虽在迁移 219 后含 AdConfigID 字段
+// （internal/models/user.go:41，列名 ad_config_id），但**旧库/测试夹具的 sys_user
+// 可能没有该列**（createUserTable 夹具即无），用 models.User 整行 SELECT 会直接
+// SQL 报错。此处按"列存在与否"动态选择查询列。
+type sysUserADRefRow struct {
+	ID string
+	// AdDn → ad_dn（sys_user 上的 AD 用户完整 DN）
+	AdDn *string
+	// AdConfigID → ad_config_id（迁移 219 起存在于 sys_user；列不存在时恒为 nil）
+	AdConfigID *string
+}
+
+// sysUserHasADConfigColumn 探测 sys_user 是否存在 ad_config_id 列。
+//
+// 现状：迁移 219（internal/core/db/migrations/migration_219_user_ad_sync_fields.go）
+// 已给 sys_user 补 ad_config_id 列并建索引，生产库恒为 true；
+// 但旧库/测试夹具可能没有该列，故此处做运行时探测而不是写死。
+func sysUserHasADConfigColumn(db *gorm.DB) bool {
+	if db == nil {
+		return false
+	}
+	return db.Migrator().HasColumn(&models.User{}, "ad_config_id")
+}
+
+// matchSysUserIDsByADDN 按 AD 端 DN 集合找出对应的 sys_user 行 ID。
+//
+// 匹配规则（按优先级）：
+//  1. **首选**：sys_user.ad_config_id = config.ID **且** ad_dn 归一化后 == DN 归一化
+//  2. **兜底**：历史数据 ad_config_id 为空（NULL/空串）时，只按 ad_dn 归一化匹配
+//  3. ad_config_id 非空但**不等于** config.ID → 不命中（避免跨配置误伤）
+//
+// ⚠ 当 sys_user 表**没有** ad_config_id 列时（当前 schema 即如此），
+//   规则 1/3 无从执行，退化为"只按 ad_dn 归一化匹配"（即规则 2 的口径）。
+//   这是安全的：AD 的完整 DN 自带域路径，同一个 DN 不可能同时归属两个配置，
+//   因此纯 DN 精确匹配不会跨配置误伤。
+//
+// DN 比较一律走 addomain.NormalizeDN（dn_util.go）—— 唯一真实源，禁在此处
+// 手写归一化（大小写/空格差异会让 AD 回写的 DN 与本地存量 ad_dn 比不相等）。
+//
+// 只返回**活行**（deleted_at IS NULL）：软删账号不在登录态考量范围内。
+func matchSysUserIDsByADDN(ctx context.Context, db *gorm.DB, config *models.ADConfig, dns []string) ([]string, error) {
+	if db == nil || config == nil || len(dns) == 0 {
+		return nil, nil
+	}
+
+	targets := make(map[string]bool, len(dns))
+	for _, dn := range dns {
+		if norm := NormalizeDN(dn); norm != "" {
+			targets[norm] = true
+		}
+	}
+	if len(targets) == 0 {
+		return nil, nil
+	}
+
+	hasConfigCol := sysUserHasADConfigColumn(db)
+	selectCols := "id, ad_dn"
+	if hasConfigCol {
+		selectCols = "id, ad_dn, ad_config_id"
+	}
+
+	var rows []sysUserADRefRow
+	if err := db.WithContext(ctx).
+		Table("sys_user").
+		Select(selectCols).
+		Where("deleted_at IS NULL").
+		Where("ad_dn IS NOT NULL AND ad_dn <> ''").
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("查询 AD 关联的 sys_user 失败: %w", err)
+	}
+
+	var ids []string
+	for i := range rows {
+		row := &rows[i]
+		if row.AdDn == nil || *row.AdDn == "" {
+			continue
+		}
+		if !targets[NormalizeDN(*row.AdDn)] {
+			continue
+		}
+		if hasConfigCol && row.AdConfigID != nil && *row.AdConfigID != "" && *row.AdConfigID != config.ID {
+			// 规则 3：归属别的 AD 配置 → 不动（跨配置误伤防护）
+			continue
+		}
+		ids = append(ids, row.ID)
+	}
+	return ids, nil
+}
+
+// disableSysUsersForADDNs 按 AD 端 DN 集合停用对应的 sys_user 账号，返回实际停用行数。
+//
+// ⚠⚠ 刻意**绕过 service 层**（不走 system.UserService.Update）：
+//
+//	system.UserService.Update 在 status 由 0 变 1 时会调用
+//	ADPushEnqueuer.EnqueueDisableOnStatusTransition 入队 sys_ad_push_queue，
+//	排水器随后会把 disable 动作再推回 AD 端 —— 形成
+//	「AD 禁用 → sys_user 停用 → 入队 disable → 排水器再推 AD」的**反向同步循环**。
+//	这里直接用 GORM 更新 status，**不入队**，从根上切断该循环：
+//	AD 是状态的单向权威源，本地只做收敛。
+//
+// ⚠ 停用是**软性状态变更**：只改 status（0 正常 → 1 停用），
+//   **不改 deleted_at、不删行**（账号行保留，管理员可随时人工恢复）。
+//
+// ⚠ 只更新当前仍为"启用"的行（status = 0）：已停用的行保持不动，重复调用幂等。
+//
+// ⚠ 缓存失效（已知残余风险，刻意不处理）：
+//	addomain 包内没有 CacheProvider 注入路径（构造函数无 cache 参数），
+//	且 internal/services/system 与 internal/core 都 import addomain，
+//	addomain 反向 import 它们会形成**循环依赖** —— 故本包内无法安全失效
+//	menu:user:* 菜单缓存，且不为本缺陷引入新的跨包依赖。
+//	风险可控的依据：登录鉴权链路（internal/api/v1/auth.go:229）**直查 DB**
+//	（不走缓存），故 DB 状态变更后账号立即无法登录；受影响的只是已登录
+//	会话的菜单/权限缓存过期（一个 TTL 周期内自愈），不影响鉴权。
+//	DB 是权威源。
+func disableSysUsersForADDNs(ctx context.Context, db *gorm.DB, config *models.ADConfig, dns []string) (int64, error) {
+	ids, err := matchSysUserIDsByADDN(ctx, db, config, dns)
+	if err != nil {
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	// 绕过 service 层的直接 DB 更新（不入 sys_ad_push_queue，见上方注释）
+	res := db.WithContext(ctx).
+		Model(&models.User{}).
+		Where("id IN ? AND status = ?", ids, models.UserStatusEnabled).
+		Update("status", models.UserStatusDisabled)
+	if res.Error != nil {
+		return 0, fmt.Errorf("停用 sys_user 账号失败: %w", res.Error)
+	}
+	return res.RowsAffected, nil
 }
