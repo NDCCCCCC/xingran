@@ -15,14 +15,7 @@ import type { FC, Key } from "react";
 import type { FormInstance } from "antd";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {
-  Button,
-  Space,
-  Card,
-  Alert,
-  Radio,
-  Layout,
-} from "antd";
+import { Button, Space, Card, Alert, Radio, Layout } from "antd";
 import {
   PlusOutlined,
   CheckCircleOutlined,
@@ -243,9 +236,7 @@ const RoomDeviceManagement: FC = () => {
           extraFilters={extraFilters}
           rowActions={rowActions}
           batchDelete={
-            permDelete.visible
-              ? { onDelete: handleBatchDelete, target: "机房设备" }
-              : undefined
+            permDelete.visible ? { onDelete: handleBatchDelete, target: "机房设备" } : undefined
           }
           toolbar={
             <Space>

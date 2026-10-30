@@ -206,7 +206,9 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
                 onClick={() =>
                   confirmDelete({
                     target: `该工单（${record.title || record.id}）`,
-                    onDelete: async () => { await handleDelete(record.id); },
+                    onDelete: async () => {
+                      await handleDelete(record.id);
+                    },
                   })
                 }
               >

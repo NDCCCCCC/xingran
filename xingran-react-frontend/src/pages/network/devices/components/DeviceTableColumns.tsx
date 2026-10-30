@@ -37,9 +37,7 @@ export interface DeviceTableColumnsProps {
 }
 
 /** 列 sorter:true 由 PageTable/useTableManager 排序管线承接；原手工 sortOrder 视觉字段随契约删除 */
-export function getDeviceTableColumns(
-  props: DeviceTableColumnsProps
-): ColumnsType<NetworkDevice> {
+export function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<NetworkDevice> {
   const { navigate, getDeviceTypeText } = props;
 
   return [

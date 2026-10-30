@@ -1,17 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { FC } from "react";
-import {
-  Card,
-  Table,
-  Button,
-  Space,
-  Form,
-  Radio,
-  Switch,
-  TreeSelect,
-  Modal,
-  Tag,
-} from "antd";
+import { Card, Table, Button, Space, Form, Radio, Switch, TreeSelect, Modal, Tag } from "antd";
 // Phase 71 (W2)：裸 Input → AppInput（搜索框带 onPressEnter，清空不误触搜索——见下注记）
 import { AppInput } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
@@ -47,7 +36,13 @@ import { PERMISSION_CODES } from "@/constants/permissionCodes";
 function toTreeData(
   depts: SimpleDept[],
   disabledIds: ReadonlySet<string>
-): { title: string; value: string; key: string; disabled: boolean; children?: ReturnType<typeof toTreeData> }[] {
+): {
+  title: string;
+  value: string;
+  key: string;
+  disabled: boolean;
+  children?: ReturnType<typeof toTreeData>;
+}[] {
   return depts.map((d) => ({
     title: d.deptName,
     value: d.id,
@@ -142,7 +137,13 @@ const ManagerOrgsPage: FC = () => {
         enabled: isManagerEnabled(record.enabled),
       });
     } else {
-      editForm.setFieldsValue({ orgName: undefined, deptId: undefined, parentOrgId: undefined, orgType: MANAGER_ORG_TYPE.MIDDLE_BRANCH, enabled: true });
+      editForm.setFieldsValue({
+        orgName: undefined,
+        deptId: undefined,
+        parentOrgId: undefined,
+        orgType: MANAGER_ORG_TYPE.MIDDLE_BRANCH,
+        enabled: true,
+      });
     }
   };
 
@@ -233,7 +234,13 @@ const ManagerOrgsPage: FC = () => {
 
   const columns: ColumnsType<ManagerOrg> = [
     { title: "机构名称", dataIndex: "orgName", key: "orgName", width: 180 },
-    { title: "对应部门", dataIndex: "deptName", key: "deptName", width: 180, render: (v: string | undefined, r) => v ?? r.deptId },
+    {
+      title: "对应部门",
+      dataIndex: "deptName",
+      key: "deptName",
+      width: 180,
+      render: (v: string | undefined, r) => v ?? r.deptId,
+    },
     {
       title: "上级机构",
       dataIndex: "parentOrgName",
@@ -312,7 +319,11 @@ const ManagerOrgsPage: FC = () => {
         <Form form={searchForm} layout="inline">
           <Form.Item name="orgName" label="机构名称">
             {/* 搜索框：清空只改受控值，不触发 onPressEnter（该回调仅回车时进搜索） */}
-            <AppInput placeholder="请输入机构名称" style={{ width: 180 }} onPressEnter={handleSearch} />
+            <AppInput
+              placeholder="请输入机构名称"
+              style={{ width: 180 }}
+              onPressEnter={handleSearch}
+            />
           </Form.Item>
           <Form.Item>
             <Space>

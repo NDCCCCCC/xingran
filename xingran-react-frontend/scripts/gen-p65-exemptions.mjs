@@ -55,7 +55,15 @@ writeFileSync(scanConfigPath, scanConfigText, "utf8");
 
 const res = spawnSync(
   "npx",
-  ["eslint", "src", "--config", "eslint.config.p65-scan.js", "--format", "json", "--no-error-on-unmatched-pattern"],
+  [
+    "eslint",
+    "src",
+    "--config",
+    "eslint.config.p65-scan.js",
+    "--format",
+    "json",
+    "--no-error-on-unmatched-pattern",
+  ],
   {
     cwd: root,
     shell: process.platform === "win32",
@@ -94,14 +102,14 @@ try {
 const hitFiles = [];
 for (const r of results) {
   const has = r.messages.some(
-    (m) => m.ruleId === "no-restricted-syntax" && P65_MESSAGE_MARKS.some((k) => (m.message ?? "").includes(k))
+    (m) =>
+      m.ruleId === "no-restricted-syntax" &&
+      P65_MESSAGE_MARKS.some((k) => (m.message ?? "").includes(k))
   );
   if (has) hitFiles.push(r.filePath);
 }
 
-const rel = hitFiles
-  .map((f) => path.relative(root, f).replaceAll("\\", "/"))
-  .sort();
+const rel = hitFiles.map((f) => path.relative(root, f).replaceAll("\\", "/")).sort();
 
 console.log(`命中 Phase 65 selector 的文件数: ${rel.length}`);
 for (const f of rel) console.log("  " + f);

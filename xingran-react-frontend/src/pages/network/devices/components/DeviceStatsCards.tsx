@@ -27,11 +27,7 @@ const DeviceStatsCards: React.FC<DeviceStatsCardsProps> = ({ statistics }) => {
     <Row gutter={16} style={{ marginBottom: 16 }}>
       <Col span={6}>
         <Card>
-          <Statistic
-            title="设备总数"
-            value={statistics.total}
-            prefix={<CloudServerOutlined />}
-          />
+          <Statistic title="设备总数" value={statistics.total} prefix={<CloudServerOutlined />} />
         </Card>
       </Col>
       <Col span={6}>

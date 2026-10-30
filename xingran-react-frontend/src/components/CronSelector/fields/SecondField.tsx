@@ -65,12 +65,18 @@ const SecondField: FC<SecondFieldProps> = ({ value, onChange }) => {
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
                 onChange={(cycleInterval: unknown) =>
-                  onChange({ ...value, periodType: "cycle", cycleInterval: cycleInterval as number })
+                  onChange({
+                    ...value,
+                    periodType: "cycle",
+                    cycleInterval: cycleInterval as number,
+                  })
                 }
-                options={Array.from({ length: Math.min(20, range.max) }, (_, i) => i + 1).map((v) => ({
-                  value: v,
-                  label: v,
-                }))}
+                options={Array.from({ length: Math.min(20, range.max) }, (_, i) => i + 1).map(
+                  (v) => ({
+                    value: v,
+                    label: v,
+                  })
+                )}
               />
               <span>秒</span>
             </Space>

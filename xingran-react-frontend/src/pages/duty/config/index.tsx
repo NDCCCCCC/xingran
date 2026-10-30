@@ -198,7 +198,8 @@ const DutyConfigPage: FC = () => {
             name="beforeReminderMinutes"
             tooltip="设置提前多少分钟提醒，留空则表示当天提醒"
           >
-            <AppInput allowClear
+            <AppInput
+              allowClear
               type="number"
               placeholder="留空表示当天提醒"
               suffix="分钟"

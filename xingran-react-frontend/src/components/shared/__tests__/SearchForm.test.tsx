@@ -148,9 +148,7 @@ describe("components/shared/SearchForm（T3）", () => {
   it("searchChildren 逃生口渲染且其 Form.Item 值进入表单（经暴露的 form 实例接线）", async () => {
     let formInstance: FormInstance | undefined;
     render(
-      <Harness
-        formRef={(f) => (formInstance = f)}
-      >
+      <Harness formRef={(f) => (formInstance = f)}>
         <Form.Item name="deptId" label="部门">
           <input data-testid="dept-input" />
         </Form.Item>
@@ -172,7 +170,11 @@ describe("components/shared/SearchForm（T3）", () => {
 describe("components/shared/SearchForm textarea 字段（Phase 70 T3）", () => {
   it("textarea→AppTextArea DOM：渲染 textarea，输入值后带 clear icon（SC2 清空能力）", () => {
     const { container } = render(
-      <Harness fields={[{ type: "textarea", name: "remark", label: "备注", placeholder: "模糊匹配备注", rows: 3 }]} />
+      <Harness
+        fields={[
+          { type: "textarea", name: "remark", label: "备注", placeholder: "模糊匹配备注", rows: 3 },
+        ]}
+      />
     );
     const textarea = container.querySelector("textarea#remark") as HTMLTextAreaElement;
     expect(textarea).not.toBeNull();
@@ -205,10 +207,7 @@ describe("components/shared/SearchForm textarea 字段（Phase 70 T3）", () => 
   it("textarea 回车不触发 onSearch（多行回车必须换行，不接 onPressEnter）", () => {
     const onSearch = vi.fn();
     const { container } = render(
-      <Harness
-        fields={[{ type: "textarea", name: "remark", label: "备注" }]}
-        onSearch={onSearch}
-      />
+      <Harness fields={[{ type: "textarea", name: "remark", label: "备注" }]} onSearch={onSearch} />
     );
     const textarea = container.querySelector("textarea#remark") as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: "abc" } });

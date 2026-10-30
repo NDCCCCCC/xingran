@@ -178,11 +178,7 @@ const ADComputerPage: FC = () => {
 
   // 登录历史加载(quick 261016):普通 async 函数,由打开 Drawer/翻页显式调用,
   // 不用带对象依赖的 useEffect(防死循环);后端固定 login_time DESC,无 server sorter
-  const fetchLoginHistory = async (
-    computerId: string,
-    current: number,
-    pageSize: number
-  ) => {
+  const fetchLoginHistory = async (computerId: string, current: number, pageSize: number) => {
     setHistoryLoading(true);
     try {
       const res = await getADComputerLoginHistory({
@@ -558,7 +554,9 @@ const ADComputerPage: FC = () => {
             </Space>
           </div>
           {commonOUs.length === 0 && (
-            <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "40px" }}>
+            <div
+              style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "40px" }}
+            >
               暂无常用OU配置
             </div>
           )}
@@ -595,8 +593,7 @@ const ADComputerPage: FC = () => {
               dataIndex: "loginTime",
               key: "loginTime",
               width: 170,
-              render: (text: string) =>
-                text ? new Date(text).toLocaleString("zh-CN") : "-",
+              render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
             },
             {
               title: "事件类型",
@@ -630,8 +627,7 @@ const ADComputerPage: FC = () => {
               dataIndex: "detectedAt",
               key: "detectedAt",
               width: 170,
-              render: (text: string) =>
-                text ? new Date(text).toLocaleString("zh-CN") : "-",
+              render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
             },
           ]}
         />

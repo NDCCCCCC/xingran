@@ -77,19 +77,18 @@ export const getRoomDeviceColumns = (): ColumnsType<RoomDevice> => [
   }),
 ];
 
-export const getRoomDeviceRowActions = (
-  openModal: (record?: RoomDevice) => void,
-  handleDelete: (id: string) => Promise<void>
-) => (record: RoomDevice) => [
-  {
-    key: "edit",
-    label: "编辑",
-    icon: <EditOutlined />,
-    onClick: () => openModal(record),
-    permission: PERMISSION_CODES.opsRoomDevice.edit,
-  },
-  createDeleteAction(record.id, handleDelete, {
-    target: `机房设备 ${record.name}`,
-    permission: PERMISSION_CODES.opsRoomDevice.delete,
-  }),
-];
+export const getRoomDeviceRowActions =
+  (openModal: (record?: RoomDevice) => void, handleDelete: (id: string) => Promise<void>) =>
+  (record: RoomDevice) => [
+    {
+      key: "edit",
+      label: "编辑",
+      icon: <EditOutlined />,
+      onClick: () => openModal(record),
+      permission: PERMISSION_CODES.opsRoomDevice.edit,
+    },
+    createDeleteAction(record.id, handleDelete, {
+      target: `机房设备 ${record.name}`,
+      permission: PERMISSION_CODES.opsRoomDevice.delete,
+    }),
+  ];

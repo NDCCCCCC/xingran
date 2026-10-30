@@ -10,7 +10,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-import {  } from "@/test/utils/createApiMock";
+import {} from "@/test/utils/createApiMock";
 import PostManagement from "../index";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
 
@@ -59,7 +59,16 @@ describe("PostManagement 页面渲染(真实 hooks)", () => {
   it("renders pagination showTotal 共 N 条 / M 页", async () => {
     const api = createApiMock("/system/posts/list");
     api.endpoint.mockResolvedValue({
-      data: { list: Array.from({ length: 10 }, (_, i) => ({ id: `p${i}`, postName: `岗位${i}`, postCode: `C${i}`, postSort: i, status: 0 })), total: 25 },
+      data: {
+        list: Array.from({ length: 10 }, (_, i) => ({
+          id: `p${i}`,
+          postName: `岗位${i}`,
+          postCode: `C${i}`,
+          postSort: i,
+          status: 0,
+        })),
+        total: 25,
+      },
     });
     const { container } = renderWithProviders(<PostManagement />);
     await waitFor(() => {

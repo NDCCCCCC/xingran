@@ -33,7 +33,9 @@ describe("components/dashboard/widgets/WidgetRenderer", () => {
 
   it("未知 widget type → 渲染占位 div", () => {
     render(
-      <WidgetRenderer widget={{ id: "w1", type: "unknown-type", title: "X", display: {} } as unknown} />
+      <WidgetRenderer
+        widget={{ id: "w1", type: "unknown-type", title: "X", display: {} } as unknown}
+      />
     );
     expect(screen.getByText(/未知的Widget类型/)).toBeInTheDocument();
     expect(screen.getByText(/unknown-type/)).toBeInTheDocument();

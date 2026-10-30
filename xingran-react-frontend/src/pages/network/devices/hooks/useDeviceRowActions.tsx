@@ -21,12 +21,7 @@
 
 import { useCallback } from "react";
 import { Button } from "antd";
-import {
-  CloudUploadOutlined,
-  EditOutlined,
-  EyeOutlined,
-  HistoryOutlined,
-} from "@ant-design/icons";
+import { CloudUploadOutlined, EditOutlined, EyeOutlined, HistoryOutlined } from "@ant-design/icons";
 import type { NetworkDevice } from "@/types";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import type { ActionButton } from "@/components/shared/ActionButtons";
@@ -74,10 +69,7 @@ export interface UseDeviceRowActionsParams extends UseDeviceRowActionsContext {
  *   若直接按动作级码门控，会对**所有用户**（含超管）隐藏编辑/删除按钮 ——
  *   那是功能回归，不是权限修复。待后端播种 F 型按钮后，第 1 条自然生效。
  */
-export function resolveDeviceActionPerm(
-  permissions: string[],
-  actionCode: string
-): string {
+export function resolveDeviceActionPerm(permissions: string[], actionCode: string): string {
   const hasActionLevelPerm = permissions.some((perm) =>
     perm.startsWith(`${DEVICE_PERMISSION_CODES.page}:`)
   );
@@ -88,9 +80,7 @@ export interface UseDeviceRowActionsReturn {
   buildRowActions: (record: NetworkDevice, loadData: () => void) => ActionButton[];
 }
 
-export function useDeviceRowActions(
-  params: UseDeviceRowActionsParams
-): UseDeviceRowActionsReturn {
+export function useDeviceRowActions(params: UseDeviceRowActionsParams): UseDeviceRowActionsReturn {
   const {
     collectingDeviceId,
     canViewMACHistory,
@@ -116,10 +106,7 @@ export function useDeviceRowActions(
   // 渲染成 disabled + 提示（入口不消失），与 Phase 78 语义一致。
   const readyPermissions = permGate.state === "ready" ? menuPermissions : [];
   const editPerm = resolveDeviceActionPerm(readyPermissions, DEVICE_PERMISSION_CODES.edit);
-  const removePerm = resolveDeviceActionPerm(
-    readyPermissions,
-    DEVICE_PERMISSION_CODES.remove
-  );
+  const removePerm = resolveDeviceActionPerm(readyPermissions, DEVICE_PERMISSION_CODES.remove);
   // Phase 86 W3（扩面）：采集端口是对设备连接的**写**操作（落库采集结果），
   // networkDevice 码组无独立 `collect` 键 → 就近归 `edit`（本 phase 零新增码），
   // 且与 edit 共用同一套降级解析结果（窗口期语义一致）。

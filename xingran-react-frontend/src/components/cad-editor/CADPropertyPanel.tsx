@@ -201,7 +201,9 @@ export function CADPropertyPanel({
             />
           );
         }
-        return <AppInput key={String(field.name)} placeholder={field.placeholder} {...commonProps} />;
+        return (
+          <AppInput key={String(field.name)} placeholder={field.placeholder} {...commonProps} />
+        );
 
       case "number":
         return (
@@ -215,7 +217,14 @@ export function CADPropertyPanel({
         );
 
       case "select":
-        return <AppSelect key={String(field.name)} showSearch={false} options={field.options} {...commonProps} />;
+        return (
+          <AppSelect
+            key={String(field.name)}
+            showSearch={false}
+            options={field.options}
+            {...commonProps}
+          />
+        );
 
       case "color":
         return <ColorPicker key={String(field.name)} showText disabled={readOnly} format="hex" />;

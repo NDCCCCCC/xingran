@@ -34,12 +34,7 @@ export const RoomDeviceModal: FC<RoomDeviceModalProps> = ({
       onCancel={onCancel}
       width={700}
     >
-      <Form
-        form={form}
-        layout="horizontal"
-        labelCol={{ span: 5 }}
-        wrapperCol={{ span: 19 }}
-      >
+      <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
         <Form.Item
           name="roomId"
           label="所属机房"

@@ -358,9 +358,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                               marginBottom: 4,
                             }}
                           >
-                            <span
-                              style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}
-                            >
+                            <span style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>
                               {index + 1}. {path.length > 30 ? `${path.slice(0, 30)}...` : path}
                             </span>
                             <span style={{ fontSize: 12, fontWeight: "bold" }}>{count} 次</span>

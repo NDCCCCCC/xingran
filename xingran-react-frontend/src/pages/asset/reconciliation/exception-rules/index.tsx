@@ -21,19 +21,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import {
-  Table,
-  Form,
-  Button,
-  Space,
-  Tag,
-  Card,
-  App,
-  Drawer,
-  Statistic,
-  Row,
-  Col,
-} from "antd";
+import { Table, Form, Button, Space, Tag, Card, App, Drawer, Statistic, Row, Col } from "antd";
 import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -262,7 +250,9 @@ const ExceptionRulesPage: React.FC = () => {
           <Space size={4}>
             <Tag color={record.scopeType === "global" ? "green" : "orange"}>{record.scopeType}</Tag>
             {record.scopeId && (
-              <span style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>{record.scopeId.slice(0, 8)}...</span>
+              <span style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>
+                {record.scopeId.slice(0, 8)}...
+              </span>
             )}
           </Space>
         ),
@@ -324,7 +314,9 @@ const ExceptionRulesPage: React.FC = () => {
                   target: `该异常处置规则（${record.name}）`,
                   // 业务语义说明，不得丢失（D-R3-A4-03）
                   extra: "软删除,历史审计链不断(D-R3-A4-03)",
-                  onDelete: async () => { await deleteMutation.mutateAsync(record.id); },
+                  onDelete: async () => {
+                    await deleteMutation.mutateAsync(record.id);
+                  },
                 })
               }
             >

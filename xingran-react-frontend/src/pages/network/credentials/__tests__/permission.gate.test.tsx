@@ -156,9 +156,9 @@ describe("设备凭据页操作级权限门控（Phase 86 W3）", () => {
     // 导出按钮在 <NetworkExport> 组件内部（未就绪 → 组件仍渲染，但被 aria-disabled 包裹）
     const exportEntry = screen.getByRole("button", { name: /导出/ });
     expect(exportEntry.closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(
-      exportEntry.closest('[aria-disabled="true"]')?.getAttribute("title") ?? ""
-    ).toContain("权限");
+    expect(exportEntry.closest('[aria-disabled="true"]')?.getAttribute("title") ?? "").toContain(
+      "权限"
+    );
 
     // 行操作：未就绪 → 入口仍在 DOM（「操作」下拉存在），但菜单项全部 disabled + 带提示
     const menu = await openRowActionsMenu();

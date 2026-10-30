@@ -32,7 +32,7 @@ vi.mock("@/store/settingsStore", () => ({
         theme: { mode: prefsState.mode },
         layout: { density: prefsState.density },
       },
-    }),
+    })
   ),
 }));
 
@@ -50,7 +50,7 @@ const mountBridge = () =>
   render(
     <AntdThemeBridge>
       <TokenProbe />
-    </AntdThemeBridge>,
+    </AntdThemeBridge>
   );
 
 describe("design-system/components/AntdThemeBridge useMemo 依赖覆盖（C15）", () => {
@@ -69,7 +69,7 @@ describe("design-system/components/AntdThemeBridge useMemo 依赖覆盖（C15）
     rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     const after = seenTokens[seenTokens.length - 1];
     expect(seenTokens.length).toBeGreaterThan(1);
@@ -85,7 +85,7 @@ describe("design-system/components/AntdThemeBridge useMemo 依赖覆盖（C15）
     rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     const after = seenTokens[seenTokens.length - 1];
     // compactAlgorithm 叠加必须触发 antdThemeConfig 重算 → token 新对象
@@ -93,15 +93,14 @@ describe("design-system/components/AntdThemeBridge useMemo 依赖覆盖（C15）
   });
 
   it("静态兜底：useMemo deps 数组覆盖全部外部状态 { themeMode, density }", () => {
-    const srcPath = resolve(
-      dirname(fileURLToPath(import.meta.url)),
-      "..",
-      "AntdThemeBridge.tsx",
-    );
+    const srcPath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "AntdThemeBridge.tsx");
     const src = readFileSync(srcPath, "utf-8");
     const m = src.match(/antdThemeConfig\s*=\s*useMemo[\s\S]*?\},\s*\[([^\]]*)\]\)/);
     expect(m, "未找到 antdThemeConfig 的 useMemo deps 数组").toBeTruthy();
-    const deps = m![1].split(",").map((d) => d.trim()).filter(Boolean);
+    const deps = m![1]
+      .split(",")
+      .map((d) => d.trim())
+      .filter(Boolean);
     expect(deps).toContain("themeMode");
     expect(deps).toContain("density");
     // deps 不允许出现 mock 外的未知输入源（防漂移提示，非硬性白名单）
@@ -131,7 +130,7 @@ describe("Phase 89 · STYLE-01 明暗色板", () => {
     return render(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
   };
 
@@ -140,7 +139,7 @@ describe("Phase 89 · STYLE-01 明暗色板", () => {
     rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     expect(tokenOf().colorBgContainer).not.toBe("#FFFFFF");
     expect(tokenOf().colorBgContainer.toLowerCase()).toBe("#1a2e1f");
@@ -151,7 +150,7 @@ describe("Phase 89 · STYLE-01 明暗色板", () => {
     rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     expect(tokenOf().colorBorder.toLowerCase()).not.toBe("#dbd7ce");
   });
@@ -161,7 +160,7 @@ describe("Phase 89 · STYLE-01 明暗色板", () => {
     rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     // 组件级三项已删（X-1b），实际回落值可能为 undefined → not.toBe 口径
     expect(tokenOf().Select.colorBgContainer?.toLowerCase()).not.toBe("#ffffff");
@@ -172,7 +171,7 @@ describe("Phase 89 · STYLE-01 明暗色板", () => {
     rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     const t = tokenOf();
     // 容忍 undefined（antd prepareComponentToken 回落行为），锁死「不得为白」
@@ -185,7 +184,7 @@ describe("Phase 89 · STYLE-01 明暗色板", () => {
     rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     expect(tokenOf().colorBgContainer.toLowerCase()).toBe("#ffffff");
     expect(tokenOf().colorBorder.toLowerCase()).toBe("#dbd7ce");
@@ -196,7 +195,7 @@ describe("Phase 89 · STYLE-01 明暗色板", () => {
     l.rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     expect(tokenOf().colorBgBase.toLowerCase()).toBe("#f0ece3");
 
@@ -204,12 +203,12 @@ describe("Phase 89 · STYLE-01 明暗色板", () => {
     const d = render(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     d.rerender(
       <AntdThemeBridge>
         <TokenProbe />
-      </AntdThemeBridge>,
+      </AntdThemeBridge>
     );
     expect(tokenOf().colorBgBase.toLowerCase()).toBe("#0f2e1b");
   });

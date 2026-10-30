@@ -284,7 +284,11 @@ const DeviceDiscoveryPage: FC = () => {
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={4}>
               <Card>
-                <Statistic title="任务总数" value={statistics.total} prefix={<CloudServerOutlined />} />
+                <Statistic
+                  title="任务总数"
+                  value={statistics.total}
+                  prefix={<CloudServerOutlined />}
+                />
               </Card>
             </Col>
             <Col span={4}>

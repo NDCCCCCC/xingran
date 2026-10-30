@@ -397,11 +397,19 @@ describe("phase-64 UAT gap tokens in AntdThemeBridge (COMP-02/03/04)", () => {
     expect(block).toContain("headerBg: board.headerBg");
     expect(block).toContain("headerColor: board.fg");
     expect(block).toContain("borderColor: board.border");
-    expect(block).toContain("headerSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
-    expect(block).toContain("headerFilterHoverBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
-    expect(block).toContain("fixedHeaderSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
+    expect(block).toContain(
+      "headerSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg"
+    );
+    expect(block).toContain(
+      "headerFilterHoverBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg"
+    );
+    expect(block).toContain(
+      "fixedHeaderSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg"
+    );
     expect(block).toContain("rowSelectedBg: board.headerBg");
-    expect(block).toContain("rowSelectedHoverBg: isDark ? xingranBrand.dark.active : xingranBrand.cream.zebraBg");
+    expect(block).toContain(
+      "rowSelectedHoverBg: isDark ? xingranBrand.dark.active : xingranBrand.cream.zebraBg"
+    );
   });
 
   it("QA-02 hygiene: Menu.dark* tokens read from xingranBrand, not string literals", () => {

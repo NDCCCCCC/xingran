@@ -1,6 +1,20 @@
 import type { FC } from "react";
 // Input 仍需保留：Input.Password 为成员表达式形态，不在 Phase 65 selector 命中面（有意不拦）
-import { Table, Button, Space, Modal, Form, Input, Tag, Card, Row, Col, Statistic, Alert, App } from "antd";
+import {
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Tag,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Alert,
+  App,
+} from "antd";
 // Phase 71 (W4)：裸 Input/Select/TextArea → 契约组件（Select 全部 children 形态改写为 options）
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
@@ -415,7 +429,11 @@ const CredentialManagement: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="searchCredentialName" label="凭证名称">
-              <AppInput placeholder="请输入凭证名称" className="user-form-input" style={{ width: 150 }} />
+              <AppInput
+                placeholder="请输入凭证名称"
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="searchProtocolType" label="协议类型">
               {/* 形态分类器①/②：children 写法改写 options；协议类型固定 2 项 → 显式禁搜 */}
@@ -430,13 +448,29 @@ const CredentialManagement: FC = () => {
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                  aria-label="搜索"
+                  title="搜索"
+                >
                   查询
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleReset}
+                  aria-label="重置"
+                  title="重置"
+                >
                   重置
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleRefresh}
+                  aria-label="刷新"
+                  title="刷新"
+                >
                   刷新
                 </Button>
               </Space>

@@ -68,11 +68,7 @@ export type { ConfirmDeleteOptions } from "./confirmDelete";
 
 // Phase 66：PageTable（新列表页唯一合法列表数据层入口）
 export { default as PageTable } from "./PageTable";
-export type {
-  PageTableProps,
-  PageTableRequest,
-  PageTableRenderContext,
-} from "./PageTable";
+export type { PageTableProps, PageTableRequest, PageTableRenderContext } from "./PageTable";
 
 // Phase 66：SearchForm（schema 驱动搜索区）
 export { SearchForm } from "./SearchForm";
@@ -85,10 +81,5 @@ export type { FormModalProps } from "./FormModal";
 export { useFormModalForm } from "./hooks/useFormModalForm";
 
 // Phase 68 DEBT-02a：状态展示统一 helper（唯一落点裁定 shared/，勿移 utils/）
-export {
-  StatusTag,
-  statusLabel,
-  statusColor,
-  UNKNOWN_STATUS_LABEL,
-} from "./statusHelpers";
+export { StatusTag, statusLabel, statusColor, UNKNOWN_STATUS_LABEL } from "./statusHelpers";
 export type { StatusDomain, StatusColor } from "./statusHelpers";

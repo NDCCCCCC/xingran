@@ -153,7 +153,14 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 
       {/* 参数说明 */}
       {endpoint && (
-        <div style={{ marginTop: 16, padding: "12px", background: "var(--theme-bg-secondary)", borderRadius: 4 }}>
+        <div
+          style={{
+            marginTop: 16,
+            padding: "12px",
+            background: "var(--theme-bg-secondary)",
+            borderRadius: 4,
+          }}
+        >
           <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>
             <strong>参数说明：</strong>
           </div>

@@ -42,9 +42,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
 }) => {
   if (floors.length === 0) {
     return (
-      <div
-        style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary)" }}
-      >
+      <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary)" }}>
         暂无数据
       </div>
     );
@@ -57,7 +55,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
           <Card
             hoverable
             actions={[
-              ...(editDecision?.visible ?? true
+              ...((editDecision?.visible ?? true)
                 ? [
                     <EditOutlined
                       key="edit"
@@ -70,7 +68,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
                     />,
                   ]
                 : []),
-              ...(floorPlanDecision?.visible ?? true
+              ...((floorPlanDecision?.visible ?? true)
                 ? [
                     <BgColorsOutlined
                       key="floorPlan"
@@ -83,7 +81,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
                     />,
                   ]
                 : []),
-              ...(deleteDecision?.visible ?? true
+              ...((deleteDecision?.visible ?? true)
                 ? [
                     <DeleteOutlined
                       key="delete"

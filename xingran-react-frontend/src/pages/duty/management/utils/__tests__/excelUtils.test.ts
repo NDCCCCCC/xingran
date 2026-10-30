@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { downloadHolidayTemplate, handleHolidayImport } from "../excelUtils";
-import {  } from "@/utils/antdMessage";
+import {} from "@/utils/antdMessage";
 
 const msgApi = {
   success: vi.fn(),

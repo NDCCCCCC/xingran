@@ -304,13 +304,29 @@ const TemplateManagement: FC = () => {
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} aria-label="搜索" title="搜索" >
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                  aria-label="搜索"
+                  title="搜索"
+                >
                   查询
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset} aria-label="重置" title="重置" >
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleReset}
+                  aria-label="重置"
+                  title="重置"
+                >
                   重置
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" title="刷新" >
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleRefresh}
+                  aria-label="刷新"
+                  title="刷新"
+                >
                   刷新
                 </Button>
               </Space>

@@ -28,11 +28,7 @@ import { PlusOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import type { NetworkDevice } from "@/types";
 import type { ColumnsType } from "antd/es/table";
 import { BatchExportModal, PageTable } from "@/components/shared";
-import type {
-  PageTableRenderContext,
-  PageTableRequest,
-  SearchField,
-} from "@/components/shared";
+import type { PageTableRenderContext, PageTableRequest, SearchField } from "@/components/shared";
 import type { ActionButton } from "@/components/shared/ActionButtons";
 import type { ActionPermissionDecision } from "@/components/shared";
 import NetworkExport from "@/components/shared/NetworkExport";

@@ -16,7 +16,13 @@ import {
 describe("pages/network/templates/constants", () => {
   it("VENDOR_OPTIONS 5 项", () => {
     expect(VENDOR_OPTIONS.length).toBe(5);
-    expect(VENDOR_OPTIONS.map((o) => o.value)).toEqual(["huawei", "h3c", "ruijie", "maipu", "cisco"]);
+    expect(VENDOR_OPTIONS.map((o) => o.value)).toEqual([
+      "huawei",
+      "h3c",
+      "ruijie",
+      "maipu",
+      "cisco",
+    ]);
   });
 
   it("DEVICE_TYPE_OPTIONS 5 项", () => {

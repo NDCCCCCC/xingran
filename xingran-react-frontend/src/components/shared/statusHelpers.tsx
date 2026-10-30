@@ -72,6 +72,12 @@ export function statusColor(status: number, domain: StatusDomain): StatusColor {
 }
 
 /** 统一状态标签组件（未知 status → 「未知」+ default，不 crash） */
-export function StatusTag({ status, domain }: { status: number; domain: StatusDomain }): JSX.Element {
+export function StatusTag({
+  status,
+  domain,
+}: {
+  status: number;
+  domain: StatusDomain;
+}): JSX.Element {
   return <Tag color={statusColor(status, domain)}>{statusLabel(status, domain)}</Tag>;
 }

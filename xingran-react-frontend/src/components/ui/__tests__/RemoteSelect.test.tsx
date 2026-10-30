@@ -26,7 +26,9 @@ function openDropdown(container: HTMLElement) {
 }
 
 function typeKeyword(value: string) {
-  const input = document.querySelector<HTMLInputElement>("input.ant-select-input") ?? document.querySelector<HTMLInputElement>(".ant-select-selection-search-input");
+  const input =
+    document.querySelector<HTMLInputElement>("input.ant-select-input") ??
+    document.querySelector<HTMLInputElement>(".ant-select-selection-search-input");
   fireEvent.change(input, { target: { value } });
 }
 
@@ -51,7 +53,9 @@ describe("components/ui/RemoteSelect（T5）", () => {
   it("initialOptions 无关键字时展示；搜索防抖 300ms 内多次输入只发一次", async () => {
     vi.useFakeTimers();
     const fetcher = vi.fn(async () => [{ label: "张三", value: "u1" }]);
-    const { container } = render(<Harness fetcher={fetcher} initialOptions={[{ label: "初始", value: "i0" }]} />);
+    const { container } = render(
+      <Harness fetcher={fetcher} initialOptions={[{ label: "初始", value: "i0" }]} />
+    );
     openDropdown(container);
     expect(document.body.textContent).toContain("初始");
     typeKeyword("张");
@@ -114,7 +118,9 @@ describe("components/ui/RemoteSelect（T5）", () => {
 
   it("keyword 清空：回 initialOptions 且不发请求", async () => {
     const fetcher = vi.fn(async () => [{ label: "搜索批", value: "s" }]);
-    const { container } = render(<Harness fetcher={fetcher} debounceMs={0} initialOptions={[{ label: "初始", value: "i" }]} />);
+    const { container } = render(
+      <Harness fetcher={fetcher} debounceMs={0} initialOptions={[{ label: "初始", value: "i" }]} />
+    );
     openDropdown(container);
     typeKeyword("a");
     await waitFor(() => {
@@ -163,7 +169,9 @@ describe("SearchForm remoteSelect 端点接线（T5 接通）", () => {
       return (
         <SearchForm
           form={form}
-          fields={[{ type: "remoteSelect", name: "owner", label: "负责人", fetcher, debounceMs: 0 }]}
+          fields={[
+            { type: "remoteSelect", name: "owner", label: "负责人", fetcher, debounceMs: 0 },
+          ]}
           onSearch={onSearch}
           onReset={() => {}}
           onRefresh={() => {}}

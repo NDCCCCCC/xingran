@@ -20,7 +20,9 @@ describe("components/ui/AppTextArea", () => {
   });
 
   it("显式 allowClear={false} 逃生口生效（clear icon 为 null）", () => {
-    const { container } = render(<AppTextArea allowClear={false} defaultValue="abc" />, { wrapper });
+    const { container } = render(<AppTextArea allowClear={false} defaultValue="abc" />, {
+      wrapper,
+    });
     expect(container.querySelector(".ant-input-clear-icon")).toBeNull();
   });
 

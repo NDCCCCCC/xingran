@@ -124,7 +124,9 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
             onClick={() => {
               confirmDelete({
                 target: `节假日 ${record.holidayName}`,
-                onDelete: async () => { await onDelete(record.id); },
+                onDelete: async () => {
+                  await onDelete(record.id);
+                },
               });
             }}
           >

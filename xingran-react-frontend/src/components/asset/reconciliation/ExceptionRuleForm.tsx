@@ -173,7 +173,12 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           rules={[{ required: true, message: "至少选择 1 个动作" }]}
           extra="可多选,多规则命中时取并集"
         >
-          <AppSelect mode="multiple" showSearch={false} placeholder="选择动作" options={EXCEPTION_ACTION_OPTIONS} />
+          <AppSelect
+            mode="multiple"
+            showSearch={false}
+            placeholder="选择动作"
+            options={EXCEPTION_ACTION_OPTIONS}
+          />
         </Form.Item>
 
         <Form.Item

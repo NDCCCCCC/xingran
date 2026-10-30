@@ -8,7 +8,6 @@ import {
   Modal,
   Form,
   message,
-
   Statistic,
   Row,
   Col,
@@ -427,7 +426,11 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             <Statistic title="账号总数" value={stats.total} />
           </Col>
           <Col span={4}>
-            <Statistic title="可用" value={stats.available} valueStyle={{ color: "var(--theme-success)" }} />
+            <Statistic
+              title="可用"
+              value={stats.available}
+              valueStyle={{ color: "var(--theme-success)" }}
+            />
           </Col>
           <Col span={4}>
             <Statistic title="已停用" value={stats.disabled} />

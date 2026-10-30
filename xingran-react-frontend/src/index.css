@@ -90,7 +90,11 @@
   --theme-success-bg: rgb(233, 239, 235);
   --theme-warning: #b07a20;
   --theme-warning-bg: rgb(254, 243, 199); /* SM2/SM3/SM4 标签底 (实测) */
-  --theme-warning-text: rgb(144, 93, 0); /* 警告文字 (= 5178 原 fallback 值，R11 补定义 → 渲染零差异) */
+  --theme-warning-text: rgb(
+    144,
+    93,
+    0
+  ); /* 警告文字 (= 5178 原 fallback 值，R11 补定义 → 渲染零差异) */
   --theme-error: #ba3630; /* 白字 5.74:1 (实测) */
   --theme-error-bg: rgb(247, 216, 213); /* 错误背景（奶油系淡红，与 --theme-error 协调） */
   --theme-info: #337ab0;
@@ -163,14 +167,26 @@
   --component-bg-hover: rgb(240, 236, 227);
   /* 输入框 */
   --input-bg: rgb(250, 250, 249); /* 输入框底（原型实测，迁自后置 :root，VISFIX-01 串色修正） */
-  --input-bg-hover: rgb(244, 242, 236); /* 结构对称补齐（对应 dark 块四兄弟），当前无引用点 → 零渲染影响 */
+  --input-bg-hover: rgb(
+    244,
+    242,
+    236
+  ); /* 结构对称补齐（对应 dark 块四兄弟），当前无引用点 → 零渲染影响 */
   --input-bg-focus: var(--input-bg); /* var 化引用（= rgb(250, 250, 249)），hex ratchet 不净增 */
   --input-bg-disabled: rgb(236, 234, 228); /* 结构对称补齐，当前无引用点 → 零渲染影响 */
   --input-border: rgb(219, 215, 206);
   --input-border-hover: rgb(89, 142, 94);
-  --input-border-focus: rgb(21, 96, 49); /* COMP-04: 聚焦边框品牌绿（原 light 块漏定义致 fallback 黑色） */
+  --input-border-focus: rgb(
+    21,
+    96,
+    49
+  ); /* COMP-04: 聚焦边框品牌绿（原 light 块漏定义致 fallback 黑色） */
   --input-text: rgb(16, 16, 16);
-  --input-text-placeholder: rgb(112, 112, 104); /* 占位符（R11：由 --input-placeholder 改名，值不变） */
+  --input-text-placeholder: rgb(
+    112,
+    112,
+    104
+  ); /* 占位符（R11：由 --input-placeholder 改名，值不变） */
   --table-header-bg: rgb(233, 239, 235); /* COMP-02: 表头专用绿灰淡彩（原借 --bg-elevated 白色） */
   --theme-zebra: rgb(250, 248, 243); /* T14（Phase 89）: 迁自后置 :root@4736，值不变 */
 }
@@ -233,7 +249,11 @@
   --input-bg-focus: rgb(15, 46, 27); /* 输入聚焦背景 */
   --input-bg-disabled: rgb(10, 31, 18); /* 输入禁用背景 */
   --table-header-bg: rgb(31, 53, 36); /* COMP-02: 表头专用深色（保持 dark 视觉层次） */
-  --theme-zebra: rgb(250, 248, 243); /* T14（Phase 89）: dark 补同值（原后置 :root 两模式共用同值 → 零渲染差异；≠--theme-bg-tertiary） */
+  --theme-zebra: rgb(
+    250,
+    248,
+    243
+  ); /* T14（Phase 89）: dark 补同值（原后置 :root 两模式共用同值 → 零渲染差异；≠--theme-bg-tertiary） */
   --input-border: rgb(45, 77, 51); /* 输入边框 */
   --input-border-hover: rgb(89, 142, 94); /* 悬停边框 */
   --input-border-focus: rgb(26, 104, 57); /* 聚焦边框 - 品牌绿 */
@@ -856,7 +876,6 @@ body {
 .ant-input.ant-input-status-error,
 .ant-input-affix-wrapper.ant-input-status-error,
 .ant-input-affix-wrapper.ant-input-status-error:hover,
-
 .ant-input.ant-input-status-warning,
 .ant-input-affix-wrapper.ant-input-status-warning,
 .ant-input-affix-wrapper.ant-input-status-warning:hover {
@@ -2377,7 +2396,12 @@ body {
 /* ---------- 展示字体栈（page-title / brand / stat-value） ---------- */
 :root {
   --theme-font-display: Georgia, "Songti SC", "Source Han Serif SC", serif;
-  --sidebar-gradient: linear-gradient(168deg, rgb(20, 83, 45) 0%, rgb(21, 96, 49) 58%, rgb(26, 104, 57) 100%);
+  --sidebar-gradient: linear-gradient(
+    168deg,
+    rgb(20, 83, 45) 0%,
+    rgb(21, 96, 49) 58%,
+    rgb(26, 104, 57) 100%
+  );
 }
 [data-color-mode="dark"] {
   --sidebar-gradient: var(--sidebar-bg); /* dark 保持实色 */
@@ -3138,7 +3162,9 @@ body {
   border: none !important;
 }
 .ant-pagination .ant-pagination-item-active a {
-  color: var(--theme-text-inverse) !important; /* T8: :root@78=rgb(255, 255, 255) 且暗色未重定义 → 值不变（Phase 89） */
+  color: var(
+    --theme-text-inverse
+  ) !important; /* T8: :root@78=rgb(255, 255, 255) 且暗色未重定义 → 值不变（Phase 89） */
 }
 /* 表格底部分页：「共 X 页」靠左、翻页/跳转靠右（默认 antd 把整行 flex-end 推到右侧） */
 .ant-table-pagination.ant-pagination {

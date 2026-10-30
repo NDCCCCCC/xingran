@@ -43,7 +43,9 @@ describe("components/shared/BatchDeleteButton（68.1 target/actionContext）", (
 
   it("传 target='资产' → 确认正文含「选中的 3 项资产」；actionContext='批量删除'", async () => {
     const confirmSpy = await spyConfirm();
-    render(<BatchDeleteButton selectedCount={3} onConfirm={async () => {}} target="资产" />, { wrapper });
+    render(<BatchDeleteButton selectedCount={3} onConfirm={async () => {}} target="资产" />, {
+      wrapper,
+    });
     fireEvent.click(screen.getByRole("button"));
     const opts = confirmSpy.mock.calls[0][0];
     expect(opts.content).toBe("将删除选中的 3 项资产，删除后不可恢复，是否继续？");
@@ -73,9 +75,14 @@ describe("components/shared/BatchDeleteButton（68.1 target/actionContext）", (
 
   it("不传 target → 正文「选中的 3 项」（缺省逐字不变）；Q2：按钮无 aria-label", async () => {
     const confirmSpy = await spyConfirm();
-    const { container } = render(<BatchDeleteButton selectedCount={3} onConfirm={async () => {}} />, { wrapper });
+    const { container } = render(
+      <BatchDeleteButton selectedCount={3} onConfirm={async () => {}} />,
+      { wrapper }
+    );
     fireEvent.click(screen.getByRole("button"));
-    expect(confirmSpy.mock.calls[0][0].content).toBe("将删除选中的 3 项，删除后不可恢复，是否继续？");
+    expect(confirmSpy.mock.calls[0][0].content).toBe(
+      "将删除选中的 3 项，删除后不可恢复，是否继续？"
+    );
     // Q2 红线：批量删除按钮（非 icon-only）不得补 aria-label
     expect(container.querySelector("button[aria-label]")).toBeNull();
   });

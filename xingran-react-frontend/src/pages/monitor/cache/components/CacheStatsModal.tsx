@@ -66,7 +66,10 @@ const CacheStatsModal: FC<CacheStatsModalProps> = ({ open, onClose, monitor }) =
             styles={{ content: { fontSize: "20px", color: "var(--theme-info)" } }}
           />
           <Divider className="my-2" />
-          <Statistic title="内存使用" value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)} />
+          <Statistic
+            title="内存使用"
+            value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
+          />
         </Card>
       </Col>
 
@@ -111,7 +114,10 @@ const CacheStatsModal: FC<CacheStatsModalProps> = ({ open, onClose, monitor }) =
             styles={{ content: { fontSize: "20px", color: "var(--theme-info)" } }}
           />
           <Divider className="my-2" />
-          <Statistic title="内存使用" value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)} />
+          <Statistic
+            title="内存使用"
+            value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
+          />
         </Card>
       </Col>
     </Row>

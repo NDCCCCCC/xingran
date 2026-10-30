@@ -195,7 +195,14 @@ export async function getManagerOrgList(
   params: ManagerOrgQuery
 ): Promise<PageResponse<ManagerOrg>> {
   const result = await post<PageResponse<ManagerOrg>>("/system/manager-orgs/list", params);
-  return result.data ?? { list: [], total: 0, current: params.current ?? 1, pageSize: params.pageSize ?? 10 };
+  return (
+    result.data ?? {
+      list: [],
+      total: 0,
+      current: params.current ?? 1,
+      pageSize: params.pageSize ?? 10,
+    }
+  );
 }
 
 /** 新增机构 */
@@ -225,9 +232,7 @@ export interface GenerateOrgsResult {
 /** 从部门架构自动生成机构映射（幂等；已存在的不覆盖手工修改） */
 export async function generateManagerOrgsFromDept(): Promise<GenerateOrgsResult> {
   const result = await post<GenerateOrgsResult>("/system/manager-orgs/generate-from-dept", {});
-  return (
-    result.data ?? { totalCandidates: 0, created: 0, skippedExisting: 0, orphanCount: 0 }
-  );
+  return result.data ?? { totalCandidates: 0, created: 0, skippedExisting: 0, orphanCount: 0 };
 }
 
 // ==================== 规则 API ====================
@@ -237,7 +242,14 @@ export async function getManagerRuleList(
   params: ManagerRuleQuery
 ): Promise<PageResponse<ManagerRule>> {
   const result = await post<PageResponse<ManagerRule>>("/system/manager-rules/list", params);
-  return result.data ?? { list: [], total: 0, current: params.current ?? 1, pageSize: params.pageSize ?? 10 };
+  return (
+    result.data ?? {
+      list: [],
+      total: 0,
+      current: params.current ?? 1,
+      pageSize: params.pageSize ?? 10,
+    }
+  );
 }
 
 /** 新增规则 */

@@ -55,7 +55,11 @@ function Harness({
         maskClosable={maskClosable}
         keyboard={keyboard}
       >
-        <Form.Item name="postName" label="岗位名称" rules={[{ required: true, message: "请输入岗位名称" }]}>
+        <Form.Item
+          name="postName"
+          label="岗位名称"
+          rules={[{ required: true, message: "请输入岗位名称" }]}
+        >
           <input data-testid="name-input" />
         </Form.Item>
       </FormModal>
@@ -75,7 +79,12 @@ afterEach(() => {
 describe("components/shared/FormModal（T4）", () => {
   it("open=true：initialValues 回填（resetFields+setFieldsValue）", async () => {
     render(
-      <Harness open onFinish={async () => {}} onCancel={() => {}} initialValues={{ postName: "总经理" }} />
+      <Harness
+        open
+        onFinish={async () => {}}
+        onCancel={() => {}}
+        initialValues={{ postName: "总经理" }}
+      />
     );
     await waitFor(() => {
       expect((screen.getByTestId("name-input") as HTMLInputElement).value).toBe("总经理");

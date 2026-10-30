@@ -8,7 +8,7 @@ import { App } from "antd";
 import type { ConfigTemplate, PageResponse } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
-import {  } from "@/utils/errorHandler";
+import {} from "@/utils/errorHandler";
 import type { TemplateStatistics } from "../types";
 
 export interface UseTemplateDataReturn {

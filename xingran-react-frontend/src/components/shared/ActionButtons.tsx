@@ -88,7 +88,8 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = 
                 title={decision.hint ?? action.label}
               >
                 {action.label}
-              </Button>            )}
+              </Button>
+            )}
           </div>
         ))}
       </Space>
@@ -100,7 +101,11 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = 
     if (action.render) {
       const rendered = decision.disabled ? (
         // 未就绪：渲染但不可交互 + 提示
-        <span title={decision.hint} aria-disabled="true" style={{ pointerEvents: "none", opacity: 0.6 }}>
+        <span
+          title={decision.hint}
+          aria-disabled="true"
+          style={{ pointerEvents: "none", opacity: 0.6 }}
+        >
           {action.render()}
         </span>
       ) : (

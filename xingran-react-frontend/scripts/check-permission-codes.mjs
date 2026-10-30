@@ -221,7 +221,9 @@ function parseSqlMenuPerms(text) {
   const stmtRe = /INSERT\s+INTO\s+"?sys_menu"?\s*\(([\s\S]*?)\)\s*(VALUES|SELECT)\s*([\s\S]*?);/gi;
   let stmt;
   while ((stmt = stmtRe.exec(text)) !== null) {
-    const columns = splitSqlTopLevel(stmt[1]).map((c) => c.trim().replace(/^"|"$/g, "").toLowerCase());
+    const columns = splitSqlTopLevel(stmt[1]).map((c) =>
+      c.trim().replace(/^"|"$/g, "").toLowerCase()
+    );
     const permsIdx = columns.indexOf("perms");
     const typeIdx = columns.indexOf("menu_type");
     const body = stmt[3];
@@ -324,7 +326,9 @@ function main() {
     const mainPrefix = codes[0].slice(0, codes[0].lastIndexOf(":"));
     const foreign = codes.filter((c) => !c.startsWith(`${mainPrefix}:`));
     if (foreign.length > 0) {
-      errors.push(`模块 ${module}：权限码前缀不一致（${mainPrefix} 之外出现 ${[...new Set(foreign)].join(" / ")}）`);
+      errors.push(
+        `模块 ${module}：权限码前缀不一致（${mainPrefix} 之外出现 ${[...new Set(foreign)].join(" / ")}）`
+      );
       continue;
     }
     const prefix = mainPrefix;
@@ -333,9 +337,7 @@ function main() {
     const tsCodes = new Set(codes);
     const backendScope = new Set([...goCodes].filter((c) => c.startsWith(scope)));
     const menuScope = new Set([...menuFType].filter((c) => c.startsWith(scope)));
-    const menuAllScope = new Set(
-      [...menuFType, ...menuUntyped].filter((c) => c.startsWith(scope))
-    );
+    const menuAllScope = new Set([...menuFType, ...menuUntyped].filter((c) => c.startsWith(scope)));
 
     console.log(`\n[${module}] 作用域 ${scope}`);
 
@@ -359,7 +361,9 @@ function main() {
         console.log(`  ⏳ ${code} 在 85 新码待播种白名单内（c 类跳过；87 播种后必须清空白名单）`);
         continue;
       }
-      errors.push(`[${module}] TS 声明了 ${code}，但 migrations 的 sys_menu.perms 未声明（该权限永远不会被授予）`);
+      errors.push(
+        `[${module}] TS 声明了 ${code}，但 migrations 的 sys_menu.perms 未声明（该权限永远不会被授予）`
+      );
     }
     // d. 菜单 F 型按钮有但 TS 没声明
     for (const code of menuScope) {
@@ -377,28 +381,28 @@ function main() {
   // 规则 B：挂起集合已清空（87-05 收口）⇒ 白名单必须完全为空。
   // 规则 C：白名单里的码若已在 F_TYPE_SEED 块中（其实已播种）⇒ 警告提示移除（不阻断）。
   const illegalWhitelistEntries = PENDING_SEED_WHITELIST.filter(
-    (w) => !PENDING_SEED_HOLD_SET.has(w.code),
+    (w) => !PENDING_SEED_HOLD_SET.has(w.code)
   );
   if (illegalWhitelistEntries.length > 0) {
     errors.push(
       `PENDING_SEED_WHITELIST 含挂起集合之外的条目（${illegalWhitelistEntries.length} 项：` +
         `${illegalWhitelistEntries.map((w) => w.code).join(", ")}）—— ` +
-        `Phase 87 第一批已播种，豁免只允许保留在挂起集合内（OQ-6 裁定）`,
+        `Phase 87 第一批已播种，豁免只允许保留在挂起集合内（OQ-6 裁定）`
     );
   }
   if (PENDING_SEED_HOLD_CODES.length === 0 && PENDING_SEED_WHITELIST.length > 0) {
     errors.push(
       `PENDING_SEED_WHITELIST 非空（${PENDING_SEED_WHITELIST.length} 项）但挂起集合已清空 —— ` +
-        `第二批补播完成后白名单必须归零`,
+        `第二批补播完成后白名单必须归零`
     );
   }
-  const alreadySeededHoldCodes = PENDING_SEED_WHITELIST.filter((w) =>
-    PENDING_SEED_HOLD_SET.has(w.code) && menuFType.has(w.code),
+  const alreadySeededHoldCodes = PENDING_SEED_WHITELIST.filter(
+    (w) => PENDING_SEED_HOLD_SET.has(w.code) && menuFType.has(w.code)
   );
   if (alreadySeededHoldCodes.length > 0) {
     console.log(
       `\n⚠ 挂起集合中已有 ${alreadySeededHoldCodes.length} 条出现在 F 型声明块内（说明已播种）：` +
-        `${alreadySeededHoldCodes.map((w) => w.code).join(", ")} —— 请从白名单移除`,
+        `${alreadySeededHoldCodes.map((w) => w.code).join(", ")} —— 请从白名单移除`
     );
   }
 

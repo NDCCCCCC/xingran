@@ -8,22 +8,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FC } from "react";
 import { Button, Card, Col, Form, InputNumber, Row, Statistic, Alert } from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  CheckCircleOutlined,
-  StopOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, CheckCircleOutlined, StopOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Key } from "react";
 import type { Post } from "@/types";
 import { post } from "@/lib/api";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import {
-  createStatusColumn,
-  createDateTimeColumn,
-  createSorterMeta,
-} from "@/utils/tableHelpers";
+import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import { PageTable, useActionPermission } from "@/components/shared";
 import type { PageTableRenderContext } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
@@ -151,7 +142,11 @@ const PostManagement: FC = () => {
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={8}>
               <Card>
-                <Statistic title="总岗位数" value={statistics.total} prefix={<CheckCircleOutlined />} />
+                <Statistic
+                  title="总岗位数"
+                  value={statistics.total}
+                  prefix={<CheckCircleOutlined />}
+                />
               </Card>
             </Col>
             <Col span={8}>
@@ -181,12 +176,7 @@ const PostManagement: FC = () => {
             title={
               <span>
                 已选择 <strong>{selectedRowKeys.length}</strong> 个岗位，
-                <Button
-                  type="link"
-                  size="small"
-                  onClick={clearSelection}
-                  style={{ padding: 0 }}
-                >
+                <Button type="link" size="small" onClick={clearSelection} style={{ padding: 0 }}>
                   取消选择
                 </Button>
               </span>
@@ -209,7 +199,13 @@ const PostManagement: FC = () => {
         searchFields={[
           { name: "postCode", label: "岗位编码", type: "input", placeholder: "请输入岗位编码" },
           { name: "postName", label: "岗位名称", type: "input", placeholder: "请输入岗位名称" },
-          { name: "status", label: "状态", type: "select", options: STATUS_OPTIONS, placeholder: "请选择状态" },
+          {
+            name: "status",
+            label: "状态",
+            type: "select",
+            options: STATUS_OPTIONS,
+            placeholder: "请选择状态",
+          },
         ]}
         sorterMetas={sorterMetas}
         rowActions={(record) => [
@@ -272,7 +268,11 @@ const PostManagement: FC = () => {
           label="岗位编码"
           rules={[{ required: true, message: "请输入岗位编码" }]}
         >
-          <AppInput placeholder="请输入岗位编码" className="user-form-input" disabled={!!editingPost} />
+          <AppInput
+            placeholder="请输入岗位编码"
+            className="user-form-input"
+            disabled={!!editingPost}
+          />
         </Form.Item>
         <Form.Item
           name="postName"
@@ -289,7 +289,11 @@ const PostManagement: FC = () => {
           <InputNumber min={0} style={{ width: "100%" }} placeholder="请输入显示排序" />
         </Form.Item>
         <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
-          <AppSelect placeholder="请选择状态" className="user-form-input" options={STATUS_OPTIONS} />
+          <AppSelect
+            placeholder="请选择状态"
+            className="user-form-input"
+            options={STATUS_OPTIONS}
+          />
         </Form.Item>
         <Form.Item name="remark" label="备注">
           <AppTextArea rows={3} placeholder="请输入备注" />

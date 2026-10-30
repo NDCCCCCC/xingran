@@ -326,8 +326,7 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
                 <strong>设备类型:</strong> {getDeviceTypeText(viewingDevice.deviceType) || "-"}
               </p>
               <p>
-                <strong>厂商:</strong>{" "}
-                {getOptionLabel(VENDOR_OPTIONS, viewingDevice.vendor) || "-"}
+                <strong>厂商:</strong> {getOptionLabel(VENDOR_OPTIONS, viewingDevice.vendor) || "-"}
               </p>
               <p>
                 <strong>型号:</strong> {viewingDevice.model || "-"}
@@ -344,8 +343,7 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
             </Col>
             <Col span={12}>
               <p>
-                <strong>状态:</strong>{" "}
-                {getOptionLabel(STATUS_OPTIONS, viewingDevice.status) || "-"}
+                <strong>状态:</strong> {getOptionLabel(STATUS_OPTIONS, viewingDevice.status) || "-"}
               </p>
               <p>
                 <strong>所属部门:</strong> {viewingDevice.deptName || "-"}

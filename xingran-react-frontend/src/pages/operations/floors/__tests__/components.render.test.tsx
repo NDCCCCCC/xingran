@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { Form } from "antd";
-import {  } from "@testing-library/react";
+import {} from "@testing-library/react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -19,7 +19,7 @@ import { FloorStatisticsCards } from "../components/FloorStatisticsCards";
 import { FloorSearchForm } from "../components/FloorSearchForm";
 import { FloorModal } from "../components/FloorModal";
 import { createFloorTableColumns } from "../components/FloorTableColumns";
-import {  } from "../constants";
+import {} from "../constants";
 
 const mockFloor = (id: string, name: string, overrides: Record<string, unknown> = {}): unknown => ({
   id,

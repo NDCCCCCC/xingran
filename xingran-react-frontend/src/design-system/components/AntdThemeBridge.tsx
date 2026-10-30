@@ -105,7 +105,9 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
         // 注：89-RESEARCH §2.2.1 示例的 `board.borderSubtle` 在 light 下会落到暗色值，
         // 与 §2.1.3 映射表（light 保持 cream.borderStrong）冲突 —— 以 PLAN「浅色值与现状
         // 逐值一致」为准，此处按模式取键。
-        colorBorderSecondary: isDark ? xingranBrand.dark.borderSubtle : xingranBrand.cream.borderStrong,
+        colorBorderSecondary: isDark
+          ? xingranBrand.dark.borderSubtle
+          : xingranBrand.cream.borderStrong,
         // 控件 8px 一档 / 大容器 12px / 字体栈（sans 含中文）
         borderRadius: 8,
         borderRadiusLG: 12,

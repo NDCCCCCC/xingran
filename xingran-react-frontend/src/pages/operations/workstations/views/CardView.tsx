@@ -43,9 +43,7 @@ export function WorkstationCardView({
 }: WorkstationCardViewProps) {
   if (workstations.length === 0) {
     return (
-      <div
-        style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary)" }}
-      >
+      <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary)" }}>
         暂无数据
       </div>
     );
@@ -58,7 +56,7 @@ export function WorkstationCardView({
           <Card
             hoverable
             actions={[
-              ...(editDecision?.visible ?? true
+              ...((editDecision?.visible ?? true)
                 ? [
                     <EditOutlined
                       key="edit"
@@ -71,7 +69,7 @@ export function WorkstationCardView({
                     />,
                   ]
                 : []),
-              ...(deleteDecision?.visible ?? true
+              ...((deleteDecision?.visible ?? true)
                 ? [
                     <DeleteOutlined
                       key="delete"

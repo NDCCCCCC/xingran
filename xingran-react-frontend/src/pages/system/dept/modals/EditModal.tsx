@@ -129,9 +129,7 @@ export function DeptEditModal({
                 <Space>
                   <UserOutlined />
                   {user.nickname || user.username}
-                  <span style={{ color: "var(--theme-text-tertiary)" }}>
-                    ({user.username})
-                  </span>
+                  <span style={{ color: "var(--theme-text-tertiary)" }}>({user.username})</span>
                 </Space>
               </Option>
             ))}
@@ -160,7 +158,12 @@ export function DeptEditModal({
         </Form.Item>
         <Form.Item name="status" label="状态" initialValue={0}>
           {/* 形态分类器②④：状态枚举（业务禁搜） */}
-          <AppSelect allowClear onSearch={() => {}} showSearch={false} options={[...STATUS_OPTIONS]} />
+          <AppSelect
+            allowClear
+            onSearch={() => {}}
+            showSearch={false}
+            options={[...STATUS_OPTIONS]}
+          />
         </Form.Item>
         <Form.Item name="remark" label="备注">
           <AppTextArea rows={4} />

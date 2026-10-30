@@ -175,7 +175,9 @@ describe("网络设备页操作级权限门控（Phase 86 W3）", () => {
     const quickBtn = screen.getByRole("button", { name: /快速创建/ }) as HTMLButtonElement;
     expect(quickBtn.disabled).toBe(true);
     expect(quickBtn.getAttribute("title") ?? "").toContain("权限");
-    const manualBtn = screen.getByRole("button", { name: /新增设备|手动新增/ }) as HTMLButtonElement;
+    const manualBtn = screen.getByRole("button", {
+      name: /新增设备|手动新增/,
+    }) as HTMLButtonElement;
     expect(manualBtn.disabled).toBe(true);
 
     // 行操作未就绪 → 入口仍在 DOM（下拉存在），菜单项 disabled

@@ -24,8 +24,7 @@ import { handleApiError } from "@/utils/errorHandler";
 
 export type RemoteSelectOption = { label: string; value: string | number | boolean | null };
 
-export interface RemoteSelectProps
-  extends Omit<SelectProps, "options" | "onSearch" | "loading"> {
+export interface RemoteSelectProps extends Omit<SelectProps, "options" | "onSearch" | "loading"> {
   /** 远程搜索：keyword → 选项列表（抛错走统一错误出口） */
   fetcher: (keyword: string) => Promise<RemoteSelectOption[]>;
   /** 防抖毫秒数（默认 300） */
@@ -95,7 +94,16 @@ export function RemoteSelect({
     }, debounceMs);
   };
 
-  return <AppSelect options={options} loading={loading} showSearch filterOption={false} onSearch={handleSearch} {...rest} />;
+  return (
+    <AppSelect
+      options={options}
+      loading={loading}
+      showSearch
+      filterOption={false}
+      onSearch={handleSearch}
+      {...rest}
+    />
+  );
 }
 
 export default RemoteSelect;

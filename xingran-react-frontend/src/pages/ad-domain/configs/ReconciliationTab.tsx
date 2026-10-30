@@ -63,7 +63,11 @@ const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) =
   const permissions = useMenuStore((s) => s.permissions);
   const canView = permissions.includes(RECONCILIATION_PERM);
 
-  const [internalForm] = Form.useForm<{ mismatchType?: DeptOUMismatchType; deptId?: string; keyword?: string }>();
+  const [internalForm] = Form.useForm<{
+    mismatchType?: DeptOUMismatchType;
+    deptId?: string;
+    keyword?: string;
+  }>();
   const form = injectedForm ?? internalForm;
 
   const deptTree = useDeptTree();

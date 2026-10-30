@@ -216,7 +216,9 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
           onClick={() => {
             confirmDelete({
               target: `排班记录 ${record.scheduleDate}`,
-              onDelete: async () => { await handleDelete(record.id); },
+              onDelete: async () => {
+                await handleDelete(record.id);
+              },
             });
           }}
         >
@@ -445,7 +447,9 @@ const DutySchedulePage: FC = () => {
                             </Tag>
                           ))
                         ) : (
-                          <Text style={{ fontSize: "11px", color: "var(--theme-text-disabled)" }}>无值班</Text>
+                          <Text style={{ fontSize: "11px", color: "var(--theme-text-disabled)" }}>
+                            无值班
+                          </Text>
                         )}
                       </Space>
                     </div>

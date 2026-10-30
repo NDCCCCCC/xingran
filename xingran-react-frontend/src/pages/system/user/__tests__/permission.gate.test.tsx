@@ -55,13 +55,17 @@ function renderUser() {
   );
 }
 
-describe("系统用户页操作级权限门控（v1.24 #16）", () => {  beforeEach(() => {
+describe("系统用户页操作级权限门控（v1.24 #16）", () => {
+  beforeEach(() => {
     mockApiBatch([
       {
         endpoint: "/system/users/list",
         response: { data: { list: [USER_ROW], total: 1, current: 1, pageSize: 10 } },
       },
-      { endpoint: "/system/users/statistics", response: { data: { total: 1, active: 1, inactive: 0 } } },
+      {
+        endpoint: "/system/users/statistics",
+        response: { data: { total: 1, active: 1, inactive: 0 } },
+      },
       { endpoint: "/system/roles/all", response: { data: [] } },
       { endpoint: "/system/posts/list", response: { data: { list: [], total: 0 } } },
       // 部门树（useDeptTree → useMemo 统计部门数，要求数组）

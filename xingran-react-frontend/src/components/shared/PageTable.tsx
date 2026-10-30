@@ -216,7 +216,8 @@ function PageTableImpl<T extends object>({
   );
 
   // 空态：无错误 + 无数据 + 非 loading 时用 emptyAction（若传）替换 antd 默认空态
-  const showEmptyAction = emptyAction !== undefined && !loading && loadError === null && total === 0;
+  const showEmptyAction =
+    emptyAction !== undefined && !loading && loadError === null && total === 0;
 
   // searchFields 与 searchChildren 二选一：同时传时 schema 优先并警告一次
   // （ref 读写收敛进 effect，react-hooks/refs：禁止渲染期访问 ref）
@@ -258,7 +259,14 @@ function PageTableImpl<T extends object>({
         />
       )}
       {(toolbar !== undefined || batchDelete !== undefined) && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {toolbar}
             {batchDelete && (
@@ -278,7 +286,9 @@ function PageTableImpl<T extends object>({
           />
         </div>
       )}
-      {loadError !== null && <ErrorAlertWithRetry error={loadError as Error} onRetry={() => void loadData()} />}
+      {loadError !== null && (
+        <ErrorAlertWithRetry error={loadError as Error} onRetry={() => void loadData()} />
+      )}
       <Table<T>
         columns={mergedColumns}
         dataSource={data}

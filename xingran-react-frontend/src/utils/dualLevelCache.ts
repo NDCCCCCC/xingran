@@ -425,7 +425,7 @@ export class DualLevelCache<T> {
   printStats(): void {
     // no-console 白名单仅允许 warn/error：调试统计走 warn 通道
     console.warn("[DualLevelCache] stats", this.getStats());
-    }
+  }
 }
 
 // 导出单例实例

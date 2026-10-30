@@ -5,19 +5,7 @@
 import { useState, useEffect, useCallback, useMemo, type FC, type Key } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Switch,
-  Layout,
-  Alert,
-  Card,
-  App,
-} from "antd";
+import { Table, Button, Space, Modal, Form, Input, Switch, Layout, Alert, Card, App } from "antd";
 // Phase 71 (W2)：裸 Input/Select → 契约组件。
 // 跳过项：<Input.Password>（成员表达式）不在本波 selector 命中面，保留 antd Input 导入。
 // Select 形态：状态/性别为固定枚举（children → options + 禁搜）；角色多选为 children 带
@@ -204,9 +192,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
         const label =
           preview.managerName || preview.managerUsername
             ? `${preview.managerName || preview.managerUsername}${
-                preview.managerUsername && preview.managerName
-                  ? `(${preview.managerUsername})`
-                  : ""
+                preview.managerUsername && preview.managerName ? `(${preview.managerUsername})` : ""
               }`
             : "—";
         const tip =
@@ -326,7 +312,9 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
               onClick={() => {
                 confirmDelete({
                   target: `用户 ${record.username}`,
-                  onDelete: async () => { await handleDelete(record.id); },
+                  onDelete: async () => {
+                    await handleDelete(record.id);
+                  },
                 });
               }}
             >
@@ -453,10 +441,7 @@ const UserManagement: FC = () => {
   // previewManagers 内部静默降级，失败不阻塞用户列表展示。
   const [managerMap, setManagerMap] = useState<Record<string, ManagerPreviewItem>>({});
 
-  const userIdsKey = useMemo(
-    () => (users ?? []).map((u) => u.id).join(","),
-    [users]
-  );
+  const userIdsKey = useMemo(() => (users ?? []).map((u) => u.id).join(","), [users]);
 
   useEffect(() => {
     const ids = userIdsKey ? userIdsKey.split(",") : [];

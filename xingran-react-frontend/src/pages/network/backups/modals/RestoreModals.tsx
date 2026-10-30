@@ -4,7 +4,21 @@
  * 由 index.tsx :737-1136 纯搬迁（versionColumns 随版本列表抽屉迁入）。
  * 68.1-T4：版本列表「确认恢复到此版本?」裸 Modal.confirm → confirmDelete §1.9 变体。
  */
-import { Button, Card, Col, Descriptions, Drawer, Modal, Row, Select, Space, Spin, Table, Tag, Alert } from "antd";
+import {
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Drawer,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Alert,
+} from "antd";
 // Phase 71 (W4)：裸 Select → 契约组件（children 形态改写 options / 复合子节点保留写法）
 import { AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
@@ -125,7 +139,8 @@ export default function RestoreModals(props: RestoreModalsProps) {
   const permRestore = permGate.decide(PERMISSION_CODES.networkBackup.restore);
 
   // 版本列表表格列（原 index.tsx :478-541，操作列含 B 类豁免确认「确认恢复到此版本?」原文保留）
-  const versionColumns: ColumnsType<ConfigBackup> = [    { title: "版本号", dataIndex: "version", key: "version", width: 80 },
+  const versionColumns: ColumnsType<ConfigBackup> = [
+    { title: "版本号", dataIndex: "version", key: "version", width: 80 },
     {
       title: "备份类型",
       dataIndex: "backupType",
@@ -282,7 +297,9 @@ export default function RestoreModals(props: RestoreModalsProps) {
                       {restoreResult?.totalLines ?? restoreTask.totalLines ?? "-"} 行
                     </div>
                     {restoreResult?.hashMatched === false && (
-                      <div style={{ color: "var(--theme-warning)" }}>回读配置与备份存在差异，已记录警告</div>
+                      <div style={{ color: "var(--theme-warning)" }}>
+                        回读配置与备份存在差异，已记录警告
+                      </div>
                     )}
                   </div>
                 }

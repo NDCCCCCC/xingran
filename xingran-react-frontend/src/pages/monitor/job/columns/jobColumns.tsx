@@ -28,7 +28,14 @@ interface GetJobColumnsParams {
 }
 
 export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo> {
-  const { handleToggleStatus, handleExecute, handleViewLogs, openModal, handleDelete, getSortOrder } = params;
+  const {
+    handleToggleStatus,
+    handleExecute,
+    handleViewLogs,
+    openModal,
+    handleDelete,
+    getSortOrder,
+  } = params;
 
   return [
     {
@@ -138,7 +145,9 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
             onClick: () => {
               confirmDelete({
                 target: `定时任务 ${record.jobName}`,
-                onDelete: async () => { await handleDelete(record); },
+                onDelete: async () => {
+                  await handleDelete(record);
+                },
               });
             },
           },

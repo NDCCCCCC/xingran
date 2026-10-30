@@ -23,7 +23,7 @@ import { App, Form } from "antd";
 import type { NetworkDevice } from "@/types";
 import type { PageResponse } from "@/types";
 import { post } from "@/lib/api";
-import type {  } from "@/utils/tableHelpers";
+import type {} from "@/utils/tableHelpers";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { useMenuStore } from "@/store/menuStore";
 import { useDict } from "@/hooks/useDict";
@@ -153,13 +153,15 @@ const DeviceManagement = () => {
   // 列表请求：搜索值/extraFilters/排序/分页由 PageTable 合参直连
   const request = useCallback(
     async (params: Record<string, unknown>) => {
-      const result = (await post<PageResponse<NetworkDevice>>(
-        "/network/devices/list",
-        params
-      )) as { data: { list: NetworkDevice[]; total: number } };
+      const result = (await post<PageResponse<NetworkDevice>>("/network/devices/list", params)) as {
+        data: { list: NetworkDevice[]; total: number };
+      };
       // 统计联动保留原语义：任何列表刷新均带动统计刷新
       void loadStatistics();
-      setExportPage({ current: Number(params.current) || 1, pageSize: Number(params.pageSize) || 10 });
+      setExportPage({
+        current: Number(params.current) || 1,
+        pageSize: Number(params.pageSize) || 10,
+      });
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     [loadStatistics]

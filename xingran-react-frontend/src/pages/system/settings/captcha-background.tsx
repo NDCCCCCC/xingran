@@ -1,17 +1,6 @@
 import { useState, useEffect } from "react";
 import type { FC, CSSProperties } from "react";
-import {
-  App,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Upload,
-  Image,
-  Card,
-  Pagination,
-  Spin,
-} from "antd";
+import { App, Button, Space, Modal, Form, Upload, Image, Card, Pagination, Spin } from "antd";
 // Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。全部 Select 均为固定枚举
 // （形状/难度/状态）→ children 改写 options 形态；状态类业务下拉显式 showSearch={false}。
 // 注：原 Select<PieceShape|undefined> 等泛型参数因 ComponentProps 擦除泛型而移除，

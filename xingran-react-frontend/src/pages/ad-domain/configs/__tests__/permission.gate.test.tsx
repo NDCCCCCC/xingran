@@ -207,10 +207,7 @@ describe("AD 配置页操作级权限门控（Phase 86 W4）", () => {
   // ==================== ③ ready + 逐码断言 ====================
 
   it("③ 持 opsADConfig.test → 「测试连接」存在且可用，而「同步数据」仍不在 DOM", async () => {
-    setPermissionState([
-      PERMISSION_CODES.opsADConfig.list,
-      PERMISSION_CODES.opsADConfig.test,
-    ]);
+    setPermissionState([PERMISSION_CODES.opsADConfig.list, PERMISSION_CODES.opsADConfig.test]);
     renderPage();
     await waitForFirstRow();
 
@@ -243,10 +240,7 @@ describe("AD 配置页操作级权限门控（Phase 86 W4）", () => {
   });
 
   it("⑤-2 持 opsADConfig.edit → 「编辑此配置」存在且可用", async () => {
-    setPermissionState([
-      PERMISSION_CODES.opsADConfig.list,
-      PERMISSION_CODES.opsADConfig.edit,
-    ]);
+    setPermissionState([PERMISSION_CODES.opsADConfig.list, PERMISSION_CODES.opsADConfig.edit]);
     renderPage();
     await waitForFirstRow();
 
@@ -262,10 +256,7 @@ describe("AD 配置页操作级权限门控（Phase 86 W4）", () => {
   // ==================== ⑥ 表单 Switch 随弹窗上下文归所属写动作 ====================
 
   it("⑥ 只持 opsADConfig.add → 新增弹窗的三个 Switch 仍可见可用（不随 edit 归码）", async () => {
-    setPermissionState([
-      PERMISSION_CODES.opsADConfig.list,
-      PERMISSION_CODES.opsADConfig.add,
-    ]);
+    setPermissionState([PERMISSION_CODES.opsADConfig.list, PERMISSION_CODES.opsADConfig.add]);
     renderPage();
     await waitForFirstRow();
 

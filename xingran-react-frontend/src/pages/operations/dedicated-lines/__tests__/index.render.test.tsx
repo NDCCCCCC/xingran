@@ -39,7 +39,9 @@ function renderLines() {
 
 describe("DedicatedLines 渲染", () => {
   it("空数据 → 渲染不抛错", async () => {
-    vi.mocked(dedicatedLineApi.list).mockResolvedValueOnce({ data: { list: [], total: 0 } } as unknown);
+    vi.mocked(dedicatedLineApi.list).mockResolvedValueOnce({
+      data: { list: [], total: 0 },
+    } as unknown);
     vi.mocked(dedicatedLineApi.statistics).mockResolvedValueOnce({ data: {} } as unknown);
     const { baseElement } = renderLines();
     await new Promise((r) => setTimeout(r, 400));

@@ -43,7 +43,10 @@ describe("components/operations 子组件渲染", () => {
   });
   it("WorkstationDeviceTable(有数据+loading)", async () => {
     await expectRenders(
-      <WorkstationDeviceTable workstations={[{ id: "w1", name: "A01" } as unknown]} loading={true} />
+      <WorkstationDeviceTable
+        workstations={[{ id: "w1", name: "A01" } as unknown]}
+        loading={true}
+      />
     );
   });
 });

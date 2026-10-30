@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, renderHook } from "@testing-library/react";
-import {  } from "react";
+import {} from "react";
 import type { ReactNode } from "react";
 
 vi.mock("@/lib/api", async () => {

@@ -6,20 +6,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { FC, CSSProperties } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Alert,
-  Radio,
-  Layout,
-} from "antd";
+import { Table, Button, Space, Modal, Form, Tag, Card, Row, Col, Alert, Radio, Layout } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,

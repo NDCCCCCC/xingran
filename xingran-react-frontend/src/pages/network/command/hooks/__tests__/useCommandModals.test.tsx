@@ -97,9 +97,7 @@ describe("pages/network/command/hooks/useCommandModals", () => {
     vi.mocked(post).mockRejectedValueOnce(new Error("net"));
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useCommandModals(), { wrapper });
-    await expect(
-      result.current.handleCancelExecution("exec-2", onSuccess)
-    ).rejects.toThrow("net");
+    await expect(result.current.handleCancelExecution("exec-2", onSuccess)).rejects.toThrow("net");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

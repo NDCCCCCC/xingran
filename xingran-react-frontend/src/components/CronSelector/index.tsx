@@ -257,14 +257,22 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
                 <ClockCircleOutlined style={{ color: "var(--theme-info)" }} />
                 <span style={{ fontWeight: 500 }}>最近五次执行时间</span>
               </div>
-              <div style={{ background: "var(--theme-bg-secondary)", padding: "8px 16px", borderRadius: 4 }}>
+              <div
+                style={{
+                  background: "var(--theme-bg-secondary)",
+                  padding: "8px 16px",
+                  borderRadius: 4,
+                }}
+              >
                 {getNextRunTimes(cronExpression, 5).map((item, index) => (
                   <div key={index} style={{ padding: "4px 0" }}>
                     <Space>
                       <span style={{ color: "var(--theme-text-tertiary)", minWidth: 60 }}>
                         第{index + 1}次
                       </span>
-                      <span style={{ fontFamily: "monospace", color: "var(--theme-text-tertiary)" }}>
+                      <span
+                        style={{ fontFamily: "monospace", color: "var(--theme-text-tertiary)" }}
+                      >
                         {formatTime(item)}
                       </span>
                     </Space>

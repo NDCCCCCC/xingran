@@ -179,9 +179,9 @@ describe("配置备份页操作级权限门控（Phase 86 W3）", () => {
 
     const exportEntry = screen.getByRole("button", { name: /导出/ });
     expect(exportEntry.closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(
-      exportEntry.closest('[aria-disabled="true"]')?.getAttribute("title") ?? ""
-    ).toContain("权限");
+    expect(exportEntry.closest('[aria-disabled="true"]')?.getAttribute("title") ?? "").toContain(
+      "权限"
+    );
 
     // 行操作未就绪 → 入口仍在 DOM（下拉存在），菜单项 disabled + 带提示
     const menu = await openRowActionsMenu();
@@ -226,10 +226,7 @@ describe("配置备份页操作级权限门控（Phase 86 W3）", () => {
   });
 
   it("③-2 持 diff（无 restore）→ 「版本对比」在、「还原」不在", async () => {
-    setPermissionState([
-      PERMISSION_CODES.networkBackup.list,
-      PERMISSION_CODES.networkBackup.diff,
-    ]);
+    setPermissionState([PERMISSION_CODES.networkBackup.list, PERMISSION_CODES.networkBackup.diff]);
     renderPage();
 
     await waitFor(() => {

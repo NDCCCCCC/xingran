@@ -29,7 +29,6 @@ import type { NoticePriority, TargetType } from "@/types/notice";
 import { formatDateTime } from "@/utils/datetime";
 import type { SortOrder } from "@/hooks/useServerSort";
 
-
 export interface NoticeListProps {
   notices: Notice[];
   loading: boolean;

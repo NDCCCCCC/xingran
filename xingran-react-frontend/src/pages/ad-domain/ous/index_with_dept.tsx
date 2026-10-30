@@ -405,7 +405,13 @@ const ADOUPage: FC = () => {
                     style={{ fontSize: "13px" }}
                   />
                 ) : (
-                  <div style={{ textAlign: "center", color: "var(--theme-text-tertiary)", padding: "20px" }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      color: "var(--theme-text-tertiary)",
+                      padding: "20px",
+                    }}
+                  >
                     {selectedConfig ? "暂无OU数据，请先同步" : "请选择AD配置"}
                   </div>
                 )}
@@ -485,7 +491,13 @@ const ADOUPage: FC = () => {
                   </div>
                 </Space>
               ) : (
-                <div style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: "20px" }}>
+                <div
+                  style={{
+                    color: "var(--theme-text-tertiary)",
+                    textAlign: "center",
+                    padding: "20px",
+                  }}
+                >
                   {selectedOU ? "该 OU 尚未关联部门" : "请选择 OU"}
                 </div>
               )}
@@ -511,7 +523,13 @@ const ADOUPage: FC = () => {
                   size="small"
                 />
               ) : (
-                <div style={{ color: "var(--theme-text-tertiary)", textAlign: "center", padding: "20px" }}>
+                <div
+                  style={{
+                    color: "var(--theme-text-tertiary)",
+                    textAlign: "center",
+                    padding: "20px",
+                  }}
+                >
                   {selectedOU ? "该 OU 下暂无用户组" : "请选择 OU"}
                 </div>
               )}

@@ -202,10 +202,7 @@ describe("菜单管理页操作级权限门控（Phase 86 W1）", () => {
   // ==================== A9：`<Switch>` 形态三态 ====================
 
   it("A9-1 弹窗内两个 Switch：ready 无权限 → 不渲染；未就绪 → 渲染但 disabled + 提示", async () => {
-    setPermissionState([
-      PERMISSION_CODES.systemMenu.list,
-      PERMISSION_CODES.systemMenu.add,
-    ]);
+    setPermissionState([PERMISSION_CODES.systemMenu.list, PERMISSION_CODES.systemMenu.add]);
     renderMenu();
 
     const addBtn = await screen.findByRole("button", { name: /新增菜单/ });

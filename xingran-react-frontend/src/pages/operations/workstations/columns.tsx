@@ -142,7 +142,9 @@ export function getWorkstationColumns(
             onClick: () =>
               confirmDelete({
                 target: `工位 ${record.name}`,
-                onDelete: async () => { await handleDelete(record.id); },
+                onDelete: async () => {
+                  await handleDelete(record.id);
+                },
               }),
           },
         ];

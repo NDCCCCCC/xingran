@@ -81,7 +81,8 @@ export function HolidayBatchModal({
                   />
                 </td>
                 <td className="border p-2">
-                  <AppInput allowClear
+                  <AppInput
+                    allowClear
                     value={row.holidayName}
                     onChange={(e) => onUpdateRow(index, "holidayName", e.target.value)}
                     placeholder="节假日名称"
@@ -100,7 +101,10 @@ export function HolidayBatchModal({
                     options={
                       holidayTypeDict.length > 0
                         ? holidayTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))
-                        : HOLIDAY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))
+                        : HOLIDAY_TYPE_OPTIONS.map((opt) => ({
+                            value: opt.value,
+                            label: opt.label,
+                          }))
                     }
                   />
                 </td>

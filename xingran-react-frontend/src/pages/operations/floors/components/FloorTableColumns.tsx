@@ -94,7 +94,13 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
           { key: "used", label: `已用 ${stats.used}`, color: "processing" as const },
           { key: "unused", label: `空闲 ${stats.unused}`, color: "success" as const },
           ...(stats.maintenance > 0
-            ? [{ key: "maintenance", label: `维护 ${stats.maintenance}`, color: "warning" as const }]
+            ? [
+                {
+                  key: "maintenance",
+                  label: `维护 ${stats.maintenance}`,
+                  color: "warning" as const,
+                },
+              ]
             : []),
         ];
         return (

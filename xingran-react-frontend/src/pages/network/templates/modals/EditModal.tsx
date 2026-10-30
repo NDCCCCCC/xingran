@@ -53,7 +53,10 @@ export function TemplateEditModal({
           label="模板编码"
           rules={[{ required: true, message: "请输入模板编码" }]}
         >
-          <AppInput placeholder="请输入模板编码（英文，用于API调用）" disabled={!!editingTemplate} />
+          <AppInput
+            placeholder="请输入模板编码（英文，用于API调用）"
+            disabled={!!editingTemplate}
+          />
         </Form.Item>
         <Form.Item name="templateType" label="模板类型" rules={[{ required: true }]}>
           {/* 形态分类器①/②：children 写法改写 options；固定 3 项 → 显式禁搜 */}

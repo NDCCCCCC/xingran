@@ -56,7 +56,10 @@ function renderTabWithForm() {
     useImperativeHandle(ref, () => ({ getForm: () => f }), [f]);
     return <ReconciliationTab form={f} />;
   });
-  return { ...renderWithProviders(<Host ref={hostRef} />), getForm: () => hostRef.current!.getForm() };
+  return {
+    ...renderWithProviders(<Host ref={hostRef} />),
+    getForm: () => hostRef.current!.getForm(),
+  };
 }
 
 const mockGetList = vi.mocked(getDeptOUMismatchList);
@@ -154,7 +157,9 @@ describe("ReconciliationTab 权限门 (D-17)", () => {
     const { findByText, container } = renderWithProviders(<ReconciliationTab />);
     expect(await findByText("未发现不一致条目")).toBeTruthy();
     expect(
-      await findByText("当前视图为实时计算。可调整筛选条件，或先在「配置列表」完成部门同步后再查看。")
+      await findByText(
+        "当前视图为实时计算。可调整筛选条件，或先在「配置列表」完成部门同步后再查看。"
+      )
     ).toBeTruthy();
     // 空态不渲染空表头（筛选行仍在，故以表格节点缺席为准）
     expect(container.querySelector(".ant-table")).toBeNull();
@@ -281,13 +286,15 @@ describe("ReconciliationTab 筛选显式提交", () => {
     const page2 = container.querySelector(".ant-pagination-item-2");
     expect(page2).not.toBeNull();
     fireEvent.click(page2 as HTMLElement);
-    await waitFor(() =>
-      expect(mockGetList).toHaveBeenLastCalledWith({ current: 2, pageSize: 20 })
-    );
+    await waitFor(() => expect(mockGetList).toHaveBeenLastCalledWith({ current: 2, pageSize: 20 }));
     await waitButtonsIdle();
 
     act(() => {
-      getForm().setFieldsValue({ mismatchType: "mapping_disabled", deptId: "d-9", keyword: "张三" });
+      getForm().setFieldsValue({
+        mismatchType: "mapping_disabled",
+        deptId: "d-9",
+        keyword: "张三",
+      });
     });
     fireEvent.click(getByRole("button", { name: /查\s*询/ }));
     await waitFor(() =>
@@ -340,9 +347,7 @@ describe("ReconciliationTab 筛选显式提交", () => {
     await waitButtonsIdle();
 
     fireEvent.click(getByRole("button", { name: /重\s*置/ }));
-    await waitFor(() =>
-      expect(mockGetList).toHaveBeenLastCalledWith({ current: 1, pageSize: 20 })
-    );
+    await waitFor(() => expect(mockGetList).toHaveBeenLastCalledWith({ current: 1, pageSize: 20 }));
   });
 
   it("翻页保持已提交筛选条件", async () => {

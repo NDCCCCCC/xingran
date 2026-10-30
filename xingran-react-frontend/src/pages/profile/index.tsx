@@ -290,9 +290,7 @@ const ProfilePage: FC = () => {
                           )}
                         </Space>
                       ) : (
-                        <span style={{ color: "var(--theme-text-tertiary)" }}>
-                          暂无排班
-                        </span>
+                        <span style={{ color: "var(--theme-text-tertiary)" }}>暂无排班</span>
                       )}
                     </div>
                   </div>

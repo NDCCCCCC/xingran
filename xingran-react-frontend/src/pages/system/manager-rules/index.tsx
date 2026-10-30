@@ -63,7 +63,9 @@ const SUBJECT_TYPES = Object.keys(MANAGER_SUBJECT_LABELS) as ManagerSubjectType[
 const MANAGER_TYPES = Object.keys(MANAGER_TYPE_LABELS) as ManagerType[];
 
 /** 部门树转 TreeSelect 数据 */
-function toTreeData(depts: SimpleDept[]): { title: string; value: string; key: string; children?: ReturnType<typeof toTreeData> }[] {
+function toTreeData(
+  depts: SimpleDept[]
+): { title: string; value: string; key: string; children?: ReturnType<typeof toTreeData> }[] {
   return depts.map((d) => ({
     title: d.deptName,
     value: d.id,
@@ -117,7 +119,11 @@ const ManagerRulesPage: FC = () => {
   }, []);
 
   // 搜索条件（提交时快照）
-  const [search, setSearch] = useState<{ ruleName?: string; subjectType?: string; enabled?: boolean }>({});
+  const [search, setSearch] = useState<{
+    ruleName?: string;
+    subjectType?: string;
+    enabled?: boolean;
+  }>({});
 
   const params = useMemo<ManagerRuleQuery>(
     () => ({ current, pageSize, ...search }),
@@ -288,7 +294,9 @@ const ManagerRulesPage: FC = () => {
         <Space size={4}>
           <Tag color="blue">{MANAGER_SUBJECT_LABELS[r.subjectType] ?? r.subjectType}</Tag>
           {r.subjectType === "post_holder" && (
-            <span style={{ color: "var(--theme-text-tertiary)" }}>{renderName(r.subjectPostName, r.subjectPostId)}</span>
+            <span style={{ color: "var(--theme-text-tertiary)" }}>
+              {renderName(r.subjectPostName, r.subjectPostId)}
+            </span>
           )}
         </Space>
       ),
@@ -301,7 +309,9 @@ const ManagerRulesPage: FC = () => {
         <Space size={4}>
           <Tag color="purple">{MANAGER_TYPE_LABELS[r.managerType] ?? r.managerType}</Tag>
           {(r.managerType === "post_holder" || r.managerType === "org_head") && (
-            <span style={{ color: "var(--theme-text-tertiary)" }}>{renderName(r.managerPostName, r.managerPostId)}</span>
+            <span style={{ color: "var(--theme-text-tertiary)" }}>
+              {renderName(r.managerPostName, r.managerPostId)}
+            </span>
           )}
           {r.managerOrgId === MANAGER_ORG_TARGET_PARENT && <Tag>上级机构</Tag>}
         </Space>
@@ -314,9 +324,17 @@ const ManagerRulesPage: FC = () => {
       render: (_, r) => {
         const label = MANAGER_SCOPE_LABELS[r.scopeType] ?? String(r.scopeType);
         if (r.scopeType === MANAGER_SCOPE_TYPE.DEPT_SUBTREE)
-          return <span>{label}：{renderName(r.scopeDeptName, r.scopeId)}</span>;
+          return (
+            <span>
+              {label}：{renderName(r.scopeDeptName, r.scopeId)}
+            </span>
+          );
         if (r.scopeType === MANAGER_SCOPE_TYPE.ORG_SUBTREE)
-          return <span>{label}：{renderName(r.scopeOrgName, r.scopeId)}</span>;
+          return (
+            <span>
+              {label}：{renderName(r.scopeOrgName, r.scopeId)}
+            </span>
+          );
         return <span>{label}</span>;
       },
     },
@@ -364,7 +382,11 @@ const ManagerRulesPage: FC = () => {
         <Form form={searchForm} layout="inline">
           <Form.Item name="ruleName" label="规则名称">
             {/* 搜索框：清空只改受控值，不触发 onPressEnter */}
-            <AppInput placeholder="请输入规则名称" style={{ width: 160 }} onPressEnter={handleSearch} />
+            <AppInput
+              placeholder="请输入规则名称"
+              style={{ width: 160 }}
+              onPressEnter={handleSearch}
+            />
           </Form.Item>
           <Form.Item name="subjectType" label="适用主体">
             <AppSelect
@@ -477,7 +499,8 @@ const ManagerRulesPage: FC = () => {
             label="适用主体"
             rules={[{ required: true, message: "请选择适用主体" }]}
           >
-            <AppSelect allowClear
+            <AppSelect
+              allowClear
               onSearch={() => {}}
               options={SUBJECT_TYPES.map((t) => ({ value: t, label: MANAGER_SUBJECT_LABELS[t] }))}
               placeholder="请选择适用主体"
@@ -489,7 +512,8 @@ const ManagerRulesPage: FC = () => {
               label="主体岗位"
               rules={[{ required: true, message: "请选择主体岗位" }]}
             >
-              <AppSelect allowClear
+              <AppSelect
+                allowClear
                 onSearch={() => {}}
                 placeholder="请选择主体岗位"
                 showSearch
@@ -512,7 +536,8 @@ const ManagerRulesPage: FC = () => {
             label="经理来源"
             rules={[{ required: true, message: "请选择经理来源" }]}
           >
-            <AppSelect allowClear
+            <AppSelect
+              allowClear
               onSearch={() => {}}
               options={MANAGER_TYPES.map((t) => ({ value: t, label: MANAGER_TYPE_LABELS[t] }))}
               placeholder="请选择经理来源"
@@ -524,7 +549,8 @@ const ManagerRulesPage: FC = () => {
               label="经理岗位"
               rules={[{ required: true, message: "请选择经理岗位" }]}
             >
-              <AppSelect allowClear
+              <AppSelect
+                allowClear
                 onSearch={() => {}}
                 placeholder="请选择经理岗位"
                 showSearch
@@ -534,7 +560,8 @@ const ManagerRulesPage: FC = () => {
             </Form.Item>
           )}
           <Form.Item name="managerOrgMode" label="目标机构">
-            <AppSelect allowClear
+            <AppSelect
+              allowClear
               onSearch={() => {}}
               options={[
                 { value: "self", label: "自身机构" },

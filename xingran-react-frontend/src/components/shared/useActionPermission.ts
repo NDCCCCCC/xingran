@@ -72,7 +72,9 @@ const DEFAULT_ERROR_HINT = "权限信息加载失败，操作暂不可用";
  *   // edit.visible === false  → 不渲染
  *   // edit.disabled === true  → 渲染但禁用（配合 edit.hint 做 title/aria）
  */
-export function useActionPermission(options: UseActionPermissionOptions = {}): ActionPermissionResult {
+export function useActionPermission(
+  options: UseActionPermissionOptions = {}
+): ActionPermissionResult {
   const permissions = useMenuStore((s) => s.permissions);
   const permissionsLoaded = useMenuStore((s) => s.permissionsLoaded);
   const permissionsError = useMenuStore((s) => s.permissionsError);
@@ -85,7 +87,8 @@ export function useActionPermission(options: UseActionPermissionOptions = {}): A
       ? "ready"
       : "loading";
 
-  const notReadyHint = state === "error" ? errorHint : state === "loading" ? loadingHint : undefined;
+  const notReadyHint =
+    state === "error" ? errorHint : state === "loading" ? loadingHint : undefined;
 
   const allowed = useCallback(
     (perm?: string) => {
@@ -103,7 +106,9 @@ export function useActionPermission(options: UseActionPermissionOptions = {}): A
       // 未就绪 → 渲染但禁用 + 提示（不能隐藏：用户需要看到入口 + 原因）
       if (state !== "ready") return { visible: true, disabled: true, hint: notReadyHint };
       // 已就绪 → 有权限可用；无权限不渲染
-      return permissions.includes(perm) ? { visible: true, disabled: false } : { visible: false, disabled: false };
+      return permissions.includes(perm)
+        ? { visible: true, disabled: false }
+        : { visible: false, disabled: false };
     },
     [permissions, state, notReadyHint]
   );
