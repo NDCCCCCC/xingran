@@ -1,8 +1,8 @@
 package portwrite
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 )
 
 // checkPreState PORT-06 pre-state 检测（D-13 + D-14）。

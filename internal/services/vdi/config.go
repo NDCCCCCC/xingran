@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
 )
 
 // tlsSkipVerify 缓存 VDI TLS 证书校验开关,从 config.VDI.TLSSkipVerify 读取。

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/pkg/system"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/pkg/system"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 const (

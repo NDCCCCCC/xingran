@@ -2,7 +2,7 @@
 package query
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 

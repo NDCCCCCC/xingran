@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 )
 
 // Phase 62 (HYGIENE-05) 手工 OU 重绑路径测试 —— 原 PLAN 记录"手工 API 路径无测试覆盖"，

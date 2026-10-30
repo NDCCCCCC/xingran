@@ -2,10 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
-	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
 

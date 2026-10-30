@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 )
 
 // TestV130R03_DeviceMismatchReturns400 V130R-03: 跨设备恢复 → BusinessError{HTTPStatus:400, Code:400001}

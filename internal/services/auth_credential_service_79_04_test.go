@@ -27,9 +27,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 const acv7904Operator = "operator-7904"

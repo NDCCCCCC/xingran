@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 )
 
 // =====================================================================

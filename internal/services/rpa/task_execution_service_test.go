@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
 // =====================================================================

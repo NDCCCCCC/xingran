@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 )
 
 const (

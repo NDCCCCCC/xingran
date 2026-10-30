@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
 )
 
 func newTestCtxCE(method, path string, body interface{}) (*gin.Context, *httptest.ResponseRecorder) {

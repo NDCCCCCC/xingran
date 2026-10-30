@@ -3,7 +3,7 @@ package workorder
 import (
 	"fmt"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // ReconciliationWorkorderTemplate 资产对账工单模板(Phase 43 R2 / D-A2-01~D-A2-04)

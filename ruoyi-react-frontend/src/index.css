@@ -866,7 +866,7 @@ body {
    antd 6 的 status class 落在 .ant-input-number 根（ant-input-number-status-error），
    而项目 Input 输入框块的 border-color（important 声明）压掉了 antd 的 border-color 长属性 →
    错误态边框停在 --input-border（品牌中性边框色）而非品牌红。
-   色值用 var(--ant-color-error)（= ruoyiBrand.functional.danger 品牌危险色，
+   色值用 var(--ant-color-error)（= xingranBrand.functional.danger 品牌危险色，
    AntdThemeBridge 显式 colorError；但 colorError 是 seed 名 → 不被 alias 回填，
    故暗色取 darkAlgorithm 派生值 —— 该变量明暗解析值不同，断言必须按模式取值）；
    light 侧无对应错误态变量，不可用。

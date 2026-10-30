@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -81,7 +81,7 @@ func main() {
 	// 4. 确认(防误操作)
 	if !dryRun {
 		log.Println("⚠️  即将修改数据库!建议先备份:")
-		log.Println("     pg_dump -U postgres -d ruoyi > backup-before-sm4-migration.sql")
+		log.Println("     pg_dump -U postgres -d xingran > backup-before-sm4-migration.sql")
 		fmt.Println()
 		log.Print("按 Enter 继续(5 秒后自动继续)...")
 		waitOrCancel(5)
@@ -193,7 +193,7 @@ func connectDB() *gorm.DB {
 		getEnv("DB_PORT", "5432"),
 		getEnv("DB_USER", "postgres"),
 		os.Getenv("DB_PASSWORD"),
-		getEnv("DB_NAME", "ruoyi"),
+		getEnv("DB_NAME", "xingran"),
 		getEnv("DB_SSLMODE", "disable"),
 	)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})

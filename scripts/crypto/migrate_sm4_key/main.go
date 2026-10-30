@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

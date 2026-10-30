@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/core/security"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )

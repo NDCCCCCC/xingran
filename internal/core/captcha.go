@@ -9,12 +9,12 @@ import (
 	"math/rand"
 	"time"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/captcha"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/captcha"
 	"gorm.io/gorm"
 )
 

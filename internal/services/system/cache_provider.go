@@ -10,7 +10,7 @@
 package system
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 // CacheProvider 缓存提供者接口（权威定义：base.CacheProvider）

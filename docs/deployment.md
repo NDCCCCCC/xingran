@@ -1,6 +1,6 @@
 # 生产环境部署指南
 
-> 适用范围：RuoYi-Next 后端服务的生产部署
+> 适用范围：XingRan-Next 后端服务的生产部署
 > 部署路径：`/app/szh/`
 > OS：Linux（systemd 服务管理）
 
@@ -10,18 +10,18 @@
 
 ```
 /app/szh/
-├── ruoyi-backend              # Go 编译产物（构建自 cmd/main.go；TextFSM 模板 + 前端皆已嵌入二进制）
+├── xingran-backend              # Go 编译产物（构建自 cmd/main.go；TextFSM 模板 + 前端皆已嵌入二进制）
 ├── ruoyi-react-frontend/      # 前端构建产物（可选，embed 构建已嵌入二进制）
 ├── configs/
 │   └── config.yaml            # 应用配置（非敏感，由 git 管理）
 ├── logs/                      # 应用日志（lumberjack 轮转）
 ├── uploads/                   # 用户上传文件
-└── secrets.env → /etc/ruoyi/secrets.env  # 软链接或独立存放敏感 env
+└── secrets.env → /etc/xingran/secrets.env  # 软链接或独立存放敏感 env
 ```
 
 > **重要**：`configs/config.yaml` **不含任何密钥**——所有敏感值通过系统环境变量注入（见 §3）。
 >
-> **重要**：网络设备的 TextFSM 模板（`templates/` 目录下 ~200 个 `.textfsm` 文件 + `lldp/` 子目录）已通过 `go:embed` 嵌入 `ruoyi-backend` 二进制，**不需要也不应该**单独部署 `templates/` 目录到 `/app/szh/`。如果服务日志出现 `no such file or directory templates/...`，请检查 binary 是否包含模板（`strings /app/szh/ruoyi-backend | grep huawei_vrp` 应有命中）。
+> **重要**：网络设备的 TextFSM 模板（`templates/` 目录下 ~200 个 `.textfsm` 文件 + `lldp/` 子目录）已通过 `go:embed` 嵌入 `xingran-backend` 二进制，**不需要也不应该**单独部署 `templates/` 目录到 `/app/szh/`。如果服务日志出现 `no such file or directory templates/...`，请检查 binary 是否包含模板（`strings /app/szh/xingran-backend | grep huawei_vrp` 应有命中）。
 
 ---
 
@@ -34,7 +34,7 @@
 scripts\build-linux.bat
 
 # 产物
-ruoyi-backend-embedded-linux
+xingran-backend-embedded-linux
 ```
 
 ### 2.2 部署到服务器
@@ -46,10 +46,10 @@ sudo mkdir -p /app/szh/{configs,logs,uploads}
 sudo chown -R szh:szh /app/szh
 
 # 上传二进制
-scp ruoyi-backend-embedded-linux szh@10.62.10.34:/app/szh/ruoyi-backend
+scp xingran-backend-embedded-linux szh@10.62.10.34:/app/szh/xingran-backend
 # 或 rsync / 堡垒机中转
-sudo chmod +x /app/szh/ruoyi-backend
-sudo chown szh:szh /app/szh/ruoyi-backend
+sudo chmod +x /app/szh/xingran-backend
+sudo chown szh:szh /app/szh/xingran-backend
 ```
 
 ---
@@ -92,7 +92,7 @@ DB_HOST=10.62.10.34
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=...
-DB_NAME=ruoyi
+DB_NAME=xingran
 DB_SSLMODE=disable
 
 REDIS_HOST=10.62.10.34
@@ -121,12 +121,12 @@ RPA_AI_AGENT_URL=
 
 ```bash
 # 方式 1: --env-file
-docker run -d --env-file=/path/to/.env -p 9000:9000 ruoyi-backend
+docker run -d --env-file=/path/to/.env -p 9000:9000 xingran-backend
 
 # 方式 2: docker-compose.yml
 services:
   backend:
-    image: ruoyi-backend
+    image: xingran-backend
     env_file: .env
 ```
 
@@ -148,15 +148,15 @@ services:
 
 **做法**：
 
-1. 在 `/etc/ruoyi/` 创建 secrets 文件：
+1. 在 `/etc/xingran/` 创建 secrets 文件：
    ```bash
-   sudo mkdir -p /etc/ruoyi
-   sudo vim /etc/ruoyi/secrets.env
+   sudo mkdir -p /etc/xingran
+   sudo vim /etc/xingran/secrets.env
    ```
 
 2. 填入密钥（**从密码管理器复制，不要 echo 到屏幕**）：
    ```bash
-   # /etc/ruoyi/secrets.env
+   # /etc/xingran/secrets.env
    # 权限: 600, owner: root:root
    # 修改后: sudo systemctl daemon-reload && sudo systemctl restart szh-backend
 
@@ -164,7 +164,7 @@ services:
    DB_PORT=5432
    DB_USER=postgres
    DB_PASSWORD=...
-   DB_NAME=ruoyi
+   DB_NAME=xingran
    DB_SSLMODE=disable
 
    REDIS_HOST=10.62.10.34
@@ -191,17 +191,17 @@ services:
 
 3. 设权限（仅 root 可读）：
    ```bash
-   sudo chmod 600 /etc/ruoyi/secrets.env
-   sudo chown root:root /etc/ruoyi/secrets.env
-   ls -la /etc/ruoyi/secrets.env
+   sudo chmod 600 /etc/xingran/secrets.env
+   sudo chown root:root /etc/xingran/secrets.env
+   ls -la /etc/xingran/secrets.env
    # 验证: -rw------- 1 root root
    ```
 
 4. service 文件加 `EnvironmentFile=`：
    ```ini
    [Service]
-   EnvironmentFile=/etc/ruoyi/secrets.env
-   ExecStart=/app/szh/ruoyi-backend
+   EnvironmentFile=/etc/xingran/secrets.env
+   ExecStart=/app/szh/xingran-backend
    ```
 
 **优点**：
@@ -241,7 +241,7 @@ DB_HOST=10.62.10.34
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=your_db_password
-DB_NAME=ruoyi
+DB_NAME=xingran
 DB_SSLMODE=disable
 
 REDIS_HOST=10.62.10.34
@@ -284,7 +284,7 @@ ExecStartPre=/bin/sh -c 'cat $CREDENTIALS_DIRECTORY/szh-secrets > /run/szh-secre
 # 读取解密后的 env
 EnvironmentFile=/run/szh-secrets.env
 # ExecStartPre 等待 /run/szh-secrets.env 准备就绪
-ExecStart=/app/szh/ruoyi-backend
+ExecStart=/app/szh/xingran-backend
 ```
 
 **优点**：
@@ -353,7 +353,7 @@ printenv | grep SM4_KEY  # 普通用户下 SM4_KEY 不存在
 
 ```ini
 [Unit]
-Description=SZH RuoYi-Next Backend
+Description=SZH XingRan-Next Backend
 After=network.target postgresql.service redis-server.service
 Wants=postgresql.service redis-server.service
 
@@ -362,8 +362,8 @@ Type=simple
 User=szh
 Group=szh
 WorkingDirectory=/app/szh
-ExecStart=/app/szh/ruoyi-backend
-EnvironmentFile=/etc/ruoyi/secrets.env
+ExecStart=/app/szh/xingran-backend
+EnvironmentFile=/etc/xingran/secrets.env
 Restart=always
 RestartSec=5
 StartLimitBurst=3
@@ -443,7 +443,7 @@ sudo systemctl disable szh-backend
 | 内容 | 路径 | 备份方式 |
 |------|------|---------|
 | **方案 A（明文 .env）** | `/app/szh/.env` | 复制到密码管理器 + 加密 U 盘 |
-| **方案 B（EnvironmentFile）** | `/etc/ruoyi/secrets.env` | 复制到密码管理器 + 加密 U 盘 |
+| **方案 B（EnvironmentFile）** | `/etc/xingran/secrets.env` | 复制到密码管理器 + 加密 U 盘 |
 | **方案 C（凭据加密）** | `/etc/credstore/*.cred` (密文) + `/var/lib/systemd/credential.secret` (host key) | host key 单独备份到密码管理器；密文可放任何异地 |
 | 应用配置 | `/app/szh/configs/config.yaml` | 已在 git |
 | 数据库 | PostgreSQL dump | `pg_dump` 定期 |
@@ -452,13 +452,13 @@ sudo systemctl disable szh-backend
 
 ### 6.2 密钥丢失应急
 
-**如果 `/etc/ruoyi/secrets.env` 丢失**：
+**如果 `/etc/xingran/secrets.env` 丢失**：
 - ❌ 旧 key 找不到 = SM4 加密的 6 行历史数据**永久不可解密**（用户/设备/AD 凭据）
 - 唯一恢复途径：从密码管理器取回
 - 如果密码管理器也没存：所有账号需重新输入新密码
 
 **预防措施**：
-- `/etc/ruoyi/secrets.env` 至少 3 处备份：密码管理器 / 加密 U 盘 / 团队共享 vault
+- `/etc/xingran/secrets.env` 至少 3 处备份：密码管理器 / 加密 U 盘 / 团队共享 vault
 - 修改后立即更新所有备份
 
 ### 6.3 密钥轮转（SM4 迁移示例）
@@ -487,7 +487,7 @@ sudo systemctl disable szh-backend
 sudo journalctl -u szh-backend -n 200 --no-pager
 
 # 常见错误:
-# - "SM4_KEY 未配置" → /etc/ruoyi/secrets.env 中 SM4_KEY= 行为空
+# - "SM4_KEY 未配置" → /etc/xingran/secrets.env 中 SM4_KEY= 行为空
 # - "数据库连接失败" → DB_HOST/DB_PORT/DB_PASSWORD 不对,或 PG 没启
 # - "Redis 连接失败" → REDIS_PASSWORD 不对,或 Redis 没启
 # - "JWT secret 是默认值" → JWT_SECRET 未设置或用了仓库默认值
@@ -497,7 +497,7 @@ sudo journalctl -u szh-backend -n 200 --no-pager
 
 ```bash
 # 看资源占用
-top -p $(pidof ruoyi-backend)
+top -p $(pidof xingran-backend)
 
 # 看连接数
 ss -s | grep -i tcp
@@ -519,18 +519,18 @@ sudo journalctl -u szh-backend --since "5 minutes ago" | grep -i slow
 
 ```bash
 # 1. 备份当前版本
-sudo cp /app/szh/ruoyi-backend /app/szh/ruoyi-backend.bak.$(date +%Y%m%d)
+sudo cp /app/szh/xingran-backend /app/szh/xingran-backend.bak.$(date +%Y%m%d)
 
 # 2. 备份密钥(理论上 secrets.env 不变)
-sudo cp /etc/ruoyi/secrets.env /etc/ruoyi/secrets.env.bak.$(date +%Y%m%d)
+sudo cp /etc/xingran/secrets.env /etc/xingran/secrets.env.bak.$(date +%Y%m%d)
 
 # 3. 停止服务
 sudo systemctl stop szh-backend
 
 # 4. 替换二进制
-sudo cp /tmp/ruoyi-backend-new /app/szh/ruoyi-backend
-sudo chown szh:szh /app/szh/ruoyi-backend
-sudo chmod +x /app/szh/ruoyi-backend
+sudo cp /tmp/xingran-backend-new /app/szh/xingran-backend
+sudo chown szh:szh /app/szh/xingran-backend
+sudo chmod +x /app/szh/xingran-backend
 
 # 5. 如有 config.yaml 变更,合并
 sudo vim /app/szh/configs/config.yaml

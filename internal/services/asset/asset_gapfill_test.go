@@ -17,11 +17,11 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	services "github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
-	pkgcache "github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	services "github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/websocket"
+	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
 // =====================================================================
@@ -120,7 +120,7 @@ func TestCacheKeyBuildersAndStripPrefix(t *testing.T) {
 	assert.Equal(t, "reconciliation:health:workstation:ws-1", GetReconciliationHealthByWorkstationKey("ws-1"))
 	assert.Equal(t, "reconciliation:health:asset:a-1", GetReconciliationHealthByAssetKey("a-1"))
 
-	assert.Equal(t, "health:ws-1", StripCachePrefix("ruoyi:health:ws-1"))
+	assert.Equal(t, "health:ws-1", StripCachePrefix("xingran:health:ws-1"))
 	assert.Equal(t, "no-prefix", StripCachePrefix("no-prefix"))
 }
 

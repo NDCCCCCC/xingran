@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // API Key 作用域名称（rate_limiter 与 system/apikey_service 各持一份以避免跨包耦合）

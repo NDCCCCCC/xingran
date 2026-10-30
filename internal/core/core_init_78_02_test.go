@@ -33,9 +33,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/scheduler"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
 const (
@@ -61,7 +61,7 @@ const (
 	init78PollInterval = 50 * time.Millisecond
 
 	// init78JWTSecret 满足 NewJWTManager 非空 + ≥16 字节校验的测试密钥,
-	// 且避开已知弱默认值 ruoyi-next-secret-key(security/jwt.go F-04)。
+	// 且避开已知弱默认值 xingran-next-secret-key(security/jwt.go F-04)。
 	init78JWTSecret = "init78-02-jwt-secret-key-test-only"
 )
 
@@ -570,7 +570,7 @@ func TestInit78_InitCache_RedisBranch_Simple(t *testing.T) {
 	// 注意:本测试只走 L1(MemoryCache),L2(Redis)因 L2Writer 是异步 fire-and-forget,
 	// 直接读 miniredis 可能尚未写入。改用 MultiLevelCache 的 Get(L1 命中)作为
 	// 主要可观察证据;键落 L2 由 TestInit78_CacheWarmUp 间接覆盖。
-	mrKey := "ruoyi:init78:simple:probe"
+	mrKey := "xingran:init78:simple:probe"
 	require.Eventually(t, func() bool {
 		_, gerr := mr.Get(mrKey)
 		return gerr == nil
@@ -595,7 +595,7 @@ func TestInit78_InitCache_RedisBranch_WriterCloseStopsWorker(t *testing.T) {
 	require.NoError(t, herr)
 	p, perr := strconv.Atoi(portStr)
 	require.NoError(t, perr)
-	l2, err := cache.NewRedisCache(&cache.CacheConfig{Host: host, Port: p}, "ruoyi")
+	l2, err := cache.NewRedisCache(&cache.CacheConfig{Host: host, Port: p}, "xingran")
 	require.NoError(t, err)
 	l1 := cache.NewMemoryCache(1000, 5*time.Minute)
 
@@ -606,7 +606,7 @@ func TestInit78_InitCache_RedisBranch_WriterCloseStopsWorker(t *testing.T) {
 	ctx := context78Bg()
 	require.NoError(t, mc.Set(ctx, "init78:writer:probe", "v", 30*time.Second))
 	require.Eventually(t, func() bool {
-		_, gerr := mr.Get("ruoyi:init78:writer:probe")
+		_, gerr := mr.Get("xingran:init78:writer:probe")
 		return gerr == nil
 	}, init78WaitUpperBound, init78PollInterval,
 		"L2Writer 应在守卫时间内把键落到 miniredis")
@@ -980,10 +980,10 @@ func TestInit78_New_ErrorPaths(t *testing.T) {
 
 	t.Run("JWT_WeakDefault", func(t *testing.T) {
 		cfg := newInit78Config(t, "memory", "")
-		cfg.JWT.SecretKey = "ruoyi-next-secret-key" // 已知弱默认(F-04)
+		cfg.JWT.SecretKey = "xingran-next-secret-key" // 已知弱默认(F-04)
 		_, err := New(cfg)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "ruoyi-next-secret-key")
+		assert.Contains(t, err.Error(), "xingran-next-secret-key")
 	})
 }
 

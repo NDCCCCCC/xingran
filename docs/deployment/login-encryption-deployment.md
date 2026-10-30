@@ -241,11 +241,11 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
    vim configs/config.prod.yaml
 
    # 重新构建
-   go build -o ruoyi-backend ./cmd/main.go
+   go build -o xingran-backend ./cmd/main.go
 
    # 部署到测试服务器
-   scp ruoyi-backend user@test-server:/opt/ruoyi/
-   ssh user@test-server "systemctl restart ruoyi-backend"
+   scp xingran-backend user@test-server:/opt/xingran/
+   ssh user@test-server "systemctl restart xingran-backend"
    ```
 
 2. **部署前端变更**:
@@ -254,10 +254,10 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
    npm run build
 
    # 部署到测试服务器
-   scp -r dist/* user@test-server:/var/www/ruoyi/
+   scp -r dist/* user@test-server:/var/www/xingran/
 
    # 清除 CDN 缓存（如果使用）
-   ssh user@test-server "invalidate-cache /var/www/ruoyi/"
+   ssh user@test-server "invalidate-cache /var/www/xingran/"
    ```
 
 3. **运行冒烟测试**:
@@ -267,7 +267,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
    npm run test:e2e
 
    # 集成测试（在测试服务器上）
-   ssh user@test-server "cd /opt/ruoyi && go test ./tests/integration/..."
+   ssh user@test-server "cd /opt/xingran && go test ./tests/integration/..."
    ```
 
 4. **手动测试场景**:
@@ -331,7 +331,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 2. **备份当前配置**:
    ```bash
    # 备份生产配置
-   ssh user@prod-server "cp /opt/ruoyi/configs/config.prod.yaml /opt/ruoyi/configs/config.prod.yaml.backup"
+   ssh user@prod-server "cp /opt/xingran/configs/config.prod.yaml /opt/xingran/configs/config.prod.yaml.backup"
    ```
 
 3. **部署后端变更**:
@@ -340,10 +340,10 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
    vim configs/config.prod.yaml
 
    # 重新构建
-   go build -o ruoyi-backend ./cmd/main.go
+   go build -o xingran-backend ./cmd/main.go
 
    # 部署到生产服务器
-   scp ruoyi-backend user@prod-server:/opt/ruoyi/
+   scp xingran-backend user@prod-server:/opt/xingran/
 
    # 滚动重启后端服务（零停机）
    ssh user@prod-server "./scripts/rolling-restart.sh"
@@ -364,7 +364,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 5. **部署后验证**:
    ```bash
    # 监控错误日志
-   ssh user@prod-server "tail -f /var/log/ruoyi-backend/app.log | grep -i 'decrypt\|error'"
+   ssh user@prod-server "tail -f /var/log/xingran-backend/app.log | grep -i 'decrypt\|error'"
 
    # 检查指标仪表板
    # 验证错误率 < 0.1%
@@ -405,10 +405,10 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 1. **回滚后端配置**:
    ```bash
    # 将 /api/v1/system/auth/login 添加回 exclude_paths
-   ssh user@prod-server "vim /opt/ruoyi/configs/config.prod.yaml"
+   ssh user@prod-server "vim /opt/xingran/configs/config.prod.yaml"
 
    # 重启后端服务
-   ssh user@prod-server "systemctl restart ruoyi-backend"
+   ssh user@prod-server "systemctl restart xingran-backend"
    ```
 
 2. **回滚前端变更**:
@@ -446,8 +446,8 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 
    # 回滚后端变更
    git revert <commit-hash>
-   go build -o ruoyi-backend ./cmd/main.go
-   systemctl restart ruoyi-backend
+   go build -o xingran-backend ./cmd/main.go
+   systemctl restart xingran-backend
    ```
 
 2. **Git 回滚前端变更**:
@@ -520,14 +520,14 @@ rate(nonce_storage_size[5m])
 
 #### 4. CPU 使用率
 
-**指标**: `process_cpu_usage{service="ruoyi-backend"}`
+**指标**: `process_cpu_usage{service="xingran-backend"}`
 
 **告警阈值**: > 80% 持续
 
 **Prometheus 查询**:
 ```promql
 # CPU 使用率
-rate(process_cpu_seconds_total{service="ruoyi-backend"}[5m]) * 100
+rate(process_cpu_seconds_total{service="xingran-backend"}[5m]) * 100
 ```
 
 ### 告警规则
@@ -584,7 +584,7 @@ groups:
       # 告警: CPU 使用率过高
       - alert: HighCPUUsage
         expr: |
-          rate(process_cpu_seconds_total{service="ruoyi-backend"}[5m]) * 100 > 80
+          rate(process_cpu_seconds_total{service="xingran-backend"}[5m]) * 100 > 80
         for: 10m
         labels:
           severity: warning
@@ -615,7 +615,7 @@ groups:
 
 4. **CPU 使用率趋势**:
    - 类型: Graph
-   - 查询: `rate(process_cpu_seconds_total{service="ruoyi-backend"}[5m]) * 100`
+   - 查询: `rate(process_cpu_seconds_total{service="xingran-backend"}[5m]) * 100`
    - 告警线: 80%
 
 ---
@@ -632,7 +632,7 @@ groups:
 **诊断步骤**:
 1. 检查后端日志中的具体错误信息：
    ```bash
-   tail -f /var/log/ruoyi-backend/app.log | grep -i "decrypt\|error"
+   tail -f /var/log/xingran-backend/app.log | grep -i "decrypt\|error"
    ```
 2. 验证 SM2 密钥对是否正确配置：
    ```bash
@@ -664,7 +664,7 @@ groups:
 **诊断步骤**:
 1. 检查 Prometheus CPU 指标：
    ```promql
-   rate(process_cpu_seconds_total{service="ruoyi-backend"}[5m]) * 100
+   rate(process_cpu_seconds_total{service="xingran-backend"}[5m]) * 100
    ```
 2. 检查解密延迟指标：
    ```promql
@@ -692,7 +692,7 @@ groups:
 **诊断步骤**:
 1. 检查 `require_encryption` 配置：
    ```bash
-   grep require_encryption /opt/ruoyi/configs/config.prod.yaml
+   grep require_encryption /opt/xingran/configs/config.prod.yaml
    ```
 2. 验证前端 CDN 缓存：
    ```bash
@@ -828,4 +828,4 @@ if len(nonce) != 32 || !isValidHex(nonce) {
 
 **文档版本**: 1.0
 **最后更新**: 2026-05-21
-**维护者**: RuoYi-Next 开发团队
+**维护者**: XingRan-Next 开发团队

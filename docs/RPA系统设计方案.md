@@ -2,7 +2,7 @@
 
 ## 一、项目概述
 
-为 ruoyi-go-backend 项目添加 RPA（机器人流程自动化）功能，支持：
+为 xingran-go-backend 项目添加 RPA（机器人流程自动化）功能，支持：
 - **混合 AI 模式**：传统选择器优先 + AI Agent 智能降级
 - AI 辅助脚本生成（自然语言描述 → Playwright 脚本）
 - AI Agent 自适应执行（选择器失效时智能修复）
@@ -16,7 +16,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                   宿主机 - ruoyi-backend                        │
+│                   宿主机 - xingran-backend                        │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  Core Services                                            │  │
@@ -496,7 +496,7 @@ version: '3.8'
 services:
   rpa-worker:
     build: .
-    image: ruoyi-rpa-worker:latest
+    image: xingran-rpa-worker:latest
     deploy:
       replicas: 2  # 默认 2 个副本
     restart: unless-stopped
@@ -513,7 +513,7 @@ services:
       - ./downloads:/app/downloads
       - ./screenshots:/app/screenshots
     networks:
-      - ruoyi-network
+      - xingran-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -521,7 +521,7 @@ services:
       retries: 3
 
 networks:
-  ruoyi-network:
+  xingran-network:
     external: true
 ```
 
@@ -686,7 +686,7 @@ go run cmd/main.go
 cd rpa-worker
 
 # 构建镜像
-docker build -t ruoyi-rpa-worker:latest .
+docker build -t xingran-rpa-worker:latest .
 
 # 启动 2 个 Worker
 docker-compose up -d --scale rpa-worker=2

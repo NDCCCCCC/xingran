@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	sysmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
 
 // TestFloorWorkstationStats_BasicAggregation F1 挂 3 工位(0/1/1) → {3,2,1,0}；

@@ -4,10 +4,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core/security"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 const (

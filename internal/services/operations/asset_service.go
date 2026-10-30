@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	pkgquery "github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	pkgquery "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 

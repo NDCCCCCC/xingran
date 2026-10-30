@@ -3,7 +3,7 @@
 package portcollection
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/device"
 	"gorm.io/gorm"
 )
 

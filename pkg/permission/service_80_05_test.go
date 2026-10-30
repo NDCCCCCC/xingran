@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // newPms8005 装配 service + sqlite 库(sys_role/sys_menu/sys_role_menu/

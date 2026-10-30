@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // API 路径常量

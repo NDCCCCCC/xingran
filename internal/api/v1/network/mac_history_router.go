@@ -2,10 +2,10 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	mac_history_query_service "github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	mac_history_query_service "github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // SetupMACHistoryRouter 设置MAC历史查询路由

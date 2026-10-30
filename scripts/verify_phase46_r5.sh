@@ -16,8 +16,8 @@
 #   API_BASE          (default: http://localhost:9000)
 #   DB_HOST           (default: localhost)
 #   DB_PORT           (default: 5432)
-#   DB_NAME           (default: ruoyi_next)
-#   DB_USER           (default: ruoyi)
+#   DB_NAME           (default: xingran_next)
+#   DB_USER           (default: xingran)
 #   DB_PASSWORD       (default: empty)
 #   ADMIN_USER        (default: admin)
 #   ADMIN_PASSWORD    (default: admin123)
@@ -33,8 +33,8 @@ set -euo pipefail
 API_BASE="${API_BASE:-http://localhost:9000}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
-DB_NAME="${DB_NAME:-ruoyi_next}"
-DB_USER="${DB_USER:-ruoyi}"
+DB_NAME="${DB_NAME:-xingran_next}"
+DB_USER="${DB_USER:-xingran}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"

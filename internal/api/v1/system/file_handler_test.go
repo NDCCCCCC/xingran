@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // setupFileTestDB creates in-memory SQLite with sys_files schema (file_service schema).

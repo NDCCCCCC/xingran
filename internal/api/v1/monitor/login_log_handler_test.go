@@ -18,12 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // mockLoginLogService implements monitorServices.LoginLogService via function fields

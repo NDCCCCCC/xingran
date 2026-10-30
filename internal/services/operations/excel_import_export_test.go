@@ -12,8 +12,8 @@ import (
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 
-	sysmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
 
 // =====================================================================

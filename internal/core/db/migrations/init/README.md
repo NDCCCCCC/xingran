@@ -11,12 +11,12 @@
 
 ### 1. 创建数据库
 ```bash
-createdb -U postgres ruoyi_next
+createdb -U postgres xingran_next
 ```
 
 ### 2. 启动应用（自动创建表结构）
 ```bash
-./ruoyi-backend
+./xingran-backend
 ```
 应用启动时会自动调用 `AutoMigrate()` 创建所有表。
 
@@ -24,34 +24,34 @@ createdb -U postgres ruoyi_next
 
 ```bash
 # 网络设备类型字典
-psql -U postgres -d ruoyi_next -f ../002_init_network_device_type_dict.sql
+psql -U postgres -d xingran_next -f ../002_init_network_device_type_dict.sql
 
 # 运维管理菜单
-psql -U postgres -d ruoyi_next -f ../006_add_operations_management_menu.sql
+psql -U postgres -d xingran_next -f ../006_add_operations_management_menu.sql
 
 # 工单和知识库菜单
-psql -U postgres -d ruoyi_next -f ../013_add_workorder_knowledge_menus.sql
+psql -U postgres -d xingran_next -f ../013_add_workorder_knowledge_menus.sql
 
 # AD 域管理菜单
-psql -U postgres -d ruoyi_next -f ../017_add_ad_domain_menus.sql
+psql -U postgres -d xingran_next -f ../017_add_ad_domain_menus.sql
 
 # 缓存配置
-psql -U postgres -d ruoyi_next -f ../025_insert_cache_config.sql
+psql -U postgres -d xingran_next -f ../025_insert_cache_config.sql
 
 # 专线类型字典
-psql -U postgres -d ruoyi_next -f ../047_add_dedicated_line_type_dict.sql
+psql -U postgres -d xingran_next -f ../047_add_dedicated_line_type_dict.sql
 
 # ISP 字典
-psql -U postgres -d ruoyi_next -f ../048_add_isp_dict.sql
+psql -U postgres -d xingran_next -f ../048_add_isp_dict.sql
 
 # 信息点类型字典
-psql -U postgres -d ruoyi_next -f ../033_add_info_point_type_dict.sql
+psql -U postgres -d xingran_next -f ../033_add_info_point_type_dict.sql
 
 # RPA 菜单（如果使用 RPA 功能）
-psql -U postgres -d ruoyi_next -f ../106_add_rpa_menus.sql
+psql -U postgres -d xingran_next -f ../106_add_rpa_menus.sql
 
 # API 密钥管理菜单（最终版本）
-psql -U postgres -d ruoyi_next -f ../123_create_apikey_menu_simple.sql
+psql -U postgres -d xingran_next -f ../123_create_apikey_menu_simple.sql
 ```
 
 ## 文件说明

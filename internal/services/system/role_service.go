@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

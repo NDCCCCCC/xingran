@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/security"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/utils"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // getNicknameOrUsername 安全地获取用户昵称，如果为空则返回用户名

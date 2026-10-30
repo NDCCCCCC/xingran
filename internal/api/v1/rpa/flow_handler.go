@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 )
 
 // FlowHandler 流程控制处理器

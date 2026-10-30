@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	opsModels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	opsModels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 )
 
 // mockWorkstationService implements opsServices.WorkstationService for handler tests.

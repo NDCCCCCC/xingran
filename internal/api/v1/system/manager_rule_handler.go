@@ -4,12 +4,12 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // ManagerRuleHandler 经理同步规则维护（列表/CRUD）。

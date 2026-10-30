@@ -9,10 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	apiOpsRequests "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
-	opsModels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	apiOpsRequests "github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	opsModels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 )
 
 // mockServerRoomService implements opsServices.ServerRoomService.

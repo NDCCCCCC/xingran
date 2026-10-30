@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 )
 
 // executionForEval SimpleConditionEvaluator 测试辅助（避免测试间循环依赖）。

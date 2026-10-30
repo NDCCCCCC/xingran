@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // fakePool78 是一个同包最小 fake AccountPool 实现,用于注入 ListAvailable error 等边界。

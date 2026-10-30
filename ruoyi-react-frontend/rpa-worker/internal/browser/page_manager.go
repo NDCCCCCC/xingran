@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ruoyi-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/logger"
 )
 
 // PageManager 页面管理器

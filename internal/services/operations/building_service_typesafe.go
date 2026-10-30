@@ -4,10 +4,10 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
+	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 

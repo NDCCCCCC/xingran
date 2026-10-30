@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RuoYi-Next is a modern enterprise permission management system based on the RuoYi framework. It uses a Go backend + React frontend architecture with national cryptography (SM2/SM3/SM4) for security.
+XingRan-Next is a modern enterprise permission management system based on the XingRan framework. It uses a Go backend + React frontend architecture with national cryptography (SM2/SM3/SM4) for security.
 
 **Tech Stack:**
 - Backend: Go 1.24, Gin, GORM, PostgreSQL 18, Redis 7.4
@@ -26,20 +26,20 @@ RuoYi-Next is a modern enterprise permission management system based on the RuoY
 
 ```bash
 # Build for Windows
-go build -o ruoyi-backend.exe ./cmd/main.go
+go build -o xingran-backend.exe ./cmd/main.go
 
 # Build for Linux (production)
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -o ruoyi-backend-linux ./cmd/main.go
+go build -o xingran-backend-linux ./cmd/main.go
 
 # Run tests
 go test ./...
 go test ./internal/api/v1/
 
 # Run backend
-.\ruoyi-backend.exe
+.\xingran-backend.exe
 ```
 
 ### Frontend (React)
@@ -93,7 +93,7 @@ npm run test:coverage
 **Important Config Values:**
 - `server.mode`: "debug" (dev) or "release" (production)
 - `database.type`: "postgres" or "sqlite"
-- `cache.prefix`: "ruoyi" (used for all Redis keys, see Cache System section)
+- `cache.prefix`: "xingran" (used for all Redis keys, see Cache System section)
 - `baidu.map_ak`: Baidu Maps API key for geocoding (read from env or config)
 - `security.request_encryption.exclude_paths`: Endpoints that skip SM2+SM4 encryption
 
@@ -102,9 +102,9 @@ npm run test:coverage
 # Database
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=ruoyi
+DB_USER=xingran
 DB_PASSWORD=your_password
-DB_NAME=ruoyi_next
+DB_NAME=xingran_next
 
 # Redis
 REDIS_URL=redis://localhost:6379
@@ -235,12 +235,12 @@ src/
 
 **规则:** 所有业务写操作（POST 创建 / 更新 / 删除 / 状态变更 / 导入导出 / 同步 / 批量等）handler 必须在 success path 末尾、`response.Success(...)` **之前**调用 `operlog.Record(...)` 记录操作日志。该约定由 Phase 34（操作日志全模块集成）落地，用于满足审计与可追溯性要求（参考 `.planning/notes/260615-oper-log-coverage-audit.md`）。
 
-**helper 包路径:** `github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog`
+**helper 包路径:** `github.com/xingran-next/xingran-go-backend/internal/utils/operlog`
 
 **调用模式（非敏感端点）:**
 
 ```go
-import "github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+import "github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 
 // success path 末尾，response.Success 之前
 operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeCreate)
@@ -572,7 +572,7 @@ LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify
 1. **pkg/cache/** - Low-level cache interface
    - `Cache` interface with Get/Set/Delete methods
    - Redis implementation in `redis.go`
-   - **Important**: Redis uses prefix `ruoyi:` for all keys
+   - **Important**: Redis uses prefix `xingran:` for all keys
    - When calling cache methods, use keys WITHOUT prefix, the prefix is added automatically
 
 2. **services/** - High-level caching
@@ -585,11 +585,11 @@ LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify
 - Constants defined in root-level `*_cache_service.go` files
 
 **CRITICAL: Cache Key Prefix Handling**
-- Redis prefix is set to `ruoyi` in `internal/core/core.go:342`
-- When storing: `cache.Set(ctx, "user:1", value)` → actual Redis key: `ruoyi:user:1`
+- Redis prefix is set to `xingran` in `internal/core/core.go:342`
+- When storing: `cache.Set(ctx, "user:1", value)` → actual Redis key: `xingran:user:1`
 - When user provides key with prefix in cache monitor operations, always strip it first:
   ```go
-  if strings.HasPrefix(key, "ruoyi:") {
+  if strings.HasPrefix(key, "xingran:") {
       key = key[6:]  // Remove prefix before operations
   }
   ```
@@ -701,10 +701,10 @@ LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify
 
 - **Scheduler confusion**: `internal/scheduler/` (engine) ≠ `api/v1/scheduler/` (job management)
 - **Cache dual architecture**: Legacy root files vs new `system/` implementations
-- **Import paths**: Use full module path `github.com/ruoyi-next/ruoyi-go-backend/...`
+- **Import paths**: Use full module path `github.com/xingran-next/xingran-go-backend/...`
 - **Context propagation**: Always pass `c.Request.Context()` to service methods
 - **Response wrapper**: Use `response.Success()` and `response.Error()`, not raw JSON
-- **Cache prefix confusion**: User input may include `ruoyi:` prefix from UI, always strip before cache operations
+- **Cache prefix confusion**: User input may include `xingran:` prefix from UI, always strip before cache operations
 - **UUID validation**: When validating org_id, check format first to avoid PostgreSQL type errors
 - **Frontend API calls**: Use wrapped functions in `@/lib/api.ts`, NOT raw axios
 - **Operations module API**: Use `@/lib/opsApi.ts` for building/floor/workstation CRUD
@@ -760,13 +760,13 @@ npm run test -- --watch
 
 ```bash
 # Development build (Windows)
-go build -o ruoyi-backend.exe ./cmd/main.go
+go build -o xingran-backend.exe ./cmd/main.go
 
 # Production build (Linux)
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -ldflags="-s -w" -o ruoyi-backend-linux ./cmd/main.go
+go build -ldflags="-s -w" -o xingran-backend-linux ./cmd/main.go
 ```
 
 ### Database Migrations
@@ -976,7 +976,7 @@ Use TodoWrite to track progress. Ask for my approval only before starting and fo
 
 **工位导入部门/用户关联功能**
 
-为 RuoYi-Next 运维管理系统的工位（Workstation）Excel 导入功能添加"所属部门"和"所属用户"两个可选字段。导入时通过部门名称匹配 `sys_dept`、通过用户名匹配 `sys_user`，建立工位与部门、用户的关联关系，并在前端展示。
+为 XingRan-Next 运维管理系统的工位（Workstation）Excel 导入功能添加"所属部门"和"所属用户"两个可选字段。导入时通过部门名称匹配 `sys_dept`、通过用户名匹配 `sys_user`，建立工位与部门、用户的关联关系，并在前端展示。
 
 **Core Value:** 工位导入时能自动关联部门和用户，避免手动逐条配置，提升批量管理效率。
 
@@ -996,7 +996,7 @@ Use TodoWrite to track progress. Ask for my approval only before starting and fo
 ## Backend Stack
 ### Language & Runtime
 - **Go 1.24** (toolchain go1.24.5)
-- Module: `github.com/ruoyi-next/ruoyi-go-backend`
+- Module: `github.com/xingran-next/xingran-go-backend`
 - Entry point: `cmd/main.go`
 ### Web Framework
 - **Gin v1.10.0** — HTTP routing, middleware, JSON binding
@@ -1011,7 +1011,7 @@ Use TodoWrite to track progress. Ask for my approval only before starting and fo
 ### Cache
 - **Redis 7.4** via `redis/go-redis/v9 v9.7.0`
 - Two-tier: L1 (in-memory) + L2 (Redis) with async writer pool
-- Prefix: `ruoyi:` for all keys
+- Prefix: `xingran:` for all keys
 - L2 writer pool: configurable workers, queue size, retry with exponential backoff
 ### Authentication & Security
 - **JWT v5.2.1** — Dual token (access + refresh)
@@ -1103,8 +1103,8 @@ Use TodoWrite to track progress. Ask for my approval only before starting and fo
 - Avoid raw SQL; prefer GORM chainable API
 ### Cache Key Helpers
 ### Cache Prefix Handling
-- Store: `cache.Set(ctx, "user:1", value)` → Redis key `ruoyi:user:1`
-- When user input includes `ruoyi:` prefix, strip it before cache operations:
+- Store: `cache.Set(ctx, "user:1", value)` → Redis key `xingran:user:1`
+- When user input includes `xingran:` prefix, strip it before cache operations:
 ## Status Value Convention
 ## API Convention
 ### Route Pattern

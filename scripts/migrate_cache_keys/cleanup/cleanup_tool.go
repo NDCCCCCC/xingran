@@ -148,7 +148,7 @@ func main() {
 // isNewKeyFormat 检查是否为新规范键
 func isNewKeyFormat(key string) bool {
 	for _, prefix := range newPrefixes {
-		if strings.HasPrefix(key, "ruoyi:"+prefix) || strings.HasPrefix(key, prefix) {
+		if strings.HasPrefix(key, "xingran:"+prefix) || strings.HasPrefix(key, prefix) {
 			return true
 		}
 	}

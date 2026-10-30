@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
 )
 
 // HasUserPermission 在 gin 上下文中"查询式"判断当前用户是否持有指定权限。

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 

@@ -15,10 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	vdiServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	vdiServices "github.com/xingran-next/xingran-go-backend/internal/services/vdi"
 )
 
 // Compile-time assertion: mockVMService implements vdiServices.VMService.

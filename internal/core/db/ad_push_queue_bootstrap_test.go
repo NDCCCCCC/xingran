@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // hasQueueIndex 读取 sqlite_master 中 ad_push_queue 的索引名集合。

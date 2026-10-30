@@ -7,7 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // actionPermissionSeed 定义动作级权限种子的单条结构。

@@ -2,12 +2,12 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // DictWriteRouteGroups 字典**写操作**路由分组（85-03 RBAC-01，范式对齐 DeptWriteRouteGroups）。
-// 类型/数据子资源共用 system:dict:* 码族（RuoYi 惯例，无独立 dict:data:* 码）。
+// 类型/数据子资源共用 system:dict:* 码族（XingRan 惯例，无独立 dict:data:* 码）。
 // ⚠️ 字段必须扁平到叶子组（groups.<Field>.POST 直挂形态，扫描器按此解析挂载）。
 type DictWriteRouteGroups struct {
 	TypesAdd    *gin.RouterGroup

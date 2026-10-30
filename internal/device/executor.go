@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // deviceExecutorTimeoutBuffer 设备执行器等待任务完成时相对于任务超时的额外缓冲时间

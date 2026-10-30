@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
 // blacklistMockCache 可控行为的 cache.Cache 实现,用于黑名单服务测试。

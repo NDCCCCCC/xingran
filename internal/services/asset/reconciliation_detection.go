@@ -14,9 +14,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 )
 
 // NormalizedRow reconciliation_normalized 物化视图单行(R1 + R2 检测引擎输入)

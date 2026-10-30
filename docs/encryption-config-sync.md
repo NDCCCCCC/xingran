@@ -2,7 +2,7 @@
 
 **版本:** 1.0.0  
 **更新日期:** 2026-05-20  
-**作者:** RuoYi-Next 开发团队
+**作者:** XingRan-Next 开发团队
 
 ---
 
@@ -25,7 +25,7 @@
 
 ## 概述
 
-本文档描述了 RuoYi-Next 系统中前后端加密配置同步功能的实现、使用和维护方法。该功能允许管理员在运行时动态控制请求体加密开关，无需重新构建前端应用。
+本文档描述了 XingRan-Next 系统中前后端加密配置同步功能的实现、使用和维护方法。该功能允许管理员在运行时动态控制请求体加密开关，无需重新构建前端应用。
 
 **核心价值:** 
 - 实时控制加密功能开关，无需重新部署
@@ -664,7 +664,7 @@ go test -v -run TestGetEncryptionConfig
 === RUN   TestGetEncryptionConfig_CacheRefresh
 --- PASS: TestGetEncryptionConfig_CacheRefresh (0.01s)
 PASS
-ok      github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1    0.525s
+ok      github.com/xingran-next/xingran-go-backend/internal/api/v1    0.525s
 ```
 
 ### 前端测试
@@ -884,7 +884,7 @@ Duration    3.38s
 1. 检查数据库连接：
    ```bash
    # 检查数据库是否可达
-   psql -h localhost -U ruoyi -d ruoyi_next
+   psql -h localhost -U xingran -d xingran_next
    ```
 
 2. 检查配置是否存在：
@@ -1055,7 +1055,7 @@ var globalConfigCache = &configCache{
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -ldflags="-s -w" -o ruoyi-backend-linux ./cmd/main.go
+go build -ldflags="-s -w" -o xingran-backend-linux ./cmd/main.go
 ```
 
 ### 紧急回滚（不重新构建）
@@ -1075,7 +1075,7 @@ WHERE config_key = 'sys.request.encryption.enabled';
 **步骤 2: 重启后端（刷新缓存）**
 
 ```bash
-systemctl restart ruoyi-backend
+systemctl restart xingran-backend
 # 或
 docker-compose restart backend
 ```
@@ -1334,7 +1334,7 @@ func SetupAuthRouter(r *gin.RouterGroup, core *core.Core) {
 ```go
 // internal/api/v1/system/config_handler.go
 
-import "github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
+import "github.com/xingran-next/xingran-go-backend/pkg/middleware"
 
 // 在 Update 方法中添加缓存刷新
 func (h *ConfigHandler) Update(c *gin.Context) {
@@ -1512,8 +1512,8 @@ npm run test -- encryptionConfig.test.ts
 ## 支持
 
 如有问题或建议，请联系：
-- **GitHub Issues:** https://github.com/ruoyi-next/ruoyi-go-backend/issues
-- **文档维护:** RuoYi-Next 开发团队
+- **GitHub Issues:** https://github.com/xingran-next/xingran-go-backend/issues
+- **文档维护:** XingRan-Next 开发团队
 
 ---
 

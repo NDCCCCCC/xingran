@@ -105,7 +105,7 @@ func checkNewKeys(ctx context.Context, client *redis.Client) {
 	totalNewKeys := 0
 	for _, pattern := range newPatterns {
 		var count int
-		iter := client.Scan(ctx, 0, "ruoyi:"+pattern, 100).Iterator()
+		iter := client.Scan(ctx, 0, "xingran:"+pattern, 100).Iterator()
 		for iter.Next(ctx) {
 			count++
 		}
@@ -152,7 +152,7 @@ func checkRedisStats(ctx context.Context, client *redis.Client) {
 func isOldKeyFormat(key string) bool {
 	// 移除 xingran: 前缀
 	cleanKey := key
-	if len(key) > 6 && key[:6] == "ruoyi:" {
+	if len(key) > 6 && key[:6] == "xingran:" {
 		cleanKey = key[6:]
 	}
 

@@ -98,6 +98,6 @@ if errors.Is(err, gorm.ErrRecordNotFound) {
 
 5. 添加新函数 `restoreDeletedUserWithADInfo`（在第212行之后）
 
-6. 重新编译：`go build -o ruoyi-backend.exe ./cmd/main.go`
+6. 重新编译：`go build -o xingran-backend.exe ./cmd/main.go`
 
 7. 重启服务并测试

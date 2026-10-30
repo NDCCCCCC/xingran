@@ -2,8 +2,8 @@ package operations
 
 import (
 	"github.com/gin-gonic/gin"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // handleJSONBinding 统一处理 JSON 绑定

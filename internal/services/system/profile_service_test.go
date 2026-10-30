@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // setupProfileServiceDB creates in-memory SQLite with sys_user schema.

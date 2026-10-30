@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 

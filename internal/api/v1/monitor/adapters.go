@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
 )
 
 // MetricsProviderAdapter 指标提供者适配器

@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // TestNormalizePaginationWithMax:表驱动覆盖全部归一化分支 + 1-9 透传口径。

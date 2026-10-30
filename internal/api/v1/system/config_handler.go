@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // ConfigHandler 参数配置处理器

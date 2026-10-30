@@ -99,7 +99,7 @@ func TestServeFrontend_AssetRootAndSubPath(t *testing.T) {
 	c, w = newTestCtx(http.MethodGet, "/xingran/"+rel)
 	ServeFrontend(c)
 	if w.Code != http.StatusOK {
-		t.Fatalf("GET /ruoyi/%s: status %d, want 200 (prefix strip broken?)", rel, w.Code)
+		t.Fatalf("GET /xingran/%s: status %d, want 200 (prefix strip broken?)", rel, w.Code)
 	}
 }
 
@@ -120,7 +120,7 @@ func TestServeSPA_AssetSubPathServesFromEmbed(t *testing.T) {
 	c, w := newTestCtx(http.MethodGet, "/xingran/"+rel)
 	ServeSPA(c)
 	if w.Code != http.StatusOK {
-		t.Fatalf("GET /ruoyi/%s: status %d, want 200", rel, w.Code)
+		t.Fatalf("GET /xingran/%s: status %d, want 200", rel, w.Code)
 	}
 }
 

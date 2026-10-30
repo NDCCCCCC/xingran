@@ -2,15 +2,15 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
-	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	networkServices "github.com/xingran-next/xingran-go-backend/internal/services/network"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
+	responseHelpers "github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // DeviceHandler 网络设备处理器

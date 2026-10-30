@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // wsd77 常量:测试种子行固定 ID(工位/用户用合法 UUID,其余表无 UUID 校验要求)

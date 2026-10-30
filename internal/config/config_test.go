@@ -117,12 +117,12 @@ func TestGetDSN_URLEscape(t *testing.T) {
 				Port:     5432,
 				User:     "postgres",
 				Password: "secret",
-				DBName: "ruoyi",
+				DBName: "xingran",
 				SSLMode:  "disable",
 			},
 			wantSubs: []string{
 				"postgres://",
-				"postgres:secret@localhost:5432/ruoyi",
+				"postgres:secret@localhost:5432/xingran",
 				"sslmode=disable",
 				"timezone=Asia%2FShanghai", // URL 编码后 / → %2F,是 net/url 标准行为
 			},

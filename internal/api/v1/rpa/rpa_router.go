@@ -2,9 +2,9 @@ package rpa
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // SetupPublicWorkerRouter 设置公开的 Worker 路由（不需要认证）

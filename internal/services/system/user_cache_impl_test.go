@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 // Phase 72 W2 计划 72-05: userCacheService 测试补齐。

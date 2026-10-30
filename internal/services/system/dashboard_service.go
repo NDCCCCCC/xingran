@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
 // DashboardService 仪表盘服务接口

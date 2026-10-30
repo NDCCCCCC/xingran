@@ -16,7 +16,7 @@ type DuplicateGroup struct {
 }
 
 func main() {
-	dsn := "host=10.62.10.34 user=postgres password=Cpic1234 dbname=ruoyi port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=10.62.10.34 user=postgres password=Cpic1234 dbname=xingran port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("数据库连接失败:", err)
@@ -102,7 +102,7 @@ func main() {
 	fmt.Printf("\n✓ 清理脚本已生成: scripts/cleanup_duplicate_menus.sql\n")
 	fmt.Printf("  预计删除 %d 条重复记录\n", deletedCount)
 	fmt.Printf("\n执行前请备份:\n")
-	fmt.Printf("  pg_dump -h 10.62.10.34 -U postgres -d ruoyi -t sys_menu > backup_sys_menu_$(date %%Y%%m%%d_%%H%%M%%S).sql\n\n")
+	fmt.Printf("  pg_dump -h 10.62.10.34 -U postgres -d xingran -t sys_menu > backup_sys_menu_$(date %%Y%%m%%d_%%H%%M%%S).sql\n\n")
 	fmt.Printf("执行清理:\n")
-	fmt.Printf("  psql -h 10.62.10.34 -U postgres -d ruoyi -f scripts/cleanup_duplicate_menus.sql\n")
+	fmt.Printf("  psql -h 10.62.10.34 -U postgres -d xingran -f scripts/cleanup_duplicate_menus.sql\n")
 }

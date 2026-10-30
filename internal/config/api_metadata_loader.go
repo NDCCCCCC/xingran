@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v3"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // APIMetadataConfig API 元数据配置。

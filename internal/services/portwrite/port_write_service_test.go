@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
+	"github.com/xingran-next/xingran-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/glebarez/sqlite"

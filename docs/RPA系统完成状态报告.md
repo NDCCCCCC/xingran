@@ -6,7 +6,7 @@
 
 ### 编译状态
 - ✅ `go build ./...` - 编译成功，无错误
-- ✅ `go build -o ruoyi-backend-test.exe ./cmd/main.go` - 可执行文件生成成功
+- ✅ `go build -o xingran-backend-test.exe ./cmd/main.go` - 可执行文件生成成功
 
 ### 数据库 (4 个迁移文件)
 - ✅ `102_add_rpa_tables.sql` - 8 个核心表

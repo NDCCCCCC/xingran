@@ -1,5 +1,5 @@
 /**
- * ruoyiBrand WCAG 2.1 对比度自动验证（QA-01）
+ * xingranBrand WCAG 2.1 对比度自动验证（QA-01）
  *
  * 目的：把 brand-spec 列出的关键前景/背景对锁在测试层 —— 不达标即 fail，
  * 防止后续重构意外破坏 D-03 按钮纪律或品牌对比度承诺。
@@ -18,7 +18,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ruoyiBrand } from "./colors";
+import { xingranBrand } from "./colors";
 import { brandSeriesColors, brandHeatRamp } from "./echartsTheme";
 
 /**
@@ -71,138 +71,138 @@ export function contrastRatio(fg: string, bg: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-describe("ruoyiBrand WCAG contrast ratios", () => {
+describe("xingranBrand WCAG contrast ratios", () => {
   // ---- D-03 主按钮纪律 ----
 
-  it("#FFFFFF on ruoyiBrand.greenPrimary (#156031) meets WCAG AA (≥ 7.6:1)", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.greenPrimary);
+  it("#FFFFFF on xingranBrand.greenPrimary (#156031) meets WCAG AA (≥ 7.6:1)", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.greenPrimary);
     expect(ratio).toBeGreaterThanOrEqual(7.6);
   });
 
-  it("#FFFFFF on ruoyiBrand.greenPrimaryHover (#2E7444) meets WCAG AA (≥ 5.6:1)", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.greenPrimaryHover);
+  it("#FFFFFF on xingranBrand.greenPrimaryHover (#2E7444) meets WCAG AA (≥ 5.6:1)", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.greenPrimaryHover);
     expect(ratio).toBeGreaterThanOrEqual(5.6);
   });
 
-  it("#FFFFFF on ruoyiBrand.greenPrimaryActive (#14542E) meets WCAG AA (≥ 7.0:1)", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.greenPrimaryActive);
+  it("#FFFFFF on xingranBrand.greenPrimaryActive (#14542E) meets WCAG AA (≥ 7.0:1)", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.greenPrimaryActive);
     expect(ratio).toBeGreaterThanOrEqual(7.0);
   });
 
-  it("#FFFFFF on ruoyiBrand.green[900] (#14532D) meets WCAG AA (≥ 7.0:1) — 深绿底", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.green[900]);
+  it("#FFFFFF on xingranBrand.green[900] (#14532D) meets WCAG AA (≥ 7.0:1) — 深绿底", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.green[900]);
     expect(ratio).toBeGreaterThanOrEqual(7.0);
   });
 
   // ---- 侧边栏深绿底文字 ----
 
-  it("ruoyiBrand.onDark.lightYellow (#E0E0B0) on ruoyiBrand.greenPrimary (#156031) meets WCAG AA (≥ 5.6:1)", () => {
-    const ratio = contrastRatio(ruoyiBrand.onDark.lightYellow, ruoyiBrand.greenPrimary);
+  it("xingranBrand.onDark.lightYellow (#E0E0B0) on xingranBrand.greenPrimary (#156031) meets WCAG AA (≥ 5.6:1)", () => {
+    const ratio = contrastRatio(xingranBrand.onDark.lightYellow, xingranBrand.greenPrimary);
     expect(ratio).toBeGreaterThanOrEqual(5.6);
   });
 
-  it("ruoyiBrand.cream.canvas (#F0ECE3) on ruoyiBrand.green[900] (#14532D) meets WCAG AA (≥ 7.0:1) — 深绿侧栏文字", () => {
-    const ratio = contrastRatio(ruoyiBrand.cream.canvas, ruoyiBrand.green[900]);
+  it("xingranBrand.cream.canvas (#F0ECE3) on xingranBrand.green[900] (#14532D) meets WCAG AA (≥ 7.0:1) — 深绿侧栏文字", () => {
+    const ratio = contrastRatio(xingranBrand.cream.canvas, xingranBrand.green[900]);
     expect(ratio).toBeGreaterThanOrEqual(7.0);
   });
 
   // ---- 白卡 / 奶油底文字 ----
 
-  it("ruoyiBrand.cream.muted (#707068) on ruoyiBrand.cream.surface (#FFFFFF) meets WCAG AA (≥ 4.9:1) — 白卡次级文字", () => {
-    const ratio = contrastRatio(ruoyiBrand.cream.muted, ruoyiBrand.cream.surface);
+  it("xingranBrand.cream.muted (#707068) on xingranBrand.cream.surface (#FFFFFF) meets WCAG AA (≥ 4.9:1) — 白卡次级文字", () => {
+    const ratio = contrastRatio(xingranBrand.cream.muted, xingranBrand.cream.surface);
     expect(ratio).toBeGreaterThanOrEqual(4.9);
   });
 
-  it("ruoyiBrand.cream.mutedStrong (#64645C) on ruoyiBrand.cream.canvas (#F0ECE3) meets WCAG AA (≥ 4.9:1) — 奶油底次级文字", () => {
-    const ratio = contrastRatio(ruoyiBrand.cream.mutedStrong, ruoyiBrand.cream.canvas);
+  it("xingranBrand.cream.mutedStrong (#64645C) on xingranBrand.cream.canvas (#F0ECE3) meets WCAG AA (≥ 4.9:1) — 奶油底次级文字", () => {
+    const ratio = contrastRatio(xingranBrand.cream.mutedStrong, xingranBrand.cream.canvas);
     expect(ratio).toBeGreaterThanOrEqual(4.9);
   });
 
-  it("ruoyiBrand.cream.fg (#101010) on ruoyiBrand.cream.canvas (#F0ECE3) meets WCAG AA (≥ 12:1) — 奶油底主文字", () => {
-    const ratio = contrastRatio(ruoyiBrand.cream.fg, ruoyiBrand.cream.canvas);
+  it("xingranBrand.cream.fg (#101010) on xingranBrand.cream.canvas (#F0ECE3) meets WCAG AA (≥ 12:1) — 奶油底主文字", () => {
+    const ratio = contrastRatio(xingranBrand.cream.fg, xingranBrand.cream.canvas);
     expect(ratio).toBeGreaterThanOrEqual(12);
   });
 
-  it("ruoyiBrand.cream.fg (#101010) on ruoyiBrand.cream.surface (#FFFFFF) meets WCAG AA (≥ 15:1) — 白卡主文字", () => {
-    const ratio = contrastRatio(ruoyiBrand.cream.fg, ruoyiBrand.cream.surface);
+  it("xingranBrand.cream.fg (#101010) on xingranBrand.cream.surface (#FFFFFF) meets WCAG AA (≥ 15:1) — 白卡主文字", () => {
+    const ratio = contrastRatio(xingranBrand.cream.fg, xingranBrand.cream.surface);
     expect(ratio).toBeGreaterThanOrEqual(15);
   });
 
-  it("ruoyiBrand.cream.fg (#101010) on ruoyiBrand.cream.headerBg (#E9EFEB) meets WCAG AA (≥ 12:1) — 表头文字 (COMP-02)", () => {
-    const ratio = contrastRatio(ruoyiBrand.cream.fg, ruoyiBrand.cream.headerBg);
+  it("xingranBrand.cream.fg (#101010) on xingranBrand.cream.headerBg (#E9EFEB) meets WCAG AA (≥ 12:1) — 表头文字 (COMP-02)", () => {
+    const ratio = contrastRatio(xingranBrand.cream.fg, xingranBrand.cream.headerBg);
     expect(ratio).toBeGreaterThanOrEqual(12);
   });
 
   // ---- 功能色 ----
 
-  it("#FFFFFF on ruoyiBrand.functional.danger (#BA3630) meets WCAG AA (≥ 5.6:1) — 危险按钮", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.functional.danger);
+  it("#FFFFFF on xingranBrand.functional.danger (#BA3630) meets WCAG AA (≥ 5.6:1) — 危险按钮", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.functional.danger);
     expect(ratio).toBeGreaterThanOrEqual(5.6);
   });
 
-  it("#FFFFFF on ruoyiBrand.functional.success (#2D8949) meets WCAG AA (≥ 4.3:1) — 成功图标/大字", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.functional.success);
+  it("#FFFFFF on xingranBrand.functional.success (#2D8949) meets WCAG AA (≥ 4.3:1) — 成功图标/大字", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.functional.success);
     expect(ratio).toBeGreaterThanOrEqual(4.3);
   });
 
-  it("#FFFFFF on ruoyiBrand.functional.successSolid (#238142) meets WCAG AA (≥ 4.5:1) — 成功实心按钮", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.functional.successSolid);
+  it("#FFFFFF on xingranBrand.functional.successSolid (#238142) meets WCAG AA (≥ 4.5:1) — 成功实心按钮", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.functional.successSolid);
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("ruoyiBrand.functional.warningText (#905D00) on #FFFFFF meets WCAG AA (≥ 5.5:1) — 警告文字白底 (brand-spec 标注 5.60:1)", () => {
-    const ratio = contrastRatio(ruoyiBrand.functional.warningText, "#FFFFFF");
+  it("xingranBrand.functional.warningText (#905D00) on #FFFFFF meets WCAG AA (≥ 5.5:1) — 警告文字白底 (brand-spec 标注 5.60:1)", () => {
+    const ratio = contrastRatio(xingranBrand.functional.warningText, "#FFFFFF");
     expect(ratio).toBeGreaterThanOrEqual(5.5);
   });
 
-  it("ruoyiBrand.functional.warningText (#905D00) on ruoyiBrand.onDark.paleYellow (#FEF3C7) meets WCAG AA (≥ 5.0:1) — 警告文字淡黄底", () => {
+  it("xingranBrand.functional.warningText (#905D00) on xingranBrand.onDark.paleYellow (#FEF3C7) meets WCAG AA (≥ 5.0:1) — 警告文字淡黄底", () => {
     const ratio = contrastRatio(
-      ruoyiBrand.functional.warningText,
-      ruoyiBrand.onDark.paleYellow
+      xingranBrand.functional.warningText,
+      xingranBrand.onDark.paleYellow
     );
     expect(ratio).toBeGreaterThanOrEqual(5.0);
   });
 
   // ---- 铜金梯度（仅作点缀/大字实心按钮，禁止作主按钮） ----
 
-  it("#FFFFFF on ruoyiBrand.copper[500] (#B88850) meets WCAG AA Large (≥ 3.0:1) — 铜金大字实心按钮", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.copper[500]);
+  it("#FFFFFF on xingranBrand.copper[500] (#B88850) meets WCAG AA Large (≥ 3.0:1) — 铜金大字实心按钮", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.copper[500]);
     expect(ratio).toBeGreaterThanOrEqual(3.0);
   });
 
-  it("#FFFFFF on ruoyiBrand.copper[400] (#AA7B42) meets WCAG AA Large (≥ 3.0:1) — 铜金 hover", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.copper[400]);
+  it("#FFFFFF on xingranBrand.copper[400] (#AA7B42) meets WCAG AA Large (≥ 3.0:1) — 铜金 hover", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.copper[400]);
     expect(ratio).toBeGreaterThanOrEqual(3.0);
   });
 
   // ---- D-03 反向断言（防回归） ----
 
-  it("#FFFFFF on ruoyiBrand.copperAccent (#C09058) violates D-03 (< 3.5:1) — 铜金不可作主按钮背景", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.copperAccent);
+  it("#FFFFFF on xingranBrand.copperAccent (#C09058) violates D-03 (< 3.5:1) — 铜金不可作主按钮背景", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.copperAccent);
     expect(ratio).toBeLessThan(3.5);
   });
 
-  it("#FFFFFF on ruoyiBrand.copper[600] (#C09058) violates D-03 (< 4.5:1) — 铜金不可作次按钮背景", () => {
-    const ratio = contrastRatio("#FFFFFF", ruoyiBrand.copper[600]);
+  it("#FFFFFF on xingranBrand.copper[600] (#C09058) violates D-03 (< 4.5:1) — 铜金不可作次按钮背景", () => {
+    const ratio = contrastRatio("#FFFFFF", xingranBrand.copper[600]);
     expect(ratio).toBeLessThan(4.5);
   });
 
   // ---- 品牌令牌完整性（防止意外删除） ----
 
-  it("ruoyiBrand exposes all required token groups", () => {
-    expect(ruoyiBrand.green).toBeDefined();
-    expect(ruoyiBrand.green[50]).toBe("#E9EFEB");
-    expect(ruoyiBrand.green[100]).toBe("#598E5E");
-    expect(ruoyiBrand.green[200]).toBe("#3B784C");
-    expect(ruoyiBrand.green[300]).toBe("#1A6839");
-    expect(ruoyiBrand.green[400]).toBe("#156031");
-    expect(ruoyiBrand.green[900]).toBe("#14532D");
-    expect(ruoyiBrand.greenPrimary).toBe("#156031");
-    expect(ruoyiBrand.copperAccent).toBe("#C09058");
-    expect(ruoyiBrand.cream.canvas).toBe("#F0ECE3");
-    expect(ruoyiBrand.cream.surface).toBe("#FFFFFF");
-    expect(ruoyiBrand.onDark.lightYellow).toBe("#E0E0B0");
-    expect(ruoyiBrand.functional.danger).toBe("#BA3630");
+  it("xingranBrand exposes all required token groups", () => {
+    expect(xingranBrand.green).toBeDefined();
+    expect(xingranBrand.green[50]).toBe("#E9EFEB");
+    expect(xingranBrand.green[100]).toBe("#598E5E");
+    expect(xingranBrand.green[200]).toBe("#3B784C");
+    expect(xingranBrand.green[300]).toBe("#1A6839");
+    expect(xingranBrand.green[400]).toBe("#156031");
+    expect(xingranBrand.green[900]).toBe("#14532D");
+    expect(xingranBrand.greenPrimary).toBe("#156031");
+    expect(xingranBrand.copperAccent).toBe("#C09058");
+    expect(xingranBrand.cream.canvas).toBe("#F0ECE3");
+    expect(xingranBrand.cream.surface).toBe("#FFFFFF");
+    expect(xingranBrand.onDark.lightYellow).toBe("#E0E0B0");
+    expect(xingranBrand.functional.danger).toBe("#BA3630");
   });
 });
 
@@ -342,9 +342,9 @@ describe("dark-mode brand derivation (THEME-02)", () => {
     const darkBrand = "#598E5E";
     const rootBrand = "#156031";
     expect(darkBrand).not.toBe(rootBrand);
-    // ruoyiBrand.green[100] = 深底图标绿, green[400] = 品牌主色
-    expect(darkBrand).toBe(ruoyiBrand.green[100]);
-    expect(rootBrand).toBe(ruoyiBrand.green[400]);
+    // xingranBrand.green[100] = 深底图标绿, green[400] = 品牌主色
+    expect(darkBrand).toBe(xingranBrand.green[100]);
+    expect(rootBrand).toBe(xingranBrand.green[400]);
   });
 
   // ---- 暗色关键前景/背景对 WCAG AA (≥ 4.5:1) ----
@@ -373,22 +373,22 @@ describe("dark-mode brand derivation (THEME-02)", () => {
 describe("phase-64 UAT gap tokens in AntdThemeBridge (COMP-02/03/04)", () => {
   const source = loadAntdThemeBridge();
 
-  it("G4/COMP-03: Button locks primary text to ruoyiBrand.onDark.white (D-03 白字 7.64:1)", () => {
+  it("G4/COMP-03: Button locks primary text to xingranBrand.onDark.white (D-03 白字 7.64:1)", () => {
     const block = extractTsBlock(source, "Button: {");
-    expect(block).toContain("primaryColor: ruoyiBrand.onDark.white");
+    expect(block).toContain("primaryColor: xingranBrand.onDark.white");
   });
 
   it("G3/COMP-04: Tag default uses paleYellow bg + copper[500] text (SM2/SM3/SM4 品牌锚点配方)", () => {
     const block = extractTsBlock(source, "Tag: {");
-    expect(block).toContain("defaultBg: ruoyiBrand.onDark.paleYellow");
-    expect(block).toContain("defaultColor: ruoyiBrand.copper[500]");
+    expect(block).toContain("defaultBg: xingranBrand.onDark.paleYellow");
+    expect(block).toContain("defaultColor: xingranBrand.copper[500]");
   });
 
   it("G2/COMP-04: Input focus ring is brand green 2px activeShadow + greenPrimary border", () => {
     const block = extractTsBlock(source, "Input: {");
     expect(block).toContain('activeShadow: "0 0 0 2px rgba(21, 96, 49, 0.15)"');
-    expect(block).toContain("activeBorderColor: ruoyiBrand.greenPrimary");
-    expect(block).toContain("hoverBorderColor: ruoyiBrand.greenPrimary");
+    expect(block).toContain("activeBorderColor: xingranBrand.greenPrimary");
+    expect(block).toContain("hoverBorderColor: xingranBrand.greenPrimary");
   });
 
   it("G1/COMP-02: Table sort/filter/selected states use board zebra/header tokens (Phase 91 board 化)", () => {
@@ -397,30 +397,30 @@ describe("phase-64 UAT gap tokens in AntdThemeBridge (COMP-02/03/04)", () => {
     expect(block).toContain("headerBg: board.headerBg");
     expect(block).toContain("headerColor: board.fg");
     expect(block).toContain("borderColor: board.border");
-    expect(block).toContain("headerSortActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg");
-    expect(block).toContain("headerFilterHoverBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg");
-    expect(block).toContain("fixedHeaderSortActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg");
+    expect(block).toContain("headerSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
+    expect(block).toContain("headerFilterHoverBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
+    expect(block).toContain("fixedHeaderSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg");
     expect(block).toContain("rowSelectedBg: board.headerBg");
-    expect(block).toContain("rowSelectedHoverBg: isDark ? ruoyiBrand.dark.active : ruoyiBrand.cream.zebraBg");
+    expect(block).toContain("rowSelectedHoverBg: isDark ? xingranBrand.dark.active : xingranBrand.cream.zebraBg");
   });
 
-  it("QA-02 hygiene: Menu.dark* tokens read from ruoyiBrand, not string literals", () => {
+  it("QA-02 hygiene: Menu.dark* tokens read from xingranBrand, not string literals", () => {
     const block = extractTsBlock(source, "Menu: {");
-    expect(block).toContain("darkItemBg: ruoyiBrand.green[900]");
-    expect(block).toContain("darkItemSelectedBg: ruoyiBrand.greenPrimary");
-    expect(block).toContain("darkItemHoverBg: ruoyiBrand.greenPrimaryLight");
+    expect(block).toContain("darkItemBg: xingranBrand.green[900]");
+    expect(block).toContain("darkItemSelectedBg: xingranBrand.greenPrimary");
+    expect(block).toContain("darkItemHoverBg: xingranBrand.greenPrimaryLight");
     expect(block).not.toMatch(/#[0-9a-fA-F]{6}/);
   });
 });
 
 describe("ECharts brand palette (COMP-04, canvas-safe)", () => {
-  it("brandSeriesColors has 5 entries from ruoyiBrand (green-gold gradient, no blue/purple)", () => {
+  it("brandSeriesColors has 5 entries from xingranBrand (green-gold gradient, no blue/purple)", () => {
     expect(brandSeriesColors).toHaveLength(5);
-    expect(brandSeriesColors[0]).toBe(ruoyiBrand.greenPrimary);
-    expect(brandSeriesColors[1]).toBe(ruoyiBrand.green[200]);
-    expect(brandSeriesColors[2]).toBe(ruoyiBrand.copperAccent);
-    expect(brandSeriesColors[3]).toBe(ruoyiBrand.green[100]);
-    expect(brandSeriesColors[4]).toBe(ruoyiBrand.copper[700]);
+    expect(brandSeriesColors[0]).toBe(xingranBrand.greenPrimary);
+    expect(brandSeriesColors[1]).toBe(xingranBrand.green[200]);
+    expect(brandSeriesColors[2]).toBe(xingranBrand.copperAccent);
+    expect(brandSeriesColors[3]).toBe(xingranBrand.green[100]);
+    expect(brandSeriesColors[4]).toBe(xingranBrand.copper[700]);
   });
 
   it("brandSeriesColors contains no default Antd blue (#1890ff) or indigo (#6366f1)", () => {
@@ -432,10 +432,10 @@ describe("ECharts brand palette (COMP-04, canvas-safe)", () => {
 
   it("brandHeatRamp has 5 entries: low-to-high green-to-copper gradient", () => {
     expect(brandHeatRamp).toHaveLength(5);
-    expect(brandHeatRamp[0]).toBe(ruoyiBrand.green[50]);
-    expect(brandHeatRamp[1]).toBe(ruoyiBrand.green[100]);
-    expect(brandHeatRamp[2]).toBe(ruoyiBrand.greenPrimary);
-    expect(brandHeatRamp[3]).toBe(ruoyiBrand.copperAccent);
-    expect(brandHeatRamp[4]).toBe(ruoyiBrand.copper[500]);
+    expect(brandHeatRamp[0]).toBe(xingranBrand.green[50]);
+    expect(brandHeatRamp[1]).toBe(xingranBrand.green[100]);
+    expect(brandHeatRamp[2]).toBe(xingranBrand.greenPrimary);
+    expect(brandHeatRamp[3]).toBe(xingranBrand.copperAccent);
+    expect(brandHeatRamp[4]).toBe(xingranBrand.copper[500]);
   });
 });

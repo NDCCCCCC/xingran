@@ -39,7 +39,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       {/*
         AntdThemeBridge 读取 settingsStore 中的 mode / density，
-        并把 ruoyiBrand 品牌令牌喂给 AntD ThemeConfig。
+        并把 xingranBrand 品牌令牌喂给 AntD ThemeConfig。
         这是解决"AntD 组件硬编码蓝色"（如工位管理页面表格/卡片/平面图
         Radio.Group）的关键；v1.22 Phase 65 起主色固定为品牌绿 #156031。
         locale 通过 AntdThemeBridge 内部直接传给 ConfigProvider。
@@ -48,7 +48,7 @@ function App() {
         <ConfigProvider>
           <ThemeProvider>
             <LayoutProvider>
-              {/* basename 取 Vite 的 base（VITE_BASE），dev 时 '/' 等价于未设；生产为 '/ruoyi/'
+              {/* basename 取 Vite 的 base（VITE_BASE），dev 时 '/' 等价于未设；生产为 '/xingran/'
                   时让 React Router 内部所有 <Link>/navigate/history 都自动加此前缀，
                   与 nginx 子路径部署模型一致。 */}
               <Router

@@ -2,9 +2,9 @@ package workorder
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/workorder"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/services/workorder"
 )
 
 // getWorkOrderService 获取工单服务（带缓存或无缓存）

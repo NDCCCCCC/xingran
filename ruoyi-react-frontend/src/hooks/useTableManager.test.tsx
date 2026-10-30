@@ -14,7 +14,7 @@ import { MemoryRouter } from "react-router-dom";
 import { Form, Input } from "antd";
 import { useTableManager, type TableManagerOptions } from "./useTableManager";
 
-const FILTERS_KEY = "ruoyi_table_state_system_user_filters";
+const FILTERS_KEY = "xingran_table_state_system_user_filters";
 
 type Manager = ReturnType<typeof useTableManager<Record<string, unknown>>>;
 
@@ -214,7 +214,7 @@ describe("useTableManager", () => {
   // UAT FAIL-1（Phase 75）：keepPage 语义——mount 恢复持久化页码的首载路径，
   // 不得把 current 硬编码回写为 1（默认行为仍回第 1 页，向后兼容）。
   it("applyFilters({ keepPage: true }) 保留当前页码加载且不覆写持久化 current", async () => {
-    sessionStorage.setItem("ruoyi_table_state_system_user_current", "2");
+    sessionStorage.setItem("xingran_table_state_system_user_current", "2");
     const loadFunction = vi.fn().mockResolvedValue({ list: [], total: 0 });
     const h = createHarness(loadFunction);
     // mount 时 usePersistedStateController 已从 sessionStorage 恢复 current=2
@@ -232,7 +232,7 @@ describe("useTableManager", () => {
     expect(call.username).toBe("alice"); // filters 合并照常
     expect(call.deptId).toBe("d1");
     expect(h.api().current).toBe(2);
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_current")).toBe("2"); // 未被覆写
+    expect(sessionStorage.getItem("xingran_table_state_system_user_current")).toBe("2"); // 未被覆写
     h.unmount();
   });
 

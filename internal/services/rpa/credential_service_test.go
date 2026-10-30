@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 )
 
 // fakeRPACipher addomain.PasswordCipher 假实现（前缀标记法）。

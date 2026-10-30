@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/transform"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/transform"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )

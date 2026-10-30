@@ -27,10 +27,10 @@ package migrations
 import (
 	"fmt"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // Migrate181CleanupDirtyMACRows 清理 sys_device_mac_address 中非 canonical MAC 行

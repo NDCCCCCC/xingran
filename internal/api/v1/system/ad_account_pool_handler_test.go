@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	coredb "github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	coredb "github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 )
 
 // =====================================================================

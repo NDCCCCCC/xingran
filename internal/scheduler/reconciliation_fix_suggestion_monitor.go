@@ -3,12 +3,12 @@ package scheduler
 import (
 	"context"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/websocket"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"gorm.io/gorm"
 )
 

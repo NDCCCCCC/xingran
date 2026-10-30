@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
-	devicepkg "github.com/ruoyi-next/ruoyi-go-backend/internal/device"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	devicepkg "github.com/xingran-next/xingran-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 

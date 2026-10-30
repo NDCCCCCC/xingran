@@ -13,11 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	knowledgeServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/knowledge"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	knowledgeServices "github.com/xingran-next/xingran-go-backend/internal/services/knowledge"
 )
 
 // Compile-time assertion: mockKnowledgeService implements knowledgeServices.KnowledgeCacheService

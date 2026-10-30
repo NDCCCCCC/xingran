@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	sysmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
 
 // =====================================================================

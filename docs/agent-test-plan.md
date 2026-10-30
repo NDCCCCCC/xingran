@@ -119,7 +119,7 @@ curl -X POST http://localhost:8443/api/v1/heartbeat \
 
 ```powershell
 # 1. 复制 Agent 到虚拟机
-Copy-Item "build\agent-windows-amd64.exe" "\\VM-IP\C$\Program Files\RuoyiAgent\"
+Copy-Item "build\agent-windows-amd64.exe" "\\VM-IP\C$\Program Files\XingranAgent\"
 
 # 2. 在虚拟机上执行安装
 powershell .\scripts\agent\install-windows.ps1 `
@@ -128,10 +128,10 @@ powershell .\scripts\agent\install-windows.ps1 `
   -VMID "vm-uuid-001"
 
 # 3. 检查服务状态
-Get-Service RuoyiVMAgent
+Get-Service XingranVMAgent
 
 # 4. 查看日志
-Get-Content "C:\Program Files\RuoyiAgent\logs\*.log"
+Get-Content "C:\Program Files\XingranAgent\logs\*.log"
 
 # 5. 测试 API
 Invoke-WebRequest -Uri "https://localhost:8443/api/v1/health" -Method POST -UseBasicParsing
@@ -148,10 +148,10 @@ ssh user@vm-ip
 sudo bash install-linux.sh "https://your-backend.com" "linux-vm-001" "vm-uuid-002"
 
 # 3. 检查服务状态
-systemctl status ruoyi-vm-agent
+systemctl status xingran-vm-agent
 
 # 4. 查看日志
-journalctl -u ruoyi-vm-agent -f
+journalctl -u xingran-vm-agent -f
 
 # 5. 测试 API
 curl -k -X POST https://localhost:8443/api/v1/health
@@ -203,11 +203,11 @@ curl -k -X POST https://localhost:8443/api/v1/health
 
 ```bash
 # Windows
-Get-Process ruoyi-vm-agent | Select-Object CPU,WorkingSet,Handles
+Get-Process xingran-vm-agent | Select-Object CPU,WorkingSet,Handles
 
 # Linux
-ps aux | grep ruoyi-vm-agent
-top -p $(pgrep ruoyi-vm-agent)
+ps aux | grep xingran-vm-agent
+top -p $(pgrep xingran-vm-agent)
 ```
 
 ### 并发测试
@@ -264,8 +264,8 @@ curl -X POST http://localhost:8443/api/v1/accounts \
 1. **Agent 无法启动**
    ```bash
    # 检查日志
-   # Windows: Get-Content "C:\Program Files\RuoyiAgent\logs\*.log"
-   # Linux: journalctl -u ruoyi-vm-agent -n 50
+   # Windows: Get-Content "C:\Program Files\XingranAgent\logs\*.log"
+   # Linux: journalctl -u xingran-vm-agent -n 50
 
    # 常见原因：
    # - 配置文件路径错误
@@ -285,7 +285,7 @@ curl -X POST http://localhost:8443/api/v1/accounts \
    ```bash
    # Windows: 检查管理员权限
    # Linux: 检查 sudoers 配置
-   cat /etc/sudoers.d/ruoyi-agent
+   cat /etc/sudoers.d/xingran-agent
    ```
 
 ## 集成测试流程
@@ -294,8 +294,8 @@ curl -X POST http://localhost:8443/api/v1/accounts \
 
 ```bash
 # 1. 启动后端服务器
-cd ruoyi-go-backend
-./ruoyi-backend.exe
+cd xingran-go-backend
+./xingran-backend.exe
 
 # 2. 创建测试 VM（通过 VDI API）
 # 3. 部署 Agent

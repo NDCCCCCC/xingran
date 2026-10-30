@@ -1,17 +1,17 @@
-# AGENTS.md - Coding Guidelines for RuoYi-Next
+# AGENTS.md - Coding Guidelines for XingRan-Next
 
 ## Build Commands
 
 ### Backend (Go)
 ```bash
 # Build for Windows
-go build -o ruoyi-backend.exe ./cmd/main.go
+go build -o xingran-backend.exe ./cmd/main.go
 
 # Build for Linux (production)
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -o ruoyi-backend-linux ./cmd/main.go
+go build -o xingran-backend-linux ./cmd/main.go
 
 # Run tests
 go test ./...
@@ -58,8 +58,8 @@ import (
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
     
-    "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-    "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+    "github.com/xingran-next/xingran-go-backend/internal/models"
+    "github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 ```
 
@@ -129,7 +129,7 @@ if (response.data.code === 0) { } // Manual check unnecessary
 
 ## Critical Rules
 
-- **Cache Prefix:** Redis uses `ruoyi:` prefix automatically. Strip it from user input before cache operations
+- **Cache Prefix:** Redis uses `xingran:` prefix automatically. Strip it from user input before cache operations
 - **UUID Validation:** `org_id` must be valid UUID format, not department names
-- **Import Path:** Use full module path `github.com/ruoyi-next/ruoyi-go-backend/...`
+- **Import Path:** Use full module path `github.com/xingran-next/xingran-go-backend/...`
 - **No Raw JSON:** Always use response wrappers, never `c.JSON()` directly

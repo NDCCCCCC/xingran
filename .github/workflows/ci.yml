@@ -1,0 +1,272 @@
+# CI quality gate — PR / push to main.
+#
+# Two independent jobs (backend slow, frontend fast → parallel feedback):
+#   backend:  golangci-lint + go test (packages that need no live services)
+#   frontend: lint → type-check → test:coverage → coverage gate → build
+#             (cheap-to-expensive order; coverage gate = Phase 82 全量口径 gate)
+#
+# Deploy lives in deploy.yml (separate file on purpose):
+#   - this file carries NO secrets context and only `contents: read`
+#   - concurrency semantics are opposite (CI cancels stale runs; deploys queue)
+
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          # go.mod declares go 1.24.0 + toolchain go1.24.5; GOTOOLCHAIN=auto
+          # (setup-go default) fetches the exact toolchain if needed.
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          # Bumped from v1.64.8 → v2.12.2 alongside dependabot PR #1's
+          # action bump v6 → v9 (action v7+ requires lint v2+).
+          # .golangci.yml also migrated to v2 schema in the same commit.
+          version: v2.12.2
+          args: --timeout=5m ./...
+
+      - name: Test
+        # Explicit package list excludes the root tests/ dir (integration
+        # tests that need a running service) and rpa-worker/ (separate Go
+        # module). Most unit tests use glebarez sqlite (:memory:, pure Go).
+        # If a package starts timing out, fall back to a whitelist:
+        #   go test ./internal/config/... ./pkg/...
+        # and re-admit packages one by one.
+        # Phase 71 GOV-01: -coverprofile + -covermode=atomic (count=1 already
+        # present). atomic mode is Go 1.21+ standalone (no -race needed; -race
+        # would 5-10x coverage time, forbidden by D-01 Claude's Discretion).
+        run: |
+          go test -timeout 15m -count=1 -coverprofile=coverage.out -covermode=atomic \
+            ./internal/... ./pkg/... ./cmd/...
+
+      - name: Coverage HTML report
+        # GOV-01: human-readable HTML for browser inspection on the artifact
+        # page. if: always() so a gate failure later does not block this step
+        # (we still want the HTML when the gate has to fail visibly).
+        if: always()
+        run: go tool cover -html=coverage.out -o coverage.html
+
+      - name: Coverage gate
+        # GOV-02: weighted-average floor read from .coverage-threshold (D-01).
+        # Script exits 0/1; exit 1 fails this step and the workflow. Script
+        # itself returns 0 when coverage.out is missing (soft skip) so the
+        # if: always() Upload step below can still publish the HTML for debug.
+        run: bash .github/scripts/check-coverage.sh coverage.out .coverage-threshold
+
+      - name: Upload coverage artifact
+        # GOV-01 + D-02: actions/upload-artifact@v4 (NOT @v7) with 30-day
+        # retention. Both raw coverage.out and HTML uploaded for local debug
+        # when the gate fails. if: always() so a gate failure still publishes
+        # the artifact instead of leaving the developer blind to the regression.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            coverage.out
+            coverage.html
+          retention-days: 30
+
+  coverage-diff:
+    # GOV-03 (Phase 74, D-14): PR diff coverage ≥80% gate. PR-only — push to
+    # main has no diff base and is already gated by the backend job's
+    # weighted-average floor. D-14 locked an external action with an explicit
+    # ratchet to self-implementation; the locked actions (gocover-coverage /
+    # ory/xcoverage-action) could not be verified to exist, so the gate is
+    # implemented in-repo (.github/scripts/check-diff-coverage.sh) with the
+    # same zero-dep bash+awk paradigm as check-coverage.sh (D-01).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: backend
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # merge-base (three-dot) diff needs full history
+          fetch-depth: 0
+
+      - name: Download coverage profile
+        # Reuses the backend job's coverage.out — no second test run.
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+
+      - name: Diff coverage gate (≥80%)
+        # Exit 1 when <80% of changed executable .go lines are covered.
+        # Exits 0 (skip) when the PR touches no testable .go lines.
+        run: bash .github/scripts/check-diff-coverage.sh coverage.out origin/${{ github.base_ref }} 80
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: xingran-react-frontend
+
+    steps:
+      # Full-repo checkout (not sparse): npm prebuild (sync-columns-schema)
+      # writes back to internal/services/system/*.json
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # Pin to current LTS. Never use 'latest' — non-reproducible CI
+          # is a CI smell. Bump in a deliberate commit when EOL approaches.
+          node-version: '24'
+          # Cache ~/.npm keyed on the lockfile. Do NOT cache node_modules
+          # directly — architecture-dependent, not safely cacheable.
+          cache: npm
+          cache-dependency-path: xingran-react-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Peer dependency compat check
+        # Pre-flight check: catch peer-incompatible version combinations BEFORE
+        # the slow lint/typecheck/test/build pipeline runs.
+        # Background: dependabot PR #26 bumped typescript 5.9.3 → 7.0.2 alongside
+        # typescript-eslint 8.50.0 → 8.70.0 (incompatible — peer is
+        # 'typescript': '>=4.8.4 <6.1.0'). Lint failed with a confusing
+        # 'typescript-eslint does not support TS 7.0' message 8 minutes into the
+        # pipeline. This step surfaces peer violations in ~10s as plain text,
+        # saving CI minutes and giving an actionable error.
+        # Note: `npm ls --all` has known false-positives (e.g. react@19.3.0 itself
+        # reports invalid against its own peer after major release). We log
+        # violations as warnings so maintainers can spot real regressions
+        # without blocking CI on npm-tooling noise. Promote to ::error:: + exit 1
+        # if a future regression is real and unambiguous.
+        run: |
+          set -e
+          # Capture stderr (where npm prints the per-violation inv lists) and
+          # stdout (JSON tree) — they normally intermix on conflict. Parse stderr
+          # line-by-line for `npm error invalid: ...` rows.
+          npm ls --all --json > /tmp/npm-ls.json 2> /tmp/npm-ls-stderr.txt || true
+          invalid_count=$(grep -c '^npm error invalid:' /tmp/npm-ls-stderr.txt || true)
+          if [ "$invalid_count" -gt 0 ]; then
+            echo "::warning::Found $invalid_count peer-dependency entries flagged by npm ls — review below"
+            grep '^npm error invalid:' /tmp/npm-ls-stderr.txt | head -20
+            if [ "$invalid_count" -gt 20 ]; then
+              echo "  ... and $(($invalid_count - 20)) more (truncated; see job log)"
+            fi
+            echo "::notice::If violations look like real peer breaks (e.g. typescript-eslint 8.x against typescript 7), consider closing PR + extending dependabot.yml ignore."
+          else
+            echo "Peer dependencies: OK"
+          fi
+
+      - name: Format check
+        # prettier --check 是廉价 fail-fast:文本比对不需要 transform/parse。
+        # 在 lint/type-check/test/build 之前跑,任何未格式化文件立刻阻断 CI,
+        # 与本地 lint-staged 的 prettier --write 互补(pre-commit 自动修;
+        # CI 兜底确保 push 进来的代码至少已经通过 check,不会被 --write 改写)。
+        run: npm run format:check
+
+      - name: Lint
+        # 2026-08-20: 恢复 strict gate。此前 dependabot PR #3 因误删
+        # typescript-eslint parser 配置导致 627 个解析错误，被迫
+        # continue-on-error。现 parser 已恢复（实际版本 TS 5.9.3 +
+        # eslint 9.39.2，从未升到 TS 7 / eslint 10），lint 可正常通过，
+        # 移除 continue-on-error 让 lint 重新成为硬门禁。
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Test (coverage)
+        # package.json 已改 vitest run --coverage (82-01): 全量口径 statements
+        # 报告 (coverage.include 圈定全 src, 白名单 cad 两目录排除), 产出
+        # coverage/coverage-final.json 供本 job 的 gate 与 PR diff job 复用。
+        run: npm run test:coverage
+
+      - name: Coverage gate
+        # GOV-03/GOV-05 (82-04): 全局阈值 + per-dir floor + 白名单漂移三合一,
+        # exit 1/4/6 任一即本 job 红。本 gate (check-frontend-coverage.sh) 在
+        # json 缺失时软跳过 (exit 0), 对称 backend check-coverage.sh 语义——
+        # 不挂 if: always()。注意: 这与本仓另一只 diff gate 脚本
+        # (check-frontend-diff-coverage.sh) 的 fail-closed exit 2 (WR-01) 刻意
+        # 不对称——那只脚本 pairing 的是 if: always() Upload 已完成的 diff job,
+        # json 缺失属配置漂移必须显式红; 两者不可混读。
+        # working-directory: . 覆盖 job 级 xingran-react-frontend (Pitfall 4):
+        # 否则 .github/scripts 与 .coverage-fe-floors 相对 frontend 目录解析不到。
+        working-directory: .
+        run: bash .github/scripts/check-frontend-coverage.sh xingran-react-frontend/coverage/coverage-final.json .coverage-fe-floors
+
+      - name: Upload coverage artifact
+        # D-03 (82-04): vitest json + html 报告目录随 artifact 上传供本地 debug
+        # 下载, 命名与 backend-coverage 对齐。if: always() 对称 backend job:
+        # gate 失败仍发布 artifact。path 相对 workspace root (upload 不走 job
+        # defaults); upload v4 以路径最小公共祖先为 artifact 根, 目录前缀被
+        # 剥离后 json 与 html 报告位于 artifact 根——frontend-coverage-diff
+        # job 的 download 必须带 path 输入还原 (见该 job 注释)。
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: xingran-react-frontend/coverage/
+          retention-days: 30
+
+      - name: Build
+        run: npm run build
+
+  frontend-coverage-diff:
+    # GOV-04 (82-04, D-02): PR-only 前端 diff coverage ≥80% gate, 逐字段对称
+    # 后端 coverage-diff job。复用 frontend job 上传的 vitest json artifact
+    # (零重复测试); push 无 diff base (已被 frontend job 的全局阈值 gate 把守),
+    # 故仅 PR 触发。
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: frontend
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # merge-base (three-dot) diff needs full history
+          fetch-depth: 0
+
+      - name: Download coverage report
+        # Reuses the frontend job's coverage-final.json — no second test run.
+        # 与后端 coverage-diff 的唯一刻意偏差: download 带 path 输入。upload v4
+        # 上传目录时以路径最小公共祖先为 artifact 根 (xingran-react-frontend/
+        # 前缀被剥离, json 与 html 报告位于 artifact 根); 无 path 输入时 json
+        # 解压到 workspace 根而非脚本第一参数路径, gate 会在所有 PR 上命中
+        # 脚本的 profile 缺失分支——该分支自 WR-01 (27f275e) 起为 fail-closed
+        # exit 2: job 显式红并提示 configuration drift, 不再静默放行。path
+        # 输入因此是让 gate 真正读到 json 跑起来, 而非防静默失效 (防失效已由
+        # fail-closed 兜底)。后端上传的是 workspace 根单文件, 故其 download
+        # 无需 path。
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage
+          path: xingran-react-frontend/coverage
+
+      - name: Diff coverage gate (≥80%)
+        # Exit 1 when <80% of changed executable .ts/.tsx lines are covered.
+        # Exits 0 (skip) only when the PR touches no testable lines.
+        # json 缺失 = fail-closed exit 2 (WR-01, 27f275e): 本 job 挂 needs:
+        # frontend, 到这里 json 必然存在, 缺失即配置漂移, 显式红不软跳过。
+        # 本 job 无 defaults.working-directory, 从 workspace root 跑; artifact
+        # 内容已经 path 输入解压回 xingran-react-frontend/coverage/ 下。
+        run: bash .github/scripts/check-frontend-diff-coverage.sh xingran-react-frontend/coverage/coverage-final.json origin/${{ github.base_ref }} 80

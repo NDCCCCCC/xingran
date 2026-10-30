@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // tlsInsecureWarnOnce records a one-time SECURITY warning when REDIS_TLS_INSECURE_SKIP_VERIFY=true.

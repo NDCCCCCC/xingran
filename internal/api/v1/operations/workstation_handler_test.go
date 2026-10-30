@@ -15,13 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 )
 
 // stubWorkstationService 满足 WorkstationService 接口的最小子集,只用于测试 GetByID

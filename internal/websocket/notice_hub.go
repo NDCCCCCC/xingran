@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // RPA 消息类型常量

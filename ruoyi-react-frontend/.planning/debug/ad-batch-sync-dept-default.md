@@ -52,7 +52,7 @@ None explicitly mentioned
 **Implementation:**
 ```go
 // 1. Add import
-import "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+import "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 
 // 2. Update struct
 type UserSyncService struct {

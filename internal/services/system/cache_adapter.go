@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // CacheAdapter 将 pkg/cache.Cache 适配为 system.CacheProvider 接口

@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // newDpl7902 装配 DutyPoolService + sqlite(t.TempDir 文件库)+ AutoMigrate duty 链 model。

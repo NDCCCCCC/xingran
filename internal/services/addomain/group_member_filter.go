@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // filterNestedGroupMemberDNs 将 memberDNs 按本轮已知 group DN 集合分流：

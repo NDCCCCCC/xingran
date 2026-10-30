@@ -2,10 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	systemRequests "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	systemRequests "github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 type ColumnConfigHandler struct {

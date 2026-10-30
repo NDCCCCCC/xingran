@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
 )
 
 // 新建 sqlite 测试库(纯 Go glebarez 驱动,与 NewDatabase 生产路径同一入口)

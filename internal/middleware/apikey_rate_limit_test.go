@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
 )
 
 // scopeProbe 记录 handler 内 SelectScope 纯函数推导结果,

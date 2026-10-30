@@ -1,6 +1,6 @@
 package rpa
 
-import "github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+import "github.com/xingran-next/xingran-go-backend/internal/services/base"
 
 // ListParams 通用列表查询参数
 // 嵌入 base.BaseListRequest 使 json 顶层自动获得 orderByColumn/isAsc 字段,

@@ -160,7 +160,7 @@ describe("authStore", () => {
   it("logout:清 token+菜单+存储痕迹并复位状态", async () => {
     useAuthStore.setState({ user: fakeUser, isAuthenticated: true, menusLoaded: true });
     sessionStorage.setItem(STORAGE_KEYS.LAST_PATH, "/system/user");
-    sessionStorage.setItem("ruoyi_table_state_system_user_current", "5");
+    sessionStorage.setItem("xingran_table_state_system_user_current", "5");
     localStorage.setItem("tabs-storage", "{}");
     useMenuStore.setState({ menus: [{ id: "m1" } as never], permissions: ["p"] });
 
@@ -170,7 +170,7 @@ describe("authStore", () => {
     expect(useMenuStore.getState().menus).toEqual([]);
     expect(useMenuStore.getState().permissions).toEqual([]);
     expect(sessionStorage.getItem(STORAGE_KEYS.LAST_PATH)).toBeNull();
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_current")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_system_user_current")).toBeNull();
     expect(localStorage.getItem("tabs-storage")).toBeNull();
 
     const state = useAuthStore.getState();

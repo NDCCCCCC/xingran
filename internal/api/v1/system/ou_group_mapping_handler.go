@@ -4,10 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // OUGroupMappingHandler OU组映射处理器

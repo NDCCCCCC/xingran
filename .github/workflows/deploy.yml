@@ -1,0 +1,252 @@
+# Deploy pipeline — push to main triggers CI first; deploy runs only after CI
+# success via workflow_run. Push of v* tag deploys + Release without CI gate
+# (tag pushes are explicit releases).
+#
+# Chain: build (embedded linux binary) → deploy (scp + remote activate)
+#        → release (tag only; skipped if deploy failed)
+#
+# Triggers:
+#   - workflow_run from ci.yml on main, conclusion=success → deploy branch HEAD
+#   - push of v* tag → deploy that tag + create GitHub Release
+#
+# Design notes:
+#   - concurrency group is FIXED and never cancelled: a deploy killed
+#     mid-binary-swap means downtime; concurrent deploys queue instead.
+#   - SSH uses raw ssh/scp (no third-party actions): this workflow holds
+#     the production private key, and every third-party action is another
+#     supply-chain surface. Rollback logic lives in
+#     scripts/deploy/deploy-remote.sh where it gets code-reviewed.
+#   - embed sanity check (size + embedded filename grep) guards against
+#     silently shipping a binary without the frontend (503-only fallback).
+#   - CI gate via workflow_run: branch deploys now require ci.yml success.
+#     Tag pushes bypass CI (explicit operator intent). workflow_run.head_sha
+#     pins checkout + version to the original commit CI tested, not the
+#     workflow_run's own SHA. Branch filter on workflow_run excludes
+#     pull_request runs (those target main but head_branch is the PR ref).
+#   - build/deploy job `if` is dual-mode: push → always run; workflow_run →
+#     only on success. release job keeps its tag-only filter (release never
+#     fires from a CI run, so the dual-mode if is unnecessary there).
+
+name: deploy
+
+on:
+  push:
+    tags: ['v*']
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write   # create deploy release (temporary artifact channel)
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      release_tag: ${{ steps.rel.outputs.release_tag }}
+      asset_url: ${{ steps.rel.outputs.asset_url }}
+      archive_sha256: ${{ steps.pkg.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v7
+        # workflow_run event carries the triggering CI's commit SHA in
+        # head_sha (github.sha would point at the workflow_run event itself);
+        # push event uses github.sha as usual.
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: xingran-react-frontend/package-lock.json
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Build frontend
+        run: |
+          cd xingran-react-frontend
+          npm ci
+          npm run build   # prebuild auto-syncs columns schema
+
+      - name: Stage embed directory
+        run: |
+          rm -rf internal/server/xingran-react-frontend
+          mkdir -p internal/server/xingran-react-frontend
+          cp -r xingran-react-frontend/dist internal/server/xingran-react-frontend/
+
+      - name: Resolve version
+        id: ver
+        env:
+          # workflow_run: pin version to the CI-tested commit, not the event SHA
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            V="${GITHUB_REF_NAME}"
+          else
+            V="main-${HEAD_SHA::7}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Build linux binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+          go build -tags=embed -trimpath \
+            -ldflags="-s -w -X main.Version=${{ steps.ver.outputs.version }}" \
+            -o out/xingran-backend ./cmd/main.go
+
+      - name: Sanity-check embed
+        # Belt and braces against an embed-less binary slipping through:
+        # embedded frontend puts the binary well over 40MB, and go:embed
+        # stores the file path verbatim in the binary (grep -a finds it
+        # even after -s -w stripping).
+        run: |
+          size=$(stat -c%s out/xingran-backend)
+          [ "$size" -gt 40000000 ] || { echo "binary too small ($size bytes), embed likely missing"; exit 1; }
+          grep -aq 'xingran-react-frontend/dist/index.html' out/xingran-backend \
+            || { echo "embed FS marker not found in binary"; exit 1; }
+          echo "embed check OK ($size bytes)"
+
+      - name: Package release archive
+        id: pkg
+        # deploy-remote.sh 一并打包 — fetch 脚本解压后直接 exec 它,
+        # 服务器不依赖任何预置脚本(自包含部署包)
+        run: |
+          cp configs/config.prod.example.yaml deploy/xingran.service out/
+          cp scripts/deploy/deploy-remote.sh out/
+          ARCHIVE="out/xingran-backend-${{ steps.ver.outputs.version }}-linux-amd64.tar.gz"
+          tar -czf "$ARCHIVE" \
+            -C out xingran-backend config.prod.example.yaml xingran.service deploy-remote.sh
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$ARCHIVE" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: xingran-backend-linux-amd64
+          path: out/xingran-backend
+          retention-days: 3
+          compression-level: 0   # already a stripped binary; gzip wastes CPU
+
+      - name: Upload release archive artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-archive
+          path: out/*.tar.gz
+          retention-days: 3
+
+      - name: Create deploy release
+        # Runner -> GitHub Release 是 GitHub 内网上传,速度不受限。
+        # 服务器侧经 gh-proxy.com 镜像拉取(实测 9.7MB/s),绕开
+        # runner -> 腾讯云 SSH 链路 ~10KB/s 的节流(deploy runs
+        # 32107499009/32113627075/32115683166/32118118412/32119924185
+        # 全部因 75MB 长流传输 15min 超时失败)。
+        # tag 用 deploy-<run_id> 保证并发/重跑唯一;临时 release 可定期清理。
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # workflow_run: pin release notes SHA to deployed commit, not event SHA
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          TAG="deploy-${GITHUB_RUN_ID}"
+          gh release create "$TAG" "${{ steps.pkg.outputs.archive }}" \
+            --repo "${{ github.repository }}" \
+            --title "$TAG" \
+            --notes "auto deploy artifact (sha: ${HEAD_SHA::7})" \
+            --prerelease
+          echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+          # 在 runner 侧解析 browser_download_url,服务器侧匿名经 gh-proxy
+          # 直接拉(仓库已 public:实测 2.7MB/s;匿名 CDN 无 rate limit)
+          ASSET_URL=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" \
+            --jq '.assets[0].browser_download_url')
+          echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+        id: rel
+
+  deploy:
+    # Mirror build job's dual-mode if: explicit (defense in depth — needs: build
+    # already gates on build success, but having the predicate here makes the
+    # contract obvious to readers and protects against future refactors that
+    # might break the chain).
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25  # 2026-09-14: fetch proxy chain 4×300s + backoff worst ~23.5min
+    environment: production   # deployment history; add reviewers later if wanted
+    steps:
+      - uses: actions/checkout@v7   # fetches deploy scripts
+
+      - name: Setup SSH
+        # Pin host key from SSH_KNOWN_HOSTS secret instead of accept-new
+        # blind trust on first connect. Fingerprint self-check catches
+        # wrong/trailing-newline Secrets before any ssh invocation.
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          got_fp=$(ssh-keygen -lf ~/.ssh/id_ed25519 | awk '{print $2}')
+          echo "deploy key fingerprint: ${got_fp}"
+          if [[ "${got_fp}" != "SHA256:9RrflpLM3hblmkElV/xRaMGqmGz5oikfVatiOl92PJ8" ]]; then
+            echo "::error::deploy private key fingerprint mismatch — refusing to connect"
+            exit 1
+          fi
+
+      - name: Fetch release on server and activate
+        # 网络矩阵实测(2026-08-18):
+        #   runner -> server SSH 吞吐 ~10KB/s (75MB 传不完,5 次 15min 超时)
+        #   server -> GitHub 直连 0-1.6KB/s;server -> gh-proxy 公开资产 2.7-9.7MB/s
+        # 故:build job 已把 tar.gz 传到临时 GitHub Release(GitHub 内网,快);
+        # 本步仅 ssh 触发服务器脚本,服务器自己匿名经 gh-proxy 拉取 ~22MB
+        # tar.gz(仓库已 public,实测 2.7MB/s),解压就位后 exec
+        # deploy-remote.sh 走原 activate 流程(零改动)。
+        run: |
+          PORT="${{ vars.SSH_PORT || '22' }}"
+          ssh -p "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+              -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            ubuntu@"${{ secrets.SSH_HOST }}" \
+            'bash -s' -- "${{ needs.build.outputs.version }}" \
+                         "${{ needs.build.outputs.asset_url }}" \
+                         "${{ needs.build.outputs.archive_sha256 }}" \
+            < scripts/deploy/fetch-release-and-activate.sh
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, deploy]   # no release artifact for a failed deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only place in this workflow that needs write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-archive
+          path: out
+
+      - name: Create GitHub Release
+        # gh is preinstalled on runners; --generate-notes builds the
+        # changelog from merged PRs/commits automatically.
+        # -R 显式指定仓库 — 本 job 无 checkout 步骤,gh 无 .git 上下文
+        # 会报 "fatal: not a git repository" (v0.1.0 run 32197297657)
+        run: |
+          gh release create "${GITHUB_REF_NAME}" out/*.tar.gz \
+            -R "${{ github.repository }}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}

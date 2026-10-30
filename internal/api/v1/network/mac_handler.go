@@ -2,14 +2,14 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
-	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/lldp"
+	"github.com/xingran-next/xingran-go-backend/internal/services/topology"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
+	responseHelpers "github.com/xingran-next/xingran-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 // MACAddressListRequest MAC地址列表请求

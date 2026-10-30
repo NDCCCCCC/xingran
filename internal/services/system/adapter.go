@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
 )
 
 // NewCacheProvider 创建缓存提供者

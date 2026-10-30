@@ -1,5 +1,5 @@
 # ============================================================================
-# RuoYi-Next 配置模板（开发/通用）
+# XingRan-Next 配置模板（开发/通用）
 # ============================================================================
 #
 # 【使用方式】
@@ -16,7 +16,7 @@
 
 # 服务器配置
 server:
-  name: "RuoYi-Next-Dev"
+  name: "XingRan-Next-Dev"
   host: "0.0.0.0"
   port: 9000
   mode: "debug"                # debug / release / test
@@ -31,12 +31,12 @@ server:
 # 环境变量: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 database:
   type: "postgres"           # postgres | sqlite
-  path: "data/ruoyi.db"    # sqlite 数据文件(仅 type=sqlite 生效)
+  path: "data/xingran.db"    # sqlite 数据文件(仅 type=sqlite 生效)
   host: "localhost"
   port: 5432
   user: "postgres"
   password: ""                 # 留空,通过 DB_PASSWORD 注入
-  dbname: "ruoyi_next"
+  dbname: "xingran_next"
   sslmode: "disable"
   max_open_conns: 25                              # Phase 62-DBG-01: 10→25 缓解 my-menus 池饥饿
   max_idle_conns: 10                              # 跟随 max_open_conns 等比调整
@@ -73,7 +73,7 @@ jwt:
   secret_key: ""               # 留空,通过 JWT_SECRET 注入（启动时强制校验非空）
   access_key_expire: 7200
   refresh_key_expire: 604800
-  issuer: "RuoYi-Next-Dev"
+  issuer: "XingRan-Next-Dev"
   use_sm2: true
   sm2_private_key: ""          # 通过 JWT_SM2_PRIVATE_KEY 注入
   sm2_public_key: ""           # 通过 JWT_SM2_PUBLIC_KEY 注入

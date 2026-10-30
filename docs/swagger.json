@@ -2,16 +2,16 @@
     "swagger": "2.0",
     "info": {
         "description": "企业级权限管理系统 API",
-        "title": "RuoYi Next API",
-        "termsOfService": "https://github.com/ruoyi-next/ruoyi-next",
+        "title": "XingRan Next API",
+        "termsOfService": "https://github.com/xingran-next/xingran-next",
         "contact": {
             "name": "API Support",
-            "url": "https://github.com/ruoyi-next/ruoyi-next/issues",
-            "email": "support@ruoyi-next.com"
+            "url": "https://github.com/xingran-next/xingran-next/issues",
+            "email": "support@xingran-next.com"
         },
         "license": {
             "name": "MIT",
-            "url": "https://github.com/ruoyi-next/ruoyi-next/blob/main/LICENSE"
+            "url": "https://github.com/xingran-next/xingran-next/blob/main/LICENSE"
         },
         "version": "1.0"
     },
@@ -1595,7 +1595,7 @@
         },
         "/monitor/cache/debug/raw-keys": {
             "post": {
-                "description": "查询Redis中所有原始键和ruoyi前缀的键，用于调试",
+                "description": "查询Redis中所有原始键和xingran前缀的键，用于调试",
                 "consumes": [
                     "application/json"
                 ],

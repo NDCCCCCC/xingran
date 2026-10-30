@@ -133,7 +133,7 @@ func (s *buildingService) applyFilters(query *gorm.DB, req BuildingListRequest) 
 // common.go - 通用请求结构体
 package requests
 
-import "github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+import "github.com/xingran-next/xingran-go-backend/internal/constants"
 
 // PaginationParams 分页参数
 type PaginationParams struct {

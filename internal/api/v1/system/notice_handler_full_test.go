@@ -14,11 +14,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // =====================================================================

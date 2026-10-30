@@ -2,9 +2,9 @@ package asset
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 )
 
 // SetupReconciliationExceptionRouter 设置资产对账例外规则路由

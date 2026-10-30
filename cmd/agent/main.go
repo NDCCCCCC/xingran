@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/agent/server"
+	"github.com/xingran-next/xingran-go-backend/internal/agent/server"
 )
 
 func main() {

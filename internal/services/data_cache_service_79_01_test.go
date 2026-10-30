@@ -36,8 +36,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 )
 
 // dcs7901Sample GetOrSet / Set / Get 往返断言用样例结构体。

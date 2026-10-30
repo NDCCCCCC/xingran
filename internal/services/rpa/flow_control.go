@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 	"gorm.io/gorm"
 )
 

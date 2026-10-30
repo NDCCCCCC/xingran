@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"gorm.io/gorm"
 )
 

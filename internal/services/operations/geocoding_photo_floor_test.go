@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	pkgcache "github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	sysmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system"
-	syssvc "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models/system"
+	syssvc "github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // =====================================================================

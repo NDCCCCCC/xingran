@@ -8,10 +8,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	queryutil "github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	queryutil "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 

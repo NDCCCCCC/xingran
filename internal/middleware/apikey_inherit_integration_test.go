@@ -16,8 +16,8 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 )
 
 // --- D-21 sqlite in-memory 模式(沿用 Phase 59 D-03 + Phase 60 D-02) ---

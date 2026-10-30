@@ -11,10 +11,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
-	sysmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
 
 // =====================================================================

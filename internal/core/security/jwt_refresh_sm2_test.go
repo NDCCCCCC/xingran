@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
 )
 
 // newSM2TestJWTManager 构造与生产 configs/config.yaml 对齐的 SM2 模式 JWTManager。
@@ -26,12 +26,12 @@ func newSM2TestJWTManager(t *testing.T, issuer string) *JWTManager {
 
 // TestSM2RefreshTokenValidatesWithConfiguredIssuer 复现 token-lost-on-refresh bug：
 // SM2 模式下 refresh token 由 GenerateRefreshTokenWithSM2 生成，曾硬编码
-// Issuer "Xingran-Next"，与配置 issuer（如 "RuoYi-Next-Dev"）不一致，
+// Issuer "Xingran-Next"，与配置 issuer（如 "XingRan-Next-Dev"）不一致，
 // 导致 JWTManager.ValidateToken 的签发者校验恒定返回 ErrTokenInvalid(401)，
 // 页面刷新时的 POST /system/auth/refresh 100% 失败，前端被迫回到登录页。
 // 该测试模拟 auth.go refreshToken handler 的确切调用路径。
 func TestSM2RefreshTokenValidatesWithConfiguredIssuer(t *testing.T) {
-	const issuer = "RuoYi-Next-Dev" // 与 configs/config.yaml jwt.issuer 一致
+	const issuer = "XingRan-Next-Dev" // 与 configs/config.yaml jwt.issuer 一致
 
 	mgr := newSM2TestJWTManager(t, issuer)
 
@@ -61,7 +61,7 @@ func TestSM2RefreshTokenValidatesWithConfiguredIssuer(t *testing.T) {
 // TestSM2RefreshTokenHonorsConfiguredExpiry 验证 refresh token 有效期跟随
 // jwt.refresh_key_expire 配置而非硬编码 7 天（当前配置恰为 7 天，但机制上必须走配置）。
 func TestSM2RefreshTokenHonorsConfiguredExpiry(t *testing.T) {
-	mgr := newSM2TestJWTManager(t, "RuoYi-Next-Dev")
+	mgr := newSM2TestJWTManager(t, "XingRan-Next-Dev")
 
 	// 覆盖为非默认时长，若实现仍硬编码 7 天则此断言失败
 	mgr.refreshKeyExpire = 30 * 24 * time.Hour

@@ -4,13 +4,13 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/utils"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // FileHandler 文件处理器

@@ -3,10 +3,10 @@
 package core
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
+	"github.com/xingran-next/xingran-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 )
 
 // CoreServices 核心业务服务层

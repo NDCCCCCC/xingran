@@ -45,7 +45,7 @@ echo [4/5] Building Go backend (Windows)...
 set GOOS=windows
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -tags=embed -ldflags="-s -w" -o ruoyi-backend-embedded.exe ./cmd/main.go
+go build -tags=embed -ldflags="-s -w" -o xingran-backend-embedded.exe ./cmd/main.go
 if errorlevel 1 (
     echo Go build FAILED!
     exit /b 1
@@ -59,10 +59,10 @@ echo.
 echo ======================================
 echo   Output File
 echo ======================================
-echo   ruoyi-backend-embedded.exe
+echo   xingran-backend-embedded.exe
 echo.
 echo Start server:
-echo   .\ruoyi-backend-embedded.exe
+echo   .\xingran-backend-embedded.exe
 echo.
 
 endlocal

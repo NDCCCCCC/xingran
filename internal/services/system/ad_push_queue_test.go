@@ -17,10 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 )
 
 // setupPhase57QueueDB 创建内存 sqlite 并直调 migration_215 建表。

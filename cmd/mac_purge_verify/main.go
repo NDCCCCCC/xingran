@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 func main() {

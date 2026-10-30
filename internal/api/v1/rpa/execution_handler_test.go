@@ -13,10 +13,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
+	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 )
 
 // Compile-time assertion: mockExecutionService implements rpa.ExecutionService.

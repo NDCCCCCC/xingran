@@ -7,11 +7,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	gorilla_ws "github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	gorilla_ws "github.com/xingran-next/xingran-go-backend/internal/websocket"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // newWebSocketUpgrader 创建 WebSocket 升级器

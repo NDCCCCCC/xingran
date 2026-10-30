@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // F-01: 仅记录一次 TLS 跳过验证的安全告警,避免每次 LDAP 连接重复刷屏。

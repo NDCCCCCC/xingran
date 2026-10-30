@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -135,7 +135,7 @@ CREATE INDEX IF NOT EXISTS idx_recon_norm_asset_code
 
 	// 4. partial unique index uniq_recon_asset_type_open (D-11 防告警风暴)
 	//    用 DO $$ 块显式命名,避免 PG 自动命名 `<table>_<col>_key`
-	//    与 GORM uniqueIndex 期望的 `uni_*` 命名规范冲突 (ruoyi-gorm-sql-constraint-naming-conflict 教训)
+	//    与 GORM uniqueIndex 期望的 `uni_*` 命名规范冲突 (xingran-gorm-sql-constraint-naming-conflict 教训)
 	//
 	//    Idempotency 修复 (debug: recon-uniq-index-23505):
 	//    migration_201 (Phase 48) 已 DROP 2 列版 uniq_recon_asset_type_open 并替换为

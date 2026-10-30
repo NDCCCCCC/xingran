@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/device"
 )
 
 // snmpEntityClasses is the set of ENTITY-MIB class values the SNMP

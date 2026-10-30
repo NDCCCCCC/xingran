@@ -44,8 +44,8 @@ set -euo pipefail
 API_BASE="${API_BASE:-http://localhost:9000}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
-DB_NAME="${DB_NAME:-ruoyi_next}"
-DB_USER="${DB_USER:-ruoyi}"
+DB_NAME="${DB_NAME:-xingran_next}"
+DB_USER="${DB_USER:-xingran}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 PSQL_EXTRA_ARGS="${PSQL_EXTRA_ARGS:-}"
 
@@ -303,7 +303,7 @@ assert_logged POST "/api/v1/vdi/vms/e2e-001/start"      '{}'                    
 assert_logged POST "/api/v1/scheduler/jobs/e2e-001/execute" '{}'                                               "定时任务" 0
 
 # --- Wave 6 (monitor/rpa/agent) ---
-assert_logged POST "/api/v1/monitor/cache/clear"        '{"cacheName":"ruoyi"}'                               "缓存监控" 9
+assert_logged POST "/api/v1/monitor/cache/clear"        '{"cacheName":"xingran"}'                               "缓存监控" 9
 assert_logged POST "/api/v1/rpa/tasks"                  '{"name":"e2e_rpa"}'                                 "RPA任务" 1
 assert_logged POST "/api/v1/rpa/credentials"            '{"name":"e2e_rpac","apiKey":"apikeysecret"}'        "RPA凭据" 1 "apikeysecret"
 assert_logged POST "/api/v1/agent/register"             '{"hostname":"e2e-host"}'                            "Agent注册" 21

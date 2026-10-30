@@ -28,13 +28,13 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
-	sysmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system"
-	svcrpa "github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
-	svcsystem "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
+	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models/system"
+	svcrpa "github.com/xingran-next/xingran-go-backend/internal/services/rpa"
+	svcsystem "github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 func readEnv(key string) string {

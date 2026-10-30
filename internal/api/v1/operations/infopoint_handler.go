@@ -6,13 +6,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 type InfoPointHandler struct {

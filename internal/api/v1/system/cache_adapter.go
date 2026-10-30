@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	sysServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	sysServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // dataCacheAdapter DataCacheService 适配器

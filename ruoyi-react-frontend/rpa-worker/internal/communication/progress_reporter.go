@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/ruoyi-next/rpa-worker/internal/logger"
-	"github.com/ruoyi-next/rpa-worker/internal/types"
+	"github.com/xingran-next/rpa-worker/internal/logger"
+	"github.com/xingran-next/rpa-worker/internal/types"
 )
 
 // ProgressReporter 进度上报器

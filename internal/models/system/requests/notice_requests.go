@@ -3,9 +3,9 @@ package requests
 import (
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 // NoticeListParams 通知公告列表查询参数

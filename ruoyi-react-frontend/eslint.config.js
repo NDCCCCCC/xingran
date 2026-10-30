@@ -160,7 +160,7 @@ export default [
           // 「Phase 68 hex 豁免」块与 .planning/phases/68-p2/hex-exemptions.md。
           selector: "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
           message:
-            "禁止裸 hex 颜色字面量，请使用 var(--theme-*) 或 @/design-system/tokens/colors 的 ruoyiBrand；豁免须 eslint-disable-next-line 并注明原因（Phase 68 DEBT-01）",
+            "禁止裸 hex 颜色字面量，请使用 var(--theme-*) 或 @/design-system/tokens/colors 的 xingranBrand；豁免须 eslint-disable-next-line 并注明原因（Phase 68 DEBT-01）",
         },
         {
           // Phase 70（TEXT-04）：TextArea 双形态拦截。成员表达式形态挂在 JSXOpeningElement

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/pkg/cache"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/pkg/system"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/pkg/system"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // MetricsCacheService 系统指标缓存服务

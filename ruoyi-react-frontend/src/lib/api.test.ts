@@ -37,7 +37,7 @@ const h = vi.hoisted(() => {
   const makeConfig = (overrides: Record<string, any> = {}) => ({
     url: "/system/users/list",
     method: "post",
-    data: { name: "ruoyi" },
+    data: { name: "xingran" },
     headers: makeHeaders(),
     ...overrides,
   });
@@ -417,7 +417,7 @@ describe("请求拦截器", () => {
 
   it("加密启用时 POST 请求体被加密并保留明文备份", async () => {
     await setEncryption(true);
-    const plain = { name: "ruoyi" };
+    const plain = { name: "xingran" };
     const config = h.makeConfig({ url: "/system/users/list", data: plain });
 
     const result = await requestInterceptor(config);
@@ -448,7 +448,7 @@ describe("请求拦截器", () => {
     const result = await requestInterceptor(blacklisted);
     expect(h.mockFetchPublicKey).not.toHaveBeenCalled();
     expect(result.headers.get("X-Request-Encrypted")).toBeNull();
-    expect(result.data).toEqual({ name: "ruoyi" });
+    expect(result.data).toEqual({ name: "xingran" });
   });
 
   it("加密失败时非生产环境回退明文并告警", async () => {
@@ -458,7 +458,7 @@ describe("请求拦截器", () => {
 
     const result = await requestInterceptor(config);
 
-    expect(result.data).toEqual({ name: "ruoyi" });
+    expect(result.data).toEqual({ name: "xingran" });
     expect(result.headers.get("X-Request-Encrypted")).toBeNull();
     expect(consoleErrorSpy).toHaveBeenCalled();
     expect(consoleWarnSpy).toHaveBeenCalled();
@@ -682,7 +682,7 @@ describe("响应拦截器 — 400 解密失败单次重放", () => {
       "X-Request-Encrypted": "true",
       "X-Request-ID": "req-stale",
     });
-    const plain = { name: "ruoyi" };
+    const plain = { name: "xingran" };
     const config = h.makeConfig({ headers, __originalPlainData: plain });
     config.data = { encrypted: true, data: "B64[x]" };
     apiInstance.mockResolvedValue("REPLAY-OK");

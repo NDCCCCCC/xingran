@@ -73,7 +73,7 @@ describe("tabsStore", () => {
     const many = Array.from({ length: 50 }, (_, i) => tab(`/t${i}`));
     many[3].pinned = true;
     seedTabs(many);
-    sessionStorage.setItem("ruoyi_table_state_t0_current", "2");
+    sessionStorage.setItem("xingran_table_state_t0_current", "2");
 
     useTabsStore.getState().addTab(tab("/new"));
 
@@ -81,7 +81,7 @@ describe("tabsStore", () => {
     expect(state.tabs).toHaveLength(50); // 淘汰 t0 加入 new
     expect(state.tabs.find((t) => t.key === "/t0")).toBeUndefined();
     expect(state.tabs.find((t) => t.key === "/t3")).toBeDefined(); // 固定标签保留
-    expect(sessionStorage.getItem("ruoyi_table_state_t0_current")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_t0_current")).toBeNull();
   });
 
   it("全部固定时达到上限不再新增", () => {
@@ -99,7 +99,7 @@ describe("tabsStore", () => {
       [tab("/a"), tab("/b"), tab("/c"), tab("/fixed", { pinned: true, closable: false })],
       "/c"
     );
-    sessionStorage.setItem("ruoyi_table_state_c_current", "3");
+    sessionStorage.setItem("xingran_table_state_c_current", "3");
 
     useTabsStore.getState().removeTab(DASHBOARD);
     expect(useTabsStore.getState().tabs).toHaveLength(4);
@@ -111,7 +111,7 @@ describe("tabsStore", () => {
     const state = useTabsStore.getState();
     expect(state.tabs.map((t) => t.key)).toEqual(["/a", "/b", "/fixed"]);
     expect(state.activeTab).toBe("/b"); // 历史前一个
-    expect(sessionStorage.getItem("ruoyi_table_state_c_current")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_c_current")).toBeNull();
   });
 
   it("removeTab 移除首个历史项时回退到 tabs[0]", () => {
@@ -142,8 +142,8 @@ describe("tabsStore", () => {
       tab("/c"),
       tab("/fixed", { pinned: true, closable: false }),
     ]);
-    sessionStorage.setItem("ruoyi_table_state_a_current", "1");
-    sessionStorage.setItem("ruoyi_table_state_c_current", "1");
+    sessionStorage.setItem("xingran_table_state_a_current", "1");
+    sessionStorage.setItem("xingran_table_state_c_current", "1");
 
     useTabsStore.getState().closeOtherTabs("/keep");
 
@@ -151,8 +151,8 @@ describe("tabsStore", () => {
     // 保持原有顺序过滤,不重排
     expect(state.tabs.map((t) => t.key)).toEqual(["/keep", "/fixed"]);
     expect(state.activeTab).toBe("/keep");
-    expect(sessionStorage.getItem("ruoyi_table_state_a_current")).toBeNull();
-    expect(sessionStorage.getItem("ruoyi_table_state_c_current")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_a_current")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_c_current")).toBeNull();
   });
 
   it("closeAllTabs 仅保留固定标签;无固定时清空", () => {

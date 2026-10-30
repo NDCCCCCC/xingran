@@ -16,13 +16,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // 既有 stub 测试（Plan 72 之前保留）—— Phase 72 不重写，仅在文件下方补充真测试。

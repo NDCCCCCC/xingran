@@ -2,10 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 )
 
 // SetupManagerRuleRouter 经理同步规则/机构维护路由。

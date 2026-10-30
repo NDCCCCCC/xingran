@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	networkServices "github.com/xingran-next/xingran-go-backend/internal/services/network"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 )
 
 // strictGroup 创建一个「单一权限点 + 严格权限」的写操作路由子组

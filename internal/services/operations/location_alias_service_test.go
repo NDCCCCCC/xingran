@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/require"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

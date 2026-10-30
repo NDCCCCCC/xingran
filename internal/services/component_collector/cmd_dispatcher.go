@@ -1,6 +1,6 @@
 package component_collector
 
-import "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+import "github.com/xingran-next/xingran-go-backend/internal/models"
 
 // CmdKind enumerates the logical CLI command groups a collector can
 // request. The dispatcher maps (vendor, kind) → concrete CLI commands.

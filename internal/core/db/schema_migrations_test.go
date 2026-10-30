@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 )
 
 // countMigrationRecords 统计 sys_schema_migrations 行数。

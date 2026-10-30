@@ -15,11 +15,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	pagination "github.com/ruoyi-next/ruoyi-go-backend/pkg/query"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	pagination "github.com/xingran-next/xingran-go-backend/pkg/query"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 

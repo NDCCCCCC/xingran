@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // BatchResult 批量写操作结果（D-14 + BATCH-03 + DB-REFRESH）。

@@ -2,11 +2,11 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portwrite"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/permission"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portwrite"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 )
 
 // SetupPortWriteRouter 注册端口写操作路由 (Phase 52 D-09 + INFRA-02 + DB-REFRESH-2026-07-08 + Phase 56 v1.20.1)

@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"github.com/tjfoc/gmsm/sm2"
 )
 
@@ -49,8 +49,8 @@ func NewJWTManager(cfg *config.JWTConfig) (*JWTManager, error) {
 			return nil, fmt.Errorf("JWT secret_key 未配置 — 必须通过 env 或 config 注入 (建议 ≥32 字节高熵随机串)")
 		}
 		// 拒绝历史硬编码默认值
-		if cfg.SecretKey == "ruoyi-next-secret-key" {
-			return nil, fmt.Errorf("JWT secret_key 使用了已知弱默认值 'ruoyi-next-secret-key' — 任何人都能伪造 token,必须替换")
+		if cfg.SecretKey == "xingran-next-secret-key" {
+			return nil, fmt.Errorf("JWT secret_key 使用了已知弱默认值 'xingran-next-secret-key' — 任何人都能伪造 token,必须替换")
 		}
 		if len(cfg.SecretKey) < 16 {
 			return nil, fmt.Errorf("JWT secret_key 长度过短 (%d 字节) — 至少 16 字节,推荐 ≥32 字节", len(cfg.SecretKey))
@@ -110,7 +110,7 @@ func (j *JWTManager) GenerateTokenPair(userID, username, nickname string, roles 
 			ID:        fmt.Sprintf("%d", now.Unix()),
 			Issuer:    j.issuer,
 			Subject:   userID,
-			Audience:  []string{"ruoyi-next"},
+			Audience:  []string{"xingran-next"},
 			ExpiresAt: jwt.NewNumericDate(now.Add(j.accessKeyExpire)),
 			NotBefore: jwt.NewNumericDate(now),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -156,7 +156,7 @@ func (j *JWTManager) GenerateTokenPair(userID, username, nickname string, roles 
 			ID:        fmt.Sprintf("%d", now.Unix()),
 			Issuer:    j.issuer,
 			Subject:   userID,
-			Audience:  []string{"ruoyi-next"},
+			Audience:  []string{"xingran-next"},
 			ExpiresAt: jwt.NewNumericDate(now.Add(j.refreshKeyExpire)),
 			NotBefore: jwt.NewNumericDate(now),
 			IssuedAt:  jwt.NewNumericDate(now),

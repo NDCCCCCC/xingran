@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // ==================== 缓存键命名规范迁移说明 ====================

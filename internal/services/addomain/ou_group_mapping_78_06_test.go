@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // setupOGM78DB 在 78-05 7 表 fixture 上追加 OU-Group 映射与同步日志表。

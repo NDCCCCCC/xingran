@@ -54,7 +54,7 @@ const endpoints = {
 };
 
 // 与 usePersistedStateController 的存储 key 规则一致（keyPrefix=location.pathname）
-const ACTIVE_TAB_KEY = "ruoyi_table_state_ad-domain_configs_activeTab";
+const ACTIVE_TAB_KEY = "xingran_table_state_ad-domain_configs_activeTab";
 
 describe("ADConfigPage 渲染", () => {
   beforeEach(() => {

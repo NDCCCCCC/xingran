@@ -15,7 +15,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // GetOrSetJSON 类型安全的读穿透缓存：命中反序列化，未命中执行 query 并同步写缓存。

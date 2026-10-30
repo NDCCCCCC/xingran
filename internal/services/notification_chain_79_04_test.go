@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // ncf7904Key 显式 32 字节测试密钥(威胁模型 T-79-04-03:仅测试,禁作生产密钥复用;

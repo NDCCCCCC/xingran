@@ -9,15 +9,15 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "https://github.com/ruoyi-next/ruoyi-next",
+        "termsOfService": "https://github.com/xingran-next/xingran-next",
         "contact": {
             "name": "API Support",
-            "url": "https://github.com/ruoyi-next/ruoyi-next/issues",
-            "email": "support@ruoyi-next.com"
+            "url": "https://github.com/xingran-next/xingran-next/issues",
+            "email": "support@xingran-next.com"
         },
         "license": {
             "name": "MIT",
-            "url": "https://github.com/ruoyi-next/ruoyi-next/blob/main/LICENSE"
+            "url": "https://github.com/xingran-next/xingran-next/blob/main/LICENSE"
         },
         "version": "{{.Version}}"
     },
@@ -21515,7 +21515,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "RuoYi Next API",
+	Title:            "XingRan Next API",
 	Description:      "企业级权限管理系统 API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

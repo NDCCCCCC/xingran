@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -191,7 +191,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--from-xlsx", type=Path, help="从已有 xlsx 读部门列表")
     p.add_argument("--db", default=None,
-                   help="PostgreSQL 连接串,例: postgresql://ruoyi:pwd@localhost:5432/ruoyi_next")
+                   help="PostgreSQL 连接串,例: postgresql://xingran:pwd@localhost:5432/xingran_next")
     p.add_argument("--mock", action="store_true",
                    help="用内置 MOCK_PARENT_MAP 演示输出(无需数据库连接)")
     p.add_argument("--out", type=Path, default=Path("dept_mapping_with_parent.xlsx"),

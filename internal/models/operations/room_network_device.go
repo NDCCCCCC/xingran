@@ -1,7 +1,7 @@
 package operations
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // OpsRoomNetworkDevice 机房-网络设备关联模型

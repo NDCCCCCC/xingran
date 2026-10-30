@@ -10,9 +10,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/services/operations"
 )
 
 // 测试Excel导入功能的主函数
@@ -49,7 +49,7 @@ func main() {
 	fmt.Println("=== 测试完成 ===")
 	fmt.Println()
 	fmt.Println("下一步：")
-	fmt.Println("1. 执行数据库迁移: psql -U postgres -d ruoyi_next -f internal/core/db/migrations/080_add_dept_code_field.sql")
+	fmt.Println("1. 执行数据库迁移: psql -U postgres -d xingran_next -f internal/core/db/migrations/080_add_dept_code_field.sql")
 	fmt.Println("2. 运行应用并测试Excel导入功能")
 	fmt.Println("3. 准备测试Excel文件进行实际导入测试")
 }

@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/spf13/viper"
 )
 
@@ -74,7 +74,7 @@ type ServerConfig struct {
 // DatabaseConfig 数据库配置。
 type DatabaseConfig struct {
 	Type         string `mapstructure:"type"` // postgres | sqlite(缺省按 postgres 处理,行为与历史一致)
-	Path         string `mapstructure:"path"` // sqlite 文件路径,仅 type=sqlite 时生效(默认 data/ruoyi.db)
+	Path         string `mapstructure:"path"` // sqlite 文件路径,仅 type=sqlite 时生效(默认 data/xingran.db)
 	Host         string `mapstructure:"host"`
 	Port         int    `mapstructure:"port"`
 	User         string `mapstructure:"user"`
@@ -468,7 +468,7 @@ func setDefaults(v *viper.Viper) {
 	// database.type: postgres(生产/默认) | sqlite(本地 dev 提速,纯 Go 驱动 glebarez/sqlite)。
 	// 缺省 postgres 与历史行为完全一致 — 不会因新增配置项静默切换数据库。
 	v.SetDefault("database.type", "postgres")
-	v.SetDefault("database.path", "data/ruoyi.db") // 仅 type=sqlite 时生效
+	v.SetDefault("database.path", "data/xingran.db") // 仅 type=sqlite 时生效
 	v.SetDefault("database.host", "localhost")
 	v.SetDefault("database.port", 5432)
 	v.SetDefault("database.user", "postgres")
@@ -476,7 +476,7 @@ func setDefaults(v *viper.Viper) {
 	// 历史上默认值 "postgres" 是 Postgres 镜像出厂密码,部署到生产忘了改会变成公开已知弱口令。
 	// dev 环境靠 configs/config.dev.yaml 显式注入;生产环境必须从 env (DB_PASSWORD) 注入。
 	// Validate() 在 release 模式下会强制校验非空。
-	v.SetDefault("database.dbname", "ruoyi_next")
+	v.SetDefault("database.dbname", "xingran_next")
 	v.SetDefault("database.sslmode", "disable")
 	v.SetDefault("database.max_open_conns", 100)
 	v.SetDefault("database.max_idle_conns", 10)
@@ -493,7 +493,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("cache.cleanup_time", 600)
 
 	// JWT默认配置
-	// F-04: 不再设置硬编码默认密钥 "ruoyi-next-secret-key" —
+	// F-04: 不再设置硬编码默认密钥 "xingran-next-secret-key" —
 	// 该默认值若被部署进生产,任何人都能用公开已知字符串伪造 JWT。
 	// 启动时由 NewJWTManager 强制校验:必须从 env 或 config 注入非空且非弱默认值。
 	v.SetDefault("jwt.secret_key", "")

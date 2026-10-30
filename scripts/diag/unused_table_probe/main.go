@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"github.com/joho/godotenv"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

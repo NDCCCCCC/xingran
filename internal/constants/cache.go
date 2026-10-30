@@ -8,7 +8,7 @@ package constants
 // Redis 键前缀
 const (
 	// Redis 全局键前缀
-	RedisKeyPrefix = "ruoyi:"
+	RedisKeyPrefix = "xingran:"
 )
 
 // Redis 键格式

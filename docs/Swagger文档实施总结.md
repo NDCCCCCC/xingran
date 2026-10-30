@@ -113,13 +113,13 @@ docs/swagger.yaml    (349 KB)
 
 #### Windows
 ```bash
-cd D:\code\ClaudeCode\ruoyi-go-backend
+cd D:\code\ClaudeCode\xingran-go-backend
 scripts\generate_swagger.bat
 ```
 
 #### Linux/Mac
 ```bash
-cd /path/to/ruoyi-go-backend
+cd /path/to/xingran-go-backend
 chmod +x scripts/generate_swagger.sh
 ./scripts/generate_swagger.sh
 ```
@@ -133,7 +133,7 @@ swag init -g cmd/main.go -o docs --parseDependency
 
 1. 启动后端服务：
 ```bash
-.\ruoyi-backend.exe
+.\xingran-backend.exe
 ```
 
 2. 访问Swagger UI：
@@ -191,6 +191,6 @@ http://localhost:8080/swagger/index.html
 
 ## 总结
 
-本次实施成功地为RuoYi-Next项目添加了完整的Swagger API文档支持。通过创建基础设施、修复注解问题和生成文档，开发者现在可以通过Swagger UI查看和测试所有API接口。
+本次实施成功地为XingRan-Next项目添加了完整的Swagger API文档支持。通过创建基础设施、修复注解问题和生成文档，开发者现在可以通过Swagger UI查看和测试所有API接口。
 
 生成的文档包含了228个API端点，覆盖了系统的主要功能模块，为前端开发和API测试提供了便利。

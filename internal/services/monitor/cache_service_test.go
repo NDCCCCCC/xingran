@@ -9,7 +9,7 @@ package monitor
 //   - glebarez sqlite 仅用于不可避免 gorm 路径(DB fallback / 历史统计 / 配置持久化)
 //
 // 已锁定的业务 quirk(见 73-04-SUMMARY.md "Business-code quirks discovered — NOT fixed"):
-//   Q1: normalizeCacheKeyForService 的 `key[:6] == "ruoyi:"` 用 6 字节切片比 8 字节字面量,
+//   Q1: normalizeCacheKeyForService 的 `key[:6] == "xingran:"` 用 6 字节切片比 8 字节字面量,
 //       恒为 false —— 函数实际是恒等函数,前缀永不被剥离。测试按真实行为断言(恒等)。
 //   Q2: getCachesFromSimpleCache / getCachesFromCacheWithLevel 对 Keys/KeysByLevel 的错误
 //       静默吞掉(返回空列表 + nil error)。测试锁定该行为。
@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // ==================== Compile-time interface assertions ====================
@@ -556,14 +556,14 @@ func TestCacheService_GetCacheInfo_ProviderHit_TTLPositive(t *testing.T) {
 	provider.AssertExpectations(t)
 }
 
-// CACHEDEF-05 fix: 前缀正确剥离 —— "ruoyi:k" 经 normalizeCacheKeyForService 归一化为 "k" 后传给 provider。
+// CACHEDEF-05 fix: 前缀正确剥离 —— "xingran:k" 经 normalizeCacheKeyForService 归一化为 "k" 后传给 provider。
 func TestCacheService_GetCacheInfo_PrefixStripped(t *testing.T) {
 	provider := &mockMonitorCacheProvider{}
 	svc := newTestCacheService(newCacheTestDB(t), provider, nil)
 	provider.On("Get", mock.Anything, "k").Return("v", nil)
 	provider.On("TTL", mock.Anything, "k").Return(time.Duration(0), nil)
 
-	info, err := svc.GetCacheInfo(context.Background(), "ruoyi:k")
+	info, err := svc.GetCacheInfo(context.Background(), "xingran:k")
 	require.NoError(t, err)
 	assert.Equal(t, "k", info.Key, "CACHEDEF-05: 前缀 xingran: 应被正确剥离")
 	provider.AssertExpectations(t)
@@ -1245,16 +1245,16 @@ func TestCacheService_ReloadCacheConfigs_Error(t *testing.T) {
 // ==================== 辅助函数 ====================
 
 // TestNormalizeCacheKeyForService — CACHEDEF-05 修复验证:
-// 使用 strings.HasPrefix + strings.TrimPrefix 正确剥离 "ruoyi:" 前缀。
+// 使用 strings.HasPrefix + strings.TrimPrefix 正确剥离 "xingran:" 前缀。
 func TestNormalizeCacheKeyForService(t *testing.T) {
 	cases := []struct {
 		in, want string
 	}{
-		{"ruoyi:user:1", "user:1"},                // 前缀正确剥离
-		{"ruoyi:cache:dept:tree:select", "cache:dept:tree:select"},
+		{"xingran:user:1", "user:1"},                // 前缀正确剥离
+		{"xingran:cache:dept:tree:select", "cache:dept:tree:select"},
 		{"user:1", "user:1"},                         // 无前缀键原样透传
-		{"ruoyi", "ruoyi"},                       // 无冒号不剥离
-		{"ruoyi:", ""},                             // 精确前缀剥离
+		{"xingran", "xingran"},                       // 无冒号不剥离
+		{"xingran:", ""},                             // 精确前缀剥离
 		{"xingr", "xingr"},                           // 短键原样返回
 		{"", ""},                                     // 空字符串边界
 	}

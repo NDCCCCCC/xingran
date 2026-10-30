@@ -70,7 +70,7 @@
 
 ### 编译验证
 - [x] `go build ./...` - 编译成功
-- [x] `go build -o ruoyi-backend-test.exe ./cmd/main.go` - 可执行文件生成成功
+- [x] `go build -o xingran-backend-test.exe ./cmd/main.go` - 可执行文件生成成功
 
 ---
 
@@ -190,9 +190,9 @@ POST /api/v1/rpa/flow/execute-retry       - 执行重试
 # 数据库
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=ruoyi
+DB_USER=xingran
 DB_PASSWORD=your_password
-DB_NAME=ruoyi_next
+DB_NAME=xingran_next
 
 # Redis
 REDIS_URL=redis://localhost:6379
@@ -219,7 +219,7 @@ RPA_AI_AGENT_URL=https://api.openai.com/v1
 # 1. 启动后端
 go run cmd/main.go
 # 或
-.\ruoyi-backend-test.exe
+.\xingran-backend-test.exe
 
 # 2. 启动前端
 cd ruoyi-react-frontend

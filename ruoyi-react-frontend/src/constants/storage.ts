@@ -34,7 +34,7 @@ export const STORAGE_KEYS = {
    * 路由最后访问路径
    * 存储于 sessionStorage，用于登录后跳转到用户上次访问的页面
    */
-  LAST_PATH: "ruoyi_last_visited_path",
+  LAST_PATH: "xingran_last_visited_path",
   /**
    * DATA-02: 菜单+权限 sessionStorage 缓存 key(hydrate-then-revalidate)。
    * 存储结构: { version: number, data: { menus, allMenus, permissions, cachedAt } }
@@ -56,9 +56,9 @@ export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 
 /**
  * Table 状态持久化前缀（用于 useTableManager / usePagination / usePersistedState）
- * 与前缀名规则保持一致: `ruoyi_table_state_<sanitizedPath>_<slotName>`
+ * 与前缀名规则保持一致: `xingran_table_state_<sanitizedPath>_<slotName>`
  */
-export const TABLE_STATE_PREFIX = "ruoyi_table_state_";
+export const TABLE_STATE_PREFIX = "xingran_table_state_";
 
 /**
  * 将 URL 路径转换为可作为 storage key 的一部分的字符串。

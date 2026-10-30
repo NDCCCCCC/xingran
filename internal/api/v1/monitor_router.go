@@ -2,8 +2,8 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	schedulerV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/scheduler"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	schedulerV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/scheduler"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
 )
 
 // RegisterJobRoutes 注册定时任务相关路由

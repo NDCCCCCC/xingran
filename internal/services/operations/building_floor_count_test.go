@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
 
 // TestBuildingFloorCount_BasicAggregation B1 挂 2 层 → 2；B2 挂 1 层 → 1；

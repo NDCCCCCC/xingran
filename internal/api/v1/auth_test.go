@@ -12,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )

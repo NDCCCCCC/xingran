@@ -2,7 +2,7 @@
 
 **版本**: 3.0
 **日期**: 2026-02-03
-**适用项目**: ruoyi-go-backend (ruoyi-react-frontend)
+**适用项目**: xingran-go-backend (ruoyi-react-frontend)
 **状态**: 阶段10完成 ✅（类型优化完成）
 
 ---

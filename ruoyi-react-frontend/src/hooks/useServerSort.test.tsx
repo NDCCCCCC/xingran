@@ -39,17 +39,17 @@ describe("useServerSort 持久化", () => {
     expect(result.current.orderByColumn).toBe("username");
     expect(result.current.isAsc).toBe(false);
     expect(result.current.sortOrder).toBe("descend");
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_orderByColumn")).toBe(
+    expect(sessionStorage.getItem("xingran_table_state_system_user_orderByColumn")).toBe(
       JSON.stringify("username")
     );
   });
 
   it("remount 恢复排序，sortOrder 正确派生", () => {
     sessionStorage.setItem(
-      "ruoyi_table_state_system_user_orderByColumn",
+      "xingran_table_state_system_user_orderByColumn",
       JSON.stringify("username")
     );
-    sessionStorage.setItem("ruoyi_table_state_system_user_isAsc", "false");
+    sessionStorage.setItem("xingran_table_state_system_user_isAsc", "false");
     const { result } = renderHook(() => useServerSort({ sorterMetas }), {
       wrapper: wrapper("/system/user"),
     });

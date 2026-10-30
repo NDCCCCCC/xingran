@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

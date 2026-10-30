@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // SNMPClient SNMP客户端

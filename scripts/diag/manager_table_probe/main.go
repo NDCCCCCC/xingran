@@ -10,8 +10,8 @@ import (
 	"github.com/joho/godotenv"
 	"os"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	addomainServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

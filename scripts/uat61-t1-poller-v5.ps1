@@ -1,8 +1,8 @@
 
-$log = 'D:/CODE/ClaudeCode/ruoyi-go-backend/.planning/tmp-uat61-t1-samples-v5.csv'
+$log = 'D:/CODE/ClaudeCode/xingran-go-backend/.planning/tmp-uat61-t1-samples-v5.csv'
 'ts,member_count,distinct_groups' | Set-Content -Path $log -Encoding utf8
 function Sample {
-  $out = & C:\Windows\System32\wsl.exe -d Ubuntu-22.04 -- bash -c "PGPASSWORD=Cpic1234 psql -X -h 10.62.10.34 -p 5432 -U postgres -d ruoyi -A -t -F, -c 'SELECT count(*), count(DISTINCT group_dn) FROM sys_ad_group_member'" 2>$null
+  $out = & C:\Windows\System32\wsl.exe -d Ubuntu-22.04 -- bash -c "PGPASSWORD=Cpic1234 psql -X -h 10.62.10.34 -p 5432 -U postgres -d xingran -A -t -F, -c 'SELECT count(*), count(DISTINCT group_dn) FROM sys_ad_group_member'" 2>$null
   return ($out | Select-Object -First 1)
 }
 $s = Sample

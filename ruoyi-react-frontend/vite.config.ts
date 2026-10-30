@@ -95,9 +95,9 @@ const { three: THREE_FAMILY, markdown: MARKDOWN_FAMILY } = computePackageFamilie
 export default defineConfig(({ mode }) => {
   // 从 .env.<mode> 读取 VITE_* 变量;只有 vite build 会读到 .env.production,
   // 开发(Vite dev server)读 .env.development — 二者行为隔离。
-  // base 默认 '/',通过 .env.production 设 VITE_BASE=/ruoyi/ 让生产构建
-  // 与 nginx 子路径(/ruoyi/)部署对齐,生成的 index.html 中所有资源 URL
-  // 自动带 /ruoyi/ 前缀,浏览器请求匹配 location /ruoyi/。
+  // base 默认 '/',通过 .env.production 设 VITE_BASE=/xingran/ 让生产构建
+  // 与 nginx 子路径(/xingran/)部署对齐,生成的 index.html 中所有资源 URL
+  // 自动带 /xingran/ 前缀,浏览器请求匹配 location /xingran/。
   const env = loadEnv(mode, __dirname, "");
   const base = env.VITE_BASE || "/";
 

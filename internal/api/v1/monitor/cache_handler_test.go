@@ -18,9 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
 )
 
 // ==================== Mock CacheService ====================

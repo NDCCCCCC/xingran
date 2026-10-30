@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // setupGC78DB 在 78-05 7 表 fixture 上追加 sys_config 表（BaseModel 列齐）。

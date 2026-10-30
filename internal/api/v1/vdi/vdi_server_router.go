@@ -2,8 +2,8 @@ package vdi
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	vdiServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/vdi"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	vdiServices "github.com/xingran-next/xingran-go-backend/internal/services/vdi"
 )
 
 // SetupVDIServerRouter 设置VDI服务器路由

@@ -500,7 +500,7 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/configs/:id/update", "POST", ConfigEdit, "编辑参数配置"},
 		{"/system/configs/:id/delete", "POST", ConfigRemove, "删除参数配置"},
 
-		// 字典管理（类型/数据共用 system:dict:* 码族，RuoYi 惯例）
+		// 字典管理（类型/数据共用 system:dict:* 码族，XingRan 惯例）
 		{"/system/dicts/types", "POST", DictTypeAdd, "新增字典类型"},
 		{"/system/dicts/types/:id/update", "POST", DictTypeEdit, "编辑字典类型"},
 		{"/system/dicts/types/:id/delete", "POST", DictTypeRemove, "删除字典类型"},

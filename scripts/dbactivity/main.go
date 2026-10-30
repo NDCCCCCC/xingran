@@ -22,7 +22,7 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
 )
 
 // activityRow 一行 pg_stat_activity (仅本库、排除自身 probe 连接)。

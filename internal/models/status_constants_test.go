@@ -431,9 +431,9 @@ func TestNoStatusLiteralUsage(t *testing.T) {
 		"status IN []int{0,1}": {
 			`package test; func F(){var x []int; x = []int{0, 1}}`, 1},
 		"constant ref — negative": {
-			`package test; import "github.com/ruoyi-next/ruoyi-go-backend/internal/models"; func F(){_ = models.JobStatusNormal}`, 0},
+			`package test; import "github.com/xingran-next/xingran-go-backend/internal/models"; func F(){_ = models.JobStatusNormal}`, 0},
 		"constant ref in assignment — negative": {
-			`package test; import "github.com/ruoyi-next/ruoyi-go-backend/internal/models"; func F(){var x struct{Status models.JobStatus}; x.Status = models.JobStatusNormal}`, 0},
+			`package test; import "github.com/xingran-next/xingran-go-backend/internal/models"; func F(){var x struct{Status models.JobStatus}; x.Status = models.JobStatusNormal}`, 0},
 	}
 	fset := token.NewFileSet()
 	for name, tc := range selfSrc {

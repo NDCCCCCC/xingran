@@ -1,4 +1,4 @@
-module github.com/ruoyi-next/ruoyi-go-backend
+module github.com/xingran-next/xingran-go-backend
 
 go 1.24.0
 

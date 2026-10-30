@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	_ "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	_ "github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 func main() {

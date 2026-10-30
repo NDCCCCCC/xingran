@@ -3,7 +3,7 @@ package services
 import (
 	"sync"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/templates"
+	"github.com/xingran-next/xingran-go-backend/internal/templates"
 )
 
 // TemplateCache TextFSM模板缓存

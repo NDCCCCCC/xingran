@@ -1,4 +1,4 @@
-# RuoYi-Next 前端性能重新评估报告
+# XingRan-Next 前端性能重新评估报告
 
 **评估日期**: 2025-06-13  
 **基于**: Phase 33 (Vercel React Best Practices) 已完成的修复工作  

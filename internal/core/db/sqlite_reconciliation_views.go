@@ -37,7 +37,7 @@ package db
 import (
 	"fmt"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // sqliteIfaceFoldCaseSQL 生成 PG normalize_iface()(migration_179)的 sqlite CASE 等价式。

@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
 
 // =====================================================================

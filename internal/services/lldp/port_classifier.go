@@ -1,8 +1,8 @@
 package lldp
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 )
 
 // ClassifyPort 根据LLDP邻居信息和MAC数量阈值对端口进行分类

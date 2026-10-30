@@ -55,8 +55,8 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     (file: UploadFile, response: FileUploadResponse) => {
       setUploading(false);
       setImageId(response.id);
-      // 前缀用 Vite base：dev 下 BASE_URL='/' 行为不变，prod 下产出 /ruoyi/uploads/...
-      // 与 nginx location /ruoyi/ 对齐；后端 /uploads/* 在 nginx 剥前缀后正常服务。
+      // 前缀用 Vite base：dev 下 BASE_URL='/' 行为不变，prod 下产出 /xingran/uploads/...
+      // 与 nginx location /xingran/ 对齐；后端 /uploads/* 在 nginx 剥前缀后正常服务。
       const uploadsBase = `${import.meta.env.BASE_URL}uploads/`;
       setImageUrl(`${uploadsBase}${response.storagePath || ""}`);
       message.success("图片上传成功");
@@ -97,7 +97,7 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
           status: "done",
           url: fileUrl,
           // 取 fileUrl 中 "/uploads/" 最后一次出现之后的部分作为 storagePath，
-          // 兼容不带前缀('/uploads/abc')和带 BASE_URL 前缀('/ruoyi/uploads/abc')两种旧/新格式。
+          // 兼容不带前缀('/uploads/abc')和带 BASE_URL 前缀('/xingran/uploads/abc')两种旧/新格式。
           response: { id: fileId, storagePath: fileUrl.split("/uploads/").pop() || "" },
         },
       ]);

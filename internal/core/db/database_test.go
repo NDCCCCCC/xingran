@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/lib/pq"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
 )
 
 // TestIsDuplicateDatabaseError 纯函数:isDuplicateDatabaseError 对 pq.Error{Code:"42P04"} 返回 true,
@@ -91,7 +91,7 @@ func TestCreatePostgresConnectionErrorPropagates(t *testing.T) {
 }
 
 // TestAdvisoryLockConcurrentMigrationProtection 源码断言:AutoMigrate 的 PG 迁移块
-// 被 pg_try_advisory_lock(hashtext('ruoyi-migrations')) 包裹;未获锁分支含 applogger.Warnf
+// 被 pg_try_advisory_lock(hashtext('xingran-migrations')) 包裹;未获锁分支含 applogger.Warnf
 // 并跳过迁移块;defer 中有 pg_advisory_unlock 释放。
 //
 // C3 修复:多副本/滚动重启下 REFRESH CONCURRENTLY 与 CREATE OR REPLACE VIEW 竞态失败,
@@ -105,7 +105,7 @@ func TestAdvisoryLockConcurrentMigrationProtection(t *testing.T) {
 
 	want := []string{
 		// 1) 锁获取语句(字面匹配,锁定锁键名)
-		"pg_try_advisory_lock(hashtext('ruoyi-migrations'))",
+		"pg_try_advisory_lock(hashtext('xingran-migrations'))",
 		// 2) 锁释放语句(defer 中)
 		"pg_advisory_unlock",
 		// 3) 专用连接 pinning(sqlDB.Conn)
@@ -119,11 +119,11 @@ func TestAdvisoryLockConcurrentMigrationProtection(t *testing.T) {
 		}
 	}
 
-	// 5) 锁键名 'ruoyi-migrations' 必须出现(grep -c >=1)
-	lockKey := "'ruoyi-migrations'"
+	// 5) 锁键名 'xingran-migrations' 必须出现(grep -c >=1)
+	lockKey := "'xingran-migrations'"
 	count := strings.Count(s, lockKey)
 	if count < 2 {
-		t.Fatalf("lock key 'ruoyi-migrations' must appear >=2 times (acquire + release), got %d", count)
+		t.Fatalf("lock key 'xingran-migrations' must appear >=2 times (acquire + release), got %d", count)
 	}
 }
 

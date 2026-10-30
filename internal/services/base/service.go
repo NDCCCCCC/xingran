@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 

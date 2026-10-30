@@ -103,10 +103,10 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
     }
 
     // 为每个截图 URL 拼接正确的前缀。前缀取 Vite BASE_URL,
-    // dev 为 '/' 行为完全等同旧逻辑；prod 为 '/ruoyi/' 时产出
-    // /ruoyi/uploads/rpa/screenshots/xxx.png,与 nginx 子路径部署一致。
+    // dev 为 '/' 行为完全等同旧逻辑；prod 为 '/xingran/' 时产出
+    // /xingran/uploads/rpa/screenshots/xxx.png,与 nginx 子路径部署一致。
     // 兼容已有前缀('/uploads/' 或 '<BASE_URL>uploads/'):剥掉后重新拼接,
-    // 避免产生 '/ruoyi/uploads/uploads/...' 这种重复前缀。
+    // 避免产生 '/xingran/uploads/uploads/...' 这种重复前缀。
     const uploadsBase = `${import.meta.env.BASE_URL}uploads/`;
     return screenshotList.map((url) => {
       if (url.startsWith("http://") || url.startsWith("https://")) {

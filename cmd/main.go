@@ -12,15 +12,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/server"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	macHistoryQueryService "github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/internal/api"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/server"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	macHistoryQueryService "github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -70,17 +70,17 @@ func setTimeZone() {
 	time.Local = tz
 }
 
-// @title RuoYi Next API
+// @title XingRan Next API
 // @version 1.0
 // @description 企业级权限管理系统 API
-// @termsOfService https://github.com/ruoyi-next/ruoyi-next
+// @termsOfService https://github.com/xingran-next/xingran-next
 
 // @contact.name API Support
-// @contact.url https://github.com/ruoyi-next/ruoyi-next/issues
-// @contact.email support@ruoyi-next.com
+// @contact.url https://github.com/xingran-next/xingran-next/issues
+// @contact.email support@xingran-next.com
 
 // @license.name MIT
-// @license.url https://github.com/ruoyi-next/ruoyi-next/blob/main/LICENSE
+// @license.url https://github.com/xingran-next/xingran-next/blob/main/LICENSE
 
 // @host localhost:8080
 // @BasePath /api/v1

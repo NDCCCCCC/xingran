@@ -2,7 +2,7 @@ package network
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
 )
 
 // SetupMACRouter 设置MAC地址路由

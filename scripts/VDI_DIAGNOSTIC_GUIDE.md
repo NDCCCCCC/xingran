@@ -50,12 +50,12 @@ scripts\vdi_diagnostic_tool.bat
 
 如果是 PostgreSQL：
 ```bash
-psql -h localhost -U ruoyi -d ruoyi_next -f scripts/check_vdi_local_data.sql
+psql -h localhost -U xingran -d xingran_next -f scripts/check_vdi_local_data.sql
 ```
 
 如果是通过数据库管理工具：
 1. 打开您的数据库管理工具（如 pgAdmin、DBeaver 等）
-2. 连接到 ruoyi_next 数据库
+2. 连接到 xingran_next 数据库
 3. 执行 `scripts/check_vdi_local_data.sql` 中的查询
 
 ### 4. check_vdi_data.go

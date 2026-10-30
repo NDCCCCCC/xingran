@@ -36,10 +36,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	coredb "github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/captcha"
+	coredb "github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/captcha"
 )
 
 // sysCaptchaBackgroundDDL 表结构精简到 GetRandomEnabled / IncrementUseCount 实际引用的列。
@@ -105,7 +105,7 @@ func newCap78Redis(t *testing.T, configs map[string]string) (*CaptchaService, *g
 	require.NoError(t, err)
 
 	// NewRedisCache 内的 rdb.Ping 走完 go-redis 完整握手(INFRA-01 R-3 冒烟点)。
-	rc, err := cache.NewRedisCache(&cache.CacheConfig{Host: host, Port: port}, "ruoyi")
+	rc, err := cache.NewRedisCache(&cache.CacheConfig{Host: host, Port: port}, "xingran")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = rc.Close() })
 
@@ -181,7 +181,7 @@ func TestCap78_GenerateCaptcha_RateLimitCacheAtomicPath(t *testing.T) {
 	assert.Contains(t, resp.CaptchaImg, "data:image/png;base64,")
 
 	// miniredis 下带前缀 xingran:,ttl > 0 证明 Lua EXPIRE 已生效
-	ttl := mr.TTL("ruoyi:captcha:rate:10.0.0.1")
+	ttl := mr.TTL("xingran:captcha:rate:10.0.0.1")
 	assert.Greater(t, ttl, time.Duration(0), "RateLimitCache 原子分支必须设置 TTL")
 }
 

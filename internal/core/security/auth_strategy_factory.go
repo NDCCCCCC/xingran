@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"gorm.io/gorm"
 )
 

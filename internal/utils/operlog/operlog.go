@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
+	"github.com/xingran-next/xingran-go-backend/internal/utils"
 	"gorm.io/gorm"
 )
 

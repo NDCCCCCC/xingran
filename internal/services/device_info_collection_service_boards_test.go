@@ -3,8 +3,8 @@ package services
 import (
 	"testing"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/component_collector"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/component_collector"
 )
 
 // TestCollectBoardsInto_RuijieBoards verifies that the ruijie `show version`

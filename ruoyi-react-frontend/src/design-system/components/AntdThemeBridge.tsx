@@ -3,34 +3,34 @@
  * AntD Theme Bridge
  *
  * v1.22 品牌化（Phase 64 · TOKEN-03 → Phase 65 · THEME-01 收敛）
- * - 读取 ruoyiBrand 常量（TS 侧唯一色值真相源）映射 AntD ThemeConfig
+ * - 读取 xingranBrand 常量（TS 侧唯一色值真相源）映射 AntD ThemeConfig
  * - v1.22 Phase 65：单一品牌主题，主色优先级链已移除 ——
- *   colorPrimary / colorInfo / colorLink 直接使用 ruoyiBrand.greenPrimary，
+ *   colorPrimary / colorInfo / colorLink 直接使用 xingranBrand.greenPrimary，
  *   不再订阅用户自定义颜色与主题 store（多主题能力随 D-01 一并删除）
  * - theme.token 全量覆盖 colorPrimary / colorInfo / colorLink / colorSuccess /
  *   colorWarning / colorError / colorTextBase / colorBgBase / colorBgContainer /
  *   colorBgElevated / colorBgLayout / colorBorder / colorBorderSecondary /
  *   borderRadius / borderRadiusLG / fontFamily
  * - v1.25 Phase 89 · STYLE-01：分模式色板 —— 按模式选板
- *   `board = isDark ? ruoyiBrand.dark : ruoyiBrand.cream`，seed 层（colorBgBase /
+ *   `board = isDark ? xingranBrand.dark : xingranBrand.cream`，seed 层（colorBgBase /
  *   colorTextBase）与 map 层（colorBgContainer / colorBgElevated / colorBgLayout /
  *   colorBorder / colorBorderSecondary）显式给值（Map 层不交给 darkAlgorithm 派生，
  *   饱和品牌绿基底会派生出错误色相，详见 89-RESEARCH §1.1.2 C/D 组）。
  *   组件级 Input/Select/Card.colorBgContainer 三项删除，回落全局 token（X-1b，
  *   避免暗色白底从组件作用域重新长出）。
  * - theme.components 覆盖 Button / Table / Input / Select / Menu / Tabs / Tag /
- *   Card 八组件，全部从 ruoyiBrand 读取
+ *   Card 八组件，全部从 xingranBrand 读取
  * - algorithm 切换（darkAlgorithm / compactAlgorithm）保留，与明暗/密度正交
  *
  * 作用：
  * - 读取 settingsStore 中的 mode (light/dark) 与 layout.density
- * - 将上述值映射到 AntD 的 ThemeConfig（v1.22 起全量接 ruoyiBrand 品牌令牌）
+ * - 将上述值映射到 AntD 的 ThemeConfig（v1.22 起全量接 xingranBrand 品牌令牌）
  *
  * 原理：
  * - AntD 组件内部通过 token 系统获取 colorPrimary；缺少 theme prop 时回退到 AntD 默认色
  * - index.css 仅更新 CSS 变量 (--theme-primary 等)，但 AntD 组件不消费 CSS 变量
- * - 本组件把 ruoyiBrand.greenPrimary 直接喂给 AntD 的 ThemeConfig.token.colorPrimary
- * - v1.22 起：token/components 全量映射到 ruoyiBrand，Button/Table/Input/
+ * - 本组件把 xingranBrand.greenPrimary 直接喂给 AntD 的 ThemeConfig.token.colorPrimary
+ * - v1.22 起：token/components 全量映射到 xingranBrand，Button/Table/Input/
  *   Select/Menu/Tabs/Tag/Card 等内置组件自动品牌化，无需逐组件 CSS override
  */
 
@@ -40,7 +40,7 @@ import type { ThemeConfig } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { useSettingsStore } from "@/store/settingsStore";
 import { setAppMessageInstance } from "@/utils/antdMessage";
-import { ruoyiBrand } from "@/design-system/tokens/colors";
+import { xingranBrand } from "@/design-system/tokens/colors";
 import { fontFamily } from "@/design-system/tokens/typography";
 
 interface AntdThemeBridgeProps {
@@ -77,19 +77,19 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
 
     // Phase 89 · STYLE-01：按模式取板（cream ↔ dark）
     // 本组常量是模式无关的 —— 混用即触发 P-M8（暗色白底）
-    const board = isDark ? ruoyiBrand.dark : ruoyiBrand.cream;
+    const board = isDark ? xingranBrand.dark : xingranBrand.cream;
 
-    // v1.22 品牌化: theme.token + theme.components 全量映射 ruoyiBrand
-    // D-03 按钮纪律: colorPrimary 永远 = ruoyiBrand.greenPrimary (#156031)
+    // v1.22 品牌化: theme.token + theme.components 全量映射 xingranBrand
+    // D-03 按钮纪律: colorPrimary 永远 = xingranBrand.greenPrimary (#156031)
     // 铜金 #C09058 不做实心主按钮（QA-01 反向断言锁住）
     return {
       token: {
-        colorPrimary: ruoyiBrand.greenPrimary,
-        colorInfo: ruoyiBrand.greenPrimary,
-        colorLink: ruoyiBrand.greenPrimary,
-        colorSuccess: ruoyiBrand.functional.success,
-        colorWarning: ruoyiBrand.functional.warning,
-        colorError: ruoyiBrand.functional.danger,
+        colorPrimary: xingranBrand.greenPrimary,
+        colorInfo: xingranBrand.greenPrimary,
+        colorLink: xingranBrand.greenPrimary,
+        colorSuccess: xingranBrand.functional.success,
+        colorWarning: xingranBrand.functional.warning,
+        colorError: xingranBrand.functional.danger,
         // —— Seed 层：算法的入口，必须随模式切换 ——
         colorTextBase: board.fg,
         colorBgBase: board.canvas,
@@ -105,7 +105,7 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
         // 注：89-RESEARCH §2.2.1 示例的 `board.borderSubtle` 在 light 下会落到暗色值，
         // 与 §2.1.3 映射表（light 保持 cream.borderStrong）冲突 —— 以 PLAN「浅色值与现状
         // 逐值一致」为准，此处按模式取键。
-        colorBorderSecondary: isDark ? ruoyiBrand.dark.borderSubtle : ruoyiBrand.cream.borderStrong,
+        colorBorderSecondary: isDark ? xingranBrand.dark.borderSubtle : xingranBrand.cream.borderStrong,
         // 控件 8px 一档 / 大容器 12px / 字体栈（sans 含中文）
         borderRadius: 8,
         borderRadiusLG: 12,
@@ -114,11 +114,11 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
       components: {
         // 主按钮 D-03: 永远绿底白字 (Phase 66 · G4/COMP-03 白字 7.64:1)
         Button: {
-          colorPrimary: ruoyiBrand.greenPrimary,
-          primaryColor: ruoyiBrand.onDark.white,
-          colorPrimaryHover: ruoyiBrand.greenPrimaryHover,
-          colorPrimaryActive: ruoyiBrand.greenPrimaryActive,
-          defaultBorderColor: ruoyiBrand.cream.border,
+          colorPrimary: xingranBrand.greenPrimary,
+          primaryColor: xingranBrand.onDark.white,
+          colorPrimaryHover: xingranBrand.greenPrimaryHover,
+          colorPrimaryActive: xingranBrand.greenPrimaryActive,
+          defaultBorderColor: xingranBrand.cream.border,
           borderRadius: 8,
           controlHeight: 36,
           fontWeight: 500,
@@ -128,13 +128,13 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           headerBg: board.headerBg,
           headerColor: board.fg,
           borderColor: board.border,
-          rowHoverBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
-          headerSortActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
-          headerSortHoverBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
-          headerFilterHoverBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
-          fixedHeaderSortActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
+          rowHoverBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg,
+          headerSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg,
+          headerSortHoverBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg,
+          headerFilterHoverBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg,
+          fixedHeaderSortActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg,
           rowSelectedBg: board.headerBg,
-          rowSelectedHoverBg: isDark ? ruoyiBrand.dark.active : ruoyiBrand.cream.zebraBg,
+          rowSelectedHoverBg: isDark ? xingranBrand.dark.active : xingranBrand.cream.zebraBg,
           borderRadius: 8,
         },
         Pagination: {
@@ -144,55 +144,55 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
         // 输入框: focus 环用品牌绿 (Phase 66 · G2/COMP-04 焦点环 2px)
         // Phase 89 · X-1b: colorBgContainer 已删除，回落全局 token（分模式色板）
         Input: {
-          activeBorderColor: ruoyiBrand.greenPrimary,
-          hoverBorderColor: ruoyiBrand.greenPrimary,
+          activeBorderColor: xingranBrand.greenPrimary,
+          hoverBorderColor: xingranBrand.greenPrimary,
           activeShadow: "0 0 0 2px rgba(21, 96, 49, 0.15)",
           borderRadius: 8,
           controlHeight: 36,
         },
         InputNumber: {
-          activeBorderColor: ruoyiBrand.greenPrimary,
-          hoverBorderColor: ruoyiBrand.greenPrimary,
+          activeBorderColor: xingranBrand.greenPrimary,
+          hoverBorderColor: xingranBrand.greenPrimary,
           activeShadow: "0 0 0 2px rgba(21, 96, 49, 0.15)",
           borderRadius: 8,
           controlHeight: 36,
         },
         Select: {
-          activeBorderColor: ruoyiBrand.greenPrimary,
-          hoverBorderColor: ruoyiBrand.greenPrimary,
+          activeBorderColor: xingranBrand.greenPrimary,
+          hoverBorderColor: xingranBrand.greenPrimary,
           borderRadius: 8,
           controlHeight: 36,
           selectorBg: board.surface,
-          optionSelectedBg: isDark ? ruoyiBrand.dark.active : ruoyiBrand.cream.headerBg,
-          optionActiveBg: isDark ? ruoyiBrand.dark.hover : ruoyiBrand.cream.zebraBg,
+          optionSelectedBg: isDark ? xingranBrand.dark.active : xingranBrand.cream.headerBg,
+          optionActiveBg: isDark ? xingranBrand.dark.hover : xingranBrand.cream.zebraBg,
         },
         Form: {
           labelColor: board.fg,
           itemMarginBottom: 16,
         },
         // 菜单: 浅色底用绿灰 / 深色侧栏用品牌深绿
-        // (Phase 66 · QA-02 卫生 — darkItem* 改为 ruoyiBrand 引用)
+        // (Phase 66 · QA-02 卫生 — darkItem* 改为 xingranBrand 引用)
         Menu: {
           itemBg: "transparent",
-          itemSelectedBg: ruoyiBrand.cream.headerBg,
-          itemSelectedColor: ruoyiBrand.greenPrimary,
-          itemHoverBg: ruoyiBrand.cream.zebraBg,
-          darkItemBg: ruoyiBrand.green[900],
-          darkItemSelectedBg: ruoyiBrand.greenPrimary,
-          darkItemSelectedColor: ruoyiBrand.onDark.lightYellow,
-          darkItemHoverBg: ruoyiBrand.greenPrimaryLight,
+          itemSelectedBg: xingranBrand.cream.headerBg,
+          itemSelectedColor: xingranBrand.greenPrimary,
+          itemHoverBg: xingranBrand.cream.zebraBg,
+          darkItemBg: xingranBrand.green[900],
+          darkItemSelectedBg: xingranBrand.greenPrimary,
+          darkItemSelectedColor: xingranBrand.onDark.lightYellow,
+          darkItemHoverBg: xingranBrand.greenPrimaryLight,
         },
         // Tabs: 选中色 = 品牌绿
         Tabs: {
-          itemSelectedColor: ruoyiBrand.greenPrimary,
-          itemActiveColor: ruoyiBrand.greenPrimary,
-          itemHoverColor: ruoyiBrand.greenPrimaryHover,
-          inkBarColor: ruoyiBrand.greenPrimary,
+          itemSelectedColor: xingranBrand.greenPrimary,
+          itemActiveColor: xingranBrand.greenPrimary,
+          itemHoverColor: xingranBrand.greenPrimaryHover,
+          inkBarColor: xingranBrand.greenPrimary,
         },
         // Tag: 默认底用淡黄 (Phase 66 · G3/COMP-04 SM2/SM3/SM4 品牌锚点配方)
         Tag: {
-          defaultBg: ruoyiBrand.onDark.paleYellow,
-          defaultColor: ruoyiBrand.copper[500],
+          defaultBg: xingranBrand.onDark.paleYellow,
+          defaultColor: xingranBrand.copper[500],
           borderRadiusSM: 4,
         },
         // Card: 白卡浮在奶油底上, 12px 圆角
@@ -202,13 +202,13 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           borderRadiusLG: 12,
         },
         Modal: {
-          contentBg: isDark ? ruoyiBrand.dark.overlay : ruoyiBrand.cream.elevated,
+          contentBg: isDark ? xingranBrand.dark.overlay : xingranBrand.cream.elevated,
           headerBg: "transparent",
           titleColor: board.fg,
           borderRadiusLG: 16,
         },
         Dropdown: {
-          colorBgElevated: isDark ? ruoyiBrand.dark.overlay : ruoyiBrand.cream.elevated,
+          colorBgElevated: isDark ? xingranBrand.dark.overlay : xingranBrand.cream.elevated,
         },
       },
       algorithm: algorithms,

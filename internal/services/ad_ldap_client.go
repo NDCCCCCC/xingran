@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // adTLSSkipVerify 缓存 AD/LDAP TLS 证书校验开关,从 config.AD.TLSSkipVerify 读取。

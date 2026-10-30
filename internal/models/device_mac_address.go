@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/normalize"
+	"github.com/xingran-next/xingran-go-backend/pkg/normalize"
 	"gorm.io/gorm"
 )
 

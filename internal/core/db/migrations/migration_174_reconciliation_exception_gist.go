@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -17,7 +17,7 @@ import (
 //       (1) GiST inet_ops partial index 加速命中测试 SQL `ip_range >> $1::inet`（D-R3-A1-03）
 //       (2) CHECK 约束确保 exception_actions ⊆ 5 白名单值 + severity_override 仅 low/medium/high
 //
-// 关键约束（Pitfall 1/6 + MEMORY.md `ruoyi-gorm-sql-constraint-naming-conflict`）：
+// 关键约束（Pitfall 1/6 + MEMORY.md `xingran-gorm-sql-constraint-naming-conflict`）：
 //   - 纯 SQL `DO $$ ... END $$`，禁止 GORM `check:` tag（GORM 命名不可控，且 v1.30.5 不稳定）
 //   - `CREATE INDEX` 用 `IF NOT EXISTS`（DO$$ 包装）保证幂等
 //   - model `IPRange` 字段保持 `gorm:"type:cidr;not null;column:ip_range"`，**不**加 `gorm:"index"`

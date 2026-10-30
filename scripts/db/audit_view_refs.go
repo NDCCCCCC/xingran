@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // loadEnvWhitelist 加载 .env 白名单 key(避免密码含括号/特殊字符时 `source` 失败)

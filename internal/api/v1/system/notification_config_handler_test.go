@@ -37,9 +37,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // setupNotifConfigTestDB creates in-memory SQLite with both sys_email_config and

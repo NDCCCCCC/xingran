@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
 // Cache key 常量模板 — 资产对账模块
@@ -105,7 +105,7 @@ func GetReconciliationHealthByAssetKey(assetID string) string {
 //	    cache.Delete(ctx, rawKey)
 //	}
 func StripCachePrefix(key string) string {
-	const prefix = "ruoyi:"
+	const prefix = "xingran:"
 	return strings.TrimPrefix(key, prefix)
 }
 

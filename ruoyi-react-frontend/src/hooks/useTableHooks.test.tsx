@@ -134,7 +134,7 @@ describe("useTableSettings", () => {
 
     act(() => result.current.pagination.setCurrent(3));
     expect(result.current.pagination.current).toBe(3);
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_current")).toBe("3");
+    expect(sessionStorage.getItem("xingran_table_state_system_user_current")).toBe("3");
   });
 
   it("getTableProps 返回分页配置可直接喂 Table", () => {
@@ -147,7 +147,7 @@ describe("useTableSettings", () => {
   });
 
   it("enableGlobalPagination=false 时不覆盖 pageSize", () => {
-    sessionStorage.setItem("ruoyi_table_state_system_user_pageSize", "50");
+    sessionStorage.setItem("xingran_table_state_system_user_pageSize", "50");
     const { result } = renderHook(() => useTableSettings({ enableGlobalPagination: false }), {
       wrapper: routerWrapper,
     });
@@ -156,7 +156,7 @@ describe("useTableSettings", () => {
   });
 
   it("pageSize 选项覆盖持久化值", () => {
-    sessionStorage.setItem("ruoyi_table_state_system_user_pageSize", "50");
+    sessionStorage.setItem("xingran_table_state_system_user_pageSize", "50");
     const { result } = renderHook(() => useTableSettings({ pageSize: 20 }), {
       wrapper: routerWrapper,
     });

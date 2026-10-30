@@ -20,8 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	assetSvc "github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	assetSvc "github.com/xingran-next/xingran-go-backend/internal/services/asset"
 )
 
 // ============================================================================

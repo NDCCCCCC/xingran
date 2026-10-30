@@ -1,6 +1,6 @@
 package operations
 
-import "github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+import "github.com/xingran-next/xingran-go-backend/internal/models"
 
 // workstation_physical_diagnosis.go — Phase 73 / #7（DBG-07）工位物理链路「空因可诊断」
 //

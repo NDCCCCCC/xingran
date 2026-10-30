@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	memcache "github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	memcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
 // TestMx78_NewMetricsCacheService_NilPaths 最小 Core 装配覆盖 :19 剩余分支

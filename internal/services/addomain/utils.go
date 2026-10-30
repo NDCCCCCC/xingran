@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // ==================== SM4 Cipher Interface ====================

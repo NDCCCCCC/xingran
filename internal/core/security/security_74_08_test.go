@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
-	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // =====================================================================
@@ -43,7 +43,7 @@ func TestNewJWTManager_Validation(t *testing.T) {
 	assert.ErrorContains(t, err, "未配置")
 
 	// 已知弱默认值
-	_, err = NewJWTManager(hs256Config("ruoyi-next-secret-key"))
+	_, err = NewJWTManager(hs256Config("xingran-next-secret-key"))
 	assert.ErrorContains(t, err, "弱默认值")
 
 	// 长度 <16

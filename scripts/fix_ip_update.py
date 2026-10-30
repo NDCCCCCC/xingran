@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fix VDI VM sync IP address update logic"""
 
-file_path = "D:/CODE/ClaudeCode/ruoyi-go-backend/internal/services/vdi/vm_service_impl.go"
+file_path = "D:/CODE/ClaudeCode/xingran-go-backend/internal/services/vdi/vm_service_impl.go"
 
 with open(file_path, 'r', encoding='utf-8') as f:
     lines = f.readlines()

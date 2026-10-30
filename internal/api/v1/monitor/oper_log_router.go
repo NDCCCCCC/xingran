@@ -2,8 +2,8 @@ package monitor
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
 )
 
 // SetupOperLogRouter 设置操作日志路由

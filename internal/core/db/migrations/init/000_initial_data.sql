@@ -1,11 +1,11 @@
 -- ========================================
--- RuoYi-Next 初始数据
+-- XingRan-Next 初始数据
 -- ========================================
 -- 说明: 新环境部署所需的初始数据
 -- 生成时间: 2026-05-21
 -- 
 -- 使用方法:
---   psql -U postgres -d ruoyi_next -f init/000_initial_data.sql
+--   psql -U postgres -d xingran_next -f init/000_initial_data.sql
 --
 -- 注意: 
 --   - 表结构由 GORM AutoMigrate 自动创建

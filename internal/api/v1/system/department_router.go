@@ -2,10 +2,10 @@ package system
 
 import (
 	"github.com/gin-gonic/gin"
-	opsAPI "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
-	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
+	opsAPI "github.com/xingran-next/xingran-go-backend/internal/api/v1/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // adcascadeSetter 部门服务的 AD 级联注入点（缓存包装内嵌基础服务，方法集透传）。

@@ -1,5 +1,5 @@
 /**
- * LAST_PATH (ruoyi_last_visited_path) sessionStorage 存取工具
+ * LAST_PATH (xingran_last_visited_path) sessionStorage 存取工具
  *
  * 从 DynamicRoutes.tsx 拆出（Phase 81 NAV-01）：
  *   1. react-refresh 清偿 —— 非组件导出与组件同文件触发 warning（原 :85/:95/:108）

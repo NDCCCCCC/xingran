@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
 )
 
 // SetupMonitorRouter 设置监控路由（已废弃，仅保留向后兼容）

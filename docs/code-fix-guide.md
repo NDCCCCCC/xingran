@@ -386,7 +386,7 @@ func (s *BuildingService) List(ctx context.Context, req BuildingListRequest) (*P
 Handler 中只需设置操作日志信息，中间件会自动记录：
 
 ```go
-import "github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
+import "github.com/xingran-next/xingran-go-backend/pkg/middleware"
 
 func (h *BuildingHandler) Create(c *gin.Context) {
     // ... 业务逻辑 ...
@@ -747,7 +747,7 @@ PASS: TestPasswordManager_VerifyInvalidFormat
 PASS: TestPasswordManager_DifferentHashesForSamePassword
 PASS: TestPasswordManager_CustomConfig
 PASS: TestPasswordManager_EmptyPassword
-ok      github.com/ruoyi-next/ruoyi-go-backend/internal/core/security
+ok      github.com/xingran-next/xingran-go-backend/internal/core/security
 ```
 
 3. **测试命令**
@@ -1074,7 +1074,7 @@ type PageData struct {
    - JWT Token 过期时间常量（访问令牌 2小时、刷新令牌 7天）
 
 2. **`cache.go`** - 缓存相关常量
-   - Redis 键前缀 `ruoyi:`
+   - Redis 键前缀 `xingran:`
    - 缓存键格式常量（token 黑名单、登录失败记录、验证码等）
 
 3. **`pagination.go`** - 分页相关常量
@@ -1096,7 +1096,7 @@ type PageData struct {
 #### 使用示例
 
 ```go
-import "github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+import "github.com/xingran-next/xingran-go-backend/internal/constants"
 
 // 使用时间常量
 cacheExpire := constants.DefaultCacheExpire  // 5 * time.Minute

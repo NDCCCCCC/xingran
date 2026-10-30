@@ -3,7 +3,7 @@ package fixtures
 import (
 	"fmt"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // MACAddressEntry MAC地址条目（测试用，避免循环导入services包）

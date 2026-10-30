@@ -17,13 +17,13 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/lib/pq"
 	"github.com/tjfoc/gmsm/sm3"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
-	sysmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
+	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models/system"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -166,7 +166,7 @@ func createFilteredLogger() *FilterLogger {
 
 // defaultSQLitePath 是 cfg.Path 为空时的兜底 SQLite 文件路径
 // (与 config 默认值 database.path 对齐)。
-const defaultSQLitePath = "data/ruoyi.db"
+const defaultSQLitePath = "data/xingran.db"
 
 // createSQLiteConnection 创建 SQLite 连接(纯 Go 驱动 glebarez/sqlite,底层
 // modernc.org/sqlite,无 CGO 依赖 — 严禁替换为 gorm.io/driver/sqlite)。
@@ -1004,7 +1004,7 @@ func (d *Database) AutoMigrate() error {
 	// ("tuple concurrently updated" / "CONCURRENTLY refresh in progress")。
 	// 用会话级 advisory lock 包裹整块迁移,未获锁实例 WARN 跳过(fail-safe 而非 fail-deadly):
 	// 单实例部署锁永远可得,只有 HA/滚动重启场景才落到跳过。
-	// SQLite 不需要此锁(d.Type guard 已排除);锁键 'ruoyi-migrations' 由 hashtext 哈希为 int4
+	// SQLite 不需要此锁(d.Type guard 已排除);锁键 'xingran-migrations' 由 hashtext 哈希为 int4
 	// 走单参 pg_advisory_lock 变体。
 	if d.Type == "postgres" {
 		if !d.acquireMigrationAdvisoryLock() {
@@ -1276,7 +1276,7 @@ func (d *Database) AutoMigrate() error {
 //
 // 实现要点:
 //   - 专用 sql.Conn(pinning 单连接):advisory lock 是会话级,跨连接不生效
-//   - pg_try_advisory_lock(hashtext('ruoyi-migrations')) 返回 bool:
+//   - pg_try_advisory_lock(hashtext('xingran-migrations')) 返回 bool:
 //     true=获锁,false=其他会话已持锁(本实例跳过)
 //   - 取锁本身失败(conn 错误/查询错误)→ Errorf 后按"未获锁"处理(fail-safe)
 func (d *Database) acquireMigrationAdvisoryLock() bool {
@@ -1294,7 +1294,7 @@ func (d *Database) acquireMigrationAdvisoryLock() bool {
 
 	var acquired bool
 	if err := conn.QueryRowContext(context.Background(),
-		"SELECT pg_try_advisory_lock(hashtext('ruoyi-migrations'))").Scan(&acquired); err != nil {
+		"SELECT pg_try_advisory_lock(hashtext('xingran-migrations'))").Scan(&acquired); err != nil {
 		applogger.Errorf("[advisory-lock] 尝试获取锁失败: %v", err)
 		_ = conn.Close()
 		return false
@@ -1319,7 +1319,7 @@ func (d *Database) releaseMigrationAdvisoryLock() {
 	// pg_advisory_unlock 与 pg_try_advisory_lock 用同样的 hashtext 锁键,
 	// 必须使用同一连接(pg_advisory_unlock 在已关闭连接上调用会静默 noop)。
 	if _, err := d.migrationLockConn.ExecContext(context.Background(),
-		"SELECT pg_advisory_unlock(hashtext('ruoyi-migrations'))"); err != nil {
+		"SELECT pg_advisory_unlock(hashtext('xingran-migrations'))"); err != nil {
 		applogger.Errorf("[advisory-lock] 释放锁失败: %v", err)
 	}
 	_ = d.migrationLockConn.Close()
@@ -1550,7 +1550,7 @@ var dbIdentRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 // migrationAdvisoryLockKey 是迁移块 advisory lock 的字符串锁键,
 // 跨进程共享同一哈希值(hash key 在 pg_advisory_lock(int8, int4) 双参版本下用 int4)。
-const migrationAdvisoryLockKey = "ruoyi-migrations"
+const migrationAdvisoryLockKey = "xingran-migrations"
 
 // isDuplicateDatabaseError 判定 err 是否为 PG 42P04 (duplicate_database)。
 // errors.As 解包 *pq.Error 以覆盖 fmt.Errorf("...: %w", pqErr) 包装路径。

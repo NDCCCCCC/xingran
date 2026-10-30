@@ -3,7 +3,7 @@
 Start-Sleep -Seconds 1
 $target = Get-Date -Date '2026-10-22 03:13:00'
 while ((Get-Date) -lt $target) { Start-Sleep -Seconds 30 }
-$csv = 'D:/CODE/ClaudeCode/ruoyi-go-backend/.planning/tmp-uat61-t1-samples-v4.csv'
+$csv = 'D:/CODE/ClaudeCode/xingran-go-backend/.planning/tmp-uat61-t1-samples-v4.csv'
 $rows = Import-Csv $csv | Where-Object { $_.ts -ne 'ts' -and $_.ts -ne '' }
 $report = @()
 $report += "=== UAT61 Test1 v4 analysis $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
@@ -27,7 +27,7 @@ if ($nums.Count -gt 0) {
 } else {
   $report += "VERDICT: NO DATA - poller failed"
 }
-$outFile = 'D:/CODE/ClaudeCode/ruoyi-go-backend/.planning/tmp-uat61-t1-v4-verdict.txt'
+$outFile = 'D:/CODE/ClaudeCode/xingran-go-backend/.planning/tmp-uat61-t1-v4-verdict.txt'
 $report | Set-Content -Path $outFile -Encoding utf8
 Write-Output "verdict written"
 $report | ForEach-Object { Write-Output $_ }

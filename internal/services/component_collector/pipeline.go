@@ -11,7 +11,7 @@ package component_collector
 import (
 	"context"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"gorm.io/gorm"
 )
 

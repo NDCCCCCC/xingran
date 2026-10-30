@@ -1,7 +1,7 @@
 package migrations
 
 import (
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -24,7 +24,7 @@ func Migrate189RemoveMACTrajectoryMenu(db *gorm.DB) error {
 	const (
 		componentExact = "pages/network/mac/trajectory"
 		pathFull       = "network/mac/trajectory"
-		pathRelative   = "trajectory" // RuoYi 子菜单常以相对父级的短路径存储
+		pathRelative   = "trajectory" // XingRan 子菜单常以相对父级的短路径存储
 	)
 
 	var menuIDs []string

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/config"
 )
 
 // ErrorAnalyzer 错误分析服务接口

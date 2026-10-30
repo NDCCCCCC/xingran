@@ -132,8 +132,8 @@ import (
     "fmt"
     "time"
 
-    "github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
-    rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+    "github.com/xingran-next/xingran-go-backend/internal/core/security"
+    rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
     "gorm.io/gorm"
 )
 
@@ -182,8 +182,8 @@ package middleware
 
 import (
     "github.com/gin-gonic/gin"
-    "github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
-    "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+    "github.com/xingran-next/xingran-go-backend/internal/services/rpa"
+    "github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // WorkerAuth Worker Token 认证中间件

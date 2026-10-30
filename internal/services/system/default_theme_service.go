@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
 

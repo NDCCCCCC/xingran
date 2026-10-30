@@ -45,7 +45,7 @@ func newMiniredisCache(t *testing.T) (*RedisCache, *miniredis.Miniredis) {
 	}
 
 	// 构造器内的 rdb.Ping 走完完整连接握手（R-3 冒烟点）。
-	r, err := NewRedisCache(&CacheConfig{Host: host, Port: port}, "ruoyi")
+	r, err := NewRedisCache(&CacheConfig{Host: host, Port: port}, "xingran")
 	if err != nil {
 		t.Fatalf("NewRedisCache: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestRedisBasicCommandSurface(t *testing.T) {
 	assert.Equal(t, []string{"a", "b", ""}, vals)
 
 	// HSet / HGet / HGetAll / HKeys / HDel
-	// （字段名刻意长于 prefixLen=len("ruoyi")+1=8，实证 WR-01 修复：
+	// （字段名刻意长于 prefixLen=len("xingran")+1=8，实证 WR-01 修复：
 	//   HKeys 不再对字段名做前缀裁剪，长字段名原样返回）
 	require.NoError(t, r.HSet(ctx, "h1", "department_name", "hv1"))
 	require.NoError(t, r.HSet(ctx, "h1", "display_order", "hv2"))
@@ -128,7 +128,7 @@ func TestRedisKeysScan(t *testing.T) {
 
 	// buildKey 自动加 xingran: 前缀：经 cache 方法断言无感；
 	// 直查 mr 时必须带前缀（CLAUDE.md 缓存前缀约定）。
-	assert.True(t, mr.Exists("ruoyi:other:x"))
+	assert.True(t, mr.Exists("xingran:other:x"))
 	assert.False(t, mr.Exists("other:x"))
 }
 

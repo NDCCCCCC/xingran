@@ -135,26 +135,26 @@ type Department struct {
 
 ```bash
 # 方式1: 使用psql命令行
-psql -U postgres -d ruoyi_next -f internal/core/db/migrations/080_add_dept_code_field.sql
+psql -U postgres -d xingran_next -f internal/core/db/migrations/080_add_dept_code_field.sql
 
 # 方式2: 使用Go迁移工具（如果配置了）
 go run cmd/migrate/main.go up
 
 # 验证迁移结果
-psql -U postgres -d ruoyi_next -c "\d sys_dept"
+psql -U postgres -d xingran_next -c "\d sys_dept"
 ```
 
 ### 步骤2: 重新编译应用
 
 ```bash
 # Windows
-go build -o ruoyi-backend.exe ./cmd/main.go
+go build -o xingran-backend.exe ./cmd/main.go
 
 # Linux
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -o ruoyi-backend-linux ./cmd/main.go
+go build -o xingran-backend-linux ./cmd/main.go
 ```
 
 ### 步骤3: 重启应用
@@ -165,7 +165,7 @@ go build -o ruoyi-backend-linux ./cmd/main.go
 # 停止旧程序（Ctrl+C或kill命令）
 
 # 启动新程序
-.\ruoyi-backend.exe
+.\xingran-backend.exe
 ```
 
 ---

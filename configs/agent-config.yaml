@@ -2,7 +2,7 @@
 # IMPORTANT: Enable TLS for production deployments
 
 # Backend Configuration
-backend_url: "https://ruoyi-backend.example.com"
+backend_url: "https://xingran-backend.example.com"
 agent_id: ""  # Leave empty for auto-registration
 vm_id: ""      # Leave empty for auto-registration
 

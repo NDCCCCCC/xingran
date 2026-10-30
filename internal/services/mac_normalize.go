@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // canonicalMACPattern 匹配标准大写冒号格式 MAC 地址: AA:BB:CC:DD:EE:FF

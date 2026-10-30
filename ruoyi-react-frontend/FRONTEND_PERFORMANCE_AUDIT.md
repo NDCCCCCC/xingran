@@ -1,4 +1,4 @@
-# RuoYi-Next 前端性能审查报告
+# XingRan-Next 前端性能审查报告
 
 根据 Vercel React 最佳实践的 57 条规则，对项目前端代码进行的全面性能审查。
 
@@ -541,7 +541,7 @@ const values = await buildingForm.validateFields() as Record<string, unknown>;
 
 ## 7. 总结
 
-RuoYi-Next 前端代码整体结构良好，但在异步操作处理、状态管理和性能优化方面存在一些关键问题。通过系统性地应用 Vercel React 最佳实践，预期可以显著提升应用性能和用户体验。
+XingRan-Next 前端代码整体结构良好，但在异步操作处理、状态管理和性能优化方面存在一些关键问题。通过系统性地应用 Vercel React 最佳实践，预期可以显著提升应用性能和用户体验。
 
 **关键行动项**:
 1. 立即修复异步瀑布流问题 (最大收益)

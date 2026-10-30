@@ -20,7 +20,7 @@ package rpa
 
 // 使用示例：
 //
-//	import "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+//	import "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 //
 //	// 创建任务
 //	task := &rpa.Task{

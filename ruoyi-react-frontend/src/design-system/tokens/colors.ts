@@ -3,12 +3,12 @@
  *
  * v1.22 Phase 65 清理：旧多主题色阶 / 语义色 / 渐变 / 旧品牌色
  * 四组导出已删除（Phase 64 cleanup note），
- * ruoyiBrand 为本文件唯一导出常量。
+ * xingranBrand 为本文件唯一导出常量。
  */
 
 /**
  * v1.22 品牌化（Phase 64 · TOKEN-02）
- * ruoyiBrand 为 TS 侧唯一色值真相源。
+ * xingranBrand 为 TS 侧唯一色值真相源。
  *
  * 色值来源：`655aa291-9bfe-4e94-ad5d-b3c8b2d24984/brand-spec.md`
  * - 标注「实测」直接采用
@@ -17,7 +17,7 @@
  * 用途：AntdThemeBridge、组件样式、未来业务组件（Phase 66）仅从此常量读取，
  * 不再硬编码 hex 值。
  */
-export const ruoyiBrand = {
+export const xingranBrand = {
   /**
    * 绿色梯度（6 阶，实测）
    * 从深到浅：渐变深端 / 品牌主色 / 渐变亮端 / 次级绿 / 深底图标绿 / 绿灰淡彩

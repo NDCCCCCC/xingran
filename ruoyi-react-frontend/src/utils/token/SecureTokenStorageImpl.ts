@@ -9,7 +9,7 @@
  *
  * 修复历史:
  *   - P1-S1 (前端审查): 原 deriveStorageKey/deriveStorageIV 的输入字符串
- *     前 16 字节恰好相同("ruoyi-next-sec"), 导致派生的 Key 与 IV 完全
+ *     前 16 字节恰好相同("xingran-next-sec"), 导致派生的 Key 与 IV 完全
  *     相同 (78696e67...), SM4-CBC Key=IV 安全性归零。现用 hash 派生确保不同。
  *   - P1-R3 (前端审查): tokenMeta 仅存内存, 页面刷新后丢失导致
  *     isAccessTokenExpiringWithin 永远 false, 自动刷新定时器失效。
@@ -61,7 +61,7 @@ function deriveHex(input: string, salt: string): string {
  * Key 使用 "-key-" salt, 与 IV 的 "-iv-" salt 确保不同。
  */
 function deriveStorageKey(): string {
-  return deriveHex("ruoyi-next-secure-storage", "sm4-key-2024");
+  return deriveHex("xingran-next-secure-storage", "sm4-key-2024");
 }
 
 /**
@@ -69,7 +69,7 @@ function deriveStorageKey(): string {
  * IV 使用 "-iv-" salt, 与 Key 不同。
  */
 function deriveStorageIV(): string {
-  return deriveHex("ruoyi-next-secure-storage", "sm4-iv-2024");
+  return deriveHex("xingran-next-secure-storage", "sm4-iv-2024");
 }
 
 // 派生密钥和 IV（单例, 启动时计算一次）

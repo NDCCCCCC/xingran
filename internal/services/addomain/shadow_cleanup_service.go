@@ -21,8 +21,8 @@ import (
 	"fmt"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // cleanupAfterFullSync 全量同步成功路径末尾的影子表清理编排入口（SHADOW-03）。

@@ -1,7 +1,7 @@
 package operations
 
 import (
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // LineStatus 专线状态枚举

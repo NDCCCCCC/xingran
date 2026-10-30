@@ -28,7 +28,7 @@ type MenuDetail struct {
 }
 
 func main() {
-	dsn := "host=10.62.10.34 user=postgres password=Cpic1234 dbname=ruoyi port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=10.62.10.34 user=postgres password=Cpic1234 dbname=xingran port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("数据库连接失败:", err)
@@ -141,5 +141,5 @@ func generateCleanupScript(db *gorm.DB, dups []MenuDupInfo) {
 	fmt.Printf("✓ 清理脚本已生成: scripts/cleanup_duplicate_menus.sql\n")
 	fmt.Printf("  预计删除 %d 条重复记录\n", deletedCount)
 	fmt.Println("\n执行命令:")
-	fmt.Println("  psql -h 10.62.10.34 -U postgres -d ruoyi -f scripts/cleanup_duplicate_menus.sql")
+	fmt.Println("  psql -h 10.62.10.34 -U postgres -d xingran -f scripts/cleanup_duplicate_menus.sql")
 }

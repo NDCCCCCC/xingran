@@ -11,7 +11,7 @@
 **使用示例：**
 
 ```go
-import "github.com/ruoyi-next/ruoyi-go-backend/pkg/gormutil"
+import "github.com/xingran-next/xingran-go-backend/pkg/gormutil"
 
 // 简单预加载
 preloader := gormutil.NewPreloadBuilder()
@@ -32,7 +32,7 @@ db := preloader.Apply(query)
 **使用示例：**
 
 ```go
-import "github.com/ruoyi-next/ruoyi-go-backend/pkg/gormutil"
+import "github.com/xingran-next/xingran-go-backend/pkg/gormutil"
 
 // 创建JOIN构建器
 builder := gormutil.NewJoinBuilder(db.Model(&User{}))
@@ -58,7 +58,7 @@ result := builder.Find(&users)
 **使用示例：**
 
 ```go
-import "github.com/ruoyi-next/ruoyi-go-backend/pkg/gormutil"
+import "github.com/xingran-next/xingran-go-backend/pkg/gormutil"
 
 // 提取ID列表
 userIDs := gormutil.ExtractIDs(users, func(u User) string {

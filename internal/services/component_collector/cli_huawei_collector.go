@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/templates"
+	"github.com/xingran-next/xingran-go-backend/internal/templates"
 )
 
 // HuaweiCliCollector parses the three Huawei VRP CLI outputs that the

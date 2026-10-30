@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -35,7 +35,7 @@ import (
 //
 // 安全性:
 //   - 不用 AutoMigrate 改 ops_asset/sys_data_reconciliation 现有列,避免触碰 deleted_at 等触发不必要的
-//     ALTER TYPE(ruoyi-gorm-sql-constraint-naming-conflict 教训);新列由显式 ALTER 创建。
+//     ALTER TYPE(xingran-gorm-sql-constraint-naming-conflict 教训);新列由显式 ALTER 创建。
 //   - DROP uniq_recon_asset_type_open 不影响现有 124 条 D 异常(conflict_type 不变,recon_category=NULL
 //     仍满足新约束的 NULL 语义 — 同一 asset 的不同 recon_category 视为不同异常行)。
 func Migrate201Phase48ComponentColumns(db *gorm.DB) error {

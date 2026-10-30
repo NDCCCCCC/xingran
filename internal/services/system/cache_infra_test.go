@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	requests "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
-	pkgcache "github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	requests "github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
 // =====================================================================
@@ -28,13 +28,13 @@ func newInfraMemCache() *pkgcache.MemoryCache {
 }
 
 func TestCacheKeyManager_BuildParsePattern(t *testing.T) {
-	m := NewCacheKeyManager("ruoyi")
-	assert.Equal(t, "ruoyi:user:id:u1", m.Build("user", "id", "u1"))
+	m := NewCacheKeyManager("xingran")
+	assert.Equal(t, "xingran:user:id:u1", m.Build("user", "id", "u1"))
 	// QUIRK(行为锁定):BuildPattern 只在结尾追加 *,不插 ":"
-	// → "ruoyi:user*" 也会命中 "ruoyi:userX" 等跨命名空间键
-	assert.Equal(t, "ruoyi:user*", m.BuildPattern("user"))
-	assert.Equal(t, "ruoyi:user:id*", m.BuildPattern("user", "id"))
-	assert.Equal(t, "user:id:u1", m.Parse("ruoyi:user:id:u1"))
+	// → "xingran:user*" 也会命中 "xingran:userX" 等跨命名空间键
+	assert.Equal(t, "xingran:user*", m.BuildPattern("user"))
+	assert.Equal(t, "xingran:user:id*", m.BuildPattern("user", "id"))
+	assert.Equal(t, "user:id:u1", m.Parse("xingran:user:id:u1"))
 	assert.Equal(t, "other:key", m.Parse("other:key"), "无前缀键原样返回")
 
 	// 空前缀
@@ -75,7 +75,7 @@ func TestCacheManager_WarmUpAndInvalidate(t *testing.T) {
 	ctx := context.Background()
 	mem := newInfraMemCache()
 	provider := NewCacheAdapter(mem)
-	mgr := NewCacheManager(provider, "ruoyi", true)
+	mgr := NewCacheManager(provider, "xingran", true)
 
 	// 预热:任务成功/失败混合
 	calls := map[string]int{}
@@ -106,7 +106,7 @@ func TestCacheManager_WarmUpAndInvalidate(t *testing.T) {
 	assert.Equal(t, 1, calls["c"])
 
 	// disabled → 直接跳过
-	disabled := NewCacheManager(provider, "ruoyi", false)
+	disabled := NewCacheManager(provider, "xingran", false)
 	require.NoError(t, disabled.WarmUp(ctx, map[string]WarmUpFunc{"x": failFunc}))
 
 	// 失效:ByModule / ByPattern / ByKey
@@ -134,8 +134,8 @@ func TestCacheManager_WarmUpAndInvalidate(t *testing.T) {
 	require.NoError(t, mgr.InvalidateByKey(ctx), "空键列表 no-op")
 
 	// 键构建 + TTL
-	assert.Equal(t, "ruoyi:user:id", mgr.BuildKey("user", "id"))
-	assert.Equal(t, "ruoyi:user*", mgr.BuildPattern("user"))
+	assert.Equal(t, "xingran:user:id", mgr.BuildKey("user", "id"))
+	assert.Equal(t, "xingran:user*", mgr.BuildPattern("user"))
 	require.NoError(t, mem.Set(ctx, "ttl-key", "v", time.Minute))
 	ttl, err := mgr.GetTTL(ctx, "ttl-key")
 	require.NoError(t, err)
@@ -144,7 +144,7 @@ func TestCacheManager_WarmUpAndInvalidate(t *testing.T) {
 	// 统计 + 预热记录清理
 	stats, err := mgr.GetStats(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, "ruoyi", stats.KeyManagerPrefix)
+	assert.Equal(t, "xingran", stats.KeyManagerPrefix)
 	assert.True(t, stats.WarmUpEnabled)
 	assert.Positive(t, stats.WarmedUpCount)
 	assert.Positive(t, stats.KeyCount, "MemoryCache 键数量应>0")

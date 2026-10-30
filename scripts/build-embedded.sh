@@ -64,7 +64,7 @@ echo -e "[5/6] ${YELLOW}Building Go backend (Linux)...${NC}"
 export GOOS=linux
 export GOARCH=amd64
 export CGO_ENABLED=0
-go build -tags=embed -ldflags="-s -w" -o ruoyi-backend-embedded-linux ./cmd/main.go
+go build -tags=embed -ldflags="-s -w" -o xingran-backend-embedded-linux ./cmd/main.go
 if [ $? -ne 0 ]; then
     echo -e "${RED}Go build FAILED!${NC}"
     exit 1
@@ -73,7 +73,7 @@ echo -e "${GREEN}Go build completed${NC}"
 echo ""
 
 # Step 6: Set execute permission
-chmod +x ruoyi-backend-embedded-linux
+chmod +x xingran-backend-embedded-linux
 
 # Complete
 echo -e "[6/6] ${GREEN}Build completed!${NC}"
@@ -81,8 +81,8 @@ echo ""
 echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}  Output File${NC}"
 echo -e "${GREEN}======================================${NC}"
-echo -e "  ${YELLOW}ruoyi-backend-embedded-linux${NC}"
+echo -e "  ${YELLOW}xingran-backend-embedded-linux${NC}"
 echo ""
 echo -e "Start server:"
-echo -e "  ${YELLOW}./ruoyi-backend-embedded-linux${NC}"
+echo -e "  ${YELLOW}./xingran-backend-embedded-linux${NC}"
 echo ""

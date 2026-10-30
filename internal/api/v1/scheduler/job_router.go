@@ -2,8 +2,8 @@ package scheduler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	schedulerServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/scheduler"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	schedulerServices "github.com/xingran-next/xingran-go-backend/internal/services/scheduler"
 )
 
 // SetupJobRouter 设置定时任务路由

@@ -1,7 +1,7 @@
-# RuoYi-Next 项目代码审查报告
+# XingRan-Next 项目代码审查报告
 
 **审查日期**: 2026-01-31
-**项目路径**: `D:\CODE\ClaudeCode\ruoyi-go-backend`
+**项目路径**: `D:\CODE\ClaudeCode\xingran-go-backend`
 **审查范围**: 全栈代码（Go 后端 + React 前端）
 **审查深度**: 深度审查
 **审查方法**: 静态代码分析 + 代理审查 + 规则匹配
@@ -32,7 +32,7 @@
 
 ## 📊 执行摘要
 
-本次代码审查对 RuoYi-Next 企业权限管理系统进行了全面的质量评估，覆盖以下维度：
+本次代码审查对 XingRan-Next 企业权限管理系统进行了全面的质量评估，覆盖以下维度：
 
 | 审查维度 | 状态 | 发现问题数 | 严重程度 |
 |---------|------|-----------|---------|
@@ -411,7 +411,7 @@ describe('SM4 Encryption', () => {
 ```go
 // ✅ 提取辅助方法 (cache_helpers.go)
 func normalizeCacheKey(key string) string {
-    if strings.HasPrefix(key, "ruoyi:") {
+    if strings.HasPrefix(key, "xingran:") {
         return key[6:]
     }
     return key
@@ -520,7 +520,7 @@ rm src/utils/cacheStats.ts
 - 生产环境禁用
 
 #### 26. 常量定义分散
-- Redis 前缀 "ruoyi:" 硬编码
+- Redis 前缀 "xingran:" 硬编码
 - 应提取为常量
 
 ---
@@ -620,7 +620,7 @@ rm src/utils/cacheStats.ts
 
 ## 📝 审查结论
 
-RuoYi-Next 项目整体架构设计合理，模块化良好，但在以下方面需要重点改进：
+XingRan-Next 项目整体架构设计合理，模块化良好，但在以下方面需要重点改进：
 
 ### 必须修复
 - **安全漏洞**：SQL 注入（LDAP 证书验证已确认忽略，符合内部网络环境）

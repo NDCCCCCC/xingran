@@ -318,7 +318,7 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
   // 原缺陷：PageTable mount effect 无条件走 applyFilters（回第 1 页），jsdom 旧用例
   // 未覆盖「预置持久化页码 + 挂载」组合，故实机失败而单测通过。
   it("UAT FAIL-1：sessionStorage 有持久化页码时 mount 首载恢复该页码且不覆写 storage", async () => {
-    sessionStorage.setItem("ruoyi_table_state_test_current", "2");
+    sessionStorage.setItem("xingran_table_state_test_current", "2");
     const request = vi
       .fn<(p: Record<string, unknown>) => Promise<{ list: { id: string; name: string }[]; total: number }>>()
       .mockResolvedValue({ list: makeRows(10), total: 25 });
@@ -330,7 +330,7 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
     // 首载请求用恢复的页码 2
     expect(request.mock.calls[0][0]).toMatchObject({ current: 2, pageSize: 10 });
     // sessionStorage 未被 mount 覆写
-    expect(sessionStorage.getItem("ruoyi_table_state_test_current")).toBe("2");
+    expect(sessionStorage.getItem("xingran_table_state_test_current")).toBe("2");
     // 分页 UI 停在第 2 页
     expect(container.querySelector(".ant-pagination-item-active")?.textContent).toBe("2");
 
@@ -342,8 +342,8 @@ describe("components/shared/PageTable（T2 完整契约）", () => {
     );
     await waitFor(() => expect(screen.getAllByText("行1").length).toBeGreaterThan(0));
     expect(remount.container.querySelector(".ant-pagination-item-active")?.textContent).toBe("2");
-    expect(sessionStorage.getItem("ruoyi_table_state_test_current")).toBe("2");
-    sessionStorage.removeItem("ruoyi_table_state_test_current");
+    expect(sessionStorage.getItem("xingran_table_state_test_current")).toBe("2");
+    sessionStorage.removeItem("xingran_table_state_test_current");
   });
 
   it("emptyAction：total=0 时替换 antd 默认空态", async () => {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -25,7 +25,7 @@ import (
 //   - 若 198 失败后重跑,199 可单独执行(幂等 DO $$ 块)
 //   - 与 migration_168 的 uniq_recon_asset_type_open 模式一致
 //
-// 命名严格遵循 uni_*_* 规范(参考 MEMORY `ruoyi-gorm-sql-constraint-naming-conflict`):
+// 命名严格遵循 uni_*_* 规范(参考 MEMORY `xingran-gorm-sql-constraint-naming-conflict`):
 //   - GORM uniqueIndex 期望 `uni_*`
 //   - SQL inline UNIQUE 会被 PG 自动命名为 `<table>_<col>_key`
 //   - 显式命名 `uni_fix_suggestion_pending_per_exception` 避免冲突

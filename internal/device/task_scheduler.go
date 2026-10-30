@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // 调度器默认配置

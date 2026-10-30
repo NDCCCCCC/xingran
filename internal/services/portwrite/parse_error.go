@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/device"
 )
 
 // WriteErrorKind 写命令错误分类（D-16）。

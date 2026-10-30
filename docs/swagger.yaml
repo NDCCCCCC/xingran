@@ -2212,15 +2212,15 @@ definitions:
 host: localhost:8080
 info:
   contact:
-    email: support@ruoyi-next.com
+    email: support@xingran-next.com
     name: API Support
-    url: https://github.com/ruoyi-next/ruoyi-next/issues
+    url: https://github.com/xingran-next/xingran-next/issues
   description: 企业级权限管理系统 API
   license:
     name: MIT
-    url: https://github.com/ruoyi-next/ruoyi-next/blob/main/LICENSE
-  termsOfService: https://github.com/ruoyi-next/ruoyi-next
-  title: RuoYi Next API
+    url: https://github.com/xingran-next/xingran-next/blob/main/LICENSE
+  termsOfService: https://github.com/xingran-next/xingran-next
+  title: XingRan Next API
   version: "1.0"
 paths:
   /duty/config:
@@ -3267,7 +3267,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: 查询Redis中所有原始键和ruoyi前缀的键，用于调试
+      description: 查询Redis中所有原始键和xingran前缀的键，用于调试
       produces:
       - application/json
       responses:

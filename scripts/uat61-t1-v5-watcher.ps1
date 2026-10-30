@@ -1,7 +1,7 @@
 
 $target = Get-Date -Date '2026-10-22 08:19:00'
 while ((Get-Date) -lt $target) { Start-Sleep -Seconds 30 }
-$csv = 'D:/CODE/ClaudeCode/ruoyi-go-backend/.planning/tmp-uat61-t1-samples-v5.csv'
+$csv = 'D:/CODE/ClaudeCode/xingran-go-backend/.planning/tmp-uat61-t1-samples-v5.csv'
 $rows = @()
 foreach ($line in Get-Content $csv) {
   if ($line -match '^(\d{2}:\d{2}:\d{2}\.\d{3}),(\d+),(\d+)$') { $rows += [pscustomobject]@{ ts=$Matches[1]; c=[int]$Matches[2]; g=[int]$Matches[3] } }
@@ -24,5 +24,5 @@ if ($rows.Count -gt 0) {
     $rep += "VERDICT: NO GAP OBSERVED - all $mode samples stable"
   }
 } else { $rep += "VERDICT: NO DATA" }
-$rep | Set-Content -Path 'D:/CODE/ClaudeCode/ruoyi-go-backend/.planning/tmp-uat61-t1-v5-verdict.txt' -Encoding utf8
+$rep | Set-Content -Path 'D:/CODE/ClaudeCode/xingran-go-backend/.planning/tmp-uat61-t1-v5-verdict.txt' -Encoding utf8
 $rep | ForEach-Object { Write-Output $_ }

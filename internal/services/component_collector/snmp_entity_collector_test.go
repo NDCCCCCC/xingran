@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/device"
 )
 
 // stubSNMPClient implements device.SNMPGetter for unit tests. Each Walk /

@@ -6,7 +6,7 @@
 -- 父菜单候选: '历史查询' 或 'MAC地址历史' (Phase 13 已创建)
 --
 -- Schema 注: Go 版 sys_menu 已用 Meta JSONB 字段统一元数据
--- 不存在 RuoYi-Java 原版的 query / is_frame / is_cache 字段, 仅插入实际存在的列
+-- 不存在 XingRan-Java 原版的 query / is_frame / is_cache 字段, 仅插入实际存在的列
 -- =============================================
 
 -- ================================

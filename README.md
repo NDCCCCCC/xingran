@@ -1,8 +1,8 @@
 <!-- generated-by: gsd-doc-writer -->
 
-# RuoYi-Next 企业级权限管理系统
+# XingRan-Next 企业级权限管理系统
 
-RuoYi-Next 是基于若依 (RuoYi) 开源管理系统的全新重构版本，采用 **Go + React** 双端分离架构，并集成 **国密 SM2/SM3/SM4 算法** 满足等保合规要求。系统面向企业内部运维、业务、数据可视化的统一管理平台，在保留传统 RBAC 权限模型的基础上扩展了 3D 楼宇可视化、AD 域同步、网络设备纳管、工位/机房运维、RPA 自动化等企业级场景能力。
+XingRan-Next 是基于若依 (XingRan) 开源管理系统的全新重构版本，采用 **Go + React** 双端分离架构，并集成 **国密 SM2/SM3/SM4 算法** 满足等保合规要求。系统面向企业内部运维、业务、数据可视化的统一管理平台，在保留传统 RBAC 权限模型的基础上扩展了 3D 楼宇可视化、AD 域同步、网络设备纳管、工位/机房运维、RPA 自动化等企业级场景能力。
 
 ## 核心特性
 
@@ -74,7 +74,7 @@ RuoYi-Next 是基于若依 (RuoYi) 开源管理系统的全新重构版本，采
 **目录结构：**
 
 ```
-ruoyi-go-backend/
+xingran-go-backend/
 ├── cmd/                        # 应用入口 (main.go)
 ├── configs/                    # 配置文件 (config.yaml, config.dev.yaml, config.prod.yaml)
 ├── internal/
@@ -137,7 +137,7 @@ npm run build    # 生产构建
 
 ```bash
 # 后端
-go build -o ruoyi-backend.exe ./cmd/main.go
+go build -o xingran-backend.exe ./cmd/main.go
 go test ./...
 go test ./internal/services/operations/
 
@@ -171,9 +171,9 @@ npm run test         # Vitest 测试
 ```bash
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=ruoyi
+DB_USER=xingran
 DB_PASSWORD=your_password
-DB_NAME=ruoyi_next
+DB_NAME=xingran_next
 
 REDIS_URL=redis://localhost:6379
 REDIS_PASSWORD=
@@ -210,7 +210,7 @@ BAIDU_MAP_AK=your_api_key_here
 
 ```bash
 # Linux 生产构建
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o ruoyi-backend-linux ./cmd/main.go
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o xingran-backend-linux ./cmd/main.go
 
 # 使用生产配置
 cp configs/config.prod.yaml configs/config.yaml

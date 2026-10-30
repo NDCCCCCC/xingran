@@ -10,9 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 )
 
 // WorkerHandler Worker 处理器

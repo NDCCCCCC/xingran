@@ -36,14 +36,14 @@ describe("usePersistedStateController", () => {
       })
     );
     act(() => result.current[1]("dept-123"));
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_selectedDeptId")).toBe(
+    expect(sessionStorage.getItem("xingran_table_state_system_user_selectedDeptId")).toBe(
       JSON.stringify("dept-123")
     );
   });
 
   it("restores value from sessionStorage on remount", () => {
     sessionStorage.setItem(
-      "ruoyi_table_state_system_user_selectedDeptId",
+      "xingran_table_state_system_user_selectedDeptId",
       JSON.stringify("dept-abc")
     );
     const { result } = renderHook(() =>
@@ -58,7 +58,7 @@ describe("usePersistedStateController", () => {
 
   it("reset() clears storage and restores default", () => {
     sessionStorage.setItem(
-      "ruoyi_table_state_system_user_selectedDeptId",
+      "xingran_table_state_system_user_selectedDeptId",
       JSON.stringify("dept-abc")
     );
     const { result } = renderHook(() =>
@@ -70,7 +70,7 @@ describe("usePersistedStateController", () => {
     );
     act(() => result.current[2]());
     expect(result.current[0]).toBe("");
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_selectedDeptId")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_system_user_selectedDeptId")).toBeNull();
   });
 
   it("supports functional setValue updates", () => {
@@ -87,7 +87,7 @@ describe("usePersistedStateController", () => {
   });
 
   it("handles corrupted storage data gracefully", () => {
-    sessionStorage.setItem("ruoyi_table_state_test_corrupted", "not-valid-json{{{");
+    sessionStorage.setItem("xingran_table_state_test_corrupted", "not-valid-json{{{");
     const { result } = renderHook(() =>
       usePersistedStateController<string>({
         keyPrefix: "/test",
@@ -97,6 +97,6 @@ describe("usePersistedStateController", () => {
     );
     expect(result.current[0]).toBe("fallback");
     // corrupted entry should have been cleaned up
-    expect(sessionStorage.getItem("ruoyi_table_state_test_corrupted")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_test_corrupted")).toBeNull();
   });
 });

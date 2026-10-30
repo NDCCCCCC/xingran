@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
-	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 // =====================================================================

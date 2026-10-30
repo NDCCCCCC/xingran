@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 )
 
 func init() { gin.SetMode(gin.TestMode) }

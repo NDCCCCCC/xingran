@@ -2212,14 +2212,14 @@ definitions:
 host: localhost:8080
 info:
   contact:
-    email: support@ruoyi-next.com
+    email: support@xingran-next.com
     name: API Support
-    url: https://github.com/ruoyi-next/ruoyi-next/issues
+    url: https://github.com/xingran-next/xingran-next/issues
   description: 企业级权限管理系统 API
   license:
     name: MIT
-    url: https://github.com/ruoyi-next/ruoyi-next/blob/main/LICENSE
-  termsOfService: https://github.com/ruoyi-next/ruoyi-next
+    url: https://github.com/xingran-next/xingran-next/blob/main/LICENSE
+  termsOfService: https://github.com/xingran-next/xingran-next
   title: XingRan Next API
   version: "1.0"
 paths:

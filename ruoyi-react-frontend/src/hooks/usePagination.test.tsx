@@ -31,11 +31,11 @@ describe("usePagination 持久化", () => {
     });
     act(() => result.current.setCurrent(5));
     expect(result.current.current).toBe(5);
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_current")).toBe("5");
+    expect(sessionStorage.getItem("xingran_table_state_system_user_current")).toBe("5");
   });
 
   it("remount 从 sessionStorage 恢复 current", () => {
-    sessionStorage.setItem("ruoyi_table_state_system_user_current", "3");
+    sessionStorage.setItem("xingran_table_state_system_user_current", "3");
     const { result } = renderHook(() => usePagination(), {
       wrapper: wrapper("/system/user"),
     });
@@ -47,12 +47,12 @@ describe("usePagination 持久化", () => {
       wrapper: wrapper("/system/user"),
     });
     act(() => result.current.setPageSize(50));
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_pageSize")).toBe("50");
+    expect(sessionStorage.getItem("xingran_table_state_system_user_pageSize")).toBe("50");
   });
 
   it("options.pageSize 硬约束覆盖持久化值", () => {
     // 历史选择过 50
-    sessionStorage.setItem("ruoyi_table_state_system_user_pageSize", "50");
+    sessionStorage.setItem("xingran_table_state_system_user_pageSize", "50");
     const { result } = renderHook(() => usePagination({ pageSize: 20 }), {
       wrapper: wrapper("/system/user"),
     });
@@ -60,13 +60,13 @@ describe("usePagination 持久化", () => {
   });
 
   it("不同 pathname 互不干扰（隔离性）", () => {
-    sessionStorage.setItem("ruoyi_table_state_system_user_current", "7");
+    sessionStorage.setItem("xingran_table_state_system_user_current", "7");
     const { result } = renderHook(() => usePagination(), {
       wrapper: wrapper("/system/role"),
     });
     // /system/role 没有 current 记录，应回默认值 1
     expect(result.current.current).toBe(1);
-    expect(sessionStorage.getItem("ruoyi_table_state_system_role_current")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_system_role_current")).toBeNull();
   });
 
   it("reset 清理持久化", () => {
@@ -75,7 +75,7 @@ describe("usePagination 持久化", () => {
     });
     act(() => result.current.setCurrent(7));
     act(() => result.current.reset());
-    expect(sessionStorage.getItem("ruoyi_table_state_system_user_current")).toBeNull();
+    expect(sessionStorage.getItem("xingran_table_state_system_user_current")).toBeNull();
     expect(result.current.current).toBe(1);
   });
 
@@ -87,7 +87,7 @@ describe("usePagination 持久化", () => {
       wrapper: wrapper("/operations/buildings"),
     });
     // 首次挂载翻到第 2 页（持久化写入）
-    sessionStorage.setItem("ruoyi_table_state_operations_buildings_current", "2");
+    sessionStorage.setItem("xingran_table_state_operations_buildings_current", "2");
     unmount(); // 切走 tab → 组件卸载
 
     // 切回 tab → 重挂载
@@ -95,6 +95,6 @@ describe("usePagination 持久化", () => {
       wrapper: wrapper("/operations/buildings"),
     });
     expect(second.result.current.current).toBe(2); // 恢复页码，而非重置 1
-    expect(sessionStorage.getItem("ruoyi_table_state_operations_buildings_current")).toBe("2"); // 未被覆写
+    expect(sessionStorage.getItem("xingran_table_state_operations_buildings_current")).toBe("2"); // 未被覆写
   });
 });

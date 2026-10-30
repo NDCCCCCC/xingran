@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system"
+	"github.com/xingran-next/xingran-go-backend/internal/models/system"
 	"gorm.io/gorm"
 )
 

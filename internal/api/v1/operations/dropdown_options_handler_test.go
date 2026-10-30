@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 )
 
 // TestDropdownOption_JSONShape 锁定前后端契约:dropdown options 必须有 value 和 label 两个字段。

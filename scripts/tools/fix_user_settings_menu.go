@@ -46,10 +46,10 @@ type Menu struct {
 const baseURL = "http://localhost:8080/api/v1"
 
 func main() {
-	token := os.Getenv("RUOYI_TOKEN")
+	token := os.Getenv("XINGRAN_TOKEN")
 	if token == "" {
-		fmt.Println("错误: 请设置环境变量 RUOYI_TOKEN")
-		fmt.Println("使用方式: RUOYI_TOKEN=your_token_here go run scripts/fix_user_settings_menu.go")
+		fmt.Println("错误: 请设置环境变量 XINGRAN_TOKEN")
+		fmt.Println("使用方式: XINGRAN_TOKEN=your_token_here go run scripts/fix_user_settings_menu.go")
 		os.Exit(1)
 	}
 

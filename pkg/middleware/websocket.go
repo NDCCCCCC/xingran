@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core"
 )
 
 // WebSocketAuth WebSocket认证中间件
