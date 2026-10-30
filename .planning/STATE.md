@@ -2,14 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.25
 milestone_name: 全站权限治理与样式收敛
-current_phase: 92
-current_phase_name: 暗色 mega-cluster 合并
-status: executing
-stopped_at: Phase 92 缺口收敛规划完成（92-04 浅色精简/hex变量化 + 92-05 矩阵机器验收与归档已编制提交）；下一步执行 Gap Closure 计划（/gsd-execute-phase 92 --gaps-only）
-last_updated: "2026-10-30T14:50:00.000Z"
+current_phase: 93
+current_phase_name: room-devices 拆分 + 视觉回归验收
+status: ready_to_plan
+stopped_at: Phase 92 全部 5 个计划执行收口并验收归档（92-VERIFICATION.md 已归档）；STYLE-02 终态指标全达标（M1=452, M7=26, M9=3194, M5=11）；下一步进入 v1.25 终局收官 Phase 93（room-devices 拆分 + 视觉回归验收）
+last_updated: "2026-10-30T15:15:00.000Z"
 last_activity: 2026-10-30
-last_activity_desc: v1.25 执行期——Phase 92 规划 92-04 与 92-05 缺口收口计划 (M1≤480 / M9≤3200 / M7≤60 与矩阵验收)
-state_head: 0831ab0f
+last_activity_desc: v1.25 执行期——Phase 92 收口完成（暗色 mega-cluster 清零，量化终态 M1=452/M7=26/M9=3194 全部达标，矩阵比对零未登记异常）
+state_head: 5684d7b2
+progress:
+  total_phases: 10
+  completed_phases: 9
+  total_plans: 35
+  completed_plans: 34
+  percent: 97
 progress:
   total_phases: 10
   completed_phases: 8

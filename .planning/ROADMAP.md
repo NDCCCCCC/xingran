@@ -141,7 +141,7 @@ previous_update: 2026-10-28 v1.24 milestone SHIPPED & ARCHIVED
     4. **量化**：M1 ≤ 900、M3 ≤ 560；M1-M16 快照逐 phase 落盘。
     5. **无未登记视觉差异**：涉及组件的明暗双态逐格比对差异清单为空；变体**两态分别验收**（有 / 无 `bordered`、有 / 无 `borderless`），不得只测默认态。
 
-- [ ] **Phase 92: 暗色 mega-cluster 合并** — 431 条暗色手写规则整块交还 `darkAlgorithm` + 分色板 token；**STYLE-02 的终态验收在此收口**。
+- [x] **Phase 92: 暗色 mega-cluster 合并** — 431 条暗色手写规则整块交还 `darkAlgorithm` + 分色板 token；**STYLE-02 的终态验收在此收口**。
   - **Depends on**: 91（前面各域交还 token 完成后，暗色手写副本才可安全删除 —— 否则暗色下组件瞬间回到 antd 默认色，全站破相）
   - **Requirements**: STYLE-02（**主责**：四批清单全部处置 + M1-M16 终态达标）
   - **UI hint**: yes
