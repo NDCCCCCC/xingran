@@ -378,6 +378,19 @@ function main() {
       while ((m = re.exec(text)) !== null) {
         menuUntyped.add(m[1]);
       }
+
+      // Phase 87 (RBAC-06): 解析 Go 侧 F 型声明块 (// F_TYPE_SEED_BEGIN ... // F_TYPE_SEED_END)
+      // 普通 Go 字面量只参与 c 类（存在性）；F_TYPE_SEED 块内的码按 F 型按钮参与 d 类（菜单 F 型 vs TS）
+      const fBlockMatch = /\/\/\s*F_TYPE_SEED_BEGIN([\s\S]*?)\/\/\s*F_TYPE_SEED_END/.exec(text);
+      if (fBlockMatch) {
+        const blockText = fBlockMatch[1];
+        const blockRe = /["']([a-z][a-z0-9_]*(?::[A-Za-z0-9_]+)+)["']/g;
+        let bm;
+        while ((bm = blockRe.exec(blockText)) !== null) {
+          menuFType.add(bm[1]);
+          menuUntyped.add(bm[1]);
+        }
+      }
     }
   }
 

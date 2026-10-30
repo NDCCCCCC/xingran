@@ -1154,6 +1154,11 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(224, "dept_sync_seed_and_ou_group_unique", migrations.Migrate224DeptSyncSeedAndOUGroupUnique); err != nil {
 			applogger.Errorf("部门同步seed与OU组唯一键迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// Phase 87 动作级 F 型权限种子与精准授权 (RBAC-05)。**非阻断**：
+		// 缺权限行只让普通角色写操作 403 / 前端按钮不显示，不影响登录 / 入队 / 排水主链路；父菜单缺失时迁移内部降级返回 nil。
+		if err := d.runAndRecord(226, "action_permission_f_type_seed", migrations.Migrate226ActionPermissionFTypeSeed); err != nil {
+			applogger.Errorf("动作级权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1239,6 +1244,11 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 部门同步 seed + OU 组唯一键扩展 (与 PG 分支同款 + 非阻断档)。
 		if err := d.runAndRecord(224, "dept_sync_seed_and_ou_group_unique", migrations.Migrate224DeptSyncSeedAndOUGroupUnique); err != nil {
 			applogger.Errorf("部门同步seed与OU组唯一键迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: Phase 87 动作级 F 型权限种子与精准授权 (RBAC-05，双方言迁移)。
+		// sqlite 既是 dev 运行时也是测试运行时；只注册 PG 分支会让 dev 环境缺权限行。
+		if err := d.runAndRecord(226, "action_permission_f_type_seed", migrations.Migrate226ActionPermissionFTypeSeed); err != nil {
+			applogger.Errorf("动作级权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
