@@ -62,4 +62,6 @@ func SetupPortWriteRouter(r *gin.RouterGroup, core *core.Core) {
 	write.POST("/port-binding", handler.PortBinding)
 	// v1.51 (Phase 121 PORTW-01)：dry-run 命令预览（零设备连接，不写 audit/operlog）
 	write.POST("/preview", handler.PortWritePreview)
+	// v1.51 (Phase 127 PWX-04 前置)：端口写审计分页查询（纯读）
+	write.POST("/audit/list", handler.PortWriteAuditList)
 }

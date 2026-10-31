@@ -360,6 +360,8 @@ func newTestDB(t *testing.T) *gorm.DB {
 	assert.NoError(t, db.AutoMigrate(&models.NetworkDevice{}, &models.DevicePortStatus{}))
 	// Phase 123 安全三件套表
 	assert.NoError(t, db.AutoMigrate(&models.PortWriteSnapshot{}, &models.PortWriteLock{}))
+	// Phase 127 前置：审计表
+	assert.NoError(t, db.AutoMigrate(&models.PortWriteAudit{}))
 	return db
 }
 

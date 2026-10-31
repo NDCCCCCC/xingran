@@ -142,6 +142,8 @@ type PortWriteService interface {
 	BatchWritePorts(ctx context.Context, req BatchWriteRequest, operator string) (*BatchResult, error)
 	// PreviewPortWrite Phase 121 (v1.51 PORTW-01)：dry-run 命令预览，零设备连接。
 	PreviewPortWrite(ctx context.Context, req PreviewRequest, operator string) (*PreviewResult, error)
+	// ListAudit Phase 127 前置（PWX-04）：端口写审计分页查询（纯读）。
+	ListAudit(ctx context.Context, req AuditListRequest) (*AuditListResult, error)
 }
 
 // portWriteServiceImpl 私有实现。字段类型为 interface 以启用 testify/mock（D-18）。

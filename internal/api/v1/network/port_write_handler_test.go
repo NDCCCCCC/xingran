@@ -129,9 +129,13 @@ func (m *mockPortWriteService) PortBinding(ctx context.Context, portID string, o
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionPortBinding, Status: "succeeded"}, nil
 }
 
+// ListAudit Phase 127 前置 mock：返回空分页结果。
+func (m *mockPortWriteService) ListAudit(ctx context.Context, req portwrite.AuditListRequest) (*portwrite.AuditListResult, error) {
+	return &portwrite.AuditListResult{List: []models.PortWriteAudit{}, Total: 0, Current: 1, PageSize: 20}, nil
+}
+
 // PreviewPortWrite Phase 121 (PORTW-01) mock：返回预设 previewOut/previewErr。
-func (m *mockPortWriteService) PreviewPortWrite(ctx context.Context, req portwrite.PreviewRequest, operator string) (*portwrite.PreviewResult, error) {
-	if m.previewOut != nil || m.previewErr != nil {
+func (m *mockPortWriteService) PreviewPortWrite(ctx context.Context, req portwrite.PreviewRequest, operator string) (*portwrite.PreviewResult, error) {	if m.previewOut != nil || m.previewErr != nil {
 		return m.previewOut, m.previewErr
 	}
 	return &portwrite.PreviewResult{DryRun: true, DeviceID: req.DeviceID, Action: req.Action}, nil
