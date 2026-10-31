@@ -148,6 +148,8 @@ type PortWriteService interface {
 	TrunkWrite(ctx context.Context, portID string, action Action, params TrunkParams, operator string, opts ...WriteOption) (*PortResult, error)
 	// PortSecWrite Phase 125 (PWX-02)：端口安全写入口。
 	PortSecWrite(ctx context.Context, portID string, action Action, params PortSecParams, operator string, opts ...WriteOption) (*PortResult, error)
+	// WithProgressNotifier Phase 122 (PORTW-07)：注入批量写进度推送通道。
+	WithProgressNotifier(n PortWriteNotifier) PortWriteService
 }
 
 // portWriteServiceImpl 私有实现。字段类型为 interface 以启用 testify/mock（D-18）。
@@ -157,6 +159,18 @@ type portWriteServiceImpl struct {
 	portCollectionSvc portWritePortCollectionSvc
 	// pingFunc PORTW-06 预检探测函数（默认 device.PingCheck；测试注入）。
 	pingFunc func(ip string, timeout time.Duration) bool
+	// progressNotifier Phase 122 (PORTW-07)：批量写进度推送（websocket.NoticeHub；
+	// WithProgressNotifier 注入，nil = 不推送）。
+	progressNotifier batchProgressNotifier
+}
+
+// WithProgressNotifier Phase 122：注入批量写进度推送通道（router 传 core.NoticeHub）。
+// 返回接口自身支持链式注入。
+func (s *portWriteServiceImpl) WithProgressNotifier(n PortWriteNotifier) PortWriteService {
+	if s != nil {
+		s.progressNotifier = n
+	}
+	return s
 }
 
 // NewPortWriteService 工厂函数：Phase 52 router 通过 *device.DeviceExecutor / *portcollection.CollectionService

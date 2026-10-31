@@ -15,6 +15,9 @@ import (
 // 三个切片同时存在（即便为空也初始化为 []PortResult{} 而非 nil），
 // 保证 JSON 序列化输出 [] 而非 null — 前端无需做 null 守卫。
 type BatchResult struct {
+	// BatchID Phase 122 (PORTW-07)：批次标识，与 WS 进度事件 batchId 同值，
+	// 前端断线重连后凭此调 audit/list 对账。
+	BatchID   string       `json:"batchId"`
 	Succeeded []PortResult `json:"succeeded"`
 	Failed    []PortResult `json:"failed"`
 	Skipped   []PortResult `json:"skipped"`
@@ -120,6 +123,11 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 		Skipped:   []PortResult{},
 	}
 
+	// Phase 122 (PORTW-07)：逐端口进度推送发布器（notifier 未注入 / operator
+	// 解析失败时降级为 no-op，不阻塞批量写）。
+	progress := s.newProgressPublisher(ctx, operator, req.DeviceID, req.Action, len(req.PortIDs))
+	result.BatchID = progress.batchID
+
 	// D-17 serial fail-fast loop
 	for idx, portID := range req.PortIDs {
 		applogger.Infof("[portwrite-batch] (%d/%d) 处理 portID=%s", idx+1, len(req.PortIDs), portID)
@@ -139,6 +147,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 					PortID: portID,
 					Error:  fmt.Sprintf("port not found: %v", err),
 				})
+				progress.emit(portID, "", idx+1, "failed", fmt.Sprintf("port not found: %v", err))
 				continue
 			}
 			if actualPort.DeviceID != req.DeviceID {
@@ -147,6 +156,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 					PortID: portID,
 					Error:  "port does not belong to device",
 				})
+				progress.emit(portID, "", idx+1, "failed", "port does not belong to device")
 				continue
 			}
 
@@ -169,6 +179,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 		// pre-state 检测
 		if noopResult := s.checkPreState(&port, req.Action, req.Description, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress); noopResult != nil {
 			result.Skipped = append(result.Skipped, *noopResult)
+			progress.emit(port.ID, port.InterfaceName, idx+1, "skipped", "pre-state 已匹配目标状态")
 			continue
 		}
 
@@ -177,6 +188,9 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 		if werr != nil {
 			if writeResult != nil {
 				result.Failed = append(result.Failed, *writeResult)
+				progress.emit(port.ID, port.InterfaceName, idx+1, "failed", writeResult.Error)
+			} else {
+				progress.emit(port.ID, port.InterfaceName, idx+1, "failed", werr.Error())
 			}
 			if isTransportError(werr) || isDeviceRejected(werr) {
 				break // fail-fast
@@ -185,13 +199,27 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 		}
 		if writeResult.NoOp {
 			result.Skipped = append(result.Skipped, *writeResult)
+			progress.emit(port.ID, port.InterfaceName, idx+1, "skipped", "pre-state 已匹配目标状态")
 			continue
 		}
 		result.Succeeded = append(result.Succeeded, *writeResult)
+		progress.emit(port.ID, port.InterfaceName, idx+1, "succeeded", "")
 	}
 
 	applogger.Infof("[portwrite-batch] 循环结束 succeeded=%d failed=%d skipped=%d",
 		len(result.Succeeded), len(result.Failed), len(result.Skipped))
+
+	// Phase 122：批次终态事件（前端据此关闭进度条）
+	batchStatus := "succeeded"
+	batchMsg := "批次完成"
+	if len(result.Failed) > 0 {
+		batchStatus = "failed"
+		batchMsg = "批次中断（fail-fast）"
+	} else if len(result.Succeeded) == 0 {
+		batchStatus = "skipped"
+		batchMsg = "批次完成（全部跳过）"
+	}
+	progress.emitCompleted(len(result.Succeeded), len(result.Failed), len(result.Skipped), batchStatus, batchMsg)
 
 	// 2026-07-08 端口刷新：批次内所有写操作完成后，对 req.DeviceID 触发一次性
 	// portcollection.CollectDevice —— 后台 goroutine fire-and-forget，HTTP response
