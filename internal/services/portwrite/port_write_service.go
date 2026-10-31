@@ -136,6 +136,8 @@ type PortWriteService interface {
 	SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*PortResult, error)
 	PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*PortResult, error)
 	BatchWritePorts(ctx context.Context, req BatchWriteRequest, operator string) (*BatchResult, error)
+	// PreviewPortWrite Phase 121 (v1.51 PORTW-01)：dry-run 命令预览，零设备连接。
+	PreviewPortWrite(ctx context.Context, req PreviewRequest, operator string) (*PreviewResult, error)
 }
 
 // portWriteServiceImpl 私有实现。字段类型为 interface 以启用 testify/mock（D-18）。

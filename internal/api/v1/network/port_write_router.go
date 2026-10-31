@@ -60,4 +60,6 @@ func SetupPortWriteRouter(r *gin.RouterGroup, core *core.Core) {
 	// v1.20.1 (Phase 56 W3)：set_access_vlan + port_binding
 	write.POST("/set-access-vlan", handler.SetAccessVlan)
 	write.POST("/port-binding", handler.PortBinding)
+	// v1.51 (Phase 121 PORTW-01)：dry-run 命令预览（零设备连接，不写 audit/operlog）
+	write.POST("/preview", handler.PortWritePreview)
 }

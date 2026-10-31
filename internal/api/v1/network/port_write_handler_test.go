@@ -46,6 +46,9 @@ type mockPortWriteService struct {
 	setAccessVlanErr error
 	portBindingOut   *portwrite.PortResult
 	portBindingErr   error
+	// Phase 121 (PORTW-01) preview mock outputs
+	previewOut *portwrite.PreviewResult
+	previewErr error
 
 	shutdownCalls     int
 	undoCalls         int
@@ -124,6 +127,14 @@ func (m *mockPortWriteService) PortBinding(ctx context.Context, portID string, o
 		return m.portBindingOut, m.portBindingErr
 	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionPortBinding, Status: "succeeded"}, nil
+}
+
+// PreviewPortWrite Phase 121 (PORTW-01) mock：返回预设 previewOut/previewErr。
+func (m *mockPortWriteService) PreviewPortWrite(ctx context.Context, req portwrite.PreviewRequest, operator string) (*portwrite.PreviewResult, error) {
+	if m.previewOut != nil || m.previewErr != nil {
+		return m.previewOut, m.previewErr
+	}
+	return &portwrite.PreviewResult{DryRun: true, DeviceID: req.DeviceID, Action: req.Action}, nil
 }
 
 // ===== Mock OperLogService =====
