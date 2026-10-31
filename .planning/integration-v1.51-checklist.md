@@ -74,13 +74,13 @@ bash scripts/integration/smoke-v1.51.sh worker-auth
 
 切强制模式为**手工步骤**（需改配置重启），脚本只跑宽限期矩阵并打印切强制模式的操作提示。
 
-> ⚠ **KNOWN ISSUE（2026-11-01 冒烟实测）**：sqlite 模式下「注册换发」两步失败
-> （`no such function: gen_random_uuid`，migration_205 的 sqlite 分支给
-> sys_rpa_workers.id 留了 PG 专属 DEFAULT，Register INSERT 触发）。宽限期心跳
-> 不受影响；PG 库不受影响。**窗口内 worker-auth 场景须用 PG 库跑**，或先修复
-> migration_205（修复方向已写入 smoke 脚本头注释；超出准备卡写域，待派卡）。
-> 本地实测记录（2026-11-01，sqlite）：矩阵 4 步中 2 PASS（宽限心跳 200、错
-> token 401）、2 FAIL（注册换发，即本 KNOWN ISSUE）。
+> ✔ **KNOWN ISSUE 已修复（2026-11-01，task-15）**：sqlite 模式下「注册换发」
+> 曾失败（`no such function: gen_random_uuid`）。根因是 worker_service.go
+> Register 原生 SQL 里的 PG 专属函数（gen_random_uuid/NOW/RETURNING），并非
+> migration_205（其本就有 isPostgreSQL 守卫，sqlite 分支跳过）。修复：Register
+> 增加 sqlite 方言分支（GORM upsert，应用层 UUID/时间戳；capabilities 写
+> []byte），PG 路径零变化。矩阵 4/4 PASS 已连续两轮 sqlite 实测；修复前记录：
+> 2 PASS（宽限心跳 200、错 token 401）/ 2 FAIL（注册换发）。
 
 ## 3. Phase 121 dry-run 端到端冒烟
 

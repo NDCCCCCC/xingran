@@ -11,13 +11,13 @@
 # 说明：真设备端口写实发不在本脚本（Phase 129 真机 UAT）；本脚本只走
 #       错误路径与契约校验，安全无副作用（preview/dry-run 均不落交换机）。
 #
-# ⚠ KNOWN ISSUE（2026-11-01 冒烟实测发现，待修复）：sqlite 模式下
-#   POST /rpa/workers/register 报 "no such function: gen_random_uuid" ——
-#   migration_205 在 sqlite 分支也给 sys_rpa_workers.id 留了 PG 专属 DEFAULT，
-#   Register 的 INSERT 触发该函数。宽限期心跳（不带 id 的 INSERT）不受影响。
-#   影响面：worker-auth 场景步骤 2/4（注册换发）；PG 库不受影响。
-#   修复方向（业务代码，超出本卡写域）：migration_205 的 sqlite 分支跳过
-#   id 列 DEFAULT，或 sqlite 净化列表纳入该列。修复前该场景需在 PG 库窗口验证。
+# ✔ 已修复（2026-11-01，task-15）：sqlite 模式下 Worker 注册曾报
+#   "no such function: gen_random_uuid" —— 根因是 Register 原生 SQL 里的
+#   PG 专属函数（gen_random_uuid/NOW/RETURNING），非 migration_205（后者
+#   本就有 isPostgreSQL 守卫）。修复：worker_service.go Register 增加 sqlite
+#   方言分支（GORM upsert：应用层 UUID/时间戳；capabilities 必须 []byte，
+#   string 回读 Scan 到 json.RawMessage 会报 unsupported）。PG 路径零变化。
+#   矩阵 4/4 PASS 已连续两轮 sqlite 实测。
 # ============================================================================
 set -u
 BASE="${BASE:-http://localhost:9000}"
