@@ -1,0 +1,32 @@
+{
+  "doc_path": "QUICK_FIX_PATCH.md",
+  "claims_checked": 5,
+  "claims_passed": 1,
+  "claims_failed": 4,
+  "failures": [
+    {
+      "line": 4,
+      "claim": "internal/services/system/user_sync_service.go 第460-472行",
+      "expected": "OU解析代码位于第460-472行",
+      "actual": "OU解析代码（从右到左处理部门层级、TrimPrefix OU=）实际位于第333-341行；文件总共只有460行，第460-472行不存在"
+    },
+    {
+      "line": 37,
+      "claim": "internal/services/system/user_sync_service.go 第486-514行",
+      "expected": "部门创建代码位于第486-514行",
+      "actual": "部门创建代码（含 generateUniqueDeptCode 调用）实际位于第355-371行；文件总共只有460行，第486-514行不存在"
+    },
+    {
+      "line": 68,
+      "claim": "internal/services/system/user_sync_service.go 第52-86行（SyncADUser 函数中的查找逻辑）",
+      "expected": "查找逻辑位于第52-86行且在 SyncADUser 函数中",
+      "actual": "第52-86行附近的双重查找逻辑实际属于 SyncUserFromAD 函数（第49-74行），而非 SyncADUser 函数（第171行）"
+    },
+    {
+      "line": 99,
+      "claim": "添加新函数 restoreDeletedUserWithADInfo",
+      "expected": "restoreDeletedUserWithADInfo 函数存在于 internal/services/system/user_sync_service.go",
+      "actual": "在 internal/services/system/user_sync_service.go 中未找到 restoreDeletedUserWithADInfo 函数的定义（同名函数存在于 internal/services/addomain/user_ou_service.go，但属于不同包）"
+    }
+  ]
+}

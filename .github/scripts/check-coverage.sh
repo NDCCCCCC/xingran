@@ -229,14 +229,9 @@ P2_FLOOR="70.0"
 P2_PACKAGES="internal/api/v1/operations internal/api/v1/asset internal/api/v1/network internal/services/rpa internal/services/vdi internal/core internal/device internal/utils internal/agent/server internal/services/scheduler"
 
 floor_of() {
-  # 2026-10-30 xingran v1.25 同步：internal/api/v1/operations 实测 68.13%，
-  # 成因是新增 building_handler_typesafe.go（整套 type-safe handler 尚无单测，
-  # 该包 40 个函数 0% 覆盖）。单独放宽到 68.0，其余 9 个包维持 70.0；
-  # 补齐 typesafe handler 测试后应删掉此例外、回到统一 floor。
-  case "$1" in
-    internal/api/v1/operations) echo "68.0" ;;
-    *) echo "$P2_FLOOR" ;;
-  esac
+  # 2026-10-31 债务清偿：building_handler_typesafe_test.go 已补齐（0% → 70~100%，
+  # 包覆盖 68.13% → 72.2%），删除此前的 68.0 单包例外，10 个包回到统一 70.0。
+  echo "$P2_FLOOR"
 }
 
 P2_PKG_TABLE=$(awk '
@@ -291,4 +286,62 @@ if [ "$P2_FAILED" -ne 0 ]; then
 fi
 
 echo "P2 per-package floor passed (70.0% x 10 packages)"
+
+# --- 5. p3_package_check: addomain ratchet floor ------------------------------
+# 2026-10-31 债务审计（D10）：internal/services/addomain 覆盖率 49.9%，此前不在
+# 任何 floor 管辖内（P1/P2 均未收录），存在无声下滑风险。以当前实测为起点设立
+# ratchet floor（measured - 0.4pp），只升不降；补测试抬升后应逐步上调 floor。
+P3_FLOOR="49.5"
+P3_PACKAGES="internal/services/addomain"
+
+P3_PKG_TABLE=$(awk '
+NR > 1 {
+    split($1, parts, ":")
+    n = split(parts[1], seg, "/")
+    pkg = ""
+    for (i = 4; i <= n - 1; i++) {
+        pkg = (pkg == "") ? seg[i] : pkg "/" seg[i]
+    }
+    if (pkg == "") next
+    num_stmts = $2 + 0
+    hit_count = $3 + 0
+    covered   = (hit_count > 0) ? num_stmts : 0
+    p3_stmts[pkg]   += num_stmts
+    p3_covered[pkg] += covered
+}
+END {
+    for (k in p3_stmts) {
+        printf "%s %d %d\n", k, p3_stmts[k], p3_covered[k]
+    }
+}
+' "$PROFILE")
+
+P3_FAILED=0
+for pkg in $P3_PACKAGES; do
+  line="$(printf '%s\n' "$P3_PKG_TABLE" | awk -v p="$pkg" '$1 == p { print $2, $3; exit }')"
+  if [ -z "$line" ]; then
+    echo "FAIL: P3 $pkg not found in profile — no statements measured for this package" >&2
+    P3_FAILED=$((P3_FAILED + 1))
+    continue
+  fi
+  stmts="${line%% *}"
+  covered="${line##* }"
+  pct="$(awk -v s="$stmts" -v c="$covered" 'BEGIN { printf "%.2f", (s + 0 > 0) ? c * 100.0 / s : 0 }')"
+  if awk -v a="$pct" -v b="$P3_FLOOR" 'BEGIN { exit !(a + 0 >= b + 0) }'; then
+    echo "PASS: P3 $pkg $pct% >= $P3_FLOOR% ($covered/$stmts stmts)"
+  else
+    echo "FAIL: P3 $pkg $pct% < $P3_FLOOR% ($covered/$stmts stmts)" >&2
+    P3_FAILED=$((P3_FAILED + 1))
+  fi
+done
+
+if [ "$P3_FAILED" -ne 0 ]; then
+  echo "" >&2
+  echo "coverage gate FAILED — $P3_FAILED P3 package(s) below their ratchet floor" >&2
+  echo "P3 floor 只升不降（ratchet 语义）：internal/services/addomain 以 2026-10-31" >&2
+  echo "实测 49.9% 为起点（floor 49.5）。抬升覆盖率后应上调 floor；严禁下调。" >&2
+  exit 6
+fi
+
+echo "P3 per-package floor passed ($P3_FLOOR% x 1 package)"
 exit 0
