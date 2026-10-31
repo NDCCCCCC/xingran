@@ -56,6 +56,17 @@ PRAGMA table_info(sys_rpa_workers);   -- sqlite；PG 用 information_schema.colu
 --       存量行三列为 NULL（宽限期兼容，老 Worker 不受影响）
 ```
 
+### 1.4 migration 231（DEBT-02 审计 operator 复合索引，portwriter）
+
+```sql
+-- 索引存在性（双方言）
+SELECT name FROM sqlite_master WHERE type='index' AND name='idx_port_write_audit_operator_created';
+-- PG: SELECT indexname FROM pg_indexes WHERE indexname = 'idx_port_write_audit_operator_created';
+-- 预期：1 行；索引定义为 (operator, created_at)——支撑审计页按操作人+时间过滤
+-- 生效验证：§4 seed 后执行 EXPLAIN QUERY PLAN SELECT * FROM sys_port_write_audit
+--          WHERE operator='tester' ORDER BY created_at DESC; 应走该索引而非全表扫描
+```
+
 ## 2. DEBT-03 Worker 认证宽限期冒烟
 
 【执行人】qualguard　【前置】§0；`rpa.worker.auth.auth_required=false`（默认）
