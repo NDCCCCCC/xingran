@@ -202,6 +202,11 @@ func newTestHandler(t *testing.T) (*PortWriteHandler, *mockPortWriteService, *mo
 	return h, mockSvc, mockOperLog, sqlDB
 }
 
+// Phase 122 接口演进适配：mock 补 WithProgressNotifier（链式 stub，无进度推送）
+func (m *mockPortWriteService) WithProgressNotifier(n portwrite.PortWriteNotifier) portwrite.PortWriteService {
+	return m
+}
+
 // invokeHandler 调用 handler 的 method（按 name dispatch），返回 *httptest.ResponseRecorder。
 func invokeHandler(method string, h func(*gin.Context), body interface{}) *httptest.ResponseRecorder {
 	gin.SetMode(gin.TestMode)
