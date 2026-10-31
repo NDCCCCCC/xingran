@@ -92,6 +92,8 @@ type BatchWriteRequest struct {
 	BindOp     string `json:"bindOp,omitempty" binding:"omitempty,oneof=add remove"`
 	IPAddress  string `json:"ipAddress,omitempty"`
 	MACAddress string `json:"macAddress,omitempty"`
+	// SkipPreflight Phase 123 (PORTW-06)：管理员强制跳过不可达预检；跳过事件留痕审计。
+	SkipPreflight bool `json:"skipPreflight,omitempty"`
 }
 
 // 超时常量（D-11 + D-12）。
@@ -126,15 +128,17 @@ type portWritePortCollectionSvc interface {
 }
 
 // PortWriteService 端口写 service 接口（8 方法 — 5 v1.19 单端口 + 2 v1.20.1 单端口 + 1 批量）。
+//
+// 单端口方法的 variadic opts（Phase 123）：WithSkipPreflight 跳过不可达预检。
 type PortWriteService interface {
-	Shutdown(ctx context.Context, portID string, operator string) (*PortResult, error)
-	UndoShutdown(ctx context.Context, portID string, operator string) (*PortResult, error)
-	SetDescription(ctx context.Context, portID string, desc string, operator string) (*PortResult, error)
-	EnableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error)
-	DisableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error)
+	Shutdown(ctx context.Context, portID string, operator string, opts ...WriteOption) (*PortResult, error)
+	UndoShutdown(ctx context.Context, portID string, operator string, opts ...WriteOption) (*PortResult, error)
+	SetDescription(ctx context.Context, portID string, desc string, operator string, opts ...WriteOption) (*PortResult, error)
+	EnableDot1x(ctx context.Context, portID string, operator string, opts ...WriteOption) (*PortResult, error)
+	DisableDot1x(ctx context.Context, portID string, operator string, opts ...WriteOption) (*PortResult, error)
 	// v1.20.1 新增方法
-	SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*PortResult, error)
-	PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*PortResult, error)
+	SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string, opts ...WriteOption) (*PortResult, error)
+	PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string, opts ...WriteOption) (*PortResult, error)
 	BatchWritePorts(ctx context.Context, req BatchWriteRequest, operator string) (*BatchResult, error)
 	// PreviewPortWrite Phase 121 (v1.51 PORTW-01)：dry-run 命令预览，零设备连接。
 	PreviewPortWrite(ctx context.Context, req PreviewRequest, operator string) (*PreviewResult, error)
@@ -145,6 +149,8 @@ type portWriteServiceImpl struct {
 	db                *gorm.DB
 	deviceExecutor    portWriteExecutor
 	portCollectionSvc portWritePortCollectionSvc
+	// pingFunc PORTW-06 预检探测函数（默认 device.PingCheck；测试注入）。
+	pingFunc func(ip string, timeout time.Duration) bool
 }
 
 // NewPortWriteService 工厂函数：Phase 52 router 通过 *device.DeviceExecutor / *portcollection.CollectionService
@@ -163,22 +169,23 @@ func NewPortWriteService(
 		db:                db,
 		deviceExecutor:    deviceExecutor,
 		portCollectionSvc: portCollectionSvc,
+		pingFunc:          device.PingCheck,
 	}
 }
 
 // Shutdown 关闭单端口。
-func (s *portWriteServiceImpl) Shutdown(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionShutdown, "", operator, 0, "", "", "", nil)
+func (s *portWriteServiceImpl) Shutdown(ctx context.Context, portID string, operator string, opts ...WriteOption) (*PortResult, error) {
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionShutdown, "", operator, 0, "", "", "", nil, opts)
 }
 
 // UndoShutdown 取消关闭。
-func (s *portWriteServiceImpl) UndoShutdown(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionUndoShutdown, "", operator, 0, "", "", "", nil)
+func (s *portWriteServiceImpl) UndoShutdown(ctx context.Context, portID string, operator string, opts ...WriteOption) (*PortResult, error) {
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionUndoShutdown, "", operator, 0, "", "", "", nil, opts)
 }
 
 // SetDescription 设置端口描述（desc 由 RenderCommand 入口校验长度 ≤ 80）。
-func (s *portWriteServiceImpl) SetDescription(ctx context.Context, portID string, desc string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDescription, desc, operator, 0, "", "", "", nil)
+func (s *portWriteServiceImpl) SetDescription(ctx context.Context, portID string, desc string, operator string, opts ...WriteOption) (*PortResult, error) {
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDescription, desc, operator, 0, "", "", "", nil, opts)
 }
 
 // EnableDot1x 启用 802.1X。
@@ -188,18 +195,18 @@ func (s *portWriteServiceImpl) SetDescription(ctx context.Context, portID string
 //
 // dot1x_user_limit 在本入口从 DB 单字段查询 (避免扩张其他 7 个 action 的方法签名),
 // 然后透传到 RenderCommand.PortTemplateParams.Dot1xUserLimit; nil 兜底为 1。
-func (s *portWriteServiceImpl) EnableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error) {
+func (s *portWriteServiceImpl) EnableDot1x(ctx context.Context, portID string, operator string, opts ...WriteOption) (*PortResult, error) {
 	limit, err := s.loadPortDot1xUserLimit(ctx, portID)
 	if err != nil {
 		applogger.Warnf("[portwrite] EnableDot1x 读取 dot1x_user_limit 失败 (portID=%s) → 兜底 1: %v", portID, err)
 		limit = nil
 	}
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xEnable, "", operator, 0, "", "", "", limit)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xEnable, "", operator, 0, "", "", "", limit, opts)
 }
 
 // DisableDot1x 停用 802.1X。
-func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xDisable, "", operator, 0, "", "", "", nil)
+func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, operator string, opts ...WriteOption) (*PortResult, error) {
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xDisable, "", operator, 0, "", "", "", nil, opts)
 }
 
 // loadPortDot1xUserLimit 从 sys_device_port_status 单字段读取 dot1x_user_limit。
@@ -281,12 +288,12 @@ func validateMACAddress(mac string) error {
 //
 // INFRA-01 / VLAN-06: 成功后把 vlanId 写入 PortResult.Extra,供 W3 handler 写入
 // sys_port_write_audit.after_value JSON(vlan 真实值的唯一 carrier)。
-func (s *portWriteServiceImpl) SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*PortResult, error) {
+func (s *portWriteServiceImpl) SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string, opts ...WriteOption) (*PortResult, error) {
 	// VLAN-05 validator: 防御性范围校验,任何越界值在入口处直接拒绝
 	if err := validateVlanIdRange(vlanId); err != nil {
 		return nil, err
 	}
-	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionSetAccessVLAN, "", operator, vlanId, "", "", "", nil)
+	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionSetAccessVLAN, "", operator, vlanId, "", "", "", nil, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +318,7 @@ func (s *portWriteServiceImpl) SetAccessVlan(ctx context.Context, portID string,
 //
 // INFRA-01: 成功后把 op / ipAddress / 可选 macAddress 写入 PortResult.Extra,供 W3 handler
 // 写入 sys_port_write_audit.after_value JSON(binding tuple carrier)。
-func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*PortResult, error) {
+func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string, opts ...WriteOption) (*PortResult, error) {
 	// BIND-07 validator #1: op 必须 add|remove
 	if err := validateBindOp(op); err != nil {
 		return nil, err
@@ -324,7 +331,7 @@ func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, o
 	if err := validateMACAddress(macAddress); err != nil {
 		return nil, err
 	}
-	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionPortBinding, "", operator, 0, op, ipAddress, macAddress, nil)
+	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionPortBinding, "", operator, 0, op, ipAddress, macAddress, nil, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -352,9 +359,9 @@ func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, o
 //
 // 批次路径走 BatchWritePorts 内部循环 + 末尾一次性 refresh，避免 50 次重复采集同设备。
 func (s *portWriteServiceImpl) writeAndRefresh(
-	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int,
+	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int, opts []WriteOption,
 ) (*PortResult, error) {
-	result, err := s.writeSinglePort(ctx, portID, action, desc, operator, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit)
+	result, err := s.writeSinglePort(ctx, portID, action, desc, operator, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit, applyWriteOptions(opts))
 	if err == nil && result != nil && result.Status == "succeeded" && result.DeviceID != "" {
 		s.refreshPortStatus(ctx, result.DeviceID)
 	}
@@ -362,6 +369,11 @@ func (s *portWriteServiceImpl) writeAndRefresh(
 }
 
 // writeSinglePort 公共单端口路径：DB 预查询 → PORT-06 pre-state 检测 → executeWrite。
+//
+// Phase 123 安全三件套集成（PORTW-05/06/04 顺序严格）：
+//  1. PORTW-05 互斥加锁（内存+DB 双层），持有至写流程结束；冲突 → ErrPortWriteLocked（handler 409）
+//  2. PORTW-06 不可达预检（1s ICMP 探测，可 skipPreflight 跳过）；不可达 → ErrDeviceUnreachable
+//  3. PORTW-04 critical 动作抓快照；executeWrite 失败自动逆序回滚，回滚失败 → rollback_failed 告警
 //
 // D-13：DB 行不存在（端口"消失"——尚未被 cron 采集或已软删除）fallback 直接下发，
 // 避免误报；此路径下 deviceID 为空，会由 executeWrite 触发 ErrDeviceNotFound 返回。
@@ -374,7 +386,7 @@ func (s *portWriteServiceImpl) writeAndRefresh(
 //   - ActionPortBinding：bindOp/ipAddr/macAddr 用于 RenderCommand.BindOp/IPAddress/MACAddress（pre-state 跳过）
 //   - 5 v1.19 action 路径下这 4 个参数均忽略(由 caller 传 0/""/"")
 func (s *portWriteServiceImpl) writeSinglePort(
-	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int,
+	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int, opts writeOptions,
 ) (*PortResult, error) {
 	var port models.DevicePortStatus
 	err := s.db.WithContext(ctx).Where("id = ?", portID).First(&port).Error
@@ -389,7 +401,60 @@ func (s *portWriteServiceImpl) writeSinglePort(
 		return noopResult, nil
 	}
 
-	return s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit)
+	// ===== Phase 123 安全三件套 =====
+	lockHolder := operator + "@" + portID
+	if err := s.acquirePortWriteLock(ctx, port.ID, lockHolder); err != nil {
+		return nil, err
+	}
+	defer s.releasePortStatusSafe(ctx, port.ID, lockHolder)
+
+	var dev models.NetworkDevice
+	if err := s.db.WithContext(ctx).Where("id = ?", port.DeviceID).First(&dev).Error; err != nil {
+		return nil, fmt.Errorf("query device: %w", err)
+	}
+	if err := s.preflightReachability(ctx, &dev, opts.skipPreflight); err != nil {
+		return nil, err
+	}
+
+	var snap *models.PortWriteSnapshot
+	if isCriticalAction(action) {
+		var cerr error
+		snap, cerr = s.captureSnapshot(ctx, &port, &dev, action)
+		if cerr != nil {
+			// 快照失败不阻塞写（写路径可用性优先），仅告警——回滚保护降级
+			applogger.Warnf("[portwrite] 快照抓取失败 portID=%s action=%s: %v", port.ID, action, cerr)
+		}
+	}
+
+	result, werr := s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit)
+	if snap != nil {
+		if werr != nil || (result != nil && result.Status == "failed") {
+			// 下发失败 → 自动逆序回滚（PORTW-04）；回滚结果留痕 Extra
+			if rolled, rerr := s.rollbackSnapshot(ctx, snap); rolled {
+				if result.Extra == nil {
+					result.Extra = make(map[string]interface{})
+				}
+				result.Extra["rollback"] = "rolled_back"
+			} else {
+				if result.Extra == nil {
+					result.Extra = make(map[string]interface{})
+				}
+				result.Extra["rollback"] = "rollback_failed"
+				result.Extra["rollbackError"] = rerr.Error()
+				if werr == nil {
+					werr = fmt.Errorf("write failed and rollback failed: snapshot %s", snap.ID)
+				}
+			}
+		} else if result != nil && result.Status == "succeeded" {
+			s.markSnapshotKept(ctx, snap.ID)
+		}
+	}
+	return result, werr
+}
+
+// releasePortStatusSafe defer 用锁释放包装（命名避免与 refreshPortStatus 混淆）。
+func (s *portWriteServiceImpl) releasePortStatusSafe(ctx context.Context, portID, holder string) {
+	s.releasePortWriteLock(ctx, portID, holder)
 }
 
 // executeWrite 实际下发写命令：RenderCommand → ExecuteCustom → parseConfigError。

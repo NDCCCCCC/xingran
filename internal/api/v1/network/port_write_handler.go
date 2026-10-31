@@ -62,6 +62,16 @@ type PortWriteRequest struct {
 	PortID      string `json:"portId" binding:"required"`
 	Description string `json:"description,omitempty"`
 	Reason      string `json:"reason,omitempty"`
+	// SkipPreflight Phase 123 (PORTW-06)：管理员强制跳过不可达预检（跳过留痕审计）。
+	SkipPreflight bool `json:"skipPreflight,omitempty"`
+}
+
+// writeOptsFrom 从请求构造 service WriteOption 列表（Phase 123 PORTW-06）。
+func writeOptsFrom(skipPreflight bool) []portwrite.WriteOption {
+	if skipPreflight {
+		return []portwrite.WriteOption{portwrite.WithSkipPreflight()}
+	}
+	return nil
 }
 
 // SetAccessVlanRequest 修改端口 access VLAN 请求 (v1.20.1)。
@@ -73,6 +83,8 @@ type SetAccessVlanRequest struct {
 	PortID string `json:"portId" binding:"required"`
 	VLANID int    `json:"vlanId" binding:"required,min=1,max=4094"`
 	Reason string `json:"reason,omitempty"`
+	// SkipPreflight Phase 123 (PORTW-06)。
+	SkipPreflight bool `json:"skipPreflight,omitempty"`
 }
 
 // PortBindingRequest 端口绑定请求 (v1.20.1)。
@@ -88,6 +100,8 @@ type PortBindingRequest struct {
 	IPAddress  string `json:"ipAddress" binding:"required"`
 	MACAddress string `json:"macAddress,omitempty"`
 	Reason     string `json:"reason,omitempty"`
+	// SkipPreflight Phase 123 (PORTW-06)。
+	SkipPreflight bool `json:"skipPreflight,omitempty"`
 }
 
 // ====================== 单端口 handler ======================
@@ -101,7 +115,7 @@ func (h *PortWriteHandler) Shutdown(c *gin.Context) {
 	}
 	h.execSinglePort(c, portcollection.ActionShutdown, operlog.OperTypeDisable, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
-			return h.service.Shutdown(ctx, portID, operator)
+			return h.service.Shutdown(ctx, portID, operator, writeOptsFrom(req.SkipPreflight)...)
 		})
 }
 
@@ -114,7 +128,7 @@ func (h *PortWriteHandler) UndoShutdown(c *gin.Context) {
 	}
 	h.execSinglePort(c, portcollection.ActionUndoShutdown, operlog.OperTypeEnable, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
-			return h.service.UndoShutdown(ctx, portID, operator)
+			return h.service.UndoShutdown(ctx, portID, operator, writeOptsFrom(req.SkipPreflight)...)
 		})
 }
 
@@ -127,7 +141,7 @@ func (h *PortWriteHandler) SetDescription(c *gin.Context) {
 	}
 	h.execSinglePort(c, portcollection.ActionDescription, operlog.OperTypeUpdate, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
-			return h.service.SetDescription(ctx, portID, desc, operator)
+			return h.service.SetDescription(ctx, portID, desc, operator, writeOptsFrom(req.SkipPreflight)...)
 		})
 }
 
@@ -140,7 +154,7 @@ func (h *PortWriteHandler) EnableDot1x(c *gin.Context) {
 	}
 	h.execSinglePort(c, portcollection.ActionDot1xEnable, operlog.OperTypeEnable, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
-			return h.service.EnableDot1x(ctx, portID, operator)
+			return h.service.EnableDot1x(ctx, portID, operator, writeOptsFrom(req.SkipPreflight)...)
 		})
 }
 
@@ -153,7 +167,7 @@ func (h *PortWriteHandler) DisableDot1x(c *gin.Context) {
 	}
 	h.execSinglePort(c, portcollection.ActionDot1xDisable, operlog.OperTypeDisable, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
-			return h.service.DisableDot1x(ctx, portID, operator)
+			return h.service.DisableDot1x(ctx, portID, operator, writeOptsFrom(req.SkipPreflight)...)
 		})
 }
 
@@ -172,7 +186,7 @@ func (h *PortWriteHandler) SetAccessVlan(c *gin.Context) {
 	}
 	h.execSinglePort(c, portcollection.ActionSetAccessVLAN, operlog.OperTypeUpdate, req.PortID, "",
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
-			return h.service.SetAccessVlan(ctx, portID, req.VLANID, operator)
+			return h.service.SetAccessVlan(ctx, portID, req.VLANID, operator, writeOptsFrom(req.SkipPreflight)...)
 		})
 }
 
@@ -197,7 +211,7 @@ func (h *PortWriteHandler) PortBinding(c *gin.Context) {
 	}
 	h.execSinglePort(c, portcollection.ActionPortBinding, operType, req.PortID, "",
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
-			return h.service.PortBinding(ctx, portID, req.Op, req.IPAddress, req.MACAddress, operator)
+			return h.service.PortBinding(ctx, portID, req.Op, req.IPAddress, req.MACAddress, operator, writeOptsFrom(req.SkipPreflight)...)
 		})
 }
 
@@ -250,6 +264,14 @@ func (h *PortWriteHandler) execSinglePort(
 			return
 		case errors.Is(err, portwrite.ErrDeviceNotFound):
 			response.Error(c, http.StatusNotFound, "设备不存在")
+			return
+		case errors.Is(err, portwrite.ErrPortWriteLocked):
+			// Phase 123 PORTW-05：并发写互斥冲突 → 409 + 持锁者信息
+			response.Error(c, http.StatusConflict, "端口正在被其他写操作处理，请稍后重试: "+err.Error())
+			return
+		case errors.Is(err, portwrite.ErrDeviceUnreachable):
+			// Phase 123 PORTW-06：不可达预检失败 → 503（可用 skipPreflight 强制）
+			response.Error(c, http.StatusServiceUnavailable, "设备不可达（预检失败），确认在线后重试或由管理员携带 skipPreflight 强制下发: "+err.Error())
 			return
 		case errors.Is(err, portwrite.ErrVlanIdOutOfRange):
 			response.Error(c, http.StatusBadRequest, "VLAN ID 必须在 1-4094 之间")
@@ -345,6 +367,10 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 			response.Error(c, http.StatusNotFound, "端口不存在")
 		case errors.Is(err, portwrite.ErrDeviceNotFound):
 			response.Error(c, http.StatusNotFound, "设备不存在")
+		case errors.Is(err, portwrite.ErrPortWriteLocked):
+			response.Error(c, http.StatusConflict, "端口正在被其他写操作处理，请稍后重试: "+err.Error())
+		case errors.Is(err, portwrite.ErrDeviceUnreachable):
+			response.Error(c, http.StatusServiceUnavailable, "设备不可达（预检失败）: "+err.Error())
 		// CR-04 (2026-07-09): batch 路径也必须把 v1.20.1 4 个 validator sentinel 翻译为 400,
 		// 否则 service 即使 emit sentinel,handler fall through default:500。
 		case errors.Is(err, portwrite.ErrVlanIdOutOfRange):
