@@ -302,6 +302,15 @@ export interface PortResult {
   currentState?: string;
   error?: string;
   commandSent?: string;
+  /**
+   * Phase 123 (commit 6cfdca54) 扩展: 写失败的恢复语义。
+   * - rollback="rolled_back": 失败后已自动回滚
+   * - rollback="rollback_failed": 回滚也失败（UI 必须常驻告警, 引导查看审计页）
+   */
+  extra?: {
+    rollback?: "rolled_back" | "rollback_failed";
+    rollbackError?: string;
+  };
 }
 
 /**
@@ -323,6 +332,11 @@ export interface BatchWriteRequest {
   ipAddress?: string; // action === "port_binding" 时使用, IPv4
   macAddress?: string; // action === "port_binding" 时使用, optional
   reason?: string;
+  /**
+   * Phase 123 (commit 6cfdca54): 管理员强制跳过预检。
+   * 契约已就绪; UI 开关待权限真相源确认（Phase 86 门控语义）后接入, 当前仅透传层支持。
+   */
+  skipPreflight?: boolean;
 }
 
 /**
@@ -410,4 +424,50 @@ export interface PortWritePreviewResult {
   riskLevel: "critical" | "medium" | "low";
   summary: string;
   ports: PortWritePreviewPort[];
+}
+
+/**
+ * 端口写审计行 (v1.51 Phase 127 PWX-04, 镜像 models.PortWriteAudit)
+ *
+ * Source: internal/models/port_write_audit.go:26-40 (append-only 真相源)
+ *
+ * beforeValue/afterValue 为任意 JSON (pre-state / post-state 快照),
+ * 前端以格式化 JSON 对比展示; failureReason/operLogId nullable。
+ */
+export interface PortWriteAuditRow {
+  id: string;
+  deviceId: string;
+  portId: string;
+  action: string;
+  beforeValue?: unknown;
+  afterValue?: unknown;
+  commandSent: string;
+  deviceResponse: string;
+  /** 契约 30a80c94: 值域仅 succeeded|failed（回滚结果在 snapshot 表, 不在 audit 行） */
+  status: "succeeded" | "failed";
+  failureReason?: string | null;
+  operator: string;
+  operLogId?: string | null;
+  createdAt: string;
+}
+
+/** 端口写审计分页查询请求（契约 30a80c94: current 从 1 起, pageSize 上限 100, 时间 RFC3339） */
+export interface PortWriteAuditListRequest {
+  current: number;
+  pageSize: number;
+  deviceId?: string;
+  portId?: string;
+  operator?: string;
+  action?: string;
+  status?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+/** 端口写审计分页响应 (项目分页约定: list/total/current/pageSize) */
+export interface PortWriteAuditListResult {
+  list: PortWriteAuditRow[];
+  total: number;
+  current: number;
+  pageSize: number;
 }

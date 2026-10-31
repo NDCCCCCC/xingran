@@ -628,4 +628,88 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     });
     expect(mockBatchWritePorts).not.toHaveBeenCalled();
   });
+
+  // ==================== Phase 123 错误语义适配（commit 6cfdca54） ====================
+
+  it("Phase 123: 写失败且回滚也失败 → 常驻 error Alert + 引导审计页", async () => {
+    mockBatchWritePorts.mockResolvedValueOnce({
+      succeeded: [],
+      failed: [
+        {
+          ...makePortResult("port-a-1", "failed", "device timeout"),
+          extra: { rollback: "rollback_failed", rollbackError: "undo shutdown 也超时" },
+        },
+      ],
+      skipped: [],
+    } as BatchResult);
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillAndSubmit();
+
+    // 常驻告警出现（不能用一闪而过 message）
+    expect(await screen.findByText("严重：部分端口写失败且自动回滚也失败")).toBeInTheDocument();
+    expect(screen.getByText(/undo shutdown 也超时/)).toBeInTheDocument();
+    expect(screen.getByText("查看端口写审计")).toBeInTheDocument();
+  });
+
+  it("Phase 123: rollback=rolled_back（回滚成功）不触发严重告警", async () => {
+    mockBatchWritePorts.mockResolvedValueOnce({
+      succeeded: [],
+      failed: [
+        {
+          ...makePortResult("port-a-1", "failed", "device timeout"),
+          extra: { rollback: "rolled_back" },
+        },
+      ],
+      skipped: [],
+    } as BatchResult);
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillAndSubmit();
+
+    await waitFor(() => {
+      expect(screen.getByText("✗ 失败")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("严重：部分端口写失败且自动回滚也失败")).not.toBeInTheDocument();
+  });
+
+  it("Phase 123: 确认写被拒 409 → 常驻 Alert「端口正在被其他写操作处理」, 留在 preview", async () => {
+    const err409 = Object.assign(new Error("端口被 operator-x 占用"), { code: 409 });
+    mockBatchWritePorts.mockRejectedValueOnce(err409);
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillAndSubmit();
+
+    // 409 常驻 Alert + phase 回 preview（预览仍在, 可修正后重试）
+    expect(await screen.findByText("端口正在被其他写操作处理")).toBeInTheDocument();
+    expect(screen.getByText(/operator-x/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "确认下发（真实写）" })).toBeInTheDocument();
+  });
 });

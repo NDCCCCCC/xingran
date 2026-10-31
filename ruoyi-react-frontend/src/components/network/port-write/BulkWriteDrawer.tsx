@@ -102,6 +102,8 @@ export function BulkWriteDrawer({
   const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
   /** PORTW-02: dry-run 预览结果（preview 阶段渲染, 确认后进入真实写） */
   const [previewResult, setPreviewResult] = useState<PortWritePreviewResult | null>(null);
+  /** Phase 123 错误语义: 409 端口占用 / 503 预检失败 → 常驻 Alert 分流（Toast 之外补充上下文） */
+  const [writeError, setWriteError] = useState<{ code?: number; message: string } | null>(null);
   /** 保留上次提交的 action/description/deviceId/interfaceMap, 用于失败重试沿用 (D-06)
    * CR-01/CR-02: deviceId 必须在首次提交时快照, retry 时用缓存值 —— 不能从 selectedPorts 重读,
    *   否则 onSuccess 触发父级 loadPortStatus 后 selectedPorts 引用漂移, deviceId 错位会让
@@ -121,6 +123,7 @@ export function BulkWriteDrawer({
 
       setBatchResult(null);
       setPreviewResult(null);
+      setWriteError(null);
       form.resetFields();
     }
   }, [open, form]);
@@ -174,8 +177,13 @@ export function BulkWriteDrawer({
         // 部分成功, 刷新父组件列表让用户看到已生效的端口, 但不弹 Toast (Drawer 还在结果视图)
         onSuccess();
       }
-    } catch {
+    } catch (err) {
       // 网络错误等才走 catch, message.error 由 post() 拦截器已弹 (LANDMINE #5)
+      // Phase 123: 409 端口占用 / 503 预检失败 → 常驻 Alert 补充上下文（持锁者/预检信息在 message 内）
+      const code = (err as { code?: number })?.code;
+      if (code === 409 || code === 503) {
+        setWriteError({ code, message: (err as Error).message });
+      }
       setPhase("select");
     }
   };
@@ -183,6 +191,7 @@ export function BulkWriteDrawer({
   /** PORTW-02 第一段: select 提交 → dry-run 预览（不下发任何设备命令）。
    * 校验通过后快照提交参数（与 CR-01/WR-03 同理），preview 失败留在 select 由拦截器弹 Toast。 */
   const handlePreview = async (): Promise<void> => {
+    setWriteError(null);
     let values: Record<string, unknown>;
     try {
       values = await form.validateFields();
@@ -246,8 +255,13 @@ export function BulkWriteDrawer({
         // 部分成功, 刷新父组件列表让已生效端口可见
         onSuccess();
       }
-    } catch {
+    } catch (err) {
       // 网络错误等才走 catch, post() 拦截器已弹 Toast
+      // Phase 123: 409 端口占用 / 503 预检失败 → 常驻 Alert 补充上下文
+      const code = (err as { code?: number })?.code;
+      if (code === 409 || code === 503) {
+        setWriteError({ code, message: (err as Error).message });
+      }
       setPhase("preview");
     }
   };
@@ -265,6 +279,19 @@ export function BulkWriteDrawer({
       mask={{ closable: !isExecuting }}
       closable={!isExecuting}
     >
+      {/* Phase 123 错误语义: 409/503 常驻 Alert（持锁者/预检详情后端带在 message 内） */}
+      {writeError && !isExecuting && (
+        <Alert
+          type={writeError.code === 409 ? "warning" : "error"}
+          showIcon
+          style={{ marginBottom: 16 }}
+          title={writeError.code === 409 ? "端口正在被其他写操作处理" : "设备不可达（预检失败）"}
+          description={writeError.message}
+          closable
+          onClose={() => setWriteError(null)}
+        />
+      )}
+
       {phase === "select" && (
         <SelectView
           form={form}
@@ -300,6 +327,43 @@ export function BulkWriteDrawer({
           // WR-03: 用提交时快照的 interfaceMap, 不随父级 selectedPorts 漂移失真
           interfaceMap={lastInterfaceMap}
           onRetry={handleRetryFailed}
+        />
+      )}
+
+      {/* Phase 123: 写失败且回滚也失败 → 常驻告警（不允许一闪而过）, 引导查看审计页 */}
+      {phase === "result" && batchResult?.failed.some((p) => p.extra?.rollback === "rollback_failed") && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginTop: 16 }}
+          title="严重：部分端口写失败且自动回滚也失败"
+          description={
+            <Space direction="vertical" size={4}>
+              {batchResult.failed
+                .filter((p) => p.extra?.rollback === "rollback_failed")
+                .map((p) => (
+                  <Typography.Text key={p.portId} type="danger" code>
+                    {lastInterfaceMap.get(p.portId) ?? p.portId}:{" "}
+                    {p.extra?.rollbackError ?? p.error ?? "未知回滚错误"}
+                  </Typography.Text>
+                ))}
+              <Typography.Text>
+                设备可能处于中间状态，请立即人工核查，并到端口写审计页核对变更前后快照。
+              </Typography.Text>
+            </Space>
+          }
+          action={
+            <Button
+              size="small"
+              danger
+              onClick={() => {
+                onClose();
+                navigate("/network/port-audits");
+              }}
+            >
+              查看端口写审计
+            </Button>
+          }
         />
       )}
     </Drawer>

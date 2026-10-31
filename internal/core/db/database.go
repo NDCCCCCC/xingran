@@ -1168,6 +1168,10 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(228, "server_sort_menus", migrations.Migrate228ServerSortMenus); err != nil {
 			applogger.Errorf("服务端排序 4 页面菜单迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// v1.51 Phase 127 PWX-04: 端口写审计明细页菜单注册。**非阻断**。
+		if err := d.runAndRecord(229, "port_write_audit_menu", migrations.Migrate229PortWriteAuditMenu); err != nil {
+			applogger.Errorf("端口写审计菜单迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1266,6 +1270,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: v1.51 TIDY-01 服务端排序 4 页面菜单注册/修复 (双方言迁移)。
 		if err := d.runAndRecord(228, "server_sort_menus", migrations.Migrate228ServerSortMenus); err != nil {
 			applogger.Errorf("服务端排序 4 页面菜单迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: v1.51 Phase 127 PWX-04 端口写审计明细页菜单注册 (双方言迁移)。
+		if err := d.runAndRecord(229, "port_write_audit_menu", migrations.Migrate229PortWriteAuditMenu); err != nil {
+			applogger.Errorf("端口写审计菜单迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only

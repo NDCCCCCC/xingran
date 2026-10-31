@@ -392,7 +392,11 @@ api.interceptors.response.use(
       return data;
     } else if (data && typeof data === "object" && data.code !== undefined) {
       getAppMessage().error(data.message || "请求失败");
-      return Promise.reject(new Error(data.message || "请求失败"));
+      // Phase 123 错误语义适配: 在 Error 上附加业务 code（如 409 端口占用 / 503 预检失败）,
+      // 供组件层做常驻 Alert 分流; 不改变既有 catch(message) 消费方的行为。
+      const bizError = new Error(data.message || "请求失败") as Error & { code?: number };
+      bizError.code = data.code;
+      return Promise.reject(bizError);
     } else {
       console.error("[Response] 响应格式无效:", {
         url: response.config.url,

@@ -5,6 +5,8 @@ import type {
   BatchResult,
   BatchWriteRequest,
   PortWritePreviewResult,
+  PortWriteAuditListRequest,
+  PortWriteAuditListResult,
 } from "@/types/network";
 
 /**
@@ -301,6 +303,19 @@ export const previewBatchWritePorts = async (
   return result.data!;
 };
 
+/**
+ * 端口写审计明细分页查询 — v1.51 Phase 127 PWX-04
+ * - 端点: POST /network/ports/write/audit/list (预期契约, portwriter 交付后以实际为准)
+ * - 过滤: deviceId/operator/action/status/时间范围; 分页 current 从 1 起
+ * - 后端未就绪期间前端以空态/错误提示兜底 (真机联调与 Phase 123 合并)
+ */
+export const listPortWriteAudits = async (
+  req: PortWriteAuditListRequest
+): Promise<PortWriteAuditListResult> => {
+  const result = await post<PortWriteAuditListResult>("/network/ports/write/audit/list", req);
+  return result.data!;
+};
+
 // ==================== 端口 MAC bundle (quick 260712-vpj, D-01/D-04) ====================
 //
 // 并行拉取单端口的"当前 MAC"+"最近一条历史 MAC",供 ports 页 expandedRowRender 使用。
@@ -403,6 +418,8 @@ export default {
   batchWritePorts,
   // v1.51 Phase 121 PORTW-02 两段式写确认
   previewBatchWritePorts,
+  // v1.51 Phase 127 PWX-04 端口写审计明细
+  listPortWriteAudits,
   // Phase 56 v1.20.1 端口写操作扩展
   writeSetAccessVlan,
   writePortBinding,

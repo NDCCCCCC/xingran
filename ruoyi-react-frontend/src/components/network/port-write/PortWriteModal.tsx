@@ -120,11 +120,16 @@ export function PortWriteModal({
   const navigate = useNavigate();
   // IN-03: submitting 防写操作重复提交 (wrapper await 期间用户可重复点"确认执行")
   const [submitting, setSubmitting] = useState(false);
+  // Phase 123 错误语义: 409/503 常驻 Alert 状态
+  const [writeError, setWriteError] = useState<{ code?: number; message: string } | null>(null);
 
   // action 变化时 reset 表单 (防上次 reason/description 残留)
   // deps 全稳定: open/action 原始值, form 来自 useForm 稳定 ref — CLAUDE.md useEffect 纪律满足
   useEffect(() => {
-    if (open) form.resetFields();
+    if (open) {
+      form.resetFields();
+      setWriteError(null);
+    }
   }, [open, action, form]);
 
   const handleOk = async (): Promise<void> => {
@@ -169,6 +174,13 @@ export function PortWriteModal({
       form.resetFields();
       onSuccess();
       onClose();
+    } catch (err) {
+      // Phase 123 错误语义: 409 端口占用 / 503 预检失败 → Modal 内常驻 Alert 分流
+      // (Toast 之外补充上下文; 其余错误维持拦截器 Toast + antd 吞 rejection 现状)
+      const code = (err as { code?: number })?.code;
+      if (code === 409 || code === 503) {
+        setWriteError({ code, message: (err as Error).message });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -201,6 +213,18 @@ export function PortWriteModal({
       okButtonProps={{ loading: submitting }}
     >
       <Form form={form} layout="vertical">
+        {/* Phase 123 错误语义: 409/503 常驻 Alert */}
+        {writeError && (
+          <Alert
+            type={writeError.code === 409 ? "warning" : "error"}
+            showIcon
+            style={{ marginBottom: 16 }}
+            title={writeError.code === 409 ? "端口正在被其他写操作处理" : "设备不可达（预检失败）"}
+            description={writeError.message}
+            closable
+            onClose={() => setWriteError(null)}
+          />
+        )}
         {/* PORTW-02 预览引导: 单端口直写路径保留, 但提示可在批量入口先 dry-run 预览命令序列 */}
         <Alert
           type="info"
