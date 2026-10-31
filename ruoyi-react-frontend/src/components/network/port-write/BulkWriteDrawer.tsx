@@ -48,8 +48,10 @@ import type {
   PortWriteAction,
   BatchWriteRequest,
   BatchResult,
+  PortWritePreviewResult,
+  PortWritePreviewPort,
 } from "@/types/network";
-import { batchWritePorts } from "@/lib/api/networkApi";
+import { batchWritePorts, previewBatchWritePorts } from "@/lib/api/networkApi";
 import {
   PRESET_REASONS,
   ACTION_TITLE,
@@ -64,7 +66,8 @@ import {
 import { showAuditLinkToast } from "./PortWriteModal";
 import { handleApiError } from "@/utils/errorHandler";
 
-type DrawerPhase = "select" | "executing" | "result";
+// v1.51 Phase 121 PORTW-02: 两段式写确认 — select → preview(dry-run) → executing → result
+type DrawerPhase = "select" | "preview" | "executing" | "result";
 
 // 避免 Object.keys() as 断言在新增 ACTION_TITLE key 时静默失同步)
 const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = [
@@ -97,6 +100,8 @@ export function BulkWriteDrawer({
   const navigate = useNavigate();
   const [phase, setPhase] = useState<DrawerPhase>("select");
   const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
+  /** PORTW-02: dry-run 预览结果（preview 阶段渲染, 确认后进入真实写） */
+  const [previewResult, setPreviewResult] = useState<PortWritePreviewResult | null>(null);
   /** 保留上次提交的 action/description/deviceId/interfaceMap, 用于失败重试沿用 (D-06)
    * CR-01/CR-02: deviceId 必须在首次提交时快照, retry 时用缓存值 —— 不能从 selectedPorts 重读,
    *   否则 onSuccess 触发父级 loadPortStatus 后 selectedPorts 引用漂移, deviceId 错位会让
@@ -115,6 +120,7 @@ export function BulkWriteDrawer({
       setPhase("select");
 
       setBatchResult(null);
+      setPreviewResult(null);
       form.resetFields();
     }
   }, [open, form]);
@@ -174,7 +180,9 @@ export function BulkWriteDrawer({
     }
   };
 
-  const handleBatch = async (): Promise<void> => {
+  /** PORTW-02 第一段: select 提交 → dry-run 预览（不下发任何设备命令）。
+   * 校验通过后快照提交参数（与 CR-01/WR-03 同理），preview 失败留在 select 由拦截器弹 Toast。 */
+  const handlePreview = async (): Promise<void> => {
     let values: Record<string, unknown>;
     try {
       values = await form.validateFields();
@@ -202,12 +210,28 @@ export function BulkWriteDrawer({
     // 不受 onSuccess 触发的父级 loadPortStatus 刷新导致的 selectedPorts 引用漂移影响
     const interfaceMap = new Map<string, string>();
     selectedPorts.forEach((p) => interfaceMap.set(p.id, p.interfaceName));
-    const req = buildRequest(deviceId, action, portIds, description);
 
     setLastAction(action);
     setLastDescription(description);
     setLastDeviceId(deviceId);
     setLastInterfaceMap(interfaceMap);
+    setPhase("preview");
+    try {
+      const preview = await previewBatchWritePorts(
+        buildRequest(deviceId, action, portIds, description)
+      );
+      setPreviewResult(preview);
+    } catch {
+      // 400 参数 / 404 不存在等, post() 拦截器已弹 Toast, 返回 select 让用户修正
+      setPhase("select");
+    }
+  };
+
+  /** PORTW-02 第二段: preview 确认 → 真实批量写（沿用预览时快照的参数, 不再重复校验）。 */
+  const handleConfirmWrite = async (): Promise<void> => {
+    const portIds = selectedPorts.map((p) => p.id);
+    const req = buildRequest(lastDeviceId, lastAction, portIds, lastDescription);
+
     setPhase("executing");
     try {
       // LANDMINE #3: batchWritePorts HTTP 200 + status:failed 是正常 resolve
@@ -224,7 +248,7 @@ export function BulkWriteDrawer({
       }
     } catch {
       // 网络错误等才走 catch, post() 拦截器已弹 Toast
-      setPhase("select");
+      setPhase("preview");
     }
   };
 
@@ -247,7 +271,17 @@ export function BulkWriteDrawer({
           selectedPorts={selectedPorts}
           uniqueDeviceCount={uniqueDeviceIds.length}
           isMixedDevices={isMixedDevices}
-          onSubmit={handleBatch}
+          onSubmit={handlePreview}
+        />
+      )}
+
+      {/* PORTW-02: dry-run 预览视图（确认后才进入真实写） */}
+      {phase === "preview" && previewResult && (
+        <PreviewView
+          preview={previewResult}
+          interfaceMap={lastInterfaceMap}
+          onConfirm={handleConfirmWrite}
+          onBack={() => setPhase("select")}
         />
       )}
 
@@ -408,10 +442,154 @@ function SelectView({
           onClick={onSubmit}
           disabled={selectedPorts.length === 0 || isMixedDevices}
         >
-          开始批量配置
+          预览命令（dry-run）
         </Button>
       </Form.Item>
     </Form>
+  );
+}
+
+// ==================== Preview View (PORTW-02 两段式第一段, dry-run) ====================
+
+/** 风险等级 → antd Tag 色板（token 语义色, 无手写暗色覆盖） */
+const RISK_TAG_COLOR: Record<"critical" | "medium" | "low", string> = {
+  critical: "red",
+  medium: "orange",
+  low: "green",
+};
+
+const RISK_LABEL: Record<"critical" | "medium" | "low", string> = {
+  critical: "高危",
+  medium: "中危",
+  low: "低危",
+};
+
+interface PreviewViewProps {
+  preview: PortWritePreviewResult;
+  /** WR-03: 提交时快照的 portId → interfaceName 映射 */
+  interfaceMap: Map<string, string>;
+  onConfirm: () => Promise<void>;
+  onBack: () => void;
+}
+
+/**
+ * PreviewView — dry-run 预览视图（Phase 121 PORTW-02）
+ * - Alert 常驻标注「dry-run 预览，未下发任何设备命令」（验收 6, 用后端 summary）
+ * - 按端口分组: Table + expandedRowRender 展开命令序列
+ * - 风险色标 critical/medium/low（antd Tag 预设色, 零手写 CSS）
+ * - skipped 端口显式标注 noOp（pre-state 已匹配, 下发时将被跳过）
+ */
+function PreviewView({ preview, interfaceMap, onConfirm, onBack }: PreviewViewProps) {
+  const willApply = preview.ports.filter((p) => p.status === "preview");
+  const skipped = preview.ports.filter((p) => p.status === "skipped");
+
+  return (
+    <div>
+      {/* 验收 6: dry-run 常驻提示 */}
+      <Alert
+        type="warning"
+        showIcon
+        title="dry-run 预览，未下发任何设备命令"
+        description={preview.summary}
+        style={{ marginBottom: 16 }}
+      />
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={8}>
+          <Card>
+            <Statistic title="设备" value={preview.deviceName} />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <Statistic title="将下发端口" value={willApply.length} />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <Statistic title="跳过 (noOp)" value={skipped.length} />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 整体风险等级 */}
+      <Space style={{ marginBottom: 16 }}>
+        <span>整体风险等级：</span>
+        <Tag color={RISK_TAG_COLOR[preview.riskLevel]}>{RISK_LABEL[preview.riskLevel]}</Tag>
+        <Typography.Text type="secondary">
+          {preview.vendor} {preview.model} · {ACTION_TITLE[preview.action]}
+        </Typography.Text>
+      </Space>
+
+      {/* 按端口分组: 展开行显示命令序列 */}
+      <Table<PortWritePreviewPort>
+        dataSource={preview.ports}
+        rowKey="portId"
+        size="small"
+        pagination={false}
+        style={{ marginBottom: 16 }}
+        expandable={{
+          defaultExpandAllRows: true,
+          expandedRowRender: (port) =>
+            port.commands.length === 0 ? (
+              <Typography.Text type="secondary">
+                无命令 —— pre-state 已匹配目标态，下发时将被跳过
+              </Typography.Text>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 16 }}>
+                {port.commands.map((cmd) => (
+                  <li key={cmd.index} style={{ marginBottom: 4 }}>
+                    <Tag color={RISK_TAG_COLOR[cmd.riskLevel]}>{RISK_LABEL[cmd.riskLevel]}</Tag>
+                    <Typography.Text code>{cmd.command}</Typography.Text>
+                    {cmd.note && (
+                      <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
+                        {cmd.note}
+                      </Typography.Text>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ),
+        }}
+        columns={[
+          {
+            title: "接口名",
+            key: "interfaceName",
+            width: 140,
+            render: (_, port) => interfaceMap.get(port.portId) ?? port.interfaceName,
+          },
+          {
+            title: "状态",
+            key: "status",
+            width: 120,
+            render: (_, port) =>
+              port.status === "skipped" ? (
+                <Tag color="default">跳过 (noOp)</Tag>
+              ) : (
+                <Tag color="blue">将下发</Tag>
+              ),
+          },
+          {
+            title: "命令数",
+            key: "commandCount",
+            width: 80,
+            render: (_, port) => port.commands.length,
+          },
+        ]}
+      />
+
+      {/* 第二段确认: 高危动作用 danger 按钮强化 */}
+      <Space>
+        <Button onClick={onBack}>返回修改</Button>
+        <Button
+          type="primary"
+          danger={preview.riskLevel === "critical"}
+          onClick={() => void onConfirm()}
+        >
+          确认下发（真实写）
+        </Button>
+      </Space>
+    </div>
   );
 }
 

@@ -22,7 +22,12 @@ import { screen, fireEvent, waitFor } from "@testing-library/dom";
 import { App } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import { useState, type ReactNode } from "react";
-import type { DevicePortStatus, PortResult, BatchResult } from "@/types/network";
+import type {
+  DevicePortStatus,
+  PortResult,
+  BatchResult,
+  PortWritePreviewResult,
+} from "@/types/network";
 
 // Polyfill: antd v6 Drawer uses ResizeObserver (jsdom lacks it)
 class ResizeObserverStub {
@@ -35,10 +40,12 @@ if (typeof globalThis.ResizeObserver === "undefined") {
     ResizeObserverStub;
 }
 
-// 捕获 batchWritePorts 调用 — 通过 networkApi 模块路径 mock
+// 捕获 batchWritePorts / previewBatchWritePorts 调用 — 通过 networkApi 模块路径 mock
 const mockBatchWritePorts = vi.fn();
+const mockPreviewBatchWritePorts = vi.fn();
 vi.mock("@/lib/api/networkApi", () => ({
   batchWritePorts: (...args: unknown[]) => mockBatchWritePorts(...args),
+  previewBatchWritePorts: (...args: unknown[]) => mockPreviewBatchWritePorts(...args),
 }));
 
 import { BulkWriteDrawer } from "../BulkWriteDrawer";
@@ -105,11 +112,26 @@ async function selectOptionByLabel(labelText: string, optionText: string): Promi
 }
 
 /** 填表 + 提交: action=shutdown + reason="故障排查处理" (走预设项, 不进 TextArea) */
-async function fillAndSubmit(): Promise<void> {
+async function fillForm(): Promise<void> {
   await selectOptionByLabel("操作类型", "关闭端口");
   await selectOptionByLabel("操作原因", "故障排查处理");
+}
+
+/**
+ * PORTW-02 两段式 helper: 填表 → dry-run 预览 → 确认下发（真实写）。
+ * 下游对 mockBatchWritePorts 的参数断言不变，仅提交入口经 preview 中转。
+ */
+async function fillAndSubmit(): Promise<void> {
+  await fillForm();
   await act(async () => {
-    fireEvent.click(screen.getByRole("button", { name: "开始批量配置" }));
+    fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+  });
+  // preview 视图渲染完成（Alert 常驻标注）
+  await waitFor(() => {
+    expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
   });
 }
 
@@ -140,6 +162,30 @@ const PORT_A3 = makePort("port-a-3", DEVICE_A, "GigabitEthernet0/3");
 
 const PORT_B1 = makePort("port-b-1", DEVICE_B, "GigabitEthernet0/1");
 
+/** PORTW-02 dry-run 预览 fixture */
+function makePreview(overrides?: Partial<PortWritePreviewResult>): PortWritePreviewResult {
+  return {
+    dryRun: true,
+    deviceId: DEVICE_A,
+    deviceName: "SW-01",
+    vendor: "huawei",
+    model: "S5735",
+    action: "shutdown",
+    riskLevel: "medium",
+    summary: "将向 1 台设备 1 个端口下发 1 条命令",
+    ports: [
+      {
+        portId: "port-a-1",
+        interfaceName: "GigabitEthernet0/1",
+        status: "preview",
+        noOp: false,
+        commands: [{ index: 1, command: "interface GigabitEthernet0/1", riskLevel: "low", critical: false }],
+      },
+    ],
+    ...overrides,
+  };
+}
+
 function makePortResult(
   portId: string,
   status: "succeeded" | "failed" | "skipped",
@@ -158,6 +204,9 @@ function makePortResult(
 describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", () => {
   beforeEach(() => {
     mockBatchWritePorts.mockReset();
+    mockPreviewBatchWritePorts.mockReset();
+    // 默认 dry-run 预览成功（PORTW-02 两段式第一段），各用例可 override
+    mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
   });
 
   /**
@@ -356,8 +405,8 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
       { wrapper: Wrapper }
     );
 
-    // select 阶段: 提交按钮可见
-    expect(screen.getByRole("button", { name: "开始批量配置" })).toBeInTheDocument();
+    // select 阶段: 预览提交按钮可见（PORTW-02 两段式入口）
+    expect(screen.getByRole("button", { name: "预览命令（dry-run）" })).toBeInTheDocument();
 
     await fillAndSubmit();
 
@@ -388,12 +437,13 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
 
     // 提交按钮 disabled
     const submitBtn = screen.getByRole("button", {
-      name: "开始批量配置",
+      name: "预览命令（dry-run）",
     }) as HTMLButtonElement;
     expect(submitBtn.disabled).toBe(true);
 
     // batchWritePorts 不应被调用 (按钮 disabled)
     expect(mockBatchWritePorts).not.toHaveBeenCalled();
+    expect(mockPreviewBatchWritePorts).not.toHaveBeenCalled();
   });
 
   /**
@@ -444,5 +494,138 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     // 最终最后一次调用必须是 false (result 阶段已结束 executing)
     const lastCall = onExecutingChange.mock.calls[onExecutingChange.mock.calls.length - 1];
     expect(lastCall[0]).toBe(false);
+  });
+
+  // ==================== PORTW-02 两段式写确认（v1.51 Phase 121） ====================
+
+  it("PORTW-02: preview renders command sequence with risk tags and skipped noOp annotation, write only fires after confirm", async () => {
+    mockPreviewBatchWritePorts.mockResolvedValue(
+      makePreview({
+        riskLevel: "critical",
+        summary: "将向 1 台设备 2 个端口下发命令",
+        ports: [
+          {
+            portId: "port-a-1",
+            interfaceName: "GigabitEthernet0/1",
+            status: "preview",
+            noOp: false,
+            commands: [
+              { index: 1, command: "interface GigabitEthernet0/1", riskLevel: "low", critical: false },
+              { index: 2, command: "shutdown", riskLevel: "critical", critical: true, note: "可能中断链路" },
+            ],
+          },
+          {
+            portId: "port-a-2",
+            interfaceName: "GigabitEthernet0/2",
+            status: "skipped",
+            noOp: true,
+            commands: [],
+          },
+        ],
+      })
+    );
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1, PORT_A2]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillForm();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+
+    // dry-run 常驻提示 + 后端 summary
+    expect(await screen.findByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("将向 1 台设备 2 个端口下发命令")).toBeInTheDocument();
+    });
+
+    // 风险色标（整体 critical + 命令级 critical/low）
+    expect(screen.getAllByText("高危").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("低危").length).toBeGreaterThan(0);
+
+    // 命令序列 + note + skipped noOp 标注
+    expect(screen.getByText("shutdown")).toBeInTheDocument();
+    expect(screen.getByText("可能中断链路")).toBeInTheDocument();
+    expect(screen.getAllByText("跳过 (noOp)").length).toBeGreaterThan(0);
+
+    // 两段式核心: preview 阶段不触发真实写
+    expect(mockPreviewBatchWritePorts).toHaveBeenCalledTimes(1);
+    expect(mockBatchWritePorts).not.toHaveBeenCalled();
+
+    // 确认后才进入真实写
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as { deviceId: string; portIds: string[] };
+    expect(writeArg.deviceId).toBe(DEVICE_A);
+    expect(writeArg.portIds).toEqual(["port-a-1", "port-a-2"]);
+  });
+
+  it("PORTW-02: 高危操作确认按钮为 danger（视觉强化），返回修改不触发写", async () => {
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillForm();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+
+    // 默认 fixture riskLevel=medium → 非 danger
+    const confirmBtn = screen.getByRole("button", { name: "确认下发（真实写）" }) as HTMLButtonElement;
+    expect(confirmBtn.className).not.toContain("danger");
+
+    // 返回修改: 回到 select, 不触发真实写
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "返回修改" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "预览命令（dry-run）" })).toBeInTheDocument();
+    });
+    expect(mockBatchWritePorts).not.toHaveBeenCalled();
+  });
+
+  it("PORTW-02: preview 调用失败（400 参数非法）留在 select 并可重新提交", async () => {
+    mockPreviewBatchWritePorts.mockRejectedValueOnce(new Error("vlanId 越界"));
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillForm();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+
+    // 失败回 select: 预览按钮重新可见
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "预览命令（dry-run）" })).toBeInTheDocument();
+    });
+    expect(mockBatchWritePorts).not.toHaveBeenCalled();
   });
 });

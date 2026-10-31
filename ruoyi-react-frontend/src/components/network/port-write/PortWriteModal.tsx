@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Modal, Form, App } from "antd";
+import { Modal, Form, App, Alert } from "antd";
 // Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
 // ⚠️ 本文件承载 v1.19 端口写命令冻结交互（submitting 防重 / reason __custom__ 状态机），
 // 本波仅换 UI 组件名，不改任何状态/条件渲染/校验逻辑。
@@ -201,6 +201,14 @@ export function PortWriteModal({
       okButtonProps={{ loading: submitting }}
     >
       <Form form={form} layout="vertical">
+        {/* PORTW-02 预览引导: 单端口直写路径保留, 但提示可在批量入口先 dry-run 预览命令序列 */}
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title="确认后将立即下发设备命令"
+          description="如需先查看将下发的命令序列与风险等级，请取消本弹窗，改用「批量配置」入口的 dry-run 预览。"
+        />
         {/* D-03 description action 特例 — 显示"新描述"必填输入框 */}
         {action === "description" && (
           <Form.Item

@@ -1,6 +1,11 @@
 import { post } from "../api";
 import { downloadFile, downloadFilePost } from "../download";
-import type { PortResult, BatchResult, BatchWriteRequest } from "@/types/network";
+import type {
+  PortResult,
+  BatchResult,
+  BatchWriteRequest,
+  PortWritePreviewResult,
+} from "@/types/network";
 
 /**
  * MAC 历史查询参数(Phase 14-01 引入)
@@ -282,6 +287,20 @@ export const batchWritePorts = async (req: BatchWriteRequest): Promise<BatchResu
   return result.data!;
 };
 
+/**
+ * 端口写预览（dry-run）— v1.51 Phase 121 PORTW-02 两段式写确认第一段
+ * - 端点: POST /network/ports/write/preview (权限 network:port:write, 与 write 同权限)
+ * - 不下发任何设备命令, 仅生成命令序列与风险等级供用户确认
+ * - status='skipped' 的端口 noOp=true 且 commands=[]（pre-state 已匹配目标态）
+ * - 错误: 404 设备/端口不存在; 400 参数非法 (vlanId 越界/IP/MAC 格式/描述超长/不支持厂商)
+ */
+export const previewBatchWritePorts = async (
+  req: BatchWriteRequest
+): Promise<PortWritePreviewResult> => {
+  const result = await post<PortWritePreviewResult>("/network/ports/write/preview", req);
+  return result.data!;
+};
+
 // ==================== 端口 MAC bundle (quick 260712-vpj, D-01/D-04) ====================
 //
 // 并行拉取单端口的"当前 MAC"+"最近一条历史 MAC",供 ports 页 expandedRowRender 使用。
@@ -382,6 +401,8 @@ export default {
   writeDot1xEnable,
   writeDot1xDisable,
   batchWritePorts,
+  // v1.51 Phase 121 PORTW-02 两段式写确认
+  previewBatchWritePorts,
   // Phase 56 v1.20.1 端口写操作扩展
   writeSetAccessVlan,
   writePortBinding,

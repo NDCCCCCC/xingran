@@ -368,3 +368,46 @@ export interface BatchResult {
   failed: PortResult[];
   skipped: PortResult[];
 }
+
+/**
+ * 端口写预览命令 (v1.51 Phase 121 PORTW-02, 镜像后端 portwrite preview)
+ *
+ * Source: POST /network/ports/write/preview 契约 (portwriter, commit 8e158388)
+ *
+ * critical=true 的命令可能影响管理面/链路 (如 shutdown), UI 需醒目标注。
+ */
+export interface PortWritePreviewCommand {
+  index: number;
+  command: string;
+  riskLevel: "critical" | "medium" | "low";
+  critical: boolean;
+  note?: string;
+}
+
+/**
+ * 端口写预览端口条目
+ *
+ * status="skipped" → noOp=true 且 commands=[]（pre-state 已匹配目标态, 下发时会被跳过）。
+ */
+export interface PortWritePreviewPort {
+  portId: string;
+  interfaceName: string;
+  status: "preview" | "skipped";
+  noOp: boolean;
+  commands: PortWritePreviewCommand[];
+}
+
+/**
+ * 端口写预览响应 (dry-run, 不下发任何设备命令)
+ */
+export interface PortWritePreviewResult {
+  dryRun: boolean;
+  deviceId: string;
+  deviceName: string;
+  vendor: string;
+  model: string;
+  action: PortWriteAction;
+  riskLevel: "critical" | "medium" | "low";
+  summary: string;
+  ports: PortWritePreviewPort[];
+}
