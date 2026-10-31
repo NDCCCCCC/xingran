@@ -129,3 +129,38 @@ succeeded/failed 各 5，覆盖 shutdown/undo_shutdown/description/dot1x_enable/
 - [ ] §4 审计页前端可分页/过滤（按 status、action）
 - [ ] 全量 `bash .github/scripts/check-coverage.sh <profile> .coverage-threshold` PASS（≥76.85）
 - [ ] 完成后由 lead 在窗口记录中勾销本清单并归档到 `.planning/`
+
+---
+
+## 执行报告（2026-11-01 窗口 #1，执行人 qualguard）
+
+**环境**：sqlite 模式（data/integration-v151.db，SERVER_SKIP_SETUP=false），端口 9911；
+含 portwriter Phase 122 的 port_write_router.go NoticeHub 接线（未提交改动，一并验证）。
+
+| 项 | 结果 | 明细 |
+|---|---|---|
+| §0 启动 + migration 228/229/230/231 | PASS | 四条 Running 日志，无非阻断失败 |
+| §1.1 228 四行菜单 | PASS | 4×visible=1,status=0 |
+| §1.2 229 审计菜单 | PASS | visible=1, perms=network:port:write |
+| §1.3 230 token 三列 | PASS | token/token_expires_at/last_token_rotation |
+| §1.4 231 operator 索引 | PASS | 存在 + EXPLAIN 走索引（SEARCH 非 SCAN） |
+| §2 worker-auth 矩阵 | PASS 4/4 | 含注册换发（task-15 修复生效） |
+| §3 dry-run 契约 | PASS 6/6 | 设备不存在=HTTP400+body.code404（契约断言已修正入脚本） |
+| §4 审计 seed | PASS | 10 行（5/5），幂等两轮一致；EXPLAIN 复用验证同 §1.4 |
+| §5 前端三步（tree-select/路由/排序带参） | 待 webfe | 后端侧全部就绪 |
+
+**窗口期发现与处置**：
+1. `SERVER_SKIP_SETUP` 默认跳过 InitData → 首启无 admin 用户（清单 §0 已知注意事项，
+   以 SERVER_SKIP_SETUP=false 重启解决）。
+2. **schema 漂移（登记待修）**：sqlite 分支 sys_user_role 建表缺 created_at 列
+   （UserRole 模型有该字段但实际表仅 role_id/user_id 两列，来源待查）→
+   initData 创建用户角色关联失败 → admin 无 admin 角色全量 403。
+   窗口内处置：手工 ALTER 补列 + 重启（initData 幂等补关联成功）。
+   待修：sqlite 分支 UserRole 建表路径排查（models in MigrateModelList 但列缺失，
+   疑似 sanitize/复合索引建表路径问题）。
+3. smoke 脚本 §3 断言修正：设备不存在=HTTP 400 + body.code 404（response.Error
+   int 重载语义，与 PWX-06 e2e 一致），已修正入脚本。
+
+**数据库终态**：sys_menu 含 228 四菜单 + 229 审计菜单（全可见）；sys_rpa_workers
+含 Token 三列 + smoke 注册的 2 个 worker；sys_port_write_audit 10 行 seed 数据；
+admin 具备 admin 角色（superadmin 旁路验证通过）。

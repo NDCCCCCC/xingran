@@ -106,12 +106,13 @@ dry_run() {
   echo "== dry-run preview 错误路径契约 =="
   local r code
 
-  # 1) 设备不存在 → 404
+  # 1) 设备不存在 → HTTP 400 + 业务 body.code 404（response.Error int 重载语义）
   code=$(curl -sS -o /tmp/smoke_body.$$ -w '%{http_code}' -X POST "$API/network/ports/write/preview" \
     -H 'Content-Type: application/json' -H "Authorization: Bearer $token" \
     -d '{"deviceId":"de000000-0000-4000-8000-00000000dead","action":"shutdown","portIds":["po000000-0000-4000-8000-00000000dead"]}')
   r=$(cat /tmp/smoke_body.$$); rm -f /tmp/smoke_body.$$
-  [ "$code" = "404" ] && ok "设备不存在 404" || bad "设备不存在（got $code, 期望 404）"
+  [ "$code" = "400" ] && ok "设备不存在 HTTP 400" || bad "设备不存在（got $code, 期望 400）"
+  case "$r" in *'"code":404'*) ok "设备不存在 业务码 404";; *) bad "设备不存在业务码（实际: ${r:0:160}）";; esac
   assert_contains "$r" '"request_id"' "响应契约含 request_id"
   assert_contains "$r" '"timestamp"' "响应契约含 timestamp"
 
