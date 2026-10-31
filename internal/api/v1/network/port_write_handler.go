@@ -393,19 +393,25 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 	// 预 SELECT before_value 一次取齐（按 portID 索引），避免 N+1 查询
 	beforeMap := preloadBeforeValues(h.core.GetDB(), all)
 
-	auditIDs := make([]string, 0, len(all))
+	// DEBT-02：批量审计行单事务原子提交 —— 消灭「部分写入」孤儿审计行。
+	// 业务语义：批量写已对设备生效（SSH 不可回滚），审计行是唯一 DB 记录，
+	// 全有或全无优于部分写入（部分丢失时 oper_param 的 audit_ids 与实际行数
+	// 不一致，审计页按 audit_ids 关联会出断链）。
+	auditRows := make([]*models.PortWriteAudit, 0, len(all))
 	for _, pr := range all {
 		beforeValue := beforeMap[pr.PortID]
 		if len(beforeValue) == 0 {
 			beforeValue = json.RawMessage([]byte("{}"))
 		}
-		auditRow := buildAuditRow(&pr, beforeValue, req.DeviceID, operator)
-		if createErr := h.core.GetDB().Create(auditRow).Error; createErr != nil {
-			log.Printf("port_write audit insert failed portID=%s action=%s: %v", pr.PortID, req.Action, createErr)
-			// 不阻塞响应，继续写下一条（CONTEXT Claude's Discretion line 173）
-			continue
-		}
-		auditIDs = append(auditIDs, auditRow.ID)
+		auditRows = append(auditRows, buildAuditRow(&pr, beforeValue, req.DeviceID, operator))
+	}
+	auditIDs, txErr := createAuditRowsInTx(h.core.GetDB(), auditRows)
+	if txErr != nil {
+		// 事务失败：零审计行落库（强一致语义），告警不阻塞响应（SSH 已生效，
+		// 设备状态是真相源；审计缺失以 operlog 行 + 日志兜底追溯）。
+		log.Printf("port_write batch audit tx failed deviceID=%s action=%s rows=%d err=%v",
+			req.DeviceID, req.Action, len(auditRows), txErr)
+		auditIDs = []string{}
 	}
 
 	// 查 device_name + portID→interface_name 用于 oper_param 可读性（UUID 不便阅读）；
@@ -430,6 +436,28 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 		operlog.WithOperParam(batchSummary))
 
 	response.Success(c, result)
+}
+
+// createAuditRowsInTx DEBT-02：批量审计行单事务原子提交。
+//
+// 任一行 INSERT 失败 → 整体回滚，返回 error 与 nil IDs；成功返回全部 audit IDs
+// （顺序与 rows 一致）。单端口路径（execSinglePort）单条 INSERT 天然原子，不入此 helper。
+func createAuditRowsInTx(db *gorm.DB, rows []*models.PortWriteAudit) ([]string, error) {
+	ids := make([]string, 0, len(rows))
+	txErr := db.Transaction(func(tx *gorm.DB) error {
+		ids = ids[:0]
+		for _, row := range rows {
+			if err := tx.Create(row).Error; err != nil {
+				return err
+			}
+			ids = append(ids, row.ID)
+		}
+		return nil
+	})
+	if txErr != nil {
+		return nil, txErr
+	}
+	return ids, nil
 }
 
 // ====================== Helpers ======================

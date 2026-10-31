@@ -1177,6 +1177,11 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(230, "rpa_worker_token", migrations.Migrate230RPAWorkerToken); err != nil {
 			applogger.Errorf("RPA Worker Token 字段迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// v1.51 DEBT-02: 端口写审计 operator 复合索引 (双方言幂等)。**非阻断**：
+		// 千万行级实机构建留 DBA 窗口（评估见 migration_231 注释），应用侧普通构建兜底。
+		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
+			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1283,6 +1288,14 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: v1.51 DEBT-03 RPA Worker Token 认证字段 (双方言迁移)。**非阻断**。
 		if err := d.runAndRecord(230, "rpa_worker_token", migrations.Migrate230RPAWorkerToken); err != nil {
 			applogger.Errorf("RPA Worker Token 字段迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v1.51 DEBT-02: 端口写审计 operator 复合索引 (双方言幂等)。**非阻断**：
+		// 千万行级实机构建留 DBA 窗口（评估见 migration_231 注释），应用侧普通构建兜底。
+		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
+			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
+			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
