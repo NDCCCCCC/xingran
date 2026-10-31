@@ -291,7 +291,9 @@ echo "P2 per-package floor passed (70.0% x 10 packages)"
 # 2026-10-31 债务审计（D10）：internal/services/addomain 覆盖率 49.9%，此前不在
 # 任何 floor 管辖内（P1/P2 均未收录），存在无声下滑风险。以当前实测为起点设立
 # ratchet floor（measured - 0.4pp），只升不降；补测试抬升后应逐步上调 floor。
-P3_FLOOR="49.5"
+# 2026-11-01 DEBT-01（v1.51）：addomain 测试补齐后实测 69.58%（2649/3807 stmts），
+# floor 从 49.5 上调至 69.2（measured - 0.4pp，lead 裁定的 ratchet 锁定）。
+P3_FLOOR="69.2"
 P3_PACKAGES="internal/services/addomain"
 
 P3_PKG_TABLE=$(awk '
