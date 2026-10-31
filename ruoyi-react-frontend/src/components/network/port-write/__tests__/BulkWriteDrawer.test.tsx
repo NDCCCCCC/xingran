@@ -712,4 +712,132 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     expect(screen.getByText(/operator-x/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "确认下发（真实写）" })).toBeInTheDocument();
   });
+
+  // ==================== Phase 124 trunk/hybrid（commit 9835291c） ====================
+
+  it("Phase 124: trunk_set_native preview→确认→写, nativeVlan 透传", async () => {
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "设置 Trunk Native VLAN");
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("Native VLAN (PVID)"), { target: { value: "10" } });
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+
+    const previewArg = mockPreviewBatchWritePorts.mock.calls[0][0] as { nativeVlan: number };
+    expect(previewArg.nativeVlan).toBe(10);
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as { nativeVlan: number };
+    expect(writeArg.nativeVlan).toBe(10);
+  });
+
+  it("Phase 124: trunk_set_allowed 去重解析 + mode 透传 + 厂商语义提示", async () => {
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "配置 Trunk 放行 VLAN");
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("放行 VLAN 列表"), {
+        target: { value: "20,10 20,30" },
+      });
+    });
+    await selectOptionByLabel("模式", "追加 (add)");
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    // 厂商语义提示常驻（Form.Item extra, select 阶段可见）
+    expect(screen.getByText(/replace（替换）仅锐捷原生支持/)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+
+    const previewArg = mockPreviewBatchWritePorts.mock.calls[0][0] as {
+      allowedVlans: number[];
+      mode: string;
+    };
+    expect(previewArg.allowedVlans).toEqual([10, 20, 30]); // 去重升序
+    expect(previewArg.mode).toBe("add");
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as { mode: string };
+    expect(writeArg.mode).toBe("add");
+  });
+
+  it("Phase 124: trunk_set_hybrid 重叠被前端预校验拦截, 修正后可预览", async () => {
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "配置 Hybrid 端口");
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("Tagged VLAN 列表"), { target: { value: "30" } });
+      fireEvent.change(screen.getByLabelText("Untagged VLAN 列表"), {
+        target: { value: "30,10" },
+      });
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+
+    // 重叠预校验拦截: 停留 select 且 preview 未被调用
+    expect(await screen.findByText(/tagged 与 untagged VLAN 存在重叠/)).toBeInTheDocument();
+    expect(mockPreviewBatchWritePorts).not.toHaveBeenCalled();
+
+    // 修正后可正常通过
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("Untagged VLAN 列表"), {
+        target: { value: "10,20" },
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    const previewArg = mockPreviewBatchWritePorts.mock.calls[0][0] as {
+      hybridTagged: number[];
+      hybridUntagged: number[];
+    };
+    expect(previewArg.hybridTagged).toEqual([30]);
+    expect(previewArg.hybridUntagged).toEqual([10, 20]);
+  });
 });

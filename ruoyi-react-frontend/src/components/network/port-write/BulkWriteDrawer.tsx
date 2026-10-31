@@ -59,9 +59,13 @@ import {
   REASON_MAX,
   DESCRIPTION_MAX,
   REASON_CUSTOM_SENTINEL,
+  TRUNK_ALLOWED_MODE_OPTIONS,
+  TRUNK_REPLACE_HINT,
+  TRUNK_HYBRID_OVERLAP_HINT,
   composeReason,
   validateReasonOptional,
   validateReasonRequired,
+  parseVlanList,
 } from "./constants";
 import { showAuditLinkToast } from "./PortWriteModal";
 import { handleApiError } from "@/utils/errorHandler";
@@ -76,7 +80,20 @@ const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = [
   { label: ACTION_TITLE.description, value: "description" },
   { label: ACTION_TITLE.dot1x_enable, value: "dot1x_enable" },
   { label: ACTION_TITLE.dot1x_disable, value: "dot1x_disable" },
+  // v1.51 Phase 124 (9835291c): trunk/hybrid 三动作
+  { label: ACTION_TITLE.trunk_set_native, value: "trunk_set_native" },
+  { label: ACTION_TITLE.trunk_set_allowed, value: "trunk_set_allowed" },
+  { label: ACTION_TITLE.trunk_set_hybrid, value: "trunk_set_hybrid" },
 ];
+
+/** trunk 动作的批量写附加参数（T-53-07 白名单的 Phase 124 延伸） */
+interface TrunkParams {
+  nativeVlan?: number;
+  allowedVlans?: number[];
+  mode?: "add" | "remove" | "replace";
+  hybridTagged?: number[];
+  hybridUntagged?: number[];
+}
 
 export interface BulkWriteDrawerProps {
   open: boolean;
@@ -113,6 +130,11 @@ export function BulkWriteDrawer({
   const [lastDescription, setLastDescription] = useState<string | undefined>(undefined);
   const [lastDeviceId, setLastDeviceId] = useState<string>("");
   const [lastInterfaceMap, setLastInterfaceMap] = useState<Map<string, string>>(new Map());
+  /** Phase 124: trunk 附加参数快照（retry/确认写与首次预览同参, CR-01 同理不重读表单） */
+  const [lastTrunkParams, setLastTrunkParams] = useState<TrunkParams | undefined>(undefined);
+  /** Phase 124 补强: portIds 同样快照——预览与确认之间父级刷新使 selectedPorts 漂移时,
+   * 确认写必须落在预览过的那批端口上（否则 dry-run 与真实写内容错位）。 */
+  const [lastPortIds, setLastPortIds] = useState<string[]>([]);
 
   // open 变 false 时 reset phase + batchResult, 防下次打开残留
   // CLAUDE.md useEffect 纪律: deps 全稳定 (open/phase/onExecutingChange 原始值或稳定 setter)
@@ -144,17 +166,34 @@ export function BulkWriteDrawer({
 
   /** 组装 BatchWriteRequest (T-53-07: 白名单字段, 不 spread 整个 port record)
    * CR-01: deviceId 改为显式参数 —— 首次提交传当前 uniqueDeviceIds[0], retry 传缓存的 lastDeviceId,
-   *   杜绝从漂移的 selectedPorts 快照重读 deviceId。 */
+   *   杜绝从漂移的 selectedPorts 快照重读 deviceId。
+   * Phase 124: trunkParams 仅 trunk 动作携带（白名单字段直传, 后端按 action 校验）。 */
   const buildRequest = (
     deviceId: string,
     action: PortWriteAction,
     portIds: string[],
-    description?: string
+    description?: string,
+    trunkParams?: TrunkParams
   ): BatchWriteRequest => ({
     deviceId,
     action,
     portIds,
     ...(action === "description" && description !== undefined ? { description } : {}),
+    ...(action === "trunk_set_native" && trunkParams?.nativeVlan !== undefined
+      ? { nativeVlan: trunkParams.nativeVlan }
+      : {}),
+    ...(action === "trunk_set_allowed" && trunkParams
+      ? {
+          allowedVlans: trunkParams.allowedVlans,
+          mode: trunkParams.mode ?? "replace",
+        }
+      : {}),
+    ...(action === "trunk_set_hybrid" && trunkParams
+      ? {
+          hybridTagged: trunkParams.hybridTagged,
+          hybridUntagged: trunkParams.hybridUntagged,
+        }
+      : {}),
   });
 
   /** D-06 重试只取 failed, 不重试 skipped (skipped = 设备已是目标态, 重试无意义) */
@@ -162,7 +201,8 @@ export function BulkWriteDrawer({
     if (!batchResult || batchResult.failed.length === 0) return;
     const failedIds = batchResult.failed.map((p) => p.portId);
     // CR-01/CR-02: retry 用首次提交时缓存的 lastDeviceId, 不从 selectedPorts 重读
-    const req = buildRequest(lastDeviceId, lastAction, failedIds, lastDescription);
+    // Phase 124: trunk 参数同样走快照（lastTrunkParams）
+    const req = buildRequest(lastDeviceId, lastAction, failedIds, lastDescription, lastTrunkParams);
     setPhase("executing");
     try {
       // LANDMINE #3: batchWritePorts 失败是正常 resolve, 不用 .catch 分类
@@ -215,6 +255,26 @@ export function BulkWriteDrawer({
 
     const portIds = selectedPorts.map((p) => p.id);
     const deviceId = uniqueDeviceIds[0] ?? "";
+    // Phase 124: 按 action 收集 trunk 附加参数（表单 rules 已校验, 此处仅解析/归一）
+    let trunkParams: TrunkParams | undefined;
+    if (action === "trunk_set_native") {
+      trunkParams = { nativeVlan: Number(values.nativeVlan) };
+    } else if (action === "trunk_set_allowed") {
+      trunkParams = {
+        allowedVlans: parseVlanList(String(values.allowedVlansText)) ?? [],
+        mode: (values.trunkMode as "add" | "remove" | "replace") ?? "replace",
+      };
+    } else if (action === "trunk_set_hybrid") {
+      trunkParams = {
+        hybridTagged: values.hybridTaggedText
+          ? (parseVlanList(String(values.hybridTaggedText)) ?? [])
+          : [],
+        hybridUntagged: values.hybridUntaggedText
+          ? (parseVlanList(String(values.hybridUntaggedText)) ?? [])
+          : [],
+      };
+    }
+
     // CR-01/WR-03: 提交时快照 deviceId + interfaceMap, 后续 retry/result 全部基于快照,
     // 不受 onSuccess 触发的父级 loadPortStatus 刷新导致的 selectedPorts 引用漂移影响
     const interfaceMap = new Map<string, string>();
@@ -224,10 +284,12 @@ export function BulkWriteDrawer({
     setLastDescription(description);
     setLastDeviceId(deviceId);
     setLastInterfaceMap(interfaceMap);
+    setLastTrunkParams(trunkParams);
+    setLastPortIds(portIds);
     setPhase("preview");
     try {
       const preview = await previewBatchWritePorts(
-        buildRequest(deviceId, action, portIds, description)
+        buildRequest(deviceId, action, portIds, description, trunkParams)
       );
       setPreviewResult(preview);
     } catch {
@@ -238,8 +300,8 @@ export function BulkWriteDrawer({
 
   /** PORTW-02 第二段: preview 确认 → 真实批量写（沿用预览时快照的参数, 不再重复校验）。 */
   const handleConfirmWrite = async (): Promise<void> => {
-    const portIds = selectedPorts.map((p) => p.id);
-    const req = buildRequest(lastDeviceId, lastAction, portIds, lastDescription);
+    // Phase 124: portIds 用预览时快照（预览与确认间父级刷新导致的漂移防护）
+    const req = buildRequest(lastDeviceId, lastAction, lastPortIds, lastDescription, lastTrunkParams);
 
     setPhase("executing");
     try {
@@ -338,7 +400,7 @@ export function BulkWriteDrawer({
           style={{ marginTop: 16 }}
           title="严重：部分端口写失败且自动回滚也失败"
           description={
-            <Space direction="vertical" size={4}>
+            <Space orientation="vertical" size={4}>
               {batchResult.failed
                 .filter((p) => p.extra?.rollback === "rollback_failed")
                 .map((p) => (
@@ -391,6 +453,17 @@ function SelectView({
   // validateReasonOptional (description) 或 validateReasonRequired (其他 4 action)。
   // SelectView 本就因 getFieldValue 在 shouldUpdate 重渲染, useWatch 不引入额外开销。
   const action = Form.useWatch("action", form) as PortWriteAction | undefined;
+
+  /** VLAN 列表可选校验（空值放行; 非空则 parseVlanList 全量校验）—— Phase 124 hybrid 两组共用 */
+  const validateVlanListOptional = (value: unknown): Promise<void> => {
+    if (value === undefined || value === null || String(value).trim() === "") {
+      return Promise.resolve();
+    }
+    if (parseVlanList(String(value)) === null) {
+      return Promise.reject(new Error("格式：逗号/空格分隔的 1-4094 整数（自动去重）"));
+    }
+    return Promise.resolve();
+  };
 
   return (
     <Form form={form} layout="vertical">
@@ -445,6 +518,127 @@ function SelectView({
             </Form.Item>
           ) : null
         }
+      </Form.Item>
+
+      {/* ===== v1.51 Phase 124: trunk/hybrid 动态参数表单 ===== */}
+      <Form.Item shouldUpdate noStyle>
+        {({ getFieldValue }) => {
+          const action = getFieldValue("action");
+          if (action === "trunk_set_native") {
+            return (
+              <Form.Item
+                name="nativeVlan"
+                label="Native VLAN (PVID)"
+                rules={[
+                  { required: true, message: "请输入 Native VLAN" },
+                  {
+                    validator: (_rule: unknown, value: unknown) => {
+                      const n = Number(value);
+                      if (value === undefined || value === null || value === "") {
+                        return Promise.resolve();
+                      }
+                      if (!Number.isInteger(n) || n < 1 || n > 4094) {
+                        return Promise.reject(new Error("VLAN 取值范围 1-4094"));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
+              >
+                <AppInput type="number" placeholder="1-4094" />
+              </Form.Item>
+            );
+          }
+          if (action === "trunk_set_allowed") {
+            return (
+              <>
+                <Form.Item
+                  name="allowedVlansText"
+                  label="放行 VLAN 列表"
+                  extra={TRUNK_REPLACE_HINT}
+                  rules={[
+                    { required: true, message: "请输入 VLAN 列表" },
+                    {
+                      validator: (_rule: unknown, value: unknown) => {
+                        if (!value) return Promise.resolve();
+                        const parsed = parseVlanList(String(value));
+                        if (parsed === null) {
+                          return Promise.reject(
+                            new Error("格式：逗号/空格分隔的 1-4094 整数（自动去重）")
+                          );
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <AppInput placeholder="如：10,20,30（逗号或空格分隔）" />
+                </Form.Item>
+                <Form.Item
+                  name="trunkMode"
+                  label="模式"
+                  initialValue="replace"
+                  rules={[{ required: true, message: "请选择模式" }]}
+                >
+                  <AppSelect
+                    options={TRUNK_ALLOWED_MODE_OPTIONS.map((o) => ({ ...o }))}
+                    showSearch={false}
+                    onSearch={() => {}}
+                  />
+                </Form.Item>
+              </>
+            );
+          }
+          if (action === "trunk_set_hybrid") {
+            return (
+              <>
+                <Form.Item
+                  name="hybridTaggedText"
+                  label="Tagged VLAN 列表"
+                  extra={TRUNK_HYBRID_OVERLAP_HINT}
+                  rules={[
+                    {
+                      validator: (_rule: unknown, value: unknown) =>
+                        validateVlanListOptional(value),
+                    },
+                  ]}
+                >
+                  <AppInput placeholder="如：30,40（可留空）" />
+                </Form.Item>
+                <Form.Item
+                  name="hybridUntaggedText"
+                  label="Untagged VLAN 列表"
+                  rules={[
+                    {
+                      validator: (_rule: unknown, value: unknown) =>
+                        validateVlanListOptional(value),
+                    },
+                    // 前端预校验: 两组不可重叠（后端 ErrHybridOverlap 400 兜底）
+                    {
+                      validator: () => {
+                        const tagged = parseVlanList(
+                          String(form.getFieldValue("hybridTaggedText") ?? "")
+                        );
+                        const untagged = parseVlanList(
+                          String(form.getFieldValue("hybridUntaggedText") ?? "")
+                        );
+                        if (tagged && untagged && tagged.some((v) => untagged.includes(v))) {
+                          return Promise.reject(
+                            new Error("tagged 与 untagged VLAN 存在重叠，请修正后重试")
+                          );
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <AppInput placeholder="如：10,20（可留空）" />
+                </Form.Item>
+              </>
+            );
+          }
+          return null;
+        }}
       </Form.Item>
 
       {/* 55-01 WR-02: reasonSelect.rules 按 action 动态选择 validator,

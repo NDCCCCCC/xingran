@@ -36,11 +36,15 @@ describe("port-write constants", () => {
     }
   });
 
-  it("ACTION_TITLE 7 个映射(5+2 v1.20.1)", () => {
-    expect(Object.keys(ACTION_TITLE).length).toBe(7);
+  it("ACTION_TITLE 10 个映射(5+2 v1.20.1+3 Phase 124 trunk)", () => {
+    expect(Object.keys(ACTION_TITLE).length).toBe(10);
     expect(ACTION_TITLE.shutdown).toBe("关闭端口");
     expect(ACTION_TITLE.set_access_vlan).toBe("修改 access VLAN");
     expect(ACTION_TITLE.port_binding).toBe("端口绑定");
+    // v1.51 Phase 124 (9835291c) 语义适配登记
+    expect(ACTION_TITLE.trunk_set_native).toBe("设置 Trunk Native VLAN");
+    expect(ACTION_TITLE.trunk_set_allowed).toBe("配置 Trunk 放行 VLAN");
+    expect(ACTION_TITLE.trunk_set_hybrid).toBe("配置 Hybrid 端口");
   });
 
   it("length 限制 3 个常量", () => {

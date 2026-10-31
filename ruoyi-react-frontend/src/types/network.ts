@@ -284,7 +284,10 @@ export type PortWriteAction =
   | "dot1x_enable"
   | "dot1x_disable"
   | "set_access_vlan" // v1.20.1 VLAN-01
-  | "port_binding"; // v1.20.1 BIND-01/02
+  | "port_binding" // v1.20.1 BIND-01/02
+  | "trunk_set_native" // v1.51 Phase 124 PWX-01
+  | "trunk_set_allowed" // v1.51 Phase 124 PWX-01
+  | "trunk_set_hybrid"; // v1.51 Phase 124 PWX-01
 
 /**
  * 单端口写操作结果 (Phase 53, 镜像后端 portwrite.PortResult)
@@ -308,7 +311,8 @@ export interface PortResult {
    * - rollback="rollback_failed": 回滚也失败（UI 必须常驻告警, 引导查看审计页）
    */
   extra?: {
-    rollback?: "rolled_back" | "rollback_failed";
+    /** no_rollback: trunk 动作无 DB 原值可恢复, 快照留痕（区别于 rollback_failed 告警） */
+    rollback?: "rolled_back" | "rollback_failed" | "no_rollback";
     rollbackError?: string;
   };
 }
@@ -337,6 +341,17 @@ export interface BatchWriteRequest {
    * 契约已就绪; UI 开关待权限真相源确认（Phase 86 门控语义）后接入, 当前仅透传层支持。
    */
   skipPreflight?: boolean;
+  // ---- v1.51 Phase 124 (commit 9835291c) trunk/hybrid 扩展, 按 action 携带 ----
+  /** action === "trunk_set_native" 时使用, 1-4094 */
+  nativeVlan?: number;
+  /** action === "trunk_set_allowed" 时使用 */
+  allowedVlans?: number[];
+  /** 仅 trunk_set_allowed: add | remove | replace（默认 replace; replace 仅锐捷原生支持） */
+  mode?: "add" | "remove" | "replace";
+  /** action === "trunk_set_hybrid" 时使用; 与 hybridUntagged 不可重叠（后端 400 兜底） */
+  hybridTagged?: number[];
+  /** action === "trunk_set_hybrid" 时使用 */
+  hybridUntagged?: number[];
 }
 
 /**

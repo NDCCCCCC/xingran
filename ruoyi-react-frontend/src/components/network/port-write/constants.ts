@@ -45,7 +45,10 @@ export const ACTION_TITLE: Record<
   | "dot1x_enable"
   | "dot1x_disable"
   | "set_access_vlan" // v1.20.1
-  | "port_binding", // v1.20.1
+  | "port_binding" // v1.20.1
+  | "trunk_set_native" // v1.51 Phase 124
+  | "trunk_set_allowed" // v1.51 Phase 124
+  | "trunk_set_hybrid", // v1.51 Phase 124
   string
 > = {
   shutdown: "关闭端口",
@@ -55,7 +58,51 @@ export const ACTION_TITLE: Record<
   dot1x_disable: "停用 802.1X",
   set_access_vlan: "修改 access VLAN",
   port_binding: "端口绑定",
+  trunk_set_native: "设置 Trunk Native VLAN",
+  trunk_set_allowed: "配置 Trunk 放行 VLAN",
+  trunk_set_hybrid: "配置 Hybrid 端口",
 };
+
+// ==================== v1.51 Phase 124 trunk/hybrid 表单常量 ====================
+
+/** trunk_set_allowed 的 mode 三选（契约 9835291c: add|remove|replace, 默认 replace） */
+export const TRUNK_ALLOWED_MODE_OPTIONS = [
+  { label: "追加 (add)", value: "add" },
+  { label: "移除 (remove)", value: "remove" },
+  { label: "替换 (replace)", value: "replace" },
+] as const;
+
+/** replace 厂商语义提示（portwriter 契约注释: 华为/H3C 无原生替换, 退化为叠加） */
+export const TRUNK_REPLACE_HINT =
+  "replace（替换）仅锐捷原生支持；华为/H3C 无原生替换语义，将退化为叠加处理，结果以预览与审计为准。";
+
+/** hybrid tagged/untagged 重叠提示（华为拒绝 / H3C 静默优先 untagged，系统侧 400 为共同真相源） */
+export const TRUNK_HYBRID_OVERLAP_HINT =
+  "tagged 与 untagged VLAN 不可重叠：华为设备会拒绝，H3C 会静默优先 untagged 表项。";
+
+/** VLAN 列表最大条数（保守上限, 防误粘超长串; 后端同样有 sentinel 校验） */
+export const VLAN_LIST_MAX = 256;
+
+/**
+ * 解析 VLAN 列表输入（逗号/空格/分号分隔）→ 去重升序数组。
+ * 返回 null 表示存在非法 token（非数字 / 越界 1-4094 / 超长），由调用方标红提示。
+ */
+export function parseVlanList(input: string): number[] | null {
+  const tokens = input
+    .split(/[,;\s]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+  if (tokens.length === 0) return null;
+  if (tokens.length > VLAN_LIST_MAX) return null;
+  const seen = new Set<number>();
+  for (const token of tokens) {
+    if (!/^\d{1,5}$/.test(token)) return null;
+    const vlan = Number(token);
+    if (!Number.isInteger(vlan) || vlan < 1 || vlan > 4094) return null;
+    seen.add(vlan);
+  }
+  return Array.from(seen).sort((a, b) => a - b);
+}
 
 /**
  * D-02 reason 字段校验上下限
