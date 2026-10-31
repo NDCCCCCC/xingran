@@ -1182,6 +1182,9 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
+			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1294,8 +1297,14 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
+			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
+			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only

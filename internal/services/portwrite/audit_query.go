@@ -19,8 +19,10 @@ type AuditListRequest struct {
 	PortID   string `json:"portId,omitempty"`
 	Operator string `json:"operator,omitempty"`
 	Action   string `json:"action,omitempty"`
-	// Status 过滤：succeeded | failed | rolled_back（可空 = 全部）
+	// Status 过滤：succeeded | failed（可空 = 全部）
 	Status string `json:"status,omitempty"`
+	// BatchID Phase 122 收尾：批次精确对账过滤（migration 232；历史行为 NULL 不命中）
+	BatchID string `json:"batchId,omitempty"`
 	// StartTime/EndTime RFC3339 或 "2006-01-02 15:04:05"（可空）
 	StartTime *time.Time `json:"startTime,omitempty"`
 	EndTime   *time.Time `json:"endTime,omitempty"`
@@ -73,6 +75,9 @@ func (s *portWriteServiceImpl) ListAudit(ctx context.Context, req AuditListReque
 	}
 	if req.Status != "" {
 		q = q.Where("status = ?", req.Status)
+	}
+	if req.BatchID != "" {
+		q = q.Where("batch_id = ?", req.BatchID)
 	}
 	if req.StartTime != nil {
 		q = q.Where("created_at >= ?", *req.StartTime)

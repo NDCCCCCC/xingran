@@ -403,7 +403,9 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 		if len(beforeValue) == 0 {
 			beforeValue = json.RawMessage([]byte("{}"))
 		}
-		auditRows = append(auditRows, buildAuditRow(&pr, beforeValue, req.DeviceID, operator))
+		auditRow := buildAuditRow(&pr, beforeValue, req.DeviceID, operator)
+		auditRow.BatchID = result.BatchID // Phase 122 收尾：batch 级精确对账
+		auditRows = append(auditRows, auditRow)
 	}
 	auditIDs, txErr := createAuditRowsInTx(h.core.GetDB(), auditRows)
 	if txErr != nil {

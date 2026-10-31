@@ -68,3 +68,32 @@ func TestListAudit_FilterAndPaginate(t *testing.T) {
 	assert.Equal(t, 1, res.Current)
 	assert.Equal(t, 20, res.PageSize)
 }
+
+// TestListAudit_BatchIdFilter Phase 122 收尾：batchId 精确对账过滤。
+func TestListAudit_BatchIdFilter(t *testing.T) {
+	db := newTestDB(t)
+	svc := newTestService(&countingExecutor{}, nil, db)
+
+	rows := []*models.PortWriteAudit{
+		{DeviceID: "dev-1", PortID: "p1", Action: "shutdown", Status: "succeeded", Operator: "a", BatchID: "batch-A"},
+		{DeviceID: "dev-1", PortID: "p2", Action: "shutdown", Status: "succeeded", Operator: "a", BatchID: "batch-A"},
+		{DeviceID: "dev-1", PortID: "p3", Action: "shutdown", Status: "succeeded", Operator: "a"}, // 历史行 NULL
+	}
+	for _, r := range rows {
+		require.NoError(t, db.Create(r).Error)
+	}
+	ctx := context.Background()
+
+	res, err := svc.ListAudit(ctx, AuditListRequest{BatchID: "batch-A"})
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), res.Total, "batchId 等值过滤")
+
+	res, err = svc.ListAudit(ctx, AuditListRequest{BatchID: "batch-NULL-not-exist"})
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), res.Total)
+
+	// 无 batchId → 全量（含 NULL 历史行）
+	res, err = svc.ListAudit(ctx, AuditListRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), res.Total)
+}

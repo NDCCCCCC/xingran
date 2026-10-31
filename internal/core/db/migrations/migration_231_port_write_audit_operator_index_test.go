@@ -25,3 +25,15 @@ func TestMigrate231OperatorIndex_Idempotent(t *testing.T) {
 	// 二次执行：幂等跳过不报错
 	require.NoError(t, Migrate231PortWriteAuditOperatorIndex(db))
 }
+
+// TestMigrate232BatchIdColumn_Idempotent batch_id 列双方言幂等（sqlite 方言）。
+func TestMigrate232BatchIdColumn_Idempotent(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&models.PortWriteAudit{}))
+
+	require.NoError(t, Migrate232PortWriteAuditBatchID(db))
+	assert.True(t, db.Migrator().HasColumn(&models.PortWriteAudit{}, "batch_id"))
+	// 二次执行幂等
+	require.NoError(t, Migrate232PortWriteAuditBatchID(db))
+}

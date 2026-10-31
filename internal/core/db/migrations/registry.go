@@ -51,6 +51,7 @@ var ActiveMigrations = []struct {
 	{227, "action_permission_f_type_seed_hold"},
 	{230, "rpa_worker_token"},
 	{231, "port_write_audit_operator_index"},
+	{232, "port_write_audit_batch_id"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。
