@@ -62,6 +62,8 @@ func vendorSuffix(v models.DeviceVendor) string {
 		return "2"
 	case models.VendorRuijie:
 		return "3"
+	case models.VendorCisco:
+		return "4"
 	default:
 		return "9"
 	}

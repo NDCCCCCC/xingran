@@ -78,6 +78,11 @@ func PlatformName(vendor models.DeviceVendor) string {
 		return "hp_comware" // hp_comware.yaml
 	case models.VendorRuijie:
 		return "ruijie_rjos" // ruijie_rjos.yaml（注意：文件名是 rjos 而不是 rgos）
+	case models.VendorCisco:
+		// Phase 126 (PWX-03)：Cisco IOS-XE；scrapli cisco_iosxe driver 覆盖
+		// IOS 15.x / IOS-XE 16.x/17.x。XR 命令模型完全不同（commit 两级提交）
+		// → cisco_iosxr platform deferred（见 cisco_port_template.go 头注）。
+		return "cisco_iosxe"
 	case models.VendorMaipu:
 		return "cisco_iosxe" // Maipu 使用通用的 cisco_iosxe 驱动
 	default:
