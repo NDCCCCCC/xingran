@@ -50,7 +50,19 @@ type PreviewRequest struct {
 	AllowedMode    string `json:"mode,omitempty" binding:"omitempty,oneof=add remove replace"`
 	HybridTagged   []int  `json:"hybridTagged,omitempty"`
 	HybridUntagged []int  `json:"hybridUntagged,omitempty"`
-	DryRun         bool   `json:"dryRun,omitempty"`
+	// Phase 125 (PWX-02) 端口安全参数：MaxMacCount 仅 portsec_max_mac；
+	// portsec_static_bind 复用 macAddress + vlanId 字段
+	MaxMacCount int `json:"maxMacCount,omitempty" binding:"omitempty,min=1,max=4096"`
+	DryRun      bool `json:"dryRun,omitempty"`
+}
+
+// portsecParamsOf 从 preview 请求抽取端口安全参数（非 portsec 动作返回 nil）。
+func (r PreviewRequest) portsecParamsOf() *PortSecParams {
+	switch r.Action {
+	case portcollection.PortSecEnable, portcollection.PortSecDisable, portcollection.PortSecMaxMac, portcollection.PortSecSticky, portcollection.PortSecStaticBind:
+		return &PortSecParams{MaxMACCount: r.MaxMacCount, MACAddress: r.MACAddress, VLANID: r.VLANID}
+	}
+	return nil
 }
 
 // trunkParamsOf 从 preview 请求抽取 trunk 参数（非 trunk 动作返回 nil）。
@@ -135,6 +147,11 @@ func actionSummary(action Action, portCount int, vendor models.DeviceVendor) str
 		portcollection.TrunkSetNative:      "设置 trunk native VLAN",
 		portcollection.TrunkSetAllowed:     "修改 trunk allowed VLAN 列表",
 		portcollection.TrunkSetHybrid:      "设置 hybrid tagged/untagged VLAN",
+		portcollection.PortSecEnable:       "启用端口安全",
+		portcollection.PortSecDisable:      "停用端口安全",
+		portcollection.PortSecMaxMac:       "设置端口安全 MAC 上限",
+		portcollection.PortSecSticky:       "启用 sticky MAC",
+		portcollection.PortSecStaticBind:   "静态 MAC 1:1 绑定",
 	}
 	name, ok := names[action]
 	if !ok {
@@ -182,9 +199,14 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 			return nil, portcollection.ErrDescriptionTooLong
 		}
 	default:
-		// Phase 124 trunk 动作入口校验（与 TrunkWrite 实跑同源）
+		// Phase 124 trunk / Phase 125 portsec 入口校验（与实跑同源）
 		if tp := req.trunkParamsOf(); tp != nil {
 			if err := validateTrunkRequest(req.Action, *tp); err != nil {
+				return nil, err
+			}
+		}
+		if pp := req.portsecParamsOf(); pp != nil {
+			if err := validatePortSecRequest(req.Action, *pp); err != nil {
 				return nil, err
 			}
 		}
@@ -214,6 +236,7 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		AllowedMode:    req.AllowedMode,
 		HybridTagged:   req.HybridTagged,
 		HybridUntagged: req.HybridUntagged,
+		MaxMACCount:    req.MaxMacCount,
 	})
 	if err != nil {
 		return nil, err
@@ -238,7 +261,7 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		Vendor:     string(dev.Vendor),
 		Model:      dev.Model,
 		Action:     req.Action,
-		RiskLevel:  riskLevelForActionTrunk(req.Action),
+		RiskLevel:  riskLevelForActionPortSec(req.Action),
 		Ports:      make([]PortPreviewResult, 0, len(req.PortIDs)),
 	}
 	result.Summary = actionSummary(req.Action, len(req.PortIDs), dev.Vendor)
@@ -269,7 +292,14 @@ func (s *portWriteServiceImpl) previewSinglePort(
 	}
 	out.InterfaceName = port.InterfaceName
 
-	if noop := s.checkPreState(&port, req.Action, req.Description, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress); noop != nil {
+	noop := s.checkPreState(&port, req.Action, req.Description, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress)
+	// Phase 125：端口安全 pre-state 与实跑同源
+	if noop == nil {
+		if pp := req.portsecParamsOf(); pp != nil {
+			noop = checkPortSecPreState(&port, req.Action, *pp)
+		}
+	}
+	if noop != nil {
 		out.Status = "skipped"
 		out.NoOp = true
 		out.NoOpReason = "当前状态已匹配目标状态，无需下发"
@@ -290,12 +320,13 @@ func (s *portWriteServiceImpl) previewSinglePort(
 		AllowedMode:    req.AllowedMode,
 		HybridTagged:   req.HybridTagged,
 		HybridUntagged: req.HybridUntagged,
+		MaxMACCount:    req.MaxMacCount,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	risk := riskLevelForActionTrunk(req.Action)
+	risk := riskLevelForActionPortSec(req.Action)
 	for i, cmd := range cmds {
 		cp := CommandPreview{
 			Index:     i,

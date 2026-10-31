@@ -58,6 +58,10 @@ type PortTemplateParams struct {
 	AllowedMode    string
 	HybridTagged   []int
 	HybridUntagged []int
+	// Phase 125 (PWX-02) 端口安全字段：
+	//   - MaxMACCount 仅 PortSecMaxMac 使用（1-4096）
+	//   - PortSecStaticBind 复用 MACAddress + VLANID 载体
+	MaxMACCount int
 }
 
 // 哨兵错误（Phase 51 service 翻译为 HTTP 400 / 404 / 422 等业务码）。

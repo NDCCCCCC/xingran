@@ -33,8 +33,23 @@ type TrunkParams struct {
 	HybridUntagged []int
 }
 
-// trunkRenderParams executeWrite 渲染参数透传载体（nil = 非 trunk 动作）。
-type trunkRenderParams = TrunkParams
+// PortSecParams 端口安全动作参数集（PWX-02）。
+type PortSecParams struct {
+	MaxMACCount int
+	// StaticBind 复用 MACAddress + VLANID 载体（PortSecStaticBind）
+	MACAddress string
+	VLANID     int
+}
+
+// renderExtras executeWrite 渲染参数扩展载体（nil = 既有 7 动作直通）。
+// Phase 124 trunk / Phase 125 portsec 共用，避免签名持续膨胀。
+type renderExtras struct {
+	trunk   *TrunkParams
+	portsec *PortSecParams
+}
+
+// trunkRenderParams 兼容别名（124 交付符号，writeSinglePort/executeWrite 形参）。
+type trunkRenderParams = renderExtras
 
 // validateVlanListRange VLAN 列表逐项 1-4094（复用单值 sentinel）。
 func validateVlanListRange(vlans []int) error {
@@ -109,7 +124,7 @@ func (s *portWriteServiceImpl) TrunkWrite(ctx context.Context, portID string, ac
 	if err := validateTrunkRequest(action, params); err != nil {
 		return nil, err
 	}
-	result, err := s.writeSinglePort(ctx, portID, action, "", operator, 0, "", "", "", nil, applyWriteOptions(opts), &params)
+	result, err := s.writeSinglePort(ctx, portID, action, "", operator, 0, "", "", "", nil, applyWriteOptions(opts), &renderExtras{trunk: &params})
 	if err != nil {
 		return nil, err
 	}

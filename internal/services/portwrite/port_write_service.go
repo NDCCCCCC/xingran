@@ -146,6 +146,8 @@ type PortWriteService interface {
 	ListAudit(ctx context.Context, req AuditListRequest) (*AuditListResult, error)
 	// TrunkWrite Phase 124 (PWX-01)：trunk native/allowed + hybrid 写入口。
 	TrunkWrite(ctx context.Context, portID string, action Action, params TrunkParams, operator string, opts ...WriteOption) (*PortResult, error)
+	// PortSecWrite Phase 125 (PWX-02)：端口安全写入口。
+	PortSecWrite(ctx context.Context, portID string, action Action, params PortSecParams, operator string, opts ...WriteOption) (*PortResult, error)
 }
 
 // portWriteServiceImpl 私有实现。字段类型为 interface 以启用 testify/mock（D-18）。
@@ -401,7 +403,12 @@ func (s *portWriteServiceImpl) writeSinglePort(
 		return nil, fmt.Errorf("query port: %w", err)
 	}
 
-	if noopResult := s.checkPreState(&port, action, desc, vlanId, bindOp, ipAddr, macAddr); noopResult != nil {
+	noopResult := s.checkPreState(&port, action, desc, vlanId, bindOp, ipAddr, macAddr)
+	// Phase 125：端口安全 pre-state（复用采集缓存 PortSecurityEnabled/MaxMACCount）
+	if noopResult == nil && trunk != nil && trunk.portsec != nil {
+		noopResult = checkPortSecPreState(&port, action, *trunk.portsec)
+	}
+	if noopResult != nil {
 		return noopResult, nil
 	}
 
@@ -421,7 +428,7 @@ func (s *portWriteServiceImpl) writeSinglePort(
 	}
 
 	var snap *models.PortWriteSnapshot
-	if isCriticalActionExt(action) {
+	if isCriticalActionPortSec(action) {
 		var cerr error
 		snap, cerr = s.captureSnapshot(ctx, &port, &dev, action)
 		if cerr != nil {
@@ -519,12 +526,20 @@ func (s *portWriteServiceImpl) executeWrite(
 		MACAddress:     macAddr,
 		Dot1xUserLimit: dot1xUserLimit,
 	}
-	if trunk != nil {
-		tpl.NativeVLAN = trunk.NativeVLAN
-		tpl.AllowedVLANs = trunk.AllowedVLANs
-		tpl.AllowedMode = trunk.AllowedMode
-		tpl.HybridTagged = trunk.HybridTagged
-		tpl.HybridUntagged = trunk.HybridUntagged
+	if trunk != nil && trunk.trunk != nil {
+		tpl.NativeVLAN = trunk.trunk.NativeVLAN
+		tpl.AllowedVLANs = trunk.trunk.AllowedVLANs
+		tpl.AllowedMode = trunk.trunk.AllowedMode
+		tpl.HybridTagged = trunk.trunk.HybridTagged
+		tpl.HybridUntagged = trunk.trunk.HybridUntagged
+	}
+	if trunk != nil && trunk.portsec != nil {
+		tpl.MaxMACCount = trunk.portsec.MaxMACCount
+		// PortSecStaticBind 复用 MAC/VLAN 载体
+		if trunk.portsec.MACAddress != "" {
+			tpl.MACAddress = trunk.portsec.MACAddress
+			tpl.VLANID = trunk.portsec.VLANID
+		}
 	}
 	cmds, err := portcollection.RenderCommand(dev.Vendor, action, tpl)
 	if err != nil {
