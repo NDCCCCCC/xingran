@@ -1,29 +1,30 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.25
-milestone_name: 全站权限治理与样式收敛
-status: Awaiting next milestone
-stopped_at: v1.25（全站权限治理与样式收敛）全部 10 个 Phase（84~93）全量执行完成并通过全系统双端终验（93-VERIFICATION.md 已归档）；全里程碑圆满封板！
-last_updated: "2026-10-30T08:59:58.358Z"
-last_activity: 2026-10-30
-last_activity_desc: Milestone v1.25 completed and archived
+milestone: v1.51
+milestone_name: 端口写生产级操作体验与平台质量收口
+status: Milestone initiated — awaiting phase 121 planning
+stopped_at: v1.51 立项完成（2026-10-31）：范围 A 端口写深化 + B 平台技术债 + D 收尾杂项，21 REQ / Phases 121-129，phase 编号延续 GitHub v1.33 线从 121 续编
+last_updated: "2026-10-31T22:30:00.000Z"
+last_activity: 2026-10-31
+last_activity_desc: Milestone v1.51 initiated (A+B+D scope, 21 REQ)
 state_head: 27ac078e18b72d83b9690eaed617328c390687cd
 progress:
-  total_phases: 10
-  completed_phases: 8
-  total_plans: 41
-  completed_plans: 32
-  percent: 78
-current_phase: 93
-current_phase_name: room-devices 拆分 + 视觉回归验收
+  total_phases: 9
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
+current_phase: 121
+current_phase_name: 端口写 dry-run 预览 + 命令预览 UI
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.25 milestone complete
-**Last activity**: 2026-10-30
+**Status**: v1.51 milestone active（端口写生产级操作体验与平台质量收口）
+**Last activity**: 2026-10-31 — v1.51 立项（范围 A+B+D，21 REQ / Phases 121-129）
+**Prior activity**: 2026-10-30 — v1.25 SHIPPED & ARCHIVED 并完成 GitHub 同步（PR #36/#37 合并，main CI/deploy 全绿，技术债 D1-D10 清偿）
 **Prior activity**: 2026-10-29 — Phase 86（W4+W5）与 Phase 90（W0~W3）全部收口并验收；下一步 Phase 87
 **Prior activity (2)**: 2026-10-28 — v1.24 全量执行完成（Phase 77 视觉验证 + Phase 83 拆分收口 + VIS-03 死规则修复）
 **Prior activity (2)**: 2026-10-28 — v1.24 执行期：78 权限双端闭环（后端严格中间件 + 前端三态门控）+ 79 PG 实机验收（三层证据）+ 82 lint 清零

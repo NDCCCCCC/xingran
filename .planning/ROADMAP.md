@@ -2,6 +2,7 @@
 
 ## Milestones
 
+- 🚧 **v1.51 端口写生产级操作体验与平台质量收口** — Phases 121-129 (in progress, 21 REQ) — 见下方 Phases
 - ✅ **v1.25 全站权限治理与样式收敛** — Phases 84-93 (shipped 2026-10-30) — [v1.25-ROADMAP.md](milestones/v1.25-ROADMAP.md)
 - ✅ **v1.24 视觉回归修复与遗留债务清偿** — Phases 76-83 (shipped 2026-10-28) — [v1.24-ROADMAP.md](milestones/v1.24-ROADMAP.md)
 - ✅ **v1.23 前端契约全量收尾与遗留清偿** — Phases 69-75 (shipped 2026-10-28) — [v1.23-ROADMAP.md](milestones/v1.23-ROADMAP.md)
@@ -12,6 +13,26 @@
 ---
 
 ## Phases
+
+<details open>
+<summary>🚧 v1.51 端口写生产级操作体验与平台质量收口 (Phases 121-129) — IN PROGRESS 2026-10-31</summary>
+
+> 需求基线：`.planning/REQUIREMENTS.md`（21 REQ）｜范围裁定：A 端口写深化 + B 平台技术债 + D 收尾杂项（C 组 RPA 编辑器 defer）
+> Phase 编号：延续 GitHub v1.33 线从 **121** 续编
+
+- [ ] Phase 121: 端口写 dry-run 预览 + 命令预览 UI (PORTW-01/02)
+- [ ] Phase 122: 批量写实时进度 SSE/WS — BATCH-05 清偿 (PORTW-03)
+- [ ] Phase 123: 安全三件套 — 快照回滚 + 并发写互斥 + 不可达预检 (PORTW-04/05/06)
+- [ ] Phase 124: VLAN 扩展 — trunk native/allowed + hybrid 华为/H3C (PWX-01)
+- [ ] Phase 125: 端口安全 — port-security/sticky/静态 MAC 绑定 (PWX-02)
+- [ ] Phase 126: Cisco IOS-XE 第 4 厂商 + 跨固件差异矩阵 (PWX-03)
+- [ ] Phase 127: 审计 UI + 审计治理 + 3 厂商 e2e + handler e2e (PWX-04/05/06 + DEBT-02)
+- [ ] Phase 128: 平台质量收口 — addomain 测试回 77.5 / RPA Token / operlog 白名单 / permission 时序 / 排序菜单注册 (DEBT-01/03/04/05 + TIDY-01/03)
+- [ ] Phase 129: 目录改名 + 双线 planning 合流 + UAT 回补组织（需窗口与真机）(DEBT-06 + TIDY-02)
+
+**执行波次建议：** W1 零依赖（121 → 122/128 并行）→ W2 需设备环境（123 → 124/125 并行）→ W3（126 → 127）→ W4 收尾（129，需真机）
+
+</details>
 
 <details>
 <summary>✅ v1.25 全站权限治理与样式收敛 (Phases 84-93) — SHIPPED 2026-10-30</summary>
@@ -44,4 +65,4 @@
 </details>
 
 ---
-*Roadmap updated: 2026-10-30 after v1.25 milestone completion*
+*Roadmap updated: 2026-10-31 — v1.51 milestone initiated (Phases 121-129, 21 REQ)*

@@ -1,7 +1,27 @@
 ---
-last_updated: 2026-10-30
-update_trigger: v1.25 milestone SHIPPED & ARCHIVED (全站权限治理与样式收敛)
-previous_update: 2026-10-28 v1.25 milestone INITIATED
+last_updated: 2026-10-31
+update_trigger: v1.51 milestone INITIATED (端口写生产级操作体验与平台质量收口，A+B+D 范围，21 REQ)
+previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
+---
+
+## Current Milestone: v1.51 端口写生产级操作体验与平台质量收口 (Production-Grade Port-Write UX & Platform Quality Closeout) — 🚧 IN PROGRESS
+
+**Goal:** 让端口写从「能写」进化为「敢写、可审计、可观测」——dry-run 预览、批量实时进度、快照回滚、并发互斥、VLAN/端口安全能力扩展、Cisco 第 4 厂商，同步清偿平台技术债（覆盖率回 77.5、审计治理、RPA Token、目录改名）与收尾杂项。
+
+**Status:** INITIATED 2026-10-31 | **Phases:** 9 (121-129，编号延续 GitHub v1.33 线) | **Requirements:** 21（PORTW×6 / PWX×6 / DEBT×6 / TIDY×3）
+
+**范围裁定（用户 2026-10-31）:** 执行候选 A（网络设备端口写深化）+ B（平台技术债清偿）+ D（收尾杂项）；C 组（RPA 拖拽编辑器/插件录制）defer 至 v1.52+；对账 MV 超时根治继续等 DBA 诊断。
+
+**关键外部依赖:**
+- Phase 123/124/125/126 的命令验证与 Phase 129 的 UAT 回补需要**真机**（华为 S8700 / 锐捷 RS8607E / H3C，+ Cisco 若到位）
+- DEBT-02 审计索引操作千万行级表，需 DBA 窗口
+
+**锁定决策:**
+- D-01 phase 编号从 121 续编（延续 GitHub v1.33 线），本地 84-93 与远端 114-120 两线编号就此合流
+- D-02 dry-run（121）先行，是回滚/互斥等安全机制的基座
+- D-03 波次：W1 零依赖（121→122/128）→ W2 需设备（123→124/125）→ W3（126→127）→ W4 收尾（129）
+- D-04 全程七 gate 不倒退（go build / go test / 后端 coverage ≥76.5→目标 77.5 / 前端 floors / lint / type-check / diff coverage）
+
 ---
 
 ## Current Milestone: v1.25 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence) — ✅ SHIPPED 2026-10-30
