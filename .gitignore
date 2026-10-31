@@ -149,3 +149,8 @@ xingran_menus_dedup.sql
 node_modules/
 .vite/
 .vitest-cache/
+.tmp-*.cjs
+PR_BODY.md
+QUICK_FIX_PATCH.md
+ruoyi-backend-linux
+*.stackdump
