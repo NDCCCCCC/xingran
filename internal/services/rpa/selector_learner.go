@@ -9,6 +9,8 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/websocket"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -28,16 +30,24 @@ type selectorLearnerImpl struct {
 	cache  base.CacheProvider
 	config *config.Config
 	mu     sync.RWMutex
+	// noticeHub TIDY-03（v1.51）：可选 WebSocket 通知枢纽（nil 安全）。
+	noticeHub *websocket.NoticeHub
 }
 
 // NewSelectorLearner 创建选择器学习服务
 // Phase 103 CONV-03 (D-103-2): cache cache.Cache → cache base.CacheProvider
-func NewSelectorLearner(db *gorm.DB, cache base.CacheProvider, cfg *config.Config) SelectorLearner {
-	return &selectorLearnerImpl{
+// TIDY-03（v1.51）：可选变参注入 NoticeHub（nil 安全）——选择器连续失败时经
+// WebSocket 广播更新提醒；不传 = 维持旧行为（仅本地记录）。
+func NewSelectorLearner(db *gorm.DB, cache base.CacheProvider, cfg *config.Config, noticeHub ...*websocket.NoticeHub) SelectorLearner {
+	impl := &selectorLearnerImpl{
 		db:     db,
 		cache:  cache,
 		config: cfg,
 	}
+	for _, h := range noticeHub {
+		impl.noticeHub = h
+	}
+	return impl
 }
 
 // SelectorSuccessRecord 选择器成功记录
@@ -384,10 +394,33 @@ func (l *selectorLearnerImpl) getCacheKey(pageURL, elementID string) string {
 	return systemServices.GetRpaSelectorBestKey(pageURL, elementID)
 }
 
-// markSelectorForUpdate 标记选择器需要更新
+// markSelectorForUpdate 标记选择器需要更新（TIDY-03 :389 实现）。
+//
+// 通知机制（复用既有 NoticeHub WebSocket 链路，不新增通知基建）：
+//   - noticeHub 注入时：BroadcastToAll 广播 selector_update_required 消息，
+//     管理端（RPA AI 面板）据此提示「该选择器连续失败 ≥3 次，建议重新学习」；
+//   - 未注入（旧构造签名/单测）：仅 WARN 日志，行为与 TODO 之前一致。
+//
+// 刻意不做的事：不落库「待处理任务」——SelectorFailureRecord 本身就是持久
+// 待办（FailureCount + ResolvedAt 已表达未解决状态），再建任务表是第二真相。
 func (l *selectorLearnerImpl) markSelectorForUpdate(ctx context.Context, record *SelectorFailureRecord) {
-	// TODO: 实现选择器更新通知机制
-	// 可以通过 WebSocket 通知前端，或创建待处理任务
+	if record == nil {
+		return
+	}
+	applogger.Warnf("[RPA-SELECTOR] 选择器连续失败 %d 次，需要更新: page=%s element=%s selector=%s lastError=%s",
+		record.FailureCount, record.PageURL, record.ElementID, record.Selector, record.ErrorMessage)
+
+	if l.noticeHub == nil {
+		return
+	}
+	l.noticeHub.BroadcastToAll(websocket.NoticeMessage{
+		Type:     "selector_update_required",
+		Title:    "RPA 选择器需要更新",
+		Content: fmt.Sprintf("选择器连续失败 %d 次（页面 %s / 元素 %s），建议在 RPA AI 面板重新学习。",
+			record.FailureCount, record.PageURL, record.ElementID),
+		Priority:  2,
+		Timestamp: time.Now().Unix(),
+	})
 }
 
 // GetSelectorHistory 获取选择器历史记录
