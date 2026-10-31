@@ -4,8 +4,8 @@
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
     "mounts": 207,
-    "routes": 699,
-    "writeRoutes": 308,
+    "routes": 700,
+    "writeRoutes": 309,
     "deferredWriteRoutes": 138
   },
   "routes": [
@@ -3878,6 +3878,22 @@
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/port_write_router.go",
       "line": 54
+    },
+    {
+      "method": "POST",
+      "path": "/network/ports/write/trunk",
+      "mountGroup": "write",
+      "setup": "SetupPortWriteRouter",
+      "isWrite": true,
+      "handler": "TrunkWrite",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "network:port:query",
+        "network:port:write"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/network/port_write_router.go",
+      "line": 68
     },
     {
       "method": "POST",

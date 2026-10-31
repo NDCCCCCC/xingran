@@ -44,7 +44,28 @@ type PreviewRequest struct {
 	BindOp      string   `json:"bindOp,omitempty" binding:"omitempty,oneof=add remove"`
 	IPAddress   string   `json:"ipAddress,omitempty"`
 	MACAddress  string   `json:"macAddress,omitempty"`
-	DryRun      bool     `json:"dryRun,omitempty"`
+	// Phase 124 (PWX-01) trunk/hybrid 参数（action 为 trunk_* 时使用）
+	NativeVLAN     int    `json:"nativeVlan,omitempty" binding:"omitempty,min=1,max=4094"`
+	AllowedVLANs   []int  `json:"allowedVlans,omitempty"`
+	AllowedMode    string `json:"mode,omitempty" binding:"omitempty,oneof=add remove replace"`
+	HybridTagged   []int  `json:"hybridTagged,omitempty"`
+	HybridUntagged []int  `json:"hybridUntagged,omitempty"`
+	DryRun         bool   `json:"dryRun,omitempty"`
+}
+
+// trunkParamsOf 从 preview 请求抽取 trunk 参数（非 trunk 动作返回 nil）。
+func (r PreviewRequest) trunkParamsOf() *TrunkParams {
+	switch r.Action {
+	case portcollection.TrunkSetNative, portcollection.TrunkSetAllowed, portcollection.TrunkSetHybrid:
+		return &TrunkParams{
+			NativeVLAN:     r.NativeVLAN,
+			AllowedVLANs:   r.AllowedVLANs,
+			AllowedMode:    r.AllowedMode,
+			HybridTagged:   r.HybridTagged,
+			HybridUntagged: r.HybridUntagged,
+		}
+	}
+	return nil
 }
 
 // CommandPreview 单条命令的预览行。
@@ -111,6 +132,9 @@ func actionSummary(action Action, portCount int, vendor models.DeviceVendor) str
 		portcollection.ActionDot1xDisable:  "停用 802.1X",
 		portcollection.ActionSetAccessVLAN: "修改 access VLAN",
 		portcollection.ActionPortBinding:   "端口 IP/MAC 绑定",
+		portcollection.TrunkSetNative:      "设置 trunk native VLAN",
+		portcollection.TrunkSetAllowed:     "修改 trunk allowed VLAN 列表",
+		portcollection.TrunkSetHybrid:      "设置 hybrid tagged/untagged VLAN",
 	}
 	name, ok := names[action]
 	if !ok {
@@ -157,6 +181,13 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		if len([]rune(req.Description)) > 80 {
 			return nil, portcollection.ErrDescriptionTooLong
 		}
+	default:
+		// Phase 124 trunk 动作入口校验（与 TrunkWrite 实跑同源）
+		if tp := req.trunkParamsOf(); tp != nil {
+			if err := validateTrunkRequest(req.Action, *tp); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	var dev models.NetworkDevice
@@ -178,6 +209,11 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		IPAddress:      req.IPAddress,
 		MACAddress:     req.MACAddress,
 		Dot1xUserLimit: nil,
+		NativeVLAN:     req.NativeVLAN,
+		AllowedVLANs:   req.AllowedVLANs,
+		AllowedMode:    req.AllowedMode,
+		HybridTagged:   req.HybridTagged,
+		HybridUntagged: req.HybridUntagged,
 	})
 	if err != nil {
 		return nil, err
@@ -202,7 +238,7 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		Vendor:     string(dev.Vendor),
 		Model:      dev.Model,
 		Action:     req.Action,
-		RiskLevel:  riskLevelForAction(req.Action),
+		RiskLevel:  riskLevelForActionTrunk(req.Action),
 		Ports:      make([]PortPreviewResult, 0, len(req.PortIDs)),
 	}
 	result.Summary = actionSummary(req.Action, len(req.PortIDs), dev.Vendor)
@@ -249,12 +285,17 @@ func (s *portWriteServiceImpl) previewSinglePort(
 		IPAddress:      req.IPAddress,
 		MACAddress:     req.MACAddress,
 		Dot1xUserLimit: dot1xLimit,
+		NativeVLAN:     req.NativeVLAN,
+		AllowedVLANs:   req.AllowedVLANs,
+		AllowedMode:    req.AllowedMode,
+		HybridTagged:   req.HybridTagged,
+		HybridUntagged: req.HybridUntagged,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	risk := riskLevelForAction(req.Action)
+	risk := riskLevelForActionTrunk(req.Action)
 	for i, cmd := range cmds {
 		cp := CommandPreview{
 			Index:     i,

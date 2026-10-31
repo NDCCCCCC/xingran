@@ -272,8 +272,11 @@ func (s *portWriteServiceImpl) captureSnapshot(ctx context.Context, port *models
 func (s *portWriteServiceImpl) rollbackSnapshot(ctx context.Context, snap *models.PortWriteSnapshot) (rolledBack bool, rollbackErr error) {
 	var cmds []string
 	if err := json.Unmarshal([]byte(snap.RollbackCommands), &cmds); err != nil || len(cmds) == 0 {
-		s.markSnapshotFailed(ctx, snap, "no rollback commands available")
-		return false, fmt.Errorf("no rollback commands: %v", err)
+		// 无回滚命令（如 Phase 124 trunk 动作：DB 无原值可恢复）≠ 失败 ——
+		// 快照保留供追溯，status=no_rollback 区别于 rollback_failed 告警。
+		s.db.WithContext(ctx).Model(&models.PortWriteSnapshot{}).Where("id = ?", snap.ID).
+			Update("status", "no_rollback")
+		return false, nil
 	}
 	execErr := s.deviceExecutor.ExecuteCustom(ctx, snap.DeviceID, func(execCtx context.Context, pc *device.PooledConnection) error {
 		wrapper := pc.GetWrapper()

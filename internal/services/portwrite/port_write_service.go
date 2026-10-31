@@ -144,6 +144,8 @@ type PortWriteService interface {
 	PreviewPortWrite(ctx context.Context, req PreviewRequest, operator string) (*PreviewResult, error)
 	// ListAudit Phase 127 前置（PWX-04）：端口写审计分页查询（纯读）。
 	ListAudit(ctx context.Context, req AuditListRequest) (*AuditListResult, error)
+	// TrunkWrite Phase 124 (PWX-01)：trunk native/allowed + hybrid 写入口。
+	TrunkWrite(ctx context.Context, portID string, action Action, params TrunkParams, operator string, opts ...WriteOption) (*PortResult, error)
 }
 
 // portWriteServiceImpl 私有实现。字段类型为 interface 以启用 testify/mock（D-18）。
@@ -363,7 +365,7 @@ func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, o
 func (s *portWriteServiceImpl) writeAndRefresh(
 	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int, opts []WriteOption,
 ) (*PortResult, error) {
-	result, err := s.writeSinglePort(ctx, portID, action, desc, operator, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit, applyWriteOptions(opts))
+	result, err := s.writeSinglePort(ctx, portID, action, desc, operator, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit, applyWriteOptions(opts), nil)
 	if err == nil && result != nil && result.Status == "succeeded" && result.DeviceID != "" {
 		s.refreshPortStatus(ctx, result.DeviceID)
 	}
@@ -388,13 +390,13 @@ func (s *portWriteServiceImpl) writeAndRefresh(
 //   - ActionPortBinding：bindOp/ipAddr/macAddr 用于 RenderCommand.BindOp/IPAddress/MACAddress（pre-state 跳过）
 //   - 5 v1.19 action 路径下这 4 个参数均忽略(由 caller 传 0/""/"")
 func (s *portWriteServiceImpl) writeSinglePort(
-	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int, opts writeOptions,
+	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int, opts writeOptions, trunk *trunkRenderParams,
 ) (*PortResult, error) {
 	var port models.DevicePortStatus
 	err := s.db.WithContext(ctx).Where("id = ?", portID).First(&port).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return s.executeWrite(ctx, portID, "", action, desc, operator, "", vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit)
+			return s.executeWrite(ctx, portID, "", action, desc, operator, "", vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit, trunk)
 		}
 		return nil, fmt.Errorf("query port: %w", err)
 	}
@@ -419,7 +421,7 @@ func (s *portWriteServiceImpl) writeSinglePort(
 	}
 
 	var snap *models.PortWriteSnapshot
-	if isCriticalAction(action) {
+	if isCriticalActionExt(action) {
 		var cerr error
 		snap, cerr = s.captureSnapshot(ctx, &port, &dev, action)
 		if cerr != nil {
@@ -428,16 +430,17 @@ func (s *portWriteServiceImpl) writeSinglePort(
 		}
 	}
 
-	result, werr := s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit)
+	result, werr := s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit, trunk)
 	if snap != nil {
 		if werr != nil || (result != nil && result.Status == "failed") {
 			// 下发失败 → 自动逆序回滚（PORTW-04）；回滚结果留痕 Extra
-			if rolled, rerr := s.rollbackSnapshot(ctx, snap); rolled {
+			rolled, rerr := s.rollbackSnapshot(ctx, snap)
+			if rolled {
 				if result.Extra == nil {
 					result.Extra = make(map[string]interface{})
 				}
 				result.Extra["rollback"] = "rolled_back"
-			} else {
+			} else if rerr != nil {
 				if result.Extra == nil {
 					result.Extra = make(map[string]interface{})
 				}
@@ -446,6 +449,12 @@ func (s *portWriteServiceImpl) writeSinglePort(
 				if werr == nil {
 					werr = fmt.Errorf("write failed and rollback failed: snapshot %s", snap.ID)
 				}
+			} else {
+				// 无回滚命令（trunk 等无 DB 原值动作）—— 快照保留，显式留痕
+				if result.Extra == nil {
+					result.Extra = make(map[string]interface{})
+				}
+				result.Extra["rollback"] = "no_rollback"
 			}
 		} else if result != nil && result.Status == "succeeded" {
 			s.markSnapshotKept(ctx, snap.ID)
@@ -490,7 +499,7 @@ func (s *portWriteServiceImpl) releasePortStatusSafe(ctx context.Context, portID
 //	在 end 掉到 privileged EXEC 后会自动 escalate 回 configuration（多一次来回开销），
 //	表面 work 但每 port 多 2 条 SSH 命令 + priv 状态抖动，非正确解法。
 func (s *portWriteServiceImpl) executeWrite(
-	ctx context.Context, portID, deviceID string, action Action, desc, operator, interfaceName string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int,
+	ctx context.Context, portID, deviceID string, action Action, desc, operator, interfaceName string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int, trunk *trunkRenderParams,
 ) (*PortResult, error) {
 	if deviceID == "" {
 		return nil, ErrDeviceNotFound
@@ -501,7 +510,7 @@ func (s *portWriteServiceImpl) executeWrite(
 		return nil, fmt.Errorf("query device: %w", err)
 	}
 
-	cmds, err := portcollection.RenderCommand(dev.Vendor, action, portcollection.PortTemplateParams{
+	tpl := portcollection.PortTemplateParams{
 		InterfaceName:  expandInterfaceName(interfaceName, dev.Vendor),
 		Description:    desc,
 		VLANID:         vlanId,
@@ -509,7 +518,15 @@ func (s *portWriteServiceImpl) executeWrite(
 		IPAddress:      ipAddr,
 		MACAddress:     macAddr,
 		Dot1xUserLimit: dot1xUserLimit,
-	})
+	}
+	if trunk != nil {
+		tpl.NativeVLAN = trunk.NativeVLAN
+		tpl.AllowedVLANs = trunk.AllowedVLANs
+		tpl.AllowedMode = trunk.AllowedMode
+		tpl.HybridTagged = trunk.HybridTagged
+		tpl.HybridUntagged = trunk.HybridUntagged
+	}
+	cmds, err := portcollection.RenderCommand(dev.Vendor, action, tpl)
 	if err != nil {
 		return nil, err
 	}

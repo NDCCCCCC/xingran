@@ -83,12 +83,12 @@ func TestRollback_ReverseOrder(t *testing.T) {
 	}
 	assert.Equal(t, []string{"undo shutdown", "port default vlan 100", "interface GE0/0/1"}, reversed,
 		"回滚消费顺序必须是快照命令的逆序")
-	// 无回滚命令的快照 → rollback_failed 告警语义
+	// 无回滚命令的快照（如 Phase 124 trunk 动作）→ no_rollback 语义（非失败告警）
 	svc := newTestService(&countingExecutor{}, nil, newTestDB(t))
 	empty := &models.PortWriteSnapshot{ID: "snap-empty", DeviceID: "device-x", RollbackCommands: `[]`}
 	rolled, rerr := svc.rollbackSnapshot(context.Background(), empty)
 	assert.False(t, rolled)
-	require.Error(t, rerr)
+	assert.NoError(t, rerr, "无回滚命令 ≠ 回滚失败（Phase 124 语义更新）")
 }
 
 // TestLock_ConcurrentContention PORTW-05 验收：并发竞争同一端口恰一个成功。

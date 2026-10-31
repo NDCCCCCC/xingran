@@ -64,4 +64,6 @@ func SetupPortWriteRouter(r *gin.RouterGroup, core *core.Core) {
 	write.POST("/preview", handler.PortWritePreview)
 	// v1.51 (Phase 127 PWX-04 前置)：端口写审计分页查询（纯读）
 	write.POST("/audit/list", handler.PortWriteAuditList)
+	// v1.51 (Phase 124 PWX-01)：trunk native/allowed + hybrid（单端点三动作）
+	write.POST("/trunk", handler.TrunkWrite)
 }
