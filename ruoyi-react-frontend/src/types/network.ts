@@ -488,6 +488,8 @@ export interface PortWriteAuditListRequest {
   status?: string;
   startTime?: string;
   endTime?: string;
+  /** 契约 9a1ea4d7: 等值过滤——PORTW-03 断线对账精确拉取该批次审计行 */
+  batchId?: string;
 }
 
 /** 端口写审计分页响应 (项目分页约定: list/total/current/pageSize) */

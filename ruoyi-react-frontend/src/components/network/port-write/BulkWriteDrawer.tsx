@@ -222,7 +222,9 @@ export function BulkWriteDrawer({
   }, [phase]);
 
   // 断线对账（契约: WS 不补发, audit 是真相源）：executing 且已锁定 batchId 时,
-  // 每 15s 检查一次——距最后事件 >20s（断线丢事件/重连后）即拉 audit 刷新进度快照
+  // 每 15s 检查一次——距最后事件 >20s（断线丢事件/重连后）即拉 audit 刷新进度快照。
+  // 契约 9a1ea4d7: 优先 batchId 等值过滤（精确）; 历史批次（migration 232 前落库）
+  // batchId 为空时退回 deviceId+pageSize 近似兜底（两路径并存）。
   useEffect(() => {
     if (phase !== "executing") return;
     const timer = setInterval(() => {
@@ -232,7 +234,8 @@ export function BulkWriteDrawer({
       listPortWriteAudits({
         current: 1,
         pageSize: Math.min(cur.total, 100),
-        deviceId: lastDeviceId || undefined,
+        batchId: cur.batchId,
+        deviceId: lastDeviceId || undefined, // 历史批次兜底（batchId 过滤为空时生效）
       })
         .then((res) => {
           const rows = (res.list ?? []).filter(
