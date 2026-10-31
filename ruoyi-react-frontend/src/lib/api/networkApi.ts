@@ -308,7 +308,12 @@ export const writePortBinding = async (
  *   BulkWriteDrawer 必须读 result.failed/succeeded/skipped 数组分区, 不能靠 catch
  */
 export const batchWritePorts = async (req: BatchWriteRequest): Promise<BatchResult> => {
-  const result = await post<BatchResult>("/network/ports/write/batch", req);
+  // Phase 122 (ece40502): data.batchId 与 WS port_write_* 事件同值, 供进度订阅关联与对账
+  const result = await post<BatchResult & { batchId?: string }>(
+    "/network/ports/write/batch",
+    req
+  );
+  // data.batchId 与 WS port_write_* 事件同值; 类型经 BatchResult.batchId 暴露
   return result.data!;
 };
 

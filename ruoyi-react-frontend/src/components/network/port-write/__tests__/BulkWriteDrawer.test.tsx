@@ -48,6 +48,22 @@ vi.mock("@/lib/api/networkApi", () => ({
   previewBatchWritePorts: (...args: unknown[]) => mockPreviewBatchWritePorts(...args),
 }));
 
+// PORTW-03: 可控的 noticeStore 进度事件派发（capture 模式, 测试手动触发回调）
+const mockPortWriteListeners = new Set<(e: unknown) => void>();
+function emitPortWriteEvent(event: unknown): void {
+  mockPortWriteListeners.forEach((cb) => cb(event));
+}
+vi.mock("@/store/noticeStore", () => ({
+  useNoticeStore: {
+    getState: () => ({
+      onPortWriteProgress: (cb: (e: unknown) => void) => {
+        mockPortWriteListeners.add(cb);
+        return () => mockPortWriteListeners.delete(cb);
+      },
+    }),
+  },
+}));
+
 import { BulkWriteDrawer } from "../BulkWriteDrawer";
 
 // Test wrapper: antd App 提供 message context + MemoryRouter 提供 useNavigate context
@@ -205,6 +221,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
   beforeEach(() => {
     mockBatchWritePorts.mockReset();
     mockPreviewBatchWritePorts.mockReset();
+    mockPortWriteListeners.clear();
     // 默认 dry-run 预览成功（PORTW-02 两段式第一段），各用例可 override
     mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
   });
@@ -960,5 +977,263 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     expect(
       (mockBatchWritePorts.mock.calls[0][0] as { skipPreflight?: boolean }).skipPreflight
     ).toBe(true);
+  });
+
+  // ==================== Phase 122 PORTW-03: WS 实时进度（契约 ece40502） ====================
+
+  it("PORTW-03: WS progress 事件驱动真实进度视图（Progress + 端口逐行点亮）", async () => {
+    mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
+    mockBatchWritePorts.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          // 写请求悬挂期间推 WS 事件（模拟后端逐端口推送）
+          setTimeout(() => {
+            emitPortWriteEvent({
+              type: "port_write_progress",
+              batchId: "batch-1",
+              deviceId: DEVICE_A,
+              action: "shutdown",
+              portId: "port-a-1",
+              interfaceName: "GigabitEthernet0/1",
+              index: 1,
+              total: 2,
+              status: "succeeded",
+            });
+          }, 50);
+          // 第二端口事件延迟派发: 避免 React 同批合并渲染吞掉首行（真实事件间隔 ~1s）
+          setTimeout(() => {
+            emitPortWriteEvent({
+              type: "port_write_progress",
+              batchId: "batch-1",
+              deviceId: DEVICE_A,
+              action: "shutdown",
+              portId: "port-a-2",
+              interfaceName: "GigabitEthernet0/2",
+              index: 2,
+              total: 2,
+              status: "skipped",
+            });
+          }, 250);
+          // 800ms 后同步响应兜底
+          setTimeout(() => {
+            resolve({
+              batchId: "batch-1",
+              succeeded: [makePortResult("port-a-1", "succeeded")],
+              failed: [],
+              skipped: [makePortResult("port-a-2", "skipped")],
+            } as BatchResult);
+          }, 800);
+        })
+    );
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1, PORT_A2]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillAndSubmit();
+
+    // 确认 listener 已随 executing 挂载
+    await waitFor(() => {
+      expect(mockPortWriteListeners.size).toBeGreaterThan(0);
+    });
+    // executing 视图: 真实进度行点亮（接口名 + 状态 Tag）
+    expect(await screen.findByText("GigabitEthernet0/1")).toBeInTheDocument();
+    // 第二事件 250ms 派发, 断言等待其到达
+    expect(await screen.findByText("GigabitEthernet0/2")).toBeInTheDocument();
+    expect(screen.getByText("跳过")).toBeInTheDocument();
+
+    // 同步响应到达 → result 视图（BatchResult 兜底真相源）
+    await waitFor(
+      () => {
+        expect(screen.getByText("✓ 成功")).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
+  });
+
+  it("PORTW-03: completed 事件渲染 summary 三计数 + fail-fast 中断文案", async () => {
+    mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
+    mockBatchWritePorts.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            emitPortWriteEvent({
+              type: "port_write_progress",
+              batchId: "batch-2",
+              deviceId: DEVICE_A,
+              action: "shutdown",
+              portId: "port-a-1",
+              interfaceName: "GigabitEthernet0/1",
+              index: 1,
+              total: 2,
+              status: "failed",
+              message: "device timeout",
+            });
+          }, 50);
+          // completed 延后派发: 与 progress 分批（真实间隔 ~1s）
+          setTimeout(() => {
+            emitPortWriteEvent({
+              type: "port_write_completed",
+              batchId: "batch-2",
+              deviceId: DEVICE_A,
+              action: "shutdown",
+              portId: null,
+              interfaceName: null,
+              index: 2,
+              total: 2,
+              status: "failed",
+              summary: '{"succeeded":0,"failed":1,"skipped":0}',
+              message: "批次中断（fail-fast）",
+            });
+          }, 250);
+          setTimeout(() => {
+            resolve({
+              batchId: "batch-2",
+              succeeded: [],
+              failed: [makePortResult("port-a-1", "failed", "device timeout")],
+              skipped: [],
+            } as BatchResult);
+          }, 800);
+        })
+    );
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1, PORT_A2]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillAndSubmit();
+
+    // completed 终态: summary 计数 + fail-fast 文案（executing 视图内）
+    expect(await screen.findByText("批次中断（fail-fast）")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("✗ 失败")).toBeInTheDocument();
+    });
+
+    // 同步响应兜底 → result 视图
+    await waitFor(
+      () => {
+        expect(screen.getByText(/重试失败端口/)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
+  });
+
+  it("PORTW-03: WS 不可用降级 — 无事件时回退 indeterminate 提示, 同步响应照常进 result", async () => {
+    mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
+    mockBatchWritePorts.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          // 延迟 resolve: 模拟真实批次耗时, 让 executing 降级态可观察
+          setTimeout(() => {
+            resolve({
+              succeeded: [makePortResult("port-a-1", "succeeded")],
+              failed: [],
+              skipped: [],
+            } as BatchResult);
+          }, 400);
+        })
+    );
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillForm();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+
+    // 无事件 → 降级提示出现（不白屏）
+    expect(
+      await screen.findByText("实时进度通道未就绪，完成后将直接显示结果")
+    ).toBeInTheDocument();
+
+    // 同步响应兜底 → result 视图
+    await waitFor(() => {
+      expect(screen.getByText("✓ 成功")).toBeInTheDocument();
+    });
+  });
+
+  it("PORTW-03: batchId 不匹配的事件被忽略（批次关联隔离; 用户级隔离由后端会话保证）", async () => {
+    mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
+    mockBatchWritePorts.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            // 先来一个「其它批次」的事件（batchId 不匹配）——应被忽略
+            emitPortWriteEvent({
+              type: "port_write_progress",
+              batchId: "batch-OTHER",
+              deviceId: DEVICE_A,
+              action: "shutdown",
+              portId: "port-a-2",
+              interfaceName: "GigabitEthernet0/2",
+              index: 2,
+              total: 2,
+              status: "failed",
+            });
+            // 本批次事件——应被接受并锁定 batchId
+            emitPortWriteEvent({
+              type: "port_write_progress",
+              batchId: "batch-mine",
+              deviceId: DEVICE_A,
+              action: "shutdown",
+              portId: "port-a-1",
+              interfaceName: "GigabitEthernet0/1",
+              index: 1,
+              total: 2,
+              status: "succeeded",
+            });
+          }, 100);
+          setTimeout(() => {
+            resolve({
+              batchId: "batch-mine",
+              succeeded: [makePortResult("port-a-1", "succeeded")],
+              failed: [],
+              skipped: [],
+            } as BatchResult);
+          }, 600);
+        })
+    );
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1, PORT_A2]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await fillAndSubmit();
+
+    // 只接受本批次端口行; 其它批次（OTHER/port-a-2）不入列
+    expect(await screen.findByText("GigabitEthernet0/1")).toBeInTheDocument();
+    expect(screen.queryByText("GigabitEthernet0/2")).not.toBeInTheDocument();
   });
 });

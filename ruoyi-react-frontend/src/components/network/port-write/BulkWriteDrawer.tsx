@@ -19,7 +19,7 @@
  * 来源: 53-02-PLAN.md Task 2, 53-PATTERNS.md line 202-289 骨架代码
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Drawer,
   Form,
@@ -36,6 +36,7 @@ import {
   Collapse,
   Typography,
   Switch,
+  Progress,
   App,
 } from "antd";
 // Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
@@ -52,7 +53,8 @@ import type {
   PortWritePreviewResult,
   PortWritePreviewPort,
 } from "@/types/network";
-import { batchWritePorts, previewBatchWritePorts } from "@/lib/api/networkApi";
+import { batchWritePorts, previewBatchWritePorts, listPortWriteAudits } from "@/lib/api/networkApi";
+import { useNoticeStore } from "@/store/noticeStore";
 import {
   PRESET_REASONS,
   ACTION_TITLE,
@@ -96,6 +98,22 @@ const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = [
   { label: ACTION_TITLE.portsec_sticky, value: "portsec_sticky" },
   { label: ACTION_TITLE.portsec_static_bind, value: "portsec_static_bind" },
 ];
+
+/** Phase 122 (PORTW-03): WS 实时进度聚合状态 */
+interface LiveProgress {
+  batchId: string | null;
+  total: number;
+  events: {
+    portId: string;
+    interfaceName: string;
+    index: number;
+    status: string;
+    message?: string;
+  }[];
+  summary: { succeeded: number; failed: number; skipped: number } | null;
+  completedMessage: string | null;
+  lastEventAt: number;
+}
 
 /** trunk/portsec 动作的批量写附加参数（T-53-07 白名单的 Phase 124/125 延伸） */
 interface TrunkParams {
@@ -153,16 +171,108 @@ export function BulkWriteDrawer({
   /** Phase 125: skipPreflight 快照（确认写/重试与预览同参） */
   const [lastSkipPreflight, setLastSkipPreflight] = useState<boolean | undefined>(undefined);
 
+  // ===== v1.51 Phase 122 (PORTW-03): WS 实时进度状态 =====
+  const [live, setLive] = useState<LiveProgress | null>(null);
+  const liveRef = useRef(live);
+  liveRef.current = live;
+
+  // WS 事件订阅：executing 阶段挂监听（复用 NoticeHub 连接的重连逻辑, 契约 ece40502）
+  useEffect(() => {
+    if (phase !== "executing") return;
+    const unsubscribe = useNoticeStore.getState().onPortWriteProgress((event) => {
+      const cur = liveRef.current;
+      if (!cur) return;
+      // batchId 锁定：首个事件确定批次, 后续事件仅当 batchId 匹配才接受
+      if (cur.batchId && event.batchId !== cur.batchId) return;
+      if (event.type === "port_write_progress") {
+        setLive({
+          ...cur,
+          batchId: event.batchId,
+          total: event.total,
+          events: [
+            ...cur.events.filter((e: { portId: string }) => e.portId !== event.portId),
+            {
+              portId: event.portId,
+              interfaceName: event.interfaceName,
+              index: event.index,
+              status: event.status,
+              message: event.message,
+            },
+          ],
+          lastEventAt: Date.now(),
+        });
+      } else {
+        // port_write_completed: 终态 summary（同步 BatchResult 仍为结果视图真相源）
+        let summary: { succeeded: number; failed: number; skipped: number } | null = null;
+        try {
+          summary = JSON.parse(event.summary);
+        } catch {
+          summary = null;
+        }
+        setLive({
+          ...cur,
+          batchId: event.batchId,
+          summary,
+          completedMessage: event.message,
+          lastEventAt: Date.now(),
+        });
+      }
+    });
+    return unsubscribe;
+  }, [phase]);
+
+  // 断线对账（契约: WS 不补发, audit 是真相源）：executing 且已锁定 batchId 时,
+  // 每 15s 检查一次——距最后事件 >20s（断线丢事件/重连后）即拉 audit 刷新进度快照
+  useEffect(() => {
+    if (phase !== "executing") return;
+    const timer = setInterval(() => {
+      const cur = liveRef.current;
+      if (!cur?.batchId || cur.summary) return; // 未锁定批次或已终态, 不对账
+      if (Date.now() - cur.lastEventAt < 20000) return;
+      listPortWriteAudits({
+        current: 1,
+        pageSize: Math.min(cur.total, 100),
+        deviceId: lastDeviceId || undefined,
+      })
+        .then((res) => {
+          const rows = (res.list ?? []).filter(
+            (r) => r.commandSent && r.status !== undefined
+          );
+          if (rows.length === 0) return;
+          setLive((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  events: rows.map((r, i) => ({
+                    portId: r.portId,
+                    interfaceName: r.portId,
+                    index: i + 1,
+                    status: r.status,
+                    message: r.failureReason ?? undefined,
+                  })),
+                  lastEventAt: Date.now(),
+                }
+              : prev
+          );
+        })
+        .catch(() => {
+          // 对账失败静默（同步 BatchResult 兜底, 不白屏）
+        });
+    }, 15000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   // open 变 false 时 reset phase + batchResult, 防下次打开残留
   // CLAUDE.md useEffect 纪律: deps 全稳定 (open/phase/onExecutingChange 原始值或稳定 setter)
   useEffect(() => {
     if (!open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase("select");
 
       setBatchResult(null);
       setPreviewResult(null);
       setWriteError(null);
+      setLive(null);
       form.resetFields();
     }
   }, [open, form]);
@@ -230,7 +340,7 @@ export function BulkWriteDrawer({
     if (!batchResult || batchResult.failed.length === 0) return;
     const failedIds = batchResult.failed.map((p) => p.portId);
     // CR-01/CR-02: retry 用首次提交时缓存的 lastDeviceId, 不从 selectedPorts 重读
-    // Phase 124: trunk 参数同样走快照（lastTrunkParams）
+    // Phase 124: trunk 参数同样走快照（lastTrunkParams）; Phase 122: retry 走 runBatch（带实时进度）
     const req = buildRequest(
       lastDeviceId,
       lastAction,
@@ -239,29 +349,7 @@ export function BulkWriteDrawer({
       lastTrunkParams,
       lastSkipPreflight
     );
-    setPhase("executing");
-    try {
-      // LANDMINE #3: batchWritePorts 失败是正常 resolve, 不用 .catch 分类
-      const newResult = await batchWritePorts(req);
-      setBatchResult(newResult);
-      setPhase("result");
-      if (newResult.failed.length === 0) {
-        // D-10 全部成功 (含重试后) 弹审计 Toast
-        showAuditLinkToast(message, navigate);
-        onSuccess();
-      } else if (newResult.succeeded.length > 0) {
-        // 部分成功, 刷新父组件列表让用户看到已生效的端口, 但不弹 Toast (Drawer 还在结果视图)
-        onSuccess();
-      }
-    } catch (err) {
-      // 网络错误等才走 catch, message.error 由 post() 拦截器已弹 (LANDMINE #5)
-      // Phase 123: 409 端口占用 / 503 预检失败 → 常驻 Alert 补充上下文（持锁者/预检信息在 message 内）
-      const code = (err as { code?: number })?.code;
-      if (code === 409 || code === 503) {
-        setWriteError({ code, message: (err as Error).message });
-      }
-      setPhase("select");
-    }
+    await runBatch(req);
   };
 
   /** PORTW-02 第一段: select 提交 → dry-run 预览（不下发任何设备命令）。
@@ -358,12 +446,30 @@ export function BulkWriteDrawer({
       lastTrunkParams,
       lastSkipPreflight
     );
+    await runBatch(req);
+  };
 
+  /** Phase 122 (PORTW-03): 执行批次 + WS 实时进度订阅 + 断线对账。
+   * confirm 与 retry 共用（retry 换 req 的 portIds 为 failed 子集, 进度 total 同步子集数）。 */
+  const runBatch = async (req: BatchWriteRequest): Promise<void> => {
+    // 初始化实时进度状态（batchId 待首个 WS 事件或同步响应锁定）
+    setLive({
+      batchId: null,
+      total: req.portIds.length,
+      events: [],
+      summary: null,
+      completedMessage: null,
+      lastEventAt: Date.now(),
+    });
     setPhase("executing");
     try {
       // LANDMINE #3: batchWritePorts HTTP 200 + status:failed 是正常 resolve
       const result = await batchWritePorts(req);
       setBatchResult(result);
+      // 同步响应锁定 batchId（WS 事件先到时 listener 已按事件值锁定, 此处幂等）
+      if (result.batchId) {
+        setLive((prev) => (prev && !prev.batchId ? { ...prev, batchId: result.batchId! } : prev));
+      }
       setPhase("result");
       if (result.failed.length === 0) {
         // D-10 全部成功 (succeeded + skipped) 弹审计 Toast
@@ -381,6 +487,9 @@ export function BulkWriteDrawer({
         setWriteError({ code, message: (err as Error).message });
       }
       setPhase("preview");
+    } finally {
+      // 批次结束清空实时进度（result 视图以 batchResult 为真相源）
+      setLive(null);
     }
   };
 
@@ -430,12 +539,21 @@ export function BulkWriteDrawer({
         />
       )}
 
-      {/* D-05 indeterminate Spin, 不伪造 X/Y (ROADMAP #2 纠正) */}
-      {phase === "executing" && (
+      {/* Phase 122 (PORTW-03): executing 态 —— WS 订阅驱动的真实进度（契约 ece40502）。
+          原 D-05「indeterminate 不伪造 X/Y」约束被 122 解除：后端逐端口实时推送使
+          index/total 为真实值而非伪造；WS 不可用/事件未达时回退 indeterminate Spin
+          （batch 同步响应的 BatchResult 兜底, 不白屏）。 */}
+      {phase === "executing" && live && live.events.length > 0 && (
+        <ExecutingView live={live} />
+      )}
+      {phase === "executing" && (!live || live.events.length === 0) && (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <Spin size="large" tip="正在批量配置...（预计 ~1s/端口）">
             <div style={{ padding: "30px" }} />
           </Spin>
+          <Typography.Text type="secondary" style={{ marginTop: 16, display: "block" }}>
+            实时进度通道未就绪，完成后将直接显示结果
+          </Typography.Text>
         </div>
       )}
 
@@ -485,6 +603,74 @@ export function BulkWriteDrawer({
         />
       )}
     </Drawer>
+  );
+}
+
+// ==================== Executing View (Phase 122 PORTW-03, WS 实时进度) ====================
+
+const LIVE_STATUS_TAG: Record<string, { color: string; label: string }> = {
+  succeeded: { color: "green", label: "成功" },
+  failed: { color: "red", label: "失败" },
+  skipped: { color: "default", label: "跳过" },
+};
+
+/**
+ * ExecutingView — WS 订阅驱动的真实进度（契约 ece40502）
+ * - Progress: index/total 真实百分比（D-05 约束被 122 解除）
+ * - 端口列表逐行点亮（按事件到达顺序, status Tag 区分 succeeded/failed/skipped）
+ * - completed 终态: summary 三计数 + fail-fast 中断文案
+ * - 交互选择说明：列表逐行点亮而非仅当前行——批量操作中「哪些已好/哪些失败/哪些
+ *   被跳过」是用户最关心的全景, 滚动单行会丢失败上下文
+ */
+function ExecutingView({ live }: { live: LiveProgress }) {
+  const done = live.events.length;
+  const percent = live.total > 0 ? Math.round((done / live.total) * 100) : 0;
+  return (
+    <div>
+      <Progress
+        percent={live.summary ? 100 : percent}
+        status={live.summary ? "normal" : "active"}
+        style={{ marginBottom: 16 }}
+      />
+      {live.summary && (
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={8}>
+            <Statistic title="✓ 成功" value={live.summary.succeeded} />
+          </Col>
+          <Col span={8}>
+            <Statistic title="✗ 失败" value={live.summary.failed} />
+          </Col>
+          <Col span={8}>
+            <Statistic title="⚠ 跳过" value={live.summary.skipped} />
+          </Col>
+        </Row>
+      )}
+      {live.completedMessage && (
+        <Typography.Text strong style={{ display: "block", marginBottom: 16 }}>
+          {live.completedMessage}
+        </Typography.Text>
+      )}
+      <Table
+        dataSource={live.events}
+        rowKey="portId"
+        size="small"
+        pagination={false}
+        columns={[
+          { title: "接口名", dataIndex: "interfaceName", key: "interfaceName", width: 180 },
+          {
+            title: "状态",
+            dataIndex: "status",
+            key: "status",
+            width: 100,
+            render: (v: string) => {
+              const meta = LIVE_STATUS_TAG[v] ?? { color: "default", label: v };
+              return <Tag color={meta.color}>{meta.label}</Tag>;
+            },
+          },
+          { title: "详情", dataIndex: "message", key: "message", ellipsis: true },
+        ]}
+      />
+    </div>
   );
 }
 

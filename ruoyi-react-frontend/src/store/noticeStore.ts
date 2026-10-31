@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import type { NoticeListItem, WebSocketNoticeMessage } from "@/types/notice";
+import type {
+  NoticeListItem,
+  WebSocketNoticeMessage,
+  PortWriteProgressEvent,
+  PortWriteCompletedEvent,
+} from "@/types/notice";
 import type { RPAProgressMessage } from "@/types/rpa";
 
 // RPA 进度回调类型
@@ -9,6 +14,12 @@ type RPAProgressCallback = (message: RPAProgressMessage) => void;
 // 原实现把 Set 放进 state 且 onRPAProgress 直接 mutate 它,破坏不可变契约,
 // 且任何订阅 state 的组件会在无关 set 时被波及。
 const rpaProgressListeners = new Set<RPAProgressCallback>();
+
+// v1.51 Phase 122 (PORTW-03): 批量写进度事件回调（progress 或 completed 二选一形状）
+export type PortWriteEventCallback = (
+  event: PortWriteProgressEvent | PortWriteCompletedEvent
+) => void;
+const portWriteListeners = new Set<PortWriteEventCallback>();
 
 interface NoticeState {
   // 未读数量
@@ -42,6 +53,8 @@ interface NoticeActions {
   handleWsMessage: (message: WebSocketNoticeMessage) => void;
   // RPA 进度事件订阅
   onRPAProgress: (callback: (message: RPAProgressMessage) => void) => () => void;
+  // v1.51 Phase 122: 批量写实时进度事件订阅
+  onPortWriteProgress: (callback: PortWriteEventCallback) => () => void;
   // 重置状态
   reset: () => void;
 }
@@ -165,6 +178,25 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
         console.error("[RPA Progress] Parse error:", error);
       }
     }
+
+    // v1.51 Phase 122 (PORTW-03): 批量写实时进度/终态分流（Content 内嵌 JSON, 仿 RPA 模式）
+    if (message.type === "port_write_progress" || message.type === "port_write_completed") {
+      try {
+        if (!message.content) return;
+        const event = JSON.parse(message.content) as
+          | PortWriteProgressEvent
+          | PortWriteCompletedEvent;
+        portWriteListeners.forEach((callback) => {
+          try {
+            callback(event);
+          } catch (error) {
+            console.error("[PortWrite Progress] Callback error:", error);
+          }
+        });
+      } catch (error) {
+        console.error("[PortWrite Progress] Parse error:", error);
+      }
+    }
   },
 
   // RPA 进度事件订阅 — 使用模块级 Set (P1-M4)
@@ -174,6 +206,14 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
     // 返回取消订阅函数
     return () => {
       rpaProgressListeners.delete(callback);
+    };
+  },
+
+  // v1.51 Phase 122 (PORTW-03): 批量写实时进度事件订阅 — 同 RPA 模式（模块级 Set）
+  onPortWriteProgress: (callback: PortWriteEventCallback) => {
+    portWriteListeners.add(callback);
+    return () => {
+      portWriteListeners.delete(callback);
     };
   },
 

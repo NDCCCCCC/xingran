@@ -402,6 +402,8 @@ export interface PortBindingRequest {
  * JSON 序列化输出 [] 而非 null — 前端无需做 null 守卫。
  */
 export interface BatchResult {
+  /** Phase 122 (ece40502): 与 WS port_write_* 事件同值, 供进度订阅关联与断线对账 */
+  batchId?: string;
   succeeded: PortResult[];
   failed: PortResult[];
   skipped: PortResult[];
