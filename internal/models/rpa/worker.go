@@ -2,6 +2,7 @@ package rpa
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
@@ -43,6 +44,15 @@ type Worker struct {
 	CurrentTasks      int             `gorm:"default:0" json:"currentTasks"`
 	LastHeartbeat     *int64          `json:"lastHeartbeat"`
 	DockerContainerID string          `gorm:"size:100" json:"dockerContainerId"`
+
+	// DEBT-03（v1.51）Worker API Token 认证字段。
+	// Token 为 wk_ 前缀随机串，注册时经 Provisioning Token 换发；
+	// auth_required=false 的宽限期模式下可为空（老 Worker 继续无认证通信）。
+	// ⚠ 刻意不用 uniqueIndex：宽限期下多行空串会撞唯一约束（PG 需部分索引），
+	// 唯一性由服务层 32 字节随机生成保证 + 普通 index 支撑查询。
+	Token             string     `gorm:"size:255;index" json:"token,omitempty"`
+	TokenExpiresAt    *time.Time `json:"tokenExpiresAt,omitempty"`
+	LastTokenRotation *time.Time `json:"lastTokenRotation,omitempty"`
 }
 
 // TableName 指定表名

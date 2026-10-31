@@ -5,20 +5,34 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 )
+
+// workerAuthConfig DEBT-03：从 core 配置提取 Worker 认证参数与 Token 服务。
+// 认证未配置（白名单为空）时 required 恒为 false（宽限期双读）。
+func workerAuthConfig(core *core.Core) (rpa.WorkerTokenService, bool) {
+	auth := core.Config.RPA.Worker.Auth
+	svc := rpa.NewWorkerTokenService(core.GetDB(), auth)
+	required := auth.AuthRequired && len(auth.ProvisioningTokens) > 0
+	return svc, required
+}
 
 // SetupPublicWorkerRouter 设置公开的 Worker 路由（不需要认证）
 func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 	// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
 	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil, system.NewCacheProvider(core.DataCacheService))
-	handler := NewWorkerHandler(services.WorkerService, core)
+	tokenSvc, required := workerAuthConfig(core)
+	handler := NewWorkerHandler(services.WorkerService, core).WithTokenService(tokenSvc)
 
-	// Worker 注册接口（公开，允许匿名访问）
-	r.POST("/workers/register", handler.Register)
+	// DEBT-03：注册接口挂 Provisioning Token 认证。
+	// required=false（宽限期，默认）→ 无头放行 WARN，带合法头时 handler 换发 Worker Token；
+	// required=true → 无头/错头一律 401。
+	r.POST("/workers/register", middleware.ProvisioningAuth(tokenSvc, required), handler.Register)
 
-	// Worker 心跳和进度上报（公开，用于 Worker 通信）
-	r.POST("/workers/:id/heartbeat", handler.Heartbeat)
-	r.POST("/workers/progress", handler.Progress)
+	// Worker 心跳和进度上报：auth_required=true 时强制 X-Worker-Token（含 :id 归属校验）。
+	workerGuard := middleware.WorkerAuth(tokenSvc, required)
+	r.POST("/workers/:id/heartbeat", workerGuard, handler.Heartbeat)
+	r.POST("/workers/progress", middleware.WorkerAuth(tokenSvc, required), handler.Progress)
 }
 
 // SetupRPARouter 设置 RPA 路由（统一入口）

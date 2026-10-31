@@ -1172,6 +1172,11 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(229, "port_write_audit_menu", migrations.Migrate229PortWriteAuditMenu); err != nil {
 			applogger.Errorf("端口写审计菜单迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// v1.51 DEBT-03: RPA Worker Token 认证字段 (双方言迁移)。**非阻断**：
+		// 字段缺失时 Worker 认证走宽限期模式（无 token 放行），不影响既有通信。
+		if err := d.runAndRecord(230, "rpa_worker_token", migrations.Migrate230RPAWorkerToken); err != nil {
+			applogger.Errorf("RPA Worker Token 字段迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1274,6 +1279,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: v1.51 Phase 127 PWX-04 端口写审计明细页菜单注册 (双方言迁移)。
 		if err := d.runAndRecord(229, "port_write_audit_menu", migrations.Migrate229PortWriteAuditMenu); err != nil {
 			applogger.Errorf("端口写审计菜单迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: v1.51 DEBT-03 RPA Worker Token 认证字段 (双方言迁移)。**非阻断**。
+		if err := d.runAndRecord(230, "rpa_worker_token", migrations.Migrate230RPAWorkerToken); err != nil {
+			applogger.Errorf("RPA Worker Token 字段迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
