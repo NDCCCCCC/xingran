@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Modal, Form, App, Alert } from "antd";
+import { Modal, Form, App, Alert, Switch } from "antd";
 // Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
 // ⚠️ 本文件承载 v1.19 端口写命令冻结交互（submitting 防重 / reason __custom__ 状态机），
 // 本波仅换 UI 组件名，不改任何状态/条件渲染/校验逻辑。
@@ -30,6 +30,7 @@ import {
   writeDescription,
   writeDot1xEnable,
   writeDot1xDisable,
+  writeTrunk,
 } from "@/lib/api/networkApi";
 import { handleApiError } from "@/utils/errorHandler";
 import {
@@ -39,9 +40,13 @@ import {
   REASON_MAX,
   DESCRIPTION_MAX,
   REASON_CUSTOM_SENTINEL,
+  TRUNK_ALLOWED_MODE_OPTIONS,
+  SKIP_PREFLIGHT_HINT,
   composeReason,
   validateReasonOptional,
   validateReasonRequired,
+  validateVlanListText,
+  parseVlanList,
 } from "./constants";
 /**
  * D-10 审计跳转 URL — route path 是 /monitor/logs (非 /monitor/operlog),
@@ -155,17 +160,49 @@ export function PortWriteModal({
       }
 
       // 按 action 分支调对应 wrapper (LANDMINE #5: 不传 errorMessage / 不 message.error, post() 拦截器已弹)
+      // Phase 125: 全部分支透传 skipPreflight（面板可达即持权, 开关默认关）
+      const skipPreflight = values.skipPreflight === true ? true : undefined;
       if (action === "shutdown") {
-        await writeShutdown(portRecord.id, reason ?? "");
+        await writeShutdown(portRecord.id, reason ?? "", skipPreflight);
       } else if (action === "undo_shutdown") {
-        await writeUndoShutdown(portRecord.id, reason ?? "");
+        await writeUndoShutdown(portRecord.id, reason ?? "", skipPreflight);
       } else if (action === "description") {
         const description = typeof values.description === "string" ? values.description : "";
-        await writeDescription(portRecord.id, description, reason ?? undefined);
+        await writeDescription(portRecord.id, description, reason ?? undefined, skipPreflight);
       } else if (action === "dot1x_enable") {
-        await writeDot1xEnable(portRecord.id, reason ?? "");
+        await writeDot1xEnable(portRecord.id, reason ?? "", skipPreflight);
       } else if (action === "dot1x_disable") {
-        await writeDot1xDisable(portRecord.id, reason ?? "");
+        await writeDot1xDisable(portRecord.id, reason ?? "", skipPreflight);
+      } else if (
+        action === "trunk_set_native" ||
+        action === "trunk_set_allowed" ||
+        action === "trunk_set_hybrid"
+      ) {
+        // v1.51 Phase 125: 单端口 trunk（POST /network/ports/write/trunk 单端点三动作）
+        await writeTrunk({
+          portId: portRecord.id,
+          action,
+          reason: reason ?? undefined,
+          ...(action === "trunk_set_native"
+            ? { nativeVlan: Number(values.nativeVlan) }
+            : {}),
+          ...(action === "trunk_set_allowed"
+            ? {
+                allowedVlans: parseVlanList(String(values.allowedVlansText)) ?? [],
+                mode: (values.trunkMode as "add" | "remove" | "replace") ?? "replace",
+              }
+            : {}),
+          ...(action === "trunk_set_hybrid"
+            ? {
+                hybridTagged: values.hybridTaggedText
+                  ? (parseVlanList(String(values.hybridTaggedText)) ?? [])
+                  : [],
+                hybridUntagged: values.hybridUntaggedText
+                  ? (parseVlanList(String(values.hybridUntaggedText)) ?? [])
+                  : [],
+              }
+            : {}),
+        });
       }
 
       // D-10 成功 Toast 含"查看审计日志"链接
@@ -231,8 +268,19 @@ export function PortWriteModal({
           showIcon
           style={{ marginBottom: 16 }}
           title="确认后将立即下发设备命令"
-          description="如需先查看将下发的命令序列与风险等级，请取消本弹窗，改用「批量配置」入口的 dry-run 预览。"
+          description="如需先查看将下发的命令序列与风险等级，请取消本弹窗，改用「批量配置」入口的 dry-run 预览（支持 shutdown / 802.1X / VLAN / trunk / 端口安全等全部动作）。"
         />
+
+        {/* v1.51 Phase 125: skipPreflight 开关（面板可达即持 network:port:write, 无需二次门控） */}
+        <Form.Item
+          name="skipPreflight"
+          valuePropName="checked"
+          label="跳过在线预检"
+          extra={SKIP_PREFLIGHT_HINT}
+          style={{ marginBottom: 16 }}
+        >
+          <Switch />
+        </Form.Item>
         {/* D-03 description action 特例 — 显示"新描述"必填输入框 */}
         {action === "description" && (
           <Form.Item
@@ -245,6 +293,79 @@ export function PortWriteModal({
           >
             <AppInput maxLength={DESCRIPTION_MAX} showCount placeholder="请输入新端口描述" />
           </Form.Item>
+        )}
+
+        {/* v1.51 Phase 125: 单端口 trunk 三动作参数表单 */}
+        {action === "trunk_set_native" && (
+          <Form.Item
+            name="nativeVlan"
+            label="Native VLAN (PVID)"
+            rules={[
+              { required: true, message: "请输入 Native VLAN" },
+              {
+                validator: (_rule: unknown, value: unknown) => {
+                  const n = Number(value);
+                  if (value === undefined || value === null || value === "") {
+                    return Promise.resolve();
+                  }
+                  if (!Number.isInteger(n) || n < 1 || n > 4094) {
+                    return Promise.reject(new Error("VLAN 取值范围 1-4094"));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <AppInput type="number" placeholder="1-4094" />
+          </Form.Item>
+        )}
+        {action === "trunk_set_allowed" && (
+          <>
+            <Form.Item
+              name="allowedVlansText"
+              label="放行 VLAN 列表"
+              rules={[
+                { required: true, message: "请输入 VLAN 列表" },
+                { validator: (_rule: unknown, value: unknown) => validateVlanListText(value) },
+              ]}
+            >
+              <AppInput placeholder="如：10,20,30（逗号或空格分隔）" />
+            </Form.Item>
+            <Form.Item
+              name="trunkMode"
+              label="模式"
+              initialValue="replace"
+              rules={[{ required: true, message: "请选择模式" }]}
+            >
+              <AppSelect
+                options={TRUNK_ALLOWED_MODE_OPTIONS.map((o) => ({ ...o }))}
+                showSearch={false}
+                onSearch={() => {}}
+              />
+            </Form.Item>
+          </>
+        )}
+        {action === "trunk_set_hybrid" && (
+          <>
+            <Form.Item
+              name="hybridTaggedText"
+              label="Tagged VLAN 列表"
+              rules={[
+                { validator: (_rule: unknown, value: unknown) => validateVlanListText(value) },
+              ]}
+            >
+              <AppInput placeholder="如：30,40（可留空）" />
+            </Form.Item>
+            <Form.Item
+              name="hybridUntaggedText"
+              label="Untagged VLAN 列表"
+              rules={[
+                { validator: (_rule: unknown, value: unknown) => validateVlanListText(value) },
+              ]}
+            >
+              <AppInput placeholder="如：10,20（可留空）" />
+            </Form.Item>
+          </>
         )}
 
         {/* D-02 reason 字段 — 外层 reasonSelect Select + 内层 reasonText TextArea (仅 __custom__ 时展开) */}

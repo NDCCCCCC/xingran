@@ -287,7 +287,12 @@ export type PortWriteAction =
   | "port_binding" // v1.20.1 BIND-01/02
   | "trunk_set_native" // v1.51 Phase 124 PWX-01
   | "trunk_set_allowed" // v1.51 Phase 124 PWX-01
-  | "trunk_set_hybrid"; // v1.51 Phase 124 PWX-01
+  | "trunk_set_hybrid" // v1.51 Phase 124 PWX-01
+  | "portsec_enable" // v1.51 Phase 125 PWX-03
+  | "portsec_disable" // v1.51 Phase 125 PWX-03
+  | "portsec_max_mac" // v1.51 Phase 125 PWX-03
+  | "portsec_sticky" // v1.51 Phase 125 PWX-03
+  | "portsec_static_bind"; // v1.51 Phase 125 PWX-03
 
 /**
  * 单端口写操作结果 (Phase 53, 镜像后端 portwrite.PortResult)
@@ -352,6 +357,10 @@ export interface BatchWriteRequest {
   hybridTagged?: number[];
   /** action === "trunk_set_hybrid" 时使用 */
   hybridUntagged?: number[];
+  // ---- v1.51 Phase 125 (commit 006ece28) portsec 扩展, 按 action 携带 ----
+  /** action === "portsec_max_mac" 时使用, 1-4096 */
+  maxMacCount?: number;
+  // portsec_static_bind 复用上方 macAddress（必填）与 vlanId（必填, 1-4094）
 }
 
 /**

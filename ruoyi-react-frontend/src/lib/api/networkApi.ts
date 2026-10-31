@@ -4,6 +4,7 @@ import type {
   PortResult,
   BatchResult,
   BatchWriteRequest,
+  PortWriteAction,
   PortWritePreviewResult,
   PortWriteAuditListRequest,
   PortWriteAuditListResult,
@@ -170,10 +171,15 @@ export const batchExport = async (
  * 关闭端口 (shutdown)
  * - 端点: POST /network/ports/write/shutdown
  */
-export const writeShutdown = async (portId: string, reason: string): Promise<PortResult> => {
+export const writeShutdown = async (
+  portId: string,
+  reason: string,
+  skipPreflight?: boolean
+): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/shutdown", {
     portId,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -182,10 +188,15 @@ export const writeShutdown = async (portId: string, reason: string): Promise<Por
  * 取消关闭端口 (undo shutdown)
  * - 端点: POST /network/ports/write/undo-shutdown
  */
-export const writeUndoShutdown = async (portId: string, reason: string): Promise<PortResult> => {
+export const writeUndoShutdown = async (
+  portId: string,
+  reason: string,
+  skipPreflight?: boolean
+): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/undo-shutdown", {
     portId,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -198,12 +209,14 @@ export const writeUndoShutdown = async (portId: string, reason: string): Promise
 export const writeDescription = async (
   portId: string,
   description: string,
-  reason?: string
+  reason?: string,
+  skipPreflight?: boolean
 ): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/description", {
     portId,
     description,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -212,10 +225,15 @@ export const writeDescription = async (
  * 启用 802.1X (dot1x enable)
  * - 端点: POST /network/ports/write/dot1x-enable
  */
-export const writeDot1xEnable = async (portId: string, reason: string): Promise<PortResult> => {
+export const writeDot1xEnable = async (
+  portId: string,
+  reason: string,
+  skipPreflight?: boolean
+): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/dot1x-enable", {
     portId,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -224,10 +242,15 @@ export const writeDot1xEnable = async (portId: string, reason: string): Promise<
  * 停用 802.1X (dot1x disable)
  * - 端点: POST /network/ports/write/dot1x-disable
  */
-export const writeDot1xDisable = async (portId: string, reason: string): Promise<PortResult> => {
+export const writeDot1xDisable = async (
+  portId: string,
+  reason: string,
+  skipPreflight?: boolean
+): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/dot1x-disable", {
     portId,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -313,6 +336,26 @@ export const listPortWriteAudits = async (
   req: PortWriteAuditListRequest
 ): Promise<PortWriteAuditListResult> => {
   const result = await post<PortWriteAuditListResult>("/network/ports/write/audit/list", req);
+  return result.data!;
+};
+
+/**
+ * 单端口 trunk 写 — v1.51 Phase 125 面板三合一（PortWriteModal 接入）
+ * - 端点: POST /network/ports/write/trunk（单端点三动作, 权限 network:port:write）
+ * - action ∈ trunk_set_native | trunk_set_allowed | trunk_set_hybrid
+ * - 参数按 action 携带（nativeVlan / allowedVlans+mode / hybridTagged+hybridUntagged）
+ */
+export const writeTrunk = async (req: {
+  portId: string;
+  action: PortWriteAction;
+  nativeVlan?: number;
+  allowedVlans?: number[];
+  mode?: "add" | "remove" | "replace";
+  hybridTagged?: number[];
+  hybridUntagged?: number[];
+  reason?: string;
+}): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/trunk", req);
   return result.data!;
 };
 
@@ -420,6 +463,8 @@ export default {
   previewBatchWritePorts,
   // v1.51 Phase 127 PWX-04 端口写审计明细
   listPortWriteAudits,
+  // v1.51 Phase 125 单端口 trunk（PortWriteModal 三动作）
+  writeTrunk,
   // Phase 56 v1.20.1 端口写操作扩展
   writeSetAccessVlan,
   writePortBinding,

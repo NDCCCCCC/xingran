@@ -35,6 +35,7 @@ import {
   Tag,
   Collapse,
   Typography,
+  Switch,
   App,
 } from "antd";
 // Phase 71 (W4)：裸 Input/Select/Input.TextArea → 契约组件。
@@ -62,10 +63,14 @@ import {
   TRUNK_ALLOWED_MODE_OPTIONS,
   TRUNK_REPLACE_HINT,
   TRUNK_HYBRID_OVERLAP_HINT,
+  SKIP_PREFLIGHT_HINT,
+  PORTSEC_MAC_HINT,
   composeReason,
   validateReasonOptional,
   validateReasonRequired,
+  validateVlanListText,
   parseVlanList,
+  parseMacAddress,
 } from "./constants";
 import { showAuditLinkToast } from "./PortWriteModal";
 import { handleApiError } from "@/utils/errorHandler";
@@ -84,15 +89,25 @@ const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = [
   { label: ACTION_TITLE.trunk_set_native, value: "trunk_set_native" },
   { label: ACTION_TITLE.trunk_set_allowed, value: "trunk_set_allowed" },
   { label: ACTION_TITLE.trunk_set_hybrid, value: "trunk_set_hybrid" },
+  // v1.51 Phase 125 (006ece28): portsec 五动作
+  { label: ACTION_TITLE.portsec_enable, value: "portsec_enable" },
+  { label: ACTION_TITLE.portsec_disable, value: "portsec_disable" },
+  { label: ACTION_TITLE.portsec_max_mac, value: "portsec_max_mac" },
+  { label: ACTION_TITLE.portsec_sticky, value: "portsec_sticky" },
+  { label: ACTION_TITLE.portsec_static_bind, value: "portsec_static_bind" },
 ];
 
-/** trunk 动作的批量写附加参数（T-53-07 白名单的 Phase 124 延伸） */
+/** trunk/portsec 动作的批量写附加参数（T-53-07 白名单的 Phase 124/125 延伸） */
 interface TrunkParams {
   nativeVlan?: number;
   allowedVlans?: number[];
   mode?: "add" | "remove" | "replace";
   hybridTagged?: number[];
   hybridUntagged?: number[];
+  // Phase 125 portsec
+  maxMacCount?: number;
+  macAddress?: string; // 归一后 AA-BB-CC-DD-EE-FF
+  staticBindVlanId?: number; // portsec_static_bind 的 VLAN（1-4094）
 }
 
 export interface BulkWriteDrawerProps {
@@ -135,6 +150,8 @@ export function BulkWriteDrawer({
   /** Phase 124 补强: portIds 同样快照——预览与确认之间父级刷新使 selectedPorts 漂移时,
    * 确认写必须落在预览过的那批端口上（否则 dry-run 与真实写内容错位）。 */
   const [lastPortIds, setLastPortIds] = useState<string[]>([]);
+  /** Phase 125: skipPreflight 快照（确认写/重试与预览同参） */
+  const [lastSkipPreflight, setLastSkipPreflight] = useState<boolean | undefined>(undefined);
 
   // open 变 false 时 reset phase + batchResult, 防下次打开残留
   // CLAUDE.md useEffect 纪律: deps 全稳定 (open/phase/onExecutingChange 原始值或稳定 setter)
@@ -173,7 +190,8 @@ export function BulkWriteDrawer({
     action: PortWriteAction,
     portIds: string[],
     description?: string,
-    trunkParams?: TrunkParams
+    trunkParams?: TrunkParams,
+    skipPreflight?: boolean
   ): BatchWriteRequest => ({
     deviceId,
     action,
@@ -194,6 +212,17 @@ export function BulkWriteDrawer({
           hybridUntagged: trunkParams.hybridUntagged,
         }
       : {}),
+    // v1.51 Phase 125 portsec（portsec_enable/disable/sticky 无附加参数）
+    ...(action === "portsec_max_mac" && trunkParams?.maxMacCount !== undefined
+      ? { maxMacCount: trunkParams.maxMacCount }
+      : {}),
+    ...(action === "portsec_static_bind" && trunkParams
+      ? {
+          macAddress: trunkParams.macAddress,
+          vlanId: trunkParams.staticBindVlanId,
+        }
+      : {}),
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
 
   /** D-06 重试只取 failed, 不重试 skipped (skipped = 设备已是目标态, 重试无意义) */
@@ -202,7 +231,14 @@ export function BulkWriteDrawer({
     const failedIds = batchResult.failed.map((p) => p.portId);
     // CR-01/CR-02: retry 用首次提交时缓存的 lastDeviceId, 不从 selectedPorts 重读
     // Phase 124: trunk 参数同样走快照（lastTrunkParams）
-    const req = buildRequest(lastDeviceId, lastAction, failedIds, lastDescription, lastTrunkParams);
+    const req = buildRequest(
+      lastDeviceId,
+      lastAction,
+      failedIds,
+      lastDescription,
+      lastTrunkParams,
+      lastSkipPreflight
+    );
     setPhase("executing");
     try {
       // LANDMINE #3: batchWritePorts 失败是正常 resolve, 不用 .catch 分类
@@ -273,7 +309,19 @@ export function BulkWriteDrawer({
           ? (parseVlanList(String(values.hybridUntaggedText)) ?? [])
           : [],
       };
+    } else if (action === "portsec_max_mac") {
+      trunkParams = { maxMacCount: Number(values.maxMacCount) };
+    } else if (action === "portsec_static_bind") {
+      trunkParams = {
+        macAddress: parseMacAddress(String(values.staticMacAddress)) ?? undefined,
+        staticBindVlanId: Number(values.staticBindVlanId),
+      };
     }
+
+    // Phase 125: skipPreflight 开关（表单可达即持 network:port:write —— 菜单 perms 已门控路由,
+    // 无需二次 decide, 无真相源问题）。语义：仅真实写请求携带, dry-run 预览不受影响
+    //（预览展示命令序列是防误操作核心, 与在线预检是两回事, 保留预览流程）。
+    const skipPreflight = values.skipPreflight === true ? true : undefined;
 
     // CR-01/WR-03: 提交时快照 deviceId + interfaceMap, 后续 retry/result 全部基于快照,
     // 不受 onSuccess 触发的父级 loadPortStatus 刷新导致的 selectedPorts 引用漂移影响
@@ -286,6 +334,7 @@ export function BulkWriteDrawer({
     setLastInterfaceMap(interfaceMap);
     setLastTrunkParams(trunkParams);
     setLastPortIds(portIds);
+    setLastSkipPreflight(skipPreflight);
     setPhase("preview");
     try {
       const preview = await previewBatchWritePorts(
@@ -301,7 +350,14 @@ export function BulkWriteDrawer({
   /** PORTW-02 第二段: preview 确认 → 真实批量写（沿用预览时快照的参数, 不再重复校验）。 */
   const handleConfirmWrite = async (): Promise<void> => {
     // Phase 124: portIds 用预览时快照（预览与确认间父级刷新导致的漂移防护）
-    const req = buildRequest(lastDeviceId, lastAction, lastPortIds, lastDescription, lastTrunkParams);
+    const req = buildRequest(
+      lastDeviceId,
+      lastAction,
+      lastPortIds,
+      lastDescription,
+      lastTrunkParams,
+      lastSkipPreflight
+    );
 
     setPhase("executing");
     try {
@@ -450,20 +506,9 @@ function SelectView({
   onSubmit,
 }: SelectViewProps) {
   // 55-01 WR-02: 用 Form.useWatch 实时跟踪当前 action, 给 reasonSelect.rules 动态选择
-  // validateReasonOptional (description) 或 validateReasonRequired (其他 4 action)。
+  // validateReasonOptional (description) 或 validateReasonRequired (其他 action)。
   // SelectView 本就因 getFieldValue 在 shouldUpdate 重渲染, useWatch 不引入额外开销。
   const action = Form.useWatch("action", form) as PortWriteAction | undefined;
-
-  /** VLAN 列表可选校验（空值放行; 非空则 parseVlanList 全量校验）—— Phase 124 hybrid 两组共用 */
-  const validateVlanListOptional = (value: unknown): Promise<void> => {
-    if (value === undefined || value === null || String(value).trim() === "") {
-      return Promise.resolve();
-    }
-    if (parseVlanList(String(value)) === null) {
-      return Promise.reject(new Error("格式：逗号/空格分隔的 1-4094 整数（自动去重）"));
-    }
-    return Promise.resolve();
-  };
 
   return (
     <Form form={form} layout="vertical">
@@ -498,8 +543,10 @@ function SelectView({
         rules={[{ required: true, message: "请选择操作类型" }]}
       >
         {/* fixed option list, no server search needed（AppSelect 不受 local/no-large-dropdown-list
-            的 Select 名拦截，原 eslint-disable 已随迁移失效，故移除） */}
-        <AppSelect placeholder="请选择操作类型" options={ACTION_OPTIONS} />
+            的 Select 名拦截，原 eslint-disable 已随迁移失效，故移除）
+            Phase 125: virtual={false} —— 动作数扩至 13 后虚拟滚动导致尾部选项不进 DOM,
+            13 项全量渲染无性能负担, 且对自动化/可访问性友好 */}
+        <AppSelect placeholder="请选择操作类型" options={ACTION_OPTIONS} virtual={false} />
       </Form.Item>
 
       {/* D-03 description action 时多一个"新描述"必填字段 */}
@@ -599,7 +646,7 @@ function SelectView({
                   rules={[
                     {
                       validator: (_rule: unknown, value: unknown) =>
-                        validateVlanListOptional(value),
+                        validateVlanListText(value),
                     },
                   ]}
                 >
@@ -611,7 +658,7 @@ function SelectView({
                   rules={[
                     {
                       validator: (_rule: unknown, value: unknown) =>
-                        validateVlanListOptional(value),
+                        validateVlanListText(value),
                     },
                     // 前端预校验: 两组不可重叠（后端 ErrHybridOverlap 400 兜底）
                     {
@@ -637,8 +684,93 @@ function SelectView({
               </>
             );
           }
+          if (action === "portsec_max_mac") {
+            return (
+              <Form.Item
+                name="maxMacCount"
+                label="MAC 学习上限"
+                rules={[
+                  { required: true, message: "请输入 MAC 学习上限" },
+                  {
+                    validator: (_rule: unknown, value: unknown) => {
+                      const n = Number(value);
+                      if (value === undefined || value === null || value === "") {
+                        return Promise.resolve();
+                      }
+                      if (!Number.isInteger(n) || n < 1 || n > 4096) {
+                        return Promise.reject(new Error("取值范围 1-4096"));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
+              >
+                <AppInput type="number" placeholder="1-4096" />
+              </Form.Item>
+            );
+          }
+          if (action === "portsec_static_bind") {
+            return (
+              <>
+                <Form.Item
+                  name="staticMacAddress"
+                  label="静态 MAC 地址"
+                  extra={PORTSEC_MAC_HINT}
+                  rules={[
+                    { required: true, message: "请输入 MAC 地址" },
+                    {
+                      validator: (_rule: unknown, value: unknown) => {
+                        if (!value) return Promise.resolve();
+                        if (parseMacAddress(String(value)) === null) {
+                          return Promise.reject(
+                            new Error("格式非法：支持 AA-BB-CC-DD-EE-FF / AA:BB:…/ aabb.ccdd.eeff")
+                          );
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <AppInput placeholder="AA-BB-CC-DD-EE-FF" />
+                </Form.Item>
+                <Form.Item
+                  name="staticBindVlanId"
+                  label="绑定 VLAN"
+                  rules={[
+                    { required: true, message: "请输入绑定 VLAN" },
+                    {
+                      validator: (_rule: unknown, value: unknown) => {
+                        const n = Number(value);
+                        if (value === undefined || value === null || value === "") {
+                          return Promise.resolve();
+                        }
+                        if (!Number.isInteger(n) || n < 1 || n > 4094) {
+                          return Promise.reject(new Error("VLAN 取值范围 1-4094"));
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <AppInput type="number" placeholder="1-4094" />
+                </Form.Item>
+              </>
+            );
+          }
           return null;
         }}
+      </Form.Item>
+
+      {/* ===== v1.51 Phase 125: skipPreflight 开关（lead 裁决: 沿用 network:port:write,
+          面板可达即持权 —— 菜单 perms 已门控路由, 无需二次 decide/新增权限码） ===== */}
+      <Form.Item
+        name="skipPreflight"
+        valuePropName="checked"
+        label="跳过在线预检"
+        extra={SKIP_PREFLIGHT_HINT}
+        style={{ marginBottom: 8 }}
+      >
+        <Switch />
       </Form.Item>
 
       {/* 55-01 WR-02: reasonSelect.rules 按 action 动态选择 validator,

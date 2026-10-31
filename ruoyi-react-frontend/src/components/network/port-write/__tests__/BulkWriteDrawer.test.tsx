@@ -840,4 +840,125 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     expect(previewArg.hybridTagged).toEqual([30]);
     expect(previewArg.hybridUntagged).toEqual([10, 20]);
   });
+
+  // ==================== v1.51 Phase 125 portsec（commit 006ece28） ====================
+
+  it("Phase 125: portsec_max_mac preview→确认→写, maxMacCount 透传", async () => {
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "设置 MAC 学习上限");
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("MAC 学习上限"), { target: { value: "64" } });
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as { maxMacCount: number };
+    expect(writeArg.maxMacCount).toBe(64);
+  });
+
+  it("Phase 125: portsec_static_bind critical → 确认按钮 danger, macAddress 归一 + vlanId 透传", async () => {
+    // 契约: static_bind preview riskLevel 恒 critical
+    mockPreviewBatchWritePorts.mockResolvedValue(makePreview({ riskLevel: "critical" }));
+
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "配置静态 MAC 绑定");
+    await act(async () => {
+      // 点分小写输入 → 归一为大写连字符（三格式归一验证）
+      fireEvent.change(screen.getByLabelText("静态 MAC 地址"), {
+        target: { value: "aabb.ccdd.eeff" },
+      });
+      fireEvent.change(screen.getByLabelText("绑定 VLAN"), { target: { value: "100" } });
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    // static_bind=critical → 确认按钮 danger（后端 riskLevel 驱动; mock 返回 critical）
+    const confirmBtn = screen.getByRole("button", { name: "确认下发（真实写）" }) as HTMLButtonElement;
+    expect(confirmBtn.className).toContain("danger");
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as {
+      macAddress: string;
+      vlanId: number;
+    };
+    expect(writeArg.macAddress).toBe("AA-BB-CC-DD-EE-FF");
+    expect(writeArg.vlanId).toBe(100);
+  });
+
+  it("Phase 125: skipPreflight 开关开启 → 确认写请求携带 skipPreflight, 预览不受影响", async () => {
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "关闭端口");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("switch"));
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+
+    // preview 请求不带 skipPreflight（dry-run 与预检是两回事, 预览流程保留）
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(mockPreviewBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+    expect(
+      (mockPreviewBatchWritePorts.mock.calls[0][0] as { skipPreflight?: boolean }).skipPreflight
+    ).toBeUndefined();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+    expect(
+      (mockBatchWritePorts.mock.calls[0][0] as { skipPreflight?: boolean }).skipPreflight
+    ).toBe(true);
+  });
 });
