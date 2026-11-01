@@ -141,3 +141,33 @@ func TestCiscoVendorInWritePipeline(t *testing.T) {
 	assert.Equal(t, "succeeded", result.Status)
 	assert.Equal(t, 1, exec.calls, "实跑恰一次 ExecuteCustom（写+回滚共用计数中回滚未触发）")
 }
+
+// TestPreviewRejectsUnsupportedOnS8700 Phase 129 真机修复端到端：
+// S8700 型号上 trunk 动作 dry-run 即报能力矩阵拒绝（不下发必失败命令）。
+func TestPreviewRejectsUnsupportedOnS8700(t *testing.T) {
+	db := newTestDB(t)
+	seedPreviewDevice(t, db, models.VendorHuawei)
+	dev := models.NetworkDevice{}
+	require.NoError(t, db.Where("id = ?", "device-huawei").First(&dev).Error)
+	dev.Model = "S8700-10"
+	require.NoError(t, db.Save(&dev).Error)
+
+	exec := &countingExecutor{}
+	svc := newTestService(exec, nil, db)
+	_, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
+		DeviceID: "device-huawei", Action: portcollection.TrunkSetNative,
+		PortIDs: []string{"port-huawei"}, NativeVLAN: 100,
+	}, "tester")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, portcollection.ErrActionNotSupported)
+	assert.Equal(t, 0, exec.calls, "能力矩阵拒绝不得触发任何设备连接")
+
+	// 非 S8700 型号（model 空）不拒绝
+	dev.Model = ""
+	require.NoError(t, db.Save(&dev).Error)
+	_, err = svc.PreviewPortWrite(context.Background(), PreviewRequest{
+		DeviceID: "device-huawei", Action: portcollection.TrunkSetNative,
+		PortIDs: []string{"port-huawei"}, NativeVLAN: 100,
+	}, "tester")
+	require.NoError(t, err)
+}
