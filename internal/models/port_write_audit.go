@@ -36,6 +36,9 @@ type PortWriteAudit struct {
 	FailureReason  *string         `gorm:"type:text" json:"failureReason,omitempty"`
 	Operator       string          `gorm:"size:50" json:"operator"`
 	OperLogID      *string         `gorm:"type:uuid" json:"operLogId,omitempty"`
+	// BatchID Phase 122 收尾：批量写批次标识（单端口写为空）。断线对账凭此
+	// 在 audit/list 精确过滤（migration 232，TEXT 可空，历史行 NULL）。
+	BatchID        string          `gorm:"size:64;index:idx_port_write_audit_batch" json:"batchId,omitempty"`
 	CreatedAt      time.Time       `gorm:"not null;index:idx_port_write_audit_device_port_created,priority:3;index:idx_port_write_audit_created" json:"createdAt"`
 }
 

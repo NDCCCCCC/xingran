@@ -44,6 +44,10 @@ func SetupPortWriteRouter(r *gin.RouterGroup, core *core.Core) {
 		core.DeviceExecutor,
 		portcollection.NewCollectionService(core.GetDB(), core.DeviceExecutor),
 	)
+	// Phase 122 (PORTW-07)：批量写进度经 NoticeHub WS 通道按操作者定向推送
+	if core.NoticeHub != nil {
+		svc = svc.WithProgressNotifier(core.NoticeHub)
+	}
 	handler := NewPortWriteHandler(svc).WithCore(core)
 
 	write := r.Group("/write")
@@ -60,4 +64,13 @@ func SetupPortWriteRouter(r *gin.RouterGroup, core *core.Core) {
 	// v1.20.1 (Phase 56 W3)：set_access_vlan + port_binding
 	write.POST("/set-access-vlan", handler.SetAccessVlan)
 	write.POST("/port-binding", handler.PortBinding)
+	// v1.51 (Phase 121 PORTW-01)：dry-run 命令预览（零设备连接，不写 audit/operlog）
+	write.POST("/preview", handler.PortWritePreview)
+	// v1.51 (Phase 127 PWX-04 前置)：端口写审计分页查询（纯读）
+	write.POST("/audit/list", handler.PortWriteAuditList)
+	// v1.51 (Phase 124 PWX-01)：trunk native/allowed + hybrid（单端点三动作）
+	write.POST("/trunk", handler.TrunkWrite)
+	// v1.51 (Phase 125 PWX-02)：端口安全（单端点五动作）
+	write.POST("/portsec", handler.PortSecWrite)
 }
+

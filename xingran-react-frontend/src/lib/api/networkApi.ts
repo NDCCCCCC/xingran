@@ -1,6 +1,14 @@
 import { post } from "../api";
 import { downloadFile, downloadFilePost } from "../download";
-import type { PortResult, BatchResult, BatchWriteRequest } from "@/types/network";
+import type {
+  PortResult,
+  BatchResult,
+  BatchWriteRequest,
+  PortWriteAction,
+  PortWritePreviewResult,
+  PortWriteAuditListRequest,
+  PortWriteAuditListResult,
+} from "@/types/network";
 
 /**
  * MAC 历史查询参数(Phase 14-01 引入)
@@ -163,10 +171,15 @@ export const batchExport = async (
  * 关闭端口 (shutdown)
  * - 端点: POST /network/ports/write/shutdown
  */
-export const writeShutdown = async (portId: string, reason: string): Promise<PortResult> => {
+export const writeShutdown = async (
+  portId: string,
+  reason: string,
+  skipPreflight?: boolean
+): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/shutdown", {
     portId,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -175,10 +188,15 @@ export const writeShutdown = async (portId: string, reason: string): Promise<Por
  * 取消关闭端口 (undo shutdown)
  * - 端点: POST /network/ports/write/undo-shutdown
  */
-export const writeUndoShutdown = async (portId: string, reason: string): Promise<PortResult> => {
+export const writeUndoShutdown = async (
+  portId: string,
+  reason: string,
+  skipPreflight?: boolean
+): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/undo-shutdown", {
     portId,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -191,12 +209,14 @@ export const writeUndoShutdown = async (portId: string, reason: string): Promise
 export const writeDescription = async (
   portId: string,
   description: string,
-  reason?: string
+  reason?: string,
+  skipPreflight?: boolean
 ): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/description", {
     portId,
     description,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -205,10 +225,15 @@ export const writeDescription = async (
  * 启用 802.1X (dot1x enable)
  * - 端点: POST /network/ports/write/dot1x-enable
  */
-export const writeDot1xEnable = async (portId: string, reason: string): Promise<PortResult> => {
+export const writeDot1xEnable = async (
+  portId: string,
+  reason: string,
+  skipPreflight?: boolean
+): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/dot1x-enable", {
     portId,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -217,10 +242,15 @@ export const writeDot1xEnable = async (portId: string, reason: string): Promise<
  * 停用 802.1X (dot1x disable)
  * - 端点: POST /network/ports/write/dot1x-disable
  */
-export const writeDot1xDisable = async (portId: string, reason: string): Promise<PortResult> => {
+export const writeDot1xDisable = async (
+  portId: string,
+  reason: string,
+  skipPreflight?: boolean
+): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/dot1x-disable", {
     portId,
     reason,
+    ...(skipPreflight ? { skipPreflight: true } : {}),
   });
   return result.data!;
 };
@@ -278,7 +308,59 @@ export const writePortBinding = async (
  *   BulkWriteDrawer 必须读 result.failed/succeeded/skipped 数组分区, 不能靠 catch
  */
 export const batchWritePorts = async (req: BatchWriteRequest): Promise<BatchResult> => {
-  const result = await post<BatchResult>("/network/ports/write/batch", req);
+  // Phase 122 (ece40502): data.batchId 与 WS port_write_* 事件同值, 供进度订阅关联与对账
+  const result = await post<BatchResult & { batchId?: string }>(
+    "/network/ports/write/batch",
+    req
+  );
+  // data.batchId 与 WS port_write_* 事件同值; 类型经 BatchResult.batchId 暴露
+  return result.data!;
+};
+
+/**
+ * 端口写预览（dry-run）— v1.51 Phase 121 PORTW-02 两段式写确认第一段
+ * - 端点: POST /network/ports/write/preview (权限 network:port:write, 与 write 同权限)
+ * - 不下发任何设备命令, 仅生成命令序列与风险等级供用户确认
+ * - status='skipped' 的端口 noOp=true 且 commands=[]（pre-state 已匹配目标态）
+ * - 错误: 404 设备/端口不存在; 400 参数非法 (vlanId 越界/IP/MAC 格式/描述超长/不支持厂商)
+ */
+export const previewBatchWritePorts = async (
+  req: BatchWriteRequest
+): Promise<PortWritePreviewResult> => {
+  const result = await post<PortWritePreviewResult>("/network/ports/write/preview", req);
+  return result.data!;
+};
+
+/**
+ * 端口写审计明细分页查询 — v1.51 Phase 127 PWX-04
+ * - 端点: POST /network/ports/write/audit/list (预期契约, portwriter 交付后以实际为准)
+ * - 过滤: deviceId/operator/action/status/时间范围; 分页 current 从 1 起
+ * - 后端未就绪期间前端以空态/错误提示兜底 (真机联调与 Phase 123 合并)
+ */
+export const listPortWriteAudits = async (
+  req: PortWriteAuditListRequest
+): Promise<PortWriteAuditListResult> => {
+  const result = await post<PortWriteAuditListResult>("/network/ports/write/audit/list", req);
+  return result.data!;
+};
+
+/**
+ * 单端口 trunk 写 — v1.51 Phase 125 面板三合一（PortWriteModal 接入）
+ * - 端点: POST /network/ports/write/trunk（单端点三动作, 权限 network:port:write）
+ * - action ∈ trunk_set_native | trunk_set_allowed | trunk_set_hybrid
+ * - 参数按 action 携带（nativeVlan / allowedVlans+mode / hybridTagged+hybridUntagged）
+ */
+export const writeTrunk = async (req: {
+  portId: string;
+  action: PortWriteAction;
+  nativeVlan?: number;
+  allowedVlans?: number[];
+  mode?: "add" | "remove" | "replace";
+  hybridTagged?: number[];
+  hybridUntagged?: number[];
+  reason?: string;
+}): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/trunk", req);
   return result.data!;
 };
 
@@ -382,6 +464,12 @@ export default {
   writeDot1xEnable,
   writeDot1xDisable,
   batchWritePorts,
+  // v1.51 Phase 121 PORTW-02 两段式写确认
+  previewBatchWritePorts,
+  // v1.51 Phase 127 PWX-04 端口写审计明细
+  listPortWriteAudits,
+  // v1.51 Phase 125 单端口 trunk（PortWriteModal 三动作）
+  writeTrunk,
   // Phase 56 v1.20.1 端口写操作扩展
   writeSetAccessVlan,
   writePortBinding,

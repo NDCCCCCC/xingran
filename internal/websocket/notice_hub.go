@@ -248,6 +248,40 @@ func (h *NoticeHub) BroadcastRPAProgress(message RPAProgressMessage) {
 	}
 }
 
+// PortWriteProgressMessage 端口写批量进度消息（Phase 122 PORTW-07）。
+//
+// NoticeHub 通道复用：与 RPAProgressMessage 同款推送模式（原始 JSON 嵌入
+// NoticeMessage.Content，Type 透传消息自身类型 port_write_progress /
+// port_write_completed），前端按 type 分流。
+type PortWriteProgressMessage struct {
+	Type          string `json:"type"`                 // port_write_progress | port_write_completed
+	BatchID       string `json:"batchId"`              // 与 HTTP 响应 BatchResult.batchId 同值
+	DeviceID      string `json:"deviceId"`
+	Action        string `json:"action"`
+	PortID        string `json:"portId,omitempty"`     // completed 事件为空
+	InterfaceName string `json:"interfaceName,omitempty"`
+	Index         int    `json:"index"`                // 1-based 当前端口序号（completed 为总数）
+	Total         int    `json:"total"`
+	Status        string `json:"status"`               // succeeded | failed | skipped；completed 为批次汇总
+	Message       string `json:"message,omitempty"`    // 失败原因 / fail-fast 说明
+	Summary       string `json:"summary,omitempty"`    // completed：{"succeeded":N,"failed":N,"skipped":N}
+	Timestamp     int64  `json:"timestamp"`
+}
+
+// BroadcastPortWriteProgressToUsers 向指定用户推送端口写批量进度事件（Phase 122）。
+func (h *NoticeHub) BroadcastPortWriteProgressToUsers(userIDs []string, message PortWriteProgressMessage) {
+	data, err := json.Marshal(message)
+	if err != nil {
+		applogger.Errorf("端口写进度消息序列化失败: %v", err)
+		return
+	}
+	h.broadcast <- NoticeMessage{
+		Type:      message.Type,
+		Timestamp: time.Now().Unix(),
+		Content:   string(data),
+	}
+}
+
 // BroadcastRPAProgressToUser 向指定用户推送RPA执行进度消息
 func (h *NoticeHub) BroadcastRPAProgressToUser(userID string, message RPAProgressMessage) {
 	h.BroadcastRPAProgressToUsers([]string{userID}, message)

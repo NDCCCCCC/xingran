@@ -372,8 +372,10 @@ func TestSelectorLearner_RecordAndGetBest(t *testing.T) {
 	require.NotNil(t, best)
 	assert.Equal(t, "#cached", best.Selector)
 
-	// LearnFromExecution 是 TODO 空实现
-	require.NoError(t, l.LearnFromExecution(ctx, "e1"))
+	// LearnFromExecution（TIDY-03 :256）：执行记录不存在 → 明确错误（不再是无声 no-op）
+	_, err = l.LearnFromExecution(ctx, "e1")
+	require.Error(t, err, "执行记录缺失应返回明确错误")
+	assert.Contains(t, err.Error(), "查询执行记录失败")
 }
 
 // TestSelectorLearner_NilResultNotCached Phase 103 CONV-03 (WR-02 锁):

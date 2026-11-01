@@ -47,6 +47,21 @@ type PortTemplateParams struct {
 	IPAddress      string
 	MACAddress     string
 	Dot1xUserLimit *int
+	// Phase 124 (PWX-01) trunk/hybrid 字段：
+	//   - NativeVLAN   仅 TrunkSetNative 使用（1-4094）
+	//   - AllowedVLANs 仅 TrunkSetAllowed 使用；配合 AllowedMode(add|remove|replace)
+	//   - AllowedMode  仅 TrunkSetAllowed 使用；空值保守按 replace 语义
+	//   - HybridTagged / HybridUntagged 仅 TrunkSetHybrid 使用（华为/H3C；两列表
+	//     不可重叠，重叠校验在 service 层 —— H3C 设备侧不兜底，见 vlan_trunk_template.go 头注）
+	NativeVLAN     int
+	AllowedVLANs   []int
+	AllowedMode    string
+	HybridTagged   []int
+	HybridUntagged []int
+	// Phase 125 (PWX-02) 端口安全字段：
+	//   - MaxMACCount 仅 PortSecMaxMac 使用（1-4096）
+	//   - PortSecStaticBind 复用 MACAddress + VLANID 载体
+	MaxMACCount int
 }
 
 // 哨兵错误（Phase 51 service 翻译为 HTTP 400 / 404 / 422 等业务码）。

@@ -204,6 +204,24 @@ type RPAWorkerConfig struct {
 	MaxWorkers        int    `mapstructure:"max_workers"`        // 最大Worker数量
 	HeartbeatInterval string `mapstructure:"heartbeat_interval"` // 心跳间隔
 	TaskTimeout       string `mapstructure:"task_timeout"`       // 任务超时时间
+
+	// Auth DEBT-03（v1.51）：Worker API Token 认证配置。
+	Auth RPAWorkerAuthConfig `mapstructure:"auth"`
+}
+
+// RPAWorkerAuthConfig Worker API Token 认证配置（DEBT-03）。
+//
+// 向后兼容宽限期：auth_required 默认 false —— 老部署/网络隔离环境下老 Worker
+// 不携带 Token 仍可通信（行为与 DEBT-03 之前完全一致）；置 true 后强制校验。
+type RPAWorkerAuthConfig struct {
+	// ProvisioningTokens 预共享注册令牌白名单（生产经 env 注入，勿提交明文）。
+	// Worker 注册时携带 X-Provisioning-Token，命中白名单才换发 Worker Token。
+	ProvisioningTokens []string `mapstructure:"provisioning_tokens"`
+	// AuthRequired 是否强制 Token 认证。false=宽限期双读（无 token 放行并 WARN），
+	// true=无 token/错 token 一律 401。
+	AuthRequired bool `mapstructure:"auth_required"`
+	// TokenExpireDays Worker Token 有效期（天）。<=0 时取默认 90。
+	TokenExpireDays int `mapstructure:"token_expire_days"`
 }
 
 // RPAStorageConfig RPA存储配置。

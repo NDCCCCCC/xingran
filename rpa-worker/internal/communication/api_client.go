@@ -17,6 +17,11 @@ import (
 type APIClient struct {
 	baseURL    string
 	token      string
+	// provisioningToken DEBT-03：预共享注册令牌，仅 Register 请求经
+	// X-Provisioning-Token 头发送；换发的 Worker Token 存 workerToken，
+	// 后续请求经 X-Worker-Token 头发送（后端 auth_required=true 时必需）。
+	provisioningToken string
+	workerToken       string
 	httpClient *http.Client
 	logger     logger.Logger
 }
@@ -24,8 +29,9 @@ type APIClient struct {
 // NewAPIClient create API client
 func NewAPIClient(cfg *config.BackendConfig, log logger.Logger) *APIClient {
 	return &APIClient{
-		baseURL: cfg.BaseURL,
-		token:   cfg.APIToken,
+		baseURL:           cfg.BaseURL,
+		token:             cfg.APIToken,
+		provisioningToken: cfg.ProvisioningToken,
 		httpClient: &http.Client{
 			Timeout: cfg.Timeout,
 		},
@@ -37,6 +43,11 @@ func NewAPIClient(cfg *config.BackendConfig, log logger.Logger) *APIClient {
 func (c *APIClient) Register(ctx context.Context, req *types.WorkerRegisterRequest) (*types.WorkerRegisterResponse, error) {
 	c.logger.Info("registering worker", logger.String("worker_id", req.WorkerID))
 
+	// DEBT-03：注册请求携带预共享令牌（宽限期后端 auth_required=false 时不强制，
+	// 但带合法头即换发 Worker Token）。
+	if c.provisioningToken != "" {
+		ctx = contextWithProvisioningToken(ctx, c.provisioningToken)
+	}
 	var resp types.APIResponse
 	err := c.post(ctx, "/rpa/workers/register", req, &resp)
 	if err != nil {
@@ -54,7 +65,22 @@ func (c *APIClient) Register(ctx context.Context, req *types.WorkerRegisterReque
 		return &registerResp, nil
 	}
 
+	// DEBT-03：保存换发的 Worker Token，后续请求经 X-Worker-Token 携带。
+	if registerResp.Token != "" {
+		c.workerToken = registerResp.Token
+		c.logger.Info("worker token acquired", logger.String("expires_hint", "see backend config token_expire_days"))
+	}
+
 	return &registerResp, nil
+}
+
+// provisioningTokenKey 上下文键：Register 请求专用的预共享令牌传递。
+type provisioningTokenKeyType struct{}
+
+var provisioningTokenKey provisioningTokenKeyType
+
+func contextWithProvisioningToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, provisioningTokenKey, token)
 }
 
 // Heartbeat send heartbeat
@@ -90,6 +116,13 @@ func (c *APIClient) post(ctx context.Context, path string, body, result interfac
 	req.Header.Set("Content-Type", "application/json")
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	// DEBT-03：注册请求带预共享令牌；运行期请求带换发的 Worker Token。
+	if pt, ok := ctx.Value(provisioningTokenKey).(string); ok && pt != "" {
+		req.Header.Set("X-Provisioning-Token", pt)
+	}
+	if c.workerToken != "" {
+		req.Header.Set("X-Worker-Token", c.workerToken)
 	}
 
 	// Send request

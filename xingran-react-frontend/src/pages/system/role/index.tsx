@@ -18,6 +18,7 @@ import {
 import type { Key } from "antd/es/table/interface";
 
 import { post } from "@/lib/api";
+import type { FormInstance } from "antd/es/form";
 import type { Role } from "@/types";
 import { STATUS_OPTIONS, DATA_SCOPE_OPTIONS, DEFAULT_FORM_VALUES } from "./constants";
 import { getRoleColumns } from "./columns";
@@ -31,7 +32,17 @@ import { useActionPermission } from "@/components/shared";
 
 // ==================== 主组件 ====================
 
-const RoleManagement: FC = () => {
+export interface RoleManagementProps {
+  /**
+   * editForm 实例就绪回调（DEBT-05 根治）。
+   * 供测试/外部消费方做确定性等待：拿到实例后经 getFieldInstance / setFieldsValue
+   * 操作表单，替代「重复 change 直到 value 生效」的轮询补丁。
+   * 不传时行为与旧版完全一致。
+   */
+  onEditFormReady?: (form: FormInstance<unknown>) => void;
+}
+
+const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
   // STOP-04 B1: 提交中标记，用于禁用编辑弹窗取消按钮
   const [submitting, setSubmitting] = useState(false);
   // 使用全局分页 hook
@@ -203,6 +214,13 @@ const RoleManagement: FC = () => {
     loadDeptTree();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // DEBT-05：editForm 实例对外暴露（仅回调，不改变组件行为）
+  useEffect(() => {
+    if (editForm) {
+      onEditFormReady?.(editForm);
+    }
+  }, [editForm, onEditFormReady]);
 
   // 搜索：applyFilters 读 searchForm，自动带上当前排序
   const handleSearch = () => {

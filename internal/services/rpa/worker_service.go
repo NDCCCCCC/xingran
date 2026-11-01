@@ -114,11 +114,16 @@ func (s *workerServiceImpl) Register(ctx context.Context, req *WorkerRegisterReq
 	// 使用原生 SQL ON CONFLICT DO UPDATE 避免 BaseModel 字段问题
 	// Worker 是自动注册的，不需要用户审计字段
 	//
-	// 注意：原生 SQL INSERT 不走 GORM Create 钩子链，Worker.BeforeCreate / BaseModel.BeforeCreate
-	//（显式赋 UUID）不会触发，故 id 必须在 SQL 内显式用 gen_random_uuid() 生成。
-	// sys_rpa_workers.id 列由 migration_205 补 DEFAULT gen_random_uuid() 兜底，但此处仍显式写入，
-	// 双重保险防止 NOT NULL 违规（SQLSTATE 23502）。
-	// gen_random_uuid() 是 PG 内嵌函数，不占 Go 占位符，下方 Scan 占位实参顺序与数量保持不变。
+	// PG 路径：原生 SQL INSERT 不走 GORM Create 钩子链，id 在 SQL 内显式用
+	// gen_random_uuid() 生成（migration_205 的 DEFAULT 兜底，此处显式写入双保险）。
+	// sqlite 路径（DEBT-03 集成准备发现，2026-11-01）：gen_random_uuid()/NOW()/
+	// RETURNING 均为 PG 专属，sqlite 上 Register 整体 500。sqlite 走 GORM upsert：
+	// 先按 worker_id 查，存在则字段级 UPDATE，不存在 Create（BeforeCreate 补 UUID），
+	// 语义与 PG 等价。此前实测矩阵见 scripts/integration/smoke-v1.51.sh。
+	if s.db.Dialector.Name() == "sqlite" {
+		return s.registerSQLite(ctx, req, string(capsJSON), now)
+	}
+
 	query := `
 		INSERT INTO sys_rpa_workers (
 			id, worker_name, worker_id, ip_address, port, status,
@@ -148,6 +153,49 @@ func (s *workerServiceImpl) Register(ctx context.Context, req *WorkerRegisterReq
 	}
 
 	return worker, nil
+}
+
+// registerSQLite sqlite 方言的 Register upsert（应用层生成 UUID 与时间戳，
+// 规避 gen_random_uuid()/NOW()/RETURNING 等 PG 专属特性）。
+func (s *workerServiceImpl) registerSQLite(ctx context.Context, req *WorkerRegisterRequest, capsJSON string, now int64) (*rpamodels.Worker, error) {
+	var existing rpamodels.Worker
+	err := s.db.WithContext(ctx).Where("worker_id = ?", req.WorkerID).First(&existing).Error
+	switch {
+	case err == nil:
+		updates := map[string]interface{}{
+			"worker_name":     req.Name,
+			"ip_address":      req.Host,
+			"port":            req.Port,
+			"status":          rpamodels.WorkerStatusOnline,
+			// ⚠ 必须 []byte：sqlite 驱动把 string 写入后回读 Scan 到
+			// json.RawMessage 报 unsupported Scan（2026-11-01 冒烟实测）
+			"capabilities":    []byte(capsJSON),
+			"max_concurrency": req.MaxConcurrency,
+			"last_heartbeat":  now,
+			"updated_at":      time.Now(),
+		}
+		if err := s.db.WithContext(ctx).Model(&existing).Updates(updates).Error; err != nil {
+			return nil, fmt.Errorf("注册 Worker 失败: %w", err)
+		}
+		return &existing, nil
+	case err == gorm.ErrRecordNotFound:
+		worker := rpamodels.Worker{
+			WorkerName:     req.Name,
+			WorkerID:       req.WorkerID,
+			IPAddress:      req.Host,
+			Port:           req.Port,
+			Status:         rpamodels.WorkerStatusOnline,
+			Capabilities:   json.RawMessage(capsJSON),
+			MaxConcurrency: req.MaxConcurrency,
+			LastHeartbeat:  &now,
+		}
+		if err := s.db.WithContext(ctx).Create(&worker).Error; err != nil {
+			return nil, fmt.Errorf("注册 Worker 失败: %w", err)
+		}
+		return &worker, nil
+	default:
+		return nil, fmt.Errorf("注册 Worker 失败: %w", err)
+	}
 }
 
 // Heartbeat 心跳上报

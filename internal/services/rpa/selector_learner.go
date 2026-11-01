@@ -2,13 +2,18 @@ package rpa
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/websocket"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -17,7 +22,9 @@ type SelectorLearner interface {
 	RecordSuccess(ctx context.Context, record *SelectorSuccessRecord) error
 	RecordFailure(ctx context.Context, record *SelectorFailureRecord) error
 	GetBestSelector(ctx context.Context, pageURL, elementID string) (*SelectorRecommendation, error)
-	LearnFromExecution(ctx context.Context, executionID string) error
+	// TIDY-03（v1.51）：返回消费的事件数——0 且无错表示"无可学事件"调用方可
+	// 降级；执行记录缺失/无明细返回明确错误（不静默吞）。
+	LearnFromExecution(ctx context.Context, executionID string) (consumed int, err error)
 	ScoreSelector(ctx context.Context, selector string, pageURL string) (float64, error)
 	GetSelectorAlternatives(ctx context.Context, selector string, pageURL string) ([]string, error)
 }
@@ -28,16 +35,24 @@ type selectorLearnerImpl struct {
 	cache  base.CacheProvider
 	config *config.Config
 	mu     sync.RWMutex
+	// noticeHub TIDY-03（v1.51）：可选 WebSocket 通知枢纽（nil 安全）。
+	noticeHub *websocket.NoticeHub
 }
 
 // NewSelectorLearner 创建选择器学习服务
 // Phase 103 CONV-03 (D-103-2): cache cache.Cache → cache base.CacheProvider
-func NewSelectorLearner(db *gorm.DB, cache base.CacheProvider, cfg *config.Config) SelectorLearner {
-	return &selectorLearnerImpl{
+// TIDY-03（v1.51）：可选变参注入 NoticeHub（nil 安全）——选择器连续失败时经
+// WebSocket 广播更新提醒；不传 = 维持旧行为（仅本地记录）。
+func NewSelectorLearner(db *gorm.DB, cache base.CacheProvider, cfg *config.Config, noticeHub ...*websocket.NoticeHub) SelectorLearner {
+	impl := &selectorLearnerImpl{
 		db:     db,
 		cache:  cache,
 		config: cfg,
 	}
+	for _, h := range noticeHub {
+		impl.noticeHub = h
+	}
+	return impl
 }
 
 // SelectorSuccessRecord 选择器成功记录
@@ -111,7 +126,10 @@ func (l *selectorLearnerImpl) RecordSuccess(ctx context.Context, record *Selecto
 			updates["avg_duration"] = totalDuration / int64(existing.SuccessCount+1)
 		}
 
-		if err := l.db.WithContext(ctx).Model(&existing).Updates(updates).Error; err != nil {
+		// 同 RecordFailure：显式三元组条件（防 sqlite 空 id 丢 WHERE）
+		if err := l.db.WithContext(ctx).Model(&SelectorSuccessRecord{}).
+			Where("page_url = ? AND element_id = ? AND selector = ?", record.PageURL, record.ElementID, record.Selector).
+			Updates(updates).Error; err != nil {
 			return fmt.Errorf("更新成功记录失败: %w", err)
 		}
 	} else {
@@ -144,7 +162,11 @@ func (l *selectorLearnerImpl) RecordFailure(ctx context.Context, record *Selecto
 		updates := map[string]interface{}{
 			"failure_count": existing.FailureCount + 1,
 		}
-		if err := l.db.WithContext(ctx).Model(&existing).Updates(updates).Error; err != nil {
+		// ⚠ 显式三元组条件而非主键：sqlite 测试库的 id 由手写表承载时可能为空
+		// （PG 下 gen_random_uuid 兜底），空主键会让 Updates 丢失 WHERE。
+		if err := l.db.WithContext(ctx).Model(&SelectorFailureRecord{}).
+			Where("page_url = ? AND element_id = ? AND selector = ?", record.PageURL, record.ElementID, record.Selector).
+			Updates(updates).Error; err != nil {
 			return fmt.Errorf("更新失败记录失败: %w", err)
 		}
 		record = &existing
@@ -251,11 +273,106 @@ func (l *selectorLearnerImpl) computeBestSelector(ctx context.Context, pageURL, 
 	return best, nil
 }
 
-// LearnFromExecution 从执行记录中学习
-func (l *selectorLearnerImpl) LearnFromExecution(ctx context.Context, executionID string) error {
-	// TODO: 从执行记录中提取选择器使用情况
-	// 这个功能需要在执行记录中存储详细的选择器信息
-	return nil
+// selectorEventEnvelope worker 上报明细的解析信封（TIDY-03 :256 方案 A 契约）。
+//
+// 契约（worker 上报侧适配依据，零 migration）：执行记录的 Logs 字段（自由文本）
+// 中允许嵌入一行合法 JSON：
+//
+//	{"selectorEvents":[{"pageUrl":"...","elementId":"...","selector":"...",
+//	  "selectorType":"css|xpath|text|aria|data-testid","success":true,
+//	  "durationMs":120,"errorType":"not_found","errorMessage":"..."}]}
+//
+// 解析规则：Logs 按 行 切分，逐行尝试 unmarshal；含 selectorEvents 的行被消费，
+// 其余行（普通日志）静默跳过——两种形态共存安全。durationMs 仅 success 事件
+// 有意义；errorType ∈ timeout/not_found/multiple_matches（与 FailureRecord 对齐）。
+type selectorEventEnvelope struct {
+	SelectorEvents []selectorEvent `json:"selectorEvents"`
+}
+
+type selectorEvent struct {
+	PageURL      string `json:"pageUrl"`
+	ElementID    string `json:"elementId"`
+	Selector     string `json:"selector"`
+	SelectorType string `json:"selectorType"`
+	Success      bool   `json:"success"`
+	DurationMs   int64  `json:"durationMs"`
+	ErrorType    string `json:"errorType"`
+	ErrorMessage string `json:"errorMessage"`
+}
+
+// LearnFromExecution 从执行记录中学习（TIDY-03 :256 实现，方案 A）。
+//
+// 流程：读 sys_rpa_executions.logs → 逐行解析 selectorEvents 信封 →
+// success 事件走 RecordSuccess（复用既有 upsert + 缓存失效）、失败事件走
+// RecordFailure（失败 ≥3 次自动触发 :389 的 selector_update_required 广播，
+// 学习→通知闭环在此汇合）。
+//
+// 结果语义：返回 (consumed, error)——consumed=消费的事件数。执行记录不存在
+// 或不含任何选择器明细时返回明确错误（调用方降级，不静默吞）。
+// 单事件解析/记录失败不中断整批（记 WARN 继续），与「学习失败不阻断主同步」
+// 的既有容忍语义一致。
+func (l *selectorLearnerImpl) LearnFromExecution(ctx context.Context, executionID string) (int, error) {
+	if strings.TrimSpace(executionID) == "" {
+		return 0, fmt.Errorf("executionID 不能为空")
+	}
+	var exec rpamodels.Execution
+	if err := l.db.WithContext(ctx).Where("id = ?", executionID).First(&exec).Error; err != nil {
+		return 0, fmt.Errorf("查询执行记录失败: %w", err)
+	}
+	if strings.TrimSpace(exec.Logs) == "" {
+		return 0, fmt.Errorf("执行记录 %s 的 logs 为空，无选择器明细可学习", executionID)
+	}
+
+	consumed := 0
+	var firstErr error
+	for _, line := range strings.Split(exec.Logs, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "{") {
+			continue
+		}
+		var envelope selectorEventEnvelope
+		if err := json.Unmarshal([]byte(line), &envelope); err != nil || len(envelope.SelectorEvents) == 0 {
+			continue
+		}
+		for _, ev := range envelope.SelectorEvents {
+			if ev.PageURL == "" || ev.ElementID == "" || ev.Selector == "" {
+				applogger.Warnf("[RPA-SELECTOR] 跳过不完整的选择器事件: page=%q element=%q selector=%q",
+					ev.PageURL, ev.ElementID, ev.Selector)
+				continue
+			}
+			var err error
+			if ev.Success {
+				err = l.RecordSuccess(ctx, &SelectorSuccessRecord{
+					PageURL:      ev.PageURL,
+					ElementID:    ev.ElementID,
+					Selector:     ev.Selector,
+					SelectorType: ev.SelectorType,
+					AvgDuration:  ev.DurationMs,
+				})
+			} else {
+				err = l.RecordFailure(ctx, &SelectorFailureRecord{
+					PageURL:      ev.PageURL,
+					ElementID:    ev.ElementID,
+					Selector:     ev.Selector,
+					ErrorType:    ev.ErrorType,
+					ErrorMessage: ev.ErrorMessage,
+				})
+			}
+			if err != nil {
+				applogger.Warnf("[RPA-SELECTOR] 事件记录失败（继续处理其余事件）: %v", err)
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			consumed++
+		}
+	}
+
+	if consumed == 0 && firstErr == nil {
+		return 0, fmt.Errorf("执行记录 %s 的 logs 未解析出任何选择器明细（worker 未按契约上报 selectorEvents）", executionID)
+	}
+	return consumed, firstErr
 }
 
 // ScoreSelector 对选择器进行评分
@@ -384,10 +501,33 @@ func (l *selectorLearnerImpl) getCacheKey(pageURL, elementID string) string {
 	return systemServices.GetRpaSelectorBestKey(pageURL, elementID)
 }
 
-// markSelectorForUpdate 标记选择器需要更新
+// markSelectorForUpdate 标记选择器需要更新（TIDY-03 :389 实现）。
+//
+// 通知机制（复用既有 NoticeHub WebSocket 链路，不新增通知基建）：
+//   - noticeHub 注入时：BroadcastToAll 广播 selector_update_required 消息，
+//     管理端（RPA AI 面板）据此提示「该选择器连续失败 ≥3 次，建议重新学习」；
+//   - 未注入（旧构造签名/单测）：仅 WARN 日志，行为与 TODO 之前一致。
+//
+// 刻意不做的事：不落库「待处理任务」——SelectorFailureRecord 本身就是持久
+// 待办（FailureCount + ResolvedAt 已表达未解决状态），再建任务表是第二真相。
 func (l *selectorLearnerImpl) markSelectorForUpdate(ctx context.Context, record *SelectorFailureRecord) {
-	// TODO: 实现选择器更新通知机制
-	// 可以通过 WebSocket 通知前端，或创建待处理任务
+	if record == nil {
+		return
+	}
+	applogger.Warnf("[RPA-SELECTOR] 选择器连续失败 %d 次，需要更新: page=%s element=%s selector=%s lastError=%s",
+		record.FailureCount, record.PageURL, record.ElementID, record.Selector, record.ErrorMessage)
+
+	if l.noticeHub == nil {
+		return
+	}
+	l.noticeHub.BroadcastToAll(websocket.NoticeMessage{
+		Type:  "selector_update_required",
+		Title: "RPA 选择器需要更新",
+		Content: fmt.Sprintf("选择器连续失败 %d 次（页面 %s / 元素 %s），建议在 RPA AI 面板重新学习。",
+			record.FailureCount, record.PageURL, record.ElementID),
+		Priority:  2,
+		Timestamp: time.Now().Unix(),
+	})
 }
 
 // GetSelectorHistory 获取选择器历史记录

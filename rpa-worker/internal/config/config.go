@@ -49,6 +49,9 @@ type WorkerConfig struct {
 type BackendConfig struct {
 	BaseURL              string        `mapstructure:"base_url"`
 	APIToken              string        `mapstructure:"token"`
+	// ProvisioningToken DEBT-03：预共享注册令牌（仅注册时经 X-Provisioning-Token 发送；
+	// 注册成功后换发的 Worker Token 由 APIClient 内存保存，无需配置）。
+	ProvisioningToken     string        `mapstructure:"provisioning_token"`
 	Timeout               time.Duration `mapstructure:"timeout"`
 	HeartbeatInterval     time.Duration `mapstructure:"heartbeat_interval"`
 	ProgressPublishTimeout time.Duration `mapstructure:"progress_publish_timeout"`
@@ -315,6 +318,10 @@ func overrideWithEnv(cfg *Config) {
 	}
 	if token := os.Getenv("WORKER_TOKEN"); token != "" {
 		cfg.Backend.APIToken = token
+	}
+	// DEBT-03：预共享注册令牌 env 注入（生产勿在 yaml 提交明文）。
+	if pt := os.Getenv("WORKER_PROVISIONING_TOKEN"); pt != "" {
+		cfg.Backend.ProvisioningToken = pt
 	}
 	if backendURL := os.Getenv("BACKEND_URL"); backendURL != "" {
 		cfg.Backend.BaseURL = backendURL

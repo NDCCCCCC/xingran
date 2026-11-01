@@ -173,7 +173,12 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage, workerID 
     // Task completed successfully
     result.Status = types.StatusSuccess
     result.CompletedAt = time.Now()
-    result.Duration = result.CompletedAt.Sub(startTime)
+    result.Duration = result.CompletedAt.Sub(result.StartedAt)
+
+    // TIDY-03 配套：选择器明细契约信封行（空事件不发——验收 #2）
+    if envelope := pageMgr.SelectorEnvelopeLine(); envelope != "" {
+        result.Logs = append(result.Logs, envelope)
+    }
 
     e.logger.Info("task executed successfully",
         logger.String("execution_id", task.ExecutionID),

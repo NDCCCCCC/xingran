@@ -16,6 +16,7 @@
  */
 
 import type { FormInstance } from "antd";
+import type { PortWriteAction } from "@/types/network";
 
 /**
  * D-02 预置操作原因
@@ -45,7 +46,15 @@ export const ACTION_TITLE: Record<
   | "dot1x_enable"
   | "dot1x_disable"
   | "set_access_vlan" // v1.20.1
-  | "port_binding", // v1.20.1
+  | "port_binding" // v1.20.1
+  | "trunk_set_native" // v1.51 Phase 124
+  | "trunk_set_allowed" // v1.51 Phase 124
+  | "trunk_set_hybrid" // v1.51 Phase 124
+  | "portsec_enable" // v1.51 Phase 125
+  | "portsec_disable" // v1.51 Phase 125
+  | "portsec_max_mac" // v1.51 Phase 125
+  | "portsec_sticky" // v1.51 Phase 125
+  | "portsec_static_bind", // v1.51 Phase 125
   string
 > = {
   shutdown: "关闭端口",
@@ -55,7 +64,93 @@ export const ACTION_TITLE: Record<
   dot1x_disable: "停用 802.1X",
   set_access_vlan: "修改 access VLAN",
   port_binding: "端口绑定",
+  trunk_set_native: "设置 Trunk Native VLAN",
+  trunk_set_allowed: "配置 Trunk 放行 VLAN",
+  trunk_set_hybrid: "配置 Hybrid 端口",
+  portsec_enable: "启用端口安全",
+  portsec_disable: "停用端口安全",
+  portsec_max_mac: "设置 MAC 学习上限",
+  portsec_sticky: "启用 Sticky MAC",
+  portsec_static_bind: "配置静态 MAC 绑定",
 };
+
+// ==================== v1.51 Phase 124 trunk/hybrid 表单常量 ====================
+
+/** trunk_set_allowed 的 mode 三选（契约 9835291c: add|remove|replace, 默认 replace） */
+export const TRUNK_ALLOWED_MODE_OPTIONS = [
+  { label: "追加 (add)", value: "add" },
+  { label: "移除 (remove)", value: "remove" },
+  { label: "替换 (replace)", value: "replace" },
+] as const;
+
+/** replace 厂商语义提示（portwriter 契约注释: 华为/H3C 无原生替换, 退化为叠加） */
+export const TRUNK_REPLACE_HINT =
+  "replace（替换）仅锐捷原生支持；华为/H3C 无原生替换语义，将退化为叠加处理，结果以预览与审计为准。";
+
+/** hybrid tagged/untagged 重叠提示（华为拒绝 / H3C 静默优先 untagged，系统侧 400 为共同真相源） */
+export const TRUNK_HYBRID_OVERLAP_HINT =
+  "tagged 与 untagged VLAN 不可重叠：华为设备会拒绝，H3C 会静默优先 untagged 表项。Cisco 不支持 hybrid 端口模式（选择将返回 400）。";
+
+/** cisco 设备 action 集提示（契约 adefb14c: cisco 支持 14 个动作, 无 trunk_set_hybrid） */
+export const CISCO_UNSUPPORTED_ACTIONS: readonly PortWriteAction[] = ["trunk_set_hybrid"];
+
+/** VLAN 列表最大条数（保守上限, 防误粘超长串; 后端同样有 sentinel 校验） */
+export const VLAN_LIST_MAX = 256;
+
+/**
+ * 解析 VLAN 列表输入（逗号/空格/分号分隔）→ 去重升序数组。
+ * 返回 null 表示存在非法 token（非数字 / 越界 1-4094 / 超长），由调用方标红提示。
+ */
+export function parseVlanList(input: string): number[] | null {
+  const tokens = input
+    .split(/[,;\s]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+  if (tokens.length === 0) return null;
+  if (tokens.length > VLAN_LIST_MAX) return null;
+  const seen = new Set<number>();
+  for (const token of tokens) {
+    if (!/^\d{1,5}$/.test(token)) return null;
+    const vlan = Number(token);
+    if (!Number.isInteger(vlan) || vlan < 1 || vlan > 4094) return null;
+    seen.add(vlan);
+  }
+  return Array.from(seen).sort((a, b) => a - b);
+}
+
+// ==================== v1.51 Phase 125 portsec 表单常量 ====================
+
+/** skipPreflight 开关文案（lead 裁决 + portwriter 建议） */
+export const SKIP_PREFLIGHT_HINT = "跳过在线预检（管理员强制下发，事件将留痕审计）";
+
+/** portsec_static_bind MAC 输入提示（后端按厂商归一渲染: 华为/H3C 连字符、锐捷点分） */
+export const PORTSEC_MAC_HINT =
+  "支持 AA-BB-CC-DD-EE-FF、AA:BB:CC:DD:EE:FF、aabb.ccdd.eeff 三种格式，后端按设备厂商自动归一。";
+
+/**
+ * 校验并归一 MAC 输入（三种分隔格式 → 大写连字符形式）。
+ * 返回 null 表示格式非法（非 12 位 hex）。
+ */
+export function parseMacAddress(input: string): string | null {
+  const hex = input.trim().replace(/[:\-.]/g, "");
+  if (!/^[0-9a-fA-F]{12}$/.test(hex)) return null;
+  const up = hex.toUpperCase();
+  return `${up.slice(0, 2)}-${up.slice(2, 4)}-${up.slice(4, 6)}-${up.slice(6, 8)}-${up.slice(
+    8,
+    10
+  )}-${up.slice(10, 12)}`;
+}
+
+/** VLAN 列表文本可选校验（抽公共: drawer 与 modal 的 hybrid/allowed 复用） */
+export function validateVlanListText(value: unknown): Promise<void> {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return Promise.resolve();
+  }
+  if (parseVlanList(String(value)) === null) {
+    return Promise.reject(new Error("格式：逗号/空格分隔的 1-4094 整数（自动去重）"));
+  }
+  return Promise.resolve();
+}
 
 /**
  * D-02 reason 字段校验上下限
