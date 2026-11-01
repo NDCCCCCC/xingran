@@ -183,9 +183,7 @@ export function PortWriteModal({
           portId: portRecord.id,
           action,
           reason: reason ?? undefined,
-          ...(action === "trunk_set_native"
-            ? { nativeVlan: Number(values.nativeVlan) }
-            : {}),
+          ...(action === "trunk_set_native" ? { nativeVlan: Number(values.nativeVlan) } : {}),
           ...(action === "trunk_set_allowed"
             ? {
                 allowedVlans: parseVlanList(String(values.allowedVlansText)) ?? [],

@@ -195,7 +195,9 @@ function makePreview(overrides?: Partial<PortWritePreviewResult>): PortWritePrev
         interfaceName: "GigabitEthernet0/1",
         status: "preview",
         noOp: false,
-        commands: [{ index: 1, command: "interface GigabitEthernet0/1", riskLevel: "low", critical: false }],
+        commands: [
+          { index: 1, command: "interface GigabitEthernet0/1", riskLevel: "low", critical: false },
+        ],
       },
     ],
     ...overrides,
@@ -527,8 +529,19 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
             status: "preview",
             noOp: false,
             commands: [
-              { index: 1, command: "interface GigabitEthernet0/1", riskLevel: "low", critical: false },
-              { index: 2, command: "shutdown", riskLevel: "critical", critical: true, note: "可能中断链路" },
+              {
+                index: 1,
+                command: "interface GigabitEthernet0/1",
+                riskLevel: "low",
+                critical: false,
+              },
+              {
+                index: 2,
+                command: "shutdown",
+                riskLevel: "critical",
+                critical: true,
+                note: "可能中断链路",
+              },
             ],
           },
           {
@@ -583,7 +596,10 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     await waitFor(() => {
       expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
     });
-    const writeArg = mockBatchWritePorts.mock.calls[0][0] as { deviceId: string; portIds: string[] };
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as {
+      deviceId: string;
+      portIds: string[];
+    };
     expect(writeArg.deviceId).toBe(DEVICE_A);
     expect(writeArg.portIds).toEqual(["port-a-1", "port-a-2"]);
   });
@@ -608,7 +624,9 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     });
 
     // 默认 fixture riskLevel=medium → 非 danger
-    const confirmBtn = screen.getByRole("button", { name: "确认下发（真实写）" }) as HTMLButtonElement;
+    const confirmBtn = screen.getByRole("button", {
+      name: "确认下发（真实写）",
+    }) as HTMLButtonElement;
     expect(confirmBtn.className).not.toContain("danger");
 
     // 返回修改: 回到 select, 不触发真实写
@@ -923,7 +941,9 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
       expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
     });
     // static_bind=critical → 确认按钮 danger（后端 riskLevel 驱动; mock 返回 critical）
-    const confirmBtn = screen.getByRole("button", { name: "确认下发（真实写）" }) as HTMLButtonElement;
+    const confirmBtn = screen.getByRole("button", {
+      name: "确认下发（真实写）",
+    }) as HTMLButtonElement;
     expect(confirmBtn.className).toContain("danger");
     await act(async () => {
       fireEvent.click(confirmBtn);
@@ -1159,9 +1179,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     });
 
     // 无事件 → 降级提示出现（不白屏）
-    expect(
-      await screen.findByText("实时进度通道未就绪，完成后将直接显示结果")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("实时进度通道未就绪，完成后将直接显示结果")).toBeInTheDocument();
 
     // 同步响应兜底 → result 视图
     await act(async () => {

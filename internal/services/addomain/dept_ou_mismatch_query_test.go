@@ -99,20 +99,20 @@ func TestListDeptOUMismatch(t *testing.T) {
 	// keyword：大小写不敏感 + 命中 username 列
 	rows, total, err = svc.ListDeptOUMismatch(ctx, &DeptOUMismatchQuery{Current: 1, PageSize: 10, Keyword: "alic"})
 	require.NoError(t, err)
-	if total != 1 {
-		t.Fatalf("keyword 应大小写不敏感命中 Alice, got %d", total)
+	if total != 1 || len(rows) != 1 || rows[0].Username == nil || *rows[0].Username != "Alice" {
+		t.Fatalf("keyword 应大小写不敏感命中 Alice, got total=%d rows=%+v", total, rows)
 	}
 	// keyword 命中 mapped_ou_dn 列
 	rows, total, err = svc.ListDeptOUMismatch(ctx, &DeptOUMismatchQuery{Current: 1, PageSize: 10, Keyword: "WRONG"})
 	require.NoError(t, err)
-	if total != 1 {
-		t.Fatalf("keyword 应命中 mapped_ou_dn, got %d", total)
+	if total != 1 || len(rows) != 1 || rows[0].MappedOUDN == nil || *rows[0].MappedOUDN != "OU=wrong,DC=t" {
+		t.Fatalf("keyword 应命中 mapped_ou_dn, got total=%d rows=%+v", total, rows)
 	}
 	// keyword 为 LIKE 元字符 → 字面量匹配（不退化为通配）
 	rows, total, err = svc.ListDeptOUMismatch(ctx, &DeptOUMismatchQuery{Current: 1, PageSize: 10, Keyword: "%"})
 	require.NoError(t, err)
-	if total != 0 {
-		t.Fatalf("LIKE 元字符应被转义为字面量, got %d", total)
+	if total != 0 || len(rows) != 0 {
+		t.Fatalf("LIKE 元字符应被转义为字面量, got total=%d rows=%+v", total, rows)
 	}
 	// keyword 空白 → 不过滤
 	_, total, err = svc.ListDeptOUMismatch(ctx, &DeptOUMismatchQuery{Current: 1, PageSize: 10, Keyword: "  "})

@@ -309,10 +309,7 @@ export const writePortBinding = async (
  */
 export const batchWritePorts = async (req: BatchWriteRequest): Promise<BatchResult> => {
   // Phase 122 (ece40502): data.batchId 与 WS port_write_* 事件同值, 供进度订阅关联与对账
-  const result = await post<BatchResult & { batchId?: string }>(
-    "/network/ports/write/batch",
-    req
-  );
+  const result = await post<BatchResult & { batchId?: string }>("/network/ports/write/batch", req);
   // data.batchId 与 WS port_write_* 事件同值; 类型经 BatchResult.batchId 暴露
   return result.data!;
 };

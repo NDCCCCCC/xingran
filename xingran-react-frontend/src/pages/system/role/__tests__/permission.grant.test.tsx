@@ -81,10 +81,9 @@ interface RolePageHandles {
 function renderRole(): RolePageHandles {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const handles: RolePageHandles = { editForm: null };
-  renderWithProviders(
-    <RoleManagement onEditFormReady={(form) => (handles.editForm = form)} />,
-    { queryClient: qc }
-  );
+  renderWithProviders(<RoleManagement onEditFormReady={(form) => (handles.editForm = form)} />, {
+    queryClient: qc,
+  });
   return handles;
 }
 

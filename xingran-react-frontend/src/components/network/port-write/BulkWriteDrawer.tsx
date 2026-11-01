@@ -238,9 +238,7 @@ export function BulkWriteDrawer({
         deviceId: lastDeviceId || undefined, // 历史批次兜底（batchId 过滤为空时生效）
       })
         .then((res) => {
-          const rows = (res.list ?? []).filter(
-            (r) => r.commandSent && r.status !== undefined
-          );
+          const rows = (res.list ?? []).filter((r) => r.commandSent && r.status !== undefined);
           if (rows.length === 0) return;
           setLive((prev) =>
             prev
@@ -546,9 +544,7 @@ export function BulkWriteDrawer({
           原 D-05「indeterminate 不伪造 X/Y」约束被 122 解除：后端逐端口实时推送使
           index/total 为真实值而非伪造；WS 不可用/事件未达时回退 indeterminate Spin
           （batch 同步响应的 BatchResult 兜底, 不白屏）。 */}
-      {phase === "executing" && live && live.events.length > 0 && (
-        <ExecutingView live={live} />
-      )}
+      {phase === "executing" && live && live.events.length > 0 && <ExecutingView live={live} />}
       {phase === "executing" && (!live || live.events.length === 0) && (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <Spin size="large" tip="正在批量配置...（预计 ~1s/端口）">
@@ -570,41 +566,42 @@ export function BulkWriteDrawer({
       )}
 
       {/* Phase 123: 写失败且回滚也失败 → 常驻告警（不允许一闪而过）, 引导查看审计页 */}
-      {phase === "result" && batchResult?.failed.some((p) => p.extra?.rollback === "rollback_failed") && (
-        <Alert
-          type="error"
-          showIcon
-          style={{ marginTop: 16 }}
-          title="严重：部分端口写失败且自动回滚也失败"
-          description={
-            <Space orientation="vertical" size={4}>
-              {batchResult.failed
-                .filter((p) => p.extra?.rollback === "rollback_failed")
-                .map((p) => (
-                  <Typography.Text key={p.portId} type="danger" code>
-                    {lastInterfaceMap.get(p.portId) ?? p.portId}:{" "}
-                    {p.extra?.rollbackError ?? p.error ?? "未知回滚错误"}
-                  </Typography.Text>
-                ))}
-              <Typography.Text>
-                设备可能处于中间状态，请立即人工核查，并到端口写审计页核对变更前后快照。
-              </Typography.Text>
-            </Space>
-          }
-          action={
-            <Button
-              size="small"
-              danger
-              onClick={() => {
-                onClose();
-                navigate("/network/port-audits");
-              }}
-            >
-              查看端口写审计
-            </Button>
-          }
-        />
-      )}
+      {phase === "result" &&
+        batchResult?.failed.some((p) => p.extra?.rollback === "rollback_failed") && (
+          <Alert
+            type="error"
+            showIcon
+            style={{ marginTop: 16 }}
+            title="严重：部分端口写失败且自动回滚也失败"
+            description={
+              <Space orientation="vertical" size={4}>
+                {batchResult.failed
+                  .filter((p) => p.extra?.rollback === "rollback_failed")
+                  .map((p) => (
+                    <Typography.Text key={p.portId} type="danger" code>
+                      {lastInterfaceMap.get(p.portId) ?? p.portId}:{" "}
+                      {p.extra?.rollbackError ?? p.error ?? "未知回滚错误"}
+                    </Typography.Text>
+                  ))}
+                <Typography.Text>
+                  设备可能处于中间状态，请立即人工核查，并到端口写审计页核对变更前后快照。
+                </Typography.Text>
+              </Space>
+            }
+            action={
+              <Button
+                size="small"
+                danger
+                onClick={() => {
+                  onClose();
+                  navigate("/network/port-audits");
+                }}
+              >
+                查看端口写审计
+              </Button>
+            }
+          />
+        )}
     </Drawer>
   );
 }
@@ -834,8 +831,7 @@ function SelectView({
                   extra={TRUNK_HYBRID_OVERLAP_HINT}
                   rules={[
                     {
-                      validator: (_rule: unknown, value: unknown) =>
-                        validateVlanListText(value),
+                      validator: (_rule: unknown, value: unknown) => validateVlanListText(value),
                     },
                   ]}
                 >
@@ -846,8 +842,7 @@ function SelectView({
                   label="Untagged VLAN 列表"
                   rules={[
                     {
-                      validator: (_rule: unknown, value: unknown) =>
-                        validateVlanListText(value),
+                      validator: (_rule: unknown, value: unknown) => validateVlanListText(value),
                     },
                     // 前端预校验: 两组不可重叠（后端 ErrHybridOverlap 400 兜底）
                     {

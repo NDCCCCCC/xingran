@@ -84,27 +84,24 @@ const PortWriteAuditsPage = () => {
   // 查询参数快照：提交时固化，翻页沿用同一组过滤条件
   const [filters, setFilters] = useState<Record<string, unknown>>({});
 
-  const loadData = useCallback(
-    async (page: number, size: number, f: Record<string, unknown>) => {
-      setLoading(true);
-      try {
-        const result = await listPortWriteAudits({
-          current: page,
-          pageSize: size,
-          ...f,
-        });
-        setRows(result.list ?? []);
-        setTotal(result.total ?? 0);
-      } catch {
-        // 后端契约未就绪/网络错误: post() 拦截器已弹 Toast, 页面空态兜底
-        setRows([]);
-        setTotal(0);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+  const loadData = useCallback(async (page: number, size: number, f: Record<string, unknown>) => {
+    setLoading(true);
+    try {
+      const result = await listPortWriteAudits({
+        current: page,
+        pageSize: size,
+        ...f,
+      });
+      setRows(result.list ?? []);
+      setTotal(result.total ?? 0);
+    } catch {
+      // 后端契约未就绪/网络错误: post() 拦截器已弹 Toast, 页面空态兜底
+      setRows([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // 初始 + 翻页/改页大小触发（deps 全为原始值/稳定引用, 无无限循环风险）
   useEffect(() => {
@@ -188,129 +185,129 @@ const PortWriteAuditsPage = () => {
       {permView.visible && (
         <>
           <Card style={{ marginBottom: 16 }}>
-        <Form form={form} layout="inline" style={{ flexWrap: "wrap", gap: "8px" }}>
-          <Form.Item name="deviceId" label="设备 ID">
-            <AppInput placeholder="设备 UUID" allowClear style={{ width: 220 }} />
-          </Form.Item>
-          <Form.Item name="portId" label="端口 ID">
-            <AppInput placeholder="端口 UUID" allowClear style={{ width: 220 }} />
-          </Form.Item>
-          <Form.Item name="operator" label="操作人">
-            <AppInput placeholder="操作人" allowClear style={{ width: 140 }} />
-          </Form.Item>
-          <Form.Item name="action" label="动作">
-            <AppSelect
-              placeholder="全部动作"
-              allowClear
-              options={ACTION_OPTIONS}
-              style={{ width: 160 }}
-              showSearch={false}
-              onSearch={() => {}}
-            />
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <AppSelect
-              placeholder="全部状态"
-              allowClear
-              options={STATUS_OPTIONS}
-              style={{ width: 130 }}
-              showSearch={false}
-              onSearch={() => {}}
-            />
-          </Form.Item>
-          <Form.Item name="timeRange" label="时间范围">
-            <DatePicker.RangePicker style={{ width: 260 }} />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                查询
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                重置
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
+            <Form form={form} layout="inline" style={{ flexWrap: "wrap", gap: "8px" }}>
+              <Form.Item name="deviceId" label="设备 ID">
+                <AppInput placeholder="设备 UUID" allowClear style={{ width: 220 }} />
+              </Form.Item>
+              <Form.Item name="portId" label="端口 ID">
+                <AppInput placeholder="端口 UUID" allowClear style={{ width: 220 }} />
+              </Form.Item>
+              <Form.Item name="operator" label="操作人">
+                <AppInput placeholder="操作人" allowClear style={{ width: 140 }} />
+              </Form.Item>
+              <Form.Item name="action" label="动作">
+                <AppSelect
+                  placeholder="全部动作"
+                  allowClear
+                  options={ACTION_OPTIONS}
+                  style={{ width: 160 }}
+                  showSearch={false}
+                  onSearch={() => {}}
+                />
+              </Form.Item>
+              <Form.Item name="status" label="状态">
+                <AppSelect
+                  placeholder="全部状态"
+                  allowClear
+                  options={STATUS_OPTIONS}
+                  style={{ width: 130 }}
+                  showSearch={false}
+                  onSearch={() => {}}
+                />
+              </Form.Item>
+              <Form.Item name="timeRange" label="时间范围">
+                <DatePicker.RangePicker style={{ width: 260 }} />
+              </Form.Item>
+              <Form.Item>
+                <Space>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    查询
+                  </Button>
+                  <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                    重置
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </Card>
 
-      <Card>
-        <Table<PortWriteAuditRow>
-          dataSource={rows}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          size="small"
-          pagination={{
-            current,
-            pageSize,
-            total,
-            pageSizeOptions: [10, 20, 50, 100], // 契约: pageSize 上限 100
-            showSizeChanger: true,
-            showTotal: (t) => `共 ${t} 条`,
-            onChange: (page, size) => {
-              setCurrent(page);
-              setPageSize(Math.min(size, 100));
-            },
-          }}
-          expandable={{
-            expandedRowRender: (row) => (
-              <div>
-                {row.failureReason && (
-                  <Alert
-                    type="error"
-                    showIcon
-                    title="失败原因"
-                    description={row.failureReason}
-                    style={{ marginBottom: 12 }}
-                  />
-                )}
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Typography.Title level={5}>变更前 (beforeValue)</Typography.Title>
-                    <Typography.Text code>
-                      <pre style={{ margin: 0, maxHeight: 240, overflow: "auto" }}>
-                        {formatJson(row.beforeValue)}
-                      </pre>
-                    </Typography.Text>
-                  </Col>
-                  <Col span={12}>
-                    <Typography.Title level={5}>变更后 (afterValue)</Typography.Title>
-                    <Typography.Text code>
-                      <pre style={{ margin: 0, maxHeight: 240, overflow: "auto" }}>
-                        {formatJson(row.afterValue)}
-                      </pre>
-                    </Typography.Text>
-                  </Col>
-                </Row>
-                <Collapse
-                  style={{ marginTop: 12 }}
-                  items={[
-                    {
-                      key: "device",
-                      label: "设备原始响应",
-                      children: (
+          <Card>
+            <Table<PortWriteAuditRow>
+              dataSource={rows}
+              columns={columns}
+              rowKey="id"
+              loading={loading}
+              size="small"
+              pagination={{
+                current,
+                pageSize,
+                total,
+                pageSizeOptions: [10, 20, 50, 100], // 契约: pageSize 上限 100
+                showSizeChanger: true,
+                showTotal: (t) => `共 ${t} 条`,
+                onChange: (page, size) => {
+                  setCurrent(page);
+                  setPageSize(Math.min(size, 100));
+                },
+              }}
+              expandable={{
+                expandedRowRender: (row) => (
+                  <div>
+                    {row.failureReason && (
+                      <Alert
+                        type="error"
+                        showIcon
+                        title="失败原因"
+                        description={row.failureReason}
+                        style={{ marginBottom: 12 }}
+                      />
+                    )}
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Typography.Title level={5}>变更前 (beforeValue)</Typography.Title>
                         <Typography.Text code>
-                          <pre style={{ margin: 0, maxHeight: 200, overflow: "auto" }}>
-                            {row.deviceResponse || "(无记录)"}
+                          <pre style={{ margin: 0, maxHeight: 240, overflow: "auto" }}>
+                            {formatJson(row.beforeValue)}
                           </pre>
                         </Typography.Text>
-                      ),
-                    },
-                    {
-                      key: "command",
-                      label: "下发命令",
-                      children: (
-                        <Typography.Text code>{row.commandSent || "(无记录)"}</Typography.Text>
-                      ),
-                    },
-                  ]}
-                />
-              </div>
-            ),
-          }}
-        />
-      </Card>
+                      </Col>
+                      <Col span={12}>
+                        <Typography.Title level={5}>变更后 (afterValue)</Typography.Title>
+                        <Typography.Text code>
+                          <pre style={{ margin: 0, maxHeight: 240, overflow: "auto" }}>
+                            {formatJson(row.afterValue)}
+                          </pre>
+                        </Typography.Text>
+                      </Col>
+                    </Row>
+                    <Collapse
+                      style={{ marginTop: 12 }}
+                      items={[
+                        {
+                          key: "device",
+                          label: "设备原始响应",
+                          children: (
+                            <Typography.Text code>
+                              <pre style={{ margin: 0, maxHeight: 200, overflow: "auto" }}>
+                                {row.deviceResponse || "(无记录)"}
+                              </pre>
+                            </Typography.Text>
+                          ),
+                        },
+                        {
+                          key: "command",
+                          label: "下发命令",
+                          children: (
+                            <Typography.Text code>{row.commandSent || "(无记录)"}</Typography.Text>
+                          ),
+                        },
+                      ]}
+                    />
+                  </div>
+                ),
+              }}
+            />
+          </Card>
         </>
       )}
     </div>
