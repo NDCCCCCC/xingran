@@ -1313,8 +1313,43 @@ func (d *Database) AutoMigrate() error {
 		if err := d.ensureSQLiteReconciliationViews(); err != nil {
 			applogger.Errorf("sqlite reconciliation 视图补建失败 (非阻断,exception/list 走 fallback 降级): %v", err)
 		}
+		// TIDY task-23: many2many join 表 schema 缓存污染兜底（列级对齐）。
+		// 根因：models.Role.Users 的 many2many:sys_user_role 让 GORM 为 join 表
+		// 合成内部 schema（role_id+user_id 双主键、无 CreatedAt）并覆盖 schema
+		// 缓存，AutoMigrate 随之建出两列表 —— initData 的用户角色关联 INSERT
+		// 写 created_at 报 no such column，admin 无角色全量 403（集成窗口 #1 实测）。
+		// 修复：按模型列定义对齐（HasColumn 守卫幂等）。PG 不受影响（有 default 兜底
+		// 且行为正确），本兜底仅 sqlite 分支执行。
+		if err := d.ensureSQLiteJoinTableColumns(); err != nil {
+			applogger.Errorf("sqlite join 表列对齐失败 (非阻断,留待下次启动): %v", err)
+		}
 	}
 
+	return nil
+}
+
+// ensureSQLiteJoinTableColumns many2many join 表的列级对齐兜底（task-23）。
+// 背景：GORM many2many 关联的内部 join schema 会覆盖显式模型的 AutoMigrate
+// 产物（见 AutoMigrate 内注释），列缺失时手写 INSERT（initData）直接 500。
+func (d *Database) ensureSQLiteJoinTableColumns() error {
+	type colFix struct {
+		table, column, ddl string
+	}
+	fixes := []colFix{
+		{"sys_user_role", "created_at", "ALTER TABLE sys_user_role ADD COLUMN created_at DATETIME"},
+	}
+	for _, f := range fixes {
+		if !d.DB.Migrator().HasTable(f.table) {
+			continue
+		}
+		if d.DB.Migrator().HasColumn(f.table, f.column) {
+			continue
+		}
+		if err := d.DB.Exec(f.ddl).Error; err != nil {
+			return fmt.Errorf("补列 %s.%s 失败: %w", f.table, f.column, err)
+		}
+		applogger.Infof("[sqlite-join-fix] %s 补列 %s 完成（many2many schema 缓存污染兜底）", f.table, f.column)
+	}
 	return nil
 }
 
