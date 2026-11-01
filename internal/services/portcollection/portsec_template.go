@@ -80,19 +80,26 @@ func renderPortSec(p PortTemplateParams, vendor models.DeviceVendor, action Port
 		if p.MACAddress == "" {
 			return nil, fmt.Errorf("portcollection: macAddress is required for static bind")
 		}
-		if p.VLANID < 1 || p.VLANID > 4094 {
-			return nil, fmt.Errorf("portcollection: vlanId %d out of range 1-4094", p.VLANID)
-		}
 		mac := toHuaweiH3CMACFormat(p.MACAddress)
 		if vendor == models.VendorRuijie {
-			// 锐捷用点分 Cisco 格式
-			mac = toCiscoMACFormat(p.MACAddress)
-			return wrapInterface(p, fmt.Sprintf("switchport port-security mac-address %s vlan %d", mac, p.VLANID))
+			// 锐捷保留 vlan 参数（Cisco 语法原生支持）
+			if p.VLANID < 1 || p.VLANID > 4094 {
+				return nil, fmt.Errorf("portcollection: vlanId %d out of range 1-4094", p.VLANID)
+			}
+			return wrapInterface(p, fmt.Sprintf("switchport port-security mac-address %s vlan %d",
+				toCiscoMACFormat(p.MACAddress), p.VLANID))
 		}
 		if vendor == models.VendorH3C {
+			if p.VLANID < 1 || p.VLANID > 4094 {
+				return nil, fmt.Errorf("portcollection: vlanId %d out of range 1-4094", p.VLANID)
+			}
 			return wrapInterface(p, fmt.Sprintf("port-security mac-address security %s vlan %d", mac, p.VLANID))
 		}
-		return wrapInterface(p, fmt.Sprintf("port-security mac-address sticky %s vlan %d", mac, p.VLANID))
+		// 华为 S8700 真机修复（2026-11-01 接口视图探测）：
+		// port-security mac-address sticky ? 只接受 [H-H-H | sticky]，无 vlan
+		// 参数 → 去掉 vlan（VLANID 字段忽略；绑定 VLAN 语义由 sticky 表本身承担）。
+		_ = p.VLANID
+		return wrapInterface(p, fmt.Sprintf("port-security mac-address sticky %s", mac))
 	}
 	return nil, fmt.Errorf("portcollection: unknown port-security action %s", action)
 }
