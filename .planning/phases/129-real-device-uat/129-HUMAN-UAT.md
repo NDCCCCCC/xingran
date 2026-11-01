@@ -40,7 +40,7 @@
 - [ ] **HW-13 trunk_set_hybrid → expected-reject（S8700）** | 同 HW-10 | 预期: 400 | 现场运维 | 非破坏 | 恢复：无 | 端口：不适用
 - [ ] **HW-14 portsec_enable + max_mac** | --apply `port-security enable` + `port-security max-mac-num 5` | 验证：`display port-security interface <port>`（真机更正：`display port-security <port>` 报 Too many parameters） | 现场运维 | [可逆] 恢复：portsec_disable | 端口：测试口
 - [ ] **HW-15a portsec_sticky** | --apply `port-security mac-address sticky` | 验证：`display port-security interface <port>` | 预期: sticky 开启（真机 ✅ 已验） | 现场运维 | [可逆] 恢复：undo sticky | 端口：测试口
-- [ ] **HW-15b portsec_static_bind → 语法复测** | 真机报 Wrong parameter（sticky MAC + vlan 参数）| 待办：从华为 VRP 官方文档确认 S8700 静态安全 MAC 正确语法（候选：`port-security mac-address sticky <mac>` 无 vlan 形式，或 sticky 需先 enable）→ 确认后修渲染器再复测；当前渲染器标记 ModelDependent 保守拒绝 | 现场运维+portwriter | [非破坏]（命令被拒不下发） | 恢复：无 | 端口：测试口
+- [ ] **HW-15b portsec_static_bind（已确认语法，复测）** | 真机探测（2026-11-01 接口视图 `port-security mac-address sticky ?`）确认：S8700 sticky 只接受 `[H-H-H]` 单参数，**无 vlan**；且无 `static` 子关键字（静态绑定只能经 sticky 表达）| 渲染器已修：华为下发 `port-security mac-address sticky <MAC>`（无 vlan）→ 复测验证静态表含该 MAC | 现场运维 | [不可逆-需基线] 恢复：`undo port-security mac-address sticky <MAC>` | 端口：测试口
 
 ## §2 锐捷 RS8607E（RGOS）— 15 项
 

@@ -38,7 +38,12 @@ func validatePortSecRequest(action Action, p PortSecParams) error {
 		if p.MACAddress == "" {
 			return fmt.Errorf("%w: macAddress is required for static bind", ErrPortSecParamsInvalid)
 		}
-		return validateVlanIdRange(p.VLANID)
+		// Phase 129 真机修复：华为 S8700 sticky 不接受 vlan 参数（2026-11-01
+		// 接口视图探测，渲染层忽略 VLANID）→ VLANID 可选：非零才校验范围。
+		if p.VLANID != 0 {
+			return validateVlanIdRange(p.VLANID)
+		}
+		return nil
 	default:
 		return fmt.Errorf("%w: %s is not a port-security action", ErrPortSecParamsInvalid, action)
 	}
