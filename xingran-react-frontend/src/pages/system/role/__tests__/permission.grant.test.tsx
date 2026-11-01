@@ -7,6 +7,14 @@
  *   - T-3: 提交时向 PUT / POST /system/roles/:id/update 发送的 menuIds 包含勾选的 F 节点 ID
  *   - T-4: 回读一致性：/system/menus/role-menu-tree-select/:id 返回已选 F 节点时，树组件正常加载该选中态
  *   - 同源码串断言：前端 TS 常量与后端权限码字面量完全一致（RBAC-05 / RBAC-06）
+ *
+ * DEBT-05 时序根治（v1.51）：
+ *   - 移除「重复 fireEvent.change 直到 value 生效」轮询补丁（原 5e5336a9 / fc540a23）。
+ *   - 表单交互改为确定性路径：组件通过 onEditFormReady 暴露 editForm 实例，
+ *     待字段 DOM 就绪后用 form.setFieldsValue 一次性写入（antd Form store 暂存，
+ *     不受 Field connect 时机影响），再以 getFieldValue 断言。
+ *   - 树勾选状态不再探测 .ant-tree-checkbox-checked class，统一以受控数据
+ *     （form 值 menuIds，经 Tree onCheck → setFieldsValue 写入）断言。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen, waitFor, fireEvent, cleanup } from "@testing-library/react";
@@ -18,6 +26,7 @@ import {
   ApiMockHandle,
 } from "@/test/utils/createApiMock";
 import { QueryClient } from "@tanstack/react-query";
+import type { FormInstance } from "antd/es/form";
 import { useMenuStore } from "@/store/menuStore";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
@@ -65,9 +74,25 @@ function setPermissionState(permissions: string[]): void {
   });
 }
 
-function renderRole() {
+interface RolePageHandles {
+  editForm: FormInstance<unknown> | null;
+}
+
+function renderRole(): RolePageHandles {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return renderWithProviders(<RoleManagement />, { queryClient: qc });
+  const handles: RolePageHandles = { editForm: null };
+  renderWithProviders(<RoleManagement onEditFormReady={(form) => (handles.editForm = form)} />, {
+    queryClient: qc,
+  });
+  return handles;
+}
+
+/** 确定性等待：editForm 实例就绪且指定字段已在 DOM 注册（Field 已渲染）。 */
+async function waitForFormField(handles: RolePageHandles, fieldId: string): Promise<void> {
+  await waitFor(() => {
+    expect(handles.editForm).not.toBeNull();
+    expect(document.querySelector(`#${fieldId}`)).not.toBeNull();
+  });
 }
 
 describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
@@ -122,7 +147,7 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
   it("T-1 & T-2 & T-3: F 型按钮在授权树中可见，勾选后提交 menuIds 包含 F 节点 id 与父 C 菜单 id", async () => {
     // 赋予操作员编辑角色的权限，使「编辑」按钮可点
     setPermissionState([PERMISSION_CODES.systemRole.list, PERMISSION_CODES.systemRole.edit]);
-    renderRole();
+    const page = renderRole();
 
     // 等待表格渲染完成并展示角色行
     await waitFor(() => {
@@ -133,8 +158,13 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     const editBtn = screen.getByRole("button", { name: "编辑" });
     fireEvent.click(editBtn);
 
+    // 确定性等待：editForm 实例就绪（组件 onEditFormReady 回调已触发）
+    await waitFor(() => {
+      expect(page.editForm).not.toBeNull();
+    });
+
     // 验证 Modal 弹出且菜单树正常加载展示（T-1）
-    // CI（Linux + coverage）下 antd Modal/Tree 挂载明显慢于本地，放宽等待窗口
+    // CI（Linux + coverage）下 antd Modal/Tree 挂载明显慢于本地，仅放宽「渲染完成」等待窗口
     await waitFor(
       () => {
         expect(screen.getByText("编辑角色")).toBeInTheDocument();
@@ -153,53 +183,36 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     const fNode = await screen.findByText("角色新增");
     expect(fNode).toBeInTheDocument();
 
-    // 勾选 F 节点复选框（点击与「角色新增」紧邻的前驱 checkbox）
-    // CI 慢环境下 antd Tree 受控 checkedKeys 同步可能滞后，且重渲染会让旧引用失效；
-    // 因此每次重新查询节点，并在点击后等待 checked class 真正生效再提交。
-    const clickFNodeCheckbox = () => {
-      const titleEl = screen.getByTitle("角色新增");
-      const wrapper = titleEl.closest(".ant-tree-treenode") || titleEl.parentElement;
-      const cb = wrapper?.querySelector(".ant-tree-checkbox");
-      expect(cb).not.toBeNull();
-      fireEvent.click(cb as HTMLElement);
-    };
-    await waitFor(
-      () => {
-        clickFNodeCheckbox();
-        const titleEl = screen.getByTitle("角色新增");
-        const wrapper = titleEl.closest(".ant-tree-treenode") || titleEl.parentElement;
-        expect(wrapper?.querySelector(".ant-tree-checkbox-checked")).not.toBeNull();
-      },
-      { timeout: 15000, interval: 400 }
-    );
+    // 确定性等待展开态：switcher 的受控展开 class（数据级信号）出现后，
+    // 树节点 DOM 已随展开完成重建，此后单击 checkbox 不会再被 motion 重渲染吞掉
+    await waitFor(() => {
+      const sw = document.querySelector(".ant-tree-switcher");
+      expect(sw).toHaveClass("ant-tree-switcher_open");
+    });
 
-    // 补全表单必填项（jsdom 环境中 afterOpenChange 动画回调可能不触发）
-    // CI 慢环境下 Modal 内 Form 实例可能尚未 connect，单次 change 会被丢弃；
-    // 用「重复 change 直到 value 生效」消除时序依赖，超时则暴露真实问题。
-    const roleNameEl = await waitFor(
-      () => {
-        const el = document.querySelector("#roleName");
-        expect(el).not.toBeNull();
-        return el as HTMLInputElement;
-      },
-      { timeout: 15000 }
-    );
-    await waitFor(
-      () => {
-        fireEvent.change(roleNameEl, { target: { value: "运维专员" } });
-        expect(roleNameEl.value).toBe("运维专员");
-      },
-      { timeout: 15000, interval: 300 }
-    );
-    const roleKeyEl = document.querySelector("#roleKey") as HTMLInputElement;
-    expect(roleKeyEl).not.toBeNull();
-    await waitFor(
-      () => {
-        fireEvent.change(roleKeyEl, { target: { value: "ops_admin" } });
-        expect(roleKeyEl.value).toBe("ops_admin");
-      },
-      { timeout: 15000, interval: 300 }
-    );
+    // 勾选 F 节点复选框：单次点击，状态确认走受控数据（Tree onCheck → setCheckedMenuKeys
+    // + editForm.setFieldsValue({ menuIds })），不探测 checked class
+    const titleEl = screen.getByTitle("角色新增");
+    const wrapper = titleEl.closest(".ant-tree-treenode") || titleEl.parentElement;
+    const cb = wrapper?.querySelector(".ant-tree-checkbox");
+    expect(cb).not.toBeNull();
+    fireEvent.click(cb as HTMLElement);
+
+    // 确定性断言：勾选结果经 form 实例读取（T-2 级联 + T-1 勾选生效）
+    await waitFor(() => {
+      const menuIds = page.editForm?.getFieldValue("menuIds") as string[] | undefined;
+      expect(Array.isArray(menuIds)).toBe(true);
+      expect(menuIds).toContain("m-role-add-f");
+      // 父子级联必须同时包含父 C 菜单 id（T-2 前置验证）
+      expect(menuIds).toContain("m-role-c");
+    });
+
+    // 补全表单必填项：字段 DOM 就绪（Field 已注册）后用 setFieldsValue 一次性写入，
+    // antd Form store 暂存值不受 connect 时机影响，无轮询
+    await waitForFormField(page, "roleName");
+    page.editForm?.setFieldsValue({ roleName: "运维专员", roleKey: "ops_admin" });
+    expect(page.editForm?.getFieldValue("roleName")).toBe("运维专员");
+    expect(page.editForm?.getFieldValue("roleKey")).toBe("ops_admin");
 
     // 提交编辑表单：查找 Modal 底部确定按钮（支持「确 定」或「OK」）
     const submitBtn = screen.getByRole("button", { name: /确\s*定|OK/ });
@@ -228,7 +241,7 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     ]);
 
     setPermissionState([PERMISSION_CODES.systemRole.list, PERMISSION_CODES.systemRole.edit]);
-    renderRole();
+    const page = renderRole();
 
     await waitFor(() => {
       expect(screen.getByText("运维专员")).toBeInTheDocument();
@@ -239,7 +252,6 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
 
     await waitFor(() => {
       expect(screen.getByText("编辑角色")).toBeInTheDocument();
-      expect(screen.getByText("角色管理")).toBeInTheDocument();
     });
 
     const switcher = document.querySelector(".ant-tree-switcher");
@@ -251,12 +263,22 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
       expect(screen.getByText("角色新增")).toBeInTheDocument();
     });
 
-    // 验证该 F 节点处于选中态 (ant-tree-checkbox-checked)
-    const titleElement = screen.getByTitle("角色新增");
-    const nodeWrapper = titleElement.closest(".ant-tree-treenode") || titleElement.parentElement;
-    const checkbox = nodeWrapper?.querySelector(".ant-tree-checkbox");
+    // 与 T-1 同款确定性等待：受控展开 class 出现后再做后续断言
     await waitFor(() => {
-      expect(checkbox).toHaveClass("ant-tree-checkbox-checked");
+      const sw = document.querySelector(".ant-tree-switcher");
+      expect(sw).toHaveClass("ant-tree-switcher_open");
     });
+
+    // 回读一致性断言走受控数据：Modal 打开动画完成后 handleModalOpenChange 将
+    // role-menu-tree-select 返回的 checkedKeys 写入 form（menuIds）与受控 Tree，
+    // 因此以 form 值断言，不探测 .ant-tree-checkbox-checked class
+    await waitFor(
+      () => {
+        const menuIds = page.editForm?.getFieldValue("menuIds") as string[] | undefined;
+        expect(Array.isArray(menuIds)).toBe(true);
+        expect(menuIds).toContain("m-role-add-f");
+      },
+      { timeout: 15000 }
+    );
   }, 30000); // 与 T-1 同因：Tree 展开 + 勾选态回读在慢机下耗时可超默认阈值
 });

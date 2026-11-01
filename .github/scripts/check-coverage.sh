@@ -291,7 +291,21 @@ echo "P2 per-package floor passed (70.0% x 10 packages)"
 # 2026-10-31 债务审计（D10）：internal/services/addomain 覆盖率 49.9%，此前不在
 # 任何 floor 管辖内（P1/P2 均未收录），存在无声下滑风险。以当前实测为起点设立
 # ratchet floor（measured - 0.4pp），只升不降；补测试抬升后应逐步上调 floor。
-P3_FLOOR="49.5"
+# 2026-11-01 DEBT-01（v1.51）：addomain 测试补齐后实测 69.58%（2649/3807 stmts），
+# floor 从 49.5 上调至 69.2（measured - 0.4pp，lead 裁定的 ratchet 锁定）。
+# 2026-11-01 v1.51 合流修正：CI profile 比本地多 115 条语句 —— 根因是
+# internal/services/addomain/user_ou_service.go（GitHub v1.33 线独有的生产文件，
+# 此前增量上传策略下从未回流本地，本地 build/test 全程不覆盖它）。已把该文件拉回
+# 本地（本地与远端文件集对齐，消除「本地改 addomain 不会发现破坏远端编译」风险），
+# 其 8 个函数 0 覆盖 → 实测降为 67.5%（2649/3922）。
+# floor 临时下调至 67.5（本次为 ratchet 的显式例外，非倒退）：待补
+# user_ou_service_test.go（8 函数：HandleUserLoginAD / updateUserDeptAndADInfo /
+# restoreDeletedUserWithADInfo / GetUserDeptByADOU / createDeptFromOUDN /
+# buildAncestors / generateUniqueDeptCode）覆盖后应立即回调至 69.2 以上。
+# 2026-11-01 补测完成：user_ou_service_test.go 落地（35 用例，947 行），该文件
+# 0% → 99.13%，addomain 实测 70.45%（2763/3922）→ floor 回调至 70.0
+# （measured - 0.4pp），并高于原 69.2 基线（净上调 0.8pp）。
+P3_FLOOR="70.0"
 P3_PACKAGES="internal/services/addomain"
 
 P3_PKG_TABLE=$(awk '

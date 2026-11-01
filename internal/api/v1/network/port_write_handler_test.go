@@ -46,6 +46,9 @@ type mockPortWriteService struct {
 	setAccessVlanErr error
 	portBindingOut   *portwrite.PortResult
 	portBindingErr   error
+	// Phase 121 (PORTW-01) preview mock outputs
+	previewOut *portwrite.PreviewResult
+	previewErr error
 
 	shutdownCalls     int
 	undoCalls         int
@@ -62,7 +65,7 @@ type mockPortWriteService struct {
 	}
 }
 
-func (m *mockPortWriteService) Shutdown(ctx context.Context, portID, operator string) (*portwrite.PortResult, error) {
+func (m *mockPortWriteService) Shutdown(ctx context.Context, portID, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
 	m.shutdownCalls++
 	m.lastShutdownInput.portID = portID
 	m.lastShutdownInput.operator = operator
@@ -71,28 +74,28 @@ func (m *mockPortWriteService) Shutdown(ctx context.Context, portID, operator st
 	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionShutdown, Status: "succeeded", CommandSent: "shutdown"}, nil
 }
-func (m *mockPortWriteService) UndoShutdown(ctx context.Context, portID, operator string) (*portwrite.PortResult, error) {
+func (m *mockPortWriteService) UndoShutdown(ctx context.Context, portID, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
 	m.undoCalls++
 	if m.undoShutdownResult != nil || m.undoShutdownErr != nil {
 		return m.undoShutdownResult, m.undoShutdownErr
 	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionUndoShutdown, Status: "succeeded"}, nil
 }
-func (m *mockPortWriteService) SetDescription(ctx context.Context, portID, desc, operator string) (*portwrite.PortResult, error) {
+func (m *mockPortWriteService) SetDescription(ctx context.Context, portID, desc, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
 	m.setDescCalls++
 	if m.setDescriptionOut != nil || m.setDescriptionErr != nil {
 		return m.setDescriptionOut, m.setDescriptionErr
 	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionDescription, Status: "succeeded", CurrentState: desc}, nil
 }
-func (m *mockPortWriteService) EnableDot1x(ctx context.Context, portID, operator string) (*portwrite.PortResult, error) {
+func (m *mockPortWriteService) EnableDot1x(ctx context.Context, portID, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
 	m.enableCalls++
 	if m.enableDot1xOut != nil || m.enableDot1xErr != nil {
 		return m.enableDot1xOut, m.enableDot1xErr
 	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionDot1xEnable, Status: "succeeded"}, nil
 }
-func (m *mockPortWriteService) DisableDot1x(ctx context.Context, portID, operator string) (*portwrite.PortResult, error) {
+func (m *mockPortWriteService) DisableDot1x(ctx context.Context, portID, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
 	m.disableCalls++
 	if m.disableDot1xOut != nil || m.disableDot1xErr != nil {
 		return m.disableDot1xOut, m.disableDot1xErr
@@ -113,17 +116,40 @@ func (m *mockPortWriteService) BatchWritePorts(ctx context.Context, req portwrit
 //
 // W3 扩展：增加可选 result/err 字段，便于 handler 集成测试覆盖
 // 成功 / sentinel / failed 三条路径（不设置时返 zero-value succeeded PortResult）。
-func (m *mockPortWriteService) SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*portwrite.PortResult, error) {
+func (m *mockPortWriteService) SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
 	if m.setAccessVlanOut != nil || m.setAccessVlanErr != nil {
 		return m.setAccessVlanOut, m.setAccessVlanErr
 	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionSetAccessVLAN, Status: "succeeded"}, nil
 }
-func (m *mockPortWriteService) PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*portwrite.PortResult, error) {
+func (m *mockPortWriteService) PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
 	if m.portBindingOut != nil || m.portBindingErr != nil {
 		return m.portBindingOut, m.portBindingErr
 	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionPortBinding, Status: "succeeded"}, nil
+}
+
+// ListAudit Phase 127 前置 mock：返回空分页结果。
+func (m *mockPortWriteService) ListAudit(ctx context.Context, req portwrite.AuditListRequest) (*portwrite.AuditListResult, error) {
+	return &portwrite.AuditListResult{List: []models.PortWriteAudit{}, Total: 0, Current: 1, PageSize: 20}, nil
+}
+
+// TrunkWrite Phase 124 (PWX-01) mock：返回 succeeded PortResult。
+func (m *mockPortWriteService) TrunkWrite(ctx context.Context, portID string, action portwrite.Action, params portwrite.TrunkParams, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
+	return &portwrite.PortResult{PortID: portID, Action: action, Status: "succeeded"}, nil
+}
+
+// PortSecWrite Phase 125 (PWX-02) mock：返回 succeeded PortResult。
+func (m *mockPortWriteService) PortSecWrite(ctx context.Context, portID string, action portwrite.Action, params portwrite.PortSecParams, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
+	return &portwrite.PortResult{PortID: portID, Action: action, Status: "succeeded"}, nil
+}
+
+// PreviewPortWrite Phase 121 (PORTW-01) mock：返回预设 previewOut/previewErr。
+func (m *mockPortWriteService) PreviewPortWrite(ctx context.Context, req portwrite.PreviewRequest, operator string) (*portwrite.PreviewResult, error) {
+	if m.previewOut != nil || m.previewErr != nil {
+		return m.previewOut, m.previewErr
+	}
+	return &portwrite.PreviewResult{DryRun: true, DeviceID: req.DeviceID, Action: req.Action}, nil
 }
 
 // ===== Mock OperLogService =====
@@ -174,6 +200,11 @@ func newTestHandler(t *testing.T) (*PortWriteHandler, *mockPortWriteService, *mo
 	}
 	h := NewPortWriteHandler(mockSvc).WithCore(c)
 	return h, mockSvc, mockOperLog, sqlDB
+}
+
+// Phase 122 接口演进适配：mock 补 WithProgressNotifier（链式 stub，无进度推送）
+func (m *mockPortWriteService) WithProgressNotifier(n portwrite.PortWriteNotifier) portwrite.PortWriteService {
+	return m
 }
 
 // invokeHandler 调用 handler 的 method（按 name dispatch），返回 *httptest.ResponseRecorder。

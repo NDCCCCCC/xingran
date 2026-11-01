@@ -55,6 +55,9 @@ func newWorkerTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, db.Exec(`
 		CREATE TABLE sys_rpa_workers (
 			id TEXT PRIMARY KEY NOT NULL,
+			created_by TEXT DEFAULT '',
+			updated_by TEXT DEFAULT '',
+			version INTEGER DEFAULT 0,
 			worker_name TEXT,
 			worker_id TEXT NOT NULL UNIQUE,
 			ip_address TEXT,
@@ -65,6 +68,10 @@ func newWorkerTestDB(t *testing.T) *gorm.DB {
 			current_tasks INTEGER DEFAULT 0,
 			last_heartbeat INTEGER,
 			docker_container_id TEXT,
+			-- DEBT-03（v1.51）Token 字段：sqlite 分支 Register 走 GORM Create 全列写入
+			token TEXT,
+			token_expires_at DATETIME,
+			last_token_rotation DATETIME,
 			created_at DATETIME,
 			updated_at DATETIME,
 			deleted_at DATETIME

@@ -35,12 +35,14 @@ const mockWriteUndoShutdown = vi.fn();
 const mockWriteDescription = vi.fn();
 const mockWriteDot1xEnable = vi.fn();
 const mockWriteDot1xDisable = vi.fn();
+const mockWriteTrunk = vi.fn();
 vi.mock("@/lib/api/networkApi", () => ({
   writeShutdown: (...args: unknown[]) => mockWriteShutdown(...args),
   writeUndoShutdown: (...args: unknown[]) => mockWriteUndoShutdown(...args),
   writeDescription: (...args: unknown[]) => mockWriteDescription(...args),
   writeDot1xEnable: (...args: unknown[]) => mockWriteDot1xEnable(...args),
   writeDot1xDisable: (...args: unknown[]) => mockWriteDot1xDisable(...args),
+  writeTrunk: (...args: unknown[]) => mockWriteTrunk(...args),
 }));
 
 import { PortWriteModal } from "../PortWriteModal";
@@ -109,6 +111,7 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
     mockWriteDescription.mockReset();
     mockWriteDot1xEnable.mockReset();
     mockWriteDot1xDisable.mockReset();
+    mockWriteTrunk.mockReset();
   });
 
   describe("D-01: Modal title reflects ACTION_TITLE[action] + interfaceName", () => {
@@ -204,7 +207,7 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
 
       // writeShutdown 被调用, 参数正确
       await waitFor(() => {
-        expect(mockWriteShutdown).toHaveBeenCalledWith("port-1", "故障排查处理");
+        expect(mockWriteShutdown).toHaveBeenCalledWith("port-1", "故障排查处理", undefined); // Phase 125: 尾参 skipPreflight
       });
       // onSuccess + onClose 触发
       await waitFor(() => {
@@ -274,7 +277,12 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
 
       // writeDescription 被调用 — reason 为 undefined (D-03 optional)
       await waitFor(() => {
-        expect(mockWriteDescription).toHaveBeenCalledWith("port-1", "uplink-to-core", undefined);
+        expect(mockWriteDescription).toHaveBeenCalledWith(
+          "port-1",
+          "uplink-to-core",
+          undefined,
+          undefined
+        ); // Phase 125: 尾参 skipPreflight
       });
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledTimes(1);
@@ -308,7 +316,7 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
       });
 
       await waitFor(() => {
-        expect(mockWriteUndoShutdown).toHaveBeenCalledWith("port-1", "故障排查处理");
+        expect(mockWriteUndoShutdown).toHaveBeenCalledWith("port-1", "故障排查处理", undefined);
       });
     });
 
@@ -337,7 +345,7 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
       });
 
       await waitFor(() => {
-        expect(mockWriteDot1xEnable).toHaveBeenCalledWith("port-1", "故障排查处理");
+        expect(mockWriteDot1xEnable).toHaveBeenCalledWith("port-1", "故障排查处理", undefined);
       });
     });
 
@@ -366,8 +374,72 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
       });
 
       await waitFor(() => {
-        expect(mockWriteDot1xDisable).toHaveBeenCalledWith("port-1", "故障排查处理");
+        expect(mockWriteDot1xDisable).toHaveBeenCalledWith("port-1", "故障排查处理", undefined);
       });
     });
+  });
+  // ==================== v1.51 Phase 125 面板三合一 ====================
+
+  it("Phase 125: trunk_set_native 单端口链路 — writeTrunk 收到 portId/action/nativeVlan/reason", async () => {
+    render(
+      <MemoryRouter>
+        <App>
+          <PortWriteModal
+            open={true}
+            action="trunk_set_native"
+            portRecord={makePort()}
+            onClose={vi.fn()}
+            onSuccess={vi.fn()}
+          />
+        </App>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("Native VLAN (PVID)"), { target: { value: "10" } });
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      clickOkButton();
+    });
+
+    await waitFor(() => {
+      expect(mockWriteTrunk).toHaveBeenCalledTimes(1);
+    });
+    expect(mockWriteTrunk).toHaveBeenCalledWith({
+      portId: "port-1",
+      action: "trunk_set_native",
+      reason: "故障排查处理",
+      nativeVlan: 10,
+    });
+  });
+
+  it("Phase 125: skipPreflight 开关开启 → wrapper 第三参收到 true", async () => {
+    render(
+      <MemoryRouter>
+        <App>
+          <PortWriteModal
+            open={true}
+            action="shutdown"
+            portRecord={makePort()}
+            onClose={vi.fn()}
+            onSuccess={vi.fn()}
+          />
+        </App>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("switch"));
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      clickOkButton();
+    });
+
+    await waitFor(() => {
+      expect(mockWriteShutdown).toHaveBeenCalledTimes(1);
+    });
+    expect(mockWriteShutdown).toHaveBeenCalledWith("port-1", "故障排查处理", true);
   });
 });

@@ -125,7 +125,6 @@ func setupFakeLDAP(t *testing.T) (string, func()) {
 	}
 	addr := ln.Addr().String()
 
-	done := make(chan struct{})
 	go func() {
 		buf := make([]byte, 1024)
 		for {
@@ -156,7 +155,6 @@ func setupFakeLDAP(t *testing.T) (string, func()) {
 				}
 			}(conn)
 		}
-		close(done)
 	}()
 
 	cleanup := func() {

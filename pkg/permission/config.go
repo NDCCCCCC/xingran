@@ -425,6 +425,14 @@ func GetRoutePermissions() []RoutePermission {
 		// v1.20.1 端口写命令扩展（Phase 56 W3: set_access_vlan + port_binding，复用同一权限）
 		{"/network/ports/write/set-access-vlan", "POST", NetworkPortWrite, "修改端口 access VLAN"},
 		{"/network/ports/write/port-binding", "POST", NetworkPortWrite, "端口绑定（IP/MAC/Port 静态绑定）"},
+		// v1.51 端口写 dry-run 命令预览（Phase 121 PORTW-01，复用同一权限）
+		{"/network/ports/write/preview", "POST", NetworkPortWrite, "端口写 dry-run 命令预览"},
+		// v1.51 端口写审计分页查询（Phase 127 PWX-04 前置，复用同一权限）
+		{"/network/ports/write/audit/list", "POST", NetworkPortWrite, "端口写审计查询"},
+		// v1.51 trunk native/allowed + hybrid 端口写（Phase 124 PWX-01，复用同一权限）
+		{"/network/ports/write/trunk", "POST", NetworkPortWrite, "trunk/hybrid VLAN 端口写"},
+		// v1.51 端口安全（Phase 125 PWX-02，复用同一权限）
+		{"/network/ports/write/portsec", "POST", NetworkPortWrite, "端口安全写"},
 
 		// ==================== 网络设备管理（85-03 RBAC-01 批次 B 拆分同批登记） ====================
 		// 8 组范围内写路由（拓扑/mac/ports 读组为 PLAN 覆盖清单外，维持 deferred 冻结）。

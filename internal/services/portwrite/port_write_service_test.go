@@ -328,11 +328,15 @@ func TestErrorKindName(t *testing.T) {
 }
 
 // newTestService 构造最小可用 *portWriteServiceImpl（task 6+ 复用）。
+//
+// Phase 123：pingFunc 注入恒真（既有用例不依赖真 ICMP）；覆盖预检失败路径的
+// 用例自行覆写 svc.pingFunc。newTestDB 已扩展 AutoMigrate 安全三件套两表。
 func newTestService(exec portWriteExecutor, coll portWritePortCollectionSvc, db *gorm.DB) *portWriteServiceImpl {
 	return &portWriteServiceImpl{
 		db:                db,
 		deviceExecutor:    exec,
 		portCollectionSvc: coll,
+		pingFunc:          func(string, time.Duration) bool { return true },
 	}
 }
 
@@ -354,6 +358,10 @@ func newTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
 	assert.NoError(t, db.AutoMigrate(&models.NetworkDevice{}, &models.DevicePortStatus{}))
+	// Phase 123 安全三件套表
+	assert.NoError(t, db.AutoMigrate(&models.PortWriteSnapshot{}, &models.PortWriteLock{}))
+	// Phase 127 前置：审计表
+	assert.NoError(t, db.AutoMigrate(&models.PortWriteAudit{}))
 	return db
 }
 

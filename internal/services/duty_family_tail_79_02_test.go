@@ -133,7 +133,10 @@ func TestDst7902_GetMyDutyStats(t *testing.T) {
 			continue
 		}
 		wantTotal++
-		if f.date.After(startOfMonth) && (f.date.Before(today) || f.date.Equal(today)) {
+		// 与服务 SQL 同口径:本月起点与"今天"均为闭区间(含端点)。
+		// 此前 After(startOfMonth) 在 today 恰逢月初 1 号时漏计今天行
+		// (服务 SQL >= 含端点),每月首日运行必 flake —— v1.51 窗口期根治。
+		if !f.date.Before(startOfMonth) && !f.date.After(today) {
 			wantMonth++
 		}
 	}

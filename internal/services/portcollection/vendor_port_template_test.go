@@ -263,10 +263,11 @@ func TestRenderCommand_EmptyInterfaceName(t *testing.T) {
 	assert.ErrorIs(t, err, ErrEmptyInterfaceName)
 }
 
-// TestRenderCommand_UnsupportedVendor 非 Huawei/H3C/Ruijie 厂商一律拒绝。
-// Cisco 显式 OUT-OF-SCOPE（REQUIREMENTS.md）。
+// TestRenderCommand_UnsupportedVendor 未接入厂商一律拒绝。
+// Phase 126 (PWX-03)：Cisco IOS-XE 已纳入（原 OUT-OF-SCOPE 冻结解除）；
+// Maipu 仍 OUT-OF-SCOPE（D-01），作为拒绝路径的代表样本。
 func TestRenderCommand_UnsupportedVendor(t *testing.T) {
-	_, err := RenderCommand(models.DeviceVendor("cisco"), ActionShutdown, PortTemplateParams{InterfaceName: "GE0/0/1"})
+	_, err := RenderCommand(models.VendorMaipu, ActionShutdown, PortTemplateParams{InterfaceName: "GE0/0/1"})
 	assert.ErrorIs(t, err, ErrUnsupportedVendor)
 }
 

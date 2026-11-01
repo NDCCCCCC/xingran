@@ -4,8 +4,8 @@
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
     "mounts": 207,
-    "routes": 697,
-    "writeRoutes": 306,
+    "routes": 701,
+    "writeRoutes": 310,
     "deferredWriteRoutes": 138
   },
   "routes": [
@@ -3737,6 +3737,22 @@
     },
     {
       "method": "POST",
+      "path": "/network/ports/write/audit/list",
+      "mountGroup": "write",
+      "setup": "SetupPortWriteRouter",
+      "isWrite": true,
+      "handler": "PortWriteAuditList",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "network:port:query",
+        "network:port:write"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/network/port_write_router.go",
+      "line": 66
+    },
+    {
+      "method": "POST",
       "path": "/network/ports/write/batch",
       "mountGroup": "write",
       "setup": "SetupPortWriteRouter",
@@ -3817,6 +3833,38 @@
     },
     {
       "method": "POST",
+      "path": "/network/ports/write/portsec",
+      "mountGroup": "write",
+      "setup": "SetupPortWriteRouter",
+      "isWrite": true,
+      "handler": "PortSecWrite",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "network:port:query",
+        "network:port:write"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/network/port_write_router.go",
+      "line": 70
+    },
+    {
+      "method": "POST",
+      "path": "/network/ports/write/preview",
+      "mountGroup": "write",
+      "setup": "SetupPortWriteRouter",
+      "isWrite": true,
+      "handler": "PortWritePreview",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "network:port:query",
+        "network:port:write"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/network/port_write_router.go",
+      "line": 64
+    },
+    {
+      "method": "POST",
       "path": "/network/ports/write/set-access-vlan",
       "mountGroup": "write",
       "setup": "SetupPortWriteRouter",
@@ -3846,6 +3894,22 @@
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/port_write_router.go",
       "line": 54
+    },
+    {
+      "method": "POST",
+      "path": "/network/ports/write/trunk",
+      "mountGroup": "write",
+      "setup": "SetupPortWriteRouter",
+      "isWrite": true,
+      "handler": "TrunkWrite",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "network:port:query",
+        "network:port:write"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/network/port_write_router.go",
+      "line": 68
     },
     {
       "method": "POST",
@@ -6420,7 +6484,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 111
+      "line": 125
     },
     {
       "method": "POST",
@@ -6433,7 +6497,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 113
+      "line": 127
     },
     {
       "method": "POST",
@@ -6446,7 +6510,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 108
+      "line": 122
     },
     {
       "method": "POST",
@@ -6459,7 +6523,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 104
+      "line": 118
     },
     {
       "method": "POST",
@@ -6472,7 +6536,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 105
+      "line": 119
     },
     {
       "method": "POST",
@@ -6485,7 +6549,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 120
+      "line": 134
     },
     {
       "method": "POST",
@@ -6498,7 +6562,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 118
+      "line": 132
     },
     {
       "method": "POST",
@@ -6511,7 +6575,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 117
+      "line": 131
     },
     {
       "method": "POST",
@@ -6524,7 +6588,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 116
+      "line": 130
     },
     {
       "method": "POST",
@@ -6537,7 +6601,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 119
+      "line": 133
     },
     {
       "method": "POST",
@@ -6550,7 +6614,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 112
+      "line": 126
     },
     {
       "method": "POST",
@@ -6563,7 +6627,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 149
+      "line": 163
     },
     {
       "method": "POST",
@@ -6576,7 +6640,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 150
+      "line": 164
     },
     {
       "method": "POST",
@@ -6589,7 +6653,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 152
+      "line": 166
     },
     {
       "method": "POST",
@@ -6602,7 +6666,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 151
+      "line": 165
     },
     {
       "method": "POST",
@@ -6615,7 +6679,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 148
+      "line": 162
     },
     {
       "method": "POST",
@@ -6628,7 +6692,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 156
+      "line": 170
     },
     {
       "method": "POST",
@@ -6641,7 +6705,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 155
+      "line": 169
     },
     {
       "method": "POST",
@@ -6654,7 +6718,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 90
+      "line": 104
     },
     {
       "method": "GET",
@@ -6667,7 +6731,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 96
+      "line": 110
     },
     {
       "method": "POST",
@@ -6680,7 +6744,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 91
+      "line": 105
     },
     {
       "method": "GET",
@@ -6693,7 +6757,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 93
+      "line": 107
     },
     {
       "method": "GET",
@@ -6706,7 +6770,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 97
+      "line": 111
     },
     {
       "method": "POST",
@@ -6719,7 +6783,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 98
+      "line": 112
     },
     {
       "method": "POST",
@@ -6732,7 +6796,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 92
+      "line": 106
     },
     {
       "method": "POST",
@@ -6745,7 +6809,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 87
+      "line": 101
     },
     {
       "method": "POST",
@@ -6758,7 +6822,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 89
+      "line": 103
     },
     {
       "method": "POST",
@@ -6771,7 +6835,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 138
+      "line": 152
     },
     {
       "method": "POST",
@@ -6784,7 +6848,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 132
+      "line": 146
     },
     {
       "method": "POST",
@@ -6797,7 +6861,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 142
+      "line": 156
     },
     {
       "method": "POST",
@@ -6810,7 +6874,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 137
+      "line": 151
     },
     {
       "method": "POST",
@@ -6823,7 +6887,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 141
+      "line": 155
     },
     {
       "method": "POST",
@@ -6836,7 +6900,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 135
+      "line": 149
     },
     {
       "method": "POST",
@@ -6849,7 +6913,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 136
+      "line": 150
     },
     {
       "method": "POST",
@@ -6862,7 +6926,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 52
+      "line": 66
     },
     {
       "method": "POST",
@@ -6875,7 +6939,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 53
+      "line": 67
     },
     {
       "method": "POST",
@@ -6888,7 +6952,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 55
+      "line": 69
     },
     {
       "method": "POST",
@@ -6901,7 +6965,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 56
+      "line": 70
     },
     {
       "method": "POST",
@@ -6914,7 +6978,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 60
+      "line": 74
     },
     {
       "method": "POST",
@@ -6927,7 +6991,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 54
+      "line": 68
     },
     {
       "method": "POST",
@@ -6940,7 +7004,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 51
+      "line": 65
     },
     {
       "method": "POST",
@@ -6953,7 +7017,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 59
+      "line": 73
     },
     {
       "method": "POST",
@@ -6966,7 +7030,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 20
+      "line": 34
     },
     {
       "method": "POST",
@@ -6979,7 +7043,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 72
+      "line": 86
     },
     {
       "method": "POST",
@@ -6992,7 +7056,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 77
+      "line": 91
     },
     {
       "method": "POST",
@@ -7005,7 +7069,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 76
+      "line": 90
     },
     {
       "method": "GET",
@@ -7018,7 +7082,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 81
+      "line": 95
     },
     {
       "method": "POST",
@@ -7031,7 +7095,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 82
+      "line": 96
     },
     {
       "method": "POST",
@@ -7044,7 +7108,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 67
+      "line": 81
     },
     {
       "method": "POST",
@@ -7057,7 +7121,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 21
+      "line": 35
     },
     {
       "method": "POST",
@@ -7070,7 +7134,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 73
+      "line": 87
     },
     {
       "method": "POST",
@@ -7083,7 +7147,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 17
+      "line": 30
     },
     {
       "method": "POST",
@@ -7096,7 +7160,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 71
+      "line": 85
     },
     {
       "method": "POST",
@@ -7109,7 +7173,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 78
+      "line": 92
     },
     {
       "method": "POST",
@@ -7122,7 +7186,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 69
+      "line": 83
     },
     {
       "method": "POST",

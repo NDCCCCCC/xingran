@@ -13,6 +13,8 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // WorkerHandler Worker 处理器
@@ -20,6 +22,8 @@ type WorkerHandler struct {
 	workerService rpa.WorkerService
 	redisClient   *redis.Client
 	core          *core.Core
+	// tokenSvc DEBT-03：Worker Token 换发服务（nil = 认证未配置，register 不换发）。
+	tokenSvc rpa.WorkerTokenService
 }
 
 // NewWorkerHandler 创建 Worker 处理器
@@ -49,6 +53,12 @@ func NewWorkerHandler(workerService rpa.WorkerService, core *core.Core) *WorkerH
 // WithCore 覆盖 core 依赖（链式调用，供 router 在构造后再次注入用于操作日志埋点）
 func (h *WorkerHandler) WithCore(core *core.Core) *WorkerHandler {
 	h.core = core
+	return h
+}
+
+// WithTokenService 注入 Worker Token 服务（DEBT-03，链式调用；nil 表示认证未配置）
+func (h *WorkerHandler) WithTokenService(svc rpa.WorkerTokenService) *WorkerHandler {
+	h.tokenSvc = svc
 	return h
 }
 
@@ -89,6 +99,18 @@ func (h *WorkerHandler) Register(c *gin.Context) {
 	worker, err := h.workerService.Register(c.Request.Context(), &req)
 	if handleError(c, err, http.StatusInternalServerError, "注册失败") {
 		return
+	}
+
+	// DEBT-03：请求携带合法 Provisioning Token 时换发 Worker Token（响应 data.token）。
+	// 未携带/服务未配置 → 不换发（宽限期双读：老 Worker 继续无 Token 通信）。
+	if h.tokenSvc != nil && h.tokenSvc.ValidateProvisioningToken(c.GetHeader(middleware.HeaderProvisioningToken)) {
+		if pair, terr := h.tokenSvc.IssueWorkerToken(c.Request.Context(), worker.WorkerID); terr != nil {
+			// 换发失败不阻断注册（宽限期语义：Worker 仍可无 Token 通信），仅告警
+			applogger.Warnf("[RPA-WORKER-AUTH] Worker %s Token 换发失败（注册成功但无 Token）: %v", worker.WorkerID, terr)
+		} else if pair != nil {
+			worker.Token = pair.Token
+			worker.TokenExpiresAt = &pair.ExpiresAt
+		}
 	}
 
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeRegister)

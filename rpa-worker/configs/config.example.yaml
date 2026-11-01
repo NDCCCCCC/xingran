@@ -35,6 +35,8 @@ worker:
 backend:
   base_url: ""              # 后端 API 地址,例如 http://10.0.0.1:9000/api/v1
   api_token: ""             # API Token(可选)
+  provisioning_token: ""    # DEBT-03: 预共享注册令牌(生产用 env WORKER_PROVISIONING_TOKEN 注入;
+                            # 注册时经 X-Provisioning-Token 换发 Worker Token,内存保存)
   timeout: 30s              # HTTP 请求超时
   heartbeat_interval: 30s   # 心跳间隔
   progress_publish_timeout: 5s # 进度发布超时

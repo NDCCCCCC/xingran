@@ -1163,6 +1163,28 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(227, "action_permission_f_type_seed_hold", migrations.Migrate227ActionPermissionFTypeSeedHold); err != nil {
 			applogger.Errorf("批次二动作级权限补播迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// v1.51 TIDY-01: 服务端排序 4 页面菜单注册/修复 (值班池/排班/知识文章/网络模板)。**非阻断**：
+		// 菜单不可达只影响 4 个页面路由与排序入口，不影响登录/主链路；单页面失败不阻断其余页面。
+		if err := d.runAndRecord(228, "server_sort_menus", migrations.Migrate228ServerSortMenus); err != nil {
+			applogger.Errorf("服务端排序 4 页面菜单迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v1.51 Phase 127 PWX-04: 端口写审计明细页菜单注册。**非阻断**。
+		if err := d.runAndRecord(229, "port_write_audit_menu", migrations.Migrate229PortWriteAuditMenu); err != nil {
+			applogger.Errorf("端口写审计菜单迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v1.51 DEBT-03: RPA Worker Token 认证字段 (双方言迁移)。**非阻断**：
+		// 字段缺失时 Worker 认证走宽限期模式（无 token 放行），不影响既有通信。
+		if err := d.runAndRecord(230, "rpa_worker_token", migrations.Migrate230RPAWorkerToken); err != nil {
+			applogger.Errorf("RPA Worker Token 字段迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v1.51 DEBT-02: 端口写审计 operator 复合索引 (双方言幂等)。**非阻断**：
+		// 千万行级实机构建留 DBA 窗口（评估见 migration_231 注释），应用侧普通构建兜底。
+		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
+			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
+			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1258,6 +1280,32 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(227, "action_permission_f_type_seed_hold", migrations.Migrate227ActionPermissionFTypeSeedHold); err != nil {
 			applogger.Errorf("批次二动作级权限补播迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// sqlite 分支: v1.51 TIDY-01 服务端排序 4 页面菜单注册/修复 (双方言迁移)。
+		if err := d.runAndRecord(228, "server_sort_menus", migrations.Migrate228ServerSortMenus); err != nil {
+			applogger.Errorf("服务端排序 4 页面菜单迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: v1.51 Phase 127 PWX-04 端口写审计明细页菜单注册 (双方言迁移)。
+		if err := d.runAndRecord(229, "port_write_audit_menu", migrations.Migrate229PortWriteAuditMenu); err != nil {
+			applogger.Errorf("端口写审计菜单迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: v1.51 DEBT-03 RPA Worker Token 认证字段 (双方言迁移)。**非阻断**。
+		if err := d.runAndRecord(230, "rpa_worker_token", migrations.Migrate230RPAWorkerToken); err != nil {
+			applogger.Errorf("RPA Worker Token 字段迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v1.51 DEBT-02: 端口写审计 operator 复合索引 (双方言幂等)。**非阻断**：
+		// 千万行级实机构建留 DBA 窗口（评估见 migration_231 注释），应用侧普通构建兜底。
+		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
+			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
+			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
+			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
+			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
 		// 迁移,此前 probeMaterializedView 诚实探测后走 fallback 降级 + 每请求 WARN)。
@@ -1265,8 +1313,43 @@ func (d *Database) AutoMigrate() error {
 		if err := d.ensureSQLiteReconciliationViews(); err != nil {
 			applogger.Errorf("sqlite reconciliation 视图补建失败 (非阻断,exception/list 走 fallback 降级): %v", err)
 		}
+		// TIDY task-23: many2many join 表 schema 缓存污染兜底（列级对齐）。
+		// 根因：models.Role.Users 的 many2many:sys_user_role 让 GORM 为 join 表
+		// 合成内部 schema（role_id+user_id 双主键、无 CreatedAt）并覆盖 schema
+		// 缓存，AutoMigrate 随之建出两列表 —— initData 的用户角色关联 INSERT
+		// 写 created_at 报 no such column，admin 无角色全量 403（集成窗口 #1 实测）。
+		// 修复：按模型列定义对齐（HasColumn 守卫幂等）。PG 不受影响（有 default 兜底
+		// 且行为正确），本兜底仅 sqlite 分支执行。
+		if err := d.ensureSQLiteJoinTableColumns(); err != nil {
+			applogger.Errorf("sqlite join 表列对齐失败 (非阻断,留待下次启动): %v", err)
+		}
 	}
 
+	return nil
+}
+
+// ensureSQLiteJoinTableColumns many2many join 表的列级对齐兜底（task-23）。
+// 背景：GORM many2many 关联的内部 join schema 会覆盖显式模型的 AutoMigrate
+// 产物（见 AutoMigrate 内注释），列缺失时手写 INSERT（initData）直接 500。
+func (d *Database) ensureSQLiteJoinTableColumns() error {
+	type colFix struct {
+		table, column, ddl string
+	}
+	fixes := []colFix{
+		{"sys_user_role", "created_at", "ALTER TABLE sys_user_role ADD COLUMN created_at DATETIME"},
+	}
+	for _, f := range fixes {
+		if !d.DB.Migrator().HasTable(f.table) {
+			continue
+		}
+		if d.DB.Migrator().HasColumn(f.table, f.column) {
+			continue
+		}
+		if err := d.DB.Exec(f.ddl).Error; err != nil {
+			return fmt.Errorf("补列 %s.%s 失败: %w", f.table, f.column, err)
+		}
+		applogger.Infof("[sqlite-join-fix] %s 补列 %s 完成（many2many schema 缓存污染兜底）", f.table, f.column)
+	}
 	return nil
 }
 

@@ -1,6 +1,8 @@
 package communication
 
 import (
+	"strings"
+
 	"context"
 	"time"
 
@@ -47,6 +49,15 @@ func (p *ProgressReporter) ReportCompletion(ctx context.Context, result *types.E
 
 	if result.ErrorMessage != "" {
 		req.Message = result.ErrorMessage
+	}
+
+	// TIDY-03 配套：执行日志（含选择器契约信封行，若 worker 采集到）随收尾
+	// 上报体追加进执行记录 logs。后端 Progress 通道按 FormatLog 给首行加
+	// "[timestamp] " 前缀，故信封行前垫一行普通日志保证信封行首为 "{"（契约
+	// 解析按行 HasPrefix("{") 判定）。
+	if len(result.Logs) > 0 {
+		lines := append([]string{"execution log report"}, result.Logs...)
+		req.Log = strings.Join(lines, "\n")
 	}
 
 	return p.ReportProgress(ctx, req)

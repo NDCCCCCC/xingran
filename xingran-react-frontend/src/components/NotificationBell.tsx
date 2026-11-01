@@ -14,7 +14,7 @@ import {
   ignoreNotice,
   getUnreadCount,
 } from "@/lib/noticeApi";
-import type { NoticeListItem } from "@/types/notice";
+import type { NoticeListItem, WebSocketNoticeMessage } from "@/types/notice";
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -79,6 +79,9 @@ const NotificationBell: FC = () => {
       // 收到新消息通知时，刷新未读数
 
       const msg = data as { type?: string };
+      // v1.51 Phase 122 (PORTW-03): 消息转发 store 分流（port_write_progress/completed
+      // 等监听器经 noticeStore.handleWsMessage 派发; new_notice 分支保持原逻辑）
+      useNoticeStore.getState().handleWsMessage(data as WebSocketNoticeMessage);
       if (msg?.type === "new_notice" || msg?.type === "notice_update") {
         // 重新获取未读数
         try {

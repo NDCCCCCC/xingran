@@ -284,7 +284,15 @@ export type PortWriteAction =
   | "dot1x_enable"
   | "dot1x_disable"
   | "set_access_vlan" // v1.20.1 VLAN-01
-  | "port_binding"; // v1.20.1 BIND-01/02
+  | "port_binding" // v1.20.1 BIND-01/02
+  | "trunk_set_native" // v1.51 Phase 124 PWX-01
+  | "trunk_set_allowed" // v1.51 Phase 124 PWX-01
+  | "trunk_set_hybrid" // v1.51 Phase 124 PWX-01
+  | "portsec_enable" // v1.51 Phase 125 PWX-03
+  | "portsec_disable" // v1.51 Phase 125 PWX-03
+  | "portsec_max_mac" // v1.51 Phase 125 PWX-03
+  | "portsec_sticky" // v1.51 Phase 125 PWX-03
+  | "portsec_static_bind"; // v1.51 Phase 125 PWX-03
 
 /**
  * 单端口写操作结果 (Phase 53, 镜像后端 portwrite.PortResult)
@@ -302,6 +310,16 @@ export interface PortResult {
   currentState?: string;
   error?: string;
   commandSent?: string;
+  /**
+   * Phase 123 (commit 6cfdca54) 扩展: 写失败的恢复语义。
+   * - rollback="rolled_back": 失败后已自动回滚
+   * - rollback="rollback_failed": 回滚也失败（UI 必须常驻告警, 引导查看审计页）
+   */
+  extra?: {
+    /** no_rollback: trunk 动作无 DB 原值可恢复, 快照留痕（区别于 rollback_failed 告警） */
+    rollback?: "rolled_back" | "rollback_failed" | "no_rollback";
+    rollbackError?: string;
+  };
 }
 
 /**
@@ -323,6 +341,26 @@ export interface BatchWriteRequest {
   ipAddress?: string; // action === "port_binding" 时使用, IPv4
   macAddress?: string; // action === "port_binding" 时使用, optional
   reason?: string;
+  /**
+   * Phase 123 (commit 6cfdca54): 管理员强制跳过预检。
+   * 契约已就绪; UI 开关待权限真相源确认（Phase 86 门控语义）后接入, 当前仅透传层支持。
+   */
+  skipPreflight?: boolean;
+  // ---- v1.51 Phase 124 (commit 9835291c) trunk/hybrid 扩展, 按 action 携带 ----
+  /** action === "trunk_set_native" 时使用, 1-4094 */
+  nativeVlan?: number;
+  /** action === "trunk_set_allowed" 时使用 */
+  allowedVlans?: number[];
+  /** 仅 trunk_set_allowed: add | remove | replace（默认 replace; replace 仅锐捷原生支持） */
+  mode?: "add" | "remove" | "replace";
+  /** action === "trunk_set_hybrid" 时使用; 与 hybridUntagged 不可重叠（后端 400 兜底） */
+  hybridTagged?: number[];
+  /** action === "trunk_set_hybrid" 时使用 */
+  hybridUntagged?: number[];
+  // ---- v1.51 Phase 125 (commit 006ece28) portsec 扩展, 按 action 携带 ----
+  /** action === "portsec_max_mac" 时使用, 1-4096 */
+  maxMacCount?: number;
+  // portsec_static_bind 复用上方 macAddress（必填）与 vlanId（必填, 1-4094）
 }
 
 /**
@@ -364,7 +402,100 @@ export interface PortBindingRequest {
  * JSON 序列化输出 [] 而非 null — 前端无需做 null 守卫。
  */
 export interface BatchResult {
+  /** Phase 122 (ece40502): 与 WS port_write_* 事件同值, 供进度订阅关联与断线对账 */
+  batchId?: string;
   succeeded: PortResult[];
   failed: PortResult[];
   skipped: PortResult[];
+}
+
+/**
+ * 端口写预览命令 (v1.51 Phase 121 PORTW-02, 镜像后端 portwrite preview)
+ *
+ * Source: POST /network/ports/write/preview 契约 (portwriter, commit 8e158388)
+ *
+ * critical=true 的命令可能影响管理面/链路 (如 shutdown), UI 需醒目标注。
+ */
+export interface PortWritePreviewCommand {
+  index: number;
+  command: string;
+  riskLevel: "critical" | "medium" | "low";
+  critical: boolean;
+  note?: string;
+}
+
+/**
+ * 端口写预览端口条目
+ *
+ * status="skipped" → noOp=true 且 commands=[]（pre-state 已匹配目标态, 下发时会被跳过）。
+ */
+export interface PortWritePreviewPort {
+  portId: string;
+  interfaceName: string;
+  status: "preview" | "skipped";
+  noOp: boolean;
+  commands: PortWritePreviewCommand[];
+}
+
+/**
+ * 端口写预览响应 (dry-run, 不下发任何设备命令)
+ */
+export interface PortWritePreviewResult {
+  dryRun: boolean;
+  deviceId: string;
+  deviceName: string;
+  vendor: string;
+  model: string;
+  action: PortWriteAction;
+  riskLevel: "critical" | "medium" | "low";
+  summary: string;
+  ports: PortWritePreviewPort[];
+}
+
+/**
+ * 端口写审计行 (v1.51 Phase 127 PWX-04, 镜像 models.PortWriteAudit)
+ *
+ * Source: internal/models/port_write_audit.go:26-40 (append-only 真相源)
+ *
+ * beforeValue/afterValue 为任意 JSON (pre-state / post-state 快照),
+ * 前端以格式化 JSON 对比展示; failureReason/operLogId nullable。
+ */
+export interface PortWriteAuditRow {
+  id: string;
+  deviceId: string;
+  portId: string;
+  action: string;
+  beforeValue?: unknown;
+  afterValue?: unknown;
+  commandSent: string;
+  deviceResponse: string;
+  /** 契约 30a80c94: 值域仅 succeeded|failed（回滚结果在 snapshot 表, 不在 audit 行） */
+  status: "succeeded" | "failed";
+  failureReason?: string | null;
+  operator: string;
+  operLogId?: string | null;
+  createdAt: string;
+}
+
+/** 端口写审计分页查询请求（契约 30a80c94: current 从 1 起, pageSize 上限 100, 时间 RFC3339） */
+export interface PortWriteAuditListRequest {
+  current: number;
+  pageSize: number;
+  deviceId?: string;
+  portId?: string;
+  operator?: string;
+  action?: string;
+  status?: string;
+  startTime?: string;
+  endTime?: string;
+  /** 契约 9a1ea4d7: 等值过滤——PORTW-03 断线对账精确拉取该批次审计行 */
+  batchId?: string;
+}
+
+/** 端口写审计分页响应 (项目分页约定: list/total/current/pageSize) */
+export interface PortWriteAuditListResult {
+  list: PortWriteAuditRow[];
+  total: number;
+  current: number;
+  pageSize: number;
 }

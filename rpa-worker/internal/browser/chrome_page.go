@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	launcherflags "github.com/go-rod/rod/lib/launcher/flags"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/xingran-next/rpa-worker/internal/config"
 	"github.com/xingran-next/rpa-worker/internal/logger"
@@ -36,7 +37,7 @@ func NewChromePage(ctx context.Context, cfg *config.BrowserConfig, log logger.Lo
 	}
 
 	// 添加Chrome启动参数（容器模式必需）
-	launcherPath = launcherPath.MustAppend(
+	launcherPath = launcherPath.Set(
 		"--no-sandbox",
 		"--disable-dev-shm-usage",
 		"--disable-gpu",
@@ -55,7 +56,7 @@ func NewChromePage(ctx context.Context, cfg *config.BrowserConfig, log logger.Lo
 
 	// 添加自定义flags
 	for _, flag := range cfg.ChromeFlags {
-		launcherPath = launcherPath.MustAppend(flag)
+		launcherPath = launcherPath.Set(launcherflags.Flag(flag))
 	}
 
 	// 启动浏览器

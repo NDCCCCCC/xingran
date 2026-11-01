@@ -53,8 +53,8 @@ describe("port-write constants self-consistency (Phase 53)", () => {
     });
   });
 
-  describe("ACTION_TITLE — exactly 7 keys covering PortWriteAction union (5 + v1.20.1 2)", () => {
-    it("has exactly 7 keys: shutdown / undo_shutdown / description / dot1x_enable / dot1x_disable / set_access_vlan / port_binding", () => {
+  describe("ACTION_TITLE — exactly 15 keys covering PortWriteAction union (5 + v1.20.1 2 + Phase 124 trunk 3 + Phase 125 portsec 5)", () => {
+    it("has exactly 15 keys: 10 既有 + portsec_enable/disable/max_mac/sticky/static_bind", () => {
       const keys = Object.keys(ACTION_TITLE).sort();
       expect(keys).toEqual(
         [
@@ -65,6 +65,14 @@ describe("port-write constants self-consistency (Phase 53)", () => {
           "dot1x_disable",
           "set_access_vlan", // Phase 56 v1.20.1
           "port_binding", // Phase 56 v1.20.1
+          "trunk_set_native", // v1.51 Phase 124 (9835291c) —— 语义适配登记
+          "trunk_set_allowed", // v1.51 Phase 124
+          "trunk_set_hybrid", // v1.51 Phase 124
+          "portsec_enable", // v1.51 Phase 125 (006ece28) —— 语义适配登记
+          "portsec_disable", // v1.51 Phase 125
+          "portsec_max_mac", // v1.51 Phase 125
+          "portsec_sticky", // v1.51 Phase 125
+          "portsec_static_bind", // v1.51 Phase 125
         ].sort()
       );
     });

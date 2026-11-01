@@ -196,7 +196,51 @@ export interface UserNoticeListParams {
  * WebSocket 消息类型
  */
 export type WebSocketMessageType =
-  "new_notice" | "ping" | "pong" | "rpa_progress" | "rpa_completed" | "rpa_failed";
+  | "new_notice"
+  | "ping"
+  | "pong"
+  | "rpa_progress"
+  | "rpa_completed"
+  | "rpa_failed"
+  | "port_write_progress" // v1.51 Phase 122 PORTW-03
+  | "port_write_completed"; // v1.51 Phase 122 PORTW-03
+
+/**
+ * 批量写逐端口实时进度事件（v1.51 Phase 122, 契约 ece40502）
+ *
+ * Content 内嵌 JSON; 事件仅推操作者本人; 断线不补发（凭 batchId 对账 audit）。
+ */
+export interface PortWriteProgressEvent {
+  type: "port_write_progress";
+  batchId: string;
+  deviceId: string;
+  action: string;
+  portId: string;
+  interfaceName: string;
+  /** 1-based */
+  index: number;
+  total: number;
+  status: "succeeded" | "failed" | "skipped";
+  message?: string;
+  timestamp: string;
+}
+
+/** 批次终态事件（portId/interfaceName 为空, index=total） */
+export interface PortWriteCompletedEvent {
+  type: "port_write_completed";
+  batchId: string;
+  deviceId: string;
+  action: string;
+  portId: null;
+  interfaceName: null;
+  index: number;
+  total: number;
+  status: string;
+  /** JSON 字符串: {"succeeded":N,"failed":N,"skipped":N} */
+  summary: string;
+  message: string;
+  timestamp: string;
+}
 
 /**
  * WebSocket 通知消息

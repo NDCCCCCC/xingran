@@ -58,7 +58,7 @@ const pagesRoot = path.join(feRoot, "src", "pages");
 const exemptionsFile = path.join(scriptDir, "gating-exemptions.json");
 
 /** 口径断言：业务页面总数（漂移即 exit 1 —— 口径漂移必须重新裁决，不许悄悄改数字） */
-const EXPECTED_PAGE_COUNT = 76;
+const EXPECTED_PAGE_COUNT = 77; // 2026-11-01 v1.51 lead 裁决：新增 port-audits 审计页（已接三态门控，未覆盖 0），口径 76→77
 /** 口径断言：N/A 豁免页数（增减须同批改本常量并在 86-STATE.md 说明理由） */
 const EXPECTED_EXEMPTION_COUNT = 51;
 /** 豁免分类白名单 */
