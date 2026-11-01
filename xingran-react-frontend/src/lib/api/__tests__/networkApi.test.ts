@@ -153,3 +153,49 @@ describe("lib/api/networkApi", () => {
     expect(r.error).toBeInstanceOf(Error);
   });
 });
+
+// ==================== v1.51 Phase 121/122/125/127 新增 wrapper ====================
+import {
+  previewBatchWritePorts,
+  writeTrunk,
+  listPortWriteAudits,
+} from "../networkApi";
+
+describe("v1.51 新增 wrapper（Phase 121/125/127 coverage 补齐）", () => {
+  it("previewBatchWritePorts 调用 post /network/ports/write/preview 并透传参数", async () => {
+    const req = { deviceId: "d1", action: "shutdown" as const, portIds: ["p1"] };
+    const result = await previewBatchWritePorts(req);
+    expect(post).toHaveBeenCalledWith("/network/ports/write/preview", req);
+    expect(result.url).toBe("/network/ports/write/preview");
+  });
+
+  it("writeTrunk 调用 post /network/ports/write/trunk（单端点三动作）", async () => {
+    const result = await writeTrunk({
+      portId: "p1",
+      action: "trunk_set_native",
+      nativeVlan: 10,
+      reason: "测试",
+    });
+    expect(post).toHaveBeenCalledWith("/network/ports/write/trunk", {
+      portId: "p1",
+      action: "trunk_set_native",
+      nativeVlan: 10,
+      reason: "测试",
+    });
+    expect(result.url).toBe("/network/ports/write/trunk");
+  });
+
+  it("listPortWriteAudits 调用 post /network/ports/write/audit/list（含 batchId 过滤）", async () => {
+    const result = await listPortWriteAudits({
+      current: 1,
+      pageSize: 10,
+      batchId: "batch-1",
+    });
+    expect(post).toHaveBeenCalledWith("/network/ports/write/audit/list", {
+      current: 1,
+      pageSize: 10,
+      batchId: "batch-1",
+    });
+    expect(result.list).toHaveLength(1);
+  });
+});
