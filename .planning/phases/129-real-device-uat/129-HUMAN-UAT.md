@@ -31,7 +31,7 @@
 - [ ] **HW-04 dot1x_enable** | --apply `authentication-profile dot1x` | 验证：`display dot1x` 或接口视图 `display this` | 预期: 802.1X 已启用且设备无 authentication-profile 缺失报错（profile 名 dot1x 需设备预配置，未配置则记录为环境依赖项） | 现场运维 | [可逆] 恢复：dot1x_disable（HW-05） | 端口：测试口（无终端接入时段）
 - [ ] **HW-05 dot1x_disable** | --apply `undo authentication-profile dot1x` | 验证：`display dot1x` 或接口视图 `display this` | 预期: 802.1X 停用 | 现场运维 | [可逆] 恢复：自身即恢复 | 端口：测试口
 - [ ] **HW-06 set_access_vlan** | --apply `port link-type access` + `port default vlan 100` | 验证：`display current-configuration interface <port>` PVID=100（真机更正：S8700 不支持 display port vlan） | 预期: PVID=100 access | 现场运维 | [可逆] 恢复：按基线原 PVID 重新下发 | 端口：测试口
-- [ ] **HW-07 port_binding add（IP+MAC）** | --apply `user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF` | 验证：`display user-bind static all` 含该 IP+MAC | 预期: 表中出现，MAC 为 hyphen 格式 | 现场运维 | [可逆] 恢复：HW-09 remove | 端口：测试口
+- [ ] **HW-07 port_binding add（IP+MAC）→ expected-reject（S8700）** | preview 调 port_binding 含 macAddress | 预期: **400 能力矩阵拒绝**（真机事实：`user-bind static ip-address ?` 仅接受 X.X.X.X，跟随 mac-address 报 Wrong parameter，2026-11-01 二轮探测；IP-only 可用） | 现场运维 | 非破坏 | 恢复：无 | 端口：不适用
 - [ ] **HW-08 port_binding add（IP only）** | --apply `user-bind static ip-address 10.62.25.6` | 验证：同上 | 预期: IP 出现无 MAC 行 | 现场运维 | [可逆] 恢复：remove 该 IP | 端口：测试口
 - [ ] **HW-09 port_binding remove** | --apply `undo user-bind static ip-address 10.62.25.5 [mac-address ...]` | 验证：`display user-bind static all` 不再含 | 预期: 移除 | 现场运维 | [可逆] 恢复：自身即恢复 | 端口：测试口
 - [ ] **HW-10 trunk_set_native** | 先确认端口为 trunk（`port link-type trunk`，若基线非 trunk 需记录并恢复）→ --apply `port trunk pvid vlan 100` | 验证：`display current-configuration interface <port>`（真机更正） | 预期: trunk PVID=100 | 现场运维 | [可逆] 恢复：按基线原 PVID | 端口：测试口
@@ -40,7 +40,7 @@
 - [ ] **HW-13 trunk_set_hybrid → expected-reject（S8700）** | 同 HW-10 | 预期: 400 | 现场运维 | 非破坏 | 恢复：无 | 端口：不适用
 - [ ] **HW-14 portsec_enable + max_mac** | --apply `port-security enable` + `port-security max-mac-num 5` | 验证：`display port-security interface <port>`（真机更正：`display port-security <port>` 报 Too many parameters） | 现场运维 | [可逆] 恢复：portsec_disable | 端口：测试口
 - [ ] **HW-15a portsec_sticky** | --apply `port-security mac-address sticky` | 验证：`display port-security interface <port>` | 预期: sticky 开启（真机 ✅ 已验） | 现场运维 | [可逆] 恢复：undo sticky | 端口：测试口
-- [ ] **HW-15b portsec_static_bind（已确认语法，复测）** | 真机探测（2026-11-01 接口视图 `port-security mac-address sticky ?`）确认：S8700 sticky 只接受 `[H-H-H]` 单参数，**无 vlan**；且无 `static` 子关键字（静态绑定只能经 sticky 表达）| 渲染器已修：华为下发 `port-security mac-address sticky <MAC>`（无 vlan）→ 复测验证静态表含该 MAC | 现场运维 | [不可逆-需基线] 恢复：`undo port-security mac-address sticky <MAC>` | 端口：测试口
+- [ ] **HW-15b portsec_static_bind → expected-reject（S8700）** | preview 调 portsec_static_bind | 预期: **400 能力矩阵拒绝**（二轮真机复测：新渲染无 vlan 仍 Wrong parameter，且 `port-security mac-address sticky <MAC> ?` 亦 Wrong parameter ⇒ sticky 仅开关用，该型号不支持静态 MAC 绑定） | 现场运维 | 非破坏 | 恢复：无 | 端口：不适用
 
 ## §2 锐捷 RS8607E（RGOS）— 15 项
 

@@ -24,10 +24,14 @@ func TestCheckActionSupport_S8700(t *testing.T) {
 	}
 	// 支持集合不受影响
 	for _, action := range []PortAction{ActionShutdown, ActionUndoShutdown, ActionSetAccessVLAN,
-		ActionDescription, ActionDot1xEnable, ActionDot1xDisable, ActionPortBinding,
-		PortSecEnable, PortSecDisable, PortSecSticky, PortSecStaticBind} {
+		ActionDescription, ActionDot1xEnable, ActionDot1xDisable,
+		PortSecEnable, PortSecDisable, PortSecSticky} {
 		assert.NoError(t, CheckActionSupport(models.VendorHuawei, s8700, action), "%s 应支持", action)
 	}
+	// 二轮真机：static_bind 整动作拒绝 + port_binding IP+MAC 组合拒绝（参数级）、IP-only 放行
+	assert.ErrorIs(t, CheckActionSupport(models.VendorHuawei, s8700, PortSecStaticBind), ErrActionNotSupported)
+	assert.ErrorIs(t, CheckActionSupportParams(models.VendorHuawei, s8700, ActionPortBinding, "AA-BB-CC-DD-EE-FF"), ErrActionNotSupported)
+	assert.NoError(t, CheckActionSupportParams(models.VendorHuawei, s8700, ActionPortBinding, ""))
 }
 
 // TestCheckActionSupport_OtherHuaweiModels 非匹配型号沿用厂商基线（保守兼容）。
