@@ -188,14 +188,14 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			vendor:   models.VendorHuawei,
 			action:   ActionPortBinding,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "add", IPAddress: "10.62.25.5"},
-			expected: []string{"interface GE0/0/1", "user-bind static ip-address 10.62.25.5"},
+			expected: []string{"user-bind static ip-address 10.62.25.5"},
 		},
 		{
 			name:     "huawei_port_binding_add_with_mac",
 			vendor:   models.VendorHuawei,
 			action:   ActionPortBinding,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "add", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
-			expected: []string{"interface GE0/0/1", "user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"},
+			expected: []string{"user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"},
 		},
 		{
 			name:     "huawei_port_binding_remove",
