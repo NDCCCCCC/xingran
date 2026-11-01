@@ -78,6 +78,11 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 			},
 		},
 	},
+	// 华为 static_bind 补充（2026-11-01 接口视图探测）：port-security
+	// mac-address sticky ? 只接受 [H-H-H | sticky]，无 vlan 参数 —— S8700 的
+	// "静态 MAC 绑定"只能经 sticky 表达（static 子关键字该型号不存在）。
+	// 渲染层已按此去掉 vlan 参数；本矩阵不需拒绝（命令合法，仅参数形状不同）。
+	//
 	// H3C / Ruijie / Cisco：真机证据不足，全部默认支持（S8700 之外的华为
 	// CE/S57 系列按公允语法支持 trunk/hybrid/max-mac-num）。
 	// 锐捷 hybrid 在渲染层不注册（RenderCommand → ErrUnknownAction），此处
