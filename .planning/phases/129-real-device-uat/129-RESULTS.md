@@ -150,8 +150,29 @@ shut ?
 `switchport port-security mac-address aabb.ccdd.eeff vlan 100`），已立即清除，
 设备恢复原状（9 行与基线一字不差）。
 
-**结论**：锐捷侧完整动作验证应改走**产品 scrapli 执行链路**（与真实用户路径
-一致），而非本执行器的自研 SSH 会话。该项列为待办。
+### 锐捷复测（改走产品 scrapli 链路，riguat 执行器）
+
+**Probe 结论（只读，零配置变更）**：
+
+| 探测 | 真机回显 | 判定 |
+|---|---|---|
+| `switchport ?` | access / backup / dot1q-tunnel / **hybrid** / mode / port-security / protected / trunk | 渲染用到的关键字全部命中 ✅ |
+| `switchport hybrid ?` | `% Incomplete command.`（**非** Unknown/Invalid） | ⇒ **设备支持 hybrid**，产品锐捷未注册 `TrunkSetHybrid` = **功能缺口，建议补** |
+| `switchport port-security maximum ?` | `<1-128>  Maximum addrs (default value: 128)` | ⇒ 渲染的 `switchport port-security maximum 5` **合法** ✅ |
+| `switchport port-security mac-address ?` | `% Incomplete command.`（关键字存在，需参数） | 需真机下发验证参数形态 |
+| `dot1x ?` | `% Incomplete command.`（关键字存在） | 渲染的 `dot1x port-control auto` / `default-user-limit 1` 命中 ✅ |
+
+**动作批次：中止（还原逻辑缺陷）**。riguat 的基线自检（与权威 9 行逐行核对）在
+第 2 个动作就报警「设备当前状态已偏离」，此时已累积三处还原失败：
+
+1. `description` 还原失败 → 残留 `description RIGUAT-TEST`
+2. `dot1x_disable` 还原不完整 → 设备连带清掉 `dot1x default-user-limit` 与
+   `dot1x mac-auth-bypass multi-user`，重放基线未补齐
+3. `set_access_vlan` 还原失败 → `switchport access vlan 318` 丢失
+
+批次立即中止，设备由 lead 用可靠路径**人工恢复**（当前 9 行与权威基线一字不差 ✅）。
+结论：**在 riguat 的还原逻辑修好并自证之前，不在生产设备上跑动作批次**。
+（基线自检这个安全网在本次事件中成功拦截，值得保留并强化。）
 
 > 注：产品代码本身正确 —— `portwrite.executeWrite` 先 `expandInterfaceName`
 > 再 `RenderCommand`（锐捷展开为 `GigabitEthernet 1/1` 带空格，华为保持短名
