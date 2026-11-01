@@ -1084,7 +1084,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     await waitFor(() => {
       expect(screen.getByText("✓ 成功")).toBeInTheDocument();
     });
-  });
+  }, 30000); // CI coverage 慢机: WS 事件派发 + 渲染累计超默认 15s（PR #38 flake）
 
   it("PORTW-03: completed 事件渲染 summary 三计数 + fail-fast 中断文案", async () => {
     mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
@@ -1150,7 +1150,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     await waitFor(() => {
       expect(screen.getByText(/重试失败端口/)).toBeInTheDocument();
     });
-  });
+  }, 30000); // CI coverage 慢机: 多轮事件派发 + 渲染累计超默认 15s（PR #38 flake）
 
   it("PORTW-03: WS 不可用降级 — 无事件时回退 indeterminate 提示, 同步响应照常进 result", async () => {
     mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
@@ -1192,7 +1192,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     await waitFor(() => {
       expect(screen.getByText("✓ 成功")).toBeInTheDocument();
     });
-  });
+  }, 30000); // CI coverage 慢机: WS 事件派发 + 渲染累计超默认 15s（PR #38 flake）
 
   it("PORTW-03: batchId 不匹配的事件被忽略（批次关联隔离; 用户级隔离由后端会话保证）", async () => {
     mockPreviewBatchWritePorts.mockResolvedValue(makePreview());
@@ -1255,5 +1255,5 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     await waitFor(() => {
       expect(screen.getByText("✓ 成功")).toBeInTheDocument();
     });
-  });
+  }, 30000); // CI coverage 慢机: WS 事件派发 + 渲染累计超默认 15s（PR #38 flake）
 });
