@@ -827,7 +827,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     expect(previewArg.mode).toBe("add");
     const writeArg = mockBatchWritePorts.mock.calls[0][0] as { mode: string };
     expect(writeArg.mode).toBe("add");
-  });
+  }, 30000); // CI coverage 慢机: 双下拉 + 表单渲染累计超默认 15s（PR #38 flake）
 
   it("Phase 124: trunk_set_hybrid 重叠被前端预校验拦截, 修正后可预览", async () => {
     render(
@@ -874,7 +874,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     };
     expect(previewArg.hybridTagged).toEqual([30]);
     expect(previewArg.hybridUntagged).toEqual([10, 20]);
-  });
+  }, 30000); // CI coverage 慢机: 双下拉 + 表单渲染累计超默认 15s（PR #38 flake）
 
   // ==================== v1.51 Phase 125 portsec（commit 006ece28） ====================
 
