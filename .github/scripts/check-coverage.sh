@@ -302,7 +302,10 @@ echo "P2 per-package floor passed (70.0% x 10 packages)"
 # user_ou_service_test.go（8 函数：HandleUserLoginAD / updateUserDeptAndADInfo /
 # restoreDeletedUserWithADInfo / GetUserDeptByADOU / createDeptFromOUDN /
 # buildAncestors / generateUniqueDeptCode）覆盖后应立即回调至 69.2 以上。
-P3_FLOOR="67.5"
+# 2026-11-01 补测完成：user_ou_service_test.go 落地（35 用例，947 行），该文件
+# 0% → 99.13%，addomain 实测 70.45%（2763/3922）→ floor 回调至 70.0
+# （measured - 0.4pp），并高于原 69.2 基线（净上调 0.8pp）。
+P3_FLOOR="70.0"
 P3_PACKAGES="internal/services/addomain"
 
 P3_PKG_TABLE=$(awk '
