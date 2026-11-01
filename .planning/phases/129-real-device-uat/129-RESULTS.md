@@ -174,6 +174,69 @@ shut ?
 结论：**在 riguat 的还原逻辑修好并自证之前，不在生产设备上跑动作批次**。
 （基线自检这个安全网在本次事件中成功拦截，值得保留并强化。）
 
+### 锐捷 12 动作复测（riguat 修复还原逻辑后，逐动作独立进程执行）
+
+riguat 还原链路修复（commit `5c205c86`）：根因是**还原重放基线行时漏了 `interface X`
+前缀**，命令落到 `(config)#` 顶层被设备全部拒绝；修复后还原自证 1 轮收敛，mock 18 项
+自测 + 反向验证（去掉前缀 → 12 动作全红）。
+
+| # | 动作 | 渲染命令（锐捷） | 真机结果 | 还原核对 |
+|---|---|---|---|---|
+| RJ-01 | shutdown | `interface GigabitEthernet 1/1` ; `shutdown` | ✅ 生效 | ✅ 一致 |
+| RJ-02 | undo_shutdown | `no shutdown` | ✅ 生效 | ✅ 一致 |
+| RJ-03 | description | `description RIGUAT-TEST` | ✅ 生效 | ✅ 一致 |
+| RJ-04 | dot1x_enable | `dot1x port-control auto` ; `dot1x default-user-limit 1` | ✅ 生效 | ✅ 一致 |
+| RJ-05 | dot1x_disable | `no dot1x port-control auto` | ✅ 生效 | ✅ 一致 |
+| RJ-06 | set_access_vlan | `switchport mode access` ; `switchport access vlan 100` | ✅ 生效 | ✅ 一致 |
+| RJ-07 | port_binding | `switchport port-security binding <MAC> <IP>` | ❌ **参数顺序错**：`% Invalid input detected at '^' marker.` | ✅ 一致 |
+| RJ-08 | portsec_enable | `switchport port-security` | ✅ 生效（幂等，基线已有） | ✅ 一致 |
+| RJ-09 | portsec_disable | `no switchport port-security` | ✅ 生效 | ✅ 一致 |
+| RJ-10 | portsec_max_mac | `switchport port-security maximum 5` | ✅ 生效（范围 `<1-128>`） | ✅ 一致 |
+| RJ-11 | portsec_sticky | `switchport port-security mac-address sticky` | ✅ 生效 | ✅ 一致 |
+| RJ-12 | portsec_static_bind | `switchport port-security mac-address <MAC> vlan 100` | ✅ 生效 | ✅ 一致 |
+
+**锐捷 12 动作：11 通过 / 1 失败（port_binding 参数顺序）；12 条还原核对全部与基线一致。**
+
+**RJ-07 根因（真机取证）**：
+```
+switchport port-security binding ?
+  A.B.C.D     IP address
+  H.H.H       48-bit hardware address
+  X:X:X:X::X  IPV6 address
+```
+⇒ **IP 在前、MAC 在后**；我们渲染成 `<MAC> <IP>` 被拒。设备基线自带的
+`switchport port-security binding 10.62.51.173` 是 **IP-only**，同样合法。
+
+**锐捷 hybrid 语法（真机取证）**：
+```
+switchport hybrid ?
+  allowed  Allowed
+  native   Native
+switchport hybrid vlan ?  → % Unrecognized command.
+switchport hybrid pvid ?  → % Unrecognized command.
+```
+⇒ 锐捷 hybrid = `switchport hybrid native <vlan>` + `switchport hybrid allowed <vlan-list>`；
+产品当前对锐捷 `TrunkSetHybrid` 返回 `ErrUnknownAction` = **功能缺口，应补**。
+
+### 华为 vs 锐捷能力对照（能力矩阵必须按厂商区分，不能一刀切）
+
+| 能力 | 华为 S8700 | 锐捷 RS8607E |
+|---|---|---|
+| portsec_sticky | ✅ | ✅ |
+| portsec_max_mac | ❌ 无 `max-mac-num` | ✅ `maximum <1-128>` |
+| portsec_static_bind | ❌ sticky 不接受手动 MAC | ✅ `mac-address <mac> vlan <vlan>` |
+| port_binding IP-only | ✅ `user-bind static ip-address X` | ✅ `binding <IP>` |
+| port_binding IP+MAC | ❌ IP 后不能跟 MAC | ✅ `binding <IP> <MAC>`（**顺序与华为相反**） |
+| trunk | ❌ 无 `port trunk` 关键字 | ✅ `switchport trunk` 存在 |
+| hybrid | ❌ 无 `hybrid` 关键字 | ✅ `switchport hybrid native/allowed` 存在 |
+
+### 收尾状态（两台设备）
+
+| 设备 | 接口 | 最终配置 |
+|---|---|---|
+| 华为 S8700 | GE1/0/0 | 7 行，与原始基线一字不差 ✅ |
+| 锐捷 RS8607E | GigabitEthernet 1/1 | 9 行，与原始基线一字不差 ✅ |
+
 > 注：产品代码本身正确 —— `portwrite.executeWrite` 先 `expandInterfaceName`
 > 再 `RenderCommand`（锐捷展开为 `GigabitEthernet 1/1` 带空格，华为保持短名
 > `GE1/0/0`），与本次真机实测一致。
