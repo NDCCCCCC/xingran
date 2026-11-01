@@ -162,7 +162,41 @@ func isNoiseLine(l string) bool {
 	case strings.HasPrefix(l, "%") && !isErrorLine(l):
 		return true
 	}
-	return false
+	// 设备提示符（如 "Ruijie#"、"Ruijie(config-if-GigabitEthernet 1/1)#"）
+	// —— scrapli 的 Result 默认带 prompt（StripPrompt 未生效），必须过滤，
+	// 否则提示符会被当成配置行，基线 diff 永远不空。
+	return looksLikePrompt(l)
+}
+
+// looksLikePrompt 判断一行是否像设备提示符。
+//
+// 形如 host# / host(config)# / host(config-if-GigabitEthernet 1/1)#。
+// 判据：以 # 或 > 结尾；含括号时括号内只允许 view 名（字母/数字/下划线/连字符/空格）。
+func looksLikePrompt(l string) bool {
+	trimmed := strings.TrimRight(l, " \t")
+	if trimmed == "" {
+		return false
+	}
+	if !strings.HasSuffix(trimmed, "#") && !strings.HasSuffix(trimmed, ">") {
+		return false
+	}
+	open := strings.Index(trimmed, "(")
+	if open < 0 {
+		// "Ruijie#" 形态
+		return !strings.ContainsAny(trimmed, " \t")
+	}
+	closeIdx := strings.LastIndex(trimmed, ")")
+	if closeIdx < open {
+		return true
+	}
+	inner := trimmed[open+1 : closeIdx]
+	for _, r := range inner {
+		if !(r == ' ' || r == '-' || r == '_' ||
+			(r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')) {
+			return false
+		}
+	}
+	return true
 }
 
 // ifaceConfigBlock 从 running-config 接口视图输出中切出目标接口的配置块。

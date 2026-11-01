@@ -20,11 +20,44 @@ DeviceConnectionPool（查设备/凭据 → 解密密码 → 建 scrapligo 连�
 
 | 文件 | 职责 |
 |---|---|
-| `main.go` | CLI、编排、报告输出 |
-| `actions.go` | 12 个动作定义（渲染参数 + 还原命令 + 判读要点） |
-| `parse.go` | 回显清洗（ANSI/折行/错误行/全局段）、配置行解析、diff |
+| `main.go` | CLI、编排、批次模式、报告输出 |
+| `actions.go` | 12 个动作定义（渲染参数 + 还原命令 + 判读要点 + no 形式推导） |
+| `restore.go` | 还原引擎：命令组装、逐条下发、自证重试、差异驱动修复 |
+| `parse.go` | 回显清洗（ANSI/折行/错误行/提示符/全局段）、配置行解析、diff |
 | `runtime.go` | config.yaml / DB / 凭据 / SM4 密钥 / 产品执行通道装配 |
 | `parse_test.go` | 解析层自测（纯函数，不连设备） |
+| `mock_test.go` | **mock 锐捷设备**：无设备模式跑完整「下发→还原→diff」闭环 |
+
+## ★ 2026-11-02 真机复测修复（根因）
+
+第一次真机跑批时，**还原静默失效**，`description` / `dot1x_disable` / `set_access_vlan`
+三个动作还原后配置偏离基线。根因：
+
+> 重放基线行时**没有带 `interface X` 前缀**，命令在 `exit` 之后、于 `(config)#` 顶层下发，
+> 被设备全部拒绝（`% Invalid input detected`）。动作下发路径（渲染结果自带 interface 前缀）
+> 因此正常，probe 也正常 —— 只有还原这一段失效。
+
+修复：
+
+1. **组装分离**：`buildActionCmds`（渲染结果，自带前缀）与 `buildInterfaceCmds`
+   （裸接口命令，**必补** `interface X` + `exit`）；还原的 undo 段与基线重放段**各自独立组装**；
+2. **逐条下发**：每条命令独立 `SendConfigs`，单条失败不再中断整批（原批量下发时一条超时
+   会让整批命令不执行 —— 真机上表现为"还原只做了一半"）；
+3. **还原自证**：还原后**重新采集 + 与基线 diff**，不一致则自动重试（默认 3 轮），
+   并用**差异驱动修复**（缺失行直接重放、多出行用 `no` 形式否定）；
+4. **批次模式 `--batch`**：任一动作还原后 diff 非空 → **立即停止后续动作**并输出差异报告；
+   动作前基线与权威基线不一致 → **立即停止**（除非 `--force-continue`）；
+5. **无设备自测**：mock 锐捷设备严格模拟两条关键行为 —— 接口级命令在 `(config)#` 顶层被拒绝、
+   `no dot1x port-control auto` 连带清除 `default-user-limit` 与 `mac-auth-bypass`。
+   任何还原组装丢掉 `interface` 前缀，自测立刻红（已做反向验证：去掉前缀 → 12 动作全红）。
+
+## 还原语义（统一）
+
+- **Undo** 只负责「删除动作引入的配置行」（锐捷/Cisco 风格的 `no` 形式）；
+- 「恢复动作删除的配置行」由**基线重放**统一负责。
+
+这样「改写型」动作（`description` / `set_access_vlan`）与「删除型」动作（`dot1x_disable`）
+的还原对称性天然正确，不需要各写一套反向模板。
 
 ## 命令来源
 
@@ -37,9 +70,10 @@ DeviceConnectionPool（查设备/凭据 → 解密密码 → 建 scrapligo 连�
 1. **基线采集**：`show running-config interface GigabitEthernet 1/1`（+ port-security 两条）
    —— 并与 lead 实测的 **9 行权威基线**逐行自检，不一致时告警；
 2. **下发**：`RenderCommand` 渲染结果（接口视图动作统一组装为
-   `["interface <全称>"] + 视图内命令 + ["exit"]`）；
-3. **验证**：三条 `show` 命令 + 动作前后配置行差异 + 锐捷专项判读；
-4. **还原**：undo 动作影响项 → 重放基线行 → 再采集；
+   `["interface <全称>"] + 视图内命令 + ["exit"]`，逐条下发）；
+3. **验证**：三条 `show` 命令 + 动作前后配置行差异（分列「消失的行 / 新增的行」+ 生效判定）
+   + 锐捷专项判读；
+4. **还原**：undo 影响项 → 基线重放 → **重新采集 + diff 自证** → 差异驱动修复 → 重试；
 5. **核对**：**最终配置 vs 原始基线逐行核对，diff 为空才算还原成功**（diff 非空必须报告）。
 
 ## 编译
@@ -61,7 +95,10 @@ riguat --device <设备名> [选项]
   --port <短名>           测试口，默认 GE1/1（库中归一化短名）
   --action <动作>         动作名（见下）
   --apply                 真正下发（默认只打印将下发的命令，不连设备）
+  --batch                 批次模式：依次跑完 12 个动作，任一还原失败立即停止
   --probe                 只读探测模式（接口视图 ? 帮助查询，零配置变更）
+  --max-restore <n>       还原自证最大尝试轮数，默认 3
+  --force-continue        基线偏离权威基线时不停止（默认停止）
   --config <path>         后端 config.yaml，默认 /app/szh/configs/config.yaml
   --backend-pid <pid>     从 /proc/<pid>/environ 取 SM4_KEY
   --sm4-env-file <path>   直接指定环境变量文件
@@ -72,6 +109,21 @@ riguat --device <设备名> [选项]
 凭据：`sys_auth_credential` 的 SM4 密文 + **运行中后端进程环境变量里的 `SM4_KEY`**
 （`/proc/<pid>/environ`；未指定 pid 时自动扫描 `/proc/*/environ` 兜底）。
 密码全程只在内存中由产品连接池解密，**绝不输出、绝不落盘**。
+
+### 批次模式（推荐真机复测用）
+
+```bash
+./riguat --device CX-WH-WH-04F-FL-RS8607E-01 --port GE1/1 \
+         --batch --apply --max-restore 3 \
+         --config /app/szh/configs/config.yaml --backend-pid $PID \
+         --out /tmp/riguat-batch.log
+```
+
+停止条件（任一命中即**立即停止后续动作**并输出差异报告，退出码 2）：
+
+- 某动作还原后 diff 非空（已用 `--max-restore` 轮重试 + 差异驱动修复）；
+- 某动作的**动作前基线**与 9 行权威基线不一致（设备状态已被人改动）。
+
 
 ## 12 个动作与判读要点
 
@@ -99,9 +151,22 @@ riguat --device <设备名> [选项]
 ## 安全红线
 
 - 只操作一个测试口（`--port`，默认 `GE1/1`），工具不做多口操作；
-- 每条动作后自动还原，还原后 diff 非空一律报告；
+- 每条动作后自动还原，**还原后重新采集并与基线 diff 自证**；diff 非空 → 重试（默认 3 轮）
+  → 仍非空则判定还原失败，批次模式立即停止后续动作；
+- 动作前基线与 9 行权威基线不一致 → 批次模式立即停止（`--force-continue` 可放行）；
 - 收尾附「最终配置 vs 原始基线 9 行」逐行核对表；
 - 还原阶段的「已存在/重复」类报错属基线重放幂等噪声，以最终 diff 为准。
+
+## 自测（无设备）
+
+```bash
+go test ./scripts/devtools/riguat/
+```
+
+mock 锐捷设备严格模拟两条真机行为（接口级命令在 `(config)#` 顶层被拒绝；
+`no dot1x port-control auto` 连带清除 `default-user-limit` 与 `mac-auth-bypass`），
+对 12 个动作逐一跑「下发 → 还原 → diff」闭环，并覆盖自证重试、差异驱动修复、
+无法修复时必须判失败、还原序列必须带 `interface` 前缀等路径。
 
 ## 已知限制（需人工判读）
 
