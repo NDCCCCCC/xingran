@@ -437,6 +437,11 @@ func (s *portWriteServiceImpl) writeSinglePort(
 	if err := s.db.WithContext(ctx).Where("id = ?", port.DeviceID).First(&dev).Error; err != nil {
 		return nil, fmt.Errorf("query device: %w", err)
 	}
+	// Phase 129 真机修复：厂商/型号能力矩阵校验（不支持的动作显式拒绝，
+	// 不下发必失败命令）
+	if err := portcollection.CheckActionSupport(dev.Vendor, dev.Model, action); err != nil {
+		return nil, err
+	}
 	if err := s.preflightReachability(ctx, &dev, opts.skipPreflight); err != nil {
 		return nil, err
 	}
@@ -577,8 +582,13 @@ func (s *portWriteServiceImpl) executeWrite(
 		// 不像 GetPrompt 探针会消费中间内容致错位）。exit/quit 只退一级（不像 end 退
 		// privileged EXEC 破坏 scrapli priv 跟踪）。
 		fullCmds := cmds
-		if exitCmd := portcollection.VendorExitViewCmd(dev.Vendor); exitCmd != "" {
-			fullCmds = append(append([]string{}, cmds...), exitCmd)
+		// Phase 129 真机修复：系统视图命令序列（如华为 user-bind，能力矩阵
+		// ActionSystemView）不追加 view 退出命令——会话本就停在配置视图，
+		// 追加 exit 会把 scrapli priv 跟踪掉出配置视图。
+		if portcollection.RequiresInterfaceView(dev.Vendor, action) {
+			if exitCmd := portcollection.VendorExitViewCmd(dev.Vendor); exitCmd != "" {
+				fullCmds = append(append([]string{}, cmds...), exitCmd)
+			}
 		}
 		responses, sendErr := wrapper.SendConfigs(fullCmds)
 		if sendErr != nil {

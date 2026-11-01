@@ -285,6 +285,10 @@ func (h *PortWriteHandler) execSinglePort(
 		case errors.Is(err, portwrite.ErrMACAddressInvalid):
 			response.Error(c, http.StatusBadRequest, "MAC 地址格式不合法")
 			return
+		case errors.Is(err, portcollection.ErrActionNotSupported):
+			// Phase 129 真机修复：厂商/型号能力矩阵拒绝（400 + 真机依据）
+			response.Error(c, http.StatusBadRequest, err.Error())
+			return
 		}
 		// 非 sentinel error：设备执行失败（拒绝/transport）或系统错误（DB/RenderCommand）。
 		// 有 failed result → fall through 走 audit + 200（handler 设计：Status==failed

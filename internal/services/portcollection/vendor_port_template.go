@@ -362,8 +362,10 @@ func renderHuaweiPortBindingAdd(p PortTemplateParams) ([]string, error) {
 			args = fmt.Sprintf("%s mac-address %s", args, mac)
 		}
 	}
+	// Phase 129 真机修复（2026-11-01 S8700 实测）：user-bind 是系统视图命令，
+	// 接口视图执行报 Unrecognized —— 不带 interface 前缀（能力矩阵
+	// ActionSystemView，executeWrite 据此不加 view 退出命令）。
 	return []string{
-		fmt.Sprintf("interface %s", p.InterfaceName),
 		fmt.Sprintf("user-bind static %s", args),
 	}, nil
 }
