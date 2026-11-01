@@ -277,7 +277,12 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
 
       // writeDescription 被调用 — reason 为 undefined (D-03 optional)
       await waitFor(() => {
-        expect(mockWriteDescription).toHaveBeenCalledWith("port-1", "uplink-to-core", undefined, undefined); // Phase 125: 尾参 skipPreflight
+        expect(mockWriteDescription).toHaveBeenCalledWith(
+          "port-1",
+          "uplink-to-core",
+          undefined,
+          undefined
+        ); // Phase 125: 尾参 skipPreflight
       });
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledTimes(1);

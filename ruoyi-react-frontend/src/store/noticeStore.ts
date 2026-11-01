@@ -184,8 +184,7 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
       try {
         if (!message.content) return;
         const event = JSON.parse(message.content) as
-          | PortWriteProgressEvent
-          | PortWriteCompletedEvent;
+          PortWriteProgressEvent | PortWriteCompletedEvent;
         portWriteListeners.forEach((callback) => {
           try {
             callback(event);
