@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.51
 milestone_name: 端口写生产级操作体验与平台质量收口
-status: Milestone initiated — awaiting phase 121 planning
-stopped_at: v1.51 立项完成（2026-10-31）：范围 A 端口写深化 + B 平台技术债 + D 收尾杂项，21 REQ / Phases 121-129，phase 编号延续 GitHub v1.33 线从 121 续编
-last_updated: "2026-10-31T22:30:00.000Z"
-last_activity: 2026-10-31
-last_activity_desc: Milestone v1.51 initiated (A+B+D scope, 21 REQ)
+status: 代码工作完成 — 真机 UAT 待设备窗口（Phase 129）
+stopped_at: v1.51 代码工作全部完成并合入 main（2026-11-01）：21 REQ / Phases 121-129 全部交付，技术债 6/6 全清，PR #38 合并（merge commit e602e811）+ tag v1.51；集成验证窗口 #1 全项 PASS。剩余：Phase 129 真机 UAT（华为 S8700 / 锐捷 RS8607E / H3C 必需 + Cisco 可选）+ 4 项 uotester 实测暴露的既有缺陷待 v1.52
+last_updated: "2026-11-01T15:40:00.000Z"
+last_activity: 2026-11-01
+last_activity_desc: v1.51 代码工作完成并合入 main（PR #38 merged, tag v1.51）
 state_head: 27ac078e18b72d83b9690eaed617328c390687cd
 progress:
   total_phases: 9
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
-current_phase: 121
-current_phase_name: 端口写 dry-run 预览 + 命令预览 UI
+  completed_phases: 8
+  total_plans: 26
+  completed_plans: 26
+  percent: 89
+current_phase: 129
+current_phase_name: 目录改名 + 双线 planning 合流 + 真机 UAT（需设备窗口）
 ---
 
 # Project State
