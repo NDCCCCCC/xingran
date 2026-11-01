@@ -173,6 +173,11 @@ func actionSet() []portcollection.PortAction {
 }
 
 func paramsFor(action portcollection.PortAction, iface string) portcollection.PortTemplateParams {
+	return paramsForVendor(action, iface, "")
+}
+
+// paramsForVendor 按厂商给出渲染参数（华为 static_bind 不带 vlan：S8700 sticky 单参数语法）
+func paramsForVendor(action portcollection.PortAction, iface string, vendor string) portcollection.PortTemplateParams {
 	limit := 1
 	p := portcollection.PortTemplateParams{InterfaceName: iface}
 	switch action {
@@ -200,7 +205,12 @@ func paramsFor(action portcollection.PortAction, iface string) portcollection.Po
 		p.MACAddress = testMAC
 	case portcollection.PortSecStaticBind:
 		p.MACAddress = testMAC
-		p.VLANID = testVLAN
+		if vendor == "huawei" {
+			// 华为 S8700: port-security mac-address sticky <MAC>（单参数，无 vlan）
+			p.VLANID = 0
+		} else {
+			p.VLANID = testVLAN
+		}
 	}
 	return p
 }
@@ -621,6 +631,8 @@ func collectConfig(s *session, vendor models.DeviceVendor, cliIface string) stri
 
 // enterConfig 进入配置视图与接口视图
 func enterConfig(s *session, vendor models.DeviceVendor, cliIface string, cmds []string) {
+	// 若渲染命令首条不是 interface X（系统视图动作，如华为 user-bind），只进配置视图
+	systemViewOnly := len(cmds) > 0 && !strings.HasPrefix(strings.TrimSpace(cmds[0]), "interface ")
 	cfgMarker := []string{"(config)"}
 	ifaceMarker := []string{"(config-if"}
 	if vendor == models.VendorHuawei {
@@ -633,6 +645,10 @@ func enterConfig(s *session, vendor models.DeviceVendor, cliIface string, cmds [
 		out = s.sendExpect("system-view", cfgMarker, 3*time.Second)
 	}
 	fmt.Printf("[enterConfig] 进入配置视图: %s\n", strings.TrimSpace(out))
+	if systemViewOnly {
+		fmt.Println("[enterConfig] 系统视图动作，不进入接口视图")
+		return
+	}
 	if len(cmds) > 0 && strings.HasPrefix(strings.TrimSpace(cmds[0]), "interface ") {
 		o := s.sendExpect(cmds[0], ifaceMarker, 3*time.Second)
 		fmt.Printf("[enterConfig] 进入接口视图: %s\n", strings.TrimSpace(o))
@@ -678,7 +694,7 @@ func runExec(dev Device, user, pass, iface, actionName string, apply bool, outFi
 	vendor := models.DeviceVendor(dev.Vendor)
 	// 库里的归一化短名 → 厂商 CLI 全名（与产品 expandInterfaceName 语义一致）
 	cliIface := expandInterfaceName(iface, vendor)
-	params := paramsFor(action, cliIface) // 与产品一致：先 expand 再渲染
+	params := paramsForVendor(action, cliIface, string(vendor)) // 与产品一致：先 expand 再渲染
 	cmds, err := portcollection.RenderCommand(vendor, action, params)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "渲染失败: %v\n", err)

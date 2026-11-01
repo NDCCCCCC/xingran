@@ -95,7 +95,18 @@ user-bind ?
 user-bind static ?
   ip-address / ipv6-address / ipv6-prefix / mac-address
         → user-bind 是系统视图命令 ⇒ HW-07 失败根因
+user-bind static ip-address ?
+  X.X.X.X  IP address
+        → IP 之后不能再跟任何参数 ⇒ S8700 不接受 ip-address + mac-address 组合写法
 ```
+
+### 修复后复测（2026-11-01 晚）
+
+| 项 | 结果 |
+|---|---|
+| HW-07 port_binding（修复为系统视图渲染后） | 渲染已正确（无 interface 前缀、系统视图执行），但 `user-bind static ip-address X mac-address Y` 仍 `Wrong parameter` ⇒ **S8700 不支持 IP+MAC 组合绑定**，待定：整动作拒绝 or 支持 IP-only 变体 |
+| HW-12 portsec_static_bind（修复为去 vlan 后） | `port-security mac-address sticky AA-BB-CC-DD-EE-FF` 仍 `Wrong parameter`；`port-security mac-address sticky AA-BB-CC-DD-EE-FF ?` → `Wrong parameter` ⇒ **S8700 连手动 MAC 都不接受**（sticky 仅作开关），该型号不支持静态 MAC 绑定 ⇒ 应标 Unsupported |
+| 两次复测的还原核对 | ✅ 均与基线完全一致（未留痕迹） |
 
 ### 华为验证命令错误（清单需更正）
 
@@ -131,9 +142,16 @@ shut ?
 ### 锐捷动作批次
 
 首轮 11 动作批次因**执行器自身的接口名处理缺陷**（用库中短名 `GE1/1`，
-而 RGOS CLI 只接受全称 `GigabitEthernet 1/1`）全部未真正下发，已定位并修正；
-修正后经 `shut ?` 确认 `shutdown` 命令存在 ✅。**锐捷各动作的完整下发/验证
-结果待复测**（执行器已修正，需重跑一轮）。
+而 RGOS CLI 只接受全称 `GigabitEthernet 1/1`）全部未真正下发，已定位并修正。
+
+修复接口名后复测一轮（12 动作）：**执行器在 RGOS 上的回显判读/时序不可靠**
+（设备回显含光标控制序列、PTY 折行），逐条判定结果不可信 —— 唯一可确认的是
+`portsec_static_bind` 实际生效（还原核对发现配置多出
+`switchport port-security mac-address aabb.ccdd.eeff vlan 100`），已立即清除，
+设备恢复原状（9 行与基线一字不差）。
+
+**结论**：锐捷侧完整动作验证应改走**产品 scrapli 执行链路**（与真实用户路径
+一致），而非本执行器的自研 SSH 会话。该项列为待办。
 
 > 注：产品代码本身正确 —— `portwrite.executeWrite` 先 `expandInterfaceName`
 > 再 `RenderCommand`（锐捷展开为 `GigabitEthernet 1/1` 带空格，华为保持短名
