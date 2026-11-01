@@ -155,11 +155,7 @@ describe("lib/api/networkApi", () => {
 });
 
 // ==================== v1.51 Phase 121/122/125/127 新增 wrapper ====================
-import {
-  previewBatchWritePorts,
-  writeTrunk,
-  listPortWriteAudits,
-} from "../networkApi";
+import { previewBatchWritePorts, writeTrunk, listPortWriteAudits } from "../networkApi";
 
 describe("v1.51 新增 wrapper（Phase 121/125/127 coverage 补齐）", () => {
   it("previewBatchWritePorts 调用 post /network/ports/write/preview 并透传参数", async () => {

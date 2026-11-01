@@ -44,6 +44,10 @@ func SetupPortWriteRouter(r *gin.RouterGroup, core *core.Core) {
 		core.DeviceExecutor,
 		portcollection.NewCollectionService(core.GetDB(), core.DeviceExecutor),
 	)
+	// Phase 122 (PORTW-07)：批量写进度经 NoticeHub WS 通道按操作者定向推送
+	if core.NoticeHub != nil {
+		svc = svc.WithProgressNotifier(core.NoticeHub)
+	}
 	handler := NewPortWriteHandler(svc).WithCore(core)
 
 	write := r.Group("/write")
