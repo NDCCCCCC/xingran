@@ -171,3 +171,43 @@ func TestPreviewRejectsUnsupportedOnS8700(t *testing.T) {
 	}, "tester")
 	require.NoError(t, err)
 }
+
+// TestPreviewRejectsS8700MacIpCombo Phase 129 二轮真机修复端到端：
+// S8700 上 IP+MAC 组合 port_binding 拒绝，IP-only 放行。
+func TestPreviewRejectsS8700MacIpCombo(t *testing.T) {
+	db := newTestDB(t)
+	seedPreviewDevice(t, db, models.VendorHuawei)
+	dev := models.NetworkDevice{}
+	require.NoError(t, db.Where("id = ?", "device-huawei").First(&dev).Error)
+	dev.Model = "S8700-10"
+	require.NoError(t, db.Save(&dev).Error)
+
+	exec := &countingExecutor{}
+	svc := newTestService(exec, nil, db)
+
+	// IP+MAC 组合 → 拒绝
+	_, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
+		DeviceID: "device-huawei", Action: portcollection.ActionPortBinding,
+		PortIDs: []string{"port-huawei"}, BindOp: "add",
+		IPAddress: "10.62.25.5", MACAddress: "AA-BB-CC-DD-EE-FF",
+	}, "tester")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, portcollection.ErrActionNotSupported)
+
+	// IP-only → 放行（零连接）
+	_, err = svc.PreviewPortWrite(context.Background(), PreviewRequest{
+		DeviceID: "device-huawei", Action: portcollection.ActionPortBinding,
+		PortIDs: []string{"port-huawei"}, BindOp: "add",
+		IPAddress: "10.62.25.6",
+	}, "tester")
+	require.NoError(t, err)
+	assert.Equal(t, 0, exec.calls)
+
+	// static_bind 在 S8700 整动作拒绝
+	_, err = svc.PreviewPortWrite(context.Background(), PreviewRequest{
+		DeviceID: "device-huawei", Action: portcollection.PortSecStaticBind,
+		PortIDs: []string{"port-huawei"}, MACAddress: "AA-BB-CC-DD-EE-FF", VLANID: 100,
+	}, "tester")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, portcollection.ErrActionNotSupported)
+}

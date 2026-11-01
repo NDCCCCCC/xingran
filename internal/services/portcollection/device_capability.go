@@ -70,10 +70,11 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 				// port-security 无 max-mac-num 子命令
 				matchModelSubstr: []string{"s87", "s8700"},
 				unsupported: map[PortAction]string{
-					TrunkSetNative:  "S8700 接口视图 port ? 无 trunk 子命令（2026-11-01 真机 ? 探测）",
-					TrunkSetAllowed: "S8700 接口视图 port ? 无 trunk 子命令（2026-11-01 真机 ? 探测）",
-					TrunkSetHybrid:  "S8700 接口视图 port ? 无 hybrid 子命令（2026-11-01 真机 ? 探测）",
-					PortSecMaxMac:   "S8700 port-security ? 无 max-mac-num 子命令（2026-11-01 真机 ? 探测）",
+					TrunkSetNative:    "S8700 接口视图 port ? 无 trunk 子命令（2026-11-01 真机 ? 探测）",
+					TrunkSetAllowed:   "S8700 接口视图 port ? 无 trunk 子命令（2026-11-01 真机 ? 探测）",
+					TrunkSetHybrid:    "S8700 接口视图 port ? 无 hybrid 子命令（2026-11-01 真机 ? 探测）",
+					PortSecMaxMac:     "S8700 port-security ? 无 max-mac-num 子命令（2026-11-01 真机 ? 探测）",
+					PortSecStaticBind: "S8700 port-security mac-address ? 仅 H-H-H/sticky 无 static；sticky <MAC> 报 Wrong parameter ⇒ 不支持静态 MAC 绑定（2026-11-01 真机探测）",
 				},
 			},
 		},
@@ -138,6 +139,59 @@ func unsupportedReason(vendor models.DeviceVendor, model string, action PortActi
 		}
 	}
 	return ""
+}
+
+// paramComboRule 参数级组合拒绝规则（action 内部参数形状差异，如
+// 华为 S8700 user-bind static 的 IP+MAC 组合不被接受而 IP-only 合法）。
+type paramComboRule struct {
+	action PortAction
+	// matchModelSubstr 型号子串匹配（大小写不敏感；真机事实只锚定 S8700）
+	matchModelSubstr []string
+	// reject 当 params 满足谓词时拒绝
+	reject func(macAddress string) bool
+	reason string
+}
+
+// vendorParamComboRules 参数级组合规则（真机事实锚定；仅命中型号生效）。
+var vendorParamComboRules = map[models.DeviceVendor][]paramComboRule{
+	models.VendorHuawei: {
+		{
+			action:           ActionPortBinding,
+			matchModelSubstr: []string{"s87", "s8700"},
+			// S8700：user-bind static ip-address ? 仅接受 X.X.X.X，
+			// 跟随 mac-address 报 Wrong parameter（2026-11-01 真机探测）
+			reject: func(mac string) bool { return mac != "" },
+			reason: "S8700 user-bind static ip-address ? 仅接受 X.X.X.X，IP+MAC 组合绑定报 Wrong parameter（2026-11-01 真机探测）；IP-only 绑定可用",
+		},
+	},
+}
+
+// CheckActionSupportParams 参数感知校验：在 CheckActionSupport 基础上叠加
+// 参数组合规则（macAddress 取 PortBinding 的 MAC 字段；其余动作忽略）。
+// 写路径与 dry-run 统一调用本入口。
+func CheckActionSupportParams(vendor models.DeviceVendor, model string, action PortAction, macAddress string) error {
+	if err := CheckActionSupport(vendor, model, action); err != nil {
+		return err
+	}
+	lowerModel := strings.ToLower(model)
+	for _, rule := range vendorParamComboRules[vendor] {
+		if rule.action != action || !rule.reject(macAddress) {
+			continue
+		}
+		matched := false
+		for _, substr := range rule.matchModelSubstr {
+			if strings.Contains(lowerModel, substr) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			continue
+		}
+		return fmt.Errorf("%w: vendor=%s model=%q action=%s — %s",
+			ErrActionNotSupported, vendor, model, action, rule.reason)
+	}
+	return nil
 }
 
 // CheckActionSupport 能力矩阵校验入口（写路径与 dry-run 统一调用）。

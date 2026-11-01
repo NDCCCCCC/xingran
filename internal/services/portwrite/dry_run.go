@@ -222,7 +222,7 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 
 	// Phase 129 真机修复：能力矩阵校验（S8700 等型号受限动作 dry-run 即报
 	// 明确错误，不下发必失败命令）
-	if err := portcollection.CheckActionSupport(dev.Vendor, dev.Model, req.Action); err != nil {
+	if err := portcollection.CheckActionSupportParams(dev.Vendor, dev.Model, req.Action, req.MACAddress); err != nil {
 		return nil, err
 	}
 

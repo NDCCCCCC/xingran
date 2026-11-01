@@ -438,8 +438,13 @@ func (s *portWriteServiceImpl) writeSinglePort(
 		return nil, fmt.Errorf("query device: %w", err)
 	}
 	// Phase 129 真机修复：厂商/型号能力矩阵校验（不支持的动作显式拒绝，
-	// 不下发必失败命令）
-	if err := portcollection.CheckActionSupport(dev.Vendor, dev.Model, action); err != nil {
+	// 不下发必失败命令）。参数感知：port_binding 的 MAC 字段参与 S8700
+	// IP+MAC 组合拒绝判定（IP-only 放行）。
+	macForCapability := macAddr
+	if trunk != nil && trunk.portsec != nil {
+		macForCapability = trunk.portsec.MACAddress
+	}
+	if err := portcollection.CheckActionSupportParams(dev.Vendor, dev.Model, action, macForCapability); err != nil {
 		return nil, err
 	}
 	if err := s.preflightReachability(ctx, &dev, opts.skipPreflight); err != nil {
