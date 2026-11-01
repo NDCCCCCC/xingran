@@ -4,10 +4,17 @@ package main
 //
 // 三条铁律：
 //  1. 下发命令一律来自 portcollection.RenderCommand（产品真相源），本文件不手写下发命令；
-//  2. undo（还原）命令是"测试工具层"的反向命令，产品只有 shutdown / set_access_vlan
-//     两个动作有回滚命令生成（internal/services/portwrite/safety.go），这里补齐其余动作，
-//     语义与 safety.go 的 renderRollbackCommands 保持一致（厂商差异 + 基线感知）；
+//  2. 还原语义统一为：
+//     - Undo 只负责**删除动作引入的配置行**（用锐捷/Cisco 风格的 no 形式）；
+//     - **恢复动作删除的配置行由基线重放统一负责**（还原引擎在接口视图逐行重放基线）。
+//     这样"改写型"动作（description / set_access_vlan）与"删除型"动作（dot1x_disable）
+//     的还原对称性天然正确，不需要各写一套反向模板；
 //  3. 每个动作都要给"判读要点"——锐捷专项断言靠它把证据摆到 lead 面前。
+//
+// ★ 2026-11-02 真机复测修复（lead 反馈）：原先重放基线行时没有带 "interface X" 前缀，
+//   命令在 (config)# 顶层下发被设备全部拒绝 → description / dot1x_disable /
+//   set_access_vlan 三个动作还原失败、配置偏离基线。现由还原引擎统一组装
+//   （buildInterfaceCmds 必带 interface 前缀 + exit），动作表只负责语义。
 
 import (
 	"fmt"
@@ -36,8 +43,8 @@ type actionSpec struct {
 	PortAction portcollection.PortAction
 	// Build 构造渲染参数
 	Build func(p actionParams) portcollection.PortTemplateParams
-	// Undo 生成还原命令（接口视图内命令，不含 "interface X" 前缀）
-	// baseline 为动作前采集到的接口配置行集合，用于基线感知还原
+	// Undo 生成"删除动作引入的配置行"的命令（接口视图内命令，不含 interface 前缀）。
+	// baseline 为动作前采集到的接口配置行集合，用于基线感知还原。
 	Undo func(baseline []string, p actionParams) []string
 	// Judgement 判读要点（锐捷专项断言提示）
 	Judgement string
@@ -53,7 +60,7 @@ var actionRegistry = map[string]actionSpec{
 		},
 		Undo: func(baseline []string, p actionParams) []string {
 			if containsLine(baseline, "shutdown") {
-				// 基线本来就是 down → 重放基线行即可恢复，无需 undo
+				// 基线本来就是 down → 由基线重放恢复 shutdown 行
 				return nil
 			}
 			return []string{"no shutdown"}
@@ -67,9 +74,7 @@ var actionRegistry = map[string]actionSpec{
 			return portcollection.PortTemplateParams{InterfaceName: p.CliIface}
 		},
 		Undo: func(baseline []string, p actionParams) []string {
-			if containsLine(baseline, "shutdown") {
-				return []string{"shutdown"}
-			}
+			// 动作只是把端口置 up（不引入配置行）；基线若本来是 down，由基线重放恢复。
 			return nil
 		},
 		Judgement: "接口应从 admin down 恢复 up；还原后 running-config 与基线一致",
@@ -81,12 +86,17 @@ var actionRegistry = map[string]actionSpec{
 			return portcollection.PortTemplateParams{InterfaceName: p.CliIface, Description: p.Desc}
 		},
 		Undo: func(baseline []string, p actionParams) []string {
-			if containsLine(baseline, "description "+p.Desc) {
-				return nil
+			for _, l := range baseline {
+				if strings.HasPrefix(strings.ToLower(l), "description ") {
+					// 基线本来就有描述行 → 基线重放会覆盖回去，无需 no description
+					return nil
+				}
 			}
+			// 基线无描述行 → 动作引入的描述需要清掉
 			return []string{"no description"}
 		},
-		Judgement: "接口描述应被改写为测试描述；还原后应恢复基线描述 3D001",
+		Judgement: "接口描述应被改写为测试描述；还原后应恢复基线描述 3D001\n" +
+			"           （真机复测重点：还原必须真的把 description 3D001 写回设备）",
 	},
 	"dot1x_enable": {
 		Name:       "dot1x_enable",
@@ -110,21 +120,12 @@ var actionRegistry = map[string]actionSpec{
 			return portcollection.PortTemplateParams{InterfaceName: p.CliIface}
 		},
 		Undo: func(baseline []string, p actionParams) []string {
-			if !containsLine(baseline, "dot1x port-control auto") {
-				return nil
-			}
-			// 只有基线里本来就有 default-user-limit 行才恢复它；
-			// 基线没有 → 恢复 port-control auto 即可（设备默认 unlimited 不落配置）。
-			cmds := []string{"dot1x port-control auto"}
-			for _, l := range baseline {
-				if strings.HasPrefix(strings.ToLower(l), "dot1x default-user-limit") {
-					cmds = append(cmds, l)
-					break
-				}
-			}
-			return cmds
+			// 动作删掉 dot1x port-control auto（并连带清 default-user-limit /
+			// mac-auth-bypass multi-user）→ 三行全部由基线重放恢复，Undo 无需动作。
+			return nil
 		},
-		Judgement: "应移除 dot1x port-control auto；还原后应恢复基线中的 dot1x 相关行",
+		Judgement: "应移除 dot1x port-control auto；还原后必须补回基线里的 dot1x 三行\n" +
+			"           （port-control auto / default-user-limit / mac-auth-bypass multi-user）",
 	},
 	"set_access_vlan": {
 		Name:       "set_access_vlan",
@@ -133,20 +134,17 @@ var actionRegistry = map[string]actionSpec{
 			return portcollection.PortTemplateParams{InterfaceName: p.CliIface, VLANID: p.VLAN}
 		},
 		Undo: func(baseline []string, p actionParams) []string {
-			// 目标 VLAN 与基线一致 → 重放基线行即可，无需 clear；
-			// 否则先清 PVID（锐捷：no switchport access vlan），再由基线重放恢复基线 VLAN。
+			// 基线的 access vlan 行会被基线重放直接覆盖 → 无需 clear；
+			// 但若基线没有 access vlan 行，动作引入的 PVID 必须清掉。
 			for _, l := range baseline {
 				if strings.HasPrefix(strings.ToLower(l), "switchport access vlan ") {
-					if strings.TrimSpace(strings.TrimPrefix(l, "switchport access vlan")) == fmt.Sprint(p.VLAN) {
-						return nil
-					}
-					return []string{"no switchport access vlan"}
+					return nil
 				}
 			}
-			// 基线没有 access vlan 行 → 清掉动作引入的 PVID
 			return []string{"no switchport access vlan"}
 		},
-		Judgement: "access vlan 应被改写为测试 VLAN；还原后应回到基线 VLAN",
+		Judgement: "access vlan 应被改写为测试 VLAN；还原后必须回到基线 VLAN\n" +
+			"           （真机复测重点：还原必须真的把 switchport access vlan 318 写回设备）",
 	},
 	"port_binding": {
 		Name:       "port_binding",
@@ -188,10 +186,8 @@ var actionRegistry = map[string]actionSpec{
 			return portcollection.PortTemplateParams{InterfaceName: p.CliIface}
 		},
 		Undo: func(baseline []string, p actionParams) []string {
-			if !containsLine(baseline, "switchport port-security") {
-				return nil
-			}
-			return []string{"switchport port-security"}
+			// 动作删掉 switchport port-security 行 → 由基线重放恢复。
+			return nil
 		},
 		Judgement: "端口安全应被关闭；还原后应恢复基线的 switchport port-security 行",
 	},
@@ -204,7 +200,8 @@ var actionRegistry = map[string]actionSpec{
 		Undo: func(baseline []string, p actionParams) []string {
 			return []string{"no switchport port-security maximum"}
 		},
-		Judgement: "应出现 switchport port-security maximum N；还原后该行应消失",
+		Judgement: "应出现 switchport port-security maximum N；还原后该行应消失\n" +
+			"           （探针已确认设备支持：<1-128> Maximum addrs）",
 	},
 	"portsec_sticky": {
 		Name:       "portsec_sticky",
@@ -251,4 +248,39 @@ func ruijieMAC(mac string) string {
 	}
 	lower := strings.ToLower(stripped)
 	return lower[0:4] + "." + lower[4:8] + "." + lower[8:12]
+}
+
+// negateConfigLine 由"多出的配置行"推导对应的否定命令（差异驱动修复用）。
+//
+// 返回 ok=false 表示该行无法安全否定（例如 spanning-tree / rldp 这类无 no 形式的行）。
+func negateConfigLine(line string) (string, bool) {
+	l := strings.TrimSpace(line)
+	lower := strings.ToLower(l)
+	switch {
+	case lower == "shutdown":
+		return "no shutdown", true
+	case strings.HasPrefix(lower, "description "):
+		return "no description", true
+	case strings.HasPrefix(lower, "switchport access vlan "):
+		return "no switchport access vlan", true
+	case strings.HasPrefix(lower, "switchport port-security maximum"):
+		return "no switchport port-security maximum", true
+	case strings.HasPrefix(lower, "switchport port-security mac-address sticky"):
+		return "no switchport port-security mac-address sticky", true
+	case strings.HasPrefix(lower, "switchport port-security mac-address "):
+		return "no " + l, true
+	case strings.HasPrefix(lower, "switchport port-security binding "):
+		return "no " + l, true
+	case strings.HasPrefix(lower, "switchport port-security"):
+		return "no switchport port-security", true
+	case strings.HasPrefix(lower, "dot1x port-control auto"):
+		return "no dot1x port-control auto", true
+	case strings.HasPrefix(lower, "dot1x default-user-limit"):
+		return "no dot1x default-user-limit", true
+	case strings.HasPrefix(lower, "dot1x mac-auth-bypass"):
+		return "no dot1x mac-auth-bypass", true
+	case strings.HasPrefix(lower, "switchport mode "):
+		return "no " + l, true
+	}
+	return "", false
 }
