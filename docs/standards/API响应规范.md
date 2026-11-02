@@ -394,7 +394,7 @@ POST /network/ports/write/port-binding
 |------|----------------|----------------------------|----------------------------|---------------------|
 | Huawei VRP | `port link-type access` + `port default vlan <N>` | `user-bind static ip-address <IP>` | `user-bind static ip-address <IP> mac-address <AA-BB-CC-DD-EE-FF>` | `undo user-bind static ip-address <IP> [mac-address ...]` |
 | H3C Comware | `port link-type access` + `port access vlan <N>` | `user-bind ip-address <IP>` | `user-bind ip-address <IP> mac-address <AA-BB-CC-DD-EE-FF>` | `undo user-bind ip-address <IP> [mac-address ...]` |
-| Ruijie RGOS | `switchport mode access` + `switchport access vlan <N>` | `switchport port-security binding <IP>` | `switchport port-security binding <aabb.ccdd.eeff> <IP>` | `no switchport port-security binding [<mac>] <IP>` |
+| Ruijie RGOS | `switchport mode access` + `switchport access vlan <N>` | `switchport port-security binding <IP>` | `switchport port-security binding <IP> <aabb.ccdd.eeff>` | `no switchport port-security binding <IP> [<aabb.ccdd.eeff>]` |
 
 **MAC 格式**（per vendor CLI 规范）：Huawei/H3C = `AA-BB-CC-DD-EE-FF`（per-byte hyphenated）；Ruijie = `aabb.ccdd.eeff`（Cisco H.H.H 3-pair dotted lowercase）。service 层 `NormalizeMACAddress` 接受冒号/连字符/无分隔/cisco 点多种输入格式，归一后按厂商转换。
 

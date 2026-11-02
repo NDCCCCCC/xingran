@@ -756,10 +756,20 @@ func pickTargetVLAN(vlans map[int]bool, baseVLAN int) int {
 }
 
 // probeCmds 接口视图只读探测命令（? 帮助查询，零配置变更）。
+//
+// 2026-11-02 扩充：加入 switchport mode / trunk / hybrid 家族的完整 ? 探测，
+// 用于锁定锐捷 hybrid 与 trunk 的**真机关键字**（不类推华为/思科）。
 func probeCmds() []string {
 	return []string{
 		"switchport ?",
+		"switchport mode ?",
+		"switchport trunk ?",
+		"switchport trunk native ?",
+		"switchport trunk allowed ?",
 		"switchport hybrid ?",
+		"switchport hybrid native ?",
+		"switchport hybrid allowed ?",
+		"switchport hybrid vlan ?",
 		"switchport port-security ?",
 		"switchport port-security mac-address ?",
 		"switchport port-security maximum ?",
