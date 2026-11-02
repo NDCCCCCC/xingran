@@ -122,6 +122,15 @@ func TestRenderRuijieTrunkSetHybridVlanOutOfRange(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "out of range")
+
+	// native 单值越界（native 是与两个列表解耦的独立参数，同样要带范围防御）
+	_, err = RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
+		InterfaceName: "GigabitEthernet 1/1",
+		HybridTagged:  []int{30},
+		NativeVLAN:    4095,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
 }
 
 // TestRenderRuijieTrunkUnchanged 锐捷 trunk 分支核对：真机 `?` 取证未推翻现有实现，
