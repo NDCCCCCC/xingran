@@ -2,12 +2,12 @@
 gsd_state_version: "1.0"
 milestone: v1.51
 milestone_name: 端口写生产级操作体验与平台质量收口
-status: Phase 129 完成（真机 UAT + DEBT-06 + TIDY-02 三项齐）— PR #39/#41/#42/#43 已合入
+status: Phase 129 完成（真机 UAT + DEBT-06 + TIDY-02 三项齐）— PR
 stopped_at: Phase 129 全部完成（2026-11-02）：真机 UAT（华为 S8700 11 动作 + 锐捷 RS8607E 12 动作 = 23 动作实测，设备零残留，两台配置与原始基线一字不差）+ 锐捷 hybrid 第二轮取证（8 条命令形态 + 5 条补验 + 一次完整实跑闭环：下发 → 落地 → 还原一次收敛 → diff 为空）与 3 类产品缺陷修正（tagged 缺 only 关键字 / undo 必须模式回退 / 802.1X 互斥无预检）+ 锐捷自动补集语义落地（(i)+(i-a)：只下发 untagged，带 tagged 明确报错不静默丢弃）+ 能力矩阵补齐 rg8607/rg-s8607 漏配；DEBT-06 前端目录改名 ruoyi-react-frontend → xingran-react-frontend（1355 文件 rename，零业务逻辑变更）；TIDY-02 回补组织完成并补跑 Phase 90 登录态巡检（40 组合实跑：deprecated=0 / reachable=42 / blockedByLoginWall=0 + 42 张截图，status 由 human_needed 改判 passed）；安全侧清除远端 265 个含明文口令的文件 + DB/Redis 口令脱敏为环境变量注入 + 修掉一个 CI flaky 测试。tag v1.51.1 / v1.51.2。
-last_updated: "2026-11-02T05:30:00.000Z"
+last_updated: "2026-11-02T08:43:58.065Z"
 last_activity: 2026-11-02
-last_activity_desc: Phase 129 三项交付全部完成（真机 UAT + DEBT-06 目录改名 + TIDY-02 回补与 Phase 90 闭合），tag v1.51.2
-state_head: 27ac078e18b72d83b9690eaed617328c390687cd
+last_activity_desc: quick task 261102-m94 完成：修复暗色模式保存失败（theme_style 违反 chk_theme_style 检查约束）；应用层「省略即不修改」+ 绑定与 DB 约束对齐 + 迁移 233 归一化历史空值
+state_head: 9f511268a7d748b0707836d95963dbf79842b1f6
 progress:
   total_phases: 9
   completed_phases: 9
@@ -23,7 +23,8 @@ current_phase_name: 目录改名 + 双线 planning 合流 + 真机 UAT ✅ 三�
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: v1.51 milestone active（端口写生产级操作体验与平台质量收口）
-**Last activity**: 2026-10-31 — v1.51 立项（范围 A+B+D，21 REQ / Phases 121-129）
+**Last activity**: 2026-11-02 - Completed quick task 261102-m94: 修复暗色模式保存失败（theme_style 违反 chk_theme_style 检查约束）
+**Prior activity**: 2026-10-31 — v1.51 立项（范围 A+B+D，21 REQ / Phases 121-129）
 **Prior activity**: 2026-10-30 — v1.25 SHIPPED & ARCHIVED 并完成 GitHub 同步（PR #36/#37 合并，main CI/deploy 全绿，技术债 D1-D10 清偿）
 **Prior activity**: 2026-10-29 — Phase 86（W4+W5）与 Phase 90（W0~W3）全部收口并验收；下一步 Phase 87
 **Prior activity (2)**: 2026-10-28 — v1.24 全量执行完成（Phase 77 视觉验证 + Phase 83 拆分收口 + VIS-03 死规则修复）
@@ -235,6 +236,12 @@ Last activity: 2026-10-30 — Milestone v1.25 completed and archived
 ### Blockers
 
 - 无
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261102-m94 | 修复暗色模式保存失败：theme_style 违反 chk_theme_style 检查约束（省略即不修改 + 绑定与 DB 约束对齐 + 迁移 233） | 2026-11-02 | 9f511268 | [261102-m94-theme-style-chk-theme-style](./quick/261102-m94-theme-style-chk-theme-style/) |
 
 ### Todos
 
