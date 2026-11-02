@@ -70,6 +70,64 @@ interface GigabitEthernet 1/25
 ⇒ 实测设计（下轮）：`only 3990` → 回读 allowed 行原文 → `add 3991` → 回读原文 → `remove 3991` → 回读原文。
 判读只看**回读里 `switchport trunk allowed vlan` 那一行原文**（唯一可信依据）。
 
+## 2.35 ★★★ 第四轮：`only` 语义已确证（**允许式**）⇒ P0 修法确定 ⭐⭐⭐
+
+```
+【allowed 行原文对照】（判读的唯一可信依据）
+  ▸ switchport trunk allowed vlan only 3990
+      执行前: （该行不存在）
+      执行后: switchport trunk allowed vlan only 3990
+```
+
+⇒ **执行后就是 `only 3990` 本身，不是补集** ⇒ ⇒ **`only` = 「只允许这些」** ⭐⭐⭐
+
+⇒ ★★ **P0 修法因此确定：就是「加 `only` 关键字」，不需要反转列表语义** ⭐⭐⭐
+（此前最担心的「产品语义与设备语义相反」**不成立** ⇒ 产品层注释里那句
+「若为排除式 ⇒ 需反转列表语义」已确定性划掉。）
+
+⇒ **锐捷 allowed 最终口径**：
+
+| 模式 | 锐捷形态 | 状态 |
+|---|---|---|
+| replace（全量） | `switchport trunk allowed vlan only <list>` | ✅ **已确证**（设备自己写的就是这个 ⭐） |
+| add | `switchport trunk allowed vlan add <list>` | ✅ 关键字存在（被接受）｜**语义待定** ❓ |
+| remove | `switchport trunk allowed vlan remove <list>` | ✅ 关键字存在（被接受）｜**语义待定** ❓ |
+| 无关键字 | `switchport trunk allowed vlan <list>` | ❌ **已确证非法**（Invalid input ⭐） |
+
+### ★ `?` 帮助法第三条边界（第四轮新增）⭐⭐
+
+```
+## switchport mode ?（端口模式交叉证据，接口视图）
+CX-WH-WH-47F-FL-RS8607E-01(config-if-GigabitEthernet 1/25)#switchport mode
+% Incomplete command.
+```
+
+⇒ **锐捷并非所有关键字都提供 `?` 补全** —— `switchport mode ?` 返回
+`% Incomplete command.`（无子命令列表），`switchport trunk ?` 直接 Invalid input
+⇒ ⇒ **③ `?` 的可用性本身是逐关键字的，不能假设「有 ? 就有帮助」** ⭐⚠️
+
+⇒ 三条边界汇总（`?` 帮助法）：
+1. **只能回答「当前位置可补全什么」** —— 对「单命令带固定参数」形态必然报错；
+2. **「Invalid input」也可能是端口模式问题** —— access 模式下连 `switchport trunk` 都不提供；
+3. **`?` 的可用性逐关键字不同** —— 有的关键字根本不给 `?` 提示。
+
+### ⚠️ 工具误报修正（第四轮）
+
+第四轮首条实跑后工具报「🚨 检测到非预期副作用（端口模式: access → trunk）」⇒ 停止后续实跑
+⇒ `add 3991` / `remove 3991` **未执行**。
+
+**根因**：副作用判定拿「**探测前**基线」做对照 ⇒ 而实跑的**前提就是切 trunk 模式**
+⇒ 「access → trunk」本身是**实跑期期望状态** ⇒ 误报。
+
+**修正**：引入**实跑期基线**（切 trunk **之后**、实跑**之前**的状态）⇒
+只有相对它的变化才算副作用。三个基线的职责因此分开：
+
+| 基线 | 取值时机 | 用途 |
+|---|---|---|
+| `initial` | 探测前（切 trunk **之前**） | **零残留核查**（还原后 vs 探测前） |
+| `runBase` | 切 trunk **之后**、实跑**之前** | **副作用判定** |
+| `before` | 循环内（上一条的结果） | allowed 行前后对比 |
+
 ## 2.4 ★ 任务 A 结论（lead 2026-11-02 两轮实测后定稿）
 
 | 项 | 结论 |

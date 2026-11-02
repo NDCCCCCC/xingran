@@ -316,19 +316,27 @@ func diffIntSets(a, b []int) []int {
 //	· 设备报错 ⇒ 关键字不存在
 //	· 被接受且 allowed 行**变了** ⇒ 存在且生效
 //	· 被接受但 allowed 行**没变** ⇒ ⚠️ 无错但不落地（那个坑）
-func judgeRunOutcome(cmd string, rejected bool, before, after probeBaseline) runOutcome {
+func judgeRunOutcome(cmd string, rejected bool, before, after, runBase probeBaseline) runOutcome {
 	o := runOutcome{Cmd: cmd, Rejected: rejected, Before: before, After: after}
 	o.AllowedBefore = extractTrunkAllowedLine(before.ConfigLinesRaw)
 	o.AllowedAfter = extractTrunkAllowedLine(after.ConfigLinesRaw)
 
-	// 设备**自动创建** VLAN 是锐捷的已知行为（hybrid 实跑已确证）⇒ 属预期内，
-	// 只记录不停止；除此之外的副作用（模式被改等）才停止后续实跑。
-	o.VlanAdded = diffIntSets(after.VlanIDs, before.VlanIDs)
-	if len(o.VlanAdded) == 0 && fmt.Sprint(before.VlanIDs) != fmt.Sprint(after.VlanIDs) {
-		o.SideEffect = true
-	}
-	if before.PortMode != after.PortMode {
-		o.SideEffect = true
+	// 副作用判定必须对「**实跑期基线**」⇒ 即「切 trunk 之后、实跑之前」的状态（runBase）。
+	//
+	// ★ 为何不能对「探测前」基线比（lead 2026-11-02 第四轮指出的误报根因）：
+	//   实跑的前提就是切 trunk 模式 ⇒ 「端口模式 access → trunk」本身就是**实跑期期望状态**，
+	//   若对探测前基线比就会误报「非预期副作用」⇒ 实跑被中途停掉。
+	//
+	// · 设备**自动创建** VLAN 是锐捷的已知行为（hybrid 实跑已确证）⇒ 属预期内，只记录不停止；
+	// · 其余变化（VLAN 表非「新增」的变化、端口模式被改动）⇒ 真副作用。
+	if runBase.PortMode != "" {
+		o.VlanAdded = diffIntSets(after.VlanIDs, runBase.VlanIDs)
+		if len(o.VlanAdded) == 0 && fmt.Sprint(runBase.VlanIDs) != fmt.Sprint(after.VlanIDs) {
+			o.SideEffect = true
+		}
+		if after.PortMode != runBase.PortMode {
+			o.SideEffect = true
+		}
 	}
 
 	switch {
@@ -422,7 +430,11 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 	// ★ initial = **探测前**基线（永远不被循环覆盖）；before 只作循环内的比较基线。
 	//   （lead 2026-11-02 指出：旧实现把 before 在循环里更新，导致报告里的
 	//    「探测前基线」实际是最后一次实跑后的状态 ⇒ 采集时机/顺序全错。）
-	var initial, before, after probeBaseline
+	// ★ 三个基线，职责不同（lead 2026-11-02 第四轮指出的误报根因）：
+	//   initial — 探测前（切 trunk **之前**）⇒ 用于**零残留核查**（还原后 vs 探测前）；
+	//   runBase — **实跑期基线**（切 trunk **之后**、实跑之前）⇒ 用于**副作用判定**；
+	//   before  — 循环内的比较基线（上一条的结果）。
+	var initial, runBase, before, after probeBaseline
 	var results []cmdResult
 	var modeSwitchOut, restoreOut []cmdResult
 	var outcomes []runOutcome
@@ -440,6 +452,12 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 
 		if switchMode {
 			modeSwitchOut = sender.sendInterfaceCmds([]string{"switchport mode trunk"})
+			// 切 trunk 之后立即采集「实跑期基线」⇒ 副作用判定的对照基准
+			rb, rberr := collectProbeBaseline(w, cliIface)
+			if rberr != nil {
+				return rberr
+			}
+			runBase = rb
 		}
 
 		if mode == probeModeControlledRun {
@@ -455,7 +473,7 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 				// ★ 按命令文本取该条结果（sendInterfaceCmds 的首项是进视图、末项是 exit）
 				cr, ok := findCmdResult(res, c)
 				rejected := ok && cr.Failed
-				o := judgeRunOutcome(c, rejected, before, cur)
+				o := judgeRunOutcome(c, rejected, before, cur, runBase)
 				outcomes = append(outcomes, o)
 				before = cur // 下一条的基线是上一条的结果
 
@@ -502,6 +520,15 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 	rep.raw("show running-config interface "+cliIface, sanitizeOutput(initial.Raw))
 	if strings.TrimSpace(initial.ModeProbeRaw) != "" {
 		rep.raw("switchport mode ?（端口模式交叉证据，接口视图）", initial.ModeProbeRaw)
+	}
+
+	// —— 实跑期基线（切 trunk 之后、实跑之前）——
+	if switchMode {
+		rep.section("1b. 实跑期基线（切 trunk 之后、实跑之前）")
+		rep.line("端口模式      : %s", runBase.PortMode)
+		rep.line("接口配置块    : %d 字节 / %d 行", runBase.ConfigBytes, runBase.ConfigLines)
+		rep.line("VLAN 表       : %v", runBase.VlanIDs)
+		rep.line("allowed 行原文   : %s", orNone(extractTrunkAllowedLine(runBase.ConfigLinesRaw)))
 	}
 
 	// —— 模式切换回显（受控写）——
@@ -551,6 +578,18 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 			rep.line("      执行前: %s", orNone(o.AllowedBefore))
 			rep.line("      执行后: %s", orNone(o.AllowedAfter))
 		}
+		rep.line("")
+		rep.line("【VLAN 表对照】（设备是否自动创建 VLAN —— 影响「产品是否需要预建 VLAN」）")
+		rep.line("  探测前    : %v", initial.VlanIDs)
+		if switchMode {
+			rep.line("  实跑期基线: %v", runBase.VlanIDs)
+		}
+		for _, o := range outcomes {
+			if len(o.VlanAdded) > 0 {
+				rep.line("  ▸ %s 自动新增: %v", o.Cmd, o.VlanAdded)
+			}
+		}
+		rep.line("  还原后    : %v", after.VlanIDs)
 		if stoppedEarly {
 			rep.line("⚠️ 因检测到副作用，后续实跑命令**未执行**")
 		}
