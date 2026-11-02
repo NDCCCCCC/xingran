@@ -152,6 +152,13 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 					// 二次取证（`?` 帮助）：allowed 必须带 tagged/untagged 关键字，native 是单值 VID；
 					// 三次取证（真机实跑，RS8607E + RG8607E 形态一致）修正：
 					//   tagged 必带 only、untagged 不能带 only、还原只认模式回退。
+					// ⚠️ ⚠️ TrunkSetNative（switchport trunk native vlan <id>）：**未取证**（2026-11-02 待实测）。
+					//   ⇒ 不进 supported（supported 表示「有真机证据」）⇒ SupportEvidence 返回空串与事实一致。
+					//   ⚠️ **第二个 P0 风险**：`trunk allowed` 已被证伪（必须带 only，无关键字形态非法）
+					//   ⇒ `trunk native` 与它同族（同为 switchport trunk ...）⇒ 极可能同样需要 only。
+					//   且 native 语义更特殊（native vlan = untagged 的 PVID）⇒ 若设备按排除式理解，后果比 allowed 严重得多。
+					//   实测计划（探针形态、回读原文、还原验证）见
+					//   .planning/phases/130-device-evidence/130-RUIIJIE-TRUNK-ALLOWED.md。
 					// ★ 2026-11-02 五轮实跑定稿（回读 allowed 行原文为唯一可信判据）：
 					//   ⚠️ 以前没有本动作的任何依据 ⇒ 产品对锐捷下发的「无关键字」形态
 					//   在真机上是**非法命令**（Invalid input）⇒ P0，五不得再回退。

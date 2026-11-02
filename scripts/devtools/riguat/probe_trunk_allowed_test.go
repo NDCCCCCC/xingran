@@ -149,7 +149,6 @@ func TestControlledRunAllowed(t *testing.T) {
 // TestControlledRunCoversSecondLayer 受控实跑必须覆盖 add / remove / replace 三形态。
 func TestControlledRunCoversSecondLayer(t *testing.T) {
 	joined := strings.Join(controlledRunCmds, "\n")
-	// 三个语义验证要点（lead 2026-11-02 指定的顺序）：
 	//   ① only 语义（允许式 vs 排除式）、② add 语义（并集 vs 替换）、③ remove 语义
 	for _, need := range []string{
 		"switchport trunk allowed vlan only 3990",
@@ -291,4 +290,28 @@ func TestZeroResidualVerdict(t *testing.T) {
 	vlanDirty := probeBaseline{ConfigBytes: 0, ConfigLines: 0, PortMode: "access（默认）", VlanIDs: []int{1, 3990}}
 	_, _, _, sv = zeroResidualVerdict(initial, vlanDirty)
 	assert.False(t, sv, "VLAN 表多了 VLAN ⇒ 零残留必须报不一致")
+}
+
+// TestExtractTrunkNativeLine native 行原文提取（native 取证的判据）。
+func TestExtractTrunkNativeLine(t *testing.T) {
+	assert.Equal(t, "switchport trunk native vlan 3990",
+		extractTrunkNativeLine([]string{
+			"interface GigabitEthernet 1/25",
+			" switchport mode trunk",
+			" switchport trunk native vlan 3990",
+		}))
+	// 没有 native 行 ⇒ 空串（access 模式下无此行）
+	assert.Equal(t, "", extractTrunkNativeLine([]string{"description X"}))
+	// 不得误把 allowed 行当成 native 行
+	assert.Equal(t, "", extractTrunkNativeLine([]string{"switchport trunk allowed vlan only 3990"}))
+}
+
+// TestControlledRunCoversNative native 必须在受控实跑白名单里（第二个 P0 候选）。
+func TestControlledRunCoversNative(t *testing.T) {
+	joined := strings.Join(controlledRunCmds, "\n")
+	assert.Contains(t, joined, "switchport trunk native vlan 3990",
+		"受控实跑必须包含 native 形态（trunk allowed 已被证伪 ⇒ native 同族也可能需要 only）")
+	// native 必须放第一条（allowed 列表还是设备默认态 ⇒ 语义判读更干净）
+	assert.Equal(t, "switchport trunk native vlan 3990", controlledRunCmds[0],
+		"native 实跑应放第一条")
 }

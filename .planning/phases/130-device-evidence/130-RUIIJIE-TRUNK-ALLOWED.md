@@ -188,6 +188,60 @@ CX-WH-WH-47F-FL-RS8607E-01(config-if-GigabitEthernet 1/25)#switchport mode
 **修正**：零残留比对改用 `initial`（探测前 = 切 trunk 之前），并把判定抽成纯函数
 `zeroResidualVerdict(initial, after)` + 测试锁定（`TestZeroResidualVerdict`）。
 
+## 2.37 ★★★ 第六轮待办：锐捷 `trunk native` 实测（**第二个 P0 候选**）
+
+### 为什么必须实跑（不能只标「未取证」）⚠️
+
+- ⭐ **`trunk allowed` 刚刚被证伪** —— 必须带 `only`，无关键字形态是真机上的**非法命令**；
+- ⇒ **`trunk native` 与它同族**（同为 `switchport trunk ...`）⇒ **极可能同样需要 `only`** ⭐
+- ⇒ **`switchport trunk native vlan <id>` 极可能是第二个 P0** ⚠️⚠️❗
+  （用户在预览里看到合法命令、真机直接拒 —— 与 allowed 一模一样的失败模式）；
+- ⚠️ 而且 **native 的语义比 allowed 更特殊**：native vlan 就是 untagged 的 **PVID**
+  ⇒ 若设备按**排除式**理解（allowed 最初被怀疑过的那种语义）⇒
+  **后果比 allowed 严重得多**。
+
+⇒ 标「未取证」只能让矩阵诚实，**不能阻止用户在生产上踩坑** ⇒ 必须拿真机证据 ⭐
+
+### 探针形态：为什么跳过 `?` 那条
+
+`switchport trunk native vlan ?` —— **按已确立的边界（§2.4），`?` 对「单命令带固定参数」形态必然报错**
+⇒ 这条**大概率无效**，**不能当结论** ⇒ 直接走实跑 ⭐
+
+### 实跑 + 判读（探针已就绪：`--probe-trunk-allowed-run`）
+
+受控实跑顺序（native 放**第一条** ⇒ allowed 列表仍是设备自动生成的默认态 ⇒ 语义判读更干净）：
+
+```
+switchport trunk native vlan 3990   ← 先验「无 only 形态」是否被接受
+```
+
+| 现象 | 判读 |
+|---|---|
+| 设备报错（Invalid input / Unrecognized） | ⭐⭐ **P0 确认**（无 only 形态非法 ⇒ 需补 only）；且**设备未改配置 ⇒ 零风险** |
+| 被接受 | 回读 **native 行原文**（落成 `native vlan 3990`？带别的关键字？被自动改写？） |
+| 被接受且 **allowed 行同时变了** | ⭐⭐⭐ **语义判据**：见下 |
+
+**语义判读（native 是允许式还是排除式？）** —— 看回读里 **allowed 行**：
+
+| allowed 行回读结果 | 判读 |
+|---|---|
+| `only 3990`（只允许 3990） | **允许式** ⇒ 与 allowed 一致 ⇒ 产品模型统一 ⭐ |
+| `only 1-3989,3991-4094`（除 3990 外全允许 = 补集） | ⭐⭐ **排除式** ⇒ native 变成「必须允许除 3990 外全部」⇒ **产品要按厂商+动作分叉** ⚠️ |
+
+### ⚠️ 还原路径**未验** ⇒ 约束不变
+
+allowed / hybrid 已确证 `switchport mode access` 能**一次清空** ✅
+⇒ 但 **native 未验** ⚠️ ⇒ **还原路径没验之前，不许在别的口上跑** ⚠️（维持裁定）。
+
+⇒ 探针在还原后会**显式回读**并报告「还原后 native 行是否残留」
+（残留 ⇒ 🚨 告警 + 提示人工处理，不静默放过）⭐
+
+### 矩阵现状
+
+锐捷 `TrunkSetNative` 已标「⚠️ **未取证**（2026-11-02 待实测）」——
+**刻意不写进 `supported`**（supported 表示「有真机证据」）⇒
+`SupportEvidence` 返回空串与事实一致；依据与实测计划记录在矩阵注释里 ⭐
+
 ## 2.4 ★ 任务 A 结论（lead 2026-11-02 两轮实测后定稿）
 
 | 项 | 结论 |

@@ -103,12 +103,18 @@ func modeSwitchComplete(cmds []string) bool {
 //
 // 逐条之后**立刻回读 running-config**（判读的关键：命令无错 ≠ 生效）。
 var controlledRunCmds = []string{
-	// ① only 的语义：允许式（只允许 3990）还是排除式（排除 3990）？
+	// ① native（第二个 P0 能险，放第一条）：
+	//    「切 trunk 之后、实跑之前」allowed 列表还是设备自动生成的默认态
+	//    ⇒ 语义判读更干净；且 native 执行后**allowed 行的变化本身就是「允许式 vs 排除式」的关键证据。
+	//    ⚠️ 先验「无 only 形态」（同族推理：`trunk allowed` 无 only 形态真机 Invalid input）
+	//       ⇒ 若被拒，设备**未变配置**（零风险）；若被接受，则回读 native 行原文看落成什么形态。
+	"switchport trunk native vlan 3990",
+	// ② only 的语义：允许式（只允许 3990）还是排除式（排除 3990）？
 	//    回读若是 `only 3990` ⇒ 允许式；若是补集（如 only 1-3899,3991-4094）⇒ 排除式。
 	"switchport trunk allowed vlan only 3990",
-	// ② add 的语义：并集（only 3990,3991）还是替换（只留 3991）？
+	// ③ add 的语义：并集（only 3990,3991）还是替换（只留 3991）？
 	"switchport trunk allowed vlan add 3991",
-	// ③ remove 的语义：能否把 VLAN 从允许列表去掉（若 ② 生效 ⇒ 期望回到 only 3990）？
+	// ④ remove 的语义：能否把 VLAN 从允许列表去掉（若 ③ 生效 ⇒ 期望回到 only 3990）？
 	"switchport trunk allowed vlan remove 3991",
 }
 
@@ -243,6 +249,8 @@ type runOutcome struct {
 	After         probeBaseline
 	AllowedBefore string // 回读的 `switchport trunk allowed vlan` 行原文（判读的唯一可信依据）
 	AllowedAfter  string // 同上（回读后）
+	NativeBefore  string // 回读的 `switchport trunk native vlan` 行原文（native 取证的判据）
+	NativeAfter   string // 同上（回读后）
 	VlanAdded     []int  // 本条新增的 VLAN（设备自动创建，锐捷已确证会这么做）
 	SideEffect    bool   // 出现**不该有**的副作用（非 VLAN 新增的变化）⇒ 停止后续实跑
 }
@@ -294,6 +302,21 @@ func extractTrunkAllowedLine(lines []string) string {
 	return ""
 }
 
+// extractTrunkNativeLine 从接口配置行里取出 `switchport trunk native vlan` 那一行**原文**。
+//
+// ★ native 取证的判据（lead 2026-11-02）：设备接受后把 3990 设为 native 后它落成什么形态？
+//
+//	回读原文是唯一可信依据。
+func extractTrunkNativeLine(lines []string) string {
+	for _, l := range lines {
+		t := strings.ToLower(strings.TrimSpace(l))
+		if strings.HasPrefix(t, "switchport trunk native") {
+			return strings.TrimSpace(l)
+		}
+	}
+	return ""
+}
+
 // diffIntSets 求 a 中有、b 中没有的元素（用于识别设备自动创建的 VLAN）。
 func diffIntSets(a, b []int) []int {
 	inB := make(map[int]bool, len(b))
@@ -320,6 +343,8 @@ func judgeRunOutcome(cmd string, rejected bool, before, after, runBase probeBase
 	o := runOutcome{Cmd: cmd, Rejected: rejected, Before: before, After: after}
 	o.AllowedBefore = extractTrunkAllowedLine(before.ConfigLinesRaw)
 	o.AllowedAfter = extractTrunkAllowedLine(after.ConfigLinesRaw)
+	o.NativeBefore = extractTrunkNativeLine(before.ConfigLinesRaw)
+	o.NativeAfter = extractTrunkNativeLine(after.ConfigLinesRaw)
 
 	// 副作用判定必须对「**实跑期基线**」⇒ 即「切 trunk 之后、实跑之前」的状态（runBase）。
 	//
@@ -579,6 +604,18 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 			rep.line("      执行后: %s", orNone(o.AllowedAfter))
 		}
 		rep.line("")
+		rep.line("【native 行原文对照】（第二个 P0 候选：native 的判据）")
+		for _, o := range outcomes {
+			rep.line("  ▸ %s", o.Cmd)
+			rep.line("      执行前: %s", orNone(o.NativeBefore))
+			rep.line("      执行后: %s", orNone(o.NativeAfter))
+		}
+		rep.line("")
+		rep.line("【语义判读提示】native 是允许式还是排除式？")
+		rep.line("  · 允许式（与 allowed 一致）⇒ 设为 native 3990 后，allowed 行应变成 `only 3990`（只允许 3990）")
+		rep.line("  · 排除式 ⇒ allowed 行应变成**补集**（如 `only 1-3989,3991-4094`，即除 3990 外全允许）")
+		rep.line("  · 若 native 行本身就被拒（无 only 形态 Invalid input）⇒ 设备不接受 native ⇒ P0 确认")
+		rep.line("")
 		rep.line("【VLAN 表对照】（设备是否自动创建 VLAN —— 影响「产品是否需要预建 VLAN」）")
 		rep.line("  探测前    : %v", initial.VlanIDs)
 		if switchMode {
@@ -611,6 +648,14 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 	rep.line("接口配置块字节: %d → %d  %s", initial.ConfigBytes, after.ConfigBytes, okMark(sameBytes))
 	rep.line("接口配置行数  : %d → %d  %s", initial.ConfigLines, after.ConfigLines, okMark(sameLines))
 	rep.line("VLAN 表       : %v → %v  %s", initial.VlanIDs, after.VlanIDs, okMark(sameVlan))
+	// ⚠️ 还原能否清掉 native 行：native 的还原路径**尚未验证**（allowed/hybrid 已确证一次清空）
+	nativeAfter := extractTrunkNativeLine(after.ConfigLinesRaw)
+	if strings.TrimSpace(nativeAfter) != "" {
+		rep.line("🚨 还原后 **native 行仍在**: %s", nativeAfter)
+		rep.line("   ⇒ `switchport mode access` 未清掉 native ⇒ 需人工处理（native 还原路径未验证）")
+	} else {
+		rep.line("✅ 还原后 native 行已清除（mode access 对 native 也有效）")
+	}
 	if sameBytes && sameLines && sameMode && sameVlan {
 		rep.line("✅ 零残留：还原后与探测前完全一致（模式/字节数/行数/VLAN 集合）")
 	} else {
