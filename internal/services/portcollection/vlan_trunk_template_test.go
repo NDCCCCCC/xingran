@@ -23,23 +23,47 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
-// TestRenderRuijieTrunkSetHybrid 锐捷 hybrid 渲染形态锁定。
+// TestRenderRuijieTrunkSetHybrid 锐捷 hybrid 渲染形态锁定（2026-11-02 第二次真机取证）。
+//
+// 真机证据：
+//
+//	switchport hybrid allowed vlan ? → add / only / remove / tagged / untagged
+//	    ⇒ 列表必须带 tagged / untagged 关键字（无关键字形态设备会拒绝）
+//	switchport hybrid native vlan ? → <1-4094> Vid
+//	    ⇒ native 是单值 VID，与 tagged/untagged 两个列表解耦
 func TestRenderRuijieTrunkSetHybrid(t *testing.T) {
 	got, err := RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
 		InterfaceName:  "GigabitEthernet 1/1",
-		HybridUntagged: []int{10},
+		HybridUntagged: []int{10, 20},
 		HybridTagged:   []int{30, 40},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, []string{
 		"interface GigabitEthernet 1/1",
-		"switchport mode hybrid",               // 前置切模式（设备要求）
-		"switchport hybrid native vlan 10",     // native 承载 untagged
-		"switchport hybrid allowed vlan 30,40", // allowed 承载 tagged 列表
+		"switchport mode hybrid",                        // 前置切模式（设备要求）
+		"switchport hybrid allowed vlan tagged 30,40",   // tagged 列表（必须带 tagged 关键字）
+		"switchport hybrid allowed vlan untagged 10,20", // untagged 列表（必须带 untagged 关键字）
 	}, got)
 }
 
-// TestRenderRuijieTrunkSetHybridOnlyTagged 只给 tagged 时不渲染 native 行。
+// TestRenderRuijieTrunkSetHybridNative 锐捷 hybrid 的 native 单值形态：
+// `switchport hybrid native vlan <id>` —— 与 tagged/untagged 两个列表解耦的独立项。
+func TestRenderRuijieTrunkSetHybridNative(t *testing.T) {
+	got, err := RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
+		InterfaceName: "GigabitEthernet 1/1",
+		HybridTagged:  []int{30},
+		NativeVLAN:    10,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []string{
+		"interface GigabitEthernet 1/1",
+		"switchport mode hybrid",
+		"switchport hybrid allowed vlan tagged 30",
+		"switchport hybrid native vlan 10",
+	}, got)
+}
+
+// TestRenderRuijieTrunkSetHybridOnlyTagged 只给 tagged 时不渲染 untagged 行。
 func TestRenderRuijieTrunkSetHybridOnlyTagged(t *testing.T) {
 	got, err := RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
 		InterfaceName: "GigabitEthernet 1/1",
@@ -49,23 +73,23 @@ func TestRenderRuijieTrunkSetHybridOnlyTagged(t *testing.T) {
 	assert.Equal(t, []string{
 		"interface GigabitEthernet 1/1",
 		"switchport mode hybrid",
-		"switchport hybrid allowed vlan 30",
+		"switchport hybrid allowed vlan tagged 30",
 	}, got)
 }
 
-// TestRenderRuijieTrunkSetHybridNativeSingleValue native 单值约束。
+// TestRenderRuijieTrunkSetHybridMultipleUntaggedAllowed 多 untagged 合法。
 //
-// 锐捷 native 只能表达一个 untagged VLAN；传多个必须**拒绝**（而不是静默取第一个），
-// 否则设备会把端口切到 hybrid 模式却只配上部分 VLAN。
-func TestRenderRuijieTrunkSetHybridNativeSingleValue(t *testing.T) {
-	_, err := RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
+// 第二次真机取证前，untagged 曾被映射到 native（单值）→ 当时按"多 untagged 拒绝"
+// 处理。现在 untagged 映射到 `allowed vlan untagged <list>`（设备明确支持列表）⇒
+// 多个 untagged 合法；继续拒绝等于把设备支持的能力禁掉。
+func TestRenderRuijieTrunkSetHybridMultipleUntaggedAllowed(t *testing.T) {
+	got, err := RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
 		InterfaceName:  "GigabitEthernet 1/1",
 		HybridUntagged: []int{10, 20},
 		HybridTagged:   []int{30},
 	})
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrActionNotSupported, "参数组合不受支持 → 必须走 400 语义")
-	assert.Contains(t, err.Error(), "native")
+	require.NoError(t, err, "锐捷 allowed vlan untagged 是列表形态，多个 untagged 合法")
+	assert.Contains(t, got, "switchport hybrid allowed vlan untagged 10,20")
 }
 
 // TestRenderRuijieTrunkSetHybridEmptyList 两个列表都空 → 拒绝。
@@ -95,6 +119,15 @@ func TestRenderRuijieTrunkSetHybridVlanOutOfRange(t *testing.T) {
 		InterfaceName:  "GigabitEthernet 1/1",
 		HybridUntagged: []int{10},
 		HybridTagged:   []int{4095},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
+
+	// native 单值越界（native 是与两个列表解耦的独立参数，同样要带范围防御）
+	_, err = RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
+		InterfaceName: "GigabitEthernet 1/1",
+		HybridTagged:  []int{30},
+		NativeVLAN:    4095,
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "out of range")

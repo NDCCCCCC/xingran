@@ -47,13 +47,18 @@ func TestCheckActionSupport_OtherHuaweiModels(t *testing.T) {
 // TestCheckActionSupport_RuijieHybrid 锐捷 hybrid 能力矩阵放行。
 //
 // 2026-11-02 起渲染层也已按真机形态注册（switchport mode hybrid +
-// switchport hybrid native/allowed），矩阵与渲染不再割裂；
+// switchport hybrid allowed vlan tagged/untagged + native vlan），矩阵与渲染不再割裂；
 // 锐捷 RS8607E 的 supported 条目见 device_capability.go（真机 `?` 帮助依据）。
 func TestCheckActionSupport_RuijieHybrid(t *testing.T) {
 	assert.NoError(t, CheckActionSupport(models.VendorRuijie, "RS8607E", TrunkSetHybrid),
 		"锐捷 RS8607E hybrid 真机支持（`?` 帮助确认），能力矩阵必须放行")
-	assert.Contains(t, SupportEvidence(models.VendorRuijie, "RS8607E", TrunkSetHybrid),
-		"switchport hybrid", "supported 依据必须写明真机命令形态")
+	ev := SupportEvidence(models.VendorRuijie, "RS8607E", TrunkSetHybrid)
+	assert.Contains(t, ev, "switchport hybrid", "supported 依据必须写明真机命令形态")
+	// 二次取证修正：依据必须写清 tagged/untagged 关键字与 native 单值，
+	// 防止依据回退到"allowed vlan <list>"这种设备会拒绝的形态。
+	assert.Contains(t, ev, "allowed vlan tagged", "依据必须写明 tagged 关键字")
+	assert.Contains(t, ev, "allowed vlan untagged", "依据必须写明 untagged 关键字")
+	assert.Contains(t, ev, "native vlan", "依据必须写明 native 单值形态")
 }
 
 // TestRequiresInterfaceView 真机事实 #1：华为 port_binding 是系统视图命令。
