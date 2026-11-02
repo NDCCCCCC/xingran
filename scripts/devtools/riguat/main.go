@@ -178,6 +178,9 @@ func main() {
 		batch         bool
 		forceContinue bool
 		maxRestore    int
+		scanIdleFlag  bool
+		scanModel     string
+		dbCheckFlag   bool
 	)
 	flag.StringVar(&cfgPath, "config", "/app/szh/configs/config.yaml", "后端 config.yaml 路径")
 	flag.StringVar(&envFile, "sm4-env-file", "", "SM4_KEY 环境变量文件路径（如 /proc/<pid>/environ）")
@@ -198,7 +201,41 @@ func main() {
 	flag.BoolVar(&probe, "probe", false, "只读探测模式（接口视图 ? 帮助查询，零配置变更）")
 	flag.BoolVar(&batch, "batch", false, "批次模式：依次跑完 12 个动作，任一还原失败立即停止")
 	flag.BoolVar(&forceContinue, "force-continue", false, "基线偏离权威基线时不停止（默认停止）")
+	flag.BoolVar(&scanIdleFlag, "scan-idle", false, "只读扫描空闲候选测试口（仅查库，不连设备、不改配置）")
+	flag.BoolVar(&dbCheckFlag, "db-check", false, "诊断：打印 config.yaml database 段解析结果（不打印密码）")
+	flag.StringVar(&scanModel, "scan-model", "RS8607", "空闲口扫描的设备 model 关键字")
 	flag.Parse()
+
+	// ---------- 诊断：db-check ----------
+	if dbCheckFlag {
+		cfg, err := loadDBConfig(cfgPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(3)
+		}
+		rep := &report{out: outFile}
+		runDBCheck(cfg, rep)
+		rep.save()
+		return
+	}
+
+	// ---------- 只读空闲口扫描（不需要设备名、不连设备） ----------
+	if scanIdleFlag {
+		cfg, err := loadDBConfig(cfgPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(3)
+		}
+		db, err := openDB(cfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(3)
+		}
+		rep := &report{out: outFile}
+		runScanIdle(db, rep, scanModel)
+		rep.save()
+		return
+	}
 
 	if deviceName == "" {
 		printUsage()

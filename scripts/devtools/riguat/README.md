@@ -148,6 +148,30 @@ riguat --device <设备名> [选项]
   （`RenderCommand` 直接返回 `ErrUnknownAction`）→ **建议在 `portcollection` 补锐捷 hybrid 模板后再开放该动作**；
 - 回显为 Invalid input / Unknown command → 设备不支持，产品现状正确，**无需补**。
 
+## 空闲候选口扫描（只读，为 hybrid/trunk 实跑找口）
+
+```bash
+./riguat --scan-idle --config /app/szh/configs/config.yaml --scan-model RS8607
+```
+
+- **只查库，不连设备、不解密凭据、不下发任何命令**（`--scan-idle` 在 SM4 装配之前就返回）；
+- 设备表 `sys_network_device`（按 `model ILIKE` 匹配，`--scan-model` 可改），
+  端口表 `sys_device_port_status`；
+- 候选判据（保守，宁可少报）：**description 为空**（无业务描述 ⇒ 不像在用工位口）
+  **且 `admin_status = up`**（未 shutdown）；
+- 输出每台的候选口清单：`interface_name / admin / oper(link) / desc / vlan / dot1x_limit`
+  —— `oper=down` 的口更"空闲"，`oper=up` 说明链路有流量，**不要选**；
+- `updated_at` 列若不存在会自动回退到不含该列的查询（不影响候选判定）。
+
+配套诊断开关（排查配置/连库问题，**不打印密码**，只打印长度）：
+
+```bash
+./riguat --db-check --config /app/szh/configs/config.yaml
+```
+
+> ⚠️ 本地开发机的 `configs/config.yaml` 里 `database.password` 为空串（凭据不落本地），
+> **本地无法连库** ⇒ 扫描必须在带凭据的远程机执行。
+
 ## 安全红线
 
 - 只操作一个测试口（`--port`，默认 `GE1/1`），工具不做多口操作；
