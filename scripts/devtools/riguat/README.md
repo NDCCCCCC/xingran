@@ -222,6 +222,96 @@ switchport hybrid native vlan 3993                ← native 单值（可选，�
 > hybrid **不在 `--batch` 批次里**：它会改变端口转发模式，且需要显式 VLAN 参数，
 > 必须由人指定口与 VLAN 后单独跑。
 
+## 锐捷 trunk allowed 第二层取证探针（只读）
+
+```bash
+./riguat --device CX-WH-WH-47F-FL-RS8607E-01 --port GE1/25 \
+         --probe-trunk-allowed \
+         --config /app/szh/configs/config.yaml --backend-pid $PID \
+         --out /tmp/riguat-trunk-allowed.log
+```
+
+### 受控切换模式（第二轮取证用）
+
+首轮纯只读探针证明：**锐捷的 `?` 帮助可选项集合依赖当前端口模式** ——
+口在 access 模式时，设备连 `switchport trunk` 这个关键字都不提供
+（`switchport trunk allowed vlan all ?` 回显 `Can't set allow list on this port mode!`），
+所以 access 模式下探针报 `Invalid input` **只说明「当前模式不提供」，不能推断「关键字不存在」**。
+
+```bash
+./riguat --device CX-WH-WH-47F-FL-RS8607E-01 --port GE1/25          --probe-trunk-allowed-in-trunk-mode          --config /app/szh/configs/config.yaml --backend-pid $PID
+```
+
+流程：**受控切 trunk 模式** → 同样 9 条 `?` 探针 → **必定还原** `switchport mode access`
+（模式回退在锐捷上已确证可靠：一轮收敛、diff 为空）→ **零残留核查比对「还原后 vs 探测前」**
+（中间那段 trunk 模式是预期内的，不参与比对）。
+
+⚠️ 受控写由**单独的白名单**约束，且**必须成对**：
+
+| 白名单 | 内容 | 约束 |
+|---|---|---|
+| `isReadOnlyProbeCmd`（只读） | 以 `?` 结尾 / `show ` 前缀 | 9 条 `?` 探针全走这条 |
+| `modeSwitchPairs`（受控写） | **仅** `switchport mode trunk` / `switchport mode access` | **必须成对**：trunk 必配 access 还原；测试断言「没有 access 还原就不允许 trunk」 |
+
+⚠️ 默认仍是**纯只读**（`--probe-trunk-allowed` 不切模式）；
+受控写必须**显式**加 `--probe-trunk-allowed-in-trunk-mode` ⇒ 安全默认不破。
+还原动作在**错误路径上也会执行**（探针失败也必须还原）。
+
+### 受控实跑（第三轮：`?` 法被证伪后的唯一路径）
+
+实测证明 `?` 只能回答「**当前位置**可补全什么」—— 对「单命令带固定参数」形态
+（如 `switchport trunk allowed vlan all`）**必然报错** ⇒ add / remove / replace
+是否存在**只能实跑才知道**。
+
+```bash
+./riguat --device CX-WH-WH-47F-FL-RS8607E-01 --port GE1/25          --probe-trunk-allowed-run          --config /app/szh/configs/config.yaml --backend-pid $PID
+```
+
+实跑顺序（**语义验证**，lead 2026-11-02 指定）：
+1. `switchport trunk allowed vlan only 3990` ⇒ 回读 allowed 行原文（判 only 是允许式还是排除式）
+2. `switchport trunk allowed vlan add 3991` ⇒ 回读原文（判 add 是并集还是替换）
+3. `switchport trunk allowed vlan remove 3991` ⇒ 回读原文（判 remove 能否去掉）
+
+⚠️ 判读只看**回读里 `switchport trunk allowed vlan` 那一行原文**（唯一可信依据），
+报告会把该行**执行前/执行后原文**并排列出。
+
+**三层白名单**（默认最安全，逐层收紧）：
+
+| 层 | 内容 | 约束 |
+|---|---|---|
+| 只读白名单 | `?` 结尾 / `show ` 前缀 | 完全只读 |
+| 受控写白名单 | **仅** `switchport mode trunk` / `switchport mode access` | **必须成对**（trunk 必配 access 还原） |
+| 受控实跑白名单 | **仅** 4 条 `switchport trunk allowed vlan {3990,add 3990,remove 3990,replace 3990}` | 逐条**回读判定** |
+
+**逐条回读 + 三态判读**（命令无错 ≠ 生效）：
+
+| 现象 | 判读 |
+|---|---|
+| 设备报错 | **命令被拒 ⇒ 关键字不存在** |
+| 被接受且**回读有变化** | **存在且生效** |
+| 被接受但**回读无变化** | ⚠️ **无错但不落地**（hybrid 的 tagged 就是这样） |
+
+每条之后同时回读 running-config **与** VLAN 表 ⇒ 若 VLAN 表变化（不该发生）
+⇒ **立即停止后续实跑**（仍会还原）。零残留核查比对「还原后 vs 探测前」。
+
+⚠️ 本轮会改配置：若中途 SSH 断线，口可能留在 trunk 模式 ⇒ 需人工
+`switchport mode access`（该命令在锐捷上已确证一轮收敛、diff 为空）。
+
+**只读由工具强制**（不靠人自觉）：
+
+| 保障 | 机制 |
+|---|---|
+| 只放行帮助查询与只读采集 | 白名单 `isReadOnlyProbeCmd`：只放行**以 `?` 结尾**与 **`show ` 前缀**；`switchport ... 3990` / `no ...` 等写形态**一律拒绝**（测试锁定） |
+| 零残留核查 | 探测**前后**各采集一次「接口配置块（字节数 + 行数）」+「VLAN ID 集合」，不一致即告警并打印探测后回显 |
+| 原始回显不改写 | 逐条原样输出 `?` 回显（只去 ANSI 色与提示符行） |
+| 结论不预设 | 只输出判读表骨架（命令 / 是否被接受 / 参数格式 / 判读），由人填 |
+
+探针命令表（9 条，全部 `?` 结尾）：`switchport trunk ?`、`... allowed ?`、
+`... allowed vlan ?`、`... allowed vlan add ?`、`... remove ?`、`... replace ?`、
+`... allowed vlan 3990 ?`、`... all ?`、`... none ?`。
+
+判读要点与判读表见 `.planning/phases/130-device-evidence/130-RUIIJIE-TRUNK-ALLOWED.md`。
+
 ## 安全红线
 
 - 只操作一个测试口（`--port`，默认 `GE1/1`），工具不做多口操作；

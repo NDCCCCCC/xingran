@@ -32,7 +32,9 @@ func TestTrunkRender_AllVendors(t *testing.T) {
 		{models.VendorH3C, portcollection.TrunkSetAllowed, TrunkParams{AllowedVLANs: []int{10}, AllowedMode: portcollection.AllowedModeRemove}, []string{"undo port trunk permit vlan 10"}},
 		{models.VendorRuijie, portcollection.TrunkSetAllowed, TrunkParams{AllowedVLANs: []int{10, 20}, AllowedMode: portcollection.AllowedModeAdd}, []string{"switchport trunk allowed vlan add 10,20"}},
 		{models.VendorRuijie, portcollection.TrunkSetAllowed, TrunkParams{AllowedVLANs: []int{10, 20}, AllowedMode: portcollection.AllowedModeRemove}, []string{"switchport trunk allowed vlan remove 10,20"}},
-		{models.VendorRuijie, portcollection.TrunkSetAllowed, TrunkParams{AllowedVLANs: []int{10, 20}, AllowedMode: portcollection.AllowedModeReplace}, []string{"switchport trunk allowed vlan 10,20"}},
+		// ★ 2026-11-02 真机定稿：锐捷 replace 必须带 only（only 本身即全量语义）；
+		//   无关键字形态真机 Invalid input ⇒ 非法命令。
+		{models.VendorRuijie, portcollection.TrunkSetAllowed, TrunkParams{AllowedVLANs: []int{10, 20}, AllowedMode: portcollection.AllowedModeReplace}, []string{"switchport trunk allowed vlan only 10,20"}},
 		{models.VendorHuawei, portcollection.TrunkSetHybrid, TrunkParams{HybridTagged: []int{30}, HybridUntagged: []int{10, 20}},
 			[]string{"port link-type hybrid", "port hybrid tagged vlan 30", "port hybrid untagged vlan 10 20"}},
 		{models.VendorH3C, portcollection.TrunkSetHybrid, TrunkParams{HybridTagged: []int{30}, HybridUntagged: []int{10}},

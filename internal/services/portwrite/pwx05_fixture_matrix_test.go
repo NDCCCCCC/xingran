@@ -49,9 +49,9 @@ func TestPWX05_HybridOverlapSentinel(t *testing.T) {
 	assert.ErrorIs(t, err, ErrHybridOverlap, "preview 必须透出同一 sentinel")
 }
 
-// TestPWX05_TrunkReplaceDegradation replace 仅锐捷原生（switchport trunk allowed
-// vlan <list> 全量）；华为 VRP allow-pass 天然叠加、H3C permit 同理 —— 语义上
-// 退化为叠加，命令形态与 add 一致（依据见 vlan_trunk_template.go 厂商注释）。
+// TestPWX05_TrunkReplaceDegradation replace 仅锐捷原生为**全量覆盖**（switchport trunk allowed
+// vlan only <list>，★ only 本身即全量语义；2026-11-02 真机定稿）；华为 VRP allow-pass 天然叠加、
+// H3C permit 同理 —— 语义上退化为叠加，命令形态与 add 一致（依据见 vlan_trunk_template.go 厂商注释）。
 func TestPWX05_TrunkReplaceDegradation(t *testing.T) {
 	cases := []struct {
 		vendor     models.DeviceVendor
@@ -60,7 +60,9 @@ func TestPWX05_TrunkReplaceDegradation(t *testing.T) {
 	}{
 		{models.VendorHuawei, []string{"port trunk allow-pass vlan 10 20"}, []string{"undo port trunk allow-pass"}},
 		{models.VendorH3C, []string{"port trunk permit vlan 10 20"}, []string{"undo port trunk permit"}},
-		{models.VendorRuijie, []string{"switchport trunk allowed vlan 10,20"},
+		// ★ 2026-11-02 真机定稿：锐捷 replace 的形态是 `only <list>`（only 本身即全量语义）；
+		//   无关键字形态 `switchport trunk allowed vlan <list>` 真机 Invalid input ⇒ 非法命令。
+		{models.VendorRuijie, []string{"switchport trunk allowed vlan only 10,20"},
 			[]string{"switchport trunk allowed vlan add", "switchport trunk allowed vlan remove"}},
 	}
 	for _, tc := range cases {
