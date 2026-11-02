@@ -16,10 +16,10 @@ import (
 // 当前 sys_device_port_status 暂无独立的 vlan_link_type 列，本过滤仅能基于
 // sys_device_port_status.port_type 做粗粒度启发。精确的 trunk/access 区分
 // 需要：
-//   1. 新增迁移给 sys_device_port_status 加 vlan_link_type 列
-//   2. 端口采集阶段调用厂商 "display port vlan" / "show interfaces switchport"
-//      并用 TextFSM 模板解析 link_type 写入该列
-//   3. 本过滤函数改成读 vlan_link_type IN ('trunk','hybrid')
+//  1. 新增迁移给 sys_device_port_status 加 vlan_link_type 列
+//  2. 端口采集阶段调用厂商 "display port vlan" / "show interfaces switchport"
+//     并用 TextFSM 模板解析 link_type 写入该列
+//  3. 本过滤函数改成读 vlan_link_type IN ('trunk','hybrid')
 //
 // 该升级属于本 session Resolution 描述的 Layer 1/2/3 三层修复，
 // 推迟到后续 phase（需要厂商命令模板与迁移协同）。本次落最小可编译

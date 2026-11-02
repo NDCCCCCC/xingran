@@ -338,7 +338,6 @@ export function PortWriteModal({
               <AppSelect
                 options={TRUNK_ALLOWED_MODE_OPTIONS.map((o) => ({ ...o }))}
                 showSearch={false}
-                onSearch={() => {}}
               />
             </Form.Item>
           </>

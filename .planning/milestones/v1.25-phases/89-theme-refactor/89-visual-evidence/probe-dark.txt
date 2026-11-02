@@ -1,0 +1,13 @@
+{
+  "mode": "dark",
+  "inputBgVar": "#0f2e1b",
+  "placeholderVar": "#707068",
+  "inputBg": "rgba(0, 0, 0, 0)",
+  "pageBg": "rgb(15, 46, 27)",
+  "selectBg": "rgb(26, 46, 31)",
+  "selectSelectorBg": "rgba(0, 0, 0, 0)",
+  "cardBg": "rgb(31, 53, 36)",
+  "antBgContainer": "#1a2e1f",
+  "antBorder": "#2d4d33",
+  "antBgElevated": "#1f3524"
+}

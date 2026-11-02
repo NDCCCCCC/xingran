@@ -74,7 +74,7 @@
       "line": 403,
       "claim": "internal/api/v1/monitor/cache_handler.go (5处重复) + cache_helpers.go with normalizeCacheKey",
       "expected": "5 occurrences of duplicate prefix-stripping code with cache_helpers.go containing normalizeCacheKey()",
-      "actual": "No cache_helpers.go file found in monitor module. Only one occurrence of 'xingran:' pattern (line 544). No `strings.HasPrefix(... \"xingran\" ...)` code exists. Claim is stale post-refactor."
+      "actual": "No cache_helpers.go file found in monitor module. Only one occurrence of 'ruoyi:' pattern (line 544). No `strings.HasPrefix(... \"ruoyi\" ...)` code exists. Claim is stale post-refactor."
     },
     {
       "line": 426,

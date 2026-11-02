@@ -762,7 +762,6 @@ const UserManagement: FC = () => {
                       placeholder="全部状态"
                       style={{ width: 140 }}
                       allowClear
-                      onSearch={() => {}}
                       showSearch={false}
                       options={STATUS_OPTIONS.map((opt) => ({
                         value: String(opt.value),
@@ -946,7 +945,6 @@ const UserManagement: FC = () => {
               <AppSelect
                 allowClear
                 className="user-form-input"
-                onSearch={() => {}}
                 showSearch={false}
                 options={
                   genderDict.length > 0

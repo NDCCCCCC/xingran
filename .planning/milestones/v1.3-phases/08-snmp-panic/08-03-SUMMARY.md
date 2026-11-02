@@ -78,7 +78,7 @@ func (c *SNMPClient) WaitForReady(timeout time.Duration) error
 === RUN   TestSNMPClient_WaitForReady_Concurrent
 --- PASS: TestSNMPClient_WaitForReady_Concurrent (0.05s)
 PASS
-ok      github.com/xingran-next/xingran-go-backend/internal/device    1.555s
+ok      github.com/ruoyi-next/ruoyi-go-backend/internal/device    1.555s
 ```
 
 ## Self-Check: PASSED

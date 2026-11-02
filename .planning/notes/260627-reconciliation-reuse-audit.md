@@ -1,7 +1,7 @@
 # 资产对账架构 — 系统已有设计复用度审计
 
 **审计日期**: 2026-06-27
-**审计范围**: v0.3 资产对账架构 vs XingRan-Next 现有系统
+**审计范围**: v0.3 资产对账架构 vs RuoYi-Next 现有系统
 **审计目标**: 确保新模块充分复用字典、参数、缓存、操作日志、Excel、Status Convention 等已有设计
 **审计方法**: 代码取证 + 命名约定 + 项目记忆清单，逐项打勾
 **审计结论**: ⚠️ v0.3 设计有 7 项未充分复用，需在 R1 plan-phase 之前补齐
@@ -86,7 +86,7 @@
 
 **代码证据**：
 - CLAUDE.md：`BaseListRequest` + `ApplySort` 白名单
-- 项目记忆 `xingran-server-side-sort-infra`：Phase A 已就位
+- 项目记忆 `ruoyi-server-side-sort-infra`：Phase A 已就位
 - `internal/services/operations/pagination_helper.go:17`：`MaxPageSize = 10000`
 - `internal/services/system/config_service.go:32-33`：Statistics 用专用 COUNT 端点
 
@@ -429,7 +429,7 @@ asset.SetupReconciliationExceptionRouter(assetGroup, core)  // 🆕
 ```
 
 **关键约束**：
-- ⚠️ 参考 `xingran-excel-import-route-conflict` 历史教训：router.go 不能预注册 `/asset/reconciliation/*` 通用路由（避免与具体 handler 冲突）
+- ⚠️ 参考 `ruoyi-excel-import-route-conflict` 历史教训：router.go 不能预注册 `/asset/reconciliation/*` 通用路由（避免与具体 handler 冲突）
 - ⚠️ `excel_handler.SetupExcelRouter` 不能预注册 `reconciliationException` entityType（避免冲突）
 - ⚠️ `reconciliation` entityType 不属于 ops ExcelConfigs 注册范围，避免与 ops 模块 Excel 路由冲突
 
@@ -473,16 +473,16 @@ asset.SetupReconciliationExceptionRouter(assetGroup, core)  // 🆕
 
 | 记忆 | 应用点 |
 |------|--------|
-| `xingran-gorm-sql-constraint-naming-conflict` | migration uniqueIndex 用 `uni_*_*` 命名 |
-| `xingran-migrations-no-sql-autoloader` | 必须 .go migration + AutoMigrate 显式调用 |
+| `ruoyi-gorm-sql-constraint-naming-conflict` | migration uniqueIndex 用 `uni_*_*` 命名 |
+| `ruoyi-migrations-no-sql-autoloader` | 必须 .go migration + AutoMigrate 显式调用 |
 | `migration-sql-name-must-match-model` | menu/migration 字段名匹配 model |
-| `xingran-perm-namespace-split-readonly-page` | 跨模块权限边界声明 + `RequirePermissionsWithQuery` |
-| `xingran-excel-import-route-conflict` | router.go 不能预注册通用 `/reconciliation/*` |
+| `ruoyi-perm-namespace-split-readonly-page` | 跨模块权限边界声明 + `RequirePermissionsWithQuery` |
+| `ruoyi-excel-import-route-conflict` | router.go 不能预注册通用 `/reconciliation/*` |
 | `stat-cards-from-list-length-capped-at-100` | Dashboard 必须用 Statistics 端点，不用 list.length |
 | `echarts6-customchart-tree-shaking-noop` | echarts 6 不追求按需引入 |
-| `xingran-server-side-sort-infra` | Phase A 排序基建已就位 |
+| `ruoyi-server-side-sort-infra` | Phase A 排序基建已就位 |
 | `captcha-enabled-invalid-value-trap` | 字典配置变更后必须 invalidate queries |
-| `xingran-gorm-sql-constraint-naming-conflict` | 新表字段必须唯一索引命名规范 |
+| `ruoyi-gorm-sql-constraint-naming-conflict` | 新表字段必须唯一索引命名规范 |
 
 ---
 

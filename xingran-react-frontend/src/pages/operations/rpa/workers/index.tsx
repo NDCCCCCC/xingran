@@ -270,7 +270,6 @@ const WorkerMonitor: FC = () => {
                 allowClear
                 style={{ width: 150 }}
                 showSearch={false}
-                onSearch={() => {}}
                 options={WORKER_STATUS_OPTIONS}
               />
             </Form.Item>

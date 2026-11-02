@@ -4,7 +4,7 @@ date: 2026-06-16
 context: Pre-flight for /gsd:complete-milestone call (user chose: sync state, do not archive yet)
 ---
 
-# State Synchronization Report — XingRan-Next .planning/
+# State Synchronization Report — RuoYi-Next .planning/
 
 **Generated:** 2026-06-16
 **Trigger:** `/gsd:complete-milestone` invoked without `version`; preflight detected multi-file drift; user selected "sync state files" instead of archive.

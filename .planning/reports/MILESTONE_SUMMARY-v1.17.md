@@ -8,7 +8,7 @@
 
 ## 1. Project Overview
 
-**XingRan-Next** is a Go backend + React frontend enterprise IT operations management system.
+**RuoYi-Next** is a Go backend + React frontend enterprise IT operations management system.
 The v1.17 milestone adds an **Asset Reconciliation** engine: an automated observability layer
 that detects drift between three sources of asset truth — *physical* (port→MAC chain),
 *declared* (`sys_workstation.user_id`), and *AD managed_by* (`description`-style host record).

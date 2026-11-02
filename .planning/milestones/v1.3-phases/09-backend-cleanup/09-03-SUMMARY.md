@@ -260,7 +260,7 @@ Please verify the following:
 1. **WebSocket CheckOrigin Security Logs**:
    ```bash
    # 启动服务
-   .\xingran-backend.exe
+   .\ruoyi-backend.exe
 
    # 从不同域名尝试 WebSocket 连接
    # 检查日志中是否有 "WebSocket 连接被拒绝" 的警告

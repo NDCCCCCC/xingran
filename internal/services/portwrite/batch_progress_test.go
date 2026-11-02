@@ -18,7 +18,7 @@ import (
 
 // fakeProgressNotifier 捕获广播事件。
 type fakeProgressNotifier struct {
-	mu    sync.Mutex
+	mu     sync.Mutex
 	events []websocket.PortWriteProgressMessage
 }
 

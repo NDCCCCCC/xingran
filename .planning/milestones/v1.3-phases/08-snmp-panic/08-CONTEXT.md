@@ -87,7 +87,7 @@
 ### Integration Points
 - SNMP 客户端被 `device_monitor_service.go` 和 `device_discovery_service.go` 使用
 - 连接池在 `network_device_service.go` 中被引用
-- 日志系统使用 `github.com/xingran-next/xingran-go-backend/pkg/logger`
+- 日志系统使用 `github.com/ruoyi-next/ruoyi-go-backend/pkg/logger`
 
 </code_context>
 

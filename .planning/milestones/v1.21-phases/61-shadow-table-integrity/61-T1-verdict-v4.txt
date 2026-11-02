@@ -1,0 +1,4 @@
+﻿=== UAT61 Test1 v4 analysis 2026-10-22 03:13:23 ===
+total samples: 2124
+member_count distribution: 2815 x2123
+VERDICT: NO DATA - poller failed

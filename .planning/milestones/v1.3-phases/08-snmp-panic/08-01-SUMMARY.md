@@ -13,7 +13,7 @@
 ```go
 import (
     "runtime/debug"           // 用于 debug.Stack()
-    "github.com/xingran-next/xingran-go-backend/pkg/logger"  // 用于 logger.Errorf
+    "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"  // 用于 logger.Errorf
 )
 ```
 

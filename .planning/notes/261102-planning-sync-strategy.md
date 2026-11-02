@@ -19,7 +19,7 @@
 ### 1.1 高严重度（唯一真实凭据）
 
 - `debug/sys-workstation-recovery-from-xlsx.md:84`：
-  `DB_HOST=10.62.10.34 / DB_NAME=ruoyi / DB_PASSWORD=Cpic1234` —— **真实 DB 明文密码**。
+  `DB_HOST=10.62.10.34` + 真实 DB 明文口令（已脱敏，不落具体值；口令轮换已由 lead 同步用户）。
 - 处置：`debug/**` 整目录列入**不入库**（见 §3），该文件留在本地；后续如需入库先脱敏。
 
 ### 1.2 低危定性依据

@@ -30,7 +30,7 @@ internal/api/v1/system/dashboard_router.go:12:	dashboardService := systemService
 **Import Alias Confirmed:**
 ```go
 // internal/api/v1/system/dashboard_handler.go
-import systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+import systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 ```
 
 **Usage Confirmed:**
@@ -62,7 +62,7 @@ internal/services/system/settings_cache_impl.go:24:) SettingsService {
 **Import Alias Confirmed:**
 ```go
 // internal/api/v1/system/settings_handler.go
-import systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+import systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 ```
 
 **Usage Confirmed:**
@@ -76,7 +76,7 @@ handler := NewSettingsHandler(settingsService)
 ```
 
 ### Task 3: Root-Level Files Search
-**Command:** `find D:/code/ClaudeCode/xingran-go-backend -path "*/services/dashboard_service.go" -not -path "*/system/*" -type f`
+**Command:** `find D:/code/ClaudeCode/ruoyi-go-backend -path "*/services/dashboard_service.go" -not -path "*/system/*" -type f`
 
 **Results:** ❌ **No root-level files found**
 

@@ -96,8 +96,11 @@ func TestTrunkRender_RuijieHybridSupported(t *testing.T) {
 	}
 	joined := strings.Join(cmds, " | ")
 	assert.Contains(t, joined, "switchport mode hybrid", "必须前置切 hybrid 模式")
-	assert.Contains(t, joined, "switchport hybrid allowed vlan tagged 30", "tagged 列表必须带 tagged 关键字")
-	assert.Contains(t, joined, "switchport hybrid allowed vlan untagged 10,20", "untagged 列表必须带 untagged 关键字")
+	// ★ 2026-11-02 第三次真机取证：tagged **必须带 only**（缺 only = 命令成功但配置不落地）；
+	//   untagged **不能带 only**（only untagged 被设备拒绝）⇒ 两条形态不对称。
+	assert.Contains(t, joined, "switchport hybrid allowed vlan only tagged 30", "tagged 列表必须带 only + tagged 关键字")
+	assert.Contains(t, joined, "switchport hybrid allowed vlan untagged 10,20", "untagged 列表必须带 untagged 关键字且不得带 only")
+	assert.NotContains(t, joined, "allowed vlan only untagged", "untagged 不得带 only（真机 % Invalid input）")
 	assert.NotContains(t, joined, "switchport hybrid allowed vlan 30", "不得出现缺关键字的 allowed 形态")
 
 	// dry-run 预览必须显式标注"端口模式变更"（不能藏在命令列表里）

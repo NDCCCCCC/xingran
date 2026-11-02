@@ -3,7 +3,7 @@
 ## Root Directory Layout
 
 ```
-xingran-go-backend/
+ruoyi-go-backend/
 ├── cmd/                          # Application entry point
 │   └── main.go                   # Server bootstrap
 ├── configs/                      # Configuration files
@@ -139,5 +139,5 @@ xingran-go-backend/
 - **TypeScript files**: `camelCase.ts` or `PascalCase.tsx` for components
 - **API routes**: `/api/v1/{module}/{resource}` pattern
 - **Database tables**: `sys_` prefix, `snake_case`
-- **Cache keys**: `module:subkey:id` pattern, prefix `xingran:` added automatically
+- **Cache keys**: `module:subkey:id` pattern, prefix `ruoyi:` added automatically
 - **Config keys**: `yaml_case` in config files

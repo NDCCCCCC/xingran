@@ -19,7 +19,7 @@
 
 ## 1. Project Overview
 
-**XingRan-Next** is a Go backend + React frontend enterprise IT operations management system.
+**RuoYi-Next** is a Go backend + React frontend enterprise IT operations management system.
 The v1.16 milestone is a dedicated **technical-debt cleanup cycle** — not a feature
 shipment. It closed the long tail of deferred debug sessions, validated the regression
 locks that protect downstream milestones, and shipped a 100%-passes validator pass.

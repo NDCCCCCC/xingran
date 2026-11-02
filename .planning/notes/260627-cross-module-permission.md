@@ -3,7 +3,7 @@
 **记录日期**: 2026-06-27
 **背景**: v0.3 架构中，工位详情页 (`/ops/workstation/:id`) 需要显示对账健康度，需调用 asset 模块的对账服务
 **关联决策**: [.planning/notes/asset-reconciliation-strategy.md](./asset-reconciliation-strategy.md) §7.5, §15
-**关联记忆**: `xingran-perm-namespace-split-readonly-page`
+**关联记忆**: `ruoyi-perm-namespace-split-readonly-page`
 
 ---
 
@@ -229,8 +229,8 @@ R1 plan-phase 第一个 plan 必须包含：
 
 ## 8. 关联记忆
 
-- `xingran-perm-namespace-split-readonly-page` — 读写权限命名空间割裂致 403，本设计显式声明跨模块边界避免
-- `xingran-ops-menu-seed-perms-naming-mismatch` — 菜单 seed perms 与路由 perms 不一致，本设计统一 `asset:reconciliation:*`
+- `ruoyi-perm-namespace-split-readonly-page` — 读写权限命名空间割裂致 403，本设计显式声明跨模块边界避免
+- `ruoyi-ops-menu-seed-perms-naming-mismatch` — 菜单 seed perms 与路由 perms 不一致，本设计统一 `asset:reconciliation:*`
 - `migration-sql-name-must-match-model` — 菜单 migration 字段名匹配 model
 
 ---

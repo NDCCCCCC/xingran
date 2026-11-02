@@ -31,7 +31,7 @@ services:
 
       # Redis 配置 - 使用外部 Redis
       - REDIS_ADDR=10.62.10.34:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-)(PO09po}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?请在部署环境注入 REDIS_PASSWORD（禁止默认兜底）}
       - REDIS_DB=0
 
       # Chrome 配置

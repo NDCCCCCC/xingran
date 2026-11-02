@@ -1,13 +1,13 @@
 # Tech Stack
 
 ## Overview
-XingRan-Next is a full-stack enterprise permission management system with Go backend and React frontend, featuring national cryptography (SM2/SM3/SM4) for security.
+RuoYi-Next is a full-stack enterprise permission management system with Go backend and React frontend, featuring national cryptography (SM2/SM3/SM4) for security.
 
 ## Backend Stack
 
 ### Language & Runtime
 - **Go 1.24** (toolchain go1.24.5)
-- Module: `github.com/xingran-next/xingran-go-backend`
+- Module: `github.com/ruoyi-next/ruoyi-go-backend`
 - Entry point: `cmd/main.go`
 
 ### Web Framework
@@ -25,7 +25,7 @@ XingRan-Next is a full-stack enterprise permission management system with Go bac
 ### Cache
 - **Redis 7.4** via `redis/go-redis/v9 v9.7.0`
 - Two-tier: L1 (in-memory) + L2 (Redis) with async writer pool
-- Prefix: `xingran:` for all keys
+- Prefix: `ruoyi:` for all keys
 - L2 writer pool: configurable workers, queue size, retry with exponential backoff
 
 ### Authentication & Security

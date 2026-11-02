@@ -170,7 +170,6 @@ const ExecutionManagement: FC = () => {
                   allowClear
                   style={{ width: 150 }}
                   showSearch={false}
-                  onSearch={() => {}}
                   options={EXECUTION_STATUS_OPTIONS}
                 />
               </Form.Item>

@@ -2,7 +2,7 @@
 
 ## 项目
 
-XingRan-Next 运维管理系统 — Go 1.24 后端 + React 19 前端 + 国密 SM2/SM3/SM4
+RuoYi-Next 运维管理系统 — Go 1.24 后端 + React 19 前端 + 国密 SM2/SM3/SM4
 
 ## 摘要
 

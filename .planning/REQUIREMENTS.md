@@ -32,7 +32,7 @@
 - [ ] **DEBT-03**: RPA Worker API Token 认证加固（方案已设计于 docs，落地实施）
 - [ ] **DEBT-04**: `operlog.exclude_paths` 配置驱动白名单完善
 - [ ] **DEBT-05**: `permission.grant.test.tsx` 时序根治（替换 15s 重试补丁，修复 antd Form connect 时机依赖）
-- [ ] **DEBT-06**: 本地目录改名 `ruoyi-react-frontend` → `xingran-react-frontend` + 本地/GitHub 双线 `.planning` 合流收尾
+- [ ] **DEBT-06**: 本地目录改名 `xingran-react-frontend` → `xingran-react-frontend` + 本地/GitHub 双线 `.planning` 合流收尾
 
 ### 收尾杂项（TIDY）
 

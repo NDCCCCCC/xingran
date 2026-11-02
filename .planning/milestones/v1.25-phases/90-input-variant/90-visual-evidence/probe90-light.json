@@ -1,0 +1,183 @@
+{
+ "scopeClass": "css-dev-only-do-not-override-19u5a7b ant-app css-var-_r_0_",
+ "realInputNumberCount": 0,
+ "num": {
+  "bc": "rgb(219, 215, 206)",
+  "bw": "1px",
+  "bs": "solid",
+  "r": "8px",
+  "fs": "14px",
+  "bg": "rgb(250, 250, 249)"
+ },
+ "numInner": {
+  "bc": "rgb(16, 16, 16)",
+  "bw": "0px",
+  "bs": "solid",
+  "r": "0px",
+  "fs": "14px",
+  "bg": "rgba(0, 0, 0, 0)"
+ },
+ "err": {
+  "bc": "rgb(186, 54, 48)",
+  "bw": "1px",
+  "bs": "solid",
+  "r": "8px",
+  "fs": "14px",
+  "bg": "rgb(250, 250, 249)"
+ },
+ "warn": {
+  "bc": "rgb(176, 122, 32)",
+  "bw": "1px",
+  "bs": "solid",
+  "r": "8px",
+  "fs": "14px",
+  "bg": "rgb(250, 250, 249)"
+ },
+ "inp": {
+  "bc": "rgb(219, 215, 206)",
+  "bw": "1px",
+  "bs": "solid",
+  "r": "8px",
+  "fs": "14px",
+  "bg": "rgb(250, 250, 249)"
+ },
+ "antColorError": "#ba3630",
+ "antColorWarning": "#b07a20",
+ "antColorBorder": "#DBD7CE",
+ "rulesWithInputNumberStatus": [
+  {
+   "sheet": 72,
+   "rule": 93,
+   "len": 444,
+   "text": ".ant-input-number.ant-input-number-status-error, .ant-input-number.ant-input-number-status-error:hover, .ant-input-number.ant-input-number-status-error:focus, [data-color-mode=\"dark\"] .ant-input-number.ant-input-number-status-error, [data-color-mode=\"dark\"] .ant-input-number.ant-input-number-status-"
+  },
+  {
+   "sheet": 72,
+   "rule": 94,
+   "len": 458,
+   "text": ".ant-input-number.ant-input-number-status-warning, .ant-input-number.ant-input-number-status-warning:hover, .ant-input-number.ant-input-number-status-warning:focus, [data-color-mode=\"dark\"] .ant-input-number.ant-input-number-status-warning, [data-color-mode=\"dark\"] .ant-input-number.ant-input-number"
+  }
+ ],
+ "antdInputNumberBaseRules": [
+  {
+   "sheet": 72,
+   "rule": 81,
+   "text": ".ant-input, .ant-input-number { border-width: 1px; border-style: solid; background: var(--input-bg) !important; border-color: var(--input-border) !important; color: var(--input-text) !important; border-radius: var(--theme-radius-lg) !important; font-size: 14px !important; transition: background var("
+  },
+  {
+   "sheet": 72,
+   "rule": 82,
+   "text": ".ant-input:hover, .ant-input-number:hover { border-color: var(--input-border-hover) !important; }"
+  },
+  {
+   "sheet": 72,
+   "rule": 83,
+   "text": ".ant-input:focus, .ant-input-number:focus { border-color: var(--input-border-focus) !important; box-shadow: 0 0 0 2px var(--theme-primary-lighter) !important; }"
+  },
+  {
+   "sheet": 72,
+   "rule": 93,
+   "text": ".ant-input-number.ant-input-number-status-error, .ant-input-number.ant-input-number-status-error:hover, .ant-input-number.ant-input-number-status-error:focus, [data-color-mode=\"dark\"] .ant-input-number.ant-input-number-status-error, [data-color-mode=\"dark\"] .ant-input-number.ant-input-number-status-"
+  },
+  {
+   "sheet": 72,
+   "rule": 94,
+   "text": ".ant-input-number.ant-input-number-status-warning, .ant-input-number.ant-input-number-status-warning:hover, .ant-input-number.ant-input-number-status-warning:focus, [data-color-mode=\"dark\"] .ant-input-number.ant-input-number-status-warning, [data-color-mode=\"dark\"] .ant-input-number.ant-input-number"
+  },
+  {
+   "sheet": 72,
+   "rule": 305,
+   "text": "[data-color-mode=\"dark\"] input, [data-color-mode=\"dark\"] textarea, [data-color-mode=\"dark\"] .ant-input, [data-color-mode=\"dark\"] .ant-input-number, [data-color-mode=\"dark\"] .ant-input-affix-wrapper { background-color: var(--input-bg) !important; color: var(--input-text) !important; border-color: var"
+  },
+  {
+   "sheet": 72,
+   "rule": 576,
+   "text": "[data-color-mode=\"dark\"] .ant-input-number { background: var(--input-bg) !important; border-color: var(--input-border) !important; }"
+  },
+  {
+   "sheet": 72,
+   "rule": 577,
+   "text": "[data-color-mode=\"dark\"] .ant-input-number:focus { border-color: var(--input-border-focus) !important; box-shadow: 0 0 0 2px rgba(21, 96, 49, 0.15), var(--glow-subtle) !important; }"
+  }
+ ],
+ "sheetOwners": [
+  "0:ny01tl(88)",
+  "1:STYLE(9)",
+  "2:1sssysb(1)",
+  "3:2mp7q1(21)",
+  "4:_effect-css-dev-only-do-not-override-19u(1)",
+  "5:1xo7i0q(34)",
+  "6:_effect-css-dev-only-do-not-override-19u(1)",
+  "7:_effect-css-dev-only-do-not-override-19u(1)",
+  "8:hq2z3t(6)",
+  "9:tgiqp6(225)",
+  "10:_effect-css-dev-only-do-not-override-19u(1)",
+  "11:_effect-css-dev-only-do-not-override-19u(1)",
+  "12:_effect-css-dev-only-do-not-override-19u(1)",
+  "13:_effect-css-dev-only-do-not-override-19u(1)",
+  "14:_effect-css-dev-only-do-not-override-19u(1)",
+  "15:_effect-css-dev-only-do-not-override-19u(1)",
+  "16:11aas02(18)",
+  "17:wjui61(1)",
+  "18:1lra13d(56)",
+  "19:_effect-css-dev-only-do-not-override-19u(1)",
+  "20:_effect-css-dev-only-do-not-override-19u(1)",
+  "21:_effect-css-dev-only-do-not-override-19u(1)",
+  "22:_effect-css-dev-only-do-not-override-19u(1)",
+  "23:4nkg0l(1)",
+  "24:1x8q4f(122)",
+  "25:_effect-css-dev-only-do-not-override-19u(1)",
+  "26:_effect-css-dev-only-do-not-override-19u(1)",
+  "27:_effect-css-dev-only-do-not-override-19u(1)",
+  "28:_effect-css-dev-only-do-not-override-19u(1)",
+  "29:_effect-css-dev-only-do-not-override-19u(1)",
+  "30:_effect-css-dev-only-do-not-override-19u(1)",
+  "31:_effect-css-dev-only-do-not-override-19u(1)",
+  "32:_effect-css-dev-only-do-not-override-19u(1)",
+  "33:lni8jr(1)",
+  "34:14diu5t(23)",
+  "35:1pwgqlt(1)",
+  "36:1btr7hb(16)",
+  "37:1eupzsp(14)",
+  "38:14xv0dz(1)",
+  "39:1uiealc(99)",
+  "40:2ltx4i(1)",
+  "41:1stqswl(146)",
+  "42:t8shbj(1)",
+  "43:1w521wl(75)",
+  "44:1w42fqj(1)",
+  "45:13hz5be(1)",
+  "46:6073ri(103)",
+  "47:1fq0ibw(1)",
+  "48:4amznb(84)",
+  "49:s76nhc(1)",
+  "50:1hu6pgu(99)",
+  "51:_effect-css-dev-only-do-not-override-19u(1)",
+  "52:4lazvx(1)",
+  "53:118i51v(1)",
+  "54:14w23i8(59)",
+  "55:1okeusu(1)",
+  "56:q2teql(265)",
+  "57:soehp3(16)",
+  "58:z0zyz2(1)",
+  "59:g1pi4i(185)",
+  "60:fosnx0(1)",
+  "61:fl2o3w(8)",
+  "62:8k9k8h(15)",
+  "63:4ef25(198)",
+  "64:1uljpe0(1)",
+  "65:1bscjuw(46)",
+  "66:dlvwmz(1)",
+  "67:1t74thx(107)",
+  "68:6hil04(1)",
+  "69:cfher5(1)",
+  "70:mtsb22(7)",
+  "71:_effect-loadingCircle(1)",
+  "72:STYLE(937)",
+  "73:STYLE(8)",
+  "74:STYLE(16)",
+  "75:STYLE(56)",
+  "76:STYLE(8)",
+  "77:STYLE(18)"
+ ]
+}

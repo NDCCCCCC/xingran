@@ -1,0 +1,570 @@
+{
+  "scanned_at": "2026-10-26T00:56:06.530Z",
+  "has_open_items": true,
+  "counts": {
+    "debug_sessions": 27,
+    "quick_tasks": 59,
+    "threads": 0,
+    "todos": 2,
+    "seeds": 0,
+    "uat_gaps": 0,
+    "verification_gaps": 0,
+    "context_questions": 0,
+    "deferred_items": 0,
+    "total": 88
+  },
+  "acknowledged": {
+    "debug_sessions": 0,
+    "quick_tasks": 0,
+    "threads": 0,
+    "todos": 0,
+    "seeds": 0,
+    "uat_gaps": 0,
+    "verification_gaps": 0,
+    "context_questions": 0,
+    "deferred_items": 0,
+    "total": 0
+  },
+  "items": {
+    "debug_sessions": [
+      {
+        "slug": "ad-push-queue-drain-interval-not-hot-reloaded",
+        "status": "fixed",
+        "updated": "2026-10-21T15:22:00+08:00",
+        "hypothesis": ""
+      },
+      {
+        "slug": "allowed-origins-silent-exit",
+        "status": "awaiting_human_verify",
+        "updated": "2026-10-15 14:15",
+        "hypothesis": ""
+      },
+      {
+        "slug": "apikey-test-raw-id",
+        "status": "diagnosed",
+        "updated": "2026-07-02",
+        "hypothesis": "- hypothesis: ROOT CAUSE CONFIRMED — 三处独立 bug,均与 SQLite 兼容性 + GORM `db.First(ptr, string)` 调用方式相关"
+      },
+      {
+        "slug": "info-point-export-fields-missing",
+        "status": "root_cause_found",
+        "updated": "2026-06-30",
+        "hypothesis": ""
+      },
+      {
+        "slug": "linux-log-missing-2026-07-09",
+        "status": "diagnosing",
+        "updated": "2026-07-09T08:45:00+08:00",
+        "hypothesis": "hypothesis: \"待确认：需要用户提供远程诊断命令输出\""
+      },
+      {
+        "slug": "mac-collection-cisco-no-vendor-support",
+        "status": "diagnosed",
+        "updated": "2026-06-29",
+        "hypothesis": "**Hypothesis:** MAC 采集系统**完全没有 Cisco 厂商支持**。`DeviceVendor` 枚举只有 huawei/h3c/ruijie/maipu 四种取值；`parseM"
+      },
+      {
+        "slug": "mac-format-recurrence-R2",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": ""
+      },
+      {
+        "slug": "mac-history-mv-double-execution",
+        "status": "investigating",
+        "updated": "2026-07-03T00:00:00Z",
+        "hypothesis": "hypothesis: 同一 job 被注册两次(sys_job 表双行)或者 scheduler 启动阶段的双重注册"
+      },
+      {
+        "slug": "mac-history-query-returns-empty",
+        "status": "investigating",
+        "updated": "2026-06-30T00:00:00Z",
+        "hypothesis": "hypothesis: 轨迹查询 (POST /network/history/trajectory) 走 `QueryMACTrajectory`"
+      },
+      {
+        "slug": "mac-iface-security-suffix",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": ""
+      },
+      {
+        "slug": "normalize-interface-ge-missing",
+        "status": "awaiting_human_verify",
+        "updated": "2026-06-29",
+        "hypothesis": "hypothesis: 双层遗漏 — (1) Go `normalizeInterfaceName` 的 prefixList 缺 `ge`/`xe`/`tw`/`twe`/`hge`/`fge` 等"
+      },
+      {
+        "slug": "notice-view-dashboard-fallback",
+        "status": "awaiting_human_verify",
+        "updated": "2026-07-04T00:00:00Z",
+        "hypothesis": "hypothesis: 已修复"
+      },
+      {
+        "slug": "port-mac-format-unify-20260701",
+        "status": "plan_approved",
+        "updated": "2026-07-01",
+        "hypothesis": "hypothesis: 7 处格式不一致已识别(MAC 大小写分裂 + 3 份 normalizeInterfaceName 副本 + 3 个 collector 写入路径绕过归一化 + 1 处 re"
+      },
+      {
+        "slug": "reconciliation-applied-actions-parse-error",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": ""
+      },
+      {
+        "slug": "reconciliation-health-misjudgment",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": ""
+      },
+      {
+        "slug": "reconciliation-normalized-mv-workstation-id-missing",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": ""
+      },
+      {
+        "slug": "reconciliation-workorder-role-id-not-exist",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": ""
+      },
+      {
+        "slug": "role-hooks-params-missing",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": "```yaml"
+      },
+      {
+        "slug": "scrapligo-getprompt-nil-panic",
+        "status": "awaiting_human_verify",
+        "updated": "2026-10-16",
+        "hypothesis": "test: 等待用户在生产/本地工作流中确认不再出现进程级 panic（原始症状：exit status 2 崩溃）"
+      },
+      {
+        "slug": "sys-dept-ou-mapping-table-not-exists",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": "### Hypothesis"
+      },
+      {
+        "slug": "vdi-cpu-display-issue",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": "**Hypothesis:**"
+      },
+      {
+        "slug": "vendor-commons-createcontext",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": "**Hypothesis:** 最近业务代码改动的过程中，新增或升级了某个第三方依赖；该依赖在模块顶层使用了 `React.createContext`，但其包路径未被 `manualChunks` "
+      },
+      {
+        "slug": "workstation-3f130-physical-link-empty",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": "hypothesis: 5F003 修复（commit 6575a1e7）已合入主干，移除 strict device_id JOIN 并改用 ip.device_id 作 MAC 锚点。3f130 "
+      },
+      {
+        "slug": "workstation-create-primary-device-serial-diag",
+        "status": "investigating",
+        "updated": "2026-06-26",
+        "hypothesis": "hypothesis: GORM tag `gorm:\"-:migration\"` on PrimaryDeviceSerial field does NOT skip the field durin"
+      },
+      {
+        "slug": "workstation-create-primary-device-serial",
+        "status": "unknown",
+        "updated": "",
+        "hypothesis": ""
+      },
+      {
+        "slug": "workstation-page-filter-miss",
+        "status": "diagnosed",
+        "updated": "2026-06-29",
+        "hypothesis": ""
+      },
+      {
+        "slug": "workstation-physical-link-zero",
+        "status": "awaiting_human_verify",
+        "updated": "2026-06-30",
+        "hypothesis": "**hypothesis**: ops_info_points.device_id 与 sys_device_port_status.device_id 漂移不一致（系统性问题，82% 工位受影响），"
+      }
+    ],
+    "quick_tasks": [
+      {
+        "slug": "fix-workstation-filter-loss",
+        "date": "20250610",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "filter-computer-accounts",
+        "date": "20250622",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "backend-optimize",
+        "date": "20260416",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "fix-update-request-id-validation",
+        "date": "20260526",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "ad-user-sync-dept-refactor",
+        "date": "20260527",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "fix-addn-field-name",
+        "date": "20260527",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "ou-user-sync",
+        "date": "20260527",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "remove-automap-add-ou-groups",
+        "date": "20260527",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "vdi-last-sync-time-fix",
+        "date": "20260527",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "ou-group-mapping",
+        "date": "20260528",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "vdi-create-vm",
+        "date": "20260529",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "vdi-vm-list-fix",
+        "date": "20260602",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "ad-user-rowselection-fix",
+        "date": "20260609",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "pre-existing-ts-errors",
+        "date": "20260613",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "merge-mac-trajectory-to-list-drawer",
+        "date": "20260630",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "startup-flow-classify",
+        "date": "20260630",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "ad-sync-fixes",
+        "date": "20261022",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "ad-domain-dept-sync-fixes",
+        "date": "20261023",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260519-fxt-25",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260520-jrp-request-encryption-config-toggle",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260521-ksr-1-exe-cmd-exe-main-exe-ruoyi-backend-exe",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260521-m45-clean-empty-folders",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260525-enhance-ou-management",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260525-w22-vdi-1-500-2-input-suffix-3-direction-ori",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260526-nij",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260526-nwn",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260526-pxd",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260527-commit-fixes",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260527-compile-test",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260527-enable-three-sync-tasks",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260527-gdc-ad-git",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260527-gra-user-adoudn",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260528-vxy-vdi-id-vdi-id-cpu",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260529-d95-vdi",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260529-ivp-vdi-vdi-test-standalone-go-host-id-run-p",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260529-j0l-vdi",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260529-j3y-vdi-host-id-run-position-id-vtp-id-vdi-t",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260602-jk9-vm-list-controls",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260602-k1b-vdi",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260604-cqo-nickname-username",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260604-unify-cache-key-naming",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260605-irs-plan-22b-02-callbackend-401-403-handler",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260609-009-asset-type-filter",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260610-device-source-refactor",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260610-workstation-device-expand",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260613-vp5-workstation-expand-fix",
+        "date": "",
+        "status": "manual verification pending",
+        "description": ""
+      },
+      {
+        "slug": "260614-rrk-id",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260626-dai-workstation-export-fields",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260626-n71-workstation-status-occupied-from-user",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "260703-asset-list-fields-remediation",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260703-dkc-xingran-react-frontend-src-pages-operation",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260703-eaj-b-schema-embed-xingran-react-frontend-src-",
+        "date": "",
+        "status": "missing",
+        "description": ""
+      },
+      {
+        "slug": "260704-ne5-database-go-migration-schema-seed-snapsh",
+        "date": "",
+        "status": "success",
+        "description": ""
+      },
+      {
+        "slug": "260712-vpj-mac-mac",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "261013-jf1-building-floor-count",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "261013-lqb-ops-buildings-total-floors",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "261014-ctp-create-update-count-total-floors",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "261021-iqq-drain-interval-hot-reload",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      },
+      {
+        "slug": "default-theme-config",
+        "date": "",
+        "status": "unknown",
+        "description": ""
+      }
+    ],
+    "threads": [],
+    "todos": [
+      {
+        "filename": "ad-push-enable-direction.md",
+        "priority": "medium",
+        "area": "",
+        "summary": "# AD 推送队列 enable 双向推送（恢复用户 → 自动重新启用 AD 账号）"
+      },
+      {
+        "filename": "v1.17-reconciliation-decisions.md",
+        "priority": "high",
+        "area": "",
+        "summary": "# v1.17 资产对账 — 决策点追踪与待办清单"
+      }
+    ],
+    "seeds": [],
+    "uat_gaps": [],
+    "verification_gaps": [],
+    "context_questions": [],
+    "deferred_items": []
+  }
+}

@@ -6,9 +6,9 @@
   "failures": [
     {
       "line": 73,
-      "claim": "xingran-backend-test.exe",
-      "expected": "file exists at xingran-backend-test.exe",
-      "actual": "file not found at D:\\CODE\\ClaudeCode\\xingran-go-backend\\xingran-backend-test.exe"
+      "claim": "ruoyi-backend-test.exe",
+      "expected": "file exists at ruoyi-backend-test.exe",
+      "actual": "file not found at D:\\CODE\\ClaudeCode\\ruoyi-go-backend\\ruoyi-backend-test.exe"
     }
   ]
 }

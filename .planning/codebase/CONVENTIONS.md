@@ -108,11 +108,11 @@ func GetXxxByIdKey(id string) string {
 Never hardcode cache key strings inline.
 
 ### Cache Prefix Handling
-Redis prefix `xingran:` is added automatically by the cache layer.
-- Store: `cache.Set(ctx, "user:1", value)` → Redis key `xingran:user:1`
-- When user input includes `xingran:` prefix, strip it before cache operations:
+Redis prefix `ruoyi:` is added automatically by the cache layer.
+- Store: `cache.Set(ctx, "user:1", value)` → Redis key `ruoyi:user:1`
+- When user input includes `ruoyi:` prefix, strip it before cache operations:
 ```go
-if strings.HasPrefix(key, "xingran:") {
+if strings.HasPrefix(key, "ruoyi:") {
     key = key[6:]
 }
 ```

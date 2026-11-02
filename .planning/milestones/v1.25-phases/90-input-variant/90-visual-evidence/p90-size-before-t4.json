@@ -1,0 +1,37 @@
+{
+ "login": {
+  "href": "http://localhost:4000/login",
+  "userInput": "15px",
+  "passwordInput": "15px",
+  "loginFormFound": true,
+  "loginFormInnerInput": "15px",
+  "loginFormWrapper": "16px",
+  "formClass": "ant-form ant-form-vertical ant-form-large css-var-_r_0_ ant-form-css-var css-dev-only-do-not-override-19u5a7b login-form",
+  "inputCount": 2
+ },
+ "knowledge": {
+  "href": "http://localhost:4000/dashboard",
+  "title": "xingran-react-frontend",
+  "kbSearchWrapper": null,
+  "kbSearchInner": null,
+  "kbWrapperCls": null,
+  "plainInput": null,
+  "hrefUsed": "/knowledge/view"
+ },
+ "globalSearch": {
+  "trigger": "CLICKED",
+  "modalFound": true,
+  "modalCls": "ant-modal css-dev-only-do-not-override-19u5a7b",
+  "wrapperFs": "16px",
+  "innerFs": "16px",
+  "wrapperCls": "ant-input-affix-wrapper ant-input-affix-wrapper-lg css-dev-only-do-not-override-19u5a7b ant-input-outlined css-var-_r_0_ ant-input-css-var ant-input-compact-item ant-input-compact-first-item",
+  "inputCount": 1
+ },
+ "systemUser": {
+  "plainInputFs": "14px",
+  "inputNumberRootFs": null,
+  "inputNumberInnerFs": null,
+  "inputNumberCount": 0
+ },
+ "tag": "before-t4"
+}

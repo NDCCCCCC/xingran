@@ -1,4 +1,4 @@
-# 🔍 XingRan-Next 后端代码审查总报告
+# 🔍 RuoYi-Next 后端代码审查总报告
 
 **报告日期**: 2026-06-12
 **审查范围**: `internal/` + `pkg/` 全部 Go 源码 (485 个文件)
@@ -30,9 +30,9 @@
 | # | 位置 | 问题 | 风险 |
 |---|------|------|------|
 | 1 | `internal/services/addomain/ldap_client.go:58` | `InsecureSkipVerify: true` 硬编码 | AD 流量 MITM,凭据窃取 |
-| 2 | `internal/services/addomain/utils.go:93-114` | AES 加密密钥硬编码 `"xingran-ad-domain-key-16"` | 二进制反汇编即可解密所有 AD 密码 |
+| 2 | `internal/services/addomain/utils.go:93-114` | AES 加密密钥硬编码 `"ruoyi-ad-domain-key-16"` | 二进制反汇编即可解密所有 AD 密码 |
 | 3 | `internal/services/addomain/utils.go:86` | 解密失败时回退明文 | 绕过加密保护 |
-| 4 | `internal/core/config.go:284` | JWT 默认密钥 `"xingran-next-secret-key"` | Token 可被伪造 |
+| 4 | `internal/core/config.go:284` | JWT 默认密钥 `"ruoyi-next-secret-key"` | Token 可被伪造 |
 | 5 | `pkg/middleware/request_decryption.go:138-160` | 解密后明文请求体被写入 INFO 日志 | **密码等敏感数据落盘** |
 | 6 | `pkg/middleware/request_decryption.go:158` | 错误响应暴露内部解密错误细节 | 帮助攻击者探测密钥/IV |
 | 7 | `pkg/middleware/websocket.go:34-40` | CORS 允许任意来源 + AllowCredentials:true | CSRF 盗用 token |
@@ -279,7 +279,7 @@
 ### 1. 严重问题 (P0 - 安全风险!)
 
 - **[ldap_client.go:58]** `InsecureSkipVerify: true` 硬编码 | AD 服务器 TLS 证书完全跳过验证,MITM 攻击;员工机器被植入 ARP 欺骗工具,所有 AD 同步流量被解密
-- **[utils.go:93-114]** AES 加密密钥硬编码 `xingran-ad-domain-key-16` | 编译后任何人反汇编二进制即可解密所有 AD bind 密码
+- **[utils.go:93-114]** AES 加密密钥硬编码 `ruoyi-ad-domain-key-16` | 编译后任何人反汇编二进制即可解密所有 AD bind 密码
 - **[utils.go:86]** `decryptPassword` 失败时回退明文 | 攻击者通过直接 SQL 注入写入伪加密字符串,绕过加密保护
 - **[user.go:38, ou.go:64, group.go:36 等]** 关键同步/查询无 `config_id` 二次校验 | 越权访问其他 AD 配置的数据
 - **[config.go:155-157]** 密码"留空不更新"逻辑过于隐式
@@ -327,7 +327,7 @@
 
 - **[core.go:140-145]** `Init()` 中数据库初始化失败时 `return nil`(吞错)
 - **[core.go:240-323]** `Init()` 全部子步骤错误均 `Warnf` 继续执行
-- **[config.go:284]** `jwt.secret_key` 默认值 `"xingran-next-secret-key"`
+- **[config.go:284]** `jwt.secret_key` 默认值 `"ruoyi-next-secret-key"`
 - **[database.go:150-151]** `AutoMigrate` 失败仅 `Warnf`
 - **[main.go:160-168]** pprof 和 Swagger 用 `cfg.Server.Mode != "release"` 弱判定
 

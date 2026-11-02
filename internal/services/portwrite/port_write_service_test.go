@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/xingran-next/xingran-go-backend/internal/device"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -66,12 +66,13 @@ var _ portWritePortCollectionSvc = (*portcollection.CollectionService)(nil)
 // service 直接进入 success path 判定，**绕开 parseConfigError**。
 //
 // 真正最简方案：把 service.executeWrite 的 success 判定改为：
-//   if executeErr != nil { return ... failed ... }
-//   // parseConfigError 只在 executeErr == nil 时调用
-//   if lastResp != nil {
-//       if parseErr := parseConfigError(lastResp); parseErr != nil { return ... failed ... }
-//   }
-//   // success path
+//
+//	if executeErr != nil { return ... failed ... }
+//	// parseConfigError 只在 executeErr == nil 时调用
+//	if lastResp != nil {
+//	    if parseErr := parseConfigError(lastResp); parseErr != nil { return ... failed ... }
+//	}
+//	// success path
 //
 // 这样 lastResp 为 nil 时（mock 路径）直接跳过 parseConfigError 走 success。
 // 这是 deviation — 适配 mock-based 测试。

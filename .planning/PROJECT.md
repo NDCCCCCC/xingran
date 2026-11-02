@@ -71,7 +71,7 @@ previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 
 **问题来源（用户实机截图 + v1.23 收档 Known Gaps）:**
 - **用户实机反馈（2026-10-28）**：「文本输入框的一键删除已经有了，但是有的输入框出现这种双重外框的情况」——外层浅灰圆角框内又套一层白色圆角输入框
-- **根因（已实证）**：`ruoyi-react-frontend/src/index.css:871` 的 `.ant-input { border: 1px solid var(--input-border) !important }` 命中了 antd 6 affix-wrapper 的**内层** input，antd 原生要求内层 `border: none`（边框只画在 wrapper 上）→ **双框**。v1.23 把 `allowClear` 默认化后，几乎所有 Input 都渲染为 affix-wrapper → 双框从少数变普遍
+- **根因（已实证）**：`xingran-react-frontend/src/index.css:871` 的 `.ant-input { border: 1px solid var(--input-border) !important }` 命中了 antd 6 affix-wrapper 的**内层** input，antd 原生要求内层 `border: none`（边框只画在 wrapper 上）→ **双框**。v1.23 把 `allowClear` 默认化后，几乎所有 Input 都渲染为 affix-wrapper → 双框从少数变普遍
 - **#16 行操作权限**：v1.23 UAT 实测「受限用户仍见 9 行编辑/删除按钮」。**已定责**：`src/pages/system/user/index.tsx:279-301` 操作列**无任何权限判定**（对比 `network/ports:132`、`asset/reconciliation:86`、`ad-domain:77` 均有判定）；生产 PG 实证：能进该页的只有 admin 与 xtgl 且都持完整写权限，故生产不复现，但配置只读角色即越权显示入口
 - **3f130 空因**：后端诊断端点 `POST /ops/workstation-device/:id/physical-diagnosis` 已交付（v1.23 commit `8b85fe6b`），**前端未接**——用户裁定本里程碑只做前端诊断展示，不写生产数据
 - **F5 刷新落 /dashboard**：v1.23 UAT 顺带发现的独立债

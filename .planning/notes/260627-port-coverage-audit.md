@@ -241,7 +241,7 @@ ELSE:
 ## 6. 关联项目记忆
 
 - `workstation-ad-device-managedby-vs-description` — MAC 关联优先于 AD managed_by
-- `xingran-migrations-no-sql-autoloader` — sys_port_mac 表结构定义
+- `ruoyi-migrations-no-sql-autoloader` — sys_port_mac 表结构定义
 - `stat-cards-from-list-length-capped-at-100` — 用 COUNT 不用 list.length
 
 ---

@@ -952,7 +952,6 @@ const InfoPointManagement: FC = () => {
                   className="user-form-input"
                   style={{ width: 120 }}
                   showSearch={false}
-                  onSearch={() => {}}
                   options={infoPointTypeDict.map((d) => ({
                     value: d.dictValue,
                     label: d.dictLabel,
@@ -967,7 +966,6 @@ const InfoPointManagement: FC = () => {
                   className="user-form-input"
                   style={{ width: 100 }}
                   showSearch={false}
-                  onSearch={() => {}}
                   options={INFO_POINT_STATUS_OPTIONS}
                 />
               </Form.Item>
@@ -1153,7 +1151,6 @@ const InfoPointManagement: FC = () => {
                     allowClear
                     placeholder="请选择类型"
                     showSearch={false}
-                    onSearch={() => {}}
                     options={infoPointTypeDict.map((d) => ({
                       value: d.dictValue,
                       label: d.dictLabel,
@@ -1170,7 +1167,6 @@ const InfoPointManagement: FC = () => {
                     allowClear
                     placeholder="请选择状态"
                     showSearch={false}
-                    onSearch={() => {}}
                     options={INFO_POINT_STATUS_OPTIONS}
                   />
                 </Form.Item>
@@ -1196,7 +1192,6 @@ const InfoPointManagement: FC = () => {
                       return searchText.includes(input.toLowerCase());
                     }}
                     optionLabelProp="label"
-                    onSearch={() => {}}
                     options={networkDevices.map((d) => {
                       const deviceName = d.deviceName || "未命名设备";
                       const fullName = `${deviceName} (${d.ipAddress})`;

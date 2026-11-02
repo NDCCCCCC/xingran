@@ -16,7 +16,7 @@ generated: 2026-07-08
 
 ## 1. Project Overview
 
-**XingRan-Next** is a Go backend + React frontend enterprise IT operations management system. It evolved from a workstation-import association feature (v1.0) into a multi-domain platform covering operations (buildings, floors, workstations, assets), network (device discovery, SNMP, Scrapli-based command execution, ports), identity (AD/LDAP, RBAC), and VDI (Sangfor). National cryptography (SM2/SM3/SM4) is mandatory on sensitive endpoints.
+**RuoYi-Next** is a Go backend + React frontend enterprise IT operations management system. It evolved from a workstation-import association feature (v1.0) into a multi-domain platform covering operations (buildings, floors, workstations, assets), network (device discovery, SNMP, Scrapli-based command execution, ports), identity (AD/LDAP, RBAC), and VDI (Sangfor). National cryptography (SM2/SM3/SM4) is mandatory on sensitive endpoints.
 
 **Core value:** End-to-end operational observability and auditability — every write action produces a traceable record (who, when, what, from-where, before/after-state) with sensitive fields auto-masked. Combined with Excel-driven bulk management, this gives operators a single trustworthy system-of-record for the entire IT estate.
 
@@ -129,7 +129,7 @@ generated: 2026-07-08
 - **D-09 real D-10 two-step on Huawei S8700 10GE5/0/4** → deferred (no live fiber port)
 - **D-09/D-11 real Ruijie RS8607E 627 rows with 352 `temprature*` noise** → deferred (no device; synthetic fixture validates filter rule, not exact 352 count)
 
-**Site-visit items:** 3 (all explicit deferrals per `.planning/milestones/v1.18-phases/48-device-component-serials-planned/48-HUMAN-UAT.md`)
+**Site-visit items:** 3 (all explicit deferrals per `.planning/phases/48-device-component-serials-planned/48-HUMAN-UAT.md`)
 
 ### Audit verdict (`48-VERIFICATION.md`)
 - `status: human_needed`
@@ -172,7 +172,7 @@ Aggregated from `48-CONTEXT.md <decisions>` + `48-VERIFICATION.md`:
 3. D-10 two-step pipeline on real Huawei S8700 10GE5/0/4 fiber interface (D-10)
 
 **Owner:** 现场运维同事 (on-site operations team)
-**Detail:** `.planning/milestones/v1.18-phases/48-device-component-serials-planned/48-HUMAN-UAT.md`
+**Detail:** `.planning/phases/48-device-component-serials-planned/48-HUMAN-UAT.md`
 
 ### Pre-existing Test Failures (NOT introduced by v1.18)
 Verified via `git stash` baseline on `b8fd2f45`:
@@ -182,7 +182,7 @@ Verified via `git stash` baseline on `b8fd2f45`:
 - `internal/services/operations/pagination_helper_test.go` — pagination drift
 - `internal/services/system/role_service_apperrors_test.go` — fixture state
 
-**11 failures documented in `.planning/milestones/v1.18-phases/48-device-component-serials-planned/deferred-items.md` as out-of-scope.**
+**11 failures documented in `.planning/phases/48-device-component-serials-planned/deferred-items.md` as out-of-scope.**
 
 ### Phase 49 Lessons Learned (per RETROSPECTIVE)
 - LSP false positives in worktree isolation
@@ -197,7 +197,7 @@ Verified via `git stash` baseline on `b8fd2f45`:
 ## 7. Getting Started
 
 ### Run the project
-- Backend dev: `go build -o xingran-backend.exe ./cmd/main.go`
+- Backend dev: `go build -o ruoyi-backend.exe ./cmd/main.go`
 - Frontend dev: `cd xingran-react-frontend && npm run dev`
 - See `CLAUDE.md` for full setup
 

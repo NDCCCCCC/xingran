@@ -18,7 +18,7 @@
 ## Cache Layer
 
 ### Redis 7.4
-- **L2 distributed cache** with `xingran:` key prefix
+- **L2 distributed cache** with `ruoyi:` key prefix
 - Connection: configurable via config or env vars (`REDIS_URL`, `REDIS_PASSWORD`)
 - Features:
   - Two-tier caching: L1 (in-memory) + L2 (Redis)

@@ -653,7 +653,6 @@ const APIKeyManagement: FC = () => {
                 onChange={(value) => setFilterStatus(value as boolean | undefined)}
                 style={{ width: 120 }}
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={[
                   { value: true, label: "启用" },
@@ -666,7 +665,6 @@ const APIKeyManagement: FC = () => {
                 onChange={(value) => setFilterScope(value as string | undefined)}
                 style={{ width: 120 }}
                 allowClear
-                onSearch={() => {}}
                 options={SCOPE_OPTIONS}
               />
               <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
@@ -787,7 +785,6 @@ const APIKeyManagement: FC = () => {
               mode="multiple"
               placeholder="请选择作用域"
               options={SCOPE_OPTIONS}
-              onSearch={() => {}}
               showSearch
             />
           </Form.Item>

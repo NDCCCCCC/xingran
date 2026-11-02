@@ -185,7 +185,6 @@ const ADSyncLogsPage: React.FC = () => {
             value={selectedConfigId}
             onChange={(value) => setSelectedConfigId(value as string | undefined)}
             showSearch={false}
-            onSearch={() => {}}
             options={configs.map((config) => ({ value: config.id, label: config.configName }))}
           />
           <Button icon={<ReloadOutlined />} onClick={fetchLogs}>

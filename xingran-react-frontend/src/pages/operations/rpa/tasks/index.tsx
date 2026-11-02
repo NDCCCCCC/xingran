@@ -204,7 +204,6 @@ const TaskManagement: FC = () => {
                   allowClear
                   style={{ width: 150 }}
                   showSearch={false}
-                  onSearch={() => {}}
                   options={TASK_SEARCH_STATUS_OPTIONS}
                 />
               </Form.Item>

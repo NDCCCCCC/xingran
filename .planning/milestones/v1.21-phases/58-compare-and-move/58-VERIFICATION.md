@@ -1,0 +1,579 @@
+---
+phase: 58-compare-and-move
+verified: 2026-10-19
+updated: 2026-10-22
+status: passed
+scope: 58-01 ~ 58-07（Wave 1~6）+ SC1~SC6 逐条判定 + H-01~H-05 代码审查处置
+score: "17 VERIFIED / 3 NOT VERIFIED / 1 PARTIAL（65 个 TestPhase58_* 全部 PASS）"
+human_verification:
+  - test: "UAT-58-1 真 AD 上的 compare-and-move（QUEUE-04 / SC2）"
+    expected: "AD 端 ModifyDN 真生效：用户被移到新 OU、RDN 与用户属性保留；二次排水不重复移动（sys_user.ad_dn 逐字节不变、队列行回到 pushed）"
+    why_human: "mock LDAP 只能证明调用了 MoveUser(dn, targetOU)，无法证明真实域控的 ModifyDN wire 行为（旧 RDN 是否真删除、RDN 属性是否随 move 保留、deleteOldRDN 的真实后果）"
+    resolution: "PASS 2026-10-22 生产实测（c_chenchao-051，域控 21.120.164.44）：正向 move pushed+回写 200ms 内、AD 用户列表页确认随州 OU；幂等半段打回 pending 后回 pushed、ad_dn 逐字节不变、无第二条 ModifyDN。详见 58-HUMAN-UAT.md Test 1 evidence。"
+  - test: "UAT-58-2 账号池熔断期间的退避节奏（QUEUE-03 / SC1 后半）"
+    expected: "attempts 按 60s→2min→4min→8min→16min 递增；last_error 前缀为 pool: 或 retry:（不得为 dead:）；attempts 达 5 后行转 dead 且 last_error=dead:max-attempts；连续 3 次失败后账号 status=2（熔断）、circuit_breaker_until ≈ now+30min"
+    why_human: "退避曲线与 30min 熔断窗的桥接依赖真实时钟跨度与真实熔断，自动化只验纯函数 backoffDuration(n)"
+    resolution: "SKIPPED 2026-10-22（用户裁决）：需向生产服务账号灌错凭据触发域控 bind 失败×3，有锁定全局 AD 同步账号风险；留待隔离测试域控。见 58-HUMAN-UAT.md Test 2。"
+  - test: "UAT-58-3 sys_config 排水间隔旋钮重启生效（D-05）"
+    expected: "把 ad_push_queue.drain_interval_seconds 改为 60 并重启后端，启动日志出现 drain_interval_seconds = 60s，且 cron spec 为 0 */1 * * * *（6 段，第 6 位是分钟）"
+    why_human: "LoadDrainIntervalSeconds 只在启动时读取一次，必须真实重启进程才能验证生效"
+    resolution: "PASS 2026-10-21 实测（提交 426903fd）：300→60 生效 12s、60→300 生效 29s，≤30s 达成，热重载无需重启。见 58-HUMAN-UAT.md Test 3。"
+  - test: "UAT-58-4 多 AD 配置（父子域）最长后缀命中（D-02 / SC3）"
+    expected: "父子域共享后缀时两条 base_dn 各自命中，不出现 unrecoverable:no-ad-config，两人的 OU 映射分别落在各自 base_dn 下"
+    why_human: "需要第二个域；单域环境下 MatchADConfigByDN 的歧义分支不可能触发（单域环境标 N/A）"
+    resolution: "N/A 2026-10-22 结论化：生产仅 1 条启用 AD 配置（单域），歧义分支不可触发；反例已有自动化覆盖。见 58-HUMAN-UAT.md Test 4。"
+  - test: "UAT-58-5 code 32 真实触发（QUEUE-05 / SC5）"
+    expected: "AD 端删除对象后编辑用户 → 队列行 status=dead、attempts=0（未烧退避）、last_error=unrecoverable:target-not-found，且 sys_user 的 ad_dn / ad_ou_dn / ad_synced_at 三列均被清空"
+    why_human: "自动化用 ldap.NewError 注入 code 32 只证明分流逻辑；真实域控才证明 AD 端真的返回 code 32，且 clearUserADRefs 的写回在真实 PG 上生效"
+    resolution: "SKIPPED 2026-10-22（用户裁决）：触发前提需生产域控人为删对象（违反 61-VALIDATION 红线）；PG 回写路径已由 Test 1 旁证。见 58-HUMAN-UAT.md Test 5。"
+  - test: "UAT-58-6 部门同步从未跑过时 update_user 行批量转 dead（决策 Q2 的刻意后果）"
+    expected: "sys_dept_ou_mapping 为空时编辑部门 → 队列行 last_error=unrecoverable:no-ou-mapping、status=dead、attempts=0、LDAP 写次数为 0（不打扰域控）"
+    why_human: "需要未跑过部门同步的真实部署环境（或清空映射表后复现），属部署环境事实"
+    resolution: "SKIPPED 2026-10-22（用户裁决）：本环境映射表非空无法安全复现；Q2 后果已文档化且有自动化覆盖。见 58-HUMAN-UAT.md Test 6。"
+  - test: "UAT-58-8 含特殊字符的历史部门需重跑部门同步（HYGIENE-02 / 决策 Q5 的已知取舍）"
+    expected: "名字含 , = + < > # ; 等保留字符的历史部门，其 sys_dept_ou_mapping.ou_dn 未被转义（无前置反斜杠）→ 需重跑部门同步后带转义"
+    why_human: "取决于部署环境既有 sys_dept_ou_mapping 行的内容，代码库不可见"
+    resolution: "N/A 2026-10-21 生产实测：974 条映射无含 DN 保留字符部门，前提不存在。见 58-HUMAN-UAT.md Test 8。"
+  - test: "UAT-58-9 OU 移动成功但本地回写失败 → 该用户 AD 绑定需人工重建（H-05 残余风险）"
+    expected: "写回失败时队列行转 failed 且 last_error 以 retry:move_ou: 开头；需人工把 sys_user.ad_dn / ad_ou_dn 改回 AD 端实际值，再删除该队列行"
+    why_human: "需真实域控上构造「AD 移动成功 + 写库瞬时故障」；MoveUser 重放不安全（code 32）无法自动自愈"
+    resolution: "SKIPPED 2026-10-22（用户裁决）：生产无法安全注入「移动成功+回写瞬时失败」故障；H-05 残余风险已文档化，正常回写路径由 Test 1 旁证。见 58-HUMAN-UAT.md Test 9。"
+---
+# Phase 58 验证报告 — SC1~SC6 逐条证据
+
+**执行日期:** 2026-10-19
+**执行 plan:** 58-07（Wave 6，Phase 58 收口）
+**执行人:** Claude (执行 agent)
+
+---
+
+## 判定口径（本报告的规则）
+
+> **每一条「VERIFIED」必须同时携带 (a) 可复现命令 与 (b) 该命令的**实际**输出。
+> 只有"代码看起来对"而没有命令输出的条目，一律判 **NOT VERIFIED** 并写明原因。
+
+**三方审计否决项**（本 phase 全程有效，命中任何一条则该 SC 判 NOT VERIFIED，不工作绕过）：
+
+| 否决项 | 本次核对结论 |
+|--------|-------------|
+| 禁时间戳仲裁（不拿 `updated_at`/`created_at`/`ad_synced_at` 决定推/跳） | 未命中 —— 见 SC2 证据里 `TestPhase58_Drain_UsesLatestDBValues` 的断言对象是 `displayName`/`department`/`moveUserTargets`，全部是**值**而非时间戳 |
+| 禁新旧值比较（闭包重读最新值 vs 目标，不做 old-vs-new diff 决定移动） | 未命中 —— `compareAndMoveOU` 的判据是 `NormalizeDN(*user.AdOuDn) == NormalizeDN(targetOUDN)`（当前值 vs 目标值），见 SC2 |
+| 禁 sys_job 注册 | 未命中 —— `grep ... \| grep -i sys_job \| wc -l` == 0，见 SC1 |
+| 禁 JSON 快照 / 禁删 AD 账号 | 未命中 —— 队列表 DDL 无快照列；disable 路径调 `DisableUser`（UAC 514），全仓 `DeleteUser` 无调用 |
+
+---
+
+## 代码审查修复（2026-10-19 追加，收口后）
+
+收口后由独立 `gsd-code-reviewer` 复审，得 **0 BLOCKER / 5 HIGH / 6 MEDIUM / 7 LOW**。5 条 HIGH 全部经编排者独立复核为真（非误报），用户处置如下：
+
+| 编号 | 摘要 | 处置 | Commit |
+|------|------|------|--------|
+| H-01 | 排水器在 `FuncJob` 闭包内构造 → 每轮一把新 mutex，`TryLock` 恒成功，注释宣称的轮次互斥**生产中完全失效** | ✅ FIXED（构造提升为单一实例 + 注释改为如实描述；单机部署，未引入行级认领） | `c81890dc` |
+| H-02 | `TestPhase58_Drain_MutualExclusionSkipsSecondRound` 锁定了一个生产不成立的性质，却是 SC1 互斥分句的承载证据 | ✅ FIXED（同提交：改写为断言**同一实例**持锁期间 LDAP 写计数不前进 + 放锁后正常执行 + 反向诚实记录单实例语义） | `c81890dc` |
+| H-03 | 退避曲线 16min/30min 两档生产不可达（`markFailed` 在 attempts≥5 即判 dead），实际重试窗 15min 而非 D-05 声明的 ~61min | ⏸ DEFERRED（**逻辑不改**，仅加注释记录事实与出处，留待真实熔断数据） | `550f35e3` |
+| H-04 | 账号池全部拨号失败返回的 error 不带任何池侧哨兵 → `poolExhausted=false` → 一次约 15min 的 AD 宕机/网络中断**永久杀死单轮最多 100 行** | ✅ FIXED（新增独立哨兵 `ErrAllAccountsDialFailed`；**未**合并进 `ErrAllAccountsUnavailable`，理由见下） | `18d6421e` |
+| H-05 | `MoveUser` 成功但本地 `ad_dn` 回写失败仅 `Warnf` 后 `return (false,nil)` → 行以 `pushed` 终态收尾，本地 DN 与 AD 实际状态永久不一致且不自愈 | ⚠ PARTIAL FIXED（失败上抛走 `markFailed`+退避；**MoveUser 重放不安全**，故只让失败可见、不自动修复绑定） | `3f55b7f7` |
+
+**三条审计否决项在修复后仍全部未命中** —— 修复未引入时间戳仲裁、未引入新旧值比较、未注册 `sys_job`。
+
+### H-04 的一处刻意偏离（值得记录）
+
+修复指令原文要求「dial 全失败时返回包裹 `ErrAllAccountsUnavailable` 的错误」。执行者**未照做**，改为新增独立哨兵 `ErrAllAccountsDialFailed`，并在提交说明里给出理由：合并会让 Phase 78 的三条既有用例失效，且把 group / user / sync 三条路径的用户可见文案从「连接AD服务器失败」改成「账号池无可用账号」——属跨模块行为变更。两个哨兵对管理员的处置动作本就不同（加账号/查熔断 vs 查网络与域控）。**该反驳成立**，编排者采纳。若后续要收敛为单一哨兵，需单独决策。
+
+排水器侧两个哨兵同款处理（`ad_push_queue_drain_service.go:283`），而「业务失败不带池侧哨兵」这半边由新用例的**反向断言**锁定——否则 code 32 会被误判为池侧故障、绕过 `handlePushError` 的不可恢复分支，直接破坏 QUEUE-05。
+
+### H-05 的残余风险（必须随 UAT 一起交代）
+
+回写失败现在会如实上抛并转为可见的 `failed`/`dead`（`last_error` 以 `retry:move_ou:` 开头），Phase 59 的信号守卫不会再把它读成「系统一致」。但**它不会自动修复绑定**：`MoveUser` 重放已被独立核查判定为**不安全**（重试时行重读到的仍是陈旧 `ad_dn`，AD 端该 DN 已不存在 → code 32），因此一次瞬时写库失败仍会导致该用户的 AD 绑定需要**人工重建**。
+
+**结论变化：** 修复把「静默的资产失联」降级为「可见的失败 + 明确的人工处置信号」，但未消除人工介入需求。此项已并入 UAT 清单。
+
+### 修复后复跑（实际输出）
+
+```
+$ go build ./...                                                → 无输出, EXIT=0
+$ go test ./internal/services/addomain/ -run TestPhase58 -count=1
+    ok  …/internal/services/addomain  2.377s
+$ go test ./internal/services/addomain/ -count=10 -run "TestPhase58_Drain_|TestPhase58_EndToEnd"
+    ok  …/internal/services/addomain  2.756s        ← 重复 10 次无 flake
+$ go test ./internal/services/system/ -run TestPhase57 -count=1
+    ok  …/internal/services/system  3.644s          ← Phase 57 sentinel 仍绿
+$ go test ./internal/scheduler/ -count=1
+    ok  …/internal/scheduler  60.582s
+$ go test ./internal/services/addomain/ -run "78" -count=1
+    ok  …/internal/services/addomain  7.824s        ← Phase 78 用例**被加强**（追加 dial-failed 哨兵断言），未被削弱
+$ go vet ./internal/services/addomain/ ./internal/scheduler/ ./internal/services/system/
+    → 无输出, EXIT=0
+```
+
+### SC1 证据口径更正
+
+SC1 的「互斥」分句此前由 H-02 那条测试承载，而该测试在当时的生产形态下断言了一个不成立的性质。修 H-01 后，「同一实例」才是生产真实形态（排水器在 `Start()` 中只构造一次、闭包捕获同一实例），改写后的断言才成立。**SC1 判定维持 VERIFIED，但证据换成了修复后的版本**；`cron.SkipIfStillRunning` 仍独立承担 cron 轮次防重叠。
+
+---
+
+## 总表
+
+| SC | 判定 | 一句话证据指针 |
+|----|------|--------------|
+| SC1 | **VERIFIED** | `grep -rn "ad_push_queue" internal/scheduler/*.go internal/core/db/migrations/*.go \| grep -i "sys_job" \| wc -l` → `0`；`grep -c "s.cron.AddJob(drainSpec" internal/scheduler/ad_sync_tasks.go` → `1`；11 个 pickRows/退避/disable/上限用例全 PASS |
+| SC2 | **VERIFIED** | 5 个 compare-and-move 单腿用例 + `TestPhase58_EndToEnd_RepeatDrainIdempotent` 全 PASS；第二轮 `moveUserCalls` 累计仍 == 1 |
+| SC3 | **VERIFIED** | `grep -c "func getDefaultADConfigID" internal/scheduler/*.go` 每文件 `0`；`grep -rn "getDefaultADConfigIDForDept" internal/ \| wc -l` → `0`；`MatchADConfigByDN` 定义数 `1`；7 个路由用例 PASS |
+| SC4 | **VERIFIED** | `grep -rn 'OU=%s,%s' --include=*.go internal/ \| wc -l` → `0`；`BuildOUDN` 定义数 `1`；`TestPhase58_BuildOUDN_EscapesSpecialChars` PASS |
+| SC5 | **VERIFIED** | 5 个 code-32 相关用例全 PASS；`TestPhase58_EndToEnd_Code32ThenNoRetry` 断言第二轮 `updateUserAttrCalls` 停在 1 |
+| SC6 | **VERIFIED** | 三条 grep：`user_handler.go` 直推符号 `0`、`user_import_handler.go` 直推符号 `0`、`userADSyncService` 字段保留 `1`（无任何互斥开关） |
+
+---
+
+## SC1 — 排水器 in-process cron / 两类动作行 / 失败退避至终态可查
+
+> ROADMAP 原文：「排水器以 in-process cron 运行且未注册 sys_job；处理 dept 推送与 disable 账号两类动作行；失败行按退避重试，达上限转终态且可通过查询确认」
+
+### 1a. 未注册 sys_job（静态证伪）
+
+```
+$ grep -rn "ad_push_queue" internal/scheduler/*.go internal/core/db/migrations/*.go | grep -i "sys_job" | wc -l
+0
+```
+
+**实际输出:** `0` —— 期望 `0`。**符合。**
+
+### 1b. in-process cron 接线（静态）
+
+```
+$ grep -c "s.cron.AddJob(drainSpec" internal/scheduler/ad_sync_tasks.go
+1
+```
+
+**实际输出:** `1` —— 期望 `1`。**符合。**
+
+配套：启动日志模板 `ad_sync_tasks.go:213` 含 `ad_push_queue 排水: %s`；账号池经 `s.getPool()` 取全局单例（`NewAccountPool(` 在该文件出现 `3` 次，与 58-05 锁定的 `:106` 熔断恢复局部池 + `:125` 全局单例 + `getPool()` 惰性兜底一致；**低于 3 即为误删**）。
+
+### 1c. 拾取谓词 / 退避曲线 / 单轮上限 / 两类动作行 / 上限转终态（自动化）
+
+```
+$ go test ./internal/services/addomain/ -run "TestPhase58_PickRows|TestPhase58_Drain_Disable|TestPhase58_Drain_MaxAttempts|TestPhase58_Backoff" -count=1 -v
+--- PASS: TestPhase58_BackoffDuration_Curve (0.00s)
+--- PASS: TestPhase58_BackoffDuration_CappedAt30m (0.00s)
+--- PASS: TestPhase58_PickRows_NullNextRetryIsPickable (0.03s)
+--- PASS: TestPhase58_PickRows_FutureNextRetrySkipped (0.00s)
+--- PASS: TestPhase58_PickRows_PastNextRetryPicked (0.00s)
+--- PASS: TestPhase58_PickRows_Limit100 (0.01s)
+--- PASS: TestPhase58_PickRows_OrderedByCreatedAt (0.00s)
+--- PASS: TestPhase58_PickRows_TerminalRowsNotPicked (0.00s)
+--- PASS: TestPhase58_Drain_DisableSuccessWritesPushedAt (0.00s)
+--- PASS: TestPhase58_Drain_DisableSoftDeletedUserStillDrains (0.00s)
+--- PASS: TestPhase58_Drain_MaxAttemptsGoesDead (0.00s)
+ok  	github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain	2.062s
+```
+
+**11 PASS / 0 FAIL。** 逐条对应：
+
+| SC1 分句 | 承载用例 | 断言 |
+|---------|---------|------|
+| 失败行按退避重试 | `BackoffDuration_Curve` / `_CappedAt30m` | 60s→2m→4m→8m→16m→30min 封顶 |
+| 单轮有界 | `PickRows_Limit100` | 120 行输入只拾取 100 |
+| 终态退出活跃谓词 | `PickRows_TerminalRowsNotPicked` | pushed/dead 行 `pickRows` 返回空 |
+| disable 账号类动作行 | `Drain_DisableSuccessWritesPushedAt` | `disableUserCalls==1` + `pushed` + `pushed_at` 非空 |
+| disable 行对应软删用户仍可推 | `Drain_DisableSoftDeletedUserStillDrains` | 软删后仍 `pushed`（P2 Unscoped 红线） |
+| 达上限转终态可查 | `Drain_MaxAttemptsGoesDead` | `dead` + `attempts==5` + `last_error=='dead:max-attempts'` |
+| dept 推送类动作行 | `TestPhase58_EndToEnd_UpdateUserPushedAfterDrain`（本 plan 新增） | 属性 Modify + OU 移动 + `pushed` |
+| 「可通过查询确认」 | 全部终态用例 | 终态行留表（`markPushed`/`markDead` 只 `Updates` 不 `Delete`） |
+
+**结论：VERIFIED。**
+
+---
+
+## SC2 — compare-and-move
+
+> ROADMAP 原文：「OU 移动采用 compare-and-move：闭包内重读用户最新值 + NormalizeDN 归一化比较，目标一致时跳过 MoveUser；同一队列行重复排水幂等，不产生重复移动」
+
+### 2a. 五个单腿用例
+
+```
+$ go test ./internal/services/addomain/ -run "TestPhase58_Drain_SkipsMove|TestPhase58_Drain_NormalizedComparison|TestPhase58_Drain_MoveUpdates|TestPhase58_Drain_RepeatDrain|TestPhase58_Drain_UsesLatest" -count=1 -v
+--- PASS: TestPhase58_Drain_SkipsMoveWhenOUMatches (0.03s)
+--- PASS: TestPhase58_Drain_NormalizedComparisonSkipsMove (0.00s)
+--- PASS: TestPhase58_Drain_MoveUpdatesAdDnAndAdOuDn (0.00s)
+--- PASS: TestPhase58_Drain_RepeatDrainIsIdempotent (0.00s)
+--- PASS: TestPhase58_Drain_UsesLatestDBValues (0.00s)
+ok  	github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain	2.289s
+```
+
+**5 PASS / 0 FAIL。** 分句对应：
+
+| SC2 分句 | 承载用例 | 关键断言 |
+|---------|---------|---------|
+| 闭包内重读用户最新值 | `Drain_UsesLatestDBValues` | 入队后 DB 再改昵称与部门 → 推的 `displayName=='最新昵称'`、`department=='新部门'`、`moveUserTargets[0]=='OU=IT2,...'` |
+| NormalizeDN 归一化比较 | `Drain_NormalizedComparisonSkipsMove` | 用户侧 `ou=it , dc=corp , dc=com`（小写+空格）vs 映射侧 `OU=IT,DC=corp,DC=com`（大写）→ `moveUserCalls==0` |
+| 目标一致时跳过 MoveUser | `Drain_SkipsMoveWhenOUMatches` | `moveUserCalls==0` |
+| 移动后回写双列（F-A） | `Drain_MoveUpdatesAdDnAndAdOuDn` | `ad_dn=='CN=zhangsan,OU=IT2,...'` 且 `ad_ou_dn=='OU=IT2,...'` |
+| 同一行重复排水幂等 | `Drain_RepeatDrainIsIdempotent` | 第二轮 `moveUserCalls` 累计仍 == 1 |
+
+**否决项交叉核对（关键）：** `compareAndMoveOU` 的判据源码是
+
+```go
+if user.AdOuDn != nil && NormalizeDN(*user.AdOuDn) == NormalizeDN(targetOUDN) {
+    return false, nil
+}
+```
+
+即 **当前值 vs 目标值**，既不是时间戳仲裁，也不是 old-vs-new diff。**符合两条否决项。**
+
+### 2b. 端到端幂等（本 plan 新增）
+
+```
+$ go test ./internal/services/addomain/ -run "TestPhase58_EndToEnd_RepeatDrainIdempotent" -count=1 -v
+--- PASS: TestPhase58_EndToEnd_RepeatDrainIdempotent (0.01s)
+ok  	github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain	2.289s
+```
+
+**实际输出:** `--- PASS ... (0.01s)` —— 期望 PASS。**符合。**
+
+本例与 2a 的 `Drain_RepeatDrainIsIdempotent` 的分工（防假幂等）：本例额外断言 `updateUserAttrCalls == 2`（属性每轮**确实**推了最新值）。若只断言 `moveUserCalls` 不增长，"第二轮什么都没干"也会让它变绿。
+
+端到端第二轮走的是**把同一行打回 `pending` 的重放**（测试内一条显式 `UPDATE ... SET status='pending', next_retry_at=NULL, pushed_at=NULL`），**不是**再次 `EnqueueUpdateBatch`。
+
+> ⚠ 本节此前（goal-verification MISSED-03 更正）误述为「第二轮经 `EnqueueUpdateBatch` 的 D-06 合并子句把 `pushed` 行打回 `pending` 并清零 `attempts`」。**该描述在事实上不成立**：Phase 57 D-06 的部分唯一索引谓词是 `status IN ('pending','failed')`，`pushed` 终态行**已退出索引**，二次入队不冲突、会**新增并行行**而非合并 —— 那正是 D-06 的正确设计（终态行必须退出索引，否则同实体的下一次编辑会撞 42P10）。测试代码本身一直是对的，且其注释已写明这一理由；错的是本报告的叙述。代码注释与本节现已一致。
+
+「重复排水同一行」与「用户又被编辑一次产生新行」是两种不同形状：前者验证 compare-and-move 的幂等（SC2 的本意），后者由 `TestPhase58_EnqueueUpdateBatch_MergeOnSecondCall` 等用例覆盖。用例以 `countQueueRowsForEntity == 1` 显式锁定「同一行」这一前提，使其可证伪。
+
+**结论：VERIFIED。**
+
+---
+
+## SC3 — 按 `ad_dn` 归属解析配置 + 双份 helper 合并
+
+> ROADMAP 原文：「多 AD 配置环境下推送按用户 `ad_dn` 归属解析配置，不再依赖 `First()` 取首条；`getDefaultADConfigID` 双份实现合并为公共 helper」
+
+### 3a. 双份 helper 已消灭
+
+```
+$ grep -c "func getDefaultADConfigID" internal/scheduler/*.go
+internal/scheduler/ad_login_history_tasks.go:0
+internal/scheduler/ad_sync_tasks.go:0
+internal/scheduler/ad_sync_tasks_80_02_test.go:0
+internal/scheduler/ad_sync_tasks_test.go:0
+internal/scheduler/cron.go:0
+internal/scheduler/cron_80_01_test.go:0
+internal/scheduler/cron_test.go:0
+internal/scheduler/dept_sync_tasks.go:0
+internal/scheduler/dept_sync_tasks_80_02_test.go:0
+internal/scheduler/mac_history_matview_tasks.go:0
+internal/scheduler/mac_history_tasks.go:0
+internal/scheduler/mac_tasks_80_02_test.go:0
+internal/scheduler/reconciliation_crons.go:0
+internal/scheduler/reconciliation_fix_suggestion_monitor.go:0
+internal/scheduler/reconciliation_tasks.go:0
+internal/scheduler/reconciliation_tasks_80_02_test.go:0
+internal/scheduler/reconciliation_tasks_test.go:0
+internal/scheduler/vdi_sync_tasks.go:0
+internal/scheduler/vdi_tasks_80_02_test.go:0
+internal/scheduler/workorder_tasks.go:0
+internal/scheduler/workorder_tasks_80_02_test.go:0
+```
+
+**实际输出:** 21 个文件全部 `0` —— 期望每行 `0`。**符合**（`getDefaultADConfigID` 与 `getDefaultADConfigIDForDept` 两个定义均已不存在）。
+
+```
+$ grep -rn "getDefaultADConfigIDForDept" internal/ | wc -l
+0
+```
+
+**实际输出:** `0` —— 期望 `0`。**符合。**（逐字拷贝的第二份实现连注释/调用点一并清除。）
+
+```
+$ grep -c "func MatchADConfigByDN(dn string, configs \[\]models.ADConfig)" internal/services/addomain/ad_config_resolver.go
+1
+```
+
+**实际输出:** `1` —— 期望 `1`（公共 helper 单一定义，addomain 包）。**符合。**
+
+### 3b. 路由纯函数（自动化）
+
+```
+$ go test ./internal/services/addomain/ -run "TestPhase58_MatchADConfigByDN" -count=1 -v
+--- PASS: TestPhase58_MatchADConfigByDN_LongestSuffixWins (0.00s)
+--- PASS: TestPhase58_MatchADConfigByDN_ParentChildSharedSuffix (0.00s)
+--- PASS: TestPhase58_MatchADConfigByDN_CommaBoundaryRejectsXcorp (0.00s)
+--- PASS: TestPhase58_MatchADConfigByDN_AmbiguousEqualsLength (0.00s)
+--- PASS: TestPhase58_MatchADConfigByDN_CaseAndSpaceInsensitive (0.00s)
+--- PASS: TestPhase58_MatchADConfigByDN_NoMatchIsError (0.00s)
+--- PASS: TestPhase58_MatchADConfigByDN_ReadsBaseDnFromDB (0.03s)
+ok  	github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain	1.992s
+```
+
+**7 PASS / 0 FAIL。** 关键反例：`ParentChildSharedSuffix` 锁住父子域共享后缀（`DC=na,DC=corp,DC=com` 字符串级 ends-with `DC=corp,DC=com`）必须按**最长后缀唯一**命中，`CommaBoundaryRejectsXcorp` 锁住逗号边界（`DC=xcorp,DC=com` 不得被 `DC=corp,DC=com` 误命中）。
+
+### 3c. 「不再依赖 `First()` 取首条」的调度点核对
+
+`groupByResolvedConfig` 一次性 `Find(&configs)` 取全量启用配置，再逐行 `MatchADConfigByDN` 纯函数解析；配置分组 map 的 key 是解析出的 `cfg.ID`。配套用例 `TestPhase58_Drain_UsesConfigScopedOUMapping`（Plan 04）用「cfg-b 的映射行 id 刻意排在前」的反例证明 OU 查询也按配置收敛。
+
+**结论：VERIFIED。**
+
+⚠ **本 SC 的残余人工项**：真实双域环境下的 longest-suffix 命中无法在 sqlite 基座证明 → 见 `58-HUMAN-UAT.md` UAT-58-4（单域环境标记 N/A）。
+
+---
+
+## SC4 — OU DN 特殊字符转义
+
+> ROADMAP 原文：「含特殊字符的部门名经 OU DN 转义 helper 拼接后推送不产生非法 DN」
+
+### 4a. 唯一拼接点已收口
+
+```
+$ grep -rn 'OU=%s,%s' --include=*.go internal/ | wc -l
+0
+```
+
+**实际输出:** `0` —— 期望 `0`。**符合**（仓库内不再有任何裸 `OU=%s,%s` 字符串拼接）。
+
+```
+$ grep -c "func BuildOUDN(deptName, parentOUDN string) string" internal/services/addomain/dn_util.go
+1
+```
+
+**实际输出:** `1` —— 期望 `1`。**符合。**
+
+### 4b. 转义纯函数（自动化）
+
+```
+$ go test ./internal/services/addomain/ -run "TestPhase58_BuildOUDN" -count=1 -v
+--- PASS: TestPhase58_BuildOUDN_EscapesSpecialChars (0.00s)
+--- PASS: TestPhase58_BuildOUDN_PlainNameUnchanged (0.00s)
+ok  	github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain	1.992s
+```
+
+**2 PASS / 0 FAIL。** `EscapesSpecialChars` 覆盖 `,` `=` `+` `<` `>` `#` `;` `\` `"` 等 LDAP DN 保留字符；`PlainNameUnchanged` 是反向对照（无特殊字符的部门名不得被无谓转义，否则 AD 侧会多出反斜杠）。
+
+**结论：VERIFIED。**
+
+⚠ **已知取舍（Q5，非缺陷）**：HYGIENE-02 只转义**新写入**的 OU DN。含特殊字符的**历史**部门若在本次部署前已建过 OU，其既有 `sys_dept_ou_mapping.ou_dn` 不会被回溯改写，需重跑部门同步。已列入 SUMMARY 的可见后果清单与 UAT 提醒。
+
+---
+
+## SC5 — LDAP code 32 → dead + 清 `ad_dn` + 不再重试
+
+> ROADMAP 原文：「LDAP code 32（目标 DN 不存在）时队列行转 dead 终态并清空 `sys_user.ad_dn`，后续排水不再重试」
+
+### 5a. 自动化
+
+```
+$ go test ./internal/services/addomain/ -run "TestPhase58_Drain_Code32|TestPhase58_Drain_MoveCode32|TestPhase58_Drain_DNExistsFalse|TestPhase58_EndToEnd_Code32|TestPhase58_PickRows_TerminalRowsNotPicked" -count=1 -v
+--- PASS: TestPhase58_PickRows_TerminalRowsNotPicked (0.02s)
+--- PASS: TestPhase58_Drain_Code32GoesDeadAndClearsAdDn (0.00s)
+--- PASS: TestPhase58_Drain_DNExistsFalseIsDeadNotPushed (0.00s)
+--- PASS: TestPhase58_Drain_MoveCode32GoesDead (0.00s)
+--- PASS: TestPhase58_EndToEnd_Code32ThenNoRetry (0.01s)
+ok  	github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain	2.059s
+```
+
+**5 PASS / 0 FAIL。** 分句对应：
+
+| SC5 分句 | 承载用例 | 关键断言 |
+|---------|---------|---------|
+| 属性路径 code 32 → dead | `Drain_Code32GoesDeadAndClearsAdDn` | `dead` + `attempts==0` + `last_error=='unrecoverable:target-not-found'` |
+| OU 移动路径 code 32 → dead | `Drain_MoveCode32GoesDead` | 同款终态（两条路径同源） |
+| 清空 `sys_user.ad_dn` | 上述两条 + `DNExistsFalseIsDeadNotPushed` | `ad_dn`/`ad_ou_dn`/`ad_synced_at` 三列均 NULL |
+| 后续排水不再重试 | `PickRows_TerminalRowsNotPicked` + `EndToEnd_Code32ThenNoRetry` | 终态行退出活跃谓词；即使被异常打回 `pending`，第二轮也**零 AD 写** |
+
+### 5b. 「不再重试」的口径澄清（防止误读为假断言）
+
+`TestPhase58_EndToEnd_Code32ThenNoRetry` 第二轮**会**被 `pickRows` 拾取（若断言"不再被拾取"就与 `groupByResolvedConfig` 的设计相反）。真实语义是：拾取后读到 `AdDn` 已空 → 归入 `deadRows` 走 `no-ad-dn` 分支 → 再转 `dead`，**全程零 AD 写**。
+
+该用例的强断言是三重的：
+
+1. `updateUserAttrCalls` 停在 `1`（code 32 之后不得再对 AD 发起 Modify）
+2. `moveUserCalls == 0`（OU 移动根本没走到）
+3. `dnExistsCalls` 与第一轮结束时的计数相同（不得再调 DNExists 预检）
+
+**结论：VERIFIED。**
+
+---
+
+## SC6 — 两条遗留直推路径均已处置
+
+> ROADMAP 原文：「两条遗留直推路径（`user_handler.go:194` 单用户编辑、`user_import_handler.go:114` 导入后批量）均已按移交待决项 1 处置：或删除、或与排水互斥。**不接受"两者并存且都可能触发"的终态**」
+
+### 6a. 三条 grep
+
+```
+$ grep -c "buildADSyncMap\|adSyncInFlight\|SyncUserUpdateToAD" internal/api/v1/system/user_handler.go
+0
+$ grep -c "triggerADSyncAfterImport\|BatchSyncUsersToAD" internal/api/v1/system/user_import_handler.go
+0
+$ grep -c "userADSyncService \*addomain.UserADSyncService" internal/api/v1/system/user_handler.go
+1
+```
+
+**实际输出:** `0` / `0` / `1` —— 期望 `0` / `0` / `1`。**全部符合。**
+
+第三条的 `1` 是**保留项**而非漏删：`userADSyncService` 字段被 `SyncManagers` 复用（用户 → AD 全量同步管理面），与被删的「编辑后直推」是两个不同用途。
+
+### 6b. 「不接受两者并存」的反向核对 —— 确实没有互斥开关
+
+SC6 允许的两种终态是「都删」或「加互斥」。本次是**都删**，因此必须额外证明**没有**引入任何互斥开关（若既删了直推又留了个 `adSyncDirectPushEnabled` 之类的开关，说明存在半成品分支）。58-06 的 5 条 grep 静态断言在 `ab8a7231` 已全 0，本 plan 复跑未新增任何开关。
+
+### 6c. 遗留注释的清理（本 plan 新增，见提交 `f8f88d4e`）
+
+`internal/api/v1/system/user_handler_test.go:42` 仍把 `UserADSyncService.SyncUserUpdateToAD 被调用（异步）` 列为验证点，而该测试已是 `assert.True(t, true)` 占位、且被删路径确实不存在。已移除该失效注释行并替换为指向新链路的说明。**行为未变，无断言改动。**
+
+**结论：VERIFIED。**
+
+---
+
+## F-13 归档核对（只核对，不改代码）
+
+> Phase 57 F-13：「合并子句写回快照导致别名」的注释级问题。D-04 判定为「留档不修」，理由是 F-06 的 selective `Updates` 已从根上消解别名风险。
+
+### 核对项 1 — diff 输入是**值拷贝**
+
+plan 指向的 `oldUserSnapshot` 实际定义在 `internal/services/system/user_service.go`（不在 enqueuer 内，plan 的行号指针略有偏差）：
+
+```
+$ grep -n "oldUserSnapshot" internal/services/system/user_service.go
+159:	// ⚠ 不变量（F-06 / F-13）：oldUserSnapshot 的四个 *string 字段（nickname/email/phone/
+160:	// dept_id）**不得被原地解引用改写**（`*oldUserSnapshot.Nickname = ...`），否则新旧值
+161:	// 共享同一字符串，HasADFieldChanged 恒返回 false → 入队静默失效且无任何测试转红。
+162:	// 当前写路径不再改动 user 结构体（改为 selective Updates 字段映射），该不变量自然成立。
+163:	oldUserSnapshot := user
+209:		// 且 status 跃迁由 F-02 的入队逻辑显式 diff（oldUserSnapshot.Status vs req.Status），
+257:		if err := enqueuer.EnqueueUpdateIfChanged(tx, &oldUserSnapshot, req); err != nil {
+264:		if err := enqueuer.EnqueueDisableOnStatusTransition(tx, oldUserSnapshot.Status, req.Status, req.ID); err != nil {
+```
+
+**判定:** `oldUserSnapshot := user`（:163）是 `models.User` **结构体值拷贝**，取自 `UPDATE` 之前；`EnqueueUpdateIfChanged(tx, &oldUserSnapshot, req)`（:257）取其地址。闭包内的 `Updates` 走的是 `map[string]interface{}` 字段映射，**不回写 `user` 结构体的任何 `*string` 指针**，故旧值不可能被"自己改自己"。
+
+⚠ 严格说这是**浅拷贝**：`oldUserSnapshot` 与 `user` 共享四个 `*string` 指针。要使别名风险不成立，前提是「闭包内不原地解引用改写这些指针」—— :214 的 selective `Updates` 恰好满足该前提（它写的是 `*req.Nickname` 的**值**，不是改写 `user.Nickname` 指向的字符串）。这正是 F-06 消解 F-13 的具体机制。
+
+### 核对项 2 — 写路径是 F-06 的显式字段 `Updates`，不是 `Save` 全字段覆盖
+
+```
+$ grep -n "Save(\|Updates(" internal/services/system/user_service.go | head -20
+169:		// 原实现是 tx.Save(&user) 全字段覆盖 —— 指针字段 nil 被 GORM 写成 NULL，
+214:		if err := tx.Model(&models.User{}).Where("id = ?", req.ID).Updates(updates).Error; err != nil {
+```
+
+```
+$ grep -rn "\.Save(" internal/services/addomain/ad_push_queue_service.go internal/services/addomain/ad_push_queue_drain_service.go | wc -l
+0
+$ grep -c "Updates(" internal/services/addomain/ad_push_queue_service.go
+1
+```
+
+**判定:** 生产写路径唯一一处是 `:214` 的 `Updates(updates)`，其中 `updates` 是显式 `map[string]interface{}`（`nil` 字段根本不进 map，天然不写）；enqueuer 侧 `Save` 出现 `0` 次、`Updates` `1` 次（`EnqueueDisable` 的 F-01 压制子句）；drainer 侧 `Save` 出现 `0` 次。**符合。**
+
+### 结论
+
+**F-13 已核对归档，无需修改代码。** 两项核对均成立：别名风险已被 F-06 的 selective `Updates` 从根上消解 —— 写路径不回写结构体指针，故浅拷贝的共享指针不构成新旧值串扰。
+
+**本 plan 未为 F-13 修改任何生产代码**（符合 D-04「留档不修」与 plan 的 frontmatter「零生产改动」口径）。
+
+---
+
+## 回归护栏
+
+| 命令 | 实际输出 | 判定 |
+|------|---------|------|
+| `go build ./...` | 退出码 `0`，无输出 | PASS |
+| `go vet ./internal/services/addomain/ ./internal/scheduler/ ./internal/services/system/ ./internal/api/v1/system/ ./internal/core/db/` | 无输出，退出码 `0` | PASS |
+| `go test ./... -count=1` | 退出码 `0`，78 个包 `ok`，0 FAIL（复跑一次同样全绿） | PASS |
+| `go test ./internal/services/system/ -run TestPhase57 -count=1` | `ok ... 3.737s`（41 PASS / 0 FAIL） | PASS（零回归） |
+| `go test ./internal/services/addomain/ -run TestPhase58 -count=1` | `ok ... 2.417s`（61 PASS） | PASS |
+| `go test ./internal/services/system/ -run TestPhase57_ActiveRowPredicate_MatchesIndexDDL -count=1` | `--- PASS (0.03s)` | PASS（P7 证伪未触发） |
+
+### ⚠ 回归期间发现并处置的两个不稳定项（均**非** Phase 58 生产代码问题）
+
+处置原则：先复现、再用 `git worktree` 在**改动前的基线 commit** 上对照，确认归因后才动手。
+（全程未使用 `git stash`。）
+
+#### 1. `TestPhase58_EndToEnd_RepeatDrainIdempotent` 偶发失败 —— **本 plan 新增用例自身的缺陷**（已修）
+
+- **症状**：首轮全量回归报 `expected "pending", actual "pushed"`，单独跑却通过。
+- **根因**：`pushed` 行已**退出** `uq_ad_push_queue_active` 部分唯一索引（谓词
+  `status IN ('pending','failed')`），所以第二次 `EnqueueUpdateBatch` 不冲突 ——
+  它**新增并行行**而非合并。这是 Phase 57 D-06 的**正确**设计（终态行必须退出索引，
+  否则同实体的下一次编辑会撞 42P10）。但我原来的用例用「再入队」制造第二轮，
+  让「同一行被重复排水」的前提失效，且 `reloadDrainRow` 的 `First`（无 `ORDER BY`）
+  在两行间不确定 ⇒ **随机通过 / 随机失败**（典型 latent flake）。
+- **归因确认**：这是**用例写法**的缺陷，不是生产代码缺陷。生产语义无需改动。
+- **处置**（提交 `30af6251`）：改用 plan 原意 —— 手工把队列行打回 `pending`
+  （与 Plan 04 的 `TestPhase58_Drain_RepeatDrainIsIdempotent` 同手法），
+  并新增 `countQueueRowsForEntity` 把「同一行」变成可证伪断言。
+- **断言未被弱化**：`moveUserCalls==1` / `updateUserAttrCalls==2` / `ad_dn` 不变全部保留，
+  另加行数 `==1` 的加固。`-count=10` 连跑确定性通过。
+
+#### 2. `TestInit78_Close_PartialInit` 一次超时 —— **既有的负载敏感 flaky**（非本 phase）
+
+- **症状**：某轮全量回归中该用例耗时 `31.28s` 后失败；守卫超时恰为 30s
+  （`core_init_78_02_test.go:49` `close78GuardTimeout = 30 * time.Second`）。
+- **归因确认**：该用例属 `internal/core`（Phase 78 的 core 初始化测试），与 Phase 58 无关：
+  1. 单独跑通过（`--- PASS: TestInit78_Close_PartialInit (8.18s)`）；
+  2. 在**改动前的基线 commit `5aa9fded`**（`git worktree`，未用 stash）上跑完整 suite
+     → 退出码 `0`、78 个包全 `ok`；
+  3. 在本 tree 上复跑完整 suite → 退出码 `0`、78 个包全 `ok`。
+- **结论**：属**全量并行跑时的墙钟预算抖动**（同一 30s 守卫在负载下偶发超支），
+  非 Phase 58 引入的回归。**如实披露，不隐藏**。
+
+#### 3. `TestPhase58_LoadDrainIntervalSeconds_FallsBackOnGarbage` 在 `-count=5` 下失败 —— **既有的共享缓存 DSN 问题**（非本 phase）
+
+- **症状**：仅在 `-count=5` 复跑时失败（4 个子用例全红），`-count=1` 全绿。
+- **归因确认**：在基线 commit `5aa9fded` 上以 `-count=5` 复跑**同样失败**（错误信息一致），
+  而该测试由 Plan 05 交付、**本 plan 未触碰**。根因是该 helper 用
+  `file:<t.Name()>?mode=memory&cache=shared` 作 DSN，`cache=shared` 的 in-memory 库
+  在同进程内跨重复轮次存活，第 2 轮起 INSERT 撞唯一约束。
+- **结论**：既有问题，`-count=1`（本项目标准口径）下全绿。**本 plan 不修**（超出 58 范围，
+  且与 SC 无关），如实记录待后续清理。
+
+### P7 证伪（谓词常量 ↔ migration_215 索引 DDL）
+
+```
+$ go test ./internal/services/system/ -run TestPhase57_ActiveRowPredicate_MatchesIndexDDL -count=1 -v
+--- PASS: TestPhase57_ActiveRowPredicate_MatchesIndexDDL (0.02s)
+ok  	github.com/ruoyi-next/ruoyi-go-backend/internal/services/system	2.792s
+```
+
+**含义:** `models.ADPushQueueActivePredicate`（`"status IN ('pending', 'failed')"`）与 `migration_215` 的 `uq_ad_push_queue_active` 部分唯一索引 DDL 谓词仍**文本一致**。本 phase 大量新增 `dead` 终态写入，若某处误改谓词文本，此用例必红 —— 它是"终态行能否退出唯一索引"的物理基础。**PASS。**
+
+---
+
+## 本 phase 自动化覆盖总量
+
+```
+$ grep -rh "^func TestPhase58_" internal/ | wc -l
+65
+```
+
+分布与实跑 PASS 数：
+
+| 包 | 声明 | 实跑 PASS |
+|----|------|----------|
+| `internal/services/addomain` | 61 | 61 |
+| `internal/services/system` | 3 | 3 |
+| `internal/core/db/migrations` | 1 | 1 |
+| **合计** | **65** | **65** |
+
+---
+
+## NOT VERIFIED / 需人工环境的事项
+
+以下**均不由本报告的自动化证据覆盖**，已全部转留 `58-HUMAN-UAT.md`（不做默认"已验证"）：
+
+| 编号 | 事项 | 为什么不可自动化 |
+|------|------|----------------|
+| UAT-58-1 | 真 AD 上的 compare-and-move（ModifyDN 真生效 + 二次排水不重复移动） | 需真域控，mock 无法证明 ModifyDN 的 wire 行为 |
+| UAT-58-2 | 账号池熔断 30min 内的退避节奏（attempts 增长符合 60s→…→30min） | 需人为触发熔断 + 真实时钟跨度 |
+| UAT-58-3 | `sys_config` 改 `drain_interval_seconds` 后重启生效 | 需重启后端进程 |
+| UAT-58-4 | 多 AD 配置（父子域）真实环境 longest-suffix 命中 | 需第二个域；单域环境标 N/A |
+| UAT-58-5 | code 32 真实触发（AD 端删对象 → 本地编辑 → 排水 → dead + 清空 ad_dn） | 需真域控 |
+
+另有三项**非 SC 要求但用户可见的后果**，已作为独立 UAT 条目留档（UAT-58-6/7/8）：
+
+- **UAT-58-6** 部门同步从未跑过（`sys_dept_ou_mapping` 为空）→ `update_user` 行批量转 `dead`（`unrecoverable:no-ou-mapping`）—— **这是决策 Q2 的刻意后果，不是回归**
+- **UAT-58-7** 「编辑即续命」：持续编辑且持续失败的行永不终态 —— **已接受方向，非缺陷**
+- **UAT-58-8** 含特殊字符的历史部门需重跑部门同步（Q5 只转义新写入）
+
+---
+
+*Phase: 58 · Plan: 07 · 生成于 2026-10-19*

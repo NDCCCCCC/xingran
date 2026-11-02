@@ -20,7 +20,7 @@
 
 ## 1. 执行环境
 
-- 连生产 PostgreSQL（与 xingran 后端同一库）
+- 连生产 PostgreSQL（与 ruoyi 后端同一库）
 - 用 psql / pgAdmin / Navicat 均可，需能看到执行计划（EXPLAIN）
 - 建议在**业务低峰**执行（REFRESH 会加锁）
 

@@ -46,13 +46,13 @@
     "internal/services/system/user_service.go",
     "internal/services/system/user_cache_impl.go",
     "internal/services/system/role_cache_impl.go",
-    "ruoyi-react-frontend/src/pages/system/post/index.tsx",
-    "ruoyi-react-frontend/src/pages/operations/buildings/index.tsx",
-    "ruoyi-react-frontend/src/pages/operations/floors/index.tsx",
-    "ruoyi-react-frontend/src/pages/operations/floors/components/FloorTableColumns.tsx",
-    "ruoyi-react-frontend/src/pages/operations/workstations/index.tsx",
-    "ruoyi-react-frontend/src/pages/operations/workstations/columns.tsx",
-    "ruoyi-react-frontend/src/pages/network/devices/index.tsx"
+    "xingran-react-frontend/src/pages/system/post/index.tsx",
+    "xingran-react-frontend/src/pages/operations/buildings/index.tsx",
+    "xingran-react-frontend/src/pages/operations/floors/index.tsx",
+    "xingran-react-frontend/src/pages/operations/floors/components/FloorTableColumns.tsx",
+    "xingran-react-frontend/src/pages/operations/workstations/index.tsx",
+    "xingran-react-frontend/src/pages/operations/workstations/columns.tsx",
+    "xingran-react-frontend/src/pages/network/devices/index.tsx"
   ],
   "next_action": "Step 1: 重启后端(加载 user_service.go + user_cache_impl.go + role_cache_impl.go 修复)。Step 2: 清理后端缓存。Step 3: 浏览器硬刷新 user 页面,点击「用户名」列头,确认 SQL 有 ORDER BY sys_user.username ASC 且数据按 username 升序。Step 4: 验证其他 5 页面(post/building/floor/workstation/network_device)的排序。Step 5: UAT 全部通过后,git add 这 10 文件 + commit('fix(table): 修复 user 排序失效(ApplySort 顺序 + 缓存 key) + 推广 5 页面排序')",
   "context_notes": "核心发现链:1)前端 useTableManager 增强正确发 orderByColumn;2)后端 user_service ApplySort 在 Select+Joins 之后,GORM 链式调用丢失 OrderBuilds;3)user_cache_impl/role_cache_impl buildListCacheKey 漏 BaseListRequest 排序参数,不同排序命中同一缓存返回错数据。role 之前 '工作' 是巧合(4 条数据 + 缓存)。修复三处后,user/role + 5 页面排序端到端打通。17 剩余 useTableManager 页面待推广。"

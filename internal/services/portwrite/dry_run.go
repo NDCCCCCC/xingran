@@ -52,7 +52,7 @@ type PreviewRequest struct {
 	HybridUntagged []int  `json:"hybridUntagged,omitempty"`
 	// Phase 125 (PWX-02) 端口安全参数：MaxMacCount 仅 portsec_max_mac；
 	// portsec_static_bind 复用 macAddress + vlanId 字段
-	MaxMacCount int `json:"maxMacCount,omitempty" binding:"omitempty,min=1,max=4096"`
+	MaxMacCount int  `json:"maxMacCount,omitempty" binding:"omitempty,min=1,max=4096"`
 	DryRun      bool `json:"dryRun,omitempty"`
 }
 

@@ -256,7 +256,6 @@ const DepartmentManagement: FC = () => {
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={STATUS_OPTIONS}
               />

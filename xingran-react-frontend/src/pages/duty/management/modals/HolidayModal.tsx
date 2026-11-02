@@ -42,7 +42,6 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
             allowClear
             placeholder="选择或输入"
             showSearch={false}
-            onSearch={() => {}}
             options={HOLIDAY_NAME_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
           />
         </Form.Item>
@@ -55,7 +54,6 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
           <AppSelect
             allowClear
             showSearch={false}
-            onSearch={() => {}}
             options={HOLIDAY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
           />
         </Form.Item>
@@ -63,7 +61,6 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
           <AppSelect
             allowClear
             showSearch={false}
-            onSearch={() => {}}
             options={[
               { value: true, label: "休息" },
               { value: false, label: "工作" },
@@ -75,7 +72,6 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
             allowClear
             placeholder="选择备注（可选）"
             showSearch={false}
-            onSearch={() => {}}
             options={HOLIDAY_REMARK_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
           />
         </Form.Item>

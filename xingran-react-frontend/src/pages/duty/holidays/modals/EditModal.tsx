@@ -113,7 +113,6 @@ export function HolidayEditModal({
             allowClear
             placeholder="请选择类型"
             showSearch={false}
-            onSearch={() => {}}
             options={
               holidayTypeDict.length > 0
                 ? holidayTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))

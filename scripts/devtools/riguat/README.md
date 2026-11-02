@@ -103,6 +103,9 @@ riguat --device <设备名> [选项]
   --backend-pid <pid>     从 /proc/<pid>/environ 取 SM4_KEY
   --sm4-env-file <path>   直接指定环境变量文件
   --vlan/--mac/--ip/--desc/--max-mac   测试参数
+  --hybrid-tagged <list>   hybrid 动作：tagged VLAN 列表（逗号分隔）
+  --hybrid-untagged <list> hybrid 动作：untagged VLAN 列表（逗号分隔）
+  --hybrid-native <id>     hybrid 动作：native VLAN 单值（0 = 不设）
   --out <path>            执行记录输出文件
 ```
 
@@ -148,6 +151,61 @@ riguat --device <设备名> [选项]
   （`RenderCommand` 直接返回 `ErrUnknownAction`）→ **建议在 `portcollection` 补锐捷 hybrid 模板后再开放该动作**；
 - 回显为 Invalid input / Unknown command → 设备不支持，产品现状正确，**无需补**。
 
+## 空闲候选口扫描（只读，为 hybrid/trunk 实跑找口）
+
+```bash
+./riguat --scan-idle --config /app/szh/configs/config.yaml --scan-model RS8607
+```
+
+- **只查库，不连设备、不解密凭据、不下发任何命令**（`--scan-idle` 在 SM4 装配之前就返回）；
+- 设备表 `sys_network_device`（按 `model ILIKE` 匹配，`--scan-model` 可改），
+  端口表 `sys_device_port_status`；
+- 候选判据（保守，宁可少报）：**description 为空**（无业务描述 ⇒ 不像在用工位口）
+  **且 `admin_status = up`**（未 shutdown）；
+- 输出每台的候选口清单：`interface_name / admin / oper(link) / desc / vlan / dot1x_limit`
+  —— `oper=down` 的口更"空闲"，`oper=up` 说明链路有流量，**不要选**；
+- `updated_at` 列若不存在会自动回退到不含该列的查询（不影响候选判定）。
+
+配套诊断开关（排查配置/连库问题，**不打印密码**，只打印长度）：
+
+```bash
+./riguat --db-check --config /app/szh/configs/config.yaml
+```
+
+> ⚠️ 本地开发机的 `configs/config.yaml` 里 `database.password` 为空串（凭据不落本地），
+> **本地无法连库** ⇒ 扫描必须在带凭据的远程机执行。
+
+## hybrid 动作（锐捷 TrunkSetHybrid，PR #44 形态）
+
+```bash
+./riguat --device <设备名> --port GE1/25 --action hybrid --apply \
+         --hybrid-tagged 3990 --hybrid-untagged 3991,3992 --hybrid-native 3993 \
+         --config /app/szh/configs/config.yaml --backend-pid $PID
+```
+
+下发形态（来自 `portcollection.RenderCommand`，产品真相源）：
+
+```
+interface GigabitEthernet 1/25
+switchport mode hybrid                            ← 前置：设备要求端口处于 hybrid 模式
+switchport hybrid allowed vlan tagged 3990        ← tagged 列表
+switchport hybrid allowed vlan untagged 3991,3992  ← untagged 列表（**允许多个**）
+switchport hybrid native vlan 3993                ← native 单值
+```
+
+还原语义（比 12 个动作多两件事）：
+
+| 环节 | 行为 |
+|---|---|
+| 接口配置行 | undo 删 `no switchport hybrid allowed vlan tagged/untagged …` / `no switchport hybrid native vlan …`；基线重放补回被删的行 |
+| **端口模式回退** | undo 额外下发 `switchport mode access`；设备回 Invalid input 时兜底 `default switchport mode access`；仍残留 `switchport mode hybrid` 行时由差异驱动修复走 `no switchport mode hybrid` |
+| **access vlan** | 基线**没有** `switchport access vlan` 行 ⇒ **不下发**该行（锐捷默认 VLAN 1 不落行；臆断下发会凭空多出一行制造 diff）。基线有该行时由基线重放补回 |
+| **VLAN 表清理** | hybrid 下发会在设备上自动带出 VLAN ⇒ 动作前存 `show vlan` 快照，还原后比对并对多出的 VLAN 下发 `no vlan <id>`，再采集确认收敛 |
+| 接口状态二次核对 | 动作前/还原后各取一次 `show interfaces status` 中目标口那一行比对（锐捷该命令**不接受接口参数** ⇒ 拉全量再筛行） |
+
+> hybrid **不在 `--batch` 批次里**：它会改变端口转发模式，且需要显式 VLAN 参数，
+> 必须由人指定口与 VLAN 后单独跑。
+
 ## 安全红线
 
 - 只操作一个测试口（`--port`，默认 `GE1/1`），工具不做多口操作；
@@ -167,6 +225,15 @@ mock 锐捷设备严格模拟两条真机行为（接口级命令在 `(config)#`
 `no dot1x port-control auto` 连带清除 `default-user-limit` 与 `mac-auth-bypass`），
 对 12 个动作逐一跑「下发 → 还原 → diff」闭环，并覆盖自证重试、差异驱动修复、
 无法修复时必须判失败、还原序列必须带 `interface` 前缀等路径。
+
+hybrid 专项用例（mock 锐捷设备复现真机行为）：
+
+| 用例 | 锁定什么 |
+|---|---|
+| `TestHybridRestoreNoDevice` | 还原后与基线逐行一致；**基线无 access vlan 行 ⇒ 还原不下发该行**；还原含模式回退与三条 no hybrid |
+| `TestHybridMultiUntaggedAccepted` | 多个 untagged 被渲成一条 `... untagged 3991,3992` 且被设备接受（PR #44 撤销拒绝规则的行为验证） |
+| `TestHybridRejectsMissingKeyword` | mock 复现真机：**缺 tagged/untagged 关键字**的 `switchport hybrid allowed vlan <list>` 会被拒绝（守住 PR #44 的核心修正） |
+| `TestHybridModeAccessFallback` | `switchport mode access` 被拒时兜底 `default switchport mode access`，且最终仍收敛到基线 |
 
 ## 已知限制（需人工判读）
 

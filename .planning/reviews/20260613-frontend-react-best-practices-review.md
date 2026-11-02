@@ -1,4 +1,4 @@
-# 🔍 XingRan-Next 前端代码 Vercel React Best Practices 审查报告
+# 🔍 RuoYi-Next 前端代码 Vercel React Best Practices 审查报告
 
 **报告日期**: 2026-06-13
 **审查范围**: `xingran-react-frontend/src/**` 全部 TS/TSX 源码 (506 个文件)

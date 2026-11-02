@@ -62,7 +62,6 @@ export function CaptchaUploadModal({
           {/* 形态分类器②③④：固定枚举（业务禁搜）→ options 形态 + showSearch={false} */}
           <AppSelect
             allowClear
-            onSearch={() => {}}
             showSearch={false}
             options={[...SHAPE_OPTIONS]}
           />
@@ -75,7 +74,6 @@ export function CaptchaUploadModal({
           {/* 形态分类器②③④：固定枚举（业务禁搜）→ options 形态 + showSearch={false} */}
           <AppSelect
             allowClear
-            onSearch={() => {}}
             showSearch={false}
             options={[...DIFFICULTY_OPTIONS]}
           />
@@ -86,7 +84,6 @@ export function CaptchaUploadModal({
             allowClear
             mode="multiple"
             placeholder="不限制则默认使用当前形状"
-            onSearch={() => {}}
             showSearch
             options={[...SHAPE_OPTIONS]}
           />

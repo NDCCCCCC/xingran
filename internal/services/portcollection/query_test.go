@@ -97,7 +97,7 @@ func extractDigitGroups(name string) []int {
 	return nums
 }
 
-// interfacePrefix 模拟 PG regexp_replace(name,'[0-9].*$',''):
+// interfacePrefix 模拟 PG regexp_replace(name,'[0-9].*$',”):
 // 取接口名首个数字之前的字母前缀。GE0/1 → GE,XGE1/0/24 → XGE。
 func interfacePrefix(name string) string {
 	return prefixRe.FindString(name)

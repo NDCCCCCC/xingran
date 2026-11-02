@@ -14,10 +14,10 @@ import "testing"
 // `*` 前缀推断，OperStatus = PHY 去掉 `*`，PROTOCOL 不再参与计算。
 func TestNormalizeHuaweiPHYStatus(t *testing.T) {
 	tests := []struct {
-		name             string
-		phy              string
-		wantAdminStatus  string
-		wantOperStatus   string
+		name            string
+		phy             string
+		wantAdminStatus string
+		wantOperStatus  string
 	}{
 		{
 			name:            "shutdown 场景 PHY=*down → admin=down oper=down",

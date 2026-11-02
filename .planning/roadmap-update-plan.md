@@ -7,7 +7,7 @@
 ## 当前状态
 
 - ROADMAP.md 中 Phase 24 是"虚拟机数据范围权限配置"（错误）
-- `.planning/milestones/infra-phases/24-uuid/` 目录包含 UUID 优化的完整内容（正确的 Phase 24）
+- `.planning/phases/24-uuid/` 目录包含 UUID 优化的完整内容（正确的 Phase 24）
 - 需要添加新的 Phase 25 为虚拟机权限配置
 
 ## 更新步骤
@@ -121,6 +121,6 @@ mkdir -p .planning/phases/25-vm-data-scope-permissions
 
 ## 文件状态
 
-- ✅ Phase 24 UUID 优化内容：存在于 `.planning/milestones/infra-phases/24-uuid/`
+- ✅ Phase 24 UUID 优化内容：存在于 `.planning/phases/24-uuid/`
 - ⏳ ROADMAP.md：需要手动更新
 - ⏳ Phase 25 目录：需要创建

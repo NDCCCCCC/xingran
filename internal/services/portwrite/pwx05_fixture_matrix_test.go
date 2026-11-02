@@ -215,8 +215,8 @@ func TestPWX05_FullCoverageMatrix(t *testing.T) {
 	// 覆盖报告（验收 #1：矩阵覆盖表）
 	t.Logf("=== PWX-05 覆盖矩阵报告（%d 厂商 × %d 动作 = %d cells） ===", len(vendors), len(actions), len(vendors)*len(actions))
 	t.Logf("动作: %v", actions)
-	t.Logf("说明: 锐捷 trunk_set_hybrid 2026-11-02 起真机支持（`?` 帮助确认），"+
-		"已注册渲染并走正常 preview 路径；"+
+	t.Logf("说明: 锐捷 trunk_set_hybrid 2026-11-02 起真机支持（`?` 帮助确认），" +
+		"已注册渲染并走正常 preview 路径；" +
 		"NoOp 语义 cell 标记 noop（pre-state 已匹配，skipped），其余标记 cmd。")
 	for _, row := range report {
 		t.Logf("vendor=%s cells=%d", row[0], len(row)-1)
@@ -226,16 +226,16 @@ func TestPWX05_FullCoverageMatrix(t *testing.T) {
 // fullMatrixRequest 按 action 组装全参数请求（参数间互不冲突，仅用于矩阵跑通）。
 func fullMatrixRequest(vendor models.DeviceVendor, action Action) PreviewRequest {
 	req := PreviewRequest{
-		DeviceID:    "device-" + string(vendor),
-		Action:      action,
-		PortIDs:     []string{"port-" + string(vendor)},
-		Description: "matrix",
-		VLANID:      100,
-		BindOp:      "add",
-		IPAddress:   "192.168.1.10",
-		MACAddress:  "AA:BB:CC:DD:EE:FF",
-		MaxMacCount: 5,
-		NativeVLAN:  10,
+		DeviceID:     "device-" + string(vendor),
+		Action:       action,
+		PortIDs:      []string{"port-" + string(vendor)},
+		Description:  "matrix",
+		VLANID:       100,
+		BindOp:       "add",
+		IPAddress:    "192.168.1.10",
+		MACAddress:   "AA:BB:CC:DD:EE:FF",
+		MaxMacCount:  5,
+		NativeVLAN:   10,
 		AllowedVLANs: []int{10, 20},
 		AllowedMode:  portcollection.AllowedModeAdd,
 		// hybrid 重叠会被 ErrHybridOverlap 拦截，矩阵用不重叠参数

@@ -603,7 +603,6 @@ const PortStatusPage: FC = () => {
                 placeholder="请选择状态"
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={[
                   { value: "up", label: "UP" },
@@ -617,7 +616,6 @@ const PortStatusPage: FC = () => {
                 placeholder="请选择状态"
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={[
                   { value: "up", label: "UP" },
@@ -631,7 +629,6 @@ const PortStatusPage: FC = () => {
                 placeholder="请选择"
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={[
                   { value: true, label: "已启用" },
@@ -645,7 +642,6 @@ const PortStatusPage: FC = () => {
                 placeholder="请选择"
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={[
                   { value: true, label: "已启用" },

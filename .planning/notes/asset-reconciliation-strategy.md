@@ -10,7 +10,7 @@
 
 ## 1. 业务背景与动机
 
-XingRan-Next 运维管理系统已具备多路数据来源对资产-人员进行描述，但缺少对账机制：
+RuoYi-Next 运维管理系统已具备多路数据来源对资产-人员进行描述，但缺少对账机制：
 
 | 数据源 | 类型 | 权威性 | 已知问题 |
 |--------|------|--------|----------|
@@ -294,7 +294,7 @@ src/components/reconciliation/
         ↑ 权限降级：无 `asset:reconciliation:list` 时健康度卡片隐藏
 ```
 
-**避免 403 的关键**（参考项目记忆 `xingran-perm-namespace-split-readonly-page`）：
+**避免 403 的关键**（参考项目记忆 `ruoyi-perm-namespace-split-readonly-page`）：
 - 菜单 perms 与 CRUD perms 不重叠会 403
 - 工位详情页是查询路径，用 `RequirePermissionsWithQuery` 对查询放宽读权限
 - 显式权限边界：用户在 ops 页需具备 `asset:reconciliation:list` 才显示健康度
@@ -303,8 +303,8 @@ src/components/reconciliation/
 
 ⚠️ 参考项目记忆：
 - `migration-sql-name-must-match-model`：菜单 SQL 必须匹配 model 字段名
-- `xingran-migrations-no-sql-autoloader`：必须用 `migration_NNN_*.go` 函数显式调用 + 加入 `AutoMigrate()`
-- `xingran-gorm-sql-constraint-naming-conflict`：GORM `uniqueIndex` 期望 `uni_*_*`，SQL inline UNIQUE 用 PG 自动名 `*_key`
+- `ruoyi-migrations-no-sql-autoloader`：必须用 `migration_NNN_*.go` 函数显式调用 + 加入 `AutoMigrate()`
+- `ruoyi-gorm-sql-constraint-naming-conflict`：GORM `uniqueIndex` 期望 `uni_*_*`，SQL inline UNIQUE 用 PG 自动名 `*_key`
 
 ---
 
@@ -373,7 +373,7 @@ src/
 | 工单生成过多淹没运维 | 告警疲劳 | R3 节流 + R4 半自动前置 |
 | reconciliation_normalized 性能 | 大表 join 慢 | 物化视图 + 增量刷新 |
 | 现有 Phase 13 技术债回归 | 新代码破坏已完成清理 | 引入 constraint 命名规范 + operlog 强制约束 |
-| 菜单权限命名空间割裂 | 读写全 403（参考 `xingran-perm-namespace-split-readonly-page`） | 显式声明跨模块权限边界 + 用 `RequirePermissionsWithQuery` |
+| 菜单权限命名空间割裂 | 读写全 403（参考 `ruoyi-perm-namespace-split-readonly-page`） | 显式声明跨模块权限边界 + 用 `RequirePermissionsWithQuery` |
 | 修复回写触发循环对账 | 异常立即重新生成 | 修复后 7d 静默期 + 异步通知引擎 |
 
 ---
@@ -386,11 +386,11 @@ src/
 | `ad-update-no-such-object-vs-lockout` | 例外引擎遇到 DN 不存在时显式标记，不能静默吃下 |
 | `ad-operation-prefix-failover-source` | 例外规则设计借鉴 AD 故障风暴教训，必须节流 |
 | `ad-modify-fail-double-counts-breaker` | 修复回写不能双计数熔断 |
-| `xingran-perm-namespace-split-readonly-page` | 跨模块调用必须显式权限声明 |
+| `ruoyi-perm-namespace-split-readonly-page` | 跨模块调用必须显式权限声明 |
 | `ops 菜单 seed perms 与路由命名不一致` | 菜单 seed 用 `asset:reconciliation:exception:*` 单数连字符，路由对应 |
 | `migration-sql-name-must-match-model` | menu/migration 字段名匹配 model |
-| `xingran-migrations-no-sql-autoloader` | 必须 .go migration + AutoMigrate 显式调用 |
-| `xingran-gorm-sql-constraint-naming-conflict` | uniqueIndex 命名 `uni_*_*` 避免冲突 |
+| `ruoyi-migrations-no-sql-autoloader` | 必须 .go migration + AutoMigrate 显式调用 |
+| `ruoyi-gorm-sql-constraint-naming-conflict` | uniqueIndex 命名 `uni_*_*` 避免冲突 |
 | `Excel 导入路由冲突陷阱` | router.go 不能预注册 asset/reconciliation/* 路径（避免与 ops 冲突） |
 | `stat-cards-from-list-length-capped-at-100` | dashboard 健康度数字必须用 COUNT 端点，不用 list.length |
 | `GORM migration tag 不阻止 INSERT` | 新表字段必须有正确的 gorm tag |
@@ -551,7 +551,7 @@ src/
 | 已解决 | resolved | success |
 
 **migration 文件位置**：`internal/core/db/migrations/migration_NNN_reconciliation_dicts.go`
-**关键约束**：必须走 `.go` migration + AutoMigrate 显式调用（参考 `xingran-migrations-no-sql-autoloader`）
+**关键约束**：必须走 `.go` migration + AutoMigrate 显式调用（参考 `ruoyi-migrations-no-sql-autoloader`）
 
 ### 15.6 参数管理 seed (P2 补充)
 
@@ -667,7 +667,7 @@ asset.SetupReconciliationExceptionRouter(assetGroup, core)  // 🆕
 ```
 
 **关键约束**：
-- ⚠️ 参考 `xingran-excel-import-route-conflict`：router.go 不能预注册 `/asset/reconciliation/*` 通用路由（避免与具体 handler 冲突）
+- ⚠️ 参考 `ruoyi-excel-import-route-conflict`：router.go 不能预注册 `/asset/reconciliation/*` 通用路由（避免与具体 handler 冲突）
 - ⚠️ `excel_handler.SetupExcelRouter` 不能预注册 `reconciliationException` entityType（避免冲突）
 
 ### 15.11 operlog module 常量 (F7 补充)

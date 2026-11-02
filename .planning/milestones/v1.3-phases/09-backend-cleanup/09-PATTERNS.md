@@ -509,7 +509,7 @@ import (
 
     "github.com/gin-gonic/gin"
     "github.com/stretchr/testify/assert"
-    "github.com/xingran-next/xingran-go-backend/internal/core"
+    "github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 )
 
 // TestLogin_ErrorLogging 测试登录错误日志记录

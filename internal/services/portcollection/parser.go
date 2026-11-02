@@ -6,8 +6,8 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/device"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/templates"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // InterfaceInfo 接口信息
@@ -463,7 +463,7 @@ func parseInterfaceVLANInfo(wrapper *device.ScrapliWrapper, vendor models.Device
 	vlanMap := make(map[string]*int)
 	for _, record := range records {
 		ifaceName := NormalizeInterfaceName(record["INTERFACE"])
-		
+
 		// 优先使用PVID (VLAN_ID)
 		if vlanStr, ok := record["VLAN_ID"]; ok && vlanStr != "" && vlanStr != "0" {
 			if vlan, err := strconv.Atoi(vlanStr); err == nil {

@@ -323,3 +323,88 @@ switchport trunk allowed vlan ?
 |---|---|
 | 华为测试端口 | `GE1/0/0` / PVID 25 / link-type access / description 25F001_D377 / port-security enable + authentication-profile dot1x + stp edged-port + ipv4 source check user-bind enable |
 | 锐捷测试端口 | `GigabitEthernet 1/1` / access vlan 318 / description 3D001 / dot1x port-control auto + mac-auth-bypass multi-user / bpduguard + portfast + rldp / port-security binding 10.62.51.173 + port-security |
+
+---
+
+## 锐捷 hybrid 真机取证（第二轮，2026-11-02）
+
+### 环境与选口
+
+| 项 | 值 |
+|---|---|
+| 设备 | `CX-WH-WH-47F-FL-RS8607E-01`（**RG8607E**，10.62.63.47） |
+| 口 | `GE1/25`（千兆，`oper=down`，`desc=""`，**基线 32 bytes 完全空配置**） |
+| 选口理由 | 该口无 802.1X、无 mode/trunk/hybrid 行 → 零额外变更；同批候选口 `CX-WH-WH-04F-FL-RS8607E-01/02/03` 与 `05F-FL-RS8607E-02` 的空闲口**全部带 `dot1x port-control auto`** → 设备拒绝切 hybrid |
+| VLAN | 设备 VLAN 表原有 `1,302,303,306,308-313,315,316,320,390,1001,3012`；测试用 `3990`（本次新建，已删除） |
+
+### 取证结论（6 条真机事实）
+
+1. **锐捷 hybrid 拒绝在启用 802.1X 的口上执行**（口：`RS8607E-01` 的 `GE1/25`）：
+   ```
+   switchport mode hybrid
+    Can not operate on interface Gi1/25. Conflict with IEEE 802.1X.
+   ```
+   ⇒ **产品缺「端口状态级」互斥预检**（同一型号同一动作，有无 dot1x 结论相反 → 不能放进设备能力矩阵，应放写路径预检层）
+
+2. **`switchport mode hybrid`** → ✅ 生效（配置出现该行）
+
+3. **`switchport hybrid native vlan 3993`** → ✅ 生效（配置出现该行；native 是**独立单值参数**，与 untagged 列表不是一回事）
+
+4. **tagged 列表必须带 `only`**：
+   ```
+   switchport hybrid allowed vlan tagged 3990        → 无错误，但【不落地】❗（既不在接口配置也不在 VLAN 表）
+   switchport hybrid allowed vlan add tagged 3990    → 无错误，同样【不落地】❗
+   switchport hybrid allowed vlan only tagged 3990    → ✅【落地】（配置出现该行 + VLAN 3990 成员含 Gi1/25）
+   ```
+   ⇒ **PR #44 渲染的 `switchport hybrid allowed vlan tagged <list>` 缺 `only` 关键字 → 命令不报错、配置不变、用户以为成功**（最隐蔽的一类缺陷）
+
+5. **untagged 列表**（与 tagged 形态不同）：
+   ```
+   switchport hybrid allowed vlan only untagged 3992 → % Invalid input detected ❌
+   switchport hybrid allowed vlan untagged 3992      → ✅ 生效
+   ```
+   ⇒ untagged **不能带 `only`**；且下发后设备把 untagged 列表写成 `add untagged 1,3992`（**自动含 VLAN 1**）
+
+6. **锐捷 hybrid 是「自动补集」语义**（设备侧行为，非产品预期）：
+   ```
+   下发 untagged 3992 后，设备把 tagged 自动改写为：only tagged 2-3991,3993-4094
+   ```
+   ⇒ untagged 里的 VLAN 从 tagged 中被排除，其余 VLAN **自动进 tagged**
+   ⇒ **产品模型「HybridTagged 列表 + HybridUntagged 列表」与设备语义不完全一致**（产品想"精确设置两个列表"，设备是"指定 untagged，其余自动 tagged"）→ 需在渲染层/文档层明确口径
+
+### undo（还原）形态：逐条 `no` 不被接受 ⭐ 安全级发现
+
+```
+no switchport hybrid allowed vlan tagged 3990   → % Invalid input detected ❌
+no switchport hybrid native vlan 3993          → % Invalid input detected ❌
+switchport mode access                         → ✅【一次性清空全部 hybrid 配置】（配置回到 32 bytes）
+```
+⇒ **锐捷不接受逐条否定 hybrid 配置**，**唯一可靠还原是「模式回退」**
+⇒ **还原失败 = 端口留在 hybrid = 转发行为改变 = 潜在业务中断** ⇒ undo 形态修正优先级最高
+
+### 附带实测到的两个副作用
+
+1. **hybrid 模式下口会离开 VLAN 1**（access 默认归属）；`switchport mode access` 会自动加回 ✅
+2. **VLAN 表的 Ports 列会把 trunk/uplink 口列进每个 VLAN**（trunk 口默认允许所有 VLAN）⇒ `show vlan` 里看到 Gi1/40、Te1/47、Te1/48 出现在 VLAN 3990 中**不是** hybrid 引入的；删除我新建的 VLAN 3990 安全 ✅
+
+### 型号取证（补 task-30 项 3 的锐捷部分）
+
+`RG8607E` 的 hybrid 关键字形态与 `RS8607E` **完全一致**：
+```
+switchport mode ?  → access / dot1q-tunnel / hybrid / private-vlan / trunk / uplink
+switchport hybrid allowed vlan ? → add / only / remove / tagged / untagged
+switchport hybrid native vlan ?  → <1-4094>  Vid
+```
+⇒ 同一渲染形态可覆盖 RS8607E 与 RG8607E 两个产品线
+
+### 设备残留核查（全部通过 ✅）
+
+| 核查项 | 结果 |
+|---|---|
+| `GE1/25` running-config | **32 bytes**，与基线逐行一致 ✅ |
+| VLAN 表 | 无 3990 ✅（已 `no vlan 3990` 删除；其唯一引用是 `vlan range` 定义行，无端口成员） |
+| VLAN 1 成员 | 含 Gi1/25 ✅（access 默认态已恢复） |
+| VLAN 302 成员 | 无 Gi1/25 ✅（hybrid 期间出现的成员已随还原消失） |
+| `GE1/1`（在用工位口，9 行基线） | 全程未变 ✅ |
+| `RS8607E-01` 的 GE1/25 | 配置 93 bytes 未变 ✅（hybrid 从未设上） |
+| 新建 VLAN | 仅 3990，已删除 ✅ |

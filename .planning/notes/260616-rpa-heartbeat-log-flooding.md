@@ -131,7 +131,7 @@ request_encryption:
 - `pkg/middleware/oper_log.go` (死代码参考)
 - `pkg/middleware/request_decryption.go:292-315` (排除路径实现蓝本)
 - `configs/config.yaml:86-95` (现有 exclude_paths 风格参考)
-- `.planning/milestones/infra-phases/34-oper-log-full-coverage/` (Phase 34 设计哲学来源)
+- `.planning/phases/34-oper-log-full-coverage/` (Phase 34 设计哲学来源)
 - `.planning/notes/260615-oper-log-coverage-audit.md` (前置审计)
 - `rpa-worker/internal/communication/api_client.go:61-62` (心跳调用方)
 - `rpa-worker/configs/config.yaml:33` (心跳频率配置)

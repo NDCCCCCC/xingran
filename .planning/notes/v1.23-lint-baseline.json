@@ -1,0 +1,3276 @@
+{
+  "captured_at": "2026-10-27",
+  "source": "npx eslint . --format json (xingran-react-frontend)",
+  "note": "v1.23 HYG-05 权威基线原料。排期口径以 eslint selector 实跑命中数 + 豁免清单条目数为准；本表为按 rule 分类的 warnings/errors 分布。",
+  "totals": {
+    "files_scanned": 1218,
+    "errors": 83,
+    "fatalErrors": 0,
+    "warnings": 1367,
+    "suppressed": 299
+  },
+  "by_rule": {
+    "@typescript-eslint/no-unused-vars": 363,
+    "@typescript-eslint/no-explicit-any": 958,
+    "react-hooks/exhaustive-deps": 12,
+    "react-hooks/set-state-in-effect": 1,
+    "react-refresh/only-export-components": 33,
+    "(fatal)": 8,
+    "local/no-large-dropdown-list": 3,
+    "react-hooks/preserve-manual-memoization": 1,
+    "react-hooks/immutability": 1,
+    "no-console": 5,
+    "react-hooks/globals": 1,
+    "quotes": 64
+  },
+  "files": [
+    {
+      "file": "src\\pages\\system\\menu\\hooks\\useMenuActions.test.tsx",
+      "errors": 0,
+      "warnings": 27,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 27
+      }
+    },
+    {
+      "file": "src\\services\\__tests__\\dashboardService.test.ts",
+      "errors": 0,
+      "warnings": 24,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 24
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\__tests__\\StatCardWidget.test.tsx",
+      "errors": 0,
+      "warnings": 22,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 22
+      }
+    },
+    {
+      "file": "src\\pages\\system\\dict\\hooks\\__tests__\\useDictActions.test.tsx",
+      "errors": 0,
+      "warnings": 20,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 20
+      }
+    },
+    {
+      "file": "src\\lib\\__tests__\\loginPreflight.test.ts",
+      "errors": 0,
+      "warnings": 19,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 19
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\__tests__\\jobLogs.utils.test.tsx",
+      "errors": 0,
+      "warnings": 19,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 18
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\rpa\\workers\\__tests__\\columns.test.tsx",
+      "errors": 0,
+      "warnings": 19,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 19
+      }
+    },
+    {
+      "file": "src\\services\\operations\\__tests__\\server-rooms.test.ts",
+      "errors": 0,
+      "warnings": 19,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 19
+      }
+    },
+    {
+      "file": "src\\pages\\knowledge\\articles\\__tests__\\columns.test.tsx",
+      "errors": 0,
+      "warnings": 18,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 17,
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\holidays\\utils\\holidays_utils_tests\\utils.test.ts",
+      "errors": 0,
+      "warnings": 15,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 15
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\hooks\\__tests__\\useHolidayData.test.tsx",
+      "errors": 0,
+      "warnings": 15,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 15
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\hooks\\__tests__\\useScheduleData.test.tsx",
+      "errors": 0,
+      "warnings": 15,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 15
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\utils\\__tests__\\excelUtils.test.ts",
+      "errors": 0,
+      "warnings": 15,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 13
+      }
+    },
+    {
+      "file": "src\\pages\\vdi\\VirtualMachineList\\index.tsx",
+      "errors": 0,
+      "warnings": 15,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 15
+      }
+    },
+    {
+      "file": "src\\design-system\\animations\\__tests__\\animations.test.ts",
+      "errors": 0,
+      "warnings": 14,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 14
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\logs\\hooks\\__tests__\\useLogData.test.tsx",
+      "errors": 0,
+      "warnings": 13,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 12
+      }
+    },
+    {
+      "file": "src\\pages\\network\\templates\\hooks\\__tests__\\useTemplateModals.test.tsx",
+      "errors": 0,
+      "warnings": 13,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 11
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\configs\\__tests__\\widgetRegistry.test.ts",
+      "errors": 0,
+      "warnings": 12,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 12
+      }
+    },
+    {
+      "file": "src\\hooks\\__tests__\\useServerSort.test.tsx",
+      "errors": 0,
+      "warnings": 11,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 11
+      }
+    },
+    {
+      "file": "src\\pages\\__tests__\\batch52.widgetsHooks.test.tsx",
+      "errors": 0,
+      "warnings": 11,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5,
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\__tests__\\useWorkstationData.test.tsx",
+      "errors": 0,
+      "warnings": 11,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 11
+      }
+    },
+    {
+      "file": "src\\pages\\system\\dept\\__tests__\\utils.test.ts",
+      "errors": 0,
+      "warnings": 11,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 11
+      }
+    },
+    {
+      "file": "src\\pages\\my-notices\\__tests__\\detail.test.tsx",
+      "errors": 0,
+      "warnings": 10,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\__tests__\\hooks.test.tsx",
+      "errors": 0,
+      "warnings": 10,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    {
+      "file": "src\\pages\\workorder\\orders\\hooks\\useWorkOrderActions.test.tsx",
+      "errors": 0,
+      "warnings": 10,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    {
+      "file": "src\\services\\operations\\__tests__\\buildings.test.ts",
+      "errors": 0,
+      "warnings": 10,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    {
+      "file": "src\\services\\operations\\__tests__\\dedicated-lines.test.ts",
+      "errors": 0,
+      "warnings": 10,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    {
+      "file": "src\\services\\operations\\__tests__\\room-devices.test.ts",
+      "errors": 0,
+      "warnings": 10,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    {
+      "file": "src\\services\\operations\\__tests__\\workstations.test.ts",
+      "errors": 0,
+      "warnings": 10,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 10
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\__tests__\\WidgetDataFilter.test.ts",
+      "errors": 0,
+      "warnings": 9,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 9
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\__tests__\\MetricWidget.test.tsx",
+      "errors": 0,
+      "warnings": 9,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 9
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\__tests__\\ProgressWidget.test.tsx",
+      "errors": 0,
+      "warnings": 9,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 9
+      }
+    },
+    {
+      "file": "src\\pages\\network\\command\\__tests__\\commandHooks.test.tsx",
+      "errors": 0,
+      "warnings": 9,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\hooks\\__tests__\\useGeocoding.test.tsx",
+      "errors": 0,
+      "warnings": 9,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 9
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\__tests__\\components.render.test.tsx",
+      "errors": 0,
+      "warnings": 9,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 4,
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\pages\\system\\menu\\__tests__\\utils.test.tsx",
+      "errors": 0,
+      "warnings": 9,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 9
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\layout\\__tests__\\TemplatePreview.test.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\__tests__\\ChartWidget.test.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    {
+      "file": "src\\components\\layout\\__tests__\\sidebar.render.test.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    {
+      "file": "src\\pages\\network\\backups\\hooks\\useBackupModals.test.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\modals\\__tests__\\EditModal.test.tsx",
+      "errors": 0,
+      "warnings": 8,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 8
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\DashboardView.tsx",
+      "errors": 2,
+      "warnings": 7,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 7,
+        "react-hooks/exhaustive-deps": 1,
+        "react-hooks/set-state-in-effect": 1
+      }
+    },
+    {
+      "file": "src\\components\\__tests__\\ConfigProvider.test.tsx",
+      "errors": 0,
+      "warnings": 7,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3,
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\components\\captcha\\__tests__\\sliderCaptcha.test.tsx",
+      "errors": 0,
+      "warnings": 7,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    {
+      "file": "src\\hooks\\__tests__\\useImageUpload.test.tsx",
+      "errors": 0,
+      "warnings": 7,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\components\\__tests__\\BaiduMapScript.test.ts",
+      "errors": 0,
+      "warnings": 7,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\info-points\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 7,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3,
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\constants.tsx",
+      "errors": 0,
+      "warnings": 7,
+      "rules": {
+        "react-refresh/only-export-components": 7
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\hooks\\__tests__\\useWorkstationModals.test.tsx",
+      "errors": 0,
+      "warnings": 7,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    {
+      "file": "src\\services\\operations\\__tests__\\info-points.test.ts",
+      "errors": 0,
+      "warnings": 7,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 7
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\layout\\__tests__\\LayoutToolbar.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5,
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\__tests__\\WidgetRenderer.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\__tests__\\statAndProgress.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\components\\layout\\shared\\__tests__\\useRouteTabs.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\components\\network\\__tests__\\MACHeatmapChart.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\components\\operations\\WorkstationDeviceTable\\index.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3,
+        "(fatal)": 2,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\ReconciliationDrawer.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 6
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\hooks\\useScheduleData.ts",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 6
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\__tests__\\logsColumns.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\job\\hooks\\useJobActions.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\server\\index.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3,
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\network\\discoveries\\hooks\\__tests__\\useDiscoveryPolling.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\__tests__\\ops-batch7.test.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\__tests__\\utils.test.ts",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\pages\\workorder\\orders\\index.tsx",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 6
+      }
+    },
+    {
+      "file": "src\\router\\__tests__\\routeConfigManager.unit.test.ts",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\utils\\sm2.test.ts",
+      "errors": 0,
+      "warnings": 6,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 6
+      }
+    },
+    {
+      "file": "src\\pages\\system\\captcha-background\\hooks\\useCaptchaModals.ts",
+      "errors": 5,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5,
+        "react-hooks/exhaustive-deps": 5
+      }
+    },
+    {
+      "file": "src\\components\\cad-editor\\CADFloorPlanEditor.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\__tests__\\DashboardSettings.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3,
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\__tests__\\ListWidget.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\hooks\\__tests__\\useWebSocket.test.ts",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\configs\\AccountPoolTab.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\users\\index.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 4,
+        "(fatal)": 1
+      }
+    },
+    {
+      "file": "src\\pages\\dashboard-system\\__tests__\\editView.render.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\components\\__tests__\\ScheduleManagement.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\hooks\\useHolidayData.ts",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\schedules\\hooks\\useScheduleModals.ts",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5
+      }
+    },
+    {
+      "file": "src\\pages\\knowledge\\articles\\index.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 4,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\command\\hooks\\__tests__\\useCommandModals.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\pages\\network\\discoveries\\hooks\\useDiscoveryData.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\pages\\network\\templates\\index.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\dedicated-lines\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\rpa\\tasks\\index.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 4,
+        "(fatal)": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\role\\hooks\\useRoleActions.ts",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5
+      }
+    },
+    {
+      "file": "src\\pages\\workorder\\orders\\hooks\\useWorkOrderActions.ts",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5
+      }
+    },
+    {
+      "file": "src\\pages\\workorder\\periodic\\templates\\hooks\\useTemplateActions.test.tsx",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\services\\__tests__\\services.api.test.ts",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\services\\cache\\__tests__\\TTLMenuCache.test.ts",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 5
+      }
+    },
+    {
+      "file": "src\\test\\setup.ts",
+      "errors": 0,
+      "warnings": 5,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 5
+      }
+    },
+    {
+      "file": "src\\pages\\ad\\SyncMonitor\\index.tsx",
+      "errors": 64,
+      "warnings": 4,
+      "rules": {
+        "quotes": 63,
+        "@typescript-eslint/no-unused-vars": 4,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    {
+      "file": "src\\components\\captcha\\__tests__\\CaptchaModal.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2,
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\__tests__\\Widget.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\components\\layout\\__tests__\\index.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\components\\network\\port-write\\__tests__\\constants.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\hooks\\__tests__\\usePagination.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\hooks\\__tests__\\useTableManager.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\dashboard-system\\components\\__tests__\\DashboardList.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\__tests__\\holidaysSchedules.utils.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\index.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 4
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\schedules\\index.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 4
+      }
+    },
+    {
+      "file": "src\\pages\\knowledge\\articles\\hooks\\useArticleData.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\network\\executions\\hooks\\useExecutionModals.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces\\components\\__tests__\\BuildingModal.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3,
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\buildings\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\__tests__\\useFloorHooks.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\__tests__\\utils.test.ts",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\useFloorPlanEditor.ts",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 4
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\server-rooms\\index.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3,
+        "(fatal)": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\dict\\hooks\\useDictActions.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\system\\dict\\hooks\\useDictData.ts",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 4
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\components\\__tests__\\NoticeList.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\components\\__tests__\\TargetSelector.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\system\\role\\index.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "no-console": 2,
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\workorder\\orders\\hooks\\__tests__\\useWorkOrderModals.test.tsx",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\router\\__tests__\\componentLoader.unit.test.ts",
+      "errors": 0,
+      "warnings": 4,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 4
+      }
+    },
+    {
+      "file": "src\\pages\\system\\settings\\default-theme.tsx",
+      "errors": 1,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/exhaustive-deps": 1,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\__tests__\\widgetDataFilter.unit.test.ts",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\StatCardWidget.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\components\\layout\\shared\\__tests__\\TabBar.render.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\network\\port-write\\__tests__\\modals.render.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\components\\shared\\ExcelExport.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2,
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\ImageGallery.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\networkExport.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\table\\__tests__\\rows.render.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\hooks\\__tests__\\useWallDrawing.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\lib\\api.ts",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\__tests__\\pages-batch11.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\ous\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\__tests__\\monitorColumns.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\job\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\logs\\__tests__\\utils.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\network\\backups\\hooks\\useBackupDiff.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\network\\credentials\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\devices\\hooks\\useDeviceData.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\network\\devices\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\discoveries\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\mac\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\ports\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\assets\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\__tests__\\hubei-map-cleanup.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\components\\HubeiMap.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\components\\__tests__\\AddressInput.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\__tests__\\useFloorPlanEditor.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\rpa\\tasks\\modals\\__tests__\\EditModal.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\system\\apikeys\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "(fatal)": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\captcha-background\\types.ts",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\pages\\system\\config\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\dept\\constants.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "react-refresh/only-export-components": 3
+      }
+    },
+    {
+      "file": "src\\pages\\system\\dict\\constants.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "react-refresh/only-export-components": 3
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\pages\\system\\role\\hooks\\useRoleActions.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\pages\\system\\settings\\captcha-background.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\pages\\system\\user\\__tests__\\utils.test.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\workorder\\periodic\\templates\\index.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 3
+      }
+    },
+    {
+      "file": "src\\router\\DynamicRoutes.tsx",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "react-refresh/only-export-components": 3
+      }
+    },
+    {
+      "file": "src\\services\\operations\\__tests__\\floors.test.ts",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 3
+      }
+    },
+    {
+      "file": "src\\utils\\__tests__\\dualLevelCache.test.ts",
+      "errors": 0,
+      "warnings": 3,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2,
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\configs\\ReconciliationTab.tsx",
+      "errors": 2,
+      "warnings": 2,
+      "rules": {
+        "react-refresh/only-export-components": 2,
+        "react-hooks/exhaustive-deps": 1,
+        "local/no-large-dropdown-list": 1
+      }
+    },
+    {
+      "file": "src\\design-system\\components\\ColorSwitcher.tsx",
+      "errors": 1,
+      "warnings": 2,
+      "rules": {
+        "react-refresh/only-export-components": 2,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\configs\\__tests__\\ReconciliationTab.test.tsx",
+      "errors": 1,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2,
+        "react-hooks/globals": 1
+      }
+    },
+    {
+      "file": "src\\components\\asset\\reconciliation\\__tests__\\MatchTestPanel.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\cad-editor\\__tests__\\editorUtils.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\DisplayConfigForm.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\EndpointSelector.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1,
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\WidgetSelector.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\__tests__\\DashboardScopeSelector.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\__tests__\\DataSourceForm.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\__tests__\\DisplayConfigForm.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\templates\\__tests__\\presets.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\utils\\__tests__\\dataFetcher.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\__tests__\\TableWidget.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\layout\\__tests__\\HybridLayout.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\network\\__tests__\\MACEventsTimeline.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\components\\network\\port-write\\__tests__\\PortBindingModal.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\network\\port-write\\__tests__\\modals.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\operations\\__tests__\\operations-subcomps.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\shared\\ActionButtons.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "react-refresh/only-export-components": 2
+      }
+    },
+    {
+      "file": "src\\components\\shared\\ColumnConfigModal.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "(fatal)": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\FloorPlanEditor.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\components\\shared\\NetworkExport.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\ColumnConfigModal.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\ExcelExport.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\ExcelImport.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\FloorPlanEditor.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\fileUpload.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\statusHelpers.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "react-refresh/only-export-components": 2
+      }
+    },
+    {
+      "file": "src\\components\\table\\__tests__\\AssetRow.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\table\\__tests__\\rowComponents.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\components\\three\\__tests__\\BuildingScene.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\design-system\\animations\\__tests__\\keyframes.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\design-system\\components\\__tests__\\LayoutProvider.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\design-system\\components\\__tests__\\themes.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\hooks\\__tests__\\useADConfigs.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\hooks\\useImageUpload.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\lib\\api\\__tests__\\networkApi.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\lib\\opsApi.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\lib\\security.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "no-console": 2
+      }
+    },
+    {
+      "file": "src\\pages\\__tests__\\batch59.modalTriple.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\__tests__\\pages-batch8.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\computers\\index.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\configs\\index.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\groups\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\asset\\reconciliation\\exceptions\\index.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\dashboard-system\\__tests__\\index.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\dashboard-system\\__tests__\\view.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\dashboard-system\\components\\__tests__\\DashboardEdit.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\dashboard-system\\components\\__tests__\\DashboardView.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\__tests__\\weeklyView.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\holidays\\hooks\\useHolidayModals.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\hooks\\useDutyConfig.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\schedules\\hooks\\useScheduleData.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\login\\index.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\cache\\__tests__\\utils.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\cache\\index.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\job\\columns\\__tests__\\jobLogColumns.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\command\\hooks\\useCommandModals.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\network\\command\\index.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\discoveries\\modals\\__tests__\\CreateModal.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\network\\executions\\__tests__\\constants.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\network\\executions\\hooks\\useExecutionData.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\network\\executions\\hooks\\useExecutionModals.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\network\\executions\\modals\\__tests__\\ExecuteModal.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\network\\executions\\modals\\__tests__\\VariableModal.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\assets\\components\\__tests__\\ComponentListTab.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces\\components\\__tests__\\BuildingCard.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1,
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces\\components\\__tests__\\FloorStack.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\buildings\\__tests__\\useDepartmentData.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\__tests__\\useFloorStatistics.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\rpa\\__tests__\\constants.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\rpa\\tasks\\modals\\EditModal.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\__tests__\\constants.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\profile\\index.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\system\\menu\\__tests__\\constants.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\system\\menu\\index.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\components\\__tests__\\components.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\hooks\\useNoticeData.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\vdi\\VDIServerConfig\\index.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\pages\\vdi\\VirtualMachineList\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\types\\__tests__\\auth.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\types\\__tests__\\common.test.ts",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\utils\\__tests__\\iconUtils.test.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 2
+      }
+    },
+    {
+      "file": "src\\utils\\tableHelpers.tsx",
+      "errors": 0,
+      "warnings": 2,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 2
+      }
+    },
+    {
+      "file": "src\\hooks\\useRealtimeUpdates.ts",
+      "errors": 1,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/immutability": 1
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\configs\\__tests__\\index.render.test.tsx",
+      "errors": 1,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "quotes": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\captcha-background\\index.tsx",
+      "errors": 1,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "react-hooks/exhaustive-deps": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\user\\index.tsx",
+      "errors": 1,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1,
+        "local/no-large-dropdown-list": 1
+      }
+    },
+    {
+      "file": "src\\components\\CronSelector\\fields\\__tests__\\SecondField.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\DeptTree\\__tests__\\index.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\__tests__\\notificationBell.interact.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\cad-editor\\__tests__\\CADFloorPlanEditor.stale-closure.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\cad-elements\\DoorElement.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\cad-elements\\WorkstationElement.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\captcha\\__tests__\\textCaptcha.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\charts\\__tests__\\EChartsWrapper.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\__tests__\\presets.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\layout\\TemplatePreview.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\layout\\TemplateSelector.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\layout\\__tests__\\layout.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\__tests__\\RefreshIntervalSelector.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\settings\\__tests__\\WidgetSelector.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\WidgetRenderer.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\__tests__\\BaseWidget.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\__tests__\\WidgetEditor.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\dashboard\\widgets\\types\\ChartWidget.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\layout\\__tests__\\layoutMisc.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\layout\\__tests__\\sidebar-helper.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\layout\\__tests__\\sidebar.utils.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\layout\\sidebar.utils.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\markdown\\__tests__\\MarkdownEditor.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\modal\\__tests__\\BaseEditModal.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\network\\MACEventsTimeline.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\network\\port-write\\PortWriteModal.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\components\\operations\\WorkstationDeviceTable\\__tests__\\WorkstationDeviceTable.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\operations\\__tests__\\deptSidebar.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\ExceptionMatchList.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\ReconciliationTimeline.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\__tests__\\ExceptionMatchList.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\__tests__\\HealthCard.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\__tests__\\ReconciliationTimeline.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\hooks\\__tests__\\useAssetHealth.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\hooks\\__tests__\\useExceptionMatch.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\reconciliation\\hooks\\__tests__\\useReconciliationVisibility.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\BatchExportModal.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\ExcelImport.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\FormModal.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\ModernTag.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\PageTable.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "(fatal)": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\ExcelImportLazy.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\FloorPlanEditor.hooks.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\FloorPlanEditor.panZoom.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\PageTable.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\columnConfigModal.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\excelOperations.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\fileUpload.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\globalSearch.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\shared\\__tests__\\imageGallery.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\components\\table\\__tests__\\VDIRow.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\design-system\\components\\LayoutProvider.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\design-system\\components\\ThemeProvider.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\design-system\\components\\__tests__\\DensitySwitcher.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\design-system\\components\\__tests__\\ThemeProvider.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\hooks\\useCaptcha.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\hooks\\useColumnConfig.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\hooks\\useSidebarDeptFilter.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\hooks\\useUtilityHooks.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\lib\\api\\__tests__\\macHeatmapApi.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\lib\\opsApi.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\__tests__\\batch67.dataFill.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\__tests__\\pages.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\__tests__\\accountPoolTab.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\computers\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\groups\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\ous\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\ad-domain\\users\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\asset\\reconciliation\\fix-suggestion\\components\\FixSuggestionDetailDrawer.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\dashboard-system\\components\\DashboardEdit.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\dashboard-system\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\config\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\holidays\\hooks\\useHolidayData.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\holidays\\hooks\\useHolidayModals.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\holidays\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\__tests__\\types.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\components\\DutyConfig.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\components\\GenerateScheduleModal.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\management\\modals\\BatchHolidayModal.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\my-duty\\__tests__\\index.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\pools\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\duty\\schedules\\hooks\\useScheduleData.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\knowledge\\articles\\columns.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\knowledge\\articles\\hooks\\useArticleData.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\knowledge\\view\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\login\\__tests__\\index.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\logs\\__tests__\\types.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\logs\\hooks\\useLogData.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\monitor\\logs\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\my-notices\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\backups\\__tests__\\types.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\backups\\hooks\\useBackupData.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\backups\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\devices\\__tests__\\utils.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\devices\\hooks\\__tests__\\useDeviceModals.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\discoveries\\__tests__\\constants.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\discoveries\\hooks\\useDiscoveryData.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\executions\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\mac\\history\\MACHistoryPage.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\network\\templates\\hooks\\useTemplateData.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\components\\BuildingModel3D.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\components\\FloorPlan3D.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces-3d\\components\\FloorView3D.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\building-spaces\\components\\__tests__\\FloorCard3D.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\buildings\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\buildings\\useBuildingGeocoding.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\buildings\\useGeocodingForm.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\__tests__\\useBuildingOptions.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\components\\FloorSearchForm.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\components\\__tests__\\FloorStatisticsCards.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\floors\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\rpa\\executions\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\rpa\\tasks\\modals\\AIScriptEditor.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\rpa\\workers\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\hooks\\__tests__\\useWorkstationView.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\hooks\\useWorkstationModals.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\views\\FloorPlanView.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\views\\__tests__\\CardView.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\operations\\workstations\\views\\__tests__\\cardView.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\settings\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\apikeys\\LogsModal.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\captcha-background\\modals\\EditModal.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\menu\\hooks\\__tests__\\useMenuData.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\__tests__\\hooks.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\hooks\\__tests__\\useAPIConfig.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\notice\\hooks\\__tests__\\useNoticeStatistics.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\post\\__tests__\\page.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\settings-page\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\settings\\api-config.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\settings\\email-config.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\settings\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "react-refresh/only-export-components": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\user\\hooks\\__tests__\\useUserModals.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\vdi\\VirtualMachineDetail\\__tests__\\index.render.test.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\pages\\vdi\\VirtualMachineDetail\\index.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\workorder\\orders\\hooks\\useWorkOrderData.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\pages\\workorder\\periodic\\templates\\hooks\\useTemplateData.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\router\\routeGenerator.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\store\\tabsStore.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\test\\utils\\renderPage.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 1
+      }
+    },
+    {
+      "file": "src\\types\\widgets\\__tests__\\helpers.test.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\utils\\dualLevelCache.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "no-console": 1
+      }
+    },
+    {
+      "file": "src\\utils\\iconUtils.tsx",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\utils\\sm-crypto.d.ts",
+      "errors": 0,
+      "warnings": 1,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 1
+      }
+    },
+    {
+      "file": "src\\components\\ui\\AppSelect.tsx",
+      "errors": 1,
+      "warnings": 0,
+      "rules": {
+        "local/no-large-dropdown-list": 1
+      }
+    },
+    {
+      "file": "src\\hooks\\useRPAProgress.ts",
+      "errors": 1,
+      "warnings": 0,
+      "rules": {
+        "react-hooks/preserve-manual-memoization": 1
+      }
+    },
+    {
+      "file": "src\\pages\\system\\captcha-background\\hooks\\useCaptchaData.ts",
+      "errors": 1,
+      "warnings": 0,
+      "rules": {
+        "react-hooks/exhaustive-deps": 1
+      }
+    }
+  ]
+}

@@ -358,7 +358,6 @@ const ADComputerPage: FC = () => {
               onChange={(value) => setSelectedConfig(value as string)}
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
               showSearch={false}
-              onSearch={() => {}}
             />
           </Form.Item>
           <Form.Item name="ouDn" label="所属OU">

@@ -44,18 +44,18 @@ func TestCiscoRender_14Actions(t *testing.T) {
 			}
 			svc := newTestService(&countingExecutor{}, nil, db)
 			result, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
-				DeviceID:    "device-cisco",
-				Action:      action,
-				PortIDs:     []string{"port-cisco"},
-				Description: "desc-x",
-				VLANID:      100,
-				BindOp:      "add",
-				IPAddress:   "192.168.1.10",
-				MACAddress:  "AA:BB:CC:DD:EE:FF",
-				NativeVLAN:  10,
+				DeviceID:     "device-cisco",
+				Action:       action,
+				PortIDs:      []string{"port-cisco"},
+				Description:  "desc-x",
+				VLANID:       100,
+				BindOp:       "add",
+				IPAddress:    "192.168.1.10",
+				MACAddress:   "AA:BB:CC:DD:EE:FF",
+				NativeVLAN:   10,
 				AllowedVLANs: []int{10, 20},
-				AllowedMode: portcollection.AllowedModeAdd,
-				MaxMacCount: 5,
+				AllowedMode:  portcollection.AllowedModeAdd,
+				MaxMacCount:  5,
 			}, "tester")
 			require.NoError(t, err)
 			pr := result.Ports[0]

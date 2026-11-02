@@ -1,0 +1,32 @@
+{
+  "items": [
+    {
+      "requirement_id": "SAFE-01",
+      "category": "unclassified",
+      "status": "unresolved",
+      "verification": null,
+      "resolution": null,
+      "reason": null,
+      "probe": "unclassified — review manually"
+    },
+    {
+      "requirement_id": "SAFE-02",
+      "category": "unclassified",
+      "status": "unresolved",
+      "verification": null,
+      "resolution": null,
+      "reason": null,
+      "probe": "unclassified — review manually"
+    }
+  ],
+  "coverage": {
+    "applicable": 2,
+    "resolved": 0,
+    "unresolved": 2,
+    "unclassified": 2,
+    "byVerification": {
+      "explicit": 0,
+      "backstop": 0
+    }
+  }
+}

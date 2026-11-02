@@ -137,10 +137,10 @@ var portStatusAllowedSortFields = map[string]string{
 // 实现按 DB dialect 分支(遵循 internal/services/asset/reconciliation_service.go 惯例):
 //   - postgres: 三个排序键 ——
 //     1. 字母前缀(regexp_replace 取首个数字及之后部分为空): GE/XGE/HGE/FOE/FE 等,
-//        把不同速率分开,避免 FE0/2 夹在 GE0/1 与 GE0/3 之间交替。
+//     把不同速率分开,避免 FE0/2 夹在 GE0/1 与 GE0/3 之间交替。
 //     2. 数字段 int 数组(regexp_matches(interface_name,'([0-9]+)','g')): PG 数组逐元素
-//        比较等价 (板卡号,子卡号,接口号) 元组比较,两段(GE0/1)和三段(GE0/0/1)都正确。
-//        COALESCE 兜底无数字接口名(Vlan/NULL 等)为空数组,排末尾。
+//     比较等价 (板卡号,子卡号,接口号) 元组比较,两段(GE0/1)和三段(GE0/0/1)都正确。
+//     COALESCE 兜底无数字接口名(Vlan/NULL 等)为空数组,排末尾。
 //     3. interface_name: 稳定 tiebreaker。
 //   - 其他(sqlite 等开发/测试 dialect): 降级为字符串排序。端口采集主库为 PG,
 //     sqlite 仅测试用,降级可接受。

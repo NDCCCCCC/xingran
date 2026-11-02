@@ -227,7 +227,6 @@ const CommandDispatch: FC = () => {
                 onChange={() => {
                   handleSuccess();
                 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={STATUS_OPTIONS}
               />
