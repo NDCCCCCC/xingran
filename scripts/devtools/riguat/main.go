@@ -27,6 +27,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -157,30 +158,55 @@ type actionRunResult struct {
 	BaseOK   bool     // 动作前基线与权威基线一致
 }
 
+// parseVlanList 解析逗号分隔的 VLAN 列表（"3990,3991" → []int{3990,3991}）。
+// 空串返回 nil（表示该参数未指定）。
+func parseVlanList(s string) []int {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	var out []int
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		n, err := strconv.Atoi(part)
+		if err != nil {
+			continue
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
 func main() {
 	var (
-		cfgPath       string
-		envFile       string
-		backendPID    int
-		procRoot      string
-		deviceName    string
-		ifaceShort    string
-		actionName    string
-		outFile       string
-		vlan          int
-		mac           string
-		ip            string
-		desc          string
-		maxMac        int
-		timeout       time.Duration
-		apply         bool
-		probe         bool
-		batch         bool
-		forceContinue bool
-		maxRestore    int
-		scanIdleFlag  bool
-		scanModel     string
-		dbCheckFlag   bool
+		cfgPath        string
+		envFile        string
+		backendPID     int
+		procRoot       string
+		deviceName     string
+		ifaceShort     string
+		actionName     string
+		outFile        string
+		vlan           int
+		mac            string
+		ip             string
+		desc           string
+		maxMac         int
+		timeout        time.Duration
+		apply          bool
+		probe          bool
+		batch          bool
+		forceContinue  bool
+		maxRestore     int
+		scanIdleFlag   bool
+		scanModel      string
+		hybridTagged   string
+		hybridUntagged string
+		hybridNative   int
+		dbCheckFlag    bool
 	)
 	flag.StringVar(&cfgPath, "config", "/app/szh/configs/config.yaml", "后端 config.yaml 路径")
 	flag.StringVar(&envFile, "sm4-env-file", "", "SM4_KEY 环境变量文件路径（如 /proc/<pid>/environ）")
@@ -204,6 +230,9 @@ func main() {
 	flag.BoolVar(&scanIdleFlag, "scan-idle", false, "只读扫描空闲候选测试口（仅查库，不连设备、不改配置）")
 	flag.BoolVar(&dbCheckFlag, "db-check", false, "诊断：打印 config.yaml database 段解析结果（不打印密码）")
 	flag.StringVar(&scanModel, "scan-model", "RS8607", "空闲口扫描的设备 model 关键字")
+	flag.StringVar(&hybridTagged, "hybrid-tagged", "", "hybrid 动作：tagged VLAN 列表（逗号分隔，如 3990,3991）")
+	flag.StringVar(&hybridUntagged, "hybrid-untagged", "", "hybrid 动作：untagged VLAN 列表（逗号分隔）")
+	flag.IntVar(&hybridNative, "hybrid-native", 0, "hybrid 动作：native VLAN 单值（0 = 不设）")
 	flag.Parse()
 
 	// ---------- 诊断：db-check ----------
@@ -315,14 +344,17 @@ func main() {
 		limit = *prow.Dot1xUserLimit
 	}
 	baseParams := actionParams{
-		CliIface:     cliIface,
-		VLAN:         vlan,
-		MAC:          mac,
-		IP:           ip,
-		Desc:         desc,
-		MaxMAC:       maxMac,
-		Dot1xLimit:   &limit,
-		BaselineVLAN: baseVLAN,
+		CliIface:       cliIface,
+		VLAN:           vlan,
+		MAC:            mac,
+		IP:             ip,
+		Desc:           desc,
+		MaxMAC:         maxMac,
+		Dot1xLimit:     &limit,
+		BaselineVLAN:   baseVLAN,
+		HybridTagged:   parseVlanList(hybridTagged),
+		HybridUntagged: parseVlanList(hybridUntagged),
+		HybridNative:   hybridNative,
 	}
 
 	// ---------- 批次模式 ----------

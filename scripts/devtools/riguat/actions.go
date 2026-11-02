@@ -33,6 +33,10 @@ type actionParams struct {
 	MaxMAC       int
 	Dot1xLimit   *int
 	BaselineVLAN int // 基线里的 access vlan（用于 set_access_vlan 还原判断）
+	// hybrid 动作参数（锐捷 TrunkSetHybrid，PR #44 新渲染形态）。
+	HybridTagged   []int // → switchport hybrid allowed vlan tagged <list>
+	HybridUntagged []int // → switchport hybrid allowed vlan untagged <list>
+	HybridNative   int   // → switchport hybrid native vlan <id>（单值）
 }
 
 // actionSpec 动作定义。
@@ -231,6 +235,53 @@ var actionRegistry = map[string]actionSpec{
 		Judgement: "锐捷专项③：`switchport port-security mac-address <mac> vlan <vlan>` 是否被支持\n" +
 			"           （看设备回显是否 % Invalid input / % Unknown command）",
 	},
+
+	// hybrid（锐捷 TrunkSetHybrid，PR #44 新渲染形态）。
+	//
+	// 注意：**不加入 actionNames** —— 批次模式（--batch）不跑 hybrid：
+	//   hybrid 会把端口从 access 切到 hybrid 模式（改变转发模式），且需要显式
+	//   指定 VLAN 参数，与「12 个固定动作」的批次语义不同，必须由人显式指定口与
+	//   VLAN 后单独跑。
+	"hybrid": {
+		Name:       "hybrid",
+		PortAction: portcollection.TrunkSetHybrid,
+		Build: func(p actionParams) portcollection.PortTemplateParams {
+			return portcollection.PortTemplateParams{
+				InterfaceName:  p.CliIface,
+				HybridTagged:   p.HybridTagged,
+				HybridUntagged: p.HybridUntagged,
+				NativeVLAN:     p.HybridNative,
+			}
+		},
+		Undo: func(baseline []string, p actionParams) []string {
+			// 还原语义：undo 只删「动作引入的配置行」；「恢复动作删除的配置行」由
+			// 基线重放负责（基线若有 `switchport access vlan N` 行，重放会补回；
+			// 基线若没有这一行 ⇒ **不下发** —— 否则凭空多出一行制造 diff）。
+			var cmds []string
+			if len(p.HybridTagged) > 0 {
+				cmds = append(cmds, fmt.Sprintf("no switchport hybrid allowed vlan tagged %s", ruijieVlanList(p.HybridTagged)))
+			}
+			if len(p.HybridUntagged) > 0 {
+				cmds = append(cmds, fmt.Sprintf("no switchport hybrid allowed vlan untagged %s", ruijieVlanList(p.HybridUntagged)))
+			}
+			if p.HybridNative > 0 {
+				cmds = append(cmds, fmt.Sprintf("no switchport hybrid native vlan %d", p.HybridNative))
+			}
+			// ★ 端口模式回退：渲染层 undo 不覆盖端口模式（lead 裁定：不在本动作范围，
+			//   safety.go 未扩写），但真机实跑必须把口切回 access ⇒ 还原显式下发。
+			//   设备回 Invalid input 时兜底 `default switchport mode access`；
+			//   若 running-config 仍残留 `switchport mode hybrid` 行，由差异驱动修复
+			//   走 `no switchport mode hybrid`（negateConfigLine 已映射该行）。
+			cmds = append(cmds, "switchport mode access")
+			return cmds
+		},
+		Judgement: "锐捷专项④：hybrid 三种形态是否被设备接受 ——\n" +
+			"           `switchport mode hybrid`（前置切模式）+\n" +
+			"           `switchport hybrid allowed vlan tagged <list>` / `... untagged <list>` /\n" +
+			"           `switchport hybrid native vlan <id>`（单值）\n" +
+			"           ★ 多 untagged 是否被接受 = PR #44 撤销「多 untagged 拒绝」后的行为验证\n" +
+			"           ★ 还原后端口模式必须回到 access（running-config 不应残留 hybrid 行）",
+	},
 }
 
 // actionNames 有序动作名列表（报告与用法输出用）。
@@ -248,6 +299,15 @@ func ruijieMAC(mac string) string {
 	}
 	lower := strings.ToLower(stripped)
 	return lower[0:4] + "." + lower[4:8] + "." + lower[8:12]
+}
+
+// ruijieVlanList 把 VLAN ID 列表格式化为锐捷/Cisco 逗号分隔形态（30,40）。
+func ruijieVlanList(vlans []int) string {
+	parts := make([]string, 0, len(vlans))
+	for _, v := range vlans {
+		parts = append(parts, fmt.Sprintf("%d", v))
+	}
+	return strings.Join(parts, ",")
 }
 
 // negateConfigLine 由"多出的配置行"推导对应的否定命令（差异驱动修复用）。
