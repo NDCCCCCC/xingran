@@ -362,8 +362,10 @@ func renderHuaweiPortBindingAdd(p PortTemplateParams) ([]string, error) {
 			args = fmt.Sprintf("%s mac-address %s", args, mac)
 		}
 	}
+	// Phase 129 真机修复（2026-11-01 S8700 实测）：user-bind 是系统视图命令，
+	// 接口视图执行报 Unrecognized —— 不带 interface 前缀（能力矩阵
+	// ActionSystemView，executeWrite 据此不加 view 退出命令）。
 	return []string{
-		fmt.Sprintf("interface %s", p.InterfaceName),
 		fmt.Sprintf("user-bind static %s", args),
 	}, nil
 }
@@ -388,10 +390,19 @@ func renderH3CPortBindingAdd(p PortTemplateParams) ([]string, error) {
 	}, nil
 }
 
-// renderRuijiePortBindingAdd Ruijie switchport port-security binding 添加（RISK-02）：
+// renderRuijiePortBindingAdd Ruijie switchport port-security binding 添加：
 //
-//	switchport port-security binding <aabb.ccdd.eeff> <IP>
+//	switchport port-security binding <IP> <aabb.ccdd.eeff>
 //	或 IP-only 形式（无 MAC）：switchport port-security binding <IP>
+//
+// ★ 2026-11-02 真机修正（锐捷 RS8607E 实测）：**IP 在前、MAC 在后**。
+// 原渲染为 `<mac> <IP>`（RISK-02 旧口径，类推 Cisco），真机下发被 RGOS 拒绝
+// （12 动作真机复测中 port_binding 是唯一失败项）→ 改为 IP 在前。
+// 依据：锐捷 RS8607E 真机 `switchport port-security binding <IP> <MAC>` 实测无错误
+// （见 device_capability.go 锐捷 supported 条目）。
+//
+// MAC 为空时只渲染 IP（IP-only 绑定是锐捷合法形式，设备基线里就有一条
+// `switchport port-security binding 10.62.51.173`）。
 func renderRuijiePortBindingAdd(p PortTemplateParams) ([]string, error) {
 	if p.IPAddress == "" {
 		return nil, fmt.Errorf("portcollection: ip-address required for ruijie port_binding add")
@@ -409,7 +420,7 @@ func renderRuijiePortBindingAdd(p PortTemplateParams) ([]string, error) {
 	mac := toRuijieMACFormat(normalized)
 	return []string{
 		fmt.Sprintf("interface %s", p.InterfaceName),
-		fmt.Sprintf("switchport port-security binding %s %s", mac, p.IPAddress),
+		fmt.Sprintf("switchport port-security binding %s %s", p.IPAddress, mac),
 	}, nil
 }
 
@@ -455,8 +466,11 @@ func renderH3CPortBindingRemove(p PortTemplateParams) ([]string, error) {
 
 // renderRuijiePortBindingRemove Ruijie switchport port-security binding 解绑（Cisco 风格 `no` 前缀）：
 //
-//	no switchport port-security binding <aabb.ccdd.eeff> <IP>
+//	no switchport port-security binding <IP> <aabb.ccdd.eeff>
 //	或 IP-only 形式：no switchport port-security binding <IP>
+//
+// ★ 2026-11-02 真机修正：参数顺序与 add 对齐（IP 在前、MAC 在后）——
+// add/remove 形状不一致会导致解绑命令匹配不到已配置的绑定（设备报未找到）。
 func renderRuijiePortBindingRemove(p PortTemplateParams) ([]string, error) {
 	if p.IPAddress == "" {
 		return nil, fmt.Errorf("portcollection: ip-address required for ruijie port_binding remove")
@@ -474,6 +488,6 @@ func renderRuijiePortBindingRemove(p PortTemplateParams) ([]string, error) {
 	mac := toRuijieMACFormat(normalized)
 	return []string{
 		fmt.Sprintf("interface %s", p.InterfaceName),
-		fmt.Sprintf("no switchport port-security binding %s %s", mac, p.IPAddress),
+		fmt.Sprintf("no switchport port-security binding %s %s", p.IPAddress, mac),
 	}, nil
 }

@@ -188,14 +188,14 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			vendor:   models.VendorHuawei,
 			action:   ActionPortBinding,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "add", IPAddress: "10.62.25.5"},
-			expected: []string{"interface GE0/0/1", "user-bind static ip-address 10.62.25.5"},
+			expected: []string{"user-bind static ip-address 10.62.25.5"},
 		},
 		{
 			name:     "huawei_port_binding_add_with_mac",
 			vendor:   models.VendorHuawei,
 			action:   ActionPortBinding,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "add", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
-			expected: []string{"interface GE0/0/1", "user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"},
+			expected: []string{"user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"},
 		},
 		{
 			name:     "huawei_port_binding_remove",
@@ -230,7 +230,7 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			vendor:   models.VendorRuijie,
 			action:   ActionPortBinding,
 			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1", BindOp: "add", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
-			expected: []string{"interface GigabitEthernet0/0/1", "switchport port-security binding aabb.ccdd.eeff 10.62.25.5"},
+			expected: []string{"interface GigabitEthernet0/0/1", "switchport port-security binding 10.62.25.5 aabb.ccdd.eeff"},
 		},
 		{
 			name:     "ruijie_port_binding_add_no_mac",
@@ -244,7 +244,7 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			vendor:   models.VendorRuijie,
 			action:   ActionPortBinding,
 			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1", BindOp: "remove", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
-			expected: []string{"interface GigabitEthernet0/0/1", "no switchport port-security binding aabb.ccdd.eeff 10.62.25.5"},
+			expected: []string{"interface GigabitEthernet0/0/1", "no switchport port-security binding 10.62.25.5 aabb.ccdd.eeff"},
 		},
 	}
 
@@ -360,7 +360,7 @@ func TestRenderCommand_Ruijie_PortBindingRemove_WithMAC(t *testing.T) {
 	})
 	require.NoError(t, err)
 	// AA:BB:CC:DD:EE:FF → aabb.ccdd.eeff（dot 格式）
-	assert.Equal(t, []string{"interface GigabitEthernet0/0/1", "no switchport port-security binding aabb.ccdd.eeff 10.62.25.5"}, got)
+	assert.Equal(t, []string{"interface GigabitEthernet0/0/1", "no switchport port-security binding 10.62.25.5 aabb.ccdd.eeff"}, got)
 }
 
 // ─── set_vlan VLAN 边界错误分支 ─────────────────────────────────────────

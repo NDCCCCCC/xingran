@@ -220,6 +220,12 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		return nil, fmt.Errorf("query device: %w", err)
 	}
 
+	// Phase 129 真机修复：能力矩阵校验（S8700 等型号受限动作 dry-run 即报
+	// 明确错误，不下发必失败命令）
+	if err := portcollection.CheckActionSupportParams(dev.Vendor, dev.Model, req.Action, req.MACAddress); err != nil {
+		return nil, err
+	}
+
 	// 厂商/(action, 参数) 支持性探测：用完整合法参数试渲染一次，把
 	// ErrUnsupportedVendor / ErrUnknownAction / 参数类校验提前到 4xx。
 	// 真正的逐端口渲染在 previewSinglePort 中重做（interfaceName 不同）。

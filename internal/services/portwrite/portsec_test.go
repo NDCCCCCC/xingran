@@ -33,7 +33,7 @@ func TestPortSecRender_AllVendors(t *testing.T) {
 		{models.VendorRuijie, portcollection.PortSecMaxMac, PortSecParams{MaxMACCount: 5}, []string{"switchport port-security maximum 5"}},
 		{models.VendorHuawei, portcollection.PortSecSticky, PortSecParams{}, []string{"port-security mac-address sticky"}},
 		{models.VendorRuijie, portcollection.PortSecSticky, PortSecParams{}, []string{"switchport port-security mac-address sticky"}},
-		{models.VendorHuawei, portcollection.PortSecStaticBind, PortSecParams{MACAddress: "AA:BB:CC:DD:EE:FF", VLANID: 100}, []string{"port-security mac-address sticky AA-BB-CC-DD-EE-FF vlan 100"}},
+		{models.VendorHuawei, portcollection.PortSecStaticBind, PortSecParams{MACAddress: "AA:BB:CC:DD:EE:FF", VLANID: 100}, []string{"port-security mac-address sticky AA-BB-CC-DD-EE-FF"}},
 		{models.VendorH3C, portcollection.PortSecStaticBind, PortSecParams{MACAddress: "AA:BB:CC:DD:EE:FF", VLANID: 100}, []string{"port-security mac-address security AA-BB-CC-DD-EE-FF vlan 100"}},
 		{models.VendorRuijie, portcollection.PortSecStaticBind, PortSecParams{MACAddress: "AA:BB:CC:DD:EE:FF", VLANID: 100}, []string{"switchport port-security mac-address aabb.ccdd.eeff vlan 100"}},
 	}
@@ -122,7 +122,8 @@ func TestValidatePortSecRequest(t *testing.T) {
 	assert.ErrorIs(t, validatePortSecRequest(portcollection.PortSecMaxMac, PortSecParams{MaxMACCount: 0}), ErrMaxMacOutOfRange)
 	assert.ErrorIs(t, validatePortSecRequest(portcollection.PortSecMaxMac, PortSecParams{MaxMACCount: 4097}), ErrMaxMacOutOfRange)
 	assert.ErrorIs(t, validatePortSecRequest(portcollection.PortSecStaticBind, PortSecParams{VLANID: 100}), ErrPortSecParamsInvalid, "缺 MAC")
-	assert.ErrorIs(t, validatePortSecRequest(portcollection.PortSecStaticBind, PortSecParams{MACAddress: "AA:BB:CC:DD:EE:FF", VLANID: 0}), ErrVlanIdOutOfRange)
+	// Phase 129 真机修复：华为 sticky 不带 vlan → VLANID=0 合法
+	assert.NoError(t, validatePortSecRequest(portcollection.PortSecStaticBind, PortSecParams{MACAddress: "AA:BB:CC:DD:EE:FF", VLANID: 0}))
 	assert.ErrorIs(t, validatePortSecRequest(portcollection.PortSecStaticBind, PortSecParams{MACAddress: "not-a-mac", VLANID: 100}), ErrMACAddressInvalid)
 	assert.ErrorIs(t, validatePortSecRequest(portcollection.ActionShutdown, PortSecParams{}), ErrPortSecParamsInvalid)
 	// 合法路径
