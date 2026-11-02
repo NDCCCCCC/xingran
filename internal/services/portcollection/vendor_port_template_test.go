@@ -463,3 +463,30 @@ func TestRenderCommand_Ruijie_PortBindingAdd_MissingIP(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "ip-address required")
 }
+
+// TestRenderCommand_CiscoTrunkActionsRejected 渲染层直调的 Cisco trunk/hybrid 拒绝。
+//
+// ★ 为何要测（2026-11-02）：能力矩阵会先拦住写路径 ⇒ 渲染层的这个分支
+//
+//	在产品链路上**从不被执行** ⇒ 不单独测就会无条件老化。
+//
+// ★ 为何错误类型是“明确不支持”而不是“不支持的厂商”：
+//
+//	Cisco 根本没有渲染派发表条目 ⇒ 若先查派发表会返回 ErrUnsupportedVendor
+//	⇒ 用户看到的是「不支持的厂商」而不是「该厂商不支持该动作」 ⇒ 错误分类。
+func TestRenderCommand_CiscoTrunkActionsRejected(t *testing.T) {
+	for _, action := range []PortAction{TrunkSetNative, TrunkSetAllowed, TrunkSetHybrid} {
+		_, err := RenderCommand(models.VendorCisco, action, PortTemplateParams{
+			InterfaceName: "GigabitEthernet 1/1",
+		})
+		require.Error(t, err, "Cisco 的 %s 在渲染层必须被明确拒绝", action)
+		assert.ErrorIs(t, err, ErrActionNotSupported,
+			"必须是 ErrActionNotSupported（不是 ErrUnsupportedVendor / ErrUnknownAction）")
+		assert.Contains(t, err.Error(), "渲染层未实现", "文案必须说明「渲染层未实现」")
+		assert.Contains(t, err.Error(), "无真机取证依据", "文案必须诚实标注「无真机取证依据」")
+	}
+
+	// 未接入厂商（Maipu）仍返回 ErrUnsupportedVendor（语义未变）
+	_, err := RenderCommand(models.VendorMaipu, ActionShutdown, PortTemplateParams{InterfaceName: "GE0/0/1"})
+	assert.ErrorIs(t, err, ErrUnsupportedVendor, "未接入厂商仍应返回 ErrUnsupportedVendor")
+}

@@ -71,6 +71,36 @@ func TestCheckActionSupport_RuijieHybrid(t *testing.T) {
 	}
 }
 
+// TestCheckActionSupport_Cisco 2026-11-02 裁定：Cisco 的 trunk/hybrid **显式标 Unsupported**。
+//
+// ★ 为什么必须显式（lead 裁定理由三条）：
+//  1. 矩阵「无条目即默认放行」= **把推测当默认**（我们要消灭的正是这个）；
+//  2. 渲染层本来就没有 Cisco 的 trunk/hybrid 实现 ⇒ 事实层面就是不支持；
+//  3. 依据要诚实：写「渲染层未实现 + 无真机取证依据」，**不伪造真机结论**。
+func TestCheckActionSupport_Cisco(t *testing.T) {
+	for _, action := range []PortAction{TrunkSetNative, TrunkSetAllowed, TrunkSetHybrid} {
+		// 型号已知与否都要拒绝（厂商级规则与型号无关）
+		for _, model := range []string{"Catalyst 9300", "C9500-48Y4C", ""} {
+			err := CheckActionSupport(models.VendorCisco, model, action)
+			assert.ErrorIs(t, err, ErrActionNotSupported,
+				"Cisco 的 %s 必须被显式拒绝（model=%q）", action, model)
+			assert.Contains(t, err.Error(), "无真机取证依据",
+				"拒绝依据必须诚实标注「无真机取证依据」")
+			assert.Contains(t, err.Error(), "渲染层未实现",
+				"拒绝依据必须说明「渲染层未实现」")
+		}
+	}
+
+	// Cisco 的其它动作（产品层有渲染）**不受影响** —— 不能一刀切
+	for _, action := range []PortAction{
+		ActionShutdown, ActionDescription, ActionSetAccessVLAN, ActionPortBinding,
+		PortSecEnable, PortSecMaxMac, PortSecStaticBind,
+	} {
+		assert.NoError(t, CheckActionSupport(models.VendorCisco, "Catalyst 9300", action),
+			"Cisco 的 %s 不应被这次裁定波及（产品层有渲染）", action)
+	}
+}
+
 // TestRequiresInterfaceView 真机事实 #1：华为 port_binding 是系统视图命令。
 func TestRequiresInterfaceView(t *testing.T) {
 	assert.False(t, RequiresInterfaceView(models.VendorHuawei, ActionPortBinding),
@@ -89,4 +119,26 @@ func TestRenderHuaweiPortBinding_SystemView(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"}, cmds)
+}
+
+// TestSupportEvidence_CiscoVendorUnsupported 厂商级 unsupported 通道的依据返回路径。
+//
+// ★ 为何要单独测：CheckActionSupport 只走 lookupSupport（覆盖了“支持/不支持判定”），
+//
+//	而 **SupportEvidence 的厂商级命中分支**（“为何拒绝”的文案来源）是另一条路径 ⇒
+//	若不单独测，它会因为「写路径先被矩阵拢截」而永远不被执行 ⇒ 那段代码会无条件潮化。
+func TestSupportEvidence_CiscoVendorUnsupported(t *testing.T) {
+	for _, action := range []PortAction{TrunkSetNative, TrunkSetAllowed, TrunkSetHybrid} {
+		ev := SupportEvidence(models.VendorCisco, "", action)
+		assert.NotEmpty(t, ev, "Cisco 的 %s 厂商级拒绝必须有依据文本", action)
+		assert.Contains(t, ev, "渲染层未实现",
+			"依据必须说明「渲染层未实现」")
+		assert.Contains(t, ev, "无真机取证依据",
+			"依据必须诚实标注「无真机取证依据」")
+	}
+
+	// 型号级依据仍然受影响（厂商级通道不得覆盖型号级 supported）
+	ev := SupportEvidence(models.VendorRuijie, "RS8607E", TrunkSetHybrid)
+	assert.Contains(t, ev, "真机",
+		"锐捷 RS8607E 的 hybrid 依据应仍为型号级真机依据")
 }
