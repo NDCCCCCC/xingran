@@ -252,7 +252,19 @@ func restoreWithVerify(
 
 		// ① undo 影响项 + ② 基线行重放（两组各自独立组装，均带 interface 前缀）
 		for _, seg := range restoreSegments(cliIface, spec, params, baseline) {
-			out.Cmds = append(out.Cmds, sender.sendInterfaceCmds(seg)...)
+			results := sender.sendInterfaceCmds(seg)
+			out.Cmds = append(out.Cmds, results...)
+			// 端口模式回退兜底：`switchport mode access` 被设备拒绝（Invalid input）时
+			// 改用 Cisco 风格的 `default switchport mode access`（lead 批准的兜底）。
+			// 若两者都不生效，running-config 会残留 `switchport mode hybrid` 行 →
+			// 由下面的差异驱动修复走 `no switchport mode hybrid`（negateConfigLine 已映射）。
+			for _, r := range results {
+				if strings.EqualFold(strings.TrimSpace(r.Command), "switchport mode access") && r.Failed {
+					log("  ⚠️ `switchport mode access` 被设备拒绝 → 兜底改用 `default switchport mode access`")
+					out.Cmds = append(out.Cmds, sender.sendInterfaceCmds([]string{"default switchport mode access"})...)
+					break
+				}
+			}
 		}
 
 		// ③ 重新采集 + diff
