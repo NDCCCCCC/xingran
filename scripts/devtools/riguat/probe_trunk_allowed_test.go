@@ -149,7 +149,6 @@ func TestControlledRunAllowed(t *testing.T) {
 // TestControlledRunCoversSecondLayer 受控实跑必须覆盖 add / remove / replace 三形态。
 func TestControlledRunCoversSecondLayer(t *testing.T) {
 	joined := strings.Join(controlledRunCmds, "\n")
-	// 三个语义验证要点（lead 2026-11-02 指定的顺序）：
 	//   ① only 语义（允许式 vs 排除式）、② add 语义（并集 vs 替换）、③ remove 语义
 	for _, need := range []string{
 		"switchport trunk allowed vlan only 3990",
@@ -291,4 +290,56 @@ func TestZeroResidualVerdict(t *testing.T) {
 	vlanDirty := probeBaseline{ConfigBytes: 0, ConfigLines: 0, PortMode: "access（默认）", VlanIDs: []int{1, 3990}}
 	_, _, _, sv = zeroResidualVerdict(initial, vlanDirty)
 	assert.False(t, sv, "VLAN 表多了 VLAN ⇒ 零残留必须报不一致")
+}
+
+// TestExtractTrunkNativeLine native 行原文提取（native 取证的判据）。
+func TestExtractTrunkNativeLine(t *testing.T) {
+	assert.Equal(t, "switchport trunk native vlan 3990",
+		extractTrunkNativeLine([]string{
+			"interface GigabitEthernet 1/25",
+			" switchport mode trunk",
+			" switchport trunk native vlan 3990",
+		}))
+	// 没有 native 行 ⇒ 空串（access 模式下无此行）
+	assert.Equal(t, "", extractTrunkNativeLine([]string{"description X"}))
+	// 不得误把 allowed 行当成 native 行
+	assert.Equal(t, "", extractTrunkNativeLine([]string{"switchport trunk allowed vlan only 3990"}))
+}
+
+// TestControlledRunCoversNative native 必须在受控实跑白名单里（第二个 P0 候选）。
+func TestControlledRunCoversNative(t *testing.T) {
+	joined := strings.Join(controlledRunCmds, "\n")
+	assert.Contains(t, joined, "switchport trunk native vlan 3990",
+		"受控实跑必须包含 native 形态（trunk allowed 已被证伪 ⇒ native 同族也可能需要 only）")
+	// native 必须放第一条（allowed 列表还是设备默认态 ⇒ 语义判读更干净）
+	assert.Equal(t, "switchport trunk native vlan 3990", controlledRunCmds[0],
+		"native 实跑应放第一条")
+}
+
+// TestJudgeRunOutcome_NativeUsesNativeLine native 命令必须比 native 行判读（lead 2026-11-02 第六轮定位的 bug）。
+//
+// ★ 原 bug：三态判定对**所有命令**都拿 allowed 行作判据 ⇒ native 命令执行后
+//
+//	allowed 行本来就不变（native 与 allowed 是独立维度）⇒ 误判「无错但不落地」。
+func TestJudgeRunOutcome_NativeUsesNativeLine(t *testing.T) {
+	// 执行前无 native 行、无 allowed 行；执行后 native 行落盘
+	before := probeBaseline{ConfigLinesRaw: []string{}, PortMode: "trunk"}
+	after := probeBaseline{ConfigLinesRaw: []string{"switchport trunk native vlan 3990"}, PortMode: "trunk"}
+	o := judgeRunOutcome("switchport trunk native vlan 3990", false, before, after, before)
+	assert.Equal(t, verdictLanded, o.Verdict, "native 行落盘 ⇒ 必须判「存在且生效」（不得误判「无错但不落地」）")
+	assert.True(t, o.Changed)
+	assert.Equal(t, "switchport trunk native vlan 3990", o.VerdictAfter, "判读行应为 native 行而非 allowed 行")
+
+	// 反向：native 落盘但 **allowed 行没动** ⇒ 仍必须判「生效」（判读行跟 native 命令走）
+	before2 := probeBaseline{ConfigLinesRaw: []string{}, PortMode: "trunk"}
+	after2 := probeBaseline{ConfigLinesRaw: []string{"switchport trunk native vlan 3990"}, PortMode: "trunk"}
+	o2 := judgeRunOutcome("switchport trunk native vlan 3990", false, before2, after2, before2)
+	assert.Equal(t, verdictLanded, o2.Verdict)
+
+	// allowed 命令仍比 allowed 行
+	before3 := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990"}, PortMode: "trunk"}
+	after3 := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990,3991"}, PortMode: "trunk"}
+	o3 := judgeRunOutcome("switchport trunk allowed vlan add 3991", false, before3, after3, before3)
+	assert.Equal(t, verdictLanded, o3.Verdict)
+	assert.Contains(t, o3.VerdictAfter, "allowed vlan only 3990,3991")
 }
