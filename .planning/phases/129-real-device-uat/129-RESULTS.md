@@ -207,16 +207,24 @@ switchport port-security binding ?
 ⇒ **IP 在前、MAC 在后**；我们渲染成 `<MAC> <IP>` 被拒。设备基线自带的
 `switchport port-security binding 10.62.51.173` 是 **IP-only**，同样合法。
 
-**锐捷 hybrid 语法（真机取证）**：
+**锐捷 hybrid 语法（真机取证，2026-11-02 `?` 帮助，零配置变更）**：
 ```
+switchport mode ?
+  access / dot1q-tunnel / hybrid / private-vlan / trunk / uplink
+      ⇒ hybrid 需先切端口模式：switchport mode hybrid 存在
 switchport hybrid ?
   allowed  Allowed
   native   Native
-switchport hybrid vlan ?  → % Unrecognized command.
-switchport hybrid pvid ?  → % Unrecognized command.
+switchport hybrid native ?
+  vlan     Vlan
+switchport hybrid allowed ?
+  vlan     Vlan
+      ⇒ 形态：switchport hybrid native vlan <id> / switchport hybrid allowed vlan <list>
+（对照 trunk：switchport trunk native vlan <id> / switchport trunk allowed vlan <list>）
 ```
-⇒ 锐捷 hybrid = `switchport hybrid native <vlan>` + `switchport hybrid allowed <vlan-list>`；
-产品当前对锐捷 `TrunkSetHybrid` 返回 `ErrUnknownAction` = **功能缺口，应补**。
+⇒ 产品当前对锐捷 `TrunkSetHybrid` 返回 `ErrUnknownAction` = **功能缺口，应补**（已派 task-29）。
+⚠️ 该形态**未在生产口实跑** —— GE1/1 是在用工位口（access vlan 318），下发 hybrid 会改变
+转发模式，故只做 `?` 帮助取证，不冒险实跑。
 
 ### 华为 vs 锐捷能力对照（能力矩阵必须按厂商区分，不能一刀切）
 
