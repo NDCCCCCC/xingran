@@ -167,7 +167,7 @@ func TestJudgeRunOutcome(t *testing.T) {
 	}
 
 	// ① 被拒 ⇒ 关键字不存在
-	o := judgeRunOutcome("switchport trunk allowed vlan add 3990", true, mk("a"), mk("a"))
+	o := judgeRunOutcome("switchport trunk allowed vlan add 3990", true, mk("a"), mk("a"), mk("a"))
 	assert.Equal(t, verdictRejected, o.Verdict)
 	assert.False(t, o.Changed)
 	assert.False(t, o.SideEffect)
@@ -176,7 +176,7 @@ func TestJudgeRunOutcome(t *testing.T) {
 	//    （判据 = 回读的 `switchport trunk allowed vlan` 那一行原文，不是整块 diff）
 	o = judgeRunOutcome("switchport trunk allowed vlan only 3990", false,
 		mk("switchport trunk allowed vlan only 1-3989,3991-4094"),
-		mk("switchport trunk allowed vlan only 3990"))
+		mk("switchport trunk allowed vlan only 3990"), mk("switchport trunk allowed vlan only 1-3989,3991-4094"))
 	assert.Equal(t, verdictLanded, o.Verdict)
 	assert.True(t, o.Changed)
 	assert.Equal(t, "switchport trunk allowed vlan only 3990", o.AllowedAfter)
@@ -184,26 +184,45 @@ func TestJudgeRunOutcome(t *testing.T) {
 	// ③ 被接受但回读无变化 ⇒ ⚠️ 无错但不落地（hybrid 的 tagged 就是这样）
 	o = judgeRunOutcome("switchport trunk allowed vlan add 3991", false,
 		mk("switchport trunk allowed vlan only 3990"),
-		mk("switchport trunk allowed vlan only 3990"))
+		mk("switchport trunk allowed vlan only 3990"), mk("switchport trunk allowed vlan only 3990"))
 	assert.Equal(t, verdictSilentNoop, o.Verdict)
 	assert.False(t, o.Changed)
 	assert.False(t, o.Rejected)
 }
 
-// TestJudgeRunOutcome_SideEffect VLAN 表变化 ⇒ 判为副作用（须停止后续实跑）。
+// TestJudgeRunOutcome_SideEffect 副作用判定对「实跑期基线」判定（lead 2026-11-02 第四轮）。
+//
+// ★ 关键：「端口模式 access → trunk」是**实跑期期望状态**（实跑的前提就是切 trunk）
+//
+//	⇒ 若对「探测前」基线比就会误报「非预期副作用」⇒ 实跑被中途停掉。
 func TestJudgeRunOutcome_SideEffect(t *testing.T) {
-	// 设备自动创建 VLAN（锐捷已确证会这么做）→ 预期内，不停止
-	before := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990"}, VlanIDs: []int{1}, PortMode: "trunk"}
-	after := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990,3991"}, VlanIDs: []int{1, 3991}, PortMode: "trunk"}
-	o := judgeRunOutcome("switchport trunk allowed vlan add 3991", false, before, after)
+	// 实跑期基线：切 trunk 之后、实跑之前
+	runBase := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 1-3989,3991-4094"},
+		VlanIDs: []int{1}, PortMode: "trunk"}
+	before := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990"},
+		VlanIDs: []int{1}, PortMode: "trunk"}
+
+	// ① 设备自动创建 VLAN（锐捷已确证会这么做）→ 预期内，不停止
+	after := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990,3991"},
+		VlanIDs: []int{1, 3991}, PortMode: "trunk"}
+	o := judgeRunOutcome("switchport trunk allowed vlan add 3991", false, before, after, runBase)
 	assert.False(t, o.SideEffect, "设备自动创建 VLAN 是预期内行为，不应停止实跑")
 	assert.Equal(t, []int{3991}, o.VlanAdded, "新增 VLAN 应被记录")
 	assert.Equal(t, verdictLanded, o.Verdict)
 
-	// 端口模式被改动 ⇒ 非预期 ⇒ 副作用
-	after2 := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990"}, VlanIDs: []int{1}, PortMode: "hybrid"}
-	o2 := judgeRunOutcome("switchport trunk allowed vlan only 3990", false, before, after2)
+	// ② 端口模式被改动（相对实跑期基线）⇒ 非预期 ⇒ 副作用
+	after2 := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990"},
+		VlanIDs: []int{1}, PortMode: "hybrid"}
+	o2 := judgeRunOutcome("switchport trunk allowed vlan only 3990", false, before, after2, runBase)
 	assert.True(t, o2.SideEffect, "端口模式被改动必须判为副作用")
+
+	// ③ 【误报回归】实跑期基线已是 trunk ⇒ 不会因「access → trunk」而误报
+	probeBefore := probeBaseline{ConfigLinesRaw: []string{"description X"}, VlanIDs: []int{1}, PortMode: "access"}
+	after3 := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990"},
+		VlanIDs: []int{1}, PortMode: "trunk"}
+	o3 := judgeRunOutcome("switchport trunk allowed vlan only 3990", false, probeBefore, after3, runBase)
+	assert.False(t, o3.SideEffect,
+		"实跑期基线已是 trunk ⇒ 不应因「access → trunk」误报副作用（lead 第四轮误报的根因）")
 }
 
 // TestParsePortMode_TrunkFeatureLine 端口模式判定修正：
