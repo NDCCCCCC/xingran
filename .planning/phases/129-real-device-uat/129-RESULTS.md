@@ -226,6 +226,19 @@ switchport hybrid allowed ?
 ⚠️ 该形态**未在生产口实跑** —— GE1/1 是在用工位口（access vlan 318），下发 hybrid 会改变
 转发模式，故只做 `?` 帮助取证，不冒险实跑。
 
+**产品侧落地（task-29，2026-11-02）**：
+
+| 项 | 落地内容 |
+|---|---|
+| 渲染 | `portcollection` 新增 `renderRuijieTrunkSetHybrid` 并注册：`switchport mode hybrid`（前置）→ `switchport hybrid native vlan <id>`（untagged）→ `switchport hybrid allowed vlan <list>`（tagged） |
+| 前置切模式 | 设备要求端口处于 hybrid 模式才接受 hybrid 配置 ⇒ 渲染内置 `switchport mode hybrid`；dry-run 预览对该命令打「★ 端口模式变更为 hybrid」Note + critical 标注（模式变更不藏在预览外） |
+| native 单值约束 | 锐捷 native 只能表达一个 untagged VLAN（华为/H3C 的 untagged 是列表）⇒ untagged 传多个时**渲染层直接拒绝**（`ErrActionNotSupported` → 400），避免"端口已切 hybrid 模式但只配了部分 VLAN"的半吊子状态 |
+| 能力矩阵 | 锐捷 RS8607E 的 `supported` 追加 `TrunkSetHybrid`，依据写明本次 `?` 帮助形态 |
+| 撤销命令 | `no switchport hybrid native vlan <id>` / `no switchport hybrid allowed vlan <list>`；**端口模式回退不在本动作范围** —— 产品 rollback（`portwrite/safety.go`）目前只覆盖 shutdown / set_access_vlan，trunk/hybrid 无自动回滚，需人工或另行设计回滚策略（本次不擅自扩写） |
+| 锐捷 trunk 分支核对 | `switchport trunk native vlan <id>` ✅ 与真机一致；`switchport trunk allowed vlan …` 第一层 ✅ 一致；第二层 add/remove/全量沿用既有 Cisco 风格依据，本次取证未到第二层，未实跑验证 |
+| 实跑状态 | **命令形态已由设备 `?` 帮助确认（2026-11-02），未在生产 access 口实跑**（避免改变工位口转发模式） |
+| 行为变更 | `portwrite` 里两处"锐捷 hybrid 必须被拒绝"的过时断言（`vlan_trunk_test.go` / `pwx05_fixture_matrix_test.go`）已改为"锐捷 hybrid 现在支持"（真机事实驱动） |
+
 ### 华为 vs 锐捷能力对照（能力矩阵必须按厂商区分，不能一刀切）
 
 | 能力 | 华为 S8700 | 锐捷 RS8607E |
