@@ -70,7 +70,6 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({
             onChange={(value) => onAPIConfigChange(value as string | undefined)}
             loading={loadingAPIConfigs}
             allowClear
-            onSearch={() => {}}
             options={apiConfigs.map((config) => ({
               value: config.id,
               label: `${config.configName}${

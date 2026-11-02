@@ -202,7 +202,6 @@ const PortWriteAuditsPage = () => {
                   options={ACTION_OPTIONS}
                   style={{ width: 160 }}
                   showSearch={false}
-                  onSearch={() => {}}
                 />
               </Form.Item>
               <Form.Item name="status" label="状态">
@@ -212,7 +211,6 @@ const PortWriteAuditsPage = () => {
                   options={STATUS_OPTIONS}
                   style={{ width: 130 }}
                   showSearch={false}
-                  onSearch={() => {}}
                 />
               </Form.Item>
               <Form.Item name="timeRange" label="时间范围">

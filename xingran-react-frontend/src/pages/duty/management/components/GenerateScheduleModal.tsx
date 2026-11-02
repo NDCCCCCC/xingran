@@ -90,7 +90,6 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
             allowClear
             placeholder="请选择值班类型"
             showSearch={false}
-            onSearch={() => {}}
             options={[
               { value: "weekday", label: "工作日值班" },
               { value: "weekend", label: "周末值班" },

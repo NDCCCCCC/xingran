@@ -97,7 +97,6 @@ export function HolidayBatchModal({
                     onChange={(v) => onUpdateRow(index, "holidayType", v)}
                     style={{ width: "100%" }}
                     showSearch={false}
-                    onSearch={() => {}}
                     options={
                       holidayTypeDict.length > 0
                         ? holidayTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))

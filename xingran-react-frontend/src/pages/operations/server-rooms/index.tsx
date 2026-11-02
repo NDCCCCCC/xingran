@@ -512,7 +512,6 @@ const ServerRoomManagement: FC = () => {
                   placeholder="请先选择部门"
                   options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
                   disabled={!selectedDeptId}
-                  onSearch={() => {}}
                 />
               </Form.Item>
               <Form.Item name="floorNo" label="楼层">
@@ -527,7 +526,6 @@ const ServerRoomManagement: FC = () => {
                   allowClear
                   placeholder="请选择状态"
                   showSearch={false}
-                  onSearch={() => {}}
                   options={[
                     { label: "正常", value: 0 },
                     { label: "停用", value: 1 },
@@ -694,7 +692,6 @@ const ServerRoomManagement: FC = () => {
                   loadFloorOptions((value as string) ?? "");
                   serverRoomForm.setFieldValue("floorId", undefined);
                 }}
-                onSearch={() => {}}
               />
             </Form.Item>
             <Form.Item
@@ -711,7 +708,6 @@ const ServerRoomManagement: FC = () => {
                   label: `${f.floorNo} - ${f.name}`,
                   value: f.id,
                 }))}
-                onSearch={() => {}}
               />
             </Form.Item>
             <Form.Item
@@ -735,7 +731,6 @@ const ServerRoomManagement: FC = () => {
                   { label: "正常", value: 0 },
                   { label: "停用", value: 1 },
                 ]}
-                onSearch={() => {}}
               />
             </Form.Item>
             <Form.Item name="remark" label="描述">

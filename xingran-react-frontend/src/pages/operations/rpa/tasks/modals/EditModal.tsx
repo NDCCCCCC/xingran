@@ -59,7 +59,6 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
             onChange={(value) => onUpdate(index, { ...action, type: value as ActionType })}
             style={{ width: "100%" }}
             showSearch={false}
-            onSearch={() => {}}
             options={ACTION_TYPE_OPTIONS}
           />
         </Col>

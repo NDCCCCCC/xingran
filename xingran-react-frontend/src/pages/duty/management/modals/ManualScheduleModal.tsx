@@ -59,7 +59,6 @@ export function ManualScheduleModal({
             allowClear
             placeholder="选择值班池"
             showSearch={false}
-            onSearch={() => {}}
             options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
           />
         </Form.Item>
@@ -79,7 +78,6 @@ export function ManualScheduleModal({
           <AppSelect
             allowClear
             showSearch={false}
-            onSearch={() => {}}
             options={DUTY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
           />
         </Form.Item>
@@ -107,7 +105,6 @@ export function ManualScheduleModal({
             allowClear
             placeholder="选择原因（可选）"
             showSearch={false}
-            onSearch={() => {}}
             options={MANUAL_REASON_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
           />
         </Form.Item>

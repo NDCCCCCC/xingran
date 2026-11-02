@@ -76,7 +76,6 @@ export const RoomDeviceModal: FC<RoomDeviceModalProps> = ({
             allowClear
             placeholder="请选择设备类型"
             showSearch={false}
-            onSearch={() => {}}
             options={ROOM_DEVICE_TYPE_OPTIONS}
           />
         </Form.Item>
@@ -132,7 +131,6 @@ export const RoomDeviceModal: FC<RoomDeviceModalProps> = ({
                 allowClear
                 placeholder="请选择状态"
                 showSearch={false}
-                onSearch={() => {}}
                 options={ROOM_DEVICE_STATUS_OPTIONS}
               />
             </Form.Item>

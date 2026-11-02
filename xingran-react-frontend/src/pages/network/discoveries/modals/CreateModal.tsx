@@ -8,7 +8,6 @@ import { Modal, Form, InputNumber, Switch } from "antd";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { FormInstance } from "antd/es/form";
 import type { Department } from "@/types";
-import { DISCOVERY_TYPE_OPTIONS } from "../constants";
 
 export interface CreateModalProps {
   open: boolean;
@@ -46,7 +45,6 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
 
         <Form.Item name="discoveryType" label="发现类型" rules={[{ required: true }]}>
           {/* 形态分类器①/②：children 写法改写 options；固定 2 项 → 显式禁搜 */}
-          <AppSelect onSearch={() => {}} showSearch={false} options={[...DISCOVERY_TYPE_OPTIONS]} />
         </Form.Item>
 
         <Form.Item
@@ -85,7 +83,6 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
           <AppSelect
             placeholder="请选择部门"
             allowClear
-            onSearch={() => {}}
             options={departments.map((dept) => ({ value: dept.id, label: dept.deptName }))}
           />
         </Form.Item>

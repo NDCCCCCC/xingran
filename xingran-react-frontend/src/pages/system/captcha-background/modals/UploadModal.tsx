@@ -60,12 +60,7 @@ export function CaptchaUploadModal({
           rules={[{ required: true, message: "请选择拼图形状" }]}
         >
           {/* 形态分类器②③④：固定枚举（业务禁搜）→ options 形态 + showSearch={false} */}
-          <AppSelect
-            allowClear
-            onSearch={() => {}}
-            showSearch={false}
-            options={[...SHAPE_OPTIONS]}
-          />
+          <AppSelect allowClear showSearch={false} options={[...SHAPE_OPTIONS]} />
         </Form.Item>
         <Form.Item
           name="difficultyLevel"
@@ -73,12 +68,7 @@ export function CaptchaUploadModal({
           rules={[{ required: true, message: "请选择难度" }]}
         >
           {/* 形态分类器②③④：固定枚举（业务禁搜）→ options 形态 + showSearch={false} */}
-          <AppSelect
-            allowClear
-            onSearch={() => {}}
-            showSearch={false}
-            options={[...DIFFICULTY_OPTIONS]}
-          />
+          <AppSelect allowClear showSearch={false} options={[...DIFFICULTY_OPTIONS]} />
         </Form.Item>
         <Form.Item name="allowedShapes" label="允许的形状">
           {/* mode="multiple"：多选场景需搜索辅助定位，显式 showSearch（不依赖 count>=8） */}
@@ -86,7 +76,6 @@ export function CaptchaUploadModal({
             allowClear
             mode="multiple"
             placeholder="不限制则默认使用当前形状"
-            onSearch={() => {}}
             showSearch
             options={[...SHAPE_OPTIONS]}
           />

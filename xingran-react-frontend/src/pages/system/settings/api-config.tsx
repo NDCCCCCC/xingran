@@ -362,7 +362,6 @@ const APIConfigPage: FC = () => {
                 placeholder="全部类型"
                 style={{ width: 140 }}
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={CONFIG_TYPE_OPTIONS}
               />
@@ -373,7 +372,6 @@ const APIConfigPage: FC = () => {
                 placeholder="全部状态"
                 style={{ width: 140 }}
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={STATUS_ENUM_OPTIONS}
               />
@@ -458,7 +456,6 @@ const APIConfigPage: FC = () => {
             <AppSelect
               allowClear
               placeholder="请选择配置类型"
-              onSearch={() => {}}
               showSearch={false}
               options={CONFIG_TYPE_OPTIONS}
             />
@@ -513,12 +510,7 @@ const APIConfigPage: FC = () => {
                 children: (
                   <>
                     <Form.Item name="authType" label="认证方式" rules={[{ required: true }]}>
-                      <AppSelect
-                        allowClear
-                        onSearch={() => {}}
-                        showSearch={false}
-                        options={AUTH_TYPE_OPTIONS}
-                      />
+                      <AppSelect allowClear showSearch={false} options={AUTH_TYPE_OPTIONS} />
                     </Form.Item>
                     <Form.Item
                       noStyle
@@ -579,12 +571,7 @@ const APIConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <AppSelect
-              allowClear
-              onSearch={() => {}}
-              showSearch={false}
-              options={STATUS_ENUM_OPTIONS}
-            />
+            <AppSelect allowClear showSearch={false} options={STATUS_ENUM_OPTIONS} />
           </Form.Item>
 
           <Form.Item name="remark" label="备注">
