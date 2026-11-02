@@ -103,7 +103,8 @@ riguat --device <设备名> [选项]
   --backend-pid <pid>     从 /proc/<pid>/environ 取 SM4_KEY
   --sm4-env-file <path>   直接指定环境变量文件
   --vlan/--mac/--ip/--desc/--max-mac   测试参数
-  --hybrid-tagged <list>   hybrid 动作：tagged VLAN 列表（逗号分隔）
+  --hybrid-tagged <list>   hybrid 动作：tagged VLAN 列表（逗号分隔）★ 锐捷会拒绝
+                           （锐捷 hybrid 为自动补集语义，tagged 无设备侧对应物）
   --hybrid-untagged <list> hybrid 动作：untagged VLAN 列表（逗号分隔）
   --hybrid-native <id>     hybrid 动作：native VLAN 单值（0 = 不设）
   --out <path>            执行记录输出文件
@@ -179,7 +180,7 @@ riguat --device <设备名> [选项]
 
 ```bash
 ./riguat --device <设备名> --port GE1/25 --action hybrid --apply \
-         --hybrid-tagged 3990 --hybrid-untagged 3991,3992 --hybrid-native 3993 \
+         --hybrid-untagged 3991,3992 --hybrid-native 3993 \
          --config /app/szh/configs/config.yaml --backend-pid $PID
 ```
 
@@ -188,9 +189,16 @@ riguat --device <设备名> [选项]
 ```
 interface GigabitEthernet 1/25
 switchport mode hybrid                            ← 前置：设备要求端口处于 hybrid 模式
-switchport hybrid allowed vlan tagged 3990        ← tagged 列表
-switchport hybrid allowed vlan untagged 3991,3992  ← untagged 列表（**允许多个**）
-switchport hybrid native vlan 3993                ← native 单值
+// ★ 锐捷不下发 tagged（自动补集语义）——见下方说明
+switchport hybrid allowed vlan untagged 3991,3992  ← untagged 列表（**允许多个**，不带 only、不带 add）
+switchport hybrid native vlan 3993                ← native 单值（可选，与 untagged 解耦）
+
+> ★ **锐捷 hybrid 是「自动补集」语义**（2026-11-02 真机 + 补验）：untagged 之外的
+> VLAN 会被**设备自动划入 tagged**（实测 untagged 3992 ⇒ 设备落成
+> `only tagged 2-3991,3993-4094` + `add untagged 1,3992`）⇒ 锐捷 hybrid **不做 VLAN 收敛**，
+> 产品的 tagged 列表在锐捷上**没有设备侧对应物**。
+> ⇒ `--hybrid-tagged` 在锐捷上**会被产品层直接拒绝**（ErrActionNotSupported → 400），
+> 锐捷实跑只传 `--hybrid-untagged`。（华为侧 tagged 是显式语义，两家不同。）
 ```
 
 还原语义（比 12 个动作多两件事）：

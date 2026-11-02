@@ -564,7 +564,10 @@ var idleBaseline = []string{}
 func hybridParamsForTest() actionParams {
 	p := actionParamsForTest()
 	p.BaselineVLAN = 1
-	p.HybridTagged = []int{3990}
+	// ★ 锐捷 hybrid 是自动补集语义（2026-11-02 真机 + 补验，产品口径 (i)）：
+	//   只下发 untagged，**不下发 tagged**（tagged 在锐捷无设备侧对应物，
+	//   提交 tagged 会被产品层以 ErrActionNotSupported 拒绝）。
+	p.HybridTagged = nil
 	p.HybridUntagged = []int{3991, 3992}
 	p.HybridNative = 3993
 	return p
@@ -657,8 +660,9 @@ func TestHybridMultiUntaggedAccepted(t *testing.T) {
 	if strings.Contains(joined, "allowed vlan only untagged") {
 		t.Errorf("untagged 不得带 only（真机回显 Invalid input）: %s", joined)
 	}
-	if !strings.Contains(joined, "switchport hybrid allowed vlan only tagged 3990") {
-		t.Errorf("tagged 渲染形态不对（必须带 only）: %s", joined)
+	// ★ 产品口径 (i)：锐捷侧不下发 tagged（自动补集语义，tagged 无设备侧对应物）
+	if strings.Contains(joined, "allowed vlan only tagged") || strings.Contains(joined, "allowed vlan tagged") {
+		t.Errorf("锐捷侧不得下发 tagged 命令: %s", joined)
 	}
 	if !strings.Contains(joined, "switchport hybrid native vlan 3993") {
 		t.Errorf("native 渲染形态不对: %s", joined)

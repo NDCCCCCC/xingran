@@ -447,6 +447,14 @@ func (s *portWriteServiceImpl) writeSinglePort(
 	if err := portcollection.CheckActionSupportParams(dev.Vendor, dev.Model, action, macForCapability); err != nil {
 		return nil, err
 	}
+	// 锐捷 hybrid 厂商语义校验（产品口径 (i)+(i-a)）：锐捷 hybrid 是自动补集语义，
+	// tagged 列表在锐捷上无设备侧对应物 ⇒ 提交 tagged 必须明确报错（不静默丢弃）。
+	// 放在占锁/快照之前 ⇒ 早拒绝、不产生副作用。
+	if trunk != nil && trunk.trunk != nil {
+		if err := checkRuijieHybridParams(action, *trunk.trunk, dev.Vendor); err != nil {
+			return nil, err
+		}
+	}
 	// 802.1X ↔ hybrid 互斥预检（2026-11-02 真机事实）：端口启用 802.1X 时，
 	// 锐捷设备拒绝切 hybrid 模式（Can not operate on interface ... Conflict with
 	// IEEE 802.1X.）⇒ 在下发前用采集快照拦掉，给中文原因而不是英文设备报错。
