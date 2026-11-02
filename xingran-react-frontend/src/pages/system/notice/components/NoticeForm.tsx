@@ -183,11 +183,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               rules={[{ required: true, message: "请选择公告类型" }]}
             >
               {/* 形态分类器②④：公告类型固定 2 项，业务禁搜 */}
-              <AppSelect
-                allowClear
-                showSearch={false}
-                options={NOTICE_TYPE_OPTIONS}
-              />
+              <AppSelect allowClear showSearch={false} options={NOTICE_TYPE_OPTIONS} />
             </Form.Item>
           </Col>
         </Row>
@@ -203,11 +199,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               initialValue={0}
             >
               {/* 形态分类器②④：重要程度固定 3 项，业务禁搜 */}
-              <AppSelect
-                allowClear
-                showSearch={false}
-                options={NOTICE_LEVEL_OPTIONS}
-              />
+              <AppSelect allowClear showSearch={false} options={NOTICE_LEVEL_OPTIONS} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -219,11 +211,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               initialValue={0}
             >
               {/* 形态分类器②④：公告状态固定 2 项，业务禁搜 */}
-              <AppSelect
-                allowClear
-                showSearch={false}
-                options={NOTICE_STATUS_OPTIONS}
-              />
+              <AppSelect allowClear showSearch={false} options={NOTICE_STATUS_OPTIONS} />
             </Form.Item>
           </Col>
         </Row>

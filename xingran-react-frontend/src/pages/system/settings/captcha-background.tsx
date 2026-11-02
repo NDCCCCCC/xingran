@@ -513,22 +513,14 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             label="拼图形状"
             rules={[{ required: true, message: "请选择拼图形状" }]}
           >
-            <AppSelect
-              allowClear
-              showSearch={false}
-              options={[...SHAPE_OPTIONS]}
-            />
+            <AppSelect allowClear showSearch={false} options={[...SHAPE_OPTIONS]} />
           </Form.Item>
           <Form.Item
             name="difficultyLevel"
             label="难度级别"
             rules={[{ required: true, message: "请选择难度" }]}
           >
-            <AppSelect
-              allowClear
-              showSearch={false}
-              options={DIFFICULTY_LEVEL_OPTIONS}
-            />
+            <AppSelect allowClear showSearch={false} options={DIFFICULTY_LEVEL_OPTIONS} />
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
             {/* mode="multiple"：多选需搜索辅助定位，显式 showSearch */}
@@ -568,18 +560,10 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       >
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
           <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
-            <AppSelect
-              allowClear
-              showSearch={false}
-              options={[...SHAPE_OPTIONS]}
-            />
+            <AppSelect allowClear showSearch={false} options={[...SHAPE_OPTIONS]} />
           </Form.Item>
           <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
-            <AppSelect
-              allowClear
-              showSearch={false}
-              options={DIFFICULTY_LEVEL_OPTIONS}
-            />
+            <AppSelect allowClear showSearch={false} options={DIFFICULTY_LEVEL_OPTIONS} />
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
             {/* mode="multiple"：多选需搜索辅助定位，显式 showSearch */}

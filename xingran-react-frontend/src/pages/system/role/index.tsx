@@ -418,11 +418,7 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
               </Col>
               <Col span={12}>
                 <Form.Item name="status" label="状态">
-                  <AppSelect
-                    allowClear
-                    showSearch={false}
-                    options={[...STATUS_OPTIONS]}
-                  />
+                  <AppSelect allowClear showSearch={false} options={[...STATUS_OPTIONS]} />
                 </Form.Item>
               </Col>
             </Row>

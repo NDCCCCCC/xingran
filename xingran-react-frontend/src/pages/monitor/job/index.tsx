@@ -14,11 +14,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 
-import {
-  STATUS_OPTIONS,
-  DEFAULT_FORM_VALUES,
-  DEFAULT_SEARCH_FORM,
-} from "./constants";
+import { STATUS_OPTIONS, DEFAULT_FORM_VALUES, DEFAULT_SEARCH_FORM } from "./constants";
 import { getJobColumns, getJobLogColumns } from "./columns";
 import { useJobData, useJobActions } from "./hooks";
 import CronSelector from "@/components/CronSelector";
@@ -325,8 +321,7 @@ const JobManager: FC = () => {
             name="misfirePolicy"
             rules={[{ required: true }]}
             extra="任务错过执行时间的处理策略"
-          >
-          </Form.Item>
+          ></Form.Item>
           <Form.Item
             label="并发执行"
             name="concurrent"
@@ -335,8 +330,7 @@ const JobManager: FC = () => {
           >
             <Switch checkedChildren="允许" unCheckedChildren="禁止" />
           </Form.Item>
-          <Form.Item label="状态" name="status" rules={[{ required: true }]}>
-          </Form.Item>
+          <Form.Item label="状态" name="status" rules={[{ required: true }]}></Form.Item>
           <Form.Item label="备注" name="remark">
             <AppTextArea placeholder="请输入备注" rows={3} />
           </Form.Item>

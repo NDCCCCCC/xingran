@@ -214,19 +214,11 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           rules={[{ required: true, message: "请选择设备类型" }]}
         >
           {/* 形态分类器①/②：children 写法改写为 options；4 项枚举 + 固定业务语义 → 显式禁搜 */}
-          <AppSelect
-            placeholder="请选择设备类型"
-            showSearch={false}
-            options={deviceTypeOptions}
-          />
+          <AppSelect placeholder="请选择设备类型" showSearch={false} options={deviceTypeOptions} />
         </Form.Item>
         <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: "请选择厂商" }]}>
           {/* 形态分类器①/②：children 改写 options；厂商为固定短枚举（5 项）→ 显式禁搜 */}
-          <AppSelect
-            placeholder="请选择厂商"
-            showSearch={false}
-            options={VENDOR_OPTIONS}
-          />
+          <AppSelect placeholder="请选择厂商" showSearch={false} options={VENDOR_OPTIONS} />
         </Form.Item>
         <Form.Item name="model" label="型号">
           <AppInput placeholder="请输入设备型号" />
