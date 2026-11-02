@@ -75,6 +75,11 @@ func TestCheckDot1xHybridConflict(t *testing.T) {
 
 // TestTrunkWrite_BlockedByDot1x 写路径级：端口启用 802.1X 时，锐捷 hybrid 必须在
 // **下发前**被拒（且一条命令都不下发）—— 否则设备侧才报错，用户只看到英文原文。
+//
+// ★ 本用例**只带 untagged**（锐捷 hybrid 现在只接受 untagged，见 TestTrunkWrite_
+//
+//	RuijieHybridRejectsTagged）：带 tagged 会先被渲染层的 (i-a) 拦截命中，
+//	压根走不到 802.1X 预检 —— 两个用例各测一件事，不要混。
 func TestTrunkWrite_BlockedByDot1x(t *testing.T) {
 	db := newTestDB(t)
 	seedPreviewDevice(t, db, models.VendorRuijie)
@@ -100,4 +105,62 @@ func TestTrunkWrite_BlockedByDot1x(t *testing.T) {
 		"必须复用 ErrActionNotSupported ⇒ handler 映射 400")
 	assert.Contains(t, err.Error(), "Conflict with IEEE 802.1X", "错误文案必须带真机原句")
 	assert.Equal(t, 0, exec.calls, "预检必须发生在下发之前（一条命令都不应下发）")
+}
+
+// TestTrunkWrite_RuijieHybridRejectsTagged 写路径级：(i-a) 锐捷 hybrid 带 tagged
+// 必须被拒（端口**无** dot1x ⇒ 命中的一定是 (i-a)，不会与 802.1X 预检混淆）。
+//
+// 真机依据（2026-11-02）：锐捷 hybrid 是自动补集语义 ⇒ tagged 在锐捷无设备侧
+// 对应物 ⇒ 提交 tagged 必须明确报错，不静默丢弃。
+func TestTrunkWrite_RuijieHybridRejectsTagged(t *testing.T) {
+	db := newTestDB(t)
+	seedPreviewDevice(t, db, models.VendorRuijie)
+	require.NoError(t, db.Model(&models.NetworkDevice{}).
+		Where("id = ?", "device-ruijie").
+		Update("model", "RS8607E").Error)
+	// 端口**不**启用 802.1X（seed 默认 false）⇒ 只可能命中 (i-a)
+
+	exec := &countingExecutor{}
+	svc := newTestService(exec, nil, db)
+
+	_, err := svc.TrunkWrite(context.Background(), "port-ruijie", portcollection.TrunkSetHybrid,
+		TrunkParams{HybridTagged: []int{3990}, HybridUntagged: []int{3991}}, "tester")
+
+	require.Error(t, err, "锐捷 hybrid 带 tagged 必须被拒")
+	assert.ErrorIs(t, err, portcollection.ErrActionNotSupported, "必须复用 ErrActionNotSupported ⇒ 400")
+	assert.Contains(t, err.Error(), "自动补集语义", "错误文案必须是 (i-a) 的说明")
+	assert.NotContains(t, err.Error(), "Conflict with IEEE 802.1X",
+		"端口未启用 802.1X 时不得出现 802.1X 文案")
+	assert.Equal(t, 0, exec.calls, "预检必须发生在下发之前（一条命令都不应下发）")
+}
+
+// TestTrunkWrite_HybridGuardOrder 锁定**两层拦截的顺序**：带 tagged **且**端口启用
+// 802.1X 时，命中的必须是 (i-a)「自动补集语义」（渲染层在前），而不是 802.1X 文案。
+//
+// 为什么值得锁：双层拦截的顺序决定用户看到的错误文案 —— 顺序变了，用户看到的
+// 提示就从"你的参数在这个厂商不被支持"变成"这个口开了 802.1X"，属于行为变更。
+// 本用例让顺序被调整时立刻报错。
+func TestTrunkWrite_HybridGuardOrder(t *testing.T) {
+	db := newTestDB(t)
+	seedPreviewDevice(t, db, models.VendorRuijie)
+	require.NoError(t, db.Model(&models.NetworkDevice{}).
+		Where("id = ?", "device-ruijie").
+		Update("model", "RS8607E").Error)
+	// 端口同时启用 802.1X
+	require.NoError(t, db.Model(&models.DevicePortStatus{}).
+		Where("id = ?", "port-ruijie").
+		Update("dot1x_enabled", true).Error)
+
+	exec := &countingExecutor{}
+	svc := newTestService(exec, nil, db)
+
+	_, err := svc.TrunkWrite(context.Background(), "port-ruijie", portcollection.TrunkSetHybrid,
+		TrunkParams{HybridTagged: []int{3990}, HybridUntagged: []int{3991}}, "tester")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "自动补集语义",
+		"两层拦截中渲染层在前 ⇒ 参数问题（tagged）优先于端口状态问题（802.1X）")
+	assert.NotContains(t, err.Error(), "Conflict with IEEE 802.1X",
+		"命中 (i-a) 时不得混入 802.1X 文案（顺序即契约）")
+	assert.Equal(t, 0, exec.calls, "拦截必须发生在下发之前")
 }
