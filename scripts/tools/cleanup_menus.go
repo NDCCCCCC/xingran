@@ -1,4 +1,5 @@
 //go:build ignore
+
 package main
 
 import (
@@ -12,21 +13,21 @@ import (
 
 // Menu 菜单模型
 type Menu struct {
-	ID         string `gorm:"type:uuid;primary_key"`
-	MenuName   string `gorm:"type:varchar(50)"`
-	ParentID   string `gorm:"type:uuid"`
-	Path       string `gorm:"type:varchar(200)"`
-	Component  string `gorm:"type:varchar(200)"`
-	MenuType   string `gorm:"type:char(1)"`
-	OrderNum   int
-	Visible    string `gorm:"type:char(1)"`
-	Status     string `gorm:"type:char(1)"`
-	Perms      string `gorm:"type:varchar(100)"`
-	Icon       string `gorm:"type:varchar(100)"`
-	Remark     string `gorm:"type:varchar(500)"`
-	CreatedAt  int64
-	UpdatedAt  int64
-	DeletedAt  *int64 `gorm:"index"`
+	ID        string `gorm:"type:uuid;primary_key"`
+	MenuName  string `gorm:"type:varchar(50)"`
+	ParentID  string `gorm:"type:uuid"`
+	Path      string `gorm:"type:varchar(200)"`
+	Component string `gorm:"type:varchar(200)"`
+	MenuType  string `gorm:"type:char(1)"`
+	OrderNum  int
+	Visible   string `gorm:"type:char(1)"`
+	Status    string `gorm:"type:char(1)"`
+	Perms     string `gorm:"type:varchar(100)"`
+	Icon      string `gorm:"type:varchar(100)"`
+	Remark    string `gorm:"type:varchar(500)"`
+	CreatedAt int64
+	UpdatedAt int64
+	DeletedAt *int64 `gorm:"index"`
 }
 
 // DuplicateGroup 重复菜单组
@@ -39,7 +40,7 @@ type DuplicateGroup struct {
 
 func main() {
 	// 连接数据库
-	dsn := "host=10.62.10.34 user=postgres password=Cpic1234 dbname=xingran port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=10.62.10.34 user=postgres password=" + os.Getenv("DB_PASSWORD") + " dbname=xingran port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("数据库连接失败:", err)

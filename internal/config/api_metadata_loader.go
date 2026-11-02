@@ -102,6 +102,10 @@ func (c *APIMetadataConfig) normalize() {
 	}
 }
 
+// readFileFn 读取源注入点：生产默认 os.ReadFile；测试替换为可控实现
+// （阻塞/放行）以确定性驱动 select 的取消优先与读完成分支，不赌调度时序。
+var readFileFn = os.ReadFile
+
 // LoadAPIMetadata 从 YAML 文件加载 API 元数据。
 //
 // 解析完成后会做一次字段规范化(WR-3),消除 Method / Route 的大小写与
@@ -115,12 +119,23 @@ func LoadAPIMetadata(ctx context.Context, path string) (*APIMetadataConfig, erro
 		data []byte
 		err  error
 	}
+
+	// 前置检查(确定性入口):调用方传入的 ctx 若已取消,不经 select 直接返回——
+	// 本地文件读取极快,select 双 case 同时 ready 时 Go 会随机选择分支,
+	// 已取消场景就有约 50% 概率返回成功(CI flaky: TestLoadAPIMetadata_ContextCanceled)。
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("读取API元数据配置已取消: %w", err)
+	}
+
 	readCh := make(chan result, 1)
 	go func() {
-		data, err := os.ReadFile(path)
+		data, err := readFileFn(path)
 		readCh <- result{data, err}
 	}()
 
+	// 「读取进行中发生取消」的语义说明:此时 select 两分支皆属合法结局——
+	// 返回读取结果(已完成)或取消错误(未完成)由调度决定,二者均不丢失数据、
+	// 不产生错误行为;真正需要确定性的「调用入口已取消」由上方前置检查保证。
 	var data []byte
 	select {
 	case <-ctx.Done():

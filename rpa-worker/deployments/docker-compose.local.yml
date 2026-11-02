@@ -26,7 +26,7 @@ services:
       - BACKEND_URL=${BACKEND_URL:-http://10.62.10.33:9000/api/v1}
       - WORKER_TOKEN=${WORKER_TOKEN:-}
       - REDIS_ADDR=10.62.10.34:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-})(PO09po}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?请在部署环境注入 REDIS_PASSWORD（禁止默认兜底）}
       - REDIS_DB=0
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
