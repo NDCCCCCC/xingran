@@ -47,6 +47,14 @@ type capabilityEntry struct {
 	baseline map[PortAction]ActionSupport
 	// modelRules 型号覆盖规则：model 子串（大小写不敏感）→ 覆盖表
 	modelRules []modelCapabilityRule
+	// vendorUnsupported 厂商级「不支持」的动作集合（action → 原因）。
+	//
+	// ★ 为什么需要它（2026-11-02 Cisco 裁定）：型号级规则靠 model 子串匹配，
+	//   而「整个厂商都不支持某动作」与型号无关 ⇒ 无法用 modelRules 表达
+	//   （matchModelSubstr 为空数组时永不匹配；model 为空时整组规则不生效）。
+	//   之前 Cisco 因为「矩阵里没有条目」而落到「默认放行」—— 那正是
+	//   **把推测当默认**（默认支持 ≠ 有证据支持）。
+	vendorUnsupported map[PortAction]string
 }
 
 // modelCapabilityRule 型号级能力覆盖。
@@ -64,6 +72,12 @@ type modelCapabilityRule struct {
 	// 显式记录支持结论 + 真机依据，测试锁定两家结论相反。
 	supported map[PortAction]string
 }
+
+// ciscoUnsupportedReason Cisco 不支持 trunk/hybrid 动作的原因（诚实标注依据）。
+//
+// ⚠️ 依据是**「未实现 + 未取证」**，不是「真机证明不支持」—— 无设备时不伪造真机结论。
+const ciscoUnsupportedReason = "Cisco 当前不支持该端口写操作：渲染层未实现 trunk/hybrid 渲染，" +
+	"且无真机取证依据（2026-11-02 裁定：矩阵显式标记 Unsupported，不以推测冒充真机结论）"
 
 // vendorCapabilities 厂商能力矩阵（真机事实唯一真相源，测试锁定）。
 var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
@@ -100,8 +114,20 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 	// "静态 MAC 绑定"只能经 sticky 表达（static 子关键字该型号不存在）。
 	// 渲染层已按此去掉 vlan 参数；本矩阵不需拒绝（命令合法，仅参数形状不同）。
 	//
-	// H3C / Cisco：真机证据不足，全部默认支持（S8700 之外的华为 CE/S57 系列
-	// 按公允语法支持 trunk/hybrid/max-mac-num）。
+	// H3C：真机证据不足，暂按默认支持（S8700 之外的华为 CE/S57 系列
+	// 按公允语法支持 trunk/hybrid/max-mac-num）—— ⚠️ 这是**未取证但被当作默认**，
+	// 取证计划见 .planning/phases/130-device-evidence/130-EVIDENCE-PLAN-NO-DEVICE.md。
+	//
+	// Cisco（2026-11-02 裁定）：**显式标 Unsupported**，不再依赖「矩阵里没有条目
+	// ⇒ 默认放行」—— 那正是把推测当默认。依据诚实标注：**渲染层未实现 + 无真机取证依据**，
+	// 不伪造真机结论。
+	models.VendorCisco: {
+		vendorUnsupported: map[PortAction]string{
+			TrunkSetNative:  ciscoUnsupportedReason,
+			TrunkSetAllowed: ciscoUnsupportedReason,
+			TrunkSetHybrid:  ciscoUnsupportedReason,
+		},
+	},
 	// 锐捷 hybrid：2026-11-02 真机 `?` 帮助确认设备支持，此前渲染层未注册
 	// （RenderCommand → ErrUnknownAction）属功能缺口，本次已补齐渲染，
 	// 矩阵显式记 supported（见下方锐捷条目）。
@@ -195,6 +221,12 @@ func lookupSupport(vendor models.DeviceVendor, model string, action PortAction) 
 			return ActionSupported
 		}
 	}
+	// 厂商级「不支持」（与型号无关）：如 Cisco 的 trunk/hybrid（渲染层未实现 +
+	// 无真机取证依据）。放在型号级 supported 之后 —— 若将来某型号真机验证支持，
+	// 型号级证据优先。
+	if _, banned := entry.vendorUnsupported[action]; banned {
+		return ActionUnsupported
+	}
 	if lvl, ok := entry.baseline[action]; ok {
 		return lvl
 	}
@@ -205,6 +237,11 @@ func lookupSupport(vendor models.DeviceVendor, model string, action PortAction) 
 func unsupportedReason(vendor models.DeviceVendor, model string, action PortAction) string {
 	for _, rule := range matchModelRules(vendor, model) {
 		if reason, banned := rule.unsupported[action]; banned {
+			return reason
+		}
+	}
+	if entry, ok := vendorCapabilities[vendor]; ok {
+		if reason, banned := entry.vendorUnsupported[action]; banned {
 			return reason
 		}
 	}
@@ -226,6 +263,11 @@ func SupportEvidence(vendor models.DeviceVendor, model string, action PortAction
 		}
 		if evidence, ok := rule.supported[action]; ok {
 			return evidence
+		}
+	}
+	if entry, ok := vendorCapabilities[vendor]; ok {
+		if reason, banned := entry.vendorUnsupported[action]; banned {
+			return reason
 		}
 	}
 	return ""

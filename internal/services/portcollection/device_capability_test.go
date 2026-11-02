@@ -71,6 +71,36 @@ func TestCheckActionSupport_RuijieHybrid(t *testing.T) {
 	}
 }
 
+// TestCheckActionSupport_Cisco 2026-11-02 裁定：Cisco 的 trunk/hybrid **显式标 Unsupported**。
+//
+// ★ 为什么必须显式（lead 裁定理由三条）：
+//  1. 矩阵「无条目即默认放行」= **把推测当默认**（我们要消灭的正是这个）；
+//  2. 渲染层本来就没有 Cisco 的 trunk/hybrid 实现 ⇒ 事实层面就是不支持；
+//  3. 依据要诚实：写「渲染层未实现 + 无真机取证依据」，**不伪造真机结论**。
+func TestCheckActionSupport_Cisco(t *testing.T) {
+	for _, action := range []PortAction{TrunkSetNative, TrunkSetAllowed, TrunkSetHybrid} {
+		// 型号已知与否都要拒绝（厂商级规则与型号无关）
+		for _, model := range []string{"Catalyst 9300", "C9500-48Y4C", ""} {
+			err := CheckActionSupport(models.VendorCisco, model, action)
+			assert.ErrorIs(t, err, ErrActionNotSupported,
+				"Cisco 的 %s 必须被显式拒绝（model=%q）", action, model)
+			assert.Contains(t, err.Error(), "无真机取证依据",
+				"拒绝依据必须诚实标注「无真机取证依据」")
+			assert.Contains(t, err.Error(), "渲染层未实现",
+				"拒绝依据必须说明「渲染层未实现」")
+		}
+	}
+
+	// Cisco 的其它动作（产品层有渲染）**不受影响** —— 不能一刀切
+	for _, action := range []PortAction{
+		ActionShutdown, ActionDescription, ActionSetAccessVLAN, ActionPortBinding,
+		PortSecEnable, PortSecMaxMac, PortSecStaticBind,
+	} {
+		assert.NoError(t, CheckActionSupport(models.VendorCisco, "Catalyst 9300", action),
+			"Cisco 的 %s 不应被这次裁定波及（产品层有渲染）", action)
+	}
+}
+
 // TestRequiresInterfaceView 真机事实 #1：华为 port_binding 是系统视图命令。
 func TestRequiresInterfaceView(t *testing.T) {
 	assert.False(t, RequiresInterfaceView(models.VendorHuawei, ActionPortBinding),

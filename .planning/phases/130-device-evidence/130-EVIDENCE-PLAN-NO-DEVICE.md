@@ -154,15 +154,30 @@ port-security maximum ?
 | 现有测试 | `portwrite/cisco_test.go` 断言「Cisco 无 hybrid 模式，必须拒绝」 | ✅ 测试锁住「会失败」，但**没锁失败原因** |
 
 ⚠️ **两个层次要分清**：
-- 矩阵层说「支持」（默认放行）——⚠️ 无证据；
+- 矩阵层原来说「支持」（默认放行）——⚠️ 无证据；
 - 渲染层根本没实现 ⇒ 实际会失败，但**失败原因是「未知动作」而不是「该设备不支持」**。
 
-⇒ 取证前**先决定产品口径**（这是需要 lead 拍板的产品决策，不是取证能解决的）：
-**要不要支持 Cisco IOS-XE 的 trunk/hybrid？**
-- 若要 ⇒ 需实现渲染（Cisco 风格 `switchport trunk allowed vlan add/remove <list>`、
-  `switchport trunk allowed vlan <list>`、`switchport mode trunk`、`switchport trunk native vlan <id>`）
-  + 补矩阵条目 + 真机取证；
-- 若不要 ⇒ 矩阵显式标 Unsupported（给出**真机依据**），而不是让用户撞「未知动作」。
+### ✅ 产品口径已定（lead 2026-11-02 裁定）
+
+**矩阵显式标 Unsupported，渲染层补明确错误。** 理由三条：
+1. 矩阵「无条目即默认放行」= **把推测当默认** —— 正是本次取证要消灭的东西；
+2. 渲染层没有 Cisco 的 trunk/hybrid 实现 ⇒ 事实层面就是不支持 ⇒ 现在报「未知动作」是
+   **错误分类**（用户看到「未知动作」会以为是 bug）；
+3. **依据要诚实**：写「**渲染层未实现 + 无真机取证依据**」，**不伪造真机结论**。
+
+已落地（2026-11-02）：
+- 能力矩阵新增 **厂商级 unsupported** 通道（`vendorUnsupported`：与型号无关的厂商级拒绝 ——
+  型号级规则靠 model 子串匹配，无法表达「整个厂商都不支持某动作」）；
+- Cisco 的 `TrunkSetNative` / `TrunkSetAllowed` / `TrunkSetHybrid` 三个动作显式标 Unsupported，
+  依据文本：「Cisco 当前不支持该端口写操作：渲染层未实现 trunk/hybrid 渲染，且无真机取证依据
+  （2026-11-02 裁定：矩阵显式标记 Unsupported，不以推测冒充真机结论）」；
+- `RenderCommand` 在「已知厂商但该动作未实现」时返回**明确的不支持错误**（`ErrActionNotSupported`
+  ⇒ handler 映射 400），不再报「未知动作」；
+- Cisco 的**其它动作不受影响**（产品层有渲染）—— 不能一刀切；
+- 测试锁定：三个 trunk 动作被拒 + **失败原因文案**含「无真机取证依据」「渲染层未实现」
+  + 零设备调用。
+
+⇒ 若将来拿到 IOS-XE 设备并取证通过，再把这条规则改为 supported（**按型号级证据**记）。
 
 ### 4.2 取证计划
 
