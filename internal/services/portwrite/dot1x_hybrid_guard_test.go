@@ -93,7 +93,7 @@ func TestTrunkWrite_BlockedByDot1x(t *testing.T) {
 	svc := newTestService(exec, nil, db)
 
 	_, err := svc.TrunkWrite(context.Background(), "port-ruijie", portcollection.TrunkSetHybrid,
-		TrunkParams{HybridTagged: []int{3990}}, "tester")
+		TrunkParams{HybridUntagged: []int{3990}}, "tester")
 
 	require.Error(t, err, "端口启用 802.1X 时必须拒绝 hybrid")
 	assert.ErrorIs(t, err, portcollection.ErrActionNotSupported,
