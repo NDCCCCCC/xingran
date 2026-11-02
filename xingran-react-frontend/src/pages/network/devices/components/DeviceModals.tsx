@@ -105,7 +105,6 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           {/* UUID 炸弹防护：credentialId 为 UUID 外键，原无 allowClear，禁用清空避免 undefined 触发后端校验 400 */}
           <AppSelect
             placeholder="请选择授权凭证"
-            onSearch={() => {}}
             allowClear={false}
             options={credentials.map((cred) => ({ value: cred.id, label: cred.credentialName }))}
           />
@@ -215,21 +214,11 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           rules={[{ required: true, message: "请选择设备类型" }]}
         >
           {/* 形态分类器①/②：children 写法改写为 options；4 项枚举 + 固定业务语义 → 显式禁搜 */}
-          <AppSelect
-            placeholder="请选择设备类型"
-            onSearch={() => {}}
-            showSearch={false}
-            options={deviceTypeOptions}
-          />
+          <AppSelect placeholder="请选择设备类型" showSearch={false} options={deviceTypeOptions} />
         </Form.Item>
         <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: "请选择厂商" }]}>
           {/* 形态分类器①/②：children 改写 options；厂商为固定短枚举（5 项）→ 显式禁搜 */}
-          <AppSelect
-            placeholder="请选择厂商"
-            onSearch={() => {}}
-            showSearch={false}
-            options={VENDOR_OPTIONS}
-          />
+          <AppSelect placeholder="请选择厂商" showSearch={false} options={VENDOR_OPTIONS} />
         </Form.Item>
         <Form.Item name="model" label="型号">
           <AppInput placeholder="请输入设备型号" />
@@ -260,7 +249,6 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
           <AppSelect
             placeholder="请选择授权凭证"
             allowClear
-            onSearch={() => {}}
             options={credentials.map((cred) => ({ value: cred.id, label: cred.credentialName }))}
           />
         </Form.Item>
@@ -272,7 +260,6 @@ const DeviceModals: React.FC<DeviceModalsProps> = ({
         </Form.Item>
         <Form.Item name="status" label="状态" rules={[{ required: true }]}>
           {/* 形态分类器①/②：children 改写 options；状态类固定枚举 → 显式禁搜 */}
-          <AppSelect onSearch={() => {}} showSearch={false} options={STATUS_OPTIONS} />
         </Form.Item>
         <Form.Item name="description" label="备注">
           <AppTextArea rows={3} placeholder="请输入备注" />

@@ -441,7 +441,6 @@ const CredentialManagement: FC = () => {
                 placeholder="请选择协议类型"
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={protocolTypeOptions}
               />
@@ -590,7 +589,6 @@ const CredentialManagement: FC = () => {
             {/* 形态分类器①/②：children 写法改写 options；固定 2 项 → 显式禁搜 */}
             <AppSelect
               placeholder="请选择协议类型 (SSH 或 Telnet)"
-              onSearch={() => {}}
               showSearch={false}
               options={protocolTypeOptions}
             />
@@ -638,7 +636,6 @@ const CredentialManagement: FC = () => {
               mode="tags"
               placeholder="请输入 SNMP Community，可添加多个"
               tokenSeparators={[","]}
-              onSearch={() => {}}
               showSearch
             />
           </Form.Item>

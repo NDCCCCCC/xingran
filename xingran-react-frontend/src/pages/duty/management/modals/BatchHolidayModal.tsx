@@ -92,7 +92,6 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
           <AppSelect
             allowClear
             showSearch={false}
-            onSearch={() => {}}
             options={[
               { value: "legal", label: "法定节假日" },
               { value: "custom", label: "自定义" },
@@ -103,7 +102,6 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
           <AppSelect
             allowClear
             showSearch={false}
-            onSearch={() => {}}
             options={[
               { value: true, label: "休息" },
               { value: false, label: "工作" },

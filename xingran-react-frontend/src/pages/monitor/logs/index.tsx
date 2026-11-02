@@ -256,7 +256,6 @@ const LogMonitor: React.FC = () => {
                       className="user-form-input"
                       style={{ width: "100%" }}
                       options={BUSINESS_TYPE_OPTIONS}
-                      onSearch={() => {}}
                     />
                   </Form.Item>
                 </Col>
@@ -268,7 +267,6 @@ const LogMonitor: React.FC = () => {
                       className="user-form-input"
                       style={{ width: "100%" }}
                       options={LOG_STATUS_OPTIONS}
-                      onSearch={() => {}}
                     />
                   </Form.Item>
                 </Col>
@@ -345,7 +343,6 @@ const LogMonitor: React.FC = () => {
                       className="user-form-input"
                       style={{ width: "100%" }}
                       options={LOGIN_STATUS_OPTIONS}
-                      onSearch={() => {}}
                     />
                   </Form.Item>
                 </Col>

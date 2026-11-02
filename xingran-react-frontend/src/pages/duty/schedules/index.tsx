@@ -489,7 +489,6 @@ const DutySchedulePage: FC = () => {
                 className="user-form-input"
                 style={{ width: 150 }}
                 showSearch={false}
-                onSearch={() => {}}
                 options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
               />
             </Form.Item>
@@ -500,7 +499,6 @@ const DutySchedulePage: FC = () => {
                 className="user-form-input"
                 style={{ width: 120 }}
                 showSearch={false}
-                onSearch={() => {}}
                 options={users.map((user) => ({
                   value: user.id,
                   label: user.nickName || user.username,
@@ -514,7 +512,6 @@ const DutySchedulePage: FC = () => {
                 className="user-form-input"
                 style={{ width: 120 }}
                 showSearch={false}
-                onSearch={() => {}}
                 options={DUTY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
               />
             </Form.Item>
@@ -525,7 +522,6 @@ const DutySchedulePage: FC = () => {
                 className="user-form-input"
                 style={{ width: 120 }}
                 showSearch={false}
-                onSearch={() => {}}
                 options={[
                   { value: 0, label: "未过期" },
                   { value: 1, label: "已过期" },
@@ -614,7 +610,6 @@ const DutySchedulePage: FC = () => {
               allowClear
               placeholder="请选择值班池"
               showSearch={false}
-              onSearch={() => {}}
               options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
             />
           </Form.Item>
@@ -637,7 +632,6 @@ const DutySchedulePage: FC = () => {
               allowClear
               placeholder="请选择值班类型"
               showSearch={false}
-              onSearch={() => {}}
               options={DUTY_TYPE_OPTIONS.map((opt) => ({
                 value: opt.value,
                 label: `${opt.label}值班`,
@@ -751,7 +745,6 @@ const DutySchedulePage: FC = () => {
               allowClear
               placeholder="请选择值班池"
               showSearch={false}
-              onSearch={() => {}}
               options={pools.map((pool) => ({ value: pool.id, label: pool.poolName }))}
             />
           </Form.Item>
@@ -773,7 +766,6 @@ const DutySchedulePage: FC = () => {
               allowClear
               placeholder="请选择值班类型"
               showSearch={false}
-              onSearch={() => {}}
               options={DUTY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
             />
           </Form.Item>

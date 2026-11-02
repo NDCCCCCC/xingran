@@ -117,7 +117,6 @@ const CaptchaBackgroundManagement: FC = () => {
             allowClear
             className="user-form-input"
             style={{ width: 120 }}
-            onSearch={() => {}}
             showSearch={false}
             options={[...SHAPE_OPTIONS]}
           />
@@ -128,7 +127,6 @@ const CaptchaBackgroundManagement: FC = () => {
             allowClear
             className="user-form-input"
             style={{ width: 100 }}
-            onSearch={() => {}}
             showSearch={false}
             options={[...DIFFICULTY_OPTIONS]}
           />
@@ -139,7 +137,6 @@ const CaptchaBackgroundManagement: FC = () => {
             allowClear
             className="user-form-input"
             style={{ width: 100 }}
-            onSearch={() => {}}
             showSearch={false}
             options={[...STATUS_OPTIONS]}
           />

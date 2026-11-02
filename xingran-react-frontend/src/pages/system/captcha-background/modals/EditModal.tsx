@@ -49,20 +49,10 @@ export function CaptchaEditModal({
     >
       <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
         <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
-          <AppSelect
-            allowClear
-            onSearch={() => {}}
-            showSearch={false}
-            options={[...SHAPE_OPTIONS]}
-          />
+          <AppSelect allowClear showSearch={false} options={[...SHAPE_OPTIONS]} />
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
-          <AppSelect
-            allowClear
-            onSearch={() => {}}
-            showSearch={false}
-            options={[...DIFFICULTY_OPTIONS]}
-          />
+          <AppSelect allowClear showSearch={false} options={[...DIFFICULTY_OPTIONS]} />
         </Form.Item>
         <Form.Item name="allowedShapes" label="允许的形状">
           {/* mode="multiple"：多选需搜索辅助定位，显式 showSearch */}
@@ -70,7 +60,6 @@ export function CaptchaEditModal({
             allowClear
             mode="multiple"
             placeholder="不限制则使用默认"
-            onSearch={() => {}}
             showSearch
             options={[...SHAPE_OPTIONS]}
           />

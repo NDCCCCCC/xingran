@@ -348,7 +348,6 @@ export default function RestoreModals(props: RestoreModalsProps) {
                       }
                     }}
                     placeholder="请选择要还原的版本"
-                    onSearch={() => {}}
                     showSearch={false}
                     optionFilterProp="label"
                   >
@@ -617,7 +616,6 @@ function DiffSelectRow(props: {
               }
             }
           }}
-          onSearch={() => {}}
           showSearch={false}
           options={selectedDeviceGroup?.backups.map((backup) => ({
             value: backup.id,
@@ -642,7 +640,6 @@ function DiffSelectRow(props: {
               }
             }
           }}
-          onSearch={() => {}}
           showSearch={false}
           options={selectedDeviceGroup?.backups.map((backup) => ({
             value: backup.id,

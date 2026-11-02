@@ -208,7 +208,6 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
         );
       }}
       {...selectProps}
-      onSearch={() => undefined}
     >
       {renderOptions()}
     </AppSelect>
