@@ -95,7 +95,7 @@ if ! git diff --unified=0 "${BASE_REF}...HEAD" -- '*.go' \
   ':(exclude)test/**' \
   ':(exclude)tests/**' \
   ':(exclude)xingran-react-frontend/**' \
-  ':(exclude)ruoyi-react-frontend/**' | awk '
+  ':(exclude)xingran-react-frontend/**' | awk '
   /^\+\+\+ b\// { file = substr($0, 7); in_hunk = 0; next }
   /^@@ / {
     match($0, /\+[0-9]+/)

@@ -27,7 +27,7 @@ go test -cover ./...
 
 ### Frontend (React)
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 
 # Install dependencies
 npm install

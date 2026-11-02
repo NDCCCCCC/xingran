@@ -14,7 +14,7 @@
  * 不负责：TS↔Go↔菜单码漂移（check-permission-codes.mjs 的职责，语义零改动）；
  * 死表陈旧条目（登记了但路由不存在）仅提示，由 85-02/03 各域拆分时清理。
  *
- * 用法：node scripts/check-route-registry.mjs（由 ruoyi-react-frontend lint:ci 链尾调用）
+ * 用法：node scripts/check-route-registry.mjs（由 xingran-react-frontend lint:ci 链尾调用）
  */
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";

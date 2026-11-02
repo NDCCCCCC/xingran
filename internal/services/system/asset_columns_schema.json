@@ -1,6 +1,6 @@
 {
-  "__generated__": "2026-10-30T14:10:52.501Z",
-  "source": "ruoyi-react-frontend/src/pages/operations/assets/columnsSchema.ts",
+  "__generated__": "2026-11-02T02:07:46.154Z",
+  "source": "xingran-react-frontend/src/pages/operations/assets/columnsSchema.ts",
   "pageKey": "asset.list",
   "columns": [
     {

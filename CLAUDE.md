@@ -45,7 +45,7 @@ go test ./internal/api/v1/
 ### Frontend (React)
 
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 
 # Install dependencies
 npm install
@@ -76,7 +76,7 @@ npm run test:coverage
 ### Configuration
 
 - Backend config: `configs/config.yaml`, `configs/config.dev.yaml`, `configs/config.prod.yaml`
-- Frontend env: `ruoyi-react-frontend/.env.development`
+- Frontend env: `xingran-react-frontend/.env.development`
 - Environment variables: `.env` (DB_HOST, DB_PASSWORD, REDIS_URL, etc.)
 
 ### Swagger Documentation
@@ -645,11 +645,11 @@ LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify
 - Permission definitions: `pkg/permission/permissions.go`
 
 **Frontend:**
-- Entry: `ruoyi-react-frontend/src/main.tsx`
-- Router: `ruoyi-react-frontend/src/App.tsx`
-- API wrapper: `ruoyi-react-frontend/src/lib/api.ts`
-- Crypto utils: `ruoyi-react-frontend/src/utils/sm2.ts`, `sm4.ts`
-- Stores: `ruoyi-react-frontend/src/store/`
+- Entry: `xingran-react-frontend/src/main.tsx`
+- Router: `xingran-react-frontend/src/App.tsx`
+- API wrapper: `xingran-react-frontend/src/lib/api.ts`
+- Crypto utils: `xingran-react-frontend/src/utils/sm2.ts`, `sm4.ts`
+- Stores: `xingran-react-frontend/src/store/`
 
 **Documentation:**
 - Architecture: `docs/项目概述和架构设计.md`
@@ -744,7 +744,7 @@ go test -v .
 ### Running Frontend Tests
 
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 
 # Run all tests
 npm run test

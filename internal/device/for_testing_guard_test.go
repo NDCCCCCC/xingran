@@ -69,7 +69,7 @@ func TestNoProductionForTestingReferences(t *testing.T) {
 			if strings.HasPrefix(name, ".") || // .git, .claude/worktrees copies, .archive-*
 				name == "vendor" ||
 				name == "node_modules" ||
-				name == "ruoyi-react-frontend" ||
+				name == "xingran-react-frontend" ||
 				name == "rpa-worker" ||
 				name == "testdata" ||
 				name == "tests" {

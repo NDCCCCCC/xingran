@@ -98,7 +98,7 @@ xingran-go-backend/
 │   └── response/               # 统一响应包装
 ├── scripts/                    # 构建与 Swagger 生成脚本
 ├── docs/                       # 项目文档
-└── ruoyi-react-frontend/       # 前端项目 (React + Vite)
+└── xingran-react-frontend/       # 前端项目 (React + Vite)
 ```
 
 ## 快速开始
@@ -127,7 +127,7 @@ go run ./cmd/main.go
 ### 前端启动
 
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npm install
 npm run dev      # 开发服，默认 http://localhost:4000
 npm run build    # 生产构建

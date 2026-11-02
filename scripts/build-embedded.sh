@@ -23,15 +23,15 @@ echo ""
 
 # Step 1: Clean frontend dist
 echo -e "[1/5] ${YELLOW}Cleaning frontend build output...${NC}"
-if [ -d "ruoyi-react-frontend/dist" ]; then
-    rm -rf ruoyi-react-frontend/dist
+if [ -d "xingran-react-frontend/dist" ]; then
+    rm -rf xingran-react-frontend/dist
 fi
 echo "Frontend dist cleaned"
 echo ""
 
 # Step 2: Check frontend dependencies
 echo -e "[2/5] ${YELLOW}Checking frontend dependencies...${NC}"
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 if [ ! -d "node_modules" ]; then
     echo "Installing frontend dependencies..."
     npm install
@@ -41,7 +41,7 @@ echo ""
 
 # Step 3: Build frontend
 echo -e "[3/5] ${YELLOW}Building frontend React app...${NC}"
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npm run build
 if [ $? -ne 0 ]; then
     echo -e "${RED}Frontend build FAILED!${NC}"
@@ -55,7 +55,7 @@ echo ""
 echo -e "[4/6] ${YELLOW}Copying frontend to embed directory...${NC}"
 rm -rf internal/server/xingran-react-frontend
 mkdir -p internal/server/xingran-react-frontend
-cp -r ruoyi-react-frontend/dist internal/server/xingran-react-frontend/
+cp -r xingran-react-frontend/dist internal/server/xingran-react-frontend/
 echo "Frontend files copied to embed directory"
 echo ""
 

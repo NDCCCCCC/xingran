@@ -21,7 +21,7 @@ type actionPermissionSeed struct {
 }
 
 // ============================================================================
-// F 型声明块（由 ruoyi-react-frontend/scripts/check-permission-codes.mjs 解析）：
+// F 型声明块（由 xingran-react-frontend/scripts/check-permission-codes.mjs 解析）：
 // 块内所有权限码字面量按 F 型按钮权限计入 menuFType，不再只当 untyped 字面量。
 // 必须与下方 actionPermissionSeeds 保持 1:1 严格一致（逐条相等且数量一致）。
 // 父 perms 必须留在块外，避免被误判为 F 型按钮。

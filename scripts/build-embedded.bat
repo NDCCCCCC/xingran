@@ -12,15 +12,15 @@ cd %PROJECT_ROOT%
 
 REM Step 1: Clean frontend dist
 echo [1/4] Cleaning frontend build output...
-if exist ruoyi-react-frontend\dist (
-    rmdir /s /q ruoyi-react-frontend\dist
+if exist xingran-react-frontend\dist (
+    rmdir /s /q xingran-react-frontend\dist
 )
 echo Frontend dist cleaned
 echo.
 
 REM Step 2: Build frontend
 echo [2/5] Building frontend React app...
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 call npm run build
 if errorlevel 1 (
     echo Frontend build FAILED!
@@ -36,7 +36,7 @@ if exist internal\server\xingran-react-frontend (
     rmdir /s /q internal\server\xingran-react-frontend
 )
 mkdir internal\server\xingran-react-frontend
-xcopy /e /i /y ruoyi-react-frontend\dist internal\server\xingran-react-frontend\dist
+xcopy /e /i /y xingran-react-frontend\dist internal\server\xingran-react-frontend\dist
 echo Frontend files copied to embed directory
 echo.
 

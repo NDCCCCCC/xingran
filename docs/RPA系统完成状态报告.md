@@ -108,7 +108,7 @@ go run cmd/main.go
 
 ### 2. 前端启动
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npm run dev
 ```
 

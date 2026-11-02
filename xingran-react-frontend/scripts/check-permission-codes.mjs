@@ -2,7 +2,7 @@
 /**
  * v1.24 PERM-06 —— 「模块 × 操作 → 权限码」映射表一致性校验（**双向**）。
  *
- * 单一真相源：`ruoyi-react-frontend/src/constants/permissionCodes.ts`
+ * 单一真相源：`xingran-react-frontend/src/constants/permissionCodes.ts`
  *
  * 对照的三份声明：
  *   1. 前端映射表   src/constants/permissionCodes.ts（PERMISSION_CODES）

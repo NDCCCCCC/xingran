@@ -209,7 +209,7 @@ if caCertPath := config.GetString("ldap.ca_cert_path"); caCertPath != "" {
 
 使用 `vite-plugin-remove-console` 插件，在生产构建时自动移除所有 console 语句：
 
-**已修改文件**: `ruoyi-react-frontend/vite.config.ts`
+**已修改文件**: `xingran-react-frontend/vite.config.ts`
 
 ```typescript
 import removeConsole from 'vite-plugin-remove-console'
@@ -456,11 +456,11 @@ curl -X POST http://localhost:8080/api/v1/system/user/unlock \
 
 ```bash
 # 重命名文件
-mv ruoyi-react-frontend/src/utils/baiduMapCache.ts \
-   ruoyi-react-frontend/src/utils/dualLevelCache.ts
+mv xingran-react-frontend/src/utils/baiduMapCache.ts \
+   xingran-react-frontend/src/utils/dualLevelCache.ts
 ```
 
-修改 `ruoyi-react-frontend/src/utils/dualLevelCache.ts`:
+修改 `xingran-react-frontend/src/utils/dualLevelCache.ts`:
 
 ```typescript
 /**
@@ -498,7 +498,7 @@ export const clearDualLevelCache = (): void => {  // 原 clearBaiduMapCache
 
 **第二步：更新 opsApi.ts 引用**
 
-修改 `ruoyi-react-frontend/src/lib/opsApi.ts`:
+修改 `xingran-react-frontend/src/lib/opsApi.ts`:
 
 ```typescript
 // ❌ 删除
@@ -563,7 +563,7 @@ export const resetGeocodeStats = () => {
 
 ```bash
 # 搜索所有 BaiduMapCache 引用
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 grep -r "BaiduMapCache\|baiduMapCache\|getBaiduMapCache" src/
 
 # 搜索所有 cacheStats 引用
@@ -574,7 +574,7 @@ grep -r "cacheStats" src/
 
 ```bash
 # 删除已弃用的 cacheStats.ts
-rm ruoyi-react-frontend/src/utils/cacheStats.ts
+rm xingran-react-frontend/src/utils/cacheStats.ts
 ```
 
 **第五步：验证**
@@ -1540,7 +1540,7 @@ import { Card } from 'antd';  // 添加导入
 
 ```bash
 # 1. 类型检查
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npx tsc --noEmit
 
 # 2. 构建

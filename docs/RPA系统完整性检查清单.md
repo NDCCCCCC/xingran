@@ -222,7 +222,7 @@ go run cmd/main.go
 .\xingran-backend-test.exe
 
 # 2. 启动前端
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npm run dev
 
 # 3. 访问 RPA 管理页面

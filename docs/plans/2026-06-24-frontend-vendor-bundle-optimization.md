@@ -100,7 +100,7 @@ vendor-react-NFPvZmrd.js: 1 处（"https://github.com/remarkjs/react-markdown/bl
 **Step 1: 测 baseline**
 
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 gzip -c dist/assets/vendor-echarts-*.js | wc -c
 ls -la dist/assets/vendor-echarts-*.js
 ```
@@ -251,7 +251,7 @@ grep -rn "from ['\"]react-markdown['\"]" src/ 2>/dev/null
 
 ```bash
 # 检查是否在 optimizeDeps.include
-grep "react-markdown" ruoyi-react-frontend/vite.config.ts
+grep "react-markdown" xingran-react-frontend/vite.config.ts
 ```
 
 预期：无。如果有 → 同步删除。
@@ -259,7 +259,7 @@ grep "react-markdown" ruoyi-react-frontend/vite.config.ts
 **Step 3: 卸载**
 
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npm uninstall react-markdown
 ```
 

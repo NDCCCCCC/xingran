@@ -97,8 +97,8 @@ func main() {
 	// 检查文件是否存在
 	fmt.Println("\n=== 检查组件文件 ===")
 	componentFiles := []string{
-		"ruoyi-react-frontend/src/pages/system/apikeys/index.tsx",
-		"ruoyi-react-frontend/src/pages/system/apikeys/LogsModal.tsx",
+		"xingran-react-frontend/src/pages/system/apikeys/index.tsx",
+		"xingran-react-frontend/src/pages/system/apikeys/LogsModal.tsx",
 	}
 
 	for _, file := range componentFiles {

@@ -22,7 +22,7 @@
 
 ### 配置验证
 - [ ] 后端配置文件已更新（`configs/config.yaml`）
-- [ ] 前端配置已更新（`ruoyi-react-frontend/src/lib/api.ts`）
+- [ ] 前端配置已更新（`xingran-react-frontend/src/lib/api.ts`）
 - [ ] 必需的排除路径已保留（公钥端点、上传端点、验证码端点）
 - [ ] `require_encryption: false` 保持向后兼容
 
@@ -116,7 +116,7 @@ request_encryption:
 
 ### 前端配置变更
 
-**文件**: `ruoyi-react-frontend/src/lib/api.ts`
+**文件**: `xingran-react-frontend/src/lib/api.ts`
 
 **变更内容**: 从 `ENCRYPTION_BLACKLIST` 移除 `/system/auth/login`
 
@@ -166,9 +166,9 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 
 2. **更新前端配置**:
    ```bash
-   # 编辑 ruoyi-react-frontend/src/lib/api.ts
+   # 编辑 xingran-react-frontend/src/lib/api.ts
    # 从 ENCRYPTION_BLACKLIST 移除 /system/auth/login
-   vim ruoyi-react-frontend/src/lib/api.ts
+   vim xingran-react-frontend/src/lib/api.ts
    ```
 
 3. **启动本地开发服务器**:
@@ -177,7 +177,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
    go run cmd/main.go
 
    # 前端
-   cd ruoyi-react-frontend
+   cd xingran-react-frontend
    npm run dev
    ```
 
@@ -214,7 +214,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
    go test ./internal/api/v1/ -run TestAuth
 
    # 前端单元测试
-   cd ruoyi-react-frontend
+   cd xingran-react-frontend
    npm run test
 
    # 集成测试
@@ -250,7 +250,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 
 2. **部署前端变更**:
    ```bash
-   cd ruoyi-react-frontend
+   cd xingran-react-frontend
    npm run build
 
    # 部署到测试服务器
@@ -263,7 +263,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 3. **运行冒烟测试**:
    ```bash
    # E2E 测试
-   cd ruoyi-react-frontend
+   cd xingran-react-frontend
    npm run test:e2e
 
    # 集成测试（在测试服务器上）
@@ -351,7 +351,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 
 4. **部署前端变更**:
    ```bash
-   cd ruoyi-react-frontend
+   cd xingran-react-frontend
    npm run build
 
    # 部署到生产 CDN
@@ -414,7 +414,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 2. **回滚前端变更**:
    ```bash
    # 将 /system/auth/login 添加回 ENCRYPTION_BLACKLIST
-   vim ruoyi-react-frontend/src/lib/api.ts
+   vim xingran-react-frontend/src/lib/api.ts
 
    # 重新构建和部署
    npm run build
@@ -750,7 +750,7 @@ groups:
 
 ### 配置文件
 - **后端配置**: `configs/config.yaml`, `configs/config.prod.yaml`
-- **前端配置**: `ruoyi-react-frontend/src/lib/api.ts`
+- **前端配置**: `xingran-react-frontend/src/lib/api.ts`
 
 ### 代码实现
 - **请求加密**: `pkg/crypto/request_encryption.go`

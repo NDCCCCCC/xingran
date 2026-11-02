@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-DIST="ruoyi-react-frontend/dist/assets"
+DIST="xingran-react-frontend/dist/assets"
 REQUIRED=("vendor-react" "vendor-antd" "vendor-echarts" "vendor-three")
 MISSING=()
 

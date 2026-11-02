@@ -298,7 +298,7 @@ cache_debug_handler.go  # 调试端点
 
 ### 9. CADFloorPlanEditor.tsx 组件过于复杂 (1291 行)
 
-**位置**: `ruoyi-react-frontend/src/components/cad-editor/CADFloorPlanEditor.tsx`
+**位置**: `xingran-react-frontend/src/components/cad-editor/CADFloorPlanEditor.tsx`
 **置信度**: 95/100
 **影响**: 可维护性
 

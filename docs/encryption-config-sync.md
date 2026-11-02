@@ -556,7 +556,7 @@ WHERE config_key = 'sys.request.encryption.enabled';
 
 ### 环境变量（回退机制）
 
-**文件:** `ruoyi-react-frontend/.env.development`
+**文件:** `xingran-react-frontend/.env.development`
 
 ```bash
 # 请求体加密开关（构建时配置，作为回退机制）
@@ -671,7 +671,7 @@ ok      github.com/xingran-next/xingran-go-backend/internal/api/v1    0.525s
 
 **运行测试:**
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npm run test -- encryptionConfig.test.ts
 ```
 
@@ -975,7 +975,7 @@ location.reload();
 **步骤 1: 修改环境变量**
 
 ```bash
-# ruoyi-react-frontend/.env.development
+# xingran-react-frontend/.env.development
 VITE_ENABLE_REQUEST_ENCRYPTION=true  # 或 false
 ```
 
@@ -1018,7 +1018,7 @@ async function initializeApp(): Promise<void> {
 **步骤 4: 重新构建前端**
 
 ```bash
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npm run build
 ```
 
@@ -1384,7 +1384,7 @@ cd internal/api/v1
 go test -v -run TestGetEncryptionConfig
 
 # 前端测试
-cd ruoyi-react-frontend
+cd xingran-react-frontend
 npm run test -- encryptionConfig.test.ts
 ```
 

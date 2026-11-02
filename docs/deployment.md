@@ -11,7 +11,7 @@
 ```
 /app/szh/
 ├── xingran-backend              # Go 编译产物（构建自 cmd/main.go；TextFSM 模板 + 前端皆已嵌入二进制）
-├── ruoyi-react-frontend/      # 前端构建产物（可选，embed 构建已嵌入二进制）
+├── xingran-react-frontend/      # 前端构建产物（可选，embed 构建已嵌入二进制）
 ├── configs/
 │   └── config.yaml            # 应用配置（非敏感，由 git 管理）
 ├── logs/                      # 应用日志（lumberjack 轮转）

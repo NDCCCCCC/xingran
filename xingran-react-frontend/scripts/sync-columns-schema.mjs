@@ -3,7 +3,7 @@
  * sync-columns-schema.mjs
  *
  * 同步前端资产列表列定义到后端 embed JSON:
- *   src:  ruoyi-react-frontend/src/pages/operations/assets/columnsSchema.ts
+ *   src:  xingran-react-frontend/src/pages/operations/assets/columnsSchema.ts
  *   dest: internal/services/system/asset_columns_schema.json
  *
  * 后端通过 //go:embed asset_columns_schema.json 在编译期嵌入该 JSON,
@@ -26,7 +26,7 @@ const projectRoot = resolve(__dirname, "..", "..");
 
 const SCHEMA_PATH = resolve(
   projectRoot,
-  "ruoyi-react-frontend/src/pages/operations/assets/columnsSchema.ts"
+  "xingran-react-frontend/src/pages/operations/assets/columnsSchema.ts"
 );
 const OUTPUT_PATH = resolve(projectRoot, "internal/services/system/asset_columns_schema.json");
 const PAGE_KEY = "asset.list";
@@ -116,7 +116,7 @@ function main() {
 
   const output = {
     __generated__: new Date().toISOString(),
-    source: "ruoyi-react-frontend/src/pages/operations/assets/columnsSchema.ts",
+    source: "xingran-react-frontend/src/pages/operations/assets/columnsSchema.ts",
     pageKey: PAGE_KEY,
     columns,
   };
