@@ -82,10 +82,25 @@ func sendReadCmd(w *device.ScrapliWrapper, cmd string) (string, error) {
 }
 
 // hasDeviceError 判断回显里是否含设备侧错误标记。
+//
+// ★ 2026-11-02 真机实跑修正：锐捷业务级错误（互斥/冲突）是**不含 % 前缀**的自然语言
+// 整行，例如：
+//
+//	Can not operate on interface Gi1/25. Conflict with IEEE 802.1X.
+//
+// 旧实现只匹配 markers 里的 "% ..." 与思科串 ⇒ 这类错误全部漏判 ⇒ 工具报假 OK。
+// 现在补两层：
+//  1. markers 增加锐捷业务错误串（Invalid input / Can not operate / Conflict with…）；
+//  2. **行首 %** 判定（设备错误前缀）——用行首而非全文 contains，避免误伤帮助文本。
 func hasDeviceError(out string) bool {
 	clean := sanitizeOutput(out)
 	for _, m := range deviceErrorMarkers {
 		if strings.Contains(clean, m) {
+			return true
+		}
+	}
+	for _, l := range strings.Split(clean, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(l), "%") {
 			return true
 		}
 	}

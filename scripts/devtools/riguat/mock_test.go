@@ -29,13 +29,16 @@ type mockRuijie struct {
 	failCmds map[string]bool // 指定命令永久失效（模拟设备不接受）
 	failOnce map[string]bool // 指定命令首次失效（模拟偶发失败 → 触发自愈重试）
 	rejected []string        // 被拒绝的命令记录
+	// rejectOutput 命令 → 自定义拒绝回显（复刻真机的业务级错误串）
+	rejectOutput map[string]string
 }
 
 func newMockRuijie(baseline []string) *mockRuijie {
 	return &mockRuijie{
-		lines:    append([]string{}, baseline...),
-		failCmds: map[string]bool{},
-		failOnce: map[string]bool{},
+		lines:        append([]string{}, baseline...),
+		failCmds:     map[string]bool{},
+		failOnce:     map[string]bool{},
+		rejectOutput: map[string]string{},
 	}
 }
 
@@ -87,6 +90,9 @@ func (m *mockRuijie) apply(cmd string) cmdResult {
 		m.rejected = append(m.rejected, c)
 		res.Failed = true
 		res.Output = "% Invalid input detected at '^' marker."
+		if custom, ok := m.rejectOutput[c]; ok {
+			res.Output = custom
+		}
 		return res
 	}
 	m.applyConfig(c)
@@ -106,6 +112,22 @@ func (m *mockRuijie) rejectsCommand(c string) bool {
 		!strings.HasPrefix(lower, "switchport hybrid allowed vlan tagged ") &&
 		!strings.HasPrefix(lower, "switchport hybrid allowed vlan untagged ") {
 		return true
+	}
+	// ★ 真机事实（2026-11-02 实跑，RS8607E GE1/25）：端口配了 802.1X 时，
+	//   设备不允许把口切到 hybrid 模式（设备级互斥）：
+	//     Can not operate on interface Gi1/25. Conflict with IEEE 802.1X.
+	if strings.HasPrefix(lower, "switchport mode hybrid") && m.hasDot1x() {
+		return true
+	}
+	return false
+}
+
+// hasDot1x 端口当前是否配了 802.1X（dot1x port-control auto）。
+func (m *mockRuijie) hasDot1x() bool {
+	for _, l := range m.lines {
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(l)), "dot1x port-control auto") {
+			return true
+		}
 	}
 	return false
 }
@@ -682,5 +704,70 @@ func TestHybridModeAccessFallback(t *testing.T) {
 	}
 	if !usedFallback {
 		t.Errorf("未触发 `default switchport mode access` 兜底: %v", outcome.Cmds)
+	}
+}
+
+// ====================== 真机事实复刻：802.1X × hybrid 互斥 + 假 OK 缺陷 ======================
+
+// TestHybridBlockedByDot1x 真机事实复刻（2026-11-02 实跑，RS8607E GE1/25）：
+//
+//	interface GigabitEthernet 1/25
+//	 switchport mode hybrid
+//	 Can not operate on interface Gi1/25. Conflict with IEEE 802.1X.
+//
+// ⇒ 端口配了 802.1X（dot1x port-control auto）时，设备不允许切 hybrid 模式。
+// 本用例同时锁住 lead 报出的**假 OK 缺陷**：工具的 hasDeviceError 必须把这条
+// 自然语言错误判为失败（否则实跑会把失败命令报成 [OK]）。
+func TestHybridBlockedByDot1x(t *testing.T) {
+	const realErr = "Can not operate on interface Gi1/25. Conflict with IEEE 802.1X."
+
+	m := newMockRuijie([]string{
+		"dot1x port-control auto",
+		"dot1x mac-auth-bypass multi-user",
+	})
+	m.rejectOutput["switchport mode hybrid"] = realErr
+
+	m.apply("interface GigabitEthernet 1/1")
+	res := m.apply("switchport mode hybrid")
+	if !res.Failed {
+		t.Fatalf("配了 dot1x 的端口切 hybrid 必须被设备拒绝（真机事实）")
+	}
+	if !strings.Contains(res.Output, "Conflict with IEEE 802.1X") {
+		t.Errorf("拒绝回显应含真机错误串: %q", res.Output)
+	}
+	// ★ 工具判定必须识别这条业务级错误（lead 报的假 OK 缺陷）
+	if !hasDeviceError(res.Output) {
+		t.Errorf("hasDeviceError 必须识别锐捷业务级错误（不含百分号前缀）: %q", res.Output)
+	}
+	// 正常回显不能误判
+	if hasDeviceError("switchport mode hybrid\nRuijie(config-if-GigabitEthernet 1/25)#") {
+		t.Errorf("正常回显不得判为失败")
+	}
+}
+
+// TestHasDeviceError 设备侧错误判定的单元测试（2026-11-02 真机实跑修正）。
+func TestHasDeviceError(t *testing.T) {
+	cases := []struct {
+		name string
+		out  string
+		want bool
+	}{
+		{"锐捷业务错误：dot1x 与 hybrid 互斥",
+			"switchport mode hybrid\nCan not operate on interface Gi1/25. Conflict with IEEE 802.1X.", true},
+		{"锐捷百分号错误（行首）",
+			"% Invalid input detected at '^' marker.", true},
+		{"多行回显中的行首百分号",
+			"switchport mode hybrid\n% Unknown command\nRuijie(config-if-GigabitEthernet 1/25)#", true},
+		{"思科风格 Unknown",
+			"Unrecognized command found at '^' position.", true},
+		{"正常回显",
+			"switchport mode hybrid\nRuijie(config-if-GigabitEthernet 1/25)#", false},
+		{"正常配置行",
+			"switchport access vlan 318", false},
+	}
+	for _, c := range cases {
+		if got := hasDeviceError(c.out); got != c.want {
+			t.Errorf("[%s] hasDeviceError = %v, want %v（out=%q）", c.name, got, c.want, c.out)
+		}
 	}
 }

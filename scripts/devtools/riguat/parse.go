@@ -43,6 +43,15 @@ var deviceErrorMarkers = []string{
 	"Invalid input detected",
 	"Unrecognized command",
 	"Wrong parameter",
+	// ★ 2026-11-02 真机实跑补充（锐捷 RS8607E，GE1/25 切 hybrid 失败）：
+	//   `Can not operate on interface Gi1/25. Conflict with IEEE 802.1X.`
+	//   —— **不含 % 前缀**，旧 markers 全部不匹配 ⇒ 工具把失败命令判成 [OK]（假 OK）。
+	//   真机业务级错误（互斥/冲突/状态不允许）都是这种自然语言整行，必须单独收。
+	"Invalid input",
+	"Can not operate",
+	"Cannot operate",
+	"Conflict with",
+	"conflict with",
 }
 
 // globalConfigLinePrefixes 全局配置行前缀。
