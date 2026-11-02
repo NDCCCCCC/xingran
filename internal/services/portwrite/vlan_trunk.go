@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 )
 
@@ -96,6 +97,37 @@ func validateTrunkRequest(action Action, p TrunkParams) error {
 	default:
 		return fmt.Errorf("%w: %s", ErrTrunkParamsInvalid, action)
 	}
+}
+
+// checkRuijieHybridParams 锐捷 hybrid 的**厂商语义**校验（产品口径 (i)+(i-a)）。
+//
+// 真机依据（2026-11-02 第三次取证 + 补验，lead 拍板 (i)）：
+// 锐捷 hybrid 是「自动补集」语义 —— 下发 untagged 后，设备把其余全部 VLAN 自动划入
+// tagged（实测 untagged 3992 ⇒ 设备落成 `only tagged 2-3991,3993-4094` +
+// `add untagged 1,3992`）⇒ 锐捷 hybrid **不做 VLAN 收敛**，产品的 tagged 列表在
+// 锐捷上**没有任何设备侧对应物**。
+//
+// ⇒ 提交 tagged 必须**明确报错**（不静默丢弃：静默丢弃 = 静默改变用户意图，
+//
+//	比直接失败危险得多）；untagged 至少一个。
+//
+// 与通用 validator（validateTrunkRequest）的分工：通用校验管"列表非空/范围/重叠"，
+// 本函数管**厂商语义**（同一份参数在华为合法、在锐捷不合法）。
+// 渲染层（portcollection 锐捷渲染器）也做同样拦截 —— 那里是产品真相源，
+// 直接调 RenderCommand 的场景同样拦得住。
+func checkRuijieHybridParams(action Action, p TrunkParams, vendor models.DeviceVendor) error {
+	if action != portcollection.TrunkSetHybrid || vendor != models.VendorRuijie {
+		return nil
+	}
+	if len(p.HybridTagged) > 0 {
+		return fmt.Errorf("%w: 锐捷 hybrid 为自动补集语义：untagged 之外的 VLAN 会被设备自动划入 tagged，无法显式指定 tagged 列表；请只提交 untagged 列表（华为设备的 tagged 为显式语义，可正常使用）",
+			portcollection.ErrActionNotSupported)
+	}
+	if len(p.HybridUntagged) == 0 {
+		return fmt.Errorf("%w: 锐捷 hybrid 至少需要一个 untagged VLAN（锐捷不支持显式 tagged 列表；untagged 之外的 VLAN 由设备自动划入 tagged）",
+			portcollection.ErrActionNotSupported)
+	}
+	return nil
 }
 
 // hybridListsOverlap tagged/untagged 交集判断。

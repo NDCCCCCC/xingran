@@ -368,26 +368,36 @@ func renderRuijieTrunkSetAllowed(p PortTemplateParams) ([]string, error) {
 // trunk/hybrid 动作无自动回滚命令 —— hybrid 改的是端口转发模式，
 // 需人工或在产品侧另行设计回滚策略（本次不擅自扩写）。
 func renderRuijieTrunkSetHybrid(p PortTemplateParams) ([]string, error) {
-	if len(p.HybridTagged) == 0 && len(p.HybridUntagged) == 0 {
-		return nil, fmt.Errorf("portcollection: hybrid tagged/untagged list required")
+	// ★ 产品口径 (i)+(i-a)（lead 2026-11-02 拍板，依据第三次真机取证）：
+	//
+	// 锐捷 hybrid 是「自动补集」语义 —— 下发 untagged 后，设备把**其余全部 VLAN**
+	// 自动划入 tagged（实测：untagged 3992 ⇒ 设备落成
+	//   switchport hybrid allowed vlan only tagged 2-3991,3993-4094
+	//   switchport hybrid allowed vlan add untagged 1,3992
+	// ）⇒ 锐捷 hybrid **不做 VLAN 收敛**（默认允许全部 VLAN），
+	// 产品的 HybridTagged 列表在锐捷上**没有任何设备侧对应物**。
+	//
+	// (i-a) 用户若提交 tagged ⇒ 明确报错，**不静默丢弃** ——
+	//   静默丢弃 = 静默改变用户意图（比直接失败危险得多）。
+	if len(p.HybridTagged) > 0 {
+		return nil, fmt.Errorf("%w: 锐捷 hybrid 为自动补集语义：untagged 之外的 VLAN 会被设备自动划入 tagged，无法显式指定 tagged 列表；请只提交 untagged 列表（华为设备的 tagged 为显式语义，可正常使用）",
+			ErrActionNotSupported)
+	}
+	if len(p.HybridUntagged) == 0 {
+		return nil, fmt.Errorf("%w: 锐捷 hybrid 至少需要一个 untagged VLAN（锐捷不支持显式 tagged 列表；untagged 之外的 VLAN 由设备自动划入 tagged）",
+			ErrActionNotSupported)
 	}
 	cmds := []string{
 		fmt.Sprintf("interface %s", p.InterfaceName),
 		// 前置切模式：设备要求端口处于 hybrid 模式才接受 hybrid 配置
 		"switchport mode hybrid",
 	}
-	if len(p.HybridTagged) > 0 {
-		if err := validateVlanListForRender(p.HybridTagged); err != nil {
-			return nil, err
-		}
-		cmds = append(cmds, fmt.Sprintf("switchport hybrid allowed vlan only tagged %s", vlanListFormatCisco(p.HybridTagged)))
+	// untagged：**不带 only、不带 add**（真机事实④：only untagged 被设备拒绝；
+	// 设备最终会自己落成 `add untagged <PVID>,<list>` 的形式）
+	if err := validateVlanListForRender(p.HybridUntagged); err != nil {
+		return nil, err
 	}
-	if len(p.HybridUntagged) > 0 {
-		if err := validateVlanListForRender(p.HybridUntagged); err != nil {
-			return nil, err
-		}
-		cmds = append(cmds, fmt.Sprintf("switchport hybrid allowed vlan untagged %s", vlanListFormatCisco(p.HybridUntagged)))
-	}
+	cmds = append(cmds, fmt.Sprintf("switchport hybrid allowed vlan untagged %s", vlanListFormatCisco(p.HybridUntagged)))
 	// native 是与两个列表解耦的单值 VID（锐捷 hybrid 模式下的 native/PVID）
 	if p.NativeVLAN > 0 {
 		if p.NativeVLAN > 4094 {
