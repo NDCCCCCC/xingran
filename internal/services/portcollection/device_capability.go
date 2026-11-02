@@ -112,14 +112,29 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 	models.VendorRuijie: {
 		modelRules: []modelCapabilityRule{
 			{
-				matchModelSubstr: []string{"rs8607"},
+				// ★ 2026-11-02 补漏配：库里真实存在三种命名 —— RS8607E / RG8607E /
+				//   RG-S8607E-iSeries。第三次真机取证确认 **RG8607E 与 RS8607E 的
+				//   hybrid 关键字形态完全一致**（同一渲染可覆盖两条产品线），
+				//   但此前只匹配 rs8607 ⇒ RG8607E 设备会被判为"型号不支持"而误拒。
+				matchModelSubstr: []string{"rs8607", "rg8607", "rg-s8607"},
 				supported: map[PortAction]string{
 					PortSecStaticBind: "锐捷 RS8607E 真机（2026-11-01）：switchport port-security mac-address <mac> vlan <vlan> 实测无错误 ⇒ 支持静态 MAC 绑定（华为 S8700 同动作 Unsupported，两家结论相反）",
 					PortSecMaxMac:     "锐捷 RS8607E 真机（2026-11-01）：switchport port-security maximum 5 实测无错误（参数范围 <1-128>）⇒ 支持 MAC 数上限（华为 S8700 无 max-mac-num 子命令）",
 					PortSecSticky:     "锐捷 RS8607E 真机（2026-11-01）：switchport port-security mac-address sticky 实测无错误 ⇒ 支持 sticky MAC 模式",
 					ActionPortBinding: "锐捷 RS8607E 真机（2026-11-01）：switchport port-security binding <IP> <MAC> 实测无错误 ⇒ 支持 IP+MAC 组合绑定（IP 在前，与华为 S8700 IP+MAC Unsupported 相反）",
-					// 2026-11-02 追加（渲染缺口补齐，非 uotester 既有内容）；二次取证修正：allowed 必须带 tagged/untagged 关键字，native 是单值 VID
-					TrunkSetHybrid: "锐捷 RS8607E 真机（2026-11-02 `?` 帮助二次取证）：switchport hybrid ? → allowed/native；switchport hybrid allowed vlan ? → add/only/remove/tagged/untagged ⇒ 形态 switchport hybrid allowed vlan tagged <list> / switchport hybrid allowed vlan untagged <list>；switchport hybrid native vlan ? → <1-4094> Vid ⇒ native 单值 switchport hybrid native vlan <id>；switchport mode ? 含 hybrid ⇒ 需前置 switchport mode hybrid",
+					// 2026-11-02 追加（渲染缺口补齐，非 uotester 既有内容）；
+					// 二次取证（`?` 帮助）：allowed 必须带 tagged/untagged 关键字，native 是单值 VID；
+					// 三次取证（真机实跑，RS8607E + RG8607E 形态一致）修正：
+					//   tagged 必带 only、untagged 不能带 only、还原只认模式回退。
+					TrunkSetHybrid: "锐捷真机（2026-11-02 三次取证，RS8607E 与 RG8607E 形态一致）：" +
+						"switchport mode hybrid（前置）→" +
+						"switchport hybrid allowed vlan only tagged <list>（★ 必带 only：缺 only 无错误但配置不落地）→" +
+						"switchport hybrid allowed vlan untagged <list>（★ 不能带 only：only untagged 被设备拒绝）→" +
+						"switchport hybrid native vlan <id>（单值 VID，与两个列表解耦）；" +
+						"还原只认模式回退 switchport mode access（逐条 no switchport hybrid ... 被设备拒绝；" +
+						"还原失败 = 口留在 hybrid 模式 = 转发行为改变）；" +
+						"另：端口启用 802.1X（dot1x port-control auto）时设备拒绝切 hybrid" +
+						"（Can not operate on interface ... Conflict with IEEE 802.1X.）⇒ 由 portwrite 预检层拦截",
 				},
 			},
 		},

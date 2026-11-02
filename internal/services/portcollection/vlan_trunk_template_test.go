@@ -28,9 +28,16 @@ import (
 // 真机证据：
 //
 //	switchport hybrid allowed vlan ? → add / only / remove / tagged / untagged
-//	    ⇒ 列表必须带 tagged / untagged 关键字（无关键字形态设备会拒绝）
+//	    ⇒ 列表必须带 tagged / untagged 关键字
 //	switchport hybrid native vlan ? → <1-4094> Vid
 //	    ⇒ native 是单值 VID，与 tagged/untagged 两个列表解耦
+//
+// ★ 第三次真机取证（2026-11-02，RG8607E GE1/25）追加：
+//
+//	switchport hybrid allowed vlan tagged 3990     → 无错误但【不落地】
+//	switchport hybrid allowed vlan add tagged 3990 → 无错误但【不落地】
+//	switchport hybrid allowed vlan only tagged 3990 → ✅【落地】
+//	   ⇒ 列表必须带 **only** 关键字（缺 only = 命令成功但配置不变，最阴险）
 func TestRenderRuijieTrunkSetHybrid(t *testing.T) {
 	got, err := RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
 		InterfaceName:  "GigabitEthernet 1/1",
@@ -40,9 +47,9 @@ func TestRenderRuijieTrunkSetHybrid(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{
 		"interface GigabitEthernet 1/1",
-		"switchport mode hybrid",                        // 前置切模式（设备要求）
-		"switchport hybrid allowed vlan tagged 30,40",   // tagged 列表（必须带 tagged 关键字）
-		"switchport hybrid allowed vlan untagged 10,20", // untagged 列表（必须带 untagged 关键字）
+		"switchport mode hybrid",                           // 前置切模式（设备要求）
+		"switchport hybrid allowed vlan only tagged 30,40", // tagged 列表（必须带 only + tagged）
+		"switchport hybrid allowed vlan untagged 10,20",    // untagged 列表（★ 不能带 only）
 	}, got)
 }
 
@@ -58,7 +65,7 @@ func TestRenderRuijieTrunkSetHybridNative(t *testing.T) {
 	assert.Equal(t, []string{
 		"interface GigabitEthernet 1/1",
 		"switchport mode hybrid",
-		"switchport hybrid allowed vlan tagged 30",
+		"switchport hybrid allowed vlan only tagged 30",
 		"switchport hybrid native vlan 10",
 	}, got)
 }
@@ -73,7 +80,7 @@ func TestRenderRuijieTrunkSetHybridOnlyTagged(t *testing.T) {
 	assert.Equal(t, []string{
 		"interface GigabitEthernet 1/1",
 		"switchport mode hybrid",
-		"switchport hybrid allowed vlan tagged 30",
+		"switchport hybrid allowed vlan only tagged 30",
 	}, got)
 }
 

@@ -254,28 +254,18 @@ var actionRegistry = map[string]actionSpec{
 			}
 		},
 		Undo: func(baseline []string, p actionParams) []string {
-			// 还原语义：undo 只删「动作引入的配置行」；「恢复动作删除的配置行」由
-			// 基线重放负责（基线若有 `switchport access vlan N` 行，重放会补回；
-			// 基线若没有这一行 ⇒ **不下发** —— 否则凭空多出一行制造 diff）。
-			var cmds []string
-			if len(p.HybridTagged) > 0 {
-				cmds = append(cmds, fmt.Sprintf("no switchport hybrid allowed vlan tagged %s", ruijieVlanList(p.HybridTagged)))
-			}
-			if len(p.HybridUntagged) > 0 {
-				cmds = append(cmds, fmt.Sprintf("no switchport hybrid allowed vlan untagged %s", ruijieVlanList(p.HybridUntagged)))
-			}
-			if p.HybridNative > 0 {
-				cmds = append(cmds, fmt.Sprintf("no switchport hybrid native vlan %d", p.HybridNative))
-			}
-			// ★ 端口模式回退：渲染层 undo 不覆盖端口模式（lead 裁定：不在本动作范围，
-			//   safety.go 未扩写），但真机实跑必须把口切回 access ⇒ 还原显式下发。
-			//   设备回 Invalid input 时兜底 `default switchport mode access`；
-			//   若 running-config 仍残留 `switchport mode hybrid` 行，由差异驱动修复
-			//   走 `no switchport mode hybrid`（negateConfigLine 已映射该行）。
-			cmds = append(cmds, "switchport mode access")
-			return cmds
+			// ★ 2026-11-02 真机结论（安全级）：锐捷**不接受**逐条否定 hybrid 配置 ——
+			//   no switchport hybrid allowed vlan tagged 3990 → % Invalid input detected
+			//   no switchport hybrid native vlan 3993        → % Invalid input detected
+			//   switchport mode access                       → ✅ 一次性清空全部 hybrid 配置
+			// ⇒ 唯一可靠的还原是**模式回退**。若沿用逐条 no：还原失败 = 端口留在
+			//   hybrid 模式 = 转发行为改变 = 潜在业务中断。
+			// 基线若有 `switchport access vlan N` 等行，由基线重放补回
+			// （基线若没有该行 ⇒ 不下发，避免凭空多出一行制造 diff）。
+			return []string{"switchport mode access"}
 		},
 		Judgement: "锐捷专项④：hybrid 三种形态是否被设备接受 ——\n" +
+			"           ★ allowed 必须带 **only**（缺 only = 命令成功但配置不落地，最阴险）\n" +
 			"           `switchport mode hybrid`（前置切模式）+\n" +
 			"           `switchport hybrid allowed vlan tagged <list>` / `... untagged <list>` /\n" +
 			"           `switchport hybrid native vlan <id>`（单值）\n" +
