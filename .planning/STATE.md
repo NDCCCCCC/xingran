@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.51
 milestone_name: 端口写生产级操作体验与平台质量收口
-status: 真机 UAT 完成 + PR #39/#41 已合入 — Phase 129 目录改名进行中（DEBT-06）
-stopped_at: v1.51.1 真机 UAT 收口（2026-11-02）：华为 S8700 11 动作 + 锐捷 RS8607E 12 动作真机实测完成（设备零残留，两台配置与原始基线一字不差），定位并修复 6 类产品级缺陷（华为 user-bind 上下文/S8700 缺 max-mac-num/trunk/hybrid 关键字/sticky 不接受手动 MAC；锐捷 port_binding 参数顺序反了/hybrid 未注册）；引入厂商型号能力矩阵（Supported/SystemView/Unsupported 三级，显式记录「支持」而非只记「拒绝」）；PR #39 + PR #41 合并（7c884e5 / 1f4608af）+ tag v1.51.1。Phase 129 三项交付：真机 UAT ✅ / TIDY-02 UAT 回补组织 ✅（129-UAT-BACKFILL.md）/ DEBT-06 目录改名 🔄（task-31 webfe 进行中）。v1.52 待办：task-30（锐捷 hybrid/trunk 二层取证、CE/S57 型号取证、Cisco/H3C 无设备）+ 4 项 uotester 实测缺陷
-last_updated: "2026-11-02T02:05:00.000Z"
+status: Phase 129 完成（真机 UAT + DEBT-06 + TIDY-02 三项齐）— PR #39/#41/#42/#43 已合入
+stopped_at: Phase 129 全部完成（2026-11-02）：真机 UAT（华为 S8700 11 动作 + 锐捷 RS8607E 12 动作 = 23 动作实测，设备零残留，两台配置与原始基线一字不差）+ 锐捷 hybrid 第二轮取证（8 条命令形态 + 5 条补验 + 一次完整实跑闭环：下发 → 落地 → 还原一次收敛 → diff 为空）与 3 类产品缺陷修正（tagged 缺 only 关键字 / undo 必须模式回退 / 802.1X 互斥无预检）+ 锐捷自动补集语义落地（(i)+(i-a)：只下发 untagged，带 tagged 明确报错不静默丢弃）+ 能力矩阵补齐 rg8607/rg-s8607 漏配；DEBT-06 前端目录改名 ruoyi-react-frontend → xingran-react-frontend（1355 文件 rename，零业务逻辑变更）；TIDY-02 回补组织完成并补跑 Phase 90 登录态巡检（40 组合实跑：deprecated=0 / reachable=42 / blockedByLoginWall=0 + 42 张截图，status 由 human_needed 改判 passed）；安全侧清除远端 265 个含明文口令的文件 + DB/Redis 口令脱敏为环境变量注入 + 修掉一个 CI flaky 测试。tag v1.51.1 / v1.51.2。
+last_updated: "2026-11-02T05:30:00.000Z"
 last_activity: 2026-11-02
-last_activity_desc: 真机 UAT 完成 + PR #39/#41 合并 + tag v1.51.1（华为/锐捷 23 动作实测，设备零残留）
+last_activity_desc: Phase 129 三项交付全部完成（真机 UAT + DEBT-06 目录改名 + TIDY-02 回补与 Phase 90 闭合），tag v1.51.2
 state_head: 27ac078e18b72d83b9690eaed617328c390687cd
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 26
   completed_plans: 26
-  percent: 96
+  percent: 100
 current_phase: 129
-current_phase_name: 目录改名 + 双线 planning 合流 + 真机 UAT（真机 UAT ✅ / TIDY-02 ✅ / DEBT-06 进行中）
+current_phase_name: 目录改名 + 双线 planning 合流 + 真机 UAT ✅ 三项交付全部完成（真机 UAT ✅ / TIDY-02 ✅ / DEBT-06 ✅）
 ---
 
 # Project State
