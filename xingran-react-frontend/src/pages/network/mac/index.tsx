@@ -449,7 +449,6 @@ const MACAddressPage: FC = () => {
                   placeholder="请选择类型"
                   className="user-form-input"
                   style={{ width: 120 }}
-                  onSearch={() => {}}
                   showSearch={false}
                   options={MAC_TYPE_OPTIONS}
                 />

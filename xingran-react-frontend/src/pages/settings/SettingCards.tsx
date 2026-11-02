@@ -158,7 +158,6 @@ export const LayoutSettingsCard: FC = () => {
             style={{ width: 160 }}
             value={preferences.layout.density}
             options={DENSITY_OPTIONS}
-            onSearch={() => {}}
             // AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型
             onChange={(value) =>
               handleUpdate(() => updateLayout({ density: value as DensityMode }))
@@ -210,7 +209,6 @@ export const DataSettingsCard: FC = () => {
             style={{ width: 160 }}
             value={preferences.data.defaultPageSize}
             options={PAGE_SIZE_SELECT_OPTIONS}
-            onSearch={() => {}}
             onChange={(value) => handleUpdate(() => updateDataPageSize(value as number))}
           />
         </div>

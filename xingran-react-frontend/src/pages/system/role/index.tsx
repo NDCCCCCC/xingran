@@ -305,7 +305,6 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={[...STATUS_OPTIONS]}
               />
@@ -421,7 +420,6 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
                 <Form.Item name="status" label="状态">
                   <AppSelect
                     allowClear
-                    onSearch={() => {}}
                     showSearch={false}
                     options={[...STATUS_OPTIONS]}
                   />
@@ -472,7 +470,6 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
                   <AppSelect
                     allowClear
                     onChange={(value) => handleDataScopeChange(value as number, editForm)}
-                    onSearch={() => {}}
                     showSearch={false}
                     options={[...DATA_SCOPE_OPTIONS]}
                   />

@@ -306,7 +306,6 @@ export const NoticeList: React.FC<NoticeListProps> = ({
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={[
                   { value: "1", label: "公告" },

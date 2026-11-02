@@ -42,7 +42,6 @@ export function SwapScheduleModal({
             allowClear
             placeholder="选择原排班"
             showSearch={false}
-            onSearch={() => {}}
             options={allSchedules.map((s) => ({ value: s.id, label: scheduleOptionLabel(s) }))}
           />
         </Form.Item>
@@ -51,7 +50,6 @@ export function SwapScheduleModal({
             allowClear
             placeholder="选择目标排班"
             showSearch={false}
-            onSearch={() => {}}
             options={allSchedules.map((s) => ({ value: s.id, label: scheduleOptionLabel(s) }))}
           />
         </Form.Item>
@@ -64,7 +62,6 @@ export function SwapScheduleModal({
             allowClear
             placeholder="选择原因"
             showSearch={false}
-            onSearch={() => {}}
             options={SWAP_REASON_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
           />
         </Form.Item>

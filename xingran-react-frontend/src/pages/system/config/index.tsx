@@ -409,7 +409,6 @@ const ConfigManagement: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={CONFIG_TYPE_OPTIONS}
               />
@@ -540,7 +539,6 @@ const ConfigManagement: FC = () => {
             <AppSelect
               allowClear
               className="user-form-input"
-              onSearch={() => {}}
               showSearch={false}
               options={CONFIG_TYPE_OPTIONS}
             />
@@ -556,7 +554,6 @@ const ConfigManagement: FC = () => {
               allowClear
               disabled={!!editingConfig}
               className="user-form-input"
-              onSearch={() => {}}
               showSearch={false}
               options={IS_SYSTEM_OPTIONS}
             />
