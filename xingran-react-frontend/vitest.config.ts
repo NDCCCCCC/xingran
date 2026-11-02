@@ -11,7 +11,15 @@ export default defineConfig({
     // 原因:network/ports + BulkWriteDrawer 等组件挂载 antd Table/Card/Modal + 多列渲染,
     // 在 coverage 模式下 setup + transform 累积导致 5s timeout 偶发 flake (Phase 53 W4 时代)。
     // 15s 给真实业务测试留缓冲;快速单元测试不受影响(timeout 是 max 不是 min)。
-    testTimeout: 15000,
+    //
+    // 2026-11-02:15s → 30s(PR #51 合并后 main CI 红)。该 run 实测
+    // Duration 927.07s(import 868.05s / tests 2037.42s / setup 61.14s)⇒ CI 机器仅 import
+    // 阶段就要 15 分钟,单测 15s 上限在「渲染整页 + 等列表 + 开下拉 + 开弹窗」这类多 waitFor
+    // 重测试上偶发不够(network/devices/index.render.test.tsx:96 实测报
+    // "Test timed out in 15000ms",而同一 commit 在 PR #51 上是绿的 ⇒ 同代码一次绿一次红
+    // ⇒ 负载型 flaky 而非逻辑错误)。
+    // timeout 是上限不是下限:正常通过的测试不会因此变慢,只有真正超时的才会多等。
+    testTimeout: 30000,
     setupFiles: ["./src/test/setup.ts"],
     // Phase 88: 159 测试文件后 Windows threads 池句柄/内存间歇耗尽(全量偶发启动崩)。
     // maxWorkers 限制并发工作线程,隔离 jsdom 实例数,消除资源竞争 flake。
