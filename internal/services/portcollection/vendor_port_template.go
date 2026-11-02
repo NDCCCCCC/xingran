@@ -218,6 +218,19 @@ func RenderCommand(vendor models.DeviceVendor, action PortAction, params PortTem
 		return nil, ErrEmptyInterfaceName
 	}
 
+	// ★ 厂商级「不支持」优先判定（2026-11-02）：该厂商 + 该动作被能力矩阵显式标不支持
+	//   ⇒ 返回**明确**错误（带原因），而不是「未知动作」或「不支持的厂商」。
+	//
+	// ★ 为什么必须放在 vendorPortTemplate 查找**之前**（2026-11-02 发现）：
+	//   被厂商级标不支持的厂商（如 Cisco）**根本没有**渲染派发表条目（vendorPortTemplate
+	//   里只有 huawei/h3c/ruijie/maipu）⇒ 若先查派发表，会先返回 ErrUnsupportedVendor
+	//   ⇒ 用户看到的是「不支持的厂商」，而不是我们想给的
+	//   「该厂商不支持该动作（渲染层未实现 + 无真机取证依据）」。
+	//   例：Cisco 的 trunk/hybrid（2026-11-02 裁定：矩阵显式标 Unsupported，依据诚实标注，不伪造真机结论）。
+	if reason := SupportEvidence(vendor, "", action); reason != "" {
+		return nil, fmt.Errorf("%w: %s", ErrActionNotSupported, reason)
+	}
+
 	vendorMap, ok := vendorPortTemplate[vendor]
 	if !ok {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedVendor, vendor)
@@ -225,13 +238,6 @@ func RenderCommand(vendor models.DeviceVendor, action PortAction, params PortTem
 
 	render, ok := vendorMap[action]
 	if !ok {
-		// 已知厂商、但该动作**未实现**：若能力矩阵显式标了「不支持」⇒ 返回明确错误，
-		// 而不是 ErrUnknownAction（用户看到「未知动作」会以为是 bug）。
-		// 例：Cisco 的 trunk/hybrid（2026-11-02 裁定：渲染层未实现 + 无真机取证依据
-		// ⇒ 矩阵显式标 Unsupported，依据诚实标注，不伪造真机结论）。
-		if reason := SupportEvidence(vendor, "", action); reason != "" {
-			return nil, fmt.Errorf("%w: %s", ErrActionNotSupported, reason)
-		}
 		return nil, fmt.Errorf("%w: %s (vendor: %s)", ErrUnknownAction, action, vendor)
 	}
 
