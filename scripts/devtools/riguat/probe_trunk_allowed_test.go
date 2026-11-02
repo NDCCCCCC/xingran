@@ -267,3 +267,28 @@ func TestExtractTrunkAllowedLine(t *testing.T) {
 		}))
 	assert.Equal(t, "", extractTrunkAllowedLine([]string{"description X"}))
 }
+
+// TestZeroResidualVerdict 零残留判定必须以「探测前」为基准。
+//
+// ★ lead 2026-11-02 第五轮误报的根因：基准用了循环内的 before（实跑结束时的 trunk 态）
+// ⇒ 把「正确的还原结果（trunk→access）」判成不一致 ⇒ 安全网误报。
+func TestZeroResidualVerdict(t *testing.T) {
+	// 探测前：access、0 字节、0 行
+	initial := probeBaseline{ConfigBytes: 0, ConfigLines: 0, PortMode: "access（默认）", VlanIDs: []int{1}}
+	// 还原后：应与探测前完全一致
+	after := probeBaseline{ConfigBytes: 0, ConfigLines: 0, PortMode: "access（默认）", VlanIDs: []int{1}}
+	sb, sl, sm, sv := zeroResidualVerdict(initial, after)
+	assert.True(t, sb && sl && sm && sv, "还原后与探测前一致 ⇒ 零残留应通过")
+
+	// 真残留（配置块变了）⇒ 必须报不一致
+	dirty := probeBaseline{ConfigBytes: 40, ConfigLines: 2, PortMode: "trunk", VlanIDs: []int{1}}
+	sb, sl, sm, _ = zeroResidualVerdict(initial, dirty)
+	assert.False(t, sb, "配置块字节变了 ⇒ 零残留必须报不一致")
+	assert.False(t, sl)
+	assert.False(t, sm)
+
+	// VLAN 表变了 ⇒ 也必须报不一致
+	vlanDirty := probeBaseline{ConfigBytes: 0, ConfigLines: 0, PortMode: "access（默认）", VlanIDs: []int{1, 3990}}
+	_, _, _, sv = zeroResidualVerdict(initial, vlanDirty)
+	assert.False(t, sv, "VLAN 表多了 VLAN ⇒ 零残留必须报不一致")
+}

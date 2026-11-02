@@ -152,6 +152,16 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 					// 二次取证（`?` 帮助）：allowed 必须带 tagged/untagged 关键字，native 是单值 VID；
 					// 三次取证（真机实跑，RS8607E + RG8607E 形态一致）修正：
 					//   tagged 必带 only、untagged 不能带 only、还原只认模式回退。
+					// ★ 2026-11-02 五轮实跑定稿（回读 allowed 行原文为唯一可信判据）：
+					//   ⚠️ 以前没有本动作的任何依据 ⇒ 产品对锐捷下发的「无关键字」形态
+					//   在真机上是**非法命令**（Invalid input）⇒ P0，五不得再回退。
+					TrunkSetAllowed: "锐捷真机（2026-11-02 五轮实跑定稿，RS8607E 与 RG8607E 形态一致）：" +
+						"replace ⇒ switchport trunk allowed vlan only <list>（★ only 本身即全量语义：实测 only 3990 直接覆盖原列表）→" +
+						"add ⇒ switchport trunk allowed vlan add <list>（并集/叠加：only 3990 → add 3991 ⇒ only 3990-3991）→" +
+						"remove ⇒ switchport trunk allowed vlan remove <list>（移除：only 3990-3991 → remove 3991 ⇒ only 3990）；" +
+						"★ 无关键字形态 switchport trunk allowed vlan <list> 真机 Invalid input（**非法命令**）；" +
+						"另：锐捷 trunk allowed **不需预建 VLAN**（实测不自动创建 VLAN 3990/3991 —— 与 hybrid 不同，hybrid 会自动建）；" +
+						"本结论仅限 RS8607E / RG8607E，**不外推其它型号**",
 					TrunkSetHybrid: "锐捷真机（2026-11-02 三次取证，RS8607E 与 RG8607E 形态一致）：" +
 						"switchport mode hybrid（前置）→" +
 						"switchport hybrid allowed vlan only tagged <list>（★ 必带 only：缺 only 无错误但配置不落地）→" +

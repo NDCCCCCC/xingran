@@ -15,6 +15,7 @@ package portcollection
 //   + switchport hybrid allowed vlan <list>；native 单值。
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -185,6 +186,78 @@ func TestRenderRuijieTrunkUnchanged(t *testing.T) {
 		"interface GigabitEthernet 1/1",
 		"switchport trunk allowed vlan add 10,20",
 	}, allowed)
+}
+
+// TestRenderRuijieTrunkSetAllowedModes 锐捷 allowed 三种模式的真机形态（P0 修复后锁定）。
+//
+// ★ 为何加这条：P0 的根因就是「replace 分支从未被任何测试断言」
+//
+//	—— 以前只有 add 形态的断言，replace 的形态无人守护 ⇒ 非法命令一直漏到真机。
+//
+// 真机实测（2026-11-02，RS8607E / RG8607E 10.62.63.47 GE1/25，回读 allowed 行原文为唯一可信判据）：
+//
+//	switchport trunk allowed vlan only 3990        → 执行后 = only 3990            ⇒ only = 允许式 + 本身即全量
+//	switchport trunk allowed vlan add 3991         → 执行后 = only 3990-3991       ⇒ add = 并集（叠加）
+//	switchport trunk allowed vlan remove 3991      → 执行后 = only 3990            ⇒ remove = 移除
+//	switchport trunk allowed vlan 3990（无关键字） → Invalid input       ⇒ 非法命令
+func TestRenderRuijieTrunkSetAllowedModes(t *testing.T) {
+	iface := "GigabitEthernet 1/25"
+	vlans := []int{10, 20}
+
+	// replace（全量）⇒ **必须带 only**（P0 修复点）
+	replace, err := RenderCommand(models.VendorRuijie, TrunkSetAllowed, PortTemplateParams{
+		InterfaceName: iface, AllowedVLANs: vlans, AllowedMode: AllowedModeReplace,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []string{
+		"interface GigabitEthernet 1/25",
+		"switchport trunk allowed vlan only 10,20",
+	}, replace, "replace 必须渲染为 only <list>（P0：无关键字形态在真机上非法）")
+
+	// add ⇒ 并集（形态不变）
+	add, err := RenderCommand(models.VendorRuijie, TrunkSetAllowed, PortTemplateParams{
+		InterfaceName: iface, AllowedVLANs: vlans, AllowedMode: AllowedModeAdd,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []string{
+		"interface GigabitEthernet 1/25",
+		"switchport trunk allowed vlan add 10,20",
+	}, add, "add 形态不变（真机实测：并集）")
+
+	// remove ⇒ 移除（形态不变）
+	remove, err := RenderCommand(models.VendorRuijie, TrunkSetAllowed, PortTemplateParams{
+		InterfaceName: iface, AllowedVLANs: vlans, AllowedMode: AllowedModeRemove,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []string{
+		"interface GigabitEthernet 1/25",
+		"switchport trunk allowed vlan remove 10,20",
+	}, remove, "remove 形态不变（真机实测：移除）")
+
+	// ⚠️ 不得出现「无关键字」形态（真机 Invalid input）
+	for _, got := range [][]string{replace, add, remove} {
+		for _, c := range got {
+			assert.NotContains(t, c, "allowed vlan 10",
+				"不得出现无关键字形态（非法命令）: %q", c)
+		}
+	}
+}
+
+// TestRenderHuaweiH3CAllowedUnchanged 华为/H3C 的 allowed 渲染不受锐捷 P0 修复影响（回归）。
+//
+// ★ 两家语义不同，但**表达形式各自确定**：华为/H3C 的 allow-pass / permit 是叠加语义
+//
+//	⇒ 它们的 replace 仍是「叠加下发新列表」（见各自渲染器注释），**不加 only**。
+func TestRenderHuaweiH3CAllowedUnchanged(t *testing.T) {
+	for _, vendor := range []models.DeviceVendor{models.VendorHuawei, models.VendorH3C} {
+		got, err := RenderCommand(vendor, TrunkSetAllowed, PortTemplateParams{
+			InterfaceName: "GE1/0/0", AllowedVLANs: []int{10, 20}, AllowedMode: AllowedModeReplace,
+		})
+		require.NoError(t, err)
+		joined := strings.Join(got, " ")
+		assert.NotContains(t, joined, "only",
+			"%s 的 allow-pass 是叠加语义 ⇒ 不应被加 only（键字字形态各厂商各自确定）", vendor)
+	}
 }
 
 // TestRenderHuaweiH3CHybridUnchanged 华为/H3C hybrid 渲染不受锐捷改动影响（回归）。
