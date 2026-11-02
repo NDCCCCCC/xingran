@@ -74,8 +74,27 @@ func runScanIdle(db *gorm.DB, rep *report, modelKeyword string) {
 		return
 	}
 	rep.line("匹配设备 %d 台（model LIKE %%%s%%）", len(devs), modelKeyword)
+
+	// 库内 distinct model 清单：**总是**打印 —— 匹配数为 0 时用它定位命名差异
+	// （型号串可能是 S8600E / RS8607E-xxx / 空串…，靠猜关键字很费时间）。
+	var distinctModels []string
+	if err := db.Raw("SELECT DISTINCT COALESCE(model, '') AS model FROM sys_network_device " +
+		"WHERE deleted_at IS NULL ORDER BY 1").Scan(&distinctModels).Error; err == nil {
+		rep.line("库内 distinct model 清单（%d 个）:", len(distinctModels))
+		for _, m := range distinctModels {
+			mark := ""
+			if m != "" && strings.Contains(strings.ToLower(m), strings.ToLower(modelKeyword)) {
+				mark = "  ← 已匹配"
+			}
+			rep.line("  - %q%s", m, mark)
+		}
+	} else {
+		rep.line("（distinct model 清单查询失败: %v）", err)
+	}
+
 	if len(devs) == 0 {
-		rep.line("提示：库里没有匹配该 model 关键字的设备，可改用 --scan-model 关键字重试")
+		rep.line("提示：库里没有匹配该 model 关键字的设备 —— 请从上面的 distinct 清单里挑关键字，")
+		rep.line("      用 --scan-model <关键字> 重跑（例如 8607 / S8600 / RS8607E）。")
 		return
 	}
 
