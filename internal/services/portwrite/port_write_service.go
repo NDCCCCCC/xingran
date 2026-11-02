@@ -20,15 +20,15 @@ import (
 //
 // 使用 portwrite: 前缀与 Phase 50 portcollection: 前缀风格一致，便于日志聚合过滤。
 var (
-	ErrBatchTooLarge = errors.New("portwrite: batch exceeds max size of 50")
-	ErrEmptyBatch    = errors.New("portwrite: batch is empty")
-	ErrMixedDevices  = errors.New("portwrite: batch contains ports from different devices")
-	ErrPortNotFound  = errors.New("portwrite: port not found")
+	ErrBatchTooLarge  = errors.New("portwrite: batch exceeds max size of 50")
+	ErrEmptyBatch     = errors.New("portwrite: batch is empty")
+	ErrMixedDevices   = errors.New("portwrite: batch contains ports from different devices")
+	ErrPortNotFound   = errors.New("portwrite: port not found")
 	ErrDeviceNotFound = errors.New("portwrite: device not found")
 	// v1.20.1 新增 sentinel（set_access_vlan + port_binding 4 个 validator）
-	ErrVlanIdOutOfRange = errors.New("portwrite: vlanId out of range 1-4094")
-	ErrBindOpInvalid    = errors.New("portwrite: bind op must be add or remove")
-	ErrIPAddressInvalid = errors.New("portwrite: invalid ipv4 address")
+	ErrVlanIdOutOfRange  = errors.New("portwrite: vlanId out of range 1-4094")
+	ErrBindOpInvalid     = errors.New("portwrite: bind op must be add or remove")
+	ErrIPAddressInvalid  = errors.New("portwrite: invalid ipv4 address")
 	ErrMACAddressInvalid = errors.New("portwrite: invalid mac address")
 )
 
@@ -447,6 +447,12 @@ func (s *portWriteServiceImpl) writeSinglePort(
 	if err := portcollection.CheckActionSupportParams(dev.Vendor, dev.Model, action, macForCapability); err != nil {
 		return nil, err
 	}
+	// 802.1X ↔ hybrid 互斥预检（2026-11-02 真机事实）：端口启用 802.1X 时，
+	// 锐捷设备拒绝切 hybrid 模式（Can not operate on interface ... Conflict with
+	// IEEE 802.1X.）⇒ 在下发前用采集快照拦掉，给中文原因而不是英文设备报错。
+	if err := checkDot1xHybridConflict(&port, action, dev.Vendor); err != nil {
+		return nil, err
+	}
 	if err := s.preflightReachability(ctx, &dev, opts.skipPreflight); err != nil {
 		return nil, err
 	}
@@ -734,7 +740,7 @@ func (s *portWriteServiceImpl) refreshPortStatus(_ context.Context, deviceID str
 //   - 锐捷 RGOS：接口类型与编号间带空格（interface GigabitEthernet 1/0/1，display 用全称）
 //   - 华为 VRP：用归一化短名（interface GE1/0/0，display 用缩写 GE，不展开全称）
 //   - H3C Comware：连写无空格（interface GigabitEthernet1/0/1）
-//   2026-07-09 真机验证：华为 S8700 拒绝全称 GigabitEthernet 1/0/0，接受缩写 GE1/0/0（与 display 一致）。
+//     2026-07-09 真机验证：华为 S8700 拒绝全称 GigabitEthernet 1/0/0，接受缩写 GE1/0/0（与 display 一致）。
 //
 // 未识别前缀（Vlan/Loopback 等逻辑接口）原样返回。
 // 与 normalize.InterfaceName（正向、采集用）分离，避免反向展开污染采集链路
