@@ -224,6 +224,7 @@ func main() {
 		hybridNative                 int
 		probeTrunkAllowed            bool
 		probeTrunkAllowedInTrunkMode bool
+		probeTrunkAllowedRun         bool
 		dbCheckFlag                  bool
 	)
 	flag.StringVar(&cfgPath, "config", "/app/szh/configs/config.yaml", "后端 config.yaml 路径")
@@ -246,6 +247,8 @@ func main() {
 	flag.BoolVar(&probeTrunkAllowed, "probe-trunk-allowed", false, "锐捷 trunk allowed 第二层取证探针（仅 ? 帮助与 show 采集，含零残留核查）")
 	flag.BoolVar(&probeTrunkAllowedInTrunkMode, "probe-trunk-allowed-in-trunk-mode", false,
 		"锐捷 trunk allowed 取证探针（**受控写**：先切 trunk 模式查关键字、查完必定还原为 access）")
+	flag.BoolVar(&probeTrunkAllowedRun, "probe-trunk-allowed-run", false,
+		"锐捷 trunk allowed 取证探针（**受控实跑**：切 trunk 模式后逐条实跑 add/remove/replace，每条后立刻回读定义）")
 	flag.BoolVar(&batch, "batch", false, "批次模式：依次跑完 12 个动作，任一还原失败立即停止")
 	flag.BoolVar(&forceContinue, "force-continue", false, "基线偏离权威基线时不停止（默认停止）")
 	flag.BoolVar(&scanIdleFlag, "scan-idle", false, "只读扫描空闲候选测试口（仅查库，不连设备、不改配置）")
@@ -357,12 +360,32 @@ func main() {
 	}
 
 	// ---------- 锐捷 trunk allowed 第二层取证探针（仅只读） ----------
-	if probeTrunkAllowed || probeTrunkAllowedInTrunkMode {
+	// 三种探针模式互斥：纯只读 / 切模式+问号探针 / 受控实跑
+	probeModes := 0
+	probeMode := probeModeReadonly
+	if probeTrunkAllowed {
+		probeModes++
+		probeMode = probeModeReadonly
+	}
+	if probeTrunkAllowedInTrunkMode {
+		probeModes++
+		probeMode = probeModeSwitchOnly
+	}
+	if probeTrunkAllowedRun {
+		probeModes++
+		probeMode = probeModeControlledRun
+	}
+	if probeModes > 1 {
+		rep.line("⛔ 探针模式互斥：--probe-trunk-allowed / --probe-trunk-allowed-in-trunk-mode / --probe-trunk-allowed-run 三者只能选一个")
+		rep.save()
+		return
+	}
+	if probeModes == 1 {
 		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
 		defer cancel()
 		ch := newExecChannel(db, cipher)
 		defer ch.Close()
-		runTrunkAllowedProbe(ctx, ch, dev, cliIface, rep, timeout, probeTrunkAllowedInTrunkMode)
+		runTrunkAllowedProbe(ctx, ch, dev, cliIface, rep, timeout, probeMode)
 		rep.save()
 		return
 	}

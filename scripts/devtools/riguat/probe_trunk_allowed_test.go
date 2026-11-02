@@ -126,3 +126,79 @@ func TestParsePortMode(t *testing.T) {
 	assert.Equal(t, "trunk", parsePortMode([]string{"switchport mode trunk"}))
 	assert.Equal(t, "hybrid", parsePortMode([]string{"switchport mode hybrid"}))
 }
+
+// TestControlledRunAllowed 受控实跑白名单：只允许那 4 条 trunk allowed 命令。
+func TestControlledRunAllowed(t *testing.T) {
+	for _, c := range controlledRunCmds {
+		assert.True(t, controlledRunAllowed(c), "白名单内的命令必须被允许: %q", c)
+	}
+	for _, c := range []string{
+		"switchport trunk allowed vlan 3991", // 换 VLAN 号 ⇒ 不在白名单
+		"switchport trunk allowed vlan add 3991",
+		"switchport trunk allowed vlan 3990-3995",
+		"no switchport trunk allowed vlan 3990",
+		"switchport mode hybrid",
+		"switchport hybrid allowed vlan untagged 3992",
+	} {
+		assert.False(t, controlledRunAllowed(c), "非白名单的命令必须被拒绝: %q", c)
+	}
+}
+
+// TestControlledRunCoversSecondLayer 受控实跑必须覆盖 add / remove / replace 三形态。
+func TestControlledRunCoversSecondLayer(t *testing.T) {
+	joined := strings.Join(controlledRunCmds, "\n")
+	for _, need := range []string{
+		"switchport trunk allowed vlan 3990",
+		"switchport trunk allowed vlan add 3990",
+		"switchport trunk allowed vlan remove 3990",
+		"switchport trunk allowed vlan replace 3990",
+	} {
+		assert.Contains(t, joined, need, "受控实跑命令表缺少 %q", need)
+	}
+}
+
+// TestJudgeRunOutcome 三态判读：被拒 / 生效 / **无错但不落地**（最关键的那一态）。
+func TestJudgeRunOutcome(t *testing.T) {
+	mk := func(lines ...string) probeBaseline {
+		return probeBaseline{ConfigLinesRaw: lines, VlanIDs: []int{1}}
+	}
+
+	// ① 被拒 ⇒ 关键字不存在
+	o := judgeRunOutcome("switchport trunk allowed vlan add 3990", true, mk("a"), mk("a"))
+	assert.Equal(t, verdictRejected, o.Verdict)
+	assert.False(t, o.Changed)
+	assert.False(t, o.SideEffect)
+
+	// ② 被接受且回读有变化 ⇒ 存在且生效
+	o = judgeRunOutcome("switchport trunk allowed vlan 3990", false,
+		mk("a"), mk("a", " switchport trunk allowed vlan 3990"))
+	assert.Equal(t, verdictLanded, o.Verdict)
+	assert.True(t, o.Changed)
+
+	// ③ 被接受但回读无变化 ⇒ ⚠️ 无错但不落地（hybrid 的 tagged 就是这样）
+	o = judgeRunOutcome("switchport trunk allowed vlan add 3990", false, mk("a"), mk("a"))
+	assert.Equal(t, verdictSilentNoop, o.Verdict)
+	assert.False(t, o.Changed)
+	assert.False(t, o.Rejected)
+}
+
+// TestJudgeRunOutcome_SideEffect VLAN 表变化 ⇒ 判为副作用（须停止后续实跑）。
+func TestJudgeRunOutcome_SideEffect(t *testing.T) {
+	before := probeBaseline{ConfigLinesRaw: []string{"a"}, VlanIDs: []int{1}}
+	after := probeBaseline{ConfigLinesRaw: []string{"a", "b"}, VlanIDs: []int{1, 3990}}
+	o := judgeRunOutcome("switchport trunk allowed vlan 3990", false, before, after)
+	assert.True(t, o.SideEffect, "VLAN 表变化必须判为副作用")
+	assert.Equal(t, verdictLanded, o.Verdict)
+}
+
+// TestParsePortMode_TrunkFeatureLine 端口模式判定修正：
+// trunk 模式下设备**不落** `switchport mode trunk` 行 ⇒ 靠 trunk 特征行判定。
+func TestParsePortMode_TrunkFeatureLine(t *testing.T) {
+	// trunk 特征行 ⇒ trunk（第二版修的 bug：旧版只看 mode 行 ⇒ 误判 access）
+	got := parsePortMode([]string{"switchport trunk allowed vlan 3990"})
+	assert.Contains(t, got, "trunk", "有 trunk 特征行必须判为 trunk")
+	// 显式 mode 行优先
+	assert.Equal(t, "hybrid", parsePortMode([]string{"switchport mode hybrid"}))
+	// 什么都没有 ⇒ access
+	assert.Contains(t, parsePortMode([]string{"description X"}), "access")
+}
