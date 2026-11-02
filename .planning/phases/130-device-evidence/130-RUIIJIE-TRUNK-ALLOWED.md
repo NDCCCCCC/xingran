@@ -33,6 +33,39 @@ switchport trunk allowed vlan replace ...  → ❓ 待取证（第二层）
 | 锐捷 trunk allowed 是否也自动补集 | ❓ **待取证** | 本文档 + 实跑 |
 | 锐捷 `switchport trunk allowed vlan` 是否接受 VLAN 区间/列表 | ❓ **待取证** | 本文档 |
 
+## 2.4 ★ 任务 A 结论（lead 2026-11-02 两轮实测后定稿）
+
+| 项 | 结论 |
+|---|---|
+| `switchport trunk allowed vlan` 在锐捷上存在 | ✅ **已确证**（`all` 被接受且回显 `<cr>`） |
+| add / remove / replace 是否存在 | ❓ **仍待取证** —— `?` 法无法回答（见下） |
+| `?` 帮助法的适用边界 | ✅ **已确证**：只能回答「**当前位置**可补全什么」；对「单命令带参数」形态**必然报错** |
+| 端口模式会影响 `?` 的可选项集合 | ✅ **已确证**（第一轮 `all` 的模式错误回显 vs 第二轮 `<cr>`） |
+| `none` 是否存在 | ❓ **待取证**（两轮都 Unrecognized，但**不能据此下结论**） |
+
+### ★★★ 本轮最贵的教训：`?` 的位置不对 ⇒ 必然报错 ⭐
+
+第二轮实测的决定性证据：
+
+```
+[9/11] switchport trunk allowed vlan all ?
+    <cr>
+  CX-WH-WH-47F-FL-RS8607E-01(config-if-GigabitEthernet 1/25)#switchport trunk allowed vlan all
+```
+
+⇒ `<cr>` = 「**命令到此就完整了，后面直接回车**」
+⇒ 说明 `switchport trunk allowed vlan all` 是「**一个带固定参数的命令**」，
+而不是「带子命令层次的命令」；
+⇒ 而 `?` 在锐捷上是「**当前位置**的参数/子命令补全」
+⇒ ⇒ **对这种「单命令带参数」形态，`?` 无论放参数前还是参数后都必然报 Invalid input**：
+`... allowed vlan ?` 无效、`... vlan 3990 ?` 无效、`... vlan all ?` 返回 `<cr>`（说明 all 已是完整命令）。
+
+⇒ ★★ **`?` 帮助法对这类命令无效；add / remove / replace 是否存在只能实跑才知道。**
+
+> **两条不可混淆的「Invalid input」成因**（都**不能**用来推断关键字不存在）：
+> 1. **`?` 的位置不对** —— 对「单命令带参数」形态必然报错 ⭐（本轮最贵的教训）
+> 2. **端口模式不对** —— access 模式下设备连 `switchport trunk` 关键字都不提供
+
 ## 2.5 ★ 首轮探针结果（2026-11-02，RG8607E GE1/25，access 模式）与**机制性发现**
 
 首轮（纯只读，不切模式）跑完，**零残留核查通过**（配置块 0→0 字节、0→0 行、
@@ -53,6 +86,22 @@ VLAN 集合前后完全一致）⇒ 工具的三道闸起作用。但结果给�
 ⇒ 由此得到两条通用纪律：
 1. **「Invalid input」也可能是模式问题** —— 判读前先确认端口模式；
 2. **取证必须记录端口模式** —— 判读表要加「探测时的端口模式」一列。
+
+### ⚠️ 工具 bug 修正（第二轮暴露）
+
+判读表每条都写「探测时端口模式: **access**」，但第二轮 `all ?` 的回显已变成 `<cr>`
+（说明**确实切进了 trunk 模式**）⇒ **端口模式判定把 trunk 读成了 access** ❗
+
+**根因**：第一版判据是「running-config 不落 mode 行 ⇒ access」
+⇒ **锐捷在 trunk 模式下也不落 `switchport mode trunk` 行**（或落法不同）。
+
+**修正后的判据**（三条证据合并）：
+1. 有 `switchport mode X` 行 ⇒ 用 X（设备显式落行时最可信）；
+2. 否则有 **trunk 特征行**（`switchport trunk ...`）⇒ trunk（access 口不会配 trunk 允许列表）；
+3. 否则 ⇒ access（默认）。
+
+⚠️ 仍属**推断**（设备没有直接的"当前模式"查询）⇒ 报告里同时给出
+`switchport mode ?` 的原始回显作**交叉证据**，不把推断当确证。
 
 ### 首轮判读表（当前只能填到这里）
 
@@ -136,8 +185,11 @@ VLAN 集合前后完全一致）⇒ 工具的三道闸起作用。但结果给�
 | `... all ?` | | | | |
 | `... none ?` | | | | |
 
-### 判读要点（沿用锐捷 hybrid 已确立的经验去问）
+### 判读要点（三条已确立的方法论 + 取证清单）
 
+0. ★★★ **判读前先排除两条「假阴性」**（都**不能**用来推断关键字不存在）：
+   - **`?` 的位置不对** —— 对「单命令带参数」形态，`?` 放参数前/参数后都必然报 Invalid input ⭐
+   - **端口模式不对** —— access 模式下设备连 `switchport trunk` 都不提供
 1. **有没有「被接受但语义不同」的坑**？锐捷 hybrid 是自动补集语义 ⇒ trunk allowed 是否也自动补集？
 2. **`add` 与直接指定的关系**：并集（叠加）还是替换（覆盖）？
 3. **`remove` 是否存在**？（有些厂商没有 remove）
@@ -146,6 +198,41 @@ VLAN 集合前后完全一致）⇒ 工具的三道闸起作用。但结果给�
 6. **关键字大小写与顺序敏感性**（`add` 必须在 `allowed vlan` 之后？）。
 7. ⚠️ **「命令不报错」≠「命令生效」** —— 锐捷 hybrid 的 `allowed vlan tagged <list>` 就是无错但不落地
    ⇒ 任何「被接受」的形态都**需要实跑验证落地**（§6）。
+
+## 5.5 ★ 第三轮：受控实跑（`?` 法到顶后的唯一路径）
+
+`?` 法已被证伪（§2.4）⇒ 改**实跑** add / remove / replace，但沿用已建好的安全机制：
+
+```bash
+./riguat --device CX-WH-WH-47F-FL-RS8607E-01 --port GE1/25 \
+         --probe-trunk-allowed-run \
+         --config /app/szh/configs/config.yaml --backend-pid $PID
+```
+
+**三层白名单**（只读性质逐层收紧，默认最安全）：
+
+| 层 | 白名单 | 内容 | 约束 |
+|---|---|---|---|
+| 1 | `isReadOnlyProbeCmd` | `?` 结尾 / `show ` 前缀 | 完全只读 |
+| 2 | `modeSwitchPairs`（受控写） | **仅** `switchport mode trunk` / `switchport mode access` | **必须成对**（trunk 必配 access 还原） |
+| 3 | `controlledRunCmds`（受控实跑） | **仅** 4 条：`... vlan 3990` / `... vlan add 3990` / `... vlan remove 3990` / `... vlan replace 3990` | 逐条**回读判定** |
+
+**逐条回读 + 三态判读**（判读的关键 —— 命令无错 ≠ 生效）：
+
+| 现象 | 判读 |
+|---|---|
+| 设备报错（Invalid input / Unrecognized） | **命令被拒 ⇒ 关键字不存在** |
+| 被接受且**回读配置有变化** | **存在且生效** |
+| 被接受但**回读配置无变化** | ⚠️⚠️ **无错但不落地（那个坑）** —— 锐捷 hybrid 的 `allowed vlan tagged <list>` 就是这样 |
+
+**副作用防护**：每条之后回读 running-config **与** VLAN 表 ⇒ 若发现 VLAN 表变化
+（不该发生）⇒ **立即停止后续实跑**（仍会还原）⇒ 有副作用也能在下一条之前发现。
+
+**零残留核查**：沿用第二轮做法，比对「**还原后 vs 探测前**」。
+
+⚠️ **风险（lead 已接受）**：本轮会改配置。GE1/25 链路 down、无流量 ✅，
+`switchport mode access` 的还原收敛性已确证（一轮收敛、diff 为空）✅ ⇒ 风险可控。
+若中途 SSH 断线 ⇒ 口可能留在 trunk 模式 ⇒ 需人工 `switchport mode access`。
 
 ## 6. 取证之后仍需实跑的部分（**待专用实验口**）
 

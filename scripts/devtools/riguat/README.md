@@ -257,6 +257,38 @@ switchport hybrid native vlan 3993                ← native 单值（可选，�
 受控写必须**显式**加 `--probe-trunk-allowed-in-trunk-mode` ⇒ 安全默认不破。
 还原动作在**错误路径上也会执行**（探针失败也必须还原）。
 
+### 受控实跑（第三轮：`?` 法被证伪后的唯一路径）
+
+实测证明 `?` 只能回答「**当前位置**可补全什么」—— 对「单命令带固定参数」形态
+（如 `switchport trunk allowed vlan all`）**必然报错** ⇒ add / remove / replace
+是否存在**只能实跑才知道**。
+
+```bash
+./riguat --device CX-WH-WH-47F-FL-RS8607E-01 --port GE1/25          --probe-trunk-allowed-run          --config /app/szh/configs/config.yaml --backend-pid $PID
+```
+
+**三层白名单**（默认最安全，逐层收紧）：
+
+| 层 | 内容 | 约束 |
+|---|---|---|
+| 只读白名单 | `?` 结尾 / `show ` 前缀 | 完全只读 |
+| 受控写白名单 | **仅** `switchport mode trunk` / `switchport mode access` | **必须成对**（trunk 必配 access 还原） |
+| 受控实跑白名单 | **仅** 4 条 `switchport trunk allowed vlan {3990,add 3990,remove 3990,replace 3990}` | 逐条**回读判定** |
+
+**逐条回读 + 三态判读**（命令无错 ≠ 生效）：
+
+| 现象 | 判读 |
+|---|---|
+| 设备报错 | **命令被拒 ⇒ 关键字不存在** |
+| 被接受且**回读有变化** | **存在且生效** |
+| 被接受但**回读无变化** | ⚠️ **无错但不落地**（hybrid 的 tagged 就是这样） |
+
+每条之后同时回读 running-config **与** VLAN 表 ⇒ 若 VLAN 表变化（不该发生）
+⇒ **立即停止后续实跑**（仍会还原）。零残留核查比对「还原后 vs 探测前」。
+
+⚠️ 本轮会改配置：若中途 SSH 断线，口可能留在 trunk 模式 ⇒ 需人工
+`switchport mode access`（该命令在锐捷上已确证一轮收敛、diff 为空）。
+
 **只读由工具强制**（不靠人自觉）：
 
 | 保障 | 机制 |
