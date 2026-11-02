@@ -33,6 +33,43 @@ switchport trunk allowed vlan replace ...  → ❓ 待取证（第二层）
 | 锐捷 trunk allowed 是否也自动补集 | ❓ **待取证** | 本文档 + 实跑 |
 | 锐捷 `switchport trunk allowed vlan` 是否接受 VLAN 区间/列表 | ❓ **待取证** | 本文档 |
 
+## 2.3 ★★★ 第三轮实跑挖出的 P0（2026-11-02，lead 实测 + 独立复核）
+
+设备在切 trunk 模式后**自己写出**的形态：
+
+```
+interface GigabitEthernet 1/25
+ switchport mode trunk
+ switchport trunk allowed vlan only 1-3989,3991-4094
+```
+
+⇒ **设备自己用的形态带 `only`** ⭐⭐⭐
+
+| 真机实测 | 结果 |
+|---|---|
+| `switchport trunk allowed vlan only 1-3989,3991-4094` | ✅ **设备自动生成的形态**（切 trunk 后自动出现） |
+| `switchport trunk allowed vlan 3990`（**无关键字**） | ❌ `% Invalid input detected` ⇒ **我们的锐捷 replace 渲染在真机上根本下不动** ⚠️⚠️ **P0** |
+| `switchport trunk allowed vlan replace 3990` | ❌ `% Invalid input detected` ⇒ **锐捷没有 `replace` 关键字** ⚠️ |
+| `switchport trunk allowed vlan add 3990` | ✅ 被接受（**语义待定**） |
+| `switchport trunk allowed vlan remove 3990` | ✅ 被接受（**语义待定**） |
+
+⚠️ **口径提示**：这次的 `replace 3990` 报错**不是 `?` 位置问题**（命令里没有 `?`）
+⇒ 这是**有效的「关键字不存在」判定**，与前两轮的假阴性不同 ⭐
+
+⇒ ★ **被推翻的历史结论**：「锐捷是三家中唯一原生支持 replace 全量替换关键字的」
+—— ❌ **错误**，已在 `vlan_trunk_template.go` 的渲染注释里更正并标注 P0。
+
+⚠️⚠️ **最高优先级的未决问题：`only` 的语义是允许式还是排除式？**
+
+- 若**允许式**（`only 3990` = 只允许 3990）⇒ 产品语义与设备语义**一致**
+  ⇒ 修法 = 补 `only` 关键字（并把产品列表语义对齐）；
+- 若**排除式**（`only 3990` = 排除 3990）⇒ 产品语义（指定要允许的列表）与设备语义
+  **完全相反** ⚠️⚠️❗ ⇒ 修法不是「加个 only 关键字」，而是**反转列表语义**
+  ⇒ **这比 `only` 本身更严重** ⇒ 所以**必须先确证语义、再改渲染**（lead 2026-11-02 裁定）。
+
+⇒ 实测设计（下轮）：`only 3990` → 回读 allowed 行原文 → `add 3991` → 回读原文 → `remove 3991` → 回读原文。
+判读只看**回读里 `switchport trunk allowed vlan` 那一行原文**（唯一可信依据）。
+
 ## 2.4 ★ 任务 A 结论（lead 2026-11-02 两轮实测后定稿）
 
 | 项 | 结论 |

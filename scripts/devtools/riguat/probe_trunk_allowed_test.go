@@ -133,8 +133,10 @@ func TestControlledRunAllowed(t *testing.T) {
 		assert.True(t, controlledRunAllowed(c), "白名单内的命令必须被允许: %q", c)
 	}
 	for _, c := range []string{
-		"switchport trunk allowed vlan 3991", // 换 VLAN 号 ⇒ 不在白名单
-		"switchport trunk allowed vlan add 3991",
+		"switchport trunk allowed vlan 3990",         // 无关键字形态（真机已确证 Invalid input）
+		"switchport trunk allowed vlan add 3990",     // 换 VLAN 号 ⇒ 不在白名单
+		"switchport trunk allowed vlan replace 3991", // replace 真机已确证不存在
+		"switchport trunk allowed vlan only 3992",    // 换 VLAN 号 ⇒ 不在白名单
 		"switchport trunk allowed vlan 3990-3995",
 		"no switchport trunk allowed vlan 3990",
 		"switchport mode hybrid",
@@ -147,11 +149,12 @@ func TestControlledRunAllowed(t *testing.T) {
 // TestControlledRunCoversSecondLayer 受控实跑必须覆盖 add / remove / replace 三形态。
 func TestControlledRunCoversSecondLayer(t *testing.T) {
 	joined := strings.Join(controlledRunCmds, "\n")
+	// 三个语义验证要点（lead 2026-11-02 指定的顺序）：
+	//   ① only 语义（允许式 vs 排除式）、② add 语义（并集 vs 替换）、③ remove 语义
 	for _, need := range []string{
-		"switchport trunk allowed vlan 3990",
-		"switchport trunk allowed vlan add 3990",
-		"switchport trunk allowed vlan remove 3990",
-		"switchport trunk allowed vlan replace 3990",
+		"switchport trunk allowed vlan only 3990",
+		"switchport trunk allowed vlan add 3991",
+		"switchport trunk allowed vlan remove 3991",
 	} {
 		assert.Contains(t, joined, need, "受控实跑命令表缺少 %q", need)
 	}
@@ -169,14 +172,19 @@ func TestJudgeRunOutcome(t *testing.T) {
 	assert.False(t, o.Changed)
 	assert.False(t, o.SideEffect)
 
-	// ② 被接受且回读有变化 ⇒ 存在且生效
-	o = judgeRunOutcome("switchport trunk allowed vlan 3990", false,
-		mk("a"), mk("a", " switchport trunk allowed vlan 3990"))
+	// ② 被接受且**allowed 行**变了 ⇒ 存在且生效
+	//    （判据 = 回读的 `switchport trunk allowed vlan` 那一行原文，不是整块 diff）
+	o = judgeRunOutcome("switchport trunk allowed vlan only 3990", false,
+		mk("switchport trunk allowed vlan only 1-3989,3991-4094"),
+		mk("switchport trunk allowed vlan only 3990"))
 	assert.Equal(t, verdictLanded, o.Verdict)
 	assert.True(t, o.Changed)
+	assert.Equal(t, "switchport trunk allowed vlan only 3990", o.AllowedAfter)
 
 	// ③ 被接受但回读无变化 ⇒ ⚠️ 无错但不落地（hybrid 的 tagged 就是这样）
-	o = judgeRunOutcome("switchport trunk allowed vlan add 3990", false, mk("a"), mk("a"))
+	o = judgeRunOutcome("switchport trunk allowed vlan add 3991", false,
+		mk("switchport trunk allowed vlan only 3990"),
+		mk("switchport trunk allowed vlan only 3990"))
 	assert.Equal(t, verdictSilentNoop, o.Verdict)
 	assert.False(t, o.Changed)
 	assert.False(t, o.Rejected)
@@ -184,11 +192,18 @@ func TestJudgeRunOutcome(t *testing.T) {
 
 // TestJudgeRunOutcome_SideEffect VLAN 表变化 ⇒ 判为副作用（须停止后续实跑）。
 func TestJudgeRunOutcome_SideEffect(t *testing.T) {
-	before := probeBaseline{ConfigLinesRaw: []string{"a"}, VlanIDs: []int{1}}
-	after := probeBaseline{ConfigLinesRaw: []string{"a", "b"}, VlanIDs: []int{1, 3990}}
-	o := judgeRunOutcome("switchport trunk allowed vlan 3990", false, before, after)
-	assert.True(t, o.SideEffect, "VLAN 表变化必须判为副作用")
+	// 设备自动创建 VLAN（锐捷已确证会这么做）→ 预期内，不停止
+	before := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990"}, VlanIDs: []int{1}, PortMode: "trunk"}
+	after := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990,3991"}, VlanIDs: []int{1, 3991}, PortMode: "trunk"}
+	o := judgeRunOutcome("switchport trunk allowed vlan add 3991", false, before, after)
+	assert.False(t, o.SideEffect, "设备自动创建 VLAN 是预期内行为，不应停止实跑")
+	assert.Equal(t, []int{3991}, o.VlanAdded, "新增 VLAN 应被记录")
 	assert.Equal(t, verdictLanded, o.Verdict)
+
+	// 端口模式被改动 ⇒ 非预期 ⇒ 副作用
+	after2 := probeBaseline{ConfigLinesRaw: []string{"switchport trunk allowed vlan only 3990"}, VlanIDs: []int{1}, PortMode: "hybrid"}
+	o2 := judgeRunOutcome("switchport trunk allowed vlan only 3990", false, before, after2)
+	assert.True(t, o2.SideEffect, "端口模式被改动必须判为副作用")
 }
 
 // TestParsePortMode_TrunkFeatureLine 端口模式判定修正：
@@ -201,4 +216,35 @@ func TestParsePortMode_TrunkFeatureLine(t *testing.T) {
 	assert.Equal(t, "hybrid", parsePortMode([]string{"switchport mode hybrid"}))
 	// 什么都没有 ⇒ access
 	assert.Contains(t, parsePortMode([]string{"description X"}), "access")
+}
+
+// TestFindCmdResult 按命令文本取结果（不能按索引！）。
+//
+// ★ 这是 lead 2026-11-02 指出的「判读表与原始回显互相矛盾」的根因：
+//
+//	sendInterfaceCmds 返回的首项是 `interface <iface>`（进接口视图）、末项是 `exit`
+//	⇒ 取 res[0] 拿到的是「进视图」那条 ⇒ 「设备是否报错」列恒为「否」。
+func TestFindCmdResult(t *testing.T) {
+	results := []cmdResult{
+		{Command: "interface GigabitEthernet 1/25", Failed: false},
+		{Command: "switchport trunk allowed vlan only 3990", Failed: true, Output: "% Invalid input detected"},
+		{Command: "exit", Failed: false},
+	}
+	r, ok := findCmdResult(results, "switchport trunk allowed vlan only 3990")
+	assert.True(t, ok)
+	assert.True(t, r.Failed, "被测命令报错时必须能被取到")
+	assert.Contains(t, r.Output, "Invalid input")
+	_, ok2 := findCmdResult(results, "switchport trunk allowed vlan add 3991")
+	assert.False(t, ok2)
+}
+
+// TestExtractTrunkAllowedLine 取 allowed 行原文（判读的唯一可信依据）。
+func TestExtractTrunkAllowedLine(t *testing.T) {
+	assert.Equal(t, "switchport trunk allowed vlan only 1-3989,3991-4094",
+		extractTrunkAllowedLine([]string{
+			"interface GigabitEthernet 1/25",
+			" switchport mode trunk",
+			" switchport trunk allowed vlan only 1-3989,3991-4094",
+		}))
+	assert.Equal(t, "", extractTrunkAllowedLine([]string{"description X"}))
 }

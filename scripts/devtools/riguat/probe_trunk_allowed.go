@@ -103,10 +103,13 @@ func modeSwitchComplete(cmds []string) bool {
 //
 // 逐条之后**立刻回读 running-config**（判读的关键：命令无错 ≠ 生效）。
 var controlledRunCmds = []string{
-	"switchport trunk allowed vlan 3990",
-	"switchport trunk allowed vlan add 3990",
-	"switchport trunk allowed vlan remove 3990",
-	"switchport trunk allowed vlan replace 3990",
+	// ① only 的语义：允许式（只允许 3990）还是排除式（排除 3990）？
+	//    回读若是 `only 3990` ⇒ 允许式；若是补集（如 only 1-3899,3991-4094）⇒ 排除式。
+	"switchport trunk allowed vlan only 3990",
+	// ② add 的语义：并集（only 3990,3991）还是替换（只留 3991）？
+	"switchport trunk allowed vlan add 3991",
+	// ③ remove 的语义：能否把 VLAN 从允许列表去掉（若 ② 生效 ⇒ 期望回到 only 3990）？
+	"switchport trunk allowed vlan remove 3991",
 }
 
 // controlledRunAllowed 判定一条命令是否在受控实跑白名单内。
@@ -207,8 +210,12 @@ func collectProbeBaseline(w *device.ScrapliWrapper, cliIface string) (probeBasel
 	b.ConfigBytes = sb.Len()
 
 	// 端口模式的交叉证据：设备自己的 ? 回显（只读）
-	if modeOut, merr := sendReadCmd(w, "switchport mode ?"); merr == nil {
-		b.ModeProbeRaw = sanitizeOutput(modeOut)
+	// ★ 必须在**接口视图**下取：特权模式下 `switchport mode ?` 回显
+	//   `% Unknown command`（lead 2026-11-02 指出）。
+	if modeRes := newCmdSender(w, cliIface).sendInterfaceCmds([]string{"switchport mode ?"}); len(modeRes) > 0 {
+		if r, ok := findCmdResult(modeRes, "switchport mode ?"); ok {
+			b.ModeProbeRaw = sanitizeOutput(r.Output)
+		}
 	}
 
 	vlanOut, err := sendReadCmd(w, "show vlan")
@@ -228,13 +235,32 @@ const (
 
 // runOutcome 一条受控实跑命令的判读结果。
 type runOutcome struct {
-	Cmd        string
-	Rejected   bool   // 设备报错（命令被拒）
-	Changed    bool   // 回读配置有变化
-	Verdict    string // 三态结论
-	Before     probeBaseline
-	After      probeBaseline
-	SideEffect bool // 出现不该有的副作用（VLAN 表变化）⇒ 需停止后续实跑
+	Cmd           string
+	Rejected      bool   // 设备报错（命令被拒）
+	Changed       bool   // 回读的 allowed 行有变化
+	Verdict       string // 三态结论
+	Before        probeBaseline
+	After         probeBaseline
+	AllowedBefore string // 回读的 `switchport trunk allowed vlan` 行原文（判读的唯一可信依据）
+	AllowedAfter  string // 同上（回读后）
+	VlanAdded     []int  // 本条新增的 VLAN（设备自动创建，锐捷已确证会这么做）
+	SideEffect    bool   // 出现**不该有**的副作用（非 VLAN 新增的变化）⇒ 停止后续实跑
+}
+
+// findCmdResult 按命令文本取该条 cmdResult。
+//
+// ★ 为什么不能按索引（lead 2026-11-02 发现的判读矛盾根因）：
+//
+//	sendInterfaceCmds 返回的**第一项是 `interface <iface>`（进入接口视图）**、
+//	最后一项是 `exit` ⇒ 取 res[0] 拿到的是"进视图"那条，不是被测命令 ⇒
+//	「设备是否报错」列恒为"否"，与原始回显直接矛盾。
+func findCmdResult(results []cmdResult, cmd string) (cmdResult, bool) {
+	for _, r := range results {
+		if strings.TrimSpace(r.Command) == strings.TrimSpace(cmd) {
+			return r, true
+		}
+	}
+	return cmdResult{}, false
 }
 
 // diffConfigLines 比较两次回读得到的接口配置行是否不同。
@@ -250,17 +276,65 @@ func diffConfigLines(before, after []string) bool {
 	return false
 }
 
+// extractTrunkAllowedLine 从接口配置行里取出 `switchport trunk allowed vlan` 那一行**原文**。
+//
+// ★ 这是判读的唯一可信依据（lead 2026-11-02 明确要求）：
+//
+//	「每条之后回读 running-config 的 switchport trunk allowed vlan 那一行 ——
+//	  这是唯一可信的判据 ⇒ 请把这一行原文直接贴出来（不要只给有/无变化）」
+//
+// 找不到 ⇒ 返回空串（该行不存在，例如 access 模式下没有 trunk 配置）。
+func extractTrunkAllowedLine(lines []string) string {
+	for _, l := range lines {
+		t := strings.ToLower(strings.TrimSpace(l))
+		if strings.HasPrefix(t, "switchport trunk allowed vlan") {
+			return strings.TrimSpace(l)
+		}
+	}
+	return ""
+}
+
+// diffIntSets 求 a 中有、b 中没有的元素（用于识别设备自动创建的 VLAN）。
+func diffIntSets(a, b []int) []int {
+	inB := make(map[int]bool, len(b))
+	for _, v := range b {
+		inB[v] = true
+	}
+	var added []int
+	for _, v := range a {
+		if !inB[v] {
+			added = append(added, v)
+		}
+	}
+	return added
+}
+
 // judgeRunOutcome 按三态判定一条实跑命令的结果。
+//
+// ★ 判据 = **回读的 `switchport trunk allowed vlan` 行**（不是整个配置块 diff）：
+//
+//	· 设备报错 ⇒ 关键字不存在
+//	· 被接受且 allowed 行**变了** ⇒ 存在且生效
+//	· 被接受但 allowed 行**没变** ⇒ ⚠️ 无错但不落地（那个坑）
 func judgeRunOutcome(cmd string, rejected bool, before, after probeBaseline) runOutcome {
 	o := runOutcome{Cmd: cmd, Rejected: rejected, Before: before, After: after}
-	// 副作用判定：VLAN 表变化（不该发生）
-	if fmt.Sprint(before.VlanIDs) != fmt.Sprint(after.VlanIDs) {
+	o.AllowedBefore = extractTrunkAllowedLine(before.ConfigLinesRaw)
+	o.AllowedAfter = extractTrunkAllowedLine(after.ConfigLinesRaw)
+
+	// 设备**自动创建** VLAN 是锐捷的已知行为（hybrid 实跑已确证）⇒ 属预期内，
+	// 只记录不停止；除此之外的副作用（模式被改等）才停止后续实跑。
+	o.VlanAdded = diffIntSets(after.VlanIDs, before.VlanIDs)
+	if len(o.VlanAdded) == 0 && fmt.Sprint(before.VlanIDs) != fmt.Sprint(after.VlanIDs) {
 		o.SideEffect = true
 	}
+	if before.PortMode != after.PortMode {
+		o.SideEffect = true
+	}
+
 	switch {
 	case rejected:
 		o.Verdict = verdictRejected
-	case diffConfigLines(before.ConfigLinesRaw, after.ConfigLinesRaw):
+	case o.AllowedBefore != o.AllowedAfter:
 		o.Changed = true
 		o.Verdict = verdictLanded
 	default:
@@ -345,7 +419,10 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 		}
 	}
 
-	var before, after probeBaseline
+	// ★ initial = **探测前**基线（永远不被循环覆盖）；before 只作循环内的比较基线。
+	//   （lead 2026-11-02 指出：旧实现把 before 在循环里更新，导致报告里的
+	//    「探测前基线」实际是最后一次实跑后的状态 ⇒ 采集时机/顺序全错。）
+	var initial, before, after probeBaseline
 	var results []cmdResult
 	var modeSwitchOut, restoreOut []cmdResult
 	var outcomes []runOutcome
@@ -358,6 +435,7 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 		if berr != nil {
 			return berr
 		}
+		initial = b
 		before = b
 
 		if switchMode {
@@ -374,15 +452,22 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 				if cerr != nil {
 					return cerr
 				}
-				rejected := len(res) > 0 && res[0].Failed
+				// ★ 按命令文本取该条结果（sendInterfaceCmds 的首项是进视图、末项是 exit）
+				cr, ok := findCmdResult(res, c)
+				rejected := ok && cr.Failed
 				o := judgeRunOutcome(c, rejected, before, cur)
 				outcomes = append(outcomes, o)
 				before = cur // 下一条的基线是上一条的结果
 
+				if len(o.VlanAdded) > 0 {
+					// 设备自动创建 VLAN 是锐捷的已确证行为（hybrid 实跑见过）
+					// ⇒ 属预期内，只记录（还原阶段会清理），不停止实跑
+					rep.line("ℹ️ 设备自动创建了 VLAN %v（预期内行为，还原阶段清理）", o.VlanAdded)
+				}
 				if o.SideEffect {
 					stoppedEarly = true
-					rep.line("🚨 检测到副作用（VLAN 表变化: %v → %v）⇒ 停止后续实跑，立即还原",
-						o.Before.VlanIDs, o.After.VlanIDs)
+					rep.line("🚨 检测到非预期副作用（端口模式: %s → %s；VLAN 表: %v → %v）⇒ 停止后续实跑，立即还原",
+						o.Before.PortMode, o.After.PortMode, o.Before.VlanIDs, o.After.VlanIDs)
 					break
 				}
 			}
@@ -408,14 +493,15 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 		return
 	}
 
-	// —— 基线（探测前）——
-	rep.section("1. 探测前基线")
-	rep.line("端口模式      : %s", before.PortMode)
-	rep.line("接口配置块    : %d 字节 / %d 行", before.ConfigBytes, before.ConfigLines)
-	rep.line("VLAN 表       : %v", before.VlanIDs)
-	rep.raw("show running-config interface "+cliIface, sanitizeOutput(before.Raw))
-	if strings.TrimSpace(before.ModeProbeRaw) != "" {
-		rep.raw("switchport mode ?（端口模式交叉证据）", before.ModeProbeRaw)
+	// —— 基线（探测前，即**切 trunk 之前**）——
+	rep.section("1. 探测前基线（切 trunk 之前）")
+	rep.line("端口模式      : %s", initial.PortMode)
+	rep.line("接口配置块    : %d 字节 / %d 行", initial.ConfigBytes, initial.ConfigLines)
+	rep.line("VLAN 表       : %v", initial.VlanIDs)
+	rep.line("allowed 行原文   : %s", orNone(extractTrunkAllowedLine(initial.ConfigLinesRaw)))
+	rep.raw("show running-config interface "+cliIface, sanitizeOutput(initial.Raw))
+	if strings.TrimSpace(initial.ModeProbeRaw) != "" {
+		rep.raw("switchport mode ?（端口模式交叉证据，接口视图）", initial.ModeProbeRaw)
 	}
 
 	// —— 模式切换回显（受控写）——
@@ -458,6 +544,13 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 			}
 			rep.line("%-42s | %-12s | %-14s | %s", o.Cmd, rejected, changed, o.Verdict)
 		}
+		rep.line("")
+		rep.line("【allowed 行原文对照】（判读的唯一可信依据）")
+		for _, o := range outcomes {
+			rep.line("  ▸ %s", o.Cmd)
+			rep.line("      执行前: %s", orNone(o.AllowedBefore))
+			rep.line("      执行后: %s", orNone(o.AllowedAfter))
+		}
 		if stoppedEarly {
 			rep.line("⚠️ 因检测到副作用，后续实跑命令**未执行**")
 		}
@@ -498,6 +591,14 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 	rep.line("3. replace 是否存在？是否存在且真能全量覆盖？")
 	rep.line("4. 参数是否接受 VLAN 区间/列表（3990-3995,3999）？是否接受 all / none？")
 	rep.line("5. 关键字大小写与顺序敏感性（`add` 必须在 `allowed vlan` 之后？）")
+}
+
+// orNone 空字符串的可读表达。
+func orNone(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "（该行不存在）"
+	}
+	return s
 }
 
 // okMark 一致性标记。
