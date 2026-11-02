@@ -6,7 +6,7 @@ system-view
 interface GigabitEthernet 1/0/1
 [Ruijie]
 [Ruijie]
-switchport port-security binding aabb.ccdd.eeff 10.62.25.5
+switchport port-security binding 10.62.25.5 aabb.ccdd.eeff
 [Ruijie]
 [Ruijie]
 exit

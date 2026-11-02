@@ -868,7 +868,7 @@ func TestE2E_PortBinding_Huawei_Remove_WithMac_Success(t *testing.T) {
 
 // TestE2E_PortBinding_Ruijie_Add_Success — Ruijie switchport port-security binding with MAC:
 //
-//	interface GigabitEthernet1/0/1 | switchport port-security binding aabb.ccdd.eeff 10.62.25.5
+//	interface GigabitEthernet1/0/1 | switchport port-security binding 10.62.25.5 aabb.ccdd.eeff
 //
 // MAC 输入 AA:BB:CC:DD:EE:FF,渲染为 aabb.ccdd.eeff (Ruijie Cisco H.H.H 格式)。
 func TestE2E_PortBinding_Ruijie_Add_Success(t *testing.T) {
@@ -893,7 +893,7 @@ func TestE2E_PortBinding_Ruijie_Add_Success(t *testing.T) {
 	if result.Status != "succeeded" {
 		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
 	}
-	if !contains(result.CommandSent, "switchport port-security binding aabb.ccdd.eeff 10.62.25.5") {
+	if !contains(result.CommandSent, "switchport port-security binding 10.62.25.5 aabb.ccdd.eeff") {
 		t.Fatalf("CommandSent %q missing Ruijie MAC format aabb.ccdd.eeff", result.CommandSent)
 	}
 	if got := result.Extra["bindOp"]; got != "add" {
@@ -945,7 +945,7 @@ func TestE2E_PortBinding_Ruijie_Add_NoMac_Success(t *testing.T) {
 
 // TestE2E_PortBinding_Ruijie_Remove_Success — Ruijie no switchport port-security binding with MAC:
 //
-//	interface GigabitEthernet1/0/1 | no switchport port-security binding aabb.ccdd.eeff 10.62.25.5
+//	interface GigabitEthernet1/0/1 | no switchport port-security binding 10.62.25.5 aabb.ccdd.eeff
 func TestE2E_PortBinding_Ruijie_Remove_Success(t *testing.T) {
 	resetCollectNotif()
 	db := newTestDB(t)
@@ -968,7 +968,7 @@ func TestE2E_PortBinding_Ruijie_Remove_Success(t *testing.T) {
 	if result.Status != "succeeded" {
 		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
 	}
-	if !contains(result.CommandSent, "no switchport port-security binding aabb.ccdd.eeff 10.62.25.5") {
+	if !contains(result.CommandSent, "no switchport port-security binding 10.62.25.5 aabb.ccdd.eeff") {
 		t.Fatalf("CommandSent %q missing Ruijie no-binding MAC format", result.CommandSent)
 	}
 	if got := result.Extra["bindOp"]; got != "remove" {
