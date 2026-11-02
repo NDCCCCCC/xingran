@@ -2,7 +2,7 @@
 // 用法: node tmp_sample_v6.cjs <mode>   （mode=dark|light，需 DB 偏好已设为该模式并重启后端）
 const fs = require('fs');
 const path = require('path');
-const WebSocket = require(process.cwd() + '/ruoyi-react-frontend/node_modules/ws');
+const WebSocket = require(process.cwd() + '/xingran-react-frontend/node_modules/ws');
 const fixtureJs = fs.readFileSync(path.join(__dirname, 'matrix-fixture.js'), 'utf8');
 const sampleJs = fs.readFileSync(path.join(__dirname, 'matrix-sample.js'), 'utf8');
 const mode = process.argv[2] || 'dark';

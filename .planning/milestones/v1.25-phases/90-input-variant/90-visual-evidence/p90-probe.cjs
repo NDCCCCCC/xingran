@@ -4,7 +4,7 @@
 //       ③ 批次 C 去 important 后 border-width/style 的接管来源；④ 内层 radius 保持 0。
 const fs = require('fs');
 const path = require('path');
-const FE_ROOT = path.resolve(__dirname, '../../../../ruoyi-react-frontend');
+const FE_ROOT = path.resolve(__dirname, '../../../../xingran-react-frontend');
 const WebSocket = require(FE_ROOT + '/node_modules/ws');
 
 function connect(wsUrl) {

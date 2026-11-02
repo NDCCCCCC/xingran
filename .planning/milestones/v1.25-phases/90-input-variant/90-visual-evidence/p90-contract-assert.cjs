@@ -1,6 +1,6 @@
 // Phase 90 W2/W3 —— 权威 computed-style 断言执行器
 //
-// 口径来源：`ruoyi-react-frontend/scripts/css-contract-assertions.js`（v1.24 VIS-01/02/03 的
+// 口径来源：`xingran-react-frontend/scripts/css-contract-assertions.js`（v1.24 VIS-01/02/03 的
 // 权威断言片段）。本脚本**逐字复用**它的 fixture 构造与判定式，只把
 // 「Console 粘贴 → 人工读 JSON」改为「CDP 求值 → 写盘 → 机器判定」。
 //
@@ -12,7 +12,7 @@
 const fs = require("fs");
 const path = require("path");
 const HERE = __dirname;
-const FE_ROOT = path.resolve(HERE, "../../../../ruoyi-react-frontend");
+const FE_ROOT = path.resolve(HERE, "../../../../xingran-react-frontend");
 const { openCdp, sleep } = require("./p90-session.cjs");
 
 // 权威断言片段（去掉 IIFE 包裹与 console.log，改为返回 report；判定式逐字保留）

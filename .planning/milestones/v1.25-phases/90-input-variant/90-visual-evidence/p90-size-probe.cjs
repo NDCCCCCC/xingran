@@ -7,7 +7,7 @@
 //   ④ 普通 <Input>（/system/user 搜索框）与 InputNumber 的字号（对照）
 const fs = require('fs');
 const path = require('path');
-const FE_ROOT = path.resolve(__dirname, '../../../../ruoyi-react-frontend');
+const FE_ROOT = path.resolve(__dirname, '../../../../xingran-react-frontend');
 const WebSocket = require(FE_ROOT + '/node_modules/ws');
 
 const TAG = process.argv[2] || 'now';

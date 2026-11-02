@@ -4,7 +4,7 @@
 //       ④ 禁碰暗色只读区（删除前行号落在 :2254-2742 / :2780-4517 内）；⑤ 一行 CSS 声明都不许动。
 const fs = require('fs');
 const path = require('path');
-const FE = path.resolve(__dirname, '../../../../ruoyi-react-frontend');
+const FE = path.resolve(__dirname, '../../../../xingran-react-frontend');
 const file = path.join(FE, 'src/index.css');
 const targets = String(process.argv[2] || '').split(',').filter(Boolean).map(Number);
 if (!targets.length) { console.error('用法: node p90-compress.cjs <csv 行号>'); process.exit(1); }

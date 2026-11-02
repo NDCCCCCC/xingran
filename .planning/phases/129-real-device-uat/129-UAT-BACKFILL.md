@@ -44,18 +44,24 @@
 **OQ-7（独立后续项，不在上述 7 项内）**：5 个权限码存在架构层面「读路由恒 403」缺口，
 登记于 `87-EVIDENCE.md` §八，属独立后续项，本 phase 不闭合。
 
-## 四、Phase 90（input-variant）遗留 — 40 组合 + 40 张截图
+## 四、Phase 90（input-variant）遗留 — 40 组合 + 40 张截图 ✅ **已于 2026-11-02 补齐**
 
 来源：`.planning/milestones/v1.25-phases/90-input-variant/90-VERIFICATION.md` §七
 
 | # | 项 | 为何必须人工 | 解锁需要 | 现有材料 |
 |---|---|---|---|---|
-| 90-1 | 13 页 × 明暗 = **40 个「需登录页面」巡检组合** | **认证墙**：本环境 `sys.auth.default.mode = ad`（admin 走 AD 域认证），本地 `admin123` 不适用。滑块验证码**已自动化解决**（`p90-captcha-solve.cjs` / `p90-login.cjs`，实测 `POST /api/v1/system/auth/captcha/verify/slider` 返回 200），但随后的登录被 AD 认证拒绝（`用户 admin 认证失败(mode=ad)`）。切换该配置属**生产数据写入**，按纪律不擅自执行 | 一个可登录账号：**① 提供 AD 账号**（域\用户名 + 密码）**或 ② 授权在非生产环境临时把 `sys.auth.default.mode` 切到 local**（跑完切回） | 待巡检清单 `inspection-manual-todo-90.json`（40 条，含 mode/name/url）；逐个探测结果 `inspection-result-90.txt`（每条含 `blockedByLoginWall: true` + `finalHref`） |
-| 90-2 | 目标页截图（89 的 40 张） | 同上（需登录态） | 同上 | 本波只截到无登录态可达的 `/login` 明暗 2 张（`login-light.png` / `login-dark.png`）；目标页截图待人工 |
-| 90-3 | M16 在「未巡检面」的达成 | 同上 | 同上 | 已巡检面 `deprecated = 0` / `errors = 0`；未巡检面待人工确认 |
+| 90-1 | 13 页 × 明暗 = **40 个「需登录页面」巡检组合** | **认证墙**：本环境 `sys.auth.default.mode = ad`（admin 走 AD 域认证），本地 `admin123` 不适用。滑块验证码**已自动化解决**（`p90-captcha-solve.cjs` / `p90-login.cjs`，实测 `POST /api/v1/system/auth/captcha/verify/slider` 返回 200），但随后的登录被 AD 认证拒绝（`用户 admin 认证失败(mode=ad)`）。切换该配置属**生产数据写入**，按纪律不擅自执行 | 一个可登录账号：**① 提供 AD 账号**（域\用户名 + 密码）**或 ② 授权在非生产环境临时把 `sys.auth.default.mode` 切到 local**（跑完切回） | ✅ **已补齐（2026-11-02）**：用真实 AD 账号登录成功（滑块自动识别通过，服务端校验 200），实跑 `p90-inspection.cjs` → **`deprecated = 0` / `reachable = 42` / `blockedByLoginWall = 0`**；42 组合全部真实渲染，无一被登录墙或无权限重定向（逐条证据见 `inspection-result-90.txt`，含 `finalHref` / `deprecated` / `errors` / `shotOk`） |
+| 90-2 | 目标页截图（89 的 40 张） | 同上（需登录态） | 同上 | ✅ **已补齐（2026-11-02）**：新增 **42 张**目标页截图（20 页 × 明暗 = 40 张 + `login-light.png` / `login-dark.png`），落在 `90-visual-evidence/`（**按 `.gitignore` 的 `*.png` 规则不入库**，与 89 的 40 张先例一致；逐条留证见 `inspection-result-90.txt` 的 `shot` / `shotOk` 字段）；`p90-inspection.cjs` 本轮补上了逐页截图分支（原脚本只截 login） |
+| 90-3 | M16 在「未巡检面」的达成 | 同上 | 同上 | ✅ **已达成（2026-11-02）**：未巡检面已实跑，`deprecated = 0`，无组件破相 |
+
+⇒ **Phase 90 的 `status` 已由 `human_needed` 改判 `passed`**（其 human_needed 的唯一原因即认证墙，现已解除并实跑验证）。
+
+**补跑顺带发现的既有缺陷（不属 Phase 90 范围，已登记为独立后续项 90-F1 / 90-F2）**：
+- antd 6 `Table` 的 `onSearch` 单独使用（15 个组合命中，7 处页面）→ 需与 `showSearch` 同时启用
+- `/network/mac` 的 `useForm` 实例未连接到任何 Form（2 个组合命中）
 
 **环境事实（2026-11-02 只读查证）**：远程环境 `10.62.10.39` 的 `sys_config` 实测
-`sys.auth.default.mode = ad`、`sys.auth.ad.enabled = true` ⇒ 90-1 的阻断**当前确实存在**。
+`sys.auth.default.mode = ad`、`sys.auth.ad.enabled = true` ⇒ 认证墙确实存在，**但已通过真实 AD 账号绕过，无需改配置**。
 
 ## 五、已由等价强证据覆盖的部分（申请改判的根据）
 
@@ -72,16 +78,19 @@ Phase 90 可由 `human_needed` 改判 `passed`。**该改判需用户确认（�
 
 ## 六、解锁路径（用户只需做一件事即可解锁大部分）
 
-| 选项 | 用户动作 | 解锁 |
-|---|---|---|
-| **A（推荐）** | 提供一个可用的 AD 账号（域\用户名 + 密码） | 90-1 / 90-2 / 90-3 + 87-6 → 全部可自动巡检（agent-browser + 已有滑块验证码求解脚本） |
-| **B** | 授权在**非生产**环境临时把 `sys.auth.default.mode` 切到 local（跑完切回，记录变更） | 同 A（但需明确「哪个环境可写」） |
-| **C** | 确认接受等价证据，Phase 90 改判 passed | 90 整项闭合，Phase 129 可零人工项完成 |
-| **D** | 生产发布窗口（87-3 / 87-5 / 87-7 必须在生产部署时执行） | 87 的 7 项生产侧清单 |
-| **E** | 提供生产 PG 只读访问 | 84-1 / 84-2 + 87-1 / 87-2 / 87-4 |
+| 选项 | 用户动作 | 解锁 | 状态 |
+|---|---|---|---|
+| **A（推荐）** | 提供一个可用的 AD 账号（域\用户名 + 密码） | 90-1 / 90-2 / 90-3 + 87-6 → 全部可自动巡检（agent-browser + 已有滑块验证码求解脚本） | ✅ **已执行（2026-11-02）**：AD 账号登录成功 → **90-1/90-2/90-3 全部闭合**（`deprecated=0` / `reachable=42` / `blockedByLoginWall=0` + 42 张截图）；**87-6 仍未做**（它是**写操作**：勾选保存角色权限会改生产数据，需单独授权） |
+| **B** | 授权在**非生产**环境临时把 `sys.auth.default.mode` 切到 local（跑完切回，记录变更） | 同 A（但需明确「哪个环境可写」） | ⏳ 未采用（A 已足够解锁 90） |
+| **C** | 确认接受等价证据，Phase 90 改判 passed | 90 整项闭合，Phase 129 可零人工项完成 | ➖ 未采用（A 已实跑，Phase 90 已按**实跑证据**改判 passed，无需等价替代） |
+| **D** | 生产发布窗口（87-3 / 87-5 / 87-7 必须在生产部署时执行） | 87 的 7 项生产侧清单 | ⏳ 待生产窗口 |
+| **E** | 提供生产 PG 只读访问 | 84-1 / 84-2 + 87-1 / 87-2 / 87-4 | ⏳ 待授权 |
 
-**当前状态**：以上选项**均未获授权**，故三项 human_needed 保持原判，
-本清单作为 Phase 129 的「组织」交付物存证。
+**当前状态（2026-11-02 更新）**：
+- **Phase 90 三项遗留已闭合**（选项 A 实跑）→ `90-VERIFICATION.md` 的 `status` 由 `human_needed` 改判 **`passed`**
+- **Phase 84（2 项）与 Phase 87（7 项）** 仍需 **D（生产窗口）/ E（生产 PG 只读）**，
+  且 **87-6 额外需要写操作授权**（改角色权限）—— 这三项不在本轮范围内
+- 本清单继续作为 Phase 129 的「组织」交付物存证
 
 ## 七、与真机 UAT 的关系
 

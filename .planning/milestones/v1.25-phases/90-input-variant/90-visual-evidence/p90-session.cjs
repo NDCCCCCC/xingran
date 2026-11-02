@@ -3,7 +3,7 @@
 // 依赖：CDP 已在 127.0.0.1:9222 监听；dev server 在 localhost:4000 运行。
 const path = require("path");
 const fs = require("fs");
-const FE_ROOT = path.resolve(__dirname, "../../../../ruoyi-react-frontend");
+const FE_ROOT = path.resolve(__dirname, "../../../../xingran-react-frontend");
 const WebSocket = require(FE_ROOT + "/node_modules/ws");
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -4,7 +4,7 @@
 // 用法: node p89-final-run.cjs
 const fs = require('fs');
 const path = require('path');
-const FE_ROOT = path.resolve(__dirname, '../../../../ruoyi-react-frontend');
+const FE_ROOT = path.resolve(__dirname, '../../../../xingran-react-frontend');
 const WebSocket = require(FE_ROOT + '/node_modules/ws');
 
 const fixtureJs = fs.readFileSync(path.join(__dirname, 'matrix-fixture.js'), 'utf8');

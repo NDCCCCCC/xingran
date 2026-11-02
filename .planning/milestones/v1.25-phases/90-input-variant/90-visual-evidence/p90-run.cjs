@@ -8,7 +8,7 @@
 //   node p90-run.cjs              → 采 fixture+sample + 巡检截图，落 after-{light,dark}.json
 const fs = require('fs');
 const path = require('path');
-const FE_ROOT = path.resolve(__dirname, '../../../../ruoyi-react-frontend');
+const FE_ROOT = path.resolve(__dirname, '../../../../xingran-react-frontend');
 const WebSocket = require(FE_ROOT + '/node_modules/ws');
 
 const BASELINE = process.argv.slice(2).includes('--baseline');

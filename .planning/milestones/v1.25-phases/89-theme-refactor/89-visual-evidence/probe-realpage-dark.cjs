@@ -1,5 +1,5 @@
 // B 类视觉证据：真实页面（/system/user）dark 下 Select 容器底色
-const WebSocket = require(process.cwd() + '/ruoyi-react-frontend/node_modules/ws');
+const WebSocket = require(process.cwd() + '/xingran-react-frontend/node_modules/ws');
 (async () => {
   const list = await (await fetch('http://127.0.0.1:9222/json')).json();
   const page = list.find((t) => t.type === 'page');

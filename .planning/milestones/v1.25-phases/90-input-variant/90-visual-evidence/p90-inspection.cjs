@@ -161,6 +161,15 @@ async function setMode(ev, nav, mode) {
           ? "登录墙（认证模式=ad，需真实 AD 域凭据）—— 待人工巡检"
           : "",
       });
+      // 逐页截图（v1.25 遗留项 90-2：目标页截图 40 张，2026-11-02 补齐）
+      let shotOk = false;
+      try {
+        shotOk = await shot(`${name}-${mode}.png`);
+      } catch (e) {
+        shotOk = false;
+      }
+      results[results.length - 1].shot = `${name}-${mode}.png`;
+      results[results.length - 1].shotOk = shotOk;
       console.log(
         `PROBE ${name}-${mode} dep=${dep.length} err=${errs.length} redirected=${redirected}`,
       );

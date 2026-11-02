@@ -2,7 +2,7 @@
 // 用法：node p90-sample-only.cjs <prefix>   （默认 after）
 const fs = require('fs');
 const path = require('path');
-const FE_ROOT = path.resolve(__dirname, '../../../../ruoyi-react-frontend');
+const FE_ROOT = path.resolve(__dirname, '../../../../xingran-react-frontend');
 const WebSocket = require(FE_ROOT + '/node_modules/ws');
 
 const OUT_PREFIX = process.argv[2] || 'after';
