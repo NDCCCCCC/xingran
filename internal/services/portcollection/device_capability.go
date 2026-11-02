@@ -102,8 +102,9 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 	//
 	// H3C / Cisco：真机证据不足，全部默认支持（S8700 之外的华为 CE/S57 系列
 	// 按公允语法支持 trunk/hybrid/max-mac-num）。
-	// 锐捷 hybrid 在渲染层不注册（RenderCommand → ErrUnknownAction），此处
-	// 不重复表达。
+	// 锐捷 hybrid：2026-11-02 真机 `?` 帮助确认设备支持，此前渲染层未注册
+	// （RenderCommand → ErrUnknownAction）属功能缺口，本次已补齐渲染，
+	// 矩阵显式记 supported（见下方锐捷条目）。
 
 	// 锐捷 RS8607E 真机（2026-11-01 锐捷 12 动作复测，走产品 scrapli 链路）：
 	// static_bind / max_mac / sticky / port_binding 全部实测无错误 ——
@@ -117,6 +118,8 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 					PortSecMaxMac:     "锐捷 RS8607E 真机（2026-11-01）：switchport port-security maximum 5 实测无错误（参数范围 <1-128>）⇒ 支持 MAC 数上限（华为 S8700 无 max-mac-num 子命令）",
 					PortSecSticky:     "锐捷 RS8607E 真机（2026-11-01）：switchport port-security mac-address sticky 实测无错误 ⇒ 支持 sticky MAC 模式",
 					ActionPortBinding: "锐捷 RS8607E 真机（2026-11-01）：switchport port-security binding <IP> <MAC> 实测无错误 ⇒ 支持 IP+MAC 组合绑定（IP 在前，与华为 S8700 IP+MAC Unsupported 相反）",
+					// 2026-11-02 追加（渲染缺口补齐，非 uotester 既有内容）：
+					TrunkSetHybrid: "锐捷 RS8607E 真机（2026-11-02 `?` 帮助）：switchport hybrid ? → allowed/native；switchport hybrid native ?/allowed ? → vlan ⇒ 形态 switchport hybrid native vlan <id> / switchport hybrid allowed vlan <list>；switchport mode ? 含 hybrid ⇒ 需前置切模式（native 单值，untagged 多值在渲染层拒绝）",
 				},
 			},
 		},

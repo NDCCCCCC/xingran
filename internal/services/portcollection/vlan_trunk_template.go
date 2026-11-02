@@ -23,7 +23,31 @@ import (
 //     port hybrid vlan <list>（tagged）/ port hybrid vlan untagged <list>（untagged）
 //   - 锐捷 RGOS（Cisco 风格）：switchport trunk native vlan X /
 //     switchport trunk allowed vlan {add|remove} <list> / replace 无关键字全量。
-//     锐捷无 hybrid 端口模式 → TrunkSetHybrid 返回 ErrUnsupportedVendor。
+//
+// ★ 2026-11-02 锐捷真机 `?` 帮助取证（RS8607E GigabitEthernet 1/1，零配置变更）：
+//
+//	switchport mode ?      → access / dot1q-tunnel / hybrid / private-vlan / trunk / uplink
+//	switchport hybrid ?   → allowed / native
+//	switchport hybrid native ?  → vlan
+//	switchport hybrid allowed ? → vlan
+//	switchport trunk ?         → native / allowed
+//	switchport trunk native ?  → vlan
+//
+// ⇒ 锐捷 hybrid 命令形态（本次新增渲染的真相源）：
+//
+//	switchport mode hybrid                 ← 前置：设备要求端口处于 hybrid 模式
+//	switchport hybrid native vlan <id>     ← untagged 承载 VLAN（native 单值）
+//	switchport hybrid allowed vlan <list>  ← tagged 允许列表
+//
+// ⇒ 锐捷 trunk 分支核对结论（本次取证未推翻现有实现，保持不变）：
+//
+//	TrunkSetNative  `switchport trunk native vlan <id>`  ✅ 与真机一致（native ? → vlan）
+//	TrunkSetAllowed `switchport trunk allowed vlan …`    ✅ 第一层与真机一致（allowed ? → vlan）
+//	                第二层 add/remove/无关键字全量       ⚠ 本次取证未到第二层，
+//	                沿用既有 Cisco 风格依据（锐捷=Cisco 风格），未实跑验证。
+//
+// ⇒ 锐捷 hybrid 之前未注册（RenderCommand → ErrUnknownAction），属功能缺口，
+//   2026-11-02 按真机形态补齐。
 //
 // 厂商语义差异（PWX-01 验收 #3 注明）：
 //   tagged/untagged 不可重叠 —— 华为 VRP 设备侧会拒绝重叠配置（两命令互斥，
@@ -31,6 +55,8 @@ import (
 //   优先于 tagged 表（port hybrid vlan 与 untagged 写入不同硬件表项），重叠时
 //   实际转发表项与用户意图不一致且无告警。因此 H3C 的重叠校验必须在系统侧
 //   前置（service 层 400 拦截为真相源），设备不兜底。
+//   锐捷 hybrid 的 native 是**单值**（一个端口一个 native VLAN）⇒ untagged 传多个
+//   无法被设备表达，渲染层直接拒绝（与华为 IP+MAC 组合拒绝同构，见 renderRuijieTrunkSetHybrid）。
 
 // PortAction Phase 124 新增动作。
 const (
@@ -255,6 +281,56 @@ func renderRuijieTrunkSetAllowed(p PortTemplateParams) ([]string, error) {
 	}, nil
 }
 
+// renderRuijieTrunkSetHybrid 锐捷 hybrid（2026-11-02 真机 `?` 帮助取证）：
+//
+//	interface <iface>
+//	switchport mode hybrid                  ← 前置：设备要求端口处于 hybrid 模式
+//	switchport hybrid native vlan <id>      ← untagged 承载 VLAN（native 单值）
+//	switchport hybrid allowed vlan <list>   ← tagged 允许列表
+//
+// 参数映射（产品参数模型是华为语义 tagged/untagged，厂商语法映射只在渲染层做）：
+//   - HybridUntagged → native（native VLAN 承载不带 tag 的流量）
+//   - HybridTagged   → allowed（允许通过的 VLAN 列表）
+//
+// ⚠ native 单值约束：锐捷 `switchport hybrid native vlan <id>` 只能表达一个
+// untagged VLAN（华为/H3C 的 untagged 是列表）。传多个时**直接拒绝**而不是
+// 静默取第一个 —— 否则设备会把端口切到 hybrid 模式却只配上部分 VLAN，
+// 在生产 access 工位口上会造成"模式已变、配置未全"的半吊子状态。
+// 错误用 ErrActionNotSupported 包装（与华为 S8700 的 IP+MAC 组合拒绝同构），
+// handler 翻译为 400 + 真机依据。
+//
+// 端口模式回退不属于本动作范围：产品 rollback（portwrite/safety.go
+// renderRollbackCommands）目前只覆盖 shutdown / set_access_vlan，
+// trunk/hybrid 动作无自动回滚命令 —— hybrid 改的是端口转发模式，
+// 需人工或在产品侧另行设计回滚策略（本次不擅自扩写）。
+func renderRuijieTrunkSetHybrid(p PortTemplateParams) ([]string, error) {
+	if len(p.HybridTagged) == 0 && len(p.HybridUntagged) == 0 {
+		return nil, fmt.Errorf("portcollection: hybrid tagged/untagged list required")
+	}
+	cmds := []string{
+		fmt.Sprintf("interface %s", p.InterfaceName),
+		// 前置切模式：设备要求端口处于 hybrid 模式才接受 hybrid 配置
+		"switchport mode hybrid",
+	}
+	if len(p.HybridUntagged) > 0 {
+		if err := validateVlanListForRender(p.HybridUntagged); err != nil {
+			return nil, err
+		}
+		if len(p.HybridUntagged) > 1 {
+			return nil, fmt.Errorf("%w: vendor=ruijie action=%s — 锐捷 hybrid native 仅支持单个 untagged VLAN（真机形态 switchport hybrid native vlan <id>，2026-11-02 ? 帮助取证），当前传入 %d 个 untagged VLAN",
+				ErrActionNotSupported, TrunkSetHybrid, len(p.HybridUntagged))
+		}
+		cmds = append(cmds, fmt.Sprintf("switchport hybrid native vlan %d", p.HybridUntagged[0]))
+	}
+	if len(p.HybridTagged) > 0 {
+		if err := validateVlanListForRender(p.HybridTagged); err != nil {
+			return nil, err
+		}
+		cmds = append(cmds, fmt.Sprintf("switchport hybrid allowed vlan %s", vlanListFormatCisco(p.HybridTagged)))
+	}
+	return cmds, nil
+}
+
 // RegisterTrunkTemplates 把 Phase 124 trunk/hybrid 渲染闭包注册进
 // vendorPortTemplate 派发表（init 时机，避免改动既有表字面量）。
 func RegisterTrunkTemplates() {
@@ -266,8 +342,9 @@ func RegisterTrunkTemplates() {
 	vendorPortTemplate[models.VendorH3C][TrunkSetHybrid] = renderH3CTrunkSetHybrid
 	vendorPortTemplate[models.VendorRuijie][TrunkSetNative] = renderRuijieTrunkSetNative
 	vendorPortTemplate[models.VendorRuijie][TrunkSetAllowed] = renderRuijieTrunkSetAllowed
-	// 锐捷无 hybrid 端口模式：不注册 TrunkSetHybrid → RenderCommand 返回
-	// ErrUnsupportedVendor（service 层翻译为 400）。
+	// 锐捷 hybrid：2026-11-02 真机 `?` 帮助确认设备支持（switchport hybrid ? →
+	// allowed/native），此前未注册属功能缺口，本次按真机形态补齐。
+	vendorPortTemplate[models.VendorRuijie][TrunkSetHybrid] = renderRuijieTrunkSetHybrid
 }
 
 func init() {
