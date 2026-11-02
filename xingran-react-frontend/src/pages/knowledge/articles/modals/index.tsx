@@ -71,7 +71,6 @@ export function EditModal({
                 allowClear
                 placeholder="请选择文章分类"
                 className="user-form-input"
-                onSearch={() => {}}
                 options={flatCategories.map((cat) => ({
                   label: cat.categoryName,
                   value: cat.id,
@@ -90,7 +89,6 @@ export function EditModal({
                 allowClear
                 placeholder="请选择状态"
                 className="user-form-input"
-                onSearch={() => {}}
                 showSearch={false}
                 // STATUS_OPTIONS 为 as const 只读元组，antd options 需可变数组 → 展开复制
                 options={[...STATUS_OPTIONS]}
@@ -109,7 +107,6 @@ export function EditModal({
             placeholder="请选择标签"
             style={{ width: "100%" }}
             className="user-form-input"
-            onSearch={() => {}}
             showSearch
             options={tags.map((tag) => ({ label: tag.tagName, value: tag.id }))}
           />

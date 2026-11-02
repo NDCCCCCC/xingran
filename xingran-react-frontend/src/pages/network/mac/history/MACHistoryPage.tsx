@@ -646,7 +646,6 @@ const MACHistoryPage: React.FC = () => {
                 { value: "disappeared", label: "消失" },
                 { value: "vlan_changed", label: "VLAN 变更" },
               ]}
-              onSearch={() => {}}
               showSearch={false}
             />
           </Form.Item>
@@ -662,7 +661,6 @@ const MACHistoryPage: React.FC = () => {
                 { value: 0, label: "正常" },
                 { value: 1, label: "停用" },
               ]}
-              onSearch={() => {}}
               showSearch={false}
             />
           </Form.Item>

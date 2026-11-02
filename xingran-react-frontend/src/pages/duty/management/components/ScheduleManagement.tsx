@@ -207,7 +207,6 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
             allowClear
             style={{ width: 120 }}
             showSearch={false}
-            onSearch={() => {}}
             options={users.map((user) => ({
               value: user.id,
               label: user.nickname || user.username,
@@ -220,7 +219,6 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
             allowClear
             style={{ width: 120 }}
             showSearch={false}
-            onSearch={() => {}}
             options={[
               { value: "weekday", label: "工作日" },
               { value: "weekend", label: "周末" },
@@ -234,7 +232,6 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
             allowClear
             style={{ width: 120 }}
             showSearch={false}
-            onSearch={() => {}}
             options={[
               { value: 0, label: "未过期" },
               { value: 1, label: "已过期" },

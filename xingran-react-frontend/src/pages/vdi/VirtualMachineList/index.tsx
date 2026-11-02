@@ -1001,7 +1001,6 @@ const VirtualMachineList: React.FC = () => {
                   <AppSelect
                     placeholder="请选择VDI服务器"
                     loading={vdiServers.length === 0}
-                    onSearch={() => {}}
                     options={vdiServers
                       .filter((s) => s.status === 0)
                       .map((server) => ({ value: server.id, label: server.name }))}
@@ -1016,7 +1015,6 @@ const VirtualMachineList: React.FC = () => {
                   <AppSelect
                     placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"}
                     disabled={!selectedServerId}
-                    onSearch={() => {}}
                     options={resourceGroups.map((group) => ({
                       value: group.resource_group_id,
                       label: `${group.name} ${group.type ? `(${group.type})` : ""}`,
@@ -1032,7 +1030,6 @@ const VirtualMachineList: React.FC = () => {
                   <AppSelect
                     placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"}
                     disabled={!selectedResourceGroupId}
-                    onSearch={() => {}}
                     options={resources.map((r) => ({
                       value: String(r.id),
                       label: `${r.name} ${r.note ? `(${r.note})` : ""}`,
@@ -1048,7 +1045,6 @@ const VirtualMachineList: React.FC = () => {
                   <AppSelect
                     placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"}
                     disabled={!selectedServerId}
-                    onSearch={() => {}}
                     options={vtpPlatforms.map((platform) => ({
                       value: platform.id,
                       label: platform.name,
@@ -1064,7 +1060,6 @@ const VirtualMachineList: React.FC = () => {
                   <AppSelect
                     placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
-                    onSearch={() => {}}
                     options={runPositions.map((position) => ({
                       value: position.id,
                       label: position.name,
@@ -1089,7 +1084,6 @@ const VirtualMachineList: React.FC = () => {
                   <AppSelect
                     placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
-                    onSearch={() => {}}
                     options={storages.map((storage) => ({
                       value: storage.id,
                       label: `${storage.name} (${(parseInt(storage.avail) / 1024).toFixed(1)}GB可用)`,
@@ -1112,7 +1106,6 @@ const VirtualMachineList: React.FC = () => {
                   <AppSelect
                     placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
-                    onSearch={() => {}}
                     options={storages.map((storage) => ({
                       value: storage.id,
                       label: `${storage.name} (${storage.avail}MB可用)`,
@@ -1128,7 +1121,6 @@ const VirtualMachineList: React.FC = () => {
                   <AppSelect
                     placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"}
                     disabled={!selectedVtpId}
-                    onSearch={() => {}}
                     options={networks.map((network) => ({
                       value: network.id,
                       label: network.name,

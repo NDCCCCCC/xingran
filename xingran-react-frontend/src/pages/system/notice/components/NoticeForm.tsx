@@ -185,7 +185,6 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               {/* 形态分类器②④：公告类型固定 2 项，业务禁搜 */}
               <AppSelect
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={NOTICE_TYPE_OPTIONS}
               />
@@ -206,7 +205,6 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               {/* 形态分类器②④：重要程度固定 3 项，业务禁搜 */}
               <AppSelect
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={NOTICE_LEVEL_OPTIONS}
               />
@@ -223,7 +221,6 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               {/* 形态分类器②④：公告状态固定 2 项，业务禁搜 */}
               <AppSelect
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={NOTICE_STATUS_OPTIONS}
               />
@@ -323,7 +320,6 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                       allowClear
                       // AppSelect 泛型被 ComponentProps 擦除 → onChange 值为 unknown，收敛回业务类型
                       onChange={(value) => onTargetTypeChange(value as number)}
-                      onSearch={() => {}}
                       options={TARGET_TYPE_OPTIONS}
                     />
                   </Form.Item>
@@ -404,7 +400,6 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                   onChange={(value) => {
                     form.setFieldValue("apiConfigId", value);
                   }}
-                  onSearch={() => {}}
                   options={apiConfigs
                     .filter((config) => config.id != null)
                     .map((config) => ({

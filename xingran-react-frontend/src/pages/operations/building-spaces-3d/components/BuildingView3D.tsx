@@ -328,7 +328,6 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
                 label: b.name,
                 value: b.id,
               }))}
-              onSearch={() => {}}
             />
           </>
         )}

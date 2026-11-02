@@ -329,7 +329,6 @@ const MenuManagement: FC = () => {
                 placeholder="请选择状态"
                 style={{ width: 120 }}
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={MENU_STATUS_OPTIONS}
               />
@@ -458,7 +457,6 @@ const MenuManagement: FC = () => {
                 <AppSelect
                   allowClear
                   placeholder="请选择菜单类型"
-                  onSearch={() => {}}
                   showSearch={false}
                   options={[...MENU_TYPE_OPTIONS]}
                 />

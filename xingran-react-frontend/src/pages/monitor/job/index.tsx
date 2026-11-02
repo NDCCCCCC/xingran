@@ -16,7 +16,6 @@ import {
 
 import {
   STATUS_OPTIONS,
-  MISFIRE_POLICY_OPTIONS,
   DEFAULT_FORM_VALUES,
   DEFAULT_SEARCH_FORM,
 } from "./constants";
@@ -212,7 +211,6 @@ const JobManager: FC = () => {
                 className="user-form-input"
                 style={{ width: "100%" }}
                 options={STATUS_OPTIONS}
-                onSearch={() => {}}
               />
             </Col>
             <Col xs={24} sm={24} md={6}>
@@ -328,7 +326,6 @@ const JobManager: FC = () => {
             rules={[{ required: true }]}
             extra="任务错过执行时间的处理策略"
           >
-            <AppSelect allowClear options={MISFIRE_POLICY_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item
             label="并发执行"
@@ -339,7 +336,6 @@ const JobManager: FC = () => {
             <Switch checkedChildren="允许" unCheckedChildren="禁止" />
           </Form.Item>
           <Form.Item label="状态" name="status" rules={[{ required: true }]}>
-            <AppSelect allowClear options={STATUS_OPTIONS} onSearch={() => {}} />
           </Form.Item>
           <Form.Item label="备注" name="remark">
             <AppTextArea placeholder="请输入备注" rows={3} />

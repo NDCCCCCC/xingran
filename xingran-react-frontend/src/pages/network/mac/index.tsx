@@ -135,6 +135,7 @@ const MACAddressPage: FC = () => {
     selectedRowKeys,
     setSelectedRowKeys,
     searchForm,
+    editForm, // 90-F2: 本页无编辑 Modal，editForm 仅作隐形连接（见下方注释）
     loadData: loadMACAddresses,
     handleSearch,
     handleReset,
@@ -405,7 +406,11 @@ const MACAddressPage: FC = () => {
               gap: "16px",
             }}
           >
-            <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+            {/* 90-F2: useTableManager 内建的 editForm 在本页没有编辑 Modal 可挂载，实例创建后
+            永不连接会触发 antd 6 警告「Instance created by `useForm` is not connected to
+            any Form element」。component={false} 不渲染任何 DOM，仅为实例建立连接消除警告。 */}
+        <Form form={editForm} component={false} />
+        <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="deviceId" label="设备">
                 {/* 形态分类器①/②：children 写法改写 options。设备下拉为 UUID 外键
                     （deviceId），原 allowClear=true → 清空即「不按设备筛选」，行为保持不变；
@@ -449,7 +454,6 @@ const MACAddressPage: FC = () => {
                   placeholder="请选择类型"
                   className="user-form-input"
                   style={{ width: 120 }}
-                  onSearch={() => {}}
                   showSearch={false}
                   options={MAC_TYPE_OPTIONS}
                 />

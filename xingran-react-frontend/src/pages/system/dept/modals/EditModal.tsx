@@ -150,7 +150,6 @@ export function DeptEditModal({
           {/* 形态分类器②④：外部机构固定枚举（业务禁搜） */}
           <AppSelect
             allowClear
-            onSearch={() => {}}
             showSearch={false}
             // as const 只读元组 → antd options 需可变数组
             options={[...EXTERNAL_ORG_OPTIONS]}
@@ -160,7 +159,6 @@ export function DeptEditModal({
           {/* 形态分类器②④：状态枚举（业务禁搜） */}
           <AppSelect
             allowClear
-            onSearch={() => {}}
             showSearch={false}
             options={[...STATUS_OPTIONS]}
           />

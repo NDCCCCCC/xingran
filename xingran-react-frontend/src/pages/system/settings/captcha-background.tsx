@@ -355,7 +355,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                 setCurrent(1);
               }}
               options={SHAPE_OPTIONS}
-              onSearch={() => {}}
               showSearch={false}
               style={{ width: 110 }}
             />
@@ -373,7 +372,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                 { value: 2, label: "中等" },
                 { value: 3, label: "困难" },
               ]}
-              onSearch={() => {}}
               style={{ width: 100 }}
             />
             <AppSelect
@@ -389,7 +387,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                 { value: 1, label: "启用" },
                 { value: 0, label: "禁用" },
               ]}
-              onSearch={() => {}}
               style={{ width: 100 }}
             />
           </Space>
@@ -518,7 +515,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           >
             <AppSelect
               allowClear
-              onSearch={() => {}}
               showSearch={false}
               options={[...SHAPE_OPTIONS]}
             />
@@ -530,7 +526,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           >
             <AppSelect
               allowClear
-              onSearch={() => {}}
               showSearch={false}
               options={DIFFICULTY_LEVEL_OPTIONS}
             />
@@ -541,7 +536,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               allowClear
               mode="multiple"
               placeholder="不限制则默认使用当前形状"
-              onSearch={() => {}}
               showSearch
               options={[...SHAPE_OPTIONS]}
             />
@@ -576,7 +570,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
             <AppSelect
               allowClear
-              onSearch={() => {}}
               showSearch={false}
               options={[...SHAPE_OPTIONS]}
             />
@@ -584,7 +577,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
             <AppSelect
               allowClear
-              onSearch={() => {}}
               showSearch={false}
               options={DIFFICULTY_LEVEL_OPTIONS}
             />
@@ -595,7 +587,6 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               allowClear
               mode="multiple"
               placeholder="不限制则使用默认"
-              onSearch={() => {}}
               showSearch
               options={[...SHAPE_OPTIONS]}
             />

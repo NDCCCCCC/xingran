@@ -248,7 +248,6 @@ const KnowledgeArticlePage: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 options={flatCategories.map((cat) => ({
                   label: cat.categoryName,
                   value: cat.id,
@@ -262,7 +261,6 @@ const KnowledgeArticlePage: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 options={tags.map((tag) => ({ label: tag.tagName, value: tag.id }))}
               />
             </Form.Item>
@@ -273,7 +271,6 @@ const KnowledgeArticlePage: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 100 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={[
                   { label: "草稿", value: KnowledgeArticleStatus.Draft },

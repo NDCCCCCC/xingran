@@ -474,7 +474,6 @@ const ADGroupPage: FC = () => {
               onChange={(value) => setSelectedConfig(value as string)}
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
               showSearch={false}
-              onSearch={() => {}}
             />
           </Form.Item>
           <Form.Item label="所属OU">

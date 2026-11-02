@@ -7,7 +7,7 @@ import { Modal, Form, Space } from "antd";
 // Phase 71 (W4)：裸 Input/Select/TextArea → 契约组件
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ConfigTemplate } from "@/types";
-import { VENDOR_OPTIONS, DEVICE_TYPE_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "../constants";
+import { VENDOR_OPTIONS, DEVICE_TYPE_OPTIONS } from "../constants";
 
 export interface TemplateEditModalProps {
   open: boolean;
@@ -60,7 +60,6 @@ export function TemplateEditModal({
         </Form.Item>
         <Form.Item name="templateType" label="模板类型" rules={[{ required: true }]}>
           {/* 形态分类器①/②：children 写法改写 options；固定 3 项 → 显式禁搜 */}
-          <AppSelect onSearch={() => {}} showSearch={false} options={TEMPLATE_TYPE_OPTIONS} />
         </Form.Item>
         <Space size="large">
           <Form.Item name="vendor" label="适用厂商">
@@ -68,7 +67,6 @@ export function TemplateEditModal({
             <AppSelect
               placeholder="通用"
               style={{ width: 150 }}
-              onSearch={() => {}}
               showSearch={false}
               options={VENDOR_OPTIONS}
             />
@@ -78,7 +76,6 @@ export function TemplateEditModal({
             <AppSelect
               placeholder="通用"
               style={{ width: 150 }}
-              onSearch={() => {}}
               showSearch={false}
               options={DEVICE_TYPE_OPTIONS}
             />
