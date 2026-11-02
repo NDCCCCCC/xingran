@@ -251,6 +251,8 @@ type runOutcome struct {
 	AllowedAfter  string // 同上（回读后）
 	NativeBefore  string // 回读的 `switchport trunk native vlan` 行原文（native 取证的判据）
 	NativeAfter   string // 同上（回读后）
+	VerdictBefore string // 三态判定实际用的判读行（按命令类型选：native 命令比 native 行）
+	VerdictAfter  string // 同上（回读后）
 	VlanAdded     []int  // 本条新增的 VLAN（设备自动创建，锐捷已确证会这么做）
 	SideEffect    bool   // 出现**不该有**的副作用（非 VLAN 新增的变化）⇒ 停止后续实跑
 }
@@ -317,6 +319,20 @@ func extractTrunkNativeLine(lines []string) string {
 	return ""
 }
 
+// verdictLineFor 按命令类型选择**判读行**（三态判定的唯一依据）。
+//
+// ★ 为何必须按类型选（lead 2026-11-02 第六轮定位的 bug）：
+//
+//	三态判定原先对**所有命令**都拿 allowed 行作判据 ⇒ native 命令执行后
+//	allowed 行本来就不变（native 与 allowed 是**独立维度**）⇒ 误判「无错但不落地」。
+//	于是**判读行要跟命令走**：native 命令比 native 行，allowed 命令比 allowed 行。
+func verdictLineFor(cmd string, b probeBaseline) string {
+	if strings.Contains(strings.ToLower(cmd), "trunk native") {
+		return extractTrunkNativeLine(b.ConfigLinesRaw)
+	}
+	return extractTrunkAllowedLine(b.ConfigLinesRaw)
+}
+
 // diffIntSets 求 a 中有、b 中没有的元素（用于识别设备自动创建的 VLAN）。
 func diffIntSets(a, b []int) []int {
 	inB := make(map[int]bool, len(b))
@@ -345,6 +361,9 @@ func judgeRunOutcome(cmd string, rejected bool, before, after, runBase probeBase
 	o.AllowedAfter = extractTrunkAllowedLine(after.ConfigLinesRaw)
 	o.NativeBefore = extractTrunkNativeLine(before.ConfigLinesRaw)
 	o.NativeAfter = extractTrunkNativeLine(after.ConfigLinesRaw)
+	// ⚠️ 判读行跟命令走（native 命令比 native 行，allowed 命令比 allowed 行）
+	o.VerdictBefore = verdictLineFor(cmd, before)
+	o.VerdictAfter = verdictLineFor(cmd, after)
 
 	// 副作用判定必须对「**实跑期基线**」⇒ 即「切 trunk 之后、实跑之前」的状态（runBase）。
 	//
@@ -367,7 +386,7 @@ func judgeRunOutcome(cmd string, rejected bool, before, after, runBase probeBase
 	switch {
 	case rejected:
 		o.Verdict = verdictRejected
-	case o.AllowedBefore != o.AllowedAfter:
+	case o.VerdictBefore != o.VerdictAfter:
 		o.Changed = true
 		o.Verdict = verdictLanded
 	default:
@@ -595,6 +614,13 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 				changed = "是"
 			}
 			rep.line("%-42s | %-12s | %-14s | %s", o.Cmd, rejected, changed, o.Verdict)
+		}
+		rep.line("")
+		rep.line("【判读行对照】（三态判定实际用的行：native 命令比 native 行，allowed 命令比 allowed 行）")
+		for _, o := range outcomes {
+			rep.line("  ▸ %s", o.Cmd)
+			rep.line("      执行前: %s", orNone(o.VerdictBefore))
+			rep.line("      执行后: %s", orNone(o.VerdictAfter))
 		}
 		rep.line("")
 		rep.line("【allowed 行原文对照】（判读的唯一可信依据）")

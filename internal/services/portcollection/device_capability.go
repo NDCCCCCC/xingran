@@ -152,16 +152,16 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 					// 二次取证（`?` 帮助）：allowed 必须带 tagged/untagged 关键字，native 是单值 VID；
 					// 三次取证（真机实跑，RS8607E + RG8607E 形态一致）修正：
 					//   tagged 必带 only、untagged 不能带 only、还原只认模式回退。
-					// ⚠️ ⚠️ TrunkSetNative（switchport trunk native vlan <id>）：**未取证**（2026-11-02 待实测）。
-					//   ⇒ 不进 supported（supported 表示「有真机证据」）⇒ SupportEvidence 返回空串与事实一致。
-					//   ⚠️ **第二个 P0 风险**：`trunk allowed` 已被证伪（必须带 only，无关键字形态非法）
-					//   ⇒ `trunk native` 与它同族（同为 switchport trunk ...）⇒ 极可能同样需要 only。
-					//   且 native 语义更特殊（native vlan = untagged 的 PVID）⇒ 若设备按排除式理解，后果比 allowed 严重得多。
-					//   实测计划（探针形态、回读原文、还原验证）见
-					//   .planning/phases/130-device-evidence/130-RUIIJIE-TRUNK-ALLOWED.md。
-					// ★ 2026-11-02 五轮实跑定稿（回读 allowed 行原文为唯一可信判据）：
-					//   ⚠️ 以前没有本动作的任何依据 ⇒ 产品对锐捷下发的「无关键字」形态
-					//   在真机上是**非法命令**（Invalid input）⇒ P0，五不得再回退。
+					// ★ 2026-11-02 第六轮实跑定稿：native 形态**原样有效、无 only 要求**（不是第二个 P0）。
+					TrunkSetNative: "锐捷真机（2026-11-02 六轮实跑，RS8607E / RG8607E）：" +
+						"switchport trunk native vlan <id> 形态**原样有效、无 only 要求**（命令未被拒绝，落盘形态原样未被改写）；" +
+						"与 allowed 列表是**独立维度**（设 native 不影响 allowed 行）；" +
+						"还原 switchport mode access 对 native 也有效（一次清掉）；" +
+						"⚠️ 本次执行前 native 行已是 3990（设备原有配置）⇒ " +
+						"「命令是否真的改写了 native 值」未单独验证；" +
+						"本结论仅限 RS8607E / RG8607E，**不外推其它型号**",
+					// ⚠️ 历史：TrunkSetNative 曾标「未取证」（2026-11-02 待实测）——
+					//   实测后已确计（见上方 supported 依据）⇒ 已改为有证据的 supported。
 					TrunkSetAllowed: "锐捷真机（2026-11-02 五轮实跑定稿，RS8607E 与 RG8607E 形态一致）：" +
 						"replace ⇒ switchport trunk allowed vlan only <list>（★ only 本身即全量语义：实测 only 3990 直接覆盖原列表）→" +
 						"add ⇒ switchport trunk allowed vlan add <list>（并集/叠加：only 3990 → add 3991 ⇒ only 3990-3991）→" +
