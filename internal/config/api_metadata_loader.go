@@ -115,6 +115,14 @@ func LoadAPIMetadata(ctx context.Context, path string) (*APIMetadataConfig, erro
 		data []byte
 		err  error
 	}
+
+	// 前置检查(确定性入口):调用方传入的 ctx 若已取消,不经 select 直接返回——
+	// 本地文件读取极快,select 双 case 同时 ready 时 Go 会随机选择分支,
+	// 已取消场景就有约 50% 概率返回成功(CI flaky: TestLoadAPIMetadata_ContextCanceled)。
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("读取API元数据配置已取消: %w", err)
+	}
+
 	readCh := make(chan result, 1)
 	go func() {
 		data, err := os.ReadFile(path)
@@ -124,7 +132,17 @@ func LoadAPIMetadata(ctx context.Context, path string) (*APIMetadataConfig, erro
 	var data []byte
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("读取API元数据配置已取消: %w", ctx.Err())
+		// 读过程中取消:读实际已完成(缓冲通道不阻塞)则以读结果为准,
+		// 未完成则以取消错误优先——保证"取消信号不晚于完成信号被观察到"。
+		select {
+		case r := <-readCh:
+			if r.err != nil {
+				return nil, fmt.Errorf("读取API元数据配置失败: %w", r.err)
+			}
+			data = r.data
+		default:
+			return nil, fmt.Errorf("读取API元数据配置已取消: %w", ctx.Err())
+		}
 	case r := <-readCh:
 		if r.err != nil {
 			return nil, fmt.Errorf("读取API元数据配置失败: %w", r.err)
