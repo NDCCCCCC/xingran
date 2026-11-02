@@ -146,7 +146,7 @@ func actionSummary(action Action, portCount int, vendor models.DeviceVendor) str
 		portcollection.ActionPortBinding:   "端口 IP/MAC 绑定",
 		portcollection.TrunkSetNative:      "设置 trunk native VLAN",
 		portcollection.TrunkSetAllowed:     "修改 trunk allowed VLAN 列表",
-		portcollection.TrunkSetHybrid:      "设置 hybrid tagged/untagged VLAN",
+		portcollection.TrunkSetHybrid:      "设置 hybrid VLAN（锐捷会先把端口切到 hybrid 模式）",
 		portcollection.PortSecEnable:       "启用端口安全",
 		portcollection.PortSecDisable:      "停用端口安全",
 		portcollection.PortSecMaxMac:       "设置端口安全 MAC 上限",
@@ -342,6 +342,14 @@ func (s *portWriteServiceImpl) previewSinglePort(
 		}
 		if i == 0 {
 			cp.Note = "进入接口视图"
+		}
+		if cmd == "switchport mode hybrid" {
+			// ★ 端口模式变更必须显式出现在预览里（不能藏在命令列表中）
+			// —— 锐捷 hybrid 动作会先把端口从 access/trunk 切到 hybrid 模式，
+			// 这会改变转发行为，dry-run 必须让操作者看见。
+			cp.Note = "★ 端口模式变更为 hybrid（会改变转发模式，锐捷 hybrid 动作的前置命令）"
+			cp.RiskLevel = RiskLevelCritical
+			cp.Critical = true
 		}
 		out.Commands = append(out.Commands, cp)
 	}

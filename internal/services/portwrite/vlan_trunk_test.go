@@ -2,6 +2,7 @@ package portwrite
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -70,16 +71,55 @@ func TestTrunkRender_AllVendors(t *testing.T) {
 	}
 }
 
-// TestTrunkRender_RuijieHybridUnsupported 锐捷无 hybrid 模式 → 渲染层拒绝。
-func TestTrunkRender_RuijieHybridUnsupported(t *testing.T) {
+// TestTrunkRender_RuijieHybridSupported 锐捷 hybrid 真机支持（2026-11-02 `?` 帮助取证）：
+// switchport hybrid ? → allowed/native；native/allowed ? → vlan；
+// switchport mode ? 含 hybrid ⇒ 渲染须前置 switchport mode hybrid。
+//
+// 2026-11-02 之前本用例断言"锐捷 hybrid 必须被渲染层拒绝"（当时设备未取证、
+// 渲染未注册）—— 真机事实推翻该认知后改为"支持 + 命令形态断言"。
+func TestTrunkRender_RuijieHybridSupported(t *testing.T) {
+	db := newTestDB(t)
+	seedPreviewDevice(t, db, models.VendorRuijie)
+	svc := newTestService(&countingExecutor{}, nil, db)
+	res, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
+		DeviceID: "device-ruijie", Action: portcollection.TrunkSetHybrid,
+		PortIDs: []string{"port-ruijie"}, HybridTagged: []int{30}, HybridUntagged: []int{10},
+	}, "tester")
+	require.NoError(t, err, "锐捷 hybrid 真机支持，预览不应报错")
+
+	require.Len(t, res.Ports, 1)
+	var cmds []string
+	for _, c := range res.Ports[0].Commands {
+		cmds = append(cmds, c.Command)
+	}
+	joined := strings.Join(cmds, " | ")
+	assert.Contains(t, joined, "switchport mode hybrid", "必须前置切 hybrid 模式")
+	assert.Contains(t, joined, "switchport hybrid native vlan 10", "native 单值承载 untagged")
+	assert.Contains(t, joined, "switchport hybrid allowed vlan 30", "allowed 承载 tagged 列表")
+
+	// dry-run 预览必须显式标注"端口模式变更"（不能藏在命令列表里）
+	var modeNote string
+	for _, c := range res.Ports[0].Commands {
+		if c.Command == "switchport mode hybrid" {
+			modeNote = c.Note
+		}
+	}
+	assert.Contains(t, modeNote, "端口模式变更为 hybrid", "模式变更必须在预览里显式标注")
+}
+
+// TestTrunkRender_RuijieHybridNativeSingleValue 锐捷 hybrid 的 native 是单值：
+// untagged 传多个 → 渲染层按设备形态限制拒绝（ErrActionNotSupported → 400），
+// 绝不下发"切了模式却只配部分 VLAN"的半吊子命令。
+func TestTrunkRender_RuijieHybridNativeSingleValue(t *testing.T) {
 	db := newTestDB(t)
 	seedPreviewDevice(t, db, models.VendorRuijie)
 	svc := newTestService(&countingExecutor{}, nil, db)
 	_, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
 		DeviceID: "device-ruijie", Action: portcollection.TrunkSetHybrid,
-		PortIDs: []string{"port-ruijie"}, HybridTagged: []int{10},
+		PortIDs: []string{"port-ruijie"}, HybridTagged: []int{30}, HybridUntagged: []int{10, 20},
 	}, "tester")
-	require.Error(t, err)
+	require.Error(t, err, "锐捷 hybrid native 单值，多 untagged 必须被拒绝")
+	assert.ErrorIs(t, err, portcollection.ErrActionNotSupported)
 }
 
 // TestValidateTrunkRequest sentinel 错误路径（验收 #3 参数校验）。

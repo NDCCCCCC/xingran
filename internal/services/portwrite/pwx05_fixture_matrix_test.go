@@ -177,18 +177,9 @@ func TestPWX05_FullCoverageMatrix(t *testing.T) {
 		for _, action := range actions {
 			action := action
 			t.Run(fmt.Sprintf("%s/%s", vendor, action), func(t *testing.T) {
-				// 厂商差异覆盖：锐捷无 hybrid 端口模式 → 渲染层 ErrUnsupportedVendor
-				// （PWX-01 注明的厂商差异，拒绝本身即覆盖）。
-				if vendor == models.VendorRuijie && action == portcollection.TrunkSetHybrid {
-					db := newTestDB(t)
-					seedPreviewDevice(t, db, vendor)
-					svc := newTestService(&countingExecutor{}, nil, db)
-					_, err := svc.PreviewPortWrite(context.Background(),
-						fullMatrixRequest(vendor, action), "matrix-tester")
-					assert.Error(t, err, "锐捷 hybrid 应被渲染层拒绝")
-					t.Logf("ruijie/trunk_set_hybrid → ErrUnsupportedVendor（预期厂商差异）")
-					return
-				}
+				// 2026-11-02：锐捷 hybrid 由"渲染层拒绝"改为"真机支持"
+				// （真机 `?` 帮助确认 switchport hybrid native/allowed 存在），
+				// 因此锐捷 hybrid 走正常 preview 路径，与华为/H3C 同口径。
 				db := newTestDB(t)
 				seedPreviewDevice(t, db, vendor)
 				// portsec_disable 需要"已启用"pre-state 才不 NoOp
@@ -224,7 +215,8 @@ func TestPWX05_FullCoverageMatrix(t *testing.T) {
 	// 覆盖报告（验收 #1：矩阵覆盖表）
 	t.Logf("=== PWX-05 覆盖矩阵报告（%d 厂商 × %d 动作 = %d cells） ===", len(vendors), len(actions), len(vendors)*len(actions))
 	t.Logf("动作: %v", actions)
-	t.Logf("说明: 锐捷 trunk_set_hybrid 预期 ErrUnsupportedVendor（渲染层拒绝，厂商差异即覆盖）；"+
+	t.Logf("说明: 锐捷 trunk_set_hybrid 2026-11-02 起真机支持（`?` 帮助确认），"+
+		"已注册渲染并走正常 preview 路径；"+
 		"NoOp 语义 cell 标记 noop（pre-state 已匹配，skipped），其余标记 cmd。")
 	for _, row := range report {
 		t.Logf("vendor=%s cells=%d", row[0], len(row)-1)
@@ -249,6 +241,11 @@ func fullMatrixRequest(vendor models.DeviceVendor, action Action) PreviewRequest
 		// hybrid 重叠会被 ErrHybridOverlap 拦截，矩阵用不重叠参数
 		HybridTagged:   []int{30},
 		HybridUntagged: []int{10, 20},
+	}
+	// 锐捷 hybrid 的 native 是单值（真机形态 switchport hybrid native vlan <id>，
+	// 2026-11-02 取证）⇒ untagged 只能给 1 个，否则渲染层按设备形态限制拒绝。
+	if vendor == models.VendorRuijie {
+		req.HybridUntagged = []int{10}
 	}
 	// portsec_disable 需要"已启用"pre-state 才不 NoOp（与既有用例同口径）
 	_ = action
