@@ -2,6 +2,146 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.25 — 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence)
+
+**Shipped:** 2026-10-30
+**Phases:** 10 (84-93) | **Requirements:** 22/22 Satisfied | **Timeline:** 2.5 天 (2026-10-28 13:11 → 2026-10-30 16:17)
+**Git:** 99 commits / 399 files / +56,653 −9,836
+
+### What Was Built
+
+- **线 A·操作级 RBAC 全站治理**：
+  - 133 处写路由 ANY-of 拆分为逐动作单一权限点（`RequireStrictPermissions`）；
+  - 全站 76 个业务页面操作入口按动作级权限码三态门控全覆盖（恒等式 25 已门控 + 51 豁免 = 76 锁死）；
+  - 72 个 F 型按钮权限码全量入库播种，映射死表真实接线，未登记写路由归零；
+  - 权限模型三缺口修复（`data_scope` 真实消费、`menu.status` 过滤、子菜单继承语义命名固化）。
+- **线 B·样式收敛与巨型单体拆分**：
+  - 453 条暗色 mega-cluster 手写覆盖整块交还 antd token 与 `darkAlgorithm`；
+  - 量化终态达标锁死：全仓 `!important` 1435 → **452**（≤455 预算，净降 983 处，-68.5%），Hex 311 → **26**（≤60 预算），`index.css` 行数 5632 → **3194**（≤3200 预算）；
+  - `room-devices/index.tsx` 896 行大单体解耦为 342 行（≤350 行，子文件均 ≤250 行，零行为变化）；
+  - C1~C16c 样式静态契约全部 PASS（双框元素数 0，单圈焦点环，8px 统一圆角）；
+  - 14 个核心业务页面视觉巡检零异常断层。
+
+### What Worked
+
+- **双线分治，线内严格串行**：线 A（Go 后端权限）与线 B（前端 CSS 样式）在阶段前期并行推进；样式线内部（88 基础断言 → 89 变量重构 → 90 Input 域 → 91 Select/Table 域 → 92 暗色 mega-cluster → 93 拆分与终验）严格串行，三处不可逆顺序约束写死，极大避免了跨阶段样式冲突与假绿。
+- **AST 精确扫描与自动化批处理**：自制 `scan-dark-rules.cjs` 对 570 行暗色规则做 AST 语法级边界识别，区分 453 条可删除覆盖与 46 条合法例外，实现了整块安全清零，无一误伤活规则。
+- **量化预算硬锁（Ratchet Guard）**：把 `IMPORTANT_BUDGET`、`C13_M7_BUDGET`、`C13_M9_BUDGET` 写入 CI 契约检查脚本，每攻克一个波次立即下调并锁死预算，形成「只降不升」的机械防线。
+- **矩阵采样机器断言先行**：搭建 computed-style 21 形态断言工具链，机器对比毫秒级反馈，确保组件视觉基线零破坏。
+
+### What Was Inefficient
+
+- **大单体暗色清除后的空章节残留**：在 Phase 92 清理完 453 条规则后，遗留了 30 余个空章节注释，导致 M9（代码行数）一度逼近 3440 行，不得不追加 Gap 计划做二次空白与死注释收敛。
+- **次级 Hex 的隐蔽扩散**：历史 CSS 中大量存在阴影与边框使用的裸 Hex，在样式收敛晚期才触发 per-file 与全量阈值预警，后续应在前期变量层重构时尽早统一转为标准 `rgb(...)`。
+
+### Key Lessons
+
+1. **样式的根基在 Token，不在选择器覆盖**：手写 `!important` 选择器覆盖只能解决一时，但会破坏 antd 内部算法，最终演变为 1400 多处的债务大山；正解是按 Antd 规范分层配置 Component Token 和 Map Token。
+2. **重构大文件必须先锁定外部注入契约**：在拆分 `room-devices` 时，先精确定位 `reloadRef` 注入链路和 `columns` 的缓存依赖，保证重构过程中外部组件调用协议零变动，确保 100% 行为保真。
+3. **机器断言比肉眼巡检更可靠**：6px 到 8px 的圆角差异肉眼极难辨识，依托 computed-style 物理单值断言才能铸造不可逾越的质量底座。
+
+---
+
+## Milestone: v1.24 — 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance)
+
+**Shipped:** 2026-10-28
+**Phases:** 8 (76-83) | **Requirements:** 18/18 Satisfied | **Timeline:** 单日完成（09:19 需求定稿 → 12:59 收口，约 3.5 小时）
+**Git:** 46 commits / 104 files / +5,419 −2,232
+
+### What Was Built
+
+- **双框根治** — 复位块 `.ant-input-affix-wrapper > input.ant-input`（6 项、**刻意不写 box-shadow**，焦点环归 wrapper）；**双框元素数 3 → 0**（harness 42 行 + 15 真实页 + 登录页，明暗双测）；错误态恢复品牌红
+- **CSS 一致性审计登记册** — 36 条（P0 已修 8 / P1 待修 7 / P2 登记 19 / 保留 1 / 样板 1）；契约检查脚本 ALL PASS
+- **#16 行操作权限前后端双端闭环** — `RequireStrictPermissions`（只做 Step1 精确匹配）+ `/system/users` 读组/写组**兄弟分离** + `useActionPermission` 三态门控 + 权限码单一真相源；三层证据（DB 前后对照 / HTTP 8/8 403 含决定性对照实验 / 组件测试 7/7）
+- **F5 刷新回退修复** — catch-all 语义区分 + LAST_PATH 防自毁反写，**红绿验证通过**
+- **3f130 空因诊断展示** — Table+Alert 分级渲染（`no_user_bound` → info 常态 / 其余 → warning）+ 静默失败补提示
+- **lint 51 → 0 problems** + devices 页 714 → 306 行（-57%）
+
+### What Worked
+
+- **波次化并行** — W1（76/80/81/82 零依赖）→ W2（78/79 需 PG）→ W3（83 依赖 78 的 gate 模式）；8 phase 在 3.5 小时内跑完，文件域零重叠让并行成为常态而非例外
+- **Lead 先定规格再派发** — Phase 78 的执行规格（含完整代码草案 + 8 项验收 + 边界清单）先于派发写死，避免执行 agent 自由发挥导致口径漂移
+- **实机验证反查实现** — Phase 77 用真实浏览器把 Phase 76 自己没发现的 P0 死规则查了出来（见 Key Lessons #1）
+- **决定性对照实验** — #16 验收不满足于「403」，追加「临时授予 xtgl → 200 且真删除」的反向实验，排除「403 只是接口坏了」的解释
+- **收口前 Lead 独立复核** — 不只采信 agent 报告：全量 vitest 独立复跑（确认 1 例超时是环境 flaky 非回归）+ 闸门六道全绿
+
+### What Was Inefficient
+
+- **4 个 subagent 崩溃** — 82/80/81/76 相继崩溃；80 与 81 由主会话亲自接管（81 的遗留改动需逐行审阅后补完测试）
+- **凭据传递绕了三轮弯路** — 环境变量继承失败 → 仓库外 TEMP 文件 → 直接贴明文；正确做法应是首次即贴明文（agent 无法被 steer，补发无门）
+- **两个 agent 重复做同一份造数** — 幂等（`WHERE NOT EXISTS`）兜住了重复行，但浪费了一个 agent 的运行时间
+- **我在自己规格里写错了一个真陷阱** — gin `Group()` 继承父组中间件链 → 写组若挂在读组之下，病灶① 不会被修掉；由实施方识破并修正（见 Key Lessons #4）
+
+### Patterns Established
+
+- **实现 → 实机验证的反查机制** — 静态断言与 computed-style 单点断言都覆盖不到「class 名在当前库版本不存在」这类错误；真实浏览器 + 真实页面是不可替代的验证层
+- **契约断言必须双向** — 正向「规则存在」不够，还要反向「不得出现已知死形态」；只看正向会得到「检查通过而功能从未生效」
+- **证据图入库** — `.gitignore` 的全局 `*.png` 会让验收凭证只存本地工作区，必须为证据目录加精确例外
+- **前后对照表** — 修复类工作必须留「修复前 / 修复后」两套实测数据（DB 层 + HTTP 层），否则修复后无法证明缺陷曾经存在
+
+### Key Lessons
+
+1. **契约检查校验「规则存在」≠ 校验「规则能命中」** — Phase 76 的 VIS-03 写成 `.ant-input-affix-wrapper.ant-input-affix-wrapper-status-error`，而 antd 6.6.4 把 status class 打在 wrapper **自身**（`ant-input-status-error`）→ 该 class 根本不存在 → 永不命中；叠加 `allowClear` 默认开 → **站内绝大多数输入框错误态一直不变红**。而 Phase 76 的 C5 检查**校验的正是这条死规则** → 检查通过、功能从未生效。**教训：契约检查必须双向断言，且断言目标要锚定「当前依赖版本里真实存在的选择器」，不能凭印象写。**
+2. **红绿验证是识别「假绿」的唯一手段** — 我第一版 NAV-01 回归测试在**回退实现**下仍然通过（fixture 用 `name` 而非 `menuName` → 菜单被 `validateMenu` 静默跳过；且未预置菜单缓存时组件在 `:246` 提前 return，根本走不到 catch-all）。**教训：写完回归测试必须先回退实现验证它会红，否则测的是空气。**
+3. **代码结构体 ≠ 库表结构** — 从 `models/role.go` 的 `RoleMenu{RoleID, MenuID}` 推断「表无 id 列」并据此判另一 agent 的 INSERT 会失败，实测生产库**实有** `id`/`created_at` 列（模型未映射 ≠ 表无列）。**教训：跨模型/迁移场景不得凭结构体推断库表结构；且 PG 能跑 ≠ sqlite 新库能跑。**
+4. **Lead 的规格也会写错** — Phase 78 规格里的 `usersWrite := users.Group("")` 有安全 bug（gin 继承父组中间件链 → 读组 ANY-of 仍放行写操作）。**教训：规格定稿不等于免于审查；执行方有义务在实现时指出规格缺陷（本次实施方正确地做了）。**
+5. **真实浏览器验证能查出静态断言查不出的东西** — VIS-03 死规则、`.dept-tree-search` 补丁从未命中、暗色 token 就地重定义，三项都只有真浏览器 + computed-style 才暴露。**教训：CSS/视觉类修复的验收层不能只有静态检查。**
+6. **PowerShell 的 GBK 显示会制造「文件损坏」假象** — `Get-Content` 把 UTF-8 中文显示成乱码，多次让我误判文件被写坏（实测均正常）。**教训：判定文件编码必须用 node 读 UTF-8，禁用 PowerShell 的 Get-Content 读中文文件。**
+7. **subagent 无法被 steer** — `send_message` 对已启动的 subagent 报 not found（它们不在 teammate 树内）。**教训：subagent 的任务书必须一次给全（凭据、路径、方法、边界），不能指望中途补充。**
+8. **生产环境知识必须入库** — `SKIP_AUTOMIGRATE` 在 release 模式会 fatal（须同时降 `SERVER_MODE=test`）、JWT 密钥环境变量真名是 `JWT_SM2_*` 而非 config 注释里的 `RUOYI_JWT_SM2_*`、`10.62.10.34:9000` 是 MinIO 不是后端。**教训：这类「试错换来的」环境事实必须落 MEMORY，否则每个新会话都要重踩。**
+
+### Cost Observations
+
+- 8 phases / 46 commits / 104 files / 约 3.5 小时（单日）
+- 4 个 subagent（其中 4 个崩溃需重派）+ 主会话亲自接管 Phase 80 与 Phase 81
+- Notable: 崩溃率偏高（约 4/9 次派发崩溃）——**单会话内串行完成两个 phase（80/81）反而比反复重派更快**，且接管遗留改动时发现了 agent 遗漏（如 hydrate 未置 `permissionsLoaded`、NAV-01 缺测试）
+
+---
+
+## Milestone: v1.23 — 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance)
+
+**Shipped:** 2026-10-28
+**Phases:** 7 (69-75) | **Requirements:** 22/22 Satisfied | **Timeline:** 单日完成（2026-10-27 规划+研究 → 10-28 收档），多 subagent 并行
+
+### What Was Built
+
+- **TextArea 一键清空契约（用户主诉闭环）** — AppTextArea 独立组件 + SearchForm textarea 字段 + eslint 成员表达式/解构双 selector（探针验证非假绿）+ 存量全量接入 + 实机 UAT 抽查通过
+- **COMP-05 全量收尾** — W1-W6 六波 121 文件具名迁移，P65 豁免 127→0，无豁免口径裸组件命中全归零；Select 形态七类分类器
+- **7 项 debug 全终结** — #5 MAC 查询双侧归一化双分支 SQL / #7 空因可诊断端点（纯增量）/ #2 Cisco 采集 / #3 Go 写防线；#1/#4 实证不复现（非 systemd 托管 / 双实例部署）；#6 关单
+- **lint 清偿 + 门禁** — errors 81→17、warnings 1366→34、any 958→0、unused 364→0、console 5→0；--max-warnings 34 + assert-lint-budget.mjs 断言
+- **流程清偿** — quick 目录 94 个归档、68.1 §8 实机回写关债、FAIL-1 分页恢复 bug 修复实机复验
+
+### What Worked
+
+- **4 维并行研究前置** — 规划前拿到 selector 盲区、豁免锚点脆弱性、acknowledge 不等于已定位等关键情报，直接改变 phase 排序（spike 先行）
+- **subagent 深度并行** — 前端线与后端线无共享文件全程并行（70/71 与 72/73），W3 并行 W4、W5 并行 W6 按域切分，零冲突
+- **每波真实闸门** — type-check/vitest/eslint 预算/build 四件套每 commit 前跑，82 到 81 到 17 errors 收敛全程零回归
+- **用户三次 DB 实测一举清零调查** — spike 阶段下发 SQL/命令清单，实测数据直接钉死 #5/#7 根因，Phase 73 变纯执行
+- **探针验证文化** — selector 生效性用临时探针实测而非推理；红绿验证证明测试有效
+
+### What Was Inefficient
+
+- **pwsh 编码事故连环（最痛）** — Get-Content/Set-Content 在 GBK 控制台把中文规划文件读坏，且字符串替换因乱码静默失败，收档时才发现需从 git 历史重建（REQUIREMENTS 全量重建 + 2 份 debug 文档恢复）
+- **规划假设被实测推翻** — P67 别名降险法在 JSX 名匹配 selector 下无效，W1 探针才发现；规划期可用 5 分钟探针避免
+- **subagent 中途崩溃 3 次** — W3/W5/W6 崩溃但遗留合格半成品，主会话接管补验或重派收尾；要有「验收遗留、接管或重派」固定动作
+- **grep 检测面漏检换行形态** — Select 标签行尾换行逃过多波对账，「残留脱节文件」实为漏检；W5/W6 宽松模式补齐
+- **UAT jsdom 盲区再现** — 分页恢复 jsdom 通过实机失败（mount 时序覆写），实机 UAT 必须保留为独立 phase
+
+### Patterns Established
+
+- **契约组件收口三件套** — 组件（默认值下沉）+ selector（eslint error 拦截）+ 豁免清单（gen 脚本管理、收口归零、转校验模式）
+- **迁移波次闸门四件套** — type-check / 定向 vitest / eslint 预算断言 / build，每 commit 前必跑
+- **Select 形态七类分类器** — options 直接迁 / children 必改 options / 禁搜显式 false / 复合子节点保留加显式 label / multiple 显式 showSearch
+- **debug 文档生命周期** — investigating 到 root_cause_identified 到 resolved；acknowledge 结转必须先重验 spike
+- **数量口径纪律** — eslint 实跑命中加豁免清单为权威；每波「域命中数 = 清单剩余数」对账
+
+### Key Lessons
+
+1. **acknowledge 不等于已定位**：结转 debug 项 7 项里 4 项调查未完成，直接排修复 wave 会修不存在的根因——重验 spike 必须前置
+2. **用户实测是最强杠杆**：三次 DB 实测把整个「DB 实测日」调查 phase 清零
+3. **契约默认值下沉必须配 selector 拦截**：否则存量永远补不齐、新增继续漏（74 处 TextArea 前车之鉴）
+4. **中文规划文件读写工具纪律**：PowerShell 管道在 GBK 控制台静默毁文件且替换静默失败——一律用 node/write 工具
+
 ## Milestone: v1.19 — 网络设备写命令 (Network Device Port Write Operations)
 
 **Shipped:** 2026-07-08 (Phase 55 close)
@@ -81,6 +221,8 @@
 | v1.16 Tech-Debt | ~5 | 2 (40/41) | TECH-05/06 闭环 + validator 100% pass |
 | v1.17 Recon | ~8 | 5 (42-46) + Phase 47 | observe-only 对账引擎 + 5 R-rounds 演进 + UAT 9/10 PASS |
 | v1.18 Components | 1 | 1 (48) | 3-wave 隔离 + D-id 全覆盖 + site-visit UAT 推迟 |
+| v1.23 Contract | ~6 | 7 (69-75) | 契约全量落地 + lint 门禁上线 + 实机 UAT |
+| v1.24 Visual+Debt | ~9 | 8 (76-83) | 波次化并行（零重叠文件域）+ 契约双向断言 + 红绿验证 + 收口前 Lead 独立复核 |
 | v1.19 Port Write | 1 main + 1 audit | 6 (50-54 + 55) | 5-phase build order + Phase 51 mock 漏洞 Phase 54 闭环 + Phase 55 tech-deb 闭环 |
 
 ### Cumulative Quality
@@ -90,6 +232,8 @@
 | v1.16 | validator 165/165 pass | n/a | n/a |
 | v1.17 | recon 5-layer test set | n/a | 6 backend recon 端点 + 4 frontend drawer + R5 state machine |
 | v1.18 | 21 collector + 5 pipeline + 3 handler + 5 operlog regression | n/a | 1 pkg + 6 textfsm + 1 cron helper + 1 endpoint + 1 tab |
+| v1.23 | 3960 用例（vitest 全量） | n/a | eslint 0 problems + 门禁归零 |
+| v1.24 | 3960 用例（vitest 全量，独立复跑）+ 5 严格权限单测 + 7 门控组件测试 + 3 NAV-01 回归（红绿验证） | n/a | 1 中间件 + 1 门控 helper + 1 权限码真相源 + 2 契约脚本（CSS / 权限码） |
 | v1.19 | 28 mock + 10 e2e + 7 handler + 5 router + 11 migration + 25 operlog + 64 vitest | n/a | 1 pkg + 15 template + 1 menu helper + 1 model + 1 migration + 6 endpoint + 2 component + 6 wrapper + 1 constants |
 
 ### Top Lessons (Verified Across Milestones)
@@ -210,6 +354,55 @@
 
 ---
 
+## Milestone: v1.21 — AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes)
+
+**Shipped:** 2026-10-22
+**Phases:** 6 (57-62) | **Plans:** 22 | **Tasks:** 45
+
+### What Was Built
+
+1. **Phase 57 — ad_push_queue (outbox-lite)** — migration_215 建表 + 部分唯一索引（活跃谓词单一事实源 `models.ADPushQueueActivePredicate` = `status IN ('pending','failed')`）+ 五条写路径同事务入队（Update / UpdateStatus / Delete / BatchDelete / profile.UpdateUserInfo）
+2. **Phase 58 — 排水器 + compare-and-move** — in-process cron 排水（非 sys_job）+ 退避重试 + `NormalizeDN` 幂等短路 + 配置路由无歧义；7/7 plans
+3. **Phase 59 — 登录回写守卫 + 部门对账视图** — 登录写 dept 前查活跃队列行，命中则跳过覆盖 + WARN（替代被证死的时间戳仲裁）；`v_dept_ou_mismatch` 只读 VIEW
+4. **Phase 60 — 软删恢复安全** — ad_dn 校验后恢复（不一致拒绝 + 审计），登录与批量同步共用分类逻辑
+5. **Phase 61 — 影子表完整性** — 删除清理两道闸门（LDAP 0 条拒绝 / 拟删 >50% 拒绝）+ 组成员 Delete+Create 事务化 + singleflight 挂载
+6. **Phase 62 — 卫生收尾与死代码清理** — HYGIENE-03 死代码删除（`user_ou_service.go` 整文件 + `BatchMoveUsersToNewOU`）+ HYGIENE-04 嵌套组成员过滤（零 DDL）+ HYGIENE-05 OU DN 冲突 typed error 显式化
+
+### What Worked
+
+- **三方 subagent 审计砍掉了两个错误方案** — 时间戳仲裁（GORM 自动刷新 `updated_at` 使其恒失效）与完整 Outbox/FieldRule 引擎（过度设计），落到 ~400 行 outbox-lite 核心层
+- **真环境实锤替代「看起来通过」** — 08:05 轮全量同步 3025 次采样在 0.887s 重放窗口内逐条 2815|59 零偏差；嵌套组成员污染 8→0 靠重放自愈；登录守卫双半段（拦截 / 正常覆盖）与软删 DN 漂移拦截全部端到端
+- **采样器纪律** — v5 先查 `sys_ad_sync_log` 确认轮次时刻再布防（v4 窗口 02:58-03:12 完全打空，因为全量 cron 是 3 小时周期）
+- **quick task 261021-iqq 把「重启才生效」变成热重载** — 固定 30s tick + `drainGate.shouldDrain` 门控，改配置 ≤30s 生效（实测 12s / 29s），无需重启后端
+- **里程碑级集成审计补齐单 phase 盲区** — 集成检查器核到 8/8 集成点 VERIFIED + E2E 流 A-D 全通过，并抓出 QUEUE-03 退避窗注释矛盾与 HYGIENE-04 nil 路径可达性两条 finding
+
+### What Was Inefficient
+
+- **Phase 62 引入生产回归** — 嵌套组过滤后 kept 为空 → `tx.Create(&[])` 触发 GORM ErrEmptySlice → 事务回滚 → 整轮同步中止（14:05 轮 failed、error_count=1）。修复 = 过滤块后补早返回 + 回归用例 + 重建二进制发版
+- **一次 write 调用漏参把 `58-VERIFICATION.md` 覆成 4 字节** — 用 `git show HEAD` 逐字节恢复后重做（git diff 证明正文零改动）
+- **UAT 文档的 frontmatter / 状态字段是解析器契约** — 缺 byte-0 frontmatter、首个 `status: failed` 被优先命中、多个 `status:` 字段并存，都会让 audit-uat 把 18 项真待办报成 32 项或反之
+- **ORM 边界要用例锁** — 过滤后空切片、`ON CONFLICT` 合并路径、终态行退出部分唯一索引，这些都不是「显然」行为，必须有 RED→GREEN 用例
+
+### Patterns Established
+
+- **活跃谓词做部分唯一索引** — `status IN ('pending','failed')` 让终态行（pushed/dead）自动退出唯一索引，后续编辑自然新增行而非合并
+- **冲突显式化三件套** — typed error（`ErrOUDNConflict` + `Unwrap` 哨兵）+ 计数（`FailedDepts` / `Errors`）+ 人工通道（`UpsertMappingForce` + 预检告警），杜绝静默互相覆盖
+- **「重放删除污染行」优于「标记污染行」** — 零 DDL、无数据修复脚本，下一轮成功同步即自愈
+- **跨实例并发是既有事实** — 排水器实际跑在另一台机器（10.62.10.39），本地实例只连库；单实例假设会让验证结论失真
+
+### Key Lessons
+
+1. **过滤后空集合必须早返回** — 把空切片交给 GORM `Create` 会得到 ErrEmptySlice 并回滚事务，把局部空集放大成整轮失败
+2. **采样窗口必须先对齐真实事件时刻** — 事件周期（3 小时 cron）与窗口不重叠时，再密的采样也只会得到「全恒定」的空结论
+3. **发版后必须实测，不能只看 `/health`** — 20:05 轮的 V 形是旧二进制造成；只有 08:05 轮零偏差才是新代码生效的证据
+4. **文档状态字段是工具契约，不是格式** — frontmatter 必须在 byte 0、同一语义只保留一个权威字段名
+
+### Cost Observations
+
+- 6 phases / 22 plans / 45 tasks，主 session 跨多轮 goal 续跑；真实域控 + 真实登录的人工验证占了本里程碑最大比重（58/59/60 三个 phase 的终态都靠真环境实锤）
+- Notable: 62-01/62-02/62-03 三 plan 的 checker 只提 MAJOR-2 + MINOR-3 + 标签闭合类问题，无架构级返工；代码事实先落 PLAN 再派 executor 的做法明显降低返工
+
+---
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -234,244 +427,8 @@
 2. **Migration layered idempotency(Phase 33/44/48 共验证)** — DROP IF EXISTS 在 GORM AutoMigrate 上不工作,改用 `pg_indexes` 探测 + count-then-insert
 3. **operlog module/chinese-name 双轨(Phase 34 + 48 共验证)** — 强制使用 ops asset 中文常量,避免 module 字段在审计回路漂移
 4. **基线审计后允许部分 deferred(Phase 41 29→ + Phase 48 3 site-visit)** — observe-only 策略延续,真机/外部依赖类 UAT 显式 partial 而非阻塞代码合入
+5. **契约断言必须双向(Phase 76→77 反查)** — 正向「规则存在」会让「永不命中的死规则」通过检查；须同时断言「不得出现已知死形态」，且锚定当前依赖版本里真实存在的选择器
+6. **回归测试必须红绿验证(Phase 81)** — 写完先回退实现确认它会红；否则测的是空气（本轮曾因 fixture 字段名错误 + 缺少缓存预置而假绿）
+7. **修复类工作必须留前后对照(Phase 79)** — DB 层 + HTTP 层各留「修复前/修复后」实测，否则修复后无法证明缺陷曾经存在
+8. **收口前 Lead 独立复核全量闸门(Phase 83 D5 后)** — 不采信 agent 的「全绿」声明；独立复跑 vitest 确认 flaky 与真回归之别
 5. **CR + Lint 在 phase 末尾加入,不在开头(Phase 32 P1+P2 + 48)** — 实施期先跑通,review 期 catch 全,避免过度返工
-
-## Milestone: v1.26 — 后端测试覆盖率优秀 (Backend Test Coverage Excellence)
-
-**Shipped**: 2026-08-22 (2 days)
-**Phases**: 4 (71-74) | **Plans**: 34 (11 规划 + 74-12 escalation) | **Requirements**: 19 (15 done + 4 documented gaps)
-
-### What Was Built
-
-- check-coverage.sh v1 (bash + awk, zero deps, D-01) + ci.yml Coverage gate step + .coverage-threshold (12.8) + coverage-baseline.md row schema
-- 4 phase ratchet chain (12.8 → 21.5 → 25.9 → 55.5; +42.76pp / 4.34x) — UP-only coverage-threshold
-- 4 enforcement layers: weighted-avg (exit 1) + P1 floor (exit 4) + P2 floor (exit 5) + PR diff >=80% (exit 1)
-- ~40 *_test.go files across 25 packages
-- P1 8 packages all >=70% (D-04/D-10 strict) + P2 7/10 at 70% + 3 UP-ONLY ratcheted (core 38.33 / device 39.07 / agent-server 22.08)
-- 15 QUIRKS locked inline (D-12 STRICT — zero business code changes)
-- GOV-03 PR diff coverage gate CI-live via 74-10 D-14 self-implementation
-
-### What Worked
-
-- Test-only constraint (D-12 STRICT 全程) — 0 business code changes across 34 plans
-- ratchet chain 12.8 → 55.5 — UP-only enforcement prevents silent regression
-- Sequential inline execution over subagent dispatch — preserved all 34 plans
-- Escalation path 74-11 → 74-12 — ad-hoc gap-closure spawned cleanly
-- Honest shortfall documentation — SC-a 55.56% < 70% written directly, gate UP-ONLY ratcheted floors (not silent)
-- Module imports cross-repo D-12 exception — utils/operlog test uses local mock Recorder
-- Pre-existing flake guard (5ead742 TestAsyncRetryWorker_Enqueue) — Phase 71 SC#4 directly validates
-
-### What Was Inefficient
-
-- Subagent dispatch failure mid-Wave 2 — fell back to sequential (~3x wall-clock)
-- Phase 74 plan count (11) inflated — could have been 6 plans with wave grouping
-- 74-08 gap-closure missed in Wave 2 — Task 1 measurement caught it; cost extra round-trip
-- CORE-04 / CORE-06 sub-targets遗留 Phase 72 → never picked Phase 73/74 → v1.27 backlog
-- scrapligo concrete *network.Driver cannot be unit-tested → device 39.07% capped
-- CI push deferred to orchestrator/user per 73-05 pattern
-- No end-to-end make test-coverage wrapper script — 12 measurements × 15min = ~3h
-
-### Patterns Established
-
-- D-12 import-cycle escape via local mock in test pkg (utils/operlog Recorder)
-- TableName() DB-contract lock tests (models/{operations,rpa,system,system/requests})
-- UNIFIED-FAIL-MOCK network retry test (containsIgnoreCase QUIRK lock)
-- ratcheted floor in gate (D-15 application) — UP-only per package instead of gate lowering
-- plan-level escalation clause for shortfall — 74-11 Task 1 spawned ad-hoc 74-12 cleanly
-
-### Key Lessons
-
-1. Honest partial-SHIPPED over quiet threshold lowering — SC-a shortfall documented + ratcheted floors
-2. Structural blockers must be planned, not encountered — 3 packages needed integration infra not in scope
-3. Subagent dispatch fallback acceptable for correctness over speed — sequential is safe default
-4. Wave plan count + ROADMAP count mismatch is silent failure mode — add verification check
-5. per-sub-package validation should match ratchet granularity — align gate granularity from day 1
-6. D-14 self-implementation when market tools unavailable — same idiom as check-coverage.sh
-7. gate extension is additive, never replaces — check-coverage.sh sections stacked not replaced
-
-### Cost Observations
-
-- Sessions: 4 (Phase 71 + 72/73 dispatch attempts + 74 sequential + retrospective)
-- Model mix: ~70% Sonnet + ~20% Opus + ~10% Haiku
-- Notable: Sequential inline cost ~2h extra vs subagent parallelism; accepted for correctness
-- Notable: SC-a shortfall (55.56% < 70%) committed to roadmap explicitly rather than hidden
-
----
-
-## Milestone: v1.29 — 技术债治理 (Tech Debt Governance)
-
-**Shipped:** 2026-09-06（3 天，2026-09-04 启动）
-**Phases:** 7（89-95）| **Plans:** 26 | **Tasks:** 39 | **Commits:** 191（+25478/−3502，236 files）
-
-### What Was Built
-
-- pkg/constants 五包（pagination/timeouts/ports/protocol/concurrency）+ NormalizePagination 唯一入口，AST 锁值双锁
-- 11/11 operations services 迁入 base.GORMRepository[T]，CRUD 模板清零
-- internal/services/base 缓存单一权威（TTLResolver + 泛型函数族），32 处 GetOrSet 收敛 + 42 处失效归一 + invariants 锁进 CI
-- config_backup 三 TODO 真实实现：gzip 压缩/解压（64MB 防线 + 文件名清洗）+ DeviceExecutor.RestoreConfig + 异步恢复四态状态机（migration 211/212）
-- 前端 apiFactory 单一权威（createResourceApi 8 方法），13 个 *Api.ts 矩阵处置，download.ts 下载归一
-- v1.28 收口 + MILESTONE-AUDIT + SHIPPED 后深度复查（6C+10W 当场修复）+ CI 首次见证全绿
-
-### What Worked
-
-- **审计驱动的 phase 划分**：2026-09-03 四维度并行扫描（TODO/硬编码/重复/完成度）直接转化为 7 相 45 requirements，零范围漂移
-- **diff 级零漂移纪律**：Phase 92/94 迁移逐 hunk 比对 wire 语义，键集/TTL/签名逐字保留——深度复查证实迁移本体零回归
-- **invariants 测试作为收口伴生品**：每个统一 phase 同时交付 AST/白名单锁（cache_invariants_92 / apiFactory.invariants / timeouts AST），防回退成本前置
-- **SHIPPED ≠ 完工**：SHIPPED 当日深度复查揪出 6 个 Critical（含 3 个 Phase 93 新增代码缺陷）——复查流水线（门禁复跑 + 8 项约定扫描 + 6 域并行审查 + Critical 独立二次验证）值得固化为 milestone close 前置
-
-### What Was Inefficient
-
-- Phase 91 三处超「零行为变更」授权的行为变更（workstation 上限收紧/Total 口径/floor 同步复活）仅以代码注释背书，未记 OVR 台账——其中 workstation 上限收紧造成真实的平面图/3D 静默截断（C-4）
-- Phase 93 新增异步恢复链的互斥（先查后写）与崩溃恢复（漏 pending）在设计期即可避免——新增代码的审查深度应不低于迁移代码
-- MILESTONES CLI 自动提取的 accomplishments 质量噪杂（"Task 3 verification"/"90-01"），依赖手工二次整理
-- commitlint subject-case 规则多次拒收大写开头 subject（C-3/C-5 等首轮被拒），修复提交的 finding ID 应置于 body
-
-### Patterns Established
-
-- 部分唯一索引实现「插入即夺锁」互斥（migration 212，PG/sqlite 双方言同语法）
-- GetPaginationWithMax(max) 模式：同一 typed request 服务「列表口径（100）」与「全集口径（10000）」双上限
-- UAT/VERIFICATION 落档模板：resolution 注记 + 证据 commit/run 编号内联
-
-### Key Lessons
-
-- 「零行为变更」授权需要 OVR 台账强制落账，仅注释背书必然漏记
-- 测试全绿 ≠ 无回归：C-4 分页截断（total 正确、无告警）全量测试无法捕获，需消费方契约核对
-- gate 语义必须验证工作量（type-check 0 文件恒真 gate 跨全程未报警）
-- 多相并行的 milestone 需要一次 SHIPPED 后全仓深度复查兜底——迁移类工作的质量在 diff 级，新增类工作的风险在设计级
-
-### Cost Observations
-
-- Sessions: 多会话并行（main + workstream）；复查阶段 6 域并行 reviewer ~60 分钟出全量报告
-- 修复流水线：12 个 atomic commit 零回退，针对性测试 → commit 节奏稳定
-
----
-
-
-
-## Milestone: v1.33 — 前端性能治理 (Frontend Performance Remediation)
-
-**Shipped:** 2026-09-14 (7 phases, 23 plans, 38 requirements, all SATISFIED)
-**Phases:** 7 (Phases 114-120) | **Plans:** 23 | **Requirements:** 38/38 satisfied
-**Sessions:** yolo 模式 / 2026-09-14 (同日完成全部 7 phases)
-**Audit input:** `.planning/reviews/20260911-frontend-perf-audit.md` (590 files, 4 parallel agents, Vercel React Best Practices 57 rules)
-
-### What Was Built
-
-- **Phase 114 (MAP3D)** — 地图聚类 O(n²) 消除：40px 网格分桶 + 锚点贪心纯函数 clusterBuildings（零 SDK 依赖），15 用例一致性测试逐位锁定；HubeiMap/HubeiMapGL 双循环 → 单遍预计算 Map<id,pixel>；5 道 filter useMemo 收敛；zoomend/tiltend cleanup 补全；死组件 BuildingMarkers/CityMarkers 删除解锁 @uiw 移除
-- **Phase 115 (SELECTOR)** — Zustand selector 收尾：useTabs 14 字段 + useLayout 10 字段 hook 内逐字段 selector 化；RouteGuard/DynamicRoutes 路由层 + 3D 页 5 文件共 17 字段级 selector；页面级 6 处 + NotificationBell 7 项；全库无参 `useXxxStore()` 归零仅余 12 处白名单（Phase 116/120 分工）
-- **Phase 116 (DASH)** — Dashboard N² 重渲染级联消除（H-1）：useWidgetData selector 化 + L1 缓存移出响应式 state + dashboard 模块 9 处订阅收敛 + DashboardGrid 稳定化
-- **Phase 117 (RENDER+BUGFIX)** — 渲染热点治理 + 正确性修复：7 处 columns 工厂 useMemo + 5+ 大数据页 Table virtual + MACHeatmapChart mobile 分支 memo + DoorElement snapCoord；BUGFIX-01/02/03 附回归测试（"0" 渲染 ×2 / VariablesModal 6 列 / CAD stale closure）
-- **Phase 118 (DATA)** — 数据获取治理：VDI react-query 去重（4 处 → 1 次请求）+ 菜单 sessionStorage hydrate-then-revalidate 消除整页门控 + useColumnConfig 缓存短路 + useHolidayData Promise.all 并行化
-- **Phase 119 (MISC)** — JS 微性能杂项：Map 索引（useWorkstationView 拖拽 O(n²)→O(n) / TargetSelector filterOption）+ 惰性 sessionStorage（useTableManager）+ scroll 状态短路（TabBar）+ expandedRowRender useCallback 化
-- **Phase 120 (BUNDLE+DEAD)** — Bundle 优化 + 死代码清理：ExcelImport 懒加载口径统一（9 调用点）+ iconUtils 假动态导入删除（功能修复）+ 路由 glob 排除 phantom chunk 清零 + 4 僵尸依赖移除（cron-parser / @react-spring/three / maath / @uiw/react-baidu-map）+ 5 处死代码删除（useTabSync / DashboardView / getWorkstationStats / _detailColumns / operations barrel）
-
-### What Worked
-
-- **同日完成全部 7 phases** — yolo 模式 + sequential execution，凌晨到下午连续作战，23 plans 全交付
-- **全量 33 findings + 8 死代码零 defer** — 用户确认 D-01 锁定范围，审计发现的遗留问题全部本期修复
-- **回归纪律（D-04）严格执行** — 行为变更（BUGFIX-01..03 / BUNDLE-02 / DATA-02）附回归测试红→绿；纯性能重构以现有测试零回归为准
-- **cluster.ts 共享函数 + TDD** — 旧 O(n²) 实现内嵌为参考，15 用例逐位一致测试锁定，逐位替换无视觉差异
-- **Phase 115 criterion 5 收口** — 全库无参 `useXxxStore()` 扫描归零，12 处剩余全部命中白名单（Phase 116/120 分工），零遗留
-
-### What Was Inefficient
-
-- **PHASE 114-120 全部 sequential** — 无并行 phase 执行，7 phases 顺序执行总时长约 ~4 小时；Phase 117/119 规划时可并行但选择了 sequential
-- **MAP3D-02 人工验证 deferred** — 114-HUMAN-UAT.md 创建但 browser 验证未执行，按 AUTO 模式自动批准留档
-- **audit-open 5 项 deferred** — ci-lint-hardcoded-ip / knowledge-base reference / Phase 114 UAT partial / Phase 120 verification human_needed / quick task unknown；全部按 yolo auto-approve 记录为 deferred
-- **DEAD-02 依赖链跨 phase** — @uiw/react-baidu-map 移除依赖 Phase 114 MAP3D-06 死组件删除，跨 phase 依赖导致 Phase 120 部分工作受前序约束
-
-### Patterns Established
-
-- **前端性能治理范式** — 审计输入（Vercel React Best Practices 57 规则扫描）→ 分类（HIGH/MEDIUM/LOW/findings）→ D-01 全量处理不分批 → phase 映射 → 逐 phase 执行 → milestone close
-- **cluster.ts 零 SDK 依赖共享函数** — 纯函数 + 单元测试守护，与实现解耦
-- **selector 化三段式** — hook 内部逐字段 selector → 路由层 → 页面级，三段收敛零整店订阅
-- **Map 索引替 O(n²) find** — 批量拖拽/filterOption 等高频微交互，O(n²)→O(n) 收益可测量
-
-### Key Lessons
-
-1. **前端性能修复与后端无关但 gate 相同** — v1.33 全程 go build / go test / lint / type-check 保持绿，即使只改 frontend；七 gate 统一守护
-2. **yolo sequential 适合单日 milestone** — 7 phases × ~20-30 min/phase = ~4 小时，凌晨开始傍晚完成，全部 commit 在同一工作日
-3. **audit-open items 可按 yolo auto-approve 记录为 deferred** — 无需用户逐条确认，5 items 全标记 deferred 继续推进
-4. **死代码/依赖清理跨 phase 依赖需在 ROADMAP 显式标注** — Phase 120 DEAD-02 依赖 Phase 114 MAP3D-06，规划时已标注但执行顺序仍需严格遵守
-
-### Cost Observations
-
-- Sessions: 1 主 session（yolo sequential，日内完成全部 7 phases）
-- Model mix: 主力 Sonnet，按需 Opus
-- Notable: 全程凌晨至下午连续作业，23 plans ≈ 4 小时 wall-clock，平均 ~10 min/plan
-- 5 deferred items（audit-open）按 yolo auto-approve 记录
-
----
-
-## Cross-Milestone Trends (v1.29 增补)
-
-| 维度 | v1.29 数据 |
-|------|-----------|
-| 时长/节奏 | 3 天 7 相 26 plans，日均 ~64 commits |
-| 回归防护 | 每相 invariants/AST 锁伴生；SHIPPED 后全量门禁两遍全绿 |
-| 缺陷发现前置 | 深度复查 6C 中 4 个为「新增代码缺陷」——新增代码审查深度需对齐迁移代码 |
-
-## Milestone: v1.31 — V131 技术债清偿 (Tech Debt Retirement)
-
-**Shipped:** 2026-09-08 (Phase 108 close)
-**Phases:** 7 (Phases 102-108) | **Plans:** 25
-**Sessions:** yolo 模式 / 2 天 (2026-09-07 → 2026-09-08)
-
-完整 phase-by-phase 摘要已在 `MILESTONES.md` / `ROADMAP.md` 折叠段落档；此处只记 v1.31 SHIPPED 当日/之后发现的补提工作。
-
-### Session Addendum — 2026-09-08 evening (post-SHIPPED)
-
-| 触发 | 用户报告「登录页移动端布局丢失」。按 `/gsd:debug` 协议自动排查 → playwright 三档视口（1920×1080 / 375×667 / 375×1280）实测 → 定位到 `login.css` `@media (max-width: 1023px)` 下 `min-height: 100vh` + `justify-content: center` 在高视口下让表单漂浮在 408px 大片空白中间（"全白"观感）。修复 = 切到 `flex-start` + `padding: 10vh 28px 40px`。3 档视口均验证。 |
-|------|---|
-| 后续 commit `03f5de3` 直推 main（admin bypass 路径，第一次绕过 PR） |
-
-随后按用户意图，建分支 `phase-104-wire-contract`，提交 phase 104 的 41 个本地未提交改动（v1.31 phase 104 plan 写下的 wire contract + handler dedup + auth rewrite + frontend touch-ups；CLAUDE.md 默认推荐先 build+test 再 commit，本次 build/vet/gofmt/npm run build/vitest 全部本地绿灯才提交）。开 PR #15。
-
-### PR #15 — phase-104-wire-contract → main
-
-| CI run | 结论 | 挂点 |
-|---|---|---|
-| `34217110052` 首轮 | ❌ failure | ① frontend `adDomainApi` 测试 2 处 fail（`updateADGroup`/`updateADUser` 期望 `configId` 收到 `adConfigId`）；② `coverage-diff` gate 57.14% < 80%（3 行未覆盖：login_log_handler.go:122-123 + user_sync_service.go:767） |
-
-**根因 #1 — wire 字段回归（真 bug，比 CI 失败严重）：** phase-104 把 `updateADGroup`/`updateADUser` 委托进 `createResourceApi` 时，为满足 `Partial<CreatePayload<T>>` 类型约束，把 wire 字段 `configId` 重命名为实体字段 `adConfigId`（代码里留 `as unknown as` 强转痕迹）。但后端 DTO 是 `json:"configId" binding:"required"`（`ad_domain_handler.go:468`），**生产 AD 用户/组更新会全 400**。这不是测试落后而是测试在保护线上。修法：两个函数回退为直接 `post()`（CLAUDE.md factory KEEP 例外已涵盖「请求类型与实体解耦」场景），删掉孤立的 `groupCrud`/`userCrud` 实例，`apiFactory.invariants.test.ts` 白名单 1→3 并附理由。
-
-**根因 #2 — 3 行未覆盖：** 补 `TestLoginLog_UnlockUser_DeletesCacheLockKey`（MemoryCache + 断言锁定键真被删）+ `TestUserSyncService_AssignRolesBatch`（空参早退 + 批量插入 + ON CONFLICT 幂等重放）。**顺带挖出 setup 基建 bug**：`setupTestDBForSync` 的 `sys_role` 表用 `role_code` 列而 model 映射 `role_key`，`db.Create(&models.Role{})` 一直**静默失败**，旧 `RoleAssignment` 测试其实一直在测空 roleID 分支（意外 PASS）。对齐列名后真正的角色路径才被测到。
-
-修复 commit `aea6a23` push → CI 重跑全绿（`34219441434`）→ PR #15 merged `a1b0d1d`（admin bypass `--admin`，第二次绕过 PR review）。
-
-### PR #16 — fix/assign-roles-dialect → main
-
-| CI run | 结论 | |
-|---|---|---|
-| `34226451856` | ✅ success | |
-
-PR #15 合并后复查全仓 `datetime('now')` 残留：phase-104 改 `NOW()` → `datetime('now')` 时只考虑了 sqlite 方言，**生产 PostgreSQL 下 `assignRolesBatch` 会炸**（PG 没有 `datetime('now')` 函数）。修法不用方言分支，而是 **Go 侧传 `time.Now()` 绑定参数**——`VALUES (?, ?, ?)` 一条 SQL 两种数据库通吃，连分支逻辑都省了。`assignRole` 同根处理。全仓非测试代码零 `datetime('now')` 残留。commit `d41a4a1` → PR #16 merged `58fbf1c`（admin bypass `--admin`，第三次）。
-
-### Policy 治理
-
-merge 三次之后主动调 `PUT /repos/.../branches/main/protection` 把 `enforce_admins.enabled` 从 `false` 拨到 `true`。验证：
-
-- 直 push main → API 拒（与 git protocol SSL 抖动无关，policy 已落库）
-- `gh pr merge` 不带 `--admin` → enforce_admins 锁住 review 流程
-- `required_status_checks.contexts = ["backend","frontend"]` + 1 approving review
-
-后续工作流变成：`push -u origin <branch>` → `gh pr create` → 自己 approve 自己 → `gh pr merge --merge`（无 `--admin`）。功能不变，流程多一步。
-
-### v1.31 Lessons 增补（post-SHIPPED 验证层）
-
-| Lesson | 含义 |
-|---|---|
-| **factory 收敛会迫使 wire 字段改名** | `Partial<CreatePayload<T>>` 类型约束不一定与后端 DTO 兼容。收敛前必须 grep 后端 handler 的 `json:` tag 确认 wire 字段名；不一致就走 KEEP 例外（CLAUDE.md 已写明），不要为了迎合类型约束牺牲线上行为。 |
-| **fixture 列名漂移让测试静默假绿** | 手写 sqlite fixture（`CREATE TABLE`）必须对齐 model 列名。**新测试一律 `require.NoError(t, db.Create(x).Error)`**，能立刻暴露 setup 漂移（`db.Create` 失败被吞 + 旧测试用 `assert.NoError` 跑后续发现漏检）。已存 memory `xingran-sqlite-fixture-schema-drift`。 |
-| **`datetime('now')` / `NOW()` 方言函数在跨 DB 项目是地雷** | Go 测 sqlite + 生产 PG 是 XingRan 标准栈（CLAUDE.md tech stack）。要么方言分支（`dialector.Name() == "postgres"`），要么 Go 侧传参。**优先传参**：少一个分支、SQL 文本只一份、可读性最高。 |
-| **admin bypass 路径用了就要立刻锁** | 临时绕过 PR 的 admin 合并（如单人 dev `gh pr merge --admin`）是 high-leverage 误操作源——一旦发现用了，**同一 session 末尾立刻 `enforce_admins=true`**，避免下次 commit 顺手再绕。 |
-
-### Trends update
-
-| 维度 | v1.29 数据 | v1.31 数据 |
-|---|---|---|
-| 时长/节奏 | 3 天 7 相 26 plans | 2 天 7 相 25 plans（日均 ~62 commits） |
-| SHIPPED 后补丁 | 0 | 3 commits（登录页 CSS / wire 回归 + coverage / 方言），全部走 PR + CI 走齐 |
-| admin bypass 使用 | n/a | 2 次 push + 2 次 merge 后立即锁回 enforce_admins=true |
-| coverage-diff gate 失败 | n/a | 1 次（phase-104 补提 PR 首轮 57.14% < 80%），补 2 个测试 + 修 setup 漂移后过 |
-| 真实 bug 在 CI 之前未捕获 | n/a | 1 处（wire 字段 `adConfigId`），被测试保护线挡住而非用户报告 |

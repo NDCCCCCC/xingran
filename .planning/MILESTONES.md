@@ -1,189 +1,106 @@
 # Milestones
 
-## v1.33 前端性能治理 (Frontend Performance Remediation) (Shipped: 2026-09-14)
+## v1.25 全站权限治理与样式收敛 (Shipped: 2026-10-30)
 
-**Phases completed:** 7 phases, 23 plans, 24 tasks
+**Phases completed:** 10 phases, 41 plans, 0 tasks
 
 **Key accomplishments:**
-
-- 40px 网格分桶 + 锚点贪心的纯函数 clusterBuildings（零 SDK 依赖）+ 内嵌旧 O(n²) 参考实现的 15 用例一致性测试，输出与旧实现逐位一致（TDD RED→GREEN）
-- HubeiMapGL 与 HubeiMap 聚类双循环替换为单遍预计算 + clusterBuildings 共享纯函数（n² 地图 API 调用归零），HubeiMap 渲染体 5 道 filter 收敛 useMemo，两组件事件监听补 effect cleanup——聚类视觉行为逐位不变
-- 删除 @uiw/react-baidu-map 仅有的两处消费方（MAP3D-06，解锁 Phase 120 DEAD-02），新增 3 用例 cleanup spy 测试锁定 MAP3D-05 监听器生命周期（同引用 removeEventListener），MAP3D-02 人工性能验证按自主模式自动批准并留档 HUMAN-UAT 步骤
-- useTabs（14 字段）与 useLayout（10 字段）hook 内部整店解构改为逐字段 Zustand selector 订阅，返回对象一字不改，TabBar/LayoutSwitcher 等常驻组件消费面零改动
-- RouteGuard/DynamicRoutes 路由层 2 文件 + 3D 页 5 文件的整店订阅全部收敛为 17 个字段级 Zustand selector，菜单刷新高频写入不再重渲整棵已认证路由树，Phase 118 DATA-02 同文件前向兼容
-- 页面级 6 处整店订阅（4 action-only + 2 state 字段）与 NotificationBell 7 项全部单字段 selector 化，4 个非 selector 兼容测试 mock 同任务 dual-form 化，criterion 5 收口为全库恰好 12 处且全部归属 Phase 116/120
-- 116-01
-- 116-02
-- 116-03
-- 117-render-columns-and-bugfix-rendering
-- Consolidated VirtualMachineList's 4 scattered VDI server list calls into one shared react-query entry and rewrote duty holiday hooks' year+list fetch from sequential to parallel Promise.all.
-- DynamicRoutes now reads the menu+permissions cache from sessionStorage synchronously on mount, hydrates the store via a useEffect, and runs a background fetchAll revalidate. The full-page InitializingFallback gate is bypassed on hard refresh when the cache exists; menuStore.clearMenus now wipes the sessionStorage cache to prevent the previous user's menu/permissions from hydrating into the next login.
-- useColumnConfig.loadConfig now returns immediately after setConfig(cached) when localStorage holds a sane config, eliminating the unconditional network fetch on every page mount.
-- `xingran-react-frontend/src/pages/operations/workstations/hooks/useWorkstationView.ts`
-- `xingran-react-frontend/src/hooks/useTableManager.ts`
-- `xingran-react-frontend/src/pages/operations/workstations/index.tsx`
+- (none recorded)
 
 ---
 
-## v1.31 V131 技术债清偿 (Tech Debt Retirement) — ✅ SHIPPED 2026-09-08
+## v1.24 视觉回归修复与遗留债务清偿 (Shipped: 2026-10-28)
 
-**Phases**: 7 (Phases 102-108) | **Plans**: 25 | **Status**: shipped
+**Phases completed:** 8 phases (76-83) | **Plans:** 0（subagent 直接执行，按刀原子提交） | **Tasks:** 8 phase × 9 项闸门
+**Requirements:** 18/18 Satisfied | **Git range:** `dbdd1707` (roadmap CREATED) → `4477b2bc` (夹具清理记录) | 46 commits / 104 files / +5,419 −2,232
+**Timeline:** 2026-10-28 09:19（需求定稿）→ 12:59（收口），约 3.5 小时
 
-**Stats**: 2026-09-07 → 2026-09-08（2 天）· All 7 phases complete
-
-**Delivered**:
-
-- Phase 102 机械常量化：CACHE-01 captcha 12 处键具名化 / CACHE-02 10 模块 47 调用点收敛 / STATUS-01 12 处 status 字面量清零 / PAGI-01 分页口径归一（pagination.go 删除）— 5 plans，3 waves
-- Phase 103 缓存闭包收敛：mac_history/reconciliation/selector 三域 legacy GetOrSet + 手写 cache-aside 全迁 base.GetOrSetJSON[T] + invariants 扩口至 services root/asset/rpa — 4 plans，21 D-truths 全 verified
-- Phase 104 handler 层架构收敛：pkg/response/handler_helpers.go 重写（BusinessError→apperrors）/ 14 operations handler 全量切换 / MonitorLogHandler[T] 泛型去重 / server_room 漂移修复 — 4 plans，8 commits
-- Phase 105 前端 CRUD 收敛：adDomainApi 3 / knowledgeApi 5 / dutyApi 5 / workorderApi 6 共 19 处手写五件套迁移 createResourceApi，apiFactory invariants 基线归零 — 4 plans
-- Phase 106 前端映射统一：server-rooms/MACHistory 选项+Tag → NORMAL_STOP_OPTIONS/TAG_CONFIG / fixStatusColor 双份统一（orange vs magenta 归一）/ 11 处内联三元 Tag 收束 / 11 处 `as any` 收窄 / 72 处 eslint-disable 补理由 — 4 plans
-- Phase 107 TODO 清零：22 处非测试代码 TODO 逐项实现或删除（D-01 不留兼容壳）+ 决策表落盘 + grep 守护进 CI / rpa/data_mapper nilness 闭环 — 4 plans
-- Phase 108 skip 测试恢复：HybridAuthenticator interface 化（hybrid_authenticator_test 5 处 skip 恢复）/ 嵌入式基建恢复 ad_authenticator 等 10 处 skip / HUMAN-UAT 决策表落档 — 4 plans
-
-**Key accomplishments**:
-
-1. ✅ Cache key literals zeroed: 68 constants + 38 helpers registered; 47 call sites replaced; 12-file scan 0 violations
-2. ✅ Status literals zeroed: 21+ sites replaced; `TestNoStatusLiteralUsage` AST guard active; WorkOrderStatus value locked
-3. ✅ Pagination single authority: `utils.ParsePagination` eliminated; `pagination.go` deleted; `NormalizePaginationWithMax` sole entry
-4. ✅ Cache closure single authority: mac_history + reconciliation + selector on `base.GetOrSetJSON[T]`; Phase 92+103 dual-generation invariants active
-5. ✅ Wire contract unified: operations 14 handler + monitor dual handler all use `pkg/response/handler_helpers.go`
-6. ✅ Frontend CRUD single authority: 19 sites across 4 API files migrated to `createResourceApi`
-7. ✅ Type hygiene: 11 `as any` narrowed; 72 eslint-disable justified; 11 Tag sites unified
-8. ✅ TODO zero: 22 non-test-code TODOs resolved; decision table on record; grep guard active
-9. ✅ Skip tests recovered: HybridAuthenticator interface refactor; 15 skip sites addressed (5 recovered + 10 UAT table)
-
-**Audit**: [v1.31-ROADMAP.md](milestones/v1.31-ROADMAP.md) | [v1.31-REQUIREMENTS.md](milestones/v1.31-REQUIREMENTS.md)
-
----
-
-## v1.30 V130 缺陷治理 (Defect Remediation) — ✅ SHIPPED 2026-09-07
-
-**Phases**: 6 (Phases 96-101) | **Plans**: 21 | **Status**: shipped
-
-**Stats**: 2026-09-06 → 2026-09-07（2 天）· CI 全绿（run 34057232365，HEAD 0733d7e）
-
-**Delivered**:
-
-- Phase 96 确定性缓存/看板缺陷修复：CACHEDEF-01..05 五项缓存失效/键污染/前缀剥离修复 + JOBSTAT-01 死代码删除，每项附回归测试（3 plans）
-- Phase 97 config_backup 恢复链加固：V130R-01 两段 context 预算（超时 worker 停推）/ V130R-02 grace period（多实例不误杀）/ V130R-03 BusinessError 400/409 语义化（3 plans；会话崩溃后 recovery 落库 2dd46a3，见 RECOVERY-NOTE）
-- Phase 98 缓存键安全与 base 迁移收尾：V130R-04 键值转义防碰撞（EscapeCacheKeyValue）+ V130R-05 四包 interface{} 残留迁 base.GetOrSetJSON[T]（2 plans；helper 补遗 2b15574）
-- Phase 99 operations 口径统一：V130R-06 Total 软删过滤 / V130R-07 换楼乐观锁 / V130R-08 BuildDeptRecursiveFilter 收敛 9 站点（含 verifier 遗漏的 server_room）/ V130R-09 分页三口径收敛单一权威 + CAD 全集专用端点 + internal/constants 并入 pkg/constants（D-03-10）（6 plans 含 99-06 gap closure；verifier gaps_found → 全闭）
-- Phase 100 前端契约修复：rpaApi 116→17 存活端态 + RECONCILIATION 台账 / /vdi/vms/operate 补注册 + accounts 死 Tab 全链删除 / 下载链收敛 download.ts + JSON 错误体检测 + invariants 递归化 15 文件（3 plans；100-VERIFICATION 6/6 SC + gates 独立实跑全绿）
-- Phase 101 收口：TESTFILE-01 四测试文件入库（含 Linux CI 编译修复 0733d7e）+ 七 gate 实测（coverage 78.32% / 前端 45 dirs / lint 0 errors 1378 warnings；diff coverage 70.72% FAIL 如实记录——stale 基线测量伪影 + 65 行已入债台账）+ UAT62-03 passed 全证据链 + UAT62-01/02 诚实 pending（UAT-RUNBOOK 就绪）+ 22/22 TRACEABILITY-FINAL
-- Audit: [v1.30-MILESTONE-AUDIT.md](milestones/v1.30-MILESTONE-AUDIT.md) — verdict tech_debt（交付成立，残留为已登记债 + 人工验证项）
-
-**Known deferred items at close**:
-
-- UAT62-01/02（真实 PG 人工验证，runbook：`.planning/phases/101-closeout-uat-audit/UAT-RUNBOOK.md`）
-- Phase 100 三项真实环境验证（VDI 批量操作 e2e / 浏览器下载体验 / VM Tab 视觉走查，见 100-VERIFICATION）
-- diff coverage 65 行未覆盖补测（Phase 96-99 修复本体，债台账在 v1.30-MILESTONE-AUDIT）
-
-## v1.29 技术债治理 (Tech Debt Governance) — ✅ SHIPPED 2026-09-06
-
-**Phases**: 7 (Phases 89-95) | **Plans**: 26 | **Tasks**: 39 | **Status**: shipped
-
-**Stats**: 2026-09-04 → 2026-09-06（3 天）· 191 commits（238283c..7de91ba）· 236 files changed · +25478/−3502 · CI 首次见证全绿（run 34007103013，HEAD 7de91ba）
-
-**Delivered**:
-
-- Phase 89 PAGINATION：`pkg/constants/pagination.go` 3 常量 + `NormalizePagination` 唯一入口，12+ 处硬编码清零（3 plans，238283c..3559626）
-- Phase 90 TIMEOUTS：4 个 leaf const pkg 共 10 常量（超时/端口/协议/并发）+ AST 锁值 10 tests，8 调用点零行为变更（4 plans，b51f44c..3a2efe5）
-- Phase 91 CRUD 复用：11/11 operations services 迁入 `base.GORMRepository[T]`，CRUD 模板清零，生产口径净减 +408 行（4 plans，5d0008b..963defe）
-- Phase 92 缓存统一：`internal/services/base` 单一权威抽象（TTLResolver + 泛型函数族），32 处 GetOrSet 样板收敛 + 42 处失效归一 + invariants 锁进 CI（4 plans）
-- Phase 93 config_backup 闭环：gzipCompress/gzipDecompress + DeviceExecutor.RestoreConfig + 异步恢复四态状态机 + 93_NN 19 用例（6 plans，a4bfc71 等）
-- Phase 94 API 工厂化：`src/lib/apiFactory.ts` 单一权威（createResourceApi 8 方法），13 个 *Api.ts 矩阵处置，覆盖率 lib 90.48%，review 0 Critical（3 plans，b3bc745..1771e1d）
-- Phase 95 收口：v1.28 SHIP 段核对确认（95-01）+ D-03 type-check gate 真实化 + gate ② flaky 双修复 + 七 gate 本地全绿（后端 coverage 78.33% / 前端 45/45 dirs / 3800 tests）+ v1.29-MILESTONE-AUDIT.md（95-02，本段标记即 D-09 落点）
-- Audit: [v1.29-MILESTONE-AUDIT.md](milestones/v1.29-MILESTONE-AUDIT.md) — 45/45 requirements 追溯
-- SHIPPED 后深度复查（[v1.29-DEEP-RECHECK.md](milestones/v1.29-DEEP-RECHECK.md)，2026-09-06）：6 域并行审查发现 6 Critical + 29 Warning，**当场修复 6 Critical + 10 Warning**（12 个 atomic commit a768dd2..7de91ba，附回归锁）；12 项 manual-only 转记 REQUIREMENTS V130R-01..12；预检 7 个未决 artifacts 全部落档（Resolve 路线）
-- Known deferred items at close: 3（见 STATE.md Deferred Items：62 跨里程碑 UAT×3 场景、4 个未跟踪测试文件 deferred v1.30、V130R-01..12 tracked）
-
-**Delivered (审计 → 规划)**:
-
-- 2026-09-03 综合审计 4 维度并行扫描（TODO/FIXME、硬编码值、重复实现、项目完成度）
-- 审计发现：**18 项真实 TODO + ~20 处中高度硬编码 + 8 个 CRUD services 60-70% 重复 + 缓存层 3 处架构重复 + config_backup 3 个 TODO 空函数**
-- 2026-09-04 milestone 启动；7 项行动转 REQ-ID（PAGINATION-01..11 / TIMEOUTS-01..08 / CRUD-REUSE-01..08 / CACHE-UNIFY-01..05 / BACKUP-CLOSED-01..05 / API-FACTORY-01..05 / CLOSEOUT-01..03）；7 phases 89-95 锁定
-
-**Target features (per REQUIREMENTS.md):**
-
-- Phase 89 PAGINATION 常量集中化（🔥 P0）
-- Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化（🔥 P0）
-- Phase 91 CRUD 复用 base.Repository[T]（🔥 P1）
-- Phase 92 缓存层三处架构统一（🟡 P2）
-- Phase 93 config_backup 三处 TODO 闭环（🟡 P2）
-- Phase 94 前端 API 工厂化（🟡 P2）
-- Phase 95 v1.28 SHIP 收口 + v1.29 closeout + audit（🟢 P4）
-
-**锁定决策 (v1.29 init):**
-
-- D-01 7 项审计行动 100% 完成
-- D-02 不破坏既有测试 + operlog 11 敏感关键词 / 25 OperType 常量 / 状态值常量 AST 锁值全程保持
-- D-03 每项行动 atomic commit，CRUD 复用先 pilot (workstation_service) 再批量复制
-- D-04 不修改业务行为（除 config_backup 三处 TODO 的真实实现）
-- D-05 Phase 编号从 89 起（v1.28 用 82-88，v1.27 用 75-81）
-
-**范围边界:** 不引入新业务功能；operlog exclude_paths todo 不在本期范围（独立 deferred）；前端覆盖率不推到 70%（v1.28 已 SHIP 45.13%）。
-
----
-
-## v1.28 前端测试覆盖率优秀 (Frontend Test Coverage Excellence) — ✅ SHIPPED + 阶段性收口 2026-09-04
-
-**Phases**: 7 (Phases 82-88) | **Plans**: ~22 (82-01..88-PROGRESS) | **Tasks**: 47 batches (R24..R47+)
-
-**Delivered**: 前端全量口径（vitest `coverage.include` 全 src）测试覆盖率 **3.67% → 45.13%**（+41.46pp），并在 18+ batches (R24-R47) 持续推进至 45.87%。Gate 45/45 dirs PASS / 1688 tests passing / 4 层 CI 防倒退 gate（全局阈值 + per-directory floor + baseline ratchet + PR diff coverage ≥80%）全部落地。
-
-**阶段性收口理由**:
-
-- 边效益递减：每 batch 仅 ~0.27pp，距 70% 目标仍差 24.87pp
-- 主要洼地（pages/system hooks + workstations/assets 大页）边效益不抵 commit 时间
-- 工作树 clean（commit `bcb51f0` 末态）；Phase 88 暂停无 pending TODO 阻塞
-
-**遗留 (deferred)**:
-
-- Phase 88 batch 续推（用户 2026-09-04 决定阶段性收口）
-- PROTO-01..04 逐屏原型对齐 / VIS-01..03 视觉深化（v1.22 候选遗留）
-- Phase 53 网络设备端口写 UI 测试 5 个 vitest 失败（与 v1.28 正交）
-
-**归档位置**:
-
-- `.planning/workstreams/frontend-coverage/` (保留作历史，含 STATE.md / ROADMAP.md / phases/)
-- `.planning/PROJECT.md` v1.28 段标记 SHIPPED + ARCHIVED
-
----
-
-## v1.22 前端品牌化改造 (Frontend Brand Design-System) — ✅ SHIPPED 2026-08-18
-
-**Phases**: 4 (Phases 64-67) | **Plans**: 4 (64-01 / 65-01 / 66-01 / 67-01) | **Tasks**: 33（含 Post-T5 补丁 + 终验）
-
-**Delivered**: 把 `brand-spec.md` 像素实测品牌品牌（深绿 `#156031` × 铜金 `#C09058` × 奶油 `#F0ECE3`）固化进 `xingran-react-frontend/src/design-system/`，后台内部组件与登录页品牌一致；53 屏业务页面自动继承样式（不逐屏施工）。范围严格遵循锁定决策（仅 design-system 层；不逐屏改造 53 屏；D-01 全局替换不保留多主题；D-03 按钮纪律；D-05 业务代码零改动）。
+**Delivered**: 修复用户主诉「文本输入框双重外框」（309 个输入框全站受影响），并清偿 v1.23 收档结转的 4 项遗留债务（#16 行操作权限越权 / 3f130 空因展示 / F5 跳 /dashboard / ColumnConfigModal 豁免注释）与 2 项延后技术债（lint 存量 / react-refresh + devices 拆分）。
 
 **Key Accomplishments**:
 
-1. ✅ **Phase 64 品牌令牌层落地** — `src/index.css` 253 变量全量改为 brand-spec 实测值（深绿/铜金/奶油/白卡/描边/次级文字） + `tokens/colors.ts` 新增 `xingranBrand` 11 键常量导出（绿6/铜金4/奶油9/渐变2/功能6/onDark3，含 OKLch + WCAG 注释） + `AntdThemeBridge.tsx` 16 项 token + 8 组件覆盖接品牌 + `tokens/shadows.ts/spacing.ts/typography.ts` 双层纸感调性对齐（深绿阴影 + 8px 圆角 + PingFang SC / JetBrains Mono / Songti SC 字体栈） + QA-01 对比度自动验证 vitest module（31 条断言，含 D-03 反向断言锁住 `#FFFFFF on #C09058 < 3.5:1`）
+1. ✅ **双框根治 + 全局 CSS 一致性审计（用户主诉闭环）** — 根因是 `index.css:871` 的 `.ant-input{border:...!important}` 命中 antd 6 affix-wrapper 的**内层** input（antd 原生契约要求内层 `border:none`）；复位块 `.ant-input-affix-wrapper > input.ant-input`（6 项、**刻意不写 box-shadow**，焦点环归 wrapper）+ CSS 审计登记册 **36 条**（P0 已修 8 / P1 待修 7 / P2 登记 19 / 保留 1 / 样板 1）；**双框元素数 3 → 0**（harness 42 行 + 15 真实页 + 登录页，明暗双测）；错误态由灰 `rgb(219,215,206)` → 品牌红 `rgb(186,54,48)`
+2. ✅ **Phase 77 视觉验证反查出 Phase 76 自身的 P0 缺陷** — VIS-03 的选择器写成 antd 6 **不存在**的 `ant-input-affix-wrapper-status-error`（antd 把 status class 打在 wrapper **自身**，名为 `ant-input-status-error`）→ 永不命中的死规则，叠加 `allowClear` 默认开 → **站内绝大多数输入框错误态一直不变红**；更糟的是契约检查 C5 **校验的正是这条死规则** → 检查通过而规则从未生效。已修并把 C5 升级为**双向断言**（正确 class 必须存在 + 死变体不得出现）
+3. ✅ **#16 行操作权限前后端双端闭环（三层证据）** — 根因是**两个叠加病灶**：组级 ANY-of（`router.go`）+ 模块级降级（`permission.go` Step 3 把 `system:user:remove` 降级匹配到页面本体）→ 只读角色调 delete **200 且真删数据**；新增 `RequireStrictPermissions`（只做 Step1 精确匹配）+ `/system/users` 读组/写组**兄弟分离**（逐动作单一权限点）+ 前端 `useActionPermission` 三态门控 + 权限码单一真相源双向校验；证据：**DB 层前后对照**（旧 8/8 放行 → 严格 8/8 拒绝）+ **HTTP 实测**（8/8 写接口 403，含决定性对照：临时加 `xtgl` → delete 200 且真删除）+ **前端组件测试 7/7**
+4. ✅ **F5 刷新回退 /dashboard 修复（红绿验证）** — catch-all 区分「菜单未就绪」(InitializingFallback) 与「真无路由」(跳 dashboard) + `saveLastPath` 加守卫防自毁反写 + 抽出 `lastPathStorage.ts`（顺带清 3 处 react-refresh）；**新增 3 条回归测试并做红绿验证**（回退实现 2 条失败 / 修复后 3 条全绿）
+5. ✅ **lint 存量清零 + 门禁防回退** — 51（17 errors + 34 warnings）→ **eslint 0 problems**；预算双写归零（`package.json --max-warnings 0` + `assert-lint-budget` 0/0）+ react-refresh 33 三类分流 + 豁免理由表 159 → 38 且 `check-exemption-reasons.mjs` exit 0 并接入 `lint:ci`
+6. ✅ **devices 页拆分（HYG-04）+ #16 前端侧复用** — 714 → **306 行（-57%）**：D1 列定义工厂(130) + D2 搜索区构造函数(63) + D3 handlers+行操作+权限门控(413→278) + D4 页面 JSX 外壳(194) + D5 行操作再拆(192)；`reloadRef` 外部注入链路 4 段逐字保留；`columns` useMemo **故意不完整**依赖未被"修正"；v1.19 port-write 62 测试零回归且 diff 为空
 
-2. ✅ **Phase 65 主题系统收敛** — 删除 `design-system/themes/` 6 套主题目录（minimal/glassmorphism/neumorphism/flat2.0/luxury-quiet/ink-amber × 20 文件）+ `ThemeSwitcher.tsx`（65 行）+ `ColorSwitcher.tsx`（477 行）+ `types/theme.ts` + `utils/color.ts` + `tokens/shadows.ts/spacing.ts` 死文件（themes/ 删除后零消费）；themeStore 重写为单 `mode` 字段；AntdThemeBridge 三层优先级链简化为直接 `xingranBrand.greenPrimary`；ConfigProvider 移除 save-theme-settings 监听；InnovativeLayout 仅删 4 行（2 import + 2 渲染）；light/dark 双模式保留（设置页 + ThemeProvider + data-color-mode）；layoutStore 3 套布局 + 密度切换完整保留（diff-zero 证据）。vendor-react gzip 持平 774.94 kB；源码层 -4357 行
+**Verification**: 收口前由 Lead **独立复核**（不只采信 agent 报告）——闸门六道全绿：type-check 0 / eslint **0 problems** / lint 预算 0-0 / 豁免表 38↔38 / 权限码双向零漂移 / CSS 契约 ALL PASS；`go build ./...` + `go test` 相关包 PASS；**vitest 569 文件 3960 用例全绿**（独立复跑，确认 1 例超时为环境 flaky 非回归）；`npm run build` ✓
 
-3. ✅ **Phase 66 通用组件层 + 硬编码色扫描** — AntdThemeBridge 扩展补齐 Phase 64 UAT 4 Gap（Table.headerBg / Input.activeBorderColor/hoverBorderColor + 2px 焦点环 / Tag.defaultBg=#FEF3C7 + defaultColor=#B88850 / Button.primaryColor=#FFFFFF 白字）+ 侧边栏深绿化（light 模式 `#14532D` 配方 + `--header-bg` 解耦防顶栏染色；sidebar.tsx 双根因修：内联白底清理 + Menu theme="dark"）+ ECharts 品牌系列色（`tokens/echartsTheme.ts` 新建 brandSeriesColors / brandHeatRamp / brandAxisLine / brandSplitLine / brandTextStyle / brandAreaFade / brandHeatZero 全出自 xingranBrand）+ `scripts/check-hardcoded-colors.mjs` 零依赖 scanner（node 内置 fs/path，相对脚本路径解析；denylist 覆盖 indigo/tailwind/slate/Antd 旧色板；路径 allowlist 5 / 值 allowlist 4）→ `--fix` 模式应用 426 项替换 / 95 文件 + 集成进 `npm run lint` + 包入 CI；scan 报告模式 0 命中 exit 0。Post-T5 补丁 4 commits（scanner 路径 / CmdK Tag 内联覆盖 / 全局 `.ant-tag` 覆盖 / 表头+focus 变量）
+**Known Gaps（转 v1.25 候选，用户裁定暂不立项）**:
+- ① 操作级 RBAC 全站治理（108 页面 + 340 路由；`roles/menus/depts/posts` 4 组 ANY-of 拆分 + `pkg/permission/config.go` 死表接线 + 动作级 F 型菜单播种）
+- ② 样式层收敛到 antd 6 variant（方案 C，需先重构 AntdThemeBridge 明暗色板）
+- ③ 权限模型三缺口（`data_scope` 未被列表查询消费 / `GetUserPermissions` 不过滤 `menu.status` / Step 2 语义易写反）+ 生产库无迁移记录表 + GORM schema 漂移
+- ④ Phase 77 视觉新发现（暗色 `--input-bg` 第 3 处就地重定义 / 暗色 Select 白底两套边框体系 / `.dept-tree-search` 死规则 / antd 6 弃用警告 2 类 / InputNumber 错误态仍灰）
+- ⑤ `room-devices/index.tsx` 815 行（比 devices 更长，未扩面）
 
-4. ✅ **Phase 67 终验** — `npm run build` exit 0 / `type-check` exit 0 / `lint` exit 0（eslint 0 errors + scanner 0 命中）/ `vitest` 14 files / 120 tests（5 fail 为 Phase 53 v1.19 网络设备端口写 UI 测试，与 v1.22 正交，**不阻塞 SHIPPED**）；vendor-react gzip 774.94 kB 持平；dist chunk 数 134 / 最大单 app chunk 131 kB 无回归；六屏视觉确认（仪表盘/系统用户/工位管理/监控仪表盘/资产对账看板/登录页）品牌化框架实测全 PASS；与 refs/ 旧截图对比 indigo/slate/冷蓝灰冲突色全部清零
+**生产库状态**: #16 验收夹具已按用户指示在单事务内清理，6 项残留自检全 0，`sys_role` 7→6、`sys_user` 4232→4231（恰为夹具本身），**既有行零改动**；证据（角色 id / perms 集合 / HTTP 返回码 / 前后对照表）已固化在 `.planning/notes/2026-10-29-v124-perm-fixture.md`
 
-**关键成果**：后台内部 `#4F46E5` indigo 主按钮 + `#F1F5F9` 冷蓝灰表头 + `#1e293b` slate 侧栏三个最大品牌化缺口全修复；登录页 → 后台视觉一脉相承（深绿 + 铜金 + 奶油 + 白卡双层纸感）；后端零改动；业务页面零改动。
+---
 
-**遗留 v1.23+ 候选**（不阻塞 SHIPPED）：
+## v1.23 前端契约全量收尾与遗留清偿 (Shipped: 2026-10-28)
 
-- **PROTO-01..04 逐屏原型对齐**：`PROTOTYPE-VS-ACTUAL.md` 差异清单（24 处路由前缀、53 屏字段 / 表头 / 工具栏 / 菜单 / 空状态 / 统计卡对齐）
-- **VIS-01..03 视觉深化**：3D 楼宇可视化（Three.js）配色接品牌令牌 / 登录页-后台过渡动效统一 / 打印导出样式品牌化
-- **Tag 默认配方收紧**：`#B88850 on #FEF3C7` 实测约 2.8:1（低于 AA 4.5:1）—— 当前为装饰性品牌锚点（orchestrator 锁定决策），收紧候选 `#905D00` on `#FEF3C7` 5.03:1 已实测达标
-- **index.css 叠层规则去重**：4 处 `[data-color-mode="dark"] .ant-table-thead` 规则（L931/L2343/L3844/L4642）与多组 dark `.ant-tag` 规则叠层，后置规则胜出 —— 当前渲染均品牌族内但建议合并去重
-- **Phase 53 网络设备端口写 UI 测试修复**：5 个 vitest 失败（BulkWriteDrawer / ports/index 异步 timing 与 mock），与 v1.22 正交
+**Phases completed:** 7 phases (69-75), 121+ 文件迁移 | **Requirements:** 22/22 Satisfied
 
-**Refs 关联**：
+**Delivered**: 修复用户主诉「文本输入框无法一键删除」（TextArea 74 处 0 覆盖根因），把 v1.22 契约推到全量落地（裸组件归零、P65 豁免 127→0），清偿 7 项 debug 遗留与流程积压，lint 债务大幅清偿并上线防回退门禁。
 
-- 素材：`655aa291-9bfe-4e94-ad5d-b3c8b2d24984/brand-spec.md`（像素实测 + WCAG 验证）、`admin-design-plan.md`（系统现状侦察 + 缺口定位）
-- Phase 64 SUMMARY：`D:\code\ClaudeCode\guoguo\.planning\phases\64-brand-token-layer-and-contrast-verification\64-01-SUMMARY.md`
-- Phase 65 SUMMARY：`.planning\phases\65-theme-system-consolidation\65-01-SUMMARY.md`
-- Phase 66 SUMMARY：`66-component-styles-and-hardcoded-color-scan\66-01-SUMMARY.md`
-- Phase 67 SUMMARY：`67-build-regression-and-visual-confirmation\67-01-SUMMARY.md`
+**Key Accomplishments**:
+
+1. ✅ **TextArea 一键清空契约（用户主诉闭环）** — AppTextArea 独立契约组件 + SearchForm textarea 字段类型 + eslint 成员表达式/解构形态双 selector（探针验证非假绿）+ 存量全量接入；实机 UAT 抽查 3/3 通过
+2. ✅ **COMP-05 全量收尾** — W1-W6 六波迁移 121 文件（Input/Select/TextArea），P65 豁免 127→0、无豁免口径裸组件命中全归零；Select 形态七类分类器全量执行；v1.22 冻结契约零破坏（port-write 62 测试全绿）
+3. ✅ **7 项 debug 遗留全终结** — #1 Linux 日志（不复现）/ #2 Cisco MAC 采集（b022.7a2e.4a4f 验收）/ #3 MAC 格式 Go 侧防线 / #4 双执行（双实例部署）/ #5 历史查询双侧归一化 / #6 scrapligo（关单）/ #7 空因可诊断端点——多项实证反转原认知（acknowledge ≠ 已定位）
+4. ✅ **lint 债务清偿 + 防回退门禁** — errors 81→17（全部为范围外存量）、warnings 1366→**34**、no-explicit-any 958→**0**、no-unused-vars 364→0、no-console 5→0；`--max-warnings 34` + assert-lint-budget.mjs 断言上线
+5. ✅ **浏览器实机 UAT** — 68.1 §8 全表 18/19 通过 + FAIL-1 分页恢复 bug 修复实机复验（PageTable mount 硬编码回写根因）；§8 回写关闭 68.1 结转债务；quick 目录 94 个归档清零
+
+**Verification overrides**: 7 个 phase 未走 GSD verifier 流程（subagent 直接执行 + 每波真实闸门：type-check/vitest/eslint 预算/build + UAT 实机），override 收档；3 项审计开放项 acknowledge（debug 已 resolved / UAT 0 pending / CONTEXT 6 问已执行回填）
+
+**Known Gaps（转 v1.24 债）**:
+- #16 行操作权限需 PG 环境 UI 复测定责（sqlite 角色创建 500 环境限制）
+- 3f130 绑定 user_id（业务核对后数据修复，代码已能诊断该空因）
+- F5 刷新落 /dashboard（UAT 顺带发现）
+- ColumnConfigModal:136 缺豁免注释（低优先级）
+
+**全程质量基线**: type-check 0 错误、vitest 全量绿（3946 tests）、eslint errors 17（≤基线 83）、build 通过、零新依赖
+
+---
+
+## v1.22 前端公用组件整治 (Shipped: 2026-10-27)
+
+**Phases completed:** 7 phases, 7 plans, 0 tasks
+
+**Key accomplishments:**
+- **P0 止血（Phase 63）**：usePagination.ts:122 分页口径修正为「共 N 条 / M 页」并全线生效（此前 51 个列表页把总条数算成页数）；backups/discoveries setTotal 断链接通恢复翻页；OU 树改服务端分页；7 处批量删除补 Modal.confirm 二次确认；71 处弹窗补提交中取消禁用（cancelButtonProps）；删除 3 处假入口（假编辑/假下载/空 Tab）；8 处 fixed 列与 scroll.x 配对修复；运行时浏览器冒烟 7/7 通过
+- **反馈与可访问性（Phase 64）**：BaseEditModal 默认 maskClosable=false+keyboard 关闭防丢表单；7 处表格 loading 反馈；cache/job/jobLog 白名单内服务端排序（此前初版误判后端不支持）；52 处 catch 收敛到 handleApiError 唯一错误出口；73 处 icon-only 按钮补 aria-label（修复 38 处误写 children 的形态缺陷）
+- **危险操作唯一入口（Phase 65）**：AppInput/AppSelect 契约组件落地（allowClear/showSearch 默认值下沉，rest 全透传+逃生口）；confirmDelete helper + ConfirmDelete 声明式 + BatchDeleteButton 三形态统一文案「将删除{target}，删除后不可恢复」；eslint no-restricted-syntax 4 selector + no-restricted-imports 双闸拦截裸组件；11 处批删迁移；存量豁免 147 文件登记
+- **列表契约组件（Phase 66）**：PageTable（受控 props+插槽+三态内建）、SearchForm（schema 驱动+children 逃生口）、FormModal（onOk Promise 防重+脏检查三文案）、RemoteSelect（debounce+竞态守卫）四大件落地；system/post 双试点迁移；useTableManager 降格为内部引擎废双轨
+- **存量迁移（Phase 67）**：discoveries 405→333、backups 1141→637、devices 1282→692、cache 974→454，四页全部切换 PageTable/SearchForm/confirmDelete 契约
+- **一致性收敛（Phase 68）**：shared/statusHelpers.tsx 六域状态唯一落点；裸 hex 526→非豁免残留 32（lint 拦截+hex-exemptions 登记制）；any 52→21（any-exemptions 登记制）；日期格式 20 文件收敛 datetime.ts 常量；gzip 体积守卫进 CI 口径
+- **收尾清偿（Phase 68.1）**：44 处删除类裸 Modal.confirm + 10 处破坏性 confirm + 14 处 Popconfirm 全部收口到 ConfirmDelete 唯一入口（剩 8 处合法点全部带行内理由）；契约 minor 7 项补课（aria-label=删除{target} 解耦、actionContext 批量语义、focusable 焦点落点、aria-busy、提交中禁取消）；豁免清单 181→159 且 100% 带结构化理由（exemption-reasons.json + 校验脚本）；operations 4 页迁移净 -375 行；独立 verifier 发现并修复 15 处 onDelete 丢 Promise 回归
+- 全程质量基线：type-check 0 错误、vitest 3937/0、eslint 83 errors 零新增、build 通过；5 天 124 commits，534 文件 +29173/−7695
+
+---
+
+## v1.21 AD 双向同步 bug 修复 (Shipped: 2026-10-22)
+
+**Phases completed:** 6 phases, 22 plans, 45 tasks
+
+**Key accomplishments:**
+- ad_push_queue 队列表以最小动作行落地：`uq_ad_push_queue_active` 部分唯一索引在 pending/failed 上夺锁实现 QUEUE-02 合并语义，PG/sqlite 双方言 DDL 幂等建表并由 Wave 0 sqlite 测试锁定行为
+- 四字段 diff 纯函数 + 事务内 `sys_ad_config` 启用行前置检查 + 靠 `uq_ad_push_queue_active` 部分唯一索引夺锁的 upsert 入队（update_user 与 disable 两条入口），T-57-06 三重防线在 sqlite 上由合并测试直接锁定
+- Update 的四字段 diff 入队与 Delete/BatchDelete 的 disable 入队全部落在业务事务闭包内、失败即回滚，队列表写不可用时 sys_user 无任何残留；HYGIENE-06 实际覆盖到三套 sqlite 环境（含计划外的 userCacheService 那一套）
+- addomain 包五表排水测试基座（ad_push_queue 走迁移、其余三表复用既有 const 零副本）+ mockLDAPClient 调用计数 + F-F/F-G/F-15/F-16 四项 Phase 57 遗留缺口处置，为 Wave 1~6 的 RED 测试提供可判真的环境
+- NormalizeDN/BuildOUDN 纯函数落地并接线唯一 OU DN 拼接点，MatchADConfigByDN 以逗号边界最长后缀唯一匹配锁定 D-02 契约（8 个用例含父子域反例），三处 First() 歧义收敛为两个语义分明的 addomain 入口，双份 getDefaultADConfigID 归零
+- ADPushDrainer 落地 QUEUE-03 排水执行面：D-05 拾取谓词（next_retry_at IS NULL = 可拾取）+ 退避曲线纯函数 + 六状态跃迁状态机 + 按 ad_dn 归属分组（每组一次账号池故障切换）+ disable(UAC 514)/update_user(属性) 两条真实推送路径；F-11 禁令以 markFailed 单点判定锁死，F-12 四处时间戳 UTC 与 F-14 model default tag 一并落地，13 个 Drain/拾取用例全绿、Phase 57 sentinel 与全仓 `go test ./...` 零回归
+- QUEUE-04 的 compare-and-move 执行面落地：闭包内重读最新值 → NormalizeDN 双侧归一化比较目标 OU → 一致跳过 `MoveUser`（幂等点）→ 不一致才移动并
+- D-05 单旋钮三层齐备（migration_216 幂等 seed + 启动读取 + SecondsToCronSpec 合法值映射 / 非法值回落 + 行为断言可被 cron parser 解析），cron 接线第三个 AddJob 落生产（AddJob + NewChain + FuncJob，cron 日志接入 applogger，账号池经 s.getPool() 字面取单例，
+- SC6 终态达成 —— 两条遗留直推路径（单用户编辑 goroutine 直推 + 导入后 `triggerADSyncAfterImport`）及其字段/方法零残留，5 条 grep 静态证伪全部 == 0；导入路径改为同步批量入队 `EnqueueUpdateBatch`（D-01，无 diff）；F-07 入队侧 Pluck 掐根 + F-10 两个删除回滚用例落地，Phase 57 sentinel 零回归。
+- 2026-10-19
+- 登录路径软删恢复在哈希与写库前增加 NormalizeDN 身份校验，拒绝经 sentinel → 专用原因码 → 固定中文文案传播，且拒绝零写入、DN 仅进 WARN。
+- 批量同步在阶段 2 用与登录路径相同的 NormalizeDN 校验过滤软删恢复，被拒项计入 Skipped 并绕开降级管道，双路径判定与 DB 终态由成对用例证伪。
+- 全量同步末尾对 AD 端已消失的 sys_ad_user/ou/computer 活行按类别软删除：三类独立双闸门（LDAP 0 条拒绝 / 拟删 >50% 拒绝、恰 50% 放行）+ syncDataInternal 单点挂载（singleflight 闭包内、增量 no-op）+ SyncResult 三计数，12 条 sqlite 可证伪用例全绿、全包零回归。
+- 四类 upsert（OU/Group/User/Computer）软删行复活：existing 查询 Unscoped 化 + OnConflict 补 deleted_at + 命中行 DeletedAt 清零，5 条 TestSync_Resurrect 先 RED（UNIQUE 2067）后 GREEN，D-78-05c 两用例翻转，全包零回归。
+- syncGroupMembers 的 Delete+Create 包进 GORM `Transaction` 闭包（每组一个事务），以 fixture 表级 CHECK 注入证伪「Create 半途失败永久丢成员」，重放幂等锁定，三调用方零改动
 
 ---
 
@@ -252,7 +169,7 @@
 - 108 文件 / 25,224 insertions / 3,152 deletions (1.7 days: 2026-07-06 → 2026-07-08)
 - Git range: d9dd2edd → 39f5a43f
 
-**Known deferred items at close**: 7 项 site-visit UAT 推迟（6 项真机 SSH transport verification：Huawei/H3C/Ruijie × shutdown/description/dot1x；1 项 WR-02 custom-reason 频率观察驱动 Phase 55 WR-02 修复决策 → ✅ RESOLVED in Phase 55）— 详见 `.planning/milestones/v1.19-phases/54-w5-e2e-real-device-uat-documentation/54-HUMAN-UAT.md`；3 厂商 e2e fixture 全覆盖 / HTTP handler 层 e2e / 跨固件版本命令差异 / Real-device SSH 往返延迟测量 / BATCH-05 实时进度 / sys_port_write_audit 详情查看 UI / 自动回滚 / 多用户并发写互斥 / Cisco IOS 支持 推迟到 v1.19.x+
+**Known deferred items at close**: 7 项 site-visit UAT 推迟（6 项真机 SSH transport verification：Huawei/H3C/Ruijie × shutdown/description/dot1x；1 项 WR-02 custom-reason 频率观察驱动 Phase 55 WR-02 修复决策 → ✅ RESOLVED in Phase 55）— 详见 `.planning/phases/54-w5-e2e-real-device-uat-documentation/54-HUMAN-UAT.md`；3 厂商 e2e fixture 全覆盖 / HTTP handler 层 e2e / 跨固件版本命令差异 / Real-device SSH 往返延迟测量 / BATCH-05 实时进度 / sys_port_write_audit 详情查看 UI / 自动回滚 / 多用户并发写互斥 / Cisco IOS 支持 推迟到 v1.19.x+
 
 ---
 
@@ -366,59 +283,3 @@
 2. ✅ 导入时通过部门名称/用户名匹配，写入对应 ID
 3. ✅ 匹配失败留空不阻断导入
 4. ✅ 前端工位列表/详情页面展示关联的部门和用户信息
-
-## v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence) — ✅ SHIPPED 2026-08-22
-
-**Phases**: 4 (Phases 71-74) | **Plans**: 34 (11 规划 + 1 escalation 74-12 + 历史未入库补齐) | **Tasks**: ~70+ | **Timeline**: 2026-08-20 → 2026-08-22 (2 days)
-
-**Delivered**: 后端测试覆盖率从 12.8% → **55.5%** (ratchet chain 12.8 → 21.5 → 25.9 → 55.5; +42.76pp / 4.34×),0% 包从 33 → **5** (全部入口/装配/生成代码),4 层 enforcement gate (weighted-avg + P1 8 包 ≥70% + P2 10 包 floor + PR diff coverage ≥80%) 全部 CI 生效;业务代码变更 0(D-12 STRICT 全程,~40 个 `*_test.go` 文件)。
-
-**Key Accomplishments**:
-
-1. ✅ **Phase 71 gate 基线** — `.coverage-threshold` (12.8) + `check-coverage.sh` (bash + awk,零依赖,D-01) + `ci.yml` Coverage gate step + `coverage-baseline.md` 起点 row;CI backend Coverage gate PASSED on runs 32382995316 + 32384622877;Phase 71 PROTECT-FIX pkg/cache TestAsyncRetryWorker_Enqueue (5ead742 guard) 修复
-
-2. ✅ **Phase 72 P0 核心 13 plans** — `api/v1/workorder 75.4%` + `api/v1/monitor 71.2%` + `api/v1/scheduler 85.5%` + `services/workorder 73.7%` (CORE-01..05 ≥70%); `services/system 53.5%` + `api/v1/system 35.4%` 不足 70% per-sub-module 留 Phase 74 处理;weighted avg 12.8 → 21.5;0%-pkg 33 → 31
-
-3. ✅ **Phase 73 P1 重要 5 plans** — P1 8 包全部 ≥70%(D-04/D-10 strict):`api/v1/duty 83.0%` + `api/v1/knowledge 84.2%` + `api/v1/rpa 79.2%` (含公开路由 3 endpoint per D-04)+ `api/v1/vdi 76.2%` + `services/duty 95.6%` + `services/knowledge 95.3%` + `services/network 92.1%` + `services/monitor 95.3%` (含 oper_log per D-03);check-coverage.sh 扩展 section 3 `p1_package_check` (exit 4);weighted avg 21.5 → 25.9;0%-pkg 31 → 22
-
-4. ✅ **Phase 74 P2 增量 + diff coverage 收口** — 11 plans + 74-12 escalation:操作类 6 包(operations 72.30/asset 84.52/network 75.34/rpa 86.11/vdi 85.09/utils 95.10/scheduler 89.82)全部 ≥70%;`internal/services/rpa` 跨 SCALE-01 + SCALE-02 双重门;`pkg/{response 96.1, ldaputils 97.0, captcha 87.5, time 85.7, gormutil 63.4, query 67.6, logger 64.6}` 高性价比工具包选择性提升;PR diff coverage ≥80% gate CI-live (74-10, D-14 自实现,market 上 gocover-diff / ory/xcoverage-action 均不可达);check-coverage.sh 扩展 section 4 `p2_package_check` (exit 5,10 包:70%×7 + UP-ONLY ratcheted×3)
-
-5. ✅ **74-08 + 74-12 escalation gap-closure** — `pkg/middleware 14.3→68.8%` / `pkg/crypto 33.7→71.8%` / `internal/services/scheduler 4.8→89.8%` / `internal/templates 44.4→88.1%` / `internal/core/db 37.5→72.9%` / `internal/core/security 48.9→74.8%` / `internal/utils 54.99→95.10%` / `internal/utils/operlog 91.7→94.4%` / `internal/agent/pkg/retry 0→93.9%` / `internal/services/common 0→100%` / `models/{operations,rpa,system,system/requests} 0→47.8~90.9%` / `internal/api/v1/operations/requests 0→100%`;0%-pkg 12 → **5** (SC-b 达成)
-
-6. ✅ **v1.26 MILESTONE SHIPPED + 原子 ratchet chain** — `.coverage-threshold` 25.9 → 55.5 (commit `1f18e20`, amend `33c8b5c`);7 文件原子 commit (`.coverage-threshold` + `coverage-baseline.md` + `check-coverage.sh` + `STATE.md` + `ROADMAP.md` + `74-11-SUMMARY.md` + `74-MILESTONE-AUDIT.md`);push deferred to orchestrator/user per 73-05 deviation;全仓 `go test -count=1` 65 packages ok / 0 FAIL / 0 panic
-
-**SC 状态**(详见 `.planning/milestones/v1.26-MILESTONE-AUDIT.md`):
-
-- **SC-a** weighted avg ≥70%: ⚠️ **部分达成** 55.56% (差 14.44pp;缺口结构化归因:addomain 2415 stmts LDAP 池 / operations 3714 stmts Excel+geocoding HTTP / scrapligo SSH / Core.Init 全链 / agent 子进程 server / services/system 53.5% / api/v1/system 35.4%;P2 3 包 UP-ONLY ratcheted)
-- **SC-b** 0%-pkg ≤5: ✅ 达成 (5/5)
-- **SC-c** threshold gate active: ✅ 达成 (UP-only ratchet chain)
-- **SC-d** full go test 零失败: ✅ 达成 (65 ok / 0 FAIL / 0 panic)
-- **SC-e** PR diff coverage ≥80%: ✅ 达成 (74-10 D-14 自实现)
-
-**Requirements 19/19**(15 完全达成 + 4 documented gaps):
-
-- ✅ GOV-01 / GOV-02 / GOV-04 / IMP-01..06 (10/10)
-- ⚠️ GOV-03 部分(74-10 自实现,缺市场认可工具支撑,可接受)
-- ✅ CORE-04 (`api/v1/system 70.35%` via 74-04) + CORE-06 (`services/system 75.57%` via 74-07) — Phase 72 时未达,Phase 74 已补齐(本行勘误于 2026-08-23,归档初版误记为遗留)
-- ⚠️ SCALE-01 P2 7/10 + 3 ratcheted(结构阻塞,UP-only)
-- ⚠️ SCALE-02 pkg/ 高性价比工具包(完成 7 包,其余未达 70%)
-- ⚠️ SCALE-03 weighted 55.5%(未达 70% 目标,诚实文档化)
-
-**遗留 v1.27 候选**(不阻塞 SHIPPED):
-
-- **SCALE-03 续**:`internal/services/addomain` 2415 stmts 21.78% (LDAP 真实连接池;testcontainer/ldap-go 引入路径);`internal/services/operations` 3714 stmts 61.07% (Excel/Baidu geocoding HTTP;HTTP mock 路径);`internal/device` 1249 stmts 39.07% (scrapligo *network.Driver 不可注入;fakeserver 路径);`internal/core` 754 stmts 38.20% (Core.Init Redis/调度器全链;mini-redis 引入路径,D-12 在 v1.26 禁);`internal/agent/server` 616 stmts 22.08% (子进程 server);`internal/services/system` 3483 stmts 53.5% + `internal/api/v1/system` 3039 stmts 35.4% (Phase 72 遗留 sub-target)
-- **集成测试基建**:miniredis / testcontainers-go / gossh-fake 等(D-12 v1.26 范围内禁,候选 v1.27 起点)
-- **CORE-04 /06 sub-target + CORE-05 65.0%** 返查
-- **15 项 QUIRK** 排查:MemoryCache IncrementBy nil-deref + 静默 0 / ModelExtractor 仅串首锚定 / gmsm sm2.Decrypt 垃圾密文 panic / retry.containsIgnoreCase 恒 true / normalizeParentID nil 塌缩等
-- **pkg/cache SCALE-02**:MemoryCache Redis 路径阻塞 24.6% → 70% 候选
-- **CI push verification**:`gh run watch` 验证 4 layer gate 在 push 后一致(P1 exit 4 不触发、P2 exit 5 不触发、PR diff exit 1 不触发)
-- **/gsd-pr-branch** Phase 74 commit chain(若需要 PR 走 code review)
-- **/gsd-cleanup** 历史 v1.26 phase directories 入库 → `milestones/v1.26-phases/`
-
-**Refs 关联**:
-
-- [v1.26-ROADMAP.md](v1.26-ROADMAP.md) — 完整 phase 结构
-- [v1.26-MILESTONE-AUDIT.md](v1.26-MILESTONE-AUDIT.md) — SC 逐项证据 + 阻塞清单
-- [.planning/phases/71-governance-baseline-and-ci-gate/71-VERIFICATION.md](../phases/71-governance-baseline-and-ci-gate/71-VERIFICATION.md) — Phase 71 终验 passed
-- [.planning/coverage-baseline.md](../coverage-baseline.md) — 4 phase ratchet row(起点 → 71 → 72 → 73 → 74)
-- [.planning/phases/74-p2-finalize-and-diff-coverage/74-11-SUMMARY.md](../phases/74-p2-finalize-and-diff-coverage/74-11-SUMMARY.md) — Phase 74 final ratchet + v1.26 closeout

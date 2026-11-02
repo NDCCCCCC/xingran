@@ -1,398 +1,209 @@
 ---
-last_updated: 2026-09-14
-update_trigger: v1.33 SHIPPED — 前端性能治理里程碑完成（38/38 requirements satisfied，7 phases complete，SHIPPED 2026-09-14）
-previous_update: 2026-09-11 v1.33 started — V133 前端性能治理（2 HIGH + 8 MEDIUM + 12 LOW findings + 死代码清理，审计输入 20260911-frontend-perf-audit.md）
+last_updated: 2026-10-31
+update_trigger: v1.51 milestone INITIATED (端口写生产级操作体验与平台质量收口，A+B+D 范围，21 REQ)
+previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 ---
 
-## Current Milestone: v1.33 前端性能治理 (Frontend Performance Remediation) — ✅ SHIPPED 2026-09-14
+## Current Milestone: v1.51 端口写生产级操作体验与平台质量收口 (Production-Grade Port-Write UX & Platform Quality Closeout) — 🚧 IN PROGRESS
 
-**Goal:** 修复 2026-09-11 前端全量性能审计报告（`.planning/reviews/20260911-frontend-perf-audit.md`）全部 33 项 findings + 8 项死代码/依赖清理，消除用户可感知卡顿，附带修复 3 个正确性 bug。
+**Goal:** 让端口写从「能写」进化为「敢写、可审计、可观测」——dry-run 预览、批量实时进度、快照回滚、并发互斥、VLAN/端口安全能力扩展、Cisco 第 4 厂商，同步清偿平台技术债（覆盖率回 77.5、审计治理、RPA Token、目录改名）与收尾杂项。
 
-**Status:** SHIPPED 2026-09-14 | **Phases:** 7 (114-120) | **Plans:** 23 | **Requirements:** 38/38 SATISFIED
+**Status:** INITIATED 2026-10-31 | **Phases:** 9 (121-129，编号延续 GitHub v1.33 线) | **Requirements:** 21（PORTW×6 / PWX×6 / DEBT×6 / TIDY×3）
 
-**Target features delivered:**
-- **H-2 地图聚类**: HubeiMap/HubeiMapGL O(n²) → Map 预计算 + 像素网格分桶，cluster.ts 共享纯函数，15 用例测试锁定
-- **H-1 dashboard 级联**: useWidgetData selector 化 + L1 缓存移出 state + dashboard 9 处订阅收敛 + DashboardGrid 稳定化
-- **SELECTOR 收尾**: useTabs 14 / useLayout 10 字段 hook 内 selector 化 + 路由层 + 3D 页全收敛，零整店订阅
-- **BUNDLE**: ExcelImportLazy 统一 9 调用点 + iconUtils 假动态导入删除 + 路由 glob phantom chunk 清零 + 4 僵尸依赖移除
-- **RENDER**: 7 处 columns 工厂 useMemo + 5+ 大数据页 Table virtual + 正确性修复 3 项附回归测试
-- **DATA**: VDI react-query 去重 + 菜单 hydrate-then-revalidate + useColumnConfig 缓存短路 + Promise.all 并行
-- **MISC**: Map 索引 O(n²)→O(n) / 惰性 sessionStorage / scroll 短路 / expandedRowRender useCallback
-- **DEAD**: useTabSync / DashboardView / getWorkstationStats / _detailColumns / operations barrel 全删 + 4 僵尸依赖移除
+**范围裁定（用户 2026-10-31）:** 执行候选 A（网络设备端口写深化）+ B（平台技术债清偿）+ D（收尾杂项）；C 组（RPA 拖拽编辑器/插件录制）defer 至 v1.52+；对账 MV 超时根治继续等 DBA 诊断。
 
-**锁定决策 (v1.33 init):**
-- **D-01 范围**: 全量 33 findings + 8 死代码清理，不分批 defer
-- **D-02 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 / 前端 45 dirs / lint / type-check / diff coverage 全程绿
-- **D-03 bundle 基线不倒退**: size-limit 门禁 entry gzip 1MB / 全量 2.5MB 不推高
-- **D-04 回归纪律**: 行为变更（BUGFIX-01..03 / BUNDLE-02 / DATA-02）附回归测试；纯性能重构现有测试零回归
-- **D-05 复用范本**: info-points:603 Map 索引 / executions:112 columns useMemo / useRouteTabs selector 风格 / noticeStore P1-M4 缓存出 state
-- **D-06 Phase 编号**: 从 114 续编
+**关键外部依赖:**
+- Phase 123/124/125/126 的命令验证与 Phase 129 的 UAT 回补需要**真机**（华为 S8700 / 锐捷 RS8607E / H3C，+ Cisco 若到位）
+- DEBT-02 审计索引操作千万行级表，需 DBA 窗口
 
-**进度:** Phase 114 ✅ + Phase 115 ✅ + Phase 116 ✅ + Phase 117 ✅ + Phase 118 ✅ + Phase 119 ✅ + Phase 120 ✅ — 7/7 phases complete, 38/38 requirements SATISFIED, 23/23 plans executed.
-
-**Known deferred items at close:** 5（ci-lint-hardcoded-ip awaiting_human_verify / knowledge-base reference / Phase 114 HUMAN-UAT partial / Phase 116-120 verification human_needed / quick task unknown — 见 STATE.md Deferred Items）
-
-**Archive:** `.planning/milestones/v1.33-ROADMAP.md` + `.planning/milestones/v1.33-REQUIREMENTS.md`
+**锁定决策:**
+- D-01 phase 编号从 121 续编（延续 GitHub v1.33 线），本地 84-93 与远端 114-120 两线编号就此合流
+- D-02 dry-run（121）先行，是回滚/互斥等安全机制的基座
+- D-03 波次：W1 零依赖（121→122/128）→ W2 需设备（123→124/125）→ W3（126→127）→ W4 收尾（129）
+- D-04 全程七 gate 不倒退（go build / go test / 后端 coverage ≥76.5→目标 77.5 / 前端 floors / lint / type-check / diff coverage）
 
 ---
 
-## Current Milestone: v1.32 V132 审计驱动的安全与可靠性收尾 (Audit-Driven Security & Reliability)
+## Current Milestone: v1.25 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence) — ✅ SHIPPED 2026-10-30
 
-**Goal:** 基于 2026-09-09 全量后端审计报告（`.planning/reviews/20260909-backend-audit.md`）的 18 项 P0/P1 风险 + 4 项 Phase 104/107/108 MUST-FIX + 6 项新发现并发风险，按用户决策（范围=P0+P1+回归守护；TLS 选项=环境变量；回归守护=Phase 109 前置）分 5 个 phase 收尾：
-- **Phase 109 回归守护前置（独立）** — 8 项回归守护测试先于修复落地，作为后续修复的安全网
-- **Phase 110 P0 安全 TLS 环境变量化** — Redis / AD authenticator / WebSocket CORS 等 TLS/Origin 选项化（默认严格，内网可显式放宽）
-- **Phase 111 P0 并发裸 goroutine 守护** — 4 个裸 goroutine 加 panic recover + detached ctx；captcha increment fail-closed
-- **Phase 112 P1 handler 收敛补丁** — Phase 104 收敛不彻底的 3 个 handler 端点（err.Error 泄漏）+ login_log nil guard + HandleGetByID HTTP 状态修复
-- **Phase 113 部署文档同步** — 把所有 TLS/Origin 选项 env 写入 docs/deployment/secret-management.md，加"MUST SET"清单
+**交付终态（2026-10-30 收档）:** 全部 10 个 Phase（84~93）全量执行完毕并通过全系统双端终验，22/22 需求 Satisfied，99 个提交原子入库。
+- **线 A（权限线）**：`data_scope` 本部门隔离生效；133 处写路由 ANY-of 拆分，`RequireStrictPermissions` 严格单点放行；全站 76 页面操作级三态门控全覆盖（恒等式 25+51=76）；72 个 F 型按钮权限码全播种，白名单彻底归零，授权链路闭环。
+- **线 B（样式收敛线）**：453 条暗色 mega-cluster 手写规则彻底清零，手写覆盖交还 antd token；**!important 净降 983 处（降至 452 处 ≤ 455 预算），Hex 降至 26 处 ≤ 60 预算，`index.css` 行数降至 3194 行 ≤ 3200 预算**；`room-devices/index.tsx` 单体大文件由 896 行成功解耦拆分为 342 行（≤350行，子文件均≤250行，零行为变化）；C1~C16c 样式静态契约 ALL PASS；全站 14 页核心业务界面视觉巡检零异常断层。
+- **全仓质量**：前端 Vitest 579 文件 4025 用例全绿，`lint:ci` 0 problems，生产打包 `vendor-react` gzip 650.74 kB ≤ 776 kB；后端 `go build` 0 错误，测试全过。
+
+**Goal:** 把 v1.24 只在 `/system/users` 单域完成的「操作级 RBAC 前后端双端闭环」推广到全站 76 页面 / 134 处后端路由挂载，并把样式层从手写 `!important` 规则收敛到 antd 6 官方 variant 机制，同步清偿权限模型三缺口与 Phase 77 视觉新发现。
+
+**问题来源（v1.24 收档 Known Gaps 五项，用户裁定全部立项）:**
+- **① 操作级 RBAC 全站治理**：v1.24 只修 `/system/users` 一个域；全站 134 处 `RequirePermissions` 挂载仍是 ANY-of 组级语义 + `permission.go` 模块级降级 → 只读角色在全域都可能被放行写操作；前端仅 14/76 页面接入 `useMenuStore.permissions`（其余恒显示操作入口）；`pkg/permission/config.go:223-289` 动作级映射表已定义但从未接线；`system` 域其余 4 组（roles/menus/depts/posts）仍是 ANY-of
+- **② 样式层收敛到 antd 6 variant**（方案 C）：手写 `!important` 规则 1359 处 / 219 行 antd 选择器 / 60 个暗色重复分区；圆角 CSS 6px 与 token 8px 漂移；暗色炸白底的**真实成因是两层**（见 STYLE-01）；`!important` 的真因是「`border` 简写压掉长属性」+「antd 复合选择器达 (0,3,0)」，**不是** hash 加特异性
+- **③ 权限模型三缺口**：`data_scope` 只塞 context 不被列表查询消费（实测 `data_scope=3` 仍返回跨部门 4231 条）；`GetUserPermissions` 不过滤 `menu.status`（已停用菜单的权限码仍进前端权限集）；Step 2「子菜单继承」语义易写反（真实是「用户持 F 型按钮 → 继承父页面权限」）＋附带缺口（生产库无迁移记录表 / GORM 模型与库表 schema 漂移）
+- **④ Phase 77 视觉新发现**：暗色 `--input-bg` 第 3 处就地重定义（`index.css:4807`，实测输入框底 rgb(250,250,249) 压在深绿底 rgb(15,46,27) 上对比度极低）；暗色 Select 白底 + 浅灰边（两套边框体系并存）；`.dept-tree-search` 补丁是死规则（实测命中 0）；antd 6 真实弃用清单（`maskClosable→mask.closable`、`bordered→variant`、`dropdownRender→popupRender` 等 9 类，**`onSearch` 未弃用**——v1.24 口径有误，见下）；InputNumber 错误态仍灰（成因是项目 `border` 简写压掉 antd `border-color` 长属性 + 只给 Input 域补 status 规则漏补 InputNumber）
+- **⑤ `room-devices/index.tsx` 815 行**：比已拆分的 devices 页（714→306）更长，v1.24 明确登记不扩面
 
 **Target features:**
-- **GUARD-01..08**: 8 项回归守护测试（Redis TLS 默认严格、ADA authenticator TLS、main allowedOrigins 非通配、HandleGetByID 404、login_log nil 不 panic、operations Statistics 不泄漏 SQL、OperLog 异步 panic recover、captcha increment fail-closed）
-- **TLS-01..03**: Redis TLS / AD authenticator TLS / WebSocket CORS 三处 InsecureSkipVerify 全部走 env 控制（默认 false，内网可选 true）
-- **GOR-01..04**: OperLog 异步 / AD dept sync / connection_manager reconnect / auth login log 4 处裸 goroutine 加 `defer recover()` + detached context
-- **CAP-01**: captcha.go Increment 失败记录 warn 日志或强制 fail-closed（防暴力破解防护静默失效）
-- **HANDLER-01..03**: operations building/floor/workstation handler 的 Statistics/Search*Options 端点全部迁到 HandleServiceError；login_log_handler.Clean 加 nil guard；HandleGetByID 改用 ErrNotFound
-- **DOC-01**: secret-management.md 新增 TLS/Origin env 部署清单 + 内网兼容说明
+- **RBAC（核心）**：后端写操作路由组逐动作拆严格权限（`RequireStrictPermissions`）+ 前端 76 页面操作入口三态门控铺开（`useActionPermission`）+ `pkg/permission/config.go` 动作映射死表接线 + 动作级 F 型菜单播种
+- **STYLE**：先重构 `AntdThemeBridge` 明暗色板（F3，解冻 v1.22 冻结契约）+ 删/降级 4 批手写规则（≈-120 行）+ 统一圆角 6→8 + hex 治理覆盖 `.css`（现 selector 只匹配 JS/TS 节点）
+- **PMODEL**：`data_scope` 被列表查询消费 + `GetUserPermissions` 过滤 `menu.status` + Step 2 语义纠偏与文档化 + 迁移记录表补齐 / GORM schema 漂移登记
+- **VISFIX**：④ 五项视觉新发现逐项清偿（暗色输入框底 / 暗色 Select 两套边框体系 / 死规则清理 / antd 6 弃用警告 / InputNumber 错误态）
+- **SPLIT**：`room-devices/index.tsx` 815 行按 v1.24 devices 页范式拆分（列定义工厂 + 搜索区构造函数 + handlers/行操作 + 页面 JSX 外壳）
 
-**锁定决策 (v1.32 init):**
-- **D-01 范围**: P0 安全 + P0 并发 + P1 handler 收敛 + 8 项回归守护；P2 清理（panic 改 error / 硬删除改软删除）不在本期范围（独立 milestone 候选）
-- **D-02 TLS 选项实现**: 全部走环境变量（沿用现有 LDAP_TLS_INSECURE_SKIP_VERIFY 模式，新增 REDIS_TLS_INSECURE_SKIP_VERIFY / WS_ALLOW_ALL_ORIGINS 等），默认 false（严格校验），内网部署可显式置 true 兼容自签证书
-- **D-03 回归纪律**: 8 项回归守护作为 Phase 109 前置独立 phase 落地，先测试后修复；每个修复必须有对应回归测试已存在（红→绿 路径）
-- **D-04 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage 全程保持绿；新增 8 项 invariants 测试纳入 diff coverage gate
-- **D-05 范围外**: P2 清理（panic 改 error / 硬删除改软删除）；agent 裸 c.JSON（已锁定为有意设计）；operlog exclude_paths 继续挂账
-- **D-06 Phase 编号**: 从 Phase 109 续编（v1.31 用 102-108，v1.30 用 96-101，v1.29 用 89-95）
+**关键决策 (v1.25 init):**
+- **执行顺序 ①权限 → ②样式**（用户裁定）——避免样式波动与权限改造混在同一验证周期；权限先行可复用 v1.24 已建的三态门控基建
+- **研究范围仅 ② 定向**（用户裁定）——①③⑤ 靠本仓事实与既有实证 note，仅对 antd 6 官方 variant API 与暗色 token 派生规则做定向核验
+- **复用 v1.24 基建不重造**：`RequireStrictPermissions`（只做 Step1 精确匹配，跳过 F 型继承与模块级降级）/ `useActionPermission` 三态门控（ready 含→可用 / ready 不含→不渲染 / loading·error→disabled+提示）/ `src/constants/permissionCodes.ts` 单一真相源 + `scripts/check-permission-codes.mjs` 双向校验
+- **②须显式解冻 v1.22 冻结契约**——`AntdThemeBridge` 色值真相源变动属冻结面突破，须单独登记与验收
+- **零新依赖**——沿用 v1.23/v1.24 原则；不引 stylelint / Playwright / jscodeshift
+- **回归基线**：eslint 0 problems / vitest 569 文件 3960 用例全绿 / vendor-react gzip 776 kB / `go build ./...` + `go test` 全绿
 
-**规划输入:**
-- `.planning/reviews/20260909-backend-audit.md`（2026-09-09 全量后端审计报告，1,068 文件，6 个并行 Explore agent 全量扫描）
-- 06-12 vs v1.31 对比：27 项历史问题 24 FIXED + 3 PARTIAL
-- 新发现 18 项风险中 P0=7 + P1=4 + P2=7
+**事实基线:** `.planning/milestones/v1.24-REQUIREMENTS.md`（Future Requirements 段五项候选原文）+ `.planning/notes/v1.24-css-audit-register.md`（36 条 CSS 登记）+ `.planning/notes/2026-10-28-pg-permission-baseline.md`（#16 定责）+ `.planning/notes/v1.24-visual-verification.md`（21 形态 × 明暗矩阵）
 
-**范围边界:** 仅 P0 安全/P0 并发/P1 handler 收敛 + 8 项回归守护；P2 清理推到下个 milestone；不引入新业务功能；所有修复必须有回归测试守护。
+## Current Milestone: v1.24 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance) — ✅ SHIPPED 2026-10-28
 
----
+**交付终态（2026-10-28 收档）:** 18/18 需求 Satisfied；用户主诉「输入框双重外框」根治（309 个输入框全站，双框元素数 3→0，错误态恢复品牌红）；#16 行操作权限**前后端双端闭环**（只读角色调写接口从 200 真删 → 403 拒绝，三层证据：DB 层前后对照 + HTTP 实测含决定性对照实验 + 前端组件测试）；lint 51 → **0 problems**；devices 页 714 → 306 行；生产库验收夹具已按用户指示清理、既有行零改动。Known Gaps 转 v1.25 候选（用户裁定暂不立项）：操作级 RBAC 全站治理 / 样式层收敛到 antd 6 variant / 权限模型三缺口 / 视觉新发现 / room-devices 拆分。
 
-## Current Milestone: v1.31 V131 技术债清偿 (Tech Debt Retirement) — ✅ SHIPPED + ARCHIVED 2026-09-08
+> ⚠️ **机制更正（2026-10-28 v1.25 定向研究期，antd 6.6.4 源码实证）**：本段及 v1.24 REQUIREMENTS 中的两条**机制归因不成立**（**症状与修法均正确，仅机制需更正**）——
+> ① 「antd 6 的 cssinjs hash 前缀使 antd 规则特异性 +1 类 → 写在后面就能覆盖不成立」→ antd 6 默认 `hashPriority:'low'`（`@ant-design/cssinjs/es/StyleContext.js:47`）生成 `:where(.css-xxx)`，**hash 特异性为 0**（`util/index.js:145`），同特异性下**后写者胜**；`!important` 的真因是「`border` 简写压掉长属性」+「antd 复合选择器达 (0,3,0)」。
+> ② 「`darkAlgorithm` 不改写显式 token」→ `genColorMapToken` 展开在 `...token` **之后**（`antd/es/theme/themes/default/index.js:30-45`），**Map Token 覆盖显式值**（`colorBgContainer`/`colorBorder` 显式设**本就无效**）；暗色白底的真凶是**组件级 token 在算法之后 merge**（`getComponentToken.js:28`）+ **seed 层 `colorBgBase` 为浅奶油**。真实文件路径为 `src/design-system/components/AntdThemeBridge.tsx`（不存在 `src/components/theme/`）。
+> ③ v1.24 登记的「antd 6 弃用警告 `onSearch→showSearch`」**不成立**——antd 6.6.4 源码 `deprecatedProps` 与类型定义 `@deprecated` 清单双向确认 `onSearch` **未弃用**。
+> 详见 `.planning/REQUIREMENTS.md`（v1.25）STYLE-01 前置障碍段与关键决策表。
 
-**Goal:** 清偿 2026-09-07 全量技术债务审计台账（`.planning/notes/260907-audit-fix-tech-debt-findings.md`）的全部 12 组未修复项（F-06~F-17）+ 顺带 nilness 观察项，达成：非测试代码 TODO 清零、status/cache-key/分页/协议字面量清零、缓存闭包收敛 base 单一权威、wire 契约统一、skip 测试尽力恢复。
+**Goal:** 修复 v1.23 引入的输入框「双重外框」视觉回归并做 CSS 一致性审计，同时清偿 v1.23 收档结转的 4 项遗留债务（#16 行操作权限 / 3f130 空因展示 / F5 跳 /dashboard / ColumnConfigModal 豁免注释）与 2 项延后技术债（lint 存量 errors / react-refresh + devices 拆分）。
 
-**Target features:**
-- **F-06~F-09 auto 残余**: captcha storageKey 常量化（8 处）/ status 字面量 12 处（job/vdi/duty/workorder）/ cache key 内联 ~35 处注册 cache_keys.go / internal/utils ParsePagination 收敛 pkg/query
-- **F-10 缓存闭包收敛**: mac_history_query_service 4 处 legacy GetOrSet + 手写 cache-aside、asset reconciliation 手写读穿透、rpa selector_learner → base.GetOrSetJSON 单一权威
-- **F-11 wire 契约统一**: operations/base_handler.go 本地 helper 与 pkg/response 收敛（方向 phase 内决策）
-- **F-12 handler 样板收敛**: operations 14 个同构 handler（含 server_room 漂移修复）+ monitor oper/login_log 双 handler
-- **F-13 前端 CRUD 收敛**: adDomainApi/knowledgeApi/dutyApi/workorderApi 19 处手写五件套 → apiFactory（D-14 单参 delete 契约保住）
-- **F-14 前端映射统一**: server-rooms/MACHistory 内联选项、fixStatusColor 双份、11 处内联三元 Tag → status.ts / 模块共享 constants（颜色 token 决策 phase 内定）
-- **F-15 TODO 逐个决策**: 22 处功能占位逐个实现或删除（工单评价 / RPA 扩缩容 / ListSessions / 解锁用户等），非测试代码 TODO 清零
-- **F-16 skip 测试恢复**: HybridAuthenticator interface refactor + 嵌入式 LDAP 基建，尽力恢复 15 处 t.Skip；真实环境依赖落 HUMAN-UAT
-- **F-17 类型卫生**: as any 11 处收窄 + 72 处无理由 eslint-disable 补理由或修复
-- **顺带**: rpa/data_mapper.go:332 nilness（non-nil == nil）排查修复
-
-**锁定决策 (v1.31 init):**
-- **D-01 范围**: 台账 12 组全做（用户确认）；F-15 逐项决策实现或删除、不留兼容壳
-- **D-02 回归纪律**: 行为变更附回归测试；七 gate（go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
-- **D-03 设计决策项**: F-11 wire 契约方向、F-14 颜色 token 选择在 phase 规划时敲定
-- **D-04 范围外**: captcha-background 1=启用语义（QUIRK-80-03-D 锁定非 bug，禁改）；观察项中的有意设计（agent 裸 c.JSON / 三层 adapter / 协议默认值）不动；operlog exclude_paths 继续挂账
-- **D-05 Phase 编号**: 从 Phase 102 续编（v1.30 用 96-101，v1.29 用 89-95）
-
----
-
-## Current Milestone: v1.30 V130 缺陷治理 (Defect Remediation) — ✅ SHIPPED + ARCHIVED 2026-09-07
-
-**Goal:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
+**问题来源（用户实机截图 + v1.23 收档 Known Gaps）:**
+- **用户实机反馈（2026-10-28）**：「文本输入框的一键删除已经有了，但是有的输入框出现这种双重外框的情况」——外层浅灰圆角框内又套一层白色圆角输入框
+- **根因（已实证）**：`ruoyi-react-frontend/src/index.css:871` 的 `.ant-input { border: 1px solid var(--input-border) !important }` 命中了 antd 6 affix-wrapper 的**内层** input，antd 原生要求内层 `border: none`（边框只画在 wrapper 上）→ **双框**。v1.23 把 `allowClear` 默认化后，几乎所有 Input 都渲染为 affix-wrapper → 双框从少数变普遍
+- **#16 行操作权限**：v1.23 UAT 实测「受限用户仍见 9 行编辑/删除按钮」。**已定责**：`src/pages/system/user/index.tsx:279-301` 操作列**无任何权限判定**（对比 `network/ports:132`、`asset/reconciliation:86`、`ad-domain:77` 均有判定）；生产 PG 实证：能进该页的只有 admin 与 xtgl 且都持完整写权限，故生产不复现，但配置只读角色即越权显示入口
+- **3f130 空因**：后端诊断端点 `POST /ops/workstation-device/:id/physical-diagnosis` 已交付（v1.23 commit `8b85fe6b`），**前端未接**——用户裁定本里程碑只做前端诊断展示，不写生产数据
+- **F5 刷新落 /dashboard**：v1.23 UAT 顺带发现的独立债
+- **ColumnConfigModal:136**：缺 eslint-disable 理由注释（契约登记完整性）
 
 **Target features:**
-- **CACHEDEF-01..05**（5 项缓存缺陷）: 失效键不匹配（dept:tree）/ 遗漏 config:id 失效 / duty parseInt 恒 0 / 待办缓存键缺 limit / 前缀剥离恒 false（key[:6]）
-- **JOBSTAT-01**: GetJobStatistics 时区日界看板缺陷（本地 00:00-08:00 窗口 JobLog 计入昨日）
-- **V130R-01..12**（12 项深度复查 manual-only）: config_backup 互斥原子性/多实例归属/业务错误码、缓存列表键转义、duty/knowledge/network/workorder 四包迁 base 泛型、asset/building Total 口径、floor 换楼乱序、orgId 子部门筛选统一、分页 clamp 三口径收敛、前端幽灵方法（rpaApi/vdiApi batch 等）、rpaApi 契约对齐、networkApi 平行下载链收敛
-- **测试文件入库决策**: 4 个未跟踪 `*_test.go`（rpa_model_methods / cache manager_coverage / sysmetrics_common / sysmetrics_windows）
-- **62-HUMAN-UAT 3 场景**: v1.27 workstream 遗留人工验证闭环（62-ai-internal-core-db）
+- **VIS（核心）**：消除 affix-wrapper 内层边框（双框消失）+ 全局 CSS 与 antd 6 变体的一致性审计（同类隐患一次性收口）
+- **PERM**：系统用户页按 `system:user:edit/remove/resetPwd/add/import/export` 条件渲染操作入口（fail-closed）+ 权限矩阵单测
+- **DIAG**：工位管理页「物理链路设备」为空时展示可诊断原因（emptyReason/emptyMessage/warnings），把后端已交付的诊断能力暴露到 UI
+- **NAV**：F5 刷新保留当前落地页（不回退 /dashboard），且不影响未登录跳登录、无权限跳 403、deep link 直达
+- **HYG**：ColumnConfigModal:136 豁免注释补齐；lint 存量 17 errors + exhaustive-deps 12 处清零；react-refresh 33 处清零 + devices 页 692 行拆分
 
-**锁定决策 (v1.30 init):**
-- **D-01 范围**: 18 项 V130-CANDIDATES 全做 + 2 顺带项；不引入新业务功能
-- **D-02 回归纪律**: 所有修复属行为变更，须附回归测试（v1.29 D-05 例外条款同款纪律）；既有七 gate（go build / go test / 后端 coverage ≥77.5 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
-- **D-03 设计决策项**: V130R-01（分段 context 预算）/ V130R-02（实例标识或 grace period）/ V130R-03（业务错误类型体系）/ V130R-09（分页口径收敛路径）的方案在 phase 规划时敲定
-- **D-04 范围外**: WSNOTICE-01 已提前修复不在范围内；operlog exclude_paths 继续挂账；前端覆盖率不推新目标（v1.28 已收口 45.13%）
-- **D-05 Phase 编号**: 从 Phase 96 起续编（v1.29 用 89-95，v1.28 用 82-88）
+**关键决策 (v1.24 init):**
+- **双框修根因而非遮盖**——审计全局 `!important` 规则与 antd 6 结构的冲突面，不做「一处覆盖了事」（用户裁定「修根因 + CSS 一致性审计」）
+- **#16 修复取 fail-closed**——权限集合为空/未加载时默认隐藏写操作入口（与「操作入口不该存在」契约一致），代价是权限加载完成前按钮不出现，需在 UI 上可接受
+- **3f130 只做前端展示**——不动生产数据（用户裁定），数据侧绑定留用户动作
+- **零新依赖**——沿用 v1.23 原则，不引视觉回归自动化工具链
 
----
+**研究基线:** `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS}.md`（4 维并行研究，2026-10-28）｜ **权限基线:** `.planning/notes/2026-10-28-pg-permission-baseline.md`（生产 PG 只读实测 + #16 定责）
 
-## Current Milestone: v1.29 技术债治理 (Tech Debt Governance) — ✅ SHIPPED + ARCHIVED 2026-09-06
+## Current Milestone: v1.23 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance) — ✅ SHIPPED 2026-10-28
 
-**Goal:** 按 2026-09-03 综合审计发现的优先级，逐批治理 7 项技术债行动：分页/超时常量统一 → CRUD 服务复用泛型抽象 → 缓存层三处架构合并 → 配置备份闭环 → 前端 API 工厂化 → Phase 88 阶段性收口。每批原子 commit + 既有测试不回归。
+**Goal:** 把 v1.22 建立但未落地的契约真正推到全量——修复用户主诉的「文本输入框无法一键删除」，并清偿 v1.22 收档结转的 debug / UAT / 流程积压，让里程碑以「无债、无盲区」收档。
 
-**Target features:**
-- **常量集中化**: 抽取 `pkg/constants/pagination.go` + `pkg/constants/timeouts.go`，消除 12+ 处 `current=1/pageSize=10` 散布和 6 处业务超时硬编码（命令/LDAP/SNMP/WS origin）
-- **CRUD 复用泛型**: 让 `internal/services/operations/` 下 8 个 CRUD 服务（building/floor/workstation/asset/room/infopoint/dedicated_line/door）复用 `base.Repository[T]` 抽象，预计减少 ~2000 行重复代码
-- **缓存层统一**: 合并 `internal/services/*_cache_service.go` (legacy root) 与 `internal/services/system/*_cache_impl.go` + `internal/services/operations/*_cache_impl.go` 三处 `CacheServiceBase` 重复模式到单一生成器/基类
-- **配置备份闭环**: 实现 `internal/services/config_backup_service.go:158,206,543` 三处 TODO 空函数（压缩 / 解压 / 恢复逻辑）+ 回归测试
-- **前端 API 工厂化**: 收敛 `xingran-react-frontend/src/lib/` 下约 15 个 `*Api.ts` 文件为工厂函数
-- **v1.28 阶段性收口**: 接受前端覆盖率 45.13% (Phase 88 batch47 已达 45.87%) 作为 SHIPPED 状态，转入技术债治理主线
+**交付终态（2026-10-28 收档）:** 22/22 需求 Satisfied；121 文件迁移、P65 豁免 127→0、无豁免口径裸组件归零；7 项 debug 全终结（#5 双侧归一化 / #7 空因可诊断端点 / #2 Cisco 采集 / #3 Go 写防线，#1/#4 实证不复现，#6 关单）；lint errors 81→17、warnings 1366→34、any 958→0、unused 364→0、门禁上线；实机 UAT 18/19 + FAIL-1 修复复验 + §8 回写关债。Known Gaps 转 v1.24：#16 需 PG 复测定责、3f130 绑 user_id、F5 跳转 /dashboard。
 
-**锁定决策 (v1.29 init):**
-- **D-01 目标线**: 7 项审计行动 100% 完成（按优先级逐批）
-- **D-02 范围**: 后端治理（常量 + CRUD + 缓存 + 配置备份）+ 前端 API 工厂化 + Phase 88 收口；不引入新业务功能
-- **D-03 兼容约束**: 不破坏既有测试（`go build ./...` + `go test ./...` 必须 0 失败）；operlog 11 强制敏感关键词、25 OperType 常量、状态值常量 AST 锁值全程保持
-- **D-04 提交纪律**: 每项行动一个 atomic commit，失败可 revert；CRUD 复用采用逐步迁移（先 1-2 个 service 跑通模式，再批量复制）
-- **D-05 范围边界**: 不修改业务行为（除 config_backup 三处 TODO 的真实实现）；operlog exclude_paths todo 不在本期范围（独立 deferred）
-- **D-06 Phase 编号**: 从 Phase 89 起（v1.28 用 82-88，v1.27 用 75-81）
-
-**Progress (v1.29):** Phase 89 (PAGINATION) ✅ · Phase 90 (TIMEOUTS) ✅ · **Phase 91 (CRUD 复用) ✅ 2026-09-04** — 11/11 services 迁入 base.GORMRepository[T]（scope 函数式），CRUD 模板清零，workstation typed 接线，附带修复 2 个现存 bug；LOC 量化锚点经 OVR-91-01 用户 override 重校准（生产口径 +408，测试基线 +678 属计划内投入）· **Phase 92 (缓存层统一) ✅ 2026-09-05** — base 缓存权威抽象落地（TTLResolver + CacheProvider 全家 type alias 翻转 + 泛型函数族），32 处 GetOrSet 样板收敛单 return，失效底层归一（42 处改写 + 旧函数删除同 commit），DataCacheService 原地定性，monitor rename CacheOperator，miniredis 十用例 + invariants 锁；LOC 校准口径 207 达成（用户判定）；WR-01..05 预存缺陷登记 V130-CANDIDATES · **Phase 93 (config_backup TODO 闭环) ✅ 2026-09-05** — 三处 TODO 清零：gzipCompress/Decompress 统一（64MB 上限 + 双检查 + 文件名清洗）、DeviceExecutor.RestoreConfig 下发内核（清洗 + SendConfigsStopOnFailed fail-fast + vendor 退出命令）、ConfigRestoreTaskService 异步恢复（sys_config_restore_task 四态状态机 + Migrate211 双注册 + 恢复前备份失败即中止 + 回读 hash 警告 + 版本链记录）；restore handler 切 taskId 契约 + /restore-tasks 双端点（组权限复用）+ 前端 useRestoreTask 轮询 Modal；93_NN 19 用例（FileTransport e2e 断言链 备份→恢复→hash 一致）+ 顺手修 sort 白名单 status SQL 500（D-33②）；CLAUDE.md 新增 Config Backup Restore Convention（D-32）；全量 gate go+npm 零失败 · **Phase 94 (前端 API 工厂化) ✅ 2026-09-06** — opsApi 私有 createCrudApi 8 方法提升为 src/lib/apiFactory.ts 单一权威（D-01 行业对齐 react-admin/refine，ROADMAP 7 方法措辞按现实校准），rpaApi 第二份工厂合并（11+7+2 资源统一走工厂），CreatePayload&lt;T&gt; 双命名并集派生类型（D-02），blob 下载三处重复归一 download.ts（含 rpaApi 裸 fetch 消灭，白得 5min 超时防护），扁平 5 件 cluster 委托（签名零变化，100+ 消费文件零改动），adDomainApi:501 deleteMapping 潜伏 URL 404 bug 修复（独立 commit 登记），D-12 双档 AST 扫描防线（allowedResidues 等值锁 + VariableDeclaration 补强），CLAUDE.md Frontend API Factory Convention（D-13），覆盖率加权 59.79%（基线 45.13% 达成，gate exit 0），review 0 Critical（WR-01/02 已修）；type-check gate 空转（solution-style tsconfig 0 文件）登记 HUMAN-UAT 待 Phase 95 closeout · **Phase 95 ✅ 2026-09-06（v1.28 收口核对 + gate 全绿 + audit）** — 95-01 零补漏核对确认（MILESTONES 四件套 + PROJECT SHIPPED+ARCHIVED + frontend-coverage 保留作历史）+ 措辞校准 + 记账补漏（commit 1c70eeb）；95-02 D-03 type-check gate 真实化（-p tsconfig.app.json，3701 文件真检查面 + useRestoreTask:47 修复，build 链同根因救活）+ gate ② flaky 双修复（network 测试环境单连接串行化 + Jbu8003 种子正午锚定，-count=10 复验）+ 七 gate 本地全绿（后端 coverage 78.33% ≥ 77.5 / 前端 554 文件 3800 tests / 45/45 dirs / lint 0 errors）+ v1.29-MILESTONE-AUDIT.md 落盘（45/45 追溯 + V130 增补 JOBSTAT-01）+ 94-HUMAN-UAT 流转 resolved · **v1.29 ✅ SHIPPED 2026-09-06**。**SHIPPED 后深度复查（2026-09-06，同日）**：6 域并行审查 + 全部门禁复跑发现 6 Critical（Phase 93 互斥原子性/pending 死锁/权限收口、Phase 91 workstation 分页截断、存量 WS 双读者竞态、network 分页缺口）+ 29 Warning——当场修复 6C+10W（12 个 atomic commit，全部附回归锁），12 项 manual-only 转记 REQUIREMENTS V130R-01..12；随后 200 commits push，CI run 34007103013 全绿（CI 首次见证 v1.29 代码）+ deploy 34007656876 success；归档预检 7 个未决 artifacts 全部落档（Resolve 路线）。**Next milestone**: 未定义——V130-CANDIDATES（CACHEDEF-01..05 + JOBSTAT-01 + WSNOTICE-01✅ + V130R-01..12）为现成输入，走 /gsd-new-milestone 重新立项。
-
-**规划输入:** 2026-09-03 综合审计报告（4 维度并行扫描：TODO/FIXME、硬编码值、重复实现、项目完成度）；审计基线数据 = 后端 78.12% / 前端 45.13% / 1688 测试 / 18 项真实 TODO / ~20 处中高度硬编码 / 8 个 CRUD 服务 60-70% 重复 / 缓存层三处架构重复。
-
-**范围边界:** 仅技术债治理（不含新业务功能、不含 operlog 白名单 todo）；所有业务行为变更必须附带回归测试；v1.28 SHIP 后 Phase 89+ 继续推进（暂不预设功能）。
-
----
-
-## Current Milestone: v1.28 前端测试覆盖率优秀 (Frontend Test Coverage Excellence) — ✅ SHIPPED + ARCHIVED 2026-09-04 (阶段性收口 45.13%)
-
-<details>
-<summary>v1.27 ROADMAP (archived) — 点击展开</summary>
-
-**Goal:** 加权平均覆盖率 55.6% → **≥70%**(收掉 v1.26 SC-a 缺口),5 个结构阻塞包逐一攻破至 ≥70%,并修复全部 15 个 v1.26 锁定的 QUIRK。
+**问题来源（用户实机反馈 + v1.22 收档结转）:**
+- 用户主诉：「v1.22 完成后文本输入框无法一键删除等细节问题还是没有解决」——经代码核实，**根因是多行输入框（TextArea）74 处 0 覆盖 allowClear**：v1.22 的 `AppInput` 契约只包了单行 `Input`，`eslint.config.js:114` 注释又明确声明 `Input.TextArea` 成员表达式「有意不拦」，形成零约束盲区
+- 存量迁移未完成：`AppInput`/`AppSelect` 在 `src/pages/` 仅 15/13 处使用，裸 `<Input>` ~188-220 行、裸 `<Select>` ~271 行仍在 P65/P66 豁免 override 中（COMP-05 只做了试点页）
+- 7 项 debug 遗留经逐份核读，**≥4 项调查未完成**（acknowledge ≠ 已定位），第一波必须是重验 spike 而非修复 wave
 
 **Target features:**
-- 集成测试基建全量引入:miniredis(core) / 嵌入式 LDAP server(addomain) / HTTP mock(operations) / SSH fake(device) / 子进程 stub(agent-server)
-- 5 阻塞包各 ≥70%:addomain 2415 / operations 3714 / device 1249 / core 754 / agent-server 616 stmts
-- 15 项 QUIRK 全部修复(业务变更,每个带回归测试):MemoryCache IncrementBy nil-panic+静默-0 / ModelExtractor 锚定 / gmsm sm2.Decrypt panic 防御 / validateFile 无扩展名 panic / retry.containsIgnoreCase 恒 true / normalizeParentID 塌缩 等
-- ratcheted floor 随包达标逐个解除(70% 全量 floor 收口)
+- **TEXT（核心）**：`AppTextArea` 独立契约组件（allowClear 默认开启）+ SearchForm `textarea` 字段类型 + eslint 成员表达式/解构形态双 selector 拦截 + 74 处存量迁移
+- **MIG**：裸 Input/Select 全量迁移到契约组件，P65/P66 豁免清单清空、豁免块移除，契约规则对全 `src/` 生效
+- **DBG**：7 项 debug 遗留清偿（#6 scrapligo 零代码关单 / #2 Cisco 采集 / #3 MAC 格式防线 / #1 Linux 日志 / #4 迁移双执行 / #5 历史查询 / #7 工位链路）
+- **UAT**：68.1 UI-SPEC §8 全表 19 条浏览器实机冒烟（重点 #13 分页 / #15 固定列 / #16 行操作权限），结果回写关闭债务
+- **HYG**：`.planning/quick/` 94 个历史目录归属归档 + lint 清偿（unused-vars/no-console 归零、any 降 50%、`--max-warnings` 门禁）+ 权威计数基线落盘
 
-**锁定决策 (v1.27 init):**
-- **D-01 目标线**: 加权 ≥70%(v1.26 SC-a 原目标,本 milestone 收口)
-- **D-02 基建解禁**: v1.26 D-04"不引入新 mock framework"解除,全量引入测试专用 devDependencies(miniredis / LDAP test server / SSH fake 等);仍禁生产依赖变更
-- **D-03 QUIRK 全修**: v1.26 D-12"零业务变更"解除——15 项 QUIRK 全部修复,每项带回归测试 + 独立原子 commit;生产语义变更需在 SUMMARY 记录影响面
-- **D-04 防线不倒退**: v1.26 建成的 4 层 gate + diff coverage 全程保持绿;ratcheted floor 只升不降,包达标即解除对应豁免
+**关键决策 (v1.23 init):**
+- **AppTextArea 独立具名导出**，不挂 `AppInput.TextArea` 静态别名——成员表达式 selector 无法区分合法契约用法与非法裸用法，挂别名会永久放弃成员表达式拦截面、74 处收口假绿
+- 数量排期口径 = **eslint selector 实跑命中数 + 豁免清单条目数**（权威），grep 数仅供粗估（研究文档间口径 157-220 不一）
+- **DBG-03 走 Go 侧防线**（写入方枚举 + 显式 normalize + 回归测试），**不使用 DB TRIGGER**——维持 v1.19「禁用 DB TRIGGER 路线」决策，规避 SQLite 双实现成本与数据流隐式化
+- 排序约束：迁移 → 收口 → lint → UAT（UAT 必须测迁移后的页面）；后端 debug 线与前端线全程无共享文件，可并行
+- 零新依赖（前端不引 jscodeshift/Playwright，UAT 用已有 agent-browser skill；后端 scrapligo v1.4.2 现状即可）
 
-**范围边界:** 覆盖率补齐 + QUIRK 修复;不做新业务功能;SCALE-02 工具包尾巴(gormutil/query/logger)不在本期范围。
+**研究基线:** `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY}.md`（4 维并行研究，overall confidence HIGH，commit `b5b3aeaf`）
 
-**Progress (final):** Phase 75 (15 QUIRKS) ✅ · Phase 76 (5 INFRA) ✅ · Phase 77 (BLOCK-01/02 operations+agent) ✅ · Phase 78 (BLOCK-03/04/05 core+device+addomain) ✅ · Phase 79 (TAIL-01 services root) ✅ · Phase 80 (TAIL-02/03 scheduler+碎包) ✅ · Phase 81 (GATE-01/02/03 ratchet closeout + audit) ✅
+## Current Milestone: v1.22 前端公用组件整治 (Frontend Shared Component Remediation) — ✅ SHIPPED 2026-10-27
 
-**Ship metrics (CI run 33243477394 PASS):**
-- Weighted avg: 55.60% → 78.12% (+22.52pp)
-- Threshold ratchet: 55.5 → 77.5 (UP-only)
-- P2 floor 10/10 × 70% PASS
-- 3 P2_RATCHET lines removed (core/device/agent-server)
-- BLOCK packages cleared: 4/5 (BLOCK-05 addomain 58% documented exemption — 12pp gap due to go-ldap/v3 BER incompatibility, gate impact = 0)
-- TAIL-01/02/03 all cleared
-- 15 canonical QUIRKs closed + ~100 new locked (deferred to future milestones)
+**Goal:** 消化 2026-10-23 全量前端组件审查的 201 条问题（P0 24 / P1 87 / P2 90），核心是把公共层从"只有零件没有契约"补成"有契约"：默认值下沉（allowClear/showSearch）、分页契约下沉（showTotal/setTotal）、危险操作唯一入口（ConfirmDelete），使抽出的组件真正被用起来。
 
-**Archive location:** `.planning/milestones/v1.27-{ROADMAP,REQUIREMENTS}.md`
+**问题来源（已定稿的审查报告，作为本里程碑的事实基线）:**
+- 主方案：`docs/2026-10-23-前端公用组件审查与最佳实践方案.md`（677 行：量化诊断 / 根因 / ROI 矩阵 / 三层架构 / 15 条硬规则 / 四阶段路线图）
+- 分片报告：`.planning/notes/frontend-audit/{01-system,02-operations-asset-vdi,03-network-monitor,04-duty-workorder-ad}.md`（合计 201 条，全部精确到 文件:行号）
 
-</details>
+**Target features（四阶段路线图）:**
+- **P0 止血**：`usePagination.ts:122` showTotal 把总条数算成页数（51 页受害）；backups:79 / discoveries:34 `_setTotal` 从未调用（total 恒 0）；ad-domain/ous:130 固定 pageSize:100 前端分页截断；27 个业务弹窗 confirmLoading 0 命中（双击重复提交）；7 处批量删除无二次确认；3 处假功能入口（message.info 空确认、ReconciliationDrawer 永久空 Tab）；6 处 fixed 列无 scroll.x 失效
+- **P1 修复**：表格 loading / scroll / Modal maskClosable+脏检查 / 本地排序误用 / console 错误出口收敛 / aria 可访问名
+- **公共层契约组件抽取**：AppInput / AppSelect（默认值下沉，修 285 Input 仅 23% allowClear、400 Select 仅 30% 的根因）、AppTable / AppPagination、PageTable、FormModal、SearchForm、ConfirmDelete
+- **P2 一致性债务**：hex 硬编码 / 日期状态格式化 / any 收敛 / index key 等
 
----
+**关键决策 (v1.22 init):**
+- 抽取原则：抽契约不抽业务（资产选择器/部门树等业务语义组件不抽）；useDebouncedSearch 并入 RemoteSelect 不单独抽
+- 默认值必须下沉封装层，禁止逐页补 allowClear（横跨 73 文件，不可维护）
+- ConfirmDelete 成为危险操作唯一入口；危险操作必须二次确认
+- 预期收益：四片外推全前端消除约 7,000~8,000 行样板
 
-## Current State: v1.26 后端测试覆盖率优秀 — ✅ SHIPPED + ARCHIVED 2026-08-22
+## Current Milestone: v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes) — ✅ SHIPPED 2026-10-22
 
-**Audit**: [v1.26-MILESTONE-AUDIT.md](milestones/v1.26-MILESTONE-AUDIT.md) — `partial` (4/5 SC fully met + SC-a honestly shortfall-documented)
+**Goal:** 修复 AD↔系统双向同步的 2 个 P0 bug（部门回退乒乓、软删用户接管风险）、3 个 P1 数据一致性缺口和 P2 卫生项，以三方审计修订后的 outbox-lite 架构落地（≈400 行核心层），消除"改了部门又弹回"与静默数据丢失。
 
-| Milestone | Title | Phases | Plans | Items | Shipped |
-|-----------|-------|--------|-------|-------|---------|
-| **v1.26** | 后端测试覆盖率优秀 (Backend Test Coverage Excellence) | 71-74 | 34 | 19 reqs (15 ✅ + 4 partial) | **2026-08-22** |
-| **Total** | **4 phases / 34 plans / 19 items / 2 days** | | | | |
-
-**SC 状态**:
-- **SC-a** weighted ≥70%: ⚠️ **55.56%** (ratchet 12.8→21.5→25.9→55.5;+42.76pp/4.34×;缺口结构化归因 + 7 pkg P2 ratchet 守住成果)
-- **SC-b** 0%-pkg ≤5: ✅ **5** (全部入口/装配/生成代码)
-- **SC-c** threshold gate: ✅ **55.5% UP-only** (4 phase ratchet chain 落 `coverage-baseline.md`)
-- **SC-d** 0 FAIL: ✅ **65 ok / 0 FAIL / 0 panic**
-- **SC-e** PR diff ≥80%: ✅ **74-10 D-14 自实现**(market 上 gocover-diff / ory/xcoverage-action 均不可达,自实现 bash+awk,ci.yml `coverage-diff` PR-only job)
-
-**Delivered**:
-- **Phase 71**: `check-coverage.sh` (bash + awk, D-01 零依赖) + ci.yml Coverage gate step + `.coverage-threshold` + `coverage-baseline.md` 起点 row
-- **Phase 72**: P0 核心 13 plans — `api/v1/workorder 75.4%` + `api/v1/monitor 71.2%` + `api/v1/scheduler 85.5%` + `services/workorder 73.7%`;ratchet 21.5
-- **Phase 73**: P1 重要 5 plans — 8 P1 包全部 ≥70% (D-04/D-10 strict);`p1_package_check` floor exit 4;ratchet 25.9
-- **Phase 74**: P2 增量 + diff coverage 收口 — 11 plans + 74-12 escalation;P2 7/10 ≥70% + 3 UP-ONLY ratcheted;`p2_package_check` exit 5 + `coverage-diff` PR-only job;ratchet 55.5;原子 7 文件 commit (1f18e20) + SHA amend (33c8b5c)
-- **业务代码变更**: **0** (D-12 STRICT 全程;~40 个 `*_test.go` 文件)
-
-**Archive**:
-- Combined: [milestones/v1.26-ROADMAP.md](milestones/v1.26-ROADMAP.md) + [milestones/v1.26-REQUIREMENTS.md](milestones/v1.26-REQUIREMENTS.md)
-- Audit: [milestones/v1.26-MILESTONE-AUDIT.md](milestones/v1.26-MILESTONE-AUDIT.md)
-- Per-plan: `.planning/phases/74-p2-finalize-and-diff-coverage/74-{01..12}-*` (preserved for full traceability)
-
-<details>
-<summary>📜 v1.22 + v1.23 + v1.24 + v1.25 SHIPPED details (archived 2026-08-19)</summary>
-
-**Combined Launch Blocks Delivered** (audit: [v1.22-v1.25-MILESTONE-AUDIT.md](milestones/v1.22-v1.25-MILESTONE-AUDIT.md) — `passed`):
-
-| Block | Title | Phases | Plans | Items | Shipped |
-|-------|-------|--------|-------|-------|---------|
-| v1.22 | 前端品牌化改造 (Frontend Brand Design-System) | 64-67 | 4 | 15 REQ | 2026-08-18 |
-| v1.23 | 部署稳健性 & 文档一致性 (Deploy Robustness & Docs) | 68 | 1 | 5 DEPLOY-XX | 2026-08-19 |
-| v1.24 | 字典与状态值治理 (Dict & Status Governance) | 69 | 8 | 4 DICT-XX | 2026-08-19 |
-| v1.25 | 系统设置页面布局重构 (Settings Page Redesign) | 70 | 7 | 12 D-XX | 2026-08-19 |
-| **Total** | **Combined Launch Blocks** | **7** | **20** | **36 items** | **2026-08-19** |
-
-**Audit scores**: 20/20 reqs + 7/7 phases + 5/5 integration + 4/4 E2E flows
-
-## Current Milestone: v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)
-
-**Goal:** 后端 Go 加权平均测试覆盖率从 **12.8% → ≥70%(优秀等级)**,P0/P1 业务模块零测试清零,CI 落地 coverage 阈值 gate + PR diff coverage,使覆盖率从此不可无声倒退。
-
-**Target features:**
-- 治理基线 + CI gate:后端 CI 加 `-coverprofile` + 全局阈值 gate(失败即阻断)+ 基线数字落盘;pkg/cache flaky test 已修复(`5ead742`,Phase 71 直接验收)
-- P0 核心补齐:api/v1/{workorder, monitor, scheduler, system}(全 0%)+ services/{workorder 0.6%, system 10.2%} 核心业务链路
-- P1 重要补齐:api/v1/{duty, knowledge, rpa, vdi} + services/{duty, knowledge, monitor, network} 8 个零测试模块全清
-- P2 增量收尾:api/v1/{operations, asset, network} + services/{rpa, vdi} + core/device 等大块增量,把整体推到 ≥70%,启用 diff coverage ≥80%
-
-**锁定决策 (v1.26 init):**
-- **D-01 目标等级**: 整体加权平均 ≥70%(优秀)——对齐 milestone 命名与 quick-260820-bcs 扫描建议
-- **D-02 范围边界**: P0+P1 全清 + P2 增量至整体 ≥70%;纯 struct 模型 / cmd 入口 / docs 类辅助包(~2.5k stmts)不强制覆盖
-- **D-03 CI gate**: 全局阈值 gate(失败即阻断)+ PR 增量 diff coverage ≥80%,与前端 Phase 63 模式对称
-- **D-04 测试基建**: 沿用已有 glebarez sqlite in-memory,不引入新 mock framework
-- **D-05 Phase 编号**: 从 v1.25 末尾 Phase 70 续编(71+),4 phases 按扫描建议拆分
-- **D-06 Research skipped**: 覆盖率数据/模块清单/CI 现状均已落盘(quick-260820-bcs),无需域研究
-
-**规划输入:** `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`(74 业务包 / 12.8% 加权 / 33 个 0% 包 / P0-P2 分级清单 / 4-phase 拆分建议 / 5 SC 建议)
-
-**范围边界:** 仅补测试 + CI 治理,不修改业务逻辑(测试暴露的 bug 修复除外);辅助工具包(models 纯 struct / cmd main / internal/docs)不强制覆盖。
-
----
-
-## Current Milestone: v1.22 前端品牌化改造 (Frontend Brand Design-System) — ✅ SHIPPED 2026-08-18
-
-<details>
-<summary>📜 v1.22 SHIPPED details (archived)</summary>
-
-**Goal:** 把 `brand-spec.md` 的像素实测品牌令牌（深绿 `#156031` × 铜金 `#C09058` × 奶油 `#F0ECE3`）固化进 `xingran-react-frontend/src/design-system/`，让后台内部组件与登录页品牌一致，53 屏业务页面自动继承样式。
-
-**Target features:**
-- 品牌令牌层：`tokens/colors.ts` 落地 XingRan 品牌色板（绿梯度 6 阶 / 铜金梯度 4 阶 / 奶油中性 6 阶），含 OKLch + WCAG 对比度注释
-- 全局替换：废弃 6 套主题（minimal / glassmorphism / neumorphism / flat2.0 / luxury-quiet / ink-amber）与 ThemeSwitcher / ColorSwitcher，单一品牌视觉
-- Antd 6 主题桥：`AntdThemeBridge.tsx` 的 token/component 覆盖全量接品牌令牌
-- 清除品牌冲突色：`#4F46E5` indigo 主按钮 → `--primary` 绿底白字；`#F1F5F9` 冷蓝灰表头 → `#E9EFEB` 绿灰淡彩；`#FEF3C7` 由按钮前景改回淡黄标签底
-- 侧边栏深绿化：现浅色 → `#14532D` 底 + `#E0E0B0` active 强调
-- 通用组件样式统一：表格（表头 / 斑马纹 / 边框）、表单、卡片、按钮体系（按钮纪律：铜金不做实心主按钮，`#C09058` 上白字仅 2.85:1 不达标）
-- 对比度门禁：关键前景/背景对满足 WCAG AA
-
-**素材来源:** `655aa291-9bfe-4e94-ad5d-b3c8b2d24984/` — `brand-spec.md`（像素实测令牌 + 对比度验证）、`admin-design-plan.md`（现状侦察 + 品牌化缺口定位）、53 张高保真 HTML 原型屏、`PROTOTYPE-VS-ACTUAL.md` 差异清单、`refs/` 真实系统截图。
-
-**范围边界（用户决策 v1.22 init）:** **仅 design-system 层**。业务页面自动继承样式，不逐屏改造 53 屏；`PROTOTYPE-VS-ACTUAL.md` 里的字段 / 表头 / 路由差异修正转 Future。
-
-**锁定决策 (v1.22 init):**
-- **D-01 主题策略**: 全局替换，不保留多主题 —— 品牌令牌直接写入 `tokens/` + `index.css` + `AntdThemeBridge`，移除主题切换能力（用户明确选择，不可逆）
-- **D-02 品牌基准**: `brand-spec.md` 为唯一色值来源，标注「实测」的直接采用，「推导」的可微调但需重跑对比度验证
-- **D-03 按钮纪律**: 主按钮一律 `--primary` 绿底白字（7.64:1）；铜金仅作点缀 / 描边 / 图标 / 图表系列，实心场景必须 `#B88850` + ≥16px 半粗体白字
-- **D-04 Phase 编号**: 从 v1.21 末尾 Phase 62 续编（63+）
-
-**Phase 编号:** 从 v1.21 末尾 Phase 62 续编（63+）。
-
-**已 SHIPPED 2026-08-18** — 详见 [milestones/v1.22-ROADMAP.md](milestones/v1.22-ROADMAP.md) + [milestones/v1.22-REQUIREMENTS.md](milestones/v1.22-REQUIREMENTS.md)
-
-</details>
-
----
-
-## v1.22 + v1.23 + v1.24 + v1.25 启动块 (Combined Launch Blocks) — ✅ SHIPPED + ARCHIVED 2026-08-19
-
-**Audit**: [v1.22-v1.25-MILESTONE-AUDIT.md](v1.22-v1.25-MILESTONE-AUDIT.md) — `passed` (20/20 reqs + 7/7 phases + 5/5 integration + 4/4 E2E flows)
-
-**Goal**: 四个连续启动块一次性落地 — 品牌化(design-system 层)+ 部署稳健性(SM2 闭环)+ 状态/字典治理(单一真相源)+ 系统设置重构(对齐 v1.22 品牌)。7 phases / 20 plans / 36 items 全部 delivered。
-
-**Target features / 工作池:**
-
-- **v1.22 (Phases 64-67) — Frontend Brand Design-System** — 把 `brand-spec.md` 像素实测品牌令牌固化进 design-system;移除 6 套主题;硬编码色扫描;6 屏视觉确认
-  - 品牌令牌层:`tokens/colors.ts` `xingranBrand`(绿 6 / 铜金 4 / 奶油 9 + OKLch + WCAG)+ `index.css` 253 变量 + `AntdThemeBridge` 全量映射
-  - 主题收敛:删除 6 套主题(minimal/glassmorphism/neumorphism/flat2.0/luxury-quiet/ink-amber)与 ThemeSwitcher/ColorSwitcher;保留 light/dark + layoutStore 布局/密度切换
-  - 组件样式:侧边栏深绿化(`#14532D`)+ 表格/卡片双层纸感 + 按钮纪律 D-03(主按钮 `#156031` 绿底白字)
-  - QA:对比度自动验证 + 硬编码色扫描 lint/CI 门 + 构建回归 + 6 屏前后视觉确认
-- **v1.23 (Phase 68) — Deploy Robustness & Docs Consistency** — 闭环 SM2 密钥配置部署稳健性
-  - DEPLOY-01:17 处 XINGRAN_JWT_SM2 → JWT_SM2(与 BindEnv 一致)
-  - DEPLOY-02:setup-server.sh secrets.env 补 SM2 密钥对段(非对称,不能动态生成)
-  - DEPLOY-03:gen_sm2_keys header 注释路径修正
-  - DEPLOY-04:getPublicKey 500 时 WARN 日志(useSM2/sm2PublicKeyLoaded 状态)+ 2 个最小 getter
-  - DEPLOY-05:sqlite use_sm2 默认值与 prod 一致(`true`) + 6 行迁移指引
-- **v1.24 (Phase 69) — Dict & Status Governance** — 状态语义单一真相源
-  - DICT-01:internal/models 状态常量作为语义真相源;94 常量 AST 锁值测试;白名单 ratchet 守护(终态 1 条 F 簇豁免 geocoding)
-  - DICT-02:migration_208 字典 seed 11 组(8 组 archive 重建 + ops_workstation_type/sys_user_sex/duty_holiday_type 新增)
-  - DICT-03:前端 4 页 type 下拉 useDict 迁移(user/workstations/holidays/devices)+ status.ts 共享常量(7 文件引用)
-  - DICT-04:CLAUDE.md Status Value Convention 改指向常量真相源(删 6 行表格)
-- **v1.25 (Phase 70) — Settings Page Layout Redesign** — 系统设置页对齐 v1.22 品牌
-  - D-01/D-03/D-04:SettingsShell 布局(左分类 + 右内容)+ URL `?cat=` 驱动 + `<lg` Segmented 降级
-  - D-02 混合宽度:表格/网格类撑满 + 用户设置 760px
-  - D-05 两页同构:系统设置 + 用户设置共用 SettingsShell.tsx
-  - D-06 行式设置项:label+描述+右对齐控件 + 即改即存
-  - D-07 v16 范式:统计卡 + 品牌工具栏 + `.xr-table-zebra` 双层纸感
-  - D-08 网格墙:验证码 `.xr-captcha-grid` + status 反转语义(1=启用)
-  - D-09:5 个 Modal 容器结构与宽度不变
-  - D-10:工作区 default-theme 清理 13 文件(+42/-717)首提交入库
-  - D-11:三个 settings 目录合并 + Migrate208 sys_menu 迁移 + 菜单缓存失效
-  - D-12:settings 范围内死目录 / dead actions / preset Tag / persisted activeTab 键 / fallback 硬编码色清零
-
-**锁定决策 (combined):**
-
-- v1.22 D-01..D-05:全局替换不保留多主题(不可逆)+ brand-spec.md 唯一色值源 + 按钮纪律绿底白字 + Phase 64 续编 + 仅 design-system 层
-- v1.23:DEPLOY-01~05 闭环 SM2 配置链路;live user-managed configs/config.yaml + .env 由运维手工迁移(phase 范围外)
-- v1.24:internal/models 为状态常量唯一真相源;type/category 真枚举 → sys_dict;前端 constants.tsx → useDict + status.ts 共享常量;CLAUDE.md 指针化
-- v1.25:D-01..D-12 全部 PASS — SettingsShell 共用骨架 / 混合宽度 / URL 驱动 / Segmented 降级 / 行式即改即存 / v16 范式 / 网格墙 / Modal 契约不变 / default-theme 清理 / 目录合并 + Migrate208 / 残留清零
-
-**回归性质:** 启动块序列组合,各自独立 + 局部依赖(v1.25 依赖 v1.22 品牌基线;其他独立)。v1.22 是纯 design-system 层重构;v1.23 是部署/文档稳健性修复;v1.24 是状态语义治理;v1.25 是设置页布局重构(对齐 v1.22 品牌理念)。
-
-**Phase 编号:** 从 v1.21 末尾 Phase 62 续编(63+)。Phase 63「前端工具链自动化」独立 IN PROGRESS,提供 CI / lint / 测试基建。
-
-**范围边界(用户决策各 init):**
-
-- v1.22 仅 design-system 层 — 业务页面自动继承样式,不逐屏改造 53 屏;PROTO 逐屏对齐与 VIS 视觉深化转 v1.23+ Future
-- v1.23 仅 6 个 `*.example.yaml` + docs + scripts;live 配置由运维手工迁移
-- v1.24 守 F 簇(geocoding 百度地图 API 外部契约)永久豁免
-- v1.25 仅前端布局重构,不改业务逻辑与 API 契约
-
-**Status:** ✅ SHIPPED + ARCHIVED 2026-08-19
-
-**归档:**
-
-- Combined: [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md)
-- Per-block:milestones/v1.22-*, v1.23-*, v1.24-*, v1.25-*(完整 phase 细节保留)
-
----
-
-## v1.21 API Key 认证链修复 (API Key Auth Chain Repair) — ✅ COMPLETE 2026-08-17
-
-**Goal:** 修复 API Key 认证系统的 P0/P1/P2 缺陷,回归 v1.6「API 密钥管理系统」(Phase 16)的可用性与可观测性,并让 MultiAuth 认证链代码就绪可启用。
+**背景:** 三份独立 subagent 审计（架构/代码核对/魔鬼代言人）确认 11 项 bug 属实，并否决了时间戳仲裁（GORM 自动刷新 updated_at 使其恒失效）与完整 Outbox/FieldRule 引擎（过度设计），形成修订方案。
 
 **Target features / 修复项:**
-- 修复 `setUserContextForAPIKey` 类型断言恒 false(P0-2)— API Key 上下文无法写入 gin context
-- 消除 `MultiAuth`/`RequireScope`/`RequireAPIKeyResourcePermission`/`RateLimitByScope` 死代码,使认证链代码就绪(P0-1)
-- 修复前端 `getAPIKey`/`updateAPIKey`/`deleteAPIKey` 与后端 POST 路由契约不匹配导致的 404(P1-1)
-- 修复使用日志记录时机导致 `successRate` 永久失真(P1-2)— 在 `c.Next()` 前记录致 Success/StatusCode/Duration 全零值
-- 修 P2:限流响应头 `string(rune(int))` 编码错误、使用日志 ctx 取消竞态、密钥明文存储评估、`idx_api_keys_key` 与 uniqueIndex 重复索引
+- **ad_push_queue (outbox-lite)**：`user_service.Update` 同事务入队 + in-process cron 排水（不进 sys_job）+ 按实体合并 dedupe —— 解决重启丢推送、dedupe 丢弃、为登录守卫提供信号源
+- **排水 compare-and-move**：闭包内重读最新值 → 目标 OU 归一化比较（NormalizeDN）→ 不等才 MoveUser（结构性修 F1，幂等，规避激活未验证重试分支）；`ErrADTargetNotFound` → 终态
+- **登录守卫**：登录写 dept 前查该用户 pending/failed 队列行 → 有则跳过覆盖 + WARN（替代被证死的时间戳仲裁）
+- **F2 软删恢复安全**：ad_dn 校验后恢复（不一致拒绝+审计）；sys 删除用户 → 入队 disable AD 账号（闭环复活链路）
+- **影子表删除清理**：挂 syncDataInternal（复用 singleflight）+ 两道闸门（0 条拒绝 / >50% 拒绝）+ 覆盖组成员关系
+- **组成员同步事务化**（Delete+Create 包 Transaction）
+- **对账视图**：普通 SQL VIEW `v_dept_ou_mismatch`（禁用 MV）+ 只读端点；含"映射指向软删部门"条目
+- **死代码清理**：user_ou_service.go 整文件 + GetUserDeptByADOU + BatchMoveUsersToNewOU + 过期注释（dept_ou_mapper.go:31 等）
+- **P2 卫生**：First() 确定性/按 ad_dn 路由配置、OU DN 转义 helper、嵌套组 member 标记、同名兄弟部门 OU DN 冲突、getDefaultADConfigID 去重、sqlite 测试补建表
 
-**范围边界(用户决策 v1.21 init):** **全修复 + 就绪** — 修复全部 P0/P1/P2 确定性缺陷,MultiAuth 代码修好可接入;「是否在生产路由挂载 MultiAuth(即 X-API-Key 认证是否真正生效)」作为 phase 内 discuss 决策点,含安全影响评估。研究阶段跳过(回归修复,代码与问题均已调查清楚)。
+**关键决策 (v1.21 init，三方审计裁决):**
+- 归属契约：代码内映射 struct + 注释（不建 FieldRule 表驱动引擎）；email/phone/displayName = write-through 委托写
+- 时间仲裁：弃用（GORM updated_at 自动刷新致恒失效）→ 信号守卫
+- FK 约束：后置可选（软删语义收益低）→ 应用层清理映射替代
+- uSNChanged 增量同步：挂起（性能优化非正确性）
+- 对账视图用 VIEW 禁用 MV（避免 MV 刷新僵尸/AutoMigrate 阻塞前科）
 
-**回归性质:** 对 v1.6「API 密钥管理系统」(Phase 16 / 2026-05-19 / 10 plans)的回归修复,非新能力。涉及文件:`internal/middleware/apikey.go`、`internal/api/router.go`、`internal/api/v1/system/apikey_router.go`、`internal/services/usage_logger.go`、`internal/services/rate_limiter.go`、`internal/services/system/apikey_service.go`、前端 `src/api/apikey.ts`、migration `migration_085_api_keys.go`。
+**前置条件（已满足 2026-10-16）:** ✅ 1641 个未提交文件已分 5 组提交并合入 main（`ced2d75b..31c7eee8`），已推送 origin（gitcode.com/ninedrunk/go_react），工作区干净。
 
-**Phase 编号:** 从 v1.20 末尾 Phase 56 续编(57+)。
+**Phase 57 已完成（2026-10-16/17，v1.21 首个 phase）:** ad_push_queue 基建落地——migration_215（部分唯一索引谓词单一事实源 `models.ADPushQueueActivePredicate`）+ **五条**写路径同事务入队（Update / UpdateStatus / Delete / BatchDelete / profile.UpdateUserInfo，后两条分别为 GAP-01/GAP-02 补接）+ disable 压制同实体 pending update_user（F-01）。code review F-01~F-06 全修（变异验证可红）+ verifier 独立复核 GAP-01/02/03 闭环。VERIFICATION 判定 `human_needed`：PG 实机合并路径 / kill -9 重启耐久 / AD UAC 533 闭环三项留档 `57-HUMAN-UAT.md`。Phase 58 移交待决项（两条遗留直推路径处置、ad_config_id 取舍、F-07~F-16）已落 ROADMAP。
 
-**Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
+**Archived:** `.planning/milestones/v1.21-ROADMAP.md` + `.planning/milestones/v1.21-REQUIREMENTS.md` + `.planning/milestones/v1.21-MILESTONE-AUDIT.md`（里程碑审计 passed：6 phase VERIFICATION 全 passed、19/19 REQ、8/8 集成点 VERIFIED、E2E 流 A-D 全通过）
 
-**Phase 53 (2026-07-07)**: W4 frontend layer complete — 6 port-write API wrappers (`networkApi.ts`) + 3 TS types mirroring backend `portwrite` Go structs (`types/network.ts`) + shared constants (`port-write/constants.ts`) + `PortWriteModal` (5 single-port actions, reason Select+TextArea, description special-case, audit-link Toast) + `BulkWriteDrawer` (select→executing→result state machine, indeterminate Spin per D-05, three Statistic cards, retry-only-failed per D-06) + `ports/index.tsx` wiring (`useMenuStore` canWrite gating per D-09, operation column, batch-config button, `batchInProgress` disables refresh+collect per D-07/LANDMINE #4) + `monitor/logs` URL query `?module=` prefetch. 8/8 must-haves verified, zero gaps. Code review found 2 BLOCKERs (CR-01/CR-02: BulkWriteDrawer retry `deviceId` snapshot drift → potential cross-device write) — fixed in commit `9b01cc68` (cache `lastDeviceId` + `lastInterfaceMap` at submit). WR-02 (custom-reason validator signature) deferred to Phase 54 UAT. Real-device/browser UAT deferred to Phase 54 (W5) per v1.18 Phase 48 site-visit precedent. `npm run build` exit 0, vendor-react gzip 774.96 kB (zero regression vs Phase 48 baseline 776 kB).
+## Current State (2026-10-28)
 
-**Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
+- **Shipped**: v1.0 ~ **v1.24** — v1.24 = Phases 76-83（8 phases），**18/18 requirements satisfied**，SHIPPED & ARCHIVED 2026-10-28。46 commits / 104 files / +5,419 −2,232，约 3.5 小时（09:19 需求定稿 → 12:59 收口）。归档：`milestones/v1.24-ROADMAP.md` + `milestones/v1.24-REQUIREMENTS.md` + `milestones/v1.24-phases/`。
+- **当前里程碑**: **v1.25 全站权限治理与样式收敛** — INITIATED 2026-10-28，五项候选全部立项（①操作级 RBAC 全站治理 / ②antd 6 variant 收敛 / ③权限模型三缺口 / ④Phase 77 视觉新发现 / ⑤room-devices 815 行拆分），执行顺序 ①→②。
+- **v1.24 终态**：用户主诉「输入框双重外框」根治（309 个输入框，双框元素数 3→0）；#16 行操作权限越权闭环（只读角色写接口 200 真删 → 403 拒绝）；lint 存量 51 → 0 problems 且门禁归零；devices 页 714 → 306 行；生产库验收夹具已清理、既有行零改动。
+- **v1.25 起点基线**：前端 76 个页面（index.tsx），仅 14 个接入 `useMenuStore.permissions`；后端 76 个路由组 / 134 处 `RequirePermissions` 挂载，`pkg/permission/config.go:223-289` 动作级映射表已定义未接线；`room-devices/index.tsx` 815 行；CSS `!important` 1359 处 / 219 行 antd 选择器。
+- **v1.22 终态**：前端公共层从"只有零件没有契约"补成"有契约"——AppInput/AppSelect 默认值下沉（allowClear/showSearch）、ConfirmDelete 危险操作唯一入口（68 处收口）、PageTable/FormModal/RemoteSelect 契约内建、hex/日期/any 三类债务收敛、handleApiError 唯一错误出口。
+- **v1.22 遗留（→ v1.23）**：TextArea 74 处零 allowClear 覆盖（用户主诉根因）+ 裸 Input/Select 存量迁移未完成（P65/P66 豁免 override 仍在）+ 7 项 debug acknowledge（≥4 项调查未完成）+ 浏览器实机 UAT 债 + `.planning/quick/` 94 个历史目录 + lint 1367 warnings / 83 errors。
+- **构建状态**：`go build ./...` clean；`go test ./internal/services/addomain/ ./internal/api/v1/... ./internal/scheduler/` 全绿；`go vet` 仅存量 `internal/core/security/ad_authenticator_test.go:159 unreachable code`（非本次影响面）。前端基线：eslint 0 problems / vitest 569 文件 3960 用例全绿 / vendor-react gzip 776 kB。
+- **v1.22 终态**：前端公共层从"只有零件没有契约"补成"有契约"——AppInput/AppSelect 默认值下沉（allowClear/showSearch）、ConfirmDelete 危险操作唯一入口（68 处收口）、PageTable/FormModal/RemoteSelect 契约内建、hex/日期/any 三类债务收敛、handleApiError 唯一错误出口。
+- **v1.22 遗留（→ v1.23）**：TextArea 74 处零 allowClear 覆盖（用户主诉根因）+ 裸 Input/Select 存量迁移未完成（P65/P66 豁免 override 仍在）+ 7 项 debug acknowledge（≥4 项调查未完成）+ 浏览器实机 UAT 债 + `.planning/quick/` 94 个历史目录 + lint 1367 warnings / 83 errors。
+- **构建状态**：`go build ./...` clean；`go test ./internal/services/addomain/ ./internal/api/v1/... ./internal/scheduler/` 全绿；`go vet` 仅存量 `internal/core/security/ad_authenticator_test.go:159 unreachable code`（非本次影响面）。
+- **（v1.21 历史）生产实锤**：全量同步轮 user_count=4177、error_count=0、67 组；嵌套组成员污染 8→0（重放自愈）；AD 部门变更 ≤30s 推送并 compare-and-move 落位（NormalizeDN 幂等短路）；登录回写守卫双半段（拦截 / 正常覆盖）与软删 DN 漂移拦截均端到端验证。
+- **（v1.21 历史）Phase 62 引入的生产回归已修复**：全嵌套组过滤后 kept 为空 → GORM ErrEmptySlice 中止整轮 → 补早返回 + 回归用例 + 二进制重建发版（14:22）→ 14:35 轮 full success。
 
+## Next Milestone Goals（v1.26 候选）
 
-## Current Milestone: v1.19 网络设备写命令 (Network Device Write Operations)
+**v1.24 结转的 5 笔候选债 → 已全部立项为 v1.25（2026-10-28 用户裁定，五条全纳入，执行顺序 ①→②）**：
 
-**Goal:** 补全网络设备"读+写"闭环——Web 端通过 SSH 直接对目标设备下发端口配置命令（启停/描述/dot1x），成功后立即采集一次端口信息回填审计。
+1. **操作级 RBAC 全站治理** — 108 页面 + 340 路由；`roles/menus/depts/posts` 4 组 ANY-of 拆分（逐动作清单已备）+ `pkg/permission/config.go` 死表接线 + 动作级 F 型菜单播种（当前 devices 等模块因无菜单种子而无法授予动作级权限）→ **v1.25 RBAC 线**
+2. **样式层收敛到 antd 6 variant**（方案 C）— 需先重构 AntdThemeBridge 明暗色板（F3：`colorBgContainer` 硬编码 `#FFFFFF`，darkAlgorithm 不改写显式 token）→ **v1.25 STYLE 线**
+3. **权限模型三缺口** — `data_scope` 未被列表查询消费（实测 data_scope=3 仍返回 total=4231 跨部门）/ `GetUserPermissions` 不过滤 `menu.status`（停用菜单权限仍进前端权限集）/ Step 2「子菜单继承」语义易写反；附带生产库无迁移记录表 + GORM schema 漂移 → **v1.25 PMODEL 线**
+4. **Phase 77 视觉新发现** — 暗色 `--input-bg` 第 3 处就地重定义（`index.css:4807`）/ 暗色 Select 白底导致同页两套边框体系 / `.dept-tree-search` 死规则 / antd 6 弃用警告 2 类 / InputNumber 错误态仍灰 → **v1.25 VISFIX 线**
+5. **room-devices 页拆分** — 815 行，比已拆的 devices 更长 → **v1.25 SPLIT 线**
 
-**Target features / 工作池:**
-- SSH 写命令基础设施（基于 Scrapli + 厂商命令模板映射）
-- 多厂商命令模板：Huawei + H3C + 锐捷（Cisco 后续 phase）
-- Web UI：端口列表 + 设备详情 + 批量操作对话框（单 + 批量）
-- 改后采集触发链路（复用 v1.18 DeviceInfoCollectionService）
-- 操作审计（operlog.Record 强制约定 + 操作结果回传前端）
-- 权限控制（perms 命名空间 network:port:write）
-- MVP 范围：端口启停（shutdown/undo shutdown）、端口描述（description）、dot1x 启停
-- 批量执行：串行失败即停（避免大批量配置错误）
+**更早的 deferred（继续挂账）**：
 
-**锁定决策 (v1.19 init):**
-- 策略：device_id 直连（复用现有凭据库），不引入 device_ip 临时建连
-- 命令模板：硬编码 vendor→template map（落地为先，后续 phase 抽象为数据库）
-- 厂商支持：Huawei / H3C / 锐捷（MVP），Cisco 后续
-- 改后采集：复用 DeviceInfoCollectionService.enqueue（v1.18 资产）
-- 操作回滚：MVP 仅"失败即停 + 回传失败点"，暂不实现自动回滚配置
+以下候选源自 v1.21/v1.22 收口审计与历史 deferred，**v1.23/v1.24 均未纳入**：
 
-**与 v1.18 关系：** v1.18（已 ship）补"读"——板卡/chassis/elabel/接口状态采集；v1.19 补"写"——端口配置下发。两者一起构成网络设备"读+写"完整闭环。
-
-**Replaces v1.19 原候选范围：** 真机 site-visit UAT 闭环 / 残余 deferred debug / VDI 22C/22D 推后到 v1.19+ follow-up phase。
+1. **AD 方向补齐** — ad_push_queue 目前只有 update_user / disable 两个动作方向，缺 enable（软删用户恢复后重新启用 AD 账号），见 `.planning/seeds/SEED-ad-push-enable-direction.md`。
+2. **同组管理员 OU 写权限** — 域控 ACL 导致同组管理员互相改 OU 报 LDAP Result Code 50，属域控侧策略（已裁决不作为代码缺陷），若要放开需域控授权流程。
+3. **残留现场 UAT 债** — v1.18（3 项真机 SNMP/CLI）+ v1.19（6 项 SSH）+ v1.20（12 项 VLAN/绑定 site-visit）仍为 deferred，需现场运维同事执行后回写 UAT。
+4. **全量同步节流** — 3 小时全量 cron（sync_interval=10800）+ 失败后每 5 分钟 tick 重试，重试风暴与节流策略可优化。
+5. **同步可观测性** — 把 v1.21 期间用于捕获重放窗口漂移的采样脚本（`scripts/uat61-t1-poller-v5.ps1`）产品化为常态化的同步漂移告警。
+6. **v1.23 明确延后项**（用户裁定 2026-10-27）— react-refresh 33 处清零 / devices 页 692 行拆分 / 三态组件（Empty/Skeleton/ErrorAlert）推广：均非质量缺陷，本轮做会挤占迁移主线上下文并放大回归面。
 
 ## Active: v1.17 资产对账 (Asset Reconciliation) — SHIPPED 2026-07-03
 
@@ -441,11 +252,11 @@ previous_update: 2026-09-11 v1.33 started — V133 前端性能治理（2 HIGH +
 
 **Todo:** .planning/todos/pending/v1.17-reconciliation-decisions.md (T1-T30)
 
-# XingRan-Next 运维管理系统
+# RuoYi-Next 运维管理系统
 
 ## What This Is
 
-XingRan-Nect is a Go backend + React frontend enterprise IT operations
+RuoYi-Nect is a Go backend + React frontend enterprise IT operations
 management system. It has evolved from a workstation-import
 association feature (v1.0) into a multi-domain platform covering:
 
@@ -506,6 +317,12 @@ estate.
   - R4 工位详情：健康度卡片 + ReconciliationDrawer 3 Tab
   - R5 半自动修复：6 状态机 + 7d 回滚 + 误修复率告警三通道
 - ✓ **Phase 47 根因修复** (infoPoint drift / Layer3 UPSERT / port_status 漂移 / MAC parser 校验) — 2026-07-03
+- ✓ **v1.24 视觉回归修复与遗留债务清偿** (Visual Regression Fix & Legacy Debt Clearance) — Phases 76-83 — 2026-10-28 (8 phases, 18/18 REQ satisfied, 46 commits / 104 files / +5,419 −2,232 in ~3.5h)
+  - 双框根治：affix-wrapper 内层复位块（6 项、无 box-shadow，焦点环归 wrapper）+ status 还原；**双框元素数 3 → 0**（harness 42 行 + 15 真实页 + 登录页，明暗双测）；错误态恢复品牌红
+  - CSS 一致性审计登记册 36 条（P0 已修 8 / P1 待修 7 / P2 登记 19 / 保留 1 / 样板 1）
+  - #16 前后端双端闭环：严格权限中间件（跳过 F 型继承与模块降级）+ `/system/users` 读组/写组**兄弟分离** + 三态门控 + 权限码单一真相源；三层证据（DB 前后对照 / HTTP 8/8 403 含决定性对照 / 组件测试 7/7）
+  - F5 刷新回退修复（红绿验证）+ 3f130 空因诊断展示 + lint 51 → 0 problems + devices 714 → 306 行
+  - **Phase 77 反查出 Phase 76 自身的 P0 死规则**（antd 6 status class 名误用 → 错误态不变红），契约检查同步升级为双向断言
 - ✓ **v1.18 网络设备硬件清单** (Device Component Serials) — Phase 48 — 2026-07-04 (1 phase / 3 plans / 3 waves, 14/14 D-id 覆盖 + 3 site-visit UAT 推迟)
   - Wave 1 Schema：migration_201 给 `ops_asset` 加 4 列 (parent_asset_id / source_device_id / component_type / component_slot) + `sys_data_reconciliation.recon_category`
   - Wave 2 Collectors：`internal/services/component_collector/` 17 文件包,SNMP ENTITY-MIB 单 GET + Ruijie `temprature*` 噪声过滤 + Huawei dual-class 去重 + OwnerResolver stack containtedIn tree + Huawei/Ruijie CLI 双厂商 + 6 TextFSM 模板
@@ -517,13 +334,91 @@ estate.
   - W4 Frontend: PortWriteModal 5-action unified Modal + BulkWriteDrawer select→executing→result 状态机 (D-05 indeterminate Spin 不伪造 X/Y) + ports/logs 页 useMenuStore canWrite gating + audit-link Toast + monitor/logs URL query 预填 + vendor-react gzip 774.96 kB 零回归
   - W5 E2E + UAT Deferral + Docs: scrapligo FileTransport 10 TestE2E_* (闭环 Phase 51 mockDeviceExecutor 不调 fn 漏洞) + API响应规范 + 安全设计 + CHANGELOG/README/MILESTONES/STATE 文档同步 + 54-HUMAN-UAT.md 7 项 deferred (owner = 现场运维同事)
   - Phase 55 Tech-Debt Cleanup: WR-02 antd validator 3-param signature + IN-01 instanceof Error narrowing + IN-02 eslint-disable placement 修正 (Lesson: directive 紧贴 `}, []);` 而非 useEffect 开头) + HealthCard.test.tsx regex match + CR-02 后端 batch_orchestrator.go fallback port 归属跨层防御 (纵深双保险)
-- ✓ **v1.22 + v1.23 + v1.24 + v1.25 启动块 (Combined Launch Blocks)** — Phases 64-70 — 2026-08-18 → 2026-08-19 (7 phases / 20 plans / 36 items, audit `passed` 20/20 reqs + 7/7 phases + 5/5 integration + 4/4 E2E flows)
-  - v1.22 (Phases 64-67): 253 CSS 变量 + xingranBrand 11 键 + AntdThemeBridge + 6 主题移除 + 硬编码扫描 + 6 屏视觉确认(15/15 reqs)
-  - v1.23 (Phase 68): 17 处 XINGRAN_JWT_SM2 → JWT_SM2 + setup-server.sh SM2 段 + getPublicKey 可观测 + sqlite use_sm2 默认(5/5 DEPLOY-XX)
-  - v1.24 (Phase 69): 94 状态常量 AST锁值 + 11 字典 seed + 4 页 useDict 迁移 + CLAUDE.md 指针化(4/4 DICT-XX)
-  - v1.25 (Phase 70): SettingsShell 共用骨架 + 14 .xr-* 选择器 + 行式即改即存 + Migrate208 sys_menu 迁移(12/12 D-XX)
 
 ### Active
+
+#### v1.25 全站权限治理与样式收敛（当前里程碑）
+
+> REQ-ID 已于需求定义阶段定稿；权威清单见 `.planning/REQUIREMENTS.md`（共 **22** 条）。
+> ⚠️ **计数更正（2026-10-28 roadmap 阶段）**：本行原写「共 25 条」、REQUIREMENTS.md 原写「26 total」，二者均与该文档**实际的 22 条需求条目**（RBAC×6 + STYLE×5 + PMODEL×4 + VISFIX×6 + SPLIT×1 = 22，已全量 grep 复核）不自洽 —— 磁盘上不存在第 23-26 条需求条目。Roadmap 按 **22 条**映射（22/22 全覆盖）。
+
+**RBAC — 操作级权限全站治理**
+- [ ] **RBAC-01**: 只读角色在任意业务模块调写接口一律 403 且无数据变更（写路由逐动作单一权限点，去 ANY-of）
+- [ ] **RBAC-02**: 前端 76 页面操作入口按动作级权限码三态渲染（无权限不渲染 / 未就绪禁用+提示）
+- [ ] **RBAC-03**: `pkg/permission/config.go` 动作映射表真实接线并可校验（未登记的写路由 → 校验失败）
+- [ ] **RBAC-04**: `system` 域其余 4 组（roles/menus/depts/posts）写操作 ANY-of → 逐动作单一权限点
+- [ ] **RBAC-05**: 动作级 F 型菜单播种，权限可被真实授予（前端可见性与后端放行同源）
+- [ ] **RBAC-06**: 权限码单一真相源三方零漂移，校验脚本覆盖新铺开面并接入 CI 门禁
+
+**STYLE — 样式层收敛到 antd 6 variant**
+- [ ] **STYLE-01**: `AntdThemeBridge` 明暗色板重构（品牌 token 交算法派生，暗色容器不再白底）
+- [ ] **STYLE-02**: 手写 antd 覆盖规则按四批清单收敛（可删批清零 / 可降级批替换 / 需重写批重写 / 必须保留批登记）
+- [ ] **STYLE-03**: 输入类组件圆角统一 6px → 8px 设计 token
+- [ ] **STYLE-04**: hex 治理覆盖 `.css`（现 eslint selector 只匹配 JS/TS 节点），收敛期不新增硬编码色
+- [ ] **STYLE-05**: 明暗双主题下与 antd 官方渲染一致（computed-style 断言 + 截图矩阵），且不破坏 VIS-01/02/03
+
+**PMODEL — 权限模型三缺口**
+- [ ] **PMODEL-01**: `data_scope` 被列表查询真实消费（data_scope=3 不再返回跨部门全量）
+- [ ] **PMODEL-02**: `GetUserPermissions` 过滤 `menu.status`（停用菜单权限码不进前端权限集）
+- [ ] **PMODEL-03**: Step 2「子菜单继承」语义文档化并以明确命名/注释固化
+- [ ] **PMODEL-04**: 迁移记录表补齐（版本可核对）+ GORM schema 漂移项登记为显式债务
+
+**VISFIX — Phase 77 视觉新发现**
+- [ ] **VISFIX-01**: 暗色输入框底色不再被 `--input-bg` 第 3 处就地重定义覆写（对比度达标）
+- [ ] **VISFIX-02**: 暗色 Select 容器底色与边框随色板派生（与 STYLE-01 联动）
+- [ ] **VISFIX-03**: `.dept-tree-search` 死规则清理
+- [ ] **VISFIX-04**: antd 6 弃用警告 2 类清零（`onSearch→showSearch` / `Modal maskClosable→mask.closable`）
+- [ ] **VISFIX-05**: InputNumber 错误态边框色还原
+- [ ] **VISFIX-06**: CSS 契约脚本自身修复（`css-contract-assertions.js` 错误态 fixture 用了 antd 6 不存在的 class → VIS-03 动态断言从未真正通过；`css-contract-check.js` C3b 反转 + 新增 C6-C15 断言）
+
+**SPLIT — 巨型文件拆分**
+- [ ] **SPLIT-01**: `room-devices/index.tsx` 815 行按 devices 页范式拆分，主文件 ≤ 350 行，每新文件 ≤ 250 行，行为零变化
+
+#### v1.24 视觉回归修复与遗留债务清偿（已 SHIPPED 2026-10-28）
+
+- [x] **VIS-01**: affix-wrapper 内层复位，消除全站 309 个输入框的双重外框
+- [x] **VIS-02**: 焦点环单圈化（边框与焦点环唯一归 wrapper）
+- [x] **VIS-03**: Form 错误态边框色还原（status → colorError）
+- [x] **VIS-04**: 全局 CSS 与 antd 6 变体的一致性审计登记册（36 条）
+- [x] **VIS-05**: 浏览器实机视觉回归验证（21 形态 × 明暗矩阵 + 15 页巡检 + 17 张证据）
+- [x] **PERM-01**: ActionButton 契约扩可选 permission 字段（加法，v1.19 冻结面对外形状不变）
+- [x] **PERM-02**: 三态权限门控 helper（ready/loading/error，禁用 permissions.length===0 判未就绪）
+- [x] **PERM-03**: 系统用户页操作入口按权限码门控
+- [x] **PERM-04**: 后端严格权限中间件（不做模块降级）+ /system/users 写操作拆独立子组
+- [x] **PERM-05**: 受限角色 PG 实机验收（HTTP 8/8 写接口 403 + 对照实验）
+- [x] **PERM-06**: 权限码映射表单一真相源 + 双向漂移校验脚本
+- [x] **DIAG-01**: 3f130 工位物理链路空因诊断前端展示（Table+Alert 分级）
+- [x] **NAV-01**: F5 刷新保留当前落地页（catch-all 语义区分 + LAST_PATH 防自毁反写）
+- [x] **HYG-01**: ColumnConfigModal:136 豁免理由注释补齐
+- [x] **HYG-02**: lint errors + warnings 清零（51 → 0 problems）
+- [x] **HYG-03**: react-refresh 33 处清零
+- [x] **HYG-04**: devices 页拆分（714 → 306 行）
+- [x] **HYG-05**: 豁免理由表全量同步（159 → 38）并接入 lint:ci
+
+#### v1.23 前端契约全量收尾与遗留清偿（已 SHIPPED 2026-10-28）
+
+- [ ] **TEXT-01**: 用户在任意表单弹窗的多行输入框（备注/描述/原因）能一键清空内容，无需手动逐字删除
+- [ ] **TEXT-02**: 存量 74 处多行输入框全部接入 AppTextArea 契约，行为一致
+- [ ] **TEXT-03**: 搜索区（SearchForm/PageTable）支持多行输入字段类型
+- [ ] **TEXT-04**: 裸多行输入框被 eslint 拦截（成员表达式 + 解构形态双覆盖）
+- [ ] **MIG-01**: 存量裸 `<Input>` 全部改用 AppInput 契约
+- [ ] **MIG-02**: 存量裸 `<Select>` 全部改用 AppSelect 契约
+- [ ] **MIG-03**: P65/P66 豁免清单清空、豁免块移除，契约规则对全 `src/` 生效
+- [ ] **MIG-04**: 迁移不破坏 v1.22 冻结契约（分页口径 / ConfirmDelete 唯一入口 / handleApiError / statusHelpers）
+- [ ] **DBG-01**: scrapligo GetPrompt nil panic 经人工验证无复现后关单
+- [ ] **DBG-02**: Cisco 设备 MAC 地址采集支持厂商模板（验收用例 `b022.7a2e.4a4f`）
+- [ ] **DBG-03**: MAC 地址格式问题不再复发（写入方枚举 + 显式 normalize + 回归测试）
+- [ ] **DBG-04**: Linux 环境应用日志正常落盘
+- [ ] **DBG-05**: MAC 历史迁移任务不重复执行（cron 共享引擎改动须过全 scheduler 测试套件）
+- [ ] **DBG-06**: MAC 历史查询返回正确结果
+- [ ] **DBG-07**: 工位 3F130 物理链路为空可区分空因状态（可诊断）
+- [ ] **UAT-01**: 68.1 UI-SPEC §8 回归清单 19 条浏览器实机全部通过
+- [ ] **UAT-02**: UAT 结果回写 68.1 UI-SPEC §8 并带证据，债务不再无主结转
+- [ ] **HYG-01**: `.planning/quick/` 94 个历史任务目录归属判定与归档
+- [ ] **HYG-02**: lint `no-unused-vars` + `no-console` 归零
+- [ ] **HYG-03**: lint `no-explicit-any` 降低 50%
+- [ ] **HYG-04**: lint `--max-warnings` 门禁纳入 npm script 防回退
+- [ ] **HYG-05**: 权威计数基线落盘（eslint 命中数 + 豁免清单条目数）
 
 ## Current Milestone: v1.19 网络设备写命令 (Network Device Port Write Operations) — SHIPPED 2026-07-08
 
@@ -623,6 +518,9 @@ See `.planning/ROADMAP.md` for current state + `.planning/MILESTONES.md` for shi
 - **仪表盘系统统一** — 保留两套系统：固定监控仪表盘（/monitor/dashboard）和可配置仪表盘（/dashboard-system）
 - 复杂图表类型（3D 图表、地图）— 超出本期范围
 - 告警规则配置 — 属于监控系统，非仪表盘核心
+- **roles/menus/depts/posts 4 组 ANY-of 拆分** — 与 #16 同族但属「全站治理」范围，v1.24 只闭环 system/user 一个模块（写路由逐动作清单已登记待用）
+- **3f130 绑定 user_id 数据修复** — 用户裁定本里程碑只做前端诊断展示，不写生产数据
+- **room-devices 页拆分** — 本轮只拆 devices（714→306），room-devices 815 行登记为候选债
 - Zabbix 告警集成 — 超出本期范围
 
 ## Context
@@ -697,6 +595,15 @@ See `.planning/ROADMAP.md` for current state + `.planning/MILESTONES.md` for shi
 | BATCH-05 indeterminate Spin MVP (v1.19 W4 D-05) | 诚实进度，不伪造 X/Y；批量同步阻塞无后端推送 | ⚠ Revisit (FUTURE-11 SSE/WS) |
 | execSinglePort DRY helper (v1.19 W3) | 5 单端口 handler 公共流程合并；operlog.Record 物理调用点 6→2，语义等价 | ✓ Good |
 | eslint-disable placement 教训 (v1.19 W4 Phase 55) | directive 紧贴 `}, []);` 而非 `useEffect(` 开头 | — Pending (Pattern doc) |
+| 双框修根因而非遮盖 (v1.24) | 用户裁定「修根因 + CSS 一致性审计」；审计全局 `!important` 与 antd 6 结构冲突面，不做一处覆盖了事 | ✓ Good (双框 3→0，登记册 36 条) |
+| CSS 复位块不写 box-shadow (v1.24) | 焦点环归 wrapper（antd 内层 `box-shadow:none!important` 特异性 0,4,1 自足）；写 box-shadow 会与焦点环叠加出双圈 | ✓ Good (焦点环单圈实测确认) |
+| `:not(组合子)` 禁用 (v1.24) | CSS3 下整条规则静默丢弃 → 必须用 `.ant-input-affix-wrapper > input.ant-input` | ✓ Good |
+| #16 双病灶同时修 (v1.24) | 组级 ANY-of + 模块级降级叠加；只藏前端按钮 = 假修复（API 直调仍可写） | ✓ Good (DB 前后对照 8/8 翻转) |
+| gin Group 继承父组中间件链 → 写组必须是兄弟组 (v1.24) | 写组若挂在读组之下，读组 ANY-of 仍放行写操作，病灶① 不会被修掉 | ✓ Good (实施方识破 Lead 规格中的此错) |
+| 三态门控禁用 `permissions.length===0` 判未就绪 (v1.24) | 空权限集与未加载完在数据上不可区分 → 接口失败时管理员也看不到按钮且无提示 | ✓ Good (组件测试 A6-3 证明两者可区分) |
+| hydrate 路径须同步置 permissionsLoaded (v1.24) | 直接 setState 绕过 setPermissions → 硬刷新后所有操作按钮在 API 返回前一直 disabled | ✓ Good (Phase 83 实测发现根因) |
+| CSS status class 用 antd 6 真实名 (v1.24) | antd 把 status class 打在 wrapper 自身（`ant-input-status-error`）；`ant-input-affix-wrapper-status-error` 在 antd 6 不存在 = 永不命中的死规则 | ✓ Good (契约检查升级为双向断言) |
+| 契约检查须校验「能命中」而非「规则存在」 (v1.24) | Phase 76 的 C5 校验的正是死规则 → 检查通过而规则从未生效 | ✓ Good (Lesson) |
 
 ## Constraints
 
@@ -785,10 +692,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-09-14 — v1.33 SHIPPED 2026-09-14：**7 phases (114-120) / 23 plans / 38/38 requirements / all phases complete**。Next: `/gsd:new-milestone` to start next milestone. Previous: 2026-09-11 v1.33 started；Previous: 2026-09-09 v1.32 started；v1.31 SHIPPED 2026-09-08；v1.30 SHIPPED 2026-09-07；v1.29 SHIPPED 2026-09-06；v1.28 SHIPPED 2026-09-04。*
-
----
-
-## Previous Milestone Footer (v1.21 close)
-
-*Last updated: 2026-08-13 — Phase 59「可观测性 / 使用日志修复」COMPLETE (2/2 plans, OBSERV-01/02/03 验证 8/8 must-haves passed; 7 commits e0f4611/2dcb041/e4c80fa/c35e675/7643578/10e5bb1/644bc94 + tracking 66a3d34)。v1.21 API Key 认证链修复 milestone 进行中 (Phase 60-61 待执行)。Phase 58 (CONTRACT-01 前后端路由方法对齐) 已 commit 1978935。v1.20 网络设备 VLAN + 端口绑定 SHIPPED 2026-07-10 (Phase 56 / 5 plans / 5 waves). v1.19 网络设备写命令 SHIPPED 2026-07-08 (Phases 50-55, 6 phases / 9 plans, 37/37 MVP requirements).*
+*Last updated: 2026-10-28 after v1.25 milestone INITIATED（全站权限治理与样式收敛：①操作级 RBAC 全站治理 / ②antd 6 variant 收敛 / ③权限模型三缺口 / ④Phase 77 视觉新发现 / ⑤room-devices 815 行拆分，五条全纳入，执行顺序 ①→②）*
