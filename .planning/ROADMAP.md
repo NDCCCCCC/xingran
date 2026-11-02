@@ -29,7 +29,7 @@
 - [x] Phase 126: Cisco IOS-XE 第 4 厂商 + 跨固件差异矩阵 (PWX-03) — completed 2026-11-01
 - [x] Phase 127: 审计 UI + 审计治理 + 3 厂商 e2e + handler e2e (PWX-04/05/06 + DEBT-02) — completed 2026-11-01
 - [x] Phase 128: 平台质量收口 — addomain 测试 / RPA Token / operlog 白名单 / permission 时序 / 排序菜单注册 (DEBT-01/03/04/05 + TIDY-01/03) — completed 2026-11-01
-- [ ] Phase 129: 目录改名 + 双线 planning 合流 + UAT 回补组织（需窗口与真机）(DEBT-06 + TIDY-02) — **阻塞：待设备窗口**（华为 S8700 / 锐捷 RS8607E / H3C 必需，Cisco 可选）
+- [x] Phase 129: 目录改名 + 双线 planning 合流 + UAT 回补组织（DEBT-06 + TIDY-02）— ✅ **已完成**：真机 UAT（华为 11 + 锐捷 12 动作，设备零残留）｜DEBT-06 前端目录改名（1355 文件 rename）｜TIDY-02 UAT 回补组织 + Phase 90 登录态巡检闭合（40 组合实跑 + 42 张截图）｜附带清除远端 265 个含密文件 + 口令脱敏
 
 **执行波次记录：** W1 零依赖（121 → 122/128 并行）→ W2 需设备（123 → 124/125）→ W3（126 → 127）→ W4 收尾（129，需真机）
 

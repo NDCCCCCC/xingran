@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -386,3 +387,72 @@ func writeYAML(tb testing.TB, content string) string {
 	}
 	return path
 }
+
+// ====================== TIDY(v1.51 follow-up):select 分支确定性测试 ======================
+//
+// 背景：ctx 取消与本地文件读取完成可能同时 ready，select 随机选分支导致
+// TestLoadAPIMetadata_ContextCanceled 偶发失败（PR #45 CI）。实现修复为
+// 「入口前置检查 + select 内取消优先（读已完成则以读结果为准）」。
+// 本组用例经 readFileFn 注入可控读取源（阻塞/放行），不赌调度时序地
+// 逐一锁定三个分支：
+//   A. 入口前置 ctx.Err() → 不发生文件读取
+//   B. select 内取消优先（读取未完成）→ 取消错误
+//   C. 读完成优先分支：无法确定性构造，见文末说明
+
+// TestLoadAPIMetadata_EntranceGuard_EntryBranch 分支 A：入口前置检查命中，
+// 且不发生任何文件读取（path 指向不存在的文件——若实现读了文件会返回
+// 读取错误而非取消错误）。
+func TestLoadAPIMetadata_EntranceGuard_EntryBranch(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := LoadAPIMetadata(ctx, filepath.Join(t.TempDir(), "no-such-file.yaml"))
+	if err == nil {
+		t.Fatal("已取消 ctx 应返回错误")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("应包装 context.Canceled, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "读取API元数据配置已取消") {
+		t.Fatalf("错误信息应含取消提示, got %v", err)
+	}
+}
+
+// TestLoadAPIMetadata_CancelWinsWhileReading 分支 B：读取未完成时取消 → 取消错误。
+// 同步点：readFileFn 被调用 = goroutine 已启动（入口检查已过），在其内部先
+// cancel 再阻塞——select 时 ctx.Done 必 ready 且 readCh 必空 → 确定性走取消。
+func TestLoadAPIMetadata_CancelWinsWhileReading(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	started := make(chan struct{})
+	release := make(chan struct{})
+	once := sync.Once{}
+
+	orig := readFileFn
+	readFileFn = func(string) ([]byte, error) {
+		once.Do(func() {
+			cancel() // 读取已开始（入口检查已过），此刻取消
+			close(started)
+		})
+		<-release // 阻塞：读取永不完成
+		return nil, nil
+	}
+	t.Cleanup(func() {
+		readFileFn = orig
+		close(release) // 释放可能仍在阻塞的读取 goroutine
+	})
+
+	_, err := LoadAPIMetadata(ctx, filepath.Join(t.TempDir(), "any.yaml"))
+	if err == nil {
+		t.Fatal("读取未完成时取消应返回取消错误")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("应包装 context.Canceled, got %v", err)
+	}
+	<-started // 确保 cancel 发生在读取进行中（防用例空转）
+}
+
+// 分支 C（读已完成则以读结果为准）说明：该 nested 路径只在 select 随机选中
+// ctx.Done 且此刻 readCh 恰有值时进入——调度随机性使其无法在不赌时序的前提下
+// 确定性构造（同步注入会导致入口短路或读取 goroutine 死锁，见 90s 超时实测）。
+// 其语义由实现内嵌套 select 结构保证（readCh 缓冲 1，nested 探测非空必取读
+// 结果），风险面为「多读一次已完成文件」，无正确性影响。

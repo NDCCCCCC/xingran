@@ -408,3 +408,24 @@ switchport hybrid native vlan ?  → <1-4094>  Vid
 | `GE1/1`（在用工位口，9 行基线） | 全程未变 ✅ |
 | `RS8607E-01` 的 GE1/25 | 配置 93 bytes 未变 ✅（hybrid 从未设上） |
 | 新建 VLAN | 仅 3990，已删除 ✅ |
+
+### 锐捷 hybrid 最终形态实跑闭环（2026-11-02，产品渲染 + 还原的一次完整验证）
+
+用**产品自身的渲染与写路径**（riguat 走 `portcollection.RenderCommand` + `portwrite` 预检/快照/执行/还原链路）实跑，验证 (i)+(i-a) 落地后的最终形态：
+
+| 核查项 | 结果 |
+|---|---|
+| 设备 / 口 | `CX-WH-WH-47F-FL-RS8607E-01`（RG8607E 10.62.63.47）`GE1/25`（基线 32 bytes 空口） |
+| 下发参数 | `--hybrid-untagged 3992,3993`（**故意不预建 VLAN**） |
+| 动作后接口配置 | `switchport mode hybrid` + `switchport hybrid allowed vlan only tagged 2-3991,3994-4094` + `switchport hybrid allowed vlan add untagged 1,3992-3993` |
+| untagged 多值 | ✅ 落地，设备写成区间形式 `1,3992-3993`（**多 untagged 被设备接受**） |
+| tagged 补集 | ✅ 设备自动补集（untagged 之外全进 tagged），产品**不下发** tagged 命令 |
+| 还原 | ✅ **一次收敛**（尝试 1 轮、失败 0 条）；`switchport mode access` 模式回退后 diff 为空 |
+| VLAN 表 | ✅ 与基线一致（设备自动创建的 3992/3993 由还原阶段自动 `no vlan` 清理） |
+| 接口状态 | ✅ down / vlan 1，回到原值 |
+
+**⇒ 两条结论**：
+1. **锐捷 hybrid 不需要预建 VLAN** —— 设备在设置 untagged 时自动创建对应 VLAN；产品无需在渲染层要求「VLAN 先存在」，但**还原必须清理自动创建出来的 VLAN**（本次由还原引擎的「基线无、还原后多出 ⇒ `no vlan` + 二次采集确认收敛」覆盖 ✅）
+2. **锐捷 hybrid 不做 VLAN 收敛**（untagged 之外自动 tagged）—— 这是「产品 `HybridTagged` 参数在锐捷无设备侧对应物」的根因；产品按 (i)+(i-a) 处理：**只下发 untagged，用户若提交 tagged 则明确报错**（不静默丢弃）
+
+**设备残留终检（全部通过 ✅）**：`GE1/25` = 32 bytes（与基线逐行一致）｜VLAN 表无 3990-3999 ｜接口状态 down/vlan1 ｜`GE1/1` 在用工位口 9 行基线全程未变

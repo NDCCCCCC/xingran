@@ -242,10 +242,12 @@ func fullMatrixRequest(vendor models.DeviceVendor, action Action) PreviewRequest
 		HybridTagged:   []int{30},
 		HybridUntagged: []int{10, 20},
 	}
-	// 锐捷 hybrid 的 native 是单值（真机形态 switchport hybrid native vlan <id>，
-	// 2026-11-02 取证）⇒ untagged 只能给 1 个，否则渲染层按设备形态限制拒绝。
+	// ★ 2026-11-02 产品口径 (i)（lead 拍板，依据第三次真机取证 + 补验）：
+	//   锐捷 hybrid 是自动补集语义 ⇒ **不下发 tagged**（tagged 在锐捷无设备侧
+	//   对应物，提交 tagged 会被 ErrActionNotSupported 拒绝）⇒ 锐捷侧清空 tagged。
+	//   untagged 允许多个（补验⑤：多 untagged 被设备接受，设备写成区间形式）。
 	if vendor == models.VendorRuijie {
-		req.HybridUntagged = []int{10}
+		req.HybridTagged = nil
 	}
 	// portsec_disable 需要"已启用"pre-state 才不 NoOp（与既有用例同口径）
 	_ = action

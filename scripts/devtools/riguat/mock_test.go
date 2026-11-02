@@ -23,6 +23,16 @@ import (
 )
 
 // mockRuijie 模拟锐捷 RGOS 的接口配置状态机。
+//
+// ★ mock 的边界（2026-11-02 实跑后明确）：mock 只模拟**命令语义**
+//
+//	（设备是否接受该命令、该命令是否落地配置行），**不模拟设备的自动改写行为** ——
+//	真机事实：下发 untagged 3992,3993 后，设备自行把配置改写成
+//	  switchport hybrid allowed vlan only tagged 2-3991,3994-4094
+//	  switchport hybrid allowed vlan add untagged 1,3992-3993
+//	（自动补集 + 区间形式 + 自动并入 PVID）。那是**设备侧行为**，由真机取证覆盖；
+//	mock 若去模拟它，反而会让"产品下发形态"与"设备落盘形态"在自测里混为一谈。
+//	⇒ 断言一律针对**产品下发的形态**（如 "switchport hybrid allowed vlan untagged ..."）。
 type mockRuijie struct {
 	lines    []string        // 当前接口配置行
 	inIface  bool            // 是否处于接口视图
@@ -564,7 +574,10 @@ var idleBaseline = []string{}
 func hybridParamsForTest() actionParams {
 	p := actionParamsForTest()
 	p.BaselineVLAN = 1
-	p.HybridTagged = []int{3990}
+	// ★ 锐捷 hybrid 是自动补集语义（2026-11-02 真机 + 补验，产品口径 (i)）：
+	//   只下发 untagged，**不下发 tagged**（tagged 在锐捷无设备侧对应物，
+	//   提交 tagged 会被产品层以 ErrActionNotSupported 拒绝）。
+	p.HybridTagged = nil
 	p.HybridUntagged = []int{3991, 3992}
 	p.HybridNative = 3993
 	return p
@@ -657,8 +670,9 @@ func TestHybridMultiUntaggedAccepted(t *testing.T) {
 	if strings.Contains(joined, "allowed vlan only untagged") {
 		t.Errorf("untagged 不得带 only（真机回显 Invalid input）: %s", joined)
 	}
-	if !strings.Contains(joined, "switchport hybrid allowed vlan only tagged 3990") {
-		t.Errorf("tagged 渲染形态不对（必须带 only）: %s", joined)
+	// ★ 产品口径 (i)：锐捷侧不下发 tagged（自动补集语义，tagged 无设备侧对应物）
+	if strings.Contains(joined, "allowed vlan only tagged") || strings.Contains(joined, "allowed vlan tagged") {
+		t.Errorf("锐捷侧不得下发 tagged 命令: %s", joined)
 	}
 	if !strings.Contains(joined, "switchport hybrid native vlan 3993") {
 		t.Errorf("native 渲染形态不对: %s", joined)
@@ -822,7 +836,7 @@ func TestHybridOnlyKeywordRequired(t *testing.T) {
 	if res2.Failed {
 		t.Fatalf("带 only 的形态必须被接受: %s", res2.Output)
 	}
-	if len(m2.lines) != 1 || !strings.Contains(m2.lines[0], "only tagged 3990") {
+	if len(m2.lines) != 1 || !strings.Contains(m2.lines[0], "switchport hybrid allowed vlan only tagged 3990") {
 		t.Errorf("带 only 的形态必须落地配置行: %v", m2.lines)
 	}
 
@@ -838,7 +852,9 @@ func TestHybridOnlyKeywordRequired(t *testing.T) {
 	if r4.Failed {
 		t.Fatalf("untagged（不带 only）必须被接受: %s", r4.Output)
 	}
-	if len(m4.lines) != 1 || !strings.Contains(m4.lines[0], "untagged 3992") {
+	// ★ 精确整行断言（lead 2026-11-02 建议）：子串 "untagged 3992" 会同时匹配
+	//   "only untagged 3992" ⇒ 用完整命令形态断言，渲染层改动才能精确反映到断言上。
+	if len(m4.lines) != 1 || !strings.Contains(m4.lines[0], "switchport hybrid allowed vlan untagged 3992") {
 		t.Errorf("untagged（不带 only）必须落地配置行: %v", m4.lines)
 	}
 }
