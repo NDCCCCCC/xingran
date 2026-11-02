@@ -198,31 +198,32 @@ func parseVlanList(s string) []int {
 
 func main() {
 	var (
-		cfgPath        string
-		envFile        string
-		backendPID     int
-		procRoot       string
-		deviceName     string
-		ifaceShort     string
-		actionName     string
-		outFile        string
-		vlan           int
-		mac            string
-		ip             string
-		desc           string
-		maxMac         int
-		timeout        time.Duration
-		apply          bool
-		probe          bool
-		batch          bool
-		forceContinue  bool
-		maxRestore     int
-		scanIdleFlag   bool
-		scanModel      string
-		hybridTagged   string
-		hybridUntagged string
-		hybridNative   int
-		dbCheckFlag    bool
+		cfgPath           string
+		envFile           string
+		backendPID        int
+		procRoot          string
+		deviceName        string
+		ifaceShort        string
+		actionName        string
+		outFile           string
+		vlan              int
+		mac               string
+		ip                string
+		desc              string
+		maxMac            int
+		timeout           time.Duration
+		apply             bool
+		probe             bool
+		batch             bool
+		forceContinue     bool
+		maxRestore        int
+		scanIdleFlag      bool
+		scanModel         string
+		hybridTagged      string
+		hybridUntagged    string
+		hybridNative      int
+		probeTrunkAllowed bool
+		dbCheckFlag       bool
 	)
 	flag.StringVar(&cfgPath, "config", "/app/szh/configs/config.yaml", "后端 config.yaml 路径")
 	flag.StringVar(&envFile, "sm4-env-file", "", "SM4_KEY 环境变量文件路径（如 /proc/<pid>/environ）")
@@ -241,6 +242,7 @@ func main() {
 	flag.IntVar(&maxRestore, "max-restore", 3, "还原自证最大尝试轮数（≥2）")
 	flag.BoolVar(&apply, "apply", false, "真正下发（默认只打印将下发的命令，不连设备）")
 	flag.BoolVar(&probe, "probe", false, "只读探测模式（接口视图 ? 帮助查询，零配置变更）")
+	flag.BoolVar(&probeTrunkAllowed, "probe-trunk-allowed", false, "锐捷 trunk allowed 第二层取证探针（仅 ? 帮助与 show 采集，含零残留核查）")
 	flag.BoolVar(&batch, "batch", false, "批次模式：依次跑完 12 个动作，任一还原失败立即停止")
 	flag.BoolVar(&forceContinue, "force-continue", false, "基线偏离权威基线时不停止（默认停止）")
 	flag.BoolVar(&scanIdleFlag, "scan-idle", false, "只读扫描空闲候选测试口（仅查库，不连设备、不改配置）")
@@ -347,6 +349,17 @@ func main() {
 		ch := newExecChannel(db, cipher)
 		defer ch.Close()
 		runProbe(ctx, ch, dev, cliIface, rep, timeout)
+		rep.save()
+		return
+	}
+
+	// ---------- 锐捷 trunk allowed 第二层取证探针（仅只读） ----------
+	if probeTrunkAllowed {
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+		defer cancel()
+		ch := newExecChannel(db, cipher)
+		defer ch.Close()
+		runTrunkAllowedProbe(ctx, ch, dev, cliIface, rep, timeout)
 		rep.save()
 		return
 	}

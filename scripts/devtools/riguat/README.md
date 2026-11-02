@@ -222,6 +222,30 @@ switchport hybrid native vlan 3993                ← native 单值（可选，�
 > hybrid **不在 `--batch` 批次里**：它会改变端口转发模式，且需要显式 VLAN 参数，
 > 必须由人指定口与 VLAN 后单独跑。
 
+## 锐捷 trunk allowed 第二层取证探针（只读）
+
+```bash
+./riguat --device CX-WH-WH-47F-FL-RS8607E-01 --port GE1/25 \
+         --probe-trunk-allowed \
+         --config /app/szh/configs/config.yaml --backend-pid $PID \
+         --out /tmp/riguat-trunk-allowed.log
+```
+
+**只读由工具强制**（不靠人自觉）：
+
+| 保障 | 机制 |
+|---|---|
+| 只放行帮助查询与只读采集 | 白名单 `isReadOnlyProbeCmd`：只放行**以 `?` 结尾**与 **`show ` 前缀**；`switchport ... 3990` / `no ...` 等写形态**一律拒绝**（测试锁定） |
+| 零残留核查 | 探测**前后**各采集一次「接口配置块（字节数 + 行数）」+「VLAN ID 集合」，不一致即告警并打印探测后回显 |
+| 原始回显不改写 | 逐条原样输出 `?` 回显（只去 ANSI 色与提示符行） |
+| 结论不预设 | 只输出判读表骨架（命令 / 是否被接受 / 参数格式 / 判读），由人填 |
+
+探针命令表（9 条，全部 `?` 结尾）：`switchport trunk ?`、`... allowed ?`、
+`... allowed vlan ?`、`... allowed vlan add ?`、`... remove ?`、`... replace ?`、
+`... allowed vlan 3990 ?`、`... all ?`、`... none ?`。
+
+判读要点与判读表见 `.planning/phases/130-device-evidence/130-RUIIJIE-TRUNK-ALLOWED.md`。
+
 ## 安全红线
 
 - 只操作一个测试口（`--port`，默认 `GE1/1`），工具不做多口操作；
