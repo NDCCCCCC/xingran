@@ -13,8 +13,13 @@ import (
 
 // ====================== Phase 126 (PWX-03) Cisco IOS-XE 测试 ======================
 
-// TestCiscoRender_14Actions Cisco 全动作渲染（hybrid 拒绝）+ cleanup。
-func TestCiscoRender_14Actions(t *testing.T) {
+// TestCiscoRender_SupportedActions Cisco **已支持**动作的渲染 + cleanup。
+//
+// ★ 2026-11-02 裁定：Cisco 的 trunk/hybrid（三个动作）现在被能力矩阵
+// **显式标 Unsupported**（依据：渲染层未实现 + 无真机取证依据）
+// ⇒ 它们不在本用例的成功列表里，由 TestCiscoTrunkActionsRejectedWithReason
+// 单独断言《拒绝 + 失败原因》。
+func TestCiscoRender_SupportedActions(t *testing.T) {
 	actions := []Action{
 		portcollection.ActionShutdown,
 		portcollection.ActionUndoShutdown,
@@ -23,8 +28,6 @@ func TestCiscoRender_14Actions(t *testing.T) {
 		portcollection.ActionDot1xDisable,
 		portcollection.ActionSetAccessVLAN,
 		portcollection.ActionPortBinding,
-		portcollection.TrunkSetNative,
-		portcollection.TrunkSetAllowed,
 		portcollection.PortSecEnable,
 		portcollection.PortSecDisable,
 		portcollection.PortSecMaxMac,
@@ -44,18 +47,18 @@ func TestCiscoRender_14Actions(t *testing.T) {
 			}
 			svc := newTestService(&countingExecutor{}, nil, db)
 			result, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
-				DeviceID:    "device-cisco",
-				Action:      action,
-				PortIDs:     []string{"port-cisco"},
-				Description: "desc-x",
-				VLANID:      100,
-				BindOp:      "add",
-				IPAddress:   "192.168.1.10",
-				MACAddress:  "AA:BB:CC:DD:EE:FF",
-				NativeVLAN:  10,
+				DeviceID:     "device-cisco",
+				Action:       action,
+				PortIDs:      []string{"port-cisco"},
+				Description:  "desc-x",
+				VLANID:       100,
+				BindOp:       "add",
+				IPAddress:    "192.168.1.10",
+				MACAddress:   "AA:BB:CC:DD:EE:FF",
+				NativeVLAN:   10,
 				AllowedVLANs: []int{10, 20},
-				AllowedMode: portcollection.AllowedModeAdd,
-				MaxMacCount: 5,
+				AllowedMode:  portcollection.AllowedModeAdd,
+				MaxMacCount:  5,
 			}, "tester")
 			require.NoError(t, err)
 			pr := result.Ports[0]
@@ -135,11 +138,53 @@ func TestCiscoVendorInWritePipeline(t *testing.T) {
 	exec := &countingExecutor{}
 	// executeWrite 成功路径：mock 不调 fn → responses 空 → success
 	svc := newTestService(exec, nil, db)
-	result, err := svc.TrunkWrite(context.Background(), "port-cw", portcollection.TrunkSetNative,
-		TrunkParams{NativeVLAN: 10}, "tester")
+	// ★ 2026-11-02：改用 Cisco **支持**的动作（set_access_vlan），保住本用例
+	// 「Cisco 走完整写管线（NoOp/锁/预检/快照共用）」的测试意图；
+	// Cisco 的 trunk/hybrid 已被矩阵显式拒绝（见下一用例）。
+	result, err := svc.SetAccessVlan(context.Background(), "port-cw", 100, "tester")
 	require.NoError(t, err)
 	assert.Equal(t, "succeeded", result.Status)
 	assert.Equal(t, 1, exec.calls, "实跑恰一次 ExecuteCustom（写+回滚共用计数中回滚未触发）")
+}
+
+// TestCiscoTrunkActionsRejectedWithReason Cisco 的 trunk/hybrid 被矩阵**显式拒绝**，
+// 且失败原因必须说清楚（lead 2026-11-02 要求：补上失败原因断言）。
+//
+// 为何不能只锁「会失败」：原先的行为是报「未知动作」（ErrUnknownAction）
+// —— 用户看到「未知动作」会误以为是缺陷。现在明确为「该厂商不支持该动作」。
+//
+// 依据也要诚实：写的是「渲染层未实现 + 无真机取证依据」，
+// 而不是伪造的「真机证明不支持」。
+func TestCiscoTrunkActionsRejectedWithReason(t *testing.T) {
+	for _, action := range []Action{
+		portcollection.TrunkSetNative,
+		portcollection.TrunkSetAllowed,
+		portcollection.TrunkSetHybrid,
+	} {
+		t.Run(string(action), func(t *testing.T) {
+			db := newTestDB(t)
+			seedPreviewDevice(t, db, models.VendorCisco)
+			exec := &countingExecutor{}
+			svc := newTestService(exec, nil, db)
+
+			_, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
+				DeviceID: "device-cisco", Action: action,
+				PortIDs:    []string{"port-cisco"},
+				NativeVLAN: 10, AllowedVLANs: []int{10, 20},
+				AllowedMode:    portcollection.AllowedModeAdd,
+				HybridUntagged: []int{10},
+			}, "tester")
+
+			require.Error(t, err, "Cisco 的 trunk/hybrid 必须被显式拒绝")
+			assert.ErrorIs(t, err, portcollection.ErrActionNotSupported,
+				"必须是 ErrActionNotSupported（handler 映射 400），不是 ErrUnknownAction")
+			assert.Contains(t, err.Error(), "无真机取证依据",
+				"失败原因必须说明「无真机取证依据」（不伪造真机结论）")
+			assert.Contains(t, err.Error(), "渲染层未实现",
+				"失败原因必须说明「渲染层未实现」")
+			assert.Equal(t, 0, exec.calls, "能力矩阵拒绝不得触发任何设备连接")
+		})
+	}
 }
 
 // TestPreviewRejectsUnsupportedOnS8700 Phase 129 真机修复端到端：

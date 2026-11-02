@@ -27,6 +27,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -80,10 +82,25 @@ func sendReadCmd(w *device.ScrapliWrapper, cmd string) (string, error) {
 }
 
 // hasDeviceError 判断回显里是否含设备侧错误标记。
+//
+// ★ 2026-11-02 真机实跑修正：锐捷业务级错误（互斥/冲突）是**不含 % 前缀**的自然语言
+// 整行，例如：
+//
+//	Can not operate on interface Gi1/25. Conflict with IEEE 802.1X.
+//
+// 旧实现只匹配 markers 里的 "% ..." 与思科串 ⇒ 这类错误全部漏判 ⇒ 工具报假 OK。
+// 现在补两层：
+//  1. markers 增加锐捷业务错误串（Invalid input / Can not operate / Conflict with…）；
+//  2. **行首 %** 判定（设备错误前缀）——用行首而非全文 contains，避免误伤帮助文本。
 func hasDeviceError(out string) bool {
 	clean := sanitizeOutput(out)
 	for _, m := range deviceErrorMarkers {
 		if strings.Contains(clean, m) {
+			return true
+		}
+	}
+	for _, l := range strings.Split(clean, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(l), "%") {
 			return true
 		}
 	}
@@ -157,27 +174,57 @@ type actionRunResult struct {
 	BaseOK   bool     // 动作前基线与权威基线一致
 }
 
+// parseVlanList 解析逗号分隔的 VLAN 列表（"3990,3991" → []int{3990,3991}）。
+// 空串返回 nil（表示该参数未指定）。
+func parseVlanList(s string) []int {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	var out []int
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		n, err := strconv.Atoi(part)
+		if err != nil {
+			continue
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
 func main() {
 	var (
-		cfgPath       string
-		envFile       string
-		backendPID    int
-		procRoot      string
-		deviceName    string
-		ifaceShort    string
-		actionName    string
-		outFile       string
-		vlan          int
-		mac           string
-		ip            string
-		desc          string
-		maxMac        int
-		timeout       time.Duration
-		apply         bool
-		probe         bool
-		batch         bool
-		forceContinue bool
-		maxRestore    int
+		cfgPath                      string
+		envFile                      string
+		backendPID                   int
+		procRoot                     string
+		deviceName                   string
+		ifaceShort                   string
+		actionName                   string
+		outFile                      string
+		vlan                         int
+		mac                          string
+		ip                           string
+		desc                         string
+		maxMac                       int
+		timeout                      time.Duration
+		apply                        bool
+		probe                        bool
+		batch                        bool
+		forceContinue                bool
+		maxRestore                   int
+		scanIdleFlag                 bool
+		scanModel                    string
+		hybridTagged                 string
+		hybridUntagged               string
+		hybridNative                 int
+		probeTrunkAllowed            bool
+		probeTrunkAllowedInTrunkMode bool
+		dbCheckFlag                  bool
 	)
 	flag.StringVar(&cfgPath, "config", "/app/szh/configs/config.yaml", "后端 config.yaml 路径")
 	flag.StringVar(&envFile, "sm4-env-file", "", "SM4_KEY 环境变量文件路径（如 /proc/<pid>/environ）")
@@ -196,9 +243,49 @@ func main() {
 	flag.IntVar(&maxRestore, "max-restore", 3, "还原自证最大尝试轮数（≥2）")
 	flag.BoolVar(&apply, "apply", false, "真正下发（默认只打印将下发的命令，不连设备）")
 	flag.BoolVar(&probe, "probe", false, "只读探测模式（接口视图 ? 帮助查询，零配置变更）")
+	flag.BoolVar(&probeTrunkAllowed, "probe-trunk-allowed", false, "锐捷 trunk allowed 第二层取证探针（仅 ? 帮助与 show 采集，含零残留核查）")
+	flag.BoolVar(&probeTrunkAllowedInTrunkMode, "probe-trunk-allowed-in-trunk-mode", false,
+		"锐捷 trunk allowed 取证探针（**受控写**：先切 trunk 模式查关键字、查完必定还原为 access）")
 	flag.BoolVar(&batch, "batch", false, "批次模式：依次跑完 12 个动作，任一还原失败立即停止")
 	flag.BoolVar(&forceContinue, "force-continue", false, "基线偏离权威基线时不停止（默认停止）")
+	flag.BoolVar(&scanIdleFlag, "scan-idle", false, "只读扫描空闲候选测试口（仅查库，不连设备、不改配置）")
+	flag.BoolVar(&dbCheckFlag, "db-check", false, "诊断：打印 config.yaml database 段解析结果（不打印密码）")
+	flag.StringVar(&scanModel, "scan-model", "RS8607", "空闲口扫描的设备 model 关键字")
+	flag.StringVar(&hybridTagged, "hybrid-tagged", "", "hybrid 动作：tagged VLAN 列表（逗号分隔，如 3990,3991）")
+	flag.StringVar(&hybridUntagged, "hybrid-untagged", "", "hybrid 动作：untagged VLAN 列表（逗号分隔）")
+	flag.IntVar(&hybridNative, "hybrid-native", 0, "hybrid 动作：native VLAN 单值（0 = 不设）")
 	flag.Parse()
+
+	// ---------- 诊断：db-check ----------
+	if dbCheckFlag {
+		cfg, err := loadDBConfig(cfgPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(3)
+		}
+		rep := &report{out: outFile}
+		runDBCheck(cfg, rep)
+		rep.save()
+		return
+	}
+
+	// ---------- 只读空闲口扫描（不需要设备名、不连设备） ----------
+	if scanIdleFlag {
+		cfg, err := loadDBConfig(cfgPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(3)
+		}
+		db, err := openDB(cfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(3)
+		}
+		rep := &report{out: outFile}
+		runScanIdle(db, rep, scanModel)
+		rep.save()
+		return
+	}
 
 	if deviceName == "" {
 		printUsage()
@@ -269,6 +356,17 @@ func main() {
 		return
 	}
 
+	// ---------- 锐捷 trunk allowed 第二层取证探针（仅只读） ----------
+	if probeTrunkAllowed || probeTrunkAllowedInTrunkMode {
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+		defer cancel()
+		ch := newExecChannel(db, cipher)
+		defer ch.Close()
+		runTrunkAllowedProbe(ctx, ch, dev, cliIface, rep, timeout, probeTrunkAllowedInTrunkMode)
+		rep.save()
+		return
+	}
+
 	baseVLAN := 0
 	if prow != nil && prow.VLAN != nil {
 		baseVLAN = *prow.VLAN
@@ -278,14 +376,17 @@ func main() {
 		limit = *prow.Dot1xUserLimit
 	}
 	baseParams := actionParams{
-		CliIface:     cliIface,
-		VLAN:         vlan,
-		MAC:          mac,
-		IP:           ip,
-		Desc:         desc,
-		MaxMAC:       maxMac,
-		Dot1xLimit:   &limit,
-		BaselineVLAN: baseVLAN,
+		CliIface:       cliIface,
+		VLAN:           vlan,
+		MAC:            mac,
+		IP:             ip,
+		Desc:           desc,
+		MaxMAC:         maxMac,
+		Dot1xLimit:     &limit,
+		BaselineVLAN:   baseVLAN,
+		HybridTagged:   parseVlanList(hybridTagged),
+		HybridUntagged: parseVlanList(hybridUntagged),
+		HybridNative:   hybridNative,
 	}
 
 	// ---------- 批次模式 ----------
@@ -410,10 +511,19 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 	cliIface := params.CliIface
 	result := &actionRunResult{OK: true, BaseOK: true}
 
+	// hybrid 全局侧核对：VLAN 表快照（动作前）/ 残留（还原后）与接口状态行
+	var (
+		baseVlanIDs     map[int]bool
+		vlanExtra       []int
+		vlanCleanupOut  []cmdResult
+		baseStatusLine  string
+		afterStatusLine string
+	)
+
 	// ① VLAN 决策（只读采集 `show vlan`，确保下发的 VLAN 在设备上真实存在）
 	var vlans map[int]bool
 	var vlanRaw string
-	if needsVLAN(spec) {
+	if needsVLAN(spec) || needsVlanSnapshot(spec) {
 		verr := ch.run(ctx, dev.ID, timeout, func(execCtx context.Context, w *device.ScrapliWrapper) error {
 			out, err := sendReadCmd(w, "show vlan")
 			if err != nil {
@@ -429,7 +539,18 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 		rep.section("1. VLAN 决策（只读 `show vlan`）")
 		rep.raw("show vlan", sanitizeOutput(vlanRaw))
 		rep.line("解析到的 VLAN ID: %v", sortedIntKeys(vlans))
-		if params.VLAN == 0 {
+		if needsVlanSnapshot(spec) {
+			// hybrid 的 VLAN 由 --hybrid-tagged/untagged/native 显式指定；
+			// `show vlan` 此处只作「还原后残留清理」的基线快照。
+			baseVlanIDs = vlans
+			for _, id := range hybridTargetVLANs(params) {
+				if vlans[id] {
+					rep.line("⚠️ VLAN %d 已在设备上存在（可能是业务 VLAN）——请确认可用性；不存在则会被 hybrid 配置自动创建", id)
+				} else {
+					rep.line("VLAN %d 当前不存在于设备（将随 hybrid 配置自动创建；还原时会 `no vlan %d` 清理）", id, id)
+				}
+			}
+		} else if params.VLAN == 0 {
 			picked := pickTargetVLAN(vlans, params.BaselineVLAN)
 			if picked == 0 {
 				return result, fmt.Errorf("无法确定可用 VLAN（设备 VLAN 列表解析为空且基线无 VLAN）")
@@ -485,6 +606,15 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 			baseOut[c] = out
 		}
 		baseLines, baseErrs, baseWarns = ifaceConfigBlock(baseOut["show running-config interface "+cliIface], cliIface)
+		if needsVlanSnapshot(spec) {
+			// 接口状态基线（还原后二次核对 admin/oper 是否回到原值）。
+			// ⚠️ 锐捷 `show interfaces status <port>` 不接受接口参数 → 只能拉全量再筛行。
+			if out, err := sendReadCmd(w, "show interfaces status"); err == nil {
+				baseStatusLine = findIfaceStatusLine(out, cliIface)
+			} else {
+				rep.line("⚠️ 基线接口状态采集失败（不阻断）: %v", err)
+			}
+		}
 
 		// ④ 下发动作（逐条下发，单条失败不中断整批）
 		actionOut = sender.sendActionCmds(rendered)
@@ -516,6 +646,33 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 		outcome = restored
 		if err != nil {
 			return err
+		}
+
+		// ⑥-b 全局侧核对：VLAN 表残留清理 + 接口状态二次采集
+		//
+		// hybrid 下发会在设备上自动带出 VLAN（锐捷行为），而还原只清接口配置行 ⇒
+		// VLAN 表里的残留必须显式 `no vlan <id>` 才干净（lead 要求：还原时清掉）。
+		if needsVlanSnapshot(spec) && len(baseVlanIDs) > 0 {
+			vout, verr := sendReadCmd(w, "show vlan")
+			if verr != nil {
+				return fmt.Errorf("还原后 show vlan 采集失败: %w", verr)
+			}
+			vlanExtra = diffVlanIDs(baseVlanIDs, parseVlanIDs(vout))
+			for _, id := range vlanExtra {
+				vlanCleanupOut = append(vlanCleanupOut,
+					sender.sendActionCmds([]string{fmt.Sprintf("no vlan %d", id)})...)
+			}
+			if len(vlanExtra) > 0 {
+				vout2, verr2 := sendReadCmd(w, "show vlan")
+				if verr2 == nil {
+					if left := diffVlanIDs(baseVlanIDs, parseVlanIDs(vout2)); len(left) > 0 {
+						return fmt.Errorf("VLAN 表残留未清理干净: %v", left)
+					}
+				}
+			}
+			if sout3, verr3 := sendReadCmd(w, "show interfaces status"); verr3 == nil {
+				afterStatusLine = findIfaceStatusLine(sout3, cliIface)
+			}
 		}
 		return nil
 	})
@@ -620,6 +777,36 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 
 	// 还原
 	printRestoreSummary(rep, outcome)
+
+	// hybrid 全局侧核对（VLAN 表残留 / 接口状态二次采集）
+	if needsVlanSnapshot(spec) {
+		rep.section("7-b. 全局侧核对（VLAN 表残留 / 接口状态）")
+		rep.line("基线 VLAN 集合: %v", sortedIntKeys(baseVlanIDs))
+		if len(vlanExtra) > 0 {
+			rep.line("⚠️ 还原后多出 VLAN（已下发 `no vlan` 清理）: %v", vlanExtra)
+			for _, c := range vlanCleanupOut {
+				mark := "OK"
+				if c.Failed {
+					mark = "FAILED"
+				}
+				rep.line("   [%s] %s", mark, c.Command)
+			}
+		} else {
+			rep.line("✅ VLAN 表无残留（与基线一致）")
+		}
+		if baseStatusLine != "" || afterStatusLine != "" {
+			rep.line("接口状态（动作前）: %s", baseStatusLine)
+			rep.line("接口状态（还原后）: %s", afterStatusLine)
+			if normalizeForCompare(baseStatusLine) == normalizeForCompare(afterStatusLine) {
+				rep.line("✅ 接口状态行与基线一致（admin/oper 已回到原值）")
+			} else {
+				rep.line("⚠️ 接口状态行与基线不一致 → 需人工判读（link 状态可能波动）")
+			}
+		} else {
+			rep.line("（接口状态行未采集到，跳过该项核对）")
+		}
+	}
+
 	result.Attempts = outcome.Attempts
 	result.Diff = outcome.Diff
 	result.OK = outcome.OK
@@ -740,6 +927,36 @@ func needsVLAN(spec actionSpec) bool {
 		return true
 	}
 	return false
+}
+
+// needsVlanSnapshot 需要 VLAN 表基线快照的动作（还原后要清理残留 VLAN）。
+//
+// hybrid 下发会在设备上**自动带出 VLAN**（锐捷行为），而还原只清接口配置行，
+// VLAN 表里的残留必须显式 `no vlan <id>` 才干净 ⇒ 动作前先存一份 VLAN 表快照，
+// 还原后比对并清理多出来的 VLAN。
+func needsVlanSnapshot(spec actionSpec) bool {
+	return spec.PortAction == portcollection.TrunkSetHybrid
+}
+
+// hybridTargetVLANs 返回 hybrid 动作涉及的全部 VLAN（tagged + untagged + native，去重）。
+func hybridTargetVLANs(p actionParams) []int {
+	seen := map[int]bool{}
+	var out []int
+	add := func(ids []int) {
+		for _, id := range ids {
+			if id > 0 && !seen[id] {
+				seen[id] = true
+				out = append(out, id)
+			}
+		}
+	}
+	add(p.HybridTagged)
+	add(p.HybridUntagged)
+	if p.HybridNative > 0 {
+		add([]int{p.HybridNative})
+	}
+	sort.Ints(out)
+	return out
 }
 
 // pickTargetVLAN 选一个设备上存在、且不同于基线的 VLAN（避免与基线同值导致幂等无验证价值）。
