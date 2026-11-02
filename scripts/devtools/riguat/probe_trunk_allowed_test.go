@@ -3,6 +3,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestIsReadOnlyProbeCmd 只读白名单判定（任务 A 的安全护栏）。
@@ -75,4 +77,52 @@ func TestTrunkAllowedProbeCoversSecondLayer(t *testing.T) {
 			t.Errorf("探针命令表缺少 %q", need)
 		}
 	}
+}
+
+// TestModeSwitchAllowed 受控写白名单：只有两条模式切换命令被允许，其余写命令一律拒绝。
+func TestModeSwitchAllowed(t *testing.T) {
+	// 允许的两条
+	ok1, restore := modeSwitchAllowed("switchport mode trunk")
+	assert.True(t, ok1, "切 trunk 必须被允许")
+	assert.Equal(t, "switchport mode access", restore, "切 trunk 必须带出它的还原命令")
+	ok2, _ := modeSwitchAllowed("switchport mode access")
+	assert.True(t, ok2, "还原 access 必须被允许")
+
+	// 其它写命令一律拒绝
+	for _, c := range []string{
+		"switchport trunk allowed vlan 3990",
+		"switchport mode hybrid",
+		"no switchport mode trunk",
+		"switchport mode access vlan 3990",
+	} {
+		ok, _ := modeSwitchAllowed(c)
+		assert.False(t, ok, "非白名单的写命令必须被拒绝: %q", c)
+	}
+}
+
+// TestModeSwitchCompleteRequiresPair 模式切换**必须成对**：有 trunk 没有 access 还原 ⇒ 拒绝。
+//
+// 这是 lead 明确要求的护栏：「trunk 必配 access 还原 —— 测试要断言没有 access
+// 还原就不允许 trunk」。没有它，一次模式切换失败就可能把口留在 trunk 模式
+// （= 转发行为改变 = 潜在业务中断）。
+func TestModeSwitchCompleteRequiresPair(t *testing.T) {
+	// 只有 trunk ⇒ 不完整 ⇒ 拒绝
+	assert.False(t, modeSwitchComplete([]string{"switchport mode trunk"}),
+		"只有 trunk 没有 access 还原 ⇒ 必须拒绝执行")
+	// 成对 ⇒ 完整
+	assert.True(t, modeSwitchComplete([]string{"switchport mode trunk", "switchport mode access"}),
+		"trunk + access 成对 ⇒ 允许")
+	// 只有 access ⇒ 不完整（无切换却有还原，逻辑上不成对）
+	assert.False(t, modeSwitchComplete([]string{"switchport mode access"}),
+		"只有 access 没有 trunk ⇒ 不成对")
+	// 空集合 ⇒ 视为不需要切换，允许（纯只读路径）
+	assert.True(t, modeSwitchComplete(nil), "空集合（纯只读路径）⇒ 允许")
+}
+
+// TestParsePortMode 端口模式判定（锐捷 access 是默认模式 ⇒ running-config 不落 mode 行）。
+func TestParsePortMode(t *testing.T) {
+	assert.Contains(t, parsePortMode(nil), "access", "无 mode 行 ⇒ 默认 access")
+	assert.Contains(t, parsePortMode([]string{"description X"}), "access")
+	assert.Equal(t, "trunk", parsePortMode([]string{"switchport mode trunk"}))
+	assert.Equal(t, "hybrid", parsePortMode([]string{"switchport mode hybrid"}))
 }

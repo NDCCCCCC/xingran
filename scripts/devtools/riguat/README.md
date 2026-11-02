@@ -231,6 +231,32 @@ switchport hybrid native vlan 3993                ← native 单值（可选，�
          --out /tmp/riguat-trunk-allowed.log
 ```
 
+### 受控切换模式（第二轮取证用）
+
+首轮纯只读探针证明：**锐捷的 `?` 帮助可选项集合依赖当前端口模式** ——
+口在 access 模式时，设备连 `switchport trunk` 这个关键字都不提供
+（`switchport trunk allowed vlan all ?` 回显 `Can't set allow list on this port mode!`），
+所以 access 模式下探针报 `Invalid input` **只说明「当前模式不提供」，不能推断「关键字不存在」**。
+
+```bash
+./riguat --device CX-WH-WH-47F-FL-RS8607E-01 --port GE1/25          --probe-trunk-allowed-in-trunk-mode          --config /app/szh/configs/config.yaml --backend-pid $PID
+```
+
+流程：**受控切 trunk 模式** → 同样 9 条 `?` 探针 → **必定还原** `switchport mode access`
+（模式回退在锐捷上已确证可靠：一轮收敛、diff 为空）→ **零残留核查比对「还原后 vs 探测前」**
+（中间那段 trunk 模式是预期内的，不参与比对）。
+
+⚠️ 受控写由**单独的白名单**约束，且**必须成对**：
+
+| 白名单 | 内容 | 约束 |
+|---|---|---|
+| `isReadOnlyProbeCmd`（只读） | 以 `?` 结尾 / `show ` 前缀 | 9 条 `?` 探针全走这条 |
+| `modeSwitchPairs`（受控写） | **仅** `switchport mode trunk` / `switchport mode access` | **必须成对**：trunk 必配 access 还原；测试断言「没有 access 还原就不允许 trunk」 |
+
+⚠️ 默认仍是**纯只读**（`--probe-trunk-allowed` 不切模式）；
+受控写必须**显式**加 `--probe-trunk-allowed-in-trunk-mode` ⇒ 安全默认不破。
+还原动作在**错误路径上也会执行**（探针失败也必须还原）。
+
 **只读由工具强制**（不靠人自觉）：
 
 | 保障 | 机制 |
