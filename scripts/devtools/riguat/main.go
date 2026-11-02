@@ -27,6 +27,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -479,10 +480,19 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 	cliIface := params.CliIface
 	result := &actionRunResult{OK: true, BaseOK: true}
 
+	// hybrid 全局侧核对：VLAN 表快照（动作前）/ 残留（还原后）与接口状态行
+	var (
+		baseVlanIDs     map[int]bool
+		vlanExtra       []int
+		vlanCleanupOut  []cmdResult
+		baseStatusLine  string
+		afterStatusLine string
+	)
+
 	// ① VLAN 决策（只读采集 `show vlan`，确保下发的 VLAN 在设备上真实存在）
 	var vlans map[int]bool
 	var vlanRaw string
-	if needsVLAN(spec) {
+	if needsVLAN(spec) || needsVlanSnapshot(spec) {
 		verr := ch.run(ctx, dev.ID, timeout, func(execCtx context.Context, w *device.ScrapliWrapper) error {
 			out, err := sendReadCmd(w, "show vlan")
 			if err != nil {
@@ -498,7 +508,18 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 		rep.section("1. VLAN 决策（只读 `show vlan`）")
 		rep.raw("show vlan", sanitizeOutput(vlanRaw))
 		rep.line("解析到的 VLAN ID: %v", sortedIntKeys(vlans))
-		if params.VLAN == 0 {
+		if needsVlanSnapshot(spec) {
+			// hybrid 的 VLAN 由 --hybrid-tagged/untagged/native 显式指定；
+			// `show vlan` 此处只作「还原后残留清理」的基线快照。
+			baseVlanIDs = vlans
+			for _, id := range hybridTargetVLANs(params) {
+				if vlans[id] {
+					rep.line("⚠️ VLAN %d 已在设备上存在（可能是业务 VLAN）——请确认可用性；不存在则会被 hybrid 配置自动创建", id)
+				} else {
+					rep.line("VLAN %d 当前不存在于设备（将随 hybrid 配置自动创建；还原时会 `no vlan %d` 清理）", id, id)
+				}
+			}
+		} else if params.VLAN == 0 {
 			picked := pickTargetVLAN(vlans, params.BaselineVLAN)
 			if picked == 0 {
 				return result, fmt.Errorf("无法确定可用 VLAN（设备 VLAN 列表解析为空且基线无 VLAN）")
@@ -554,6 +575,15 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 			baseOut[c] = out
 		}
 		baseLines, baseErrs, baseWarns = ifaceConfigBlock(baseOut["show running-config interface "+cliIface], cliIface)
+		if needsVlanSnapshot(spec) {
+			// 接口状态基线（还原后二次核对 admin/oper 是否回到原值）。
+			// ⚠️ 锐捷 `show interfaces status <port>` 不接受接口参数 → 只能拉全量再筛行。
+			if out, err := sendReadCmd(w, "show interfaces status"); err == nil {
+				baseStatusLine = findIfaceStatusLine(out, cliIface)
+			} else {
+				rep.line("⚠️ 基线接口状态采集失败（不阻断）: %v", err)
+			}
+		}
 
 		// ④ 下发动作（逐条下发，单条失败不中断整批）
 		actionOut = sender.sendActionCmds(rendered)
@@ -585,6 +615,33 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 		outcome = restored
 		if err != nil {
 			return err
+		}
+
+		// ⑥-b 全局侧核对：VLAN 表残留清理 + 接口状态二次采集
+		//
+		// hybrid 下发会在设备上自动带出 VLAN（锐捷行为），而还原只清接口配置行 ⇒
+		// VLAN 表里的残留必须显式 `no vlan <id>` 才干净（lead 要求：还原时清掉）。
+		if needsVlanSnapshot(spec) && len(baseVlanIDs) > 0 {
+			vout, verr := sendReadCmd(w, "show vlan")
+			if verr != nil {
+				return fmt.Errorf("还原后 show vlan 采集失败: %w", verr)
+			}
+			vlanExtra = diffVlanIDs(baseVlanIDs, parseVlanIDs(vout))
+			for _, id := range vlanExtra {
+				vlanCleanupOut = append(vlanCleanupOut,
+					sender.sendActionCmds([]string{fmt.Sprintf("no vlan %d", id)})...)
+			}
+			if len(vlanExtra) > 0 {
+				vout2, verr2 := sendReadCmd(w, "show vlan")
+				if verr2 == nil {
+					if left := diffVlanIDs(baseVlanIDs, parseVlanIDs(vout2)); len(left) > 0 {
+						return fmt.Errorf("VLAN 表残留未清理干净: %v", left)
+					}
+				}
+			}
+			if sout3, verr3 := sendReadCmd(w, "show interfaces status"); verr3 == nil {
+				afterStatusLine = findIfaceStatusLine(sout3, cliIface)
+			}
 		}
 		return nil
 	})
@@ -689,6 +746,36 @@ func runOneAction(ctx context.Context, ch *execChannel, dev *deviceInfo, spec ac
 
 	// 还原
 	printRestoreSummary(rep, outcome)
+
+	// hybrid 全局侧核对（VLAN 表残留 / 接口状态二次采集）
+	if needsVlanSnapshot(spec) {
+		rep.section("7-b. 全局侧核对（VLAN 表残留 / 接口状态）")
+		rep.line("基线 VLAN 集合: %v", sortedIntKeys(baseVlanIDs))
+		if len(vlanExtra) > 0 {
+			rep.line("⚠️ 还原后多出 VLAN（已下发 `no vlan` 清理）: %v", vlanExtra)
+			for _, c := range vlanCleanupOut {
+				mark := "OK"
+				if c.Failed {
+					mark = "FAILED"
+				}
+				rep.line("   [%s] %s", mark, c.Command)
+			}
+		} else {
+			rep.line("✅ VLAN 表无残留（与基线一致）")
+		}
+		if baseStatusLine != "" || afterStatusLine != "" {
+			rep.line("接口状态（动作前）: %s", baseStatusLine)
+			rep.line("接口状态（还原后）: %s", afterStatusLine)
+			if normalizeForCompare(baseStatusLine) == normalizeForCompare(afterStatusLine) {
+				rep.line("✅ 接口状态行与基线一致（admin/oper 已回到原值）")
+			} else {
+				rep.line("⚠️ 接口状态行与基线不一致 → 需人工判读（link 状态可能波动）")
+			}
+		} else {
+			rep.line("（接口状态行未采集到，跳过该项核对）")
+		}
+	}
+
 	result.Attempts = outcome.Attempts
 	result.Diff = outcome.Diff
 	result.OK = outcome.OK
@@ -809,6 +896,36 @@ func needsVLAN(spec actionSpec) bool {
 		return true
 	}
 	return false
+}
+
+// needsVlanSnapshot 需要 VLAN 表基线快照的动作（还原后要清理残留 VLAN）。
+//
+// hybrid 下发会在设备上**自动带出 VLAN**（锐捷行为），而还原只清接口配置行，
+// VLAN 表里的残留必须显式 `no vlan <id>` 才干净 ⇒ 动作前先存一份 VLAN 表快照，
+// 还原后比对并清理多出来的 VLAN。
+func needsVlanSnapshot(spec actionSpec) bool {
+	return spec.PortAction == portcollection.TrunkSetHybrid
+}
+
+// hybridTargetVLANs 返回 hybrid 动作涉及的全部 VLAN（tagged + untagged + native，去重）。
+func hybridTargetVLANs(p actionParams) []int {
+	seen := map[int]bool{}
+	var out []int
+	add := func(ids []int) {
+		for _, id := range ids {
+			if id > 0 && !seen[id] {
+				seen[id] = true
+				out = append(out, id)
+			}
+		}
+	}
+	add(p.HybridTagged)
+	add(p.HybridUntagged)
+	if p.HybridNative > 0 {
+		add([]int{p.HybridNative})
+	}
+	sort.Ints(out)
+	return out
 }
 
 // pickTargetVLAN 选一个设备上存在、且不同于基线的 VLAN（避免与基线同值导致幂等无验证价值）。

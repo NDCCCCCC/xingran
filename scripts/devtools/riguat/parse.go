@@ -321,6 +321,43 @@ func containsLine(lines []string, want string) bool {
 	return false
 }
 
+// findIfaceStatusLine 从 `show interfaces status`（全量，无接口参数）的回显里
+// 取出目标接口所在行（按 CLI 全称匹配，如 "GigabitEthernet 1/25"）。
+//
+// ⚠️ 锐捷的 `show interfaces status <port>` **不接受接口参数**（Invalid input），
+// 所以只能拉全量再筛行。找不到返回空串。
+func findIfaceStatusLine(out, cliIface string) string {
+	target := strings.TrimSpace(cliIface)
+	if target == "" {
+		return ""
+	}
+	for _, l := range strings.Split(out, "\n") {
+		t := strings.TrimSpace(l)
+		if t == "" || strings.HasPrefix(t, "Interface") || strings.HasPrefix(t, "Port") {
+			continue
+		}
+		// 设备侧接口名可能带全角/半角空格差异，用前缀匹配 + 空白归一化兜底
+		norm := strings.Join(strings.Fields(t), " ")
+		if strings.HasPrefix(norm, target) {
+			return t
+		}
+	}
+	return ""
+}
+
+// diffVlanIDs 返回「当前有、基线没有」的 VLAN ID（= 本次动作带出的残留 VLAN）。
+// 锐捷下发 hybrid 配置会自动带出 VLAN ⇒ 还原后必须显式 `no vlan <id>` 清理。
+func diffVlanIDs(base, now map[int]bool) []int {
+	var extra []int
+	for id := range now {
+		if !base[id] {
+			extra = append(extra, id)
+		}
+	}
+	sort.Ints(extra)
+	return extra
+}
+
 // sortedIntKeys 返回 map[int]bool 的升序键列表（报告用）。
 func sortedIntKeys(m map[int]bool) []int {
 	out := make([]int, 0, len(m))
