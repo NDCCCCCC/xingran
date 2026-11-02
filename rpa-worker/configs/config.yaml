@@ -35,7 +35,7 @@ backend:
 
 redis:
   addr: "10.62.10.34:6379"   # Redis 地址（外部 Redis）
-  password: ")(PO09po"       # Redis 密码
+  password: ""               # Redis 密码（必须经环境变量 REDIS_PASSWORD 注入，禁止写死明文）
   db: 0                      # Redis DB
   stream_tasks: "rpa:tasks"        # 任务流
   stream_group: "rpa:workers"      # 工作组

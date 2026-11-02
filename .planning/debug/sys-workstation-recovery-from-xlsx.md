@@ -81,4 +81,4 @@ version IS NULL = 1182 行 (Excel 原值 \N),DB 列 nullable=YES 允许 NULL ✅
 
 ## 备注
 
-- 连接信息在 `.env`:`DB_HOST=10.62.10.34` / `DB_NAME=ruoyi` / `DB_PASSWORD=Cpic1234`
+- 连接信息在 `.env`:`DB_HOST=10.62.10.34` / `DB_NAME=ruoyi` / `DB_PASSWORD=<REDACTED_DB_PASSWORD>`

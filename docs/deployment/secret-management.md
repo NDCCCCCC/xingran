@@ -286,8 +286,8 @@ git filter-repo --path configs/config.yaml --invert-paths
 git filter-repo --replace-text expressions.txt
 # expressions.txt 内容:
 #   d8d9a3e6b356cf7538cb0fd6a486055c2a621a63a8a095e60a6362874b26508b==>REDACTED_SM2_PRIVATE_KEY
-#   Cpic1234==>REDACTED_DB_PASSWORD
-#   )(PO09po==>REDACTED_REDIS_PASSWORD
+#   <DB_PASSWORD>==>REDACTED_DB_PASSWORD
+#   <REDIS_PASSWORD>==>REDACTED_REDIS_PASSWORD
 #   31jIJbkkaQHV6pNXbrQmnOoSrynzalC8==>REDACTED_BAIDU_AK
 #   dGVzdC1zZWNyZXQxNiEhIQ====>REDACTED_SM4_KEY
 #   xingran-next-secret-key-please-change-in-production==>REDACTED_JWT_SECRET
