@@ -76,6 +76,30 @@ func TestRenderRuijieTrunkSetHybridEmptyList(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TestRenderRuijieTrunkSetHybridVlanOutOfRange 渲染层的 VLAN 范围防御分支。
+//
+// service 层 validateTrunkRequest 会先拦越界（ErrVlanIdOutOfRange），但渲染层
+// 仍需自带防御（与华为/H3C 同款：渲染层是最后一道防线，防止绕过 service 直调）。
+func TestRenderRuijieTrunkSetHybridVlanOutOfRange(t *testing.T) {
+	// untagged 越界
+	_, err := RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
+		InterfaceName:  "GigabitEthernet 1/1",
+		HybridUntagged: []int{0},
+		HybridTagged:   []int{30},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
+
+	// tagged 越界
+	_, err = RenderCommand(models.VendorRuijie, TrunkSetHybrid, PortTemplateParams{
+		InterfaceName:  "GigabitEthernet 1/1",
+		HybridUntagged: []int{10},
+		HybridTagged:   []int{4095},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
+}
+
 // TestRenderRuijieTrunkUnchanged 锐捷 trunk 分支核对：真机 `?` 取证未推翻现有实现，
 // 渲染保持不变（native → `switchport trunk native vlan N`；
 // allowed → `switchport trunk allowed vlan add|remove|<list>`）。
