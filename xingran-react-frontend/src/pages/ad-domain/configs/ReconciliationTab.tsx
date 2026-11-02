@@ -271,7 +271,6 @@ const ReconciliationTab: FC<ReconciliationTabProps> = ({ form: injectedForm }) =
               allowClear
               style={{ width: 220 }}
               showSearch={false}
-              onSearch={() => {}}
               options={MISMATCH_TYPE_OPTIONS}
             />
           </Form.Item>

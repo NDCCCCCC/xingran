@@ -286,7 +286,6 @@ const TemplateManagement: FC = () => {
                 placeholder="请选择模板类型"
                 className="user-form-input"
                 style={{ width: 130 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={TEMPLATE_TYPE_OPTIONS}
               />
@@ -297,7 +296,6 @@ const TemplateManagement: FC = () => {
                 placeholder="请选择厂商"
                 className="user-form-input"
                 style={{ width: 120 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={VENDOR_OPTIONS}
               />

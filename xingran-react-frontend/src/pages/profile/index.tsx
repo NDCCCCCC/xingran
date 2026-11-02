@@ -19,7 +19,7 @@ import {
 // Phase 71 (W1)：裸 Input/Select/Input.TextArea → 契约组件。
 // 说明：本页 Input 仍在 antd 导入中——因为 <Input.Password>（成员表达式）不在
 // 本波迁移面（P65/P70 selector 只拦 TextArea 形态的成员表达式），见 SUMMARY 跳过项。
-import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
+import { AppInput, AppTextArea } from "@/components/ui";
 import {
   UserOutlined,
   EditOutlined,
@@ -37,11 +37,6 @@ import { formatDateTime, FORMAT_DATE_SHORT } from "@/utils/datetime";
 import { Link } from "react-router-dom";
 
 // 性别枚举（形态分类器产物：options 形态，供 AppSelect 使用）
-const GENDER_OPTIONS: { label: string; value: number }[] = [
-  { value: 0, label: "未知" },
-  { value: 1, label: "男" },
-  { value: 2, label: "女" },
-];
 
 const ProfilePage: FC = () => {
   const { message } = App.useApp();
@@ -360,7 +355,6 @@ const ProfilePage: FC = () => {
             {/* 形态分类器：原 children 形态 <Option> 改写为 options 形态——AppSelect 无条件
                 设 optionFilterProp="label"，children 形态下该 prop 指向不存在的字段（破坏性，
                 PITFALLS 2.2）。3 项固定枚举 < 8，故 showSearch 自动为 false。 */}
-            <AppSelect options={GENDER_OPTIONS} onSearch={() => {}} />
           </Form.Item>
 
           <Form.Item

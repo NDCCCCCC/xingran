@@ -426,7 +426,6 @@ const DutyPoolPage: FC = () => {
                 className="user-form-input"
                 style={{ width: 100 }}
                 showSearch={false}
-                onSearch={() => {}}
                 options={[
                   { value: 0, label: "启用" },
                   { value: 1, label: "停用" },

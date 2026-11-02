@@ -399,7 +399,6 @@ const MyDutyPage: FC = () => {
                     style={{ width: 100 }}
                     onChange={handleSearch}
                     showSearch={false}
-                    onSearch={() => {}}
                     options={[
                       { value: "weekday", label: "工作日" },
                       { value: "weekend", label: "周末" },

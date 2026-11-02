@@ -365,7 +365,6 @@ const ServerMonitor: FC = () => {
                   { label: "正常", value: 0 },
                   { label: "异常", value: 1 },
                 ]}
-                onSearch={() => {}}
               />
             </Col>
             <Col xs={24} sm={8} md={12}>

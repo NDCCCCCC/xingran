@@ -390,7 +390,6 @@ const ManagerRulesPage: FC = () => {
           </Form.Item>
           <Form.Item name="subjectType" label="适用主体">
             <AppSelect
-              onSearch={() => {}}
               placeholder="请选择适用主体"
               allowClear
               style={{ width: 150 }}
@@ -399,7 +398,6 @@ const ManagerRulesPage: FC = () => {
           </Form.Item>
           <Form.Item name="enabled" label="状态">
             <AppSelect
-              onSearch={() => {}}
               placeholder="请选择状态"
               allowClear
               style={{ width: 110 }}
@@ -501,7 +499,6 @@ const ManagerRulesPage: FC = () => {
           >
             <AppSelect
               allowClear
-              onSearch={() => {}}
               options={SUBJECT_TYPES.map((t) => ({ value: t, label: MANAGER_SUBJECT_LABELS[t] }))}
               placeholder="请选择适用主体"
             />
@@ -514,7 +511,6 @@ const ManagerRulesPage: FC = () => {
             >
               <AppSelect
                 allowClear
-                onSearch={() => {}}
                 placeholder="请选择主体岗位"
                 showSearch
                 optionFilterProp="label"
@@ -538,7 +534,6 @@ const ManagerRulesPage: FC = () => {
           >
             <AppSelect
               allowClear
-              onSearch={() => {}}
               options={MANAGER_TYPES.map((t) => ({ value: t, label: MANAGER_TYPE_LABELS[t] }))}
               placeholder="请选择经理来源"
             />
@@ -551,7 +546,6 @@ const ManagerRulesPage: FC = () => {
             >
               <AppSelect
                 allowClear
-                onSearch={() => {}}
                 placeholder="请选择经理岗位"
                 showSearch
                 optionFilterProp="label"

@@ -573,7 +573,6 @@ const DictManagement: FC = () => {
                           allowClear
                           className="user-form-input"
                           style={{ width: 120 }}
-                          onSearch={() => {}}
                           showSearch={false}
                           options={STATUS_OPTIONS}
                         />
@@ -725,7 +724,6 @@ const DictManagement: FC = () => {
                           // 语义等同「未选择字典类型」，不引入 undefined 分支
                           onChange={(value) => setSelectedType((value as string) ?? "")}
                           style={{ width: 200 }}
-                          onSearch={() => {}}
                           options={dictTypes
                             .filter((t) => t.status === 0)
                             .map((t) => ({ value: t.dictType, label: t.dictName }))}
@@ -745,7 +743,6 @@ const DictManagement: FC = () => {
                           allowClear
                           className="user-form-input"
                           style={{ width: 120 }}
-                          onSearch={() => {}}
                           showSearch={false}
                           options={STATUS_OPTIONS}
                         />
@@ -879,7 +876,6 @@ const DictManagement: FC = () => {
             <AppSelect
               allowClear
               className="user-form-input"
-              onSearch={() => {}}
               showSearch={false}
               options={STATUS_OPTIONS}
             />
@@ -945,7 +941,6 @@ const DictManagement: FC = () => {
             <AppSelect
               allowClear
               className="user-form-input"
-              onSearch={() => {}}
               showSearch={false}
               options={STATUS_OPTIONS}
             />

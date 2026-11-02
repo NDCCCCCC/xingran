@@ -19,7 +19,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type FC } from "react";
 import { Button, App, Space, Modal, Form, InputNumber, Tag } from "antd";
 // Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件（P65 allowClear / P65 Select 契约 / P70 TextArea 契约）
-import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
+import { AppInput, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
   SettingOutlined,
@@ -39,7 +39,7 @@ import { createSorterMeta } from "@/utils/tableHelpers";
 
 // 导入提取的文件
 import type { CacheInfo, CacheMonitor } from "./types";
-import { TYPE_OPTIONS, OPERATION_OPTIONS, LEVEL_OPTIONS, LEVEL_TAG_CONFIG } from "./constants";
+import { TYPE_OPTIONS, LEVEL_OPTIONS, LEVEL_TAG_CONFIG } from "./constants";
 import {
   formatMemorySize,
   formatTTL,
@@ -436,9 +436,7 @@ const CacheManager: FC = () => {
           label="操作类型"
           name="operation"
           rules={[{ required: true, message: "请选择操作类型" }]}
-        >
-          <AppSelect allowClear options={OPERATION_OPTIONS} onSearch={() => {}} />
-        </Form.Item>
+        ></Form.Item>
         <Form.Item
           label="缓存值"
           name="value"

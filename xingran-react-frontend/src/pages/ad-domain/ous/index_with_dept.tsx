@@ -393,7 +393,6 @@ const ADOUPage: FC = () => {
                 onChange={(value) => setSelectedConfig(value as string)}
                 options={configs.map((c) => ({ label: c.configName, value: c.id }))}
                 showSearch={false}
-                onSearch={() => {}}
               />
               <Spin spinning={treeLoading}>
                 {ouTree.length > 0 ? (

@@ -371,7 +371,6 @@ const EmailConfigPage: FC = () => {
                 placeholder="全部状态"
                 style={{ width: 140 }}
                 allowClear
-                onSearch={() => {}}
                 showSearch={false}
                 options={STATUS_ENUM_OPTIONS}
               />
@@ -502,12 +501,7 @@ const EmailConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <AppSelect
-              allowClear
-              onSearch={() => {}}
-              showSearch={false}
-              options={STATUS_ENUM_OPTIONS}
-            />
+            <AppSelect allowClear showSearch={false} options={STATUS_ENUM_OPTIONS} />
           </Form.Item>
 
           <Form.Item name="remark" label="备注">

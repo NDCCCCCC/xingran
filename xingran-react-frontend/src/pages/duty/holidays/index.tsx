@@ -72,7 +72,6 @@ const DutyHolidayPage: FC = () => {
               style={{ width: 120 }}
               suffixIcon={null}
               showSearch={false}
-              onSearch={() => {}}
               options={availableYears.map((y) => ({ value: y, label: `${y}年` }))}
             />
             <Button icon={<ReloadOutlined />} onClick={() => fetchList()}>

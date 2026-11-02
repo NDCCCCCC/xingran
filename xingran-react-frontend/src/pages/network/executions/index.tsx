@@ -237,7 +237,6 @@ const ConfigExecutionPage: FC = () => {
                   loadExecutions();
                   loadStatistics();
                 }}
-                onSearch={() => {}}
                 showSearch={false}
                 options={[...STATUS_OPTIONS]}
               />

@@ -758,7 +758,6 @@ const DedicatedLineManagement: FC = () => {
                 allowClear
                 placeholder="请选择专线类型"
                 showSearch={false}
-                onSearch={() => {}}
                 options={lineTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))}
               />
             </Form.Item>
@@ -780,7 +779,6 @@ const DedicatedLineManagement: FC = () => {
                     placeholder="请选择运营商"
                     className="user-form-input"
                     showSearch={false}
-                    onSearch={() => {}}
                     options={ispDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))}
                   />
                 </Form.Item>
@@ -917,7 +915,6 @@ const DedicatedLineManagement: FC = () => {
                     placeholder="请选择状态"
                     className="user-form-input"
                     showSearch={false}
-                    onSearch={() => {}}
                     options={DEDICATED_LINE_STATUS_OPTIONS}
                   />
                 </Form.Item>
