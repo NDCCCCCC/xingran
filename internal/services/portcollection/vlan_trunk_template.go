@@ -28,23 +28,24 @@ import (
 //
 //	switchport mode ?      → access / dot1q-tunnel / hybrid / private-vlan / trunk / uplink
 //	switchport hybrid ?   → allowed / native
-//	switchport hybrid native ?  → vlan
-//	switchport hybrid allowed ? → vlan
+//	switchport hybrid native vlan ?   → <1-4094> Vid
+//	switchport hybrid allowed vlan ? → add / only / remove / tagged / untagged
 //	switchport trunk ?         → native / allowed
 //	switchport trunk native ?  → vlan
+//	switchport trunk allowed vlan ? → add / all / except / only / remove
 //
-// ⇒ 锐捷 hybrid 命令形态（本次新增渲染的真相源）：
+// ⇒ 锐捷 hybrid 命令形态（渲染真相源，第二次取证修正后）：
 //
-//	switchport mode hybrid                 ← 前置：设备要求端口处于 hybrid 模式
-//	switchport hybrid native vlan <id>     ← untagged 承载 VLAN（native 单值）
-//	switchport hybrid allowed vlan <list>  ← tagged 允许列表
+//	switchport mode hybrid                                   ← 前置：设备要求端口处于 hybrid 模式
+//	switchport hybrid allowed vlan tagged <list>              ← tagged 列表（**必须带 tagged 关键字**）
+//	switchport hybrid allowed vlan untagged <list>            ← untagged 列表（**必须带 untagged 关键字**）
+//	switchport hybrid native vlan <id>                        ← native 单值 VID（与上面两个列表解耦）
 //
-// ⇒ 锐捷 trunk 分支核对结论（本次取证未推翻现有实现，保持不变）：
+// ⇒ 锐捷 trunk 分支核对结论（第二次取证未推翻现有实现，保持不变）：
 //
 //	TrunkSetNative  `switchport trunk native vlan <id>`  ✅ 与真机一致（native ? → vlan）
-//	TrunkSetAllowed `switchport trunk allowed vlan …`    ✅ 第一层与真机一致（allowed ? → vlan）
-//	                第二层 add/remove/无关键字全量       ⚠ 本次取证未到第二层，
-//	                沿用既有 Cisco 风格依据（锐捷=Cisco 风格），未实跑验证。
+//	TrunkSetAllowed `switchport trunk allowed vlan …`    ✅ 与真机一致（allowed ? → add/all/except/only/remove，
+//	                现有 add|remove|全量 三态均为真机子命令，无需改）
 //
 // ⇒ 锐捷 hybrid 之前未注册（RenderCommand → ErrUnknownAction），属功能缺口，
 //   2026-11-02 按真机形态补齐。
@@ -55,8 +56,9 @@ import (
 //   优先于 tagged 表（port hybrid vlan 与 untagged 写入不同硬件表项），重叠时
 //   实际转发表项与用户意图不一致且无告警。因此 H3C 的重叠校验必须在系统侧
 //   前置（service 层 400 拦截为真相源），设备不兜底。
-//   锐捷 hybrid 的 native 是**单值**（一个端口一个 native VLAN）⇒ untagged 传多个
-//   无法被设备表达，渲染层直接拒绝（与华为 IP+MAC 组合拒绝同构，见 renderRuijieTrunkSetHybrid）。
+//   锐捷 hybrid 的 tagged / untagged 同样是**两个列表**（一一对应华为语义），
+//   重叠校验沿用 service 层（validateTrunkRequest → ErrHybridOverlap）。
+//   锐捷 hybrid 的 native 是**单值 VID**（与两个列表解耦，见 renderRuijieTrunkSetHybrid）。
 
 // PortAction Phase 124 新增动作。
 const (
@@ -281,23 +283,40 @@ func renderRuijieTrunkSetAllowed(p PortTemplateParams) ([]string, error) {
 	}, nil
 }
 
-// renderRuijieTrunkSetHybrid 锐捷 hybrid（2026-11-02 真机 `?` 帮助取证）：
+// renderRuijieTrunkSetHybrid 锐捷 hybrid（2026-11-02 真机 `?` 帮助取证，第二次取证修正）：
 //
 //	interface <iface>
-//	switchport mode hybrid                  ← 前置：设备要求端口处于 hybrid 模式
-//	switchport hybrid native vlan <id>      ← untagged 承载 VLAN（native 单值）
-//	switchport hybrid allowed vlan <list>   ← tagged 允许列表
+//	switchport mode hybrid                                   ← 前置：设备要求端口处于 hybrid 模式
+//	switchport hybrid allowed vlan tagged <list>              ← tagged 列表
+//	switchport hybrid allowed vlan untagged <list>            ← untagged 列表
+//	switchport hybrid native vlan <id>                        ← native 单值（可选，附加）
 //
-// 参数映射（产品参数模型是华为语义 tagged/untagged，厂商语法映射只在渲染层做）：
-//   - HybridUntagged → native（native VLAN 承载不带 tag 的流量）
-//   - HybridTagged   → allowed（允许通过的 VLAN 列表）
+// ★ 第二次真机取证（2026-11-02，lead 提供的 `?` 帮助）修正了第一次取证的结论：
 //
-// ⚠ native 单值约束：锐捷 `switchport hybrid native vlan <id>` 只能表达一个
-// untagged VLAN（华为/H3C 的 untagged 是列表）。传多个时**直接拒绝**而不是
-// 静默取第一个 —— 否则设备会把端口切到 hybrid 模式却只配上部分 VLAN，
-// 在生产 access 工位口上会造成"模式已变、配置未全"的半吊子状态。
-// 错误用 ErrActionNotSupported 包装（与华为 S8700 的 IP+MAC 组合拒绝同构），
-// handler 翻译为 400 + 真机依据。
+//	switchport hybrid allowed vlan ?
+//	  add / only / remove / tagged / untagged
+//	      ⇒ 列表**必须带 tagged / untagged 关键字**：
+//	        switchport hybrid allowed vlan tagged <list>
+//	        switchport hybrid allowed vlan untagged <list>
+//	        （第一版渲染写成 `switchport hybrid allowed vlan <list>`（无关键字）⇒ 设备会拒绝）
+//
+//	switchport hybrid native vlan ?
+//	  <1-4094>  Vid
+//	      ⇒ native 是「单个 VID」，与 untagged 列表是**两个不同概念**
+//	        （第一版把 untagged 列表映射到 native ⇒ 概念混淆）
+//
+// 参数映射（产品参数模型是华为语义 tagged/untagged 两个列表，与锐捷**一一对应**）：
+//   - HybridTagged   → switchport hybrid allowed vlan tagged <list>
+//   - HybridUntagged → switchport hybrid allowed vlan untagged <list>
+//   - NativeVLAN     → switchport hybrid allowed vlan native vlan <id> 之外的独立项：
+//     switchport hybrid native vlan <id>（native 是单值 VID，与两个列表解耦）
+//
+// ⚠ 与上一版裁定的差异（2026-11-02 第二次取证后修正）：
+// 上一版曾「多个 untagged → 拒绝（ErrActionNotSupported → 400）」，理由是当时把
+// untagged 映射到了 native（单值）。该前提已被第二次取证推翻 —— untagged 现在映射到
+// `allowed vlan untagged <list>`，设备**明确支持列表** ⇒ 多 untagged 合法，不再拒绝。
+// 保留拒绝会把设备支持的能力禁掉（且错误文案与新映射自相矛盾）。
+// native 的单值约束依然成立，但它是**另一个参数**（NativeVLAN，本身就是单值字段）。
 //
 // 端口模式回退不属于本动作范围：产品 rollback（portwrite/safety.go
 // renderRollbackCommands）目前只覆盖 shutdown / set_access_vlan，
@@ -312,21 +331,24 @@ func renderRuijieTrunkSetHybrid(p PortTemplateParams) ([]string, error) {
 		// 前置切模式：设备要求端口处于 hybrid 模式才接受 hybrid 配置
 		"switchport mode hybrid",
 	}
-	if len(p.HybridUntagged) > 0 {
-		if err := validateVlanListForRender(p.HybridUntagged); err != nil {
-			return nil, err
-		}
-		if len(p.HybridUntagged) > 1 {
-			return nil, fmt.Errorf("%w: vendor=ruijie action=%s — 锐捷 hybrid native 仅支持单个 untagged VLAN（真机形态 switchport hybrid native vlan <id>，2026-11-02 ? 帮助取证），当前传入 %d 个 untagged VLAN",
-				ErrActionNotSupported, TrunkSetHybrid, len(p.HybridUntagged))
-		}
-		cmds = append(cmds, fmt.Sprintf("switchport hybrid native vlan %d", p.HybridUntagged[0]))
-	}
 	if len(p.HybridTagged) > 0 {
 		if err := validateVlanListForRender(p.HybridTagged); err != nil {
 			return nil, err
 		}
-		cmds = append(cmds, fmt.Sprintf("switchport hybrid allowed vlan %s", vlanListFormatCisco(p.HybridTagged)))
+		cmds = append(cmds, fmt.Sprintf("switchport hybrid allowed vlan tagged %s", vlanListFormatCisco(p.HybridTagged)))
+	}
+	if len(p.HybridUntagged) > 0 {
+		if err := validateVlanListForRender(p.HybridUntagged); err != nil {
+			return nil, err
+		}
+		cmds = append(cmds, fmt.Sprintf("switchport hybrid allowed vlan untagged %s", vlanListFormatCisco(p.HybridUntagged)))
+	}
+	// native 是与两个列表解耦的单值 VID（锐捷 hybrid 模式下的 native/PVID）
+	if p.NativeVLAN > 0 {
+		if p.NativeVLAN > 4094 {
+			return nil, fmt.Errorf("portcollection: nativeVlan %d out of range 1-4094", p.NativeVLAN)
+		}
+		cmds = append(cmds, fmt.Sprintf("switchport hybrid native vlan %d", p.NativeVLAN))
 	}
 	return cmds, nil
 }

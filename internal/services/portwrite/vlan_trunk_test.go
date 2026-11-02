@@ -72,7 +72,9 @@ func TestTrunkRender_AllVendors(t *testing.T) {
 }
 
 // TestTrunkRender_RuijieHybridSupported 锐捷 hybrid 真机支持（2026-11-02 `?` 帮助取证）：
-// switchport hybrid ? → allowed/native；native/allowed ? → vlan；
+// switchport hybrid ? → allowed/native；
+// switchport hybrid allowed vlan ? → add/only/remove/tagged/untagged ⇒ 列表必须带 tagged/untagged 关键字；
+// switchport hybrid native vlan ? → <1-4094> Vid ⇒ native 是单值；
 // switchport mode ? 含 hybrid ⇒ 渲染须前置 switchport mode hybrid。
 //
 // 2026-11-02 之前本用例断言"锐捷 hybrid 必须被渲染层拒绝"（当时设备未取证、
@@ -83,7 +85,7 @@ func TestTrunkRender_RuijieHybridSupported(t *testing.T) {
 	svc := newTestService(&countingExecutor{}, nil, db)
 	res, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
 		DeviceID: "device-ruijie", Action: portcollection.TrunkSetHybrid,
-		PortIDs: []string{"port-ruijie"}, HybridTagged: []int{30}, HybridUntagged: []int{10},
+		PortIDs: []string{"port-ruijie"}, HybridTagged: []int{30}, HybridUntagged: []int{10, 20},
 	}, "tester")
 	require.NoError(t, err, "锐捷 hybrid 真机支持，预览不应报错")
 
@@ -94,8 +96,9 @@ func TestTrunkRender_RuijieHybridSupported(t *testing.T) {
 	}
 	joined := strings.Join(cmds, " | ")
 	assert.Contains(t, joined, "switchport mode hybrid", "必须前置切 hybrid 模式")
-	assert.Contains(t, joined, "switchport hybrid native vlan 10", "native 单值承载 untagged")
-	assert.Contains(t, joined, "switchport hybrid allowed vlan 30", "allowed 承载 tagged 列表")
+	assert.Contains(t, joined, "switchport hybrid allowed vlan tagged 30", "tagged 列表必须带 tagged 关键字")
+	assert.Contains(t, joined, "switchport hybrid allowed vlan untagged 10,20", "untagged 列表必须带 untagged 关键字")
+	assert.NotContains(t, joined, "switchport hybrid allowed vlan 30", "不得出现缺关键字的 allowed 形态")
 
 	// dry-run 预览必须显式标注"端口模式变更"（不能藏在命令列表里）
 	var modeNote string
@@ -107,19 +110,24 @@ func TestTrunkRender_RuijieHybridSupported(t *testing.T) {
 	assert.Contains(t, modeNote, "端口模式变更为 hybrid", "模式变更必须在预览里显式标注")
 }
 
-// TestTrunkRender_RuijieHybridNativeSingleValue 锐捷 hybrid 的 native 是单值：
-// untagged 传多个 → 渲染层按设备形态限制拒绝（ErrActionNotSupported → 400），
-// 绝不下发"切了模式却只配部分 VLAN"的半吊子命令。
+// TestTrunkRender_RuijieHybridNativeSingleValue 锐捷 hybrid 的 native 是单值 VID。
+//
+// native 与 tagged/untagged 两个列表解耦，由 NativeVLAN 单独承载（单值字段）。
 func TestTrunkRender_RuijieHybridNativeSingleValue(t *testing.T) {
 	db := newTestDB(t)
 	seedPreviewDevice(t, db, models.VendorRuijie)
 	svc := newTestService(&countingExecutor{}, nil, db)
-	_, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
+	res, err := svc.PreviewPortWrite(context.Background(), PreviewRequest{
 		DeviceID: "device-ruijie", Action: portcollection.TrunkSetHybrid,
-		PortIDs: []string{"port-ruijie"}, HybridTagged: []int{30}, HybridUntagged: []int{10, 20},
+		PortIDs: []string{"port-ruijie"}, HybridTagged: []int{30}, NativeVLAN: 10,
 	}, "tester")
-	require.Error(t, err, "锐捷 hybrid native 单值，多 untagged 必须被拒绝")
-	assert.ErrorIs(t, err, portcollection.ErrActionNotSupported)
+	require.NoError(t, err)
+	var cmds []string
+	for _, c := range res.Ports[0].Commands {
+		cmds = append(cmds, c.Command)
+	}
+	assert.Contains(t, strings.Join(cmds, " | "), "switchport hybrid native vlan 10",
+		"native 单值走独立命令形态")
 }
 
 // TestValidateTrunkRequest sentinel 错误路径（验收 #3 参数校验）。
