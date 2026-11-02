@@ -128,6 +128,66 @@ CX-WH-WH-47F-FL-RS8607E-01(config-if-GigabitEthernet 1/25)#switchport mode
 | `runBase` | 切 trunk **之后**、实跑**之前** | **副作用判定** |
 | `before` | 循环内（上一条的结果） | allowed 行前后对比 |
 
+## 2.36 ★★★ 第五轮：语义全部定稿 ⭐⭐⭐（任务 A 结论）
+
+```
+▸ switchport trunk allowed vlan only 3990
+    执行前: （该行不存在）
+    执行后: switchport trunk allowed vlan only 3990          ← only = 允许式 ✅（二次确认）
+▸ switchport trunk allowed vlan add 3991
+    执行前: switchport trunk allowed vlan only 3990
+    执行后: switchport trunk allowed vlan only 3990-3991       ← add = 并集（叠加）✅
+▸ switchport trunk allowed vlan remove 3991
+    执行前: switchport trunk allowed vlan only 3990-3991
+    执行后: switchport trunk allowed vlan only 3990            ← remove 存在且生效 ✅
+```
+
+⇒ **`only` 本身即全量语义**（`only 3990` 直接覆盖了之前的全部）⭐⭐
+
+### ★ 锐捷 `switchport trunk allowed vlan` 最终口径（定稿）
+
+| 模式 | 形态 | 语义 |
+|---|---|---|
+| replace | `switchport trunk allowed vlan only <list>` | **全量覆盖** ✅（only 本身即全量 ⭐） |
+| add | `switchport trunk allowed vlan add <list>` | **并集/叠加** ✅ |
+| remove | `switchport trunk allowed vlan remove <list>` | **移除** ✅ |
+| （无关键字） | `switchport trunk allowed vlan <list>` | ❌ **已确证非法**（Invalid input ⭐） |
+
+⇒ **P0 修法 = replace 分支补 `only` 关键字** ⭐⭐（add/remove 形态与语义均已正确，不动）
+⇒ **华为/H3C 不受影响** ✅（allow-pass / permit 是叠加语义，保持原样）
+⇒ **产品模型不需按厂商分叉** ✅（add/remove 语义两家一致，只有 replace 的表达不同）
+⇒ **无需预建 VLAN** ✅（锐捷 trunk allowed 不需要）
+
+### ★ VLAN 表对照（回答「产品是否需要预建 VLAN」）
+
+```
+探测前    : [1 302 303 306 308 309 310 311 312 313 315 316 320 390 428 600 1001 3012]
+实跑期基线: [1 302 303 306 308 309 310 311 312 313 315 316 320 390 428 600 1001 3012]
+还原后    : [1 302 303 306 308 309 310 311 312 313 315 316 320 390 428 600 1001 3012]
+```
+
+⇒ **设备没有自动创建 VLAN 3990/3991** ⇒ **锐捷 trunk allowed 不需要预建 VLAN** ✅
+⚠️⚠️ **但「是否需要预建 VLAN」是「按厂商 + 按动作」的结论，不是全局结论** ⭐：
+**hybrid 那次设备会自动创建 VLAN**（实测 3992/3993 被自动建）⇒ 两者行为不同。
+
+### ⚠️ 零残留核查误报（第五轮，安全网级别 ⚠️⚠️）
+
+```
+端口模式      : trunk → access（默认：无 mode 行也无 trunk 特征行）  🚨 不一致
+接口配置块字节: 62 → 0  🚨 不一致
+```
+
+⚠️ 设备实际是干净的（lead 独立复核：32 bytes / access / VLAN 干净）⇒ **是误报**。
+
+**根因**：零残留比对的基准用了**循环内的 `before`**（实跑结束时的 trunk 态），
+而不是**探测前的 `initial`** ⇒ 拿一个错的基准去比对「还原后」⇒
+把**正确的还原结果**判成不一致。
+
+⚠️⚠️ **这条比其它 bug 严重**：零残留核查是**最后一道安全网** ⇒ 它误报 ⇒ **真正的残留会被淹没**。
+
+**修正**：零残留比对改用 `initial`（探测前 = 切 trunk 之前），并把判定抽成纯函数
+`zeroResidualVerdict(initial, after)` + 测试锁定（`TestZeroResidualVerdict`）。
+
 ## 2.4 ★ 任务 A 结论（lead 2026-11-02 两轮实测后定稿）
 
 | 项 | 结论 |

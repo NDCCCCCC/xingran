@@ -601,15 +601,16 @@ func runTrunkAllowedProbe(ctx context.Context, ch *execChannel, dev *deviceInfo,
 	}
 
 	// —— 零残留核查 ——
-	rep.section("5. 零残留核查（还原后 vs 探测前）")
-	sameBytes := before.ConfigBytes == after.ConfigBytes
-	sameLines := before.ConfigLines == after.ConfigLines
-	sameMode := before.PortMode == after.PortMode
-	sameVlan := fmt.Sprint(before.VlanIDs) == fmt.Sprint(after.VlanIDs)
-	rep.line("端口模式      : %s → %s  %s", before.PortMode, after.PortMode, okMark(sameMode))
-	rep.line("接口配置块字节: %d → %d  %s", before.ConfigBytes, after.ConfigBytes, okMark(sameBytes))
-	rep.line("接口配置行数  : %d → %d  %s", before.ConfigLines, after.ConfigLines, okMark(sameLines))
-	rep.line("VLAN 表       : %v → %v  %s", before.VlanIDs, after.VlanIDs, okMark(sameVlan))
+	rep.section("5. 零残留核查（还原后 vs **探测前**）")
+	// ★ 基准必须是 **initial**（探测前 = 切 trunk 之前）。
+	//   曾用 before（循环内上一条的结果）作基准 ⇒ 基准本身就是「实跑结束时的 trunk 态」
+	//   ⇒ 把「正确的还原结果（trunk→access）」判成不一致 ⇒ 安全网误报，真正的残留会被淹没。
+	sameBytes, sameLines, sameMode, sameVlan := zeroResidualVerdict(initial, after)
+	rep.line("基准         : 探测前（initial）")
+	rep.line("端口模式      : %s → %s  %s", initial.PortMode, after.PortMode, okMark(sameMode))
+	rep.line("接口配置块字节: %d → %d  %s", initial.ConfigBytes, after.ConfigBytes, okMark(sameBytes))
+	rep.line("接口配置行数  : %d → %d  %s", initial.ConfigLines, after.ConfigLines, okMark(sameLines))
+	rep.line("VLAN 表       : %v → %v  %s", initial.VlanIDs, after.VlanIDs, okMark(sameVlan))
 	if sameBytes && sameLines && sameMode && sameVlan {
 		rep.line("✅ 零残留：还原后与探测前完全一致（模式/字节数/行数/VLAN 集合）")
 	} else {
@@ -638,6 +639,21 @@ func orNone(s string) string {
 		return "（该行不存在）"
 	}
 	return s
+}
+
+// zeroResidualVerdict 零残留判定（基准 = **探测前** initial）。
+//
+// ★ 为何单独抽出来并加测试（lead 2026-11-02 第五轮误报的根因）：
+//
+//	零残留核查是**最后一道安全网** ⇒ 它误报，真正的残留就会被淹没。
+//	星史 bug：基准用了循环内的 before（实跑结束时的 trunk 态）⇒
+//	把「正确的还原结果（trunk→access）」判成不一致。
+func zeroResidualVerdict(initial, after probeBaseline) (sameBytes, sameLines, sameMode, sameVlan bool) {
+	sameBytes = initial.ConfigBytes == after.ConfigBytes
+	sameLines = initial.ConfigLines == after.ConfigLines
+	sameMode = initial.PortMode == after.PortMode
+	sameVlan = fmt.Sprint(initial.VlanIDs) == fmt.Sprint(after.VlanIDs)
+	return
 }
 
 // okMark 一致性标记。
