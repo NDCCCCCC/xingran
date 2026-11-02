@@ -1,4 +1,5 @@
 //go:build ignore
+
 package main
 
 import (
@@ -20,13 +21,13 @@ func main() {
 	}
 
 	type MenuInfo struct {
-		ID          string
-		MenuName    string
-		Path        string
-		Component   string
-		MenuType    string
-		ParentID    *string
-		ParentName  *string
+		ID         string
+		MenuName   string
+		Path       string
+		Component  string
+		MenuType   string
+		ParentID   *string
+		ParentName *string
 	}
 
 	fmt.Println("=== 检查 API 密钥管理菜单配置 ===")
@@ -60,12 +61,18 @@ func main() {
 		fmt.Printf("  类型: %s\n", menu.MenuType)
 		fmt.Printf("  父菜单: %s (ID: %s)\n",
 			func() string {
-				if menu.ParentName != nil { return *menu.ParentName }
-				if menu.ParentID != nil { return "未知" }
+				if menu.ParentName != nil {
+					return *menu.ParentName
+				}
+				if menu.ParentID != nil {
+					return "未知"
+				}
 				return "无"
 			}(),
 			func() string {
-				if menu.ParentID != nil { return *menu.ParentID }
+				if menu.ParentID != nil {
+					return *menu.ParentID
+				}
 				return "无"
 			}())
 

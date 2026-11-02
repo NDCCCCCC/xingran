@@ -1,16 +1,18 @@
 //go:build ignore
+
 package main
 
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
-	dsn := "host=10.62.10.34 user=postgres password=Cpic1234 dbname=xingran port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=10.62.10.34 user=postgres password=" + os.Getenv("DB_PASSWORD") + " dbname=xingran port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("数据库连接失败:", err)
