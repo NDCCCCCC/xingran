@@ -120,3 +120,25 @@ func TestRenderHuaweiPortBinding_SystemView(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"}, cmds)
 }
+
+// TestSupportEvidence_CiscoVendorUnsupported 厂商级 unsupported 通道的依据返回路径。
+//
+// ★ 为何要单独测：CheckActionSupport 只走 lookupSupport（覆盖了“支持/不支持判定”），
+//
+//	而 **SupportEvidence 的厂商级命中分支**（“为何拒绝”的文案来源）是另一条路径 ⇒
+//	若不单独测，它会因为「写路径先被矩阵拢截」而永远不被执行 ⇒ 那段代码会无条件潮化。
+func TestSupportEvidence_CiscoVendorUnsupported(t *testing.T) {
+	for _, action := range []PortAction{TrunkSetNative, TrunkSetAllowed, TrunkSetHybrid} {
+		ev := SupportEvidence(models.VendorCisco, "", action)
+		assert.NotEmpty(t, ev, "Cisco 的 %s 厂商级拒绝必须有依据文本", action)
+		assert.Contains(t, ev, "渲染层未实现",
+			"依据必须说明「渲染层未实现」")
+		assert.Contains(t, ev, "无真机取证依据",
+			"依据必须诚实标注「无真机取证依据」")
+	}
+
+	// 型号级依据仍然受影响（厂商级通道不得覆盖型号级 supported）
+	ev := SupportEvidence(models.VendorRuijie, "RS8607E", TrunkSetHybrid)
+	assert.Contains(t, ev, "真机",
+		"锐捷 RS8607E 的 hybrid 依据应仍为型号级真机依据")
+}
