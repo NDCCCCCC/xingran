@@ -23,19 +23,32 @@ import (
 )
 
 // mockRuijie 模拟锐捷 RGOS 的接口配置状态机。
+//
+// ★ mock 的边界（2026-11-02 实跑后明确）：mock 只模拟**命令语义**
+//
+//	（设备是否接受该命令、该命令是否落地配置行），**不模拟设备的自动改写行为** ——
+//	真机事实：下发 untagged 3992,3993 后，设备自行把配置改写成
+//	  switchport hybrid allowed vlan only tagged 2-3991,3994-4094
+//	  switchport hybrid allowed vlan add untagged 1,3992-3993
+//	（自动补集 + 区间形式 + 自动并入 PVID）。那是**设备侧行为**，由真机取证覆盖；
+//	mock 若去模拟它，反而会让"产品下发形态"与"设备落盘形态"在自测里混为一谈。
+//	⇒ 断言一律针对**产品下发的形态**（如 "switchport hybrid allowed vlan untagged ..."）。
 type mockRuijie struct {
 	lines    []string        // 当前接口配置行
 	inIface  bool            // 是否处于接口视图
 	failCmds map[string]bool // 指定命令永久失效（模拟设备不接受）
 	failOnce map[string]bool // 指定命令首次失效（模拟偶发失败 → 触发自愈重试）
 	rejected []string        // 被拒绝的命令记录
+	// rejectOutput 命令 → 自定义拒绝回显（复刻真机的业务级错误串）
+	rejectOutput map[string]string
 }
 
 func newMockRuijie(baseline []string) *mockRuijie {
 	return &mockRuijie{
-		lines:    append([]string{}, baseline...),
-		failCmds: map[string]bool{},
-		failOnce: map[string]bool{},
+		lines:        append([]string{}, baseline...),
+		failCmds:     map[string]bool{},
+		failOnce:     map[string]bool{},
+		rejectOutput: map[string]string{},
 	}
 }
 
@@ -83,8 +96,65 @@ func (m *mockRuijie) apply(cmd string) cmdResult {
 		res.Output = "% Invalid input detected at '^' marker."
 		return res
 	}
+	if m.rejectsCommand(c) {
+		m.rejected = append(m.rejected, c)
+		res.Failed = true
+		res.Output = "% Invalid input detected at '^' marker."
+		if custom, ok := m.rejectOutput[c]; ok {
+			res.Output = custom
+		}
+		return res
+	}
 	m.applyConfig(c)
 	return res
+}
+
+// rejectsCommand 判断该命令是否会被真机设备拒绝（模拟锐捷 RGOS 行为）。
+//
+// ★ 缺 tagged / untagged 关键字的 hybrid allowed 形态：真机
+//
+//	`switchport hybrid allowed vlan ?` → add/only/remove/tagged/untagged
+//	⇒ 不带关键字的 `switchport hybrid allowed vlan <list>` 会被设备拒绝。
+//	mock 必须复现这条，否则渲染层回归（少关键字）不会被自测发现。
+func (m *mockRuijie) rejectsCommand(c string) bool {
+	lower := strings.ToLower(strings.TrimSpace(c))
+	// ★ 真机事实（2026-11-02 第三次取证，事实④）：tagged 与 untagged 形态**不对称** ——
+	//   switchport hybrid allowed vlan only untagged 3992 → ❌ % Invalid input detected
+	//   switchport hybrid allowed vlan untagged 3992      → ✅ 生效
+	// ⇒ only untagged 必须被拒绝；untagged 不带 only 才是合法形态。
+	if strings.HasPrefix(lower, "switchport hybrid allowed vlan only untagged ") {
+		return true
+	}
+	// 关键字完全不对（既无 tagged/untagged 也无 only tagged）→ 设备拒绝
+	if strings.HasPrefix(lower, "switchport hybrid allowed vlan ") &&
+		!strings.HasPrefix(lower, "switchport hybrid allowed vlan tagged ") &&
+		!strings.HasPrefix(lower, "switchport hybrid allowed vlan untagged ") &&
+		!strings.HasPrefix(lower, "switchport hybrid allowed vlan only tagged ") {
+		return true
+	}
+	// ★ 真机事实（2026-11-02 第三次取证）：锐捷**不接受**逐条否定 hybrid 配置
+	//   （no switchport hybrid allowed vlan tagged 3990 → % Invalid input detected）
+	//   ⇒ 唯一可靠的还原是模式回退 `switchport mode access`。
+	if strings.HasPrefix(lower, "no switchport hybrid ") {
+		return true
+	}
+	// ★ 真机事实（2026-11-02 实跑，RS8607E GE1/25）：端口配了 802.1X 时，
+	//   设备不允许把口切到 hybrid 模式（设备级互斥）：
+	//     Can not operate on interface Gi1/25. Conflict with IEEE 802.1X.
+	if strings.HasPrefix(lower, "switchport mode hybrid") && m.hasDot1x() {
+		return true
+	}
+	return false
+}
+
+// hasDot1x 端口当前是否配了 802.1X（dot1x port-control auto）。
+func (m *mockRuijie) hasDot1x() bool {
+	for _, l := range m.lines {
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(l)), "dot1x port-control auto") {
+			return true
+		}
+	}
+	return false
 }
 
 // applyConfig 应用接口级配置语义。
@@ -101,12 +171,41 @@ func (m *mockRuijie) applyConfig(c string) {
 		m.set(c)
 	case lower == "no switchport mode access":
 		m.removePrefix("switchport mode ")
+	case lower == "no switchport mode hybrid":
+		// 兜底路径：否定 hybrid 模式 → 清掉 hybrid 配置行与 mode 行
+		m.removePrefix("switchport hybrid ")
+		m.removePrefix("switchport mode hybrid")
+	case lower == "default switchport mode access":
+		// ★ 兜底写法（Cisco 风格）：切回 access → 清 hybrid 行，access 是默认模式不落 mode 行
+		m.removePrefix("switchport hybrid ")
+		m.removePrefix("switchport mode hybrid")
 	case strings.HasPrefix(lower, "switchport mode "):
 		// ★ 锐捷真实行为：access 是默认模式，running-config 里不落 mode 行
 		//   （权威 9 行基线里确实没有 mode 行）→ 这里同样不落行。
 		if strings.HasPrefix(lower, "switchport mode access") {
+			// 切回 access ⇒ 清掉 hybrid 相关行（真机行为：换模式会清 hybrid 配置）
+			m.removePrefix("switchport hybrid ")
+			m.removePrefix("switchport mode hybrid")
 			return
 		}
+		m.set(c)
+	// ---- hybrid（锐捷 TrunkSetHybrid，PR #44 形态）----
+	case strings.HasPrefix(lower, "no switchport hybrid allowed vlan tagged "):
+		m.removePrefix("switchport hybrid allowed vlan tagged ")
+	case strings.HasPrefix(lower, "no switchport hybrid allowed vlan untagged "):
+		m.removePrefix("switchport hybrid allowed vlan untagged ")
+	case strings.HasPrefix(lower, "no switchport hybrid native vlan "):
+		m.removePrefix("switchport hybrid native vlan ")
+	case strings.HasPrefix(lower, "switchport hybrid allowed vlan only tagged "):
+		// ★ tagged 的正确形态（带 only）→ 落地
+		m.set(c)
+	case strings.HasPrefix(lower, "switchport hybrid allowed vlan untagged "):
+		// ★ untagged 的正确形态（**不带** only）→ 落地
+		m.set(c)
+	case strings.HasPrefix(lower, "switchport hybrid allowed vlan tagged "):
+		// ★ tagged 缺 only → 设备**无错误但不落地**（配置不变）→ 这里不写配置行
+		return
+	case strings.HasPrefix(lower, "switchport hybrid native vlan "):
 		m.set(c)
 	case lower == "no dot1x port-control auto":
 		// ★ 真机行为：连带清除 default-user-limit 与 mac-auth-bypass
@@ -195,6 +294,15 @@ func configLineKey(line string) string {
 		return f[0]
 	case "switchport":
 		switch {
+		case f[1] == "hybrid" && len(f) >= 5 && f[2] == "allowed" && f[3] == "vlan":
+			// switchport hybrid allowed vlan [only] tagged/untagged <list> 各是不同行
+			key := f[0] + " " + f[1] + " " + f[2] + " " + f[3] + " " + f[4]
+			if f[4] == "only" && len(f) >= 6 {
+				key += " " + f[5]
+			}
+			return key
+		case f[1] == "hybrid" && len(f) >= 4 && f[2] == "native":
+			return f[0] + " " + f[1] + " " + f[2]
 		case f[1] == "port-security" && len(f) >= 3 && (f[2] == "binding" || f[2] == "maximum" || f[2] == "mac-address"):
 			return f[0] + " " + f[1] + " " + f[2]
 		case f[1] == "mac-address" && len(f) >= 3 && f[2] == "sticky":
@@ -451,3 +559,330 @@ type discardWriter struct{}
 func (discardWriter) Write(p []byte) (int, error) { return len(p), nil }
 
 var io_Discard = discardWriter{}
+
+// ====================== hybrid 场景（锐捷 TrunkSetHybrid，PR #44 形态） ======================
+
+// idleBaseline 空闲口的基线：锐捷默认 access 模式**不落** mode 行，
+// 空闲口也没有 description / access vlan 行（lead 选定的 GE1/25 就是这种口）。
+var idleBaseline = []string{}
+
+// hybridParamsForTest hybrid 动作的测试参数。
+//
+// ★ untagged 给**两个** VLAN：PR #44 撤销了「多 untagged 拒绝」，
+//
+//	这里锁定「多 untagged 能被渲染且下发被设备接受」。
+func hybridParamsForTest() actionParams {
+	p := actionParamsForTest()
+	p.BaselineVLAN = 1
+	// ★ 锐捷 hybrid 是自动补集语义（2026-11-02 真机 + 补验，产品口径 (i)）：
+	//   只下发 untagged，**不下发 tagged**（tagged 在锐捷无设备侧对应物，
+	//   提交 tagged 会被产品层以 ErrActionNotSupported 拒绝）。
+	p.HybridTagged = nil
+	p.HybridUntagged = []int{3991, 3992}
+	p.HybridNative = 3993
+	return p
+}
+
+// TestHybridRestoreNoDevice hybrid 全流程还原（无设备 mock）。
+//
+// 断言：
+//  1. 还原后与基线逐行一致（diff 为空）；
+//  2. ★ 基线**无** `switchport access vlan` 行 ⇒ 还原**不得**下发该行
+//     （lead 点名的坑：臆断下发会凭空多出一行 → 制造 diff → 误判还原失败）；
+//  3. 还原必须含端口模式回退 `switchport mode access`；
+//  4. 还原必须含三条 no hybrid（tagged / untagged / native）。
+func TestHybridRestoreNoDevice(t *testing.T) {
+	params := hybridParamsForTest()
+	spec := actionRegistry["hybrid"]
+
+	tpl := spec.Build(params)
+	tpl.InterfaceName = params.CliIface
+	rendered, err := portcollection.RenderCommand(models.VendorRuijie, spec.PortAction, tpl)
+	if err != nil {
+		t.Fatalf("渲染失败: %v", err)
+	}
+
+	m := newMockRuijie(idleBaseline)
+	for _, seg := range actionSegments(params.CliIface, rendered) {
+		m.sendInterfaceCmds(seg)
+	}
+	if len(m.rejected) > 0 {
+		t.Fatalf("下发被设备拒绝: %v", m.rejected)
+	}
+	if len(m.lines) == 0 {
+		t.Fatalf("下发后 mock 没有任何配置行（hybrid 形态未生效）")
+	}
+
+	outcome, err := restoreWithVerify(m, params.CliIface, spec, params, idleBaseline,
+		func() ([]string, error) { return append([]string{}, m.lines...), nil },
+		3, func(format string, args ...interface{}) {})
+	if err != nil {
+		t.Fatalf("还原引擎报错: %v", err)
+	}
+	if len(m.rejected) > 0 {
+		t.Errorf("还原过程有命令被设备拒绝: %v", m.rejected)
+	}
+	if !outcome.OK {
+		t.Errorf("还原未通过: diff=%v 最终=%v", outcome.Diff, m.lines)
+	}
+	if d := diffConfig(idleBaseline, m.lines); len(d) != 0 {
+		t.Errorf("还原后与基线不一致: %v（最终状态 %v）", d, m.lines)
+	}
+
+	var hasModeBack bool
+	for _, c := range outcome.Cmds {
+		cmd := strings.ToLower(strings.TrimSpace(c.Command))
+		switch {
+		case cmd == "switchport mode access" || cmd == "default switchport mode access":
+			hasModeBack = true
+		case strings.HasPrefix(cmd, "no switchport hybrid"):
+			// ★ 真机事实：锐捷**不接受**逐条否定 hybrid 配置（% Invalid input）
+			//   ⇒ 还原只走模式回退；下发逐条 no = 还原失败 = 口留在 hybrid 模式
+			//   = 转发行为改变 = 潜在业务中断（安全级）
+			t.Errorf("还原不得下发逐条 `no switchport hybrid ...`（锐捷不认，必须走模式回退）: %q", c.Command)
+		case strings.Contains(cmd, "switchport access vlan"):
+			// ★ 基线无 access vlan 行时，还原不得下发该行
+			t.Errorf("基线无 access vlan 行时还原不得下发该行: %q", c.Command)
+		}
+	}
+	if !hasModeBack {
+		t.Errorf("还原必须含端口模式回退（switchport mode access / default ...）: %v", outcome.Cmds)
+	}
+}
+
+// TestHybridMultiUntaggedAccepted 多 untagged 被接受（PR #44 撤销拒绝规则的行为验证）。
+//
+// 渲染层：两个 untagged 必须渲成一条 `... untagged 3991,3992`（不是被拒绝、也不是拆两条）。
+// mock 层：该形态被设备接受（不被 reject）。
+func TestHybridMultiUntaggedAccepted(t *testing.T) {
+	params := hybridParamsForTest()
+	spec := actionRegistry["hybrid"]
+	tpl := spec.Build(params)
+	tpl.InterfaceName = params.CliIface
+	rendered, err := portcollection.RenderCommand(models.VendorRuijie, spec.PortAction, tpl)
+	if err != nil {
+		t.Fatalf("多 untagged 必须被接受（PR #44 已撤销拒绝规则）: %v", err)
+	}
+	joined := strings.Join(rendered, " | ")
+	if !strings.Contains(joined, "switchport hybrid allowed vlan untagged 3991,3992") {
+		t.Errorf("多 untagged 渲染形态不对（★ untagged 不得带 only）: %s", joined)
+	}
+	if strings.Contains(joined, "allowed vlan only untagged") {
+		t.Errorf("untagged 不得带 only（真机回显 Invalid input）: %s", joined)
+	}
+	// ★ 产品口径 (i)：锐捷侧不下发 tagged（自动补集语义，tagged 无设备侧对应物）
+	if strings.Contains(joined, "allowed vlan only tagged") || strings.Contains(joined, "allowed vlan tagged") {
+		t.Errorf("锐捷侧不得下发 tagged 命令: %s", joined)
+	}
+	if !strings.Contains(joined, "switchport hybrid native vlan 3993") {
+		t.Errorf("native 渲染形态不对: %s", joined)
+	}
+
+	m := newMockRuijie(idleBaseline)
+	for _, seg := range actionSegments(params.CliIface, rendered) {
+		m.sendInterfaceCmds(seg)
+	}
+	if len(m.rejected) > 0 {
+		t.Errorf("多 untagged 形态被 mock 设备拒绝: %v", m.rejected)
+	}
+}
+
+// TestHybridRejectsMissingKeyword mock 复现真机行为：缺 tagged/untagged 关键字的
+// `switchport hybrid allowed vlan <list>` 会被设备拒绝。
+//
+// 这条自测守住 PR #44 的核心修正：渲染层一旦退回无关键字形态，mock 立刻能发现。
+func TestHybridRejectsMissingKeyword(t *testing.T) {
+	m := newMockRuijie(idleBaseline)
+	m.apply("interface GigabitEthernet 1/1") // 进接口视图（否则顶层命令一律被拒）
+	res := m.apply("switchport hybrid allowed vlan 3990")
+	if !res.Failed {
+		t.Errorf("缺 tagged/untagged 关键字的 hybrid allowed 形态必须被设备拒绝")
+	}
+	ok := m.apply("switchport hybrid allowed vlan tagged 3990")
+	if ok.Failed {
+		t.Errorf("带 tagged 关键字的形态必须被接受: %s", ok.Output)
+	}
+}
+
+// TestHybridModeAccessFallback 端口模式回退兜底：
+// `switchport mode access` 被设备拒绝时，改用 `default switchport mode access`，
+// 且最终仍能收敛到基线（不留 hybrid 行）。
+func TestHybridModeAccessFallback(t *testing.T) {
+	params := hybridParamsForTest()
+	spec := actionRegistry["hybrid"]
+	tpl := spec.Build(params)
+	tpl.InterfaceName = params.CliIface
+	rendered, err := portcollection.RenderCommand(models.VendorRuijie, spec.PortAction, tpl)
+	if err != nil {
+		t.Fatalf("渲染失败: %v", err)
+	}
+
+	m := newMockRuijie(idleBaseline)
+	for _, seg := range actionSegments(params.CliIface, rendered) {
+		m.sendInterfaceCmds(seg)
+	}
+	// 模拟设备不接受 `switchport mode access`（首次即失败 → 触发兜底）
+	m.failOnce["switchport mode access"] = true
+
+	outcome, err := restoreWithVerify(m, params.CliIface, spec, params, idleBaseline,
+		func() ([]string, error) { return append([]string{}, m.lines...), nil },
+		3, func(format string, args ...interface{}) {})
+	if err != nil {
+		t.Fatalf("还原引擎报错: %v", err)
+	}
+	if !outcome.OK {
+		t.Errorf("兜底后仍未收敛: diff=%v 最终=%v", outcome.Diff, m.lines)
+	}
+	var usedFallback bool
+	for _, c := range outcome.Cmds {
+		if strings.EqualFold(strings.TrimSpace(c.Command), "default switchport mode access") {
+			usedFallback = true
+		}
+	}
+	if !usedFallback {
+		t.Errorf("未触发 `default switchport mode access` 兜底: %v", outcome.Cmds)
+	}
+}
+
+// ====================== 真机事实复刻：802.1X × hybrid 互斥 + 假 OK 缺陷 ======================
+
+// TestHybridBlockedByDot1x 真机事实复刻（2026-11-02 实跑，RS8607E GE1/25）：
+//
+//	interface GigabitEthernet 1/25
+//	 switchport mode hybrid
+//	 Can not operate on interface Gi1/25. Conflict with IEEE 802.1X.
+//
+// ⇒ 端口配了 802.1X（dot1x port-control auto）时，设备不允许切 hybrid 模式。
+// 本用例同时锁住 lead 报出的**假 OK 缺陷**：工具的 hasDeviceError 必须把这条
+// 自然语言错误判为失败（否则实跑会把失败命令报成 [OK]）。
+func TestHybridBlockedByDot1x(t *testing.T) {
+	const realErr = "Can not operate on interface Gi1/25. Conflict with IEEE 802.1X."
+
+	m := newMockRuijie([]string{
+		"dot1x port-control auto",
+		"dot1x mac-auth-bypass multi-user",
+	})
+	m.rejectOutput["switchport mode hybrid"] = realErr
+
+	m.apply("interface GigabitEthernet 1/1")
+	res := m.apply("switchport mode hybrid")
+	if !res.Failed {
+		t.Fatalf("配了 dot1x 的端口切 hybrid 必须被设备拒绝（真机事实）")
+	}
+	if !strings.Contains(res.Output, "Conflict with IEEE 802.1X") {
+		t.Errorf("拒绝回显应含真机错误串: %q", res.Output)
+	}
+	// ★ 工具判定必须识别这条业务级错误（lead 报的假 OK 缺陷）
+	if !hasDeviceError(res.Output) {
+		t.Errorf("hasDeviceError 必须识别锐捷业务级错误（不含百分号前缀）: %q", res.Output)
+	}
+	// 正常回显不能误判
+	if hasDeviceError("switchport mode hybrid\nRuijie(config-if-GigabitEthernet 1/25)#") {
+		t.Errorf("正常回显不得判为失败")
+	}
+}
+
+// TestHasDeviceError 设备侧错误判定的单元测试（2026-11-02 真机实跑修正）。
+func TestHasDeviceError(t *testing.T) {
+	cases := []struct {
+		name string
+		out  string
+		want bool
+	}{
+		{"锐捷业务错误：dot1x 与 hybrid 互斥",
+			"switchport mode hybrid\nCan not operate on interface Gi1/25. Conflict with IEEE 802.1X.", true},
+		{"锐捷百分号错误（行首）",
+			"% Invalid input detected at '^' marker.", true},
+		{"多行回显中的行首百分号",
+			"switchport mode hybrid\n% Unknown command\nRuijie(config-if-GigabitEthernet 1/25)#", true},
+		{"思科风格 Unknown",
+			"Unrecognized command found at '^' position.", true},
+		{"正常回显",
+			"switchport mode hybrid\nRuijie(config-if-GigabitEthernet 1/25)#", false},
+		{"正常配置行",
+			"switchport access vlan 318", false},
+	}
+	for _, c := range cases {
+		if got := hasDeviceError(c.out); got != c.want {
+			t.Errorf("[%s] hasDeviceError = %v, want %v（out=%q）", c.name, got, c.want, c.out)
+		}
+	}
+}
+
+// TestHybridOnlyKeywordRequired 真机事实（2026-11-02 第三次取证）：
+//
+//	switchport hybrid allowed vlan tagged 3990     → 无错误但【不落地】
+//	switchport hybrid allowed vlan add tagged 3990 → 无错误但【不落地】
+//	switchport hybrid allowed vlan only tagged 3990 → ✅【落地】
+//
+// ⇒ 缺 only 是**静默失败**（命令成功、配置不变、用户以为成功）—— 最阴险的一类缺陷。
+// 本用例锁住：带 only 才落地；缺 only 时设备不报错但配置不变。
+func TestHybridOnlyKeywordRequired(t *testing.T) {
+	// 缺 only → 无错误、但不落地
+	m := newMockRuijie(idleBaseline)
+	m.apply("interface GigabitEthernet 1/1")
+	res := m.apply("switchport hybrid allowed vlan tagged 3990")
+	if res.Failed {
+		t.Errorf("缺 only 的形态在真机上不报错（只是不落地）: %s", res.Output)
+	}
+	if len(m.lines) != 0 {
+		t.Errorf("缺 only 的形态不得落地配置行: %v", m.lines)
+	}
+
+	// 带 only → 落地
+	m2 := newMockRuijie(idleBaseline)
+	m2.apply("interface GigabitEthernet 1/1")
+	res2 := m2.apply("switchport hybrid allowed vlan only tagged 3990")
+	if res2.Failed {
+		t.Fatalf("带 only 的形态必须被接受: %s", res2.Output)
+	}
+	if len(m2.lines) != 1 || !strings.Contains(m2.lines[0], "switchport hybrid allowed vlan only tagged 3990") {
+		t.Errorf("带 only 的形态必须落地配置行: %v", m2.lines)
+	}
+
+	// ★ untagged 形态**不带** only（真机事实④：only untagged 被设备拒绝）
+	m3 := newMockRuijie(idleBaseline)
+	m3.apply("interface GigabitEthernet 1/1")
+	if r := m3.apply("switchport hybrid allowed vlan only untagged 3992"); !r.Failed {
+		t.Errorf("only untagged 必须被设备拒绝（真机事实④）")
+	}
+	m4 := newMockRuijie(idleBaseline)
+	m4.apply("interface GigabitEthernet 1/1")
+	r4 := m4.apply("switchport hybrid allowed vlan untagged 3992")
+	if r4.Failed {
+		t.Fatalf("untagged（不带 only）必须被接受: %s", r4.Output)
+	}
+	// ★ 精确整行断言（lead 2026-11-02 建议）：子串 "untagged 3992" 会同时匹配
+	//   "only untagged 3992" ⇒ 用完整命令形态断言，渲染层改动才能精确反映到断言上。
+	if len(m4.lines) != 1 || !strings.Contains(m4.lines[0], "switchport hybrid allowed vlan untagged 3992") {
+		t.Errorf("untagged（不带 only）必须落地配置行: %v", m4.lines)
+	}
+}
+
+// TestHybridPerItemNoRejected 真机事实：锐捷**不接受**逐条否定 hybrid 配置。
+//
+//	no switchport hybrid allowed vlan tagged 3990 → % Invalid input detected
+//	no switchport hybrid native vlan 3993        → % Invalid input detected
+//
+// ⇒ 还原必须走模式回退 `switchport mode access`（一次性清空全部 hybrid 配置）。
+func TestHybridPerItemNoRejected(t *testing.T) {
+	m := newMockRuijie([]string{"switchport mode hybrid", "switchport hybrid allowed vlan only tagged 3990"})
+	m.apply("interface GigabitEthernet 1/1")
+	for _, c := range []string{
+		"no switchport hybrid allowed vlan tagged 3990",
+		"no switchport hybrid native vlan 3993",
+	} {
+		res := m.apply(c)
+		if !res.Failed {
+			t.Errorf("逐条否定 hybrid 配置必须被设备拒绝（真机事实）: %q", c)
+		}
+	}
+	// 模式回退可用：一次性清空全部 hybrid 配置
+	res := m.apply("switchport mode access")
+	if res.Failed {
+		t.Fatalf("模式回退必须被设备接受: %s", res.Output)
+	}
+	if len(m.lines) != 0 {
+		t.Errorf("模式回退必须一次性清空全部 hybrid 配置: %v", m.lines)
+	}
+}

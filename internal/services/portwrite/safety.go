@@ -197,6 +197,8 @@ func buildPortBeforeState(port *models.DevicePortStatus) portBeforeState {
 //
 //   - shutdown → undo_shutdown（复用 RenderCommand，零第二套模板）
 //   - set_access_vlan → 恢复快照原 VLAN；原 VLAN 为 nil 时用厂商"清除 PVID"命令
+//   - trunk_set_hybrid（仅锐捷）→ **端口模式回退** `switchport mode access`
+//     （锐捷不接受逐条 `no switchport hybrid ...`；模式回退一次性清空全部 hybrid 配置）
 //
 // 未覆盖动作返回 nil + false（快照仍可抓，仅不生成回滚命令——保守不误恢复）。
 func renderRollbackCommands(vendor models.DeviceVendor, action Action, before portBeforeState, interfaceName string) ([]string, bool) {
@@ -207,6 +209,28 @@ func renderRollbackCommands(vendor models.DeviceVendor, action Action, before po
 		})
 		if err != nil {
 			return nil, false
+		}
+		return cmds, true
+	case portcollection.TrunkSetHybrid:
+		// ★ 2026-11-02 真机结论（锐捷 RG8607E 10.62.63.47 GE1/25，空口 32 bytes）：
+		//   锐捷**不接受**逐条否定 hybrid 配置 ——
+		//     no switchport hybrid allowed vlan tagged 3990 → % Invalid input detected
+		//     no switchport hybrid native vlan 3993        → % Invalid input detected
+		//   唯一可靠的还原是**模式回退** `switchport mode access`
+		//   （一次性清空全部 hybrid 配置，实测回到 32 bytes 基线）。
+		// ⇒ 还原失败 = 端口留在 hybrid 模式 = 转发行为改变 = 潜在业务中断（安全级）
+		//
+		// ⚠ 其它厂商的 trunk/hybrid 回退形态**未取证** ⇒ 仍返回 nil,false
+		//   （保守：宁可不生成回滚命令，也不生成一条设备不认的命令）。
+		if vendor != models.VendorRuijie {
+			return nil, false
+		}
+		iface := expandInterfaceName(interfaceName, vendor)
+		cmds := []string{"interface " + iface, "switchport mode access"}
+		// 基线有 PVID → 按基线补回（基线没有该行时**不下发**：
+		// 锐捷默认 VLAN 1 在 running-config 里不落行，臆断下发会凭空多出一行）。
+		if before.VLAN != nil {
+			cmds = append(cmds, fmt.Sprintf("switchport access vlan %d", *before.VLAN))
 		}
 		return cmds, true
 	case portcollection.ActionSetAccessVLAN:
