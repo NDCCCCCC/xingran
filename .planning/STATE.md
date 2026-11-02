@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.51
 milestone_name: 端口写生产级操作体验与平台质量收口
-status: 代码工作完成 — 真机 UAT 待设备窗口（Phase 129）
-stopped_at: v1.51 代码工作全部完成并合入 main（2026-11-01）：21 REQ / Phases 121-129 全部交付，技术债 6/6 全清，PR #38 合并（merge commit e602e811）+ tag v1.51；集成验证窗口 #1 全项 PASS。剩余：Phase 129 真机 UAT（华为 S8700 / 锐捷 RS8607E / H3C 必需 + Cisco 可选）+ 4 项 uotester 实测暴露的既有缺陷待 v1.52
-last_updated: "2026-11-01T15:40:00.000Z"
-last_activity: 2026-11-01
-last_activity_desc: v1.51 代码工作完成并合入 main（PR #38 merged, tag v1.51）
+status: 真机 UAT 完成 + PR #39/#41 已合入 — Phase 129 目录改名进行中（DEBT-06）
+stopped_at: v1.51.1 真机 UAT 收口（2026-11-02）：华为 S8700 11 动作 + 锐捷 RS8607E 12 动作真机实测完成（设备零残留，两台配置与原始基线一字不差），定位并修复 6 类产品级缺陷（华为 user-bind 上下文/S8700 缺 max-mac-num/trunk/hybrid 关键字/sticky 不接受手动 MAC；锐捷 port_binding 参数顺序反了/hybrid 未注册）；引入厂商型号能力矩阵（Supported/SystemView/Unsupported 三级，显式记录「支持」而非只记「拒绝」）；PR #39 + PR #41 合并（7c884e5 / 1f4608af）+ tag v1.51.1。Phase 129 三项交付：真机 UAT ✅ / TIDY-02 UAT 回补组织 ✅（129-UAT-BACKFILL.md）/ DEBT-06 目录改名 🔄（task-31 webfe 进行中）。v1.52 待办：task-30（锐捷 hybrid/trunk 二层取证、CE/S57 型号取证、Cisco/H3C 无设备）+ 4 项 uotester 实测缺陷
+last_updated: "2026-11-02T02:05:00.000Z"
+last_activity: 2026-11-02
+last_activity_desc: 真机 UAT 完成 + PR #39/#41 合并 + tag v1.51.1（华为/锐捷 23 动作实测，设备零残留）
 state_head: 27ac078e18b72d83b9690eaed617328c390687cd
 progress:
   total_phases: 9
   completed_phases: 8
   total_plans: 26
   completed_plans: 26
-  percent: 89
+  percent: 96
 current_phase: 129
-current_phase_name: 目录改名 + 双线 planning 合流 + 真机 UAT（需设备窗口）
+current_phase_name: 目录改名 + 双线 planning 合流 + 真机 UAT（真机 UAT ✅ / TIDY-02 ✅ / DEBT-06 进行中）
 ---
 
 # Project State
