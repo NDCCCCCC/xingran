@@ -9,7 +9,6 @@ import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { FormInstance } from "antd/es/form";
 import type { Department } from "@/types";
 
-
 export interface CreateModalProps {
   open: boolean;
   departments: Department[];

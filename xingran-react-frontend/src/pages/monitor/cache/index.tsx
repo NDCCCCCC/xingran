@@ -436,8 +436,7 @@ const CacheManager: FC = () => {
           label="操作类型"
           name="operation"
           rules={[{ required: true, message: "请选择操作类型" }]}
-        >
-        </Form.Item>
+        ></Form.Item>
         <Form.Item
           label="缓存值"
           name="value"

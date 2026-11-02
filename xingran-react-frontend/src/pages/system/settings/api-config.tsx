@@ -510,11 +510,7 @@ const APIConfigPage: FC = () => {
                 children: (
                   <>
                     <Form.Item name="authType" label="认证方式" rules={[{ required: true }]}>
-                      <AppSelect
-                        allowClear
-                        showSearch={false}
-                        options={AUTH_TYPE_OPTIONS}
-                      />
+                      <AppSelect allowClear showSearch={false} options={AUTH_TYPE_OPTIONS} />
                     </Form.Item>
                     <Form.Item
                       noStyle
@@ -575,11 +571,7 @@ const APIConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <AppSelect
-              allowClear
-              showSearch={false}
-              options={STATUS_ENUM_OPTIONS}
-            />
+            <AppSelect allowClear showSearch={false} options={STATUS_ENUM_OPTIONS} />
           </Form.Item>
 
           <Form.Item name="remark" label="备注">

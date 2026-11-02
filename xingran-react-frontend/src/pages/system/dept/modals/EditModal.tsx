@@ -157,11 +157,7 @@ export function DeptEditModal({
         </Form.Item>
         <Form.Item name="status" label="状态" initialValue={0}>
           {/* 形态分类器②④：状态枚举（业务禁搜） */}
-          <AppSelect
-            allowClear
-            showSearch={false}
-            options={[...STATUS_OPTIONS]}
-          />
+          <AppSelect allowClear showSearch={false} options={[...STATUS_OPTIONS]} />
         </Form.Item>
         <Form.Item name="remark" label="备注">
           <AppTextArea rows={4} />
