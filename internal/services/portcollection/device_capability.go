@@ -55,6 +55,14 @@ type modelCapabilityRule struct {
 	matchModelSubstr []string
 	// unsupported 命中后不支持的动作集合
 	unsupported map[PortAction]string // action → reason（真机依据）
+	// supported 命中后「真机验证支持」的动作集合（action → 真机依据）。
+	//
+	// 为什么需要显式的 supported（2026-11-01 锐捷 RS8607E 真机复测）：
+	// 华为 S8700 与锐捷 RS8607E 在 portsec_static_bind / portsec_max_mac 上
+	// 结论完全相反 —— 前者 Unsupported，后者实测无错误。若矩阵只记「拒绝」，
+	// 「支持」就是隐式默认值，后来者容易把锐捷按华为一刀切掉。
+	// 显式记录支持结论 + 真机依据，测试锁定两家结论相反。
+	supported map[PortAction]string
 }
 
 // vendorCapabilities 厂商能力矩阵（真机事实唯一真相源，测试锁定）。
@@ -76,6 +84,14 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 					PortSecMaxMac:     "S8700 port-security ? 无 max-mac-num 子命令（2026-11-01 真机 ? 探测）",
 					PortSecStaticBind: "S8700 port-security mac-address ? 仅 H-H-H/sticky 无 static；sticky <MAC> 报 Wrong parameter ⇒ 不支持静态 MAC 绑定（2026-11-01 真机探测）",
 				},
+				// 同一次真机复测里「支持」的两项也要显式记下来：sticky 开关式可用、
+				// port_binding 仅 IP-only 变体可用（IP+MAC 组合由参数级规则拒绝）。
+				// 记下来是为了与锐捷 RS8607E 的 supported 形成对照，避免误以为
+				// 「华为整个 port-security 家族都不支持」。
+				supported: map[PortAction]string{
+					PortSecSticky:     "S8700 真机（2026-11-01）：port-security mac-address sticky 实测无错误 ⇒ sticky 仅作开关式使用（不支持带 MAC）",
+					ActionPortBinding: "S8700 真机（2026-11-01）：user-bind static ip-address 10.62.25.5（IP-only）实测合法 ⇒ 仅 IP-only 变体可用，IP+MAC 组合报 Wrong parameter",
+				},
 			},
 		},
 	},
@@ -84,10 +100,27 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 	// "静态 MAC 绑定"只能经 sticky 表达（static 子关键字该型号不存在）。
 	// 渲染层已按此去掉 vlan 参数；本矩阵不需拒绝（命令合法，仅参数形状不同）。
 	//
-	// H3C / Ruijie / Cisco：真机证据不足，全部默认支持（S8700 之外的华为
-	// CE/S57 系列按公允语法支持 trunk/hybrid/max-mac-num）。
+	// H3C / Cisco：真机证据不足，全部默认支持（S8700 之外的华为 CE/S57 系列
+	// 按公允语法支持 trunk/hybrid/max-mac-num）。
 	// 锐捷 hybrid 在渲染层不注册（RenderCommand → ErrUnknownAction），此处
 	// 不重复表达。
+
+	// 锐捷 RS8607E 真机（2026-11-01 锐捷 12 动作复测，走产品 scrapli 链路）：
+	// static_bind / max_mac / sticky / port_binding 全部实测无错误 ——
+	// 与华为 S8700 的 static_bind、max_mac 结论相反（两家不可一刀切）。
+	models.VendorRuijie: {
+		modelRules: []modelCapabilityRule{
+			{
+				matchModelSubstr: []string{"rs8607"},
+				supported: map[PortAction]string{
+					PortSecStaticBind: "锐捷 RS8607E 真机（2026-11-01）：switchport port-security mac-address <mac> vlan <vlan> 实测无错误 ⇒ 支持静态 MAC 绑定（华为 S8700 同动作 Unsupported，两家结论相反）",
+					PortSecMaxMac:     "锐捷 RS8607E 真机（2026-11-01）：switchport port-security maximum 5 实测无错误（参数范围 <1-128>）⇒ 支持 MAC 数上限（华为 S8700 无 max-mac-num 子命令）",
+					PortSecSticky:     "锐捷 RS8607E 真机（2026-11-01）：switchport port-security mac-address sticky 实测无错误 ⇒ 支持 sticky MAC 模式",
+					ActionPortBinding: "锐捷 RS8607E 真机（2026-11-01）：switchport port-security binding <IP> <MAC> 实测无错误 ⇒ 支持 IP+MAC 组合绑定（IP 在前，与华为 S8700 IP+MAC Unsupported 相反）",
+				},
+			},
+		},
+	},
 }
 
 // RequiresInterfaceView 该动作命令序列是否需要 interface 前缀视图。
@@ -98,22 +131,50 @@ func RequiresInterfaceView(vendor models.DeviceVendor, action PortAction) bool {
 	return lookupSupport(vendor, "", action) != ActionSystemView
 }
 
+// matchModelRules 返回 (vendor, model) 命中的型号级规则（型号子串匹配，大小写不敏感）。
+//
+// 抽出来是为了 lookupSupport / unsupportedReason / SupportEvidence 三处共用同一套
+// 匹配语义（避免三份拷贝各自漂移）。vendor 不在矩阵内或 model 为空 → 无型号级规则
+// （只按厂商基线处理）。
+func matchModelRules(vendor models.DeviceVendor, model string) []modelCapabilityRule {
+	entry, ok := vendorCapabilities[vendor]
+	if !ok || model == "" {
+		return nil
+	}
+	lower := strings.ToLower(model)
+	var matched []modelCapabilityRule
+	for _, rule := range entry.modelRules {
+		for _, substr := range rule.matchModelSubstr {
+			if strings.Contains(lower, substr) {
+				matched = append(matched, rule)
+				break
+			}
+		}
+	}
+	return matched
+}
+
 // lookupSupport 解析 (vendor, model, action) → 支持级别（model 规则优先于基线）。
 func lookupSupport(vendor models.DeviceVendor, model string, action PortAction) ActionSupport {
 	entry, ok := vendorCapabilities[vendor]
 	if !ok {
 		return ActionSupported
 	}
-	if model != "" {
-		lower := strings.ToLower(model)
-		for _, rule := range entry.modelRules {
-			for _, substr := range rule.matchModelSubstr {
-				if strings.Contains(lower, substr) {
-					if _, banned := rule.unsupported[action]; banned {
-						return ActionUnsupported
-					}
-				}
+	matched := matchModelRules(vendor, model)
+	// 型号级「不支持」优先于一切（含型号级显式支持）
+	for _, rule := range matched {
+		if _, banned := rule.unsupported[action]; banned {
+			return ActionUnsupported
+		}
+	}
+	// 型号级显式「真机验证支持」：不得被厂商基线降级为 Unsupported，
+	// 但基线的系统视图要求（ActionSystemView）是渲染路径约束，予以保留。
+	for _, rule := range matched {
+		if _, ok := rule.supported[action]; ok {
+			if lvl, ok := entry.baseline[action]; ok && lvl == ActionSystemView {
+				return ActionSystemView
 			}
+			return ActionSupported
 		}
 	}
 	if lvl, ok := entry.baseline[action]; ok {
@@ -124,18 +185,29 @@ func lookupSupport(vendor models.DeviceVendor, model string, action PortAction) 
 
 // unsupportedReason 返回型号级不支持原因（无则空串）。
 func unsupportedReason(vendor models.DeviceVendor, model string, action PortAction) string {
-	entry, ok := vendorCapabilities[vendor]
-	if !ok || model == "" {
-		return ""
+	for _, rule := range matchModelRules(vendor, model) {
+		if reason, banned := rule.unsupported[action]; banned {
+			return reason
+		}
 	}
-	lower := strings.ToLower(model)
-	for _, rule := range entry.modelRules {
-		for _, substr := range rule.matchModelSubstr {
-			if strings.Contains(lower, substr) {
-				if reason, banned := rule.unsupported[action]; banned {
-					return reason
-				}
-			}
+	return ""
+}
+
+// SupportEvidence 返回 (vendor, model, action) 的真机依据文本。
+//
+// 命中型号级 unsupported → 拒绝依据（真机实测不支持的原因）；
+// 命中型号级 supported   → 支持依据（真机实测可用的命令形态）；
+// 未命中型号级规则        → 空串（无型号级真机证据，按厂商基线处理）。
+//
+// 用途：把「为什么这家支持、那家不支持」显式暴露给调用方（handler 错误文案 /
+// 审计 / 前端提示），也是矩阵按厂商区分的可读出口。
+func SupportEvidence(vendor models.DeviceVendor, model string, action PortAction) string {
+	for _, rule := range matchModelRules(vendor, model) {
+		if reason, banned := rule.unsupported[action]; banned {
+			return reason
+		}
+		if evidence, ok := rule.supported[action]; ok {
+			return evidence
 		}
 	}
 	return ""
