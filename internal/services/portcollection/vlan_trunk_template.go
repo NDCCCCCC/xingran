@@ -256,14 +256,35 @@ func renderRuijieTrunkSetNative(p PortTemplateParams) ([]string, error) {
 	}, nil
 }
 
-// renderRuijieTrunkSetAllowed 锐捷 allowed 列表（Cisco IOS 关键字 add/remove/all）：
+// renderRuijieTrunkSetAllowed 锐捷 allowed 列表。
 //
-//	add:     switchport trunk allowed vlan add <list>
-//	remove:  switchport trunk allowed vlan remove <list>
-//	replace: switchport trunk allowed vlan <list>  （无关键字 = 全量替换）
+// ⚠️⚠️ **P0（2026-11-02 真机实测）：本渲染**下不动**（下方的形态在真机上是非法命令）。
 //
-// 锐捷是三家中唯一原生支持 replace 全量替换关键字的（华为/H3C 的 allow-pass /
-// permit 均为叠加语义，replace 退化为叠加——契约中已注明）。
+// 真机实测（RG8607E 10.62.63.47 GE1/25）：
+//
+//	switchport trunk allowed vlan only 1-3989,3991-4094  ← 设备自己写的形态（**必须带 only**）
+//	switchport trunk allowed vlan 3990                  → ❌ % Invalid input detected（**无关键字形态无效**）
+//	switchport trunk allowed vlan replace 3990           → ❌ % Invalid input detected（**锐捷无 replace 关键字**）
+//
+// ⇒ 下面 default(replace) 分支渲染出的 `switchport trunk allowed vlan <list>` 在真机上**非法**
+//
+//	（用户在预览里看到一条“合法”命令，真机直接拒）。
+//
+// ⇒ add / remove 关键字**存在**（真机被接受），但**语义待定**
+//
+//	（add 是并集还是替换？remove 能否去掉？）；
+//	`only` 的语义（**允许式**还是**排除式**）**待实测** ——
+//	若为排除式，则产品语义（指定要允许的列表）与设备语义**相反**
+//	⇒ 修法不是「加个 only 关键字」而是**反转列表语义**。
+//
+// ⇒ 故本函数**暂不改行为**（lead 2026-11-02 裁定：「先确证语义、再改渲染」——
+//
+//	现在改会改错）；语义结论落地后再统一修正。
+//
+// ⚠️ **历史结论（已被真机推翻，勿再引用）**：
+//
+//	「锐捷是三家中唯一原生支持 replace 全量替换关键字的」 —— ❌ **错误**：
+//	锐捷**没有** replace 关键字，真机实测 replace 形态同样 Invalid input。
 func renderRuijieTrunkSetAllowed(p PortTemplateParams) ([]string, error) {
 	if err := validateVlanListForRender(p.AllowedVLANs); err != nil {
 		return nil, err

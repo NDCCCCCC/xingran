@@ -267,6 +267,14 @@ switchport hybrid native vlan 3993                ← native 单值（可选，�
 ./riguat --device CX-WH-WH-47F-FL-RS8607E-01 --port GE1/25          --probe-trunk-allowed-run          --config /app/szh/configs/config.yaml --backend-pid $PID
 ```
 
+实跑顺序（**语义验证**，lead 2026-11-02 指定）：
+1. `switchport trunk allowed vlan only 3990` ⇒ 回读 allowed 行原文（判 only 是允许式还是排除式）
+2. `switchport trunk allowed vlan add 3991` ⇒ 回读原文（判 add 是并集还是替换）
+3. `switchport trunk allowed vlan remove 3991` ⇒ 回读原文（判 remove 能否去掉）
+
+⚠️ 判读只看**回读里 `switchport trunk allowed vlan` 那一行原文**（唯一可信依据），
+报告会把该行**执行前/执行后原文**并排列出。
+
 **三层白名单**（默认最安全，逐层收紧）：
 
 | 层 | 内容 | 约束 |
