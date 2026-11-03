@@ -134,9 +134,7 @@ describe("EndpointSelector — 行为测试（GOV-05 覆盖补齐）", () => {
 
   it("选择端点：onChange 携带 route 与端点详情", async () => {
     const onChange = vi.fn();
-    const { container } = render(
-      <EndpointSelector value="" onChange={onChange} />
-    );
+    const { container } = render(<EndpointSelector value="" onChange={onChange} />);
 
     // 等 categories 加载完成
     await waitFor(() => {
