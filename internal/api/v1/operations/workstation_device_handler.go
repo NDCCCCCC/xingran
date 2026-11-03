@@ -3,11 +3,15 @@ package operations
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	models "github.com/xingran-next/xingran-go-backend/internal/models"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
+
+// swagger 类型解析引用：swag 解析注解中的 models.WorkstationDevice 需要本文件 import models 包
+var _ = models.WorkstationDevice{}
 
 // WorkstationDeviceHandler 工位设备关联处理器
 type WorkstationDeviceHandler struct {

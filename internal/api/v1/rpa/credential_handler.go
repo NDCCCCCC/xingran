@@ -33,6 +33,15 @@ func (h *CredentialHandler) WithCore(core *core.Core) *CredentialHandler {
 }
 
 // List 列出凭证
+// @Summary 查询RPA凭据列表
+// @Description 分页查询RPA凭据列表（凭据值脱敏）
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/credentials/list [post]
 func (h *CredentialHandler) List(c *gin.Context) {
 	var params rpamodels.CredentialListParams
 	if !bindAndValidate(c, &params) {
@@ -57,6 +66,16 @@ func (h *CredentialHandler) List(c *gin.Context) {
 }
 
 // Create 创建凭证
+// @Summary 创建RPA凭据
+// @Description 创建新的RPA凭据
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "凭据信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/credentials [post]
 func (h *CredentialHandler) Create(c *gin.Context) {
 	var req rpamodels.CredentialCreateRequest
 	if !bindAndValidate(c, &req) {
@@ -76,6 +95,14 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 }
 
 // GetByID 获取凭证详情
+// @Summary 查询RPA凭据详情
+// @Description 按ID查询RPA凭据详情（凭据值脱敏）
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "凭据ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/credentials/{id} [post]
 func (h *CredentialHandler) GetByID(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -93,6 +120,16 @@ func (h *CredentialHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新凭证
+// @Summary 更新RPA凭据
+// @Description 按 ID 更新RPA凭据
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param id path string true "凭据ID"
+// @Param request body object true "更新内容"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/credentials/{id}/update [post]
 func (h *CredentialHandler) Update(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -116,6 +153,14 @@ func (h *CredentialHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除凭证
+// @Summary 删除RPA凭据
+// @Description 删除指定RPA凭据
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "凭据ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/credentials/{id}/delete [post]
 func (h *CredentialHandler) Delete(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -135,6 +180,13 @@ func (h *CredentialHandler) Delete(c *gin.Context) {
 // ===== 会话管理 =====
 
 // ListSessions 列出会话
+// @Summary 查询RPA凭据会话列表
+// @Description 查询凭据关联的会话列表
+// @Tags RPA管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/credentials/sessions/list [post]
 func (h *CredentialHandler) ListSessions(c *gin.Context) {
 	credentialID := c.Query("credentialId")
 	if credentialID == "" {
@@ -158,6 +210,14 @@ func (h *CredentialHandler) ListSessions(c *gin.Context) {
 }
 
 // InvalidateSession 使会话失效
+// @Summary 使凭据会话失效
+// @Description 使指定凭据会话失效
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "会话ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/credentials/sessions/{id}/invalidate [post]
 func (h *CredentialHandler) InvalidateSession(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {

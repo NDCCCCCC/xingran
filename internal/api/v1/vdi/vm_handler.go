@@ -485,7 +485,7 @@ func (h *VMHandler) SyncAll(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object true "查询参数"
-// @Success 200 {object} response.Response{data=[]vdi.VDIPlatform}
+// @Success 200 {object} response.Response{data=[]vdiServices.VDIPlatform}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /vdi/vm/vtp-platforms [post]
@@ -519,7 +519,7 @@ func (h *VMHandler) ListVTPPlatforms(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object true "查询参数"
-// @Success 200 {object} response.Response{data=[]vdi.RunPosition}
+// @Success 200 {object} response.Response{data=[]vdiServices.RunPosition}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /vdi/vm/run-positions [post]
@@ -558,7 +558,7 @@ func (h *VMHandler) ListRunPositions(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object true "查询参数"
-// @Success 200 {object} response.Response{data=[]vdi.Storage}
+// @Success 200 {object} response.Response{data=[]vdiServices.Storage}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /vdi/vm/storages [post]
@@ -597,7 +597,7 @@ func (h *VMHandler) ListStorages(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body object true "查询参数"
-// @Success 200 {object} response.Response{data=[]vdi.Network}
+// @Success 200 {object} response.Response{data=[]vdiServices.Network}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /vdi/vm/networks [post]

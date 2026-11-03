@@ -106,13 +106,58 @@ func buildResourceCmd(name string, node *treeNode, module string, run RunFunc, e
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+	// 子资源与叶子动作可能同名（如 auth 下的 captcha 既是资源又是动作）。
+	// 同名时合并为同一个 cobra 命令：既设 RunE（叶子端点），又保留子命令，
+	// 否则 AddCommand 两次同名会覆盖，导致其中一个端点不可达。
 	for _, sub := range sortedKeys(node.children) {
-		cmd.AddCommand(buildResourceCmd(sub, node.children[sub], module, run, emit))
+		childCmd := buildResourceCmd(sub, node.children[sub], module, run, emit)
+		if leafMeta, ok := node.leafs[sub]; ok {
+			applyLeafBehavior(childCmd, leafMeta, run, emit)
+		}
+		cmd.AddCommand(childCmd)
 	}
 	for _, a := range sortedKeys(node.leafs) {
+		if _, isChild := node.children[a]; isChild {
+			continue // 已在上方合并
+		}
 		cmd.AddCommand(buildActionCmd(node.leafs[a], run, emit))
 	}
 	return cmd
+}
+
+// applyLeafBehavior 把端点行为应用到已有资源命令（同名资源/动作合并场景）。
+// 保留原有子命令，同时让该命令自身可执行（cobra 支持 RunE + AddCommand 共存）。
+func applyLeafBehavior(cmd *cobra.Command, m EndpointMeta, run RunFunc, emit EmitFunc) {
+	use := m.Action
+	for _, p := range m.PathArgs {
+		use += " <" + p + ">"
+	}
+	cmd.Use = use
+	cmd.Short = m.Summary
+	flags := sortedFlags(m.Flags)
+	cmd.Long = buildActionLong(m, flags) + "\n\n本命令既可直接执行（见上），也可携带子命令访问其下级资源。"
+	cmd.Example = buildExample(m, flags)
+	cmd.Args = cobra.ExactArgs(len(m.PathArgs))
+	cmd.RunE = func(c *cobra.Command, args []string) error {
+		flagVals := map[string]any{}
+		var missing []string
+		for _, f := range flags {
+			v, changed := flagValue(c, f.Name)
+			if f.Required && (!changed || isEmptyValue(v)) {
+				missing = append(missing, "--"+f.Name)
+				continue
+			}
+			if changed {
+				flagVals[f.Name] = v
+			}
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("缺少必填参数: %s", strings.Join(missing, " "))
+		}
+		result, err := run(c.Context(), &m, flagVals, args)
+		return emit(result, err)
+	}
+	registerFlags(cmd, flags)
 }
 
 // pathOf 回溯节点路径（构建 Long 文案用）。

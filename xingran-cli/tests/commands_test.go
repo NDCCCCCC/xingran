@@ -91,7 +91,7 @@ func cliAvailable(t *testing.T) bool {
 // cobra 子命令解析：help 输出 Available Commands 段的行格式
 //
 //	system        System-related commands（名称，中文描述）
-var cobraCmdRe = regexp.MustCompile(`(?m)^  (\S+)\s{2,}(\S.*)$`)
+var cobraCmdRe = regexp.MustCompile(`(?m)^  (\S+)(?:\s+(\S.*))?\s*$`)
 
 // listSubCommands 解析 help 输出中的子命令名（Available Commands 段）。
 func listSubCommands(helpOut string) []string {
@@ -225,9 +225,14 @@ func collectLeaves(t *testing.T, root string) []leafInfo {
 		if c != 0 {
 			continue
 		}
-		if subs := listSubCommands(sub); len(subs) > 0 {
+		hasAPI := strings.Contains(sub, "对应 API:")
+		subs := listSubCommands(sub)
+		if hasAPI {
+			leaves = append(leaves, leafInfo{Path: path, Help: sub})
+		}
+		if len(subs) > 0 {
 			leaves = append(leaves, collectLeaves(t, path)...)
-		} else {
+		} else if !hasAPI {
 			leaves = append(leaves, leafInfo{Path: path, Help: sub})
 		}
 	}
@@ -276,7 +281,8 @@ func extractAPIPaths(helpOut string) []string {
 		}
 		method := strings.ToUpper(parts[0])
 		path := strings.TrimPrefix(parts[1], "/api/v1")
-		path = strings.ReplaceAll(path, "/{", "/:") // {id} -> :id（docs 用 {}，help 用 :）
+		path = strings.ReplaceAll(path, "{", ":")
+		path = strings.ReplaceAll(path, "}", "") // {id} -> :id（docs 用 {}，help 用 :）
 		keys = append(keys, method+" "+path)
 	}
 	return keys
@@ -387,7 +393,8 @@ func schemaEndpointsFor(t *testing.T, module string) []schemaEndpoint {
 // normalizeAPIKey 归一化 API 键：method + path（剥 /api/v1，{id}→:id）。
 func normalizeAPIKey(method, path string) string {
 	path = strings.TrimPrefix(path, "/api/v1")
-	path = strings.ReplaceAll(path, "/{", "/:")
+	path = strings.ReplaceAll(path, "{", ":")
+		path = strings.ReplaceAll(path, "}", "")
 	return strings.ToUpper(method) + " " + path
 }
 

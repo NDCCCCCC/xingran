@@ -49,6 +49,15 @@ type EvaluateConditionResponse struct {
 }
 
 // EvaluateCondition 评估条件表达式
+// @Summary 流程条件求值
+// @Description RPA流程条件表达式求值
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "条件与数据上下文"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/flow/evaluate-condition [post]
 func (h *FlowHandler) EvaluateCondition(c *gin.Context) {
 	var req EvaluateConditionRequest
 	if !bindAndValidate(c, &req) {
@@ -72,6 +81,15 @@ type MapDataRequest struct {
 }
 
 // MapData 执行数据映射
+// @Summary 流程数据映射
+// @Description RPA流程字段映射转换
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "映射规则与数据"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/flow/map-data [post]
 func (h *FlowHandler) MapData(c *gin.Context) {
 	var req MapDataRequest
 	if !bindAndValidate(c, &req) {
@@ -96,6 +114,15 @@ type TransformValueRequest struct {
 }
 
 // TransformValue 转换值
+// @Summary 流程值转换
+// @Description RPA流程字段值转换
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "转换规则与数据"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/flow/transform-value [post]
 func (h *FlowHandler) TransformValue(c *gin.Context) {
 	var req TransformValueRequest
 	if !bindAndValidate(c, &req) {
@@ -119,6 +146,15 @@ type ExtractJSONPathRequest struct {
 }
 
 // ExtractJSONPath 从 JSON 提取路径值
+// @Summary JSONPath 提取
+// @Description 从 JSON 数据中按 JSONPath 提取值
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "JSON 数据与 JSONPath"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/flow/extract-jsonpath [post]
 func (h *FlowHandler) ExtractJSONPath(c *gin.Context) {
 	var req ExtractJSONPathRequest
 	if !bindAndValidate(c, &req) {
@@ -145,6 +181,15 @@ type HandleErrorRequest struct {
 }
 
 // HandleError 处理错误
+// @Summary 流程错误处理
+// @Description RPA流程错误处理策略求值
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "错误与处理策略"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/flow/handle-error [post]
 func (h *FlowHandler) HandleError(c *gin.Context) {
 	var req HandleErrorRequest
 	if !bindAndValidate(c, &req) {
@@ -182,6 +227,15 @@ type ExecuteRetryRequest struct {
 }
 
 // ExecuteRetry 执行重试
+// @Summary 流程重试执行
+// @Description RPA流程重试策略求值
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "重试策略与上下文"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/flow/execute-retry [post]
 func (h *FlowHandler) ExecuteRetry(c *gin.Context) {
 	var req ExecuteRetryRequest
 	if !bindAndValidate(c, &req) {
@@ -222,6 +276,15 @@ type AggregateDataRequest struct {
 }
 
 // AggregateData 聚合数据
+// @Summary 流程数据聚合
+// @Description RPA流程数据聚合计算
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "聚合规则与数据"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/flow/aggregate-data [post]
 func (h *FlowHandler) AggregateData(c *gin.Context) {
 	var req AggregateDataRequest
 	if !bindAndValidate(c, &req) {

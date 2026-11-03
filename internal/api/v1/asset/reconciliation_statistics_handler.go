@@ -52,7 +52,6 @@ func (h *StatisticsHandler) WithCore(core *core.Core) *StatisticsHandler {
 // @Success 200 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/statistics/summary [post]
-
 func (h *StatisticsHandler) Summary(c *gin.Context) {
 	var req struct {
 		Days int `json:"days"`
@@ -80,7 +79,6 @@ func (h *StatisticsHandler) Summary(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/statistics/by-conflict-type [post]
-
 func (h *StatisticsHandler) ByConflictType(c *gin.Context) {
 	result, err := h.service.ByConflictType(c.Request.Context(), asset.StatsFilter{})
 	if err != nil {
@@ -100,7 +98,6 @@ func (h *StatisticsHandler) ByConflictType(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/statistics/by-severity [post]
-
 func (h *StatisticsHandler) BySeverity(c *gin.Context) {
 	result, err := h.service.BySeverity(c.Request.Context(), asset.StatsFilter{})
 	if err != nil {
@@ -125,7 +122,6 @@ func (h *StatisticsHandler) BySeverity(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/statistics/health-trend [post]
-
 func (h *StatisticsHandler) HealthTrend(c *gin.Context) {
 	var req struct {
 		Days int `json:"days"`
@@ -155,7 +151,6 @@ func (h *StatisticsHandler) HealthTrend(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/statistics/top-unresolved [post]
-
 func (h *StatisticsHandler) TopUnresolved(c *gin.Context) {
 	var req struct {
 		Limit int `json:"limit"`
@@ -182,7 +177,6 @@ func (h *StatisticsHandler) TopUnresolved(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/statistics/exception-rule-stats [post]
-
 func (h *StatisticsHandler) ExceptionRuleStats(c *gin.Context) {
 	result, err := h.service.ExceptionRuleStats(c.Request.Context())
 	if err != nil {
