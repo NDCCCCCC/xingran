@@ -17,9 +17,30 @@
 | 脚本 | 用途 |
 |---|---|
 | `push-files.cjs` | 把指定文件推到远端分支（**全量对齐语义**，逐文件 sha 比对，不依赖增量清单正确性） |
-| `pr-retrigger.cjs` | 解决「API 更新 ref 不触发 CI」：以 PR 的 base 为基准重建新分支 → 切 PR head → close/reopen |
+| `pr-publish.cjs` | 建分支 → 全量推文件 → 建 PR 一条龙（**建新 PR 首选**） |
+| `pr-retrigger.cjs` | 让**已有** PR 重新跑 CI：重建分支 + 切 head + close/reopen |
 | `ci-watch.cjs` | 盯 CI 结果，绿了自动合并（可同时打 tag） |
 | `ci-log.cjs` | 下载失败 job 日志并抽出关键错误行（含 ANSI 去色） |
+
+## ⚠️ 两条实测出来的硬约束
+
+### 1. GitHub API **不允许**修改已存在 PR 的 head 分支
+
+`PATCH /repos/{owner}/{repo}/pulls/{n}` 传 `head` 字段会返回 **HTTP 200**，
+但**该字段被静默忽略** ⇒ PR 的 head 纹丝不动（2026-11-03 实测，白等约 90 分钟 CI）。
+
+⇒ 因此 `pr-retrigger.cjs` 在切 head 后会**回读 PR 并断言**，不符即 `exit 1`
+并打印替代路径（**不报假成功**）—— 对应纪律第 11 条「写操作返回 2xx ≠ 操作生效」。
+
+⇒ **建新 PR 走 `pr-publish.cjs`**；要让**已有** PR 重跑 CI，走
+`push-files.cjs` 把内容推到该 PR 现有的 head 分支，再用普通 `git push` 触发 `synchronize`。
+
+### 2. GitHub Trees API **不接受**尚未存在于仓库的 blob sha
+
+新建文件必须先 `POST /git/blobs` 上传，拿到远端 blob sha 后才能进 tree。
+否则建 tree 报 `422 tree.sha xxx is not a valid blob`。
+
+⇒ 三个推送类工具都内置了 blob 上传步骤。
 
 ## 用法
 

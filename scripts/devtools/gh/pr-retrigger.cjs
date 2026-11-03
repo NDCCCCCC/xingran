@@ -160,8 +160,26 @@ async function main() {
   console.log(`[retrigger] 新分支 ${newBranch} → ${commit.json.sha.slice(0, 10)}`);
 
   // 4. 把 PR 的 head 切到新分支
+  // ⚠️ 重要（2026-11-03 实测）：GitHub **不允许**通过 API 修改已存在 PR 的 head
+  // 分支 —— PATCH /pulls/{n} 传 head 字段会返回 HTTP 200 但**静默不生效**
+  // （PR 的 head 保持原样）。⇒ 本步骤必须**回读验证**，否则就是「报成功而没做」
+  // 这类最危险的工具缺陷（曾因此白等 90 分钟 CI）。
+  // ⇒ 真正的可靠路径是：新建 PR（pr-publish.cjs）或把内容推到 PR 原有 head 分支。
   const setHead = await api("PATCH", `/repos/${OWNER}/${REPO}/pulls/${pr}`, { head: newBranch });
-  console.log(`[retrigger] PR head 切到 ${newBranch} → HTTP ${setHead.status}`);
+  const verify = await api("GET", `/repos/${OWNER}/${REPO}/pulls/${pr}`);
+  const actualHead = verify.json.head && verify.json.head.ref;
+  if (actualHead !== newBranch) {
+    console.error(
+      `[retrigger] ❌ head 切换未生效（API 返回 HTTP ${setHead.status}，但 PR 的 head 仍是 ${actualHead}）。\n` +
+        "           GitHub 不允许通过 API 修改已存在 PR 的 head 分支。\n" +
+        "           ⇒ 改用其一：\n" +
+        "             ① 用 pr-publish.cjs 新建一个 PR（head 直接是新分支）；\n" +
+        "             ② 把内容推到 PR 现有的 head 分支上（push-files.cjs），\n" +
+        "                再对该分支做一次普通 push（git push）以触发 synchronize。",
+    );
+    process.exit(1);
+  }
+  console.log(`[retrigger] PR head 已切到 ${newBranch}（已回读验证）`);
 
   // 5. close → reopen（触发 PR 事件，排 CI）
   const closed = await api("PATCH", `/repos/${OWNER}/${REPO}/pulls/${pr}`, { state: "closed" });
