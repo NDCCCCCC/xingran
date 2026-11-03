@@ -110,14 +110,33 @@ async function main() {
 
   // 2. 读远端当前 tree，建立 path→sha 映射
   const remoteMap = new Map();
+  const remoteBlobs = new Set();
   let truncated = false;
   const walk = async (sha) => {
     const t = await api("GET", `/repos/${OWNER}/${REPO}/git/trees/${sha}?recursive=1`);
     if (t.json.truncated) truncated = true;
-    for (const e of t.json.tree || []) if (e.type === "blob") remoteMap.set(e.path, e.sha);
+    for (const e of t.json.tree || []) if (e.type === "blob") {
+      remoteMap.set(e.path, e.sha);
+      remoteBlobs.add(e.sha);
+    }
   };
   await walk(baseTree);
   if (truncated) console.warn("[warn] tree 响应被截断，远端路径映射不完整");
+
+  // GitHub Trees API 只接受**仓库中已存在**的 blob sha ⇒ 新文件必须先 POST /git/blobs 上传
+  const uploaded = new Map();
+  async function ensureBlob(localSha, file) {
+    if (remoteBlobs.has(localSha)) return localSha;
+    if (uploaded.has(localSha)) return uploaded.get(localSha);
+    const content = fs.readFileSync(file).toString("base64");
+    const bl = await api("POST", `/repos/${OWNER}/${REPO}/git/blobs`, { content, encoding: "base64" });
+    if (bl.status !== 201) {
+      console.error(`上传 blob 失败 HTTP ${bl.status}: ${JSON.stringify(bl.json).slice(0, 200)}`);
+      process.exit(1);
+    }
+    uploaded.set(localSha, bl.json.sha);
+    return bl.json.sha;
+  }
 
   // 3. 逐文件比对：本地 blob sha vs 远端 blob sha
   const toUpdate = [];
@@ -130,7 +149,7 @@ async function main() {
     const localSha = await gitBlob(f);
     const remoteSha = remoteMap.get(f);
     if (localSha === remoteSha) skipped.push(f);
-    else toUpdate.push({ path: f, sha: localSha, mode: "100644" });
+    else toUpdate.push({ path: f, sha: await ensureBlob(localSha, f), mode: "100644" });
   }
 
   console.log(`[push] 目标分支 ${branch}`);
