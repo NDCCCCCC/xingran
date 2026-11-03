@@ -5,6 +5,7 @@
  */
 
 import { get, post } from "@/lib/api";
+import { dashboardWsUrl } from "@/lib/wsUrl";
 import type {
   DataSourceConfig,
   ApiDataSourceConfig,
@@ -194,12 +195,13 @@ export class DataFetcher {
 
   /**
    * 获取WebSocket URL
+   *
+   * 路径由 API 基址派生并自动带上部署子路径前缀（生产为 /xingran）。
+   * 旧的硬编码 `${host}/ws/${channel}` 既缺前缀、路径也与后端注册的
+   * /api/v1/system/ws/ 前缀不一致 → 握手必然 404。
    */
   private getWebSocketUrl(channel: string): string {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = import.meta.env.VITE_WS_HOST || window.location.host;
-    const basePath = import.meta.env.VITE_WS_BASE_PATH || "/ws";
-    return `${protocol}//${host}${basePath}/${channel}`;
+    return dashboardWsUrl(channel);
   }
 
   /**

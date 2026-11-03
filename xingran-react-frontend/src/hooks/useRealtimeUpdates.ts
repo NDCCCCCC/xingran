@@ -6,6 +6,7 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { useDashboardStore } from "@/store/dashboardStore";
+import { dashboardWsUrl } from "@/lib/wsUrl";
 import type { WidgetConfig, WebSocketDataSourceConfig, DataSourceConfig } from "@/types/dashboard";
 
 // 类型守卫：检查 dataSource 是否有直接的 type 属性
@@ -25,6 +26,13 @@ function isWebSocketDataSource(ds: DataSourceConfig): ds is WebSocketDataSourceC
   }
   return false;
 }
+
+/** WS 自动重连的最大次数 —— 超过后停止,避免无限重连风暴。 */
+const MAX_RECONNECT_ATTEMPTS = 5;
+/** 重连退避基数(毫秒)。 */
+const RECONNECT_BASE_DELAY_MS = 5000;
+/** 重连退避上限(毫秒)。 */
+const RECONNECT_MAX_DELAY_MS = 60000;
 
 interface UseRealtimeUpdatesOptions {
   /** 是否启用 */
@@ -48,14 +56,15 @@ export function useRealtimeUpdates(widgets: WidgetConfig[], options?: UseRealtim
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const subscribedChannelsRef = useRef<Set<string>>(new Set());
+  // 已连续重连次数 —— 达上限后停止重连
+  const reconnectAttemptRef = useRef(0);
 
   // 获取WebSocket URL
-  const getWsUrl = useCallback(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = import.meta.env.VITE_WS_HOST || window.location.host;
-    const basePath = import.meta.env.VITE_WS_BASE_PATH || "/ws";
-    return `${protocol}//${host}${basePath}/dashboard`;
-  }, []);
+  //
+  // 路径由 API 基址派生(后端 WS 端点挂在 /api/v1/system/ws/ 下),并自动带上
+  // 部署子路径前缀(生产为 /xingran)。早期硬编码的 `${host}/ws/dashboard`
+  // 既缺子路径前缀、路径也与后端注册的不一致 → 握手必然 404。
+  const getWsUrl = useCallback(() => dashboardWsUrl("dashboard"), []);
 
   // connect 的 latest-ref 桥接：ws.onclose 里的自动重连需要引用 connect 自身，
   // 直接自引用会形成「声明前访问」（react-hooks/immutability）；ref 写入收敛在 effect 内
@@ -71,6 +80,7 @@ export function useRealtimeUpdates(widgets: WidgetConfig[], options?: UseRealtim
       const ws = new WebSocket(getWsUrl());
 
       ws.onopen = () => {
+        reconnectAttemptRef.current = 0;
         options?.onConnectionChange?.(true);
 
         // 订阅所有WebSocket数据源的Widget
@@ -117,10 +127,24 @@ export function useRealtimeUpdates(widgets: WidgetConfig[], options?: UseRealtim
         subscribedChannelsRef.current.clear();
 
         // 自动重连（经 ref 间接调用 connect，避免自引用）
-        if (options?.enabled !== false) {
+        //
+        // 指数退避 + 次数上限：后端当前只实现了 /notices 端点,仪表盘频道端点
+        // 尚未提供 → 握手必然失败。旧的固定 5s 重连会无限循环,在生产上表现为
+        // 持续的无效连接与错误日志刷屏。
+        if (options?.enabled !== false && reconnectAttemptRef.current < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttemptRef.current += 1;
+          const delay = Math.min(
+            RECONNECT_BASE_DELAY_MS * 2 ** (reconnectAttemptRef.current - 1),
+            RECONNECT_MAX_DELAY_MS
+          );
           reconnectTimerRef.current = setTimeout(() => {
             connectRef.current();
-          }, 5000);
+          }, delay);
+        } else if (reconnectAttemptRef.current >= MAX_RECONNECT_ATTEMPTS) {
+          console.warn(
+            `[Dashboard WebSocket] 已重连 ${MAX_RECONNECT_ATTEMPTS} 次仍失败,停止重连` +
+              `（后端尚未提供仪表盘 WS 端点时属预期,数据请走 REST 数据源）`
+          );
         }
       };
 
@@ -148,6 +172,7 @@ export function useRealtimeUpdates(widgets: WidgetConfig[], options?: UseRealtim
     }
 
     subscribedChannelsRef.current.clear();
+    reconnectAttemptRef.current = 0;
   }, []);
 
   // 手动刷新订阅

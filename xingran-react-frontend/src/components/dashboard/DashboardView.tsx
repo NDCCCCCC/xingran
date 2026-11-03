@@ -17,6 +17,7 @@ import {
   ReloadOutlined as RefreshIcon,
 } from "@ant-design/icons";
 import { useDashboardStore } from "@/store/dashboardStore";
+import { dashboardWsUrl } from "@/lib/wsUrl";
 import { useWidgetPolling } from "@/hooks/useWidgetPolling";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -111,12 +112,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
-  // WebSocket URL（使用环境变量配置，支持部署到非默认路径）
+  // WebSocket URL（路径由 API 基址派生，自动带部署子路径前缀）
   const wsUrl = useMemo(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = import.meta.env.VITE_WS_HOST || window.location.host;
-    const basePath = import.meta.env.VITE_WS_BASE_PATH || "/ws";
-    return `${protocol}//${host}${basePath}/dashboard/${dashboard?.id}`;
+    return dashboardWsUrl(`dashboard/${dashboard?.id}`);
   }, [dashboard?.id]);
 
   // WebSocket 连接

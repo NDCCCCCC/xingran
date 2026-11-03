@@ -100,6 +100,13 @@ func (s *GeocodingService) Geocode(ctx context.Context, address string) (lng, la
 		return 0, 0, fmt.Errorf("地址不能为空")
 	}
 
+	// 未配置百度地图 AK 时直接返回明确错误。
+	// 否则会带着空 ak 去请求百度接口,只换来难以定位的"ak 无效"鉴权错误,
+	// 排查方向容易跑偏(生产未配置 AK 时即为此现象)。
+	if s.apiKey == "" {
+		return 0, 0, fmt.Errorf("未配置百度地图 AK(baidu.map_ak 配置项或 BAIDU_MAP_AK 环境变量),地址解析不可用")
+	}
+
 	cacheKey := buildCacheKey(address)
 
 	// 检查缓存（内存 -> Redis）

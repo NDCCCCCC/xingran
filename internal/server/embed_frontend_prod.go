@@ -45,7 +45,13 @@ func detectedFrontendBase() string {
 				continue
 			}
 			rest := html[idx+1:]
-			if strings.HasPrefix(rest, strings.TrimPrefix(frontendSubPath, "/")+"/assets/") {
+			// rest 只去掉了 marker 的首字符(引号),前导斜杠仍在:
+			//   marker = `"/xingran/assets/` → rest = `/xingran/assets/xxx.js`
+			// 比较串必须同样带前导斜杠,否则永远不匹配 —— 这正是
+			// detectedFrontendBase() 恒返回 "" 的根因:
+			// 直连 :9000 时后端不做 302 引导,浏览器停在 "/",
+			// 与前端 basename "/xingran/" 不匹配 → 白屏。
+			if strings.HasPrefix(rest, frontendSubPath+"/assets/") {
 				detectedBase = frontendSubPath
 			} else {
 				detectedBase = ""
@@ -122,6 +128,17 @@ func ServeSPA(c *gin.Context) {
 	// 只处理 GET 请求
 	if c.Request.Method != http.MethodGet {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		return
+	}
+
+	// 子路径部署下 basename="/xingran/" 要求 URL 以 "/xingran/" 开头。
+	// 请求 "/xingran"（缺尾斜杠）时 React Router 会因 basename 不匹配而
+	// 整个不渲染 —— 白屏,控制台报
+	// "<Router basename=/xingran/> is not able to match the URL /xingran"。
+	// nginx 侧有 location = /xingran { return 301 /xingran/; } 兜底,
+	// 但直连 :9000 的部署没有这层 → 后端补一个尾斜杠重定向。
+	if detectedFrontendBase() != "" && requestPath == frontendSubPath {
+		c.Redirect(http.StatusMovedPermanently, frontendSubPath+"/")
 		return
 	}
 
