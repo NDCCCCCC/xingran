@@ -245,6 +245,6 @@ load @ index-BnADbsd9.js:2
 
 ## 验证补充 (Verification Appendix)
 
-- 全量前端测试（`cd xingran-react-frontend && npx vitest run`）：截至本会话归档时已跑完 **286 个测试文件、0 失败**（含本次新增的 4 个文件），余下部分在本机后台继续执行（vitest 为每文件单 worker，全量约需 1 小时以上）。
-- 本次改动的影响面已由目录级回归**完整覆盖**：`componentLoader` 的全部调用点只落在 `src/router` 与 `src/components/layout` 内（已逐个检索确认），这两个目录共 27 files / 161 tests 全绿；另有 ESLint（exit 0）与 `tsc --noEmit`（exit 0）。
-- 说明：第一轮全量测试因未指定工作目录而在仓库根执行，把 `.worktrees/main-fix/` 副本下的测试一并收集，产生大量 `ERR_MODULE_NOT_FOUND` —— 属执行环境错误（副本缺少依赖解析），**非本次改动导致**；已在正确目录 `xingran-react-frontend/` 重跑。
+- **全量前端测试**（`cd xingran-react-frontend && npx vitest run`）：**589 个测试文件 / 4101 个测试全部通过（exit 0），无任何新失败**（Duration 1179.62s / import 2254.63s / tests 1307.08s）。
+- 本次改动的影响面同时由目录级回归**完整覆盖**：`componentLoader` 的全部调用点只落在 `src/router` 与 `src/components/layout` 内（已逐个检索确认），这两个目录共 27 files / 161 tests 全绿；另有 ESLint（exit 0）与 `tsc --noEmit`（exit 0）。
+- 说明：第一轮全量测试因未指定工作目录而在仓库根执行，把 `.worktrees/main-fix/` 副本下的测试一并收集，产生大量 `ERR_MODULE_NOT_FOUND` —— 属执行环境错误（副本缺少依赖解析），**非本次改动导致**；已在正确目录 `xingran-react-frontend/` 重跑并全绿。
