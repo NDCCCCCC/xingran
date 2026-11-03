@@ -1,9 +1,54 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM ============================================================
+REM  Usage:
+REM    scripts\build-linux.bat        -> base=/xingran/  (default)
+REM        Tencent Cloud nginx sub-path deployment:
+REM          location /xingran/ { proxy_pass http://127.0.0.1:9000/; }
+REM        nginx strips the /xingran/ prefix, so frontend asset URLs
+REM        and API URLs MUST carry that prefix.
+REM
+REM    scripts\build-linux.bat root  -> base=/
+REM        Direct :9000 deployment (no nginx sub-path):
+REM        browser opens http://<host>:9000/
+REM        assets and API calls carry no prefix.
+REM        (the literal "/" also works, but "root" is safer: MSYS in
+REM         Git Bash rewrites a lone "/" argument into an absolute path)
+REM
+REM  The two deployments need different bases, so base MUST be a
+REM  build-time argument and must NOT be hardcoded in .env.production
+REM  (.env.production keeps /xingran/ for CI's plain `npm run build`).
+REM
+REM  Notes:
+REM  - base is exported here and picked up by npm; in vite.config.ts
+REM    process.env.VITE_BASE wins over the .env file value (vite's
+REM    loadEnv also overwrites same-named VITE_* vars from process.env).
+REM  - Do NOT export VITE_BASE from Git Bash: MSYS rewrites values that
+REM    start with "/" into absolute paths (observed: it became the bash
+REM    install dir). Running this script (cmd set) is unaffected.
+REM  - Keep this file ASCII-only: cmd decodes .bat with the OEM code
+REM    page, so UTF-8 Chinese comments get misparsed into commands.
+REM ============================================================
+set "VITE_BASE=%~1"
+if "%VITE_BASE%"=="" set "VITE_BASE=/xingran/"
+if /i "%VITE_BASE%"=="root" set "VITE_BASE=/"
+
+REM Derive API prefix from base: /xingran/ -> /xingran/api/v1 ; / -> /api/v1
+set "BASE_NOSLASH=%VITE_BASE%"
+if "%BASE_NOSLASH:~-1%"=="/" set "BASE_NOSLASH=%BASE_NOSLASH:~0,-1%"
+set "VITE_API_BASE_URL=%BASE_NOSLASH%/api/v1"
+
+REM Distinct artifact name per base so the two deployments never mix up
+set "OUT_FILE=xingran-backend-embedded-linux"
+if not "%VITE_BASE%"=="/xingran/" set "OUT_FILE=xingran-backend-embedded-linux-root"
+
 echo ======================================
 echo   Build Embedded Executable (Linux)
 echo ======================================
+echo   Frontend base : %VITE_BASE%
+echo   API base      : %VITE_API_BASE_URL%
+echo   Output file   : %OUT_FILE%
 echo.
 
 REM Project root directory
@@ -55,7 +100,7 @@ echo [5/6] Building Go backend (Linux)...
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -tags=embed -ldflags="-s -w" -o xingran-backend-embedded-linux ./cmd/main.go
+go build -tags=embed -ldflags="-s -w" -o %OUT_FILE% ./cmd/main.go
 if errorlevel 1 (
     echo Go build FAILED!
     exit /b 1
@@ -69,11 +114,11 @@ echo.
 echo ======================================
 echo   Output File
 echo ======================================
-echo   xingran-backend-embedded-linux
+echo   %OUT_FILE%
 echo.
 echo Upload to Linux server and run:
-echo   chmod +x xingran-backend-embedded-linux
-echo   ./xingran-backend-embedded-linux
+echo   chmod +x %OUT_FILE%
+echo   ./%OUT_FILE%
 echo.
 
 endlocal
