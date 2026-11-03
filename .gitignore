@@ -149,8 +149,19 @@ xingran_menus_dedup.sql
 node_modules/
 .vite/
 .vitest-cache/
-.tmp-*.cjs
+# 协作过程中的临时产物（文件清单 / 提交信息 / 一次性脚本）
+.tmp-*
 PR_BODY.md
 QUICK_FIX_PATCH.md
 ruoyi-backend-linux
 *.stackdump
+PR_DESCRIPTION.md
+
+# 一次性调试脚本（本地用，不进仓库）
+add_asset_columns.sql
+check_asset_types.sql
+debug_asset_filter.sql
+check_vdi_menu_fix.sh
+
+# 本地 AI 工具配置（个人环境，不进仓库）
+.trae/
