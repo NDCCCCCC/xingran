@@ -241,7 +241,7 @@ func (h *APIKeyHandler) ToggleStatus(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "密钥ID"
-// @Param request body requests.ListUsageLogsParams true "查询条件"
+// @Param request body systemServices.ListUsageLogsParams true "查询条件"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /system/apikeys/:id/logs [post]
 func (h *APIKeyHandler) ListUsageLogs(c *gin.Context) {

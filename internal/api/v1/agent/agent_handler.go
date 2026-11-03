@@ -49,6 +49,16 @@ type AgentRegisterResponse struct {
 
 // RegisterAgent Agent 自动注册
 // POST /api/agent/register
+// @Summary Agent注册
+// @Description Agent 自动注册（无需认证）
+// @Tags Agent管理
+// @Accept json
+// @Produce json
+// @Param request body object true "注册信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /agent/register [post]
 func (h *AgentHandler) RegisterAgent(c *gin.Context) {
 	var req AgentRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

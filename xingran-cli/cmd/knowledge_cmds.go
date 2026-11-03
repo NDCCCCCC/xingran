@@ -9,7 +9,7 @@ import (
 	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/commands"
 )
 
-// KnowledgeEndpoints knowledge 模块端点元数据（17 端点）。
+// KnowledgeEndpoints knowledge 模块端点元数据（18 端点）。
 var KnowledgeEndpoints = []commands.EndpointMeta{
 	{
 		Module: "knowledge",
@@ -20,13 +20,13 @@ var KnowledgeEndpoints = []commands.EndpointMeta{
 		Description: "创建新的知识库文章",
 		Tags: "知识库文章",
 		Flags: []commands.FlagSpec{
-			{Name: "content", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "sourceWorkOrderId", Type: "string", Required: false, Desc: "来源工单ID（用于工单转知识库）", Enum: "", In: "body"},
 			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "summary", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "tagIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "title", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "categoryId", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "content", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "sourceWorkOrderId", Type: "string", Required: false, Desc: "来源工单ID（用于工单转知识库）", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -68,9 +68,11 @@ var KnowledgeEndpoints = []commands.EndpointMeta{
 		Description: "分页查询知识库文章列表，支持多条件过滤",
 		Tags: "知识库文章",
 		Flags: []commands.FlagSpec{
-			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "isAsc", Type: "bool", Required: false, Desc: "nil 或 true=升序，false=降序", Enum: "", In: "body"},
+			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
+			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "tagId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "title", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "categoryId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
@@ -86,12 +88,21 @@ var KnowledgeEndpoints = []commands.EndpointMeta{
 		Description: "根据关键词搜索已发布的知识库文章",
 		Tags: "知识库文章",
 		Flags: []commands.FlagSpec{
+			{Name: "tagId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "categoryId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "keyword", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "pageNum", Type: "int", Required: false, Desc: "页码，从0开始", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "每页大小，默认100", Enum: "", In: "body"},
-			{Name: "tagId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
+	},
+	{
+		Module: "knowledge",
+		ResourcePath: []string{"article"},
+		Action: "statistics",
+		Method: "POST", APIPath: "/api/v1/knowledge/articles/statistics",
+		Summary: "知识库文章统计",
+		Description: "返回文章总数/状态计数及累计浏览点赞数,供列表页统计卡片使用;用 COUNT 聚合而非按当前页 list 计算",
+		Tags: "知识库文章",
 	},
 	{
 		Module: "knowledge",
@@ -102,12 +113,12 @@ var KnowledgeEndpoints = []commands.EndpointMeta{
 		Description: "更新知识库文章信息",
 		Tags: "知识库文章",
 		Flags: []commands.FlagSpec{
-			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "summary", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "tagIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "title", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "categoryId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "content", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -169,11 +180,11 @@ var KnowledgeEndpoints = []commands.EndpointMeta{
 		Description: "更新知识库分类信息",
 		Tags: "知识库分类",
 		Flags: []commands.FlagSpec{
+			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "categoryName", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "description", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "parentId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "sortOrder", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -224,12 +235,12 @@ var KnowledgeEndpoints = []commands.EndpointMeta{
 		Description: "将已完成的工单转换为知识库文章",
 		Tags: "知识库文章",
 		Flags: []commands.FlagSpec{
-			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "summary", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "tagIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "title", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "categoryId", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "content", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},

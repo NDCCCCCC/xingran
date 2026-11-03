@@ -5,10 +5,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	models "github.com/xingran-next/xingran-go-backend/internal/models"
 	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
+
+// swagger 类型解析引用：swag 解析注解中的 models.OUGroupMapping 需要本文件 import models 包
+var _ models.OUGroupMapping
 
 // OUGroupMappingHandler OU组映射处理器
 type OUGroupMappingHandler struct {

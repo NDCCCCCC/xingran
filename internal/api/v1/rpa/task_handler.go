@@ -37,6 +37,15 @@ func (h *TaskHandler) WithCore(core *core.Core) *TaskHandler {
 }
 
 // List 任务列表
+// @Summary 查询RPA任务列表
+// @Description 分页查询RPA任务列表，支持状态筛选
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/tasks/list [post]
 func (h *TaskHandler) List(c *gin.Context) {
 	var params rpa.TaskListParams
 	if !bindAndValidate(c, &params) {
@@ -54,6 +63,16 @@ func (h *TaskHandler) List(c *gin.Context) {
 }
 
 // Create 创建任务
+// @Summary 创建RPA任务
+// @Description 创建新的RPA任务
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "任务信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/tasks [post]
 func (h *TaskHandler) Create(c *gin.Context) {
 	var req rpa.CreateTaskRequest
 	if !bindAndValidate(c, &req) {
@@ -72,6 +91,14 @@ func (h *TaskHandler) Create(c *gin.Context) {
 }
 
 // GetByID 获取任务详情
+// @Summary 查询RPA任务详情
+// @Description 按任务ID查询RPA任务详情
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "任务ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/tasks/{id} [post]
 func (h *TaskHandler) GetByID(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -88,6 +115,16 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 }
 
 // Update 更新任务
+// @Summary 更新RPA任务
+// @Description 按 ID 更新RPA任务配置
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param id path string true "任务ID"
+// @Param request body object true "更新内容"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/tasks/{id}/update [post]
 func (h *TaskHandler) Update(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -111,6 +148,14 @@ func (h *TaskHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除任务
+// @Summary 删除RPA任务
+// @Description 删除指定RPA任务
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "任务ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/tasks/{id}/delete [post]
 func (h *TaskHandler) Delete(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -127,6 +172,14 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 }
 
 // Execute 执行任务
+// @Summary 执行RPA任务
+// @Description 触发执行指定RPA任务
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "任务ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/tasks/{id}/execute [post]
 func (h *TaskHandler) Execute(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -152,6 +205,16 @@ func (h *TaskHandler) Execute(c *gin.Context) {
 }
 
 // UploadExcel 上传并解析 Excel 文件
+// @Summary 上传RPA任务Excel
+// @Description 上传 Excel 文件批量创建/导入RPA任务
+// @Tags RPA管理
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "Excel 文件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/tasks/upload-excel [post]
 func (h *TaskHandler) UploadExcel(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -178,6 +241,17 @@ func (h *TaskHandler) UploadExcel(c *gin.Context) {
 }
 
 // ExecuteWithExcel 上传 Excel 并执行批量任务
+// @Summary 带Excel执行RPA任务
+// @Description 使用上传的 Excel 数据驱动执行指定RPA任务
+// @Tags RPA管理
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path string true "任务ID"
+// @Param file formData file true "Excel 数据文件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/tasks/{id}/execute-with-excel [post]
 func (h *TaskHandler) ExecuteWithExcel(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {

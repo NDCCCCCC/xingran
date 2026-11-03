@@ -154,6 +154,15 @@ var fieldDocs = map[string]fieldEntry{
 	"data":          {desc: "业务数据（响应包装字段）"},
 	"message":       {desc: "响应消息"},
 	"requestId":     {desc: "请求追踪 ID（响应字段）"},
+	"tagIds":        {desc: "标签 ID 列表"},
+	"startTime":     {desc: "查询开始时间（YYYY-MM-DD 或完整时间）"},
+	"port":          {desc: "端口号"},
+	"updatedBy":     {desc: "最后更新人"},
+	"createdBy":     {desc: "创建人"},
+	"templateCode":  {desc: "模板编码（唯一标识）"},
+	"templateName":  {desc: "模板名称"},
+	"templateContent": {desc: "模板内容"},
+	"variables":     {desc: "模板变量定义（键值对）"},
 
 	// ---- 审计字段 ----
 	"createBy":  {desc: "创建者"},
@@ -443,6 +452,13 @@ var aliases = map[string]string{
 	"create_time": "createTime", "update_by": "updateBy", "update_time": "updateTime",
 	"employee_no": "employeeNo", "request_id": "requestId", "user_ids": "userIdList",
 	"auth_source": "authSource", "keep_alive": "keepAlive", "is_default": "isDefault",
+	// 后端部分模型用全小写 json tag，词典键按 camelCase 收录。
+	"ipaddress": "ipAddress", "snmpport": "snmpPort", "macaddress": "macAddress",
+	"hostname": "hostName", "devicename": "deviceName", "devicetype": "deviceType",
+	"updatedby": "updatedBy", "createdby": "createdBy", "deptid": "deptId",
+	"credentialid": "credentialId", "templatecode": "templateCode",
+	"templatename": "templateName", "templatecontent": "templateContent",
+	"starttime": "startTime", "endtime": "endTime",
 }
 
 // normalize 归一化字段名：去空格、统一 snake_case 到 camelCase 词典键
@@ -474,9 +490,34 @@ func normalize(name string) string {
 				b.WriteString(strings.ToUpper(p[:1]) + strings.ToLower(p[1:]))
 			}
 		}
-		return b.String()
+		name = b.String()
 	}
+	// 全大写缩写归一：credentialID -> credentialId、deptID -> deptId。
+	// 后端 json tag 里 ID/IP 等缩写常全大写，词典键按 camelCase 收录。
+	name = normalizeAcronyms(name)
 	return name
+}
+
+// normalizeAcronyms 把字段名里的连续全大写段转成 camelCase（credentialID -> credentialId）。
+func normalizeAcronyms(name string) string {
+	var b strings.Builder
+	for i := 0; i < len(name); i++ {
+		ch := name[i]
+		if ch >= 'A' && ch <= 'Z' {
+			j := i + 1
+			for j < len(name) && name[j] >= 'A' && name[j] <= 'Z' {
+				j++
+			}
+			if j-i >= 2 {
+				b.WriteByte(ch)
+				b.WriteString(strings.ToLower(name[i+1 : j]))
+				i = j - 1
+				continue
+			}
+		}
+		b.WriteByte(ch)
+	}
+	return b.String()
 }
 
 // lookup 归一化后查词典

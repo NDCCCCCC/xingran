@@ -63,6 +63,15 @@ func (h *WorkerHandler) WithTokenService(svc rpa.WorkerTokenService) *WorkerHand
 }
 
 // List Worker 列表
+// @Summary 查询RPA Worker列表
+// @Description 分页查询RPA执行器（Worker）列表
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/list [post]
 func (h *WorkerHandler) List(c *gin.Context) {
 	var params rpa.WorkerListParams
 	if !bindAndValidate(c, &params) {
@@ -80,6 +89,13 @@ func (h *WorkerHandler) List(c *gin.Context) {
 }
 
 // Statistics Worker 统计(读操作,不记操作日志)
+// @Summary RPA Worker统计
+// @Description RPA Worker 专用聚合统计端点
+// @Tags RPA管理
+// @Produce json
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/statistics [post]
 func (h *WorkerHandler) Statistics(c *gin.Context) {
 	result, err := h.workerService.Statistics(c.Request.Context())
 	if handleError(c, err, http.StatusInternalServerError, "统计失败") {
@@ -90,6 +106,16 @@ func (h *WorkerHandler) Statistics(c *gin.Context) {
 }
 
 // Register 注册 Worker
+// @Summary 注册RPA Worker
+// @Description Worker 自动注册（无需 JWT，使用 Provisioning 认证）
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "注册信息"
+// @Success 200 {object} object
+// @Failure 400 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/register [post]
 func (h *WorkerHandler) Register(c *gin.Context) {
 	var req rpa.WorkerRegisterRequest
 	if !bindAndValidate(c, &req) {
@@ -119,6 +145,16 @@ func (h *WorkerHandler) Register(c *gin.Context) {
 }
 
 // Heartbeat 心跳上报
+// @Summary RPA Worker心跳
+// @Description Worker 定期心跳上报（Worker Token 认证）
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param id path string true "Worker ID"
+// @Param request body object true "心跳数据"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/{id}/heartbeat [post]
 func (h *WorkerHandler) Heartbeat(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -142,6 +178,15 @@ func (h *WorkerHandler) Heartbeat(c *gin.Context) {
 }
 
 // Progress 进度上报
+// @Summary RPA执行进度上报
+// @Description Worker 上报任务执行进度（Worker Token 认证）
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "进度数据"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/progress [post]
 func (h *WorkerHandler) Progress(c *gin.Context) {
 	var req rpa.WorkerProgressRequest
 	if !bindAndValidate(c, &req) {
@@ -158,6 +203,14 @@ func (h *WorkerHandler) Progress(c *gin.Context) {
 }
 
 // ScaleUp 扩容 Worker
+// @Summary RPA Worker扩容
+// @Description 触发指定 Worker 扩容
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "Worker ID"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/{id}/scale-up [post]
 func (h *WorkerHandler) ScaleUp(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -196,6 +249,14 @@ func (h *WorkerHandler) ScaleUp(c *gin.Context) {
 }
 
 // ScaleDown 缩容 Worker
+// @Summary RPA Worker缩容
+// @Description 触发指定 Worker 缩容
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "Worker ID"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/{id}/scale-down [post]
 func (h *WorkerHandler) ScaleDown(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -234,6 +295,15 @@ func (h *WorkerHandler) ScaleDown(c *gin.Context) {
 }
 
 // ScaleAll 批量扩缩容所有 Worker
+// @Summary RPA Worker全量扩缩容
+// @Description 对全部 Worker 执行统一扩缩容指令
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "扩缩容指令"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/scale-all [post]
 func (h *WorkerHandler) ScaleAll(c *gin.Context) {
 	var req struct {
 		Direction   string `json:"direction" binding:"required,oneof=up down"`
@@ -278,6 +348,13 @@ type AutoScaleConfig struct {
 }
 
 // GetAutoScaleConfig 获取自动扩缩容配置
+// @Summary 查询自动扩缩容配置
+// @Description 查询 RPA 自动扩缩容配置
+// @Tags RPA管理
+// @Produce json
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/autoscale/config [get]
 func (h *WorkerHandler) GetAutoScaleConfig(c *gin.Context) {
 	config := AutoScaleConfig{
 		Enabled:            false,
@@ -291,6 +368,15 @@ func (h *WorkerHandler) GetAutoScaleConfig(c *gin.Context) {
 }
 
 // UpdateAutoScaleConfig 更新自动扩缩容配置
+// @Summary 更新自动扩缩容配置
+// @Description 更新 RPA 自动扩缩容配置
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "扩缩容配置"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/workers/autoscale/config [post]
 func (h *WorkerHandler) UpdateAutoScaleConfig(c *gin.Context) {
 	var config AutoScaleConfig
 	if !bindAndValidate(c, &config) {

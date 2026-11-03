@@ -41,7 +41,9 @@ echo ""
 
 # 生成文档
 echo -e "${YELLOW}正在生成Swagger文档...${NC}"
-swag init -g cmd/main.go -o docs --parseInternal --parseDependency --parseInternal
+# --exclude ./xingran-react-frontend：排除前端仓库内的 rpa-worker Go 子模块，
+# swag 解析该目录会 fatal（且该模块不属于本仓库 API 面）
+swag init -g cmd/main.go -o docs --parseInternal --parseDependency --parseInternal --exclude ./xingran-react-frontend
 
 if [ $? -eq 0 ]; then
     echo ""

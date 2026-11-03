@@ -27,6 +27,15 @@ func (h *AIHandler) WithCore(core *core.Core) *AIHandler {
 }
 
 // GenerateScript 生成脚本
+// @Summary AI生成RPA脚本
+// @Description 由自然语言描述生成RPA自动化脚本
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "生成要求"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/generate [post]
 func (h *AIHandler) GenerateScript(c *gin.Context) {
 	var req rpa.AIScriptGenerateRequest
 	if !bindAndValidate(c, &req) {
@@ -45,6 +54,15 @@ func (h *AIHandler) GenerateScript(c *gin.Context) {
 }
 
 // OptimizeScript 优化脚本
+// @Summary AI优化RPA脚本
+// @Description 优化已有RPA自动化脚本
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "脚本与优化要求"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/optimize [post]
 func (h *AIHandler) OptimizeScript(c *gin.Context) {
 	var req rpa.AIScriptOptimizeRequest
 	if !bindAndValidate(c, &req) {
@@ -62,6 +80,15 @@ func (h *AIHandler) OptimizeScript(c *gin.Context) {
 }
 
 // Decide AI 决策下一步动作
+// @Summary AI决策
+// @Description RPA流程中的 AI 决策端点
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "决策上下文"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/decide [post]
 func (h *AIHandler) Decide(c *gin.Context) {
 	var req rpa.AIAgentDecisionRequest
 	if !bindAndValidate(c, &req) {
@@ -79,6 +106,15 @@ func (h *AIHandler) Decide(c *gin.Context) {
 }
 
 // AnalyzeFailure 分析失败原因
+// @Summary AI分析执行失败
+// @Description 分析RPA执行失败原因
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "失败上下文"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/analyze-failure [post]
 func (h *AIHandler) AnalyzeFailure(c *gin.Context) {
 	var req rpa.AnalyzeFailureRequest
 	if !bindAndValidate(c, &req) {
@@ -96,6 +132,15 @@ func (h *AIHandler) AnalyzeFailure(c *gin.Context) {
 }
 
 // SuggestFix 提供修复建议
+// @Summary AI建议修复
+// @Description 针对失败给出修复建议
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "失败上下文"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/suggest-fix [post]
 func (h *AIHandler) SuggestFix(c *gin.Context) {
 	var req rpa.SuggestFixRequest
 	if !bindAndValidate(c, &req) {
@@ -113,6 +158,15 @@ func (h *AIHandler) SuggestFix(c *gin.Context) {
 }
 
 // ClassifyError 分类错误
+// @Summary AI错误分类
+// @Description 对RPA错误进行分类
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "错误信息"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/classify-error [post]
 func (h *AIHandler) ClassifyError(c *gin.Context) {
 	var req struct {
 		ErrorMessage string `json:"errorMessage" binding:"required"`
@@ -132,6 +186,15 @@ func (h *AIHandler) ClassifyError(c *gin.Context) {
 }
 
 // RecordSelectorSuccess 记录选择器成功
+// @Summary 记录选择器成功
+// @Description 记录元素选择器命中成功（选择器学习）
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "选择器信息"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/selector/record-success [post]
 func (h *AIHandler) RecordSelectorSuccess(c *gin.Context) {
 	var req rpa.SelectorSuccessRecord
 	if !bindAndValidate(c, &req) {
@@ -148,6 +211,15 @@ func (h *AIHandler) RecordSelectorSuccess(c *gin.Context) {
 }
 
 // RecordSelectorFailure 记录选择器失败
+// @Summary 记录选择器失败
+// @Description 记录元素选择器命中失败（选择器学习）
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "选择器信息"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/selector/record-failure [post]
 func (h *AIHandler) RecordSelectorFailure(c *gin.Context) {
 	var req rpa.SelectorFailureRecord
 	if !bindAndValidate(c, &req) {
@@ -164,6 +236,15 @@ func (h *AIHandler) RecordSelectorFailure(c *gin.Context) {
 }
 
 // GetBestSelector 获取最佳选择器
+// @Summary 获取最优选择器
+// @Description 获取当前学习到的最优元素选择器
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询条件"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/selector/best [post]
 func (h *AIHandler) GetBestSelector(c *gin.Context) {
 	var req struct {
 		PageURL   string `json:"pageUrl" binding:"required"`
@@ -182,6 +263,15 @@ func (h *AIHandler) GetBestSelector(c *gin.Context) {
 }
 
 // ScoreSelector 对选择器进行评分
+// @Summary 选择器评分
+// @Description 对候选元素选择器评分
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "候选选择器"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/selector/score [post]
 func (h *AIHandler) ScoreSelector(c *gin.Context) {
 	var req struct {
 		Selector string `json:"selector" binding:"required"`
@@ -200,6 +290,15 @@ func (h *AIHandler) ScoreSelector(c *gin.Context) {
 }
 
 // GetSelectorAlternatives 获取选择器的替代方案
+// @Summary 获取备选选择器
+// @Description 获取备选元素选择器列表
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询条件"
+// @Success 200 {object} object
+// @Failure 500 {object} object
+// @Router /rpa/ai/selector/alternatives [post]
 func (h *AIHandler) GetSelectorAlternatives(c *gin.Context) {
 	var req struct {
 		Selector string `json:"selector" binding:"required"`

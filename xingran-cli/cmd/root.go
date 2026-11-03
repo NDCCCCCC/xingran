@@ -146,6 +146,11 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newWorkorderModuleCmd(runEndpoint, emitEndpoint))
 	root.AddCommand(newDutyModuleCmd(runEndpoint, emitEndpoint))
 	root.AddCommand(newKnowledgeModuleCmd(runEndpoint, emitEndpoint))
+	root.AddCommand(newVdiModuleCmd(runEndpoint, emitEndpoint))
+	root.AddCommand(newRpaModuleCmd(runEndpoint, emitEndpoint))
+	root.AddCommand(newAssetModuleCmd(runEndpoint, emitEndpoint))
+	root.AddCommand(newAgentModuleCmd(runEndpoint, emitEndpoint))
+	root.AddCommand(newAdDomainModuleCmd(runEndpoint, emitEndpoint))
 	return root
 }
 

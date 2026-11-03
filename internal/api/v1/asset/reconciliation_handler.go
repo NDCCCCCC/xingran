@@ -69,7 +69,6 @@ func (h *ReconciliationHandler) WithCore(core *core.Core) *ReconciliationHandler
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception/list [post]
-
 func (h *ReconciliationHandler) ListExceptions(c *gin.Context) {
 	var params asset.ExceptionListParams
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -95,7 +94,6 @@ func (h *ReconciliationHandler) ListExceptions(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception/{id} [post]
-
 func (h *ReconciliationHandler) GetExceptionByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -149,7 +147,6 @@ func (h *ReconciliationHandler) GetExceptionByID(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception/{id}/resolve [post]
-
 func (h *ReconciliationHandler) ResolveException(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -262,7 +259,6 @@ func (h *ReconciliationHandler) ResolveException(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/by-workstation [post]
-
 func (h *ReconciliationHandler) GetByWorkstation(c *gin.Context) {
 	var req struct {
 		WorkstationID string `json:"workstationId" binding:"required"`

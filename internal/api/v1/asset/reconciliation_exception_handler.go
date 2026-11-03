@@ -164,7 +164,6 @@ func (h *ReconciliationExceptionHandler) CreateRule(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception-rule/{id}/update [post]
-
 func (h *ReconciliationExceptionHandler) UpdateRule(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -204,7 +203,6 @@ func (h *ReconciliationExceptionHandler) UpdateRule(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception-rule/{id}/delete [post]
-
 func (h *ReconciliationExceptionHandler) DeleteRule(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -239,7 +237,6 @@ func (h *ReconciliationExceptionHandler) DeleteRule(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception-rule/test [post]
-
 func (h *ReconciliationExceptionHandler) TestRule(c *gin.Context) {
 	var req struct {
 		IP     string `json:"ip" binding:"required"`
@@ -289,7 +286,6 @@ func (h *ReconciliationExceptionHandler) TestRule(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/baseline/snapshot [post]
-
 func (h *ReconciliationExceptionHandler) SnapshotBaseline(c *gin.Context) {
 	if h.baselineSvc == nil {
 		response.Error(c, http.StatusInternalServerError, "baseline service 未注入")
@@ -324,7 +320,6 @@ func (h *ReconciliationExceptionHandler) SnapshotBaseline(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/baseline/compare [post]
-
 func (h *ReconciliationExceptionHandler) CompareBaseline(c *gin.Context) {
 	if h.baselineSvc == nil {
 		response.Error(c, http.StatusInternalServerError, "baseline service 未注入")
@@ -370,7 +365,6 @@ func (h *ReconciliationExceptionHandler) CompareBaseline(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception-rule/import [post]
-
 func (h *ReconciliationExceptionHandler) ImportRules(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -398,7 +392,6 @@ func (h *ReconciliationExceptionHandler) ImportRules(c *gin.Context) {
 // @Success 200 {file} file
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception-rule/export [post]
-
 func (h *ReconciliationExceptionHandler) ExportRules(c *gin.Context) {
 	excelSvc := operations.NewExcelService(h.core.GetDB(), nil, nil, nil)
 	f, err := excelSvc.ExportData(c.Request.Context(), "reconciliationExceptionRule", nil)
@@ -426,7 +419,6 @@ func (h *ReconciliationExceptionHandler) ExportRules(c *gin.Context) {
 // @Success 200 {file} file
 // @Failure 500 {object} response.Response
 // @Router /asset/reconciliation/exception-rule/template [post]
-
 func (h *ReconciliationExceptionHandler) DownloadTemplate(c *gin.Context) {
 	excelSvc := operations.NewExcelService(h.core.GetDB(), nil, nil, nil)
 	f, err := excelSvc.GenerateTemplate("reconciliationExceptionRule")

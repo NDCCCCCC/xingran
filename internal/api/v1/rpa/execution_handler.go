@@ -39,6 +39,15 @@ func (h *ExecutionHandler) WithCore(core *core.Core) *ExecutionHandler {
 }
 
 // List 执行记录列表
+// @Summary 查询RPA执行记录列表
+// @Description 分页查询RPA任务执行记录
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param request body object true "查询参数"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/list [post]
 func (h *ExecutionHandler) List(c *gin.Context) {
 	var params rpa.ExecutionListParams
 	if !bindAndValidate(c, &params) {
@@ -56,6 +65,13 @@ func (h *ExecutionHandler) List(c *gin.Context) {
 }
 
 // Statistics 执行记录统计(读操作,不记操作日志)
+// @Summary RPA执行统计
+// @Description RPA 执行记录聚合统计
+// @Tags RPA管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/statistics [post]
 func (h *ExecutionHandler) Statistics(c *gin.Context) {
 	result, err := h.executionService.Statistics(c.Request.Context())
 	if handleError(c, err, http.StatusInternalServerError, "统计失败") {
@@ -66,6 +82,14 @@ func (h *ExecutionHandler) Statistics(c *gin.Context) {
 }
 
 // GetByID 获取执行记录详情
+// @Summary 查询执行记录详情
+// @Description 按执行ID查询RPA执行记录详情
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "执行ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/{id} [post]
 func (h *ExecutionHandler) GetByID(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -82,6 +106,14 @@ func (h *ExecutionHandler) GetByID(c *gin.Context) {
 }
 
 // Cancel 取消执行
+// @Summary 取消RPA执行
+// @Description 取消执行中的RPA任务
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "执行ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/{id}/cancel [post]
 func (h *ExecutionHandler) Cancel(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -98,6 +130,14 @@ func (h *ExecutionHandler) Cancel(c *gin.Context) {
 }
 
 // GetLogs 获取执行日志
+// @Summary 查询RPA执行日志
+// @Description 查询指定执行的日志
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "执行ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/{id}/logs [post]
 func (h *ExecutionHandler) GetLogs(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -114,6 +154,14 @@ func (h *ExecutionHandler) GetLogs(c *gin.Context) {
 }
 
 // GetBatchReport 获取批量执行报告
+// @Summary 查询批量执行报告
+// @Description 查询批量执行的汇总报告
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "执行ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/{id}/batch-report [get]
 func (h *ExecutionHandler) GetBatchReport(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -134,6 +182,14 @@ func (h *ExecutionHandler) GetBatchReport(c *gin.Context) {
 }
 
 // RequestHumanIntervention 请求人工干预
+// @Summary 请求人工干预
+// @Description 查询指定执行的人工干预请求状态
+// @Tags RPA管理
+// @Produce json
+// @Param id path string true "执行ID"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/{id}/human-intervention [get]
 func (h *ExecutionHandler) RequestHumanIntervention(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
@@ -169,6 +225,16 @@ func (h *ExecutionHandler) RequestHumanIntervention(c *gin.Context) {
 }
 
 // SubmitHumanIntervention 提交人工干预响应
+// @Summary 提交人工干预
+// @Description 提交人工干预结果
+// @Tags RPA管理
+// @Accept json
+// @Produce json
+// @Param id path string true "执行ID"
+// @Param request body object true "干预内容"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/{id}/human-intervention [post]
 func (h *ExecutionHandler) SubmitHumanIntervention(c *gin.Context) {
 	var req rpa.HumanInterventionRequest
 	if !bindAndValidate(c, &req) {
@@ -207,6 +273,14 @@ func (h *ExecutionHandler) SubmitHumanIntervention(c *gin.Context) {
 }
 
 // DownloadArtifacts 下载执行产物（截图和日志）为 ZIP 文件
+// @Summary 下载RPA执行产物
+// @Description 下载指定执行的产物文件
+// @Tags RPA管理
+// @Produce application/octet-stream
+// @Param id path string true "执行ID"
+// @Success 200 {file} file
+// @Failure 500 {object} response.Response
+// @Router /rpa/executions/{id}/download [get]
 func (h *ExecutionHandler) DownloadArtifacts(c *gin.Context) {
 	id := getIDParam(c)
 	if id == "" {
