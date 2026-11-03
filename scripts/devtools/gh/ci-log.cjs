@@ -10,6 +10,7 @@
  * 环境变量：GH_TOKEN（必需） GH_OWNER / GH_REPO / GH_HOST_IP（可选）
  */
 const https = require("https");
+const { execFileSync } = require("child_process");
 
 const TOKEN = process.env.GH_TOKEN || "";
 const OWNER = process.env.GH_OWNER || "NDCCCCCC";
@@ -20,6 +21,34 @@ const API = "api.github.com";
 if (!TOKEN) {
   console.error("缺少 GH_TOKEN 环境变量");
   process.exit(2);
+}
+
+function apiRaw(p) {
+  return new Promise((r) => {
+    const req = https.request(
+      {
+        host: HOST_IP || API,
+        servername: API,
+        port: 443,
+        path: p,
+        method: "GET",
+        headers: {
+          Host: API,
+          Authorization: `Bearer ${TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "xingran-ci-log",
+        },
+        timeout: 120000,
+      },
+      (res) => {
+        const chunks = [];
+        res.on("data", (d) => chunks.push(d));
+        res.on("end", () => r(Buffer.concat(chunks).toString()));
+      }
+    );
+    req.on("error", (e) => r(String(e.message)));
+    req.end();
+  });
 }
 
 function api(method, p, body) {
@@ -101,8 +130,19 @@ async function main() {
     console.log(`失败 job: ${bad.name} (${jobId})`);
   }
 
-  const logs = await api("GET", `/repos/${OWNER}/${REPO}/actions/jobs/${jobId}/logs`);
-  const text = logs.json.raw || "";
+  // 日志取用 gh CLI：`gh run view --job <id> --log`。
+  // ⚠️ 不用 GitHub 的 job logs API —— 该端点在 job 刚结束时可能返回空/未就绪
+  //   （实测多次拿到 0 行），而 gh CLI 走同一份数据但稳定可用。
+  let text = "";
+  try {
+    text = execFileSync("gh", ["run", "view", "--job", String(jobId), "--log"], {
+      encoding: "utf8",
+      maxBuffer: 256 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch (e) {
+    console.error(`取日志失败（gh run view 退出码 ${e.status}）`);
+  }
   const lines = text.split("\n");
   console.log(`总行数 ${lines.length}`);
   const hits = lines.filter((l) => KEY.test(l) && !/npm error invalid/.test(l));
