@@ -142,8 +142,8 @@ export function useRealtimeUpdates(widgets: WidgetConfig[], options?: UseRealtim
           }, delay);
         } else if (reconnectAttemptRef.current >= MAX_RECONNECT_ATTEMPTS) {
           console.warn(
-            `[Dashboard WebSocket] 已重连 ${MAX_RECONNECT_ATTEMPTS} 次仍失败,停止重连` +
-              `（后端尚未提供仪表盘 WS 端点时属预期,数据请走 REST 数据源）`
+            "[Dashboard WebSocket] 已重连 " + MAX_RECONNECT_ATTEMPTS + " 次仍失败,停止重连" +
+              "（后端尚未提供仪表盘 WS 端点时属预期,数据请走 REST 数据源）"
           );
         }
       };
