@@ -195,11 +195,98 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Test (coverage)
-        # package.json 已改 vitest run --coverage (82-01): 全量口径 statements
-        # 报告 (coverage.include 圈定全 src, 白名单 cad 两目录排除), 产出
-        # coverage/coverage-final.json 供本 job 的 gate 与 PR diff job 复用。
-        run: npm run test:coverage
+      - name: Build
+        run: npm run build
+
+  frontend-coverage:
+    # 前端覆盖率测试独立成 job 并分片并行（2026-11-03 C-3 CI 提速）。
+    #
+    # 为什么分片：ubuntu-latest 是 4 核，vitest maxWorkers 已被 4 占满 ⇒ 单机
+    # 无法再并行。实测单 job 全量 4059 个测试墙钟约 15.5 分钟（Duration 927s，
+    # 其中 import 868s / tests 2037s 均为 4 worker 累加），逼近本仓 frontend
+    # job 的 timeout-minutes: 25 ⇒ 再慢一点就会超时挂 CI。
+    # 拆成 4 个 shard 并行后，墙钟降到约 1/4，门禁语义不变。
+    #
+    # 分片安全性：vitest --shard 按测试文件分配，同一文件内的用例不拆分 ⇒
+    # 用例间共享状态的行为不变。coverage 合并由 vitest merge-reports 完成
+    # （官方支持），合并后才是全量口径，喂给既有门禁脚本。
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: xingran-react-frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: xingran-react-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Test (coverage, shard ${{ matrix.shard }}/4)
+        # 每片输出到独立子目录：merge-reports 以 reportsDirectory 为输入根，
+        # 扫其下的子目录收集各片 coverage-final.json。
+        run: npm run test:coverage -- --shard=${{ matrix.shard }}/4 --coverage.reportsDirectory=coverage/shards/shard-${{ matrix.shard }}
+
+      - name: Upload shard coverage
+        # 上传**单片目录**（而非整个 shards 目录）：upload v4 以路径的最小公共祖先
+        # 为 artifact 根 ⇒ artifact 内就是 coverage-final.json（路径前缀被剥离）
+        # ⇒ 下载到 coverage/shards/ 后结构为 shards/<artifact 名>/coverage-final.json，
+        # 深度固定 ⇒ merge-reports 在一层下即可全部找到（实测：上传整个 shards/
+        #   会多出一层 shard-N/，下载后变成两层，合并脚本找不到文件）。
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-shard-${{ matrix.shard }}
+          path: xingran-react-frontend/coverage/shards/shard-${{ matrix.shard }}/
+          retention-days: 30
+
+  frontend-coverage-merge:
+    # 合并 4 个 shard 的 coverage 并跑全局门禁（原 frontend job 内的
+    # Test + Coverage gate + Upload 三步整体搬到这里）。
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: frontend-coverage
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: xingran-react-frontend/package-lock.json
+
+      - name: Install dependencies
+        # ⚠️ 必须：merge 步骤调 `npx vitest merge-reports`，vitest 是 devDependency
+        # ⇒ 没有 node_modules 时 npx 找不到 vitest（实测命令 0.3s 即失败且无报错输出）。
+        run: npm ci --legacy-peer-deps
+        working-directory: xingran-react-frontend
+
+      - name: Download all shards
+        # 每片的 artifact 内是 coverage-final.json（上传时以单片目录为根 ⇒
+        # 前缀被剥离）⇒ 下载后结构为 shards/<artifact 名>/coverage-final.json，
+        # 深度固定，merge-reports 在一层下即可全部找到。
+        uses: actions/download-artifact@v4
+        with:
+          pattern: frontend-coverage-shard-*
+          path: xingran-react-frontend/coverage/shards
+
+      - name: Merge coverage reports
+        # vitest merge-reports 读取 reportsDirectory 下各片的 coverage-final.json，
+        # 输出合并后的全量 json（--outputFile）。任一片缺失即合并失败 ⇒
+        # fail-closed，不静默放行半个覆盖率。
+        # --outputFile 指向 coverage/coverage-final.json，与门禁脚本第一参数、
+        # 以及 frontend-coverage-diff 的 artifact 内容路径保持一致。
+        working-directory: xingran-react-frontend
+        run: npx vitest merge-reports --reportsDirectory=coverage/shards --outputFile=coverage/coverage-final.json
 
       - name: Coverage gate
         # GOV-03/GOV-05 (82-04): 全局阈值 + per-dir floor + 白名单漂移三合一,
@@ -214,22 +301,15 @@ jobs:
         working-directory: .
         run: bash .github/scripts/check-frontend-coverage.sh xingran-react-frontend/coverage/coverage-final.json .coverage-fe-floors
 
-      - name: Upload coverage artifact
-        # D-03 (82-04): vitest json + html 报告目录随 artifact 上传供本地 debug
-        # 下载, 命名与 backend-coverage 对齐。if: always() 对称 backend job:
-        # gate 失败仍发布 artifact。path 相对 workspace root (upload 不走 job
-        # defaults); upload v4 以路径最小公共祖先为 artifact 根, 目录前缀被
-        # 剥离后 json 与 html 报告位于 artifact 根——frontend-coverage-diff
-        # job 的 download 必须带 path 输入还原 (见该 job 注释)。
+      - name: Upload merged coverage artifact
+        # D-03 (82-04): 合并后的 vitest json 随 artifact 上传供 PR diff job 复用
+        # 与本地 debug 下载。if: always()：gate 失败仍发布 artifact。
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage
-          path: xingran-react-frontend/coverage/
+          path: xingran-react-frontend/coverage/coverage-final.json
           retention-days: 30
-
-      - name: Build
-        run: npm run build
 
   frontend-coverage-diff:
     # GOV-04 (82-04, D-02): PR-only 前端 diff coverage ≥80% gate, 逐字段对称
@@ -238,7 +318,7 @@ jobs:
     # 故仅 PR 触发。
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: frontend
+    needs: frontend-coverage-merge
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v7
@@ -247,7 +327,8 @@ jobs:
           fetch-depth: 0
 
       - name: Download coverage report
-        # Reuses the frontend job's coverage-final.json — no second test run.
+        # Reuses the merged coverage-final.json from frontend-coverage-merge —
+        # no second test run.
         # 与后端 coverage-diff 的唯一刻意偏差: download 带 path 输入。upload v4
         # 上传目录时以路径最小公共祖先为 artifact 根 (xingran-react-frontend/
         # 前缀被剥离, json 与 html 报告位于 artifact 根); 无 path 输入时 json
