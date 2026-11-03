@@ -12,7 +12,7 @@ import { Tabs, Dropdown, Button } from "antd";
 import type { MenuProps } from "antd";
 import { useTabs } from "@/store/tabsStore";
 import { useNavigate } from "react-router-dom";
-import { preloadComponents } from "@/router/componentLoader";
+import { preloadRouteComponent } from "@/router/componentLoader";
 import {
   CloseOutlined,
   CloseCircleOutlined,
@@ -317,7 +317,9 @@ const TabBar: FC = () => {
       onContextMenu={(e) => handleTabContextMenu(tab.key, e)}
       onMouseEnter={() => {
         // hover 预取目标路由 chunk（仅预取，非导航）
-        preloadComponents([tab.path]);
+        // 传的是**路由路径**，由 componentLoader 经菜单数据映射到真实组件路径；
+        // 预取失败静默，不会污染控制台，也不会产生未捕获的 promise rejection。
+        void preloadRouteComponent(tab.path);
       }}
       style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
     >

@@ -6,6 +6,8 @@
  */
 
 import { lazy, type ComponentType } from "react";
+import { routeConfigManager } from "./routeConfigManager";
+import { RouteGenerator } from "./routeGenerator";
 
 /**
  * 组件加载器
@@ -61,7 +63,8 @@ export class ComponentLoader {
 
     // 路径白名单验证
     if (!this.isValidComponentPath(normalizedPath)) {
-      console.error(`[ComponentLoader] Invalid component path: ${normalizedPath}`);
+      // 非法路径只抛错、不打日志：调用方（预取链路）自行决定如何处理，
+      // 避免同一类非法入参在控制台反复刷屏。
       throw new Error(`Invalid component path: ${normalizedPath}`);
     }
 
@@ -81,7 +84,41 @@ export class ComponentLoader {
   }
 
   /**
+   * 静默预加载组件（尽力而为）
+   *
+   * 与 load() 的区别：不抛错、不打日志——预取是性能优化，
+   * 失败（路径非法 / 组件不存在 / chunk 加载失败）既不应影响调用方，
+   * 更不应在控制台刷屏或变成未捕获的 promise rejection。
+   *
+   * @param componentPath 组件路径（如 'pages/system/user/index'）
+   * @returns 是否成功预加载
+   */
+  async preload(componentPath: string): Promise<boolean> {
+    try {
+      const normalizedPath = this.normalizePath(componentPath);
+
+      if (!this.isValidComponentPath(normalizedPath)) {
+        return false;
+      }
+
+      if (this.cache.has(normalizedPath)) {
+        return true;
+      }
+
+      const component = await this.importComponent(normalizedPath);
+      this.cache.set(normalizedPath, component);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * 验证组件路径是否在白名单内
+   *
+   * 危险字符（路径遍历 / 反斜杠 / 非 tsx 文件）属于安全信号，始终告警；
+   * 单纯不满足白名单则静默拒绝——具体如何处置交给调用方，
+   * 避免预取这类「尽力而为」的调用在控制台反复刷屏。
    */
   private isValidComponentPath(path: string): boolean {
     // 检查是否包含危险字符
@@ -93,13 +130,7 @@ export class ComponentLoader {
     }
 
     // 检查白名单
-    const isValid = ComponentLoader.ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix));
-
-    if (!isValid) {
-      console.warn("[ComponentLoader] Path not in whitelist", { path });
-    }
-
-    return isValid;
+    return ComponentLoader.ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix));
   }
 
   /**
@@ -229,9 +260,59 @@ export function createLazyComponent(componentPath: string): ComponentType {
 }
 
 /**
- * 批量预加载组件
+ * 批量预加载组件（尽力而为）
+ *
+ * 单项失败既不影响其它项，也不会向外 reject——避免调用方漏写 .catch()
+ * 时把预取失败变成未捕获的 promise rejection。
+ *
  * @param componentPaths 组件路径数组
  */
 export async function preloadComponents(componentPaths: string[]): Promise<void> {
-  await Promise.all(componentPaths.map((path) => componentLoader.load(path)));
+  await Promise.all(componentPaths.map((path) => componentLoader.preload(path)));
+}
+
+/**
+ * 解析路由路径对应的组件路径（纯函数，不触发任何加载）
+ *
+ * @param routePath 路由路径（如 '/network/discoveries'）
+ * @returns 组件路径（如 'pages/network/discoveries/index.tsx'）；路由不存在时返回 null
+ */
+export function resolveRouteComponentPath(routePath: string): string | null {
+  try {
+    const route = routeConfigManager.getRouteByPath(routePath);
+    if (!route) {
+      return null;
+    }
+
+    // 与实际渲染走同一套归一化规则（RouteGenerator.resolveComponent），
+    // 保证预取到的 chunk 就是渲染时真正用到的那个。
+    const componentPath = RouteGenerator.resolveComponent(route.component || "", route.path);
+    if (!componentPath) {
+      return null;
+    }
+
+    return componentPath.endsWith(".tsx") ? componentPath : `${componentPath}.tsx`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 按**路由路径**预取目标页面 chunk（尽力而为）
+ *
+ * 路由路径 ≠ 组件路径：例如 /assets/dashboard 实际对应
+ * pages/asset/reconciliation/dashboard/index.tsx（目录名与路由段并不一致），
+ * 因此必须经由菜单数据（routeConfigManager → RouteGenerator.resolveComponent）
+ * 做映射，不能靠字符串拼接推导。
+ *
+ * @param routePath 路由路径（如 '/network/discoveries'）
+ * @returns 是否成功预取
+ */
+export async function preloadRouteComponent(routePath: string): Promise<boolean> {
+  const componentPath = resolveRouteComponentPath(routePath);
+  if (!componentPath) {
+    return false;
+  }
+
+  return componentLoader.preload(componentPath);
 }
