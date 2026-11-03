@@ -292,7 +292,7 @@ const Sidebar = () => {
           <span className="brand-mark" aria-hidden="true">
             星
           </span>
-          {!sidebarCollapsed && <span className="brand-wordmark">数智化平台 · RUOYI-NEXT</span>}
+          {!sidebarCollapsed && <span className="brand-wordmark">XingRan-Next</span>}
         </div>
 
         {loading ? (

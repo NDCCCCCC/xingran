@@ -237,15 +237,16 @@ jobs:
         run: npm run test:coverage -- --shard=${{ matrix.shard }}/4 --coverage.reportsDirectory=coverage/shards/shard-${{ matrix.shard }}
 
       - name: Upload shard coverage
-        # 上传整个 shards 目录（而非单片目录）：upload v4 以**最小公共祖先**为
-        # artifact 根 ⇒ artifact 内保留 shard-N/ 这一层 ⇒ 下载到
-        # coverage/shards/ 后结构确定为 shards/shard-N/coverage-final.json，
-        # 合并脚本的输入路径不依赖 artifact 名。
+        # 上传**单片目录**（而非整个 shards 目录）：upload v4 以路径的最小公共祖先
+        # 为 artifact 根 ⇒ artifact 内就是 coverage-final.json（路径前缀被剥离）
+        # ⇒ 下载到 coverage/shards/ 后结构为 shards/<artifact 名>/coverage-final.json，
+        # 深度固定 ⇒ merge-reports 在一层下即可全部找到（实测：上传整个 shards/
+        #   会多出一层 shard-N/，下载后变成两层，合并脚本找不到文件）。
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-shard-${{ matrix.shard }}
-          path: xingran-react-frontend/coverage/shards/
+          path: xingran-react-frontend/coverage/shards/shard-${{ matrix.shard }}/
           retention-days: 30
 
   frontend-coverage-merge:
@@ -257,7 +258,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: xingran-react-frontend/package-lock.json
+
+      - name: Install dependencies
+        # ⚠️ 必须：merge 步骤调 `npx vitest merge-reports`，vitest 是 devDependency
+        # ⇒ 没有 node_modules 时 npx 找不到 vitest（实测命令 0.3s 即失败且无报错输出）。
+        run: npm ci --legacy-peer-deps
+        working-directory: xingran-react-frontend
+
       - name: Download all shards
+        # 每片的 artifact 内是 coverage-final.json（上传时以单片目录为根 ⇒
+        # 前缀被剥离）⇒ 下载后结构为 shards/<artifact 名>/coverage-final.json，
+        # 深度固定，merge-reports 在一层下即可全部找到。
         uses: actions/download-artifact@v4
         with:
           pattern: frontend-coverage-shard-*
@@ -267,6 +283,8 @@ jobs:
         # vitest merge-reports 读取 reportsDirectory 下各片的 coverage-final.json，
         # 输出合并后的全量 json（--outputFile）。任一片缺失即合并失败 ⇒
         # fail-closed，不静默放行半个覆盖率。
+        # --outputFile 指向 coverage/coverage-final.json，与门禁脚本第一参数、
+        # 以及 frontend-coverage-diff 的 artifact 内容路径保持一致。
         working-directory: xingran-react-frontend
         run: npx vitest merge-reports --reportsDirectory=coverage/shards --outputFile=coverage/coverage-final.json
 

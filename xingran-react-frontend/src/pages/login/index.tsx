@@ -179,7 +179,7 @@ const Login: FC = () => {
 
         <div className="login-brand__top">
           <div className="login-brand__mark">星</div>
-          <span className="login-brand__wordmark">数智化平台 · RUOYI-NEXT</span>
+          <span className="login-brand__wordmark">XingRan-Next</span>
         </div>
 
         <div className="login-brand__center">
@@ -235,7 +235,7 @@ const Login: FC = () => {
           <span className="login-brand__badge">SM2</span>
           <span className="login-brand__badge">SM3</span>
           <span className="login-brand__badge">SM4</span>
-          <span className="login-brand__copyright">© 2026 数智化平台</span>
+          <span className="login-brand__copyright">© 2026 XingRan-Next</span>
         </div>
       </aside>
 
