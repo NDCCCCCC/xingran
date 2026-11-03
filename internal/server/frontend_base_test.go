@@ -1,11 +1,13 @@
 package server
 
 import (
+	"embed"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"testing/fstest"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,6 +43,44 @@ func TestDetectedFrontendBase_SubPathBuild(t *testing.T) {
 
 	if got := detectedFrontendBase(); got != frontendSubPath {
 		t.Fatalf("detectedFrontendBase() = %q, want %q（子路径构建）", got, frontendSubPath)
+	}
+}
+
+// TestDetectedFrontendBase_DefaultReader 用 fstest.MapFS 模拟 embed 产物，
+// 走「默认读取器」这条路径 —— embed 构建下真实走的就是它，
+// 而该路径必须在 CI 的非 embed 构建下也能被覆盖。
+func TestDetectedFrontendBase_DefaultReader(t *testing.T) {
+	resetDetectedFrontendBase()
+	defer resetDetectedFrontendBase()
+
+	savedFS := frontendFS
+	savedEmbedded := frontendEmbedded
+	frontendFS = fstest.MapFS{
+		"xingran-react-frontend/dist/index.html": &fstest.MapFile{
+			Data: []byte(`<script type="module" src="/xingran/assets/index-abc.js"></script>`),
+		},
+	}
+	frontendEmbedded = true
+	defer func() { frontendFS = savedFS; frontendEmbedded = savedEmbedded }()
+
+	if got := detectedFrontendBase(); got != frontendSubPath {
+		t.Fatalf("detectedFrontendBase() = %q, want %q（默认读取器 + 子路径构建）", got, frontendSubPath)
+	}
+}
+
+// TestSetEmbeddedFrontend 覆盖 embed 构建的资源注入路径。
+func TestSetEmbeddedFrontend(t *testing.T) {
+	savedFS := frontendFS
+	savedEmbedded := frontendEmbedded
+	defer func() { frontendFS = savedFS; frontendEmbedded = savedEmbedded }()
+
+	setEmbeddedFrontend(embed.FS{})
+
+	if !frontendEmbedded {
+		t.Fatal("setEmbeddedFrontend() 未标记 frontendEmbedded")
+	}
+	if frontendFS == nil {
+		t.Fatal("setEmbeddedFrontend() 未注入 frontendFS")
 	}
 }
 

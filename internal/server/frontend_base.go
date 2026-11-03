@@ -25,7 +25,11 @@ import (
 //	embed 构建只负责把 embed.FS 注入进来。
 
 // frontendFS 嵌入的前端资源集合；由 embed 构建通过 setEmbeddedFrontend 注入。
-var frontendFS embed.FS
+//
+// 用 fs.FS 接口类型（而非 embed.FS 具体类型）：测试可注入 fstest.MapFS，
+// 于是「读取 index.html」这条路径在 CI 的非 embed 构建下也能被覆盖 ——
+// 否则它只存在于 embed 专属代码里，diff coverage 永远判为未覆盖。
+var frontendFS fs.FS
 
 // frontendEmbedded 标记本次构建是否内嵌了前端产物。
 var frontendEmbedded bool
@@ -51,9 +55,12 @@ func defaultFrontendIndexHTML() func() ([]byte, error) {
 	if !frontendEmbedded {
 		return nil
 	}
-	return func() ([]byte, error) {
-		return fs.ReadFile(frontendFS, "xingran-react-frontend/dist/index.html")
-	}
+	return readEmbeddedIndexHTML
+}
+
+// readEmbeddedIndexHTML 读取嵌入产物中的 index.html。
+func readEmbeddedIndexHTML() ([]byte, error) {
+	return fs.ReadFile(frontendFS, "xingran-react-frontend/dist/index.html")
 }
 
 // detectedFrontendBase 从嵌入 dist 的 index.html 自动探测前端构建 base。
