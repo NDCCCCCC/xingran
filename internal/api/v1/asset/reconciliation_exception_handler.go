@@ -46,6 +46,16 @@ func (h *ReconciliationExceptionHandler) WithBaselineService(svc asset.Reconcili
 }
 
 // ListRules 查询例外规则列表
+// @Summary 查询例外规则列表
+// @Description 分页查询资产对账例外规则列表
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body asset.ExceptionRuleListParams true "查询参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/list [post]
 func (h *ReconciliationExceptionHandler) ListRules(c *gin.Context) {
 	var params asset.ExceptionRuleListParams
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -62,6 +72,16 @@ func (h *ReconciliationExceptionHandler) ListRules(c *gin.Context) {
 }
 
 // GetRuleByID 按 ID 查询单条规则
+// @Summary 查询例外规则详情
+// @Description 根据规则ID查询单条例外规则
+// @Tags 资产管理
+// @Produce json
+// @Param id path string true "规则ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/{id} [post]
 func (h *ReconciliationExceptionHandler) GetRuleByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -98,6 +118,16 @@ func (h *ReconciliationExceptionHandler) GetRuleByID(c *gin.Context) {
 //  2. service.Create 失败(含 ValidateCIDR/Actions/SeverityOverride/Reason) → 500
 //  3. success path 末尾 operlog.Record(OperTypeCreate) → 写 sys_oper_log
 //  4. response.Success(rule)
+// @Summary 创建例外规则
+// @Description 创建新的资产对账例外规则（校验 CIDR / Actions / Severity / Reason）
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body asset.CreateExceptionRuleRequest true "例外规则信息"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/create [post]
 func (h *ReconciliationExceptionHandler) CreateRule(c *gin.Context) {
 	var req asset.CreateExceptionRuleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -123,6 +153,18 @@ func (h *ReconciliationExceptionHandler) CreateRule(c *gin.Context) {
 //  1. URL 参数 :id + body(UpdateExceptionRuleRequest)
 //  2. service.Update 失败(含校验 / 不存在) → 500
 //  3. success path 末尾 operlog.Record(OperTypeUpdate)
+// @Summary 更新例外规则
+// @Description 按 ID 更新资产对账例外规则
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param id path string true "规则ID"
+// @Param request body asset.UpdateExceptionRuleRequest true "更新内容"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/{id}/update [post]
+
 func (h *ReconciliationExceptionHandler) UpdateRule(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -153,6 +195,16 @@ func (h *ReconciliationExceptionHandler) UpdateRule(c *gin.Context) {
 //  1. URL 参数 :id
 //  2. service.Delete 失败(规则不存在) → 500
 //  3. success path 末尾 operlog.Record(OperTypeDelete)
+// @Summary 删除例外规则
+// @Description 软删除指定例外规则
+// @Tags 资产管理
+// @Produce json
+// @Param id path string true "规则ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/{id}/delete [post]
+
 func (h *ReconciliationExceptionHandler) DeleteRule(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -177,6 +229,17 @@ func (h *ReconciliationExceptionHandler) DeleteRule(c *gin.Context) {
 //
 // 入参 body: { "ip": "192.168.0.10", "userId": "uuid?", "deptId": "uuid?" }
 // 返回: MatchTestResult { matchedRules, mergedActions, finalSeverity, isSilence, needsUserDept }
+// @Summary 例外规则命中测试
+// @Description 按给定 IP/用户/部门测试例外规则命中情况，返回合并动作与最终严重级别
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body object{ip=string,userId=string,deptId=string} true "命中测试参数（ip 必填）"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/test [post]
+
 func (h *ReconciliationExceptionHandler) TestRule(c *gin.Context) {
 	var req struct {
 		IP     string `json:"ip" binding:"required"`
@@ -219,6 +282,14 @@ func (h *ReconciliationExceptionHandler) TestRule(c *gin.Context) {
 //  1. baselineSvc.Snapshot 失败 → 500
 //  2. success path 末尾 operlog.Record(OperTypeUpdate) → 写 sys_oper_log
 //  3. response.Success(snapshot)
+// @Summary 记录降噪基线
+// @Description 将当前对账异常计数记录为降噪基线（覆盖现有 baseline，R3 部署前必须调用）
+// @Tags 资产管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/baseline/snapshot [post]
+
 func (h *ReconciliationExceptionHandler) SnapshotBaseline(c *gin.Context) {
 	if h.baselineSvc == nil {
 		response.Error(c, http.StatusInternalServerError, "baseline service 未注入")
@@ -245,6 +316,15 @@ func (h *ReconciliationExceptionHandler) SnapshotBaseline(c *gin.Context) {
 //  1. baselineSvc.Compare 失败(含 "未找到基线") → 400(前端依赖此状态码显示引导提示)
 //  2. 其他 service 失败 → 500
 //  3. success → response.Success(result)
+// @Summary 对比降噪基线
+// @Description 对比当前异常计数与基线，返回下降百分比（无基线时返回 400）
+// @Tags 资产管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/baseline/compare [post]
+
 func (h *ReconciliationExceptionHandler) CompareBaseline(c *gin.Context) {
 	if h.baselineSvc == nil {
 		response.Error(c, http.StatusInternalServerError, "baseline service 未注入")
@@ -280,6 +360,17 @@ func (h *ReconciliationExceptionHandler) CompareBaseline(c *gin.Context) {
 //  2. service.ImportFromExcel 调 excel_service.ImportData 写入 + 后处理 scope_id + TEXT[]
 //  3. success path 末尾 operlog.Record(OperTypeImport) → 写 sys_oper_log
 //  4. response.Success(result)
+// @Summary Excel 导入例外规则
+// @Description 上传 Excel 文件批量导入例外规则
+// @Tags 资产管理
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "Excel 文件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/import [post]
+
 func (h *ReconciliationExceptionHandler) ImportRules(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -300,6 +391,14 @@ func (h *ReconciliationExceptionHandler) ImportRules(c *gin.Context) {
 }
 
 // ExportRules Excel 导出例外规则
+// @Summary Excel 导出例外规则
+// @Description 导出全部例外规则为 Excel 文件
+// @Tags 资产管理
+// @Produce application/octet-stream
+// @Success 200 {file} file
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/export [post]
+
 func (h *ReconciliationExceptionHandler) ExportRules(c *gin.Context) {
 	excelSvc := operations.NewExcelService(h.core.GetDB(), nil, nil, nil)
 	f, err := excelSvc.ExportData(c.Request.Context(), "reconciliationExceptionRule", nil)
@@ -320,6 +419,14 @@ func (h *ReconciliationExceptionHandler) ExportRules(c *gin.Context) {
 }
 
 // DownloadTemplate 下载例外规则 Excel 模板
+// @Summary 下载例外规则导入模板
+// @Description 下载例外规则 Excel 导入模板文件
+// @Tags 资产管理
+// @Produce application/octet-stream
+// @Success 200 {file} file
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception-rule/template [post]
+
 func (h *ReconciliationExceptionHandler) DownloadTemplate(c *gin.Context) {
 	excelSvc := operations.NewExcelService(h.core.GetDB(), nil, nil, nil)
 	f, err := excelSvc.GenerateTemplate("reconciliationExceptionRule")

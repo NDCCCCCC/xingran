@@ -2,6 +2,7 @@ package system
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
@@ -213,9 +214,16 @@ func buildFileResponse(file systemServices.SysFileInfo, fileURL string) gin.H {
 		"fileType":  file.GetFileType(),
 		"extension": file.GetExtension(),
 		"url":       fileURL,
-		"width":     file.GetWidth(),
-		"height":    file.GetHeight(),
-		"metadata":  file.GetMetadata(),
-		"createdAt": file.GetCreatedAt(),
+		// storagePath 是相对存储路径（如 floor-plan/xxx.png）。
+		// 前端 useImageUpload 需要它拼接带 BASE_URL 前缀的预览地址
+		// （${BASE_URL}uploads/${storagePath}）；此前缺失该字段会让上传后
+		// 的预览地址退化成 "/uploads/"，表现为"图片上传成功但看不到"。
+		// GetFileURL 契约固定为 "/uploads/" + StoragePath（file_service.go），
+		// 故直接剥离该前缀，避免改动 SysFileInfo 接口（会波及所有实现与 fake）。
+		"storagePath": strings.TrimPrefix(fileURL, "/uploads/"),
+		"width":       file.GetWidth(),
+		"height":      file.GetHeight(),
+		"metadata":    file.GetMetadata(),
+		"createdAt":   file.GetCreatedAt(),
 	}
 }

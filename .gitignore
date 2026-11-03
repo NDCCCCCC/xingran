@@ -168,3 +168,5 @@ check_vdi_menu_fix.sh
 
 # 交叉编译产物目录
 out/
+verify-adcred-linux
+tmp_swag/

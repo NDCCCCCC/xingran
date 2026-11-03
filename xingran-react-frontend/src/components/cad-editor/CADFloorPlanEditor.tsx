@@ -272,23 +272,9 @@ export function CADFloorPlanEditor({
     setOffset({ x: 0, y: 0 });
   }, []);
 
-  // 平面图自动隐藏逻辑：当有墙体或门时，默认隐藏平面图
-  useEffect(() => {
-    const hasWallsOrDoors = floorPlanData.walls.length > 0 || floorPlanData.doors.length > 0;
-    const planImageLayer = layers.find((l) => l.id === "plan_image");
-
-    // 如果有图层配置，使用配置值；否则使用默认行为（有内容时隐藏）
-    const autoHide = layerConfig?.planImage?.autoHide !== false;
-
-    if (autoHide && planImageLayer) {
-      setLayers((prev) =>
-        prev.map((layer) =>
-          layer.id === "plan_image" ? { ...layer, visible: !hasWallsOrDoors } : layer
-        )
-      );
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- layers is state array; disable to avoid re-run loop
-  }, [floorPlanData.walls.length, floorPlanData.doors.length, layerConfig?.planImage?.autoHide]);
+  // 平面图底图始终默认可见：设计师需要以上传的平面图为参照摆放工位，
+  // 不可见性只由用户在图层面板手动控制（此前「有墙体/门时自动隐藏底图」
+  // 的逻辑与底图参照需求冲突，导致查看平面图时看不到上传的底图，已移除）。
 
   // ==================== 图层辅助函数 ====================
   function isLayerLocked(layerId: string): boolean {
@@ -789,7 +775,8 @@ export function CADFloorPlanEditor({
           const addToSelection = e.ctrlKey || e.shiftKey; // Ctrl/Shift 多选
           const wasSelected = selectedIds.has(hitElement.id); // 是否已经选中
 
-          if (!isLayerLocked && !readOnly) {
+          // layerIsLocked：上方已按 hitElement.type 计算（isLayerLocked 是函数，直接取反恒为 false）
+          if (!layerIsLocked && !readOnly) {
             // 更新选中状态
             if (addToSelection) {
               // 添加到选择（多选模式）

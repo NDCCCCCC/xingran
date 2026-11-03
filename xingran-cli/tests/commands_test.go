@@ -204,17 +204,24 @@ type leafInfo struct {
 	Help string
 }
 
-// collectLeaves 递归收集 root 命令树下全部叶子命令（help 缓存）。
+// runCLIHelp 按空格切分命令路径执行 --help（多级路径不得整串作为单参数传递）。
+func runCLIHelp(t *testing.T, path string) (string, int) {
+	t.Helper()
+	stdout, _, code := runCLI(t, append(strings.Split(path, " "), "--help")...)
+	return stdout, code
+}
+
+// collectLeaves 递归收集 root 命令树下全部叶子命令。
 func collectLeaves(t *testing.T, root string) []leafInfo {
 	t.Helper()
-	stdout, _, code := runCLI(t, root, "--help")
+	stdout, code := runCLIHelp(t, root)
 	if code != 0 {
 		return nil
 	}
 	var leaves []leafInfo
 	for _, name := range listSubCommands(stdout) {
 		path := root + " " + name
-		sub, _, c := runCLI(t, path, "--help")
+		sub, c := runCLIHelp(t, path)
 		if c != 0 {
 			continue
 		}
@@ -227,18 +234,30 @@ func collectLeaves(t *testing.T, root string) []leafInfo {
 	return leaves
 }
 
-// ensureBuilt 若无现成二进制则预编译一次（后续数百次 CLI 调用大幅提速）。
+// ensureBuilt 编译测试自持二进制（tests/_tmpcli/），经 XINGRAN_CLI_BIN 指向，
+// 与 client-dev 的 xingran-cli.exe 产物隔离，避免并发编译竞态。
 func ensureBuilt(t *testing.T) {
 	t.Helper()
-	if cliBin() != "" {
+	tmpBin, _ := filepath.Abs(filepath.Join("_tmpcli", "xingran-cli.exe"))
+	if _, err := os.Stat(tmpBin); err == nil {
+		t.Setenv("XINGRAN_CLI_BIN", tmpBin)
 		return
 	}
-	t.Log("无现成二进制，预编译 go build ./cmd/xingran ...")
-	cmd := exec.Command("go", "build", "-o", "xingran-cli.exe", "./cmd/xingran")
-	out, err := cmd.CombinedOutput()
+	t.Log("编译测试自持二进制 go build ./cmd/xingran ...")
+	cliRoot, err := filepath.Abs("..")
 	if err != nil {
+		t.Skipf("解析根目录失败: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(tmpBin), 0o755); err != nil {
+		t.Skipf("创建临时目录失败: %v", err)
+	}
+	cmd := exec.Command("go", "build", "-o", tmpBin, "./cmd/xingran")
+	cmd.Dir = cliRoot
+	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Skipf("预编译失败（命令树构建中？）: %v %s", err, out)
 	}
+	t.Cleanup(func() { _ = os.RemoveAll(filepath.Dir(tmpBin)) })
+	t.Setenv("XINGRAN_CLI_BIN", tmpBin)
 }
 
 // extractAPIPaths 从叶子 help 提取「对应 API: METHOD /api/v1/path」归一化键集合。
@@ -251,13 +270,12 @@ func extractAPIPaths(helpOut string) []string {
 			continue
 		}
 		api := strings.TrimSpace(strings.TrimPrefix(line, "对应 API:"))
-		api = strings.TrimPrefix(api, "/api/v1")
 		parts := strings.SplitN(api, " ", 2)
 		if len(parts) != 2 {
 			continue
 		}
 		method := strings.ToUpper(parts[0])
-		path := parts[1]
+		path := strings.TrimPrefix(parts[1], "/api/v1")
 		path = strings.ReplaceAll(path, "/{", "/:") // {id} -> :id（docs 用 {}，help 用 :）
 		keys = append(keys, method+" "+path)
 	}

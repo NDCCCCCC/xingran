@@ -54,8 +54,12 @@ export const FloorModal: FC<FloorModalProps> = ({
         editingFloor.planImageId,
         editingFloor.planImageUrl ?? undefined
       );
+      // 同步进 form store：用户只改其它字段（不动图片）时保存必须带上原图 id，
+      // 否则 getFieldValue("planImageId") 为空，update 会丢掉既有底图。
+      form.setFieldValue("planImageId", editingFloor.planImageId);
     } else {
       planImageUpload.resetUpload();
+      form.setFieldValue("planImageId", undefined);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, editingFloor?.id, editingFloor?.planImageId, editingFloor?.planImageUrl]);

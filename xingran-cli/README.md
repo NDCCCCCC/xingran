@@ -188,6 +188,13 @@ cd xingran-cli
 go test -tags=integration ./tests/ -v
 ```
 
+**命令树验收闸门**（tests/commands_test.go，M6 模块树质量把关）：
+
+- TestCLIHelpSectionsRequired：全模块叶子命令 help 必须含「对应 API」与示例段落
+- TestCLIEndpointCoverage：`schema <module>` 端点必须被命令树叶子「对应 API」全覆盖，不一致即 fail（防端点丢失）
+- TestCLIHelpNoEmptyUsage / TestCLIHelpReadability：参数说明不得为空或纯英文字段名
+- 框架自动编译测试自持二进制（tests/_tmpcli/，经 XINGRAN_CLI_BIN 注入），与开发产物隔离；也可用 `XINGRAN_CLI_BIN` 指定现成二进制跳过编译
+
 用例与前置条件：
 
 | 用例 | 前置 | 说明 |

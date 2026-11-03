@@ -272,21 +272,22 @@ jobs:
 
       - name: Download all shards
         # 每片的 artifact 内是 coverage-final.json（上传时以单片目录为根 ⇒
-        # 前缀被剥离）⇒ 下载后结构为 shards/<artifact 名>/coverage-final.json，
-        # 深度固定，merge-reports 在一层下即可全部找到。
+        # 前缀被剥离）⇒ 下载后结构为 shards/<artifact 名>/coverage-final.json。
         uses: actions/download-artifact@v4
         with:
           pattern: frontend-coverage-shard-*
           path: xingran-react-frontend/coverage/shards
 
       - name: Merge coverage reports
-        # vitest merge-reports 读取 reportsDirectory 下各片的 coverage-final.json，
-        # 输出合并后的全量 json（--outputFile）。任一片缺失即合并失败 ⇒
-        # fail-closed，不静默放行半个覆盖率。
-        # --outputFile 指向 coverage/coverage-final.json，与门禁脚本第一参数、
-        # 以及 frontend-coverage-diff 的 artifact 内容路径保持一致。
+        # ⚠️ 不用 `vitest merge-reports`：该子命令在 vitest 4 下的参数与文档/直觉
+        #   不一致（实测 `--reportsDirectory` 报 "Unknown option"，连续两轮 CI 因此失败）。
+        # ⇒ 改用官方 istanbul-lib-coverage（@vitest/coverage-v8 的依赖，随 npm ci 安装）
+        #   做合并：istanbul 格式的标准合并路径，无手写合并逻辑、无 key 冲突风险。
+        # 脚本会打印对照数据（去重后文件数 / statements 总数）⇒ 这是
+        # 「分片后覆盖率分母不得变小」这条正确性闸的数据来源。
+        # 找不到任何分片 ⇒ 脚本以非 0 退出 ⇒ fail-closed，不静默产出半个覆盖率。
         working-directory: xingran-react-frontend
-        run: npx vitest merge-reports --reportsDirectory=coverage/shards --outputFile=coverage/coverage-final.json
+        run: node ../scripts/devtools/merge-coverage.cjs coverage/shards coverage/coverage-final.json
 
       - name: Coverage gate
         # GOV-03/GOV-05 (82-04): 全局阈值 + per-dir floor + 白名单漂移三合一,

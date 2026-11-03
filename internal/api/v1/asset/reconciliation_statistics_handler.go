@@ -43,6 +43,16 @@ func (h *StatisticsHandler) WithCore(core *core.Core) *StatisticsHandler {
 //
 // POST /statistics/summary
 // Request body:{"days": 7}  // 可选,默认 7
+// @Summary 对账统计总览
+// @Description 查询资产对账统计总览（默认近 7 天）
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body object{days=int} false "统计天数"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/statistics/summary [post]
+
 func (h *StatisticsHandler) Summary(c *gin.Context) {
 	var req struct {
 		Days int `json:"days"`
@@ -63,6 +73,14 @@ func (h *StatisticsHandler) Summary(c *gin.Context) {
 // ByConflictType 按冲突类型聚合(A-F 6 值)
 //
 // POST /statistics/by-conflict-type
+// @Summary 按冲突类型统计
+// @Description 按冲突类型分组统计资产对账异常
+// @Tags 资产管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/statistics/by-conflict-type [post]
+
 func (h *StatisticsHandler) ByConflictType(c *gin.Context) {
 	result, err := h.service.ByConflictType(c.Request.Context(), asset.StatsFilter{})
 	if err != nil {
@@ -75,6 +93,14 @@ func (h *StatisticsHandler) ByConflictType(c *gin.Context) {
 // BySeverity 按严重级聚合(low/medium/high/critical 4 值)
 //
 // POST /statistics/by-severity
+// @Summary 按严重级别统计
+// @Description 按严重级别分组统计资产对账异常
+// @Tags 资产管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/statistics/by-severity [post]
+
 func (h *StatisticsHandler) BySeverity(c *gin.Context) {
 	result, err := h.service.BySeverity(c.Request.Context(), asset.StatsFilter{})
 	if err != nil {
@@ -90,6 +116,16 @@ func (h *StatisticsHandler) BySeverity(c *gin.Context) {
 // Request body:{"days": 7}  // 可选,默认 7,MaxDays=365
 //
 // 注意:此端点使用 PG `FILTER (WHERE ...)` 语法,SQLite 不支持,dev 必须用 PG。
+// @Summary 资产健康趋势
+// @Description 查询资产健康度趋势（默认近 7 天）
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body object{days=int} false "趋势天数"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/statistics/health-trend [post]
+
 func (h *StatisticsHandler) HealthTrend(c *gin.Context) {
 	var req struct {
 		Days int `json:"days"`
@@ -110,6 +146,16 @@ func (h *StatisticsHandler) HealthTrend(c *gin.Context) {
 //
 // POST /statistics/top-unresolved
 // Request body:{"limit": 10}  // 可选,默认 10,MaxPageSize=10000 兜底
+// @Summary 未解决异常 TOP
+// @Description 查询长期未解决对账异常排行
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body object{limit=int} false "返回条数"
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/statistics/top-unresolved [post]
+
 func (h *StatisticsHandler) TopUnresolved(c *gin.Context) {
 	var req struct {
 		Limit int `json:"limit"`
@@ -129,6 +175,14 @@ func (h *StatisticsHandler) TopUnresolved(c *gin.Context) {
 // ExceptionRuleStats 按例外规则聚合的命中数(R3 接入后有数据,R1 返回空)
 //
 // POST /statistics/exception-rule-stats
+// @Summary 例外规则命中统计
+// @Description 统计各例外规则命中情况
+// @Tags 资产管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/statistics/exception-rule-stats [post]
+
 func (h *StatisticsHandler) ExceptionRuleStats(c *gin.Context) {
 	result, err := h.service.ExceptionRuleStats(c.Request.Context())
 	if err != nil {

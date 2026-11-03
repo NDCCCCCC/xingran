@@ -195,6 +195,15 @@ const FloorManagement: FC = () => {
     try {
       const values = (await floorForm.validateFields()) as Partial<Floor>;
 
+      // 平面图底图是独立上传状态（Form.Item 没有 name，只靠 setFieldValue 写入 store），
+      // 而 validateFields() 只返回**已注册字段**，不会带出 planImageId。
+      // 缺了这一步，上传的图存进了 sys_files 却永远写不进 ops_floors.plan_image_id，
+      // 表现为"上传成功但查看平面图看不到底图"。
+      const planImageId = floorForm.getFieldValue("planImageId") as string | undefined;
+      if (planImageId !== undefined && planImageId !== null) {
+        values.planImageId = planImageId;
+      }
+
       if (editingFloor) {
         await floorApi.update(editingFloor.id, values);
         handleSuccess("更新");

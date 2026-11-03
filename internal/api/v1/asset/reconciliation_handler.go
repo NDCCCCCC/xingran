@@ -59,6 +59,17 @@ func (h *ReconciliationHandler) WithCore(core *core.Core) *ReconciliationHandler
 }
 
 // ListExceptions 查询异常列表(分页 + JOIN asset_code / physical_username / responsible_username)
+// @Summary 查询对账异常列表
+// @Description 分页查询资产对账异常列表（JOIN 资产编码/物理责任人/责任人）
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body asset.ExceptionListParams true "查询参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception/list [post]
+
 func (h *ReconciliationHandler) ListExceptions(c *gin.Context) {
 	var params asset.ExceptionListParams
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -75,6 +86,16 @@ func (h *ReconciliationHandler) ListExceptions(c *gin.Context) {
 }
 
 // GetExceptionByID 按 ID 查询单条异常
+// @Summary 查询对账异常详情
+// @Description 根据异常ID查询单条资产对账异常
+// @Tags 资产管理
+// @Produce json
+// @Param id path string true "异常ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception/{id} [post]
+
 func (h *ReconciliationHandler) GetExceptionByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -117,6 +138,18 @@ func (h *ReconciliationHandler) GetExceptionByID(c *gin.Context) {
 // 与其他 resolve 模式的区别:
 //   - 不联动 workorder 关闭(workorder 单独在 workorder UI 关闭,D-A4-04 锁定)
 //   - 不触发重检(7d 静默期已兜底,人工重检反而打破静默设计)
+// @Summary 人工解决对账异常
+// @Description 人工解决指定对账异常（可附处理说明，不联动工单/不触发重检）
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param id path string true "异常ID"
+// @Param request body object{resolutionNote=string} false "处理说明"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/exception/{id}/resolve [post]
+
 func (h *ReconciliationHandler) ResolveException(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -219,6 +252,17 @@ func (h *ReconciliationHandler) ResolveException(c *gin.Context) {
 //  5. response.Success — 读路径,无 operlog.Record(参考 ListExceptions 模式)
 //
 // 注:Plan 01 不修改 ResolveException(缓存失效归 Plan 02,B1/B2 锁定)。
+// @Summary 按工位查询对账异常
+// @Description 按工位ID查询其对账异常（默认 7 天窗口）
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body object{workstationId=string,window=string} true "工位ID（必填）与窗口"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/by-workstation [post]
+
 func (h *ReconciliationHandler) GetByWorkstation(c *gin.Context) {
 	var req struct {
 		WorkstationID string `json:"workstationId" binding:"required"`

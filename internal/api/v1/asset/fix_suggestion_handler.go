@@ -45,6 +45,16 @@ func (h *FixSuggestionHandler) WithCore(core *core.Core) *FixSuggestionHandler {
 // ====================== 读端点 ======================
 
 // ListFixSuggestions 查询修复建议列表
+// @Summary 查询修复建议列表
+// @Description 分页查询资产对账修复建议列表，支持按状态、严重级别等筛选
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body asset.FixSuggestionListParams true "查询参数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/fix-suggestion/list [post]
 func (h *FixSuggestionHandler) ListFixSuggestions(c *gin.Context) {
 	var params asset.FixSuggestionListParams
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -61,6 +71,16 @@ func (h *FixSuggestionHandler) ListFixSuggestions(c *gin.Context) {
 }
 
 // GetByID 查询单条修复建议详情
+// @Summary 查询修复建议详情
+// @Description 根据建议ID查询单条修复建议详情
+// @Tags 资产管理
+// @Produce json
+// @Param id path string true "建议ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/fix-suggestion/{id} [post]
 func (h *FixSuggestionHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -81,6 +101,16 @@ func (h *FixSuggestionHandler) GetByID(c *gin.Context) {
 }
 
 // Stats 7d 统计(KPI 卡片)
+// @Summary 修复建议统计
+// @Description 统计近 N 天（默认 7 天）修复建议 KPI 指标
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param request body object{windowDays=int} false "统计窗口天数"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/fix-suggestion/stats [post]
 func (h *FixSuggestionHandler) Stats(c *gin.Context) {
 	var req struct {
 		WindowDays int `json:"windowDays"`
@@ -106,6 +136,16 @@ func (h *FixSuggestionHandler) Stats(c *gin.Context) {
 // ====================== 写端点 ======================
 
 // Accept 接受建议
+// @Summary 接受修复建议
+// @Description 接受一条待处理的修复建议（pending → accepted）
+// @Tags 资产管理
+// @Produce json
+// @Param id path string true "建议ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 409 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/fix-suggestion/{id}/accept [post]
 func (h *FixSuggestionHandler) Accept(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -139,6 +179,18 @@ func (h *FixSuggestionHandler) Accept(c *gin.Context) {
 }
 
 // Reject 拒绝建议
+// @Summary 拒绝修复建议
+// @Description 拒绝一条待处理的修复建议，需填写拒绝原因（至少 10 字符）
+// @Tags 资产管理
+// @Accept json
+// @Produce json
+// @Param id path string true "建议ID"
+// @Param request body object{rejectionReason=string} true "拒绝原因"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 409 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/fix-suggestion/{id}/reject [post]
 func (h *FixSuggestionHandler) Reject(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -185,6 +237,16 @@ func (h *FixSuggestionHandler) Reject(c *gin.Context) {
 }
 
 // Apply 应用建议(accepted → applied,写 ops_asset.user_id)
+// @Summary 应用修复建议
+// @Description 应用已接受的修复建议（accepted → applied），写回资产责任人
+// @Tags 资产管理
+// @Produce json
+// @Param id path string true "建议ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 409 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/fix-suggestion/{id}/apply [post]
 func (h *FixSuggestionHandler) Apply(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -221,6 +283,16 @@ func (h *FixSuggestionHandler) Apply(c *gin.Context) {
 }
 
 // Rollback 回滚应用(applied → rolled_back,7d 窗口内)
+// @Summary 回滚修复建议
+// @Description 回滚已应用的修复建议（applied → rolled_back，限 7 天窗口内）
+// @Tags 资产管理
+// @Produce json
+// @Param id path string true "建议ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 409 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/fix-suggestion/{id}/rollback [post]
 //
 // 严格顺序(D-A4-04):service → invalidate cache → operlog → response
 //
