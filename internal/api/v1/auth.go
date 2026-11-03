@@ -678,6 +678,11 @@ func syncErrorReasonMessage(reason string) string {
 		// 最常见:sys_ad_config 配置的管理员账号被 AD 锁(密码错多次触发
 		// Account Lockout Policy)或密码过期/错。明确告知"管理员账号"问题。
 		return "AD 管理员账号配置异常（账号可能被锁定或密码错误），请联系系统管理员"
+	case "admin_credential":
+		// 与 admin_bind 区分：这是**本地凭据解密失败**（SM4_KEY 与加密时不一致、
+		// 密文被篡改或全局 cipher 未注入），域控账号本身没有问题。
+		// 若沿用上面的"账号可能被锁定或密码错误"，会把人引向域控侧排查，方向完全相反。
+		return "AD 服务账号凭据解密失败（SM4 密钥与密文不匹配），请系统管理员检查 SM4_KEY 配置"
 	case "user_search":
 		return "AD 用户信息搜索失败，请联系系统管理员"
 	case "user_sync":

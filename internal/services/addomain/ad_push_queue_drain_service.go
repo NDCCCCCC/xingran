@@ -295,7 +295,8 @@ func (d *ADPushDrainer) executeGroup(ctx context.Context, cfgID string, group []
 		//   两个哨兵**不合并**（见 account_pool.go 的注释），只在本处同款处理。
 		// ⚠ 闭包执行过（账号拨通了、只是业务操作全失败）时**不得**归为 poolExhausted：
 		//   code 32 等不可恢复语义必须原样流转到行级 handlePushError。
-		poolExhausted := errors.Is(err, ErrAllAccountsUnavailable) || errors.Is(err, ErrAllAccountsDialFailed)
+		poolExhausted := errors.Is(err, ErrAllAccountsUnavailable) || errors.Is(err, ErrAllAccountsDialFailed) ||
+			errors.Is(err, ErrCredentialDecryptFailed)
 		for _, row := range group {
 			d.markFailed(ctx, row, now, poolExhausted, "pool:"+err.Error())
 		}

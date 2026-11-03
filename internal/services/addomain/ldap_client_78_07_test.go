@@ -396,9 +396,13 @@ func echoTCPServer(t *testing.T) int {
 }
 
 // TestLC78_TryBindAttempts_AllFail 验证三次尝试(UPN/NetBIOS/Direct)全失败时返回绑定失败错误。
+//
+// ⚠ 假熔断修复后：密码必须能解密才会走到 bind（否则提前返回
+// ErrCredentialDecryptFailed），所以这里用 legacy AES 加密出真实可解密的密文。
 func TestLC78_TryBindAttempts_AllFail(t *testing.T) {
 	port := echoTCPServer(t)
 	cfg := dummyConfig(port)
+	cfg.AdminPassword = encryptPasswordLegacyAES("admin_password")
 	c := NewLDAPClient(cfg)
 
 	// 通过 dialConnection 拿到 conn(不走 Connect,避免真实 DNS 解析)
@@ -416,14 +420,14 @@ func TestLC78_TryBindAttempts_AllFail(t *testing.T) {
 }
 
 // TestLC78_TryBindAttempts_WithAccount 用 account 非 nil 形态跑 tryBindAttempts。
-// 验证走 decryptPassword 分支(明文密码来自解密)。
+// 验证走 decryptPasswordStrict 分支(明文密码来自解密)。
 func TestLC78_TryBindAttempts_WithAccount(t *testing.T) {
 	port := echoTCPServer(t)
 	cfg := dummyConfig(port)
 	acct := &models.ADServiceAccount{
-		ID:                  "acct-echo",
-		Username:            "svc_echo",
-		PasswordCiphertext:  "encrypted_placeholder", // tryBindAttempts 用 decryptPassword 解密
+		ID:                 "acct-echo",
+		Username:           "svc_echo",
+		PasswordCiphertext: encryptPasswordLegacyAES("svc_echo_password"), // 可解密的真实密文
 	}
 	c := NewLDAPClient(cfg, acct)
 
@@ -436,4 +440,44 @@ func TestLC78_TryBindAttempts_WithAccount(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "绑定失败")
 	conn.Close()
+}
+
+// TestLC78_TryBindAttempts_UndecryptableCredential_NoBind 锁定假熔断修复的核心契约：
+// 凭据解不开时**绝不发起 bind**（否则空密码 → LDAP 206 → 被计为账号失败 → 熔断健康账号），
+// 而是返回可被 errors.Is 识别的 ErrCredentialDecryptFailed。
+func TestLC78_TryBindAttempts_UndecryptableCredential_NoBind(t *testing.T) {
+	port := echoTCPServer(t)
+	cfg := dummyConfig(port)
+	cfg.AdminPassword = "!!!!not-a-valid-ciphertext!!!!"
+	c := NewLDAPClient(cfg)
+
+	conn, err := c.dialConnection("127.0.0.1:" + portStr(port))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	err = c.tryBindAttempts(conn, "example.com")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCredentialDecryptFailed,
+		"解密失败必须返回 ErrCredentialDecryptFailed，供 FailoverClient 跳过熔断计数")
+	assert.NotContains(t, err.Error(), "绑定失败",
+		"解密失败时不得发起 bind（否则会以空密码触发 LDAP 206 并误计熔断）")
+}
+
+// TestLC78_TryBindAttempts_AccountEmptyCiphertext 账号密文为空时同样不得 bind。
+func TestLC78_TryBindAttempts_AccountEmptyCiphertext(t *testing.T) {
+	port := echoTCPServer(t)
+	cfg := dummyConfig(port)
+	acct := &models.ADServiceAccount{ID: "acct-empty", Username: "svc_empty", PasswordCiphertext: ""}
+	c := NewLDAPClient(cfg, acct)
+
+	conn, err := c.dialConnection("127.0.0.1:" + portStr(port))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	err = c.tryBindAttempts(conn, "example.com")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrCredentialDecryptFailed)
+	assert.NotContains(t, err.Error(), "绑定失败")
 }

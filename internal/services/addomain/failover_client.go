@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -64,11 +65,23 @@ func (f *FailoverClient) ExecuteWithFailover(
 	//   前者是池侧/基础设施故障（域控宕机、网络中断、DNS 故障、服务账号全被锁），
 	//   可恢复；后者是业务失败，code 32 之类必须原样上抛给调用方的分流逻辑。
 	var dialedAny bool
+	// credErr 记录"凭据解密失败"这类**本地配置**故障。
+	// ⚠ 假熔断修复：该错误绝不能走 MarkFailure —— 否则密钥错配会在 3 次重试内
+	//   把健康的域控账号熔断（表现为"域控账号正常但系统里全熔断"）。
+	var credErr error
 	for i := 0; i < maxAttempts; i++ {
 		acct := &available[i]
 
 		client := f.newClient(acct)
 		if err := client.Connect(); err != nil {
+			if errors.Is(err, ErrCredentialDecryptFailed) {
+				// 本地配置故障：不计失败次数、不熔断，仅记录并继续试下一个账号
+				applogger.Errorf("[Failover] 账号 %s 凭据解密失败（不计入熔断，请检查 SM4_KEY）[ID=%s, err=%v]",
+					acct.Username, acct.ID, err)
+				credErr = err
+				lastErr = err
+				continue
+			}
 			// P0-2 修复（H5 修正）：连接失败显式上报到 pool
 			f.pool.MarkFailure(ctx, acct.ID, "dial:"+err.Error())
 			lastErr = err
@@ -97,6 +110,11 @@ func (f *FailoverClient) ExecuteWithFailover(
 	}
 
 	if !dialedAny {
+		// ⚠ 凭据解密失败优先上报：这是本地配置问题（SM4_KEY 错配），
+		//   文案必须让管理员去查密钥，而不是误以为是域控/网络故障。
+		if credErr != nil {
+			return fmt.Errorf("账号池 %d 个账号均不可用（凭据解密失败，非账号故障）: %w", maxAttempts, credErr)
+		}
 		// ⚠ H-04：**一个账号都没拨通**。此前这条路径返回 "账号池 N 个账号均失败: %w"，
 		//   包的是最后一次拨号错误、不带任何池侧哨兵，于是排水器把它当成业务失败：
 		//   poolExhausted=false → 烧 attempts → 第 5 轮整批转 dead 终态。一次 ~15min
@@ -133,11 +151,19 @@ func (f *FailoverClient) PickFirstConnect(ctx context.Context) (*LDAPClient, *mo
 	}
 
 	var lastErr error
+	var credErr error // 同 ExecuteWithFailover：解密失败不计熔断
 	for i := 0; i < maxAttempts; i++ {
 		acct := &available[i]
 
 		client := NewLDAPClient(f.config, acct)
 		if err := client.Connect(); err != nil {
+			if errors.Is(err, ErrCredentialDecryptFailed) {
+				applogger.Errorf("[Failover] 账号 %s 凭据解密失败（不计入熔断，请检查 SM4_KEY）[ID=%s, err=%v]",
+					acct.Username, acct.ID, err)
+				credErr = err
+				lastErr = err
+				continue
+			}
 			// P0-2: 显式上报失败
 			f.pool.MarkFailure(ctx, acct.ID, "dial:"+err.Error())
 			lastErr = err
@@ -148,6 +174,9 @@ func (f *FailoverClient) PickFirstConnect(ctx context.Context) (*LDAPClient, *mo
 			applogger.Warnf("[Failover] MarkSuccess 失败 [ID=%s, err=%v]", acct.ID, markErr)
 		}
 		return client, acct, nil
+	}
+	if credErr != nil {
+		return nil, nil, fmt.Errorf("账号池 %d 个账号均不可用（凭据解密失败，非账号故障）: %w", maxAttempts, credErr)
 	}
 	return nil, nil, fmt.Errorf("账号池 %d 个账号均无法连接: %w", maxAttempts, lastErr)
 }

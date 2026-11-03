@@ -95,13 +95,24 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 	adminClient, err := a.bindAdminWithFailover(ctx, config)
 	if err != nil {
 		// 管理员绑定失败（账号池未初始化 / 无可用账号 / 全部 bind 失败）
-		applogger.Warnf("[ADAuth] 管理员绑定失败（账号池耗尽）: username=%s, error=%v", req.Username, err)
+		//
+		// ⚠ 假熔断修复：区分「本地凭据解密失败」与「账号/池故障」。
+		//   前者是 SM4_KEY 错配等配置问题，必须给管理员准确指引，
+		//   否则页面只会显示"账号可能被锁定或密码错误"，与实际原因完全相反。
+		reason := "admin_bind"
+		if errors.Is(err, addomain.ErrCredentialDecryptFailed) {
+			reason = "admin_credential"
+			applogger.Errorf("[ADAuth] 管理员账号凭据解密失败（非账号问题，请检查 SM4_KEY）: username=%s, error=%v",
+				req.Username, err)
+		} else {
+			applogger.Warnf("[ADAuth] 管理员绑定失败（账号池耗尽）: username=%s, error=%v", req.Username, err)
+		}
 		return &AuthResult{
 			User:            nil,
 			AuthSource:      "ad",
 			ADUserInfo:      &ADUserInfo{Username: req.Username},
 			NeedsSync:       true,
-			SyncErrorReason: "admin_bind",
+			SyncErrorReason: reason,
 		}, nil
 	}
 	defer adminClient.Close()

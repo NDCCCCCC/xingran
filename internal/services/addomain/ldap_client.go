@@ -147,8 +147,36 @@ func (c *LDAPClient) tryBindAttempts(conn *ldap.Conn, domain string) error {
 		// bind 前必须解密得到明文密码——LDAP bind 需要明文，传密文必然 LDAP error 49。
 		// 与单管理员路径（config.AdminPassword 的 decryptPassword 处理）保持一致。
 		// 历史契约"caller 负责解密"已废弃：FailoverClient 遍历多账号极易遗漏，改为内部解密更鲁棒。
-		password = decryptPassword(c.account.PasswordCiphertext)
+		//
+		// ⚠ 假熔断修复：改用 decryptPasswordStrict。解密失败时**必须**返回
+		// ErrCredentialDecryptFailed，而不是拿着空串去 bind —— 空串会让 go-ldap
+		// 本地抛 206 "Empty password not allowed by the client"，该错误随后被
+		// FailoverClient 记为账号失败并累积熔断，把密钥配置问题伪装成"账号被锁定"。
+		plain, err := decryptPasswordStrict(c.account.PasswordCiphertext)
+		if err != nil {
+			return fmt.Errorf("%w: account=%s", err, c.account.Username)
+		}
+		if plain == "" {
+			return fmt.Errorf("%w: account=%s 密文为空", ErrCredentialDecryptFailed, c.account.Username)
+		}
+		password = plain
 		username = c.account.Username
+	} else {
+		// Phase 38 已移除单管理员路径，但本函数仍可能被历史调用方以 nil account 触达。
+		// 原实现直接把 config.AdminPassword（**密文**）当密码 bind，必然失败；
+		// 且该列在 Phase 38 之后不再维护，通常为空 → LDAP 206 → 同样误计熔断。
+		// 现改为：显式解密 + 明确报错，绝不用密文或空串发起 bind。
+		if password == "" {
+			return fmt.Errorf("%w: 未提供账号池账号且 sys_ad_config.admin_password 为空（Phase 38 后该列已废弃）", ErrCredentialDecryptFailed)
+		}
+		plain, err := decryptPasswordStrict(password)
+		if err != nil {
+			return fmt.Errorf("%w: 单管理员路径 username=%s", err, username)
+		}
+		if plain == "" {
+			return fmt.Errorf("%w: 单管理员路径 username=%s 密文解出空密码", ErrCredentialDecryptFailed, username)
+		}
+		password = plain
 	}
 	netbiosName := extractNetBIOSName(domain)
 

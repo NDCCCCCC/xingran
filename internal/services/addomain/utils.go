@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +15,15 @@ import (
 
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
+
+// ErrCredentialDecryptFailed 凭据密文无法用当前密钥解开。
+//
+// ⚠ 这是**本地配置类故障**（SM4_KEY 与加密时不一致、密文被篡改、
+// 或全局 cipher 未注入），与域控账号本身的行为无关。
+// 调用方（尤其 FailoverClient）必须据此**跳过熔断计数** ——
+// 否则一份错配的密钥会在 3 次重试内把健康的域控账号熔断，
+// 表现为"系统里两个账号都熔断，但域控侧账号完全正常"（data 775 同类故障的变种）。
+var ErrCredentialDecryptFailed = errors.New("AD 凭据解密失败（请检查 SM4_KEY 与密文是否匹配）")
 
 // ==================== SM4 Cipher Interface ====================
 
@@ -96,6 +106,39 @@ func decryptPassword(encrypted string) string {
 		len(encrypted),
 	)
 	return ""
+}
+
+// decryptPasswordStrict 与 decryptPassword 语义相同（SM4 → legacy AES 依次尝试），
+// 但解密失败时返回包装了 ErrCredentialDecryptFailed 的错误，而**不是空串**。
+//
+// 为什么需要两个版本：
+//   - decryptPassword 返回 "" 是 F-03 的安全决策（绝不把密文当明文回退），
+//     历史上被 LDAP bind 路径直接使用 → 空密码 → LDAP 206 → 误判为账号故障 → 熔断；
+//   - bind 路径需要区分"密码真的为空"和"密文解不开"，否则运维只能看到
+//     "账号被锁定"这种与事实相反的错误。故 bind 路径改用本函数。
+//
+// 空密文（""）视为未设置密码：返回空串 + nil，由调用方决定是否报错。
+func decryptPasswordStrict(encrypted string) (string, error) {
+	if encrypted == "" {
+		return "", nil
+	}
+
+	if c := getPasswordCipher(); c != nil {
+		if plaintext, err := c.Decrypt(encrypted); err == nil {
+			return plaintext, nil
+		}
+	}
+
+	if plaintext, err := decryptPasswordLegacyAES(encrypted); err == nil {
+		return plaintext, nil
+	}
+
+	applogger.Errorf(
+		"[SECURITY] decryptPasswordStrict: SM4 与 legacy AES 均解密失败 (input_len=%d) — "+
+			"不再以空密码发起 LDAP bind，避免把密钥配置故障误记为账号熔断",
+		len(encrypted),
+	)
+	return "", fmt.Errorf("%w: 密文长度=%d", ErrCredentialDecryptFailed, len(encrypted))
 }
 
 // ==================== Legacy AES-GCM (for backward compatibility) ====================
