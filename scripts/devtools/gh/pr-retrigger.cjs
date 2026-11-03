@@ -103,8 +103,27 @@ async function main() {
 
   // 远端 tree 映射（用于跳过一致文件）
   const remoteMap = new Map();
+  const remoteBlobs = new Set();
   const t0 = await api("GET", `/repos/${OWNER}/${REPO}/git/trees/${tree}?recursive=1`);
-  for (const e of t0.json.tree || []) if (e.type === "blob") remoteMap.set(e.path, e.sha);
+  for (const e of t0.json.tree || []) if (e.type === "blob") {
+    remoteMap.set(e.path, e.sha);
+    remoteBlobs.add(e.sha);
+  }
+
+  // GitHub Trees API 只接受**仓库中已存在**的 blob sha ⇒ 新文件必须先 POST /git/blobs
+  const uploaded = new Map();
+  async function ensureBlob(localSha, file) {
+    if (remoteBlobs.has(localSha)) return localSha;
+    if (uploaded.has(localSha)) return uploaded.get(localSha);
+    const content = fs.readFileSync(file).toString("base64");
+    const bl = await api("POST", `/repos/${OWNER}/${REPO}/git/blobs`, { content, encoding: "base64" });
+    if (bl.status !== 201) {
+      console.error(`上传 blob 失败 HTTP ${bl.status}: ${JSON.stringify(bl.json).slice(0, 200)}`);
+      process.exit(1);
+    }
+    uploaded.set(localSha, bl.json.sha);
+    return bl.json.sha;
+  }
 
   const entries = [];
   for (const f of files) {
@@ -112,9 +131,9 @@ async function main() {
       console.error(`[abort] 文件不存在: ${f}`);
       process.exit(1);
     }
-    const sha = git(["hash-object", "--", f]);
-    if (remoteMap.get(f) === sha) continue;
-    entries.push({ path: f, mode: "100644", type: "blob", sha });
+    const localSha = git(["hash-object", "--", f]);
+    if (remoteMap.get(f) === localSha) continue;
+    entries.push({ path: f, mode: "100644", type: "blob", sha: await ensureBlob(localSha, f) });
   }
   if (entries.length === 0) {
     console.log("[retrigger] base 已包含全部目标内容，无需新建分支");
