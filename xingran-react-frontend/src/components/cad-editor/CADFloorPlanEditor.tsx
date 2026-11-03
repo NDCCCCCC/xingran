@@ -42,7 +42,7 @@ export interface CADFloorPlanEditorProps {
   planImageId?: string; // 平面图图片ID
   planImageUrl?: string; // 平面图图片URL
   layerConfig?: LayerConfig; // 图层配置
-  onSave?: (data: FloorPlanData) => void;
+  onSave?: (data: FloorPlanData) => void | Promise<void>;
   readOnly?: boolean;
   style?: React.CSSProperties;
 }
@@ -418,9 +418,11 @@ export function CADFloorPlanEditor({
 
   // ==================== 保存 ====================
   const handleSave = useCallback(() => {
-    onSave?.(floorPlanData);
-    message.success("保存成功");
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    // 保存结果提示统一由上层（useFloorPlanEditor）在真实保存完成后发出：
+    // 此处只负责把当前平面图数据交给上层，不重复弹提示。
+    // 上层 onSave 可能是 async 函数，这里显式声明「不等待」的语义，
+    // 避免 floating promise；也不在此处 await，以免编辑器组件承担保存职责。
+    void onSave?.(floorPlanData);
   }, [floorPlanData, onSave]);
 
   // ==================== 更新元素属性 ====================
