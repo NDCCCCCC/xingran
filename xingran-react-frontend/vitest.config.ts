@@ -19,6 +19,12 @@ export default defineConfig({
     // "Test timed out in 15000ms",而同一 commit 在 PR #51 上是绿的 ⇒ 同代码一次绿一次红
     // ⇒ 负载型 flaky 而非逻辑错误)。
     // timeout 是上限不是下限:正常通过的测试不会因此变慢,只有真正超时的才会多等。
+    //
+    // ⚠️ 曾临时提到 60s（为 CI 分片改造留余量），现已收回 30s。
+    // 原因：阻塞点 permission.grant.test.tsx 有**显式 per-test timeout**（30000），
+    // 覆盖全局值 ⇒ 提全局对它完全无效（实测日志仍是 30000ms）。
+    // 且该测试的根因已根治（getByRole 全 DOM a11y 计算 ⇒ 25.9s → ~5.0s，
+    // 见 addbfd70）⇒ per-test 15s 已充裕 ⇒ 全局 30s 足够，无需放宽。
     testTimeout: 30000,
     setupFiles: ["./src/test/setup.ts"],
     // Phase 88: 159 测试文件后 Windows threads 池句柄/内存间歇耗尽(全量偶发启动崩)。
