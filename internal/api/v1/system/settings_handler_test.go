@@ -26,6 +26,13 @@ import (
 )
 
 // setupSettingsTestDB creates in-memory SQLite with sys_user_preference schema.
+//
+// 建表 SQL 显式带上与 PG 侧一致的 CHECK 约束（theme_style / layout_type /
+// layout_density / page_size）。SQLite 原生支持 CHECK，只是 GORM AutoMigrate 不生成；
+// 不写出来的话本 bug 在 SQLite 上表现为「静默写空串」而非报错，测不出根因。
+//
+// 不加 NOT NULL：既有 TC4/TC7 依赖「不指定该列时插入 NULL」；SQLite 的 CHECK
+// 对 NULL 结果放行（NULL → UNKNOWN → 通过），不影响既有断言。
 func setupSettingsTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -35,13 +42,13 @@ func setupSettingsTestDB(t *testing.T) *gorm.DB {
 			id TEXT PRIMARY KEY,
 			user_id TEXT UNIQUE,
 			theme TEXT,
-			theme_style TEXT,
-			layout_type TEXT,
-			layout_density TEXT,
+			theme_style TEXT CHECK (theme_style IN ('minimal','glassmorphism','neumorphism','flat2.0','luxury-quiet')),
+			layout_type TEXT CHECK (layout_type IN ('classic','hybrid','innovative')),
+			layout_density TEXT CHECK (layout_density IN ('compact','comfortable','spacious')),
 			sidebar_width INTEGER,
 			sidebar_collapsed_width INTEGER,
 			sidebar_collapsed INTEGER,
-			page_size INTEGER,
+			page_size INTEGER CHECK (page_size IN (5,10,20,50,100)),
 			custom_primary_color TEXT,
 			custom_sidebar_color TEXT,
 			language TEXT,
@@ -214,4 +221,71 @@ func TestSettingsHandler_WithCore_NilReceiver(t *testing.T) {
 	var h *SettingsHandler
 	result := h.WithCore(&core.Core{})
 	assert.Nil(t, result)
+}
+
+// =====================================================================
+// quick-261102-m94: HTTP 端到端回归（前端真实形态 / 越界值 400 而非 500）
+// =====================================================================
+
+// TestSettingsHandler_UpdateUserPreferences_OmittedOptionalFieldsSucceeds
+// 前端真实形态：PUT 的 body 里**根本没有 themeStyle 这个 key**（Phase 65 移除多主题后
+// 前端不再发送该字段）。
+//
+// 注意：不能用 systemServices.UserPreferences 结构体整体序列化来构造这个 body ——
+// 它的 themeStyle 标签没有 omitempty，序列化出来是 "themeStyle": ""，那是「显式空串」
+// 而非「字段不存在」。虽然绑定层对二者等价，但这条用例要严格模拟前端形态，所以用
+// 原始 JSON 字符串。
+func TestSettingsHandler_UpdateUserPreferences_OmittedOptionalFieldsSucceeds(t *testing.T) {
+	h, db := newSettingsTestHandler(t, setupSettingsTestDB(t))
+
+	require.NoError(t, db.Exec(`INSERT INTO sys_user_preference (id, user_id, theme, theme_style, layout_type, layout_density, sidebar_width, sidebar_collapsed_width, page_size, language)
+		VALUES (?, 'user-1', 'light', 'glassmorphism', 'hybrid', 'compact', 320, 80, 20, 'zh-CN')`, "id-1").Error)
+
+	// 字段严格照前端 toBackendFormat() 的实际形态：没有 themeStyle key
+	// （themeStyle 是本次唯一「请求省略 + 数据库有 CHECK 约束」的字段）；
+	// layoutType/layoutDensity 等前端始终发送的字段按显式值生效。
+	body := `{"theme":"dark","layoutType":"classic","layoutDensity":"comfortable","sidebarWidth":280,"sidebarCollapsedWidth":64,"sidebarCollapsed":false,"pageSize":20,"language":"zh-CN"}`
+	w := invokeAuthHandler(t, "PUT", "/system/settings/preferences", body, nil, h.UpdateUserPreferences, "user-1")
+	assert.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, 0, resp.Code)
+
+	var row struct {
+		ThemeStyle string
+		LayoutType string
+	}
+	require.NoError(t, db.Raw(`SELECT theme_style, layout_type FROM sys_user_preference WHERE user_id = ?`, "user-1").Scan(&row).Error)
+	assert.Equal(t, "glassmorphism", row.ThemeStyle, "省略的 theme_style 应保留原值，不被写成空串")
+	assert.NotEmpty(t, row.LayoutType, "layout_type 不应被清空")
+	assert.Equal(t, "classic", row.LayoutType, "显式携带的 layoutType 应生效")
+}
+
+// TestSettingsHandler_UpdateUserPreferences_UnsupportedThemeStyleRejected
+// 携带数据库 CHECK 约束从未允许过的主题风格值 → HTTP 400（参数错误），不是 500。
+func TestSettingsHandler_UpdateUserPreferences_UnsupportedThemeStyleRejected(t *testing.T) {
+	h, _ := newSettingsTestHandler(t, setupSettingsTestDB(t))
+
+	body := `{"theme":"dark","themeStyle":"ink-amber","pageSize":20,"language":"zh-CN"}`
+	w := invokeAuthHandler(t, "PUT", "/system/settings/preferences", body, nil, h.UpdateUserPreferences, "user-1")
+
+	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
+	assert.NotContains(t, w.Body.String(), "23514", "不应出现数据库约束冲突")
+	assert.NotContains(t, w.Body.String(), "CHECK constraint", "不应出现数据库约束冲突")
+}
+
+// TestSettingsHandler_UpdateUserPreferences_UnsupportedPageSizeRejected
+// pageSize=30 能过 min/max 校验但撞 chk_page_size → 绑定层已收紧为 oneof，HTTP 400。
+func TestSettingsHandler_UpdateUserPreferences_UnsupportedPageSizeRejected(t *testing.T) {
+	h, _ := newSettingsTestHandler(t, setupSettingsTestDB(t))
+
+	body := `{"theme":"dark","pageSize":30,"language":"zh-CN"}`
+	w := invokeAuthHandler(t, "PUT", "/system/settings/preferences", body, nil, h.UpdateUserPreferences, "user-1")
+
+	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
+	assert.NotContains(t, w.Body.String(), "23514", "不应出现数据库约束冲突")
+	assert.NotContains(t, w.Body.String(), "CHECK constraint", "不应出现数据库约束冲突")
 }

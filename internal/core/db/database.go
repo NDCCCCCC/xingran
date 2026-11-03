@@ -1185,6 +1185,12 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
 			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 用户偏好空值归一化 (双方言幂等, quick-261102-m94)。**非阻断**：
+		// PG 侧因 CHECK 约束本就无违规行(空串在写入时即被拦下),该迁移实为 no-op;
+		// SQLite 侧修历史残留的空串行。失败只影响历史行的读取,不影响新写入路径。
+		if err := d.runAndRecord(233, "user_preference_defaults", migrations.Migrate233UserPreferenceDefaults); err != nil {
+			applogger.Errorf("用户偏好空值归一化迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1299,6 +1305,12 @@ func (d *Database) AutoMigrate() error {
 		}
 		if err := d.runAndRecord(232, "port_write_audit_batch_id", migrations.Migrate232PortWriteAuditBatchID); err != nil {
 			applogger.Errorf("端口写审计 batch_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 用户偏好空值归一化 (双方言幂等, quick-261102-m94)。**非阻断**：
+		// PG 侧因 CHECK 约束本就无违规行(空串在写入时即被拦下),该迁移实为 no-op;
+		// SQLite 侧修历史残留的空串行。失败只影响历史行的读取,不影响新写入路径。
+		if err := d.runAndRecord(233, "user_preference_defaults", migrations.Migrate233UserPreferenceDefaults); err != nil {
+			applogger.Errorf("用户偏好空值归一化迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
