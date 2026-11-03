@@ -78,6 +78,26 @@ interface RolePageHandles {
   editForm: FormInstance<unknown> | null;
 }
 
+/**
+ * 轻量按钮查找（90-F1 性能返工）：绕开 getByRole 的无障碍 name 全树计算。
+ * 本页 DOM 含 Table+Tree+Modal（数千节点），单次 getByRole 实测 4-9s
+ * （jsdom getComputedStyle/name 计算极贵），textContent 匹配为 O(n) 直查。
+ */
+function findButtonByText(text: string): HTMLButtonElement {
+  const btn = [...document.querySelectorAll("button")].find(
+    (b) => (b.textContent || "").replace(/\s+/g, "") === text.replace(/\s+/g, "")
+  );
+  expect(btn).not.toBeUndefined();
+  return btn as HTMLButtonElement;
+}
+
+/** Modal footer 主按钮（确定/OK）——限作用域到 .ant-modal, 避免全表遍历 */
+function findModalOkButton(): HTMLButtonElement {
+  const btn = document.querySelector<HTMLButtonElement>(".ant-modal .ant-btn-primary");
+  expect(btn).not.toBeNull();
+  return btn as HTMLButtonElement;
+}
+
 function renderRole(): RolePageHandles {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const handles: RolePageHandles = { editForm: null };
@@ -153,9 +173,8 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     await waitFor(() => {
       expect(screen.getByText("运维专员")).toBeInTheDocument();
     });
-
     // 点击行操作「编辑」打开编辑角色 Modal
-    const editBtn = screen.getByRole("button", { name: "编辑" });
+    const editBtn = findButtonByText("编辑");
     fireEvent.click(editBtn);
 
     // 确定性等待：editForm 实例就绪（组件 onEditFormReady 回调已触发）
@@ -164,7 +183,6 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     });
 
     // 验证 Modal 弹出且菜单树正常加载展示（T-1）
-    // CI（Linux + coverage）下 antd Modal/Tree 挂载明显慢于本地，仅放宽「渲染完成」等待窗口
     await waitFor(
       () => {
         expect(screen.getByText("编辑角色")).toBeInTheDocument();
@@ -215,7 +233,10 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
     expect(page.editForm?.getFieldValue("roleKey")).toBe("ops_admin");
 
     // 提交编辑表单：查找 Modal 底部确定按钮（支持「确 定」或「OK」）
-    const submitBtn = screen.getByRole("button", { name: /确\s*定|OK/ });
+    // Modal footer 主按钮（antd Modal 的确定按钮固定在 .ant-modal-footer）。
+    // 不用 getByRole/queryByRole: 其无障碍 name 全树计算在本页数千节点 DOM 上
+    // 实测单次 4-9s（90-F1 性能返工主根因）。T-3 语义不变: 点击的仍是提交按钮。
+    const submitBtn = findModalOkButton();
     fireEvent.click(submitBtn);
 
     // 验证向后端发送的请求参数（T-2 & T-3）
@@ -229,7 +250,7 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
       // 父子级联必须同时包含父 C 菜单 id（T-2）
       expect(payload.menuIds).toContain("m-role-c");
     });
-  }, 30000); // antd Tree 全量渲染在慢机/高并发下可达 ~12s，默认 15s 阈值偏紧
+  }, 15000); // 90-F1 性能返工后单用例 ~3.3s（getByRole a11y 全树计算已替换为轻量查询），15s 充裕
 
   it("T-4: 回读一致性 —— 角色既有权限含 F 节点时，树组件正常加载该勾选状态", async () => {
     // 覆盖角色已有 m-role-add-f 的 checked 态
@@ -247,7 +268,7 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
       expect(screen.getByText("运维专员")).toBeInTheDocument();
     });
 
-    const editBtn = screen.getByRole("button", { name: "编辑" });
+    const editBtn = findButtonByText("编辑");
     fireEvent.click(editBtn);
 
     await waitFor(() => {
@@ -280,5 +301,5 @@ describe("角色授权闭环组件测试（Phase 87 RBAC-05）", () => {
       },
       { timeout: 15000 }
     );
-  }, 30000); // 与 T-1 同因：Tree 展开 + 勾选态回读在慢机下耗时可超默认阈值
+  }, 15000); // 性能返工后单用例 ~1.7s，15s 充裕
 });
