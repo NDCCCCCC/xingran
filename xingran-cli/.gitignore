@@ -1,0 +1,12 @@
+# 构建产物（不提交二进制）
+/xingran
+/xingran.exe
+/xingran-linux
+/xingran-cli.exe
+/cmdgen.exe
+/build/
+
+# 运行期产物
+/captcha*.png
+/captcha-*.png
+*.tmp
