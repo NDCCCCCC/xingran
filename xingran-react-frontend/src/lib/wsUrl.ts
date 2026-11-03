@@ -15,8 +15,13 @@
  *    因此连接会失败。本模块只负责把 URL 拼对，重连策略由调用方决定。
  */
 
-/** API 基址（与 src/lib/api.ts 的 baseURL 保持同一来源）。 */
-const RAW_API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+/**
+ * API 基址（与 src/lib/api.ts 的 baseURL 保持同一来源）。
+ * 每次调用都重新读取 env —— 运行时可被部署配置覆盖，测试也可直接 stub。
+ */
+function rawApiBase(): string {
+  return import.meta.env.VITE_API_BASE_URL || "/api/v1";
+}
 
 /**
  * 取 API 基址的路径部分。
@@ -24,10 +29,10 @@ const RAW_API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
  */
 function apiPath(): string {
   try {
-    const url = new URL(RAW_API_BASE, window.location.origin);
+    const url = new URL(rawApiBase(), window.location.origin);
     return url.pathname.replace(/\/+$/, "");
   } catch {
-    return RAW_API_BASE.replace(/\/+$/, "");
+    return rawApiBase().replace(/\/+$/, "");
   }
 }
 
