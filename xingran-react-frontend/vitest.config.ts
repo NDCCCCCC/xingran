@@ -20,15 +20,12 @@ export default defineConfig({
     // ⇒ 负载型 flaky 而非逻辑错误)。
     // timeout 是上限不是下限:正常通过的测试不会因此变慢,只有真正超时的才会多等。
     //
-    // 2026-11-03:30s → 60s(CI 提速改造的前置余量)。前端覆盖率测试拆成 4 个 vitest
-    // shard 并行后,每个 worker 承载的**测试文件组合**变了 ⇒ 单文件的调度时序随之变化
-    // ⇒ 原本就贴着上限的慢测试被推过界。
-    // 实测证据:permission.grant.test.tsx(Phase 87 RBAC-05)在**全量单跑**基线上就要
-    // 25031ms(3 tests)—— 即它本来就贴着 30s 上限;分片后报 "Test timed out in 30000ms"。
-    // ⚠️ 这是**权宜之计,不是修复**:该测试根因是 waitFor 的等待条件在 CI 上迟迟不成立
-    // (antd Modal/Tree 挂载慢或 DOM 断言假设错),已单独派修 ⇒ 修好后应把本值收回。
-    // 本值只是保证「分片并行」这个改造不被既有脆弱点阻塞。
-    testTimeout: 60000,
+    // ⚠️ 曾临时提到 60s（为 CI 分片改造留余量），现已收回 30s。
+    // 原因：阻塞点 permission.grant.test.tsx 有**显式 per-test timeout**（30000），
+    // 覆盖全局值 ⇒ 提全局对它完全无效（实测日志仍是 30000ms）。
+    // 且该测试的根因已根治（getByRole 全 DOM a11y 计算 ⇒ 25.9s → ~5.0s，
+    // 见 addbfd70）⇒ per-test 15s 已充裕 ⇒ 全局 30s 足够，无需放宽。
+    testTimeout: 30000,
     setupFiles: ["./src/test/setup.ts"],
     // Phase 88: 159 测试文件后 Windows threads 池句柄/内存间歇耗尽(全量偶发启动崩)。
     // maxWorkers 限制并发工作线程,隔离 jsdom 实例数,消除资源竞争 flake。
