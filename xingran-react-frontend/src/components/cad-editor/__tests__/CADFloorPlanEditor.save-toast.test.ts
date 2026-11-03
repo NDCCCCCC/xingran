@@ -23,7 +23,7 @@ const FLOORS_DIR = path.resolve(__dirname, "../../../pages/operations/floors");
 /**
  * 拼接构造成功提示字面量，避免本测试文件自身被「保存链路成功提示」统计误计入。
  */
-const SUCCESS_TOAST = ["message.success(", "\"保存成功\"", ")"].join("");
+const SUCCESS_TOAST = ["message.success(", '"保存成功"', ")"].join("");
 
 function readSource(filePath: string): string {
   return fs.readFileSync(filePath, "utf-8");
@@ -70,7 +70,9 @@ describe("平面图保存只弹一次「保存成功」toast", () => {
 
   it("onSave props 类型放宽为 void | Promise<void>", () => {
     const source = readSource(EDITOR_SOURCE_PATH);
-    expect(source).toMatch(/onSave\?:\s*\(data:\s*FloorPlanData\)\s*=>\s*void\s*\|\s*Promise<void>/);
+    expect(source).toMatch(
+      /onSave\?:\s*\(data:\s*FloorPlanData\)\s*=>\s*void\s*\|\s*Promise<void>/
+    );
   });
 
   it("保存链路源码中「保存成功」提示恰好只有一处（位于 useFloorPlanEditor）", () => {
