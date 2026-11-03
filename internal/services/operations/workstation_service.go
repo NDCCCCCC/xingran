@@ -381,97 +381,123 @@ func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []P
 		return nil
 	}
 
+	sql, args := buildBatchPositionUpdateSQL(items)
+
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// F-19: 重构为 GORM 占位符参数化查询,彻底消除 SQL 注入。
-		// 原代码用 fmt.Sprintf 直接拼接 item.ID (UUID 字符串若含 ' 即可注入)
-		// 与 PositionX/Y 等整数字段。本实现按 SQL 中 ? 的出现顺序顺序追加 args。
-
-		ids := make([]string, 0, len(items))
-		args := make([]interface{}, 0, len(items)*12)
-
-		// 必填: position_x / position_y 的 CASE WHEN
-		var positionXClause, positionYClause strings.Builder
-		positionXClause.WriteString("position_x = CASE id ")
-		positionYClause.WriteString("position_y = CASE id ")
-		for _, item := range items {
-			ids = append(ids, item.ID)
-			positionXClause.WriteString("WHEN ? THEN ? ")
-		}
-		positionXClause.WriteString("END")
-		for range items {
-			positionYClause.WriteString("WHEN ? THEN ? ")
-		}
-		positionYClause.WriteString("END")
-
-		// 按 SQL 模板中 ? 的出现顺序追加 args
-		for _, item := range items {
-			args = append(args, item.ID, item.PositionX)
-		}
-		for _, item := range items {
-			args = append(args, item.ID, item.PositionY)
-		}
-
-		setClauses := []string{positionXClause.String(), positionYClause.String()}
-
-		// 可选字段:rotation / width / depth / desk_type
-		// 提取生成 CASE 子句和 args 的公共逻辑
-		appendOptionalClause := func(col string, valuer func(PositionUpdateItem) (int, bool)) {
-			var b strings.Builder
-			b.WriteString(col + " = CASE id ")
-			added := 0
-			for _, item := range items {
-				if v, ok := valuer(item); ok {
-					_ = v
-					b.WriteString("WHEN ? THEN ? ")
-					added++
-				}
-			}
-			if added == 0 {
-				return
-			}
-			b.WriteString("ELSE " + col + " END")
-			setClauses = append(setClauses, b.String())
-			for _, item := range items {
-				if v, ok := valuer(item); ok {
-					args = append(args, item.ID, v)
-				}
-			}
-		}
-		appendOptionalClause("rotation", func(it PositionUpdateItem) (int, bool) {
-			if it.Rotation == nil {
-				return 0, false
-			}
-			return *it.Rotation, true
-		})
-		appendOptionalClause("width", func(it PositionUpdateItem) (int, bool) {
-			if it.Width == nil {
-				return 0, false
-			}
-			return *it.Width, true
-		})
-		appendOptionalClause("depth", func(it PositionUpdateItem) (int, bool) {
-			if it.Depth == nil {
-				return 0, false
-			}
-			return *it.Depth, true
-		})
-		appendOptionalClause("desk_type", func(it PositionUpdateItem) (int, bool) {
-			if it.DeskType == nil {
-				return 0, false
-			}
-			return *it.DeskType, true
-		})
-
-		// WHERE id IN (?) — GORM 接受 []string 参数展开
-		sql := fmt.Sprintf("UPDATE sys_workstation SET %s WHERE id IN ?", strings.Join(setClauses, ", "))
-		args = append(args, ids)
-
 		if err := tx.Exec(sql, args...).Error; err != nil {
 			return fmt.Errorf("批量更新工位位置失败: %w", err)
 		}
 
 		return nil
 	})
+}
+
+// buildBatchPositionUpdateSQL 构造批量更新工位位置的 SQL 与参数。
+//
+// 参数化沿用 F-19(消除 SQL 注入): ID 全部走占位符,按 SQL 中 ? 的出现顺序追加 args。
+//
+// 【类型安全 — 42804 的根因与修复】
+//
+// 原写法 `CASE id WHEN ? THEN ? END` 在 PostgreSQL 上必然失败:
+// THEN 分支的占位符在 Parse 阶段**无法推断类型** —— CASE 表达式的结果类型
+// 由所有 THEN/ELSE 分支共同决定,与赋值目标列(position_x integer)的类型不是
+// 同一个上下文,PG 只能把未类型化参数落到 text,于是整个 CASE 退化为 text,
+// 赋值时报:
+//
+//	ERROR: column "position_x" is of type integer but expression is of type text
+//	(SQLSTATE 42804)
+//
+// SQLite 无严格类型推断(动态类型),因此同一段 SQL 在 SQLite 单测里全绿,
+// 缺陷只在真实 PostgreSQL 上暴露。
+//
+// 修复:THEN 分支统一写成 `CAST(? AS int)`。CAST 显式给出参数类型后,
+// PG 推断 CASE 结果类型为 integer,int4 列赋值成立;SQLite 同样支持 CAST(… AS int)。
+// ID 仍是占位符,F-19 的防注入目标不变。
+//
+// 抽成独立纯函数的原因:42804 只有 PostgreSQL 会报,SQLite 复现不了,
+// 把 SQL 构造独立出来才能写不依赖数据库的回归测试(见
+// workstation_position_sql_test.go)。
+func buildBatchPositionUpdateSQL(items []PositionUpdateItem) (string, []interface{}) {
+	ids := make([]string, 0, len(items))
+	args := make([]interface{}, 0, len(items)*12)
+
+	// 必填: position_x / position_y 的 CASE WHEN
+	var positionXClause, positionYClause strings.Builder
+	positionXClause.WriteString("position_x = CASE id ")
+	positionYClause.WriteString("position_y = CASE id ")
+	for _, item := range items {
+		ids = append(ids, item.ID)
+		positionXClause.WriteString("WHEN ? THEN CAST(? AS int) ")
+	}
+	positionXClause.WriteString("END")
+	for range items {
+		positionYClause.WriteString("WHEN ? THEN CAST(? AS int) ")
+	}
+	positionYClause.WriteString("END")
+
+	// 按 SQL 模板中 ? 的出现顺序追加 args
+	for _, item := range items {
+		args = append(args, item.ID, item.PositionX)
+	}
+	for _, item := range items {
+		args = append(args, item.ID, item.PositionY)
+	}
+
+	setClauses := []string{positionXClause.String(), positionYClause.String()}
+
+	// 可选字段:rotation / width / depth / desk_type
+	// 提取生成 CASE 子句和 args 的公共逻辑
+	appendOptionalClause := func(col string, valuer func(PositionUpdateItem) (int, bool)) {
+		var b strings.Builder
+		b.WriteString(col + " = CASE id ")
+		added := 0
+		for _, item := range items {
+			if _, ok := valuer(item); ok {
+				b.WriteString("WHEN ? THEN CAST(? AS int) ")
+				added++
+			}
+		}
+		if added == 0 {
+			return
+		}
+		b.WriteString("ELSE " + col + " END")
+		setClauses = append(setClauses, b.String())
+		for _, item := range items {
+			if v, ok := valuer(item); ok {
+				args = append(args, item.ID, v)
+			}
+		}
+	}
+	appendOptionalClause("rotation", func(it PositionUpdateItem) (int, bool) {
+		if it.Rotation == nil {
+			return 0, false
+		}
+		return *it.Rotation, true
+	})
+	appendOptionalClause("width", func(it PositionUpdateItem) (int, bool) {
+		if it.Width == nil {
+			return 0, false
+		}
+		return *it.Width, true
+	})
+	appendOptionalClause("depth", func(it PositionUpdateItem) (int, bool) {
+		if it.Depth == nil {
+			return 0, false
+		}
+		return *it.Depth, true
+	})
+	appendOptionalClause("desk_type", func(it PositionUpdateItem) (int, bool) {
+		if it.DeskType == nil {
+			return 0, false
+		}
+		return *it.DeskType, true
+	})
+
+	// WHERE id IN (?) — GORM 接受 []string 参数展开
+	sql := fmt.Sprintf("UPDATE sys_workstation SET %s WHERE id IN ?", strings.Join(setClauses, ", "))
+	args = append(args, ids)
+
+	return sql, args
 }
 
 // SearchWorkstationOptions 工位下拉数据源(name LIKE 模糊 + floorId/floorCode/status/type/orgId 多维筛选,LIMIT 50)。
