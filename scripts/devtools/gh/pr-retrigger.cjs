@@ -103,8 +103,27 @@ async function main() {
 
   // 远端 tree 映射（用于跳过一致文件）
   const remoteMap = new Map();
+  const remoteBlobs = new Set();
   const t0 = await api("GET", `/repos/${OWNER}/${REPO}/git/trees/${tree}?recursive=1`);
-  for (const e of t0.json.tree || []) if (e.type === "blob") remoteMap.set(e.path, e.sha);
+  for (const e of t0.json.tree || []) if (e.type === "blob") {
+    remoteMap.set(e.path, e.sha);
+    remoteBlobs.add(e.sha);
+  }
+
+  // GitHub Trees API 只接受**仓库中已存在**的 blob sha ⇒ 新文件必须先 POST /git/blobs
+  const uploaded = new Map();
+  async function ensureBlob(localSha, file) {
+    if (remoteBlobs.has(localSha)) return localSha;
+    if (uploaded.has(localSha)) return uploaded.get(localSha);
+    const content = fs.readFileSync(file).toString("base64");
+    const bl = await api("POST", `/repos/${OWNER}/${REPO}/git/blobs`, { content, encoding: "base64" });
+    if (bl.status !== 201) {
+      console.error(`上传 blob 失败 HTTP ${bl.status}: ${JSON.stringify(bl.json).slice(0, 200)}`);
+      process.exit(1);
+    }
+    uploaded.set(localSha, bl.json.sha);
+    return bl.json.sha;
+  }
 
   const entries = [];
   for (const f of files) {
@@ -112,9 +131,9 @@ async function main() {
       console.error(`[abort] 文件不存在: ${f}`);
       process.exit(1);
     }
-    const sha = git(["hash-object", "--", f]);
-    if (remoteMap.get(f) === sha) continue;
-    entries.push({ path: f, mode: "100644", type: "blob", sha });
+    const localSha = git(["hash-object", "--", f]);
+    if (remoteMap.get(f) === localSha) continue;
+    entries.push({ path: f, mode: "100644", type: "blob", sha: await ensureBlob(localSha, f) });
   }
   if (entries.length === 0) {
     console.log("[retrigger] base 已包含全部目标内容，无需新建分支");
@@ -141,8 +160,26 @@ async function main() {
   console.log(`[retrigger] 新分支 ${newBranch} → ${commit.json.sha.slice(0, 10)}`);
 
   // 4. 把 PR 的 head 切到新分支
+  // ⚠️ 重要（2026-11-03 实测）：GitHub **不允许**通过 API 修改已存在 PR 的 head
+  // 分支 —— PATCH /pulls/{n} 传 head 字段会返回 HTTP 200 但**静默不生效**
+  // （PR 的 head 保持原样）。⇒ 本步骤必须**回读验证**，否则就是「报成功而没做」
+  // 这类最危险的工具缺陷（曾因此白等 90 分钟 CI）。
+  // ⇒ 真正的可靠路径是：新建 PR（pr-publish.cjs）或把内容推到 PR 原有 head 分支。
   const setHead = await api("PATCH", `/repos/${OWNER}/${REPO}/pulls/${pr}`, { head: newBranch });
-  console.log(`[retrigger] PR head 切到 ${newBranch} → HTTP ${setHead.status}`);
+  const verify = await api("GET", `/repos/${OWNER}/${REPO}/pulls/${pr}`);
+  const actualHead = verify.json.head && verify.json.head.ref;
+  if (actualHead !== newBranch) {
+    console.error(
+      `[retrigger] ❌ head 切换未生效（API 返回 HTTP ${setHead.status}，但 PR 的 head 仍是 ${actualHead}）。\n` +
+        "           GitHub 不允许通过 API 修改已存在 PR 的 head 分支。\n" +
+        "           ⇒ 改用其一：\n" +
+        "             ① 用 pr-publish.cjs 新建一个 PR（head 直接是新分支）；\n" +
+        "             ② 把内容推到 PR 现有的 head 分支上（push-files.cjs），\n" +
+        "                再对该分支做一次普通 push（git push）以触发 synchronize。",
+    );
+    process.exit(1);
+  }
+  console.log(`[retrigger] PR head 已切到 ${newBranch}（已回读验证）`);
 
   // 5. close → reopen（触发 PR 事件，排 CI）
   const closed = await api("PATCH", `/repos/${OWNER}/${REPO}/pulls/${pr}`, { state: "closed" });

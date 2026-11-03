@@ -23,11 +23,15 @@
 |---|---|---|
 | 锐捷 RS8607E / RG8607E：hybrid 关键字形态、undo 只认模式回退、自动补集语义 | ✅ | Phase 129 三轮真机取证（RG8607E 10.62.63.47 GE1/25） |
 | 锐捷：`allowed vlan tagged <list>` 无错但**不落地**（缺 `only`） | ✅ | 同上 |
+| 锐捷 `trunk allowed vlan`：**无关键字形态非法**（Invalid input）⇒ 必须带 `only` | ✅ | Phase 130 五轮（2026-11-02 RG8607E GE1/25） |
+| 锐捷 `trunk allowed vlan only <list>` = **允许式**且本身即全量；`add` = 并集；`remove` = 移除 | ✅ | 同上（回读 allowed 行原文） |
+| 锐捷 `trunk native vlan <id>`：原样有效、**无 only 要求**；与 allowed **独立维度**；`mode access` 还原有效 | ✅ | 同上（native 行原文 + 还原验证） |
+| 锐捷 `trunk allowed` **不需预建 VLAN** | ✅ | 同上（VLAN 表三段对照：探测前/实跑期/还原后一致） |
 | 华为 **S8700**：`port ?` **无** trunk/hybrid 子命令；`port-security ?` 无 `max-mac-num`；`user-bind` 仅系统视图 | ✅ | Phase 129（2026-11-01 华为 S8700 10.62.25.253 探测） |
 | 华为 **CE / S57 系列**：trunk/hybrid 支持性 | ❓ **待取证** | ⚠️ **S8700 的结论不能外推到 CE/S57**（型号不同 ⇒ 前提不同） |
 | H3C（Comware）：trunk/hybrid 支持性与语义 | ❓ **待取证** | 无任何真机证据 |
-| Cisco IOS-XE：trunk/hybrid 支持性与语义 | ❓ **待取证** | 无任何真机证据（且产品层**无渲染实现**，见 §4） |
-| 锐捷 `trunk allowed vlan` 第二层（add/remove/replace） | ❓ **待取证** | 见 `130-RUIIJIE-TRUNK-ALLOWED.md` |
+| Cisco IOS-XE：trunk/hybrid 支持性与语义 | ❓ **待取证** | 无任何真机证据（产品层**已显式标 Unsupported**：渲染未实现 + 无真机依据，见 §4） |
+| 锐捷 hybrid 的 `native` + `untagged` **组合语义** | ❓ **待取证** | 需**专用实验口**（不在生产空闲口做组合边界）；依据：Phase 130 §2.36 |
 
 ## 2. 华为 CE / S57（VRP）
 
