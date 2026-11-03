@@ -124,7 +124,14 @@ export class RouteGenerator {
     return `${parentPath}/${menuPath}`;
   }
 
-  private static resolveComponent(component: string, path: string): string {
+  /**
+   * 把菜单里的 component 值归一化为组件路径。
+   *
+   * 公开原因：hover 预取链路（componentLoader.preloadRouteComponent）必须复用
+   * 同一套归一化规则，否则预取到的 chunk 会与实际渲染的 chunk 不一致
+   * （例如 path === "dashboard" 时实际渲染 pages/dashboard-system/index）。
+   */
+  static resolveComponent(component: string, path: string): string {
     if (path === "dashboard") {
       return "pages/dashboard-system/index";
     }
