@@ -99,7 +99,9 @@ export default defineConfig(({ mode }) => {
   // 与 nginx 子路径(/xingran/)部署对齐,生成的 index.html 中所有资源 URL
   // 自动带 /xingran/ 前缀,浏览器请求匹配 location /xingran/。
   const env = loadEnv(mode, __dirname, "");
-  const base = env.VITE_BASE || "/";
+  // loadEnv 只解析 .env 文件，不读 process.env；显式让 process.env 优先，
+  // 这样 CI/本地可用 `VITE_BASE=... npm run build` 直接覆盖，无需改动 .env 文件。
+  const base = process.env.VITE_BASE || env.VITE_BASE || "/";
 
   return {
     base,

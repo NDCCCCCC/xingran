@@ -9,52 +9,17 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/gin-gonic/gin"
 )
 
 //go:embed all:xingran-react-frontend/dist
-var frontendFS embed.FS
+var frontendDist embed.FS
 
-var (
-	detectedBaseOnce sync.Once
-	detectedBase     string
-)
-
-// detectedFrontendBase 从嵌入 dist 的 index.html 自动探测前端构建 base。
-//
-// Vite 以 VITE_BASE 构建时,资源引用形如 src="/xingran/assets/xxx.js";
-// 根路径构建时为 src="/assets/xxx.js"。取首个 "/...assets/" 引用的前缀:
-//   - "/xingran/assets/" → 返回 "/xingran"(子路径构建)
-//   - "/assets/"         → 返回 ""(根路径构建)
-//
-// 两处重定向行为(根路径 302、陈旧无前缀 SPA URL 补前缀)都以它为开关:
-// 根路径构建的 dist 没有 basename,任何重定向到 /xingran 的行为都会把
-// 浏览器送进不存在的地址 —— 必须全部停用。
-func detectedFrontendBase() string {
-	detectedBaseOnce.Do(func() {
-		content, err := fs.ReadFile(frontendFS, "xingran-react-frontend/dist/index.html")
-		if err != nil {
-			return
-		}
-		html := string(content)
-		for _, marker := range []string{"\"/" + strings.TrimPrefix(frontendSubPath, "/") + "/assets/", "\"/assets/"} {
-			idx := strings.Index(html, marker)
-			if idx < 0 {
-				continue
-			}
-			rest := html[idx+1:]
-			if strings.HasPrefix(rest, strings.TrimPrefix(frontendSubPath, "/")+"/assets/") {
-				detectedBase = frontendSubPath
-			} else {
-				detectedBase = ""
-			}
-			return
-		}
-	})
-	return detectedBase
-}
+// embed 构建把资源集合注入前端静态服务基础件(frontend_base.go)。
+// 可测的判定逻辑都在基础件里,embed 文件只负责注入 —— 这样
+// CI 的普通 go test(不带 -tags=embed)也能覆盖到那些逻辑。
+func init() { setEmbeddedFrontend(frontendDist) }
 
 // ServeRoot 处理根路径请求。
 //
@@ -122,6 +87,12 @@ func ServeSPA(c *gin.Context) {
 	// 只处理 GET 请求
 	if c.Request.Method != http.MethodGet {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		return
+	}
+
+	// 缺尾斜杠的子路径地址(例如 "/xingran")由基础件统一处理:
+	// 前端 basename="/xingran/" 要求 URL 以 "/xingran/" 开头。
+	if redirectSubPathTrailingSlash(c, requestPath) {
 		return
 	}
 

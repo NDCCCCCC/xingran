@@ -441,7 +441,10 @@ func (c *Config) Validate() error {
 func warnSecurityRisks(c *Config) {
 	isProd := c.Server.Mode == "release"
 
-	if c.Database.Password == "" {
+	// 仅对需要密码认证的后端告警:sqlite 是单文件本地库,没有密码概念。
+	// 现场问题:生产 config 为 type=sqlite,却每次启动都刷 ⚠️[SECURITY]
+	// database.password 为空 —— 纯误报,会掩盖真正的安全告警。
+	if c.Database.Type != "sqlite" && c.Database.Password == "" {
 		if isProd {
 			applogger.Warn("⚠️ [SECURITY] release 模式下 database.password 为空,数据库连接将以无密码方式尝试,生产部署必须设置 DB_PASSWORD")
 		} else {

@@ -37,6 +37,39 @@ func embedDistStaged() bool {
 	return err == nil
 }
 
+// TestDetectedFrontendBase_MatchesEmbeddedIndex 锁定 base 探测与嵌入产物的对应关系。
+//
+// 背景:探测 marker 是 `"/xingran/assets/`,取 html[idx+1:] 只去掉引号、前导斜杠仍在,
+// 比较串必须同样带斜杠。此前比较串漏了斜杠 → detectedFrontendBase() 恒为 "" →
+// 直连 :9000 时不做 302 引导 → 浏览器停在 "/" → 与前端 basename 不匹配 → 白屏。
+// 而旧测试在 detected 为空时只断言"不是 302",把这个缺陷一并放过了。
+//
+// 不变量:嵌入的 index.html 带子路径资源前缀时,detectedFrontendBase() 必须等于该前缀;
+// 根路径构建时必须为空。
+func TestDetectedFrontendBase_MatchesEmbeddedIndex(t *testing.T) {
+	if !embedDistStaged() {
+		t.Skip("embed dist not staged")
+	}
+	content, err := fs.ReadFile(frontendFS, "xingran-react-frontend/dist/index.html")
+	if err != nil {
+		t.Fatalf("read embedded index.html: %v", err)
+	}
+	html := string(content)
+	prefix := strings.TrimPrefix(frontendSubPath, "/")
+
+	if !strings.Contains(html, `"/`+prefix+`/assets/`) {
+		// 根路径构建的 dist → 无 basename 概念,探测结果应为空
+		if got := detectedFrontendBase(); got != "" {
+			t.Fatalf("detectedFrontendBase() = %q, want %q (根路径构建的 dist)", got, "")
+		}
+		return
+	}
+	if got := detectedFrontendBase(); got != frontendSubPath {
+		t.Fatalf("detectedFrontendBase() = %q, want %q (index.html 带子路径资源前缀)",
+			got, frontendSubPath)
+	}
+}
+
 func TestSubPath_ServeRoot_RedirectsToSubPath(t *testing.T) {
 	c, w := newSubPathEmbedCtx(http.MethodGet, "/")
 	ServeRoot(c)
