@@ -147,6 +147,7 @@ func toMeta(e client.EndpointInfo) (commands.EndpointMeta, bool) {
 		Summary:      e.Summary,
 		Description:  e.Description,
 		PathArgs:     mp.PathArgs,
+		Kind:         e.Kind,
 	}
 	if len(e.Tags) > 0 {
 		meta.Tags = e.Tags[0]
@@ -244,6 +245,7 @@ func renderMeta(m commands.EndpointMeta) string {
 	fmt.Fprintf(&b, "\t\tSummary: %q,\n", m.Summary)
 	fmt.Fprintf(&b, "\t\tDescription: %q,\n", m.Description)
 	fmt.Fprintf(&b, "\t\tTags: %q,\n", m.Tags)
+	fmt.Fprintf(&b, "\t\tKind: %q,\n", m.Kind)
 	if len(m.Flags) > 0 {
 		b.WriteString("\t\tFlags: []commands.FlagSpec{\n")
 		for _, f := range m.Flags {

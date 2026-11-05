@@ -19,6 +19,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "获取值班配置",
 		Description: "获取系统值班配置",
 		Tags: "值班管理",
+		Kind: "",
 	},
 	{
 		Module: "duty",
@@ -28,18 +29,19 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "更新值班配置",
 		Description: "更新系统值班配置",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "beforeReminderMinutes", Type: "int", Required: false, Desc: "提前提醒分钟数（0=当天提醒）", Enum: "", In: "body"},
-			{Name: "createdBy", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "reminderChannels", Type: "string", Required: false, Desc: "提醒渠道（websocket,email,sms，逗号分隔）", Enum: "", In: "body"},
 			{Name: "updatedAt", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "updatedBy", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "createdAt", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "deletedAt", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "id", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "reminderEnabled", Type: "bool", Required: false, Desc: "是否启用值班提醒", Enum: "", In: "body"},
-			{Name: "reminderTime", Type: "string", Required: false, Desc: "提醒时间 HH:mm格式", Enum: "", In: "body"},
 			{Name: "version", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "createdAt", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "createdBy", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "deletedAt", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "reminderChannels", Type: "string", Required: false, Desc: "提醒渠道（websocket,email,sms，逗号分隔）", Enum: "", In: "body"},
+			{Name: "reminderEnabled", Type: "bool", Required: false, Desc: "是否启用值班提醒", Enum: "", In: "body"},
+			{Name: "beforeReminderMinutes", Type: "int", Required: false, Desc: "提前提醒分钟数（0=当天提醒）", Enum: "", In: "body"},
+			{Name: "id", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "reminderTime", Type: "string", Required: false, Desc: "提醒时间 HH:mm格式", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -50,6 +52,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "批量创建节假日",
 		Description: "批量添加多个节假日",
 		Tags: "值班管理",
+		Kind: "",
 	},
 	{
 		Module: "duty",
@@ -59,6 +62,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "创建节假日",
 		Description: "添加新的节假日",
 		Tags: "值班管理",
+		Kind: "",
 	},
 	{
 		Module: "duty",
@@ -68,6 +72,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "删除节假日",
 		Description: "删除指定节假日",
 		Tags: "值班管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -78,6 +83,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "查询节假日列表",
 		Description: "获取指定年份的节假日列表",
 		Tags: "值班管理",
+		Kind: "",
 	},
 	{
 		Module: "duty",
@@ -87,6 +93,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "更新节假日",
 		Description: "更新节假日信息",
 		Tags: "值班管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -97,6 +104,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "获取节假日年份列表",
 		Description: "获取所有包含节假日数据的年份",
 		Tags: "值班管理",
+		Kind: "",
 	},
 	{
 		Module: "duty",
@@ -106,6 +114,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "获取我的值班统计",
 		Description: "获取当前登录用户的值班统计数据",
 		Tags: "值班管理",
+		Kind: "",
 	},
 	{
 		Module: "duty",
@@ -115,12 +124,13 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "创建值班池",
 		Description: "创建新的值班池",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "description", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "memberIds", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "poolName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "dailyCount", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "description", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "memberIds", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -131,6 +141,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "删除值班池",
 		Description: "删除指定值班池",
 		Tags: "值班管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -141,6 +152,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "获取值班池详情",
 		Description: "根据ID获取值班池详细信息",
 		Tags: "值班管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -151,14 +163,15 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "查询值班池列表",
 		Description: "分页查询值班池列表",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "isAsc", Type: "bool", Required: false, Desc: "nil 或 true=升序，false=降序", Enum: "", In: "body"},
-			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "poolName", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "isAsc", Type: "bool", Required: false, Desc: "nil 或 true=升序，false=降序", Enum: "", In: "body"},
+			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -169,6 +182,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "值班池统计",
 		Description: "返回值班池总数、启停状态计数与成员总数,供统计卡片使用;用 COUNT 聚合而非按当前页 list 计算",
 		Tags: "值班管理",
+		Kind: "",
 	},
 	{
 		Module: "duty",
@@ -178,13 +192,14 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "更新值班池",
 		Description: "更新值班池信息",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "status", Type: "int", Required: false, Desc: "使用指针类型，未提供时为nil", Enum: "", In: "body"},
-			{Name: "dailyCount", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "description", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "memberIds", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "poolName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "status", Type: "int", Required: false, Desc: "使用指针类型，未提供时为nil", Enum: "", In: "body"},
+			{Name: "dailyCount", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -196,6 +211,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除排班记录",
 		Description: "批量删除多个排班记录",
 		Tags: "值班管理",
+		Kind: "",
 	},
 	{
 		Module: "duty",
@@ -205,6 +221,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "删除排班记录",
 		Description: "删除指定排班记录",
 		Tags: "值班管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -215,6 +232,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "生成排班",
 		Description: "根据规则自动生成排班",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "startDate", Type: "string", Required: true, Desc: "YYYY-MM-DD", Enum: "", In: "body"},
 			{Name: "clearExists", Type: "bool", Required: false, Desc: "是否清除已有排班", Enum: "", In: "body"},
@@ -231,18 +249,19 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "查询排班列表",
 		Description: "分页查询排班列表",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "dutyType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "endDate", Type: "string", Required: false, Desc: "YYYY-MM-DD", Enum: "", In: "body"},
+			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "userId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "poolId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "startDate", Type: "string", Required: false, Desc: "YYYY-MM-DD", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "expired", Type: "int", Required: false, Desc: "过期状态：0=未过期，1=已过期，不传=全部", Enum: "", In: "body"},
 			{Name: "isAsc", Type: "bool", Required: false, Desc: "nil 或 true=升序，false=降序", Enum: "", In: "body"},
-			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
-			{Name: "poolId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "startDate", Type: "string", Required: false, Desc: "YYYY-MM-DD", Enum: "", In: "body"},
+			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "userId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -253,12 +272,13 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "手动排班",
 		Description: "手动为指定日期添加值班人员",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "dutyType", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "poolId", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "reason", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "userIds", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "dutyDate", Type: "string", Required: true, Desc: "YYYY-MM-DD", Enum: "", In: "body"},
-			{Name: "dutyType", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "poolId", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -269,6 +289,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "获取月度排班",
 		Description: "获取指定月份的值班排班表",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "year", Type: "string", Required: false, Desc: "", Enum: "", In: "query"},
 			{Name: "month", Type: "string", Required: false, Desc: "", Enum: "", In: "query"},
@@ -282,6 +303,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "调班",
 		Description: "交换两个值班人员的班次",
 		Tags: "值班管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "fromScheduleId", Type: "string", Required: true, Desc: "原排班ID", Enum: "", In: "body"},
 			{Name: "reason", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
@@ -296,6 +318,7 @@ var DutyEndpoints = []commands.EndpointMeta{
 		Summary: "获取今日值班",
 		Description: "获取今天的值班人员",
 		Tags: "值班管理",
+		Kind: "",
 	},
 }
 

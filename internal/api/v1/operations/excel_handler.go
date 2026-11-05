@@ -204,7 +204,9 @@ func downloadTemplate(entityType string, core *core.Core) gin.HandlerFunc {
 // DownloadDeptMappingTemplate 下载部门名称↔代码映射表 (xlsx)
 //
 // quick 260713-df0 工位导入的辅助端点: 用户在 Excel 中填写 deptName 容易拼错,
-// 提供一份 sys_dept 全量映射表(dept_name | dept_code 两列), 方便按代码填写或校对。
+// 提供一份 sys_dept 全量映射表, 方便按代码填写或校对。
+// 现包含三列: dept_name(部门名称) | parent_path(上级部门全链路) | dept_code(部门代码),
+// 以解决同名部门在不同分支下难以区分的问题。
 //
 // 数据范围: WHERE deleted_at IS NULL AND status = 0(只含启用部门)。
 // 排序: dept_code ASC, 方便用户按代码区间检索。
@@ -214,23 +216,34 @@ func downloadTemplate(entityType string, core *core.Core) gin.HandlerFunc {
 // operlog: 记 1 条 部门管理 / OperTypeDownload 日志(独立于工位导入的 Import 日志)。
 func DownloadDeptMappingTemplate(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 查询 sys_dept 中所有启用部门, 按 dept_code 升序
+		// 查询 sys_dept 中所有启用部门及其递归链路 parent_path, 按 dept_code 升序
 		type deptRow struct {
-			DeptName string `gorm:"column:dept_name"`
-			DeptCode string `gorm:"column:dept_code"`
+			DeptName   string `gorm:"column:dept_name"`
+			ParentPath string `gorm:"column:parent_path"`
+			DeptCode   string `gorm:"column:dept_code"`
 		}
 		var rows []deptRow
+
+		querySQL := opsServices.DeptPathCTE + `
+SELECT d.dept_name,
+       d.dept_code,
+       (SELECT path_text
+        FROM dept_path_cte
+        WHERE id = d.id
+        ORDER BY depth DESC
+        LIMIT 1) AS parent_path
+FROM sys_dept d
+WHERE d.deleted_at IS NULL AND d.status = ?
+ORDER BY d.dept_code ASC`
+
 		if err := core.DB.GetDB().WithContext(c.Request.Context()).
-			Table("sys_dept").
-			Select("dept_name, dept_code").
-			Where("deleted_at IS NULL AND status = ?", models.DeptStatusNormal).
-			Order("dept_code ASC").
+			Raw(querySQL, models.DeptStatusNormal).
 			Scan(&rows).Error; err != nil {
 			response.Error(c, response.ErrServerError, fmt.Sprintf("查询部门映射失败: %v", err))
 			return
 		}
 
-		// 创建 xlsx, sheet 名 部门映射, 表头 dept_name | dept_code
+		// 创建 xlsx, sheet 名 部门映射, 表头 dept_name | parent_path | dept_code
 		f := excelize.NewFile()
 		sheetName := "部门映射"
 		index, err := f.NewSheet(sheetName)
@@ -257,28 +270,35 @@ func DownloadDeptMappingTemplate(core *core.Core) gin.HandlerFunc {
 			return
 		}
 
-		// 表头
+		// 表头: A1: 部门名称, B1: 上级部门全链路, C1: 部门代码
 		if err := f.SetCellValue(sheetName, "A1", "dept_name"); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
-		if err := f.SetCellValue(sheetName, "B1", "dept_code"); err != nil {
+		if err := f.SetCellValue(sheetName, "B1", "parent_path"); err != nil {
 			response.Error(c, response.ErrServerError, err.Error())
 			return
 		}
-		_ = f.SetCellStyle(sheetName, "A1", "B1", headerStyle)
+		if err := f.SetCellValue(sheetName, "C1", "dept_code"); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+			return
+		}
+		_ = f.SetCellStyle(sheetName, "A1", "C1", headerStyle)
 
 		// 数据行(从第 2 行开始)
 		for i, row := range rows {
 			cellName, _ := excelize.CoordinatesToCellName(1, i+2)
 			_ = f.SetCellValue(sheetName, cellName, row.DeptName)
-			cellCode, _ := excelize.CoordinatesToCellName(2, i+2)
+			cellPath, _ := excelize.CoordinatesToCellName(2, i+2)
+			_ = f.SetCellValue(sheetName, cellPath, row.ParentPath)
+			cellCode, _ := excelize.CoordinatesToCellName(3, i+2)
 			_ = f.SetCellValue(sheetName, cellCode, row.DeptCode)
 		}
 
 		// 列宽
 		_ = f.SetColWidth(sheetName, "A", "A", 30)
-		_ = f.SetColWidth(sheetName, "B", "B", 20)
+		_ = f.SetColWidth(sheetName, "B", "B", 50)
+		_ = f.SetColWidth(sheetName, "C", "C", 20)
 
 		// 冻结表头
 		_ = f.SetPanes(sheetName, &excelize.Panes{

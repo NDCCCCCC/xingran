@@ -25,7 +25,15 @@ type EndpointMeta struct {
 
 	Flags    []FlagSpec // body/query 参数 → flag
 	PathArgs []string   // 路径参数名（按出现顺序 → 位置参数）
+	Kind     string     // ""=JSON | upload(multipart 文件上传) | download(二进制流下载)
 }
+
+// 端点 Kind 常量。
+const (
+	KindJSON     = ""
+	KindUpload   = "upload"   // POST multipart，flag: --file
+	KindDownload = "download" // 响应为文件流，flag: --out
+)
 
 // ModuleNames 模块 → 中文固定名（help 展示用；未知模块回退 tags 或模块名）。
 // 注意：运维模块的后端路由前缀是 /ops（非 operations）。

@@ -21,12 +21,19 @@ type swagOp struct {
 	Description string      `json:"description"`
 	Tags        []string    `json:"tags"`
 	Parameters  []swagParam `json:"parameters"`
+	Responses   map[string]swagResponse `json:"responses"`
+}
+
+type swagResponse struct {
+	Description string      `json:"description"`
+	Schema      *swagSchema `json:"schema"`
 }
 
 type swagParam struct {
 	Name     string      `json:"name"`
 	In       string      `json:"in"`
 	Required bool        `json:"required"`
+	Type     string      `json:"type"`
 	Schema   *swagSchema `json:"schema"`
 }
 
@@ -46,6 +53,7 @@ type EndpointInfo struct {
 	Description string      `json:"description,omitempty"`
 	Tags        []string    `json:"tags,omitempty"`
 	Params      []ParamInfo `json:"params,omitempty"`
+	Kind        string      `json:"kind,omitempty"` // ""=JSON | upload(multipart) | download(二进制流)
 }
 
 // ParamInfo 参数说明（含 body $ref 展开后的字段）。
@@ -115,6 +123,11 @@ func ParseSchema(content string) ([]EndpointInfo, string, error) {
 				Tags:        op.Tags,
 			}
 			for _, p := range op.Parameters {
+				// multipart 文件参数（formData file）→ upload 端点，不进普通参数
+				if p.In == "formData" && p.Type == "file" {
+					info.Kind = "upload"
+					continue
+				}
 				info.Params = append(info.Params, ParamInfo{
 					Name: p.Name, In: p.In, Required: p.Required,
 				})
@@ -122,6 +135,10 @@ func ParseSchema(content string) ([]EndpointInfo, string, error) {
 				if p.Schema != nil && p.Schema.Ref != "" {
 					info.Params = append(info.Params, expandRef(doc.Definitions, p.Schema.Ref)...)
 				}
+			}
+			// 响应 200 schema type=file → 二进制流下载端点
+			if resp, ok := op.Responses["200"]; ok && resp.Schema != nil && resp.Schema.Type == "file" {
+				info.Kind = "download"
 			}
 			out = append(out, info)
 		}

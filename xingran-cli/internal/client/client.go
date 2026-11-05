@@ -43,6 +43,11 @@ type Authenticator interface {
 type Client interface {
 	Do(ctx context.Context, method, path string, body any) (*Response, error)
 	DryRun(ctx context.Context, method, path string, body any) (*DryRunRequest, error)
+	// DoUpload multipart/form-data 文件上传（M8：Excel 导入）。
+	DoUpload(ctx context.Context, path, fileField, filePath string, fields map[string]string) (*Response, error)
+	// DoDownload 二进制流下载（M8：export/template），返回实际保存路径。
+	// method 为空按 GET 处理；destPath 为空时从 Content-Disposition 解析。
+	DoDownload(ctx context.Context, path, jsonBody, destPath, method string) (string, error)
 }
 
 // Response 后端统一响应包装。
@@ -91,12 +96,11 @@ type Options struct {
 
 // token 重试相关的响应 code / 语义。
 const (
-	codeInvalidToken  = 1007
-	retryAuthCodes    = "" // 见 shouldRetryAuth：401 HTTP 或 1007 code
-	defaultTimeout    = 30 * time.Second
-	authHeaderPrefix  = "Bearer "
-	defaultUserAgent  = "xingran-cli/0.1.0"
-	maxRetryAuthOnce  = 1 // 401/1007 只重试一次
+	codeInvalidToken = 1007
+	defaultTimeout   = 30 * time.Second
+	authHeaderPrefix = "Bearer "
+	defaultUserAgent = "xingran-cli/0.1.0"
+	maxRetryAuthOnce = 1 // 401/1007 只重试一次
 )
 
 type clientImpl struct {

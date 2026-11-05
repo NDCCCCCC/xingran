@@ -19,6 +19,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "AI分析执行失败",
 		Description: "分析RPA执行失败原因",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -28,6 +29,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "AI错误分类",
 		Description: "对RPA错误进行分类",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -37,6 +39,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "AI决策",
 		Description: "RPA流程中的 AI 决策端点",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -46,6 +49,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "AI生成RPA脚本",
 		Description: "由自然语言描述生成RPA自动化脚本",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -55,6 +59,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "AI优化RPA脚本",
 		Description: "优化已有RPA自动化脚本",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -64,6 +69,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "AI建议修复",
 		Description: "针对失败给出修复建议",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -73,6 +79,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "获取备选选择器",
 		Description: "获取备选元素选择器列表",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -82,6 +89,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "获取最优选择器",
 		Description: "获取当前学习到的最优元素选择器",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -91,6 +99,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "记录选择器失败",
 		Description: "记录元素选择器命中失败（选择器学习）",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -100,6 +109,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "记录选择器成功",
 		Description: "记录元素选择器命中成功（选择器学习）",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -109,6 +119,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "选择器评分",
 		Description: "对候选元素选择器评分",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -118,6 +129,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "创建RPA凭据",
 		Description: "创建新的RPA凭据",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -127,6 +139,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "删除RPA凭据",
 		Description: "删除指定RPA凭据",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -137,6 +150,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询RPA凭据详情",
 		Description: "按ID查询RPA凭据详情（凭据值脱敏）",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -147,6 +161,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询RPA凭据列表",
 		Description: "分页查询RPA凭据列表（凭据值脱敏）",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -156,6 +171,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "更新RPA凭据",
 		Description: "按 ID 更新RPA凭据",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -166,6 +182,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "使凭据会话失效",
 		Description: "使指定凭据会话失效",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -176,6 +193,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询RPA凭据会话列表",
 		Description: "查询凭据关联的会话列表",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -185,6 +203,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询批量执行报告",
 		Description: "查询批量执行的汇总报告",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -195,6 +214,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "取消RPA执行",
 		Description: "取消执行中的RPA任务",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -205,6 +225,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "下载RPA执行产物",
 		Description: "下载指定执行的产物文件",
 		Tags: "RPA管理",
+		Kind: "download",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -215,6 +236,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询执行记录详情",
 		Description: "按执行ID查询RPA执行记录详情",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -225,6 +247,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "请求人工干预",
 		Description: "查询指定执行的人工干预请求状态",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -235,6 +258,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "提交人工干预",
 		Description: "提交人工干预结果",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -245,6 +269,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询RPA执行记录列表",
 		Description: "分页查询RPA任务执行记录",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -254,6 +279,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询RPA执行日志",
 		Description: "查询指定执行的日志",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -264,6 +290,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "RPA执行统计",
 		Description: "RPA 执行记录聚合统计",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -273,6 +300,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "流程数据聚合",
 		Description: "RPA流程数据聚合计算",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -282,6 +310,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "流程条件求值",
 		Description: "RPA流程条件表达式求值",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -291,6 +320,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "流程重试执行",
 		Description: "RPA流程重试策略求值",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -300,6 +330,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "JSONPath 提取",
 		Description: "从 JSON 数据中按 JSONPath 提取值",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -309,6 +340,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "流程错误处理",
 		Description: "RPA流程错误处理策略求值",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -318,6 +350,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "流程数据映射",
 		Description: "RPA流程字段映射转换",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -327,6 +360,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "流程值转换",
 		Description: "RPA流程字段值转换",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -336,6 +370,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "创建RPA任务",
 		Description: "创建新的RPA任务",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -345,6 +380,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "删除RPA任务",
 		Description: "删除指定RPA任务",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -355,6 +391,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "执行RPA任务",
 		Description: "触发执行指定RPA任务",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -365,9 +402,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "带Excel执行RPA任务",
 		Description: "使用上传的 Excel 数据驱动执行指定RPA任务",
 		Tags: "RPA管理",
-		Flags: []commands.FlagSpec{
-			{Name: "file", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-		},
+		Kind: "upload",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -378,6 +413,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询RPA任务详情",
 		Description: "按任务ID查询RPA任务详情",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -388,6 +424,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询RPA任务列表",
 		Description: "分页查询RPA任务列表，支持状态筛选",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -397,6 +434,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "更新RPA任务",
 		Description: "按 ID 更新RPA任务配置",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -407,9 +445,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "上传RPA任务Excel",
 		Description: "上传 Excel 文件批量创建/导入RPA任务",
 		Tags: "RPA管理",
-		Flags: []commands.FlagSpec{
-			{Name: "file", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-		},
+		Kind: "upload",
 	},
 	{
 		Module: "rpa",
@@ -419,6 +455,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "RPA Worker心跳",
 		Description: "Worker 定期心跳上报（Worker Token 认证）",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -429,6 +466,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询RPA Worker列表",
 		Description: "分页查询RPA执行器（Worker）列表",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -438,6 +476,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "RPA执行进度上报",
 		Description: "Worker 上报任务执行进度（Worker Token 认证）",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -447,6 +486,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "注册RPA Worker",
 		Description: "Worker 自动注册（无需 JWT，使用 Provisioning 认证）",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -456,6 +496,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "RPA Worker全量扩缩容",
 		Description: "对全部 Worker 执行统一扩缩容指令",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -465,6 +506,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "RPA Worker缩容",
 		Description: "触发指定 Worker 缩容",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -475,6 +517,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "RPA Worker扩容",
 		Description: "触发指定 Worker 扩容",
 		Tags: "RPA管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -485,6 +528,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "RPA Worker统计",
 		Description: "RPA Worker 专用聚合统计端点",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -494,6 +538,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "查询自动扩缩容配置",
 		Description: "查询 RPA 自动扩缩容配置",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 	{
 		Module: "rpa",
@@ -503,6 +548,7 @@ var RpaEndpoints = []commands.EndpointMeta{
 		Summary: "更新自动扩缩容配置",
 		Description: "更新 RPA 自动扩缩容配置",
 		Tags: "RPA管理",
+		Kind: "",
 	},
 }
 

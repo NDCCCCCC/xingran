@@ -119,7 +119,10 @@ func NewDepartmentQueryBuilder() *DepartmentQueryBuilder {
 //     而不是把父名拼在前面 — 后者会把链路倒着算,且会双倍根名.
 //     正确写法: path_text = dpc.path_text || ' → ' || c.dept_name
 //               depth     = dpc.depth + 1
-const deptPathCTE = `
+// DeptPathCTE 完整的递归 CTE,导出所有部门的"根 → … → 当前"链路.
+// 跨方言设计 (PostgreSQL 生产 + SQLite 单测共用).
+// 导出给需要全链路父部门的查询使用 (如部门导出、工位部门映射表下载).
+const DeptPathCTE = `
 WITH RECURSIVE dept_path_cte AS (
     -- base case: 根部门(parent_id 为 NULL),path 起点就是自身名
     SELECT id, parent_id, dept_name AS path_text, 0 AS depth
@@ -136,6 +139,9 @@ WITH RECURSIVE dept_path_cte AS (
     FROM sys_dept c
     JOIN dept_path_cte dpc ON dpc.id = c.parent_id
 )`
+
+// deptPathCTE 兼容包内旧引用
+const deptPathCTE = DeptPathCTE
 
 func (b *DepartmentQueryBuilder) BuildQuery(
 	ctx context.Context,

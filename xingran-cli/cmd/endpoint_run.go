@@ -30,6 +30,36 @@ func runEndpoint(ctx context.Context, m *commands.EndpointMeta, flags map[string
 	body := commands.BuildBody(flags, m.Flags)
 	c := newClient(ctx)
 
+	// 按端点类型分流（M8）：multipart 上传 / 二进制下载 / 普通 JSON
+	switch m.Kind {
+	case commands.KindUpload:
+		if flagDryRun {
+			return map[string]any{"dry_run": true, "command": endpointCommandName(m),
+				"message": fmt.Sprintf("将 POST multipart 上传 %s → %s（字段 file）", flags["file"], path)}, nil
+		}
+		file, _ := flags["file"].(string)
+		resp, err := c.DoUpload(ctx, path, "file", file, nil)
+		if err != nil {
+			return nil, err
+		}
+		return resp, nil
+	case commands.KindDownload:
+		if flagDryRun {
+			return map[string]any{"dry_run": true, "command": endpointCommandName(m),
+				"message": fmt.Sprintf("将 %s %s 并保存响应文件流（--out 指定输出路径）", m.Method, path)}, nil
+		}
+		out, _ := flags["out"].(string)
+		jsonBody := "{}"
+		if b, ok := flags["body"].(string); ok && b != "" {
+			jsonBody = b
+		}
+		saved, err := c.DoDownload(ctx, path, jsonBody, out, m.Method)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"status": "ok", "saved": saved}, nil
+	}
+
 	if flagDryRun {
 		dr, err := c.DryRun(ctx, m.Method, path, bodyOrNil(body))
 		if err != nil {

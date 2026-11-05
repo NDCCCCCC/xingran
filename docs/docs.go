@@ -8337,6 +8337,121 @@ const docTemplate = `{
                 }
             }
         },
+        "/ops/asset/export": {
+            "post": {
+                "description": "按筛选条件导出资产数据为 .xlsx 文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导出资产",
+                "parameters": [
+                    {
+                        "description": "导出筛选条件(动态参数)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/asset/import": {
+            "post": {
+                "description": "上传 .xlsx 文件批量导入资产数据",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导入资产",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel 文件(.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/asset/template": {
+            "get": {
+                "description": "下载资产 Excel 导入模板文件(.xlsx)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载资产导入模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/building": {
             "post": {
                 "description": "创建新的楼宇信息",
@@ -8452,6 +8567,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/ops/building/export": {
+            "post": {
+                "description": "按筛选条件导出楼宇数据为 .xlsx 文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导出楼宇",
+                "parameters": [
+                    {
+                        "description": "导出筛选条件(动态参数)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/building/geocode": {
             "post": {
                 "description": "将详细地址转换为经纬度坐标（使用百度地图 API）",
@@ -8493,6 +8653,50 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/building/import": {
+            "post": {
+                "description": "上传 .xlsx 文件批量导入楼宇数据",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导入楼宇",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel 文件(.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
                         }
                     },
                     "400": {
@@ -8585,6 +8789,32 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/building/template": {
+            "get": {
+                "description": "下载楼宇 Excel 导入模板文件(.xlsx)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载楼宇导入模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     },
                     "500": {
@@ -8865,6 +9095,95 @@ const docTemplate = `{
                 }
             }
         },
+        "/ops/dedicatedLine/export": {
+            "post": {
+                "description": "按筛选条件导出专线数据为 .xlsx 文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导出专线",
+                "parameters": [
+                    {
+                        "description": "导出筛选条件(动态参数)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/dedicatedLine/import": {
+            "post": {
+                "description": "上传 .xlsx 文件批量导入专线数据",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导入专线",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel 文件(.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/dedicatedLine/list": {
             "post": {
                 "description": "分页查询专线列表，支持按条件筛选",
@@ -8923,6 +9242,32 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/dedicatedLine/template": {
+            "get": {
+                "description": "下载专线 Excel 导入模板文件(.xlsx)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载专线导入模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     },
                     "500": {
@@ -9970,6 +10315,95 @@ const docTemplate = `{
                 }
             }
         },
+        "/ops/floor/export": {
+            "post": {
+                "description": "按筛选条件导出楼层数据为 .xlsx 文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导出楼层",
+                "parameters": [
+                    {
+                        "description": "导出筛选条件(动态参数)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor/import": {
+            "post": {
+                "description": "上传 .xlsx 文件批量导入楼层数据",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导入楼层",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel 文件(.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/floor/list": {
             "post": {
                 "description": "分页查询楼层列表，支持按条件筛选",
@@ -10042,6 +10476,32 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/floor/template": {
+            "get": {
+                "description": "下载楼层 Excel 导入模板文件(.xlsx)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载楼层导入模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     },
                     "500": {
@@ -10366,6 +10826,95 @@ const docTemplate = `{
                 }
             }
         },
+        "/ops/infoPoint/export": {
+            "post": {
+                "description": "按筛选条件导出信息点数据为 .xlsx 文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导出信息点",
+                "parameters": [
+                    {
+                        "description": "导出筛选条件(动态参数)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/infoPoint/import": {
+            "post": {
+                "description": "上传 .xlsx 文件批量导入信息点数据",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导入信息点",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel 文件(.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/infoPoint/list": {
             "post": {
                 "description": "分页查询信息点列表，支持按条件筛选",
@@ -10424,6 +10973,32 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/infoPoint/template": {
+            "get": {
+                "description": "下载信息点 Excel 导入模板文件(.xlsx)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载信息点导入模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     },
                     "500": {
@@ -10704,6 +11279,95 @@ const docTemplate = `{
                 }
             }
         },
+        "/ops/roomDevice/export": {
+            "post": {
+                "description": "按筛选条件导出机房设备数据为 .xlsx 文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导出机房设备",
+                "parameters": [
+                    {
+                        "description": "导出筛选条件(动态参数)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/roomDevice/import": {
+            "post": {
+                "description": "上传 .xlsx 文件批量导入机房设备数据",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导入机房设备",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel 文件(.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/roomDevice/list": {
             "post": {
                 "description": "分页查询机房设备列表，支持按条件筛选",
@@ -10762,6 +11426,32 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/roomDevice/template": {
+            "get": {
+                "description": "下载机房设备 Excel 导入模板文件(.xlsx)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载机房设备导入模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     },
                     "500": {
@@ -11042,6 +11732,95 @@ const docTemplate = `{
                 }
             }
         },
+        "/ops/serverRoom/export": {
+            "post": {
+                "description": "按筛选条件导出机房数据为 .xlsx 文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导出机房",
+                "parameters": [
+                    {
+                        "description": "导出筛选条件(动态参数)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/serverRoom/import": {
+            "post": {
+                "description": "上传 .xlsx 文件批量导入机房数据",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导入机房",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel 文件(.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/serverRoom/list": {
             "post": {
                 "description": "分页查询机房列表，支持按条件筛选",
@@ -11100,6 +11879,32 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/serverRoom/template": {
+            "get": {
+                "description": "下载机房 Excel 导入模板文件(.xlsx)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载机房导入模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     },
                     "500": {
@@ -12471,6 +13276,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/ops/workstation/dept-mapping-template": {
+            "get": {
+                "description": "下载 sys_dept 启用部门的全量映射表(dept_name/parent_path/dept_code)，供工位导入时按代码校对部门名称",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载部门名称↔代码映射表模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/workstation/dept-options": {
             "post": {
                 "description": "union 查询: orgId 子孙节点 + alias 映射节点 (含 isAlias 标记)",
@@ -12520,6 +13351,95 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/export": {
+            "post": {
+                "description": "按筛选条件导出工位数据为 .xlsx 文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导出工位",
+                "parameters": [
+                    {
+                        "description": "导出筛选条件(动态参数)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/import": {
+            "post": {
+                "description": "上传 .xlsx 文件批量导入工位数据，支持按部门名称/用户名建立关联",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "Excel 导入工位",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Excel 文件(.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
                         }
                     },
                     "500": {
@@ -12670,6 +13590,32 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/workstation/template": {
+            "get": {
+                "description": "下载工位 Excel 导入模板文件(.xlsx)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "运维管理"
+                ],
+                "summary": "下载工位导入模板",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     },
                     "500": {
