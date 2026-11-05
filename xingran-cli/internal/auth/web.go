@@ -16,7 +16,8 @@ import (
 )
 
 // DefaultWebLoginTimeout 浏览器交互登录默认超时。
-const DefaultWebLoginTimeout = 5 * time.Minute
+// 覆盖"打开页面 → 找密码 → 拖滑块 → 提交"全流程，含中途被打断的情况。
+const DefaultWebLoginTimeout = 10 * time.Minute
 
 // WebLoginOptions InteractiveLogin 选项。
 type WebLoginOptions struct {
@@ -78,7 +79,8 @@ func InteractiveLogin(ctx context.Context, opts WebLoginOptions) (*TokenPair, er
 		if err := openBrowser(url); err != nil {
 			fmt.Fprintf(os.Stderr, "无法自动打开浏览器(%v)，请手动访问:\n%s\n", err, url)
 		} else {
-			fmt.Fprintf(os.Stderr, "已打开浏览器: %s\n", url)
+			// 自动打开只是尽力而为（进程拉起不代表窗口弹出），始终给出 URL 兜底。
+			fmt.Fprintf(os.Stderr, "已尝试打开浏览器。若未弹出页面，请手动访问:\n%s\n", url)
 		}
 	} else {
 		fmt.Fprintf(os.Stderr, "请在浏览器打开以下地址完成登录:\n%s\n", url)
@@ -270,12 +272,15 @@ func writeJSON(rw http.ResponseWriter, status int, v any) {
 func openBrowser(url string) error {
 	switch runtime.GOOS {
 	case "windows":
-		// rundll32 优先（不闪 cmd 窗口），cmd /c start 兜底
-		cmd := exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-		if err := cmd.Start(); err == nil {
+		// cmd /c start 优先：start 的第一个引号参数是窗口标题，必须传空串，
+		// 否则 URL 会被当作标题（经典坑）；rundll32 与 explorer 依次兜底。
+		if err := exec.Command("cmd", "/c", "start", "", url).Start(); err == nil {
 			return nil
 		}
-		return exec.Command("cmd", "/c", "start", url).Start()
+		if err := exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start(); err == nil {
+			return nil
+		}
+		return exec.Command("explorer.exe", url).Start()
 	case "darwin":
 		return exec.Command("open", url).Start()
 	default:

@@ -641,7 +641,10 @@ func (s *ExcelService) applyReferenceResults(
 					// 将名称/编码替换为ID
 					// 优先使用配置的 DBField，否则使用自动转换的字段名
 					targetField := s.getTargetFieldForReference(col)
-					data[targetField] = id
+					// 同一 targetField 多列时遵循 first-non-empty-wins（如 deptCode 优先于 deptName）
+					if existing, already := data[targetField]; !already || isEmptyValue(existing) {
+						data[targetField] = id
+					}
 
 					// InfoPoint特殊处理：保留名称字段用于显示
 					// InfoPoint模型有冗余字段（deviceName, portName）用于前端显示
@@ -974,10 +977,11 @@ func (s *ExcelService) prepareRecordsForUpsert(
 		preparedRecord["deleted_at"] = nil // 显式设置为未删除状态
 
 		// ✨ 联动 user_id ↔ status(占用/空闲),Maintain 状态保留
-		// Excel 中的 status 列将被忽略,以 user_id 为准
 		// 仅对 sys_workstation 生效(其他表 status 字段语义不同)
 		if config.TableName == "sys_workstation" {
-			if userID, ok := preparedRecord["user_id"]; ok && userID != nil && fmt.Sprintf("%v", userID) != "" {
+			if currentStatus, ok := preparedRecord["status"].(int); ok && currentStatus == int(models.WorkstationStatusMaintain) {
+				// 用户在 Excel 中明确指定维护状态，保留维护状态不变
+			} else if userID, ok := preparedRecord["user_id"]; ok && userID != nil && fmt.Sprintf("%v", userID) != "" {
 				preparedRecord["status"] = int(models.WorkstationStatusOccupied)
 			} else {
 				preparedRecord["status"] = int(models.WorkstationStatusAvailable)
@@ -1168,19 +1172,46 @@ func (s *ExcelService) validateReferenceFields(
 				continue
 			}
 
-			// 获取目标字段名（如 buildingId）
+			// 获取目标字段名（如 building_id, floor_id）
 			targetField := s.getTargetFieldForReference(col)
 
 			// 检查目标字段是否有值
 			if val, exists := data[targetField]; !exists || val == nil || val == "" {
 				// 必填引用字段解析失败
+				valStr := fmt.Sprintf("%v", data[col.Field])
 				logger.Infof("记录 %d 验证失败: %s (原始值: %v, 目标字段: %s=%v)", i, col.Field, data[col.Field], targetField, val)
 				result.Failed++
+
+				// 检查是否有依赖关系，生成更精准的报错信息
+				errorField := col.Header
+				errorVal := valStr
+				errMsg := fmt.Sprintf("引用的 %s 不存在", col.Header)
+
+				if col.DependsOn != "" {
+					dependsOnCol := s.getColumnByName(col.DependsOn, config)
+					depRawVal, _ := data[dependsOnCol.Field].(string)
+					depTargetField := s.getTargetFieldForReference(dependsOnCol)
+					depID, _ := data[depTargetField].(string)
+
+					if depRawVal != "" && depID == "" {
+						// 用户填了依赖项（如所属楼宇），但楼宇在数据库中不存在
+						errorField = dependsOnCol.Header
+						errorVal = depRawVal
+						errMsg = fmt.Sprintf("引用的 %s 不存在: %s，导致无法定位 %s", dependsOnCol.Header, depRawVal, col.Header)
+					} else if depID == "" {
+						// 用户没有填依赖项（如未填所属楼宇）
+						errMsg = fmt.Sprintf("缺少 %s，引用的 %s 不存在: %s", dependsOnCol.Header, col.Header, valStr)
+					} else {
+						// 楼宇解析成功，但该楼宇下无此楼层
+						errMsg = fmt.Sprintf("引用的 %s 不存在 (%s下未找到: %s)", col.Header, dependsOnCol.Header, valStr)
+					}
+				}
+
 				result.Errors = append(result.Errors, ImportError{
 					Row:   config.StartRow + i + 1, // 实际 Excel 行号（i 从 0 开始，StartRow 从 2 开始）
-					Field: col.Header,
-					Value: fmt.Sprintf("%v", data[col.Field]),
-					Error: fmt.Sprintf("引用的 %s 不存在", col.Header),
+					Field: errorField,
+					Value: errorVal,
+					Error: errMsg,
 				})
 				valid = false
 				break
@@ -1229,9 +1260,12 @@ func normalizeHeader(s string) string {
 // 解析时跳过。同一字段只匹配第一个出现的列, 避免重复。
 // matchedRequired 返回成功匹配的 Required 字段数, 调用方据此判断是否启用按表头匹配。
 func resolveColumnsByHeader(headerCells []string, config ExcelConfig) (effective []ExcelColumn, matchedRequired int) {
-	normalizedConfig := make(map[string]ExcelColumn, len(config.Columns))
+	normalizedConfig := make(map[string]ExcelColumn, len(config.Columns)*3)
 	for _, col := range config.Columns {
 		normalizedConfig[normalizeHeader(col.Header)] = col
+		for _, alias := range col.Aliases {
+			normalizedConfig[normalizeHeader(alias)] = col
+		}
 	}
 
 	effective = make([]ExcelColumn, len(headerCells))

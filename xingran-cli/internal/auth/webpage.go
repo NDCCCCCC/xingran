@@ -128,7 +128,10 @@ $('btn').onclick = function(){
       btn.disabled = false;
       loadCaptcha(); // 失败重试：刷新验证码
     }
-  }).catch(function(e){ setMsg('网络错误：' + e); btn.disabled = false; });
+  }).catch(function(e){
+    setMsg('无法连接本地登录服务（' + e + '）。服务可能已超时关闭——请回到终端重新执行 login --web，本页面请关闭重开。');
+    btn.disabled = false;
+  });
 };
 
 if (PRESET_USER) { $('u').value = PRESET_USER; }

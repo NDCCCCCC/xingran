@@ -38,7 +38,7 @@ type referenceResolverImpl struct {
 // tablesWithoutSoftDelete 不支持软删除的表名列表（没有deleted_at列）
 var tablesWithoutSoftDelete = map[string]bool{
 	"sys_device_port_status": true, // 设备端口状态表（实时采集数据，无需软删除）
-	"sys_dept":                true, // 部门表（无 deleted_at 列，部门管理走 status 字段软启用/停用）
+	"sys_dept":               true, // 部门表（无 deleted_at 列，部门管理走 status 字段软启用/停用）
 }
 
 // ResolveBatch 批量解析引用值
@@ -262,34 +262,168 @@ func (r *referenceResolverImpl) batchQueryIDs(
 		return make(map[string]string), nil
 	}
 
+	const maxBatchChunk = 400 // 防止 SQLite 999 或 PG 参数超限
+
+	// 针对 sys_dept：同时支持按 dept_name（部门名称）和 dept_code（部门代码）双向匹配。
+	//
+	// 优先级按 field 语义隔离，避免「名称命中」与「代码命中」互相污染：
+	//   - field=dept_code → 代码命中为主、名称命中为兜底（用户误把名称填进「部门代码」列仍可导入）
+	//   - field=dept_name → 名称命中为主、代码命中为兜底
+	// 两者共享同一个 idMap，因此「主」必须后写（后写覆盖先写）。
+	if table == "sys_dept" && (field == "dept_name" || field == "dept_code") {
+		type DeptResult struct {
+			ID       string `gorm:"column:id;type:uuid"`
+			DeptName string `gorm:"column:dept_name"`
+			DeptCode string `gorm:"column:dept_code"`
+		}
+		idMap := make(map[string]string)
+		primaryHits := make(map[string]string)  // 主字段命中（按 field 语义）
+		fallbackHits := make(map[string]string) // 另一字段命中（兜底）
+		for i := 0; i < len(values); i += maxBatchChunk {
+			end := i + maxBatchChunk
+			if end > len(values) {
+				end = len(values)
+			}
+			chunk := values[i:end]
+
+			var deptResults []DeptResult
+			query := r.db.WithContext(ctx).Table("sys_dept").
+				Select("id, dept_name, dept_code").
+				Where("dept_name IN ? OR dept_code IN ?", chunk, chunk)
+			if !tablesWithoutSoftDelete["sys_dept"] {
+				query = query.Where("deleted_at IS NULL")
+			}
+			if err := query.Find(&deptResults).Error; err != nil {
+				return nil, err
+			}
+			for _, d := range deptResults {
+				if field == "dept_code" {
+					if d.DeptCode != "" {
+						primaryHits[d.DeptCode] = d.ID
+						primaryHits[strings.TrimSpace(d.DeptCode)] = d.ID
+					}
+					if d.DeptName != "" {
+						fallbackHits[d.DeptName] = d.ID
+						fallbackHits[strings.TrimSpace(d.DeptName)] = d.ID
+					}
+				} else {
+					if d.DeptName != "" {
+						primaryHits[d.DeptName] = d.ID
+						primaryHits[strings.TrimSpace(d.DeptName)] = d.ID
+					}
+					if d.DeptCode != "" {
+						fallbackHits[d.DeptCode] = d.ID
+						fallbackHits[strings.TrimSpace(d.DeptCode)] = d.ID
+					}
+				}
+			}
+		}
+		// 合并：兜底先填，主命中后填 → 主匹配永远优先，且与 DB 返回顺序无关
+		for k, v := range fallbackHits {
+			idMap[k] = v
+		}
+		for k, v := range primaryHits {
+			idMap[k] = v
+		}
+		return idMap, nil
+	}
+
+	// 针对 sys_user：同时支持按 username（登录账号）和 nickname（人员姓名/昵称）双向匹配。
+	//
+	// 优先级同样按 field 语义隔离，避免「账号命中」与「姓名命中」互相污染：
+	//   - field=username → 账号命中为主、姓名命中为兜底
+	//   - field=nickname → 姓名命中为主、账号命中为兜底
+	if table == "sys_user" && (field == "username" || field == "nickname") {
+		type UserResult struct {
+			ID       string `gorm:"column:id;type:uuid"`
+			Username string `gorm:"column:username"`
+			Nickname string `gorm:"column:nickname"`
+		}
+		idMap := make(map[string]string)
+		primaryHits := make(map[string]string)  // 主字段命中（按 field 语义）
+		fallbackHits := make(map[string]string) // 另一字段命中（兜底）
+		for i := 0; i < len(values); i += maxBatchChunk {
+			end := i + maxBatchChunk
+			if end > len(values) {
+				end = len(values)
+			}
+			chunk := values[i:end]
+
+			var userResults []UserResult
+			query := r.db.WithContext(ctx).Table("sys_user").
+				Select("id, username, nickname").
+				Where("username IN ? OR nickname IN ?", chunk, chunk)
+			if !tablesWithoutSoftDelete["sys_user"] {
+				query = query.Where("deleted_at IS NULL")
+			}
+			if err := query.Find(&userResults).Error; err != nil {
+				return nil, err
+			}
+			for _, u := range userResults {
+				if field == "username" {
+					if u.Username != "" {
+						primaryHits[u.Username] = u.ID
+						primaryHits[strings.TrimSpace(u.Username)] = u.ID
+					}
+					if u.Nickname != "" {
+						fallbackHits[u.Nickname] = u.ID
+						fallbackHits[strings.TrimSpace(u.Nickname)] = u.ID
+					}
+				} else {
+					if u.Nickname != "" {
+						primaryHits[u.Nickname] = u.ID
+						primaryHits[strings.TrimSpace(u.Nickname)] = u.ID
+					}
+					if u.Username != "" {
+						fallbackHits[u.Username] = u.ID
+						fallbackHits[strings.TrimSpace(u.Username)] = u.ID
+					}
+				}
+			}
+		}
+		// 合并：兜底先填，主命中后填 → 主匹配永远优先，且与 DB 返回顺序无关
+		for k, v := range fallbackHits {
+			idMap[k] = v
+		}
+		for k, v := range primaryHits {
+			idMap[k] = v
+		}
+		return idMap, nil
+	}
+
 	type Result struct {
 		ID    string `gorm:"column:id;type:uuid"`
 		Value string `gorm:"column:value"`
 	}
 
-	var results []Result
-
-	// 构建查询：SELECT id, {field} FROM {table} WHERE {field} IN (...)
-	query := r.db.WithContext(ctx).
-		Table(table).
-		Select("id, "+field+" as value").
-		Where(field+" IN ?", values)
-
-	// 只对支持软删除的表添加 deleted_at IS NULL 条件
-	if !tablesWithoutSoftDelete[table] {
-		query = query.Where("deleted_at IS NULL")
-	}
-
-	err := query.Find(&results).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	// 转换为 value -> id 映射
 	idMap := make(map[string]string)
-	for _, r := range results {
-		idMap[r.Value] = r.ID
+	for i := 0; i < len(values); i += maxBatchChunk {
+		end := i + maxBatchChunk
+		if end > len(values) {
+			end = len(values)
+		}
+		chunk := values[i:end]
+
+		var results []Result
+		// 构建查询：SELECT id, {field} FROM {table} WHERE {field} IN (...)
+		query := r.db.WithContext(ctx).
+			Table(table).
+			Select("id, "+field+" as value").
+			Where(field+" IN ?", chunk)
+
+		// 只对支持软删除的表添加 deleted_at IS NULL 条件
+		if !tablesWithoutSoftDelete[table] {
+			query = query.Where("deleted_at IS NULL")
+		}
+
+		if err := query.Find(&results).Error; err != nil {
+			return nil, err
+		}
+
+		// 转换为 value -> id 映射
+		for _, r := range results {
+			idMap[r.Value] = r.ID
+		}
 	}
 
 	return idMap, nil

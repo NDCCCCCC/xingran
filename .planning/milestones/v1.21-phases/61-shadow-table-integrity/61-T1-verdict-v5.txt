@@ -1,6 +1,0 @@
-﻿=== UAT61 Test1 v5 analysis 2026-10-22 08:19:06 ===
-parsed samples: 3025
-first: 07:24:31.291  last: 08:17:59.931
-member_count distribution: 2815x3025
-distinct_groups distribution: 59x3025
-VERDICT: NO GAP OBSERVED - all 2815 samples stable
