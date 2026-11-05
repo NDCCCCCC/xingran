@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -120,6 +121,93 @@ func TestStoreEnvOverride(t *testing.T) {
 		got, err := st.Load(nil)
 		if err != nil || got == nil || got.AccessToken != "b" {
 			t.Fatalf("回读失败: %+v err=%v", got, err)
+		}
+	})
+}
+
+// TestStoreSaveErrorPaths 覆盖 Save 的三个失败分支：
+// 目录创建失败、临时文件写入失败、最终 rename 失败。
+// 企业环境被安全软件拦截时正是走这些分支，错误信息必须带可操作建议。
+func TestStoreSaveErrorPaths(t *testing.T) {
+	pair := TokenPair{AccessToken: "x", RefreshToken: "y", ExpiresIn: 60}
+
+	t.Run("目录创建失败", func(t *testing.T) {
+		dir := t.TempDir()
+		// 用一个已存在的普通文件占住本该是目录的位置 → MkdirAll 失败
+		blocker := filepath.Join(dir, "blocker")
+		if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		st := &FileTokenStore{Path: filepath.Join(blocker, "sub", "tokens.json")}
+		err := st.Save(nil, pair)
+		if err == nil {
+			t.Fatal("期望目录创建失败，实际成功")
+		}
+		if !strings.Contains(err.Error(), "创建 token 目录") ||
+			!strings.Contains(err.Error(), EnvTokenFile) {
+			t.Fatalf("错误信息应含路径与 %s 建议，实际: %v", EnvTokenFile, err)
+		}
+	})
+
+	t.Run("临时文件写入失败", func(t *testing.T) {
+		dir := t.TempDir()
+		// 预先用目录占住 <path>.tmp，使 WriteFile 失败
+		if err := os.MkdirAll(filepath.Join(dir, "tokens.json.tmp"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		st := &FileTokenStore{Path: filepath.Join(dir, "tokens.json")}
+		err := st.Save(nil, pair)
+		if err == nil {
+			t.Fatal("期望写入失败，实际成功")
+		}
+		if !strings.Contains(err.Error(), "写入 token 文件") ||
+			!strings.Contains(err.Error(), EnvTokenFile) {
+			t.Fatalf("错误信息应含 %s 建议，实际: %v", EnvTokenFile, err)
+		}
+	})
+
+	t.Run("rename 失败", func(t *testing.T) {
+		dir := t.TempDir()
+		// 目标路径被一个非空目录占住 → rename 失败
+		target := filepath.Join(dir, "tokens.json")
+		if err := os.MkdirAll(filepath.Join(target, "inner"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		st := &FileTokenStore{Path: target}
+		err := st.Save(nil, pair)
+		if err == nil {
+			t.Fatal("期望 rename 失败，实际成功")
+		}
+		if !strings.Contains(err.Error(), "落盘 token 文件") ||
+			!strings.Contains(err.Error(), EnvTokenFile) {
+			t.Fatalf("错误信息应含 %s 建议，实际: %v", EnvTokenFile, err)
+		}
+	})
+}
+
+// TestStoreClearAndLoadErrorPaths 覆盖 Clear 的删除失败分支与 Load 的非 NotExist 错误分支。
+func TestStoreClearAndLoadErrorPaths(t *testing.T) {
+	dir := t.TempDir()
+
+	t.Run("Clear 删除非空目录失败", func(t *testing.T) {
+		target := filepath.Join(dir, "clear-dir")
+		if err := os.MkdirAll(filepath.Join(target, "inner"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		st := &FileTokenStore{Path: target}
+		if err := st.Clear(nil); err == nil {
+			t.Fatal("期望删除非空目录失败，实际成功")
+		}
+	})
+
+	t.Run("Load 读取目录报错", func(t *testing.T) {
+		target := filepath.Join(dir, "load-dir")
+		if err := os.MkdirAll(target, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		st := &FileTokenStore{Path: target}
+		if _, err := st.Load(nil); err == nil {
+			t.Fatal("期望读取目录报错，实际成功")
 		}
 	})
 }

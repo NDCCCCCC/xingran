@@ -1,4 +1,4 @@
-module github.com/xingran-next/ruoyi-go-backend/xingran-cli
+module github.com/xingran-next/xingran-go-backend/xingran-cli
 
 go 1.24.0
 

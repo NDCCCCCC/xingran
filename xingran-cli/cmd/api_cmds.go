@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/client"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/output"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/client"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/output"
 )
 
 func newAPICmd() *cobra.Command {

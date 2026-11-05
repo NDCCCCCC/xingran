@@ -163,6 +163,134 @@ func TestWebLoginUsesShownCaptcha(t *testing.T) {
 	}
 }
 
+// TestWebLoginModeInference 无 mode 字段时（旧版页面兼容），按请求体内容推断验证码模式。
+func TestWebLoginModeInference(t *testing.T) {
+	t.Run("有 sliderX 推断 slider", func(t *testing.T) {
+		req := newMockRequester()
+		req.routes["/system/auth/captcha"] = req.ok(CaptchaInfo{
+			CaptchaID: "cap-i", CaptchaType: "slider", Token: "tk-i",
+			SliderImg: "data:image/png;base64,AA", PieceImg: "data:image/png;base64,BB", YPos: 10,
+		})
+		req.routes["/system/auth/captcha/verify/slider"] = req.ok(map[string]any{"success": true})
+		req.routes[loginPath] = req.ok(loginResponseData())
+		w, ts := newTestWebServer(req)
+		defer ts.Close()
+
+		code, out := webPostJSON(ts, "/login?", w.token, map[string]any{
+			"username": "admin", "password": "pw", "sliderX": 88,
+		})
+		if code != 200 || out["ok"] != true {
+			t.Fatalf("推断 slider 后登录应成功: %d %v", code, out)
+		}
+		if vb := req.lastBody("/system/auth/captcha/verify/slider"); vb["xPos"] != float64(88) {
+			t.Fatalf("应按 sliderX 校验: %+v", vb)
+		}
+	})
+
+	t.Run("有 code 推断 normal", func(t *testing.T) {
+		req := newMockRequester()
+		req.routes["/system/auth/captcha"] = req.ok(CaptchaInfo{
+			CaptchaID: "cap-n", CaptchaType: "normal", CaptchaImg: "data:image/png;base64,CC",
+		})
+		req.routes[loginPath] = req.ok(loginResponseData())
+		w, ts := newTestWebServer(req)
+		defer ts.Close()
+
+		code, out := webPostJSON(ts, "/login?", w.token, map[string]any{
+			"username": "admin", "password": "pw", "code": "A1B2",
+		})
+		if code != 200 || out["ok"] != true {
+			t.Fatalf("推断 normal 后登录应成功: %d %v", code, out)
+		}
+	})
+}
+
+// TestWebLoginValidationErrors 覆盖 sliderX 缺失、code 缺失、凭据回退等分支。
+func TestWebLoginValidationErrors(t *testing.T) {
+	t.Run("slider 缺 sliderX", func(t *testing.T) {
+		req := newMockRequester()
+		req.routes[loginPath] = req.ok(loginResponseData())
+		w, ts := newTestWebServer(req)
+		defer ts.Close()
+
+		code, out := webPostJSON(ts, "/login?", w.token, map[string]any{
+			"username": "admin", "password": "pw", "mode": "slider", "captchaId": "c", "token": "t",
+		})
+		if code != http.StatusBadRequest || !strings.Contains(out["error"].(string), "拖动拼图") {
+			t.Fatalf("应提示先拖动拼图: %d %v", code, out)
+		}
+	})
+
+	t.Run("normal 缺 code", func(t *testing.T) {
+		req := newMockRequester()
+		req.routes[loginPath] = req.ok(loginResponseData())
+		w, ts := newTestWebServer(req)
+		defer ts.Close()
+
+		code, out := webPostJSON(ts, "/login?", w.token, map[string]any{
+			"username": "admin", "password": "pw", "mode": "normal",
+		})
+		if code != http.StatusBadRequest || !strings.Contains(out["error"].(string), "验证码字符") {
+			t.Fatalf("应提示输入验证码: %d %v", code, out)
+		}
+	})
+
+	t.Run("slider 凭据缺失回退 FetchCaptcha", func(t *testing.T) {
+		req := newMockRequester()
+		req.routes["/system/auth/captcha"] = req.ok(CaptchaInfo{
+			CaptchaID: "cap-fb", CaptchaType: "slider", Token: "tk-fb",
+			SliderImg: "data:image/png;base64,AA", PieceImg: "data:image/png;base64,BB", YPos: 5,
+		})
+		req.routes["/system/auth/captcha/verify/slider"] = req.ok(map[string]any{"success": true})
+		req.routes[loginPath] = req.ok(loginResponseData())
+		w, ts := newTestWebServer(req)
+		defer ts.Close()
+
+		// 不给 captchaId/token，触发回退
+		code, out := webPostJSON(ts, "/login?", w.token, map[string]any{
+			"username": "admin", "password": "pw", "mode": "slider", "sliderX": 100,
+		})
+		if code != 200 || out["ok"] != true {
+			t.Fatalf("回退后登录应成功: %d %v", code, out)
+		}
+		if vb := req.lastBody("/system/auth/captcha/verify/slider"); vb["captchaId"] != "cap-fb" {
+			t.Fatalf("回退应使用新拉取的 captchaId: %+v", vb)
+		}
+	})
+
+	t.Run("normal 凭据缺失回退 FetchCaptcha", func(t *testing.T) {
+		req := newMockRequester()
+		req.routes["/system/auth/captcha"] = req.ok(CaptchaInfo{
+			CaptchaID: "cap-fbn", CaptchaType: "normal", CaptchaImg: "data:image/png;base64,CC",
+		})
+		req.routes[loginPath] = req.ok(loginResponseData())
+		w, ts := newTestWebServer(req)
+		defer ts.Close()
+
+		code, out := webPostJSON(ts, "/login?", w.token, map[string]any{
+			"username": "admin", "password": "pw", "mode": "normal", "code": "ZX99",
+		})
+		if code != 200 || out["ok"] != true {
+			t.Fatalf("回退后登录应成功: %d %v", code, out)
+		}
+	})
+
+	t.Run("回退时验证码获取失败", func(t *testing.T) {
+		req := newMockRequester()
+		// 未注册 /system/auth/captcha → mock 返回错误
+		req.routes[loginPath] = req.ok(loginResponseData())
+		w, ts := newTestWebServer(req)
+		defer ts.Close()
+
+		code, out := webPostJSON(ts, "/login?", w.token, map[string]any{
+			"username": "admin", "password": "pw", "mode": "slider", "sliderX": 100,
+		})
+		if code != http.StatusBadGateway || !strings.Contains(out["error"].(string), "刷新页面") {
+			t.Fatalf("应提示刷新页面: %d %v", code, out)
+		}
+	})
+}
+
 func TestWebLoginCaptchaRetry(t *testing.T) {
 	req := newMockRequester()
 	req.routes["/system/auth/captcha"] = req.ok(map[string]any{})

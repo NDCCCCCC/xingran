@@ -4,7 +4,7 @@ package main
 import (
 	"os"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/cmd"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/cmd"
 )
 
 func main() {

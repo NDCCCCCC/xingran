@@ -7,9 +7,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/auth"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/client"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/crypto"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/auth"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/client"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/crypto"
 )
 
 // login flag 值（支持非交互回填，agent 友好）。

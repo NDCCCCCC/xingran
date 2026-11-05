@@ -62,6 +62,16 @@ jobs:
           go test -timeout 15m -count=1 -coverprofile=coverage.out -covermode=atomic \
             ./internal/... ./pkg/... ./cmd/...
 
+      - name: Test xingran-cli (submodule)
+        # xingran-cli 是独立 go.mod 子模块，上面的 ./internal/... 扫不到它。
+        # 它的 coverage 单独产出（cli-coverage.out），供 coverage-diff job 合并：
+        # 不能直接并入 coverage.out，因为 CLI 含大量零覆盖的生成代码
+        # （cmd/*_cmds.go），会拉低本 job 的加权总覆盖率门禁。
+        run: |
+          cd xingran-cli
+          go test -timeout 10m -count=1 -coverprofile=cli-coverage.out -covermode=atomic ./...
+          mv cli-coverage.out ..
+
       - name: Coverage HTML report
         # GOV-01: human-readable HTML for browser inspection on the artifact
         # page. if: always() so a gate failure later does not block this step
@@ -88,6 +98,7 @@ jobs:
           path: |
             coverage.out
             coverage.html
+            cli-coverage.out
           retention-days: 30
 
   coverage-diff:
@@ -113,6 +124,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: backend-coverage
+
+      - name: Merge xingran-cli coverage
+        # CLI 是独立 go.mod 子模块，其覆盖记录不在 coverage.out 里。
+        # 不合并的话，CLI 的改动行会被 diff gate 判为「未覆盖」（GOV-03 误伤）。
+        # 合并后路径天然可被脚本的 MODULE 前缀剥离：
+        #   <root module>/xingran-cli/internal/... → xingran-cli/internal/...
+        run: |
+          if [ -f cli-coverage.out ]; then
+            grep -v '^mode:' cli-coverage.out >> coverage.out
+            echo "merged $(wc -l < cli-coverage.out) CLI coverage lines"
+          else
+            echo "cli-coverage.out absent — skipping merge"
+          fi
 
       - name: Diff coverage gate (≥80%)
         # Exit 1 when <80% of changed executable .go lines are covered.

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/auth"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/crypto"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/auth"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/crypto"
 )
 
 // WebLoginOptions 交互式浏览器登录选项（镜像 auth.WebLoginOptions 约定签名，

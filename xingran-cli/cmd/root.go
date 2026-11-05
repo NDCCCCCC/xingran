@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/client"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/output"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/client"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/output"
 )
 
 // 版本信息（构建时可通过 -ldflags 注入）。

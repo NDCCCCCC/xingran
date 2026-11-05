@@ -5,7 +5,7 @@
 ## 技术选型
 - Go 1.24，复用后端仓库（本仓库）`pkg/crypto`（tjfoc/gmsm SM2/SM3/SM4）
 - 命令框架：cobra；输出：结构化 JSON（默认非 TTY）/ 人类可读（TTY）
-- 模块路径：`github.com/xingran-next/ruoyi-go-backend/xingran-cli/...`（以 go.mod 实际为准）
+- 模块路径：`github.com/xingran-next/xingran-go-backend/xingran-cli/...`（以 go.mod 实际为准）
 
 ## 模块划分与写权限（互斥）
 | 目录 | 负责人 | 内容 |

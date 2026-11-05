@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/client"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/client"
 )
 
 func resp(code int, msg, reqID string) client.Response {

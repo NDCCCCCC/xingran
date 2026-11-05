@@ -6,7 +6,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/commands"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/commands"
 )
 
 // SystemEndpoints system 模块端点元数据（180 端点）。

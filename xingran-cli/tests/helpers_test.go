@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/auth"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/auth"
 )
 
 // tempTokenPath 每个测试独立的 token 存储路径（互不污染真实 ~/.xingran-cli）。

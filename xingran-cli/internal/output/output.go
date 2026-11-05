@@ -14,8 +14,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/auth"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/client"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/auth"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/client"
 )
 
 // 语义化退出码。

@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/auth"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/auth"
 )
 
 // Encryptor 契约接口（由 internal/crypto 实现，本包只依赖接口）。
