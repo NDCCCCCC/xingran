@@ -26,6 +26,34 @@ func newMockRateLimitProvider() *mockRateLimitProvider {
 	}
 }
 
+// virtualClock 让「分钟/小时窗口滑动」类测试推进虚拟时间，而不必真睡 61 秒。
+// 生产代码通过包级变量 timeNow 取时（默认 time.Now）；本辅助在测试期间
+// 临时替换它，t.Cleanup 恢复，且本包测试未使用 t.Parallel，无并发竞争。
+type virtualClock struct {
+	mu      sync.Mutex
+	current time.Time
+}
+
+func useVirtualClock(t *testing.T) *virtualClock {
+	t.Helper()
+	vc := &virtualClock{current: time.Now()}
+	prev := timeNow
+	timeNow = func() time.Time {
+		vc.mu.Lock()
+		defer vc.mu.Unlock()
+		return vc.current
+	}
+	t.Cleanup(func() { timeNow = prev })
+	return vc
+}
+
+// advance 把虚拟时钟向前推进 d（等价于原测试的 time.Sleep(d)）。
+func (vc *virtualClock) advance(d time.Duration) {
+	vc.mu.Lock()
+	defer vc.mu.Unlock()
+	vc.current = vc.current.Add(d)
+}
+
 // GetRateLimit 实现 RateLimitProvider 接口
 // key 形态: rate_limit.<scope>.<per_minute|per_hour|per_day>
 func (m *mockRateLimitProvider) GetRateLimit(key string, defaultValue int) int {
@@ -176,6 +204,8 @@ func TestRateLimiter_Check(t *testing.T) {
 
 // TestRateLimiter_SlidingWindow 测试滑动窗口
 func TestRateLimiter_SlidingWindow(t *testing.T) {
+	vc := useVirtualClock(t)
+	_ = vc // 由下方 advance 调用
 	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("分钟级窗口", func(t *testing.T) {
@@ -192,8 +222,8 @@ func TestRateLimiter_SlidingWindow(t *testing.T) {
 		allowed, _ := limiter.Check(key, scope)
 		assert.False(t, allowed, "31st request should be denied")
 
-		// 等待超过1分钟后，窗口应该滑动
-		time.Sleep(61 * time.Second)
+		// 推进虚拟时钟超过 1 分钟后，窗口应该滑动
+		vc.advance(61 * time.Second)
 
 		// 新请求应该被允许
 		allowed, _ = limiter.Check(key, scope)
@@ -245,8 +275,8 @@ func TestRateLimiter_SlidingWindow(t *testing.T) {
 		allowed, _ := limiter.Check(key, scope)
 		assert.False(t, allowed, "Request should be denied when window is full")
 
-		// 等待超过1分钟
-		time.Sleep(61 * time.Second)
+		// 推进虚拟时钟超过 1 分钟
+		vc.advance(61 * time.Second)
 
 		// 新请求应该被允许（窗口已滑动）
 		allowed, _ = limiter.Check(key, scope)
@@ -283,6 +313,8 @@ func TestRateLimiter_SlidingWindow(t *testing.T) {
 
 // TestRateLimiter_Cleanup 测试自动清理过期条目
 func TestRateLimiter_Cleanup(t *testing.T) {
+	vc := useVirtualClock(t)
+	_ = vc // 由下方 advance 调用
 	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("自动清理过期条目", func(t *testing.T) {
@@ -294,8 +326,8 @@ func TestRateLimiter_Cleanup(t *testing.T) {
 			limiter.Check(key, scope)
 		}
 
-		// 等待超过1分钟，让条目过期
-		time.Sleep(61 * time.Second)
+		// 推进虚拟时钟超过 1 分钟，让条目过期
+		vc.advance(61 * time.Second)
 
 		// 发送新请求，应该清理过期条目
 		allowed, result := limiter.Check(key, scope)
@@ -312,8 +344,8 @@ func TestRateLimiter_Cleanup(t *testing.T) {
 			limiter.Check(key, scope)
 		}
 
-		// 等待超过1分钟
-		time.Sleep(61 * time.Second)
+		// 推进虚拟时钟超过 1 分钟
+		vc.advance(61 * time.Second)
 
 		// 清理后，计数应该从1开始（不是从51开始）
 		_, result := limiter.Check(key, scope)
@@ -329,8 +361,8 @@ func TestRateLimiter_Cleanup(t *testing.T) {
 			limiter.Check(key, scope)
 		}
 
-		// 等待条目过期
-		time.Sleep(61 * time.Second)
+		// 推进虚拟时钟让条目过期
+		vc.advance(61 * time.Second)
 
 		// 再次检查，应该清理过期条目
 		_, result := limiter.Check("leak-test-key", "read")
@@ -393,6 +425,8 @@ func TestRateLimiter_MultipleKeys(t *testing.T) {
 
 // TestRateLimiter_Reset 测试窗口重置
 func TestRateLimiter_Reset(t *testing.T) {
+	vc := useVirtualClock(t)
+	_ = vc // 由下方 advance 调用
 	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("窗口重置后重新计数", func(t *testing.T) {
@@ -408,8 +442,8 @@ func TestRateLimiter_Reset(t *testing.T) {
 		allowed, _ := limiter.Check(key, scope)
 		assert.False(t, allowed, "Request should be denied before reset")
 
-		// 等待窗口重置
-		time.Sleep(61 * time.Second)
+		// 推进虚拟时钟让窗口重置
+		vc.advance(61 * time.Second)
 
 		// 新请求应该被允许，计数重新开始
 		for i := 0; i < 30; i++ {

@@ -7,6 +7,15 @@
 # pattern: pre-push should catch it first, IDE should surface it inline,
 # and only if both are bypassed does CI catch it.
 
+# 2026-11-05 修复：原 `npm run test` = `vitest`（交互式 watch 模式），
+# 在 CI 非 TTY 环境下挂起等待输入，导致本 job 每次跑满 15 分钟超时被杀。
+# 改为 `npm run test -- --run`（等价于 `vitest run`），与 package.json 的
+# `verify` 脚本一致。同时把 actions 升到 v7、对齐依赖安装参数、补 format:check、
+# 超时放宽到 20 分钟留余量。
+#
+# 与 ci.yml / frontend 的分工：ci.yml 覆盖 format:check + lint + type-check + build
+# （必需检查）；本 workflow 额外跑 lint:ci 的 7 个治理脚本与全量 vitest run。
+
 name: frontend-build
 
 on:
@@ -18,17 +27,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # vitest 全量单测本地约 2-5 分钟；原 15 分钟是被 watch 模式耗尽，
+    # 修复后正常远低于此，放宽到 20 分钟留余量。
+    timeout-minutes: 20
 
     defaults:
       run:
         working-directory: xingran-react-frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           # Pin to current LTS. Never use 'latest' — non-reproducible CI
           # is a CI smell. Bump in a deliberate commit when EOL approaches.
@@ -36,19 +47,29 @@ jobs:
           # Caches ~/.npm keyed on package-lock.json. Do NOT cache
           # node_modules directly — it is architecture-dependent and not
           # safely cacheable across runners.
+          # 仓库根目录无 package-lock.json，必须显式指向前端子目录。
           cache: 'npm'
+          cache-dependency-path: xingran-react-frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        # 与 ci.yml / frontend 保持一致（仓库存在 peer 依赖冲突）。
+        run: npm ci --legacy-peer-deps
+
+      - name: Format check
+        run: npm run format:check
 
       - name: Lint (lint:ci)
+        # lint:ci 在 eslint 之外还跑 7 个治理脚本，是本 workflow 相对
+        # ci.yml / frontend 的增量价值，保留。
         run: npm run lint:ci
 
       - name: Type check
         run: npm run type-check
 
       - name: Test
-        run: npm run test
+        # --run 显式禁用 watch 模式；`npm run test` 直接跑会挂起（见文件头）。
+        # 与 `npm run verify` 里的 `vitest run` 等价。
+        run: npm run test -- --run
 
       - name: Build
         run: npm run build

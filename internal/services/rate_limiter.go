@@ -30,6 +30,14 @@ type rateLimitWindow struct {
 	mu     sync.Mutex  // 互斥锁
 }
 
+// timeNow 返回当前时间。抽成包级变量是为了让涉及「分钟/小时窗口滑动」的
+// 测试可以推进虚拟时钟，而不必 time.Sleep(61s) 真等一分钟 —— 生产行为
+// 完全不变（默认就是 time.Now），测试里临时替换后再恢复。
+//
+// 并发说明：测试通过 t.Cleanup 恢复，且各测试不并行（本包测试未使用
+// t.Parallel），因此不存在跨测试竞争。
+var timeNow = time.Now
+
 // RateLimiter 速率限制器
 //
 // Phase 61 QUAL-03 / D-18: 移除硬编码 limits map,改为从 RateLimitProvider
@@ -129,7 +137,7 @@ func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) 
 	window.mu.Lock()
 	defer window.mu.Unlock()
 
-	now := time.Now()
+	now := timeNow()
 
 	// 清理过期条目
 	window.minute = rl.cleanOlderThan(window.minute, now.Add(-time.Minute))
@@ -250,7 +258,7 @@ func (rl *RateLimiter) calculateRemaining(limit RateLimit, minuteCount, hourCoun
 // 分钟路径传 time.Minute,小时路径传 time.Hour,天路径传 24*time.Hour。
 func (rl *RateLimiter) calculateReset(times []time.Time, window time.Duration) time.Time {
 	if len(times) == 0 {
-		return time.Now()
+		return timeNow()
 	}
 
 	// 返回最早的时间点 + 对应窗口时长(窗口内最早记录滑出的时刻)
