@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -31,6 +32,7 @@ var (
 	flagWait    time.Duration // --wait：单请求超时预算（agent 友好语义，留接口）
 	flagNoColor bool          // 预留：TTY 下禁用着色
 	flagNoTTY   bool          // 强制 JSON 输出（等价非 TTY 行为）
+	flagFormat  string        // --format / -o：输出格式（json / table / csv / yaml）
 )
 
 // silentError 表示输出已由 output.Emit 完成，Execute 只需透传退出码。
@@ -59,6 +61,23 @@ func isTTY() bool {
 	return term.IsTerminal(int(os.Stdout.Fd()))
 }
 
+// readStdinIfAvailable 如果 stdin 不是终端（说明来自管道或者文件重定向），则读取全部内容返回。
+func readStdinIfAvailable() ([]byte, bool) {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return nil, false
+	}
+	// 模式有管道输入或者普通文件重定向时
+	if (fi.Mode() & (os.ModeCharDevice | os.ModeNamedPipe)) == os.ModeNamedPipe || (fi.Mode()&os.ModeType == 0 && fi.Size() > 0) {
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return nil, false
+		}
+		return data, true
+	}
+	return nil, false
+}
+
 // runResult 一次命令执行的产物。raw=true 时 result 为纯文本（如 --format text），
 // 直接写 stdout，不经 JSON 编码。
 type runResult struct {
@@ -77,7 +96,7 @@ func runE(fn func(ctx context.Context, cmd *cobra.Command, args []string) runRes
 				return nil
 			}
 		}
-		code := output.Emit(r.result, r.err, os.Stdout, os.Stderr, isTTY())
+		code := output.EmitWithFormat(r.result, r.err, os.Stdout, os.Stderr, isTTY(), flagFormat)
 		if code != output.ExitOK {
 			return &silentError{code: code}
 		}
@@ -128,6 +147,7 @@ func newRootCmd() *cobra.Command {
 		"单请求超时预算，如 30s / 2m")
 	pf.BoolVar(&flagNoColor, "no-color", false, "禁用着色输出")
 	pf.BoolVar(&flagNoTTY, "no-tty", false, "强制 JSON 输出（等价非 TTY 行为）")
+	pf.StringVarP(&flagFormat, "format", "o", "", "输出格式: json / table / csv / yaml（默认按环境自动判断）")
 
 	root.AddCommand(
 		newLoginCmd(),

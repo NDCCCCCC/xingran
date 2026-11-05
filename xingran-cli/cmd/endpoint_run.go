@@ -27,7 +27,19 @@ func runEndpoint(ctx context.Context, m *commands.EndpointMeta, flags map[string
 	}
 
 	path := commands.RenderPath(m.APIPath, m.PathArgs, pathVals)
-	body := commands.BuildBody(flags, m.Flags)
+	bodyMap := commands.BuildBody(flags, m.Flags)
+	var finalBody any = bodyOrNil(bodyMap)
+
+	// 如果没有在命令行显式提供 flag 参数，且标准输入存在管道或重定向输入，自动作为整体 body
+	if len(bodyMap) == 0 && m.Kind != commands.KindUpload {
+		if stdinData, ok := readStdinIfAvailable(); ok && len(stdinData) > 0 {
+			if !json.Valid(stdinData) {
+				return nil, argError("从标准输入读取的内容不是合法 JSON")
+			}
+			finalBody = json.RawMessage(stdinData)
+		}
+	}
+
 	c := newClient(ctx)
 
 	// 按端点类型分流（M8）：multipart 上传 / 二进制下载 / 普通 JSON
@@ -52,6 +64,8 @@ func runEndpoint(ctx context.Context, m *commands.EndpointMeta, flags map[string
 		jsonBody := "{}"
 		if b, ok := flags["body"].(string); ok && b != "" {
 			jsonBody = b
+		} else if raw, ok := finalBody.(json.RawMessage); ok {
+			jsonBody = string(raw)
 		}
 		saved, err := c.DoDownload(ctx, path, jsonBody, out, m.Method)
 		if err != nil {
@@ -61,14 +75,14 @@ func runEndpoint(ctx context.Context, m *commands.EndpointMeta, flags map[string
 	}
 
 	if flagDryRun {
-		dr, err := c.DryRun(ctx, m.Method, path, bodyOrNil(body))
+		dr, err := c.DryRun(ctx, m.Method, path, finalBody)
 		if err != nil {
 			return nil, err
 		}
 		return map[string]any{"dry_run": true, "command": endpointCommandName(m), "request": dr}, nil
 	}
 
-	resp, err := c.Do(ctx, m.Method, path, bodyOrNil(body))
+	resp, err := c.Do(ctx, m.Method, path, finalBody)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +91,7 @@ func runEndpoint(ctx context.Context, m *commands.EndpointMeta, flags map[string
 
 // emitEndpoint 统一输出与退出码（复用 output.Emit 与 silentError 约定）。
 func emitEndpoint(result any, err error) error {
-	code := output.Emit(result, err, os.Stdout, os.Stderr, isTTY())
+	code := output.EmitWithFormat(result, err, os.Stdout, os.Stderr, isTTY(), flagFormat)
 	if code != output.ExitOK {
 		return &silentError{code: code}
 	}

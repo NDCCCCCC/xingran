@@ -135,3 +135,48 @@ func TestEmitNilResult(t *testing.T) {
 		t.Fatalf("out = %q", out.String())
 	}
 }
+
+func TestEmitFormats(t *testing.T) {
+	data := map[string]any{
+		"code": 0,
+		"data": map[string]any{
+			"list": []map[string]any{
+				{"id": "1", "name": "alice", "status": 0},
+				{"id": "2", "name": "bob", "status": 1},
+			},
+			"total": 2,
+		},
+	}
+
+	// 1. YAML
+	var yamlOut, errOut bytes.Buffer
+	code := EmitWithFormat(data, nil, &yamlOut, &errOut, false, "yaml")
+	if code != ExitOK {
+		t.Fatalf("code = %d", code)
+	}
+	if !strings.Contains(yamlOut.String(), "name: alice") {
+		t.Fatalf("yaml should contain alice: %s", yamlOut.String())
+	}
+
+	// 2. CSV
+	var csvOut bytes.Buffer
+	code = EmitWithFormat(data, nil, &csvOut, &errOut, false, "csv")
+	if code != ExitOK {
+		t.Fatalf("code = %d", code)
+	}
+	csvStr := csvOut.String()
+	if !strings.Contains(csvStr, "id") || !strings.Contains(csvStr, "alice") || !strings.Contains(csvStr, "bob") {
+		t.Fatalf("csv invalid: %s", csvStr)
+	}
+
+	// 3. Table
+	var tableOut bytes.Buffer
+	code = EmitWithFormat(data, nil, &tableOut, &errOut, false, "table")
+	if code != ExitOK {
+		t.Fatalf("code = %d", code)
+	}
+	tblStr := tableOut.String()
+	if !strings.Contains(tblStr, "alice") || !strings.Contains(tblStr, "bob") || !strings.Contains(tblStr, "---") {
+		t.Fatalf("table invalid: %s", tblStr)
+	}
+}

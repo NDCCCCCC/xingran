@@ -1,18 +1,17 @@
-// Package output 负责命令行输出的统一格式化与语义化退出码。
-//
-// 规则：
-//   - 非 TTY（管道 / agent 调用）：纯 JSON 输出，不染色、不交互；
-//     成功结果 JSON → stdout，错误 JSON → stderr。
-//   - TTY：人类可读输出。
-//   - 退出码：0 成功 / 1 网络错误 / 2 认证失败 / 3 参数错误 / 4 权限不足 / 5 其他。
 package output
 
 import (
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
+	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/auth"
 	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/client"
@@ -26,6 +25,14 @@ const (
 	ExitParam     = 3 // 参数错误（本地参数不合法或服务端 400 / 1001）
 	ExitForbidden = 4 // 权限不足（403）
 	ExitOther     = 5 // 其他业务/未知错误
+)
+
+// 支持的输出格式
+const (
+	FormatJSON  = "json"
+	FormatTable = "table"
+	FormatCSV   = "csv"
+	FormatYAML  = "yaml"
 )
 
 // exitError 由 cmd 层包装"未触达服务端"的本地错误，
@@ -58,20 +65,38 @@ type ErrorJSON struct {
 }
 
 // Emit 将一次命令执行的结果写入对应流并返回退出码。
-//
-// result 非 nil 且 err == nil 时视为成功；否则按 err 分类输出错误并给退出码。
-// tty 决定 JSON（非 TTY）或人类可读（TTY）格式。
+// 兼容旧签名：默认按 format="json" (或 tty 下人类可读)。
 func Emit(result any, err error, stdout, stderr io.Writer, tty bool) int {
+	return EmitWithFormat(result, err, stdout, stderr, tty, "")
+}
+
+// EmitWithFormat 将一次命令执行的结果按指定 format 写入对应流并返回退出码。
+// format 支持: json, table, csv, yaml。若为空则按 tty 默认 json/human。
+func EmitWithFormat(result any, err error, stdout, stderr io.Writer, tty bool, format string) int {
 	if err == nil {
-		return emitSuccess(result, stdout, tty)
+		return emitSuccess(result, stdout, tty, format)
 	}
 	return emitError(err, stderr, tty)
 }
 
-func emitSuccess(result any, stdout io.Writer, tty bool) int {
+func emitSuccess(result any, stdout io.Writer, tty bool, format string) int {
 	if result == nil {
 		result = struct{}{}
 	}
+
+	format = strings.ToLower(strings.TrimSpace(format))
+	switch format {
+	case FormatYAML, "yml":
+		return writeYAML(stdout, result)
+	case FormatCSV:
+		return writeCSV(stdout, result)
+	case FormatTable:
+		return writeTable(stdout, result)
+	case FormatJSON:
+		return writeJSON(stdout, result, ExitOK)
+	}
+
+	// 未显式指定 format 时按原规则：tty 输出人类可读缩进 JSON，非 tty 输出单行 JSON
 	if tty {
 		writeHuman(stdout, result)
 		return ExitOK
@@ -149,12 +174,211 @@ func writeJSON(w io.Writer, v any, exitCode int) int {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(v); err != nil {
-		// 编码失败极罕见（如不可序列化类型），兜底输出简单 JSON。
 		fmt.Fprintf(w, "{\"code\":-1,\"message\":\"internal encode error: %s\",\"exit_code\":%d}\n",
 			err.Error(), ExitOther)
 		return ExitOther
 	}
 	return exitCode
+}
+
+func writeYAML(w io.Writer, v any) int {
+	enc := yaml.NewEncoder(w)
+	enc.SetIndent(2)
+	defer enc.Close()
+	if err := enc.Encode(v); err != nil {
+		fmt.Fprintf(w, "internal yaml encode error: %s\n", err.Error())
+		return ExitOther
+	}
+	return ExitOK
+}
+
+// extractRows 递归或从 response/map 中抽取出可用于表格/CSV 显示的对象切片
+func extractRows(v any) []map[string]any {
+	// 优先利用 JSON 转换为通用 map / slice
+	var raw any
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil
+	}
+	_ = json.Unmarshal(b, &raw)
+
+	// 如果顶层是 client.Response 形式 { "code": 0, "data": ... }
+	if m, ok := raw.(map[string]any); ok {
+		if data, exists := m["data"]; exists && data != nil {
+			if subRows := extractRows(data); len(subRows) > 0 {
+				return subRows
+			}
+		}
+		if list, exists := m["list"]; exists && list != nil {
+			if subRows := extractRows(list); len(subRows) > 0 {
+				return subRows
+			}
+		}
+		// 单个对象转化为 1 行
+		return []map[string]any{m}
+	}
+
+	if s, ok := raw.([]any); ok {
+		rows := make([]map[string]any, 0, len(s))
+		for _, item := range s {
+			if im, ok := item.(map[string]any); ok {
+				rows = append(rows, im)
+			} else {
+				rows = append(rows, map[string]any{"value": item})
+			}
+		}
+		return rows
+	}
+
+	return nil
+}
+
+// collectHeaders 收集所有列名并按常用排序规则排序
+func collectHeaders(rows []map[string]any) []string {
+	set := make(map[string]bool)
+	for _, r := range rows {
+		for k := range r {
+			set[k] = true
+		}
+	}
+	headers := make([]string, 0, len(set))
+	for k := range set {
+		headers = append(headers, k)
+	}
+
+	// 优先把 id, name, code, status, createdAt 等核心字段排在前面
+	priority := map[string]int{
+		"id": 1, "code": 2, "name": 3, "deptName": 4, "userName": 5,
+		"status": 6, "type": 7, "createdAt": 80, "updatedAt": 90,
+	}
+
+	sort.Slice(headers, func(i, j int) bool {
+		pi, oki := priority[headers[i]]
+		pj, okj := priority[headers[j]]
+		if oki && okj {
+			return pi < pj
+		}
+		if oki {
+			return true
+		}
+		if okj {
+			return false
+		}
+		return headers[i] < headers[j]
+	})
+
+	return headers
+}
+
+func writeCSV(w io.Writer, v any) int {
+	rows := extractRows(v)
+	if len(rows) == 0 {
+		return writeJSON(w, v, ExitOK)
+	}
+
+	headers := collectHeaders(rows)
+	csvWriter := csv.NewWriter(w)
+	defer csvWriter.Flush()
+
+	// 写表头
+	if err := csvWriter.Write(headers); err != nil {
+		fmt.Fprintf(w, "internal csv write error: %s\n", err.Error())
+		return ExitOther
+	}
+
+	// 写数据行
+	for _, row := range rows {
+		line := make([]string, len(headers))
+		for i, h := range headers {
+			val := row[h]
+			line[i] = formatCell(val)
+		}
+		if err := csvWriter.Write(line); err != nil {
+			fmt.Fprintf(w, "internal csv write error: %s\n", err.Error())
+			return ExitOther
+		}
+	}
+	return ExitOK
+}
+
+func writeTable(w io.Writer, v any) int {
+	rows := extractRows(v)
+	if len(rows) == 0 {
+		return writeJSON(w, v, ExitOK)
+	}
+
+	headers := collectHeaders(rows)
+	// 计算各列最大宽度
+	widths := make([]int, len(headers))
+	for i, h := range headers {
+		widths[i] = len(h)
+	}
+
+	strRows := make([][]string, len(rows))
+	for ri, row := range rows {
+		strRows[ri] = make([]string, len(headers))
+		for ci, h := range headers {
+			s := formatCell(row[h])
+			// 避免多行文本破坏终端单行对齐
+			s = strings.ReplaceAll(s, "\n", " ")
+			s = strings.ReplaceAll(s, "\r", "")
+			if len(s) > 40 {
+				s = s[:37] + "..."
+			}
+			strRows[ri][ci] = s
+			if len(s) > widths[ci] {
+				widths[ci] = len(s)
+			}
+		}
+	}
+
+	// 打印表头
+	var buf bytes.Buffer
+	for i, h := range headers {
+		fmt.Fprintf(&buf, "%-*s  ", widths[i], h)
+	}
+	fmt.Fprintln(w, strings.TrimRight(buf.String(), " "))
+
+	// 打印分隔线
+	buf.Reset()
+	for i := range headers {
+		fmt.Fprintf(&buf, "%s  ", strings.Repeat("-", widths[i]))
+	}
+	fmt.Fprintln(w, strings.TrimRight(buf.String(), " "))
+
+	// 打印行
+	for _, r := range strRows {
+		buf.Reset()
+		for i, val := range r {
+			fmt.Fprintf(&buf, "%-*s  ", widths[i], val)
+		}
+		fmt.Fprintln(w, strings.TrimRight(buf.String(), " "))
+	}
+
+	return ExitOK
+}
+
+func formatCell(v any) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return val
+	case float64:
+		if val == float64(int64(val)) {
+			return fmt.Sprintf("%d", int64(val))
+		}
+		return fmt.Sprintf("%v", val)
+	case bool:
+		return fmt.Sprintf("%t", val)
+	default:
+		b, err := json.Marshal(val)
+		if err == nil {
+			return string(b)
+		}
+		return fmt.Sprintf("%v", val)
+	}
 }
 
 // writeHuman TTY 人类可读输出。
