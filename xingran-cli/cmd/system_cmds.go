@@ -19,6 +19,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建AD配置",
 		Description: "创建新的AD域配置",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -28,6 +29,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取AD电脑设备详情",
 		Description: "根据电脑DN获取AD域电脑设备详细信息",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -37,6 +39,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询AD电脑设备列表",
 		Description: "查询AD域电脑设备列表，支持分页",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -46,6 +49,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询AD设备登录历史",
 		Description: "按设备ID查询登录历史(后端固定 login_time 倒序,服务端分页)",
 		Tags: "AD域管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "computerId", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
@@ -62,6 +66,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除AD配置",
 		Description: "删除指定的AD域配置",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -72,6 +77,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取AD配置详情",
 		Description: "根据配置ID获取AD域配置详细信息",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -82,6 +88,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询AD配置列表",
 		Description: "查询AD域配置列表，支持按状态筛选和分页",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -91,6 +98,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "同步AD数据",
 		Description: "从AD域同步用户、用户组等数据到系统",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -101,6 +109,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "同步AD用户组",
 		Description: "从AD域同步用户组数据和成员关系",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -111,6 +120,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "测试AD连接",
 		Description: "测试AD域服务器连接是否正常",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -121,6 +131,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新AD配置",
 		Description: "更新AD域配置信息",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -131,6 +142,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取AD用户组详情",
 		Description: "根据用户组DN获取AD用户组详细信息",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -141,6 +153,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询AD用户组列表",
 		Description: "查询AD域用户组列表，支持分页",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -150,6 +163,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取AD用户组成员",
 		Description: "获取AD域用户组的成员列表",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -160,6 +174,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "同步单个AD用户组",
 		Description: "从AD域同步指定用户组及其成员关系",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -169,6 +184,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取用户组同步状态",
 		Description: "获取指定AD配置下的用户组同步状态统计",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -178,6 +194,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新AD用户组",
 		Description: "更新AD域用户组信息",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -188,6 +205,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取OU树形结构",
 		Description: "获取AD域的组织单元(OU)树形结构",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -197,6 +215,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询AD同步日志列表",
 		Description: "查询AD域数据同步日志列表",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -206,6 +225,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "禁用AD用户",
 		Description: "禁用AD域用户账号",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -216,6 +236,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "启用AD用户",
 		Description: "启用AD域用户账号",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -226,6 +247,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取AD用户详情",
 		Description: "根据用户ID获取AD域用户详细信息",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -236,6 +258,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取AD用户ID列表",
 		Description: "根据筛选条件获取所有匹配的AD用户ID（用于全选功能）",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -245,6 +268,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询AD用户列表",
 		Description: "查询AD域用户列表，支持分页",
 		Tags: "AD域管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -254,6 +278,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "移动AD用户到新OU",
 		Description: "将AD域用户移动到新的组织单元(OU)",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -264,6 +289,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新AD用户",
 		Description: "更新AD域用户信息",
 		Tags: "AD域管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -274,13 +300,14 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建API密钥",
 		Description: "创建新的API密钥，完整密钥仅在此返回一次",
 		Tags: "API密钥管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "expiresAt", Type: "string", Required: false, Desc: "过期时间（RFC3339 格式）", Enum: "", In: "body"},
+			{Name: "inheritPerms", Type: "bool", Required: false, Desc: "是否继承用户权限", Enum: "", In: "body"},
 			{Name: "ipWhitelist", Type: "json", Required: false, Desc: "IP 白名单（支持 CIDR）", Enum: "", In: "body"},
 			{Name: "name", Type: "string", Required: true, Desc: "密钥名称", Enum: "", In: "body"},
 			{Name: "scopes", Type: "json", Required: true, Desc: "作用域数组（read, write, admin）", Enum: "", In: "body"},
 			{Name: "description", Type: "string", Required: false, Desc: "描述信息", Enum: "", In: "body"},
-			{Name: "expiresAt", Type: "string", Required: false, Desc: "过期时间（RFC3339 格式）", Enum: "", In: "body"},
-			{Name: "inheritPerms", Type: "bool", Required: false, Desc: "是否继承用户权限", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -291,6 +318,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除API密钥",
 		Description: "软删除API密钥",
 		Tags: "API密钥管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -301,6 +329,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取API密钥详情",
 		Description: "根据ID获取API密钥详细信息",
 		Tags: "API密钥管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -311,14 +340,15 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询API密钥列表",
 		Description: "分页查询API密钥列表，支持关键词搜索和状态筛选",
 		Tags: "API密钥管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "orderByColumn", Type: "string", Required: false, Desc: "服务端排序字段（白名单）", Enum: "", In: "body"},
+			{Name: "pageSize", Type: "int", Required: false, Desc: "每页数量", Enum: "", In: "body"},
+			{Name: "scope", Type: "string", Required: false, Desc: "作用域筛选", Enum: "", In: "body"},
 			{Name: "status", Type: "bool", Required: false, Desc: "状态筛选（true=启用, false=禁用）", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "当前页", Enum: "", In: "body"},
 			{Name: "isAsc", Type: "bool", Required: false, Desc: "是否升序", Enum: "", In: "body"},
 			{Name: "keyword", Type: "string", Required: false, Desc: "关键词搜索（名称或密钥）", Enum: "", In: "body"},
-			{Name: "orderByColumn", Type: "string", Required: false, Desc: "服务端排序字段（白名单）", Enum: "", In: "body"},
-			{Name: "pageSize", Type: "int", Required: false, Desc: "每页数量", Enum: "", In: "body"},
-			{Name: "scope", Type: "string", Required: false, Desc: "作用域筛选", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -329,13 +359,14 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询API密钥使用日志",
 		Description: "分页查询API密钥使用日志",
 		Tags: "API密钥管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "success", Type: "bool", Required: false, Desc: "成功筛选", Enum: "", In: "body"},
 			{Name: "apikeyID", Type: "string", Required: false, Desc: "密钥ID", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "当前页", Enum: "", In: "body"},
 			{Name: "endTime", Type: "string", Required: false, Desc: "结束时间", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "每页数量", Enum: "", In: "body"},
 			{Name: "startTime", Type: "string", Required: false, Desc: "开始时间", Enum: "", In: "body"},
-			{Name: "success", Type: "bool", Required: false, Desc: "成功筛选", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -347,6 +378,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取API密钥使用统计",
 		Description: "获取API密钥的使用统计汇总信息",
 		Tags: "API密钥管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -357,6 +389,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "切换API密钥状态",
 		Description: "启用或禁用API密钥",
 		Tags: "API密钥管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -367,15 +400,16 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新API密钥",
 		Description: "更新API密钥信息（不能更新密钥值本身）",
 		Tags: "API密钥管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "expiresAt", Type: "string", Required: false, Desc: "过期时间", Enum: "", In: "body"},
-			{Name: "id", Type: "string", Required: false, Desc: "密钥ID（取自 URL 路径参数，body 中的同名字段不参与校验）", Enum: "", In: "body"},
 			{Name: "inheritPerms", Type: "bool", Required: false, Desc: "是否继承用户权限", Enum: "", In: "body"},
 			{Name: "ipWhitelist", Type: "json", Required: false, Desc: "IP 白名单", Enum: "", In: "body"},
 			{Name: "isActive", Type: "bool", Required: false, Desc: "是否启用", Enum: "", In: "body"},
 			{Name: "name", Type: "string", Required: false, Desc: "密钥名称", Enum: "", In: "body"},
 			{Name: "scopes", Type: "json", Required: false, Desc: "作用域数组", Enum: "", In: "body"},
 			{Name: "description", Type: "string", Required: false, Desc: "描述信息", Enum: "", In: "body"},
+			{Name: "expiresAt", Type: "string", Required: false, Desc: "过期时间", Enum: "", In: "body"},
+			{Name: "id", Type: "string", Required: false, Desc: "密钥ID（取自 URL 路径参数，body 中的同名字段不参与校验）", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -387,6 +421,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取验证码",
 		Description: "获取图形验证码（数字字母或滑动拼图）",
 		Tags: "认证",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -396,6 +431,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取加密配置",
 		Description: "获取当前请求体加密的开关状态（公共端点，无需认证）",
 		Tags: "认证",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -405,13 +441,14 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "用户登录",
 		Description: "用户登录接口",
 		Tags: "认证",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "username", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "authMode", Type: "string", Required: false, Desc: "AuthMode 认证模式：local=本地, ad=AD域控, hybrid=混合（可选，为空时使用系统默认配置）", Enum: "", In: "body"},
 			{Name: "captcha", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "captchaId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "encryptedPassword", Type: "bool", Required: false, Desc: "EncryptedPassword 表示密码是否已加密（SM2）", Enum: "", In: "body"},
 			{Name: "password", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "username", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -422,6 +459,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "用户登出",
 		Description: "用户登出接口，将令牌加入黑名单",
 		Tags: "认证",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -431,6 +469,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取 SM2 公钥",
 		Description: "获取 SM2 公钥用于前端加密密码",
 		Tags: "认证",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -440,6 +479,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "刷新令牌",
 		Description: "使用刷新令牌获取新的访问令牌",
 		Tags: "认证",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -449,6 +489,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取验证码配置",
 		Description: "获取当前验证码的配置信息",
 		Tags: "认证",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -458,6 +499,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "重新加载验证码配置",
 		Description: "从数据库重新加载验证码配置，无需重启服务",
 		Tags: "认证",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -467,6 +509,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "验证滑动验证码",
 		Description: "验证滑动拼图验证码的滑动位置",
 		Tags: "认证",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "captchaId", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "token", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
@@ -481,6 +524,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除参数配置",
 		Description: "批量删除多个参数配置",
 		Tags: "配置管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -490,6 +534,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建参数配置",
 		Description: "创建新的系统参数配置",
 		Tags: "配置管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -499,6 +544,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除参数配置",
 		Description: "删除指定的参数配置",
 		Tags: "配置管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -509,6 +555,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取参数配置详情",
 		Description: "根据配置ID获取参数配置详细信息",
 		Tags: "配置管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -519,6 +566,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询参数配置列表",
 		Description: "查询系统参数配置列表，支持多条件筛选和分页",
 		Tags: "配置管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -528,6 +576,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "刷新参数缓存",
 		Description: "刷新系统参数配置缓存",
 		Tags: "配置管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -537,6 +586,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新参数配置",
 		Description: "更新参数配置信息",
 		Tags: "配置管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -547,25 +597,28 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "根据键获取参数配置",
 		Description: "根据配置键获取参数配置值",
 		Tags: "配置管理",
+		Kind: "",
 		PathArgs: []string{"configKey"},
 	},
 	{
 		Module: "system",
 		ResourcePath: []string{"config", "theme"},
 		Action: "default",
-		Method: "GET", APIPath: "/api/v1/system/config/theme/default",
-		Summary: "获取默认主题配置",
-		Description: "获取系统默认主题配置",
-		Tags: "系统设置",
-	},
-	{
-		Module: "system",
-		ResourcePath: []string{"config", "theme"},
-		Action: "default-post",
 		Method: "POST", APIPath: "/api/v1/system/config/theme/default",
 		Summary: "设置默认主题配置",
 		Description: "设置系统默认主题配置（需要管理员权限）",
 		Tags: "系统设置",
+		Kind: "",
+	},
+	{
+		Module: "system",
+		ResourcePath: []string{"config", "theme"},
+		Action: "default-get",
+		Method: "GET", APIPath: "/api/v1/system/config/theme/default",
+		Summary: "获取默认主题配置",
+		Description: "获取系统默认主题配置",
+		Tags: "系统设置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -575,6 +628,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "从用户配置同步到默认主题",
 		Description: "将指定用户的主题配置同步为系统默认主题（需要管理员权限）",
 		Tags: "系统设置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -584,6 +638,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建仪表盘",
 		Description: "创建新的仪表盘（带权限验证）",
 		Tags: "仪表盘管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -593,6 +648,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取可访问的默认仪表盘",
 		Description: "获取用户可访问的默认仪表盘（用户默认 > 系统仪表盘）",
 		Tags: "仪表盘管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -602,6 +658,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "复制仪表盘",
 		Description: "复制指定仪表盘",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -612,6 +669,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取可用的API端点列表",
 		Description: "根据用户权限返回可访问的API端点，按模块分类",
 		Tags: "仪表盘管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -621,26 +679,29 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "导出仪表盘配置",
 		Description: "导出仪表盘配置",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
 		Module: "system",
 		ResourcePath: []string{"dashboard"},
 		Action: "get",
-		Method: "DELETE", APIPath: "/api/v1/system/dashboards/:id",
-		Summary: "删除仪表盘",
-		Description: "删除指定仪表盘",
+		Method: "GET", APIPath: "/api/v1/system/dashboards/:id",
+		Summary: "获取仪表盘详情",
+		Description: "根据仪表盘ID获取仪表盘详细信息",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
 		Module: "system",
 		ResourcePath: []string{"dashboard"},
-		Action: "get-get",
-		Method: "GET", APIPath: "/api/v1/system/dashboards/:id",
-		Summary: "获取仪表盘详情",
-		Description: "根据仪表盘ID获取仪表盘详细信息",
+		Action: "get-delete",
+		Method: "DELETE", APIPath: "/api/v1/system/dashboards/:id",
+		Summary: "删除仪表盘",
+		Description: "删除指定仪表盘",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -651,6 +712,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "导入仪表盘配置",
 		Description: "导入仪表盘配置",
 		Tags: "仪表盘管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -660,6 +722,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取仪表盘列表",
 		Description: "获取用户可访问的仪表盘列表",
 		Tags: "仪表盘管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -669,6 +732,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "设置默认仪表盘",
 		Description: "设置指定仪表盘为默认仪表盘",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -679,6 +743,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取仪表盘模板列表",
 		Description: "获取仪表盘模板列表",
 		Tags: "仪表盘管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -688,6 +753,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新仪表盘",
 		Description: "更新仪表盘信息",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -698,6 +764,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取仪表盘版本历史",
 		Description: "获取仪表盘版本历史",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -708,6 +775,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建版本快照",
 		Description: "创建仪表盘版本快照",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -718,6 +786,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取过滤后的端点列表",
 		Description: "根据Widget类型过滤可用的API端点",
 		Tags: "仪表盘管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "widgetType", Type: "string", Required: false, Desc: "", Enum: "", In: "query"},
 		},
@@ -730,6 +799,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "验证API端点配置",
 		Description: "验证指定的API端点是否存在",
 		Tags: "仪表盘管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "route", Type: "string", Required: true, Desc: "", Enum: "", In: "query"},
 			{Name: "method", Type: "string", Required: true, Desc: "", Enum: "", In: "query"},
@@ -743,6 +813,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "清除用户端点缓存",
 		Description: "清除当前用户的端点列表缓存",
 		Tags: "仪表盘管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -752,6 +823,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "从模板创建仪表盘",
 		Description: "从模板创建仪表盘",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -762,6 +834,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "从版本恢复仪表盘",
 		Description: "从版本恢复仪表盘",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id", "versionId"},
 	},
 	{
@@ -772,6 +845,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量获取 Widget 数据",
 		Description: "批量获取 Widget 数据",
 		Tags: "仪表盘管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -781,6 +855,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取 Widget 数据",
 		Description: "获取 Widget 数据",
 		Tags: "仪表盘管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -791,6 +866,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除部门",
 		Description: "批量删除多个部门",
 		Tags: "部门管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -800,17 +876,18 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建部门",
 		Description: "创建新的部门",
 		Tags: "部门管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "deptCode", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "deptName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "leader", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "orderNum", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "email", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "isExternalOrg", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "parentId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "phone", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "deptCode", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "isExternalOrg", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "orderNum", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "parentId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "deptName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "email", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -821,6 +898,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除部门",
 		Description: "删除指定部门",
 		Tags: "部门管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -831,6 +909,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取部门详情",
 		Description: "根据部门ID获取部门详细信息",
 		Tags: "部门管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -841,6 +920,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询部门列表",
 		Description: "查询部门列表",
 		Tags: "部门管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "deptName", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
@@ -854,6 +934,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新部门状态",
 		Description: "更新部门的启用/停用状态",
 		Tags: "部门管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -864,6 +945,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取部门树",
 		Description: "获取部门树形结构，支持按名称和状态筛选",
 		Tags: "部门管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "deptName", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
@@ -877,18 +959,19 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新部门",
 		Description: "更新部门信息",
 		Tags: "部门管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "deptCode", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "deptName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "email", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "id", Type: "string", Required: false, Desc: "ID 从 URL 参数获取，不在请求体验证", Enum: "", In: "body"},
+			{Name: "leader", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "orderNum", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "parentId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "email", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "isExternalOrg", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "leader", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "phone", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "deptName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "isExternalOrg", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -900,6 +983,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取部门用户列表",
 		Description: "获取指定部门的用户列表",
 		Tags: "部门管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -910,6 +994,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取角色部门树选择器",
 		Description: "获取指定角色的部门树和已选中的部门ID，用于角色部门权限分配",
 		Tags: "部门管理",
+		Kind: "",
 		PathArgs: []string{"roleId"},
 	},
 	{
@@ -920,6 +1005,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建字典数据",
 		Description: "创建新的字典数据",
 		Tags: "字典管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -929,6 +1015,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除字典数据",
 		Description: "删除指定的字典数据",
 		Tags: "字典管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -939,6 +1026,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取字典数据详情",
 		Description: "根据字典数据ID获取详细信息",
 		Tags: "字典管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -949,6 +1037,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询字典数据列表",
 		Description: "查询字典数据列表，支持多条件筛选和分页",
 		Tags: "字典管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -958,6 +1047,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新字典数据",
 		Description: "更新字典数据信息",
 		Tags: "字典管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -968,6 +1058,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取所有字典类型",
 		Description: "获取所有字典类型列表（使用缓存）",
 		Tags: "字典管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -977,6 +1068,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建字典类型",
 		Description: "创建新的字典类型",
 		Tags: "字典管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -986,6 +1078,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除字典类型",
 		Description: "删除指定的字典类型",
 		Tags: "字典管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -996,6 +1089,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取字典类型详情",
 		Description: "根据字典类型ID获取详细信息",
 		Tags: "字典管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1006,6 +1100,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询字典类型列表",
 		Description: "查询字典类型列表，支持多条件筛选和分页",
 		Tags: "字典管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1015,6 +1110,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新字典类型",
 		Description: "更新字典类型信息",
 		Tags: "字典管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1025,6 +1121,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除文件",
 		Description: "批量删除多个文件",
 		Tags: "文件管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1034,6 +1131,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除文件",
 		Description: "删除指定的文件",
 		Tags: "文件管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1044,6 +1142,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取文件信息",
 		Description: "根据文件ID获取文件详细信息",
 		Tags: "文件管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1054,6 +1153,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "列出文件",
 		Description: "查询文件列表，支持分页",
 		Tags: "文件管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "page", Type: "string", Required: false, Desc: "", Enum: "", In: "query"},
 			{Name: "pageSize", Type: "string", Required: false, Desc: "", Enum: "", In: "query"},
@@ -1069,9 +1169,9 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "上传文件",
 		Description: "上传文件到服务器",
 		Tags: "文件管理",
+		Kind: "upload",
 		Flags: []commands.FlagSpec{
 			{Name: "category", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "file", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -1082,6 +1182,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除菜单",
 		Description: "批量删除多个菜单，支持级联删除子菜单",
 		Tags: "菜单管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1091,18 +1192,19 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建菜单",
 		Description: "创建新的菜单",
 		Tags: "菜单管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "menuType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "parentId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "perms", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "path", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "orderNum", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "perms", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "visible", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "component", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "icon", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "menuName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "menuType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "orderNum", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "path", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "visible", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -1113,6 +1215,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除菜单",
 		Description: "删除指定菜单，支持级联删除子菜单",
 		Tags: "菜单管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "cascade", Type: "string", Required: false, Desc: "", Enum: "", In: "query"},
 		},
@@ -1126,6 +1229,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取菜单详情",
 		Description: "根据菜单ID获取菜单详细信息",
 		Tags: "菜单管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1136,6 +1240,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询菜单列表",
 		Description: "查询菜单列表",
 		Tags: "菜单管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "menuName", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
@@ -1149,6 +1254,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新菜单状态",
 		Description: "更新菜单的启用/停用状态",
 		Tags: "菜单管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1159,6 +1265,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取菜单树",
 		Description: "获取菜单树形结构",
 		Tags: "菜单管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1168,19 +1275,20 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新菜单",
 		Description: "更新菜单信息",
 		Tags: "菜单管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "path", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "parentId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "perms", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "component", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "icon", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "id", Type: "string", Required: false, Desc: "ID 从 URL 参数获取，不在请求体验证", Enum: "", In: "body"},
-			{Name: "menuName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "menuType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "orderNum", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "path", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "visible", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "orderNum", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "parentId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "component", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "icon", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "menuName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -1192,6 +1300,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取角色菜单树选择器",
 		Description: "获取指定角色的菜单树和已选中的菜单ID，用于角色菜单权限分配",
 		Tags: "菜单管理",
+		Kind: "",
 		PathArgs: []string{"roleId"},
 	},
 	{
@@ -1202,6 +1311,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取用户所有菜单",
 		Description: "获取当前登录用户的菜单树（包含隐藏菜单，用于标签页标题）",
 		Tags: "菜单管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1211,6 +1321,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取用户菜单",
 		Description: "获取当前登录用户的菜单树（用于前端渲染导航菜单）",
 		Tags: "菜单管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1220,6 +1331,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取用户权限",
 		Description: "获取当前登录用户的权限标识列表",
 		Tags: "菜单管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1229,6 +1341,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取我的通知详情",
 		Description: "获取通知详情并自动标记为已读",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1239,6 +1352,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "忽略通知",
 		Description: "忽略指定通知",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1249,6 +1363,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取我的通知列表",
 		Description: "获取当前登录用户的通知列表",
 		Tags: "通知公告",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "query"},
 			{Name: "current", Type: "string", Required: false, Desc: "", Enum: "", In: "query"},
@@ -1263,6 +1378,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "标记通知已读",
 		Description: "标记指定通知为已读状态",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1273,6 +1389,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "全部标记已读",
 		Description: "将所有通知标记为已读状态",
 		Tags: "通知公告",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1282,6 +1399,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "取消忽略通知",
 		Description: "取消忽略指定通知",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1292,6 +1410,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取未读数量",
 		Description: "获取当前用户的未读通知数量",
 		Tags: "通知公告",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1301,25 +1420,28 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除通知公告",
 		Description: "批量删除多个通知公告",
 		Tags: "通知公告",
+		Kind: "",
 	},
 	{
 		Module: "system",
 		ResourcePath: []string{"notice"},
 		Action: "channels",
-		Method: "GET", APIPath: "/api/v1/system/notices/:id/channels",
-		Summary: "获取通知渠道配置",
-		Description: "获取通知公告的发送渠道配置",
+		Method: "POST", APIPath: "/api/v1/system/notices/:id/channels",
+		Summary: "设置通知渠道配置",
+		Description: "设置通知公告的发送渠道配置",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
 		Module: "system",
 		ResourcePath: []string{"notice"},
-		Action: "channels-post",
-		Method: "POST", APIPath: "/api/v1/system/notices/:id/channels",
-		Summary: "设置通知渠道配置",
-		Description: "设置通知公告的发送渠道配置",
+		Action: "channels-get",
+		Method: "GET", APIPath: "/api/v1/system/notices/:id/channels",
+		Summary: "获取通知渠道配置",
+		Description: "获取通知公告的发送渠道配置",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1330,6 +1452,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建通知公告",
 		Description: "创建新的通知公告",
 		Tags: "通知公告",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1339,6 +1462,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取常用Cron表达式",
 		Description: "获取常用的Cron表达式列表",
 		Tags: "通知公告",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1348,6 +1472,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除通知公告",
 		Description: "删除指定的通知公告",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1358,6 +1483,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取通知公告详情",
 		Description: "根据通知公告ID获取详细信息",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1368,6 +1494,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询通知公告列表",
 		Description: "查询通知公告列表，支持多条件筛选和分页",
 		Tags: "通知公告",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1377,6 +1504,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "发布通知",
 		Description: "发布通知公告",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1387,6 +1515,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取通知阅读统计",
 		Description: "获取通知公告的阅读统计信息",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1397,6 +1526,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "通知状态统计",
 		Description: "返回通知总数及各发布状态计数,供统计卡片使用;用 COUNT 聚合而非加载全量行",
 		Tags: "通知公告",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1406,6 +1536,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新通知公告",
 		Description: "更新通知公告信息",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1416,6 +1547,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "撤回通知",
 		Description: "撤回已发布的通知公告",
 		Tags: "通知公告",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1426,6 +1558,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建API通知配置",
 		Description: "创建新的API通知配置",
 		Tags: "通知配置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1435,6 +1568,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建邮箱配置",
 		Description: "创建新的邮箱配置",
 		Tags: "通知配置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1444,6 +1578,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除API通知配置",
 		Description: "删除指定的API通知配置",
 		Tags: "通知配置",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1454,6 +1589,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取API通知配置详情",
 		Description: "根据配置ID获取API通知配置详细信息",
 		Tags: "通知配置",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1464,6 +1600,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询API通知配置列表",
 		Description: "查询API通知配置列表，支持配置类型和状态筛选",
 		Tags: "通知配置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1473,6 +1610,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新API通知配置",
 		Description: "更新API通知配置信息",
 		Tags: "通知配置",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1483,6 +1621,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除邮箱配置",
 		Description: "删除指定的邮箱配置",
 		Tags: "通知配置",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1493,6 +1632,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取邮箱配置详情",
 		Description: "根据配置ID获取邮箱配置详细信息",
 		Tags: "通知配置",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1503,6 +1643,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询邮箱配置列表",
 		Description: "查询邮箱配置列表，支持状态筛选和分页",
 		Tags: "通知配置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1512,6 +1653,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "测试邮箱配置",
 		Description: "测试邮箱配置是否正常工作",
 		Tags: "通知配置",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1522,6 +1664,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新邮箱配置",
 		Description: "更新邮箱配置信息",
 		Tags: "通知配置",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1532,6 +1675,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取所有岗位",
 		Description: "获取所有岗位列表（使用缓存）",
 		Tags: "岗位管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1541,6 +1685,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除岗位",
 		Description: "批量删除多个岗位",
 		Tags: "岗位管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1550,6 +1695,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建岗位",
 		Description: "创建新的岗位",
 		Tags: "岗位管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1559,6 +1705,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除岗位",
 		Description: "删除指定的岗位",
 		Tags: "岗位管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1569,6 +1716,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取启用的岗位",
 		Description: "获取所有启用状态的岗位列表（使用缓存）",
 		Tags: "岗位管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1578,6 +1726,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取岗位详情",
 		Description: "根据岗位ID获取详细信息",
 		Tags: "岗位管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1588,6 +1737,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询岗位列表",
 		Description: "查询岗位列表，支持多条件筛选和分页",
 		Tags: "岗位管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1597,6 +1747,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新岗位",
 		Description: "更新岗位信息",
 		Tags: "岗位管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1607,6 +1758,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "修改密码",
 		Description: "修改当前登录用户的密码",
 		Tags: "个人设置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1616,6 +1768,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取个人信息",
 		Description: "获取当前登录用户的个人信息",
 		Tags: "个人设置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1625,9 +1778,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "上传头像",
 		Description: "上传用户头像",
 		Tags: "个人设置",
-		Flags: []commands.FlagSpec{
-			{Name: "file", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-		},
+		Kind: "upload",
 	},
 	{
 		Module: "system",
@@ -1637,6 +1788,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新个人信息",
 		Description: "更新当前登录用户的个人信息",
 		Tags: "个人设置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1646,6 +1798,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取所有启用的角色",
 		Description: "获取所有启用状态的角色，用于下拉选择",
 		Tags: "角色管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1655,6 +1808,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除角色",
 		Description: "批量删除多个角色",
 		Tags: "角色管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1664,17 +1818,18 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建角色",
 		Description: "创建新的角色",
 		Tags: "角色管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "roleKey", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "roleName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "roleSort", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "deptCheckStrictly", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "menuCheckStrictly", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "roleName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "dataScope", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "deptIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "dataScope", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "menuCheckStrictly", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "menuIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -1685,6 +1840,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除角色",
 		Description: "删除指定角色",
 		Tags: "角色管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1695,6 +1851,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取角色详情",
 		Description: "根据角色ID获取角色详细信息",
 		Tags: "角色管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1705,14 +1862,15 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询角色列表",
 		Description: "分页查询角色列表",
 		Tags: "角色管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "isAsc", Type: "bool", Required: false, Desc: "nil 或 true=升序，false=降序", Enum: "", In: "body"},
 			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "roleKey", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "roleName", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -1723,6 +1881,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "角色统计",
 		Description: "返回角色总数及启停状态计数,供统计卡片使用;用 COUNT 聚合而非加载全量行",
 		Tags: "角色管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1732,6 +1891,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新角色状态",
 		Description: "更新角色的启用/停用状态",
 		Tags: "角色管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1742,18 +1902,19 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新角色",
 		Description: "更新角色信息",
 		Tags: "角色管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "roleName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "roleSort", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "dataScope", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "deptCheckStrictly", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "deptIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "id", Type: "string", Required: false, Desc: "ID 从 URL 参数获取，不在请求体验证", Enum: "", In: "body"},
 			{Name: "menuCheckStrictly", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "roleSort", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "deptCheckStrictly", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "deptIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "menuIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "roleKey", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "roleName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -1765,6 +1926,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取用户个人设置",
 		Description: "获取当前登录用户的个人设置",
 		Tags: "系统设置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1774,6 +1936,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新用户个人设置",
 		Description: "更新当前登录用户的个人设置",
 		Tags: "系统设置",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1783,6 +1946,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量删除用户",
 		Description: "批量删除多个用户",
 		Tags: "用户管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1792,19 +1956,20 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "创建用户",
 		Description: "创建新用户",
 		Tags: "用户管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "postIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "title", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "gender", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "nickname", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "password", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "phone", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "roleIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "username", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "email", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "gender", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "password", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "postIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "title", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "employeeNo", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "mobile", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
@@ -1817,6 +1982,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "删除用户",
 		Description: "删除指定用户",
 		Tags: "用户管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1827,6 +1993,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "获取用户详情",
 		Description: "根据用户ID获取用户详细信息",
 		Tags: "用户管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1837,9 +2004,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "批量导入用户",
 		Description: "通过 Excel 批量导入用户，以用户名为唯一标识，重复用户更新相关信息，导入后触发 AD 同步",
 		Tags: "用户管理",
-		Flags: []commands.FlagSpec{
-			{Name: "file", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-		},
+		Kind: "upload",
 	},
 	{
 		Module: "system",
@@ -1849,19 +2014,20 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "查询用户列表",
 		Description: "分页查询用户列表，支持多条件过滤",
 		Tags: "用户管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "beginTime", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "endTime", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "isAsc", Type: "bool", Required: false, Desc: "nil 或 true=升序，false=降序", Enum: "", In: "body"},
+			{Name: "username", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "nickname", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "phone", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "recursiveDeptId", Type: "string", Required: false, Desc: "RecursiveDeptID 非空时,把查询扩展为该部门及所有子部门的用户。\n与 DeptID 并列存在:DeptID 保持单部门等值语义,RecursiveDeptID 用于\n工位管理\"所属部门\"下拉需要\"当前部门+子部门\"递归查询的场景。\n复用 sys_dept.ancestors 的 4-条件模式(参见 building_service.go applyDeptFilter)。", Enum: "", In: "body"},
 			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "username", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "beginTime", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -1872,6 +2038,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "重置用户密码",
 		Description: "管理员重置指定用户的密码。优先读取 sys_config 中\nsys.user.default_reset_password 的配置值；未配置或为空时\n自动生成 12 位强密码（含大小写字母与数字），仅写入审计日志。",
 		Tags: "用户管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1882,6 +2049,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "用户统计",
 		Description: "返回用户总数及启停状态计数,供统计卡片使用;用 COUNT 聚合而非加载全量行",
 		Tags: "用户管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1891,6 +2059,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新用户状态",
 		Description: "更新用户的启用/禁用状态",
 		Tags: "用户管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -1901,6 +2070,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "同步用户经理到AD",
 		Description: "根据 sys_dept.leader 全量同步用户 AD manager 属性（部门无 leader 时递归父部门）",
 		Tags: "用户管理",
+		Kind: "",
 	},
 	{
 		Module: "system",
@@ -1910,6 +2080,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "解锁用户账号",
 		Description: "管理员手动解锁被锁定的用户账号",
 		Tags: "用户管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "username", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 		},
@@ -1922,20 +2093,21 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "更新用户",
 		Description: "更新用户信息",
 		Tags: "用户管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "employeeNo", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "id", Type: "string", Required: false, Desc: "ID 从 URL 参数获取，不在请求体验证", Enum: "", In: "body"},
 			{Name: "mobile", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "postIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "remark", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "title", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "email", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "gender", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "nickname", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "phone", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "roleIds", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "employeeNo", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "title", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -1947,6 +2119,7 @@ var SystemEndpoints = []commands.EndpointMeta{
 		Summary: "下载用户导入模板",
 		Description: "生成并下载用户批量导入用的 Excel 模板",
 		Tags: "用户管理",
+		Kind: "download",
 	},
 }
 

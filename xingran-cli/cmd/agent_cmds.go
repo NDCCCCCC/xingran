@@ -19,6 +19,7 @@ var AgentEndpoints = []commands.EndpointMeta{
 		Summary: "Agent注册",
 		Description: "Agent 自动注册（无需认证）",
 		Tags: "Agent管理",
+		Kind: "",
 	},
 }
 

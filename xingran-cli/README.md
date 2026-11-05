@@ -193,6 +193,64 @@ pair, err := auth.InteractiveLogin(ctx, auth.WebLoginOptions{
 })
 ```
 
+## Excel 导入导出（M8）
+
+8 类运维实体支持 Excel 批量导入/导出/模板下载，路径前缀 `/api/v1/ops/<entity>`：
+
+| 实体 | 说明 |
+|---|---|
+| building | 楼宇 |
+| floor | 楼层 |
+| workstation | 工位 |
+| asset | 资产 |
+| infoPoint | 信息点 |
+| serverRoom | 机房 |
+| dedicatedLine | 专线 |
+| roomDevice | 房间设备 |
+
+### 命令速查（每类 3 个动作）
+
+```bash
+xingran ops workstation template --out 工位模板.xlsx     # 下载模板（GET）
+xingran ops workstation import   --file 工位.xlsx        # 批量导入（multipart 上传）
+xingran ops workstation export   --out 工位导出.xlsx     # 导出（POST JSON → xlsx）
+
+# 其余 7 类实体同构：building / floor / asset / infoPoint / serverRoom / dedicatedLine / roomDevice
+xingran ops building template --out 楼宇模板.xlsx
+
+# 附加模板：工位部门映射
+xingran ops workstation dept-mapping-template --out 部门映射模板.xlsx
+
+# 通用兜底（命令树未覆盖的 Excel 端点）
+xingran upload   /ops/workstation/import --file x.xlsx
+xingran download /ops/workstation/template --out t.xlsx
+```
+
+### 使用注意（实测经验）
+
+- **模板自带 1 行示例数据**：直接上传模板会报「引用的 所属楼宇 不存在」——批量导入前必须删除示例行
+- 上传校验：扩展名必须 `.xlsx`、受大小上限约束、服务端校验 OOXML magic（`PK\x03\x04`）
+- 导入结果返回逐行 `errors` 结构（`data.errors[]` 含 `row` 与 `message`），`code=0` 但 `failed>0` 表示部分行失败，按 errors 逐行修正后重新上传
+- export/template 需要 RBAC 对应权限组（import/export/template 分挂不同权限）
+
+### 安全行为
+
+- 上传/下载同样走 Bearer token 与 auto 加密探测，token 过期自动 refresh 并重试一次（与普通 API 一致）
+- 下载遇到服务端 JSON 错误响应（`code!=0`）**不会落盘成 .xlsx**，直接报错——避免拿错误 JSON 当 Excel 用
+
+### 测试
+
+```bash
+# 单元测试（httptest mock，不依赖后端）
+go test -run "TestUpload|TestDownload" ./tests/ -v
+
+# 真实后端 E2E（需 XINGRAN_TEST_USER/XINGRAN_TEST_PASS，后端不在线自动 skip）
+go test -tags=integration -run "TestExcel" ./tests/ -v
+```
+
+契约文件 `tests/upload_contract_client_test.go.txt`：client 的 DoUpload/DoDownload
+交付后启用（build tag 改为 integration），编译期断言 client.Client 满足 UploadDownloader 接口。
+
 ## 请求加密模式（auto 探测）
 
 后端加密开关是数据库动态配置（`sys.request.encryption.enabled`），经公开端点

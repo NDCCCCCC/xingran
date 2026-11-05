@@ -394,7 +394,7 @@ func schemaEndpointsFor(t *testing.T, module string) []schemaEndpoint {
 func normalizeAPIKey(method, path string) string {
 	path = strings.TrimPrefix(path, "/api/v1")
 	path = strings.ReplaceAll(path, "{", ":")
-		path = strings.ReplaceAll(path, "}", "")
+	path = strings.ReplaceAll(path, "}", "")
 	return strings.ToUpper(method) + " " + path
 }
 

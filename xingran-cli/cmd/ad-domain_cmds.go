@@ -19,6 +19,7 @@ var AdDomainEndpoints = []commands.EndpointMeta{
 		Summary: "创建OU组映射",
 		Description: "创建OU与用户组的映射关系",
 		Tags: "OU组映射管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "ouDn", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "ouName", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
@@ -36,6 +37,7 @@ var AdDomainEndpoints = []commands.EndpointMeta{
 		Summary: "获取OU组映射详情",
 		Description: "根据ID获取OU组映射的详细信息",
 		Tags: "OU组映射管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -46,6 +48,7 @@ var AdDomainEndpoints = []commands.EndpointMeta{
 		Summary: "删除OU组映射",
 		Description: "根据ID删除OU组映射",
 		Tags: "OU组映射管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -56,6 +59,7 @@ var AdDomainEndpoints = []commands.EndpointMeta{
 		Summary: "更新OU组映射",
 		Description: "更新OU组映射的配置信息",
 		Tags: "OU组映射管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "syncEnabled", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
@@ -71,13 +75,14 @@ var AdDomainEndpoints = []commands.EndpointMeta{
 		Summary: "查询OU组映射列表",
 		Description: "查询OU与用户组的映射列表，支持按配置、OU、组名、状态筛选和分页",
 		Tags: "OU组映射管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "adConfigId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "groupName", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "ouDn", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "adConfigId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -88,6 +93,7 @@ var AdDomainEndpoints = []commands.EndpointMeta{
 		Summary: "获取OU的所有关联组",
 		Description: "根据OU的DN获取该OU关联的所有用户组",
 		Tags: "OU组映射管理",
+		Kind: "",
 		PathArgs: []string{"ouDn"},
 	},
 	{
@@ -98,12 +104,13 @@ var AdDomainEndpoints = []commands.EndpointMeta{
 		Summary: "查询部门-OU 对账不一致",
 		Description: "分页查询 v_dept_ou_mismatch（mismatchType 四值白名单 + 可选 deptId/keyword 筛选）",
 		Tags: "AD域管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "mismatchType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "deptId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "keyword", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "mismatchType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -114,6 +121,7 @@ var AdDomainEndpoints = []commands.EndpointMeta{
 		Summary: "批量同步AD用户",
 		Description: "将选中的AD用户批量同步到系统用户表，复用首次登录同步逻辑",
 		Tags: "AD域管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "configId", Type: "string", Required: true, Desc: "AD配置ID", Enum: "", In: "body"},
 			{Name: "defaultRoleId", Type: "string", Required: false, Desc: "默认角色ID（可选）", Enum: "", In: "body"},

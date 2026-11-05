@@ -19,6 +19,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "批量操作缓存",
 		Description: "批量获取或删除缓存",
 		Tags: "缓存管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "keys", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "operation", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
@@ -32,6 +33,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "清空缓存",
 		Description: "清空所有缓存数据",
 		Tags: "缓存管理",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -41,6 +43,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "更新缓存配置",
 		Description: "更新指定缓存项的时间配置",
 		Tags: "缓存配置",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "key", Type: "string", Required: true, Desc: "配置键", Enum: "", In: "body"},
 			{Name: "value", Type: "int", Required: true, Desc: "配置值（分钟）", Enum: "", In: "body"},
@@ -54,6 +57,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取缓存配置列表",
 		Description: "获取所有缓存配置信息，按分类组织",
 		Tags: "缓存配置",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -63,14 +67,15 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "导出缓存数据",
 		Description: "导出缓存数据到JSON文件",
 		Tags: "缓存管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "orderByColumn", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "type", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "isAsc", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "key", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "level", Type: "string", Required: false, Desc: "\"l1\", \"l2\", \"all\"", Enum: "", In: "body"},
-			{Name: "orderByColumn", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "type", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -81,6 +86,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取缓存详情",
 		Description: "根据缓存键获取缓存详细信息",
 		Tags: "缓存管理",
+		Kind: "",
 		PathArgs: []string{"key"},
 	},
 	{
@@ -91,9 +97,10 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "按模块清除缓存",
 		Description: "根据模块名称清除相关缓存，可选择清除特定类型的缓存",
 		Tags: "监控",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "keyType", Type: "string", Required: false, Desc: "可选，键类型", Enum: "", In: "body"},
 			{Name: "module", Type: "string", Required: true, Desc: "模块名称（如 \"user\", \"role\" 等）", Enum: "", In: "body"},
+			{Name: "keyType", Type: "string", Required: false, Desc: "可选，键类型", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -104,6 +111,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "按模式清除缓存",
 		Description: "根据缓存键模式清除匹配的所有缓存",
 		Tags: "监控",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "pattern", Type: "string", Required: true, Desc: "缓存键模式", Enum: "", In: "body"},
 		},
@@ -116,6 +124,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取缓存键信息",
 		Description: "获取指定缓存键的详细信息，包括是否存活、TTL等",
 		Tags: "监控",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "key", Type: "string", Required: true, Desc: "缓存键", Enum: "", In: "body"},
 		},
@@ -128,14 +137,15 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取缓存列表",
 		Description: "分页查询缓存键值列表",
 		Tags: "缓存管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "isAsc", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "key", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "level", Type: "string", Required: false, Desc: "\"l1\", \"l2\", \"all\"", Enum: "", In: "body"},
 			{Name: "orderByColumn", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "type", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "isAsc", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -146,6 +156,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取缓存监控数据",
 		Description: "获取缓存实时监控数据，包括L1和L2的统计信息",
 		Tags: "缓存管理",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -155,11 +166,12 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "操作缓存",
 		Description: "对缓存进行get/set/del/exists/expire/ttl等操作",
 		Tags: "缓存管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "value", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "key", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "operation", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "ttl", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "value", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -170,6 +182,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取缓存统计信息",
 		Description: "获取缓存系统的统计信息，包括命中率、键数量等",
 		Tags: "监控",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "module", Type: "string", Required: false, Desc: "可选，指定模块名称", Enum: "", In: "body"},
 		},
@@ -182,6 +195,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "测试缓存功能",
 		Description: "用于测试缓存功能是否正常工作",
 		Tags: "测试",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -191,6 +205,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "执行缓存预热",
 		Description: "执行缓存预热操作，可选择预热特定模块或全部模块",
 		Tags: "监控",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "modules", Type: "json", Required: false, Desc: "可选，指定要预热的模块列表，为空则预热所有", Enum: "", In: "body"},
 		},
@@ -203,6 +218,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "重新加载缓存配置",
 		Description: "从数据库重新加载所有缓存配置",
 		Tags: "缓存配置",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -212,6 +228,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "调试L1缓存状态",
 		Description: "检查L1缓存的统计信息、命中率和键数量，用于诊断缓存问题",
 		Tags: "监控管理",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -221,6 +238,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "调试原始缓存键",
 		Description: "查询Redis中所有原始键和xingran前缀的键，用于调试",
 		Tags: "监控管理",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -230,13 +248,14 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取缓存统计",
 		Description: "获取缓存性能统计信息",
 		Tags: "缓存管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "isRealtime", Type: "bool", Required: false, Desc: "true=实时统计, false=历史统计", Enum: "", In: "body"},
-			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "startTime", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "cacheType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "endTime", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "isRealtime", Type: "bool", Required: false, Desc: "true=实时统计, false=历史统计", Enum: "", In: "body"},
+			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "startTime", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -247,6 +266,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "创建定时任务",
 		Description: "创建新的定时任务",
 		Tags: "定时任务管理",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -256,6 +276,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "删除定时任务",
 		Description: "删除指定定时任务",
 		Tags: "定时任务管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -266,6 +287,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "立即执行任务",
 		Description: "立即执行指定的定时任务",
 		Tags: "定时任务管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -276,6 +298,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取定时任务详情",
 		Description: "根据任务ID获取定时任务详细信息",
 		Tags: "定时任务管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -286,6 +309,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "查询定时任务列表",
 		Description: "分页查询定时任务列表",
 		Tags: "定时任务管理",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -295,6 +319,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "更改任务状态",
 		Description: "启用或禁用定时任务",
 		Tags: "定时任务管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -305,6 +330,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "更新定时任务",
 		Description: "更新定时任务信息",
 		Tags: "定时任务管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -315,6 +341,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "清理旧任务日志",
 		Description: "删除指定天数之前的任务日志",
 		Tags: "定时任务管理",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -324,6 +351,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "",
 		Description: "",
 		Tags: "",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -333,6 +361,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "任务日志统计",
 		Description: "分页查询任务执行日志列表\n返回任务日志总数及成功/失败计数,供日志抽屉统计卡片使用;用 COUNT 聚合而非按当前页 list(pageSize:50)计算",
 		Tags: "定时任务管理",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -342,6 +371,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取服务器信息",
 		Description: "获取服务器基本信息和当前状态（优先从缓存获取）",
 		Tags: "系统监控",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -351,6 +381,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取当前服务器指标",
 		Description: "获取当前服务器的实时性能指标（优先从缓存获取）",
 		Tags: "系统监控",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -360,6 +391,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "获取系统指标历史",
 		Description: "获取指定时间范围内的系统性能指标历史数据",
 		Tags: "系统监控",
+		Kind: "",
 	},
 	{
 		Module: "monitor",
@@ -369,6 +401,7 @@ var MonitorEndpoints = []commands.EndpointMeta{
 		Summary: "保存系统指标",
 		Description: "保存系统性能指标数据",
 		Tags: "系统监控",
+		Kind: "",
 	},
 }
 

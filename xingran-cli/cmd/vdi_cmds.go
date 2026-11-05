@@ -19,13 +19,14 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "创建VDI服务器",
 		Description: "创建新的VDI服务器配置",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "endpoint", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "name", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "password", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "tenant_id", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "username", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "endpoint", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -36,6 +37,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "删除VDI服务器",
 		Description: "删除指定的VDI服务器配置",
 		Tags: "VDI管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -46,6 +48,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "获取VDI服务器详情",
 		Description: "根据ID获取VDI服务器详细信息",
 		Tags: "VDI管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -56,6 +59,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "查询VDI服务器列表",
 		Description: "分页查询VDI服务器列表",
 		Tags: "VDI管理",
+		Kind: "",
 	},
 	{
 		Module: "vdi",
@@ -65,6 +69,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "测试连接",
 		Description: "测试VDI服务器连接是否正常",
 		Tags: "VDI管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -75,13 +80,14 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "更新VDI服务器",
 		Description: "更新VDI服务器配置",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "tenant_id", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "username", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "endpoint", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "password", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "status", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -93,6 +99,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "绑定用户",
 		Description: "将虚拟机关联到指定用户，调用VDI API",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "username", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 		},
@@ -106,21 +113,22 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "创建虚拟机",
 		Description: "创建新的虚拟机，调用VDI API",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "cpu_core", Type: "int", Required: false, Desc: "每颗CPU核数", Enum: "", In: "body"},
-			{Name: "disk", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "disk_id", Type: "string", Required: true, Desc: "Personal disk ID", Enum: "", In: "body"},
-			{Name: "host_id", Type: "string", Required: true, Desc: "Host position ID (father_id)", Enum: "", In: "body"},
-			{Name: "memory", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "network_id", Type: "string", Required: true, Desc: "Network interface ID", Enum: "", In: "body"},
-			{Name: "resource_id", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-			{Name: "cpu_number", Type: "int", Required: false, Desc: "CPU颗数", Enum: "", In: "body"},
-			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "run_position_id", Type: "string", Required: false, Desc: "Run position ID (empty if id == father_id)", Enum: "", In: "body"},
-			{Name: "storage_id", Type: "string", Required: true, Desc: "Storage location ID", Enum: "", In: "body"},
-			{Name: "vdi_server_id", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "vtp_id", Type: "int", Required: true, Desc: "VDI API specific fields", Enum: "", In: "body"},
 			{Name: "count", Type: "int", Required: false, Desc: "Number of VMs to create", Enum: "", In: "body"},
+			{Name: "cpu_core", Type: "int", Required: false, Desc: "每颗CPU核数", Enum: "", In: "body"},
+			{Name: "host_id", Type: "string", Required: true, Desc: "Host position ID (father_id)", Enum: "", In: "body"},
+			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "network_id", Type: "string", Required: true, Desc: "Network interface ID", Enum: "", In: "body"},
+			{Name: "resource_id", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "vdi_server_id", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
+			{Name: "cpu_number", Type: "int", Required: false, Desc: "CPU颗数", Enum: "", In: "body"},
+			{Name: "disk", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "disk_id", Type: "string", Required: true, Desc: "Personal disk ID", Enum: "", In: "body"},
+			{Name: "memory", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "run_position_id", Type: "string", Required: false, Desc: "Run position ID (empty if id == father_id)", Enum: "", In: "body"},
+			{Name: "storage_id", Type: "string", Required: true, Desc: "Storage location ID", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -131,6 +139,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "删除虚拟机",
 		Description: "删除指定的虚拟机，调用VDI API",
 		Tags: "VDI管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -141,6 +150,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "获取虚拟机详情",
 		Description: "根据ID获取虚拟机详细信息",
 		Tags: "VDI管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -151,15 +161,16 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "查询虚拟机列表",
 		Description: "分页查询虚拟机列表，支持按条件筛选",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "power_state", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "resource_id", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "vdi_server_id", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "isAsc", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "orderByColumn", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "page", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "power_state", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "resource_id", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "vdi_server_id", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "isAsc", Type: "bool", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -170,6 +181,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "查询网络接口列表",
 		Description: "查询指定VTP平台下的网络接口列表",
 		Tags: "VDI管理",
+		Kind: "",
 	},
 	{
 		Module: "vdi",
@@ -179,6 +191,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "查询资源组列表",
 		Description: "查询VDI资源组列表，支持按VDI服务器过滤",
 		Tags: "VDI管理",
+		Kind: "",
 	},
 	{
 		Module: "vdi",
@@ -188,6 +201,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "查询资源列表",
 		Description: "查询指定资源组下的计算资源列表",
 		Tags: "VDI管理",
+		Kind: "",
 	},
 	{
 		Module: "vdi",
@@ -197,6 +211,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "查询运行位置列表",
 		Description: "查询指定VTP平台下的运行位置列表",
 		Tags: "VDI管理",
+		Kind: "",
 	},
 	{
 		Module: "vdi",
@@ -206,6 +221,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "查询存储位置列表",
 		Description: "查询指定VTP平台下的存储位置列表",
 		Tags: "VDI管理",
+		Kind: "",
 	},
 	{
 		Module: "vdi",
@@ -215,6 +231,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "同步虚拟机状态",
 		Description: "从VDI服务器同步虚拟机最新状态",
 		Tags: "VDI管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -225,6 +242,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "同步所有虚拟机",
 		Description: "从VDI服务器同步所有虚拟机数据到本地数据库",
 		Tags: "VDI管理",
+		Kind: "",
 	},
 	{
 		Module: "vdi",
@@ -234,6 +252,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "解绑用户",
 		Description: "解除虚拟机与用户的关联",
 		Tags: "VDI管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -244,10 +263,11 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "更新虚拟机",
 		Description: "更新虚拟机信息",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
+			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "ip_address", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "mac_address", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
 	},
@@ -259,6 +279,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "查询VTP平台列表",
 		Description: "查询VDI服务器的VTP平台列表，用于虚拟机创建",
 		Tags: "VDI管理",
+		Kind: "",
 	},
 	{
 		Module: "vdi",
@@ -268,6 +289,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "操作虚拟机",
 		Description: "批量开机、关机、重启、休眠虚拟机，调用VDI API",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "action", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "vm_ids", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},
@@ -281,6 +303,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "重启虚拟机",
 		Description: "批量重启指定的虚拟机",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "action", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "vm_ids", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},
@@ -294,6 +317,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "启动虚拟机",
 		Description: "批量启动指定的虚拟机",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "action", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "vm_ids", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},
@@ -307,6 +331,7 @@ var VdiEndpoints = []commands.EndpointMeta{
 		Summary: "关闭虚拟机",
 		Description: "批量关闭指定的虚拟机",
 		Tags: "VDI管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "action", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
 			{Name: "vm_ids", Type: "json", Required: true, Desc: "", Enum: "", In: "body"},

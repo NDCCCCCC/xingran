@@ -134,7 +134,7 @@ func applyLeafBehavior(cmd *cobra.Command, m EndpointMeta, run RunFunc, emit Emi
 	}
 	cmd.Use = use
 	cmd.Short = m.Summary
-	flags := sortedFlags(m.Flags)
+	flags := endpointFlags(m)
 	cmd.Long = buildActionLong(m, flags) + "\n\n本命令既可直接执行（见上），也可携带子命令访问其下级资源。"
 	cmd.Example = buildExample(m, flags)
 	cmd.Args = cobra.ExactArgs(len(m.PathArgs))
@@ -158,6 +158,20 @@ func applyLeafBehavior(cmd *cobra.Command, m EndpointMeta, run RunFunc, emit Emi
 		return emit(result, err)
 	}
 	registerFlags(cmd, flags)
+}
+
+// endpointFlags 按端点类型返回 flag 规格：
+// upload → --file（必填）；download → --out（可选）；JSON → 业务参数。
+func endpointFlags(m EndpointMeta) []FlagSpec {
+	switch m.Kind {
+	case KindUpload:
+		return []FlagSpec{{Name: "file", Type: "string", Required: true,
+			Desc: "上传的 .xlsx 文件路径"}}
+	case KindDownload:
+		return []FlagSpec{{Name: "out", Type: "string",
+			Desc: "输出文件路径（默认从响应 Content-Disposition 解析文件名）"}}
+	}
+	return sortedFlags(m.Flags)
 }
 
 // pathOf 回溯节点路径（构建 Long 文案用）。
@@ -208,7 +222,7 @@ func buildActionCmd(m EndpointMeta, run RunFunc, emit EmitFunc) *cobra.Command {
 		use += " <" + p + ">"
 	}
 	// 参数顺序：必填在前，其余按名称字母序
-	flags := sortedFlags(m.Flags)
+	flags := endpointFlags(m)
 	cmd := &cobra.Command{
 		Use:     use,
 		Short:   m.Summary,

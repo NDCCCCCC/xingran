@@ -10106,6 +10106,81 @@ paths:
       tags:
       - 配置模板管理
       - 配置模板管理
+  /ops/asset/export:
+    post:
+      consumes:
+      - application/json
+      description: 按筛选条件导出资产数据为 .xlsx 文件
+      parameters:
+      - description: 导出筛选条件(动态参数)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导出资产
+      tags:
+      - 运维管理
+  /ops/asset/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传 .xlsx 文件批量导入资产数据
+      parameters:
+      - description: Excel 文件(.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导入资产
+      tags:
+      - 运维管理
+  /ops/asset/template:
+    get:
+      description: 下载资产 Excel 导入模板文件(.xlsx)
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载资产导入模板
+      tags:
+      - 运维管理
   /ops/building:
     post:
       consumes:
@@ -10284,6 +10359,35 @@ paths:
       summary: 批量操作
       tags:
       - 运维管理
+  /ops/building/export:
+    post:
+      consumes:
+      - application/json
+      description: 按筛选条件导出楼宇数据为 .xlsx 文件
+      parameters:
+      - description: 导出筛选条件(动态参数)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导出楼宇
+      tags:
+      - 运维管理
   /ops/building/geocode:
     post:
       consumes:
@@ -10319,6 +10423,35 @@ paths:
       summary: 地址解析
       tags:
       - 楼宇管理
+  /ops/building/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传 .xlsx 文件批量导入楼宇数据
+      parameters:
+      - description: Excel 文件(.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导入楼宇
+      tags:
+      - 运维管理
   /ops/building/list:
     post:
       consumes:
@@ -10370,6 +10503,23 @@ paths:
           schema:
             $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
       summary: 查询楼宇列表
+      tags:
+      - 运维管理
+  /ops/building/template:
+    get:
+      description: 下载楼宇 Excel 导入模板文件(.xlsx)
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载楼宇导入模板
       tags:
       - 运维管理
   /ops/dedicatedLine:
@@ -10543,6 +10693,64 @@ paths:
       summary: 批量操作
       tags:
       - 运维管理
+  /ops/dedicatedLine/export:
+    post:
+      consumes:
+      - application/json
+      description: 按筛选条件导出专线数据为 .xlsx 文件
+      parameters:
+      - description: 导出筛选条件(动态参数)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导出专线
+      tags:
+      - 运维管理
+  /ops/dedicatedLine/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传 .xlsx 文件批量导入专线数据
+      parameters:
+      - description: Excel 文件(.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导入专线
+      tags:
+      - 运维管理
   /ops/dedicatedLine/list:
     post:
       consumes:
@@ -10583,6 +10791,23 @@ paths:
           schema:
             $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
       summary: 查询专线列表
+      tags:
+      - 运维管理
+  /ops/dedicatedLine/template:
+    get:
+      description: 下载专线 Excel 导入模板文件(.xlsx)
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载专线导入模板
       tags:
       - 运维管理
   /ops/doors:
@@ -11253,6 +11478,64 @@ paths:
       summary: 批量操作
       tags:
       - 运维管理
+  /ops/floor/export:
+    post:
+      consumes:
+      - application/json
+      description: 按筛选条件导出楼层数据为 .xlsx 文件
+      parameters:
+      - description: 导出筛选条件(动态参数)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导出楼层
+      tags:
+      - 运维管理
+  /ops/floor/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传 .xlsx 文件批量导入楼层数据
+      parameters:
+      - description: Excel 文件(.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导入楼层
+      tags:
+      - 运维管理
   /ops/floor/list:
     post:
       consumes:
@@ -11302,6 +11585,23 @@ paths:
           schema:
             $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
       summary: 查询楼层列表
+      tags:
+      - 运维管理
+  /ops/floor/template:
+    get:
+      description: 下载楼层 Excel 导入模板文件(.xlsx)
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载楼层导入模板
       tags:
       - 运维管理
   /ops/floor/tree:
@@ -11501,6 +11801,64 @@ paths:
       summary: 批量操作
       tags:
       - 运维管理
+  /ops/infoPoint/export:
+    post:
+      consumes:
+      - application/json
+      description: 按筛选条件导出信息点数据为 .xlsx 文件
+      parameters:
+      - description: 导出筛选条件(动态参数)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导出信息点
+      tags:
+      - 运维管理
+  /ops/infoPoint/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传 .xlsx 文件批量导入信息点数据
+      parameters:
+      - description: Excel 文件(.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导入信息点
+      tags:
+      - 运维管理
   /ops/infoPoint/list:
     post:
       consumes:
@@ -11541,6 +11899,23 @@ paths:
           schema:
             $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
       summary: 查询信息点列表
+      tags:
+      - 运维管理
+  /ops/infoPoint/template:
+    get:
+      description: 下载信息点 Excel 导入模板文件(.xlsx)
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载信息点导入模板
       tags:
       - 运维管理
   /ops/roomDevice:
@@ -11714,6 +12089,64 @@ paths:
       summary: 批量操作
       tags:
       - 运维管理
+  /ops/roomDevice/export:
+    post:
+      consumes:
+      - application/json
+      description: 按筛选条件导出机房设备数据为 .xlsx 文件
+      parameters:
+      - description: 导出筛选条件(动态参数)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导出机房设备
+      tags:
+      - 运维管理
+  /ops/roomDevice/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传 .xlsx 文件批量导入机房设备数据
+      parameters:
+      - description: Excel 文件(.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导入机房设备
+      tags:
+      - 运维管理
   /ops/roomDevice/list:
     post:
       consumes:
@@ -11754,6 +12187,23 @@ paths:
           schema:
             $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
       summary: 查询机房设备列表
+      tags:
+      - 运维管理
+  /ops/roomDevice/template:
+    get:
+      description: 下载机房设备 Excel 导入模板文件(.xlsx)
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载机房设备导入模板
       tags:
       - 运维管理
   /ops/serverRoom:
@@ -11927,6 +12377,64 @@ paths:
       summary: 批量操作
       tags:
       - 运维管理
+  /ops/serverRoom/export:
+    post:
+      consumes:
+      - application/json
+      description: 按筛选条件导出机房数据为 .xlsx 文件
+      parameters:
+      - description: 导出筛选条件(动态参数)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导出机房
+      tags:
+      - 运维管理
+  /ops/serverRoom/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传 .xlsx 文件批量导入机房数据
+      parameters:
+      - description: Excel 文件(.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导入机房
+      tags:
+      - 运维管理
   /ops/serverRoom/list:
     post:
       consumes:
@@ -11967,6 +12475,23 @@ paths:
           schema:
             $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
       summary: 查询机房列表
+      tags:
+      - 运维管理
+  /ops/serverRoom/template:
+    get:
+      description: 下载机房 Excel 导入模板文件(.xlsx)
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载机房导入模板
       tags:
       - 运维管理
   /ops/walls:
@@ -12868,6 +13393,23 @@ paths:
       summary: 批量楼层工位计数
       tags:
       - 运维管理
+  /ops/workstation/dept-mapping-template:
+    get:
+      description: 下载 sys_dept 启用部门的全量映射表(dept_name/parent_path/dept_code)，供工位导入时按代码校对部门名称
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载部门名称↔代码映射表模板
+      tags:
+      - 运维管理
   /ops/workstation/dept-options:
     post:
       consumes:
@@ -12902,6 +13444,64 @@ paths:
           schema:
             $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
       summary: 工位部门下拉选项
+      tags:
+      - 运维管理
+  /ops/workstation/export:
+    post:
+      consumes:
+      - application/json
+      description: 按筛选条件导出工位数据为 .xlsx 文件
+      parameters:
+      - description: 导出筛选条件(动态参数)
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导出工位
+      tags:
+      - 运维管理
+  /ops/workstation/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传 .xlsx 文件批量导入工位数据，支持按部门名称/用户名建立关联
+      parameters:
+      - description: Excel 文件(.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: Excel 导入工位
       tags:
       - 运维管理
   /ops/workstation/list:
@@ -12997,6 +13597,23 @@ paths:
           schema:
             $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
       summary: 批量更新工位位置
+      tags:
+      - 运维管理
+  /ops/workstation/template:
+    get:
+      description: 下载工位 Excel 导入模板文件(.xlsx)
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_xingran-next_xingran-go-backend_pkg_response.Response'
+      summary: 下载工位导入模板
       tags:
       - 运维管理
   /rpa/ai/analyze-failure:

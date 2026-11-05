@@ -19,6 +19,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "按工位查询对账异常",
 		Description: "按工位ID查询其对账异常（默认 7 天窗口）",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -28,6 +29,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "手动刷新对账(REFRESH MV + 立即 DetectLayer3)",
 		Description: "用于运维/UAT 调试,避免等待 5min/6min cron 周期。",
 		Tags: "资产对账",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -37,6 +39,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "对比降噪基线",
 		Description: "对比当前异常计数与基线，返回下降百分比（无基线时返回 400）",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -46,6 +49,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "记录降噪基线",
 		Description: "将当前对账异常计数记录为降噪基线（覆盖现有 baseline，R3 部署前必须调用）",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -55,6 +59,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "查询对账异常详情",
 		Description: "根据异常ID查询单条资产对账异常",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -65,17 +70,18 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "查询对账异常列表",
 		Description: "分页查询资产对账异常列表（JOIN 资产编码/物理责任人/责任人）",
 		Tags: "资产管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "showSilenced", Type: "bool", Required: false, Desc: "ShowSilenced R3 / D-R3-A1-01 — 是否在列表显示 silence 记录(默认 false 隐藏)\n\nsilence action 命中仍写表(审计链不断),但异常列表默认过滤掉,仅运维\n审计场景需要时显式传 true 才可见。SQL 默认 WHERE NOT ('silence' = ANY(applied_actions))。", Enum: "", In: "body"},
+			{Name: "assetCode", Type: "string", Required: false, Desc: "资产编号(devicesn),LIKE 模糊匹配", Enum: "", In: "body"},
 			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "detectedFrom", Type: "string", Required: false, Desc: "检测时间区间起点(包含)", Enum: "", In: "body"},
+			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
+			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "severity", Type: "string", Required: false, Desc: "严重度(low/medium/high/critical,精确匹配)", Enum: "", In: "body"},
-			{Name: "assetCode", Type: "string", Required: false, Desc: "资产编号(devicesn),LIKE 模糊匹配", Enum: "", In: "body"},
+			{Name: "showSilenced", Type: "bool", Required: false, Desc: "ShowSilenced R3 / D-R3-A1-01 — 是否在列表显示 silence 记录(默认 false 隐藏)\n\nsilence action 命中仍写表(审计链不断),但异常列表默认过滤掉,仅运维\n审计场景需要时显式传 true 才可见。SQL 默认 WHERE NOT ('silence' = ANY(applied_actions))。", Enum: "", In: "body"},
 			{Name: "conflictType", Type: "string", Required: false, Desc: "冲突类型(A/B/C/D/E/F,精确匹配)", Enum: "", In: "body"},
 			{Name: "detectedTo", Type: "string", Required: false, Desc: "检测时间区间终点(包含)", Enum: "", In: "body"},
 			{Name: "isAsc", Type: "bool", Required: false, Desc: "nil 或 true=升序，false=降序", Enum: "", In: "body"},
-			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
-			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -86,6 +92,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "人工解决对账异常",
 		Description: "人工解决指定对账异常（可附处理说明，不联动工单/不触发重检）",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -96,15 +103,16 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "创建例外规则",
 		Description: "创建新的资产对账例外规则（校验 CIDR / Actions / Severity / Reason）",
 		Tags: "资产管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "conflictTypes", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "exceptionActions", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "expiresAt", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "ipRange", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "reason", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "scopeId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "scopeType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "exceptionActions", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "ipRange", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "conflictTypes", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "scopeId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "severityOverride", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 	},
@@ -116,6 +124,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "删除例外规则",
 		Description: "软删除指定例外规则",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -126,6 +135,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "Excel 导出例外规则",
 		Description: "导出全部例外规则为 Excel 文件",
 		Tags: "资产管理",
+		Kind: "download",
 	},
 	{
 		Module: "asset",
@@ -135,6 +145,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "查询例外规则详情",
 		Description: "根据规则ID查询单条例外规则",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -145,9 +156,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "Excel 导入例外规则",
 		Description: "上传 Excel 文件批量导入例外规则",
 		Tags: "资产管理",
-		Flags: []commands.FlagSpec{
-			{Name: "file", Type: "string", Required: true, Desc: "", Enum: "", In: "body"},
-		},
+		Kind: "upload",
 	},
 	{
 		Module: "asset",
@@ -157,6 +166,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "查询例外规则列表",
 		Description: "分页查询资产对账例外规则列表",
 		Tags: "资产管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "isActive", Type: "int", Required: false, Desc: "状态过滤(0=启用, 1=停用,遵循 Status Convention)", Enum: "", In: "body"},
@@ -173,6 +183,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "下载例外规则导入模板",
 		Description: "下载例外规则 Excel 导入模板文件",
 		Tags: "资产管理",
+		Kind: "download",
 	},
 	{
 		Module: "asset",
@@ -182,6 +193,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "例外规则命中测试",
 		Description: "按给定 IP/用户/部门测试例外规则命中情况，返回合并动作与最终严重级别",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -191,15 +203,16 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "更新例外规则",
 		Description: "按 ID 更新资产对账例外规则",
 		Tags: "资产管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
 			{Name: "conflictTypes", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "ipRange", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "exceptionActions", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "expiresAt", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "reason", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "ipRange", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "scopeId", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "scopeType", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "exceptionActions", Type: "json", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "name", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "reason", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "severityOverride", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 		},
 		PathArgs: []string{"id"},
@@ -212,6 +225,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "接受修复建议",
 		Description: "接受一条待处理的修复建议（pending → accepted）",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -222,6 +236,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "应用修复建议",
 		Description: "应用已接受的修复建议（accepted → applied），写回资产责任人",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -232,6 +247,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "查询修复建议详情",
 		Description: "根据建议ID查询单条修复建议详情",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -242,16 +258,17 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "查询修复建议列表",
 		Description: "分页查询资产对账修复建议列表，支持按状态、严重级别等筛选",
 		Tags: "资产管理",
+		Kind: "",
 		Flags: []commands.FlagSpec{
-			{Name: "createdTo", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
-			{Name: "fixStatus", Type: "string", Required: false, Desc: "过滤字段", Enum: "", In: "body"},
+			{Name: "createdFrom", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "isAsc", Type: "bool", Required: false, Desc: "nil 或 true=升序，false=降序", Enum: "", In: "body"},
 			{Name: "orderByColumn", Type: "string", Required: false, Desc: "逻辑字段名（对应 allowed map 的 key）", Enum: "", In: "body"},
+			{Name: "pageSize", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
 			{Name: "responsibleDeptId", Type: "string", Required: false, Desc: "责任人部门 ID(JOIN sys_asset.dept_id)", Enum: "", In: "body"},
 			{Name: "conflictType", Type: "string", Required: false, Desc: "冲突类型(A/B/C/D/E/F)", Enum: "", In: "body"},
-			{Name: "createdFrom", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "createdTo", Type: "string", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "current", Type: "int", Required: false, Desc: "", Enum: "", In: "body"},
+			{Name: "fixStatus", Type: "string", Required: false, Desc: "过滤字段", Enum: "", In: "body"},
 		},
 	},
 	{
@@ -262,6 +279,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "拒绝修复建议",
 		Description: "拒绝一条待处理的修复建议，需填写拒绝原因（至少 10 字符）",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -272,6 +290,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "回滚修复建议",
 		Description: "回滚已应用的修复建议（applied → rolled_back，限 7 天窗口内）",
 		Tags: "资产管理",
+		Kind: "",
 		PathArgs: []string{"id"},
 	},
 	{
@@ -282,6 +301,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "修复建议统计",
 		Description: "统计近 N 天（默认 7 天）修复建议 KPI 指标",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -291,6 +311,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "按冲突类型统计",
 		Description: "按冲突类型分组统计资产对账异常",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -300,6 +321,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "按严重级别统计",
 		Description: "按严重级别分组统计资产对账异常",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -309,6 +331,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "例外规则命中统计",
 		Description: "统计各例外规则命中情况",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -318,6 +341,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "资产健康趋势",
 		Description: "查询资产健康度趋势（默认近 7 天）",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -327,6 +351,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "对账统计总览",
 		Description: "查询资产对账统计总览（默认近 7 天）",
 		Tags: "资产管理",
+		Kind: "",
 	},
 	{
 		Module: "asset",
@@ -336,6 +361,7 @@ var AssetEndpoints = []commands.EndpointMeta{
 		Summary: "未解决异常 TOP",
 		Description: "查询长期未解决对账异常排行",
 		Tags: "资产管理",
+		Kind: "",
 	},
 }
 

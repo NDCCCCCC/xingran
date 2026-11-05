@@ -136,6 +136,8 @@ func newRootCmd() *cobra.Command {
 		newAPICmd(),
 		newSchemaCmd(),
 		newVersionCmd(),
+		newUploadCmd(),
+		newDownloadCmd(),
 	)
 	// 三级命令树（tools/cmdgen 从 Swagger 生成，按模块注册）：
 	// xingran <module> <resource...> <action>；xingran api 保持万能兜底。
