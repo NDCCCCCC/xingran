@@ -21,14 +21,15 @@ const (
 type ExcelColumn struct {
 	Field     string
 	Header    string
+	Aliases   []string // 表头别名（匹配导入表格时支持多种表头名称）
 	Required  bool
 	Unique    bool
 	MinLength int
 	MaxLength int
 	Pattern   string
 	Options   map[interface{}]string
-	Reference string // 引用配置，格式："table.field"，用于名称到ID的转换
-	DependsOn string // 依赖字段：该字段的引用解析依赖于另一个字段的解析结果（如 floorName 依赖 buildingName）
+	Reference string      // 引用配置，格式："table.field"，用于名称到ID的转换
+	DependsOn string      // 依赖字段：该字段的引用解析依赖于另一个字段的解析结果（如 floorName 依赖 buildingName）
 	UpsertKey bool        // 是否作为Upsert的唯一键（用于判断重复记录）
 	DBField   string      // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
 	Default   interface{} // 当Excel值为空时的默认值
@@ -86,13 +87,13 @@ var ExcelConfigs = map[string]ExcelConfig{
 		// 不按表头名（Header 仅用于错误提示）。Excel 实际列序：昵称/用户名/工号/邮箱/
 		// 手机号/科室代码/科室名称（共 7 列）。
 		Columns: []ExcelColumn{
-			{Field: "nickname", Header: "昵称", MaxLength: 64, DBField: "nickname"},
-			{Field: "username", Header: "用户名", Required: true, Unique: true, MaxLength: 64, UpsertKey: true, DBField: "username"},
-			{Field: "employeeNo", Header: "工号", MaxLength: 64, DBField: "employee_no"},
-			{Field: "email", Header: "邮箱", MaxLength: 128, DBField: "email"},
-			{Field: "phone", Header: "手机号", MaxLength: 32, DBField: "phone"},
-			{Field: "deptCode", Header: "科室代码", Reference: "sys_dept.dept_code", DBField: "dept_id"},
-			{Field: "deptNameText", Header: "科室名称", MaxLength: 100}, // 临时字段，无DBField不写库（prepareRecordsForUpsert 跳过）
+			{Field: "nickname", Header: "昵称", Aliases: []string{"姓名", "用户姓名", "真实姓名"}, MaxLength: 64, DBField: "nickname"},
+			{Field: "username", Header: "用户名", Aliases: []string{"账号", "登录名", "用户账号", "登录账号"}, Required: true, Unique: true, MaxLength: 64, UpsertKey: true, DBField: "username"},
+			{Field: "employeeNo", Header: "工号", Aliases: []string{"员工号", "员工编号"}, MaxLength: 64, DBField: "employee_no"},
+			{Field: "email", Header: "邮箱", Aliases: []string{"电子邮箱", "Email"}, MaxLength: 128, DBField: "email"},
+			{Field: "phone", Header: "手机号", Aliases: []string{"联系电话", "手机", "电话"}, MaxLength: 32, DBField: "phone"},
+			{Field: "deptCode", Header: "科室代码", Aliases: []string{"科室编码", "部门代码", "部门编码"}, Reference: "sys_dept.dept_code", DBField: "dept_id"},
+			{Field: "deptNameText", Header: "科室名称", Aliases: []string{"部门名称", "所属部门", "所属科室"}, MaxLength: 100}, // 临时字段，无DBField不写库（prepareRecordsForUpsert 跳过）
 			// gender/status：Excel 无对应列（仅 7 列，index 7/8 越界），走 Default 填充
 			{Field: "gender", Header: "性别", Options: map[interface{}]string{int(0): "男", int(1): "女", int(2): "保密"}, Default: int(2)},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(0): "启用", int(1): "禁用"}, Default: int(0)},
@@ -107,12 +108,12 @@ var ExcelConfigs = map[string]ExcelConfig{
 		CachePatterns: []string{"building:*", "buildings:*"},
 		UniqueKeys:    []string{"name", "orgId"}, // 按名称+机构判断重复
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "楼宇名称", Required: true, MaxLength: 100, UpsertKey: true},
-			{Field: "address", Header: "地址", MaxLength: 200, DBField: "position_desc"},
-			{Field: "orgName", Header: "所属机构名称/编码", Required: true, MaxLength: 100, Reference: "sys_dept.dept_code", DBField: "org_id"}, // 用户提供机构名称或编码，自动转换为orgId
+			{Field: "name", Header: "楼宇名称", Aliases: []string{"楼宇", "所属楼宇", "建筑名称", "楼栋名称", "楼栋"}, Required: true, MaxLength: 100, UpsertKey: true},
+			{Field: "address", Header: "地址", Aliases: []string{"详细地址", "楼宇地址", "位置描述"}, MaxLength: 200, DBField: "position_desc"},
+			{Field: "orgName", Header: "所属机构名称/编码", Aliases: []string{"所属机构", "机构名称", "机构编码", "所属部门", "部门", "所属机构名称", "机构"}, Required: true, MaxLength: 100, Reference: "sys_dept.dept_code", DBField: "org_id"}, // 用户提供机构名称或编码，自动转换为orgId
 			{Field: "level", Header: "层级", Options: map[interface{}]string{1: "城市级汇总", 2: "具体楼宇"}},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.BuildingStatusNormal): "正常", int(operations.BuildingStatusStopped): "停用"}},
-			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
+			{Field: "remark", Header: "备注", Aliases: []string{"说明", "描述"}, MaxLength: 500, DBField: "remark"},
 		},
 	},
 	"floor": {
@@ -124,11 +125,11 @@ var ExcelConfigs = map[string]ExcelConfig{
 		CachePatterns: []string{"floor:*", "floors:*"},
 		UniqueKeys:    []string{"building_id", "floor_no"}, // 按楼宇+楼层号判断重复（使用数据库字段名）
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "楼层名称", Required: true, MaxLength: 100, DBField: "name"},
-			{Field: "floorNo", Header: "楼层号", Required: true, MaxLength: 50, DBField: "floor_no"},
-			{Field: "buildingName", Header: "所属楼宇名称", Required: true, MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"},
+			{Field: "name", Header: "楼层名称", Aliases: []string{"楼层", "层名"}, Required: true, MaxLength: 100, DBField: "name"},
+			{Field: "floorNo", Header: "楼层号", Aliases: []string{"楼层编码", "层号", "楼层代号"}, Required: true, MaxLength: 50, DBField: "floor_no"},
+			{Field: "buildingName", Header: "所属楼宇名称", Aliases: []string{"所属楼宇", "楼宇", "楼宇名称", "所属建筑", "楼栋"}, Required: true, MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.FloorStatusNormal): "正常", int(operations.FloorStatusStopped): "停用"}, DBField: "status"},
-			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
+			{Field: "remark", Header: "备注", Aliases: []string{"说明", "描述"}, MaxLength: 500, DBField: "remark"},
 		},
 	},
 	"workstation": {
@@ -140,22 +141,22 @@ var ExcelConfigs = map[string]ExcelConfig{
 		CachePatterns: []string{"workstation:*", "workstations:*"},
 		UniqueKeys:    []string{"floorName", "name"}, // 按楼层+工位名称判断重复
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "工位名称", Required: true, MaxLength: 100, DBField: "workstation_name"},
-			{Field: "buildingName", Header: "所属楼宇", MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"},                                     // Excel列名：所属楼宇
-			{Field: "floorName", Header: "所属楼层名称", Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id", DependsOn: "buildingName"}, // 依赖 buildingName 的解析结果
-			{Field: "workstationType", Header: "工位类型", DBField: "workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
-			{Field: "status", Header: "状态", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
+			{Field: "name", Header: "工位名称", Aliases: []string{"工位", "工位编号", "工位号", "工位代码"}, Required: true, MaxLength: 100, DBField: "workstation_name"},
+			{Field: "buildingName", Header: "所属楼宇", Aliases: []string{"所属楼宇名称", "楼宇", "楼宇名称", "所属楼栋", "楼栋", "所属建筑", "建筑"}, MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"},                         // Excel列名：所属楼宇
+			{Field: "floorName", Header: "所属楼层名称", Aliases: []string{"所属楼层", "所在楼层", "所在楼层名称", "楼层", "楼层名称"}, Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id", DependsOn: "buildingName"}, // 依赖 buildingName 的解析结果
+			{Field: "workstationType", Header: "工位类型", Aliases: []string{"类型"}, DBField: "workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
+			{Field: "status", Header: "状态", Aliases: []string{"工位状态"}, DBField: "status", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
 			// 部门代码：按 sys_dept.dept_code 解析为 dept_id；与既有 deptName 共存时以本字段为准；
 			// 本字段为空且 deptName 非空时走名称匹配回退，向后兼容老模板。
-			{Field: "deptCode", Header: "部门代码", MaxLength: 100, Reference: "sys_dept.dept_code", DBField: "dept_id"},
-			{Field: "deptName", Header: "所属部门", Reference: "sys_dept.dept_name", DBField: "dept_id"},
-			{Field: "userName", Header: "所属用户", Reference: "sys_user.username", DBField: "user_id"},
+			{Field: "deptCode", Header: "部门代码", Aliases: []string{"部门编码", "科室代码", "科室编码"}, MaxLength: 100, Reference: "sys_dept.dept_code", DBField: "dept_id"},
+			{Field: "deptName", Header: "所属部门", Aliases: []string{"部门", "部门名称", "所属科室", "科室名称", "科室"}, Reference: "sys_dept.dept_name", DBField: "dept_id"},
+			{Field: "userName", Header: "所属用户", Aliases: []string{"所属人员", "用户", "人员", "使用人", "责任人", "姓名", "用户名", "人员姓名"}, Reference: "sys_user.username", DBField: "user_id"},
 			// 主设备序列号：跨表特殊处理，无 DBField → prepareRecordsForUpsert 跳过不写 sys_workstation；
 			// 由 ExcelService.ImportData post-import hook 调用 WorkstationDeviceService.SetPrimaryAndSaveBySerial
 			// 写入 ops_workstation_device 表（IsPrimary=true，字段值由 AD/Asset 合并填充）。
 			// 加 Reference:"skip" 使 shouldSkipFromUpdate 跳过，避免 device_serial 进入 ON CONFLICT DO UPDATE SET。
-			{Field: "deviceSerial", Header: "主设备序列号", MaxLength: 200, Reference: "skip"},
-			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "description"},
+			{Field: "deviceSerial", Header: "主设备序列号", Aliases: []string{"设备序列号", "主机序列号", "序列号", "设备SN", "SN"}, MaxLength: 200, Reference: "skip"},
+			{Field: "remark", Header: "备注", Aliases: []string{"说明", "描述"}, MaxLength: 500, DBField: "description"},
 		},
 	},
 	"asset": {
@@ -237,21 +238,21 @@ var ExcelConfigs = map[string]ExcelConfig{
 		HasHeader:  true,
 		StartRow:   2,
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "设备名称", Required: true, MaxLength: 100, DBField: "name"},
-			{Field: "deviceCode", Header: "设备编码", Required: true, Unique: true, UpsertKey: true, MaxLength: 200, DBField: "device_code"},
+			{Field: "name", Header: "设备名称", Aliases: []string{"设备", "设备名"}, Required: true, MaxLength: 100, DBField: "name"},
+			{Field: "deviceCode", Header: "设备编码", Aliases: []string{"设备代码", "资产编码", "设备编号"}, Required: true, Unique: true, UpsertKey: true, MaxLength: 200, DBField: "device_code"},
 			{Field: "deviceType", Header: "设备类型", DBField: "device_type", Default: string(operations.DeviceTypeOther), Options: map[interface{}]string{string(operations.DeviceTypeServer): "服务器", string(operations.DeviceTypeStorage): "存储设备", string(operations.DeviceTypeUPS): "UPS", string(operations.DeviceTypePDU): "PDU", string(operations.DeviceTypeFirewall): "防火墙", string(operations.DeviceTypeKVM): "KVM", string(operations.DeviceTypeCabinet): "机柜", string(operations.DeviceTypeOther): "其他"}},
 			{Field: "vendor", Header: "厂商", MaxLength: 100, DBField: "vendor"},
-			{Field: "model", Header: "型号", MaxLength: 100, DBField: "model"},
-			{Field: "serialNumber", Header: "序列号", MaxLength: 100, DBField: "serial_number"},
-			{Field: "roomName", Header: "所在机房", Required: true, Reference: "ops_server_rooms.name", DBField: "room_id"},
-			{Field: "positionU", Header: "U位", DBField: "position_u"},
+			{Field: "model", Header: "型号", Aliases: []string{"规格型号", "设备型号"}, MaxLength: 100, DBField: "model"},
+			{Field: "serialNumber", Header: "序列号", Aliases: []string{"设备序列号", "SN"}, MaxLength: 100, DBField: "serial_number"},
+			{Field: "roomName", Header: "所在机房", Aliases: []string{"所属机房", "机房", "机房名称"}, Required: true, Reference: "ops_server_rooms.name", DBField: "room_id"},
+			{Field: "positionU", Header: "U位", Aliases: []string{"机架位置(U)", "机架位置"}, DBField: "position_u"},
 			{Field: "positionDesc", Header: "位置描述", MaxLength: 200, DBField: "position_desc"},
 			{Field: "assetNumber", Header: "资产编号", MaxLength: 100, DBField: "asset_number"},
 			{Field: "purchaseDate", Header: "购买日期", MaxLength: 50, DBField: "purchase_date"},
 			{Field: "warrantyDate", Header: "保修到期", MaxLength: 50, DBField: "warranty_date"},
 			{Field: "powerConsumption", Header: "功耗(W)", DBField: "power_consumption"},
 			{Field: "status", Header: "状态", DBField: "status", Options: map[interface{}]string{0: "正常", 1: "故障", 2: "报废"}},
-			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
+			{Field: "remark", Header: "备注", Aliases: []string{"说明", "描述"}, MaxLength: 500, DBField: "remark"},
 		},
 	},
 	"dedicatedLine": {
@@ -293,13 +294,13 @@ var ExcelConfigs = map[string]ExcelConfig{
 		UniqueKeys:    []string{"workstation_id", "name"}, // 按工位+名称判断重复（使用数据库字段名）
 		PartialUpdate: true,                               // 启用部分更新以避免 GORM 无法识别部分索引的问题
 		Columns: []ExcelColumn{
-			{Field: "name", Header: "信息点名称", Required: true, MaxLength: 100, DBField: "name"},
+			{Field: "name", Header: "信息点名称", Aliases: []string{"信息点", "信息点编号", "点位名称", "点位编号"}, Required: true, MaxLength: 100, DBField: "name"},
 			{Field: "infoPointType", Header: "信息点类型", Options: map[interface{}]string{string(operations.InfoPointTypeNetwork): "网络信息点", string(operations.InfoPointTypePower): "电源信息点", string(operations.InfoPointTypeOther): "其他"}, DBField: "info_point_type", Default: string(operations.InfoPointTypeNetwork)},
-			{Field: "workstationName", Header: "关联工位名称", Required: true, MaxLength: 100, Reference: "sys_workstation.workstation_name", DBField: "workstation_id"}, // 用户提供工位名称，自动转换为workstationId
-			{Field: "deviceName", Header: "所属设备", MaxLength: 100, Reference: "sys_network_device.device_name", DBField: "device_id"},
-			{Field: "portName", Header: "所属端口", MaxLength: 100, Reference: "sys_device_port_status.interface_name", DBField: "port_id", DependsOn: "deviceName"}, // 依赖 deviceName 解析结果(避免同名接口跨设备误选)
+			{Field: "workstationName", Header: "关联工位名称", Aliases: []string{"所属工位", "工位", "工位名称", "关联工位"}, Required: true, MaxLength: 100, Reference: "sys_workstation.workstation_name", DBField: "workstation_id"}, // 用户提供工位名称，自动转换为workstationId
+			{Field: "deviceName", Header: "所属设备", Aliases: []string{"关联设备", "网络设备", "设备名称", "交换机名称", "交换机"}, MaxLength: 100, Reference: "sys_network_device.device_name", DBField: "device_id"},
+			{Field: "portName", Header: "所属端口", Aliases: []string{"端口名称", "端口", "接口名称", "接口"}, MaxLength: 100, Reference: "sys_device_port_status.interface_name", DBField: "port_id", DependsOn: "deviceName"}, // 依赖 deviceName 解析结果(避免同名接口跨设备误选)
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(operations.InfoPointStatusNormal): "正常", int(operations.InfoPointStatusFault): "故障", int(operations.InfoPointStatusDisabled): "停用"}, DBField: "status"},
-			{Field: "description", Header: "描述", MaxLength: 500, DBField: "remark"},
+			{Field: "description", Header: "描述", Aliases: []string{"备注", "说明"}, MaxLength: 500, DBField: "remark"},
 		},
 	},
 	// Phase 44 R3 / Plan 44-02 Task 4 — 资产对账例外规则 Excel 导入导出
