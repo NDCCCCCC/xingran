@@ -82,3 +82,44 @@ func TestDefaultStoreDir(t *testing.T) {
 		t.Fatalf("期望目录名 .xingran-cli, got %s", dir)
 	}
 }
+
+// TestStoreEnvOverride 企业环境 %USERPROFILE% 写入被拦截时的逃生通道：
+// XINGRAN_TOKEN_FILE / XINGRAN_HOME 必须生效。
+func TestStoreEnvOverride(t *testing.T) {
+	tmp := t.TempDir()
+
+	t.Run("XINGRAN_HOME", func(t *testing.T) {
+		t.Setenv(EnvHome, tmp)
+		t.Setenv(EnvTokenFile, "")
+		if got := DefaultStoreDir(); got != tmp {
+			t.Fatalf("XINGRAN_HOME 未生效: got %s want %s", got, tmp)
+		}
+		st := NewFileTokenStore()
+		if want := filepath.Join(tmp, "tokens.json"); st.Path != want {
+			t.Fatalf("tokens 路径不正确: got %s want %s", st.Path, want)
+		}
+		if err := st.Save(nil, TokenPair{AccessToken: "a", RefreshToken: "r", ExpiresIn: 60}); err != nil {
+			t.Fatalf("保存失败: %v", err)
+		}
+		got, err := st.Load(nil)
+		if err != nil || got == nil || got.AccessToken != "a" {
+			t.Fatalf("回读失败: %+v err=%v", got, err)
+		}
+	})
+
+	t.Run("XINGRAN_TOKEN_FILE", func(t *testing.T) {
+		custom := filepath.Join(tmp, "custom", "my-token.json")
+		t.Setenv(EnvTokenFile, custom)
+		st := NewFileTokenStore()
+		if st.Path != custom {
+			t.Fatalf("XINGRAN_TOKEN_FILE 未生效: got %s want %s", st.Path, custom)
+		}
+		if err := st.Save(nil, TokenPair{AccessToken: "b", RefreshToken: "r2", ExpiresIn: 60}); err != nil {
+			t.Fatalf("保存失败（应自动创建父目录）: %v", err)
+		}
+		got, err := st.Load(nil)
+		if err != nil || got == nil || got.AccessToken != "b" {
+			t.Fatalf("回读失败: %+v err=%v", got, err)
+		}
+	})
+}

@@ -61,6 +61,31 @@ go build -o xingran-cli.exe ./cmd/xingran
 
 token 存储：`%USERPROFILE%/.xingran-cli/tokens.json`（POSIX 0600 / 目录 0700；Windows 退化为只读位）。access token 剩余有效期 <30s 时自动 refresh；refresh 失败清除本地凭据并要求重新登录。
 
+### ⚠️ 企业环境：token 目录写入被拦截怎么办
+
+部分企业终端（EDR / 杀毒 / Windows「受控文件夹访问」）会阻止程序在用户目录下创建目录或写文件，
+表现为登录成功后报 `Access is denied`：
+
+```
+保存 token 失败: 写入 token 文件 C:\Users\<you>\.xingran-cli\tokens.json.tmp 失败:
+open ...: Access is denied.
+```
+
+这不是 CLI 缺陷，而是安全策略拦截。用环境变量把凭据落到可写位置即可：
+
+```bash
+# 方式 1：指定完整文件路径（推荐，路径可自定义）
+set "XINGRAN_TOKEN_FILE=D:\tools\xingran\tokens.json"
+./xingran-cli.exe login --web
+
+# 方式 2：只换目录，文件名仍为 tokens.json
+set "XINGRAN_HOME=D:\tools\xingran"
+```
+
+优先级：`XINGRAN_TOKEN_FILE` > `XINGRAN_HOME` > `%USERPROFILE%/.xingran-cli`。
+注意 `set` 只在当前 shell 窗口有效——同一窗口内后续命令才共享该凭据位置。
+若把 token 放在工作目录，请确保它被 `.gitignore` 排除（本仓库已排除 `.tokens.json` / `tokens.json`）。
+
 ## 验证码三模式（agent 非交互指南）
 
 后端模式由数据库配置键动态决定（`sys.account.captchaEnabled` = disabled / normal / slider）。

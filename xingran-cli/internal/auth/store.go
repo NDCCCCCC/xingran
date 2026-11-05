@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -15,8 +16,20 @@ type TokenStore interface {
 	Clear(ctx context.Context) error
 }
 
-// DefaultStoreDir 返回默认 token 存储目录：%USERPROFILE%/.xingran-cli/。
+// 环境变量（企业环境下 %USERPROFILE% 可能被 EDR/杀软拦截写入，提供自定义位置）：
+//   XINGRAN_TOKEN_FILE 完整 token 文件路径（优先级最高）
+//   XINGRAN_HOME       存放 tokens.json 的目录
+const (
+	EnvTokenFile = "XINGRAN_TOKEN_FILE"
+	EnvHome      = "XINGRAN_HOME"
+)
+
+// DefaultStoreDir 返回 token 存储目录，优先级：
+// XINGRAN_HOME > %USERPROFILE%/.xingran-cli。
 func DefaultStoreDir() string {
+	if d := os.Getenv(EnvHome); d != "" {
+		return d
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ".xingran-cli"
@@ -30,19 +43,28 @@ type FileTokenStore struct {
 	Path string
 }
 
-// NewFileTokenStore 使用默认目录构造。
+// NewFileTokenStore 使用默认位置构造，优先级：
+// XINGRAN_TOKEN_FILE（完整路径） > XINGRAN_HOME/tokens.json > %USERPROFILE%/.xingran-cli/tokens.json。
 func NewFileTokenStore() *FileTokenStore {
+	if f := os.Getenv(EnvTokenFile); f != "" {
+		return &FileTokenStore{Path: f}
+	}
 	return &FileTokenStore{Path: filepath.Join(DefaultStoreDir(), "tokens.json")}
 }
 
+// Save 写入 token；失败时返回带绝对路径与排查建议的错误。
 func (s *FileTokenStore) Save(_ context.Context, pair TokenPair) error {
-	if err := os.MkdirAll(filepath.Dir(s.Path), 0o700); err != nil {
-		return err
+	dir := filepath.Dir(s.Path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("创建 token 目录 %s 失败: %w（若为企业环境，可能被安全软件拦截写入；"+
+			"可用环境变量 %s 指定可写路径，例如 %s=D:\\tools\\xingran\\tokens.json）",
+			dir, err, EnvTokenFile, EnvTokenFile)
 	}
 	// 先写临时文件再 rename，避免并发读写撕裂
 	tmp := s.Path + ".tmp"
 	if err := os.WriteFile(tmp, []byte(marshalPair(pair)), 0o600); err != nil {
-		return err
+		return fmt.Errorf("写入 token 文件 %s 失败: %w（可用环境变量 %s 指定可写路径）",
+			tmp, err, EnvTokenFile)
 	}
 	if err := os.Chmod(tmp, 0o600); err != nil { // 确保权限（覆盖 umask 影响）
 		_ = os.Remove(tmp)
@@ -50,7 +72,8 @@ func (s *FileTokenStore) Save(_ context.Context, pair TokenPair) error {
 	}
 	if err := os.Rename(tmp, s.Path); err != nil {
 		_ = os.Remove(tmp)
-		return err
+		return fmt.Errorf("落盘 token 文件 %s 失败: %w（可用环境变量 %s 指定可写路径）",
+			s.Path, err, EnvTokenFile)
 	}
 	return nil
 }

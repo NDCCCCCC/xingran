@@ -20,7 +20,7 @@ const webLoginPageTpl = `<!DOCTYPE html>
          background:var(--bg); display:flex; justify-content:center; align-items:center;
          min-height:100vh; padding:16px; }
   .card { background:#fff; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,.08);
-          padding:32px; width:420px; max-width:100%; }
+          padding:32px; width:464px; max-width:100%; }
   h1 { font-size:20px; margin-bottom:4px; }
   .sub { color:#64748b; font-size:13px; margin-bottom:20px; }
   label { display:block; font-size:13px; color:#334155; margin:12px 0 4px; }
@@ -78,8 +78,20 @@ function loadCaptcha(){
     if (mode === 'slider') {
       box.innerHTML = '<div class="slider-wrap" id="wrap">' +
         '<img class="bg" src="' + d.sliderImg + '" draggable="false">' +
-        '<img class="piece" id="piece" src="' + d.pieceImg + '" style="top:' + (d.yPos||0) + 'px;left:0px" draggable="false">' +
+        '<img class="piece" id="piece" src="' + d.pieceImg + '" style="left:0px" draggable="false">' +
         '</div><div class="hint">拖动拼图块到缺口位置后点击登录</div>';
+      var bgEl = $('wrap').querySelector('.bg');
+      var pieceEl = $('piece');
+      // 底图按容器宽度显示；拼图块与 yPos 必须按同一缩放比换算，
+      // 否则图片被缩放时视觉位置与后端原图坐标错位。
+      function applyScale(){
+        if (!bgEl.naturalWidth) return;
+        var sc = bgEl.clientWidth / bgEl.naturalWidth;
+        pieceEl.style.width = (pieceEl.naturalWidth * sc) + 'px';
+        pieceEl.style.top = ((d.yPos||0) * sc) + 'px';
+        pieceEl.style.left = (dragX) + 'px';
+      }
+      if (bgEl.complete) applyScale(); else bgEl.onload = applyScale;
       initDrag($('piece'));
     } else if (mode === 'normal') {
       box.innerHTML = '<label>验证码</label><div class="normal-cap">' +
@@ -111,8 +123,15 @@ function initDrag(piece){
 $('btn').onclick = function(){
   var btn = $('btn');
   btn.disabled = true; setMsg('');
-  var body = { username: $('u').value.trim(), password: $('p').value, code: '', sliderX: 0 };
-  if (mode === 'slider') { body.sliderX = Math.round(dragX); }
+  var body = { username: $('u').value.trim(), password: $('p').value,
+               mode: mode, captchaId: captchaId, token: capToken, code: '', sliderX: 0 };
+  if (mode === 'slider') {
+    // 页面可能对 400px 原图做了响应式缩放显示；dragX 是显示像素，
+    // 必须按 naturalWidth/clientWidth 换算回原图坐标，否则后端 ±8px 容差校验必然失败。
+    var bg = document.querySelector('#wrap .bg');
+    var scale = (bg && bg.naturalWidth && bg.clientWidth) ? (bg.clientWidth / bg.naturalWidth) : 1;
+    body.sliderX = Math.round(dragX / scale);
+  }
   if (mode === 'normal') { body.code = ($('code')||{}).value || ''; }
   fetch('/login?s=' + encodeURIComponent(S), {
     method: 'POST',
