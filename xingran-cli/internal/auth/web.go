@@ -186,11 +186,16 @@ func (w *webLoginServer) handleCaptcha(rw http.ResponseWriter, r *http.Request) 
 }
 
 // loginRequest POST /login 请求体（浏览器提交）。
+// captchaId/token 是页面当前展示的那张验证码的凭据，必须原样回传，
+// 服务端不能重新 FetchCaptcha（新图 xPos 随机，用户拖的是旧图位置，必然失败）。
 type loginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	SliderX  int    `json:"sliderX,omitempty"`
-	Code     string `json:"code,omitempty"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	SliderX   int    `json:"sliderX,omitempty"`
+	Code      string `json:"code,omitempty"`
+	CaptchaID string `json:"captchaId,omitempty"`
+	Token     string `json:"token,omitempty"`
+	Mode      string `json:"mode,omitempty"`
 }
 
 // handleLogin 登录编排：FetchCaptcha → (slider: VerifySlider) → Login。
@@ -214,38 +219,52 @@ func (w *webLoginServer) handleLogin(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 每次登录尝试都取新验证码（失败重试天然刷新 captchaId）
-	info, err := w.cp.FetchCaptcha(r.Context())
-	if err != nil {
-		writeJSON(rw, http.StatusBadGateway, map[string]any{"error": "获取验证码失败: " + err.Error()})
-		return
-	}
-
+	// 使用页面展示的那张验证码的凭据，绝不重新拉取。
+	// 若页面未提供（旧版页面兼容），才回退到 FetchCaptcha 一次。
 	input := CaptchaInput{Type: CaptchaTypeNone}
-	if info != nil {
-		switch info.CaptchaType {
-		case CaptchaTypeSlider:
-			if lr.SliderX <= 0 {
-				writeJSON(rw, http.StatusBadRequest, map[string]any{"error": "请先拖动拼图到缺口位置"})
-				return
-			}
-			input = CaptchaInput{
-				Type:      CaptchaTypeSlider,
-				SliderX:   lr.SliderX,
-				CaptchaID: info.CaptchaID,
-				Token:     info.Token,
-			}
-		case CaptchaTypeNormal:
-			if lr.Code == "" {
-				writeJSON(rw, http.StatusBadRequest, map[string]any{"error": "请输入验证码字符"})
-				return
-			}
-			input = CaptchaInput{
-				Type:      CaptchaTypeNormal,
-				Code:      lr.Code,
-				CaptchaID: info.CaptchaID,
-			}
+	mode := lr.Mode
+	if mode == "" {
+		// 无 mode 时按请求体内容推断
+		switch {
+		case lr.SliderX > 0:
+			mode = CaptchaTypeSlider
+		case lr.Code != "":
+			mode = CaptchaTypeNormal
 		}
+	}
+	switch mode {
+	case CaptchaTypeSlider:
+		if lr.SliderX <= 0 {
+			writeJSON(rw, http.StatusBadRequest, map[string]any{"error": "请先拖动拼图到缺口位置"})
+			return
+		}
+		captchaID, token := lr.CaptchaID, lr.Token
+		if captchaID == "" || token == "" {
+			info, err := w.cp.FetchCaptcha(r.Context())
+			if err != nil || info == nil {
+				writeJSON(rw, http.StatusBadGateway, map[string]any{"error": "验证码凭据缺失且无法获取新验证码，请刷新页面重试"})
+				return
+			}
+			captchaID, token = info.CaptchaID, info.Token
+		}
+		input = CaptchaInput{Type: CaptchaTypeSlider, SliderX: lr.SliderX, CaptchaID: captchaID, Token: token}
+	case CaptchaTypeNormal:
+		if lr.Code == "" {
+			writeJSON(rw, http.StatusBadRequest, map[string]any{"error": "请输入验证码字符"})
+			return
+		}
+		captchaID := lr.CaptchaID
+		if captchaID == "" {
+			info, err := w.cp.FetchCaptcha(r.Context())
+			if err != nil || info == nil {
+				writeJSON(rw, http.StatusBadGateway, map[string]any{"error": "验证码凭据缺失且无法获取新验证码，请刷新页面重试"})
+				return
+			}
+			captchaID = info.CaptchaID
+		}
+		input = CaptchaInput{Type: CaptchaTypeNormal, Code: lr.Code, CaptchaID: captchaID}
+	default:
+		// disabled 或未知 mode：直通登录，不附加验证码字段
 	}
 
 	pair, err := w.authn.Login(r.Context(), lr.Username, lr.Password, input)

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/auth"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/client"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/crypto"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/auth"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/client"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/crypto"
 )
 
 // M2 冒烟目标：login → api /system/users/list 全流程。

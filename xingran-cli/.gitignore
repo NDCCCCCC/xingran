@@ -10,3 +10,9 @@
 /captcha*.png
 /captcha-*.png
 *.tmp
+
+# 凭据（绝不入库）
+/.tokens.json
+/tokens.json
+*.tokens.json
+/tests/_tmpcli/

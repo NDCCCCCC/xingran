@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/commands"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/output"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/commands"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/output"
 )
 
 // runEndpoint 三级命令的执行：位置参数还原路径 → body 组装 → client.Do / dry-run。

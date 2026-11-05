@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/auth"
-	"github.com/xingran-next/ruoyi-go-backend/xingran-cli/internal/crypto"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/auth"
+	"github.com/xingran-next/xingran-go-backend/xingran-cli/internal/crypto"
 )
 
 const (
