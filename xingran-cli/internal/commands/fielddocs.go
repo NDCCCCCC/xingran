@@ -433,6 +433,12 @@ var fieldDocs = map[string]fieldEntry{
 	"lastExecutionId": {desc: "最近一次执行 ID（UUID）"},
 	"version":       {desc: "版本号（乐观锁）"},
 	"tags":          {desc: "标签（逗号分隔）"},
+
+	// ==================== 工单与值班/通用 ====================
+	"categoryName":  {desc: "分类名称"},
+	"sortOrder":     {desc: "排序顺序"},
+	"children":      {desc: "子节点列表"},
+	"dailyCount":    {desc: "每日值班人数"},
 }
 
 // aliases 字段名归一化映射：常见的 camelCase/snake_case 变体统一到词典键

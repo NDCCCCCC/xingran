@@ -20,8 +20,11 @@ func newAPICmd() *cobra.Command {
 		Long: `泛化 API 调用命令——三级命令树（xingran <module> <resource> <action>）
 覆盖不到的任意端点都可用本命令直达，两者共享同一 HTTP 核心与输出约定。
 
+支持从参数传入 JSON body，或通过管道/标准输入读取（如 cat data.json | xingran api <path>）。
+
 示例：
   xingran api /system/users/list '{"current":1,"pageSize":10}'
+  cat user.json | xingran api /system/users
   xingran api /system/auth/public-key
   xingran api /system/user/123 --dry-run
 
@@ -47,6 +50,14 @@ body 为合法 JSON 文本。非 TTY 输出完整响应包装 {code,message,data
 			var body any
 			if len(args) == 2 {
 				body = json.RawMessage(args[1])
+			} else {
+				// 当没有提供第二个参数且标准输入非终端时，尝试从 Stdin 读取 body
+				if stdinData, ok := readStdinIfAvailable(); ok && len(stdinData) > 0 {
+					if !json.Valid(stdinData) {
+						return runResult{err: argError("从标准输入读取的内容不是合法 JSON")}
+					}
+					body = json.RawMessage(stdinData)
+				}
 			}
 
 			if flagDryRun {

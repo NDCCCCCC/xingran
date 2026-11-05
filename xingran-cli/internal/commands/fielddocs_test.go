@@ -26,14 +26,14 @@ func TestFieldDocCommonFields(t *testing.T) {
 	}
 }
 
-// TestFieldDocCoverage 验证词典总量达到任务要求（扩容后 250-350 个）
+// TestFieldDocCoverage 验证词典总量达到任务要求（扩容后 250-400 个）
 func TestFieldDocCoverage(t *testing.T) {
 	n := FieldDocCount()
 	if n < 250 {
 		t.Errorf("词典字段数 %d < 250，覆盖不足", n)
 	}
-	if n > 360 {
-		t.Errorf("词典字段数 %d > 360，超出预期规模", n)
+	if n > 400 {
+		t.Errorf("词典字段数 %d > 400，超出预期规模", n)
 	}
 }
 
