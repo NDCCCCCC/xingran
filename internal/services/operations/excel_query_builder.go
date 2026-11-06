@@ -101,7 +101,8 @@ func NewDepartmentQueryBuilder() *DepartmentQueryBuilder {
 	return &DepartmentQueryBuilder{}
 }
 
-// deptPathCTE 完整的递归 CTE,导出所有部门的"根 → … → 当前"链路.
+// DeptPathCTE 完整的递归 CTE,导出所有部门的"根 → … → 当前"链路.
+// 导出给需要全链路父部门的查询使用 (如部门导出、工位部门映射表下载)。
 //
 // " → " (U+2192 空格) 用作分隔符,Excel 中显示比 "/" 更清晰,
 // 也避免与 Phase 39 location alias 的 "/" 分隔符混淆.
@@ -119,13 +120,23 @@ func NewDepartmentQueryBuilder() *DepartmentQueryBuilder {
 //     而不是把父名拼在前面 — 后者会把链路倒着算,且会双倍根名.
 //     正确写法: path_text = dpc.path_text || ' → ' || c.dept_name
 //               depth     = dpc.depth + 1
-// DeptPathCTE 完整的递归 CTE,导出所有部门的"根 → … → 当前"链路.
-// 跨方言设计 (PostgreSQL 生产 + SQLite 单测共用).
-// 导出给需要全链路父部门的查询使用 (如部门导出、工位部门映射表下载).
+//
+// ⚠️ PostgreSQL 递归 CTE 的类型硬约束 (SQLSTATE 42804):
+// 非递归项与递归项的列类型必须**精确一致**(含长度限定符),否则 PG 直接报错:
+//     recursive query "dept_path_cte" column 3 has type character varying(100)
+//     in non-recursive term but type character varying overall
+// base case 的 dept_name 是 varchar(100),而递归项 `path_text || ' → ' || c.dept_name`
+// 的结果是长度未定的 varchar → 类型不一致 → 整条查询失败(端点 500)。
+// 修法: base case 显式 CAST 成 text,让两侧都落到 text。
+// CAST 是 SQL 标准,PostgreSQL 与 SQLite 均支持。
+//
+// 注:SQLite 是动态类型,同样的 SQL 在 SQLite 单测里能跑通 —— 这就是该类
+// 缺陷能潜伏到生产的土壤。凡是 PostgreSQL 递归 CTE,base case 必须显式 CAST。
 const DeptPathCTE = `
 WITH RECURSIVE dept_path_cte AS (
     -- base case: 根部门(parent_id 为 NULL),path 起点就是自身名
-    SELECT id, parent_id, dept_name AS path_text, 0 AS depth
+    -- CAST(... AS TEXT): 对齐递归项的 text 类型,满足 PG 递归 CTE 类型一致性约束
+    SELECT id, parent_id, CAST(dept_name AS TEXT) AS path_text, CAST(0 AS INTEGER) AS depth
     FROM sys_dept
     WHERE parent_id IS NULL
 
