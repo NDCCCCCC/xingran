@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // ReferenceResolver 引用解析器接口
@@ -61,9 +63,19 @@ func (r *referenceResolverImpl) ResolveBatch(
 	for refType, requests := range grouped {
 		table, field := r.parseReference(refType)
 
-		// 验证引用配置格式
+		// 验证引用配置格式。
+		//
+		// ⚠️ 纵深防御（工位导入填主设备序列号后报"所属楼宇不存在"事故）：
+		// 此处曾直接 `return nil, err` 中断**整批**解析，导致该批次里
+		// 其他合法引用（楼宇/部门/用户）全部丢失解析结果，
+		// 最终表现为"引用的 所属楼宇 不存在"这类与真实原因无关的报错。
+		// 现在改为跳过无效分组并继续处理其余引用，同时保留已解析的部分结果。
 		if table == "" || field == "" {
-			return nil, fmt.Errorf("无效的引用配置: %s", refType)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("无效的引用配置: %s", refType)
+			}
+			logger.Warnf("跳过无效的引用配置 [%s]，继续解析其余引用", refType)
+			continue
 		}
 
 		// 提取所有待解析的值（去重）
@@ -146,7 +158,12 @@ func (r *referenceResolverImpl) ResolveBatchWithDependencies(
 	for _, req := range refs {
 		table, field := r.parseReference(req.Reference)
 		if table == "" || field == "" {
-			return nil, fmt.Errorf("无效的引用配置: %s", req.Reference)
+			// 纵深防御：跳过无效引用配置，不中断整批（详见 ResolveBatch 同处注释）
+			if firstErr == nil {
+				firstErr = fmt.Errorf("无效的引用配置: %s", req.Reference)
+			}
+			logger.Warnf("跳过无效的引用配置 [%s]，继续解析其余引用", req.Reference)
+			continue
 		}
 
 		// 使用带条件查询的方式

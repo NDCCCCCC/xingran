@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -134,9 +135,13 @@ func (s *ExcelService) GenerateTemplate(entityType string) (*excelize.File, erro
 
 func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 	if col.Options != nil {
-		for _, v := range col.Options {
-			return v
-		}
+		// 按 key 排序取第一个，保证模板示例值稳定。
+		//
+		// ⚠️ 历史问题：Options 是 map，Go 的 map 遍历顺序随机，
+		// 原实现 `for _, v := range col.Options { return v }` 会导致
+		// 每次下载模板，示例行的"状态/工位类型"等枚举示例值都不一样
+		// （时而"空闲"时而"占用"），用户对照模板排查时困惑。
+		return firstOptionLabel(col.Options)
 	}
 
 	switch col.Field {
@@ -613,7 +618,7 @@ func (s *ExcelService) extractReferenceRequests(
 	var requests []ReferenceRequest
 
 	for _, col := range config.Columns {
-		if col.Reference != "" {
+		if col.Reference != "" && !col.isSkipReference() {
 			if value, ok := data[col.Field].(string); ok && value != "" {
 				requests = append(requests, ReferenceRequest{
 					Reference: col.Reference,
@@ -634,7 +639,7 @@ func (s *ExcelService) applyReferenceResults(
 	resolver := &referenceResolverImpl{}
 
 	for _, col := range config.Columns {
-		if col.Reference != "" {
+		if col.Reference != "" && !col.isSkipReference() {
 			if value, ok := data[col.Field].(string); ok && value != "" {
 				key := resolver.makeKey(col.Reference, value)
 				if id, exists := refResults[key]; exists {
@@ -706,6 +711,10 @@ func (s *ExcelService) splitReferencesByDependency(
 	config ExcelConfig,
 ) (independent, dependent []ReferenceRequest) {
 	for _, ref := range refs {
+		// 哨兵列（ReferenceSkip）不参与引用解析，直接跳过
+		if ref.Reference == ReferenceSkip {
+			continue
+		}
 		isDependent := false
 		for _, col := range config.Columns {
 			if col.Reference == ref.Reference && col.DependsOn != "" {
@@ -731,7 +740,7 @@ func (s *ExcelService) applyDependentReferenceResults(
 	resolver := &referenceResolverImpl{}
 
 	for _, col := range config.Columns {
-		if col.Reference != "" && col.DependsOn != "" {
+		if col.Reference != "" && col.DependsOn != "" && !col.isSkipReference() {
 			if value, ok := data[col.Field].(string); ok && value != "" {
 				key := resolver.makeKey(col.Reference, value)
 				if id, exists := refResults[key]; exists {
@@ -1638,6 +1647,60 @@ func (s *ExcelService) writeExampleData(f *excelize.File, sheetName string, colu
 		exampleValue := s.getExampleValue(col)
 		_ = f.SetCellValue(sheetName, cell, exampleValue)
 	}
+
+	// 给示例行加「示例样式」（浅灰斜体）+ 批注，避免用户误把示例行当真实数据导入。
+	//
+	// 背景：模板自带示例行是历史设计（CONTRACT-M8 已知问题），
+	// 用户若未删除示例行直接上传，会得到「引用的 所属楼宇 不存在: 示例楼宇A」
+	// 这类与真实原因无关的报错，排查成本高。这里用视觉 + 批注双提示。
+	s.markExampleRow(f, sheetName, columns, dataRow)
+}
+
+// markExampleRow 给模板示例行应用浅灰斜体样式，并在首列单元格加批注提示删除。
+func (s *ExcelService) markExampleRow(f *excelize.File, sheetName string, columns []ExcelColumn, dataRow int) {
+	if len(columns) == 0 {
+		return
+	}
+
+	style, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Italic: true, Color: "BFBFBF", Size: 10},
+	})
+	if err != nil {
+		logger.Debugf("创建示例行样式失败: %v", err)
+		return
+	}
+
+	startCell, _ := excelize.CoordinatesToCellName(1, dataRow)
+	endCell, _ := excelize.CoordinatesToCellName(len(columns), dataRow)
+	_ = f.SetCellStyle(sheetName, startCell, endCell, style)
+
+	// 首列单元格加批注（Excel 红色三角，悬停可见）
+	_ = f.AddComment(sheetName, excelize.Comment{
+		Cell:   startCell,
+		Author: "XingRan",
+		Text:   "本行为示例数据，导入前请先删除该行，否则会因示例楼宇/楼层不存在而导入失败。",
+	})
+}
+
+// firstOptionLabel 按 key 升序取 Options 的第一个 label，保证模板示例值稳定。
+func firstOptionLabel(options map[interface{}]string) string {
+	if len(options) == 0 {
+		return ""
+	}
+	keys := make([]interface{}, 0, len(options))
+	for k := range options {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		ki, oki := keys[i].(int)
+		kj, okj := keys[j].(int)
+		if oki && okj {
+			return ki < kj
+		}
+		// 非 int key 退化为字符串比较，保证确定性
+		return fmt.Sprintf("%v", keys[i]) < fmt.Sprintf("%v", keys[j])
+	})
+	return options[keys[0]]
 }
 
 // writeInstructions 写入模板顶部的说明文字
