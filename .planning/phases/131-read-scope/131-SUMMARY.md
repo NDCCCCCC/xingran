@@ -87,7 +87,8 @@
 | 编译 | `go build ./internal/services/operations/ ./internal/api/v1/operations/` | 通过 |
 | 定向测试 | `go test -count=1 ./internal/services/operations/... ./internal/api/v1/operations/...` | 全绿 |
 | 主闸门 | `go test -count=1 ./internal/services/operations/... ./internal/api/... ./pkg/datascope/...` | 全绿（18 个包 ok） |
-| 全量 | `go build ./...` + `go test -count=1 ./internal/... ./pkg/... ./cmd/...` | 见文末回填 |
+| 全量 build | `go build ./...` | 通过（exit 0；133 vdi 中间态恢复后复跑） |
+| 全量 test | `go test -count=1 ./internal/... ./pkg/... ./cmd/...` | 除 `internal/services/vdi` 的 133 在制中间态外全绿：该包 `TestVMScopeMigration_*` 两例报 `no such column: ancestors`，来自 133 未跟踪文件 `vm_scope_migration_test.go`（夹具缺列），与本 phase 交付无关；lead 已确认「以定向 build + operations 全量测试为准，事后统一跑全量回归」 |
 | PG contract | `go test -run TestPGContract_ExcelExportScope -v` | `--- SKIP: TEST_PG_DSN not set; PG contract test skipped`（门控可观测） |
 | 覆盖率 | 不跑 `-coverprofile`（避免与厚测试 agent 的 coverage.out 互相覆盖，按 lead 协调由 `coverage_diffcov.out` 统一出数） | — |
 
@@ -106,8 +107,9 @@
 5. 前端 DeptSidebar 联动 → Phase 133；backfill 确认框 → Phase 132；本 phase 前端零改动。
 6. `operlog` 导出范围档位：DS-06 允许「可选」，`excel_handler.go` 既有 `OperTypeExport` 日志已记录请求参数摘要，本 phase 未改响应形状、未新增范围档位字段（避免牵动 handler 契约）。
 
-## 6. 闸门与提交（提交后回填）
+## 6. 闸门与提交
 
-- commit hash：`__COMMIT_HASH__`
-- `go build ./...`：`__BUILD__`
-- `go test -count=1 ./internal/... ./pkg/... ./cmd/...`：`__FULL_TEST__`
+- commit hash：`e62bc7b6`（主交付 16 文件）；本 SUMMARY 的 hash 回填为独立小提交（不 amend，避免改写 132 已依赖的 hash）
+- `go build ./...`：PASS（exit 0）
+- `go test -count=1 ./internal/services/operations/... ./internal/api/... ./pkg/datascope/...`：PASS（18 包 ok）
+- `go test -count=1 ./internal/... ./pkg/... ./cmd/...`：本 phase 相关包全绿；唯一红灯为 133 并行在制的 `internal/services/vdi`（`vm_scope_migration_test.go` 未跟踪、夹具缺 `ancestors` 列），已登记移交 lead 统一回归
