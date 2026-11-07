@@ -5,7 +5,7 @@
   130 `06e892ee`/`cb04d0f1`、131 `e62bc7b6`/`ade0c823`、132 `b02e1bac`/`4ff4d648`
 - 本 phase 提交（3 笔，详见 §4）：
   `5161b39f`（part1 C/D/E/F）、`bc381628`（part2 A/B，Lead 代提交）、
-  第三笔 `fix(v1.52-p133): 补 BatchOperation operlog 四类计数 + 回填 SUMMARY 验收数据`
+  第三笔 `dfe9f4ac` — `fix(v1.52-p133): 补 BatchOperation operlog 四类计数 + 回填 SUMMARY 验收数据`
 - 关联需求：`REQUIREMENTS.md` DS-01/02/03/04/05/06/07 + 映射总表 + 验收硬约束；`ROADMAP.md` Phase 133
 - LOCKED 开工输入（只读消费，不重新裁定）：
   - `261107-v152-ds05-scope-decision.md`（归属链 / workstation-device / 显式豁免清单）
@@ -238,7 +238,7 @@ Create/Update/Delete 已用 `response.HandleServiceError`，对 `IsAppError` 天
 **commit 记录**
 - 第一批 `5161b39f` — `feat(v1.52-p133-part1): vdi 迁移 + 死实现删除 + DeptSidebar 联动 + UAT 骨架`（11 文件）
 - 第二批 `bc381628` — `feat(v1.52-p133-part2): 四实体读写收口 + workstation-device 归属 + 403 矩阵`（8 文件，Lead 代提交）
-- 第三笔 — `fix(v1.52-p133): 补 BatchOperation operlog 四类计数 + 回填 SUMMARY 验收数据`（3 个 handler + 本文；提交后 hash 回填至本行）
+- 第三笔 `dfe9f4ac` — `fix(v1.52-p133): 补 BatchOperation operlog 四类计数 + 回填 SUMMARY 验收数据`（3 个 handler + 本文）
 
 原子提交约束：`git add` 只加本 phase 文件，不 `git add -A`，不提交 `coverage.out` / `coverage_diffcov.out`，
 不碰 `xingran-react-frontend/.env.production`（工作区该文件为其它 agent 在制、非本 phase 改动）。
