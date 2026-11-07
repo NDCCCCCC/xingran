@@ -12,7 +12,6 @@ import (
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
-	"gorm.io/gorm"
 )
 
 // ==================== 中间件权限结果短 TTL 缓存 (login-menu-timeout-20260817 H7 修复) ====================
@@ -81,17 +80,6 @@ func InvalidateMiddlewarePermCache(userID string) {
 		}
 		return true
 	})
-}
-
-// 允许的数据权限字段白名单
-var allowedDataScopeFields = map[string]bool{
-	"dept_id": true,
-	"id":      true,
-}
-
-// isValidDataScopeField 验证字段名是否在白名单中
-func isValidDataScopeField(field string) bool {
-	return allowedDataScopeFields[field]
 }
 
 // getUserIDAsString 安全地从context获取user_id
@@ -566,120 +554,11 @@ func getUserMaxDataScope(core *core.Core, userID string) (models.DataScope, erro
 	return dataScope, err
 }
 
-// ApplyDataScope 应用数据权限过滤
-//
-// @Deprecated 将在 v1.52 Phase 133 删除（见 .planning/notes/261107-v152-self-scope-decision.md §4）。
-// 全仓无生产调用方（仅 pkg/middleware/permission_74_08_test.go 使用），Self 档
-// deptField = userID 存在 id 空间错位、字段白名单只有 dept_id/id 覆盖不了 org_id。
-// 新代码一律使用 pkg/datascope.ScopeProvider 单一真实源。
-func ApplyDataScope(db *gorm.DB, userID string, dataScope models.DataScope, core *core.Core, deptField string) *gorm.DB {
-	// 验证字段名安全性，防止SQL注入
-	if !isValidDataScopeField(deptField) {
-		return db.Where("1=0") // 无效字段名，返回空结果
-	}
+// Phase 133 / DS-01（裁定 261107-v152-self-scope-decision.md §4）：
+// 旧的通用版 ApplyDataScope / ApplyDataScopeFromContext / getChildDepts 三个死实现
+// 及其字段白名单 isValidDataScopeField 已删除（全仓无生产调用方、Self 档
+// deptField=userID 存在 id 空间错位、白名单覆盖不了 org_id）。
+// 数据范围一律走 pkg/datascope.ScopeProvider 单一真实源：
+//   - 中间件注入：DataScopePermission / injectScopeRequestContext（见上方）；
+//   - 业务读/写过滤：各域从 datascope.FromContext(ctx) 取 ScopeResult。
 
-	switch dataScope {
-	case models.DataScopeAll:
-		// 全部数据权限，不做过滤
-		return db
-	case models.DataScopeCustom:
-		// 自定义数据权限，查询用户可访问的部门
-		var deptIds []string
-		core.DB.GetDB().Raw(`
-			SELECT DISTINCT rd.dept_id
-			FROM sys_user_role ur
-			INNER JOIN sys_role_dept rd ON ur.role_id = rd.role_id
-			WHERE ur.user_id = ?
-		`, userID).Scan(&deptIds)
-
-		if len(deptIds) > 0 {
-			return db.Where(deptField+" IN ?", deptIds)
-		}
-		return db.Where("1=0") // 没有权限访问任何数据
-	case models.DataScopeDept:
-		// 本部门数据权限，查询用户所属部门
-		var deptId string
-		if err := core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId).Error; err != nil {
-			if err != gorm.ErrRecordNotFound {
-				// 非记录未找到错误，记录数据库错误日志
-				applogger.Errorf("Failed to query user dept for data scope filtering (user_id=%s): %v", userID, err)
-			}
-			return db.Where("1=0")
-		}
-		if deptId != "" {
-			return db.Where(deptField+" = ?", deptId)
-		}
-		return db.Where("1=0")
-	case models.DataScopeDeptChild:
-		// 本部门及子部门数据权限
-		var deptId string
-		if err := core.DB.GetDB().Raw("SELECT dept_id FROM sys_user WHERE id = ?", userID).Scan(&deptId).Error; err != nil {
-			if err != gorm.ErrRecordNotFound {
-				// 非记录未找到错误，记录数据库错误日志
-				applogger.Errorf("Failed to query user dept for data scope filtering (user_id=%s): %v", userID, err)
-			}
-			return db.Where("1=0")
-		}
-		if deptId != "" {
-			// 查询本部门及所有子部门
-			var childDeptIds []string
-			childDeptIds = append(childDeptIds, deptId)
-			getChildDepts(core, deptId, &childDeptIds)
-
-			return db.Where(deptField+" IN ?", childDeptIds)
-		}
-		return db.Where("1=0")
-	case models.DataScopeSelf:
-		// 仅本人数据权限
-		// ⚠️ PMODEL-01 标注（零行为改动）：此处 deptField + " = ?", userID 的语义
-		// 仅当 deptField 为用户维度字段（如 vdi bound_user_id）才正确；若 deptField
-		// 是部门列（如 dept_id）则构成 id 空间错位（user id ≠ dept id）。
-		// sys_user 列表场景的正确实现见 internal/services/system/user_service.go
-		// applyUserDataScope 的 DataScopeSelf 分支（sys_user.id = ?）。
-		return db.Where(deptField+" = ?", userID)
-	default:
-		return db.Where("1=0") // 默认无权限
-	}
-}
-
-// getChildDepts 递归获取子部门
-func getChildDepts(core *core.Core, parentId string, deptIds *[]string) {
-	var childDepts []struct {
-		ID string `gorm:"column:id"`
-	}
-
-	core.DB.GetDB().Table("sys_dept").Where("parent_id = ?", parentId).Select("id").Scan(&childDepts)
-
-	for _, dept := range childDepts {
-		*deptIds = append(*deptIds, dept.ID)
-		getChildDepts(core, dept.ID, deptIds)
-	}
-}
-
-// ApplyDataScopeFromContext 从 Gin 上下文中应用数据权限过滤
-// 这是一个便捷函数，用于在 handler 中应用数据权限
-// deptField 是要过滤的部门字段名，如 "dept_id" 或 "id"（对于部门表本身）
-//
-// @Deprecated 将在 v1.52 Phase 133 删除（见 .planning/notes/261107-v152-self-scope-decision.md §4）。
-// 与 ApplyDataScope 同为死实现；新代码使用 pkg/datascope.FromContext(ctx) + ScopeResult。
-func ApplyDataScopeFromContext(c *gin.Context, db *gorm.DB, core *core.Core, deptField string) *gorm.DB {
-	// 获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
-		return db
-	}
-
-	// 检查是否是超级管理员
-	if isSuperAdmin(core, userID.(string)) {
-		return db // 超级管理员不过滤数据
-	}
-
-	// 从上下文中获取数据权限范围
-	dataScope, exists := c.Get("data_scope")
-	if !exists {
-		return db // 没有数据权限信息，不做过滤
-	}
-
-	// 应用数据权限过滤
-	return ApplyDataScope(db, userID.(string), dataScope.(models.DataScope), core, deptField)
-}
