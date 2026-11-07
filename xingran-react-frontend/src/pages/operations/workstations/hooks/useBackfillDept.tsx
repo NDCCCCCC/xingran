@@ -32,11 +32,44 @@ const actionLabel: Record<BackfillDeptSample["action"], string> = {
 };
 
 const sampleColumns: ColumnsType<BackfillDeptSample> = [
-  { title: "工位", dataIndex: "workstationName", key: "workstationName", width: 120, ellipsis: true },
-  { title: "现部门", dataIndex: "currentDeptName", key: "currentDeptName", width: 120, ellipsis: true, render: (v?: string) => v || "-" },
-  { title: "目标部门", dataIndex: "targetDeptName", key: "targetDeptName", width: 120, ellipsis: true, render: (v?: string) => v || "-" },
-  { title: "人员", dataIndex: "userName", key: "userName", width: 90, ellipsis: true, render: (v?: string) => v || "-" },
-  { title: "动作", dataIndex: "action", key: "action", width: 100, render: (v: BackfillDeptSample["action"]) => actionLabel[v] ?? v },
+  {
+    title: "工位",
+    dataIndex: "workstationName",
+    key: "workstationName",
+    width: 120,
+    ellipsis: true,
+  },
+  {
+    title: "现部门",
+    dataIndex: "currentDeptName",
+    key: "currentDeptName",
+    width: 120,
+    ellipsis: true,
+    render: (v?: string) => v || "-",
+  },
+  {
+    title: "目标部门",
+    dataIndex: "targetDeptName",
+    key: "targetDeptName",
+    width: 120,
+    ellipsis: true,
+    render: (v?: string) => v || "-",
+  },
+  {
+    title: "人员",
+    dataIndex: "userName",
+    key: "userName",
+    width: 90,
+    ellipsis: true,
+    render: (v?: string) => v || "-",
+  },
+  {
+    title: "动作",
+    dataIndex: "action",
+    key: "action",
+    width: 100,
+    render: (v: BackfillDeptSample["action"]) => actionLabel[v] ?? v,
+  },
 ];
 
 export interface UseBackfillDeptReturn {
@@ -83,9 +116,15 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
         </div>
         <div>
           <Text>将填补空缺部门 </Text>
-          <Text strong style={{ color: "var(--theme-success)" }}>{preview?.toFill ?? 0}</Text>
+          <Text strong style={{ color: "var(--theme-success)" }}>
+            {preview?.toFill ?? 0}
+          </Text>
           <Text> 条；跳过（无用户 / 用户部门无效 / 已一致） </Text>
-          <Text strong>{(preview?.skippedNoUser ?? 0) + (preview?.skippedBadUserDept ?? 0) + (preview?.skippedAlreadyValid ?? 0)}</Text>
+          <Text strong>
+            {(preview?.skippedNoUser ?? 0) +
+              (preview?.skippedBadUserDept ?? 0) +
+              (preview?.skippedAlreadyValid ?? 0)}
+          </Text>
           <Text> 条。</Text>
         </div>
         {fixMismatch && (
@@ -111,7 +150,9 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
             modalRef.current?.update({ content: renderContent(), okText: okText() });
           }}
         >
-          <Text type="danger">⚠ 同时纠正「已有部门但与人员部门不一致」的工位（会覆盖已填部门）</Text>
+          <Text type="danger">
+            ⚠ 同时纠正「已有部门但与人员部门不一致」的工位（会覆盖已填部门）
+          </Text>
         </Checkbox>
         {(preview?.samples?.length ?? 0) > 0 && (
           <Table<BackfillDeptSample>
@@ -126,7 +167,8 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
       </Space>
     );
 
-    const okText = () => (fixMismatch ? `确认执行（含纠正 ${preview?.toCorrect ?? 0} 条）` : "确认执行");
+    const okText = () =>
+      fixMismatch ? `确认执行（含纠正 ${preview?.toCorrect ?? 0} 条）` : "确认执行";
 
     // 非删除类确认（批量回填预览 + 危险开关二次确认），ConfirmDelete 语义不匹配；
     // 按 eslint 契约显式豁免并注明原因（同 FormModal.tsx 的既有豁免口径）。

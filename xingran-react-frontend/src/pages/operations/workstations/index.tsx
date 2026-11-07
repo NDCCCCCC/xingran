@@ -924,7 +924,9 @@ const WorkstationManagement: FC = () => {
                   onClick={() => void backfillDept.open()}
                   disabled={permBackfill.disabled || backfillDept.loading}
                   loading={backfillDept.loading}
-                  title={permBackfill.hint ?? "按工位绑定的用户，反推并回填所属部门（先预览再确认）"}
+                  title={
+                    permBackfill.hint ?? "按工位绑定的用户，反推并回填所属部门（先预览再确认）"
+                  }
                 >
                   按人员反推部门
                 </Button>

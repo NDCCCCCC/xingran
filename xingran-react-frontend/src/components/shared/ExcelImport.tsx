@@ -321,9 +321,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
                 )}
                 {(importResult.inferredDeptCount ?? 0) > 0 && (
                   <div>
-                    <Tag color="warning">
-                      部门按人员反推: {importResult.inferredDeptCount}
-                    </Tag>
+                    <Tag color="warning">部门按人员反推: {importResult.inferredDeptCount}</Tag>
                   </div>
                 )}
               </Space>

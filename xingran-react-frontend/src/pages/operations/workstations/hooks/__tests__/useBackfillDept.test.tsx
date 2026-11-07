@@ -118,7 +118,11 @@ describe("useBackfillDept", () => {
     // 从 content 里取出 Checkbox 的 onChange 并触发勾选。
     // content 是 React 元素树；用其子级结构定位 Checkbox（Space 的第 4 个 child）。
     const content = latestConfig.content as {
-      props: { children: Array<{ props?: { onChange?: (e: { target: { checked: boolean } }) => Promise<void> } }> };
+      props: {
+        children: Array<{
+          props?: { onChange?: (e: { target: { checked: boolean } }) => Promise<void> };
+        }>;
+      };
     };
     const checkbox = content.props.children.find((c) => c?.props?.onChange);
     expect(checkbox).toBeTruthy();
