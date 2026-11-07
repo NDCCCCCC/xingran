@@ -23,7 +23,8 @@ current_phase_name: 目录改名 + 双线 planning 合流 + 真机 UAT ✅ 三�
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: v1.51 milestone active（端口写生产级操作体验与平台质量收口）
-**Last activity**: 2026-11-02 - Completed quick task 261102-m94: 修复暗色模式保存失败（theme_style 违反 chk_theme_style 检查约束）
+**Last activity**: 2026-11-06 - Completed quick task 261106-wsb: 工位管理页新增「按人员反推部门」按钮（预览+确认、仅兜底+可选纠正、全链路权限/审计/缓存）
+**Prior activity**: 2026-11-06 - Completed quick task 261106-wso: 一栋楼跨机构办公 —— 楼层可覆盖所属机构（ops_floors.org_id + 全链路 COALESCE）
 **Prior activity**: 2026-10-31 — v1.51 立项（范围 A+B+D，21 REQ / Phases 121-129）
 **Prior activity**: 2026-10-30 — v1.25 SHIPPED & ARCHIVED 并完成 GitHub 同步（PR #36/#37 合并，main CI/deploy 全绿，技术债 D1-D10 清偿）
 **Prior activity**: 2026-10-29 — Phase 86（W4+W5）与 Phase 90（W0~W3）全部收口并验收；下一步 Phase 87
@@ -242,6 +243,9 @@ Last activity: 2026-10-30 — Milestone v1.25 completed and archived
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261102-m94 | 修复暗色模式保存失败：theme_style 违反 chk_theme_style 检查约束（省略即不修改 + 绑定与 DB 约束对齐 + 迁移 233） | 2026-11-02 | 9f511268 | [261102-m94-theme-style-chk-theme-style](./quick/261102-m94-theme-style-chk-theme-style/) |
+| 261106-wsd | 工位导入部门填写不规范时按所属人员反推部门（仅兜底 + 反推计数 + 6 个回归测试） | 2026-11-06 | 未提交 | [261106-wsd-workstation-dept-infer-from-user](./quick/261106-wsd-workstation-dept-infer-from-user/) |
+| 261106-wso | 一栋楼跨机构办公：楼层可覆盖所属机构（ops_floors.org_id + migration 234 + 工位/楼层/楼宇全链路 COALESCE + 楼层表单 + 10 个回归测试） | 2026-11-06 | 未提交 | [261106-wso-workstation-floor-org-override](./quick/261106-wso-workstation-floor-org-override/) |
+| 261106-wsb | 工位管理页「按人员反推部门」按钮（预览+确认两步、默认仅兜底+可选纠正不一致、复用 edit 权限、严格写组+operlog+缓存失效+route-registry 登记） | 2026-11-06 | 未提交 | [261106-wsb-workstation-backfill-dept-button](./quick/261106-wsb-workstation-backfill-dept-button/) |
 
 ### Todos
 

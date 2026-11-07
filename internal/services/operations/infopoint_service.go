@@ -201,7 +201,9 @@ func (s *infoPointService) filterScope(req requests.InfoPointListRequest) base.S
 				Where("CAST(w.id AS TEXT) = ops_info_points.workstation_id").
 				Where("w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL").
 				Select("1")
-			db = db.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, "b.org_id")(sub))
+			// 与工位同口径（审计 P1-5）：有效机构 = 楼层覆盖优先、NULL/空串
+			// 继承楼宇；两侧 CAST AS TEXT 防 uuid 漂移。
+			db = db.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, "COALESCE(NULLIF(CAST(f.org_id AS TEXT), ''), CAST(b.org_id AS TEXT))")(sub))
 		}
 		return db
 	}

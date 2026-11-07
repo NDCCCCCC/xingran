@@ -200,6 +200,8 @@ describe("工位管理页操作级权限门控（Phase 86 W2）", () => {
     expect(screen.queryByRole("button", { name: /导出/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /下载部门映射表/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /映射$/ })).toBeNull();
+    // quick-261106-wsb：按人员反推部门（批量改 dept_id）→ 归 opsWorkstation.edit
+    expect(screen.queryByRole("button", { name: /按人员反推部门/ })).toBeNull();
     // 行操作（columns.tsx 列工厂 → ActionButtons 内建三态：ready 无码 → 不渲染）
     expect(screen.queryByRole("button", { name: /编辑/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /删除/ })).toBeNull();
@@ -223,6 +225,7 @@ describe("工位管理页操作级权限门控（Phase 86 W2）", () => {
     expect(screen.queryByRole("button", { name: /新增工位/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /下载部门映射表/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /映射$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /按人员反推部门/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /编辑/ })).toBeNull();
   });
 
@@ -241,6 +244,8 @@ describe("工位管理页操作级权限门控（Phase 86 W2）", () => {
     expectDisabledWithHint(/导出/);
     // NEW-02：导出类写入口「下载部门映射表」同样「渲染但 disabled」
     expectDisabledWithHint(/下载部门映射表/);
+    // quick-261106-wsb：按人员反推部门未就绪时渲染但 disabled
+    expectDisabledWithHint(/按人员反推部门/);
     // alias 抽屉入口（旧式 canListAlias 已迁三态）→ 未就绪时渲染但 disabled
     expectDisabledWithHint(/映射$/);
     // 行编辑/行删除：两者都是 columns.tsx 里的普通 action（onClick 形态，无 render），
@@ -274,6 +279,7 @@ describe("工位管理页操作级权限门控（Phase 86 W2）", () => {
     expectDisabledWithHint(/新增工位/);
     expectDisabledWithHint(/导入/);
     expectDisabledWithHint(/下载部门映射表/);
+    expectDisabledWithHint(/按人员反推部门/);
     expectDisabledWithHint(/映射$/);
   });
 
@@ -307,6 +313,9 @@ describe("工位管理页操作级权限门控（Phase 86 W2）", () => {
     // alias 抽屉入口在持 opsLocationAlias.list 时可用
     const aliasBtn = screen.getByRole("button", { name: /映射$/ }) as HTMLButtonElement;
     expect(aliasBtn.disabled).toBe(false);
+    // quick-261106-wsb：持 edit 时「按人员反推部门」可用
+    const backfillBtn = screen.getByRole("button", { name: /按人员反推部门/ }) as HTMLButtonElement;
+    expect(backfillBtn.disabled).toBe(false);
     // 行编辑/删除可用
     expect(screen.getByRole("button", { name: /编辑/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /删除/ })).toBeTruthy();

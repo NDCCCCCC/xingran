@@ -75,6 +75,9 @@ type ImportResult struct {
 	// （如用户的 username）。供调用方做导入后处理（如触发 AD 域控同步）。
 	// 仅在 ExcelConfig 配置了 UpsertKey 列时填充，其余场景为空。
 	AffectedKeys []string `json:"affectedKeys,omitempty"`
+	// InferredDeptCount 本次工位导入中「部门列解析失败、改由所属用户反推部门」的记录数。
+	// 仅用于审计与结果展示，不计入失败数；非工位导入恒为 0。
+	InferredDeptCount int `json:"inferredDeptCount,omitempty"`
 }
 
 // GenerateTemplate 生成Excel模板
@@ -412,6 +415,15 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		validRecords = s.validateReferenceFields(validRecords, config, result)
 	}
 
+	// 工位导入兜底：部门名称/代码填写不规范导致 dept_id 解析失败时，
+	// 用已解析出的 user_id 反推用户所属部门。仅填补空缺，不覆盖显式填对的部门。
+	if entityType == "workstation" {
+		result.InferredDeptCount = s.inferDeptFromUser(ctx, validRecords)
+		if result.InferredDeptCount > 0 {
+			logger.Infof("[workstation] 部门反推: %d 条记录由所属用户补全 dept_id", result.InferredDeptCount)
+		}
+	}
+
 	if entityType == "building" && s.geocoding != nil {
 		s.batchGeocodeBuildings(ctx, validRecords)
 	}
@@ -703,6 +715,99 @@ func (s *ExcelService) getTargetFieldForReference(col ExcelColumn) string {
 		return suffix + "Id"
 	}
 	return field
+}
+
+// inferDeptFromUser 工位导入兜底：当「部门代码 / 所属部门」两列都没能解析出
+// dept_id 时，用已解析出的 user_id 反推该用户在 sys_user 上绑定的部门。
+//
+// 设计要点（与用户确认的「仅兜底」策略一致）：
+//   - 只填补 dept_id 空缺，绝不覆盖用户显式填对的部门（first-non-empty-wins,
+//     与 applyReferenceResults 的合并语义一致）。
+//   - 复用 sys_user.dept_id → sys_dept.id 这条既有外键（models/user.go:20），
+//     参考 workstation_device_service.go:989 的 JOIN 范式。
+//   - 用 INNER JOIN sys_dept 过滤脏数据：历史数据里 dept_id 可能为 NULL、
+//     为部门名称字符串、或指向已删除/不存在的部门，这些都不该写进工位。
+//   - 一次批量 IN 查询（按 400 分块，沿用 reference_resolver.go 的
+//     maxBatchChunk 约定），不产生 N+1。
+//   - 反推失败不产生 ImportError：这是增强而非校验失败，部门列本就是可选的。
+//
+// 返回成功补全 dept_id 的记录数，供 ImportResult.InferredDeptCount 审计。
+func (s *ExcelService) inferDeptFromUser(ctx context.Context, records []map[string]any) int {
+	// 收集「缺部门 + 有用户」的 user_id，去重。
+	userIDs := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, data := range records {
+		if !isEmptyValue(data["dept_id"]) {
+			continue
+		}
+		userID, _ := data["user_id"].(string)
+		userID = strings.TrimSpace(userID)
+		if userID == "" || seen[userID] {
+			continue
+		}
+		seen[userID] = true
+		userIDs = append(userIDs, userID)
+	}
+	if len(userIDs) == 0 {
+		return 0
+	}
+
+	// 批量反查用户所属部门。INNER JOIN sys_dept 保证拿到的 dept_id 一定
+	// 指向真实存在的部门；sys_user 走软删除过滤（sys_dept 无 deleted_at 列，
+	// 见 reference_resolver.go 的 tablesWithoutSoftDelete）。
+	//
+	// ⚠ JOIN 条件必须两侧都 CAST 成 TEXT：sys_dept.id 是 uuid、sys_user.dept_id
+	// 是 varchar(64)（model tag size:64），PG 没有 uuid = varchar 运算符，裸比较
+	// 会报 "operator does not exist"。与 migration_217 的既有写法一致。
+	deptByUser := make(map[string]string, len(userIDs))
+	const chunkSize = 400
+	for i := 0; i < len(userIDs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(userIDs) {
+			end = len(userIDs)
+		}
+		chunk := userIDs[i:end]
+
+		var rows []struct {
+			UserID string `gorm:"column:user_id"`
+			DeptID string `gorm:"column:dept_id"`
+		}
+		err := s.db.WithContext(ctx).
+			Table("sys_user AS su").
+			Select("su.id AS user_id, su.dept_id").
+			Joins("INNER JOIN sys_dept d ON CAST(d.id AS TEXT) = CAST(su.dept_id AS TEXT)").
+			Where("su.id IN ? AND su.deleted_at IS NULL AND su.dept_id IS NOT NULL AND CAST(su.dept_id AS TEXT) <> ''", chunk).
+			Find(&rows).Error
+		if err != nil {
+			// 兜底逻辑失败不应阻断整批导入，记录日志后放弃本次反推。
+			logger.Warnf("[workstation] 按用户反推部门查询失败，跳过兜底: %v", err)
+			return 0
+		}
+		for _, row := range rows {
+			if row.DeptID != "" {
+				deptByUser[row.UserID] = row.DeptID
+			}
+		}
+	}
+	if len(deptByUser) == 0 {
+		return 0
+	}
+
+	// 仅回填 dept_id 为空的记录。
+	inferred := 0
+	for _, data := range records {
+		if !isEmptyValue(data["dept_id"]) {
+			continue
+		}
+		userID, _ := data["user_id"].(string)
+		deptID, ok := deptByUser[strings.TrimSpace(userID)]
+		if !ok {
+			continue
+		}
+		data["dept_id"] = deptID
+		inferred++
+	}
+	return inferred
 }
 
 // splitReferencesByDependency 将引用请求分为独立引用和依赖引用

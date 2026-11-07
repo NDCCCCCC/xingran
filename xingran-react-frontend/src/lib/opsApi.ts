@@ -21,6 +21,7 @@ import type {
   AssetListParams,
   WorkstationDevice,
   DeviceFormData,
+  BackfillDeptResult,
 } from "@/types";
 
 // ==================== 通用类型 ====================
@@ -168,6 +169,28 @@ export const workstationApi = {
       floorIds,
     });
     return { counts: res.data?.counts ?? {} };
+  },
+
+  // quick-261106-wsb: 按人员反推部门。dryRun=true 只预览不写库；
+  // fixMismatch=true 额外纠正「已有部门但与用户部门不一致」的工位（默认关闭）。
+  backfillDeptFromUser: async (params: {
+    dryRun: boolean;
+    fixMismatch: boolean;
+  }): Promise<BackfillDeptResult> => {
+    const res = await post<BackfillDeptResult>("/ops/workstation/backfill-dept", params);
+    return (
+      res.data ?? {
+        dryRun: params.dryRun,
+        fixMismatch: params.fixMismatch,
+        candidates: 0,
+        toFill: 0,
+        toCorrect: 0,
+        skippedNoUser: 0,
+        skippedBadUserDept: 0,
+        skippedAlreadyValid: 0,
+        samples: [],
+      }
+    );
   },
 };
 

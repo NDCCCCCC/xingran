@@ -1191,6 +1191,12 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(233, "user_preference_defaults", migrations.Migrate233UserPreferenceDefaults); err != nil {
 			applogger.Errorf("用户偏好空值归一化迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 楼层所属机构覆盖列 (quick-261106-wso)。可空、无回填 → 存量行为不变；
+		// HasColumn 幂等兜底，覆盖 SKIP_AUTOMIGRATE 旁路。失败非阻断：启动继续，
+		// 但依赖该列的 COALESCE 查询会报列不存在，需下次启动重试。
+		if err := d.runAndRecord(234, "floor_org_id", migrations.Migrate234FloorOrgID); err != nil {
+			applogger.Errorf("楼层 org_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1311,6 +1317,10 @@ func (d *Database) AutoMigrate() error {
 		// SQLite 侧修历史残留的空串行。失败只影响历史行的读取,不影响新写入路径。
 		if err := d.runAndRecord(233, "user_preference_defaults", migrations.Migrate233UserPreferenceDefaults); err != nil {
 			applogger.Errorf("用户偏好空值归一化迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 楼层所属机构覆盖列 (quick-261106-wso)，与上方 PG 分支对称。
+		if err := d.runAndRecord(234, "floor_org_id", migrations.Migrate234FloorOrgID); err != nil {
+			applogger.Errorf("楼层 org_id 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)

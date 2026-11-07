@@ -49,6 +49,11 @@ func newFloor91TestDB(t *testing.T) *gorm.DB {
 		&sysmodels.Workstation{},
 		&system.SysFile{},
 	))
+	// 楼层 orgId 筛选改子树口径（审计 P1-3）后需查 sys_dept 展开部门子树。
+	require.NoError(t, db.Exec(`CREATE TABLE sys_dept (
+		id TEXT PRIMARY KEY, dept_name TEXT, dept_code TEXT, parent_id TEXT,
+		ancestors TEXT, is_external_org INTEGER DEFAULT 0, status INTEGER DEFAULT 0,
+		deleted_at DATETIME)`).Error)
 	return db
 }
 
@@ -115,8 +120,10 @@ func TestFloor91_CRUD(t *testing.T) {
 
 // TestFloor91_Create_SoftDeleteRestore 锁定同 (building_id, floor_no) 唯一键的
 // Create-after-soft-delete 当前行为：唯一约束冲突 → isDuplicateKeyError → 检索到
-// 软删行 → 进入恢复分支。sqlite 无 NOW()（P-77-2，TestImp77_FloorCreate 已锁），
-// 恢复 UPDATE 必失败 → 错误语义为「恢复楼层失败」。迁移后该分支路径不得改变。
+// 软删行 → 进入恢复分支。行为变更（quick-261106-wso P1-1 修复附带）：
+// 恢复 UPDATE 的时间函数由 NOW() 改为双方言的 CURRENT_TIMESTAMP，sqlite 下
+// 恢复分支从「必失败（P-77-2）」变为真正可用 —— 正向断言：同键再建恢复软删
+// 行而非插入第二行，且 OrgID 覆盖值随请求写入（不再静默丢弃）。
 func TestFloor91_Create_SoftDeleteRestore(t *testing.T) {
 	db := newFloor91TestDB(t)
 	// P-77-7 形状：唯一索引对齐「同楼宇同楼层号唯一」约束（生产 PG 为 migration 098
@@ -131,12 +138,12 @@ func TestFloor91_Create_SoftDeleteRestore(t *testing.T) {
 	require.NoError(t, svc.Create(ctx, f))
 	require.NoError(t, svc.Delete(ctx, f.ID))
 
-	// 同键再 Create → 唯一约束命中 → 恢复分支（sqlite 下恢复 UPDATE 因 NOW() 失败）
+	// 同键再 Create → 唯一约束命中 → 恢复分支：恢复成功且不产生第二行。
 	f2 := &operationsmodels.OpsFloor{Name: "F-R", FloorNo: "1", BuildingID: b.ID}
-	err := svc.Create(ctx, f2)
-	require.Error(t, err, "唯一键命中软删行 → 恢复分支（非静默插入第二行）")
-	assert.Contains(t, err.Error(), "恢复楼层失败",
-		"sqlite 无 NOW() → 恢复 UPDATE 失败，错误应归因恢复分支（P-77-2）")
+	require.NoError(t, svc.Create(ctx, f2), "恢复分支应在 CURRENT_TIMESTAMP 下成功（P-77-2 已随双方言改造消除）")
+	var cnt int64
+	require.NoError(t, db.Table("ops_floors").Where("building_id = ? AND floor_no = ?", b.ID, "1").Count(&cnt).Error)
+	assert.Equal(t, int64(1), cnt, "恢复而非插入第二行")
 }
 
 // TestFloor91_Update_SyncsWorkstation 锁定 Update 修改 floor.building_id 后
@@ -204,6 +211,12 @@ func TestFloor91_List_Filters(t *testing.T) {
 	orgHit := "org-hit-91"
 	b := seedFloor91Building(t, db, "B91L", orgHit)
 	bOther := seedFloor91Building(t, db, "B91L-other", "org-miss")
+	// 子树口径（审计 P1-3）：orgId 会先在 sys_dept 展开「部门+子孙」，需把
+	// 命中/不命中两个机构都落库（不命中机构不入库同样得空集，这里都插入
+	// 以区分「子树展开空」与「展开后楼层不匹配」两种路径）。
+	require.NoError(t, db.Exec(`INSERT INTO sys_dept (id, dept_name, dept_code, ancestors, status) VALUES
+		(?, 'org-hit-91', 'H91', '', 0),
+		(?, 'org-miss', 'M91', '', 0)`, orgHit, "org-miss").Error)
 
 	fA := &operationsmodels.OpsFloor{Name: "alpha-91", FloorNo: "1", BuildingID: b.ID, OrderNum: 5}
 	fB := &operationsmodels.OpsFloor{Name: "beta-91", FloorNo: "2", BuildingID: b.ID, OrderNum: 1}

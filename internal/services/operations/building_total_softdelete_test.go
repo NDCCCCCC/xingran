@@ -42,7 +42,7 @@ func newBuildingSoftDeleteTestDB(t *testing.T) *gorm.DB {
 		"11111111-1111-1111-1111-111111111111").Error)
 	// ops_floors required by List's workstation_count subquery
 	require.NoError(t, db.Exec(
-		`CREATE TABLE IF NOT EXISTS ops_floors (id TEXT PRIMARY KEY, name TEXT, floor_no TEXT, building_id TEXT, deleted_at DATETIME)`).Error)
+		`CREATE TABLE IF NOT EXISTS ops_floors (id TEXT PRIMARY KEY, name TEXT, floor_no TEXT, building_id TEXT, org_id TEXT, deleted_at DATETIME)`).Error)
 	// sys_workstation required by List's workstation_count subquery
 	require.NoError(t, db.Exec(
 		`CREATE TABLE IF NOT EXISTS sys_workstation (id TEXT PRIMARY KEY, workstation_name TEXT, floor_id TEXT, deleted_at DATETIME)`).Error)

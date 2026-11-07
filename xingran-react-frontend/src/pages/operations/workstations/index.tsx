@@ -26,6 +26,7 @@ import {
   DesktopOutlined,
   SettingOutlined,
   DownloadOutlined,
+  DeploymentUnitOutlined,
 } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import { useTableManager } from "@/hooks/useTableManager";
@@ -44,6 +45,7 @@ import { filterExternalOrgDepts, trimTitleToLastSegment } from "@/utils/deptUtil
 import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
 import { buildSearchParams } from "@/utils/buildSearchParams";
 import { useWorkstationData, useWorkstationModals, useWorkstationView } from "./hooks";
+import { useBackfillDept } from "./hooks/useBackfillDept";
 import { getWorkstationColumns } from "./columns";
 import { WorkstationEditModal } from "./modals";
 import { WorkstationCardView, WorkstationFloorPlanView } from "./views";
@@ -116,6 +118,12 @@ const WorkstationManagement: FC = () => {
   // 这里只是为了在顶层拿到 orgId 喂给 useAliasByLocation, 不修改 EditModal 内部逻辑。
   const [watchedOrgId, setWatchedOrgId] = useState<string | undefined>(undefined);
   const { data: aliasList = [] } = useAliasByLocation(watchedOrgId);
+
+  // Cascader 懒加载楼层时使用的机构过滤值（quick-261106-wso）。
+  // 用 ref 而非 state：Cascader 的 loadData 在 TreeSelect onChange 同一事件循环内
+  // 稍后触发，ref 读取无异步批处理时序问题。新增流程 = 当前选中机构；
+  // 编辑回显 = 不带过滤（需展示全楼楼层）。
+  const cascaderOrgIdRef = useRef<string | undefined>(undefined);
 
   // Phase 39-07: 工位部门物理位置映射 Drawer 状态
   const [aliasDrawerOpen, setAliasDrawerOpen] = useState(false);
@@ -291,6 +299,9 @@ const WorkstationManagement: FC = () => {
     loadStatisticsFromHook(selectedDeptId || undefined);
   }, [loadWorkstations, loadStatisticsFromHook, selectedDeptId]);
 
+  // quick-261106-wsb: 按人员反推部门（预览 + 确认两步），成功后刷新列表/统计。
+  const backfillDept = useBackfillDept(refreshData);
+
   // ✅ Wave 5: useTableQuery companion to useTableManager — exercises the
   // React-Query data-fetching hook for a separate, non-conflicting list.
   // Fetches the *first page* of workstations via React Query, dedup'd by the
@@ -409,10 +420,18 @@ const WorkstationManagement: FC = () => {
   }, []); // 空依赖数组：buildingApi 是稳定的模块导入
 
   // 加载楼层列表（级联第二级）
+  // orgId 可选：新增流程传当前选中机构，后端按「楼层覆盖优先、NULL 继承楼宇」
+  // 只返回该机构实际拥有的楼层，避免跨机构楼宇把其它机构的楼层也列出来。
+  // 编辑回显的 preloadCascaderPath 不传（需展示全楼楼层，否则当前楼层可能无法回显）。
   const loadFloorsForCascader = useCallback(
-    async (buildingId: string): Promise<CascaderOption[]> => {
+    async (buildingId: string, orgId?: string): Promise<CascaderOption[]> => {
       try {
-        const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
+        const floorResult = await floorApi.list({
+          buildingId,
+          current: 1,
+          pageSize: 50,
+          ...(orgId ? { orgId } : {}),
+        });
         const floors = floorResult.data?.list || [];
         return floors.map((f) => ({
           value: f.id,
@@ -435,9 +454,10 @@ const WorkstationManagement: FC = () => {
 
       try {
         if (selectedOptions.length === 1) {
-          // 加载楼层（第二级）
+          // 加载楼层（第二级）。传入当前选中机构，后端按楼层覆盖值过滤，
+          // 跨机构楼宇下只列出属于该机构的楼层（quick-261106-wso）。
           const buildingId = targetOption.value;
-          const floors = await loadFloorsForCascader(buildingId);
+          const floors = await loadFloorsForCascader(buildingId, cascaderOrgIdRef.current);
           // 直接修改 targetOption 的 children 属性
           targetOption.children = floors;
           // 触发重新渲染
@@ -455,6 +475,8 @@ const WorkstationManagement: FC = () => {
     async (orgId: string) => {
       // Phase 39: 同步 orgId 到顶层 state, 触发 useAliasByLocation 重新拉取 alias 映射部门
       setWatchedOrgId(orgId || undefined);
+      // 新增流程：Cascader 懒加载楼层时只列该机构实际拥有的楼层（含楼层覆盖）。
+      cascaderOrgIdRef.current = orgId || undefined;
       if (!orgId) {
         setCascaderOptions([]);
         return;
@@ -529,9 +551,12 @@ const WorkstationManagement: FC = () => {
         // 并行获取楼宇信息（用于拿到 orgId）
         const buildingResult = await buildingApi.get(buildingId);
         const building = buildingResult.data;
-        const orgId = building?.orgId;
+        // 一栋楼跨机构办公（quick-261106-wso）：楼层 org_id 是机构覆盖值，
+        // 非空时优先；为空则继承楼宇 org_id。编辑 1/3 楼工位时，此处决定
+        // 「所属机构」回显与 useAliasByLocation 拉取的部门下拉数据源。
+        const orgId = floor?.orgId || building?.orgId;
 
-        // 不管有没有 orgId 都要把 orgId 写入表单（来自 building.get 的 orgId）
+        // 不管有没有 orgId 都要把 orgId 写入表单（来自楼层覆盖或 building.get）
         // 这样编辑模式下"所属机构"字段才能正确回显
         pendingCascaderWrite.current = {
           record: { ...record, orgId },
@@ -541,6 +566,9 @@ const WorkstationManagement: FC = () => {
         // Phase 39: 编辑模式 orgId 也要同步到顶层 state,
         // 触发 useAliasByLocation 拉取该机构的 alias 映射部门
         setWatchedOrgId(orgId || undefined);
+        // 编辑回显不按机构过滤楼层：Cascader 需展示整栋楼楼层，
+        // 否则当前楼层可能因覆盖到其它机构而不在选项里、无法回显。
+        cascaderOrgIdRef.current = undefined;
 
         if (orgId) {
           // 预加载 cascaderOptions；useEffect 会在选项就绪后写入表单
@@ -581,6 +609,8 @@ const WorkstationManagement: FC = () => {
         setCascaderOptions([]);
         // Phase 39: 新增模式无 orgId, 清空顶层 watchedOrgId 避免上一次编辑的 alias 数据残留
         setWatchedOrgId(undefined);
+        // 新增模式 Cascader 过滤值随 handleOrgChange 设置；此处先清空避免编辑残留。
+        cascaderOrgIdRef.current = undefined;
         workstationForm.setFieldsValue({ status: 0, type: defaultType });
       }
       setModalVisible(true);
@@ -881,6 +911,20 @@ const WorkstationManagement: FC = () => {
                   title={permExport.hint}
                 >
                   下载部门映射表
+                </Button>
+              )}
+              {/* quick-261106-wsb: 按人员反推部门（存量工位批量回填）。
+                  批量改 dept_id → 复用 opsWorkstation.edit 三态门控。
+                  预览 + 确认两步，纠正不一致默认关闭。 */}
+              {permEdit.visible && (
+                <Button
+                  icon={<DeploymentUnitOutlined />}
+                  onClick={() => void backfillDept.open()}
+                  disabled={permEdit.disabled || backfillDept.loading}
+                  loading={backfillDept.loading}
+                  title={permEdit.hint ?? "按工位绑定的用户，反推并回填所属部门（先预览再确认）"}
+                >
+                  按人员反推部门
                 </Button>
               )}
               {permExport.visible && (

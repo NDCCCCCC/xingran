@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
@@ -110,6 +111,9 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 	if err := s.validateBuilding(ctx, floor.BuildingID); err != nil {
 		return err
 	}
+	if err := s.validateOrgOptional(ctx, floor.OrgID); err != nil {
+		return err
+	}
 	if err := s.db.WithContext(ctx).Create(floor).Error; err != nil {
 		// 检查是否是唯一约束错误（同一楼宇下楼层号重复）
 		if isDuplicateKeyError(err) {
@@ -124,10 +128,10 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 					UPDATE ops_floors
 					SET name = ?, area = ?, status = ?, remark = ?,
 							plan_image_id = ?, plan_image_url = ?,
-							deleted_at = NULL, updated_at = NOW()
+							org_id = ?, deleted_at = NULL, updated_at = CURRENT_TIMESTAMP
 					WHERE id = ?
 				`, floor.Name, floor.Area, floor.Status, floor.Remark,
-					floor.PlanImageID, floor.PlanImageUrl, softDeletedFloor.ID).Error
+					floor.PlanImageID, floor.PlanImageUrl, floor.OrgID, softDeletedFloor.ID).Error
 
 				if recoverErr != nil {
 					return apperrors.Wrap(recoverErr, apperrors.CodeServerError, "恢复楼层失败")
@@ -164,6 +168,9 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 			return err
 		}
 	}
+	if err := s.validateOrgOptional(ctx, floor.OrgID); err != nil {
+		return err
+	}
 
 	// 换楼时使用乐观锁：只有楼层仍在旧楼宇才能更新，防止并发 race 导致后到的请求静默覆盖先到的请求。
 	// V130R-07: 如果 building_id 有变化，WHERE 条件包含 oldBuildingID 确保原子性。
@@ -179,6 +186,7 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 				"order_num":   floor.OrderNum,
 				"status":      floor.Status,
 				"remark":      floor.Remark,
+				"org_id":      floor.OrgID,
 			})
 		if result.Error != nil {
 			return result.Error
@@ -273,8 +281,18 @@ func (s *floorService) filterScope(params map[string]interface{}) base.Scope {
 			db = db.Where("ops_floors.building_id = ?", buildingId)
 		}
 		if orgId, ok := params["orgId"].(string); ok && orgId != "" {
-			// 通过关联楼宇的 orgId 筛选（使用 EXISTS 子查询避免 JOIN 冲突）
-			db = db.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+			// 与楼宇/工位同口径：先展开「该部门+全部子孙」再 IN（精确等值会让
+			// Cascader 一级可见而二级为空，审计 P1-3）。
+			// 有效机构 = 楼层覆盖值优先、NULL/空串时继承楼宇 org_id；
+			// NULLIF/COALESCE 两侧都 CAST AS TEXT（org_id 若与 uuid 漂移，
+			// PG 会报 COALESCE types cannot be matched；varchar 下是 no-op）。
+			var deptIDs []string
+			if err := s.db.Table("sys_dept").
+				Scopes(BuildDeptRecursiveFilter(orgId, "id")).
+				Pluck("id", &deptIDs).Error; err != nil || len(deptIDs) == 0 {
+				return db.Where("1 = 0")
+			}
+			db = db.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND COALESCE(NULLIF(CAST(ops_floors.org_id AS TEXT), ''), CAST(b.org_id AS TEXT)) IN ? AND b.deleted_at IS NULL)", deptIDs)
 		}
 
 		// 状态筛选
@@ -409,7 +427,17 @@ func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string
 		query = query.Where("ops_floors.building_id = ?", buildingId)
 	}
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		// 与 List 同口径：子树展开 + 楼层覆盖优先（CAST 防 uuid 漂移）。
+		var deptIDs []string
+		if err := s.db.WithContext(ctx).Table("sys_dept").
+			Scopes(BuildDeptRecursiveFilter(orgId, "id")).
+			Pluck("id", &deptIDs).Error; err != nil {
+			return nil, err
+		}
+		if len(deptIDs) == 0 {
+			return result, nil
+		}
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND COALESCE(NULLIF(CAST(ops_floors.org_id AS TEXT), ''), CAST(b.org_id AS TEXT)) IN ? AND b.deleted_at IS NULL)", deptIDs)
 	}
 	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("ops_floors.status = ?", status)
@@ -529,6 +557,31 @@ func (s *floorService) validateBuilding(ctx context.Context, buildingID string) 
 
 func (s *floorService) updateBuildingFloorCount(ctx context.Context, buildingID string) error {
 	return recomputeBuildingTotalFloorsByID(ctx, s.db, buildingID)
+}
+
+// validateOrgOptional 校验楼层机构覆盖值（可空）：非空时必须是合法 UUID 且
+// 指向真实存在的部门（审计 P2-1，对齐 building_service.validateOrg 与
+// CLAUDE.md「org_id 必须是有效 UUID」约束）。脏值入库会让 COALESCE 不再
+// 回落楼宇机构，该楼层将从所有机构筛选中静默消失。
+func (s *floorService) validateOrgOptional(ctx context.Context, orgID *string) error {
+	if orgID == nil || *orgID == "" {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*orgID)
+	if trimmed == "" {
+		return nil
+	}
+	if err := uuid.Validate(trimmed); err != nil {
+		return apperrors.Wrap(nil, apperrors.CodeParamError, "楼层归属机构必须是合法 UUID")
+	}
+	var count int64
+	if err := s.db.WithContext(ctx).Table("sys_dept").Where("id = ?", trimmed).Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return apperrors.Wrap(nil, apperrors.CodeParamError, "楼层归属机构不存在")
+	}
+	return nil
 }
 
 // recomputeBuildingTotalFloorsByID 单楼栋 total_floors 实时重算（包级共享 helper，

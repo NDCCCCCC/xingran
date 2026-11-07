@@ -30,6 +30,14 @@ type OpsFloor struct {
 	FloorNo      string      `gorm:"column:floor_no;size:50;not null" json:"floorNo"`
 	BuildingID   string      `gorm:"column:building_id;size:64;not null" json:"buildingId"`
 	BuildingName *string     `gorm:"column:building_name;size:100" json:"buildingName,omitempty"`
+	// OrgID 楼层所属机构覆盖值。NULL / 空串 = 继承 ops_buildings.org_id。
+	// 用于「一栋楼跨机构办公」场景（如浙商大厦 4/5/6/47 楼属分公司本部、
+	// 1/3 楼属武汉中支）：楼宇 org_id 只有一个值，真实归属粒度在楼层这一层。
+	//
+	// 消费口径统一为 COALESCE(ops_floors.org_id, ops_buildings.org_id)，
+	// 见 workstation_service.go / floor_service.go / building_service.go。
+	// 可空字段、无 NOT NULL 约束：AutoMigrate 对存量行 ADD COLUMN 安全。
+	OrgID        *string     `gorm:"column:org_id;size:64" json:"orgId,omitempty"`
 	Area         *float64    `gorm:"type:numeric(10,2)" json:"area,omitempty"`
 	Status       FloorStatus `gorm:"default:0" json:"status"`
 	Remark       *string     `gorm:"size:500" json:"-"`

@@ -27,6 +27,8 @@ export interface ImportResult {
   inserted: number;
   updated: number;
   failed: number;
+  /** 工位导入：部门填写不规范时由所属用户反推补全部门的条数（后端可选返回） */
+  inferredDeptCount?: number;
   errors?: ImportError[];
 }
 
@@ -314,6 +316,13 @@ const ExcelImport: FC<ExcelImportProps> = ({
                   <div>
                     <Tag color="error" icon={<CloseCircleOutlined />}>
                       失败: {importResult.failed}
+                    </Tag>
+                  </div>
+                )}
+                {(importResult.inferredDeptCount ?? 0) > 0 && (
+                  <div>
+                    <Tag color="warning">
+                      部门按人员反推: {importResult.inferredDeptCount}
                     </Tag>
                   </div>
                 )}

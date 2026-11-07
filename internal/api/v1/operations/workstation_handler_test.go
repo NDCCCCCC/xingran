@@ -65,6 +65,10 @@ func (s *stubWorkstationService) GetWorkstationDeptOptions(_ context.Context, _ 
 	return nil, nil
 }
 
+func (s *stubWorkstationService) BackfillDeptFromUser(_ context.Context, _, _ bool) (*opsServices.BackfillDeptResult, error) {
+	return nil, nil
+}
+
 func (s *stubWorkstationService) SearchWorkstationOptions(_ context.Context, _ requests.WorkstationListRequest) ([]opsServices.DropdownOption, error) {
 	return nil, nil
 }
@@ -250,6 +254,9 @@ func (m *mockWorkstationServiceForStatisticsError) BatchUpdatePositions(_ contex
 	return nil
 }
 func (m *mockWorkstationServiceForStatisticsError) GetWorkstationDeptOptions(_ context.Context, _ string) ([]opsServices.DeptOption, error) {
+	return nil, nil
+}
+func (m *mockWorkstationServiceForStatisticsError) BackfillDeptFromUser(_ context.Context, _, _ bool) (*opsServices.BackfillDeptResult, error) {
 	return nil, nil
 }
 func (m *mockWorkstationServiceForStatisticsError) SearchWorkstationOptions(_ context.Context, _ requests.WorkstationListRequest) ([]opsServices.DropdownOption, error) {

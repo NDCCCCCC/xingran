@@ -29,6 +29,9 @@ export const DEFAULT_FLOOR_PLAN_CONFIG = {
 export const STATUS_OPTIONS = NORMAL_STOP_OPTIONS;
 
 // 表单状态默认值
+// orgId 显式置 undefined：编辑（可能带覆盖值）后再新增时，防止上次的
+// 「楼层归属机构」残留在表单里被静默写入新楼层（审计 P1-4）。
 export const DEFAULT_FORM_VALUES = {
   status: 0,
+  orgId: undefined,
 } as const;

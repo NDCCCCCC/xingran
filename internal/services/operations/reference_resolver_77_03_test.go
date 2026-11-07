@@ -39,7 +39,7 @@ func setupResolver77DB(t *testing.T) *gorm.DB {
 		)`).Error)
 	require.NoError(t, db.Exec(`
 		CREATE TABLE ops_floors (
-			id TEXT PRIMARY KEY, name TEXT, building_id TEXT,
+			id TEXT PRIMARY KEY, name TEXT, building_id TEXT, org_id TEXT,
 			deleted_at DATETIME
 		)`).Error)
 	require.NoError(t, db.Exec(`

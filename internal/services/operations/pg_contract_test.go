@@ -129,3 +129,64 @@ func TestPGContract_OpsListJoins(t *testing.T) {
 		}())
 	})
 }
+
+// TestPGContract_WorkstationOrgAndBackfill 快速-261106-wsb/-wso 的类型契约守护
+// （2026-11-07 生产 500 回归：sys_user.dept_id 是原生 uuid 列，候选查询里裸写
+// `su.dept_id <> ”` 让 PG 尝试 ” → uuid 隐式转换报 invalid input syntax，
+// SQLite 动态类型全绿测不出 —— 与本文件头部记载的 42883 同族缺陷）。
+//
+// 只读保证：BackfillDeptFromUser 以 dryRun=true 调用，service 内部仅 SELECT/Count，
+// 不写库不清缓存（与 header 的「禁止写 SQL」约束一致）；Statistics/List 的 orgId
+// 筛选是纯读 EXISTS 子查询。
+func TestPGContract_WorkstationOrgAndBackfill(t *testing.T) {
+	db := openPGForContractTest(t)
+	ctx := context.Background()
+
+	wsSvc := NewWorkstationService(db)
+
+	// 1) 按人员反推部门预览（覆盖候选 JOIN 里的 su.dept_id/user_id 空串判断）。
+	requireNoPGErr(t, "backfill-dept dryRun preview", func() error {
+		_, err := wsSvc.BackfillDeptFromUser(ctx, true, false)
+		return err
+	}())
+
+	// 1b) 导入兜底 infer 查询同款 SQL 直跑（审计 P0-1 回归：inferDeptFromUser
+	// 内部 Warnf 吞错误、返回 0，无法靠调用它断言 —— 必须直接执行同款 JOIN
+	// 才能拦住 uuid 列空串比较这类类型契约回归）。只 SELECT。
+	requireNoPGErr(t, "excel infer query shape", func() error {
+		return db.WithContext(ctx).
+			Table("sys_user AS su").
+			Select("su.id AS user_id, su.dept_id").
+			Joins("INNER JOIN sys_dept d ON CAST(d.id AS TEXT) = CAST(su.dept_id AS TEXT)").
+			Where("su.id IN ? AND su.deleted_at IS NULL AND su.dept_id IS NOT NULL AND CAST(su.dept_id AS TEXT) <> ''",
+				[]string{"00000000-0000-0000-0000-000000000000"}).
+			Find(&[]map[string]any{}).Error
+	}())
+
+	// 2) 工位 List/Statistics/SearchOptions 的有效机构 COALESCE 筛选
+	//    （f.org_id/b.org_id 双侧 CAST 后的 COALESCE 类型契约）。
+	const dummyOrg = "00000000-0000-0000-0000-000000000000"
+	requireNoPGErr(t, "workstation List orgId COALESCE", func() error {
+		_, err := wsSvc.List(ctx, requests.WorkstationListRequest{OrgID: dummyOrg})
+		return err
+	}())
+	requireNoPGErr(t, "workstation Statistics orgId COALESCE", func() error {
+		_, err := wsSvc.Statistics(ctx, map[string]interface{}{"orgId": dummyOrg})
+		return err
+	}())
+	requireNoPGErr(t, "workstation SearchOptions orgId COALESCE", func() error {
+		_, err := wsSvc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{OrgID: dummyOrg})
+		return err
+	}())
+
+	// 3) 楼层 List/SearchFloorOptions 的同款 COALESCE 筛选。
+	floorSvc := NewFloorService(db)
+	requireNoPGErr(t, "floor List orgId COALESCE", func() error {
+		_, err := floorSvc.List(ctx, map[string]interface{}{"orgId": dummyOrg})
+		return err
+	}())
+	requireNoPGErr(t, "floor SearchFloorOptions orgId COALESCE", func() error {
+		_, err := floorSvc.SearchFloorOptions(ctx, map[string]interface{}{"orgId": dummyOrg})
+		return err
+	}())
+}

@@ -580,6 +580,7 @@ func GetRoutePermissions() []RoutePermission {
 		// 工位管理（positions 为批量更新工位物理位置=编辑）
 		{"/ops/workstation/batch", "POST", OpsWorkstationDelete, "批量删除工位"},
 		{"/ops/workstation/positions", "POST", OpsWorkstationEdit, "批量更新工位位置"},
+		{"/ops/workstation/backfill-dept", "POST", OpsWorkstationEdit, "按人员反推部门"},
 		{"/ops/workstation/import", "POST", OpsWorkstationImport, "导入工位"},
 		{"/ops/workstation/export", "POST", OpsWorkstationExport, "导出工位"},
 		{"/ops/workstation", "POST", OpsWorkstationAdd, "新增工位"},

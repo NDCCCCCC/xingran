@@ -779,7 +779,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		// 工位管理
 		// 查询接口(/list)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list。
 		// 写操作见下方 workstationWrites 严格兄弟组（85-03 RBAC-01）。
-		workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
+		// quick-261106-wsb: 批量反推部门执行成功后需失效工位缓存。
+		// DataCacheService 为 nil 时 NewCacheProvider 返回安全空实现（既有语义）。
+		workstationService := opsServices.NewWorkstationServiceWithCache(
+			core.DB.GetDB(), systemServices.NewCacheProvider(core.DataCacheService))
 		// R4 (Phase 45) — 跨模块注入 ReconciliationService 到 WorkstationHandler
 		// GetByID 内根据 hasReconciliationPerm 决定是否拉对账健康度 (D-A1-01/03)
 		// Phase 45 R4: 注入 exceptionSvc 用于 per-asset 命中 (D-A4-02)
@@ -823,6 +826,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstationEdits := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationEdit, core)
 			workstationEdits.POST("/:id/update", workstationHandler.Update)
 			workstationEdits.POST("/positions", workstationHandler.BatchUpdatePositions) // 批量更新物理位置=编辑
+			// quick-261106-wsb: 按人员反推部门（预览+执行），批量改 dept_id → 编辑权限
+			workstationEdits.POST("/backfill-dept", workstationHandler.BatchBackfillDeptFromUser)
 			workstationDeletes := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationDelete, core)
 			workstationDeletes.POST("/:id/delete", workstationHandler.Delete)
 			workstationDeletes.POST("/batch", workstationHandler.BatchOperation)

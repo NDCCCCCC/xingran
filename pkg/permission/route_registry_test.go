@@ -171,6 +171,7 @@ var strictWriteGroups = map[string]PermissionCode{
 	"/ops/workstation":           OpsWorkstationAdd,
 	"/ops/workstation/:id/update":  OpsWorkstationEdit,
 	"/ops/workstation/positions":   OpsWorkstationEdit,
+	"/ops/workstation/backfill-dept":  OpsWorkstationEdit,
 	"/ops/workstation/:id/delete":  OpsWorkstationDelete,
 	"/ops/workstation/batch":       OpsWorkstationDelete,
 	"/ops/workstation/import":      OpsWorkstationImport,

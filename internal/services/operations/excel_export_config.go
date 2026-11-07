@@ -169,6 +169,10 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "buildingName", Header: "所属楼宇",
 					Join: &JoinConfig{Table: "ops_buildings", LeftField: "building_id",
 						RightField: "id", SelectField: "name", As: "buildingName"}},
+				// 楼层机构覆盖值（可空 = 继承楼宇 org_id）。导出供核对/批量回填用；
+				// 导入配置刻意不识别该列（standardUpsert 会把未提供的 org_id 写成
+				// NULL，误清空覆盖值），批量设置走楼层表单或 SQL 回填。
+				{Field: "orgId", Header: "所属机构ID(覆盖)", DBField: "org_id"},
 				{Field: "floorNo", Header: "楼层号", DBField: "floor_no"},
 				{Field: "area", Header: "面积(㎡)", DBField: "area"},
 				{Field: "status", Header: "状态", DBField: "status",

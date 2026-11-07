@@ -47,6 +47,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 			id TEXT PRIMARY KEY,
 			name TEXT,
 			building_id TEXT,
+			org_id TEXT,
 			deleted_at DATETIME
 		);
 	`).Error

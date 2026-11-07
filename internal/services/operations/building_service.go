@@ -251,7 +251,14 @@ func (s *buildingService) applyFilters(query *gorm.DB, params map[string]interfa
 		query = query.Where("name LIKE ?", "%"+name+"%")
 	}
 
-	// 部门筛选（包含子部门）
+	// 部门筛选（包含子部门）：楼宇自身 org_id 命中，或该楼宇下有楼层
+	// 把机构覆盖到该部门（ops_floors.org_id）。
+	//
+	// 一栋楼跨机构办公场景（quick-261106-wso）：浙商大厦 org_id=分公司本部，
+	// 但 1/3 楼 org_id=武汉中支。选武汉中支时，工位页 Cascader 第一级楼宇
+	// 下拉必须能拿到浙商大厦，否则 1/3 楼工位根本无法新增/编辑。
+	// 用 EXISTS 而非 JOIN，避免与楼宇列表自身的 JOIN/分页冲突；CAST 统一
+	// uuid/varchar 混比（PG 无隐式互转）。
 	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
 		query = s.applyDeptFilter(query, orgId)
 	}
@@ -264,7 +271,15 @@ func (s *buildingService) applyFilters(query *gorm.DB, params map[string]interfa
 	return query
 }
 
-// applyDeptFilter 应用部门筛选（包含子部门）
+// applyDeptFilter 应用部门筛选（包含子部门）。
+//
+// 命中条件二选一：
+//  1. 楼宇自身 org_id 落在选中部门子树内（原语义）；
+//  2. 该楼宇下存在楼层 org_id 覆盖到选中部门子树内（楼层级机构覆盖）。
+//
+// 后者让「一栋楼跨机构办公」时，Cascader 第一级楼宇下拉也能被非楼宇归属
+// 机构选中（见 quick-261106-wso）。EXISTS 子查询不引入重复行，分页/total
+// 不受影响；CAST(... AS TEXT) 保证 PG/SQLite 双方言 uuid/varchar 可比。
 func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB {
 	var deptIDs []string
 
@@ -277,7 +292,15 @@ func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB
 		return query.Where("1 = 0")
 	}
 
-	return query.Where("org_id IN ?", deptIDs)
+	return query.Where(
+		`org_id IN ? OR EXISTS (
+			SELECT 1 FROM ops_floors f
+			WHERE CAST(f.building_id AS TEXT) = CAST(ops_buildings.id AS TEXT)
+			  AND f.org_id IN ?
+			  AND f.deleted_at IS NULL
+		)`,
+		deptIDs, deptIDs,
+	)
 }
 
 // BatchDelete 批量删除楼宇（repo 空 ids nil 语义与现状 IN(空) no-op 等价）
@@ -360,7 +383,17 @@ func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[
 			// 没有匹配的部门,返回空集而非全集
 			return result, nil
 		}
-		query = query.Where("org_id IN ?", deptIDs)
+		// 与 applyDeptFilter 同口径：楼宇自身 org_id 命中，或其下楼层
+		// org_id 覆盖命中（一栋楼跨机构办公，见 quick-261106-wso）。
+		query = query.Where(
+			`org_id IN ? OR EXISTS (
+				SELECT 1 FROM ops_floors f
+				WHERE CAST(f.building_id AS TEXT) = CAST(ops_buildings.id AS TEXT)
+				  AND f.org_id IN ?
+				  AND f.deleted_at IS NULL
+			)`,
+			deptIDs, deptIDs,
+		)
 	}
 
 	// 状态筛选(0=正常 1=停用)
