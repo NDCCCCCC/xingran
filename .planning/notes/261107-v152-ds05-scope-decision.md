@@ -49,11 +49,14 @@ ops 域「有效机构」一律走 `internal/services/operations/dept_filter.go:
 
 ## 附：v1.52 全量「显式豁免」清单（终态登记）
 
+> **审查补正（2026-11-07，agent-8 独立审查 P1-1）**：`GET /dept-mapping-template`（`internal/api/router.go:818` → `internal/api/v1/operations/excel_handler.go:227-237 DownloadDeptMappingTemplate`）返回全库部门树（部门名 / 全链路 parent_path / 部门代码），零范围过滤，**原清单未点名，属于第 4 个未登记越权面**。按本文「其余 ops 端点一律收口」的总原则，裁定：**不豁免，由 Phase 131 注入可见集过滤**（`sys_dept.id ∈ 可见部门集`，All 档短路不变，不改响应形状）。已在下表中补登记为「已收口」而非豁免。
+
 | 面 | 豁免理由 | 残余风险 |
 |---|---|---|
 | walls / doors / floor-plan-texts（独立 `/list` + `/:id`） | 返回楼层平面几何坐标/展示文字，无业务归属列 | 几何图可能间接暴露布局；Three.js 编辑器联动回归面大 |
 | rooms/photos（独立 `GET /list/:roomId` + `GET /:id`） | 照片/房间附件，模型无机构列 | 附件内容人工录入可能含敏感信息 |
 | location-alias（裁定 3） | 展示型字典，无归属列 | 别名文本可能含机构名 |
+| dept-mapping-template（审查 P1-1 补收口） | **不豁免**：Phase 131 按可见集过滤部门树 | 全链路 parent_path 含父部门名，过滤后仍可能暴露上级名称；登记为已知残余 |
 
 **以上三项均为「已知残余面、接受风险」，不是「间接可见所以安全」的结案**；其余 ops 端点一律收口（含 `workstations-all(:813)`、Excel 导入/导出）。
 

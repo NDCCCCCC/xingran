@@ -649,7 +649,10 @@ func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest, userID 
 
 	// Apply data scope filtering using explicit parameters from handler
 	// (DataScopePermission middleware sets these in Gin context, handler extracts and passes them)
-	if userID != "" && dataScope > 0 {
+	// 审查 P1-4：异常枚举（非 0 且 ∉ 1..5）也必须过滤，旧的 `dataScope > 0`
+	// 会让 -1 等负值完全跳过过滤 = All 放行全库。改由 ApplyVMDataScopeFilter 的
+	// default 分支统一 fail-closed（1=0），0/unset 仍保持不过滤（超管零回归）。
+	if userID != "" && dataScope != 0 {
 		query = ApplyVMDataScopeFilter(query, userID, dataScope, s.db)
 		query = ApplyBoundUserFilter(query, dataScope)
 	}

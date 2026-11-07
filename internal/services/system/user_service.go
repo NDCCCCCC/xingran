@@ -10,6 +10,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -566,70 +567,55 @@ func (s *userService) Statistics(ctx context.Context) (*UserStatisticsResult, er
 	return &result, nil
 }
 
-// applyUserDataScope 对用户列表查询应用 data_scope 过滤（PMODEL-01）。
-// 仿 vdi 模式由 handler 显式传参（scope 信息不进 gin context 之外的自定义机制）：
-//   - DataScopeAll(1) / 0（零值：未挂中间件或超管）→ 不过滤（旧行为零变化）
-//   - DataScopeCustom(2) → dept_id IN (sys_role_dept ⋈ sys_user_role 映射部门)
-//   - DataScopeDept(3) → dept_id = (SELECT dept_id FROM sys_user WHERE id = ?)
-//   - DataScopeDeptChild(4) → ancestors 5 条件子查询（同 RecursiveDeptID 模式，
-//     对 3 层及以上深树正确；不用递归 getChildDepts，避免每请求 N 次往返）
-//   - DataScopeSelf(5) → sys_user.id = ?（按用户主键）。
-//     注意：pkg/middleware/permission.go ApplyDataScope 的 Self 分支是
-//     deptField = userID 形态，仅当 deptField 为用户维度字段（如 vdi bound_user_id）
-//     才正确；对 sys_user 场景必须用本函数的 id 主键语义。
-//   - 未知枚举值 → fail-closed（1=0 空集）
+// applyUserDataScope 对用户列表查询应用 data_scope 过滤（PMODEL-01 / v1.52 Phase 130）。
+//
+// v1.52 Phase 130：部门集展开已收敛到 pkg/datascope.ScopeProvider 单一真实源，
+// 本函数只负责「把 Resolve 得到的可见集应用到 sys_user 查询」，不再内联任何
+// sys_dept / sys_role_dept 展开逻辑（禁止内联复制，DS-01）。
+//
+// 保留的行为契约（不得改变 /system/users 现有行为）：
+//   - DataScopeAll(1) / 0（零值：未挂中间件或超管）→ 不过滤（旧行为零变化，超管零回归）
+//   - 空 scopeUserID（非 All/0）→ 1=0 空集
+//   - DataScopeSelf(5) → sys_user.id = ?（按用户主键；不是 dept_id = userID 的错位形态）
+//   - 未知 / 异常枚举 → fail-closed（1=0 空集）
+//   - 过滤必须在 Count 之前插入（调用点 List:452 / StatisticsWithDataScope:639）
+//
+// 应用规则（ScopeResult → SQL）：
+//   - All / Resolve 失败 → 不过滤 / 1=0（fail-closed，不因基建异常放行全库）
+//   - FailClosed → 1=0
+//   - HookSelfUser → sys_user.id = ?
+//   - 其余（Custom/Dept/DeptChild）→ dept_id IN (Resolve 展开后的 DeptIDs)；空集 → 1=0
 func (s *userService) applyUserDataScope(query *gorm.DB, ctx context.Context, scopeUserID string, dataScope models.DataScope) *gorm.DB {
-	switch dataScope {
-	case models.DataScopeAll, 0:
-		// 全部数据权限 / 未挂中间件：不过滤
+	// All / 0 特判短路：不查部门集、不展开、不过滤（超管零回归硬要求）。
+	if dataScope == models.DataScopeAll || dataScope == 0 {
 		return query
-
-	case models.DataScopeCustom:
-		// 自定义数据权限：按 sys_role_dept 映射部门过滤
-		if scopeUserID == "" {
-			return query.Where("1=0")
-		}
-		return query.Where(
-			"dept_id IN (SELECT rd.dept_id FROM sys_role_dept rd JOIN sys_user_role ur ON ur.role_id = rd.role_id WHERE ur.user_id = ?)",
-			scopeUserID,
-		)
-
-	case models.DataScopeDept:
-		// 本部门数据权限
-		if scopeUserID == "" {
-			return query.Where("1=0")
-		}
-		return query.Where("dept_id = (SELECT dept_id FROM sys_user WHERE id = ?)", scopeUserID)
-
-	case models.DataScopeDeptChild:
-		// 本部门及子部门数据权限：先解析当前用户 dept_id，再对 sys_dept 用
-		// ancestors 5 条件（id / 全等 / 三种 LIKE，同 RecursiveDeptID 模式，3 层以上深树正确）
-		if scopeUserID == "" {
-			return query.Where("1=0")
-		}
-		var deptID string
-		if err := s.db.WithContext(ctx).Raw("SELECT dept_id FROM sys_user WHERE id = ?", scopeUserID).Scan(&deptID).Error; err != nil {
-			return query.Where("1=0")
-		}
-		if deptID == "" {
-			return query.Where("1=0")
-		}
-		return query.Where(
-			"dept_id IN (SELECT id FROM sys_dept WHERE id = ? OR ancestors = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors LIKE ?)",
-			deptID, deptID, deptID+",%", "%,"+deptID+",%", "%,"+deptID,
-		)
-
-	case models.DataScopeSelf:
-		// 仅本人数据权限：按 sys_user.id 主键（不是 dept_id = userID 的错位形态）
-		if scopeUserID == "" {
-			return query.Where("1=0")
-		}
-		return query.Where("sys_user.id = ?", scopeUserID)
-
-	default:
-		// 未知枚举值：fail-closed
+	}
+	// 空 scopeUserID（非 All/0）：无登录人上下文，一律空集（旧行为保持）。
+	if scopeUserID == "" {
 		return query.Where("1=0")
 	}
+
+	result, err := datascope.Resolve(ctx, s.db, scopeUserID, dataScope)
+	if err != nil {
+		// 基建异常 fail-closed：绝不因 Resolve 报错放行全库。
+		return query.Where("1=0")
+	}
+	if result.All {
+		return query
+	}
+	if result.FailClosed {
+		return query.Where("1=0")
+	}
+	if result.ResourceHook == datascope.HookSelfUser {
+		// Self 档：按 sys_user.id 主键（pkg/middleware 死实现的 deptField=userID 是错位形态）。
+		return query.Where("sys_user.id = ?", scopeUserID)
+	}
+	if len(result.DeptIDs) == 0 {
+		return query.Where("1=0")
+	}
+	// Custom / Dept / DeptChild：可见部门集已由 ScopeProvider 展开，直接 IN 值列表
+	// （不引入 JOIN/子查询，避免 List 后续 LEFT JOIN sys_dept 的列歧义）。
+	return query.Where("dept_id IN ?", result.DeptIDs)
 }
 
 // StatisticsWithDataScope 带 data_scope 过滤的用户统计（与 List 复用同一
@@ -723,7 +709,6 @@ func (s *userService) buildDepartmentPaths(ctx context.Context, list []models.Us
 		}
 	}
 }
-
 
 // BatchDelete 批量删除用户
 func (s *userService) BatchDelete(ctx context.Context, ids []string) error {

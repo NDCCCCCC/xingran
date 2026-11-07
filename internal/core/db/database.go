@@ -1198,12 +1198,12 @@ func (d *Database) AutoMigrate() error {
 		// 但依赖该列的 COALESCE 查询会报列不存在，需下次启动重试。
 		if err := d.runAndRecord(234, "floor_org_id", migrations.Migrate234FloorOrgID); err != nil {
 			applogger.Errorf("楼层 org_id 列迁移失败 (非阻断,留待下次启动): %v", err)
-			if err := d.runAndRecord(235, "workstation_backfill_perm", migrations.Migrate235WorkstationBackfillPerm); err != nil {
-				applogger.Errorf("工位部门反推按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
-			}
-			if err := d.runAndRecord(235, "workstation_backfill_perm", migrations.Migrate235WorkstationBackfillPerm); err != nil {
-				applogger.Errorf("工位部门反推按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
-			}
+		}
+		// 工位部门反推按钮权限 seed (quick-261106-wsb, migration 235)。
+		// 必须独立于 234 执行：234 成功是正常路径，把 235 嵌套进 234 的失败分支
+		// 会导致正常启动时权限项永不 seed（审查 P0-1）。
+		if err := d.runAndRecord(235, "workstation_backfill_perm", migrations.Migrate235WorkstationBackfillPerm); err != nil {
+			applogger.Errorf("工位部门反推按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
@@ -1329,6 +1329,10 @@ func (d *Database) AutoMigrate() error {
 		// 楼层所属机构覆盖列 (quick-261106-wso)，与上方 PG 分支对称。
 		if err := d.runAndRecord(234, "floor_org_id", migrations.Migrate234FloorOrgID); err != nil {
 			applogger.Errorf("楼层 org_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 工位部门反推按钮权限 seed (quick-261106-wsb)，与上方 PG 分支对称。
+		if err := d.runAndRecord(235, "workstation_backfill_perm", migrations.Migrate235WorkstationBackfillPerm); err != nil {
+			applogger.Errorf("工位部门反推按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
