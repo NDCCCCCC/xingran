@@ -203,7 +203,7 @@ func (s *infoPointService) filterScope(req requests.InfoPointListRequest) base.S
 				Select("1")
 			// 与工位同口径（审计 P1-5）：有效机构 = 楼层覆盖优先、NULL/空串
 			// 继承楼宇；两侧 CAST AS TEXT 防 uuid 漂移。
-			db = db.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, "COALESCE(NULLIF(CAST(f.org_id AS TEXT), ''), CAST(b.org_id AS TEXT))")(sub))
+			db = db.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, ""+effectiveOrgExpr("f.org_id", "b.org_id")+"")(sub))
 		}
 		return db
 	}

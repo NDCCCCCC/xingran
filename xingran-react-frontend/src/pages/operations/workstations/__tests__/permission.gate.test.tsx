@@ -293,6 +293,7 @@ describe("工位管理页操作级权限门控（Phase 86 W2）", () => {
       PERMISSION_CODES.opsWorkstation.delete,
       PERMISSION_CODES.opsWorkstation.import,
       PERMISSION_CODES.opsWorkstation.export,
+      PERMISSION_CODES.opsWorkstation.backfill,
       PERMISSION_CODES.opsLocationAlias.list,
     ]);
     renderPage();
@@ -313,11 +314,30 @@ describe("工位管理页操作级权限门控（Phase 86 W2）", () => {
     // alias 抽屉入口在持 opsLocationAlias.list 时可用
     const aliasBtn = screen.getByRole("button", { name: /映射$/ }) as HTMLButtonElement;
     expect(aliasBtn.disabled).toBe(false);
-    // quick-261106-wsb：持 edit 时「按人员反推部门」可用
+    // quick-261106-wsb：持 backfill 时「按人员反推部门」可用
     const backfillBtn = screen.getByRole("button", { name: /按人员反推部门/ }) as HTMLButtonElement;
     expect(backfillBtn.disabled).toBe(false);
     // 行编辑/删除可用
     expect(screen.getByRole("button", { name: /编辑/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /删除/ })).toBeTruthy();
+  });
+
+  // ==================== ⑤ 独立权限项（quick-261106-wsb 用户决策） ====================
+
+  it("⑤ 持 edit 但无 backfill → 「按人员反推部门」不渲染（独立权限项不与 edit 共用）", async () => {
+    setPermissionState([
+      PERMISSION_CODES.opsWorkstation.query,
+      PERMISSION_CODES.opsWorkstation.edit,
+    ]);
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("A-01")).toBeTruthy();
+    });
+
+    // 持 edit：行编辑等 edit 入口在 DOM
+    expect(screen.getByRole("button", { name: /编辑/ })).toBeTruthy();
+    // 但批量反推按钮不渲染 —— 权限不与 edit 共用
+    expect(screen.queryByRole("button", { name: /按人员反推部门/ })).toBeNull();
   });
 }, 30000);

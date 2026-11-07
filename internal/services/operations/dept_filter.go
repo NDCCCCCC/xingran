@@ -1,9 +1,25 @@
 package operations
 
 import (
+	"fmt"
+
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
+
+// effectiveOrgExpr 「有效机构」表达式单一真实源（审计 P2-6）：
+// 楼层覆盖值优先（NULL/空串经 NULLIF 归一），否则继承楼宇 org_id。
+// 两侧 CAST AS TEXT 防 uuid/varchar 漂移（PG 无隐式互转；varchar 下 CAST 是
+// no-op，SQLite 动态类型不受影响）。
+//
+// floorCol/buildingCol 为调用方 JOIN 别名下的列引用（如 "f.org_id" / "b.org_id"），
+// 调用方须保证这两个表别名在当前查询作用域内存在。
+func effectiveOrgExpr(floorCol, buildingCol string) string {
+	return fmt.Sprintf(
+		"COALESCE(NULLIF(CAST(%s AS TEXT), ''), CAST(%s AS TEXT))",
+		floorCol, buildingCol,
+	)
+}
 
 // BuildDeptRecursiveFilter returns a scope for "department + all sub-departments" filtering.
 // Use this instead of duplicating the logic across building/workstation/infopoint/

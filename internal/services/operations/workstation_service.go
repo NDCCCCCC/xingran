@@ -20,20 +20,8 @@ const (
 	// PG/SQLite 双方言行为一致(PG 专有 ::uuid/::text 在 SQLite 报 unrecognized token ':')。
 	// 与 GetWorkstationDeptOptions / location_alias_service 的 CAST 范式一致。
 	workstationJoinClause = "LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id LEFT JOIN sys_dept ON CAST(sys_dept.id AS TEXT) = sys_workstation.dept_id LEFT JOIN sys_user ON CAST(sys_user.id AS TEXT) = sys_workstation.user_id"
-	// workstationOrgColumn 工位机构筛选使用的「有效机构」表达式。
-	//
-	// ops_floors.org_id 为楼层级机构覆盖值（可空），NULL 时继承 ops_buildings.org_id。
-	// 用于「一栋楼跨机构办公」：例如浙商大厦 org_id=分公司本部，但 1/3 楼
-	// org_id=武汉中支，选武汉中支时必须能筛出 1/3 楼的工位，反之亦然。
-	//
-	// 由 workstationOrgExistsSub 保证子查询里 f/b 两个表别名都存在（JOIN
-	// ops_floors f → ops_buildings b），列名均为常量、不含用户输入。
-	// NULLIF 把表单清空写入的空串也归一为 NULL，避免 COALESCE 命中空串。
-	// ⚠ 两侧都 CAST AS TEXT：org_id 若与 uuid 漂移（同 building_id 先例），
-	// COALESCE(text, uuid) 会被 PG 拒绝（types cannot be matched）；CAST 对
-	// varchar 是 no-op，SQLite 动态类型不受影响（2026-11-07 backfill-dept
-	// 同类教训：uuid 列上 <> '' 在 PG 运行时报错而 SQLite 全绿）。
-	workstationOrgColumn = "COALESCE(NULLIF(CAST(f.org_id AS TEXT), ''), CAST(b.org_id AS TEXT))"
+	// workstationOrgColumn（工位机构筛选「有效机构」表达式）见下方 var：
+	// 运行时经 effectiveOrgExpr 生成，单一源自 dept_filter.go（审计 P2-6）。
 )
 
 // validateTableName 验证表名是否在白名单中，防止 SQL 注入
@@ -46,6 +34,21 @@ func validateTableName(tableName string) bool {
 	}
 	return allowedTables[tableName]
 }
+
+// workstationOrgColumn 工位机构筛选使用的「有效机构」表达式。
+//
+// ops_floors.org_id 为楼层级机构覆盖值（可空），NULL 时继承 ops_buildings.org_id。
+// 用于「一栋楼跨机构办公」：例如浙商大厦 org_id=分公司本部，但 1/3 楼
+// org_id=武汉中支，选武汉中支时必须能筛出 1/3 楼的工位，反之亦然。
+//
+// 由 workstationOrgExistsSub 保证子查询里 f/b 两个表别名都存在（JOIN
+// ops_floors f → ops_buildings b），列名均为常量、不含用户输入。
+// NULLIF 把表单清空写入的空串也归一为 NULL，避免 COALESCE 命中空串。
+// ⚠ 两侧都 CAST AS TEXT：org_id 若与 uuid 漂移（同 building_id 先例），
+// COALESCE(text, uuid) 会被 PG 拒绝（types cannot be matched）；CAST 对
+// varchar 是 no-op，SQLite 动态类型不受影响。
+// 定义单一源自 dept_filter.go 的 effectiveOrgExpr（审计 P2-6）。
+var workstationOrgColumn = effectiveOrgExpr("f.org_id", "b.org_id")
 
 // CountsByFloorResult 批量楼层工位计数结果
 type CountsByFloorResult struct {
@@ -274,6 +277,11 @@ func NewWorkstationServiceWithCache(db *gorm.DB, cache system.CacheProvider) Wor
 // WithCacheProvider 注入缓存提供者，供 BackfillDeptFromUser 成功后失效工位缓存。
 // 可选：不注入时该 service 仍可正常工作（缓存清理被跳过），与
 // ExcelService.WithDeviceService 同款 setter 模式，避免改构造函数签名影响 14 个调用点。
+//
+// ⚠ 审计 P2-2 备注：当前 workstation 域无缓存写入者（CRUD 直读 DB），
+// 此失效链路属预埋——为「工位数据被缓存化」的未来演进预先就位正确语义；
+// 现阶段执行它是对失效模式的无害空转。删除或启用请与导入侧 CachePatterns
+// （workstation:* / workstations:*）一并裁决。
 func (s *workstationService) WithCacheProvider(cache system.CacheProvider) *workstationService {
 	s.cache = cache
 	return s
@@ -520,21 +528,26 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 	}
 	result.Candidates = len(candidates)
 
-	// 2) 未命中候选的工位按原因归类（两条 COUNT，避免把全表拉进内存）。
-	var total, withUser int64
+	// 2) 未命中候选的工位按原因归类：一条条件聚合替代两次全表 COUNT（审计 P2-4）。
+	var stats []struct {
+		Total    int64
+		WithUser int64
+	}
 	if err := s.db.WithContext(ctx).Table("sys_workstation").
-		Where("deleted_at IS NULL").Count(&total).Error; err != nil {
+		Select("COUNT(*) AS total, " +
+			"COALESCE(SUM(CASE WHEN user_id IS NOT NULL AND CAST(user_id AS TEXT) <> '' THEN 1 ELSE 0 END), 0) AS with_user").
+		Where("deleted_at IS NULL").Scan(&stats).Error; err != nil {
 		return nil, fmt.Errorf("统计工位总数失败: %w", err)
 	}
-	if err := s.db.WithContext(ctx).Table("sys_workstation").
-		// 同上：user_id 可能是 uuid 列，空串比较必须 CAST AS TEXT。
-		Where("deleted_at IS NULL AND user_id IS NOT NULL AND CAST(user_id AS TEXT) <> ''").Count(&withUser).Error; err != nil {
-		return nil, fmt.Errorf("统计已绑定用户工位失败: %w", err)
+	if len(stats) == 0 {
+		return result, nil
 	}
-	result.SkippedNoUser = int(total - withUser)
-	result.SkippedBadUserDept = int(withUser) - len(candidates)
+	result.SkippedNoUser = int(stats[0].Total - stats[0].WithUser)
+	result.SkippedBadUserDept = int(stats[0].WithUser) - len(candidates)
 
-	// 3) 内存分类 + 收集待更新。
+	// 3) 内存分类 + 收集待更新。样例收集策略（审计 P2-5）：fill/correct 优先
+	// 占满上限，skip 只在槽位剩余时补位 —— 幂等二跑（ToFill=0）时预览表不再
+	// 被 20 行「跳过」挤占，审计目的可见。
 	type updateItem struct{ id, deptID string }
 	toUpdate := make([]updateItem, 0)
 	const maxSamples = 20
@@ -562,6 +575,10 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 			// 已有部门且一致（或不一致但未开启纠正）→ 跳过，绝不覆盖。
 			result.SkippedAlreadyValid++
 		}
+		// skip 样例只补位：把前 20 个槽位尽量留给 fill/correct（审计 P2-5）。
+		if action == "skip" && len(result.Samples) >= maxSamples-1 {
+			continue
+		}
 		if len(result.Samples) < maxSamples {
 			sample := BackfillDeptSample{
 				WorkstationID:   c.WorkstationID,
@@ -588,32 +605,27 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 		return result, nil
 	}
 
-	// 5) 事务内批量 CASE UPDATE，按 400 分块（沿用 reference_resolver 约定）。
-	const chunkSize = 400
+	// 5) 事务内批量 CASE UPDATE，分块走 chunksOf 共享 helper（审计 P2-11）。
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for i := 0; i < len(toUpdate); i += chunkSize {
-			end := i + chunkSize
-			if end > len(toUpdate) {
-				end = len(toUpdate)
-			}
-			chunk := toUpdate[i:end]
-
+		for _, chunk := range chunksOf(toUpdate, 400) {
 			var sb strings.Builder
-			// id 列是 uuid、dept_id 是 varchar：两侧都 CAST 成 TEXT 比较，
-			// PG/SQLite 双方言一致（PG 无 uuid = varchar 运算符）。
-			// THEN 分支显式 CAST 避免 PG 42804（CASE 结果类型退化为 text）。
+			// CASE 表达式内两侧 CAST：id 是 uuid、dept_id 是 varchar，PG 无
+			// uuid = varchar 运算符；THEN 分支显式 CAST 避免 PG 42804（CASE
+			// 结果类型退化为 text）。
 			sb.WriteString("UPDATE sys_workstation SET dept_id = CASE CAST(id AS TEXT) ")
 			args := make([]interface{}, 0, len(chunk)*2)
 			for _, it := range chunk {
 				sb.WriteString("WHEN CAST(? AS TEXT) THEN CAST(? AS TEXT) ")
 				args = append(args, it.id, it.deptID)
 			}
-			sb.WriteString("END, updated_at = CURRENT_TIMESTAMP WHERE CAST(id AS TEXT) IN (")
+			// WHERE 走参数化 id IN (?)：pgx 按列类型推断把 string 编码为 uuid，
+			// 不包 CAST 才能命中 PK 索引（审计 P2-4；包裹 CAST 会全表扫描）。
+			sb.WriteString("END, updated_at = CURRENT_TIMESTAMP WHERE id IN (")
 			for j := range chunk {
 				if j > 0 {
 					sb.WriteString(",")
 				}
-				sb.WriteString("CAST(? AS TEXT)")
+				sb.WriteString("?")
 				args = append(args, chunk[j].id)
 			}
 			sb.WriteString(") AND deleted_at IS NULL")

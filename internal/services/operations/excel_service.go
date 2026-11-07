@@ -752,42 +752,21 @@ func (s *ExcelService) inferDeptFromUser(ctx context.Context, records []map[stri
 		return 0
 	}
 
-	// 批量反查用户所属部门。INNER JOIN sys_dept 保证拿到的 dept_id 一定
-	// 指向真实存在的部门；sys_user 走软删除过滤（sys_dept 无 deleted_at 列，
-	// 见 reference_resolver.go 的 tablesWithoutSoftDelete）。
+	// 批量反查用户所属部门：复用包级 queryUserDeptMap（审计 P2-7，与
+	// BackfillDeptFromUser 共享同一份 JOIN/CAST 形态，防双实现分叉复发——
+	// 本函数曾因独立维护漏修 uuid CAST 而在生产静默失效，见 P0-1）。
+	// INNER JOIN sys_dept 过滤脏数据；错误上抛由调用方 Warnf 后放弃兜底。
 	//
-	// ⚠ JOIN 条件必须两侧都 CAST 成 TEXT：sys_dept.id 是 uuid、sys_user.dept_id
-	// 是 varchar(64)（model tag size:64），PG 没有 uuid = varchar 运算符，裸比较
-	// 会报 "operator does not exist"。与 migration_217 的既有写法一致。
-	deptByUser := make(map[string]string, len(userIDs))
-	const chunkSize = 400
-	for i := 0; i < len(userIDs); i += chunkSize {
-		end := i + chunkSize
-		if end > len(userIDs) {
-			end = len(userIDs)
-		}
-		chunk := userIDs[i:end]
-
-		var rows []struct {
-			UserID string `gorm:"column:user_id"`
-			DeptID string `gorm:"column:dept_id"`
-		}
-		err := s.db.WithContext(ctx).
-			Table("sys_user AS su").
-			Select("su.id AS user_id, su.dept_id").
-			Joins("INNER JOIN sys_dept d ON CAST(d.id AS TEXT) = CAST(su.dept_id AS TEXT)").
-			Where("su.id IN ? AND su.deleted_at IS NULL AND su.dept_id IS NOT NULL AND CAST(su.dept_id AS TEXT) <> ''", chunk).
-			Find(&rows).Error
-		if err != nil {
-			// 兜底逻辑失败不应阻断整批导入，记录日志后放弃本次反推。
-			logger.Warnf("[workstation] 按用户反推部门查询失败，跳过兜底: %v", err)
-			return 0
-		}
-		for _, row := range rows {
-			if row.DeptID != "" {
-				deptByUser[row.UserID] = row.DeptID
-			}
-		}
+	// ⚠ 语义边界（审计 P2-8）：本兜底发生在 Upsert 之前，标准导入（非
+	// PartialUpdate）的 `dept_id = EXCLUDED.dept_id` 无条件生效 —— 若 Excel
+	// 该列留空但 DB 行已有部门，反推值会**覆盖**既有部门。这与「Excel 为准」
+	// 的导入语义方向一致（旧行为空值写 NULL 更糟），但导入结果文案应区分
+	// 「填补」与「覆盖」两种情形，避免跨机构配置被误判为补全。
+	deptByUser, err := queryUserDeptMap(ctx, s.db, userIDs)
+	if err != nil {
+		// 兜底逻辑失败不应阻断整批导入，记录日志后放弃本次反推。
+		logger.Warnf("[workstation] 按用户反推部门查询失败，跳过兜底: %v", err)
+		return 0
 	}
 	if len(deptByUser) == 0 {
 		return 0

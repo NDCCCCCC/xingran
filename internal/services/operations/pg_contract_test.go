@@ -150,6 +150,22 @@ func TestPGContract_WorkstationOrgAndBackfill(t *testing.T) {
 		return err
 	}())
 
+	// 1c) 回填写路径契约（审计 P2-3：dryRun 只覆盖读路径，UPDATE 的 CASE
+	// WHEN CAST 形态与 WHERE id IN (?) 参数化推断此前无 PG 守护）。在显式
+	// 事务里执行 fixMismatch=true 的完整写路径后**回滚**——真实走 UPDATE
+	// SQL 但零净变更，符合本文件只读保证的精神。
+	tx := db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		t.Fatalf("begin tx: %v", tx.Error)
+	}
+	requireNoPGErr(t, "backfill-dept write path (rolled back)", func() error {
+		_, err := NewWorkstationService(tx).BackfillDeptFromUser(ctx, false, true)
+		return err
+	}())
+	if err := tx.Rollback().Error; err != nil {
+		t.Fatalf("rollback: %v", err)
+	}
+
 	// 1b) 导入兜底 infer 查询同款 SQL 直跑（审计 P0-1 回归：inferDeptFromUser
 	// 内部 Warnf 吞错误、返回 0，无法靠调用它断言 —— 必须直接执行同款 JOIN
 	// 才能拦住 uuid 列空串比较这类类型契约回归）。只 SELECT。

@@ -263,7 +263,10 @@ const (
 	OpsWorkstationDelete PermissionCode = "ops:workstation:delete"
 	OpsWorkstationImport PermissionCode = "ops:workstation:import"
 	OpsWorkstationExport PermissionCode = "ops:workstation:export"
-	OpsWorkstationQuery  PermissionCode = "ops:workstation:query"
+	// OpsWorkstationBackfill 按人员反推部门（批量全库写，quick-261106-wsb 用户
+	// 决策：独立权限项，不与 edit 共用 —— 影响面全库，须可按角色独立授权/回收）。
+	OpsWorkstationBackfill PermissionCode = "ops:workstation:backfill"
+	OpsWorkstationQuery    PermissionCode = "ops:workstation:query"
 
 	// 资产管理
 	OpsAssetAdd    PermissionCode = "ops:asset:add"
@@ -323,15 +326,15 @@ const (
 	// ==================== AD 域管理 / 经理同步（85-03 RBAC-01 批次 C） ====================
 	// 均为既有字面量码升常量（此前散落在 ad_domain_router.go / manager_rule_router.go
 	// 的组级 ANY-of 字符串中）；migration_221/163 菜单 seed 对应按钮权限。
-	OpsADConfigList   PermissionCode = "ops:ad:config:list"
-	OpsADConfigAdd    PermissionCode = "ops:ad:config:add"
-	OpsADConfigEdit   PermissionCode = "ops:ad:config:edit"
-	OpsADConfigDelete PermissionCode = "ops:ad:config:delete"
-	OpsADConfigTest   PermissionCode = "ops:ad:config:test"
-	OpsADConfigSync   PermissionCode = "ops:ad:config:sync"
-	OpsADGroupEdit       PermissionCode = "ops:ad:group:edit"
+	OpsADConfigList       PermissionCode = "ops:ad:config:list"
+	OpsADConfigAdd        PermissionCode = "ops:ad:config:add"
+	OpsADConfigEdit       PermissionCode = "ops:ad:config:edit"
+	OpsADConfigDelete     PermissionCode = "ops:ad:config:delete"
+	OpsADConfigTest       PermissionCode = "ops:ad:config:test"
+	OpsADConfigSync       PermissionCode = "ops:ad:config:sync"
+	OpsADGroupEdit        PermissionCode = "ops:ad:group:edit"
 	OpsADGroupMappingSync PermissionCode = "ops:ad:group:mapping:sync"
-	OpsADUserEdit        PermissionCode = "ops:ad:user:edit"
+	OpsADUserEdit         PermissionCode = "ops:ad:user:edit"
 
 	OpsManagerRuleList   PermissionCode = "ops:manager:rule:list"
 	OpsManagerRuleEdit   PermissionCode = "ops:manager:rule:edit"
@@ -580,7 +583,7 @@ func GetRoutePermissions() []RoutePermission {
 		// 工位管理（positions 为批量更新工位物理位置=编辑）
 		{"/ops/workstation/batch", "POST", OpsWorkstationDelete, "批量删除工位"},
 		{"/ops/workstation/positions", "POST", OpsWorkstationEdit, "批量更新工位位置"},
-		{"/ops/workstation/backfill-dept", "POST", OpsWorkstationEdit, "按人员反推部门"},
+		{"/ops/workstation/backfill-dept", "POST", OpsWorkstationBackfill, "按人员反推部门"},
 		{"/ops/workstation/import", "POST", OpsWorkstationImport, "导入工位"},
 		{"/ops/workstation/export", "POST", OpsWorkstationExport, "导出工位"},
 		{"/ops/workstation", "POST", OpsWorkstationAdd, "新增工位"},

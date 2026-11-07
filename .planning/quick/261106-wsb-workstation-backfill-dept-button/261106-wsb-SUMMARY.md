@@ -114,3 +114,21 @@ subagent 审计结论 FAIL（P0x1 / P1x6 / P2x11），已修复：
 未修（记录待办）：P2 性能类（回填候选无 LIMIT / PK CAST 索引失效）、双实现合并、缓存 no-op 链路、样例表分拣、EditModal 子树 raw UUID —— 均为一致性/效率项，不影响正确性。
 
 验证：go build 全绿；operations/api/permission/api/migrations 全绿；真实 PG（10.62.10.34）contract 全过；前端 type-check/lint/vitest 13/13。
+
+## P2 修复 + 独立权限项（2026-11-07 第二轮）
+
+用户决策变更：按人员反推部门改为**独立权限项 ops:workstation:backfill**，不与 edit 共用（批量全库写须可按角色独立授权/回收）。
+
+- 独立权限全套：config.go 常量 + 独立 strict 组挂载 + route_registry 重扫（isWrite=true, permCodes=backfill）+ migration 235 幂等 seed（复用 226 包级函数，bootstrap 授权给持工位菜单角色，可回收）+ database.go 双分支注册 + 前端 permissionCodes.backfill + 按钮门控切换 + 新增测试「持 edit 无 backfill → 按钮不渲染」锁定不共用
+- P2-2：WithCacheProvider 预埋语义注释（当前域无缓存写入者，无害空转）
+- P2-4：回填 UPDATE WHERE 去包裹 CAST（参数化推断走 PK 索引，不再全表扫描）；两次全表 COUNT 合一条条件聚合
+- P2-5：预览样例 fill/correct 优先占位，skip 只补位（幂等二跑不再被 20 行跳过挤占）
+- P2-6：effectiveOrgExpr 单一真实源（dept_filter.go），替换 workstationOrgColumn/floor 两处/infopoint 共 4 处内联
+- P2-7：queryUserDeptMap 包级共享，excel infer 与 backfill 共用同一份 JOIN/CAST 形态（P0 类缺陷防复发）
+- P2-8：infer 注释明确「可能覆盖 DB 已有部门」语义边界
+- P2-9：onOk 失败不再 rethrow（loading 状态机闭合）
+- P2-10：EditModal 工位 deptId 不在机构子树时用 editingWorkstation.deptName 兜底注入（消 raw UUID）
+- P2-11：chunksOf 泛型 helper 收敛分块循环
+- P2-3 增强：PG contract 补写路径契约（显式事务内执行 fixMismatch=true 完整 UPDATE 后回滚，零净变更）
+
+验证：go build 全绿；operations/api/permission/api/migrations 全绿；真实 PG contract 全过（含写路径）；前端 type-check + vitest（权限 6/6 含新增 ⑤ 用例）。

@@ -142,6 +142,8 @@ const WorkstationManagement: FC = () => {
   const permImport = permGate.decide(PERMISSION_CODES.opsWorkstation.import);
   // ⚠️ NEW-02（数据外带面）：「下载部门映射表」是**导出类写入口**，归 opsWorkstation.export
   const permExport = permGate.decide(PERMISSION_CODES.opsWorkstation.export);
+  // quick-261106-wsb：按人员反推部门 —— 独立权限项（批量全库写不与 edit 共用）。
+  const permBackfill = permGate.decide(PERMISSION_CODES.opsWorkstation.backfill);
   // alias 抽屉入口：ready 无 opsLocationAlias.list → 不渲染；未就绪 → 渲染但 disabled
   const permAliasList = permGate.decide(PERMISSION_CODES.opsLocationAlias.list);
 
@@ -914,15 +916,15 @@ const WorkstationManagement: FC = () => {
                 </Button>
               )}
               {/* quick-261106-wsb: 按人员反推部门（存量工位批量回填）。
-                  批量改 dept_id → 复用 opsWorkstation.edit 三态门控。
+                  独立权限项 opsWorkstation.backfill（批量全库写不与 edit 共用）。
                   预览 + 确认两步，纠正不一致默认关闭。 */}
-              {permEdit.visible && (
+              {permBackfill.visible && (
                 <Button
                   icon={<DeploymentUnitOutlined />}
                   onClick={() => void backfillDept.open()}
-                  disabled={permEdit.disabled || backfillDept.loading}
+                  disabled={permBackfill.disabled || backfillDept.loading}
                   loading={backfillDept.loading}
-                  title={permEdit.hint ?? "按工位绑定的用户，反推并回填所属部门（先预览再确认）"}
+                  title={permBackfill.hint ?? "按工位绑定的用户，反推并回填所属部门（先预览再确认）"}
                 >
                   按人员反推部门
                 </Button>

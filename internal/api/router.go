@@ -826,8 +826,6 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstationEdits := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationEdit, core)
 			workstationEdits.POST("/:id/update", workstationHandler.Update)
 			workstationEdits.POST("/positions", workstationHandler.BatchUpdatePositions) // 批量更新物理位置=编辑
-			// quick-261106-wsb: 按人员反推部门（预览+执行），批量改 dept_id → 编辑权限
-			workstationEdits.POST("/backfill-dept", workstationHandler.BatchBackfillDeptFromUser)
 			workstationDeletes := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationDelete, core)
 			workstationDeletes.POST("/:id/delete", workstationHandler.Delete)
 			workstationDeletes.POST("/batch", workstationHandler.BatchOperation)
@@ -835,6 +833,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			operations.SetupExcelImportRouter(workstationImport, "workstation", core)
 			workstationExport := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationExport, core)
 			operations.SetupExcelExportRouter(workstationExport, "workstation", core)
+			// quick-261106-wsb：按人员反推部门 —— 独立权限项（批量全库写不与编辑共用）。
+			workstationBackfill := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationBackfill, core)
+			workstationBackfill.POST("/backfill-dept", workstationHandler.BatchBackfillDeptFromUser)
 		}
 
 		// 工位部门物理位置映射 (Phase 39)

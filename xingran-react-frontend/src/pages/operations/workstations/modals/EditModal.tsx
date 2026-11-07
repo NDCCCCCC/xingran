@@ -108,6 +108,7 @@ export function WorkstationEditModal({
   // (即 "人力资源部"),但仍保留父子结构以便展开查看子部门。
   // 不影响 orgTreeData(它仍展示全路径,有助于"所属机构"的辨识)。
   const watchedOrgId = Form.useWatch("orgId", form) as string | undefined;
+  const watchedDeptId = Form.useWatch("deptId", form) as string | undefined;
   const subDeptTree = useMemo<DeptTreeNode[]>(() => {
     if (!watchedOrgId) return [];
     const node = findDeptNode(deptTreeData, watchedOrgId);
@@ -123,7 +124,6 @@ export function WorkstationEditModal({
     // 已经在 baseTree(deptTreeData 子树)里了,必须过滤掉,否则整棵子树重复注入 →
     // 下拉显示所有部门 + TreeSelect "Same key" 重复告警。
     const aliasOnly = (aliasList ?? []).filter((a) => a?.isAlias === true);
-    if (aliasOnly.length === 0) return baseTree;
 
     const aliasNodes: DeptTreeNode[] = aliasOnly.map((a) => {
       // 走 trimTitleToLastSegment 保持与 baseTree title 收窄规则一致
@@ -140,8 +140,28 @@ export function WorkstationEditModal({
       } as DeptTreeNode;
     });
 
-    return [...baseTree, ...aliasNodes];
-  }, [deptTreeData, watchedOrgId, aliasList]);
+    const merged = [...baseTree, ...aliasNodes];
+
+    // 兜底注入 (审计 P2-10): 反推/导入写入的用户部门可能不在当前机构子树内
+    // (跨机构归属是常态，如浙商大厦 1/3 楼工位挂武汉中支部门)，TreeSelect 对
+    // 不在树内的 value 显示 raw UUID。用 editingWorkstation.deptName 注入兜底
+    // 节点（同 ensureUser 模式）。
+    if (
+      watchedDeptId &&
+      !merged.some((n) => n.value === watchedDeptId || n.key === watchedDeptId)
+    ) {
+      const fallbackName =
+        editingWorkstation?.deptName?.trim() || editingWorkstation?.deptId || "当前部门";
+      merged.push({
+        title: fallbackName,
+        value: watchedDeptId,
+        key: watchedDeptId,
+        isLeaf: true,
+      } as DeptTreeNode);
+    }
+
+    return merged;
+  }, [deptTreeData, watchedOrgId, watchedDeptId, aliasList, editingWorkstation]);
 
   return (
     <BaseEditModal

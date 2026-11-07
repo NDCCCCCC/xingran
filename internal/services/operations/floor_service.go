@@ -292,7 +292,7 @@ func (s *floorService) filterScope(params map[string]interface{}) base.Scope {
 				Pluck("id", &deptIDs).Error; err != nil || len(deptIDs) == 0 {
 				return db.Where("1 = 0")
 			}
-			db = db.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND COALESCE(NULLIF(CAST(ops_floors.org_id AS TEXT), ''), CAST(b.org_id AS TEXT)) IN ? AND b.deleted_at IS NULL)", deptIDs)
+			db = db.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND "+effectiveOrgExpr("ops_floors.org_id", "b.org_id")+" IN ? AND b.deleted_at IS NULL)", deptIDs)
 		}
 
 		// 状态筛选
@@ -437,7 +437,7 @@ func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string
 		if len(deptIDs) == 0 {
 			return result, nil
 		}
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND COALESCE(NULLIF(CAST(ops_floors.org_id AS TEXT), ''), CAST(b.org_id AS TEXT)) IN ? AND b.deleted_at IS NULL)", deptIDs)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND "+effectiveOrgExpr("ops_floors.org_id", "b.org_id")+" IN ? AND b.deleted_at IS NULL)", deptIDs)
 	}
 	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("ops_floors.status = ?", status)
@@ -604,13 +604,14 @@ func recomputeBuildingTotalFloorsByID(ctx context.Context, db *gorm.DB, building
 // （SQL 形状拷贝 BatchDelete 的关联子查询 UPDATE，去掉 id 限定 + 加楼栋软删过滤）。
 //
 // 设计要点：
-//   ① 供 Excel 导入事务收尾调用（building + floor 双实体，修漂移路径 B/C）——
-//     building 导入直写用户上传的 totalFloors 值、floor 导入经通用 BatchUpsert
-//     绕过 floorService.Create 的重算，两者都会污染派生列，导入完成统一归正；
-//   ② 幂等可重入：重复执行结果一致，事务重试/并发导入均安全；
-//   ③ 实时 COUNT 口径与 updateBuildingFloorCount 一致（ops_floors 非软删行数，
-//     禁止 ±1 增量——会把历史脏值固化）；
-//   ④ ops_buildings 量级小（百级行），全表重算无性能顾虑。
+//
+//	① 供 Excel 导入事务收尾调用（building + floor 双实体，修漂移路径 B/C）——
+//	  building 导入直写用户上传的 totalFloors 值、floor 导入经通用 BatchUpsert
+//	  绕过 floorService.Create 的重算，两者都会污染派生列，导入完成统一归正；
+//	② 幂等可重入：重复执行结果一致，事务重试/并发导入均安全；
+//	③ 实时 COUNT 口径与 updateBuildingFloorCount 一致（ops_floors 非软删行数，
+//	  禁止 ±1 增量——会把历史脏值固化）；
+//	④ ops_buildings 量级小（百级行），全表重算无性能顾虑。
 func recomputeAllBuildingTotalFloors(ctx context.Context, db *gorm.DB) error {
 	sql := `
 		UPDATE ops_buildings

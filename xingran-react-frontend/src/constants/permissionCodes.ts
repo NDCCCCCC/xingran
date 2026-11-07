@@ -95,6 +95,8 @@ export const PERMISSION_CODES = {
     delete: "ops:workstation:delete",
     import: "ops:workstation:import",
     export: "ops:workstation:export",
+    // 按人员反推部门（批量全库写，独立权限项不与 edit 共用）
+    backfill: "ops:workstation:backfill",
   },
   opsAsset: {
     list: "ops:asset:list",
