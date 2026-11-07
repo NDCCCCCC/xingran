@@ -29,7 +29,7 @@ import (
 // 本测试在真实 PG 上、事务内执行（结束 ROLLBACK），不会留下任何数据变更。
 //
 // 连接信息来源（按优先级）：
-//  1. XINGRAN_TEST_PG_DSN 环境变量（CI 推荐）
+//  1. TEST_PG_DSN 环境变量（CI 推荐；v1.52 P1-9 与 pg_contract_test.go 统一）
 //  2. 项目根 .env 中的 DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME（本地开发）
 //  3. 以上都没有 → 跳过（skip），保证无 PG 环境的 CI 依然可跑
 // =====================================================================
@@ -73,9 +73,11 @@ func workstationPositionLoadDotEnv(t *testing.T) {
 }
 
 // workstationPositionDSN 解析测试用 PostgreSQL DSN；无连接信息时 skip。
+// v1.52 P1-9：门控变量与 pg_contract_test.go 统一为 TEST_PG_DSN；
+// 保留既有 .env / DB_* fallback 与 skip 语义（不改测试行为）。
 func workstationPositionDSN(t *testing.T) string {
 	t.Helper()
-	if dsn := strings.TrimSpace(os.Getenv("XINGRAN_TEST_PG_DSN")); dsn != "" {
+	if dsn := strings.TrimSpace(os.Getenv("TEST_PG_DSN")); dsn != "" {
 		return dsn
 	}
 	workstationPositionLoadDotEnv(t)
@@ -84,7 +86,7 @@ func workstationPositionDSN(t *testing.T) string {
 	user := os.Getenv("DB_USER")
 	name := os.Getenv("DB_NAME")
 	if host == "" || user == "" || name == "" {
-		t.Skip("未提供 PostgreSQL 连接信息（XINGRAN_TEST_PG_DSN 或 DB_* 环境变量），跳过 PG 集成测试")
+		t.Skip("未提供 PostgreSQL 连接信息（TEST_PG_DSN 或 DB_* 环境变量），跳过 PG 集成测试")
 	}
 	port := os.Getenv("DB_PORT")
 	if port == "" {

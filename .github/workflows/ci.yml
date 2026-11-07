@@ -62,6 +62,19 @@ jobs:
           go test -timeout 15m -count=1 -coverprofile=coverage.out -covermode=atomic \
             ./internal/... ./pkg/... ./cmd/...
 
+      - name: PG contract skip observability
+        # v1.52 P1-9：三个 PostgreSQL contract 测试统一门控 TEST_PG_DSN，
+        # CI 不注入 DSN ⇒ 全部走 t.Skip。上面的非 verbose 全量测试不会打印
+        # "--- SKIP:"，本 step 用 -v 单独跑这三个用例，把 skip 原因显式写进
+        # CI 日志（REQUIREMENTS.md:48「CI 中 skip 必须可观测」）。
+        # 不带 -coverprofile：不与上一步的 coverage.out 竞争，也不重复计时。
+        run: |
+          go test -v -count=1 \
+            -run 'TestPGContract_|TestDeptPathCTE_PostgresIntegration|TestBatchUpdatePositions_Postgres' \
+            ./internal/services/operations/ 2>&1 | tee /tmp/pg-contract-observability.log
+          echo "::notice::PG contract tests gated by TEST_PG_DSN (unset in CI); skip reasons logged above"
+          grep -E -- '--- (SKIP|PASS|FAIL)' /tmp/pg-contract-observability.log || true
+
       - name: Test xingran-cli (submodule)
         # xingran-cli 是独立 go.mod 子模块，上面的 ./internal/... 扫不到它。
         # 它的 coverage 单独产出（cli-coverage.out），供 coverage-diff job 合并：
