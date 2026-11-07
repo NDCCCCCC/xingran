@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- 🚧 **v1.51 端口写生产级操作体验与平台质量收口** — Phases 121-129 (in progress, 21 REQ) — 见下方 Phases
+- 🚧 **v1.52 运维域数据权限统一收口（终态）** — Phases 130-133 (in progress, 7 REQ) — 见下方 Phases
+- ✅ **v1.51 端口写生产级操作体验与平台质量收口** — Phases 121-129 (shipped 2026-11-02, 21 REQ) — [v1.51-REQUIREMENTS.md](milestones/v1.51-REQUIREMENTS.md)
 - ✅ **v1.25 全站权限治理与样式收敛** — Phases 84-93 (shipped 2026-10-30) — [v1.25-ROADMAP.md](milestones/v1.25-ROADMAP.md)
 - ✅ **v1.24 视觉回归修复与遗留债务清偿** — Phases 76-83 (shipped 2026-10-28) — [v1.24-ROADMAP.md](milestones/v1.24-ROADMAP.md)
 - ✅ **v1.23 前端契约全量收尾与遗留清偿** — Phases 69-75 (shipped 2026-10-28) — [v1.23-ROADMAP.md](milestones/v1.23-ROADMAP.md)
@@ -15,6 +16,24 @@
 ## Phases
 
 <details open>
+<summary>🚧 v1.52 运维域数据权限统一收口（终态）(Phases 130-133) — 立项 2026-11-07</summary>
+
+> 需求基线：`.planning/REQUIREMENTS.md`（7 REQ：DS-01~07）｜范围裁定（用户 2026-11-07）：**终态方案 = operations 全模块声明式 data_scope 统一收口**，不做逐端点手工接线
+> Phase 编号：延续 v1.51 从 **130** 续编
+> **立项动因**：v1.51 期间实测确认 operations 全模块未接 data_scope（List orgId 后端不校验 / strict 组不注入 / 三份重复实现），quick-261106-wsb 审计裁定逐端点补丁为非终态
+
+- [ ] Phase 130: ScopeProvider 基建 —— 可见部门集统一实现（五档收敛，合并 middleware/user/vdi 三份重复）+ strict 组注入 data_scope/user_id (DS-01/02) — fail-closed 对齐 PMODEL-01
+- [ ] Phase 131: 工位域读端点收口 —— workstation/floor/building/infopoint 四域 List/Statistics/SearchOptions 统一「有效机构 ∈ 可见集」（复用 effectiveOrgExpr 单一真实源）；缓存 key 增数据范围维度段 (DS-03/06 部分)
+- [ ] Phase 132: 工位域写端点收口 —— Create/Update 校验 deptId/orgId 归属；backfill-dept 回填范围限定可见集 + 前端确认框范围可视化 (DS-04)
+- [ ] Phase 133: 扩展实体 + 实现合并 + 范围裁定落地 —— asset/serverRoom/dedicatedLine/roomDevice 收口、三份重复实现合并迁移、Dept/Self 批量操作与 Excel 导入豁免裁定、前端 DeptSidebar 联动、UAT (DS-05/06/07)
+
+**执行波次记录：** W1 基建（130）→ W2 读写并行（131 ∥ 132，均只依赖 130）→ W3 收尾（133，含裁定项）
+
+**关键约束：** uuid/varchar 双侧 CAST + PG contract 门控扩展至新查询｜effectiveOrgExpr 单一真实源禁止内联｜fail-closed 对齐 PMODEL-01｜缓存 key 必含 scope 维度（PMODEL-01 跨范围泄漏教训）｜回归基线 eslint 0 / vitest 全绿 / go build + go test 全绿（含路由双层守卫）
+
+</details>
+
+<details>
 <summary>🚧 v1.51 端口写生产级操作体验与平台质量收口 (Phases 121-129) — 代码工作完成 2026-11-01（真机 UAT 待设备）</summary>
 
 > 需求基线：`.planning/REQUIREMENTS.md`（21 REQ）｜范围裁定：A 端口写深化 + B 平台技术债 + D 收尾杂项（C 组 RPA 编辑器 defer）

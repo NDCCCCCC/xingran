@@ -1,62 +1,33 @@
 # Requirements: XingRan-Next（RuoYi-Next 运维管理系统）
 
-**Defined:** 2026-10-31
-**Core Value:** 网络设备端口写能力深化到生产级操作体验（dry-run、实时进度、回滚、并发安全），同步清偿平台技术债与收尾杂项，使端口写从「能写」进化为「敢写、可审计、可观测」。
+**Defined:** 2026-11-07
+**Core Value:** 把数据权限（data_scope）从「用户/VDI 两个模块的局部实现」升级为**运维域全模块的声明式统一收口**——读写两端按登录人数据范围自动过滤与校验，使「中支管理员只能管本机构的工位/楼层/资产」从口头约定变为架构保证。本里程碑是对 v1.51 期间实测确认的越权面（operations 全模块未接 data_scope、strict 组不注入、List orgId 后端不校验）的**终态治理**，替代逐端点补丁。
 
-## v1.51 Requirements
+## v1.52 Requirements
 
-范围裁定（用户 2026-10-31）：**执行 A（端口写深化）+ B（平台技术债）+ D（收尾杂项）**；C 组（RPA 拖拽编辑器/插件录制）不入本里程碑。
+范围裁定（用户 2026-11-07）：**终态方案 = operations 全模块声明式统一收口**，不做逐端点手工接线（已在 quick-261106-wsb 审计中裁定为补丁）。独立按钮权限码 ops:workstation:backfill 已在分支先行落地（PR #75）。
 
-### 端口写操作体验（PORTW）
+### 起点基线（Lead 实跑复核 2026-11-07）
 
-- [ ] **PORTW-01**: 端口写命令 **dry-run 预览**——不下发生成将执行的命令序列供人工确认
-- [ ] **PORTW-02**: 命令预览 UI（与 dry-run 配套的前端展示）
-- [ ] **PORTW-03**: 批量写**实时进度**（SSE/WebSocket，BATCH-05 v1.20 遗留正式清偿）
-- [ ] **PORTW-04**: critical 操作**快照 + 自动回滚**（执行前抓取端口状态，失败时 reverse 恢复）
-- [ ] **PORTW-05**: 多用户并发写互斥（同端口同一时刻仅允许一个写会话）
-- [ ] **PORTW-06**: 设备不可达预检（下发前 1s 级连通性探测）
+- **operations 全模块未接 data_scope**：工位 List/Statistics/SearchOptions 的 orgId 由前端传、后端不校验登录人范围（API 直调可读全库）；Create/Update 的 deptId/orgId 可传任意 UUID。
+- **strict 权限组不注入**：`RequirePermissionsWithQuery` 注入 data_scope/user_id（permission.go:496-519），`RequireStrictPermissions`（:413-428）不注入——写端点拿不到范围信息。
+- **三份重复实现并存**：pkg/middleware `ApplyDataScope`（通用版）、user_service `applyUserDataScope`（PMODEL-01）、vdi `vm_data_scope_filter`——Custom/Dept/DeptChild 展开逻辑三处维护。
+- **可用基建**：`models.DataScope` 五档（All/Custom/Dept/DeptChild/Self）、`getUserMaxDataScope`（多角色取 MAX）、工位域「有效机构」表达式已收敛单一真实源 `effectiveOrgExpr`（dept_filter.go）、`BuildDeptRecursiveFilter` 子树展开、PG contract 类型契约测试门控。
+- **行业教训参照**：PMODEL-01 的缓存 key 遗漏 data_scope 维度导致跨用户泄漏（已修），新收口必须同步覆盖缓存 key。
 
-### 端口写能力扩展（PWX）
+### 数据权限统一收口（DS）
 
-- [ ] **PWX-01**: VLAN 扩展——trunk VLAN 修改（native/allowed list）+ hybrid 模式（华为/H3C）
-- [ ] **PWX-02**: 端口安全——port-security enable/disable、max-mac-num、sticky MAC、静态 MAC 1:1 绑定
-- [ ] **PWX-03**: Cisco IOS-XE/XR 第 4 厂商支持 + 跨固件版本命令差异矩阵
-- [ ] **PWX-04**: 端口写审计明细 UI（`sys_port_write_audit` 可视化查询）
-- [ ] **PWX-05**: 3 厂商（华为/锐捷/H3C）e2e fixture 全覆盖
-- [ ] **PWX-06**: HTTP handler 层 e2e 测试（gin test engine）
+- [ ] **DS-01**: **ScopeProvider 单一真实源**——抽取「登录人可见部门集」统一实现（All→全量 / Custom→sys_role_dept 映射 / Dept→本部门 / DeptChild→ancestors 展开 / Self→按资源语义裁定 / 未知枚举→fail-closed 空集），合并 pkg/middleware、user_service、vdi 三份重复实现为单一包级 API，三处调用方迁移。
+- [ ] **DS-02**: **strict 权限组注入**——`RequireStrictPermissions` 与 `RequirePermissionsWithQuery` 同款注入 data_scope/user_id 到 gin context（写端点同样可取）。
+- [ ] **DS-03**: **工位域读端点收口**——workstation List/Statistics/SearchOptions/counts-by-floor、floor List/SearchFloorOptions、building List/SearchBuildingOptions、infopoint List 的机构筛选统一应用「有效机构 ∈ 可见集」（复用 `effectiveOrgExpr` + `BuildDeptRecursiveFilter`），后端强制，前端 orgId 参数不可越权读取。
+- [ ] **DS-04**: **工位域写端点收口**——Create/Update 校验提交的 deptId/orgId 落在可见集内（越界 403 语义）；backfill-dept 回填范围限定可见集，前端确认框显示「本次范围：全库 / XX 部门及子部门」。
+- [ ] **DS-05**: **其余 ops 实体收口**——asset（dept_id 直挂）、serverRoom（楼宇链）、dedicatedLine/roomDevice（归属链 scope 裁定后收口）。
+- [ ] **DS-06**: **缓存与前端联动**——涉收口端点的缓存 key 增加数据范围维度段（对齐 PMODEL-01 防跨范围泄漏）；前端 DeptSidebar/下拉按可见集过滤（可选：后端 tree 端点收口驱动）；越界提交的统一错误文案。
+- [ ] **DS-07**: **范围语义裁定与豁免清单**——Dept/Self 档是否允许批量操作（回填/导入）；Excel 导入是否豁免（跨机构批量导入有正当场景→「豁免 + operlog 审计强化」或同样收口，实施前裁定）；超管（admin）语义不变。
 
-### 平台技术债（DEBT）
+### 验收硬约束（从 v1.51 期间生产事故与本会话教训提炼）
 
-- [ ] **DEBT-01**: 补 `internal/services/addomain` 测试（现 51.4%），后端覆盖率阈值从 76.5 **恢复到 77.5**
-- [ ] **DEBT-02**: 端口写审计治理——批量写审计行移入事务 + `operator` 字段补索引（千万行级表）
-- [ ] **DEBT-03**: RPA Worker API Token 认证加固（方案已设计于 docs，落地实施）
-- [ ] **DEBT-04**: `operlog.exclude_paths` 配置驱动白名单完善
-- [ ] **DEBT-05**: `permission.grant.test.tsx` 时序根治（替换 15s 重试补丁，修复 antd Form connect 时机依赖）
-- [ ] **DEBT-06**: 本地目录改名 `ruoyi-react-frontend` → `xingran-react-frontend` + 本地/GitHub 双线 `.planning` 合流收尾
-
-### 收尾杂项（TIDY）
-
-- [ ] **TIDY-01**: 服务端排序 4 页面菜单注册（值班池/排班/知识文章/网络模板——代码已完成，路由不可达）
-- [ ] **TIDY-02**: v1.25 三个 phase 的 UAT human_needed 回补组织（84/87/90；PORTW 真机 site-visit 19 项 deferred UAT 一并纳入，**需真机在场**）
-- [ ] **TIDY-03**: RPA selector learner 两项 TODO（使用统计提取、更新通知机制）
-
-## Deferred（本里程碑明确不做）
-
-- RPA 可视化拖拽编辑器 / 浏览器插件录制（→ 候选 v1.52+）
-- 对账 MV 刷新 30s 超时根治（继续等待 DBA 诊断回传）
-- 物理参数写（速率/双工/MTU）
-- 前端 TypeScript 全量严格化
-
-## Traceability
-
-| REQ 组 | Phase | 备注 |
-|---|---|---|
-| PORTW-01/02 | 121 | dry-run 是后续一切安全机制的基座，最先落地 |
-| PORTW-03 | 122 | BATCH-05 独立成 phase（SSE/WS 基建） |
-| PORTW-04/05/06 | 123 | 安全三件套（回滚/互斥/预检） |
-| PWX-01 | 124 | VLAN 扩展 |
-| PWX-02 | 125 | 端口安全 |
-| PWX-03 | 126 | Cisco 第 4 厂商 |
-| PWX-04/05/06 + DEBT-02 | 127 | 审计 UI + 审计治理 + e2e 补强 |
-| DEBT-01/03/04/05 + TIDY-01/03 | 128 | 平台质量收口 |
-| DEBT-06 + TIDY-02 | 129 | 目录改名/合流/UAT 回补（需窗口与真机） |
+- uuid/varchar 列比较双侧 CAST AS TEXT；SQLite/PG 双方言——**PG contract 测试门控扩展至新收口查询**（真实 PG 只读/回滚式验证）。
+- 「有效机构」表达式必须走 `effectiveOrgExpr` 单一真实源，禁止内联复制。
+- data_scope 语义 fail-closed 对齐 PMODEL-01；多角色取 MAX（getUserMaxDataScope 语义不变）。
+- 回归基线：eslint 0 problems / vitest 全绿 / `go build` + `go test`（含 pkg/permission 路由双层守卫、internal/api strict 守卫）全绿 / 新收口查询必须有 PG contract 或等价双方言测试。
