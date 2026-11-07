@@ -46,7 +46,10 @@ func TestE2EAllEndpointsLogged(t *testing.T) {
 
 	ctx := t.Context()
 	// 5-minute timeout (T-34-VER-03 mitigation).
-	cmd := exec.CommandContext(ctx, "bash", scriptPath)
+	// Windows 上 filepath.Join 产出 "..\\..\\scripts\\..."，bash 会反斜杠当
+	// 转义字符吞掉 → "....scriptsoperlog_e2e_verify.sh"（exit 127）。
+	// ToSlash 在 Windows 把 \ 转 /、Linux 是 no-op，跨平台一致（v1.52 残余修复）。
+	cmd := exec.CommandContext(ctx, "bash", filepath.ToSlash(scriptPath))
 	// Inherit the parent environment so ADMIN_USER/ADMIN_PASSWORD/DEV_MODE
 	// flow through when set in CI; nothing is appended here.
 	cmd.Env = os.Environ()
