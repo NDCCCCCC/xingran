@@ -202,10 +202,13 @@ WHERE d.deleted_at IS NULL`
 	return db.WithContext(ctx).Raw(sql, args...)
 }
 
-// WorkstationQueryBuilder 镜像生产 List 查询（workstationJoinClause），
-// 用显式 LEFT JOIN + ::uuid/::text 转换一次性带出 楼层/楼宇/部门/人员 名称，
+// WorkstationQueryBuilder 镜像生产 List 查询（workstationJoinSelect/workstationJoinClause），
+// 用显式 LEFT JOIN + 标准 SQL CAST(... AS TEXT) 一次性带出 楼层/楼宇/部门/人员 名称，
 // 并用相关子查询取主设备的 序列号/名称/型号。
-// 彻底绕开 resolveAssociations 的 uuid/text 类型坑（config 无 Join 时其提前返回）。
+// 与 workstation_service.go:18-22 的生产 List 同款双方言写法：PG 专有 ::uuid/::text
+// 在 SQLite 报 "unrecognized token ':'"，且 floor_id/dept_id/user_id 为空串时
+// ''::uuid 在 PG 报 22P02 会让整条导出失败（P1-8）。双侧 CAST 后空串只是不匹配、
+// LEFT JOIN 给 NULL，导出不再整体失败。
 type WorkstationQueryBuilder struct{}
 
 func NewWorkstationQueryBuilder() *WorkstationQueryBuilder {
@@ -236,27 +239,26 @@ func (b *WorkstationQueryBuilder) BuildQuery(
 			sys_dept.dept_name AS dept_name,
 			sys_user.nickname AS user_name,
 			(SELECT device_serial FROM ops_workstation_device
-				WHERE workstation_id = sys_workstation.id::text AND deleted_at IS NULL
+				WHERE CAST(workstation_id AS TEXT) = CAST(sys_workstation.id AS TEXT) AND deleted_at IS NULL
 				ORDER BY (CASE WHEN is_primary = true THEN 0 ELSE 1 END), priority DESC, created_at ASC
 				LIMIT 1) AS device_serial,
 			(SELECT device_name FROM ops_workstation_device
-				WHERE workstation_id = sys_workstation.id::text AND deleted_at IS NULL
+				WHERE CAST(workstation_id AS TEXT) = CAST(sys_workstation.id AS TEXT) AND deleted_at IS NULL
 				ORDER BY (CASE WHEN is_primary = true THEN 0 ELSE 1 END), priority DESC, created_at ASC
 				LIMIT 1) AS device_name,
 			(SELECT device_model FROM ops_workstation_device
-				WHERE workstation_id = sys_workstation.id::text AND deleted_at IS NULL
+				WHERE CAST(workstation_id AS TEXT) = CAST(sys_workstation.id AS TEXT) AND deleted_at IS NULL
 				ORDER BY (CASE WHEN is_primary = true THEN 0 ELSE 1 END), priority DESC, created_at ASC
 				LIMIT 1) AS device_model`).
-		Joins("LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid").
-		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = sys_workstation.building_id::uuid").
-		Joins("LEFT JOIN sys_dept ON sys_dept.id::text = sys_workstation.dept_id").
-		Joins("LEFT JOIN sys_user ON sys_user.id::text = sys_workstation.user_id").
+		Joins("LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = CAST(sys_workstation.floor_id AS TEXT)").
+		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = CAST(sys_workstation.building_id AS TEXT)").
+		Joins("LEFT JOIN sys_dept ON CAST(sys_dept.id AS TEXT) = CAST(sys_workstation.dept_id AS TEXT)").
+		Joins("LEFT JOIN sys_user ON CAST(sys_user.id AS TEXT) = CAST(sys_workstation.user_id AS TEXT)").
 		Where("sys_workstation.deleted_at IS NULL")
 
 	// Phase 131 / DS-06：Excel 导出不豁免、不走 List —— 独立注入可见集过滤，
 	// 不读取 params["orgId"]（FilterMapping 无 orgId，前端传 orgId 会拼出不存在的列）。
-	// 新增条件用 CAST(... AS TEXT) 双方言写法，与上方既有 ::uuid JOIN（P1-8 技术债）
-	// 互不干扰：本条件在 SQLite 上语法合法，PG 上同样成立。
+	// 可见集条件与上方 JOIN 一样用 CAST(... AS TEXT) 双方言写法（P1-8 已清偿）。
 	query = applyExcelWorkstationScope(query, ctx)
 
 	// 复用 config.FilterMapping 应用筛选（逻辑与 DefaultQueryBuilder 等价，
