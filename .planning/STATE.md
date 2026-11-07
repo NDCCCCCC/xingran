@@ -243,9 +243,9 @@ Last activity: 2026-10-30 — Milestone v1.25 completed and archived
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261102-m94 | 修复暗色模式保存失败：theme_style 违反 chk_theme_style 检查约束（省略即不修改 + 绑定与 DB 约束对齐 + 迁移 233） | 2026-11-02 | 9f511268 | [261102-m94-theme-style-chk-theme-style](./quick/261102-m94-theme-style-chk-theme-style/) |
-| 261106-wsd | 工位导入部门填写不规范时按所属人员反推部门（仅兜底 + 反推计数 + 6 个回归测试） | 2026-11-06 | 未提交 | [261106-wsd-workstation-dept-infer-from-user](./quick/261106-wsd-workstation-dept-infer-from-user/) |
-| 261106-wso | 一栋楼跨机构办公：楼层可覆盖所属机构（ops_floors.org_id + migration 234 + 工位/楼层/楼宇全链路 COALESCE + 楼层表单 + 10 个回归测试） | 2026-11-06 | 未提交 | [261106-wso-workstation-floor-org-override](./quick/261106-wso-workstation-floor-org-override/) |
-| 261106-wsb | 工位管理页「按人员反推部门」按钮（预览+确认两步、默认仅兜底+可选纠正不一致、复用 edit 权限、严格写组+operlog+缓存失效+route-registry 登记） | 2026-11-06 | 未提交 | [261106-wsb-workstation-backfill-dept-button](./quick/261106-wsb-workstation-backfill-dept-button/) |
+| 261106-wsd | 工位导入部门填写不规范时按所属人员反推部门（仅兜底 + 反推计数 + 6 个回归测试） | 2026-11-06 | 7259cf90 | [261106-wsd-workstation-dept-infer-from-user](./quick/261106-wsd-workstation-dept-infer-from-user/) |
+| 261106-wso | 一栋楼跨机构办公：楼层可覆盖所属机构（ops_floors.org_id + migration 234 + 工位/楼层/楼宇全链路 COALESCE + 楼层表单 + 10 个回归测试） | 2026-11-06 | 7259cf90 | [261106-wso-workstation-floor-org-override](./quick/261106-wso-workstation-floor-org-override/) |
+| 261106-wsb | 工位管理页「按人员反推部门」按钮（预览+确认两步、默认仅兜底+可选纠正不一致、复用 edit 权限、严格写组+operlog+缓存失效+route-registry 登记） | 2026-11-06 | 7259cf90 | [261106-wsb-workstation-backfill-dept-button](./quick/261106-wsb-workstation-backfill-dept-button/) |
 
 ### Todos
 
