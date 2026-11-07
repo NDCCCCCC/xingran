@@ -48,6 +48,12 @@
 
 `BatchBackfillDeptFromUser` 符合「success path 末尾、`response.Success` 之前 `operlog.Record`」；body 无敏感字段，`Record` 正确（无需 `RecordWithBody`）。偏差见 P1-11。
 
+## 审查后补充裁定（Lead，2026-11-07）
+
+**dedicatedLine 归属链 schema 冲突**（由 Phase 133 只读勘察发现，agent-10）：ds05 裁定 1 假定 `ops_dedicated_lines` 有 `building_id` 或 `org_id` 列，实测模型（`internal/models/operations/dedicated_line.go:17-44`）只有 `source_room_id`/`dest_room_id` → `ops_server_rooms`，全仓 migrations 无该表机构列。
+
+补充口径（133 直接消费，不重新裁定）：`source_room_id → ops_server_rooms.building_id → ops_buildings.org_id` **OR** `dest_room_id → 同源链`，**任一端归属链命中可见集即放行**；两端都不命中 → 子查询 0 行 → 空集，仍 fail-closed。写端点同理（Create/Update 提交的 source/dest 至少一端落可见集，否则 403）。不新增迁移、不加列。理由：专线是「两端」实体，只看源端会误拒正常跨机构专线；任一端命中不扩大越权面。登记入 `133-SUMMARY.md` 的「裁定补充登记」章节。
+
 ## 一句话总评
 
 三份裁定文字上以 fail-closed 自洽，但集体漏掉「ops 组未注入 data_scope」与「越界 403 被框架退化成 401/500」两个落地前提 —— 二者已分别由 Phase 130 第二笔与 Phase 132 规格补齐；PR#75 的「全库写 + 全库明细回显 + 权限默认广播 + 迁移 235 永不执行」四重叠加，已通过 P0-1/P0-3 与 Phase 132 收口化解。
