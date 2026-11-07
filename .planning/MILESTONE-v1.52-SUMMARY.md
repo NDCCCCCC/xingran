@@ -69,11 +69,19 @@
 - GitHub CI：backend / frontend / build / coverage-diff / 4×frontend-coverage / coverage-merge / coverage-diff 全 pass
 
 ## 已知残余（登记，非阻断）
-- `WorkstationQueryBuilder` 既有 `::uuid/::text` PG 专有 JOIN 在 SQLite 必炸（P1-8，既有技术债，新增过滤条件已用双方言 CAST）
-- 聚合计数（越界行数 / N / 行号）仍为枚举侧信道（P1-5，已知接受，未来应加告警通道而非改回整批 403）
-- `scripts/e2e/TestE2EAllEndpointsLogged` 在 Windows 下 bash 路径拼接报 127（环境既有）
-- 显式豁免面：walls / doors / floor-plan-texts / rooms-photos / location-alias（详见 `133-UAT.md`）
-- 双门控 `TEST_PG_DSN` / `XINGRAN_TEST_PG_DSN` 在 CI 默认 Skip（P1-9，skip 可观测）
+
+### 已清偿（2026-11-07 二次修复，走 `feat/v1.52-data-scope-unification` 分支）
+- ~~P1-8 `WorkstationQueryBuilder` 的 `::uuid/::text` PG 专有 JOIN 在 SQLite 必炸~~ → **已修**：7 处改为标准 SQL `CAST(... AS TEXT)` 双侧比较，与生产 `workstationJoinClause` 同款；空串 `''::uuid` 在 PG 报 22P02 导致整表导出失败的问题一并消除。新增 `excel_query_builder_p18_test.go` 两个回归守护（DryRun 静态断言无 `::` + SQLite 语法可执行）。
+- ~~P1-9 双门控 `TEST_PG_DSN` / `XINGRAN_TEST_PG_DSN`，CI 默认 Skip 且不可观测~~ → **已修**：两个文件统一到 `TEST_PG_DSN`（保留 `.env`/`DB_*` fallback 与 skip 语义）；`ci.yml` 新增 `PG contract skip observability` step，用 `-v -run` 把 skip 原因显式打进 CI 日志。
+- ~~`scripts/e2e/TestE2EAllEndpointsLogged` Windows 下 bash 路径拼接报 127~~ → **已修**：`filepath.ToSlash(scriptPath)`（`\` 被 POSIX shell 吞掉是根因）；实测两个 e2e 包均从 exit 127 变为「凭据缺失 → 可观测 skip → PASS」。
+
+### 仍为已裁定接受（LOCKED，不改代码）
+- 聚合计数（越界行数 / N / 行号）仍为枚举侧信道（P1-5）：裁定明确「已知残余风险、接受；未来应加告警通道而非改回整批 403」，132-SUMMARY §6 已登记，不假装已解决。
+- 显式豁免面：walls / doors / floor-plan-texts / rooms-photos / location-alias（5 项）：ds05 裁定「已知残余面、接受风险，不以『间接可见』结案」，详见 `133-UAT.md`。
+
+### 独立登记（非本里程碑范围，scope constrainment）
+- `excel_export_service.go:148` 的 `RightCast:"text"` 动态拼接（infopoint 导出）与 `workstation_device_service.go:438-2222` 的 PG 专属 CTE（`DISTINCT ON` / `REGEXP_REPLACE` / `NULLS LAST`）仍只在 PG 可用；这两条与 P1-8 是相互独立的技术债，其 SQLite 报错已被既有测试文档化为预期，本轮不动。
+- `scripts/operlog_e2e_verify.sh:57-66` 凭据门禁先于 `SKIP_LIVE:162`，导致静态检查实际跑不到（既有语义缺陷）；修通 127 后两 e2e 包走「凭据缺失 → skip」，属既有行为，单独登记。
 
 ## 交付物索引
 - Phase 产物：`.planning/phases/{130-scope-provider,131-read-scope,132-write-scope,133-scope-final}/`
