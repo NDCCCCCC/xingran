@@ -54,8 +54,10 @@ type DedicatedLineStatisticsResult struct {
 // Statistics 统计专线(按 status 聚合,排除软删除)。
 func (s *dedicatedLineService) Statistics(ctx context.Context) (*DedicatedLineStatisticsResult, error) {
 	var result DedicatedLineStatisticsResult
-	err := s.db.WithContext(ctx).
-		Model(&operations.OpsDedicatedLine{}).
+	err := applyEntityReadScope(
+		s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{}), ctx,
+		scopeEntityDedicatedLine, "ops_dedicated_lines",
+	).
 		Select(
 			"COUNT(*) AS total",
 			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS normal", int(operations.LineStatusNormal)),
@@ -100,6 +102,12 @@ var dedicatedLineAllowedSortFields = map[string]string{
 
 // Create 创建专线
 func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsDedicatedLine) error {
+	// Phase 133 / DS-05：单条写越界 403（提交侧，source/dest 双链 OR 命中）。
+	// 两端都不在可见集 / 都断链 → 候选为空 → ErrScopeDenied(403)。
+	src, dst := dedicatedLineRoomIDs(line)
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityDedicatedLine, src, dst); err != nil {
+		return err
+	}
 	if err := s.populateRoomNames(ctx, line); err != nil {
 		return err
 	}
@@ -107,8 +115,28 @@ func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsD
 	return s.repo.Create(ctx, line)
 }
 
+// dedicatedLineRoomIDs 取专线两端机房 ID（nil 指针 → 空串，交给归属链 fail-closed）。
+func dedicatedLineRoomIDs(line *operations.OpsDedicatedLine) (string, string) {
+	src, dst := "", ""
+	if line.SourceRoomID != nil {
+		src = *line.SourceRoomID
+	}
+	if line.DestRoomID != nil {
+		dst = *line.DestRoomID
+	}
+	return src, dst
+}
+
 // Update 更新专线
 func (s *dedicatedLineService) Update(ctx context.Context, line *operations.OpsDedicatedLine) error {
+	// Phase 133 / DS-05：单条写越界 403（改前侧 + 提交侧双向校验，防搬移）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityDedicatedLine, line.ID); err != nil {
+		return err
+	}
+	src, dst := dedicatedLineRoomIDs(line)
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityDedicatedLine, src, dst); err != nil {
+		return err
+	}
 	if err := s.populateRoomNames(ctx, line); err != nil {
 		return err
 	}
@@ -118,12 +146,17 @@ func (s *dedicatedLineService) Update(ctx context.Context, line *operations.OpsD
 
 // Delete 删除专线
 func (s *dedicatedLineService) Delete(ctx context.Context, id string) error {
+	// Phase 133 / DS-05：单条写越界 403（改前侧按资源双链归属校验）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityDedicatedLine, id); err != nil {
+		return err
+	}
 	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取专线
 func (s *dedicatedLineService) GetByID(ctx context.Context, id string) (*operations.OpsDedicatedLine, error) {
-	return s.repo.GetByID(ctx, id)
+	// Phase 133 / DS-05：读端点按双链可见集校验，越界 → record not found。
+	return s.repo.GetByID(ctx, id, entityReadScope(ctx, scopeEntityDedicatedLine, "ops_dedicated_lines"))
 }
 
 // filterScope List 管道的全部 11 个 filter（条件字符串、else-if 分支结构与
@@ -171,13 +204,23 @@ func (s *dedicatedLineService) List(ctx context.Context, req requests.DedicatedL
 	current, pageSize := req.GetPagination()
 	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
 		s.filterScope(req),
+		// Phase 133 / DS-05：source/dest 双链 OR 命中可见集（断链 → 空集）。
+		entityReadScope(ctx, scopeEntityDedicatedLine, "ops_dedicated_lines"),
 		base.SortScope(req.BaseListRequest, dedicatedLineAllowedSortFields, "created_at DESC"),
 	)
 }
 
 // BatchDelete 批量删除专线
 func (s *dedicatedLineService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.repo.BatchDelete(ctx, ids)
+	// Phase 133 / DS-05：批量按双链可见集裁剪（不整批 403），越界行不进入删除集合。
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityDedicatedLine, ids)
+	if err != nil {
+		return err
+	}
+	if len(visible) == 0 {
+		return nil
+	}
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // SearchDedicatedLineOptions 专线下拉数据源(name LIKE 模糊 + lineType/ISP/sourceRoomId/destRoomId/status 筛选,LIMIT 50)。
@@ -185,7 +228,10 @@ func (s *dedicatedLineService) BatchDelete(ctx context.Context, ids []string) er
 func (s *dedicatedLineService) SearchDedicatedLineOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Table("ops_dedicated_lines").
+	query := applyEntityReadScope(
+		s.db.WithContext(ctx).Table("ops_dedicated_lines"), ctx,
+		scopeEntityDedicatedLine, "ops_dedicated_lines",
+	).
 		Select("id AS value, name AS label").
 		Limit(DropdownMaxRows)
 
