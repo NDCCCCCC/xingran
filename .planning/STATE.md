@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1.52
 milestone_name: 运维域数据权限统一收口（终态）
-status: v1.52 立项（2026-11-07）—— operations 全模块声明式 data_scope 统一收口，Phases 130-133 未开始
-stopped_at: v1.51 已交付（21/21 REQ，Phase 129 全部完成 2026-11-02：真机 UAT 23 动作实测 + DEBT-06 目录改名 + TIDY-02 UAT 回补，tag v1.51.1/v1.51.2）；v1.52 于 2026-11-07 立项——起因：v1.51 期间实测 operations 全模块未接 data_scope（List orgId 后端不校验 / strict 组不注入 / 三份 data_scope 实现：两处生产调用方 user_service、vdi + 一处死实现 pkg/middleware），quick-261106-wsb 审计裁定逐端点补丁为非终态，用户决策「直接建立新里程碑，做终态」
+status: v1.52 SHIPPED（2026-11-07）—— operations 全模块声明式 data_scope 统一收口，Phases 130-133 全部完成（7/7 REQ）
+stopped_at: v1.52 全量交付（PR #75 merged `b56f1286`，4 phase / 24 commits / 全量闸门全绿）；收档文档走 `feat/v1.52-data-scope-unification` 分支 PR
 last_updated: "2026-11-07T13:35:00+08:00"
 last_activity: 2026-11-07
 last_activity_desc: v1.52 立项：运维域数据权限统一收口（终态），Phases 130-133（DS-01~07）
 state_head: 9f511268a7d748b0707836d95963dbf79842b1f6
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 4
   total_plans: 0
   completed_plans: 0
-  percent: 0
-current_phase: 130
+  percent: 100
+current_phase: 133
 current_phase_name: ScopeProvider 基建（可见部门集统一实现 + strict 组注入 data_scope/user_id）
 ---
 
@@ -73,10 +73,10 @@ current_phase_name: ScopeProvider 基建（可见部门集统一实现 + strict 
 
 ## Current Position
 
-Phase: Milestone v1.52 active（运维域数据权限统一收口·终态，Phases 130-133）
+Phase: Milestone v1.52 **SHIPPED**（运维域数据权限统一收口·终态，Phases 130-133 全完成）
 Plan: —
-Status: v1.52 立项完成（2026-11-07），Phases 130-133 未开始；下一步 `/gsd-plan-phase 130`（开工输入：Self 档 ops 域语义裁定）
-Last activity: 2026-11-07 — v1.52 立项 + 计划审计修订（P0-1 注入面归属更正 / P1-2 端点覆盖缺口 / P1-3 W2 并行约束 / P1-4 裁定前置 / P1-5 ops 域映射总表 / P2-6~10）
+Status: v1.52 全量交付完成（2026-11-07）：4 phase / 7 REQ / 24 commits，PR #75 merged `b56f1286`；全量闸门全绿（go build / go test / eslint 0 / vitest 592 文件 4128 用例 / format / lint:ci / 生产构建 / diff coverage）
+Last activity: 2026-11-07 — v1.52 收档（ROADMAP 4 phase 勾选 shipped、STATE 进度 100%、里程碑总结落盘）；收档文档走 `feat/v1.52-data-scope-unification` 分支 PR
 
 ---
 

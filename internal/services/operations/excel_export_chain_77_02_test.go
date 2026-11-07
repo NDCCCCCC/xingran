@@ -10,9 +10,10 @@ package operations
 //   - queryData 的 sys_dept 字段名特判分支(name→dept_name/code→dept_code)无法经
 //     ExportData 触达(department 已被新导出链截流),用白盒直调覆盖。
 //   - appendWorkstationDeviceSheets 直接白盒调用:workstation 主表导出走
-//     WorkstationQueryBuilder,含 ::uuid/::text PG-only 强转,sqlite 必报错
-//     (P-77-1 现行为,由 TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 文档化),
-//     故不能经 PLAN 设想的 svc.ExportData("workstation") 入口触达追加链。
+//     WorkstationQueryBuilder,历史含 ::uuid/::text PG-only 强转(v1.52 P1-8 已改为
+//     双方言 CAST);但本文件夹具 setupWSD77DB 不建 ops_floors/ops_buildings,
+//     ExportData 仍会因缺表报错(P-77-1 由下方 PGOnlySQL 用例文档化),
+//     故追加链仍用白盒直调覆盖,不依赖 ExportData 入口成功。
 //   - 物理链路 sheet 经 physErr != nil 降级(P-77-10):GetPhysicalDevices* 的
 //     DISTINCT ON/REGEXP_REPLACE CTE 在 sqlite 报错已被 77-01
 //     TestWSD77_GetPhysicalDevicesByWorkstations_FrontSegment 实证。
@@ -462,16 +463,18 @@ func TestExp77_ExportData_WorkstationAppendSheets(t *testing.T) {
 		"责任人", "Port", "InfoPoint", "LastSeen", "Confidence"}, physRows[0])
 }
 
-// TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 文档化工位主表导出现行为:
-// WorkstationQueryBuilder 含 ::uuid/::text 强转,sqlite 解析必败 → ExportData
-// 直接报错、追加链无机会执行(因此本 plan 用白盒直调覆盖 appendWorkstationDeviceSheets)。
+// TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 文档化工位主表导出的
+// 夹具限制:WorkstationQueryBuilder 的 7 处 PG 专有 ::uuid/::text 已在 v1.52 P1-8
+// 改为双方言 CAST(... AS TEXT),但共用夹具 setupWSD77DB 未建 ops_floors /
+// ops_buildings 两表,ExportData 仍因 LEFT JOIN 缺表报错 → 追加链无机会执行。
+// 因此本 plan 继续用白盒直调覆盖 appendWorkstationDeviceSheets。
 func TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL(t *testing.T) {
 	db := setupWSD77DB(t)
 	seedWSD77Workstation(t, db, wsd77WS1, "3f130", "")
 	svc := NewExcelService(db, nil, nil, nil).WithDeviceService(NewWorkstationDeviceService(db))
 
 	f, err := svc.ExportData(context.Background(), "workstation", map[string]any{})
-	require.Error(t, err, "P-77-1 现行为::uuid/::text 强转在 sqlite 必报错")
+	require.Error(t, err, "夹具缺 ops_floors/ops_buildings 表 → ExportData 仍报错")
 	assert.Nil(t, f)
 	assert.Contains(t, err.Error(), "查询数据失败")
 }

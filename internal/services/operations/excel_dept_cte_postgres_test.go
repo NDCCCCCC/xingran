@@ -32,7 +32,7 @@ import (
 // 本文件提供两层守护:
 //   1. 静态断言(默认跑,无需数据库): 校验 DeptPathCTE 的 base case 显式 CAST 为 TEXT,
 //      且两侧类型表达式一致。
-//   2. 真实 PG 集成测试(可选): 设置 XINGRAN_TEST_PG_DSN 后自动跑,直连 PG 验证
+//   2. 真实 PG 集成测试(可选): 设置 TEST_PG_DSN 后自动跑,直连 PG 验证
 //      DepartmentQueryBuilder 与部门映射表 SQL 都能成功执行。
 
 // TestDeptPathCTE_PostgresTypeConsistency 静态守护: 递归 CTE 的 base case 必须显式 CAST。
@@ -55,13 +55,14 @@ func TestDeptPathCTE_PostgresTypeConsistency(t *testing.T) {
 		"递归项的链路拼接表达式不应被改动")
 }
 
-// TestDeptPathCTE_PostgresIntegration 直连真实 PostgreSQL 验证（需设置 XINGRAN_TEST_PG_DSN）。
+// TestDeptPathCTE_PostgresIntegration 直连真实 PostgreSQL 验证（需设置 TEST_PG_DSN）。
 //
 // 未设置环境变量时自动 skip —— 本地/CI 无 PG 时不阻塞，但一旦有 PG 就能守住这条线。
+// v1.52 P1-9：门控变量与 pg_contract_test.go 统一为 TEST_PG_DSN。
 func TestDeptPathCTE_PostgresIntegration(t *testing.T) {
-	dsn := os.Getenv("XINGRAN_TEST_PG_DSN")
+	dsn := os.Getenv("TEST_PG_DSN")
 	if dsn == "" {
-		t.Skip("未设置 XINGRAN_TEST_PG_DSN，跳过 PostgreSQL 集成验证")
+		t.Skip("未设置 TEST_PG_DSN，跳过 PostgreSQL 集成验证")
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
