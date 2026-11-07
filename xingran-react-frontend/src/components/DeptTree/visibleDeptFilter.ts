@@ -1,3 +1,5 @@
+import type { Key } from "react";
+
 /**
  * Phase 133 / DS-06：按后端可见集过滤部门树（保持树形结构）。
  *
@@ -12,7 +14,9 @@
  *   - visibleDeptIds 为空/undefined → 原样返回（后端 tree 已是收口结果）。
  */
 export interface VisibleDeptFilterNode {
-  key?: string | number;
+  // 与 antd Tree 的 DataNode.key（React.Key = string | number | bigint）对齐，
+  // 且必填（DataNode 要求 key 存在），否则泛型与 useMemo<DataNode[]> 不兼容。
+  key: Key;
   children?: VisibleDeptFilterNode[];
 }
 
@@ -24,7 +28,7 @@ export function filterTreeByVisibleDeptIds<T extends VisibleDeptFilterNode>(
   const visible = new Set(visibleDeptIds.map(String));
   const walk = (list: T[]): T[] =>
     list.reduce<T[]>((acc, node) => {
-      const selfHit = node.key !== undefined && visible.has(String(node.key));
+      const selfHit = visible.has(String(node.key));
       const keptChildren = node.children?.length ? walk(node.children as T[]) : [];
       if (selfHit) {
         acc.push(node);
