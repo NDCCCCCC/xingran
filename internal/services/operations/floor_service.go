@@ -14,6 +14,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 
@@ -51,8 +52,21 @@ type FloorStatisticsResult struct {
 // Statistics 统计楼层(按 status 聚合,排除软删除)。
 func (s *floorService) Statistics(ctx context.Context) (*FloorStatisticsResult, error) {
 	var result FloorStatisticsResult
-	err := s.db.WithContext(ctx).
-		Model(&operations.OpsFloor{}).
+	query := s.db.WithContext(ctx).
+		Model(&operations.OpsFloor{})
+	// Phase 131：签名不变（handler/前端不改），从 ctx 取 ScopeResult 聚合前注入范围条件。
+	// 楼层有效机构 = 楼层覆盖值优先、NULL/空串继承楼宇 org_id（effectiveOrgExpr 单一真实源）。
+	// 无用户归属列 → Self 档按裁定走空集（subUserCol=""）。
+	{
+		orgExpr := effectiveOrgExpr("ops_floors.org_id", "b.org_id")
+		sub := s.db.WithContext(ctx).Session(&gorm.Session{NewDB: true}).
+			Table("ops_buildings b").
+			Where("CAST(b.id AS TEXT) = ops_floors.building_id").
+			Where("b.deleted_at IS NULL").
+			Select("1")
+		query = wrapScopeExists(query, ctx, sub, orgExpr, "")
+	}
+	err := query.
 		Select(
 			"COUNT(*) AS total",
 			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS active", int(operations.FloorStatusNormal)),
@@ -251,7 +265,16 @@ func (s *floorService) Delete(ctx context.Context, id string) error {
 func (s *floorService) GetByID(ctx context.Context, id string) (*operations.OpsFloor, error) {
 	// repo.GetByID 有 scope 时按 Tabler 断言生成 ops_floors.id = ?（与现状逐字等价），
 	// joinScope 携带 Select+Joins（:229-231 三段原样平移）。
-	return s.listRepo().GetByID(ctx, id, s.joinScope())
+	// Phase 131：追加可见集归属校验（越界 → record not found，既有响应形状不变）。
+	return s.listRepo().GetByID(ctx, id, s.joinScope(), func(db *gorm.DB) *gorm.DB {
+		orgExpr := effectiveOrgExpr("ops_floors.org_id", "b.org_id")
+		sub := db.Session(&gorm.Session{NewDB: true}).
+			Table("ops_buildings b").
+			Where("CAST(b.id AS TEXT) = ops_floors.building_id").
+			Where("b.deleted_at IS NULL").
+			Select("1")
+		return wrapScopeExists(db, ctx, sub, orgExpr, "")
+	})
 }
 
 // joinScope List/GetByID 共用的 Select+Joins（原 :229-231 三段逐字平移）。
@@ -274,6 +297,21 @@ func (s *floorService) joinScope() base.Scope {
 // orgId EXISTS 子查询）。
 func (s *floorService) filterScope(params map[string]interface{}) base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
+		// Phase 131：可见集收口 + 越界 orgId 求交（service 层强制，禁止信任 params）。
+		ctx := db.Statement.Context
+		orgId, _ := params["orgId"].(string)
+		if scopeRejectsRequestedOrgFromContext(ctx, orgId) {
+			return db.Where("1 = 0")
+		}
+		{
+			orgExpr := effectiveOrgExpr("ops_floors.org_id", "b.org_id")
+			sub := db.Session(&gorm.Session{NewDB: true}).
+				Table("ops_buildings b").
+				Where("CAST(b.id AS TEXT) = ops_floors.building_id").
+				Where("b.deleted_at IS NULL").
+				Select("1")
+			db = wrapScopeExists(db, ctx, sub, orgExpr, "")
+		}
 		if name, ok := params["name"].(string); ok && name != "" {
 			db = db.Where("ops_floors.name LIKE ?", "%"+name+"%")
 		}
@@ -420,6 +458,20 @@ func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string
 		Select("ops_floors.id AS value, ops_floors.name AS label").
 		Limit(DropdownMaxRows)
 
+	// Phase 131：可见集收口 + 越界 orgId 求交（下拉数据源同样不可越权枚举）。
+	if scopeRejectsRequestedOrgFromContext(ctx, extractStringParam(params, "orgId")) {
+		return result, nil
+	}
+	{
+		orgExpr := effectiveOrgExpr("ops_floors.org_id", "b.org_id")
+		sub := s.db.WithContext(ctx).Session(&gorm.Session{NewDB: true}).
+			Table("ops_buildings b").
+			Where("CAST(b.id AS TEXT) = ops_floors.building_id").
+			Where("b.deleted_at IS NULL").
+			Select("1")
+		query = wrapScopeExists(query, ctx, sub, orgExpr, "")
+	}
+
 	if name := extractStringParam(params, "name"); name != "" {
 		query = query.Where("ops_floors.name LIKE ?", "%"+name+"%")
 	}
@@ -458,6 +510,26 @@ func (s *floorService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
 		FloorNo      string
 	}
 
+	// Phase 131：tree 按可见集过滤后再缓存（floorCacheService 已按 scope 派生 key）。
+	// 有效机构 = 楼层覆盖值优先、NULL/空串继承楼宇 org_id（effectiveOrgExpr 单一真实源）。
+	// 楼层无用户归属列 → Self 档按裁定空集（subUserCol=""）。
+	// All / 未注入 → 条件片段为空，Raw SQL 逐字保持原状（零回归）。
+	scope, ok := scopeFromContext(ctx)
+	orgExpr := effectiveOrgExpr("f.org_id", "b.org_id")
+	scopeCond := ""
+	var scopeArgs []any
+	if !scopeIsAll(scope, ok) {
+		if scope.ResourceHook == datascope.HookSelfUser && !scope.FailClosed {
+			// 无用户列实体：Self 档空集。
+			scopeCond = " AND (1=0)"
+		} else {
+			cond, args, skip := orgScopeClause(scope, ok, orgExpr)
+			if !skip {
+				scopeCond = " AND (" + cond + ")"
+				scopeArgs = args
+			}
+		}
+	}
 	var results []BuildingFloor
 	err := s.db.WithContext(ctx).Raw(`
 		SELECT
@@ -468,9 +540,9 @@ func (s *floorService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
 			f.floor_no
 		FROM ops_buildings b
 		LEFT JOIN ops_floors f ON b.id = f.building_id
-		WHERE b.deleted_at IS NULL
+		WHERE b.deleted_at IS NULL`+scopeCond+`
 		ORDER BY b.order_num ASC, f.order_num ASC
-	`).Scan(&results).Error
+	`, scopeArgs...).Scan(&results).Error
 
 	if err != nil {
 		return nil, err

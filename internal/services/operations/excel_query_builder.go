@@ -253,6 +253,12 @@ func (b *WorkstationQueryBuilder) BuildQuery(
 		Joins("LEFT JOIN sys_user ON sys_user.id::text = sys_workstation.user_id").
 		Where("sys_workstation.deleted_at IS NULL")
 
+	// Phase 131 / DS-06：Excel 导出不豁免、不走 List —— 独立注入可见集过滤，
+	// 不读取 params["orgId"]（FilterMapping 无 orgId，前端传 orgId 会拼出不存在的列）。
+	// 新增条件用 CAST(... AS TEXT) 双方言写法，与上方既有 ::uuid JOIN（P1-8 技术债）
+	// 互不干扰：本条件在 SQLite 上语法合法，PG 上同样成立。
+	query = applyExcelWorkstationScope(query, ctx)
+
 	// 复用 config.FilterMapping 应用筛选（逻辑与 DefaultQueryBuilder 等价，
 	// 仅在字段无表别名前缀时补 sys_workstation.）
 	for paramKey, paramValue := range params {

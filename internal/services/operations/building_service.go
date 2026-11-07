@@ -41,6 +41,11 @@ type BuildingStatisticsResult struct {
 func (s *buildingService) Statistics(ctx context.Context, params map[string]interface{}) (*BuildingStatisticsResult, error) {
 	var result BuildingStatisticsResult
 	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{})
+	// Phase 131：可见集收口 + 越界 orgId 求交（聚合前注入）。
+	if scopeRejectsRequestedOrgFromContext(ctx, extractStringParam(params, "orgId")) {
+		return &result, nil
+	}
+	query = applyBuildingScope(query, ctx)
 	query = s.applyFilters(query, params)
 	err := query.
 		Select(
@@ -137,7 +142,11 @@ func (s *buildingService) Delete(ctx context.Context, id string) error {
 
 // GetByID 根据ID获取楼宇
 func (s *buildingService) GetByID(ctx context.Context, id string) (*operations.OpsBuilding, error) {
-	return s.repo.GetByID(ctx, id)
+	// Phase 131：按资源归属校验（越界 → record not found，既有响应形状不变）。
+	// 无用户归属列 → Self 档按裁定空集。
+	return s.repo.GetByID(ctx, id, func(db *gorm.DB) *gorm.DB {
+		return applyBuildingScope(db, ctx)
+	})
 }
 
 // List 查询楼宇列表（map 签名不变——F1：D-05 只锁 workstation，service 内部 map→scope 转换）
@@ -232,6 +241,13 @@ func (s *buildingService) attachFloorCount(ctx context.Context, buildings []oper
 // 闭包内调用保证条件逐字平移零漂移）。
 func (s *buildingService) filterScope(params map[string]interface{}) base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
+		// Phase 131：可见集收口 + 越界 orgId 求交（service 层强制，禁止信任 params）。
+		ctx := db.Statement.Context
+		orgId, _ := params["orgId"].(string)
+		if scopeRejectsRequestedOrgFromContext(ctx, orgId) {
+			return db.Where("1 = 0")
+		}
+		db = applyBuildingScope(db, ctx)
 		return s.applyFilters(db, params)
 	}
 }
@@ -365,6 +381,13 @@ func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[
 	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).
 		Select("id AS value, name AS label").
 		Limit(DropdownMaxRows)
+
+	// Phase 131：可见集收口 + 越界 orgId 求交（下拉数据源同样不可越权枚举）。
+	// 注意：下拉手写 SQL 不复用 applyFilters，故可见集条件在此显式注入。
+	if scopeRejectsRequestedOrgFromContext(ctx, extractStringParam(params, "orgId")) {
+		return result, nil
+	}
+	query = applyBuildingScope(query, ctx)
 
 	if name := extractStringParam(params, "name"); name != "" {
 		query = query.Where("name LIKE ?", "%"+name+"%")

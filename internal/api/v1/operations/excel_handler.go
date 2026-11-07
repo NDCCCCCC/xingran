@@ -16,6 +16,7 @@ import (
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"github.com/xuri/excelize/v2"
 )
@@ -233,11 +234,26 @@ SELECT d.dept_name,
         ORDER BY depth DESC
         LIMIT 1) AS parent_path
 FROM sys_dept d
-WHERE d.deleted_at IS NULL AND d.status = ?
-ORDER BY d.dept_code ASC`
+WHERE d.deleted_at IS NULL AND d.status = ?`
+
+		// Phase 131 / 审查 P1-1：部门映射模板返回全库部门树，须按可见集收口
+		// （「其余 ops 端点一律收口」）。All / 未注入短路：SQL 逐字保持原状、
+		// 响应形状零变更；Self / FailClosed / 异常枚举 → 空集（IN 空切片）；
+		// Custom/Dept/DeptChild → 部门 id ∈ 已展开的可见 DeptIDs。
+		// 双侧 CAST AS TEXT 保证 PG uuid / SQLite text 双方言一致。
+		queryArgs := []any{models.DeptStatusNormal}
+		if scope, ok := datascope.FromContext(c.Request.Context()); ok && !scope.All {
+			if scope.FailClosed || scope.ResourceHook == datascope.HookSelfUser || len(scope.DeptIDs) == 0 {
+				querySQL += " AND 1=0"
+			} else {
+				querySQL += " AND CAST(d.id AS TEXT) IN ?"
+				queryArgs = append(queryArgs, scope.DeptIDs)
+			}
+		}
+		querySQL += " ORDER BY d.dept_code ASC"
 
 		if err := core.DB.GetDB().WithContext(c.Request.Context()).
-			Raw(querySQL, models.DeptStatusNormal).
+			Raw(querySQL, queryArgs...).
 			Scan(&rows).Error; err != nil {
 			response.Error(c, response.ErrServerError, fmt.Sprintf("查询部门映射失败: %v", err))
 			return

@@ -135,7 +135,20 @@ type WorkstationStatisticsResult struct {
 func (s *workstationService) Statistics(ctx context.Context, params map[string]interface{}) (*WorkstationStatisticsResult, error) {
 	var result WorkstationStatisticsResult
 	query := s.db.WithContext(ctx).Model(&models.Workstation{})
-	if orgId := extractStringParam(params, "orgId"); orgId != "" {
+	orgId := extractStringParam(params, "orgId")
+	// Phase 131：前端 orgId 不可越权读取——请求 orgId 不在可见集内 → 直接空集，
+	// 不报错（读端点统一响应形状），符合 DS-03「收口必须在 service 层求交」。
+	if scopeRejectsRequestedOrgFromContext(ctx, orgId) {
+		return &result, nil
+	}
+	// Phase 131：可见集收口——All/未注入短路（零 DB 查询），其余档位按
+	// 「有效机构 ∈ 可见集」注入 EXISTS（Self 档按 sys_workstation.user_id）。
+	// 有效机构表达式 workstationOrgColumn 源自 effectiveOrgExpr 单一真实源。
+	{
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = wrapScopeExists(query, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	}
+	if orgId != "" {
 		// 部门递归四条件统一走 BuildDeptRecursiveFilter（V130R-08）；
 		// EXISTS 骨架（工位 → 楼层 f → 楼宇 b）见 workstationOrgExistsSub。
 		// 有效机构 = 楼层覆盖值优先、NULL 时继承楼宇值（workstationOrgColumn）。
@@ -182,6 +195,10 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 	if orgId == "" {
 		return []DeptOption{}, nil
 	}
+	// Phase 131：dept-options 接收前端 orgId，越界一律返回空集（不报错）。
+	if scopeRejectsRequestedOrgFromContext(ctx, orgId) {
+		return []DeptOption{}, nil
+	}
 	var result []DeptOption
 	// 单 query union: sys_dept 子孙节点 (is_alias=false) + alias 命中节点 (is_alias=true)
 	// 1) 子孙节点: BuildDeptRecursiveFilter 四条件口径（orgId 自身 + 全部子孙，
@@ -200,6 +217,14 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 		Select("CAST(id AS TEXT) AS dept_id, dept_name AS dept_name, false AS is_alias").
 		Where("deleted_at IS NULL AND is_external_org = 0").
 		Scopes(BuildDeptRecursiveFilter(orgId, "id"))
+	// Phase 131：部门下拉结果必须与可见部门集求交（Self 档部门集为空 → 空集）。
+	// All / 未注入短路，不挂任何额外条件。
+	if scope, ok := scopeFromContext(ctx); ok && !scope.All {
+		cond, args, skip := orgScopeClause(scope, ok, "id")
+		if !skip {
+			descendants = descendants.Where(cond, args...)
+		}
+	}
 	err := s.db.WithContext(ctx).Raw(`(?) UNION ALL
 		SELECT a.dept_id, d.dept_name, true AS is_alias
 		FROM sys_dept_location_alias a
@@ -352,7 +377,12 @@ func (s *workstationService) Delete(ctx context.Context, id string) error {
 // join scope 非空 → repo 经 Tabler 断言生成 sys_workstation.id = ?（models.Workstation
 // TableName() 返回 sys_workstation，与迁移前 :231 的表限定逐字一致）。
 func (s *workstationService) GetByID(ctx context.Context, id string) (*models.Workstation, error) {
-	return s.repo.GetByID(ctx, id, s.joinScope())
+	// Phase 131：按资源归属校验——有效机构 / Self 用户列不在可见集时 repo.First
+	// 返回 record not found，handler 既有 404/空语义不变（不新增错误码）。
+	return s.repo.GetByID(ctx, id, s.joinScope(), func(db *gorm.DB) *gorm.DB {
+		sub := workstationOrgExistsSub(db, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		return wrapScopeExists(db, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	})
 }
 
 // joinScope List/GetByID 共用的 Select + 6 表 LEFT JOIN scope（常量逐字平移）。
@@ -378,6 +408,16 @@ func (s *workstationService) joinScope() base.Scope {
 // （行为与迁移前一致，前端传入被静默忽略）。
 func (s *workstationService) filterScope(req requests.WorkstationListRequest) base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
+		// Phase 131：可见集收口 + 越界 orgId 求交（service 层强制，禁止信任 req.OrgID）。
+		// ctx 从 GORM 链取（List 经 WithContext(ctx) 起链），保证拿到注入结果。
+		ctx := db.Statement.Context
+		if scopeRejectsRequestedOrgFromContext(ctx, req.OrgID) {
+			return db.Where("1 = 0")
+		}
+		{
+			sub := workstationOrgExistsSub(db, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+			db = wrapScopeExists(db, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+		}
 		if req.Name != "" {
 			db = db.Where("sys_workstation.workstation_name LIKE ?", "%"+req.Name+"%")
 		}
@@ -437,10 +477,17 @@ func (s *workstationService) List(ctx context.Context, req requests.WorkstationL
 // 软删过滤由 Model 起链自动附带（与 99-01 的 Total 口径一致）。
 func (s *workstationService) GetFloorWorkstationsAll(ctx context.Context, floorId string) ([]models.Workstation, error) {
 	var workstations []models.Workstation
-	if err := s.db.WithContext(ctx).
+	query := s.db.WithContext(ctx).
 		Model(&models.Workstation{}).
 		Scopes(s.joinScope()).
-		Where("sys_workstation.floor_id = ?", floorId).
+		Where("sys_workstation.floor_id = ?", floorId)
+	// Phase 131（DS-03 硬要求）：无分页全集端点不得豁免——按 floor 所属
+	// 有效机构 ∈ 可见集收口；Self 档按 sys_workstation.user_id 过滤。
+	{
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = wrapScopeExists(query, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	}
+	if err := query.
 		Order("sys_workstation.created_at DESC").
 		Find(&workstations).Error; err != nil {
 		return nil, err
@@ -768,6 +815,15 @@ func (s *workstationService) SearchWorkstationOptions(ctx context.Context, req r
 		Select("sys_workstation.id AS value, sys_workstation.workstation_name AS label").
 		Limit(DropdownMaxRows)
 
+	// Phase 131：可见集收口 + 越界 orgId 求交（下拉数据源同样不可越权枚举）。
+	if scopeRejectsRequestedOrgFromContext(ctx, req.OrgID) {
+		return result, nil
+	}
+	{
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = wrapScopeExists(query, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	}
+
 	if req.Name != "" {
 		query = query.Where("sys_workstation.workstation_name LIKE ?", "%"+req.Name+"%")
 	}
@@ -813,12 +869,16 @@ func (s *workstationService) CountsByFloor(ctx context.Context, floorIds []strin
 		FloorID string `gorm:"column:floor_id"`
 		Count   int    `gorm:"column:cnt"`
 	}
-	err := s.db.WithContext(ctx).
+	query := s.db.WithContext(ctx).
 		Model(&models.Workstation{}).
 		Select("floor_id, COUNT(*) AS cnt").
-		Where("floor_id IN ? AND status = ? AND deleted_at IS NULL", floorIds, models.WorkstationStatusAvailable).
-		Group("floor_id").
-		Scan(&results).Error
+		Where("floor_id IN ? AND status = ? AND deleted_at IS NULL", floorIds, models.WorkstationStatusAvailable)
+	// Phase 131：CountsByFloor 按 floor 可见集过滤，防跨楼层枚举统计。
+	{
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = wrapScopeExists(query, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	}
+	err := query.Group("floor_id").Scan(&results).Error
 	if err != nil {
 		return nil, err
 	}

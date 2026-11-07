@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -205,4 +206,47 @@ func TestPGContract_WorkstationOrgAndBackfill(t *testing.T) {
 		_, err := floorSvc.SearchFloorOptions(ctx, map[string]interface{}{"orgId": dummyOrg})
 		return err
 	}())
+}
+
+// TestPGContract_ExcelExportScope 守护 Phase 131 两条 Excel 导出独立路径注入的
+// 可见集条件在真实 PG 上的类型契约（P1-8 / DS-06）。
+//
+// 门控：与全文件统一使用 TEST_PG_DSN；未设置/连不通 → t.Skip 带原因（CI 可观测）。
+// 只读保证：仅执行 SELECT，不写库；BuildQuery 的 ::uuid JOIN 是既有技术债
+// （P1-8，Phase 133 或后续清偿），本测试不修改它，只验证新增 CAST 条件的 PG 兼容性。
+//
+// 注意：BuildQuery 含 PG 专有 ::uuid/::text，SQLite 上必炸（既有测试
+// TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 已锁定），故本用例必须
+// 在真实 PG 上跑；静态断言（不依赖 DSN）见 TestScopeExport_StaticContract。
+func TestPGContract_ExcelExportScope(t *testing.T) {
+	db := openPGForContractTest(t)
+	ctx := context.Background()
+
+	// 构造一个非 All 档的可见集（DeptIDs 非空），让 applyExcelWorkstationScope
+	// 真正走到 EXISTS + CAST(... AS TEXT) IN ? 分支。
+	scopeCtx := datascope.WithContext(ctx, datascope.ScopeResult{
+		DeptIDs: []string{"00000000-0000-0000-0000-000000000000"},
+	})
+
+	config, ok := GetExportConfig("workstation")
+	if !ok {
+		t.Fatal("工位导出配置缺失")
+	}
+
+	t.Run("BuildQuery 可见集条件 PG 契约", func(t *testing.T) {
+		qb := NewWorkstationQueryBuilder()
+		// 真实 PG 执行整条 BuildQuery（只读），守护新增 CAST 条件无 42883。
+		requireNoPGErr(t, "Excel BuildQuery scope filter", func() error {
+			return qb.BuildQuery(scopeCtx, db, config, map[string]interface{}{}).
+				Find(&[]map[string]interface{}{}).Error
+		}())
+	})
+
+	t.Run("queryWorkstationIDsForExport 可见集条件 PG 契约", func(t *testing.T) {
+		svc := &ExcelService{db: db}
+		requireNoPGErr(t, "Excel queryWorkstationIDsForExport scope filter", func() error {
+			_, err := svc.queryWorkstationIDsForExport(scopeCtx, nil, map[string]any{})
+			return err
+		}())
+	})
 }

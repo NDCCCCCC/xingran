@@ -2420,6 +2420,10 @@ func (s *ExcelService) queryWorkstationIDsForExport(
 		Table("sys_workstation").
 		Where("deleted_at IS NULL")
 
+	// Phase 131 / DS-06：第二条导出路径独立注入可见集过滤（与 BuildQuery 同源
+	// helper，但不复用其 ::uuid JOIN）。不依赖 params["orgId"]。
+	query = applyExcelWorkstationScope(query, ctx)
+
 	for paramKey, paramValue := range params {
 		if paramValue == nil || paramValue == "" {
 			continue

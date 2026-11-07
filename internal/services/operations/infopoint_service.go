@@ -36,8 +36,23 @@ type InfoPointStatisticsResult struct {
 // Statistics 统计信息点(按 status 聚合,排除软删除)。
 func (s *infoPointService) Statistics(ctx context.Context) (*InfoPointStatisticsResult, error) {
 	var result InfoPointStatisticsResult
-	err := s.db.WithContext(ctx).
-		Model(&operations.OpsInfoPoint{}).
+	query := s.db.WithContext(ctx).
+		Model(&operations.OpsInfoPoint{})
+	// Phase 131：签名不变，从 ctx 取 ScopeResult 聚合前注入范围条件。
+	// 信息点 → 工位 w → 楼层 f → 楼宇 b；有效机构 = 楼层覆盖优先（单一真实源）。
+	// Self 档按裁定经 workstation_id 链到 w.user_id 过滤。
+	{
+		orgExpr := effectiveOrgExpr("f.org_id", "b.org_id")
+		sub := s.db.WithContext(ctx).Session(&gorm.Session{NewDB: true}).
+			Table("sys_workstation w").
+			Joins("JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id").
+			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+			Where("CAST(w.id AS TEXT) = ops_info_points.workstation_id").
+			Where("w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL").
+			Select("1")
+		query = wrapScopeExists(query, ctx, sub, orgExpr, "w.user_id")
+	}
+	err := query.
 		Select(
 			"COUNT(*) AS total",
 			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS normal", int(operations.InfoPointStatusNormal)),
@@ -134,7 +149,18 @@ func (s *infoPointService) Delete(ctx context.Context, id string) error {
 // 通过 LEFT JOIN 工位/楼层/楼宇 动态填充 workstation_name/building_name/floor_name/building_id
 // (这些字段是 JOIN 虚拟字段，见 OpsInfoPoint model 的 gorm:"->;-:migration" tag，非物理列)
 func (s *infoPointService) GetByID(ctx context.Context, id string) (*operations.OpsInfoPoint, error) {
-	return s.repo.GetByID(ctx, id, s.joinScope())
+	// Phase 131：按资源归属校验（越界 → record not found，既有响应形状不变）。
+	return s.repo.GetByID(ctx, id, s.joinScope(), func(db *gorm.DB) *gorm.DB {
+		orgExpr := effectiveOrgExpr("f.org_id", "b.org_id")
+		sub := db.Session(&gorm.Session{NewDB: true}).
+			Table("sys_workstation w").
+			Joins("JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id").
+			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+			Where("CAST(w.id AS TEXT) = ops_info_points.workstation_id").
+			Where("w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL").
+			Select("1")
+		return wrapScopeExists(db, ctx, sub, orgExpr, "w.user_id")
+	})
 }
 
 // joinScope List/GetByID 共用的 Select + workstation/floors/buildings LEFT JOIN
@@ -165,6 +191,22 @@ func (s *infoPointService) joinScope() base.Scope {
 // orgId 用 EXISTS 子查询，不引用外层 JOIN——与 joinScope 顺序无关。
 func (s *infoPointService) filterScope(req requests.InfoPointListRequest) base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
+		// Phase 131：可见集收口 + 越界 orgId 求交（service 层强制，禁止信任 req.OrgID）。
+		ctx := db.Statement.Context
+		if scopeRejectsRequestedOrgFromContext(ctx, req.OrgID) {
+			return db.Where("1 = 0")
+		}
+		{
+			orgExpr := effectiveOrgExpr("f.org_id", "b.org_id")
+			sub := db.Session(&gorm.Session{NewDB: true}).
+				Table("sys_workstation w").
+				Joins("JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id").
+				Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+				Where("CAST(w.id AS TEXT) = ops_info_points.workstation_id").
+				Where("w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL").
+				Select("1")
+			db = wrapScopeExists(db, ctx, sub, orgExpr, "w.user_id")
+		}
 		if req.Name != "" {
 			db = db.Where("ops_info_points.name LIKE ?", "%"+req.Name+"%")
 		}
@@ -233,6 +275,19 @@ func (s *infoPointService) SearchInfoPointOptions(ctx context.Context, params ma
 	query := s.db.WithContext(ctx).Table("ops_info_points").
 		Select("ops_info_points.id AS value, ops_info_points.name AS label").
 		Limit(DropdownMaxRows)
+
+	// Phase 131：可见集收口（信息点 → 工位 → 楼层 → 楼宇；Self 经 w.user_id）。
+	{
+		orgExpr := effectiveOrgExpr("f.org_id", "b.org_id")
+		sub := s.db.WithContext(ctx).Session(&gorm.Session{NewDB: true}).
+			Table("sys_workstation w").
+			Joins("JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id").
+			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+			Where("CAST(w.id AS TEXT) = ops_info_points.workstation_id").
+			Where("w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL").
+			Select("1")
+		query = wrapScopeExists(query, ctx, sub, orgExpr, "w.user_id")
+	}
 
 	if name := extractStringParam(params, "name"); name != "" {
 		query = query.Where("ops_info_points.name LIKE ?", "%"+name+"%")

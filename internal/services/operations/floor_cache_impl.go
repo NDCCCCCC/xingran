@@ -33,11 +33,35 @@ func NewFloorServiceWithCache(
 	}
 }
 
+// scopedFloorTreeKey 由请求 ctx 的 ScopeResult 派生楼层树缓存 key。
+//
+// PMODEL-01：生产路径（已挂 DataScopePermission 注入）一律带 scope 段，
+// 不同可见集不共享同一份树缓存；All 档短路路径同样含 "all" 段
+// （LOCKED §1 关键不变量 3）。
+//
+// 兼容策略：未注入 ctx（存量单测 / 内部任务以 context.Background() 调用）保持
+// 旧精确 key "floor:tree"，保证既有断言与行为零回归——这与「未注入按 All 兜底」
+// 的读路径语义一致，且这类调用方本就不跨用户，不存在泄漏面。
+func scopedFloorTreeKey(ctx context.Context) string {
+	if _, ok := scopeFromContext(ctx); !ok {
+		return "floor:tree"
+	}
+	return fmt.Sprintf("floor:tree:s%s", scopeCacheKey(ctx))
+}
+
+// scopedFloorBuildingKey 同 scopedFloorTreeKey，作用于 floor:building:<id>。
+func scopedFloorBuildingKey(ctx context.Context, buildingID string) string {
+	if _, ok := scopeFromContext(ctx); !ok {
+		return fmt.Sprintf("floor:building:%s", buildingID)
+	}
+	return fmt.Sprintf("floor:building:s%s:%s", scopeCacheKey(ctx), buildingID)
+}
+
 // GetTree 获取楼层树（带缓存）
 // 这是最需要缓存的方法，被多个页面高频调用
 func (s *floorCacheService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
 	return base.GetOrSetJSON(ctx, s.cache,
-		"floor:tree",
+		scopedFloorTreeKey(ctx),
 		s.GetExpiration("cache.floor.tree", 30*time.Minute),
 		func() ([]FloorTreeNode, error) {
 			return s.floorService.GetTree(ctx)
@@ -47,7 +71,7 @@ func (s *floorCacheService) GetTree(ctx context.Context) ([]FloorTreeNode, error
 // GetFloorsByBuildingID 获取指定楼宇的楼层列表（带缓存）
 func (s *floorCacheService) GetFloorsByBuildingID(ctx context.Context, buildingID string) ([]operations.OpsFloor, error) {
 	return base.GetOrSetJSON(ctx, s.cache,
-		fmt.Sprintf("floor:building:%s", buildingID),
+		scopedFloorBuildingKey(ctx, buildingID),
 		s.GetExpiration("cache.floor.building", 15*time.Minute),
 		func() ([]operations.OpsFloor, error) {
 			// 查询指定楼宇的所有楼层
@@ -62,15 +86,18 @@ func (s *floorCacheService) GetFloorsByBuildingID(ctx context.Context, buildingI
 		})
 }
 
-// InvalidateFloorCache 失效楼层缓存
+// InvalidateFloorCache 失效楼层缓存。
+//
+// tree 与 building 均改用前缀通配：一次清掉旧 key（未注入路径遗留）与
+// 所有 scope 变体，避免写操作后某个可见集仍命中陈旧缓存。
 func (s *floorCacheService) InvalidateFloorCache(ctx context.Context, buildingID string) error {
-	keys := []string{
-		"floor:tree",
-	}
+	patterns := []string{"floor:tree*"}
 	if buildingID != "" {
-		keys = append(keys, fmt.Sprintf("floor:building:%s", buildingID))
+		// MemoryCache.Keys 只支持「末尾 *」前缀匹配，故按实体前缀整段清除，
+		// 一次覆盖所有 scope 变体（写操作后全清属既有安全语义）。
+		patterns = append(patterns, "floor:building:*")
 	}
-	base.Invalidate(ctx, s.cache, keys, "FLOOR")
+	base.InvalidatePattern(ctx, s.cache, patterns, "FLOOR")
 	return nil
 }
 
@@ -159,7 +186,8 @@ func (s *floorCacheService) SearchFloorOptions(ctx context.Context, params map[s
 		return s.floorService.SearchFloorOptions(ctx, params)
 	}
 
-	cacheKey := BuildDropdownCacheKey("floor", params)
+	// Phase 131：dropdown 缓存 key 增 scope 维度段（PMODEL-01 防跨范围泄漏）。
+	cacheKey := BuildScopedDropdownCacheKey(ctx, "floor", params)
 	return base.GetOrSetJSON(ctx, s.cache,
 		cacheKey,
 		s.GetExpiration("cache.floor.dropdown", 5*time.Minute),
