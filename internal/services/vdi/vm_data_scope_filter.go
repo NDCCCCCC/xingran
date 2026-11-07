@@ -3,9 +3,56 @@ package vdi
 import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
+
+// ApplyVMScopeResult 是 v1.52 Phase 133 迁移后的「ScopeResult 单一真实源」过滤入口。
+//
+// 与旧 ApplyVMDataScopeFilter 的语义逐档对齐（LOCKED 裁定
+// .planning/notes/261107-v152-self-scope-decision.md §4）：
+//   - All / 0 / unset：不过滤（超管零回归；DataScopePermission 对 0 注入 AllScope）。
+//   - Custom / Dept / DeptChild：DeptIDs 已由 datascope.Resolve 展开，按
+//     bound_user_id IN (SELECT id FROM sys_user WHERE dept_id IN (?)) 过滤；
+//     空 DeptIDs → 1=0（fail-closed）。
+//   - Self（HookSelfUser）：bound_user_id = UserID（ResourceHook 语义，与部门集不等价）。
+//   - FailClosed（异常枚举）：1=0。
+//   - 非 All 档统一追加 bound_user_id IS NOT NULL（等价旧 ApplyBoundUserFilter）。
+//
+// 参数 scope 来自 datascope.FromContext(ctx)；ok=false（未挂注入中间件）时调用方
+// 应回落旧 ApplyVMDataScopeFilter 显式参数路径，本函数不处理 ok=false。
+// 本函数为纯函数（不查库、不读 ctx），便于「新旧实现迁移对照测试」逐档比对。
+func ApplyVMScopeResult(query *gorm.DB, scope datascope.ScopeResult) *gorm.DB {
+	// All 档特判短路：不过滤、不追加 IS NOT NULL（超管/0/unset 零回归）。
+	if scope.All {
+		return query
+	}
+
+	// 非 All 档：先按档位挂主体条件，再统一追加「排除未绑定用户」。
+	bounded := func(q *gorm.DB) *gorm.DB {
+		switch {
+		case scope.FailClosed:
+			return q.Where("1=0")
+		case scope.ResourceHook == datascope.HookSelfUser:
+			// Self：部门集为空，按 bound_user_id = 登录人（UserID 缺失则 fail-closed）。
+			if scope.UserID == "" {
+				return q.Where("1=0")
+			}
+			return q.Where("bound_user_id = ?", scope.UserID)
+		case len(scope.DeptIDs) == 0:
+			// Custom/Dept/DeptChild 但无可见部门 → fail-closed 空集。
+			return q.Where("1=0")
+		default:
+			return q.Where(
+				"bound_user_id IN (SELECT id FROM sys_user WHERE dept_id IN (?))",
+				scope.DeptIDs,
+			)
+		}
+	}(query)
+
+	return bounded.Where("bound_user_id IS NOT NULL")
+}
 
 // isValidUUID 验证字符串是否符合UUID格式
 func isValidUUID(id string) bool {

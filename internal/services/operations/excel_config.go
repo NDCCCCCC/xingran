@@ -28,11 +28,29 @@ type ExcelColumn struct {
 	MaxLength int
 	Pattern   string
 	Options   map[interface{}]string
-	Reference string      // 引用配置，格式："table.field"，用于名称到ID的转换
+	Reference string      // 引用配置，格式："table.field"，用于名称到ID的转换；ReferenceSkip 表示不参与引用解析
 	DependsOn string      // 依赖字段：该字段的引用解析依赖于另一个字段的解析结果（如 floorName 依赖 buildingName）
 	UpsertKey bool        // 是否作为Upsert的唯一键（用于判断重复记录）
 	DBField   string      // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
 	Default   interface{} // 当Excel值为空时的默认值
+}
+
+// ReferenceSkip 是引用配置的哨兵值：标记该列**不参与**引用解析。
+//
+// 用于「跨表特殊处理」列 —— 例如工位导入的"主设备序列号"(deviceSerial)：
+// 它不是 sys_xxx 表的外键引用，而是由 post-import hook 写入子表
+// (ops_workstation_device)，因此不能按 "table.field" 语义去解析。
+//
+// ⚠️ 历史事故（工位导入填主设备序列号后全部报"引用的 所属楼宇 不存在"）：
+// 该列曾以 Reference:"skip" 进入引用请求列表，resolve 阶段 parseReference("skip")
+// 解析失败 → ResolveBatch 直接 return nil, err → **整批**引用（楼宇/部门/用户）
+// 解析结果被丢弃 → 楼宇 ID 为空 → 楼层依赖解析连带失败。
+// 因此所有引用处理点都必须显式跳过 ReferenceSkip。
+const ReferenceSkip = "skip"
+
+// isSkipReference 判断列是否为「跳过引用解析」的哨兵列。
+func (c ExcelColumn) isSkipReference() bool {
+	return c.Reference == ReferenceSkip
 }
 
 type ExcelConfig struct {

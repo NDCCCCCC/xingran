@@ -696,6 +696,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:building:edit",
 			"ops:building:delete",
 		}, []string{"ops:building:spaces:list"}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		buildings.Use(middleware.DataScopePermission(core))
 		{
 			buildings.POST("/list", buildingHandler.List)
 			buildings.POST("/statistics", buildingHandler.Statistics)
@@ -711,6 +713,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		// 楼宇管理写路由（85-03 RBAC-01：逐动作 RequireStrictPermissions 单一权限点，
 		// 与读组互为兄弟组——写组绝不做成读组子组，防 ANY-of 父中间件先放行）
 		buildingWrites := ops.Group("/building")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		buildingWrites.Use(middleware.DataScopePermission(core))
 		{
 			buildingAdd := strictUserRouteGroup(buildingWrites, permission.OpsBuildingAdd, core)
 			buildingAdd.POST("", buildingHandler.Create)
@@ -748,6 +752,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:floor:edit",
 			"ops:floor:delete",
 		}, []string{"ops:building:spaces:list"}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		floors.Use(middleware.DataScopePermission(core))
 		{
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			floors.POST("/list", floorHandler.List)
@@ -762,6 +768,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 楼层管理写路由（85-03 RBAC-01 严格兄弟组）
 		floorWrites := ops.Group("/floor")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		floorWrites.Use(middleware.DataScopePermission(core))
 		{
 			floorAdd := strictUserRouteGroup(floorWrites, permission.OpsFloorAdd, core)
 			floorAdd.POST("", floorHandler.Create) // 兜底路由
@@ -779,7 +787,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		// 工位管理
 		// 查询接口(/list)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list。
 		// 写操作见下方 workstationWrites 严格兄弟组（85-03 RBAC-01）。
-		workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
+		// quick-261106-wsb: 批量反推部门执行成功后需失效工位缓存。
+		// DataCacheService 为 nil 时 NewCacheProvider 返回安全空实现（既有语义）。
+		workstationService := opsServices.NewWorkstationServiceWithCache(
+			core.DB.GetDB(), systemServices.NewCacheProvider(core.DataCacheService))
 		// R4 (Phase 45) — 跨模块注入 ReconciliationService 到 WorkstationHandler
 		// GetByID 内根据 hasReconciliationPerm 决定是否拉对账健康度 (D-A1-01/03)
 		// Phase 45 R4: 注入 exceptionSvc 用于 per-asset 命中 (D-A4-02)
@@ -796,6 +807,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:workstation:edit",
 			"ops:workstation:delete",
 		}, []string{"ops:building:spaces:list"}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		workstations.Use(middleware.DataScopePermission(core))
 		{
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			workstations.POST("/list", workstationHandler.List)
@@ -817,6 +830,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 工位管理写路由（85-03 RBAC-01 严格兄弟组；positions 为批量更新物理位置=编辑）
 		workstationWrites := ops.Group("/workstation")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		workstationWrites.Use(middleware.DataScopePermission(core))
 		{
 			workstationAdd := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationAdd, core)
 			workstationAdd.POST("", workstationHandler.Create) // 兜底路由
@@ -830,6 +845,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			operations.SetupExcelImportRouter(workstationImport, "workstation", core)
 			workstationExport := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationExport, core)
 			operations.SetupExcelExportRouter(workstationExport, "workstation", core)
+			// quick-261106-wsb：按人员反推部门 —— 独立权限项（批量全库写不与编辑共用）。
+			workstationBackfill := strictUserRouteGroup(workstationWrites, permission.OpsWorkstationBackfill, core)
+			workstationBackfill.POST("/backfill-dept", workstationHandler.BatchBackfillDeptFromUser)
 		}
 
 		// 工位部门物理位置映射 (Phase 39)
@@ -859,6 +877,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:location:alias:edit",
 			"ops:location:alias:delete",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		locationAlias.Use(middleware.DataScopePermission(core))
 		{
 			// 注意:更具体的路由放在前面,避免被通用路由匹配
 			locationAlias.POST("/list", locationAliasHandler.List)
@@ -866,6 +886,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 位置映射写路由（85-03 RBAC-01 严格兄弟组）
 		locationAliasWrites := ops.Group("/location-alias")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		locationAliasWrites.Use(middleware.DataScopePermission(core))
 		{
 			locationAliasAdd := strictUserRouteGroup(locationAliasWrites, permission.OpsLocationAliasAdd, core)
 			locationAliasAdd.POST("", locationAliasHandler.Create) // 兜底路由
@@ -882,6 +904,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:workstation:add",
 			"ops:workstation:edit",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		workstationDevices.Use(middleware.DataScopePermission(core))
 		{
 			workstationDeviceService := opsServices.NewWorkstationDeviceService(core.DB.GetDB())
 			workstationDeviceHandler := operations.NewWorkstationDeviceHandler(workstationDeviceService).WithCore(core)
@@ -901,6 +925,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		workstationDeviceService := opsServices.NewWorkstationDeviceService(core.DB.GetDB())
 		workstationDeviceHandler := operations.NewWorkstationDeviceHandler(workstationDeviceService).WithCore(core)
 		workstationDeviceWrites := ops.Group("/workstation-device")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		workstationDeviceWrites.Use(middleware.DataScopePermission(core))
 		{
 			workstationDeviceAdd := strictUserRouteGroup(workstationDeviceWrites, permission.OpsWorkstationAdd, core)
 			workstationDeviceAdd.POST("/manual", workstationDeviceHandler.AddManual)
@@ -924,6 +950,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:asset:edit",
 			"ops:asset:delete",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		assets.Use(middleware.DataScopePermission(core))
 		{
 			// 注意：更具体的路由要放在前面
 			assets.GET("/search-by-serial/:serial", assetHandler.SearchBySerial)
@@ -948,6 +976,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 资产管理写路由（85-03 RBAC-01 严格兄弟组）
 		assetWrites := ops.Group("/asset")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		assetWrites.Use(middleware.DataScopePermission(core))
 		{
 			assetAdd := strictUserRouteGroup(assetWrites, permission.OpsAssetAdd, core)
 			assetAdd.POST("", assetHandler.Create)
@@ -972,6 +1002,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:infopoint:edit",
 			"ops:infopoint:delete",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		infoPoints.Use(middleware.DataScopePermission(core))
 		{
 			// 注意：更具体的路由要放在前面
 			infoPoints.POST("/list", infoPointHandler.List)
@@ -985,6 +1017,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 信息点管理写路由（85-03 RBAC-01 严格兄弟组）
 		infoPointWrites := ops.Group("/infoPoint")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		infoPointWrites.Use(middleware.DataScopePermission(core))
 		{
 			infoPointAdd := strictUserRouteGroup(infoPointWrites, permission.OpsInfoPointAdd, core)
 			infoPointAdd.POST("", infoPointHandler.Create) // 兜底路由
@@ -1009,6 +1043,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:serverroom:edit",
 			"ops:serverroom:delete",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		serverRooms.Use(middleware.DataScopePermission(core))
 		{
 			// 注意：更具体的路由要放在前面
 			serverRooms.POST("/list", serverRoomHandler.List)
@@ -1022,6 +1058,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 机房管理写路由（85-03 RBAC-01 严格兄弟组）
 		serverRoomWrites := ops.Group("/serverRoom")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		serverRoomWrites.Use(middleware.DataScopePermission(core))
 		{
 			serverRoomAdd := strictUserRouteGroup(serverRoomWrites, permission.OpsServerRoomAdd, core)
 			serverRoomAdd.POST("", serverRoomHandler.Create) // 兜底路由
@@ -1055,6 +1093,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:dedicatedline:edit",
 			"ops:dedicatedline:delete",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		dedicatedLines.Use(middleware.DataScopePermission(core))
 		{
 			// 注意：更具体的路由要放在前面
 			dedicatedLines.POST("/list", dedicatedLineHandler.List)
@@ -1068,6 +1108,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 专线管理写路由（85-03 RBAC-01 严格兄弟组）
 		dedicatedLineWrites := ops.Group("/dedicatedLine")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		dedicatedLineWrites.Use(middleware.DataScopePermission(core))
 		{
 			dedicatedLineAdd := strictUserRouteGroup(dedicatedLineWrites, permission.OpsDedicatedLineAdd, core)
 			dedicatedLineAdd.POST("", dedicatedLineHandler.Create) // 兜底路由
@@ -1092,6 +1134,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:roomdevice:edit",
 			"ops:roomdevice:delete",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		roomDevices.Use(middleware.DataScopePermission(core))
 		{
 			// 注意：更具体的路由要放在前面
 			roomDevices.POST("/list", roomDeviceHandler.List)
@@ -1105,6 +1149,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 机房设备管理写路由（85-03 RBAC-01 严格兄弟组）
 		roomDeviceWrites := ops.Group("/roomDevice")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		roomDeviceWrites.Use(middleware.DataScopePermission(core))
 		{
 			roomDeviceAdd := strictUserRouteGroup(roomDeviceWrites, permission.OpsRoomDeviceAdd, core)
 			roomDeviceAdd.POST("", roomDeviceHandler.Create) // 兜底路由
@@ -1135,6 +1181,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:walls:edit",
 			"ops:walls:delete",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		walls.Use(middleware.DataScopePermission(core))
 		{
 			walls.POST("/list", wallHandler.List)
 			walls.POST("/:id", wallHandler.GetByID)
@@ -1142,6 +1190,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 墙体写路由（85-03 RBAC-01 严格兄弟组）
 		wallsWrites := ops.Group("/walls")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		wallsWrites.Use(middleware.DataScopePermission(core))
 		{
 			wallsAdd := strictUserRouteGroup(wallsWrites, permission.OpsWallAdd, core)
 			wallsAdd.POST("", wallHandler.Create)
@@ -1167,6 +1217,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:doors:edit",
 			"ops:doors:delete",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		doors.Use(middleware.DataScopePermission(core))
 		{
 			doors.POST("/list", doorHandler.List)
 			doors.POST("/:id", doorHandler.GetByID)
@@ -1174,6 +1226,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 门写路由（85-03 RBAC-01 严格兄弟组）
 		doorsWrites := ops.Group("/doors")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		doorsWrites.Use(middleware.DataScopePermission(core))
 		{
 			doorsAdd := strictUserRouteGroup(doorsWrites, permission.OpsDoorAdd, core)
 			doorsAdd.POST("", doorHandler.Create)
@@ -1195,6 +1249,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			"ops:floor-plan:edit",
 			"ops:floor-plan:save",
 		}, core))
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		texts.Use(middleware.DataScopePermission(core))
 		{
 			texts.POST("/list", textHandler.List)
 			texts.POST("/:id", textHandler.GetByID)
@@ -1202,6 +1258,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 平面图文本写路由（85-03 RBAC-01 严格兄弟组；域内无专属写码，归 ops:floor-plan:edit）
 		textsWrites := ops.Group("/floor-plan-texts")
+		// DS-02: 写组为读组的兄弟组（不继承读组 ANY-of），注入 data_scope/user_id 供严格写端点取范围。
+		textsWrites.Use(middleware.DataScopePermission(core))
 		{
 			textsEdits := strictUserRouteGroup(textsWrites, permission.OpsFloorPlanEdit, core)
 			textsEdits.POST("", textHandler.Create)

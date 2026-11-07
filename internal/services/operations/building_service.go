@@ -41,6 +41,11 @@ type BuildingStatisticsResult struct {
 func (s *buildingService) Statistics(ctx context.Context, params map[string]interface{}) (*BuildingStatisticsResult, error) {
 	var result BuildingStatisticsResult
 	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{})
+	// Phase 131：可见集收口 + 越界 orgId 求交（聚合前注入）。
+	if scopeRejectsRequestedOrgFromContext(ctx, extractStringParam(params, "orgId")) {
+		return &result, nil
+	}
+	query = applyBuildingScope(query, ctx)
 	query = s.applyFilters(query, params)
 	err := query.
 		Select(
@@ -86,8 +91,12 @@ var buildingAllowedSortFields = map[string]string{
 
 // Create 创建楼宇
 func (s *buildingService) Create(ctx context.Context, building *operations.OpsBuilding) error {
-	// 验证机构存在性
+	// 验证机构存在性（UUID 格式 + 部门存在性，保留原校验）
 	if err := s.validateOrg(ctx, building.OrgID); err != nil {
+		return err
+	}
+	// Phase 132：validateOrg 之后追加可见集校验（写 SQL 之前，越界 403）。
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityBuilding, building.OrgID, ""); err != nil {
 		return err
 	}
 
@@ -109,8 +118,16 @@ func (s *buildingService) Create(ctx context.Context, building *operations.OpsBu
 
 // Update 更新楼宇
 func (s *buildingService) Update(ctx context.Context, building *operations.OpsBuilding) error {
-	// 验证机构存在性
+	// 验证机构存在性（UUID 格式 + 部门存在性，保留原校验）
 	if err := s.validateOrg(ctx, building.OrgID); err != nil {
+		return err
+	}
+	// Phase 132 双向校验（写 SQL 之前）：改前资源归属 ∈ 可见集，且提交的
+	// orgId ∈ 可见集，防把数据搬出/搬入越界范围。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityBuilding, building.ID); err != nil {
+		return err
+	}
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityBuilding, building.OrgID, ""); err != nil {
 		return err
 	}
 
@@ -132,12 +149,20 @@ func (s *buildingService) Update(ctx context.Context, building *operations.OpsBu
 
 // Delete 删除楼宇
 func (s *buildingService) Delete(ctx context.Context, id string) error {
+	// Phase 132：按资源归属校验（写 SQL 之前，越界 403）。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityBuilding, id); err != nil {
+		return err
+	}
 	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取楼宇
 func (s *buildingService) GetByID(ctx context.Context, id string) (*operations.OpsBuilding, error) {
-	return s.repo.GetByID(ctx, id)
+	// Phase 131：按资源归属校验（越界 → record not found，既有响应形状不变）。
+	// 无用户归属列 → Self 档按裁定空集。
+	return s.repo.GetByID(ctx, id, func(db *gorm.DB) *gorm.DB {
+		return applyBuildingScope(db, ctx)
+	})
 }
 
 // List 查询楼宇列表（map 签名不变——F1：D-05 只锁 workstation，service 内部 map→scope 转换）
@@ -232,6 +257,13 @@ func (s *buildingService) attachFloorCount(ctx context.Context, buildings []oper
 // 闭包内调用保证条件逐字平移零漂移）。
 func (s *buildingService) filterScope(params map[string]interface{}) base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
+		// Phase 131：可见集收口 + 越界 orgId 求交（service 层强制，禁止信任 params）。
+		ctx := db.Statement.Context
+		orgId, _ := params["orgId"].(string)
+		if scopeRejectsRequestedOrgFromContext(ctx, orgId) {
+			return db.Where("1 = 0")
+		}
+		db = applyBuildingScope(db, ctx)
 		return s.applyFilters(db, params)
 	}
 }
@@ -251,7 +283,14 @@ func (s *buildingService) applyFilters(query *gorm.DB, params map[string]interfa
 		query = query.Where("name LIKE ?", "%"+name+"%")
 	}
 
-	// 部门筛选（包含子部门）
+	// 部门筛选（包含子部门）：楼宇自身 org_id 命中，或该楼宇下有楼层
+	// 把机构覆盖到该部门（ops_floors.org_id）。
+	//
+	// 一栋楼跨机构办公场景（quick-261106-wso）：浙商大厦 org_id=分公司本部，
+	// 但 1/3 楼 org_id=武汉中支。选武汉中支时，工位页 Cascader 第一级楼宇
+	// 下拉必须能拿到浙商大厦，否则 1/3 楼工位根本无法新增/编辑。
+	// 用 EXISTS 而非 JOIN，避免与楼宇列表自身的 JOIN/分页冲突；CAST 统一
+	// uuid/varchar 混比（PG 无隐式互转）。
 	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
 		query = s.applyDeptFilter(query, orgId)
 	}
@@ -264,7 +303,15 @@ func (s *buildingService) applyFilters(query *gorm.DB, params map[string]interfa
 	return query
 }
 
-// applyDeptFilter 应用部门筛选（包含子部门）
+// applyDeptFilter 应用部门筛选（包含子部门）。
+//
+// 命中条件二选一：
+//  1. 楼宇自身 org_id 落在选中部门子树内（原语义）；
+//  2. 该楼宇下存在楼层 org_id 覆盖到选中部门子树内（楼层级机构覆盖）。
+//
+// 后者让「一栋楼跨机构办公」时，Cascader 第一级楼宇下拉也能被非楼宇归属
+// 机构选中（见 quick-261106-wso）。EXISTS 子查询不引入重复行，分页/total
+// 不受影响；CAST(... AS TEXT) 保证 PG/SQLite 双方言 uuid/varchar 可比。
 func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB {
 	var deptIDs []string
 
@@ -277,12 +324,27 @@ func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB
 		return query.Where("1 = 0")
 	}
 
-	return query.Where("org_id IN ?", deptIDs)
+	return query.Where(
+		`org_id IN ? OR EXISTS (
+			SELECT 1 FROM ops_floors f
+			WHERE CAST(f.building_id AS TEXT) = CAST(ops_buildings.id AS TEXT)
+			  AND f.org_id IN ?
+			  AND f.deleted_at IS NULL
+		)`,
+		deptIDs, deptIDs,
+	)
 }
 
 // BatchDelete 批量删除楼宇（repo 空 ids nil 语义与现状 IN(空) no-op 等价）
+//
+// Phase 132（裁定 §2）：service 层、任何写 SQL 之前按可见集裁剪目标集；
+// 越界行剔除（不因含越界行 403 整批），越界计数由 handler 层 operlog 记录。
 func (s *buildingService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.repo.BatchDelete(ctx, ids)
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityBuilding, ids)
+	if err != nil {
+		return err
+	}
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // validateOrg 验证机构存在性
@@ -343,6 +405,13 @@ func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[
 		Select("id AS value, name AS label").
 		Limit(DropdownMaxRows)
 
+	// Phase 131：可见集收口 + 越界 orgId 求交（下拉数据源同样不可越权枚举）。
+	// 注意：下拉手写 SQL 不复用 applyFilters，故可见集条件在此显式注入。
+	if scopeRejectsRequestedOrgFromContext(ctx, extractStringParam(params, "orgId")) {
+		return result, nil
+	}
+	query = applyBuildingScope(query, ctx)
+
 	if name := extractStringParam(params, "name"); name != "" {
 		query = query.Where("name LIKE ?", "%"+name+"%")
 	}
@@ -360,7 +429,17 @@ func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[
 			// 没有匹配的部门,返回空集而非全集
 			return result, nil
 		}
-		query = query.Where("org_id IN ?", deptIDs)
+		// 与 applyDeptFilter 同口径：楼宇自身 org_id 命中，或其下楼层
+		// org_id 覆盖命中（一栋楼跨机构办公，见 quick-261106-wso）。
+		query = query.Where(
+			`org_id IN ? OR EXISTS (
+				SELECT 1 FROM ops_floors f
+				WHERE CAST(f.building_id AS TEXT) = CAST(ops_buildings.id AS TEXT)
+				  AND f.org_id IN ?
+				  AND f.deleted_at IS NULL
+			)`,
+			deptIDs, deptIDs,
+		)
 	}
 
 	// 状态筛选(0=正常 1=停用)

@@ -375,7 +375,9 @@ func TestImp77_WorkstationSearchOrgId(t *testing.T) {
 // Floor
 // =====================================================================
 
-// TestImp77_FloorCreate 覆盖 Create 正常 + 唯一约束 + sqlite 软删恢复 NOW() 报错。
+// TestImp77_FloorCreate 覆盖 Create 正常 + 唯一约束 + 软删恢复正向断言。
+// 行为变更（quick-261106-wso P1-1）：恢复 UPDATE 的时间函数 NOW() → 双方言
+// CURRENT_TIMESTAMP，sqlite 恢复分支由「必失败（P-77-2）」变为真正可用。
 func TestImp77_FloorCreate(t *testing.T) {
 	db := setupWSFloorCode77DB(t)
 	buildingID, _ := seedBuildingFloor(t, db, "ws-b")
@@ -387,15 +389,13 @@ func TestImp77_FloorCreate(t *testing.T) {
 	require.NoError(t, svc.Create(ctx, f))
 	assert.NotEmpty(t, f.ID, "create 后 ID 应被填充")
 
-	// 软删后再次 Create 同名 + 同 building + 同 floor_no
+	// 软删后再次 Create 同名 + 同 building + 同 floor_no → 恢复成功而非报错
 	require.NoError(t, svc.Delete(ctx, f.ID))
-
-	// P-77-2: sqlite 无 NOW() 函数 → 恢复 UPDATE 必报「恢复楼层失败」
 	f2 := &operationsmodels.OpsFloor{Name: "新楼层", FloorNo: "2", BuildingID: buildingID}
-	err := svc.Create(ctx, f2)
-	require.Error(t, err, "sqlite 软删恢复分支不可达(P-77-2)")
-	assert.Contains(t, err.Error(), "恢复楼层失败",
-		"错误信息应明确归因到恢复分支")
+	require.NoError(t, svc.Create(ctx, f2), "恢复分支应在 CURRENT_TIMESTAMP 下成功（P-77-2 已消除）")
+	var cnt int64
+	require.NoError(t, db.Table("ops_floors").Where("building_id = ? AND floor_no = ?", buildingID, "2").Count(&cnt).Error)
+	assert.Equal(t, int64(1), cnt, "恢复而非插入第二行")
 
 	// 唯一约束错误(building_id 缺省 → validateBuilding 报错)
 	require.Error(t, svc.Create(ctx, &operationsmodels.OpsFloor{Name: "无楼宇", FloorNo: "3", BuildingID: ""}))

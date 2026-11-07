@@ -53,7 +53,7 @@ func setupImportRest77DB(t *testing.T) *gorm.DB {
 		)`).Error)
 	require.NoError(t, db.Exec(`
 		CREATE TABLE ops_floors (
-			id TEXT PRIMARY KEY, name TEXT, floor_no TEXT, building_id TEXT, status INTEGER,
+			id TEXT PRIMARY KEY, name TEXT, floor_no TEXT, building_id TEXT, org_id TEXT, status INTEGER,
 			remark TEXT, deleted_at DATETIME, plan_image_id TEXT, plan_image_url TEXT
 		)`).Error)
 	require.NoError(t, db.Exec(`

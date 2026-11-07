@@ -35,8 +35,10 @@ type ServerRoomStatisticsResult struct {
 // Statistics 统计机房(按 status 聚合,排除软删除)。
 func (s *serverRoomService) Statistics(ctx context.Context) (*ServerRoomStatisticsResult, error) {
 	var result ServerRoomStatisticsResult
-	err := s.db.WithContext(ctx).
-		Model(&operations.OpsServerRoom{}).
+	err := applyEntityReadScope(
+		s.db.WithContext(ctx).Model(&operations.OpsServerRoom{}), ctx,
+		scopeEntityServerRoom, "ops_server_rooms",
+	).
 		Select(
 			"COUNT(*) AS total",
 			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS active", int(operations.RoomStatusNormal)),
@@ -76,6 +78,10 @@ var serverRoomAllowedSortFields = map[string]string{
 
 // Create 创建机房
 func (s *serverRoomService) Create(ctx context.Context, room *operations.OpsServerRoom) error {
+	// Phase 133 / DS-05：单条写越界 403（提交侧，按 building_id 归属链解析有效机构）。
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityServerRoom, room.BuildingID); err != nil {
+		return err
+	}
 	// 验证楼层存在性
 	if err := s.validateFloor(ctx, room.FloorID); err != nil {
 		return err
@@ -86,6 +92,13 @@ func (s *serverRoomService) Create(ctx context.Context, room *operations.OpsServ
 
 // Update 更新机房
 func (s *serverRoomService) Update(ctx context.Context, room *operations.OpsServerRoom) error {
+	// Phase 133 / DS-05：单条写越界 403（改前侧 + 提交侧双向校验，防搬移）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityServerRoom, room.ID); err != nil {
+		return err
+	}
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityServerRoom, room.BuildingID); err != nil {
+		return err
+	}
 	// 验证楼层存在性
 	if err := s.validateFloor(ctx, room.FloorID); err != nil {
 		return err
@@ -96,12 +109,17 @@ func (s *serverRoomService) Update(ctx context.Context, room *operations.OpsServ
 
 // Delete 删除机房
 func (s *serverRoomService) Delete(ctx context.Context, id string) error {
+	// Phase 133 / DS-05：单条写越界 403（改前侧按资源归属校验）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityServerRoom, id); err != nil {
+		return err
+	}
 	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取机房
 func (s *serverRoomService) GetByID(ctx context.Context, id string) (*operations.OpsServerRoom, error) {
-	return s.repo.GetByID(ctx, id)
+	// Phase 133 / DS-05：读端点按楼宇链可见集校验，越界 → record not found。
+	return s.repo.GetByID(ctx, id, entityReadScope(ctx, scopeEntityServerRoom, "ops_server_rooms"))
 }
 
 // joinScope List 的 Select + buildings/floors LEFT JOIN scope（常量逐字平移）。
@@ -166,17 +184,29 @@ func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomLis
 	scopes := []base.Scope{s.joinScope(), s.filterScope(req)}
 	if req.OrgID != "" {
 		scopes = append(scopes, func(db *gorm.DB) *gorm.DB {
-			// 通过楼宇的 org_id 进行筛选（引用 JOIN 的表，保持原顺序在后）
+			// 通过楼宇的 org_id 进行筛选（引用 JOIN 的表，保持原顺序在后）。
+			// 请求维度（业务筛选）与下方 ScopeResult 维度（强制权限边界）AND 叠加。
 			return db.Where("b.org_id IN ?", deptIDs)
 		})
 	}
+	// Phase 133 / DS-05：楼宇链可见集（强制权限边界，后端注入、不信任前端 orgId）。
+	// 与上方请求 orgId 业务筛选 AND 叠加；All / 未注入短路零额外 SQL（超管零回归）。
+	scopes = append(scopes, entityReadScope(ctx, scopeEntityServerRoom, "ops_server_rooms"))
 	scopes = append(scopes, base.SortScope(req.BaseListRequest, serverRoomAllowedSortFields, "ops_server_rooms.created_at DESC"))
 	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize}, scopes...)
 }
 
 // BatchDelete 批量删除机房
 func (s *serverRoomService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.repo.BatchDelete(ctx, ids)
+	// Phase 133 / DS-05：批量按可见集裁剪（不整批 403），越界行不进入删除集合。
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityServerRoom, ids)
+	if err != nil {
+		return err
+	}
+	if len(visible) == 0 {
+		return nil
+	}
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // SearchServerRoomOptions 机房下拉数据源(name LIKE 模糊 + buildingId/floorId/status/orgId 筛选,LIMIT 50)。
@@ -184,7 +214,10 @@ func (s *serverRoomService) BatchDelete(ctx context.Context, ids []string) error
 func (s *serverRoomService) SearchServerRoomOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Table("ops_server_rooms").
+	query := applyEntityReadScope(
+		s.db.WithContext(ctx).Table("ops_server_rooms"), ctx,
+		scopeEntityServerRoom, "ops_server_rooms",
+	).
 		Select("ops_server_rooms.id AS value, ops_server_rooms.name AS label").
 		Limit(DropdownMaxRows)
 
@@ -200,9 +233,15 @@ func (s *serverRoomService) SearchServerRoomOptions(ctx context.Context, params 
 	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("ops_server_rooms.status = ?", status)
 	}
-	// orgId 部门筛选:机房 → 楼宇 → 部门(org_id 直接匹配)
+	// orgId 部门筛选（请求维度，业务筛选）：与 List 同口径，走
+	// getDeptAndChildDeptIDs（BuildDeptRecursiveFilter 单一真实源）展开子树后 IN。
+	// 与上方注入的 ScopeResult 可见集（强制权限边界）AND 叠加。
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_server_rooms.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		deptIDs := s.getDeptAndChildDeptIDs(ctx, orgId)
+		if len(deptIDs) == 0 {
+			return []DropdownOption{}, nil
+		}
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_server_rooms.building_id AND b.org_id IN ? AND b.deleted_at IS NULL)", deptIDs)
 	}
 
 	if err := query.Order("ops_server_rooms.name ASC").Find(&result).Error; err != nil {
@@ -223,8 +262,14 @@ func (s *serverRoomService) validateFloor(ctx context.Context, floorID string) e
 	return nil
 }
 
-// getDeptAndChildDeptIDs 获取部门及其所有子部门的ID
-// （四条件递归口径统一走 BuildDeptRecursiveFilter，V130R-08）
+// getDeptAndChildDeptIDs 展开「请求参数 orgId」的业务筛选部门集。
+//
+// Phase 133 收敛说明：这里不是「登录人可见部门集」的展开，而是既有请求参数
+// req.OrgID 的业务筛选（与强制权限边界 ScopeResult 正交，二者 AND 叠加）。
+// 展开逻辑本身复用 BuildDeptRecursiveFilter 单一真实源（dept_filter.go），
+// 不内联复制四条件、不新增第 5 套子树实现；登录人可见集的展开只由
+// pkg/datascope.Resolve 承担，读端点经 applyEntityReadScope / wrapScopeExists
+// 注入。List 与 SearchServerRoomOptions 两处共用本 helper，口径已对齐。
 func (s *serverRoomService) getDeptAndChildDeptIDs(ctx context.Context, orgId string) []string {
 	var deptIDs []string
 

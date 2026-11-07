@@ -9,10 +9,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 
@@ -50,8 +52,21 @@ type FloorStatisticsResult struct {
 // Statistics 统计楼层(按 status 聚合,排除软删除)。
 func (s *floorService) Statistics(ctx context.Context) (*FloorStatisticsResult, error) {
 	var result FloorStatisticsResult
-	err := s.db.WithContext(ctx).
-		Model(&operations.OpsFloor{}).
+	query := s.db.WithContext(ctx).
+		Model(&operations.OpsFloor{})
+	// Phase 131：签名不变（handler/前端不改），从 ctx 取 ScopeResult 聚合前注入范围条件。
+	// 楼层有效机构 = 楼层覆盖值优先、NULL/空串继承楼宇 org_id（effectiveOrgExpr 单一真实源）。
+	// 无用户归属列 → Self 档按裁定走空集（subUserCol=""）。
+	{
+		orgExpr := effectiveOrgExpr("ops_floors.org_id", "b.org_id")
+		sub := s.db.WithContext(ctx).Session(&gorm.Session{NewDB: true}).
+			Table("ops_buildings b").
+			Where("CAST(b.id AS TEXT) = ops_floors.building_id").
+			Where("b.deleted_at IS NULL").
+			Select("1")
+		query = wrapScopeExists(query, ctx, sub, orgExpr, "")
+	}
+	err := query.
 		Select(
 			"COUNT(*) AS total",
 			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS active", int(operations.FloorStatusNormal)),
@@ -110,6 +125,16 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 	if err := s.validateBuilding(ctx, floor.BuildingID); err != nil {
 		return err
 	}
+	// 原校验保留：楼层覆盖值（可空）必须是合法 UUID 且指向真实部门。
+	if err := s.validateOrgOptional(ctx, floor.OrgID); err != nil {
+		return err
+	}
+	// Phase 132：追加可见集校验（写 SQL 之前）。楼层 org_id 为空时按
+	// buildingID 继承楼宇有效机构，断链 → fail-closed 403。
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityFloor,
+		scopeWriteOrgPtr(floor.OrgID), floor.BuildingID); err != nil {
+		return err
+	}
 	if err := s.db.WithContext(ctx).Create(floor).Error; err != nil {
 		// 检查是否是唯一约束错误（同一楼宇下楼层号重复）
 		if isDuplicateKeyError(err) {
@@ -124,10 +149,10 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 					UPDATE ops_floors
 					SET name = ?, area = ?, status = ?, remark = ?,
 							plan_image_id = ?, plan_image_url = ?,
-							deleted_at = NULL, updated_at = NOW()
+							org_id = ?, deleted_at = NULL, updated_at = CURRENT_TIMESTAMP
 					WHERE id = ?
 				`, floor.Name, floor.Area, floor.Status, floor.Remark,
-					floor.PlanImageID, floor.PlanImageUrl, softDeletedFloor.ID).Error
+					floor.PlanImageID, floor.PlanImageUrl, floor.OrgID, softDeletedFloor.ID).Error
 
 				if recoverErr != nil {
 					return apperrors.Wrap(recoverErr, apperrors.CodeServerError, "恢复楼层失败")
@@ -164,6 +189,18 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 			return err
 		}
 	}
+	if err := s.validateOrgOptional(ctx, floor.OrgID); err != nil {
+		return err
+	}
+	// Phase 132 双向校验（写 SQL 之前）：改前楼层归属 ∈ 可见集，且提交的
+	// orgId（空则继承新楼宇有效机构）∈ 可见集，防换楼搬到越界楼宇。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityFloor, floor.ID); err != nil {
+		return err
+	}
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityFloor,
+		scopeWriteOrgPtr(floor.OrgID), floor.BuildingID); err != nil {
+		return err
+	}
 
 	// 换楼时使用乐观锁：只有楼层仍在旧楼宇才能更新，防止并发 race 导致后到的请求静默覆盖先到的请求。
 	// V130R-07: 如果 building_id 有变化，WHERE 条件包含 oldBuildingID 确保原子性。
@@ -179,6 +216,7 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 				"order_num":   floor.OrderNum,
 				"status":      floor.Status,
 				"remark":      floor.Remark,
+				"org_id":      floor.OrgID,
 			})
 		if result.Error != nil {
 			return result.Error
@@ -230,6 +268,10 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 }
 
 func (s *floorService) Delete(ctx context.Context, id string) error {
+	// Phase 132：按资源归属校验（First 之前、任何写 SQL 之前，越界 403）。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityFloor, id); err != nil {
+		return err
+	}
 	var floor operations.OpsFloor
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&floor).Error; err != nil {
 		return err
@@ -243,7 +285,16 @@ func (s *floorService) Delete(ctx context.Context, id string) error {
 func (s *floorService) GetByID(ctx context.Context, id string) (*operations.OpsFloor, error) {
 	// repo.GetByID 有 scope 时按 Tabler 断言生成 ops_floors.id = ?（与现状逐字等价），
 	// joinScope 携带 Select+Joins（:229-231 三段原样平移）。
-	return s.listRepo().GetByID(ctx, id, s.joinScope())
+	// Phase 131：追加可见集归属校验（越界 → record not found，既有响应形状不变）。
+	return s.listRepo().GetByID(ctx, id, s.joinScope(), func(db *gorm.DB) *gorm.DB {
+		orgExpr := effectiveOrgExpr("ops_floors.org_id", "b.org_id")
+		sub := db.Session(&gorm.Session{NewDB: true}).
+			Table("ops_buildings b").
+			Where("CAST(b.id AS TEXT) = ops_floors.building_id").
+			Where("b.deleted_at IS NULL").
+			Select("1")
+		return wrapScopeExists(db, ctx, sub, orgExpr, "")
+	})
 }
 
 // joinScope List/GetByID 共用的 Select+Joins（原 :229-231 三段逐字平移）。
@@ -266,6 +317,21 @@ func (s *floorService) joinScope() base.Scope {
 // orgId EXISTS 子查询）。
 func (s *floorService) filterScope(params map[string]interface{}) base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
+		// Phase 131：可见集收口 + 越界 orgId 求交（service 层强制，禁止信任 params）。
+		ctx := db.Statement.Context
+		orgId, _ := params["orgId"].(string)
+		if scopeRejectsRequestedOrgFromContext(ctx, orgId) {
+			return db.Where("1 = 0")
+		}
+		{
+			orgExpr := effectiveOrgExpr("ops_floors.org_id", "b.org_id")
+			sub := db.Session(&gorm.Session{NewDB: true}).
+				Table("ops_buildings b").
+				Where("CAST(b.id AS TEXT) = ops_floors.building_id").
+				Where("b.deleted_at IS NULL").
+				Select("1")
+			db = wrapScopeExists(db, ctx, sub, orgExpr, "")
+		}
 		if name, ok := params["name"].(string); ok && name != "" {
 			db = db.Where("ops_floors.name LIKE ?", "%"+name+"%")
 		}
@@ -273,8 +339,18 @@ func (s *floorService) filterScope(params map[string]interface{}) base.Scope {
 			db = db.Where("ops_floors.building_id = ?", buildingId)
 		}
 		if orgId, ok := params["orgId"].(string); ok && orgId != "" {
-			// 通过关联楼宇的 orgId 筛选（使用 EXISTS 子查询避免 JOIN 冲突）
-			db = db.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+			// 与楼宇/工位同口径：先展开「该部门+全部子孙」再 IN（精确等值会让
+			// Cascader 一级可见而二级为空，审计 P1-3）。
+			// 有效机构 = 楼层覆盖值优先、NULL/空串时继承楼宇 org_id；
+			// NULLIF/COALESCE 两侧都 CAST AS TEXT（org_id 若与 uuid 漂移，
+			// PG 会报 COALESCE types cannot be matched；varchar 下是 no-op）。
+			var deptIDs []string
+			if err := s.db.Table("sys_dept").
+				Scopes(BuildDeptRecursiveFilter(orgId, "id")).
+				Pluck("id", &deptIDs).Error; err != nil || len(deptIDs) == 0 {
+				return db.Where("1 = 0")
+			}
+			db = db.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND "+effectiveOrgExpr("ops_floors.org_id", "b.org_id")+" IN ? AND b.deleted_at IS NULL)", deptIDs)
 		}
 
 		// 状态筛选
@@ -402,6 +478,20 @@ func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string
 		Select("ops_floors.id AS value, ops_floors.name AS label").
 		Limit(DropdownMaxRows)
 
+	// Phase 131：可见集收口 + 越界 orgId 求交（下拉数据源同样不可越权枚举）。
+	if scopeRejectsRequestedOrgFromContext(ctx, extractStringParam(params, "orgId")) {
+		return result, nil
+	}
+	{
+		orgExpr := effectiveOrgExpr("ops_floors.org_id", "b.org_id")
+		sub := s.db.WithContext(ctx).Session(&gorm.Session{NewDB: true}).
+			Table("ops_buildings b").
+			Where("CAST(b.id AS TEXT) = ops_floors.building_id").
+			Where("b.deleted_at IS NULL").
+			Select("1")
+		query = wrapScopeExists(query, ctx, sub, orgExpr, "")
+	}
+
 	if name := extractStringParam(params, "name"); name != "" {
 		query = query.Where("ops_floors.name LIKE ?", "%"+name+"%")
 	}
@@ -409,7 +499,17 @@ func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string
 		query = query.Where("ops_floors.building_id = ?", buildingId)
 	}
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		// 与 List 同口径：子树展开 + 楼层覆盖优先（CAST 防 uuid 漂移）。
+		var deptIDs []string
+		if err := s.db.WithContext(ctx).Table("sys_dept").
+			Scopes(BuildDeptRecursiveFilter(orgId, "id")).
+			Pluck("id", &deptIDs).Error; err != nil {
+			return nil, err
+		}
+		if len(deptIDs) == 0 {
+			return result, nil
+		}
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND "+effectiveOrgExpr("ops_floors.org_id", "b.org_id")+" IN ? AND b.deleted_at IS NULL)", deptIDs)
 	}
 	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("ops_floors.status = ?", status)
@@ -430,6 +530,26 @@ func (s *floorService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
 		FloorNo      string
 	}
 
+	// Phase 131：tree 按可见集过滤后再缓存（floorCacheService 已按 scope 派生 key）。
+	// 有效机构 = 楼层覆盖值优先、NULL/空串继承楼宇 org_id（effectiveOrgExpr 单一真实源）。
+	// 楼层无用户归属列 → Self 档按裁定空集（subUserCol=""）。
+	// All / 未注入 → 条件片段为空，Raw SQL 逐字保持原状（零回归）。
+	scope, ok := scopeFromContext(ctx)
+	orgExpr := effectiveOrgExpr("f.org_id", "b.org_id")
+	scopeCond := ""
+	var scopeArgs []any
+	if !scopeIsAll(scope, ok) {
+		if scope.ResourceHook == datascope.HookSelfUser && !scope.FailClosed {
+			// 无用户列实体：Self 档空集。
+			scopeCond = " AND (1=0)"
+		} else {
+			cond, args, skip := orgScopeClause(scope, ok, orgExpr)
+			if !skip {
+				scopeCond = " AND (" + cond + ")"
+				scopeArgs = args
+			}
+		}
+	}
 	var results []BuildingFloor
 	err := s.db.WithContext(ctx).Raw(`
 		SELECT
@@ -440,9 +560,9 @@ func (s *floorService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
 			f.floor_no
 		FROM ops_buildings b
 		LEFT JOIN ops_floors f ON b.id = f.building_id
-		WHERE b.deleted_at IS NULL
+		WHERE b.deleted_at IS NULL`+scopeCond+`
 		ORDER BY b.order_num ASC, f.order_num ASC
-	`).Scan(&results).Error
+	`, scopeArgs...).Scan(&results).Error
 
 	if err != nil {
 		return nil, err
@@ -478,11 +598,20 @@ func (s *floorService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
 }
 
 func (s *floorService) BatchDelete(ctx context.Context, ids []string) error {
-	var floors []operations.OpsFloor
-	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Find(&floors).Error; err != nil {
+	// Phase 132（裁定 §2）：service 层、任何写 SQL 之前按可见集裁剪目标集；
+	// 越界行剔除（不因含越界行 403 整批），后续所有 SQL 只用 visible。
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityFloor, ids)
+	if err != nil {
 		return err
 	}
-	if err := s.db.WithContext(ctx).Delete(&operations.OpsFloor{}, "id IN ?", ids).Error; err != nil {
+	if len(visible) == 0 {
+		return nil
+	}
+	var floors []operations.OpsFloor
+	if err := s.db.WithContext(ctx).Where("id IN ?", visible).Find(&floors).Error; err != nil {
+		return err
+	}
+	if err := s.db.WithContext(ctx).Delete(&operations.OpsFloor{}, "id IN ?", visible).Error; err != nil {
 		return err
 	}
 
@@ -505,7 +634,7 @@ func (s *floorService) BatchDelete(ctx context.Context, ids []string) error {
 		)
 	`
 
-	if err := s.db.WithContext(ctx).Exec(sql, ids).Error; err != nil {
+	if err := s.db.WithContext(ctx).Exec(sql, visible).Error; err != nil {
 		return err
 	}
 
@@ -531,6 +660,31 @@ func (s *floorService) updateBuildingFloorCount(ctx context.Context, buildingID 
 	return recomputeBuildingTotalFloorsByID(ctx, s.db, buildingID)
 }
 
+// validateOrgOptional 校验楼层机构覆盖值（可空）：非空时必须是合法 UUID 且
+// 指向真实存在的部门（审计 P2-1，对齐 building_service.validateOrg 与
+// CLAUDE.md「org_id 必须是有效 UUID」约束）。脏值入库会让 COALESCE 不再
+// 回落楼宇机构，该楼层将从所有机构筛选中静默消失。
+func (s *floorService) validateOrgOptional(ctx context.Context, orgID *string) error {
+	if orgID == nil || *orgID == "" {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*orgID)
+	if trimmed == "" {
+		return nil
+	}
+	if err := uuid.Validate(trimmed); err != nil {
+		return apperrors.Wrap(nil, apperrors.CodeParamError, "楼层归属机构必须是合法 UUID")
+	}
+	var count int64
+	if err := s.db.WithContext(ctx).Table("sys_dept").Where("id = ?", trimmed).Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return apperrors.Wrap(nil, apperrors.CodeParamError, "楼层归属机构不存在")
+	}
+	return nil
+}
+
 // recomputeBuildingTotalFloorsByID 单楼栋 total_floors 实时重算（包级共享 helper，
 // 261014-ctp 抽取自 updateBuildingFloorCount，供 floor_service 与 building_service
 // Create/Update 两侧共用）。
@@ -551,13 +705,14 @@ func recomputeBuildingTotalFloorsByID(ctx context.Context, db *gorm.DB, building
 // （SQL 形状拷贝 BatchDelete 的关联子查询 UPDATE，去掉 id 限定 + 加楼栋软删过滤）。
 //
 // 设计要点：
-//   ① 供 Excel 导入事务收尾调用（building + floor 双实体，修漂移路径 B/C）——
-//     building 导入直写用户上传的 totalFloors 值、floor 导入经通用 BatchUpsert
-//     绕过 floorService.Create 的重算，两者都会污染派生列，导入完成统一归正；
-//   ② 幂等可重入：重复执行结果一致，事务重试/并发导入均安全；
-//   ③ 实时 COUNT 口径与 updateBuildingFloorCount 一致（ops_floors 非软删行数，
-//     禁止 ±1 增量——会把历史脏值固化）；
-//   ④ ops_buildings 量级小（百级行），全表重算无性能顾虑。
+//
+//	① 供 Excel 导入事务收尾调用（building + floor 双实体，修漂移路径 B/C）——
+//	  building 导入直写用户上传的 totalFloors 值、floor 导入经通用 BatchUpsert
+//	  绕过 floorService.Create 的重算，两者都会污染派生列，导入完成统一归正；
+//	② 幂等可重入：重复执行结果一致，事务重试/并发导入均安全；
+//	③ 实时 COUNT 口径与 updateBuildingFloorCount 一致（ops_floors 非软删行数，
+//	  禁止 ±1 增量——会把历史脏值固化）；
+//	④ ops_buildings 量级小（百级行），全表重算无性能顾虑。
 func recomputeAllBuildingTotalFloors(ctx context.Context, db *gorm.DB) error {
 	sql := `
 		UPDATE ops_buildings

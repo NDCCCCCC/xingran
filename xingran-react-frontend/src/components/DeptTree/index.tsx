@@ -7,6 +7,7 @@ import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import type { SimpleDept } from "@/lib/dutyApi";
 import { filterExternalOrgDepts, toShortNameDataNode, type DeptLikeNode } from "@/utils/deptUtils";
+import { filterTreeByVisibleDeptIds } from "./visibleDeptFilter";
 
 /**
  * 后端部门树接口实际返回的节点形状。
@@ -34,6 +35,18 @@ interface DeptTreeProps {
   selectedKeys?: Key[];
   style?: CSSProperties;
   externalOnly?: boolean;
+  /**
+   * 后端 tree/dept-options 已按可见集收口后返回的部门 ID 集合（Phase 133 / DS-06）。
+   *
+   * 语义：以后端返回的可见集为**唯一数据源**，前端不硬编码任何过滤规则
+   * （不按机构层级 / 名称 / 用户角色自行推断可见性）。传入时，treeData 只保留
+   * 「自身在集合内或拥有在集合内的后代」的分支（保持树结构，祖先节点作为路径保留）；
+   * 不传（默认）则完整渲染 useDeptTree() 的后端结果，行为与 Phase 133 前一致。
+   *
+   * 这样不同 data_scope 的用户拿到不同的后端可见集 → DeptSidebar 渲染不同部门集，
+   * 且不会因前端缓存/旧规则把越权部门显示出来。
+   */
+  visibleDeptIds?: string[];
 }
 
 // 模块级稳定空数组：useDeptTree 加载期(data===undefined)的兜底，保证 rawDept/treeData 引用稳定，
@@ -45,6 +58,7 @@ const DeptTree: FC<DeptTreeProps> = ({
   selectedKeys = [],
   style,
   externalOnly = false,
+  visibleDeptIds,
 }) => {
   // 数据层: 消费 canonical hook (Phase 37 收敛)。不再内部 post fetch。
   // ⚠️ 必须用模块级稳定常量 EMPTY_DEPTS 兜底，绝不能用内联 []：加载期 data===undefined 时内联 []
@@ -66,8 +80,11 @@ const DeptTree: FC<DeptTreeProps> = ({
         )
       : rawDeptTyped;
     // toShortNameDataNode 输出 { title, key, value, children?, isLeaf? }, 兼容 DataNode。
-    return toShortNameDataNode(filtered) as unknown as DataNode[];
-  }, [rawDeptTyped, externalOnly]);
+    const shortName = toShortNameDataNode(filtered) as unknown as DataNode[];
+    // Phase 133 / DS-06：以后端返回的可见集为唯一数据源做树形裁剪。
+    // visibleDeptIds 为空时 filterTreeByVisibleDeptIds 原样返回，行为零回归。
+    return filterTreeByVisibleDeptIds(shortName, visibleDeptIds);
+  }, [rawDeptTyped, externalOnly, visibleDeptIds]);
 
   const [searchValue, setSearchValue] = useState("");
   // userExpandedKeys=null 表示用户尚未手动调整 — 用派生值 firstParentKey 兜底首次自动展开。

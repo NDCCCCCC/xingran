@@ -44,7 +44,7 @@ func TestBuildingService_Statistics(t *testing.T) {
 func TestFloorService_Statistics(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.Exec(`CREATE TABLE ops_floors (id TEXT PRIMARY KEY, name TEXT, status INTEGER DEFAULT 0, deleted_at DATETIME, created_at DATETIME)`).Error)
+	require.NoError(t, db.Exec(`CREATE TABLE ops_floors (id TEXT PRIMARY KEY, name TEXT, status INTEGER DEFAULT 0, org_id TEXT, deleted_at DATETIME, created_at DATETIME)`).Error)
 	now := nowStr()
 	insert := func(p string, n, st int) {
 		for i := 0; i < n; i++ {

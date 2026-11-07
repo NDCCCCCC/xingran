@@ -20,6 +20,11 @@ interface DeptSidebarProps {
   width?: number;
   /** 是否仅显示外部组织 */
   externalOnly?: boolean;
+  /**
+   * 后端 tree/dept-options 已按可见集收口后返回的部门 ID 集合（Phase 133 / DS-06）。
+   * 以后端返回为准，前端不硬编码任何过滤规则；不传时完整渲染后端 tree 结果。
+   */
+  visibleDeptIds?: string[];
   /** 自定义样式 */
   style?: React.CSSProperties;
 }
@@ -32,6 +37,7 @@ export const DeptSidebar: FC<DeptSidebarProps> = ({
   onSelect,
   width = 360,
   externalOnly = true,
+  visibleDeptIds,
   style,
 }) => {
   return (
@@ -44,6 +50,7 @@ export const DeptSidebar: FC<DeptSidebarProps> = ({
         onSelect={onSelect}
         selectedKeys={selectedDeptId ? [selectedDeptId] : []}
         externalOnly={externalOnly}
+        visibleDeptIds={visibleDeptIds}
       />
     </Sider>
   );

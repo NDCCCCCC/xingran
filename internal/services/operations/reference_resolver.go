@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
+
+	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // ReferenceResolver 引用解析器接口
@@ -61,9 +63,19 @@ func (r *referenceResolverImpl) ResolveBatch(
 	for refType, requests := range grouped {
 		table, field := r.parseReference(refType)
 
-		// 验证引用配置格式
+		// 验证引用配置格式。
+		//
+		// ⚠️ 纵深防御（工位导入填主设备序列号后报"所属楼宇不存在"事故）：
+		// 此处曾直接 `return nil, err` 中断**整批**解析，导致该批次里
+		// 其他合法引用（楼宇/部门/用户）全部丢失解析结果，
+		// 最终表现为"引用的 所属楼宇 不存在"这类与真实原因无关的报错。
+		// 现在改为跳过无效分组并继续处理其余引用，同时保留已解析的部分结果。
 		if table == "" || field == "" {
-			return nil, fmt.Errorf("无效的引用配置: %s", refType)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("无效的引用配置: %s", refType)
+			}
+			logger.Warnf("跳过无效的引用配置 [%s]，继续解析其余引用", refType)
+			continue
 		}
 
 		// 提取所有待解析的值（去重）
@@ -146,7 +158,12 @@ func (r *referenceResolverImpl) ResolveBatchWithDependencies(
 	for _, req := range refs {
 		table, field := r.parseReference(req.Reference)
 		if table == "" || field == "" {
-			return nil, fmt.Errorf("无效的引用配置: %s", req.Reference)
+			// 纵深防御：跳过无效引用配置，不中断整批（详见 ResolveBatch 同处注释）
+			if firstErr == nil {
+				firstErr = fmt.Errorf("无效的引用配置: %s", req.Reference)
+			}
+			logger.Warnf("跳过无效的引用配置 [%s]，继续解析其余引用", req.Reference)
+			continue
 		}
 
 		// 使用带条件查询的方式
@@ -485,6 +502,77 @@ func (r *referenceResolverImpl) ResolveAssetDept(ctx context.Context, deptName s
 // Usage: Excel import with "userName" column -> user_id
 func (r *referenceResolverImpl) ResolveAssetUser(ctx context.Context, userName string) (string, error) {
 	return r.ResolveUser(ctx, userName)
+}
+
+// queryUserDeptMap 批量反查「用户 → 有效部门」映射（包级共享，审计 P2-7 消双实现）。
+//
+// 供两处调用方复用同一份 SQL 形态（quick-261106-wsb 审计 P0-1 教训：双实现
+// 曾分叉导致一处修了 uuid CAST 另一处漏修，生产静默失效）：
+//   - Excel 导入兜底 inferDeptFromUser（excel_service.go）
+//   - 存量回填 BackfillDeptFromUser（workstation_service.go）
+//
+// 语义：
+//   - INNER JOIN sys_dept 保证 dept_id 指向真实存在的部门（过滤 NULL /
+//     部门名称字符串 / 悬空 ID）；
+//   - JOIN 两侧 CAST AS TEXT：sys_dept.id 是 uuid、sys_user.dept_id 是
+//     varchar(64)，PG 无 uuid = varchar 运算符（migration_217 既有范式）；
+//     空串判断 CAST 后再 <> ”（uuid 列裸比较空串会运行时报错）；
+//   - sys_user 走软删除过滤（sys_dept 无 deleted_at 列，见
+//     tablesWithoutSoftDelete）；
+//   - 按 400 分块，规避 SQLite 999 / PG 参数上限。
+func queryUserDeptMap(ctx context.Context, db *gorm.DB, userIDs []string) (map[string]string, error) {
+	deptByUser := make(map[string]string, len(userIDs))
+	if len(userIDs) == 0 {
+		return deptByUser, nil
+	}
+	const chunkSize = 400
+	for i := 0; i < len(userIDs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(userIDs) {
+			end = len(userIDs)
+		}
+		chunk := userIDs[i:end]
+
+		var rows []struct {
+			UserID string `gorm:"column:user_id"`
+			DeptID string `gorm:"column:dept_id"`
+		}
+		err := db.WithContext(ctx).
+			Table("sys_user AS su").
+			Select("su.id AS user_id, su.dept_id").
+			Joins("INNER JOIN sys_dept d ON CAST(d.id AS TEXT) = CAST(su.dept_id AS TEXT)").
+			Where("su.id IN ? AND su.deleted_at IS NULL AND su.dept_id IS NOT NULL AND CAST(su.dept_id AS TEXT) <> ''", chunk).
+			Find(&rows).Error
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			if row.DeptID != "" {
+				deptByUser[row.UserID] = row.DeptID
+			}
+		}
+	}
+	return deptByUser, nil
+}
+
+// chunksOf 把切片按 size 切块（末块可短），size<=0 时返回单块。
+// 包级泛型 helper（审计 P2-11：收敛多处手写分块循环）。
+func chunksOf[T any](items []T, size int) [][]T {
+	if size <= 0 {
+		size = len(items)
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	blocks := make([][]T, 0, (len(items)+size-1)/size)
+	for i := 0; i < len(items); i += size {
+		end := i + size
+		if end > len(items) {
+			end = len(items)
+		}
+		blocks = append(blocks, items[i:end])
+	}
+	return blocks
 }
 
 // makeKey 生成缓存键，格式："reference:value"

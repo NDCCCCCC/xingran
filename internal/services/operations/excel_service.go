@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,6 +75,12 @@ type ImportResult struct {
 	// （如用户的 username）。供调用方做导入后处理（如触发 AD 域控同步）。
 	// 仅在 ExcelConfig 配置了 UpsertKey 列时填充，其余场景为空。
 	AffectedKeys []string `json:"affectedKeys,omitempty"`
+	// InferredDeptCount 本次工位导入中「部门列解析失败、改由所属用户反推部门」的记录数。
+	// 仅用于审计与结果展示，不计入失败数；非工位导入恒为 0。
+	InferredDeptCount int `json:"inferredDeptCount,omitempty"`
+	// ScopeOutOfScope Phase 132 导入逐行可见集校验剔除的越界行数（裁定 §4）。
+	// 越界行不写入、不阻断整批；聚合计数供 operlog 审计，不逐条回显明细。
+	ScopeOutOfScope int `json:"scopeOutOfScope,omitempty"`
 }
 
 // GenerateTemplate 生成Excel模板
@@ -134,9 +141,13 @@ func (s *ExcelService) GenerateTemplate(entityType string) (*excelize.File, erro
 
 func (s *ExcelService) getExampleValue(col ExcelColumn) string {
 	if col.Options != nil {
-		for _, v := range col.Options {
-			return v
-		}
+		// 按 key 排序取第一个，保证模板示例值稳定。
+		//
+		// ⚠️ 历史问题：Options 是 map，Go 的 map 遍历顺序随机，
+		// 原实现 `for _, v := range col.Options { return v }` 会导致
+		// 每次下载模板，示例行的"状态/工位类型"等枚举示例值都不一样
+		// （时而"空闲"时而"占用"），用户对照模板排查时困惑。
+		return firstOptionLabel(col.Options)
 	}
 
 	switch col.Field {
@@ -369,6 +380,10 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 			allRefRequests = append(allRefRequests, rowRefs...)
 		}
 
+		// Phase 132：记录原始 Excel 行号（1-based）供导入逐行可见集校验的
+		// 越界错误明细使用；事务内 prepareRecordsForUpsert 会跳过 "__" 前缀的
+		// 内部字段，不会写入业务表（见下方过滤函数内显式 delete）。
+		data["__excel_row__"] = rowNum
 		validRecords = append(validRecords, data)
 	}
 
@@ -407,6 +422,15 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		validRecords = s.validateReferenceFields(validRecords, config, result)
 	}
 
+	// 工位导入兜底：部门名称/代码填写不规范导致 dept_id 解析失败时，
+	// 用已解析出的 user_id 反推用户所属部门。仅填补空缺，不覆盖显式填对的部门。
+	if entityType == "workstation" {
+		result.InferredDeptCount = s.inferDeptFromUser(ctx, validRecords)
+		if result.InferredDeptCount > 0 {
+			logger.Infof("[workstation] 部门反推: %d 条记录由所属用户补全 dept_id", result.InferredDeptCount)
+		}
+	}
+
 	if entityType == "building" && s.geocoding != nil {
 		s.batchGeocodeBuildings(ctx, validRecords)
 	}
@@ -419,6 +443,21 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 				delete(validRecords[i], "deptCode")
 			}
 		}
+	}
+
+	// Phase 132（裁定 §4 导入不豁免）：在 Upsert 之前（事务内 prepare records
+	// 阶段）对每行解析出的有效机构 / dept_id 过可见集。越界行不写入、不阻断
+	// 整批，计入 ImportResult 错误明细（含行号、不含敏感值）与聚合越界计数。
+	// All 档短路零校验零查询（超管零回归）。仅四域导入收口，其余实体不动。
+	if entityType == "building" || entityType == "floor" ||
+		entityType == "workstation" || entityType == "infoPoint" {
+		kept, outOfScope, filterErr := filterScopeWriteImportRows(
+			ctx, s.db, entityType, config, validRecords, result)
+		if filterErr != nil {
+			return nil, filterErr
+		}
+		validRecords = kept
+		result.ScopeOutOfScope = outOfScope
 	}
 
 	// P2-A8: Wrap department-processing and upsert in a single transaction so
@@ -613,7 +652,7 @@ func (s *ExcelService) extractReferenceRequests(
 	var requests []ReferenceRequest
 
 	for _, col := range config.Columns {
-		if col.Reference != "" {
+		if col.Reference != "" && !col.isSkipReference() {
 			if value, ok := data[col.Field].(string); ok && value != "" {
 				requests = append(requests, ReferenceRequest{
 					Reference: col.Reference,
@@ -634,7 +673,7 @@ func (s *ExcelService) applyReferenceResults(
 	resolver := &referenceResolverImpl{}
 
 	for _, col := range config.Columns {
-		if col.Reference != "" {
+		if col.Reference != "" && !col.isSkipReference() {
 			if value, ok := data[col.Field].(string); ok && value != "" {
 				key := resolver.makeKey(col.Reference, value)
 				if id, exists := refResults[key]; exists {
@@ -700,12 +739,88 @@ func (s *ExcelService) getTargetFieldForReference(col ExcelColumn) string {
 	return field
 }
 
+// inferDeptFromUser 工位导入兜底：当「部门代码 / 所属部门」两列都没能解析出
+// dept_id 时，用已解析出的 user_id 反推该用户在 sys_user 上绑定的部门。
+//
+// 设计要点（与用户确认的「仅兜底」策略一致）：
+//   - 只填补 dept_id 空缺，绝不覆盖用户显式填对的部门（first-non-empty-wins,
+//     与 applyReferenceResults 的合并语义一致）。
+//   - 复用 sys_user.dept_id → sys_dept.id 这条既有外键（models/user.go:20），
+//     参考 workstation_device_service.go:989 的 JOIN 范式。
+//   - 用 INNER JOIN sys_dept 过滤脏数据：历史数据里 dept_id 可能为 NULL、
+//     为部门名称字符串、或指向已删除/不存在的部门，这些都不该写进工位。
+//   - 一次批量 IN 查询（按 400 分块，沿用 reference_resolver.go 的
+//     maxBatchChunk 约定），不产生 N+1。
+//   - 反推失败不产生 ImportError：这是增强而非校验失败，部门列本就是可选的。
+//
+// 返回成功补全 dept_id 的记录数，供 ImportResult.InferredDeptCount 审计。
+func (s *ExcelService) inferDeptFromUser(ctx context.Context, records []map[string]any) int {
+	// 收集「缺部门 + 有用户」的 user_id，去重。
+	userIDs := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, data := range records {
+		if !isEmptyValue(data["dept_id"]) {
+			continue
+		}
+		userID, _ := data["user_id"].(string)
+		userID = strings.TrimSpace(userID)
+		if userID == "" || seen[userID] {
+			continue
+		}
+		seen[userID] = true
+		userIDs = append(userIDs, userID)
+	}
+	if len(userIDs) == 0 {
+		return 0
+	}
+
+	// 批量反查用户所属部门：复用包级 queryUserDeptMap（审计 P2-7，与
+	// BackfillDeptFromUser 共享同一份 JOIN/CAST 形态，防双实现分叉复发——
+	// 本函数曾因独立维护漏修 uuid CAST 而在生产静默失效，见 P0-1）。
+	// INNER JOIN sys_dept 过滤脏数据；错误上抛由调用方 Warnf 后放弃兜底。
+	//
+	// ⚠ 语义边界（审计 P2-8）：本兜底发生在 Upsert 之前，标准导入（非
+	// PartialUpdate）的 `dept_id = EXCLUDED.dept_id` 无条件生效 —— 若 Excel
+	// 该列留空但 DB 行已有部门，反推值会**覆盖**既有部门。这与「Excel 为准」
+	// 的导入语义方向一致（旧行为空值写 NULL 更糟），但导入结果文案应区分
+	// 「填补」与「覆盖」两种情形，避免跨机构配置被误判为补全。
+	deptByUser, err := queryUserDeptMap(ctx, s.db, userIDs)
+	if err != nil {
+		// 兜底逻辑失败不应阻断整批导入，记录日志后放弃本次反推。
+		logger.Warnf("[workstation] 按用户反推部门查询失败，跳过兜底: %v", err)
+		return 0
+	}
+	if len(deptByUser) == 0 {
+		return 0
+	}
+
+	// 仅回填 dept_id 为空的记录。
+	inferred := 0
+	for _, data := range records {
+		if !isEmptyValue(data["dept_id"]) {
+			continue
+		}
+		userID, _ := data["user_id"].(string)
+		deptID, ok := deptByUser[strings.TrimSpace(userID)]
+		if !ok {
+			continue
+		}
+		data["dept_id"] = deptID
+		inferred++
+	}
+	return inferred
+}
+
 // splitReferencesByDependency 将引用请求分为独立引用和依赖引用
 func (s *ExcelService) splitReferencesByDependency(
 	refs []ReferenceRequest,
 	config ExcelConfig,
 ) (independent, dependent []ReferenceRequest) {
 	for _, ref := range refs {
+		// 哨兵列（ReferenceSkip）不参与引用解析，直接跳过
+		if ref.Reference == ReferenceSkip {
+			continue
+		}
 		isDependent := false
 		for _, col := range config.Columns {
 			if col.Reference == ref.Reference && col.DependsOn != "" {
@@ -731,7 +846,7 @@ func (s *ExcelService) applyDependentReferenceResults(
 	resolver := &referenceResolverImpl{}
 
 	for _, col := range config.Columns {
-		if col.Reference != "" && col.DependsOn != "" {
+		if col.Reference != "" && col.DependsOn != "" && !col.isSkipReference() {
 			if value, ok := data[col.Field].(string); ok && value != "" {
 				key := resolver.makeKey(col.Reference, value)
 				if id, exists := refResults[key]; exists {
@@ -1638,6 +1753,60 @@ func (s *ExcelService) writeExampleData(f *excelize.File, sheetName string, colu
 		exampleValue := s.getExampleValue(col)
 		_ = f.SetCellValue(sheetName, cell, exampleValue)
 	}
+
+	// 给示例行加「示例样式」（浅灰斜体）+ 批注，避免用户误把示例行当真实数据导入。
+	//
+	// 背景：模板自带示例行是历史设计（CONTRACT-M8 已知问题），
+	// 用户若未删除示例行直接上传，会得到「引用的 所属楼宇 不存在: 示例楼宇A」
+	// 这类与真实原因无关的报错，排查成本高。这里用视觉 + 批注双提示。
+	s.markExampleRow(f, sheetName, columns, dataRow)
+}
+
+// markExampleRow 给模板示例行应用浅灰斜体样式，并在首列单元格加批注提示删除。
+func (s *ExcelService) markExampleRow(f *excelize.File, sheetName string, columns []ExcelColumn, dataRow int) {
+	if len(columns) == 0 {
+		return
+	}
+
+	style, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Italic: true, Color: "BFBFBF", Size: 10},
+	})
+	if err != nil {
+		logger.Debugf("创建示例行样式失败: %v", err)
+		return
+	}
+
+	startCell, _ := excelize.CoordinatesToCellName(1, dataRow)
+	endCell, _ := excelize.CoordinatesToCellName(len(columns), dataRow)
+	_ = f.SetCellStyle(sheetName, startCell, endCell, style)
+
+	// 首列单元格加批注（Excel 红色三角，悬停可见）
+	_ = f.AddComment(sheetName, excelize.Comment{
+		Cell:   startCell,
+		Author: "XingRan",
+		Text:   "本行为示例数据，导入前请先删除该行，否则会因示例楼宇/楼层不存在而导入失败。",
+	})
+}
+
+// firstOptionLabel 按 key 升序取 Options 的第一个 label，保证模板示例值稳定。
+func firstOptionLabel(options map[interface{}]string) string {
+	if len(options) == 0 {
+		return ""
+	}
+	keys := make([]interface{}, 0, len(options))
+	for k := range options {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		ki, oki := keys[i].(int)
+		kj, okj := keys[j].(int)
+		if oki && okj {
+			return ki < kj
+		}
+		// 非 int key 退化为字符串比较，保证确定性
+		return fmt.Sprintf("%v", keys[i]) < fmt.Sprintf("%v", keys[j])
+	})
+	return options[keys[0]]
 }
 
 // writeInstructions 写入模板顶部的说明文字
@@ -2272,6 +2441,10 @@ func (s *ExcelService) queryWorkstationIDsForExport(
 	query := s.db.WithContext(ctx).
 		Table("sys_workstation").
 		Where("deleted_at IS NULL")
+
+	// Phase 131 / DS-06：第二条导出路径独立注入可见集过滤（与 BuildQuery 同源
+	// helper，但不复用其 ::uuid JOIN）。不依赖 params["orgId"]。
+	query = applyExcelWorkstationScope(query, ctx)
 
 	for paramKey, paramValue := range params {
 		if paramValue == nil || paramValue == "" {

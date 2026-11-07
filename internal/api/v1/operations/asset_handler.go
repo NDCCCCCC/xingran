@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,8 +9,26 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
+
+// writeAssetServiceError 统一资产写端点错误响应（Phase 133 / DS-05）。
+//
+// 类型分派保证「越界 403」与「普通错误存量语义」同时成立：
+//   - *apperrors.AppError（典型为 ErrScopeDenied，NewWithHTTPStatus 显式 403）
+//     → 原样透传，response.Error 取 GetHTTPStatus() = 403；
+//   - 普通 error → 恢复既有 `response.Error(c, 500, err.Error())` 形态
+//     （int-first-arg quirk：存量测试断言 400，零回归硬约束）；
+//   - nil 不应进入本函数（调用方已判 err != nil）。
+func writeAssetServiceError(c *gin.Context, err error) {
+	var appErr *apperrors.AppError
+	if errors.As(err, &appErr) {
+		response.Error(c, err)
+		return
+	}
+	response.Error(c, http.StatusInternalServerError, err.Error())
+}
 
 // AssetHandler 资产处理器
 type AssetHandler struct {
@@ -41,7 +60,8 @@ func (h *AssetHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.assetService.Create(c.Request.Context(), &asset); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		// Phase 133 / DS-05：越界 403 透传，普通错误保持存量 500/400 语义。
+		writeAssetServiceError(c, err)
 		return
 	}
 
@@ -58,7 +78,7 @@ func (h *AssetHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.assetService.Update(c.Request.Context(), &asset); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		writeAssetServiceError(c, err)
 		return
 	}
 
@@ -75,7 +95,7 @@ func (h *AssetHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.assetService.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		writeAssetServiceError(c, err)
 		return
 	}
 
@@ -132,7 +152,7 @@ func (h *AssetHandler) BatchOperation(c *gin.Context) {
 	switch req.Action {
 	case "delete":
 		if err := h.assetService.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-			response.Error(c, http.StatusInternalServerError, err.Error())
+			writeAssetServiceError(c, err)
 			return
 		}
 	default:

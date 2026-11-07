@@ -1,10 +1,22 @@
 ---
-last_updated: 2026-10-31
-update_trigger: v1.51 milestone INITIATED (端口写生产级操作体验与平台质量收口，A+B+D 范围，21 REQ)
-previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
+last_updated: 2026-11-07
+update_trigger: v1.52 milestone INITIATED (运维域数据权限统一收口·终态，Phases 130-133，7 REQ DS-01~07)
+previous_update: 2026-10-31 v1.51 milestone INITIATED（端口写生产级操作体验，21 REQ）
 ---
 
-## Current Milestone: v1.51 端口写生产级操作体验与平台质量收口 (Production-Grade Port-Write UX & Platform Quality Closeout) — 🚧 IN PROGRESS
+## Current Milestone: v1.52 运维域数据权限统一收口（终态）(Operations-Wide Data-Scope Unification) — 🚧 IN PROGRESS
+
+**Goal:** 把数据权限（data_scope）从「用户/VDI 两个模块的局部实现」升级为运维域全模块的声明式统一收口——读写两端按登录人数据范围自动过滤与校验，使「中支管理员只能管本机构的工位/楼层/资产」从口头约定变为架构保证。
+
+**Status:** INITIATED 2026-11-07 | **Phases:** 4 (130-133，编号延续 v1.51 从 130 续编) | **Requirements:** 7（DS-01~07）
+
+**范围裁定（用户 2026-11-07）:** 终态方案 = operations 全模块声明式统一收口，不做逐端点手工接线（quick-261106-wsb 审计裁定补丁为非终态）。
+
+**Phase 映射:** 130=DS-01/02（ScopeProvider 基建 + 注入覆盖全域，Self 档语义裁定为开工输入）→ 131=DS-03/06 部分（读收口，含 tree/GetByID/缓存 key 断言）∥ 132=DS-04（写收口，Dept/Self 批量 + Excel 导入豁免裁定为开工输入）→ 133=DS-05/06/07（扩展实体 + vdi 合并迁移 + 按已裁定结论落地 + UAT）。
+
+---
+
+## Past Milestone: v1.51 端口写生产级操作体验与平台质量收口 (Production-Grade Port-Write UX & Platform Quality Closeout) — ✅ SHIPPED 2026-11-02（历史归档）
 
 **Goal:** 让端口写从「能写」进化为「敢写、可审计、可观测」——dry-run 预览、批量实时进度、快照回滚、并发互斥、VLAN/端口安全能力扩展、Cisco 第 4 厂商，同步清偿平台技术债（覆盖率回 77.5、审计治理、RPA Token、目录改名）与收尾杂项。
 
@@ -24,7 +36,7 @@ previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 
 ---
 
-## Current Milestone: v1.25 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence) — ✅ SHIPPED 2026-10-30
+## Past Milestone: v1.25 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence) — ✅ SHIPPED 2026-10-30（历史归档）
 
 **交付终态（2026-10-30 收档）:** 全部 10 个 Phase（84~93）全量执行完毕并通过全系统双端终验，22/22 需求 Satisfied，99 个提交原子入库。
 - **线 A（权限线）**：`data_scope` 本部门隔离生效；133 处写路由 ANY-of 拆分，`RequireStrictPermissions` 严格单点放行；全站 76 页面操作级三态门控全覆盖（恒等式 25+51=76）；72 个 F 型按钮权限码全播种，白名单彻底归零，授权链路闭环。
@@ -57,7 +69,7 @@ previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 
 **事实基线:** `.planning/milestones/v1.24-REQUIREMENTS.md`（Future Requirements 段五项候选原文）+ `.planning/notes/v1.24-css-audit-register.md`（36 条 CSS 登记）+ `.planning/notes/2026-10-28-pg-permission-baseline.md`（#16 定责）+ `.planning/notes/v1.24-visual-verification.md`（21 形态 × 明暗矩阵）
 
-## Current Milestone: v1.24 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance) — ✅ SHIPPED 2026-10-28
+## Past Milestone: v1.24 视觉回归修复与遗留债务清偿 (Visual Regression Fix & Legacy Debt Clearance) — ✅ SHIPPED 2026-10-28（历史归档）
 
 **交付终态（2026-10-28 收档）:** 18/18 需求 Satisfied；用户主诉「输入框双重外框」根治（309 个输入框全站，双框元素数 3→0，错误态恢复品牌红）；#16 行操作权限**前后端双端闭环**（只读角色调写接口从 200 真删 → 403 拒绝，三层证据：DB 层前后对照 + HTTP 实测含决定性对照实验 + 前端组件测试）；lint 51 → **0 problems**；devices 页 714 → 306 行；生产库验收夹具已按用户指示清理、既有行零改动。Known Gaps 转 v1.25 候选（用户裁定暂不立项）：操作级 RBAC 全站治理 / 样式层收敛到 antd 6 variant / 权限模型三缺口 / 视觉新发现 / room-devices 拆分。
 
@@ -92,7 +104,7 @@ previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 
 **研究基线:** `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS}.md`（4 维并行研究，2026-10-28）｜ **权限基线:** `.planning/notes/2026-10-28-pg-permission-baseline.md`（生产 PG 只读实测 + #16 定责）
 
-## Current Milestone: v1.23 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance) — ✅ SHIPPED 2026-10-28
+## Past Milestone: v1.23 前端契约全量收尾与遗留清偿 (Frontend Contract Full Rollout & Legacy Clearance) — ✅ SHIPPED 2026-10-28（历史归档）
 
 **Goal:** 把 v1.22 建立但未落地的契约真正推到全量——修复用户主诉的「文本输入框无法一键删除」，并清偿 v1.22 收档结转的 debug / UAT / 流程积压，让里程碑以「无债、无盲区」收档。
 
@@ -119,7 +131,7 @@ previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 
 **研究基线:** `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY}.md`（4 维并行研究，overall confidence HIGH，commit `b5b3aeaf`）
 
-## Current Milestone: v1.22 前端公用组件整治 (Frontend Shared Component Remediation) — ✅ SHIPPED 2026-10-27
+## Past Milestone: v1.22 前端公用组件整治 (Frontend Shared Component Remediation) — ✅ SHIPPED 2026-10-27（历史归档）
 
 **Goal:** 消化 2026-10-23 全量前端组件审查的 201 条问题（P0 24 / P1 87 / P2 90），核心是把公共层从"只有零件没有契约"补成"有契约"：默认值下沉（allowClear/showSearch）、分页契约下沉（showTotal/setTotal）、危险操作唯一入口（ConfirmDelete），使抽出的组件真正被用起来。
 
@@ -139,7 +151,7 @@ previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 - ConfirmDelete 成为危险操作唯一入口；危险操作必须二次确认
 - 预期收益：四片外推全前端消除约 7,000~8,000 行样板
 
-## Current Milestone: v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes) — ✅ SHIPPED 2026-10-22
+## Past Milestone: v1.21 AD 双向同步 bug 修复 (AD Bidirectional Sync Bug Fixes) — ✅ SHIPPED 2026-10-22（历史归档）
 
 **Goal:** 修复 AD↔系统双向同步的 2 个 P0 bug（部门回退乒乓、软删用户接管风险）、3 个 P1 数据一致性缺口和 P2 卫生项，以三方审计修订后的 outbox-lite 架构落地（≈400 行核心层），消除"改了部门又弹回"与静默数据丢失。
 
@@ -169,10 +181,10 @@ previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 
 **Archived:** `.planning/milestones/v1.21-ROADMAP.md` + `.planning/milestones/v1.21-REQUIREMENTS.md` + `.planning/milestones/v1.21-MILESTONE-AUDIT.md`（里程碑审计 passed：6 phase VERIFICATION 全 passed、19/19 REQ、8/8 集成点 VERIFIED、E2E 流 A-D 全通过）
 
-## Current State (2026-10-28)
+## Historical State (v1.25, archived)
 
 - **Shipped**: v1.0 ~ **v1.24** — v1.24 = Phases 76-83（8 phases），**18/18 requirements satisfied**，SHIPPED & ARCHIVED 2026-10-28。46 commits / 104 files / +5,419 −2,232，约 3.5 小时（09:19 需求定稿 → 12:59 收口）。归档：`milestones/v1.24-ROADMAP.md` + `milestones/v1.24-REQUIREMENTS.md` + `milestones/v1.24-phases/`。
-- **当前里程碑**: **v1.25 全站权限治理与样式收敛** — INITIATED 2026-10-28，五项候选全部立项（①操作级 RBAC 全站治理 / ②antd 6 variant 收敛 / ③权限模型三缺口 / ④Phase 77 视觉新发现 / ⑤room-devices 815 行拆分），执行顺序 ①→②。
+- **历史里程碑 v1.25 全站权限治理与样式收敛**（SHIPPED 2026-10-30，历史归档、非当前状态）：INITIATED 2026-10-28，五项候选全部立项（①操作级 RBAC 全站治理 / ②antd 6 variant 收敛 / ③权限模型三缺口 / ④Phase 77 视觉新发现 / ⑤room-devices 815 行拆分），执行顺序 ①→②；当前里程碑为 v1.52（见文档顶部）。
 - **v1.24 终态**：用户主诉「输入框双重外框」根治（309 个输入框，双框元素数 3→0）；#16 行操作权限越权闭环（只读角色写接口 200 真删 → 403 拒绝）；lint 存量 51 → 0 problems 且门禁归零；devices 页 714 → 306 行；生产库验收夹具已清理、既有行零改动。
 - **v1.25 起点基线**：前端 76 个页面（index.tsx），仅 14 个接入 `useMenuStore.permissions`；后端 76 个路由组 / 134 处 `RequirePermissions` 挂载，`pkg/permission/config.go:223-289` 动作级映射表已定义未接线；`room-devices/index.tsx` 815 行；CSS `!important` 1359 处 / 219 行 antd 选择器。
 - **v1.22 终态**：前端公共层从"只有零件没有契约"补成"有契约"——AppInput/AppSelect 默认值下沉（allowClear/showSearch）、ConfirmDelete 危险操作唯一入口（68 处收口）、PageTable/FormModal/RemoteSelect 契约内建、hex/日期/any 三类债务收敛、handleApiError 唯一错误出口。
@@ -205,7 +217,7 @@ previous_update: 2026-10-30 v1.25 milestone SHIPPED & ARCHIVED
 5. **同步可观测性** — 把 v1.21 期间用于捕获重放窗口漂移的采样脚本（`scripts/uat61-t1-poller-v5.ps1`）产品化为常态化的同步漂移告警。
 6. **v1.23 明确延后项**（用户裁定 2026-10-27）— react-refresh 33 处清零 / devices 页 692 行拆分 / 三态组件（Empty/Skeleton/ErrorAlert）推广：均非质量缺陷，本轮做会挤占迁移主线上下文并放大回归面。
 
-## Active: v1.17 资产对账 (Asset Reconciliation) — SHIPPED 2026-07-03
+## Past Milestone: v1.17 资产对账 (Asset Reconciliation) — ✅ SHIPPED 2026-07-03（历史归档、非当前状态）
 
 **Goal:** 建立"实物层 vs 声明层"对账引擎，使资产系统数据保持与实际情况相符。
 
@@ -335,9 +347,9 @@ estate.
   - W5 E2E + UAT Deferral + Docs: scrapligo FileTransport 10 TestE2E_* (闭环 Phase 51 mockDeviceExecutor 不调 fn 漏洞) + API响应规范 + 安全设计 + CHANGELOG/README/MILESTONES/STATE 文档同步 + 54-HUMAN-UAT.md 7 项 deferred (owner = 现场运维同事)
   - Phase 55 Tech-Debt Cleanup: WR-02 antd validator 3-param signature + IN-01 instanceof Error narrowing + IN-02 eslint-disable placement 修正 (Lesson: directive 紧贴 `}, []);` 而非 useEffect 开头) + HealthCard.test.tsx regex match + CR-02 后端 batch_orchestrator.go fallback port 归属跨层防御 (纵深双保险)
 
-### Active
+### 历史 REQ 清单归档（当前 Active 为 v1.52 Phases 130-133，见文档顶部；以下 v1.25 及更早条目均为非当前状态）
 
-#### v1.25 全站权限治理与样式收敛（当前里程碑）
+#### v1.25 全站权限治理与样式收敛（历史归档 / SHIPPED 2026-10-30，非当前里程碑）
 
 > REQ-ID 已于需求定义阶段定稿；权威清单见 `.planning/REQUIREMENTS.md`（共 **22** 条）。
 > ⚠️ **计数更正（2026-10-28 roadmap 阶段）**：本行原写「共 25 条」、REQUIREMENTS.md 原写「26 total」，二者均与该文档**实际的 22 条需求条目**（RBAC×6 + STYLE×5 + PMODEL×4 + VISFIX×6 + SPLIT×1 = 22，已全量 grep 复核）不自洽 —— 磁盘上不存在第 23-26 条需求条目。Roadmap 按 **22 条**映射（22/22 全覆盖）。
@@ -420,7 +432,7 @@ estate.
 - [ ] **HYG-04**: lint `--max-warnings` 门禁纳入 npm script 防回退
 - [ ] **HYG-05**: 权威计数基线落盘（eslint 命中数 + 豁免清单条目数）
 
-## Current Milestone: v1.19 网络设备写命令 (Network Device Port Write Operations) — SHIPPED 2026-07-08
+## Past Milestone: v1.19 网络设备写命令 (Network Device Port Write Operations) — SHIPPED 2026-07-08（历史归档）
 
 **v1.19 已闭环** — 6 phases (50-54 build + 55 cleanup) / 9 plans / 5 build waves + 1 cleanup / 37 MVP requirements all addressed (35 fully satisfied + 2 PARTIAL BATCH-05/UI-03 + 1 adjusted PERM-03 D-07 父菜单名). 闭环分析:
 - **Build (W1-W5)**: Phase 50 (vendor templates) → Phase 51 (service + batch + mock) → Phase 52 (router/handler/operlog/permission/migration) → Phase 53 (frontend drawer + API wrappers) → Phase 54 (e2e + UAT deferral + docs)
@@ -441,13 +453,13 @@ estate.
 - **6 site-visit SSH verification** (Huawei S5700/S5735/H3C/Ruijie × shutdown/description/dot1x) — owner = 现场运维同事
 - **WR-01..05 + IN-XX** remaining tech-debt items
 
-## Current Milestone: v1.18 SHIPPED 2026-07-04 — awaiting v1.19 planning
+## Past Milestone: v1.18 — SHIPPED 2026-07-04（历史归档；原 "awaiting v1.19 planning" 为当时状态）
 
 **v1.18 已闭环** — Phase 48, 3/3 plans, 0 critical regressions, 14/14 D-id 覆盖 + 3 项 site-visit UAT 推迟到下次现场访问(S8700/RS8607E 真机)。
 
 **Phase 49 v1.18 gap-closure (2026-07-05)** — 用户报告 RS8607E-03 展开组件清单为空,诊断出 3 个连锁缺口(Gap 3 chassis SN 全空 → Gap 2 关联断裂 → Gap 1 collectComponentInfo dead code)。2 plans 修复:enrichChassisSerial 接入 + collectBoardsInto 接入(chassis 行丢弃)。生产 E2E 验证:14 台设备 serial_number 回填(部署前 0),RS8607E-03 展开 9 条组件(7 板卡 + 2 光模块),超过 ≥6 门槛。E2E 期间附带修复 ReconciliationEmitter 的 PG `IS ?` SQLSTATE 42601 跨方言 bug。verifier 7/7 passed。
 
-## Active: v1.19 (planning) — 候选范围
+## Past Milestone: v1.19 (历史 planning 候选，已归档 / 非当前状态)
 
 候选方向(择 1-3 个,phase scope 决策)：
 
@@ -650,7 +662,7 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - ✓ Phase 44 R3 IP 例外规则引擎 (v1.17 资产对账) (2026-06-28) — 2 plans, CIDR GiST 引擎 + Layer 3.5 拦截 + 例外 CRUD/命中测试 + cron 过期清理 + 转单 no_workorder 过滤 + 降噪基线 + Excel 导入导出; VERIFICATION 10/10 passed, 1 CR-03 gap-closure fix (baseline 路由权限), 4 硬化债 BLOCKER 跟踪
 
 ---
-## Current Milestone: v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding) — ✅ SHIPPED 2026-07-10
+## Past Milestone: v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding) — ✅ SHIPPED 2026-07-10（历史归档）
 
 **Goal:** 在 v1.19 端口写命令 MVP 基础上扩展 2 个新写命令：① 修改 access VLAN ② IP+MAC+Port 静态绑定。复用 v1.19 vendor 模板 / operlog / 权限 / 批量 / e2e 全套基建，最小化新基建引入。
 
@@ -692,4 +704,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-10-28 after v1.25 milestone INITIATED（全站权限治理与样式收敛：①操作级 RBAC 全站治理 / ②antd 6 variant 收敛 / ③权限模型三缺口 / ④Phase 77 视觉新发现 / ⑤room-devices 815 行拆分，五条全纳入，执行顺序 ①→②）*
+*Last updated: 2026-11-07 after v1.52 立项（运维域数据权限统一收口·终态，Phases 130-133，7 REQ DS-01~07）*

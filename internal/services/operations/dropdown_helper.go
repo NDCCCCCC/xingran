@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -55,4 +56,23 @@ func BuildDropdownCacheKey(entity string, filters map[string]any) string {
 	}
 	h := sha1.Sum([]byte(strings.Join(parts, "&")))
 	return fmt.Sprintf("%s:%s:h%s", dropdownCacheKeyPrefix, entity, hex.EncodeToString(h[:8]))
+}
+
+// BuildScopedDropdownCacheKey 在 BuildDropdownCacheKey 基础上追加「scope 维度」段
+// （PMODEL-01 防跨范围泄漏）。Phase 131 所有 dropdown-options 调用点必须改用本函数。
+//
+// key 形态：dropdown:{entity}:s{scopeKey}:{all|h<hash>}。
+// scopeKey 由 ScopeResult 稳定派生（scopeCacheKey）：
+//   - 未注入 / All → "all"（超管短路路径同样带 scope 段，LOCKED §1 关键不变量 3）
+//   - FailClosed → "closed"；Self → "self<hash>"；DeptIDs → "d<hash>"
+//
+// 保留旧 BuildDropdownCacheKey 的签名与逐字行为（dropdown_helper_test.go 既有断言
+// 不破）：本函数只在其结果里插入一段，不改动旧函数任何一行。
+//
+// ctx 用于读取 ScopeResult；调用方应传 service 收到的请求 ctx（携带注入结果）。
+func BuildScopedDropdownCacheKey(ctx context.Context, entity string, filters map[string]any) string {
+	baseKey := BuildDropdownCacheKey(entity, filters)
+	sk := scopeCacheKey(ctx)
+	return strings.Replace(baseKey, dropdownCacheKeyPrefix+":"+entity+":",
+		dropdownCacheKeyPrefix+":"+entity+":s"+sk+":", 1)
 }

@@ -49,6 +49,9 @@ export interface Floor {
   buildingCode: string;
   code: string;
   buildingName?: string;
+  // 楼层所属机构覆盖值。空/未设置 = 继承 ops_buildings.orgId。
+  // 用于「一栋楼跨机构办公」：如浙商大厦 1/3 楼属武汉中支，其余楼层属分公司本部。
+  orgId?: string;
   floorNo: string;
   name?: string;
   area?: number;
@@ -90,6 +93,39 @@ export interface WorkstationOps {
   description?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// 按人员反推部门（quick-261106-wsb）预览/执行结果。
+// dryRun=true 时 toFill/toCorrect 为「将」变更条数；false 时为「实际」更新条数。
+export interface BackfillDeptSample {
+  workstationId: string;
+  workstationName: string;
+  currentDeptId?: string;
+  currentDeptName?: string;
+  targetDeptId: string;
+  targetDeptName?: string;
+  userName?: string;
+  action: "fill" | "correct" | "skip";
+}
+
+export interface BackfillDeptResult {
+  dryRun: boolean;
+  fixMismatch: boolean;
+  candidates: number;
+  toFill: number;
+  toCorrect: number;
+  skippedNoUser: number;
+  skippedBadUserDept: number;
+  skippedAlreadyValid: number;
+  samples: BackfillDeptSample[];
+  /** Phase 132 范围快照（预览与确认同一 ScopeResult，防范围漂移） */
+  scopeTier?: string;
+  scopeDeptNames?: string[];
+  scopeDeptTotal?: number;
+  scopeTotal?: number;
+  scopeVisible?: number;
+  scopeOutOfScope?: number;
+  scopeFailClosed?: boolean;
 }
 
 export type RoomStatus = Status;

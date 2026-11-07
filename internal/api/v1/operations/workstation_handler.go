@@ -2,6 +2,7 @@ package operations
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
@@ -345,7 +346,17 @@ func (h *WorkstationHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch)
+	// Phase 132（裁定 §2 硬约束 3/4）：批量裁剪越界计数入 operlog，含范围档位 /
+	// 请求行数 / 可见集内行数 / 越界行数；All 档同样记录档位，审计链完整。
+	tier, requested, visibleCount, outOfScope, statsErr := opsServices.ScopeWriteBatchStats(
+		c.Request.Context(), h.core.GetDB(), opsServices.ScopeWriteEntityWorkstation, req.IDs)
+	if statsErr != nil {
+		tier, requested, visibleCount, outOfScope = opsServices.ScopeWriteTier(c.Request.Context()), len(req.IDs), 0, 0
+	}
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch,
+		operlog.WithOperParam(fmt.Sprintf(
+			`{"action":"delete","scopeTier":%q,"requested":%d,"visible":%d,"outOfScope":%d}`,
+			tier, requested, visibleCount, outOfScope)))
 	response.Success(c, nil)
 }
 
@@ -373,6 +384,69 @@ func (h *WorkstationHandler) BatchUpdatePositions(c *gin.Context) {
 		return
 	}
 
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch)
+	// Phase 132：positions 批量裁剪的越界计数入 operlog（同 BatchOperation 口径）。
+	ids := make([]string, 0, len(req.Items))
+	for _, it := range req.Items {
+		ids = append(ids, it.ID)
+	}
+	tier, requested, visibleCount, outOfScope, statsErr := opsServices.ScopeWriteBatchStats(
+		c.Request.Context(), h.core.GetDB(), opsServices.ScopeWriteEntityWorkstation, ids)
+	if statsErr != nil {
+		tier, requested, visibleCount, outOfScope = opsServices.ScopeWriteTier(c.Request.Context()), len(ids), 0, 0
+	}
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch,
+		operlog.WithOperParam(fmt.Sprintf(
+			`{"action":"positions","scopeTier":%q,"requested":%d,"visible":%d,"outOfScope":%d}`,
+			tier, requested, visibleCount, outOfScope)))
 	response.Success(c, nil)
+}
+
+// BatchBackfillDeptFromUser 按工位绑定用户反推部门（quick-261106-wsb）。
+//
+// 名称含 Batch 前缀：让 scripts/scan-routes.cjs 的 WRITE_HANDLER 正则识别为写路由，
+// 从而被 route_registry_test.go 的 Coverage + strict_mount_count_test.go 双层守卫覆盖。
+//
+// dryRun=true 只返回预览计数，不写库、不清缓存、不记操作日志；
+// dryRun=false 执行批量回填，成功后记录 OperTypeBatch 审计日志（只记条数/模式，
+// 不记工位明细，对齐 excel_handler.go:138 的信息泄露缓解口径）。
+//
+// fixMismatch=true 会覆盖已有部门（高危），故前端必须二次确认且默认关闭。
+//
+// @Summary 按人员反推部门
+// @Description 对存量工位按绑定用户反推部门。dryRun=true 预览，fixMismatch=true 额外纠正不一致部门
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{dryRun=bool,fixMismatch=bool} true "预览/执行与纠正开关"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/backfill-dept [post]
+func (h *WorkstationHandler) BatchBackfillDeptFromUser(c *gin.Context) {
+	var req struct {
+		DryRun      bool `json:"dryRun"`
+		FixMismatch bool `json:"fixMismatch"`
+	}
+	// 保守：body 非法/缺省返回 400，避免误触发全表写。
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, response.ErrBadRequest, "请求参数错误")
+		return
+	}
+
+	result, err := h.service.BackfillDeptFromUser(c.Request.Context(), req.DryRun, req.FixMismatch)
+	if !response.HandleServiceError(c, err, "按人员反推部门") {
+		return
+	}
+
+	if !req.DryRun {
+		// Phase 132（裁定 §2 硬约束 3/4）：范围档位 + 请求行数 / 可见集内行数 /
+		// 越界行数 + 既有条数，全部聚合计数，绝不逐条回显工位明细。
+		operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch,
+			operlog.WithOperParam(fmt.Sprintf(
+				`{"fixMismatch":%t,"candidates":%d,"toFill":%d,"toCorrect":%d,`+
+					`"scopeTier":%q,"requested":%d,"visible":%d,"outOfScope":%d}`,
+				req.FixMismatch, result.Candidates, result.ToFill, result.ToCorrect,
+				result.ScopeTier, result.ScopeTotal, result.ScopeVisible, result.ScopeOutOfScope)))
+	}
+	response.Success(c, result)
 }

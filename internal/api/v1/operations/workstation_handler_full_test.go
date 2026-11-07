@@ -34,6 +34,7 @@ type mockWorkstationService struct {
 	SearchWorkstationOptionsFunc  func(ctx context.Context, req requests.WorkstationListRequest) ([]opsServices.DropdownOption, error)
 	GetFloorWorkstationsAllFunc   func(ctx context.Context, floorId string) ([]models.Workstation, error)
 	CountsByFloorFunc             func(ctx context.Context, floorIds []string) (*opsServices.CountsByFloorResult, error)
+	BackfillDeptFromUserFunc      func(ctx context.Context, dryRun, fixMismatch bool) (*opsServices.BackfillDeptResult, error)
 }
 
 func (m *mockWorkstationService) Create(ctx context.Context, w *models.Workstation) error {
@@ -108,6 +109,12 @@ func (m *mockWorkstationService) CountsByFloor(ctx context.Context, floorIds []s
 	}
 	return nil, errNotImplemented
 }
+func (m *mockWorkstationService) BackfillDeptFromUser(ctx context.Context, dryRun, fixMismatch bool) (*opsServices.BackfillDeptResult, error) {
+	if m.BackfillDeptFromUserFunc != nil {
+		return m.BackfillDeptFromUserFunc(ctx, dryRun, fixMismatch)
+	}
+	return nil, errNotImplemented
+}
 
 func newWorkstationRouter(h *WorkstationHandler) *gin.Engine {
 	return mountRouter([]routeMount{
@@ -118,6 +125,7 @@ func newWorkstationRouter(h *WorkstationHandler) *gin.Engine {
 		{http.MethodPost, "/workstations/:id/delete", h.Delete},
 		{http.MethodPost, "/workstations/batch", h.BatchOperation},
 		{http.MethodPost, "/workstations/positions", h.BatchUpdatePositions},
+		{http.MethodPost, "/workstations/backfill-dept", h.BatchBackfillDeptFromUser},
 		{http.MethodPost, "/workstations/statistics", h.Statistics},
 		{http.MethodPost, "/workstations/dept-options", h.GetWorkstationDeptOptions},
 		{http.MethodPost, "/workstations/search-options", h.SearchWorkstationOptions},
@@ -621,6 +629,74 @@ func TestWorkstationHandler_WithCore_NilSafe(t *testing.T) {
 	var h *WorkstationHandler
 	out := h.WithCore(newTestCore(t))
 	assert.Nil(t, out)
+}
+
+// ==================== BatchBackfillDeptFromUser (quick-261106-wsb) ====================
+
+// TestWorkstationHandler_BatchBackfillDept_Success dryRun 与执行两种模式透传参数。
+func TestWorkstationHandler_BatchBackfillDept_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, tc := range []struct {
+		name    string
+		body    string
+		wantDry bool
+		wantFix bool
+	}{
+		{"预览默认", `{"dryRun":true,"fixMismatch":false}`, true, false},
+		{"执行并纠正", `{"dryRun":false,"fixMismatch":true}`, false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotDry, gotFix bool
+			svc := &mockWorkstationService{
+				BackfillDeptFromUserFunc: func(_ context.Context, dry, fix bool) (*opsServices.BackfillDeptResult, error) {
+					gotDry, gotFix = dry, fix
+					return &opsServices.BackfillDeptResult{
+						DryRun: dry, FixMismatch: fix, ToFill: 3, ToCorrect: 1,
+						Samples: []opsServices.BackfillDeptSample{},
+					}, nil
+				},
+			}
+			h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+			r := newWorkstationRouter(h)
+			w := httpDo(r, http.MethodPost, "/workstations/backfill-dept", tc.body)
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, tc.wantDry, gotDry)
+			assert.Equal(t, tc.wantFix, gotFix)
+			assert.Contains(t, w.Body.String(), `"toFill":3`)
+		})
+	}
+}
+
+// TestWorkstationHandler_BatchBackfillDept_BindError body 非法 → 400，且绝不触发全表写。
+func TestWorkstationHandler_BatchBackfillDept_BindError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	called := false
+	svc := &mockWorkstationService{
+		BackfillDeptFromUserFunc: func(_ context.Context, _, _ bool) (*opsServices.BackfillDeptResult, error) {
+			called = true
+			return nil, nil
+		},
+	}
+	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+	r := newWorkstationRouter(h)
+	w := httpDo(r, http.MethodPost, "/workstations/backfill-dept", `not-json`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.False(t, called, "参数错误时绝不能触发批量写")
+}
+
+// TestWorkstationHandler_BatchBackfillDept_Error service 错误走 HandleServiceError。
+func TestWorkstationHandler_BatchBackfillDept_Error(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockWorkstationService{
+		BackfillDeptFromUserFunc: func(_ context.Context, _, _ bool) (*opsServices.BackfillDeptResult, error) {
+			return nil, errors.New("backfill err")
+		},
+	}
+	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+	r := newWorkstationRouter(h)
+	w := httpDo(r, http.MethodPost, "/workstations/backfill-dept", `{"dryRun":true,"fixMismatch":false}`)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "backfill err")
 }
 
 // silence unused import

@@ -36,8 +36,10 @@ type RoomDeviceStatisticsResult struct {
 // Statistics 统计机房设备(按 status 聚合,排除软删除)。
 func (s *roomDeviceService) Statistics(ctx context.Context) (*RoomDeviceStatisticsResult, error) {
 	var result RoomDeviceStatisticsResult
-	err := s.db.WithContext(ctx).
-		Model(&operations.OpsRoomDevice{}).
+	err := applyEntityReadScope(
+		s.db.WithContext(ctx).Model(&operations.OpsRoomDevice{}), ctx,
+		scopeEntityRoomDevice, "ops_room_devices",
+	).
 		Select(
 			"COUNT(*) AS total",
 			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS normal", int(operations.RoomDeviceStatusNormal)),
@@ -79,6 +81,10 @@ var roomDeviceAllowedSortFields = map[string]string{
 
 // Create 创建机房设备
 func (s *roomDeviceService) Create(ctx context.Context, device *operations.OpsRoomDevice) error {
+	// Phase 133 / DS-05：单条写越界 403（提交侧，两级归属链 room_id → building.org_id）。
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityRoomDevice, device.RoomID); err != nil {
+		return err
+	}
 	// 验证机房存在性
 	if err := s.validateRoom(ctx, device.RoomID); err != nil {
 		return err
@@ -93,6 +99,13 @@ func (s *roomDeviceService) Create(ctx context.Context, device *operations.OpsRo
 
 // Update 更新机房设备
 func (s *roomDeviceService) Update(ctx context.Context, device *operations.OpsRoomDevice) error {
+	// Phase 133 / DS-05：单条写越界 403（改前侧 + 提交侧双向校验，防搬移）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityRoomDevice, device.ID); err != nil {
+		return err
+	}
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityRoomDevice, device.RoomID); err != nil {
+		return err
+	}
 	// 验证机房存在性
 	if err := s.validateRoom(ctx, device.RoomID); err != nil {
 		return err
@@ -103,13 +116,19 @@ func (s *roomDeviceService) Update(ctx context.Context, device *operations.OpsRo
 
 // Delete 删除机房设备
 func (s *roomDeviceService) Delete(ctx context.Context, id string) error {
+	// Phase 133 / DS-05：单条写越界 403（改前侧按两级归属链校验）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityRoomDevice, id); err != nil {
+		return err
+	}
 	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取机房设备（JOIN 管道经 repo 执行；repo 经 Tabler 断言生成
 // ops_room_devices.id = ?，与迁移前表限定逐字一致）。
 func (s *roomDeviceService) GetByID(ctx context.Context, id string) (*operations.OpsRoomDevice, error) {
-	return s.repo.GetByID(ctx, id, s.joinScope())
+	// Phase 133 / DS-05：读端点按两级归属链可见集校验，越界 → record not found。
+	return s.repo.GetByID(ctx, id, s.joinScope(),
+		entityReadScope(ctx, scopeEntityRoomDevice, "ops_room_devices"))
 }
 
 // joinScope List/GetByID 共用的 JOIN + Select scope（逐字平移，含 CAST 写法）。
@@ -169,13 +188,23 @@ func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceLis
 	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
 		s.joinScope(),
 		s.filterScope(req),
+		// Phase 133 / DS-05：两级归属链可见集（断链 → 空集）。
+		entityReadScope(ctx, scopeEntityRoomDevice, "ops_room_devices"),
 		base.SortScope(req.BaseListRequest, roomDeviceAllowedSortFields, "ops_room_devices.created_at DESC"),
 	)
 }
 
 // BatchDelete 批量删除机房设备
 func (s *roomDeviceService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.repo.BatchDelete(ctx, ids)
+	// Phase 133 / DS-05：批量按两级归属链可见集裁剪（不整批 403），越界行不进入删除集合。
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityRoomDevice, ids)
+	if err != nil {
+		return err
+	}
+	if len(visible) == 0 {
+		return nil
+	}
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // SearchRoomDeviceOptions 机房设备下拉数据源(name LIKE 模糊 + roomId/deviceType/status 筛选,LIMIT 50)。
@@ -183,7 +212,10 @@ func (s *roomDeviceService) BatchDelete(ctx context.Context, ids []string) error
 func (s *roomDeviceService) SearchRoomDeviceOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Table("ops_room_devices").
+	query := applyEntityReadScope(
+		s.db.WithContext(ctx).Table("ops_room_devices"), ctx,
+		scopeEntityRoomDevice, "ops_room_devices",
+	).
 		Select("ops_room_devices.id AS value, ops_room_devices.name AS label").
 		Limit(DropdownMaxRows)
 

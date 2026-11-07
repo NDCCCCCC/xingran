@@ -127,6 +127,22 @@ export const FloorModal: FC<FloorModalProps> = ({
           />
         </Form.Item>
 
+        {/* 一栋楼跨机构办公（quick-261106-wso）：楼层可覆盖所属机构。
+            与上方「所属机构」不同——上方是楼宇下拉的过滤器（编辑态禁用），
+            本项才真正写进 ops_floors.org_id。留空 = 继承楼宇 org_id。
+            编辑态也允许修改，否则存量楼层无法补设覆盖值。 */}
+        <Form.Item
+          name="orgId"
+          label="楼层归属机构"
+          extra="留空表示继承所属楼宇的机构；仅当本楼层与其它楼层分属不同机构时填写"
+        >
+          <DepartmentTreeSelect
+            placeholder="留空则继承楼宇机构"
+            departments={departments}
+            allowClear
+          />
+        </Form.Item>
+
         <Form.Item
           name="floorNo"
           label="楼层号"

@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
@@ -19,6 +20,8 @@ const (
 	// PG/SQLite 双方言行为一致(PG 专有 ::uuid/::text 在 SQLite 报 unrecognized token ':')。
 	// 与 GetWorkstationDeptOptions / location_alias_service 的 CAST 范式一致。
 	workstationJoinClause = "LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id LEFT JOIN sys_dept ON CAST(sys_dept.id AS TEXT) = sys_workstation.dept_id LEFT JOIN sys_user ON CAST(sys_user.id AS TEXT) = sys_workstation.user_id"
+	// workstationOrgColumn（工位机构筛选「有效机构」表达式）见下方 var：
+	// 运行时经 effectiveOrgExpr 生成，单一源自 dept_filter.go（审计 P2-6）。
 )
 
 // validateTableName 验证表名是否在白名单中，防止 SQL 注入
@@ -31,6 +34,21 @@ func validateTableName(tableName string) bool {
 	}
 	return allowedTables[tableName]
 }
+
+// workstationOrgColumn 工位机构筛选使用的「有效机构」表达式。
+//
+// ops_floors.org_id 为楼层级机构覆盖值（可空），NULL 时继承 ops_buildings.org_id。
+// 用于「一栋楼跨机构办公」：例如浙商大厦 org_id=分公司本部，但 1/3 楼
+// org_id=武汉中支，选武汉中支时必须能筛出 1/3 楼的工位，反之亦然。
+//
+// 由 workstationOrgExistsSub 保证子查询里 f/b 两个表别名都存在（JOIN
+// ops_floors f → ops_buildings b），列名均为常量、不含用户输入。
+// NULLIF 把表单清空写入的空串也归一为 NULL，避免 COALESCE 命中空串。
+// ⚠ 两侧都 CAST AS TEXT：org_id 若与 uuid 漂移（同 building_id 先例），
+// COALESCE(text, uuid) 会被 PG 拒绝（types cannot be matched）；CAST 对
+// varchar 是 no-op，SQLite 动态类型不受影响。
+// 定义单一源自 dept_filter.go 的 effectiveOrgExpr（审计 P2-6）。
+var workstationOrgColumn = effectiveOrgExpr("f.org_id", "b.org_id")
 
 // CountsByFloorResult 批量楼层工位计数结果
 type CountsByFloorResult struct {
@@ -56,6 +74,10 @@ type WorkstationService interface {
 	Statistics(ctx context.Context, params map[string]interface{}) (*WorkstationStatisticsResult, error)
 	// GetWorkstationDeptOptions 工位编辑"所属部门"下拉数据源(orgId 子孙 + alias union)
 	GetWorkstationDeptOptions(ctx context.Context, orgId string) ([]DeptOption, error)
+	// BackfillDeptFromUser 按工位绑定用户反推部门，批量回填存量工位的 dept_id。
+	// dryRun=true 只返回预览不写库；fixMismatch=true 额外纠正「已有部门但与
+	// 用户部门不一致」的工位（默认 false = 仅填补空缺）。详见 quick-261106-wsb。
+	BackfillDeptFromUser(ctx context.Context, dryRun, fixMismatch bool) (*BackfillDeptResult, error)
 	// SearchWorkstationOptions 工位下拉数据源(LIKE 模糊 + 多维筛选,LIMIT 50)。
 	// 设计给前端 Select/AutoComplete 远程搜索。workstation 高频变更,不缓存。
 	// D-05: typed request,复用 WorkstationListRequest（去 map，不新增重复 struct）。
@@ -73,6 +95,44 @@ type DeptOption struct {
 	IsAlias  bool   `json:"isAlias"`  // 是否为 alias 映射条目; true → 前端追加 [映射] 后缀
 }
 
+// BackfillDeptSample 反推预览/执行的单条样例（上限 20 条，防大批量明细泄露）。
+type BackfillDeptSample struct {
+	WorkstationID   string `json:"workstationId"`
+	WorkstationName string `json:"workstationName"`
+	CurrentDeptID   string `json:"currentDeptId,omitempty"`
+	CurrentDeptName string `json:"currentDeptName,omitempty"`
+	TargetDeptID    string `json:"targetDeptId"`
+	TargetDeptName  string `json:"targetDeptName,omitempty"`
+	UserName        string `json:"userName,omitempty"`
+	Action          string `json:"action"` // "fill" | "correct" | "skip"
+}
+
+// BackfillDeptResult 「按人员反推部门」预览/执行结果。
+//
+// dryRun=true 时 ToFill/ToCorrect 表示「将」变更条数且不写库；
+// dryRun=false 时表示「实际」更新条数。第二次执行天然幂等（ToFill=0）。
+type BackfillDeptResult struct {
+	DryRun              bool                 `json:"dryRun"`
+	FixMismatch         bool                 `json:"fixMismatch"`
+	Candidates          int                  `json:"candidates"`          // 命中「有用户且用户部门有效」的工位总数
+	ToFill              int                  `json:"toFill"`              // dept_id 为空 → 填补
+	ToCorrect           int                  `json:"toCorrect"`           // dept_id 非空且不一致 → 纠正（仅 fixMismatch=true）
+	SkippedNoUser       int                  `json:"skippedNoUser"`       // 无绑定用户
+	SkippedBadUserDept  int                  `json:"skippedBadUserDept"`  // 用户部门 NULL/脏/指向不存在部门
+	SkippedAlreadyValid int                  `json:"skippedAlreadyValid"` // 已有部门且一致（或不纠正时不一致亦计此）
+	Samples             []BackfillDeptSample `json:"samples"`             // 前 20 条（非 All 档恒为空，见 Phase 132）
+	// Phase 132 范围快照（裁定 §3：预览与确认用同一 ScopeResult 快照，防范围漂移）。
+	// 两次请求各自从同一 c.Request.Context() 的 ScopeResult 派生，档位/计数回显
+	// 供前端确认框「本次范围」文案与 operlog 审计使用；All 档同样回填档位。
+	ScopeTier        string   `json:"scopeTier,omitempty"`        // All / Custom/Dept/DeptChild / Self / FailClosed
+	ScopeDeptNames   []string `json:"scopeDeptNames,omitempty"`   // 可见部门名（前 3 个 + 总数由前端拼）
+	ScopeDeptTotal   int      `json:"scopeDeptTotal,omitempty"`   // 可见部门总数（多部门「等 M 个部门」用）
+	ScopeTotal       int      `json:"scopeTotal,omitempty"`       // 请求行数（全库候选总数）
+	ScopeVisible     int      `json:"scopeVisible,omitempty"`     // 可见集内行数
+	ScopeOutOfScope  int      `json:"scopeOutOfScope,omitempty"`  // 越界行数（聚合计数，不逐条回显）
+	ScopeFailClosed  bool     `json:"scopeFailClosed,omitempty"`  // 数据权限异常 → 前端确认按钮 disabled
+}
+
 // WorkstationStatisticsResult 工位统计结果(status: 0=可用 1=占用 2=维护)。
 type WorkstationStatisticsResult struct {
 	Total     int64 `json:"total"`
@@ -85,11 +145,25 @@ type WorkstationStatisticsResult struct {
 func (s *workstationService) Statistics(ctx context.Context, params map[string]interface{}) (*WorkstationStatisticsResult, error) {
 	var result WorkstationStatisticsResult
 	query := s.db.WithContext(ctx).Model(&models.Workstation{})
-	if orgId := extractStringParam(params, "orgId"); orgId != "" {
+	orgId := extractStringParam(params, "orgId")
+	// Phase 131：前端 orgId 不可越权读取——请求 orgId 不在可见集内 → 直接空集，
+	// 不报错（读端点统一响应形状），符合 DS-03「收口必须在 service 层求交」。
+	if scopeRejectsRequestedOrgFromContext(ctx, orgId) {
+		return &result, nil
+	}
+	// Phase 131：可见集收口——All/未注入短路（零 DB 查询），其余档位按
+	// 「有效机构 ∈ 可见集」注入 EXISTS（Self 档按 sys_workstation.user_id）。
+	// 有效机构表达式 workstationOrgColumn 源自 effectiveOrgExpr 单一真实源。
+	{
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = wrapScopeExists(query, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	}
+	if orgId != "" {
 		// 部门递归四条件统一走 BuildDeptRecursiveFilter（V130R-08）；
 		// EXISTS 骨架（工位 → 楼层 f → 楼宇 b）见 workstationOrgExistsSub。
+		// 有效机构 = 楼层覆盖值优先、NULL 时继承楼宇值（workstationOrgColumn）。
 		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
-		query = query.Where("EXISTS (?)", BuildDeptRecursiveFilter(orgId, "b.org_id")(sub))
+		query = query.Where("EXISTS (?)", BuildDeptRecursiveFilter(orgId, workstationOrgColumn)(sub))
 	}
 	err := query.
 		Select(
@@ -131,6 +205,10 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 	if orgId == "" {
 		return []DeptOption{}, nil
 	}
+	// Phase 131：dept-options 接收前端 orgId，越界一律返回空集（不报错）。
+	if scopeRejectsRequestedOrgFromContext(ctx, orgId) {
+		return []DeptOption{}, nil
+	}
 	var result []DeptOption
 	// 单 query union: sys_dept 子孙节点 (is_alias=false) + alias 命中节点 (is_alias=true)
 	// 1) 子孙节点: BuildDeptRecursiveFilter 四条件口径（orgId 自身 + 全部子孙，
@@ -149,6 +227,14 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 		Select("CAST(id AS TEXT) AS dept_id, dept_name AS dept_name, false AS is_alias").
 		Where("deleted_at IS NULL AND is_external_org = 0").
 		Scopes(BuildDeptRecursiveFilter(orgId, "id"))
+	// Phase 131：部门下拉结果必须与可见部门集求交（Self 档部门集为空 → 空集）。
+	// All / 未注入短路，不挂任何额外条件。
+	if scope, ok := scopeFromContext(ctx); ok && !scope.All {
+		cond, args, skip := orgScopeClause(scope, ok, "id")
+		if !skip {
+			descendants = descendants.Where(cond, args...)
+		}
+	}
 	err := s.db.WithContext(ctx).Raw(`(?) UNION ALL
 		SELECT a.dept_id, d.dept_name, true AS is_alias
 		FROM sys_dept_location_alias a
@@ -166,6 +252,9 @@ type workstationService struct {
 	// db 保留给 Statistics / GetWorkstationDeptOptions / BatchUpdatePositions /
 	// SearchWorkstationOptions / Update 的 First 回填（D-04 留 service 的直用场景）
 	db *gorm.DB
+	// cache 可选注入：BackfillDeptFromUser 执行成功后失效 workstation 缓存。
+	// nil 时跳过（测试/未注入场景），与 ExcelService.WithDeviceService 同款 setter 模式。
+	cache system.CacheProvider
 }
 
 // workstationAllowedSortFields 工位可排序字段白名单。
@@ -208,6 +297,31 @@ func NewWorkstationService(db *gorm.DB) WorkstationService {
 	}
 }
 
+// NewWorkstationServiceWithCache 创建带缓存失效能力的工位服务。
+// 供 router 生产路径使用：BackfillDeptFromUser 成功后需失效 workstation 缓存
+// （工位 CRUD 本身不缓存，但导入/批量写后列表统计依赖该失效）。
+// 保留 NewWorkstationService 单参签名不变，避免影响 14 个既有调用点。
+func NewWorkstationServiceWithCache(db *gorm.DB, cache system.CacheProvider) WorkstationService {
+	return &workstationService{
+		repo:  base.NewGORMRepository[models.Workstation](db),
+		db:    db,
+		cache: cache,
+	}
+}
+
+// WithCacheProvider 注入缓存提供者，供 BackfillDeptFromUser 成功后失效工位缓存。
+// 可选：不注入时该 service 仍可正常工作（缓存清理被跳过），与
+// ExcelService.WithDeviceService 同款 setter 模式，避免改构造函数签名影响 14 个调用点。
+//
+// ⚠ 审计 P2-2 备注：当前 workstation 域无缓存写入者（CRUD 直读 DB），
+// 此失效链路属预埋——为「工位数据被缓存化」的未来演进预先就位正确语义；
+// 现阶段执行它是对失效模式的无害空转。删除或启用请与导入侧 CachePatterns
+// （workstation:* / workstations:*）一并裁决。
+func (s *workstationService) WithCacheProvider(cache system.CacheProvider) *workstationService {
+	s.cache = cache
+	return s
+}
+
 // Create 创建工位
 //
 // 新建工位默认 status=0（空闲）。如果用户在创建时同时指定了 user_id，则
@@ -215,6 +329,12 @@ func NewWorkstationService(db *gorm.DB) WorkstationService {
 // 仅由管理员手动设置，新建路径不会触发（因为新工位入库前 status 来自表单，
 // 通常是 Available）。
 func (s *workstationService) Create(ctx context.Context, workstation *models.Workstation) error {
+	// Phase 132：按提交归属（floorId → 楼层/楼宇有效机构）校验可见集，
+	// 写 SQL 之前，越界 403；Self 档按提交的 user_id 是否为本人放行。
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityWorkstation, "",
+		scopeWritePtr(workstation.FloorID), scopeWritePtr(workstation.UserID)); err != nil {
+		return err
+	}
 	// ✨ 联动 user_id ↔ status(占用/空闲)
 	applyWorkstationOccupancyLink(workstation, workstation.Status)
 	return s.repo.Create(ctx, workstation)
@@ -229,6 +349,15 @@ func (s *workstationService) Create(ctx context.Context, workstation *models.Wor
 // 修复:Save 前先 First 查出现有记录,把审计字段 CreatedAt/CreatedBy 回填到入参,
 // 再 Save。参考 internal/services/system/user_service.go 的 Update 模式。
 func (s *workstationService) Update(ctx context.Context, workstation *models.Workstation) error {
+	// Phase 132 双向校验（写 SQL 之前）：改前工位归属 ∈ 可见集，且提交的
+	// floorId → 有效机构 ∈ 可见集，防把工位搬出/搬入越界范围。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityWorkstation, workstation.ID); err != nil {
+		return err
+	}
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityWorkstation, "",
+		scopeWritePtr(workstation.FloorID), scopeWritePtr(workstation.UserID)); err != nil {
+		return err
+	}
 	var existing models.Workstation
 	if err := s.db.WithContext(ctx).Where("id = ?", workstation.ID).First(&existing).Error; err != nil {
 		return err
@@ -265,6 +394,10 @@ func applyWorkstationOccupancyLink(w *models.Workstation, currentStatus models.W
 }
 
 func (s *workstationService) Delete(ctx context.Context, id string) error {
+	// Phase 132：按资源归属校验（写 SQL 之前，越界 403）。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityWorkstation, id); err != nil {
+		return err
+	}
 	// repo.Delete 经 Model(new(T)) 软删除,与迁移前 .Table(workstationTable) 形式行为等价
 	return s.repo.Delete(ctx, id)
 }
@@ -273,7 +406,12 @@ func (s *workstationService) Delete(ctx context.Context, id string) error {
 // join scope 非空 → repo 经 Tabler 断言生成 sys_workstation.id = ?（models.Workstation
 // TableName() 返回 sys_workstation，与迁移前 :231 的表限定逐字一致）。
 func (s *workstationService) GetByID(ctx context.Context, id string) (*models.Workstation, error) {
-	return s.repo.GetByID(ctx, id, s.joinScope())
+	// Phase 131：按资源归属校验——有效机构 / Self 用户列不在可见集时 repo.First
+	// 返回 record not found，handler 既有 404/空语义不变（不新增错误码）。
+	return s.repo.GetByID(ctx, id, s.joinScope(), func(db *gorm.DB) *gorm.DB {
+		sub := workstationOrgExistsSub(db, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		return wrapScopeExists(db, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	})
 }
 
 // joinScope List/GetByID 共用的 Select + 6 表 LEFT JOIN scope（常量逐字平移）。
@@ -299,6 +437,16 @@ func (s *workstationService) joinScope() base.Scope {
 // （行为与迁移前一致，前端传入被静默忽略）。
 func (s *workstationService) filterScope(req requests.WorkstationListRequest) base.Scope {
 	return func(db *gorm.DB) *gorm.DB {
+		// Phase 131：可见集收口 + 越界 orgId 求交（service 层强制，禁止信任 req.OrgID）。
+		// ctx 从 GORM 链取（List 经 WithContext(ctx) 起链），保证拿到注入结果。
+		ctx := db.Statement.Context
+		if scopeRejectsRequestedOrgFromContext(ctx, req.OrgID) {
+			return db.Where("1 = 0")
+		}
+		{
+			sub := workstationOrgExistsSub(db, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+			db = wrapScopeExists(db, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+		}
 		if req.Name != "" {
 			db = db.Where("sys_workstation.workstation_name LIKE ?", "%"+req.Name+"%")
 		}
@@ -314,15 +462,16 @@ func (s *workstationService) filterScope(req requests.WorkstationListRequest) ba
 		if req.Type != nil && *req.Type >= 0 {
 			db = db.Where("sys_workstation.workstation_type = ?", *req.Type)
 		}
-		// 通过关联楼宇的 orgId 筛选部门（包含子部门）
-		// 工位 -> 楼层 -> 楼宇，通过楼宇的 org_id 筛选
+		// 通过关联机构筛选工位（包含子部门）：工位 -> 楼层 f -> 楼宇 b。
+		// 有效机构 = COALESCE(NULLIF(f.org_id, ''), b.org_id)：楼层可覆盖楼宇归属，
+		// 未覆盖（NULL/空串）则继承（workstationOrgColumn，一栋楼跨机构办公场景）。
 		// 使用 EXISTS 子查询避免与现有 JOIN 冲突；部门递归四条件统一走
 		// BuildDeptRecursiveFilter（V130R-08），其内部对 uuid/varchar 混比
 		// 统一 CAST(... AS TEXT)（PG 对二者无隐式互转）；EXISTS 骨架见
 		// workstationOrgExistsSub（Session(NewDB) 派生子查询，不污染外层链）。
 		if req.OrgID != "" {
 			sub := workstationOrgExistsSub(db, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
-			db = db.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, "b.org_id")(sub))
+			db = db.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, workstationOrgColumn)(sub))
 		}
 		return db
 	}
@@ -357,10 +506,17 @@ func (s *workstationService) List(ctx context.Context, req requests.WorkstationL
 // 软删过滤由 Model 起链自动附带（与 99-01 的 Total 口径一致）。
 func (s *workstationService) GetFloorWorkstationsAll(ctx context.Context, floorId string) ([]models.Workstation, error) {
 	var workstations []models.Workstation
-	if err := s.db.WithContext(ctx).
+	query := s.db.WithContext(ctx).
 		Model(&models.Workstation{}).
 		Scopes(s.joinScope()).
-		Where("sys_workstation.floor_id = ?", floorId).
+		Where("sys_workstation.floor_id = ?", floorId)
+	// Phase 131（DS-03 硬要求）：无分页全集端点不得豁免——按 floor 所属
+	// 有效机构 ∈ 可见集收口；Self 档按 sys_workstation.user_id 过滤。
+	{
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = wrapScopeExists(query, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	}
+	if err := query.
 		Order("sys_workstation.created_at DESC").
 		Find(&workstations).Error; err != nil {
 		return nil, err
@@ -369,19 +525,47 @@ func (s *workstationService) GetFloorWorkstationsAll(ctx context.Context, floorI
 }
 
 func (s *workstationService) BatchDelete(ctx context.Context, ids []string) error {
+	// Phase 132（裁定 §2）：service 层、写 SQL 之前按可见集裁剪，越界行剔除。
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityWorkstation, ids)
+	if err != nil {
+		return err
+	}
 	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil），
 	// 与迁移前 `if len(ids) == 0 { return nil }` 行为一致
-	return s.repo.BatchDelete(ctx, ids)
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // BatchUpdatePositions 批量更新工位位置和尺寸
 // 遵循 Go 最佳实践：使用 CASE WHEN 批量更新，避免 N+1 问题
+//
+// Phase 132（裁定 §2）：按可见集裁剪 items，越界工位不进入 CASE UPDATE。
 func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []PositionUpdateItem) error {
 	if len(items) == 0 {
 		return nil
 	}
+	ids := make([]string, 0, len(items))
+	for _, it := range items {
+		ids = append(ids, it.ID)
+	}
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityWorkstation, ids)
+	if err != nil {
+		return err
+	}
+	visibleSet := make(map[string]bool, len(visible))
+	for _, id := range visible {
+		visibleSet[id] = true
+	}
+	filtered := make([]PositionUpdateItem, 0, len(visible))
+	for _, it := range items {
+		if visibleSet[it.ID] {
+			filtered = append(filtered, it)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
 
-	sql, args := buildBatchPositionUpdateSQL(items)
+	sql, args := buildBatchPositionUpdateSQL(filtered)
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(sql, args...).Error; err != nil {
@@ -390,6 +574,254 @@ func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []P
 
 		return nil
 	})
+}
+
+// backfillDeptCandidate 反推候选行（工位 + 有效用户部门）。
+type backfillDeptCandidate struct {
+	WorkstationID   string  `gorm:"column:workstation_id"`
+	WorkstationName string  `gorm:"column:workstation_name"`
+	CurrentDeptID   *string `gorm:"column:current_dept_id"`
+	CurrentDeptName *string `gorm:"column:current_dept_name"`
+	TargetDeptID    string  `gorm:"column:target_dept_id"`
+	TargetDeptName  *string `gorm:"column:target_dept_name"`
+	UserName        *string `gorm:"column:user_name"`
+}
+
+// BackfillDeptFromUser 对存量工位按绑定用户反推部门（quick-261106-wsb）。
+//
+// 与 Excel 导入兜底 inferDeptFromUser 的判定规则一致，但作用于**已落库**数据：
+//   - INNER JOIN sys_dept 保证用户部门有效（过滤 NULL / 部门名称 / 悬空 ID）；
+//   - JOIN 两侧 CAST(... AS TEXT)：sys_dept.id 是 uuid、sys_user.dept_id 是
+//     varchar(64)，PG 无 uuid = varchar 运算符（migration_217 既有范式）；
+//   - 只写 dept_id + updated_at，**绝不碰 status**（存量状态是真实业务状态，
+//     与导入 prepareRecordsForUpsert 的 user_id↔status 联动不同）；
+//   - dryRun=true 只预览不写库、不清缓存；
+//   - fixMismatch=false（默认）只填补空缺；true 额外纠正「已有部门但与用户
+//     部门不一致」的行（高危：工位部门≠人员部门可能是有意的跨机构配置，
+//     故由前端二次确认 + 默认关闭）。
+//
+// 双方言：不用 PG 的 UPDATE ... FROM（SQLite 不支持），改为
+// 「一次 SELECT 候选 → 内存分类 → 事务内批量 CASE UPDATE」，CASE 的 THEN
+// 分支显式 CAST 避免 PG 42804（见 buildBatchPositionUpdateSQL 注释）。
+func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, fixMismatch bool) (*BackfillDeptResult, error) {
+	result := &BackfillDeptResult{
+		DryRun:      dryRun,
+		FixMismatch: fixMismatch,
+		Samples:     make([]BackfillDeptSample, 0),
+	}
+
+	// Phase 132（裁定 §3）：本次调用的 ScopeResult 快照只解析一次，预览与执行
+	// 两次请求各自从同一 c.Request.Context() 的 ScopeResult 派生；档位/部门名/
+	// FailClosed 回显进 result 供前端确认框「本次范围」文案展示，禁止确认阶段
+	// 重新解析用户档位（防范围漂移）。All 档同样回填档位保证审计链完整。
+	tier, deptNames, deptTotal, failClosed := scopeWriteBackfillSnapshot(ctx, s.db)
+	result.ScopeTier = tier
+	result.ScopeDeptNames = deptNames
+	result.ScopeDeptTotal = deptTotal
+	result.ScopeFailClosed = failClosed
+
+	// 候选/COUNT/CASE UPDATE 三层共用同一段「工位有效机构 ∈ 可见集」条件
+	// （scopeWriteWorkstationVisibleSQL，由本次调用的同一 ScopeResult 决定）。
+	visibleCond, visibleArgs, skipAll := scopeWriteWorkstationVisibleSQL(ctx, "w")
+	scope, ok := scopeFromContext(ctx)
+	isAll := scopeIsAll(scope, ok)
+
+	// 1) 候选工位：有绑定用户且该用户的部门有效 + 可见集裁剪（裁定 §2）。
+	var candidates []backfillDeptCandidate
+	candidateQ := s.db.WithContext(ctx).
+		Table("sys_workstation AS w").
+		Select(`w.id AS workstation_id, w.workstation_name,
+			w.dept_id AS current_dept_id, d2.dept_name AS current_dept_name,
+			su.dept_id AS target_dept_id, d.dept_name AS target_dept_name,
+			su.nickname AS user_name`).
+		Joins("JOIN sys_user su ON CAST(su.id AS TEXT) = CAST(w.user_id AS TEXT)").
+		Joins("JOIN sys_dept d ON CAST(d.id AS TEXT) = CAST(su.dept_id AS TEXT)").
+		Joins("LEFT JOIN sys_dept d2 ON CAST(d2.id AS TEXT) = CAST(w.dept_id AS TEXT)").
+		// ⚠ 空串判断必须 CAST 后再 <> ''：sys_user.dept_id 在生产 PG 是原生 uuid
+		// 列（user_service.go:463 的 P4 fix 记载），裸写 su.dept_id <> '' 会让 PG
+		// 尝试把 '' 隐式转 uuid → invalid input syntax 运行时报错；SQLite 动态
+		// 类型放行，故该类缺陷只有 PG contract 测试能拦（2026-11-07 实测 500）。
+		Where("w.deleted_at IS NULL AND su.deleted_at IS NULL AND su.dept_id IS NOT NULL AND CAST(su.dept_id AS TEXT) <> ''")
+	if !skipAll {
+		candidateQ = candidateQ.Where(visibleCond, visibleArgs...)
+	}
+	err := candidateQ.Find(&candidates).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询反推候选工位失败: %w", err)
+	}
+	result.Candidates = len(candidates)
+	result.ScopeVisible = len(candidates)
+
+	// 2) 未命中候选的工位按原因归类：一条条件聚合替代两次全表 COUNT（审计 P2-4）。
+	// Phase 132：COUNT 同步注入可见集条件，保证「请求行数 / 可见集内行数 /
+	// 越界行数」与候选集同一口径（裁定 §2 硬约束 3）。
+	var stats []struct {
+		Total    int64
+		WithUser int64
+	}
+	// Phase 132：COUNT 保持全库口径 = 「请求行数」（裁定 §2 硬约束 3 的四类
+	// 计数之一）；可见集内行数由上面已裁剪的候选查询给出，越界行数 =
+	// 全库总数 - 可见候选数。若给 COUNT 也挂可见集条件会让越界恒 0，
+	// 丢失审计语义，故此处不注入（既有全库 COUNT 原样保留）。
+	countQ := s.db.WithContext(ctx).Table("sys_workstation").
+		Select("COUNT(*) AS total, " +
+			"COALESCE(SUM(CASE WHEN user_id IS NOT NULL AND CAST(user_id AS TEXT) <> '' THEN 1 ELSE 0 END), 0) AS with_user").
+		Where("deleted_at IS NULL")
+	if err := countQ.Scan(&stats).Error; err != nil {
+		return nil, fmt.Errorf("统计工位总数失败: %w", err)
+	}
+	if len(stats) == 0 {
+		return result, nil
+	}
+	result.ScopeTotal = int(stats[0].Total)
+	result.ScopeOutOfScope = result.ScopeTotal - result.ScopeVisible
+	if result.ScopeOutOfScope < 0 {
+		result.ScopeOutOfScope = 0
+	}
+	result.SkippedNoUser = int(stats[0].Total - stats[0].WithUser)
+	result.SkippedBadUserDept = int(stats[0].WithUser) - len(candidates)
+
+	// 3) 内存分类 + 收集待更新。样例收集策略（审计 P2-5）：fill/correct 优先
+	// 占满上限，skip 只在槽位剩余时补位 —— 幂等二跑（ToFill=0）时预览表不再
+	// 被 20 行「跳过」挤占，审计目的可见。
+	type updateItem struct{ id, deptID string }
+	toUpdate := make([]updateItem, 0)
+	const maxSamples = 20
+	for _, c := range candidates {
+		current := ""
+		if c.CurrentDeptID != nil {
+			current = strings.TrimSpace(*c.CurrentDeptID)
+		}
+		// 用户部门同样 trim + 忽略大小写比较：UUID 文本在 varchar 列里可能
+		// 存在大小写/空格差异，避免 fixMismatch 模式下误判为「不一致」而覆盖。
+		target := strings.TrimSpace(c.TargetDeptID)
+		action := "skip"
+		switch {
+		case current == "":
+			// dept_id 空（NULL 或空串）→ 填补（两种模式都做）。
+			result.ToFill++
+			action = "fill"
+			toUpdate = append(toUpdate, updateItem{c.WorkstationID, target})
+		case !strings.EqualFold(current, target) && fixMismatch:
+			// 已有部门但与用户部门不一致，且显式开启纠正 → 覆盖。
+			result.ToCorrect++
+			action = "correct"
+			toUpdate = append(toUpdate, updateItem{c.WorkstationID, target})
+		default:
+			// 已有部门且一致（或不一致但未开启纠正）→ 跳过，绝不覆盖。
+			result.SkippedAlreadyValid++
+		}
+		// Phase 132（agent-8 P0-3）：批量裁定 §2「越界行统一计入聚合计数、
+		// 不逐条回显」。Samples 前 20 条逐条含 WorkstationID/Name/UserName/
+		// 部门名，属逐条明细回显；非 All 档一律不收集（恒为空 slice），
+		// 只保留聚合计数，杜绝越界集合枚举（P1-5 侧信道收敛）。All 档保持
+		// 既有审计样例行为零回归。
+		if !isAll {
+			continue
+		}
+		// skip 样例只补位：把前 20 个槽位尽量留给 fill/correct（审计 P2-5）。
+		if action == "skip" && len(result.Samples) >= maxSamples-1 {
+			continue
+		}
+		if len(result.Samples) < maxSamples {
+			sample := BackfillDeptSample{
+				WorkstationID:   c.WorkstationID,
+				WorkstationName: c.WorkstationName,
+				CurrentDeptID:   current,
+				TargetDeptID:    target,
+				Action:          action,
+			}
+			if c.CurrentDeptName != nil {
+				sample.CurrentDeptName = *c.CurrentDeptName
+			}
+			if c.TargetDeptName != nil {
+				sample.TargetDeptName = *c.TargetDeptName
+			}
+			if c.UserName != nil {
+				sample.UserName = *c.UserName
+			}
+			result.Samples = append(result.Samples, sample)
+		}
+	}
+
+	// 4) dryRun 到此为止：不写库、不清缓存、不记 operlog。
+	if dryRun || len(toUpdate) == 0 {
+		return result, nil
+	}
+
+	// 5) 事务内批量 CASE UPDATE，分块走 chunksOf 共享 helper（审计 P2-11）。
+	// Phase 132（裁定 §2 第三层）：toUpdate 在 service 层、写 SQL 之前按可见集
+	// 裁剪（一次性 WHERE id IN ? AND 有效机构 ∈ 可见集），且 CASE UPDATE 的
+	// WHERE 追加可见集 EXISTS 条件作双保险——即便上层分类有 bug，DB 也不会
+	// 写出可见集外的行。
+	updateIDs := make([]string, 0, len(toUpdate))
+	for _, it := range toUpdate {
+		updateIDs = append(updateIDs, it.id)
+	}
+	visibleUpdateIDs, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityWorkstation, updateIDs)
+	if err != nil {
+		return nil, err
+	}
+	visibleSet := make(map[string]bool, len(visibleUpdateIDs))
+	for _, id := range visibleUpdateIDs {
+		visibleSet[id] = true
+	}
+	scopedUpdate := make([]updateItem, 0, len(visibleUpdateIDs))
+	for _, it := range toUpdate {
+		if visibleSet[it.id] {
+			scopedUpdate = append(scopedUpdate, it)
+		}
+	}
+	if len(scopedUpdate) == 0 {
+		return result, nil
+	}
+	// CASE UPDATE 用的可见集条件（别名 sys_workstation，与 UPDATE 目标表一致）。
+	updateCond, updateArgs, updateSkip := scopeWriteWorkstationVisibleSQL(ctx, "sys_workstation")
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, chunk := range chunksOf(scopedUpdate, 400) {
+			var sb strings.Builder
+			// CASE 表达式内两侧 CAST：id 是 uuid、dept_id 是 varchar，PG 无
+			// uuid = varchar 运算符；THEN 分支显式 CAST 避免 PG 42804（CASE
+			// 结果类型退化为 text）。
+			sb.WriteString("UPDATE sys_workstation SET dept_id = CASE CAST(id AS TEXT) ")
+			args := make([]interface{}, 0, len(chunk)*2)
+			for _, it := range chunk {
+				sb.WriteString("WHEN CAST(? AS TEXT) THEN CAST(? AS TEXT) ")
+				args = append(args, it.id, it.deptID)
+			}
+			// WHERE 走参数化 id IN (?)：pgx 按列类型推断把 string 编码为 uuid，
+			// 不包 CAST 才能命中 PK 索引（审计 P2-4；包裹 CAST 会全表扫描）。
+			sb.WriteString("END, updated_at = CURRENT_TIMESTAMP WHERE id IN (")
+			for j := range chunk {
+				if j > 0 {
+					sb.WriteString(",")
+				}
+				sb.WriteString("?")
+				args = append(args, chunk[j].id)
+			}
+			sb.WriteString(") AND deleted_at IS NULL")
+			// 追加可见集条件（All 档 skip，零额外 SQL）。
+			if !updateSkip {
+				sb.WriteString(" AND ")
+				sb.WriteString(updateCond)
+				args = append(args, updateArgs...)
+			}
+			if err := tx.Exec(sb.String(), args...).Error; err != nil {
+				return fmt.Errorf("批量回填工位部门失败: %w", err)
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	// 6) 缓存失效必须在事务提交**之后**（cache 写不进事务，与
+	// ExcelService.ImportData 的 post-commit 语义一致）。
+	if s.cache != nil {
+		base.InvalidatePattern(ctx, s.cache, []string{"workstation:*", "workstations:*"}, "workstation")
+	}
+
+	return result, nil
 }
 
 // buildBatchPositionUpdateSQL 构造批量更新工位位置的 SQL 与参数。
@@ -513,6 +945,15 @@ func (s *workstationService) SearchWorkstationOptions(ctx context.Context, req r
 		Select("sys_workstation.id AS value, sys_workstation.workstation_name AS label").
 		Limit(DropdownMaxRows)
 
+	// Phase 131：可见集收口 + 越界 orgId 求交（下拉数据源同样不可越权枚举）。
+	if scopeRejectsRequestedOrgFromContext(ctx, req.OrgID) {
+		return result, nil
+	}
+	{
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = wrapScopeExists(query, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	}
+
 	if req.Name != "" {
 		query = query.Where("sys_workstation.workstation_name LIKE ?", "%"+req.Name+"%")
 	}
@@ -531,10 +972,11 @@ func (s *workstationService) SearchWorkstationOptions(ctx context.Context, req r
 	if req.Type != nil && *req.Type >= 0 {
 		query = query.Where("sys_workstation.workstation_type = ?", *req.Type)
 	}
-	// orgId 部门筛选含子部门:与 List 同款 EXISTS 子查询,避免类型转换问题
+	// orgId 部门筛选含子部门:与 List 同款 EXISTS 子查询,避免类型转换问题。
+	// 有效机构 = COALESCE(NULLIF(f.org_id, ''), b.org_id)（楼层覆盖优先）。
 	if req.OrgID != "" {
 		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
-		query = query.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, "b.org_id")(sub))
+		query = query.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, workstationOrgColumn)(sub))
 	}
 
 	if err := query.Order("sys_workstation.workstation_name ASC").Find(&result).Error; err != nil {
@@ -557,12 +999,16 @@ func (s *workstationService) CountsByFloor(ctx context.Context, floorIds []strin
 		FloorID string `gorm:"column:floor_id"`
 		Count   int    `gorm:"column:cnt"`
 	}
-	err := s.db.WithContext(ctx).
+	query := s.db.WithContext(ctx).
 		Model(&models.Workstation{}).
 		Select("floor_id, COUNT(*) AS cnt").
-		Where("floor_id IN ? AND status = ? AND deleted_at IS NULL", floorIds, models.WorkstationStatusAvailable).
-		Group("floor_id").
-		Scan(&results).Error
+		Where("floor_id IN ? AND status = ? AND deleted_at IS NULL", floorIds, models.WorkstationStatusAvailable)
+	// Phase 131：CountsByFloor 按 floor 可见集过滤，防跨楼层枚举统计。
+	{
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = wrapScopeExists(query, ctx, sub, workstationOrgColumn, "sys_workstation.user_id")
+	}
+	err := query.Group("floor_id").Scan(&results).Error
 	if err != nil {
 		return nil, err
 	}

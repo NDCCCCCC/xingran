@@ -186,6 +186,10 @@ func (s *workstationDeviceService) GetDevicesByWorkstation(ctx context.Context, 
 	if !s.uuidValidator.MatchString(workstationID) {
 		return nil, apperrors.ParamInvalid("工位ID")
 	}
+	// Phase 133 / DS-05 裁定 2：工位不在可见集 → 返回空集（读端点不报错、不越权）。
+	if !workstationDeviceReadAllowed(ctx, s.db, workstationID) {
+		return []*models.WorkstationDevice{}, nil
+	}
 
 	var devices []*models.WorkstationDevice
 	query := s.db.WithContext(ctx).
@@ -211,6 +215,10 @@ func (s *workstationDeviceService) GetDevicesByWorkstation(ctx context.Context, 
 func (s *workstationDeviceService) GetADDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error) {
 	if workstationID == "" {
 		return nil, apperrors.ParamMissing("工位ID")
+	}
+	// Phase 133 / DS-05 裁定 2：工位不在可见集 → 返回空集。
+	if !workstationDeviceReadAllowed(ctx, s.db, workstationID) {
+		return []*models.WorkstationDevice{}, nil
 	}
 
 	// 获取工位信息以查找绑定的用户
@@ -264,6 +272,10 @@ func (s *workstationDeviceService) GetADDevices(ctx context.Context, workstation
 func (s *workstationDeviceService) GetAssetDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error) {
 	if workstationID == "" {
 		return nil, apperrors.ParamMissing("工位ID")
+	}
+	// Phase 133 / DS-05 裁定 2：工位不在可见集 → 返回空集。
+	if !workstationDeviceReadAllowed(ctx, s.db, workstationID) {
+		return []*models.WorkstationDevice{}, nil
 	}
 
 	// 获取工位信息以查找绑定的用户
@@ -360,6 +372,10 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 
 	if !s.uuidValidator.MatchString(workstationID) {
 		return nil, apperrors.ParamInvalid("工位ID")
+	}
+	// Phase 133 / DS-05 裁定 2：工位不在可见集 → 返回空集（不触发 PG 专属 CTE）。
+	if !workstationDeviceReadAllowed(ctx, s.db, workstationID) {
+		return []*models.WorkstationDevice{}, nil
 	}
 
 	// 1. 工位存在性校验(物理链路查询不依赖 user_id, 只依赖工位本身)
@@ -624,6 +640,16 @@ func (s *workstationDeviceService) GetPhysicalDevicesWithDiagnosis(ctx context.C
 	}
 	if !s.uuidValidator.MatchString(workstationID) {
 		return nil, apperrors.ParamInvalid("工位ID")
+	}
+	// Phase 133 / DS-05 裁定 2：工位不在可见集 → 返回空结果（不泄露越权工位诊断）。
+	if !workstationDeviceReadAllowed(ctx, s.db, workstationID) {
+		return &PhysicalDevicesResult{
+			Devices:      []*models.WorkstationDevice{},
+			Total:        0,
+			EmptyMessage: "无权访问该工位的数据",
+			Warnings:     nil,
+			Diagnosis:    PhysicalChainDiagnosis{},
+		}, nil
 	}
 
 	// 1. 设备列表：复用原实现，保证两个入口的数据绝不分叉
@@ -1074,6 +1100,10 @@ func (s *workstationDeviceService) AddDeviceManual(ctx context.Context, req *Add
 	if !s.uuidValidator.MatchString(req.WorkstationID) {
 		return nil, apperrors.ParamInvalid("工位ID")
 	}
+	// Phase 133 / DS-05 裁定 2：目标工位越界 → 403（单条写不豁免）。
+	if err := checkWorkstationDeviceWriteScope(ctx, s.db, req.WorkstationID); err != nil {
+		return nil, err
+	}
 
 	// 验证序列号
 	if req.DeviceSerial == "" {
@@ -1126,6 +1156,10 @@ func (s *workstationDeviceService) AddDeviceManual(ctx context.Context, req *Add
 func (s *workstationDeviceService) SyncFromAD(ctx context.Context, workstationID string) error {
 	if workstationID == "" {
 		return apperrors.ParamMissing("工位ID")
+	}
+	// Phase 133 / DS-05 裁定 2：目标工位越界 → 403。
+	if err := checkWorkstationDeviceWriteScope(ctx, s.db, workstationID); err != nil {
+		return err
 	}
 
 	// 获取工位信息以查找绑定的用户
@@ -1187,6 +1221,10 @@ func (s *workstationDeviceService) SyncFromAD(ctx context.Context, workstationID
 func (s *workstationDeviceService) SyncFromAsset(ctx context.Context, workstationID string) error {
 	if workstationID == "" {
 		return apperrors.ParamMissing("工位ID")
+	}
+	// Phase 133 / DS-05 裁定 2：目标工位越界 → 403。
+	if err := checkWorkstationDeviceWriteScope(ctx, s.db, workstationID); err != nil {
+		return err
 	}
 
 	// 获取工位信息以查找绑定的用户
@@ -1292,6 +1330,10 @@ func (s *workstationDeviceService) UpdateDevice(ctx context.Context, id string, 
 	if err != nil {
 		return fmt.Errorf("设备不存在: %w", err)
 	}
+	// Phase 133 / DS-05 裁定 2：设备关联工位越界 → 403（改前侧）。
+	if err := checkWorkstationDeviceWriteScope(ctx, s.db, device.WorkstationID); err != nil {
+		return err
+	}
 
 	// 更新字段
 	updates := make(map[string]any)
@@ -1345,8 +1387,16 @@ func (s *workstationDeviceService) DeleteDevice(ctx context.Context, id string) 
 	if id == "" {
 		return apperrors.ParamMissing("设备ID")
 	}
+	// Phase 133 / DS-05 裁定 2：设备关联工位越界 → 403（改前侧）。
+	wsID, err := deviceWorkstationID(ctx, s.db, id)
+	if err != nil {
+		return err
+	}
+	if err := checkWorkstationDeviceWriteScope(ctx, s.db, wsID); err != nil {
+		return err
+	}
 
-	err := s.db.WithContext(ctx).
+	err = s.db.WithContext(ctx).
 		Where("id = ?", id).
 		Delete(&models.WorkstationDevice{}).Error
 
@@ -1371,6 +1421,10 @@ func (s *workstationDeviceService) SetPrimaryDevice(ctx context.Context, id stri
 
 	if err != nil {
 		return fmt.Errorf("设备不存在: %w", err)
+	}
+	// Phase 133 / DS-05 裁定 2：设备关联工位越界 → 403（改前侧）。
+	if err := checkWorkstationDeviceWriteScope(ctx, s.db, device.WorkstationID); err != nil {
+		return err
 	}
 
 	// 使用事务确保原子性
@@ -1429,6 +1483,10 @@ func (s *workstationDeviceService) SetPrimaryAndSave(ctx context.Context, device
 	}
 	if req.DeviceSerial == "" {
 		return apperrors.ParamMissing("设备序列号")
+	}
+	// Phase 133 / DS-05 裁定 2：目标工位越界 → 403（提交侧）。
+	if err := checkWorkstationDeviceWriteScope(ctx, s.db, req.WorkstationID); err != nil {
+		return err
 	}
 
 	// 验证工位存在
@@ -1501,6 +1559,10 @@ func (s *workstationDeviceService) SetPrimaryAndSaveBySerial(ctx context.Context
 	}
 	if serial == "" {
 		return apperrors.ParamMissing("设备序列号")
+	}
+	// Phase 133 / DS-05 裁定 2：目标工位越界 → 403（提交侧）。
+	if err := checkWorkstationDeviceWriteScope(ctx, s.db, workstationID); err != nil {
+		return err
 	}
 
 	// 验证工位存在
@@ -1732,6 +1794,8 @@ func (s *workstationDeviceService) GetADDevicesByWorkstations(
 	ctx context.Context,
 	workstationIDs []string,
 ) (map[string][]*models.WorkstationDevice, error) {
+	// Phase 133 / DS-05 裁定 2：按工位可见集裁剪，越界工位不进入结果 map。
+	workstationIDs = visibleWorkstationIDs(ctx, s.db, workstationIDs)
 	result := make(map[string][]*models.WorkstationDevice, len(workstationIDs))
 	for _, id := range workstationIDs {
 		result[id] = []*models.WorkstationDevice{}
@@ -1895,6 +1959,8 @@ func (s *workstationDeviceService) GetAssetDevicesByWorkstations(
 	ctx context.Context,
 	workstationIDs []string,
 ) (map[string][]*models.WorkstationDevice, error) {
+	// Phase 133 / DS-05 裁定 2：按工位可见集裁剪，越界工位不进入结果 map。
+	workstationIDs = visibleWorkstationIDs(ctx, s.db, workstationIDs)
 	result := make(map[string][]*models.WorkstationDevice, len(workstationIDs))
 	for _, id := range workstationIDs {
 		result[id] = []*models.WorkstationDevice{}
@@ -2051,6 +2117,8 @@ func (s *workstationDeviceService) GetPhysicalDevicesByWorkstations(
 	ctx context.Context,
 	workstationIDs []string,
 ) (map[string][]*models.WorkstationDevice, error) {
+	// Phase 133 / DS-05 裁定 2：按工位可见集裁剪，越界工位不进入结果 map。
+	workstationIDs = visibleWorkstationIDs(ctx, s.db, workstationIDs)
 	result := make(map[string][]*models.WorkstationDevice, len(workstationIDs))
 	for _, id := range workstationIDs {
 		result[id] = []*models.WorkstationDevice{}

@@ -66,8 +66,9 @@ func NewAssetService(db *gorm.DB) AssetService {
 // 组件行不参与设备总数/正常/停用/拟报废的统计(避免 1 台交换机 + N 板卡被重复计数)。
 func (s *assetService) Statistics(ctx context.Context) (*AssetStatisticsResult, error) {
 	var result AssetStatisticsResult
-	err := s.db.WithContext(ctx).
-		Model(&models.Asset{}).
+	err := applyAssetReadScope(
+		s.db.WithContext(ctx).Model(&models.Asset{}), ctx,
+	).
 		Where("component_type IS NULL").
 		Select(
 			"COUNT(*) AS total",
@@ -100,6 +101,15 @@ var assetAllowedSortFields = map[string]string{
 
 // Create 创建资产
 func (s *assetService) Create(ctx context.Context, asset *models.Asset) error {
+	// Phase 133 / DS-05：单条写越界 403（提交侧）。dept_id 直挂，空/越界→ErrScopeDenied。
+	var deptID string
+	if asset.DeptID != nil {
+		deptID = *asset.DeptID
+	}
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityAsset, deptID); err != nil {
+		return err
+	}
+
 	// 验证部门存在性（如果提供了 dept_id）
 	if asset.DeptID != nil && *asset.DeptID != "" {
 		if err := s.validateDept(ctx, *asset.DeptID); err != nil {
@@ -124,6 +134,18 @@ func (s *assetService) Create(ctx context.Context, asset *models.Asset) error {
 
 // Update 更新资产
 func (s *assetService) Update(ctx context.Context, asset *models.Asset) error {
+	// Phase 133 / DS-05：单条写越界 403（改前侧 + 提交侧双向校验，防搬移）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityAsset, asset.ID); err != nil {
+		return err
+	}
+	var deptID string
+	if asset.DeptID != nil {
+		deptID = *asset.DeptID
+	}
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityAsset, deptID); err != nil {
+		return err
+	}
+
 	// 验证部门存在性
 	if asset.DeptID != nil && *asset.DeptID != "" {
 		if err := s.validateDept(ctx, *asset.DeptID); err != nil {
@@ -149,12 +171,17 @@ func (s *assetService) Update(ctx context.Context, asset *models.Asset) error {
 
 // Delete 删除资产
 func (s *assetService) Delete(ctx context.Context, id string) error {
+	// Phase 133 / DS-05：单条写越界 403（改前侧按资源归属校验）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityAsset, id); err != nil {
+		return err
+	}
 	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取资产
 func (s *assetService) GetByID(ctx context.Context, id string) (*models.Asset, error) {
-	return s.repo.GetByID(ctx, id)
+	// Phase 133 / DS-05：读端点按 dept_id 可见集校验，越界 → record not found。
+	return s.repo.GetByID(ctx, id, entityReadScope(ctx, scopeEntityAsset, "ops_asset"))
 }
 
 // GetByDeviceSN 根据设备序列号获取资产
@@ -164,8 +191,9 @@ func (s *assetService) GetByDeviceSN(ctx context.Context, deviceSN string) (*mod
 	}
 
 	var asset models.Asset
-	err := s.db.WithContext(ctx).
-		Where("devicesn = ? AND deleted_at IS NULL", deviceSN).
+	err := applyAssetReadScope(
+		s.db.WithContext(ctx).Where("devicesn = ? AND deleted_at IS NULL", deviceSN), ctx,
+	).
 		First(&asset).Error
 
 	if err != nil {
@@ -200,6 +228,8 @@ func (s *assetService) List(ctx context.Context, params map[string]interface{}) 
 			return db.Where("component_type IS NULL")
 		},
 		s.filterScope(params),
+		// Phase 133 / DS-05：dept_id 直挂可见集（All 短路零回归、越界空集）。
+		entityReadScope(ctx, scopeEntityAsset, "ops_asset"),
 		base.SortScope(sortReq, assetAllowedSortFields, "created_at DESC"),
 	)
 }
@@ -214,7 +244,15 @@ func (s *assetService) filterScope(params map[string]interface{}) base.Scope {
 
 // BatchDelete 批量删除资产（repo 空 ids nil 语义与现状 IN(空) no-op 等价）
 func (s *assetService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.repo.BatchDelete(ctx, ids)
+	// Phase 133 / DS-05：批量按可见集裁剪（不整批 403），越界行不进入删除集合。
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityAsset, ids)
+	if err != nil {
+		return err
+	}
+	if len(visible) == 0 {
+		return nil
+	}
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // applyFilters 应用查询筛选条件
@@ -348,7 +386,9 @@ func (s *assetService) validateDeviceSNUnique(ctx context.Context, deviceSN, exc
 func (s *assetService) GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, error) {
 	var results []DeviceTypeCount
 
-	err := s.db.WithContext(ctx).Table("ops_asset").
+	err := applyAssetReadScope(
+		s.db.WithContext(ctx).Table("ops_asset"), ctx,
+	).
 		Select("device_type_name as value, COUNT(*) as count").
 		Where("device_type_name IS NOT NULL AND device_type_name != ''").
 		Group("device_type_name").
@@ -366,7 +406,9 @@ func (s *assetService) GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, e
 func (s *assetService) GetDeviceCategories(ctx context.Context) ([]DeviceTypeCount, error) {
 	var results []DeviceTypeCount
 
-	err := s.db.WithContext(ctx).Table("ops_asset").
+	err := applyAssetReadScope(
+		s.db.WithContext(ctx).Table("ops_asset"), ctx,
+	).
 		Select("device_category_second_name as value, COUNT(*) as count").
 		Where("device_category_second_name IS NOT NULL AND device_category_second_name != ''").
 		Group("device_category_second_name").
@@ -384,7 +426,9 @@ func (s *assetService) GetDeviceCategories(ctx context.Context) ([]DeviceTypeCou
 func (s *assetService) GetStatusValues(ctx context.Context) ([]DeviceTypeCount, error) {
 	var results []DeviceTypeCount
 
-	err := s.db.WithContext(ctx).Table("ops_asset").
+	err := applyAssetReadScope(
+		s.db.WithContext(ctx).Table("ops_asset"), ctx,
+	).
 		Select("usestatus_label as value, COUNT(*) as count").
 		Where("usestatus_label IS NOT NULL AND usestatus_label != ''").
 		Group("usestatus_label").

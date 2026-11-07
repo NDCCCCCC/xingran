@@ -86,14 +86,6 @@ func TestSetOperLogInfo(t *testing.T) {
 
 // ---------------- permission.go 纯函数 + 缓存 ----------------
 
-func TestIsValidDataScopeField(t *testing.T) {
-	assert.True(t, isValidDataScopeField("dept_id"))
-	assert.True(t, isValidDataScopeField("id"))
-	assert.False(t, isValidDataScopeField("name"))
-	assert.False(t, isValidDataScopeField("dept_id; DROP TABLE x--"), "注入串拒")
-	assert.False(t, isValidDataScopeField(""))
-}
-
 func TestExtractModulePermission(t *testing.T) {
 	assert.Equal(t, "system:menu", extractModulePermission("system:menu:list"))
 	assert.Equal(t, "system:user", extractModulePermission("system:user:add"))
@@ -299,99 +291,6 @@ func TestGetUserMaxDataScope(t *testing.T) {
 	scope2, err := getUserMaxDataScope(core, uuid.NewString())
 	require.NoError(t, err)
 	assert.Equal(t, models.DataScopeSelf, scope2)
-}
-
-// seedDataScopeTables 补建数据权限测试所需的 sys_user/sys_dept/sys_role_dept。
-func seedDataScopeTables(t *testing.T, db *gorm.DB) {
-	t.Helper()
-	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_user (id TEXT PRIMARY KEY, dept_id TEXT)`).Error)
-	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_dept (id TEXT PRIMARY KEY, parent_id TEXT, dept_id TEXT)`).Error)
-	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_role_dept (role_id TEXT, dept_id TEXT)`).Error)
-}
-
-func TestApplyDataScope(t *testing.T) {
-	userID := uuid.NewString()
-	roleID := uuid.NewString()
-
-	core := newTestCoreWithSQLite(t, func(db *gorm.DB) {
-		seedDataScopeTables(t, db)
-		require.NoError(t, db.Exec(`INSERT INTO sys_role (id, role_name, role_key, status, del_flag) VALUES (?, 'r', 'x', 0, 0)`, roleID).Error)
-		require.NoError(t, db.Exec(`INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)`, userID, roleID).Error)
-		require.NoError(t, db.Exec(`INSERT INTO sys_user (id, dept_id) VALUES (?, 'd1')`, userID).Error)
-		// 部门树: d1 → d2 → d3
-		require.NoError(t, db.Exec(`INSERT INTO sys_dept (id, parent_id, dept_id) VALUES ('d1', NULL, 'd1')`).Error)
-		require.NoError(t, db.Exec(`INSERT INTO sys_dept (id, parent_id, dept_id) VALUES ('d2', 'd1', 'd2')`).Error)
-		require.NoError(t, db.Exec(`INSERT INTO sys_dept (id, parent_id, dept_id) VALUES ('d3', 'd2', 'd3')`).Error)
-		// 自定义数据权限: role → d9
-		require.NoError(t, db.Exec(`INSERT INTO sys_role_dept (role_id, dept_id) VALUES (?, 'd9')`, roleID).Error)
-	})
-	
-
-	q := func() *gorm.DB { return core.GetDB().Table("sys_dept") }
-
-	// 非法字段 → 1=0
-	require.NotPanics(t, func() {
-		_ = ApplyDataScope(q(), userID, models.DataScopeAll, core, "evil;drop").Find(&[]map[string]interface{}{})
-	})
-
-	// DataScopeAll → 不过滤
-	var rows []map[string]interface{}
-	require.NoError(t, ApplyDataScope(q(), userID, models.DataScopeAll, core, "dept_id").Find(&rows).Error)
-	assert.Len(t, rows, 3, "全部数据权限不过滤")
-
-	// DataScopeCustom → rd 表的 d9
-	rows = nil
-	require.NoError(t, ApplyDataScope(q(), userID, models.DataScopeCustom, core, "id").Find(&rows).Error)
-	assert.Len(t, rows, 0, "d9 不在 sys_dept,0 行但 SQL 合法")
-
-	// DataScopeDept → dept_id = d1
-	rows = nil
-	require.NoError(t, ApplyDataScope(q(), userID, models.DataScopeDept, core, "dept_id").Find(&rows).Error)
-	assert.Len(t, rows, 1, "d2 的 parent 是 d1")
-
-	// DataScopeDeptChild → d1 及后代
-	rows = nil
-	require.NoError(t, ApplyDataScope(q(), userID, models.DataScopeDeptChild, core, "id").Find(&rows).Error)
-	assert.Len(t, rows, 3, "d1/d2/d3 全部")
-
-	// DataScopeSelf → dept_id = userID
-	rows = nil
-	require.NoError(t, ApplyDataScope(q(), userID, models.DataScopeSelf, core, "dept_id").Find(&rows).Error)
-	assert.Len(t, rows, 0)
-
-	// 未知 scope → 1=0
-	rows = nil
-	require.NoError(t, ApplyDataScope(q(), userID, models.DataScope(99), core, "dept_id").Find(&rows).Error)
-	assert.Len(t, rows, 0)
-}
-
-func TestApplyDataScopeFromContext(t *testing.T) {
-	userID := uuid.NewString()
-	core := newTestCoreWithSQLite(t, func(db *gorm.DB) {
-		seedDataScopeTables(t, db)
-	})
-
-	// 无 user_id → 原样返回
-	c, _ := newMWContext("GET", "/x")
-	base := core.GetDB().Table("sys_dept")
-	out := ApplyDataScopeFromContext(c, base, core, "dept_id")
-	assert.NotNil(t, out)
-
-	// 非 admin + 有 data_scope → 走 ApplyDataScope(Self)
-	c2, _ := newMWContext("GET", "/x")
-	c2.Set("user_id", userID)
-	c2.Set("data_scope", models.DataScopeSelf)
-	out2 := ApplyDataScopeFromContext(c2, base, core, "dept_id")
-	require.NotNil(t, out2)
-	var rows []map[string]interface{}
-	require.NoError(t, out2.Find(&rows).Error)
-	assert.Len(t, rows, 0, "DataScopeSelf: dept_id=userID 无匹配")
-
-	// 无 data_scope → 不过滤
-	c3, _ := newMWContext("GET", "/x")
-	c3.Set("user_id", userID)
-	out3 := ApplyDataScopeFromContext(c3, base, core, "dept_id")
-	require.NotNil(t, out3)
 }
 
 func TestHasUserPermission(t *testing.T) {

@@ -195,8 +195,8 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	dsn := path + "?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)"
 
 	gormConfig := &gorm.Config{
-		Logger:  createFilteredLogger(),
-		NowFunc: func() time.Time { return time.Now().UTC() },
+		Logger:                                   createFilteredLogger(),
+		NowFunc:                                  func() time.Time { return time.Now().UTC() },
 		DisableForeignKeyConstraintWhenMigrating: true,
 		SkipDefaultTransaction:                   true,
 		PrepareStmt:                              false, // 与 PG 路径对齐(simple protocol)
@@ -294,7 +294,7 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	dsn := cfg.GetDSN()
 
 	gormConfig := &gorm.Config{
-		Logger:                                   createFilteredLogger(),
+		Logger: createFilteredLogger(),
 		// CDX-M-UTC:全项目 UTC 一致性,与 SQL DEFAULT NOW() 语义对齐。
 		// 历史本地时区行由 timestamptz 规范化(timestamptz 列按会话时区规范化存储,
 		// 混合期查询按 timestamptz 语义正确;naive timestamp 列若有则存在解释漂移)。
@@ -365,6 +365,7 @@ func (d *Database) GetDB() *gorm.DB {
 // 设计原因: GORM AutoMigrate 与手写 SQL migration 混用导致 unique 约束命名冲突 ——
 //   - SQL inline `UNIQUE`     → PG 自动命名 `<table>_<column>_key`
 //   - GORM `uniqueIndex` tag  → GORM 拼接 `uni_<table>_<column>` 或显式名 `uni_*_*`
+//
 // GORM Migrator.DropConstraint 无 IF EXISTS,试图 DROP 自己命名的旧约束失败 → FATA。
 // 本函数在 AutoMigrate 之前主动清理已知所有可能命名,让 AutoMigrate 走 ADD path 而非 DROP+ADD。
 //
@@ -450,13 +451,14 @@ func (d *Database) cleanupOldConstraints() {
 // 重要: 普通 VIEW 也会触发 0A000!
 //   - 2026-07-04 17:35 验证:只 DROP MV reconciliation_normalized,启动时报
 //     "ALTER TABLE ops_asset ALTER COLUMN devicesn TYPE varchar(200)
-//      ERROR: cannot alter type of a column used by a view or rule"
+//     ERROR: cannot alter type of a column used by a view or rule"
 //     因为 reconciliation_physical_chain 普通 VIEW 引用了 ops_asset.devicesn。
 //   - 回归守护 memory gorm-automigrate-blocked-by-matview.md 描述的是 MV 场景,
 //     未涵盖普通 VIEW。已补"普通 VIEW 也会阻塞 GORM ALTER TYPE"的子条目。
 //
 // 解决: AutoMigrate 之前 DROP 所有引用业务表的视图(MV + 普通 VIEW);
-//       对应的 migration_NNN 会在 AutoMigrate 完成后重建。
+//
+//	对应的 migration_NNN 会在 AutoMigrate 完成后重建。
 //
 // 当前已知视图(全部 DROP):
 //   - reconciliation_normalized (MV, migration_168/176 创建,引用 sys_ad_user / sys_user /
@@ -684,7 +686,7 @@ func MigrateModelList() []interface{} {
 		&models.ConfigExecutionDetail{},
 		&models.ConfigBackup{},
 		&models.ConfigRestoreTask{}, // Phase 93: 配置恢复任务 (D-15 异步编排载体)
-		&models.ADPushQueue{},      // Phase 57: AD 推送队列 (outbox-lite 队列表)
+		&models.ADPushQueue{},       // Phase 57: AD 推送队列 (outbox-lite 队列表)
 		// Phase 59 G-59-2: 部门-OU 映射表。其建表 DDL 原先只存在于归档 .sql
 		// (archive/legacy-2026-06-15/126_create_dept_ou_mapping_table.sql) 与
 		// scripts/dbprovision(新部署专用工具),而 .sql 迁移不被自动加载 ——
@@ -695,7 +697,7 @@ func MigrateModelList() []interface{} {
 		&models.DeviceMACAddress{},
 		&models.DevicePortStatus{},
 		&models.LLDPNeighborInfo{}, // LLDP 邻居信息(拓扑发现)
-		&models.PortWriteAudit{}, // Phase 52: 端口写审计 append-only 表
+		&models.PortWriteAudit{},   // Phase 52: 端口写审计 append-only 表
 		&models.DeviceDiscovery{},
 		&models.DeviceEnrichmentTask{},
 		// 通知公告相关模型（增强版）
@@ -779,26 +781,26 @@ func MigrateModelList() []interface{} {
 //
 // 设计变更 (260704-ne5): 启动期不再调用 200+ migration 函数 ——
 //
-//   1. 所有迁移(Migrate033/117/143~201)都是 schema 演进期一次性脚本,生产 DB 已全部应用过,
-//      每次启动都是 idempotent noop,但累计产生 ~30s 启动开销 + 250 行启动日志噪音。
+//  1. 所有迁移(Migrate033/117/143~201)都是 schema 演进期一次性脚本,生产 DB 已全部应用过,
+//     每次启动都是 idempotent noop,但累计产生 ~30s 启动开销 + 250 行启动日志噪音。
 //
-//   2. 新部署流程改为:
-//        a) 用 scripts/db/snapshot.sh 从生产 DB 导出 schema-{date}.sql + seed-{date}.sql
-//        b) 新机 psql -f schema-snapshot.sql && psql -f seed-snapshot.sql 一次性导入
-//        c) ./xingran-backend 启动
+//  2. 新部署流程改为:
+//     a) 用 scripts/db/snapshot.sh 从生产 DB 导出 schema-{date}.sql + seed-{date}.sql
+//     b) 新机 psql -f schema-snapshot.sql && psql -f seed-snapshot.sql 一次性导入
+//     c) ./xingran-backend 启动
 //
-//   3. GORM AutoMigrate(model) 仍保留 — 它是 model 加新字段时的安全网(ALTER TABLE ADD COLUMN)。
-//      启动期只跑 ~2s,日志 1 行 "所有表迁移成功"。
+//  3. GORM AutoMigrate(model) 仍保留 — 它是 model 加新字段时的安全网(ALTER TABLE ADD COLUMN)。
+//     启动期只跑 ~2s,日志 1 行 "所有表迁移成功"。
 //
-//   4. cleanupOldConstraints() 仍保留 — 清理 GORM uniqueIndex 与 SQL inline UNIQUE 命名冲突,
-//      ~5ms,无日志噪音。
+//  4. cleanupOldConstraints() 仍保留 — 清理 GORM uniqueIndex 与 SQL inline UNIQUE 命名冲突,
+//     ~5ms,无日志噪音。
 //
-//   5. dropDependentMaterializedViews() 已恢复(260704-ne5-regression-fix)——
-//      GORM AutoMigrate 仍会 ALTER sys_ad_user.username 等被 MV 引用的列,导致 PG SQLSTATE 0A000 FATA。
-//      前置 DROP 引用业务表的 MV,AutoMigrate 完成后由 migrations.Migrate176ReconciliationPhysicalMV
-//      重建 reconciliation_normalized(MV 重建 ~10s 是 R5 双源+物理链路版本的固有开销)。
+//  5. dropDependentMaterializedViews() 已恢复(260704-ne5-regression-fix)——
+//     GORM AutoMigrate 仍会 ALTER sys_ad_user.username 等被 MV 引用的列,导致 PG SQLSTATE 0A000 FATA。
+//     前置 DROP 引用业务表的 MV,AutoMigrate 完成后由 migrations.Migrate176ReconciliationPhysicalMV
+//     重建 reconciliation_normalized(MV 重建 ~10s 是 R5 双源+物理链路版本的固有开销)。
 //
-//   6. migrateCredentialModel() 已删除 — 凭证模型已在生产迁移完成(protocol_type 列已存在)。
+//  6. migrateCredentialModel() 已删除 — 凭证模型已在生产迁移完成(protocol_type 列已存在)。
 //
 // 所有 migrations.MigrateNNN 函数定义仍保留在 internal/core/db/migrations/,仅不再启动期调用。
 // 如需重放某次迁移,手动跑对应函数(d.DB)即可。
@@ -1191,6 +1193,18 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(233, "user_preference_defaults", migrations.Migrate233UserPreferenceDefaults); err != nil {
 			applogger.Errorf("用户偏好空值归一化迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 楼层所属机构覆盖列 (quick-261106-wso)。可空、无回填 → 存量行为不变；
+		// HasColumn 幂等兜底，覆盖 SKIP_AUTOMIGRATE 旁路。失败非阻断：启动继续，
+		// 但依赖该列的 COALESCE 查询会报列不存在，需下次启动重试。
+		if err := d.runAndRecord(234, "floor_org_id", migrations.Migrate234FloorOrgID); err != nil {
+			applogger.Errorf("楼层 org_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 工位部门反推按钮权限 seed (quick-261106-wsb, migration 235)。
+		// 必须独立于 234 执行：234 成功是正常路径，把 235 嵌套进 234 的失败分支
+		// 会导致正常启动时权限项永不 seed（审查 P0-1）。
+		if err := d.runAndRecord(235, "workstation_backfill_perm", migrations.Migrate235WorkstationBackfillPerm); err != nil {
+			applogger.Errorf("工位部门反推按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1311,6 +1325,14 @@ func (d *Database) AutoMigrate() error {
 		// SQLite 侧修历史残留的空串行。失败只影响历史行的读取,不影响新写入路径。
 		if err := d.runAndRecord(233, "user_preference_defaults", migrations.Migrate233UserPreferenceDefaults); err != nil {
 			applogger.Errorf("用户偏好空值归一化迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 楼层所属机构覆盖列 (quick-261106-wso)，与上方 PG 分支对称。
+		if err := d.runAndRecord(234, "floor_org_id", migrations.Migrate234FloorOrgID); err != nil {
+			applogger.Errorf("楼层 org_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 工位部门反推按钮权限 seed (quick-261106-wsb)，与上方 PG 分支对称。
+		if err := d.runAndRecord(235, "workstation_backfill_perm", migrations.Migrate235WorkstationBackfillPerm); err != nil {
+			applogger.Errorf("工位部门反推按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)

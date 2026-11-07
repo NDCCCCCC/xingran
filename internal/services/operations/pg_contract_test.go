@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -128,4 +129,174 @@ func TestPGContract_OpsListJoins(t *testing.T) {
 			return err
 		}())
 	})
+}
+
+// TestPGContract_WorkstationOrgAndBackfill 快速-261106-wsb/-wso 的类型契约守护
+// （2026-11-07 生产 500 回归：sys_user.dept_id 是原生 uuid 列，候选查询里裸写
+// `su.dept_id <> ”` 让 PG 尝试 ” → uuid 隐式转换报 invalid input syntax，
+// SQLite 动态类型全绿测不出 —— 与本文件头部记载的 42883 同族缺陷）。
+//
+// 只读保证：BackfillDeptFromUser 以 dryRun=true 调用，service 内部仅 SELECT/Count，
+// 不写库不清缓存（与 header 的「禁止写 SQL」约束一致）；Statistics/List 的 orgId
+// 筛选是纯读 EXISTS 子查询。
+func TestPGContract_WorkstationOrgAndBackfill(t *testing.T) {
+	db := openPGForContractTest(t)
+	ctx := context.Background()
+
+	wsSvc := NewWorkstationService(db)
+
+	// 1) 按人员反推部门预览（覆盖候选 JOIN 里的 su.dept_id/user_id 空串判断）。
+	requireNoPGErr(t, "backfill-dept dryRun preview", func() error {
+		_, err := wsSvc.BackfillDeptFromUser(ctx, true, false)
+		return err
+	}())
+
+	// 1c) 回填写路径契约（审计 P2-3：dryRun 只覆盖读路径，UPDATE 的 CASE
+	// WHEN CAST 形态与 WHERE id IN (?) 参数化推断此前无 PG 守护）。在显式
+	// 事务里执行 fixMismatch=true 的完整写路径后**回滚**——真实走 UPDATE
+	// SQL 但零净变更，符合本文件只读保证的精神。
+	tx := db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		t.Fatalf("begin tx: %v", tx.Error)
+	}
+	requireNoPGErr(t, "backfill-dept write path (rolled back)", func() error {
+		_, err := NewWorkstationService(tx).BackfillDeptFromUser(ctx, false, true)
+		return err
+	}())
+	if err := tx.Rollback().Error; err != nil {
+		t.Fatalf("rollback: %v", err)
+	}
+
+	// 1b) 导入兜底 infer 查询同款 SQL 直跑（审计 P0-1 回归：inferDeptFromUser
+	// 内部 Warnf 吞错误、返回 0，无法靠调用它断言 —— 必须直接执行同款 JOIN
+	// 才能拦住 uuid 列空串比较这类类型契约回归）。只 SELECT。
+	requireNoPGErr(t, "excel infer query shape", func() error {
+		return db.WithContext(ctx).
+			Table("sys_user AS su").
+			Select("su.id AS user_id, su.dept_id").
+			Joins("INNER JOIN sys_dept d ON CAST(d.id AS TEXT) = CAST(su.dept_id AS TEXT)").
+			Where("su.id IN ? AND su.deleted_at IS NULL AND su.dept_id IS NOT NULL AND CAST(su.dept_id AS TEXT) <> ''",
+				[]string{"00000000-0000-0000-0000-000000000000"}).
+			Find(&[]map[string]any{}).Error
+	}())
+
+	// 2) 工位 List/Statistics/SearchOptions 的有效机构 COALESCE 筛选
+	//    （f.org_id/b.org_id 双侧 CAST 后的 COALESCE 类型契约）。
+	const dummyOrg = "00000000-0000-0000-0000-000000000000"
+	requireNoPGErr(t, "workstation List orgId COALESCE", func() error {
+		_, err := wsSvc.List(ctx, requests.WorkstationListRequest{OrgID: dummyOrg})
+		return err
+	}())
+	requireNoPGErr(t, "workstation Statistics orgId COALESCE", func() error {
+		_, err := wsSvc.Statistics(ctx, map[string]interface{}{"orgId": dummyOrg})
+		return err
+	}())
+	requireNoPGErr(t, "workstation SearchOptions orgId COALESCE", func() error {
+		_, err := wsSvc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{OrgID: dummyOrg})
+		return err
+	}())
+
+	// 3) 楼层 List/SearchFloorOptions 的同款 COALESCE 筛选。
+	floorSvc := NewFloorService(db)
+	requireNoPGErr(t, "floor List orgId COALESCE", func() error {
+		_, err := floorSvc.List(ctx, map[string]interface{}{"orgId": dummyOrg})
+		return err
+	}())
+	requireNoPGErr(t, "floor SearchFloorOptions orgId COALESCE", func() error {
+		_, err := floorSvc.SearchFloorOptions(ctx, map[string]interface{}{"orgId": dummyOrg})
+		return err
+	}())
+}
+
+// TestPGContract_ExcelExportScope 守护 Phase 131 两条 Excel 导出独立路径注入的
+// 可见集条件在真实 PG 上的类型契约（P1-8 / DS-06）。
+//
+// 门控：与全文件统一使用 TEST_PG_DSN；未设置/连不通 → t.Skip 带原因（CI 可观测）。
+// 只读保证：仅执行 SELECT，不写库；BuildQuery 的 ::uuid JOIN 是既有技术债
+// （P1-8，Phase 133 或后续清偿），本测试不修改它，只验证新增 CAST 条件的 PG 兼容性。
+//
+// 注意：BuildQuery 含 PG 专有 ::uuid/::text，SQLite 上必炸（既有测试
+// TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 已锁定），故本用例必须
+// 在真实 PG 上跑；静态断言（不依赖 DSN）见 TestScopeExport_StaticContract。
+func TestPGContract_ExcelExportScope(t *testing.T) {
+	db := openPGForContractTest(t)
+	ctx := context.Background()
+
+	// 构造一个非 All 档的可见集（DeptIDs 非空），让 applyExcelWorkstationScope
+	// 真正走到 EXISTS + CAST(... AS TEXT) IN ? 分支。
+	scopeCtx := datascope.WithContext(ctx, datascope.ScopeResult{
+		DeptIDs: []string{"00000000-0000-0000-0000-000000000000"},
+	})
+
+	config, ok := GetExportConfig("workstation")
+	if !ok {
+		t.Fatal("工位导出配置缺失")
+	}
+
+	t.Run("BuildQuery 可见集条件 PG 契约", func(t *testing.T) {
+		qb := NewWorkstationQueryBuilder()
+		// 真实 PG 执行整条 BuildQuery（只读），守护新增 CAST 条件无 42883。
+		requireNoPGErr(t, "Excel BuildQuery scope filter", func() error {
+			return qb.BuildQuery(scopeCtx, db, config, map[string]interface{}{}).
+				Find(&[]map[string]interface{}{}).Error
+		}())
+	})
+
+	t.Run("queryWorkstationIDsForExport 可见集条件 PG 契约", func(t *testing.T) {
+		svc := &ExcelService{db: db}
+		requireNoPGErr(t, "Excel queryWorkstationIDsForExport scope filter", func() error {
+			_, err := svc.queryWorkstationIDsForExport(scopeCtx, nil, map[string]any{})
+			return err
+		}())
+	})
+}
+
+// TestScopeWriteImport_StaticContract 静态断言守护「Excel 导入路径含可见集
+// 校验」（裁定 §4 / 验收硬约束）：不依赖 TEST_PG_DSN，CI 恒跑，防止后续
+// 重构把 filterScopeWriteImportRows 的调用从 ImportData 里静默摘掉。
+func TestScopeWriteImport_StaticContract(t *testing.T) {
+	src, err := os.ReadFile("excel_service.go")
+	if err != nil {
+		t.Fatalf("读取 excel_service.go 失败: %v", err)
+	}
+	content := string(src)
+	assertImportHook := func(token, desc string) {
+		if !strings.Contains(content, token) {
+			t.Fatalf("导入路径可见集校验缺失：%s（应含 %q）", desc, token)
+		}
+	}
+	assertImportHook("filterScopeWriteImportRows(", "ImportData 必须调用逐行可见集过滤")
+	assertImportHook("result.ScopeOutOfScope = outOfScope", "越界行数必须回写 ImportResult")
+	assertImportHook("__excel_row__", "越界错误明细必须携带原始行号")
+}
+
+// TestPGContract_ScopeWriteImportResolve 把 Phase 132 导入逐行校验的新增
+// 查询（scopeWriteResolveEffOrg 四种实体归属链）纳入 TEST_PG_DSN 门控覆盖：
+// 真实 PG 上执行 SELECT，守护 effectiveOrgExpr 的 COALESCE / 双侧 CAST
+// 与 JOIN 骨架无 42883（uuid/varchar 漂移）。
+//
+// 统一门控 openPGForContractTest：未设置/连不通 → t.Skip（CI 可观测）。
+// 只读保证：仅 SELECT，不写库（与全文件一致）。
+func TestPGContract_ScopeWriteImportResolve(t *testing.T) {
+	db := openPGForContractTest(t)
+	ctx := context.Background()
+	const dummy = "00000000-0000-0000-0000-000000000000"
+
+	cases := []struct {
+		entity string
+		record map[string]any
+	}{
+		{"building", map[string]any{"org_id": dummy}},
+		{"floor", map[string]any{"building_id": dummy}},
+		{"workstation", map[string]any{"floor_id": dummy}},
+		{"infoPoint", map[string]any{"workstation_id": dummy}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.entity, func(t *testing.T) {
+			requireNoPGErr(t, "导入归属链解析 "+tc.entity, func() error {
+				_, err := scopeWriteResolveEffOrg(ctx, db, tc.entity, []map[string]any{tc.record})
+				return err
+			}())
+		})
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
@@ -647,9 +648,17 @@ func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest, userID 
 		query = query.Where("power_state = ?", req.PowerState)
 	}
 
-	// Apply data scope filtering using explicit parameters from handler
-	// (DataScopePermission middleware sets these in Gin context, handler extracts and passes them)
-	if userID != "" && dataScope > 0 {
+	// Phase 133 / DS-01：vdi 生产调用方迁移到 ScopeProvider 单一真实源。
+	// 优先取 DataScopePermission 注入 request context 的 ScopeResult；
+	// 未挂注入中间件（ok=false，如直接以 context.Background() 调用的内部任务 /
+	// 单测）时回落显式 userID/dataScope 参数，保留 ListVMs 签名与旧行为零回归。
+	// 审查 P1-4 语义保留：异常枚举（非 0 且 ∉ 1..5）走 fail-closed（1=0），
+	// 0/unset 仍不过滤（超管零回归），绝不改回 `dataScope > 0`。
+	if scope, ok := datascope.FromContext(ctx); ok {
+		query = ApplyVMScopeResult(query, scope)
+	} else if userID != "" && dataScope != 0 {
+		// 无注入回落：旧实现（ApplyVMDataScopeFilter + ApplyBoundUserFilter）保留不删，
+		// 供既有 fail-closed 回归测试 vm_service_test.go:498 直接调用。
 		query = ApplyVMDataScopeFilter(query, userID, dataScope, s.db)
 		query = ApplyBoundUserFilter(query, dataScope)
 	}

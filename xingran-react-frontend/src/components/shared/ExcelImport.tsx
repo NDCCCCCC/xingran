@@ -27,6 +27,8 @@ export interface ImportResult {
   inserted: number;
   updated: number;
   failed: number;
+  /** 工位导入：部门填写不规范时由所属用户反推补全部门的条数（后端可选返回） */
+  inferredDeptCount?: number;
   errors?: ImportError[];
 }
 
@@ -234,8 +236,14 @@ const ExcelImport: FC<ExcelImportProps> = ({
             <div>
               <div>1. 先下载Excel模板文件</div>
               <div>2. 按照模板格式填写数据</div>
-              <div>3. 上传填写好的Excel文件进行导入</div>
-              <div>4. 导入完成后会显示结果，如有错误会详细列出</div>
+              <div>
+                3.{" "}
+                <Text strong style={{ color: "#cf1322" }}>
+                  模板第 2 行是示例数据，填写前请先删除该行
+                </Text>
+              </div>
+              <div>4. 上传填写好的Excel文件进行导入</div>
+              <div>5. 导入完成后会显示结果，如有错误会详细列出</div>
             </div>
           }
           type="info"
@@ -309,6 +317,11 @@ const ExcelImport: FC<ExcelImportProps> = ({
                     <Tag color="error" icon={<CloseCircleOutlined />}>
                       失败: {importResult.failed}
                     </Tag>
+                  </div>
+                )}
+                {(importResult.inferredDeptCount ?? 0) > 0 && (
+                  <div>
+                    <Tag color="warning">部门按人员反推: {importResult.inferredDeptCount}</Tag>
                   </div>
                 )}
               </Space>
