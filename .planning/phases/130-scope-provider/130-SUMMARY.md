@@ -101,9 +101,17 @@ Phase 131/132 收敛 operations 侧时以本 helper 为单一真实源（方向 
 ## 5. Commit
 
 - 第一笔（Lead）：`06e892ee` — `feat(v1.52-p130): ScopeProvider 单一真实源 API（最小可用）`（`pkg/datascope/**` 两个文件）
-- 第二笔（本 agent）：`__COMMIT_HASH__` — `feat(v1.52-p130): ScopeProvider 单一真实源 + user_service 迁移 + ops 全域 data_scope 注入`
-  - `git add` 仅含本 agent 文件；**未** `git add -A`；未提交 `coverage.out`；
-  - 未提交并行 agent 的 `internal/services/operations/**`、`.env.production`、`useBackfillDept.tsx`。
+- 第二笔（本 agent 交付）：`cb04d0f1` — 本 agent 的 7 个文件全部由该提交带入 HEAD。
+  - **协作说明**：本 agent `git add` 了且仅 add 了自己的 7 个文件（暂存区核对无误），
+    但并行 agent 在两笔操作之间先执行了 `git add -A` + commit，把本 agent 文件与它自己的
+    `internal/core/db/database.go`、`internal/services/vdi/vm_service_impl.go`、
+    `.planning/notes/261107-v152-ds05-scope-decision.md` 一并合入 `cb04d0f1`
+    （message = `fix(v1.52): 修复迁移235注册错误 + vdi异常枚举放行 + 裁定补登记部门映射表`）。
+    本 agent 随后执行的 `git commit -m "feat(v1.52-p130): ..."` 因暂存区已空而空跑，
+    故 **未产生独立的原子提交**。文件内容完整、全量测试通过，未做 reset/amend 以免破坏并行 agent。
+  - `130-SUMMARY.md` 的 commit hash 回填为工作区未提交的一处文档修订，是否补一笔提交由 Lead 决定。
+  - 未提交 `coverage.out`；未主动提交并行 agent 的 `internal/services/operations/**`、
+    `.env.production`、`useBackfillDept.tsx`（这些文件在 `cb04d0f1` 之外仍为未提交状态）。
 
 ---
 
