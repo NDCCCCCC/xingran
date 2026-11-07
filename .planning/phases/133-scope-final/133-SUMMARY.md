@@ -1,9 +1,11 @@
 # Phase 133 交付总结：扩展实体 + vdi 合并迁移 + 死实现删除 + DeptSidebar 联动 + UAT
 
 - 日期：2026-11-07
-- 波次：W3 收尾（130 → 131 → 132 → **133** 严格串行），依赖 130 commit `06e892ee` + `cb04d0f1`、131 commit、132 commit
-- 提交信息：`feat(v1.52-p133): 扩展实体收口 + vdi 迁移 + 死实现删除 + DeptSidebar 联动 + UAT`
-- commit hash：见文末「闸门与提交」（提交后回填）
+- 波次：W3 收尾（130 → 131 → 132 → **133** 严格串行），前置全部落地：
+  130 `06e892ee`/`cb04d0f1`、131 `e62bc7b6`/`ade0c823`、132 `b02e1bac`/`4ff4d648`
+- 本 phase 提交（3 笔，详见 §4）：
+  `5161b39f`（part1 C/D/E/F）、`bc381628`（part2 A/B，Lead 代提交）、
+  第三笔 `fix(v1.52-p133): 补 BatchOperation operlog 四类计数 + 回填 SUMMARY 验收数据`
 - 关联需求：`REQUIREMENTS.md` DS-01/02/03/04/05/06/07 + 映射总表 + 验收硬约束；`ROADMAP.md` Phase 133
 - LOCKED 开工输入（只读消费，不重新裁定）：
   - `261107-v152-ds05-scope-decision.md`（归属链 / workstation-device / 显式豁免清单）
@@ -49,20 +51,51 @@
 | 0/unset → All | 超管零回归硬约束；异常枚举（非 0 且 ∉ 1..5）→ fail-closed |
 | 批量语义 | 单条越界 403；批量按可见集裁剪（不整批 403），越界计数入 operlog |
 
+### 0.3 两条实现决策登记（Phase 133 落地，Lead 2026-11-07 确认）
+
+| 决策 | 内容 | 依据 |
+|---|---|---|
+| **dedicatedLine source/dest 双链 OR 命中** | 见 §0.1：原裁定 1 假定 `ops_dedicated_lines` 存在 `building_id` 列，与真实 schema 不符；按「归属链回溯到最近带机构列实体 + 链断 fail-closed」补充为 `source_room_id` / `dest_room_id` 各自经 `ops_server_rooms.building_id → ops_buildings.org_id`，**任一端命中可见集即放行**（读端点两端 EXISTS OR、写端点候选 org 任一命中放行），两端都断链/都越界 → 空集 / 403。**不新增迁移、不加列**。 | 2026-11-07 Lead 裁定（开工前消息）；`.planning/notes/*` 只读，只在本文登记 |
+| **不改 132 `filterVisibleIDs` 白名单，四实体用同源 SQL 自行裁剪** | 132 `scope_write.go` 的 `filterVisibleIDsAllowedTables` 是刻意设的防误用边界，只含四域表（ops_buildings / ops_floors / sys_workstation / ops_info_points），**不含四实体表**。133 在 `scope_entities.go::filterEntityVisibleIDs` 用 131 的 `orgScopeClause` + `effectiveOrgExpr` 构造 `WHERE id IN ? AND CAST(<orgExpr> AS TEXT) IN ?`（EXISTS 子查询形态）的一次性查询，与 132 `filterVisibleIDs` 内部逐字同源：service 层、写 SQL 之前、DB 自筛、All 短路零查询、FailClosed/空集 → 空集、越界计数返回。**不放宽 132 白名单、不改 132 任何文件、不算新增第 5 套实现**。单条写仍直接复用 132 `checkWriteScope`（`ErrScopeDenied` 显式 403），读复用 131 `applyReadScope` / `wrapScopeExists` / `applyScopeToSub`。 | Lead 2026-11-07「按你不改 132 方案落地」确认；理由是放宽白名单会削弱 132 刻意设的防误用边界 |
+
+**403 透传决策**（132 文件头 P0-2 陷阱）：四实体中 serverRoom / dedicatedLine / roomDevice 的
+Create/Update/Delete 已用 `response.HandleServiceError`，对 `IsAppError` 天然透传 `ErrScopeDenied` 的 403；
+仅 `asset_handler.go` 用裸 500 包装，新增 `writeAssetServiceError` 类型分派：
+`*apperrors.AppError`（越界 403）→ 原样透传；普通 error → 恢复既有 `response.Error(c, 500, err.Error())`
+（int-first-arg quirk，存量测试断言 400 零回归）。operlog.Record 位置不变。
+
 ---
 
 ## 1. 交付清单
 
-### ① 四实体读写 403 矩阵（A）
+### ① 四实体读写 403 矩阵（A）— 已落地（`bc381628`）
 
-> 交付文件与覆盖数在 A 落地后回填；口径已在 §0 锁定。
-> 待填：asset / serverRoom / dedicatedLine / roomDevice 各
-> List / Statistics / dropdown-options / GetByID 读端点 +
-> Create / Update / Delete / Batch 写端点的 403 越权矩阵用例数，
-> 含「归属链断链」专项用例（dedicatedLine 两端断链、roomDevice 两级断链）。
+**交付文件**（8 文件，+1440 行）
+- `internal/services/operations/scope_entities.go`（133 新建，659 行）：
+  四实体 + workstation-device 的归属链 EXISTS 子查询、读侧可见集注入、
+  写侧有效机构解析、批量裁剪统一基建。
+- `internal/services/operations/scope_entities_403_test.go`（新建，492 行）：
+  403 越权矩阵厚测试（8 个 `TestEntity403_*` / **115 个语义断言** / 21 个 `IsScopeDenied` 403 断言）。
+- 6 个 service + `asset_handler.go`：读端点注入 / 写端点 403 / 批量裁剪接线。
 
-- [ ] A 落地后回填：四实体 403 矩阵覆盖数 = ____（读 ____ / 写 ____ / 断链 ____）
-- [ ] 收敛 `server_room_service.go:153-170` 的 `getDeptAndChildDeptIDs` 第 4 套子树展开到 datascope 单一真实源（不新增第 5 套）
+**四实体 403 矩阵覆盖数 = 115 个断言**（分项，按语义断言组计，非仅返回值检查）：
+
+| 分项 | 覆盖数 | 内容 |
+|---|---|---|
+| 读端点越界空集 | **28** | 四实体 × List / Statistics / GetByID / dropdown 口径（R-1：asset 3 + serverRoom 3 + dedicatedLine 4 + roomDevice 4，含计数与越界 not-found）+ 断链读空集（R-2：楼宇软删后 serverRoom / roomDevice / dedicatedLine 三档 Statistics=0）+ All/未注入全量对照（Z-1：4 实体 List 各 2 档）+ FailClosed/Self 读空集（Z-2） |
+| 写端点单条 403 | **21** | W-1 Create×4 + Update×2 + Delete×4（含断链 Delete×2）+ W-2 双链 OR 放行 1 / 断链 Create 403 1 + Z-2 FailClosed/Self×2 档 Delete 403×2 实体 + B-1 workstation-device 写 403×5（Add/Delete/Update/SyncAD/SyncAsset）+ Self 他人工位 403 1 |
+| 批量按可见集裁剪 | **13** | W-3 四实体 BatchDelete 各一组（asset / serverRoom / dedicatedLine / roomDevice），含越界行零变更语义断言（请求行数 / 可见行数 / 越界保留行数） |
+| 归属链断链专项 | **11** | dedicatedLine 两端断链 Create/Delete/GetByID/Statistics/批量保留；roomDevice 两级断链 GetByID/Delete/Statistics/批量保留；楼宇软删触发的跨实体断链（R-2） |
+| 档位边界（All/未注入/异常/Self/双链 OR） | **42** | 0/unset 与 `FromContext ok=false` 零回归（131/132 `scopeIsAll` 契约）、FailClosed、Self 无用户列空集、workstation-device Self 随工位 `user_id`、dedicatedLine 源/目的双链 OR 命中、All 全量放行 |
+
+- [x] A 落地回填：四实体 403 矩阵覆盖数 = **115**（读 28 / 写 21 / 批量 13 / 断链 11 / 档位边界 42）
+- [x] 收敛 `server_room_service.go` 的 `getDeptAndChildDeptIDs`：明确为「请求 orgId 业务筛选展开」（与 ScopeResult 强制权限边界正交、AND 叠加），
+  展开逻辑本身复用 `BuildDeptRecursiveFilter` 单一真实源（dept_filter.go），不内联复制四条件、**不新增第 5 套子树实现**；
+  `SearchServerRoomOptions` 的 orgId 等值筛选同步改为同款 `IN` 展开，消除 List/Options 口径不一致。
+  登录人可见集的展开只由 `pkg/datascope.Resolve` 承担，读端点经 `applyEntityReadScope` / `wrapScopeExists` 注入。
+- [x] **零回归硬约束**：A/B 接入后曾出现 3 个存量 CRUD 测试 + 4 个 asset handler 测试回归，均已按 131/132 契约修正
+  （`!ok → All` 完全短路、普通 error 保持既有 500/400 语义、`ErrScopeDenied` 才透传 403），
+  `go test -count=1 ./internal/services/operations/... ./internal/api/v1/operations/...` 全绿。
 
 ### ② vdi / 超管零回归 + 死实现与死测试删除（D，已落地自洽）
 
@@ -169,21 +202,46 @@
 
 | 批 | 内容 | 状态 |
 |---|---|---|
-| ① | 四实体读写 403 矩阵（含归属链断链） | 待 A 落地后回填 |
-| ② | vdi / 超管零回归 + middleware 死实现与死测试删除 | **已自洽**（vdi 对照测试全绿 / middleware 测试全绿） |
-| ③ | 前端 DeptSidebar 可见集断言 | **已自洽**（vitest 24 绿 / lint:ci ALL PASS） |
-| ④ | UAT 清单（含 location-alias 豁免复核、ds05 残余风险脏数据抽查） | **已产出** [133-UAT.md](133-UAT.md) |
+| ① | 四实体读写 403 矩阵（含归属链断链） | **已自洽**（`bc381628`：8 个 `TestEntity403_*` / 115 断言 / 21 个 403 断言；含 3 个存量 CRUD + 4 个 asset handler 零回归修正） |
+| ② | vdi / 超管零回归 + middleware 死实现与死测试删除 | **已自洽**（`5161b39f`：vdi 对照测试全绿 / middleware 测试全绿） |
+| ③ | 前端 DeptSidebar 可见集断言 | **已自洽**（`5161b39f`：vitest 24 绿 / prettier / lint:ci ALL PASS） |
+| ④ | UAT 清单（含 location-alias 豁免复核、ds05 残余风险脏数据抽查） | **已产出** [133-UAT.md](133-UAT.md)（`5161b39f`） |
+
+### 132 遗留补强（Lead 交办，本 phase 收尾）
+
+- 132 的 `building_handler.go` / `floor_handler.go` / `infopoint_handler.go` 的
+  `BatchOperation` success path 原本只有裸 `operlog.Record(OperTypeBatch)`，
+  缺「范围档位 / 请求行数 / 可见集内行数 / 越界行数」四类聚合计数
+  （`workstation_handler.go` 与 `excel_handler.go` 已由 132 补齐）。
+- 本 phase 用 132 导出的 `opsServices.ScopeWriteOperParam(ctx, db, entity, action, ids)`
+  经 `operlog.WithOperParam(...)` 一键接入三处，复用
+  `ScopeWriteEntityBuilding` / `ScopeWriteEntityFloor` / `ScopeWriteEntityInfoPoint` 常量；
+  `operlog.Record` 既有位置、响应形状、错误路径均不变。
+- 计入本 phase 最后一笔提交（`fix(v1.52-p133): ...`），文件面与 `bc381628` 不重叠。
 
 ---
 
-## 4. 闸门与提交（提交后回填）
+## 4. 闸门与提交
 
-- `go build ./...`：（待全量跑）
-- `go test -count=1 ./internal/... ./pkg/... ./cmd/...`：（待全量跑，不带 coverprofile 避免与厚测试 agent 竞态）
-- 前端：vitest / prettier / `npm run lint:ci`（ALL PASS）
-- `internal/api/strict_mount_count_test.go` 下限 16/188/164：（本 phase 原则上不动 router.go，130 已挂注入；如动则先 `node scripts/scan-routes.cjs` 重生成 `scripts/route-registry.json` 并跑该守卫）
-- commit hash：（提交后回填）
-- 原子提交：`git add` 只加本 phase 文件，不 `git add -A`，不提交 `coverage.out`，不碰 `xingran-react-frontend/.env.production`
+| 闸门 | 结果 |
+|---|---|
+| `go build ./...` | **EXIT=0 全绿**（第一批、A/B 后、132 遗留补强后各跑一次） |
+| `go test -count=1 ./internal/... ./pkg/... ./cmd/...` | **EXIT=0 全绿**（第一批全量；不带 coverprofile 避免与厚测试 agent 竞态） |
+| `go test -count=1 ./internal/services/operations/... ./internal/api/v1/operations/...` | **全绿**（含 8 个 Entity403 + 3 个存量 CRUD + 4 个 asset handler；A/B 接入后 2 轮回归均修正为零回归） |
+| `go test -count=1 ./internal/api/v1/operations/...`（132 遗留补强后） | **ok**（building/floor/infopoint 三处 handler 改动零回归） |
+| 前端 vitest | **592 文件 / 4128 用例全绿**（Lead 全量复核）+ 本 phase 相关 24 用例全绿（含新增 9 个 `visibleDeptScope`） |
+| `npx prettier --write` 改动文件 / `npm run format:check` | **PASS** |
+| `npm run lint:ci` | **ALL PASS**（eslint 0 problems；含 antd 6 弃用 prop 门禁 C14 全表零命中；`check-route-registry` OK 路由 702 / 写路由 311 / deferred 138） |
+| `internal/api/strict_mount_count_test.go` 下限 16/188/164 | **通过**（本 phase 未动 router.go；130 已挂注入、registry 未重生成） |
+| 全量 `go test ./...` 已知环境项 | `scripts/e2e/TestE2EAllEndpointsLogged` 因 Windows/bash 路径拼接报 127（环境既有、非本里程碑引入，如实登记，不修） |
+
+**commit 记录**
+- 第一批 `5161b39f` — `feat(v1.52-p133-part1): vdi 迁移 + 死实现删除 + DeptSidebar 联动 + UAT 骨架`（11 文件）
+- 第二批 `bc381628` — `feat(v1.52-p133-part2): 四实体读写收口 + workstation-device 归属 + 403 矩阵`（8 文件，Lead 代提交）
+- 第三笔 — `fix(v1.52-p133): 补 BatchOperation operlog 四类计数 + 回填 SUMMARY 验收数据`（3 个 handler + 本文；提交后 hash 回填至本行）
+
+原子提交约束：`git add` 只加本 phase 文件，不 `git add -A`，不提交 `coverage.out` / `coverage_diffcov.out`，
+不碰 `xingran-react-frontend/.env.production`（工作区该文件为其它 agent 在制、非本 phase 改动）。
 
 ---
 
@@ -193,6 +251,7 @@
 `excel_query_builder.go` / `excel_service.go` 导出路径、`dropdown_helper.go`、
 `floor_cache_impl.go`、四域 service 读/写函数（131/132 已交付）、
 `internal/core/db/database.go`、`useBackfillDept.tsx`、任何 `.env*`、`.planning/notes/*`。
-router.go 本 phase 未改动（130 已挂 DataScopePermission）。
 operlog 强制约定：业务写操作 success path 末尾、`response.Success` 之前 `operlog.Record`——
-四实体 handler 既有位置保持不变。
+四实体 handler 既有位置保持不变；132 遗留的 building/floor/infopoint 三处 `BatchOperation`
+仅补 `operlog.WithOperParam(ScopeWriteOperParam(...))` 四类聚合计数，`Record` 位置/形状不变（见 §3）。
+router.go 本 phase 未改动（130 已挂 DataScopePermission、`scripts/route-registry.json` 未重生成）。

@@ -224,6 +224,9 @@ func (h *FloorHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层管理", operlog.OperTypeBatch)
+	// Phase 133 补 132 遗留（裁定 §2 硬约束 3/4）：批量裁剪越界计数入 operlog。
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "楼层管理", operlog.OperTypeBatch,
+		operlog.WithOperParam(opsServices.ScopeWriteOperParam(
+			c.Request.Context(), h.core.GetDB(), opsServices.ScopeWriteEntityFloor, req.Action, req.IDs)))
 	response.Success(c, nil)
 }
