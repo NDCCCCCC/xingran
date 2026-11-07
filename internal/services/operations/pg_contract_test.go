@@ -250,3 +250,53 @@ func TestPGContract_ExcelExportScope(t *testing.T) {
 		}())
 	})
 }
+
+// TestScopeWriteImport_StaticContract 静态断言守护「Excel 导入路径含可见集
+// 校验」（裁定 §4 / 验收硬约束）：不依赖 TEST_PG_DSN，CI 恒跑，防止后续
+// 重构把 filterScopeWriteImportRows 的调用从 ImportData 里静默摘掉。
+func TestScopeWriteImport_StaticContract(t *testing.T) {
+	src, err := os.ReadFile("excel_service.go")
+	if err != nil {
+		t.Fatalf("读取 excel_service.go 失败: %v", err)
+	}
+	content := string(src)
+	assertImportHook := func(token, desc string) {
+		if !strings.Contains(content, token) {
+			t.Fatalf("导入路径可见集校验缺失：%s（应含 %q）", desc, token)
+		}
+	}
+	assertImportHook("filterScopeWriteImportRows(", "ImportData 必须调用逐行可见集过滤")
+	assertImportHook("result.ScopeOutOfScope = outOfScope", "越界行数必须回写 ImportResult")
+	assertImportHook("__excel_row__", "越界错误明细必须携带原始行号")
+}
+
+// TestPGContract_ScopeWriteImportResolve 把 Phase 132 导入逐行校验的新增
+// 查询（scopeWriteResolveEffOrg 四种实体归属链）纳入 TEST_PG_DSN 门控覆盖：
+// 真实 PG 上执行 SELECT，守护 effectiveOrgExpr 的 COALESCE / 双侧 CAST
+// 与 JOIN 骨架无 42883（uuid/varchar 漂移）。
+//
+// 统一门控 openPGForContractTest：未设置/连不通 → t.Skip（CI 可观测）。
+// 只读保证：仅 SELECT，不写库（与全文件一致）。
+func TestPGContract_ScopeWriteImportResolve(t *testing.T) {
+	db := openPGForContractTest(t)
+	ctx := context.Background()
+	const dummy = "00000000-0000-0000-0000-000000000000"
+
+	cases := []struct {
+		entity string
+		record map[string]any
+	}{
+		{"building", map[string]any{"org_id": dummy}},
+		{"floor", map[string]any{"building_id": dummy}},
+		{"workstation", map[string]any{"floor_id": dummy}},
+		{"infoPoint", map[string]any{"workstation_id": dummy}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.entity, func(t *testing.T) {
+			requireNoPGErr(t, "导入归属链解析 "+tc.entity, func() error {
+				_, err := scopeWriteResolveEffOrg(ctx, db, tc.entity, []map[string]any{tc.record})
+				return err
+			}())
+		})
+	}
+}

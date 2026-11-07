@@ -118,6 +118,14 @@ export interface BackfillDeptResult {
   skippedBadUserDept: number;
   skippedAlreadyValid: number;
   samples: BackfillDeptSample[];
+  /** Phase 132 范围快照（预览与确认同一 ScopeResult，防范围漂移） */
+  scopeTier?: string;
+  scopeDeptNames?: string[];
+  scopeDeptTotal?: number;
+  scopeTotal?: number;
+  scopeVisible?: number;
+  scopeOutOfScope?: number;
+  scopeFailClosed?: boolean;
 }
 
 export type RoomStatus = Status;

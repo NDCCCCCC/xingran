@@ -120,7 +120,17 @@ type BackfillDeptResult struct {
 	SkippedNoUser       int                  `json:"skippedNoUser"`       // 无绑定用户
 	SkippedBadUserDept  int                  `json:"skippedBadUserDept"`  // 用户部门 NULL/脏/指向不存在部门
 	SkippedAlreadyValid int                  `json:"skippedAlreadyValid"` // 已有部门且一致（或不纠正时不一致亦计此）
-	Samples             []BackfillDeptSample `json:"samples"`             // 前 20 条
+	Samples             []BackfillDeptSample `json:"samples"`             // 前 20 条（非 All 档恒为空，见 Phase 132）
+	// Phase 132 范围快照（裁定 §3：预览与确认用同一 ScopeResult 快照，防范围漂移）。
+	// 两次请求各自从同一 c.Request.Context() 的 ScopeResult 派生，档位/计数回显
+	// 供前端确认框「本次范围」文案与 operlog 审计使用；All 档同样回填档位。
+	ScopeTier        string   `json:"scopeTier,omitempty"`        // All / Custom/Dept/DeptChild / Self / FailClosed
+	ScopeDeptNames   []string `json:"scopeDeptNames,omitempty"`   // 可见部门名（前 3 个 + 总数由前端拼）
+	ScopeDeptTotal   int      `json:"scopeDeptTotal,omitempty"`   // 可见部门总数（多部门「等 M 个部门」用）
+	ScopeTotal       int      `json:"scopeTotal,omitempty"`       // 请求行数（全库候选总数）
+	ScopeVisible     int      `json:"scopeVisible,omitempty"`     // 可见集内行数
+	ScopeOutOfScope  int      `json:"scopeOutOfScope,omitempty"`  // 越界行数（聚合计数，不逐条回显）
+	ScopeFailClosed  bool     `json:"scopeFailClosed,omitempty"`  // 数据权限异常 → 前端确认按钮 disabled
 }
 
 // WorkstationStatisticsResult 工位统计结果(status: 0=可用 1=占用 2=维护)。
@@ -319,6 +329,12 @@ func (s *workstationService) WithCacheProvider(cache system.CacheProvider) *work
 // 仅由管理员手动设置，新建路径不会触发（因为新工位入库前 status 来自表单，
 // 通常是 Available）。
 func (s *workstationService) Create(ctx context.Context, workstation *models.Workstation) error {
+	// Phase 132：按提交归属（floorId → 楼层/楼宇有效机构）校验可见集，
+	// 写 SQL 之前，越界 403；Self 档按提交的 user_id 是否为本人放行。
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityWorkstation, "",
+		scopeWritePtr(workstation.FloorID), scopeWritePtr(workstation.UserID)); err != nil {
+		return err
+	}
 	// ✨ 联动 user_id ↔ status(占用/空闲)
 	applyWorkstationOccupancyLink(workstation, workstation.Status)
 	return s.repo.Create(ctx, workstation)
@@ -333,6 +349,15 @@ func (s *workstationService) Create(ctx context.Context, workstation *models.Wor
 // 修复:Save 前先 First 查出现有记录,把审计字段 CreatedAt/CreatedBy 回填到入参,
 // 再 Save。参考 internal/services/system/user_service.go 的 Update 模式。
 func (s *workstationService) Update(ctx context.Context, workstation *models.Workstation) error {
+	// Phase 132 双向校验（写 SQL 之前）：改前工位归属 ∈ 可见集，且提交的
+	// floorId → 有效机构 ∈ 可见集，防把工位搬出/搬入越界范围。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityWorkstation, workstation.ID); err != nil {
+		return err
+	}
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityWorkstation, "",
+		scopeWritePtr(workstation.FloorID), scopeWritePtr(workstation.UserID)); err != nil {
+		return err
+	}
 	var existing models.Workstation
 	if err := s.db.WithContext(ctx).Where("id = ?", workstation.ID).First(&existing).Error; err != nil {
 		return err
@@ -369,6 +394,10 @@ func applyWorkstationOccupancyLink(w *models.Workstation, currentStatus models.W
 }
 
 func (s *workstationService) Delete(ctx context.Context, id string) error {
+	// Phase 132：按资源归属校验（写 SQL 之前，越界 403）。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityWorkstation, id); err != nil {
+		return err
+	}
 	// repo.Delete 经 Model(new(T)) 软删除,与迁移前 .Table(workstationTable) 形式行为等价
 	return s.repo.Delete(ctx, id)
 }
@@ -496,19 +525,47 @@ func (s *workstationService) GetFloorWorkstationsAll(ctx context.Context, floorI
 }
 
 func (s *workstationService) BatchDelete(ctx context.Context, ids []string) error {
+	// Phase 132（裁定 §2）：service 层、写 SQL 之前按可见集裁剪，越界行剔除。
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityWorkstation, ids)
+	if err != nil {
+		return err
+	}
 	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil），
 	// 与迁移前 `if len(ids) == 0 { return nil }` 行为一致
-	return s.repo.BatchDelete(ctx, ids)
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // BatchUpdatePositions 批量更新工位位置和尺寸
 // 遵循 Go 最佳实践：使用 CASE WHEN 批量更新，避免 N+1 问题
+//
+// Phase 132（裁定 §2）：按可见集裁剪 items，越界工位不进入 CASE UPDATE。
 func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []PositionUpdateItem) error {
 	if len(items) == 0 {
 		return nil
 	}
+	ids := make([]string, 0, len(items))
+	for _, it := range items {
+		ids = append(ids, it.ID)
+	}
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityWorkstation, ids)
+	if err != nil {
+		return err
+	}
+	visibleSet := make(map[string]bool, len(visible))
+	for _, id := range visible {
+		visibleSet[id] = true
+	}
+	filtered := make([]PositionUpdateItem, 0, len(visible))
+	for _, it := range items {
+		if visibleSet[it.ID] {
+			filtered = append(filtered, it)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
 
-	sql, args := buildBatchPositionUpdateSQL(items)
+	sql, args := buildBatchPositionUpdateSQL(filtered)
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(sql, args...).Error; err != nil {
@@ -553,9 +610,25 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 		Samples:     make([]BackfillDeptSample, 0),
 	}
 
-	// 1) 候选工位：有绑定用户且该用户的部门有效。
+	// Phase 132（裁定 §3）：本次调用的 ScopeResult 快照只解析一次，预览与执行
+	// 两次请求各自从同一 c.Request.Context() 的 ScopeResult 派生；档位/部门名/
+	// FailClosed 回显进 result 供前端确认框「本次范围」文案展示，禁止确认阶段
+	// 重新解析用户档位（防范围漂移）。All 档同样回填档位保证审计链完整。
+	tier, deptNames, deptTotal, failClosed := scopeWriteBackfillSnapshot(ctx, s.db)
+	result.ScopeTier = tier
+	result.ScopeDeptNames = deptNames
+	result.ScopeDeptTotal = deptTotal
+	result.ScopeFailClosed = failClosed
+
+	// 候选/COUNT/CASE UPDATE 三层共用同一段「工位有效机构 ∈ 可见集」条件
+	// （scopeWriteWorkstationVisibleSQL，由本次调用的同一 ScopeResult 决定）。
+	visibleCond, visibleArgs, skipAll := scopeWriteWorkstationVisibleSQL(ctx, "w")
+	scope, ok := scopeFromContext(ctx)
+	isAll := scopeIsAll(scope, ok)
+
+	// 1) 候选工位：有绑定用户且该用户的部门有效 + 可见集裁剪（裁定 §2）。
 	var candidates []backfillDeptCandidate
-	err := s.db.WithContext(ctx).
+	candidateQ := s.db.WithContext(ctx).
 		Table("sys_workstation AS w").
 		Select(`w.id AS workstation_id, w.workstation_name,
 			w.dept_id AS current_dept_id, d2.dept_name AS current_dept_name,
@@ -568,26 +641,42 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 		// 列（user_service.go:463 的 P4 fix 记载），裸写 su.dept_id <> '' 会让 PG
 		// 尝试把 '' 隐式转 uuid → invalid input syntax 运行时报错；SQLite 动态
 		// 类型放行，故该类缺陷只有 PG contract 测试能拦（2026-11-07 实测 500）。
-		Where("w.deleted_at IS NULL AND su.deleted_at IS NULL AND su.dept_id IS NOT NULL AND CAST(su.dept_id AS TEXT) <> ''").
-		Find(&candidates).Error
+		Where("w.deleted_at IS NULL AND su.deleted_at IS NULL AND su.dept_id IS NOT NULL AND CAST(su.dept_id AS TEXT) <> ''")
+	if !skipAll {
+		candidateQ = candidateQ.Where(visibleCond, visibleArgs...)
+	}
+	err := candidateQ.Find(&candidates).Error
 	if err != nil {
 		return nil, fmt.Errorf("查询反推候选工位失败: %w", err)
 	}
 	result.Candidates = len(candidates)
+	result.ScopeVisible = len(candidates)
 
 	// 2) 未命中候选的工位按原因归类：一条条件聚合替代两次全表 COUNT（审计 P2-4）。
+	// Phase 132：COUNT 同步注入可见集条件，保证「请求行数 / 可见集内行数 /
+	// 越界行数」与候选集同一口径（裁定 §2 硬约束 3）。
 	var stats []struct {
 		Total    int64
 		WithUser int64
 	}
-	if err := s.db.WithContext(ctx).Table("sys_workstation").
+	// Phase 132：COUNT 保持全库口径 = 「请求行数」（裁定 §2 硬约束 3 的四类
+	// 计数之一）；可见集内行数由上面已裁剪的候选查询给出，越界行数 =
+	// 全库总数 - 可见候选数。若给 COUNT 也挂可见集条件会让越界恒 0，
+	// 丢失审计语义，故此处不注入（既有全库 COUNT 原样保留）。
+	countQ := s.db.WithContext(ctx).Table("sys_workstation").
 		Select("COUNT(*) AS total, " +
 			"COALESCE(SUM(CASE WHEN user_id IS NOT NULL AND CAST(user_id AS TEXT) <> '' THEN 1 ELSE 0 END), 0) AS with_user").
-		Where("deleted_at IS NULL").Scan(&stats).Error; err != nil {
+		Where("deleted_at IS NULL")
+	if err := countQ.Scan(&stats).Error; err != nil {
 		return nil, fmt.Errorf("统计工位总数失败: %w", err)
 	}
 	if len(stats) == 0 {
 		return result, nil
+	}
+	result.ScopeTotal = int(stats[0].Total)
+	result.ScopeOutOfScope = result.ScopeTotal - result.ScopeVisible
+	if result.ScopeOutOfScope < 0 {
+		result.ScopeOutOfScope = 0
 	}
 	result.SkippedNoUser = int(stats[0].Total - stats[0].WithUser)
 	result.SkippedBadUserDept = int(stats[0].WithUser) - len(candidates)
@@ -622,6 +711,14 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 			// 已有部门且一致（或不一致但未开启纠正）→ 跳过，绝不覆盖。
 			result.SkippedAlreadyValid++
 		}
+		// Phase 132（agent-8 P0-3）：批量裁定 §2「越界行统一计入聚合计数、
+		// 不逐条回显」。Samples 前 20 条逐条含 WorkstationID/Name/UserName/
+		// 部门名，属逐条明细回显；非 All 档一律不收集（恒为空 slice），
+		// 只保留聚合计数，杜绝越界集合枚举（P1-5 侧信道收敛）。All 档保持
+		// 既有审计样例行为零回归。
+		if !isAll {
+			continue
+		}
 		// skip 样例只补位：把前 20 个槽位尽量留给 fill/correct（审计 P2-5）。
 		if action == "skip" && len(result.Samples) >= maxSamples-1 {
 			continue
@@ -653,8 +750,35 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 	}
 
 	// 5) 事务内批量 CASE UPDATE，分块走 chunksOf 共享 helper（审计 P2-11）。
+	// Phase 132（裁定 §2 第三层）：toUpdate 在 service 层、写 SQL 之前按可见集
+	// 裁剪（一次性 WHERE id IN ? AND 有效机构 ∈ 可见集），且 CASE UPDATE 的
+	// WHERE 追加可见集 EXISTS 条件作双保险——即便上层分类有 bug，DB 也不会
+	// 写出可见集外的行。
+	updateIDs := make([]string, 0, len(toUpdate))
+	for _, it := range toUpdate {
+		updateIDs = append(updateIDs, it.id)
+	}
+	visibleUpdateIDs, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityWorkstation, updateIDs)
+	if err != nil {
+		return nil, err
+	}
+	visibleSet := make(map[string]bool, len(visibleUpdateIDs))
+	for _, id := range visibleUpdateIDs {
+		visibleSet[id] = true
+	}
+	scopedUpdate := make([]updateItem, 0, len(visibleUpdateIDs))
+	for _, it := range toUpdate {
+		if visibleSet[it.id] {
+			scopedUpdate = append(scopedUpdate, it)
+		}
+	}
+	if len(scopedUpdate) == 0 {
+		return result, nil
+	}
+	// CASE UPDATE 用的可见集条件（别名 sys_workstation，与 UPDATE 目标表一致）。
+	updateCond, updateArgs, updateSkip := scopeWriteWorkstationVisibleSQL(ctx, "sys_workstation")
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for _, chunk := range chunksOf(toUpdate, 400) {
+		for _, chunk := range chunksOf(scopedUpdate, 400) {
 			var sb strings.Builder
 			// CASE 表达式内两侧 CAST：id 是 uuid、dept_id 是 varchar，PG 无
 			// uuid = varchar 运算符；THEN 分支显式 CAST 避免 PG 42804（CASE
@@ -676,6 +800,12 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 				args = append(args, chunk[j].id)
 			}
 			sb.WriteString(") AND deleted_at IS NULL")
+			// 追加可见集条件（All 档 skip，零额外 SQL）。
+			if !updateSkip {
+				sb.WriteString(" AND ")
+				sb.WriteString(updateCond)
+				args = append(args, updateArgs...)
+			}
 			if err := tx.Exec(sb.String(), args...).Error; err != nil {
 				return fmt.Errorf("批量回填工位部门失败: %w", err)
 			}

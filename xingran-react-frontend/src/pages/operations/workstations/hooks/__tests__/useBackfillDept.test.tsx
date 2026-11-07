@@ -50,7 +50,26 @@ interface ConfirmConfig {
   afterClose?: () => void;
   content?: unknown;
   okText?: string;
+  okButtonProps?: { disabled?: boolean };
 }
+
+// Phase 132：递归收集 React 元素树里的所有文本节点，用于断言「本次范围」文案
+// 是否挂进 renderContent() / modalRef.current.update() 刷新链路。
+function collectScopeWriteTexts(node: unknown): string[] {
+  if (node == null || typeof node === "boolean") return [];
+  if (typeof node === "string" || typeof node === "number") return [String(node)];
+  if (Array.isArray(node)) return node.flatMap(collectScopeWriteTexts);
+  if (typeof node === "object") {
+    const el = node as { props?: { children?: unknown } };
+    if (el.props && "children" in el.props) {
+      return collectScopeWriteTexts(el.props.children);
+    }
+  }
+  return [];
+}
+
+const scopeWriteRangeText = (cfg: ConfirmConfig): string =>
+  collectScopeWriteTexts(cfg.content).find((s) => s.startsWith("本次范围")) ?? "";
 
 describe("useBackfillDept", () => {
   let confirmSpy: ReturnType<typeof vi.spyOn>;
@@ -179,5 +198,104 @@ describe("useBackfillDept", () => {
     });
 
     expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  // Phase 132 / 裁定 §3：四类「本次范围」文案 + FailClosed 确认按钮 disabled。
+  const openWithPreview = async (p: BackfillDeptResult) => {
+    const onSuccess = vi.fn();
+    vi.mocked(workstationApi.backfillDeptFromUser).mockResolvedValueOnce(p);
+    const { result } = renderHook(() => useBackfillDept(onSuccess));
+    await act(async () => {
+      await result.current.open();
+    });
+  };
+
+  it("All 档 → 「本次范围：全库（共 N 条）」且确认按钮可用", async () => {
+    await openWithPreview(preview({ scopeTier: "All", scopeTotal: 42 }));
+    expect(scopeWriteRangeText(latestConfig)).toBe("本次范围：全库（共 42 条）");
+    expect(latestConfig.okButtonProps?.disabled).toBe(false);
+  });
+
+  it("Custom/Dept/DeptChild 档 → 「部门名及子部门（共 N 条）」且确认按钮可用", async () => {
+    await openWithPreview(
+      preview({
+        scopeTier: "Custom/Dept/DeptChild",
+        scopeDeptNames: ["研发部", "测试部"],
+        scopeDeptTotal: 2,
+        scopeTotal: 7,
+      })
+    );
+    expect(scopeWriteRangeText(latestConfig)).toBe("本次范围：研发部、测试部及子部门（共 7 条）");
+    expect(latestConfig.okButtonProps?.disabled).toBe(false);
+  });
+
+  it("多部门（>3）→ 列前 3 个 + 「等 M 个部门」", async () => {
+    await openWithPreview(
+      preview({
+        scopeTier: "DeptChild",
+        scopeDeptNames: ["A部", "B部", "C部", "D部"],
+        scopeDeptTotal: 5,
+        scopeTotal: 9,
+      })
+    );
+    expect(scopeWriteRangeText(latestConfig)).toBe(
+      "本次范围：A部、B部、C部 等 5 个部门及子部门（共 9 条）"
+    );
+  });
+
+  it("Self 档 → 「仅本人关联工位（共 N 条）」且确认按钮可用", async () => {
+    await openWithPreview(preview({ scopeTier: "Self", scopeTotal: 3 }));
+    expect(scopeWriteRangeText(latestConfig)).toBe("本次范围：仅本人关联工位（共 3 条）");
+    expect(latestConfig.okButtonProps?.disabled).toBe(false);
+  });
+
+  it("FailClosed 档 → 「无（数据权限异常，请联系管理员）」且确认按钮 disabled", async () => {
+    await openWithPreview(
+      preview({ scopeTier: "FailClosed", scopeFailClosed: true, scopeTotal: 0 })
+    );
+    expect(scopeWriteRangeText(latestConfig)).toBe("本次范围：无（数据权限异常，请联系管理员）");
+    expect(latestConfig.okButtonProps?.disabled).toBe(true);
+  });
+
+  it("勾选「纠正不一致」触发 update() 刷新链路后，范围文案与 disabled 不丢失", async () => {
+    const onSuccess = vi.fn();
+    vi.mocked(workstationApi.backfillDeptFromUser)
+      .mockResolvedValueOnce(
+        preview({
+          scopeTier: "Custom/Dept/DeptChild",
+          scopeDeptNames: ["研发部"],
+          scopeDeptTotal: 1,
+          scopeTotal: 5,
+        })
+      )
+      .mockResolvedValueOnce(
+        preview({
+          scopeTier: "Custom/Dept/DeptChild",
+          scopeDeptNames: ["研发部"],
+          scopeDeptTotal: 1,
+          scopeTotal: 5,
+          fixMismatch: true,
+        })
+      );
+    const { result } = renderHook(() => useBackfillDept(onSuccess));
+    await act(async () => {
+      await result.current.open();
+    });
+    const content = latestConfig.content as {
+      props: {
+        children: Array<{
+          props?: { onChange?: (e: { target: { checked: boolean } }) => Promise<void> };
+        }>;
+      };
+    };
+    const checkbox = content.props.children.find((c) => c?.props?.onChange);
+    expect(checkbox).toBeTruthy();
+    await act(async () => {
+      await checkbox!.props!.onChange!({ target: { checked: true } });
+    });
+    // update() 的最后一版配置必须仍带范围文案 + 非 disabled。
+    const last = updates[updates.length - 1];
+    expect(collectScopeWriteTexts(last.content).join("")).toContain("本次范围：研发部及子部门");
+    expect(last.okButtonProps?.disabled).toBe(false);
   });
 });

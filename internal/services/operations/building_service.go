@@ -91,8 +91,12 @@ var buildingAllowedSortFields = map[string]string{
 
 // Create 创建楼宇
 func (s *buildingService) Create(ctx context.Context, building *operations.OpsBuilding) error {
-	// 验证机构存在性
+	// 验证机构存在性（UUID 格式 + 部门存在性，保留原校验）
 	if err := s.validateOrg(ctx, building.OrgID); err != nil {
+		return err
+	}
+	// Phase 132：validateOrg 之后追加可见集校验（写 SQL 之前，越界 403）。
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityBuilding, building.OrgID, ""); err != nil {
 		return err
 	}
 
@@ -114,8 +118,16 @@ func (s *buildingService) Create(ctx context.Context, building *operations.OpsBu
 
 // Update 更新楼宇
 func (s *buildingService) Update(ctx context.Context, building *operations.OpsBuilding) error {
-	// 验证机构存在性
+	// 验证机构存在性（UUID 格式 + 部门存在性，保留原校验）
 	if err := s.validateOrg(ctx, building.OrgID); err != nil {
+		return err
+	}
+	// Phase 132 双向校验（写 SQL 之前）：改前资源归属 ∈ 可见集，且提交的
+	// orgId ∈ 可见集，防把数据搬出/搬入越界范围。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityBuilding, building.ID); err != nil {
+		return err
+	}
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityBuilding, building.OrgID, ""); err != nil {
 		return err
 	}
 
@@ -137,6 +149,10 @@ func (s *buildingService) Update(ctx context.Context, building *operations.OpsBu
 
 // Delete 删除楼宇
 func (s *buildingService) Delete(ctx context.Context, id string) error {
+	// Phase 132：按资源归属校验（写 SQL 之前，越界 403）。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityBuilding, id); err != nil {
+		return err
+	}
 	return s.repo.Delete(ctx, id)
 }
 
@@ -320,8 +336,15 @@ func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB
 }
 
 // BatchDelete 批量删除楼宇（repo 空 ids nil 语义与现状 IN(空) no-op 等价）
+//
+// Phase 132（裁定 §2）：service 层、任何写 SQL 之前按可见集裁剪目标集；
+// 越界行剔除（不因含越界行 403 整批），越界计数由 handler 层 operlog 记录。
 func (s *buildingService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.repo.BatchDelete(ctx, ids)
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityBuilding, ids)
+	if err != nil {
+		return err
+	}
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // validateOrg 验证机构存在性

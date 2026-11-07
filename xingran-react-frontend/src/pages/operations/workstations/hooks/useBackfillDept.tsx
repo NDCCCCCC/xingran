@@ -107,8 +107,42 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
 
     // 用 modalRef.current.update() 重渲染内容（Checkbox 勾选后刷新预览）。
 
+    // Phase 132「本次范围」文案（裁定 §3）：预览与确认用同一 ScopeResult 快照，
+    // 后端把档位/部门名/总数回显进 BackfillDeptResult，前端只消费不重新解析，
+    // 防范围漂移。文案必须挂进 modalRef.current.update() 刷新链路，否则
+    // Checkbox rerender 会丢失范围行（见下方两处 update + 初始 confirm）。
+    const rangeText = (): string => {
+      const p = preview;
+      const total = p?.scopeTotal ?? p?.candidates ?? 0;
+      const tier = p?.scopeTier ?? "All";
+      if (p?.scopeFailClosed || tier === "FailClosed") {
+        return "本次范围：无（数据权限异常，请联系管理员）";
+      }
+      if (tier === "All") {
+        return `本次范围：全库（共 ${total} 条）`;
+      }
+      if (tier === "Self") {
+        return `本次范围：仅本人关联工位（共 ${total} 条）`;
+      }
+      // Custom/Dept/DeptChild：列前 3 个部门名 + 「等 M 个部门」。
+      const names = p?.scopeDeptNames ?? [];
+      const deptTotal = p?.scopeDeptTotal ?? names.length;
+      const label =
+        names.length > 0
+          ? `${names.slice(0, 3).join("、")}${deptTotal > 3 ? ` 等 ${deptTotal} 个部门` : ""}`
+          : `${deptTotal} 个部门`;
+      return `本次范围：${label}及子部门（共 ${total} 条）`;
+    };
+
+    const okButtonProps = () => ({
+      disabled: (preview?.scopeFailClosed ?? false) || preview?.scopeTier === "FailClosed",
+    });
+
     const renderContent = () => (
-      <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="medium" style={{ width: "100%" }}>
+        <div>
+          <Text strong>{rangeText()}</Text>
+        </div>
         <div>
           <Text>共匹配到 </Text>
           <Text strong>{preview?.candidates ?? 0}</Text>
@@ -131,7 +165,7 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
           <Alert
             type="warning"
             showIcon
-            message={`将覆盖 ${preview?.toCorrect ?? 0} 条已填写的部门`}
+            title={`将覆盖 ${preview?.toCorrect ?? 0} 条已填写的部门`}
             description="「工位部门 ≠ 人员部门」可能是有意的跨机构配置，请仅在确认这些部门确实填错时勾选。"
           />
         )}
@@ -141,13 +175,17 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
           onChange={async (e) => {
             fixMismatch = e.target.checked;
             refreshing = true;
-            modalRef.current?.update({ content: renderContent() });
+            modalRef.current?.update({ content: renderContent(), okButtonProps: okButtonProps() });
             const ok = await runPreview();
             refreshing = false;
             if (!ok) {
               fixMismatch = !fixMismatch;
             }
-            modalRef.current?.update({ content: renderContent(), okText: okText() });
+            modalRef.current?.update({
+              content: renderContent(),
+              okText: okText(),
+              okButtonProps: okButtonProps(),
+            });
           }}
         >
           <Text type="danger">
@@ -178,8 +216,9 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
       width: 720,
       content: renderContent(),
       okText: okText(),
+      okButtonProps: okButtonProps(),
       cancelText: "取消",
-      maskClosable: false,
+      mask: { closable: false },
       onOk: async () => {
         try {
           const result = await workstationApi.backfillDeptFromUser({ dryRun: false, fixMismatch });

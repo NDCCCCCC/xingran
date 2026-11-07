@@ -78,6 +78,9 @@ type ImportResult struct {
 	// InferredDeptCount 本次工位导入中「部门列解析失败、改由所属用户反推部门」的记录数。
 	// 仅用于审计与结果展示，不计入失败数；非工位导入恒为 0。
 	InferredDeptCount int `json:"inferredDeptCount,omitempty"`
+	// ScopeOutOfScope Phase 132 导入逐行可见集校验剔除的越界行数（裁定 §4）。
+	// 越界行不写入、不阻断整批；聚合计数供 operlog 审计，不逐条回显明细。
+	ScopeOutOfScope int `json:"scopeOutOfScope,omitempty"`
 }
 
 // GenerateTemplate 生成Excel模板
@@ -377,6 +380,10 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 			allRefRequests = append(allRefRequests, rowRefs...)
 		}
 
+		// Phase 132：记录原始 Excel 行号（1-based）供导入逐行可见集校验的
+		// 越界错误明细使用；事务内 prepareRecordsForUpsert 会跳过 "__" 前缀的
+		// 内部字段，不会写入业务表（见下方过滤函数内显式 delete）。
+		data["__excel_row__"] = rowNum
 		validRecords = append(validRecords, data)
 	}
 
@@ -436,6 +443,21 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 				delete(validRecords[i], "deptCode")
 			}
 		}
+	}
+
+	// Phase 132（裁定 §4 导入不豁免）：在 Upsert 之前（事务内 prepare records
+	// 阶段）对每行解析出的有效机构 / dept_id 过可见集。越界行不写入、不阻断
+	// 整批，计入 ImportResult 错误明细（含行号、不含敏感值）与聚合越界计数。
+	// All 档短路零校验零查询（超管零回归）。仅四域导入收口，其余实体不动。
+	if entityType == "building" || entityType == "floor" ||
+		entityType == "workstation" || entityType == "infoPoint" {
+		kept, outOfScope, filterErr := filterScopeWriteImportRows(
+			ctx, s.db, entityType, config, validRecords, result)
+		if filterErr != nil {
+			return nil, filterErr
+		}
+		validRecords = kept
+		result.ScopeOutOfScope = outOfScope
 	}
 
 	// P2-A8: Wrap department-processing and upsert in a single transaction so

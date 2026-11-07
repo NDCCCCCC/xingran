@@ -125,7 +125,14 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 	if err := s.validateBuilding(ctx, floor.BuildingID); err != nil {
 		return err
 	}
+	// 原校验保留：楼层覆盖值（可空）必须是合法 UUID 且指向真实部门。
 	if err := s.validateOrgOptional(ctx, floor.OrgID); err != nil {
+		return err
+	}
+	// Phase 132：追加可见集校验（写 SQL 之前）。楼层 org_id 为空时按
+	// buildingID 继承楼宇有效机构，断链 → fail-closed 403。
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityFloor,
+		scopeWriteOrgPtr(floor.OrgID), floor.BuildingID); err != nil {
 		return err
 	}
 	if err := s.db.WithContext(ctx).Create(floor).Error; err != nil {
@@ -183,6 +190,15 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 		}
 	}
 	if err := s.validateOrgOptional(ctx, floor.OrgID); err != nil {
+		return err
+	}
+	// Phase 132 双向校验（写 SQL 之前）：改前楼层归属 ∈ 可见集，且提交的
+	// orgId（空则继承新楼宇有效机构）∈ 可见集，防换楼搬到越界楼宇。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityFloor, floor.ID); err != nil {
+		return err
+	}
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityFloor,
+		scopeWriteOrgPtr(floor.OrgID), floor.BuildingID); err != nil {
 		return err
 	}
 
@@ -252,6 +268,10 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 }
 
 func (s *floorService) Delete(ctx context.Context, id string) error {
+	// Phase 132：按资源归属校验（First 之前、任何写 SQL 之前，越界 403）。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityFloor, id); err != nil {
+		return err
+	}
 	var floor operations.OpsFloor
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&floor).Error; err != nil {
 		return err
@@ -578,11 +598,20 @@ func (s *floorService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
 }
 
 func (s *floorService) BatchDelete(ctx context.Context, ids []string) error {
-	var floors []operations.OpsFloor
-	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Find(&floors).Error; err != nil {
+	// Phase 132（裁定 §2）：service 层、任何写 SQL 之前按可见集裁剪目标集；
+	// 越界行剔除（不因含越界行 403 整批），后续所有 SQL 只用 visible。
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityFloor, ids)
+	if err != nil {
 		return err
 	}
-	if err := s.db.WithContext(ctx).Delete(&operations.OpsFloor{}, "id IN ?", ids).Error; err != nil {
+	if len(visible) == 0 {
+		return nil
+	}
+	var floors []operations.OpsFloor
+	if err := s.db.WithContext(ctx).Where("id IN ?", visible).Find(&floors).Error; err != nil {
+		return err
+	}
+	if err := s.db.WithContext(ctx).Delete(&operations.OpsFloor{}, "id IN ?", visible).Error; err != nil {
 		return err
 	}
 
@@ -605,7 +634,7 @@ func (s *floorService) BatchDelete(ctx context.Context, ids []string) error {
 		)
 	`
 
-	if err := s.db.WithContext(ctx).Exec(sql, ids).Error; err != nil {
+	if err := s.db.WithContext(ctx).Exec(sql, visible).Error; err != nil {
 		return err
 	}
 

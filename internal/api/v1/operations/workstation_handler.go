@@ -346,7 +346,17 @@ func (h *WorkstationHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch)
+	// Phase 132（裁定 §2 硬约束 3/4）：批量裁剪越界计数入 operlog，含范围档位 /
+	// 请求行数 / 可见集内行数 / 越界行数；All 档同样记录档位，审计链完整。
+	tier, requested, visibleCount, outOfScope, statsErr := opsServices.ScopeWriteBatchStats(
+		c.Request.Context(), h.core.GetDB(), opsServices.ScopeWriteEntityWorkstation, req.IDs)
+	if statsErr != nil {
+		tier, requested, visibleCount, outOfScope = opsServices.ScopeWriteTier(c.Request.Context()), len(req.IDs), 0, 0
+	}
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch,
+		operlog.WithOperParam(fmt.Sprintf(
+			`{"action":"delete","scopeTier":%q,"requested":%d,"visible":%d,"outOfScope":%d}`,
+			tier, requested, visibleCount, outOfScope)))
 	response.Success(c, nil)
 }
 
@@ -374,7 +384,20 @@ func (h *WorkstationHandler) BatchUpdatePositions(c *gin.Context) {
 		return
 	}
 
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch)
+	// Phase 132：positions 批量裁剪的越界计数入 operlog（同 BatchOperation 口径）。
+	ids := make([]string, 0, len(req.Items))
+	for _, it := range req.Items {
+		ids = append(ids, it.ID)
+	}
+	tier, requested, visibleCount, outOfScope, statsErr := opsServices.ScopeWriteBatchStats(
+		c.Request.Context(), h.core.GetDB(), opsServices.ScopeWriteEntityWorkstation, ids)
+	if statsErr != nil {
+		tier, requested, visibleCount, outOfScope = opsServices.ScopeWriteTier(c.Request.Context()), len(ids), 0, 0
+	}
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch,
+		operlog.WithOperParam(fmt.Sprintf(
+			`{"action":"positions","scopeTier":%q,"requested":%d,"visible":%d,"outOfScope":%d}`,
+			tier, requested, visibleCount, outOfScope)))
 	response.Success(c, nil)
 }
 
@@ -416,10 +439,14 @@ func (h *WorkstationHandler) BatchBackfillDeptFromUser(c *gin.Context) {
 	}
 
 	if !req.DryRun {
+		// Phase 132（裁定 §2 硬约束 3/4）：范围档位 + 请求行数 / 可见集内行数 /
+		// 越界行数 + 既有条数，全部聚合计数，绝不逐条回显工位明细。
 		operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch,
 			operlog.WithOperParam(fmt.Sprintf(
-				`{"fixMismatch":%t,"candidates":%d,"toFill":%d,"toCorrect":%d}`,
-				req.FixMismatch, result.Candidates, result.ToFill, result.ToCorrect)))
+				`{"fixMismatch":%t,"candidates":%d,"toFill":%d,"toCorrect":%d,`+
+					`"scopeTier":%q,"requested":%d,"visible":%d,"outOfScope":%d}`,
+				req.FixMismatch, result.Candidates, result.ToFill, result.ToCorrect,
+				result.ScopeTier, result.ScopeTotal, result.ScopeVisible, result.ScopeOutOfScope)))
 	}
 	response.Success(c, result)
 }

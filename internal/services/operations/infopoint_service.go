@@ -94,6 +94,11 @@ var infoPointAllowedSortFields = map[string]string{
 
 // Create 创建信息点
 func (s *infoPointService) Create(ctx context.Context, infoPoint *operations.OpsInfoPoint) error {
+	// Phase 132：按 workstationId → 工位 → 楼层/楼宇有效机构校验可见集，
+	// 写 SQL 之前，越界 403；断链 → fail-closed。
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityInfoPoint, "", infoPoint.WorkstationID); err != nil {
+		return err
+	}
 	// 填充冗余字段
 	if err := s.populateRedundantFields(ctx, infoPoint); err != nil {
 		return err
@@ -103,6 +108,14 @@ func (s *infoPointService) Create(ctx context.Context, infoPoint *operations.Ops
 
 // Update 更新信息点
 func (s *infoPointService) Update(ctx context.Context, infoPoint *operations.OpsInfoPoint) error {
+	// Phase 132 双向校验（写 SQL 之前）：改前信息点归属 ∈ 可见集，且提交的
+	// workstationId → 有效机构 ∈ 可见集，防跨范围搬移。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityInfoPoint, infoPoint.ID); err != nil {
+		return err
+	}
+	if err := checkSubmittedWriteScope(ctx, s.db, scopeWriteEntityInfoPoint, "", infoPoint.WorkstationID); err != nil {
+		return err
+	}
 	// 填充冗余字段
 	if err := s.populateRedundantFields(ctx, infoPoint); err != nil {
 		return err
@@ -141,6 +154,10 @@ func (s *infoPointService) populateRedundantFields(ctx context.Context, infoPoin
 
 // Delete 删除信息点
 func (s *infoPointService) Delete(ctx context.Context, id string) error {
+	// Phase 132：按资源归属校验（写 SQL 之前，越界 403）。
+	if err := checkResourceWriteScope(ctx, s.db, scopeWriteEntityInfoPoint, id); err != nil {
+		return err
+	}
 	return s.repo.Delete(ctx, id)
 }
 
@@ -263,8 +280,14 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 }
 
 // BatchDelete 批量删除信息点
+//
+// Phase 132（裁定 §2）：service 层、写 SQL 之前按可见集裁剪，越界行剔除。
 func (s *infoPointService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.repo.BatchDelete(ctx, ids)
+	visible, _, err := visibleIDsForEntityWrite(ctx, s.db, scopeWriteEntityInfoPoint, ids)
+	if err != nil {
+		return err
+	}
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // SearchInfoPointOptions 信息点下拉数据源(name LIKE 模糊 + workstationId/infoPointType/status 筛选,LIMIT 50)。

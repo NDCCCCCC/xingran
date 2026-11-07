@@ -138,9 +138,13 @@ func importData(entityType string, core *core.Core) gin.HandlerFunc {
 
 		// Phase 34 操作日志：只记录 filename + 行数统计（inserted/updated/failed），
 		// 绝不记录原始 Excel 行数据（T-34-W3-01 信息泄露缓解）。OperType=Import(6)。
+		// Phase 132（裁定 §4）：补「范围档位 + 越界行数」，导入逐行可见集校验的
+		// 聚合计数入审计链；All 档同样记录档位保证完整（裁定 §2 硬约束 4）。
 		operlog.Record(c, core.OperLogService, core.GetDB(), excelModuleName(entityType), operlog.OperTypeImport,
-			operlog.WithOperParam(fmt.Sprintf(`{"filename":%q,"size":%d,"inserted":%d,"updated":%d,"failed":%d}`,
-				file.Filename, file.Size, result.Inserted, result.Updated, result.Failed)))
+			operlog.WithOperParam(fmt.Sprintf(
+				`{"filename":%q,"size":%d,"inserted":%d,"updated":%d,"failed":%d,"scopeTier":%q,"outOfScope":%d}`,
+				file.Filename, file.Size, result.Inserted, result.Updated, result.Failed,
+				opsServices.ScopeWriteTier(c.Request.Context()), result.ScopeOutOfScope)))
 		response.Success(c, gin.H{
 			"inserted": result.Inserted,
 			"updated":  result.Updated,
