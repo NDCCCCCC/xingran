@@ -202,8 +202,11 @@ func TestScopeContext_RoundTrip(t *testing.T) {
 	assert.Equal(t, ScopeResult{}, got2)
 	assert.False(t, got2.All, "零值 ScopeResult 不得被误当成 All")
 
-	// nil ctx 不 panic
-	got3, ok3 := FromContext(nil)
+	// nil ctx 不 panic（FromContext 内部有 nil 防御）。
+	// 用变量传递而非直接传 nil 字面量：staticcheck SA1012 禁止把 nil Context
+	// 直接传给接收 context.Context 的函数，但这里测的正是该防御分支本身。
+	var nilCtx context.Context
+	got3, ok3 := FromContext(nilCtx)
 	assert.False(t, ok3)
 	assert.Equal(t, ScopeResult{}, got3)
 }
