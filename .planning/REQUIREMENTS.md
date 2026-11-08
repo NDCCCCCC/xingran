@@ -24,7 +24,7 @@
 
 - [x] **ALRT-01**: 用户可在后端查询与配置漂移告警——告警列表/详情/已读状态端点 + 通道配置项（企微/钉钉 webhook URL、启用开关），权限码挂载，敏感 webhook 配置走 `operlog.RecordWithBody` 脱敏。
 - [x] **ALRT-02**: 漂移告警产生时经 `internal/websocket/` 广播到在线客户端（复用现有广播 API 与消息体格式），并支持企微/钉钉 webhook 推送（凭证不落明文日志、失败可观测、不阻塞主流程、operlog 覆盖）。
-- [x] **ALRT-03**: 用户可在前端「同步漂移告警」页面查看告警列表、筛选与标记已读，并经 WS 实时收到新告警——页面注册路由与菜单、store、API 用 `@/lib/api.ts` wrapped functions（禁止裸 axios）。
+- [x] **ALRT-03**: 用户可在前端「同步漂移告警」页面查看告警触发记录列表、分页/筛选与三态展示，并经 WS 实时收到新告警——页面注册路由与菜单、store、API 用 `@/lib/api.ts` wrapped functions（禁止裸 axios）。**（2026-11-09 文案收窄）**：ROADMAP 成功标准曾提「标记已读」，但后端 5 端点契约无该能力、`logs` 来自 `sys_oper_log` 无已读字段；按 `144-02-frontend-SUMMARY.md §四.1` 如实登记为契约缺口（见 Future Requirements GAP-01），功能主体已交付、勾选不变。
 
 ### PORT — 端口写物理参数收口
 
@@ -39,7 +39,25 @@
 
 - **VAL-类（3 项）**：FIX-01 实机 AD/LDAP UAT（UAC 544 + 登录恢复）｜FIX-09 端到端 HTTP P99 压测（v1.53 仅计算路径近似基线）｜FIX-13 生产库 migration 236/237 待执行后受限角色才真正 403→200。继续由 `.planning/notes/261108-human-verification-tracker.md`（79 条，0 勾选）与回写口径承载。
 - **真机取证类**：FIX-04 三厂商物理参数真机逐型号取证（本里程碑 PORT-02 只做**可代码化的规则框架**，不替代真机结论，未决型号差异登记为待人工验证）。
-- **FUTURE-01**：P1-5 聚合计数侧信道告警通道与 FIX-11 告警通道合并评估（见 `.planning/notes/261108-v153-locked-residuals.md:63`）。
+- **FUTURE-01**：P1-5 聚合计数侧信道告警通道与 FIX-11 告警通道合并评估（见 `.planning/notes/261108-v153-locked-residuals.md:63`）。v1.54 已交付 FIX-11 告警通道（路线 A 通用 Webhook），但**未覆盖 P1-5 聚合计数面**，FUTURE-01 仍未推进；触发复核条件见该裁定文件 ①（2026-11-09 流向复核补注）。
+
+### v1.54 新增 Known Gaps（2026-11-09 收档登记，非阻断）
+
+> 与 `.planning/STATE.md ## Deferred Items` 的 v1.54 行、`MILESTONES.md` v1.54 条目、`ROADMAP.md` Known Gaps 段、`PROJECT.md` Known Gaps 段同源。逐项原文见 4 份 phase `*-SUMMARY.md`。**均为登记/后续候选，不驱动本里程碑修复，不伪造闭环。**
+
+| # | Gap | 性质 | 是否需代码修复 |
+|---|-----|------|----------------|
+| GAP-01 | 告警「标记已读」未实现——后端 5 端点无该契约、`logs` 来自 `sys_oper_log` 无已读字段 | 后端契约缺口 | 需（须先定契约：新端点 / 新字段 / 是否值得做） |
+| GAP-02 | 企微/钉钉专用 markdown + 加签（路线 B）未做，当前只走路线 A 通用 Webhook | 产品化增强 | 视产品需求；非缺陷 |
+| GAP-03 | `sys_object_id` 已由 SNMP 采集但**未落库**，型号 key 仅 `NetworkDevice.Model` | 数据模型增强 | 需 schema + migration；当前有 Model 兜底回退，不阻断 |
+| GAP-04 | 批量物理参数无自动回滚（沿用非 critical 语义） | 安全/可用性设计取舍 | 需产品决策（快照逆序回滚 vs 人工按 `audit.before_value` 恢复）；dry-run 与审计已显式警示 |
+| GAP-05 | 发现导入链路顺带隐患：`user_id.(string)` 硬断言 panic、`persistDiscoveryResults` 未开事务、`ExecuteDiscovery` 未检查 `Save` Error | 既有隐患（非 v1.54 引入） | 建议修（尤其 panic 与非原子写），但属 scope constrainment 外 |
+| GAP-06 | e2e 归位：`physical_e2e_test.go` 仍在业务包内，与 AGENTS.md「e2e 归 `tests/e2e/`」有偏差 | 目录规范债 | 低优先级；迁移牵动 `FileTransport` 辅助函数可见性 |
+| GAP-07 | `RequiresInterfaceView` 与型号画像 `RequiresView` 联动点：型号级 `RequiresView=false` 的系统视图序列目前无真机型号结论触发 | 前向兼容钩子 | 待真机型号画像接入时联动，当前无触发面 |
+
+### LOCKED 残余与 Deferred Items 表的关系（2026-11-09 流向复核说明）
+
+6 项 LOCKED 残余**未**列入 `.planning/STATE.md ## Deferred Items` 表，系 v1.53 收档的有意设计（STATE.md:325 明确其为「已裁定接受 / 非 GSD 可扫描 artifact / audit-open 报全清」，入表会污染 deferred 判定）；其权威承载为 **本裁定原文 + `v1.53-REQUIREMENTS.md` traceability + `MILESTONES.md` v1.53/v1.54 条目 + 本文件 Out of Scope 表**。状态引用入口见 `STATE.md ## Operator Next Steps`。
 
 ## Out of Scope
 
