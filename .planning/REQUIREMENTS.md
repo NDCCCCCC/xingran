@@ -67,18 +67,20 @@ Which phases cover which requirements. Updated during roadmap creation (Step 10 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISC-01 | — | Pending |
-| DISC-02 | — | Pending |
-| ALRT-01 | — | Pending |
-| ALRT-02 | — | Pending |
-| ALRT-03 | — | Pending |
-| PORT-01 | — | Pending |
-| PORT-02 | — | Pending |
+| DISC-01 | 142 | Pending |
+| DISC-02 | 142 | Pending |
+| ALRT-01 | 144 | Pending |
+| ALRT-02 | 144 | Pending |
+| ALRT-03 | 144 | Pending |
+| PORT-01 | 143 | Pending |
+| PORT-02 | 143 | Pending |
+
+**映射说明**：142 = DISC-01/02（发现设备真实导入）；143 = PORT-01/02（端口写物理参数收口）；144 = ALRT-01/02/03（同步漂移告警通道收口）。W1 三 phase 零依赖并行（按模块隔离）；验证类残余不建 phase。
 
 **Coverage:**
 - v1.54 requirements: 7 total
-- Mapped to phases: 0（待 roadmap）
-- Unmapped: 7
+- Mapped to phases: 7
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-11-08*
