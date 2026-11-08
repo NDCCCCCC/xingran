@@ -1,14 +1,41 @@
 ---
-last_updated: 2026-11-07
-update_trigger: v1.52 milestone INITIATED (运维域数据权限统一收口·终态，Phases 130-133，7 REQ DS-01~07)
-previous_update: 2026-10-31 v1.51 milestone INITIATED（端口写生产级操作体验，21 REQ）
+last_updated: 2026-11-08
+update_trigger: v1.53 milestone INITIATED 2026-11-08（开放项全量清偿，21 条开放项 → 24 REQ / 8 Phase 134-141；唯一输入 `.planning/OPEN-ITEMS.md`，跳过领域研究，纳入 SEED-ad-push-enable-direction）
+previous_update: 2026-11-07 v1.52 milestone SHIPPED（运维域数据权限统一收口·终态；4/4 Phase、7/7 REQ、PR #75 merged `b56f1286`；2026-11-08 完成 GSD 归档）
 ---
 
-## Current Milestone: v1.52 运维域数据权限统一收口（终态）(Operations-Wide Data-Scope Unification) — 🚧 IN PROGRESS
+## Current Milestone: v1.53 开放项全量清偿 (OPEN-ITEMS Full Clearance) — ◆ INITIATED 2026-11-08
+
+**Goal:** 以 `.planning/OPEN-ITEMS.md`（2026-11-08「真实仍存在的问题唯一权威清单」）的 **21 条真实开放项**为唯一输入，按「代码可修 / 待人工验证 / 已裁定接受」三类分别闭环，使收档时每条开放项都有可核对的结论与证据。
+
+**Status:** ◆ INITIATED 2026-11-08（需求 + 路线图已定义，Phases 尚未开始）| **Phases:** 8（134-141，延续 133 续编）| **Requirements:** 24（FIX 14 / VAL 7 / ACK 2 / GOV 1）| 详见 `.planning/REQUIREMENTS.md` 与 `.planning/ROADMAP.md`
+
+**Target features:**
+- **FIX（14 REQ）** — 代码可修的缺口与缺陷：A1/A6/A7 AD 同步域（含纳入 seed `SEED-ad-push-enable-direction`）、A3-OQ7、B1~B12 中可修项（Swagger 产物链路 / 用户导出 / 工单评价 / GetDiscoveryResults stub / rpa-worker 双副本 / scheduler Rotation / 端口写物理参数 / 3 处排序 / 对账 MV 超时配置化 / 登录加密 benchmark）
+- **VAL（7 REQ）** — 待人工验证：重建 5 份磁盘缺失的原始 UAT 清单 + 7 组验证跟踪表 + 回写口径；受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束，**不伪造闭环、不擅自写生产数据**
+- **ACK（2 REQ）** — A8 四项 LOCKED 残余 + B13 仅登记项：只落「接受/已知约束」结论，**不写修复代码**
+- **GOV（1 REQ）** — 按 OPEN-ITEMS.md 维护约定 §2/§3 做清偿回写（清偿项标注日期+证据并移入 C 节）与权威分层一致性复核
+
+**关键决策 (v1.53 init, 用户 2026-11-08 裁定):**
+- **21 条全覆盖**（A 节 8 + B 节 13）；C 节 13 类「明确不属于开放项」防误读清单不纳入
+- **Phase 从 134 续编**（v1.52 结束于 133），8 phases / 24 REQ / 100% 映射无孤儿无重复
+- **跳过领域研究**（21 条均带本仓 `文件:行号` 实证、无新领域能力需调研，沿用 v1.25「研究范围仅定向」先例）
+- **纳入 seed** `seeds/SEED-ad-push-enable-direction.md` 为 FIX-01 输入上下文（另 2 个 seed 已标 SUPERSEDED）
+- **人工验证类交付物 = 清单 + 跟踪表 + 回写口径**，实际执行由现场/PG 授权方完成；沿用 v1.25 Phase 90「不擅自切换生产认证模式」先例
+- **零新依赖**；遵循 Handler-Service / response 包装 / operlog 约定 / 双方言（SQLite+PG）
+- **文档提交前须用户确认**（CLAUDE.md「Before making git commits, ask for explicit user confirmation」）
+
+**事实基线:** `.planning/OPEN-ITEMS.md`（唯一输入，21 条）｜`.planning/REQUIREMENTS.md`（24 REQ）｜`.planning/ROADMAP.md`（Phases 134-141）｜v1.52 终态 `.planning/MILESTONE-v1.52-SUMMARY.md`
+
+**Phase 映射:** 134=AD 同步域(FIX-01/10/11) ∥ 135=Swagger 链路(FIX-02) ∥ 136=端点接线(FIX-03/06/13) ∥ 137=Stub/双副本(FIX-07/08) ∥ 138=功能分支(FIX-04/05/14) ∥ 139=低优先级技术债(FIX-09/12)（W1 六者按模块隔离并行）→ 140=人工验证债组织(VAL-01~07) → 141=登记接受结论 + OPEN-ITEMS.md 核销与权威分层复核(ACK-01/02 + GOV-01，**必须最后执行**)。
+
+---
+
+## Past Milestone: v1.52 运维域数据权限统一收口（终态）(Operations-Wide Data-Scope Unification) — ✅ SHIPPED 2026-11-07（历史归档）
 
 **Goal:** 把数据权限（data_scope）从「用户/VDI 两个模块的局部实现」升级为运维域全模块的声明式统一收口——读写两端按登录人数据范围自动过滤与校验，使「中支管理员只能管本机构的工位/楼层/资产」从口头约定变为架构保证。
 
-**Status:** INITIATED 2026-11-07 | **Phases:** 4 (130-133，编号延续 v1.51 从 130 续编) | **Requirements:** 7（DS-01~07）
+**Status:** ✅ SHIPPED 2026-11-07（4/4 Phase：130/131/132/133 全部完成；7/7 REQ：DS-01~07 全部交付；PR #75 merged → `b56f1286`）| 权威终态基线见 `.planning/MILESTONE-v1.52-SUMMARY.md`，全仓真实开放项见 `.planning/OPEN-ITEMS.md`
 
 **范围裁定（用户 2026-11-07）:** 终态方案 = operations 全模块声明式统一收口，不做逐端点手工接线（quick-261106-wsb 审计裁定补丁为非终态）。
 
@@ -208,14 +235,16 @@ previous_update: 2026-10-31 v1.51 milestone INITIATED（端口写生产级操作
 
 **更早的 deferred（继续挂账）**：
 
+> 当前权威的开放项清单见 `.planning/OPEN-ITEMS.md`；本节仅保留仍有效的挂账与已裁决结论。
+
 以下候选源自 v1.21/v1.22 收口审计与历史 deferred，**v1.23/v1.24 均未纳入**：
 
-1. **AD 方向补齐** — ad_push_queue 目前只有 update_user / disable 两个动作方向，缺 enable（软删用户恢复后重新启用 AD 账号），见 `.planning/seeds/SEED-ad-push-enable-direction.md`。
-2. **同组管理员 OU 写权限** — 域控 ACL 导致同组管理员互相改 OU 报 LDAP Result Code 50，属域控侧策略（已裁决不作为代码缺陷），若要放开需域控授权流程。
-3. **残留现场 UAT 债** — v1.18（3 项真机 SNMP/CLI）+ v1.19（6 项 SSH）+ v1.20（12 项 VLAN/绑定 site-visit）仍为 deferred，需现场运维同事执行后回写 UAT。
-4. **全量同步节流** — 3 小时全量 cron（sync_interval=10800）+ 失败后每 5 分钟 tick 重试，重试风暴与节流策略可优化。
-5. **同步可观测性** — 把 v1.21 期间用于捕获重放窗口漂移的采样脚本（`scripts/uat61-t1-poller-v5.ps1`）产品化为常态化的同步漂移告警。
-6. **v1.23 明确延后项**（用户裁定 2026-10-27）— react-refresh 33 处清零 / devices 页 692 行拆分 / 三态组件（Empty/Skeleton/ErrorAlert）推广：均非质量缺陷，本轮做会挤占迁移主线上下文并放大回归面。
+1. **AD 方向补齐** — ad_push_queue 目前只有 update_user / disable 两个动作方向，缺 enable（软删用户恢复后重新启用 AD 账号），见 `.planning/seeds/SEED-ad-push-enable-direction.md`。（已登记 OPEN-ITEMS.md #A1）
+2. **同组管理员 OU 写权限** — ✅ 已裁决关闭（域控侧 ACL 策略，非代码缺陷；2026-10-21 用户裁决不修，仅作已知环境限制记录）。
+3. **残留现场 UAT 债** — v1.18（3 项真机 SNMP/CLI）+ v1.19（6 项 SSH）+ v1.20（12 项 VLAN/绑定 site-visit）仍为 deferred，需现场运维同事执行后回写 UAT。⚠️ 原始 `48-HUMAN-UAT.md` / `54-HUMAN-UAT.md` / `56-HUMAN-UAT.md` 三份清单当前磁盘不存在（见 notes/261102-planning-sync-strategy.md 归档策略），执行前须重建；v1.51 Phase 129 另有 H3C 2 条 deferred 与 129-RESULTS.md §五 5 条复测遗留。已登记 OPEN-ITEMS.md #A5
+4. **全量同步节流** — 3 小时全量 cron（sync_interval=10800）+ 失败后每 5 分钟 tick 重试，重试风暴与节流策略可优化。（OPEN-ITEMS.md #A6）
+5. **同步可观测性** — 把 v1.21 期间用于捕获重放窗口漂移的采样脚本（`scripts/uat61-t1-poller-v5.ps1`）产品化为常态化的同步漂移告警。（OPEN-ITEMS.md #A7）
+6. **v1.23 明确延后项**（用户裁定 2026-10-27）— react-refresh 33 处清零 / devices 页 692 行拆分 / 三态组件（Empty/Skeleton/ErrorAlert）推广 — ✅ 已落地（v1.24 Phase 82/83 + PageTable 三态组件），不再挂账。
 
 ## Past Milestone: v1.17 资产对账 (Asset Reconciliation) — ✅ SHIPPED 2026-07-03（历史归档、非当前状态）
 
@@ -262,7 +291,7 @@ previous_update: 2026-10-31 v1.51 milestone INITIATED（端口写生产级操作
 
 **Seed:** .planning/seeds/asset-reconciliation-v1.17.md
 
-**Todo:** .planning/todos/pending/v1.17-reconciliation-decisions.md (T1-T30)
+**Todo（历史归档）:** .planning/todos/done/v1.17-reconciliation-decisions.md（v1.17 已 SHIPPED 2026-07-03，T1-T30 为 2026-06-27 原始计划，勿再推进；真实开放项见 OPEN-ITEMS.md）
 
 # RuoYi-Next 运维管理系统
 
@@ -347,7 +376,15 @@ estate.
   - W5 E2E + UAT Deferral + Docs: scrapligo FileTransport 10 TestE2E_* (闭环 Phase 51 mockDeviceExecutor 不调 fn 漏洞) + API响应规范 + 安全设计 + CHANGELOG/README/MILESTONES/STATE 文档同步 + 54-HUMAN-UAT.md 7 项 deferred (owner = 现场运维同事)
   - Phase 55 Tech-Debt Cleanup: WR-02 antd validator 3-param signature + IN-01 instanceof Error narrowing + IN-02 eslint-disable placement 修正 (Lesson: directive 紧贴 `}, []);` 而非 useEffect 开头) + HealthCard.test.tsx regex match + CR-02 后端 batch_orchestrator.go fallback port 归属跨层防御 (纵深双保险)
 
-### 历史 REQ 清单归档（当前 Active 为 v1.52 Phases 130-133，见文档顶部；以下 v1.25 及更早条目均为非当前状态）
+### 历史 REQ 清单归档（当前 Active 为 **v1.53 Phases 134-141 / 24 REQ**，见文档顶部与 `.planning/REQUIREMENTS.md`；以下 v1.52 及更早条目均为非当前状态）
+
+### Active — v1.53 开放项全量清偿（24 REQ，权威清单见 `.planning/REQUIREMENTS.md`）
+
+- [ ] **FIX-01~14**: 14 条代码可修开放项（A1/A3-OQ7/A6/A7 + B1~B12 可修项）
+- [ ] **VAL-01~07**: 7 条待人工验证开放项（A2/A3/A4/A5/A8-133UAT/B7② + 清单重建框架）
+- [ ] **ACK-01~02**: 2 条已裁定接受 / 仅登记残余（A8 四项 LOCKED + B13①②）
+- [ ] **GOV-01**: 清单治理与清偿回写（21/21 条终态结论 + 权威分层复核）
+
 
 #### v1.25 全站权限治理与样式收敛（历史归档 / SHIPPED 2026-10-30，非当前里程碑）
 
@@ -704,4 +741,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-11-07 after v1.52 立项（运维域数据权限统一收口·终态，Phases 130-133，7 REQ DS-01~07）*
+*Last updated: 2026-11-08 after v1.53 milestone INITIATED（开放项全量清偿，Phases 134-141 / 24 REQ / 21 条开放项全覆盖；唯一输入 `.planning/OPEN-ITEMS.md`；跳过领域研究；纳入 SEED-ad-push-enable-direction；v1.52 已 SHIPPED & GSD 归档，终态基线见 `.planning/MILESTONE-v1.52-SUMMARY.md`，路径映射见 `.planning/ARCHIVE-INDEX.md`）*

@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- ✅ **v1.52 运维域数据权限统一收口（终态）** — Phases 130-133 (shipped 2026-11-07, 7 REQ) — 见下方 Phases
+- ◆ **v1.53 开放项全量清偿（OPEN-ITEMS Full Clearance）** — Phases 134-141 (initiated 2026-11-08, 24 REQ / 21 条开放项全覆盖) — [REQUIREMENTS.md](REQUIREMENTS.md) · [OPEN-ITEMS.md](OPEN-ITEMS.md)
+- ✅ **v1.52 运维域数据权限统一收口（终态）** — Phases 130-133 (shipped 2026-11-07, 7 REQ；archived 2026-11-08) — [v1.52-ROADMAP.md](milestones/v1.52-ROADMAP.md) · [v1.52-REQUIREMENTS.md](milestones/v1.52-REQUIREMENTS.md) · [归档索引](ARCHIVE-INDEX.md)
 - ✅ **v1.51 端口写生产级操作体验与平台质量收口** — Phases 121-129 (shipped 2026-11-02, 21 REQ) — [v1.51-REQUIREMENTS.md](milestones/v1.51-REQUIREMENTS.md)
 - ✅ **v1.25 全站权限治理与样式收敛** — Phases 84-93 (shipped 2026-10-30) — [v1.25-ROADMAP.md](milestones/v1.25-ROADMAP.md)
 - ✅ **v1.24 视觉回归修复与遗留债务清偿** — Phases 76-83 (shipped 2026-10-28) — [v1.24-ROADMAP.md](milestones/v1.24-ROADMAP.md)
@@ -16,6 +17,30 @@
 ## Phases
 
 <details open>
+<summary>◆ v1.53 开放项全量清偿 (Phases 134-141) — INITIATED 2026-11-08</summary>
+
+> 需求基线：`.planning/REQUIREMENTS.md`（**24 REQ**：FIX-01~14 / VAL-01~07 / ACK-01~02 / GOV-01）｜唯一输入：`.planning/OPEN-ITEMS.md`（2026-11-08 唯一权威清单，A 节 8 + B 节 13 = **21 条真实开放项**）
+> Phase 编号：延续 v1.52 从 **134** 续编
+> 范围裁定（用户 2026-11-08）：**21 条全覆盖**，按「代码可修 / 待人工验证 / 已裁定接受」三类分别闭环；C 节 13 类防误读清单不纳入；**跳过领域研究**（21 条均带本仓 `文件:行号` 实证，无新领域能力需调研）；纳入 `seeds/SEED-ad-push-enable-direction.md` 为 FIX-01 输入
+> **人工验证类不伪造闭环**：VAL-* 交付物 = 清单重建 + 统一跟踪表 + 回写口径，实际执行受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束；AI 不擅自写生产数据（沿用 v1.25 Phase 90 先例）
+> **登记接受类只落结论**：ACK-* 对应 OPEN-ITEMS.md 明示 LOCKED /「仅登记，不驱动修复」条目，不写修复代码
+
+- [ ] Phase 134: AD 同步域 —— enable 方向 + 全量同步节流 + 漂移告警产品化 (FIX-01/10/11) — **验收** = `ADPushActionEnable` 入队/排水/SAFE-01 守卫/F-01 压制 sqlite 用例全绿 + 与 2026-10-21 d_chenchao 对称的实机 UAT；节流退避单测覆盖「连续失败不成风暴」；告警通道可配置可观测，方向与 A8① 裁定一致；`go test ./internal/scheduler/` 零回归
+- [ ] Phase 135: Swagger / 文档产物链路修复与死文件清理 (FIX-02) — **验收** = `/swagger/index.html` 取到规范；两脚本产物落 `internal/docs/`；bat 层级 bug 修复；`docs/` 下 5 份死文件清零；`scripts/README.md:256-257` 矛盾表述修正；`go build ./...` 全绿
+- [ ] Phase 136: 接线型端点缺口 —— 用户导出 + 工单评价 + 5 个权限码读路由 OQ-7 (FIX-03/06/13) — **验收** = 3 组端点可用 + operlog 覆盖 + 权限码挂载；OQ-7 提供 403→200 对照证据且不破坏 v1.25 严格权限中间件（RBAC 零回归）；前端导出按钮/评价页可用
+- [ ] Phase 137: Stub 与双副本漂移治理 —— GetDiscoveryResults + rpa-worker (FIX-07/08) — **验收** = stub 返回真实结果且 handler/测试同步更新；rpa-worker 两副本 `createPage` 真实 Chrome + Wait* 超时断言 + 漂移结论落 `.planning/notes/`；两副本各自 `go build` 通过
+- [ ] Phase 138: 功能分支补齐 —— scheduler Rotation + 端口写物理参数 + 3 处排序 (FIX-04/05/14) — **验收** = scheduler/service 双路径一致性测试；端口写 3 厂商模板 + 校验 + 审计零回归；3 处排序产品结论落 `.planning/notes/` 并按结论实现或显式登记「不推进」
+- [ ] Phase 139: 低优先级技术债 —— 对账 MV 超时配置化 + 登录加密 benchmark 实测 (FIX-09/12) — **验收** = 30s 超时可配置且默认值不变；5 个 benchmark 产出数值与 P99<350ms 达标结论落盘；零新依赖
+- [ ] Phase 140: 人工验证债组织 —— 5 份缺失 UAT 清单重建 + 7 组验证跟踪表 + 回写口径 (VAL-01~07) — **验收** = 重建 `57/48/54/56-HUMAN-UAT.md` 与 133-UAT 跟踪；统一跟踪表按「条目 → 前置授权 → 执行人 → 证据 → 回写状态」覆盖 VAL-01~06 全部条目；口径文档明确「未执行不得勾选」；不标已完成、不写生产数据
+- [ ] Phase 141: 登记接受残余结论落盘 + OPEN-ITEMS.md 核销与权威分层复核 (ACK-01/02 + GOV-01) — **验收** = A8 四项 + B13①② 结论逐条落 `.planning/notes/`（含裁定/残余风险/不改代码理由）；21/21 条开放项在 OPEN-ITEMS.md 均有终态结论（已清偿移入 C 节并带日期+commit / 保留挂账并注明前置 / LOCKED 结论登记）；状态权威与开放项权威分层复核记录落盘
+
+**执行波次记录：** W1 零依赖并行（134 AD 同步 / 135 Swagger / 136 端点接线 / 137 stub / 138 功能分支 / 139 技术债 —— 六者文件面基本不重叠，按模块隔离）→ W2（140 人工验证债组织，消费 W1 交付的清单与证据结构）→ W3 收尾（141，按 W1 清偿结果 + W2 跟踪表做统一回写与权威分层复核，**必须最后执行**）。
+**并行冲突面**：134 动 `internal/services/system/user_service.go` / `internal/scheduler/ad_sync_tasks.go`；135 动 `cmd/main.go` / `scripts/` / `docs/`；136 动 `internal/api/router.go` / `internal/api/v1/workorder/`；137 动 `internal/services/device_discovery_service.go` / `rpa-worker/`；138 动 `internal/scheduler/workorder_tasks.go` / `internal/services/portwrite/`；139 动 `internal/core/core.go` / `tests/benchmark/` —— 134 与 138 均触及 `internal/scheduler/`，plan-phase 须产出函数级归属表，无法保证无交集则降级为串行（134 → 138）。
+**关键约束：** 遵循 Handler-Service / response 包装 / operlog 约定 / 0=正常 1=停用 / 双方言（SQLite+PG，uuid 双侧 CAST）；回归基线 eslint 0 problems / vitest 全绿 / `go build ./...` + `go test ./...` 全绿；**不擅自写生产数据**；**LOCKED 项不写修复代码**；清偿回写严格按 OPEN-ITEMS.md 维护约定 §2（标注日期+证据并移入 C 节，不直接删除）。
+
+</details>
+
+<details>
 <summary>✅ v1.52 运维域数据权限统一收口（终态）(Phases 130-133) — SHIPPED 2026-11-07</summary>
 
 > 需求基线：`.planning/REQUIREMENTS.md`（7 REQ：DS-01~07）｜范围裁定（用户 2026-11-07）：**终态方案 = operations 全模块声明式 data_scope 统一收口**，不做逐端点手工接线
@@ -34,7 +59,7 @@
 </details>
 
 <details>
-<summary>🚧 v1.51 端口写生产级操作体验与平台质量收口 (Phases 121-129) — 代码工作完成 2026-11-01（真机 UAT 待设备）</summary>
+<summary>✅ v1.51 端口写生产级操作体验与平台质量收口 (Phases 121-129) — SHIPPED 2026-11-02（21/21 REQ · 真机 UAT 已完成）</summary>
 
 > 需求基线：`.planning/REQUIREMENTS.md`（21 REQ）｜范围裁定：A 端口写深化 + B 平台技术债 + D 收尾杂项（C 组 RPA 编辑器 defer）
 > Phase 编号：延续 GitHub v1.33 线从 **121** 续编
@@ -85,4 +110,4 @@
 </details>
 
 ---
-*Roadmap updated: 2026-11-07 — v1.52 SHIPPED（Phases 130-133 全 4 phase 完成，7 REQ 全交付，PR #75 merged `b56f1286`；本分支 `feat/v1.52-data-scope-unification` 为里程碑收档 PR）*
+*Roadmap updated: 2026-11-08 — v1.53 INITIATED（开放项全量清偿，Phases 134-141 / 24 REQ / 21 条开放项全覆盖；唯一输入 `.planning/OPEN-ITEMS.md`；跳过领域研究；Phase 编号延续 133 从 134 续编）*
