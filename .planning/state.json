@@ -1,63 +1,12 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.25 — 全站权限治理与样式收敛",
-  "phases": [
-    {
-      "number": "84",
-      "name": "权限模型三缺口",
-      "status": "complete"
-    },
-    {
-      "number": "85",
-      "name": "后端动作级严格化",
-      "status": "complete"
-    },
-    {
-      "number": "86",
-      "name": "前端操作入口三态门控铺开",
-      "status": "complete"
-    },
-    {
-      "number": "87",
-      "name": "动作级权限授予闭环",
-      "status": "complete"
-    },
-    {
-      "number": "88",
-      "name": "验证底座与零风险清理",
-      "status": "complete"
-    },
-    {
-      "number": "89",
-      "name": "变量层与明暗色板重构",
-      "status": "complete"
-    },
-    {
-      "number": "90",
-      "name": "Input 域交还 variant/token + 圆角统一",
-      "status": "complete"
-    },
-    {
-      "number": "91",
-      "name": "Select / InputNumber / Form / Table / Modal 域交还",
-      "status": "complete"
-    },
-    {
-      "number": "92",
-      "name": "暗色 mega-cluster 合并",
-      "status": "complete"
-    },
-    {
-      "number": "93",
-      "name": "room-devices 拆分 + 视觉回归验收",
-      "status": "complete"
-    }
-  ],
+  "milestone": "v1.53",
+  "phases": [],
   "next": {
     "command": "/gsd-progress",
     "label": "Show progress",
     "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-10-30T08:59:58.468Z"
+  "updated_at": "2026-11-08T09:53:59.788Z"
 }

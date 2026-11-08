@@ -4,14 +4,16 @@ trigger_condition: v1.16 技术债清理 100% 完成 + 用户/团队确认 obser
 planted_date: 2026-06-27
 origin: gsd:explore session — asset-reconciliation-strategy v0.3
 related_note: .planning/notes/asset-reconciliation-strategy.md
-related_todo: .planning/todos/pending/v1.17-reconciliation-decisions.md
+related_todo: .planning/todos/done/v1.17-reconciliation-decisions.md
 priority: high
-status: pending (等待 promote 到 ROADMAP)
+status: SUPERSEDED — v1.17 已 SHIPPED 2026-07-03（R1-R5 + Phase 47）
 estimated_phases: 5 (R1-R5)
 estimated_duration: 8-12 周
 ---
 
 # 资产对账 v1.17 阶段种子
+
+> 历史归档，勿再 promote；当前状态见 .planning/STATE.md / ROADMAP.md
 
 ## 触发条件（满足任一即可启动）
 
@@ -106,7 +108,7 @@ estimated_duration: 8-12 周
 ## 关联文档
 
 - 决策记录：[`.planning/notes/asset-reconciliation-strategy.md`](../notes/asset-reconciliation-strategy.md)
-- 决策追踪：[`.planning/todos/pending/v1.17-reconciliation-decisions.md`](../todos/pending/v1.17-reconciliation-decisions.md)
+- 决策追踪：[`.planning/todos/done/v1.17-reconciliation-decisions.md`](../todos/done/v1.17-reconciliation-decisions.md)
 - 当前进度：[`.planning/STATE.md`](../STATE.md)
 - 路线图：[`.planning/ROADMAP.md`](../ROADMAP.md)
 

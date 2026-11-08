@@ -1,5 +1,7 @@
 # Swagger API文档实施总结
 
+> ⚠️ **历史文档（2026-02-09，路径已过时）**：本文中的 `docs/docs.go`、`docs/swagger.json`、`docs/swagger.yaml`、`docs/swagger_templates.go`、`docs/models.go` 均为当时的产物记录；`docs/` 下这 5 份 Swagger 死文件已于 Phase 135 / FIX-02 删除，swaggo 权威产物现位于 `internal/docs/`（生成脚本用 `swag init -g cmd/main.go -o internal/docs`）。`cmd/main.go` 已补 `_ ".../internal/docs"` blank import，`/swagger/*any` 可加载规范；文中的 `-o docs` 及脚本路径请以现状为准，勿再照抄。
+
 ## 实施日期
 2026-02-09
 
@@ -8,7 +10,7 @@
 ### 1. 创建基础设施
 
 #### 1.1 通用模板文件
-- **文件位置**: `docs/swagger_templates.go`
+- **文件位置**: `docs/swagger_templates.go`（已删除，见顶部时效注记）
 - **内容**: 通用Swagger注解模板和响应结构定义
 - **包含**:
   - `Response` - 通用API响应结构
@@ -19,7 +21,7 @@
   - `UpdateStatusRequest` - 更新状态请求
 
 #### 1.2 模型定义文件
-- **文件位置**: `docs/models.go`
+- **文件位置**: `docs/models.go`（已删除，见顶部时效注记）
 - **内容**: Swagger文档使用的通用数据模型定义
 - **包含模型**:
   - 登录认证相关: `LoginRequest`, `LoginResponse`, `LogoutRequest`
@@ -69,11 +71,11 @@
 
 ### 3. 生成的文档
 
-#### 3.1 文件列表
+#### 3.1 文件列表（当时记录，现已删除；权威产物见 `internal/docs/`）
 ```
-docs/docs.go         (755 KB)
-docs/swagger.json    (755 KB)
-docs/swagger.yaml    (349 KB)
+docs/docs.go         (755 KB)   ← 已删除
+docs/swagger.json    (755 KB)   ← 已删除
+docs/swagger.yaml    (349 KB)   ← 已删除
 ```
 
 #### 3.2 API统计
@@ -126,8 +128,9 @@ chmod +x scripts/generate_swagger.sh
 
 #### 手动生成
 ```bash
-swag init -g cmd/main.go -o docs --parseDependency
+swag init -g cmd/main.go -o internal/docs --parseDependency
 ```
+（原文为 `-o docs`；产物目录已于 Phase 135 / FIX-02 统一为 `internal/docs/`。）
 
 ### 访问文档
 
@@ -146,7 +149,7 @@ http://localhost:8080/swagger/index.html
 1. **类型引用限制**
    - Swagger无法解析外部包的类型定义
    - 使用通用类型`response.Response`代替具体模型类型
-   - 如需详细类型定义，请在`docs/models.go`中添加
+   - 如需详细类型定义，请在对应的 API 请求/响应结构体上补充注解（原 `docs/models.go` 已删除，见顶部时效注记）
 
 2. **注解规范**
    - 所有需要认证的接口应添加`@Security ApiKeyAuth`注解

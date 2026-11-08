@@ -2,6 +2,50 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.52 — 运维域数据权限统一收口（终态）
+
+**Shipped:** 2026-11-07 | **Archived:** 2026-11-08
+**Phases:** 4 (130-133) | **Requirements:** 7/7 (DS-01~07) | **Commits:** 24 | **PR:** #75 merged `b56f1286`
+
+### What Was Built
+
+- `pkg/datascope` ScopeProvider 单一真实源（可见部门集五档 / 0-unset→All 特判 / 异常枚举 fail-closed / 多角色 MAX=最严档），ops 全域 26 处读写组挂载 `DataScopePermission`。
+- 四域（workstation/floor/building/infopoint）读端点 20 个 + Excel 导出两条独立路径统一「有效机构 ∈ 可见集」；缓存 key 增 scope 维度并交付 `131-CACHE-INVENTORY.md`。
+- 四域写端点越界显式 403（`NewWithHTTPStatus` 绕开 `CodePermissionDenied` 默认 401 坑）、批量按可见集裁剪、backfill 三层注入、Excel 导入逐行校验、前端「本次范围」四类文案。
+- asset/serverRoom/dedicatedLine/roomDevice 收口（115 个语义断言）+ vdi 调用方迁移 + 删除 `pkg/middleware` 三份死实现与死测试 + DeptSidebar 联动 + 5 项显式豁免面登记。
+
+### What Worked
+
+- **三项开工输入裁定前置到 notes/**（Self 档 ops 语义 / Dept-Self 批量与导入豁免 / DS-05 三项归属链）在对应 phase 开工前落盘，避免执行期承载裁定动作——这个模式显著减少了返工。
+- **独立只读代码审查**（agent-8）：3 P0 + 11 P1 在合并前拦截，尤其是「迁移 235 被误嵌在 234 失败分支内 → 正常启动永不 seed」这类静态测试照不到的缺陷。
+- **全量回归闸门**作为单一收口判据（go build / go test / vitest 4128 / lint:ci 0 / diff coverage 83.37% / 生产构建），不采信单个 agent 报告。
+
+### What Was Inefficient
+
+- PR #75 推送后连遇 4 类 CI 红灯（prettier 4 文件 / antd 6 弃用 prop 3 项 / coverage-diff 76.63%<80% / DeptTree 类型 + staticcheck SA1012），其中 coverage 缺口需临时补 644 行厚测试。**教训**：本地应先跑 `npm run format:check` 与 `check-coverage.sh`，不要等 CI。
+- `130-device-evidence/`（v1.51 遗留归档）与 `130-scope-provider/`（v1.52 新 phase）共用 "130-" 前缀，GSD CLI 归档时给出 duplicate phase key 警告（#3355），靠 `STATE.md:67-69` 的消歧说明才没误判。**教训**：历史归档目录改名比写消歧注释更彻底，但会破坏可追溯性——本项目选择保留 + 显式注记。
+
+### Patterns Established
+
+- 数据权限统一收口的「有效机构」表达式走 `effectiveOrgExpr` 单一真实源，禁止内联复制（P2-6 教训）。
+- 缓存 key 必含数据范围维度段；`floor:tree` 这类全局固定 key 因按可见集过滤必须改结构或停用（PMODEL-01 跨范围泄漏教训）。
+- PG contract 新增测试统一门控变量名 `TEST_PG_DSN`，CI 中 skip 必须可观测。
+- 越界语义：单条写显式 403、批量按可见集裁剪（不整批 403）、聚合计数侧信道作为**已裁定接受的已知残余**登记而非假装已解决。
+
+### Key Lessons
+
+1. **accept + 登记 > 假装修好**：P1-5 聚合计数侧信道、5 项显式豁免面均明确写「已知残余风险、接受；未来应加告警通道而非改回整批 403」，不以「间接可见所以安全」结案。
+2. **CLI 机械重写必须人工复核**：`/gsd-complete-milestone` 会把 `130-device-evidence` 算作第 6 个 phase、把 `stopped_at` 含反引号的值截断、把 `progress.total_phases` 改成 5、把 MILESTONES 顶部权威声明挤到条目之后。归档后必须逐字段比对备份再修正。
+3. **归档前先跑 `audit-open` 并 acknowledge**：3 项 `uat_gaps`（0 pending scenarios）不阻塞收档，但必须按 [A] 分支登记 deferred 并在 STATE.md / MILESTONES.md 留痕，否则下次扫描会重复报。
+4. **归档会产生路径死链**：当时的临时清单、代码注释、`MILESTONE-v1.52-SUMMARY.md` 里大量 `phases/...` / `quick/...` 引用，靠一张 `ARCHIVE-INDEX.md` 路径映射换算而不是逐个改历史正文，可保住可追溯性。
+
+### Cost Observations
+
+- 模型与会话：多 subagent 并行（审查 / 执行 / 验证），具体配比为环境动态调度，未单独记账。
+- Notable：本里程碑交付后，一次「检查是否存在已记录的缺陷项/待办」的只读审计发现 **37 个文件的文档债**（已落地却仍标待办、状态文件互相矛盾），随后用 2 路甄别 + 4 路并行写入收敛为 1 份临时开放项清单（21 条真实开放项）。**项目规模到 v1.52 时，「记录腐烂」本身已成为比代码缺陷更大的维护成本**——建议每个里程碑收档固定做一次文档债扫描。
+
+---
+
 ## Milestone: v1.25 — 全站权限治理与样式收敛 (Site-wide Permission Governance & antd 6 Style Convergence)
 
 **Shipped:** 2026-10-30

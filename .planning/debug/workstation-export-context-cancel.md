@@ -1,6 +1,6 @@
 ---
 slug: workstation-export-context-cancel
-status: investigating
+status: resolved
 trigger: |
   工位导出接口 POST /api/v1/ops/workstation/export 在生产环境出现 context canceled：
   - 设备主表数据收集成功（GetPhysicalDevicesByWorkstations 命中 1947 行 / 1643 工位，AD=648 资产=1662 物理=1947）
@@ -12,7 +12,6 @@ trigger: |
   - client_ip=10.62.10.33
 created: 2026-07-24T08:33:46+08:00
 updated: 2026-07-24T09:30:00+08:00
-status: resolved
 diagnose_only: false
 tdd_mode: false
 goal: find_and_fix

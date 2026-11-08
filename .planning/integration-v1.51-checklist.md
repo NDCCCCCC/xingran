@@ -123,12 +123,12 @@ succeeded/failed 各 5，覆盖 shutdown/undo_shutdown/description/dot1x_enable/
 
 ## 5. 收尾核对
 
-- [ ] §1.1-1.3 三步全绿
-- [ ] §2 宽限期矩阵 4/4 通过；强制模式切换步骤已演练
-- [ ] §3 错误路径契约字段齐全（code/message/timestamp/request_id）
-- [ ] §4 审计页前端可分页/过滤（按 status、action）
-- [ ] 全量 `bash .github/scripts/check-coverage.sh <profile> .coverage-threshold` PASS（≥76.85）
-- [ ] 完成后由 lead 在窗口记录中勾销本清单并归档到 `.planning/`
+- [x] §1.1-1.3 三步全绿
+- [x] §2 宽限期矩阵 4/4 通过；强制模式切换步骤已演练
+- [x] §3 错误路径契约字段齐全（code/message/timestamp/request_id）
+- [x] §4 审计页前端可分页/过滤（按 status、action）（后端侧窗口 #1 已 PASS；前端三步当时记『待 webfe』，见执行报告）
+- [x] 全量 `bash .github/scripts/check-coverage.sh <profile> .coverage-threshold` PASS（≥76.85）
+- [x] 完成后由 lead 在窗口记录中勾销本清单并归档到 `.planning/`
 
 ---
 
@@ -152,12 +152,7 @@ succeeded/failed 各 5，覆盖 shutdown/undo_shutdown/description/dot1x_enable/
 **窗口期发现与处置**：
 1. `SERVER_SKIP_SETUP` 默认跳过 InitData → 首启无 admin 用户（清单 §0 已知注意事项，
    以 SERVER_SKIP_SETUP=false 重启解决）。
-2. **schema 漂移（登记待修）**：sqlite 分支 sys_user_role 建表缺 created_at 列
-   （UserRole 模型有该字段但实际表仅 role_id/user_id 两列，来源待查）→
-   initData 创建用户角色关联失败 → admin 无 admin 角色全量 403。
-   窗口内处置：手工 ALTER 补列 + 重启（initData 幂等补关联成功）。
-   待修：sqlite 分支 UserRole 建表路径排查（models in MigrateModelList 但列缺失，
-   疑似 sanitize/复合索引建表路径问题）。
+2. ✅ **已修（task-23）**：sqlite 分支 UserRole join 表缺 created_at 的 schema 缓存污染已由 `internal/core/db/database.go:1350-1388` 的 `ensureSQLiteJoinTableColumns()` 幂等兜底修复，并有 `init_data_test.go` CDX-M-USERROLE 回归守护；窗口内手工 ALTER 仅为当时应急。
 3. smoke 脚本 §3 断言修正：设备不存在=HTTP 400 + body.code 404（response.Error
    int 重载语义，与 PWX-06 e2e 一致），已修正入脚本。
 

@@ -57,20 +57,29 @@
 
 ## 已清理的死代码（Go 文件，不属于归档范畴）
 
-- `docs/models.go` — 25 个手写数据模型，全代码库无任何 `docs.XxxType` 限定引用；真实类型在 `internal/api/v1/` 与 `pkg/response/`
-- `docs/swagger_templates.go` — 同上，6 个手写响应模板无任何引用
+以下 5 份 Swagger 死产物原位于 `docs/` 下、与 `internal/docs/` 权威产物重复，已于 Phase 135 / FIX-02 全部删除；下列路径均为历史记录（文件现已不存在）：
+
+- `docs/models.go`（原路径，已删除）— 25 个手写数据模型，全代码库无任何 `docs.XxxType` 限定引用；真实类型在 `internal/api/v1/` 与 `pkg/response/`
+- `docs/swagger_templates.go`（原路径，已删除）— 同上，6 个手写响应模板无任何引用
+- `docs/docs.go`（原路径，已删除）— swaggo 生成物（33710 行）
+- `docs/swagger.json`（原路径，已删除）— 同上
+- `docs/swagger.yaml`（原路径，已删除）— 同上
 
 ## swaggo 产物位置调整
 
-为分离代码与文档目录，`docs.go` / `swagger.json` / `swagger.yaml` 已从 `docs/` 移到 **`internal/docs/`**（仍是 `package docs`）。生成方式：`swag init -g cmd/main.go -o internal/docs`。若未来 `cmd/main.go` 补上 `_ ".../internal/docs"` blank import 即可让 Swagger UI 加载接口规范（当前缺此 import，UI 可能加载不到规范——属代码遗留问题，不在文档清理范围）。
+为分离代码与文档目录，`docs.go` / `swagger.json` / `swagger.yaml` 已从 `docs/` 移到 **`internal/docs/`**（仍是 `package docs`）。生成方式：`swag init -g cmd/main.go -o internal/docs`——两个生成脚本均已按此输出。`cmd/main.go` 已补 `_ ".../internal/docs"` blank import，`internal/docs/docs.go` 的 `init()` → `swag.Register` 生效，Swagger UI 可正常加载接口规范。
 
-> ⚠️ 代码层面遗留问题（不在文档清理范围）：`cmd/main.go:206` 注册了 Swagger UI，但项目**无 `_ ".../docs"` blank import**，`docs.SwaggerInfo` 运行时可能未初始化——Swagger UI 实际可能加载不到接口规范。建议后续排查 `swag init` 配置与 main.go 导入。
+> ✅ **生成脚本已对齐（Phase 135 / FIX-02）**：`scripts/build/generate_swagger.bat` 与 `scripts/generate_swagger.sh` 的 `-o` 均已改为 `internal/docs`，产物不再写回 `docs/`；bat 的 `cd /d "%~dp0.."` 层级 bug 也已修正为 `cd /d "%~dp0..\.."`；上列 `docs/` 下 5 份死文件已删除。
+
+> ✅ **blank import 已补（Phase 135 / FIX-02）**：`cmd/main.go` import 块已含 `_ ".../internal/docs"`，`internal/docs/docs.go` 的 `swag.Register` 正常执行，`/swagger/*any` 可取到规范。
 
 ---
 
-## 已移至 `.planning/`（未落地的真实待办，不应归档）
+## 历史记录（已失效，勿再作为待办）
 
-- `.planning/operlog-nickname-display-plan.md` — 操作日志 oper_name 改为 nickname(username) 的方案（2026-06-21 至今**后端未落地**，确认为有效待办）
+- **operlog nickname 显示**：已由 migration_160/161 + `internal/utils/context_helper.go` 的 `GetNicknamePtrWithDB` + `internal/utils/operlog/operlog.go:254` 落地；原方案文件 `.planning/operlog-nickname-display-plan.md` 已不存在（现行方案文档为 `docs/操作日志-nickname显示实现方案.md`）。
+- **RPA Worker Token 认证**：已于 v1.51 DEBT-03（2026-11-01）落地（migration_230 / worker_token_service.go / worker_auth.go / rpa_router.go，见 `docs/modules/rpa/RPA-Worker-API认证方案-待办.md` 顶部落地注记）。
+- 本节原登记的两条均已完成，不再是待办；真实开放项的当前结论以里程碑需求清单（`.planning/milestones/v1.53-REQUIREMENTS.md`）为准。
 
 ---
 
@@ -109,7 +118,7 @@ docs/
 │       ├── RPA-数据格式规范.md
 │       └── RPA-Worker-API认证方案-待办.md
 ├── plans/                             # 前瞻设计
-│   └── 2026-07-09-v1.20.1-design.md   # v1.20.1 端口写命令设计（pending sign-off）
+│   └── 2026-07-09-v1.20.1-design.md   # v1.20.1 端口写命令设计（✅ 已实施，非 pending）
 ├── reference/                         # 外部参考资料
 │   ├── 深信服桌面云开放平台（V1.2）.doc
 │   ├── sangfor_vdi_utf8.txt

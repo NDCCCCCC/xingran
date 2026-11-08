@@ -1,3 +1,4 @@
+> ℹ️ 历史归档（审查日期 2026-08-14）：本文 P0/P1 清单为当时时点快照，useEffect 依赖 / hooks 泄漏 / lint 存量已由 v1.24 Phase 82 与 v1.25 样式线清偿（eslint 0 problems，见 .planning/MILESTONES.md:26、STATE.md:78）。勿再作为开放缺陷推进。
 # 前端代码审查报告
 
 **审查日期**: 2026-08-14
