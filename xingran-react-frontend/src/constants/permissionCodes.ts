@@ -144,18 +144,29 @@ export const PERMISSION_CODES = {
     edit: "ops:location:alias:edit",
     delete: "ops:location:alias:delete",
   },
+  // FIX-13 / OQ-7：5 个读码此前只存在于后端 router.go 字面量里，
+  // sys_menu 未播种、TS 未声明 → 读路由恒 403。migration_236 补种后同步声明。
   opsWall: {
+    list: "ops:walls:list",
     add: "ops:walls:add",
     edit: "ops:walls:edit",
     delete: "ops:walls:delete",
   },
   opsDoor: {
+    list: "ops:doors:list",
     add: "ops:doors:add",
     edit: "ops:doors:edit",
     delete: "ops:doors:delete",
   },
   opsFloorPlan: {
+    list: "ops:floor-plan:list",
+    query: "ops:floor-plan:query",
+    save: "ops:floor-plan:save",
     edit: "ops:floor-plan:edit",
+  },
+  // FIX-06：工单评价创建（写）独立权限码，后端严格单一权限点挂载。
+  workorderRating: {
+    create: "ops:workorder:rating:create",
   },
   // ==================== 85-03（RBAC-01）批次 B：network 域写码 TS 同批声明 ====================
   // 后端「网络设备管理权限」区块的镜像声明。network 域仅 backup:add/restore/diff、

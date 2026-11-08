@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+	"github.com/google/uuid"
 	devicepkg "github.com/xingran-next/xingran-go-backend/internal/device"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
@@ -70,15 +71,16 @@ type DiscoveryRequest struct {
 	CreatedBy       string
 }
 
-// DiscoveredDevice 发现的设备信息
+// DiscoveredDevice 发现的设备信息。
+// JSON tag 与前端「发现结果」表格列对齐（camelCase）。
 type DiscoveredDevice struct {
-	IPAddress  string
-	DeviceType string
-	Vendor     string
-	Model      string
-	SysName    string
-	SysDescr   string
-	IsAlive    bool
+	IPAddress  string `json:"ipAddress"`
+	DeviceType string `json:"deviceType"`
+	Vendor     string `json:"vendor"`
+	Model      string `json:"model"`
+	SysName    string `json:"deviceName"`
+	SysDescr   string `json:"sysDescr"`
+	IsAlive    bool   `json:"isAlive"`
 }
 
 // DiscoveryResult 发现结果
@@ -180,7 +182,15 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 	}
 
 	task.Status = models.DiscoveryStatusSuccess
-	s.db.WithContext(ctx).Save(&task)
+	if err := s.db.WithContext(ctx).Save(&task).Error; err != nil {
+		return nil, fmt.Errorf("保存发现任务结果失败: %w", err)
+	}
+
+	// Phase 137 / FIX-07: 把发现明细持久化，供结果查询端点返回真实数据。
+	// 先清除该任务的历史结果（重跑发现时以最后一次结果为准），再批量写入。
+	if err := s.persistDiscoveryResults(ctx, discoveryID, discoveredDevices); err != nil {
+		return nil, err
+	}
 
 	return &DiscoveryResult{
 		DiscoveryID:       discoveryID,
@@ -189,6 +199,46 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 		DiscoveredCount:   len(discoveredDevices),
 		DiscoveredDevices: discoveredDevices,
 	}, nil
+}
+
+// persistDiscoveryResults 持久化设备发现明细（Phase 137 / FIX-07）。
+// 同一任务重跑时覆盖旧结果；无设备时也清空旧结果，保证查询结果与最后一次执行一致。
+func (s *DeviceDiscoveryService) persistDiscoveryResults(ctx context.Context, discoveryID string, devices []*DiscoveredDevice) error {
+	tx := s.db.WithContext(ctx)
+	if err := tx.Where("discovery_id = ?", discoveryID).Delete(&models.DeviceDiscoveryResult{}).Error; err != nil {
+		return fmt.Errorf("清理历史发现结果失败: %w", err)
+	}
+	if len(devices) == 0 {
+		return nil
+	}
+
+	rows := make([]models.DeviceDiscoveryResult, 0, len(devices))
+	seq := 0
+	for _, dev := range devices {
+		if dev == nil {
+			continue
+		}
+		seq++
+		rows = append(rows, models.DeviceDiscoveryResult{
+			ID:          uuid.NewString(),
+			DiscoveryID: discoveryID,
+			Seq:         seq,
+			IPAddress:   dev.IPAddress,
+			DeviceType:  dev.DeviceType,
+			Vendor:      dev.Vendor,
+			Model:       dev.Model,
+			SysName:     dev.SysName,
+			SysDescr:    dev.SysDescr,
+			IsAlive:     dev.IsAlive,
+		})
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	if err := tx.Create(&rows).Error; err != nil {
+		return fmt.Errorf("保存发现结果失败: %w", err)
+	}
+	return nil
 }
 
 // discoverBySNMP 使用SNMP发现设备
@@ -436,6 +486,12 @@ func (s *DeviceDiscoveryService) DeleteDiscovery(ctx context.Context, discoveryI
 	if err := s.db.WithContext(ctx).Delete(&task).Error; err != nil {
 		return fmt.Errorf("删除任务失败: %w", err)
 	}
+	// 同步清理发现结果明细，避免任务软删后留下孤儿行。
+	if err := s.db.WithContext(ctx).
+		Where("discovery_id = ?", discoveryID).
+		Delete(&models.DeviceDiscoveryResult{}).Error; err != nil {
+		return fmt.Errorf("删除发现结果失败: %w", err)
+	}
 
 	return nil
 }
@@ -651,15 +707,36 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	}, nil
 }
 
-// GetDiscoveryResults 获取发现结果
+// GetDiscoveryResults 获取发现结果（Phase 137 / FIX-07）。
+// 返回 ExecuteDiscovery 已持久化的设备明细；任务存在但未执行过时返回空列表。
 func (s *DeviceDiscoveryService) GetDiscoveryResults(ctx context.Context, discoveryID string) ([]*DiscoveredDevice, error) {
-	// 获取发现任务
+	// 校验发现任务存在（不存在时返回错误，与 handler 的 1500 分支一致）
 	var task models.DeviceDiscovery
 	if err := s.db.WithContext(ctx).Where("id = ?", discoveryID).First(&task).Error; err != nil {
 		return nil, fmt.Errorf("发现任务不存在: %w", err)
 	}
 
-	return []*DiscoveredDevice{}, nil
+	var rows []models.DeviceDiscoveryResult
+	if err := s.db.WithContext(ctx).
+		Where("discovery_id = ?", discoveryID).
+		Order("seq ASC, id ASC").
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("查询发现结果失败: %w", err)
+	}
+
+	devices := make([]*DiscoveredDevice, 0, len(rows))
+	for _, row := range rows {
+		devices = append(devices, &DiscoveredDevice{
+			IPAddress:  row.IPAddress,
+			DeviceType: row.DeviceType,
+			Vendor:     row.Vendor,
+			Model:      row.Model,
+			SysName:    row.SysName,
+			SysDescr:   row.SysDescr,
+			IsAlive:    row.IsAlive,
+		})
+	}
+	return devices, nil
 }
 
 // calculateIPCount 计算IP范围内IP数量

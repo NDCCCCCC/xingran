@@ -66,7 +66,7 @@ export DB_NAME=xingran
 
 ### `build/` — 构建脚本
 
-`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。**所有脚本内已用 `%~dp0..\..` / `dirname/../..` 定位项目根，可从任意 cwd 调用**。
+`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。`build/` 下脚本用 `%~dp0..\..`、`scripts/` 根脚本用 `dirname/..` 各自上溯到项目根，可从任意 cwd 调用（两者层级不同，不可一概而论）。
 
 ```bash
 cd scripts/build
@@ -253,5 +253,10 @@ psql -h localhost -U postgres -d xingran -f check_duplicate_menus.sql
 2. 确保环境变量配置正确
 3. 建议先在测试环境验证脚本
 4. **`.archive-*` 目录的脚本通常不需要再次运行**——除非你明确知道它还在用
-5. `build/` 下脚本的路径定位（`%~dp0..\..` / `dirname/../..`）已适配子目录层级，可从任意 cwd 调用
-6. **已知遗留 bug（未修）**：`build/generate_swagger.bat` 第 19 行 `cd /d "%~dp0.."` 在 `build/` 子目录里实际只切到 `scripts/`，应改为 `%~dp0..\..`（Linux 版 `generate_swagger.sh` 已在 2026-08-12 整理时一并修正）。如需在 Windows 上生成 Swagger，请优先使用 `cd scripts/build && generate_swagger.bat` 并手动确认 `cmd/main.go` 路径，或先 `cd ..` 再调用
+5. `build/` 下脚本与 `scripts/` 根下脚本层级不同，路径定位不可一概而论，详见第 6 条。
+6. **Swagger 生成脚本（Phase 135 / FIX-02 已修复，替代此前自相矛盾的旧表述）**：
+   - `scripts/build/generate_swagger.bat` 位于 `scripts/build/` 下，已把 `cd /d "%~dp0.."` 改为 `cd /d "%~dp0..\.."`（上溯两级到项目根），从 `scripts/build/` 执行可正常找到 `cmd/main.go`，此前的层级缺陷已修；
+   - Linux 版 `scripts/generate_swagger.sh` 位于 `scripts/` 根（不存在 `scripts/build/generate_swagger.sh`），其 `dirname/..` 上溯一级到项目根，本就正确，与 .bat 层级不同、无同一 bug；
+   - 两脚本的 `-o` 均已由 `docs` 改为 `internal/docs`，产物落 `internal/docs/`（与 `docs/archive/ARCHIVE-INDEX.md`「swaggo 产物位置调整」节一致）；`docs/` 下 5 份 Swagger 死文件已删除；
+   - `cmd/main.go` 已补 `_ ".../internal/docs"` blank import，`internal/docs/docs.go` 的 `swag.Register` 生效，`/swagger/*any` 可加载到规范；
+   - Windows 上从任意 cwd 直接运行 `generate_swagger.bat` 即可，无需再手动确认 `cmd/main.go` 路径。

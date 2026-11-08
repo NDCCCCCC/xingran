@@ -148,6 +148,8 @@ type PortWriteService interface {
 	TrunkWrite(ctx context.Context, portID string, action Action, params TrunkParams, operator string, opts ...WriteOption) (*PortResult, error)
 	// PortSecWrite Phase 125 (PWX-02)：端口安全写入口。
 	PortSecWrite(ctx context.Context, portID string, action Action, params PortSecParams, operator string, opts ...WriteOption) (*PortResult, error)
+	// PhysicalWrite Phase 138 (FIX-04)：物理参数（速率/双工/MTU）写入口。
+	PhysicalWrite(ctx context.Context, portID string, action Action, params PhysicalParams, operator string, opts ...WriteOption) (*PortResult, error)
 	// WithProgressNotifier Phase 122 (PORTW-07)：注入批量写进度推送通道。
 	WithProgressNotifier(n PortWriteNotifier) PortWriteService
 }
@@ -578,6 +580,13 @@ func (s *portWriteServiceImpl) executeWrite(
 			tpl.MACAddress = trunk.portsec.MACAddress
 			tpl.VLANID = trunk.portsec.VLANID
 		}
+	}
+	// FIX-04 物理参数（速率/双工/MTU）透传到 render 派发表
+	if trunk != nil && trunk.physical != nil {
+		tpl.Speed = trunk.physical.Speed
+		tpl.SpeedMode = trunk.physical.SpeedMode
+		tpl.Duplex = trunk.physical.Duplex
+		tpl.MTU = trunk.physical.MTU
 	}
 	cmds, err := portcollection.RenderCommand(dev.Vendor, action, tpl)
 	if err != nil {

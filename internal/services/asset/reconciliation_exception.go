@@ -576,10 +576,7 @@ func (s *reconciliationExceptionServiceImpl) MatchException(ctx context.Context,
 // 当前实现是无 Redis 场景下的 no-op;Phase 42 INFRA-04 已定义 CacheProvider
 // 接口,真实部署由 core.Cache 注入。这里保留方法签名,便于后续接入。
 func (s *reconciliationExceptionServiceImpl) invalidateCache() {
-	// TODO(R3+): core.Cache.Delete(ctx, CacheKeyReconciliationExceptionRuleList)
-	// 当前 service 层 ctx-agnostic,CacheProvider 注入由 handler 完成。
-	// 数据写入 DB 后,下次 List 查询会从 DB 读取,缓存陈旧窗口在 cron 周期内
-	// 可接受(告警通路由 DetectLayer3 内存匹配驱动,不依赖此缓存)。
+	// 设计决策（已裁定接受，低优先级）：无 Redis 场景下 invalidateCache 为 no-op；缓存陈旧窗口在 cron 周期内可接受，告警通路由 DetectLayer3 内存匹配驱动、不依赖此缓存。若未来接入 Redis 再补 core.Cache.Delete(ctx, CacheKeyReconciliationExceptionRuleList)。2026-11-08 开放项盘点 #B13（结论见 v1.53 归档产物）。
 }
 
 // ============================================================================

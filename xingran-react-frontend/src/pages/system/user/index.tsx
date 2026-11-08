@@ -19,9 +19,11 @@ import {
   SearchOutlined,
   ReloadOutlined,
   ImportOutlined,
+  ExportOutlined,
 } from "@ant-design/icons";
 import type { User } from "@/types";
 import { post } from "@/lib/api";
+import { downloadFilePost } from "@/lib/download";
 import type { PageResponse } from "@/types";
 import { previewManagers, type ManagerPreviewItem } from "@/lib/managerApi";
 import DeptTree from "@/components/DeptTree";
@@ -341,8 +343,8 @@ const UserManagement: FC = () => {
   const permRemove = permGate.decide(PERMISSION_CODES.systemUser.remove);
   const permAdd = permGate.decide(PERMISSION_CODES.systemUser.add);
   const permImport = permGate.decide(PERMISSION_CODES.systemUser.import);
-  // 注：system:user:export 已登记在权限码表，但用户模块**未注册导出路由**、
-  // 前端也无导出按钮（xtgl 缺 export 权限也不会 403）——待导出功能落地时接入。
+  // FIX-03（Phase 136）：导出端点已接线，导出按钮按同一套权限门控渲染。
+  const permExport = permGate.decide(PERMISSION_CODES.systemUser.export);
   // 自定义状态
   const location = useLocation();
   const [selectedDeptId, setSelectedDeptId] = usePersistedStateController<string>({
@@ -403,6 +405,23 @@ const UserManagement: FC = () => {
     }
     const result = await post<PageResponse<User>>("/system/users/list", params);
     return { list: result.data?.list || [], total: result.data?.total || 0 };
+  }, []);
+
+  // FIX-03（Phase 136）：导出用户 Excel。复用 src/lib/download.ts 的
+  // downloadFilePost（blobAxios + 异步 getAuthHeaders 注入 + 文件名提取 +
+  // 200+json 错误体识别），不写裸 axios。后端 POST /system/users/export
+  // 与导入模板同源，参数为空对象即导出全量。
+  const [exporting, setExporting] = useState(false);
+  const handleExportUsers = useCallback(async () => {
+    setExporting(true);
+    try {
+      await downloadFilePost("/system/users/export", {}, `users_${Date.now()}.xlsx`);
+      handleSuccess("导出用户成功");
+    } catch (error) {
+      handleApiError(error, "导出用户失败");
+    } finally {
+      setExporting(false);
+    }
   }, []);
 
   // 使用 useTableManager 管理表格状态（含服务端排序 + filters 持久化）
@@ -801,6 +820,17 @@ const UserManagement: FC = () => {
                       title={permImport.hint}
                     >
                       导入用户
+                    </Button>
+                  )}
+                  {permExport.visible && (
+                    <Button
+                      icon={<ExportOutlined />}
+                      onClick={handleExportUsers}
+                      loading={exporting}
+                      disabled={permExport.disabled || exporting}
+                      title={permExport.hint}
+                    >
+                      导出用户
                     </Button>
                   )}
                   {permAdd.visible && (

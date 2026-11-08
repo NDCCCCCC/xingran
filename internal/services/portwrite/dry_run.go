@@ -53,7 +53,21 @@ type PreviewRequest struct {
 	// Phase 125 (PWX-02) 端口安全参数：MaxMacCount 仅 portsec_max_mac；
 	// portsec_static_bind 复用 macAddress + vlanId 字段
 	MaxMacCount int `json:"maxMacCount,omitempty" binding:"omitempty,min=1,max=4096"`
-	DryRun      bool `json:"dryRun,omitempty"`
+	// FIX-04 (Phase 138) 物理参数：速率/双工/MTU（仅对应动作使用）
+	Speed     int    `json:"speed,omitempty"`
+	SpeedMode string `json:"speedMode,omitempty"`
+	Duplex    string `json:"duplex,omitempty"`
+	MTU       int    `json:"mtu,omitempty"`
+	DryRun    bool   `json:"dryRun,omitempty"`
+}
+
+// physicalParamsOf 从 preview 请求抽取物理参数（非物理动作返回 nil）。
+func (r PreviewRequest) physicalParamsOf() *PhysicalParams {
+	switch r.Action {
+	case portcollection.ActionSetSpeed, portcollection.ActionSetDuplex, portcollection.ActionSetMTU:
+		return &PhysicalParams{Speed: r.Speed, SpeedMode: r.SpeedMode, Duplex: r.Duplex, MTU: r.MTU}
+	}
+	return nil
 }
 
 // portsecParamsOf 从 preview 请求抽取端口安全参数（非 portsec 动作返回 nil）。
@@ -152,6 +166,10 @@ func actionSummary(action Action, portCount int, vendor models.DeviceVendor) str
 		portcollection.PortSecMaxMac:       "设置端口安全 MAC 上限",
 		portcollection.PortSecSticky:       "启用 sticky MAC",
 		portcollection.PortSecStaticBind:   "静态 MAC 1:1 绑定",
+		// FIX-04 物理参数
+		portcollection.ActionSetSpeed:  "调整端口速率",
+		portcollection.ActionSetDuplex: "调整端口双工模式",
+		portcollection.ActionSetMTU:    "调整端口 MTU",
 	}
 	name, ok := names[action]
 	if !ok {
@@ -210,6 +228,12 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 				return nil, err
 			}
 		}
+		// FIX-04 物理参数入口校验（与实跑同源）
+		if ph := req.physicalParamsOf(); ph != nil {
+			if err := validatePhysicalRequest(req.Action, *ph); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	var dev models.NetworkDevice
@@ -243,6 +267,11 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		HybridTagged:   req.HybridTagged,
 		HybridUntagged: req.HybridUntagged,
 		MaxMACCount:    req.MaxMacCount,
+		// FIX-04 物理参数
+		Speed:     req.Speed,
+		SpeedMode: req.SpeedMode,
+		Duplex:    req.Duplex,
+		MTU:       req.MTU,
 	})
 	if err != nil {
 		return nil, err
@@ -327,6 +356,11 @@ func (s *portWriteServiceImpl) previewSinglePort(
 		HybridTagged:   req.HybridTagged,
 		HybridUntagged: req.HybridUntagged,
 		MaxMACCount:    req.MaxMacCount,
+		// FIX-04 物理参数
+		Speed:     req.Speed,
+		SpeedMode: req.SpeedMode,
+		Duplex:    req.Duplex,
+		MTU:       req.MTU,
 	})
 	if err != nil {
 		return nil, err

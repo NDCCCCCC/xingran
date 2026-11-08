@@ -73,6 +73,14 @@ func newDutyDB8002(t *testing.T) *gorm.DB {
 			schedule_date TEXT,
 			status INTEGER
 		)`,
+		// FIX-05:Rotation 分支读取 sys_duty_pool_member（按 member_order ASC）
+		`CREATE TABLE IF NOT EXISTS sys_duty_pool_member (
+			id TEXT PRIMARY KEY,
+			pool_id TEXT,
+			user_id TEXT,
+			member_order INTEGER,
+			created_at DATETIME
+		)`,
 		`CREATE TABLE IF NOT EXISTS sys_work_order (
 			id TEXT PRIMARY KEY,
 			title TEXT,
@@ -303,15 +311,37 @@ func TestWot8002_AssignWorkOrderHandler_Branches(t *testing.T) {
 	assert.Equal(t, "duty_pool", workOrder3.DutyType)
 	assert.Equal(t, "assign_one", workOrder3.AssignStrategy)
 
-	// 分支 3:Rotation — 暂未实现
+	// 分支 3:Rotation — FIX-05 补齐真实轮询分配（2026-11-08 开放项盘点 #B8）。
+	//
+	// 契约变更（与 workorder_tasks_80_02_test.go 旧 stub 断言相反）：
+	//   - 有成员 → 按 member_order 取模返回处理人（不再是 nil）
+	//   - 无成员 / 未配 poolID → 返回 nil（宽松降级，不阻塞建单）
+	// 双路径一致性（与 service 层 GenerateWorkOrder 同输入同处理人）另见
+	// workorder_tasks_138_test.go 的 TestWot138_RotationDualPathConsistency。
 	template3 := &models.PeriodicWorkOrderTemplate{
-		BaseModel:  models.BaseModel{ID: "tpl-rot"},
-		AssignType: models.PeriodicAssignTypeRotation,
+		BaseModel:      models.BaseModel{ID: "tpl-rot"},
+		AssignType:     models.PeriodicAssignTypeRotation,
+		AssignTargetID: strPtr("pool-rot-8002"),
 	}
+	require.NoError(t, db.Exec(`INSERT INTO sys_duty_pool_member (id, pool_id, user_id, member_order) VALUES
+		('m-1', 'pool-rot-8002', 'rot-user-1', 0),
+		('m-2', 'pool-rot-8002', 'rot-user-2', 1)`).Error)
 	workOrder4 := &models.WorkOrder{}
 	got4, err := assignWorkOrderHandler(db, template3, workOrder4)
 	require.NoError(t, err)
-	assert.Nil(t, got4, "轮询未实现应返回 nil")
+	require.NotNil(t, got4, "有成员时应返回处理人")
+	assert.Equal(t, "rot-user-1", *got4, "total_generated=0 应选中 member_order=0 的成员")
+	assert.Equal(t, "rotation", workOrder4.AssignStrategy)
+	assert.Equal(t, "pool-rot-8002", *workOrder4.DutyPoolID)
+
+	// 分支 3b:Rotation — 未配 AssignTargetID → 降级返回 nil
+	template3b := &models.PeriodicWorkOrderTemplate{
+		BaseModel:  models.BaseModel{ID: "tpl-rot-nopool"},
+		AssignType: models.PeriodicAssignTypeRotation,
+	}
+	got4b, err := assignWorkOrderHandler(db, template3b, &models.WorkOrder{})
+	require.NoError(t, err)
+	assert.Nil(t, got4b, "未配值班池 ID 应宽松降级返回 nil")
 
 	// 分支 4:default — 未知类型
 	template4 := &models.PeriodicWorkOrderTemplate{

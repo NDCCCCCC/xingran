@@ -83,8 +83,8 @@ npm run test:coverage
 
 ```bash
 # Generate Swagger docs
-./scripts/generate_swagger.bat   # Windows
-./scripts/generate_swagger.sh    # Linux/Mac
+./scripts/build/generate_swagger.bat   # Windows
+./scripts/generate_swagger.sh          # Linux/Mac
 
 # Access Swagger UI after starting server
 # http://localhost:9000/swagger/index.html

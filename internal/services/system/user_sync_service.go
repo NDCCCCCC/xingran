@@ -651,6 +651,16 @@ func (s *UserSyncService) restoreSoftDeletedUser(tx *gorm.DB, user *models.User,
 		return err
 	}
 
+	// FIX-01: 软删恢复同事务入队 enable —— AD 端账号此前已被 disable（UAC 514），
+	// 恢复本地用户后必须重新启用，否则 AD 登录 bind 失败 data 533，恢复通道走不通。
+	// EnqueueEnableOnRestore 内部再做一次 SAFE-01 身份校验（currentUserDN = 本次 AD 当前 DN），
+	// 与开头的 checkSoftDeletedRestore 形成纵深防御：身份不一致时不入队 + 安全 WARN。
+	// ⚠ 本函数已被 checkSoftDeletedRestore 放行，正常路径此校验必然通过；拒绝分支返回 nil
+	//   （策略拒绝不回滚已生效的恢复），只是不产生 enable 行。
+	if err := addomain.NewADPushEnqueuer().EnqueueEnableOnRestore(tx, user, adUser.UserDN, "login"); err != nil {
+		return err
+	}
+
 	// 重新分配默认角色（软删除期间关联可能丢失）
 	if defaultRoleID != "" {
 		if err := s.assignRole(tx, user.ID, defaultRoleID); err != nil {
@@ -1070,6 +1080,12 @@ func (s *UserSyncService) BatchSyncADUsers(
 	if items := plansByCat[catSoftDeleted]; len(items) > 0 {
 		s.runInBatchedTx(ctx, items, result, func(tx *gorm.DB, it *batchPlanItem) error {
 			if err := s.applyRestoreSoftDeleted(tx, it.user, it.adUser, hashMap[it.adUser.Username]); err != nil {
+				return err
+			}
+			// FIX-01: 批量恢复同事务入队 enable（与登录恢复路径对称，SAFE-02 双路径一致性）。
+			// 身份校验已在阶段 2 由 checkSoftDeletedRestore 过滤被拒项（path=batch），
+			// 这里再做一次纵深防御；被拒项根本不会进入本阶段。
+			if err := addomain.NewADPushEnqueuer().EnqueueEnableOnRestore(tx, it.user, it.adUser.UserDN, "batch"); err != nil {
 				return err
 			}
 			if deptID := ouCache[it.adUser.OuDn]; deptID != "" {

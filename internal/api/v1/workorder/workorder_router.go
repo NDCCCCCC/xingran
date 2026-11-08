@@ -59,11 +59,37 @@ func SetupWorkOrderCategoriesRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/:id/delete", handler.DeleteCategory)
 }
 
-// SetupWorkOrderRatingsRouter 设置工单评价路由
-// 注意：评价路由暂时保留原有实现，因为Handler中未包含评价功能
+// SetupWorkOrderRatingsRouter 设置工单评价路由（FIX-06 / Phase 136 接线）。
+//
+// 把已实现的 RatingService（internal/services/workorder/rating.go）接入 HTTP：
+//   - POST /ratings            创建评价（写，operlog=OperTypeCreate）
+//   - POST /ratings/list       查询某工单的评价列表（读）
+//   - POST /ratings/statistics 查询某工单的评分统计（读）
+//
+// 权限：路由组继承 router.go 中 workorder/orders 的 RequirePermissions ANY-of
+// （ops:workorder:list/add/edit/delete）；评价 CRUD 的写权限单独由
+// router.go 的 ratingsWrite 严格子组挂 ops:workorder:rating:*（见下）。
+// 本函数只负责「读路由 + service/handler 构造」，不重复挂权限中间件，
+// 避免破坏读组 / 写组兄弟分离（v1.24 Phase 78 #16）。
 func SetupWorkOrderRatingsRouter(r *gin.RouterGroup, core *core.Core) {
-	// TODO: 评价功能需要在WorkOrderHandler中添加
-	// 暂时保留原有函数式handler
+	service := workorder.NewRatingService(core.GetDB())
+	handler := NewRatingHandler(service, core)
+
+	// 读路由（继承父组 ANY-of + DataScopePermission，不带严格写权限）
+	r.POST("/ratings/list", handler.ListRatings)
+	r.POST("/ratings/statistics", handler.GetRatingStatistics)
+}
+
+// SetupWorkOrderRatingsWriteRouter 设置工单评价**写**路由（严格单一权限点）。
+//
+// FIX-06：评价创建属于业务写操作，独立兄弟写组挂
+// RequireStrictPermissions(ops:workorder:rating:create)，与读组解耦，
+// 不做模块级降级（v1.25 严格权限语义零回归）。
+func SetupWorkOrderRatingsWriteRouter(r *gin.RouterGroup, core *core.Core) {
+	service := workorder.NewRatingService(core.GetDB())
+	handler := NewRatingHandler(service, core)
+
+	r.POST("/ratings", handler.CreateRating)
 }
 
 // SetupPeriodicWorkOrderRouter 设置周期性工单路由
@@ -80,7 +106,7 @@ func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 		templates.POST("/:id/update", handler.UpdatePeriodic)
 		templates.POST("/:id/delete", handler.DeletePeriodic)
 
-		// 以下路由暂时保留原有实现
+		// 历史注释、已废弃：以下 5 行为早期函数式 handler 路由（getPeriodicTemplate / enablePeriodicTemplate 等），均已注释、未启用；现行周期工单路由由上方 templates.POST(... → handler.* 方法) 注册。保留作追溯，勿据此判断为待办或可启用实现。
 		// templates.POST("/:id", getPeriodicTemplate(core))
 		// templates.POST("/:id/enable", enablePeriodicTemplate(core))
 		// templates.POST("/:id/disable", disablePeriodicTemplate(core))

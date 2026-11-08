@@ -42,7 +42,7 @@ import (
 // models.DeviceDiscovery carries no BeforeCreate hook).
 func newDdv7906(t *testing.T) (*DeviceDiscoveryService, *gorm.DB) {
 	t.Helper()
-	db := newDB7906(t, &models.DeviceDiscovery{}, &models.AuthCredential{})
+	db := newDB7906(t, &models.DeviceDiscovery{}, &models.DeviceDiscoveryResult{}, &models.AuthCredential{})
 	return &DeviceDiscoveryService{db: db}, db
 }
 
@@ -416,7 +416,7 @@ func TestDdv7906_DiscoveryCRUD(t *testing.T) {
 		require.Error(t, err, "the present task must still be deleted")
 	})
 
-	t.Run("import_and_results_stub", func(t *testing.T) {
+	t.Run("import_and_results_persisted", func(t *testing.T) {
 		n, err := svc.ImportDiscoveredDevices(ctx, taskIDs[2], []string{"d1", "d2", "d3"}, "ddv7906")
 		require.NoError(t, err)
 		assert.Equal(t, 3, n, "stub implementation echoes the requested device count")
@@ -424,9 +424,29 @@ func TestDdv7906_DiscoveryCRUD(t *testing.T) {
 		_, err = svc.ImportDiscoveredDevices(ctx, "no-such-task", []string{"d1"}, "ddv7906")
 		require.Error(t, err)
 
+		// Phase 137 / FIX-07: 未执行过的任务没有明细，返回空列表（不再恒空 stub）。
 		devices, err := svc.GetDiscoveryResults(ctx, taskIDs[2])
 		require.NoError(t, err)
-		assert.Empty(t, devices, "result store is a stub — always empty (locked)")
+		assert.Empty(t, devices, "任务尚未执行 → 无持久化结果")
+
+		// 持久化两条真实结果后，查询必须原样返回（含厂商/型号/名称/存活状态）。
+		require.NoError(t, svc.persistDiscoveryResults(ctx, taskIDs[2], []*DiscoveredDevice{
+			{IPAddress: "10.79.0.1", DeviceType: "switch", Vendor: "Huawei", Model: "S5700", SysName: "core-sw-1", SysDescr: "HW", IsAlive: true},
+			{IPAddress: "10.79.0.2", DeviceType: "router", Vendor: "Cisco", Model: "ISR4K", SysName: "edge-rtr-1", SysDescr: "CSCO", IsAlive: true},
+		}))
+		devices, err = svc.GetDiscoveryResults(ctx, taskIDs[2])
+		require.NoError(t, err)
+		require.Len(t, devices, 2, "查询返回已持久化的真实结果")
+		assert.Equal(t, "10.79.0.1", devices[0].IPAddress)
+		assert.Equal(t, "Huawei", devices[0].Vendor)
+		assert.Equal(t, "S5700", devices[0].Model)
+		assert.Equal(t, "core-sw-1", devices[0].SysName)
+		assert.True(t, devices[0].IsAlive)
+		assert.Equal(t, "10.79.0.2", devices[1].IPAddress)
+
+		// 任务不存在仍返回错误。
+		_, err = svc.GetDiscoveryResults(ctx, "no-such-task")
+		require.Error(t, err)
 	})
 }
 
@@ -577,6 +597,13 @@ func TestDdv7906_ExecuteDiscovery_SNMPType(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, models.DiscoveryStatusSuccess, row.Status)
 	assert.Equal(t, 1, row.DiscoveredCount)
+
+	// Phase 137 / FIX-07: 执行完成后结果明细已持久化，可经查询端点回查。
+	stored, err := svc.GetDiscoveryResults(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, stored, 1, "ExecuteDiscovery 必须落库结果明细")
+	assert.Equal(t, "core-sw-7906", stored[0].SysName)
+	assert.Equal(t, "127.0.0.1", stored[0].IPAddress)
 }
 
 // TestDdv7906_ProbeSingleDevice_Validation — the pure validation ladder of

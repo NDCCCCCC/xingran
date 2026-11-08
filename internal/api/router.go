@@ -191,7 +191,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				// 用户 Excel 导入由 SetupUserWriteRouter 内的 ImportUser 处理（带 AD 域控同步触发），
 				// 不复用 operations.SetupExcelRouter —— 后者的 importData 为通用导入，不触发
 				// AD 同步。模板下载同样在 user_router（GET /import/template）。
-				// 若将来需要用户导出(/export)，可单独接入 operations.exportData("user")。
+				// 用户导出（FIX-03）由下方 usersWrite 的 Export 严格子组接线，导出字段与
+				// 导入模板同源（excel_config.go "user" 配置）。
 			}
 
 			// 用户写操作组：逐动作**单一权限点** + 严格权限（不做任何降级）。
@@ -205,8 +206,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			//   删除            POST /system/users/:id/delete      → system:user:remove
 			//   批量删除        POST /system/users/batch-delete    → system:user:remove
 			//   重置密码        POST /system/users/:id/reset-password → system:user:resetPwd
-			// ⚠️ 导出接口不存在（用户模块未注册 /export 路由，前端也无导出按钮），
-			//    故 system:user:export 无需挂保护；xtgl 缺该权限不产生 403 风险。
+			//   导出            POST /system/users/export          → system:user:export（FIX-03）
+			// 导出为业务写操作（审计），与其余写操作一样走严格单一权限点；读组 ANY-of
+			// 不覆盖它（读/写兄弟分离），持 system:user:export 的角色方可导出。
 			usersWrite := authorized.Group("/users")
 			// 数据权限中间件沿用原行为（读组原本覆盖全部用户路由）
 			usersWrite.Use(middleware.DataScopePermission(core))
@@ -217,6 +219,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 					Edit:     strictUserRouteGroup(usersWrite, permission.UserEdit, core),
 					Remove:   strictUserRouteGroup(usersWrite, permission.UserRemove, core),
 					ResetPwd: strictUserRouteGroup(usersWrite, permission.UserResetPwd, core),
+				Export:   strictUserRouteGroup(usersWrite, permission.UserExport, core),
 				}, core)
 			}
 
@@ -577,7 +580,16 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			workorderV1.SetupWorkOrdersRouter(orders, core)
-			workorderV1.SetupWorkOrderRatingsRouter(orders, core) // 评价路由
+			workorderV1.SetupWorkOrderRatingsRouter(orders, core) // 评价读路由（FIX-06）
+		}
+
+		// 工单评价写路由（FIX-06 / Phase 136）：评价创建为业务写操作，走独立
+		// 兄弟严格写组（RequireStrictPermissions 单一权限点），与上面 orders 读组
+		// 的 ANY-of 解耦，保持 v1.24 Phase 78 #16 读/写兄弟分离语义零回归。
+		ratingsWrite := workorder.Group("/orders")
+		{
+			ratingsCreate := strictUserRouteGroup(ratingsWrite, permission.WorkOrderRatingCreate, core)
+			workorderV1.SetupWorkOrderRatingsWriteRouter(ratingsCreate, core)
 		}
 
 		// 工单分类管理
@@ -1171,15 +1183,17 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		wallService := opsServices.NewWallService(core.DB.GetDB())
 		wallHandler := operations.NewWallHandler(wallService).WithCore(core)
 		walls := ops.Group("/walls")
+		// FIX-13：5 个读码改引用 permission.* 常量（单一真相源），
+		// 由 migration_236 播种 F 型菜单，使持对应权限码的角色可读（403→200）。
 		walls.Use(middleware.RequirePermissions([]string{
-			"ops:floor-plan:list",
-			"ops:floor-plan:query",
-			"ops:floor-plan:edit",
-			"ops:floor-plan:save",
-			"ops:walls:list",
-			"ops:walls:add",
-			"ops:walls:edit",
-			"ops:walls:delete",
+			string(permission.OpsFloorPlanList),
+			string(permission.OpsFloorPlanQuery),
+			string(permission.OpsFloorPlanEdit),
+			string(permission.OpsFloorPlanSave),
+			string(permission.OpsWallList),
+			string(permission.OpsWallAdd),
+			string(permission.OpsWallEdit),
+			string(permission.OpsWallDelete),
 		}, core))
 		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
 		walls.Use(middleware.DataScopePermission(core))
@@ -1208,14 +1222,14 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		doorHandler := operations.NewDoorHandler(doorService).WithCore(core)
 		doors := ops.Group("/doors")
 		doors.Use(middleware.RequirePermissions([]string{
-			"ops:floor-plan:list",
-			"ops:floor-plan:query",
-			"ops:floor-plan:edit",
-			"ops:floor-plan:save",
-			"ops:doors:list",
-			"ops:doors:add",
-			"ops:doors:edit",
-			"ops:doors:delete",
+			string(permission.OpsFloorPlanList),
+			string(permission.OpsFloorPlanQuery),
+			string(permission.OpsFloorPlanEdit),
+			string(permission.OpsFloorPlanSave),
+			string(permission.OpsDoorList),
+			string(permission.OpsDoorAdd),
+			string(permission.OpsDoorEdit),
+			string(permission.OpsDoorDelete),
 		}, core))
 		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
 		doors.Use(middleware.DataScopePermission(core))
@@ -1244,10 +1258,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		textHandler := operations.NewFloorPlanTextHandler(textService).WithCore(core)
 		texts := ops.Group("/floor-plan-texts")
 		texts.Use(middleware.RequirePermissions([]string{
-			"ops:floor-plan:list",
-			"ops:floor-plan:query",
-			"ops:floor-plan:edit",
-			"ops:floor-plan:save",
+			string(permission.OpsFloorPlanList),
+			string(permission.OpsFloorPlanQuery),
+			string(permission.OpsFloorPlanEdit),
+			string(permission.OpsFloorPlanSave),
 		}, core))
 		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
 		texts.Use(middleware.DataScopePermission(core))

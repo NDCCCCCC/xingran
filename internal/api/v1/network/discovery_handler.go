@@ -169,7 +169,8 @@ func (h *DiscoveryHandler) GetByID(c *gin.Context) {
 
 // GetResults 获取发现结果
 // @Summary 获取发现结果
-// @Description 获取发现任务的设备发现结果
+// @Description 返回 ExecuteDiscovery 已持久化的设备发现明细（Phase 137 / FIX-07）。
+// @Description 任务存在但未执行/无存活设备时返回空 devices 数组。
 // @Tags 设备发现
 // @Accept json
 // @Produce json

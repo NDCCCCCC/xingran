@@ -116,7 +116,7 @@ func (h *LoginLogHandler) Clean(c *gin.Context) {
 	response.Success(c, gin.H{"message": "清空成功"})
 }
 
-// UnlockUser 解锁用户 — Phase 107 TODO-03 placeholder, not part of handler deduplication
+// UnlockUser 解锁用户 — 删除登录失败锁定缓存键（Phase 107 落地；非空 placeholder）
 func (h *LoginLogHandler) UnlockUser(c *gin.Context) {
 	username := c.Param("username")
 	if username == "" {

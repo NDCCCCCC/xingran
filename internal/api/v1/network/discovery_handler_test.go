@@ -8,6 +8,7 @@ package network
 // task-not-found branch — the live scan paths need real devices (out of scope, D-12).
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -19,7 +20,7 @@ import (
 )
 
 func newDiscoveryTestEnv(t *testing.T) *netTestEnv {
-	return newNetworkTestEnv(t, &models.DeviceDiscovery{}, &models.AuthCredential{}, &models.NetworkDevice{})
+	return newNetworkTestEnv(t, &models.DeviceDiscovery{}, &models.DeviceDiscoveryResult{}, &models.AuthCredential{}, &models.NetworkDevice{})
 }
 
 func newDiscoveryHandler(env *netTestEnv) *DiscoveryHandler {
@@ -40,6 +41,23 @@ func seedDiscovery(t *testing.T, env *netTestEnv, id, name string, status models
 	}
 	require.NoError(t, env.db.Create(task).Error)
 	return task
+}
+
+// seedDiscoveryResult 直接写入一条已持久化的发现结果明细（Phase 137 / FIX-07）。
+func seedDiscoveryResult(t *testing.T, env *netTestEnv, id, discoveryID, ip, sysName, vendor string, seq int) {
+	t.Helper()
+	row := &models.DeviceDiscoveryResult{
+		ID:          id,
+		DiscoveryID: discoveryID,
+		IPAddress:   ip,
+		DeviceType:  "switch",
+		Vendor:      vendor,
+		Model:       "S5700",
+		SysName:     sysName,
+		IsAlive:     true,
+		Seq:         seq,
+	}
+	require.NoError(t, env.db.Create(row).Error)
 }
 
 func TestDiscoveryHandler_Statistics(t *testing.T) {
@@ -149,14 +167,42 @@ func TestDiscoveryHandler_GetResults(t *testing.T) {
 	h := newDiscoveryHandler(env)
 	seedDiscovery(t, env, "dr1", "results-task", models.DiscoveryStatusSuccess, 3)
 
-	t.Run("found_returns_empty_devices_stub", func(t *testing.T) {
-		// GetDiscoveryResults is a documented TODO stub — returns an empty list
+	t.Run("empty_when_no_persisted_results", func(t *testing.T) {
+		// Phase 137 / FIX-07: 任务存在但无持久化明细时返回空数组（不再是恒空 stub）。
 		w := netServe(t, []netRoute{{http.MethodPost, "/discoveries/:id/results", h.GetResults}},
 			http.MethodPost, "/discoveries/dr1/results", "")
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, 0, resp.Code)
 		assert.JSONEq(t, `{"devices":[]}`, string(resp.Data))
+	})
+
+	t.Run("returns_persisted_devices", func(t *testing.T) {
+		// 写入两条真实结果后，端点必须返回真实明细（camelCase 对齐前端表格列）。
+		seedDiscoveryResult(t, env, "ddr-1", "dr1", "10.0.0.1", "core-sw-1", "Huawei", 1)
+		seedDiscoveryResult(t, env, "ddr-2", "dr1", "10.0.0.2", "core-sw-2", "Cisco", 2)
+		w := netServe(t, []netRoute{{http.MethodPost, "/discoveries/:id/results", h.GetResults}},
+			http.MethodPost, "/discoveries/dr1/results", "")
+		resp := decodeNetResp(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 0, resp.Code)
+		assert.Contains(t, string(resp.Data), `"devices"`)
+		assert.Contains(t, string(resp.Data), `"ipAddress":"10.0.0.1"`)
+		assert.Contains(t, string(resp.Data), `"deviceName":"core-sw-1"`)
+		assert.Contains(t, string(resp.Data), `"vendor":"Huawei"`)
+		assert.Contains(t, string(resp.Data), `"model":"S5700"`)
+		assert.Contains(t, string(resp.Data), `"ipAddress":"10.0.0.2"`)
+		assert.Contains(t, string(resp.Data), `"deviceName":"core-sw-2"`)
+		assert.Contains(t, string(resp.Data), `"isAlive":true`)
+		// 明细只归属本任务：断言恰好 2 条且字段完整回传。
+		var payload struct {
+			Devices []services.DiscoveredDevice `json:"devices"`
+		}
+		require.NoError(t, json.Unmarshal(resp.Data, &payload))
+		require.Len(t, payload.Devices, 2)
+		assert.Equal(t, "10.0.0.1", payload.Devices[0].IPAddress)
+		assert.Equal(t, "core-sw-1", payload.Devices[0].SysName)
+		assert.True(t, payload.Devices[0].IsAlive)
 	})
 
 	t.Run("not_found_1500", func(t *testing.T) {

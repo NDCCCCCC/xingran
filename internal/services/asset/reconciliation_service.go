@@ -873,8 +873,7 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 	// 关联资产通过 ops_workstation_device 中间表(已有 workstation_id + asset_id 外键,
 	// 两列均为 VARCHAR(36) — 存 UUID 字符串,与 ops_asset.id (uuid) 需显式 cast 兼容 PG 强类型)。
 	// 不能直接 WHERE ops_asset.workstation_id = ? — 该列在 ops_asset 不存在
-	// (R1 已知约束:物理链路 sys_port_mac→sys_info_point→sys_workstation_info_point 未落地,
-	//  R4 用 ops_workstation_device 作工位-资产关联的可靠路径)。
+	// (R1 已知约束（已裁定接受）：旧直连物理链路 sys_port_mac→sys_info_point→sys_workstation_info_point 不再使用；migration_180 后物理链路 JOIN 已恢复，R4 以 ops_workstation_device 作工位-资产关联的可靠路径。属架构决策，非开放缺陷。)
 	// 沿用 workstation_service List 中 primary_device_serial 子查询的 cast 模式 (::text)。
 	// 方言分支(reconciliation-sqlite-cast-400):PG 保留 ::text(零改动);
 	// sqlite 不识别 `::` 词法(unrecognized token ':'),machine_ip/id 均 TEXT,

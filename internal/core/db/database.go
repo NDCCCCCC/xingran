@@ -699,6 +699,8 @@ func MigrateModelList() []interface{} {
 		&models.LLDPNeighborInfo{}, // LLDP 邻居信息(拓扑发现)
 		&models.PortWriteAudit{},   // Phase 52: 端口写审计 append-only 表
 		&models.DeviceDiscovery{},
+		// Phase 137 / FIX-07: 发现结果明细表，供 GetDiscoveryResults 返回真实结果。
+		&models.DeviceDiscoveryResult{},
 		&models.DeviceEnrichmentTask{},
 		// 通知公告相关模型（增强版）
 		&models.Notice{},
@@ -1205,6 +1207,14 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(235, "workstation_backfill_perm", migrations.Migrate235WorkstationBackfillPerm); err != nil {
 			applogger.Errorf("工位部门反推按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
+		// FIX-13 / OQ-7：5 个读权限码菜单种子（读路由恒 403 的数据侧根因）。
+		if err := d.runAndRecord(236, "oq7_read_perm_seed", migrations.Migrate236OQ7ReadPermSeed); err != nil {
+			applogger.Errorf("OQ-7 读权限码 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// FIX-06：工单评价创建权限菜单种子（严格写组的授权来源）。
+		if err := d.runAndRecord(237, "workorder_rating_perm_seed", migrations.Migrate237WorkOrderRatingPermSeed); err != nil {
+			applogger.Errorf("工单评价权限 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1333,6 +1343,14 @@ func (d *Database) AutoMigrate() error {
 		// 工位部门反推按钮权限 seed (quick-261106-wsb)，与上方 PG 分支对称。
 		if err := d.runAndRecord(235, "workstation_backfill_perm", migrations.Migrate235WorkstationBackfillPerm); err != nil {
 			applogger.Errorf("工位部门反推按钮权限 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// FIX-13 / OQ-7：5 个读权限码菜单种子（与上方 PG 分支对称）。
+		if err := d.runAndRecord(236, "oq7_read_perm_seed", migrations.Migrate236OQ7ReadPermSeed); err != nil {
+			applogger.Errorf("OQ-7 读权限码 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// FIX-06：工单评价创建权限菜单种子（与上方 PG 分支对称）。
+		if err := d.runAndRecord(237, "workorder_rating_perm_seed", migrations.Migrate237WorkOrderRatingPermSeed); err != nil {
+			applogger.Errorf("工单评价权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)

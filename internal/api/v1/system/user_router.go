@@ -18,6 +18,7 @@ import (
 //	Edit     → system:user:edit     （编辑 + 状态变更 + 同步经理）
 //	Remove   → system:user:remove   （删除 + 批量删除）
 //	ResetPwd → system:user:resetPwd （重置密码）
+//	Export   → system:user:export   （导出；FIX-03 Phase 136 接线）
 //
 // 严格权限（RequireStrictPermissions）只做 sys_menu.perms 精确匹配，
 // 不做 F 型继承与模块级降级——这是「只读角色不得写」的闭环前提。
@@ -27,6 +28,7 @@ type UserWriteRouteGroups struct {
 	Edit     *gin.RouterGroup
 	Remove   *gin.RouterGroup
 	ResetPwd *gin.RouterGroup
+	Export   *gin.RouterGroup
 }
 
 // SetupUserRouter 设置用户**读**路由
@@ -51,6 +53,9 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
 // 每个写操作落到单一权限点的严格权限子组上（分组由 router.go 创建）。
 // 用户 Excel 导入在此处理（带 AD 域控同步触发），不复用
 // operations.SetupExcelRouter —— 后者的 importData 为通用导入，不触发 AD 同步。
+// 用户导出（FIX-03）同样走本模块的 ExcelService（与导入模板同源），不复用
+// operations.exportData —— 后者按 /ops/{entityType}/export 拼路径且用
+// excelModuleName(entityType) 记 operlog，module 无法落到「用户管理」。
 func SetupUserWriteRouter(groups UserWriteRouteGroups, core *core.Core) {
 	handler := newUserHandler(core)
 
@@ -68,6 +73,10 @@ func SetupUserWriteRouter(groups UserWriteRouteGroups, core *core.Core) {
 	groups.Remove.POST("/batch-delete", handler.BatchDelete)
 	// 重置密码
 	groups.ResetPwd.POST("/:id/reset-password", handler.ResetPassword)
+	// 用户导出（FIX-03 Phase 136）
+	if groups.Export != nil {
+		groups.Export.POST("/export", handler.ExportUser)
+	}
 }
 
 // newUserHandler 构造用户处理器（含缓存适配与 AD 同步服务注入）。

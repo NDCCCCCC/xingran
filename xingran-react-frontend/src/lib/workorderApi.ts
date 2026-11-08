@@ -637,3 +637,64 @@ export function getDeptList(): Promise<BaseResponse<SimpleDept[]>> {
 // getDeptTree 副本已删除 (Phase 37-05): 全项目唯一 fetch 部门树的函数在 dutyApi.ts。
 // 消费方应改用 useDeptTree hook (共享 ['dept','tree'] React Query 缓存),
 // 或直接 import { getDeptTree } from "@/lib/dutyApi"。
+
+// ==================== 工单评价 API（FIX-06 / Phase 136）====================
+//
+// 全部走 @/lib/api 的 post 包装（响应拦截器已拆包，调用方直接读 .data），
+// 不写裸 axios。后端端点见 workorder_router.go SetupWorkOrderRatings*Router。
+//
+// ⚠ 命名刻意与文件上方「工单评价 API」段的既有 createWorkOrderRating /
+// getWorkOrderRatings / getRatingStatistics（旧路径 /workorder/orders/:id/rating*）
+// 区分，避免同名函数重载造成调用歧义；本段函数对应 Phase 136 新接线的
+// /workorder/orders/ratings* 端点。
+
+export type WorkOrderRatingTypeV2 = "user" | "handler";
+
+export interface WorkOrderRatingRecordV2 {
+  id: string;
+  workOrderId: string;
+  ratingType: WorkOrderRatingTypeV2;
+  completionScore: number;
+  cooperationScore: number;
+  comment: string;
+  raterId: string;
+  createdAt: string;
+  rater?: { nickname?: string; username?: string };
+}
+
+export interface WorkOrderRatingStatisticsV2 {
+  totalCount: number;
+  avgCompletionScore?: number;
+  avgCooperationScore?: number;
+  userRating?: WorkOrderRatingRecordV2 | null;
+  handlerRating?: WorkOrderRatingRecordV2 | null;
+}
+
+export interface WorkOrderRatingCreateRequestV2 {
+  workOrderId: string;
+  ratingType: WorkOrderRatingTypeV2;
+  completionScore?: number;
+  cooperationScore?: number;
+  comment?: string;
+}
+
+/** 创建工单评价（写；后端严格权限 ops:workorder:rating:create + operlog） */
+export function submitWorkOrderRating(
+  data: WorkOrderRatingCreateRequestV2
+): Promise<BaseResponse<{ message: string }>> {
+  return post("/workorder/orders/ratings", data);
+}
+
+/** 查询某工单的评价列表（读） */
+export function listWorkOrderRatings(
+  workOrderId: string
+): Promise<BaseResponse<WorkOrderRatingRecordV2[]>> {
+  return post("/workorder/orders/ratings/list", { workOrderId });
+}
+
+/** 查询某工单的评分统计（读） */
+export function fetchWorkOrderRatingStats(
+  workOrderId: string
+): Promise<BaseResponse<WorkOrderRatingStatisticsV2>> {
+  return post("/workorder/orders/ratings/statistics", { workOrderId });
+}

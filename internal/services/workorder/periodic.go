@@ -404,30 +404,30 @@ func (s *PeriodicService) GenerateWorkOrder(ctx context.Context, templateID stri
 		if template.AssignTargetID != nil {
 			dutyPoolID = template.AssignTargetID
 
-			// 查询值班池成员
-			var members []models.DutyPoolMember
-			if err := s.db.WithContext(ctx).
-				Where("pool_id = ?", *dutyPoolID).
-				Order("member_order ASC").
-				Find(&members).Error; err == nil && len(members) > 0 {
+			// 查询值班池成员（FIX-05：与 scheduler 路径共用 LoadRotationMembers，
+			// 保证「成员集合来源 + member_order ASC 排序」两路径一致）。
+			members, memberErr := LoadRotationMembers(ctx, s.db, *dutyPoolID)
+			if memberErr == nil && len(members) > 0 {
 				// F-12 fix: 用 UPDATE...RETURNING 原子化 total_generated +1,
 				// 杜绝并发场景下两个 goroutine 读取相同 generatedCount 后选中
 				// 同一成员的 lost update bug。
 				// RETURNING 返回 +1 后的新值,(newCount-1) 即"本次分配前"的序号,
-				// 取模选择成员。下方 line 447 的 +1 因已在此处完成需跳过。
+				// 取模选择成员（FIX-05：改用共享 RotationSelectedIndex）。
+				// 下方 line 447 的 +1 因已在此处完成需跳过。
 				var newCount int64
 				if err := s.db.WithContext(ctx).
 					Raw("UPDATE sys_periodic_workorder_template SET total_generated = total_generated + 1 WHERE id = ? RETURNING total_generated", template.ID).
 					Scan(&newCount).Error; err == nil {
-					selectedIndex := int(newCount-1) % len(members)
+					selectedIndex := RotationSelectedIndex(int(newCount-1), len(members))
 					assigneeID = &members[selectedIndex].UserID
 					applogger.Debugf("[workorder] [F-12 原子分配] 值班池 %s 选中成员 %s (索引 %d/%d, total_generated → %d)",
 						*dutyPoolID, *assigneeID, selectedIndex, len(members), newCount)
 					rotationCounted = true
 				} else {
 					// 表名/RETURNING 不可用时降级为原逻辑(SQLite 测试或未 migrate)
+					// FIX-05：与 scheduler 路径共用 RotationSelectedIndex。
 					generatedCount := template.TotalGenerated
-					selectedIndex := generatedCount % len(members)
+					selectedIndex := RotationSelectedIndex(generatedCount, len(members))
 					assigneeID = &members[selectedIndex].UserID
 					applogger.Warnf("[workorder] [F-12 降级] RETURNING 不可用,使用 generatedCount=%d 选择成员: %v", generatedCount, err)
 				}

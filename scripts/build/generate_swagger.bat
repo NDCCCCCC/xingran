@@ -15,8 +15,8 @@ echo %GREEN%  Swagger 文档生成脚本%NC%
 echo %GREEN%======================================%NC%
 echo.
 
-REM 切换到项目根目录
-cd /d "%~dp0.."
+REM 切换到项目根目录（脚本位于 scripts/build/，需上溯两级）
+cd /d "%~dp0..\.."
 
 REM 检查swag是否安装
 where swag >nul 2>nul
@@ -44,7 +44,7 @@ echo.
 
 REM 生成文档
 echo %YELLOW%正在生成Swagger文档...%NC%
-swag init -g cmd/main.go -o docs --parseInternal --parseDependency --parseInternal
+swag init -g cmd/main.go -o internal/docs --parseInternal --parseDependency --parseInternal
 
 if %errorlevel% equ 0 (
     echo.
@@ -53,9 +53,9 @@ if %errorlevel% equ 0 (
     echo %GREEN%======================================%NC%
     echo.
     echo 生成的文件:
-    echo   - docs\swagger.json
-    echo   - docs\swagger.yaml
-    echo   - docs\docs.go
+    echo   - internal\docs\swagger.json
+    echo   - internal\docs\swagger.yaml
+    echo   - internal\docs\docs.go
     echo.
     echo 访问地址: %YELLOW%http://localhost:8080/swagger/index.html%NC%
     echo.

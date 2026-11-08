@@ -290,6 +290,11 @@ func (h *PortWriteHandler) execSinglePort(
 			response.Error(c, http.StatusBadRequest, err.Error())
 			return
 		}
+		// FIX-04（Phase 138）：物理参数（速率/双工/MTU）新增 sentinel 翻译。
+		if code, msg, ok := physicalSentinelMessage(err); ok {
+			response.Error(c, code, msg)
+			return
+		}
 		// 非 sentinel error：设备执行失败（拒绝/transport）或系统错误（DB/RenderCommand）。
 		// 有 failed result → fall through 走 audit + 200（handler 设计：Status==failed
 		//   记审计后返回，前端能看到失败原因 + 审计可追溯）。
@@ -550,6 +555,35 @@ func buildAfterValue(action portcollection.PortAction, pr *portwrite.PortResult)
 			}
 			if op, ok := pr.Extra["bindOp"].(string); ok && op != "" {
 				parts = append(parts, fmt.Sprintf(`"bindOp":%q`, op))
+			}
+			if len(parts) > 0 {
+				return json.RawMessage([]byte("{" + strings.Join(parts, ",") + "}"))
+			}
+		}
+		return json.RawMessage([]byte(`{}`))
+	case portcollection.ActionSetSpeed, portcollection.ActionSetDuplex, portcollection.ActionSetMTU:
+		// FIX-04（Phase 138）：物理参数 after_value —— 从 PortResult.Extra 读
+		// service 在成功路径写入的 speed / duplex / mtu（审计真相源，禁默默吞字段）。
+		if pr != nil && pr.Extra != nil {
+			parts := make([]string, 0, 1)
+			switch action {
+			case portcollection.ActionSetSpeed:
+				if v, ok := pr.Extra["speed"]; ok {
+					switch n := v.(type) {
+					case int:
+						parts = append(parts, fmt.Sprintf(`"speed":%d`, n))
+					case string:
+						parts = append(parts, fmt.Sprintf(`"speed":%q`, n))
+					}
+				}
+			case portcollection.ActionSetDuplex:
+				if v, ok := pr.Extra["duplex"].(string); ok && v != "" {
+					parts = append(parts, fmt.Sprintf(`"duplex":%q`, v))
+				}
+			case portcollection.ActionSetMTU:
+				if v, ok := pr.Extra["mtu"].(int); ok {
+					parts = append(parts, fmt.Sprintf(`"mtu":%d`, v))
+				}
 			}
 			if len(parts) > 0 {
 				return json.RawMessage([]byte("{" + strings.Join(parts, ",") + "}"))

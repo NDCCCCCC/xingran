@@ -25,6 +25,20 @@ type Config struct {
 	VDI      VDIConfig      `mapstructure:"vdi"`
 	AD       ADTLSConfig    `mapstructure:"ad"`
 	OperLog  OperLogConfig  `mapstructure:"operlog"`
+	// Reconciliation 资产对账相关配置。
+	Reconciliation ReconciliationConfig `mapstructure:"reconciliation"`
+}
+
+// ReconciliationConfig 资产对账配置。
+type ReconciliationConfig struct {
+	// MVRefreshTimeoutSec 启动时刷新 reconciliation_normalized 物化视图的超时(秒)。
+	//
+	// 历史(FIX-12 / D-02):该值曾在 internal/core/core.go 硬编码为 30s。
+	// 当时的 O(N²) 刷新慢查询根因已由 migration_180(视图结构重构,消除相关子查询)
+	// 根治,此项为非阻断低优先级技术债,仅保留防御性可配置能力。
+	// 默认 30s,保证零配置时行为与历史完全一致;<=0 时回退到默认值。
+	// 可通过 XINGRAN_RECONCILIATION_MV_REFRESH_TIMEOUT_SEC 环境变量覆盖。
+	MVRefreshTimeoutSec int `mapstructure:"mv_refresh_timeout_sec"`
 }
 
 // VDIConfig VDI 客户端配置。
@@ -543,6 +557,11 @@ func setDefaults(v *viper.Viper) {
 	// 生产环境部署时应在 configs/config.yaml 中显式设为 false,启用严格证书校验,避免 MITM 攻击。
 	v.SetDefault("vdi.tls_skip_verify", true)
 	v.SetDefault("ad.tls_skip_verify", true)
+
+	// 资产对账:启动时刷新 reconciliation_normalized MV 的超时(秒)。
+	// 默认 30s,与 FIX-12 之前 core.go 里 context.WithTimeout(..., 30*time.Second)
+	// 硬编码值完全一致,零配置部署行为不变。
+	v.SetDefault("reconciliation.mv_refresh_timeout_sec", 30)
 }
 
 // GetDSN 获取数据库连接字符串(URL 格式)。
