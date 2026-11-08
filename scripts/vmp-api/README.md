@@ -63,7 +63,6 @@ pip install requests
 | `verify_vmp_api.py` | 简化版 - 仅API调用（需手动设置Cookie） |
 | `LOGIN_ANALYSIS.md` | 登录逻辑详细分析 |
 | `.env.example` | 配置示例 |
-| `run.bat` | Windows快速启动脚本 |
 
 ## API端点详解
 

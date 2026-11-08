@@ -15,9 +15,9 @@
 //   - DELETE: 其他 appeared / 所有 disappeared
 //
 // 用法:
-//   go run ./cmd/mac_purge_meaningless -dry-run           # 只统计,不写 DB
-//   go run ./cmd/mac_purge_meaningless                   # 真跑(自动备份)
-//   go run ./cmd/mac_purge_meaningless -dry-run -verbose # 详细统计
+//   go run ./scripts/ops/mac_purge_meaningless -dry-run           # 只统计,不写 DB
+//   go run ./scripts/ops/mac_purge_meaningless                   # 真跑(自动备份)
+//   go run ./scripts/ops/mac_purge_meaningless -dry-run -verbose # 详细统计
 //
 // 备份:
 //   执行前自动创建 sys_device_mac_history_purge_backup_YYYYMMDD_HHMMSS,

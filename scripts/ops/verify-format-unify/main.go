@@ -10,7 +10,7 @@
 //   - 端口名前缀分布: 列出非标准前缀(全称/异常短名)
 //
 // 用法:
-//   go run ./cmd/verify-format-unify
+//   go run ./scripts/ops/verify-format-unify
 package main
 
 import (

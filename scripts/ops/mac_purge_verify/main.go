@@ -9,7 +9,7 @@
 //   5. 抽样 5 条 first-appeared 记录,确认时间最早
 //
 // 用法:
-//   go run ./cmd/mac_purge_meaningless/verify -backup sys_device_mac_history_purge_backup_20260630_172543
+//   go run ./scripts/ops/mac_purge_verify -backup sys_device_mac_history_purge_backup_20260630_172543
 package main
 
 import (
@@ -30,7 +30,7 @@ func main() {
 	flag.Parse()
 
 	if *backupTable == "" {
-		fmt.Fprintln(os.Stderr, "用法: go run ./cmd/mac_purge_meaningless/verify -backup <table_name>")
+		fmt.Fprintln(os.Stderr, "用法: go run ./scripts/ops/mac_purge_verify -backup <table_name>")
 		os.Exit(2)
 	}
 

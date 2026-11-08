@@ -9,9 +9,9 @@
 //   - 该工具对所有有历史的 deviceID 一次性跑 cleanup
 //
 // 用法:
-//   go run ./cmd/mac_cleanup                     # 使用默认 config.yaml + .env
-//   go run ./cmd/mac_cleanup -dry-run            # 只统计,不写 DB
-//   CONFIG_PATH=/path/to/config.yaml go run ./cmd/mac_cleanup
+//   go run ./scripts/ops/mac_cleanup                     # 使用默认 config.yaml + .env
+//   go run ./scripts/ops/mac_cleanup -dry-run            # 只统计,不写 DB
+//   CONFIG_PATH=/path/to/config.yaml go run ./scripts/ops/mac_cleanup
 //
 // 行为:
 //   - 加载 .env(同主程序 godotenv 模式)

@@ -24,7 +24,7 @@
 | 路径 | 原因 |
 |---|---|
 | `.coverage-fe-floors` / `.coverage-threshold` | 被 `.github/scripts/check-frontend-coverage.sh` 与 `check-coverage.sh` 读取（CI 门禁输入） |
-| `run.bat` | 被 `scripts/vmp-api/README.md:66` 引用 |
+| `run.bat` | 项目根启动脚本，用户 2026-11-08 裁定不需要（自行启动前后端），已删除 |
 | `人员详情.xlsx` | 被 `internal/services/operations/excel_config.go:104` 引用（导入模板/样例） |
 | `out/sha256.txt` | `.github/workflows/deploy.yml` 引用 |
 | `test/fixtures`、`uploads/` 下 2 张已跟踪 jpg、`xingran-cli/` | 项目源码 / 运行时资源 |

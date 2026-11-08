@@ -64,25 +64,28 @@ export DB_NAME=xingran
 
 ## 各子目录说明
 
-### `build/` — 构建脚本
+### 构建脚本（顶层 + `build/` 子目录）
 
-`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。`build/` 下脚本用 `%~dp0..\..`、`scripts/` 根脚本用 `dirname/..` 各自上溯到项目根，可从任意 cwd 调用（两者层级不同，不可一概而论）。
+`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。`scripts/build/` 下脚本用 `%~dp0..\..`、`scripts/` 顶层脚本用 `%~dp0..` / `dirname/..` 各自上溯到项目根，可从任意 cwd 调用（两者层级不同，不可一概而论）。**产物统一 `out/`**（见上文「构建产物路径」）。
 
 ```bash
+# scripts/ 顶层（产物 out/）
+./build-linux.bat [root]     # 内嵌前端 Linux（VITE_BASE 切换）
+./build_linux.sh             # 纯后端 Linux
+./build-embedded.bat         # 内嵌前端 Windows
+./build-embedded.sh          # 内嵌前端 Linux
+
+# scripts/build/ 子目录（产物 out/）
 cd scripts/build
+./build.bat                  # 纯后端 Linux
+./build_and_deploy.bat       # 纯后端 Linux + 部署说明
+./generate_swagger.bat       # Swagger 生成（Windows）
+```
 
-# 构建后端（Linux 目标）
-./build.bat                    # 或 ./build_and_deploy.bat
-./build-embedded.sh            # 内嵌前端的版本（Linux）
-build-embedded.bat             # 内嵌前端的版本（Windows）
-build-linux.bat                # 纯 Windows 构建
-
-# Swagger 文档
-./generate_swagger.bat
-./generate_swagger.sh
-
-# 校验打包后的 vendor chunks（D-07）
-./check-bundle.sh
+```bash
+# scripts/ 顶层其余工具
+./generate_swagger.sh        # Swagger 生成（Linux）
+./check-bundle.sh            # 校验打包后的 vendor chunks（D-07）
 ```
 
 ### `agent/` — Agent 部署/测试
@@ -114,13 +117,36 @@ go test ./scripts/e2e/...
 
 ### `tests/` — 测试脚本
 
-跨语言测试脚本目录。
+跨语言测试脚本目录。注意：仓库根统一用 `tests/`（复数）存放 Go/前端测试，`test/`（单数）已删除；本目录只放 `scripts/` 自身的测试辅助脚本。
 
 | 项 | 类型 | 说明 |
 |----|------|------|
-| `test_excel_import/main.go` | Go | Excel 导入功能测试 |
-| `test_rpa_worker.py` | Python | RPA Worker 任务执行测试 |
-| `rpa_test_templates.json` | 配置 | `test_rpa_worker.py` 配套模板 |
+| `test_excel_import.go` | Go | Excel 导入功能测试（见 `docs/EXCEL_IMPORT_GUIDE.md`） |
+
+> RPA Worker 测试脚本的权威副本在 `tests/scripts/rpa/`，不在本目录（重复副本已清理）。
+
+### `ops/` — 一次性运维 / 诊断 CLI
+
+从 `cmd/` 迁入的 13 个一次性 Go CLI（`package main`，仍被 `go build ./...` 覆盖）：`cleanup_port_status`、`diag_4f001_red`、`mac_*`（6 个）、`reset-ad-breaker`、`verify-*`（4 个）。用法：`go run ./scripts/ops/<name>/`。**新增一次性工具一律放这里，不要放 `cmd/`**（`cmd/` 只保留 `main.go` 与 `agent/`）。
+
+### 顶层在用脚本（登记）
+
+| 文件 | 用途 |
+|------|------|
+| `build-embedded.bat/.sh`、`build-linux.bat`、`build_linux.sh` | 本地构建（产物统一 `out/`） |
+| `check-route-registry.mjs`、`scan-routes.cjs`、`route-registry.json` | 路由注册表门禁 |
+| `check-status-literals.sh` | 状态字面量门禁 |
+| `check-bundle.sh` | vendor chunks 校验（D-07） |
+| `generate_swagger.sh` | Swagger 生成（Windows 版在 `build/`） |
+| `migrate-sm4-key.go` | SM4 密钥迁移（见 `docs/deployment.md`） |
+| `operlog_e2e_verify.sh` | 操作日志 e2e |
+| `rpa_test_templates.json`、`test-sm2-parse.go` | 测试辅助 |
+
+> 无现存引用的一次性历史脚本（历史 phase 验证 / VDI 诊断 / 菜单工具箱等）已归档到 `.planning/milestones/v1.53-archived-scripts/`，见该目录 README。
+
+### 构建产物路径（强制）
+
+所有本地构建脚本与 CI 的产物统一输出到仓库根 **`out/`**（gitignored）：`out/xingran-backend*`、`out/agent/`。禁止在根目录落 `.exe` / `-linux` / `-embedded` / 打包文件。完整约束见 `AGENTS.md`「构建产物与目录约定」。
 
 ### `verify/` — 校验/格式化工具
 

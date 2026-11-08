@@ -20,7 +20,7 @@
 //   9. sys_data_reconciliation (detection 引擎的输出)
 //
 // 用法:
-//   go run ./cmd/diag_4f001_red
+//   go run ./scripts/ops/diag_4f001_red
 package main
 
 import (

@@ -1,8 +1,8 @@
 // Command mac_purge_drop_backup 是独立 CLI,用于 DROP 旧的 purge 备份表。
 //
 // 用法:
-//   go run ./cmd/mac_purge_meaningless/drop_backup -table sys_device_mac_history_purge_backup_20260630_172543
-//   go run ./cmd/mac_purge_meaningless/drop_backup -auto-older-than 7d   # 自动 DROP >7 天的
+//   go run ./scripts/ops/mac_purge_drop_backup -table sys_device_mac_history_purge_backup_20260630_172543
+//   go run ./scripts/ops/mac_purge_drop_backup -auto-older-than 7d   # 自动 DROP >7 天的
 package main
 
 import (

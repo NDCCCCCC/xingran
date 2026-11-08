@@ -3,8 +3,8 @@
 // 删除判定:interface_name 全部由数字 + 斜杠组成(典型异常:纯数字 "5"、X/Y "3/11"、以斜杠开头 "/47")。
 //
 // 用法:
-//   go run ./cmd/cleanup_port_status                # 预演(只 SELECT,不 DELETE)
-//   go run ./cmd/cleanup_port_status --confirm      # 实际执行 DELETE
+//   go run ./scripts/ops/cleanup_port_status                # 预演(只 SELECT,不 DELETE)
+//   go run ./scripts/ops/cleanup_port_status --confirm      # 实际执行 DELETE
 package main
 
 import (
@@ -126,7 +126,7 @@ func main() {
 	if !*confirm {
 		applogger.Info("-----------------------------------------------------------------")
 		applogger.Info("[cleanup] 预演模式(--confirm 未传),未执行 DELETE")
-		applogger.Info("[cleanup] 如确认无误,执行: go run ./cmd/cleanup_port_status --confirm")
+		applogger.Info("[cleanup] 如确认无误,执行: go run ./scripts/ops/cleanup_port_status --confirm")
 		applogger.Info("-----------------------------------------------------------------")
 		return
 	}
