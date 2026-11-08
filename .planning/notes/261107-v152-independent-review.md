@@ -23,8 +23,8 @@
 | P1-5 | 批量裁定 §2「聚合计数不逐条回显」不足防枚举（越界行数 / N / 行号都是侧信道） | ✅ 登记为「已知残余风险、接受」，132 SUMMARY 明确不假装已解决 |
 | P1-6 | ds05 断链 fail-closed 会让脏数据全不可见；§残余风险只「建议 UAT 加脏数据抽查」，未进消费清单、未设阻断；dedicatedLine `org_id` 直挂列 schema 未核实 | 登记：133 交付时须核实 schema + UAT 加脏数据抽查项 |
 | P1-7 | `building_service.go:294-303,386-393` 裸 `org_id IN ?` vs `floor_service.go:293` 用 `effectiveOrgExpr` 两侧 CAST，PG 42883 风险（推定、未实测） | 登记：131 收口时统一 CAST；PG contract 补 building 覆盖 |
-| P1-8 | `excel_query_builder.go:239-253` 的 `::uuid/::text` 在 SQLite 必炸，且 `excel_export_chain_77_02_test.go:465-477` 把「报错」文档化为预期 ⇒ 新增导出过滤逻辑在 SQLite 单测里永远测不到 | 登记为既有技术债；131 新增条件用 `CAST AS TEXT` 双方言、PG contract 用静态/片段断言；SUMMARY 注明留给后续清偿 |
-| P1-9 | 双门控 `TEST_PG_DSN` / `XINGRAN_TEST_PG_DSN`，CI 无注入 ⇒ 默认全 Skip 且不可观测 | 登记：新增 PG contract 统一 `TEST_PG_DSN` + skip 带原因 |
+| P1-8 | `excel_query_builder.go:239-253` 的 `::uuid/::text` 在 SQLite 必炸，且 `excel_export_chain_77_02_test.go:465-477` 把「报错」文档化为预期 ⇒ 新增导出过滤逻辑在 SQLite 单测里永远测不到 | ✅ **已清偿（2026-11-07 二次修复）**：7 处改 `CAST(... AS TEXT)` 双侧比较（与生产 `workstationJoinClause` 同款）；空串 `''::uuid` 在 PG 报 22P02 的整表导出失败一并消除；新增 `excel_query_builder_p18_test.go` 两用例守护（DryRun 静态断言 + SQLite 语法可执行）；`TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL` 因夹具缺 ops_floors/ops_buildings 仍报错、断言未反转，注释已同步。独立债（`RightCast` 动态拼接 / 物理链路 PG CTE）按 scope constrainment 登记不动 |
+| P1-9 | 双门控 `TEST_PG_DSN` / `XINGRAN_TEST_PG_DSN`，CI 无注入 ⇒ 默认全 Skip 且不可观测 | ✅ **已清偿（2026-11-07 二次修复）**：`excel_dept_cte_postgres_test.go:63` 与 `workstation_position_pg_test.go:80` 统一到 `TEST_PG_DSN`（保留 `.env`/`DB_*` fallback）；`ci.yml` 新增 `PG contract skip observability` step，`-v -run` 把 skip 原因打进 CI 日志 |
 | P1-10 | `pg_contract_test.go` 文件头「禁止任何写 SQL」被 1c 用例自我破例，且无零净变更断言；DSN 指向生产库时有落库风险 | 登记：保持事务回滚纪律 + 补零净变更断言 |
 | P1-11 | `workstation_handler.go:418-425` dryRun 不记 operlog、param 缺范围档位/请求行数/可见集内/越界行数 | ✅ 已纳入 Phase 132 |
 
