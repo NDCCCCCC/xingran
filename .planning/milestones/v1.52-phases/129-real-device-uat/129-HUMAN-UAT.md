@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v1.52
+  at: 2026-11-08
+  gap_snapshot: "unknown::scenarios=0"
+---
+
 # Phase 129 v1.51 端口写全动作 — 真机 UAT 清单（华为 S8700 + 锐捷 RS8607E）
 
 > 依据：v1.51 端口写全管线（commit 8e158388..278ac809）。命令字面以

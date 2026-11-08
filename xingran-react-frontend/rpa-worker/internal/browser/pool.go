@@ -81,7 +81,7 @@ func (p *Pool) Acquire(ctx context.Context) (*PooledPage, error) {
 			}
 		}
 		
-		page, err := p.createPage()
+		page, err := p.createPage(ctx)
 		if err != nil {
 			p.mu.Unlock()
 			return nil, err
@@ -145,45 +145,19 @@ func (p *Pool) Close() error {
 	return nil
 }
 
-// createPage 创建新页面（需要实际实现）
-func (p *Pool) createPage() (Page, error) {
-	// TODO: 实现实际的浏览器页面创建
-	// 这里返回模拟实现
-	return &mockPage{}, nil
+// Page 返回底层页面（Phase 137 / FIX-08：对齐根副本，供 executor 构造 PageManager）。
+func (p *PooledPage) Page() Page {
+	return p.page
 }
 
-// mockPage 模拟页面（用于开发测试）
-type mockPage struct{}
-
-func (m *mockPage) Goto(url string) error {
-	// 模拟导航
-	return nil
-}
-
-func (m *mockPage) Close() error {
-	return nil
-}
-
-func (m *mockPage) Screenshot() ([]byte, error) {
-	return []byte("fake screenshot"), nil
-}
-
-func (m *mockPage) Click(selector string) error {
-	return nil
-}
-
-func (m *mockPage) Fill(selector, value string) error {
-	return nil
-}
-
-func (m *mockPage) Select(selector, value string) error {
-	return nil
-}
-
-func (m *mockPage) WaitFor(selector string, timeout time.Duration) error {
-	return nil
-}
-
-func (m *mockPage) Evaluate(script string) (interface{}, error) {
-	return nil, nil
+// createPage 创建新页面（使用真实Chrome浏览器）。
+// Phase 137 / FIX-08: 对齐根副本 rpa-worker/internal/browser/pool.go 的
+// NewChromePage 写法，去除恒返回 mockPage 的 stub。
+func (p *Pool) createPage(ctx context.Context) (Page, error) {
+	page, err := NewChromePage(ctx, p.config, p.logger)
+	if err != nil {
+		p.logger.Error("创建Chrome页面失败", logger.Err(err))
+		return nil, fmt.Errorf("创建Chrome页面失败: %w", err)
+	}
+	return page, nil
 }

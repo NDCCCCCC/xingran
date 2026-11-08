@@ -33,7 +33,13 @@ var (
 	Bool     = zap.Bool
 	Any      = zap.Any
 	Duration = zap.Duration
-	Err      = zap.NamedError
+)
+
+// Err 把 error 包装成日志字段。
+// Phase 137 / FIX-08：对齐根副本 rpa-worker 的 Err(err) 单参语义
+// （此前误用 zap.NamedError 双参，导致全代码库 logger.Err(err) 无法编译）。
+func Err(err error) Field {
+	return zap.Error(err)
 }
 
 // zapLogger zap 实现

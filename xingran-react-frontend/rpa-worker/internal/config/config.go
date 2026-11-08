@@ -48,12 +48,16 @@ type RedisConfig struct {
 }
 
 // BrowserConfig 浏览器配置
+// Phase 137 / FIX-08: 补齐真实 Chrome 页面所需字段，与根副本 rpa-worker 对齐。
 type BrowserConfig struct {
-	Headless       bool          `mapstructure:"headless"`
-	Timeout        time.Duration `mapstructure:"timeout"`
-	MaxPages       int           `mapstructure:"max_pages"`
-	ViewportWidth  int           `mapstructure:"viewport_width"`
-	ViewportHeight int           `mapstructure:"viewport_height"`
+	Headless          bool          `mapstructure:"headless"`
+	Timeout           time.Duration `mapstructure:"timeout"`
+	NavigationTimeout time.Duration `mapstructure:"navigation_timeout"`
+	MaxPages          int           `mapstructure:"max_pages"`
+	ViewportWidth     int           `mapstructure:"viewport_width"`
+	ViewportHeight    int           `mapstructure:"viewport_height"`
+	ChromePath        string        `mapstructure:"chrome_path"`
+	ChromeFlags       []string      `mapstructure:"chrome_flags"`
 }
 
 // LoggingConfig 日志配置
@@ -126,6 +130,7 @@ func setDefaults(v *viper.Viper) {
 	// Browser
 	v.SetDefault("browser.headless", true)
 	v.SetDefault("browser.timeout", 30*time.Second)
+	v.SetDefault("browser.navigation_timeout", 60*time.Second)
 	v.SetDefault("browser.max_pages", 10)
 	v.SetDefault("browser.viewport_width", 1920)
 	v.SetDefault("browser.viewport_height", 1080)

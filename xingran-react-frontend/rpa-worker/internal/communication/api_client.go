@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/xingran-next/rpa-worker/internal/config"
 	"github.com/xingran-next/rpa-worker/internal/logger"

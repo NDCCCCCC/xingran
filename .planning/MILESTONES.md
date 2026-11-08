@@ -1,4 +1,42 @@
+> ℹ️ 本文件为各里程碑**收档时点快照**（含当时的 Known Gaps / deferred 表述），仅供追溯；当前状态以 `.planning/STATE.md` frontmatter、`.planning/ROADMAP.md` / `.planning/MILESTONES.md` 为准。例如本文 v1.24 段落「Known Gaps 转 v1.25 候选，用户裁定暂不立项」是当时记录，实际 v1.25 已全部立项并 SHIPPED（见 PROJECT.md:201）。
+
 # Milestones
+
+## v1.53 开放项全量清偿 (Shipped: 2026-11-08)
+
+**Phases completed:** 8 phases (134-141) | **Requirements:** 24 REQ（18 交付 + 6 项人工验证跟踪，不伪造闭环）| **21 条开放项全覆盖** | **回归闸门**：go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例全绿
+
+**Key accomplishments:**
+- AD push 队列 enable 方向 + SAFE-01 身份校验/双向压制、全量同步指数退避节流、常态化同步漂移告警服务
+- 补齐 main.go docs blank import、两生成脚本改产物到 internal/docs 并修 bat 层级、删除 docs/ 下 5 份 Swagger 死文件
+- 接通用户导出/工单评价端点与前端入口，用 migration 236 seed 闭环 OQ-7 五个读权限码恒 403
+- GetDiscoveryResults 补持久化查询链路、rpa-worker 双副本去 browser stub 并修复前端副本基线编译
+- scheduler Rotation 抽共享纯函数对齐 service 双路径、3 厂商×3 参数端口物理参数写全闭环、3 处排序收尾落产品决策结论
+- 对账 MV 30s 超时配置化（默认不变）、5 个登录加密 benchmark 空桩补国密实测并标注测量边界
+- 从 git 历史精确重建 5 份缺失 UAT 清单 + 79 条全部待执行的统一跟踪表与 GSD 产物回写口径
+- 全仓清理临时清单权威引用、归档临时清单与历史 UAT 重建件、用 GSD milestone complete 把权威交回自动生成的 ROADMAP/REQUIREMENTS/STATE/MILESTONES
+
+**Known Gaps（登记，非阻断）**：6 项人工验证（VAL-01~06）交付物已落盘，实际执行受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束，跟踪表见 `.planning/notes/261108-human-verification-tracker.md`（79 条全部待执行、0 勾选）；LOCKED 残余结论见 `.planning/notes/261108-v153-locked-residuals.md`。
+
+---
+
+## v1.52 运维域数据权限统一收口（终态） (Shipped: 2026-11-07 · Archived: 2026-11-08)
+
+**Phases completed:** 4 phases (130-133) | **Requirements:** 7/7 (DS-01~07) | **Commits:** 24 | **PR:** #75 merged `b56f1286`
+
+**Key accomplishments:**
+
+1. ✅ **ScopeProvider 单一真实源**（`pkg/datascope`）—— 可见部门集统一实现（All/0/unset 特判短路、Custom/Dept/DeptChild 展开、Self 资源语义钩子、异常枚举 fail-closed、多角色 MAX），`DataScopePermission` 注入 ops 全域 26 处挂载，`user_service` 迁移到单一真实源。
+2. ✅ **四域读端点 + Excel 导出独立收口** —— 20 个读函数统一「有效机构 ∈ 可见集」，缓存 key 增 scope 维度，交付 `131-CACHE-INVENTORY.md`，403 越权矩阵 + 跨用户缓存对照 + PG contract 扩展。
+3. ✅ **四域写端点收口** —— Create/Update/Delete/Batch/positions 单条越界显式 403（`NewWithHTTPStatus` 规避框架 401 坑），批量按可见集裁剪，backfill 三层注入，Excel 导入逐行校验，前端「本次范围」四类文案。
+4. ✅ **扩展实体与收尾** —— asset/serverRoom/dedicatedLine/roomDevice 收口（115 个语义断言）、vdi 迁移、删除 `pkg/middleware` 三份死实现 + 死测试、前端 DeptSidebar 联动、5 项显式豁免面登记。
+5. ✅ **独立审查 + CI 红灯修复** —— 3 P0（迁移 235 误嵌 / 权限码 401 / backfill 全库扫描）全修；PR #75 全 checks pass 后合并；回归闸门全绿（go build / go test / vitest 4128 / lint:ci 0 / diff coverage 83.37%）。
+
+**Verification**: 全量闸门全绿（详见 `.planning/MILESTONE-v1.52-SUMMARY.md` §回归闸门）。`closeout_type: override_closeout` —— GSD `audit-open` 前置审计在收档时检出 3 项 `uat_gaps`（`129-HUMAN-UAT.md` / `129-UAT-BACKFILL.md` / `133-UAT.md`，均 `open_scenario_count: 0`），已按 [A] Acknowledge 全部登记为 deferred；另有 3 项历史 debug suppression 结转。**Known verification overrides: 3 newly acknowledged, 3 carried forward**。人工 UAT 挂账见 STATE.md Deferred Items 表（A2/A3/A5/A8）。
+
+**归档产物（2026-11-08 /gsd-complete-milestone）**: `.planning/milestones/v1.52-ROADMAP.md`、`v1.52-REQUIREMENTS.md`、`v1.52-phases/`（6 目录）、`v1.52-quick/`（4 目录）；路径映射见 `.planning/ARCHIVE-INDEX.md`。
+
+---
 
 ## v1.25 全站权限治理与样式收敛 (Shipped: 2026-10-30)
 

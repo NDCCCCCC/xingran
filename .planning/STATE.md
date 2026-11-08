@@ -1,25 +1,29 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.53
-milestone_name: 开放项全量清偿
-status: planning
-last_updated: "2026-11-08T06:32:17.994Z"
+status: v1.53 SHIPPED 2026-11-08 并已归档（Awaiting next milestone）
+stopped_at: "v1.53 全量交付（8/8 Phase、18 REQ 交付 + 6 项人工验证跟踪、21/21 条开放项全覆盖、全量回归闸门全绿）；2026-11-08 完成 GSD 归档与权威交回（ROADMAP/REQUIREMENTS → milestones/v1.53-*，8 个 phase 目录 → v1.53-phases/，临时输入清单归档进 milestones/）"
+last_updated: "2026-11-08T09:55:00.000Z"
 last_activity: 2026-11-08
+last_activity_desc: v1.53 SHIPPED and archived; authority handed back to GSD-generated ROADMAP/REQUIREMENTS/STATE/MILESTONES
+state_head: "0b500fdc992462a1ff5430e7953efe4154cf2155"
 progress:
-  total_phases: 0
-  completed_phases: 0
+  total_phases: 8
+  completed_phases: 8
   total_plans: 0
   completed_plans: 0
-  percent: 0
+  percent: 100
+milestone_name: 开放项全量清偿
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.53 planning（开放项全量清偿，Phases 134-141 / 24 REQ / 21 条开放项全覆盖）
+**Status**: v1.53 SHIPPED & ARCHIVED 2026-11-08（8/8 Phase、21/21 条开放项全覆盖）
 **Last activity**: 2026-11-08
-**Prior activity**: 2026-11-08 - v1.52 SHIPPED 并完成 GSD 归档（ROADMAP/REQUIREMENTS/phases/quick → `.planning/milestones/v1.52-*`）；同日立项 v1.53
+**Prior activity**: 2026-11-08 - v1.53 SHIPPED：8 个 Phase 全部交付，全量回归闸门全绿（go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例），GSD `milestone complete` 完成归档与权威交回
+**Prior activity**: 2026-11-08 - v1.52 SHIPPED 并完成 GSD 归档
 **Prior activity**: 2026-11-06 - Completed quick task 261106-wso: 一栋楼跨机构办公 —— 楼层可覆盖所属机构（ops_floors.org_id + 全链路 COALESCE）
 **Prior activity**: 2026-10-31 — v1.51 立项（范围 A+B+D，21 REQ / Phases 121-129）
 **Prior activity**: 2026-10-30 — v1.25 SHIPPED & ARCHIVED 并完成 GitHub 同步（PR #36/#37 合并，main CI/deploy 全绿，技术债 D1-D10 清偿）
@@ -29,28 +33,29 @@ progress:
 **Prior activity (3)**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
 **Prior activity (4)**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）
 
-## Current Milestone: v1.53 开放项全量清偿 (Phases 134-141) — INITIATED 2026-11-08
+## Current Milestone: v1.53 开放项全量清偿 (Phases 134-141) — ✅ SHIPPED & ARCHIVED 2026-11-08
 
-**Goal:** 以 `.planning/OPEN-ITEMS.md`（2026-11-08「真实仍存在的问题唯一权威清单」）的 **21 条真实开放项**为唯一输入，按「代码可修 / 待人工验证 / 已裁定接受」三类分别闭环，使收档时每条开放项都有可核对的结论与证据。
+**Goal:** 以 `.planning/REQUIREMENTS.md` 的 **24 REQ** 为基线（对应 2026-11-08 开放项盘点的 21 条历史计数），按「代码可修 / 待人工验证 / 已裁定接受」三类分别闭环，使收档时每条开放项都有可核对的结论与证据。
 
-**立项动因（2026-11-08）**: v1.52 SHIPPED & 归档后 `Awaiting next milestone`；用户指示「查看 open-item 文档，建立新里程碑处理所有事项」。OPEN-ITEMS.md 明确「凡未列入本文件的历史 TODO/FUTURE/待办/deferred/Known Gaps 字样一律视为文档债或历史归档」，故本里程碑严格以该清单 21 条（A 节 8 + B 节 13）为唯一输入，C 节 13 类防误读清单不纳入。
+**立项动因（2026-11-08）**: v1.52 SHIPPED & 归档后 `Awaiting next milestone`；用户指示「查看 open-item 文档，建立新里程碑处理所有事项」。2026-11-08 开放项盘点明确「凡未列入本盘点清单的历史 TODO/FUTURE/待办/deferred/Known Gaps 字样一律视为文档债或历史归档」，故本里程碑严格以该盘点 21 条（A 节 8 + B 节 13）为范围，C 节 13 类防误读清单不纳入。
 
 **范围裁定（用户 2026-11-08）**:
 - **21 条全覆盖**，按三类分别处置：代码可修（~16 条）→ FIX REQ 写代码；待人工验证（~6 条）→ VAL REQ 交付清单重建 + 跟踪表 + 回写口径，**不伪造闭环**（受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束，AI 不擅自写生产数据，沿用 v1.25 Phase 90 先例）；已裁定接受 / 仅登记（2 条）→ ACK REQ **只落结论、不写修复代码**
 - **Phase 从 134 续编**（v1.52 结束于 133），8 phases 134-141 / 24 REQ（FIX 14 / VAL 7 / ACK 2 / GOV 1），100% 映射无孤儿无重复
 - **跳过领域研究**（21 条均带本仓 `文件:行号` 实证、无新领域能力需调研，沿用 v1.25「研究范围仅定向」先例）
 - **纳入 seed** `seeds/SEED-ad-push-enable-direction.md` 作为 FIX-01 输入上下文（另 2 个 seed 已标 SUPERSEDED，跳过）
+- **权威回收（用户 2026-11-08 追加裁定，覆盖本文件所有「临时清单 = 权威 / 唯一入口」表述）**：临时输入清单仅用于本次里程碑取数、非长期权威；21 条全部处置干净后须归档（移入 `.planning/milestones/` 或删除）、不再维护 A/B/C 节，通过 GSD SDK `milestone complete` / `audit-open` 完成归档并清理引用，**权威交回 GSD 自动生成的 ROADMAP / REQUIREMENTS / STATE / MILESTONES**。GOV-01 / Phase 141 改为「临时清单归档 + 权威交回 + 一致性复核」，不再执行「清偿项移入 C 节」；VAL-* 结果写入 GSD 产物，不回写临时清单。
 
 **事实基线**:
-- `.planning/REQUIREMENTS.md`（**24 REQ**）｜`.planning/ROADMAP.md`（Phases 134-141）｜唯一输入 `.planning/OPEN-ITEMS.md`
-- 权威分层：STATE.md frontmatter / ROADMAP.md / MILESTONE-v1.52-SUMMARY.md = 状态权威；OPEN-ITEMS.md = 开放项权威；冲突以证据为准
+- `.planning/REQUIREMENTS.md`（**24 REQ**）｜`.planning/ROADMAP.md`（Phases 134-141）
+- 状态权威 = STATE.md / ROADMAP.md / MILESTONES.md（GSD 自动生成体系）
 - 人工验证类 5 份原始 UAT 清单磁盘缺失（`48/54/56/57-HUMAN-UAT.md` + 133-UAT 跟踪），Phase 140 须重建
 
 **硬约束（v1.53）**:
 1. 遵循 Handler-Service / `response.Success()/Error()` / operlog 约定 / 0=正常 1=停用 / SQLite+PG 双方言（uuid 双侧 CAST）
 2. 回归基线：eslint 0 problems / vitest 全绿 / `go build ./...` + `go test ./...` 全绿
 3. 人工验证类不写生产数据、不擅自切换生产认证模式；LOCKED 项不写修复代码
-4. 清偿回写严格按 OPEN-ITEMS.md 维护约定 §2（标注清偿日期 + commit/证据并移入 C 节，不直接删除）；GOV-01 统一收口 21/21 条终态结论
+4. 结果写入 GSD 自动生成的产物（v1.53-REQUIREMENTS.md traceability / STATE.md Deferred Items）；GOV-01 统一收口 21/21 条终态结论
 5. `phases/...` 证据路径按 `.planning/ARCHIVE-INDEX.md` 换算到 `.planning/milestones/v1.52-phases/`
 
 ---
@@ -94,10 +99,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Milestone v1.53 complete
 Plan: —
-Status: Defining requirements
-Last activity: 2026-11-08 — Milestone v1.53 started
+Status: Awaiting next milestone
+Last activity: 2026-11-08 — Milestone v1.53 completed and archived
 
 ## 历史归档（v1.25 及更早，已 SHIPPED / ARCHIVED；以下为非当前状态，仅供追溯）
 
@@ -264,7 +269,7 @@ Last activity: 2026-11-08 — Milestone v1.53 started
 
 ### Decisions
 
-- [v1.21 遗留] 57-HUMAN-UAT.md 三项真环境验证：① kill -9 重启耐久已由 `.planning/debug/ad-push-queue-drain-interval-not-hot-reloaded.md:172-174` 独立证实，可核销；② PG 合并路径、③ AD UAC 533 未见闭合证据，仍挂账并已登记 OPEN-ITEMS.md；原始 57-HUMAN-UAT.md 文件当前磁盘不存在，需重建清单。v1.18/1.19/1.20 的 site-visit UAT 债保留挂账，详见 OPEN-ITEMS.md
+- [v1.21 遗留] 57-HUMAN-UAT.md 三项真环境验证：① kill -9 重启耐久已由 `.planning/debug/ad-push-queue-drain-interval-not-hot-reloaded.md:172-174` 独立证实，可核销；② PG 合并路径、③ AD UAC 533 未见闭合证据，仍挂账；原始 57-HUMAN-UAT.md 文件当前磁盘不存在，需重建清单。v1.18/1.19/1.20 的 site-visit UAT 债保留挂账
 
 ### Blockers
 
@@ -279,11 +284,11 @@ Last activity: 2026-11-08 — Milestone v1.53 started
 
 ### Todos（v1.52 / Phases 130-133，历史归档）
 
-- **已清偿**：以下为 v1.52 立项期计划，全部已于 2026-11-07 交付（Phases 130-133 四个 phase 完成、三项开工输入裁定已落盘 `.planning/notes/261107-v152-*-decision.md`，PG contract 变量名统一 `TEST_PG_DSN` 与新迁移 236 起编亦已完成），见 MILESTONE-v1.52-SUMMARY.md。**v1.53 当前待办**以 `.planning/REQUIREMENTS.md`（24 REQ）与 `.planning/OPEN-ITEMS.md`（21 条开放项）为准，见 `.planning/ROADMAP.md` Phases 134-141。
+- **已清偿**：以下为 v1.52 立项期计划，全部已于 2026-11-07 交付（Phases 130-133 四个 phase 完成、三项开工输入裁定已落盘 `.planning/notes/261107-v152-*-decision.md`，PG contract 变量名统一 `TEST_PG_DSN` 与新迁移 236 起编亦已完成），见 MILESTONE-v1.52-SUMMARY.md。**v1.53 当前待办**以 `.planning/REQUIREMENTS.md`（24 REQ）为准，见 `.planning/ROADMAP.md` Phases 134-141。
 
 ### Roadmap Evolution
 
-- Phases 134-141 created for v1.53「开放项全量清偿」: 134 AD 同步域（FIX-01/10/11）∥ 135 Swagger 链路（FIX-02）∥ 136 端点接线（FIX-03/06/13）∥ 137 Stub/双副本（FIX-07/08）∥ 138 功能分支（FIX-04/05/14）∥ 139 低优先级技术债（FIX-09/12）→ 140 人工验证债组织（VAL-01~07）→ 141 登记接受结论 + OPEN-ITEMS.md 核销与权威分层复核（ACK-01/02 + GOV-01，**必须最后执行**）。**24/24 需求映射，无孤儿无重复；21/21 条真实开放项全覆盖**（A 节 8 + B 节 13；C 节防误读清单不纳入）；唯一输入 `.planning/OPEN-ITEMS.md`；跳过领域研究；纳入 SEED-ad-push-enable-direction。W1 六 phase 按模块隔离并行（134 与 138 均触及 `internal/scheduler/`，plan-phase 须产出函数级归属表，无法保证无交集则降级串行 134→138）。 (CRITICAL)
+- Phases 134-141 created for v1.53「开放项全量清偿」: 134 AD 同步域（FIX-01/10/11）∥ 135 Swagger 链路（FIX-02）∥ 136 端点接线（FIX-03/06/13）∥ 137 Stub/双副本（FIX-07/08）∥ 138 功能分支（FIX-04/05/14）∥ 139 低优先级技术债（FIX-09/12）→ 140 人工验证债组织（VAL-01~07）→ 141 登记接受结论 + 临时清单归档与权威分层复核（ACK-01/02 + GOV-01，**必须最后执行**）。**24/24 需求映射，无孤儿无重复；21/21 条真实开放项全覆盖**（A 节 8 + B 节 13；C 节防误读清单不纳入）；跳过领域研究；纳入 SEED-ad-push-enable-direction。W1 六 phase 按模块隔离并行（134 与 138 均触及 `internal/scheduler/`，plan-phase 须产出函数级归属表，无法保证无交集则降级串行 134→138）。 (CRITICAL)
 - Phases 84-93 created for v1.25「全站权限治理与样式收敛」: 84 权限模型三缺口（PMODEL-01~04）→ 85 后端动作级严格化（RBAC-01/03/04）→ 86 前端操作入口三态门控铺开（RBAC-02）→ 87 动作级权限授予闭环（RBAC-05/06）→ 88 验证底座与零风险清理（VISFIX-03/04/06 + STYLE-02 第 1 批）→ 89 变量层与明暗色板重构（STYLE-01/04 + VISFIX-01/02）→ 90 Input 域交还 variant/token + 圆角统一（STYLE-03 + VISFIX-05）→ 91 Select/InputNumber/Form/Table/Modal 域交还（承接 STYLE-02 R8 + VISFIX-04 剩余）→ 92 暗色 mega-cluster 合并（STYLE-02 主责）→ 93 room-devices 拆分 + 视觉回归验收（SPLIT-01 + STYLE-05）。**22/22 需求映射，无孤儿无重复**；线 A 权限 84-87 ∥ 线 B 样式 88-93，线内串行；写死三处不可逆顺序约束（89→90/91/92、批次 C→批次 B 同 commit、变量层→变体交还）。 (CRITICAL)
 - Phases 76-83 created for v1.24「视觉回归修复与遗留债务清偿」: 76 双框 P0 修复 + CSS 审计登记册（VIS-01~04）→ 77 视觉回归验证收口（VIS-05）→ 78 #16 前后端双端闭环（PERM-01~04/06）→ 79 PG 实机验收（PERM-05）→ 80 3f130 空因诊断前端接入（DIAG-01）→ 81 F5 刷新落 /dashboard 修复（NAV-01）→ 82 lint 清零 + 豁免理由表修复（HYG-01/02/03/05）→ 83 devices 页拆分（HYG-04）。18/18 需求映射，无孤儿无重复；**全部 SHIPPED 2026-10-28**（tag `v1.24`）。 (CRITICAL)
 - Phases 69-75 created for v1.23「前端契约全量收尾与遗留清偿」: 69 后端 debug 重验 spike（DBG-01）→ 70 TextArea 契约基建 W0（TEXT-01/03/04 + HYG-05）→ 71 TextArea 存量 + COMP-05 分域迁移 W1-W6（TEXT-02 + MIG-01/02/04）→ 72 后端 debug 修复 wave（DBG-02/03/04，#3 先于 #2）→ 73 DB 实测日 + cron.go 双执行调查（DBG-05/06/07）→ 74 COMP-05 收口 + lint 清偿 + quick 目录归档（MIG-03 + HYG-01~04）→ 75 浏览器实机 UAT + 收档（UAT-01/02）。22/22 需求映射，无孤儿无重复。 (CRITICAL)
@@ -291,16 +296,16 @@ Last activity: 2026-11-08 — Milestone v1.53 started
 
 ## Project Reference
 
-See: `.planning/PROJECT.md`（updated 2026-11-08 after v1.53 INITIATED）
+See: `.planning/PROJECT.md`（updated 2026-11-08 after v1.53 SHIPPED & ARCHIVED）
 
 **Core value:** 端到端的运维可观测与可审计——每个写操作都留下可追溯记录（谁、何时、改了什么、从哪来、改前改后），敏感字段自动脱敏；配合 Excel 批量管理与引用自动解析（部门名 → UUID），运维人员对整个 IT 资产域拥有唯一可信的系统记录。
-**Current focus:** v1.53 开放项全量清偿（Phases 134-141，Phases 尚未开始）；真实开放项见 OPEN-ITEMS.md
+**Current focus:** 无 · v1.53 SHIPPED & ARCHIVED；权威已交回 GSD 自动生成的 ROADMAP / REQUIREMENTS / STATE / MILESTONES
 
 ## Session
 
-**Last session:** 2026-11-08T14:32:00+08:00
-**Stopped at:** v1.53 INITIATED（需求 + 路线图已定义，Phases 134-141 未开始）；下一步 `/gsd-plan-phase 134`
-**Resume file:** 无（真实开放项见 OPEN-ITEMS.md，需求/路线图见 REQUIREMENTS.md / ROADMAP.md）
+**Last session:** 2026-11-08T17:55:00+08:00
+**Stopped at:** v1.53 SHIPPED & ARCHIVED（8/8 Phase、21/21 条开放项全覆盖、全量回归全绿、GSD 归档与权威交回完成）；下一步 `/gsd-new-milestone`
+**Resume file:** 无（归档产物见 `.planning/milestones/v1.53-*`，人工验证跟踪见 `.planning/notes/261108-human-verification-tracker.md`）
 
 ## Deferred Items
 
@@ -308,24 +313,24 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
-| verification_gaps | 84/84-VERIFICATION.md — 真实挂账，详见 129-UAT-BACKFILL.md:91-92；已登记 OPEN-ITEMS.md | human_needed（真实挂账） | 2026-10-30 | v1.25 |
-| verification_gaps | 87/87-VERIFICATION.md — 真实挂账，详见 129-UAT-BACKFILL.md:91-92；87-6 另需写操作授权；已登记 OPEN-ITEMS.md | human_needed（真实挂账） | 2026-10-30 | v1.25 |
-| uat_gaps | 129-HUMAN-UAT.md — 收档审计 acknowledge（0 pending scenarios）；已登记 OPEN-ITEMS.md A5 | acknowledged（deferred） | 2026-11-08 | v1.52 |
-| uat_gaps | 129-UAT-BACKFILL.md — 收档审计 acknowledge（0 pending scenarios）；84/87 人工验收挂账载体，详见 OPEN-ITEMS.md A2/A3 | acknowledged（deferred） | 2026-11-08 | v1.52 |
-| uat_gaps | 133-UAT.md — 收档审计 acknowledge（0 pending scenarios）；约 30 项人工 UAT 全未勾选，详见 OPEN-ITEMS.md A8 | acknowledged（deferred） | 2026-11-08 | v1.52 |
+| verification_gaps | 84/84-VERIFICATION.md — 真实挂账，详见 129-UAT-BACKFILL.md:91-92 | human_needed（真实挂账） | 2026-10-30 | v1.25 |
+| verification_gaps | 87/87-VERIFICATION.md — 真实挂账，详见 129-UAT-BACKFILL.md:91-92；87-6 另需写操作授权 | human_needed（真实挂账） | 2026-10-30 | v1.25 |
+| uat_gaps | 129-HUMAN-UAT.md — 收档审计 acknowledge（0 pending scenarios） | acknowledged（deferred） | 2026-11-08 | v1.52 |
+| uat_gaps | 129-UAT-BACKFILL.md — 收档审计 acknowledge（0 pending scenarios）；84/87 人工验收挂账载体 | acknowledged（deferred） | 2026-11-08 | v1.52 |
+| uat_gaps | 133-UAT.md — 收档审计 acknowledge（0 pending scenarios）；37 项人工 UAT 全未勾选 | acknowledged（deferred） | 2026-11-08 | v1.52 |
+| uat_gaps | VAL-01~06 人工验证（生产 PG 只读 / 87-6 写授权 / 现场真机 / DBA 回传）— 交付物已落盘（5 份重建清单 + 79 条跟踪表 + 回写口径），实际验证待执行；见 `notes/261108-human-verification-tracker.md` | 待执行（不标已完成） | 2026-11-08 | v1.53 |
 
-> **closeout_type: override_closeout**（`audit-open` 检出 3 项 uat_gaps，已按 [A] Acknowledge 全部登记；另有 3 项历史 debug suppression 结转）。Known verification overrides: **3 newly acknowledged, 3 carried forward**（同步记录于 MILESTONES.md v1.52 条目）。以上均为 verdict-preserving 的 self-invalidating suppression，真实挂账以 `.planning/OPEN-ITEMS.md` 为准。
+> **closeout_type: override_closeout**（`audit-open` 检出 3 项 uat_gaps，已按 [A] Acknowledge 全部登记；另有 3 项历史 debug suppression 结转）。Known verification overrides: **3 newly acknowledged, 3 carried forward**（同步记录于 MILESTONES.md v1.52 条目）。以上均为 verdict-preserving 的 self-invalidating suppression，真实挂账以 STATE.md Deferred Items 表与 MILESTONES.md v1.53 条目为准。
 
 ## Performance Metrics
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| v1.53（8 phase，subagent 团队并行 + Lead 集成收档） | 单日（2026-11-08 14:43→17:55） | 8 phase / 24 REQ / 21 条开放项 | 全仓（见最终提交 diff） |
 | v1.25（10 phase，planning 阶段） | 路线图 1 轮完成（2026-10-28） | 10 phase × 5 成功标准 | — |
-| v1.24（8 phase，subagent 直接执行，按刀原子提交） | ~3.5 h（09:19→12:59，单日） | 8 phase × 9 项闸门 | 104（+5,419 −2,232，46 commits） |
-| v1.23（7 phase） | 单日 | 121 文件迁移 | — |
 
 ## Operator Next Steps
 
-- `/gsd-plan-phase 134` — 规划 Phase 134（AD 同步域：enable 方向 + 全量同步节流 + 漂移告警产品化）
-- `/gsd-discuss-phase 134` — 可选：先收集 Phase 134 上下文再规划
-- 本里程碑为「开放项清偿收口」，Phase 141 必须最后执行（统一回写 + 权威分层复核）
+- `/gsd-new-milestone` — 启动下一里程碑（权威已交回 GSD 自动生成体系，`REQUIREMENTS.md` 已按工作流清空待重建）
+- 人工验证跟踪表 `.planning/notes/261108-human-verification-tracker.md` 的 79 条待执行项，需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物
+- LOCKED 残余结论见 `.planning/notes/261108-v153-locked-residuals.md`；本次临时输入清单的归档副本存于 `.planning/milestones/`

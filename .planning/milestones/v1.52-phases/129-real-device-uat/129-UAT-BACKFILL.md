@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v1.52
+  at: 2026-11-08
+  gap_snapshot: "unknown::scenarios=0"
+---
+
 # Phase 129 · TIDY-02 — v1.25 遗留 human_needed 项回补清单
 
 > 组织日期：2026-11-02

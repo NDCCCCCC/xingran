@@ -51,8 +51,8 @@ func NewRedisClient(cfg *config.RedisConfig, workerID string, log logger.Logger)
 
 // ConsumeTasks 消费任务
 func (r *RedisClient) ConsumeTasks(ctx context.Context) (*types.TaskMessage, string, error) {
-	// 创建消费者组（如果不存在）
-	r.client.XGroupCreate(ctx, r.streamName, r.groupName, "$", 0).Err()
+	// 创建消费者组（如果不存在）；v9 用 XGroupCreateMkStream，MKSTREAM 自动建流。
+	r.client.XGroupCreateMkStream(ctx, r.streamName, r.groupName, "0").Err()
 
 	// 阻塞读取任务
 	results, err := r.client.XReadGroup(ctx, &redis.XReadGroupArgs{
@@ -105,8 +105,8 @@ func (r *RedisClient) AckTask(ctx context.Context, messageID string) error {
 	return r.client.XAck(ctx, r.streamName, r.groupName, messageID).Err()
 }
 
-// PendingTask 处理挂起的任务
-func (r *RedisClient) PendingTask(ctx context.Context) ([]*redis.XPending, error) {
+// PendingTask 处理挂起的任务（v9 的 XPending 返回单个 *redis.XPending）。
+func (r *RedisClient) PendingTask(ctx context.Context) (*redis.XPending, error) {
 	result, err := r.client.XPending(ctx, r.streamName, r.groupName).Result()
 	if err != nil {
 		return nil, err
