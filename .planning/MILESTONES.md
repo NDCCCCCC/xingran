@@ -16,7 +16,12 @@
 - 从 git 历史精确重建 5 份缺失 UAT 清单 + 79 条全部待执行的统一跟踪表与 GSD 产物回写口径
 - 全仓清理临时清单权威引用、归档临时清单与历史 UAT 重建件、用 GSD milestone complete 把权威交回自动生成的 ROADMAP/REQUIREMENTS/STATE/MILESTONES
 
-**Known Gaps（登记，非阻断）**：6 项人工验证（VAL-01~06）交付物已落盘，实际执行受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束，跟踪表见 `.planning/notes/261108-human-verification-tracker.md`（79 条全部待执行、0 勾选）；LOCKED 残余结论见 `.planning/notes/261108-v153-locked-residuals.md`。
+**Known Gaps（登记，非阻断）**：
+- **人工验证**：6 项（VAL-01~06）交付物已落盘，实际执行受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束，跟踪表见 `.planning/notes/261108-human-verification-tracker.md`（79 条全部待执行、0 勾选）。
+- **LOCKED 残余**：A8 四项 + B13 两项只落结论不改代码，见 `.planning/notes/261108-v153-locked-residuals.md`。
+- **真实缺口（2026-11-08 收档后补登记）**：`ImportDiscoveredDevices`（`internal/services/device_discovery_service.go:509-523`）仍是简化实现、仅返回 `len(deviceIDs)`，不真正写入 `NetworkDevice`；Phase 137 (FIX-07) 按范围约束未动，属本次临时清单 B10 之外的独立缺口，此前未进入任何 deferred 登记，现补入 `STATE.md ## Deferred Items`。
+- **Phase 自报边界（同上补登记）**：FIX-01 实机 AD/LDAP UAT｜FIX-04 三厂商物理参数真机逐型号取证 + 型号级能力矩阵规则｜FIX-09 端到端 HTTP P99 压测（本次仅计算路径近似基线）｜FIX-11 前端告警页 / WS / 企微钉钉 webhook｜FIX-13 生产库 migration 236/237 待执行｜FIX-05 批量物理参数路径未接入。逐项见 `.planning/milestones/v1.53-phases/*-SUMMARY.md` 与 `STATE.md ## Deferred Items`。
+- 上述补登记为**显式披露**，非 GSD `audit-open` 可扫描的 artifact；收档时 `audit-open` / `audit-uat` 均为全清。
 
 ---
 

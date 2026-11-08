@@ -3,7 +3,7 @@ gsd_state_version: "1.0"
 milestone: v1.53
 status: v1.53 SHIPPED 2026-11-08 并已归档（Awaiting next milestone）
 stopped_at: "v1.53 全量交付（8/8 Phase、18 REQ 交付 + 6 项人工验证跟踪、21/21 条开放项全覆盖、全量回归闸门全绿）；2026-11-08 完成 GSD 归档与权威交回（ROADMAP/REQUIREMENTS → milestones/v1.53-*，8 个 phase 目录 → v1.53-phases/，临时输入清单归档进 milestones/）"
-last_updated: "2026-11-08T09:55:00.000Z"
+last_updated: "2026-11-08T10:45:00.000Z"
 last_activity: 2026-11-08
 last_activity_desc: v1.53 SHIPPED and archived; authority handed back to GSD-generated ROADMAP/REQUIREMENTS/STATE/MILESTONES
 state_head: "0b500fdc992462a1ff5430e7953efe4154cf2155"
@@ -319,8 +319,10 @@ Items acknowledged and deferred at milestone close, most recent first:
 | uat_gaps | 129-UAT-BACKFILL.md — 收档审计 acknowledge（0 pending scenarios）；84/87 人工验收挂账载体 | acknowledged（deferred） | 2026-11-08 | v1.52 |
 | uat_gaps | 133-UAT.md — 收档审计 acknowledge（0 pending scenarios）；37 项人工 UAT 全未勾选 | acknowledged（deferred） | 2026-11-08 | v1.52 |
 | uat_gaps | VAL-01~06 人工验证（生产 PG 只读 / 87-6 写授权 / 现场真机 / DBA 回传）— 交付物已落盘（5 份重建清单 + 79 条跟踪表 + 回写口径），实际验证待执行；见 `notes/261108-human-verification-tracker.md` | 待执行（不标已完成） | 2026-11-08 | v1.53 |
+| code_gaps | `ImportDiscoveredDevices`（`internal/services/device_discovery_service.go:509-523`）仍是简化实现，仅 `return len(deviceIDs), nil`，不真正写入 `NetworkDevice`；Phase 137 (FIX-07) 按范围约束未动，属 B10 之外独立缺口，**此前未登记，2026-11-08 补登记** | 真实缺口（未修，待后续立项） | 2026-11-08 | v1.53 |
+| verification_gaps | Phase 自报边界汇总（各 `v1.53-phases/*-SUMMARY.md` 已记载但未进统一 deferred 登记，2026-11-08 补登记）：FIX-01 实机 AD/LDAP UAT（UAC 544 + 登录恢复）｜FIX-04 三厂商物理参数真机逐型号取证 + 型号级 `vendorCapabilities` 规则｜FIX-09 端到端 HTTP P99 压测（本次仅计算路径近似基线）｜FIX-11 前端告警页 / WS 广播 / 企微钉钉 webhook｜FIX-13 生产库 migration 236/237 待执行后受限角色才真正 403→200｜FIX-05 批量物理参数路径未接入（REQ 未要求）｜`ImportDiscoveredDevices` 见上一行 | 待执行 / 已知边界（不伪造完成） | 2026-11-08 | v1.53 |
 
-> **closeout_type: override_closeout**（`audit-open` 检出 3 项 uat_gaps，已按 [A] Acknowledge 全部登记；另有 3 项历史 debug suppression 结转）。Known verification overrides: **3 newly acknowledged, 3 carried forward**（同步记录于 MILESTONES.md v1.52 条目）。以上均为 verdict-preserving 的 self-invalidating suppression，真实挂账以 STATE.md Deferred Items 表与 MILESTONES.md v1.53 条目为准。
+> **closeout_type: override_closeout**（v1.52 收档时 `audit-open` 检出 3 项 uat_gaps，已按 [A] Acknowledge 全部登记；另有 3 项历史 debug suppression 结转）。Known verification overrides: **3 newly acknowledged, 3 carried forward**（同步记录于 MILESTONES.md v1.52 条目）。以上均为 verdict-preserving 的 self-invalidating suppression。**v1.53 收档后补登记（2026-11-08 18:45）**：上表另含 v1.53 的 3 行 `uat_gaps / code_gaps / verification_gaps`（79 条人工验证跟踪 + `ImportDiscoveredDevices` 真实缺口 + Phase 自报边界汇总），属**显式披露**而非 `audit-open` suppression；GSD `audit-open` 仍报全清（这些是文档登记项，不是 GSD 可扫描的 artifact）。真实挂账以本表与 MILESTONES.md v1.53 条目为准。
 
 ## Performance Metrics
 
@@ -334,3 +336,4 @@ Items acknowledged and deferred at milestone close, most recent first:
 - `/gsd-new-milestone` — 启动下一里程碑（权威已交回 GSD 自动生成体系，`REQUIREMENTS.md` 已按工作流清空待重建）
 - 人工验证跟踪表 `.planning/notes/261108-human-verification-tracker.md` 的 79 条待执行项，需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物
 - LOCKED 残余结论见 `.planning/notes/261108-v153-locked-residuals.md`；本次临时输入清单的归档副本存于 `.planning/milestones/`
+- 补登记的真实缺口 `ImportDiscoveredDevices`（`device_discovery_service.go:509-523`）与 7 项 Phase 自报边界见本文件 `## Deferred Items` 表 v1.53 三行；若下一里程碑要推进，从此处取数立项，不再依赖临时清单
