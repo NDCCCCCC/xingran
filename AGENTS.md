@@ -36,6 +36,8 @@ go test -cover ./...
 - **一次性运维/诊断 CLI 放 `scripts/ops/`**，不要放 `cmd/`。`cmd/` 只保留应用入口 `cmd/main.go`(+`main_test.go`) 与独立服务 `cmd/agent/`。`scripts/ops/` 下的 `package main` 仍由 `go build ./...` 覆盖。
 - **临时/一次性脚本不得散落在 `scripts/` 顶层**：无现存引用的历史脚本归档到 `.planning/milestones/v1.53-archived-scripts/` 并写索引；在用脚本（`check-route-registry.mjs`、`scan-routes.cjs`、`generate_swagger.sh`、`migrate-sm4-key.go`、`operlog_e2e_verify.sh` 等）保留在 `scripts/` 顶层并在 `scripts/README.md` 登记。
 - **禁止在根目录新增启动/构建包装脚本**（如 `run.bat`）；前后端由开发者各自启动。
+- **Excel 导入/导出模板一律动态生成、禁止落盘**：后端由 `ExcelService.GenerateTemplate(entityType)` 依据 `internal/services/operations/excel_config.go` 的列定义在内存生成 xlsx、以 HTTP 流下载（`user_template_<ts>.xlsx` 等）；导出同理；前端如节假日模板用 `XLSX.writeFile` 在浏览器端生成。`.gitignore` 已忽略 `*.xlsx`，**仓库中不得提交或依赖任何 `.xlsx` 文件**；测试若需 xlsx 夹具用 `t.TempDir()` 自建或仅用 `xlsxMagic` 字节，不读取磁盘模板。
+- **`data/` 不是仓库目录**：仅指运行时 SQLite/本地数据（已被 `.gitignore` 忽略），不得在仓库创建或提交 `data/`；文档里的示例路径用 `<sqlite-db-path>` 占位，不写具体已删文件名。
 
 ## 测试目录与文件命名（强制）
 

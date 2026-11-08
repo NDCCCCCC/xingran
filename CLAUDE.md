@@ -44,7 +44,7 @@ go test ./internal/api/v1/
 .\out\xingran-backend.exe
 ```
 
-> **目录与命名约束（强制，完整版见 AGENTS.md 同名章节）**：构建产物统一 `out/`（本地脚本与 CI 一致）；一次性运维 CLI 放 `scripts/ops/`，`cmd/` 只保留 `main.go` + `agent/`；测试统一 `tests/`（复数，禁止 `test/`），Go 单测 `*_test.go` 就近包内、分层用 `tests/{benchmark,e2e,integration,fixtures,scripts}/`，前端用 `*.test.ts(x)` / `src/**/__tests__/`；禁止在根目录新增启动/构建包装脚本（`run.bat` 已删除）。
+> **目录与命名约束（强制，完整版见 AGENTS.md 同名章节）**：构建产物统一 `out/`（本地脚本与 CI 一致）；一次性运维 CLI 放 `scripts/ops/`，`cmd/` 只保留 `main.go` + `agent/`；测试统一 `tests/`（复数，禁止 `test/`），Go 单测 `*_test.go` 就近包内、分层用 `tests/{benchmark,e2e,integration,fixtures,scripts}/`，前端用 `*.test.ts(x)` / `src/**/__tests__/`；Excel 导入/导出模板一律由 `GenerateTemplate` / 前端 `XLSX.writeFile` 动态生成、禁止向仓库提交或依赖 `.xlsx`；`data/` 仅运行时数据、不纳入仓库；禁止在根目录新增启动/构建包装脚本（`run.bat` 已删除）。
 
 ### Frontend (React)
 
