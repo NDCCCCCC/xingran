@@ -15,7 +15,7 @@
 # sqlite 模式启动（窗口冒烟用，不依赖 PG 实例）
 set DB_TYPE=sqlite
 set DB_PATH=data/integration-v151.db   # 干净库，窗口内一次成型
-go build -o xingran-backend.exe ./cmd/main.go
+go build -o out/xingran-backend.exe ./cmd/main.go
 .\xingran-backend.exe                  # 启动即自动跑全部 migrations（含 228/229/230）
 ```
 

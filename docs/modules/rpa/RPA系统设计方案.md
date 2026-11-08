@@ -481,7 +481,7 @@ RUN go mod download
 COPY ./
 
 # 构建
-RUN CGO_ENABLED=0 go build -o rpa-worker ./src/main.go
+RUN CGO_ENABLED=0 go build -o out/rpa-worker ./src/main.go
 
 # 创建目录
 RUN mkdir -p /app/downloads /app/screenshots

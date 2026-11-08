@@ -8,11 +8,12 @@
 # 构建所有平台版本
 bash scripts/agent/build.sh 1.0.0
 
-# 仅构建 Windows 版本
-set GOOS=windows && set GOARCH=amd64 && go build -o build/agent-windows-amd64.exe ./cmd/agent/
+# 仅构建 Windows 版本（产物统一 out/agent/，见 AGENTS.md）
+if not exist out\agent mkdir out\agent
+set GOOS=windows && set GOARCH=amd64 && go build -o out/agent/agent-windows-amd64.exe ./cmd/agent/
 
 # 仅构建 Linux 版本
-GOOS=linux GOARCH=amd64 go build -o build/agent-linux-amd64 ./cmd/agent/
+GOOS=linux GOARCH=amd64 go build -o out/agent/agent-linux-amd64 ./cmd/agent/
 ```
 
 ### 2. 本地测试

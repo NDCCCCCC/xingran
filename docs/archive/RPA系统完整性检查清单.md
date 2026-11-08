@@ -70,7 +70,7 @@
 
 ### 编译验证
 - [x] `go build ./...` - 编译成功
-- [x] `go build -o xingran-backend-test.exe ./cmd/main.go` - 可执行文件生成成功
+- [x] `go build -o out/xingran-backend-test.exe ./cmd/main.go` - 可执行文件生成成功
 
 ---
 

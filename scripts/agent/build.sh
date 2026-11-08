@@ -4,7 +4,8 @@
 set -e
 
 VERSION=${1:-"1.0.0"}
-BUILD_DIR="build"
+# Artifacts always land under out/ (gitignored) - see AGENTS.md "Build artifacts" section.
+BUILD_DIR="out/agent"
 
 echo "=========================================="
 echo "Building XingRan VDI Agent v$VERSION"

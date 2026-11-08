@@ -40,8 +40,9 @@ if "%BASE_NOSLASH:~-1%"=="/" set "BASE_NOSLASH=%BASE_NOSLASH:~0,-1%"
 set "VITE_API_BASE_URL=%BASE_NOSLASH%/api/v1"
 
 REM Distinct artifact name per base so the two deployments never mix up
-set "OUT_FILE=xingran-backend-embedded-linux"
-if not "%VITE_BASE%"=="/xingran/" set "OUT_FILE=xingran-backend-embedded-linux-root"
+set "OUT_DIR=out"
+set "OUT_FILE=%OUT_DIR%\xingran-backend-embedded-linux"
+if not "%VITE_BASE%"=="/xingran/" set "OUT_FILE=%OUT_DIR%\xingran-backend-embedded-linux-root"
 
 echo ======================================
 echo   Build Embedded Executable (Linux)
@@ -97,6 +98,7 @@ echo.
 
 REM Step 5: Build Go backend (Linux)
 echo [5/6] Building Go backend (Linux)...
+if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
@@ -120,5 +122,6 @@ echo Upload to Linux server and run:
 echo   chmod +x %OUT_FILE%
 echo   ./%OUT_FILE%
 echo.
+echo NOTE: artifacts always land in out/ (gitignored); see AGENTS.md.
 
 endlocal

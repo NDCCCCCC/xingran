@@ -160,7 +160,7 @@ load @ index-BnADbsd9.js:2
     - `scripts/build-embedded.bat`（Windows，另有 `.sh`）= 项目既有的「前端构建 → 托管产物同步 → 后端内嵌构建」脚本：
       Step1 清 `xingran-react-frontend/dist` → Step2 `cd xingran-react-frontend && npm run build`（= `tsc -b && vite build`）
       → Step3 `rmdir /s /q internal\server\xingran-react-frontend` 后 `xcopy /e /i /y xingran-react-frontend\dist internal\server\xingran-react-frontend\dist`
-      → Step4 `go build -tags=embed -ldflags="-s -w" -o xingran-backend-embedded.exe ./cmd/main.go`
+      → Step4 `go build -tags=embed -ldflags="-s -w" -o out/xingran-backend-embedded.exe ./cmd/main.go`
     - 托管机制：`internal/server/embed_frontend_prod.go`（`//go:build embed`）用 `//go:embed all:xingran-react-frontend/dist` 把 `internal/server/xingran-react-frontend/dist` **嵌入二进制**；
       `internal/server/embed_frontend.go`（`//go:build !embed`）不托管前端（返回 503，提示改用 vite dev server :4000）。
     - ⇒ 用户在 :9000 能看到前端 ⇒ 其后端是 embed 构建 ⇒ **只改源码不够，必须重新构建前端 + 同步产物 + 重新 go build -tags=embed + 重启后端**。
@@ -202,7 +202,7 @@ load @ index-BnADbsd9.js:2
    :: 方式 B（手工分步，与 build-embedded.bat 的 Step2/3/4 等价）
    cd xingran-react-frontend && npm run build
    xcopy /e /i /y xingran-react-frontend\dist internal\server\xingran-react-frontend\dist
-   go build -tags=embed -ldflags="-s -w" -o xingran-backend-embedded.exe ./cmd/main.go
+   go build -tags=embed -ldflags="-s -w" -o out/xingran-backend-embedded.exe ./cmd/main.go
    :: 然后重启后端并强制刷新浏览器（Ctrl+F5）
    ```
    注意：前端资源经 `//go:embed all:xingran-react-frontend/dist` 嵌入后端二进制（`internal/server/embed_frontend_prod.go`），

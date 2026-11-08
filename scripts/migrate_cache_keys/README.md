@@ -204,7 +204,7 @@ KEYS cache:dept:*
    pkill xingran-backend
 
    # 重新编译
-   go build -o xingran-backend ./cmd/main.go
+   go build -o out/xingran-backend ./cmd/main.go
 
    # 启动应用
    ./xingran-backend

@@ -148,13 +148,13 @@ psql -U postgres -d xingran_next -c "\d sys_dept"
 
 ```bash
 # Windows
-go build -o xingran-backend.exe ./cmd/main.go
+go build -o out/xingran-backend.exe ./cmd/main.go
 
 # Linux
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -o xingran-backend-linux ./cmd/main.go
+go build -o out/xingran-backend-linux ./cmd/main.go
 ```
 
 ### 步骤3: 重启应用

@@ -136,8 +136,9 @@ npm run build    # 生产构建
 ### 常用脚本
 
 ```bash
-# 后端
-go build -o xingran-backend.exe ./cmd/main.go
+# 后端（产物统一 out/，详见 AGENTS.md）
+mkdir -p out            # Windows: if not exist out mkdir out
+go build -o out/xingran-backend.exe ./cmd/main.go
 go test ./...
 go test ./internal/services/operations/
 
@@ -210,7 +211,7 @@ BAIDU_MAP_AK=your_api_key_here
 
 ```bash
 # Linux 生产构建
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o xingran-backend-linux ./cmd/main.go
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o out/xingran-backend-linux ./cmd/main.go
 
 # 使用生产配置
 cp configs/config.prod.yaml configs/config.yaml

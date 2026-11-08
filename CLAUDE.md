@@ -25,22 +25,26 @@ XingRan-Next is a modern enterprise permission management system based on the Xi
 ### Backend (Go)
 
 ```bash
+# 构建产物一律输出到 out/（gitignored），禁止落在仓库根目录；详见 AGENTS.md「构建产物与目录约定」
+mkdir -p out            # Windows: if not exist out mkdir out
 # Build for Windows
-go build -o xingran-backend.exe ./cmd/main.go
+go build -o out/xingran-backend.exe ./cmd/main.go
 
 # Build for Linux (production)
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -o xingran-backend-linux ./cmd/main.go
+go build -o out/xingran-backend-linux ./cmd/main.go
 
 # Run tests
 go test ./...
 go test ./internal/api/v1/
 
 # Run backend
-.\xingran-backend.exe
+.\out\xingran-backend.exe
 ```
+
+> **目录与命名约束（强制，完整版见 AGENTS.md 同名章节）**：构建产物统一 `out/`（本地脚本与 CI 一致）；一次性运维 CLI 放 `scripts/ops/`，`cmd/` 只保留 `main.go` + `agent/`；测试统一 `tests/`（复数，禁止 `test/`），Go 单测 `*_test.go` 就近包内、分层用 `tests/{benchmark,e2e,integration,fixtures,scripts}/`，前端用 `*.test.ts(x)` / `src/**/__tests__/`；禁止在根目录新增启动/构建包装脚本（`run.bat` 已删除）。
 
 ### Frontend (React)
 
@@ -759,14 +763,16 @@ npm run test -- --watch
 ### Building
 
 ```bash
+# 产物统一落 out/（gitignored），详见 AGENTS.md「构建产物与目录约定」
+mkdir -p out            # Windows: if not exist out mkdir out
 # Development build (Windows)
-go build -o xingran-backend.exe ./cmd/main.go
+go build -o out/xingran-backend.exe ./cmd/main.go
 
 # Production build (Linux)
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -ldflags="-s -w" -o xingran-backend-linux ./cmd/main.go
+go build -ldflags="-s -w" -o out/xingran-backend-linux ./cmd/main.go
 ```
 
 ### Database Migrations

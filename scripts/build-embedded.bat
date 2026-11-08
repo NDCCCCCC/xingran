@@ -45,7 +45,10 @@ echo [4/5] Building Go backend (Windows)...
 set GOOS=windows
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -tags=embed -ldflags="-s -w" -o xingran-backend-embedded.exe ./cmd/main.go
+set OUT_DIR=out
+set OUT_FILE=%OUT_DIR%\xingran-backend-embedded.exe
+if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
+go build -tags=embed -ldflags="-s -w" -o %OUT_FILE% ./cmd/main.go
 if errorlevel 1 (
     echo Go build FAILED!
     exit /b 1
@@ -59,10 +62,11 @@ echo.
 echo ======================================
 echo   Output File
 echo ======================================
-echo   xingran-backend-embedded.exe
+echo   %OUT_FILE%
 echo.
 echo Start server:
-echo   .\xingran-backend-embedded.exe
+echo   .\%OUT_FILE%
 echo.
+echo NOTE: artifacts always land in out/ (gitignored); see AGENTS.md.
 
 endlocal
