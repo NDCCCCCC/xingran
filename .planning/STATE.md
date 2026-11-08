@@ -1,27 +1,25 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.53
-status: v1.53 SHIPPED 2026-11-08 并已归档（Awaiting next milestone）
-stopped_at: "v1.53 全量交付（8/8 Phase、18 REQ 交付 + 6 项人工验证跟踪、21/21 条开放项全覆盖、全量回归闸门全绿）；2026-11-08 完成 GSD 归档与权威交回（ROADMAP/REQUIREMENTS → milestones/v1.53-*，8 个 phase 目录 → v1.53-phases/，临时输入清单归档进 milestones/）"
-last_updated: "2026-11-08T10:45:00.000Z"
+milestone: v1.54
+milestone_name: 真实代码缺口清偿
+status: planning
+last_updated: "2026-11-08T15:50:50.069Z"
 last_activity: 2026-11-08
-last_activity_desc: v1.53 SHIPPED and archived; authority handed back to GSD-generated ROADMAP/REQUIREMENTS/STATE/MILESTONES
-state_head: "0b500fdc992462a1ff5430e7953efe4154cf2155"
 progress:
-  total_phases: 8
-  completed_phases: 8
+  total_phases: 0
+  completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 100
-milestone_name: 开放项全量清偿
+  percent: 0
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.53 SHIPPED & ARCHIVED 2026-11-08（8/8 Phase、21/21 条开放项全覆盖）
+**Status**: v1.54 INITIATED 2026-11-08（真实代码缺口清偿；取数自 v1.53 Deferred Items 的 4 项代码缺口，Phase 从 142 续编）
 **Last activity**: 2026-11-08
+**Prior activity**: 2026-11-08 - v1.54 INITIATED：4 项真实代码缺口（发现设备真实导入 / 告警通道收口 / 批量物理参数 / 型号级能力矩阵），3 个并行 subagent 做本仓代码面探索；跳过领域研究；验证类残余不伪造闭环
 **Prior activity**: 2026-11-08 - v1.53 SHIPPED：8 个 Phase 全部交付，全量回归闸门全绿（go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例），GSD `milestone complete` 完成归档与权威交回
 **Prior activity**: 2026-11-08 - v1.52 SHIPPED 并完成 GSD 归档
 **Prior activity**: 2026-11-06 - Completed quick task 261106-wso: 一栋楼跨机构办公 —— 楼层可覆盖所属机构（ops_floors.org_id + 全链路 COALESCE）
@@ -99,14 +97,14 @@ milestone_name: 开放项全量清偿
 
 ## Current Position
 
-Phase: Milestone v1.53 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-11-08 — Milestone v1.53 completed and archived
+Status: Defining requirements
+Last activity: 2026-11-08 — Milestone v1.54 started
 
 ## 历史归档（v1.25 及更早，已 SHIPPED / ARCHIVED；以下为非当前状态，仅供追溯）
 
-> 本节及后续子标题（进度快照、Phase 依赖速查、执行期决策、立项范围、Accumulated Context 等）为 **v1.25 及更早里程碑**的归档记录，**均非当前状态**；当前状态一律以文档上半段 **v1.53 active** 与 `## Current Position` 为准（v1.52 终态见上方「历史基线」段）。
+> 本节及后续子标题（进度快照、Phase 依赖速查、执行期决策、立项范围、Accumulated Context 等）为 **v1.25 及更早里程碑**的归档记录，**均非当前状态**；当前状态一律以文档上半段 **v1.54 active** 与 `## Current Position` 为准（v1.53 终态见上方「历史基线」段，v1.52 及更早见 `.planning/MILESTONES.md`）。
 
 ### v1.25 真实进度快照（历史，2026-10-29 晚，Lead 实跑复核）
 

@@ -1,10 +1,34 @@
 ---
 last_updated: 2026-11-08
-update_trigger: v1.53 milestone SHIPPED & ARCHIVED 2026-11-08（开放项全量清偿；8/8 Phase、18 REQ 交付 + 6 项人工验证跟踪、21 条开放项全覆盖；GSD milestone complete 完成归档与权威交回）
-previous_update: 2026-11-08 v1.53 milestone INITIATED（24 REQ / 8 Phase 134-141）
+update_trigger: v1.54 milestone INITIATED 2026-11-08（真实代码缺口清偿：4 项代码缺口 / 取数自 STATE.md ## Deferred Items；Phase 从 142 续编）
+previous_update: 2026-11-08 v1.53 milestone SHIPPED & ARCHIVED（开放项全量清偿；8/8 Phase、18 REQ 交付 + 6 项人工验证跟踪、21 条开放项全覆盖；GSD milestone complete 完成归档与权威交回）
 ---
 
-## Current Milestone: v1.53 开放项全量清偿 (Open Items Clearance) — ✅ SHIPPED & ARCHIVED 2026-11-08
+## Current Milestone: v1.54 真实代码缺口清偿 (Code Gap Clearance) — INITIATED 2026-11-08
+
+**Goal:** 清偿 `.planning/STATE.md ## Deferred Items` 中登记的 4 项真实代码缺口，使 v1.53 收档后显式披露的「代码可修」残余全部真正落地；不触碰 LOCKED 残余、不伪造人工验证闭环。
+
+**Status:** INITIATED 2026-11-08 | 取数权威 = `.planning/STATE.md ## Deferred Items`（v1.53 三行：`code_gaps` / `verification_gaps` 边界汇总 / `uat_gaps`）+ `.planning/MILESTONES.md` v1.53 Known Gaps | Phase 从 **142** 续编（v1.53 结束于 141）
+
+**Target features:**
+- **DISC** — `ImportDiscoveredDevices`（`internal/services/device_discovery_service.go:509-523`）真实写入 `NetworkDevice`：字段映射、去重语义、事务边界、operlog、缓存失效、错误返回
+- **ALRT** — 同步漂移告警通道收口（FIX-11 自报边界）：后端查询/配置端点 + WS 广播 + 前端告警页 + 企微/钉钉 webhook（凭证脱敏）
+- **PORT** — 端口写物理参数收口（FIX-04/FIX-05 自报边界）：批量物理参数路径接入（复用 v1.51 批量进度事件）+ 型号级 `vendorCapabilities` 规则（型号来源与默认值回退）
+
+**关键决策 (v1.54, 用户 2026-11-08 裁定):**
+- **范围 = 4 项纯代码缺口**：`ImportDiscoveredDevices` 真实导入 / 告警前端+WS+webhook / 批量物理参数 / 型号级能力矩阵；3 项验证类（FIX-01 实机 AD UAT、FIX-09 端到端 HTTP P99 压测、FIX-13 生产库 migration 236/237）与 FIX-04 真机逐型号取证**不纳入**，继续登记为待人工验证、不伪造闭环
+- **跳过领域研究**：4 项均带本仓 `文件:行号` 实证、无新领域能力需调研（沿用 v1.53 先例）；改为派 3 个并行 subagent 做本仓代码面探索作为需求输入
+- **LOCKED 残余不写修复代码**：`.planning/notes/261108-v153-locked-residuals.md` 6 项只维持结论
+- **79 条人工验证跟踪表不改**：`.planning/notes/261108-human-verification-tracker.md` 保持 0 勾选，按 `.planning/notes/261108-uat-writeback-policy.md` 由人工执行后回写
+- **遵循既有架构**：Handler-Service / `response.Success()/Error()` / operlog 写操作约定 / 0=正常 1=停用 / UUID 主键 / SQLite+PG 双方言 / 前端 wrapped API / 构建产物只落 `out/`
+- **智能体团队**：3 个探索 subagent（发现导入 / 告警通道 / 端口写）→ gsd-roadmapper 生成路线图 → 按 phase 分波并行 executor subagent → Lead 集成复核 + 全量回归闸门
+- **提交授权**：用户 2026-11-08 明确授权 GSD 自动提交规划产物与实现代码（覆盖 CLAUDE.md 默认确认要求，仅限本里程碑）
+
+**事实基线:** `.planning/STATE.md ## Deferred Items`（v1.53 三行）｜`.planning/MILESTONES.md:19-24`（v1.53 Known Gaps）｜`.planning/notes/261108-v153-locked-residuals.md`（LOCKED 边界）
+
+---
+
+## Past Milestone: v1.53 开放项全量清偿 (Open Items Clearance) — ✅ SHIPPED & ARCHIVED 2026-11-08
 
 **Goal:** 以 `.planning/REQUIREMENTS.md` 的 **24 REQ** 为基线（对应 2026-11-08 开放项盘点的 21 条历史计数），按「代码可修 / 待人工验证 / 已裁定接受」三类分别闭环，使收档时每条开放项都有可核对的结论与证据。
 
