@@ -85,6 +85,30 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 	//   - vlanId 越界落入 per-port Failed[] 而非 entry-rejection 4xx
 	// 顺序与单端口 SetAccessVlan / PortBinding 保持一致：vlan → bindOp → IP → MAC。
 	// action-specific：仅当 action 匹配时才校验对应字段（其他 action 的字段留空合法）。
+	//
+	// Phase 143 (PORT-01)：物理三动作 + 设备型号能力矩阵校验。批量同设备，
+	// 入口查一次 dev 拿 vendor/model，供 validatePhysicalRequest（与单条同源）
+	// 与 CheckActionSupportParams（Cisco/Maipu/型号 unsupported 显式拒绝）使用；
+	// 循环内不再重复查设备（executeWrite 内部仍按既有逻辑查 dev 用于渲染 Model）。
+	var dev models.NetworkDevice
+	var physicalEvidence portcollection.PhysicalEvidence
+	if isPhysicalAction(req.Action) {
+		if err := s.db.WithContext(ctx).Where("id = ?", req.DeviceID).First(&dev).Error; err != nil {
+			// 设备查不到时不阻断入口校验（用零值 vendor/model 走全局默认画像），
+			// 下发时 executeWrite 会按既有逻辑返回 ErrDeviceNotFound。
+			dev = models.NetworkDevice{}
+		}
+		params := PhysicalParams{Speed: req.Speed, SpeedMode: req.SpeedMode, Duplex: req.Duplex, MTU: req.MTU}
+		ev, err := validatePhysicalRequest(dev.Vendor, dev.Model, req.Action, params)
+		if err != nil {
+			return nil, err
+		}
+		physicalEvidence = ev
+		if err := portcollection.CheckActionSupportParams(dev.Vendor, dev.Model, req.Action, req.MACAddress); err != nil {
+			return nil, err
+		}
+	}
+
 	switch req.Action {
 	case portcollection.ActionSetAccessVLAN:
 		if err := validateVlanIdRange(req.VLANID); err != nil {
@@ -121,6 +145,15 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 		Succeeded: []PortResult{},
 		Failed:    []PortResult{},
 		Skipped:   []PortResult{},
+	}
+
+	// Phase 143 (PORT-01)：物理参数渲染载体（两处 executeWrite 共用同一份，
+	// 与单条 PhysicalWrite 完全同构 —— 无第二套校验/审计/命令分发实现）。
+	var physicalExtras *renderExtras
+	var physicalParams PhysicalParams
+	if isPhysicalAction(req.Action) {
+		physicalParams = PhysicalParams{Speed: req.Speed, SpeedMode: req.SpeedMode, Duplex: req.Duplex, MTU: req.MTU}
+		physicalExtras = &renderExtras{physical: &physicalParams}
 	}
 
 	// Phase 122 (PORTW-07)：逐端口进度推送发布器（notifier 未注入 / operator
@@ -161,7 +194,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 			}
 
 			// 校验通过 — 端口"消失"（D-13 fallback）但归属正确，直接下发
-			writeResult, werr := s.executeWrite(ctx, portID, req.DeviceID, req.Action, req.Description, operator, "", req.VLANID, req.BindOp, req.IPAddress, req.MACAddress, nil, nil)
+			writeResult, werr := s.executeWrite(ctx, portID, req.DeviceID, req.Action, req.Description, operator, "", req.VLANID, req.BindOp, req.IPAddress, req.MACAddress, nil, physicalExtras)
 			if werr != nil {
 				if writeResult != nil {
 					result.Failed = append(result.Failed, *writeResult)
@@ -172,6 +205,8 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 				result.Skipped = append(result.Skipped, *writeResult)
 				continue
 			}
+			// Phase 143：成功回显进 Extra（audit.after_value 非空，与单条共用同一函数）
+			applyPhysicalAuditExtra(req.Action, physicalParams, physicalEvidence, writeResult)
 			result.Succeeded = append(result.Succeeded, *writeResult)
 			continue
 		}
@@ -184,7 +219,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 		}
 
 		// 实际下发
-		writeResult, werr := s.executeWrite(ctx, port.ID, port.DeviceID, req.Action, req.Description, operator, port.InterfaceName, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress, nil, nil)
+		writeResult, werr := s.executeWrite(ctx, port.ID, port.DeviceID, req.Action, req.Description, operator, port.InterfaceName, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress, nil, physicalExtras)
 		if werr != nil {
 			if writeResult != nil {
 				result.Failed = append(result.Failed, *writeResult)
@@ -202,6 +237,8 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 			progress.emit(port.ID, port.InterfaceName, idx+1, "skipped", "pre-state 已匹配目标状态")
 			continue
 		}
+		// Phase 143：成功回显进 Extra（audit.after_value 非空，与单条共用同一函数）
+		applyPhysicalAuditExtra(req.Action, physicalParams, physicalEvidence, writeResult)
 		result.Succeeded = append(result.Succeeded, *writeResult)
 		progress.emit(port.ID, port.InterfaceName, idx+1, "succeeded", "")
 	}

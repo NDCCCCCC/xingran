@@ -125,6 +125,12 @@ type PreviewResult struct {
 	RiskLevel  string              `json:"riskLevel"`
 	Summary    string              `json:"summary"`
 	Ports      []PortPreviewResult `json:"ports"`
+	// EvidenceLevel Phase 143 (PORT-02)：物理能力画像取证级别
+	// "unverified" | "model" | "vendor"。非物理动作恒为空串。
+	// 默认放行 ≠ 有证据：unverified 不阻断写、不冒充真机结论。
+	EvidenceLevel string `json:"evidenceLevel,omitempty"`
+	// PhysicalEvidence 画像依据文本；空串 = 未取证（严禁写成已验证）。
+	PhysicalEvidence string `json:"physicalEvidence,omitempty"`
 }
 
 // riskLevelForAction action → 风险等级（PORTW-01 风险标注真相源）。
@@ -193,7 +199,18 @@ func actionSummary(action Action, portCount int, vendor models.DeviceVendor) str
 // 返回 sentinel error 语义与真实写路径一致：ErrPortNotFound / ErrDeviceNotFound /
 // ErrDeviceUnsupportedVendor / 各 validator sentinel —— handler 层共享同一翻译表。
 func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req PreviewRequest, operator string) (*PreviewResult, error) {
+	// Phase 143：设备查询提前到入口 validator 之前 —— 物理参数 validator 需要
+	// (vendor, model) 走型号级能力矩阵（与实跑同源）。非物理动作行为不变。
+	var dev models.NetworkDevice
+	if err := s.db.WithContext(ctx).Where("id = ?", req.DeviceID).First(&dev).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrDeviceNotFound
+		}
+		return nil, fmt.Errorf("query device: %w", err)
+	}
+
 	// 与真实写路径相同的入口 validator（真相源同源，防 dry-run 和实跑行为漂移）
+	var physicalEvidence portcollection.PhysicalEvidence
 	switch req.Action {
 	case portcollection.ActionSetAccessVLAN:
 		if err := validateVlanIdRange(req.VLANID); err != nil {
@@ -228,20 +245,14 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 				return nil, err
 			}
 		}
-		// FIX-04 物理参数入口校验（与实跑同源）
+		// FIX-04 / Phase 143 物理参数入口校验（与实跑同源，接 vendor/model）
 		if ph := req.physicalParamsOf(); ph != nil {
-			if err := validatePhysicalRequest(req.Action, *ph); err != nil {
+			ev, err := validatePhysicalRequest(dev.Vendor, dev.Model, req.Action, *ph)
+			if err != nil {
 				return nil, err
 			}
+			physicalEvidence = ev
 		}
-	}
-
-	var dev models.NetworkDevice
-	if err := s.db.WithContext(ctx).Where("id = ?", req.DeviceID).First(&dev).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrDeviceNotFound
-		}
-		return nil, fmt.Errorf("query device: %w", err)
 	}
 
 	// Phase 129 真机修复：能力矩阵校验（S8700 等型号受限动作 dry-run 即报
@@ -272,6 +283,8 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		SpeedMode: req.SpeedMode,
 		Duplex:    req.Duplex,
 		MTU:       req.MTU,
+		// Phase 143：型号透传（校验/渲染同源）
+		Model: dev.Model,
 	})
 	if err != nil {
 		return nil, err
@@ -298,8 +311,17 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		Action:     req.Action,
 		RiskLevel:  riskLevelForActionPortSec(req.Action),
 		Ports:      make([]PortPreviewResult, 0, len(req.PortIDs)),
+		// Phase 143：物理动作回显取证级别（unverified|model|vendor）与依据文本。
+		// 默认放行 ≠ 有证据：unverified 不阻断写、不冒充真机结论。
+		EvidenceLevel:    physicalEvidence.Level,
+		PhysicalEvidence: physicalEvidence.Evidence,
 	}
 	result.Summary = actionSummary(req.Action, len(req.PortIDs), dev.Vendor)
+	// Phase 143 裁决：批量物理参数不纳入 critical 自动回滚，预览与审计显式警示
+	// 「失败需人工按 audit.before_value 恢复」，不伪造闭环。
+	if isPhysicalAction(req.Action) {
+		result.Summary += "；⚠️ 批量物理参数无自动回滚，失败需人工按 audit.before_value 恢复"
+	}
 
 	for _, portID := range req.PortIDs {
 		pr, perr := s.previewSinglePort(ctx, &dev, portID, req, dot1xLimit)
@@ -361,6 +383,8 @@ func (s *portWriteServiceImpl) previewSinglePort(
 		SpeedMode: req.SpeedMode,
 		Duplex:    req.Duplex,
 		MTU:       req.MTU,
+		// Phase 143：型号透传（校验/渲染同源）
+		Model: dev.Model,
 	})
 	if err != nil {
 		return nil, err

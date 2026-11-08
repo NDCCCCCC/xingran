@@ -31,6 +31,7 @@ import {
   writeDot1xEnable,
   writeDot1xDisable,
   writeTrunk,
+  writePhysical,
 } from "@/lib/api/networkApi";
 import { handleApiError } from "@/utils/errorHandler";
 import {
@@ -42,6 +43,11 @@ import {
   REASON_CUSTOM_SENTINEL,
   TRUNK_ALLOWED_MODE_OPTIONS,
   SKIP_PREFLIGHT_HINT,
+  PHYSICAL_SPEED_OPTIONS,
+  PHYSICAL_SPEED_MODE_AUTO,
+  PHYSICAL_DUPLEX_OPTIONS,
+  PHYSICAL_MTU_MIN,
+  PHYSICAL_MTU_MAX,
   composeReason,
   validateReasonOptional,
   validateReasonRequired,
@@ -200,6 +206,22 @@ export function PortWriteModal({
                   : [],
               }
             : {}),
+        });
+      } else if (action === "set_speed" || action === "set_duplex" || action === "set_mtu") {
+        // v1.54 Phase 143: 单端口物理参数写（POST /network/ports/write/physical 单端点三动作）
+        // 条件表单已按 action 校验必填，后端按型号能力画像二次校验（真相源）。
+        await writePhysical({
+          portId: portRecord.id,
+          action,
+          reason: reason ?? undefined,
+          skipPreflight,
+          ...(action === "set_speed"
+            ? values.speedMode === PHYSICAL_SPEED_MODE_AUTO
+              ? { speedMode: PHYSICAL_SPEED_MODE_AUTO }
+              : { speed: Number(values.speed) }
+            : {}),
+          ...(action === "set_duplex" ? { duplex: String(values.duplex) } : {}),
+          ...(action === "set_mtu" ? { mtu: Number(values.mtu) } : {}),
         });
       }
 
@@ -363,6 +385,79 @@ export function PortWriteModal({
               <AppInput placeholder="如：10,20（可留空）" />
             </Form.Item>
           </>
+        )}
+
+        {/* v1.54 Phase 143: 单端口物理参数三动作条件表单 */}
+        {action === "set_speed" && (
+          <>
+            <Form.Item
+              name="speedMode"
+              label="速率模式"
+              initialValue={PHYSICAL_SPEED_MODE_AUTO}
+              rules={[{ required: true, message: "请选择速率模式" }]}
+            >
+              <AppSelect
+                options={[
+                  { label: "自协商 (auto)", value: PHYSICAL_SPEED_MODE_AUTO },
+                  { label: "指定速率", value: "manual" },
+                ]}
+                showSearch={false}
+              />
+            </Form.Item>
+            <Form.Item shouldUpdate noStyle>
+              {({ getFieldValue }) =>
+                getFieldValue("speedMode") !== PHYSICAL_SPEED_MODE_AUTO ? (
+                  <Form.Item
+                    name="speed"
+                    label="速率 (Mbps)"
+                    rules={[{ required: true, message: "请选择速率" }]}
+                  >
+                    <AppSelect
+                      options={PHYSICAL_SPEED_OPTIONS.map((o) => ({ ...o }))}
+                      showSearch={false}
+                    />
+                  </Form.Item>
+                ) : null
+              }
+            </Form.Item>
+          </>
+        )}
+        {action === "set_duplex" && (
+          <Form.Item
+            name="duplex"
+            label="双工模式"
+            rules={[{ required: true, message: "请选择双工模式" }]}
+          >
+            <AppSelect
+              options={PHYSICAL_DUPLEX_OPTIONS.map((o) => ({ ...o }))}
+              showSearch={false}
+            />
+          </Form.Item>
+        )}
+        {action === "set_mtu" && (
+          <Form.Item
+            name="mtu"
+            label={`MTU (${PHYSICAL_MTU_MIN}-${PHYSICAL_MTU_MAX})`}
+            rules={[
+              { required: true, message: "请输入 MTU" },
+              {
+                validator: (_rule: unknown, value: unknown) => {
+                  const n = Number(value);
+                  if (value === undefined || value === null || value === "") {
+                    return Promise.resolve();
+                  }
+                  if (!Number.isInteger(n) || n < PHYSICAL_MTU_MIN || n > PHYSICAL_MTU_MAX) {
+                    return Promise.reject(
+                      new Error(`MTU 取值范围 ${PHYSICAL_MTU_MIN}-${PHYSICAL_MTU_MAX}`)
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <AppInput type="number" placeholder={`${PHYSICAL_MTU_MIN}-${PHYSICAL_MTU_MAX}`} />
+          </Form.Item>
         )}
 
         {/* D-02 reason 字段 — 外层 reasonSelect Select + 内层 reasonText TextArea (仅 __custom__ 时展开) */}

@@ -1215,6 +1215,10 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(237, "workorder_rating_perm_seed", migrations.Migrate237WorkOrderRatingPermSeed); err != nil {
 			applogger.Errorf("工单评价权限 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
+		// Phase 144：同步漂移告警 C 型菜单 + 4 个 F 型权限 + 9 行 sys_config seed。
+		if err := d.runAndRecord(238, "ad_drift_alert_menu_perm_seed", migrations.Migrate238ADDriftAlert); err != nil {
+			applogger.Errorf("同步漂移告警菜单/权限/配置 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1351,6 +1355,11 @@ func (d *Database) AutoMigrate() error {
 		// FIX-06：工单评价创建权限菜单种子（与上方 PG 分支对称）。
 		if err := d.runAndRecord(237, "workorder_rating_perm_seed", migrations.Migrate237WorkOrderRatingPermSeed); err != nil {
 			applogger.Errorf("工单评价权限 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// Phase 144：同步漂移告警 C 型菜单 + 4 个 F 型权限 + 9 行 sys_config seed
+		//（与上方 PG 分支对称）。
+		if err := d.runAndRecord(238, "ad_drift_alert_menu_perm_seed", migrations.Migrate238ADDriftAlert); err != nil {
+			applogger.Errorf("同步漂移告警菜单/权限/配置 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)

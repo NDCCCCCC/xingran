@@ -416,14 +416,20 @@ func TestDdv7906_DiscoveryCRUD(t *testing.T) {
 		require.Error(t, err, "the present task must still be deleted")
 	})
 
-	t.Run("import_and_results_persisted", func(t *testing.T) {
+	// Phase 142 / DISC-01：stub 已替换为真实导入，deviceIDs 被忽略、恒全量导入
+	// 结果行。空结果时 (0, nil)；任务不存在保持既有错误。真实写入分支的逐项断言
+	// 见新增的 device_discovery_service_import_test.go。
+	t.Run("import_ignores_deviceIDs_and_missing_task", func(t *testing.T) {
 		n, err := svc.ImportDiscoveredDevices(ctx, taskIDs[2], []string{"d1", "d2", "d3"}, "ddv7906")
 		require.NoError(t, err)
-		assert.Equal(t, 3, n, "stub implementation echoes the requested device count")
+		assert.Equal(t, 0, n, "deviceIDs 被忽略；任务尚未执行 → 无明细 → 导入 0 条")
 
 		_, err = svc.ImportDiscoveredDevices(ctx, "no-such-task", []string{"d1"}, "ddv7906")
 		require.Error(t, err)
+		assert.Contains(t, err.Error(), "发现任务不存在")
+	})
 
+	t.Run("results_persisted", func(t *testing.T) {
 		// Phase 137 / FIX-07: 未执行过的任务没有明细，返回空列表（不再恒空 stub）。
 		devices, err := svc.GetDiscoveryResults(ctx, taskIDs[2])
 		require.NoError(t, err)

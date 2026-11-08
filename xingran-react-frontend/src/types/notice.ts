@@ -203,7 +203,8 @@ export type WebSocketMessageType =
   | "rpa_completed"
   | "rpa_failed"
   | "port_write_progress" // v1.51 Phase 122 PORTW-03
-  | "port_write_completed"; // v1.51 Phase 122 PORTW-03
+  | "port_write_completed" // v1.51 Phase 122 PORTW-03
+  | "ad_sync_drift_alert"; // Phase 144 ALRT-03: AD 同步漂移告警
 
 /**
  * 批量写逐端口实时进度事件（v1.51 Phase 122, 契约 ece40502）
@@ -240,6 +241,39 @@ export interface PortWriteCompletedEvent {
   summary: string;
   message: string;
   timestamp: string;
+}
+
+/**
+ * AD 同步漂移告警事件（Phase 144 ALRT-03）
+ *
+ * 后端 `websocket.NoticeMessage{Type:"ad_sync_drift_alert"}` 经全局唯一
+ * `/system/ws/notices` 连接推送，业务 payload JSON 内嵌在 `content` 字段。
+ * 本接口是前端 `onADDriftAlert` 监听器回调的入参形状。
+ *
+ * 注意：字段与后端 `emit()` 构造的业务 payload 对齐；解析失败时 store 仅
+ * console.warn 并跳过派发（不抛错、不阻断其它消息分流）。
+ */
+export interface ADSyncDriftAlertEvent {
+  /** 事件类型，固定为 ad_sync_drift_alert */
+  type: "ad_sync_drift_alert";
+  /** 关联 sys_notice 主键 */
+  noticeId?: string;
+  /** 当前 AD 成员数 */
+  memberCount?: number;
+  /** 当前去重组数 */
+  distinctGroups?: number;
+  /** 基线（上一轮快照） */
+  baseline?: number;
+  /** 与本轮相比的漂移量（按组/成员） */
+  deltas?: Record<string, number>;
+  /** 触发阈值 */
+  tolerance?: number;
+  /** 是否处于节流窗口内 */
+  throttled?: boolean;
+  /** 事件时间戳（毫秒或 ISO 字符串，以后端为准） */
+  timestamp?: number | string;
+  /** 告警标题（WS 消息外层 Title 透传，可选） */
+  title?: string;
 }
 
 /**

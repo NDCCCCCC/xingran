@@ -3,10 +3,10 @@
   "sourceOfTruth": "internal/api/** route registration source (rescan), not tmp_routes.json",
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
-    "mounts": 211,
-    "routes": 708,
-    "writeRoutes": 314,
-    "deferredWriteRoutes": 139
+    "mounts": 214,
+    "routes": 713,
+    "writeRoutes": 315,
+    "deferredWriteRoutes": 138
   },
   "routes": [
     {
@@ -2462,7 +2462,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 227
+      "line": 232
     },
     {
       "method": "POST",
@@ -2480,7 +2480,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 216
+      "line": 221
     },
     {
       "method": "POST",
@@ -2495,7 +2495,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 232
+      "line": 237
     },
     {
       "method": "POST",
@@ -2510,7 +2510,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 247
+      "line": 252
     },
     {
       "method": "POST",
@@ -2525,7 +2525,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 228
+      "line": 233
     },
     {
       "method": "POST",
@@ -2540,7 +2540,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 233
+      "line": 238
     },
     {
       "method": "POST",
@@ -2558,7 +2558,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 215
+      "line": 220
     },
     {
       "method": "POST",
@@ -2573,7 +2573,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 230
+      "line": 235
     },
     {
       "method": "POST",
@@ -2588,7 +2588,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 235
+      "line": 240
     },
     {
       "method": "GET",
@@ -2606,7 +2606,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 222
+      "line": 227
     },
     {
       "method": "POST",
@@ -2624,7 +2624,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 214
+      "line": 219
     },
     {
       "method": "POST",
@@ -2642,7 +2642,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 219
+      "line": 224
     },
     {
       "method": "POST",
@@ -2660,7 +2660,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 218
+      "line": 223
     },
     {
       "method": "GET",
@@ -2678,7 +2678,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 220
+      "line": 225
     },
     {
       "method": "GET",
@@ -2696,7 +2696,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 221
+      "line": 226
     },
     {
       "method": "POST",
@@ -2709,7 +2709,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 299
+      "line": 304
     },
     {
       "method": "POST",
@@ -2725,7 +2725,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 172
+      "line": 177
     },
     {
       "method": "POST",
@@ -2741,7 +2741,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 173
+      "line": 178
     },
     {
       "method": "POST",
@@ -2756,7 +2756,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 178
+      "line": 183
     },
     {
       "method": "POST",
@@ -2771,7 +2771,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 181
+      "line": 186
     },
     {
       "method": "POST",
@@ -2787,7 +2787,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 170
+      "line": 175
     },
     {
       "method": "POST",
@@ -2802,7 +2802,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 179
+      "line": 184
     },
     {
       "method": "POST",
@@ -2818,7 +2818,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 171
+      "line": 176
     },
     {
       "method": "POST",
@@ -2833,7 +2833,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 122
+      "line": 127
     },
     {
       "method": "POST",
@@ -2851,7 +2851,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 116
+      "line": 121
     },
     {
       "method": "POST",
@@ -2866,7 +2866,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 127
+      "line": 132
     },
     {
       "method": "POST",
@@ -2884,7 +2884,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 117
+      "line": 122
     },
     {
       "method": "POST",
@@ -2899,7 +2899,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 125
+      "line": 130
     },
     {
       "method": "POST",
@@ -2914,7 +2914,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 124
+      "line": 129
     },
     {
       "method": "POST",
@@ -2929,7 +2929,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 128
+      "line": 133
     },
     {
       "method": "POST",
@@ -2944,7 +2944,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 130
+      "line": 135
     },
     {
       "method": "POST",
@@ -2962,7 +2962,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 114
+      "line": 119
     },
     {
       "method": "POST",
@@ -2980,7 +2980,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 115
+      "line": 120
     },
     {
       "method": "POST",
@@ -2995,7 +2995,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 94
+      "line": 99
     },
     {
       "method": "POST",
@@ -3013,7 +3013,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 89
+      "line": 94
     },
     {
       "method": "POST",
@@ -3028,7 +3028,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 99
+      "line": 104
     },
     {
       "method": "POST",
@@ -3043,7 +3043,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 97
+      "line": 102
     },
     {
       "method": "POST",
@@ -3058,7 +3058,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 100
+      "line": 105
     },
     {
       "method": "POST",
@@ -3076,7 +3076,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 88
+      "line": 93
     },
     {
       "method": "POST",
@@ -3091,7 +3091,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 102
+      "line": 107
     },
     {
       "method": "POST",
@@ -3109,7 +3109,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 86
+      "line": 91
     },
     {
       "method": "POST",
@@ -3124,7 +3124,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 95
+      "line": 100
     },
     {
       "method": "POST",
@@ -3142,7 +3142,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 87
+      "line": 92
     },
     {
       "method": "POST",
@@ -3158,7 +3158,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 259
+      "line": 264
     },
     {
       "method": "POST",
@@ -3174,7 +3174,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 261
+      "line": 266
     },
     {
       "method": "POST",
@@ -3189,7 +3189,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 270
+      "line": 275
     },
     {
       "method": "POST",
@@ -3204,7 +3204,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 267
+      "line": 272
     },
     {
       "method": "POST",
@@ -3219,7 +3219,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 268
+      "line": 273
     },
     {
       "method": "POST",
@@ -3235,7 +3235,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 260
+      "line": 265
     },
     {
       "method": "POST",
@@ -3250,7 +3250,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 271
+      "line": 276
     },
     {
       "method": "POST",
@@ -3265,7 +3265,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 266
+      "line": 271
     },
     {
       "method": "POST",
@@ -3280,7 +3280,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 273
+      "line": 278
     },
     {
       "method": "POST",
@@ -3296,7 +3296,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 257
+      "line": 262
     },
     {
       "method": "POST",
@@ -3312,7 +3312,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 258
+      "line": 263
     },
     {
       "method": "POST",
@@ -3327,7 +3327,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 192
+      "line": 197
     },
     {
       "method": "POST",
@@ -3342,7 +3342,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 193
+      "line": 198
     },
     {
       "method": "POST",
@@ -3357,7 +3357,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 200
+      "line": 205
     },
     {
       "method": "POST",
@@ -3372,7 +3372,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 201
+      "line": 206
     },
     {
       "method": "POST",
@@ -3387,7 +3387,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 202
+      "line": 207
     },
     {
       "method": "POST",
@@ -3402,7 +3402,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 190
+      "line": 195
     },
     {
       "method": "POST",
@@ -3417,7 +3417,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 191
+      "line": 196
     },
     {
       "method": "POST",
@@ -3432,7 +3432,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 199
+      "line": 204
     },
     {
       "method": "POST",
@@ -3827,7 +3827,7 @@
         "network:port:query",
         "network:port:write"
       ],
-      "registeredDeadTable": false,
+      "registeredDeadTable": true,
       "file": "internal/api/v1/network/port_write_router.go",
       "line": 76
     },
@@ -3956,7 +3956,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 150
+      "line": 155
     },
     {
       "method": "POST",
@@ -3974,7 +3974,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 144
+      "line": 149
     },
     {
       "method": "POST",
@@ -3989,7 +3989,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 151
+      "line": 156
     },
     {
       "method": "POST",
@@ -4004,7 +4004,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 155
+      "line": 160
     },
     {
       "method": "POST",
@@ -4019,7 +4019,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 158
+      "line": 163
     },
     {
       "method": "POST",
@@ -4034,7 +4034,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 153
+      "line": 158
     },
     {
       "method": "POST",
@@ -4052,7 +4052,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 145
+      "line": 150
     },
     {
       "method": "POST",
@@ -4067,7 +4067,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 156
+      "line": 161
     },
     {
       "method": "POST",
@@ -4082,7 +4082,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 160
+      "line": 165
     },
     {
       "method": "POST",
@@ -4100,7 +4100,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 142
+      "line": 147
     },
     {
       "method": "POST",
@@ -4118,7 +4118,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/network_router.go",
-      "line": 143
+      "line": 148
     },
     {
       "method": "POST",
@@ -4211,7 +4211,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 995
+      "line": 1079
     },
     {
       "method": "POST",
@@ -4229,7 +4229,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 980
+      "line": 1064
     },
     {
       "method": "POST",
@@ -4244,7 +4244,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 999
+      "line": 1083
     },
     {
       "method": "POST",
@@ -4259,7 +4259,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 997
+      "line": 1081
     },
     {
       "method": "POST",
@@ -4274,7 +4274,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1000
+      "line": 1084
     },
     {
       "method": "GET",
@@ -4292,7 +4292,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 975
+      "line": 1059
     },
     {
       "method": "POST",
@@ -4310,7 +4310,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 982
+      "line": 1066
     },
     {
       "method": "POST",
@@ -4328,7 +4328,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 981
+      "line": 1065
     },
     {
       "method": "POST",
@@ -4376,7 +4376,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 977
+      "line": 1061
     },
     {
       "method": "GET",
@@ -4394,7 +4394,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 969
+      "line": 1053
     },
     {
       "method": "POST",
@@ -4412,7 +4412,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 979
+      "line": 1063
     },
     {
       "method": "POST",
@@ -4430,7 +4430,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 983
+      "line": 1067
     },
     {
       "method": "GET",
@@ -4463,7 +4463,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 732
+      "line": 816
     },
     {
       "method": "POST",
@@ -4482,7 +4482,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 717
+      "line": 801
     },
     {
       "method": "POST",
@@ -4497,7 +4497,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 736
+      "line": 820
     },
     {
       "method": "POST",
@@ -4512,7 +4512,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 734
+      "line": 818
     },
     {
       "method": "POST",
@@ -4527,7 +4527,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 737
+      "line": 821
     },
     {
       "method": "POST",
@@ -4546,7 +4546,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 716
+      "line": 800
     },
     {
       "method": "POST",
@@ -4580,7 +4580,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 719
+      "line": 803
     },
     {
       "method": "POST",
@@ -4614,7 +4614,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 714
+      "line": 798
     },
     {
       "method": "POST",
@@ -4633,7 +4633,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 715
+      "line": 799
     },
     {
       "method": "GET",
@@ -4667,7 +4667,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1127
+      "line": 1211
     },
     {
       "method": "POST",
@@ -4685,7 +4685,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1115
+      "line": 1199
     },
     {
       "method": "POST",
@@ -4700,7 +4700,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1131
+      "line": 1215
     },
     {
       "method": "POST",
@@ -4715,7 +4715,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1129
+      "line": 1213
     },
     {
       "method": "POST",
@@ -4730,7 +4730,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1132
+      "line": 1216
     },
     {
       "method": "POST",
@@ -4748,7 +4748,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1114
+      "line": 1198
     },
     {
       "method": "POST",
@@ -4796,7 +4796,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1112
+      "line": 1196
     },
     {
       "method": "POST",
@@ -4814,7 +4814,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1113
+      "line": 1197
     },
     {
       "method": "GET",
@@ -4847,7 +4847,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1247
+      "line": 1331
     },
     {
       "method": "POST",
@@ -4869,7 +4869,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1238
+      "line": 1322
     },
     {
       "method": "POST",
@@ -4884,7 +4884,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1251
+      "line": 1335
     },
     {
       "method": "POST",
@@ -4899,7 +4899,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1249
+      "line": 1333
     },
     {
       "method": "POST",
@@ -4914,7 +4914,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1252
+      "line": 1336
     },
     {
       "method": "POST",
@@ -4936,7 +4936,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1237
+      "line": 1321
     },
     {
       "method": "POST",
@@ -4951,7 +4951,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 787
+      "line": 871
     },
     {
       "method": "POST",
@@ -4966,7 +4966,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1279
+      "line": 1363
     },
     {
       "method": "POST",
@@ -4984,7 +4984,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1270
+      "line": 1354
     },
     {
       "method": "POST",
@@ -4999,7 +4999,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1281
+      "line": 1365
     },
     {
       "method": "POST",
@@ -5014,7 +5014,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1280
+      "line": 1364
     },
     {
       "method": "POST",
@@ -5029,7 +5029,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1282
+      "line": 1366
     },
     {
       "method": "POST",
@@ -5047,7 +5047,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1269
+      "line": 1353
     },
     {
       "method": "POST",
@@ -5066,7 +5066,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 775
+      "line": 859
     },
     {
       "method": "POST",
@@ -5081,7 +5081,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 791
+      "line": 875
     },
     {
       "method": "POST",
@@ -5096,7 +5096,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 789
+      "line": 873
     },
     {
       "method": "POST",
@@ -5111,7 +5111,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 792
+      "line": 876
     },
     {
       "method": "POST",
@@ -5130,7 +5130,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 774
+      "line": 858
     },
     {
       "method": "POST",
@@ -5179,7 +5179,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 771
+      "line": 855
     },
     {
       "method": "POST",
@@ -5198,7 +5198,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 772
+      "line": 856
     },
     {
       "method": "GET",
@@ -5236,7 +5236,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 773
+      "line": 857
     },
     {
       "method": "POST",
@@ -5251,7 +5251,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1036
+      "line": 1120
     },
     {
       "method": "POST",
@@ -5269,7 +5269,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1024
+      "line": 1108
     },
     {
       "method": "POST",
@@ -5284,7 +5284,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1040
+      "line": 1124
     },
     {
       "method": "POST",
@@ -5299,7 +5299,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1038
+      "line": 1122
     },
     {
       "method": "POST",
@@ -5314,7 +5314,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1041
+      "line": 1125
     },
     {
       "method": "POST",
@@ -5332,7 +5332,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1023
+      "line": 1107
     },
     {
       "method": "POST",
@@ -5380,7 +5380,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1021
+      "line": 1105
     },
     {
       "method": "POST",
@@ -5398,7 +5398,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1022
+      "line": 1106
     },
     {
       "method": "GET",
@@ -5431,7 +5431,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 905
+      "line": 989
     },
     {
       "method": "POST",
@@ -5446,7 +5446,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 909
+      "line": 993
     },
     {
       "method": "POST",
@@ -5461,7 +5461,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 907
+      "line": 991
     },
     {
       "method": "POST",
@@ -5479,7 +5479,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 896
+      "line": 980
     },
     {
       "method": "POST",
@@ -5494,7 +5494,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1168
+      "line": 1252
     },
     {
       "method": "POST",
@@ -5512,7 +5512,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1156
+      "line": 1240
     },
     {
       "method": "POST",
@@ -5527,7 +5527,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1172
+      "line": 1256
     },
     {
       "method": "POST",
@@ -5542,7 +5542,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1170
+      "line": 1254
     },
     {
       "method": "POST",
@@ -5557,7 +5557,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1173
+      "line": 1257
     },
     {
       "method": "POST",
@@ -5575,7 +5575,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1155
+      "line": 1239
     },
     {
       "method": "POST",
@@ -5623,7 +5623,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1153
+      "line": 1237
     },
     {
       "method": "POST",
@@ -5641,7 +5641,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1154
+      "line": 1238
     },
     {
       "method": "GET",
@@ -5778,7 +5778,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1077
+      "line": 1161
     },
     {
       "method": "POST",
@@ -5796,7 +5796,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1065
+      "line": 1149
     },
     {
       "method": "POST",
@@ -5811,7 +5811,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1081
+      "line": 1165
     },
     {
       "method": "POST",
@@ -5826,7 +5826,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1079
+      "line": 1163
     },
     {
       "method": "POST",
@@ -5841,7 +5841,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1082
+      "line": 1166
     },
     {
       "method": "POST",
@@ -5859,7 +5859,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1064
+      "line": 1148
     },
     {
       "method": "POST",
@@ -5907,7 +5907,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1062
+      "line": 1146
     },
     {
       "method": "POST",
@@ -5925,7 +5925,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1063
+      "line": 1147
     },
     {
       "method": "GET",
@@ -5958,7 +5958,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1211
+      "line": 1295
     },
     {
       "method": "POST",
@@ -5980,7 +5980,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1202
+      "line": 1286
     },
     {
       "method": "POST",
@@ -5995,7 +5995,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1215
+      "line": 1299
     },
     {
       "method": "POST",
@@ -6010,7 +6010,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1213
+      "line": 1297
     },
     {
       "method": "POST",
@@ -6025,7 +6025,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1216
+      "line": 1300
     },
     {
       "method": "POST",
@@ -6047,7 +6047,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1201
+      "line": 1285
     },
     {
       "method": "POST",
@@ -6062,7 +6062,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 849
+      "line": 933
     },
     {
       "method": "POST",
@@ -6079,7 +6079,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 925
+      "line": 1009
     },
     {
       "method": "POST",
@@ -6096,7 +6096,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 926
+      "line": 1010
     },
     {
       "method": "POST",
@@ -6113,7 +6113,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 927
+      "line": 1011
     },
     {
       "method": "POST",
@@ -6128,7 +6128,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 952
+      "line": 1036
     },
     {
       "method": "POST",
@@ -6145,7 +6145,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 929
+      "line": 1013
     },
     {
       "method": "POST",
@@ -6162,7 +6162,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 932
+      "line": 1016
     },
     {
       "method": "POST",
@@ -6177,7 +6177,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 949
+      "line": 1033
     },
     {
       "method": "POST",
@@ -6192,7 +6192,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 950
+      "line": 1034
     },
     {
       "method": "POST",
@@ -6207,7 +6207,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 948
+      "line": 1032
     },
     {
       "method": "POST",
@@ -6222,7 +6222,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 944
+      "line": 1028
     },
     {
       "method": "POST",
@@ -6237,7 +6237,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 946
+      "line": 1030
     },
     {
       "method": "POST",
@@ -6252,7 +6252,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 947
+      "line": 1031
     },
     {
       "method": "GET",
@@ -6271,7 +6271,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 835
+      "line": 919
     },
     {
       "method": "POST",
@@ -6290,7 +6290,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 831
+      "line": 915
     },
     {
       "method": "POST",
@@ -6305,7 +6305,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 854
+      "line": 938
     },
     {
       "method": "POST",
@@ -6320,7 +6320,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 851
+      "line": 935
     },
     {
       "method": "POST",
@@ -6335,7 +6335,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 862
+      "line": 946
     },
     {
       "method": "POST",
@@ -6350,7 +6350,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 855
+      "line": 939
     },
     {
       "method": "POST",
@@ -6369,7 +6369,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 830
+      "line": 914
     },
     {
       "method": "GET",
@@ -6388,7 +6388,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 840
+      "line": 924
     },
     {
       "method": "POST",
@@ -6407,7 +6407,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 827
+      "line": 911
     },
     {
       "method": "POST",
@@ -6426,7 +6426,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 829
+      "line": 913
     },
     {
       "method": "POST",
@@ -6475,7 +6475,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 826
+      "line": 910
     },
     {
       "method": "POST",
@@ -6490,7 +6490,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 852
+      "line": 936
     },
     {
       "method": "POST",
@@ -6509,7 +6509,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 828
+      "line": 912
     },
     {
       "method": "GET",
@@ -7244,6 +7244,84 @@
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 83
+    },
+    {
+      "method": "POST",
+      "path": "/system/ad-drift-alert/config",
+      "mountGroup": "read",
+      "setup": "SetupAdDriftAlertRouter",
+      "isWrite": false,
+      "handler": "GetConfig",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "system:adDriftAlert:list",
+        "system:adDriftAlert:config"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/ad_drift_alert_router.go",
+      "line": 31
+    },
+    {
+      "method": "POST",
+      "path": "/system/ad-drift-alert/config/update",
+      "mountGroup": "writeConfig",
+      "setup": "SetupAdDriftAlertRouter",
+      "isWrite": true,
+      "handler": "UpdateConfig",
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "system:adDriftAlert:edit"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/ad_drift_alert_router.go",
+      "line": 40
+    },
+    {
+      "method": "POST",
+      "path": "/system/ad-drift-alert/logs",
+      "mountGroup": "read",
+      "setup": "SetupAdDriftAlertRouter",
+      "isWrite": false,
+      "handler": "ListLogs",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "system:adDriftAlert:list",
+        "system:adDriftAlert:config"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/ad_drift_alert_router.go",
+      "line": 30
+    },
+    {
+      "method": "POST",
+      "path": "/system/ad-drift-alert/status",
+      "mountGroup": "read",
+      "setup": "SetupAdDriftAlertRouter",
+      "isWrite": false,
+      "handler": "GetStatus",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "system:adDriftAlert:list",
+        "system:adDriftAlert:config"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/ad_drift_alert_router.go",
+      "line": 29
+    },
+    {
+      "method": "POST",
+      "path": "/system/ad-drift-alert/trigger",
+      "mountGroup": "writeTrigger",
+      "setup": "SetupAdDriftAlertRouter",
+      "isWrite": false,
+      "handler": "Trigger",
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "system:adDriftAlert:trigger"
+      ],
+      "registeredDeadTable": true,
+      "file": "internal/api/v1/system/ad_drift_alert_router.go",
+      "line": 49
     },
     {
       "method": "POST",
@@ -11351,11 +11429,6 @@
         "path": "/network/ports/export",
         "method": "POST",
         "handler": "ExportPorts"
-      },
-      {
-        "path": "/network/ports/write/physical",
-        "method": "POST",
-        "handler": "PhysicalWrite"
       },
       {
         "path": "/network/topology/rules",

@@ -398,3 +398,32 @@ func TestNhb8005_BroadcastToAll_NoClients(t *testing.T) {
 		hub.BroadcastToUsers([]string{"nobody"}, nhb8005SampleNotice())
 	})
 }
+
+// TestNhb8005_ADSyncDriftAlert_BroadcastToAll Phase 144：漂移告警全员事件
+// 两客户端各收 1 帧，Type/Content/Priority/Timestamp 字段透传。
+func TestNhb8005_ADSyncDriftAlert_BroadcastToAll(t *testing.T) {
+	hub, clients, sinks := newHubWithClients8005(t, 2)
+	_ = clients
+
+	payload := `{"event":"ad_sync_drift_alert","memberCount":15,"distinctGroups":3,"noticeId":"n-144"}`
+	msg := NoticeMessage{
+		Type:      MessageTypeADSyncDriftAlert,
+		Title:     "AD 同步漂移告警",
+		Content:   payload,
+		Priority:  2,
+		Timestamp: 1700000001,
+	}
+	hub.BroadcastToAll(msg)
+
+	for i, sink := range sinks {
+		assert.Eventually(t, func() bool { return len(sink.Frames()) == 1 },
+			2*time.Second, 10*time.Millisecond, "客户端 %d 应收到 1 帧漂移告警事件", i)
+		var got NoticeMessage
+		require.NoError(t, json.Unmarshal([]byte(sink.Frames()[0]), &got))
+		assert.Equal(t, MessageTypeADSyncDriftAlert, got.Type)
+		assert.Equal(t, msg.Title, got.Title)
+		assert.Equal(t, payload, got.Content)
+		assert.Equal(t, msg.Priority, got.Priority)
+		assert.Equal(t, msg.Timestamp, got.Timestamp)
+	}
+}

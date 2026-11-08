@@ -506,6 +506,8 @@ func (s *Scheduler) GetJobCount() (total int, running int) {
 // 定义为函数类型以避免循环依赖
 type NoticeHub interface {
 	BroadcastToUsers(userIDs []string, message interface{})
+	// Phase 144：AD 同步漂移告警等全员事件走 BroadcastToAll。
+	BroadcastToAll(message interface{})
 }
 
 // GlobalNoticeHub 全局通知中心

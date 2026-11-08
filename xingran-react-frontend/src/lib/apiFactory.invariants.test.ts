@@ -68,9 +68,11 @@ const HARD_ALLOWED: Record<string, number> = {
   "vdiApi.ts": 0,
 };
 
-/** 16 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试 */
+/** 17 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试
+ *  v1.54 Phase 144：新增 adDriftAlertApi.ts（5 个 POST 端点，非 CRUD 形状，warning 档登记 0）→ 16→17 */
 const EXPECTED_FILES = [
   "adDomainApi.ts",
+  "adDriftAlertApi.ts",
   "api/macHeatmapApi.ts",
   "api/networkApi.ts",
   "assetApi.ts",
@@ -113,6 +115,7 @@ const WARNING_WHITELIST: Record<string, number> = {
   // —— Phase 100 D-100-8 递归扫描新纳管的 src/lib/api/ 子目录（0 也要显式登记）——
   "api/networkApi": 0, // post 类 write* 包装全为 plain-literal URL 不含 CRUD 后缀;exportMACHistory/batchExport 为薄壳调用 download.ts,不满足「单 return 直调传输函数」口径（D-100-6 收敛后归 download 域）
   "api/macHeatmapApi": 0, // 单函数 plain-literal URL,无 CRUD 后缀模板形状
+  adDriftAlertApi: 0, // v1.54 Phase 144 ALRT-03：5 个 POST /system/ad-drift-alert/* 端点，plain-literal URL 无 CRUD 后缀，非 createResourceApi 形状
 };
 
 interface TemplateHit {
@@ -246,7 +249,7 @@ describe("apiFactory invariants — src/lib/*Api.ts 手写 CRUD 模板扫描（D
     files.map((f) => [f, scanFile(f, readFileSync(join(LIB_DIR, f), "utf-8"))])
   );
 
-  it("扫描范围恰为 16 个业务 *Api.ts（3 对象形态 + 11 扁平/KEEP + 2 子目录），不越 src/lib 半步", () => {
+  it("扫描范围恰为 17 个业务 *Api.ts（3 对象形态 + 12 扁平/KEEP + 2 子目录），不越 src/lib 半步", () => {
     expect(files).toEqual(EXPECTED_FILES);
   });
 

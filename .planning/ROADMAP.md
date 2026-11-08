@@ -2,7 +2,7 @@
 
 ## Current Milestone: v1.54 真实代码缺口清偿 (Code Gap Clearance)
 
-**Status:** INITIATED 2026-11-08 · ROADMAP CREATED 2026-11-08 | Phases **142-144**（编号延续 v1.53 结束于 141，不重置）| **7 REQ / 3 Phase / 100% 映射**（无孤儿无重复）| **W1 三者零依赖并行**（按模块隔离）
+**Status:** ✅ SHIPPED 2026-11-09 · INITIATED/ROADMAP CREATED 2026-11-08 | Phases **142-144**（编号延续 v1.53 结束于 141，不重置）| **7 REQ / 3 Phase / 100% 映射 / 100% 交付** | **W1 四 executor 零依赖并行 + Lead 集成**（按模块隔离）| 全量回归闸门全绿（go build / go test ./... / tsc / lint:ci ALL PASS / 全量 vitest / check-permission-codes 双向零漂移 / check-route-registry）
 
 **Goal:** 清偿 `.planning/STATE.md ## Deferred Items` 中 v1.53 收档时显式披露的 4 项真实代码缺口（发现设备真实导入 / 同步漂移告警通道 / 端口写批量物理参数 / 型号级能力矩阵），使「代码可修」残余真正落地为可运行、可测试的产品能力；不触碰 LOCKED 残余、不伪造人工验证闭环。
 
@@ -12,9 +12,9 @@
 
 ### Phases
 
-- [ ] Phase 142: 发现设备真实导入 (DISC-01/02) — stub → 真实写 `sys_network_device`
-- [ ] Phase 143: 端口写物理参数收口 (PORT-01/02) — 批量物理参数路径 + 型号级 `vendorCapabilities` 规则
-- [ ] Phase 144: 同步漂移告警通道收口 (ALRT-01/02/03) — 前端告警页 / WS 广播 / 企微钉钉 webhook
+- [x] Phase 142: 发现设备真实导入 (DISC-01/02) — stub → 真实写 `sys_network_device` — **completed 2026-11-09**（`142-SUMMARY.md`）
+- [x] Phase 143: 端口写物理参数收口 (PORT-01/02) — 批量物理参数路径 + 型号级 `vendorCapabilities` 规则 — **completed 2026-11-09**（`143-SUMMARY.md`）
+- [x] Phase 144: 同步漂移告警通道收口 (ALRT-01/02/03) — 前端告警页 / WS 广播 / 企微钉钉 webhook — **completed 2026-11-09**（`144-01-backend-SUMMARY.md` + `144-02-frontend-SUMMARY.md`；本 phase 拆为「后端」与「前端」两个并行 executor，文件面互斥）
 
 **依赖拓扑:** `142 ∥ 143 ∥ 144`（W1 单波、三者零依赖并行，按模块隔离）；无 W2、无收口 phase。
 
@@ -89,6 +89,10 @@
 | FIX-04 真机逐型号取证 | 三厂商物理参数逐型号真机结论 | 待现场取证；PORT-02 只做可代码化的规则框架，不替代真机结论 |
 
 > 另：79 条人工验证跟踪项（0 勾选）、6 项 LOCKED 残余、FUTURE-01（P1-5 侧信道告警通道合并评估）继续挂账，见 `.planning/REQUIREMENTS.md` 与 `.planning/notes/261108-*`。
+>
+> **v1.54 交付后新增登记（2026-11-09，非阻断）**：① 告警「标记已读」未实现（后端 5 端点无该契约、`logs` 来自 `sys_oper_log` 无已读字段）② 企微/钉钉专用 markdown + 加签（路线 B）未做，当前只走路线 A 通用 Webhook ③ `sys_object_id` 已采集未落库、型号 key 仅 `NetworkDevice.Model` ④ 批量物理参数无自动回滚（预览/审计已显式警示）⑤ 发现导入链路顺带隐患（`user_id.(string)` 硬断言 / `persistDiscoveryResults` 未开事务 / `ExecuteDiscovery` 未检查 Save Error）⑥ e2e 归位 ⑦ `RequiresInterfaceView` 与型号画像 `RequiresView` 联动点。逐项见各 phase `*-SUMMARY.md` 与 `STATE.md ## Deferred Items` 的 v1.54 行。
+>
+> **交付证据（4 份 SUMMARY）**：`.planning/phases/142-disc-01-02/142-SUMMARY.md`、`.planning/phases/143-port-01-02/143-SUMMARY.md`、`.planning/phases/144-alrt-01-02-03/144-01-backend-SUMMARY.md`、`.planning/phases/144-alrt-01-02-03/144-02-frontend-SUMMARY.md`。架构裁定 `.planning/notes/261108-v154-architecture-decisions.md`；集成清单 `.planning/notes/261108-v154-integration-checklist.md`。
 
 ---
 

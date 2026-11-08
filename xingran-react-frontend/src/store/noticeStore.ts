@@ -4,6 +4,7 @@ import type {
   WebSocketNoticeMessage,
   PortWriteProgressEvent,
   PortWriteCompletedEvent,
+  ADSyncDriftAlertEvent,
 } from "@/types/notice";
 import type { RPAProgressMessage } from "@/types/rpa";
 
@@ -20,6 +21,29 @@ export type PortWriteEventCallback = (
   event: PortWriteProgressEvent | PortWriteCompletedEvent
 ) => void;
 const portWriteListeners = new Set<PortWriteEventCallback>();
+
+// Phase 144 (ALRT-03): AD 同步漂移告警回调。
+// 同 RPA / portWrite 模式：模块级 Set，不进入 Zustand 响应式 state。
+// 全局唯一 WS 连接（NotificationBell.tsx）把消息转 handleWsMessage 后派发到这里，
+// 页面经 onADDriftAlert 订阅；**提示（message.warning）放在页面订阅回调里**，
+// store 只负责纯派发（避免静态 message 无法消费 ConfigProvider context 的告警）。
+export type ADDriftAlertCallback = (event: ADSyncDriftAlertEvent) => void;
+const driftAlertListeners = new Set<ADDriftAlertCallback>();
+
+/**
+ * AD 同步漂移告警订阅（具名导出，页面直接 `import { onADDriftAlert }`）。
+ * 返回退订函数；与 store action `useNoticeStore.getState().onADDriftAlert`
+ * 共用同一模块级 Set（两种调用方式等价）。
+ *
+ * 不新建 WebSocket：消息由全局唯一 /system/ws/notices 连接转入
+ * `handleWsMessage` 后派发到这里。
+ */
+export function onADDriftAlert(callback: ADDriftAlertCallback): () => void {
+  driftAlertListeners.add(callback);
+  return () => {
+    driftAlertListeners.delete(callback);
+  };
+}
 
 interface NoticeState {
   // 未读数量
@@ -55,6 +79,8 @@ interface NoticeActions {
   onRPAProgress: (callback: (message: RPAProgressMessage) => void) => () => void;
   // v1.51 Phase 122: 批量写实时进度事件订阅
   onPortWriteProgress: (callback: PortWriteEventCallback) => () => void;
+  // Phase 144 ALRT-03: AD 同步漂移告警订阅（返回退订函数）
+  onADDriftAlert: (callback: ADDriftAlertCallback) => () => void;
   // 重置状态
   reset: () => void;
 }
@@ -196,6 +222,36 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
         console.error("[PortWrite Progress] Parse error:", error);
       }
     }
+
+    // Phase 144 (ALRT-03): AD 同步漂移告警分流。
+    // 复用全局唯一 /system/ws/notices 连接，不新建第二条 WebSocket。
+    // 业务 payload JSON 内嵌在 content；解析失败仅 warn 并静默跳过（不抛、不影响其它分流）。
+    if (message.type === "ad_sync_drift_alert") {
+      if (!message.content) {
+        console.warn("[ADDriftAlert] 忽略无 content 的漂移告警 WS 消息");
+        return;
+      }
+      let event: ADSyncDriftAlertEvent;
+      try {
+        event = JSON.parse(message.content) as ADSyncDriftAlertEvent;
+      } catch (error) {
+        console.warn("[ADDriftAlert] content 非法 JSON，忽略该消息", error);
+        return;
+      }
+      // 兜底：即便 content 是合法 JSON 但不是对象，也不派发脏数据
+      if (!event || typeof event !== "object") {
+        console.warn("[ADDriftAlert] content 不是对象，忽略该消息");
+        return;
+      }
+      // 派发给所有监听器；try/catch 隔离单个 listener 异常，避免一个订阅者崩掉全部分发
+      driftAlertListeners.forEach((callback) => {
+        try {
+          callback(event);
+        } catch (error) {
+          console.error("[ADDriftAlert] Callback error:", error);
+        }
+      });
+    }
   },
 
   // RPA 进度事件订阅 — 使用模块级 Set (P1-M4)
@@ -216,7 +272,12 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
     };
   },
 
-  // 重置状态
+  // Phase 144 (ALRT-03): AD 同步漂移告警事件订阅 — 同 RPA / portWrite 模式（模块级 Set）。
+  // 复用模块级具名导出 onADDriftAlert，保证两种调用方式共用同一 Set。
+  onADDriftAlert: (callback: ADDriftAlertCallback) => onADDriftAlert(callback),
+
+  // 重置状态。注意：模块级 listener Set 不属于 Zustand state，按 RPA / portWrite
+  // 既有约定 reset() 不清空它们（订阅生命周期由各页面 useEffect cleanup 负责）。
   reset: () => {
     set(initialState);
   },

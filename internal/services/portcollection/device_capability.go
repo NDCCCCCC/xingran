@@ -55,6 +55,14 @@ type capabilityEntry struct {
 	//   之前 Cisco 因为「矩阵里没有条目」而落到「默认放行」—— 那正是
 	//   **把推测当默认**（默认支持 ≠ 有证据支持）。
 	vendorUnsupported map[PortAction]string
+	// physical Phase 143 (PORT-02)：厂商级物理参数画像基线（速率/双工/MTU 值域
+	// + 命令形态 + 取证依据）。见 physical_capability.go。未配置时回退全局默认画像
+	// （FIX-04 现状三家交集，Evidence="" 表示未取证）。
+	physical *physicalProfile
+	// modelPhysical 型号级物理画像覆盖（按 NetworkDevice.Model 子串匹配）。
+	// 本里程碑不预置任何型号结论（真机逐型号取证列为 Known Gap）；由后续真机
+	// 取证后经 code review + *_test.go 锁定写入。
+	modelPhysical []modelPhysicalRule
 }
 
 // modelCapabilityRule 型号级能力覆盖。
@@ -126,6 +134,20 @@ var vendorCapabilities = map[models.DeviceVendor]capabilityEntry{
 			TrunkSetNative:  ciscoUnsupportedReason,
 			TrunkSetAllowed: ciscoUnsupportedReason,
 			TrunkSetHybrid:  ciscoUnsupportedReason,
+			// Phase 143 (PORT-02)：物理参数三动作渲染层未实现且无真机取证依据，
+			// 显式标 Unsupported，不再靠 ErrUnsupportedVendor 含糊兜底。
+			ActionSetSpeed:  physicalVendorUnsupportedReason,
+			ActionSetDuplex: physicalVendorUnsupportedReason,
+			ActionSetMTU:    physicalVendorUnsupportedReason,
+		},
+	},
+	// 迈普（Phase 143 裁定）：与 Cisco 同口径，物理参数渲染层未实现 + 无真机取证依据，
+	// 显式标 vendorUnsupported，不补模板。
+	models.VendorMaipu: {
+		vendorUnsupported: map[PortAction]string{
+			ActionSetSpeed:  physicalVendorUnsupportedReason,
+			ActionSetDuplex: physicalVendorUnsupportedReason,
+			ActionSetMTU:    physicalVendorUnsupportedReason,
 		},
 	},
 	// 锐捷 hybrid：2026-11-02 真机 `?` 帮助确认设备支持，此前渲染层未注册

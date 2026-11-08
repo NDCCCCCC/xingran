@@ -63,7 +63,12 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	commandHandler := NewCommandHandler(commandService, db).WithCore(core)
 	executionHandler := NewExecutionHandler(executionService).WithCore(core)
 	backupHandler := NewBackupHandler(backupService, restoreTaskSvc, db).WithCore(core)
-	discoveryHandler := NewDiscoveryHandler(discoveryService).WithCore(core)
+	// Phase 142 / DISC-02：导入成功后失效网络设备缓存（network_device:*），
+	// 复用已装配的 deviceService（networkServices.CacheService）方法值注入，
+	// 不给 DeviceDiscoveryService 增加 CacheProvider 依赖。
+	discoveryHandler := NewDiscoveryHandler(discoveryService).
+		WithCore(core).
+		WithDeviceCacheInvalidator(deviceService.InvalidateAllDeviceCache)
 	exportHandler := NewNetworkExportHandler(core)
 
 	// ==================== 网络设备路由 ====================

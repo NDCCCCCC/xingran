@@ -58,7 +58,12 @@ const pagesRoot = path.join(feRoot, "src", "pages");
 const exemptionsFile = path.join(scriptDir, "gating-exemptions.json");
 
 /** 口径断言：业务页面总数（漂移即 exit 1 —— 口径漂移必须重新裁决，不许悄悄改数字） */
-const EXPECTED_PAGE_COUNT = 77; // 2026-11-01 v1.51 lead 裁决：新增 port-audits 审计页（已接三态门控，未覆盖 0），口径 76→77
+// v1.54 裁决（2026-11-09，Lead）：Phase 144 ALRT-03 新增业务页
+//   `src/pages/system/ad-drift-alert/index.tsx`，页面总数 77 → 78。该页已自带
+//   三态门控（useActionPermission + PERMISSION_CODES.adDriftAlert.trigger /
+//   :edit），不需要新增豁免；恒等式以 EXPECTED_PAGE_COUNT=78 重新成立。
+//   原 v1.51 裁决保留：2026-11-01 新增 port-audits 审计页（76→77）。
+const EXPECTED_PAGE_COUNT = 78;
 /** 口径断言：N/A 豁免页数（增减须同批改本常量并在 86-STATE.md 说明理由） */
 const EXPECTED_EXEMPTION_COUNT = 51;
 /** 豁免分类白名单 */

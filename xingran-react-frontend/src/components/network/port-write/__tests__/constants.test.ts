@@ -16,6 +16,13 @@ import {
   REASON_MIN,
   REASON_MAX,
   DESCRIPTION_MAX,
+  CISCO_UNSUPPORTED_ACTIONS,
+  PHYSICAL_SPEED_OPTIONS,
+  PHYSICAL_DUPLEX_OPTIONS,
+  PHYSICAL_MTU_MIN,
+  PHYSICAL_MTU_MAX,
+  PHYSICAL_SPEED_MODE_AUTO,
+  PHYSICAL_EVIDENCE_LABEL,
 } from "../constants";
 
 describe("port-write constants self-consistency (Phase 53)", () => {
@@ -53,8 +60,8 @@ describe("port-write constants self-consistency (Phase 53)", () => {
     });
   });
 
-  describe("ACTION_TITLE — exactly 15 keys covering PortWriteAction union (5 + v1.20.1 2 + Phase 124 trunk 3 + Phase 125 portsec 5)", () => {
-    it("has exactly 15 keys: 10 既有 + portsec_enable/disable/max_mac/sticky/static_bind", () => {
+  describe("ACTION_TITLE — exactly 18 keys covering PortWriteAction union (5 + v1.20.1 2 + Phase 124 trunk 3 + Phase 125 portsec 5 + Phase 143 physical 3)", () => {
+    it("has exactly 18 keys: 15 既有 + set_speed/set_duplex/set_mtu", () => {
       const keys = Object.keys(ACTION_TITLE).sort();
       expect(keys).toEqual(
         [
@@ -73,6 +80,9 @@ describe("port-write constants self-consistency (Phase 53)", () => {
           "portsec_max_mac", // v1.51 Phase 125
           "portsec_sticky", // v1.51 Phase 125
           "portsec_static_bind", // v1.51 Phase 125
+          "set_speed", // v1.54 Phase 143 PORT-01/02
+          "set_duplex", // v1.54 Phase 143 PORT-01/02
+          "set_mtu", // v1.54 Phase 143 PORT-01/02
         ].sort()
       );
     });
@@ -111,6 +121,36 @@ describe("port-write constants self-consistency (Phase 53)", () => {
 
     it("REASON_MIN < REASON_MAX (range is non-empty)", () => {
       expect(REASON_MIN).toBeLessThan(REASON_MAX);
+    });
+  });
+
+  // ==================== Phase 143 物理参数常量 ====================
+  describe("Phase 143 physical constants (PORT-01/02)", () => {
+    it("ACTION_TITLE 三物理动作标题齐全", () => {
+      expect(ACTION_TITLE.set_speed).toBe("调整端口速率");
+      expect(ACTION_TITLE.set_duplex).toBe("调整端口双工模式");
+      expect(ACTION_TITLE.set_mtu).toBe("调整端口 MTU");
+    });
+
+    it("CISCO_UNSUPPORTED_ACTIONS 含物理三动作（后端 vendorUnsupported 同口径）", () => {
+      expect(CISCO_UNSUPPORTED_ACTIONS).toContain("trunk_set_hybrid");
+      expect(CISCO_UNSUPPORTED_ACTIONS).toContain("set_speed");
+      expect(CISCO_UNSUPPORTED_ACTIONS).toContain("set_duplex");
+      expect(CISCO_UNSUPPORTED_ACTIONS).toContain("set_mtu");
+    });
+
+    it("速率/双工/MTU 选项与后端全局默认画像三家交集一致", () => {
+      expect(PHYSICAL_SPEED_OPTIONS.map((o) => o.value)).toEqual([10, 100, 1000, 10000]);
+      expect(PHYSICAL_DUPLEX_OPTIONS.map((o) => o.value)).toEqual(["half", "full", "auto"]);
+      expect(PHYSICAL_MTU_MIN).toBe(1280);
+      expect(PHYSICAL_MTU_MAX).toBe(9216);
+      expect(PHYSICAL_SPEED_MODE_AUTO).toBe("auto");
+    });
+
+    it("取证级别文案：unverified 不冒充真机结论", () => {
+      expect(PHYSICAL_EVIDENCE_LABEL.unverified).toContain("未取证");
+      expect(PHYSICAL_EVIDENCE_LABEL.model).toContain("型号");
+      expect(PHYSICAL_EVIDENCE_LABEL.vendor).toContain("未逐型号取证");
     });
   });
 });

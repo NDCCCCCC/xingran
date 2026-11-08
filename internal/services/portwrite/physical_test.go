@@ -12,10 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 )
 
 // TestPhysical138_ValidatePhysicalRequest validator 表驱动（合法/非法/未知动作）。
+// Phase 143：签名改为 (vendor, model, action, params)，本组用 huawei + 空型号（全局默认画像，
+// 与 FIX-04 现状等价）锁定既有行为零回归。
 func TestPhysical138_ValidatePhysicalRequest(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -49,7 +52,7 @@ func TestPhysical138_ValidatePhysicalRequest(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validatePhysicalRequest(tc.action, tc.params)
+			_, err := validatePhysicalRequest(models.VendorHuawei, "", tc.action, tc.params)
 			if tc.wantErr == nil {
 				require.NoError(t, err)
 			} else {
@@ -57,6 +60,29 @@ func TestPhysical138_ValidatePhysicalRequest(t *testing.T) {
 				assert.ErrorIs(t, err, tc.wantErr)
 			}
 		})
+	}
+}
+
+// TestPhysical143_ValidateVendorModelMatrix Phase 143：vendor/model 维度校验矩阵。
+// Cisco / 迈普 显式 vendorUnsupported；三家默认画像放行；Evidence 空串 = 未取证。
+func TestPhysical143_ValidateVendorModelMatrix(t *testing.T) {
+	validParams := PhysicalParams{Speed: 1000}
+	// 三家默认画像（型号为空）：放行 + level=unverified + Evidence=""
+	for _, vendor := range []models.DeviceVendor{models.VendorHuawei, models.VendorH3C, models.VendorRuijie} {
+		ev, err := validatePhysicalRequest(vendor, "", portcollection.ActionSetSpeed, validParams)
+		require.NoError(t, err, "vendor=%s 应默认放行", vendor)
+		assert.Equal(t, "unverified", ev.Level, "默认放行 ≠ 有证据")
+		assert.Empty(t, ev.Evidence, "Evidence 空串表示未取证")
+	}
+	// Cisco / 迈普：显式 vendorUnsupported（型号已知与否都拒绝）
+	for _, vendor := range []models.DeviceVendor{models.VendorCisco, models.VendorMaipu} {
+		for _, model := range []string{"", "Catalyst 9300", "MP8000"} {
+			_, err := validatePhysicalRequest(vendor, model, portcollection.ActionSetSpeed, validParams)
+			require.Error(t, err, "vendor=%s model=%q 必须显式拒绝", vendor, model)
+			assert.ErrorIs(t, err, portcollection.ErrActionNotSupported)
+			assert.Contains(t, err.Error(), "渲染层未实现")
+			assert.Contains(t, err.Error(), "无真机取证依据")
+		}
 	}
 }
 

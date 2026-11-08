@@ -17,6 +17,7 @@ package addomain
 import (
 	"context"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 )
 
 // ==================== 1. 纯函数判定表 ====================
@@ -319,4 +321,201 @@ func TestPhase134_DriftAlert_ConfigFallback(t *testing.T) {
 	seedDriftConfig(t, db2, adDriftKeyThrottle, "-1")
 	seedDriftConfig(t, db2, adDriftKeyEnabled, "maybe")
 	assert.Equal(t, defaultADDriftConfig(), NewADSyncDriftAlertService(db2).loadConfig())
+}
+
+// ==================== Phase 144 新增通道单测 ====================
+
+// stubDriftWSNotifier 记录 BroadcastToAll 调用（与 scheduler.NoticeHub 同签名）。
+type stubDriftWSNotifier struct {
+	mu          sync.Mutex
+	calls       int
+	lastType    string
+	lastContent string
+	panicNext   bool
+}
+
+func (m *stubDriftWSNotifier) BroadcastToAll(msg interface{}) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.panicNext {
+		panic("hub closed")
+	}
+	m.calls++
+	if n, ok := msg.(websocket.NoticeMessage); ok {
+		m.lastType = n.Type
+		m.lastContent = n.Content
+	}
+}
+
+func (m *stubDriftWSNotifier) snapshot() (int, string, string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.calls, m.lastType, m.lastContent
+}
+
+// resetDriftHooks 每个用例收口：清空全局钩子（77-05 var-seam 纪律）。
+func resetDriftHooks(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		SetDriftAlertWSNotifier(nil)
+		SetDriftAlertNoticePublisher(nil)
+		SetDriftAlertWebhookSender(nil)
+	})
+}
+
+func seedDriftAndTrigger(t *testing.T, svc *ADSyncDriftAlertService, db *gorm.DB) {
+	t.Helper()
+	seedDriftMembers(t, db, 20, 4)
+	ctx := context.Background()
+	require.NoError(t, svc.CheckAndAlert(ctx)) // 首次观测 20,4
+	require.NoError(t, db.Where("1 = 1").Delete(&models.ADGroupMember{}).Error)
+	seedDriftMembers(t, db, 15, 3) // 漂移
+	require.NoError(t, svc.CheckAndAlert(ctx))
+}
+
+func TestPhase144_DriftAlert_WSBroadcast(t *testing.T) {
+	resetDriftHooks(t)
+	db := setupDriftAlertDB(t)
+	svc := NewADSyncDriftAlertService(db)
+	mock := &stubDriftWSNotifier{}
+	SetDriftAlertWSNotifier(mock)
+
+	seedDriftAndTrigger(t, svc, db)
+
+	calls, typ, content := mock.snapshot()
+	assert.Equal(t, 1, calls, "漂移应触发 1 次全员 WS 广播")
+	assert.Equal(t, websocket.MessageTypeADSyncDriftAlert, typ)
+	assert.Contains(t, content, `"memberCount":15`)
+	assert.Contains(t, content, `"distinctGroups":3`)
+	assert.Equal(t, 1, svc.AlertCount())
+}
+
+func TestPhase144_DriftAlert_WSDisabledNoBroadcast(t *testing.T) {
+	resetDriftHooks(t)
+	db := setupDriftAlertDB(t)
+	seedDriftConfig(t, db, adDriftKeyWSEnabled, "false")
+	svc := NewADSyncDriftAlertService(db)
+	mock := &stubDriftWSNotifier{}
+	SetDriftAlertWSNotifier(mock)
+
+	seedDriftAndTrigger(t, svc, db)
+
+	calls, _, _ := mock.snapshot()
+	assert.Equal(t, 0, calls, "ws_enabled=false 不得广播")
+	assert.Equal(t, 1, svc.AlertCount(), "关 WS 不影响告警本身")
+}
+
+func TestPhase144_DriftAlert_ThrottleNoRepeatBroadcast(t *testing.T) {
+	resetDriftHooks(t)
+	db := setupDriftAlertDB(t)
+	svc := NewADSyncDriftAlertService(db)
+	mock := &stubDriftWSNotifier{}
+	SetDriftAlertWSNotifier(mock)
+
+	seedDriftMembers(t, db, 20, 4)
+	ctx := context.Background()
+	require.NoError(t, svc.CheckAndAlert(ctx))
+	require.NoError(t, db.Where("1 = 1").Delete(&models.ADGroupMember{}).Error)
+	seedDriftMembers(t, db, 15, 3)
+	for i := 0; i < 10; i++ {
+		require.NoError(t, svc.CheckAndAlert(ctx))
+	}
+	calls, _, _ := mock.snapshot()
+	assert.Equal(t, 1, calls, "节流内持续漂移不得重复广播（防刷屏）")
+	assert.Equal(t, 1, svc.AlertCount())
+}
+
+func TestPhase144_DriftAlert_WSRecoverDoesNotBlockCron(t *testing.T) {
+	resetDriftHooks(t)
+	db := setupDriftAlertDB(t)
+	svc := NewADSyncDriftAlertService(db)
+	SetDriftAlertWSNotifier(&stubDriftWSNotifier{panicNext: true})
+
+	// notifier 内部 panic 必须被 recover 兜底，CheckAndAlert 仍返回 nil
+	require.NoError(t, svc.CheckAndAlert(context.Background()))
+	seedDriftAndTrigger(t, svc, db)
+	assert.Equal(t, 1, svc.AlertCount())
+}
+
+func TestPhase144_DriftAlert_NoticePublisherChain(t *testing.T) {
+	resetDriftHooks(t)
+	db := setupDriftAlertDB(t)
+	svc := NewADSyncDriftAlertService(db)
+
+	var published int
+	SetDriftAlertNoticePublisher(func(_ context.Context, _ *gorm.DB, n DriftAlertNotice) (string, error) {
+		published++
+		assert.Equal(t, adDriftAlertTitle, n.Title)
+		assert.Equal(t, adDriftAlertNoticeType, n.NoticeType)
+		assert.Equal(t, adDriftAlertPriorityUrgent, n.Priority)
+		assert.Equal(t, adDriftAlertTargetAll, n.TargetType)
+		return "notice-144", nil
+	})
+	mock := &stubDriftWSNotifier{}
+	SetDriftAlertWSNotifier(mock)
+
+	seedDriftAndTrigger(t, svc, db)
+
+	assert.Equal(t, 1, published, "必须走发布链路（修铃铛收不到）")
+	_, _, content := mock.snapshot()
+	assert.Contains(t, content, `"noticeId":"notice-144"`)
+	// publisher 接管后不再 direct INSERT（语义由 api 层真实实现落库）
+	assert.Equal(t, int64(0), countDriftNotices(t, db))
+}
+
+func TestPhase144_DriftAlert_WebhookFailureSoftDegrade(t *testing.T) {
+	resetDriftHooks(t)
+	db := setupDriftAlertDB(t)
+	seedDriftConfig(t, db, adDriftKeyWebhookEnabled, "true")
+	svc := NewADSyncDriftAlertService(db)
+
+	var sent int
+	SetDriftAlertWebhookSender(func(_ context.Context, _ *gorm.DB, configID string, msg DriftAlertWebhookMessage) DriftAlertWebhookResult {
+		sent++
+		assert.Equal(t, adDriftAlertTitle, msg.Title)
+		return DriftAlertWebhookResult{
+			Success:    false,
+			HTTPCode:   500,
+			RetryCount: 3,
+			Message:    "HTTP请求失败 url=https://hook.example.com/send?key=PLAIN-SECRET&access_token=PLAIN-TOKEN",
+		}
+	})
+
+	seedDriftAndTrigger(t, svc, db)
+
+	assert.Equal(t, 1, sent, "webhook_enabled=true 必须触发一次")
+	assert.Equal(t, 1, svc.AlertCount(), "webhook 失败不得影响告警本身")
+	// 触发结果写 sys_oper_log，且 URL 脱敏
+	var log models.OperLog
+	require.NoError(t, db.Where("method = ?", adDriftAlertWebhookMethod).First(&log).Error)
+	require.NotNil(t, log.JsonResult)
+	assert.Contains(t, *log.JsonResult, `"success":false`)
+	assert.Contains(t, *log.JsonResult, `"httpCode":500`)
+	require.NotNil(t, log.ErrorMsg)
+	assert.NotContains(t, *log.ErrorMsg, "PLAIN-SECRET", "明文 webhook key 不得落 operlog")
+	assert.NotContains(t, *log.ErrorMsg, "PLAIN-TOKEN", "明文 access_token 不得落 operlog")
+}
+
+func TestPhase144_DriftAlert_WebhookDisabledByDefault(t *testing.T) {
+	resetDriftHooks(t)
+	db := setupDriftAlertDB(t)
+	svc := NewADSyncDriftAlertService(db)
+	var sent int
+	SetDriftAlertWebhookSender(func(_ context.Context, _ *gorm.DB, _ string, _ DriftAlertWebhookMessage) DriftAlertWebhookResult {
+		sent++
+		return DriftAlertWebhookResult{Success: true}
+	})
+
+	seedDriftAndTrigger(t, svc, db)
+	assert.Equal(t, 0, sent, "webhook_enabled 默认 false，不得推送")
+}
+
+func TestPhase144_SanitizeWebhookMessage(t *testing.T) {
+	in := "POST https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=SECRET123&access_token=TOK456 failed; key=ABC token=XYZ"
+	out := sanitizeWebhookMessage(in)
+	assert.NotContains(t, out, "SECRET123")
+	assert.NotContains(t, out, "TOK456")
+	assert.NotContains(t, out, "key=ABC")
+	assert.NotContains(t, out, "token=XYZ")
+	assert.Contains(t, out, "******")
 }

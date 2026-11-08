@@ -223,9 +223,11 @@ func (s *ADSyncScheduler) Start() {
 		applogger.Errorf("[ad_push_queue] 启动排水定时任务失败（不阻断其它 AD 定时任务）: %v", err)
 	}
 
-	// FIX-11: AD 同步漂移常态化告警通道（可配置 / 可观测 / 有触发记录）。
+	// FIX-11 + Phase 144: AD 同步漂移常态化告警通道（可配置 / 可观测 / 有触发记录）。
 	// 与全量同步 5min tick 错峰（每小时第 12 分钟），避免争用 sys_ad_group_member 读。
-	// ⚠ 服务自包含（applogger + sys_oper_log + sys_notice），零新依赖；
+	// ⚠ 服务通道（applogger / sys_oper_log / sys_notice 发布链路 / WS / webhook）
+	//   由 internal/api/router.go 装配阶段注入全局钩子（addomain 包级 var seam），
+	//   本处每轮 NewADSyncDriftAlertService(s.db) 共享同一注入点，无需改动 cron。
 	//   软失败由服务内部处理，cron 闭包只需调用一次 CheckAndAlert。
 	_, err = s.cron.AddFunc("0 12 * * * *", func() {
 		svc := addomain.NewADSyncDriftAlertService(s.db)

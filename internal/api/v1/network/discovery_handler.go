@@ -1,6 +1,8 @@
 package network
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
@@ -16,12 +18,26 @@ import (
 type DiscoveryHandler struct {
 	discoveryService *services.DeviceDiscoveryService
 	core             *core.Core
+	// invalidateDeviceCache 是导入成功后失效网络设备缓存的可选依赖（Phase 142 / DISC-02）。
+	// 由 network_router.go 注入 networkServices.CacheService.InvalidateAllDeviceCache 方法值；
+	// 测试通过 NewDiscoveryHandler 构造时不注入 → 恒为 nil，成功路径 no-op，现有
+	// newNetworkTestEnv / newDiscoveryHandler 构造点零改动。
+	invalidateDeviceCache func(context.Context) error
 }
 
 // WithCore 注入 core 依赖（操作日志记录所需）。Phase 34 操作日志全模块覆盖。
 func (h *DiscoveryHandler) WithCore(core *core.Core) *DiscoveryHandler {
 	if h != nil {
 		h.core = core
+	}
+	return h
+}
+
+// WithDeviceCacheInvalidator 注入网络设备缓存失效函数（Phase 142 / DISC-02）。
+// 仅在真实路由装配时调用；测试构造不调用即保持 no-op。
+func (h *DiscoveryHandler) WithDeviceCacheInvalidator(fn func(context.Context) error) *DiscoveryHandler {
+	if h != nil {
+		h.invalidateDeviceCache = fn
 	}
 	return h
 }
@@ -319,6 +335,12 @@ func (h *DiscoveryHandler) ImportDevices(c *gin.Context) {
 	if err != nil {
 		response.Error(c, apperrors.InternalServerError(err))
 		return
+	}
+
+	// Phase 142 / DISC-02：导入事务已提交，失效网络设备缓存让列表即时可见。
+	// 放在 operlog.Record 之前、事务之外；失败静默，不阻断导入 success path。
+	if h.invalidateDeviceCache != nil {
+		_ = h.invalidateDeviceCache(c.Request.Context())
 	}
 
 	// Import 把发现的设备导入系统 — OperTypeImport

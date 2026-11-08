@@ -318,16 +318,24 @@ func TestDiscoveryHandler_ImportDevices(t *testing.T) {
 	env := newDiscoveryTestEnv(t)
 	h := newDiscoveryHandler(env)
 	seedDiscovery(t, env, "imp1", "import-task", models.DiscoveryStatusSuccess, 2)
+	// Phase 142 / DISC-01：seed 真实发现结果明细，handler 恒传 deviceIDs=nil，
+	// service 全量导入结果行 → count 应等于真实写入 sys_network_device 的行数。
+	seedDiscoveryResult(t, env, "imp-r1", "imp1", "10.10.1.1", "core-sw-1", "Huawei", 1)
+	seedDiscoveryResult(t, env, "imp-r2", "imp1", "10.10.1.2", "edge-sw-2", "Cisco", 2)
 
-	t.Run("success_returns_zero_count_stub", func(t *testing.T) {
-		// Handler passes deviceIDs=nil → ImportDiscoveredDevices stub returns len(nil)=0
+	t.Run("success_imports_real_rows", func(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/discoveries/:id/import", h.ImportDevices}},
 			http.MethodPost, "/discoveries/imp1/import", "")
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, 0, resp.Code)
-		assert.JSONEq(t, `{"count":0}`, string(resp.Data))
+		assert.JSONEq(t, `{"count":2}`, string(resp.Data))
 		assert.Equal(t, 6, env.oper.lastBusinessType) // OperTypeImport
+
+		var count int64
+		require.NoError(t, env.db.Model(&models.NetworkDevice{}).
+			Where("ip_address IN ?", []string{"10.10.1.1", "10.10.1.2"}).Count(&count).Error)
+		assert.Equal(t, int64(2), count, "发现结果应真实写入 sys_network_device")
 	})
 
 	t.Run("not_found_1500", func(t *testing.T) {
@@ -365,9 +373,9 @@ func TestDiscoveryHandler_Probe(t *testing.T) {
 
 	t.Run("credential_without_communities_rejected", func(t *testing.T) {
 		cred := &models.AuthCredential{
-			BaseModel:     models.BaseModel{ID: credUUID},
+			BaseModel:      models.BaseModel{ID: credUUID},
 			CredentialName: "no-snmp",
-			ProtocolType:  models.ProtocolType("ssh"),
+			ProtocolType:   models.ProtocolType("ssh"),
 		}
 		require.NoError(t, env.db.Create(cred).Error)
 

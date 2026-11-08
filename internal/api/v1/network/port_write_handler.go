@@ -390,8 +390,18 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 			response.Error(c, http.StatusBadRequest, "IP 地址格式不合法")
 		case errors.Is(err, portwrite.ErrMACAddressInvalid):
 			response.Error(c, http.StatusBadRequest, "MAC 地址格式不合法")
+		// Phase 143 (PORT-01)：批量物理参数路径与单条共用同一套 sentinel。
+		// execSinglePort 已用 physicalSentinelMessage 翻译，批量这里补齐（放在
+		// default:500 之前，避免物理参数 400 被误判成 500）。
+		case errors.Is(err, portcollection.ErrActionNotSupported):
+			// 型号/厂商能力矩阵显式拒绝（Cisco/Maipu/型号 unsupported）
+			response.Error(c, http.StatusBadRequest, err.Error())
 		default:
-			response.Error(c, http.StatusInternalServerError, err.Error())
+			if code, msg, ok := physicalSentinelMessage(err); ok {
+				response.Error(c, code, msg)
+			} else {
+				response.Error(c, http.StatusInternalServerError, err.Error())
+			}
 		}
 		return
 	}

@@ -1,14 +1,14 @@
 ---
-last_updated: 2026-11-08
-update_trigger: v1.54 milestone INITIATED 2026-11-08（真实代码缺口清偿：4 项代码缺口 / 取数自 STATE.md ## Deferred Items；Phase 从 142 续编）
-previous_update: 2026-11-08 v1.53 milestone SHIPPED & ARCHIVED（开放项全量清偿；8/8 Phase、18 REQ 交付 + 6 项人工验证跟踪、21 条开放项全覆盖；GSD milestone complete 完成归档与权威交回）
+last_updated: 2026-11-09
+update_trigger: v1.54 milestone SHIPPED 2026-11-09（真实代码缺口清偿：3/3 Phase、7/7 REQ、全量回归闸门全绿；验证类残余不伪造闭环）
+previous_update: 2026-11-08 v1.54 milestone INITIATED（真实代码缺口清偿：4 项代码缺口 / 取数自 STATE.md ## Deferred Items；Phase 从 142 续编）
 ---
 
-## Current Milestone: v1.54 真实代码缺口清偿 (Code Gap Clearance) — INITIATED 2026-11-08
+## Current Milestone: v1.54 真实代码缺口清偿 (Code Gap Clearance) — ✅ SHIPPED 2026-11-09
 
 **Goal:** 清偿 `.planning/STATE.md ## Deferred Items` 中登记的 4 项真实代码缺口，使 v1.53 收档后显式披露的「代码可修」残余全部真正落地；不触碰 LOCKED 残余、不伪造人工验证闭环。
 
-**Status:** INITIATED 2026-11-08 | 取数权威 = `.planning/STATE.md ## Deferred Items`（v1.53 三行：`code_gaps` / `verification_gaps` 边界汇总 / `uat_gaps`）+ `.planning/MILESTONES.md` v1.53 Known Gaps | Phase 从 **142** 续编（v1.53 结束于 141）
+**Status:** ✅ SHIPPED 2026-11-09（3/3 Phase：142 发现设备真实导入 / 143 端口写物理参数收口 / 144 同步漂移告警通道收口；7/7 REQ Satisfied；144 拆后端+前端两个并行 executor，共 4 PLAN；W1 四 executor 并行 + Lead 集成）| 全量回归闸门全绿：`go build ./...` / `go test ./...` / `tsc` / `lint:ci ALL PASS`（含 check-permission-codes 双向零漂移、check-route-registry 713 路由）/ 全量 vitest | 交付证据 4 份 phase `*-SUMMARY.md` + `.planning/MILESTONES.md` v1.54 条目
 
 **Target features:**
 - **DISC** — `ImportDiscoveredDevices`（`internal/services/device_discovery_service.go:509-523`）真实写入 `NetworkDevice`：字段映射、去重语义、事务边界、operlog、缓存失效、错误返回
@@ -52,7 +52,7 @@ previous_update: 2026-11-08 v1.53 milestone SHIPPED & ARCHIVED（开放项全量
 
 **事实基线（归档后）:** `.planning/milestones/v1.53-REQUIREMENTS.md`（24 REQ）｜`.planning/milestones/v1.53-ROADMAP.md`（Phases 134-141 完整详情）｜`.planning/milestones/v1.53-phases/`（8 份 SUMMARY）｜v1.52 终态 `.planning/MILESTONE-v1.52-SUMMARY.md`
 
-**Known Gaps（登记，非阻断）**：79 条人工验证跟踪项全部待执行（`.planning/notes/261108-human-verification-tracker.md`），需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物；LOCKED 残余结论见 `.planning/notes/261108-v153-locked-residuals.md`。
+**Known Gaps（登记，非阻断）**：79 条人工验证跟踪项全部待执行（`.planning/notes/261108-human-verification-tracker.md`，**保持 0 勾选**），需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物；LOCKED 残余结论见 `.planning/notes/261108-v153-locked-residuals.md`；验证类残余（FIX-01/04/09/13）不伪造闭环；v1.54 新增边界（标记已读 / 企微钉钉路线 B / `sys_object_id` 未落库 / 批量无自动回滚 / 发现导入顺带隐患 / e2e 归位 / `RequiresInterfaceView` 联动点）见 `.planning/MILESTONES.md` v1.54 条目与 `STATE.md ## Deferred Items` 的 v1.54 行。
 
 **Phase 映射:** 134=AD 同步域(FIX-01/10/11) ∥ 135=Swagger 链路(FIX-02) ∥ 136=端点接线(FIX-03/06/13) ∥ 137=Stub/双副本(FIX-07/08) ∥ 138=功能分支(FIX-04/05/14) ∥ 139=低优先级技术债(FIX-09/12)（W1 六者按模块隔离并行）→ 140=人工验证债组织(VAL-01~07) → 141=登记接受结论 + 临时清单归档与权威分层复核(ACK-01/02 + GOV-01，**必须最后执行**)。
 

@@ -243,7 +243,36 @@ export const PERMISSION_CODES = {
   opsADUser: {
     edit: "ops:ad:user:edit",
   },
+  // ==================== Phase 144 ALRT-03：同步漂移告警 ====================
+  // 与后端 pkg/permission/config.go + migration 238 的 sys_menu.perms 三方逐字一致。
+  // ⚠️ 本组只放 4 个 F 型**操作码**；C 型页面本体权限 `system:adDriftAlert`
+  // 按文件头既有惯例**不进本表**（校验脚本按「主前缀 + ':'」圈定 scope，
+  // 若把页面本体码混进组里会把 scope 退化为 `system:` 并把所有 system:* 常量
+  // 误报成 b 类漂移）。页面本体码在下方单独导出，供文档/引用核对。
+  // 命名以 Lead 裁决为准（261108-v154-architecture-decisions.md §二）。
+  adDriftAlert: {
+    list: "system:adDriftAlert:list",
+    config: "system:adDriftAlert:config",
+    edit: "system:adDriftAlert:edit",
+    trigger: "system:adDriftAlert:trigger",
+  },
 } as const;
+
+/**
+ * Phase 144 ALRT-03：同步漂移告警 **C 型页面本体**权限码。
+ *
+ * 与 PLAN-01-backend 的 `pkg/permission/config.go` 常量 + migration 238 播种的
+ * sys_menu.perms 逐字一致。按文件头惯例不进 `PERMISSION_CODES` 操作码表
+ * （否则 check-permission-codes.mjs 的 scope 圈定会被污染），单独导出供页面/文档核对。
+ *
+ * 5 个权限码逐字清单（三方一致）：
+ *   - system:adDriftAlert           （C 型页面本体，本常量）
+ *   - system:adDriftAlert:list      （读：status/logs/config）
+ *   - system:adDriftAlert:config    （读：配置）
+ *   - system:adDriftAlert:edit      （写：config/update）
+ *   - system:adDriftAlert:trigger   （写：trigger）
+ */
+export const SYSTEM_AD_DRIFT_ALERT_PERM = "system:adDriftAlert";
 
 /** 模块键名（如 systemUser） */
 export type PermissionModuleKey = keyof typeof PERMISSION_CODES;

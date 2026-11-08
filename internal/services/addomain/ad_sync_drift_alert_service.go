@@ -17,10 +17,15 @@ package addomain
 // （复用 reconciliation_tasks.go checkPortStatusDrift 的自适应基线思想 +
 //  fix_suggestion_monitor.go 的节流思想），避免把一次正常同步拆成告警风暴。
 //
-// 三通道（全部复用项目既有设施，零新依赖）：
+// 五通道（Phase 144 收口后，全部复用项目既有设施，零新依赖）：
 //   1. applogger.Warnf —— 结构化可观测日志（含全部诊断字段）；
 //   2. sys_oper_log    —— 触发记录（OperTypeSync=14，direct INSERT，无需 gin.Context）；
-//   3. sys_notice      —— 面向运维的通知（notice_type='2' 警告 / 立即发布 / TargetAll）。
+//   3. sys_notice      —— 面向运维的通知；生产走 NoticeService.CreateNoticeWithTargets
+//                         + PublishNotice 发布链路（Phase 144 修「铃铛收不到」根因），
+//                         未注入 publisher 时回退 direct INSERT（软失败兼容单测/降级）；
+//   4. WS              —— ad_sync_drift_alert 全员事件（ws_enabled 旋钮，recover 兜底）；
+//   5. webhook         —— 复用 sys_api_notification_config + APISenderService
+//                         （webhook_enabled / webhook_config_id 旋钮，URL 脱敏）。
 //
 // 配置（sys_config，热重载，每轮读一次）：
 //   ad_sync.drift_alert.enabled          默认 true
@@ -28,20 +33,29 @@ package addomain
 //   ad_sync.drift_alert.baseline_key     基线存储用的 config_key（默认见常量）
 //   ad_sync.drift_alert.throttle_minutes 默认 60（同一持续漂移 1h 最多 1 次通知）
 //   ad_sync.drift_alert.notice_enabled   默认 true（是否写 sys_notice）
+//   ad_sync.drift_alert.ws_enabled       默认 true（是否推 WS 全员事件）
+//   ad_sync.drift_alert.webhook_enabled  默认 false（是否推 webhook）
+//   ad_sync.drift_alert.webhook_config_id 默认 ""（空=用默认 webhook 配置）
 //
-// ⚠ 边界（交付说明会明确）：本服务 = 可复用检测服务 + 配置 + 单测 + cron 接入点，
-//   未做前端告警页 / WS 推送 / 企业微信 webhook（属后续产品化增量，不伪造完成）。
+// ⚠ 依赖注入说明：addomain 被 scheduler 与 services(根) 反向 import，故本包
+//   **不能**直接 import 二者（Go 循环依赖）。WS / 发布链路 / webhook 三个外部
+//   能力通过 ad_sync_drift_alert_hooks.go 的函数变量注入，由 internal/api/router.go
+//   装配阶段注入真实实现（同一个 scheduler 全局 noticeHubAdapter + NoticeService
+//   + APISenderService）。未注入时新通道安全跳过，软失败契约不变。
 //   软失败：任何一步失败仅 applogger.Warnf，绝不阻断 cron 主流程（error 返回不 panic）。
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -49,37 +63,52 @@ import (
 // ==================== 配置旋钮 ====================
 
 const (
-	adDriftKeyEnabled        = "ad_sync.drift_alert.enabled"
-	adDriftKeyTolerance      = "ad_sync.drift_alert.tolerance"
-	adDriftKeyThrottle       = "ad_sync.drift_alert.throttle_minutes"
-	adDriftKeyNoticeEnabled  = "ad_sync.drift_alert.notice_enabled"
-	adDriftBaselineConfigKey = "ad_sync.drift_alert.baseline" // 基线存 sys_config（member_count,distinct_groups）
+	adDriftKeyEnabled          = "ad_sync.drift_alert.enabled"
+	adDriftKeyTolerance        = "ad_sync.drift_alert.tolerance"
+	adDriftKeyThrottle         = "ad_sync.drift_alert.throttle_minutes"
+	adDriftKeyNoticeEnabled    = "ad_sync.drift_alert.notice_enabled"
+	adDriftKeyWSEnabled        = "ad_sync.drift_alert.ws_enabled"
+	adDriftKeyWebhookEnabled   = "ad_sync.drift_alert.webhook_enabled"
+	adDriftKeyWebhookConfigID  = "ad_sync.drift_alert.webhook_config_id"
+	adDriftBaselineConfigKey   = "ad_sync.drift_alert.baseline" // 基线存 sys_config（member_count,distinct_groups）
 
-	adDriftDefaultEnabled        = true
-	adDriftDefaultTolerance      = 0
-	adDriftDefaultThrottleMin    = 60
-	adDriftDefaultNoticeEnabled  = true
-	adDriftAlertTitle            = "AD 同步漂移告警"
-	adDriftAlertContentPrefix    = "[ad_sync_drift_alert]"
-	adDriftAlertMethod           = "ADSyncDriftAlertService.CheckAndAlert"
-	adDriftAlertNoticeType       = "2" // 警告
-	adDriftAlertOperBusinessType = 14  // OperTypeSync
+	adDriftDefaultEnabled         = true
+	adDriftDefaultTolerance       = 0
+	adDriftDefaultThrottleMin     = 60
+	adDriftDefaultNoticeEnabled   = true
+	adDriftDefaultWSEnabled       = true
+	adDriftDefaultWebhookEnabled  = false
+	adDriftDefaultWebhookConfigID = ""
+	adDriftAlertTitle             = "AD 同步漂移告警"
+	adDriftAlertContentPrefix     = "[ad_sync_drift_alert]"
+	adDriftAlertMethod            = "ADSyncDriftAlertService.CheckAndAlert"
+	adDriftAlertWebhookMethod     = "ADSyncDriftAlertService.Webhook"
+	adDriftAlertNoticeType        = "2" // 警告
+	adDriftAlertOperBusinessType  = 14  // OperTypeSync
+	adDriftAlertPriorityUrgent    = 2   // models.PriorityUrgent（避免 import models 常量类型不一致）
+	adDriftAlertTargetAll         = 0   // models.TargetAll
 )
 
 // adDriftConfig 漂移告警配置。
 type adDriftConfig struct {
-	Enabled       bool
-	Tolerance     int // 计数变化绝对值 <= 容差 视为噪声，不告警
-	ThrottleMin   int // 同一持续漂移的告警节流分钟数
-	NoticeEnabled bool
+	Enabled         bool
+	Tolerance       int // 计数变化绝对值 <= 容差 视为噪声，不告警
+	ThrottleMin     int // 同一持续漂移的告警节流分钟数
+	NoticeEnabled   bool
+	WSEnabled       bool   // Phase 144：是否推 ad_sync_drift_alert WS 全员事件
+	WebhookEnabled  bool   // Phase 144：是否推 webhook
+	WebhookConfigID string // Phase 144：空=用默认 webhook 配置
 }
 
 func defaultADDriftConfig() adDriftConfig {
 	return adDriftConfig{
-		Enabled:       adDriftDefaultEnabled,
-		Tolerance:     adDriftDefaultTolerance,
-		ThrottleMin:   adDriftDefaultThrottleMin,
-		NoticeEnabled: adDriftDefaultNoticeEnabled,
+		Enabled:         adDriftDefaultEnabled,
+		Tolerance:       adDriftDefaultTolerance,
+		ThrottleMin:     adDriftDefaultThrottleMin,
+		NoticeEnabled:   adDriftDefaultNoticeEnabled,
+		WSEnabled:       adDriftDefaultWSEnabled,
+		WebhookEnabled:  adDriftDefaultWebhookEnabled,
+		WebhookConfigID: adDriftDefaultWebhookConfigID,
 	}
 }
 
@@ -270,14 +299,29 @@ func (s *ADSyncDriftAlertService) loadConfig() adDriftConfig {
 		}
 	}
 	if v, ok := read(adDriftKeyNoticeEnabled); ok {
-		switch strings.ToLower(strings.TrimSpace(v)) {
-		case "0", "false", "no", "off":
-			cfg.NoticeEnabled = false
-		case "1", "true", "yes", "on":
-			cfg.NoticeEnabled = true
-		}
+		cfg.NoticeEnabled = parseADDriftBool(v, cfg.NoticeEnabled)
+	}
+	if v, ok := read(adDriftKeyWSEnabled); ok {
+		cfg.WSEnabled = parseADDriftBool(v, cfg.WSEnabled)
+	}
+	if v, ok := read(adDriftKeyWebhookEnabled); ok {
+		cfg.WebhookEnabled = parseADDriftBool(v, cfg.WebhookEnabled)
+	}
+	if v, ok := read(adDriftKeyWebhookConfigID); ok {
+		cfg.WebhookConfigID = strings.TrimSpace(v)
 	}
 	return cfg
+}
+
+// parseADDriftBool 解析 sys_config 布尔旋钮；无法识别时保持原值（零噪音）。
+func parseADDriftBool(v string, fallback bool) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "0", "false", "no", "off":
+		return false
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return fallback
 }
 
 // baseline 编码 "member_count,distinct_groups" 存入 sys_config，避免加表/加列/迁移。
@@ -354,11 +398,19 @@ func (s *ADSyncDriftAlertService) resetDriftState() {
 	s.lastAlertDrifted = false
 }
 
-// ==================== 三通道告警 ====================
+// ==================== 五通道告警 ====================
 
-// emit 触发记录的三通道产出：applogger + sys_oper_log + sys_notice。
-// 任一通道失败仅 WARN，不影响其它通道，也不返回 error（软失败）。
+// emit 触发记录的五通道产出：applogger + sys_oper_log + sys_notice(发布链路)
+// + WS 全员事件 + webhook。任一通道失败仅 WARN，不影响其它通道，也不返回
+// error（软失败契约：绝不阻断 cron）。仅在 shouldAlert==true 时被调用。
 func (s *ADSyncDriftAlertService) emit(ctx context.Context, cur, baseline adDriftSample, v adDriftVerdict, cfg adDriftConfig) {
+	// 顶层兜底：任何注入通道（publisher / webhook / WS）若 panic，
+	// 也绝不让它穿透到 cron（软失败契约：不阻断主同步流程）。
+	defer func() {
+		if r := recover(); r != nil {
+			applogger.Warnf("[ad_sync:drift] emit 通道异常(忽略，不阻断 cron): %v", r)
+		}
+	}()
 	content := fmt.Sprintf(
 		"%s\nAD 同步漂移：member_count %d→%d (Δ%d)，distinct_groups %d→%d (Δ%d)。请核对最近一轮全量同步与 sys_ad_group_member 重放窗口。",
 		adDriftAlertContentPrefix,
@@ -388,26 +440,235 @@ func (s *ADSyncDriftAlertService) emit(ctx context.Context, cur, baseline adDrif
 		applogger.Infof("[ad_sync:drift] 触发记录已写 sys_oper_log id=%s", operLog.ID)
 	}
 
-	// 通道 3：sys_notice 通知（notice_type='2' 警告 / 立即发布 / TargetAll）
+	// 通道 3：sys_notice 通知（notice_type='2' 警告 / 已发布 / TargetAll）。
+	// Phase 144：优先走注入的 NoticeService.CreateNoticeWithTargets + PublishNotice
+	// 发布链路（修「铃铛收不到」根因）；未注入 publisher 时回退 direct INSERT，
+	// 保持既有行为与单测软失败契约（零循环依赖，见 hooks.go 说明）。
+	noticeID := ""
 	if cfg.NoticeEnabled && s.db.Migrator().HasTable(&models.Notice{}) {
-		publishAt := now
-		notice := &models.Notice{
-			NoticeTitle:   adDriftAlertTitle,
-			NoticeType:    adDriftAlertNoticeType,
-			NoticeContent: content,
-			Status:        int(models.NoticeStatusNormal),
-			Priority:      models.PriorityUrgent,
-			PublishStatus: models.PublishStatusPublished,
-			PublishTime:   &publishAt,
-			TargetType:    models.TargetAll,
-			CreatedByName: "SYSTEM",
-		}
-		if err := s.db.WithContext(ctx).Create(notice).Error; err != nil {
-			applogger.Warnf("[ad_sync:drift] sys_notice 写入失败(忽略): %v", err)
+		if pub := driftAlertNoticePublisher(); pub != nil {
+			// 独立 recover：发布链路 panic 不得影响后续 WS / webhook 通道。
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						applogger.Warnf("[ad_sync:drift] 发布链路异常(忽略): %v", r)
+					}
+				}()
+				id, err := pub(ctx, s.db, DriftAlertNotice{
+					Title:      adDriftAlertTitle,
+					Content:    content,
+					NoticeType: adDriftAlertNoticeType,
+					Priority:   adDriftAlertPriorityUrgent,
+					TargetType: adDriftAlertTargetAll,
+				})
+				if err != nil {
+					applogger.Warnf("[ad_sync:drift] NoticeService 发布链路失败(忽略): %v", err)
+				} else {
+					noticeID = id
+					applogger.Infof("[ad_sync:drift] 告警通知经发布链路发布 sys_notice id=%s", id)
+				}
+			}()
 		} else {
-			applogger.Infof("[ad_sync:drift] 告警通知已发布 sys_notice id=%s", notice.ID)
+			noticeID = s.insertNoticeDirect(ctx, content, now)
 		}
 	}
+
+	// 业务 payload 复用给 WS / webhook（Content 内嵌 JSON，照 reconciliation_workorder）。
+	payload := s.buildPayload(cur, baseline, v, cfg, noticeID)
+
+	// 通道 4：WS ad_sync_drift_alert 全员事件（ws_enabled 旋钮 + recover 兜底）
+	if cfg.WSEnabled {
+		s.broadcastWS(now, payload)
+	}
+
+	// 通道 5：webhook（webhook_enabled 旋钮；失败仅 WARN，URL 脱敏落 operlog）
+	if cfg.WebhookEnabled {
+		s.sendWebhook(ctx, content, payload, cfg, now)
+	}
+}
+
+// insertNoticeDirect 发布链路未注入时的兼容回退（保持 FIX-11 原行为）。
+func (s *ADSyncDriftAlertService) insertNoticeDirect(ctx context.Context, content string, now time.Time) string {
+	publishAt := now
+	notice := &models.Notice{
+		NoticeTitle:   adDriftAlertTitle,
+		NoticeType:    adDriftAlertNoticeType,
+		NoticeContent: content,
+		Status:        int(models.NoticeStatusNormal),
+		Priority:      models.PriorityUrgent,
+		PublishStatus: models.PublishStatusPublished,
+		PublishTime:   &publishAt,
+		TargetType:    models.TargetAll,
+		CreatedByName: "SYSTEM",
+	}
+	if err := s.db.WithContext(ctx).Create(notice).Error; err != nil {
+		applogger.Warnf("[ad_sync:drift] sys_notice 写入失败(忽略): %v", err)
+		return ""
+	}
+	applogger.Infof("[ad_sync:drift] 告警通知已发布 sys_notice id=%s", notice.ID)
+	return notice.ID
+}
+
+// buildPayload 构造 WS / webhook 共用的业务 payload JSON（不含任何密钥）。
+func (s *ADSyncDriftAlertService) buildPayload(cur, baseline adDriftSample, v adDriftVerdict, cfg adDriftConfig, noticeID string) string {
+	p := map[string]interface{}{
+		"event":          websocket.MessageTypeADSyncDriftAlert,
+		"memberCount":    cur.MemberCount,
+		"distinctGroups": cur.DistinctGroups,
+		"baseline":       []int64{baseline.MemberCount, baseline.DistinctGroups},
+		"memberDelta":    v.MemberDelta,
+		"groupDelta":     v.GroupDelta,
+		"noticeId":       noticeID,
+		"tolerance":      cfg.Tolerance,
+		"throttled":      false, // emit 仅在 shouldAlert==true 时调用
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		applogger.Warnf("[ad_sync:drift] WS/webhook payload 序列化失败(忽略): %v", err)
+		return "{}"
+	}
+	return string(b)
+}
+
+// broadcastWS 推 WS 全员事件。defer recover 兜底：hub 关闭时写 channel 会 panic，
+// 绝不能让 cron 崩溃（软失败契约）。未注入 notifier 时安全跳过。
+func (s *ADSyncDriftAlertService) broadcastWS(now time.Time, payload string) {
+	notifier := driftAlertWSNotifier()
+	if notifier == nil {
+		applogger.Debugf("[ad_sync:drift] WS notifier 未注入，跳过全员广播")
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			applogger.Warnf("[ad_sync:drift] WS 广播异常(忽略): %v", r)
+		}
+	}()
+	notifier.BroadcastToAll(websocket.NoticeMessage{
+		Type:      websocket.MessageTypeADSyncDriftAlert,
+		Title:     adDriftAlertTitle,
+		Content:   payload,
+		Priority:  adDriftAlertPriorityUrgent,
+		Timestamp: now.Unix(),
+	})
+	applogger.Debugf("[ad_sync:drift] ad_sync_drift_alert WS 全员事件已广播")
+}
+
+// sendWebhook 推 webhook + 写 sys_oper_log 触发结果。URL / token 绝不落明文日志。
+// 失败仅 WARN（软失败）；未注入 sender 时安全跳过并仍记录一条 skipped 审计。
+func (s *ADSyncDriftAlertService) sendWebhook(ctx context.Context, content, payload string, cfg adDriftConfig, now time.Time) {
+	sender := driftAlertWebhookSender()
+	var res DriftAlertWebhookResult
+	if sender == nil {
+		res = DriftAlertWebhookResult{Success: false, Message: "webhook sender 未注入(跳过)"}
+		applogger.Warnf("[ad_sync:drift] webhook sender 未注入，跳过推送")
+	} else {
+		// 独立 recover：webhook sender panic 不得影响 emit 其余收尾。
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					res = DriftAlertWebhookResult{Success: false, Message: "webhook sender panic(已兜底)"}
+					applogger.Warnf("[ad_sync:drift] webhook sender 异常(忽略): %v", r)
+				}
+			}()
+			res = sender(ctx, s.db, cfg.WebhookConfigID, DriftAlertWebhookMessage{
+				Title:   adDriftAlertTitle,
+				Content: content,
+				Data:    map[string]interface{}{"payload": payload},
+			})
+		}()
+		if !res.Success {
+			applogger.Warnf("[ad_sync:drift] webhook 推送失败(忽略): %s", sanitizeWebhookMessage(res.Message))
+		}
+	}
+
+	// sys_oper_log 触发结果（Method=ADSyncDriftAlertService.Webhook，BusinessType=14）。
+	// JsonResult 只含 httpCode/success/retryCount；Message 先脱敏再落库。
+	jsonResult := fmt.Sprintf(`{"success":%t,"httpCode":%d,"retryCount":%d}`,
+		res.Success, res.HTTPCode, res.RetryCount)
+	msg := sanitizeWebhookMessage(res.Message)
+	operLog := &models.OperLog{
+		Title:        adDriftAlertTitle,
+		BusinessType: adDriftAlertOperBusinessType,
+		Method:       adDriftAlertWebhookMethod,
+		Status:       int(models.OperLogStatusSuccess),
+		OperTime:     now,
+		JsonResult:   &jsonResult,
+		ErrorMsg:     &msg,
+	}
+	if err := s.db.WithContext(ctx).Create(operLog).Error; err != nil {
+		applogger.Warnf("[ad_sync:drift] webhook operlog 写入失败(忽略): %v", err)
+	}
+}
+
+// sanitizeWebhookMessage 脱敏 webhook 错误 / 响应文本：抹掉 URL 中的
+// ?key= / access_token= / token= 等查询凭据与 userinfo。
+// 保证明文 webhook secret 绝不落 sys_oper_log / 日志（PHASE 144 安全红线）。
+func sanitizeWebhookMessage(s string) string {
+	if s == "" {
+		return ""
+	}
+	var out strings.Builder
+	rest := s
+	for {
+		idx := strings.Index(rest, "http")
+		if idx < 0 {
+			out.WriteString(rest)
+			break
+		}
+		out.WriteString(rest[:idx])
+		tail := rest[idx:]
+		end := len(tail)
+		if q := strings.IndexAny(tail, " \t\n\r\"'"); q >= 0 {
+			end = q
+		}
+		raw := tail[:end]
+		if u, err := url.Parse(raw); err == nil && u.Scheme != "" {
+			if u.RawQuery != "" {
+				u.RawQuery = "******"
+			}
+			if u.User != nil {
+				u.User = url.User("******")
+			}
+			out.WriteString(u.String())
+		} else {
+			out.WriteString(raw)
+		}
+		rest = tail[end:]
+	}
+	result := out.String()
+	// 兜底：独立的 key/token/secret 查询串字面量（无 scheme 时也能遮）
+	for _, kw := range []string{"key", "token", "access_token", "secret", "sign"} {
+		result = maskQueryParam(result, kw)
+	}
+	return result
+}
+
+// maskQueryParam 把 "kw=明文" 的值遮成 ******（值到 & / 空白 / 引号为止）。
+func maskQueryParam(s, kw string) string {
+	lower := strings.ToLower(s)
+	pat := kw + "="
+	start := 0
+	var b strings.Builder
+	for {
+		i := strings.Index(lower[start:], pat)
+		if i < 0 {
+			b.WriteString(s[start:])
+			break
+		}
+		abs := start + i
+		b.WriteString(s[start : abs+len(pat)])
+		vStart := abs + len(pat)
+		vEnd := vStart
+		for vEnd < len(s) && !strings.ContainsRune("&\t\n\r \"'", rune(s[vEnd])) {
+			vEnd++
+		}
+		if vEnd > vStart {
+			b.WriteString("******")
+		}
+		start = vEnd
+		lower = strings.ToLower(s)
+	}
+	return b.String()
 }
 
 // AlertCount 累计告警触发次数（排障 / 单测 / 可观测用）。

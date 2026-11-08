@@ -26,6 +26,9 @@ export const SYSTEM_MENU = "/system/menu"; // 菜单管理
 export const SYSTEM_DEPT = "/system/dept"; // 部门管理
 export const SYSTEM_DICT = "/system/dict"; // 字典管理
 export const SYSTEM_NOTICE = "/system/notice"; // 通知公告
+// Phase 144 ALRT-03: 同步漂移告警页（菜单驱动动态路由，componentLoader glob 自动收
+// src/pages/system/ad-drift-alert/index.tsx；App.tsx 不含静态路由表，禁止改）
+export const SYSTEM_AD_DRIFT_ALERT = "/system/ad-drift-alert";
 
 // ============================================
 // 网络设备相关路由

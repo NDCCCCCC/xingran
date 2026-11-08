@@ -1,6 +1,9 @@
 package api
 
 import (
+	"context"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	v1 "github.com/xingran-next/xingran-go-backend/internal/api/v1"
 	agentV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/agent"
@@ -15,11 +18,13 @@ import (
 	vdiV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/vdi"
 	workorderV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/workorder"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	// AUTH-03 / D-01: MultiAuth + RateLimitByScope 位于 internal/middleware,
 	// 与下方 pkg/middleware（别名 middleware）同 package 名，故取别名 internalmw。
 	internalmw "github.com/xingran-next/xingran-go-backend/internal/middleware"
 	"github.com/xingran-next/xingran-go-backend/internal/scheduler"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
@@ -28,6 +33,7 @@ import (
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	"github.com/xingran-next/xingran-go-backend/pkg/permission"
+	"gorm.io/gorm"
 )
 
 const permSystemConfig = "system:config"
@@ -44,6 +50,76 @@ func (a *noticeHubAdapter) BroadcastToUsers(userIDs []string, message interface{
 	if msg, ok := message.(websocket.NoticeMessage); ok {
 		a.hub.BroadcastToUsers(userIDs, msg)
 	}
+}
+
+// BroadcastToAll Phase 144：把全员事件转调 *websocket.NoticeHub.BroadcastToAll。
+// 与 BroadcastToUsers 同款类型断言（scheduler 侧传 interface{}）。
+func (a *noticeHubAdapter) BroadcastToAll(message interface{}) {
+	if msg, ok := message.(websocket.NoticeMessage); ok {
+		a.hub.BroadcastToAll(msg)
+	}
+}
+
+// Phase 144：把 scheduler 全局 adapter + 真实发布链路 / webhook 通道注入到
+// addomain 漂移告警服务（零循环依赖：addomain 被 scheduler/services 反向 import，
+// 只能由 api 装配层注入）。WS notifier 与 scheduler.SetNoticeHub 用同一个
+// adapter 实例，语义等价 PLAN「方案 A」；NoticeService / APISenderService 走
+// services 根包真实实现。
+func setupDriftAlertHooks(core *core.Core, adapter *noticeHubAdapter) {
+	addomain.SetDriftAlertWSNotifier(adapter)
+	addomain.SetDriftAlertNoticePublisher(
+		func(ctx context.Context, db *gorm.DB, n addomain.DriftAlertNotice) (string, error) {
+			svc := services.NewNoticeService(db)
+			notice, err := svc.CreateNoticeWithTargets(ctx, &services.CreateNoticeRequest{
+				NoticeTitle:   n.Title,
+				NoticeType:    n.NoticeType,
+				NoticeContent: n.Content,
+				Priority:      models.NoticePriority(n.Priority),
+				TargetType:    models.TargetType(n.TargetType),
+				IsMarkdown:    false,
+			}, "SYSTEM", "SYSTEM")
+			if err != nil {
+				return "", err
+			}
+			if perr := svc.PublishNotice(ctx, notice.ID); perr != nil {
+				return notice.ID, perr
+			}
+			// 修「铃铛收不到」：发布成功后主动推 new_notice 全员事件
+			// （CreateNoticeWithTargets+PublishNotice 只落库/改状态，不推 WS；
+			//  scheduler.broadcastNoticeToUsers 仅服务定时发布任务）。
+			// 与 ad_sync_drift_alert 双事件并存，前端 noticeStore 按 type 分流。
+			func() {
+				defer func() { _ = recover() }()
+				adapter.BroadcastToAll(websocket.NoticeMessage{
+					Type:      "new_notice",
+					NoticeID:  notice.ID,
+					Title:     n.Title,
+					Priority:  n.Priority,
+					Timestamp: time.Now().Unix(),
+				})
+			}()
+			return notice.ID, nil
+		})
+	addomain.SetDriftAlertWebhookSender(
+		func(ctx context.Context, db *gorm.DB, configID string, msg addomain.DriftAlertWebhookMessage) addomain.DriftAlertWebhookResult {
+			sender := services.NewAPISenderService(db)
+			apiMsg := &services.APIMessage{Title: msg.Title, Content: msg.Content, Data: msg.Data}
+			var r *services.APISendResult
+			if configID != "" {
+				r = sender.Send(ctx, configID, apiMsg)
+			} else {
+				r = sender.SendWithDefaultConfig(ctx, models.APIConfigTypeWebhook, apiMsg)
+			}
+			if r == nil {
+				return addomain.DriftAlertWebhookResult{Success: false, Message: "webhook 发送返回空结果"}
+			}
+			return addomain.DriftAlertWebhookResult{
+				Success:    r.Success,
+				HTTPCode:   r.HTTPCode,
+				RetryCount: r.RetryCount,
+				Message:    r.Message,
+			}
+		})
 }
 
 // setupEncryptionMiddlewares 配置请求/响应加密中间件
@@ -89,7 +165,10 @@ func setupNoticeHub(r *gin.RouterGroup, core *core.Core) *websocket.NoticeHub {
 	applogger.Infof("通知中心已启动")
 
 	core.NoticeHub = noticeHub
-	scheduler.SetNoticeHub(&noticeHubAdapter{hub: noticeHub})
+	adapter := &noticeHubAdapter{hub: noticeHub}
+	scheduler.SetNoticeHub(adapter)
+	// Phase 144：同一个 adapter 同时注入漂移告警 WS 通道 + 发布链路 / webhook。
+	setupDriftAlertHooks(core, adapter)
 
 	return noticeHub
 }
@@ -161,6 +240,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			notificationConfigs.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
 			{
 				systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
+			}
+
+			// Phase 144 同步漂移告警（5 个 POST 端点，读/写权限分组在 setup 内）
+			{
+				systemV1.SetupAdDriftAlertRouter(authorized, core)
 			}
 
 			// 用户管理

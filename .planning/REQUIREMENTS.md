@@ -15,23 +15,23 @@
 
 ### DISC — 发现设备真实导入
 
-- [ ] **DISC-01**: 用户可把一次设备发现任务中发现的设备真实导入为网络设备（`NetworkDevice`）——完成 `DiscoveredDevice → NetworkDevice` 字段映射、按可判定键去重、事务边界、部分成功/失败语义；替换 `internal/services/device_discovery_service.go:509-523` 的 `ImportDiscoveredDevices` 简化实现（现状仅 `return len(deviceIDs), nil`）。
-- [ ] **DISC-02**: 导入端点符合全仓写操作约定——success path 在 `response.Success(...)` 之前调用 `operlog.Record(...)`、缓存失效、错误以 `error` 逐层返回并由 handler 用 `response.Error(...)` 包装；`discovery_handler.go` 与相关测试同步更新（删除「简化实现」断言），SQLite+PG 双方言均不报错。
+- [x] **DISC-01**: 用户可把一次设备发现任务中发现的设备真实导入为网络设备（`NetworkDevice`）——完成 `DiscoveredDevice → NetworkDevice` 字段映射、按可判定键去重、事务边界、部分成功/失败语义；替换 `internal/services/device_discovery_service.go:509-523` 的 `ImportDiscoveredDevices` 简化实现（现状仅 `return len(deviceIDs), nil`）。
+- [x] **DISC-02**: 导入端点符合全仓写操作约定——success path 在 `response.Success(...)` 之前调用 `operlog.Record(...)`、缓存失效、错误以 `error` 逐层返回并由 handler 用 `response.Error(...)` 包装；`discovery_handler.go` 与相关测试同步更新（删除「简化实现」断言），SQLite+PG 双方言均不报错。
 
 ### ALRT — 同步漂移告警通道收口
 
 > 补齐 FIX-11 自报边界：v1.53 已交付常态化漂移告警**后端服务**，但前端告警页 / WS 广播 / 企微钉钉 webhook 未接。
 
-- [ ] **ALRT-01**: 用户可在后端查询与配置漂移告警——告警列表/详情/已读状态端点 + 通道配置项（企微/钉钉 webhook URL、启用开关），权限码挂载，敏感 webhook 配置走 `operlog.RecordWithBody` 脱敏。
-- [ ] **ALRT-02**: 漂移告警产生时经 `internal/websocket/` 广播到在线客户端（复用现有广播 API 与消息体格式），并支持企微/钉钉 webhook 推送（凭证不落明文日志、失败可观测、不阻塞主流程、operlog 覆盖）。
-- [ ] **ALRT-03**: 用户可在前端「同步漂移告警」页面查看告警列表、筛选与标记已读，并经 WS 实时收到新告警——页面注册路由与菜单、store、API 用 `@/lib/api.ts` wrapped functions（禁止裸 axios）。
+- [x] **ALRT-01**: 用户可在后端查询与配置漂移告警——告警列表/详情/已读状态端点 + 通道配置项（企微/钉钉 webhook URL、启用开关），权限码挂载，敏感 webhook 配置走 `operlog.RecordWithBody` 脱敏。
+- [x] **ALRT-02**: 漂移告警产生时经 `internal/websocket/` 广播到在线客户端（复用现有广播 API 与消息体格式），并支持企微/钉钉 webhook 推送（凭证不落明文日志、失败可观测、不阻塞主流程、operlog 覆盖）。
+- [x] **ALRT-03**: 用户可在前端「同步漂移告警」页面查看告警列表、筛选与标记已读，并经 WS 实时收到新告警——页面注册路由与菜单、store、API 用 `@/lib/api.ts` wrapped functions（禁止裸 axios）。
 
 ### PORT — 端口写物理参数收口
 
 > 补齐 FIX-04 / FIX-05 自报边界：v1.53 已交付 3 厂商×3 参数（速率/双工/MTU）单条写 + 校验 + 审计，但型号级能力矩阵与批量路径未做。
 
-- [ ] **PORT-01**: 用户可在批量端口写中使用物理参数——沿用 v1.51 Phase 122 批量写实时进度事件，补齐批量路径对 speed/duplex/mtu 动作的分发、逐项结果与错误聚合，单条路径零回归。
-- [ ] **PORT-02**: 端口写物理参数支持型号级 `vendorCapabilities` 规则——型号来源取自设备已有字段（不依赖真机取证）、厂商级默认值回退、未知型号 fail-safe（拒绝或降级到安全默认值，结论须显式登记）、可通过非真机 fixture 单测覆盖全部分支。
+- [x] **PORT-01**: 用户可在批量端口写中使用物理参数——沿用 v1.51 Phase 122 批量写实时进度事件，补齐批量路径对 speed/duplex/mtu 动作的分发、逐项结果与错误聚合，单条路径零回归。
+- [x] **PORT-02**: 端口写物理参数支持型号级 `vendorCapabilities` 规则——型号来源取自设备已有字段（不依赖真机取证）、厂商级默认值回退、未知型号 fail-safe（拒绝或降级到安全默认值，结论须显式登记）、可通过非真机 fixture 单测覆盖全部分支。
 
 ## Future Requirements
 
@@ -67,21 +67,22 @@ Which phases cover which requirements. Updated during roadmap creation (Step 10 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISC-01 | 142 | Pending |
-| DISC-02 | 142 | Pending |
-| ALRT-01 | 144 | Pending |
-| ALRT-02 | 144 | Pending |
-| ALRT-03 | 144 | Pending |
-| PORT-01 | 143 | Pending |
-| PORT-02 | 143 | Pending |
+| DISC-01 | 142 | Satisfied |
+| DISC-02 | 142 | Satisfied |
+| ALRT-01 | 144 | Satisfied |
+| ALRT-02 | 144 | Satisfied |
+| ALRT-03 | 144 | Satisfied |
+| PORT-01 | 143 | Satisfied |
+| PORT-02 | 143 | Satisfied |
 
-**映射说明**：142 = DISC-01/02（发现设备真实导入）；143 = PORT-01/02（端口写物理参数收口）；144 = ALRT-01/02/03（同步漂移告警通道收口）。W1 三 phase 零依赖并行（按模块隔离）；验证类残余不建 phase。
+**映射说明**：142 = DISC-01/02（发现设备真实导入）；143 = PORT-01/02（端口写物理参数收口）；144 = ALRT-01/02/03（同步漂移告警通道收口，拆后端/前端两个并行 executor）。W1 四 executor 零依赖并行（按模块隔离）；验证类残余不建 phase、不伪造闭环。
 
 **Coverage:**
 - v1.54 requirements: 7 total
 - Mapped to phases: 7
 - Unmapped: 0
+- Satisfied: 7 / 7（SHIPPED 2026-11-09）
 
 ---
 *Requirements defined: 2026-11-08*
-*Last updated: 2026-11-08 after 用户确认「纯代码缺口 4 项」范围、跳过领域研究、授权自动提交*
+*Last updated: 2026-11-09 after v1.54 SHIPPED（7/7 REQ 交付；全量回归闸门全绿）*

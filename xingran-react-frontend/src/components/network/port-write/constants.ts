@@ -34,7 +34,7 @@ export const PRESET_REASONS = [
 ] as const;
 
 /**
- * D-01 action 的中文标题 (Phase 53 5 个 + Phase 56 v1.20.1 2 个 = 7 个)
+ * D-01 action 的中文标题 (Phase 143: 15 → 18, 补物理参数三动作)
  *
  * 用于 PortWriteModal / SetAccessVlanModal / PortBindingModal 动态标题
  * (ACTION_TITLE[action] + ' - ' + interfaceName) 与 BulkWriteDrawer action 选择器的 label。
@@ -54,7 +54,10 @@ export const ACTION_TITLE: Record<
   | "portsec_disable" // v1.51 Phase 125
   | "portsec_max_mac" // v1.51 Phase 125
   | "portsec_sticky" // v1.51 Phase 125
-  | "portsec_static_bind", // v1.51 Phase 125
+  | "portsec_static_bind" // v1.51 Phase 125
+  | "set_speed" // v1.54 Phase 143
+  | "set_duplex" // v1.54 Phase 143
+  | "set_mtu", // v1.54 Phase 143
   string
 > = {
   shutdown: "关闭端口",
@@ -72,6 +75,46 @@ export const ACTION_TITLE: Record<
   portsec_max_mac: "设置 MAC 学习上限",
   portsec_sticky: "启用 Sticky MAC",
   portsec_static_bind: "配置静态 MAC 绑定",
+  set_speed: "调整端口速率",
+  set_duplex: "调整端口双工模式",
+  set_mtu: "调整端口 MTU",
+};
+
+// ==================== v1.54 Phase 143 物理参数表单常量 (PORT-01/02) ====================
+// 与后端 portcollection.defaultPhysicalProfile() 三家交集一致；型号级差异由后端
+// 能力画像决定，前端只做 UX 层白名单（后端 validator 是真相源）。
+
+/** set_speed 速率选项 (Mbps)；auto 作为 speedMode 独立枚举，见 PHYSICAL_SPEED_MODE_AUTO */
+export const PHYSICAL_SPEED_OPTIONS = [
+  { label: "10 Mbps", value: 10 },
+  { label: "100 Mbps", value: 100 },
+  { label: "1000 Mbps (1G)", value: 1000 },
+  { label: "10000 Mbps (10G)", value: 10000 },
+] as const;
+
+/** set_speed 自协商速率 speedMode 哨兵值 */
+export const PHYSICAL_SPEED_MODE_AUTO = "auto";
+
+/** set_duplex 双工选项 */
+export const PHYSICAL_DUPLEX_OPTIONS = [
+  { label: "半双工 (half)", value: "half" },
+  { label: "全双工 (full)", value: "full" },
+  { label: "自协商 (auto)", value: "auto" },
+] as const;
+
+/** set_mtu 范围（后端全局默认画像三家交集；型号级上下界以后端能力画像为准） */
+export const PHYSICAL_MTU_MIN = 1280;
+export const PHYSICAL_MTU_MAX = 9216;
+
+/** 物理批量无自动回滚的诚实警示（后端 dry-run Summary 与审计同源文案） */
+export const PHYSICAL_NO_ROLLBACK_HINT =
+  "批量物理参数无自动回滚，失败需人工按 audit.before_value 恢复（本里程碑不纳入 critical 自动回滚）。";
+
+/** 取证级别徽标文案（默认放行 ≠ 有证据；unverified 不冒充真机结论） */
+export const PHYSICAL_EVIDENCE_LABEL: Record<string, string> = {
+  unverified: "未取证（默认放行）",
+  model: "型号级依据",
+  vendor: "厂商基线（未逐型号取证）",
 };
 
 // ==================== v1.51 Phase 124 trunk/hybrid 表单常量 ====================
@@ -91,8 +134,17 @@ export const TRUNK_REPLACE_HINT =
 export const TRUNK_HYBRID_OVERLAP_HINT =
   "tagged 与 untagged VLAN 不可重叠：华为设备会拒绝，H3C 会静默优先 untagged 表项。Cisco 不支持 hybrid 端口模式（选择将返回 400）。";
 
-/** cisco 设备 action 集提示（契约 adefb14c: cisco 支持 14 个动作, 无 trunk_set_hybrid） */
-export const CISCO_UNSUPPORTED_ACTIONS: readonly PortWriteAction[] = ["trunk_set_hybrid"];
+/**
+ * Cisco 设备不支持的 action 集（契约 adefb14c + Phase 143 裁定）。
+ * Phase 143: 物理参数三动作渲染层未实现 + 无真机取证依据 → 后端能力矩阵显式标
+ * vendorUnsupported，前端同步禁用/提示（迈普同口径，后端同样标 Unsupported）。
+ */
+export const CISCO_UNSUPPORTED_ACTIONS: readonly PortWriteAction[] = [
+  "trunk_set_hybrid",
+  "set_speed",
+  "set_duplex",
+  "set_mtu",
+];
 
 /** VLAN 列表最大条数（保守上限, 防误粘超长串; 后端同样有 sentinel 校验） */
 export const VLAN_LIST_MAX = 256;

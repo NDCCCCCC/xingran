@@ -71,6 +71,11 @@ type PortTemplateParams struct {
 	SpeedMode string
 	Duplex    string
 	MTU       int
+	// Model Phase 143 (PORT-02)：设备型号（models.NetworkDevice.Model），仅物理动作
+	// 使用 —— renderPhysical 按 (vendor, Model) 调 ResolvePhysicalProfile / 
+	// CheckPhysicalSupport 取命令形态与值域，保证「校验放行 ⇔ 渲染接受」同源。
+	// 其它 action 忽略；空串表示型号未知，回退厂商基线 / 全局默认画像。
+	Model string
 }
 
 // 哨兵错误（Phase 51 service 翻译为 HTTP 400 / 404 / 422 等业务码）。

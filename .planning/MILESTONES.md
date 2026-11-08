@@ -2,6 +2,27 @@
 
 # Milestones
 
+## v1.54 真实代码缺口清偿 (Shipped: 2026-11-09)
+
+**Phases completed:** 3 phases (142-144，其中 144 拆后端/前端两个并行 executor，共 4 PLAN) | **Requirements:** 7/7 (DISC-01/02 · ALRT-01/02/03 · PORT-01/02，100% Satisfied) | **W1 四 executor 并行 + Lead 集成** | **回归闸门**：`go build ./...` / `go test ./...` / `tsc` / `lint:ci` **ALL PASS**（含 check-permission-codes 双向零漂移、check-route-registry 713 路由）/ 全量 vitest 全绿
+
+**取数**：`.planning/STATE.md ## Deferred Items` 中 v1.53 收档显式披露的 4 项真实代码缺口；用户 2026-11-08 裁定「仅纯代码缺口 4 项」，跳过领域研究、授权自动提交。
+
+**Key accomplishments:**
+1. ✅ **发现设备真实导入（DISC）** — `ImportDiscoveredDevices` 从 `return len(deviceIDs), nil` 改为读 `sys_device_discovery_result` → `ip_address` 去重（批内 / 已存在跳过 / 软删恢复）→ 单事务批量写 `sys_network_device`；handler 补缓存失效；9 个新单测 + 2 处旧 stub 断言改写；零 migration。
+2. ✅ **端口写物理参数收口（PORT）** — 型号级 `physicalProfile` 能力矩阵（代码常量 + 测试锁定，回退链 / `Evidence=""` 未取证诚实标注 / Cisco·Maipu 显式 Unsupported）；批量 speed/duplex/mtu 接入（复用 Phase 122 进度事件零改动、`applyPhysicalAuditExtra` 修 `audit.after_value`、sentinel 400）；前端 `PortWriteAction` 15→18 + 单条/批量表单 + `evidenceLevel` 徽标。
+3. ✅ **同步漂移告警通道收口（ALRT）** — 后端 5 端点（status/logs/config/config/update/trigger）+ 权限三方一致 + migration 238（菜单/4 F 型权限/9 行 sys_config seed，**database.go 两处注册**）；`emit()` 改走 `NoticeService` 发布链路（修铃铛收不到）+ `ad_sync_drift_alert` WS 全员广播 + 路线 A 通用 Webhook（凭证脱敏）；前端菜单驱动页面（状态卡/日志表/配置表单/立即检测/WS 实时，**不新建第二条 WS**）。
+4. ✅ **Phase 143 移交项闭环** — `pkg/permission/config.go` 补登 `POST /network/ports/write/physical`（复用 `NetworkPortWrite`）+ 测试。
+5. ✅ **集成修复** — Lead 复核修 7 个前端 lint 错误（裸 antd 组件 → `AppSelect/AppInput/AppTextArea`、裸 hex → `var(--theme-*)`）、antd 6 弃用 `size="middle"`→`medium`；同批更新 4 个计数不变量基线（新增页 77→78、新增 `*Api.ts` 16→17、`PAGE_TITLES` 4→5），全部附裁决理由。
+
+**Known Gaps（登记，非阻断）**：
+- **验证类残余（不伪造闭环）**：FIX-01 实机 AD/LDAP UAT｜FIX-04 三厂商物理参数真机逐型号取证 7 项｜FIX-09 端到端 HTTP P99 压测｜FIX-13 生产库 migration 236/237 待执行；79 条人工验证跟踪表 **0 勾选**；6 项 LOCKED 残余不写修复代码。
+- **v1.54 新增边界**：告警「标记已读」未实现（后端无该契约）｜企微/钉钉专用 markdown + 加签（路线 B）未做｜`sys_object_id` 已采集未落库、型号 key 仅 `NetworkDevice.Model`｜批量物理参数无自动回滚（预览/审计已显式警示）｜发现导入链路 3 处顺带隐患｜e2e 归位｜`RequiresInterfaceView` 与型号画像 `RequiresView` 联动点。逐项见 4 份 phase `*-SUMMARY.md` 与 `STATE.md ## Deferred Items` 的 v1.54 行。
+
+**交付证据**：`.planning/phases/142-disc-01-02/142-SUMMARY.md`、`143-port-01-02/143-SUMMARY.md`、`144-alrt-01-02-03/144-01-backend-SUMMARY.md`、`144-02-frontend-SUMMARY.md`；架构裁定 `.planning/notes/261108-v154-architecture-decisions.md`；集成清单 `.planning/notes/261108-v154-integration-checklist.md`。
+
+---
+
 ## v1.53 开放项全量清偿 (Shipped: 2026-11-08)
 
 **Phases completed:** 8 phases (134-141) | **Requirements:** 24 REQ（18 交付 + 6 项人工验证跟踪，不伪造闭环）| **21 条开放项全覆盖** | **回归闸门**：go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例全绿

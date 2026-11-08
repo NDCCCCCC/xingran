@@ -36,8 +36,8 @@ describe("port-write constants", () => {
     }
   });
 
-  it("ACTION_TITLE 15 个映射(5+2 v1.20.1+3 Phase 124 trunk+5 Phase 125 portsec)", () => {
-    expect(Object.keys(ACTION_TITLE).length).toBe(15);
+  it("ACTION_TITLE 18 个映射(5+2 v1.20.1+3 Phase 124 trunk+5 Phase 125 portsec+3 Phase 143 physical)", () => {
+    expect(Object.keys(ACTION_TITLE).length).toBe(18);
     expect(ACTION_TITLE.shutdown).toBe("关闭端口");
     expect(ACTION_TITLE.set_access_vlan).toBe("修改 access VLAN");
     expect(ACTION_TITLE.port_binding).toBe("端口绑定");
@@ -48,6 +48,10 @@ describe("port-write constants", () => {
     // v1.51 Phase 125 (006ece28) 语义适配登记
     expect(ACTION_TITLE.portsec_enable).toBe("启用端口安全");
     expect(ACTION_TITLE.portsec_static_bind).toBe("配置静态 MAC 绑定");
+    // v1.54 Phase 143 物理参数三动作
+    expect(ACTION_TITLE.set_speed).toBe("调整端口速率");
+    expect(ACTION_TITLE.set_duplex).toBe("调整端口双工模式");
+    expect(ACTION_TITLE.set_mtu).toBe("调整端口 MTU");
   });
 
   it("length 限制 3 个常量", () => {
