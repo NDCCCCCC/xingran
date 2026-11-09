@@ -131,9 +131,7 @@ export async function getConfig(): Promise<ADDriftAlertConfig> {
 }
 
 /** 写 9 个配置旋钮（权限码 system:adDriftAlert:edit 门控） */
-export async function updateConfig(
-  payload: ADDriftAlertConfig
-): Promise<ADDriftAlertConfig> {
+export async function updateConfig(payload: ADDriftAlertConfig): Promise<ADDriftAlertConfig> {
   const result = await post<ADDriftAlertConfig>(`${BASE}/config/update`, payload);
   return result.data as ADDriftAlertConfig;
 }

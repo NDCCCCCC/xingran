@@ -26,11 +26,7 @@ export interface StatusCardsProps {
 }
 
 /** 通道开关徽标：on=绿色启用 / off=默认灰色停用 */
-const ChannelTag: FC<{ label: string; on: boolean; icon: ReactNode }> = ({
-  label,
-  on,
-  icon,
-}) => (
+const ChannelTag: FC<{ label: string; on: boolean; icon: ReactNode }> = ({ label, on, icon }) => (
   <Tooltip title={on ? "已启用" : "已停用"}>
     <Tag color={on ? "success" : "default"} icon={icon} style={{ marginInlineEnd: 4 }}>
       {label}
@@ -83,7 +79,11 @@ const StatusCards: FC<StatusCardsProps> = ({ status, loading = false }) => {
         <Card loading={loading} size="small" title="告警通道">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             <ChannelTag label="总开关" on={status?.enabled ?? false} icon={<CloudSyncOutlined />} />
-            <ChannelTag label="站内通知" on={status?.noticeEnabled ?? false} icon={<BellOutlined />} />
+            <ChannelTag
+              label="站内通知"
+              on={status?.noticeEnabled ?? false}
+              icon={<BellOutlined />}
+            />
             <ChannelTag label="WS 实时" on={status?.wsEnabled ?? false} icon={<ApiOutlined />} />
             <ChannelTag
               label="Webhook"

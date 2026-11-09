@@ -306,15 +306,17 @@ describe("noticeStore — ad_sync_drift_alert 分流 (Phase 144 ALRT-03)", () =>
     const cb = vi.fn();
     const unsub = useNoticeStore.getState().onADDriftAlert(cb);
 
-    useNoticeStore.getState().handleWsMessage(
-      driftWsMessage(JSON.stringify(driftEvent())) as never
-    );
+    useNoticeStore
+      .getState()
+      .handleWsMessage(driftWsMessage(JSON.stringify(driftEvent())) as never);
     expect(cb).toHaveBeenCalledTimes(1);
 
     unsub();
-    useNoticeStore.getState().handleWsMessage(
-      driftWsMessage(JSON.stringify(driftEvent({ noticeId: "notice-2" }))) as never
-    );
+    useNoticeStore
+      .getState()
+      .handleWsMessage(
+        driftWsMessage(JSON.stringify(driftEvent({ noticeId: "notice-2" }))) as never
+      );
     // 退订后仍是 1 次
     expect(cb).toHaveBeenCalledTimes(1);
   });
@@ -344,7 +346,7 @@ describe("noticeStore — ad_sync_drift_alert 分流 (Phase 144 ALRT-03)", () =>
     expect(warnSpy).toHaveBeenCalled();
   });
 
-  it("content 合法 JSON 但非对象（如 \"string\"）：忽略，不派发", () => {
+  it('content 合法 JSON 但非对象（如 "string"）：忽略，不派发', () => {
     const cb = vi.fn();
     useNoticeStore.getState().onADDriftAlert(cb);
 
@@ -362,9 +364,9 @@ describe("noticeStore — ad_sync_drift_alert 分流 (Phase 144 ALRT-03)", () =>
     useNoticeStore.getState().onADDriftAlert(bad);
     useNoticeStore.getState().onADDriftAlert(good);
 
-    useNoticeStore.getState().handleWsMessage(
-      driftWsMessage(JSON.stringify(driftEvent())) as never
-    );
+    useNoticeStore
+      .getState()
+      .handleWsMessage(driftWsMessage(JSON.stringify(driftEvent())) as never);
 
     expect(bad).toHaveBeenCalledTimes(1);
     expect(good).toHaveBeenCalledTimes(1);
@@ -386,9 +388,9 @@ describe("noticeStore — ad_sync_drift_alert 分流 (Phase 144 ALRT-03)", () =>
     expect(driftCb).not.toHaveBeenCalled();
     expect(rpaCb).toHaveBeenCalledTimes(1);
 
-    useNoticeStore.getState().handleWsMessage(
-      driftWsMessage(JSON.stringify(driftEvent())) as never
-    );
+    useNoticeStore
+      .getState()
+      .handleWsMessage(driftWsMessage(JSON.stringify(driftEvent())) as never);
     expect(driftCb).toHaveBeenCalledTimes(1);
     expect(rpaCb).toHaveBeenCalledTimes(1); // 未被 drift 二次触发
   });

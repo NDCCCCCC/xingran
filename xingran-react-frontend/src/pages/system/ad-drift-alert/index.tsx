@@ -114,8 +114,7 @@ const ADDriftAlertPage: FC = () => {
       const result = await triggerOnce();
       handleSuccess("立即检测");
       getAppMessage().info(
-        result?.message ??
-          (result?.drifted ? "检测完成：发现同步漂移" : "检测完成：未发现同步漂移")
+        result?.message ?? (result?.drifted ? "检测完成：发现同步漂移" : "检测完成：未发现同步漂移")
       );
       void refreshStatus();
       bumpLogs();
@@ -162,11 +161,7 @@ const ADDriftAlertPage: FC = () => {
 
         <StatusCards status={status} loading={statusLoading} />
 
-        <ConfigForm
-          config={config}
-          loading={configLoading}
-          onSaved={handleConfigSaved}
-        />
+        <ConfigForm config={config} loading={configLoading} onSaved={handleConfigSaved} />
 
         <Card title="触发记录" size="small">
           <TriggerLogTable refreshToken={logRefreshToken} />

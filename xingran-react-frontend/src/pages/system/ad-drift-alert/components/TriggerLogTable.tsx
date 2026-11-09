@@ -102,7 +102,7 @@ const TriggerLogTable: FC<TriggerLogTableProps> = ({ refreshToken }) => {
         dataIndex: "source",
         key: "source",
         width: 100,
-        render: (v?: string) => (v === "manual" ? "手动" : v === "cron" ? "定时" : v ?? "-"),
+        render: (v?: string) => (v === "manual" ? "手动" : v === "cron" ? "定时" : (v ?? "-")),
       },
       {
         title: "检测结果",
@@ -122,8 +122,7 @@ const TriggerLogTable: FC<TriggerLogTableProps> = ({ refreshToken }) => {
         title: "成员数 / 组数",
         key: "counts",
         width: 140,
-        render: (_, r: ADDriftTriggerLog) =>
-          `${r.memberCount ?? "-"} / ${r.distinctGroups ?? "-"}`,
+        render: (_, r: ADDriftTriggerLog) => `${r.memberCount ?? "-"} / ${r.distinctGroups ?? "-"}`,
       },
       {
         title: "漂移量",

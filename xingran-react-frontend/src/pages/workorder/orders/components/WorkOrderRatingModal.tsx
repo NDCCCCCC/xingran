@@ -110,7 +110,9 @@ const WorkOrderRatingModal: FC<WorkOrderRatingModalProps> = ({
           <div style={{ marginBottom: 12 }}>
             <Text type="secondary">评价数：{stats.totalCount ?? 0}</Text>
             {stats.avgCompletionScore != null && (
-              <Text style={{ marginLeft: 12 }}>平均完成度：{Number(stats.avgCompletionScore).toFixed(1)}</Text>
+              <Text style={{ marginLeft: 12 }}>
+                平均完成度：{Number(stats.avgCompletionScore).toFixed(1)}
+              </Text>
             )}
             {stats.avgCooperationScore != null && (
               <Text style={{ marginLeft: 12 }}>
@@ -149,7 +151,13 @@ const WorkOrderRatingModal: FC<WorkOrderRatingModalProps> = ({
                       <Tag color={item.ratingType === "user" ? "blue" : "green"}>
                         {item.ratingType === "user" ? "用户评价" : "处理人评价"}
                       </Tag>
-                      <Rate disabled allowHalf value={item.ratingType === "user" ? item.completionScore : item.cooperationScore} />
+                      <Rate
+                        disabled
+                        allowHalf
+                        value={
+                          item.ratingType === "user" ? item.completionScore : item.cooperationScore
+                        }
+                      />
                     </span>
                   }
                   description={item.comment || "（无评价内容）"}

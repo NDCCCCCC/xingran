@@ -72,7 +72,7 @@ func TestPbkdf2SM3_RejectsIllegalInput(t *testing.T) {
 		if err == nil {
 			t.Errorf("%s: 期望 error，实际 err=nil（旧实现此处静默返回「32 真值 + 后半段全零」弱密钥）", tc.name)
 		}
-		if dk != nil && len(dk) != 0 {
+		if len(dk) != 0 {
 			t.Errorf("%s: 期望 nil/空结果，实际 len(dk)=%d（不得再出现 result[32:] 全零的非 nil 切片）", tc.name, len(dk))
 		}
 	}

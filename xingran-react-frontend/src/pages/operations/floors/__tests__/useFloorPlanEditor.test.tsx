@@ -251,7 +251,15 @@ describe("Phase 149 保存侧可见基线增量 diff", () => {
   });
 
   const makeWall = (id: string) =>
-    ({ id, floorId: "f1", type: "straight", points: [], thickness: 10, height: 3, color: "#fff" }) as never;
+    ({
+      id,
+      floorId: "f1",
+      type: "straight",
+      points: [],
+      thickness: 10,
+      height: 3,
+      color: "#fff",
+    }) as never;
 
   it("越界几何 ID 不进任何请求集；可见元素仍全部 update；保存前后几何行数不变", async () => {
     const { wallApi } = await import("@/lib/opsApi");
@@ -317,7 +325,12 @@ describe("Phase 149 保存侧可见基线增量 diff", () => {
     // 编辑态只含越界 ID（模拟「看不到但仍被整体覆写」）。
     await act(async () => {
       await result.current.saveFloorPlan(
-        { walls: [makeWall("out-of-scope-w1"), makeWall("out-of-scope-w2")], doors: [], texts: [], workstations: [] } as never,
+        {
+          walls: [makeWall("out-of-scope-w1"), makeWall("out-of-scope-w2")],
+          doors: [],
+          texts: [],
+          workstations: [],
+        } as never,
         floor as never
       );
     });
@@ -330,7 +343,10 @@ describe("Phase 149 保存侧可见基线增量 diff", () => {
     expect(deleteIds).not.toContain("out-of-scope-w2");
     expect(vi.mocked(wallApi.update)).not.toHaveBeenCalled();
     expect(vi.mocked(wallApi.create)).not.toHaveBeenCalled();
-    const allBodies = vi.mocked(wallApi.update).mock.calls.map((c) => JSON.stringify(c)).join("|");
+    const allBodies = vi
+      .mocked(wallApi.update)
+      .mock.calls.map((c) => JSON.stringify(c))
+      .join("|");
     expect(allBodies).not.toContain("out-of-scope");
   });
 });

@@ -21,25 +21,13 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
-import {
-  Alert,
-  Button,
-  Card,
-  Form,
-  InputNumber,
-  Space,
-  Switch,
-  Tooltip,
-} from "antd";
+import { Alert, Button, Card, Form, InputNumber, Space, Switch, Tooltip } from "antd";
 import { InfoCircleOutlined, SaveOutlined } from "@ant-design/icons";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { useActionPermission } from "@/components/shared/useActionPermission";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import {
-  updateConfig,
-  type ADDriftAlertConfig,
-} from "@/lib/adDriftAlertApi";
+import { updateConfig, type ADDriftAlertConfig } from "@/lib/adDriftAlertApi";
 import { getAPINotificationConfigList } from "@/lib/notificationConfigApi";
 
 export interface ConfigFormProps {
@@ -275,7 +263,13 @@ const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) =
                 保存配置
               </Button>
               {editDecision.disabled && editDecision.hint && (
-                <span style={{ marginInlineStart: 8, fontSize: 12, color: "var(--theme-text-tertiary)" }}>
+                <span
+                  style={{
+                    marginInlineStart: 8,
+                    fontSize: 12,
+                    color: "var(--theme-text-tertiary)",
+                  }}
+                >
                   {editDecision.hint}
                 </span>
               )}

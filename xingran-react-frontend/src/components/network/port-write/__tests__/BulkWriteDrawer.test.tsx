@@ -1301,7 +1301,10 @@ describe("BulkWriteDrawer — Phase 143 物理参数批量写", () => {
       expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
     });
 
-    const previewArg = mockPreviewBatchWritePorts.mock.calls[0][0] as { mtu: number; action: string };
+    const previewArg = mockPreviewBatchWritePorts.mock.calls[0][0] as {
+      mtu: number;
+      action: string;
+    };
     expect(previewArg.mtu).toBe(9000);
     expect(previewArg.action).toBe("set_mtu");
     const writeArg = mockBatchWritePorts.mock.calls[0][0] as { mtu: number; action: string };
@@ -1311,7 +1314,11 @@ describe("BulkWriteDrawer — Phase 143 物理参数批量写", () => {
 
   it("Phase 143: set_speed speedMode=auto 透传（不带数字 speed）", async () => {
     mockPreviewBatchWritePorts.mockResolvedValue(
-      makePreview({ action: "set_speed", evidenceLevel: "vendor", physicalEvidence: "厂商基线，未逐型号取证" })
+      makePreview({
+        action: "set_speed",
+        evidenceLevel: "vendor",
+        physicalEvidence: "厂商基线，未逐型号取证",
+      })
     );
     render(
       <BulkWriteDrawer
