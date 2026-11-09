@@ -52,7 +52,7 @@ type FloorStatisticsResult struct {
 // Statistics 统计楼层(按 status 聚合,排除软删除)。
 func (s *floorService) Statistics(ctx context.Context) (*FloorStatisticsResult, error) {
 	var result FloorStatisticsResult
-	query := s.db.WithContext(ctx).
+	query := ScopedQuery(ctx, s.db).
 		Model(&operations.OpsFloor{})
 	// Phase 131：签名不变（handler/前端不改），从 ctx 取 ScopeResult 聚合前注入范围条件。
 	// 楼层有效机构 = 楼层覆盖值优先、NULL/空串继承楼宇 org_id（effectiveOrgExpr 单一真实源）。
@@ -433,7 +433,7 @@ func (s *floorService) attachWorkstationStats(ctx context.Context, floors []oper
 		Unused      int64
 		Maintenance int64
 	}
-	err := s.db.WithContext(ctx).
+	err := ScopedQuery(ctx, s.db).
 		Model(&models.Workstation{}).
 		Select(
 			"floor_id",
@@ -474,7 +474,7 @@ func (s *floorService) attachWorkstationStats(ctx context.Context, floors []oper
 func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Table("ops_floors").
+	query := ScopedQuery(ctx, s.db).Table("ops_floors").
 		Select("ops_floors.id AS value, ops_floors.name AS label").
 		Limit(DropdownMaxRows)
 
@@ -501,7 +501,7 @@ func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
 		// 与 List 同口径：子树展开 + 楼层覆盖优先（CAST 防 uuid 漂移）。
 		var deptIDs []string
-		if err := s.db.WithContext(ctx).Table("sys_dept").
+		if err := ScopedQuery(ctx, s.db).Table("sys_dept").
 			Scopes(BuildDeptRecursiveFilter(orgId, "id")).
 			Pluck("id", &deptIDs).Error; err != nil {
 			return nil, err

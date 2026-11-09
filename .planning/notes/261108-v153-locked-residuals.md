@@ -60,5 +60,5 @@
 
 1. 本文件的结论由 **`.planning/milestones/v1.53-REQUIREMENTS.md` 的 traceability / Future Requirements / Out of Scope 段**（ACK-01/02 两项 REQ + 6 项列名 + FUTURE-01）与 `.planning/MILESTONES.md` v1.53 条目（Known Gaps「LOCKED 残余」行）承载；`.planning/milestones/v1.53-ROADMAP.md` 仅在 Phase 141 验收段与「关键约束」段写入「LOCKED 项不写修复代码」（**该文件并无 issues / technical-debt 段**，2026-11-09 Lead 流向复核更正——原表述指向不存在的段，勿再据此引用）；本文件作为 `.planning/notes/` 下的裁定原文保留。
 2. **不再**在临时清单里维护「移入 C 节」；临时清单整体归档后，其 A/B/C 节不再是任何当前状态的判据。
-3. FUTURE-01（P1-5 告警通道产品化）与 FIX-11 同步漂移告警通道合并评估，属未来里程碑候选，不属本里程碑交付。
+3. ~~FUTURE-01（P1-5 告警通道产品化）与 FIX-11 同步漂移告警通道合并评估，属未来里程碑候选~~ → **✅ v1.55 收档已关闭（2026-11-09）**：用户裁定允许推翻 ① 的「范围快照回显」产品语义，① 改由 A（Phase 150 响应体去规模化）+ B（Phase 151 统一 ScopedDB 防回归）从根源根治，P1-5 侧信道已消除，告警通道合并评估不再需要；本裁定原文 ① 的「接受/不改代码」结论按清偿结果由 `.planning/STATE.md ## Deferred Items` 与 `.planning/MILESTONES.md` v1.55 条目承载（本文件 6 项裁定原文保持只读）。
 4. 待人工验证类残余（VAL-01~06）的承载物是 `STATE.md` 的 `## Deferred Items` 表 + `MILESTONES.md` + `.planning/notes/261108-human-verification-tracker.md`，不属本文件范围。

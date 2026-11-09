@@ -2441,7 +2441,7 @@ func (s *ExcelService) queryWorkstationIDsForExport(
 	_ = exportService // 当前实现不再依赖 exportService, 保留形参以兼容调用方
 
 	// 直接查询 sys_workstation 表, 应用 FilterMapping 过滤 (避免 JOIN 副作用)
-	query := s.db.WithContext(ctx).
+	query := ScopedQuery(ctx, s.db).
 		Table("sys_workstation").
 		Where("deleted_at IS NULL")
 
@@ -2498,7 +2498,7 @@ func (s *ExcelService) batchGetWorkstationNames(ctx context.Context, ids []strin
 		ID              string
 		WorkstationName string
 	}
-	if err := s.db.WithContext(ctx).
+	if err := ScopedQuery(ctx, s.db).
 		Table("sys_workstation").
 		Select("id, workstation_name").
 		Where("id IN ? AND deleted_at IS NULL", ids).
@@ -2534,7 +2534,7 @@ func (s *ExcelService) batchGetADEnrichment(ctx context.Context, devices []*mode
 		OperatingSystem string
 		LastLogon       *time.Time
 	}
-	if err := s.db.WithContext(ctx).
+	if err := ScopedQuery(ctx, s.db).
 		Table("sys_ad_computer").
 		Select("id, operating_system, last_logon").
 		Where("id IN ?", ids).
@@ -2577,7 +2577,7 @@ func (s *ExcelService) batchGetAssetEnrichment(ctx context.Context, devices []*m
 		ID        string
 		MachineIP string
 	}
-	if err := s.db.WithContext(ctx).
+	if err := ScopedQuery(ctx, s.db).
 		Table("ops_asset").
 		Select("id, machine_ip").
 		Where("id IN ? AND deleted_at IS NULL", ids).

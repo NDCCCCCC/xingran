@@ -2,23 +2,24 @@
 gsd_state_version: "1.0"
 milestone: v1.55
 milestone_name: LOCKED 残余根治
-status: planning
-last_updated: "2026-11-09T01:28:23.664Z"
+status: v1.55 SHIPPED 2026-11-09 (Awaiting next milestone)
+last_updated: "2026-11-09T10:30:00.000Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 7
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 7
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.55 INITIATED 2026-11-09（LOCKED 残余根治；6 项 / 7 子项，用户裁定推翻 ① 产品语义纳入 A+B 根治；Phase 从 145 续编）
+**Status**: v1.55 SHIPPED 2026-11-09（7/7 Phase：145/146/147/148/149/150/151 全部完成；24/24 REQ 交付，含 CRYPTO-04 按硬 gate 合规跳过；**① 的 A(150)+B(151) 均完成 → P1-5 侧信道根治达成**；6 项 LOCKED / 7 子项全部从根源清偿）
 **Last activity**: 2026-11-09
+**Prior activity**: 2026-11-09 - v1.55 SHIPPED：W1（145 AUDIT / 146 CRYPTO / 147 CACHE）+ W2（148 DIALECT / 149 SCOPE / 150 侧信道 A）并行 + W3（151 统一 ScopedDB，单独执行）；3 波共 7 个 gsd-planner + 2 个 plan-checker + 7 个 gsd-executor + Lead 集成；全量回归闸门全绿（go build / go test ./... / tsc / lint:ci ALL PASS / 全量 vitest / check-route-registry 713 零漂移）；79 条人工验证跟踪表保持 0 勾选、验证类残余不伪造闭环
 **Prior activity**: 2026-11-09 - v1.55 INITIATED：6 项 LOCKED 残余从根源根治（深度根因报告 + 5 项决策拍板 + 24 REQ 草案）；跳过领域研究；FUTURE-01 随 ① 关闭；79 条人工验证跟踪表保持 0 勾选
 **Prior activity**: 2026-11-09 - v1.54 SHIPPED：4 项真实代码缺口全部清偿（发现设备真实导入 / 批量物理参数 + 型号级能力矩阵 / 告警前端+WS+webhook 收口），W1 4 个并行 executor + Lead 集成；`go build ./...` / `go test ./...` / `tsc` / `lint:ci ALL PASS` / 全量 vitest 全绿；权限三方逐字一致、migration 238 两处注册；验证类残余不伪造闭环
 **Prior activity**: 2026-11-08 - v1.53 SHIPPED：8 个 Phase 全部交付，全量回归闸门全绿（go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例），GSD `milestone complete` 完成归档与权威交回
@@ -324,6 +325,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 | code_gaps | **v1.55 W1 新增登记（门禁真跑后暴露）**：① `POST /network/ports/write/trunk`（`internal/api/v1/network/port_write_trunk_handler.go:43-80`）成功路径直接 `response.Success`、前面**无 `operlog.Record`**，且 `internal/services/portwrite/` 全包零 operlog → 违反 CLAUDE.md「所有业务写操作 success path 在 `response.Success` 前必须 `operlog.Record`」强制约定，属 v1.51 Phase 124 遗留真实缺口；Phase 145 按文件面/范围未修，已用 `knownGapHandlers` + 可观测 `t.Skip` 在静态门禁中**登记而非放行**（`internal/utils/operlog/handler_coverage_test.go`、`145-SUMMARY.md §Known Gaps`），**W2 148 未覆盖它（portwrite 不在 148 文件面），仍待后续 quick 补** ② `reconciliation_service.go` `computeByWorkstation:1074` 既有 `append` 早于 exception 字段修改，per-asset matcher 结果未进响应（Phase 147 按 PLAN 禁区未改 6 步聚合，用「缓存真删 + 写后读必回源 + 直查 DB 读路径立即一致」等价判据覆盖，建议后续单独立项）③ 两份 `operlog_e2e_verify.sh` 重复副本未物理合并（已登记 `scripts/README.md`）| 真实缺口 / 既有缺陷（登记，非阻断，不伪造闭环） | 2026-11-09 | v1.55 W1 |
 | verification_gaps | **v1.55 W2 新增登记**：① `.golangci.yml` forbidigo（148）实测 golangci-lint 2.12.2 **只匹配 AST 标识符/选择器调用名，不命中字符串字面量或注释里的 SQL 方言 token**；真正的「反向变异必红」由 148 新增的 Go 源码静态断言测试承担，规则本身作为标识符形态准入守卫（探针实测生效）。`148-SUMMARY.md §4` 已如实登记能力边界，不伪造「forbidigo 必红」 ② `TEST_PG_DSN` 双跑仍为前置依赖（用户裁定本期不建 `services: postgres`），148/149/150 的 PG contract 测试均为 `t.Skip` 可观测 ③ 149 的 D1/D2 UAT 作废登记落 `149-UAT-RECHECK.md`、150 的 backfill UAT 落 `150-UAT-BACKFILL.md`，**重跑窗口/验收人待 QA 裁定，未勾选完成** ④ FUTURE-01 随 ① 关闭的 4 处引用清理、132/133 UAT 重跑，均待 **B（Phase 151 统一 ScopedDB）落地后由 Lead 收档统一执行** ⑤ `room_photo` / `location_alias` 两 handler 现为固定状态码形态（service 层已统一 `ErrScopeDenied`、149 T4 矩阵 `errors.Is` 全绿），HTTP 层透传统一属后续候选 | 能力边界 / 前置依赖 / 待人工（登记，非阻断，不伪造闭环） | 2026-11-09 | v1.55 W2 |
 | note | **v1.55 W2 契约基线更新（非缺陷）**：`internal/api/datascope_mount_test.go` 的 `TestDataScopeMount_OpsCoverage` / `TestDataScopeMount_NotOnOpsAncestor` 原按 v1.52「roomPhotos 是显式豁免组、挂载总数 31」硬编码；用户 2026-11-09 裁定推翻该豁免后，149 补挂 `roomPhotos.Use(middleware.DataScopePermission(core))`，Lead 集成期按新语义把断言更新为「总数 32、roomPhotos 恰好挂 1 处」，并在注释写明裁定依据（这不是放宽门禁，是把契约测试对齐已批准的新语义） | 基线同步（已落地） | 2026-11-09 | v1.55 W2 |
+| code_gaps | ~~6 项 LOCKED 残余（7 子项）~~ **v1.55 全部清偿（2026-11-09）**：① P1-5 侧信道 = A(150 响应体去规模化，删 6 字段/全库 `countQ`/越界行号，差分攻击测试) + B(151 统一 ScopedDB：pkg/query ScopedDB + 资源归属注册表 + `GORMRepository` 读链 2 行 + 8 核心读端点 32 处起链，写链一字不动、All 兜底零回归) ② 5 项豁免面 = 149 方案 D 零迁移收口 ③-A `RightCast` = 148 删方言机制+单侧 CAST ③-B PG CTE = 148 唯一共享 `recallPhysicalRows` Go 层合并 ④ e2e 门禁 = 145 静态段 Go 单测化+cwd 锚定+CI 硬门禁 ⑤ `invalidateCache` = 147 删死键/空函数+广播失效立即一致 ⑥ `pbkdf2SM3` = 146 守卫+`len==32`+黄金向量（CRYPTO-04 按硬 gate 合规跳过，守卫已收口非遗留缺陷）。证据：7 份 phase `*-SUMMARY.md` + `.planning/notes/261109-v154-locked-root-cause-analysis.md`。**裁定原文 `261108-v153-locked-residuals.md` 保持只读，收档结论由本表与 MILESTONES.md v1.55 条目承载** | ✅ 已清偿 | 2026-11-08 裁定 → 清偿 2026-11-09 | v1.52 → v1.55 |
+| verification_gaps | **v1.55 收档后仍待人工（不伪造闭环）**：① 79 条人工验证跟踪表保持 0 勾选 ② FIX-01/04/09/13 验证类残余 ③ `TEST_PG_DSN` 双跑前置依赖（本期不建 `services: postgres`）④ 149 的 `149-UAT-RECHECK.md`（D1/D2）与 150 的 `150-UAT-BACKFILL.md` 重跑窗口/验收人待 QA 裁定 ⑤ **W1/W2 新增登记仍挂账**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 无 `operlog.Record`，W2 未覆盖，待后续 quick）、`computeByWorkstation:1074` append 缺陷、两份 `operlog_e2e_verify.sh` 重复副本、forbidigo 能力边界、`room_photo`/`location_alias` 两 handler HTTP 透传口径 ⑥ **FUTURE-01 已随 ① 根治关闭**：4 处引用已由 Lead 收档清理（`REQUIREMENTS.md` / `ROADMAP.md:91` / `STATE.md` / `261108-v153-locked-residuals.md:63`），不再是未来候选 | 待人工 / 后续候选（登记，非阻断，不伪造闭环） | 2026-11-09 | v1.55 收档 |
 
 > **closeout_type: override_closeout**（v1.52 收档时 `audit-open` 检出 3 项 uat_gaps，已按 [A] Acknowledge 全部登记；另有 3 项历史 debug suppression 结转）。Known verification overrides: **3 newly acknowledged, 3 carried forward**（同步记录于 MILESTONES.md v1.52 条目）。以上均为 verdict-preserving 的 self-invalidating suppression。**v1.53 收档后补登记（2026-11-08 18:45）**：上表另含 v1.53 的 3 行 `uat_gaps / code_gaps / verification_gaps`（79 条人工验证跟踪 + `ImportDiscoveredDevices` 真实缺口 + Phase 自报边界汇总），属**显式披露**而非 `audit-open` suppression；GSD `audit-open` 仍报全清（这些是文档登记项，不是 GSD 可扫描的 artifact）。真实挂账以本表与 MILESTONES.md v1.53 条目为准。
 
@@ -336,8 +339,9 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- `/gsd-new-milestone` — 启动下一里程碑（v1.54 已 SHIPPED，权威仍由 GSD 自动生成体系承载）
+- `/gsd-new-milestone` — 启动下一里程碑（v1.55 已 SHIPPED，7/7 Phase、24/24 REQ、6 项 LOCKED 残余全部从根源清偿；权威仍由 GSD 自动生成体系承载，`REQUIREMENTS.md` 已按工作流清空待重建）
 - 人工验证跟踪表 `.planning/notes/261108-human-verification-tracker.md` 的 **79 条待执行项保持 0 勾选**，需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物；FIX-01/04/09/13 验证类残余**不伪造闭环**
-- LOCKED 残余结论见 `.planning/notes/261108-v153-locked-residuals.md`（6 项只维持结论、不写修复代码）
-- v1.54 新增 Known Gaps 见本文件 `## Deferred Items` 的 v1.54 行与 `.planning/MILESTONES.md` v1.54 条目；若下一里程碑要推进，从此处取数立项
+- LOCKED 残余裁定原文 `.planning/notes/261108-v153-locked-residuals.md` 保持只读（v1.55 收档已更正其 :61 承载声明并关闭 FUTURE-01）；清偿结论见本表 v1.55 行与 `MILESTONES.md` v1.55 条目
+- **下一里程碑取数**：本表 `## Deferred Items` 的「v1.55 收档后仍待人工」行（trunk operlog 缺口 / `computeByWorkstation` append / 重复脚本合并 / forbidigo 能力边界 / 两 handler 透传 / PG 双跑前置 / UAT 重跑窗口）与 `MILESTONES.md` v1.55 Known Gaps
+- v1.55 交付证据：7 份 `.planning/phases/{145..151}-*/*-SUMMARY.md` + `149-UAT-RECHECK.md` + `150-UAT-BACKFILL.md`；根因判定 `.planning/notes/261109-v154-locked-root-cause-analysis.md`；草案 `.planning/notes/261109-v155-requirements-draft.md`
 - v1.54 交付证据：`.planning/phases/{142-disc-01-02/142-SUMMARY.md, 143-port-01-02/143-SUMMARY.md, 144-alrt-01-02-03/144-01-backend-SUMMARY.md, 144-alrt-01-02-03/144-02-frontend-SUMMARY.md}` + 架构裁定 `.planning/notes/261108-v154-architecture-decisions.md` + 集成清单 `.planning/notes/261108-v154-integration-checklist.md`

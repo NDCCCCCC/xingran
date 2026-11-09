@@ -66,7 +66,7 @@ func (s *buildingServiceTypeSafe) Delete(ctx context.Context, id string) error {
 // GetByID 根据ID获取楼宇
 func (s *buildingServiceTypeSafe) GetByID(ctx context.Context, id string) (*operations.OpsBuilding, error) {
 	var building operations.OpsBuilding
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&building).Error
+	err := ScopedQuery(ctx, s.db).Where("id = ?", id).First(&building).Error
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (s *buildingServiceTypeSafe) GetByID(ctx context.Context, id string) (*oper
 
 // List 查询楼宇列表（类型安全版本）
 func (s *buildingServiceTypeSafe) List(ctx context.Context, req requests.BuildingListRequest) (*PageResult, error) {
-	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{})
+	query := ScopedQuery(ctx, s.db).Model(&operations.OpsBuilding{})
 
 	// 应用筛选条件 - 现在不需要类型断言，直接访问字段
 	query = s.applyFiltersTypeSafe(query, req)

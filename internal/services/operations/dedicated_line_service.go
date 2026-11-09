@@ -55,7 +55,7 @@ type DedicatedLineStatisticsResult struct {
 func (s *dedicatedLineService) Statistics(ctx context.Context) (*DedicatedLineStatisticsResult, error) {
 	var result DedicatedLineStatisticsResult
 	err := applyEntityReadScope(
-		s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{}), ctx,
+		ScopedQuery(ctx, s.db).Model(&operations.OpsDedicatedLine{}), ctx,
 		scopeEntityDedicatedLine, "ops_dedicated_lines",
 	).
 		Select(
@@ -229,7 +229,7 @@ func (s *dedicatedLineService) SearchDedicatedLineOptions(ctx context.Context, p
 	var result []DropdownOption
 
 	query := applyEntityReadScope(
-		s.db.WithContext(ctx).Table("ops_dedicated_lines"), ctx,
+		ScopedQuery(ctx, s.db).Table("ops_dedicated_lines"), ctx,
 		scopeEntityDedicatedLine, "ops_dedicated_lines",
 	).
 		Select("id AS value, name AS label").

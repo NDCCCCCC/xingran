@@ -2,7 +2,7 @@
 
 ## Current Milestone: v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix)
 
-**Status:** INITIATED 2026-11-09 · ROADMAP CREATED 2026-11-09 | Phases **145-151**（编号延续 v1.54 结束于 144，**不重置**）| **24 REQ / 7 Phase / 100% 映射（无孤儿无重复；CRYPTO-04 标注 optional）** | **W1 `145 ∥ 146 ∥ 147` 可并行（文件面互斥）→ W2 `148 ∥ 149 ∥ 150`（以函数级归属表为并行许可凭证）→ W3 `151` 必须最后执行** | ① 的 A(150)+B(151) 均需完成，不伪造「统一架构已落地」
+**Status:** ✅ SHIPPED 2026-11-09 · INITIATED/ROADMAP CREATED 2026-11-09 | Phases **145-151**（编号延续 v1.54 结束于 144，**不重置**）| **23 REQ / 7 Phase / 100% 映射 / 100% 交付**（CRYPTO-04 按硬 gate 合规跳过并登记；收档计数修正：立项期「24 REQ」把 optional 标注误计入，逐组实证 = 23） | **W1 `145 ∥ 146 ∥ 147` → W2 `148 ∥ 149 ∥ 150`（函数级归属表凭证）→ W3 `151` 最后执行，全部完成** | **① 的 A(150)+B(151) 均完成 → P1-5 侧信道根治达成；6 项 LOCKED / 7 子项全部从根源清偿** | 全量回归闸门全绿（go build / go test ./... / tsc / lint:ci ALL PASS / 全量 vitest / check-route-registry 713 零漂移）
 
 **Goal:** 把 v1.52 收档时以「已接受 / 仅登记」名义挂账的 6 项 LOCKED 残余（7 个子项，③ 拆 A/B）从根源上修掉（而非打补丁 / 加告警 / 加方言分支），使约束从「靠约定」升级为「靠机制」；按用户 2026-11-09 裁定允许推翻 ① 的「范围快照回显」产品语义，① 纳入 A+B 组合根治。
 
@@ -12,13 +12,13 @@
 
 ### Phases
 
-- [ ] Phase 145: AUDIT 静态门禁 Go 化 (AUDIT-01/02/03) — operlog e2e 静态段 Go 单测化 + cwd 锚定 + CI 硬门禁
-- [ ] Phase 146: CRYPTO KDF 契约 (CRYPTO-01/02/03/04) — pbkdf2SM3 守卫 + `len==32` 校验 + 黄金向量（CRYPTO-04 optional）
-- [ ] Phase 147: CACHE 失效契约 (CACHE-01/02/03) — 删死键/空函数 + `GetByWorkstation` 例外变更立即一致联动失效
-- [ ] Phase 148: DIALECT 双方言 (DIALECT-01/02/03/04) — 删 `RightCast` + PG CTE 改 Go 层合并 + forbidigo 防复发 + CI PG 双跑前置登记
-- [ ] Phase 149: SCOPE 豁免面收口 (SCOPE-01/02/03/04) — 5 项豁免零迁移收口 + 补挂 rooms/photos 中间件 + 保存侧裁剪 + UAT 重跑
-- [ ] Phase 150: ① 侧信道根治 A — 响应体去规模化 (SIDECHANNEL-01/02/03) — 信息论根治：推翻「范围快照回显」产品语义
-- [ ] Phase 151: 统一 ScopedDB / B — ① 防回归 + ② 机制化 (SIDECHANNEL-04 + ARCH-01) — **必须最后执行**
+- [x] Phase 145: AUDIT 静态门禁 Go 化 (AUDIT-01/02/03) — operlog e2e 静态段 Go 单测化 + cwd 锚定 + CI 硬门禁 — **completed 2026-11-09**（`145-SUMMARY.md`）
+- [x] Phase 146: CRYPTO KDF 契约 (CRYPTO-01/02/03/04) — pbkdf2SM3 守卫 + `len==32` 校验 + 黄金向量（CRYPTO-04 optional 按硬 gate 合规跳过） — **completed 2026-11-09**（`146-SUMMARY.md`）
+- [x] Phase 147: CACHE 失效契约 (CACHE-01/02/03) — 删死键/空函数 + `GetByWorkstation` 例外变更立即一致联动失效 — **completed 2026-11-09**（`147-SUMMARY.md`）
+- [x] Phase 148: DIALECT 双方言 (DIALECT-01/02/03/04) — 删 `RightCast` + PG CTE 改 Go 层合并 + forbidigo 防复发 + CI PG 双跑前置登记 — **completed 2026-11-09**（`148-SUMMARY.md`）
+- [x] Phase 149: SCOPE 豁免面收口 (SCOPE-01/02/03/04) — 5 项豁免零迁移收口 + 补挂 rooms/photos 中间件 + 保存侧裁剪 + UAT 重跑登记 — **completed 2026-11-09**（`149-SUMMARY.md`）
+- [x] Phase 150: ① 侧信道根治 A — 响应体去规模化 (SIDECHANNEL-01/02/03) — 信息论根治：推翻「范围快照回显」产品语义 — **completed 2026-11-09**（`150-SUMMARY.md`）
+- [x] Phase 151: 统一 ScopedDB / B — ① 防回归 + ② 机制化 (SIDECHANNEL-04 + ARCH-01) — **completed 2026-11-09**（`151-SUMMARY.md`；A+B 均完成，① 根治达成）
 
 **依赖拓扑:** `W1: 145 ∥ 146 ∥ 147`（文件面互斥、零依赖并行）→ `W2: 148 ∥ 149 ∥ 150`（均动 `internal/services/operations/**`，以本文件「函数级归属表」为并行许可凭证；`internal/api/router.go` 的 149→151 顺序硬登记）→ `W3: 151`（触及 `base.GORMRepository` 全仓基座、依赖 148/149/150 经验，**必须最后执行**）。任一 W2 phase 实测出现跨 phase 写交集，则整组**显式降级为串行**，不得带冲突并行。
 
@@ -156,7 +156,7 @@
 4. Go 单测就近 `*_test.go`；集成 `tests/integration/`；e2e `tests/e2e/`；前端 `*.test.ts(x)`。
 5. 构建产物只落 `out/`；Excel 模板动态生成、禁止落盘 `.xlsx`；`data/` 不入库。
 6. **向后兼容**：`keyLen=32` KDF 输出逐字节不变、25 个 operlog 常量值不重排、② 响应形状不变、**① All 档响应形状/数值零回归**、`datascope` 未注入 ctx → All 兜底短路不变。
-7. **① 专项**：132-SUMMARY.md:74 四类前端文案与 `useBackfillDept.tsx` 确认框作废需产品/QA 确认；132/133 backfill 相关 UAT 作废重跑窗口由 QA 裁定；FUTURE-01 在 ① 落地后由 Lead 同步清理 4 处引用。
+7. **① 专项**：132-SUMMARY.md:74 四类前端文案与 `useBackfillDept.tsx` 确认框作废需产品/QA 确认；132/133 backfill 相关 UAT 作废重跑窗口由 QA 裁定；~~FUTURE-01 在 ① 落地后由 Lead 同步清理 4 处引用~~ → **✅ v1.55 收档已清理（`REQUIREMENTS.md` 决策表 / 本表 Known Gaps / `STATE.md` Deferred Items / `261108-v153-locked-residuals.md:63`）**。
 8. **零新依赖**；跳过领域研究（7 子项均带本仓 `文件:行号` 实证与现成改写范本，根因报告即研究输入）。
 9. **全量回归闸门**：`go build ./...` + `go test ./...` + `tsc` + `lint:ci`（含新增 forbidigo）+ `vitest` 全绿；ARCH-01（151）改动后必须跑全量矩阵；**提交由 Lead 统一执行**（roadmapper 不 git commit）。
 
@@ -165,7 +165,7 @@
 | 决策 | 裁定 | ROADMAP 落点 |
 |---|---|---|
 | **DECISION-①**（决定性） | 允许重定语义，① 纳入根治（A+B 组合）：取消 `ScopeTotal/ScopeOutOfScope` 等回显、去掉全库 `countQ`、去导入 `Errors[].Row` 行号、作废 132-SUMMARY.md:74 四类「本次范围：共 N 条」文案 | Phase 150（A）+ Phase 151（B，`ARCH-01` 升级必需）；132/133 UAT 作废重跑 |
-| **FUTURE-01** | 随 ① 根治一并关闭，不再单独挂账 | ① 落地后由 Lead 收档时清理 4 处引用（见 Known Gaps） |
+| **FUTURE-01** | ✅ v1.55 收档已关闭（随 ① 的 A+B 根治一并关闭，不再单独挂账） | 4 处引用已由 Lead 于 2026-11-09 收档清理完毕（见 Known Gaps 段） |
 | **DECISION-CI-PG** | 本期不建 PG service，登记前置依赖，不伪造双跑 | Phase 148 的 DIALECT-04③：只做 `forbidigo` 门禁（XS）+ 视预算抽 dialect 语义原语；`TEST_PG_DSN` 双跑为前置依赖 |
 | **DECISION-存量密码** | 免盘点，直接上守卫 | Phase 146 的 CRYPTO-02 直接加 `len(hashBytes)==32` 校验，无需迁移 |
 | **DECISION-例外陈旧窗口** | 要求立即一致，做联动失效 | Phase 147 的 CACHE-02 必做（非可选）：规则写成功后 `GetByWorkstation` exception 字段立即一致 |
@@ -196,8 +196,12 @@
 | 79 条人工验证跟踪表 | 全部待执行、**0 勾选** | 按 `261108-uat-writeback-policy.md` 人工回写 |
 | v1.54 新增 7 项 GAP（GAP-01~07） | 告警「标记已读」未实现 / 企微钉钉路线 B / `sys_object_id` 未落库 / 批量无自动回滚 / 发现导入顺带隐患 / e2e 归位 / `RequiresInterfaceView` 联动点 | 已在 `STATE.md ## Deferred Items` v1.54 行登记，属后续候选；本里程碑专注 LOCKED 根治 |
 | **CI PG 双跑前置依赖** | `ci.yml` 无 `services: postgres`、`TEST_PG_DSN` unset，PG contract 只做「skip 可观测」 | 用户裁定本期不建；登记为 `DIALECT-04③` 前置依赖（需新建 PG service + 迁移引导后方可升级），**不伪造双跑** |
-| **FUTURE-01（P1-5 侧信道告警通道合并评估）** | 触发条件「FIX-11 告警通道落地」在 v1.54 已成立，但未覆盖聚合计数面 | 用户裁定**随 ① 根治一并关闭**，不再单列挂账；**收档时清理 4 处引用**：`.planning/REQUIREMENTS.md`(v1.54) / `ROADMAP.md:91` / `STATE.md` / `.planning/notes/261108-v153-locked-residuals.md:63` |
+| ~~**FUTURE-01（P1-5 侧信道告警通道合并评估）**~~ | ~~触发条件「FIX-11 告警通道落地」在 v1.54 已成立，但未覆盖聚合计数面~~ | **✅ v1.55 收档已关闭**：① 改由 A(150 响应体去规模化)+B(151 统一 ScopedDB) 根治，告警通道合并评估不再需要；4 处引用已由 Lead 清理（`REQUIREMENTS.md` 决策表 / 本表 / `STATE.md` Deferred Items / `261108-v153-locked-residuals.md:63`），不再挂账 |
 | **132/133 UAT 作废重跑窗口** | ① 推翻产品语义后，132-SUMMARY.md:74 四类文案与 `133-UAT.md:79-91` D1/D2「确认未收口」结论作废 | 由 QA 裁定重跑窗口与验收人；Phase 149/150 只登记、不擅自勾选完成 |
+
+**v1.55 交付证据（7 份 SUMMARY + 2 份 UAT 载体）**：`.planning/phases/145-audit-go-audit-01-02-03/145-SUMMARY.md`、`146-crypto-kdf-crypto-01-02-03-04/146-SUMMARY.md`、`147-cache-cache-01-02-03/147-SUMMARY.md`、`148-dialect-dialect-01-02-03-04/148-SUMMARY.md`、`149-scope-scope-01-02-03-04/149-SUMMARY.md` + `149-UAT-RECHECK.md`、`150-a-sidechannel-01-02-03/150-SUMMARY.md` + `150-UAT-BACKFILL.md`、`151-scopeddb-b-sidechannel-04-arch-01/151-SUMMARY.md`。根因判定 `.planning/notes/261109-v154-locked-root-cause-analysis.md`；草案 `.planning/notes/261109-v155-requirements-draft.md`。
+
+**v1.55 收档新增登记（非阻断）**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 成功路径无 `operlog.Record`，W2 未覆盖，待后续 quick）｜`computeByWorkstation:1074` append 缺陷｜两份 `operlog_e2e_verify.sh` 重复副本未物理合并｜forbidigo 能力边界（只匹配 AST 标识符，反向变异实际由 Go 源码静态断言承担）｜`room_photo`/`location_alias` 两 handler HTTP 透传口径｜`TEST_PG_DSN` 双跑前置依赖｜149/150 UAT 重跑窗口待 QA。逐项见 `STATE.md ## Deferred Items` 的 v1.55 行。
 
 ---
 

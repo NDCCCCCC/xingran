@@ -76,7 +76,7 @@ func (s *floorCacheService) GetFloorsByBuildingID(ctx context.Context, buildingI
 		func() ([]operations.OpsFloor, error) {
 			// 查询指定楼宇的所有楼层
 			var floors []operations.OpsFloor
-			if err := s.db.WithContext(ctx).
+			if err := ScopedQuery(ctx, s.db).
 				Where("building_id = ?", buildingID).
 				Order("order_num ASC").
 				Find(&floors).Error; err != nil {

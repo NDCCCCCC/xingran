@@ -139,7 +139,7 @@ type WorkstationStatisticsResult struct {
 // Statistics 统计工位(按 status 聚合,排除软删除;支持 orgId 部门筛选含子部门,与 List orgId 过滤一致)。
 func (s *workstationService) Statistics(ctx context.Context, params map[string]interface{}) (*WorkstationStatisticsResult, error) {
 	var result WorkstationStatisticsResult
-	query := s.db.WithContext(ctx).Model(&models.Workstation{})
+	query := ScopedQuery(ctx, s.db).Model(&models.Workstation{})
 	orgId := extractStringParam(params, "orgId")
 	// Phase 131：前端 orgId 不可越权读取——请求 orgId 不在可见集内 → 直接空集，
 	// 不报错（读端点统一响应形状），符合 DS-03「收口必须在 service 层求交」。
@@ -217,7 +217,7 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 	// 故 CAST 写法在 PG/SQLite 双 DB 行为一致(避免 PG 专有 ::text 在 SQLite 语法错误)。
 	// 与 location_alias_service.go 的 aliasListJoinClause 处理方式一致。
 	// 子查询经 (?) 实参内联为 UNION ALL 左支（GORM 渲染 *gorm.DB 实参并合并其绑定参数）。
-	descendants := s.db.WithContext(ctx).
+	descendants := ScopedQuery(ctx, s.db).
 		Table("sys_dept").
 		Select("CAST(id AS TEXT) AS dept_id, dept_name AS dept_name, false AS is_alias").
 		Where("deleted_at IS NULL AND is_external_org = 0").
@@ -501,7 +501,7 @@ func (s *workstationService) List(ctx context.Context, req requests.WorkstationL
 // 软删过滤由 Model 起链自动附带（与 99-01 的 Total 口径一致）。
 func (s *workstationService) GetFloorWorkstationsAll(ctx context.Context, floorId string) ([]models.Workstation, error) {
 	var workstations []models.Workstation
-	query := s.db.WithContext(ctx).
+	query := ScopedQuery(ctx, s.db).
 		Model(&models.Workstation{}).
 		Scopes(s.joinScope()).
 		Where("sys_workstation.floor_id = ?", floorId)
@@ -910,7 +910,7 @@ func buildBatchPositionUpdateSQL(items []PositionUpdateItem) (string, []interfac
 func (s *workstationService) SearchWorkstationOptions(ctx context.Context, req requests.WorkstationListRequest) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Table("sys_workstation").
+	query := ScopedQuery(ctx, s.db).Table("sys_workstation").
 		Select("sys_workstation.id AS value, sys_workstation.workstation_name AS label").
 		Limit(DropdownMaxRows)
 
@@ -968,7 +968,7 @@ func (s *workstationService) CountsByFloor(ctx context.Context, floorIds []strin
 		FloorID string `gorm:"column:floor_id"`
 		Count   int    `gorm:"column:cnt"`
 	}
-	query := s.db.WithContext(ctx).
+	query := ScopedQuery(ctx, s.db).
 		Model(&models.Workstation{}).
 		Select("floor_id, COUNT(*) AS cnt").
 		Where("floor_id IN ? AND status = ? AND deleted_at IS NULL", floorIds, models.WorkstationStatusAvailable)

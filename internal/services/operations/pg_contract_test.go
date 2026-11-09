@@ -28,6 +28,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -335,5 +336,67 @@ func TestPGContract_ScopeWriteImportResolve(t *testing.T) {
 				return err
 			}())
 		})
+	}
+}
+
+// TestPGContract_ScopedDB_Homology（Phase 151 / T4 追加）：
+// TEST_PG_DSN unset → t.Skip 可观测、不伪造 PG 双跑；DSN 存在时才连真 PG
+// 对同一 ScopeResult 断言 COUNT 与 List 行数一致（同源恒等式）。
+//
+// 同时恒跑静态断言（不依赖 DSN）：workstation_service.go 不含 150 已删的
+// 全库 COUNT 口径、8 个 service 起链含 ScopedQuery、scope_filter.go 短路
+// token 存在。本函数不改动 150 的 TestScopeWriteImport_StaticContract 与
+// TestPGContract_ScopeWriteImportResolve 的任何既有 token / t.Skip 行为。
+func TestPGContract_ScopedDB_Homology(t *testing.T) {
+	// —— 静态断言恒跑（零 DSN 依赖）——
+	read := func(name string) string {
+		b, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("读取 %s 失败: %v", name, err)
+		}
+		return string(b)
+	}
+	ws := read("workstation_service.go")
+	// 只检查 150 已删的「全库 countQ 死代码」token（与 150 的
+	// TestScopeWriteImport_StaticContract 同口径；8 个 /statistics 里合法的
+	// COUNT(*) AS total 同源聚合不受影响）。
+	for _, dead := range []string{
+		`countQ := s.db.WithContext(ctx).Table("sys_workstation")`,
+		"countQ.Scan",
+	} {
+		if strings.Contains(ws, dead) {
+			t.Fatalf("workstation_service.go 不得残留全库口径 %q（防 150 D-3 复活）", dead)
+		}
+	}
+	for _, name := range []string{
+		"asset_service.go", "building_service.go", "floor_service.go", "workstation_service.go",
+		"infopoint_service.go", "server_room_service.go", "dedicated_line_service.go", "room_device_service.go",
+	} {
+		if !strings.Contains(read(name), "ScopedQuery(ctx, s.db)") {
+			t.Fatalf("%s 读端点起链必须改走 ScopedQuery（SIDECHANNEL-04 同源）", name)
+		}
+	}
+	if !strings.Contains(read("scope_filter.go"), "return !ok || scope.All") {
+		t.Fatal("scope_filter.go 的 !ok || All 零回归短路必须保留")
+	}
+
+	// —— 真实 PG 双跑（TEST_PG_DSN unset → t.Skip 可观测）——
+	db := openPGForContractTest(t)
+	ctx := homologyCtx(datascope.ScopeResult{DeptIDs: []string{homologyDeptA}})
+	query.ResetRegistryForTest()
+	if err := SetupScopedDBRegistry(); err != nil {
+		t.Fatalf("注册表装配失败: %v", err)
+	}
+	q := ScopedQuery(ctx, db).Table("ops_asset")
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		requireNoPGErr(t, "ScopedDB Count", err)
+	}
+	var rows []map[string]any
+	if err := q.Find(&rows).Error; err != nil {
+		requireNoPGErr(t, "ScopedDB Find", err)
+	}
+	if total != int64(len(rows)) {
+		t.Fatalf("PG 同源恒等式不成立: COUNT=%d len(List)=%d", total, len(rows))
 	}
 }

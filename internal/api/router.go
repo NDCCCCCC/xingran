@@ -777,6 +777,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	ops.Use(middleware.JWTAuth(core.JWTManager))
 	// 添加操作日志中间件
 	ops.Use(middleware.OperLogMiddleware(core.OperLogService, core))
+	// Phase 151 / ARCH-01：ScopedDB 资源归属注册表装配（唯一查询起链点由 pkg/query 承载）。
+	opsServices.MustSetupScopedDBRegistry()
 	{
 		// 楼宇管理
 		// 查询接口(/list)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list，

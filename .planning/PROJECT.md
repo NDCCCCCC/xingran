@@ -1,14 +1,14 @@
 ---
 last_updated: 2026-11-09
-update_trigger: v1.55 milestone INITIATED 2026-11-09（LOCKED 残余根治：6 项 / 7 子项，用户裁定推翻 ① 产品语义纳入 A+B 根治；取数自 261109-v154-locked-root-cause-analysis.md + 261109-v155-requirements-draft.md；Phase 从 145 续编）
-previous_update: 2026-11-09 v1.54 milestone SHIPPED（真实代码缺口清偿：3/3 Phase、7/7 REQ、全量回归闸门全绿；验证类残余不伪造闭环）
+update_trigger: v1.55 milestone SHIPPED 2026-11-09（LOCKED 残余根治：7/7 Phase、23/23 REQ、6 项 LOCKED / 7 子项全部从根源清偿；① 的 A+B 均完成 → P1-5 侧信道根治达成；全量回归闸门全绿；验证类残余不伪造闭环）
+previous_update: 2026-11-09 v1.55 milestone INITIATED（LOCKED 残余根治：6 项 / 7 子项，用户裁定推翻 ① 产品语义纳入 A+B 根治；取数自 261109-v154-locked-root-cause-analysis.md + 261109-v155-requirements-draft.md；Phase 从 145 续编）
 ---
 
-## Current Milestone: v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix) — INITIATED 2026-11-09
+## Current Milestone: v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix) — ✅ SHIPPED 2026-11-09
 
 **Goal:** 把 v1.52 收档时以「已接受 / 仅登记」名义挂账的 6 项 LOCKED 残余（7 个子项，③ 拆 A/B）从根源上修掉（而非打补丁 / 加告警 / 加方言分支），使约束从「靠约定」升级为「靠机制」；按用户 2026-11-09 裁定允许推翻 ① 的「范围快照回显」产品语义，① 纳入 A+B 组合根治。
 
-**Status:** INITIATED 2026-11-09 | 取数权威 = `.planning/notes/261109-v154-locked-root-cause-analysis.md`（3 个并行只读 subagent + Lead 交叉核对）+ `.planning/notes/261109-v155-requirements-draft.md`（用户已拍板 5 项决策的 24 REQ 草案）| Phase 从 **145** 续编（v1.54 结束于 144）
+**Status:** ✅ SHIPPED 2026-11-09（7/7 Phase：145 AUDIT / 146 CRYPTO / 147 CACHE / 148 DIALECT / 149 SCOPE / 150 侧信道 A / 151 统一 ScopedDB；23/23 REQ Satisfied；3 波共 7 planner + 2 checker + 7 executor + Lead 集成）| **① 的 A(150)+B(151) 均完成 → P1-5 侧信道根治达成；6 项 LOCKED / 7 子项全部清偿** | 全量回归闸门全绿：`go build ./...` / `go test ./...` / `tsc` / `lint:ci ALL PASS` / 全量 vitest / `check-route-registry` 713 零漂移 | 交付证据 7 份 phase `*-SUMMARY.md` + `149-UAT-RECHECK.md` + `150-UAT-BACKFILL.md` + `.planning/MILESTONES.md` v1.55 条目
 
 **Target features:**
 - **AUDIT**（④）— operlog e2e 静态段 Go 单测化 + cwd 锚定 + CI 硬门禁（当前静态检查从未真正跑过）
@@ -22,7 +22,7 @@ previous_update: 2026-11-09 v1.54 milestone SHIPPED（真实代码缺口清偿�
 **关键决策 (v1.55, 用户 2026-11-09 裁定):**
 - **范围 = 6 项 LOCKED / 7 子项全覆盖**（① ② ③-A ③-B ④ ⑤ ⑥）；**不允许**用告警通道 / 粗粒度桶 / 方言分支 / 「接 Redis 后补 Delete」/ 仅调门禁顺序等补丁方式代替根治
 - **DECISION-①（决定性）：允许重定语义** —— 取消 `BackfillDeptResult` 规模回显、去掉全库 `countQ`、去导入 `Errors[].Row` 行号、作废 132-SUMMARY.md:74 前端四类「本次范围：共 N 条」文案；① 按 A（响应体去规模化）+ B（统一 ScopedDB 防回归）组合根治
-- **FUTURE-01 随 ① 根治一并关闭**，不再单列挂账（收档时清理 4 处引用）
+- **FUTURE-01 随 ① 根治一并关闭**（✅ v1.55 收档已关闭，4 处引用已由 Lead 清理），不再单列挂账
 - **CI-PG**：本期不建 `services: postgres`，`TEST_PG_DSN` 双跑登记为前置依赖，不伪造双跑
 - **存量密码**：全库写入均经 `HashPassword`（恒 32 字节），免盘点直接上守卫
 - **例外缓存陈旧窗口**：要求立即一致，`CACHE-02` 必做联动失效

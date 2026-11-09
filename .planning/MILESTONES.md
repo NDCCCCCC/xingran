@@ -2,6 +2,29 @@
 
 # Milestones
 
+## v1.55 LOCKED 残余根治 (Shipped: 2026-11-09)
+
+**Phases completed:** 7 phases (145-151，W1 `145∥146∥147` → W2 `148∥149∥150`（函数级归属表凭证）→ W3 `151` 最后执行) | **Requirements:** 23/23 (AUDIT×3 · CRYPTO×4（CRYPTO-04 optional 按硬 gate 合规跳过） · CACHE×3 · DIALECT×4 · SCOPE×4 · SIDECHANNEL×4 · ARCH×1，100% Satisfied) | **7 planner + 2 plan-checker + 7 executor + Lead 集成** | **回归闸门**：`go build ./...` / `go test ./...` / `tsc` / `lint:ci` **ALL PASS**（含 forbidigo / check-route-registry 713 零漂移）/ 全量 vitest 594 文件（唯一 dashboard 动态 import 超时为 W1/W2 已定性 flaky，单跑复绿）
+
+**取数**：`.planning/notes/261109-v154-locked-root-cause-analysis.md`（3 个并行只读 subagent + Lead 交叉核对，判定 6 项 LOCKED 中 5 项裁定不成立/理由被高估、可从根源根治）+ 用户 2026-11-09 拍板 5 项决策（DECISION-① 允许推翻「范围快照回显」产品语义 / FUTURE-01 随 ① 关闭 / CI-PG 登记前置依赖 / 密码免盘点 / 例外缓存立即一致）。
+
+**Key accomplishments（6 项 LOCKED / 7 子项全部从根源清偿）:**
+1. ✅ **① P1-5 侧信道（A+B 组合根治）** — A(150)：全档位删 6 个规模字段、整段删全库 `countQ`、越界行静默跳过 + `ScopeOutOfScope json:"-"`、5 个差分攻击测试（N 变化响应逐字节相等）、All 档零回归、`ScopeWriteOperParam` 审计链一字不改；B(151)：新建 `pkg/query/scoped_db.go` + `scoped_registry.go`（回调注册制、零 `internal/**` import）+ 资源归属注册表（引用 149/131 单一真实源、幂等守卫 SQL 零漂移）+ `GORMRepository` 仅 `GetByID`/`List` 两行读链改走 ScopedDB（构造签名与 Create/Update/Delete/BatchDelete 写链一字不动）+ 8 核心读端点 32 处起链 + `scope_filter.go` 强制层 + 响应契约层防复活断言。**A+B 均完成 → P1-5 侧信道根治达成**；全仓基座影响面实证 = `GORMRepository[T]` 17 文件/56 处/仅 2 包，system/pkg/vdi 零直接消费。
+2. ✅ **② 5 项显式豁免面** — 149 方案 D 零迁移收口：`scope_entities.go` 扩 5 实体 + 归属链（walls/doors/texts 经 floor、photos 经 room→serverRoom→building、location-alias 用已有 `dept_id` 直挂）；`router.go` 仅 +2 行补挂 rooms/photos `DataScopePermission`（原「连挂都没挂」）；写端点 403/批量按 `filterEntityVisibleIDs` 裁剪；保存侧 `VisibleBaseline`+增量 diff 防误删越界几何；Lead 集成期把 `datascope_mount_test.go` 契约基线从「31 / roomPhotos 豁免」更新为「32 / 恰好挂 1 处」。
+3. ✅ **③-A `RightCast:"text"` / ③-B PG 专属 CTE** — 148：删 `RightCast` 方言机制改语义枚举 + 单侧 `CAST(id AS TEXT)`、去 `Warnf+continue` 静默降级；两处 raw CTE 改**唯一共享 `recallPhysicalRows`** Go 层合并（8 类方言 token 全文件归零、单条/批量口径不分叉）；4 文件 10 处「报错即预期」改真实结果断言；`.golangci.yml` forbidigo 8 类规则 + 存量白名单；能力边界（只匹配 AST 标识符）如实登记。
+4. ✅ **④ operlog e2e 静态门禁** — 145：静态段 Go 单测化（`runtime.Caller` 锚定仓库根）、两脚本删静态段/凭据门禁下移、两 driver 设 `cmd.Dir`、ci.yml/README 登记；实测原 shell 静态段真跑 = `exit 1`（9 项白名单漂移）=「从未真跑过」实证；判定从手写白名单升级为三组可验证分类，trunk operlog 真实缺口用 `knownGapHandlers` 可观测 Skip 登记（非放行）。
+5. ✅ **⑤ `invalidateCache` no-op / ⑥ `pbkdf2SM3`** — 147：删 2 死键/2 helper/空函数（6 处旧标识符全处置含测试调用）+ 方案(a) 广播失效 `reconciliation:health:workstation:*`、写后立即一致、memory/redis 同路径；146：三类守卫显式 error + `VerifyPassword len==32` 校验 + 4 组黄金向量逐字节一致（`keyLen=32` 零迁移）、CRYPTO-04 按硬 gate 合规跳过（守卫已收口、非遗留缺陷）。
+
+**Known Gaps（登记，非阻断，不伪造闭环）**：
+- **验证类残余**：79 条人工验证跟踪表保持 **0 勾选**；FIX-01 实机 AD/LDAP UAT｜FIX-04 真机逐型号取证 7 项｜FIX-09 HTTP P99 压测｜FIX-13 生产库 migration 236/237；`TEST_PG_DSN` 双跑前置依赖（本期不建 `services: postgres`）；149 的 `149-UAT-RECHECK.md`（D1/D2）与 150 的 `150-UAT-BACKFILL.md` 重跑窗口/验收人待 QA 裁定。
+- **v1.55 新增登记**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 成功路径无 `operlog.Record`，W2 未覆盖，待后续 quick）｜`computeByWorkstation:1074` append 缺陷｜两份 `operlog_e2e_verify.sh` 重复副本未物理合并｜forbidigo 能力边界｜`room_photo`/`location_alias` 两 handler HTTP 透传口径｜v1.54 新增 7 项 GAP 仍挂账。逐项见 `STATE.md ## Deferred Items` v1.55 行与各 phase `*-SUMMARY.md`。
+- **FUTURE-01 已关闭**：随 ① 的 A+B 根治一并关闭，4 处引用（`REQUIREMENTS.md` / `ROADMAP.md` / `STATE.md` / `261108-v153-locked-residuals.md:63`）已由 Lead 收档清理，不再是未来候选。
+- **收档计数修正**：立项期草案/ROADMAP 沿用「24 REQ」口径，实为把 CRYPTO-04 的 `optional` 标注误计入；逐组实证 = 23，以 23 为准（`REQUIREMENTS.md` Coverage 段已登记）。
+
+**交付证据**：7 份 `.planning/phases/{145..151}-*/*-SUMMARY.md`（其中 151 含全仓基座影响面评估与 3 个 checker 边界披露）+ `149-UAT-RECHECK.md` + `150-UAT-BACKFILL.md`；根因判定 `.planning/notes/261109-v154-locked-root-cause-analysis.md`；草案 `.planning/notes/261109-v155-requirements-draft.md`；6 项 LOCKED 裁定原文 `.planning/notes/261108-v153-locked-residuals.md` 保持只读。
+
+---
+
 ## v1.54 真实代码缺口清偿 (Shipped: 2026-11-09)
 
 **Phases completed:** 3 phases (142-144，其中 144 拆后端/前端两个并行 executor，共 4 PLAN) | **Requirements:** 7/7 (DISC-01/02 · ALRT-01/02/03 · PORT-01/02，100% Satisfied) | **W1 四 executor 并行 + Lead 集成** | **回归闸门**：`go build ./...` / `go test ./...` / `tsc` / `lint:ci` **ALL PASS**（含 check-permission-codes 双向零漂移、check-route-registry 713 路由）/ 全量 vitest 全绿
