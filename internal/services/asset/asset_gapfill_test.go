@@ -114,8 +114,6 @@ func TestCacheKeyBuildersAndStripPrefix(t *testing.T) {
 	assert.Equal(t, "reconciliation:dashboard:global", GetReconciliationDashboardKey("global"))
 	assert.Equal(t, "reconciliation:exception:list:dept-1", GetReconciliationExceptionListKey("dept-1"))
 	assert.Equal(t, "reconciliation:exception:byID:rec-1", GetReconciliationExceptionByIDKey("rec-1"))
-	assert.Equal(t, "reconciliation:exceptionRule:list", GetReconciliationExceptionRuleListKey())
-	assert.Equal(t, "reconciliation:exceptionRule:byID:r-1", GetReconciliationExceptionRuleByIDKey("r-1"))
 	assert.Equal(t, "reconciliation:view:lastRefresh", GetReconciliationViewLastRefreshKey())
 	assert.Equal(t, "reconciliation:health:workstation:ws-1", GetReconciliationHealthByWorkstationKey("ws-1"))
 	assert.Equal(t, "reconciliation:health:asset:a-1", GetReconciliationHealthByAssetKey("a-1"))
@@ -765,10 +763,10 @@ func TestExceptionService_ImportFromExcel(t *testing.T) {
 	assert.False(t, scopeID.Valid, "postProcess 键名错配 → scope_id 保持 NULL(quirk)")
 	assert.False(t, conflictTypes.Valid, "CSV 未转换反而被空值覆写为 NULL(quirk)")
 
-	// invalidateCache no-op(覆盖方法体)
+	// Phase 147 CACHE-01/CACHE-02:零参构造 cache=nil，新失效函数 nil-safe 返回 nil
 	db.Exec(`UPDATE sys_reconciliation_exception SET is_active = 0`)
 	impl := svc.(*reconciliationExceptionServiceImpl)
-	impl.invalidateCache()
+	require.NoError(t, impl.invalidateExceptionRuleCache(ctx))
 }
 
 // =====================================================================

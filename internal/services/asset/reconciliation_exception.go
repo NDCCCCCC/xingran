@@ -17,6 +17,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // ============================================================================
@@ -238,11 +239,23 @@ func ValidateReason(reason string) error {
 // reconciliationExceptionServiceImpl ReconciliationExceptionService 私有实现
 type reconciliationExceptionServiceImpl struct {
 	db *gorm.DB
+
+	// cache Phase 147 CACHE-02:例外规则写成功后广播失效工位健康度缓存。
+	// 可为 nil（零参构造 / 单测场景）→ 失效动作 nil-safe 跳过。
+	cache base.CacheProvider
 }
 
 // NewReconciliationExceptionService 构造 ReconciliationExceptionService 实例
-func NewReconciliationExceptionService(db *gorm.DB) ReconciliationExceptionService {
-	return &reconciliationExceptionServiceImpl{db: db}
+//
+// Phase 147 CACHE-02:cacheProviders 为向后兼容的可变参数,零参调用方
+// (matcher 注入等非写路径装配)零改动;写路径装配点传入
+// system.NewCacheProvider(core.DataCacheService) 以启用联动失效。
+func NewReconciliationExceptionService(db *gorm.DB, cacheProviders ...base.CacheProvider) ReconciliationExceptionService {
+	svc := &reconciliationExceptionServiceImpl{db: db}
+	if len(cacheProviders) > 0 {
+		svc.cache = cacheProviders[0]
+	}
+	return svc
 }
 
 // List 列出例外规则
@@ -334,7 +347,7 @@ func (s *reconciliationExceptionServiceImpl) GetByID(ctx context.Context, id str
 //   2. 构造 model(IsActive=0 默认启用,CreatedBy 默认 0 — handler 可通过
 //      gin context 注入真实 user_id,但本 service 层保持 ctx-agnostic)
 //   3. db.Create
-//   4. 失效缓存(CacheKeyReconciliationExceptionRuleList)
+//   4. 失效工位健康度缓存（见 invalidateExceptionRuleCache，Phase 147 CACHE-02）
 //
 // 注意:ScopeType 不在 service 层强校验(DB default 'global' + 前端 Radio.Group
 // 限制 global/dept/user 三选一);ScopeID 在 R3 仅做"nil 允许"非强校验(避免
@@ -378,7 +391,10 @@ func (s *reconciliationExceptionServiceImpl) Create(ctx context.Context, req *Cr
 		return nil, fmt.Errorf("创建例外规则失败: %w", err)
 	}
 
-	s.invalidateCache()
+	if err := s.invalidateExceptionRuleCache(ctx); err != nil {
+		// 失效失败不阻断主写路径（DB 已提交），但必须可观测（CACHE-03）
+		applogger.Warnf("[reconciliation:exceptionRule] %s 后缓存失效失败（不阻断主流程）: %v", "Create", err)
+	}
 	return rule, nil
 }
 
@@ -388,7 +404,7 @@ func (s *reconciliationExceptionServiceImpl) Create(ctx context.Context, req *Cr
 //   1. 先 First 验证 id 存在(不存在返回 error)
 //   2. Validate(同 Create)
 //   3. db.Updates(GORM Updates 只 SET 包含字段)
-//   4. 失效缓存
+//   4. 失效工位健康度缓存（Phase 147）
 func (s *reconciliationExceptionServiceImpl) Update(ctx context.Context, id string, req *UpdateExceptionRuleRequest) error {
 	if id == "" {
 		return errors.New("规则ID不能为空")
@@ -446,7 +462,10 @@ func (s *reconciliationExceptionServiceImpl) Update(ctx context.Context, id stri
 		return fmt.Errorf("更新例外规则失败: %w", err)
 	}
 
-	s.invalidateCache()
+	if err := s.invalidateExceptionRuleCache(ctx); err != nil {
+		// 失效失败不阻断主写路径（DB 已提交），但必须可观测（CACHE-03）
+		applogger.Warnf("[reconciliation:exceptionRule] %s 后缓存失效失败（不阻断主流程）: %v", "Update", err)
+	}
 	return nil
 }
 
@@ -471,7 +490,10 @@ func (s *reconciliationExceptionServiceImpl) Delete(ctx context.Context, id stri
 	if result.RowsAffected == 0 {
 		return errors.New("规则不存在或已被删除")
 	}
-	s.invalidateCache()
+	if err := s.invalidateExceptionRuleCache(ctx); err != nil {
+		// 失效失败不阻断主写路径（DB 已提交），但必须可观测（CACHE-03）
+		applogger.Warnf("[reconciliation:exceptionRule] %s 后缓存失效失败（不阻断主流程）: %v", "Delete", err)
+	}
 	return nil
 }
 
@@ -571,12 +593,19 @@ func (s *reconciliationExceptionServiceImpl) MatchException(ctx context.Context,
 	}, nil
 }
 
-// invalidateCache 失效例外规则缓存(R3 写操作后调用)
-//
-// 当前实现是无 Redis 场景下的 no-op;Phase 42 INFRA-04 已定义 CacheProvider
-// 接口,真实部署由 core.Cache 注入。这里保留方法签名,便于后续接入。
-func (s *reconciliationExceptionServiceImpl) invalidateCache() {
-	// 设计决策（已裁定接受，低优先级）：无 Redis 场景下 invalidateCache 为 no-op；缓存陈旧窗口在 cron 周期内可接受，告警通路由 DetectLayer3 内存匹配驱动、不依赖此缓存。若未来接入 Redis 再补 core.Cache.Delete(ctx, CacheKeyReconciliationExceptionRuleList)。2026-11-08 开放项盘点 #B13（结论见 v1.53 归档产物）。
+// invalidateExceptionRuleCache 广播失效工位健康度缓存（Phase 147 CACHE-02）。
+// 例外规则变更后 GetByWorkstation 5min 缓存内的 exceptionHit/AppliedActions 会陈旧，
+// 故写成功后按 pattern 失效全部 reconciliation:health:workstation:*；
+// 返回 error 供调用方 Warnf 观测；cache 为 nil（单测/未配置）时 nil-safe 跳过。
+func (s *reconciliationExceptionServiceImpl) invalidateExceptionRuleCache(ctx context.Context) error {
+	if s.cache == nil {
+		return nil
+	}
+	pattern := fmt.Sprintf(CacheKeyReconciliationHealthByWorkstation, "*")
+	if err := s.cache.DeleteByPattern(ctx, pattern); err != nil {
+		return fmt.Errorf("失效工位健康度缓存失败: pattern=%s: %w", pattern, err)
+	}
+	return nil
 }
 
 // ============================================================================
@@ -619,7 +648,10 @@ func (s *reconciliationExceptionServiceImpl) ImportFromExcel(ctx context.Context
 		fmt.Printf("[reconciliation:ImportFromExcel] 后处理失败 (基础字段已写库): %v\n", err)
 	}
 
-	s.invalidateCache()
+	if err := s.invalidateExceptionRuleCache(ctx); err != nil {
+		// 失效失败不阻断主写路径（DB 已提交），但必须可观测（CACHE-03）
+		applogger.Warnf("[reconciliation:exceptionRule] %s 后缓存失效失败（不阻断主流程）: %v", "ImportFromExcel", err)
+	}
 	return result, nil
 }
 
