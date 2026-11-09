@@ -140,16 +140,17 @@ func (s *excelExportServiceImpl) resolveAssociations(
 		}
 
 		results := make(map[string]string)
-		// RightCast 字段(可选):RightField 类型转换,如 "text" → "id::text IN (?)"
-		// 用于 LeftField 是 varchar 存 UUID 字符串但 RightField 是 uuid 类型的场景
-		// (例: ops_info_points.workstation_id varchar, sys_workstation.id uuid)
+		// Phase 148 / DIALECT-01 根治：配置层只承载「右表字段是 UUID 列」这一语义
+		// （RightFieldKind），由 service 统一生成双方言等价的单侧 CAST(id AS TEXT)。
+		// IN ? 的实参是 Go 字符串，不需要双侧 CAST（P1-8 双侧是 JOIN 两边皆为列）。
+		// 配置/结构体中不得再出现任何 SQL 方言片段字符串。
 		rightFieldExpr := join.RightField
-		if join.RightCast != "" {
-			rightFieldExpr = join.RightField + "::" + join.RightCast
+		if join.RightFieldKind == RightFieldUUID {
+			rightFieldExpr = "CAST(" + join.RightField + " AS TEXT)"
 		}
 		// SkipSoftDelete 字段(可选):某些 join 目标表为硬删除表(无 deleted_at 列,如 sys_device_port_status),
-		// 加 `deleted_at IS NULL` 会触发 PG SQLSTATE 42703 → 整个 join 失败 → 关联列整列空,
-		// 错误被 logger.Warnf 后 continue 时静默吞掉。此字段为 true 时跳过该过滤。
+		// 加 `deleted_at IS NULL` 会触发 PG SQLSTATE 42703 → 整个 join 失败 → 关联列整列空。
+		// 此字段为 true 时跳过该过滤；两处语义（软删工位恢复名称 / 硬删表无列）保持不变。
 		queryBuilder := s.db.WithContext(ctx).
 			Table(join.Table).
 			Select(join.RightField+", "+join.SelectField).
@@ -158,20 +159,27 @@ func (s *excelExportServiceImpl) resolveAssociations(
 			queryBuilder = queryBuilder.Where("deleted_at IS NULL")
 		}
 		rows, err := queryBuilder.Rows()
-
 		if err != nil {
-			logger.Warnf("批量查询关联数据失败: %v", err)
-			continue
+			// 根治：不再 logger.Warnf + continue 静默降级（旧行为会让「关联列整列空但导出仍成功」）。
+			// 调用方 ExportData 已用 fmt.Errorf("解析关联数据失败: %w", err) 包装传播。
+			return nil, fmt.Errorf("关联表 %s 查询失败: %w", join.Table, err)
 		}
 
 		for rows.Next() {
 			var id, value string
 			if err := rows.Scan(&id, &value); err != nil {
-				continue
+				_ = rows.Close()
+				return nil, fmt.Errorf("关联表 %s 扫描失败: %w", join.Table, err)
 			}
 			results[id] = value
 		}
-		rows.Close()
+		if err := rows.Err(); err != nil {
+			_ = rows.Close()
+			return nil, fmt.Errorf("关联表 %s 遍历失败: %w", join.Table, err)
+		}
+		if err := rows.Close(); err != nil {
+			return nil, fmt.Errorf("关联表 %s 关闭结果集失败: %w", join.Table, err)
+		}
 
 		for _, row := range data {
 			if idValue, ok := row[join.LeftField]; ok {

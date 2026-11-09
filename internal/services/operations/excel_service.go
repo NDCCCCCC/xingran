@@ -60,6 +60,8 @@ func (s *ExcelService) WithDeviceService(svc WorkstationDeviceService) *ExcelSer
 }
 
 type ImportError struct {
+	// 越界行不再产生 ImportError（Phase 150）；本字段仅用于用户上传文件自身的
+	// 校验错误定位，不构成越界规模泄漏。
 	Row   int    `json:"row"`
 	Field string `json:"field"`
 	Value string `json:"value"`
@@ -78,9 +80,10 @@ type ImportResult struct {
 	// InferredDeptCount 本次工位导入中「部门列解析失败、改由所属用户反推部门」的记录数。
 	// 仅用于审计与结果展示，不计入失败数；非工位导入恒为 0。
 	InferredDeptCount int `json:"inferredDeptCount,omitempty"`
-	// ScopeOutOfScope Phase 132 导入逐行可见集校验剔除的越界行数（裁定 §4）。
-	// 越界行不写入、不阻断整批；聚合计数供 operlog 审计，不逐条回显明细。
-	ScopeOutOfScope int `json:"scopeOutOfScope,omitempty"`
+	// ScopeOutOfScope Phase 150：仅服务端内部字段，供 excel_handler.go 的
+	// operlog 审计链读取；json:"-" 确保永不进入 HTTP 响应。越界行静默跳过，
+	// 不在响应体回显行号或数量（D-6）。字段名与类型不变，excel_handler.go 仍读它。
+	ScopeOutOfScope int `json:"-"`
 }
 
 // GenerateTemplate 生成Excel模板
@@ -445,10 +448,10 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		}
 	}
 
-	// Phase 132（裁定 §4 导入不豁免）：在 Upsert 之前（事务内 prepare records
-	// 阶段）对每行解析出的有效机构 / dept_id 过可见集。越界行不写入、不阻断
-	// 整批，计入 ImportResult 错误明细（含行号、不含敏感值）与聚合越界计数。
-	// All 档短路零校验零查询（超管零回归）。仅四域导入收口，其余实体不动。
+	// Phase 150（D-6）：在 Upsert 之前（prepare records 阶段）对每行解析出的
+	// 有效机构 / dept_id 过可见集。越界行静默跳过：不写入、不阻断整批、不进
+	// ImportResult.Errors / Failed；仅 outOfScope 入服务端 operlog 审计链，
+	// HTTP 响应体零回显。All 档短路零校验零查询（超管零回归）。仅四域导入收口。
 	if entityType == "building" || entityType == "floor" ||
 		entityType == "workstation" || entityType == "infoPoint" {
 		kept, outOfScope, filterErr := filterScopeWriteImportRows(

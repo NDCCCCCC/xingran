@@ -113,3 +113,22 @@ func TestFloorPlanText91_CRUDSmoke(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), page.Total)
 }
+
+// TestScope149_FloorPlanText_ServiceWiring 就近验证 floor_plan_text_service.go
+// 的 149 接线：Create 提交侧越界 → 403；List 按可见集裁剪；BatchDelete 权威裁剪。
+// 反向变异：去掉任一处 149 接线必红。
+func TestScope149_FloorPlanText_ServiceWiring(t *testing.T) {
+	f := scope149BuildFixture(t)
+	ctxA := scope149Ctx(scope149DeptOnly(scope149DeptA))
+
+	err := f.TextSvc.Create(ctxA, &operationsmodels.FloorPlanText{FloorID: f.FloorB})
+	assert.True(t, IsScopeDenied(err), "text Create 越界 floor_id → ErrScopeDenied(403)")
+
+	list, err := f.TextSvc.List(ctxA, requests.FloorPlanTextListRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), list.Total, "text List 只返回可见集内 1 行")
+
+	require.NoError(t, f.TextSvc.BatchDelete(ctxA, []string{f.TextA, f.TextB, f.TextBroken}))
+	assert.Equal(t, int64(2), scope149CountVisible(t, f.DB, "ops_floor_plan_texts"),
+		"只删可见 1 行；越界 + 断链 2 行不被误删")
+}

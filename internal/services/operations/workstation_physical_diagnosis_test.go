@@ -30,8 +30,8 @@ import (
 
 const testWSID = "00000000-0000-0000-0000-000000000130"
 
-// newPhysicalTestDB 建独立内存库 + 物理链路 CTE 依赖的表（SQLite 方言）。
-// 表结构按 PG 模型裁剪到诊断实际用到的列。
+// newPhysicalTestDB 建独立内存库 + 物理链路共享召回依赖的表（双方言 GORM 链式可跑）。
+// 表结构按 PG 模型裁剪到召回实际用到的列。
 func newPhysicalTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{
@@ -68,23 +68,21 @@ func newPhysicalTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-// newDiagnosisTestService 构造一个「诊断专用」service：
-//   - db 是真实 SQLite（诊断 SQL 全部用 GORM chainable，可双端跑）；
-//   - physicalDevicesFetcher 用 SQLite 版链路召回替换 PG 专属 CTE
-//     （GetPhysicalDevices 的 CTE 含 ::text / REGEXP_REPLACE，SQLite 无法执行）。
+// newDiagnosisTestService 构造诊断测试用 service：
+//   - db 是真实 SQLite（Phase 148 共享召回 recallPhysicalRows 用 GORM chainable，双端可跑）；
+//   - physicalDevicesFetcher 保留注入能力，用于隔离测试「Total/EmptyReason 组装」，
+//     生产路径恒为 nil（不存在第二套 recall 逻辑，口径不分叉）。
 //
-// 这样测的是**真实的诊断实现 + 真实的空因分类**，只有「CTE 方言」这一层被替换。
+// 历史：旧版 GetPhysicalDevices 是 PG 专属 CTE，SQLite 无法执行，只能注入一份
+// SQLite 等价复刻来测诊断组装。Phase 148 历史 CTE 已移除，sqlitePhysicalRecall
+// 降级为**独立 oracle**（仅供断言比对，不再注入生产路径）。
 func newDiagnosisTestService(db *gorm.DB) *workstationDeviceService {
-	svc := NewWorkstationDeviceService(db).(*workstationDeviceService)
-	svc.physicalDevicesFetcher = func(ctx context.Context, wsID string) ([]*models.WorkstationDevice, error) {
-		return sqlitePhysicalRecall(ctx, db, wsID)
-	}
-	return svc
+	return NewWorkstationDeviceService(db).(*workstationDeviceService)
 }
 
-// sqlitePhysicalRecall 是 GetPhysicalDevices CTE 的 SQLite 等价实现（仅测试用）：
+// sqlitePhysicalRecall 是召回逻辑的独立 SQLite 复刻（仅作断言 oracle，不注入服务）：
 // 按 信息点(active) → 端口存在 → 设备存在 → 端口上有 MAC 的顺序召回。
-// 召回规则与生产 CTE 同构，只是方言换成 SQLite 支持的写法。
+// 与生产 recallPhysicalRows 同构，用于「真实结果 vs 独立复刻」逐字段比对。
 func sqlitePhysicalRecall(_ context.Context, db *gorm.DB, wsID string) ([]*models.WorkstationDevice, error) {
 	type row struct {
 		InterfaceName string
@@ -398,9 +396,9 @@ func TestClassifyPhysicalEmptyReason_CoversAllFour(t *testing.T) {
 // TestGetPhysicalDevices_LegacySignatureUnchanged 是向后兼容守护：
 // 旧方法**签名与委托关系**不变 —— 仍返回裸切片、仍由同一实现提供数据。
 //
-// 说明：旧方法内部是 PG 专属 CTE（::text / REGEXP_REPLACE / DISTINCT ON），
-// SQLite 无法执行，因此这里只做「编译期签名 + 入口参数校验 + 委托关系」三重守护；
-// 链路真实性由既有 workstation_device_physical_test.go（physicalJoin 等价实现）覆盖。
+// Phase 148：历史 PG 专属 CTE 已移除，GetPhysicalDevices 走双方言共享召回
+// recallPhysicalRows，SQLite 可真实执行。本用例改为「编译期签名 + 入口参数校验 +
+// 真实结果 + 诊断入口同源」四重守护，不再只做签名/委托的绕过式断言。
 func TestGetPhysicalDevices_LegacySignatureUnchanged(t *testing.T) {
 	db := newPhysicalTestDB(t)
 	seedWorkstation(t, db, testWSID, "3f130", nil)
@@ -415,12 +413,24 @@ func TestGetPhysicalDevices_LegacySignatureUnchanged(t *testing.T) {
 	require.Error(t, err, "空工位ID必须报参数错误")
 	assert.Empty(t, devices)
 
-	// ③ 诊断入口复用同一实现：注入 fetcher 后 Total 必须等于 fetcher 返回条数
-	diagSvc := newDiagnosisTestService(db)
-	result, err := diagSvc.GetPhysicalDevicesWithDiagnosis(context.Background(), testWSID)
+	// ③ 真实结果：GetPhysicalDevices 在 SQLite 上真实召回（不再报方言错误），
+	//    并与独立 oracle sqlitePhysicalRecall 逐字段一致。
+	seedFullChain(t, db, testWSID, "B0:22:7A:2E:4A:4F")
+	recall, err := svc.GetPhysicalDevices(context.Background(), testWSID)
+	require.NoError(t, err, "根治后共享召回不应再报 PG 方言错误")
+	require.Len(t, recall, 1, "完整链路应召回 1 台设备")
+	require.NotNil(t, recall[0].MACAddress)
+	assert.Equal(t, "B0:22:7A:2E:4A:4F", *recall[0].MACAddress,
+		"MAC 优先取 ops_asset.mac1 原值（对齐 PG COALESCE）")
+	oracle, err := sqlitePhysicalRecall(context.Background(), db, testWSID)
 	require.NoError(t, err)
-	require.NotNil(t, result)
-	recall, err := sqlitePhysicalRecall(context.Background(), db, testWSID)
+	require.Len(t, oracle, 1, "独立 oracle 也应召回 1 台")
+	assert.Equal(t, *oracle[0].MACAddress, *recall[0].MACAddress,
+		"真实实现与独立复刻逐字段一致")
+
+	// ④ 诊断入口复用同一实现（无注入）→ Total 必须等于真实召回条数。
+	diagResult, err := svc.GetPhysicalDevicesWithDiagnosis(context.Background(), testWSID)
 	require.NoError(t, err)
-	assert.Equal(t, len(recall), result.Total, "诊断的 Total 必须与召回一致（同一份数据源）")
+	require.NotNil(t, diagResult)
+	assert.Equal(t, len(recall), diagResult.Total, "诊断 Total 必须与真实召回一致（同一份数据源）")
 }

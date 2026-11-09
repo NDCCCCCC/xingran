@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	pkgquery "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
@@ -24,6 +24,7 @@ const aliasListJoinSelect = `sys_dept_location_alias.*,
 // 必须显式转换一侧类型。用标准 SQL 的 CAST(... AS TEXT):
 //   - PG: CAST(uuid AS TEXT) 把 uuid 转成 text,再与 varchar 比较(text 与 varchar 同族,有 = 操作符)
 //   - SQLite: uuid 列实际存为 TEXT,CAST(x AS TEXT) 是 no-op,TEXT = TEXT 正常
+//
 // 故 CAST 写法在 PG/SQLite 双 DB 行为一致(不能用 PG 专有 `::text`,SQLite 语法错误)。
 const aliasListJoinClause = `LEFT JOIN sys_dept origin ON CAST(origin.id AS TEXT) = sys_dept_location_alias.dept_id AND origin.deleted_at IS NULL
 	LEFT JOIN sys_dept location ON CAST(location.id AS TEXT) = sys_dept_location_alias.location_id AND location.deleted_at IS NULL`
@@ -105,6 +106,11 @@ func (s *locationAliasServiceImpl) List(ctx context.Context, pageNum, pageSize i
 	query := s.db.WithContext(ctx).Model(&models.SysDeptLocationAlias{}).
 		Where("sys_dept_location_alias.deleted_at IS NULL")
 
+	// Phase 149 / SCOPE-01：location-alias 按已有 dept_id ∈ 可见集直挂。
+	// 挂在 Count 之前，保证 Count 与 Find 同源（不出现「total 全库、list 裁剪」双口径）；
+	// All / 未注入短路零额外 SQL（超管零回归）；dept_id 越界 / 空集 → 空集。
+	query = applyEntityReadScope(query, ctx, scopeEntityLocationAlias, "sys_dept_location_alias")
+
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
@@ -131,7 +137,10 @@ func (s *locationAliasServiceImpl) List(ctx context.Context, pageNum, pageSize i
 // GetByID 按 ID 查询 alias
 func (s *locationAliasServiceImpl) GetByID(ctx context.Context, id string) (*models.SysDeptLocationAlias, error) {
 	var alias models.SysDeptLocationAlias
+	// Phase 149 / SCOPE-01：读端点按 dept_id ∈ 可见集裁剪，越界 / 断链 →
+	// gorm.ErrRecordNotFound（空集语义，不报 403）；All / 未注入零回归。
 	err := s.db.WithContext(ctx).
+		Scopes(entityReadScope(ctx, scopeEntityLocationAlias, "sys_dept_location_alias")).
 		Where("id = ? AND deleted_at IS NULL", id).
 		First(&alias).Error
 	if err != nil {
@@ -150,6 +159,11 @@ func (s *locationAliasServiceImpl) Create(ctx context.Context, req *LocationAlia
 	scope := req.Scope
 	if scope == "" {
 		scope = aliasDefaultScope
+	}
+
+	// Phase 149 / SCOPE-03：提交侧 dept_id 越界 → 单条显式 403（本表 dept_id 直挂）。
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityLocationAlias, req.DeptID); err != nil {
+		return nil, err
 	}
 
 	alias := &models.SysDeptLocationAlias{
@@ -187,9 +201,25 @@ func (s *locationAliasServiceImpl) Update(ctx context.Context, id string, req *L
 		return errors.New("请求体不能为空")
 	}
 
+	// Phase 149 / SCOPE-03：改前侧按 id 解析 dept_id 校验（越界 403）；
+	// All / 未注入短路零查询放行（存量零回归）。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityLocationAlias, id); err != nil {
+		return err
+	}
+
 	var existing models.SysDeptLocationAlias
 	if err := s.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&existing).Error; err != nil {
 		return fmt.Errorf("别名映射不存在: %w", err)
+	}
+
+	// Phase 149 / SCOPE-03：提交侧按「本次生效的 dept_id」校验（req 覆盖优先，
+	// 否则用 existing.DeptID）；越界 → 单条显式 403。
+	submittedDeptID := existing.DeptID
+	if req.DeptID != nil {
+		submittedDeptID = *req.DeptID
+	}
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityLocationAlias, submittedDeptID); err != nil {
+		return err
 	}
 
 	deptChanged := false
@@ -232,6 +262,10 @@ func (s *locationAliasServiceImpl) Update(ctx context.Context, id string, req *L
 
 // Delete 软删除 alias(GORM 默认 deleted_at)
 func (s *locationAliasServiceImpl) Delete(ctx context.Context, id string) error {
+	// Phase 149 / SCOPE-03：改前侧 dept_id 越界 → 单条显式 403。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityLocationAlias, id); err != nil {
+		return err
+	}
 	return s.db.WithContext(ctx).Where("id = ?", id).Delete(&models.SysDeptLocationAlias{}).Error
 }
 

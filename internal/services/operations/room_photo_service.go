@@ -39,10 +39,38 @@ func NewRoomPhotoService(db *gorm.DB) RoomPhotoService {
 	}
 }
 
+// photoReadVisible 判定给定 photo IDs 是否全部落在可见集内（读端点空集语义）。
+//
+// Phase 149 / SCOPE-01：rooms/photos 经 room_id → serverRoom → building 两级链
+// 收口；All / 未注入短路恒 true（零额外 DB 查询，超管零回归）；越界 / 断链
+// → false，调用方按 RoomPhotoNotFound / 空集返回（不报 403）。
+func (s *roomPhotoService) photoReadVisible(ctx context.Context, photoIDs ...string) bool {
+	if len(photoIDs) == 0 {
+		return true
+	}
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityRoomPhoto, photoIDs)
+	return err == nil && len(visible) == len(photoIDs)
+}
+
+// photoSubmittedWriteGuard 写端点提交侧校验（roomID 两级链），越界 → 403。
+func (s *roomPhotoService) photoSubmittedWriteGuard(ctx context.Context, roomID string) error {
+	return checkEntitySubmittedScope(ctx, s.db, scopeEntityRoomPhoto, roomID)
+}
+
+// photoExistingWriteGuard 写端点改前侧校验（photoID 两级链），越界 → 403。
+func (s *roomPhotoService) photoExistingWriteGuard(ctx context.Context, photoID string) error {
+	return checkEntityWriteScope(ctx, s.db, scopeEntityRoomPhoto, photoID)
+}
+
 // UploadPhotos 批量上传机房照片
 func (s *roomPhotoService) UploadPhotos(ctx context.Context, roomID string, files []*multipart.FileHeader, primaryIndex int, userID string) ([]*operations.OpsRoomPhoto, error) {
 	if len(files) == 0 {
 		return nil, apperrors.ParamMissing("照片")
+	}
+
+	// Phase 149 / SCOPE-03：提交侧 room_id 越界 → 单条显式 403（两级链）。
+	if err := s.photoSubmittedWriteGuard(ctx, roomID); err != nil {
+		return nil, err
 	}
 
 	// 验证机房是否存在
@@ -104,7 +132,10 @@ func (s *roomPhotoService) UploadPhotos(ctx context.Context, roomID string, file
 func (s *roomPhotoService) ListByRoom(ctx context.Context, roomID string) ([]*operations.OpsRoomPhoto, error) {
 	var photos []*operations.OpsRoomPhoto
 
+	// Phase 149 / SCOPE-01：读端点按 room_id → serverRoom → building 两级链裁剪
+	// （只裁剪行，响应形状不变）；断链 / 越界 → 空集。All / 未注入零回归。
 	if err := s.db.WithContext(ctx).
+		Scopes(entityReadScope(ctx, scopeEntityRoomPhoto, "ops_room_photos")).
 		Where("room_id = ?", roomID).
 		Order("is_primary DESC, sort_order ASC, created_at ASC").
 		Find(&photos).Error; err != nil {
@@ -116,6 +147,10 @@ func (s *roomPhotoService) ListByRoom(ctx context.Context, roomID string) ([]*op
 
 // SetPrimary 设置主图
 func (s *roomPhotoService) SetPrimary(ctx context.Context, photoID string) error {
+	// Phase 149 / SCOPE-03：改前侧 photoID 越界 → 单条显式 403。
+	if err := s.photoExistingWriteGuard(ctx, photoID); err != nil {
+		return err
+	}
 	// 获取照片信息
 	var photo operations.OpsRoomPhoto
 	if err := s.db.WithContext(ctx).Where("id = ?", photoID).First(&photo).Error; err != nil {
@@ -151,9 +186,16 @@ func (s *roomPhotoService) UpdateSort(ctx context.Context, photoIDs []string) er
 		return apperrors.ParamMissing("照片ID列表")
 	}
 
-	// 使用事务批量更新排序
+	// Phase 149 / SCOPE-03：提交侧按可见集裁剪（不改响应形状、不整批 403）；
+	// 越界 ID 静默丢弃，All / 未注入短路零查询原样返回。
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityRoomPhoto, photoIDs)
+	if err != nil {
+		return err
+	}
+
+	// 使用事务批量更新排序（只处理可见集内 ID，越界 ID 不进入写 SQL）
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for i, photoID := range photoIDs {
+		for i, photoID := range visible {
 			if err := tx.Model(&operations.OpsRoomPhoto{}).
 				Where("id = ?", photoID).
 				Update("sort_order", i).Error; err != nil {
@@ -166,6 +208,10 @@ func (s *roomPhotoService) UpdateSort(ctx context.Context, photoIDs []string) er
 
 // UpdateDescription 更新照片描述
 func (s *roomPhotoService) UpdateDescription(ctx context.Context, photoID string, description string) error {
+	// Phase 149 / SCOPE-03：改前侧 photoID 越界 → 单条显式 403。
+	if err := s.photoExistingWriteGuard(ctx, photoID); err != nil {
+		return err
+	}
 	result := s.db.WithContext(ctx).
 		Model(&operations.OpsRoomPhoto{}).
 		Where("id = ?", photoID).
@@ -184,6 +230,10 @@ func (s *roomPhotoService) UpdateDescription(ctx context.Context, photoID string
 
 // DeletePhoto 删除照片
 func (s *roomPhotoService) DeletePhoto(ctx context.Context, photoID string) error {
+	// Phase 149 / SCOPE-03：改前侧 photoID 越界 → 单条显式 403。
+	if err := s.photoExistingWriteGuard(ctx, photoID); err != nil {
+		return err
+	}
 	// 获取照片信息
 	var photo operations.OpsRoomPhoto
 	if err := s.db.WithContext(ctx).Where("id = ?", photoID).First(&photo).Error; err != nil {
@@ -226,7 +276,13 @@ func (s *roomPhotoService) BatchDeletePhotos(ctx context.Context, photoIDs []str
 		return apperrors.ParamMissing("照片ID列表")
 	}
 
-	for _, photoID := range photoIDs {
+	// Phase 149 / SCOPE-03：后端权威边界 —— 按可见集裁剪后继续（不整批 403）。
+	// 越界 / 断链 ID 静默丢弃；All / 未注入短路零查询原样返回（超管零回归）。
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityRoomPhoto, photoIDs)
+	if err != nil {
+		return err
+	}
+	for _, photoID := range visible {
 		if err := s.DeletePhoto(ctx, photoID); err != nil {
 			return fmt.Errorf("删除照片 %s 失败: %w", photoID, err)
 		}
@@ -239,12 +295,17 @@ func (s *roomPhotoService) BatchDeletePhotos(ctx context.Context, photoIDs []str
 func (s *roomPhotoService) GetPrimaryPhoto(ctx context.Context, roomID string) (*operations.OpsRoomPhoto, error) {
 	var photo operations.OpsRoomPhoto
 
+	// Phase 149 / SCOPE-01：primary 前置走可见集裁剪（与 ListByRoom 同源）；
+	// 断链 / 越界 → record not found（空集语义）。
+	readScope := entityReadScope(ctx, scopeEntityRoomPhoto, "ops_room_photos")
 	if err := s.db.WithContext(ctx).
+		Scopes(readScope).
 		Where("room_id = ? AND is_primary = ?", roomID, true).
 		First(&photo).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 如果没有主图，返回第一张照片
+			// 如果没有主图，返回第一张照片（同样挂可见集）
 			if err2 := s.db.WithContext(ctx).
+				Scopes(readScope).
 				Where("room_id = ?", roomID).
 				Order("sort_order ASC").
 				First(&photo).Error; err2 != nil {
@@ -260,6 +321,11 @@ func (s *roomPhotoService) GetPrimaryPhoto(ctx context.Context, roomID string) (
 
 // GetPhotoWithFile 获取照片及文件信息
 func (s *roomPhotoService) GetPhotoWithFile(ctx context.Context, photoID string) (*operations.OpsRoomPhoto, *system.SysFile, error) {
+	// Phase 149 / SCOPE-01：读端点按可见集裁剪，越界 / 断链 → RoomPhotoNotFound
+	// （空集语义，不报 403）；All / 未注入短路零回归。
+	if !s.photoReadVisible(ctx, photoID) {
+		return nil, nil, apperrors.RoomPhotoNotFound()
+	}
 	var photo operations.OpsRoomPhoto
 	if err := s.db.WithContext(ctx).Where("id = ?", photoID).First(&photo).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -279,7 +345,10 @@ func (s *roomPhotoService) GetPhotoWithFile(ctx context.Context, photoID string)
 // CountPhotos 统计机房照片数量
 func (s *roomPhotoService) CountPhotos(ctx context.Context, roomID string) (int64, error) {
 	var count int64
+	// Phase 149 / SCOPE-01：count 前置走可见集裁剪（与 ListByRoom 同源，不存在
+	// 「total 全库 + list 裁剪」双口径）；断链 / 越界 → 0；All / 未注入零回归。
 	if err := s.db.WithContext(ctx).Model(&operations.OpsRoomPhoto{}).
+		Scopes(entityReadScope(ctx, scopeEntityRoomPhoto, "ops_room_photos")).
 		Where("room_id = ?", roomID).
 		Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("统计照片数量失败: %w", err)

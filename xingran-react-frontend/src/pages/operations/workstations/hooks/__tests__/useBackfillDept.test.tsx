@@ -37,8 +37,6 @@ const preview = (overrides: Partial<BackfillDeptResult> = {}): BackfillDeptResul
   candidates: 5,
   toFill: 3,
   toCorrect: 0,
-  skippedNoUser: 1,
-  skippedBadUserDept: 1,
   skippedAlreadyValid: 1,
   samples: [],
   ...overrides,
@@ -200,7 +198,8 @@ describe("useBackfillDept", () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  // Phase 132 / 裁定 §3：四类「本次范围」文案 + FailClosed 确认按钮 disabled。
+  // Phase 150：132 的四类「本次范围：…（共 N 条）」文案整体作废（DECISION-①）；
+  // 确认框范围行改为不含全库规模、不含任何数值的可见集内表述。
   const openWithPreview = async (p: BackfillDeptResult) => {
     const onSuccess = vi.fn();
     vi.mocked(workstationApi.backfillDeptFromUser).mockResolvedValueOnce(p);
@@ -210,49 +209,57 @@ describe("useBackfillDept", () => {
     });
   };
 
-  it("All 档 → 「本次范围：全库（共 N 条）」且确认按钮可用", async () => {
-    await openWithPreview(preview({ scopeTier: "All", scopeTotal: 42 }));
-    expect(scopeWriteRangeText(latestConfig)).toBe("本次范围：全库（共 42 条）");
+  // 范围行通用断言：以「本次范围：」开头、不含任何数字、不含规模量词。
+  const expectNoScaleText = (cfg: ConfirmConfig) => {
+    const text = scopeWriteRangeText(cfg);
+    expect(text.startsWith("本次范围：")).toBe(true);
+    expect(text).not.toMatch(/[0-9]/);
+    expect(text).not.toContain("共");
+    expect(text).not.toContain("条");
+    expect(text).not.toContain("等");
+    expect(text).not.toContain("个部门");
+    return text;
+  };
+
+  it("All 档 → 「本次范围：全部工位」且确认按钮可用", async () => {
+    await openWithPreview(preview({ scopeTier: "All" }));
+    expect(expectNoScaleText(latestConfig)).toBe("本次范围：全部工位");
     expect(latestConfig.okButtonProps?.disabled).toBe(false);
   });
 
-  it("Custom/Dept/DeptChild 档 → 「部门名及子部门（共 N 条）」且确认按钮可用", async () => {
+  it("Custom/Dept/DeptChild 档 → 可见集内表述、无任何数值且确认按钮可用", async () => {
     await openWithPreview(
       preview({
         scopeTier: "Custom/Dept/DeptChild",
         scopeDeptNames: ["研发部", "测试部"],
-        scopeDeptTotal: 2,
-        scopeTotal: 7,
       })
     );
-    expect(scopeWriteRangeText(latestConfig)).toBe("本次范围：研发部、测试部及子部门（共 7 条）");
+    expect(expectNoScaleText(latestConfig)).toBe("本次范围：当前数据权限可见的部门及子部门");
     expect(latestConfig.okButtonProps?.disabled).toBe(false);
   });
 
-  it("多部门（>3）→ 列前 3 个 + 「等 M 个部门」", async () => {
+  it("多部门（>3）→ 不回显部门总数、不回显「等 M 个部门」数值", async () => {
     await openWithPreview(
       preview({
         scopeTier: "DeptChild",
         scopeDeptNames: ["A部", "B部", "C部", "D部"],
-        scopeDeptTotal: 5,
-        scopeTotal: 9,
       })
     );
-    expect(scopeWriteRangeText(latestConfig)).toBe(
-      "本次范围：A部、B部、C部 等 5 个部门及子部门（共 9 条）"
-    );
+    const text = expectNoScaleText(latestConfig);
+    expect(text).toBe("本次范围：当前数据权限可见的部门及子部门");
+    // 确认框范围行不得含任何派生规模数值（旧文案的 9 / 5 一类数字）。
+    expect(text).not.toContain("9");
+    expect(text).not.toContain("5");
   });
 
-  it("Self 档 → 「仅本人关联工位（共 N 条）」且确认按钮可用", async () => {
-    await openWithPreview(preview({ scopeTier: "Self", scopeTotal: 3 }));
-    expect(scopeWriteRangeText(latestConfig)).toBe("本次范围：仅本人关联工位（共 3 条）");
+  it("Self 档 → 「本次范围：仅本人关联工位」且确认按钮可用", async () => {
+    await openWithPreview(preview({ scopeTier: "Self" }));
+    expect(expectNoScaleText(latestConfig)).toBe("本次范围：仅本人关联工位");
     expect(latestConfig.okButtonProps?.disabled).toBe(false);
   });
 
   it("FailClosed 档 → 「无（数据权限异常，请联系管理员）」且确认按钮 disabled", async () => {
-    await openWithPreview(
-      preview({ scopeTier: "FailClosed", scopeFailClosed: true, scopeTotal: 0 })
-    );
+    await openWithPreview(preview({ scopeTier: "FailClosed", scopeFailClosed: true }));
     expect(scopeWriteRangeText(latestConfig)).toBe("本次范围：无（数据权限异常，请联系管理员）");
     expect(latestConfig.okButtonProps?.disabled).toBe(true);
   });
@@ -264,16 +271,12 @@ describe("useBackfillDept", () => {
         preview({
           scopeTier: "Custom/Dept/DeptChild",
           scopeDeptNames: ["研发部"],
-          scopeDeptTotal: 1,
-          scopeTotal: 5,
         })
       )
       .mockResolvedValueOnce(
         preview({
           scopeTier: "Custom/Dept/DeptChild",
           scopeDeptNames: ["研发部"],
-          scopeDeptTotal: 1,
-          scopeTotal: 5,
           fixMismatch: true,
         })
       );
@@ -293,9 +296,10 @@ describe("useBackfillDept", () => {
     await act(async () => {
       await checkbox!.props!.onChange!({ target: { checked: true } });
     });
-    // update() 的最后一版配置必须仍带范围文案 + 非 disabled。
+    // update() 的最后一版配置必须仍带范围文案 + 非 disabled，且范围行不含数值。
     const last = updates[updates.length - 1];
-    expect(collectScopeWriteTexts(last.content).join("")).toContain("本次范围：研发部及子部门");
+    const lastCfg = { content: last.content } as ConfirmConfig;
+    expect(expectNoScaleText(lastCfg)).toBe("本次范围：当前数据权限可见的部门及子部门");
     expect(last.okButtonProps?.disabled).toBe(false);
   });
 });

@@ -10,13 +10,12 @@ package operations
 //   - queryData 的 sys_dept 字段名特判分支(name→dept_name/code→dept_code)无法经
 //     ExportData 触达(department 已被新导出链截流),用白盒直调覆盖。
 //   - appendWorkstationDeviceSheets 直接白盒调用:workstation 主表导出走
-//     WorkstationQueryBuilder,历史含 ::uuid/::text PG-only 强转(v1.52 P1-8 已改为
-//     双方言 CAST);但本文件夹具 setupWSD77DB 不建 ops_floors/ops_buildings,
-//     ExportData 仍会因缺表报错(P-77-1 由下方 PGOnlySQL 用例文档化),
+//     WorkstationQueryBuilder(v1.52 P1-8 已改双方言 CAST);本文件夹具
+//     setupWSD77DB 不建 ops_floors/ops_buildings,ExportData 主表仍因缺表报错,
 //     故追加链仍用白盒直调覆盖,不依赖 ExportData 入口成功。
-//   - 物理链路 sheet 经 physErr != nil 降级(P-77-10):GetPhysicalDevices* 的
-//     DISTINCT ON/REGEXP_REPLACE CTE 在 sqlite 报错已被 77-01
-//     TestWSD77_GetPhysicalDevicesByWorkstations_FrontSegment 实证。
+//   - Phase 148 后物理链路召回改双方言共享实现(无 PG 专属语法),追加链
+//     「physErr 降级为 0 行」的旧假设作废;现补建链路表并断言物理链路 sheet
+//     产出 1 条真实数据行(逐字段抽查,不再把报错当预期)。
 //   - D-06:全部 xlsx 经 excelize.NewFile() 内存生成,零 testdata 二进制;
 //   - D-07:断言仅 sheet 名/表头行/行数 + 抽查关键单元格(AD sheet 序列号列,
 //     mergeBySerial 合并主键),禁全量逐单元格快照。
@@ -407,8 +406,8 @@ func TestExp77_AppendSheets_NoMatchingWorkstation(t *testing.T) {
 
 // TestExp77_ExportData_WorkstationAppendSheets 追加链主路径:D-07 结构断言 —
 // 三 sheet 存在、表头行逐字相等、AD sheet 行数 = 种子命中数、序列号列抽查
-// (mergeBySerial 的合并主键)。物理链路 sheet 断言 0 数据行但表头在
-// (P-77-10:PG-only CTE 在 sqlite 报错走 physErr 降级,已被 77-01 实证)。
+// (mergeBySerial 的合并主键)。Phase 148 后物理链路 sheet 断言**真实数据行**
+// (补建链路表 + 完整链路,不再「physErr 降级为 0 行」)。
 func TestExp77_ExportData_WorkstationAppendSheets(t *testing.T) {
 	db := setupWSD77DB(t)
 	// 77-01 fixture 为查询链精简,未建 AD enrichment 所需的 last_logon 列 → 补列
@@ -425,6 +424,9 @@ func TestExp77_ExportData_WorkstationAppendSheets(t *testing.T) {
 		exp77LastLogon, wsd77ADComp1).Error)
 	seedWSD77Asset(t, db, wsd77Asset1, "SN-EXP-A1", "ThinkPad T14", "笔记本",
 		"AA:BB:CC:DD:EE:11", "张三", "研发部", "10.2.2.1")
+	// Phase 148:补建物理链路表 + 一条完整链路(信息点→端口→设备→实测MAC→资产),
+	// 使 GetPhysicalDevicesByWorkstations 在 SQLite 真实召回 1 台(复用 77-01 helper)。
+	wsd77SeedPhysicalChain(t, db, wsd77WS1)
 
 	exportSvc := NewExcelExportService(db).(*excelExportServiceImpl)
 	svc := NewExcelService(db, nil, nil, nil).WithDeviceService(NewWorkstationDeviceService(db))
@@ -455,28 +457,39 @@ func TestExp77_ExportData_WorkstationAppendSheets(t *testing.T) {
 	assert.Equal(t, []string{"工位名称", "DeviceName", "Model", "Type", "IP", "ResponsibleUser"}, assetRows[0])
 	assert.Equal(t, "10.2.2.1", assetRows[1][4], "IP 列(batchGetAssetEnrichment 读 machine_ip)")
 
-	// ---- 物理链路设备 sheet(physErr 降级:A1 假设成立)----
+	// ---- 物理链路设备 sheet（Phase 148:真实召回 1 行，非降级空表）----
 	physRows, err := f.GetRows("物理链路设备")
 	require.NoError(t, err)
-	require.Len(t, physRows, 1, "sqlite 下物理链路查询必报错 → 降级为 0 数据行但表头保留")
+	require.Len(t, physRows, 2, "表头 + 1 台共享召回命中的物理设备（不再 physErr 降级为 0 行）")
 	assert.Equal(t, []string{"工位名称", "设备名称", "序列号", "型号", "类型", "MAC", "IP地址",
 		"责任人", "Port", "InfoPoint", "LastSeen", "Confidence"}, physRows[0])
+	// 逐字段抽查（对齐 PG 版 CTE 口径：资产优先）
+	assert.Equal(t, "3f130", physRows[1][0], "工位名称")
+	assert.Equal(t, "SN-148-A", physRows[1][2], "序列号(资产 devicesn)")
+	assert.Equal(t, "ThinkCentre M90q", physRows[1][3], "型号")
+	assert.Equal(t, "b022.7a2e.4a4f", physRows[1][5], "MAC(资产 mac1 原值)")
+	assert.Equal(t, "10.62.1.130", physRows[1][6], "IP 地址")
+	assert.Equal(t, "1.00", physRows[1][11], "Confidence=1.0(实测 MAC 命中)")
 }
 
-// TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 文档化工位主表导出的
-// 夹具限制:WorkstationQueryBuilder 的 7 处 PG 专有 ::uuid/::text 已在 v1.52 P1-8
-// 改为双方言 CAST(... AS TEXT),但共用夹具 setupWSD77DB 未建 ops_floors /
-// ops_buildings 两表,ExportData 仍因 LEFT JOIN 缺表报错 → 追加链无机会执行。
-// 因此本 plan 继续用白盒直调覆盖 appendWorkstationDeviceSheets。
-func TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL(t *testing.T) {
+// TestExp77_ExportData_WorkstationMainSheet_FixtureBoundary 文档化工位主表导出的
+// 夹具边界：WorkstationQueryBuilder 的双方言 CAST 已就位(v1.52 P1-8),但共用夹具
+// setupWSD77DB 未建 ops_floors / ops_buildings 两表,ExportData 的 LEFT JOIN 缺表报错。
+// 这是「夹具缺表」而非「PG 方言/CTE 报错」——Phase 148 后已无 PG 专属 CTE 可报错。
+// 追加链因此继续用白盒直调覆盖(见 TestExp77_ExportData_WorkstationAppendSheets)。
+func TestExp77_ExportData_WorkstationMainSheet_FixtureBoundary(t *testing.T) {
 	db := setupWSD77DB(t)
 	seedWSD77Workstation(t, db, wsd77WS1, "3f130", "")
 	svc := NewExcelService(db, nil, nil, nil).WithDeviceService(NewWorkstationDeviceService(db))
 
 	f, err := svc.ExportData(context.Background(), "workstation", map[string]any{})
+	// 夹具缺 JOIN 表 → 报「查询数据失败」；断言错误不含任何方言/语法 token
+	// （证明不是 PG 强转或 CTE 语法导致的失败）。
 	require.Error(t, err, "夹具缺 ops_floors/ops_buildings 表 → ExportData 仍报错")
 	assert.Nil(t, f)
 	assert.Contains(t, err.Error(), "查询数据失败")
+	assert.NotContains(t, err.Error(), "unrecognized token", "不得残留方言语法错误")
+	assert.NotContains(t, err.Error(), "syntax error", "不得残留 SQL 语法错误")
 }
 
 // TestExp77_QueryWorkstationIDsForExport_ParamTypes 直查 sys_workstation 的

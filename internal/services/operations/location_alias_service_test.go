@@ -8,10 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/stretchr/testify/require"
 	"github.com/glebarez/sqlite"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -414,4 +415,30 @@ func TestLocationAliasService_Delete(t *testing.T) {
 	result, err := svc.List(ctx, 1, 10)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, result.Total)
+}
+
+// TestScope149_LocationAlias_ServiceWiring 就近验证 location_alias_service.go
+// 的 149 接线：Create 提交侧 dept_id 越界 → 403；List 按 dept_id ∈ 可见集裁剪
+// （Count 与 Find 同源）；GetByID 越界 → 空集。
+// 反向变异：去掉 checkEntitySubmittedScope / applyEntityReadScope /
+// GetByID 的 entityReadScope 任一处必红。
+func TestScope149_LocationAlias_ServiceWiring(t *testing.T) {
+	f := scope149BuildFixture(t)
+	ctxA := scope149Ctx(scope149DeptOnly(scope149DeptA))
+
+	// Create 提交侧 dept_id 越界 → 显式 403（本表 dept_id 直挂）。
+	_, err := f.AliasSvc.Create(ctxA, &LocationAliasCreateRequest{
+		DeptID:     scope149DeptB,
+		LocationID: "loc-b",
+	})
+	assert.True(t, IsScopeDenied(err), "alias Create 越界 dept_id → ErrScopeDenied(403)")
+
+	// List 按 dept_id ∈ 可见集裁剪（Count/Find 同源）。
+	list, err := f.AliasSvc.List(ctxA, 1, 1000)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), list.Total, "alias List 只返回可见集内 1 行（Count 与 Find 同源）")
+
+	// GetByID 越界 → 空集语义。
+	_, err = f.AliasSvc.GetByID(ctxA, f.AliasB)
+	assert.Error(t, err, "alias GetByID 越界 → 空集")
 }

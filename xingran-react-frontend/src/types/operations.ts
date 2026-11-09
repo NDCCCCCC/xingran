@@ -114,17 +114,12 @@ export interface BackfillDeptResult {
   candidates: number;
   toFill: number;
   toCorrect: number;
-  skippedNoUser: number;
-  skippedBadUserDept: number;
   skippedAlreadyValid: number;
   samples: BackfillDeptSample[];
-  /** Phase 132 范围快照（预览与确认同一 ScopeResult，防范围漂移） */
+  /** Phase 150：不含任何全库规模 / 越界规模回显（DECISION-① 推翻范围快照语义）。
+   * 以下仅为可见集内元数据与 fail-closed 提示，与后端 BackfillDeptResult 逐字对齐。 */
   scopeTier?: string;
   scopeDeptNames?: string[];
-  scopeDeptTotal?: number;
-  scopeTotal?: number;
-  scopeVisible?: number;
-  scopeOutOfScope?: number;
   scopeFailClosed?: boolean;
 }
 

@@ -437,10 +437,11 @@ func scopeWriteWorkstationVisibleSQL(ctx context.Context, wAlias string) (string
 	return cond, []any{scope.DeptIDs}, false
 }
 
-// scopeWriteBackfillSnapshot 生成 backfill 的「范围快照」回显字段：
-// 档位 / 可见部门名（前 3）/ 部门总数 / FailClosed。预览与执行两次请求
-// 各自从同一 ctx 的 ScopeResult 派生，前端确认框据此展示「本次范围」，
-// 禁止确认阶段重新解析用户档位（裁定 §3 防范围漂移）。
+// scopeWriteBackfillSnapshot 生成 backfill 的范围元数据：档位 / 可见部门名
+// （前 3）/ FailClosed，仅生成可见集内提示与 fail-closed 门控，不含任何全库
+// 或越界规模（Phase 150 / DECISION-①）。预览与执行两次请求各自从同一 ctx 的
+// ScopeResult 派生，禁止确认阶段重新解析用户档位（裁定 §3 防范围漂移）。
+// deptTotal 仅作内部计算保留，不再用于任何 HTTP 响应回显。
 func scopeWriteBackfillSnapshot(ctx context.Context, db *gorm.DB) (tier string, deptNames []string, deptTotal int, failClosed bool) {
 	scope, ok := scopeFromContext(ctx)
 	tier = ScopeWriteTier(ctx)
@@ -524,9 +525,10 @@ func newScopeWriteImportVerdict(ctx context.Context, entityType string) scopeWri
 //   - deptID：工位导入的 dept_id（可空）；
 //   - userID：工位导入的 user_id（Self 档按本人判定，可空）。
 //
-// 语义（裁定 §4）：越界返回 false，该行不写入、不阻断整批，计入 ImportResult
-// 错误明细（含行号、不含敏感值）。空 effOrgID 且无法由归属链解析 → false
-// （fail-closed）。All 档短路返回 true（超管零回归）。
+// 语义（裁定 §4 / Phase 150 D-6）：越界返回 false，该行静默跳过 —— 不写入、
+// 不阻断整批、不产生 ImportError、不计入 Failed；仅 outOfScope 聚合入服务端
+// operlog 审计链。空 effOrgID 且无法由归属链解析 → false（fail-closed）。
+// All 档短路返回 true（超管零回归）。
 func scopeWriteImportRowOK(v scopeWriteImportVerdict, effOrgID, deptID, userID string) bool {
 	if v.skipAll {
 		return true
@@ -560,20 +562,6 @@ func scopeWriteStr(m map[string]any, key string) string {
 		return fmt.Sprintf("%v", v)
 	}
 	return strings.TrimSpace(s)
-}
-
-// scopeWriteImportRowNum 取回解析阶段打的原始 Excel 行号；缺省用
-// config.StartRow + i 兜底（与 excel_service.go:1304 既有行号口径一致）。
-func scopeWriteImportRowNum(m map[string]any, i, startRow int) int {
-	if v, ok := m["__excel_row__"]; ok {
-		switch n := v.(type) {
-		case int:
-			return n
-		case int64:
-			return int(n)
-		}
-	}
-	return startRow + i
 }
 
 // scopeWriteResolveEffOrg 批量解析导入行的「有效机构」（一次 SQL，不逐行查库）。
@@ -679,11 +667,13 @@ func scopeWriteResolveEffOrg(ctx context.Context, db *gorm.DB, entityType string
 // filterScopeWriteImportRows 是 Excel 导入逐行可见集校验的唯一落点
 // （裁定 §4）：在 Upsert 之前（事务内 prepare records 阶段）对每行解析出的
 // org_id（楼层覆盖优先的有效机构）/ dept_id 过可见集；越界行不写入、
-// 不阻断整批，计入 ImportResult 越界错误明细（含行号，不含敏感值 Value）。
+// 不阻断整批。Phase 150（D-6）：越界行静默跳过，仅 outOfScope 入服务端
+// operlog 审计链，不进 ImportResult.Errors / Failed、不进 HTTP 响应体。
 //
 // 复用 effectiveOrgExpr 单一真实源（scopeWriteResolveEffOrg 内）、集合 map
 // 做 O(1) 判定避免逐行查库（裁定 §6）。All 档短路：零校验、零查询、零回归。
-// 返回 (可见行切片, 越界行数)。
+// 返回 (可见行切片, 越界行数)。result 参数保留以维持跨文件接口契约，但函数
+// 体内不再写入（越界计数只经返回值交给 ImportResult.ScopeOutOfScope）。
 func filterScopeWriteImportRows(ctx context.Context, db *gorm.DB, entityType string, config ExcelConfig, records []map[string]any, result *ImportResult) ([]map[string]any, int, error) {
 	v := newScopeWriteImportVerdict(ctx, entityType)
 	if v.skipAll {
@@ -700,19 +690,15 @@ func filterScopeWriteImportRows(ctx context.Context, db *gorm.DB, entityType str
 	kept := make([]map[string]any, 0, len(records))
 	outOfScope := 0
 	for i, rec := range records {
-		rowNum := scopeWriteImportRowNum(rec, i, config.StartRow)
 		effOrg := effOrgs[i]
 		deptID := scopeWriteStr(rec, "dept_id")
 		userID := scopeWriteStr(rec, "user_id")
 		if !scopeWriteImportRowOK(v, effOrg, deptID, userID) {
-			// 越界：不写入、不阻断整批，只记聚合明细（含行号，不含敏感值）。
+			// Phase 150（D-6）：越界行静默跳过 —— 不写入、不阻断整批，仅记
+			// outOfScope 聚合供服务端 operlog 审计链读取；不 Failed++、不 append
+			// Errors、不回显行号，杜绝「failed / errors 数组长度随 N−M 变化」
+			// 的间接侧信道（F-4）。
 			outOfScope++
-			result.Failed++
-			result.Errors = append(result.Errors, ImportError{
-				Row:   rowNum,
-				Field: "org_id/dept_id",
-				Error: "无权操作该数据：该行归属机构不在本次可见范围内",
-			})
 			delete(rec, "__excel_row__")
 			continue
 		}
@@ -727,6 +713,8 @@ func filterScopeWriteImportRows(ctx context.Context, db *gorm.DB, entityType str
 // 含 action / scopeTier / requested / visible / outOfScope 五个字段，全部
 // 为聚合计数，不逐条回显越界 ID（裁定 §2）。统计查询失败时降级为
 // 「档位 + 请求行数 + 全越界」的保守值，绝不静默丢日志。
+// Phase 150：本字符串仅供 operlog.WithOperParam 服务端审计链，严禁写入任何
+// HTTP 响应体 / gin.H / response.Success 的 data（DECISION-① 响应体去规模化）。
 func ScopeWriteOperParam(ctx context.Context, db *gorm.DB, entity, action string, ids []string) string {
 	tier, requested, visibleCount, outOfScope, err := ScopeWriteBatchStats(ctx, db, entity, ids)
 	if err != nil {

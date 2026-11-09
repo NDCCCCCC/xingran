@@ -66,16 +66,19 @@ func TestDataScopeMount_OpsCoverage(t *testing.T) {
 	lines := datascopeMountRouterSource(t)
 
 	// 1) 既有 5 处（system usersRead/usersWrite/deptsRead/deptsWrite + vdi vms）不得被误删，
-	//    加上 ops 26 处 = 31。
+	//    加上 ops 26 处 = 31，再加 v1.55 Phase 149 收口的 roomPhotos 1 处 = 32。
+	//    v1.55 SCOPE-02：rooms/photos 原先「连 DataScopePermission 都没挂」属接线遗漏
+	//    （见 261109-v154-locked-root-cause-analysis.md §② 根因 1），已按用户 2026-11-09
+	//    裁定「显式豁免面从根源收口」补挂；本守卫随新语义更新，不再把 roomPhotos 当豁免组。
 	total := 0
 	for _, l := range lines {
 		if strings.Contains(l, ".Use(middleware.DataScopePermission(core))") {
 			total++
 		}
 	}
-	const wantTotal = 5 + 26
+	const wantTotal = 5 + 26 + 1
 	if total != wantTotal {
-		t.Fatalf("DataScopePermission 挂载总数 = %d，期望 %d（既有 5 + ops 读组 13 + ops 写组 13）；新增/删除挂载必须同步本测试与 ops 域", total, wantTotal)
+		t.Fatalf("DataScopePermission 挂载总数 = %d，期望 %d（既有 5 + ops 读组 13 + ops 写组 13 + v1.55 收口的 roomPhotos 1）；新增/删除挂载必须同步本测试与 ops 域", total, wantTotal)
 	}
 
 	// 2) 26 个组逐一断言已挂载。
@@ -106,12 +109,16 @@ func TestDataScopeMount_OpsCoverage(t *testing.T) {
 		t.Fatalf("读组注入顺序违规:\n%s", strings.Join(orderViolations, "\n"))
 	}
 
-	t.Logf("DS-02 挂载守卫通过: 总数 %d（5 既有 + 13 读组 + 13 写组），读组顺序全部为 Require* → DataScopePermission", total)
+	t.Logf("DS-02 挂载守卫通过: 总数 %d（5 既有 + 13 读组 + 13 写组 + 1 roomPhotos 收口），读组顺序全部为 Require* → DataScopePermission", total)
 }
 
 // TestDataScopeMount_NotOnOpsAncestor 防「挂到 ops 祖先组」的坑：
-// 祖先组中间件会被所有子组继承（含显式豁免的 roomPhotos 几何/照片端点），
-// 且会在各组权限校验之前运行。DataScopePermission 必须只挂在 26 个叶子组上。
+// 祖先组中间件会被所有子组继承，且会在各组权限校验之前运行。
+// DataScopePermission 必须只挂在叶子组上。
+//
+// v1.55 Phase 149：roomPhotos 原先是「显式豁免组」（v1.52 ds05 裁定接受风险），
+// 用户 2026-11-09 已裁定推翻该豁免、按可见集收口（SCOPE-02）。守卫随之更新为
+// 「roomPhotos 必须恰好挂 1 处」——既防祖先组继承，也防收口被回退。
 func TestDataScopeMount_NotOnOpsAncestor(t *testing.T) {
 	lines := datascopeMountRouterSource(t)
 	for i, l := range lines {
@@ -120,8 +127,8 @@ func TestDataScopeMount_NotOnOpsAncestor(t *testing.T) {
 			t.Fatalf("router.go:%d 把 DataScopePermission 挂到了祖先组（会被所有子组继承且在权限校验之前）: %s", i+1, strings.TrimSpace(l))
 		}
 	}
-	// 显式豁免组 roomPhotos（无权限中间件、几何/照片端点，REQUIREMENTS 映射总表登记豁免）不得挂。
-	if n := len(findUseLines(lines, "roomPhotos", "middleware.DataScopePermission(core)")); n != 0 {
-		t.Fatalf("豁免组 roomPhotos 不应挂载 DataScopePermission，实际 %d 处", n)
+	// v1.55 收口组 roomPhotos（原显式豁免面）必须恰好挂 1 处，不得回退为豁免。
+	if n := len(findUseLines(lines, "roomPhotos", "middleware.DataScopePermission(core)")); n != 1 {
+		t.Fatalf("v1.55 收口组 roomPhotos 应恰好挂载 1 处 DataScopePermission，实际 %d 处", n)
 	}
 }

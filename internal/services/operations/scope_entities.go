@@ -5,7 +5,7 @@
 //   - serverRoom：楼宇链 building_id → ops_buildings.org_id；
 //   - dedicatedLine：source_room_id / dest_room_id 双链 OR 命中
 //     （2026-11-07 Lead 补充裁定：原裁定 1 假定存在 building_id 列与真实 schema
-//      不符，见 .planning/phases/133-scope-final/133-SUMMARY.md §0.1）；
+//     不符，见 .planning/phases/133-scope-final/133-SUMMARY.md §0.1）；
 //   - roomDevice：两级链 room_id → ops_server_rooms.building_id → ops_buildings.org_id；
 //   - workstation-device：跟随 workstation_id 所指工位可见集，Self 随工位 user_id。
 //
@@ -42,6 +42,15 @@ const (
 	scopeEntityDedicatedLine     = "dedicatedLine"
 	scopeEntityRoomDevice        = "roomDevice"
 	scopeEntityWorkstationDevice = "workstationDevice"
+	// Phase 149 / SCOPE-01~04：5 类显式豁免面收口（方案 D 零迁移）。
+	// walls/doors/floor-plan-texts 经 floor_id → ops_floors → ops_buildings 楼层归属链；
+	// rooms-photos 经 room_id → ops_server_rooms → ops_buildings 两级链；
+	// location-alias 按已有 dept_id ∈ 可见集直挂（不新增列）。
+	scopeEntityWall          = "wall"
+	scopeEntityDoor          = "door"
+	scopeEntityFloorPlanText = "floorPlanText"
+	scopeEntityRoomPhoto     = "roomPhoto"
+	scopeEntityLocationAlias = "locationAlias"
 )
 
 // entityScopeTables 各实体主表名与「归属链有效机构」列所在的子查询表别名。
@@ -51,6 +60,12 @@ var entityScopeTables = map[string]string{
 	scopeEntityDedicatedLine:     "ops_dedicated_lines",
 	scopeEntityRoomDevice:        "ops_room_devices",
 	scopeEntityWorkstationDevice: "ops_workstation_device",
+	// Phase 149：5 类新实体表名（编译期白名单，防 SQL 注入；table/列名不来自外部输入）。
+	scopeEntityWall:          "ops_walls",
+	scopeEntityDoor:          "ops_doors",
+	scopeEntityFloorPlanText: "ops_floor_plan_texts",
+	scopeEntityRoomPhoto:     "ops_room_photos",
+	scopeEntityLocationAlias: "sys_dept_location_alias",
 }
 
 // entityBuildingOrgExpr 楼宇链「有效机构」表达式（单一真实源口径）。
@@ -63,6 +78,15 @@ const entityBuildingOrgExpr = "b.org_id"
 // entityWorkstationOrgExpr 工位链「有效机构」表达式（楼层覆盖优先，单一真实源
 // dept_filter.go::effectiveOrgExpr）；workstation-device 跟随工位可见集时使用。
 func entityWorkstationOrgExpr() string {
+	return effectiveOrgExpr("f.org_id", "b.org_id")
+}
+
+// entityFloorOrgExpr 楼层归属链「有效机构」表达式（单一真实源）。
+//
+// Phase 149：walls / doors / floor-plan-texts 的 floor_id → ops_floors f →
+// ops_buildings b 归属链终点与工位链完全相同（楼层 org_id 可空覆盖楼宇 org_id），
+// 故直接复用 effectiveOrgExpr("f.org_id","b.org_id")，禁止内联复制 COALESCE/NULLIF。
+func entityFloorOrgExpr() string {
 	return effectiveOrgExpr("f.org_id", "b.org_id")
 }
 
@@ -84,7 +108,7 @@ func entityExistsSub(db *gorm.DB, entity string, mainAlias string) *gorm.DB {
 	case scopeEntityServerRoom:
 		// serverRoom.building_id → ops_buildings.org_id（一级）
 		return sub.Table("ops_buildings b").
-			Where("CAST(b.id AS TEXT) = "+mainAlias+".building_id").
+			Where("CAST(b.id AS TEXT) = " + mainAlias + ".building_id").
 			Where("b.deleted_at IS NULL").
 			Select("1")
 
@@ -92,7 +116,7 @@ func entityExistsSub(db *gorm.DB, entity string, mainAlias string) *gorm.DB {
 		// roomDevice.room_id → ops_server_rooms.building_id → ops_buildings.org_id（两级）
 		return sub.Table("ops_server_rooms sr").
 			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = sr.building_id").
-			Where("CAST(sr.id AS TEXT) = "+mainAlias+".room_id").
+			Where("CAST(sr.id AS TEXT) = " + mainAlias + ".room_id").
 			Where("sr.deleted_at IS NULL AND b.deleted_at IS NULL").
 			Select("1")
 
@@ -104,6 +128,26 @@ func entityExistsSub(db *gorm.DB, entity string, mainAlias string) *gorm.DB {
 			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
 			Where("CAST(w.id AS TEXT) = CAST(" + mainAlias + ".workstation_id AS TEXT)").
 			Where("w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL").
+			Select("1")
+
+	case scopeEntityWall, scopeEntityDoor, scopeEntityFloorPlanText:
+		// Phase 149 楼层归属链：主表.<floor_id> → ops_floors f → ops_buildings b。
+		// 有效机构 = entityFloorOrgExpr() = effectiveOrgExpr("f.org_id","b.org_id")。
+		// 断链（floor 软删 / 不存在 / building 软删）→ JOIN 不上 → EXISTS 0 行 → 空集。
+		return sub.Table("ops_floors f").
+			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+			Where("CAST(f.id AS TEXT) = " + mainAlias + ".floor_id").
+			Where("f.deleted_at IS NULL AND b.deleted_at IS NULL").
+			Select("1")
+
+	case scopeEntityRoomPhoto:
+		// Phase 149 两级链：ops_room_photos.room_id → ops_server_rooms sr
+		// → ops_buildings b，与 ds05 裁定 1 的 roomDevice 两级链逐字同款骨架，
+		// 仅主表外键列改为 room_id；有效机构 = entityBuildingOrgExpr (b.org_id)。
+		return sub.Table("ops_server_rooms sr").
+			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = sr.building_id").
+			Where("CAST(sr.id AS TEXT) = " + mainAlias + ".room_id").
+			Where("sr.deleted_at IS NULL AND b.deleted_at IS NULL").
 			Select("1")
 
 	default:
@@ -137,7 +181,9 @@ func applyAssetReadScope(query *gorm.DB, ctx context.Context) *gorm.DB {
 //
 // All / 未注入 → 原样返回（零 DB 查询、零额外 SQL，超管零回归）。
 func applyEntityReadScope(query *gorm.DB, ctx context.Context, entity, mainAlias string) *gorm.DB {
-	if entity == scopeEntityAsset {
+	// Phase 149：location-alias 按已有 dept_id ∈ 可见集直挂（不走 EXISTS）。
+	// 与 asset 的 applyAssetReadScope 逐字同款（本表列可直引用 + Self 无用户列空集）。
+	if entity == scopeEntityAsset || entity == scopeEntityLocationAlias {
 		return applyAssetReadScope(query, ctx)
 	}
 
@@ -148,6 +194,16 @@ func applyEntityReadScope(query *gorm.DB, ctx context.Context, entity, mainAlias
 
 	switch entity {
 	case scopeEntityServerRoom, scopeEntityRoomDevice:
+		sub := entityExistsSub(query, entity, mainAlias)
+		return wrapScopeExists(query, ctx, sub, entityBuildingOrgExpr, "")
+
+	case scopeEntityWall, scopeEntityDoor, scopeEntityFloorPlanText:
+		// Phase 149 楼层归属链：EXISTS 子查询 + 楼层覆盖有效机构单一真实源。
+		sub := entityExistsSub(query, entity, mainAlias)
+		return wrapScopeExists(query, ctx, sub, entityFloorOrgExpr(), "")
+
+	case scopeEntityRoomPhoto:
+		// Phase 149 两级链（room → serverRoom → building），取 b.org_id。
 		sub := entityExistsSub(query, entity, mainAlias)
 		return wrapScopeExists(query, ctx, sub, entityBuildingOrgExpr, "")
 
@@ -228,7 +284,7 @@ func entityEffectiveOrgs(ctx context.Context, db *gorm.DB, entity, id string) ([
 		for _, col := range []string{"source_room_id", "dest_room_id"} {
 			var one []string
 			q := db.WithContext(ctx).Table("ops_dedicated_lines dl").
-				Joins("JOIN ops_server_rooms sr ON CAST(sr.id AS TEXT) = dl." + col).
+				Joins("JOIN ops_server_rooms sr ON CAST(sr.id AS TEXT) = dl."+col).
 				Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = sr.building_id").
 				Where("CAST(dl.id AS TEXT) = ? AND dl.deleted_at IS NULL AND sr.deleted_at IS NULL AND b.deleted_at IS NULL", id).
 				Pluck("CAST(b.org_id AS TEXT)", &one)
@@ -248,6 +304,31 @@ func entityEffectiveOrgs(ctx context.Context, db *gorm.DB, entity, id string) ([
 			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
 			Where("CAST(wd.id AS TEXT) = ? AND wd.deleted_at IS NULL AND w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL", id).
 			Pluck("CAST("+orgExpr+" AS TEXT)", &orgs).Error
+
+	case scopeEntityWall, scopeEntityDoor, scopeEntityFloorPlanText:
+		// Phase 149 楼层归属链（改前）：主表 → ops_floors f → ops_buildings b，
+		// 取 CAST(entityFloorOrgExpr() AS TEXT)；断链 / 软删 → 空切片 → fail-closed。
+		orgExpr := entityFloorOrgExpr()
+		err = db.WithContext(ctx).Table(entityScopeTables[entity]+" e").
+			Joins("JOIN ops_floors f ON CAST(f.id AS TEXT) = e.floor_id").
+			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+			Where("CAST(e.id AS TEXT) = ? AND e.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL", id).
+			Pluck("CAST("+orgExpr+" AS TEXT)", &orgs).Error
+
+	case scopeEntityRoomPhoto:
+		// Phase 149 两级链（改前）：ops_room_photos → ops_server_rooms sr
+		// → ops_buildings b，取 b.org_id。
+		err = db.WithContext(ctx).Table("ops_room_photos e").
+			Joins("JOIN ops_server_rooms sr ON CAST(sr.id AS TEXT) = e.room_id").
+			Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = sr.building_id").
+			Where("CAST(e.id AS TEXT) = ? AND e.deleted_at IS NULL AND sr.deleted_at IS NULL AND b.deleted_at IS NULL", id).
+			Pluck("CAST(b.org_id AS TEXT)", &orgs).Error
+
+	case scopeEntityLocationAlias:
+		// Phase 149 dept_id 直挂：本表列直接取；软删 / 不存在 → 空切片。
+		err = db.WithContext(ctx).Table("sys_dept_location_alias").
+			Where("CAST(id AS TEXT) = ? AND deleted_at IS NULL", id).
+			Pluck("CAST(dept_id AS TEXT)", &orgs).Error
 
 	default:
 		return nil, nil
@@ -341,6 +422,37 @@ func entitySubmittedOrgs(ctx context.Context, db *gorm.DB, entity string, fkIDs 
 				Where("CAST(w.id AS TEXT) = CAST(? AS TEXT) AND w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL", wid).
 				Pluck("CAST("+orgExpr+" AS TEXT)", &one).Error
 			orgs = append(orgs, one...)
+		}
+
+	case scopeEntityWall, scopeEntityDoor, scopeEntityFloorPlanText:
+		// Phase 149 提交侧：fkIDs[0] = floorID → 查 ops_floors f JOIN ops_buildings b
+		// 取楼层覆盖有效机构；断链 / 空 → 候选为空 → fail-closed。
+		if fid := pick(0); fid != "" {
+			orgExpr := entityFloorOrgExpr()
+			var one []string
+			err = db.WithContext(ctx).Table("ops_floors f").
+				Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+				Where("CAST(f.id AS TEXT) = CAST(? AS TEXT) AND f.deleted_at IS NULL AND b.deleted_at IS NULL", fid).
+				Pluck("CAST("+orgExpr+" AS TEXT)", &one).Error
+			orgs = append(orgs, one...)
+		}
+
+	case scopeEntityRoomPhoto:
+		// Phase 149 提交侧：fkIDs[0] = roomID → 查 ops_server_rooms sr
+		// JOIN ops_buildings b 取 b.org_id；断链 → 候选为空。
+		if rid := pick(0); rid != "" {
+			var one []string
+			err = db.WithContext(ctx).Table("ops_server_rooms sr").
+				Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = sr.building_id").
+				Where("CAST(sr.id AS TEXT) = CAST(? AS TEXT) AND sr.deleted_at IS NULL AND b.deleted_at IS NULL", rid).
+				Pluck("CAST(b.org_id AS TEXT)", &one).Error
+			orgs = append(orgs, one...)
+		}
+
+	case scopeEntityLocationAlias:
+		// Phase 149 dept_id 直挂（提交侧）：[0] = deptID，无需查库。
+		if o := pick(0); o != "" {
+			orgs = append(orgs, o)
 		}
 
 	default:
@@ -464,7 +576,7 @@ func workstationScopeDecision(ctx context.Context, db *gorm.DB, workstationID st
 		Joins("JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id").
 		Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
 		Where("CAST(w.id AS TEXT) = CAST(? AS TEXT) AND w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL", workstationID).
-		Select("CAST("+orgExpr+" AS TEXT) AS eff_org, CAST(w.user_id AS TEXT) AS user_id").
+		Select("CAST(" + orgExpr + " AS TEXT) AS eff_org, CAST(w.user_id AS TEXT) AS user_id").
 		Scan(&row).Error
 	if err != nil {
 		return false, apperrors.Wrap(err, apperrors.CodeDatabaseError, "解析工位归属失败")
@@ -582,8 +694,10 @@ func filterEntityVisibleIDs(ctx context.Context, db *gorm.DB, entity string, ids
 	var sub *gorm.DB
 	var orgExpr string
 	switch entity {
-	case scopeEntityAsset:
+	case scopeEntityAsset, scopeEntityLocationAlias:
 		// dept_id 直挂：本表列可直接引用，无需 EXISTS。
+		// Phase 149：location-alias 已有 DeptID 列，与 asset 逐字同款；
+		// table 由 entityScopeTables 映射到 sys_dept_location_alias。
 		cond, args, skip := orgScopeClause(scope, okScope, "dept_id")
 		if skip {
 			return append([]string(nil), ids...), 0, nil
@@ -605,6 +719,17 @@ func filterEntityVisibleIDs(ctx context.Context, db *gorm.DB, entity string, ids
 		} else {
 			orgExpr = entityBuildingOrgExpr
 		}
+
+	case scopeEntityWall, scopeEntityDoor, scopeEntityFloorPlanText:
+		// Phase 149 楼层归属链批量裁剪：sub = 楼层链 EXISTS，orgExpr = 楼层覆盖
+		// 有效机构单一真实源 entityFloorOrgExpr()（禁止内联 COALESCE/NULLIF）。
+		sub = entityExistsSub(db, entity, table)
+		orgExpr = entityFloorOrgExpr()
+
+	case scopeEntityRoomPhoto:
+		// Phase 149 两级链批量裁剪：room → serverRoom → building，取 b.org_id。
+		sub = entityExistsSub(db, entity, table)
+		orgExpr = entityBuildingOrgExpr
 
 	case scopeEntityDedicatedLine:
 		// 双链 OR：构造一个「两端任一命中」的 EXISTS 子查询，把可见集条件

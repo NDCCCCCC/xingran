@@ -117,20 +117,15 @@ type BackfillDeptResult struct {
 	Candidates          int                  `json:"candidates"`          // 命中「有用户且用户部门有效」的工位总数
 	ToFill              int                  `json:"toFill"`              // dept_id 为空 → 填补
 	ToCorrect           int                  `json:"toCorrect"`           // dept_id 非空且不一致 → 纠正（仅 fixMismatch=true）
-	SkippedNoUser       int                  `json:"skippedNoUser"`       // 无绑定用户
-	SkippedBadUserDept  int                  `json:"skippedBadUserDept"`  // 用户部门 NULL/脏/指向不存在部门
 	SkippedAlreadyValid int                  `json:"skippedAlreadyValid"` // 已有部门且一致（或不纠正时不一致亦计此）
 	Samples             []BackfillDeptSample `json:"samples"`             // 前 20 条（非 All 档恒为空，见 Phase 132）
-	// Phase 132 范围快照（裁定 §3：预览与确认用同一 ScopeResult 快照，防范围漂移）。
-	// 两次请求各自从同一 c.Request.Context() 的 ScopeResult 派生，档位/计数回显
-	// 供前端确认框「本次范围」文案与 operlog 审计使用；All 档同样回填档位。
-	ScopeTier        string   `json:"scopeTier,omitempty"`        // All / Custom/Dept/DeptChild / Self / FailClosed
-	ScopeDeptNames   []string `json:"scopeDeptNames,omitempty"`   // 可见部门名（前 3 个 + 总数由前端拼）
-	ScopeDeptTotal   int      `json:"scopeDeptTotal,omitempty"`   // 可见部门总数（多部门「等 M 个部门」用）
-	ScopeTotal       int      `json:"scopeTotal,omitempty"`       // 请求行数（全库候选总数）
-	ScopeVisible     int      `json:"scopeVisible,omitempty"`     // 可见集内行数
-	ScopeOutOfScope  int      `json:"scopeOutOfScope,omitempty"`  // 越界行数（聚合计数，不逐条回显）
-	ScopeFailClosed  bool     `json:"scopeFailClosed,omitempty"`  // 数据权限异常 → 前端确认按钮 disabled
+	// Phase 150：不再回显任何全库规模 / 越界规模；ScopeTier / ScopeDeptNames /
+	// ScopeFailClosed 仅为可见集内元数据与 fail-closed 提示（DECISION-① 推翻
+	// 132 的「范围快照回显」语义）。全档位统一删除 6 个规模字段，禁止 if isAll
+	// 档位分支回显。
+	ScopeTier       string   `json:"scopeTier,omitempty"`       // All / Custom/Dept/DeptChild / Self / FailClosed
+	ScopeDeptNames  []string `json:"scopeDeptNames,omitempty"`  // 可见部门名（仅可见集内，不含总数）
+	ScopeFailClosed bool     `json:"scopeFailClosed,omitempty"` // 数据权限异常 → 前端确认按钮 disabled
 }
 
 // WorkstationStatisticsResult 工位统计结果(status: 0=可用 1=占用 2=维护)。
@@ -612,12 +607,12 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 
 	// Phase 132（裁定 §3）：本次调用的 ScopeResult 快照只解析一次，预览与执行
 	// 两次请求各自从同一 c.Request.Context() 的 ScopeResult 派生；档位/部门名/
-	// FailClosed 回显进 result 供前端确认框「本次范围」文案展示，禁止确认阶段
-	// 重新解析用户档位（防范围漂移）。All 档同样回填档位保证审计链完整。
-	tier, deptNames, deptTotal, failClosed := scopeWriteBackfillSnapshot(ctx, s.db)
+	// FailClosed 回显进 result 供前端确认框文案展示，禁止确认阶段重新解析用户
+	// 档位（防范围漂移）。Phase 150：快照不再回显任何全库 / 越界规模，
+	// deptTotal 不再进入 HTTP 响应（用 _ 接收）。All 档同样回填档位保证审计链完整。
+	tier, deptNames, _, failClosed := scopeWriteBackfillSnapshot(ctx, s.db)
 	result.ScopeTier = tier
 	result.ScopeDeptNames = deptNames
-	result.ScopeDeptTotal = deptTotal
 	result.ScopeFailClosed = failClosed
 
 	// 候选/COUNT/CASE UPDATE 三层共用同一段「工位有效机构 ∈ 可见集」条件
@@ -649,37 +644,11 @@ func (s *workstationService) BackfillDeptFromUser(ctx context.Context, dryRun, f
 	if err != nil {
 		return nil, fmt.Errorf("查询反推候选工位失败: %w", err)
 	}
+	// Phase 150：候选查询是唯一 COUNT / 明细来源（已带 visibleCond）。
+	// 原 132「不带 scope 的全库 COUNT + 相减回显越界规模」双口径已整段删除：
+	// 删掉 6 个规模字段后该 COUNT 的唯一消费者已消失，残留即死代码，且
+	// 违背「所有 COUNT(*) 与明细同源」（D-3）。全档位统一，不按 isAll 分支回显。
 	result.Candidates = len(candidates)
-	result.ScopeVisible = len(candidates)
-
-	// 2) 未命中候选的工位按原因归类：一条条件聚合替代两次全表 COUNT（审计 P2-4）。
-	// Phase 132：COUNT 同步注入可见集条件，保证「请求行数 / 可见集内行数 /
-	// 越界行数」与候选集同一口径（裁定 §2 硬约束 3）。
-	var stats []struct {
-		Total    int64
-		WithUser int64
-	}
-	// Phase 132：COUNT 保持全库口径 = 「请求行数」（裁定 §2 硬约束 3 的四类
-	// 计数之一）；可见集内行数由上面已裁剪的候选查询给出，越界行数 =
-	// 全库总数 - 可见候选数。若给 COUNT 也挂可见集条件会让越界恒 0，
-	// 丢失审计语义，故此处不注入（既有全库 COUNT 原样保留）。
-	countQ := s.db.WithContext(ctx).Table("sys_workstation").
-		Select("COUNT(*) AS total, " +
-			"COALESCE(SUM(CASE WHEN user_id IS NOT NULL AND CAST(user_id AS TEXT) <> '' THEN 1 ELSE 0 END), 0) AS with_user").
-		Where("deleted_at IS NULL")
-	if err := countQ.Scan(&stats).Error; err != nil {
-		return nil, fmt.Errorf("统计工位总数失败: %w", err)
-	}
-	if len(stats) == 0 {
-		return result, nil
-	}
-	result.ScopeTotal = int(stats[0].Total)
-	result.ScopeOutOfScope = result.ScopeTotal - result.ScopeVisible
-	if result.ScopeOutOfScope < 0 {
-		result.ScopeOutOfScope = 0
-	}
-	result.SkippedNoUser = int(stats[0].Total - stats[0].WithUser)
-	result.SkippedBadUserDept = int(stats[0].WithUser) - len(candidates)
 
 	// 3) 内存分类 + 收集待更新。样例收集策略（审计 P2-5）：fill/correct 优先
 	// 占满上限，skip 只在槽位剩余时补位 —— 幂等二跑（ToFill=0）时预览表不再

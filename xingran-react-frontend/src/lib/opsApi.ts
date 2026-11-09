@@ -185,8 +185,6 @@ export const workstationApi = {
         candidates: 0,
         toFill: 0,
         toCorrect: 0,
-        skippedNoUser: 0,
-        skippedBadUserDept: 0,
         skippedAlreadyValid: 0,
         samples: [],
       }

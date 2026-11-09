@@ -11,11 +11,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// normalizeIface 复刻 service.GetPhysicalDevices 中的 REGEXP_REPLACE 归一化逻辑。
+// normalizeIface 复刻共享召回 normalizePhysicalIface 的接口名归一化规则。
 // 规则: trim 前缀 gigabitethernet|gigabitether|ge|gi → 'ge';空格移除;大小写不敏感。
 //
-// 真实 CTE 用 PG 的 REGEXP_REPLACE 完成归一化(见 workstation_device_service.go)。
-// 本测试在 SQLite 上手动预归一化以兼容 SQLite(无 REGEXP_REPLACE)。
+// Phase 148 后生产 recallPhysicalRows 用 Go 侧等价实现（双方言，无 PG 正则依赖），
+// 本测试用同款规则预归一化以构造夹具 / 做独立 oracle 对照。
 func normalizeIface(s string) string {
 	s = strings.ToLower(s)
 	s = strings.ReplaceAll(s, " ", "")
@@ -239,31 +239,34 @@ func TestGetPhysicalDevices_InvalidDeviceId(t *testing.T) {
 // TestGetPhysicalDevices_UserIDEmpty (B-3f130-2026-07-21 回归守护):
 // 验证工位未绑定 user_id 时, 服务不再因 user_id 早退而返回空数组。
 //
-// 修复前: workstation_device_service.go:339 早退分支 (workstation.UserID == nil)
+// 修复前: workstation_device_service.go 早退分支 (workstation.UserID == nil)
 //   导致工位未绑定用户时返回 ([]WorkstationDevice{}, nil), 即使端口有 MAC 也"看似空"。
-// 修复后: 物理链路是客观事实, 与 user_id 无关, 服务越过 user_id 校验进入物理链路 CTE。
+// 修复后: 物理链路是客观事实, 与 user_id 无关, 服务进入物理链路召回。
 //
-// 测试方法 (适配 SQLite 测试环境):
-//   - 本测试仅建 sys_workstation 表, 不建 CTE 依赖的 ops_info_points 等表
-//   - 修复前: service 在 line 339 早退, 返回 err=nil, devices=空数组 (测试 FAIL: 期望 err != nil)
-//   - 修复后: service 越过 user_id 检查, 进入物理链路 CTE, 因缺表/PG 语法报错 (测试 PASS: 实际收到 err)
-//   - 关键断言: err != nil, 这恰好证明 service 已越过 user_id 早退分支
+// Phase 148 / DIALECT-03 改写：旧版「只建 sys_workstation 表、缺表/PG 语法报错即
+// 证明越过 user_id 早退」的假绿手法已废弃。现在建齐链路表 + 一条完整链路，
+// 断言**真实结果**：未绑用户仍能召回 1 台、err=nil、字段逐项对齐 PG 版口径。
 //
 // 业务背景:
 //   工位 3f130 信息点绑定了网络端口 CX-WH-WH-04F-FL-RS8607E-01 GE2/6 (有 MAC),
 //   但工位 user_id = NULL。修复前前端"物理链路设备(N 台)"为空;修复后能正常显示。
-//
-// 注意: 完整链路返回的端到端验证需要在 PG 环境执行 (现有 CTE 使用 ::text/REGEXP_REPLACE/NULLS LAST),
-// 此处只守护 user_id 早退 BUG 不复发。
 func TestGetPhysicalDevices_UserIDEmpty(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
-	// 仅建 sys_workstation 表, 故意不建 CTE 依赖的 ops_info_points 等表
-	// 这样 service 越过 user_id 检查后, 进入 CTE 阶段必然报错
-	require.NoError(t, db.Exec(`
-		CREATE TABLE sys_workstation (id TEXT PRIMARY KEY, workstation_name TEXT, status INTEGER DEFAULT 0, user_id TEXT, deleted_at DATETIME)
-	`).Error)
+	// 建齐 Phase 148 共享召回依赖的链路表（不再是「故意缺表让 SQL 报错」）。
+	for _, ddl := range []string{
+		`CREATE TABLE sys_workstation (id TEXT PRIMARY KEY, workstation_name TEXT, status INTEGER DEFAULT 0, user_id TEXT, deleted_at DATETIME)`,
+		`CREATE TABLE ops_info_points (id TEXT PRIMARY KEY, name TEXT, workstation_id TEXT, device_id TEXT, port_id TEXT, status INTEGER DEFAULT 0, deleted_at DATETIME)`,
+		`CREATE TABLE sys_device_port_status (id TEXT PRIMARY KEY, device_id TEXT, interface_name TEXT)`,
+		`CREATE TABLE sys_network_device (id TEXT PRIMARY KEY, device_name TEXT)`,
+		`CREATE TABLE sys_device_mac_address (id TEXT PRIMARY KEY, device_id TEXT, mac_address TEXT, interface_name TEXT, collected_at DATETIME)`,
+		`CREATE TABLE sys_device_mac_history (id TEXT PRIMARY KEY, device_id TEXT, mac_address TEXT, interface_name TEXT, last_seen DATETIME)`,
+		`CREATE TABLE ops_asset (id TEXT PRIMARY KEY, devicesn TEXT, device_model_name TEXT, device_type_name TEXT, mac1 TEXT, mac2 TEXT, machine_ip TEXT, nowuser_name TEXT, deleted_at DATETIME)`,
+		`CREATE TABLE sys_ad_computer (id TEXT PRIMARY KEY, mac_address TEXT, serial_number TEXT, computer_name TEXT, ip_address TEXT, operating_system TEXT, updated_at DATETIME, deleted_at DATETIME)`,
+	} {
+		require.NoError(t, db.Exec(ddl).Error)
+	}
 
 	// 工位 ws-3f130 未绑定 user_id (user_id = NULL, 模拟真实业务)
 	workstationUUID := "00000000-0000-0000-0000-000000000130"
@@ -271,14 +274,37 @@ func TestGetPhysicalDevices_UserIDEmpty(t *testing.T) {
 		`INSERT INTO sys_workstation VALUES (?, '3f130', 0, NULL, NULL)`, workstationUUID,
 	).Error)
 
+	// 完整链路：信息点(active) → 端口 → 网络设备 → 实测 MAC → 资产
+	const (
+		devID  = "dev-aaa"
+		portID = "port-aaa"
+		iface  = "GE2/6"
+		mac    = "AA:BB:CC:DD:EE:01"
+	)
+	require.NoError(t, db.Exec(`INSERT INTO sys_network_device VALUES (?, 'CX-3F130')`, devID).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_device_port_status VALUES (?, ?, ?)`, portID, devID, iface).Error)
+	require.NoError(t, db.Exec(`INSERT INTO ops_info_points VALUES ('ip-aaa', '3f130-A', ?, ?, ?, 0, NULL)`,
+		workstationUUID, devID, portID).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_device_mac_address VALUES ('mac-aaa', ?, ?, ?, '2026-10-27 16:02:00')`,
+		devID, mac, "GigabitEthernet "+iface[2:]).Error)
+	require.NoError(t, db.Exec(`INSERT INTO ops_asset VALUES ('asset-aaa', 'SN-3F130', 'ThinkCentre M90q', 'PC', ?, NULL, '10.62.1.130', '张三', NULL)`,
+		mac).Error)
+
 	svc := NewWorkstationDeviceService(db)
 	devices, err := svc.GetPhysicalDevices(context.Background(), workstationUUID)
 
-	// 核心断言: 服务不应因 user_id=NULL 而早退返回成功。
-	// 修复前: err == nil, devices == [] (BUG: 早退)
-	// 修复后: err != nil (CTE 阶段因缺表/PG 语法报错, 证明已越过 user_id 检查)
-	require.Error(t, err,
-		"service 必须越过 user_id 早退检查, 进入物理链路 CTE 查询 (B-3f130-2026-07-21 修复生效)")
-	require.Empty(t, devices,
-		"修复不应返回任何 device (因为 CTE 缺表未真正执行)")
+	// 核心断言（真实结果，非「报错即预期」）：
+	//   user_id=NULL 不再早退 → 双方言共享召回真实执行 → 返回 1 台、err=nil。
+	require.NoError(t, err, "根治后未绑用户不应再报方言/缺表错误")
+	require.Len(t, devices, 1, "未绑定 user_id 的工位仍应召回 1 台物理设备（B-3f130 契约）")
+	d := devices[0]
+	require.NotNil(t, d)
+	require.NotNil(t, d.MACAddress)
+	require.Equal(t, mac, *d.MACAddress, "MAC 优先取 ops_asset.mac1 原值（对齐 PG COALESCE）")
+	require.NotNil(t, d.Confidence)
+	require.Equal(t, 1.0, *d.Confidence, "实测 MAC 命中 → confidence=1.0")
+	require.NotNil(t, d.DeviceSerial)
+	require.Equal(t, "SN-3F130", *d.DeviceSerial, "资产优先 devicesn")
+	// 物理链路与 user_id 解耦：未绑用户时 ResponsibleUserID 仍为 nil。
+	require.Nil(t, d.ResponsibleUserID)
 }

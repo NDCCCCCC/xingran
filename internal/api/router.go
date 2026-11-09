@@ -1172,6 +1172,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 机房照片管理
 		roomPhotos := ops.Group("/rooms/photos")
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		roomPhotos.Use(middleware.DataScopePermission(core))
 		{
 			operations.SetupRoomPhotoRouter(roomPhotos, core)
 		}
