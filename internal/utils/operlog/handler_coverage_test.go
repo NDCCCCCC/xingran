@@ -2,8 +2,10 @@ package operlog
 
 // handler_coverage_test.go — Phase 145 / AUDIT-01/02/03
 //
-// 把 scripts/operlog_e2e_verify.sh 旧静态段（原 :68-151）的三项断言从 shell
-// 逐字迁移为 Go 单测，纳入 go test ./internal/...（ci.yml:62-63 天然硬门禁）。
+// 把 operlog_e2e_verify.sh 旧静态段（原 :68-151）的三项断言从 shell 逐字迁移
+// 为 Go 单测，纳入 go test ./internal/...（ci.yml:62-63 天然硬门禁）。
+// 2026-11-09 quick 261109-wdu 收敛：两份脚本统一到唯一权威 tests/e2e/operlog_e2e_verify.sh，
+// scripts/ 顶层副本与 scripts/e2e/ driver 已删除；LIVE e2e 由 tests/e2e/ 的 Go driver 承载。
 // 目标：零 ADMIN_USER/ADMIN_PASSWORD/DEV_MODE/SKIP_E2E/SKIP_LIVE、零 running
 // backend、零 DB、任意 cwd 下真跑且失败会红。
 //
@@ -105,30 +107,27 @@ type classifiedHandler struct {
 }
 
 // knownGapHandlers —— 真实违反 CLAUDE.md「所有业务写操作 success path 在
-// response.Success 之前必须 operlog.Record」约定的遗留缺口。
+// response.Success 之前必须 operlog.Record」约定的遗留缺口清单。
 //
 // 本 phase（145）只负责「让静态门禁真跑、真实暴露缺口」，不修生产代码
-// （文件面属 portwrite，归 W2 148/150 或后续 quick）。这些文件**不得**被当作
-// 合法例外静默放行：HandlerDifferential 会用一个可观测 t.Skip 子测试逐项
-// 登记（skip 非放行），并从 violations 中显式排除；一旦该文件补了 operlog
-// 调用，子测试会把它从 knownGap 清单里摘除（清单与代码漂移即报错）。
+// （文件面属 portwrite，归 W2 148/150 或后续 quick）。清单内的文件**不得**被当作
+// 合法例外静默放行：HandlerDifferential 用一个可观测 t.Skip 子测试逐项登记
+// （skip 非放行），并从 violations 中显式排除；一旦该文件补了 operlog 调用，
+// 子测试会失败并要求把它从清单里摘除（清单与代码漂移即报错）。
 //
 // 每项必须带文件:行号证据与违反的约定。
+//
+// 2026-11-09 quick 261109-wdu：清单原唯一项
+// `network/port_write_trunk_handler.go` 已补 operlog.Record（OperTypeUpdate），
+// 从清单摘除；该 handler 现直接命中 operlog 调用 → HandlerDifferential PASS，
+// 不再产生 KNOWN_GAP Skip 子测试。清单保留为空（不删变量/类型），使将来
+// 若再出现真实缺口仍可按同样机制登记，且反向漂移断言继续生效。
 type knownGap struct {
 	path   string
 	reason string
 }
 
-var knownGapHandlers = []knownGap{
-	{
-		path: "network/port_write_trunk_handler.go",
-		reason: "`POST /network/ports/write/trunk`（port_write_trunk_handler.go:43-80）成功路径直接 " +
-			"response.Success(c, result)，前面没有任何 operlog.Record / RecordWithBody；" +
-			"internal/services/portwrite/ 全包 operlog. 零命中；router port_write_router.go:72 " +
-			"直连 handler.TrunkWrite（不经过 execSinglePort/BatchWrite）。违反 CLAUDE.md 写操作日志约定；" +
-			"v1.51 Phase 124 遗留，本 phase 不修，登记为后续缺口（详见 145-SUMMARY.md §Known Gaps）。",
-	},
-}
+var knownGapHandlers = []knownGap{}
 
 var classifiedHandlers = []classifiedHandler{
 	// ---- (a) 纯只读（含原 2 项白名单逐字条目 + 漂移补登记，均带 reason）----

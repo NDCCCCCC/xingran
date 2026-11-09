@@ -160,7 +160,9 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 	now := time.Now()
 	task.Status = models.DiscoveryStatusRunning
 	task.StartedAt = &now
-	s.db.WithContext(ctx).Save(&task)
+	if err := s.db.WithContext(ctx).Save(&task).Error; err != nil {
+		return nil, fmt.Errorf("保存发现任务执行中状态失败: %w", err)
+	}
 
 	// 执行发现
 	var discoveredDevices []*DiscoveredDevice
@@ -180,7 +182,9 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 	if err != nil {
 		task.Status = models.DiscoveryStatusFailed
 		task.ErrorMessage = err.Error()
-		s.db.WithContext(ctx).Save(&task)
+		if saveErr := s.db.WithContext(ctx).Save(&task).Error; saveErr != nil {
+			return nil, fmt.Errorf("保存发现任务失败状态失败: %v（发现错误: %w）", saveErr, err)
+		}
 		return nil, err
 	}
 
@@ -206,42 +210,47 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 
 // persistDiscoveryResults 持久化设备发现明细（Phase 137 / FIX-07）。
 // 同一任务重跑时覆盖旧结果；无设备时也清空旧结果，保证查询结果与最后一次执行一致。
+//
+// v1.55 收档登记（v1.54 顺带隐患）已于 quick 261109-wdu 清偿：Delete 与 Create
+// 原先非原子，中途失败会留下「旧结果已删、新结果未写」的空档。现包进单个事务，
+// 事务内全部走 tx（sqlite 单连接死锁红线，沿用 Phase 142 ImportDiscoveredDevices）。
 func (s *DeviceDiscoveryService) persistDiscoveryResults(ctx context.Context, discoveryID string, devices []*DiscoveredDevice) error {
-	tx := s.db.WithContext(ctx)
-	if err := tx.Where("discovery_id = ?", discoveryID).Delete(&models.DeviceDiscoveryResult{}).Error; err != nil {
-		return fmt.Errorf("清理历史发现结果失败: %w", err)
-	}
-	if len(devices) == 0 {
-		return nil
-	}
-
-	rows := make([]models.DeviceDiscoveryResult, 0, len(devices))
-	seq := 0
-	for _, dev := range devices {
-		if dev == nil {
-			continue
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("discovery_id = ?", discoveryID).Delete(&models.DeviceDiscoveryResult{}).Error; err != nil {
+			return fmt.Errorf("清理历史发现结果失败: %w", err)
 		}
-		seq++
-		rows = append(rows, models.DeviceDiscoveryResult{
-			ID:          uuid.NewString(),
-			DiscoveryID: discoveryID,
-			Seq:         seq,
-			IPAddress:   dev.IPAddress,
-			DeviceType:  dev.DeviceType,
-			Vendor:      dev.Vendor,
-			Model:       dev.Model,
-			SysName:     dev.SysName,
-			SysDescr:    dev.SysDescr,
-			IsAlive:     dev.IsAlive,
-		})
-	}
-	if len(rows) == 0 {
+		if len(devices) == 0 {
+			return nil
+		}
+
+		rows := make([]models.DeviceDiscoveryResult, 0, len(devices))
+		seq := 0
+		for _, dev := range devices {
+			if dev == nil {
+				continue
+			}
+			seq++
+			rows = append(rows, models.DeviceDiscoveryResult{
+				ID:          uuid.NewString(),
+				DiscoveryID: discoveryID,
+				Seq:         seq,
+				IPAddress:   dev.IPAddress,
+				DeviceType:  dev.DeviceType,
+				Vendor:      dev.Vendor,
+				Model:       dev.Model,
+				SysName:     dev.SysName,
+				SysDescr:    dev.SysDescr,
+				IsAlive:     dev.IsAlive,
+			})
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		if err := tx.Create(&rows).Error; err != nil {
+			return fmt.Errorf("保存发现结果失败: %w", err)
+		}
 		return nil
-	}
-	if err := tx.Create(&rows).Error; err != nil {
-		return fmt.Errorf("保存发现结果失败: %w", err)
-	}
-	return nil
+	})
 }
 
 // discoverBySNMP 使用SNMP发现设备

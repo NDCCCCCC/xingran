@@ -18,7 +18,6 @@ scripts/
 ├── agent/                          # Agent 部署/测试
 ├── vmp-api/                        # VMP API 逆向/分析工具集
 │
-├── e2e/                            # 端到端测试（Go test）
 ├── tests/                          # 测试脚本（Python / 一工具一目录）
 ├── verify/                         # 格式/校验工具
 │
@@ -107,17 +106,21 @@ cd scripts/build
 
 详见 `vmp-api/README.md`。
 
-### `e2e/` — 端到端测试
+### 端到端测试（已收敛到 `tests/e2e/`）
 
-Go 测试入口，与 Go test 框架配合运行。
+> **2026-11-09 quick 261109-wdu 收敛**：原 `scripts/e2e/` 与 `scripts/operlog_e2e_verify.sh`
+> 两套重复副本已物理合并，唯一权威为 **`tests/e2e/operlog_e2e_verify.sh`**
+> + `tests/e2e/operlog_e2e_verify_test.go`（AGENTS.md「后端 e2e 归 `tests/e2e/`」）。
+> 本目录不再承载 e2e，`scripts/e2e/` 已移除。
 
 ```bash
-go test ./scripts/e2e/...
+go test ./tests/e2e/...
 ```
 
-> 静态 3 项 operlog 覆盖断言已不在本目录脚本内，见
+> 静态 3 项 operlog 覆盖断言不在 e2e 脚本内，见
 > `internal/utils/operlog/handler_coverage_test.go`（由 `go test ./internal/...`
-> 硬门禁执行）；`scripts/e2e/operlog_e2e_verify_test.go` 只承载 LIVE e2e。
+> 硬门禁执行）；`tests/e2e/operlog_e2e_verify_test.go` 只承载 LIVE e2e
+> （需 running backend + DB + 凭据，缺凭据可观测 skip）。
 
 ### `tests/` — 测试脚本
 
@@ -143,13 +146,23 @@ go test ./scripts/e2e/...
 | `check-bundle.sh` | vendor chunks 校验（D-07） |
 | `generate_swagger.sh` | Swagger 生成（Windows 版在 `build/`） |
 | `migrate-sm4-key.go` | SM4 密钥迁移（见 `docs/deployment.md`） |
-| `operlog_e2e_verify.sh`（`scripts/` 顶层，**权威副本**） | 操作日志 **LIVE e2e**（需 running backend + DB + 凭据）；静态覆盖断言已迁出至 `internal/utils/operlog/handler_coverage_test.go` |
-| `tests/e2e/operlog_e2e_verify.sh`（**重复副本**） | 与权威副本仅 1 行注释路径不同，配套 `tests/e2e/operlog_e2e_verify_test.go`；LIVE 行为与权威副本逐字一致，改动须同步 |
 | `rpa_test_templates.json`、`test-sm2-parse.go` | 测试辅助 |
+
+> **操作日志 LIVE e2e**：唯一权威在 `tests/e2e/operlog_e2e_verify.sh`
+> + `tests/e2e/operlog_e2e_verify_test.go`（见上方「端到端测试」段）；
+> 静态覆盖断言在 `internal/utils/operlog/handler_coverage_test.go`。
 
 > 无现存引用的一次性历史脚本（历史 phase 验证 / VDI 诊断 / 菜单工具箱等）已归档到 `.planning/milestones/v1.53-archived-scripts/`，见该目录 README。
 >
-> **两份 `operlog_e2e_verify.sh` 重复副本处置（Phase 145）**：保留双份但登记权威/从属关系——`scripts/operlog_e2e_verify.sh` 为权威副本、`tests/e2e/operlog_e2e_verify.sh` 为重复副本（各自配套不同包的 Go driver，避免 driver 路径断裂）；两者 LIVE 行为逐字一致、**任何改动须同步**。静态覆盖断言统一由 `internal/utils/operlog/handler_coverage_test.go`（`go test ./internal/...` 硬门禁）承载，不在脚本内。未来是否物理合并由 Lead 单独裁定，本 phase 不擅自删除任一文件。上文 `.archive-scripts-2026-08-12/` 提到的 `operlog_e2e_verify.sh` 是历史一次性归档件，与当前在用副本无关。
+> **两份 `operlog_e2e_verify.sh` 重复副本处置 —— ✅ 已物理合并（2026-11-09 quick 261109-wdu）**：
+> Phase 145 曾「保留双份并登记权威/从属，未来是否合并由 Lead 单独裁定」；本轮用户裁定按
+> AGENTS.md「后端 e2e 归 `tests/e2e/`」收敛为**唯一权威** —— 删除 `scripts/operlog_e2e_verify.sh`
+> 与 `scripts/e2e/operlog_e2e_verify_test.go`（`scripts/e2e/` 目录一并移除），保留
+> `tests/e2e/operlog_e2e_verify.sh` + `tests/e2e/operlog_e2e_verify_test.go`（driver 仍指向同目录脚本，
+> LIVE 行为与 cwd 锚定不变、缺凭据仍 `exit 1`/可观测 skip）。静态覆盖断言统一由
+> `internal/utils/operlog/handler_coverage_test.go`（`go test ./internal/...` 硬门禁）承载，不在脚本内。
+> 上文 `.archive-scripts-2026-08-12/` 提到的 `operlog_e2e_verify.sh` 是历史一次性归档件，与当前在用副本无关。
+> 历史 phase 文档（145-PLAN/SUMMARY 等）为收档时点快照，保持只读、不回改。
 
 ### 构建产物路径（强制）
 
