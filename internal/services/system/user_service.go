@@ -269,8 +269,15 @@ func (s *userService) Update(ctx context.Context, req *requests.UserUpdateReques
 
 		// Phase 57 F-02: 停用（status 0→1）必须同时入队 disable —— 编辑表单保存会带 status，
 		// 该入口此前既不入队也无任何 AD 侧动作，导致系统已停用而域账号仍可登录。
-		// 语义与 UpdateStatus 的停用一致（启用方向不在 v1.21 范围内）。
+		// 语义与 UpdateStatus 的停用一致。
 		if err := enqueuer.EnqueueDisableOnStatusTransition(tx, oldUserSnapshot.Status, req.Status, req.ID); err != nil {
+			return apperrors.DatabaseError(err)
+		}
+
+		// FIX-01: 启用（status 1→0）反向形态同事务入队 enable —— 表单保存把停用用户
+		// 改回启用时，AD 端账号必须重新启用（UAC 544），否则域内仍无法登录。
+		// upsert 内部压制同实体活跃 disable 行（最新意图胜出）。
+		if err := enqueuer.EnqueueEnableOnStatusTransition(tx, oldUserSnapshot.Status, req.Status, req.ID); err != nil {
 			return apperrors.DatabaseError(err)
 		}
 
@@ -775,8 +782,11 @@ func (s *userService) BatchDelete(ctx context.Context, ids []string) error {
 // 正是本 phase 要消灭的失败模式；且 Phase 59 GUARD-01 信号守卫以 pending/failed 队列行
 // 为判据，缺行的分叉会被判成"无待推送 → 一致"，比不接线更危险。
 //
-// 方向性：仅 0→1（停用）入队。1→0（重新启用）在 v1.21 无对应动作
-// （models.ADPushActionEnable 不存在），0→0 / 1→1 为 no-op。
+// 方向性（FIX-01 后双向对称）：
+//   - 0→1（停用）入队 disable；1→0（启用）入队 enable；0→0 / 1→1 为 no-op。
+//   - 两个动作都在同一事务内入队，且入队层 upsert 会压制相反意图的活跃行
+//     （最新意图胜出，杜绝"先停用后启用却仍被禁用"的竞态）。
+//
 // 事务外的 First 只为取旧状态（diff 输入），不参与写。
 func (s *userService) UpdateStatus(ctx context.Context, id string, status int) error {
 	// 检查用户是否存在（事务外：仅用于取旧状态做 0→1 diff）
@@ -795,8 +805,12 @@ func (s *userService) UpdateStatus(ctx context.Context, id string, status int) e
 			return apperrors.DatabaseError(err)
 		}
 
-		// 同事务入队 disable；入队失败 → 返回 error 使 tx.Commit() 被跳过
-		if err := addomain.NewADPushEnqueuer().EnqueueDisableOnStatusTransition(tx, oldStatus, models.UserStatus(status), id); err != nil {
+		// 同事务入队 disable/enable（按状态跃迁方向择一）；入队失败 → 返回 error 使 tx.Commit() 被跳过
+		enqueuer := addomain.NewADPushEnqueuer()
+		if err := enqueuer.EnqueueDisableOnStatusTransition(tx, oldStatus, models.UserStatus(status), id); err != nil {
+			return apperrors.DatabaseError(err)
+		}
+		if err := enqueuer.EnqueueEnableOnStatusTransition(tx, oldStatus, models.UserStatus(status), id); err != nil {
 			return apperrors.DatabaseError(err)
 		}
 

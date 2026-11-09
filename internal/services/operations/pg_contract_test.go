@@ -14,6 +14,9 @@
 //
 // 只读保证:本测试对 DB 仅执行三服务 List/Statistics 内部的 SELECT(JOIN 无条件生效,
 // 正是被守护路径);禁止任何 Create/Update/Delete/Raw 写 SQL —— TEST_PG_DSN 可能指向生产库。
+//
+// Phase 150：差分攻击测试（sidechannel_diff_attack_test.go）为静态断言 + SQLite 真跑；
+// PG 双跑仍为 DIALECT-04③ 前置依赖，本期不建 services: postgres、不伪造双跑。
 package operations
 
 import (
@@ -25,6 +28,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -216,8 +220,8 @@ func TestPGContract_WorkstationOrgAndBackfill(t *testing.T) {
 // （P1-8，Phase 133 或后续清偿），本测试不修改它，只验证新增 CAST 条件的 PG 兼容性。
 //
 // 注意：BuildQuery 含 PG 专有 ::uuid/::text，SQLite 上必炸（既有测试
-// TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 已锁定），故本用例必须
-// 在真实 PG 上跑；静态断言（不依赖 DSN）见 TestScopeExport_StaticContract。
+// TestExp77_ExportData_WorkstationMainSheet_FixtureBoundary 已锁定，Phase 148 更名），
+// 故本用例必须在真实 PG 上跑；静态断言（不依赖 DSN）见 TestScopeExport_StaticContract。
 func TestPGContract_ExcelExportScope(t *testing.T) {
 	db := openPGForContractTest(t)
 	ctx := context.Background()
@@ -252,22 +256,56 @@ func TestPGContract_ExcelExportScope(t *testing.T) {
 }
 
 // TestScopeWriteImport_StaticContract 静态断言守护「Excel 导入路径含可见集
-// 校验」（裁定 §4 / 验收硬约束）：不依赖 TEST_PG_DSN，CI 恒跑，防止后续
-// 重构把 filterScopeWriteImportRows 的调用从 ImportData 里静默摘掉。
+// 校验」+「Phase 150 响应体去规模化不回退」（裁定 §4 / 验收硬约束 / D-3/D-6）。
+// 不依赖 TEST_PG_DSN，CI 恒跑：防止后续重构把 filterScopeWriteImportRows 的
+// 调用从 ImportData 里静默摘掉、或把全库规模字段 / 越界错误明细改回响应体。
 func TestScopeWriteImport_StaticContract(t *testing.T) {
-	src, err := os.ReadFile("excel_service.go")
-	if err != nil {
-		t.Fatalf("读取 excel_service.go 失败: %v", err)
+	readSrc := func(name string) string {
+		src, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("读取 %s 失败: %v", name, err)
+		}
+		return string(src)
 	}
-	content := string(src)
 	assertImportHook := func(token, desc string) {
-		if !strings.Contains(content, token) {
+		if !strings.Contains(readSrc("excel_service.go"), token) {
 			t.Fatalf("导入路径可见集校验缺失：%s（应含 %q）", desc, token)
 		}
 	}
 	assertImportHook("filterScopeWriteImportRows(", "ImportData 必须调用逐行可见集过滤")
-	assertImportHook("result.ScopeOutOfScope = outOfScope", "越界行数必须回写 ImportResult")
-	assertImportHook("__excel_row__", "越界错误明细必须携带原始行号")
+	assertImportHook("result.ScopeOutOfScope = outOfScope", "越界行数必须回写 ImportResult（内部字段供 operlog）")
+	assertImportHook("__excel_row__", "导入行号标记保留供内部定位，但越界行不写入响应体")
+
+	// Phase 150 防复活静态断言（D-3/D-6）：源码层锁死「响应体去规模化」。
+	forbidden := []string{
+		"ScopeTotal", "ScopeVisible", "ScopeOutOfScope", "ScopeDeptTotal",
+		"SkippedNoUser", "SkippedBadUserDept",
+	}
+	wsSrc := readSrc("workstation_service.go")
+	for _, field := range forbidden {
+		if strings.Contains(wsSrc, field+" ") || strings.Contains(wsSrc, field+"\t") ||
+			strings.Contains(wsSrc, field+"\n") || strings.Contains(wsSrc, field+" int") {
+			t.Fatalf("BackfillDeptResult 不得含已删规模字段 %q（响应体去规模化不得回退）", field)
+		}
+	}
+	// D-3 防复活：BackfillDeptFromUser 内被整段删除的全库 countQ 专有 token
+	// 不得出现（不误伤 :165 的 statistics 合法 COUNT —— 8 个 /statistics 已同源）。
+	for _, dead := range []string{
+		`countQ := s.db.WithContext(ctx).Table("sys_workstation")`,
+		"countQ.Scan", "统计工位总数失败",
+	} {
+		if strings.Contains(wsSrc, dead) {
+			t.Fatalf("workstation_service.go 不得残留不带 visibleCond 的全库 countQ 死代码 %q（D-3）", dead)
+		}
+	}
+	excelSrc := readSrc("excel_service.go")
+	if !strings.Contains(excelSrc, "ScopeOutOfScope int") || !strings.Contains(excelSrc, `json:"-"`) ||
+		strings.Contains(excelSrc, `json:"scopeOutOfScope`) {
+		t.Fatalf("ImportResult.ScopeOutOfScope 必须为 json:\"-\"（仅供 operlog，永不进 HTTP 响应）")
+	}
+	if strings.Contains(readSrc("scope_write.go"), "result.Errors = append") {
+		t.Fatalf("filterScopeWriteImportRows 越界分支不得再 append Errors（D-6 静默跳过）")
+	}
 }
 
 // TestPGContract_ScopeWriteImportResolve 把 Phase 132 导入逐行校验的新增
@@ -298,5 +336,67 @@ func TestPGContract_ScopeWriteImportResolve(t *testing.T) {
 				return err
 			}())
 		})
+	}
+}
+
+// TestPGContract_ScopedDB_Homology（Phase 151 / T4 追加）：
+// TEST_PG_DSN unset → t.Skip 可观测、不伪造 PG 双跑；DSN 存在时才连真 PG
+// 对同一 ScopeResult 断言 COUNT 与 List 行数一致（同源恒等式）。
+//
+// 同时恒跑静态断言（不依赖 DSN）：workstation_service.go 不含 150 已删的
+// 全库 COUNT 口径、8 个 service 起链含 ScopedQuery、scope_filter.go 短路
+// token 存在。本函数不改动 150 的 TestScopeWriteImport_StaticContract 与
+// TestPGContract_ScopeWriteImportResolve 的任何既有 token / t.Skip 行为。
+func TestPGContract_ScopedDB_Homology(t *testing.T) {
+	// —— 静态断言恒跑（零 DSN 依赖）——
+	read := func(name string) string {
+		b, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("读取 %s 失败: %v", name, err)
+		}
+		return string(b)
+	}
+	ws := read("workstation_service.go")
+	// 只检查 150 已删的「全库 countQ 死代码」token（与 150 的
+	// TestScopeWriteImport_StaticContract 同口径；8 个 /statistics 里合法的
+	// COUNT(*) AS total 同源聚合不受影响）。
+	for _, dead := range []string{
+		`countQ := s.db.WithContext(ctx).Table("sys_workstation")`,
+		"countQ.Scan",
+	} {
+		if strings.Contains(ws, dead) {
+			t.Fatalf("workstation_service.go 不得残留全库口径 %q（防 150 D-3 复活）", dead)
+		}
+	}
+	for _, name := range []string{
+		"asset_service.go", "building_service.go", "floor_service.go", "workstation_service.go",
+		"infopoint_service.go", "server_room_service.go", "dedicated_line_service.go", "room_device_service.go",
+	} {
+		if !strings.Contains(read(name), "ScopedQuery(ctx, s.db)") {
+			t.Fatalf("%s 读端点起链必须改走 ScopedQuery（SIDECHANNEL-04 同源）", name)
+		}
+	}
+	if !strings.Contains(read("scope_filter.go"), "return !ok || scope.All") {
+		t.Fatal("scope_filter.go 的 !ok || All 零回归短路必须保留")
+	}
+
+	// —— 真实 PG 双跑（TEST_PG_DSN unset → t.Skip 可观测）——
+	db := openPGForContractTest(t)
+	ctx := homologyCtx(datascope.ScopeResult{DeptIDs: []string{homologyDeptA}})
+	query.ResetRegistryForTest()
+	if err := SetupScopedDBRegistry(); err != nil {
+		t.Fatalf("注册表装配失败: %v", err)
+	}
+	q := ScopedQuery(ctx, db).Table("ops_asset")
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		requireNoPGErr(t, "ScopedDB Count", err)
+	}
+	var rows []map[string]any
+	if err := q.Find(&rows).Error; err != nil {
+		requireNoPGErr(t, "ScopedDB Find", err)
+	}
+	if total != int64(len(rows)) {
+		t.Fatalf("PG 同源恒等式不成立: COUNT=%d len(List)=%d", total, len(rows))
 	}
 }

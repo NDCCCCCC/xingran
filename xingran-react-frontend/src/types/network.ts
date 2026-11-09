@@ -274,8 +274,9 @@ export interface DeviceDiscovery {
 /**
  * 端口写操作 action 字面量联合类型 (Phase 53)
  *
- * 与后端 portcollection.PortAction 字面量集合一一对应,编译期锁定 5 个 action,
+ * 与后端 portcollection.PortAction 字面量集合一一对应,编译期锁定动作集合,
  * 防 typo 引入第 4 态导致 BulkWriteDrawer 结果分区漏判 (LANDMINE #3 / T-53-04)。
+ * Phase 143 (PORT-01/02): 15 → 18,补 set_speed / set_duplex / set_mtu 三个物理动作。
  */
 export type PortWriteAction =
   | "shutdown"
@@ -292,7 +293,10 @@ export type PortWriteAction =
   | "portsec_disable" // v1.51 Phase 125 PWX-03
   | "portsec_max_mac" // v1.51 Phase 125 PWX-03
   | "portsec_sticky" // v1.51 Phase 125 PWX-03
-  | "portsec_static_bind"; // v1.51 Phase 125 PWX-03
+  | "portsec_static_bind" // v1.51 Phase 125 PWX-03
+  | "set_speed" // v1.54 Phase 143 PORT-01/02 物理参数
+  | "set_duplex" // v1.54 Phase 143 PORT-01/02 物理参数
+  | "set_mtu"; // v1.54 Phase 143 PORT-01/02 物理参数
 
 /**
  * 单端口写操作结果 (Phase 53, 镜像后端 portwrite.PortResult)
@@ -361,6 +365,16 @@ export interface BatchWriteRequest {
   /** action === "portsec_max_mac" 时使用, 1-4096 */
   maxMacCount?: number;
   // portsec_static_bind 复用上方 macAddress（必填）与 vlanId（必填, 1-4094）
+  // ---- v1.54 Phase 143 (PORT-01) 物理参数扩展, 按 action 携带 ----
+  // json tag 与后端 BatchWriteRequest / PhysicalWriteRequest / PreviewRequest 同名。
+  /** action === "set_speed" 时使用; speedMode="auto" 时忽略 speed */
+  speed?: number;
+  /** action === "set_speed" 时使用 ("auto" = 自协商速率) */
+  speedMode?: string;
+  /** action === "set_duplex" 时使用 (half|full|auto) */
+  duplex?: string;
+  /** action === "set_mtu" 时使用 (默认 1280-9216, 以型号能力画像为准) */
+  mtu?: number;
 }
 
 /**
@@ -450,6 +464,10 @@ export interface PortWritePreviewResult {
   riskLevel: "critical" | "medium" | "low";
   summary: string;
   ports: PortWritePreviewPort[];
+  /** Phase 143: 物理能力画像取证级别 "unverified" | "model" | "vendor"; 非物理动作为空 */
+  evidenceLevel?: "unverified" | "model" | "vendor" | string;
+  /** Phase 143: 画像依据文本; 空串 = 未取证 (严禁写成已验证) */
+  physicalEvidence?: string;
 }
 
 /**

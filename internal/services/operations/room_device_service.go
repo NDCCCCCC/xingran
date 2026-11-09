@@ -37,7 +37,7 @@ type RoomDeviceStatisticsResult struct {
 func (s *roomDeviceService) Statistics(ctx context.Context) (*RoomDeviceStatisticsResult, error) {
 	var result RoomDeviceStatisticsResult
 	err := applyEntityReadScope(
-		s.db.WithContext(ctx).Model(&operations.OpsRoomDevice{}), ctx,
+		ScopedQuery(ctx, s.db).Model(&operations.OpsRoomDevice{}), ctx,
 		scopeEntityRoomDevice, "ops_room_devices",
 	).
 		Select(
@@ -213,7 +213,7 @@ func (s *roomDeviceService) SearchRoomDeviceOptions(ctx context.Context, params 
 	var result []DropdownOption
 
 	query := applyEntityReadScope(
-		s.db.WithContext(ctx).Table("ops_room_devices"), ctx,
+		ScopedQuery(ctx, s.db).Table("ops_room_devices"), ctx,
 		scopeEntityRoomDevice, "ops_room_devices",
 	).
 		Select("ops_room_devices.id AS value, ops_room_devices.name AS label").

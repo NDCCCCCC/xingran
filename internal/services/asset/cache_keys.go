@@ -20,7 +20,7 @@ import (
 // R1/R2/R3 演进:
 //   - R1: 仅 cache_keys 文件就位,无运行时调用(INFRA-03 占位)
 //   - R2: F1/F3 启用 reconciliation:dashboard / reconciliation:exception:list / reconciliation:view:lastRefresh
-//   - R3: F4 启用 reconciliation:exceptionRule:list / reconciliation:exceptionRule:byID
+//   - R3: F4 例外规则缓存键已下线（Phase 147 CACHE-01，读路径直查 DB，无缓存契约）
 //   - R4: F5 启用 reconciliation:health:workstation:* / reconciliation:health:asset:*
 const (
 	// CacheKeyReconciliationDashboard Dashboard 数据缓存 key(按 scope 分桶)
@@ -32,12 +32,6 @@ const (
 
 	// CacheKeyReconciliationExceptionByID 单条异常详情缓存 key
 	CacheKeyReconciliationExceptionByID = "reconciliation:exception:byID:%s"
-
-	// CacheKeyReconciliationExceptionRuleList 例外规则列表缓存 key (R3 启用)
-	CacheKeyReconciliationExceptionRuleList = "reconciliation:exceptionRule:list"
-
-	// CacheKeyReconciliationExceptionRuleByID 单条例外规则详情缓存 key (R3 启用)
-	CacheKeyReconciliationExceptionRuleByID = "reconciliation:exceptionRule:byID:%s"
 
 	// CacheKeyReconciliationViewLastRefresh 物化视图最近刷新时间缓存 key
 	// 用于 dashboard 显示 "数据更新于 X 分钟前"
@@ -65,16 +59,6 @@ func GetReconciliationExceptionListKey(scope string) string {
 // GetReconciliationExceptionByIDKey 根据异常 ID 构建详情缓存键
 func GetReconciliationExceptionByIDKey(id string) string {
 	return fmt.Sprintf(CacheKeyReconciliationExceptionByID, id)
-}
-
-// GetReconciliationExceptionRuleListKey 返回例外规则列表缓存键
-func GetReconciliationExceptionRuleListKey() string {
-	return CacheKeyReconciliationExceptionRuleList
-}
-
-// GetReconciliationExceptionRuleByIDKey 根据例外规则 ID 构建详情缓存键
-func GetReconciliationExceptionRuleByIDKey(id string) string {
-	return fmt.Sprintf(CacheKeyReconciliationExceptionRuleByID, id)
 }
 
 // GetReconciliationViewLastRefreshKey 返回物化视图最近刷新时间缓存键

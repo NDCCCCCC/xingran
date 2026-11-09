@@ -43,10 +43,11 @@ type PortSecParams struct {
 }
 
 // renderExtras executeWrite 渲染参数扩展载体（nil = 既有 7 动作直通）。
-// Phase 124 trunk / Phase 125 portsec 共用，避免签名持续膨胀。
+// Phase 124 trunk / Phase 125 portsec / Phase 138 physical（FIX-04）共用，避免签名持续膨胀。
 type renderExtras struct {
-	trunk   *TrunkParams
-	portsec *PortSecParams
+	trunk    *TrunkParams
+	portsec  *PortSecParams
+	physical *PhysicalParams // FIX-04 物理参数（速率/双工/MTU）
 }
 
 // trunkRenderParams 兼容别名（124 交付符号，writeSinglePort/executeWrite 形参）。

@@ -69,7 +69,10 @@ func TestPasswordManager_VerifyBackwardCompat_100k(t *testing.T) {
 	if _, err := rand.Read(salt); err != nil {
 		t.Fatalf("rand.Read failed: %v", err)
 	}
-	hashBytes := pm.pbkdf2SM3([]byte(plaintext), salt, legacyIterations, 32)
+	hashBytes, err := pm.pbkdf2SM3([]byte(plaintext), salt, legacyIterations, 32)
+	if err != nil {
+		t.Fatalf("pbkdf2SM3 failed on legacy 100k hash: %v", err)
+	}
 
 	legacyHash := fmt.Sprintf("$sm3$%d$%s$%s",
 		legacyIterations,

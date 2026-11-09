@@ -204,6 +204,12 @@ var mandatorySensitiveKeywords = []string{
 	"clientSecret",
 	"private_key",
 	"publicKey",
+	// Phase 144：webhook 配置端点脱敏红线（与 operlog.go sensitiveKeys 同步）。
+	"webhookUrl",
+	"webhook_url",
+	"webhookKey",
+	"access_token",
+	"authorization",
 }
 
 // TestFilterSensitiveParamsKeywordsStable asserts the sensitive keyword slice
@@ -359,4 +365,41 @@ func TestExcludedPathsEarlyReturn(t *testing.T) {
 		RecordWithBody(c2, mock, db, "RPA Worker", OperTypeRegister)
 		assert.Equal(t, 1, mock.called, "register path must call RecordAsync via RecordWithBody")
 	})
+}
+
+// TestPhase144_WebhookSecretsMasked Phase 144 安全红线：webhook 配置写端点
+// 请求体里的明文 URL / token 必须被 RecordWithBody 的 FilterSensitiveParams
+// 遮成 ******，绝不落 sys_oper_log.oper_param。
+func TestPhase144_WebhookSecretsMasked(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		body       string
+		forbidden  []string
+	}{
+		{
+			name:      "webhookUrl 键整值遮蔽（含 ?key= 查询凭据）",
+			body:      `{"webhookUrl":"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=PLAIN-KEY","wsEnabled":"true"}`,
+			forbidden: []string{"PLAIN-KEY", "qyapi.weixin.qq.com"},
+		},
+		{
+			name:      "webhookKey / access_token 字面量",
+			body:      `{"webhookKey":"WK-SECRET","access_token":"AT-SECRET","enabled":true}`,
+			forbidden: []string{"WK-SECRET", "AT-SECRET"},
+		},
+		{
+			name:      "authConfig / headers 中的 token/key/secret",
+			body:      `{"headers":{"Authorization":"Bearer BOT-TOKEN"},"authConfig":{"token":"BOT-SECRET","apiKey":"AK-SECRET"}}`,
+			forbidden: []string{"BOT-TOKEN", "BOT-SECRET", "AK-SECRET"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := FilterSensitiveParams(tc.body)
+			assert.Contains(t, got, "******")
+			for _, f := range tc.forbidden {
+				assert.NotContains(t, got, f, "明文敏感值不得残留: %s", f)
+			}
+		})
+	}
 }

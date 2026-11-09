@@ -1,6 +1,9 @@
 package api
 
 import (
+	"context"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	v1 "github.com/xingran-next/xingran-go-backend/internal/api/v1"
 	agentV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/agent"
@@ -15,11 +18,13 @@ import (
 	vdiV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/vdi"
 	workorderV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/workorder"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	// AUTH-03 / D-01: MultiAuth + RateLimitByScope 位于 internal/middleware,
 	// 与下方 pkg/middleware（别名 middleware）同 package 名，故取别名 internalmw。
 	internalmw "github.com/xingran-next/xingran-go-backend/internal/middleware"
 	"github.com/xingran-next/xingran-go-backend/internal/scheduler"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
@@ -28,6 +33,7 @@ import (
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	"github.com/xingran-next/xingran-go-backend/pkg/permission"
+	"gorm.io/gorm"
 )
 
 const permSystemConfig = "system:config"
@@ -44,6 +50,76 @@ func (a *noticeHubAdapter) BroadcastToUsers(userIDs []string, message interface{
 	if msg, ok := message.(websocket.NoticeMessage); ok {
 		a.hub.BroadcastToUsers(userIDs, msg)
 	}
+}
+
+// BroadcastToAll Phase 144：把全员事件转调 *websocket.NoticeHub.BroadcastToAll。
+// 与 BroadcastToUsers 同款类型断言（scheduler 侧传 interface{}）。
+func (a *noticeHubAdapter) BroadcastToAll(message interface{}) {
+	if msg, ok := message.(websocket.NoticeMessage); ok {
+		a.hub.BroadcastToAll(msg)
+	}
+}
+
+// Phase 144：把 scheduler 全局 adapter + 真实发布链路 / webhook 通道注入到
+// addomain 漂移告警服务（零循环依赖：addomain 被 scheduler/services 反向 import，
+// 只能由 api 装配层注入）。WS notifier 与 scheduler.SetNoticeHub 用同一个
+// adapter 实例，语义等价 PLAN「方案 A」；NoticeService / APISenderService 走
+// services 根包真实实现。
+func setupDriftAlertHooks(core *core.Core, adapter *noticeHubAdapter) {
+	addomain.SetDriftAlertWSNotifier(adapter)
+	addomain.SetDriftAlertNoticePublisher(
+		func(ctx context.Context, db *gorm.DB, n addomain.DriftAlertNotice) (string, error) {
+			svc := services.NewNoticeService(db)
+			notice, err := svc.CreateNoticeWithTargets(ctx, &services.CreateNoticeRequest{
+				NoticeTitle:   n.Title,
+				NoticeType:    n.NoticeType,
+				NoticeContent: n.Content,
+				Priority:      models.NoticePriority(n.Priority),
+				TargetType:    models.TargetType(n.TargetType),
+				IsMarkdown:    false,
+			}, "SYSTEM", "SYSTEM")
+			if err != nil {
+				return "", err
+			}
+			if perr := svc.PublishNotice(ctx, notice.ID); perr != nil {
+				return notice.ID, perr
+			}
+			// 修「铃铛收不到」：发布成功后主动推 new_notice 全员事件
+			// （CreateNoticeWithTargets+PublishNotice 只落库/改状态，不推 WS；
+			//  scheduler.broadcastNoticeToUsers 仅服务定时发布任务）。
+			// 与 ad_sync_drift_alert 双事件并存，前端 noticeStore 按 type 分流。
+			func() {
+				defer func() { _ = recover() }()
+				adapter.BroadcastToAll(websocket.NoticeMessage{
+					Type:      "new_notice",
+					NoticeID:  notice.ID,
+					Title:     n.Title,
+					Priority:  n.Priority,
+					Timestamp: time.Now().Unix(),
+				})
+			}()
+			return notice.ID, nil
+		})
+	addomain.SetDriftAlertWebhookSender(
+		func(ctx context.Context, db *gorm.DB, configID string, msg addomain.DriftAlertWebhookMessage) addomain.DriftAlertWebhookResult {
+			sender := services.NewAPISenderService(db)
+			apiMsg := &services.APIMessage{Title: msg.Title, Content: msg.Content, Data: msg.Data}
+			var r *services.APISendResult
+			if configID != "" {
+				r = sender.Send(ctx, configID, apiMsg)
+			} else {
+				r = sender.SendWithDefaultConfig(ctx, models.APIConfigTypeWebhook, apiMsg)
+			}
+			if r == nil {
+				return addomain.DriftAlertWebhookResult{Success: false, Message: "webhook 发送返回空结果"}
+			}
+			return addomain.DriftAlertWebhookResult{
+				Success:    r.Success,
+				HTTPCode:   r.HTTPCode,
+				RetryCount: r.RetryCount,
+				Message:    r.Message,
+			}
+		})
 }
 
 // setupEncryptionMiddlewares 配置请求/响应加密中间件
@@ -89,7 +165,10 @@ func setupNoticeHub(r *gin.RouterGroup, core *core.Core) *websocket.NoticeHub {
 	applogger.Infof("通知中心已启动")
 
 	core.NoticeHub = noticeHub
-	scheduler.SetNoticeHub(&noticeHubAdapter{hub: noticeHub})
+	adapter := &noticeHubAdapter{hub: noticeHub}
+	scheduler.SetNoticeHub(adapter)
+	// Phase 144：同一个 adapter 同时注入漂移告警 WS 通道 + 发布链路 / webhook。
+	setupDriftAlertHooks(core, adapter)
 
 	return noticeHub
 }
@@ -163,6 +242,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				systemV1.SetupNotificationConfigRouter(notificationConfigs, core)
 			}
 
+			// Phase 144 同步漂移告警（5 个 POST 端点，读/写权限分组在 setup 内）
+			{
+				systemV1.SetupAdDriftAlertRouter(authorized, core)
+			}
+
 			// 用户管理
 			//
 			// v1.24 Phase 78（#16）：读组 / 写组**兄弟分离**。
@@ -191,7 +275,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				// 用户 Excel 导入由 SetupUserWriteRouter 内的 ImportUser 处理（带 AD 域控同步触发），
 				// 不复用 operations.SetupExcelRouter —— 后者的 importData 为通用导入，不触发
 				// AD 同步。模板下载同样在 user_router（GET /import/template）。
-				// 若将来需要用户导出(/export)，可单独接入 operations.exportData("user")。
+				// 用户导出（FIX-03）由下方 usersWrite 的 Export 严格子组接线，导出字段与
+				// 导入模板同源（excel_config.go "user" 配置）。
 			}
 
 			// 用户写操作组：逐动作**单一权限点** + 严格权限（不做任何降级）。
@@ -205,8 +290,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			//   删除            POST /system/users/:id/delete      → system:user:remove
 			//   批量删除        POST /system/users/batch-delete    → system:user:remove
 			//   重置密码        POST /system/users/:id/reset-password → system:user:resetPwd
-			// ⚠️ 导出接口不存在（用户模块未注册 /export 路由，前端也无导出按钮），
-			//    故 system:user:export 无需挂保护；xtgl 缺该权限不产生 403 风险。
+			//   导出            POST /system/users/export          → system:user:export（FIX-03）
+			// 导出为业务写操作（审计），与其余写操作一样走严格单一权限点；读组 ANY-of
+			// 不覆盖它（读/写兄弟分离），持 system:user:export 的角色方可导出。
 			usersWrite := authorized.Group("/users")
 			// 数据权限中间件沿用原行为（读组原本覆盖全部用户路由）
 			usersWrite.Use(middleware.DataScopePermission(core))
@@ -217,6 +303,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 					Edit:     strictUserRouteGroup(usersWrite, permission.UserEdit, core),
 					Remove:   strictUserRouteGroup(usersWrite, permission.UserRemove, core),
 					ResetPwd: strictUserRouteGroup(usersWrite, permission.UserResetPwd, core),
+				Export:   strictUserRouteGroup(usersWrite, permission.UserExport, core),
 				}, core)
 			}
 
@@ -577,7 +664,16 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			workorderV1.SetupWorkOrdersRouter(orders, core)
-			workorderV1.SetupWorkOrderRatingsRouter(orders, core) // 评价路由
+			workorderV1.SetupWorkOrderRatingsRouter(orders, core) // 评价读路由（FIX-06）
+		}
+
+		// 工单评价写路由（FIX-06 / Phase 136）：评价创建为业务写操作，走独立
+		// 兄弟严格写组（RequireStrictPermissions 单一权限点），与上面 orders 读组
+		// 的 ANY-of 解耦，保持 v1.24 Phase 78 #16 读/写兄弟分离语义零回归。
+		ratingsWrite := workorder.Group("/orders")
+		{
+			ratingsCreate := strictUserRouteGroup(ratingsWrite, permission.WorkOrderRatingCreate, core)
+			workorderV1.SetupWorkOrderRatingsWriteRouter(ratingsCreate, core)
 		}
 
 		// 工单分类管理
@@ -681,6 +777,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	ops.Use(middleware.JWTAuth(core.JWTManager))
 	// 添加操作日志中间件
 	ops.Use(middleware.OperLogMiddleware(core.OperLogService, core))
+	// Phase 151 / ARCH-01：ScopedDB 资源归属注册表装配（唯一查询起链点由 pkg/query 承载）。
+	opsServices.MustSetupScopedDBRegistry()
 	{
 		// 楼宇管理
 		// 查询接口(/list)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list，
@@ -1076,6 +1174,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 机房照片管理
 		roomPhotos := ops.Group("/rooms/photos")
+		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
+		roomPhotos.Use(middleware.DataScopePermission(core))
 		{
 			operations.SetupRoomPhotoRouter(roomPhotos, core)
 		}
@@ -1171,15 +1271,17 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		wallService := opsServices.NewWallService(core.DB.GetDB())
 		wallHandler := operations.NewWallHandler(wallService).WithCore(core)
 		walls := ops.Group("/walls")
+		// FIX-13：5 个读码改引用 permission.* 常量（单一真相源），
+		// 由 migration_236 播种 F 型菜单，使持对应权限码的角色可读（403→200）。
 		walls.Use(middleware.RequirePermissions([]string{
-			"ops:floor-plan:list",
-			"ops:floor-plan:query",
-			"ops:floor-plan:edit",
-			"ops:floor-plan:save",
-			"ops:walls:list",
-			"ops:walls:add",
-			"ops:walls:edit",
-			"ops:walls:delete",
+			string(permission.OpsFloorPlanList),
+			string(permission.OpsFloorPlanQuery),
+			string(permission.OpsFloorPlanEdit),
+			string(permission.OpsFloorPlanSave),
+			string(permission.OpsWallList),
+			string(permission.OpsWallAdd),
+			string(permission.OpsWallEdit),
+			string(permission.OpsWallDelete),
 		}, core))
 		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
 		walls.Use(middleware.DataScopePermission(core))
@@ -1208,14 +1310,14 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		doorHandler := operations.NewDoorHandler(doorService).WithCore(core)
 		doors := ops.Group("/doors")
 		doors.Use(middleware.RequirePermissions([]string{
-			"ops:floor-plan:list",
-			"ops:floor-plan:query",
-			"ops:floor-plan:edit",
-			"ops:floor-plan:save",
-			"ops:doors:list",
-			"ops:doors:add",
-			"ops:doors:edit",
-			"ops:doors:delete",
+			string(permission.OpsFloorPlanList),
+			string(permission.OpsFloorPlanQuery),
+			string(permission.OpsFloorPlanEdit),
+			string(permission.OpsFloorPlanSave),
+			string(permission.OpsDoorList),
+			string(permission.OpsDoorAdd),
+			string(permission.OpsDoorEdit),
+			string(permission.OpsDoorDelete),
 		}, core))
 		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
 		doors.Use(middleware.DataScopePermission(core))
@@ -1244,10 +1346,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		textHandler := operations.NewFloorPlanTextHandler(textService).WithCore(core)
 		texts := ops.Group("/floor-plan-texts")
 		texts.Use(middleware.RequirePermissions([]string{
-			"ops:floor-plan:list",
-			"ops:floor-plan:query",
-			"ops:floor-plan:edit",
-			"ops:floor-plan:save",
+			string(permission.OpsFloorPlanList),
+			string(permission.OpsFloorPlanQuery),
+			string(permission.OpsFloorPlanEdit),
+			string(permission.OpsFloorPlanSave),
 		}, core))
 		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
 		texts.Use(middleware.DataScopePermission(core))

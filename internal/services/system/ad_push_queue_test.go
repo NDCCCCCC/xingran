@@ -684,7 +684,8 @@ func TestPhase57_UserService_Update_Disable_EnqueuesDisable(t *testing.T) {
 
 // TestPhase57_UserService_Update_NoStatusTransition_NoDisable 锁定 F-02 的方向性：
 // 已停用用户重复保存（1→1）、启用用户保存（0→0）都不得入队 disable；
-// 启用（1→0）也不入队 —— enable 动作在 v1.21 不存在。
+// 1→0（重新启用）现在入队 **enable**（FIX-01 新契约），本用例只断言其**不产生 disable 行**，
+// enable 入队由 phase134_ad_push_enable_test.go 的 FIX-01 用例覆盖。
 func TestPhase57_UserService_Update_NoStatusTransition_NoDisable(t *testing.T) {
 	db := setupPhase57QueueDB(t)
 	seedADConfigEnabled(t, db, true, 0)
@@ -705,11 +706,12 @@ func TestPhase57_UserService_Update_NoStatusTransition_NoDisable(t *testing.T) {
 	}))
 	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionDisable), "1→1 无跃迁不得入队")
 
-	// 3) 重新启用（1→0）：v1.21 无 enable 动作，不得入队
+	// 3) 重新启用（1→0）：FIX-01 起入队 enable（不再是 v1.21 的"不入队"），
+	//    但绝不能产生 disable 行；enable 行由 FIX-01 专用用例断言。
 	require.NoError(t, svc.Update(context.Background(), &requests.UserUpdateRequest{
 		ID: disabled, Status: models.UserStatusEnabled,
 	}))
-	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionDisable), "1→0 启用不在 v1.21 范围")
+	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionDisable), "1→0 启用不得产生 disable 行")
 
 	// 纯函数级断言：只有 0→1 返回入队
 	require.NoError(t, enq.EnqueueDisableOnStatusTransition(db, models.UserStatusEnabled, models.UserStatusDisabled, ""))
@@ -1005,7 +1007,9 @@ func TestPhase57_UserService_UpdateStatus_Disable_RollsBackWhenQueueInsertFails(
 }
 
 // TestPhase57_UserService_UpdateStatus_NoTransition_NoDisable 锁定方向性与 no-op：
-// 1→0（重新启用）、0→0、1→1 三种情况都不得入队 disable —— v1.21 没有 enable 动作。
+// 0→0、1→1 两种无跃迁情况都不得入队 disable / enable。
+// ⚠ FIX-01 后 1→0（重新启用）改为入队 enable，由下方独立的 FIX-01 用例覆盖，
+// 本用例不再断言「重新启用不产生任何队列行」（v1.21 旧契约已废止）。
 func TestPhase57_UserService_UpdateStatus_NoTransition_NoDisable(t *testing.T) {
 	db := setupPhase57QueueDB(t)
 	seedADConfigEnabled(t, db, true, 0)
@@ -1015,17 +1019,13 @@ func TestPhase57_UserService_UpdateStatus_NoTransition_NoDisable(t *testing.T) {
 	enabled := seedUserRow(t, db, "phase57-gap01-stay-enabled", 0)
 	require.NoError(t, svc.UpdateStatus(context.Background(), enabled, int(models.UserStatusEnabled)))
 	assert.Equal(t, int64(0), countRowsByAction(t, db, enabled, models.ADPushActionDisable), "0→0 无跃迁不得入队")
+	assert.Equal(t, int64(0), countRowsByAction(t, db, enabled, models.ADPushActionEnable), "0→0 无跃迁不得入队 enable")
 
 	// 2) 已停用用户重复停用（1→1）
 	disabled := seedUserRow(t, db, "phase57-gap01-stay-disabled", 1)
 	require.NoError(t, svc.UpdateStatus(context.Background(), disabled, int(models.UserStatusDisabled)))
 	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionDisable), "1→1 无跃迁不得入队")
-
-	// 3) 重新启用（1→0）：v1.21 无 enable 动作，不得入队
-	reenable := seedUserRow(t, db, "phase57-gap01-reenable", 1)
-	require.NoError(t, svc.UpdateStatus(context.Background(), reenable, int(models.UserStatusEnabled)))
-	assert.Equal(t, int64(0), countRowsByAction(t, db, reenable, models.ADPushActionDisable), "1→0 启用不在 v1.21 范围")
-	assert.Equal(t, int64(0), countQueueRows(t, db, reenable), "重新启用不得产生任何队列行")
+	assert.Equal(t, int64(0), countRowsByAction(t, db, disabled, models.ADPushActionEnable), "1→1 无跃迁不得入队 enable")
 }
 
 // TestPhase57_UserService_UpdateStatus_Disable_NoADConfig_NoEnqueue 锁定 D-02 第一层

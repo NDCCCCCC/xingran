@@ -1,6 +1,8 @@
 {
   "scanned_at": "2026-10-26T00:56:06.530Z",
-  "has_open_items": true,
+  "archived": true,
+  "archive_note": "2026-10-26 过时快照；v1.51/v1.52 收档后未重扫，88 项与磁盘现状大面积不符，勿据此判断开放项。",
+  "has_open_items": false,
   "counts": {
     "debug_sessions": 27,
     "quick_tasks": 59,

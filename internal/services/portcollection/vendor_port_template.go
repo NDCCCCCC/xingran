@@ -62,6 +62,20 @@ type PortTemplateParams struct {
 	//   - MaxMACCount 仅 PortSecMaxMac 使用（1-4096）
 	//   - PortSecStaticBind 复用 MACAddress + VLANID 载体
 	MaxMACCount int
+	// FIX-04 (v1.53 Phase 138) 物理参数字段（速率/双工/MTU）：
+	//   - Speed      仅 ActionSetSpeed 使用（10/100/1000/10000；SpeedMode=="auto" 时忽略）
+	//   - SpeedMode  仅 ActionSetSpeed 使用（"auto" 表示自协商速率）
+	//   - Duplex     仅 ActionSetDuplex 使用（half|full|auto）
+	//   - MTU        仅 ActionSetMTU 使用（1280-9216，三家交集）
+	Speed     int
+	SpeedMode string
+	Duplex    string
+	MTU       int
+	// Model Phase 143 (PORT-02)：设备型号（models.NetworkDevice.Model），仅物理动作
+	// 使用 —— renderPhysical 按 (vendor, Model) 调 ResolvePhysicalProfile / 
+	// CheckPhysicalSupport 取命令形态与值域，保证「校验放行 ⇔ 渲染接受」同源。
+	// 其它 action 忽略；空串表示型号未知，回退厂商基线 / 全局默认画像。
+	Model string
 }
 
 // 哨兵错误（Phase 51 service 翻译为 HTTP 400 / 404 / 422 等业务码）。

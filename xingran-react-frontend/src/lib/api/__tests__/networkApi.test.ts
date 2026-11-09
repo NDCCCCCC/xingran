@@ -155,7 +155,12 @@ describe("lib/api/networkApi", () => {
 });
 
 // ==================== v1.51 Phase 121/122/125/127 新增 wrapper ====================
-import { previewBatchWritePorts, writeTrunk, listPortWriteAudits } from "../networkApi";
+import {
+  previewBatchWritePorts,
+  writeTrunk,
+  writePhysical,
+  listPortWriteAudits,
+} from "../networkApi";
 
 describe("v1.51 新增 wrapper（Phase 121/125/127 coverage 补齐）", () => {
   it("previewBatchWritePorts 调用 post /network/ports/write/preview 并透传参数", async () => {
@@ -193,5 +198,45 @@ describe("v1.51 新增 wrapper（Phase 121/125/127 coverage 补齐）", () => {
       batchId: "batch-1",
     });
     expect(result.list).toHaveLength(1);
+  });
+});
+
+// ==================== v1.54 Phase 143 writePhysical wrapper (PORT-01/02) ====================
+describe("Phase 143 writePhysical（单端口物理参数写 wrapper）", () => {
+  it("writePhysical 调用 post /network/ports/write/physical 并透传 action/参数", async () => {
+    const result = await writePhysical({
+      portId: "p1",
+      action: "set_speed",
+      speed: 1000,
+      reason: "测试",
+    });
+    expect(post).toHaveBeenCalledWith("/network/ports/write/physical", {
+      portId: "p1",
+      action: "set_speed",
+      speed: 1000,
+      reason: "测试",
+    });
+    expect(result.url).toBe("/network/ports/write/physical");
+  });
+
+  it("writePhysical speedMode=auto / duplex / mtu 三动作参数透传", async () => {
+    await writePhysical({ portId: "p2", action: "set_speed", speedMode: "auto" });
+    expect(post).toHaveBeenCalledWith("/network/ports/write/physical", {
+      portId: "p2",
+      action: "set_speed",
+      speedMode: "auto",
+    });
+    await writePhysical({ portId: "p3", action: "set_duplex", duplex: "full" });
+    expect(post).toHaveBeenCalledWith("/network/ports/write/physical", {
+      portId: "p3",
+      action: "set_duplex",
+      duplex: "full",
+    });
+    await writePhysical({ portId: "p4", action: "set_mtu", mtu: 9000 });
+    expect(post).toHaveBeenCalledWith("/network/ports/write/physical", {
+      portId: "p4",
+      action: "set_mtu",
+      mtu: 9000,
+    });
   });
 });

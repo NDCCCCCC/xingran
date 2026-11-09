@@ -1,29 +1,29 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.52
-milestone_name: 运维域数据权限统一收口（终态）
-status: v1.52 SHIPPED（2026-11-07）—— operations 全模块声明式 data_scope 统一收口，Phases 130-133 全部完成（7/7 REQ）
-stopped_at: v1.52 全量交付（PR #75 merged `b56f1286`，4 phase / 24 commits / 全量闸门全绿）；收档文档走 `feat/v1.52-data-scope-unification` 分支 PR
-last_updated: "2026-11-07T13:35:00+08:00"
-last_activity: 2026-11-07
-last_activity_desc: v1.52 立项：运维域数据权限统一收口（终态），Phases 130-133（DS-01~07）
-state_head: 9f511268a7d748b0707836d95963dbf79842b1f6
+milestone: v1.55
+milestone_name: LOCKED 残余根治
+status: v1.55 SHIPPED 2026-11-09 (Awaiting next milestone)
+last_updated: "2026-11-09T10:30:00.000Z"
+last_activity: 2026-11-09
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 8
+  completed_plans: 8
   percent: 100
-current_phase: 133
-current_phase_name: ScopeProvider 基建（可见部门集统一实现 + strict 组注入 data_scope/user_id）
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.52 milestone active（运维域数据权限统一收口·终态，Phases 130-133 未开始）
-**Last activity**: 2026-11-07 - v1.52 立项：运维域数据权限统一收口（终态，DS-01~07 / Phases 130-133）；同日前置 quick 三件套（261106-wsd 导入反推 / 261106-wso 楼层机构覆盖 / 261106-wsb 回填按钮 + 独立权限项 + P2 修复）已合入 PR #75
+**Status**: v1.55 SHIPPED 2026-11-09（7/7 Phase：145/146/147/148/149/150/151 全部完成；24/24 REQ 交付，含 CRYPTO-04 按硬 gate 合规跳过；**① 的 A(150)+B(151) 均完成 → P1-5 侧信道根治达成**；6 项 LOCKED / 7 子项全部从根源清偿）
+**Last activity**: 2026-11-09
+**Prior activity**: 2026-11-09 - v1.55 SHIPPED：W1（145 AUDIT / 146 CRYPTO / 147 CACHE）+ W2（148 DIALECT / 149 SCOPE / 150 侧信道 A）并行 + W3（151 统一 ScopedDB，单独执行）；3 波共 7 个 gsd-planner + 2 个 plan-checker + 7 个 gsd-executor + Lead 集成；全量回归闸门全绿（go build / go test ./... / tsc / lint:ci ALL PASS / 全量 vitest / check-route-registry 713 零漂移）；79 条人工验证跟踪表保持 0 勾选、验证类残余不伪造闭环
+**Prior activity**: 2026-11-09 - v1.55 INITIATED：6 项 LOCKED 残余从根源根治（深度根因报告 + 5 项决策拍板 + 24 REQ 草案）；跳过领域研究；FUTURE-01 随 ① 关闭；79 条人工验证跟踪表保持 0 勾选
+**Prior activity**: 2026-11-09 - v1.54 SHIPPED：4 项真实代码缺口全部清偿（发现设备真实导入 / 批量物理参数 + 型号级能力矩阵 / 告警前端+WS+webhook 收口），W1 4 个并行 executor + Lead 集成；`go build ./...` / `go test ./...` / `tsc` / `lint:ci ALL PASS` / 全量 vitest 全绿；权限三方逐字一致、migration 238 两处注册；验证类残余不伪造闭环
+**Prior activity**: 2026-11-08 - v1.53 SHIPPED：8 个 Phase 全部交付，全量回归闸门全绿（go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例），GSD `milestone complete` 完成归档与权威交回
+**Prior activity**: 2026-11-08 - v1.52 SHIPPED 并完成 GSD 归档
 **Prior activity**: 2026-11-06 - Completed quick task 261106-wso: 一栋楼跨机构办公 —— 楼层可覆盖所属机构（ops_floors.org_id + 全链路 COALESCE）
 **Prior activity**: 2026-10-31 — v1.51 立项（范围 A+B+D，21 REQ / Phases 121-129）
 **Prior activity**: 2026-10-30 — v1.25 SHIPPED & ARCHIVED 并完成 GitHub 同步（PR #36/#37 合并，main CI/deploy 全绿，技术债 D1-D10 清偿）
@@ -33,7 +33,34 @@ current_phase_name: ScopeProvider 基建（可见部门集统一实现 + strict 
 **Prior activity (3)**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
 **Prior activity (4)**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）
 
-## Current Milestone: v1.52 运维域数据权限统一收口（终态）(Phases 130-133)
+## Current Milestone: v1.53 开放项全量清偿 (Phases 134-141) — ✅ SHIPPED & ARCHIVED 2026-11-08
+
+**Goal:** 以 `.planning/REQUIREMENTS.md` 的 **24 REQ** 为基线（对应 2026-11-08 开放项盘点的 21 条历史计数），按「代码可修 / 待人工验证 / 已裁定接受」三类分别闭环，使收档时每条开放项都有可核对的结论与证据。
+
+**立项动因（2026-11-08）**: v1.52 SHIPPED & 归档后 `Awaiting next milestone`；用户指示「查看 open-item 文档，建立新里程碑处理所有事项」。2026-11-08 开放项盘点明确「凡未列入本盘点清单的历史 TODO/FUTURE/待办/deferred/Known Gaps 字样一律视为文档债或历史归档」，故本里程碑严格以该盘点 21 条（A 节 8 + B 节 13）为范围，C 节 13 类防误读清单不纳入。
+
+**范围裁定（用户 2026-11-08）**:
+- **21 条全覆盖**，按三类分别处置：代码可修（~16 条）→ FIX REQ 写代码；待人工验证（~6 条）→ VAL REQ 交付清单重建 + 跟踪表 + 回写口径，**不伪造闭环**（受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束，AI 不擅自写生产数据，沿用 v1.25 Phase 90 先例）；已裁定接受 / 仅登记（2 条）→ ACK REQ **只落结论、不写修复代码**
+- **Phase 从 134 续编**（v1.52 结束于 133），8 phases 134-141 / 24 REQ（FIX 14 / VAL 7 / ACK 2 / GOV 1），100% 映射无孤儿无重复
+- **跳过领域研究**（21 条均带本仓 `文件:行号` 实证、无新领域能力需调研，沿用 v1.25「研究范围仅定向」先例）
+- **纳入 seed** `seeds/SEED-ad-push-enable-direction.md` 作为 FIX-01 输入上下文（另 2 个 seed 已标 SUPERSEDED，跳过）
+- **权威回收（用户 2026-11-08 追加裁定，覆盖本文件所有「临时清单 = 权威 / 唯一入口」表述）**：临时输入清单仅用于本次里程碑取数、非长期权威；21 条全部处置干净后须归档（移入 `.planning/milestones/` 或删除）、不再维护 A/B/C 节，通过 GSD SDK `milestone complete` / `audit-open` 完成归档并清理引用，**权威交回 GSD 自动生成的 ROADMAP / REQUIREMENTS / STATE / MILESTONES**。GOV-01 / Phase 141 改为「临时清单归档 + 权威交回 + 一致性复核」，不再执行「清偿项移入 C 节」；VAL-* 结果写入 GSD 产物，不回写临时清单。
+
+**事实基线**:
+- `.planning/REQUIREMENTS.md`（**24 REQ**）｜`.planning/ROADMAP.md`（Phases 134-141）
+- 状态权威 = STATE.md / ROADMAP.md / MILESTONES.md（GSD 自动生成体系）
+- 人工验证类 5 份原始 UAT 清单磁盘缺失（`48/54/56/57-HUMAN-UAT.md` + 133-UAT 跟踪），Phase 140 须重建
+
+**硬约束（v1.53）**:
+1. 遵循 Handler-Service / `response.Success()/Error()` / operlog 约定 / 0=正常 1=停用 / SQLite+PG 双方言（uuid 双侧 CAST）
+2. 回归基线：eslint 0 problems / vitest 全绿 / `go build ./...` + `go test ./...` 全绿
+3. 人工验证类不写生产数据、不擅自切换生产认证模式；LOCKED 项不写修复代码
+4. 结果写入 GSD 自动生成的产物（v1.53-REQUIREMENTS.md traceability / STATE.md Deferred Items）；GOV-01 统一收口 21/21 条终态结论
+5. `phases/...` 证据路径按 `.planning/ARCHIVE-INDEX.md` 换算到 `.planning/milestones/v1.52-phases/`
+
+---
+
+## 历史基线：v1.52 运维域数据权限统一收口（终态）(Phases 130-133) — ✅ SHIPPED & ARCHIVED 2026-11-08（以下为非当前状态，仅供追溯）
 
 **Core Value**: 把数据权限从「用户/VDI 两个模块的局部实现」升级为运维域全模块的声明式统一收口 —— 读写两端按登录人数据范围自动过滤与校验，使「中支管理员只能管本机构的工位/楼层/资产」从口头约定变为架构保证。
 
@@ -70,19 +97,16 @@ current_phase_name: ScopeProvider 基建（可见部门集统一实现 + strict 
 
 **历史里程碑:** v1.51 端口写生产级操作体验（Phases 121-129，21 REQ 全交付，tag v1.51.1/v1.51.2，需求归档 [v1.51-REQUIREMENTS.md](milestones/v1.51-REQUIREMENTS.md)）；更早见 ROADMAP.md Milestones。
 
-
 ## Current Position
 
-Phase: Milestone v1.52 **SHIPPED**（运维域数据权限统一收口·终态，Phases 130-133 全完成）
+Phase: Not started (roadmap created)
 Plan: —
-Status: v1.52 全量交付完成（2026-11-07）：4 phase / 7 REQ / 24 commits，PR #75 merged `b56f1286`；全量闸门全绿（go build / go test / eslint 0 / vitest 592 文件 4128 用例 / format / lint:ci / 生产构建 / diff coverage）
-Last activity: 2026-11-07 — v1.52 收档（ROADMAP 4 phase 勾选 shipped、STATE 进度 100%、里程碑总结落盘）；收档文档走 `feat/v1.52-data-scope-unification` 分支 PR
-
----
+Status: Defining requirements
+Last activity: 2026-11-09 — v1.55 roadmap created
 
 ## 历史归档（v1.25 及更早，已 SHIPPED / ARCHIVED；以下为非当前状态，仅供追溯）
 
-> 本节及后续子标题（进度快照、Phase 依赖速查、执行期决策、立项范围、Accumulated Context 等）为 v1.25 及更早里程碑的归档记录，**均非当前状态**；当前状态一律以文档上半段 v1.52 active 与 `## Current Position` 为准。
+> 本节及后续子标题（进度快照、Phase 依赖速查、执行期决策、立项范围、Accumulated Context 等）为 **v1.25 及更早里程碑**的归档记录，**均非当前状态**；当前状态一律以文档上半段 **v1.55 active** 与 `## Current Position` 为准（v1.54 终态见上方「历史基线」段与 `.planning/MILESTONES.md` v1.54 条目，v1.53 及更早见 `.planning/MILESTONES.md`）。
 
 ### v1.25 真实进度快照（历史，2026-10-29 晚，Lead 实跑复核）
 
@@ -239,13 +263,13 @@ Last activity: 2026-11-07 — v1.52 收档（ROADMAP 4 phase 勾选 shipped、ST
 
 ### 继承自 v1.21 的环境约束
 
-- `gsd_run` CLI 在本环境不可用（`$HOME/.claude/get-shit-done/bin/gsd-tools.cjs` 不接受 `query <verb>`）——STATE/ROADMAP/REQUIREMENTS 用手工编辑（Phase 57-62 先例）
+- `gsd_run` CLI 在 v1.21 期不可用（`$HOME/.claude/get-shit-done/bin/gsd-tools.cjs` 不接受 `query <verb>`）—— 那是当时状态；**2026-11-08 v1.53 立项实测已可用**（`C:\Users\CPIC\.agents\gsd-core\bin\gsd-tools.cjs` 的 `query init.new-milestone` / `state.milestone-switch` / `state.get` / `init.progress` 均正常，STATE.md frontmatter 由 SDK 切换）。但 `roadmap.analyze` 仍解析不出 `<details>` 内的 `- [ ] Phase N:` 列表（`phases: []`），与 v1.52 归档格式一致，属本仓既有惯例 → 除 frontmatter 用 SDK 外，ROADMAP/REQUIREMENTS/PROJECT 正文继续保持手工编辑（Phase 57-62 先例）。
 - 提交落在 main 分支（`branching_strategy: none`）
 - DB migration 编号已用到 **235**（migration_235_workstation_backfill_perm.go，v1.51 期）；**v1.52 新迁移从 236 起编**。
 
 ### Decisions
 
-- [v1.21 遗留] 57-HUMAN-UAT.md 三项真环境验证（PG 合并路径 / kill -9 重启 / UAC 533）仍待人工执行；v1.18/1.19/1.20 的 site-visit UAT 债同样挂账
+- [v1.21 遗留] 57-HUMAN-UAT.md 三项真环境验证：① kill -9 重启耐久已由 `.planning/debug/ad-push-queue-drain-interval-not-hot-reloaded.md:172-174` 独立证实，可核销；② PG 合并路径、③ AD UAC 533 未见闭合证据，仍挂账；原始 57-HUMAN-UAT.md 文件当前磁盘不存在，需重建清单。v1.18/1.19/1.20 的 site-visit UAT 债保留挂账
 
 ### Blockers
 
@@ -253,26 +277,18 @@ Last activity: 2026-11-07 — v1.52 收档（ROADMAP 4 phase 勾选 shipped、ST
 
 ### Quick Tasks Completed
 
+> ✅ 4 个 v1.51/v1.52 期 quick 任务目录已于 2026-11-08 由 `/gsd-complete-milestone --archive-quick` 归档至 `.planning/milestones/v1.52-quick/`，表内数据行按 GSD 归档语义清空；逐目录索引见归档目录 `README.md` 与 `.planning/ARCHIVE-INDEX.md`。
+
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 261102-m94 | 修复暗色模式保存失败：theme_style 违反 chk_theme_style 检查约束（省略即不修改 + 绑定与 DB 约束对齐 + 迁移 233） | 2026-11-02 | 9f511268 | [261102-m94-theme-style-chk-theme-style](./quick/261102-m94-theme-style-chk-theme-style/) |
-| 261106-wsd | 工位导入部门填写不规范时按所属人员反推部门（仅兜底 + 反推计数 + 6 个回归测试） | 2026-11-06 | 7259cf90 | [261106-wsd-workstation-dept-infer-from-user](./quick/261106-wsd-workstation-dept-infer-from-user/) |
-| 261106-wso | 一栋楼跨机构办公：楼层可覆盖所属机构（ops_floors.org_id + migration 234 + 工位/楼层/楼宇全链路 COALESCE + 楼层表单 + 10 个回归测试） | 2026-11-06 | 7259cf90 | [261106-wso-workstation-floor-org-override](./quick/261106-wso-workstation-floor-org-override/) |
-| 261106-wsb | 工位管理页「按人员反推部门」按钮（预览+确认两步、默认仅兜底+可选纠正不一致、复用 edit 权限、严格写组+operlog+缓存失效+route-registry 登记） | 2026-11-06 | 7259cf90 | [261106-wsb-workstation-backfill-dept-button](./quick/261106-wsb-workstation-backfill-dept-button/) |
 
-### Todos（v1.52 / Phases 130-133）
+### Todos（v1.52 / Phases 130-133，历史归档）
 
-- **两项开工输入裁定**（结论落 `.planning/notes/`）：① Self 档 ops 语义 → **Phase 130 开工输入**；② Dept/Self 批量 + Excel 导入豁免 → **Phase 132 开工输入**；未产出前对应 phase 不得定案
-- **DS-05 三项裁定结论**（dedicatedLine/roomDevice 归属链、workstation-device 归属、location-alias 查询面）→ **Phase 133 开工输入**，133 开工前产出，133 不承载裁定动作
-- **Phase 130**：ScopeProvider 基建（可见部门集统一实现 + `effectiveOrgExpr` 单一真实源）+ strict 组注入 data_scope/user_id + 超管 / 0 值边界用例；产物落 `.planning/phases/130-scope-provider/`
-- **Phase 131**：四域读收口 + **Excel 导出独立收口** + **缓存面清点表（必交产物）** + 跨用户对照实验 + PG contract（含导出/导入路径）
-- **Phase 132**：四域写收口 + backfill 范围（依赖 132 开工输入裁定）
-- **Phase 133**：按已裁定结论落地（DS-05 开工输入）+ 四实体收口 + vdi 迁移 + pkg/middleware 死实现 / 死测试删除 + 前端联动 + UAT
-- **PG contract 变量名统一 `TEST_PG_DSN`**（131/132/133 一致）
-- **新迁移从 236 起编**（全库最大 235，无冲突）
+- **已清偿**：以下为 v1.52 立项期计划，全部已于 2026-11-07 交付（Phases 130-133 四个 phase 完成、三项开工输入裁定已落盘 `.planning/notes/261107-v152-*-decision.md`，PG contract 变量名统一 `TEST_PG_DSN` 与新迁移 236 起编亦已完成），见 MILESTONE-v1.52-SUMMARY.md。**v1.53 当前待办**以 `.planning/REQUIREMENTS.md`（24 REQ）为准，见 `.planning/ROADMAP.md` Phases 134-141。
 
 ### Roadmap Evolution
 
+- Phases 134-141 created for v1.53「开放项全量清偿」: 134 AD 同步域（FIX-01/10/11）∥ 135 Swagger 链路（FIX-02）∥ 136 端点接线（FIX-03/06/13）∥ 137 Stub/双副本（FIX-07/08）∥ 138 功能分支（FIX-04/05/14）∥ 139 低优先级技术债（FIX-09/12）→ 140 人工验证债组织（VAL-01~07）→ 141 登记接受结论 + 临时清单归档与权威分层复核（ACK-01/02 + GOV-01，**必须最后执行**）。**24/24 需求映射，无孤儿无重复；21/21 条真实开放项全覆盖**（A 节 8 + B 节 13；C 节防误读清单不纳入）；跳过领域研究；纳入 SEED-ad-push-enable-direction。W1 六 phase 按模块隔离并行（134 与 138 均触及 `internal/scheduler/`，plan-phase 须产出函数级归属表，无法保证无交集则降级串行 134→138）。 (CRITICAL)
 - Phases 84-93 created for v1.25「全站权限治理与样式收敛」: 84 权限模型三缺口（PMODEL-01~04）→ 85 后端动作级严格化（RBAC-01/03/04）→ 86 前端操作入口三态门控铺开（RBAC-02）→ 87 动作级权限授予闭环（RBAC-05/06）→ 88 验证底座与零风险清理（VISFIX-03/04/06 + STYLE-02 第 1 批）→ 89 变量层与明暗色板重构（STYLE-01/04 + VISFIX-01/02）→ 90 Input 域交还 variant/token + 圆角统一（STYLE-03 + VISFIX-05）→ 91 Select/InputNumber/Form/Table/Modal 域交还（承接 STYLE-02 R8 + VISFIX-04 剩余）→ 92 暗色 mega-cluster 合并（STYLE-02 主责）→ 93 room-devices 拆分 + 视觉回归验收（SPLIT-01 + STYLE-05）。**22/22 需求映射，无孤儿无重复**；线 A 权限 84-87 ∥ 线 B 样式 88-93，线内串行；写死三处不可逆顺序约束（89→90/91/92、批次 C→批次 B 同 commit、变量层→变体交还）。 (CRITICAL)
 - Phases 76-83 created for v1.24「视觉回归修复与遗留债务清偿」: 76 双框 P0 修复 + CSS 审计登记册（VIS-01~04）→ 77 视觉回归验证收口（VIS-05）→ 78 #16 前后端双端闭环（PERM-01~04/06）→ 79 PG 实机验收（PERM-05）→ 80 3f130 空因诊断前端接入（DIAG-01）→ 81 F5 刷新落 /dashboard 修复（NAV-01）→ 82 lint 清零 + 豁免理由表修复（HYG-01/02/03/05）→ 83 devices 页拆分（HYG-04）。18/18 需求映射，无孤儿无重复；**全部 SHIPPED 2026-10-28**（tag `v1.24`）。 (CRITICAL)
 - Phases 69-75 created for v1.23「前端契约全量收尾与遗留清偿」: 69 后端 debug 重验 spike（DBG-01）→ 70 TextArea 契约基建 W0（TEXT-01/03/04 + HYG-05）→ 71 TextArea 存量 + COMP-05 分域迁移 W1-W6（TEXT-02 + MIG-01/02/04）→ 72 后端 debug 修复 wave（DBG-02/03/04，#3 先于 #2）→ 73 DB 实测日 + cron.go 双执行调查（DBG-05/06/07）→ 74 COMP-05 收口 + lint 清偿 + quick 目录归档（MIG-03 + HYG-01~04）→ 75 浏览器实机 UAT + 收档（UAT-01/02）。22/22 需求映射，无孤儿无重复。 (CRITICAL)
@@ -280,16 +296,16 @@ Last activity: 2026-11-07 — v1.52 收档（ROADMAP 4 phase 勾选 shipped、ST
 
 ## Project Reference
 
-See: `.planning/PROJECT.md`（updated 2026-11-07 after v1.52 立项）
+See: `.planning/PROJECT.md`（updated 2026-11-08 after v1.53 SHIPPED & ARCHIVED）
 
 **Core value:** 端到端的运维可观测与可审计——每个写操作都留下可追溯记录（谁、何时、改了什么、从哪来、改前改后），敏感字段自动脱敏；配合 Excel 批量管理与引用自动解析（部门名 → UUID），运维人员对整个 IT 资产域拥有唯一可信的系统记录。
-**Current focus:** v1.52「运维域数据权限统一收口（终态）」IN PROGRESS（Phases 130-133，7 REQ mapped）——下一步 /gsd-plan-phase 130（须先产出两项开工输入裁定，见下）。
+**Current focus:** 无 · v1.53 SHIPPED & ARCHIVED；权威已交回 GSD 自动生成的 ROADMAP / REQUIREMENTS / STATE / MILESTONES
 
 ## Session
 
-**Last session:** 2026-11-07T13:35:00+08:00
-**Stopped at:** v1.52 立项（Phases 130-133，7 REQ）；计划经 2 轮审计修订
-**Resume file:** 无（下一步 /gsd-plan-phase 130）
+**Last session:** 2026-11-08T17:55:00+08:00
+**Stopped at:** v1.53 SHIPPED & ARCHIVED（8/8 Phase、21/21 条开放项全覆盖、全量回归全绿、GSD 归档与权威交回完成）；下一步 `/gsd-new-milestone`
+**Resume file:** 无（归档产物见 `.planning/milestones/v1.53-*`，人工验证跟踪见 `.planning/notes/261108-human-verification-tracker.md`）
 
 ## Deferred Items
 
@@ -297,19 +313,35 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
-| verification_gaps | 84/84-VERIFICATION.md | human_needed | 2026-10-30 | v1.25 |
-| verification_gaps | 87/87-VERIFICATION.md | human_needed | 2026-10-30 | v1.25 |
-| verification_gaps | 90/90-VERIFICATION.md | human_needed | 2026-10-30 | v1.25 |
+| verification_gaps | 84/84-VERIFICATION.md — 真实挂账，详见 129-UAT-BACKFILL.md:91-92 | human_needed（真实挂账） | 2026-10-30 | v1.25 |
+| verification_gaps | 87/87-VERIFICATION.md — 真实挂账，详见 129-UAT-BACKFILL.md:91-92；87-6 另需写操作授权 | human_needed（真实挂账） | 2026-10-30 | v1.25 |
+| uat_gaps | 129-HUMAN-UAT.md — 收档审计 acknowledge（0 pending scenarios） | acknowledged（deferred） | 2026-11-08 | v1.52 |
+| uat_gaps | 129-UAT-BACKFILL.md — 收档审计 acknowledge（0 pending scenarios）；84/87 人工验收挂账载体 | acknowledged（deferred） | 2026-11-08 | v1.52 |
+| uat_gaps | 133-UAT.md — 收档审计 acknowledge（0 pending scenarios）；37 项人工 UAT 全未勾选 | acknowledged（deferred） | 2026-11-08 | v1.52 |
+| uat_gaps | VAL-01~06 人工验证（生产 PG 只读 / 87-6 写授权 / 现场真机 / DBA 回传）— 交付物已落盘（5 份重建清单 + 79 条跟踪表 + 回写口径），实际验证待执行；见 `notes/261108-human-verification-tracker.md` | 待执行（不标已完成） | 2026-11-08 | v1.53 |
+| code_gaps | ~~`ImportDiscoveredDevices` 简化实现~~ **v1.54 Phase 142 已清偿（2026-11-09）**：`internal/services/device_discovery_service.go` 改为读 `sys_device_discovery_result` → 按 `ip_address` 去重（批内/已存在跳过/软删恢复）→ 单事务批量写 `sys_network_device`；handler 补缓存失效；9 个新单测 + 2 处旧 stub 断言改写。证据 `.planning/phases/142-disc-01-02/142-SUMMARY.md` | ✅ 已清偿 | 2026-11-08 → 清偿 2026-11-09 | v1.53 → v1.54 |
+| verification_gaps | ~~Phase 自报边界汇总~~ **v1.54 Phase 143/144 已清偿其中 4 项代码缺口（2026-11-09）**：FIX-11 前端告警页 / WS 广播 / 企微钉钉 webhook（路线 A 通用 Webhook）｜FIX-04 型号级 `vendorCapabilities` 规则框架｜FIX-05 批量物理参数路径接入｜`ImportDiscoveredDevices` 见上一行。**仍未清偿（验证类，不伪造闭环）**：FIX-01 实机 AD/LDAP UAT｜FIX-04 三厂商物理参数真机逐型号取证｜FIX-09 端到端 HTTP P99 压测｜FIX-13 生产库 migration 236/237｜FIX-11 企微/钉钉专用 markdown+加签（路线 B） | 代码项 ✅ 已清偿 / 验证类 待执行（不伪造完成） | 2026-11-08 → 部分清偿 2026-11-09 | v1.53 → v1.54 |
+| code_gaps | **v1.54 新增登记**：① 前端「标记已读」未实现（告警 `logs` 来自 `sys_oper_log` 无已读字段、后端 5 端点无已读契约）② 企微/钉钉专用 markdown + 加签（路线 B）未做，当前只走路线 A 通用 Webhook ③ `sys_object_id` 已采集未落库，型号 key 仅 `NetworkDevice.Model` ④ 批量物理参数无自动回滚（预览/审计已显式警示）⑤ 发现导入链路顺带隐患（`user_id.(string)` 硬断言、`persistDiscoveryResults` 未开事务、`ExecuteDiscovery` 未检查 Save Error）⑥ e2e 归位（`physical_e2e_test.go` 仍在业务包内）⑦ `RequiresInterfaceView` 与型号画像 `RequiresView` 联动点 | 已知边界 / 后续候选（登记，非阻断） | 2026-11-09 | v1.54 |
+| code_gaps | **v1.55 W1 新增登记（门禁真跑后暴露）**：① `POST /network/ports/write/trunk`（`internal/api/v1/network/port_write_trunk_handler.go:43-80`）成功路径直接 `response.Success`、前面**无 `operlog.Record`**，且 `internal/services/portwrite/` 全包零 operlog → 违反 CLAUDE.md「所有业务写操作 success path 在 `response.Success` 前必须 `operlog.Record`」强制约定，属 v1.51 Phase 124 遗留真实缺口；Phase 145 按文件面/范围未修，已用 `knownGapHandlers` + 可观测 `t.Skip` 在静态门禁中**登记而非放行**（`internal/utils/operlog/handler_coverage_test.go`、`145-SUMMARY.md §Known Gaps`），**W2 148 未覆盖它（portwrite 不在 148 文件面），仍待后续 quick 补** ② `reconciliation_service.go` `computeByWorkstation:1074` 既有 `append` 早于 exception 字段修改，per-asset matcher 结果未进响应（Phase 147 按 PLAN 禁区未改 6 步聚合，用「缓存真删 + 写后读必回源 + 直查 DB 读路径立即一致」等价判据覆盖，建议后续单独立项）③ 两份 `operlog_e2e_verify.sh` 重复副本未物理合并（已登记 `scripts/README.md`）| 真实缺口 / 既有缺陷（登记，非阻断，不伪造闭环） | 2026-11-09 | v1.55 W1 |
+| verification_gaps | **v1.55 W2 新增登记**：① `.golangci.yml` forbidigo（148）实测 golangci-lint 2.12.2 **只匹配 AST 标识符/选择器调用名，不命中字符串字面量或注释里的 SQL 方言 token**；真正的「反向变异必红」由 148 新增的 Go 源码静态断言测试承担，规则本身作为标识符形态准入守卫（探针实测生效）。`148-SUMMARY.md §4` 已如实登记能力边界，不伪造「forbidigo 必红」 ② `TEST_PG_DSN` 双跑仍为前置依赖（用户裁定本期不建 `services: postgres`），148/149/150 的 PG contract 测试均为 `t.Skip` 可观测 ③ 149 的 D1/D2 UAT 作废登记落 `149-UAT-RECHECK.md`、150 的 backfill UAT 落 `150-UAT-BACKFILL.md`，**重跑窗口/验收人待 QA 裁定，未勾选完成** ④ FUTURE-01 随 ① 关闭的 4 处引用清理、132/133 UAT 重跑，均待 **B（Phase 151 统一 ScopedDB）落地后由 Lead 收档统一执行** ⑤ `room_photo` / `location_alias` 两 handler 现为固定状态码形态（service 层已统一 `ErrScopeDenied`、149 T4 矩阵 `errors.Is` 全绿），HTTP 层透传统一属后续候选 | 能力边界 / 前置依赖 / 待人工（登记，非阻断，不伪造闭环） | 2026-11-09 | v1.55 W2 |
+| note | **v1.55 W2 契约基线更新（非缺陷）**：`internal/api/datascope_mount_test.go` 的 `TestDataScopeMount_OpsCoverage` / `TestDataScopeMount_NotOnOpsAncestor` 原按 v1.52「roomPhotos 是显式豁免组、挂载总数 31」硬编码；用户 2026-11-09 裁定推翻该豁免后，149 补挂 `roomPhotos.Use(middleware.DataScopePermission(core))`，Lead 集成期按新语义把断言更新为「总数 32、roomPhotos 恰好挂 1 处」，并在注释写明裁定依据（这不是放宽门禁，是把契约测试对齐已批准的新语义） | 基线同步（已落地） | 2026-11-09 | v1.55 W2 |
+| code_gaps | ~~6 项 LOCKED 残余（7 子项）~~ **v1.55 全部清偿（2026-11-09）**：① P1-5 侧信道 = A(150 响应体去规模化，删 6 字段/全库 `countQ`/越界行号，差分攻击测试) + B(151 统一 ScopedDB：pkg/query ScopedDB + 资源归属注册表 + `GORMRepository` 读链 2 行 + 8 核心读端点 32 处起链，写链一字不动、All 兜底零回归) ② 5 项豁免面 = 149 方案 D 零迁移收口 ③-A `RightCast` = 148 删方言机制+单侧 CAST ③-B PG CTE = 148 唯一共享 `recallPhysicalRows` Go 层合并 ④ e2e 门禁 = 145 静态段 Go 单测化+cwd 锚定+CI 硬门禁 ⑤ `invalidateCache` = 147 删死键/空函数+广播失效立即一致 ⑥ `pbkdf2SM3` = 146 守卫+`len==32`+黄金向量（CRYPTO-04 按硬 gate 合规跳过，守卫已收口非遗留缺陷）。证据：7 份 phase `*-SUMMARY.md` + `.planning/notes/261109-v154-locked-root-cause-analysis.md`。**裁定原文 `261108-v153-locked-residuals.md` 保持只读，收档结论由本表与 MILESTONES.md v1.55 条目承载** | ✅ 已清偿 | 2026-11-08 裁定 → 清偿 2026-11-09 | v1.52 → v1.55 |
+| verification_gaps | **v1.55 收档后仍待人工（不伪造闭环）**：① 79 条人工验证跟踪表保持 0 勾选 ② FIX-01/04/09/13 验证类残余 ③ `TEST_PG_DSN` 双跑前置依赖（本期不建 `services: postgres`）④ 149 的 `149-UAT-RECHECK.md`（D1/D2）与 150 的 `150-UAT-BACKFILL.md` 重跑窗口/验收人待 QA 裁定 ⑤ **W1/W2 新增登记仍挂账**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 无 `operlog.Record`，W2 未覆盖，待后续 quick）、`computeByWorkstation:1074` append 缺陷、两份 `operlog_e2e_verify.sh` 重复副本、forbidigo 能力边界、`room_photo`/`location_alias` 两 handler HTTP 透传口径 ⑥ **FUTURE-01 已随 ① 根治关闭**：4 处引用已由 Lead 收档清理（`REQUIREMENTS.md` / `ROADMAP.md:91` / `STATE.md` / `261108-v153-locked-residuals.md:63`），不再是未来候选 | 待人工 / 后续候选（登记，非阻断，不伪造闭环） | 2026-11-09 | v1.55 收档 |
+
+> **closeout_type: override_closeout**（v1.52 收档时 `audit-open` 检出 3 项 uat_gaps，已按 [A] Acknowledge 全部登记；另有 3 项历史 debug suppression 结转）。Known verification overrides: **3 newly acknowledged, 3 carried forward**（同步记录于 MILESTONES.md v1.52 条目）。以上均为 verdict-preserving 的 self-invalidating suppression。**v1.53 收档后补登记（2026-11-08 18:45）**：上表另含 v1.53 的 3 行 `uat_gaps / code_gaps / verification_gaps`（79 条人工验证跟踪 + `ImportDiscoveredDevices` 真实缺口 + Phase 自报边界汇总），属**显式披露**而非 `audit-open` suppression；GSD `audit-open` 仍报全清（这些是文档登记项，不是 GSD 可扫描的 artifact）。真实挂账以本表与 MILESTONES.md v1.53 条目为准。
 
 ## Performance Metrics
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| v1.53（8 phase，subagent 团队并行 + Lead 集成收档） | 单日（2026-11-08 14:43→17:55） | 8 phase / 24 REQ / 21 条开放项 | 全仓（见最终提交 diff） |
 | v1.25（10 phase，planning 阶段） | 路线图 1 轮完成（2026-10-28） | 10 phase × 5 成功标准 | — |
-| v1.24（8 phase，subagent 直接执行，按刀原子提交） | ~3.5 h（09:19→12:59，单日） | 8 phase × 9 项闸门 | 104（+5,419 −2,232，46 commits） |
-| v1.23（7 phase） | 单日 | 121 文件迁移 | — |
 
 ## Operator Next Steps
 
-- 产出两项开工输入裁定（Self 档 ops 语义 → 130；Dept/Self 批量 + Excel 导入豁免 → 132），结论落 `.planning/notes/`
-- /gsd-plan-phase 130（ScopeProvider 基建）；其后 131 ∥ 132（函数级无交集约束）→ 133（须先产出 DS-05 三项裁定结论）
+- `/gsd-new-milestone` — 启动下一里程碑（v1.55 已 SHIPPED，7/7 Phase、24/24 REQ、6 项 LOCKED 残余全部从根源清偿；权威仍由 GSD 自动生成体系承载，`REQUIREMENTS.md` 已按工作流清空待重建）
+- 人工验证跟踪表 `.planning/notes/261108-human-verification-tracker.md` 的 **79 条待执行项保持 0 勾选**，需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物；FIX-01/04/09/13 验证类残余**不伪造闭环**
+- LOCKED 残余裁定原文 `.planning/notes/261108-v153-locked-residuals.md` 保持只读（v1.55 收档已更正其 :61 承载声明并关闭 FUTURE-01）；清偿结论见本表 v1.55 行与 `MILESTONES.md` v1.55 条目
+- **下一里程碑取数**：本表 `## Deferred Items` 的「v1.55 收档后仍待人工」行（trunk operlog 缺口 / `computeByWorkstation` append / 重复脚本合并 / forbidigo 能力边界 / 两 handler 透传 / PG 双跑前置 / UAT 重跑窗口）与 `MILESTONES.md` v1.55 Known Gaps
+- v1.55 交付证据：7 份 `.planning/phases/{145..151}-*/*-SUMMARY.md` + `149-UAT-RECHECK.md` + `150-UAT-BACKFILL.md`；根因判定 `.planning/notes/261109-v154-locked-root-cause-analysis.md`；草案 `.planning/notes/261109-v155-requirements-draft.md`
+- v1.54 交付证据：`.planning/phases/{142-disc-01-02/142-SUMMARY.md, 143-port-01-02/143-SUMMARY.md, 144-alrt-01-02-03/144-01-backend-SUMMARY.md, 144-alrt-01-02-03/144-02-frontend-SUMMARY.md}` + 架构裁定 `.planning/notes/261108-v154-architecture-decisions.md` + 集成清单 `.planning/notes/261108-v154-integration-checklist.md`

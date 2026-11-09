@@ -1,14 +1,99 @@
 ---
-last_updated: 2026-11-07
-update_trigger: v1.52 milestone INITIATED (运维域数据权限统一收口·终态，Phases 130-133，7 REQ DS-01~07)
-previous_update: 2026-10-31 v1.51 milestone INITIATED（端口写生产级操作体验，21 REQ）
+last_updated: 2026-11-09
+update_trigger: v1.55 milestone SHIPPED 2026-11-09（LOCKED 残余根治：7/7 Phase、23/23 REQ、6 项 LOCKED / 7 子项全部从根源清偿；① 的 A+B 均完成 → P1-5 侧信道根治达成；全量回归闸门全绿；验证类残余不伪造闭环）
+previous_update: 2026-11-09 v1.55 milestone INITIATED（LOCKED 残余根治：6 项 / 7 子项，用户裁定推翻 ① 产品语义纳入 A+B 根治；取数自 261109-v154-locked-root-cause-analysis.md + 261109-v155-requirements-draft.md；Phase 从 145 续编）
 ---
 
-## Current Milestone: v1.52 运维域数据权限统一收口（终态）(Operations-Wide Data-Scope Unification) — 🚧 IN PROGRESS
+## Current Milestone: v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix) — ✅ SHIPPED 2026-11-09
+
+**Goal:** 把 v1.52 收档时以「已接受 / 仅登记」名义挂账的 6 项 LOCKED 残余（7 个子项，③ 拆 A/B）从根源上修掉（而非打补丁 / 加告警 / 加方言分支），使约束从「靠约定」升级为「靠机制」；按用户 2026-11-09 裁定允许推翻 ① 的「范围快照回显」产品语义，① 纳入 A+B 组合根治。
+
+**Status:** ✅ SHIPPED 2026-11-09（7/7 Phase：145 AUDIT / 146 CRYPTO / 147 CACHE / 148 DIALECT / 149 SCOPE / 150 侧信道 A / 151 统一 ScopedDB；23/23 REQ Satisfied；3 波共 7 planner + 2 checker + 7 executor + Lead 集成）| **① 的 A(150)+B(151) 均完成 → P1-5 侧信道根治达成；6 项 LOCKED / 7 子项全部清偿** | 全量回归闸门全绿：`go build ./...` / `go test ./...` / `tsc` / `lint:ci ALL PASS` / 全量 vitest / `check-route-registry` 713 零漂移 | 交付证据 7 份 phase `*-SUMMARY.md` + `149-UAT-RECHECK.md` + `150-UAT-BACKFILL.md` + `.planning/MILESTONES.md` v1.55 条目
+
+**Target features:**
+- **AUDIT**（④）— operlog e2e 静态段 Go 单测化 + cwd 锚定 + CI 硬门禁（当前静态检查从未真正跑过）
+- **CRYPTO**（⑥）— `pbkdf2SM3` 非法输入守卫 + `len(hashBytes)==32` 校验 + 黄金向量（免生产盘点）
+- **CACHE**（⑤）— 删死键/空函数 + `GetByWorkstation` 例外变更立即一致联动失效
+- **DIALECT**（③）— 删 `RightCast` 方言机制 + PG 专属 CTE 改 Go 层合并 + forbidigo 防复发；CI PG 双跑登记前置依赖
+- **SCOPE**（②）— 5 项豁免面零迁移收口（补挂 rooms/photos 中间件 + 保存侧裁剪）+ UAT 重跑
+- **SIDECHANNEL**（①，A）— 响应体去规模化（`ScopeTotal`/`ScopeOutOfScope`/行号）+ 去掉全库 `countQ` + 差分攻击测试 + 132/133 UAT 重跑
+- **ARCH**（① 的 B，必需）— 统一 ScopedDB（GORM `Scopes` 强制唯一查询起链点 + 资源归属注册表 + 响应契约层），必须最后执行
+
+**关键决策 (v1.55, 用户 2026-11-09 裁定):**
+- **范围 = 6 项 LOCKED / 7 子项全覆盖**（① ② ③-A ③-B ④ ⑤ ⑥）；**不允许**用告警通道 / 粗粒度桶 / 方言分支 / 「接 Redis 后补 Delete」/ 仅调门禁顺序等补丁方式代替根治
+- **DECISION-①（决定性）：允许重定语义** —— 取消 `BackfillDeptResult` 规模回显、去掉全库 `countQ`、去导入 `Errors[].Row` 行号、作废 132-SUMMARY.md:74 前端四类「本次范围：共 N 条」文案；① 按 A（响应体去规模化）+ B（统一 ScopedDB 防回归）组合根治
+- **FUTURE-01 随 ① 根治一并关闭**（✅ v1.55 收档已关闭，4 处引用已由 Lead 清理），不再单列挂账
+- **CI-PG**：本期不建 `services: postgres`，`TEST_PG_DSN` 双跑登记为前置依赖，不伪造双跑
+- **存量密码**：全库写入均经 `HashPassword`（恒 32 字节），免盘点直接上守卫
+- **例外缓存陈旧窗口**：要求立即一致，`CACHE-02` 必做联动失效
+- **跳过领域研究**：7 子项均带本仓 `文件:行号` 实证与现成改写范本，根因报告即研究输入（沿用 v1.53/v1.54 先例）
+- **79 条人工验证跟踪表保持 0 勾选**；FIX-01/04/09/13 验证类残余、v1.54 新增 7 项 GAP 不纳入；不伪造闭环
+- **零新依赖**；遵循 Handler-Service / `response.Success()/Error()` / operlog 写操作约定 / 0=正常 1=停用 / UUID 主键 / SQLite+PG 双方言 / 前端 wrapped API / 构建产物只落 `out/`
+- **提交授权**：用户 2026-11-09 沿用 2026-11-08 口径，授权 GSD 自动提交 v1.55 立项/需求/路线图产物与实现代码
+
+**事实基线:** `.planning/notes/261109-v154-locked-root-cause-analysis.md`｜`.planning/notes/261109-v155-requirements-draft.md`（决策裁定记录）｜`.planning/notes/261108-v153-locked-residuals.md`（6 项裁定原文）｜`.planning/STATE.md ## Deferred Items`
+
+---
+
+## Past Milestone: v1.54 真实代码缺口清偿 (Code Gap Clearance) — ✅ SHIPPED 2026-11-09
+
+**Goal:** 清偿 `.planning/STATE.md ## Deferred Items` 中登记的 4 项真实代码缺口，使 v1.53 收档后显式披露的「代码可修」残余全部真正落地；不触碰 LOCKED 残余、不伪造人工验证闭环。
+
+**Status:** ✅ SHIPPED 2026-11-09（3/3 Phase：142 发现设备真实导入 / 143 端口写物理参数收口 / 144 同步漂移告警通道收口；7/7 REQ Satisfied；144 拆后端+前端两个并行 executor，共 4 PLAN；W1 四 executor 并行 + Lead 集成）| 全量回归闸门全绿：`go build ./...` / `go test ./...` / `tsc` / `lint:ci ALL PASS`（含 check-permission-codes 双向零漂移、check-route-registry 713 路由）/ 全量 vitest | 交付证据 4 份 phase `*-SUMMARY.md` + `.planning/MILESTONES.md` v1.54 条目
+
+**Target features:**
+- **DISC** — `ImportDiscoveredDevices`（`internal/services/device_discovery_service.go:509-523`）真实写入 `NetworkDevice`：字段映射、去重语义、事务边界、operlog、缓存失效、错误返回
+- **ALRT** — 同步漂移告警通道收口（FIX-11 自报边界）：后端查询/配置端点 + WS 广播 + 前端告警页 + 企微/钉钉 webhook（凭证脱敏）
+- **PORT** — 端口写物理参数收口（FIX-04/FIX-05 自报边界）：批量物理参数路径接入（复用 v1.51 批量进度事件）+ 型号级 `vendorCapabilities` 规则（型号来源与默认值回退）
+
+**关键决策 (v1.54, 用户 2026-11-08 裁定):**
+- **范围 = 4 项纯代码缺口**：`ImportDiscoveredDevices` 真实导入 / 告警前端+WS+webhook / 批量物理参数 / 型号级能力矩阵；3 项验证类（FIX-01 实机 AD UAT、FIX-09 端到端 HTTP P99 压测、FIX-13 生产库 migration 236/237）与 FIX-04 真机逐型号取证**不纳入**，继续登记为待人工验证、不伪造闭环
+- **跳过领域研究**：4 项均带本仓 `文件:行号` 实证、无新领域能力需调研（沿用 v1.53 先例）；改为派 3 个并行 subagent 做本仓代码面探索作为需求输入
+- **LOCKED 残余不写修复代码**：`.planning/notes/261108-v153-locked-residuals.md` 6 项只维持结论
+- **79 条人工验证跟踪表不改**：`.planning/notes/261108-human-verification-tracker.md` 保持 0 勾选，按 `.planning/notes/261108-uat-writeback-policy.md` 由人工执行后回写
+- **遵循既有架构**：Handler-Service / `response.Success()/Error()` / operlog 写操作约定 / 0=正常 1=停用 / UUID 主键 / SQLite+PG 双方言 / 前端 wrapped API / 构建产物只落 `out/`
+- **智能体团队**：3 个探索 subagent（发现导入 / 告警通道 / 端口写）→ gsd-roadmapper 生成路线图 → 按 phase 分波并行 executor subagent → Lead 集成复核 + 全量回归闸门
+- **提交授权**：用户 2026-11-08 明确授权 GSD 自动提交规划产物与实现代码（覆盖 CLAUDE.md 默认确认要求，仅限本里程碑）
+
+**事实基线:** `.planning/STATE.md ## Deferred Items`（v1.53 三行）｜`.planning/MILESTONES.md:19-24`（v1.53 Known Gaps）｜`.planning/notes/261108-v153-locked-residuals.md`（LOCKED 边界）
+
+---
+
+## Past Milestone: v1.53 开放项全量清偿 (Open Items Clearance) — ✅ SHIPPED & ARCHIVED 2026-11-08
+
+**Goal:** 以 `.planning/REQUIREMENTS.md` 的 **24 REQ** 为基线（对应 2026-11-08 开放项盘点的 21 条历史计数），按「代码可修 / 待人工验证 / 已裁定接受」三类分别闭环，使收档时每条开放项都有可核对的结论与证据。
+
+**Status:** ✅ SHIPPED & ARCHIVED 2026-11-08（8/8 Phase：134-141 全部完成；18 REQ 交付 + 6 项人工验证跟踪不伪造闭环；21/21 条开放项全覆盖）| 归档产物 `.planning/milestones/v1.53-ROADMAP.md` / `v1.53-REQUIREMENTS.md` / `v1.53-phases/`；全量回归闸门全绿（go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例）
+
+**Target features:**
+- **FIX（14 REQ）** — 代码可修的缺口与缺陷：A1/A6/A7 AD 同步域（含纳入 seed `SEED-ad-push-enable-direction`）、A3-OQ7、B1~B12 中可修项（Swagger 产物链路 / 用户导出 / 工单评价 / GetDiscoveryResults stub / rpa-worker 双副本 / scheduler Rotation / 端口写物理参数 / 3 处排序 / 对账 MV 超时配置化 / 登录加密 benchmark）
+- **VAL（7 REQ）** — 待人工验证：重建 5 份磁盘缺失的原始 UAT 清单 + 7 组验证跟踪表 + 回写口径；受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束，**不伪造闭环、不擅自写生产数据**
+- **ACK（2 REQ）** — A8 四项 LOCKED 残余 + B13 仅登记项：只落「接受/已知约束」结论，**不写修复代码**
+- **GOV（1 REQ）** — 临时清单归档 + 权威交回 + 一致性复核（结论写入 GSD 自动生成的产物）
+
+**关键决策 (v1.53, 用户 2026-11-08 裁定，均已落地):**
+- **21 条全覆盖**（A 节 8 + B 节 13）；C 节 13 类「明确不属于开放项」防误读清单不纳入
+- **Phase 从 134 续编**（v1.52 结束于 133），8 phases / 24 REQ / 100% 映射无孤儿无重复
+- **跳过领域研究**（21 条均带本仓 `文件:行号` 实证、无新领域能力需调研，沿用 v1.25「研究范围仅定向」先例）
+- **纳入 seed** `seeds/SEED-ad-push-enable-direction.md` 为 FIX-01 输入上下文（另 2 个 seed 已标 SUPERSEDED）
+- **人工验证类交付物 = 清单 + 跟踪表 + 回写口径**，实际执行由现场/PG 授权方完成；沿用 v1.25 Phase 90「不擅自切换生产认证模式」先例
+- **零新依赖**；遵循 Handler-Service / response 包装 / operlog 约定 / 双方言（SQLite+PG）
+- **文档提交前须用户确认**（CLAUDE.md「Before making git commits, ask for explicit user confirmation」）
+- **权威交回 GSD（用户 2026-11-08 追加裁定，已落地）**：本次临时输入清单已归档进 `.planning/milestones/`（历史快照），全仓「权威 / 唯一入口」引用已清理，GSD `milestone complete v1.53` 已自动生成 / 更新 ROADMAP / REQUIREMENTS / STATE / MILESTONES 承载当前状态；不再维护手工 A/B/C 节清单。
+
+**事实基线（归档后）:** `.planning/milestones/v1.53-REQUIREMENTS.md`（24 REQ）｜`.planning/milestones/v1.53-ROADMAP.md`（Phases 134-141 完整详情）｜`.planning/milestones/v1.53-phases/`（8 份 SUMMARY）｜v1.52 终态 `.planning/MILESTONE-v1.52-SUMMARY.md`
+
+**Known Gaps（登记，非阻断）**：79 条人工验证跟踪项全部待执行（`.planning/notes/261108-human-verification-tracker.md`，**保持 0 勾选**），需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物；LOCKED 残余结论见 `.planning/notes/261108-v153-locked-residuals.md`；验证类残余（FIX-01/04/09/13）不伪造闭环；v1.54 新增边界（标记已读 / 企微钉钉路线 B / `sys_object_id` 未落库 / 批量无自动回滚 / 发现导入顺带隐患 / e2e 归位 / `RequiresInterfaceView` 联动点）见 `.planning/MILESTONES.md` v1.54 条目与 `STATE.md ## Deferred Items` 的 v1.54 行。
+
+**Phase 映射:** 134=AD 同步域(FIX-01/10/11) ∥ 135=Swagger 链路(FIX-02) ∥ 136=端点接线(FIX-03/06/13) ∥ 137=Stub/双副本(FIX-07/08) ∥ 138=功能分支(FIX-04/05/14) ∥ 139=低优先级技术债(FIX-09/12)（W1 六者按模块隔离并行）→ 140=人工验证债组织(VAL-01~07) → 141=登记接受结论 + 临时清单归档与权威分层复核(ACK-01/02 + GOV-01，**必须最后执行**)。
+
+---
+
+## Past Milestone: v1.52 运维域数据权限统一收口（终态）(Operations-Wide Data-Scope Unification) — ✅ SHIPPED 2026-11-07（历史归档）
 
 **Goal:** 把数据权限（data_scope）从「用户/VDI 两个模块的局部实现」升级为运维域全模块的声明式统一收口——读写两端按登录人数据范围自动过滤与校验，使「中支管理员只能管本机构的工位/楼层/资产」从口头约定变为架构保证。
 
-**Status:** INITIATED 2026-11-07 | **Phases:** 4 (130-133，编号延续 v1.51 从 130 续编) | **Requirements:** 7（DS-01~07）
+**Status:** ✅ SHIPPED 2026-11-07（4/4 Phase：130/131/132/133 全部完成；7/7 REQ：DS-01~07 全部交付；PR #75 merged → `b56f1286`）| v1.52 收档时点快照见 `.planning/MILESTONE-v1.52-SUMMARY.md`
 
 **范围裁定（用户 2026-11-07）:** 终态方案 = operations 全模块声明式统一收口，不做逐端点手工接线（quick-261106-wsb 审计裁定补丁为非终态）。
 
@@ -208,14 +293,16 @@ previous_update: 2026-10-31 v1.51 milestone INITIATED（端口写生产级操作
 
 **更早的 deferred（继续挂账）**：
 
+> 本节为历史挂账快照；当前状态见 STATE.md / ROADMAP.md。
+
 以下候选源自 v1.21/v1.22 收口审计与历史 deferred，**v1.23/v1.24 均未纳入**：
 
-1. **AD 方向补齐** — ad_push_queue 目前只有 update_user / disable 两个动作方向，缺 enable（软删用户恢复后重新启用 AD 账号），见 `.planning/seeds/SEED-ad-push-enable-direction.md`。
-2. **同组管理员 OU 写权限** — 域控 ACL 导致同组管理员互相改 OU 报 LDAP Result Code 50，属域控侧策略（已裁决不作为代码缺陷），若要放开需域控授权流程。
-3. **残留现场 UAT 债** — v1.18（3 项真机 SNMP/CLI）+ v1.19（6 项 SSH）+ v1.20（12 项 VLAN/绑定 site-visit）仍为 deferred，需现场运维同事执行后回写 UAT。
-4. **全量同步节流** — 3 小时全量 cron（sync_interval=10800）+ 失败后每 5 分钟 tick 重试，重试风暴与节流策略可优化。
-5. **同步可观测性** — 把 v1.21 期间用于捕获重放窗口漂移的采样脚本（`scripts/uat61-t1-poller-v5.ps1`）产品化为常态化的同步漂移告警。
-6. **v1.23 明确延后项**（用户裁定 2026-10-27）— react-refresh 33 处清零 / devices 页 692 行拆分 / 三态组件（Empty/Skeleton/ErrorAlert）推广：均非质量缺陷，本轮做会挤占迁移主线上下文并放大回归面。
+1. **AD 方向补齐** — ad_push_queue 目前只有 update_user / disable 两个动作方向，缺 enable（软删用户恢复后重新启用 AD 账号），见 `.planning/seeds/SEED-ad-push-enable-direction.md`。（2026-11-08 开放项盘点 #A1）
+2. **同组管理员 OU 写权限** — ✅ 已裁决关闭（域控侧 ACL 策略，非代码缺陷；2026-10-21 用户裁决不修，仅作已知环境限制记录）。
+3. **残留现场 UAT 债** — v1.18（3 项真机 SNMP/CLI）+ v1.19（6 项 SSH）+ v1.20（12 项 VLAN/绑定 site-visit）仍为 deferred，需现场运维同事执行后回写 UAT。⚠️ 原始 `48-HUMAN-UAT.md` / `54-HUMAN-UAT.md` / `56-HUMAN-UAT.md` 三份清单当前磁盘不存在（见 notes/261102-planning-sync-strategy.md 归档策略），执行前须重建；v1.51 Phase 129 另有 H3C 2 条 deferred 与 129-RESULTS.md §五 5 条复测遗留（2026-11-08 开放项盘点 #A5）。
+4. **全量同步节流** — 3 小时全量 cron（sync_interval=10800）+ 失败后每 5 分钟 tick 重试，重试风暴与节流策略可优化。（2026-11-08 开放项盘点 #A6）
+5. **同步可观测性** — 把 v1.21 期间用于捕获重放窗口漂移的采样脚本（`scripts/uat61-t1-poller-v5.ps1`）产品化为常态化的同步漂移告警。（2026-11-08 开放项盘点 #A7）
+6. **v1.23 明确延后项**（用户裁定 2026-10-27）— react-refresh 33 处清零 / devices 页 692 行拆分 / 三态组件（Empty/Skeleton/ErrorAlert）推广 — ✅ 已落地（v1.24 Phase 82/83 + PageTable 三态组件），不再挂账。
 
 ## Past Milestone: v1.17 资产对账 (Asset Reconciliation) — ✅ SHIPPED 2026-07-03（历史归档、非当前状态）
 
@@ -262,7 +349,7 @@ previous_update: 2026-10-31 v1.51 milestone INITIATED（端口写生产级操作
 
 **Seed:** .planning/seeds/asset-reconciliation-v1.17.md
 
-**Todo:** .planning/todos/pending/v1.17-reconciliation-decisions.md (T1-T30)
+**Todo（历史归档）:** .planning/todos/done/v1.17-reconciliation-decisions.md（v1.17 已 SHIPPED 2026-07-03，T1-T30 为 2026-06-27 原始计划，勿再推进）
 
 # RuoYi-Next 运维管理系统
 
@@ -347,7 +434,17 @@ estate.
   - W5 E2E + UAT Deferral + Docs: scrapligo FileTransport 10 TestE2E_* (闭环 Phase 51 mockDeviceExecutor 不调 fn 漏洞) + API响应规范 + 安全设计 + CHANGELOG/README/MILESTONES/STATE 文档同步 + 54-HUMAN-UAT.md 7 项 deferred (owner = 现场运维同事)
   - Phase 55 Tech-Debt Cleanup: WR-02 antd validator 3-param signature + IN-01 instanceof Error narrowing + IN-02 eslint-disable placement 修正 (Lesson: directive 紧贴 `}, []);` 而非 useEffect 开头) + HealthCard.test.tsx regex match + CR-02 后端 batch_orchestrator.go fallback port 归属跨层防御 (纵深双保险)
 
-### 历史 REQ 清单归档（当前 Active 为 v1.52 Phases 130-133，见文档顶部；以下 v1.25 及更早条目均为非当前状态）
+### 历史 REQ 清单归档（v1.53 已 SHIPPED，24 REQ 见 `.planning/milestones/v1.53-REQUIREMENTS.md`；以下均为非当前状态）
+
+### Validated — v1.53 开放项全量清偿（2026-11-08 SHIPPED）
+
+- ✓ **FIX-01~14**: 14 条代码可修开放项全部交付 — v1.53
+- ✓ **VAL-07**: 人工验证执行框架（5 份重建清单 + 79 条跟踪表 + 回写口径）— v1.53
+- ✓ **ACK-01~02**: LOCKED 残余 / 已知约束结论落盘 — v1.53
+- ✓ **GOV-01**: 临时清单归档 + 权威交回 GSD + 一致性复核 — v1.53
+- ○ **VAL-01~06**: 交付物已落盘，实际人工验证待执行（受生产 PG 只读 / 写授权 / 现场真机 / DBA 回传约束，跟踪表 79 条全部待执行、0 勾选）— 非阻断，见 `.planning/notes/261108-human-verification-tracker.md`
+- 归档清单：`.planning/milestones/v1.53-REQUIREMENTS.md`（24 REQ，18 勾选 + 6 项待人工验证）
+
 
 #### v1.25 全站权限治理与样式收敛（历史归档 / SHIPPED 2026-10-30，非当前里程碑）
 
@@ -704,4 +801,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-11-07 after v1.52 立项（运维域数据权限统一收口·终态，Phases 130-133，7 REQ DS-01~07）*
+*Last updated: 2026-11-08 after v1.53 milestone SHIPPED & ARCHIVED（开放项全量清偿，8/8 Phase、18 REQ 交付 + 6 项人工验证跟踪、21 条开放项全覆盖；全量回归全绿；GSD `milestone complete` 完成归档与权威交回，产物见 `.planning/milestones/v1.53-*`；路径映射见 `.planning/ARCHIVE-INDEX.md`）*

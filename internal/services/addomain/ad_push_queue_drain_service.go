@@ -417,6 +417,18 @@ func (d *ADPushDrainer) drainRow(ctx context.Context, c LDAPClientIface, row mod
 		}
 		d.markPushed(ctx, row.ID, now)
 
+	case models.ADPushActionEnable:
+		// FIX-01: sys 恢复用户（软删恢复 / 状态 1→0 启用）→ 重新启用 AD 账号。
+		// UAC 544 Replace，幂等可重放；原语 ldap_client.go EnableUser 现成。
+		// ⚠ 身份校验在**入队侧**已完成（EnqueueEnableOnRestore / CheckRestoreIdentityForEnable），
+		//   ad_dn 已漂移的恢复根本不会入队；排水侧只按闭包内重读到的 ad_dn 执行，
+		//   不在 LDAP 写前后做任何身份改写（D-05 闭包重读 + D-03 只读不变量）。
+		if err := c.EnableUser(*user.AdDn); err != nil {
+			d.handlePushError(ctx, row, now, err, "enable")
+			return
+		}
+		d.markPushed(ctx, row.ID, now)
+
 	case models.ADPushActionUpdateUser:
 		// 闭包内重读到的最新值（不依赖入队时刻的旧值 —— compare-and-move 的前提）。
 		updateReq := buildDrainUpdateReq(user)

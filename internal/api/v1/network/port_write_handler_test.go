@@ -49,6 +49,9 @@ type mockPortWriteService struct {
 	// Phase 121 (PORTW-01) preview mock outputs
 	previewOut *portwrite.PreviewResult
 	previewErr error
+	// Phase 138 (FIX-04) physical write mock outputs
+	physicalOut *portwrite.PortResult
+	physicalErr error
 
 	shutdownCalls     int
 	undoCalls         int
@@ -141,6 +144,14 @@ func (m *mockPortWriteService) TrunkWrite(ctx context.Context, portID string, ac
 
 // PortSecWrite Phase 125 (PWX-02) mock：返回 succeeded PortResult。
 func (m *mockPortWriteService) PortSecWrite(ctx context.Context, portID string, action portwrite.Action, params portwrite.PortSecParams, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
+	return &portwrite.PortResult{PortID: portID, Action: action, Status: "succeeded"}, nil
+}
+
+// PhysicalWrite Phase 138 (FIX-04) mock：返回 succeeded PortResult（带 Extra 回显）。
+func (m *mockPortWriteService) PhysicalWrite(ctx context.Context, portID string, action portwrite.Action, params portwrite.PhysicalParams, operator string, _ ...portwrite.WriteOption) (*portwrite.PortResult, error) {
+	if m.physicalOut != nil || m.physicalErr != nil {
+		return m.physicalOut, m.physicalErr
+	}
 	return &portwrite.PortResult{PortID: portID, Action: action, Status: "succeeded"}, nil
 }
 

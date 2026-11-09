@@ -72,5 +72,7 @@ func SetupPortWriteRouter(r *gin.RouterGroup, core *core.Core) {
 	write.POST("/trunk", handler.TrunkWrite)
 	// v1.51 (Phase 125 PWX-02)：端口安全（单端点五动作）
 	write.POST("/portsec", handler.PortSecWrite)
+	// v1.53 (Phase 138 FIX-04)：物理参数速率/双工/MTU（单端点三动作，复用组级权限）
+	write.POST("/physical", handler.PhysicalWrite)
 }
 

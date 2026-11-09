@@ -140,11 +140,16 @@ func importData(entityType string, core *core.Core) gin.HandlerFunc {
 		// 绝不记录原始 Excel 行数据（T-34-W3-01 信息泄露缓解）。OperType=Import(6)。
 		// Phase 132（裁定 §4）：补「范围档位 + 越界行数」，导入逐行可见集校验的
 		// 聚合计数入审计链；All 档同样记录档位保证完整（裁定 §2 硬约束 4）。
+		// Phase 150：越界聚合仅在此服务端 operlog 审计链，HTTP 响应体零回显；
+		// result.ScopeOutOfScope 带 json:"-"，永不序列化（D-6）。
 		operlog.Record(c, core.OperLogService, core.GetDB(), excelModuleName(entityType), operlog.OperTypeImport,
 			operlog.WithOperParam(fmt.Sprintf(
 				`{"filename":%q,"size":%d,"inserted":%d,"updated":%d,"failed":%d,"scopeTier":%q,"outOfScope":%d}`,
 				file.Filename, file.Size, result.Inserted, result.Updated, result.Failed,
 				opsServices.ScopeWriteTier(c.Request.Context()), result.ScopeOutOfScope)))
+		// gin.H 形状不变（inserted/updated/failed/errors）。Phase 150（D-6）：
+		// failed 仅统计用户上传文件自身的校验失败、不含越界行数；errors 不含越界行。
+		// 故同一份上传文件、不同越界行数 N−M 时这两部分逐字节相同（F-4 间接泄漏根治）。
 		response.Success(c, gin.H{
 			"inserted": result.Inserted,
 			"updated":  result.Updated,

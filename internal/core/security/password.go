@@ -25,11 +25,11 @@ type PasswordConfig struct {
 // 提供安全且性能平衡的默认配置
 //
 // P1 fix: Iterations 提升到 600000 (600k):
-// - OWASP 2023 baseline for PBKDF2-SM3; backward-compat with 100k hashes via embedded iteration count
-// - OWASP 2023 推荐 PBKDF2-HMAC-SHA256 ≥ 600,000;SM3 计算成本与 SHA-256 接近
-// - 600k 显著提高离线爆破成本(从分钟级提升到小时级)
-// - 哈希格式 $sm3$iterations$salt$hash 已嵌入 iterations,旧密码可继续验证
-//   (用 hash 里嵌入的旧值,仅新 hash 用 600k,无迁移成本)
+//   - OWASP 2023 baseline for PBKDF2-SM3; backward-compat with 100k hashes via embedded iteration count
+//   - OWASP 2023 推荐 PBKDF2-HMAC-SHA256 ≥ 600,000;SM3 计算成本与 SHA-256 接近
+//   - 600k 显著提高离线爆破成本(从分钟级提升到小时级)
+//   - 哈希格式 $sm3$iterations$salt$hash 已嵌入 iterations,旧密码可继续验证
+//     (用 hash 里嵌入的旧值,仅新 hash 用 600k,无迁移成本)
 var DefaultPasswordConfig = &PasswordConfig{
 	Iterations: 600000, // SM3-PBKDF2 抗离线爆破基线
 	SaltLength: 16,     // 128位盐值，提供足够的随机性
@@ -50,7 +50,7 @@ func NewPasswordManager(config *PasswordConfig) *PasswordManager {
 	return &PasswordManager{config: config}
 }
 
-// pbkdf2SM3 基于SM3的PBKDF2实现
+// pbkdf2SM3 基于SM3的PBKDF2实现（单块契约）
 // 使用国密SM3算法作为伪随机函数(PRF)，实现PBKDF2密钥派生
 // 参数：
 //   - password: 原始密码
@@ -63,16 +63,34 @@ func NewPasswordManager(config *PasswordConfig) *PasswordManager {
 //  2. U2 = SM3(U1)
 //  3. ...
 //  4. result = U1 XOR U2 XOR ... XOR Uc
-// 注意:本实现仅支持 keyLen ≤ 32 (= SM3 摘要长度)。计数器固定为 block 1 (0x00000001),
-// 未实现多块循环。密码哈希场景 keyLen=32 安全;若未来以 keyLen > 32 调用,需补全多块循环
-// (每个 block i 用 INT32_BE(i) 作计数器,逐块填充并 XOR 累加)。
-func (pm *PasswordManager) pbkdf2SM3(password, salt []byte, iterations, keyLen int) []byte {
+//
+// 契约（Phase 146）：
+//   - 仅支持 1<=keyLen<=32 单块；计数器固定为 block 1 (0x00000001)，未实现多块循环
+//     （CRYPTO-04 多块能力扩展当前无需求，缺席不算遗留缺陷）
+//   - keyLen<=0 / keyLen>32 / iterations<=0 一律返回 error（禁 panic、禁静默弱密钥）
+//   - keyLen=32 时 l=1,i=1，与历史实现逐字节一致（存量 $sm3$ 哈希零迁移）
+func (pm *PasswordManager) pbkdf2SM3(password, salt []byte, iterations, keyLen int) ([]byte, error) {
+	// 入口守卫：把未定义行为变定义行为，非法入参绝不静默产出「后半段全零」的低熵弱密钥
+	if keyLen <= 0 {
+		return nil, fmt.Errorf("pbkdf2SM3: 非法 keyLen=%d，须为正数且不超过 SM3 摘要长度 32", keyLen)
+	}
+	if keyLen > 32 {
+		return nil, fmt.Errorf("pbkdf2SM3: keyLen=%d 超过 32，当前实现仅支持单块（INT32_BE(1)），拒绝静默弱密钥", keyLen)
+	}
+	if iterations <= 0 {
+		return nil, fmt.Errorf("pbkdf2SM3: 非法 iterations=%d，须为正数", iterations)
+	}
+
 	// 初始化数据块和结果
 	block := make([]byte, 32) // SM3输出长度为32字节
 	result := make([]byte, keyLen)
 
 	// 构造初始数据块：password || salt || 计数器(00000001)
-	blockData := append(password, salt...)
+	// make+append 避免 append(password, salt...) 在 cap 富余时原地改写调用方底层数组（slice 别名）；
+	// 输入字节序列仍严格是 password || salt || 0x00000001，与历史实现一致。
+	blockData := make([]byte, 0, len(password)+len(salt)+4)
+	blockData = append(blockData, password...)
+	blockData = append(blockData, salt...)
 	blockData = append(blockData, 0x00, 0x00, 0x00, 0x01)
 
 	// 第一次迭代：计算U1
@@ -93,7 +111,7 @@ func (pm *PasswordManager) pbkdf2SM3(password, salt []byte, iterations, keyLen i
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 // HashPassword 哈希密码
@@ -106,8 +124,11 @@ func (pm *PasswordManager) HashPassword(password string) (string, error) {
 		return "", fmt.Errorf("生成盐失败: %w", err)
 	}
 
-	// 2. 使用SM3进行PBKDF2迭代哈希
-	hash := pm.pbkdf2SM3([]byte(password), salt, pm.config.Iterations, 32)
+	// 2. 使用SM3进行PBKDF2迭代哈希（keyLen 恒 32，接 KDF error）
+	hash, err := pm.pbkdf2SM3([]byte(password), salt, pm.config.Iterations, 32)
+	if err != nil {
+		return "", fmt.Errorf("哈希密码失败: %w", err)
+	}
 
 	// 3. 编码为Base64格式，便于存储
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
@@ -145,10 +166,19 @@ func (pm *PasswordManager) VerifyPassword(password, hash string) (bool, error) {
 		return false, fmt.Errorf("解码哈希失败: %w", err)
 	}
 
-	// 4. 使用相同参数重新计算密码哈希
-	comparisonHash := pm.pbkdf2SM3([]byte(password), salt, iterations, len(hashBytes))
+	// 4. 显式校验存储哈希长度：$sm3$ 格式恒 32 字节
+	// 非 32 字节属数据损坏 / 伪造，与「密码输错」不同安全类别，返回 error（可观测 / 可审计）。
+	if len(hashBytes) != 32 {
+		return false, fmt.Errorf("密码哈希长度非法: got %d bytes, want 32（$sm3$ 格式恒 32 字节）", len(hashBytes))
+	}
 
-	// 5. 使用恒定时间比较，防止时序攻击
+	// 5. 使用相同参数重新计算密码哈希（keyLen 写字面量 32，不再用 len(hashBytes) 作 keyLen）
+	comparisonHash, err := pm.pbkdf2SM3([]byte(password), salt, iterations, 32)
+	if err != nil {
+		return false, fmt.Errorf("重算密码哈希失败: %w", err)
+	}
+
+	// 6. 使用恒定时间比较，防止时序攻击
 	return subtle.ConstantTimeCompare(hashBytes, comparisonHash) == 1, nil
 }
 
@@ -160,11 +190,10 @@ func GenerateRandomPassword(length int) (string, error) {
 		length = 8
 	}
 
-	// 定义字符集：大小写字母、数字、特殊字符
+	// 定义字符集：大小写字母、数字和特殊字符
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
 	password := make([]byte, length)
 	charsetLen := big.NewInt(int64(len(charset)))
-
 	// P1 fix: 使用 crypto/rand.Int 替代 randomByte[0] % len(charset)。
 	// 取模会引入模偏置 (charset=70 时 256 mod 70 = 46,前 46 字符出现概率
 	// 比后 24 字符高 ~20%),降低密码熵。

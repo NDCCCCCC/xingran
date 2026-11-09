@@ -72,6 +72,9 @@ type mockLDAPClient struct {
 	moveUserCalls       int
 	moveUserTargets     []string
 	disableUserCalls    int
+	// enableUserCalls 为 FIX-01 enable 排水用例新增（与 disableUserCalls 对称），
+	// 用于断言 drainRow 的 enable 分支确实触达 LDAPClientIface.EnableUser。
+	enableUserCalls     int
 	updateUserAttrCalls int
 	// updateUserAttrLastAttrs 记录**最后一次** UpdateUserAttribute 的 attrs 实参
 	// （Phase 58 Plan 04 追加）：排水器"闭包内重读最新值"的可观测证据 ——
@@ -191,6 +194,7 @@ func (m *mockLDAPClient) MoveUser(userDN, newOUDN string) error {
 }
 
 func (m *mockLDAPClient) EnableUser(userDN string) error {
+	m.enableUserCalls++
 	return m.enableUserErr
 }
 

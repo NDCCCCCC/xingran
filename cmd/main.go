@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	// 添加 pprof 支持，仅用于性能分析
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,20 +14,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
 	"github.com/xingran-next/xingran-go-backend/internal/api"
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
-	"github.com/xingran-next/xingran-go-backend/internal/server"
+	// 注册 swaggo 生成的 Swagger 规范（init() → swag.Register），供 /swagger/*any 读取
+	_ "github.com/xingran-next/xingran-go-backend/internal/docs"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/server"
 	macHistoryQueryService "github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
-
-	// 添加 pprof 支持，仅用于性能分析
-	_ "net/http/pprof"
 )
 
 const (

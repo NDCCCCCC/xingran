@@ -1,4 +1,91 @@
+> ℹ️ 本文件为各里程碑**收档时点快照**（含当时的 Known Gaps / deferred 表述），仅供追溯；当前状态以 `.planning/STATE.md` frontmatter、`.planning/ROADMAP.md` / `.planning/MILESTONES.md` 为准。例如本文 v1.24 段落「Known Gaps 转 v1.25 候选，用户裁定暂不立项」是当时记录，实际 v1.25 已全部立项并 SHIPPED（见 PROJECT.md:201）。
+
 # Milestones
+
+## v1.55 LOCKED 残余根治 (Shipped: 2026-11-09)
+
+**Phases completed:** 7 phases (145-151，W1 `145∥146∥147` → W2 `148∥149∥150`（函数级归属表凭证）→ W3 `151` 最后执行) | **Requirements:** 23/23 (AUDIT×3 · CRYPTO×4（CRYPTO-04 optional 按硬 gate 合规跳过） · CACHE×3 · DIALECT×4 · SCOPE×4 · SIDECHANNEL×4 · ARCH×1，100% Satisfied) | **7 planner + 2 plan-checker + 7 executor + Lead 集成** | **回归闸门**：`go build ./...` / `go test ./...` / `tsc` / `lint:ci` **ALL PASS**（含 forbidigo / check-route-registry 713 零漂移）/ 全量 vitest 594 文件（唯一 dashboard 动态 import 超时为 W1/W2 已定性 flaky，单跑复绿）
+
+**取数**：`.planning/notes/261109-v154-locked-root-cause-analysis.md`（3 个并行只读 subagent + Lead 交叉核对，判定 6 项 LOCKED 中 5 项裁定不成立/理由被高估、可从根源根治）+ 用户 2026-11-09 拍板 5 项决策（DECISION-① 允许推翻「范围快照回显」产品语义 / FUTURE-01 随 ① 关闭 / CI-PG 登记前置依赖 / 密码免盘点 / 例外缓存立即一致）。
+
+**Key accomplishments（6 项 LOCKED / 7 子项全部从根源清偿）:**
+1. ✅ **① P1-5 侧信道（A+B 组合根治）** — A(150)：全档位删 6 个规模字段、整段删全库 `countQ`、越界行静默跳过 + `ScopeOutOfScope json:"-"`、5 个差分攻击测试（N 变化响应逐字节相等）、All 档零回归、`ScopeWriteOperParam` 审计链一字不改；B(151)：新建 `pkg/query/scoped_db.go` + `scoped_registry.go`（回调注册制、零 `internal/**` import）+ 资源归属注册表（引用 149/131 单一真实源、幂等守卫 SQL 零漂移）+ `GORMRepository` 仅 `GetByID`/`List` 两行读链改走 ScopedDB（构造签名与 Create/Update/Delete/BatchDelete 写链一字不动）+ 8 核心读端点 32 处起链 + `scope_filter.go` 强制层 + 响应契约层防复活断言。**A+B 均完成 → P1-5 侧信道根治达成**；全仓基座影响面实证 = `GORMRepository[T]` 17 文件/56 处/仅 2 包，system/pkg/vdi 零直接消费。
+2. ✅ **② 5 项显式豁免面** — 149 方案 D 零迁移收口：`scope_entities.go` 扩 5 实体 + 归属链（walls/doors/texts 经 floor、photos 经 room→serverRoom→building、location-alias 用已有 `dept_id` 直挂）；`router.go` 仅 +2 行补挂 rooms/photos `DataScopePermission`（原「连挂都没挂」）；写端点 403/批量按 `filterEntityVisibleIDs` 裁剪；保存侧 `VisibleBaseline`+增量 diff 防误删越界几何；Lead 集成期把 `datascope_mount_test.go` 契约基线从「31 / roomPhotos 豁免」更新为「32 / 恰好挂 1 处」。
+3. ✅ **③-A `RightCast:"text"` / ③-B PG 专属 CTE** — 148：删 `RightCast` 方言机制改语义枚举 + 单侧 `CAST(id AS TEXT)`、去 `Warnf+continue` 静默降级；两处 raw CTE 改**唯一共享 `recallPhysicalRows`** Go 层合并（8 类方言 token 全文件归零、单条/批量口径不分叉）；4 文件 10 处「报错即预期」改真实结果断言；`.golangci.yml` forbidigo 8 类规则 + 存量白名单；能力边界（只匹配 AST 标识符）如实登记。
+4. ✅ **④ operlog e2e 静态门禁** — 145：静态段 Go 单测化（`runtime.Caller` 锚定仓库根）、两脚本删静态段/凭据门禁下移、两 driver 设 `cmd.Dir`、ci.yml/README 登记；实测原 shell 静态段真跑 = `exit 1`（9 项白名单漂移）=「从未真跑过」实证；判定从手写白名单升级为三组可验证分类，trunk operlog 真实缺口用 `knownGapHandlers` 可观测 Skip 登记（非放行）。
+5. ✅ **⑤ `invalidateCache` no-op / ⑥ `pbkdf2SM3`** — 147：删 2 死键/2 helper/空函数（6 处旧标识符全处置含测试调用）+ 方案(a) 广播失效 `reconciliation:health:workstation:*`、写后立即一致、memory/redis 同路径；146：三类守卫显式 error + `VerifyPassword len==32` 校验 + 4 组黄金向量逐字节一致（`keyLen=32` 零迁移）、CRYPTO-04 按硬 gate 合规跳过（守卫已收口、非遗留缺陷）。
+
+**Known Gaps（登记，非阻断，不伪造闭环）**：
+- **验证类残余**：79 条人工验证跟踪表保持 **0 勾选**；FIX-01 实机 AD/LDAP UAT｜FIX-04 真机逐型号取证 7 项｜FIX-09 HTTP P99 压测｜FIX-13 生产库 migration 236/237；`TEST_PG_DSN` 双跑前置依赖（本期不建 `services: postgres`）；149 的 `149-UAT-RECHECK.md`（D1/D2）与 150 的 `150-UAT-BACKFILL.md` 重跑窗口/验收人待 QA 裁定。
+- **v1.55 新增登记**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 成功路径无 `operlog.Record`，W2 未覆盖，待后续 quick）｜`computeByWorkstation:1074` append 缺陷｜两份 `operlog_e2e_verify.sh` 重复副本未物理合并｜forbidigo 能力边界｜`room_photo`/`location_alias` 两 handler HTTP 透传口径｜v1.54 新增 7 项 GAP 仍挂账。逐项见 `STATE.md ## Deferred Items` v1.55 行与各 phase `*-SUMMARY.md`。
+- **FUTURE-01 已关闭**：随 ① 的 A+B 根治一并关闭，4 处引用（`REQUIREMENTS.md` / `ROADMAP.md` / `STATE.md` / `261108-v153-locked-residuals.md:63`）已由 Lead 收档清理，不再是未来候选。
+- **收档计数修正**：立项期草案/ROADMAP 沿用「24 REQ」口径，实为把 CRYPTO-04 的 `optional` 标注误计入；逐组实证 = 23，以 23 为准（`REQUIREMENTS.md` Coverage 段已登记）。
+
+**交付证据**：7 份 `.planning/phases/{145..151}-*/*-SUMMARY.md`（其中 151 含全仓基座影响面评估与 3 个 checker 边界披露）+ `149-UAT-RECHECK.md` + `150-UAT-BACKFILL.md`；根因判定 `.planning/notes/261109-v154-locked-root-cause-analysis.md`；草案 `.planning/notes/261109-v155-requirements-draft.md`；6 项 LOCKED 裁定原文 `.planning/notes/261108-v153-locked-residuals.md` 保持只读。
+
+---
+
+## v1.54 真实代码缺口清偿 (Shipped: 2026-11-09)
+
+**Phases completed:** 3 phases (142-144，其中 144 拆后端/前端两个并行 executor，共 4 PLAN) | **Requirements:** 7/7 (DISC-01/02 · ALRT-01/02/03 · PORT-01/02，100% Satisfied) | **W1 四 executor 并行 + Lead 集成** | **回归闸门**：`go build ./...` / `go test ./...` / `tsc` / `lint:ci` **ALL PASS**（含 check-permission-codes 双向零漂移、check-route-registry 713 路由）/ 全量 vitest 全绿
+
+**取数**：`.planning/STATE.md ## Deferred Items` 中 v1.53 收档显式披露的 4 项真实代码缺口；用户 2026-11-08 裁定「仅纯代码缺口 4 项」，跳过领域研究、授权自动提交。
+
+**Key accomplishments:**
+1. ✅ **发现设备真实导入（DISC）** — `ImportDiscoveredDevices` 从 `return len(deviceIDs), nil` 改为读 `sys_device_discovery_result` → `ip_address` 去重（批内 / 已存在跳过 / 软删恢复）→ 单事务批量写 `sys_network_device`；handler 补缓存失效；9 个新单测 + 2 处旧 stub 断言改写；零 migration。
+2. ✅ **端口写物理参数收口（PORT）** — 型号级 `physicalProfile` 能力矩阵（代码常量 + 测试锁定，回退链 / `Evidence=""` 未取证诚实标注 / Cisco·Maipu 显式 Unsupported）；批量 speed/duplex/mtu 接入（复用 Phase 122 进度事件零改动、`applyPhysicalAuditExtra` 修 `audit.after_value`、sentinel 400）；前端 `PortWriteAction` 15→18 + 单条/批量表单 + `evidenceLevel` 徽标。
+3. ✅ **同步漂移告警通道收口（ALRT）** — 后端 5 端点（status/logs/config/config/update/trigger）+ 权限三方一致 + migration 238（菜单/4 F 型权限/9 行 sys_config seed，**database.go 两处注册**）；`emit()` 改走 `NoticeService` 发布链路（修铃铛收不到）+ `ad_sync_drift_alert` WS 全员广播 + 路线 A 通用 Webhook（凭证脱敏）；前端菜单驱动页面（状态卡/日志表/配置表单/立即检测/WS 实时，**不新建第二条 WS**）。
+4. ✅ **Phase 143 移交项闭环** — `pkg/permission/config.go` 补登 `POST /network/ports/write/physical`（复用 `NetworkPortWrite`）+ 测试。
+5. ✅ **集成修复** — Lead 复核修 7 个前端 lint 错误（裸 antd 组件 → `AppSelect/AppInput/AppTextArea`、裸 hex → `var(--theme-*)`）、antd 6 弃用 `size="middle"`→`medium`；同批更新 4 个计数不变量基线（新增页 77→78、新增 `*Api.ts` 16→17、`PAGE_TITLES` 4→5），全部附裁决理由。
+
+**Known Gaps（登记，非阻断）**：
+- **验证类残余（不伪造闭环）**：FIX-01 实机 AD/LDAP UAT｜FIX-04 三厂商物理参数真机逐型号取证 7 项｜FIX-09 端到端 HTTP P99 压测｜FIX-13 生产库 migration 236/237 待执行；79 条人工验证跟踪表 **0 勾选**；6 项 LOCKED 残余不写修复代码。
+- **v1.54 新增边界**：告警「标记已读」未实现（后端无该契约）｜企微/钉钉专用 markdown + 加签（路线 B）未做｜`sys_object_id` 已采集未落库、型号 key 仅 `NetworkDevice.Model`｜批量物理参数无自动回滚（预览/审计已显式警示）｜发现导入链路 3 处顺带隐患｜e2e 归位｜`RequiresInterfaceView` 与型号画像 `RequiresView` 联动点。逐项见 4 份 phase `*-SUMMARY.md` 与 `STATE.md ## Deferred Items` 的 v1.54 行。
+
+**交付证据**：`.planning/phases/142-disc-01-02/142-SUMMARY.md`、`143-port-01-02/143-SUMMARY.md`、`144-alrt-01-02-03/144-01-backend-SUMMARY.md`、`144-02-frontend-SUMMARY.md`；架构裁定 `.planning/notes/261108-v154-architecture-decisions.md`；集成清单 `.planning/notes/261108-v154-integration-checklist.md`。
+
+---
+
+## v1.53 开放项全量清偿 (Shipped: 2026-11-08)
+
+**Phases completed:** 8 phases (134-141) | **Requirements:** 24 REQ（18 交付 + 6 项人工验证跟踪，不伪造闭环）| **21 条开放项全覆盖** | **回归闸门**：go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例全绿
+
+**Key accomplishments:**
+- AD push 队列 enable 方向 + SAFE-01 身份校验/双向压制、全量同步指数退避节流、常态化同步漂移告警服务
+- 补齐 main.go docs blank import、两生成脚本改产物到 internal/docs 并修 bat 层级、删除 docs/ 下 5 份 Swagger 死文件
+- 接通用户导出/工单评价端点与前端入口，用 migration 236 seed 闭环 OQ-7 五个读权限码恒 403
+- GetDiscoveryResults 补持久化查询链路、rpa-worker 双副本去 browser stub 并修复前端副本基线编译
+- scheduler Rotation 抽共享纯函数对齐 service 双路径、3 厂商×3 参数端口物理参数写全闭环、3 处排序收尾落产品决策结论
+- 对账 MV 30s 超时配置化（默认不变）、5 个登录加密 benchmark 空桩补国密实测并标注测量边界
+- 从 git 历史精确重建 5 份缺失 UAT 清单 + 79 条全部待执行的统一跟踪表与 GSD 产物回写口径
+- 全仓清理临时清单权威引用、归档临时清单与历史 UAT 重建件、用 GSD milestone complete 把权威交回自动生成的 ROADMAP/REQUIREMENTS/STATE/MILESTONES
+
+**Known Gaps（登记，非阻断）**：
+- **人工验证**：6 项（VAL-01~06）交付物已落盘，实际执行受生产 PG 只读 / 写操作授权 / 现场真机 / DBA 回传约束，跟踪表见 `.planning/notes/261108-human-verification-tracker.md`（79 条全部待执行、0 勾选）。
+- **LOCKED 残余**：A8 四项 + B13 两项只落结论不改代码，见 `.planning/notes/261108-v153-locked-residuals.md`。
+- **真实缺口（2026-11-08 收档后补登记）**：`ImportDiscoveredDevices`（`internal/services/device_discovery_service.go:509-523`）仍是简化实现、仅返回 `len(deviceIDs)`，不真正写入 `NetworkDevice`；Phase 137 (FIX-07) 按范围约束未动，属本次临时清单 B10 之外的独立缺口，此前未进入任何 deferred 登记，现补入 `STATE.md ## Deferred Items`。
+- **Phase 自报边界（同上补登记）**：FIX-01 实机 AD/LDAP UAT｜FIX-04 三厂商物理参数真机逐型号取证 + 型号级能力矩阵规则｜FIX-09 端到端 HTTP P99 压测（本次仅计算路径近似基线）｜FIX-11 前端告警页 / WS / 企微钉钉 webhook｜FIX-13 生产库 migration 236/237 待执行｜FIX-05 批量物理参数路径未接入。逐项见 `.planning/milestones/v1.53-phases/*-SUMMARY.md` 与 `STATE.md ## Deferred Items`。
+- 上述补登记为**显式披露**，非 GSD `audit-open` 可扫描的 artifact；收档时 `audit-open` / `audit-uat` 均为全清。
+
+---
+
+## v1.52 运维域数据权限统一收口（终态） (Shipped: 2026-11-07 · Archived: 2026-11-08)
+
+**Phases completed:** 4 phases (130-133) | **Requirements:** 7/7 (DS-01~07) | **Commits:** 24 | **PR:** #75 merged `b56f1286`
+
+**Key accomplishments:**
+
+1. ✅ **ScopeProvider 单一真实源**（`pkg/datascope`）—— 可见部门集统一实现（All/0/unset 特判短路、Custom/Dept/DeptChild 展开、Self 资源语义钩子、异常枚举 fail-closed、多角色 MAX），`DataScopePermission` 注入 ops 全域 26 处挂载，`user_service` 迁移到单一真实源。
+2. ✅ **四域读端点 + Excel 导出独立收口** —— 20 个读函数统一「有效机构 ∈ 可见集」，缓存 key 增 scope 维度，交付 `131-CACHE-INVENTORY.md`，403 越权矩阵 + 跨用户缓存对照 + PG contract 扩展。
+3. ✅ **四域写端点收口** —— Create/Update/Delete/Batch/positions 单条越界显式 403（`NewWithHTTPStatus` 规避框架 401 坑），批量按可见集裁剪，backfill 三层注入，Excel 导入逐行校验，前端「本次范围」四类文案。
+4. ✅ **扩展实体与收尾** —— asset/serverRoom/dedicatedLine/roomDevice 收口（115 个语义断言）、vdi 迁移、删除 `pkg/middleware` 三份死实现 + 死测试、前端 DeptSidebar 联动、5 项显式豁免面登记。
+5. ✅ **独立审查 + CI 红灯修复** —— 3 P0（迁移 235 误嵌 / 权限码 401 / backfill 全库扫描）全修；PR #75 全 checks pass 后合并；回归闸门全绿（go build / go test / vitest 4128 / lint:ci 0 / diff coverage 83.37%）。
+
+**Verification**: 全量闸门全绿（详见 `.planning/MILESTONE-v1.52-SUMMARY.md` §回归闸门）。`closeout_type: override_closeout` —— GSD `audit-open` 前置审计在收档时检出 3 项 `uat_gaps`（`129-HUMAN-UAT.md` / `129-UAT-BACKFILL.md` / `133-UAT.md`，均 `open_scenario_count: 0`），已按 [A] Acknowledge 全部登记为 deferred；另有 3 项历史 debug suppression 结转。**Known verification overrides: 3 newly acknowledged, 3 carried forward**。人工 UAT 挂账见 STATE.md Deferred Items 表（A2/A3/A5/A8）。
+
+**归档产物（2026-11-08 /gsd-complete-milestone）**: `.planning/milestones/v1.52-ROADMAP.md`、`v1.52-REQUIREMENTS.md`、`v1.52-phases/`（6 目录）、`v1.52-quick/`（4 目录）；路径映射见 `.planning/ARCHIVE-INDEX.md`。
+
+---
 
 ## v1.25 全站权限治理与样式收敛 (Shipped: 2026-10-30)
 

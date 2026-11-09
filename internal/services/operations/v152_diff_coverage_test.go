@@ -472,33 +472,36 @@ func TestDiffCov_Backfill_QueryError(t *testing.T) {
 	assert.Contains(t, err.Error(), "sys_user")
 }
 
-// TestDiffCov_Backfill_StatsError 统计查询（Scan→gorm:row callback）失败 →
-// 「统计工位总数失败」。用 callback 精确只打断统计阶段，候选 Find 不受影响。
-func TestDiffCov_Backfill_StatsError(t *testing.T) {
+// TestDiffCov_Backfill_NoGlobalCountQ Phase 150（D-3）：全库 countQ / Scan 已
+// 整段删除。即便打断 gorm:row callback，BackfillDeptFromUser 也不再执行任何
+// 独立统计查询，不再报「统计工位总数失败」；候选查询（gorm:query）正常返回。
+// 该用例同时守护「不带 visibleCond 的全库 COUNT 死代码不得复活」。
+func TestDiffCov_Backfill_NoGlobalCountQ(t *testing.T) {
 	db := newDiffCovDB(t)
-	// 候选 Find 走 gorm:query；统计 Scan 走 gorm:row。替换 row callback 让后者必失败。
 	require.NoError(t, db.Callback().Row().Replace("gorm:row", func(tx *gorm.DB) {
 		tx.AddError(errors.New("模拟统计查询失败"))
 	}))
 	svc := NewWorkstationService(db)
 	res, err := svc.BackfillDeptFromUser(context.Background(), true, false)
-	require.Error(t, err)
-	assert.Nil(t, res)
-	assert.Contains(t, err.Error(), "统计工位总数失败")
-	assert.Contains(t, err.Error(), "模拟统计查询失败")
+	require.NoError(t, err, "全库 countQ 已删，row callback 不应再影响回填")
+	require.NotNil(t, res)
+	assert.Equal(t, 0, res.Candidates, "空夹具候选为 0")
+	assert.Equal(t, 0, res.ToFill)
+	assert.Empty(t, res.Samples)
 }
 
-// TestDiffCov_Backfill_StatsLenZero 空工位表时条件聚合恒有一行(0,0)，
-// len(stats)!=0：断言 SkippedNoUser/BadUserDept 归零且提前返回不写库。
-func TestDiffCov_Backfill_StatsLenZero(t *testing.T) {
+// TestDiffCov_Backfill_EmptyTable 空工位表：候选集为空、零分类、零写库。
+// Phase 150（D-3）：全库 countQ 与 len(stats)==0 提前返回已删，响应体不再含
+// SkippedNoUser / SkippedBadUserDept 全库派生字段；业务数值零回归由 Candidates 承载。
+func TestDiffCov_Backfill_EmptyTable(t *testing.T) {
 	db := newDiffCovDB(t)
 	svc := NewWorkstationService(db)
 	res, err := svc.BackfillDeptFromUser(context.Background(), false, false)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res.Candidates)
 	assert.Equal(t, 0, res.ToFill)
-	assert.Equal(t, 0, res.SkippedNoUser)
-	assert.Equal(t, 0, res.SkippedBadUserDept)
+	assert.Equal(t, 0, res.ToCorrect)
+	assert.Equal(t, 0, res.SkippedAlreadyValid)
 	assert.Empty(t, res.Samples, "无候选时样例为空")
 }
 

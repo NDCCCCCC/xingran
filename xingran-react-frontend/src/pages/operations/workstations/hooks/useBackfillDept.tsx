@@ -107,31 +107,24 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
 
     // 用 modalRef.current.update() 重渲染内容（Checkbox 勾选后刷新预览）。
 
-    // Phase 132「本次范围」文案（裁定 §3）：预览与确认用同一 ScopeResult 快照，
-    // 后端把档位/部门名/总数回显进 BackfillDeptResult，前端只消费不重新解析，
-    // 防范围漂移。文案必须挂进 modalRef.current.update() 刷新链路，否则
-    // Checkbox rerender 会丢失范围行（见下方两处 update + 初始 confirm）。
+    // Phase 150：不再消费范围快照规模，确认框文案不含全库规模（DECISION-①）；
+    // scopeTier / scopeDeptNames / scopeFailClosed 仅作可见集内提示与 fail-closed
+    // 门控。132 的四类「本次范围：…（共 N 条）」文案整体作废，改为不含任何数值
+    // 的可见集内表述；文案仍挂进 modalRef.current.update() 刷新链路。
     const rangeText = (): string => {
       const p = preview;
-      const total = p?.scopeTotal ?? p?.candidates ?? 0;
       const tier = p?.scopeTier ?? "All";
       if (p?.scopeFailClosed || tier === "FailClosed") {
         return "本次范围：无（数据权限异常，请联系管理员）";
       }
       if (tier === "All") {
-        return `本次范围：全库（共 ${total} 条）`;
+        return "本次范围：全部工位";
       }
       if (tier === "Self") {
-        return `本次范围：仅本人关联工位（共 ${total} 条）`;
+        return "本次范围：仅本人关联工位";
       }
-      // Custom/Dept/DeptChild：列前 3 个部门名 + 「等 M 个部门」。
-      const names = p?.scopeDeptNames ?? [];
-      const deptTotal = p?.scopeDeptTotal ?? names.length;
-      const label =
-        names.length > 0
-          ? `${names.slice(0, 3).join("、")}${deptTotal > 3 ? ` 等 ${deptTotal} 个部门` : ""}`
-          : `${deptTotal} 个部门`;
-      return `本次范围：${label}及子部门（共 ${total} 条）`;
+      // Custom/Dept/DeptChild：不含「共 N 条」/「等 M 个部门」等任何全库规模数值。
+      return "本次范围：当前数据权限可见的部门及子部门";
     };
 
     const okButtonProps = () => ({
@@ -153,12 +146,8 @@ export function useBackfillDept(onSuccess: () => void): UseBackfillDeptReturn {
           <Text strong style={{ color: "var(--theme-success)" }}>
             {preview?.toFill ?? 0}
           </Text>
-          <Text> 条；跳过（无用户 / 用户部门无效 / 已一致） </Text>
-          <Text strong>
-            {(preview?.skippedNoUser ?? 0) +
-              (preview?.skippedBadUserDept ?? 0) +
-              (preview?.skippedAlreadyValid ?? 0)}
-          </Text>
+          <Text> 条；跳过（已一致） </Text>
+          <Text strong>{preview?.skippedAlreadyValid ?? 0}</Text>
           <Text> 条。</Text>
         </div>
         {fixMismatch && (

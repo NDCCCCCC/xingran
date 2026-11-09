@@ -55,6 +55,8 @@ jobs:
         # If a package starts timing out, fall back to a whitelist:
         #   go test ./internal/config/... ./pkg/...
         # and re-admit packages one by one.
+        # Phase 145: static operlog coverage assertions in ./internal/utils/operlog
+        # are hard-gated here (go test ./internal/... 天然含该包).
         # Phase 71 GOV-01: -coverprofile + -covermode=atomic (count=1 already
         # present). atomic mode is Go 1.21+ standalone (no -race needed; -race
         # would 5-10x coverage time, forbidden by D-01 Claude's Discretion).

@@ -101,9 +101,10 @@ var ExcelConfigs = map[string]ExcelConfig{
 		CachePatterns: []string{"user:*", "users:*"},
 		UniqueKeys:    []string{"username"}, // 按用户名判断重复
 		PartialUpdate: true,                 // 启用部分更新（只更新有值的字段）
-		// ⚠ 列顺序必须与"人员详情.xlsx"一致：validateAndParseRow 按位置 row[i] 匹配，
-		// 不按表头名（Header 仅用于错误提示）。Excel 实际列序：昵称/用户名/工号/邮箱/
-		// 手机号/科室代码/科室名称（共 7 列）。
+		// ⚠ 列顺序按本配置 Columns 定义固定（与 GenerateTemplate("user") 生成的导入模板一致）：
+		// validateAndParseRow 按位置 row[i] 匹配，不按表头名（Header 仅用于错误提示）。
+		// 模板由代码动态生成、不落盘，禁止依赖仓库中的任何 .xlsx 文件（见 AGENTS.md）。
+		// Excel 实际列序：昵称/用户名/工号/邮箱/手机号/科室代码/科室名称（共 7 列）。
 		Columns: []ExcelColumn{
 			{Field: "nickname", Header: "昵称", Aliases: []string{"姓名", "用户姓名", "真实姓名"}, MaxLength: 64, DBField: "nickname"},
 			{Field: "username", Header: "用户名", Aliases: []string{"账号", "登录名", "用户账号", "登录账号"}, Required: true, Unique: true, MaxLength: 64, UpsertKey: true, DBField: "username"},

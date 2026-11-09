@@ -6,9 +6,9 @@ package operations
 // "AD 设备"全部读 sys_ad_computer/sys_ad_user 预落库行):
 //   - 7 表手动 CREATE TABLE fixture(physical_test.go:86-103 先例),列集精简到被测函数实际引用列
 //   - 种子行照 analog 裸 INSERT INTO 风格
-//   - GetPhysicalDevices* 仅覆盖 sqlite 可达前段:越过全部早退后 PG-only SQL
-//     (DISTINCT ON/REGEXP_REPLACE/::text) 在 sqlite 必报错属预期 —
-//     「报错即证明越过早退」手法照抄 physical_test.go:249-284(P-77-1:勿为覆盖率改 SQL)
+//   - GetPhysicalDevices* 在 Phase 148 后走**双方言共享召回** recallPhysicalRows
+//     （GORM 链式 + Go 层合并），SQLite 可真实执行；相关用例改为「建齐链路表 +
+//     对逐字段真实结果断言」，不再把 SQL 报错当预期。
 //   - 状态/来源断言一律引用 internal/models 具名常量,禁裸 0/1(status_constants_test.go 锁值)
 //
 // 本文件 Task 1 = 查询链(GetADDevices 家族 + GetPhysicalDevices 前段 + 纯函数边角);
@@ -565,10 +565,85 @@ func TestWSD77_GetAssetDevicesByWorkstations(t *testing.T) {
 	assert.Contains(t, err.Error(), "批量查询 ops_asset 失败")
 }
 
-// TestWSD77_GetPhysicalDevices_FrontSegment 仅 sqlite 可达前段:
-// ParamMissing / ParamInvalid / 工位不存在三分支正常断言;越过后 PG-only SQL
-// (DISTINCT ON/REGEXP_REPLACE/::text) 在 sqlite 必报错 — 报错即证明已越过全部早退
-// (physical_test.go:249-284 手法;P-77-1:勿为覆盖率改 SQL,D-03 无据)。
+// wsd77SeedPhysicalChain 在既有 7 表 fixture 上补建 Phase 148 共享召回依赖的链路表，
+// 并插入一条完整链路：信息点(active) → 端口 → 网络设备 → 实测 MAC → 资产。
+// 返回 canonical MAC，供单工位与批量两侧做逐字段比对。
+func wsd77SeedPhysicalChain(t *testing.T, db *gorm.DB, wsID string) string {
+	t.Helper()
+	for _, ddl := range []string{
+		`CREATE TABLE ops_info_points (
+			id TEXT PRIMARY KEY, name TEXT, workstation_id TEXT, device_id TEXT,
+			port_id TEXT, status INTEGER DEFAULT 0, deleted_at DATETIME)`,
+		`CREATE TABLE sys_device_port_status (
+			id TEXT PRIMARY KEY, device_id TEXT, interface_name TEXT)`,
+		`CREATE TABLE sys_network_device (id TEXT PRIMARY KEY, device_name TEXT)`,
+		`CREATE TABLE sys_device_mac_address (
+			id TEXT PRIMARY KEY, device_id TEXT, mac_address TEXT, interface_name TEXT,
+			collected_at DATETIME)`,
+		`CREATE TABLE sys_device_mac_history (
+			id TEXT PRIMARY KEY, device_id TEXT, mac_address TEXT, interface_name TEXT,
+			last_seen DATETIME, device_name_snapshot TEXT, vlan_id INTEGER, event_type TEXT,
+			first_seen DATETIME, collected_at DATETIME, created_at DATETIME)`,
+	} {
+		require.NoError(t, db.Exec(ddl).Error, "补建链路表失败")
+	}
+	const (
+		devID  = "dev-148-a"
+		portID = "port-148-a"
+		iface  = "GE2/6"
+		mac    = "B0:22:7A:2E:4A:4F" // canonical 大写冒号，与生产库一致
+	)
+	wsd77Exec(t, db, `INSERT INTO sys_network_device (id, device_name) VALUES (?, 'CX-148')`, devID)
+	wsd77Exec(t, db, `INSERT INTO sys_device_port_status (id, device_id, interface_name) VALUES (?, ?, ?)`,
+		portID, devID, iface)
+	wsd77Exec(t, db, `INSERT INTO ops_info_points
+		(id, name, workstation_id, device_id, port_id, status, deleted_at)
+		VALUES ('ip-148-a', '3f130-A', ?, ?, ?, 0, NULL)`, wsID, devID, portID)
+	// 接口名用 GigabitEthernet 前缀，验证 Go 层前缀折叠与 PG 版一致。
+	wsd77Exec(t, db, `INSERT INTO sys_device_mac_address
+		(id, device_id, mac_address, interface_name, collected_at)
+		VALUES ('mac-148-a', ?, ?, ?, '2026-10-27 16:02:00')`,
+		devID, mac, "GigabitEthernet "+iface[2:])
+	// 资产：mac1 用点分格式，验证 MAC 归一化（去 . : - + LOWER）后仍命中。
+	// 用独立字面量 id 避免与调用方已 seed 的 ops_asset 行主键冲突；
+	// nowuser_name 用独立名字，避免被「按用户名查资产设备」路径误命中。
+	wsd77Exec(t, db, `INSERT INTO ops_asset
+		(id, devicesn, device_model_name, device_type_name, mac1, mac2, nowuser_name, deptname, machine_ip, deleted_at)
+		VALUES ('asset-148-physical', 'SN-148-A', 'ThinkCentre M90q', 'PC', 'b022.7a2e.4a4f', NULL, '链路责任人', '研发部', '10.62.1.130', NULL)`)
+	return mac
+}
+
+// wsd77AssertPhysicalDevice 对单条物理设备做逐字段真实结果断言（PG 版期望值以
+// fixture 常量固化，TEST_PG_DSN 本期 unset 不做真实 PG 双跑，见 148-SUMMARY Known Gaps）。
+func wsd77AssertPhysicalDevice(t *testing.T, d *models.WorkstationDevice, wsID string) {
+	t.Helper()
+	require.NotNil(t, d)
+	assert.Equal(t, wsID, d.WorkstationID)
+	assert.Equal(t, models.DeviceSourcePhysical, d.DeviceSource)
+	require.NotNil(t, d.DeviceSerial)
+	assert.Equal(t, "SN-148-A", *d.DeviceSerial, "资产优先：devicesn 来自 ops_asset")
+	require.NotNil(t, d.MACAddress)
+	// PG 版 COALESCE(a.mac1, mac.mac_address, hist.mac_address) 直接返回资产原始值，
+	// 不做大小写/分隔符格式化；归一化只用于 JOIN 匹配。故期望资产 mac1 原值。
+	assert.Equal(t, "b022.7a2e.4a4f", *d.MACAddress,
+		"MAC 优先取 ops_asset.mac1 原值（点分归一仅用于匹配，对齐 PG COALESCE）")
+	require.NotNil(t, d.DeviceModel)
+	assert.Equal(t, "ThinkCentre M90q", *d.DeviceModel)
+	require.NotNil(t, d.DeviceType)
+	assert.Equal(t, "PC", *d.DeviceType)
+	require.NotNil(t, d.IPAddress)
+	assert.Equal(t, "10.62.1.130", *d.IPAddress)
+	require.NotNil(t, d.Confidence)
+	assert.Equal(t, 1.0, *d.Confidence, "实测 MAC 命中 → confidence=1.0（对齐 PG CASE）")
+	assert.Nil(t, d.HistoryLastSeen, "实测命中不写 HistoryLastSeen")
+	require.NotNil(t, d.Description)
+	assert.Contains(t, *d.Description, "GE2/6", "端口名回填")
+	assert.Contains(t, *d.Description, "3f130-A", "信息点名回填")
+}
+
+// TestWSD77_GetPhysicalDevices_FrontSegment 前段三个早退分支 + 越过后的真实结果断言。
+// Phase 148 前：越过早退后 PG 专属 CTE 在 SQLite 必报错，「报错即证明越过」。
+// Phase 148 后：共享召回双方言可跑，改为建齐链路表 + 逐字段真实结果断言（DIALECT-03）。
 func TestWSD77_GetPhysicalDevices_FrontSegment(t *testing.T) {
 	db := setupWSD77DB(t)
 	svc := NewWorkstationDeviceService(db)
@@ -589,18 +664,18 @@ func TestWSD77_GetPhysicalDevices_FrontSegment(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "工位不存在")
 
-	// 越过全部早退: 工位存在(甚至不绑定用户)后进入物理链路 CTE,
-	// PG-only SQL 在 sqlite 报错属预期 — 不含对 DISTINCT ON 结果行的断言。
+	// 越过全部早退：工位存在(甚至不绑定用户) + 完整物理链路 → 真实召回 1 台，err=nil。
 	seedWSD77Workstation(t, db, wsd77WS1, "3f130", "")
+	canonicalMAC := wsd77SeedPhysicalChain(t, db, wsd77WS1)
+	_ = canonicalMAC // 资产 mac1 原值优先，canonical MAC 仅用于构造实测表读数
 	devices, err := svc.GetPhysicalDevices(ctx, wsd77WS1)
-	require.Error(t, err,
-		"service 必须越过工位存在性校验进入物理链路 CTE(PG-only SQL 在 sqlite 报错属预期)")
-	require.Empty(t, devices)
-	assert.Contains(t, err.Error(), "查询物理链路设备失败")
+	require.NoError(t, err, "根治后共享召回不应再报方言错误")
+	require.Len(t, devices, 1, "完整链路应召回 1 台设备（PG 版口径）")
+	wsd77AssertPhysicalDevice(t, devices[0], wsd77WS1)
 }
 
-// TestWSD77_GetPhysicalDevicesByWorkstations_FrontSegment 批量物理链路仅前段:
-// 空入参 + 越过批量 sys_workstation 查询后 PG-only CTE 报错。
+// TestWSD77_GetPhysicalDevicesByWorkstations_FrontSegment 批量前段 + 真实结果断言，
+// 并与单工位对同一 fixture 的返回逐字段一致（单条/批量口径不分叉，DIALECT-02/03）。
 func TestWSD77_GetPhysicalDevicesByWorkstations_FrontSegment(t *testing.T) {
 	db := setupWSD77DB(t)
 	svc := NewWorkstationDeviceService(db)
@@ -611,13 +686,27 @@ func TestWSD77_GetPhysicalDevicesByWorkstations_FrontSegment(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, result)
 
-	// 越过前段: 批量 sys_workstation 查询成功后进入 PG-only CTE,sqlite 必报错。
+	// 越过前段：完整链路 → 批量真实召回，且与单工位逐字段一致。
 	seedWSD77Workstation(t, db, wsd77WS1, "3f130", wsd77User1)
+	canonicalMAC := wsd77SeedPhysicalChain(t, db, wsd77WS1)
+	_ = canonicalMAC
 	result, err = svc.GetPhysicalDevicesByWorkstations(ctx, []string{wsd77WS1})
-	require.Error(t, err,
-		"越过批量 sys_workstation 查询后进入 PG-only CTE,sqlite 报错属预期(报错即证明已越过前段)")
-	assert.Contains(t, err.Error(), "批量查询物理链路设备失败")
-	require.Empty(t, result[wsd77WS1], "错误路径返回的预置 map 值应为空切片")
+	require.NoError(t, err, "根治后批量共享召回不应再报方言错误")
+	require.Len(t, result[wsd77WS1], 1, "批量应召回 1 台设备")
+	wsd77AssertPhysicalDevice(t, result[wsd77WS1][0], wsd77WS1)
+
+	// 单工位与批量逐字段一致（复用同一份 recallPhysicalRows）。
+	single, err := svc.GetPhysicalDevices(ctx, wsd77WS1)
+	require.NoError(t, err)
+	require.Len(t, single, 1)
+	a, b := single[0], result[wsd77WS1][0]
+	assert.Equal(t, a.DeviceSource, b.DeviceSource)
+	assert.Equal(t, a.MACAddress, b.MACAddress)
+	assert.Equal(t, a.DeviceSerial, b.DeviceSerial)
+	assert.Equal(t, a.DeviceModel, b.DeviceModel)
+	assert.Equal(t, a.Confidence, b.Confidence)
+	assert.Equal(t, a.HistoryLastSeen, b.HistoryLastSeen)
+	assert.Equal(t, a.Description, b.Description)
 }
 
 // TestWSD77_macIDFragment 纯函数边角: nil → "nil",非 nil → 原值。

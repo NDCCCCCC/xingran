@@ -245,3 +245,153 @@ describe("noticeStore", () => {
     expect(state.wsConnected).toBe(false);
   });
 });
+
+// ==================== Phase 144 ALRT-03: ad_sync_drift_alert 分流 ====================
+/**
+ * 覆盖：新类型分流、listener 订阅/退订、content 解析失败不崩溃、
+ * 其它类型不误触发、listener 抛错隔离。
+ * 全局唯一 WS 连接只在 noticeStore 分流，不新建 WebSocket。
+ */
+const driftEvent = (overrides: Record<string, unknown> = {}) => ({
+  type: "ad_sync_drift_alert",
+  noticeId: "notice-1",
+  memberCount: 120,
+  distinctGroups: 8,
+  baseline: 100,
+  deltas: { users: 20, groups: 2 },
+  tolerance: 5,
+  throttled: false,
+  timestamp: 1766380800,
+  ...overrides,
+});
+
+const driftWsMessage = (content: string) => ({
+  type: "ad_sync_drift_alert",
+  data: null,
+  timestamp: 1,
+  content,
+});
+
+describe("noticeStore — ad_sync_drift_alert 分流 (Phase 144 ALRT-03)", () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    useNoticeStore.getState().reset();
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("handleWsMessage ad_sync_drift_alert：解析 content 并派发给 listener", () => {
+    const cb = vi.fn();
+    useNoticeStore.getState().onADDriftAlert(cb);
+
+    const event = driftEvent();
+    useNoticeStore.getState().handleWsMessage(driftWsMessage(JSON.stringify(event)) as never);
+
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledWith(
+      expect.objectContaining({ memberCount: 120, distinctGroups: 8, noticeId: "notice-1" })
+    );
+    // 不影响未读数/铃铛列表（漂移告警走独立 listener，不进 new_notice 分流）
+    expect(useNoticeStore.getState().notifications).toEqual([]);
+  });
+
+  it("onADDriftAlert 订阅与退订：退订后不再收到事件", () => {
+    const cb = vi.fn();
+    const unsub = useNoticeStore.getState().onADDriftAlert(cb);
+
+    useNoticeStore
+      .getState()
+      .handleWsMessage(driftWsMessage(JSON.stringify(driftEvent())) as never);
+    expect(cb).toHaveBeenCalledTimes(1);
+
+    unsub();
+    useNoticeStore
+      .getState()
+      .handleWsMessage(
+        driftWsMessage(JSON.stringify(driftEvent({ noticeId: "notice-2" }))) as never
+      );
+    // 退订后仍是 1 次
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it("content 非法 JSON：仅 console.warn，不抛错、不派发", () => {
+    const cb = vi.fn();
+    useNoticeStore.getState().onADDriftAlert(cb);
+
+    expect(() =>
+      useNoticeStore.getState().handleWsMessage(driftWsMessage("not-json{{{") as never)
+    ).not.toThrow();
+    expect(cb).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it("content 缺失：仅 console.warn，不派发", () => {
+    const cb = vi.fn();
+    useNoticeStore.getState().onADDriftAlert(cb);
+
+    useNoticeStore.getState().handleWsMessage({
+      type: "ad_sync_drift_alert",
+      data: null,
+      timestamp: 1,
+    } as never);
+
+    expect(cb).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('content 合法 JSON 但非对象（如 "string"）：忽略，不派发', () => {
+    const cb = vi.fn();
+    useNoticeStore.getState().onADDriftAlert(cb);
+
+    useNoticeStore.getState().handleWsMessage(driftWsMessage('"a-string"') as never);
+
+    expect(cb).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it("单个 listener 抛错被隔离，其它 listener 仍收到事件", () => {
+    const bad = vi.fn(() => {
+      throw new Error("listener crash");
+    });
+    const good = vi.fn();
+    useNoticeStore.getState().onADDriftAlert(bad);
+    useNoticeStore.getState().onADDriftAlert(good);
+
+    useNoticeStore
+      .getState()
+      .handleWsMessage(driftWsMessage(JSON.stringify(driftEvent())) as never);
+
+    expect(bad).toHaveBeenCalledTimes(1);
+    expect(good).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it("其它 WS 类型不误触发 drift listener；drift 类型也不误触发 RPA listener", () => {
+    const driftCb = vi.fn();
+    const rpaCb = vi.fn();
+    useNoticeStore.getState().onADDriftAlert(driftCb);
+    useNoticeStore.getState().onRPAProgress(rpaCb);
+
+    useNoticeStore.getState().handleWsMessage({
+      type: "rpa_progress",
+      data: null,
+      timestamp: 1,
+      content: JSON.stringify(rpaMsg()),
+    } as never);
+    expect(driftCb).not.toHaveBeenCalled();
+    expect(rpaCb).toHaveBeenCalledTimes(1);
+
+    useNoticeStore
+      .getState()
+      .handleWsMessage(driftWsMessage(JSON.stringify(driftEvent())) as never);
+    expect(driftCb).toHaveBeenCalledTimes(1);
+    expect(rpaCb).toHaveBeenCalledTimes(1); // 未被 drift 二次触发
+  });
+});

@@ -10,6 +10,8 @@ related_debug: .planning/debug/ad-push-queue-drain-interval-not-hot-reloaded.md
 
 # AD 推送队列 enable 双向推送（恢复用户 → 自动重新启用 AD 账号）
 
+> ✅ 已纳入 v1.53 Phase 134（FIX-01）
+
 ## 背景与缺口（Phase 57 Test 3 实测确认）
 
 v1.21 交付的 outbox-lite 只覆盖"sys → AD"的 **disable 方向**：sys 删除/停用用户 →

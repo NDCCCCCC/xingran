@@ -1,6 +1,8 @@
 # RPA Worker API 认证方案 - 待办任务
 
-## 状态：暂缓（搁置）
+> ✅ **已落地（v1.51 DEBT-03，2026-11-01）**：本方案已实施。落地位置：`internal/core/db/migrations/migration_230_rpa_worker_token.go`（token/token_expires_at/last_token_rotation）、`internal/services/rpa/worker_token_service.go`（Issue/Validate/Revoke）、`pkg/middleware/worker_auth.go`（X-Worker-Token / ProvisioningAuth / WorkerAuth）、`internal/api/v1/rpa/rpa_router.go` + `worker_handler.go` 接线、`internal/config/config.go` 宽限期配置、`.planning/integration-v1.51-checklist.md` §2 冒烟矩阵 4/4 PASS。本文保留为**设计记录/历史归档**，标题中的「待办」不再代表开放项；第 502 行「本文档为待办任务，实施前需再次评审技术方案」亦为时点表述，勿据此推进。两份为重复副本，后续可去重。
+
+## 状态：暂缓（搁置）（⚠️ 历史时点状态；实际已落地，见上方注记）
 
 **创建日期**: 2026-03-10
 **优先级**: P2 - 安全加固

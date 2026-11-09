@@ -2,16 +2,20 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gosnmp/gosnmp"
 	devicepkg "github.com/xingran-next/xingran-go-backend/internal/device"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -70,15 +74,16 @@ type DiscoveryRequest struct {
 	CreatedBy       string
 }
 
-// DiscoveredDevice 发现的设备信息
+// DiscoveredDevice 发现的设备信息。
+// JSON tag 与前端「发现结果」表格列对齐（camelCase）。
 type DiscoveredDevice struct {
-	IPAddress  string
-	DeviceType string
-	Vendor     string
-	Model      string
-	SysName    string
-	SysDescr   string
-	IsAlive    bool
+	IPAddress  string `json:"ipAddress"`
+	DeviceType string `json:"deviceType"`
+	Vendor     string `json:"vendor"`
+	Model      string `json:"model"`
+	SysName    string `json:"deviceName"`
+	SysDescr   string `json:"sysDescr"`
+	IsAlive    bool   `json:"isAlive"`
 }
 
 // DiscoveryResult 发现结果
@@ -180,7 +185,15 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 	}
 
 	task.Status = models.DiscoveryStatusSuccess
-	s.db.WithContext(ctx).Save(&task)
+	if err := s.db.WithContext(ctx).Save(&task).Error; err != nil {
+		return nil, fmt.Errorf("保存发现任务结果失败: %w", err)
+	}
+
+	// Phase 137 / FIX-07: 把发现明细持久化，供结果查询端点返回真实数据。
+	// 先清除该任务的历史结果（重跑发现时以最后一次结果为准），再批量写入。
+	if err := s.persistDiscoveryResults(ctx, discoveryID, discoveredDevices); err != nil {
+		return nil, err
+	}
 
 	return &DiscoveryResult{
 		DiscoveryID:       discoveryID,
@@ -189,6 +202,46 @@ func (s *DeviceDiscoveryService) ExecuteDiscovery(ctx context.Context, discovery
 		DiscoveredCount:   len(discoveredDevices),
 		DiscoveredDevices: discoveredDevices,
 	}, nil
+}
+
+// persistDiscoveryResults 持久化设备发现明细（Phase 137 / FIX-07）。
+// 同一任务重跑时覆盖旧结果；无设备时也清空旧结果，保证查询结果与最后一次执行一致。
+func (s *DeviceDiscoveryService) persistDiscoveryResults(ctx context.Context, discoveryID string, devices []*DiscoveredDevice) error {
+	tx := s.db.WithContext(ctx)
+	if err := tx.Where("discovery_id = ?", discoveryID).Delete(&models.DeviceDiscoveryResult{}).Error; err != nil {
+		return fmt.Errorf("清理历史发现结果失败: %w", err)
+	}
+	if len(devices) == 0 {
+		return nil
+	}
+
+	rows := make([]models.DeviceDiscoveryResult, 0, len(devices))
+	seq := 0
+	for _, dev := range devices {
+		if dev == nil {
+			continue
+		}
+		seq++
+		rows = append(rows, models.DeviceDiscoveryResult{
+			ID:          uuid.NewString(),
+			DiscoveryID: discoveryID,
+			Seq:         seq,
+			IPAddress:   dev.IPAddress,
+			DeviceType:  dev.DeviceType,
+			Vendor:      dev.Vendor,
+			Model:       dev.Model,
+			SysName:     dev.SysName,
+			SysDescr:    dev.SysDescr,
+			IsAlive:     dev.IsAlive,
+		})
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	if err := tx.Create(&rows).Error; err != nil {
+		return fmt.Errorf("保存发现结果失败: %w", err)
+	}
+	return nil
 }
 
 // discoverBySNMP 使用SNMP发现设备
@@ -436,6 +489,12 @@ func (s *DeviceDiscoveryService) DeleteDiscovery(ctx context.Context, discoveryI
 	if err := s.db.WithContext(ctx).Delete(&task).Error; err != nil {
 		return fmt.Errorf("删除任务失败: %w", err)
 	}
+	// 同步清理发现结果明细，避免任务软删后留下孤儿行。
+	if err := s.db.WithContext(ctx).
+		Where("discovery_id = ?", discoveryID).
+		Delete(&models.DeviceDiscoveryResult{}).Error; err != nil {
+		return fmt.Errorf("删除发现结果失败: %w", err)
+	}
 
 	return nil
 }
@@ -450,20 +509,224 @@ func (s *DeviceDiscoveryService) BatchDeleteDiscoveries(ctx context.Context, dis
 	return nil
 }
 
-// ImportDiscoveredDevices 导入发现的设备
+// errDiscoveryTaskNotFound 是事务内「任务不存在」的哨兵；外层据此还原为
+// 既有错误文案「发现任务不存在: <err>」，其余错误统一包成「导入发现设备失败」。
+var errDiscoveryTaskNotFound = errors.New("发现任务不存在")
+
+// discoveryImportMaxBatch 批量写入的单批上限，避免 PostgreSQL 65535 参数上限。
+const discoveryImportMaxBatch = 1000
+
+// ImportDiscoveredDevices 把一次发现任务的全部结果明细真实导入 sys_network_device。
+//
+// Phase 142 / DISC-01：忽略 deviceIDs 入参、恒全量导入该任务全部结果行（保留旧签名兼容）。
+// 去重按 ip_address trim + net.ParseIP 校验：批内保留最后一条；库内未软删命中跳过不覆盖；
+// 软删命中恢复（清 deleted_at + 覆盖字段）。单 GORM 事务全原子，事务内只用 tx。
 func (s *DeviceDiscoveryService) ImportDiscoveredDevices(ctx context.Context, discoveryID string, deviceIDs []string, createdBy string) (int, error) {
-	// 获取发现任务
-	var task models.DeviceDiscovery
-	if err := s.db.WithContext(ctx).Where("id = ?", discoveryID).First(&task).Error; err != nil {
-		return 0, fmt.Errorf("发现任务不存在: %w", err)
+	_ = deviceIDs // 恒全量导入；保留参数仅为兼容既有调用点
+
+	count := 0
+	txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1) 事务内用 tx 重新读取任务（校验存在 + 取 GroupID / SNMPPort）。
+		var task models.DeviceDiscovery
+		if err := tx.Where("id = ?", discoveryID).First(&task).Error; err != nil {
+			return fmt.Errorf("%w: %w", errDiscoveryTaskNotFound, err)
+		}
+
+		// 2) 读取结果明细（含 ID/Seq 的原始行）。
+		rows, err := loadDiscoveryResultRows(ctx, tx, discoveryID)
+		if err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+
+		// 3) 按 IP 过滤 + 批内去重（保留最后一条），记录首次出现顺序。
+		// 直接缓存构建好的待写入对象，避免后续重复映射。
+		byIP := make(map[string]models.NetworkDevice, len(rows))
+		ips := make([]string, 0, len(rows))
+		for _, row := range rows {
+			dev, ok := buildNetworkDevice(row, &task, createdBy)
+			if !ok {
+				continue
+			}
+			ip := dev.IPAddress
+			if _, seen := byIP[ip]; !seen {
+				ips = append(ips, ip)
+			}
+			byIP[ip] = dev
+		}
+		if len(ips) == 0 {
+			return nil
+		}
+
+		// 4) 一次 IN 查询预加载库内已存在（含软删）行，避免 N+1。
+		var existing []models.NetworkDevice
+		if err := tx.Unscoped().Where("ip_address IN ?", ips).Find(&existing).Error; err != nil {
+			return fmt.Errorf("查询已存在网络设备失败: %w", err)
+		}
+		existingByIP := make(map[string]models.NetworkDevice, len(existing))
+		for _, dev := range existing {
+			existingByIP[dev.IPAddress] = dev
+		}
+
+		newRows := make([]models.NetworkDevice, 0, len(ips))
+		restored := make([]models.NetworkDevice, 0, len(ips))
+		for _, ip := range ips {
+			fresh := byIP[ip]
+			if cur, hit := existingByIP[ip]; hit {
+				if !cur.DeletedAt.Valid {
+					// 库内未软删命中 → 跳过、不覆盖（保护人工维护字段）。
+					continue
+				}
+				// 软删命中 → 恢复：清 deleted_at + 覆盖发现字段 + tx.Save。
+				cur.DeletedAt = gorm.DeletedAt{}
+				cur.DeviceName = fresh.DeviceName
+				cur.DeviceType = fresh.DeviceType
+				cur.Vendor = fresh.Vendor
+				cur.Model = fresh.Model
+				cur.IPAddress = fresh.IPAddress
+				cur.Port = fresh.Port
+				cur.SNMPPort = fresh.SNMPPort
+				cur.CredentialID = nil
+				cur.DeptID = fresh.DeptID
+				cur.Location = ""
+				cur.Status = fresh.Status
+				cur.Description = fresh.Description
+				cur.SerialNumber = ""
+				cur.SoftwareVersion = ""
+				cur.Uptime = ""
+				cur.CreatedBy = fresh.CreatedBy
+				cur.UpdatedBy = fresh.UpdatedBy
+				restored = append(restored, cur)
+				continue
+			}
+			newRows = append(newRows, fresh)
+		}
+
+		// 5) 分批 tx.Create；恢复行逐条 tx.Unscoped().Save（GORM 软删 UPDATE 会
+		//    附加 deleted_at IS NULL，不加 Unscoped 会静默更新 0 行）。
+		for i := 0; i < len(newRows); i += discoveryImportMaxBatch {
+			end := i + discoveryImportMaxBatch
+			if end > len(newRows) {
+				end = len(newRows)
+			}
+			batch := newRows[i:end]
+			if err := tx.Create(&batch).Error; err != nil {
+				return fmt.Errorf("批量写入网络设备失败: %w", err)
+			}
+		}
+		for i := range restored {
+			if err := tx.Unscoped().Save(&restored[i]).Error; err != nil {
+				return fmt.Errorf("恢复网络设备失败: %w", err)
+			}
+		}
+
+		// 6) 显式写回 status=0（在线）。
+		//    sys_network_device.status 的列定义带 `default:2`（未知），GORM 对带
+		//    DefaultValueInterface 的字段会把零值无条件替换成默认值：即使结构体里
+		//    赋 DeviceStatusOnline(0)，tx.Create / tx.Save 落库仍是 2，且 Select("*")
+		//    也不能绕过。用一次单列 Update 显式写 0 才是双方言都可靠的做法；
+		//    writtenIPs 只含新建 + 恢复行，不会碰到「跳过不覆盖」的人工维护行。
+		writtenIPs := make([]string, 0, len(newRows)+len(restored))
+		for i := range newRows {
+			writtenIPs = append(writtenIPs, newRows[i].IPAddress)
+		}
+		for i := range restored {
+			writtenIPs = append(writtenIPs, restored[i].IPAddress)
+		}
+		if len(writtenIPs) > 0 {
+			if err := tx.Model(&models.NetworkDevice{}).
+				Where("ip_address IN ?", writtenIPs).
+				Update("status", models.DeviceStatusOnline).Error; err != nil {
+				return fmt.Errorf("回写设备状态失败: %w", err)
+			}
+		}
+
+		count = len(newRows) + len(restored)
+		return nil
+	})
+
+	if txErr != nil {
+		if errors.Is(txErr, errDiscoveryTaskNotFound) {
+			// 保持既有文案「发现任务不存在: <err>」。
+			return 0, txErr
+		}
+		return 0, fmt.Errorf("导入发现设备失败: %w", txErr)
+	}
+	return count, nil
+}
+
+// loadDiscoveryResultRows 在事务内读取发现结果明细，保留原始 ID/Seq 顺序。
+func loadDiscoveryResultRows(ctx context.Context, tx *gorm.DB, discoveryID string) ([]models.DeviceDiscoveryResult, error) {
+	var rows []models.DeviceDiscoveryResult
+	if err := tx.WithContext(ctx).
+		Where("discovery_id = ?", discoveryID).
+		Order("seq ASC, id ASC").
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("查询发现结果失败: %w", err)
+	}
+	return rows, nil
+}
+
+// buildNetworkDevice 把一条发现结果映射为待写入的 NetworkDevice；ok=false 表示该行跳过。
+// 字段兜底按 Phase 142 裁决表：SysName/DeviceType/Vendor/DeptID/SNMPPort 均有回落，
+// Status 按 models.DeviceStatus（0 在线）赋值，不套用通用「0 正常/1 停用」。
+func buildNetworkDevice(row models.DeviceDiscoveryResult, task *models.DeviceDiscovery, createdBy string) (models.NetworkDevice, bool) {
+	ip := strings.TrimSpace(row.IPAddress)
+	if !row.IsAlive || ip == "" || net.ParseIP(ip) == nil {
+		return models.NetworkDevice{}, false
 	}
 
-	// 这里需要重新获取发现的设备列表
-	// 实际实现中可以将发现的设备存储到临时表中
-	// 或者从结果缓存中获取
+	deviceName := row.SysName
+	if deviceName == "" {
+		// Device-<IP 末段>，与 network_device_service.go 的 getLastIPOctet 同义。
+		last := ip
+		if i := strings.LastIndex(ip, "."); i >= 0 {
+			last = ip[i+1:]
+		}
+		deviceName = fmt.Sprintf("Device-%s", last)
+	}
 
-	// 简化实现：返回导入数量
-	return len(deviceIDs), nil
+	deviceType := models.DeviceType(row.DeviceType)
+	switch deviceType {
+	case models.DeviceTypeRouter, models.DeviceTypeSwitch, models.DeviceTypeFirewall,
+		models.DeviceTypeAP, models.DeviceTypeLoadBalancer:
+		// 合法枚举，保留
+	default:
+		deviceType = models.DeviceTypeSwitch
+	}
+
+	var deptID *string
+	if task != nil && task.GroupID != nil {
+		group := strings.TrimSpace(*task.GroupID)
+		// org_id 必须是合法 UUID（CLAUDE.md 硬约定）：非法值不写脏数据，留空即可。
+		if constants.UUIDPattern.MatchString(group) {
+			deptID = &group
+		}
+	}
+
+	snmpPort := 161
+	if task != nil && task.SNMPPort > 0 {
+		snmpPort = task.SNMPPort
+	}
+
+	return models.NetworkDevice{
+		BaseModel: models.BaseModel{
+			CreatedBy: createdBy,
+			UpdatedBy: createdBy,
+		},
+		DeviceName:  deviceName,
+		DeviceType:  deviceType,
+		Vendor:      models.DeviceVendor(row.Vendor), // 空 → ""（列允许空串）
+		Model:       row.Model,
+		IPAddress:   ip,
+		Port:        22,
+		SNMPPort:    snmpPort,
+		DeptID:      deptID,
+		Status:      models.DeviceStatusOnline, // 存活设备导入即在线
+		Description: row.SysDescr,
+	}, true
 }
 
 // ProbeSingleDevice 探测单个设备（支持多个 community）
@@ -651,15 +914,36 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	}, nil
 }
 
-// GetDiscoveryResults 获取发现结果
+// GetDiscoveryResults 获取发现结果（Phase 137 / FIX-07）。
+// 返回 ExecuteDiscovery 已持久化的设备明细；任务存在但未执行过时返回空列表。
 func (s *DeviceDiscoveryService) GetDiscoveryResults(ctx context.Context, discoveryID string) ([]*DiscoveredDevice, error) {
-	// 获取发现任务
+	// 校验发现任务存在（不存在时返回错误，与 handler 的 1500 分支一致）
 	var task models.DeviceDiscovery
 	if err := s.db.WithContext(ctx).Where("id = ?", discoveryID).First(&task).Error; err != nil {
 		return nil, fmt.Errorf("发现任务不存在: %w", err)
 	}
 
-	return []*DiscoveredDevice{}, nil
+	var rows []models.DeviceDiscoveryResult
+	if err := s.db.WithContext(ctx).
+		Where("discovery_id = ?", discoveryID).
+		Order("seq ASC, id ASC").
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("查询发现结果失败: %w", err)
+	}
+
+	devices := make([]*DiscoveredDevice, 0, len(rows))
+	for _, row := range rows {
+		devices = append(devices, &DiscoveredDevice{
+			IPAddress:  row.IPAddress,
+			DeviceType: row.DeviceType,
+			Vendor:     row.Vendor,
+			Model:      row.Model,
+			SysName:    row.SysName,
+			SysDescr:   row.SysDescr,
+			IsAlive:    row.IsAlive,
+		})
+	}
+	return devices, nil
 }
 
 // calculateIPCount 计算IP范围内IP数量

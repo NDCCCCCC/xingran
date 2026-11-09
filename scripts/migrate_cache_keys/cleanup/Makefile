@@ -19,7 +19,7 @@ help:
 # 编译工具
 build:
 	@echo "编译清理工具..."
-	@go build -o cleanup_tool cleanup_tool.go
+	@go build -o out/cleanup_tool cleanup_tool.go
 	@echo "编译完成: cleanup_tool"
 
 # 清理编译产物

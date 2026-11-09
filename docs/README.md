@@ -58,11 +58,11 @@ XingRan-Next 项目的全部技术文档索引。最后整理：2026-08-12。
 - **`agent-test-plan.md`** — VM Agent（VDI 账号）测试方案
 - **`rpa/RPA系统设计方案.md`** — 分布式 RPA 总架构（设计层 rod 已替代 Playwright）
 - **`rpa/RPA-数据格式规范.md`** — ScriptAction ↔ WorkerAction 字段映射（实现契约）
-- **`rpa/RPA-Worker-API认证方案-待办.md`** — 双令牌认证方案（**真实待办**，4 个新建文件未落地）
+- **`rpa/RPA-Worker-API认证方案-待办.md`** — 双令牌认证方案（✅ 已落地：v1.51 DEBT-03，2026-11-01；migration_230 + worker_token_service.go + pkg/middleware/worker_auth.go + rpa_router.go，详见该文档顶部落地注记）
 
 ### 📋 plans/ — 前瞻设计（1 份）
 
-- **`2026-07-09-v1.20.1-design.md`** — v1.20.1 端口写命令设计（status: pending user sign-off）
+- **`2026-07-09-v1.20.1-design.md`** — v1.20.1 端口写命令设计（✅ 已实施：Phase 56 落地 set_access_vlan / port_binding，v1.51 Phase 124/125 扩展，非 pending）
 
 ### 📚 reference/ — 外部参考（5 份）
 

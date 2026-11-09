@@ -161,6 +161,29 @@ func setupTestDBForSync(t *testing.T) *gorm.DB {
 		return nil
 	}
 
+	// FIX-01: 软删恢复路径（restoreSoftDeletedUser / BatchSyncADUsers 阶段5c）现已
+	// 同事务入队 enable，入队前置条件 IsADSyncEnabled 会查 sys_ad_config。
+	// 有意建**空表（0 行）**：D-02 第一层降级为"无启用配置 → WARN + 放行"，
+	// 恢复业务照常成功、不产生队列行 —— 既有 Phase 60 恢复用例零回归。
+	// 需要断言 enable 真实入队的新用例请用 setupPhase57QueueDB + seedADConfigEnabled
+	// （在独立的 FIX-01 测试文件里自建带启用配置的 fixture）。
+	err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_ad_config (
+			id TEXT PRIMARY KEY,
+			config_name TEXT,
+			base_dn TEXT,
+			sync_enabled INTEGER NOT NULL DEFAULT 0,
+			status INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)
+	`).Error
+	if err != nil {
+		t.Skipf("Failed to create sys_ad_config table: %v", err)
+		return nil
+	}
+
 	return db
 }
 

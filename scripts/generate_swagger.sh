@@ -43,7 +43,7 @@ echo ""
 echo -e "${YELLOW}正在生成Swagger文档...${NC}"
 # --exclude ./xingran-react-frontend：排除前端仓库内的 rpa-worker Go 子模块，
 # swag 解析该目录会 fatal（且该模块不属于本仓库 API 面）
-swag init -g cmd/main.go -o docs --parseInternal --parseDependency --parseInternal --exclude ./xingran-react-frontend
+swag init -g cmd/main.go -o internal/docs --parseInternal --parseDependency --parseInternal --exclude ./xingran-react-frontend
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -52,9 +52,9 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}======================================${NC}"
     echo ""
     echo -e "生成的文件:"
-    echo -e "  - docs/swagger.json"
-    echo -e "  - docs/swagger.yaml"
-    echo -e "  - docs/docs.go"
+    echo -e "  - internal/docs/swagger.json"
+    echo -e "  - internal/docs/swagger.yaml"
+    echo -e "  - internal/docs/docs.go"
     echo ""
     echo -e "访问地址: ${YELLOW}http://localhost:8080/swagger/index.html${NC}"
     echo ""

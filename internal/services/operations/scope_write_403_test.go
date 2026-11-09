@@ -15,6 +15,7 @@ package operations
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -310,9 +311,15 @@ func TestWrite403_Backfill_ScopeLimited(t *testing.T) {
 	res, err := f.WSSvc.BackfillDeptFromUser(ctxA, true, false)
 	require.NoError(t, err)
 	assert.Equal(t, "Custom/Dept/DeptChild", res.ScopeTier, "范围档位回显")
-	assert.Equal(t, 1, res.ScopeVisible, "仅部门 A 的工位可见（候选层裁剪）")
-	assert.Equal(t, 2, res.ScopeTotal, "请求行数 = 全库工位总数（COUNT 层口径）")
-	assert.Equal(t, 1, res.ScopeOutOfScope, "越界行数聚合计数")
+	// Phase 150：全库 / 越界规模字段已全档位删除；响应体序列化后不得含这 6 个键。
+	body, err := json.Marshal(res)
+	require.NoError(t, err)
+	for _, key := range []string{
+		"scopeTotal", "scopeVisible", "scopeOutOfScope", "scopeDeptTotal",
+		"skippedNoUser", "skippedBadUserDept",
+	} {
+		assert.NotContains(t, string(body), `"`+key+`"`, "响应体不得回显 %s", key)
+	}
 	assert.Empty(t, res.Samples, "非 All 档不逐条回显明细（P0-3）")
 
 	// 执行层：只写可见集内工位，越界工位 dept_id 不变。
@@ -332,7 +339,7 @@ func TestWrite403_Backfill_ScopeLimited(t *testing.T) {
 	// FailClosed：候选空集、零写。
 	resClosed, err := f.WSSvc.BackfillDeptFromUser(write403Ctx(datascope.ScopeResult{FailClosed: true}), true, false)
 	require.NoError(t, err)
-	assert.Equal(t, 0, resClosed.ScopeVisible)
+	assert.Equal(t, 0, resClosed.Candidates, "FailClosed 候选空集（D-8）")
 	assert.True(t, resClosed.ScopeFailClosed)
 }
 
@@ -354,11 +361,10 @@ func TestWrite403_ImportRows_OutOfScope(t *testing.T) {
 	kept, outOfScope, err := filterScopeWriteImportRows(ctxA, f.DB, "building", config, records, result)
 	require.NoError(t, err)
 	assert.Len(t, kept, 1, "越界行不写入、不阻断整批")
-	assert.Equal(t, 1, outOfScope)
-	assert.Equal(t, 1, result.Failed)
-	require.Len(t, result.Errors, 1)
-	assert.Equal(t, 3, result.Errors[0].Row, "越界错误明细含原始行号")
-	assert.Empty(t, result.Errors[0].Value, "越界错误明细不含敏感值 Value")
+	assert.Equal(t, 1, outOfScope, "越界行数仍返回供服务端 operlog 审计链")
+	// Phase 150（D-6）：越界行静默跳过，不 Failed++、不 append Errors、不回显行号。
+	assert.Equal(t, 0, result.Failed, "越界行不计入 failed")
+	assert.Empty(t, result.Errors, "越界行不进 Errors（数组长度不随 N−M 变化）")
 	for _, rec := range kept {
 		_, leaked := rec["__excel_row__"]
 		assert.False(t, leaked, "内部行号标记不得泄漏进 Upsert 字段集")
@@ -381,7 +387,9 @@ func TestWrite403_ImportRows_OutOfScope(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, keptClosed)
 	assert.Equal(t, 1, outClosed)
-	assert.Equal(t, 1, resultClosed.Failed)
+	// Phase 150（D-6）：FailClosed 越界行同样静默跳过，不 Failed++、不 append Errors。
+	assert.Equal(t, 0, resultClosed.Failed)
+	assert.Empty(t, resultClosed.Errors)
 }
 
 // ---------------------------------------------------------------------

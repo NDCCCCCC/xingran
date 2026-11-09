@@ -36,6 +36,7 @@ const mockWriteDescription = vi.fn();
 const mockWriteDot1xEnable = vi.fn();
 const mockWriteDot1xDisable = vi.fn();
 const mockWriteTrunk = vi.fn();
+const mockWritePhysical = vi.fn();
 vi.mock("@/lib/api/networkApi", () => ({
   writeShutdown: (...args: unknown[]) => mockWriteShutdown(...args),
   writeUndoShutdown: (...args: unknown[]) => mockWriteUndoShutdown(...args),
@@ -43,6 +44,7 @@ vi.mock("@/lib/api/networkApi", () => ({
   writeDot1xEnable: (...args: unknown[]) => mockWriteDot1xEnable(...args),
   writeDot1xDisable: (...args: unknown[]) => mockWriteDot1xDisable(...args),
   writeTrunk: (...args: unknown[]) => mockWriteTrunk(...args),
+  writePhysical: (...args: unknown[]) => mockWritePhysical(...args),
 }));
 
 import { PortWriteModal } from "../PortWriteModal";
@@ -112,6 +114,7 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
     mockWriteDot1xEnable.mockReset();
     mockWriteDot1xDisable.mockReset();
     mockWriteTrunk.mockReset();
+    mockWritePhysical.mockReset();
   });
 
   describe("D-01: Modal title reflects ACTION_TITLE[action] + interfaceName", () => {
@@ -441,5 +444,108 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
       expect(mockWriteShutdown).toHaveBeenCalledTimes(1);
     });
     expect(mockWriteShutdown).toHaveBeenCalledWith("port-1", "故障排查处理", true);
+  });
+});
+
+// ==================== v1.54 Phase 143 单端口物理参数表单 (PORT-01/02) ====================
+describe("PortWriteModal — Phase 143 物理参数条件表单", () => {
+  beforeEach(() => {
+    mockWriteShutdown.mockReset();
+    mockWriteUndoShutdown.mockReset();
+    mockWriteDescription.mockReset();
+    mockWriteDot1xEnable.mockReset();
+    mockWriteDot1xDisable.mockReset();
+    mockWriteTrunk.mockReset();
+    mockWritePhysical.mockReset();
+  });
+
+  it("set_mtu: 条件表单渲染 + 提交调 writePhysical 带 mtu", async () => {
+    render(
+      <PortWriteModal
+        open={true}
+        action="set_mtu"
+        portRecord={makePort()}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    expect(screen.getByText(/调整端口 MTU/)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("MTU (1280-9216)"), { target: { value: "9000" } });
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      clickOkButton();
+    });
+    await waitFor(() => {
+      expect(mockWritePhysical).toHaveBeenCalledTimes(1);
+    });
+    const arg = mockWritePhysical.mock.calls[0][0] as {
+      portId: string;
+      action: string;
+      mtu: number;
+      reason: string;
+    };
+    expect(arg.portId).toBe("port-1");
+    expect(arg.action).toBe("set_mtu");
+    expect(arg.mtu).toBe(9000);
+    expect(arg.reason).toBe("故障排查处理");
+  });
+
+  it("set_speed: speedMode=auto 默认带 auto、不带数字 speed", async () => {
+    render(
+      <PortWriteModal
+        open={true}
+        action="set_speed"
+        portRecord={makePort()}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    expect(screen.getByText(/调整端口速率/)).toBeInTheDocument();
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      clickOkButton();
+    });
+    await waitFor(() => {
+      expect(mockWritePhysical).toHaveBeenCalledTimes(1);
+    });
+    const arg = mockWritePhysical.mock.calls[0][0] as {
+      action: string;
+      speedMode?: string;
+      speed?: number;
+    };
+    expect(arg.action).toBe("set_speed");
+    expect(arg.speedMode).toBe("auto");
+    expect(arg.speed).toBeUndefined();
+  });
+
+  it("set_duplex: 双工选项透传", async () => {
+    render(
+      <PortWriteModal
+        open={true}
+        action="set_duplex"
+        portRecord={makePort()}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("双工模式", "全双工 (full)");
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      clickOkButton();
+    });
+    await waitFor(() => {
+      expect(mockWritePhysical).toHaveBeenCalledTimes(1);
+    });
+    const arg = mockWritePhysical.mock.calls[0][0] as { action: string; duplex: string };
+    expect(arg.action).toBe("set_duplex");
+    expect(arg.duplex).toBe("full");
   });
 });

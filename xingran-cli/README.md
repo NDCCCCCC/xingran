@@ -264,7 +264,7 @@ go test -tags=integration -run "TestExcel" ./tests/ -v
 
 ## 集成测试
 
-需要真实后端运行（仓库根目录 `go build -o xingran-backend.exe ./cmd/main.go && .\xingran-backend.exe`）。
+需要真实后端运行（仓库根目录 `go build -o out/xingran-backend.exe ./cmd/main.go && .\out\xingran-backend.exe`）。
 
 ```bash
 cd xingran-cli

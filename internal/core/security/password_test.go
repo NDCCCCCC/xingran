@@ -1,6 +1,7 @@
 package security
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 )
@@ -74,6 +75,9 @@ func TestPasswordManager_VerifyInvalidFormat(t *testing.T) {
 		"$invalid$format",
 		"$sm3$100$salt", // 缺少哈希值
 		"$sm3$100",      // 缺少盐和哈希
+		// Phase 146: 非 32 字节存储哈希（数据损坏 / 伪造）必须被拒绝
+		"$sm3$1000$AAECAwQFBgcICQoLDA0ODw$AAAA",                                                      // hash 仅 3 字节（RawStdEncoding "AAAA" 解码为 3 字节）
+		"$sm3$1000$AAECAwQFBgcICQoLDA0ODw$" + base64.RawStdEncoding.EncodeToString(make([]byte, 64)), // 人工构造 64 字节伪造哈希
 	}
 
 	for _, hash := range invalidHashes {

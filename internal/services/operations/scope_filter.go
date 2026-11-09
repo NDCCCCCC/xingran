@@ -2,6 +2,9 @@
 //
 // 设计契约（.planning/notes/261107-v152-self-scope-decision.md LOCKED）：
 //   - 只消费 pkg/datascope 的 ScopeResult，本包不重新裁定档位、不查 sys_dept；
+//   - Phase 151 / ARCH-01：本层由 pkg/query.ScopedDB 在起链时**强制调用**，
+//     wrapScopeExists 不再是「唯一可选入口」——资源归属注册表登记后，所有
+//     经 ScopedQuery / ScopedDB 起链的查询自动获得可见集谓词，靠机制而非约定；
 //   - All / 0 / unset 特判短路：原样返回 query，零 DB 查询、零额外 SQL（超管零回归）；
 //   - 未挂注入中间件（FromContext 返回 false）同样按 All 兜底，保证存量调用方
 //     （如直接以 context.Background() 调用的 SQLite 单测 / 内部任务）行为不变；
@@ -22,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/xingran-next/xingran-go-backend/pkg/datascope"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -310,4 +314,27 @@ func applyExcelWorkstationScope(query *gorm.DB, ctx context.Context) *gorm.DB {
 		Where("f.deleted_at IS NULL AND b.deleted_at IS NULL").
 		Select("1")
 	return wrapScopeExists(query, ctx, sub, orgExpr, "")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 151 / ARCH-01：强制查询层入口 + 缓存 key 薄封装
+// ---------------------------------------------------------------------------
+
+// ScopedQuery 是 ops 包内**统一查询起链点**（不可绕过的查询层）。
+//
+// 直接委托 pkg/query.ScopedDB：未注入 ctx / All 档原样返回（零回归短路），
+// 其余档位由 GORM Scopes 在 SQL 构建时按表名查「资源归属注册表」强制挂
+// 可见集谓词。8 核心 service / 类型安全旁路 / Excel 起链一律改走本函数；
+// wrapScopeExists 保持同名同签名（131/149 存量调用零改），但其角色已从
+// 「唯一可选入口」降为「注册表谓词复用的既有实现」。
+func ScopedQuery(ctx context.Context, db *gorm.DB) *gorm.DB {
+	return query.ScopedDB(ctx, db)
+}
+
+// ScopedCacheKey 是 scopeCacheKey(ctx)（本文件 :53-74）的导出薄封装。
+//
+// 唯一算法实现仍是 scopeCacheKey，pkg/query 经注册表 CacheKey 回调引用，
+// **禁止复制算法**；供 floor:tree 等固定 key 挂 scope 维度（PMODEL-01）。
+func ScopedCacheKey(ctx context.Context) string {
+	return scopeCacheKey(ctx)
 }

@@ -1055,7 +1055,7 @@ var globalConfigCache = &configCache{
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -ldflags="-s -w" -o xingran-backend-linux ./cmd/main.go
+go build -ldflags="-s -w" -o out/xingran-backend-linux ./cmd/main.go
 ```
 
 ### 紧急回滚（不重新构建）

@@ -92,7 +92,20 @@ type BatchWriteRequest struct {
 	BindOp     string `json:"bindOp,omitempty" binding:"omitempty,oneof=add remove"`
 	IPAddress  string `json:"ipAddress,omitempty"`
 	MACAddress string `json:"macAddress,omitempty"`
+	// Phase 143 (PORT-01) 物理参数字段（与单条 PhysicalWriteRequest / PreviewRequest
+	// DTO json tag 同名，前端同一套表单既能单条也能批量）：
+	//   - Speed      仅 set_speed 使用（10/100/1000/10000；SpeedMode=="auto" 时忽略）
+	//   - SpeedMode  仅 set_speed 使用（"auto" 表示自协商速率）
+	//   - Duplex     仅 set_duplex 使用（half|full|auto）
+	//   - MTU        仅 set_mtu 使用（画像上下界内，默认 1280-9216）
+	Speed     int    `json:"speed,omitempty"`
+	SpeedMode string `json:"speedMode,omitempty"`
+	Duplex    string `json:"duplex,omitempty"`
+	MTU       int    `json:"mtu,omitempty"`
 	// SkipPreflight Phase 123 (PORTW-06)：管理员强制跳过不可达预检；跳过事件留痕审计。
+	// ⚠️ Phase 143 显式登记：批量路径**不支持跳过预检**（本字段在 BatchWritePorts
+	// 内不被消费，只有单端口 WithSkipPreflight 生效）。保持字段存在仅为向后兼容 DTO，
+	// 不得误以为批量已支持 skipPreflight，登记为 Known Gap。
 	SkipPreflight bool `json:"skipPreflight,omitempty"`
 }
 
@@ -148,6 +161,8 @@ type PortWriteService interface {
 	TrunkWrite(ctx context.Context, portID string, action Action, params TrunkParams, operator string, opts ...WriteOption) (*PortResult, error)
 	// PortSecWrite Phase 125 (PWX-02)：端口安全写入口。
 	PortSecWrite(ctx context.Context, portID string, action Action, params PortSecParams, operator string, opts ...WriteOption) (*PortResult, error)
+	// PhysicalWrite Phase 138 (FIX-04)：物理参数（速率/双工/MTU）写入口。
+	PhysicalWrite(ctx context.Context, portID string, action Action, params PhysicalParams, operator string, opts ...WriteOption) (*PortResult, error)
 	// WithProgressNotifier Phase 122 (PORTW-07)：注入批量写进度推送通道。
 	WithProgressNotifier(n PortWriteNotifier) PortWriteService
 }
@@ -579,6 +594,16 @@ func (s *portWriteServiceImpl) executeWrite(
 			tpl.VLANID = trunk.portsec.VLANID
 		}
 	}
+	// FIX-04 物理参数（速率/双工/MTU）透传到 render 派发表
+	if trunk != nil && trunk.physical != nil {
+		tpl.Speed = trunk.physical.Speed
+		tpl.SpeedMode = trunk.physical.SpeedMode
+		tpl.Duplex = trunk.physical.Duplex
+		tpl.MTU = trunk.physical.MTU
+	}
+	// Phase 143 (PORT-02)：型号透传给 renderPhysical，按 (vendor, model) 取
+	// physicalProfile 的命令形态与值域（校验/渲染同源）。其它 action 忽略该字段。
+	tpl.Model = dev.Model
 	cmds, err := portcollection.RenderCommand(dev.Vendor, action, tpl)
 	if err != nil {
 		return nil, err

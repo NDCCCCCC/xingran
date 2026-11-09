@@ -778,6 +778,14 @@ func (h *stubNoticeHub8001) BroadcastToUsers(userIDs []string, message any) {
 	h.lastMsg = message
 }
 
+// Phase 144：scheduler.NoticeHub 接口新增 BroadcastToAll，stub 同步补齐。
+func (h *stubNoticeHub8001) BroadcastToAll(message any) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.calls++
+	h.lastMsg = message
+}
+
 func (h *stubNoticeHub8001) snapshot() (int, []string, any) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

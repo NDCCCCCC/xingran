@@ -62,7 +62,7 @@ func (e *Engine) Execute(ctx context.Context, task *types.TaskMessage) (*types.E
 	defer e.browserPool.Release(pooledPage)
 
 	// 创建页面管理器
-	pageMgr := browser.NewPageManager(pooledPage.page, e.logger)
+	pageMgr := browser.NewPageManager(pooledPage.Page(), e.logger)
 
 	// 初始化变量上下文
 	variables := make(map[string]interface{})
@@ -253,8 +253,8 @@ func indexOf(s, substr string) int {
 	return -1
 }
 
-// createErrorResult 创建错误结果
-func (e *Engine) createErrorResult(result *types.ExecutionResult, err error, step, total int) *types.ExecutionResult {
+// createErrorResult 创建错误结果，并返回 (result, error) 以匹配 Execute 的双值返回。
+func (e *Engine) createErrorResult(result *types.ExecutionResult, err error, step, total int) (*types.ExecutionResult, error) {
 	result.Status = types.StatusFailed
 	result.ErrorMessage = err.Error()
 	result.CompletedAt = time.Now()
@@ -269,5 +269,5 @@ func (e *Engine) createErrorResult(result *types.ExecutionResult, err error, ste
 		logger.Err(err),
 	)
 
-	return result
+	return result, err
 }

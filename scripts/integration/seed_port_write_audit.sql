@@ -3,7 +3,7 @@
 -- 目标表：sys_port_write_audit（单数表名，Phase 52 D-01 锁定）
 -- 方言：SQLite / PostgreSQL 通用（固定 UUID 主键，无方言函数）
 -- 幂等：先删固定清单再插，可重复执行
--- 用法：sqlite3 data/integration-v151.db < seed_port_write_audit.sql
+-- 用法：sqlite3 <sqlite-db-path> < seed_port_write_audit.sql
 --      （PG: psql -f；PG 下 jsonb 列接受 JSON 文本自动转换）
 -- ============================================================================
 

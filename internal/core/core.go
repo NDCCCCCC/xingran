@@ -42,6 +42,11 @@ const fallbackMemoryCacheSize = 1000
 // 在Redis不可用或配置缺失时作为L1缓存的兜底清理周期
 const fallbackMemoryCacheCleanup = 10 * time.Minute
 
+// defaultMVRefreshTimeout 启动时刷新 reconciliation_normalized MV 的兜底超时。
+// 与 config.setDefaults("reconciliation.mv_refresh_timeout_sec", 30) 保持一致:
+// 当配置值缺失/非法(<=0)时回退到 30s,保证启动路径行为与 FIX-12 之前一致。
+const defaultMVRefreshTimeout = 30 * time.Second
+
 // loadConnectionPoolConfig 从 sys_config 读取网络设备连接池配置 (web 可配)。
 // 任一项缺失/解析失败均用默认值兜底, 保证启动不崩溃。
 //
@@ -235,10 +240,19 @@ func (c *Core) Init() error {
 	c.initRPAAndAPIAndReaper()
 
 	// 20. Phase 42 R1: 启动时刷新 reconciliation_normalized 物化视图 (D-02 冷启兜底)
-	// 避免 0-5min 数据为空(用户首次访问 dashboard 不会看到 0 资产)。goroutine + 30s 超时,不阻断启动;
+	// 避免 0-5min 数据为空(用户首次访问 dashboard 不会看到 0 资产)。goroutine + 超时,不阻断启动;
 	// 失败仅 log 警告 — 与 cron 调度一致(D-02 设计)。
+	//
+	// FIX-12: 超时值改为读配置(默认 30s,见 config.setDefaults),去除硬编码。
+	// 历史背景(notes/260630-mv-refresh-30s-timeout.md:4,85):导致刷新超过 30s 的
+	// O(N²) 根因已由 migration_180(视图结构重构,消除相关子查询)根治,本超时
+	// 仅保留为防御项;配置化后可在特殊大库场景调大,默认行为不变。
 	go func() {
-		refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		refreshTimeout := defaultMVRefreshTimeout
+		if sec := c.Config.Reconciliation.MVRefreshTimeoutSec; sec > 0 {
+			refreshTimeout = time.Duration(sec) * time.Second
+		}
+		refreshCtx, refreshCancel := context.WithTimeout(context.Background(), refreshTimeout)
 		defer refreshCancel()
 		if err := assetSvc.StartupRefreshView(refreshCtx, c.GetDB()); err != nil {
 			applogger.Errorf("Phase 42 R1 startup RefreshView failed (D-02 仅 log): %v", err)

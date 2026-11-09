@@ -663,6 +663,13 @@ func TestWorkstationHandler_BatchBackfillDept_Success(t *testing.T) {
 			assert.Equal(t, tc.wantDry, gotDry)
 			assert.Equal(t, tc.wantFix, gotFix)
 			assert.Contains(t, w.Body.String(), `"toFill":3`)
+			// Phase 150：响应体全档位不含任何全库 / 越界规模字段。
+			for _, key := range []string{
+				"scopeTotal", "scopeVisible", "scopeOutOfScope", "scopeDeptTotal",
+				"skippedNoUser", "skippedBadUserDept",
+			} {
+				assert.NotContains(t, w.Body.String(), `"`+key+`"`, "响应体不得回显 %s", key)
+			}
 		})
 	}
 }

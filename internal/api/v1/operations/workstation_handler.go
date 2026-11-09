@@ -439,14 +439,13 @@ func (h *WorkstationHandler) BatchBackfillDeptFromUser(c *gin.Context) {
 	}
 
 	if !req.DryRun {
-		// Phase 132（裁定 §2 硬约束 3/4）：范围档位 + 请求行数 / 可见集内行数 /
-		// 越界行数 + 既有条数，全部聚合计数，绝不逐条回显工位明细。
+		// Phase 150（D-4）：范围档位 + 可见集内写入计数入服务端 operlog 审计链；
+		// 132 的 requested/visible/outOfScope 全库 / 越界聚合随 DECISION-① 语义
+		// 作废，不再记入 OperParam，更不进 HTTP 响应。绝不逐条回显工位明细。
 		operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeBatch,
 			operlog.WithOperParam(fmt.Sprintf(
-				`{"fixMismatch":%t,"candidates":%d,"toFill":%d,"toCorrect":%d,`+
-					`"scopeTier":%q,"requested":%d,"visible":%d,"outOfScope":%d}`,
-				req.FixMismatch, result.Candidates, result.ToFill, result.ToCorrect,
-				result.ScopeTier, result.ScopeTotal, result.ScopeVisible, result.ScopeOutOfScope)))
+				`{"fixMismatch":%t,"candidates":%d,"toFill":%d,"toCorrect":%d,"scopeTier":%q}`,
+				req.FixMismatch, result.Candidates, result.ToFill, result.ToCorrect, result.ScopeTier)))
 	}
 	response.Success(c, result)
 }

@@ -45,6 +45,10 @@ func (s *floorPlanTextService) Create(ctx context.Context, text *operationsmodel
 	if err := s.validator.ValidateFloor(ctx, text.FloorID); err != nil {
 		return err
 	}
+	// Phase 149 / SCOPE-03：提交侧 floor_id 越界 → 单条显式 403。
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityFloorPlanText, text.FloorID); err != nil {
+		return err
+	}
 	return s.repo.Create(ctx, text)
 }
 
@@ -52,17 +56,29 @@ func (s *floorPlanTextService) Update(ctx context.Context, text *operationsmodel
 	if err := s.validator.ValidateFloor(ctx, text.FloorID); err != nil {
 		return err
 	}
+	// Phase 149 / SCOPE-03：改前侧按 text.ID + 提交侧 floor_id，任一侧越界 403。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityFloorPlanText, text.ID); err != nil {
+		return err
+	}
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityFloorPlanText, text.FloorID); err != nil {
+		return err
+	}
 	return s.repo.Update(ctx, text)
 }
 
 func (s *floorPlanTextService) Delete(ctx context.Context, id string) error {
+	// Phase 149 / SCOPE-03：改前侧越界 → 单条显式 403。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityFloorPlanText, id); err != nil {
+		return err
+	}
 	// 迁移前 .Table(ops_floor_plan_texts).Delete(&T{}) 形态与 repo 的
 	// Model(new(T)) 形态行为等价（软删 + WHERE 语义一致，RESEARCH 盘点 #11）
 	return s.repo.Delete(ctx, id)
 }
 
 func (s *floorPlanTextService) GetByID(ctx context.Context, id string) (*operationsmodels.FloorPlanText, error) {
-	return s.repo.GetByID(ctx, id)
+	// Phase 149 / SCOPE-01：读端点按可见集裁剪，越界 / 断链 → record not found（空集语义）。
+	return s.repo.GetByID(ctx, id, entityReadScope(ctx, scopeEntityFloorPlanText, "ops_floor_plan_texts"))
 }
 
 // filterScope List 的两个过滤条件（条件字符串与 ? 占位符逐字平移自迁移前实现）。
@@ -82,14 +98,21 @@ func (s *floorPlanTextService) filterScope(req requests.FloorPlanTextListRequest
 // B 型排他默认排序，无 OrderByColumn 时保留 created_at DESC 默认）。
 func (s *floorPlanTextService) List(ctx context.Context, req requests.FloorPlanTextListRequest) (*PageResult, error) {
 	current, pageSize := req.GetPagination()
+	// Phase 149 / SCOPE-01：scopes 追加可见集裁剪（只裁剪行，响应形状不变）；
+	// 业务 filterScope 与排序 scope 顺序不变；Count 与 Find 同源。
 	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
 		s.filterScope(req),
 		base.SortScope(req.BaseListRequest, floorPlanTextAllowedSortFields, "created_at DESC"),
+		entityReadScope(ctx, scopeEntityFloorPlanText, "ops_floor_plan_texts"),
 	)
 }
 
 func (s *floorPlanTextService) BatchDelete(ctx context.Context, ids []string) error {
-	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil），
-	// 与迁移前 `if len(ids) == 0 { return nil }` 行为一致
-	return s.repo.BatchDelete(ctx, ids)
+	// Phase 149 / SCOPE-03：后端权威边界 —— 按可见集裁剪后继续（不整批 403）。
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityFloorPlanText, ids)
+	if err != nil {
+		return err
+	}
+	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil）。
+	return s.repo.BatchDelete(ctx, visible)
 }

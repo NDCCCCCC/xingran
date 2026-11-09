@@ -67,6 +67,13 @@ import {
   TRUNK_HYBRID_OVERLAP_HINT,
   SKIP_PREFLIGHT_HINT,
   PORTSEC_MAC_HINT,
+  PHYSICAL_SPEED_OPTIONS,
+  PHYSICAL_SPEED_MODE_AUTO,
+  PHYSICAL_DUPLEX_OPTIONS,
+  PHYSICAL_MTU_MIN,
+  PHYSICAL_MTU_MAX,
+  PHYSICAL_NO_ROLLBACK_HINT,
+  PHYSICAL_EVIDENCE_LABEL,
   composeReason,
   validateReasonOptional,
   validateReasonRequired,
@@ -97,6 +104,10 @@ const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = [
   { label: ACTION_TITLE.portsec_max_mac, value: "portsec_max_mac" },
   { label: ACTION_TITLE.portsec_sticky, value: "portsec_sticky" },
   { label: ACTION_TITLE.portsec_static_bind, value: "portsec_static_bind" },
+  // v1.54 Phase 143 (PORT-01/02): 物理参数三动作
+  { label: ACTION_TITLE.set_speed, value: "set_speed" },
+  { label: ACTION_TITLE.set_duplex, value: "set_duplex" },
+  { label: ACTION_TITLE.set_mtu, value: "set_mtu" },
 ];
 
 /** Phase 122 (PORTW-03): WS 实时进度聚合状态 */
@@ -115,7 +126,7 @@ interface LiveProgress {
   lastEventAt: number;
 }
 
-/** trunk/portsec 动作的批量写附加参数（T-53-07 白名单的 Phase 124/125 延伸） */
+/** trunk/portsec/physical 动作的批量写附加参数（T-53-07 白名单的 Phase 124/125/143 延伸） */
 interface TrunkParams {
   nativeVlan?: number;
   allowedVlans?: number[];
@@ -126,6 +137,11 @@ interface TrunkParams {
   maxMacCount?: number;
   macAddress?: string; // 归一后 AA-BB-CC-DD-EE-FF
   staticBindVlanId?: number; // portsec_static_bind 的 VLAN（1-4094）
+  // v1.54 Phase 143 物理参数（复用同一份参数快照，确认写/重试与预览同参）
+  speed?: number;
+  speedMode?: string;
+  duplex?: string;
+  mtu?: number;
 }
 
 export interface BulkWriteDrawerProps {
@@ -333,6 +349,14 @@ export function BulkWriteDrawer({
           vlanId: trunkParams.staticBindVlanId,
         }
       : {}),
+    // v1.54 Phase 143 物理参数（按 action 白名单携带, 后端按型号能力画像校验）
+    ...(action === "set_speed" && trunkParams
+      ? trunkParams.speedMode === PHYSICAL_SPEED_MODE_AUTO
+        ? { speedMode: PHYSICAL_SPEED_MODE_AUTO }
+        : { speed: trunkParams.speed }
+      : {}),
+    ...(action === "set_duplex" && trunkParams ? { duplex: trunkParams.duplex } : {}),
+    ...(action === "set_mtu" && trunkParams ? { mtu: trunkParams.mtu } : {}),
     ...(skipPreflight ? { skipPreflight: true } : {}),
   });
 
@@ -405,6 +429,16 @@ export function BulkWriteDrawer({
         macAddress: parseMacAddress(String(values.staticMacAddress)) ?? undefined,
         staticBindVlanId: Number(values.staticBindVlanId),
       };
+    } else if (action === "set_speed") {
+      // v1.54 Phase 143: auto 走 speedMode 哨兵, 否则带数字速率
+      trunkParams =
+        values.speedMode === PHYSICAL_SPEED_MODE_AUTO
+          ? { speedMode: PHYSICAL_SPEED_MODE_AUTO }
+          : { speed: Number(values.speed) };
+    } else if (action === "set_duplex") {
+      trunkParams = { duplex: String(values.duplex) };
+    } else if (action === "set_mtu") {
+      trunkParams = { mtu: Number(values.mtu) };
     }
 
     // Phase 125: skipPreflight 开关（表单可达即持 network:port:write —— 菜单 perms 已门控路由,
@@ -892,6 +926,84 @@ function SelectView({
               </Form.Item>
             );
           }
+          if (action === "set_speed") {
+            return (
+              <>
+                <Form.Item
+                  name="speedMode"
+                  label="速率模式"
+                  initialValue={PHYSICAL_SPEED_MODE_AUTO}
+                  rules={[{ required: true, message: "请选择速率模式" }]}
+                >
+                  <AppSelect
+                    options={[
+                      { label: "自协商 (auto)", value: PHYSICAL_SPEED_MODE_AUTO },
+                      { label: "指定速率", value: "manual" },
+                    ]}
+                    showSearch={false}
+                  />
+                </Form.Item>
+                <Form.Item shouldUpdate noStyle>
+                  {({ getFieldValue }) =>
+                    getFieldValue("speedMode") !== PHYSICAL_SPEED_MODE_AUTO ? (
+                      <Form.Item
+                        name="speed"
+                        label="速率 (Mbps)"
+                        rules={[{ required: true, message: "请选择速率" }]}
+                      >
+                        <AppSelect
+                          options={PHYSICAL_SPEED_OPTIONS.map((o) => ({ ...o }))}
+                          showSearch={false}
+                        />
+                      </Form.Item>
+                    ) : null
+                  }
+                </Form.Item>
+              </>
+            );
+          }
+          if (action === "set_duplex") {
+            return (
+              <Form.Item
+                name="duplex"
+                label="双工模式"
+                rules={[{ required: true, message: "请选择双工模式" }]}
+              >
+                <AppSelect
+                  options={PHYSICAL_DUPLEX_OPTIONS.map((o) => ({ ...o }))}
+                  showSearch={false}
+                />
+              </Form.Item>
+            );
+          }
+          if (action === "set_mtu") {
+            return (
+              <Form.Item
+                name="mtu"
+                label={`MTU (${PHYSICAL_MTU_MIN}-${PHYSICAL_MTU_MAX})`}
+                extra={PHYSICAL_NO_ROLLBACK_HINT}
+                rules={[
+                  { required: true, message: "请输入 MTU" },
+                  {
+                    validator: (_rule: unknown, value: unknown) => {
+                      const n = Number(value);
+                      if (value === undefined || value === null || value === "") {
+                        return Promise.resolve();
+                      }
+                      if (!Number.isInteger(n) || n < PHYSICAL_MTU_MIN || n > PHYSICAL_MTU_MAX) {
+                        return Promise.reject(
+                          new Error(`MTU 取值范围 ${PHYSICAL_MTU_MIN}-${PHYSICAL_MTU_MAX}`)
+                        );
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
+              >
+                <AppInput type="number" placeholder={`${PHYSICAL_MTU_MIN}-${PHYSICAL_MTU_MAX}`} />
+              </Form.Item>
+            );
+          }
           if (action === "portsec_static_bind") {
             return (
               <>
@@ -1085,14 +1197,29 @@ function PreviewView({ preview, interfaceMap, onConfirm, onBack }: PreviewViewPr
         </Col>
       </Row>
 
-      {/* 整体风险等级 */}
+      {/* 整体风险等级 + Phase 143 取证级别徽标 */}
       <Space style={{ marginBottom: 16 }}>
         <span>整体风险等级：</span>
         <Tag color={RISK_TAG_COLOR[preview.riskLevel]}>{RISK_LABEL[preview.riskLevel]}</Tag>
         <Typography.Text type="secondary">
           {preview.vendor} {preview.model} · {ACTION_TITLE[preview.action]}
         </Typography.Text>
+        {/* 默认放行 ≠ 有证据：unverified 诚实标注「未取证」，不冒充真机结论 */}
+        {preview.evidenceLevel && (
+          <Tag color={preview.evidenceLevel === "unverified" ? "default" : "blue"}>
+            取证级别：{PHYSICAL_EVIDENCE_LABEL[preview.evidenceLevel] ?? preview.evidenceLevel}
+          </Tag>
+        )}
       </Space>
+      {preview.evidenceLevel === "unverified" && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title="未取证（默认放行）"
+          description="该物理参数命令形态按厂商/全局默认画像渲染，尚未针对该型号真机逐一取证；默认放行不代表已验证。批量物理参数无自动回滚，失败需人工按 audit.before_value 恢复。"
+        />
+      )}
 
       {/* 按端口分组: 展开行显示命令序列 */}
       <Table<PortWritePreviewPort>

@@ -506,10 +506,10 @@ func (l *selectorLearnerImpl) getCacheKey(pageURL, elementID string) string {
 // 通知机制（复用既有 NoticeHub WebSocket 链路，不新增通知基建）：
 //   - noticeHub 注入时：BroadcastToAll 广播 selector_update_required 消息，
 //     管理端（RPA AI 面板）据此提示「该选择器连续失败 ≥3 次，建议重新学习」；
-//   - 未注入（旧构造签名/单测）：仅 WARN 日志，行为与 TODO 之前一致。
+//   - 未注入（旧构造签名/单测）：TIDY-03 已落地，仅 WARN 日志，行为与注入前一致。
 //
-// 刻意不做的事：不落库「待处理任务」——SelectorFailureRecord 本身就是持久
-// 待办（FailureCount + ResolvedAt 已表达未解决状态），再建任务表是第二真相。
+// 设计决策（已裁定接受）：FailureCount + ResolvedAt 已表达未解决状态，不再另建任务表
+// （避免第二真相）；此为已接受的架构选择。
 func (l *selectorLearnerImpl) markSelectorForUpdate(ctx context.Context, record *SelectorFailureRecord) {
 	if record == nil {
 		return

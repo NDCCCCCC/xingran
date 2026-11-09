@@ -1257,3 +1257,135 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     });
   }, 30000); // CI coverage 慢机: WS 事件派发 + 渲染累计超默认 15s（PR #38 flake）
 });
+
+// ==================== v1.54 Phase 143 物理参数批量入口 (PORT-01/02) ====================
+describe("BulkWriteDrawer — Phase 143 物理参数批量写", () => {
+  beforeEach(() => {
+    mockBatchWritePorts.mockReset();
+    mockPreviewBatchWritePorts.mockReset();
+    mockPortWriteListeners.clear();
+    mockPreviewBatchWritePorts.mockResolvedValue(
+      makePreview({ action: "set_mtu", evidenceLevel: "unverified", physicalEvidence: "" })
+    );
+  });
+
+  it("Phase 143: set_mtu preview→确认→写, mtu 透传 + evidenceLevel 徽标 + 未取证告警", async () => {
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "调整端口 MTU");
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("MTU (1280-9216)"), { target: { value: "9000" } });
+    });
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    // evidenceLevel 徽标：默认放行 ≠ 有证据，诚实标注未取证
+    expect(screen.getByText(/取证级别：未取证/)).toBeInTheDocument();
+    expect(screen.getByText(/批量物理参数无自动回滚/)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+
+    const previewArg = mockPreviewBatchWritePorts.mock.calls[0][0] as {
+      mtu: number;
+      action: string;
+    };
+    expect(previewArg.mtu).toBe(9000);
+    expect(previewArg.action).toBe("set_mtu");
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as { mtu: number; action: string };
+    expect(writeArg.mtu).toBe(9000);
+    expect(writeArg.action).toBe("set_mtu");
+  });
+
+  it("Phase 143: set_speed speedMode=auto 透传（不带数字 speed）", async () => {
+    mockPreviewBatchWritePorts.mockResolvedValue(
+      makePreview({
+        action: "set_speed",
+        evidenceLevel: "vendor",
+        physicalEvidence: "厂商基线，未逐型号取证",
+      })
+    );
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "调整端口速率");
+    // 速率模式默认 initialValue=auto，无需改
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    // vendor 级别徽标不触发 unverified 告警
+    expect(screen.getByText(/取证级别：厂商基线/)).toBeInTheDocument();
+    expect(screen.queryByText("未取证（默认放行）")).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as {
+      speedMode?: string;
+      speed?: number;
+      action: string;
+    };
+    expect(writeArg.action).toBe("set_speed");
+    expect(writeArg.speedMode).toBe("auto");
+    expect(writeArg.speed).toBeUndefined();
+  });
+
+  it("Phase 143: set_duplex 双工选项透传", async () => {
+    render(
+      <BulkWriteDrawer
+        open={true}
+        selectedPorts={[PORT_A1]}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    await selectOptionByLabel("操作类型", "调整端口双工模式");
+    await selectOptionByLabel("双工模式", "全双工 (full)");
+    await selectOptionByLabel("操作原因", "故障排查处理");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "预览命令（dry-run）" }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText("dry-run 预览，未下发任何设备命令")).toBeInTheDocument();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "确认下发（真实写）" }));
+    });
+    await waitFor(() => {
+      expect(mockBatchWritePorts).toHaveBeenCalledTimes(1);
+    });
+    const writeArg = mockBatchWritePorts.mock.calls[0][0] as { duplex: string; action: string };
+    expect(writeArg.action).toBe("set_duplex");
+    expect(writeArg.duplex).toBe("full");
+  });
+});

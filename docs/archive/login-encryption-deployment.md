@@ -241,7 +241,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
    vim configs/config.prod.yaml
 
    # 重新构建
-   go build -o xingran-backend ./cmd/main.go
+   go build -o out/xingran-backend ./cmd/main.go
 
    # 部署到测试服务器
    scp xingran-backend user@test-server:/opt/xingran/
@@ -340,7 +340,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
    vim configs/config.prod.yaml
 
    # 重新构建
-   go build -o xingran-backend ./cmd/main.go
+   go build -o out/xingran-backend ./cmd/main.go
 
    # 部署到生产服务器
    scp xingran-backend user@prod-server:/opt/xingran/
@@ -446,7 +446,7 @@ VITE_ENABLE_REQUEST_ENCRYPTION=true  # 生产环境永远不要设为 false
 
    # 回滚后端变更
    git revert <commit-hash>
-   go build -o xingran-backend ./cmd/main.go
+   go build -o out/xingran-backend ./cmd/main.go
    systemctl restart xingran-backend
    ```
 

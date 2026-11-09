@@ -361,6 +361,27 @@ export const writeTrunk = async (req: {
   return result.data!;
 };
 
+/**
+ * 单端口物理参数写 (set_speed / set_duplex / set_mtu) — v1.54 Phase 143 (PORT-01/02)
+ * - 端点: POST /network/ports/write/physical（单端点三动作, 权限 network:port:write）
+ * - 参数按 action 携带（speed+speedMode / duplex / mtu）; 后端按型号能力画像校验+渲染
+ * - 型号能力结论（evidenceLevel）由批量 dry-run 预览回显; 单条不额外请求预览
+ * - wrapper 遵守 LANDMINE #5: 无 try/catch, 无 message.error (post() 拦截器统一弹 Toast)
+ */
+export const writePhysical = async (req: {
+  portId: string;
+  action: PortWriteAction;
+  speed?: number;
+  speedMode?: string;
+  duplex?: string;
+  mtu?: number;
+  reason?: string;
+  skipPreflight?: boolean;
+}): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/physical", req);
+  return result.data!;
+};
+
 // ==================== 端口 MAC bundle (quick 260712-vpj, D-01/D-04) ====================
 //
 // 并行拉取单端口的"当前 MAC"+"最近一条历史 MAC",供 ports 页 expandedRowRender 使用。

@@ -64,25 +64,28 @@ export DB_NAME=xingran
 
 ## 各子目录说明
 
-### `build/` — 构建脚本
+### 构建脚本（顶层 + `build/` 子目录）
 
-`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。**所有脚本内已用 `%~dp0..\..` / `dirname/../..` 定位项目根，可从任意 cwd 调用**。
+`bat`/`sh` 配对，覆盖 Windows / Linux（macOS 通常也能跑 `.sh`）。`scripts/build/` 下脚本用 `%~dp0..\..`、`scripts/` 顶层脚本用 `%~dp0..` / `dirname/..` 各自上溯到项目根，可从任意 cwd 调用（两者层级不同，不可一概而论）。**产物统一 `out/`**（见上文「构建产物路径」）。
 
 ```bash
+# scripts/ 顶层（产物 out/）
+./build-linux.bat [root]     # 内嵌前端 Linux（VITE_BASE 切换）
+./build_linux.sh             # 纯后端 Linux
+./build-embedded.bat         # 内嵌前端 Windows
+./build-embedded.sh          # 内嵌前端 Linux
+
+# scripts/build/ 子目录（产物 out/）
 cd scripts/build
+./build.bat                  # 纯后端 Linux
+./build_and_deploy.bat       # 纯后端 Linux + 部署说明
+./generate_swagger.bat       # Swagger 生成（Windows）
+```
 
-# 构建后端（Linux 目标）
-./build.bat                    # 或 ./build_and_deploy.bat
-./build-embedded.sh            # 内嵌前端的版本（Linux）
-build-embedded.bat             # 内嵌前端的版本（Windows）
-build-linux.bat                # 纯 Windows 构建
-
-# Swagger 文档
-./generate_swagger.bat
-./generate_swagger.sh
-
-# 校验打包后的 vendor chunks（D-07）
-./check-bundle.sh
+```bash
+# scripts/ 顶层其余工具
+./generate_swagger.sh        # Swagger 生成（Linux）
+./check-bundle.sh            # 校验打包后的 vendor chunks（D-07）
 ```
 
 ### `agent/` — Agent 部署/测试
@@ -112,15 +115,45 @@ Go 测试入口，与 Go test 框架配合运行。
 go test ./scripts/e2e/...
 ```
 
+> 静态 3 项 operlog 覆盖断言已不在本目录脚本内，见
+> `internal/utils/operlog/handler_coverage_test.go`（由 `go test ./internal/...`
+> 硬门禁执行）；`scripts/e2e/operlog_e2e_verify_test.go` 只承载 LIVE e2e。
+
 ### `tests/` — 测试脚本
 
-跨语言测试脚本目录。
+跨语言测试脚本目录。注意：仓库根统一用 `tests/`（复数）存放 Go/前端测试，`test/`（单数）已删除；本目录只放 `scripts/` 自身的测试辅助脚本。
 
 | 项 | 类型 | 说明 |
 |----|------|------|
-| `test_excel_import/main.go` | Go | Excel 导入功能测试 |
-| `test_rpa_worker.py` | Python | RPA Worker 任务执行测试 |
-| `rpa_test_templates.json` | 配置 | `test_rpa_worker.py` 配套模板 |
+| `test_excel_import.go` | Go | Excel 导入功能测试（见 `docs/EXCEL_IMPORT_GUIDE.md`） |
+
+> RPA Worker 测试脚本的权威副本在 `tests/scripts/rpa/`，不在本目录（重复副本已清理）。
+
+### `ops/` — 一次性运维 / 诊断 CLI
+
+从 `cmd/` 迁入的 13 个一次性 Go CLI（`package main`，仍被 `go build ./...` 覆盖）：`cleanup_port_status`、`diag_4f001_red`、`mac_*`（6 个）、`reset-ad-breaker`、`verify-*`（4 个）。用法：`go run ./scripts/ops/<name>/`。**新增一次性工具一律放这里，不要放 `cmd/`**（`cmd/` 只保留 `main.go` 与 `agent/`）。
+
+### 顶层在用脚本（登记）
+
+| 文件 | 用途 |
+|------|------|
+| `build-embedded.bat/.sh`、`build-linux.bat`、`build_linux.sh` | 本地构建（产物统一 `out/`） |
+| `check-route-registry.mjs`、`scan-routes.cjs`、`route-registry.json` | 路由注册表门禁 |
+| `check-status-literals.sh` | 状态字面量门禁 |
+| `check-bundle.sh` | vendor chunks 校验（D-07） |
+| `generate_swagger.sh` | Swagger 生成（Windows 版在 `build/`） |
+| `migrate-sm4-key.go` | SM4 密钥迁移（见 `docs/deployment.md`） |
+| `operlog_e2e_verify.sh`（`scripts/` 顶层，**权威副本**） | 操作日志 **LIVE e2e**（需 running backend + DB + 凭据）；静态覆盖断言已迁出至 `internal/utils/operlog/handler_coverage_test.go` |
+| `tests/e2e/operlog_e2e_verify.sh`（**重复副本**） | 与权威副本仅 1 行注释路径不同，配套 `tests/e2e/operlog_e2e_verify_test.go`；LIVE 行为与权威副本逐字一致，改动须同步 |
+| `rpa_test_templates.json`、`test-sm2-parse.go` | 测试辅助 |
+
+> 无现存引用的一次性历史脚本（历史 phase 验证 / VDI 诊断 / 菜单工具箱等）已归档到 `.planning/milestones/v1.53-archived-scripts/`，见该目录 README。
+>
+> **两份 `operlog_e2e_verify.sh` 重复副本处置（Phase 145）**：保留双份但登记权威/从属关系——`scripts/operlog_e2e_verify.sh` 为权威副本、`tests/e2e/operlog_e2e_verify.sh` 为重复副本（各自配套不同包的 Go driver，避免 driver 路径断裂）；两者 LIVE 行为逐字一致、**任何改动须同步**。静态覆盖断言统一由 `internal/utils/operlog/handler_coverage_test.go`（`go test ./internal/...` 硬门禁）承载，不在脚本内。未来是否物理合并由 Lead 单独裁定，本 phase 不擅自删除任一文件。上文 `.archive-scripts-2026-08-12/` 提到的 `operlog_e2e_verify.sh` 是历史一次性归档件，与当前在用副本无关。
+
+### 构建产物路径（强制）
+
+所有本地构建脚本与 CI 的产物统一输出到仓库根 **`out/`**（gitignored）：`out/xingran-backend*`、`out/agent/`。禁止在根目录落 `.exe` / `-linux` / `-embedded` / 打包文件。完整约束见 `AGENTS.md`「构建产物与目录约定」。
 
 ### `verify/` — 校验/格式化工具
 
@@ -253,5 +286,10 @@ psql -h localhost -U postgres -d xingran -f check_duplicate_menus.sql
 2. 确保环境变量配置正确
 3. 建议先在测试环境验证脚本
 4. **`.archive-*` 目录的脚本通常不需要再次运行**——除非你明确知道它还在用
-5. `build/` 下脚本的路径定位（`%~dp0..\..` / `dirname/../..`）已适配子目录层级，可从任意 cwd 调用
-6. **已知遗留 bug（未修）**：`build/generate_swagger.bat` 第 19 行 `cd /d "%~dp0.."` 在 `build/` 子目录里实际只切到 `scripts/`，应改为 `%~dp0..\..`（Linux 版 `generate_swagger.sh` 已在 2026-08-12 整理时一并修正）。如需在 Windows 上生成 Swagger，请优先使用 `cd scripts/build && generate_swagger.bat` 并手动确认 `cmd/main.go` 路径，或先 `cd ..` 再调用
+5. `build/` 下脚本与 `scripts/` 根下脚本层级不同，路径定位不可一概而论，详见第 6 条。
+6. **Swagger 生成脚本（Phase 135 / FIX-02 已修复，替代此前自相矛盾的旧表述）**：
+   - `scripts/build/generate_swagger.bat` 位于 `scripts/build/` 下，已把 `cd /d "%~dp0.."` 改为 `cd /d "%~dp0..\.."`（上溯两级到项目根），从 `scripts/build/` 执行可正常找到 `cmd/main.go`，此前的层级缺陷已修；
+   - Linux 版 `scripts/generate_swagger.sh` 位于 `scripts/` 根（不存在 `scripts/build/generate_swagger.sh`），其 `dirname/..` 上溯一级到项目根，本就正确，与 .bat 层级不同、无同一 bug；
+   - 两脚本的 `-o` 均已由 `docs` 改为 `internal/docs`，产物落 `internal/docs/`（与 `docs/archive/ARCHIVE-INDEX.md`「swaggo 产物位置调整」节一致）；`docs/` 下 5 份 Swagger 死文件已删除；
+   - `cmd/main.go` 已补 `_ ".../internal/docs"` blank import，`internal/docs/docs.go` 的 `swag.Register` 生效，`/swagger/*any` 可加载到规范；
+   - Windows 上从任意 cwd 直接运行 `generate_swagger.bat` 即可，无需再手动确认 `cmd/main.go` 路径。

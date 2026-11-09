@@ -24,9 +24,13 @@ const (
 	// ADPushActionUpdateUser 用户四字段变更（nickname/email/phone/deptId）推送。
 	ADPushActionUpdateUser ADPushActionType = "update_user"
 	// ADPushActionDisable sys 软删用户 → 禁用 AD 账号（UAC 514，幂等可重放）。
-	// 注意: UpdateStatus 双向推送（停用→disable / 启用→enable）明确排除在 v1.21 外,
-	// 此处仅预留扩展位。
 	ADPushActionDisable ADPushActionType = "disable"
+	// ADPushActionEnable sys 恢复用户（软删恢复 / 状态 1→0 启用）→ 重新启用 AD 账号
+	// （UAC 544 Replace，幂等可重放）。FIX-01 / Phase 134 落地：排水器 drainRow 调
+	// LDAPClient.EnableUser；入队前须过 SAFE-01/SAFE-02 身份校验，且与 disable 相互压制
+	// （最新意图胜出，见 addomain.adPushOppositeAction 注释）。
+	// ⚠ v1.21 曾刻意裁掉 enable 方向；本常量为**追加新值**，三个既有常量值保持不变。
+	ADPushActionEnable ADPushActionType = "enable"
 	// ADPushActionUpdateManager 重算并回写用户的 AD manager 属性（经理同步规则引擎）。
 	//
 	// 触发时机：部门负责人变更（该部门子树内全部用户）、用户岗位变更、用户部门变更、

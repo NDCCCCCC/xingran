@@ -32,6 +32,7 @@ import {
   FileTextOutlined,
   CheckCircleOutlined,
   EyeOutlined,
+  StarOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
@@ -52,6 +53,7 @@ import {
   WorkOrderType,
 } from "@/lib/workorderApi";
 import ActionButtons from "@/components/shared/ActionButtons";
+import WorkOrderRatingModal from "./components/WorkOrderRatingModal";
 
 // 导入提取的常量、工具和 Hook
 import { STATUS_CONFIG, PRIORITY_CONFIG, TYPE_CONFIG } from "./constants";
@@ -70,6 +72,8 @@ interface WorkOrderTableColumnsProps {
   handleEdit: (record: WorkOrder) => void;
   handleAssignToTodayDuty: (id: string) => void;
   handleDelete: (id: string) => void;
+  /** FIX-06：打开工单评价弹窗 */
+  handleRate: (record: WorkOrder) => void;
   current: number;
   pageSize: number;
   /** 由 useServerSort 注入,返回字段当前排序方向 */
@@ -82,6 +86,7 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
     handleEdit,
     handleAssignToTodayDuty,
     handleDelete,
+    handleRate,
     current,
     pageSize,
     getSortOrder,
@@ -164,7 +169,7 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
     {
       title: "操作",
       key: "action",
-      width: 100,
+      width: 140,
       fixed: "right",
       render: (_: unknown, record: WorkOrder) => {
         const actions = [
@@ -179,6 +184,12 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
             label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
+          },
+          {
+            key: "rate",
+            label: "评价",
+            icon: <StarOutlined />,
+            onClick: () => handleRate(record),
           },
           ...(record.status === WorkOrderStatus.Pending
             ? [
@@ -234,6 +245,8 @@ const WorkOrderPage: FC = () => {
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  // FIX-06：工单评价弹窗（最小可用入口，挂在操作列「评价」按钮）
+  const [ratingWorkOrder, setRatingWorkOrder] = useState<WorkOrder | null>(null);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize } = usePagination();
@@ -453,6 +466,11 @@ const WorkOrderPage: FC = () => {
     [fetchList, openDetailDrawer, selectedRecord, message]
   );
 
+  // FIX-06：打开评价弹窗（用 useCallback 保证列 useMemo 依赖稳定）
+  const handleRate = useCallback((record: WorkOrder) => {
+    setRatingWorkOrder(record);
+  }, []);
+
   // 表格列 - 使用 useMemo 避免重复创建
   const columns = useMemo(
     () =>
@@ -461,6 +479,7 @@ const WorkOrderPage: FC = () => {
         handleEdit,
         handleAssignToTodayDuty,
         handleDelete,
+        handleRate,
         current: paginationProps.current ?? 1,
         pageSize: paginationProps.pageSize ?? 10,
         getSortOrder: (field) =>
@@ -471,6 +490,7 @@ const WorkOrderPage: FC = () => {
       handleEdit,
       handleAssignToTodayDuty,
       handleDelete,
+      handleRate,
       paginationProps,
       orderByColumn,
       woSortOrder,
@@ -987,6 +1007,13 @@ const WorkOrderPage: FC = () => {
           </div>
         )}
       </Drawer>
+
+      {/* FIX-06：工单评价弹窗（最小可用入口） */}
+      <WorkOrderRatingModal
+        workOrderId={ratingWorkOrder?.id ?? null}
+        workOrderTitle={ratingWorkOrder?.title}
+        onClose={() => setRatingWorkOrder(null)}
+      />
     </div>
   );
 };

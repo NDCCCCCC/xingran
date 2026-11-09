@@ -15,6 +15,10 @@ const (
 	MessageTypeRPAProgress  = "rpa_progress"
 	MessageTypeRPACompleted = "rpa_completed"
 	MessageTypeRPAFailed    = "rpa_failed"
+
+	// MessageTypeADSyncDriftAlert Phase 144：AD 同步漂移告警 WS 事件。
+	// 前端 noticeStore 按 type 分流；business payload JSON 内嵌 Content。
+	MessageTypeADSyncDriftAlert = "ad_sync_drift_alert"
 )
 
 // noticeHubBufferSize NoticeHub 内部 channel 缓冲大小

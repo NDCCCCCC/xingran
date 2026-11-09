@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 )
 
@@ -31,7 +32,9 @@ import (
 //     compare=reconciliation:list(读,模块标准读权限)。verifier 原 suggestion exception:list 未 seed,
 //     改用已 seed 的 reconciliation:list 避免误锁 dashboard 卡片。
 func SetupReconciliationExceptionRouter(r *gin.RouterGroup, core *core.Core) {
-	svc := asset.NewReconciliationExceptionService(core.DB.GetDB())
+	// Phase 147 CACHE-02:写路径装配注入 CacheProvider,使规则写成功后
+	// 广播失效 reconciliation:health:workstation:*（与 core.DataCacheService 同后端）。
+	svc := asset.NewReconciliationExceptionService(core.DB.GetDB(), system.NewCacheProvider(core.DataCacheService))
 	baselineSvc := asset.NewReconciliationBaselineService(core.DB.GetDB())
 	handler := NewReconciliationExceptionHandler(svc).
 		WithCore(core).

@@ -1,5 +1,6 @@
 # v1.52 运维域数据权限统一收口（终态）— 里程碑总结
-
+> ✅ 本文件是 v1.52 收档时点快照；当前状态以 `.planning/STATE.md` frontmatter / `.planning/ROADMAP.md` / `.planning/MILESTONES.md` 为准。其余 `.planning/` 历史文件（STATE.md 正文、state.json、HANDOFF.json、audit 快照、v1.23-seeds、todos、docs 手册 FUTURE 清单等）均为时点快照或已清偿记录，勿据此判断当前待办。
+> 📦 2026-11-08 已完成 GSD 归档：本文件 §交付物索引中 `phases/{130..133}-*` 与 `quick/2611*` 路径已移入 `.planning/milestones/v1.52-phases/` / `v1.52-quick/`，换算见 `.planning/ARCHIVE-INDEX.md`。
 - **状态**：✅ SHIPPED 2026-11-07
 - **PR**：#75 merged → `b56f1286`（全量代码）；本分支 `feat/v1.52-data-scope-unification` 为收档 PR
 - **需求**：7 REQ（DS-01~07）全部交付

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	workordersvc "github.com/xingran-next/xingran-go-backend/internal/services/workorder"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -229,9 +230,33 @@ func assignWorkOrderHandler(db *gorm.DB, template *models.PeriodicWorkOrderTempl
 		return assigneeID, nil
 
 	case models.PeriodicAssignTypeRotation:
-		// 按轮询分配（暂未实现）
-		applogger.Infof("轮询分配暂未实现")
-		return nil, nil
+		// FIX-05（v1.53 Phase 138，2026-11-08 开放项盘点 #B8）：补齐 cron 路径的
+		// Rotation 轮询分配，与 service 层 periodic.GenerateWorkOrder 语义对齐。
+		//
+		// 复用 workorder 包共享纯函数（成员集合 + 取模索引），避免复制两份逻辑：
+		//   - LoadRotationMembers：pool_id = template.AssignTargetID，按 member_order ASC 取成员
+		//   - RotationSelectedIndex：cursorBefore % memberCount
+		//
+		// 游标语义对齐：本函数不自己 +1；executePeriodicWorkOrderCreateTask 在事务末尾
+		// 统一 `total_generated + 1`（见 workorder_tasks.go:113）。因此「本次分配前」
+		// 的游标就是 template.TotalGenerated，与 service 降级路径（及原子路径的
+		// newCount-1）完全一致 —— 这是「双路径一致性」的核心不变量。
+		if template.AssignTargetID == nil || *template.AssignTargetID == "" {
+			applogger.Infof("[workorder] Rotation 模板未配置值班池 ID，无法分配")
+			return nil, nil
+		}
+		members, err := workordersvc.LoadRotationMembers(context.Background(), db, *template.AssignTargetID)
+		if err != nil || len(members) == 0 {
+			applogger.Infof("[workorder] 值班池 %s 中没有找到有效成员或查询失败: %v", *template.AssignTargetID, err)
+			return nil, nil
+		}
+		selectedIndex := workordersvc.RotationSelectedIndex(template.TotalGenerated, len(members))
+		assigneeID := members[selectedIndex].UserID
+		workOrder.DutyPoolID = template.AssignTargetID
+		workOrder.AssignStrategy = string(models.PeriodicAssignTypeRotation)
+		applogger.Infof("[workorder] Rotation 选中成员 %s (索引 %d/%d, total_generated=%d, pool=%s)",
+			assigneeID, selectedIndex, len(members), template.TotalGenerated, *template.AssignTargetID)
+		return &assigneeID, nil
 
 	default:
 		return nil, nil

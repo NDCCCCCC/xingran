@@ -67,7 +67,7 @@ func NewAssetService(db *gorm.DB) AssetService {
 func (s *assetService) Statistics(ctx context.Context) (*AssetStatisticsResult, error) {
 	var result AssetStatisticsResult
 	err := applyAssetReadScope(
-		s.db.WithContext(ctx).Model(&models.Asset{}), ctx,
+		ScopedQuery(ctx, s.db).Model(&models.Asset{}), ctx,
 	).
 		Where("component_type IS NULL").
 		Select(
@@ -192,7 +192,7 @@ func (s *assetService) GetByDeviceSN(ctx context.Context, deviceSN string) (*mod
 
 	var asset models.Asset
 	err := applyAssetReadScope(
-		s.db.WithContext(ctx).Where("devicesn = ? AND deleted_at IS NULL", deviceSN), ctx,
+		ScopedQuery(ctx, s.db).Where("devicesn = ? AND deleted_at IS NULL", deviceSN), ctx,
 	).
 		First(&asset).Error
 
@@ -387,7 +387,7 @@ func (s *assetService) GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, e
 	var results []DeviceTypeCount
 
 	err := applyAssetReadScope(
-		s.db.WithContext(ctx).Table("ops_asset"), ctx,
+		ScopedQuery(ctx, s.db).Table("ops_asset"), ctx,
 	).
 		Select("device_type_name as value, COUNT(*) as count").
 		Where("device_type_name IS NOT NULL AND device_type_name != ''").
@@ -407,7 +407,7 @@ func (s *assetService) GetDeviceCategories(ctx context.Context) ([]DeviceTypeCou
 	var results []DeviceTypeCount
 
 	err := applyAssetReadScope(
-		s.db.WithContext(ctx).Table("ops_asset"), ctx,
+		ScopedQuery(ctx, s.db).Table("ops_asset"), ctx,
 	).
 		Select("device_category_second_name as value, COUNT(*) as count").
 		Where("device_category_second_name IS NOT NULL AND device_category_second_name != ''").
@@ -427,7 +427,7 @@ func (s *assetService) GetStatusValues(ctx context.Context) ([]DeviceTypeCount, 
 	var results []DeviceTypeCount
 
 	err := applyAssetReadScope(
-		s.db.WithContext(ctx).Table("ops_asset"), ctx,
+		ScopedQuery(ctx, s.db).Table("ops_asset"), ctx,
 	).
 		Select("usestatus_label as value, COUNT(*) as count").
 		Where("usestatus_label IS NOT NULL AND usestatus_label != ''").

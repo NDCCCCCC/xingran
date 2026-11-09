@@ -47,6 +47,10 @@ func (s *doorService) Create(ctx context.Context, door *operationsmodels.Door) e
 	if err := s.validateDoorRelations(ctx, door); err != nil {
 		return err
 	}
+	// Phase 149 / SCOPE-03：提交侧 floor_id 越界 → 单条显式 403。
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityDoor, door.FloorID); err != nil {
+		return err
+	}
 	return s.repo.Create(ctx, door)
 }
 
@@ -54,15 +58,27 @@ func (s *doorService) Update(ctx context.Context, door *operationsmodels.Door) e
 	if err := s.validateDoorRelations(ctx, door); err != nil {
 		return err
 	}
+	// Phase 149 / SCOPE-03：改前侧按 door.ID + 提交侧 floor_id，任一侧越界 403。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityDoor, door.ID); err != nil {
+		return err
+	}
+	if err := checkEntitySubmittedScope(ctx, s.db, scopeEntityDoor, door.FloorID); err != nil {
+		return err
+	}
 	return s.repo.Update(ctx, door)
 }
 
 func (s *doorService) Delete(ctx context.Context, id string) error {
+	// Phase 149 / SCOPE-03：改前侧越界 → 单条显式 403。
+	if err := checkEntityWriteScope(ctx, s.db, scopeEntityDoor, id); err != nil {
+		return err
+	}
 	return s.repo.Delete(ctx, id)
 }
 
 func (s *doorService) GetByID(ctx context.Context, id string) (*operationsmodels.Door, error) {
-	return s.repo.GetByID(ctx, id)
+	// Phase 149 / SCOPE-01：读端点按可见集裁剪，越界 / 断链 → record not found（空集语义）。
+	return s.repo.GetByID(ctx, id, entityReadScope(ctx, scopeEntityDoor, "ops_doors"))
 }
 
 // filterScope List 的两个过滤条件（条件字符串与 ? 占位符逐字平移自迁移前实现）。
@@ -90,16 +106,23 @@ func (s *doorService) filterScope(req requests.DoorListRequest) base.Scope {
 // Order」的分支是 GORM no-op 死代码（空串不进 clause），随迁移删除。
 func (s *doorService) List(ctx context.Context, req requests.DoorListRequest) (*PageResult, error) {
 	current, pageSize := req.GetPagination()
+	// Phase 149 / SCOPE-01：scopes 追加可见集裁剪（只裁剪行，响应形状不变）；
+	// 业务 filterScope 与排序 scope 顺序不变；Count 与 Find 同源。
 	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
 		s.filterScope(req),
 		base.SortScopeWithTail(req.BaseListRequest, doorAllowedSortFields, "created_at DESC"),
+		entityReadScope(ctx, scopeEntityDoor, "ops_doors"),
 	)
 }
 
 func (s *doorService) BatchDelete(ctx context.Context, ids []string) error {
-	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil），
-	// 与迁移前 `if len(ids) == 0 { return nil }` 行为一致
-	return s.repo.BatchDelete(ctx, ids)
+	// Phase 149 / SCOPE-03：后端权威边界 —— 按可见集裁剪后继续（不整批 403）。
+	visible, _, err := filterEntityVisibleIDs(ctx, s.db, scopeEntityDoor, ids)
+	if err != nil {
+		return err
+	}
+	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil）。
+	return s.repo.BatchDelete(ctx, visible)
 }
 
 // validateDoorRelations 验证门的关联关系

@@ -11,8 +11,8 @@ import {
 } from "../pageTitles";
 
 describe("constants/pageTitles", () => {
-  it("PAGE_TITLES 包含 4 项", () => {
-    expect(Object.keys(PAGE_TITLES).length).toBe(4);
+  it("PAGE_TITLES 包含 5 项", () => {
+    expect(Object.keys(PAGE_TITLES).length).toBe(5);
   });
 
   it("PAGE_TITLES 值正确", () => {
@@ -20,6 +20,8 @@ describe("constants/pageTitles", () => {
     expect(PAGE_TITLES.MONITOR_DASHBOARD).toBe("监控仪表盘");
     expect(PAGE_TITLES.HOME).toBe("首页");
     expect(PAGE_TITLES.NOTICE_DETAIL).toBe("通知详情");
+    // v1.54 Phase 144 ALRT-03: 同步漂移告警页标题
+    expect(PAGE_TITLES.AD_DRIFT_ALERT).toBe("同步漂移告警");
   });
 
   it("SPECIAL_PATH_TITLES 三个特殊路径", () => {

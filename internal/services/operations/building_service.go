@@ -40,7 +40,7 @@ type BuildingStatisticsResult struct {
 // Statistics 统计楼宇(按 status 聚合,排除软删除;复用 applyFilters 支持筛选,与 List 筛选语义一致)。
 func (s *buildingService) Statistics(ctx context.Context, params map[string]interface{}) (*BuildingStatisticsResult, error) {
 	var result BuildingStatisticsResult
-	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{})
+	query := ScopedQuery(ctx, s.db).Model(&operations.OpsBuilding{})
 	// Phase 131：可见集收口 + 越界 orgId 求交（聚合前注入）。
 	if scopeRejectsRequestedOrgFromContext(ctx, extractStringParam(params, "orgId")) {
 		return &result, nil
@@ -231,7 +231,7 @@ func (s *buildingService) attachFloorCount(ctx context.Context, buildings []oper
 		BuildingID string
 		FloorCount int64
 	}
-	err := s.db.WithContext(ctx).
+	err := ScopedQuery(ctx, s.db).
 		Model(&operations.OpsFloor{}).
 		Select("building_id", "COUNT(*) AS floor_count").
 		Where("building_id IN ?", buildingIDs).
@@ -401,7 +401,7 @@ func (s *buildingService) validateNameUnique(ctx context.Context, orgID, name st
 func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).
+	query := ScopedQuery(ctx, s.db).Model(&operations.OpsBuilding{}).
 		Select("id AS value, name AS label").
 		Limit(DropdownMaxRows)
 

@@ -36,7 +36,7 @@ type InfoPointStatisticsResult struct {
 // Statistics 统计信息点(按 status 聚合,排除软删除)。
 func (s *infoPointService) Statistics(ctx context.Context) (*InfoPointStatisticsResult, error) {
 	var result InfoPointStatisticsResult
-	query := s.db.WithContext(ctx).
+	query := ScopedQuery(ctx, s.db).
 		Model(&operations.OpsInfoPoint{})
 	// Phase 131：签名不变，从 ctx 取 ScopeResult 聚合前注入范围条件。
 	// 信息点 → 工位 w → 楼层 f → 楼宇 b；有效机构 = 楼层覆盖优先（单一真实源）。
@@ -295,7 +295,7 @@ func (s *infoPointService) BatchDelete(ctx context.Context, ids []string) error 
 func (s *infoPointService) SearchInfoPointOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Table("ops_info_points").
+	query := ScopedQuery(ctx, s.db).Table("ops_info_points").
 		Select("ops_info_points.id AS value, ops_info_points.name AS label").
 		Limit(DropdownMaxRows)
 

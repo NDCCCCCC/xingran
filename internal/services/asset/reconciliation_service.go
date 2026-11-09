@@ -818,6 +818,8 @@ func (s *reconciliationServiceImpl) GetByWorkstation(ctx context.Context, wsID s
 //     内部保证），因此 err 直接一次传播，不重算（避免 DB 故障时 6 步聚合双跑）
 //   - 脏缓存防御：缓存命中但 Workstation.ID == "" 视为无效条目——失效该键后
 //     回源重建（等价原实现 compute 后 Set 覆写的自愈行为）
+//   - Phase 147 CACHE-02：例外规则写路径经 invalidateExceptionRuleCache 广播失效本键前缀，
+//     保证规则变更后本缓存内 exceptionHit/AppliedActions 立即一致；本函数读路径不变。
 func (s *reconciliationServiceImpl) getByWorkstationWithCache(ctx context.Context, cacheKey string, wsID string) (*ByWorkstationResponse, error) {
 	resp, err := base.GetOrSetJSON[*ByWorkstationResponse](ctx, s.cache, cacheKey, reconciliationHealthCacheTTL, func() (*ByWorkstationResponse, error) {
 		return s.computeByWorkstation(ctx, wsID)
@@ -873,8 +875,7 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 	// 关联资产通过 ops_workstation_device 中间表(已有 workstation_id + asset_id 外键,
 	// 两列均为 VARCHAR(36) — 存 UUID 字符串,与 ops_asset.id (uuid) 需显式 cast 兼容 PG 强类型)。
 	// 不能直接 WHERE ops_asset.workstation_id = ? — 该列在 ops_asset 不存在
-	// (R1 已知约束:物理链路 sys_port_mac→sys_info_point→sys_workstation_info_point 未落地,
-	//  R4 用 ops_workstation_device 作工位-资产关联的可靠路径)。
+	// (R1 已知约束（已裁定接受）：旧直连物理链路 sys_port_mac→sys_info_point→sys_workstation_info_point 不再使用；migration_180 后物理链路 JOIN 已恢复，R4 以 ops_workstation_device 作工位-资产关联的可靠路径。属架构决策，非开放缺陷。)
 	// 沿用 workstation_service List 中 primary_device_serial 子查询的 cast 模式 (::text)。
 	// 方言分支(reconciliation-sqlite-cast-400):PG 保留 ::text(零改动);
 	// sqlite 不识别 `::` 词法(unrecognized token ':'),machine_ip/id 均 TEXT,

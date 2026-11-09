@@ -8,6 +8,15 @@
 #
 # 配合: golangci-lint v2.12+ / staticcheck v0.6+
 # 验证: golangci-lint run --timeout=5m ./...
+#
+# Phase 148 / DIALECT-04: forbidigo 方言 token 准入守卫。
+# 说明(实测 2026-11-09, golangci-lint 2.12.2): forbidigo 基于 go/ast 匹配
+# **标识符 / 选择器调用名**,不匹配字符串字面量或注释里的 SQL 文本。因此本规则
+# 的准入门禁覆盖「以函数调用/标识符形式引入方言写法」;对 raw SQL 字符串里的
+# 方言片段, 由 internal/services/operations/excel_export_dialect_148_test.go
+# 的 Go 源码静态断言(扫字符串+注释)补全, 反向变异红绿由该测试守护。
+# 存量 136 个 Go 文件命中方言 token(全仓实测),按下方 path 白名单逐步收敛;
+# **不得一刀切禁全部 .Raw(**(406 文件含 .Raw(, 大量为合法使用)。
 
 version: "2"
 
@@ -15,6 +24,31 @@ linters:
   default: none
   enable:
     - staticcheck
+    - forbidigo
+  settings:
+    forbidigo:
+      # 8 类 PG 专属方言 token(REQ :44 / ROADMAP :73 口径)。
+      # 语义原语在 Go 层(CastToText / Top1PerGroup / NormalizeMac 等价实现见
+      # workstation_device_service.go 的 recallPhysicalRows),配置里不含 SQL 片段原语。
+      forbid:
+        - pattern: '::text'
+          msg: 'PG 专有强转 ::text 禁止使用；uuid/varchar 比较用双方言 CAST(... AS TEXT)'
+        - pattern: '::uuid'
+          msg: 'PG 专有强转 ::uuid 禁止使用；用双方言 CAST(... AS TEXT)'
+        - pattern: '::\w+'
+          msg: 'PG 专有 :: 强转禁止使用；用双方言 CAST(... AS TEXT)'
+        - pattern: '(?i)DISTINCT\s+ON'
+          msg: 'PG 专有 DISTINCT ON 禁止使用；去重改 Go 层分组 Top-1 或双方言 ROW_NUMBER 窗口函数'
+        - pattern: '(?i)REGEXP_REPLACE'
+          msg: 'PG 专有 REGEXP_REPLACE 禁止使用；归一化改 Go 层或双方言嵌套 REPLACE'
+        - pattern: '(?i)NULLS\s+LAST'
+          msg: 'PG 专有 NULLS LAST 禁止使用；排序改 Go 层或双方言 (x IS NULL), x'
+        - pattern: '(?i)\bILIKE\b'
+          msg: 'PG 专有 ILIKE 禁止使用；用 LOWER(col) LIKE 双方言写法'
+        - pattern: '(?i)ON\s+CONFLICT'
+          msg: '裸 ON CONFLICT 禁止新增；upsert 走 GORM clause.OnConflict 双方言封装'
+      # 注:v1 的 exclude_godoc_examples 在 v2.12.2 的 jsonschema 中不接受
+      # (config verify 实测报错),故按实测去掉;godoc 示例同样受 forbid 规则约束。
   exclusions:
     rules:
       # SA1029: 'interface{} → any' 风格建议
@@ -62,3 +96,85 @@ linters:
         linters:
           - staticcheck
         text: "SA1019"
+
+      # ---------------------------------------------------------------
+      # Phase 148 / DIALECT-04 存量白名单(逐步收敛,非豁免新增代码)
+      # ---------------------------------------------------------------
+      # 全仓实测 136 个 Go 文件命中 8 类方言 token,集中在以下存量目录:
+      #   internal/core/db/migrations/**  58  (PG-only 迁移原文,历史归档+在用)
+      #   internal/services/**            61  (asset/addomain/operations/sql 存量)
+      #   internal/api|models|scheduler/**  3
+      #   scripts/**                      14 (一次性诊断/运维 CLI)
+      # 这些是**改造前既有**的方言用法,本 phase 不逐一改写(超出 148 文件面),
+      # 登记为「存量待收敛」:后续 phase 逐个消除并从白名单移除。
+      #
+      # 硬约束:以下 3 个 Phase 148 改造过的文件**不在**白名单(应已归零):
+      #   internal/services/operations/excel_export_config.go
+      #   internal/services/operations/excel_export_service.go
+      #   internal/services/operations/workstation_device_service.go
+      # 新增方言片段到任意非白名单 Go 文件 → forbidigo(标识符形态)或
+      # excel_export_dialect_148_test.go(源码静态断言)必红。
+      - path: 'internal/core/db/migrations/'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:PG-only 迁移原文(migration_1xx / archive/applied)
+      - path: 'internal/core/db/sqlite_reconciliation_views\.go'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:双方言视图范本注释里的 PG 原版语义描述
+      - path: 'internal/core/db/database\.go'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:bootstrap 期 PG 方言探测
+      - path: 'internal/core/db/.*_test\.go'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:db 包测试夹具
+      - path: 'internal/services/asset/'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:reconciliation 系列 SQL(归 147 / 后续收敛)
+      - path: 'internal/services/addomain/'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:AD 同步/分区 SQL
+      - path: 'internal/services/system/'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:user_sync / role 存量 SQL
+      - path: 'internal/services/rpa/'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:RPA worker/credential SQL
+      - path: 'internal/services/portcollection/'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:端口采集 query
+      - path: 'internal/services/mac_history'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:MAC 历史分区/查询归一化
+      - path: 'internal/services/data_cache_service_test\.go|internal/services/cache_config_service_79_01_test\.go|internal/services/device_discovery_service_79_06_test\.go|internal/services/usage_logger_test\.go'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:services 根包测试夹具
+      - path: 'internal/api/v1/asset/reconciliation_permission_test\.go'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:资产权限测试夹具
+      - path: 'internal/models/ad_push_queue\.go'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:AD push queue 模型 SQL
+      - path: 'internal/scheduler/reconciliation_tasks\.go'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:reconciliation 定时任务
+      - path: 'internal/middleware/apikey_test\.go'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:apikey 测试夹具
+      - path: 'scripts/'
+        linters:
+          - forbidigo
+        text: '.*' # 存量待收敛:一次性诊断/运维 CLI(dbactivity/dbbootstrap/dbprobe/diag/ops/mac/verify 等)

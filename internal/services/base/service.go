@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -71,7 +72,7 @@ func (r *GORMRepository[T]) Delete(ctx context.Context, id string) error {
 func (r *GORMRepository[T]) GetByID(ctx context.Context, id string, scopes ...Scope) (*T, error) {
 	var entity T
 
-	db := r.db.WithContext(ctx).Model(new(T))
+	db := query.ScopedDB(ctx, r.db).Model(new(T))
 	hasScope := false
 	for _, s := range scopes {
 		if s != nil {
@@ -111,7 +112,7 @@ func (r *GORMRepository[T]) GetByID(ctx context.Context, id string, scopes ...Sc
 //
 // PageResult.List 为值切片 []T。
 func (r *GORMRepository[T]) List(ctx context.Context, page PageParams, scopes ...Scope) (*PageResult, error) {
-	query := r.db.WithContext(ctx).Model(new(T))
+	query := query.ScopedDB(ctx, r.db).Model(new(T))
 	for _, s := range scopes {
 		if s != nil {
 			query = s(query)

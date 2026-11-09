@@ -90,6 +90,10 @@ const (
 	SystemConfig PermissionCode = "system:config"
 	SystemNotice PermissionCode = "system:notice"
 
+	// 工单评价权限（FIX-06 / Phase 136 接线 RatingService）。
+	// 独立写码：评价创建属于业务写操作，挂严格单一权限点，不与工单 CRUD 写码共用。
+	WorkOrderRatingCreate PermissionCode = "ops:workorder:rating:create"
+
 	// API Key 管理权限(Phase 61 / AUTH-04 — 由 resource_action_map.go 引用)
 	// 词汇约定(WR-01): 删除权限统一为 remove(system:* 模块约定, D-04)。
 	// router.go apikeys 组级检查已从历史字面量 "system:apikey:delete" 对齐到
@@ -323,6 +327,16 @@ const (
 	OpsDoorDelete    PermissionCode = "ops:doors:delete"
 	OpsFloorPlanEdit PermissionCode = "ops:floor-plan:edit"
 
+	// FIX-13 / OQ-7（v1.25 Phase 87 §八遗留）：5 个读权限码此前只以字面量
+	// 散落在 router.go 的 walls / doors / floor-plan-texts 读组，sys_menu 未播种，
+	// 导致除 admin 外所有角色读端点恒 403。升格为常量（权限码单一真相源），
+	// 由 migration_236 补 F 型菜单种子，router.go 改引用常量。
+	OpsFloorPlanList  PermissionCode = "ops:floor-plan:list"
+	OpsFloorPlanQuery PermissionCode = "ops:floor-plan:query"
+	OpsFloorPlanSave  PermissionCode = "ops:floor-plan:save"
+	OpsWallList       PermissionCode = "ops:walls:list"
+	OpsDoorList       PermissionCode = "ops:doors:list"
+
 	// ==================== AD 域管理 / 经理同步（85-03 RBAC-01 批次 C） ====================
 	// 均为既有字面量码升常量（此前散落在 ad_domain_router.go / manager_rule_router.go
 	// 的组级 ANY-of 字符串中）；migration_221/163 菜单 seed 对应按钮权限。
@@ -342,6 +356,15 @@ const (
 	OpsManagerOrgList    PermissionCode = "ops:manager:org:list"
 	OpsManagerOrgEdit    PermissionCode = "ops:manager:org:edit"
 	OpsManagerOrgDelete  PermissionCode = "ops:manager:org:delete"
+
+	// ==================== 同步漂移告警（Phase 144 / ALRT-01/02/03） ====================
+	// 权限码三方一致：src/constants/permissionCodes.ts / pkg/permission/config.go
+	// / sys_menu.perms（migration_238 seed）。C 型页面码 + 4 个 F 型操作码。
+	ADDriftAlert        PermissionCode = "system:adDriftAlert"
+	ADDriftAlertList    PermissionCode = "system:adDriftAlert:list"
+	ADDriftAlertConfig  PermissionCode = "system:adDriftAlert:config"
+	ADDriftAlertEdit    PermissionCode = "system:adDriftAlert:edit"
+	ADDriftAlertTrigger PermissionCode = "system:adDriftAlert:trigger"
 )
 
 // RoutePermission 路由权限映射
@@ -366,6 +389,17 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/users/:id/reset-password", "POST", UserResetPwd, "重置用户密码"},
 		{"/system/users/export", "POST", UserExport, "导出用户"},
 		{"/system/users/import", "POST", UserImport, "导入用户"},
+
+		// 工单评价写路由（FIX-06 / Phase 136）：严格单一权限点，登记供路由守卫静态核对。
+		{"/workorder/orders/ratings", "POST", WorkOrderRatingCreate, "创建工单评价"},
+
+		// Phase 144 同步漂移告警（ALRT-01/02/03）：读组 ANY-of list/config，
+		// 写组严格单一 edit/trigger。
+		{"/system/ad-drift-alert/status", "POST", ADDriftAlertList, "漂移告警通道状态"},
+		{"/system/ad-drift-alert/logs", "POST", ADDriftAlertList, "漂移告警触发记录分页"},
+		{"/system/ad-drift-alert/config", "POST", ADDriftAlertConfig, "漂移告警配置查询"},
+		{"/system/ad-drift-alert/config/update", "POST", ADDriftAlertEdit, "漂移告警配置更新"},
+		{"/system/ad-drift-alert/trigger", "POST", ADDriftAlertTrigger, "手动触发漂移检测"},
 
 		// 角色管理（85-02：batch 为 2 段具体路径，登记在 :id 之前防 matchPath
 		// 参数段遮蔽——GetPermissionByPath 按数组顺序返回首个命中）
@@ -436,6 +470,8 @@ func GetRoutePermissions() []RoutePermission {
 		{"/network/ports/write/trunk", "POST", NetworkPortWrite, "trunk/hybrid VLAN 端口写"},
 		// v1.51 端口安全（Phase 125 PWX-02，复用同一权限）
 		{"/network/ports/write/portsec", "POST", NetworkPortWrite, "端口安全写"},
+	// Phase 143 移交补登：物理参数写（速率/双工/MTU），复用 NetworkPortWrite。
+	{"/network/ports/write/physical", "POST", NetworkPortWrite, "端口物理参数写"},
 
 		// ==================== 网络设备管理（85-03 RBAC-01 批次 B 拆分同批登记） ====================
 		// 8 组范围内写路由（拓扑/mac/ports 读组为 PLAN 覆盖清单外，维持 deferred 冻结）。

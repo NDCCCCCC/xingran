@@ -23,10 +23,13 @@ type ADSyncScheduler struct {
 	sem     *semaphore.Weighted // 并发控制信号量
 	db      *gorm.DB
 	// Phase 38 Wave 1 (W-04): 全局账号池单例字段，供 dept_sync_tasks 等复用（Pitfall 4 缓存共享）
-	pool    addomain.AccountPool
-	mu      sync.Mutex // 保护状态变更
-	ctx     context.Context    // 调度器上下文，用于取消延迟任务
-	cancel  context.CancelFunc // 取消函数
+	pool addomain.AccountPool
+	// FIX-10: 全量同步失败退避门控（内存状态机，零表结构变更）。构造一次并由
+	// checkAndSyncADConfigs / syncADConfig 共享：tick 前问 allowSync，同步结束问 record。
+	backoffGate *adSyncBackoffGate
+	mu          sync.Mutex         // 保护状态变更
+	ctx         context.Context    // 调度器上下文，用于取消延迟任务
+	cancel      context.CancelFunc // 取消函数
 }
 
 // 全局 AD 同步调度器实例
@@ -60,11 +63,12 @@ func getADSM4Cipher() addomain.PasswordCipher {
 func NewADSyncScheduler(db *gorm.DB, maxConcurrent int64) *ADSyncScheduler {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ADSyncScheduler{
-		cron:   cron.New(cron.WithSeconds()),
-		sem:    semaphore.NewWeighted(maxConcurrent),
-		db:     db,
-		ctx:    ctx,
-		cancel: cancel,
+		cron:        cron.New(cron.WithSeconds()),
+		sem:         semaphore.NewWeighted(maxConcurrent),
+		db:          db,
+		backoffGate: newADSyncBackoffGate(),
+		ctx:         ctx,
+		cancel:      cancel,
 	}
 }
 
@@ -219,9 +223,28 @@ func (s *ADSyncScheduler) Start() {
 		applogger.Errorf("[ad_push_queue] 启动排水定时任务失败（不阻断其它 AD 定时任务）: %v", err)
 	}
 
+	// FIX-11 + Phase 144: AD 同步漂移常态化告警通道（可配置 / 可观测 / 有触发记录）。
+	// 与全量同步 5min tick 错峰（每小时第 12 分钟），避免争用 sys_ad_group_member 读。
+	// ⚠ 服务通道（applogger / sys_oper_log / sys_notice 发布链路 / WS / webhook）
+	//   由 internal/api/router.go 装配阶段注入全局钩子（addomain 包级 var seam），
+	//   本处每轮 NewADSyncDriftAlertService(s.db) 共享同一注入点，无需改动 cron。
+	//   软失败由服务内部处理，cron 闭包只需调用一次 CheckAndAlert。
+	_, err = s.cron.AddFunc("0 12 * * * *", func() {
+		svc := addomain.NewADSyncDriftAlertService(s.db)
+		checkCtx, checkCancel := context.WithTimeout(context.Background(), pkgconstants.ADSyncTaskTimeout)
+		defer checkCancel()
+		if alertErr := svc.CheckAndAlert(checkCtx); alertErr != nil {
+			applogger.Errorf("[ad_sync:drift] 漂移检测轮次失败: %v", alertErr)
+		}
+	})
+	if err != nil {
+		// 非阻断：告警通道注册失败不应影响全量同步 / 账号池恢复 / 队列排水
+		applogger.Errorf("[ad_sync:drift] 启动漂移告警定时任务失败（不阻断其它 AD 定时任务）: %v", err)
+	}
+
 	s.cron.Start()
 	s.started = true
-	applogger.Infof("AD同步定时任务已启动（全量同步: 每5分钟 + 账号池恢复: 每5分钟 + ad_push_queue 排水: 固定30s tick×间隔门控，sys_config 热重载）")
+	applogger.Infof("AD同步定时任务已启动（全量同步: 每5分钟 + 账号池恢复: 每5分钟 + ad_push_queue 排水: 固定30s tick×间隔门控 + 漂移告警: 每小时12分，sys_config 热重载）")
 }
 
 // drainGate 排水间隔门控（方案A热重载的核心状态）。
@@ -285,6 +308,11 @@ func (s *ADSyncScheduler) Stop() {
 }
 
 // checkAndSyncADConfigs 检查并同步需要同步的AD配置
+//
+// FIX-10: 叠加失败退避门控 —— 同步失败时 sys_ad_config.last_sync_at 不更新，
+// 旧逻辑会让每个 5min tick 都重新触发同步（重试风暴）。本函数每 tick 读取退避旋钮，
+// 在 shouldSync 判定之后、真正发起同步之前问 backoffGate.allowSync；被抑制的 tick
+// 直接跳过（不打日志刷屏，只在退避升级时由 record 打一条 WARN）。
 func (s *ADSyncScheduler) checkAndSyncADConfigs() {
 	var configs []models.ADConfig
 	err := s.db.Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).Find(&configs).Error
@@ -292,6 +320,9 @@ func (s *ADSyncScheduler) checkAndSyncADConfigs() {
 		applogger.Errorf("查询AD配置失败: %v", err)
 		return
 	}
+
+	backoffCfg := loadADSyncBackoffConfig(s.db)
+	tickNow := time.Now()
 
 	for _, config := range configs {
 		shouldSync := false
@@ -322,9 +353,14 @@ func (s *ADSyncScheduler) checkAndSyncADConfigs() {
 		}
 
 		if shouldSync {
+			// FIX-10 失败退避门控：连续失败期间，退避窗口内的 tick 一律跳过。
+			// 成功路径（无退避状态 / 已清零）恒放行 → 不改变现有正常行为。
+			if s.backoffGate != nil && !s.backoffGate.allowSync(config.ID, tickNow, backoffCfg) {
+				continue
+			}
 			// 使用信号量控制并发数，异步执行同步
 			// 遵循 Go 最佳实践：使用带超时的 context
-			go func(configID string, configName string) {
+			go func(configID string, configName string, cfg adSyncBackoffConfig) {
 				syncCtx, cancel := context.WithTimeout(context.Background(), pkgconstants.ADSyncTimeout)
 				defer cancel()
 
@@ -335,18 +371,29 @@ func (s *ADSyncScheduler) checkAndSyncADConfigs() {
 					} else {
 						applogger.Errorf("AD同步启动失败: %s - %v", configName, err)
 					}
+					// FIX-10: 信号量/超时失败也算一次失败，纳入退避，避免启动层反复重试成风暴
+					if s.backoffGate != nil {
+						s.backoffGate.record(configID, false, time.Now(), cfg)
+					}
 					return
 				}
 				defer s.sem.Release(1)
 
-				s.syncADConfig(syncCtx, configID)
-			}(config.ID, config.ConfigName)
+				s.syncADConfig(syncCtx, configID, cfg)
+			}(config.ID, config.ConfigName, backoffCfg)
 		}
 	}
 }
 
 // syncADConfig 同步指定的AD配置
-func (s *ADSyncScheduler) syncADConfig(ctx context.Context, configID string) {
+//
+// FIX-10: 无论成功/失败都用 backoffCfg 调 backoffGate.record —— 成功清零退避状态
+// （恢复正常 3h 全量周期），失败累加连续次数并设置下次允许同步时间。
+// cfg 传零值时（历史直接调用方）内部回落默认配置，行为不变。
+func (s *ADSyncScheduler) syncADConfig(ctx context.Context, configID string, cfg adSyncBackoffConfig) {
+	if cfg.Base <= 0 {
+		cfg = defaultADSyncBackoffConfig()
+	}
 	// 获取配置
 	var config models.ADConfig
 	err := s.db.WithContext(ctx).Where("id = ?", configID).First(&config).Error
@@ -365,9 +412,15 @@ func (s *ADSyncScheduler) syncADConfig(ctx context.Context, configID string) {
 
 	if err != nil {
 		applogger.Errorf("AD同步失败: %s - %v", config.ConfigName, err)
+		if s.backoffGate != nil {
+			s.backoffGate.record(configID, false, time.Now(), cfg)
+		}
 	} else {
 		applogger.Infof("AD同步成功: %s - OU=%d, 用户组=%d, 用户=%d, 电脑=%d",
 			config.ConfigName, result.OUCount, result.GroupCount, result.UserCount, result.ComputerCount)
+		if s.backoffGate != nil {
+			s.backoffGate.record(configID, true, time.Now(), cfg)
+		}
 	}
 }
 
@@ -433,7 +486,8 @@ func ScheduleADSyncForConfig(configID string, delay time.Duration) {
 			// 延迟结束，执行同步
 			syncCtx, cancel := context.WithTimeout(context.Background(), pkgconstants.ADSyncTimeout)
 			defer cancel()
-			globalADSyncScheduler.syncADConfig(syncCtx, configID)
+			globalADSyncScheduler.syncADConfig(syncCtx, configID,
+				loadADSyncBackoffConfig(globalADSyncScheduler.db))
 		}
 	}()
 }

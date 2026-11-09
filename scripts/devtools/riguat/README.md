@@ -83,7 +83,7 @@ DeviceConnectionPool（查设备/凭据 → 解密密码 → 建 scrapligo 连�
 go build ./scripts/devtools/riguat
 
 # 远程机（Linux amd64，纯 Go 静态）
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o riguat-linux-amd64 ./scripts/devtools/riguat
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o out/riguat-linux-amd64 ./scripts/devtools/riguat
 ```
 
 ## 用法

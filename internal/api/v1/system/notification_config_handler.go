@@ -339,6 +339,10 @@ func (h *NotificationConfigHandler) ListAPINotificationConfigs(c *gin.Context) {
 		return
 	}
 
+	// Phase 144：复用为漂移告警 webhook 配置前，主动遮蔽 authConfig / headers
+	// 中的 token/key/secret 与 URL 查询凭据，避免明文 secret 回显客户端。
+	result.List = maskAPINotificationConfigList(result.List)
+
 	response.Page(c, result.List, result.Total, result.Current, result.PageSize)
 }
 
@@ -367,7 +371,8 @@ func (h *NotificationConfigHandler) GetAPINotificationConfig(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, config)
+	// Phase 144：读端点主动遮蔽 authConfig / headers 中的 token/key/secret。
+	response.Success(c, maskAPINotificationConfig(config))
 }
 
 // CreateAPINotificationConfig 创建API通知配置

@@ -1,52 +1,153 @@
-# Requirements: XingRan-Next（RuoYi-Next 运维管理系统）
+# Requirements: RuoYi-Next 运维管理系统
 
-**Defined:** 2026-11-07
-**Core Value:** 把数据权限（data_scope）从「用户/VDI 两个模块的局部实现」升级为**运维域全模块的声明式统一收口**——读写两端按登录人数据范围自动过滤与校验，使「中支管理员只能管本机构的工位/楼层/资产」从口头约定变为架构保证。本里程碑是对 v1.51 期间实测确认的越权面（operations 全模块未接 data_scope、strict 组不注入、List orgId 后端不校验）的**终态治理**，替代逐端点补丁。
+**Defined:** 2026-11-09
+**Milestone:** v1.55 LOCKED 残余根治
+**Core Value:** 把 v1.52 收档时以「已接受 / 仅登记」名义挂账的 LOCKED 残余，**从根源上**（而非打补丁/加告警/加方言分支）全部修掉，使约束从「靠约定」升级为「靠机制」；用户 2026-11-09 裁定允许推翻 ① 的「范围快照回显」产品语义，故 **6 项 LOCKED / 7 个子项全部纳入根治**。
 
-## v1.52 Requirements
+## 决策裁定记录（用户 2026-11-09，全部按推荐项）
 
-范围裁定（用户 2026-11-07）：**终态方案 = operations 全模块声明式统一收口**，不做逐端点手工接线（已在 quick-261106-wsb 审计中裁定为补丁）。独立按钮权限码 ops:workstation:backfill 已在分支先行落地（PR #75）。
+| 决策 | 裁定 | 在本 REQUIREMENTS 中的落点 | 实证前提 |
+|---|---|---|---|
+| **DECISION-①**（决定性） | **允许重定语义，① 纳入根治（A+B 组合）** —— 允许取消 `ScopeTotal/ScopeOutOfScope` 等回显、去掉全库 `countQ`、去导入 `Errors[].Row` 行号、作废 132-SUMMARY.md:74 前端四类「本次范围：共 N 条」文案 | 新增 `SIDECHANNEL-01~04`；`ARCH-01` 从「可选」升级为**必需**（B = 统一 ScopedDB 防回归）；132/133 backfill UAT 作废重跑 | 8 个 `/statistics` 已同源；残余是 `workstation_service.go:662-677` 刻意双口径差分，属信息论必然非代码缺陷 |
+| **FUTURE-01** | **✅ v1.55 收档已关闭**（原「随 ① 根治一并关闭」，A(150)+B(151) 均完成，P1-5 侧信道已根治，告警通道合并评估不再需要） | 4 处引用已由 Lead 在 2026-11-09 收档清理：本节、`ROADMAP.md` Known Gaps/历史段、`STATE.md` Deferred Items、`261108-v153-locked-residuals.md:63` | 触发条件「FIX-11 告警通道落地」在 v1.54 成立但 ① 已改由 A+B 根治，不再走告警通道路线 |
+| **DECISION-CI-PG** | **本期不建 PG service，登记前置依赖** | `DIALECT-04③` 改为「登记前置依赖、不伪造双跑」；v1.55 只做 `forbidigo` 门禁（XS）+ 视预算抽 dialect 语义原语 | `ci.yml` 无 `services: postgres`；`TEST_PG_DSN` 明确 unset，PG contract 只做「skip 可观测」，零真实 PG 验证 |
+| **DECISION-存量密码** | **免盘点，直接上守卫** | `CRYPTO-02` 直接加 `len(hashBytes)==32` 校验，无需迁移 | 全库 `sys_user.password` 写入均经 `HashPassword`（`user_service.go:841`、`user_sync_service.go:511/646/1143`、`excel_service.go:1172`），`$sm3$` 恒 32 字节；无绕过写入路径。仅对「人工直接改库的历史脏数据」在上线说明里提示（代码层不产生） |
+| **DECISION-例外陈旧窗口** | **要求立即一致，做联动失效** | `CACHE-02` 必做（非可选项）：规则写成功后 `GetByWorkstation` 的 exception 字段立即一致 | `reconciliation_service.go:821-834` 5min TTL 缓存含 `exceptionHit/AppliedActions`；同文件 `InvalidateWorkstationHealth` 已是正确范式但无联动 |
 
-### 起点基线（Lead 实跑复核 2026-11-07）
+> 5 项裁定已全部落地到下方 REQ；原「Future Requirements / 待产品决策」段整体退役，其中未纳入本期的仅剩「CI PG 双跑」一条前置依赖（见 Out of Scope）。
 
-- **operations 全模块未接 data_scope**：工位 List/Statistics/SearchOptions 的 orgId 由前端传、后端不校验登录人范围（API 直调可读全库）；Create/Update 的 deptId/orgId 可传任意 UUID。
-- **data_scope 注入为单点中间件**：注入只由 `DataScopePermission`（permission.go:494-523，`c.Set("data_scope"/"user_id")` 在 :518-519）完成；`RequirePermissionsWithQuery`（:350-384，权限校验 + queryExtra 放行）与 `RequireStrictPermissions`（:411-437）**均不注入**。router.go 中 `DataScopePermission` 仅挂载 usersRead(:187)/usersWrite(:212)/deptsRead(:295)/deptsWrite(:302)/vms(:1228) 五组；**operations 全域读组与写组均只挂权限中间件、未挂任何 data_scope 注入** ⇒ 读写两端都拿不到范围信息（DS-02 的根缺口）。
-- **三份重复实现并存**：pkg/middleware `ApplyDataScope`（通用版）、user_service `applyUserDataScope`（PMODEL-01）、vdi `vm_data_scope_filter`——Custom/Dept/DeptChild 展开逻辑三处维护。
-- **可用基建**：`models.DataScope` 五档（All/Custom/Dept/DeptChild/Self）、`getUserMaxDataScope`（多角色取 MAX）、工位域「有效机构」表达式已收敛单一真实源 `effectiveOrgExpr`（dept_filter.go）、`BuildDeptRecursiveFilter` 子树展开、PG contract 类型契约测试门控。
-- **行业教训参照**：PMODEL-01 的缓存 key 遗漏 data_scope 维度导致跨用户泄漏（已修），新收口必须同步覆盖缓存 key。
+## 范围裁定（用户 2026-11-09 最终版）
 
-### 数据权限统一收口（DS）
+- **纳入：6 项 LOCKED / 7 个子项全覆盖**（③ 拆 A/B）：① P1-5 侧信道（A+B）、② 5 项豁免面、③-A `RightCast:"text"`、③-B PG 专属 CTE、④ operlog e2e 静态门禁、⑤ `invalidateCache` no-op、⑥ `pbkdf2SM3` 契约。
+- **不纳入**：79 条人工验证跟踪表（保持 0 勾选）、FIX-01/04/09/13 验证类残余、v1.54 新增 7 项 Known Gaps（GAP-01~07）、CI 新建 PG service（登记为前置依赖）。
+- **FUTURE-01 随 ① 根治一并关闭**（✅ v1.55 收档已关闭，4 处引用已清理），不再单列挂账。
+- **Phase 编号**：延续 v1.54（结束于 144），从 **145** 续编。
+- **跳过领域研究**：7 个子项均带本仓 `文件:行号` 实证与现成改写范本，无新领域能力需调研（沿用 v1.53/v1.54 先例）；根因报告即研究输入。
+- **零新依赖**；遵循 Handler-Service / `response.Success()/Error()` / operlog 写操作约定 / SQLite+PG 双方言 / 前端 wrapped API / 构建产物只落 `out/`。
 
-- [ ] **DS-01**: **ScopeProvider 单一真实源**——抽取「登录人可见部门集」统一实现（All→全量 / Custom→sys_role_dept 映射 / Dept→本部门 / DeptChild→ancestors 展开 / Self→**按资源语义钩子裁定，不纳入部门集展开** / 异常枚举→fail-closed 空集）。**设计约束（vdi Self 档语义不等价，vm_data_scope_filter.go:87-100 按 `bound_user_id` 按人绑定）**：ScopeProvider 只统一 Custom/Dept/DeptChild 三档部门集展开，Self/All 保留资源语义钩子供各域注入。**0/unset 边界**：data_scope=0（超管 `permission.go:504-507` 早退未 `c.Set`，或未挂注入中间件）**映射为 All、不进 fail-closed 分支**；fail-closed 仅针对「非 0 且不在 1-5」的异常枚举。验收须含超管零回归用例（迁移 user_service 到 ScopeProvider 后超管仍不过滤，对齐 `user_requests.go:30-31` 0=不过滤、`user_service.go:583 case DataScopeAll, 0`）。**多角色 MAX 边界**：`getUserMaxDataScope`（permission.go:526-537，`COALESCE(MAX(r.data_scope), 5)`）的 MAX = 数值最大 = **最严档**（1=All…5=Self），"语义不变"须配多角色组合 / 无角色 COALESCE→Self(5) 的边界用例。**合并归属（避免重叠）**：Phase 130 = 建 ScopeProvider + 迁移 **user_service** 这一处生产调用方 + 处理 pkg/middleware **死实现**（删除 + 清理 `permission_74_08_test.go` 死测试）；Phase 133 = 迁移 **vdi** 生产调用方 + 删除旧实现。**术语统一**：三份「实现」= user_service / vdi / pkg/middleware（后者无生产调用方、为死实现）；两处「生产调用方」= user_service / vdi。**验收口径** = 两处生产调用方迁移 + middleware 死实现与死测试删除；vdi 合并验收含既有 fail-closed 测试零回归。
-- [ ] **DS-02**: **data_scope/user_id 注入覆盖 operations 全域**——在 operations 各读组（`RequirePermissionsWithQuery`）与 strict 写组（`RequireStrictPermissions`）**统一挂载/改造 `DataScopePermission`**（permission.go:494 起；现状仅挂 usersRead/usersWrite/deptsRead/deptsWrite/vms 五组），使读写端点均能从 gin context 取到 data_scope/user_id；**不改 `RequirePermissionsWithQuery`/`RequireStrictPermissions` 自身逻辑**（二者只做权限校验）。
-- [ ] **DS-03**: **工位域读端点收口**——workstation List/Statistics/SearchOptions/dropdown-options/counts-by-floor/**GetByID（按可见集校验资源归属）**/**dept-options（:805，接收前端 orgId）**/**workstations-all（:813 GET /:floorId/workstations-all，全集无分页、`workstation_service.go:438-449` 仅 `Where("floor_id = ?")` 无范围过滤——真实越权面，必须收口不得豁免）**、floor List/**tree（:755，isQueryPath permission.go:388-396 对 list/tree 同等放行）**/Statistics/SearchFloorOptions/dropdown-options/GetByID、building List/Statistics/SearchBuildingOptions/GetByID、infopoint List/Statistics/dropdown-options/GetByID，以及 asset/serverRoom/dedicatedLine/roomDevice 各自的 /statistics、/dropdown-options、/:id（router.go:945-946/1021-1023/1067-1069/1104-1106）——机构筛选统一应用「有效机构 ∈ 可见集」（复用 `effectiveOrgExpr` + `BuildDeptRecursiveFilter`），后端强制，前端 orgId 参数不可越权读取。
-- [ ] **DS-04**: **四域写端点收口（workstation/floor/building/infopoint）**——Create/Update 校验提交的 deptId/orgId 落在可见集内（越界 403 语义）；**Delete（`POST /:id/delete`，buildingDeletes :720-721、workstation :830-831）与 BatchOperation（`POST /batch`）按资源归属校验（越界 403 语义）**；floor 写端点 :767-776、infopoint 写端点 :996-1005（Create/Update/Delete/Batch/Import/Export）一并收口；backfill-dept 回填范围限定可见集，前端确认框显示「本次范围：全库 / XX 部门及子部门」。
-- [ ] **DS-05**: **其余 ops 实体收口**——asset（dept_id 直挂）、serverRoom（楼宇链）、dedicatedLine/roomDevice（归属链 scope）、workstation-device 归属、location-alias 查询面：三项归属/范围裁定结论为 **Phase 133 开工输入**（须在 133 开工前由 130 设计阶段或单独裁定记录产出，落 `.planning/notes/`），**133 只消费结论 + 落地 + UAT，不承载裁定动作**。
-- [ ] **DS-06**: **缓存与前端联动**——涉收口端点的缓存 key 增加数据范围维度段（对齐 PMODEL-01 防跨范围泄漏；All 档特判短路路径同样须含 scope 维度）；前端 DeptSidebar/下拉按可见集过滤由 Phase 133 落地（后端 tree 端点收口见 DS-03）；越界提交的统一错误文案由 Phase 132 落地。**Excel 导出独立收口（不豁免）**——导出**不走** `WorkstationService.List`，而走 `excel_query_builder.go:215-254` 的 `WorkstationQueryBuilder.BuildQuery`（自建 `sys_workstation` JOIN + FilterMapping）与 `excel_service.go:2407-2453 queryWorkstationIDsForExport`；须在这两条导出查询路径注入可见集过滤，并把导出路径纳入 PG contract 覆盖（现状 `pg_contract_test.go:87-208` 仅覆盖 List/Statistics/SearchOptions/Backfill、未覆盖导出）。落地归属 **Phase 131**（读端点收口波次）。
-- [ ] **DS-07**: **范围语义裁定与豁免清单**——Dept/Self 档是否允许批量操作（回填/导入）、Excel 导入是否豁免（跨机构批量导入有正当场景→「豁免 + operlog 审计强化」或同样收口）的结论按 **Phase 130/132 已裁定的结论登记**（书面结论落 `.planning/notes/`，为 130/132 开工输入）；**导出不豁免**，按 DS-06 的「Excel 导出独立收口」任务在 **Phase 131** 落地；DS-05 三项裁定（dedicatedLine/roomDevice 归属链 scope、workstation-device 归属、location-alias 查询面）为 **Phase 133 开工输入**；**133 只消费已裁定结论 + 落地 + UAT，不承载裁定动作**；超管（admin）语义不变。
+## v1.55 Requirements
 
-### ops 域端点/实体 → DS 映射总表（P1-5 覆盖缺口修订）
+### SCOPE — data_scope 豁免面根治（②）
 
-| ops 域端点/实体（router.go） | DS 归属 | 说明 |
-|---|---|---|
-| workstation（:805 dept-options / :806 statistics / :807 dropdown-options / :809 GetByID / :813 workstations-all / :830-831 delete+batch / List 系） | DS-03 / DS-04 | 主收口域；**workstations-all(:813) 无范围过滤，属真实越权面，必须收口** |
-| building（:701 statistics / :702 dropdown-options / :703 GetByID / :720-721 delete+batch / List 系；:705 是 /geocode） | DS-03 / DS-04 | 同上 |
-| floor（:754 statistics / :755 tree / :756 dropdown-options / :757 GetByID / :767-776 写端点） | DS-03 / DS-04 | tree 与 list 同等放行收口；四域写端点一并收口 |
-| infopoint（:984 statistics / :985 dropdown-options / :986 GetByID / :996-1005 写端点） | DS-03 / DS-04 | 读 + 写收口 |
-| asset（:945 statistics / :946 GetByID） | DS-05 / DS-03 | dept_id 直挂；读端点随 DS-03 收口 |
-| serverRoom（:1021 statistics / :1022 dropdown-options / :1023 GetByID） | DS-05 / DS-03 | 楼宇链；读端点随 DS-03 收口 |
-| dedicatedLine（:1067 statistics / :1068 dropdown-options / :1069 GetByID） | DS-05 / DS-03 | 归属链 scope 结论为 133 开工输入；读端点随 DS-03 收口 |
-| roomDevice（:1104 statistics / :1105 dropdown-options / :1106 GetByID） | DS-05 / DS-03 | 同上 |
-| workstation-device（:885-920） | DS-05 | 归属结论为 **133 开工输入**，133 按已裁定结论落地 |
-| location-alias（:861-874） | DS-05 | 查询面裁定结论为 **133 开工输入**，133 按已裁定结论落地 |
-| walls / doors / floor-plan-texts（:1145-1146 / :1177-1178 / :1205-1206 各有独立 /list + /:id） | **显式豁免（已知残余面，接受风险）** | 这些**独立可直接调用**的读端点返回楼层平面几何坐标 / 展示文字，不含 org_id/dept_id 业务归属字段、不承载机构敏感信息，越权读取不泄露业务归属；本里程碑不收口，登记理由与残余风险（不以「间接可见」结案；Three.js 编辑器联动回归面大） |
-| rooms/photos（:1046；room_photo_handler.go:32-33 有独立 `GET /list/:roomId` 与 `GET /:id`） | **显式豁免（已知残余面，接受风险）** | 这些**独立可直接调用**的读端点返回照片/房间附件，模型（room_photo.go:8-16）不含 org_id/dept_id 业务归属字段、不承载机构敏感信息；本里程碑不收口，登记理由与残余风险（不以「间接可见」结案） |
-| Excel 导出（excel_query_builder.go:215-254 / excel_service.go:2407-2453） | DS-06（Phase 131） | **不豁免**、不走 List；独立注入可见集过滤 + PG contract 覆盖 |
+- [x] **SCOPE-01**: 5 类读端点（walls / doors / floor-plan-texts / rooms-photos / location-alias）在**统一父资源可见性校验**下按可见集裁剪——walls/doors/floor-plan-texts 经 `floor_id → ops_floors/ops_buildings` 归属链、rooms-photos 经 `room_id → serverRoom → building` 两级链（复用 `scope_entities.go` 的 `entityExistsSub` + `wrapScopeExists`），location-alias 按已有 `dept_id ∈ 可见集` 直挂；断链（floor/room 软删或不存在）fail-closed 空集。
+- [x] **SCOPE-02**: `internal/api/router.go:1174-1177` 的 rooms/photos 组补挂 `middleware.DataScopePermission(core)`（当前**连中间件都没挂**，比「豁免」更基础的接线遗漏）；`GetByID` / count / primary / batch-delete 前置全部走可见集校验。
+- [x] **SCOPE-03**: 写端点（Create/Update/Delete/Batch）对越界 `floor_id`/`room_id` 返回显式 403（单条）或按可见集裁剪（批量，复用 `scope_write.go:282-320` 的 `visibleIDsForEntityWrite`）；**必须修保存侧**：`useFloorPlanEditor.ts:156-186` 的「整层拉取 → 整体覆写」不得让非超管误删自己看不到的几何元素。响应形状不变（只裁剪行，不改 `list`/`total`/字段）。
+- [x] **SCOPE-04**: 双方言（PG + SQLite）403 矩阵 + 断链脏数据抽查断言一致；`133-UAT.md:79-91` 的 D1/D2「确认未收口」结论作废并登记重跑窗口；若这些端点将来加缓存，key 必须含 `scopeCacheKey(ctx)`。
+  - **零迁移**（方案 D）：不新增 `org_id` 冗余列（方案 E）、不把几何合并进楼层 JSONB（方案 F）。
 
-### 验收硬约束（从 v1.51 期间生产事故与本会话教训提炼）
+### DIALECT — 双方言 SQL 根治（③）
 
-- uuid/varchar 列比较双侧 CAST AS TEXT；SQLite/PG 双方言——**PG contract 测试门控扩展至新收口查询**（真实 PG 只读/回滚式验证）；**导出/导入路径须纳入 PG contract 覆盖**（现状 `pg_contract_test.go:87-208` 仅覆盖 List/Statistics/SearchOptions/Backfill）；新增测试统一门控变量名 `TEST_PG_DSN`（与 `pg_contract_test.go:36` 一致）或显式兼容 `XINGRAN_TEST_PG_DSN`，CI 中 skip 必须可观测。
-- 「有效机构」表达式必须走 `effectiveOrgExpr` 单一真实源，禁止内联复制。
-- data_scope 语义 fail-closed 对齐 PMODEL-01：**0/unset 映射 All（超管零回归），仅非 0 异常枚举 fail-closed**；多角色取 MAX（getUserMaxDataScope 语义不变，**MAX=数值最大=最严档 1=All…5=Self**，配多角色组合 / 无角色 COALESCE→Self(5) 边界用例）。
-- **缓存 key 必含数据范围维度段**（PMODEL-01 跨范围泄漏教训）；All 档特判短路路径同样可断言；**Phase 131 必交 ops 缓存面清点表**（逐 key 现状→目标，`floor_cache_impl.go:39-45 floor:tree` 固定 key 因按可见集过滤必须改结构或停用）。
-- 回归基线：eslint 0 problems / vitest 全绿 / `go build` + `go test`（含 pkg/permission 路由双层守卫、internal/api strict 守卫）全绿 / 新收口查询必须有 PG contract 或等价双方言测试。
+- [x] **DIALECT-01**（③-A）: 删除 `RightCast` 承载 `"::"` 方言片段的机制（`excel_export_config.go:18,351/355/359`），改为语义枚举 + service 统一 `CAST(id AS TEXT)`（**单侧**即可，`IN ?` 参数是 Go 字符串）；`resolveAssociations` 的 3 个关联列在 SQLite 与 PG 均产出相同非空结果，不再 `logger.Warnf + continue` 静默降级为整列空；补 P1-8 式 DryRun 静态断言（导出路径 SQL 不含 `::`）+ SQLite 实跑断言。
+- [x] **DIALECT-02**（③-B）: 单工位 `GetPhysicalDevices`（`workstation_device_service.go:426-535`）与批量 `GetPhysicalDevicesByWorkstations`（`:2151-2234`）**从根源消除 PG 专属 raw CTE**——推荐拆多次 GORM 链式查询 + Go 层归一化/去重/排序（复用 `diagnosePhysicalChain:701-799` 与 `physicalDevicesFetcher` 注入，保证「不存在第二套 recall 逻辑」）；`DISTINCT ON` / `REGEXP_REPLACE` / `NULLS LAST` / `id::text` 全部归零，SQLite 与 PG 返回逐字段一致结果（含归一化/置信度/Top-1 口径）。
+- [x] **DIALECT-03**（③-B 配套）: 改写 4+ 个「把 PG CTE 报错当预期」的既有测试（`workstation_device_77_01_test.go:9-11,568-620`、`excel_export_chain_77_02_test.go:458-480`、`workstation_physical_diagnosis_test.go:401-403`）为真实结果断言；`SkipSoftDelete:true` 两处语义保留。
+  - **明确禁止**：加 `isPostgres` 方言分支（两套 SQL 口径必分叉，是补丁不是根治）；CTE 下沉双方言视图（带 `?` 参数，视图无法参数化）。
+- [x] **DIALECT-04**（防复发机制）: ① `.golangci.yml` 启用 `forbidigo` 禁方言 token（`::text|::uuid|DISTINCT ON|REGEXP_REPLACE|NULLS LAST|ILIKE|ON CONFLICT`，存量先白名单逐步收敛；不得一刀切禁全部 raw SQL——406 文件含 `.Raw(`）② 视预算抽 `dialect` 语义原语（`CastToText` / `Top1PerGroup` / `NormalizeMac`），配置里禁止出现 SQL 片段 ③ **CI 注入 `TEST_PG_DSN` 双跑登记为前置依赖**（用户裁定本期不建 `services: postgres`），在 REQ/SUMMARY 显式写「需新建 PG service + 迁移引导后方可升级」，**不伪造双跑**。
+
+### AUDIT — operlog 静态门禁根治（④）
+
+- [x] **AUDIT-01**: 把 `scripts/operlog_e2e_verify.sh:68-151` 的**静态段从 shell 拆出改写成 Go 单测**并纳入 `go test ./internal/...`（`ci.yml:62-63` 天然硬门禁）：① `operlog.Record|RecordWithBody` 全 `internal/` 调用数 ≥290 ② `sensitiveKeys` 条目 ≥17 ③ `internal/api/v1/**/*_handler.go` 的 `*Handler` 方法文件逐文件覆盖扫描（0 命中且不在 `READONLY_ALLOWLIST` → FAIL）。可复用 `internal/utils/operlog/regression_test.go`（`go/ast` 锁 25 常量）与 `coverage_test.go`（脱敏）现成基建，补约 80-120 行 `go/parser` 扫描。
+- [x] **AUDIT-02**: 验收「零 `ADMIN_USER`/`ADMIN_PASSWORD`/`DEV_MODE`/`SKIP_E2E`/`SKIP_LIVE`、零 running backend、零 DB、**任意 cwd** 下静态 3 项断言真实执行且失败会红」；LIVE 段保留 shell、缺凭据仍 `exit 1`（恢复脚本注释声明的语义，不改 LIVE 行为）。
+- [x] **AUDIT-03**: 顺带处置两份 `operlog_e2e_verify.sh` 重复副本（仅 1 行注释不同）与 `scripts/README.md` 登记（AGENTS.md 目录治理）；**不做** shell 整体替换为 Go e2e（会把 CI 硬门禁与需凭据 live 重新耦合，复现同类缺陷）。
+  - **必须同时修 cwd 锚定**：当前 Go driver 未设 `cmd.Dir`、脚本用相对仓库根路径，包子目录下 `CALLS=0` / 目标文件不存在 → 仅挪门禁顺序连缓解都不算（假绿）。
+
+### CACHE — 缓存失效契约根治（⑤）
+
+- [x] **CACHE-01**: 删除死键 `CacheKeyReconciliationExceptionRuleList` / `GetReconciliationExceptionRuleListKey()` 与空函数体 `invalidateCache()`（`reconciliation_exception.go:578-580`），消除「定义缓存键却从不读写 + 失效函数为空」的悬空契约；4 个写路径（Create/Update/Delete/ImportFromExcel）的调用点同步清理。
+- [x] **CACHE-02**（**用户裁定：必做，不允许 5min 陈旧**）: 补**真实陈旧点**的联动失效：`reconciliation_service.go:821-834` 的 `GetByWorkstation` 5min TTL 缓存中 `exceptionHit/AppliedActions` 随例外规则变更陈旧 —— 规则写成功后按同文件 `InvalidateWorkstationHealth`（`cache_keys.go:129-134`，接 cache 参数、nil-safe、真调 Delete）范式广播失效，或把 exception 字段从缓存结果中剥离；**保留 5min 缓存不动其性能价值，但要求写后立即一致**。
+- [x] **CACHE-03**: 验收「写后读必一致」（List/GetByID/MatchTest/MatchException/DetectLayer3/`GetByWorkstation` 同进程立即反映新规则）、`Cache.Type=memory`（`*MemoryCache`）与 `redis`（`*MultiLevelCache`）两种配置行为一致、失效动作可观测且失败可传播（返回 error 或日志/metric，禁止空函数）。
+  - **明确作废**触发条件「项目接入 Redis 后补 `core.Cache.Delete(ctx, 死键)`」——L1/L2 都支持 Delete，该处方删的是从没人写过的键，且无 Redis 时同样不生效。
+  - **不推荐**改全局 `CacheProvider` 接口禁 no-op（20+ 消费文件/大量 mock 连锁改，未命中真实陈旧点，仅为缓解）。
+
+### CRYPTO — KDF 契约根治（⑥）
+
+- [x] **CRYPTO-01**: `pbkdf2SM3`（`password.go:69-97`）把未定义行为变定义行为——`keyLen<=0` / `keyLen>32` / `iterations<=0` 显式返回 `error`（项目禁 panic），杜绝 `result[32:]` 静默全零弱密钥；`HashPassword`/`VerifyPassword` 同步接错误。
+- [x] **CRYPTO-02**（**用户裁定：免盘点，直接上守卫**）: `VerifyPassword:149` 当前用 `len(hashBytes)` 作 keyLen（裁定「全部调用点 32」不成立）——显式校验 `len(hashBytes)==32`，非 32 字节哈希属损坏/伪造数据，按产品决策报错或返回 false，不再喂给 KDF。代码实证所有写入路径均经 `HashPassword` 产出恒 32 字节 `$sm3$`，**无需生产盘点、无需迁移**；仅在上线说明提示「人工直接改库的历史脏数据」风险（代码层不产生）。
+- [x] **CRYPTO-03**: **向后兼容硬约束**——`keyLen=32` 时输出逐字节不变；新增黄金向量测试（固定 password/salt/iterations 固化 hex，锁重构前后一致，不能只靠 Hash↔Verify 自洽），存量 `$sm3$<iter>$<salt>$<32字节hash>` 与 600k 默认 / 100k 旧哈希无需迁移；`$sm3$` 格式、`DefaultPasswordConfig`、25 个 operlog 常量均不变。
+- [x] **CRYPTO-04**（可选能力扩展，非消除当前隐患的必要条件）: 若产品确认未来需要 >32 派生（当前**无** SM4/会话/token 派生用途），再补完整 PBKDF2-SM3 多块循环（INT32_BE(i)、每块独立 `New/Reset`、`dk[:keyLen]` 截断、`make+append` 避免 `:75` slice 别名），用独立 oracle `golang.org/x/crypto/pbkdf2.Key(sm3.New,...)` 比对 `keyLen=33/64/65`、断言 `DK(64)[0:32]==DK(32)`。**守卫仍为主防线**，补循环不叠加守卫只算缓解。
+
+### SIDECHANNEL — P1-5 聚合计数侧信道根治（①，用户 2026-11-09 裁定纳入）
+
+> **根治定义**：任何非 All 档用户，通过单请求或多次请求组合，都无法从响应体（含状态码、任何数值/序号/数组长度）推导出「可见集之外的资源规模」或「越界资源是否存在/有多少」。
+> **方案 A+B 组合**（用户裁定）：A = 响应体去规模化（信息论根治），B = 统一 ScopedDB 防回归（见 `ARCH-01` / `SIDECHANNEL-04`）。只做 A 不做 B，未来新增端点仍可能漏挂；只做 B 不做 A，响应体仍可显式算「全库−可见」差值。
+
+- [x] **SIDECHANNEL-01**（A-响应体）: 删除 `BackfillDeptResult` 的 `ScopeTotal` / `ScopeVisible` / `ScopeOutOfScope` / `ScopeDeptTotal`（`workstation_service.go:110-134`）及全库派生的 `SkippedNoUser` / `SkippedBadUserDept`（`:681-682`）；**去掉 `workstation_service.go:666-669` 的全库 `countQ`**（或改为带 `visibleCond`），消除「一条带 scope 的 candidateQ + 一条不带 scope 的 COUNT + 相减」双口径；`ToFill`/`ToCorrect`（可见集内）可保留。
+- [x] **SIDECHANNEL-02**（A-导入/审计边界）: `ImportResult.Errors[].Row` 实际行号（`excel_service.go:62-67`）与 `ScopeOutOfScope`（`:83`）不回显越界行位置与数量，越界行改为静默跳过或仅记录到服务端 operlog；`ScopeWriteOperParam`（`scope_write.go:730-738`）的 `requested/visible/outOfScope` **保留在服务端审计链但不进入 HTTP 响应**。
+- [x] **SIDECHANNEL-03**（A-前端/验收/All 档）: 作废 132-SUMMARY.md:74 的四类「本次范围：…（共 N 条）」文案与 `useBackfillDept.tsx` 确认框（`scopeWriteBackfillSnapshot`），改为不含全库规模的可见集内表述；**All 档响应形状/数值零回归**；新增「差分攻击测试」：构造「全库 N 行、可见 M 行」，用两个相邻 scope（Dept / DeptChild）各请求一次，断言响应体所有数值字段仅随 M 变化、不随 N−M 变化，重复请求不得通过 `Row`/数组长度/`total` 枚举出 N；重跑 132/133 backfill 相关 UAT。
+- [x] **SIDECHANNEL-04**（B-防回归，与 `ARCH-01` 同 phase）: 所有 `COUNT(*)` / `SUM` 与明细查询同源——8 个 `/statistics`、分页 `total`、`counts-by-floor`（`router.go:914`）、`dept-options`、`workstations-all`；用 `pg_contract_test.go` + SQLite 双跑，对同一 `ScopeResult` 断言 COUNT 结果与 `List` 行数一致；operlog 审计链不降级。
+
+### ARCH — 统一 ScopedDB（① 的 B 组成 + ② 机制化，**用户裁定升级为必需**）
+
+- [x] **ARCH-01**: `DataScopePermission` 注入 `ScopeResult`（已有 `pkg/datascope` 单一真实源）→ **统一 ScopedDB**：GORM `Scopes` 强制唯一查询起链点（禁止裸 `s.db.WithContext(ctx)` 起链）+「资源归属注册表」（引用 `effectiveOrgExpr` / 归属链 EXISTS 骨架 / `dept_id` 直挂，禁止内联复制，符合项目「单一真实源」约定）+ 内建 `scopeCacheKey(ctx)` → **响应契约层**禁止任何「全库规模 − 可见规模」回显。
+  - **同时解 ①②**：② 的 5 类端点在注册表登记后自动获得可见集谓词（修「中间件挂了没接线」）；① 的任何 `COUNT(*)` 从 ScopedDB 起链后天然同源。
+  - **硬约束**：触及 `base.GORMRepository` 全仓基座（485 Go 文件）与 system/vdi 零回归保证，需全量 `go build ./...` + `go test ./...` 守护；**必须保留「未注入 ctx → All 兜底」短路**（`scope_filter.go:37-39`、`datascope.go:6`）；`EXISTS (?) + CAST AS TEXT` 已验证双方言。
+  - **不可行方向（勿立项）**：DB 视图（可见集每用户动态、无法参数化）、PG RLS（SQLite 无 RLS、Go 共享连接池串味需每请求 `SET LOCAL` 独占事务、双方言两套安全模型）、按用户分表（`org_id` 可变、与 UUID 单表模型冲突）。
+
+## Out of Scope
+
+| Feature | Reason |
+|---|---|
+| 79 条人工验证跟踪项的实际执行与勾选 | 需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传；保持 0 勾选，AI 不擅自写生产数据 |
+| FIX-01 实机 AD UAT / FIX-04 真机逐型号取证 / FIX-09 HTTP P99 压测 / FIX-13 生产库 migration 236/237 | 验证类残余，不伪造闭环 |
+| v1.54 新增 7 项 Known Gaps（GAP-01~07） | 已在 `STATE.md ## Deferred Items` v1.54 行登记，属后续候选；本里程碑专注 LOCKED 根治 |
+| **CI 新建 `services: postgres` + 注入 `TEST_PG_DSN` 双跑** | 用户 2026-11-09 裁定本期不建，登记为 **DIALECT-04③ 前置依赖**；不伪造双跑 |
+| PG RLS / DB 视图 / 按用户分表 | Go+GORM+SQLite/PG 双方言下不可行（见 ARCH-01） |
+| shell 整体替换为 Go e2e / 加 `isPostgres` 方言分支 / 加告警通道代替 ① 根治 / 「接 Redis 后补 Delete」/ 仅调门禁顺序 | 均为补丁或无效处方，按用户「不打补丁」标准排除 |
+| 新领域能力、新外部依赖 | 7 个子项均有本仓现成范本与实证，零新依赖 |
+| ~~FUTURE-01 单独挂账~~ | ✅ v1.55 收档已关闭（随 ① 的 A+B 根治一并关闭，4 处引用已清理），不再单列 |
+
+## Constraints (inherited + v1.55 新增)
+- Handler-Service；service 返回 `error`；`response.Success()` / `response.Error()`（禁止裸 `c.JSON`）；写操作 success path 在 `response.Success` **之前** `operlog.Record(...)`；敏感端点 `RecordWithBody`。
+- `0=正常 1=停用`；UUID 主键；**SQLite+PG 双方言**（纯 GORM / `CAST AS TEXT` / 禁 `::uuid`/`ILIKE`/裸 `ON CONFLICT`）；PG contract 门控变量名 `TEST_PG_DSN`（本期仍为前置依赖）。
+- 前端 wrapped API（`@/lib/api.ts`）、Zustand、禁止裸 axios、`useEffect` 依赖稳定。
+- Go 单测就近 `*_test.go`；集成 `tests/integration/`；e2e `tests/e2e/`；前端 `*.test.ts(x)`。
+- 构建产物只落 `out/`；Excel 模板动态生成、禁止落盘 `.xlsx`；`data/` 不入库。
+- **向后兼容**：`keyLen=32` KDF 输出逐字节不变、25 个 operlog 常量值不重排、② 响应形状不变、**① All 档响应形状/数值零回归**、`datascope` 未注入 ctx → All 兜底短路不变。
+- **① 专项**：132-SUMMARY.md:74 四类前端文案与 `useBackfillDept.tsx` 确认框作废需产品/QA 确认；132/133 backfill 相关 UAT 作废重跑窗口由 QA 裁定；~~FUTURE-01 在 ① 落地后由 Lead 同步清理 4 处引用~~ → **✅ v1.55 收档已清理完毕**。
+- 回归基线：`go build ./...` + `go test ./...` + `tsc` + `lint:ci`（含新增 forbidigo） + `vitest` 全绿；ARCH-01 改动后必须跑全量矩阵。
+
+## Traceability（v1.55 ROADMAP 已生成 · Phases 145-151）
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SCOPE-01 | 149 | Satisfied |
+| SCOPE-02 | 149 | Satisfied |
+| SCOPE-03 | 149 | Satisfied |
+| SCOPE-04 | 149 | Satisfied |
+| DIALECT-01 | 148 | Satisfied |
+| DIALECT-02 | 148 | Satisfied |
+| DIALECT-03 | 148 | Satisfied |
+| DIALECT-04 | 148 | Satisfied |
+| AUDIT-01 | 145 | Satisfied |
+| AUDIT-02 | 145 | Satisfied |
+| AUDIT-03 | 145 | Satisfied |
+| CACHE-01 | 147 | Satisfied |
+| CACHE-02 | 147 | Satisfied |
+| CACHE-03 | 147 | Satisfied |
+| CRYPTO-01 | 146 | Satisfied |
+| CRYPTO-02 | 146 | Satisfied |
+| CRYPTO-03 | 146 | Satisfied |
+| CRYPTO-04（可选 / optional） | 146 | Satisfied |
+| SIDECHANNEL-01 | 150 | Satisfied |
+| SIDECHANNEL-02 | 150 | Satisfied |
+| SIDECHANNEL-03 | 150 | Satisfied |
+| SIDECHANNEL-04 | 151 | Satisfied |
+| ARCH-01（必需） | 151 | Satisfied |
+
+**Coverage:** **23 REQ total / 23 mapped / 0 unmapped / 23 Satisfied（SHIPPED 2026-11-09）**（每个 REQ 映射且只映射到一个 Phase，无孤儿无重复）。**收档计数修正（2026-11-09 Lead 复核）**：立项期草案/ROADMAP 沿用「24 REQ」口径，实为把 CRYPTO-04 的 `optional` 标注误计入第 24 项；逐组实证 = SCOPE 4 + DIALECT 4 + AUDIT 3 + CACHE 3 + CRYPTO 4 + SIDECHANNEL 4 + ARCH 1 = **23**，故以 23 为准，7 phase 映射本身全部有效。**CRYPTO-04 标注 optional**（可选能力扩展，非消除当前隐患的必要条件，仍映射至 Phase 146；守卫仍为主防线）；ARCH-01 用户裁定由「可选」升级为**必需**，与 SIDECHANNEL-04 同归 Phase 151。6 项 LOCKED / 7 个子项 100% 覆盖（① ② ③-A ③-B ④ ⑤ ⑥），① 的用户裁定（A=150 + B=151 组合根治）已纳入。
+
+### 建议的 Phase 划分（供 gsd-roadmapper 输入，非定案）
+| Phase | 主题 | REQ | 文件面（互斥检查用） |
+|---|---|---|---|
+| 145 | AUDIT 静态门禁 Go 化 | AUDIT-01/02/03 | `internal/utils/operlog/*_test.go`、`scripts/operlog_e2e_verify.sh`、`tests/e2e/operlog_e2e_verify.sh`、两 driver、`scripts/README.md`、`.github/workflows/ci.yml` |
+| 146 | CRYPTO KDF 契约 | CRYPTO-01/02/03/04 | `internal/core/security/password.go` + `*_test.go` |
+| 147 | CACHE 失效契约 | CACHE-01/02/03 | `internal/services/asset/reconciliation_exception*.go`、`reconciliation_service.go`、`cache_keys.go` |
+| 148 | DIALECT 双方言 | DIALECT-01/02/03/04 | `excel_export_config/service*.go`、`workstation_device_service.go` + 4+ 测试、`.golangci.yml` |
+| 149 | SCOPE 豁免面收口 | SCOPE-01/02/03/04 | 5 个 `*_service.go`、`scope_entities.go`、`internal/api/router.go`、`useFloorPlanEditor.ts`、`133-UAT.md` |
+| 150 | ① 侧信道根治 A（响应体去规模化） | SIDECHANNEL-01/02/03 | `workstation_service.go`、`excel_service.go`、`scope_write.go`、`useBackfillDept.tsx`、132/133 UAT |
+| 151 | 统一 ScopedDB（B，① 防回归 + ② 机制化） | SIDECHANNEL-04 + ARCH-01 | `base/GORMRepository`、`pkg/query`（新）、8 个 service 起链处、`scope_filter.go` |
+
+> **并行冲突面**：W1 候选 `145 ∥ 146 ∥ 147`（文件面互斥）。`148 / 149 / 150` 均动 `internal/services/operations/**`（148 动 excel_export/workstation_device，149 动 wall/door/text/photo/alias + router，150 动 workstation_service/excel_service + 前端），须产出**函数级归属表**否则降级串行。`151` 触及全仓基座且依赖 148/149/150 的经验，**必须最后执行**；① 的 A（150）与 B（151）按用户裁定均需完成，不伪造「统一架构已落地」。
+
+---
+*Requirements defined: 2026-11-09 (from `.planning/notes/261109-v155-requirements-draft.md`, 用户 5 项决策已拍板)*
+*Last updated: 2026-11-09 after GSD new-milestone v1.55 INITIATED — 草案转为权威 REQUIREMENTS.md；Traceability 待 gsd-roadmapper 填充*

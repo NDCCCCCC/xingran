@@ -125,6 +125,14 @@ operlog:
   # 高频/无审计价值端点示例: /healthz、/swagger/*、/api/v1/rpa/workers/*/heartbeat
   exclude_paths: []
 
+# 资产对账配置（FIX-12）
+# 启动时刷新 reconciliation_normalized 物化视图的超时(秒)。
+# 默认 30s(见 internal/config/config.go setDefaults,零配置行为与历史一致);<=0 回退默认。
+# 历史:导致刷新超时的 O(N²) 根因已由 migration_180 根治,此项仅保留为防御性可配置能力。
+# 环境变量覆盖: XINGRAN_RECONCILIATION_MV_REFRESH_TIMEOUT_SEC
+reconciliation:
+  mv_refresh_timeout_sec: 30
+
 # 注: AD 域控组同步配置（ad_group_sync）已从本模板移除
 # 实际配置通过 sys_config 表或 API 管理,代码不读取配置文件
 # 详情: docs/deployment/secret-management.md 第 4 节

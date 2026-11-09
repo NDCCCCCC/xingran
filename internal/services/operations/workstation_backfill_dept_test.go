@@ -112,8 +112,8 @@ func TestBackfillDept_DryRun_DefaultOnlyFill(t *testing.T) {
 	assert.Equal(t, 3, res.ToFill, "null / empty / maint 三条待填补")
 	assert.Equal(t, 0, res.ToCorrect, "默认不纠正")
 	assert.Equal(t, 2, res.SkippedAlreadyValid, "ws-valid 一致 + ws-mism 不纠正")
-	assert.Equal(t, 1, res.SkippedNoUser)
-	assert.Equal(t, 3, res.SkippedBadUserDept)
+	// Phase 150：skippedNoUser / skippedBadUserDept 全库派生字段已删；业务数值零回归
+	// 由 Candidates / ToFill / SkippedAlreadyValid 承载，响应体不再含越界规模。
 	assert.LessOrEqual(t, len(res.Samples), 20)
 
 	// dryRun 必须零写库。
@@ -246,5 +246,7 @@ func TestBackfillDept_SoftDeletedExcluded(t *testing.T) {
 	res, err := svc.BackfillDeptFromUser(context.Background(), true, false)
 	require.NoError(t, err)
 	assert.Equal(t, 3, res.ToFill, "软删工位不计入")
-	assert.Equal(t, 1, res.SkippedNoUser, "软删工位不计入 total")
+	// Phase 150：软删工位不计入全库规模（该字段已删），业务数值零回归由
+	// Candidates / ToFill 承载。
+	assert.Equal(t, 5, res.Candidates, "候选集仍只含未软删的有效用户工位")
 }

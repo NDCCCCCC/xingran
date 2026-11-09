@@ -167,6 +167,16 @@ var sensitiveKeys = []string{
 	"secretKey",
 	"private_key",
 	"publicKey",
+	// Phase 144：webhook 配置端点（RecordWithBody）与漂移告警配置写端点
+	// 的请求体可能带 webhookUrl / webhookKey / access_token 等键。按 JSON key
+	// 名精确匹配（maskKeyOccurrences 检索 `"<key>":"`），故必须逐字登记，
+	// 否则明文 webhook URL（?key= / access_token= 查询凭据）会落 oper_param。
+	// 同步维护：regression_test.go 的 mandatorySensitiveKeywords。
+	"webhookUrl",
+	"webhook_url",
+	"webhookKey",
+	"access_token",
+	"authorization",
 }
 
 // recordConfig holds optional fields that functional options can override.

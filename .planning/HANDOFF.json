@@ -7,7 +7,9 @@
   "plan": null,
   "task": null,
   "total_tasks": null,
-  "status": "paused",
+  "archived": true,
+  "archive_note": "2026-06-18 paused 快照，已被 v1.21~v1.52 全覆盖：10 个 uncommitted 文件与排序功能均已落地（DEBT-06 目录改名 / migration_228 / useTableManager）；4 项 remaining_tasks 与 3 项 blockers 全部失效。勿据此恢复工作。当前状态见 STATE.md / ROADMAP.md / MILESTONES.md",
+  "status": "archived",
   "completed_tasks": [
     {"id": 1, "name": "回滚 Phase C 前端 10 文件(到 d0ecfa3)", "status": "done", "commit": "e215e3b"},
     {"id": 2, "name": "增强 useTableManager.ts(加 sorterMetas/filtersRef/handleTableChange/getColumnSortOrder/applyFilters)", "status": "done", "commit": "e215e3b"},
