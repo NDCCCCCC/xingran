@@ -105,35 +105,35 @@
 - **① 专项**：132-SUMMARY.md:74 四类前端文案与 `useBackfillDept.tsx` 确认框作废需产品/QA 确认；132/133 backfill 相关 UAT 作废重跑窗口由 QA 裁定；FUTURE-01 在 ① 落地后由 Lead 同步清理 4 处引用。
 - 回归基线：`go build ./...` + `go test ./...` + `tsc` + `lint:ci`（含新增 forbidigo） + `vitest` 全绿；ARCH-01 改动后必须跑全量矩阵。
 
-## Traceability（待 roadmapper 生成 ROADMAP 时填充）
+## Traceability（v1.55 ROADMAP 已生成 · Phases 145-151）
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCOPE-01 | — | Pending |
-| SCOPE-02 | — | Pending |
-| SCOPE-03 | — | Pending |
-| SCOPE-04 | — | Pending |
-| DIALECT-01 | — | Pending |
-| DIALECT-02 | — | Pending |
-| DIALECT-03 | — | Pending |
-| DIALECT-04 | — | Pending |
-| AUDIT-01 | — | Pending |
-| AUDIT-02 | — | Pending |
-| AUDIT-03 | — | Pending |
-| CACHE-01 | — | Pending |
-| CACHE-02 | — | Pending |
-| CACHE-03 | — | Pending |
-| CRYPTO-01 | — | Pending |
-| CRYPTO-02 | — | Pending |
-| CRYPTO-03 | — | Pending |
-| CRYPTO-04（可选） | — | Pending |
-| SIDECHANNEL-01 | — | Pending |
-| SIDECHANNEL-02 | — | Pending |
-| SIDECHANNEL-03 | — | Pending |
-| SIDECHANNEL-04 | — | Pending |
-| ARCH-01（必需） | — | Pending |
+| SCOPE-01 | 149 | Pending |
+| SCOPE-02 | 149 | Pending |
+| SCOPE-03 | 149 | Pending |
+| SCOPE-04 | 149 | Pending |
+| DIALECT-01 | 148 | Pending |
+| DIALECT-02 | 148 | Pending |
+| DIALECT-03 | 148 | Pending |
+| DIALECT-04 | 148 | Pending |
+| AUDIT-01 | 145 | Pending |
+| AUDIT-02 | 145 | Pending |
+| AUDIT-03 | 145 | Pending |
+| CACHE-01 | 147 | Pending |
+| CACHE-02 | 147 | Pending |
+| CACHE-03 | 147 | Pending |
+| CRYPTO-01 | 146 | Pending |
+| CRYPTO-02 | 146 | Pending |
+| CRYPTO-03 | 146 | Pending |
+| CRYPTO-04（可选 / optional） | 146 | Pending |
+| SIDECHANNEL-01 | 150 | Pending |
+| SIDECHANNEL-02 | 150 | Pending |
+| SIDECHANNEL-03 | 150 | Pending |
+| SIDECHANNEL-04 | 151 | Pending |
+| ARCH-01（必需） | 151 | Pending |
 
-**Coverage:** 24 REQ（23 必需 + CRYPTO-04 可选）/ 0 mapped（待 ROADMAP）/ **6 项 LOCKED / 7 个子项 100% 覆盖**（① ② ③-A ③-B ④ ⑤ ⑥），① 的用户裁定已纳入。
+**Coverage:** 24 total / **24 mapped** / **0 unmapped**（每个 REQ 映射且只映射到一个 Phase，无孤儿无重复）。**CRYPTO-04 标注 optional**（可选能力扩展，非消除当前隐患的必要条件，仍映射至 Phase 146；守卫仍为主防线）；ARCH-01 用户裁定由「可选」升级为**必需**，与 SIDECHANNEL-04 同归 Phase 151。6 项 LOCKED / 7 个子项 100% 覆盖（① ② ③-A ③-B ④ ⑤ ⑥），① 的用户裁定（A=150 + B=151 组合根治）已纳入。
 
 ### 建议的 Phase 划分（供 gsd-roadmapper 输入，非定案）
 | Phase | 主题 | REQ | 文件面（互斥检查用） |
