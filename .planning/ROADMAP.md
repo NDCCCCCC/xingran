@@ -201,7 +201,9 @@
 
 **v1.55 交付证据（7 份 SUMMARY + 2 份 UAT 载体）**：`.planning/phases/145-audit-go-audit-01-02-03/145-SUMMARY.md`、`146-crypto-kdf-crypto-01-02-03-04/146-SUMMARY.md`、`147-cache-cache-01-02-03/147-SUMMARY.md`、`148-dialect-dialect-01-02-03-04/148-SUMMARY.md`、`149-scope-scope-01-02-03-04/149-SUMMARY.md` + `149-UAT-RECHECK.md`、`150-a-sidechannel-01-02-03/150-SUMMARY.md` + `150-UAT-BACKFILL.md`、`151-scopeddb-b-sidechannel-04-arch-01/151-SUMMARY.md`。根因判定 `.planning/notes/261109-v154-locked-root-cause-analysis.md`；草案 `.planning/notes/261109-v155-requirements-draft.md`。
 
-**v1.55 收档新增登记（非阻断）**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 成功路径无 `operlog.Record`，W2 未覆盖，待后续 quick）｜`computeByWorkstation:1074` append 缺陷｜两份 `operlog_e2e_verify.sh` 重复副本未物理合并｜forbidigo 能力边界（只匹配 AST 标识符，反向变异实际由 Go 源码静态断言承担）｜`room_photo`/`location_alias` 两 handler HTTP 透传口径｜`TEST_PG_DSN` 双跑前置依赖｜149/150 UAT 重跑窗口待 QA。逐项见 `STATE.md ## Deferred Items` 的 v1.55 行。
+**v1.55 收档新增登记（非阻断，收档时点）**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 成功路径无 `operlog.Record`，W2 未覆盖，待后续 quick）｜`computeByWorkstation:1074` append 缺陷｜两份 `operlog_e2e_verify.sh` 重复副本未物理合并｜forbidigo 能力边界（只匹配 AST 标识符，反向变异实际由 Go 源码静态断言承担）｜`room_photo`/`location_alias` 两 handler HTTP 透传口径｜`TEST_PG_DSN` 双跑前置依赖｜149/150 UAT 重跑窗口待 QA。逐项见 `STATE.md ## Deferred Items` 的 v1.55 行。
+
+> **后续处置（2026-11-09 quick 261109-wdu，非本快照内容）**：A 类代码缺口全部收口 —— ① trunk operlog ② append 顺序 ③ 两份脚本物理合并到 `tests/e2e/` 唯一权威 ④ `physical_e2e_test.go` 归位按 AGENTS.md 登记「就近单测合规豁免、不迁移」 ⑤ 发现导入事务与 Save Error 均清偿（含红绿回归断言）；`user_id.(string)` 硬断言实证已不存在、属过时登记。**仍挂账**：forbidigo 能力边界、两 handler HTTP 透传口径、B 类需产品决策项、C 类验证/人工项（79 条 0 勾选）。终态以 `STATE.md ## Deferred Items` 最新行为准。
 
 ---
 

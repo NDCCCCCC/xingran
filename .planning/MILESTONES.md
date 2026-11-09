@@ -17,7 +17,8 @@
 
 **Known Gaps（登记，非阻断，不伪造闭环）**：
 - **验证类残余**：79 条人工验证跟踪表保持 **0 勾选**；FIX-01 实机 AD/LDAP UAT｜FIX-04 真机逐型号取证 7 项｜FIX-09 HTTP P99 压测｜FIX-13 生产库 migration 236/237；`TEST_PG_DSN` 双跑前置依赖（本期不建 `services: postgres`）；149 的 `149-UAT-RECHECK.md`（D1/D2）与 150 的 `150-UAT-BACKFILL.md` 重跑窗口/验收人待 QA 裁定。
-- **v1.55 新增登记**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 成功路径无 `operlog.Record`，W2 未覆盖，待后续 quick）｜`computeByWorkstation:1074` append 缺陷｜两份 `operlog_e2e_verify.sh` 重复副本未物理合并｜forbidigo 能力边界｜`room_photo`/`location_alias` 两 handler HTTP 透传口径｜v1.54 新增 7 项 GAP 仍挂账。逐项见 `STATE.md ## Deferred Items` v1.55 行与各 phase `*-SUMMARY.md`。
+- **v1.55 新增登记（收档时点）**：trunk operlog 真实缺口（`port_write_trunk_handler.go:43-80` 成功路径无 `operlog.Record`，W2 未覆盖，待后续 quick）｜`computeByWorkstation:1074` append 缺陷｜两份 `operlog_e2e_verify.sh` 重复副本未物理合并｜forbidigo 能力边界｜`room_photo`/`location_alias` 两 handler HTTP 透传口径｜v1.54 新增 7 项 GAP 仍挂账。逐项见 `STATE.md ## Deferred Items` v1.55 行与各 phase `*-SUMMARY.md`。
+  - **后续处置（2026-11-09 quick 261109-wdu，非本快照内容）**：trunk operlog / append 缺陷 / 两份脚本重复副本 / `physical_e2e_test.go` 归位（登记就近单测合规豁免）/ 发现导入事务与 Save Error 均已清偿，`A-2` 收敛到 `tests/e2e/` 唯一权威、`A-3` 登记豁免不迁移；**仍挂账** = forbidigo 能力边界、两 handler HTTP 透传口径、v1.54 的 7 项 GAP 中 ①②④⑥⑦ 与 B/C 类验证人工项。结论以 `STATE.md ## Deferred Items` 最新行为准。
 - **FUTURE-01 已关闭**：随 ① 的 A+B 根治一并关闭，4 处引用（`REQUIREMENTS.md` / `ROADMAP.md` / `STATE.md` / `261108-v153-locked-residuals.md:63`）已由 Lead 收档清理，不再是未来候选。
 - **收档计数修正**：立项期草案/ROADMAP 沿用「24 REQ」口径，实为把 CRYPTO-04 的 `optional` 标注误计入；逐组实证 = 23，以 23 为准（`REQUIREMENTS.md` Coverage 段已登记）。
 
