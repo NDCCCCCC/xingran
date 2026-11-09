@@ -1,26 +1,26 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.54
-milestone_name: 真实代码缺口清偿
-status: v1.54 SHIPPED 2026-11-09 (Awaiting next milestone)
-last_updated: "2026-11-09T02:20:00.000Z"
+milestone: v1.55
+milestone_name: LOCKED 残余根治
+status: planning
+last_updated: "2026-11-09T01:28:23.664Z"
 last_activity: 2026-11-09
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.54 SHIPPED 2026-11-09（3/3 Phase：142/143/144 全部完成；7/7 REQ 交付；全量回归闸门全绿）
+**Status**: v1.55 INITIATED 2026-11-09（LOCKED 残余根治；6 项 / 7 子项，用户裁定推翻 ① 产品语义纳入 A+B 根治；Phase 从 145 续编）
 **Last activity**: 2026-11-09
+**Prior activity**: 2026-11-09 - v1.55 INITIATED：6 项 LOCKED 残余从根源根治（深度根因报告 + 5 项决策拍板 + 24 REQ 草案）；跳过领域研究；FUTURE-01 随 ① 关闭；79 条人工验证跟踪表保持 0 勾选
 **Prior activity**: 2026-11-09 - v1.54 SHIPPED：4 项真实代码缺口全部清偿（发现设备真实导入 / 批量物理参数 + 型号级能力矩阵 / 告警前端+WS+webhook 收口），W1 4 个并行 executor + Lead 集成；`go build ./...` / `go test ./...` / `tsc` / `lint:ci ALL PASS` / 全量 vitest 全绿；权限三方逐字一致、migration 238 两处注册；验证类残余不伪造闭环
-**Prior activity**: 2026-11-08 - v1.54 INITIATED：4 项真实代码缺口（发现设备真实导入 / 告警通道收口 / 批量物理参数 / 型号级能力矩阵），3 个并行 subagent 做本仓代码面探索；跳过领域研究；验证类残余不伪造闭环
 **Prior activity**: 2026-11-08 - v1.53 SHIPPED：8 个 Phase 全部交付，全量回归闸门全绿（go build / go test 全仓 / tsc / lint:ci / vitest 592 文件 4128 用例），GSD `milestone complete` 完成归档与权威交回
 **Prior activity**: 2026-11-08 - v1.52 SHIPPED 并完成 GSD 归档
 **Prior activity**: 2026-11-06 - Completed quick task 261106-wso: 一栋楼跨机构办公 —— 楼层可覆盖所属机构（ops_floors.org_id + 全链路 COALESCE）
@@ -98,14 +98,14 @@ progress:
 
 ## Current Position
 
-Phase: Not started (roadmap created)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Roadmap created (v1.54 · Phases 142-144 · 7 REQ / 100% mapped · W1 零依赖并行)
-Last activity: 2026-11-08 — v1.54 roadmap created (142 DISC-01/02 ∥ 143 PORT-01/02 ∥ 144 ALRT-01/02/03)
+Status: Defining requirements
+Last activity: 2026-11-09 — Milestone v1.55 started
 
 ## 历史归档（v1.25 及更早，已 SHIPPED / ARCHIVED；以下为非当前状态，仅供追溯）
 
-> 本节及后续子标题（进度快照、Phase 依赖速查、执行期决策、立项范围、Accumulated Context 等）为 **v1.25 及更早里程碑**的归档记录，**均非当前状态**；当前状态一律以文档上半段 **v1.54 active** 与 `## Current Position` 为准（v1.53 终态见上方「历史基线」段，v1.52 及更早见 `.planning/MILESTONES.md`）。
+> 本节及后续子标题（进度快照、Phase 依赖速查、执行期决策、立项范围、Accumulated Context 等）为 **v1.25 及更早里程碑**的归档记录，**均非当前状态**；当前状态一律以文档上半段 **v1.55 active** 与 `## Current Position` 为准（v1.54 终态见上方「历史基线」段与 `.planning/MILESTONES.md` v1.54 条目，v1.53 及更早见 `.planning/MILESTONES.md`）。
 
 ### v1.25 真实进度快照（历史，2026-10-29 晚，Lead 实跑复核）
 

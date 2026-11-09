@@ -1,10 +1,41 @@
 ---
 last_updated: 2026-11-09
-update_trigger: v1.54 milestone SHIPPED 2026-11-09（真实代码缺口清偿：3/3 Phase、7/7 REQ、全量回归闸门全绿；验证类残余不伪造闭环）
-previous_update: 2026-11-08 v1.54 milestone INITIATED（真实代码缺口清偿：4 项代码缺口 / 取数自 STATE.md ## Deferred Items；Phase 从 142 续编）
+update_trigger: v1.55 milestone INITIATED 2026-11-09（LOCKED 残余根治：6 项 / 7 子项，用户裁定推翻 ① 产品语义纳入 A+B 根治；取数自 261109-v154-locked-root-cause-analysis.md + 261109-v155-requirements-draft.md；Phase 从 145 续编）
+previous_update: 2026-11-09 v1.54 milestone SHIPPED（真实代码缺口清偿：3/3 Phase、7/7 REQ、全量回归闸门全绿；验证类残余不伪造闭环）
 ---
 
-## Current Milestone: v1.54 真实代码缺口清偿 (Code Gap Clearance) — ✅ SHIPPED 2026-11-09
+## Current Milestone: v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix) — INITIATED 2026-11-09
+
+**Goal:** 把 v1.52 收档时以「已接受 / 仅登记」名义挂账的 6 项 LOCKED 残余（7 个子项，③ 拆 A/B）从根源上修掉（而非打补丁 / 加告警 / 加方言分支），使约束从「靠约定」升级为「靠机制」；按用户 2026-11-09 裁定允许推翻 ① 的「范围快照回显」产品语义，① 纳入 A+B 组合根治。
+
+**Status:** INITIATED 2026-11-09 | 取数权威 = `.planning/notes/261109-v154-locked-root-cause-analysis.md`（3 个并行只读 subagent + Lead 交叉核对）+ `.planning/notes/261109-v155-requirements-draft.md`（用户已拍板 5 项决策的 24 REQ 草案）| Phase 从 **145** 续编（v1.54 结束于 144）
+
+**Target features:**
+- **AUDIT**（④）— operlog e2e 静态段 Go 单测化 + cwd 锚定 + CI 硬门禁（当前静态检查从未真正跑过）
+- **CRYPTO**（⑥）— `pbkdf2SM3` 非法输入守卫 + `len(hashBytes)==32` 校验 + 黄金向量（免生产盘点）
+- **CACHE**（⑤）— 删死键/空函数 + `GetByWorkstation` 例外变更立即一致联动失效
+- **DIALECT**（③）— 删 `RightCast` 方言机制 + PG 专属 CTE 改 Go 层合并 + forbidigo 防复发；CI PG 双跑登记前置依赖
+- **SCOPE**（②）— 5 项豁免面零迁移收口（补挂 rooms/photos 中间件 + 保存侧裁剪）+ UAT 重跑
+- **SIDECHANNEL**（①，A）— 响应体去规模化（`ScopeTotal`/`ScopeOutOfScope`/行号）+ 去掉全库 `countQ` + 差分攻击测试 + 132/133 UAT 重跑
+- **ARCH**（① 的 B，必需）— 统一 ScopedDB（GORM `Scopes` 强制唯一查询起链点 + 资源归属注册表 + 响应契约层），必须最后执行
+
+**关键决策 (v1.55, 用户 2026-11-09 裁定):**
+- **范围 = 6 项 LOCKED / 7 子项全覆盖**（① ② ③-A ③-B ④ ⑤ ⑥）；**不允许**用告警通道 / 粗粒度桶 / 方言分支 / 「接 Redis 后补 Delete」/ 仅调门禁顺序等补丁方式代替根治
+- **DECISION-①（决定性）：允许重定语义** —— 取消 `BackfillDeptResult` 规模回显、去掉全库 `countQ`、去导入 `Errors[].Row` 行号、作废 132-SUMMARY.md:74 前端四类「本次范围：共 N 条」文案；① 按 A（响应体去规模化）+ B（统一 ScopedDB 防回归）组合根治
+- **FUTURE-01 随 ① 根治一并关闭**，不再单列挂账（收档时清理 4 处引用）
+- **CI-PG**：本期不建 `services: postgres`，`TEST_PG_DSN` 双跑登记为前置依赖，不伪造双跑
+- **存量密码**：全库写入均经 `HashPassword`（恒 32 字节），免盘点直接上守卫
+- **例外缓存陈旧窗口**：要求立即一致，`CACHE-02` 必做联动失效
+- **跳过领域研究**：7 子项均带本仓 `文件:行号` 实证与现成改写范本，根因报告即研究输入（沿用 v1.53/v1.54 先例）
+- **79 条人工验证跟踪表保持 0 勾选**；FIX-01/04/09/13 验证类残余、v1.54 新增 7 项 GAP 不纳入；不伪造闭环
+- **零新依赖**；遵循 Handler-Service / `response.Success()/Error()` / operlog 写操作约定 / 0=正常 1=停用 / UUID 主键 / SQLite+PG 双方言 / 前端 wrapped API / 构建产物只落 `out/`
+- **提交授权**：用户 2026-11-09 沿用 2026-11-08 口径，授权 GSD 自动提交 v1.55 立项/需求/路线图产物与实现代码
+
+**事实基线:** `.planning/notes/261109-v154-locked-root-cause-analysis.md`｜`.planning/notes/261109-v155-requirements-draft.md`（决策裁定记录）｜`.planning/notes/261108-v153-locked-residuals.md`（6 项裁定原文）｜`.planning/STATE.md ## Deferred Items`
+
+---
+
+## Past Milestone: v1.54 真实代码缺口清偿 (Code Gap Clearance) — ✅ SHIPPED 2026-11-09
 
 **Goal:** 清偿 `.planning/STATE.md ## Deferred Items` 中登记的 4 项真实代码缺口，使 v1.53 收档后显式披露的「代码可修」残余全部真正落地；不触碰 LOCKED 残余、不伪造人工验证闭环。
 
