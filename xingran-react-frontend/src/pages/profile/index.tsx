@@ -12,7 +12,6 @@ import {
   Form,
   Input,
   Upload,
-  Statistic,
   Tag,
   Space,
 } from "antd";
@@ -20,6 +19,7 @@ import {
 // 说明：本页 Input 仍在 antd 导入中——因为 <Input.Password>（成员表达式）不在
 // 本波迁移面（P65/P70 selector 只拦 TextArea 形态的成员表达式），见 SUMMARY 跳过项。
 import { AppInput, AppTextArea } from "@/components/ui";
+import { StatCards } from "@/components/shared";
 import {
   UserOutlined,
   EditOutlined,
@@ -249,48 +249,30 @@ const ProfilePage: FC = () => {
             loading={dutyStatsLoading}
           >
             {dutyStats && (
-              <Row gutter={[16, 16]}>
-                <Col xs={12} sm={6}>
-                  <Statistic
-                    title="今日状态"
-                    value={dutyStats.isOnDutyToday ? "值班中" : "休息"}
-                    styles={{
-                      content: {
-                        color: dutyStats.isOnDutyToday
-                          ? "var(--theme-success)"
-                          : "var(--theme-text-tertiary)",
-                      },
-                    }}
-                  />
-                </Col>
-                <Col xs={12} sm={6}>
-                  <Statistic title="本月次数" value={dutyStats.thisMonthCount} suffix="次" />
-                </Col>
-                <Col xs={12} sm={6}>
-                  <Statistic title="累计值班" value={dutyStats.totalCount} suffix="次" />
-                </Col>
-                <Col xs={12} sm={6}>
-                  <div>
-                    <div
-                      style={{ fontSize: "14px", color: "rgba(0,0,0,0.45)", marginBottom: "4px" }}
-                    >
-                      下次值班
-                    </div>
-                    <div style={{ fontSize: "20px", fontWeight: 500 }}>
-                      {dutyStats.nextDutyDate ? (
-                        <Space>
-                          <span>{formatDateTime(dutyStats.nextDutyDate, FORMAT_DATE_SHORT)}</span>
-                          {dutyStats.nextDutyPoolName && (
-                            <Tag color="blue">{dutyStats.nextDutyPoolName}</Tag>
-                          )}
-                        </Space>
-                      ) : (
-                        <span style={{ color: "var(--theme-text-tertiary)" }}>暂无排班</span>
-                      )}
-                    </div>
-                  </div>
-                </Col>
-              </Row>
+              <StatCards
+                items={[
+                  {
+                    label: "今日状态",
+                    value: dutyStats.isOnDutyToday ? "值班中" : "休息",
+                    tone: dutyStats.isOnDutyToday ? "green" : "gray",
+                  },
+                  { label: "本月次数", value: `${dutyStats.thisMonthCount} 次` },
+                  { label: "累计值班", value: `${dutyStats.totalCount} 次` },
+                  {
+                    label: "下次值班",
+                    value: dutyStats.nextDutyDate ? (
+                      <Space>
+                        <span>{formatDateTime(dutyStats.nextDutyDate, FORMAT_DATE_SHORT)}</span>
+                        {dutyStats.nextDutyPoolName && (
+                          <Tag color="blue">{dutyStats.nextDutyPoolName}</Tag>
+                        )}
+                      </Space>
+                    ) : (
+                      "暂无排班"
+                    ),
+                  },
+                ]}
+              />
             )}
 
             {/* 今日值班详情 */}

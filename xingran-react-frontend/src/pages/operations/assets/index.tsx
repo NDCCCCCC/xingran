@@ -13,7 +13,7 @@ import { formatDateTime, formatDate } from "@/utils/datetime";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { FC, Key } from "react";
 import type { FormInstance } from "antd";
-import { App, Button, Space, Tag, Card, Tooltip } from "antd";
+import { App, Button, Space, Tag, Tooltip } from "antd";
 import {
   PlusOutlined,
   ImportOutlined,
@@ -29,7 +29,7 @@ import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { PageTable, useActionPermission } from "@/components/shared";
+import { PageTable, StatCards, useActionPermission } from "@/components/shared";
 import type { PageTableRenderContext, SearchField } from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
@@ -608,24 +608,14 @@ const AssetList: FC = () => {
     reloadRef.current = loadData;
     searchFormRef.current = searchForm;
     return (
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <Card>
-          <div className="text-2xl font-bold">{statistics.total}</div>
-          <div className="text-gray-500">总资产数</div>
-        </Card>
-        <Card>
-          <div className="text-2xl font-bold text-green-600">{statistics.normal}</div>
-          <div className="text-gray-500">正常状态</div>
-        </Card>
-        <Card>
-          <div className="text-2xl font-bold text-red-600">{statistics.stopped}</div>
-          <div className="text-gray-500">停用状态</div>
-        </Card>
-        <Card>
-          <div className="text-2xl font-bold text-orange-600">{statistics.nbf}</div>
-          <div className="text-gray-500">拟报废</div>
-        </Card>
-      </div>
+      <StatCards
+        items={[
+          { label: "总资产数", value: statistics.total, tone: "default" },
+          { label: "正常状态", value: statistics.normal, tone: "green" },
+          { label: "停用状态", value: statistics.stopped, tone: "danger" },
+          { label: "拟报废", value: statistics.nbf, tone: "gold" },
+        ]}
+      />
     );
   };
 

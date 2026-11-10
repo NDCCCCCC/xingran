@@ -18,15 +18,7 @@ import {
   Progress,
   Layout,
 } from "antd";
-import {
-  SearchOutlined,
-  ReloadOutlined,
-  CloudServerOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ClockCircleOutlined,
-  LoadingOutlined,
-} from "@ant-design/icons";
+import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Worker } from "@/types/rpa";
 import { useTableManager } from "@/hooks/useTableManager";
 import { useServerSort } from "@/hooks/useServerSort";
@@ -38,6 +30,7 @@ import { post } from "@/lib/api";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // Worker 状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
 import { AppInput, AppSelect } from "@/components/ui";
+import { StatCards } from "@/components/shared";
 
 const { Content } = Layout;
 
@@ -174,61 +167,18 @@ const WorkerMonitor: FC = () => {
     statistics.totalCapacity > 0 ? (statistics.usedCapacity / statistics.totalCapacity) * 100 : 0;
 
   return (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
-      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
+    <Layout style={{ background: "transparent" }}>
+      <Content style={{ padding: 0, background: "transparent" }}>
         {/* 统计卡片 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={4}>
-            <Card>
-              <Statistic
-                title="Worker 总数"
-                value={statistics.total}
-                prefix={<CloudServerOutlined />}
-                styles={{ content: { color: "var(--theme-info)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={5}>
-            <Card>
-              <Statistic
-                title="在线"
-                value={statistics.online}
-                prefix={<CheckCircleOutlined />}
-                styles={{ content: { color: "var(--theme-success)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={5}>
-            <Card>
-              <Statistic
-                title="忙碌"
-                value={statistics.busy}
-                prefix={<LoadingOutlined />}
-                styles={{ content: { color: "var(--theme-info)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={5}>
-            <Card>
-              <Statistic
-                title="离线"
-                value={statistics.offline}
-                prefix={<ClockCircleOutlined />}
-                styles={{ content: { color: "var(--theme-text-tertiary)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={5}>
-            <Card>
-              <Statistic
-                title="错误"
-                value={statistics.error}
-                prefix={<CloseCircleOutlined />}
-                styles={{ content: { color: "var(--theme-error)" } }}
-              />
-            </Card>
-          </Col>
-        </Row>
+        <StatCards
+          items={[
+            { label: "Worker 总数", value: statistics.total, tone: "default" },
+            { label: "在线", value: statistics.online, tone: "green" },
+            { label: "忙碌", value: statistics.busy, tone: "default" },
+            { label: "离线", value: statistics.offline, tone: "default" },
+            { label: "错误", value: statistics.error, tone: "danger" },
+          ]}
+        />
 
         {/* 容量使用率 */}
         <Card style={{ marginBottom: 16 }}>

@@ -117,7 +117,9 @@ export const FixSuggestionDetailDrawer = ({
                   <>
                     <Descriptions bordered column={1} size="small" style={{ marginBottom: 16 }}>
                       <Descriptions.Item label="当前 ops_asset.user_id">
-                        {sugg.currentUserId ?? <span style={{ color: "#999" }}>-</span>}
+                        {sugg.currentUserId ?? (
+                          <span style={{ color: "var(--theme-text-tertiary)" }}>-</span>
+                        )}
                       </Descriptions.Item>
                       <Descriptions.Item label="建议 user_id">
                         {sugg.suggestedUserId}
@@ -126,7 +128,9 @@ export const FixSuggestionDetailDrawer = ({
                         {sugg.suggestedUsername ?? "-"}
                       </Descriptions.Item>
                       <Descriptions.Item label="应用前 user_id(pre_fix)">
-                        {sugg.preFixUserId ?? <span style={{ color: "#999" }}>未应用</span>}
+                        {sugg.preFixUserId ?? (
+                          <span style={{ color: "var(--theme-text-tertiary)" }}>未应用</span>
+                        )}
                       </Descriptions.Item>
                       <Descriptions.Item label="回滚窗口截止">
                         {sugg.rollbackWindowUntil ? (
@@ -170,7 +174,9 @@ export const FixSuggestionDetailDrawer = ({
                             content: (
                               <>
                                 <div>创建建议</div>
-                                <div style={{ fontSize: 12, color: "#999" }}>{sugg.createdAt}</div>
+                                <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>
+                                  {sugg.createdAt}
+                                </div>
                               </>
                             ),
                           },
@@ -180,7 +186,9 @@ export const FixSuggestionDetailDrawer = ({
                                 content: (
                                   <>
                                     <div>接受</div>
-                                    <div style={{ fontSize: 12, color: "#999" }}>
+                                    <div
+                                      style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}
+                                    >
                                       {sugg.acceptedAt}
                                     </div>
                                   </>
@@ -193,7 +201,9 @@ export const FixSuggestionDetailDrawer = ({
                                 content: (
                                   <>
                                     <div>应用</div>
-                                    <div style={{ fontSize: 12, color: "#999" }}>
+                                    <div
+                                      style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}
+                                    >
                                       {sugg.appliedAt}
                                     </div>
                                   </>
@@ -206,7 +216,9 @@ export const FixSuggestionDetailDrawer = ({
                                 content: (
                                   <>
                                     <div>回滚</div>
-                                    <div style={{ fontSize: 12, color: "#999" }}>
+                                    <div
+                                      style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}
+                                    >
                                       {sugg.rolledBackAt}
                                     </div>
                                   </>
@@ -233,9 +245,13 @@ export const FixSuggestionDetailDrawer = ({
                               <Tag color={FIX_STATUS_TAG_CONFIG[h.fixStatus]?.color ?? "default"}>
                                 {FIX_STATUS_TAG_CONFIG[h.fixStatus]?.text ?? h.fixStatus}
                               </Tag>
-                              <span style={{ color: "#999", fontSize: 12 }}>{h.id}</span>
+                              <span style={{ color: "var(--theme-text-tertiary)", fontSize: 12 }}>
+                                {h.id}
+                              </span>
                             </div>
-                            <div style={{ fontSize: 12, color: "#999" }}>{h.createdAt}</div>
+                            <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)" }}>
+                              {h.createdAt}
+                            </div>
                             {h.rejectionReason && (
                               <div style={{ fontSize: 12, color: "red" }}>
                                 拒绝原因:{h.rejectionReason}

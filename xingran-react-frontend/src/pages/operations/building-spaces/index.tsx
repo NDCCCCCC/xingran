@@ -6,8 +6,8 @@
  * 不再一次性拉 floor/workstation 全量做前端关联。
  */
 import { useState, useEffect, useCallback } from "react";
-import { App, Card, Row, Col, Statistic, Spin, Pagination } from "antd";
-import { ApartmentOutlined, DesktopOutlined } from "@ant-design/icons";
+import { App, Row, Col, Spin, Pagination } from "antd";
+import { StatCards } from "@/components/shared";
 import { buildingApi, floorApi, workstationApi } from "@/lib/opsApi";
 import BuildingCard from "./components/BuildingCard";
 import BuildingModal from "./components/BuildingModal";
@@ -82,40 +82,16 @@ const BuildingSpacesPage: React.FC = () => {
   };
 
   return (
-    <div className={styles.buildingSpacesPage}>
+    <div>
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={8}>
-          <Card className={styles.statCard}>
-            <Statistic
-              title="楼宇总数"
-              value={statistics.totalBuildings}
-              prefix={<ApartmentOutlined />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card className={styles.statCard}>
-            <Statistic
-              title="总楼层数"
-              value={statistics.totalFloors}
-              prefix="🏢"
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card className={styles.statCard}>
-            <Statistic
-              title="总工位数"
-              value={statistics.totalWorkstations}
-              prefix={<DesktopOutlined />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        style={{ marginBottom: 24 }}
+        items={[
+          { label: "楼宇总数", value: statistics.totalBuildings, tone: "default" },
+          { label: "总楼层数", value: statistics.totalFloors, tone: "default" },
+          { label: "总工位数", value: statistics.totalWorkstations, tone: "default" },
+        ]}
+      />
 
       {/* 加载状态 / 楼宇卡片网格 */}
       {loading ? (

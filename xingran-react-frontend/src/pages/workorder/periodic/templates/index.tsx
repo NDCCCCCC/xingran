@@ -14,7 +14,6 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
   Drawer,
   Timeline,
   Switch,
@@ -37,6 +36,7 @@ import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { PeriodicWorkOrderTemplate } from "@/lib/workorderApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { confirmDelete } from "@/components/shared/confirmDelete";
+import { StatCards } from "@/components/shared";
 import CronSelector from "@/components/CronSelector";
 import { PeriodicAssignType } from "@/lib/workorderApi";
 
@@ -323,33 +323,16 @@ const PeriodicTemplatePage: FC = () => {
 
   return (
     <div className="p-6">
-      {/* 统计卡片 - 只在数据大于10时显示 */}
-      {statistics.total > 10 && (
-        <Card title={null} className="mb-4">
-          <Row gutter={16}>
-            <Col span={6}>
-              <Statistic title="总模板" value={statistics.total} />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="已启用"
-                value={statistics.enabled}
-                styles={{ content: { color: "var(--theme-success)" } }}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="已禁用"
-                value={statistics.disabled}
-                styles={{ content: { color: "var(--theme-error)" } }}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic title="已生成工单" value={statistics.totalGenerated} />
-            </Col>
-          </Row>
-        </Card>
-      )}
+      {/* 统计卡片：统一走 <StatCards>，保留原 statistics.total > 10 条件 */}
+      <StatCards
+        show={statistics.total > 10}
+        items={[
+          { label: "总模板", value: statistics.total },
+          { label: "已启用", value: statistics.enabled, tone: "green" },
+          { label: "已禁用", value: statistics.disabled, tone: "danger" },
+          { label: "已生成工单", value: statistics.totalGenerated },
+        ]}
+      />
 
       {/* 筛选表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>

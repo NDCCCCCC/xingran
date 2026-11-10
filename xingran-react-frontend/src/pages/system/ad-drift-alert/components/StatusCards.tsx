@@ -5,20 +5,15 @@
  * 各通道开关（enabled / noticeEnabled / wsEnabled / webhookEnabled）。
  *
  * 只读展示组件：数据由 index.tsx 的 getStatus() 注入，自身不发请求、不订阅 WS。
- * loading 时用 antd Card 的 loading 骨架，避免出现「0」误读为真实值。
+ * 数值统计卡统一走 <StatCards>；通道开关 Tag 组属于另一类展示，保留在其后。
+ * loading 时用 show 隐藏数值卡，避免把「0」误读为真实值。
  */
-import { Card, Col, Row, Statistic, Tag, Tooltip } from "antd";
-import {
-  AlertOutlined,
-  ApiOutlined,
-  BellOutlined,
-  CloudSyncOutlined,
-  FieldNumberOutlined,
-  InfoCircleOutlined,
-} from "@ant-design/icons";
+import { Card, Tag, Tooltip } from "antd";
+import { ApiOutlined, BellOutlined, CloudSyncOutlined } from "@ant-design/icons";
 import type { FC, ReactNode } from "react";
 import type { ADDriftAlertStatus } from "@/lib/adDriftAlertApi";
 import { formatDateTime } from "@/utils/datetime";
+import { StatCards } from "@/components/shared";
 
 export interface StatusCardsProps {
   status: ADDriftAlertStatus | null;
@@ -40,60 +35,48 @@ const StatusCards: FC<StatusCardsProps> = ({ status, loading = false }) => {
       ? "-"
       : String(status.baseline);
 
+  const lastAlertText = status?.lastAlertAt
+    ? `${formatDateTime(status.lastAlertAt)}${status?.lastAlertDrifted ? "（检测到漂移）" : ""}`
+    : "无";
+
   return (
-    <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-      <Col xs={24} sm={12} lg={6}>
-        <Card loading={loading} size="small">
-          <Statistic
-            title="累计告警次数"
-            value={status?.alertCount ?? 0}
-            prefix={<AlertOutlined />}
-            valueStyle={{ color: (status?.alertCount ?? 0) > 0 ? "var(--theme-error)" : undefined }}
+    <div style={{ marginBottom: 16 }}>
+      {/* 数值统计卡：统一走 <StatCards>；loading 时不显示，避免 0 被误读为真实值 */}
+      <StatCards
+        show={!loading}
+        items={[
+          {
+            label: "累计告警次数",
+            value: status?.alertCount ?? 0,
+            tone: (status?.alertCount ?? 0) > 0 ? "danger" : "default",
+          },
+          { label: "当前基线（成员数,组数）", value: baselineText },
+          {
+            label: "容差 / 节流",
+            value: `${status?.tolerance ?? 0} / ${status?.throttleMinutes ?? 0}min`,
+            trend: `上次告警：${lastAlertText}`,
+          },
+        ]}
+      />
+
+      {/* 通道开关：Tag 徽标组属于另一类展示，保留原功能与骨架 */}
+      <Card loading={loading} size="small" title="告警通道" style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          <ChannelTag label="总开关" on={status?.enabled ?? false} icon={<CloudSyncOutlined />} />
+          <ChannelTag
+            label="站内通知"
+            on={status?.noticeEnabled ?? false}
+            icon={<BellOutlined />}
           />
-        </Card>
-      </Col>
-      <Col xs={24} sm={12} lg={6}>
-        <Card loading={loading} size="small">
-          <Statistic
-            title="当前基线（成员数,组数）"
-            value={baselineText}
-            prefix={<FieldNumberOutlined />}
+          <ChannelTag label="WS 实时" on={status?.wsEnabled ?? false} icon={<ApiOutlined />} />
+          <ChannelTag
+            label="Webhook"
+            on={status?.webhookEnabled ?? false}
+            icon={<CloudSyncOutlined />}
           />
-        </Card>
-      </Col>
-      <Col xs={24} sm={12} lg={6}>
-        <Card loading={loading} size="small">
-          <Statistic
-            title="容差 / 节流"
-            value={`${status?.tolerance ?? 0} / ${status?.throttleMinutes ?? 0}min`}
-            prefix={<InfoCircleOutlined />}
-          />
-          <div style={{ marginTop: 4, fontSize: 12, color: "var(--theme-text-tertiary)" }}>
-            上次告警：
-            {status?.lastAlertAt ? formatDateTime(status.lastAlertAt) : "无"}
-            {status?.lastAlertDrifted ? "（检测到漂移）" : ""}
-          </div>
-        </Card>
-      </Col>
-      <Col xs={24} sm={12} lg={6}>
-        <Card loading={loading} size="small" title="告警通道">
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            <ChannelTag label="总开关" on={status?.enabled ?? false} icon={<CloudSyncOutlined />} />
-            <ChannelTag
-              label="站内通知"
-              on={status?.noticeEnabled ?? false}
-              icon={<BellOutlined />}
-            />
-            <ChannelTag label="WS 实时" on={status?.wsEnabled ?? false} icon={<ApiOutlined />} />
-            <ChannelTag
-              label="Webhook"
-              on={status?.webhookEnabled ?? false}
-              icon={<CloudSyncOutlined />}
-            />
-          </div>
-        </Card>
-      </Col>
-    </Row>
+        </div>
+      </Card>
+    </div>
   );
 };
 

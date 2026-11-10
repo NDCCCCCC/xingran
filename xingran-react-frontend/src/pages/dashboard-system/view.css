@@ -1,23 +1,13 @@
 /**
  * Dashboard View Page 样式
+ *
+ * UI 统一整改：选择器与 view.tsx 的 className（dashboard-view__content）对齐。
+ * .dashboard-view 本体由 components/dashboard/DashboardView.css 定义（全局生效），
+ * 此处不再重复定义，避免 height:100vh 与 height:100% 两套约束打架；
+ * 亦去掉自造整页 padding，正文透出全局奶油画布。
  */
 
-.dashboard-view-page {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-.dashboard-view-page.loading,
-.dashboard-view-page.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
-
-.dashboard-view-page__content {
+.dashboard-view__content {
   flex: 1;
   overflow: auto;
-  padding: 16px;
 }

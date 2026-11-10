@@ -2,29 +2,13 @@ import { useState, useEffect } from "react";
 import type { FC } from "react";
 // Phase 71 (W5)：裸 Input/Select/TextArea → 契约组件（children 复合子节点保留写法）
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
-import {
-  Button,
-  Form,
-  Table,
-  Modal,
-  Select,
-  InputNumber,
-  Space,
-  Tag,
-  App,
-  Card,
-  Statistic,
-  Row,
-  Col,
-} from "antd";
+import { Button, Form, Table, Modal, Select, InputNumber, Space, Tag, App, Card } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  TeamOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
@@ -33,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/usePagination";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import { queryKeys } from "@/lib/queryKeys";
-import { DepartmentTreeSelect } from "@/components/shared";
+import { DepartmentTreeSelect, StatCards } from "@/components/shared";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import {
   getDutyPoolList,
@@ -365,30 +349,15 @@ const DutyPoolPage: FC = () => {
 
   return (
     <div className="p-6">
-      <Card title={null} className="mb-4">
-        <Row gutter={16}>
-          <Col span={6}>
-            <Statistic title="总值班池" value={stats.total} prefix={<TeamOutlined />} />
-          </Col>
-          <Col span={6}>
-            <Statistic
-              title="启用中"
-              value={stats.enabled}
-              styles={{ content: { color: "var(--theme-success)" } }}
-            />
-          </Col>
-          <Col span={6}>
-            <Statistic
-              title="已停用"
-              value={stats.disabled}
-              styles={{ content: { color: "var(--theme-error)" } }}
-            />
-          </Col>
-          <Col span={6}>
-            <Statistic title="总成员数" value={stats.totalMembers} prefix={<UserOutlined />} />
-          </Col>
-        </Row>
-      </Card>
+      <StatCards
+        className="mb-4"
+        items={[
+          { label: "总值班池", value: stats.total },
+          { label: "启用中", value: stats.enabled, tone: "green" },
+          { label: "已停用", value: stats.disabled, tone: "danger" },
+          { label: "总成员数", value: stats.totalMembers },
+        ]}
+      />
 
       <Card title="值班池管理">
         <div

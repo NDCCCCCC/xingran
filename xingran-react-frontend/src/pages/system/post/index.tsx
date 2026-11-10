@@ -7,15 +7,15 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FC } from "react";
-import { Button, Card, Col, Form, InputNumber, Row, Statistic, Alert } from "antd";
-import { PlusOutlined, EditOutlined, CheckCircleOutlined, StopOutlined } from "@ant-design/icons";
+import { Button, Form, InputNumber, Alert } from "antd";
+import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Key } from "react";
 import type { Post } from "@/types";
 import { post } from "@/lib/api";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
-import { PageTable, useActionPermission } from "@/components/shared";
+import { PageTable, useActionPermission, StatCards } from "@/components/shared";
 import type { PageTableRenderContext } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { FormModal } from "@/components/shared/FormModal";
@@ -138,39 +138,14 @@ const PostManagement: FC = () => {
     reloadRef.current = loadData;
     return (
       <>
-        {total > 10 && (
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={8}>
-              <Card>
-                <Statistic
-                  title="总岗位数"
-                  value={statistics.total}
-                  prefix={<CheckCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card>
-                <Statistic
-                  title="正常岗位"
-                  value={statistics.active}
-                  styles={{ content: { color: "var(--theme-success)" } }}
-                  prefix={<CheckCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card>
-                <Statistic
-                  title="停用岗位"
-                  value={statistics.inactive}
-                  styles={{ content: { color: "var(--theme-error)" } }}
-                  prefix={<StopOutlined />}
-                />
-              </Card>
-            </Col>
-          </Row>
-        )}
+        <StatCards
+          show={total > 10}
+          items={[
+            { label: "总岗位数", value: statistics.total, tone: "default" },
+            { label: "正常岗位", value: statistics.active, tone: "green" },
+            { label: "停用岗位", value: statistics.inactive, tone: "danger" },
+          ]}
+        />
         {selectedRowKeys.length > 0 && (
           <Alert
             title={

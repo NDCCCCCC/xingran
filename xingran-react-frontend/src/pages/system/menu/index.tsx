@@ -14,7 +14,6 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
   InputNumber,
   Switch,
   TreeSelect,
@@ -29,10 +28,6 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  MenuOutlined,
-  FolderOutlined,
-  FileOutlined,
-  AppstoreOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Menu } from "@/types";
@@ -50,7 +45,7 @@ import { renderTreeData, renderMenuName } from "./utils";
 import { useMenuData, useMenuActions } from "./hooks";
 // Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
-import { useActionPermission } from "@/components/shared";
+import { useActionPermission, StatCards } from "@/components/shared";
 import type { ActionPermissionDecision } from "@/components/shared";
 
 // ==================== 表格列定义 ====================
@@ -270,43 +265,14 @@ const MenuManagement: FC = () => {
   return (
     <div>
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="总菜单数" value={statistics.total} prefix={<MenuOutlined />} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="目录数量"
-              value={statistics.directories}
-              styles={{ content: { color: "var(--theme-info)" } }}
-              prefix={<FolderOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="菜单数量"
-              value={statistics.menus}
-              styles={{ content: { color: "var(--theme-success)" } }}
-              prefix={<FileOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="按钮数量"
-              value={statistics.buttons}
-              styles={{ content: { color: "var(--theme-warning)" } }}
-              prefix={<AppstoreOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "总菜单数", value: statistics.total, tone: "default" },
+          { label: "目录数量", value: statistics.directories, tone: "default" },
+          { label: "菜单数量", value: statistics.menus, tone: "green" },
+          { label: "按钮数量", value: statistics.buttons, tone: "gold" },
+        ]}
+      />
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>

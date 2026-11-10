@@ -124,8 +124,8 @@ describe("FloorStatisticsCards", () => {
     const { container } = renderWithProviders(
       <FloorStatisticsCards show={false} statistics={{ total: 0, active: 0, inactive: 0 }} />
     );
-    // AntD Row 也可能留空容器,以 .ant-statistic 不存在为准
-    expect(container.querySelectorAll(".ant-statistic")).toHaveLength(0);
+    // 统一范本 StatCards：show=false 时 .stat-card 不存在
+    expect(container.querySelectorAll(".stat-card")).toHaveLength(0);
   });
 
   it("show=true 渲染 3 张统计卡", async () => {
@@ -134,7 +134,7 @@ describe("FloorStatisticsCards", () => {
     );
     expect(await findByText("总楼层数")).toBeDefined();
     await vi.waitFor(() => {
-      expect(container.querySelectorAll(".ant-statistic")).toHaveLength(3);
+      expect(container.querySelectorAll(".stat-card")).toHaveLength(3);
     });
     expect(await findByText("正常楼层")).toBeDefined();
     expect(await findByText("停用楼层")).toBeDefined();

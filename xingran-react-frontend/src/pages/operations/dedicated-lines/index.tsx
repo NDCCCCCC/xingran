@@ -654,8 +654,8 @@ const DedicatedLineManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
-      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
+    <Layout style={{ background: "transparent" }}>
+      <Content style={{ padding: 0, background: "transparent" }}>
         <PageTable<DedicatedLine>
           request={request}
           columns={columns}

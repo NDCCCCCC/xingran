@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type FC } from "react";
-import { Table, Button, Form, Card, Row, Col, Statistic, Space, App } from "antd";
+import { Table, Button, Form, Card, Space, App } from "antd";
+import { StatCards } from "@/components/shared";
 import type { FilterValue } from "antd/es/table/interface";
 // Phase 71 (W1)：裸 Input/Select → 契约组件（本页 Select 全为 children 形态，均改写为 options 形态，
 // 见各处的形态分类器注记——AppSelect 无条件 optionFilterProp="label"，children 形态下该 prop 破坏性）
 import { AppInput, AppSelect } from "@/components/ui";
-import { PlusOutlined, SearchOutlined, ReloadOutlined, FileTextOutlined } from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useArticleData } from "./hooks";
 import { getArticleColumns } from "./columns";
 import { EditModal, PreviewModal } from "./modals";
@@ -191,35 +192,17 @@ const KnowledgeArticlePage: FC = () => {
   return (
     <div className="p-6">
       {/* 统计卡片 */}
-      {statistics.total > 10 && (
-        <Card title={null} className="mb-4">
-          <Row gutter={16}>
-            <Col span={5}>
-              <Statistic title="总文章" value={statistics.total} prefix={<FileTextOutlined />} />
-            </Col>
-            <Col span={5}>
-              <Statistic
-                title="草稿"
-                value={statistics.draft}
-                styles={{ content: { color: "var(--theme-warning)" } }}
-              />
-            </Col>
-            <Col span={5}>
-              <Statistic
-                title="已发布"
-                value={statistics.published}
-                styles={{ content: { color: "var(--theme-success)" } }}
-              />
-            </Col>
-            <Col span={4}>
-              <Statistic title="总浏览" value={statistics.totalViews} />
-            </Col>
-            <Col span={5}>
-              <Statistic title="总点赞" value={statistics.totalLikes} />
-            </Col>
-          </Row>
-        </Card>
-      )}
+      <StatCards
+        show={statistics.total > 10}
+        className="mb-4"
+        items={[
+          { label: "总文章", value: statistics.total },
+          { label: "草稿", value: statistics.draft, tone: "gold" },
+          { label: "已发布", value: statistics.published, tone: "green" },
+          { label: "总浏览", value: statistics.totalViews },
+          { label: "总点赞", value: statistics.totalLikes },
+        ]}
+      />
 
       {/* 筛选表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>

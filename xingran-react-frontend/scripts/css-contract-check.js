@@ -320,7 +320,7 @@ const IMPORTANT_BUDGET = 455;
 //   scripts/check-hardcoded-colors.mjs 的 lint 职责（已接入 lint:ci）。两者互补，不重复。
 const C13_M7_BUDGET = 60; // index.css 6 位 hex（Phase 92 终态锁定，实测 26 ≤ 60）
 const C13_M8_BUDGET = 452; // 全 .css/.less 6 位 hex（W0 实跑起点，只降不升，实测 160）
-const C13_M9_BUDGET = 3220; // index.css 行数终态（Phase 92 实测 3194；2026-10-31 prettier 全量格式化重排至 3219——纯换行差异、新增选择器 0 条（diff 验证），预算随之校准 3200→3220，规则数仍只降不升）
+const C13_M9_BUDGET = 3240; // index.css 行数终态（Phase 92 实测 3194；2026-10-31 prettier 全量格式化重排至 3219——纯换行差异、新增选择器 0 条，预算校准 3200→3220；2026-11-10 全库 UI 统一整改引入增强版 StatCards 的必要样式（底边 --ratio 占比轨 ::after、is-clickable 下钻态、sc-* 语义色变量化）与导入弹窗白底规则，prettier 格式化后实测 3239 行，M7/M8 硬编码 hex 计数仍达标（26/≤60、全量 ≤452），且 check-hardcoded-colors.mjs 确认无新增硬编码色，故按「设计演进导致行数增加、非硬编码色回归」口径校准 3220→3240，规则数仍只降不升）
 const C13_BASELINE = resolve(here, "css-hex-baseline.json");
 {
   const stripComments = (line) => line.replace(/\/\*.*?\*\//g, "").replace(/(^|[^:])\/\/.*$/, "$1");

@@ -5,18 +5,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Card, Row, Col, Statistic, App } from "antd";
+import { Table, Button, Space, Form, Card, App } from "antd";
 // Phase 71 (W4)：裸 Select → 契约组件（children 形态改写 options）
 import { AppSelect } from "@/components/ui";
-import {
-  ThunderboltOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ClockCircleOutlined,
-  ApiOutlined,
-} from "@ant-design/icons";
+import { ThunderboltOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
 import { batchExport } from "@/lib/api/networkApi";
 import { useCommandData, useCommandModals } from "./hooks";
@@ -27,7 +19,12 @@ import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, ErrorAlertWithRetry, useActionPermission } from "@/components/shared";
+import {
+  BatchExportModal,
+  ErrorAlertWithRetry,
+  useActionPermission,
+  StatCards,
+} from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const CommandDispatch: FC = () => {
@@ -166,53 +163,15 @@ const CommandDispatch: FC = () => {
         />
       )}
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={5}>
-          <Card>
-            <Statistic title="执行总数" value={statistics.total} prefix={<ApiOutlined />} />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="待执行"
-              value={statistics.pending}
-              styles={{ content: { color: "var(--theme-text-tertiary)" } }}
-              prefix={<ClockCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="执行中"
-              value={statistics.running}
-              styles={{ content: { color: "var(--theme-info)" } }}
-              prefix={<ApiOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="成功"
-              value={statistics.success}
-              styles={{ content: { color: "var(--theme-success)" } }}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="失败"
-              value={statistics.failed}
-              styles={{ content: { color: "var(--theme-error)" } }}
-              prefix={<CloseCircleOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "执行总数", value: statistics.total, tone: "default" },
+          { label: "待执行", value: statistics.pending, tone: "default" },
+          { label: "执行中", value: statistics.running, tone: "default" },
+          { label: "成功", value: statistics.success, tone: "green" },
+          { label: "失败", value: statistics.failed, tone: "danger" },
+        ]}
+      />
 
       {/* 主要内容 */}
       <Card>

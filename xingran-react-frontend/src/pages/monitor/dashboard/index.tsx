@@ -1,6 +1,7 @@
 import type { FC } from "react";
-import { Card, Row, Col, Statistic, Table, Tag, Button } from "antd";
-import { ClusterOutlined, ReloadOutlined, DatabaseOutlined } from "@ant-design/icons";
+import { Card, Row, Col, Table, Tag, Button } from "antd";
+import { ReloadOutlined } from "@ant-design/icons";
+import { StatCards } from "@/components/shared";
 import { useQuery } from "@tanstack/react-query";
 import { post } from "@/lib/api";
 import { formatDateTime } from "@/utils/datetime";
@@ -181,76 +182,32 @@ const Dashboard: FC = () => {
         </Button>
       </div>
 
-      {/* 系统概览卡片 */}
-      <Row gutter={[16, 16]} className="mb-6">
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="CPU使用率"
-              value={metrics?.cpuUsage || 0}
-              precision={1}
-              suffix="%"
-              styles={{
-                content: {
-                  color:
-                    metrics?.cpuUsage && metrics.cpuUsage > 80
-                      ? "var(--theme-error)"
-                      : "var(--theme-success)",
-                },
-              }}
-              prefix={<ClusterOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="内存使用率"
-              value={metrics?.memoryUsage || 0}
-              precision={1}
-              suffix="%"
-              styles={{
-                content: {
-                  color:
-                    metrics?.memoryUsage && metrics.memoryUsage > 80
-                      ? "var(--theme-error)"
-                      : "var(--theme-success)",
-                },
-              }}
-              prefix={<DatabaseOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="磁盘使用率"
-              value={metrics?.diskUsage || 0}
-              precision={1}
-              suffix="%"
-              styles={{
-                content: {
-                  color:
-                    metrics?.diskUsage && metrics.diskUsage > 80
-                      ? "var(--theme-error)"
-                      : "var(--theme-success)",
-                },
-              }}
-              prefix={<DatabaseOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="进程数量"
-              value={metrics?.processCount || 0}
-              styles={{ content: { color: "var(--theme-info)" } }}
-              prefix={<ClusterOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* 系统概览卡片：统一走 <StatCards>，>80% 转 danger 语义 */}
+      <StatCards
+        className="mb-6"
+        items={[
+          {
+            label: "CPU使用率",
+            value: `${(metrics?.cpuUsage || 0).toFixed(1)}%`,
+            tone: metrics?.cpuUsage && metrics.cpuUsage > 80 ? "danger" : "green",
+          },
+          {
+            label: "内存使用率",
+            value: `${(metrics?.memoryUsage || 0).toFixed(1)}%`,
+            tone: metrics?.memoryUsage && metrics.memoryUsage > 80 ? "danger" : "green",
+          },
+          {
+            label: "磁盘使用率",
+            value: `${(metrics?.diskUsage || 0).toFixed(1)}%`,
+            tone: metrics?.diskUsage && metrics.diskUsage > 80 ? "danger" : "green",
+          },
+          {
+            label: "进程数量",
+            value: metrics?.processCount || 0,
+            tone: "default",
+          },
+        ]}
+      />
 
       {/* 详细信息卡片 */}
       <Row gutter={[16, 16]} className="mb-6">

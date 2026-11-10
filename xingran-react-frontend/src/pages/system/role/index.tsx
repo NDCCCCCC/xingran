@@ -4,17 +4,11 @@
  */
 
 import { useEffect, useCallback, useRef, useMemo, useState, type FC } from "react";
-import { Table, Button, Space, Modal, Form, Card, Row, Col, Statistic, Tree } from "antd";
+import { Table, Button, Space, Modal, Form, Card, Row, Col, Tree } from "antd";
 // Phase 71 (W2)：裸 Input/Select/Input.TextArea → 契约组件。状态/数据范围为固定枚举
 // → children 改写 options 形态；状态类业务下拉显式 showSearch={false}
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
-import {
-  PlusOutlined,
-  DeleteOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  SafetyCertificateOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Key } from "antd/es/table/interface";
 
 import { post } from "@/lib/api";
@@ -28,7 +22,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
 // Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
-import { useActionPermission } from "@/components/shared";
+import { useActionPermission, StatCards } from "@/components/shared";
 
 // ==================== 主组件 ====================
 
@@ -249,37 +243,13 @@ const RoleManagement: FC<RoleManagementProps> = ({ onEditFormReady }) => {
   return (
     <div>
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="总角色数"
-              value={statistics.total}
-              prefix={<SafetyCertificateOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="正常角色"
-              value={statistics.active}
-              styles={{ content: { color: "var(--theme-success)" } }}
-              prefix={<SafetyCertificateOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="停用角色"
-              value={statistics.inactive}
-              styles={{ content: { color: "var(--theme-error)" } }}
-              prefix={<DeleteOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "总角色数", value: statistics.total, tone: "default" },
+          { label: "正常角色", value: statistics.active, tone: "green" },
+          { label: "停用角色", value: statistics.inactive, tone: "danger" },
+        ]}
+      />
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>

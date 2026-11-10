@@ -1,19 +1,6 @@
 import type { FC } from "react";
 import { useState, useCallback, useEffect, useMemo } from "react";
-import {
-  App,
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Alert,
-} from "antd";
+import { App, Table, Button, Space, Modal, Form, Tag, Card, Alert } from "antd";
 // Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。本文件 Select 全为 children 形态的
 // 固定枚举（Y/N、是/否）→ 一律改写 options 形态并显式禁搜（状态/开关类业务下拉）
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
@@ -24,8 +11,6 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  CheckCircleOutlined,
-  StopOutlined,
 } from "@ant-design/icons";
 import type { Config } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
@@ -34,7 +19,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { confirmDelete } from "@/components/shared";
+import { confirmDelete, StatCards } from "@/components/shared";
 import { refreshEncryptionConfig } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
 
@@ -342,39 +327,14 @@ const ConfigManagement: FC = () => {
   return (
     <div>
       {/* 统计卡片 - 只在总数大于10时显示 */}
-      {statistics.total > 10 && (
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="总配置数"
-                value={statistics.total}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="启用配置"
-                value={statistics.active}
-                styles={{ content: { color: "var(--theme-success)" } }}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="禁用配置"
-                value={statistics.inactive}
-                styles={{ content: { color: "var(--theme-error)" } }}
-                prefix={<StopOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
+      <StatCards
+        show={statistics.total > 10}
+        items={[
+          { label: "总配置数", value: statistics.total, tone: "default" },
+          { label: "启用配置", value: statistics.active, tone: "green" },
+          { label: "禁用配置", value: statistics.inactive, tone: "danger" },
+        ]}
+      />
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>

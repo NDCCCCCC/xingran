@@ -33,6 +33,7 @@ import {
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
+import { StatCards } from "@/components/shared";
 
 // 状态枚举（形态分类器产物：children <Option> → options）
 const STATUS_ENUM_OPTIONS = [
@@ -335,23 +336,25 @@ const EmailConfigPage: FC = () => {
   return (
     <>
       {/* 统计卡行：3 卡 — 总配置数 / 启用 / 停用 */}
-      <div className="stat-cards">
-        <div className="stat-card">
-          <div className="stat-label">总配置数</div>
-          <div className="stat-value">{totalCount}</div>
-          <div className="stat-trend">全部通知渠道</div>
-        </div>
-        <div className="stat-card sc-green">
-          <div className="stat-label">启用</div>
-          <div className="stat-value">{enabledCount}</div>
-          <div className="stat-trend">占比 {enabledPct}%</div>
-        </div>
-        <div className="stat-card sc-gray">
-          <div className="stat-label">停用</div>
-          <div className="stat-value">{disabledCount}</div>
-          <div className="stat-trend">可随时恢复</div>
-        </div>
-      </div>
+      <StatCards
+        items={[
+          { label: "总配置数", value: totalCount, trend: "全部通知渠道", ratio: 1 },
+          {
+            label: "启用",
+            value: enabledCount,
+            trend: `占比 ${enabledPct}%`,
+            tone: "green",
+            ratio: totalCount ? enabledCount / totalCount : 0,
+          },
+          {
+            label: "停用",
+            value: disabledCount,
+            trend: "可随时恢复",
+            tone: "gray",
+            ratio: totalCount ? disabledCount / totalCount : 0,
+          },
+        ]}
+      />
 
       {/* 工具栏卡：状态筛选 / 新增配置（名称搜索待后端支持，70-07 移除死输入框） */}
       <Card style={{ marginBottom: 14 }}>

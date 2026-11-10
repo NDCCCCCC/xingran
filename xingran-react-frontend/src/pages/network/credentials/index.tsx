@@ -1,20 +1,6 @@
 import type { FC } from "react";
 // Input 仍需保留：Input.Password 为成员表达式形态，不在 Phase 65 selector 命中面（有意不拦）
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Alert,
-  App,
-} from "antd";
+import { Table, Button, Space, Modal, Form, Input, Tag, Card, Alert, App } from "antd";
 // Phase 71 (W4)：裸 Input/Select/TextArea → 契约组件（Select 全部 children 形态改写为 options）
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
@@ -24,8 +10,6 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  KeyOutlined,
-  ApiOutlined,
 } from "@ant-design/icons";
 import type { AuthCredential, PageResponse } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
@@ -37,7 +21,12 @@ import { handleApiError, withErrorHandling } from "@/utils/errorHandler";
 import { useState, useEffect, useMemo } from "react";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, confirmDelete, useActionPermission } from "@/components/shared";
+import {
+  BatchExportModal,
+  confirmDelete,
+  useActionPermission,
+  StatCards,
+} from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
@@ -388,33 +377,13 @@ const CredentialManagement: FC = () => {
   return (
     <div>
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
-          <Card>
-            <Statistic title="凭证总数" value={statistics.total} prefix={<KeyOutlined />} />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="SSH凭证"
-              value={statistics.ssh}
-              styles={{ content: { color: "var(--theme-info)" } }}
-              prefix={<ApiOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="Telnet凭证"
-              value={statistics.telnet}
-              styles={{ content: { color: "var(--theme-success)" } }}
-              prefix={<ApiOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "凭证总数", value: statistics.total, tone: "default" },
+          { label: "SSH凭证", value: statistics.ssh, tone: "default" },
+          { label: "Telnet凭证", value: statistics.telnet, tone: "green" },
+        ]}
+      />
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>

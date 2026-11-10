@@ -20,7 +20,7 @@
  * - hooks/useBackupData、useBackupModals、useRestoreTask、utils、types 零修改
  */
 import { useCallback, useMemo, useRef, useState, type FC } from "react";
-import { App, Button, Card, Col, Form, Row, Space, Statistic, Tag } from "antd";
+import { App, Button, Form, Space, Tag } from "antd";
 // Phase 71 (W4)：裸 Select/TextArea → 契约组件（children 形态改写 options）
 import { AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
@@ -37,7 +37,12 @@ import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, confirmDelete, useActionPermission } from "@/components/shared";
+import {
+  BatchExportModal,
+  confirmDelete,
+  useActionPermission,
+  StatCards,
+} from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { formatDateTime } from "@/utils/datetime";
@@ -539,47 +544,15 @@ const ConfigBackupPage: FC = () => {
           searchFormRef.current = ctx.searchForm;
           return (
             <>
-              {/* 统计卡片（原 :552-584 逐字） */}
-              <Row gutter={16} style={{ marginBottom: 16 }}>
-                <Col span={6}>
-                  <Card>
-                    <Statistic
-                      title="备份总数"
-                      value={statistics.total}
-                      prefix={<DatabaseOutlined />}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card>
-                    <Statistic
-                      title="自动备份"
-                      value={statistics.auto}
-                      styles={{ content: { color: "var(--theme-info)" } }}
-                      prefix={<ClockCircleOutlined />}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card>
-                    <Statistic
-                      title="手动备份"
-                      value={statistics.manual}
-                      styles={{ content: { color: "var(--theme-success)" } }}
-                      prefix={<SaveOutlined />}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card>
-                    <Statistic
-                      title="涉及设备"
-                      value={statistics.devices}
-                      prefix={<HistoryOutlined />}
-                    />
-                  </Card>
-                </Col>
-              </Row>
+              {/* 统计卡片 */}
+              <StatCards
+                items={[
+                  { label: "备份总数", value: statistics.total, tone: "default" },
+                  { label: "自动备份", value: statistics.auto, tone: "default" },
+                  { label: "手动备份", value: statistics.manual, tone: "green" },
+                  { label: "涉及设备", value: statistics.devices, tone: "default" },
+                ]}
+              />
 
               {/* 批量导出 Modal（原误嵌 renderDiffLine 空行分支内，归位到根级） */}
               <BatchExportModal

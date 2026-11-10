@@ -1,14 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import type { FC } from "react";
-import { App, Table, Button, Space, Form, Card, Row, Col, Statistic } from "antd";
+import { App, Table, Button, Space, Form, Card } from "antd";
 // Phase 71 (W2)：裸 Input/Select → 契约组件（状态枚举 children → options + 禁搜）
 import { AppInput, AppSelect } from "@/components/ui";
 import {
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
-  ApartmentOutlined,
-  TeamOutlined,
   ImportOutlined,
   ExportOutlined,
 } from "@ant-design/icons";
@@ -26,7 +24,7 @@ import { post } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 // Phase 86 W1（RBAC-02）：操作级权限门控 —— 单一真相源 + 三态门控 hook。
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
-import { useActionPermission } from "@/components/shared";
+import { useActionPermission, StatCards } from "@/components/shared";
 
 const DepartmentManagement: FC = () => {
   const { message } = App.useApp();
@@ -208,33 +206,14 @@ const DepartmentManagement: FC = () => {
 
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
-          <Card>
-            <Statistic title="总部门数" value={statistics.total} prefix={<ApartmentOutlined />} />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="顶级部门"
-              value={statistics.topLevel}
-              styles={{ content: { color: "var(--theme-success)" } }}
-              prefix={<TeamOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="子部门"
-              value={statistics.subLevel}
-              styles={{ content: { color: "var(--theme-info)" } }}
-              prefix={<ApartmentOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* 统计卡片 */}
+      <StatCards
+        items={[
+          { label: "总部门数", value: statistics.total, tone: "default" },
+          { label: "顶级部门", value: statistics.topLevel, tone: "green" },
+          { label: "子部门", value: statistics.subLevel, tone: "default" },
+        ]}
+      />
 
       <Card style={{ marginBottom: 16 }}>
         <div

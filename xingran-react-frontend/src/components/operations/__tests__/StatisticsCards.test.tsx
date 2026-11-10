@@ -64,8 +64,9 @@ describe("components/operations/StatisticsCards", () => {
     expect(screen.getByText("99")).toBeInTheDocument();
   });
 
-  it("空 items → 只渲染 Row", () => {
+  it("空 items → 仍渲染统计卡容器", () => {
     const { container } = render(<StatisticsCards items={[]} />);
-    expect(container.querySelector(".ant-row")).toBeTruthy();
+    // 统一范本 StatCards 渲染 .stat-cards 容器（替代旧 antd .ant-row）
+    expect(container.querySelector(".stat-cards")).toBeTruthy();
   });
 });

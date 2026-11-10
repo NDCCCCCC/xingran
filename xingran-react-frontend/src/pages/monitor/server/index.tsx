@@ -30,7 +30,7 @@ import { usePagination } from "@/hooks/usePagination";
 import type { ColumnsType } from "antd/es/table";
 import type { PageResponse } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { ErrorAlertWithRetry } from "@/components/shared";
+import { ErrorAlertWithRetry, StatCards } from "@/components/shared";
 import { handleApiError } from "@/utils/errorHandler";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
@@ -446,73 +446,52 @@ const ServerMonitor: FC = () => {
               </Descriptions>
             </Card>
 
-            {/* 实时指标 */}
-            <Card title="实时指标" className="mb-4">
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Statistic
-                    title="CPU使用率"
-                    value={75.2}
-                    precision={1}
-                    suffix="%"
-                    styles={{ content: { color: "var(--theme-error)" } }}
-                  />
-                  <Progress percent={75.2} className="mt-2" />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="内存使用率"
-                    value={68.5}
-                    precision={1}
-                    suffix="%"
-                    styles={{ content: { color: "var(--theme-success)" } }}
-                  />
-                  <Progress percent={68.5} className="mt-2" />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="磁盘使用率"
-                    value={45.8}
-                    precision={1}
-                    suffix="%"
-                    styles={{ content: { color: "var(--theme-success)" } }}
-                  />
-                  <Progress percent={45.8} className="mt-2" />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="系统负载"
-                    value={2.35}
-                    precision={2}
-                    prefix={<ClusterOutlined />}
-                  />
-                </Col>
-              </Row>
-            </Card>
+            {/* 实时指标：统一走 <StatCards>，Progress 进度条用 ReactNode value 原样保留 */}
+            <StatCards
+              className="mb-4"
+              items={[
+                {
+                  label: "CPU使用率",
+                  value: (
+                    <div>
+                      <span>75.2%</span>
+                      <Progress percent={75.2} className="mt-2" />
+                    </div>
+                  ),
+                  tone: "danger",
+                },
+                {
+                  label: "内存使用率",
+                  value: (
+                    <div>
+                      <span>68.5%</span>
+                      <Progress percent={68.5} className="mt-2" />
+                    </div>
+                  ),
+                  tone: "green",
+                },
+                {
+                  label: "磁盘使用率",
+                  value: (
+                    <div>
+                      <span>45.8%</span>
+                      <Progress percent={45.8} className="mt-2" />
+                    </div>
+                  ),
+                  tone: "green",
+                },
+                { label: "系统负载", value: "2.35", tone: "default" },
+              ]}
+            />
 
-            {/* 网络流量 */}
-            <Card title="网络流量" className="mb-4">
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Statistic
-                    title="接收流量"
-                    value={1234.56}
-                    precision={2}
-                    suffix="MB/s"
-                    styles={{ content: { color: "var(--theme-info)" } }}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="发送流量"
-                    value={987.32}
-                    precision={2}
-                    suffix="MB/s"
-                    styles={{ content: { color: "var(--theme-success)" } }}
-                  />
-                </Col>
-              </Row>
-            </Card>
+            {/* 网络流量：统一走 <StatCards> */}
+            <StatCards
+              className="mb-4"
+              items={[
+                { label: "接收流量", value: "1234.56 MB/s", tone: "default" },
+                { label: "发送流量", value: "987.32 MB/s", tone: "green" },
+              ]}
+            />
           </div>
         )}
       </Drawer>

@@ -5,20 +5,11 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Card, Row, Col, Statistic, App } from "antd";
+import { Table, Button, Space, Form, Card, App } from "antd";
 import type { FilterValue } from "antd/es/table/interface";
 // Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
 import { AppInput, AppSelect } from "@/components/ui";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  DeleteOutlined,
-  FileTextOutlined,
-  AppstoreOutlined,
-  SettingOutlined,
-  FundOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined, ReloadOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ConfigTemplate } from "@/types";
 import { batchExport } from "@/lib/api/networkApi";
 import { useTemplateData, useTemplateModals } from "./hooks";
@@ -30,7 +21,12 @@ import { TemplateEditModal, TemplatePreviewModal, TemplateVariablesModal } from 
 import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, ErrorAlertWithRetry, useActionPermission } from "@/components/shared";
+import {
+  BatchExportModal,
+  ErrorAlertWithRetry,
+  useActionPermission,
+  StatCards,
+} from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const TemplateManagement: FC = () => {
@@ -216,43 +212,29 @@ const TemplateManagement: FC = () => {
         />
       )}
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="模板总数" value={statistics.total} prefix={<FileTextOutlined />} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="系统模板"
-              value={statistics.system}
-              styles={{ content: { color: "var(--theme-warning)" } }}
-              prefix={<AppstoreOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="自定义模板"
-              value={statistics.custom}
-              styles={{ content: { color: "var(--theme-info)" } }}
-              prefix={<SettingOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="初始化模板"
-              value={statistics.init}
-              styles={{ content: { color: "var(--theme-success)" } }}
-              prefix={<FundOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "模板总数", value: statistics.total, trend: "全部模板", ratio: 1 },
+          {
+            label: "系统模板",
+            value: statistics.system,
+            tone: "gold",
+            ratio: statistics.total ? statistics.system / statistics.total : 0,
+          },
+          {
+            label: "自定义模板",
+            value: statistics.custom,
+            tone: "default",
+            ratio: statistics.total ? statistics.custom / statistics.total : 0,
+          },
+          {
+            label: "初始化模板",
+            value: statistics.init,
+            tone: "green",
+            ratio: statistics.total ? statistics.init / statistics.total : 0,
+          },
+        ]}
+      />
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>

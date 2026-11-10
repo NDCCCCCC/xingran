@@ -114,7 +114,7 @@ const DeviceTablePanel: React.FC<DeviceTablePanelProps> = ({
   batchExportModal,
   modals,
 }) => (
-  <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
+  <Layout style={{ background: "transparent" }}>
     {/* 左侧部门树 */}
     <DeptTreePanel selectedDeptId={selectedDeptId} onSelect={onDeptSelect} />
 

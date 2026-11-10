@@ -49,7 +49,7 @@ export function WorkstationFloorPlanView({
           style={{
             marginBottom: 12,
             padding: "12px",
-            background: "#f5f5f5",
+            background: "var(--theme-bg-tertiary, var(--theme-bg-surface))",
             borderRadius: "4px",
             flexShrink: 0,
           }}
@@ -90,7 +90,7 @@ export function WorkstationFloorPlanView({
               style={{
                 textAlign: "center",
                 padding: "60px",
-                color: "var(--theme-text-tertiary, #999)",
+                color: "var(--theme-text-tertiary)",
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
@@ -106,7 +106,7 @@ export function WorkstationFloorPlanView({
               style={{
                 textAlign: "center",
                 padding: "60px",
-                color: "var(--theme-text-tertiary, #999)",
+                color: "var(--theme-text-tertiary)",
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
@@ -141,7 +141,7 @@ export function WorkstationFloorPlanView({
               style={{
                 textAlign: "center",
                 padding: "20px",
-                color: "var(--theme-text-tertiary, #999)",
+                color: "var(--theme-text-tertiary)",
               }}
             >
               暂无工位数据
@@ -172,7 +172,13 @@ export function WorkstationFloorPlanView({
                         {getWorkstationStatusText(ws.status)}
                       </Tag>
                     </div>
-                    <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--theme-text-secondary)",
+                        marginBottom: 4,
+                      }}
+                    >
                       <div>类型：{typeText}</div>
                       <div>
                         位置：({Math.round(ws.x)}, {Math.round(ws.y)})

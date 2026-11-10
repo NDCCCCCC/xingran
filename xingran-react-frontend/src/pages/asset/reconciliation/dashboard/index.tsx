@@ -21,14 +21,8 @@
 import { useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, Row, Col, Spin, Empty, Alert, Badge, Statistic, Tag, App } from "antd";
-import {
-  AppstoreOutlined,
-  WarningOutlined,
-  AlertOutlined,
-  RiseOutlined,
-  TrophyOutlined,
-} from "@ant-design/icons";
+import { Card, Row, Col, Spin, Empty, Alert, Badge, Tag, App } from "antd";
+import { StatCards } from "@/components/shared";
 import ReactECharts from "@/components/charts/EChartsWrapper";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useReconciliationWebSocket } from "@/hooks/useReconciliationWebSocket";
@@ -254,69 +248,22 @@ const Dashboard = () => {
 
       {/* 5 KPI 卡片 */}
       <Spin spinning={isLoading}>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
-            <Card>
-              <div className="flex items-center gap-3">
-                <AppstoreOutlined style={{ fontSize: 32, color: "var(--theme-info)" }} />
-                <div>
-                  <div className="text-2xl font-bold">{summary.data?.totalAssets ?? 0}</div>
-                  <div className="text-gray-500">全量资产数</div>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
-            <Card>
-              <div className="flex items-center gap-3">
-                <WarningOutlined style={{ fontSize: 32, color: "var(--theme-warning)" }} />
-                <div>
-                  <div className="text-2xl font-bold" style={{ color: "var(--theme-warning)" }}>
-                    {summary.data?.openExceptions ?? 0}
-                  </div>
-                  <div className="text-gray-500">未解决异常数</div>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
-            <Card>
-              <div className="flex items-center gap-3">
-                <AlertOutlined style={{ fontSize: 32, color: "var(--theme-error)" }} />
-                <div>
-                  <div className="text-2xl font-bold" style={{ color: "var(--theme-error)" }}>
-                    {summary.data?.criticalOpen ?? 0}
-                  </div>
-                  <div className="text-gray-500">critical 级未解决</div>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
-            <Card>
-              <div className="flex items-center gap-3">
-                <RiseOutlined style={{ fontSize: 32, color: "var(--theme-success)" }} />
-                <div>
-                  <div className="text-2xl font-bold">{summary.data?.last7dNew ?? 0}</div>
-                  <div className="text-gray-500">7d 新增异常数</div>
-                </div>
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={Math.ceil(24 / 5)}>
-            <Card>
-              <div className="flex items-center gap-3">
-                <TrophyOutlined style={{ fontSize: 32, color: "#722ed1" }} />
-                <div>
-                  <div className="text-2xl font-bold">{summary.data?.topConflictType || "—"}</div>
-                  <div className="text-gray-500">
-                    Top1 冲突类型 ({summary.data?.topConflictCount ?? 0})
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </Col>
-        </Row>
+        <StatCards
+          items={[
+            { label: "全量资产数", value: summary.data?.totalAssets ?? 0 },
+            { label: "未解决异常数", value: summary.data?.openExceptions ?? 0, tone: "gold" },
+            {
+              label: "critical 级未解决",
+              value: summary.data?.criticalOpen ?? 0,
+              tone: "danger",
+            },
+            { label: "7d 新增异常数", value: summary.data?.last7dNew ?? 0, tone: "green" },
+            {
+              label: `Top1 冲突类型 (${summary.data?.topConflictCount ?? 0})`,
+              value: summary.data?.topConflictType || "—",
+            },
+          ]}
+        />
       </Spin>
 
       {/* Phase 44 R3 / Plan 44-02 Task 3 — 降噪效果卡片(SC 8 ≥60% 降噪量化验证)
@@ -359,61 +306,28 @@ const Dashboard = () => {
             }
           />
         ) : reductions ? (
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={8}>
-              <Statistic
-                title="异常下降%"
-                value={reductions.excPct}
-                precision={1}
-                suffix="%"
-                styles={{
-                  content: {
-                    color:
-                      reductions.excPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
-                  },
-                }}
-              />
-              <small style={{ color: "var(--theme-text-secondary)" }}>
-                baseline {baselineCompareQuery.data?.baseline?.total_exceptions ?? 0} → current{" "}
-                {baselineCompareQuery.data?.current?.total_exceptions ?? 0}
-              </small>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Statistic
-                title="工单下降%"
-                value={reductions.woPct}
-                precision={1}
-                suffix="%"
-                styles={{
-                  content: {
-                    color: reductions.woPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
-                  },
-                }}
-              />
-              <small style={{ color: "var(--theme-text-secondary)" }}>
-                baseline {baselineCompareQuery.data?.baseline?.total_workorders ?? 0} → current{" "}
-                {baselineCompareQuery.data?.current?.total_workorders ?? 0}
-              </small>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Statistic
-                title="Critical 下降%"
-                value={reductions.critPct}
-                precision={1}
-                suffix="%"
-                styles={{
-                  content: {
-                    color:
-                      reductions.critPct >= 60 ? "var(--theme-success)" : "var(--theme-warning)",
-                  },
-                }}
-              />
-              <small style={{ color: "var(--theme-text-secondary)" }}>
-                baseline {baselineCompareQuery.data?.baseline?.critical_exceptions ?? 0} → current{" "}
-                {baselineCompareQuery.data?.current?.critical_exceptions ?? 0}
-              </small>
-            </Col>
-          </Row>
+          <StatCards
+            items={[
+              {
+                label: "异常下降%",
+                value: `${reductions.excPct.toFixed(1)}%`,
+                tone: reductions.excPct >= 60 ? "green" : "gold",
+                trend: `baseline ${baselineCompareQuery.data?.baseline?.total_exceptions ?? 0} → current ${baselineCompareQuery.data?.current?.total_exceptions ?? 0}`,
+              },
+              {
+                label: "工单下降%",
+                value: `${reductions.woPct.toFixed(1)}%`,
+                tone: reductions.woPct >= 60 ? "green" : "gold",
+                trend: `baseline ${baselineCompareQuery.data?.baseline?.total_workorders ?? 0} → current ${baselineCompareQuery.data?.current?.total_workorders ?? 0}`,
+              },
+              {
+                label: "Critical 下降%",
+                value: `${reductions.critPct.toFixed(1)}%`,
+                tone: reductions.critPct >= 60 ? "green" : "gold",
+                trend: `baseline ${baselineCompareQuery.data?.baseline?.critical_exceptions ?? 0} → current ${baselineCompareQuery.data?.current?.critical_exceptions ?? 0}`,
+              },
+            ]}
+          />
         ) : null}
       </Card>
 

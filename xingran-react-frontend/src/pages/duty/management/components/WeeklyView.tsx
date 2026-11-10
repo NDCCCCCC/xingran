@@ -72,7 +72,8 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weekly
                 style={{
                   height: "120px",
                   borderColor: isToday ? "var(--theme-info)" : undefined,
-                  backgroundColor: isToday ? "#e6f7ff" : undefined,
+                  // 裸 hex → 主题变量，与 duty/schedules 今日高亮口径一致
+                  backgroundColor: isToday ? "var(--theme-primary-lighter)" : undefined,
                 }}
                 styles={{ body: { padding: "8px", height: "100%", overflow: "auto" } }}
               >
@@ -119,7 +120,9 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weekly
                         ))}
                       </Space>
                     ) : (
-                      <Text style={{ fontSize: "12px", color: "#ccc" }}>无值班</Text>
+                      <Text style={{ fontSize: "12px", color: "var(--theme-text-tertiary)" }}>
+                        无值班
+                      </Text>
                     )}
                   </div>
                 </div>

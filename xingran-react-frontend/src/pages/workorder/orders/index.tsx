@@ -4,6 +4,7 @@
 
 import { useState, useCallback, useMemo, type FC } from "react";
 import { confirmDelete } from "@/components/shared/confirmDelete";
+import { StatCards } from "@/components/shared";
 import {
   Button,
   Form,
@@ -13,7 +14,6 @@ import {
   Tag,
   App,
   Card,
-  Statistic,
   Row,
   Col,
   Drawer,
@@ -29,7 +29,6 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  FileTextOutlined,
   CheckCircleOutlined,
   EyeOutlined,
   StarOutlined,
@@ -502,53 +501,29 @@ const WorkOrderPage: FC = () => {
 
   return (
     <div className="p-6">
-      {/* 统计卡片 */}
+      {/* 统计卡片：统一走 <StatCards>，保留原 stats.total > 10 条件 */}
+      <StatCards
+        show={stats.total > 10}
+        items={[
+          { label: "总工单", value: stats.total },
+          { label: "待处理", value: stats.pending, tone: "gold" },
+          { label: "处理中", value: stats.processing },
+          { label: "已完成", value: stats.completed, tone: "green" },
+          { label: "已关闭", value: stats.closed, tone: "gray" },
+        ]}
+      />
+      {/* 批量删除按钮：沿用原统计区条件与 disabled 语义，功能不丢 */}
       {stats.total > 10 && (
-        <Card title={null} className="mb-4">
-          <Row gutter={16}>
-            <Col span={4}>
-              <Statistic title="总工单" value={stats.total} prefix={<FileTextOutlined />} />
-            </Col>
-            <Col span={4}>
-              <Statistic
-                title="待处理"
-                value={stats.pending}
-                styles={{ content: { color: "var(--theme-warning)" } }}
-              />
-            </Col>
-            <Col span={4}>
-              <Statistic
-                title="处理中"
-                value={stats.processing}
-                styles={{ content: { color: "var(--theme-info)" } }}
-              />
-            </Col>
-            <Col span={4}>
-              <Statistic
-                title="已完成"
-                value={stats.completed}
-                styles={{ content: { color: "var(--theme-success)" } }}
-              />
-            </Col>
-            <Col span={4}>
-              <Statistic
-                title="已关闭"
-                value={stats.closed}
-                styles={{ content: { color: "var(--theme-text-tertiary)" } }}
-              />
-            </Col>
-            <Col span={4}>
-              <Button
-                type="primary"
-                danger
-                disabled={selectedRowKeys.length === 0}
-                onClick={handleBatchDelete}
-              >
-                批量删除 ({selectedRowKeys.length})
-              </Button>
-            </Col>
-          </Row>
-        </Card>
+        <div className="mb-4">
+          <Button
+            type="primary"
+            danger
+            disabled={selectedRowKeys.length === 0}
+            onClick={handleBatchDelete}
+          >
+            批量删除 ({selectedRowKeys.length})
+          </Button>
+        </div>
       )}
 
       {/* 筛选表单和操作按钮 */}

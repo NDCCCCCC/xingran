@@ -82,4 +82,8 @@ export { useFormModalForm } from "./hooks/useFormModalForm";
 
 // Phase 68 DEBT-02a：状态展示统一 helper（唯一落点裁定 shared/，勿移 utils/）
 export { StatusTag, statusLabel, statusColor, UNKNOWN_STATUS_LABEL } from "./statusHelpers";
+
+// 全站统一统计卡（范本 = 系统管理 user/settings 的 .stat-cards/.stat-card）
+export { default as StatCards } from "./StatCards";
+export type { StatCardsProps, StatCardItem, StatCardTone } from "./StatCards";
 export type { StatusDomain, StatusColor } from "./statusHelpers";

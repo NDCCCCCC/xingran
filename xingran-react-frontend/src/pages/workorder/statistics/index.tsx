@@ -1,14 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card, Row, Col, Statistic, Table, Tag } from "antd";
-import {
-  FileTextOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-} from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { getWorkOrderStatistics, type WorkOrderStatistics } from "@/lib/workorderApi";
 import { WorkOrderPriority } from "@/lib/workorderApi";
+import { StatCards } from "@/components/shared";
 
 import type { FC } from "react";
 import { createSorter } from "@/utils/tableHelpers";
@@ -160,72 +155,18 @@ const WorkOrderStatisticsPage: FC = () => {
 
   return (
     <div className="p-6">
-      {/* 基本统计卡片 */}
-      <Row gutter={16} className="mb-6">
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="总工单"
-              value={stats?.total || 0}
-              prefix={<FileTextOutlined />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="待处理"
-              value={stats?.pending || 0}
-              prefix={<ClockCircleOutlined />}
-              styles={{ content: { color: "var(--theme-warning)" } }}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="处理中"
-              value={stats?.processing || 0}
-              styles={{ content: { color: "var(--theme-info)" } }}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="已完成"
-              value={stats?.completed || 0}
-              prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: "var(--theme-success)" } }}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="已关闭"
-              value={stats?.closed || 0}
-              prefix={<CloseCircleOutlined />}
-              styles={{ content: { color: "var(--theme-text-tertiary)" } }}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="平均处理时长"
-              value={stats?.avgProcessTime?.toFixed(1) || 0}
-              suffix="小时"
-              loading={loading}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* 基本统计卡片：统一走 <StatCards> */}
+      <StatCards
+        className="mb-6"
+        items={[
+          { label: "总工单", value: stats?.total || 0 },
+          { label: "待处理", value: stats?.pending || 0, tone: "gold" },
+          { label: "处理中", value: stats?.processing || 0 },
+          { label: "已完成", value: stats?.completed || 0, tone: "green" },
+          { label: "已关闭", value: stats?.closed || 0, tone: "gray" },
+          { label: "平均处理时长", value: `${stats?.avgProcessTime?.toFixed(1) ?? 0} 小时` },
+        ]}
+      />
 
       <Row gutter={16}>
         {/* 按优先级统计 */}

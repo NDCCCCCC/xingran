@@ -1,19 +1,5 @@
 import type { FC } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Form,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  App,
-  Empty,
-  Skeleton,
-  Typography,
-} from "antd";
+import { Table, Button, Space, Form, Tag, Card, App, Empty, Skeleton, Typography } from "antd";
 // Phase 71 (W4)：裸 Input/Select → 契约组件（children 形态改写 options）
 import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
@@ -22,9 +8,6 @@ import {
   ReloadOutlined,
   DeleteOutlined,
   CloudSyncOutlined,
-  ApiOutlined,
-  CheckCircleOutlined,
-  WarningOutlined,
   ArrowLeftOutlined,
 } from "@ant-design/icons";
 import type { DevicePortStatus, NetworkDevice } from "@/types";
@@ -38,7 +21,12 @@ import { handleApiError, withErrorHandling } from "@/utils/errorHandler";
 import { formatDateTime } from "@/utils/datetime";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, ErrorAlertWithRetry, confirmDelete } from "@/components/shared";
+import {
+  BatchExportModal,
+  ErrorAlertWithRetry,
+  confirmDelete,
+  StatCards,
+} from "@/components/shared";
 import ActionButtons, { type ActionButton } from "@/components/shared/ActionButtons";
 import { SettingOutlined } from "@ant-design/icons";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -524,43 +512,29 @@ const PortStatusPage: FC = () => {
       )}
 
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="端口总数" value={statistics.total} prefix={<ApiOutlined />} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="UP端口"
-              value={statistics.up}
-              styles={{ content: { color: "var(--theme-success)" } }}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="DOWN端口"
-              value={statistics.down}
-              styles={{ content: { color: "var(--theme-error)" } }}
-              prefix={<WarningOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="802.1X启用"
-              value={statistics.dot1xEnabled}
-              styles={{ content: { color: "var(--theme-info)" } }}
-              prefix={<ApiOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "端口总数", value: statistics.total, trend: "全部端口", ratio: 1 },
+          {
+            label: "UP端口",
+            value: statistics.up,
+            tone: "green",
+            ratio: statistics.total ? statistics.up / statistics.total : 0,
+          },
+          {
+            label: "DOWN端口",
+            value: statistics.down,
+            tone: "danger",
+            ratio: statistics.total ? statistics.down / statistics.total : 0,
+          },
+          {
+            label: "802.1X启用",
+            value: statistics.dot1xEnabled,
+            tone: "default",
+            ratio: statistics.total ? statistics.dot1xEnabled / statistics.total : 0,
+          },
+        ]}
+      />
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
