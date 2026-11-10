@@ -1,8 +1,16 @@
 /**
- * Phase 144 ALRT-03 — lib/adDriftAlertApi 测试
+ * Phase 144 ALRT-03 / quick 261110-jci — lib/adDriftAlertApi 测试
  *
- * 断言：5 个 API 全走 `@/lib/api` 的 wrapped `post`（禁止裸 axios）、
+ * 断言：6 个 API 全走 `@/lib/api` 的 wrapped `post`（禁止裸 axios）、
  * 路径正确、直接返回 `result.data`（不手动判 code===0）、分页 current 从 1。
+ *
+ * config 契约（quick 261110-jci）：后端 `GET /config` 返回 9 个
+ * `ad_sync.drift_alert.*` dotted key 的 `map[string]string`，`POST /config/update`
+ * 用同样形状 + 白名单消费。本文件锁死：
+ *   - getConfig 把 dotted-key map 还原成 camelCase 类型化对象（string→bool/int）
+ *   - updateConfig 发 dotted-key 全 string map（不再发 camelCase 对象 / 不发 400）
+ *   - webhookTemplate 死控件已删（后端根本不存在该旋钮）
+ *   - parseConfigView / toConfigPayload 的边界（空串 / 非法值 / 往返一致）
  *
  * ⚠️ vi.mock 工厂会被 hoist 到文件顶部，不能引用普通顶层 const；用 vi.hoisted()
  * 定义 spy 后再在工厂中引用（vitest 官方约定）。
@@ -10,6 +18,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { postMock } = vi.hoisted(() => {
+  // 后端 GET /config 真实形状：dotted-key + 全 string（9 个旋钮）。
+  const configView: Record<string, string> = {
+    "ad_sync.drift_alert.enabled": "true",
+    "ad_sync.drift_alert.tolerance": "0",
+    "ad_sync.drift_alert.throttle_minutes": "60",
+    "ad_sync.drift_alert.notice_enabled": "true",
+    "ad_sync.drift_alert.ws_enabled": "true",
+    "ad_sync.drift_alert.webhook_enabled": "false",
+    "ad_sync.drift_alert.webhook_config_id": "",
+    "ad_sync.drift_alert.baseline": "20,4",
+    "ad_sync.drift_alert.baseline_key": "ad_sync.drift_alert.baseline",
+  };
   const postMock = vi.fn(async (url: string, data?: unknown) => ({
     code: 0,
     message: "success",
@@ -19,6 +39,7 @@ const { postMock } = vi.hoisted(() => {
       // 通用回显，便于断言「返回的是 result.data 而非整个 BaseResponse」
       url,
       payload: data,
+      ...configView,
       enabled: true,
       tolerance: 0,
       throttleMinutes: 60,
@@ -26,7 +47,6 @@ const { postMock } = vi.hoisted(() => {
       wsEnabled: true,
       webhookEnabled: false,
       webhookConfigId: "",
-      webhookTemplate: "",
       baseline: "20,4",
       lastAlertAt: null,
       lastAlertDrifted: false,
@@ -54,7 +74,11 @@ import {
   updateConfig,
   triggerOnce,
   markTriggerLogRead,
+  parseConfigView,
+  toConfigPayload,
+  AD_DRIFT_CONFIG_KEYS,
   type ADDriftAlertConfig,
+  type ADDriftAlertConfigView,
 } from "../adDriftAlertApi";
 
 const fullConfig: ADDriftAlertConfig = {
@@ -65,8 +89,19 @@ const fullConfig: ADDriftAlertConfig = {
   wsEnabled: true,
   webhookEnabled: false,
   webhookConfigId: "",
-  webhookTemplate: "",
   baseline: "20,4",
+};
+
+const fullView: ADDriftAlertConfigView = {
+  "ad_sync.drift_alert.enabled": "true",
+  "ad_sync.drift_alert.tolerance": "0",
+  "ad_sync.drift_alert.throttle_minutes": "60",
+  "ad_sync.drift_alert.notice_enabled": "true",
+  "ad_sync.drift_alert.ws_enabled": "true",
+  "ad_sync.drift_alert.webhook_enabled": "false",
+  "ad_sync.drift_alert.webhook_config_id": "",
+  "ad_sync.drift_alert.baseline": "20,4",
+  "ad_sync.drift_alert.baseline_key": "ad_sync.drift_alert.baseline",
 };
 
 describe("lib/adDriftAlertApi — wrapped post 契约", () => {
@@ -107,18 +142,46 @@ describe("lib/adDriftAlertApi — wrapped post 契约", () => {
     expect(r).not.toHaveProperty("code");
   });
 
-  it("getConfig 走 post(/config) 并返回 9 旋钮", async () => {
+  it("getConfig 把后端 dotted-key map 还原成 camelCase 类型化对象（不再全落空）", async () => {
     const r = await getConfig();
     expect(post).toHaveBeenCalledWith("/system/ad-drift-alert/config");
-    expect(r).toHaveProperty("webhookConfigId");
-    expect(r).toHaveProperty("webhookTemplate");
+    expect(r).toEqual({
+      enabled: true,
+      tolerance: 0,
+      throttleMinutes: 60,
+      noticeEnabled: true,
+      wsEnabled: true,
+      webhookEnabled: false,
+      webhookConfigId: "",
+      baseline: "20,4",
+    });
+    // 死字段已删
+    expect(r).not.toHaveProperty("webhookTemplate");
     expect(r).not.toHaveProperty("code");
   });
 
-  it("updateConfig 走 post(/config/update) 并原样透传 payload", async () => {
+  it("updateConfig 发 9 个 dotted-key 全 string payload（与后端白名单对齐，不再 400）", async () => {
     const r = await updateConfig(fullConfig);
-    expect(post).toHaveBeenCalledWith("/system/ad-drift-alert/config/update", fullConfig);
-    expect(r).toMatchObject({ enabled: true });
+    const expected: ADDriftAlertConfigView = {
+      "ad_sync.drift_alert.enabled": "true",
+      "ad_sync.drift_alert.tolerance": "0",
+      "ad_sync.drift_alert.throttle_minutes": "60",
+      "ad_sync.drift_alert.notice_enabled": "true",
+      "ad_sync.drift_alert.ws_enabled": "true",
+      "ad_sync.drift_alert.webhook_enabled": "false",
+      "ad_sync.drift_alert.webhook_config_id": "",
+      "ad_sync.drift_alert.baseline": "20,4",
+      "ad_sync.drift_alert.baseline_key": "ad_sync.drift_alert.baseline",
+    };
+    expect(post).toHaveBeenCalledWith("/system/ad-drift-alert/config/update", expected);
+    // 绝不再发 camelCase 对象或虚构字段
+    const sent = postMock.mock.calls[0][1] as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("webhookTemplate");
+    expect(sent).not.toHaveProperty("enabled");
+    // 值必须全是 string
+    for (const v of Object.values(sent)) expect(typeof v).toBe("string");
+    // 返回合并后的表单对象供页面刷新
+    expect(r).toEqual(fullConfig);
   });
 
   it("triggerOnce 走 post(/trigger)（写操作）", async () => {
@@ -139,5 +202,57 @@ describe("lib/adDriftAlertApi — wrapped post 契约", () => {
       expect(typeof call[0]).toBe("string");
       expect(call[0]).toMatch(/^\/system\/ad-drift-alert\//);
     }
+  });
+});
+
+describe("quick 261110-jci — config 双向适配边界", () => {
+  it("AD_DRIFT_CONFIG_KEYS 与后端 9 个 dotted key 逐字一致", () => {
+    expect(Object.values(AD_DRIFT_CONFIG_KEYS)).toEqual([
+      "ad_sync.drift_alert.enabled",
+      "ad_sync.drift_alert.tolerance",
+      "ad_sync.drift_alert.throttle_minutes",
+      "ad_sync.drift_alert.notice_enabled",
+      "ad_sync.drift_alert.ws_enabled",
+      "ad_sync.drift_alert.webhook_enabled",
+      "ad_sync.drift_alert.webhook_config_id",
+      "ad_sync.drift_alert.baseline",
+      "ad_sync.drift_alert.baseline_key",
+    ]);
+  });
+
+  it("parseConfigView：空 / 缺键 / 非法数值安全回落，不抛错", () => {
+    expect(parseConfigView(null)).toMatchObject({
+      enabled: false,
+      tolerance: 0,
+      throttleMinutes: 0,
+      noticeEnabled: false,
+      wsEnabled: false,
+      webhookEnabled: false,
+      webhookConfigId: "",
+      baseline: "",
+    });
+    expect(
+      parseConfigView({
+        "ad_sync.drift_alert.enabled": "TRUE", // 仅严格 'true' 为真
+        "ad_sync.drift_alert.tolerance": "abc",
+        "ad_sync.drift_alert.throttle_minutes": "-5",
+      })
+    ).toMatchObject({ enabled: false, tolerance: 0, throttleMinutes: 0 });
+  });
+
+  it("toConfigPayload → parseConfigView 往返一致（合法输入）", () => {
+    const roundTrip = parseConfigView(toConfigPayload(fullConfig));
+    expect(roundTrip).toEqual(fullConfig);
+  });
+
+  it("toConfigPayload 只发后端白名单内的 9 个 key，零 camelCase / 零 webhookTemplate", () => {
+    const payload = toConfigPayload(fullConfig);
+    expect(Object.keys(payload).sort()).toEqual(Object.values(AD_DRIFT_CONFIG_KEYS).sort());
+    expect(payload).not.toHaveProperty("webhookTemplate");
+    expect(payload).not.toHaveProperty("enabled");
+  });
+
+  it("parseConfigView(fullView) 与 fullConfig 一致", () => {
+    expect(parseConfigView(fullView)).toEqual(fullConfig);
   });
 });

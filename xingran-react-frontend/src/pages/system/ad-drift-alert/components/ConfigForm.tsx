@@ -1,7 +1,7 @@
 /**
- * 同步漂移告警 — 配置表单（Phase 144 ALRT-03）
+ * 同步漂移告警 — 配置表单（Phase 144 ALRT-03 / quick 261110-jci 契约对齐）
  *
- * 9 个 sys_config 旋钮：
+ * 8 个可写 sys_config 旋钮 + baseline 只读回显（dotted-key 映射见 adDriftAlertApi.ts）：
  *   1 enabled            总开关
  *   2 tolerance          容差
  *   3 throttleMinutes    节流分钟
@@ -9,8 +9,11 @@
  *   5 wsEnabled          WS 实时广播
  *   6 webhookEnabled     webhook 推送
  *   7 webhookConfigId    webhook 配置（下拉选已有 configType=webhook 配置）
- *   8 webhookTemplate    webhook 模板
- *   9 baseline           基线（只读回显，不参与提交）
+ *   8 baseline           基线（运行时维护，只读回显；随 payload 原样带回）
+ *
+ * 后端不存在 webhookTemplate 旋钮（quick 261110-jci 删死控件）；config 的
+ * camelCase ↔ dotted-key 全 string 双向适配统一在 `@/lib/adDriftAlertApi` 内完成，
+ * 本组件只处理类型化表单值。
  *
  * 约束：
  *   - webhook 下拉走 getAPINotificationConfigList({configType:'webhook'})，只选已有配置，
@@ -23,7 +26,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
 import { Alert, Button, Card, Form, InputNumber, Space, Switch, Tooltip } from "antd";
 import { InfoCircleOutlined, SaveOutlined } from "@ant-design/icons";
-import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
+import { AppInput, AppSelect } from "@/components/ui";
 import { useActionPermission } from "@/components/shared/useActionPermission";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
@@ -51,7 +54,6 @@ interface ConfigFormValues {
   wsEnabled: boolean;
   webhookEnabled: boolean;
   webhookConfigId: string;
-  webhookTemplate: string;
 }
 
 const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) => {
@@ -101,7 +103,6 @@ const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) =
   const wsEnabled = config?.wsEnabled;
   const webhookEnabled = config?.webhookEnabled;
   const webhookConfigId = config?.webhookConfigId;
-  const webhookTemplate = config?.webhookTemplate;
   useEffect(() => {
     if (config) {
       form.setFieldsValue({
@@ -112,7 +113,6 @@ const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) =
         wsEnabled: Boolean(wsEnabled),
         webhookEnabled: Boolean(webhookEnabled),
         webhookConfigId: webhookConfigId ?? "",
-        webhookTemplate: webhookTemplate ?? "",
       });
     }
   }, [
@@ -125,7 +125,6 @@ const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) =
     wsEnabled,
     webhookEnabled,
     webhookConfigId,
-    webhookTemplate,
   ]);
 
   const selectOptions = useMemo(
@@ -141,6 +140,7 @@ const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) =
       setSaving(true);
       try {
         // baseline 只读展示，不在表单 values 里；提交时从 config 原样带回
+        // （后端白名单含 ad_sync.drift_alert.baseline，api 层会转 dotted-key）。
         const payload: ADDriftAlertConfig = {
           enabled: values.enabled,
           tolerance: values.tolerance,
@@ -149,7 +149,6 @@ const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) =
           wsEnabled: values.wsEnabled,
           webhookEnabled: values.webhookEnabled,
           webhookConfigId: values.webhookConfigId ?? "",
-          webhookTemplate: values.webhookTemplate ?? "",
           baseline: config?.baseline ?? "",
         };
         const next = await updateConfig(payload);
@@ -190,7 +189,6 @@ const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) =
           wsEnabled: true,
           webhookEnabled: false,
           webhookConfigId: "",
-          webhookTemplate: "",
         }}
       >
         <Space orientation="vertical" size="medium" style={{ width: "100%" }}>
@@ -236,13 +234,6 @@ const ConfigForm: FC<ConfigFormProps> = ({ config, loading = false, onSaved }) =
             }
           >
             <AppSelect options={selectOptions} placeholder="使用默认配置" allowClear={false} />
-          </Form.Item>
-
-          <Form.Item name="webhookTemplate" label="Webhook 模板（可选）">
-            <AppTextArea
-              rows={2}
-              placeholder="自定义推送模板；留空使用后端默认模板（不填明文密钥）"
-            />
           </Form.Item>
 
           <Form.Item label="当前基线（只读）">
