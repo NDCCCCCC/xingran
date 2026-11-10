@@ -53,6 +53,10 @@ var ActiveMigrations = []struct {
 	{231, "port_write_audit_operator_index"},
 	{232, "port_write_audit_batch_id"},
 	{233, "user_preference_defaults"},
+	// B-3 / v1.56：sys_object_id 列（network device + discovery result）。
+	// 注：234-238 已存在于 database.go 调用块但未录入本清单（历史漂移，保持现状不扩改）；
+	// 本轮只按维护约定同步新增的 239。
+	{239, "network_device_sys_object_id"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

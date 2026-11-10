@@ -113,9 +113,8 @@ const ADDriftAlertPage: FC = () => {
     try {
       const result = await triggerOnce();
       handleSuccess("立即检测");
-      getAppMessage().info(
-        result?.message ?? (result?.drifted ? "检测完成：发现同步漂移" : "检测完成：未发现同步漂移")
-      );
+      // B-1 / v1.56：trigger 端点实际只返回 {message}，不再按虚构的 drifted 分支判断
+      getAppMessage().info(result?.message ?? "检测完成");
       void refreshStatus();
       bumpLogs();
     } catch (error) {
@@ -164,7 +163,7 @@ const ADDriftAlertPage: FC = () => {
         <ConfigForm config={config} loading={configLoading} onSaved={handleConfigSaved} />
 
         <Card title="触发记录" size="small">
-          <TriggerLogTable refreshToken={logRefreshToken} />
+          <TriggerLogTable refreshToken={logRefreshToken} onMarkRead={bumpLogs} />
         </Card>
       </Space>
     </div>

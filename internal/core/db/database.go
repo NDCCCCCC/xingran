@@ -1219,6 +1219,10 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(238, "ad_drift_alert_menu_perm_seed", migrations.Migrate238ADDriftAlert); err != nil {
 			applogger.Errorf("同步漂移告警菜单/权限/配置 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
+		// B-3 / v1.56：sys_object_id 可空列（网络设备 + 发现结果中转表）。
+		if err := d.runAndRecord(239, "network_device_sys_object_id", migrations.Migrate239NetworkDeviceSysObjectID); err != nil {
+			applogger.Errorf("sys_object_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1360,6 +1364,10 @@ func (d *Database) AutoMigrate() error {
 		//（与上方 PG 分支对称）。
 		if err := d.runAndRecord(238, "ad_drift_alert_menu_perm_seed", migrations.Migrate238ADDriftAlert); err != nil {
 			applogger.Errorf("同步漂移告警菜单/权限/配置 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// B-3 / v1.56：sys_object_id 可空列（与上方 PG 分支对称）。
+		if err := d.runAndRecord(239, "network_device_sys_object_id", migrations.Migrate239NetworkDeviceSysObjectID); err != nil {
+			applogger.Errorf("sys_object_id 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)

@@ -19,20 +19,25 @@ import { renderWithProviders } from "@/test/utils/renderWithProviders";
 
 const h = vi.hoisted(() => {
   const listTriggerLogs = vi.fn();
+  const markTriggerLogRead = vi.fn();
   const updateConfig = vi.fn();
   const getAPINotificationConfigList = vi.fn();
   const handleApiError = vi.fn();
   const handleSuccess = vi.fn();
   const decide = vi.fn(() => ({ visible: true, disabled: false, hint: undefined }));
-  // PageTable mock 透传：把 columns / request / emptyAction 暴露给测试断言
+  // PageTable mock 透传：把 columns / request / emptyAction / rowActions 暴露给测试断言
   const pageTableProps = {
     columns: [] as Array<{ title?: string; render?: (...args: never[]) => ReactNode }>,
     request: null as null | ((p: Record<string, unknown>) => Promise<unknown>),
     emptyAction: null as ReactNode,
     extraFilters: null as Record<string, unknown> | null,
+    rowActions: null as null | ((r: unknown) => Array<{
+      key: string; label: string; disabled?: boolean; permission?: string; onClick?: () => void;
+    }>),
   };
   return {
     listTriggerLogs,
+    markTriggerLogRead,
     updateConfig,
     getAPINotificationConfigList,
     handleApiError,
@@ -44,6 +49,7 @@ const h = vi.hoisted(() => {
 
 vi.mock("@/lib/adDriftAlertApi", () => ({
   listTriggerLogs: h.listTriggerLogs,
+  markTriggerLogRead: h.markTriggerLogRead,
   updateConfig: h.updateConfig,
 }));
 
@@ -71,11 +77,15 @@ vi.mock("@/components/shared/PageTable", () => ({
     request: (p: Record<string, unknown>) => Promise<unknown>;
     emptyAction: ReactNode;
     extraFilters: Record<string, unknown>;
+    rowActions?: (r: unknown) => Array<{
+      key: string; label: string; disabled?: boolean; permission?: string; onClick?: () => void;
+    }>;
   }): ReactElement => {
     h.pageTableProps.columns = props.columns;
     h.pageTableProps.request = props.request;
     h.pageTableProps.emptyAction = props.emptyAction;
     h.pageTableProps.extraFilters = props.extraFilters;
+    h.pageTableProps.rowActions = props.rowActions ?? null;
     return <div data-testid="page-table">触发记录表</div>;
   },
 }));
@@ -122,6 +132,7 @@ describe("AD 漂移告警子组件（v1.55 diff-coverage 补测）", () => {
     });
     h.updateConfig.mockImplementation(async (p: unknown) => p);
     h.listTriggerLogs.mockResolvedValue({ list: [], total: 0, current: 1, pageSize: 10 });
+    h.markTriggerLogRead.mockResolvedValue({ message: "标记成功" });
   });
 
   // ---------- StatusCards ----------
@@ -215,8 +226,19 @@ describe("AD 漂移告警子组件（v1.55 diff-coverage 补测）", () => {
     expect(screen.queryByText("保存配置")).toBeNull();
   });
 
-  // ---------- TriggerLogTable ----------
-  it("TriggerLogTable：request 构造业务入参（含 status/startTime/endTime）", async () => {
+  // ---------- TriggerLogTable（B-1 / v1.56 契约对齐） ----------
+  const logFixture = {
+    id: "log-1",
+    title: "AD 同步漂移告警",
+    method: "ADSyncDriftAlertService.CheckAndAlert",
+    operTime: "2026-11-09 10:00:00",
+    jsonResult: "{\"memberCount\":18,\"distinctGroups\":4,\"memberDelta\":-2,\"groupDelta\":0,\"noticeId\":\"n-1\"}",
+    status: 0,
+    noticeId: "n-1",
+    isRead: false,
+  };
+
+  it("TriggerLogTable：request 只发分页参数（后端不支持假筛选）", async () => {
     renderWithProviders(<TriggerLogTable refreshToken={2} />);
     expect(screen.getByTestId("page-table")).toBeTruthy();
     expect(h.pageTableProps.extraFilters).toEqual({ _reload: 2 });
@@ -226,52 +248,65 @@ describe("AD 漂移告警子组件（v1.55 diff-coverage 补测）", () => {
       pageSize: 20,
       status: "drifted",
       startTime: "2026-11-01",
-      endTime: "2026-11-09",
       _reload: 2,
     });
-    expect(h.listTriggerLogs).toHaveBeenCalledWith({
-      current: 2,
-      pageSize: 20,
-      status: "drifted",
-      startTime: "2026-11-01",
-      endTime: "2026-11-09",
-    });
+    expect(h.listTriggerLogs).toHaveBeenCalledWith({ current: 2, pageSize: 20 });
   });
 
-  it("TriggerLogTable：request 缺省值与非合法 status 过滤", async () => {
+  it("TriggerLogTable：request 缺省分页值", async () => {
     renderWithProviders(<TriggerLogTable refreshToken={0} />);
     const req = h.pageTableProps.request!;
-    await req({ status: "bogus", _reload: 0 });
+    await req({ _reload: 0 });
     expect(h.listTriggerLogs).toHaveBeenCalledWith({ current: 1, pageSize: 10 });
   });
 
-  it("TriggerLogTable：columns 各列 render 分支（时间/来源/漂移/节流/计数/结果）", () => {
+  it("TriggerLogTable：columns 对齐后端字段 + 已读列 + jsonResult 派生", () => {
     renderWithProviders(<TriggerLogTable refreshToken={0} />);
     const cols = h.pageTableProps.columns;
-    expect(cols.length).toBe(7);
+    // 6 列：触发时间/标题/成员数组数/漂移量/日志状态/已读（rowActions 由 PageTable 另加「操作」列）
+    expect(cols.length).toBe(6);
     const byTitle = (t: string) => cols.find((c) => c.title === t)!;
     const render = (t: string, ...args: never[]) => byTitle(t).render!(...args) as ReactNode;
 
-    // formatLogTime：空值 / 合法 / 非法（本地时区由 dayjs 解析，断言日期部分即可）
+    // formatLogTime：空值 / 合法 / 非法
     expect(render("触发时间", undefined as never)).toBe("-");
     expect(render("触发时间", "2026-11-09T10:00:00Z" as never)).toContain("2026-11-09");
     expect(render("触发时间", "not-a-date" as never)).toBe("not-a-date");
-    // 来源
-    expect(render("来源", "manual" as never)).toBe("手动");
-    expect(render("来源", "cron" as never)).toBe("定时");
-    expect(render("来源", undefined as never)).toBe("-");
-    // 检测结果：节流优先 / 漂移 / 无漂移
-    const throttled = render("检测结果", true as never, { throttled: true } as never);
-    expect(throttled).toBeTruthy();
-    expect(render("检测结果", true as never, { throttled: false } as never)).toBeTruthy();
-    expect(render("检测结果", false as never, { throttled: false } as never)).toBeTruthy();
-    // 计数 / 漂移量 / 操作人 / 结果 的缺省兜底
+    // 标题
+    expect(render("标题", undefined as never)).toBe("-");
+    expect(render("标题", "AD 同步漂移告警" as never)).toBe("AD 同步漂移告警");
+    // 成员数 / 组数 与漂移量：从 jsonResult 解析（损坏 JSON 软降级）
+    expect(render("成员数 / 组数", undefined as never, logFixture as never)).toBe("18 / 4");
+    expect(render("漂移量（成员 / 组）", undefined as never, logFixture as never)).toBe("-2 / 0");
     expect(
-      render("成员数 / 组数", undefined as never, { memberCount: 3, distinctGroups: 2 } as never)
-    ).toBe("3 / 2");
-    expect(render("漂移量", undefined as never)).toBe("-");
-    expect(render("操作人", undefined as never)).toBe("-");
-    expect(render("结果", undefined as never)).toBe("-");
+      render("成员数 / 组数", undefined as never, { jsonResult: "not-json" } as never)
+    ).toBe("- / -");
+    // 日志状态（0 成功 / 1 失败）
+    expect(render("日志状态", 0 as never)).toBeTruthy();
+    expect(render("日志状态", 1 as never)).toBeTruthy();
+    // 已读列：未读 / 已读 / 无关联通知
+    expect(render("已读", false as never, logFixture as never)).toBeTruthy();
+    expect(render("已读", true as never, { ...logFixture, isRead: true } as never)).toBeTruthy();
+    expect(render("已读", false as never, { ...logFixture, noticeId: "" } as never)).toBeTruthy();
+  });
+
+  it("TriggerLogTable：rowActions 门控 + 标记已读后走 onMarkRead 刷新", async () => {
+    const onMarkRead = vi.fn();
+    renderWithProviders(<TriggerLogTable refreshToken={0} onMarkRead={onMarkRead} />);
+    const actions = h.pageTableProps.rowActions!;
+    // 未读 + 有 noticeId → 可点、带 list 权限码
+    const a = actions(logFixture)[0];
+    expect(a.key).toBe("markRead");
+    expect(a.disabled).toBe(false);
+    expect(a.permission).toBe("system:adDriftAlert:list");
+    // 已读 / 无关联通知 → 禁用（后端会 400）
+    expect(actions({ ...logFixture, isRead: true })[0].disabled).toBe(true);
+    expect(actions({ ...logFixture, noticeId: "" })[0].disabled).toBe(true);
+    // 点击：调 API + 成功提示 + onMarkRead 刷新
+    a.onClick?.();
+    await waitFor(() => expect(h.markTriggerLogRead).toHaveBeenCalledWith("log-1"));
+    await waitFor(() => expect(onMarkRead).toHaveBeenCalledTimes(1));
+    expect(h.handleSuccess).toHaveBeenCalledWith("标记已读");
   });
 
   it("TriggerLogTable：空态文案渲染", () => {

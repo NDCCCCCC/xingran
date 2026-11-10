@@ -515,12 +515,14 @@ func boolPtr7906(v bool) *bool { return &v }
 // SNMP 段(D-79-05 fake)—— snmpProbe / discoverBySNMP
 // -----------------------------------------------------------------------------
 
-// ddv7906SNMPTable is the sysName/sysDescr OID table shared by the fake-backed
-// discovery cases (only the two OIDs snmpProbe requests).
+// ddv7906SNMPTable is the sysName/sysDescr/sysObjectID OID table shared by the
+// fake-backed discovery cases. B-3 / v1.56: snmpProbe 现在请求 3 个 OID，
+// 第三个是 sysObjectID（未知 OID 会让 fake 不回包 → 5s 超时，故必须预置）。
 func ddv7906SNMPTable() []gosnmp.SnmpPDU {
 	return []gosnmp.SnmpPDU{
 		{Name: ".1.3.6.1.2.1.1.5.0", Type: gosnmp.OctetString, Value: "core-sw-7906"},
 		{Name: ".1.3.6.1.2.1.1.1.0", Type: gosnmp.OctetString, Value: "Huawei Versatile Routing Platform V800R022C00"},
+		{Name: ".1.3.6.1.2.1.1.2.0", Type: gosnmp.ObjectIdentifier, Value: "1.3.6.1.4.1.2011.2.23"},
 	}
 }
 
@@ -538,7 +540,9 @@ func TestDdv7906_SnmpProbe_Happy(t *testing.T) {
 	assert.Contains(t, dev.SysDescr, "Huawei")
 	assert.Equal(t, string(models.VendorHuawei), dev.Vendor,
 		"vendor identified from the replayed sysDescr")
-	assert.Equal(t, int64(2), fake.RequestCount(), "one Get per OID on the same socket")
+	assert.Equal(t, "1.3.6.1.4.1.2011.2.23", dev.SysObjectID,
+		"B-3: sysObjectID 必须透传到 DiscoveredDevice（精确匹配键）")
+	assert.Equal(t, int64(3), fake.RequestCount(), "one Get per OID on the same socket (sysName/sysDescr/sysObjectID)")
 }
 
 // TestDdv7906_SnmpProbe_ErrorStatus locks an upstream quirk:

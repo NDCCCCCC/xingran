@@ -77,13 +77,27 @@ type DiscoveryRequest struct {
 // DiscoveredDevice 发现的设备信息。
 // JSON tag 与前端「发现结果」表格列对齐（camelCase）。
 type DiscoveredDevice struct {
-	IPAddress  string `json:"ipAddress"`
-	DeviceType string `json:"deviceType"`
-	Vendor     string `json:"vendor"`
-	Model      string `json:"model"`
-	SysName    string `json:"deviceName"`
-	SysDescr   string `json:"sysDescr"`
-	IsAlive    bool   `json:"isAlive"`
+	IPAddress   string `json:"ipAddress"`
+	DeviceType  string `json:"deviceType"`
+	Vendor      string `json:"vendor"`
+	Model       string `json:"model"`
+	SysName     string `json:"deviceName"`
+	SysDescr    string `json:"sysDescr"`
+	IsAlive     bool   `json:"isAlive"`
+	SysObjectID string `json:"sysObjectId,omitempty"` // B-3 / v1.56：SNMP sysObjectID
+}
+
+// snmpPDUString 把 gosnmp PDU 值（string / []byte / 其它）统一收敛为字符串，
+// 并规范化 OID（去首尾空白与前导点）。B-3 / v1.56：避免各处硬类型断言。
+func snmpPDUString(v interface{}) string {
+	switch x := v.(type) {
+	case string:
+		return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(x), "."))
+	case []byte:
+		return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(string(x)), "."))
+	default:
+		return strings.TrimSpace(fmt.Sprint(v))
+	}
 }
 
 // DiscoveryResult 发现结果
@@ -114,9 +128,10 @@ type DeviceProbeResult struct {
 	DeviceName string              `json:"deviceName,omitempty"`
 	DeviceType models.DeviceType   `json:"deviceType,omitempty"`
 	Vendor     models.DeviceVendor `json:"vendor,omitempty"`
-	Model      string              `json:"model,omitempty"`
-	SysDescr   string              `json:"sysDescr,omitempty"`
-	SysName    string              `json:"sysName,omitempty"`
+	Model       string              `json:"model,omitempty"`
+	SysDescr    string              `json:"sysDescr,omitempty"`
+	SysName     string              `json:"sysName,omitempty"`
+	SysObjectID string              `json:"sysObjectId,omitempty"` // B-3 / v1.56
 }
 
 // CreateDiscoveryTask 创建发现任务
@@ -241,6 +256,7 @@ func (s *DeviceDiscoveryService) persistDiscoveryResults(ctx context.Context, di
 				SysName:     dev.SysName,
 				SysDescr:    dev.SysDescr,
 				IsAlive:     dev.IsAlive,
+				SysObjectID: dev.SysObjectID, // B-3 / v1.56 中转列
 			})
 		}
 		if len(rows) == 0 {
@@ -373,6 +389,12 @@ func (s *DeviceDiscoveryService) snmpProbe(ip, community string, port int) *Disc
 		case []byte:
 			device.SysDescr = string(v)
 		}
+	}
+
+	// B-3 / v1.56：同连接再取 sysObjectID（1.3.6.1.2.1.1.2.0）。
+	// 失败不致命（部分设备/代理不返回），留空即可，匹配时自动回退 Model。
+	if sysObjectID, oidErr := snmpClient.Get([]string{".1.3.6.1.2.1.1.2.0"}); oidErr == nil && len(sysObjectID.Variables) > 0 {
+		device.SysObjectID = snmpPDUString(sysObjectID.Variables[0].Value)
 	}
 
 	// 识别厂商和类型
@@ -605,6 +627,7 @@ func (s *DeviceDiscoveryService) ImportDiscoveredDevices(ctx context.Context, di
 				cur.SerialNumber = ""
 				cur.SoftwareVersion = ""
 				cur.Uptime = ""
+			cur.SysObjectID = fresh.SysObjectID // B-3 / v1.56：软删恢复同步刷新 OID
 				cur.CreatedBy = fresh.CreatedBy
 				cur.UpdatedBy = fresh.UpdatedBy
 				restored = append(restored, cur)
@@ -735,6 +758,7 @@ func buildNetworkDevice(row models.DeviceDiscoveryResult, task *models.DeviceDis
 		DeptID:      deptID,
 		Status:      models.DeviceStatusOnline, // 存活设备导入即在线
 		Description: row.SysDescr,
+		SysObjectID: row.SysObjectID, // B-3 / v1.56：OID 从发现结果带入网络设备
 	}, true
 }
 
@@ -837,6 +861,8 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 	}
 
 	sysDescr, _ := snmpClient.Get([]string{".1.3.6.1.2.1.1.1.0"})
+	// B-3 / v1.56：同连接取 sysObjectID，失败不致命（留空回退 Model）。
+	sysObjectID, _ := snmpClient.Get([]string{".1.3.6.1.2.1.1.2.0"})
 
 	discoveredDevice := &DiscoveredDevice{
 		IPAddress: req.IPAddress,
@@ -861,6 +887,9 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 		case []byte:
 			discoveredDevice.SysDescr = string(v)
 		}
+	}
+	if sysObjectID != nil && len(sysObjectID.Variables) > 0 {
+		discoveredDevice.SysObjectID = snmpPDUString(sysObjectID.Variables[0].Value)
 	}
 
 	discoveredDevice.Vendor = string(devicepkg.IdentifyVendor(discoveredDevice.SysDescr))
@@ -891,9 +920,10 @@ func (s *DeviceDiscoveryService) ProbeSingleDevice(ctx context.Context, req *Dev
 			IPAddress:  req.IPAddress,
 			DeviceName: discoveredDevice.SysName,
 			SysDescr:   discoveredDevice.SysDescr,
-			SysName:    discoveredDevice.SysName,
-			Vendor:     vendor,
-			Model:      model,
+			SysName:     discoveredDevice.SysName,
+			Vendor:      vendor,
+			Model:       model,
+			SysObjectID: discoveredDevice.SysObjectID, // B-3 / v1.56
 		}
 
 		// 转换设备类型
@@ -947,9 +977,10 @@ func (s *DeviceDiscoveryService) GetDiscoveryResults(ctx context.Context, discov
 			DeviceType: row.DeviceType,
 			Vendor:     row.Vendor,
 			Model:      row.Model,
-			SysName:    row.SysName,
-			SysDescr:   row.SysDescr,
-			IsAlive:    row.IsAlive,
+			SysName:     row.SysName,
+			SysDescr:    row.SysDescr,
+			IsAlive:     row.IsAlive,
+			SysObjectID: row.SysObjectID, // B-3 / v1.56
 		})
 	}
 	return devices, nil

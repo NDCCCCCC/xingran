@@ -247,7 +247,7 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		}
 		// FIX-04 / Phase 143 物理参数入口校验（与实跑同源，接 vendor/model）
 		if ph := req.physicalParamsOf(); ph != nil {
-			ev, err := validatePhysicalRequest(dev.Vendor, dev.Model, req.Action, *ph)
+			ev, err := validatePhysicalRequest(dev.Vendor, dev.Model, req.Action, *ph, dev.SysObjectID)
 			if err != nil {
 				return nil, err
 			}
@@ -283,8 +283,9 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		SpeedMode: req.SpeedMode,
 		Duplex:    req.Duplex,
 		MTU:       req.MTU,
-		// Phase 143：型号透传（校验/渲染同源）
-		Model: dev.Model,
+		// Phase 143：型号透传（校验/渲染同源）；B-3：OID 同步透传
+		Model:       dev.Model,
+		SysObjectID: dev.SysObjectID,
 	})
 	if err != nil {
 		return nil, err
@@ -386,8 +387,9 @@ func (s *portWriteServiceImpl) previewSinglePort(
 		SpeedMode: req.SpeedMode,
 		Duplex:    req.Duplex,
 		MTU:       req.MTU,
-		// Phase 143：型号透传（校验/渲染同源）
-		Model: dev.Model,
+		// Phase 143：型号透传（校验/渲染同源）；B-3：OID 同步透传
+		Model:       dev.Model,
+		SysObjectID: dev.SysObjectID,
 	})
 	if err != nil {
 		return nil, err

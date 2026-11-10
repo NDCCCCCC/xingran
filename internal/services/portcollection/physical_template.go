@@ -79,7 +79,9 @@ const (
 func renderPhysical(p PortTemplateParams, vendor models.DeviceVendor, action PortAction) ([]string, error) {
 	// 校验/渲染同源：用与 service 入口完全相同的 CheckPhysicalSupport 取画像，
 	// 既做能力拒绝（Cisco/Maipu/型号 unsupported），也做参数值域/命令形态解析。
-	prof, err := CheckPhysicalSupport(vendor, p.Model, action, p)
+	// B-3 / v1.56：校验/渲染同源，传 SysObjectID 走 OID 优先匹配。
+	// p.SysObjectID 为空时等价旧 CheckPhysicalSupport（存量零回归）。
+	prof, err := CheckPhysicalSupportWithOID(vendor, p.Model, action, p, p.SysObjectID)
 	if err != nil {
 		return nil, err
 	}

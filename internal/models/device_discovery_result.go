@@ -24,6 +24,9 @@ type DeviceDiscoveryResult struct {
 	// 导致查询顺序不确定（Phase 137 / FIX-07）。
 	Seq       int       `gorm:"default:0" json:"seq"`
 	CreatedAt time.Time `json:"createdAt"`
+	// SysObjectID B-3 / v1.56 中转列：发现明细持久化时带上，供
+	// ImportDiscoveredDevices 写入 sys_network_device。可空，存量行不回填。
+	SysObjectID string `gorm:"size:255" json:"sysObjectId,omitempty"`
 }
 
 // TableName 设置表名

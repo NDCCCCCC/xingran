@@ -67,11 +67,17 @@ func physicalTemplateParams(p PhysicalParams) portcollection.PortTemplateParams 
 // —— 型号级能力矩阵（型号命中 / 厂商回退 / 未知 fail-safe / 枚举范围）是唯一真相源，
 // renderer 的 renderPhysical 调同一个函数，保证「校验放行 ⇔ 渲染接受」。
 // 返回的画像供 PreviewResult.evidenceLevel / 审计 Extra 取证级别回显。
-func validatePhysicalRequest(vendor models.DeviceVendor, model string, action Action, p PhysicalParams) (portcollection.PhysicalEvidence, error) {
+// B-3 / v1.56：sysObjectID 为可变参数，旧调用（不传）等价 OID 为空，存量零回归。
+// 新调用点传 dev.SysObjectID，走 OID 精确/前缀优先匹配；OID 不进 Evidence。
+func validatePhysicalRequest(vendor models.DeviceVendor, model string, action Action, p PhysicalParams, sysObjectID ...string) (portcollection.PhysicalEvidence, error) {
 	if !isPhysicalAction(action) {
 		return portcollection.PhysicalEvidence{}, fmt.Errorf("%w: %s is not a physical action", ErrPhysicalParamsInvalid, action)
 	}
-	prof, err := portcollection.CheckPhysicalSupport(vendor, model, action, physicalTemplateParams(p))
+	oid := ""
+	if len(sysObjectID) > 0 {
+		oid = sysObjectID[0]
+	}
+	prof, err := portcollection.CheckPhysicalSupportWithOID(vendor, model, action, physicalTemplateParams(p), oid)
 	if err != nil {
 		// 把能力矩阵错误翻译成 portwrite 400 sentinel（handler 已有翻译表），
 		// 参数越界按动作细分带上原画像信息，便于既有测试与前端定位。
@@ -150,7 +156,7 @@ func (s *portWriteServiceImpl) PhysicalWrite(ctx context.Context, portID string,
 		_ = s.db.WithContext(ctx).Where("id = ?", port.DeviceID).First(&dev).Error
 	}
 
-	evidence, err := validatePhysicalRequest(dev.Vendor, dev.Model, action, params)
+	evidence, err := validatePhysicalRequest(dev.Vendor, dev.Model, action, params, dev.SysObjectID)
 	if err != nil {
 		return nil, err
 	}
