@@ -36,7 +36,6 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
   Alert,
   Radio,
   Layout,
@@ -46,8 +45,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  CheckCircleOutlined,
-  StopOutlined,
   AppstoreOutlined,
   TableOutlined,
   ImportOutlined,
@@ -59,7 +56,7 @@ import type { Building } from "@/types/operations";
 import { buildingApi } from "@/lib/opsApi";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
-import { PageTable, useActionPermission } from "@/components/shared";
+import { PageTable, StatCards, useActionPermission } from "@/components/shared";
 import type { PageTableRenderContext, SearchField } from "@/components/shared";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
@@ -530,37 +527,13 @@ const BuildingManagement: FC = () => {
     searchFormRef.current = searchForm;
     return (
       <>
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="总楼宇数"
-                value={statistics.total}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="正常楼宇"
-                value={statistics.active}
-                styles={{ content: { color: "var(--theme-success)" } }}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="停用楼宇"
-                value={statistics.inactive}
-                styles={{ content: { color: "var(--theme-error)" } }}
-                prefix={<StopOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
+        <StatCards
+          items={[
+            { label: "总楼宇数", value: statistics.total, tone: "default" },
+            { label: "正常楼宇", value: statistics.active, tone: "green" },
+            { label: "停用楼宇", value: statistics.inactive, tone: "danger" },
+          ]}
+        />
         {selectedRowKeys.length > 0 && (
           <Alert
             title={
@@ -581,15 +554,14 @@ const BuildingManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "transparent" }}>
       {/* 左侧部门树 */}
       <Sider
-        width={360}
-        className="dept-list-sider"
+        width={250}
+        className="dept-list-sider xr-dept-panel"
         style={{
-          background: "var(--theme-bg-surface)",
-          padding: "0 16px 16px 0",
-          borderRight: "1px solid var(--theme-border-primary)",
+          background: "transparent",
+          padding: "0 14px 16px 0",
         }}
       >
         <DeptTree
@@ -600,7 +572,7 @@ const BuildingManagement: FC = () => {
       </Sider>
 
       {/* 右侧内容区 */}
-      <Content style={{ background: "var(--theme-bg-surface)" }}>
+      <Content style={{ padding: 0, background: "transparent" }}>
         <div>
           <PageTable<Building>
             request={request}

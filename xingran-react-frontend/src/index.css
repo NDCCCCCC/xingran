@@ -1299,6 +1299,12 @@ body {
   border: 1px solid var(--theme-primary-lighter) !important;
 }
 
+/* 导入弹窗「导入说明」：覆盖 .ant-alert-info 的绿底黑字，收敛为白底 + 中性描边。 */
+.ant-alert.excel-import-notice {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-base) !important;
+}
+
 /* ========================================
    Message 消息提示
    ======================================== */
@@ -1874,14 +1880,13 @@ body {
   width: var(--sidebar-collapsed-width);
 }
 
-/* 部门列表侧边栏（其他消费方默认 360px；用户页 250px 见下方 xr-dept-panel 覆盖） */
+/* 部门列表侧边栏：全库统一 250px（范本 = 系统管理用户页部门列）。 */
 .dept-list-sider {
-  width: 360px;
-  max-width: 360px;
-  min-width: 360px;
-  flex: 0 0 360px;
+  width: 250px;
+  max-width: 250px;
+  min-width: 250px;
+  flex: 0 0 250px;
   border-right: none !important;
-  /* height: calc(100vh - 64px); */
 }
 
 .dept-list-sider .ant-layout-sider-children {
@@ -2742,6 +2747,8 @@ body {
   box-shadow: 0 1px 2px rgba(120, 100, 70, 0.06);
   position: relative;
   overflow: hidden;
+  --stat-accent: var(--theme-primary);
+  --ratio: 0;
 }
 .stat-card::before {
   content: "";
@@ -2750,19 +2757,44 @@ body {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--theme-primary);
+  background: var(--stat-accent);
 }
-.stat-card.sc-green::before {
-  background: var(--theme-success);
+.stat-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: calc(var(--ratio) * 100%);
+  background: var(--stat-accent);
+  opacity: 0.55;
+  transition: width var(--theme-transition-base);
 }
-.stat-card.sc-gray::before {
-  background: var(--theme-text-secondary);
+.stat-card.sc-green {
+  --stat-accent: var(--theme-success);
 }
-.stat-card.sc-gold::before {
-  background: var(--sidebar-accent);
+.stat-card.sc-gray {
+  --stat-accent: var(--theme-text-secondary);
 }
-.stat-card.sc-danger::before {
-  background: var(--theme-error);
+.stat-card.sc-gold {
+  --stat-accent: var(--sidebar-accent);
+}
+.stat-card.sc-danger {
+  --stat-accent: var(--theme-error);
+}
+.stat-card.is-clickable {
+  cursor: pointer;
+  transition:
+    border-color var(--theme-transition-fast),
+    box-shadow var(--theme-transition-fast);
+}
+.stat-card.is-clickable:hover {
+  border-color: var(--stat-accent);
+  box-shadow: 0 2px 8px rgba(120, 100, 70, 0.12);
+}
+.stat-card.is-clickable:focus-visible {
+  outline: 2px solid var(--stat-accent);
+  outline-offset: 2px;
 }
 .stat-label {
   font-size: 12px;
@@ -2870,22 +2902,9 @@ body {
 }
 
 /* ---------- 部门面板（demo .dept-tree：整行 hover/active 绿色） ---------- */
-/* 用户页部门列 300px（用户反馈加宽；全局 .dept-list-sider 360px 不动其他页） */
-.dept-list-sider.xr-dept-panel {
-  width: 300px;
-  max-width: 300px;
-  min-width: 300px;
-}
-/* 业务页内嵌 Sider（部门列）不是侧边导航 — 排除全局深绿底 var(--sidebar-bg) */
-/* ⚠️ 不能全局 transparent：仅用户页 xr-dept-panel 画布是奶油色、Sider 本意 transparent；
-   业务页（operations/network 等 11 页）Sider 需显式白底。业务页根 Layout 画布为浅灰
-   "rgb(245, 245, 245)"（dept-tree-black-background bug：曾为 "#000"，任何透明/圆角裁剪都会透出纯黑）。 */
+/* 业务页内嵌部门 Sider：transparent 透出奶油画布，白卡由 DeptTree 自带 <Card> 承担。 */
 .dept-list-sider {
-  background: #fff !important;
-  /* 白底圆角与部门 Card 对齐（.ant-card 同用 --theme-radius-lg，运行时由主题 JS 注入，
-     minimal 主题为 6px——并非 :root 的静态 8px）。Sider padding 上/左为 0，Card 左上角
-     与背景左上角重合，同半径弧线嵌套；其余三角的裁剪楔形透出 Layout 浅灰画布 rgb(245, 245, 245)
-     （非黑），呈现圆角卡片观感。.xr-dept-panel 背景为 transparent，radius 无视觉效果。 */
+  background: transparent !important;
   border-radius: var(--theme-radius-lg);
 }
 .dept-list-sider.xr-dept-panel {

@@ -473,9 +473,9 @@ const ServerRoomManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "transparent" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: "var(--theme-bg-surface)" }}>
+      <Content style={{ padding: 0, background: "transparent" }}>
         <StatisticsCards
           show={total > 10}
           items={[

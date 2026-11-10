@@ -31,7 +31,12 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useDict, type DictItem } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import { DepartmentTreeSelect, confirmDelete, useActionPermission } from "@/components/shared";
+import {
+  DepartmentTreeSelect,
+  StatCards,
+  confirmDelete,
+  useActionPermission,
+} from "@/components/shared";
 import type { ActionPermissionDecision } from "@/components/shared";
 import ExcelImportLazy from "@/components/shared/ExcelImportLazy";
 import { formatDateTime } from "@/utils/datetime";
@@ -712,6 +717,20 @@ const UserManagement: FC = () => {
     ? Math.round((statistics.active / statistics.total) * 1000) / 10
     : 0;
 
+  // 禁用占比（与 activePct 同口径，供"禁用用户"卡 trend 段使用）
+  const inactivePct = statistics.total
+    ? Math.round((statistics.inactive / statistics.total) * 1000) / 10
+    : 0;
+
+  // 统计卡下钻：把状态写回搜索表单并回第 1 页（保留左侧部门树的递归部门口径）
+  const filterByStatus = useCallback(
+    (status: string) => {
+      searchForm.setFieldsValue({ status });
+      applyFilters(selectedDeptId ? { recursiveDeptId: selectedDeptId } : undefined);
+    },
+    [applyFilters, searchForm, selectedDeptId]
+  );
+
   // 部门数（全树节点数，含根节点 — 原型「部门数」卡）
   const deptCount = useMemo(() => {
     const count = (nodes: typeof departments): number =>
@@ -723,29 +742,42 @@ const UserManagement: FC = () => {
     <>
       {/* 顶部 TabBar 已显示标题，页面内不再重复 PageTitle */}
 
-      {/* 统计卡组（theme.css .stat-card：左 3px 色条 + label/value/trend） */}
-      <div className="stat-cards">
-        <div className="stat-card">
-          <div className="stat-label">用户总数</div>
-          <div className="stat-value">{statistics.total}</div>
-          <div className="stat-trend">全部门合计</div>
-        </div>
-        <div className="stat-card sc-green">
-          <div className="stat-label">正常用户</div>
-          <div className="stat-value">{statistics.active}</div>
-          <div className="stat-trend">占比 {activePct}%</div>
-        </div>
-        <div className="stat-card sc-gray">
-          <div className="stat-label">禁用用户</div>
-          <div className="stat-value">{statistics.inactive}</div>
-          <div className="stat-trend">可随时恢复</div>
-        </div>
-        <div className="stat-card sc-gold">
-          <div className="stat-label">部门数</div>
-          <div className="stat-value">{deptCount}</div>
-          <div className="stat-trend">左侧部门列表</div>
-        </div>
-      </div>
+      {/* 统计卡组：统一走 <StatCards>，底边占比轨由 ratio 驱动；正常/禁用可点击下钻 */}
+      <StatCards
+        items={[
+          {
+            label: "用户总数",
+            value: statistics.total,
+            trend: "全部门合计",
+            ratio: 1,
+            hint: "全部用户，不受搜索条件影响",
+          },
+          {
+            label: "正常用户",
+            value: statistics.active,
+            tone: "green",
+            trend: `占比 ${activePct}%`,
+            ratio: statistics.total ? statistics.active / statistics.total : 0,
+            hint: "点击只看正常用户",
+            onClick: () => filterByStatus("0"),
+          },
+          {
+            label: "禁用用户",
+            value: statistics.inactive,
+            tone: "gray",
+            trend: `占比 ${inactivePct}%`,
+            ratio: statistics.total ? statistics.inactive / statistics.total : 0,
+            hint: "点击只看禁用用户",
+            onClick: () => filterByStatus("1"),
+          },
+          {
+            label: "部门数",
+            value: deptCount,
+            tone: "gold",
+            hint: "左侧部门树节点总数",
+          },
+        ]}
+      />
 
       <Layout style={{ display: "flex", alignItems: "stretch", background: "transparent" }}>
         {/* 左侧部门树（原型 250px 白卡） */}

@@ -1,14 +1,9 @@
 import { useState, useEffect } from "react";
 // Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
 import { AppSelect } from "@/components/ui";
-import { Card, Row, Col, Statistic, Tag, Table, Form, Empty, Typography, Space } from "antd";
-import {
-  CalendarOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  CoffeeOutlined,
-  UnorderedListOutlined,
-} from "@ant-design/icons";
+import { Card, Row, Col, Tag, Table, Form, Empty, Space } from "antd";
+import { StatCards } from "@/components/shared";
+import { ClockCircleOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import dayjs from "dayjs";
 import { formatDateTime, FORMAT_DATETIME_MINUTE, FORMAT_DATE_SHORT } from "@/utils/datetime";
@@ -27,8 +22,6 @@ import {
 } from "@/lib/workorderApi";
 import { useAuthStore } from "@/store/authStore";
 import { usePagination } from "@/hooks/usePagination";
-
-const { Text } = Typography;
 
 // 模块级静态映射：避免 render 回调内每行每格重建（Phase m76-js-misc 6.3）
 const PRIORITY_CONFIG: Record<WorkOrderPriority, { text: string; color: string }> = {
@@ -54,7 +47,7 @@ const MyDutyPage: FC = () => {
 
   // 统计数据
   const [stats, setStats] = useState<MyDutyStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
+  const [, setStatsLoading] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -277,72 +270,29 @@ const MyDutyPage: FC = () => {
   return (
     <div style={{ padding: "24px" }}>
       {/* 统计卡片区域 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-        <Col xs={12} sm={6} lg={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title="今日状态"
-              value={stats?.isOnDutyToday ? "值班中" : "休息"}
-              prefix={stats?.isOnDutyToday ? <ClockCircleOutlined /> : <CoffeeOutlined />}
-              styles={{
-                content: {
-                  color: stats?.isOnDutyToday
-                    ? "var(--theme-success)"
-                    : "var(--theme-text-secondary)",
-                  fontSize: "20px",
-                },
-              }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title="本月值班"
-              value={stats?.thisMonthCount || 0}
-              suffix="次"
-              prefix={<CalendarOutlined />}
-              styles={{ content: { color: "var(--theme-info)", fontSize: "20px" } }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={6}>
-          <Card loading={statsLoading}>
-            {/* Phase 71 W5：P68 契约清偿——裸 hex → 主题变量 */}
-            <Statistic
-              title="累计值班"
-              value={stats?.totalCount || 0}
-              suffix="次"
-              prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: "var(--theme-brand)", fontSize: "20px" } }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={6}>
-          <Card loading={statsLoading}>
-            <div>
-              <Text type="secondary" style={{ fontSize: "14px" }}>
-                下次值班
-              </Text>
-              <div style={{ marginTop: "8px" }}>
-                {stats?.nextDutyDate ? (
-                  <Space>
-                    <span style={{ fontSize: "18px", fontWeight: 500 }}>
-                      {formatDateTime(stats.nextDutyDate, FORMAT_DATE_SHORT)}
-                    </span>
-                    {stats.nextDutyPoolName && <Tag color="blue">{stats.nextDutyPoolName}</Tag>}
-                  </Space>
-                ) : (
-                  <span style={{ color: "var(--theme-text-secondary)" }}>暂无排班</span>
-                )}
-              </div>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        className="mb-6"
+        items={[
+          {
+            label: "今日状态",
+            value: stats?.isOnDutyToday ? "值班中" : "休息",
+            tone: stats?.isOnDutyToday ? "green" : "gray",
+          },
+          { label: "本月值班", value: `${stats?.thisMonthCount || 0} 次` },
+          { label: "累计值班", value: `${stats?.totalCount || 0} 次` },
+          {
+            label: "下次值班",
+            value: stats?.nextDutyDate ? (
+              <Space>
+                <span>{formatDateTime(stats.nextDutyDate, FORMAT_DATE_SHORT)}</span>
+                {stats.nextDutyPoolName && <Tag color="blue">{stats.nextDutyPoolName}</Tag>}
+              </Space>
+            ) : (
+              "暂无排班"
+            ),
+          },
+        ]}
+      />
 
       {/* 待办工单和值班记录 - 左右布局 */}
       <Row gutter={[16, 16]}>

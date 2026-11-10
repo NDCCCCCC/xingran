@@ -35,7 +35,7 @@ const LIST_CLASS_TO_HEX: Record<string, string> = {
   success: "var(--theme-success)",
   warning: "var(--theme-warning)",
   error: "var(--theme-error)",
-  default: "#d4d4d8",
+  default: "var(--theme-text-tertiary)",
   processing: "var(--theme-primary)",
 };
 

@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { Card, Button, Tooltip, Space, Divider } from "antd";
+import { Button, Tooltip, Space, Divider } from "antd";
 import { useNavigate } from "react-router-dom";
 import LayoutSwitcher from "@/design-system/components/LayoutSwitcher";
 import DensitySwitcher from "@/design-system/components/DensitySwitcher";
@@ -207,7 +207,9 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
       <div
         className="flex-1 overflow-auto"
         style={{
-          padding: "24px",
+          // 与 ClassicLayout / HybridLayout 对齐：奶油画布 + 页面自管白卡浮层，
+          // 不再把 children 整页包进一张大白卡（消除「多一块白色背景」）
+          padding: "20px 28px 40px",
           maxWidth: "1600px",
           margin: "0 auto",
           width: "100%",
@@ -266,22 +268,9 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
 
         <QuickNav />
 
-        <Card
-          style={{
-            borderRadius: "var(--theme-radius-xl)",
-            border: "1px solid var(--theme-border-primary)",
-            background: "var(--theme-bg-surface)",
-            boxShadow: "var(--theme-shadow-sm)",
-            transition: "all var(--theme-transition-base)",
-          }}
-          styles={{
-            body: {
-              padding: "24px",
-            },
-          }}
-        >
-          {children}
-        </Card>
+        {/* 正文直接落在奶油画布上，由各页面自行用 <Card> 组织白卡浮层
+            （与 ClassicLayout / HybridLayout 的视觉基线一致） */}
+        {children}
       </div>
     </div>
   );

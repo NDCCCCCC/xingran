@@ -3,17 +3,12 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, type FC } from "react";
-import { Modal, Table, Statistic, Card, Row, Col, Tag, Descriptions, Progress } from "antd";
+import { Modal, Table, Card, Row, Col, Tag, Descriptions, Progress } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
-import {
-  FileTextOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ClockCircleOutlined,
-} from "@ant-design/icons";
 import { listUsageLogs, getUsageSummary } from "@/api/apikey";
 import type { APIKeyUsageLog, UsageSummary } from "@/types/apikey";
 import { formatDateTime } from "@/utils/datetime";
+import { StatCards } from "@/components/shared";
 
 // ==================== 组件属性 ====================
 
@@ -232,81 +227,40 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
     >
       {summary && (
         <div style={{ marginBottom: 16 }}>
-          {/* 统计概览 */}
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="总请求数"
-                  value={summary.total_requests}
-                  prefix={<FileTextOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="成功率"
-                  value={(summary.success_rate * 100).toFixed(2)}
-                  suffix="%"
-                  styles={{
-                    content: {
-                      color:
-                        summary.success_rate >= 0.95
-                          ? "var(--theme-success)"
-                          : summary.success_rate >= 0.8
-                            ? "var(--theme-warning)"
-                            : "var(--theme-error)",
-                    },
-                  }}
-                  prefix={
-                    summary.success_rate >= 0.95 ? (
-                      <CheckCircleOutlined />
-                    ) : summary.success_rate >= 0.8 ? (
-                      <ClockCircleOutlined />
-                    ) : (
-                      <CloseCircleOutlined />
-                    )
-                  }
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="平均耗时"
-                  value={summary.avg_duration.toFixed(2)}
-                  suffix="ms"
-                  styles={{
-                    content: {
-                      color:
-                        summary.avg_duration < 100
-                          ? "var(--theme-success)"
-                          : summary.avg_duration < 500
-                            ? "var(--theme-warning)"
-                            : "var(--theme-error)",
-                    },
-                  }}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="错误数"
-                  value={
-                    summary.total_requests -
-                    Math.floor(summary.total_requests * summary.success_rate)
-                  }
-                  styles={{
-                    content: {
-                      color: "var(--theme-error)",
-                    },
-                  }}
-                />
-              </Card>
-            </Col>
-          </Row>
+          {/* 统计概览：统一走 <StatCards>，保持 Modal 结构 */}
+          <StatCards
+            style={{ marginBottom: 16 }}
+            items={[
+              { label: "总请求数", value: summary.total_requests },
+              {
+                label: "成功率",
+                value: `${(summary.success_rate * 100).toFixed(2)}%`,
+                tone:
+                  summary.success_rate >= 0.95
+                    ? "green"
+                    : summary.success_rate >= 0.8
+                      ? "gold"
+                      : "danger",
+              },
+              {
+                label: "平均耗时",
+                value: `${summary.avg_duration.toFixed(2)} ms`,
+                tone:
+                  summary.avg_duration < 100
+                    ? "green"
+                    : summary.avg_duration < 500
+                      ? "gold"
+                      : "danger",
+              },
+              {
+                label: "错误数",
+                value:
+                  summary.total_requests -
+                  Math.floor(summary.total_requests * summary.success_rate),
+                tone: "danger",
+              },
+            ]}
+          />
 
           {/* 详细统计 */}
           <Row gutter={16}>

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 修复建议 admin 页面 (Phase 46 R5)
  *
  * 内容:
@@ -17,7 +17,8 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Table, Form, Button, Space, Tag, Card, Row, Col, Statistic, App, Modal } from "antd";
+import { Table, Form, Button, Space, Tag, Card, App, Modal } from "antd";
+import { StatCards } from "@/components/shared";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -418,47 +419,24 @@ const FixSuggestion = () => {
   return (
     <div style={{ padding: 16 }}>
       {/* 5 KPI 卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="待处理"
-              value={stats?.pendingAll ?? stats?.pending ?? 0}
-              suffix="条"
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic title="7d 应用" value={stats?.applied ?? 0} suffix="条" />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="7d 回滚"
-              value={stats?.rolledBack ?? 0}
-              suffix="条"
-              valueStyle={{ color: stats?.rolledBack ? "red" : undefined }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="7d 误修复率"
-              value={((stats?.misFixRate ?? 0) * 100).toFixed(2)}
-              suffix="%"
-              valueStyle={{ color: stats?.thresholdBreached ? "red" : "green" }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic title="7d 拒绝" value={stats?.rejected ?? 0} suffix="条" />
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "待处理", value: stats?.pendingAll ?? stats?.pending ?? 0, trend: "条" },
+          { label: "7d 应用", value: stats?.applied ?? 0, trend: "条", tone: "green" },
+          {
+            label: "7d 回滚",
+            value: stats?.rolledBack ?? 0,
+            trend: "条",
+            tone: stats?.rolledBack ? "danger" : "default",
+          },
+          {
+            label: "7d 误修复率",
+            value: `${((stats?.misFixRate ?? 0) * 100).toFixed(2)}%`,
+            tone: stats?.thresholdBreached ? "danger" : "green",
+          },
+          { label: "7d 拒绝", value: stats?.rejected ?? 0, trend: "条" },
+        ]}
+      />
 
       {/* 筛选表单 */}
       <Card style={{ marginBottom: 16 }}>

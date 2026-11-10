@@ -1,18 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import {
-  Table,
-  Button,
-  Space,
-  Tag,
-  Modal,
-  Form,
-  message,
-  Statistic,
-  Row,
-  Col,
-  Tooltip,
-} from "antd";
+import { StatCards } from "@/components/shared";
+import { Table, Button, Space, Tag, Modal, Form, message, Tooltip } from "antd";
 // Phase 71 (W5)：裸 Input/TextArea → 契约组件。
 // 跳过项：<Input.Password>（成员表达式，不在 P65 selector 命中面）→ 保留 antd Input 导入。
 import { AppInput, AppTextArea } from "@/components/ui";
@@ -420,33 +409,16 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
   return (
     <div>
       {/* 统计卡片 */}
-      {stats && (
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={4}>
-            <Statistic title="账号总数" value={stats.total} />
-          </Col>
-          <Col span={4}>
-            <Statistic
-              title="可用"
-              value={stats.available}
-              valueStyle={{ color: "var(--theme-success)" }}
-            />
-          </Col>
-          <Col span={4}>
-            <Statistic title="已停用" value={stats.disabled} />
-          </Col>
-          <Col span={4}>
-            <Statistic
-              title="熔断中"
-              value={stats.circuitBroken}
-              valueStyle={{ color: "var(--theme-error)" }}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic title="当前活跃账号" value={stats.currentAccount || "无"} />
-          </Col>
-        </Row>
-      )}
+      <StatCards
+        show={!!stats}
+        items={[
+          { label: "账号总数", value: stats?.total ?? 0 },
+          { label: "可用", value: stats?.available ?? 0, tone: "green" },
+          { label: "已停用", value: stats?.disabled ?? 0, tone: "gray" },
+          { label: "熔断中", value: stats?.circuitBroken ?? 0, tone: "danger" },
+          { label: "当前活跃账号", value: stats?.currentAccount || "无" },
+        ]}
+      />
 
       <Space style={{ marginBottom: 16 }}>
         {/* 刷新是读入口（loadList / loadStats，不落库）→ **不门控** */}

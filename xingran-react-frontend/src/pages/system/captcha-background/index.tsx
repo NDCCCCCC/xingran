@@ -5,7 +5,7 @@
 
 import { useEffect } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Card, Row, Col, Statistic } from "antd";
+import { Table, Button, Space, Form } from "antd";
 // Phase 71 (W2)：裸 Input/Select → 契约组件。三处搜索下拉均为动态 children 固定枚举
 // → 改写 options 形态；形状/难度/状态均为业务禁搜枚举 → 显式 showSearch={false}
 import { AppInput, AppSelect } from "@/components/ui";
@@ -16,6 +16,7 @@ import { getCaptchaColumns } from "./columns";
 import { CaptchaUploadModal, CaptchaEditModal } from "./modals";
 import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
+import { StatCards } from "@/components/shared";
 
 const CaptchaBackgroundManagement: FC = () => {
   const [searchForm] = Form.useForm();
@@ -73,38 +74,15 @@ const CaptchaBackgroundManagement: FC = () => {
   return (
     <div>
       {/* 统计卡片 */}
-      {statistics && (
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={6}>
-            <Card>
-              <Statistic title="总数量" value={statistics.totalCount} />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="启用数量"
-                value={statistics.enabledCount}
-                styles={{ content: { color: "var(--theme-success)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="禁用数量"
-                value={statistics.disabledCount}
-                styles={{ content: { color: "var(--theme-error)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic title="总使用次数" value={statistics.totalUsage} />
-            </Card>
-          </Col>
-        </Row>
-      )}
+      <StatCards
+        show={!!statistics}
+        items={[
+          { label: "总数量", value: statistics?.totalCount ?? 0, tone: "default" },
+          { label: "启用数量", value: statistics?.enabledCount ?? 0, tone: "green" },
+          { label: "禁用数量", value: statistics?.disabledCount ?? 0, tone: "danger" },
+          { label: "总使用次数", value: statistics?.totalUsage ?? 0, tone: "default" },
+        ]}
+      />
 
       {/* 搜索表单 */}
       <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>

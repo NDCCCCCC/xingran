@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 例外规则 admin 页 (Phase 44 R3 / Plan 44-01 Task 6b)
  *
  * 内容:
@@ -21,7 +21,8 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { Table, Form, Button, Space, Tag, Card, App, Drawer, Statistic, Row, Col } from "antd";
+import { Table, Form, Button, Space, Tag, Card, App, Drawer } from "antd";
+import { StatCards } from "@/components/shared";
 import { AppInput, AppSelect } from "@/components/ui";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -334,47 +335,27 @@ const ExceptionRulesPage: React.FC = () => {
       <h2 style={{ marginBottom: 16 }}>例外规则管理</h2>
 
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="总规则数" value={stats.total} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="启用中"
-              value={stats.enabled}
-              styles={{ content: { color: "var(--theme-success)" } }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="已停用"
-              value={stats.disabled}
-              styles={{ content: { color: "var(--theme-text-secondary)" } }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Button
-              type="primary"
-              icon={<CameraOutlined />}
-              loading={baselineSnapshotMutation.isPending}
-              onClick={() => baselineSnapshotMutation.mutate()}
-              block
-            >
-              记录当前为基线
-            </Button>
-            <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)", marginTop: 8 }}>
-              降噪对比基准 (D-R3-A4-01)
-            </div>
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "总规则数", value: stats.total },
+          { label: "启用中", value: stats.enabled, tone: "green" },
+          { label: "已停用", value: stats.disabled, tone: "gray" },
+        ]}
+      />
+      <Card style={{ marginBottom: 16 }}>
+        <Button
+          type="primary"
+          icon={<CameraOutlined />}
+          loading={baselineSnapshotMutation.isPending}
+          onClick={() => baselineSnapshotMutation.mutate()}
+          block
+        >
+          记录当前为基线
+        </Button>
+        <div style={{ fontSize: 12, color: "var(--theme-text-tertiary)", marginTop: 8 }}>
+          降噪对比基准 (D-R3-A4-01)
+        </div>
+      </Card>
 
       {/* 筛选表单 */}
       <Card className="mb-4">

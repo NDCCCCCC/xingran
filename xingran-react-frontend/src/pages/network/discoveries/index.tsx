@@ -18,15 +18,8 @@
  */
 import { useCallback, useRef, useState } from "react";
 import type { FC } from "react";
-import { Button, Row, Col, Card, Statistic, App, Form } from "antd";
-import {
-  PlusOutlined,
-  EyeOutlined,
-  CloudServerOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-} from "@ant-design/icons";
+import { Button, App, Form } from "antd";
+import { PlusOutlined, EyeOutlined } from "@ant-design/icons";
 import { useDiscoveryData, useDiscoveryPolling } from "./hooks";
 import { getDiscoveryColumns } from "./columns";
 import { CreateModal, ResultModal } from "./modals";
@@ -38,7 +31,7 @@ import type { FormInstance } from "antd/es/form";
 import type { PageResponse } from "@/types";
 import type { DeviceDiscovery } from "@/types";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, useActionPermission } from "@/components/shared";
+import { BatchExportModal, useActionPermission, StatCards } from "@/components/shared";
 import { PageTable } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
@@ -281,62 +274,16 @@ const DeviceDiscoveryPage: FC = () => {
         }
       >
         {() => (
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={4}>
-              <Card>
-                <Statistic
-                  title="任务总数"
-                  value={statistics.total}
-                  prefix={<CloudServerOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={4}>
-              <Card>
-                <Statistic
-                  title="待执行"
-                  value={statistics.pending}
-                  styles={{ content: { color: "var(--theme-text-tertiary)" } }}
-                  prefix={<ClockCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={4}>
-              <Card>
-                <Statistic
-                  title="扫描中"
-                  value={statistics.running}
-                  styles={{ content: { color: "var(--theme-info)" } }}
-                  prefix={<CloudServerOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={4}>
-              <Card>
-                <Statistic
-                  title="已完成"
-                  value={statistics.completed}
-                  styles={{ content: { color: "var(--theme-success)" } }}
-                  prefix={<CheckCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={4}>
-              <Card>
-                <Statistic
-                  title="失败"
-                  value={statistics.failed}
-                  styles={{ content: { color: "var(--theme-error)" } }}
-                  prefix={<CloseCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={4}>
-              <Card>
-                <Statistic title="发现设备" value={statistics.totalDevices} />
-              </Card>
-            </Col>
-          </Row>
+          <StatCards
+            items={[
+              { label: "任务总数", value: statistics.total, tone: "default" },
+              { label: "待执行", value: statistics.pending, tone: "default" },
+              { label: "扫描中", value: statistics.running, tone: "default" },
+              { label: "已完成", value: statistics.completed, tone: "green" },
+              { label: "失败", value: statistics.failed, tone: "danger" },
+              { label: "发现设备", value: statistics.totalDevices, tone: "default" },
+            ]}
+          />
         )}
       </PageTable>
 

@@ -4,15 +4,10 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, type FC } from "react";
-import { Card, Table, Button, Space, Modal, Form, Switch, Row, Col, Statistic, Drawer } from "antd";
+import { Card, Table, Button, Space, Modal, Form, Switch, Row, Col, Drawer } from "antd";
 // Phase 71 (W1)：裸 Input/Select/TextArea → 契约组件
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
-import {
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  ClockCircleOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 
 import { STATUS_OPTIONS, DEFAULT_FORM_VALUES, DEFAULT_SEARCH_FORM } from "./constants";
 import { getJobColumns, getJobLogColumns } from "./columns";
@@ -21,7 +16,7 @@ import CronSelector from "@/components/CronSelector";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
-import { ErrorAlertWithRetry } from "@/components/shared";
+import { ErrorAlertWithRetry, StatCards } from "@/components/shared";
 import type { JobInfo, JobLog } from "./types";
 
 // ==================== 主组件 ====================
@@ -357,37 +352,14 @@ const JobManager: FC = () => {
           </Space>
         }
       >
-        <div className="mb-4">
-          <Row gutter={16}>
-            <Col span={8}>
-              <Card size="small">
-                <Statistic
-                  title="总执行次数"
-                  value={jobLogStats.total}
-                  prefix={<ClockCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card size="small">
-                <Statistic
-                  title="成功次数"
-                  value={jobLogStats.success}
-                  styles={{ content: { color: "var(--theme-success)" } }}
-                />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card size="small">
-                <Statistic
-                  title="失败次数"
-                  value={jobLogStats.fail}
-                  styles={{ content: { color: "var(--theme-error)" } }}
-                />
-              </Card>
-            </Col>
-          </Row>
-        </div>
+        <StatCards
+          className="mb-4"
+          items={[
+            { label: "总执行次数", value: jobLogStats.total },
+            { label: "成功次数", value: jobLogStats.success, tone: "green" },
+            { label: "失败次数", value: jobLogStats.fail, tone: "danger" },
+          ]}
+        />
 
         <Table
           columns={jobLogColumns}

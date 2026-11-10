@@ -1,24 +1,25 @@
 /**
  * Dashboard Edit Page 样式
+ *
+ * UI 统一整改：选择器与 edit.tsx 的 className（dashboard-edit / dashboard-edit__content）
+ * 对齐；去掉自造整页底色 #f5f5f5 与 height:100vh，正文透出全局奶油画布，
+ * 与 ClassicLayout / HybridLayout 的「奶油画布 + 白卡浮层」基线一致。
  */
 
-.dashboard-edit-page {
+.dashboard-edit {
   display: flex;
   flex-direction: column;
-  height: 100vh;
 }
 
-.dashboard-edit-page.loading,
-.dashboard-edit-page.empty {
+.dashboard-edit.loading,
+.dashboard-edit.empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 400px;
 }
 
-.dashboard-edit-page__content {
+.dashboard-edit__content {
   flex: 1;
   overflow: auto;
-  padding: 16px;
-  background: #f5f5f5;
 }

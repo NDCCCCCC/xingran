@@ -62,7 +62,14 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
   // 空态(/gsd-fast: 同步压成单行内联,去掉 Card 标题/Empty 图标撑出的空白)
   if (data.healthScore.total === 0) {
     return (
-      <div style={{ padding: "4px 8px", marginBottom: 8, fontSize: 12, color: "#999" }}>
+      <div
+        style={{
+          padding: "4px 8px",
+          marginBottom: 8,
+          fontSize: 12,
+          color: "var(--theme-text-tertiary)",
+        }}
+      >
         对账健康度:该工位暂无关联资产。
       </div>
     );
@@ -82,12 +89,15 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
         padding: "4px 8px",
         marginBottom: 8,
         fontSize: 12,
-        color: "#666",
+        color: "var(--theme-text-secondary)",
       }}
     >
       <span style={{ color: scoreColor, fontWeight: 700, fontSize: 16 }}>
         {healthScore.score}
-        <span style={{ fontSize: 11, color: "#999", fontWeight: 400 }}> /100</span>
+        <span style={{ fontSize: 11, color: "var(--theme-text-tertiary)", fontWeight: 400 }}>
+          {" "}
+          /100
+        </span>
       </span>
       <span>
         正常 {healthScore.normal} · 漂移 {healthScore.drift} · 冲突 {healthScore.conflict}

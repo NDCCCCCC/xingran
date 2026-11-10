@@ -181,8 +181,8 @@ const TaskManagement: FC = () => {
   );
 
   return (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
-      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
+    <Layout style={{ background: "transparent" }}>
+      <Content style={{ padding: 0, background: "transparent" }}>
         <Card style={{ marginBottom: 16 }}>
           <div
             style={{

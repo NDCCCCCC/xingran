@@ -6,9 +6,6 @@ import {
   Form,
   InputNumber,
   Card,
-  Row,
-  Col,
-  Statistic,
   Tag,
   Layout,
   Drawer,
@@ -22,7 +19,6 @@ import {
   SearchOutlined,
   ReloadOutlined,
   DeleteOutlined,
-  AppleOutlined,
   ApartmentOutlined,
 } from "@ant-design/icons";
 import type { DeviceMACAddress, NetworkDevice } from "@/types";
@@ -38,7 +34,7 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal, confirmDelete } from "@/components/shared";
+import { BatchExportModal, confirmDelete, StatCards } from "@/components/shared";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { MACEventsTimeline } from "@/components/network";
 import { MAC_TYPE_TAG_CONFIG } from "@/constants/status";
@@ -324,12 +320,12 @@ const MACAddressPage: FC = () => {
       {/* 桌面端:左侧部门树常驻(2026-06-30 quick,与 workstations 同款 DeptSidebar) */}
       {!isMobile && (
         <DeptSidebar
-          width={240}
+          width={250}
           selectedDeptId={selectedDeptId}
           onSelect={handleDeptChangeWithUrl}
         />
       )}
-      <Content style={{ background: "var(--theme-bg-elevated)", padding: isMobile ? 12 : 24 }}>
+      <Content style={{ padding: 0, background: "transparent" }}>
         {/* 移动端:Dept tree 折叠进 Drawer,通过按钮触发(与 workstations 同步) */}
         {isMobile && (
           <div style={{ marginBottom: 16 }}>
@@ -360,40 +356,29 @@ const MACAddressPage: FC = () => {
           </div>
         )}
         {/* 统计卡片 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={6}>
-            <Card>
-              <Statistic title="MAC地址总数" value={statistics.total} prefix={<AppleOutlined />} />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="动态MAC"
-                value={statistics.dynamic}
-                styles={{ content: { color: "var(--theme-info)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="静态MAC"
-                value={statistics.static}
-                styles={{ content: { color: "var(--theme-success)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="安全MAC"
-                value={statistics.secure}
-                styles={{ content: { color: "var(--theme-warning)" } }}
-              />
-            </Card>
-          </Col>
-        </Row>
+        <StatCards
+          items={[
+            { label: "MAC地址总数", value: statistics.total, trend: "全部 MAC 记录", ratio: 1 },
+            {
+              label: "动态MAC",
+              value: statistics.dynamic,
+              tone: "default",
+              ratio: statistics.total ? statistics.dynamic / statistics.total : 0,
+            },
+            {
+              label: "静态MAC",
+              value: statistics.static,
+              tone: "green",
+              ratio: statistics.total ? statistics.static / statistics.total : 0,
+            },
+            {
+              label: "安全MAC",
+              value: statistics.secure,
+              tone: "gold",
+              ratio: statistics.total ? statistics.secure / statistics.total : 0,
+            },
+          ]}
+        />
 
         {/* 搜索表单和操作按钮 */}
         <Card style={{ marginBottom: 16 }}>

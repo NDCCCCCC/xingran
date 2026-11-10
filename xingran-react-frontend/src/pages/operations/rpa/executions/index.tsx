@@ -4,8 +4,8 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Card, Tag, Layout } from "antd";
-import { SearchOutlined, ReloadOutlined, FilterOutlined } from "@ant-design/icons";
+import { Table, Button, Space, Form, Card, Layout } from "antd";
+import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Execution } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
 import { useTableManager } from "@/hooks/useTableManager";
@@ -19,6 +19,7 @@ import { post } from "@/lib/api";
 // Phase 71 (W3)：裸 Input/Select → 契约组件。
 // 执行状态为固定枚举（业务禁搜）→ children 改写 options + showSearch={false}。
 import { AppInput, AppSelect } from "@/components/ui";
+import { StatCards } from "@/components/shared";
 
 const { Content } = Layout;
 
@@ -147,8 +148,8 @@ const ExecutionManagement: FC = () => {
   );
 
   return (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
-      <Content style={{ background: "var(--theme-bg-surface)", padding: 16 }}>
+    <Layout style={{ background: "transparent" }}>
+      <Content style={{ padding: 0, background: "transparent" }}>
         <Card style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -191,20 +192,19 @@ const ExecutionManagement: FC = () => {
           </div>
 
           {/* 统计信息 */}
-          <Space
+          <StatCards
             style={{
               marginTop: 12,
               paddingTop: 12,
               borderTop: "1px solid var(--theme-border-primary)",
             }}
-          >
-            <Tag icon={<FilterOutlined />} color="blue">
-              总计: {statistics.total}
-            </Tag>
-            <Tag color="processing">运行中: {statistics.running}</Tag>
-            <Tag color="success">成功: {statistics.success}</Tag>
-            <Tag color="error">失败: {statistics.failed}</Tag>
-          </Space>
+            items={[
+              { label: "总计", value: statistics.total, tone: "default" },
+              { label: "运行中", value: statistics.running, tone: "default" },
+              { label: "成功", value: statistics.success, tone: "green" },
+              { label: "失败", value: statistics.failed, tone: "danger" },
+            ]}
+          />
         </Card>
 
         <Card>

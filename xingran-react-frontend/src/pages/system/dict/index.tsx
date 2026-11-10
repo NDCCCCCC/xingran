@@ -6,29 +6,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type FC, type Key } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Tabs,
-  InputNumber,
-  Switch,
-  Alert,
-} from "antd";
+import { Table, Button, Space, Modal, Form, Card, Tabs, InputNumber, Switch, Alert } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  CheckCircleOutlined,
-  StopOutlined,
   LinkOutlined,
 } from "@ant-design/icons";
 // Phase 71 (W2)：裸 Input/Select/TextArea → 契约组件。状态枚举与字典类型选择均为
@@ -41,6 +25,7 @@ import { formatDateTime } from "@/utils/datetime";
 import type { DictType, DictData } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { confirmDelete } from "@/components/shared/confirmDelete";
+import { StatCards } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import type { SortOrder } from "@/hooks/useServerSort";
@@ -506,39 +491,14 @@ const DictManagement: FC = () => {
             children: (
               <>
                 {/* 统计卡片 */}
-                {typeStatistics.total > 10 && (
-                  <Row gutter={16} style={{ marginBottom: 16 }}>
-                    <Col span={8}>
-                      <Card>
-                        <Statistic
-                          title="总类型数"
-                          value={typeStatistics.total}
-                          prefix={<CheckCircleOutlined />}
-                        />
-                      </Card>
-                    </Col>
-                    <Col span={8}>
-                      <Card>
-                        <Statistic
-                          title="正常类型"
-                          value={typeStatistics.active}
-                          styles={{ content: { color: "var(--theme-success)" } }}
-                          prefix={<CheckCircleOutlined />}
-                        />
-                      </Card>
-                    </Col>
-                    <Col span={8}>
-                      <Card>
-                        <Statistic
-                          title="停用类型"
-                          value={typeStatistics.inactive}
-                          styles={{ content: { color: "var(--theme-error)" } }}
-                          prefix={<StopOutlined />}
-                        />
-                      </Card>
-                    </Col>
-                  </Row>
-                )}
+                <StatCards
+                  show={typeStatistics.total > 10}
+                  items={[
+                    { label: "总类型数", value: typeStatistics.total, tone: "default" },
+                    { label: "正常类型", value: typeStatistics.active, tone: "green" },
+                    { label: "停用类型", value: typeStatistics.inactive, tone: "danger" },
+                  ]}
+                />
 
                 {/* 搜索表单和操作按钮 */}
                 <Card style={{ marginBottom: 16 }}>
@@ -668,39 +628,14 @@ const DictManagement: FC = () => {
             children: (
               <>
                 {/* 统计卡片 */}
-                {dataStatistics.total > 10 && (
-                  <Row gutter={16} style={{ marginBottom: 16 }}>
-                    <Col span={8}>
-                      <Card>
-                        <Statistic
-                          title="总数据数"
-                          value={dataStatistics.total}
-                          prefix={<CheckCircleOutlined />}
-                        />
-                      </Card>
-                    </Col>
-                    <Col span={8}>
-                      <Card>
-                        <Statistic
-                          title="正常数据"
-                          value={dataStatistics.active}
-                          styles={{ content: { color: "var(--theme-success)" } }}
-                          prefix={<CheckCircleOutlined />}
-                        />
-                      </Card>
-                    </Col>
-                    <Col span={8}>
-                      <Card>
-                        <Statistic
-                          title="停用数据"
-                          value={dataStatistics.inactive}
-                          styles={{ content: { color: "var(--theme-error)" } }}
-                          prefix={<StopOutlined />}
-                        />
-                      </Card>
-                    </Col>
-                  </Row>
-                )}
+                <StatCards
+                  show={dataStatistics.total > 10}
+                  items={[
+                    { label: "总数据数", value: dataStatistics.total, tone: "default" },
+                    { label: "正常数据", value: dataStatistics.active, tone: "green" },
+                    { label: "停用数据", value: dataStatistics.inactive, tone: "danger" },
+                  ]}
+                />
 
                 {/* 搜索表单和操作按钮 */}
                 <Card style={{ marginBottom: 16 }}>

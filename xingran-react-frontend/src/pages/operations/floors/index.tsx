@@ -549,7 +549,7 @@ const FloorManagement: FC = () => {
   );
 
   const renderListView = () => (
-    <Layout style={{ background: "var(--theme-bg-secondary)", minHeight: "calc(100vh - 64px)" }}>
+    <Layout style={{ background: "transparent" }}>
       <DeptSidebar
         selectedDeptId={selectedDeptId}
         onSelect={(keys, info) => {
@@ -558,7 +558,7 @@ const FloorManagement: FC = () => {
           handleDeptSelectWithBuildingLoad(deptId);
         }}
       />
-      <Content style={{ background: "#fff" }}>
+      <Content style={{ padding: 0, background: "transparent" }}>
         <StatisticsCards
           show={total > 10}
           items={[

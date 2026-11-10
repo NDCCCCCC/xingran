@@ -66,11 +66,11 @@ describe("WeeklyView", () => {
     expect(baseElement.innerHTML).toContain("2026年08月29日");
   });
 
-  it("今天高亮(用真实今天所在周, rgb 色值)", () => {
+  it("今天高亮(用真实今天所在周, 主题变量)", () => {
     const today = dayjs().startOf("week");
     const { baseElement } = wrap(<WeeklyView currentWeekStart={today} weeklyDutyData={{}} />);
-    // jsdom 将 hex 转为 rgb
-    expect(baseElement.innerHTML).toContain("rgb(230, 247, 255)");
+    // 裸 hex → 主题变量（与 duty/schedules 今日高亮口径一致）
+    expect(baseElement.innerHTML).toContain("var(--theme-primary-lighter)");
   });
 
   it("holiday 类型成员渲染", () => {

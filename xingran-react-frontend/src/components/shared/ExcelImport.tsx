@@ -231,6 +231,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
     >
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <Alert
+          className="excel-import-notice"
           title="导入说明"
           description={
             <div>

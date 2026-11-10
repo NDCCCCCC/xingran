@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { App, Card, Row, Col, Statistic, Button, Table, Tag } from "antd";
+import { App, Card, Button, Table, Tag } from "antd";
 import { ReloadOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
 import { createSorter } from "@/utils/tableHelpers";
+import { StatCards } from "@/components/shared";
 
 interface SyncStatus {
   enabled: boolean;
@@ -140,46 +141,28 @@ const SyncMonitor: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="映射总数" value={status?.totalMappings || 0} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="活跃映射"
-              value={status?.activeMappings || 0}
-              valueStyle={{ color: "var(--theme-success)" }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="同步状态"
-              value={status?.enabled ? "已启用" : "已禁用"}
-              valueStyle={{
-                color: status?.enabled ? "var(--theme-success)" : "var(--theme-error)",
-              }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Button
-              type="primary"
-              icon={<PlayCircleOutlined />}
-              onClick={handleSync}
-              loading={syncing}
-              size="large"
-            >
-              手动同步
-            </Button>
-          </Card>
-        </Col>
-      </Row>
+      <StatCards
+        items={[
+          { label: "映射总数", value: status?.totalMappings || 0 },
+          { label: "活跃映射", value: status?.activeMappings || 0, tone: "green" },
+          {
+            label: "同步状态",
+            value: status?.enabled ? "已启用" : "已禁用",
+            tone: status?.enabled ? "green" : "danger",
+          },
+        ]}
+      />
+      <div style={{ marginBottom: 16, marginTop: 12 }}>
+        <Button
+          type="primary"
+          icon={<PlayCircleOutlined />}
+          onClick={handleSync}
+          loading={syncing}
+          size="large"
+        >
+          手动同步
+        </Button>
+      </div>
 
       <Card
         title="同步历史"
