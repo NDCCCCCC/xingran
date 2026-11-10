@@ -104,6 +104,37 @@ func TestB3_OIDMissFallsBackToVendorBaselineOrDefault(t *testing.T) {
 	assert.Equal(t, "exact speed %s", profOld.SpeedCommand)
 }
 
+func TestB3_OIDHelperEdgeCases(t *testing.T) {
+	// normalizeOID：空串 / 前导点 / 空白
+	assert.Equal(t, "", normalizeOID(""))
+	assert.Equal(t, "1.3.6", normalizeOID("  .1.3.6  "))
+	// modelKeyMatches：OID 空 + model 空 → 不命中
+	ok, by := modelKeyMatches([]string{"s8700"}, []string{"1.3.6.1.4.1"}, "", "")
+	assert.False(t, ok)
+	assert.Equal(t, MatchedByNone, by)
+	// oidMatches：最长前缀优先（两个前缀都命中时取更长的）
+	matched, by2, plen := oidMatches(
+		[]string{"1.3.6.", "1.3.6.1.4.1."},
+		"1.3.6.1.4.1.2011.2.23")
+	assert.True(t, matched)
+	assert.Equal(t, MatchedByOIDPrefix, by2)
+	assert.Equal(t, len("1.3.6.1.4.1"), plen)
+	// oidMatches：空 OID 列表 / 空输入 → 不命中
+	_, by3, _ := oidMatches(nil, "1.3.6")
+	assert.Equal(t, MatchedByNone, by3)
+	_, by4, _ := oidMatches([]string{"1.3.6"}, "")
+	assert.Equal(t, MatchedByNone, by4)
+	// modelKeyMatches：OID 未命中但 Model 子串命中 → Model 兜底
+	ok5, by5 := modelKeyMatches([]string{"ce6800"}, []string{"9.9.9"}, "CE6800-48S", "8.8.8.8")
+	assert.True(t, ok5)
+	assert.Equal(t, MatchedByModelSubstr, by5)
+	// MatchKey 结构（供审计/诊断使用）字段可读
+	key := MatchKey{Vendor: "huawei", Model: "S8700", SysObjectID: "1.3.6"}
+	assert.Equal(t, "huawei", key.Vendor)
+	assert.Equal(t, "S8700", key.Model)
+	assert.Equal(t, "1.3.6", key.SysObjectID)
+}
+
 func TestB3_CheckPhysicalSupportWithOID_KeepsEvidenceDiscipline(t *testing.T) {
 	vendor := models.VendorHuawei
 	withPhysicalEntry(t, vendor, b3Entry())

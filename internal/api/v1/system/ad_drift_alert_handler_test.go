@@ -260,4 +260,22 @@ func TestB1_Handler_MarkLogRead(t *testing.T) {
 	// 5) 不存在的 logId → 400
 	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": "no-such-log"}, "reader-1")
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 6) 空 logId → 400（ShouldBindJSON 成功但字段为空）
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": ""}, "reader-1")
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 7) 损坏 JSON（jsonResult 非法）→ 400（无关联通知分支）
+	jrBad := `not-json`
+	badRow := &models.OperLog{Title: "AD 同步漂移告警", Method: addomain.DriftAlertTriggerLogMethod, JsonResult: &jrBad}
+	require.NoError(t, db.Create(badRow).Error)
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": badRow.ID}, "reader-1")
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 8) MarkNoticeRead 写表失败 → 500（删掉 sys_notice_read 让 Create 返回 error）
+	require.NoError(t, db.Migrator().DropTable(&models.NoticeRead{}))
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": logRow.ID}, "reader-2")
+	assert.Equal(t, http.StatusBadRequest, w.Code, "int-first-arg quirk：名义 500 实落 400")
+	// 失败分支不得记 operlog（成功 2 次：首次 + 幂等）
+	assert.Len(t, rec.snapshot(), 2, "只有 2 次成功路径（含幂等）记录 operlog")
 }
