@@ -1,8 +1,9 @@
 ---
-doc_type: v1.56 里程碑草案（待产品/架构拍板后转正式立项）
+doc_type: v1.56 里程碑草案（部分 Phase 已由 quick 261110-f5g 执行）
 created: 2026-11-10
+updated: 2026-11-10
 created_by: quick 261110-161（用户裁定 B-2 / B-3 按推荐立里程碑）
-status: draft / 未立项 / 不含任何代码改动
+status: draft / 未正式立项 / 152+154 已执行，153 用户裁定暂缓，155 可选
 scope: B 类中型改动 4 项（B-2 路线 B / B-3 OID / B-1 前端补齐 / B-4 批量自动回滚〔可选〕）
 ---
 
@@ -26,12 +27,12 @@ scope: B 类中型改动 4 项（B-2 路线 B / B-3 OID / B-1 前端补齐 / B-4
 
 ## 1. 候选 Phase 与 REQ 骨架（编号自 152 续编，v1.55 止于 151）
 
-| Phase | 主题 | REQ 草案 | 关键决策点（立项前必须拍板） |
+| Phase | 主题 | REQ 草案 | 状态 / 关键决策点 |
 |---|---|---|---|
-| 152 | B-1 前端契约对齐 + 告警已读 UI | BALRT-01~03 | ① 页面语义确认为「按用户已读」（后端已按此实现）② 前端 `ADDriftTriggerLog` 改为后端 `DriftAlertTriggerLog` 真实字段（id/title/method/operTime/jsonResult/status/noticeId/isRead）③ 删除前端未实现的 startTime/endTime/status 筛选与 `webhookTemplate` 配置项，或补后端 ④ 已读列/标记按钮/未读筛选的交互与权限门控 |
-| 153 | B-2 企微/钉钉路线 B | BWEBHOOK-01~05 | ① 平台范围（企微/钉钉/飞书/可扩展 provider）② 配置落点（推荐 `sys_api_notification_config` 增 Platform/SignSecret/SignMode/MsgType 列，Platform 空 = 路线 A 零回归）③ 消息体渲染责任（整段 JSON 模板需结构化替换+转义 vs 只填 markdown text 由代码包 msgtype 外壳）④ 加签每次重发重算、timestamp 秒/毫秒 ⑤ `SendWithDefaultConfig` 同类型多平台区分 ⑥ sign_secret 列入 mask/RecordWithBody 关键词 |
-| 154 | B-3 `sys_object_id` 落库 + 匹配键改造 | BOID-01~06 | ① 落哪张表（`sys_network_device` / 同时 `sys_device_discovery_result`）、存量回填策略 ② 采集链补齐（修 `ScanDevice` 透传 vs `snmpProbe` 增一次 Get）③ **核心**：匹配键 =「SysObjectID 精确/前缀优先 + Model 子串兜底」（推荐）/ 只落库不改匹配 / 只用 OID ④ 规则仍留 Go 常量（不落规则库）⑤ `Evidence` 空串=未取证口径不受 OID 命中影响 ⑥ 存量无 OID 行 Model 兜底零回归 |
-| 155 | B-4 批量物理参数自动回滚（**可选**） | BROLLBACK-01~04 | ① 范围（只物理批量 / 所有批量写纳入 PORTW-04）② 逆命令可得性（三家 `undo speed`/`speed auto`、MTU 默认值、`speedMode=auto` 无单一逆命令）③ 原值来源（扩 before_state/audit vs 读 running-config 解析）④ 失败判定（fail-fast 后回滚整批已成功 / 只回滚失败端口）⑤ 回滚自身失败状态与 operlog/审批口径 ⑥ **必须先有真机逐厂商逆命令取证 + 失败注入测试**，否则「假回滚成功」比显式警示更危险 |
+| 152 | B-1 前端契约对齐 + 告警已读 UI | BALRT-01~03 | ✅ **已执行（quick 261110-f5g）**：logs 契约对齐（8 字段）、删假筛选、已读列 + rowActions + onMarkRead 刷新、第 6 个 API `markTriggerLogRead`、trigger 返回 `{message}` 对齐；type-check / vitest 28 用例 / lint:ci ALL PASS。**剩余后续项**：config 契约形状（后端 `map[string]string` 9-key ↔ 前端 camelCase 对象 + `webhookTemplate` 死控件 + `updateConfig` 会 400）——真实但独立，留 152 后续单独修（不伪造本轮已覆盖）。 |
+| 153 | B-2 企微/钉钉路线 B | BWEBHOOK-01~05 | ⏸ **用户 2026-11-10 裁定「企微钉钉等平台先不管」→ 暂缓**，不立项、不执行。决策点保留备查：① 平台范围 ② 配置落点 ③ 消息体渲染 ④ 加签每次重发重算 ⑤ 默认配置区分 ⑥ sign_secret 脱敏。 |
+| 154 | B-3 `sys_object_id` 落库 + 匹配键改造 | BOID-01~06 | ✅ **已执行（quick 261110-f5g）**：`sys_network_device` + `sys_device_discovery_result` 加可空列 + migration 239（双方言幂等、两处注册、不回填）；SNMP 采集链统一转换 + 3 处透传 + 两条落库路径；`MatchKey` 机制（OID 精确 > 最长前缀 > Model 子串 > 基线）+ variadic 兼容旧签名（旧测试零改动）；OID 不进 Evidence；机制测试含红绿守护。前端展示列按报告判定可省，未做。 |
+| 155 | B-4 批量物理参数自动回滚（**可选**） | BROLLBACK-01~04 | ⏸ 按推荐**不做自动回滚本体**（quick 261110-161 已补诚实性短板：警示文案去误导 + before_value 边界声明）。若产品坚持，决策点保留：① 范围 ② 逆命令可得性 ③ 原值来源 ④ 失败判定 ⑤ 回滚失败状态/审批 ⑥ **必须先有真机逐厂商逆命令取证 + 失败注入测试**。 |
 
 ## 2. 全局硬约束（继承 CLAUDE.md / AGENTS.md）
 
