@@ -126,13 +126,7 @@ vi.mock("../components/StatusCards", () => ({
   default: () => <div data-testid="status-cards">状态卡</div>,
 }));
 vi.mock("../components/TriggerLogTable", () => ({
-  default: ({
-    refreshToken,
-    onMarkRead,
-  }: {
-    refreshToken: number;
-    onMarkRead?: () => void;
-  }) => (
+  default: ({ refreshToken, onMarkRead }: { refreshToken: number; onMarkRead?: () => void }) => (
     <div data-testid="trigger-log-table">
       日志表 refreshToken={refreshToken}
       <button type="button" aria-label="模拟标记已读" onClick={() => onMarkRead?.()} />

@@ -31,9 +31,15 @@ const h = vi.hoisted(() => {
     request: null as null | ((p: Record<string, unknown>) => Promise<unknown>),
     emptyAction: null as ReactNode,
     extraFilters: null as Record<string, unknown> | null,
-    rowActions: null as null | ((r: unknown) => Array<{
-      key: string; label: string; disabled?: boolean; permission?: string; onClick?: () => void;
-    }>),
+    rowActions: null as
+      | null
+      | ((r: unknown) => Array<{
+          key: string;
+          label: string;
+          disabled?: boolean;
+          permission?: string;
+          onClick?: () => void;
+        }>),
   };
   return {
     listTriggerLogs,
@@ -78,7 +84,11 @@ vi.mock("@/components/shared/PageTable", () => ({
     emptyAction: ReactNode;
     extraFilters: Record<string, unknown>;
     rowActions?: (r: unknown) => Array<{
-      key: string; label: string; disabled?: boolean; permission?: string; onClick?: () => void;
+      key: string;
+      label: string;
+      disabled?: boolean;
+      permission?: string;
+      onClick?: () => void;
     }>;
   }): ReactElement => {
     h.pageTableProps.columns = props.columns;
@@ -232,7 +242,8 @@ describe("AD 漂移告警子组件（v1.55 diff-coverage 补测）", () => {
     title: "AD 同步漂移告警",
     method: "ADSyncDriftAlertService.CheckAndAlert",
     operTime: "2026-11-09 10:00:00",
-    jsonResult: "{\"memberCount\":18,\"distinctGroups\":4,\"memberDelta\":-2,\"groupDelta\":0,\"noticeId\":\"n-1\"}",
+    jsonResult:
+      '{"memberCount":18,"distinctGroups":4,"memberDelta":-2,"groupDelta":0,"noticeId":"n-1"}',
     status: 0,
     noticeId: "n-1",
     isRead: false,
@@ -278,9 +289,9 @@ describe("AD 漂移告警子组件（v1.55 diff-coverage 补测）", () => {
     // 成员数 / 组数 与漂移量：从 jsonResult 解析（损坏 JSON 软降级）
     expect(render("成员数 / 组数", undefined as never, logFixture as never)).toBe("18 / 4");
     expect(render("漂移量（成员 / 组）", undefined as never, logFixture as never)).toBe("-2 / 0");
-    expect(
-      render("成员数 / 组数", undefined as never, { jsonResult: "not-json" } as never)
-    ).toBe("- / -");
+    expect(render("成员数 / 组数", undefined as never, { jsonResult: "not-json" } as never)).toBe(
+      "- / -"
+    );
     // 日志状态（0 成功 / 1 失败）
     expect(render("日志状态", 0 as never)).toBeTruthy();
     expect(render("日志状态", 1 as never)).toBeTruthy();
