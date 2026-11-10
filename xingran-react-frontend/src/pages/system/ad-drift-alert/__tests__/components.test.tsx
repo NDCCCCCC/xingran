@@ -129,7 +129,6 @@ const configFixture = {
   wsEnabled: true,
   webhookEnabled: false,
   webhookConfigId: "cfg-1",
-  webhookTemplate: "tpl",
   baseline: "20,4",
 };
 
@@ -190,9 +189,10 @@ describe("AD 漂移告警子组件（v1.55 diff-coverage 补测）", () => {
     expect(screen.getByText("站内通知（铃铛）")).toBeTruthy();
     expect(screen.getByText("WS 实时推送")).toBeTruthy();
     expect(screen.getByText("Webhook 推送")).toBeTruthy();
-    expect(screen.getByText("Webhook 模板（可选）")).toBeTruthy();
     expect(screen.getByText("当前基线（只读）")).toBeTruthy();
     expect(screen.getByLabelText("当前基线")).toHaveProperty("value", "20,4");
+    // quick 261110-jci：webhookTemplate 是后端不存在的死控件，已删除
+    expect(screen.queryByText("Webhook 模板（可选）")).toBeNull();
     expect(screen.getByText("保存配置")).toBeTruthy();
   });
 
@@ -215,6 +215,8 @@ describe("AD 漂移告警子组件（v1.55 diff-coverage 补测）", () => {
     const payload = h.updateConfig.mock.calls[0][0];
     expect(payload.baseline).toBe("20,4");
     expect(payload.webhookConfigId).toBe("cfg-1");
+    // quick 261110-jci：组件只交 camelCase 表单对象给 api 层，死字段已删
+    expect(payload).not.toHaveProperty("webhookTemplate");
     await waitFor(() => expect(h.handleSuccess).toHaveBeenCalledWith("保存配置"));
     expect(onSaved).toHaveBeenCalled();
   });
