@@ -15,8 +15,12 @@ package operations
 
 import (
 	"context"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -75,6 +79,61 @@ func TestDialect148_SourceFilesNoDialectTokens(t *testing.T) {
 		"两处 CTE 必须改为共享 recallPhysicalRows")
 	assert.NotContains(t, files["workstation_device_service.go"], "WITH workstation_ports",
 		"两处 PG 专属 CTE 必须整体删除")
+}
+
+// B-6 / quick 261110-161：把静态断言的扫描面从 3 个改造文件扩到本包
+// （operations，非 forbidigo 白名单域）所有生产 .go 文件的**字符串字面量**。
+//
+// 设计取舍（实证：全仓 976 处方言命中，多数是迁移归档 SQL / 日志 / 测试夹具 /
+// 合法注释，如 excel_query_builder.go 注释「避免 PostgreSQL 专有 DISTINCT ON」）：
+//   - 用 go/parser 只取 ast.BasicLit(token.STRING)，天然跳过注释里的合法说明；
+//   - 跳过 _test.go（PG contract 夹具、方言反例测试含合法方言字符串）；
+//   - 跳过 3 个已由 TestDialect148_SourceFilesNoDialectTokens 严格全源码扫描的文件；
+//   - 只扫字符串字面量里的方言 token，新增 raw SQL 方言片段必红，合法注释不误伤。
+//
+// 与 forbidigo 的分工不变：forbidigo 守「标识符/选择器调用名」形态，本断言守
+// 「SQL 字符串」形态，两层互补（148-SUMMARY.md §4 能力边界如实登记）。
+var dialect148StringTokenRE = regexp.MustCompile(
+	`(?i)::text|::uuid|::\w+|DISTINCT\s+ON|REGEXP_REPLACE|NULLS\s+LAST|\bILIKE\b|ON\s+CONFLICT`)
+
+func TestB6_OperationsProdFilesNoDialectSQLStrings(t *testing.T) {
+	strict := map[string]bool{
+		"excel_export_config.go":        true,
+		"excel_export_service.go":       true,
+		"workstation_device_service.go": true,
+	}
+	entries, err := os.ReadDir(".")
+	require.NoError(t, err, "读取本包目录失败（测试须在本包目录执行）")
+	scanned := 0
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".go") ||
+			strings.HasSuffix(name, "_test.go") || strict[name] {
+			continue
+		}
+		src, err := os.ReadFile(name)
+		require.NoError(t, err, "读取 %s 失败", name)
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, name, src, 0)
+		if err != nil {
+			// 非 Go 语法（如 build tag 片段）软跳过，不阻断整包
+			continue
+		}
+		scanned++
+		ast.Inspect(f, func(n ast.Node) bool {
+			lit, ok := n.(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				return true
+			}
+			val := lit.Value
+			if m := dialect148StringTokenRE.FindString(val); m != "" {
+				t.Errorf("%s 的字符串字面量含 PG 方言片段 %q（B-6 扩面门禁）：%s",
+					name, m, val)
+			}
+			return true
+		})
+	}
+	require.Greater(t, scanned, 10, "扩面扫描必须覆盖本包主要生产文件（防止空扫假绿）")
 }
 
 // dialect148NewDB 建 t.TempDir() 上的 SQLite（不落盘仓库、不写生产数据）。

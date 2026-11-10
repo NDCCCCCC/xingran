@@ -34,6 +34,7 @@ func TestPhase144_ADDriftAlertRoutePermissions(t *testing.T) {
 		{"/system/ad-drift-alert/config", ADDriftAlertConfig},
 		{"/system/ad-drift-alert/config/update", ADDriftAlertEdit},
 		{"/system/ad-drift-alert/trigger", ADDriftAlertTrigger},
+		{"/system/ad-drift-alert/logs/read", ADDriftAlertList},
 	}
 	for _, c := range cases {
 		got := GetPermissionByPath(c.path, "POST")

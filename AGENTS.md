@@ -34,7 +34,7 @@ go test -cover ./...
 
 - **所有构建产物必须落在 `out/`**：本地脚本（`scripts/build-*.bat|sh`、`scripts/build/*.bat`、`scripts/agent/build.sh`）与 CI（`.github/workflows/deploy.yml` 的 `-o out/xingran-backend`）统一。`out/` 已在 `.gitignore` 中，禁止把 `.exe` / `-linux` / `-embedded` / 打包 `.tar.gz|.zip` 落在仓库根目录。
 - **一次性运维/诊断 CLI 放 `scripts/ops/`**，不要放 `cmd/`。`cmd/` 只保留应用入口 `cmd/main.go`(+`main_test.go`) 与独立服务 `cmd/agent/`。`scripts/ops/` 下的 `package main` 仍由 `go build ./...` 覆盖。
-- **临时/一次性脚本不得散落在 `scripts/` 顶层**：无现存引用的历史脚本归档到 `.planning/milestones/v1.53-archived-scripts/` 并写索引；在用脚本（`check-route-registry.mjs`、`scan-routes.cjs`、`generate_swagger.sh`、`migrate-sm4-key.go`、`operlog_e2e_verify.sh` 等）保留在 `scripts/` 顶层并在 `scripts/README.md` 登记。
+- **临时/一次性脚本不得散落在 `scripts/` 顶层**：无现存引用的历史脚本归档到 `.planning/milestones/v1.53-archived-scripts/` 并写索引；在用脚本（`check-route-registry.mjs`、`scan-routes.cjs`、`generate_swagger.sh`、`migrate-sm4-key.go` 等）保留在 `scripts/` 顶层并在 `scripts/README.md` 登记。**操作日志 LIVE e2e 不在此列**：2026-11-09 已收敛到唯一权威 `tests/e2e/operlog_e2e_verify.sh`（见下方测试目录约定）。
 - **禁止在根目录新增启动/构建包装脚本**（如 `run.bat`）；前后端由开发者各自启动。
 - **Excel 导入/导出模板一律动态生成、禁止落盘**：后端由 `ExcelService.GenerateTemplate(entityType)` 依据 `internal/services/operations/excel_config.go` 的列定义在内存生成 xlsx、以 HTTP 流下载（`user_template_<ts>.xlsx` 等）；导出同理；前端如节假日模板用 `XLSX.writeFile` 在浏览器端生成。`.gitignore` 已忽略 `*.xlsx`，**仓库中不得提交或依赖任何 `.xlsx` 文件**；测试若需 xlsx 夹具用 `t.TempDir()` 自建或仅用 `xlsxMagic` 字节，不读取磁盘模板。
 - **`data/` 不是仓库目录**：仅指运行时 SQLite/本地数据（已被 `.gitignore` 忽略），不得在仓库创建或提交 `data/`；文档里的示例路径用 `<sqlite-db-path>` 占位，不写具体已删文件名。
@@ -51,6 +51,13 @@ go test -cover ./...
   - `tests/scripts/`：测试辅助脚本（按子域 `agent/ crypto/ rpa/ vdi/` 分目录）
 - 前端：组件/工具测试用 `*.test.ts(x)` 或 `src/**/__tests__/`，与被测模块就近；快照与截图证据放 `.planning/notes/v1.24-visual-evidence/`（唯一豁免的 png 目录）。
 - 禁止 `test_*.py` / `test_*.go` 这类「以 test 前缀命名源码」的写法散落在 `scripts/` 顶层；测试脚本归 `tests/scripts/` 并加对应子域目录。
+- **就近单测豁免（2026-11-09 quick 261109-wdu 登记）**：`internal/services/portwrite/` 包内的
+  `physical_e2e_test.go` / `port_write_e2e_test.go` 虽名为 e2e，但依赖整套**同包私有 fixture**
+  （`newTestDB` / `seedPortAndDevice` / `fileTransportExecutor` / `newTestService` 等，定义在同包其它
+  `*_test.go`）与**未导出的生产类型**（`portWriteServiceImpl` / `portWriteExecutor` 等）。Go 的 `_test.go`
+  符号无法被其它包 import，硬搬到 `tests/e2e/` 会编译失败；按「Go 单元测试就近放业务包内」判定为
+  **合规例外，保留在业务包内、不迁移**。若将来要真迁移，须先把 fixture 抽成正式 `.go` 源码/
+  `tests/fixtures/` 共享包（会改变生产包符号面，需单独立项评估），不得仅移文件。
 
 ### Frontend (React)
 ```bash

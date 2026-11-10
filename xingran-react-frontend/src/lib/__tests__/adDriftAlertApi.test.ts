@@ -53,6 +53,7 @@ import {
   getConfig,
   updateConfig,
   triggerOnce,
+  markTriggerLogRead,
   type ADDriftAlertConfig,
 } from "../adDriftAlertApi";
 
@@ -92,21 +93,18 @@ describe("lib/adDriftAlertApi — wrapped post 契约", () => {
     expect(Array.isArray(r.list)).toBe(true);
   });
 
-  it("listTriggerLogs 透传筛选参数（时间/状态）", async () => {
-    await listTriggerLogs({
-      current: 2,
-      pageSize: 20,
-      startTime: "2026-11-01",
-      endTime: "2026-11-09",
-      status: "drifted",
-    });
+  it("listTriggerLogs 只发分页参数（B-1 / v1.56：后端不支持时间/状态筛选，不伪造）", async () => {
+    await listTriggerLogs({ current: 2, pageSize: 20 });
     expect(post).toHaveBeenCalledWith("/system/ad-drift-alert/logs", {
       current: 2,
       pageSize: 20,
-      startTime: "2026-11-01",
-      endTime: "2026-11-09",
-      status: "drifted",
     });
+  });
+
+  it("markTriggerLogRead 走 post(/logs/read) + {logId} 并返回 result.data", async () => {
+    const r = await markTriggerLogRead("log-1");
+    expect(post).toHaveBeenCalledWith("/system/ad-drift-alert/logs/read", { logId: "log-1" });
+    expect(r).not.toHaveProperty("code");
   });
 
   it("getConfig 走 post(/config) 并返回 9 旋钮", async () => {
@@ -129,13 +127,14 @@ describe("lib/adDriftAlertApi — wrapped post 契约", () => {
     expect(r).not.toHaveProperty("code");
   });
 
-  it("5 个 API 全部只调用 wrapped post（零裸 axios / 零其它 verb）", async () => {
+  it("6 个 API 全部只调用 wrapped post（零裸 axios / 零其它 verb）", async () => {
     await getStatus();
     await listTriggerLogs({ current: 1, pageSize: 10 });
     await getConfig();
     await updateConfig(fullConfig);
     await triggerOnce();
-    expect(postMock).toHaveBeenCalledTimes(5);
+    await markTriggerLogRead("log-1");
+    expect(postMock).toHaveBeenCalledTimes(6);
     for (const call of postMock.mock.calls) {
       expect(typeof call[0]).toBe("string");
       expect(call[0]).toMatch(/^\/system\/ad-drift-alert\//);

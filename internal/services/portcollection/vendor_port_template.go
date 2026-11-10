@@ -76,6 +76,9 @@ type PortTemplateParams struct {
 	// CheckPhysicalSupport 取命令形态与值域，保证「校验放行 ⇔ 渲染接受」同源。
 	// 其它 action 忽略；空串表示型号未知，回退厂商基线 / 全局默认画像。
 	Model string
+	// SysObjectID B-3 / v1.56：设备 SNMP sysObjectID，物理画像匹配键
+	//（精确/前缀优先于 Model 子串）。空串 = 未采集，完整回退 Model，零回归。
+	SysObjectID string
 }
 
 // 哨兵错误（Phase 51 service 翻译为 HTTP 400 / 404 / 422 等业务码）。

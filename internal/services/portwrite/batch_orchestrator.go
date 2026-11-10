@@ -99,7 +99,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWrite
 			dev = models.NetworkDevice{}
 		}
 		params := PhysicalParams{Speed: req.Speed, SpeedMode: req.SpeedMode, Duplex: req.Duplex, MTU: req.MTU}
-		ev, err := validatePhysicalRequest(dev.Vendor, dev.Model, req.Action, params)
+		ev, err := validatePhysicalRequest(dev.Vendor, dev.Model, req.Action, params, dev.SysObjectID)
 		if err != nil {
 			return nil, err
 		}

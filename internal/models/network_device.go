@@ -54,6 +54,11 @@ type NetworkDevice struct {
 	SerialNumber    string `gorm:"size:100" json:"serialNumber,omitempty"`
 	SoftwareVersion string `gorm:"size:100" json:"softwareVersion,omitempty"`
 	Uptime          string `gorm:"size:100" json:"uptime,omitempty"`
+	// SysObjectID SNMP sysObjectID (1.3.6.1.2.1.1.2.0)，B-3 / v1.56。
+	// 设备身份属性，用作型号能力矩阵的精确/前缀匹配键（Model 子串兜底）。
+	// 可空：存量设备未采集时为 NULL/空串，匹配时自动回退 Model，不做历史回填。
+	// 注意：这是设备属性，不是物理能力的「真机取证依据」，绝不写入 physicalProfile.Evidence。
+	SysObjectID string `gorm:"size:255" json:"sysObjectId,omitempty"`
 }
 
 // TableName 设置表名

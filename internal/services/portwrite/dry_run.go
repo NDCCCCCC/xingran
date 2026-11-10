@@ -247,7 +247,7 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		}
 		// FIX-04 / Phase 143 物理参数入口校验（与实跑同源，接 vendor/model）
 		if ph := req.physicalParamsOf(); ph != nil {
-			ev, err := validatePhysicalRequest(dev.Vendor, dev.Model, req.Action, *ph)
+			ev, err := validatePhysicalRequest(dev.Vendor, dev.Model, req.Action, *ph, dev.SysObjectID)
 			if err != nil {
 				return nil, err
 			}
@@ -283,8 +283,9 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		SpeedMode: req.SpeedMode,
 		Duplex:    req.Duplex,
 		MTU:       req.MTU,
-		// Phase 143：型号透传（校验/渲染同源）
-		Model: dev.Model,
+		// Phase 143：型号透传（校验/渲染同源）；B-3：OID 同步透传
+		Model:       dev.Model,
+		SysObjectID: dev.SysObjectID,
 	})
 	if err != nil {
 		return nil, err
@@ -317,10 +318,13 @@ func (s *portWriteServiceImpl) PreviewPortWrite(ctx context.Context, req Preview
 		PhysicalEvidence: physicalEvidence.Evidence,
 	}
 	result.Summary = actionSummary(req.Action, len(req.PortIDs), dev.Vendor)
-	// Phase 143 裁决：批量物理参数不纳入 critical 自动回滚，预览与审计显式警示
-	// 「失败需人工按 audit.before_value 恢复」，不伪造闭环。
+	// Phase 143 裁决：批量物理参数不纳入 critical 自动回滚，预览与审计显式警示，
+	// 不伪造闭环。B-4 / quick 261110-161 诚实性修正：原文案说「按 audit.before_value
+	// 恢复」，但 buildBeforeValue（port_write_handler.go:497-509）只含端口状态字段
+	// （admin_status/dot1x_enabled/description/interface_name/vlan），不含
+	// speed/duplex/mtu 物理原值，人工按它恢复不了。改为指向真实可恢复依据。
 	if isPhysicalAction(req.Action) {
-		result.Summary += "；⚠️ 批量物理参数无自动回滚，失败需人工按 audit.before_value 恢复"
+		result.Summary += "；⚠️ 批量物理参数无自动回滚，失败需人工按设备 running-config / 采集快照与 audit.command_sent 恢复（audit.before_value 仅含端口状态，不含物理原值）"
 	}
 
 	for _, portID := range req.PortIDs {
@@ -383,8 +387,9 @@ func (s *portWriteServiceImpl) previewSinglePort(
 		SpeedMode: req.SpeedMode,
 		Duplex:    req.Duplex,
 		MTU:       req.MTU,
-		// Phase 143：型号透传（校验/渲染同源）
-		Model: dev.Model,
+		// Phase 143：型号透传（校验/渲染同源）；B-3：OID 同步透传
+		Model:       dev.Model,
+		SysObjectID: dev.SysObjectID,
 	})
 	if err != nil {
 		return nil, err

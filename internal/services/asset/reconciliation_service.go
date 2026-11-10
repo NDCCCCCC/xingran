@@ -1073,7 +1073,6 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 		//   第一优先:ops_asset.machine_ip → 第二优先:sys_workstation.machine_ip
 		//   第三优先:通过 ops_info_points 关联 sys_network_device.ip_address → "unknown"
 		item.IP = resolveAssetIPChain(assetIPByID[a.ID], workstationIP, workstationDeviceIPs)
-		assetItems = append(assetItems, item)
 
 		// 🆕 Phase 45 R4 / D-A4-02:per-asset 例外规则命中(MatchException inline)
 		//
@@ -1094,6 +1093,10 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 				}
 			}
 		}
+		// append 必须在 per-asset MatchException 之后：此前放在 matcher 计算之前
+		// 会把未覆盖的 item 值拷贝进切片，导致 ExceptionRuleID / AppliedActions 的
+		// matcher 覆盖结果丢失（v1.55 收档登记的 computeByWorkstation append 缺陷）。
+		assetItems = append(assetItems, item)
 	}
 	resp.Assets = assetItems
 

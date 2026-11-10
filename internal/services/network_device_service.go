@@ -309,6 +309,7 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 		existingDevice.Location = req.Location
 		existingDevice.Status = models.DeviceStatusOnline
 		existingDevice.Description = req.Description
+		existingDevice.SysObjectID = probeResult.SysObjectID // B-3 / v1.56
 		existingDevice.UpdatedBy = req.CreatedBy
 
 		if err := s.db.WithContext(ctx).Save(&existingDevice).Error; err != nil {
@@ -336,6 +337,7 @@ func (s *NetworkDeviceService) QuickCreateDevice(ctx context.Context, req *Quick
 		Location:     req.Location,
 		Status:       models.DeviceStatusOnline, // 初始状态为在线
 		Description:  req.Description,
+		SysObjectID:  probeResult.SysObjectID, // B-3 / v1.56
 	}
 
 	if err := s.db.WithContext(ctx).Create(device).Error; err != nil {

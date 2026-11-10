@@ -488,6 +488,10 @@ func createAuditRowsInTx(db *gorm.DB, rows []*models.PortWriteAudit) ([]string, 
 // 字段结构固定：{"admin_status":..., "dot1x_enabled":..., "description":..., "interface_name":..., "vlan":...}
 // （便于审计完整快照，description action 之外的 action 也带 description）
 //
+// B-4 / quick 261110-161 边界声明：本快照来自 DevicePortStatus（端口采集表），
+// 不含 speed/duplex/mtu 物理原值。批量物理参数失败时的人工恢复不得依赖本字段，
+// 须依据设备 running-config / 采集快照与 audit.command_sent（见 dry_run.go 警示文案）。
+//
 // CR-02 (2026-07-09 修复)：
 // v1.20.1 set_access_vlan 的 skipped 路径 (NoOp short-circuit) 会让 after_value 被
 // 覆盖为 before_value (buildAuditRow:493-495),而 set_access_vlan 审计的核心字段

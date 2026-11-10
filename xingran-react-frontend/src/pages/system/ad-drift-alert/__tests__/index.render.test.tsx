@@ -126,8 +126,11 @@ vi.mock("../components/StatusCards", () => ({
   default: () => <div data-testid="status-cards">状态卡</div>,
 }));
 vi.mock("../components/TriggerLogTable", () => ({
-  default: ({ refreshToken }: { refreshToken: number }) => (
-    <div data-testid="trigger-log-table">日志表 refreshToken={refreshToken}</div>
+  default: ({ refreshToken, onMarkRead }: { refreshToken: number; onMarkRead?: () => void }) => (
+    <div data-testid="trigger-log-table">
+      日志表 refreshToken={refreshToken}
+      <button type="button" aria-label="模拟标记已读" onClick={() => onMarkRead?.()} />
+    </div>
   ),
 }));
 vi.mock("../components/ConfigForm", () => ({
@@ -205,6 +208,19 @@ describe("同步漂移告警页 index.tsx 渲染/编排（Phase 144 ALRT-03）",
       expect(h.getStatusMock.mock.calls.length).toBeGreaterThan(before);
       expect(screen.getByTestId("trigger-log-table").textContent).toContain("refreshToken=1");
       expect(h.infoMock).toHaveBeenCalled();
+    });
+  });
+
+  it("B-1 / v1.56：日志表 onMarkRead 复用 bumpLogs 使 refreshToken +1（只刷日志不刷状态卡）", async () => {
+    renderWithProviders(<ADDriftAlertPage />);
+    await waitFor(() => expect(h.getStatusMock).toHaveBeenCalled());
+    const before = h.getStatusMock.mock.calls.length;
+
+    fireEvent.click(screen.getByRole("button", { name: "模拟标记已读" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("trigger-log-table").textContent).toContain("refreshToken=1");
+      // 复用 bumpLogs 通道：只刷日志表，不额外请求状态卡
+      expect(h.getStatusMock.mock.calls.length).toBe(before);
     });
   });
 

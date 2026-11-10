@@ -3,9 +3,11 @@ package portcollection
 // Phase 143 (PORT-02)：型号级物理参数（速率/双工/MTU）能力矩阵框架。
 //
 // 与 device_capability.go 的 vendorCapabilities（真机事实唯一真相源，测试锁定）同构：
-// 只用 Go 代码常量表达规则，不引入配置 / DB / migration / SysObjectID 落库。
-// 型号 key 只取 models.NetworkDevice.Model 字符串（子串匹配，大小写不敏感），
-// 复用既有 matchModelRules 的匹配语义。
+// 只用 Go 代码常量表达规则，不引入配置 / DB / 规则库。
+// 型号 key：B-3 / v1.56 起支持 SysObjectID 精确/前缀优先 + NetworkDevice.Model
+// 子串兜底（见 oid_match.go）；规则本身仍留 Go 常量，不落规则库。
+// SysObjectID 作为设备属性落在 sys_network_device，是**识别依据**而非真机取证依据，
+// 绝不写进 physicalProfile.Evidence（下方取证诚实性口径不变）。
 //
 // ⚠️ 取证诚实性（本里程碑不做真机逐型号取证，严禁伪造闭环）：
 //   - physicalProfile.Evidence == "" 表示「未取证」，绝不写成「已验证」；
@@ -23,7 +25,6 @@ package portcollection
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
@@ -60,7 +61,10 @@ type physicalProfile struct {
 // profile 由真机取证后经 code review + *_test.go 锁定写入；本里程碑不预置任何型号结论。
 type modelPhysicalRule struct {
 	matchModelSubstr []string
-	profile          physicalProfile
+	// matchSysObjectIDs B-3 / v1.56：OID 精确/前缀匹配（优先于 Model 子串）。
+	// 设备识别依据，不是真机取证依据，不进 profile.Evidence。
+	matchSysObjectIDs []string
+	profile           physicalProfile
 }
 
 // physicalVendorUnsupportedReason Cisco / 迈普 物理动作显式拒绝依据。
@@ -116,18 +120,20 @@ func PhysicalEvidenceLevel(p physicalProfile) string {
 // resolveModelPhysicalProfile 型号子串命中 → 型号画像（大小写不敏感）。
 // 与 matchModelRules 语义一致：model 为空或厂商不在矩阵内 → 不命中。
 func resolveModelPhysicalProfile(vendor models.DeviceVendor, model string) (physicalProfile, bool) {
+	return resolveModelPhysicalProfileWithOID(vendor, model, "")
+}
+
+// resolveModelPhysicalProfileWithOID B-3 / v1.56：型号画像匹配（OID 优先、Model 兜底）。
+func resolveModelPhysicalProfileWithOID(vendor models.DeviceVendor, model, sysObjectID string) (physicalProfile, bool) {
 	entry, ok := vendorCapabilities[vendor]
-	if !ok || model == "" {
+	if !ok || (model == "" && normalizeOID(sysObjectID) == "") {
 		return physicalProfile{}, false
 	}
-	lower := strings.ToLower(model)
 	for _, rule := range entry.modelPhysical {
-		for _, substr := range rule.matchModelSubstr {
-			if strings.Contains(lower, substr) {
-				p := rule.profile
-				p.level = "model"
-				return p, true
-			}
+		if ok, _ := modelKeyMatches(rule.matchModelSubstr, rule.matchSysObjectIDs, model, sysObjectID); ok {
+			p := rule.profile
+			p.level = "model"
+			return p, true
 		}
 	}
 	return physicalProfile{}, false
@@ -143,7 +149,14 @@ func resolveModelPhysicalProfile(vendor models.DeviceVendor, model string) (phys
 //   - 命中厂商基线：level="vendor"，Evidence 兜底标「厂商基线，未逐型号取证」
 //   - 全局默认：level="unverified"，Evidence=""（未取证，与 FIX-04 等价）
 func ResolvePhysicalProfile(vendor models.DeviceVendor, model string) physicalProfile {
-	if p, ok := resolveModelPhysicalProfile(vendor, model); ok {
+	return ResolvePhysicalProfileWithOID(vendor, model, "")
+}
+
+// ResolvePhysicalProfileWithOID B-3 / v1.56：解析 (vendor, model, sysObjectID) → 物理画像。
+// OID 优先命中型号画像；未命中完整回退 Model 子串 / 厂商基线 / 全局默认（零回归）。
+// 注意：返回画像的 Evidence / level 语义不变，OID 命中不构成真机取证。
+func ResolvePhysicalProfileWithOID(vendor models.DeviceVendor, model, sysObjectID string) physicalProfile {
+	if p, ok := resolveModelPhysicalProfileWithOID(vendor, model, sysObjectID); ok {
 		return p
 	}
 	if entry, ok := vendorCapabilities[vendor]; ok && entry.physical != nil {
@@ -172,15 +185,22 @@ func ResolvePhysicalProfile(vendor models.DeviceVendor, model string) physicalPr
 // params 用 PortTemplateParams 作为载体（portcollection 自有类型，避免 import portwrite 循环）；
 // 仅消费 Speed / SpeedMode / Duplex / MTU 四个字段。
 func CheckPhysicalSupport(vendor models.DeviceVendor, model string, action PortAction, params PortTemplateParams) (physicalProfile, error) {
+	return CheckPhysicalSupportWithOID(vendor, model, action, params, "")
+}
+
+// CheckPhysicalSupportWithOID B-3 / v1.56：物理动作校验（OID 优先、Model 兜底）。
+// 旧签名 CheckPhysicalSupport 委托到本函数（OID 为空），存量零回归。
+// 校验/渲染同源：renderPhysical 也走本变体（传 PortTemplateParams.SysObjectID）。
+func CheckPhysicalSupportWithOID(vendor models.DeviceVendor, model string, action PortAction, params PortTemplateParams, sysObjectID string) (physicalProfile, error) {
 	// 1. 既有型号级「不支持」优先于一切（含型号级物理画像）
-	for _, rule := range matchModelRules(vendor, model) {
+	for _, rule := range matchModelRulesWithOID(vendor, model, sysObjectID) {
 		if reason, banned := rule.unsupported[action]; banned {
 			return physicalProfile{}, fmt.Errorf("%w: vendor=%s model=%q action=%s — %s",
 				ErrActionNotSupported, vendor, model, action, reason)
 		}
 	}
 	// 2. 型号物理画像命中 → 型号级证据优先（对齐 lookupSupport：型号 supported 在厂商 unsupported 之前）
-	if prof, matched := resolveModelPhysicalProfile(vendor, model); matched {
+	if prof, matched := resolveModelPhysicalProfileWithOID(vendor, model, sysObjectID); matched {
 		return validatePhysicalParams(prof, action, params)
 	}
 	// 3. 厂商级「不支持」（与型号无关）：Cisco / 迈普 物理动作显式标 Unsupported
@@ -191,7 +211,7 @@ func CheckPhysicalSupport(vendor models.DeviceVendor, model string, action PortA
 		}
 	}
 	// 4/5. 厂商基线 / 全局默认
-	return validatePhysicalParams(ResolvePhysicalProfile(vendor, model), action, params)
+	return validatePhysicalParams(ResolvePhysicalProfileWithOID(vendor, model, sysObjectID), action, params)
 }
 
 // validatePhysicalParams 按 physicalProfile 的值域校验参数（校验/渲染同源的核心）。

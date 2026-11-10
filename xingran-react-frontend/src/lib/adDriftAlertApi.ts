@@ -43,39 +43,36 @@ export interface ADDriftAlertStatus {
   alertCount: number;
 }
 
-/** 触发记录（logs 端点 list 元素，来自 sys_oper_log） */
+/**
+ * 触发记录（logs 端点 list 元素，来自 sys_oper_log 投影）。
+ * B-1 / v1.56：与后端 DriftAlertTriggerLog 逐字段对齐（此前前端按虚构业务字段
+ * 渲染，全部列落空 fallback）。noticeId / isRead 为后端派生字段（gorm:"-"），
+ * 来自 JsonResult.noticeId + sys_notice_read 按用户已读状态。
+ */
 export interface ADDriftTriggerLog {
   id: string;
-  /** 触发时间 */
-  createdAt: string;
-  /** 操作人 */
-  operator?: string;
-  /** 是否检测到漂移 */
-  drifted: boolean;
-  /** 成员数 */
-  memberCount?: number;
-  /** 去重组数 */
-  distinctGroups?: number;
-  /** 漂移量摘要 */
-  delta?: string;
-  /** 是否被节流 */
-  throttled?: boolean;
-  /** 结果 / 状态描述 */
-  result?: string;
-  /** 触发来源（cron / manual） */
-  source?: string;
+  /** 日志标题（恒为 "AD 同步漂移告警"） */
+  title: string;
+  /** 方法名（恒为 "ADSyncDriftAlertService.CheckAndAlert"） */
+  method: string;
+  /** 触发时间（字符串，dayjs 容错格式化） */
+  operTime: string;
+  /** 原始诊断 JSON（memberCount/distinctGroups/baseline/memberDelta/groupDelta/noticeId） */
+  jsonResult: string;
+  /** operlog 状态：0=成功 1=失败（非「漂移/节流」业务状态） */
+  status: number;
+  /** 关联的 sys_notice ID（无关联时为空串，不能标记已读） */
+  noticeId: string;
+  /** 当前用户是否已读该通知 */
+  isRead: boolean;
 }
 
-/** 触发记录查询参数（current 从 1） */
+/** 触发记录查询参数（current 从 1）。
+ * B-1 / v1.56：后端 ListLogs 只接 current/pageSize，时间/状态筛选不存在，
+ * 前端不再发送假参数（不伪造后端能力）。 */
 export interface ADDriftTriggerLogParams {
   current: number;
   pageSize: number;
-  /** 起始时间（含） */
-  startTime?: string;
-  /** 结束时间（含） */
-  endTime?: string;
-  /** 状态筛选：all / drifted / normal / throttled */
-  status?: "all" | "drifted" | "normal" | "throttled";
 }
 
 /** 9 个配置旋钮（config / config/update 的 data 形状） */
@@ -100,13 +97,8 @@ export interface ADDriftAlertConfig {
   baseline: string;
 }
 
-/** 立即检测结果（trigger 端点响应 data，形状由后端定义，宽松声明） */
+/** 立即检测结果（trigger 端点实际返回 {message}，B-1 / v1.56 对齐） */
 export interface ADDriftTriggerResult {
-  drifted?: boolean;
-  alerted?: boolean;
-  throttled?: boolean;
-  memberCount?: number;
-  distinctGroups?: number;
   message?: string;
 }
 
@@ -140,4 +132,13 @@ export async function updateConfig(payload: ADDriftAlertConfig): Promise<ADDrift
 export async function triggerOnce(): Promise<ADDriftTriggerResult> {
   const result = await post<ADDriftTriggerResult>(`${BASE}/trigger`);
   return result.data as ADDriftTriggerResult;
+}
+
+/** 把某条触发记录对应的站内通知标记为当前用户已读（B-1 / v1.56）。
+ * 后端 POST /logs/read 按 {logId} 反查 JsonResult.noticeId 后复用
+ * NoticeService.MarkNoticeRead；noticeId 为空 / 记录不存在时后端返回 400，
+ * 故调用方须对 isRead 或无 noticeId 的行禁用按钮。 */
+export async function markTriggerLogRead(logId: string): Promise<{ message?: string }> {
+  const result = await post<{ message?: string }>(`${BASE}/logs/read`, { logId });
+  return result.data as { message?: string };
 }

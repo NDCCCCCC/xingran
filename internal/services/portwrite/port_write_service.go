@@ -603,7 +603,9 @@ func (s *portWriteServiceImpl) executeWrite(
 	}
 	// Phase 143 (PORT-02)：型号透传给 renderPhysical，按 (vendor, model) 取
 	// physicalProfile 的命令形态与值域（校验/渲染同源）。其它 action 忽略该字段。
+	// B-3 / v1.56：OID 同步透传，renderPhysical 走 OID 优先匹配（空串零回归）。
 	tpl.Model = dev.Model
+	tpl.SysObjectID = dev.SysObjectID
 	cmds, err := portcollection.RenderCommand(dev.Vendor, action, tpl)
 	if err != nil {
 		return nil, err

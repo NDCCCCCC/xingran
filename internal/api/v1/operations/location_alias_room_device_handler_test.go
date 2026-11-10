@@ -432,3 +432,81 @@ func TestRoomDeviceHandler_WithCore_NilSafe(t *testing.T) {
 	out := h.WithCore(newTestCore(t))
 	assert.Nil(t, out)
 }
+
+// B-7 / quick 261110-161：service 层越界返回 ErrScopeDenied 时，三个写端点 HTTP 层
+// 必须显式透传 403（此前 Create/Update 恒 400、Delete 名义 500 实 400），与
+// 149-UAT-RECHECK.md:43 及 walls/doors/texts/asset 端点口径对齐。
+// 普通 error 仍走存量 400/500 分支，零回归。
+func TestLocationAliasHandler_ScopeDenied_Returns403(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	denied := opsServices.ErrScopeDenied
+	cases := []struct {
+		name   string
+		setup  func() *gin.Engine
+		method string
+		path   string
+		body   string
+	}{
+		{
+			name: "Create",
+			setup: func() *gin.Engine {
+				svc := &mockLocationAliasService{CreateFunc: func(_ context.Context, _ *opsServices.LocationAliasCreateRequest) (*models.SysDeptLocationAlias, error) {
+					return nil, denied
+				}}
+				return newLocationAliasRouter(NewLocationAliasHandler(svc).WithCore(newTestCore(t)))
+			},
+			method: http.MethodPost, path: "/location-alias",
+			body: `{"deptId":"d1","locationId":"l1","scope":"workstation"}`,
+		},
+		{
+			name: "Update",
+			setup: func() *gin.Engine {
+				svc := &mockLocationAliasService{UpdateFunc: func(_ context.Context, _ string, _ *opsServices.LocationAliasUpdateRequest) error {
+					return denied
+				}}
+				return newLocationAliasRouter(NewLocationAliasHandler(svc).WithCore(newTestCore(t)))
+			},
+			method: http.MethodPost, path: "/location-alias/a1/update", body: `{}`,
+		},
+		{
+			name: "Delete",
+			setup: func() *gin.Engine {
+				svc := &mockLocationAliasService{DeleteFunc: func(_ context.Context, _ string) error {
+					return denied
+				}}
+				return newLocationAliasRouter(NewLocationAliasHandler(svc).WithCore(newTestCore(t)))
+			},
+			method: http.MethodPost, path: "/location-alias/a1/delete", body: `{}`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httpDo(tc.setup(), tc.method, tc.path, tc.body)
+			assert.Equal(t, http.StatusForbidden, w.Code,
+				"ErrScopeDenied 必须透传 403；若为 400/500 说明 HTTP 层又覆盖了 403")
+		})
+	}
+}
+
+// B-7 零回归：普通（非 scope）错误仍沿用存量 400/500 口径。
+func TestLocationAliasHandler_NonScopeError_Unchanged(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	plain := errors.New("db busy")
+	svc := &mockLocationAliasService{
+		CreateFunc: func(_ context.Context, _ *opsServices.LocationAliasCreateRequest) (*models.SysDeptLocationAlias, error) {
+			return nil, plain
+		},
+		UpdateFunc: func(_ context.Context, _ string, _ *opsServices.LocationAliasUpdateRequest) error {
+			return plain
+		},
+		DeleteFunc: func(_ context.Context, _ string) error { return plain },
+	}
+	h := NewLocationAliasHandler(svc).WithCore(newTestCore(t))
+	r := newLocationAliasRouter(h)
+	assert.Equal(t, http.StatusBadRequest,
+		httpDo(r, http.MethodPost, "/location-alias", `{"deptId":"d1","locationId":"l1","scope":"workstation"}`).Code)
+	assert.Equal(t, http.StatusBadRequest,
+		httpDo(r, http.MethodPost, "/location-alias/a1/update", `{}`).Code)
+	assert.Equal(t, http.StatusBadRequest,
+		httpDo(r, http.MethodPost, "/location-alias/a1/delete", `{}`).Code) // int-first-arg quirk: 名义 500 实 400
+}

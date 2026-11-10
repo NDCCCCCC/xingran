@@ -13,10 +13,11 @@ package asset
 //  5. 广播 pattern 与读缓存键同源；现成范式仍存在；5min TTL 与读路径未改。
 //
 // 判据口径（重要，SUMMARY 同步登记）：
-//   computeByWorkstation（reconciliation_service.go:1074）先 append(assetItems, item)
-//   再在 :1085-1094 修改 item 的 ExceptionRuleID / AppliedActions，切片里存的是副本，
-//   故 per-asset matcher 结果未进入响应——这是生产既有缺陷，本 phase 禁区 8 禁止改
-//   6 步聚合。因此「写后立即一致」用更严格且不受该缺陷影响的等价判据：
+//   立项期 computeByWorkstation 曾先 append(assetItems, item) 再修改 item 的
+//   ExceptionRuleID / AppliedActions，切片里存的是副本，故 per-asset matcher 结果
+//   未进入响应。该 append 顺序缺陷已于 2026-11-09 quick 261109-wdu 清偿（append
+//   后移到 matcher 覆盖之后），回归断言见 reconciliation_append_order_test.go。
+//   本文件「写后立即一致」仍沿用更严格、不依赖响应体单字段的等价判据：
 //     (a) 写路径真删 reconciliation:health:workstation:* 缓存键；
 //     (b) 写后读确实回源重算（computeByWorkstation / matcher 调用次数增加）；
 //     (c) 直查 DB 的读路径（MatchException / List）同进程立即反映新规则。

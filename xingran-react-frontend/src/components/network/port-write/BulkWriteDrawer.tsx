@@ -1217,7 +1217,7 @@ function PreviewView({ preview, interfaceMap, onConfirm, onBack }: PreviewViewPr
           showIcon
           style={{ marginBottom: 16 }}
           title="未取证（默认放行）"
-          description="该物理参数命令形态按厂商/全局默认画像渲染，尚未针对该型号真机逐一取证；默认放行不代表已验证。批量物理参数无自动回滚，失败需人工按 audit.before_value 恢复。"
+          description="该物理参数命令形态按厂商/全局默认画像渲染，尚未针对该型号真机逐一取证；默认放行不代表已验证。批量物理参数无自动回滚，失败需人工按设备 running-config / 采集快照与 audit.command_sent 恢复（audit.before_value 仅含端口状态，不含物理原值）。"
         />
       )}
 

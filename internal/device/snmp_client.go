@@ -287,6 +287,20 @@ func (c *SNMPClient) GetBulk(oid string, maxRepetitions uint8) (result []gosnmp.
 }
 
 // parseSNMPValue 解析SNMP值
+// snmpValueToString 把任意 gosnmp PDU 值统一收敛为字符串（B-3 / v1.56）。
+// sysObjectID 等 OID 值可能是 ObjectIdentifier(string) 或 OctetString([]byte)，
+// 统一在此处理，避免各处硬类型断言 panic。OID 值去首尾空白与前导点。
+func snmpValueToString(v interface{}) string {
+	switch x := v.(type) {
+	case string:
+		return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(x), "."))
+	case []byte:
+		return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(string(x)), "."))
+	default:
+		return strings.TrimSpace(fmt.Sprint(v))
+	}
+}
+
 func parseSNMPValue(variable gosnmp.SnmpPDU) interface{} {
 	switch variable.Type {
 	case gosnmp.Integer:
@@ -295,18 +309,11 @@ func parseSNMPValue(variable gosnmp.SnmpPDU) interface{} {
 		}
 	case gosnmp.OctetString:
 		if variable.Value != nil {
-			switch v := variable.Value.(type) {
-			case []byte:
-				return string(v)
-			case string:
-				return v
-			default:
-				return string(v.([]byte))
-			}
+			return snmpValueToString(variable.Value)
 		}
 	case gosnmp.ObjectIdentifier:
 		if variable.Value != nil {
-			return variable.Value.(string)
+			return snmpValueToString(variable.Value)
 		}
 	case gosnmp.Counter32, gosnmp.Counter64, gosnmp.Gauge32, gosnmp.TimeTicks:
 		if variable.Value != nil {
@@ -348,16 +355,16 @@ func (c *SNMPClient) GetSystemInfo() (*SystemInfo, error) {
 	info := &SystemInfo{}
 
 	if descr, err := c.Get(oidSysDescr); err == nil && descr != nil {
-		info.Description = descr.(string)
+		info.Description = snmpValueToString(descr)
 	}
 	if objectID, err := c.Get(oidSysObjectID); err == nil && objectID != nil {
-		info.ObjectID = objectID.(string)
+		info.ObjectID = snmpValueToString(objectID)
 	}
 	if name, err := c.Get(oidSysName); err == nil && name != nil {
-		info.Name = name.(string)
+		info.Name = snmpValueToString(name)
 	}
 	if location, err := c.Get(oidSysLocation); err == nil && location != nil {
-		info.Location = location.(string)
+		info.Location = snmpValueToString(location)
 	}
 
 	return info, nil
@@ -773,12 +780,13 @@ func indexOfIgnoreCase(s, substr string) int {
 
 // ScanResult 扫描结果
 type ScanResult struct {
-	IPAddress  string
-	Online     bool
-	Vendor     models.DeviceVendor
-	DeviceType models.DeviceType
-	SysDescr   string
-	SysName    string
+	IPAddress   string
+	Online      bool
+	Vendor      models.DeviceVendor
+	DeviceType  models.DeviceType
+	SysDescr    string
+	SysName     string
+	SysObjectID string // B-3 / v1.56：SNMP sysObjectID，型号精确匹配键
 }
 
 // ScanDevice 扫描单个设备
@@ -807,6 +815,7 @@ func ScanDevice(target string, community string, port int, timeout time.Duration
 	if err == nil {
 		result.SysDescr = sysInfo.Description
 		result.SysName = sysInfo.Name
+		result.SysObjectID = sysInfo.ObjectID
 		result.Vendor = DetectVendor(sysInfo.Description)
 		result.DeviceType = DetectDeviceType(sysInfo.Description)
 	}

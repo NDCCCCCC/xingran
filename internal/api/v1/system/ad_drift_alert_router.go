@@ -48,4 +48,15 @@ func SetupAdDriftAlertRouter(r *gin.RouterGroup, core *core.Core) {
 	{
 		writeTrigger.POST("/trigger", handler.Trigger)
 	}
+
+	// 写组 3：logs/:id/read（B-1 / quick 261110-161）。
+	// 标记「我的已读」是写操作，复用 list 权限点但走 RequireStrictPermissions
+	// 单一权限（读组是 ANY-of，写端点挂进去会被只持 config 权限者放行）。
+	writeRead := r.Group("/ad-drift-alert")
+	writeRead.Use(middleware.RequireStrictPermissions([]string{
+		string(permission.ADDriftAlertList),
+	}, core))
+	{
+		writeRead.POST("/logs/read", handler.MarkLogRead)
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portwrite"
 	"github.com/xingran-next/xingran-go-backend/internal/utils"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -76,5 +77,8 @@ func (h *PortWriteHandler) TrunkWrite(c *gin.Context) {
 		}
 		return
 	}
+	// 写操作 success path：response.Success 之前记录操作日志（CLAUDE.md 强制约定）。
+	// trunk 变更属修改类，复用端口管理模块名与 OperTypeUpdate，与同包 execSinglePort 口径一致。
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModulePortWrite, operlog.OperTypeUpdate)
 	response.Success(c, result)
 }

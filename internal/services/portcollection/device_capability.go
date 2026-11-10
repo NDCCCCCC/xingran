@@ -69,6 +69,10 @@ type capabilityEntry struct {
 type modelCapabilityRule struct {
 	// matchModelSubstr model 字符串包含任一子串即命中（大小写不敏感）
 	matchModelSubstr []string
+	// matchSysObjectIDs B-3 / v1.56：SNMP sysObjectID 精确/前缀匹配（优先于 Model 子串）。
+	// 精确项写点分数字串，前缀项以点结尾（如 "1.3.6.1.4.1.2011."）；最长前缀优先。
+	// 这是设备识别依据，不是物理命令的真机取证依据，不进 Evidence。
+	matchSysObjectIDs []string
 	// unsupported 命中后不支持的动作集合
 	unsupported map[PortAction]string // action → reason（真机依据）
 	// supported 命中后「真机验证支持」的动作集合（action → 真机依据）。
@@ -220,18 +224,21 @@ func RequiresInterfaceView(vendor models.DeviceVendor, action PortAction) bool {
 // 匹配语义（避免三份拷贝各自漂移）。vendor 不在矩阵内或 model 为空 → 无型号级规则
 // （只按厂商基线处理）。
 func matchModelRules(vendor models.DeviceVendor, model string) []modelCapabilityRule {
+	// 旧签名保持零改动：等价「OID 为空」路径（存量设备 / 旧测试零回归）。
+	return matchModelRulesWithOID(vendor, model, "")
+}
+
+// matchModelRulesWithOID B-3 / v1.56：型号规则匹配（OID 精确/前缀优先、Model 子串兜底）。
+// 与 matchModelRules 返回同类型，供 CheckActionSupport* / lookupSupport* 新变体使用。
+func matchModelRulesWithOID(vendor models.DeviceVendor, model, sysObjectID string) []modelCapabilityRule {
 	entry, ok := vendorCapabilities[vendor]
-	if !ok || model == "" {
+	if !ok || (model == "" && normalizeOID(sysObjectID) == "") {
 		return nil
 	}
-	lower := strings.ToLower(model)
 	var matched []modelCapabilityRule
 	for _, rule := range entry.modelRules {
-		for _, substr := range rule.matchModelSubstr {
-			if strings.Contains(lower, substr) {
-				matched = append(matched, rule)
-				break
-			}
+		if ok, _ := modelKeyMatches(rule.matchModelSubstr, rule.matchSysObjectIDs, model, sysObjectID); ok {
+			matched = append(matched, rule)
 		}
 	}
 	return matched

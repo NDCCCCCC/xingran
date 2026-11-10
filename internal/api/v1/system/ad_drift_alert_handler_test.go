@@ -197,3 +197,85 @@ func TestPhase144_Handler_Trigger_RecordsOperTypeSync(t *testing.T) {
 	assert.Equal(t, "同步漂移告警", logs[0].title)
 	assert.Equal(t, 14, logs[0].businessType, "OperTypeSync=14")
 }
+
+// B-1 / quick 261110-161：MarkLogRead 按 logId 反查 noticeId 并复用
+// NoticeService.MarkNoticeRead 写 sys_notice_read；success path 记 operlog。
+func doDriftWithUser(t *testing.T, h gin.HandlerFunc, body interface{}, userID string) *httptest.ResponseRecorder {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	raw, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/system/ad-drift-alert/logs/read", bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+	if userID != "" {
+		c.Set("user_id", userID)
+	}
+	h(c)
+	return w
+}
+
+func TestB1_Handler_MarkLogRead(t *testing.T) {
+	h, rec, db := setupDriftAlertHandler(t)
+	// 用真实模型 AutoMigrate，列类型（uuid 文本主键）与生产一致；
+	// 手建 INTEGER 主键会让 MarkNoticeRead 插入 id="" 时 datatype mismatch。
+	require.NoError(t, db.AutoMigrate(&models.NoticeRead{}))
+	// 一条触发记录带 noticeId="n-read-1"
+	jr := `{"memberCount":10,"noticeId":"n-read-1"}`
+	logRow := &models.OperLog{Title: "AD 同步漂移告警", Method: addomain.DriftAlertTriggerLogMethod, JsonResult: &jr}
+	require.NoError(t, db.Create(logRow).Error)
+
+	// 1) 无登录态 → 401（requireUserID）
+	w := doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": logRow.ID}, "")
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+	// 2) 成功：写 sys_notice_read + operlog
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": logRow.ID}, "reader-1")
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp driftResp
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, 0, resp.Code)
+	var readCount int64
+	require.NoError(t, db.Table("sys_notice_read").
+		Where("notice_id = ? AND user_id = ?", "n-read-1", "reader-1").Count(&readCount).Error)
+	assert.Equal(t, int64(1), readCount, "复用既有已读设施写入一行")
+	logs := rec.snapshot()
+	require.Len(t, logs, 1, "标记已读属写操作，success path 必须记 operlog")
+
+	// 3) 重复标记幂等（MarkNoticeRead 已读跳过）
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": logRow.ID}, "reader-1")
+	require.Equal(t, http.StatusOK, w.Code)
+	require.NoError(t, db.Table("sys_notice_read").
+		Where("notice_id = ? AND user_id = ?", "n-read-1", "reader-1").Count(&readCount).Error)
+	assert.Equal(t, int64(1), readCount, "重复标记不得插入第二行")
+
+	// 4) 无关联通知（旧格式 JsonResult）→ 400，不静默成功
+	jrOld := `{"memberCount":11}`
+	oldRow := &models.OperLog{Title: "AD 同步漂移告警", Method: addomain.DriftAlertTriggerLogMethod, JsonResult: &jrOld}
+	require.NoError(t, db.Create(oldRow).Error)
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": oldRow.ID}, "reader-1")
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 5) 不存在的 logId → 400
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": "no-such-log"}, "reader-1")
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 6) 空 logId → 400（ShouldBindJSON 成功但字段为空）
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": ""}, "reader-1")
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 7) 损坏 JSON（jsonResult 非法）→ 400（无关联通知分支）
+	jrBad := `not-json`
+	badRow := &models.OperLog{Title: "AD 同步漂移告警", Method: addomain.DriftAlertTriggerLogMethod, JsonResult: &jrBad}
+	require.NoError(t, db.Create(badRow).Error)
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": badRow.ID}, "reader-1")
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 8) MarkNoticeRead 写表失败 → 500（删掉 sys_notice_read 让 Create 返回 error）
+	require.NoError(t, db.Migrator().DropTable(&models.NoticeRead{}))
+	w = doDriftWithUser(t, h.MarkLogRead, map[string]string{"logId": logRow.ID}, "reader-2")
+	assert.Equal(t, http.StatusBadRequest, w.Code, "int-first-arg quirk：名义 500 实落 400")
+	// 失败分支不得记 operlog（成功 2 次：首次 + 幂等）
+	assert.Len(t, rec.snapshot(), 2, "只有 2 次成功路径（含幂等）记录 operlog")
+}
