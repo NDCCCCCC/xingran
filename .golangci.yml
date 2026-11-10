@@ -14,8 +14,14 @@
 # **标识符 / 选择器调用名**,不匹配字符串字面量或注释里的 SQL 文本。因此本规则
 # 的准入门禁覆盖「以函数调用/标识符形式引入方言写法」;对 raw SQL 字符串里的
 # 方言片段, 由 internal/services/operations/excel_export_dialect_148_test.go
-# 的 Go 源码静态断言(扫字符串+注释)补全, 反向变异红绿由该测试守护。
-# 存量 136 个 Go 文件命中方言 token(全仓实测),按下方 path 白名单逐步收敛;
+# 的 Go 源码静态断言补全, 反向变异红绿由该测试守护。
+# B-6 / quick 261110-161 扩面: 该断言新增 TestB6_OperationsProdFilesNoDialectSQLStrings,
+# 用 go/parser 扫本包(operations,非白名单域)所有生产 .go 的字符串字面量
+# (跳过 _test.go 与 3 个已严格全源码扫描的改造文件), 只匹配 SQL 字符串形态的
+# 8 类方言 token, 天然跳过注释里的合法说明(如 excel_query_builder.go 注释
+# 「避免 PostgreSQL 专有 DISTINCT ON」)。实证: 全仓 976 处方言命中多为迁移归档
+# SQL / 日志 / 测试夹具 / 合法注释, 一刀切扩到全仓连注释一起扫会大面积误伤,
+# 故不采用。存量 136 个 Go 文件命中方言 token(全仓实测),按下方 path 白名单逐步收敛;
 # **不得一刀切禁全部 .Raw(**(406 文件含 .Raw(, 大量为合法使用)。
 
 version: "2"

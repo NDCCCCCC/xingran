@@ -400,6 +400,7 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/ad-drift-alert/config", "POST", ADDriftAlertConfig, "漂移告警配置查询"},
 		{"/system/ad-drift-alert/config/update", "POST", ADDriftAlertEdit, "漂移告警配置更新"},
 		{"/system/ad-drift-alert/trigger", "POST", ADDriftAlertTrigger, "手动触发漂移检测"},
+		{"/system/ad-drift-alert/logs/read", "POST", ADDriftAlertList, "漂移告警记录标记已读(B-1/261110-161)"},
 
 		// 角色管理（85-02：batch 为 2 段具体路径，登记在 :id 之前防 matchPath
 		// 参数段遮蔽——GetPermissionByPath 按数组顺序返回首个命中）

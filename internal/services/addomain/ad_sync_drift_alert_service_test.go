@@ -172,6 +172,11 @@ func TestPhase134_DriftAlert_DriftEmitsThreeChannels(t *testing.T) {
 	assert.Equal(t, adDriftAlertNoticeType, notice.NoticeType)
 	assert.Equal(t, models.PriorityUrgent, notice.Priority)
 	assert.Equal(t, models.TargetAll, notice.TargetType)
+
+	// B-1 / quick 261110-161：emit 顺序调整后，operlog JsonResult 必须携带
+	// noticeId 且与 sys_notice 行的 ID 一致（触发记录 ↔ 按用户已读的关联键）。
+	assert.Contains(t, *log.JsonResult, `"noticeId":"`+notice.ID+`"`,
+		"JsonResult.noticeId 必须指向本次发布的 sys_notice，供 logs/mark-read 关联")
 	assert.Contains(t, notice.NoticeContent, adDriftAlertContentPrefix)
 }
 

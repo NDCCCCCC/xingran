@@ -45,6 +45,11 @@ jobs:
           # Bumped from v1.64.8 → v2.12.2 alongside dependabot PR #1's
           # action bump v6 → v9 (action v7+ requires lint v2+).
           # .golangci.yml also migrated to v2 schema in the same commit.
+          # B-6 / quick 261110-161: forbidigo 守「标识符/选择器调用名」形态；
+          # SQL 字符串字面量形态由 go test ./internal/services/operations/ 的
+          # TestB6_OperationsProdFilesNoDialectSQLStrings 静态断言守护（随下面
+          # Test step 的 ./internal/... 天然硬门禁执行），两层互补、能力边界见
+          # .golangci.yml 头注释与 148-SUMMARY.md §4。
           version: v2.12.2
           args: --timeout=5m ./...
 

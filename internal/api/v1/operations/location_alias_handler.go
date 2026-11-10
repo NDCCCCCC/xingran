@@ -105,8 +105,12 @@ func (h *LocationAliasHandler) Create(c *gin.Context) {
 
 	alias, err := h.service.Create(c.Request.Context(), &req)
 	if err != nil {
-		// validateAlias 三级校验失败:中文错误信息直接透传给前端
-		// HTTP 400 + 明确错误信息(自映射/外部机构/后代)
+		// 越界（ErrScopeDenied）由 helper 显式透传 403；其余 validateAlias 三级校验失败
+		// 沿用存量 HTTP 400 + 中文错误信息（自映射/外部机构/后代）。
+		if opsServices.IsScopeDenied(err) {
+			writeScopeAwareServiceError(c, err)
+			return
+		}
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -127,6 +131,10 @@ func (h *LocationAliasHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.service.Update(c.Request.Context(), id, &req); err != nil {
+		if opsServices.IsScopeDenied(err) {
+			writeScopeAwareServiceError(c, err)
+			return
+		}
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -143,6 +151,10 @@ func (h *LocationAliasHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
+		if opsServices.IsScopeDenied(err) {
+			writeScopeAwareServiceError(c, err)
+			return
+		}
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}

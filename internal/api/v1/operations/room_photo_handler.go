@@ -2,13 +2,32 @@ package operations
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
+
+// writeScopeAwareServiceError 统一本包 service 错误响应（v1.55 B-7 / quick 261110-161）。
+//
+// Phase 149 后 service 层越界统一返回 ErrScopeDenied（scope_write.go:38-44，显式 403），
+// 但本包两个 handler 此前用固定 500/400 覆盖，导致越界恒非 403、与
+// 149-UAT-RECHECK.md:43 口径不符。此处按 asset_handler.go:24-31 的同一范式分派：
+//   - opsServices.IsScopeDenied(err) 命中 → 显式构造 403 AppError 透传（不依赖
+//     toAppError 对 Wrap 链取最外层的歧义，Wrap 会把内层 403 覆盖成 500/400）；
+//   - 普通 error → 保留存量 response.ErrServerError 形态，零回归。
+func writeScopeAwareServiceError(c *gin.Context, err error) {
+	if opsServices.IsScopeDenied(err) {
+		response.Error(c, apperrors.NewWithHTTPStatus(
+			apperrors.CodePermissionDenied, http.StatusForbidden, "无权操作该数据"))
+		return
+	}
+	response.Error(c, response.ErrServerError, err.Error())
+}
 
 // UploadPhotosRequest 上传照片请求
 type UploadPhotosRequest struct {
@@ -78,7 +97,7 @@ func uploadPhotos(core *core.Core) gin.HandlerFunc {
 		service := opsServices.NewRoomPhotoService(core.DB.GetDB())
 		photos, err := service.UploadPhotos(c.Request.Context(), req.RoomID, files, req.PrimaryIndex, userID.(string))
 		if err != nil {
-			response.Error(c, response.ErrServerError, err.Error())
+			writeScopeAwareServiceError(c, err)
 			return
 		}
 
@@ -103,7 +122,7 @@ func listPhotos(core *core.Core) gin.HandlerFunc {
 		service := opsServices.NewRoomPhotoService(core.DB.GetDB())
 		photos, err := service.ListByRoom(c.Request.Context(), roomID)
 		if err != nil {
-			response.Error(c, response.ErrServerError, err.Error())
+			writeScopeAwareServiceError(c, err)
 			return
 		}
 
@@ -138,7 +157,7 @@ func getPhoto(core *core.Core) gin.HandlerFunc {
 		service := opsServices.NewRoomPhotoService(core.DB.GetDB())
 		photo, file, err := service.GetPhotoWithFile(c.Request.Context(), photoID)
 		if err != nil {
-			response.Error(c, response.ErrServerError, err.Error())
+			writeScopeAwareServiceError(c, err)
 			return
 		}
 
@@ -167,7 +186,7 @@ func setPrimary(core *core.Core) gin.HandlerFunc {
 
 		service := opsServices.NewRoomPhotoService(core.DB.GetDB())
 		if err := service.SetPrimary(c.Request.Context(), photoID); err != nil {
-			response.Error(c, response.ErrServerError, err.Error())
+			writeScopeAwareServiceError(c, err)
 			return
 		}
 
@@ -194,7 +213,7 @@ func updateDescription(core *core.Core) gin.HandlerFunc {
 
 		service := opsServices.NewRoomPhotoService(core.DB.GetDB())
 		if err := service.UpdateDescription(c.Request.Context(), photoID, req.Description); err != nil {
-			response.Error(c, response.ErrServerError, err.Error())
+			writeScopeAwareServiceError(c, err)
 			return
 		}
 
@@ -215,7 +234,7 @@ func updateSort(core *core.Core) gin.HandlerFunc {
 
 		service := opsServices.NewRoomPhotoService(core.DB.GetDB())
 		if err := service.UpdateSort(c.Request.Context(), req.PhotoIDs); err != nil {
-			response.Error(c, response.ErrServerError, err.Error())
+			writeScopeAwareServiceError(c, err)
 			return
 		}
 
@@ -235,7 +254,7 @@ func deletePhoto(core *core.Core) gin.HandlerFunc {
 
 		service := opsServices.NewRoomPhotoService(core.DB.GetDB())
 		if err := service.DeletePhoto(c.Request.Context(), photoID); err != nil {
-			response.Error(c, response.ErrServerError, err.Error())
+			writeScopeAwareServiceError(c, err)
 			return
 		}
 
@@ -261,7 +280,7 @@ func batchDeletePhotos(core *core.Core) gin.HandlerFunc {
 
 		service := opsServices.NewRoomPhotoService(core.DB.GetDB())
 		if err := service.BatchDeletePhotos(c.Request.Context(), req.IDs); err != nil {
-			response.Error(c, response.ErrServerError, err.Error())
+			writeScopeAwareServiceError(c, err)
 			return
 		}
 

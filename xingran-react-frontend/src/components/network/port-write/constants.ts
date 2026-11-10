@@ -106,9 +106,14 @@ export const PHYSICAL_DUPLEX_OPTIONS = [
 export const PHYSICAL_MTU_MIN = 1280;
 export const PHYSICAL_MTU_MAX = 9216;
 
-/** 物理批量无自动回滚的诚实警示（后端 dry-run Summary 与审计同源文案） */
+/**
+ * 物理批量无自动回滚的诚实警示（后端 dry-run Summary 与审计同源文案）。
+ * B-4 / quick 261110-161：audit.before_value 只含端口状态、不含物理原值，
+ * 人工恢复须依据设备 running-config / 采集快照与 audit.command_sent，
+ * 不得误导为「按 before_value 恢复」。
+ */
 export const PHYSICAL_NO_ROLLBACK_HINT =
-  "批量物理参数无自动回滚，失败需人工按 audit.before_value 恢复（本里程碑不纳入 critical 自动回滚）。";
+  "批量物理参数无自动回滚，失败需人工按设备 running-config / 采集快照与 audit.command_sent 恢复（audit.before_value 仅含端口状态，不含物理原值）。";
 
 /** 取证级别徽标文案（默认放行 ≠ 有证据；unverified 不冒充真机结论） */
 export const PHYSICAL_EVIDENCE_LABEL: Record<string, string> = {

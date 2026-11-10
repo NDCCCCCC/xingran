@@ -422,23 +422,7 @@ func (s *ADSyncDriftAlertService) emit(ctx context.Context, cur, baseline adDrif
 		"检测到同步漂移", baseline.MemberCount, cur.MemberCount,
 		baseline.DistinctGroups, cur.DistinctGroups, v.MemberDelta, v.GroupDelta, cfg.Tolerance)
 
-	// 通道 2：sys_oper_log 触发记录（OperTypeSync=14；direct INSERT 无需 gin.Context）
 	now := s.timeNow()
-	jsonResult := fmt.Sprintf(`{"memberCount":%d,"distinctGroups":%d,"baseline":[%d,%d],"memberDelta":%d,"groupDelta":%d}`,
-		cur.MemberCount, cur.DistinctGroups, baseline.MemberCount, baseline.DistinctGroups, v.MemberDelta, v.GroupDelta)
-	operLog := &models.OperLog{
-		Title:        adDriftAlertTitle,
-		BusinessType: adDriftAlertOperBusinessType,
-		Method:       adDriftAlertMethod,
-		Status:       int(models.OperLogStatusSuccess),
-		OperTime:     now,
-		JsonResult:   &jsonResult,
-	}
-	if err := s.db.WithContext(ctx).Create(operLog).Error; err != nil {
-		applogger.Warnf("[ad_sync:drift] operlog 触发记录写入失败(忽略): %v", err)
-	} else {
-		applogger.Infof("[ad_sync:drift] 触发记录已写 sys_oper_log id=%s", operLog.ID)
-	}
 
 	// 通道 3：sys_notice 通知（notice_type='2' 警告 / 已发布 / TargetAll）。
 	// Phase 144：优先走注入的 NoticeService.CreateNoticeWithTargets + PublishNotice
@@ -471,6 +455,27 @@ func (s *ADSyncDriftAlertService) emit(ctx context.Context, cur, baseline adDrif
 		} else {
 			noticeID = s.insertNoticeDirect(ctx, content, now)
 		}
+	}
+
+	// 通道 2：sys_oper_log 触发记录（OperTypeSync=14；direct INSERT 无需 gin.Context）。
+	// B-1 / quick 261110-161：本通道刻意排在通道 3 之后——JsonResult 需携带
+	// noticeId，才能把「触发记录」与 sys_notice / sys_notice_read 的按用户已读状态
+	// 关联起来（复用既有已读设施，不给 append-only 审计表加列）。noticeID 为空
+	// （通知未启用 / 发布失败）时写空串，下游 logs 把该行按「无可标记」处理。
+	jsonResult := fmt.Sprintf(`{"memberCount":%d,"distinctGroups":%d,"baseline":[%d,%d],"memberDelta":%d,"groupDelta":%d,"noticeId":%q}`,
+		cur.MemberCount, cur.DistinctGroups, baseline.MemberCount, baseline.DistinctGroups, v.MemberDelta, v.GroupDelta, noticeID)
+	operLog := &models.OperLog{
+		Title:        adDriftAlertTitle,
+		BusinessType: adDriftAlertOperBusinessType,
+		Method:       adDriftAlertMethod,
+		Status:       int(models.OperLogStatusSuccess),
+		OperTime:     now,
+		JsonResult:   &jsonResult,
+	}
+	if err := s.db.WithContext(ctx).Create(operLog).Error; err != nil {
+		applogger.Warnf("[ad_sync:drift] operlog 触发记录写入失败(忽略): %v", err)
+	} else {
+		applogger.Infof("[ad_sync:drift] 触发记录已写 sys_oper_log id=%s", operLog.ID)
 	}
 
 	// 业务 payload 复用给 WS / webhook（Content 内嵌 JSON，照 reconciliation_workorder）。

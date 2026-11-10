@@ -8,6 +8,7 @@ package addomain
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,6 +16,11 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
+
+// DriftAlertTriggerLogMethod 是 sys_oper_log 里漂移告警触发记录的 method 值，
+// 供 handler / 端点按日志 ID 反查 noticeId 时使用（B-1 / quick 261110-161）。
+// 与 emit 通道 2 写入的 adDriftAlertMethod 同值，避免跨包复制字符串。
+const DriftAlertTriggerLogMethod = adDriftAlertMethod
 
 // adDriftConfigKeys 9 个 sys_config 旋钮（5 既有 + 4 新增，PLAN 任务4 seed 同源）。
 // 供 GetConfig / UpdateConfig 白名单校验，避免写任意 sys_config key。
@@ -55,13 +61,19 @@ type DriftAlertStatus struct {
 type DriftAlertConfigView map[string]string
 
 // DriftAlertTriggerLog 一条触发记录（sys_oper_log 投影）。
+//
+// B-1 / quick 261110-161：JsonResult 里的 noticeId 被解析到 NoticeID，用于关联
+// sys_notice / sys_notice_read 的按用户已读状态（IsRead）。复用既有已读设施，
+// 不给 append-only 的 sys_oper_log 加列。
 type DriftAlertTriggerLog struct {
-	ID           string `json:"id" gorm:"column:id"`
-	Title        string `json:"title" gorm:"column:title"`
-	Method       string `json:"method" gorm:"column:method"`
-	OperTime     string `json:"operTime" gorm:"column:oper_time"`
-	JsonResult   string `json:"jsonResult" gorm:"column:json_result"`
-	Status       int    `json:"status" gorm:"column:status"`
+	ID         string `json:"id" gorm:"column:id"`
+	Title      string `json:"title" gorm:"column:title"`
+	Method     string `json:"method" gorm:"column:method"`
+	OperTime   string `json:"operTime" gorm:"column:oper_time"`
+	JsonResult string `json:"jsonResult" gorm:"column:json_result"`
+	Status     int    `json:"status" gorm:"column:status"`
+	NoticeID   string `json:"noticeId" gorm:"-"`
+	IsRead     bool   `json:"isRead" gorm:"-"`
 }
 
 // DriftAlertTriggerLogPage 分页响应（list/total/current/pageSize，current 从 1）。
@@ -115,7 +127,11 @@ func (s *ADSyncDriftAlertService) GetStatus(ctx context.Context) (DriftAlertStat
 
 // ListTriggerLogs 分页查询触发记录（method=ADSyncDriftAlertService.CheckAndAlert）。
 // current <1 归 1；pageSize 限 [1,200]。
-func (s *ADSyncDriftAlertService) ListTriggerLogs(ctx context.Context, current, pageSize int) (DriftAlertTriggerLogPage, error) {
+//
+// B-1 / quick 261110-161：userID 非空时，按 JsonResult.noticeId 批量查
+// sys_notice_read，给每行补 IsRead（按用户维度的已读，复用既有已读设施）。
+// userID 为空（如无登录态的内部调用）时 IsRead 全 false，不额外查表。
+func (s *ADSyncDriftAlertService) ListTriggerLogs(ctx context.Context, current, pageSize int, userID string) (DriftAlertTriggerLogPage, error) {
 	if current < 1 {
 		current = 1
 	}
@@ -146,6 +162,42 @@ func (s *ADSyncDriftAlertService) ListTriggerLogs(ctx context.Context, current, 
 		Scan(&rows).Error; err != nil {
 		return page, fmt.Errorf("查询漂移告警触发记录失败: %w", err)
 	}
+	// 解析每行 JsonResult 里的 noticeId（emit 通道 2 写入），收集非空 ID。
+	noticeIDs := make([]string, 0, len(rows))
+	for i := range rows {
+		if rows[i].JsonResult == "" {
+			continue
+		}
+		var payload struct {
+			NoticeID string `json:"noticeId"`
+		}
+		if err := json.Unmarshal([]byte(rows[i].JsonResult), &payload); err != nil {
+			continue // 旧格式 / 损坏 JSON：软降级，不阻断整页
+		}
+		rows[i].NoticeID = payload.NoticeID
+		if payload.NoticeID != "" {
+			noticeIDs = append(noticeIDs, payload.NoticeID)
+		}
+	}
+
+	// 批量查当前用户已读集合；表缺失 / 查询失败软降级（IsRead 保持 false）。
+	if userID != "" && len(noticeIDs) > 0 && s.db.Migrator().HasTable("sys_notice_read") {
+		var readIDs []string
+		if err := s.db.WithContext(ctx).Table("sys_notice_read").
+			Where("user_id = ? AND notice_id IN ?", userID, noticeIDs).
+			Pluck("notice_id", &readIDs).Error; err == nil {
+			readSet := make(map[string]bool, len(readIDs))
+			for _, id := range readIDs {
+				readSet[id] = true
+			}
+			for i := range rows {
+				if rows[i].NoticeID != "" && readSet[rows[i].NoticeID] {
+					rows[i].IsRead = true
+				}
+			}
+		}
+	}
+
 	page.List = rows
 	return page, nil
 }
