@@ -5,7 +5,8 @@ created: 2026-11-10
 completed: 2026-11-11
 scope: 数据库全量备份导出/导入恢复（本地/OSS/FTP/SMB + cron 定期 + 系统管理独立菜单）
 branch: feat/db-backup-export-restore
-commit: false  # 按 CLAUDE.md 提交前确认纪律，先给用户看 diff，未授权不提交
+commit: 8e535db7（功能）+ 729735f9（merge github/main）
+pr: https://github.com/NDCCCCCC/xingran/pull/83
 decision_source: 用户「开始」+ 评估页两项决策 + 本轮三项实现深度决策（完整生产级 / pg_dump+VACUUM INTO / SMB OS 挂载）
 ---
 
@@ -135,4 +136,11 @@ type-check/lint 未跑该脚本）：`Space.direction→orientation`、`size="mi
 
 ## 提交状态
 
-**未提交**。按用户与 CLAUDE.md 约定，提交前先展示 diff 并等待明确确认。定时任务 `schedule-0e5c60fa...` 已在触发后暂停，不会重复启动。
+**已提交并开 PR**：用户 2026-11-11 授权「提交并pr」。
+- 提交 `8e535db7`（45 文件，+7070/-155），精确暂存，排除无关的 `asset_columns_schema.json` 时间戳。
+- 合并 `github/main`（PR #82，解 `.planning/STATE.md` 冲突保留双方登记行）→ `729735f9`。
+- 推送 `github/feat/db-backup-export-restore`，创建 [PR #83](https://github.com/NDCCCCCC/xingran/pull/83)（base=main，OPEN）。
+- 提交前/合并后验证全绿：`go build ./...`、`go test ./...` 两轮零 FAIL、type-check、lint、CSS 契约 ALL PASS、权限码零漂移。
+- 提交前修掉一个全仓并行下的 flaky 测试（`waitFileRemoved` 有界重试）。
+
+定时任务 `schedule-0e5c60fa...` 已于触发后暂停，不会重复启动。
