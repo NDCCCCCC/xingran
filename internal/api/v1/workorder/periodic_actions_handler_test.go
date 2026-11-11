@@ -20,6 +20,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
+
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/core/db"
 )
 
 // TestEnablePeriodic_Success 启用后 is_enabled=true 且 next_run_at 被计算
@@ -174,4 +178,127 @@ func TestGetPeriodicLogs_Empty(t *testing.T) {
 	logs, ok := resp["data"].([]interface{})
 	require.True(t, ok)
 	assert.Empty(t, logs)
+}
+
+// ==================== GOV-03 覆盖补齐：缺 ID 分支 / service 错误分支 ====================
+
+// TestEnablePeriodic_EmptyID_Returns400 缺 path 参数
+func TestEnablePeriodic_EmptyID_Returns400(t *testing.T) {
+	db := setupTestDB(t)
+	h := setupTestHandler(t, db)
+	c, w := newTestContext("POST", "//enable", "", nil)
+	c.Params = gin.Params{{Key: "id", Value: ""}}
+	h.EnablePeriodic(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestGeneratePeriodic_EmptyID_Returns400 缺 path 参数
+func TestGeneratePeriodic_EmptyID_Returns400(t *testing.T) {
+	db := setupTestDB(t)
+	h := setupTestHandler(t, db)
+	c, w := newTestContext("POST", "//generate", "", nil)
+	c.Params = gin.Params{{Key: "id", Value: ""}}
+	h.GeneratePeriodic(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestGetPeriodicLogs_EmptyID_Returns400 缺 path 参数
+func TestGetPeriodicLogs_EmptyID_Returns400(t *testing.T) {
+	db := setupTestDB(t)
+	h := setupTestHandler(t, db)
+	c, w := newTestContext("POST", "//logs", "", nil)
+	c.Params = gin.Params{{Key: "id", Value: ""}}
+	h.GetPeriodicLogs(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestDisablePeriodic_NotFound 模板不存在走 HandleServiceError 错误分支
+func TestDisablePeriodic_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	h := setupTestHandler(t, db)
+	missing := uuid.NewString()
+	c, w := newTestContext("POST", "/"+missing+"/disable", "operator-1", nil)
+	c.Params = gin.Params{{Key: "id", Value: missing}}
+	h.DisablePeriodic(c)
+
+	assert.NotEqual(t, http.StatusOK, w.Code)
+}
+
+// TestGeneratePeriodic_NotFound 模板不存在走 HandleServiceError 错误分支
+func TestGeneratePeriodic_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	h := setupTestHandler(t, db)
+	missing := uuid.NewString()
+	c, w := newTestContext("POST", "/"+missing+"/generate", "operator-1", nil)
+	c.Params = gin.Params{{Key: "id", Value: missing}}
+	h.GeneratePeriodic(c)
+
+	assert.NotEqual(t, http.StatusOK, w.Code)
+}
+
+// TestGetPeriodicLogs_DBError 关闭底层 DB 使 GetLogs 报错，走 HandleServiceError 错误分支
+func TestGetPeriodicLogs_DBError(t *testing.T) {
+	db := setupTestDB(t)
+	id := seedPeriodicTemplate(t, db, "DB错误模板")
+	h := setupTestHandler(t, db)
+
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, sqlDB.Close())
+
+	c, w := newTestContext("POST", "/"+id+"/logs", "operator-1", nil)
+	c.Params = gin.Params{{Key: "id", Value: id}}
+	h.GetPeriodicLogs(c)
+
+	assert.NotEqual(t, http.StatusOK, w.Code)
+}
+
+// ==================== GOV-03 覆盖补齐：router 注册冒烟 ====================
+
+// setupRouterTestCore 构造路由注册所需的最小 core（与 setupTestHandler 同构）
+func setupRouterTestCore(t *testing.T, gormDB *gorm.DB) *core.Core {
+	t.Helper()
+	return &core.Core{
+		CoreInfra: &core.CoreInfra{
+			DB: &db.Database{DB: gormDB, Type: "sqlite"},
+		},
+		CoreServices: &core.CoreServices{},
+	}
+}
+
+// TestSetupPeriodicWorkOrderRouter_RegistersActionRoutes 断言 4 条模板动作路由已注册
+func TestSetupPeriodicWorkOrderRouter_RegistersActionRoutes(t *testing.T) {
+	gormDB := setupTestDB(t)
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	group := engine.Group("/workorder/periodic")
+
+	SetupPeriodicWorkOrderRouter(group, setupRouterTestCore(t, gormDB))
+
+	registered := map[string]bool{}
+	for _, ri := range engine.Routes() {
+		registered[ri.Method+" "+ri.Path] = true
+	}
+
+	for _, path := range []string{
+		"/workorder/periodic/templates/:id/enable",
+		"/workorder/periodic/templates/:id/disable",
+		"/workorder/periodic/templates/:id/generate",
+		"/workorder/periodic/templates/:id/logs",
+	} {
+		assert.True(t, registered["POST "+path], "路由应已注册: POST "+path)
+	}
+	// 现行 5 条基础路由不回归
+	for _, path := range []string{
+		"/workorder/periodic/templates/list",
+		"/workorder/periodic/templates/statistics",
+		"/workorder/periodic/templates",
+		"/workorder/periodic/templates/:id/update",
+		"/workorder/periodic/templates/:id/delete",
+	} {
+		assert.True(t, registered["POST "+path], "现行路由不应丢失: POST "+path)
+	}
 }
