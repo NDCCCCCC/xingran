@@ -1295,14 +1295,16 @@ body {
 }
 
 /* Info 提示框：统一白底 + 中性描边 + 主文字色（暗色随 --bg-elevated 自适应）。
-   历史坑：曾用深绿 --theme-primary-light 作背景却未调亮文字，导致「深底深字」不可读；
-   收敛为与卡片一致的 surface 配色，禁止再为一个页面打局部补丁。 */
+   历史坑：曾用深绿 --theme-primary-light 作背景却未调亮文字导致「深底深字」不可读；收敛为 surface 配色，禁止局部补丁。 */
 .ant-alert-info {
   background: var(--bg-elevated) !important;
   border: 1px solid var(--border-base) !important;
   color: var(--text-primary) !important;
 }
-.ant-alert-info .ant-alert-message, .ant-alert-info .ant-alert-description { color: var(--text-primary) !important; }
+.ant-alert-info .ant-alert-message,
+.ant-alert-info .ant-alert-description {
+  color: var(--text-primary) !important;
+}
 
 /* ========================================
    Message 消息提示

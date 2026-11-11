@@ -7,15 +7,7 @@
  *   （后端 SavePlan 亦做保留）。绝不把占位串写回配置，也不误清空真实凭据。
  */
 import { useCallback, useEffect, useState, type FC } from "react";
-import {
-  Button,
-  Card,
-  Form,
-  Input,
-  InputNumber,
-  Space,
-  Switch,
-} from "antd";
+import { Button, Card, Form, Input, InputNumber, Space, Switch } from "antd";
 import CronSelector from "@/components/CronSelector";
 // Input.Password 为成员表达式形态，不在 Phase 65 <Input> selector 命中面（沿用 settings 页范式）
 import { AppInput, AppSelect } from "@/components/ui";
@@ -266,9 +258,7 @@ const BackupPlanTab: FC = () => {
             )}
             <Button onClick={() => void loadPlan()}>重新读取</Button>
           </Space>
-          {!permSave.visible && (
-            <div style={{ marginTop: 8 }}>当前账号无「保存备份计划」权限</div>
-          )}
+          {!permSave.visible && <div style={{ marginTop: 8 }}>当前账号无「保存备份计划」权限</div>}
         </Form.Item>
       </Form>
     </Card>

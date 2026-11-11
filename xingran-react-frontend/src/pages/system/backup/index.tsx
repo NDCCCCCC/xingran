@@ -114,13 +114,7 @@ const DataBackupPage: FC = () => {
           </Space>
           <Progress
             percent={percent}
-            status={
-              status === "failed"
-                ? "exception"
-                : status === "success"
-                  ? "success"
-                  : "active"
-            }
+            status={status === "failed" ? "exception" : status === "success" ? "success" : "active"}
           />
           {status === "failed" && taskView.errorMessage && (
             <Alert type="error" showIcon title="任务失败" description={taskView.errorMessage} />
@@ -173,7 +167,11 @@ const DataBackupPage: FC = () => {
   return (
     <div>
       {progressCard}
-      <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key as BackupTabKey)} items={tabItems} />
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as BackupTabKey)}
+        items={tabItems}
+      />
     </div>
   );
 };

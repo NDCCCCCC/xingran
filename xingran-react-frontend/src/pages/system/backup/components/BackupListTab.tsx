@@ -31,12 +31,7 @@ import { formatFileSize } from "@/utils/tableHelpers";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import type { BackupRecord, BackupStatistics } from "@/types/backup";
 import type { AsyncTask } from "../types";
-import {
-  SOURCE_TEXT,
-  STATUS_TAG_COLOR,
-  STATUS_TEXT,
-  STORAGE_TEXT,
-} from "../types";
+import { SOURCE_TEXT, STATUS_TAG_COLOR, STATUS_TEXT, STORAGE_TEXT } from "../types";
 import RestoreModal from "./RestoreModal";
 
 interface BackupListTabProps {
@@ -50,11 +45,7 @@ interface BackupListTabProps {
 
 const EMPTY_STATISTICS: BackupStatistics = { total: 0, success: 0, usedSpace: 0 };
 
-const BackupListTab: FC<BackupListTabProps> = ({
-  onStartTask,
-  refreshToken,
-  taskRunning,
-}) => {
+const BackupListTab: FC<BackupListTabProps> = ({ onStartTask, refreshToken, taskRunning }) => {
   const { message } = App.useApp();
   // 工具栏按钮门控：统一走 useActionPermission（三态 ready / loading / error），不自造 hasPermission
   const permGate = useActionPermission();
@@ -151,16 +142,13 @@ const BackupListTab: FC<BackupListTabProps> = ({
   }, [message, onStartTask]);
 
   /** 下载备份 zip（downloadFile 唯一权威封装） */
-  const handleDownload = useCallback(
-    async (record: BackupRecord) => {
-      try {
-        await dbBackupApi.download(record.id, record.fileName);
-      } catch (error) {
-        handleApiError(error, "下载备份文件");
-      }
-    },
-    []
-  );
+  const handleDownload = useCallback(async (record: BackupRecord) => {
+    try {
+      await dbBackupApi.download(record.id, record.fileName);
+    } catch (error) {
+      handleApiError(error, "下载备份文件");
+    }
+  }, []);
 
   /** 删除备份记录（confirmDelete 二次确认，权限内建） */
   const handleDelete = useCallback(

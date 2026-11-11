@@ -7,21 +7,12 @@
 import { get, post, postFormData } from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import type { PageResponse, PageParams } from "@/types/base";
-import type {
-  BackupRecord,
-  BackupStatistics,
-  Capabilities,
-  Plan,
-  TaskView,
-} from "@/types/backup";
+import type { BackupRecord, BackupStatistics, Capabilities, Plan, TaskView } from "@/types/backup";
 
 export const dbBackupApi = {
   /** 备份记录分页：POST /system/db-backup/list */
   async list(params: PageParams): Promise<PageResponse<BackupRecord>> {
-    const result = await post<PageResponse<BackupRecord>>(
-      "/system/db-backup/list",
-      params
-    );
+    const result = await post<PageResponse<BackupRecord>>("/system/db-backup/list", params);
     return result.data ?? { list: [], total: 0, current: 1, pageSize: 10 };
   },
 
@@ -77,10 +68,7 @@ export const dbBackupApi = {
   async restore(file: File): Promise<{ taskId: string }> {
     const formData = new FormData();
     formData.append("file", file);
-    const result = await postFormData<{ taskId: string }>(
-      "/system/db-backup/restore",
-      formData
-    );
+    const result = await postFormData<{ taskId: string }>("/system/db-backup/restore", formData);
     return result.data ?? { taskId: "" };
   },
 

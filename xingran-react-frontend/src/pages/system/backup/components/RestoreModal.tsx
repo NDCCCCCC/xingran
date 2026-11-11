@@ -20,12 +20,7 @@ interface RestoreModalProps {
   onStartTask: (task: AsyncTask) => void;
 }
 
-const RestoreModal: FC<RestoreModalProps> = ({
-  open,
-  taskRunning,
-  onClose,
-  onStartTask,
-}) => {
+const RestoreModal: FC<RestoreModalProps> = ({ open, taskRunning, onClose, onStartTask }) => {
   const { message } = App.useApp();
 
   /** 选择文件后：先二次确认，确认通过才真正上传（customRequest 不立即发请求） */

@@ -1408,7 +1408,8 @@ const C14_EXEMPTIONS = [
     if (!block.includes("var(--border-base)")) bad.push("未使用 --border-base 作为描边");
     if (!block.includes("color: var(--text-primary)")) bad.push("未显式声明主文字色");
     // 深绿品牌变量绝不能再当 Alert 背景（该变量是渐变亮端，实测 #1a6839）
-    if (block.includes("--theme-primary-light")) bad.push("再次把深绿 --theme-primary-light 用作背景");
+    if (block.includes("--theme-primary-light"))
+      bad.push("再次把深绿 --theme-primary-light 用作背景");
   }
   // 局部特例补丁不得复活：一个页面一个补丁正是问题反复出现的根因
   if (/\.ant-alert\.excel-import-notice/.test(indexCss)) {
@@ -1422,8 +1423,11 @@ const C14_EXEMPTIONS = [
       break;
     }
   }
-  check("C15 Alert info 白底契约（阻断深底深字复发）", bad.length === 0,
-    bad.length ? bad.join(" | ") : "C15 PASS：白底 + 中性描边 + 显式文字色，无局部补丁");
+  check(
+    "C15 Alert info 白底契约（阻断深底深字复发）",
+    bad.length === 0,
+    bad.length ? bad.join(" | ") : "C15 PASS：白底 + 中性描边 + 显式文字色，无局部补丁"
+  );
 }
 
 console.log("----");
