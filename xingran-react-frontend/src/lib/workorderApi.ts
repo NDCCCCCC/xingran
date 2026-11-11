@@ -374,12 +374,7 @@ export interface UpdatePeriodicTemplateRequest {
   notifyAssignee?: boolean;
 }
 
-export interface CreateWorkOrderRatingRequest {
-  ratingType: string; // user 或 handler
-  completionScore?: number; // 用户评价：完成度评分
-  cooperationScore?: number; // 处理人员评价：配合度评分
-  comment?: string;
-}
+// CreateWorkOrderRatingRequest 已随旧评价 API 一并删除（V2 用 WorkOrderRatingCreateRequestV2）。
 
 // ==================== 工单管理 API ====================
 
@@ -475,24 +470,10 @@ export function getWorkOrderHistory(id: string): Promise<BaseResponse<WorkOrderH
   return post(`/workorder/orders/${id}/history`, {});
 }
 
-// ==================== 工单评价 API ====================
-
-export function createWorkOrderRating(
-  id: string,
-  data: CreateWorkOrderRatingRequest
-): Promise<BaseResponse<{ message: string }>> {
-  return post(`/workorder/orders/${id}/rating`, data);
-}
-
-export function getWorkOrderRatings(id: string): Promise<BaseResponse<WorkOrderRating[]>> {
-  return post(`/workorder/orders/${id}/ratings`, {});
-}
-
-export function getRatingStatistics(
-  id: string
-): Promise<BaseResponse<{ averageRating: number; ratingCounts: Record<number, number> }>> {
-  return post(`/workorder/orders/${id}/rating-statistics`, {});
-}
+// FIX broken-links-batch2（task-6）：旧评价 API createWorkOrderRating /
+// getWorkOrderRatings / getRatingStatistics（路径 /workorder/orders/:id/rating*）
+// 已删除 —— Phase 136 后端已迁移到 /workorder/orders/ratings* V2 路由，旧端点
+// 不存在；唯一消费者 WorkOrderRatingModal 早已切换到下方 V2 函数，生产调用方为 0。
 
 // ==================== 工单分类 API ====================
 
@@ -638,15 +619,14 @@ export function getDeptList(): Promise<BaseResponse<SimpleDept[]>> {
 // 消费方应改用 useDeptTree hook (共享 ['dept','tree'] React Query 缓存),
 // 或直接 import { getDeptTree } from "@/lib/dutyApi"。
 
-// ==================== 工单评价 API（FIX-06 / Phase 136）====================
+// ==================== 工单评价 API（FIX-06 / Phase 136，V2 唯一版本）====================
 //
 // 全部走 @/lib/api 的 post 包装（响应拦截器已拆包，调用方直接读 .data），
 // 不写裸 axios。后端端点见 workorder_router.go SetupWorkOrderRatings*Router。
 //
-// ⚠ 命名刻意与文件上方「工单评价 API」段的既有 createWorkOrderRating /
-// getWorkOrderRatings / getRatingStatistics（旧路径 /workorder/orders/:id/rating*）
-// 区分，避免同名函数重载造成调用歧义；本段函数对应 Phase 136 新接线的
-// /workorder/orders/ratings* 端点。
+// FIX broken-links-batch2（task-6）：旧路径 /workorder/orders/:id/rating* 的
+// createWorkOrderRating / getWorkOrderRatings / getRatingStatistics 已删除
+// （后端已无这些端点，生产调用方为 0）。评价 API 只保留本段 V2 函数。
 
 export type WorkOrderRatingTypeV2 = "user" | "handler";
 

@@ -1,9 +1,8 @@
 /**
  * 工单评价弹窗（FIX-06 / Phase 136 最小可用前端入口）。
  *
- * - 列表/统计：复用包装 API 函数 getWorkOrderRatings / getWorkOrderRatingStatistics
- *   （内部走 @/lib/api 的 post，非裸 axios）。
- * - 提交：createWorkOrderRating，后端 POST /workorder/orders/ratings 接
+ * - 列表/统计：listWorkOrderRatings / fetchWorkOrderRatingStats（V2，POST /workorder/orders/ratings/list|statistics）。
+ * - 提交：submitWorkOrderRating，后端 POST /workorder/orders/ratings 接
  *   RatingService.Create，成功路径由后端记 operlog（工单管理 / OperTypeCreate）。
  */
 import { useCallback, useEffect, useState, type FC } from "react";

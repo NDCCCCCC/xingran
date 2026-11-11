@@ -317,21 +317,9 @@ export function getADGroupMembers(
   });
 }
 
-export function addADGroupMember(
-  id: string,
-  configId: string,
-  userDn: string
-): Promise<BaseResponse<{ message: string }>> {
-  return post(`/ad-domain/groups/${id}/members/add`, { configId, userDn });
-}
-
-export function removeADGroupMember(
-  id: string,
-  configId: string,
-  userDn: string
-): Promise<BaseResponse<{ message: string }>> {
-  return post(`/ad-domain/groups/${id}/members/remove`, { configId, userDn });
-}
+// FIX broken-links-batch2（task-6）：addADGroupMember / removeADGroupMember 已删除
+// —— 其端点 /groups/:id/members/add|remove 后端未实现（仅 /members 查询存在），
+// 前端唯一消费按钮已下线。恢复时参考 git 历史与 scripts/frontend-url-exemptions.json 对应条目。
 
 // ==================== 用户组同步 API ====================
 
@@ -471,84 +459,11 @@ export function getADComputerLoginHistory(params: {
 }
 
 // ==================== 部门组映射 API ====================
-
-export interface DeptGroupMapping {
-  id: string;
-  deptId: string;
-  adGroupId: string;
-  adConfigId: string;
-  mappingType: "auto" | "manual";
-  mappingStatus: "active" | "inactive";
-  groupDn: string;
-  groupName: string;
-  syncEnabled: boolean;
-  lastSyncAt?: string;
-  createdBy?: string;
-  updatedBy?: string;
-  createdAt: string;
-  updatedAt: string;
-  Dept?: { id: string; deptName: string };
-  ADGroup?: { id: string; groupName: string; groupDn: string };
-}
-
-export interface MappingListRequest {
-  adConfigId?: string;
-  deptId?: string;
-  mappingType?: "auto" | "manual";
-  mappingStatus?: "active" | "inactive";
-  groupName?: string;
-  current?: number;
-  pageSize?: number;
-}
-
-export interface MappingListResponse {
-  total: number;
-  list: DeptGroupMapping[];
-}
-
-export interface CreateMappingRequest {
-  deptId: string;
-  adGroupId: string;
-  adConfigId: string;
-  mappingType?: "auto" | "manual";
-  syncEnabled?: boolean;
-}
-
-export interface UpdateMappingRequest {
-  mappingStatus?: "active" | "inactive";
-  syncEnabled?: boolean;
-}
-
-// ==================== 部门组映射 API（CRUD 委托） ====================
-
-const mappingCrud = createResourceApi<DeptGroupMapping>({ basePath: "/ad-domain/mappings" });
-
-export function getMappingList(
-  params: MappingListRequest
-): Promise<BaseResponse<MappingListResponse>> {
-  return mappingCrud.list(
-    withDefaultPagination(params) as unknown as PageParams & Record<string, unknown>
-  );
-}
-
-export function createMapping(data: CreateMappingRequest): Promise<BaseResponse<DeptGroupMapping>> {
-  return mappingCrud.create(data) as Promise<BaseResponse<DeptGroupMapping>>;
-}
-
-export function getMapping(id: string): Promise<BaseResponse<DeptGroupMapping>> {
-  // KEEP: GET 动词（工厂 get 是 POST，动词不可改）
-  return get(`/ad-domain/mappings/${id}`);
-}
-
-export function updateMapping(id: string, data: UpdateMappingRequest): Promise<BaseResponse<null>> {
-  return mappingCrud.update(id, data) as Promise<BaseResponse<null>>;
-}
-
-export function deleteMapping(id: string): Promise<BaseResponse<null>> {
-  // fix(94-03): URL 模板串历史笔误（末尾多余右括号）必然 404，
-  // 随工厂委托自然正确化为 `${id}/delete`（v1.29 D-05 例外条款登记，独立 commit 可审计）
-  return mappingCrud.delete(id) as Promise<BaseResponse<null>>;
-}
+// FIX broken-links-batch2（task-6）：整组 mapping API（DeptGroupMapping 类型 +
+// getMappingList / createMapping / getMapping / updateMapping / deleteMapping 及
+// mappingCrud 工厂）已删除 —— 后端无 /ad-domain/mappings/* 任何路由（整组 CRUD
+// 均未注册），且生产调用方为 0（类型层副本仍保留在 src/types/ad-group.ts，未受影响）。
+// 恢复时参考 git 历史与 scripts/frontend-url-exemptions.json 对应条目。
 
 // ==================== OU 部门映射 API ====================
 

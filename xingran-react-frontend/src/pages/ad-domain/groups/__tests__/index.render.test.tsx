@@ -37,8 +37,6 @@ vi.mock("@/lib/adDomainApi", () => ({
   ),
   getADGroupMembers: vi.fn(() => Promise.resolve({ data: { list: [] } })),
   getADUserList: vi.fn(() => Promise.resolve({ data: { list: [] } })),
-  addADGroupMember: vi.fn(),
-  removeADGroupMember: vi.fn(),
   updateADGroup: vi.fn(),
   createADGroup: vi.fn(),
   deleteADGroup: vi.fn(),

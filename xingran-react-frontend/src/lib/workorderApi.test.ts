@@ -23,7 +23,6 @@ import {
   batchDeleteWorkOrders,
   buildCategoryTree,
   createWorkOrder,
-  createWorkOrderRating,
   deletePeriodicTemplate,
   deleteWorkOrder,
   disablePeriodicTemplate,
@@ -32,9 +31,7 @@ import {
   getMyPendingWorkOrders,
   getPeriodicLogs,
   getPeriodicTemplateList,
-  getRatingStatistics,
   getWorkOrder,
-  getWorkOrderRatings,
   getWorkOrderCategoryList,
   getWorkOrderComments,
   getWorkOrderConfig,
@@ -71,13 +68,6 @@ describe("workorderApi — 工单主体", () => {
     expect(mockPost).toHaveBeenNthCalledWith(1, "/workorder/orders/my-pending", {});
     await getMyPendingWorkOrders({ limit: 5 });
     expect(mockPost).toHaveBeenNthCalledWith(2, "/workorder/orders/my-pending", { limit: 5 });
-  });
-
-  it("getWorkOrderRatings POST /workorder/orders/:id/ratings", async () => {
-    mockPost.mockReset();
-    mockPost.mockResolvedValueOnce(OK);
-    await getWorkOrderRatings("w1");
-    expect(mockPost).toHaveBeenCalledWith("/workorder/orders/w1/ratings", {});
   });
 
   it("create / get / update / delete / batchDelete 按 ID 拼接", async () => {
@@ -122,17 +112,6 @@ describe("workorderApi — 工单主体", () => {
     });
     await getWorkOrderHistory("w1");
     expect(mockPost).toHaveBeenNthCalledWith(3, "/workorder/orders/w1/history", {});
-  });
-
-  it("评价:创建 / 统计", async () => {
-    mockPost.mockResolvedValue(OK);
-    await createWorkOrderRating("w1", { rating: 5, comment: "处理迅速" });
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/workorder/orders/w1/rating", {
-      rating: 5,
-      comment: "处理迅速",
-    });
-    await getRatingStatistics("w1");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/workorder/orders/w1/rating-statistics", {});
   });
 });
 
