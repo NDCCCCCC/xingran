@@ -107,7 +107,13 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
             danger: true,
             onClick: () => handleDelete(record.id),
           },
-        ].filter(Boolean) as { key: string; label: string; danger?: boolean; icon?: React.ReactNode; onClick: () => void }[];
+        ].filter(Boolean) as {
+          key: string;
+          label: string;
+          danger?: boolean;
+          icon?: React.ReactNode;
+          onClick: () => void;
+        }[];
         return <ActionButtons actions={actions} />;
       },
     },

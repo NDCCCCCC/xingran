@@ -119,7 +119,7 @@ const MACHistoryPage: React.FC = () => {
   // 旧字面量 network:mac:export 码不存在，会让导出按钮永久隐藏）。
   // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
   const exportGate = useActionPermission();
-  const canExport = exportGate.decide(PERMISSION_CODES.networkMac.query).allowed;
+  const canExport = exportGate.decide(PERMISSION_CODES.networkMac.query).visible;
 
   // 状态
   const [current, setCurrent] = useState(1);

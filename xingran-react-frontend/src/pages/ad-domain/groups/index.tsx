@@ -16,11 +16,7 @@ import {
 } from "antd";
 import type { TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
-import {
-  ReloadOutlined,
-  SyncOutlined,
-  InfoCircleOutlined,
-} from "@ant-design/icons";
+import { ReloadOutlined, SyncOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
   getADGroupList,

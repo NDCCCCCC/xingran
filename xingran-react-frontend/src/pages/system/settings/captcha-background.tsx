@@ -375,7 +375,11 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           </Space>
           <Space>
             {permCbEdit.visible && (
-              <Button icon={<PictureOutlined />} onClick={handlePreload} disabled={permCbEdit.disabled}>
+              <Button
+                icon={<PictureOutlined />}
+                onClick={handlePreload}
+                disabled={permCbEdit.disabled}
+              >
                 预加载缓存
               </Button>
             )}
@@ -439,12 +443,22 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                 {/* 卡脚行 2：文字链接操作（启停文案 = 当前 status 取反） */}
                 <div className="xr-row-ops xr-captcha-card-ops" style={{ padding: "0 8px 8px" }}>
                   {permCbEdit.visible && (
-                    <Button type="link" size="small" disabled={permCbEdit.disabled} onClick={() => handleToggle(record.id)}>
+                    <Button
+                      type="link"
+                      size="small"
+                      disabled={permCbEdit.disabled}
+                      onClick={() => handleToggle(record.id)}
+                    >
                       {record.status === 1 ? "禁用" : "启用"}
                     </Button>
                   )}
                   {permCbEdit.visible && (
-                    <Button type="link" size="small" disabled={permCbEdit.disabled} onClick={() => openEditModal(record)}>
+                    <Button
+                      type="link"
+                      size="small"
+                      disabled={permCbEdit.disabled}
+                      onClick={() => openEditModal(record)}
+                    >
                       编辑
                     </Button>
                   )}
@@ -457,11 +471,11 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                         confirmDelete({
                           target: `验证码背景 ${record.fileName}`,
                           onDelete: () => handleDelete(record.id),
-                      });
-                    }}
-                  >
-                    删除
-                  </Button>
+                        });
+                      }}
+                    >
+                      删除
+                    </Button>
                   )}
                 </div>
               </div>

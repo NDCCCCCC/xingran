@@ -399,7 +399,9 @@ function main() {
   console.log(
     `路由挂载  : ${ROUTE_REGISTRY}（操作码 ${routeCodes.size} 个，源自 ${routeRegistry.totals?.routes ?? "?"} 条路由）`
   );
-  console.log(`存量豁免  : ${driftExemptions.size} 条（permission-drift-exemptions.json，全部 grandfathered）`);
+  console.log(
+    `存量豁免  : ${driftExemptions.size} 条（permission-drift-exemptions.json，全部 grandfathered）`
+  );
 
   const exempt = (code) => driftExemptions.has(code);
 
@@ -496,11 +498,12 @@ function main() {
   // RequirePermissions 保证，不参与四向存在性检查与孤儿判定。
   const isPageLevelCode = (code) => code.split(":").length < 3;
   const unscoped = [...allCodes].filter(
-    (code) =>
-      !tsScopes.some((scope) => code.startsWith(scope)) && !isPageLevelCode(code)
+    (code) => !tsScopes.some((scope) => code.startsWith(scope)) && !isPageLevelCode(code)
   );
 
-  console.log(`\n=== 全量对账（全集 ${allCodes.size} 码，其中 TS 作用域外 ${unscoped.length} 码）===`);
+  console.log(
+    `\n=== 全量对账（全集 ${allCodes.size} 码，其中 TS 作用域外 ${unscoped.length} 码）===`
+  );
   let unscopedExempt = 0;
   for (const code of unscoped.sort()) {
     const missing = [];
