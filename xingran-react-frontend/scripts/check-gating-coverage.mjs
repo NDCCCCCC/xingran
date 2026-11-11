@@ -84,7 +84,11 @@ const EXPECTED_PAGE_COUNT = 73;
 // 铺开权限门控（PERMISSION_CODES.monitor* 区块落地）后移出豁免清单，豁免 47 → 44；
 // 同批移除悬空豁免 src/pages/ad/SyncMonitor（页面目录已删除）44 → 43；
 // 恒等式以 EXPECTED_PAGE_COUNT=73 重新成立（已门控 30 + 豁免 43 = 73）。
-const EXPECTED_EXEMPTION_COUNT = 43;
+// rpa RBAC 接线（2026-11-11 task-2）：operations/rpa/tasks 页铺开
+// PERMISSION_CODES.rpaTask 门控（新增/执行/编辑/删除），已门控 30 → 31；
+// 同批从 gating-exemptions.json 移除该页（原豁免理由「rpa 区块未声明」已消失），
+// 豁免 43 → 42；恒等式以 EXPECTED_PAGE_COUNT=73 重新成立（已门控 31 + 豁免 42 = 73）。
+const EXPECTED_EXEMPTION_COUNT = 42;
 /** 豁免分类白名单 */
 const EXEMPTION_CATEGORIES = [
   "no-permission-code",

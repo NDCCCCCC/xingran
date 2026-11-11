@@ -164,12 +164,6 @@
       "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
     },
     {
-      "page": "src/pages/operations/rpa/tasks/index.tsx",
-      "category": "no-permission-code",
-      "reason": "RPA 任务页有新增/编辑/删除写入口，但前端权限码清单无 rpa 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（失败重试 <Form.Item name=\"retryOnFailure\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
-      "evidence": "src/constants/permissionCodes.ts 无 rpa 区块；pkg/permission/config.go 无 ops:rpa:/rpa: 前缀；Switch 命中 src/pages/operations/rpa/tasks/modals/EditModal.tsx:324"
-    },
-    {
       "page": "src/pages/operations/rpa/workers/index.tsx",
       "category": "read-only",
       "reason": "RPA 执行器节点列表为只读列表，唯一操作按钮是「重置」（重置搜索条件，非业务写）；扫描器写入口特征零命中，无可门控的写入口。",

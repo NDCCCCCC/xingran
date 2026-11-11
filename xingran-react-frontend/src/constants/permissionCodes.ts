@@ -208,6 +208,35 @@ export const PERMISSION_CODES = {
     list: "monitor:online:list",
     forceLogout: "monitor:online:forceLogout",
   },
+  // ==================== rpa 域 RBAC 全链路接线（migration_245 同源，2026-11-11） ====================
+  // 14 码与 pkg/permission/config.go RPA 域常量、sys_menu F 型播种
+  // （menu_catalog_seed.sql 既有 8 码 + migration_245 新码 6 码）三方一致。
+  // 后端路由端点级挂载见 internal/api/v1/rpa/rpa_router.go。credentials/ai
+  // 命名对齐 network:credential:* 惯例（无 ops 前缀），删除统一 remove（D-04）。
+  rpaTask: {
+    list: "ops:rpa:task:list",
+    add: "ops:rpa:task:add",
+    edit: "ops:rpa:task:edit",
+    delete: "ops:rpa:task:delete",
+    execute: "ops:rpa:task:execute",
+  },
+  rpaExecution: {
+    list: "ops:rpa:execution:list",
+    cancel: "ops:rpa:execution:cancel",
+  },
+  rpaWorker: {
+    monitor: "ops:rpa:worker:monitor",
+    edit: "ops:rpa:worker:edit",
+  },
+  rpaCredential: {
+    list: "rpa:credential:list",
+    add: "rpa:credential:add",
+    edit: "rpa:credential:edit",
+    remove: "rpa:credential:remove",
+  },
+  rpaAi: {
+    use: "rpa:ai:use",
+  },
   // ==================== 85-03（RBAC-01）批次 B：network 域写码 TS 同批声明 ====================
   // 后端「网络设备管理权限」区块的镜像声明。network 域仅 backup:add/restore/diff、
   // command:execute、discovery:add 有 sys_menu F 型授权来源（其余均进

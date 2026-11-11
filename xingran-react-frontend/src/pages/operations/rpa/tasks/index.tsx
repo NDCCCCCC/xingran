@@ -22,6 +22,8 @@ import { post } from "@/lib/api";
 // 与 constants.tsx 里 TASK_STATUS_OPTIONS（0/1/2 草稿/启用/禁用）和
 // EXECUTION_STATUS_OPTIONS（success 而非 completed）都不同，故就地命名保留原值。
 import { AppInput, AppSelect } from "@/components/ui";
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const { Content } = Layout;
 
@@ -166,6 +168,13 @@ const TaskManagement: FC = () => {
     taskForm.resetFields();
   }, [setModalVisible, taskForm]);
 
+  // rpa RBAC 门控（migration_245 同源）：新增/执行/编辑/删除按端点级权限码过滤
+  const permGate = useActionPermission();
+  const canAdd = permGate.decide(PERMISSION_CODES.rpaTask.add).visible;
+  const canExecute = permGate.decide(PERMISSION_CODES.rpaTask.execute).visible;
+  const canEdit = permGate.decide(PERMISSION_CODES.rpaTask.edit).visible;
+  const canDelete = permGate.decide(PERMISSION_CODES.rpaTask.delete).visible;
+
   const columns = useMemo(
     () =>
       getTaskColumns({
@@ -174,10 +183,13 @@ const TaskManagement: FC = () => {
         },
         handleDelete,
         handleExecute,
+        canExecute,
+        canEdit,
+        canDelete,
         getSortOrder: (field) =>
           orderByColumn === field ? ((taskSortOrder ?? null) as "ascend" | "descend" | null) : null,
       }),
-    [handleEdit, handleDelete, handleExecute, orderByColumn, taskSortOrder]
+    [handleEdit, handleDelete, handleExecute, canExecute, canEdit, canDelete, orderByColumn, taskSortOrder]
   );
 
   return (
@@ -220,16 +232,18 @@ const TaskManagement: FC = () => {
               </Form.Item>
             </Form>
             <Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  handleAdd();
-                  setModalVisible(true);
-                }}
-              >
-                新增任务
-              </Button>
+              {canAdd && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    handleAdd();
+                    setModalVisible(true);
+                  }}
+                >
+                  新增任务
+                </Button>
+              )}
             </Space>
           </div>
           {selectedRowKeys.length > 0 && (
