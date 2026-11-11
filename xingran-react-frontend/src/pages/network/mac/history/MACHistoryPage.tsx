@@ -62,9 +62,10 @@ import { queryMACHistory, exportMACHistory } from "@/lib/api/networkApi";
 import type { MACHistoryRecord, MACHistoryQueryParams } from "@/lib/api/networkApi";
 import { MACEventsTimeline } from "@/components/network";
 import { EmptyStateWithAction, ErrorAlertWithRetry } from "@/components/shared";
-import { useMenuStore } from "@/store/menuStore";
 import { EVENT_LABEL, EVENT_TAG_COLOR } from "@/components/network/macEventMeta";
 import { MAC_HISTORY_STATUS_TAG_CONFIG } from "@/constants/status";
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const { RangePicker } = DatePicker;
 const { useBreakpoint } = Grid;
@@ -113,10 +114,12 @@ const MACHistoryPage: React.FC = () => {
   const breakpoint = useBreakpoint();
   const isMobile = !!breakpoint.xs;
 
-  // 权限(从 menuStore 拉取)— 14-04 导出按钮可见性控制
-  const menuPermissions = useMenuStore((s) => s.permissions);
-  const hasPermission = (perm: string) => menuPermissions.includes(perm);
-  const canExport = hasPermission("network:mac:export");
+  // 权限 — 导出按钮可见性控制（task-4 收口到 PERMISSION_CODES 单一真相源：
+  // 后端 GET /network/mac/history/list 为 strict(network:mac:query)，
+  // 旧字面量 network:mac:export 码不存在，会让导出按钮永久隐藏）。
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const exportGate = useActionPermission();
+  const canExport = exportGate.decide(PERMISSION_CODES.networkMac.query).allowed;
 
   // 状态
   const [current, setCurrent] = useState(1);

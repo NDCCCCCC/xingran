@@ -88,7 +88,10 @@ const EXPECTED_PAGE_COUNT = 73;
 // PERMISSION_CODES.rpaTask 门控（新增/执行/编辑/删除），已门控 30 → 31；
 // 同批从 gating-exemptions.json 移除该页（原豁免理由「rpa 区块未声明」已消失），
 // 豁免 43 → 42；恒等式以 EXPECTED_PAGE_COUNT=73 重新成立（已门控 31 + 豁免 42 = 73）。
-const EXPECTED_EXEMPTION_COUNT = 42;
+// 杂项 RBAC（2026-11-12 task-4）：network/mac 页铺开 networkMac.remove 门控、
+// network/mac/history 页旧字面量 network:mac:export 收口到 PERMISSION_CODES.networkMac.query，
+// 两页移出豁免清单，豁免 42 → 40；恒等式重成立（已门控 33 + 豁免 40 = 73）。
+const EXPECTED_EXEMPTION_COUNT = 40;
 /** 豁免分类白名单 */
 const EXEMPTION_CATEGORIES = [
   "no-permission-code",

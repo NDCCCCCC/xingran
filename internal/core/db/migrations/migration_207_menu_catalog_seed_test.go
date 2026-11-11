@@ -47,8 +47,8 @@ func TestMigrate207FreshDBSeedsFullCatalog(t *testing.T) {
 		t.Fatalf("Migrate207 first run: %v", err)
 	}
 
-	if got := aliveMenuCount(t, db); got != 277 {
-		t.Fatalf("alive menu count = %d, want 277", got)
+	if got := aliveMenuCount(t, db); got != 286 {
+		t.Fatalf("alive menu count = %d, want 286", got)
 	}
 
 	// 规范顶级根: 系统管理 + 运维管理
@@ -86,8 +86,8 @@ func TestMigrate207FreshDBSeedsFullCatalog(t *testing.T) {
 	if err := Migrate207SeedCanonicalMenuCatalog(db); err != nil {
 		t.Fatalf("Migrate207 second run: %v", err)
 	}
-	if got := aliveMenuCount(t, db); got != 277 {
-		t.Fatalf("after re-run alive menu count = %d, want 277", got)
+	if got := aliveMenuCount(t, db); got != 286 {
+		t.Fatalf("after re-run alive menu count = %d, want 286", got)
 	}
 }
 
@@ -120,8 +120,8 @@ func TestMigrate207RespectsUserDeletion(t *testing.T) {
 	if c != 0 {
 		t.Fatalf("user-deleted menu %s was resurrected by seed", victim.ID)
 	}
-	if got := aliveMenuCount(t, db); got != 276 {
-		t.Fatalf("alive menu count = %d, want 276", got)
+	if got := aliveMenuCount(t, db); got != 285 {
+		t.Fatalf("alive menu count = %d, want 285", got)
 	}
 }
 
@@ -215,21 +215,21 @@ func TestMigrate207ReconcilesLegacyOpsTree(t *testing.T) {
 	}
 
 	// 规范目录全量就位: 277 存活 (遗留 3 条已软删不计)
-	if got := aliveMenuCount(t, db); got != 277 {
-		t.Fatalf("alive menu count = %d, want 277", got)
+	if got := aliveMenuCount(t, db); got != 286 {
+		t.Fatalf("alive menu count = %d, want 286", got)
 	}
 
 	// 幂等重跑
 	if err := Migrate207SeedCanonicalMenuCatalog(db); err != nil {
 		t.Fatalf("Migrate207 re-run: %v", err)
 	}
-	if got := aliveMenuCount(t, db); got != 277 {
-		t.Fatalf("after re-run alive menu count = %d, want 277", got)
+	if got := aliveMenuCount(t, db); got != 286 {
+		t.Fatalf("after re-run alive menu count = %d, want 286", got)
 	}
 }
 
 // TestMigrate207GrantPathIntegration 端到端断言: 种子后 assignAllMenusToAdmin
-// 等价物 (差集授权) 能授予 admin 全部 271 条 —— 验证"超管始终拥有全部权限"闭环。
+// 等价物 (差集授权) 能授予 admin 全部 286 条 —— 验证"超管始终拥有全部权限"闭环。
 // (真正的 assignAllMenusToAdmin 在 pkg/permission, 此处用同语义 SQL 避免包循环依赖。)
 func TestMigrate207GrantPathIntegration(t *testing.T) {
 	db := freshSQLiteDBForMigrate207(t)
@@ -255,13 +255,13 @@ func TestMigrate207GrantPathIntegration(t *testing.T) {
 		}
 	}
 
-	// admin 菜单数 == 存活菜单数 == 271 (含按钮; 读取链路的 M/C 过滤在前端树构建层)
+	// admin 菜单数 == 存活菜单数 == 286 (含按钮; 读取链路的 M/C 过滤在前端树构建层)
 	var granted int64
 	if err := db.Model(&models.RoleMenu{}).Where("role_id = ?", adminRole.ID).Count(&granted).Error; err != nil {
 		t.Fatalf("count grants: %v", err)
 	}
-	if granted != 277 {
-		t.Fatalf("admin grants = %d, want 277", granted)
+	if granted != 286 {
+		t.Fatalf("admin grants = %d, want 286", granted)
 	}
 
 	// 读取链路 (menuService.GetUserMenus 语义): 授权 ∩ 存活 ∩ 正常 ∩ 可见

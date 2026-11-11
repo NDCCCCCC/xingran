@@ -12,21 +12,39 @@ import (
 	corepkg "github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // SetupCaptchaBackgroundRouter 设置验证码背景图管理路由
+//
+// RBAC 接线（task-4 孤儿码处置 a：system:captchaBackground:* 5 码有对应功能
+// （前端 system/settings/captcha-background 页活跃调用 list/upload/statistics/preload）
+// 但路由未挂权限——本处补挂，码由孤儿转正，migration_247 播种 F 型）：
+//   - 读（list/statistics/GET /:id）→ ANY-of([captchaBackground:list, captchaBackground:view])
+//   - 新增（upload）→ strict(add)
+//   - 编辑（update/toggle/preload）→ strict(edit)
+//   - 删除（delete）→ strict(remove)
 func SetupCaptchaBackgroundRouter(r *gin.RouterGroup, core *corepkg.Core) {
+	cbRead := []string{
+		string(permission.CaptchaBackgroundList),
+		string(permission.CaptchaBackgroundView),
+	}
+	cbAdd := []string{string(permission.CaptchaBackgroundAdd)}
+	cbEdit := []string{string(permission.CaptchaBackgroundEdit)}
+	cbRemove := []string{string(permission.CaptchaBackgroundRemove)}
+
 	// 静态路由必须在动态路由（如 :id）之前注册
-	r.POST("/upload", uploadCaptchaBackground(core))
-	r.POST("/list", listCaptchaBackgrounds(core))
-	r.POST("/statistics", getStatistics(core))
-	r.POST("/preload", preloadCache(core))
+	r.POST("/upload", middleware.RequireStrictPermissions(cbAdd, core), uploadCaptchaBackground(core))
+	r.POST("/list", middleware.RequirePermissions(cbRead, core), listCaptchaBackgrounds(core))
+	r.POST("/statistics", middleware.RequirePermissions(cbRead, core), getStatistics(core))
+	r.POST("/preload", middleware.RequireStrictPermissions(cbEdit, core), preloadCache(core))
 	// 动态路由放在最后
-	r.POST("/:id", getCaptchaBackground(core))
-	r.POST("/:id/update", updateCaptchaBackground(core))
-	r.POST("/:id/delete", deleteCaptchaBackground(core))
-	r.POST("/:id/toggle", toggleCaptchaBackgroundStatus(core))
+	r.POST("/:id", middleware.RequirePermissions(cbRead, core), getCaptchaBackground(core))
+	r.POST("/:id/update", middleware.RequireStrictPermissions(cbEdit, core), updateCaptchaBackground(core))
+	r.POST("/:id/delete", middleware.RequireStrictPermissions(cbRemove, core), deleteCaptchaBackground(core))
+	r.POST("/:id/toggle", middleware.RequireStrictPermissions(cbEdit, core), toggleCaptchaBackgroundStatus(core))
 }
 
 // listCaptchaBackgrounds 获取背景图列表

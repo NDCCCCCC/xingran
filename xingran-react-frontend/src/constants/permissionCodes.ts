@@ -208,6 +208,22 @@ export const PERMISSION_CODES = {
     list: "monitor:online:list",
     forceLogout: "monitor:online:forceLogout",
   },
+  // ==================== task-4 杂项 RBAC（migration_247 同源） ====================
+  // network:mac 域（mac/mac-history/topology 组接线，含 3 新码）；captchaBackground
+  // 孤儿转正（captcha-backgrounds 路由已挂端点级权限）。
+  networkMac: {
+    query: "network:mac:query",
+    collect: "network:mac:collect",
+    remove: "network:mac:remove",
+    ruleEdit: "network:mac:rule:edit",
+  },
+  systemCaptchaBackground: {
+    list: "system:captchaBackground:list",
+    view: "system:captchaBackground:view",
+    add: "system:captchaBackground:add",
+    edit: "system:captchaBackground:edit",
+    remove: "system:captchaBackground:remove",
+  },
   // ==================== rpa 域 RBAC 全链路接线（migration_245 同源，2026-11-11） ====================
   // 14 码与 pkg/permission/config.go RPA 域常量、sys_menu F 型播种
   // （menu_catalog_seed.sql 既有 8 码 + migration_245 新码 6 码）三方一致。

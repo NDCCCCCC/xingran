@@ -422,38 +422,8 @@
       "grandfathered": true
     },
     {
-      "code": "system:apikey:view",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:apikey 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
       "code": "system:backup:remove",
       "reason": "存量漂移（TS声明）：system:backup 域历史接线不完整，TS声明 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:captchaBackground:add",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:captchaBackground 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:captchaBackground:edit",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:captchaBackground 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:captchaBackground:list",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:captchaBackground 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:captchaBackground:remove",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:captchaBackground 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:captchaBackground:view",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:captchaBackground 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
       "grandfathered": true
     },
     {
@@ -529,56 +499,6 @@
     {
       "code": "system:notice:view",
       "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:notice 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:workstation:add",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:workstation 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:workstation:edit",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:workstation 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:workstation:list",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:workstation 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:workstation:remove",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:workstation 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "system:workstation:view",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:workstation 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "tool:build:add",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：tool:build 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "tool:build:edit",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：tool:build 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "tool:build:export",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：tool:build 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "tool:build:list",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：tool:build 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
-      "grandfathered": true
-    },
-    {
-      "code": "tool:build:remove",
-      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：tool:build 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
       "grandfathered": true
     },
     {

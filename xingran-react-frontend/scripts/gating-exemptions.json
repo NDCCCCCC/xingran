@@ -122,18 +122,6 @@
       "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
     },
     {
-      "page": "src/pages/network/mac/history/index.tsx",
-      "category": "legacy-two-source",
-      "reason": "MAC 历史页用旧式权限码 network:mac:export 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑，等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",
-      "evidence": "src/pages/network/mac/history/MACHistoryPage.tsx:117-119 使用字面量 network:mac:export；src/constants/permissionCodes.ts 无 networkMac 区块；pkg/permission/config.go 有 network:mac:* 常量"
-    },
-    {
-      "page": "src/pages/network/mac/index.tsx",
-      "category": "no-permission-code",
-      "reason": "MAC 地址页有删除与导出写入口，但前端权限码清单无 networkMac 区块；等后端拆分 phase 回补后再铺开门控。",
-      "evidence": "src/constants/permissionCodes.ts 无 networkMac 区块；pkg/permission/config.go 有 network:mac:* 常量 → 缺的是 TS 侧声明"
-    },
-    {
       "page": "src/pages/network/ports/index.tsx",
       "category": "legacy-two-source",
       "reason": "端口页用旧式权限码 network:port:write 直判（useMenuStore().permissions），该码不在前端权限码清单 → 直判构成第二真相源，违反 PERM-06 单一真相源；86 不改其判定逻辑（改了等于自造权限码），等后端拆分 phase 统一收口到 PERMISSION_CODES 后再铺开三态门控。含旧式直判（第二真相源），待后端动作级拆分 phase 统一收口。",

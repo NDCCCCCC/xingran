@@ -1320,6 +1320,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 机房照片管理
 		roomPhotos := ops.Group("/rooms/photos")
+		// RBAC（task-4）：照片端点级权限在 SetupRoomPhotoRouter 内挂载（读 ANY-of
+		// ops:serverroom:list/query、写 strict(edit)、删 strict(delete)，域借用注释见彼处）。
 		// DS-02: 权限校验之后、handler 之前注入 data_scope/user_id（含 request context）。
 		roomPhotos.Use(middleware.DataScopePermission(core))
 		{

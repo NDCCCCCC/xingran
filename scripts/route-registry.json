@@ -3352,11 +3352,11 @@
       "setup": "SetupMACHistoryRouter",
       "isWrite": false,
       "handler": "QueryDeviceHistory",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_history_router.go",
-      "line": 30
+      "line": 36
     },
     {
       "method": "POST",
@@ -3365,11 +3365,11 @@
       "setup": "SetupMACHistoryRouter",
       "isWrite": false,
       "handler": "QueryHeatmap",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_history_router.go",
-      "line": 35
+      "line": 41
     },
     {
       "method": "GET",
@@ -3378,11 +3378,11 @@
       "setup": "SetupMACHistoryRouter",
       "isWrite": false,
       "handler": "ExportHistory",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_history_router.go",
-      "line": 34
+      "line": 40
     },
     {
       "method": "POST",
@@ -3391,11 +3391,11 @@
       "setup": "SetupMACHistoryRouter",
       "isWrite": false,
       "handler": "QueryHistory",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_history_router.go",
-      "line": 33
+      "line": 39
     },
     {
       "method": "POST",
@@ -3404,11 +3404,11 @@
       "setup": "SetupMACHistoryRouter",
       "isWrite": false,
       "handler": "QueryPortHistory",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_history_router.go",
-      "line": 29
+      "line": 35
     },
     {
       "method": "POST",
@@ -3417,11 +3417,11 @@
       "setup": "SetupMACHistoryRouter",
       "isWrite": false,
       "handler": "QueryConnectionStats",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_history_router.go",
-      "line": 31
+      "line": 37
     },
     {
       "method": "POST",
@@ -3430,11 +3430,11 @@
       "setup": "SetupMACHistoryRouter",
       "isWrite": false,
       "handler": "GetVendor",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_history_router.go",
-      "line": 32
+      "line": 38
     },
     {
       "method": "POST",
@@ -3443,13 +3443,13 @@
       "setup": "SetupMACRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "network:mac:query"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_router.go",
-      "line": 17
+      "line": 29
     },
     {
       "method": "POST",
@@ -3458,13 +3458,13 @@
       "setup": "SetupMACRouter",
       "isWrite": true,
       "handler": "Clean",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "network:mac:query"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_router.go",
-      "line": 16
+      "line": 28
     },
     {
       "method": "POST",
@@ -3473,13 +3473,13 @@
       "setup": "SetupMACRouter",
       "isWrite": false,
       "handler": "Collect",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "network:mac:query"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_router.go",
-      "line": 13
+      "line": 25
     },
     {
       "method": "POST",
@@ -3488,13 +3488,13 @@
       "setup": "SetupMACRouter",
       "isWrite": false,
       "handler": "CollectAll",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "network:mac:query"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_router.go",
-      "line": 14
+      "line": 26
     },
     {
       "method": "POST",
@@ -3503,13 +3503,13 @@
       "setup": "SetupMACRouter",
       "isWrite": true,
       "handler": "ExportMACAddresses",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions",
       "permCodes": [
         "network:mac:query"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_router.go",
-      "line": 18
+      "line": 30
     },
     {
       "method": "POST",
@@ -3524,7 +3524,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_router.go",
-      "line": 12
+      "line": 24
     },
     {
       "method": "GET",
@@ -3539,7 +3539,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/mac_router.go",
-      "line": 15
+      "line": 27
     },
     {
       "method": "POST",
@@ -4038,11 +4038,11 @@
       "setup": "SetupTopologyRouter",
       "isWrite": true,
       "handler": "CreateRule",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/topology_router.go",
-      "line": 25
+      "line": 33
     },
     {
       "method": "POST",
@@ -4051,11 +4051,11 @@
       "setup": "SetupTopologyRouter",
       "isWrite": false,
       "handler": "GetRule",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/topology_router.go",
-      "line": 26
+      "line": 34
     },
     {
       "method": "POST",
@@ -4064,11 +4064,11 @@
       "setup": "SetupTopologyRouter",
       "isWrite": true,
       "handler": "DeleteRule",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/topology_router.go",
-      "line": 28
+      "line": 36
     },
     {
       "method": "POST",
@@ -4077,11 +4077,11 @@
       "setup": "SetupTopologyRouter",
       "isWrite": true,
       "handler": "UpdateRule",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/topology_router.go",
-      "line": 27
+      "line": 35
     },
     {
       "method": "GET",
@@ -4090,11 +4090,11 @@
       "setup": "SetupTopologyRouter",
       "isWrite": false,
       "handler": "GetEffectiveRule",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/topology_router.go",
-      "line": 32
+      "line": 40
     },
     {
       "method": "POST",
@@ -4103,11 +4103,11 @@
       "setup": "SetupTopologyRouter",
       "isWrite": false,
       "handler": "ListRules",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/network/topology_router.go",
-      "line": 24
+      "line": 32
     },
     {
       "method": "POST",
@@ -4578,7 +4578,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1361
+      "line": 1363
     },
     {
       "method": "POST",
@@ -4596,7 +4596,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1349
+      "line": 1351
     },
     {
       "method": "POST",
@@ -4611,7 +4611,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1365
+      "line": 1367
     },
     {
       "method": "POST",
@@ -4626,7 +4626,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1363
+      "line": 1365
     },
     {
       "method": "POST",
@@ -4641,7 +4641,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1366
+      "line": 1368
     },
     {
       "method": "POST",
@@ -4659,7 +4659,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1348
+      "line": 1350
     },
     {
       "method": "POST",
@@ -4707,7 +4707,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1346
+      "line": 1348
     },
     {
       "method": "POST",
@@ -4725,7 +4725,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1347
+      "line": 1349
     },
     {
       "method": "GET",
@@ -4758,7 +4758,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1481
+      "line": 1483
     },
     {
       "method": "POST",
@@ -4780,7 +4780,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1472
+      "line": 1474
     },
     {
       "method": "POST",
@@ -4795,7 +4795,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1485
+      "line": 1487
     },
     {
       "method": "POST",
@@ -4810,7 +4810,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1483
+      "line": 1485
     },
     {
       "method": "POST",
@@ -4825,7 +4825,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1486
+      "line": 1488
     },
     {
       "method": "POST",
@@ -4847,7 +4847,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1471
+      "line": 1473
     },
     {
       "method": "POST",
@@ -4877,7 +4877,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1516
+      "line": 1518
     },
     {
       "method": "POST",
@@ -4895,7 +4895,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1507
+      "line": 1509
     },
     {
       "method": "POST",
@@ -4910,7 +4910,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1518
+      "line": 1520
     },
     {
       "method": "POST",
@@ -4925,7 +4925,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1517
+      "line": 1519
     },
     {
       "method": "POST",
@@ -4940,7 +4940,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1519
+      "line": 1521
     },
     {
       "method": "POST",
@@ -4958,7 +4958,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1506
+      "line": 1508
     },
     {
       "method": "POST",
@@ -5405,7 +5405,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1402
+      "line": 1404
     },
     {
       "method": "POST",
@@ -5423,7 +5423,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1390
+      "line": 1392
     },
     {
       "method": "POST",
@@ -5438,7 +5438,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1406
+      "line": 1408
     },
     {
       "method": "POST",
@@ -5453,7 +5453,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1404
+      "line": 1406
     },
     {
       "method": "POST",
@@ -5468,7 +5468,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1407
+      "line": 1409
     },
     {
       "method": "POST",
@@ -5486,7 +5486,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1389
+      "line": 1391
     },
     {
       "method": "POST",
@@ -5534,7 +5534,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1387
+      "line": 1389
     },
     {
       "method": "POST",
@@ -5552,7 +5552,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1388
+      "line": 1390
     },
     {
       "method": "GET",
@@ -5579,11 +5579,11 @@
       "setup": "SetupRoomPhotoRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/room_photo_handler.go",
-      "line": 56
+      "line": 74
     },
     {
       "method": "GET",
@@ -5592,11 +5592,11 @@
       "setup": "SetupRoomPhotoRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/room_photo_handler.go",
-      "line": 52
+      "line": 70
     },
     {
       "method": "PUT",
@@ -5605,11 +5605,11 @@
       "setup": "SetupRoomPhotoRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/room_photo_handler.go",
-      "line": 54
+      "line": 72
     },
     {
       "method": "PUT",
@@ -5618,11 +5618,11 @@
       "setup": "SetupRoomPhotoRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/room_photo_handler.go",
-      "line": 53
+      "line": 71
     },
     {
       "method": "POST",
@@ -5631,11 +5631,11 @@
       "setup": "SetupRoomPhotoRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/room_photo_handler.go",
-      "line": 57
+      "line": 75
     },
     {
       "method": "GET",
@@ -5644,11 +5644,11 @@
       "setup": "SetupRoomPhotoRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/room_photo_handler.go",
-      "line": 51
+      "line": 69
     },
     {
       "method": "PUT",
@@ -5657,11 +5657,11 @@
       "setup": "SetupRoomPhotoRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/room_photo_handler.go",
-      "line": 55
+      "line": 73
     },
     {
       "method": "POST",
@@ -5670,11 +5670,11 @@
       "setup": "SetupRoomPhotoRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/operations/room_photo_handler.go",
-      "line": 50
+      "line": 68
     },
     {
       "method": "POST",
@@ -5869,7 +5869,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1445
+      "line": 1447
     },
     {
       "method": "POST",
@@ -5891,7 +5891,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1436
+      "line": 1438
     },
     {
       "method": "POST",
@@ -5906,7 +5906,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1449
+      "line": 1451
     },
     {
       "method": "POST",
@@ -5921,7 +5921,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1447
+      "line": 1449
     },
     {
       "method": "POST",
@@ -5936,7 +5936,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1450
+      "line": 1452
     },
     {
       "method": "POST",
@@ -5958,7 +5958,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1435
+      "line": 1437
     },
     {
       "method": "POST",
@@ -7485,11 +7485,11 @@
       "setup": "SetupCaptchaBackgroundRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/captcha_background_handler.go",
-      "line": 26
+      "line": 44
     },
     {
       "method": "POST",
@@ -7498,11 +7498,11 @@
       "setup": "SetupCaptchaBackgroundRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/captcha_background_handler.go",
-      "line": 28
+      "line": 46
     },
     {
       "method": "POST",
@@ -7511,11 +7511,11 @@
       "setup": "SetupCaptchaBackgroundRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/captcha_background_handler.go",
-      "line": 29
+      "line": 47
     },
     {
       "method": "POST",
@@ -7524,11 +7524,11 @@
       "setup": "SetupCaptchaBackgroundRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/captcha_background_handler.go",
-      "line": 27
+      "line": 45
     },
     {
       "method": "POST",
@@ -7537,11 +7537,11 @@
       "setup": "SetupCaptchaBackgroundRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/captcha_background_handler.go",
-      "line": 22
+      "line": 40
     },
     {
       "method": "POST",
@@ -7550,11 +7550,11 @@
       "setup": "SetupCaptchaBackgroundRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/captcha_background_handler.go",
-      "line": 24
+      "line": 42
     },
     {
       "method": "POST",
@@ -7563,11 +7563,11 @@
       "setup": "SetupCaptchaBackgroundRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequirePermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/captcha_background_handler.go",
-      "line": 23
+      "line": 41
     },
     {
       "method": "POST",
@@ -7576,11 +7576,11 @@
       "setup": "SetupCaptchaBackgroundRouter",
       "isWrite": false,
       "handler": "core",
-      "permKind": null,
+      "permKind": "RequireStrictPermissions",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/captcha_background_handler.go",
-      "line": 21
+      "line": 39
     },
     {
       "method": "POST",

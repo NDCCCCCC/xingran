@@ -9,6 +9,8 @@ import (
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -46,15 +48,31 @@ type UpdateSortRequest struct {
 }
 
 // SetupRoomPhotoRouter 设置机房照片路由
+//
+// RBAC 接线（task-4 杂项 RBAC，端点级中间件，对齐 vdi/vm_router 先例）：
+// 照片为机房子资源，借用 ops:serverroom 域码（对齐 workstationDevices 借
+// ops:workstation 域码先例，域借用注释声明，零新码）：
+//   - 读（list/:roomId、GET /:id）→ ANY-of([ops:serverroom:list, ops:serverroom:query])
+//   - 内容写（upload/primary/description/sort）→ strict(ops:serverroom:edit)
+//   - 删除（DELETE /:id、batch-delete）→ strict(ops:serverroom:delete)
 func SetupRoomPhotoRouter(r *gin.RouterGroup, core *core.Core) {
-	r.POST("/upload", uploadPhotos(core))
-	r.GET("/list/:roomId", listPhotos(core))
-	r.GET("/:id", getPhoto(core))
-	r.PUT("/:id/primary", setPrimary(core))
-	r.PUT("/:id/description", updateDescription(core))
-	r.PUT("/sort", updateSort(core))
-	r.DELETE("/:id", deletePhoto(core))
-	r.POST("/batch-delete", batchDeletePhotos(core))
+	// ops:serverroom:list 为 C 型页面本体码（不进 config.go 常量集），按
+	// router.go serverRooms 读组惯例用字面量；query/edit/delete 用常量。
+	photoRead := []string{
+		"ops:serverroom:list",
+		string(permission.OpsServerRoomQuery),
+	}
+	photoEdit := []string{string(permission.OpsServerRoomEdit)}
+	photoDelete := []string{string(permission.OpsServerRoomDelete)}
+
+	r.POST("/upload", middleware.RequireStrictPermissions(photoEdit, core), uploadPhotos(core))
+	r.GET("/list/:roomId", middleware.RequirePermissions(photoRead, core), listPhotos(core))
+	r.GET("/:id", middleware.RequirePermissions(photoRead, core), getPhoto(core))
+	r.PUT("/:id/primary", middleware.RequireStrictPermissions(photoEdit, core), setPrimary(core))
+	r.PUT("/:id/description", middleware.RequireStrictPermissions(photoEdit, core), updateDescription(core))
+	r.PUT("/sort", middleware.RequireStrictPermissions(photoEdit, core), updateSort(core))
+	r.DELETE("/:id", middleware.RequireStrictPermissions(photoDelete, core), deletePhoto(core))
+	r.POST("/batch-delete", middleware.RequireStrictPermissions(photoDelete, core), batchDeletePhotos(core))
 }
 
 // uploadPhotos 上传机房照片

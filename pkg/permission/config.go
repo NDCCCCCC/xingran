@@ -51,12 +51,10 @@ const (
 	PostEdit   PermissionCode = "system:post:edit"
 	PostRemove PermissionCode = "system:post:remove"
 
-	// 工位管理权限
-	WorkstationList   PermissionCode = "system:workstation:list"
-	WorkstationView   PermissionCode = "system:workstation:view"
-	WorkstationAdd    PermissionCode = "system:workstation:add"
-	WorkstationEdit   PermissionCode = "system:workstation:edit"
-	WorkstationRemove PermissionCode = "system:workstation:remove"
+	// 工位管理权限（ops:workstation:*）
+	// [2026-11-12 task-4 孤儿码清理] 旧域 system:workstation:* 5 码（list/view/add/
+	// edit/remove）已删除：工位功能由 ops:workstation:* 域接管，旧码零路由挂载、
+	// 零菜单播种、零前端引用（孤儿码审计 2026-11-11）。
 
 	// 字典管理权限
 	DictTypeList   PermissionCode = "system:dict:list"
@@ -112,10 +110,11 @@ const (
 	// 注意: 菜单种子仅播种 system:apikey:list/logs, add/edit/remove 细粒度授权
 	// 需由后续 migration 或 admin 手动授权补充(见 61-REVIEW.md WR-01)。
 	APIKeyList   PermissionCode = "system:apikey:list"
-	APIKeyView   PermissionCode = "system:apikey:view"
 	APIKeyAdd    PermissionCode = "system:apikey:add"
 	APIKeyEdit   PermissionCode = "system:apikey:edit"
 	APIKeyRemove PermissionCode = "system:apikey:remove"
+	// [2026-11-12 task-4 孤儿码清理] system:apikey:view 已删除：apikeys 读组
+	// ANY-of 仅用 list 码（router.go:431），view 码零挂载零播种零前端引用。
 
 	// 通知公告权限
 	NoticeList   PermissionCode = "system:notice:list"
@@ -190,12 +189,8 @@ const (
 	MonitorJob    PermissionCode = "monitor:job"
 	MonitorCache  PermissionCode = "monitor:cache"
 
-	// 在线构建权限
-	BuildList   PermissionCode = "tool:build:list"
-	BuildAdd    PermissionCode = "tool:build:add"
-	BuildEdit   PermissionCode = "tool:build:edit"
-	BuildRemove PermissionCode = "tool:build:remove"
-	BuildExport PermissionCode = "tool:build:export"
+	// [2026-11-12 task-4 孤儿码清理] tool:build:* 5 码（list/add/edit/remove/export）
+	// 已删除：在线构建功能不存在（无路由、无 handler、无前端页面、零菜单播种）。
 
 	// ==================== 网络设备管理权限 ====================
 	// 设备管理权限
@@ -248,6 +243,12 @@ const (
 
 	// MAC地址查询权限
 	NetworkMacQuery PermissionCode = "network:mac:query"
+	// MAC 采集权限（task-4：mac 组 collect/collect/all，触发 SNMP 采集入库）
+	NetworkMacCollect PermissionCode = "network:mac:collect"
+	// MAC 清理权限（task-4：mac 组 clean/batch-delete）
+	NetworkMacRemove PermissionCode = "network:mac:remove"
+	// MAC 过滤规则管理权限（task-4：topology/rules 写操作）
+	NetworkMacRuleEdit PermissionCode = "network:mac:rule:edit"
 
 	// 端口状态查询权限
 	NetworkPortQuery PermissionCode = "network:port:query"
@@ -481,12 +482,8 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/posts/:id/delete", "POST", PostRemove, "删除岗位"},
 
 		// 工位管理
-		{"/system/workstations/list", "POST", WorkstationList, "查询工位列表"},
-		{"/system/workstations/:id", "POST", WorkstationView, "查看工位详情"},
-		{"/system/workstations", "POST", WorkstationAdd, "新增工位"},
-		{"/system/workstations/:id/update", "POST", WorkstationEdit, "编辑工位"},
-		{"/system/workstations/:id/delete", "POST", WorkstationRemove, "删除工位"},
-		{"/system/workstations/batch-delete", "POST", WorkstationRemove, "批量删除工位"},
+		// [2026-11-12 task-4] 旧 /system/workstations/* 端点条目删除（路由已下线，
+		// 由 /ops/workstation/* 接管；此前是 scan-routes STALE 报告的来源）
 
 		// 网络端口写操作（Phase 52: shutdown/undo-shutdown/description/dot1x-enable/dot1x-disable/batch）
 		{"/network/ports/write/shutdown", "POST", NetworkPortWrite, "关闭端口"},

@@ -6,6 +6,8 @@ import (
 	mac_history_query_service "github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 )
 
 // SetupMACHistoryRouter 设置MAC历史查询路由
@@ -26,13 +28,17 @@ func SetupMACHistoryRouter(r *gin.RouterGroup, core *core.Core) {
 	heatmapHandler := NewMACHistoryHeatmapHandler(heatmapService)
 
 	// 注册路由
-	r.POST("/history/port", historyHandler.QueryPortHistory)
-	r.POST("/history/device", historyHandler.QueryDeviceHistory)
-	r.POST("/history/stats", historyHandler.QueryConnectionStats)
-	r.POST("/history/vendor", historyHandler.GetVendor)
-	r.POST("/history/list", historyHandler.QueryHistory)
-	r.GET("/history/list", historyHandler.ExportHistory)
-	r.POST("/history/heatmap", heatmapHandler.QueryHeatmap)
+	//
+	// RBAC 接线（task-4）：历史查询全部为读语义 → ANY-of([network:mac:query])；
+	// GET /history/list 为导出 → strict(network:mac:query)（FIX-03 导出惯例）。
+	macHistoryRead := []string{string(permission.NetworkMacQuery)}
+	r.POST("/history/port", middleware.RequirePermissions(macHistoryRead, core), historyHandler.QueryPortHistory)
+	r.POST("/history/device", middleware.RequirePermissions(macHistoryRead, core), historyHandler.QueryDeviceHistory)
+	r.POST("/history/stats", middleware.RequirePermissions(macHistoryRead, core), historyHandler.QueryConnectionStats)
+	r.POST("/history/vendor", middleware.RequirePermissions(macHistoryRead, core), historyHandler.GetVendor)
+	r.POST("/history/list", middleware.RequirePermissions(macHistoryRead, core), historyHandler.QueryHistory)
+	r.GET("/history/list", middleware.RequireStrictPermissions(macHistoryRead, core), historyHandler.ExportHistory)
+	r.POST("/history/heatmap", middleware.RequirePermissions(macHistoryRead, core), heatmapHandler.QueryHeatmap)
 
 	applogger.Infof("[路由注册] MAC历史查询路由已注册: /history/port, /history/device, /history/stats, /history/vendor, /history/list (POST/GET), /history/heatmap")
 }
