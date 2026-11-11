@@ -20,12 +20,6 @@
       "evidence": "src/constants/permissionCodes.ts AD 相关仅 opsADConfig(ops:ad:config:*)/opsADGroup(ops:ad:group:*)/opsADUser(ops:ad:user:*)，无 ou/computer 组；pkg/permission/config.go 的 ops:ad 二级前缀下无 ou/computer 操作码"
     },
     {
-      "page": "src/pages/ad/SyncMonitor/index.tsx",
-      "category": "no-permission-code",
-      "reason": "旧 ad 目录的同步监控页有写入口（src/pages/ad/ 与 src/pages/ad-domain/ 是两套目录，都按 index.tsx 计为页面）；前端权限码清单无旧 ad 域同步区块，86 不自造权限码，等后端拆分 phase 回补后再铺开门控。",
-      "evidence": "src/constants/permissionCodes.ts 无 ad 同步区块；pkg/permission/config.go 无 ad: 前缀（旧目录域，未进 85 拆分范围）"
-    },
-    {
       "page": "src/pages/asset/reconciliation/dashboard/index.tsx",
       "category": "read-only",
       "reason": "对账仪表盘为纯图表视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
@@ -110,28 +104,10 @@
       "evidence": "src/pages/login/index.tsx:303 唯一按钮为 <Button type=\"primary\" htmlType=\"submit\"> 登录提交；该页不挂 useMenuStore 权限判定"
     },
     {
-      "page": "src/pages/monitor/cache/index.tsx",
-      "category": "no-permission-code",
-      "reason": "缓存监控页有清理/删除写入口，但前端权限码清单无 monitor 区块；等后端拆分 phase 回补后再铺开门控。",
-      "evidence": "src/constants/permissionCodes.ts 无 monitor 区块；pkg/permission/config.go 有 monitor:cache:* 常量 → 缺的是 TS 侧声明"
-    },
-    {
       "page": "src/pages/monitor/dashboard/index.tsx",
       "category": "read-only",
       "reason": "监控总览仪表盘为纯图表视图，扫描器写入口特征零命中、人工复核亦无写向按钮，无可门控的写入口。",
       "evidence": "check-gating-coverage.mjs 实测该页写入口特征命中数 = 0"
-    },
-    {
-      "page": "src/pages/monitor/job/index.tsx",
-      "category": "no-permission-code",
-      "reason": "定时任务页有新增/编辑/删除写入口，但前端权限码清单无 monitor 区块；等后端拆分 phase 回补后再铺开门控。该页 Switch 命中为表单字段 Switch（并发执行 <Form.Item name=\"concurrent\" valuePropName=\"checked\"> 内、无 onChange），随表单提交生效，不构成独立业务写入口。",
-      "evidence": "src/constants/permissionCodes.ts 无 monitor 区块；pkg/permission/config.go 有 monitor:job:* 常量；Switch 命中 src/pages/monitor/job/index.tsx:338"
-    },
-    {
-      "page": "src/pages/monitor/logs/index.tsx",
-      "category": "no-permission-code",
-      "reason": "操作日志页有导出/清理写入口，但前端权限码清单无 monitor 区块；等后端拆分 phase 回补后再铺开门控。",
-      "evidence": "src/constants/permissionCodes.ts 无 monitor 区块；pkg/permission/config.go 有 monitor:log*/monitor:operlog 常量"
     },
     {
       "page": "src/pages/monitor/server/index.tsx",

@@ -27,13 +27,16 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	"github.com/xingran-next/xingran-go-backend/pkg/permission"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
 
@@ -500,6 +503,23 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				}, core)
 			}
 
+			// 字典刷新缓存（URL 交叉校验 FIX：前端字典页「刷新缓存」按钮活跃调用
+			// /system/dicts/refresh-cache，此前无后端端点）。
+			// 失效字典类型/字典数据全族缓存键，与 dictTypeCacheService.invalidateCache
+			// （dict_cache_impl.go invalidateCache → base.InvalidatePattern）同源键族；
+			// 归 dicts 编辑码严格组（与 dicts 写组口径一致）。
+			dictRefreshCache := strictUserRouteGroup(dictsWrites, permission.DictTypeEdit, core)
+			dictRefreshCache.POST("/refresh-cache", func(c *gin.Context) {
+				provider := systemServices.NewCacheProvider(core.DataCacheService)
+				base.InvalidatePattern(c.Request.Context(), provider, []string{
+					systemServices.CacheKeyDictType + "*",
+					systemServices.CacheKeyDictData + "*",
+					systemServices.CacheKeyDictDataByType + "*",
+				}, "DICT")
+				operlog.Record(c, core.OperLogService, core.GetDB(), "字典管理", operlog.OperTypeClean)
+				response.Success(c, gin.H{"refreshed": true})
+			})
+
 			// 参数配置
 			configs := authorized.Group("/configs")
 			configs.Use(middleware.RequirePermissions([]string{
@@ -591,6 +611,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	}
 
 	// 监控模块
+	//
+	// RBAC 接线（2026-11-11 monitor 域权限码全链路）：本组端点级权限在各子 setup
+	// 内挂载（server/cache/oper-logs/login-logs + jobs），对齐 vdi/vm_router.go
+	// 端点级中间件先例——读端点 ANY-of 读码、写端点 RequireStrictPermissions 单码。
+	// 权限码定义见 pkg/permission/config.go monitor 域；F 型按钮播种见
+	// migration_244（monitor RBAC F 型按钮）。
 	monitor := r.Group("/monitor")
 	monitor.Use(middleware.JWTAuth(core.JWTManager))
 	{

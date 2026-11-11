@@ -8,6 +8,8 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
+	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"github.com/xingran-next/xingran-go-backend/pkg/permission"
 )
 
 // ==================== 适配器 ====================
@@ -304,37 +306,48 @@ func SetupCacheRouter(r *gin.RouterGroup, core *core.Core) {
 	// 创建Handler
 	cacheHandler := NewCacheHandler(cacheService, core)
 
+	// RBAC 接线（monitor 域权限码全链路）：
+	//   - 读端点 → RequirePermissions ANY-of([monitor:cache:list, monitor:cache:view])
+	//   - 写端点（操作/清空/批量/失效/预热/配置变更）→ RequireStrictPermissions monitor:cache:clean（高危写，单一权限点）
+	// 端点级中间件（对齐 vdi/vm_router.go 先例）：本 setup 全量注册读/写端点，
+	// 端点级单中间件不存在 ANY-of 前置放行病灶。
+	cacheRead := []string{
+		string(permission.CacheList),
+		string(permission.CacheView),
+	}
+	cacheClean := []string{string(permission.CacheClean)}
+
 	// ==================== 缓存信息路由 ====================
-	r.POST("/cache/list", cacheHandler.GetCacheList)
-	r.GET("/cache/:key", cacheHandler.GetCacheInfo)
+	r.POST("/cache/list", middleware.RequirePermissions(cacheRead, core), cacheHandler.GetCacheList)
+	r.GET("/cache/:key", middleware.RequirePermissions(cacheRead, core), cacheHandler.GetCacheInfo)
 
 	// ==================== 缓存操作路由 ====================
-	r.POST("/cache/operate", cacheHandler.OperateCache)
-	r.POST("/cache/batch", cacheHandler.BatchOperateCache)
-	r.POST("/cache/clear", cacheHandler.ClearCache)
+	r.POST("/cache/operate", middleware.RequireStrictPermissions(cacheClean, core), cacheHandler.OperateCache)
+	r.POST("/cache/batch", middleware.RequireStrictPermissions(cacheClean, core), cacheHandler.BatchOperateCache)
+	r.POST("/cache/clear", middleware.RequireStrictPermissions(cacheClean, core), cacheHandler.ClearCache)
 
 	// ==================== 缓存统计路由 ====================
-	r.POST("/cache/stats/list", cacheHandler.GetCacheStats)
-	r.POST("/cache/monitor", cacheHandler.GetCacheMonitor)
+	r.POST("/cache/stats/list", middleware.RequirePermissions(cacheRead, core), cacheHandler.GetCacheStats)
+	r.POST("/cache/monitor", middleware.RequirePermissions(cacheRead, core), cacheHandler.GetCacheMonitor)
 
 	// ==================== 缓存导出路由 ====================
-	r.POST("/cache/export", cacheHandler.ExportCache)
+	r.POST("/cache/export", middleware.RequireStrictPermissions(cacheRead, core), cacheHandler.ExportCache)
 
 	// ==================== 缓存配置管理路由 ====================
-	r.GET("/cache/config", cacheHandler.GetCacheConfigs)
-	r.PUT("/cache/config", cacheHandler.UpdateCacheConfig)
-	r.POST("/cache/config/reload", cacheHandler.ReloadCacheConfigs)
+	r.GET("/cache/config", middleware.RequirePermissions(cacheRead, core), cacheHandler.GetCacheConfigs)
+	r.PUT("/cache/config", middleware.RequireStrictPermissions(cacheClean, core), cacheHandler.UpdateCacheConfig)
+	r.POST("/cache/config/reload", middleware.RequireStrictPermissions(cacheClean, core), cacheHandler.ReloadCacheConfigs)
 
 	// ==================== 测试端点路由 ====================
-	r.GET("/cache/test", cacheHandler.TestCacheEndpoint)
-	r.GET("/cache/debug/raw-keys", cacheHandler.DebugRawKeys)
-	r.GET("/cache/debug/l1", cacheHandler.DebugL1Cache)
+	r.GET("/cache/test", middleware.RequirePermissions(cacheRead, core), cacheHandler.TestCacheEndpoint)
+	r.GET("/cache/debug/raw-keys", middleware.RequirePermissions(cacheRead, core), cacheHandler.DebugRawKeys)
+	r.GET("/cache/debug/l1", middleware.RequirePermissions(cacheRead, core), cacheHandler.DebugL1Cache)
 
 	// ==================== 增强缓存管理路由 ====================
 	enhancedCacheHandler := NewCacheEnhancedHandler(core)
-	r.POST("/cache/stats", enhancedCacheHandler.GetCacheStats)                    // 获取缓存统计信息
-	r.POST("/cache/invalidate", enhancedCacheHandler.InvalidateByModule)          // 按模块清除缓存
-	r.POST("/cache/invalidate-pattern", enhancedCacheHandler.InvalidateByPattern) // 按模式清除缓存
-	r.POST("/cache/warmup", enhancedCacheHandler.WarmUpCache)                     // 执行缓存预热
-	r.POST("/cache/key-info", enhancedCacheHandler.GetKeyInfo)                    // 获取缓存键信息
+	r.POST("/cache/stats", middleware.RequirePermissions(cacheRead, core), enhancedCacheHandler.GetCacheStats)                    // 获取缓存统计信息
+	r.POST("/cache/invalidate", middleware.RequireStrictPermissions(cacheClean, core), enhancedCacheHandler.InvalidateByModule)          // 按模块清除缓存
+	r.POST("/cache/invalidate-pattern", middleware.RequireStrictPermissions(cacheClean, core), enhancedCacheHandler.InvalidateByPattern) // 按模式清除缓存
+	r.POST("/cache/warmup", middleware.RequireStrictPermissions(cacheClean, core), enhancedCacheHandler.WarmUpCache)                     // 执行缓存预热
+	r.POST("/cache/key-info", middleware.RequirePermissions(cacheRead, core), enhancedCacheHandler.GetKeyInfo)                    // 获取缓存键信息
 }

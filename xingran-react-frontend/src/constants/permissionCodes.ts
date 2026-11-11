@@ -168,6 +168,46 @@ export const PERMISSION_CODES = {
   workorderRating: {
     create: "ops:workorder:rating:create",
   },
+  // ==================== monitor 域 RBAC 全链路接线（migration_244 同源） ====================
+  // 24 码与 pkg/permission/config.go monitor 域常量、sys_menu F 型播种（migration_244
+  // / menu_catalog_seed.sql 同源追加）三方一致。后端路由端点级挂载见
+  // monitor/{server,cache,oper_log,login_log}_router.go 与 scheduler/job_router.go。
+  monitorServer: {
+    list: "monitor:server:list",
+    view: "monitor:server:view",
+  },
+  monitorCache: {
+    list: "monitor:cache:list",
+    view: "monitor:cache:view",
+    clean: "monitor:cache:clean",
+  },
+  monitorJob: {
+    list: "monitor:job:list",
+    view: "monitor:job:view",
+    add: "monitor:job:add",
+    edit: "monitor:job:edit",
+    remove: "monitor:job:remove",
+    export: "monitor:job:export",
+    start: "monitor:job:start",
+    stop: "monitor:job:stop",
+    run: "monitor:job:run",
+  },
+  monitorOperLog: {
+    list: "monitor:operlog:list",
+    view: "monitor:operlog:view",
+    export: "monitor:operlog:export",
+    remove: "monitor:operlog:remove",
+  },
+  monitorLoginLog: {
+    list: "monitor:loginlog:list",
+    view: "monitor:loginlog:view",
+    export: "monitor:loginlog:export",
+    remove: "monitor:loginlog:remove",
+  },
+  monitorOnline: {
+    list: "monitor:online:list",
+    forceLogout: "monitor:online:forceLogout",
+  },
   // ==================== 85-03（RBAC-01）批次 B：network 域写码 TS 同批声明 ====================
   // 后端「网络设备管理权限」区块的镜像声明。network 域仅 backup:add/restore/diff、
   // command:execute、discovery:add 有 sys_menu F 型授权来源（其余均进

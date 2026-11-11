@@ -17,6 +17,8 @@ import { usePagination } from "@/hooks/usePagination";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { ErrorAlertWithRetry, StatCards } from "@/components/shared";
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import type { JobInfo, JobLog } from "./types";
 
 // ==================== 主组件 ====================
@@ -27,6 +29,14 @@ const JobManager: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize } = usePagination();
+
+  // RBAC 门控（monitor 域权限码接线，后端对应端点级 strict 单码）：
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permJobAdd = permGate.decide(PERMISSION_CODES.monitorJob.add);
+  const permJobEdit = permGate.decide(PERMISSION_CODES.monitorJob.edit);
+  // 行级「立即执行/编辑/删除」走 ActionButtons 的 permission 字段（组件内三态门控），
+  // run/remove 码在此不需要显式 decide。
 
   // FIX-03b: job 主表服务端排序（字段对齐后端 jobAllowedSortFields：jobName/jobGroup/status/createdAt）
   const jobSorterMetas = useMemo(
@@ -114,6 +124,8 @@ const JobManager: FC = () => {
         handleViewLogs,
         openModal: (record) => openModal(record, form),
         handleDelete,
+        // RBAC 三态决策透传（启停=编辑语义；行级下拉 actions 走 ActionButtons permission 字段）
+        canToggleStatus: permJobEdit.visible && !permJobEdit.disabled,
         getSortOrder: (field) =>
           jobOrderByColumn === field
             ? ((jobSortOrder ?? null) as "ascend" | "descend" | null)
@@ -128,6 +140,7 @@ const JobManager: FC = () => {
       form,
       jobOrderByColumn,
       jobSortOrder,
+      permJobEdit,
     ]
   );
 
@@ -206,15 +219,18 @@ const JobManager: FC = () => {
             </Col>
             <Col xs={24} sm={24} md={6}>
               <Space>
-                <Button
-                  aria-label="新增任务"
-                  title="新增任务"
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => openModal(undefined, form)}
-                >
-                  新增
-                </Button>
+                {permJobAdd.visible && (
+                  <Button
+                    aria-label="新增任务"
+                    title="新增任务"
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    disabled={permJobAdd.disabled}
+                    onClick={() => openModal(undefined, form)}
+                  >
+                    新增
+                  </Button>
+                )}
                 <Button
                   icon={<SearchOutlined />}
                   onClick={handleSearch}

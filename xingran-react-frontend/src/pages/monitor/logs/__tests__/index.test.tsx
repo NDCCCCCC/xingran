@@ -42,6 +42,14 @@ describe("pages/monitor/logs", () => {
   }, 15000);
 
   it("点击清空按钮 → 确认弹窗 → 发出 /clean 而非 /clear（冒烟：页面实际渲染组件）", async () => {
+    // RBAC：permGate 需要 menuStore 就绪位 + monitor:operlog:remove（清空端点对应码）
+    const { useMenuStore } = await import("@/store/menuStore");
+    useMenuStore.setState({
+      permissions: ["monitor:operlog:remove"],
+      permissionsLoaded: true,
+      permissionsError: null,
+    } as never);
+
     // list 端点注册（页面 mount 即拉列表）；clean 端点 mock 成功
     const handles = mockApiBatch([
       { endpoint: "/monitor/oper-logs/list", response: { code: 0, data: { list: [], total: 0 } } },
