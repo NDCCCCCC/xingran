@@ -366,10 +366,12 @@ function scanRoutes() {
     // 85-03：局部 strict 写组赋值形态 var := (pkg.)strictUserRouteGroup(parent, permission.X, core)
     // （router.go 内联兄弟写组，非 struct-literal 实参形态）。prefix 继承 parent 组
     // （strictUserRouteGroup 是 parent.Group("")），权限码 = 单一常量，kind = Strict。
+    // task-3（2026-11-11）：兼容 strictLiteralRouteGroup 字面量码形态
+    // var := strictLiteralRouteGroup(parent, "ops:x:y", core)（G1/G2 字面量码拆组）。
     const localStrict = new Map(); // var -> { parentVar, code }
-    const reLocalStrict = /([A-Za-z_]\w*)\s*:?=\s*(?:[A-Za-z_][\w.]*\.)?strict\w*Group\(\s*([A-Za-z_]\w*)\s*,\s*(?:permission\.)?([A-Za-z_]\w*)/g;
+    const reLocalStrict = /([A-Za-z_]\w*)\s*:?=\s*(?:[A-Za-z_][\w.]*\.)?strict\w*Group\(\s*([A-Za-z_]\w*)\s*,\s*(?:"([^"]*)"|(?:permission\.)?([A-Za-z_]\w*))/g;
     while ((m = reLocalStrict.exec(bodyText)) !== null) {
-      const code = constMap.get(m[3]);
+      const code = m[3] || constMap.get(m[4]);
       localStrict.set(m[1], { parentVar: m[2], code: code || null });
     }
 
@@ -410,11 +412,12 @@ function scanRoutes() {
       const litMatch = call.argsText.match(/\w*WriteRouteGroups\s*\{([\s\S]*?)\}/);
       if (litMatch) {
         const fieldMounts2 = new Map();
-        const fre = /(\w+)\s*:\s*(?:\w+\.)*strict\w*Group\(\s*([A-Za-z_]\w*)\s*,\s*permission\.([A-Za-z_]\w*)/g;
+        // task-3（2026-11-11）：兼容字面量码 strictLiteralRouteGroup(parent, "ops:x:y", core)。
+        const fre = /(\w+)\s*:\s*(?:\w+\.)*strict\w*Group\(\s*([A-Za-z_]\w*)\s*,\s*(?:"([^"]*)"|(?:permission\.)?([A-Za-z_]\w*))/g;
         let fm;
         while ((fm = fre.exec(litMatch[1])) !== null) {
           const base = localResolve(fm[2]);
-          const code = constMap.get(fm[3]);
+          const code = fm[3] || constMap.get(fm[4]);
           fieldMounts2.set(fm[1], {
             prefix: base.prefix, codes: code ? [code] : [], kinds: ["RequireStrictPermissions(field)"], leafVar: fm[1],
           });

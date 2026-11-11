@@ -11,18 +11,21 @@ import (
 // SetupReconciliationExceptionRouter 设置资产对账例外规则路由
 //
 // R1 端点(只读):
-//   POST /exception-rule/list   -> handler.ListRules
-//   POST /exception-rule/:id    -> handler.GetRuleByID
+//
+//	POST /exception-rule/list   -> handler.ListRules
+//	POST /exception-rule/:id    -> handler.GetRuleByID
 //
 // R3 扩展端点(Phase 44 / Plan 44-01 Task 5):
-//   POST /exception-rule/create         -> handler.CreateRule    (RequirePermissions asset:reconciliation:exception:create)
-//   POST /exception-rule/:id/update     -> handler.UpdateRule    (RequirePermissions asset:reconciliation:exception:update)
-//   POST /exception-rule/:id/delete     -> handler.DeleteRule    (RequirePermissions asset:reconciliation:exception:delete)
-//   POST /exception-rule/test           -> handler.TestRule      (RequirePermissions asset:reconciliation:exception:test)
+//
+//	POST /exception-rule/create         -> handler.CreateRule    (RequirePermissions asset:reconciliation:exception:create)
+//	POST /exception-rule/:id/update     -> handler.UpdateRule    (RequirePermissions asset:reconciliation:exception:update)
+//	POST /exception-rule/:id/delete     -> handler.DeleteRule    (RequirePermissions asset:reconciliation:exception:delete)
+//	POST /exception-rule/test           -> handler.TestRule      (RequirePermissions asset:reconciliation:exception:test)
 //
 // Phase 44 R3 / Plan 44-02 Task 3 新增(降噪基线):
-//   POST /baseline/snapshot             -> handler.SnapshotBaseline (写 sys_config, 调 operlog OperTypeUpdate)
-//   POST /baseline/compare              -> handler.CompareBaseline  (读 sys_config + COUNT, 不调 operlog)
+//
+//	POST /baseline/snapshot             -> handler.SnapshotBaseline (写 sys_config, 调 operlog OperTypeUpdate)
+//	POST /baseline/compare              -> handler.CompareBaseline  (读 sys_config + COUNT, 不调 operlog)
 //
 // 权限粒度参考 44-CONTEXT.md(T-44-02 越权创建例外规则缓解):
 //   - 4 个新端点全部 RequirePermissions,仅持权限角色可调
@@ -83,6 +86,15 @@ func SetupReconciliationExceptionRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/exception-rule/import",
 		middleware.RequirePermissions([]string{"asset:reconciliation:exception:create"}, core),
 		handler.ImportRules)
+}
+
+// SetupReconciliationExceptionExportRouter 设置例外规则导出/模板下载路由
+// （task-3 G2 整改：由读组 ANY-of 迁至 strict export 码严格兄弟组——导出是
+// 业务写操作，沿用 users/ops 先例的读/写兄弟分离口径；download 语义不变）。
+func SetupReconciliationExceptionExportRouter(r *gin.RouterGroup, core *core.Core) {
+	svc := asset.NewReconciliationExceptionService(core.DB.GetDB(), system.NewCacheProvider(core.DataCacheService))
+	handler := NewReconciliationExceptionHandler(svc).WithCore(core)
+
 	r.POST("/exception-rule/export", handler.ExportRules)
 	r.POST("/exception-rule/template", handler.DownloadTemplate)
 }

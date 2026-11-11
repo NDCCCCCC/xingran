@@ -258,8 +258,10 @@ const BackupListTab: FC<BackupListTabProps> = ({ onStartTask, refreshToken, task
                 key: "delete",
                 label: "删除",
                 icon: <DeleteOutlined />,
+                // task-3 G4 整改：删除按钮改挂独立 system:backup:remove（此前复用 export）。
+                // 需与后端 migration_246 F 型播种配套（持 system:backup 父菜单的角色自动获得）。
                 danger: true,
-                permission: PERMISSION_CODES.systemBackup.export,
+                permission: PERMISSION_CODES.systemBackup.remove,
                 onClick: () => handleDelete(record),
               },
             ]}

@@ -191,6 +191,16 @@ func strictUserRouteGroup(parent *gin.RouterGroup, perm permission.PermissionCod
 	return g
 }
 
+// strictLiteralRouteGroup 创建「字面量权限码 + 严格权限」的写操作路由子组。
+// 与 strictUserRouteGroup 等价，用于权限码以路由字面量挂载（无 config.go
+// 常量）的模块（task-3 G1/G2：duty/workorder/knowledge/reconciliation）。
+// 父组同样必须不含任何 ANY-of 权限中间件（Group 继承父组中间件链）。
+func strictLiteralRouteGroup(parent *gin.RouterGroup, perm string, core *core.Core) *gin.RouterGroup {
+	g := parent.Group("")
+	g.Use(middleware.RequireStrictPermissions([]string{perm}, core))
+	return g
+}
+
 // SetupRouter 设置路由
 func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	r.Use(middleware.RequestID())
@@ -315,7 +325,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 					Edit:     strictUserRouteGroup(usersWrite, permission.UserEdit, core),
 					Remove:   strictUserRouteGroup(usersWrite, permission.UserRemove, core),
 					ResetPwd: strictUserRouteGroup(usersWrite, permission.UserResetPwd, core),
-				Export:   strictUserRouteGroup(usersWrite, permission.UserExport, core),
+					Export:   strictUserRouteGroup(usersWrite, permission.UserExport, core),
 				}, core)
 			}
 
@@ -439,6 +449,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// WR-01 修复(Phase 61 review): 删除权限词汇统一为 system:* 模块的 remove
 			// 约定(与 pkg/permission/config.go APIKeyRemove 常量 + resource_action_map
 			// D-04 一致)。历史值 "system:apikey:delete" 无菜单授权来源,永不命中。
+			// task-3 口径记录（2026-11-11 granularity 审计）：
+			//   ① 冗余说明——本组读组 ANY-of 同时含 add/edit/remove 写码，与下方
+			//      apikeysWrites 严格兄弟组并存属于历史形态保留（写组 strict 已闭环，
+			//      读组多出的写码只影响读端点可达性，无提权风险），不回改。
+			//   ② "system:apikey:delete" 标注 @Deprecated——历史词汇，无菜单授权
+			//      来源、永不命中，任何新代码不得引用（统一用 system:apikey:remove）。
 			apikeys.Use(middleware.RequirePermissions([]string{
 				"system:apikey:list",
 				"system:apikey:add",
@@ -568,7 +584,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 					Export:  strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupExport, core),
 					Restore: strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupRestore, core),
 					Edit:    strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupExport, core),
-					Remove:  strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupExport, core),
+					// G4 整改（task-3，2026-11-11）：删除不再复用 export 码——此前持
+					// system:backup:export 即可删除备份文件，违反最小权限；现拆独立
+					// system:backup:remove（F 型播种见 migration_246，契约见
+					// docs/API响应规范.md，前端门控见 BackupListTab 删除按钮）。
+					Remove: strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupRemove, core),
 				}, core)
 			}
 
@@ -667,38 +687,55 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	// 添加操作日志中间件
 	duty.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
-		// 值班池管理
+		// 值班池管理（task-3 G1 整改：读 ANY-of / 写 strict 兄弟分离。
+		// 此前整组 4 码 ANY-of，持 ops:duty:pool:list 即可调 delete。）
 		dutyPools := duty.Group("/pools")
 		dutyPools.Use(middleware.RequirePermissions([]string{
 			"ops:duty:pool:list",
-			"ops:duty:pool:add",
-			"ops:duty:pool:edit",
-			"ops:duty:pool:delete",
 		}, core))
 		{
 			dutyV1.SetupDutyPoolsRouter(dutyPools, core)
 		}
+		dutyPoolsWrites := duty.Group("/pools")
+		{
+			dutyV1.SetupDutyPoolsWriteRouter(dutyV1.DutyPoolsWriteRouteGroups{
+				Add:    strictLiteralRouteGroup(dutyPoolsWrites, "ops:duty:pool:add", core),
+				Edit:   strictLiteralRouteGroup(dutyPoolsWrites, "ops:duty:pool:edit", core),
+				Delete: strictLiteralRouteGroup(dutyPoolsWrites, "ops:duty:pool:delete", core),
+			}, core)
+		}
 
-		// 排班管理
+		// 排班管理（task-3 G1 整改：读 ANY-of / 写 strict 兄弟分离）
 		dutySchedules := duty.Group("/schedules")
 		dutySchedules.Use(middleware.RequirePermissions([]string{
 			"ops:duty:schedule:list",
-			"ops:duty:schedule:add",
-			"ops:duty:schedule:edit",
-			"ops:duty:schedule:delete",
 		}, core))
 		{
 			dutyV1.SetupDutySchedulesRouter(dutySchedules, core)
+		}
+		dutySchedulesWrites := duty.Group("/schedules")
+		{
+			dutyV1.SetupDutySchedulesWriteRouter(dutyV1.DutySchedulesWriteRouteGroups{
+				Edit:   strictLiteralRouteGroup(dutySchedulesWrites, "ops:duty:schedule:edit", core),
+				Delete: strictLiteralRouteGroup(dutySchedulesWrites, "ops:duty:schedule:delete", core),
+			}, core)
 		}
 
 		// 节假日管理（所有已登录用户可查看）
 		dutyV1.SetupDutyHolidaysRouter(duty.Group("/holidays"), core)
 
-		// 值班配置管理（所有已登录用户可查看，管理员可修改）
+		// 值班配置管理（所有已登录用户可查看，管理员可修改）。
+		// task-3 G1 整改：读/写兄弟分离（沿用 system:config 单码，不新增码——
+		// 单码组 ANY-of 与 strict 对持码者等价，拆分是为对齐全局读写分离形态）。
 		dutyConfig := duty.Group("/config")
 		dutyConfig.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
 		{
 			dutyV1.SetupDutyConfigRouter(dutyConfig, core)
+		}
+		dutyConfigWrites := duty.Group("/config")
+		{
+			dutyConfigWrite := strictLiteralRouteGroup(dutyConfigWrites, permSystemConfig, core)
+			dutyV1.SetupDutyConfigWriteRouter(dutyConfigWrite, core)
 		}
 
 		// 我的值班（所有已登录用户可访问）
@@ -711,17 +748,23 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	// 添加操作日志中间件
 	workorder.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
-		// 工单管理
+		// 工单管理（task-3 G1 整改：读 ANY-of / 写 strict 兄弟分离。
+		// 此前整组 4 码 ANY-of，持 ops:workorder:list 即可调 delete/assign。）
 		orders := workorder.Group("/orders")
 		orders.Use(middleware.RequirePermissions([]string{
 			"ops:workorder:list",
-			"ops:workorder:add",
-			"ops:workorder:edit",
-			"ops:workorder:delete",
 		}, core))
 		{
 			workorderV1.SetupWorkOrdersRouter(orders, core)
 			workorderV1.SetupWorkOrderRatingsRouter(orders, core) // 评价读路由（FIX-06）
+		}
+		ordersWrites := workorder.Group("/orders")
+		{
+			workorderV1.SetupWorkOrdersWriteRouter(workorderV1.WorkOrdersWriteRouteGroups{
+				Add:    strictLiteralRouteGroup(ordersWrites, "ops:workorder:add", core),
+				Edit:   strictLiteralRouteGroup(ordersWrites, "ops:workorder:edit", core),
+				Delete: strictLiteralRouteGroup(ordersWrites, "ops:workorder:delete", core),
+			}, core)
 		}
 
 		// 工单评价写路由（FIX-06 / Phase 136）：评价创建为业务写操作，走独立
@@ -733,19 +776,25 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workorderV1.SetupWorkOrderRatingsWriteRouter(ratingsCreate, core)
 		}
 
-		// 工单分类管理
+		// 工单分类管理（task-3 G1 整改：读 ANY-of / 写 strict 兄弟分离）
 		categories := workorder.Group("/categories")
 		categories.Use(middleware.RequirePermissions([]string{
 			"ops:workorder:category:list",
-			"ops:workorder:category:add",
-			"ops:workorder:category:edit",
-			"ops:workorder:category:delete",
 		}, core))
 		{
 			workorderV1.SetupWorkOrderCategoriesRouter(categories, core)
 		}
+		categoriesWrites := workorder.Group("/categories")
+		{
+			workorderV1.SetupWorkOrderCategoriesWriteRouter(workorderV1.WorkOrderCategoriesWriteRouteGroups{
+				Add:    strictLiteralRouteGroup(categoriesWrites, "ops:workorder:category:add", core),
+				Edit:   strictLiteralRouteGroup(categoriesWrites, "ops:workorder:category:edit", core),
+				Delete: strictLiteralRouteGroup(categoriesWrites, "ops:workorder:category:delete", core),
+			}, core)
+		}
 
-		// 周期性工单模板管理
+		// 周期性工单模板管理（task-3 G1 整改：仅模板主体 CRUD 拆 strict 写组；
+		// enable/disable/generate/logs 4 条 86 新路由按任务书豁免，保持继承组口径）。
 		periodic := workorder.Group("/periodic")
 		periodic.Use(middleware.RequirePermissions([]string{
 			"ops:workorder:periodic:list",
@@ -756,12 +805,26 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		{
 			workorderV1.SetupPeriodicWorkOrderRouter(periodic, core)
 		}
+		periodicWrites := workorder.Group("/periodic/templates")
+		{
+			workorderV1.SetupPeriodicWorkOrderWriteRouter(workorderV1.PeriodicWorkOrderWriteRouteGroups{
+				Add:    strictLiteralRouteGroup(periodicWrites, "ops:workorder:periodic:add", core),
+				Edit:   strictLiteralRouteGroup(periodicWrites, "ops:workorder:periodic:edit", core),
+				Delete: strictLiteralRouteGroup(periodicWrites, "ops:workorder:periodic:delete", core),
+			}, core)
+		}
 
 		// 工单配置管理（需要系统配置权限）
+		// 工单配置管理（task-3 G1 整改：读/写兄弟分离，沿用 system:config 单码）
 		workorderConfig := workorder.Group("/config")
 		workorderConfig.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
 		{
 			workorderV1.SetupWorkOrderConfigRouter(workorderConfig, core)
+		}
+		workorderConfigWrites := workorder.Group("/config")
+		{
+			workorderConfigWrite := strictLiteralRouteGroup(workorderConfigWrites, permSystemConfig, core)
+			workorderV1.SetupWorkOrderConfigWriteRouter(workorderConfigWrite, core)
 		}
 
 		// 工单统计（所有已登录用户可查看）
@@ -775,39 +838,57 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	knowledge.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 知识库文章管理
+		// 知识库文章（task-3 G1 整改：读 ANY-of / 写 strict 兄弟分离）
 		articles := knowledge.Group("/articles")
 		articles.Use(middleware.RequirePermissions([]string{
 			"ops:knowledge:article:list",
-			"ops:knowledge:article:add",
-			"ops:knowledge:article:edit",
-			"ops:knowledge:article:delete",
 		}, core))
 		{
 			v1_knowledge.SetupArticleRouter(articles, core)
 		}
+		articlesWrites := knowledge.Group("/articles")
+		{
+			v1_knowledge.SetupArticleWriteRouter(v1_knowledge.ArticleWriteRouteGroups{
+				Add:    strictLiteralRouteGroup(articlesWrites, "ops:knowledge:article:add", core),
+				Edit:   strictLiteralRouteGroup(articlesWrites, "ops:knowledge:article:edit", core),
+				Delete: strictLiteralRouteGroup(articlesWrites, "ops:knowledge:article:delete", core),
+			}, core)
+		}
 
 		// 知识库分类管理
+		// 知识库分类（task-3 G1 整改：读 ANY-of / 写 strict 兄弟分离）
 		knowledgeCategories := knowledge.Group("/categories")
 		knowledgeCategories.Use(middleware.RequirePermissions([]string{
 			"ops:knowledge:category:list",
-			"ops:knowledge:category:add",
-			"ops:knowledge:category:edit",
-			"ops:knowledge:category:delete",
 		}, core))
 		{
 			v1_knowledge.SetupCategoryRouter(knowledgeCategories, core)
 		}
+		knowledgeCategoriesWrites := knowledge.Group("/categories")
+		{
+			v1_knowledge.SetupCategoryWriteRouter(v1_knowledge.CategoryWriteRouteGroups{
+				Add:    strictLiteralRouteGroup(knowledgeCategoriesWrites, "ops:knowledge:category:add", core),
+				Edit:   strictLiteralRouteGroup(knowledgeCategoriesWrites, "ops:knowledge:category:edit", core),
+				Delete: strictLiteralRouteGroup(knowledgeCategoriesWrites, "ops:knowledge:category:delete", core),
+			}, core)
+		}
 
 		// 知识库标签管理
+		// 知识库标签（task-3 G1 整改：读 ANY-of / 写 strict 兄弟分离）
 		knowledgeTags := knowledge.Group("/tags")
 		knowledgeTags.Use(middleware.RequirePermissions([]string{
 			"ops:knowledge:tag:list",
-			"ops:knowledge:tag:add",
-			"ops:knowledge:tag:edit",
-			"ops:knowledge:tag:delete",
 		}, core))
 		{
 			v1_knowledge.SetupTagRouter(knowledgeTags, core)
+		}
+		knowledgeTagsWrites := knowledge.Group("/tags")
+		{
+			v1_knowledge.SetupTagWriteRouter(v1_knowledge.TagWriteRouteGroups{
+				Add:    strictLiteralRouteGroup(knowledgeTagsWrites, "ops:knowledge:tag:add", core),
+				Edit:   strictLiteralRouteGroup(knowledgeTagsWrites, "ops:knowledge:tag:edit", core),
+				Delete: strictLiteralRouteGroup(knowledgeTagsWrites, "ops:knowledge:tag:delete", core),
+			}, core)
 		}
 
 		// 知识库工单转换（工单转知识库）
@@ -830,6 +911,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	}
 
 	// 运维管理模块（物理资源管理）
+	//
+	// task-3 词汇口径记录（2026-11-11 granularity 审计）：楼宇空间可视化读权限
+	// 存在 ops:building:spaces:list 与 ops:building:spaces:query 两后缀并存
+	// （router.go /list 借码处用 :list，pkg/permission/config.go 常量为 :query）。
+	// 仅记录不统一——两码均未在端点鉴权主链冲突，词汇统一归
+	// check-permission-codes 盲区任务范围。
 	ops := r.Group("/ops")
 	ops.Use(middleware.JWTAuth(core.JWTManager))
 	// 添加操作日志中间件
@@ -1053,6 +1140,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}
 
 		// 工位设备关联（域码借用 ops:workstation:*；写操作见下方严格兄弟组 85-03 RBAC-01）
+		// task-3 口径记录（G5 借码说明，2026-11-11）：本组无独立 ops:workstation-device:* 码，
+		// 有意借用 ops:workstation:* 域码（工位设备关联属工位域管理面），不新增码、不拆组。
 		workstationDevices := ops.Group("/workstation-device")
 		workstationDevices.Use(middleware.RequirePermissions([]string{
 			"ops:workstation:list",
@@ -1402,6 +1491,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		textService := opsServices.NewFloorPlanTextService(core.DB.GetDB())
 		textHandler := operations.NewFloorPlanTextHandler(textService).WithCore(core)
 		texts := ops.Group("/floor-plan-texts")
+		// task-3 口径记录（G5 借码说明，2026-11-11）：平面图文本组借用 ops:floor-plan:*
+		// 全 4 码 ANY-of（list/query/edit/save），读写同组未拆 strict——平面图编辑场景
+		// 本就整组授权（画布协同），风险可接受，只记录不整改。
 		texts.Use(middleware.RequirePermissions([]string{
 			string(permission.OpsFloorPlanList),
 			string(permission.OpsFloorPlanQuery),
@@ -1435,6 +1527,11 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	vdi.Use(middleware.OperLogMiddleware(core.OperLogService, core))
 	{
 		// 虚拟机管理
+		// 虚拟机管理
+		// task-3 G3 口径记录（2026-11-11 granularity 审计）：vms/servers 组为
+		// ANY-of（含写码）且未拆 strict 写组——持 vdi:vm:list 即可调虚拟机写端点。
+		// 属已知低危残留（VDI 管理面角色本就整组授权），本轮只记录不整改，
+		// 后续若拆 strict 需对齐 vdi/vm_router.go 端点级先例形态。
 		vms := vdi.Group("/vms")
 		vms.Use(middleware.DataScopePermission(core))
 		vms.Use(middleware.RequirePermissions([]string{
@@ -1484,6 +1581,18 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	// 中间件链:JWTAuth → OperLogMiddleware(D-17 写操作自动记)→ RequirePermissions(读端点同样受权限保护)。
 	// 不在 router.go 预注册通用 /asset/reconciliation/* 路径 — 由 Setup*Router 函数内部注册,
 	// 避免与 Excel 导入路由冲突陷阱(MEMORY: xingran-excel-import-route-conflict)。
+	//
+	// task-3 G2 整改（2026-11-11）：拆「读 ANY-of / 写 strict」兄弟组。
+	// 此前 9 码平铺整组 ANY-of，持 list 即可调 fix:apply/rollback。整改后：
+	//   读组（下方）ANY-of 仅读码：list / dashboard / fix:list / fix:stats；
+	//   strict 写组（下方 assetReconStrict）逐动作 strict：fix:accept/reject/apply/
+	//   rollback 与 exception-rule export/template（export 码）；
+	//   通用写组（assetReconWrites）ANY-of 写语义码集兜底 resolve/refresh 等
+	//   无独立动作码的写端点——读码持有者无法触达。
+	// 口径记录：SetupReconciliationExceptionRouter 内 exception-rule
+	// create/update/delete/test/import 与 baseline/snapshot 等端点保留端点级
+	// RequirePermissions(exception:create/update/delete/test) 自护，继续挂读组
+	//（端点级拦截晚于组级放行，安全语义不变）。
 	assetReconciliation := r.Group("/asset/reconciliation")
 	assetReconciliation.Use(middleware.JWTAuth(core.JWTManager))
 	// 添加操作日志中间件(D-17:全部写操作都走 operlog)。LogPaths 必须在 pkg/middleware/oper_log.go 追加 /asset/reconciliation 才会触发。
@@ -1491,24 +1600,51 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	assetReconciliation.Use(middleware.RequirePermissions([]string{
 		"asset:reconciliation:list",
 		"asset:reconciliation:dashboard",
-		"asset:reconciliation:export",
-		// Phase 46 R5: 修复建议命名空间 5 个 perm(list/accept/reject/apply/rollback/stats)
+		// Phase 46 R5: 修复建议命名空间 5 个 perm 中的读码（写码迁移见下方 strict 组）
 		"asset:reconciliation:fix:list",
-		"asset:reconciliation:fix:accept",
-		"asset:reconciliation:fix:reject",
-		"asset:reconciliation:fix:apply",
-		"asset:reconciliation:fix:rollback",
 		"asset:reconciliation:fix:stats",
 	}, core))
 	{
 		// 异常列表读端点 (SetupReconciliationRouter: /exception/list, /exception/:id)
 		assetV1.SetupReconciliationRouter(assetReconciliation, core)
-		// 例外规则读端点 (SetupReconciliationExceptionRouter: /exception-rule/list, /exception-rule/:id)
+		// 例外规则端点（读 + 自护写端点，口径见上方注释）
 		assetV1.SetupReconciliationExceptionRouter(assetReconciliation, core)
 		// 6 个统计端点 (SetupReconciliationStatisticsRouter: /statistics/summary 等)
 		assetV1.SetupReconciliationStatisticsRouter(assetReconciliation, core)
-		// Phase 46 R5: 修复建议(7 个端点:list/getById/accept/reject/apply/rollback/stats)
+		// Phase 46 R5: 修复建议读端点 (list/getById/stats)
 		assetV1.SetupFixSuggestionRouter(assetReconciliation, core)
+	}
+
+	// 对账通用写组（task-3 G2）：resolve/refresh 等无独立动作码的写端点，
+	// 以写语义码集 ANY-of 兜底（任一写码持有者可调；读码持有者不可达）。
+	assetReconWrites := r.Group("/asset/reconciliation")
+	assetReconWrites.Use(middleware.JWTAuth(core.JWTManager))
+	assetReconWrites.Use(middleware.OperLogMiddleware(core.OperLogService, core))
+	assetReconWrites.Use(middleware.RequirePermissions([]string{
+		"asset:reconciliation:export",
+		"asset:reconciliation:fix:accept",
+		"asset:reconciliation:fix:reject",
+		"asset:reconciliation:fix:apply",
+		"asset:reconciliation:fix:rollback",
+	}, core))
+	{
+		assetV1.SetupReconciliationWriteRouter(assetReconWrites, core)
+	}
+
+	// 对账严格写组（task-3 G2）：逐动作 RequireStrictPermissions 单一权限点。
+	assetReconStrict := r.Group("/asset/reconciliation")
+	assetReconStrict.Use(middleware.JWTAuth(core.JWTManager))
+	assetReconStrict.Use(middleware.OperLogMiddleware(core.OperLogService, core))
+	{
+		assetV1.SetupFixSuggestionWriteRouter(assetV1.FixSuggestionWriteRouteGroups{
+			Accept:   strictLiteralRouteGroup(assetReconStrict, "asset:reconciliation:fix:accept", core),
+			Reject:   strictLiteralRouteGroup(assetReconStrict, "asset:reconciliation:fix:reject", core),
+			Apply:    strictLiteralRouteGroup(assetReconStrict, "asset:reconciliation:fix:apply", core),
+			Rollback: strictLiteralRouteGroup(assetReconStrict, "asset:reconciliation:fix:rollback", core),
+		}, core)
+		// 例外规则导出/模板下载迁 strict export 码（导出为业务写操作，users 先例口径）
+		assetReconExport := strictLiteralRouteGroup(assetReconStrict, "asset:reconciliation:export", core)
+		assetV1.SetupReconciliationExceptionExportRouter(assetReconExport, core)
 	}
 
 	// 注意：前端静态文件路由已移至 cmd/main.go，直接注册在 engine 上

@@ -23,27 +23,48 @@ func SetupWorkOrdersRouter(r *gin.RouterGroup, core *core.Core) {
 	service := getWorkOrderService(core)
 	handler := NewWorkOrderHandler(service).WithCore(core)
 
-	// 工单基础操作
+	// 工单读操作（task-3 G1 整改：写端点已拆至下方 strict 写组）
 	r.POST("/list", handler.List)
 	r.POST("/status-statistics", handler.GetStatusStatistics)
 	r.POST("/my-pending", handler.GetMyPending)
-	r.POST("/batch-delete", handler.BatchDelete)
-	r.POST("", handler.Create)
 	r.POST("/:id", handler.GetByID)
-	r.POST("/:id/update", handler.Update)
-	r.POST("/:id/delete", handler.Delete)
 
-	// 工单分配与状态
-	r.POST("/:id/assign", handler.Assign)
-	r.POST("/:id/assign-duty", handler.AssignToTodayDuty)
-	r.POST("/:id/status", handler.UpdateStatus)
-
-	// 工单评论
+	// 工单评论（读）
 	r.POST("/:id/comments/list", handler.GetComments)
-	r.POST("/:id/comments", handler.AddComment)
 
 	// 工单历史
 	r.POST("/:id/history", handler.GetHistory)
+}
+
+// WorkOrdersWriteRouteGroups 工单写操作路由分组（task-3 G1：逐动作拆分）。
+type WorkOrdersWriteRouteGroups struct {
+	Add    *gin.RouterGroup
+	Edit   *gin.RouterGroup
+	Delete *gin.RouterGroup
+}
+
+// SetupWorkOrdersWriteRouter 设置工单写路由（严格写组接线：逐动作单一权限点）。
+//
+//	新增            POST /workorder/orders               → ops:workorder:add
+//	编辑            POST /workorder/orders/:id/update    → ops:workorder:edit
+//	指派            POST /workorder/orders/:id/assign    → ops:workorder:edit
+//	指派到今日值班  POST /workorder/orders/:id/assign-duty → ops:workorder:edit
+//	状态变更        POST /workorder/orders/:id/status    → ops:workorder:edit
+//	添加评论        POST /workorder/orders/:id/comments  → ops:workorder:edit
+//	删除            POST /workorder/orders/:id/delete    → ops:workorder:delete
+//	批量删除        POST /workorder/orders/batch-delete  → ops:workorder:delete
+func SetupWorkOrdersWriteRouter(groups WorkOrdersWriteRouteGroups, core *core.Core) {
+	service := getWorkOrderService(core)
+	handler := NewWorkOrderHandler(service).WithCore(core)
+
+	groups.Add.POST("", handler.Create)
+	groups.Edit.POST("/:id/update", handler.Update)
+	groups.Edit.POST("/:id/assign", handler.Assign)
+	groups.Edit.POST("/:id/assign-duty", handler.AssignToTodayDuty)
+	groups.Edit.POST("/:id/status", handler.UpdateStatus)
+	groups.Edit.POST("/:id/comments", handler.AddComment)
+	groups.Delete.POST("/:id/delete", handler.Delete)
+	groups.Delete.POST("/batch-delete", handler.BatchDelete)
 }
 
 // SetupWorkOrderCategoriesRouter 设置工单分类路由
@@ -51,12 +72,31 @@ func SetupWorkOrderCategoriesRouter(r *gin.RouterGroup, core *core.Core) {
 	service := getWorkOrderService(core)
 	handler := NewWorkOrderHandler(service).WithCore(core)
 
+	// 工单分类读操作（task-3 G1 整改：写端点已拆至下方 strict 写组）
 	r.POST("/list", handler.ListCategories)
 	r.POST("/enabled", handler.GetEnabledCategories)
 	r.POST("/:id", handler.GetCategoryByID)
-	r.POST("", handler.CreateCategory)
-	r.POST("/:id/update", handler.UpdateCategory)
-	r.POST("/:id/delete", handler.DeleteCategory)
+}
+
+// WorkOrderCategoriesWriteRouteGroups 工单分类写操作路由分组（task-3 G1）。
+type WorkOrderCategoriesWriteRouteGroups struct {
+	Add    *gin.RouterGroup
+	Edit   *gin.RouterGroup
+	Delete *gin.RouterGroup
+}
+
+// SetupWorkOrderCategoriesWriteRouter 设置工单分类写路由（严格写组）。
+//
+//	新增   POST /workorder/categories            → ops:workorder:category:add
+//	编辑   POST /workorder/categories/:id/update → ops:workorder:category:edit
+//	删除   POST /workorder/categories/:id/delete → ops:workorder:category:delete
+func SetupWorkOrderCategoriesWriteRouter(groups WorkOrderCategoriesWriteRouteGroups, core *core.Core) {
+	service := getWorkOrderService(core)
+	handler := NewWorkOrderHandler(service).WithCore(core)
+
+	groups.Add.POST("", handler.CreateCategory)
+	groups.Edit.POST("/:id/update", handler.UpdateCategory)
+	groups.Delete.POST("/:id/delete", handler.DeleteCategory)
 }
 
 // SetupWorkOrderRatingsRouter 设置工单评价路由（FIX-06 / Phase 136 接线）。
@@ -100,15 +140,15 @@ func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 	// 注意：原有路由使用了/templates前缀，这里保持一致
 	templates := r.Group("/templates")
 	{
+		// 读操作（task-3 G1 整改：模板主体写端点已拆至下方 strict 写组）
 		templates.POST("/list", handler.ListPeriodic)
 		templates.POST("/statistics", handler.GetPeriodicStatistics)
-		templates.POST("", handler.CreatePeriodic)
-		templates.POST("/:id/update", handler.UpdatePeriodic)
-		templates.POST("/:id/delete", handler.DeletePeriodic)
 
 		// 模板动作（启停 / 立即生成 / 执行记录）——与前端 workorderApi 对齐。
 		// 历史上这 4 条路由因路由重构（cd306b359）丢失 HTTP 通路而仅存注释，
 		// service 层 PeriodicService 实现一直可用，现已恢复注册。
+		// 口径记录（task-3）：enable/disable/generate/logs 这 4 条 86 新路由
+		// 按任务书豁免「保持继承组口径」——继续挂本 ANY-of 组，不迁 strict。
 		templates.POST("/:id/enable", handler.EnablePeriodic)
 		templates.POST("/:id/disable", handler.DisablePeriodic)
 		templates.POST("/:id/generate", handler.GeneratePeriodic)
@@ -116,12 +156,45 @@ func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 }
 
-// SetupWorkOrderConfigRouter 设置工单配置路由
+// PeriodicWorkOrderWriteRouteGroups 周期工单模板写操作路由分组（task-3 G1）。
+type PeriodicWorkOrderWriteRouteGroups struct {
+	Add    *gin.RouterGroup
+	Edit   *gin.RouterGroup
+	Delete *gin.RouterGroup
+}
+
+// SetupPeriodicWorkOrderWriteRouter 设置周期工单模板写路由（严格写组）。
+// 仅模板主体 CRUD 拆入 strict；enable/disable/generate 4 条 86 新路由豁免
+// （口径见 SetupPeriodicWorkOrderRouter 内注释）。
+//
+//	新增   POST /workorder/periodic/templates            → ops:workorder:periodic:add
+//	编辑   POST /workorder/periodic/templates/:id/update → ops:workorder:periodic:edit
+//	删除   POST /workorder/periodic/templates/:id/delete → ops:workorder:periodic:delete
+func SetupPeriodicWorkOrderWriteRouter(groups PeriodicWorkOrderWriteRouteGroups, core *core.Core) {
+	service := getWorkOrderService(core)
+	handler := NewWorkOrderHandler(service).WithCore(core)
+
+	// 传入的各动作组由 router.go 以 workorder.Group("/periodic/templates") 兄弟组创建
+	groups.Add.POST("", handler.CreatePeriodic)
+	groups.Edit.POST("/:id/update", handler.UpdatePeriodic)
+	groups.Delete.POST("/:id/delete", handler.DeletePeriodic)
+}
+
+// SetupWorkOrderConfigRouter 设置工单配置路由（读端点：POST "" 读取配置）。
+// task-3 G1 整改：写端点 /update 拆至 SetupWorkOrderConfigWriteRouter 严格兄弟组。
 func SetupWorkOrderConfigRouter(r *gin.RouterGroup, core *core.Core) {
 	service := getWorkOrderService(core)
 	handler := NewWorkOrderHandler(service).WithCore(core)
 
 	r.POST("", handler.GetConfig)
+}
+
+// SetupWorkOrderConfigWriteRouter 设置工单配置写路由（严格写组）。
+// 沿用 system:config 单码（与 duty config 同口径，不新增码）。
+func SetupWorkOrderConfigWriteRouter(r *gin.RouterGroup, core *core.Core) {
+	service := getWorkOrderService(core)
+	handler := NewWorkOrderHandler(service).WithCore(core)
+
 	r.POST("/update", handler.UpdateConfig)
 }
 

@@ -1180,6 +1180,11 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(245, "rpa_permission_f_type_seed", migrations.Migrate245RpaPermissionFTypeSeed); err != nil {
 			applogger.Errorf("rpa 域权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// G4 整改（task-3）：system:backup:remove 备份删除独立码 F 型种子。**非阻断**：
+		// 缺权限行只让普通角色备份删除 403 / 前端删除按钮不显示；父菜单缺失时迁移内部降级返回 nil。
+		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
+			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 		// v1.51 TIDY-01: 服务端排序 4 页面菜单注册/修复 (值班池/排班/知识文章/网络模板)。**非阻断**：
 		// 菜单不可达只影响 4 个页面路由与排序入口，不影响登录/主链路；单页面失败不阻断其余页面。
 		if err := d.runAndRecord(228, "server_sort_menus", migrations.Migrate228ServerSortMenus); err != nil {
@@ -1345,6 +1350,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: rpa RBAC F 型权限种子（双方言迁移，rpa 域权限码全链路接线）。**非阻断**。
 		if err := d.runAndRecord(245, "rpa_permission_f_type_seed", migrations.Migrate245RpaPermissionFTypeSeed); err != nil {
 			applogger.Errorf("rpa 域权限种子迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: G4 整改 system:backup:remove 备份删除独立码 F 型种子（双方言迁移）。**非阻断**。
+		if err := d.runAndRecord(246, "backup_remove_permission_f_type_seed", migrations.Migrate246BackupRemovePermissionFTypeSeed); err != nil {
+			applogger.Errorf("备份删除权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite 分支: v1.51 TIDY-01 服务端排序 4 页面菜单注册/修复 (双方言迁移)。
 		if err := d.runAndRecord(228, "server_sort_menus", migrations.Migrate228ServerSortMenus); err != nil {

@@ -3,7 +3,7 @@
   "sourceOfTruth": "internal/api/** route registration source (rescan), not tmp_routes.json",
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
-    "mounts": 222,
+    "mounts": 253,
     "routes": 726,
     "writeRoutes": 327,
     "deferredWriteRoutes": 148
@@ -669,7 +669,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 70
+      "line": 73
     },
     {
       "method": "POST",
@@ -684,7 +684,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 67
+      "line": 70
     },
     {
       "method": "POST",
@@ -697,17 +697,12 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_router.go",
-      "line": 42
+      "line": 45
     },
     {
       "method": "POST",
@@ -720,17 +715,12 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 45
+      "line": 48
     },
     {
       "method": "POST",
@@ -745,7 +735,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 54
+      "line": 57
     },
     {
       "method": "POST",
@@ -760,7 +750,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 51
+      "line": 54
     },
     {
       "method": "POST",
@@ -775,30 +765,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 48
+      "line": 51
     },
     {
       "method": "POST",
       "path": "/asset/reconciliation/exception-rule/export",
       "mountGroup": "r",
-      "setup": "SetupReconciliationExceptionRouter",
+      "setup": "SetupReconciliationExceptionExportRouter",
       "isWrite": true,
       "handler": "ExportRules",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "asset:reconciliation:list",
-        "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
-        "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
-        "asset:reconciliation:fix:stats"
+        "asset:reconciliation:export"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 86
+      "line": 98
     },
     {
       "method": "POST",
@@ -813,7 +795,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 83
+      "line": 86
     },
     {
       "method": "POST",
@@ -826,40 +808,27 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 44
+      "line": 47
     },
     {
       "method": "POST",
       "path": "/asset/reconciliation/exception-rule/template",
       "mountGroup": "r",
-      "setup": "SetupReconciliationExceptionRouter",
+      "setup": "SetupReconciliationExceptionExportRouter",
       "isWrite": false,
       "handler": "DownloadTemplate",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [
-        "asset:reconciliation:list",
-        "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
-        "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
-        "asset:reconciliation:fix:stats"
+        "asset:reconciliation:export"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 87
+      "line": 99
     },
     {
       "method": "POST",
@@ -874,7 +843,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_exception_router.go",
-      "line": 57
+      "line": 60
     },
     {
       "method": "POST",
@@ -887,40 +856,31 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_router.go",
-      "line": 40
+      "line": 44
     },
     {
       "method": "POST",
       "path": "/asset/reconciliation/exception/:id/resolve",
       "mountGroup": "r",
-      "setup": "SetupReconciliationRouter",
+      "setup": "SetupReconciliationWriteRouter",
       "isWrite": true,
       "handler": "ResolveException",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "asset:reconciliation:list",
-        "asset:reconciliation:dashboard",
         "asset:reconciliation:export",
-        "asset:reconciliation:fix:list",
         "asset:reconciliation:fix:accept",
         "asset:reconciliation:fix:reject",
         "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
-        "asset:reconciliation:fix:stats"
+        "asset:reconciliation:fix:rollback"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_router.go",
-      "line": 41
+      "line": 57
     },
     {
       "method": "POST",
@@ -933,17 +893,12 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_router.go",
-      "line": 39
+      "line": 43
     },
     {
       "method": "POST",
@@ -956,35 +911,7 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
-        "asset:reconciliation:fix:stats"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/asset/fix_suggestion_router.go",
-      "line": 30
-    },
-    {
-      "method": "POST",
-      "path": "/asset/reconciliation/fix-suggestion/:id/accept",
-      "mountGroup": "r",
-      "setup": "SetupFixSuggestionRouter",
-      "isWrite": true,
-      "handler": "Accept",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "asset:reconciliation:list",
-        "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
-        "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
@@ -993,72 +920,63 @@
     },
     {
       "method": "POST",
-      "path": "/asset/reconciliation/fix-suggestion/:id/apply",
-      "mountGroup": "r",
-      "setup": "SetupFixSuggestionRouter",
+      "path": "/asset/reconciliation/fix-suggestion/:id/accept",
+      "mountGroup": "Accept>groups.Accept",
+      "setup": "SetupFixSuggestionWriteRouter",
       "isWrite": true,
-      "handler": "Apply",
-      "permKind": "RequirePermissions",
+      "handler": "Accept",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "asset:reconciliation:list",
-        "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
-        "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
-        "asset:reconciliation:fix:stats"
+        "asset:reconciliation:fix:accept"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/fix_suggestion_router.go",
-      "line": 33
+      "line": 52
+    },
+    {
+      "method": "POST",
+      "path": "/asset/reconciliation/fix-suggestion/:id/apply",
+      "mountGroup": "Apply>groups.Apply",
+      "setup": "SetupFixSuggestionWriteRouter",
+      "isWrite": true,
+      "handler": "Apply",
+      "permKind": "RequireStrictPermissions(field)",
+      "permCodes": [
+        "asset:reconciliation:fix:apply"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/asset/fix_suggestion_router.go",
+      "line": 54
     },
     {
       "method": "POST",
       "path": "/asset/reconciliation/fix-suggestion/:id/reject",
-      "mountGroup": "r",
-      "setup": "SetupFixSuggestionRouter",
+      "mountGroup": "Reject>groups.Reject",
+      "setup": "SetupFixSuggestionWriteRouter",
       "isWrite": true,
       "handler": "Reject",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "asset:reconciliation:list",
-        "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
-        "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
-        "asset:reconciliation:fix:stats"
+        "asset:reconciliation:fix:reject"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/fix_suggestion_router.go",
-      "line": 32
+      "line": 53
     },
     {
       "method": "POST",
       "path": "/asset/reconciliation/fix-suggestion/:id/rollback",
-      "mountGroup": "r",
-      "setup": "SetupFixSuggestionRouter",
+      "mountGroup": "Rollback>groups.Rollback",
+      "setup": "SetupFixSuggestionWriteRouter",
       "isWrite": true,
       "handler": "Rollback",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "asset:reconciliation:list",
-        "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
-        "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
-        "asset:reconciliation:fix:stats"
+        "asset:reconciliation:fix:rollback"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/fix_suggestion_router.go",
-      "line": 34
+      "line": 55
     },
     {
       "method": "POST",
@@ -1071,17 +989,12 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/fix_suggestion_router.go",
-      "line": 29
+      "line": 30
     },
     {
       "method": "POST",
@@ -1094,40 +1007,31 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/fix_suggestion_router.go",
-      "line": 35
+      "line": 32
     },
     {
       "method": "POST",
       "path": "/asset/reconciliation/refresh",
       "mountGroup": "r",
-      "setup": "SetupReconciliationRouter",
+      "setup": "SetupReconciliationWriteRouter",
       "isWrite": true,
       "handler": "Refresh",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "asset:reconciliation:list",
-        "asset:reconciliation:dashboard",
         "asset:reconciliation:export",
-        "asset:reconciliation:fix:list",
         "asset:reconciliation:fix:accept",
         "asset:reconciliation:fix:reject",
         "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
-        "asset:reconciliation:fix:stats"
+        "asset:reconciliation:fix:rollback"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/asset/reconciliation_router.go",
-      "line": 45
+      "line": 60
     },
     {
       "method": "POST",
@@ -1140,12 +1044,7 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
@@ -1163,12 +1062,7 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
@@ -1186,12 +1080,7 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
@@ -1209,12 +1098,7 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
@@ -1232,12 +1116,7 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
@@ -1255,12 +1134,7 @@
       "permCodes": [
         "asset:reconciliation:list",
         "asset:reconciliation:dashboard",
-        "asset:reconciliation:export",
         "asset:reconciliation:fix:list",
-        "asset:reconciliation:fix:accept",
-        "asset:reconciliation:fix:reject",
-        "asset:reconciliation:fix:apply",
-        "asset:reconciliation:fix:rollback",
         "asset:reconciliation:fix:stats"
       ],
       "registeredDeadTable": false,
@@ -1278,20 +1152,20 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 56
+      "line": 107
     },
     {
       "method": "POST",
       "path": "/duty/config/update",
       "mountGroup": "r",
-      "setup": "SetupDutyConfigRouter",
+      "setup": "SetupDutyConfigWriteRouter",
       "isWrite": true,
       "handler": "UpdateConfig",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 57
+      "line": 115
     },
     {
       "method": "POST",
@@ -1304,7 +1178,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 45
+      "line": 92
     },
     {
       "method": "POST",
@@ -1317,7 +1191,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 47
+      "line": 94
     },
     {
       "method": "POST",
@@ -1330,7 +1204,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 46
+      "line": 93
     },
     {
       "method": "POST",
@@ -1343,7 +1217,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 48
+      "line": 95
     },
     {
       "method": "POST",
@@ -1356,7 +1230,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 43
+      "line": 90
     },
     {
       "method": "POST",
@@ -1369,7 +1243,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 44
+      "line": 91
     },
     {
       "method": "POST",
@@ -1382,25 +1256,22 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 65
+      "line": 123
     },
     {
       "method": "POST",
       "path": "/duty/pools",
-      "mountGroup": "r",
-      "setup": "SetupDutyPoolsRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupDutyPoolsWriteRouter",
       "isWrite": true,
       "handler": "CreatePool",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:duty:pool:list",
-        "ops:duty:pool:add",
-        "ops:duty:pool:edit",
-        "ops:duty:pool:delete"
+        "ops:duty:pool:add"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 17
+      "line": 33
     },
     {
       "method": "POST",
@@ -1411,50 +1282,41 @@
       "handler": "GetPoolByID",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:duty:pool:list",
-        "ops:duty:pool:add",
-        "ops:duty:pool:edit",
-        "ops:duty:pool:delete"
+        "ops:duty:pool:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 18
+      "line": 21
     },
     {
       "method": "POST",
       "path": "/duty/pools/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupDutyPoolsRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupDutyPoolsWriteRouter",
       "isWrite": true,
       "handler": "DeletePool",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:duty:pool:list",
-        "ops:duty:pool:add",
-        "ops:duty:pool:edit",
         "ops:duty:pool:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 20
+      "line": 35
     },
     {
       "method": "POST",
       "path": "/duty/pools/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupDutyPoolsRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupDutyPoolsWriteRouter",
       "isWrite": true,
       "handler": "UpdatePool",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:duty:pool:list",
-        "ops:duty:pool:add",
-        "ops:duty:pool:edit",
-        "ops:duty:pool:delete"
+        "ops:duty:pool:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 19
+      "line": 34
     },
     {
       "method": "POST",
@@ -1465,14 +1327,11 @@
       "handler": "ListPools",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:duty:pool:list",
-        "ops:duty:pool:add",
-        "ops:duty:pool:edit",
-        "ops:duty:pool:delete"
+        "ops:duty:pool:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 15
+      "line": 19
     },
     {
       "method": "POST",
@@ -1483,68 +1342,56 @@
       "handler": "StatisticsPools",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:duty:pool:list",
-        "ops:duty:pool:add",
-        "ops:duty:pool:edit",
-        "ops:duty:pool:delete"
+        "ops:duty:pool:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 16
+      "line": 20
     },
     {
       "method": "POST",
       "path": "/duty/schedules/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupDutySchedulesRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupDutySchedulesWriteRouter",
       "isWrite": true,
       "handler": "DeleteSchedule",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:duty:schedule:list",
-        "ops:duty:schedule:add",
-        "ops:duty:schedule:edit",
         "ops:duty:schedule:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 34
+      "line": 72
     },
     {
       "method": "POST",
       "path": "/duty/schedules/batch-delete",
-      "mountGroup": "r",
-      "setup": "SetupDutySchedulesRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupDutySchedulesWriteRouter",
       "isWrite": true,
       "handler": "BatchDeleteSchedules",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:duty:schedule:list",
-        "ops:duty:schedule:add",
-        "ops:duty:schedule:edit",
         "ops:duty:schedule:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 35
+      "line": 73
     },
     {
       "method": "POST",
       "path": "/duty/schedules/generate",
-      "mountGroup": "r",
-      "setup": "SetupDutySchedulesRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupDutySchedulesWriteRouter",
       "isWrite": true,
       "handler": "GenerateSchedule",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:duty:schedule:list",
-        "ops:duty:schedule:add",
-        "ops:duty:schedule:edit",
-        "ops:duty:schedule:delete"
+        "ops:duty:schedule:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 29
+      "line": 69
     },
     {
       "method": "POST",
@@ -1555,32 +1402,26 @@
       "handler": "ListSchedules",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:duty:schedule:list",
-        "ops:duty:schedule:add",
-        "ops:duty:schedule:edit",
-        "ops:duty:schedule:delete"
+        "ops:duty:schedule:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 28
+      "line": 53
     },
     {
       "method": "POST",
       "path": "/duty/schedules/manual",
-      "mountGroup": "r",
-      "setup": "SetupDutySchedulesRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupDutySchedulesWriteRouter",
       "isWrite": true,
       "handler": "ManualDuty",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:duty:schedule:list",
-        "ops:duty:schedule:add",
-        "ops:duty:schedule:edit",
-        "ops:duty:schedule:delete"
+        "ops:duty:schedule:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 33
+      "line": 71
     },
     {
       "method": "POST",
@@ -1591,32 +1432,26 @@
       "handler": "GetMonthlySchedule",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:duty:schedule:list",
-        "ops:duty:schedule:add",
-        "ops:duty:schedule:edit",
-        "ops:duty:schedule:delete"
+        "ops:duty:schedule:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 31
+      "line": 55
     },
     {
       "method": "POST",
       "path": "/duty/schedules/swap",
-      "mountGroup": "r",
-      "setup": "SetupDutySchedulesRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupDutySchedulesWriteRouter",
       "isWrite": true,
       "handler": "SwapDuty",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:duty:schedule:list",
-        "ops:duty:schedule:add",
-        "ops:duty:schedule:edit",
-        "ops:duty:schedule:delete"
+        "ops:duty:schedule:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 32
+      "line": 70
     },
     {
       "method": "POST",
@@ -1627,32 +1462,26 @@
       "handler": "GetTodayDuty",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:duty:schedule:list",
-        "ops:duty:schedule:add",
-        "ops:duty:schedule:edit",
-        "ops:duty:schedule:delete"
+        "ops:duty:schedule:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/duty/duty_router.go",
-      "line": 30
+      "line": 54
     },
     {
       "method": "POST",
       "path": "/knowledge/articles",
-      "mountGroup": "r",
-      "setup": "SetupArticleRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupArticleWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:article:list",
-        "ops:knowledge:article:add",
-        "ops:knowledge:article:edit",
-        "ops:knowledge:article:delete"
+        "ops:knowledge:article:add"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 18
+      "line": 41
     },
     {
       "method": "POST",
@@ -1663,10 +1492,7 @@
       "handler": "GetByID",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:knowledge:article:list",
-        "ops:knowledge:article:add",
-        "ops:knowledge:article:edit",
-        "ops:knowledge:article:delete"
+        "ops:knowledge:article:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
@@ -1675,20 +1501,17 @@
     {
       "method": "POST",
       "path": "/knowledge/articles/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupArticleRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupArticleWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:article:list",
-        "ops:knowledge:article:add",
-        "ops:knowledge:article:edit",
         "ops:knowledge:article:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 21
+      "line": 43
     },
     {
       "method": "POST",
@@ -1699,10 +1522,7 @@
       "handler": "Like",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:knowledge:article:list",
-        "ops:knowledge:article:add",
-        "ops:knowledge:article:edit",
-        "ops:knowledge:article:delete"
+        "ops:knowledge:article:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
@@ -1711,20 +1531,17 @@
     {
       "method": "POST",
       "path": "/knowledge/articles/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupArticleRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupArticleWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:article:list",
-        "ops:knowledge:article:add",
-        "ops:knowledge:article:edit",
-        "ops:knowledge:article:delete"
+        "ops:knowledge:article:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 20
+      "line": 42
     },
     {
       "method": "POST",
@@ -1735,14 +1552,11 @@
       "handler": "List",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:knowledge:article:list",
-        "ops:knowledge:article:add",
-        "ops:knowledge:article:edit",
-        "ops:knowledge:article:delete"
+        "ops:knowledge:article:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 15
+      "line": 16
     },
     {
       "method": "POST",
@@ -1753,14 +1567,11 @@
       "handler": "Search",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:knowledge:article:list",
-        "ops:knowledge:article:add",
-        "ops:knowledge:article:edit",
-        "ops:knowledge:article:delete"
+        "ops:knowledge:article:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 17
+      "line": 18
     },
     {
       "method": "POST",
@@ -1771,32 +1582,26 @@
       "handler": "Statistics",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:knowledge:article:list",
-        "ops:knowledge:article:add",
-        "ops:knowledge:article:edit",
-        "ops:knowledge:article:delete"
+        "ops:knowledge:article:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 16
+      "line": 17
     },
     {
       "method": "POST",
       "path": "/knowledge/categories",
-      "mountGroup": "r",
-      "setup": "SetupCategoryRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupCategoryWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:category:list",
-        "ops:knowledge:category:add",
-        "ops:knowledge:category:edit",
-        "ops:knowledge:category:delete"
+        "ops:knowledge:category:add"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 31
+      "line": 72
     },
     {
       "method": "POST",
@@ -1807,50 +1612,41 @@
       "handler": "GetByID",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:knowledge:category:list",
-        "ops:knowledge:category:add",
-        "ops:knowledge:category:edit",
-        "ops:knowledge:category:delete"
+        "ops:knowledge:category:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 32
+      "line": 53
     },
     {
       "method": "POST",
       "path": "/knowledge/categories/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupCategoryRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupCategoryWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:category:list",
-        "ops:knowledge:category:add",
-        "ops:knowledge:category:edit",
         "ops:knowledge:category:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 34
+      "line": 74
     },
     {
       "method": "POST",
       "path": "/knowledge/categories/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupCategoryRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupCategoryWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:category:list",
-        "ops:knowledge:category:add",
-        "ops:knowledge:category:edit",
-        "ops:knowledge:category:delete"
+        "ops:knowledge:category:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 33
+      "line": 73
     },
     {
       "method": "POST",
@@ -1861,68 +1657,56 @@
       "handler": "List",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:knowledge:category:list",
-        "ops:knowledge:category:add",
-        "ops:knowledge:category:edit",
-        "ops:knowledge:category:delete"
+        "ops:knowledge:category:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 30
+      "line": 52
     },
     {
       "method": "POST",
       "path": "/knowledge/tags",
-      "mountGroup": "r",
-      "setup": "SetupTagRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupTagWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:tag:list",
-        "ops:knowledge:tag:add",
-        "ops:knowledge:tag:edit",
-        "ops:knowledge:tag:delete"
+        "ops:knowledge:tag:add"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 43
+      "line": 102
     },
     {
       "method": "POST",
       "path": "/knowledge/tags/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupTagRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupTagWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:tag:list",
-        "ops:knowledge:tag:add",
-        "ops:knowledge:tag:edit",
         "ops:knowledge:tag:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 45
+      "line": 104
     },
     {
       "method": "POST",
       "path": "/knowledge/tags/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupTagRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupTagWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:knowledge:tag:list",
-        "ops:knowledge:tag:add",
-        "ops:knowledge:tag:edit",
-        "ops:knowledge:tag:delete"
+        "ops:knowledge:tag:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 44
+      "line": 103
     },
     {
       "method": "POST",
@@ -1933,14 +1717,11 @@
       "handler": "GetAll",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:knowledge:tag:list",
-        "ops:knowledge:tag:add",
-        "ops:knowledge:tag:edit",
-        "ops:knowledge:tag:delete"
+        "ops:knowledge:tag:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 42
+      "line": 83
     },
     {
       "method": "POST",
@@ -1953,7 +1734,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 67
+      "line": 126
     },
     {
       "method": "POST",
@@ -1966,7 +1747,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 66
+      "line": 125
     },
     {
       "method": "POST",
@@ -1979,7 +1760,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 74
+      "line": 133
     },
     {
       "method": "POST",
@@ -1992,7 +1773,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 73
+      "line": 132
     },
     {
       "method": "POST",
@@ -2005,7 +1786,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/knowledge/router.go",
-      "line": 53
+      "line": 112
     },
     {
       "method": "GET",
@@ -4341,7 +4122,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1138
+      "line": 1227
     },
     {
       "method": "POST",
@@ -4359,7 +4140,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1123
+      "line": 1212
     },
     {
       "method": "POST",
@@ -4374,7 +4155,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1142
+      "line": 1231
     },
     {
       "method": "POST",
@@ -4389,7 +4170,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1140
+      "line": 1229
     },
     {
       "method": "POST",
@@ -4404,7 +4185,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1143
+      "line": 1232
     },
     {
       "method": "GET",
@@ -4422,7 +4203,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1118
+      "line": 1207
     },
     {
       "method": "POST",
@@ -4440,7 +4221,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1125
+      "line": 1214
     },
     {
       "method": "POST",
@@ -4458,7 +4239,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1124
+      "line": 1213
     },
     {
       "method": "POST",
@@ -4506,7 +4287,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1120
+      "line": 1209
     },
     {
       "method": "GET",
@@ -4524,7 +4305,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1112
+      "line": 1201
     },
     {
       "method": "POST",
@@ -4542,7 +4323,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1122
+      "line": 1211
     },
     {
       "method": "POST",
@@ -4560,7 +4341,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1126
+      "line": 1215
     },
     {
       "method": "GET",
@@ -4593,7 +4374,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 875
+      "line": 962
     },
     {
       "method": "POST",
@@ -4612,7 +4393,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 860
+      "line": 947
     },
     {
       "method": "POST",
@@ -4627,7 +4408,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 879
+      "line": 966
     },
     {
       "method": "POST",
@@ -4642,7 +4423,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 877
+      "line": 964
     },
     {
       "method": "POST",
@@ -4657,7 +4438,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 880
+      "line": 967
     },
     {
       "method": "POST",
@@ -4676,7 +4457,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 859
+      "line": 946
     },
     {
       "method": "POST",
@@ -4710,7 +4491,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 862
+      "line": 949
     },
     {
       "method": "POST",
@@ -4744,7 +4525,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 857
+      "line": 944
     },
     {
       "method": "POST",
@@ -4763,7 +4544,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 858
+      "line": 945
     },
     {
       "method": "GET",
@@ -4797,7 +4578,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1272
+      "line": 1361
     },
     {
       "method": "POST",
@@ -4815,7 +4596,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1260
+      "line": 1349
     },
     {
       "method": "POST",
@@ -4830,7 +4611,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1276
+      "line": 1365
     },
     {
       "method": "POST",
@@ -4845,7 +4626,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1274
+      "line": 1363
     },
     {
       "method": "POST",
@@ -4860,7 +4641,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1277
+      "line": 1366
     },
     {
       "method": "POST",
@@ -4878,7 +4659,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1259
+      "line": 1348
     },
     {
       "method": "POST",
@@ -4926,7 +4707,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1257
+      "line": 1346
     },
     {
       "method": "POST",
@@ -4944,7 +4725,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1258
+      "line": 1347
     },
     {
       "method": "GET",
@@ -4977,7 +4758,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1392
+      "line": 1481
     },
     {
       "method": "POST",
@@ -4999,7 +4780,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1383
+      "line": 1472
     },
     {
       "method": "POST",
@@ -5014,7 +4795,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1396
+      "line": 1485
     },
     {
       "method": "POST",
@@ -5029,7 +4810,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1394
+      "line": 1483
     },
     {
       "method": "POST",
@@ -5044,7 +4825,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1397
+      "line": 1486
     },
     {
       "method": "POST",
@@ -5066,7 +4847,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1382
+      "line": 1471
     },
     {
       "method": "POST",
@@ -5081,7 +4862,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 930
+      "line": 1017
     },
     {
       "method": "POST",
@@ -5096,7 +4877,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1424
+      "line": 1516
     },
     {
       "method": "POST",
@@ -5114,7 +4895,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1415
+      "line": 1507
     },
     {
       "method": "POST",
@@ -5129,7 +4910,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1426
+      "line": 1518
     },
     {
       "method": "POST",
@@ -5144,7 +4925,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1425
+      "line": 1517
     },
     {
       "method": "POST",
@@ -5159,7 +4940,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1427
+      "line": 1519
     },
     {
       "method": "POST",
@@ -5177,7 +4958,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1414
+      "line": 1506
     },
     {
       "method": "POST",
@@ -5196,7 +4977,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 918
+      "line": 1005
     },
     {
       "method": "POST",
@@ -5211,7 +4992,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 934
+      "line": 1021
     },
     {
       "method": "POST",
@@ -5226,7 +5007,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 932
+      "line": 1019
     },
     {
       "method": "POST",
@@ -5241,7 +5022,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 935
+      "line": 1022
     },
     {
       "method": "POST",
@@ -5260,7 +5041,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 917
+      "line": 1004
     },
     {
       "method": "POST",
@@ -5309,7 +5090,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 914
+      "line": 1001
     },
     {
       "method": "POST",
@@ -5328,7 +5109,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 915
+      "line": 1002
     },
     {
       "method": "GET",
@@ -5366,7 +5147,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 916
+      "line": 1003
     },
     {
       "method": "POST",
@@ -5381,7 +5162,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1179
+      "line": 1268
     },
     {
       "method": "POST",
@@ -5399,7 +5180,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1167
+      "line": 1256
     },
     {
       "method": "POST",
@@ -5414,7 +5195,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1183
+      "line": 1272
     },
     {
       "method": "POST",
@@ -5429,7 +5210,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1181
+      "line": 1270
     },
     {
       "method": "POST",
@@ -5444,7 +5225,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1184
+      "line": 1273
     },
     {
       "method": "POST",
@@ -5462,7 +5243,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1166
+      "line": 1255
     },
     {
       "method": "POST",
@@ -5510,7 +5291,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1164
+      "line": 1253
     },
     {
       "method": "POST",
@@ -5528,7 +5309,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1165
+      "line": 1254
     },
     {
       "method": "GET",
@@ -5561,7 +5342,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1048
+      "line": 1135
     },
     {
       "method": "POST",
@@ -5576,7 +5357,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1052
+      "line": 1139
     },
     {
       "method": "POST",
@@ -5591,7 +5372,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1050
+      "line": 1137
     },
     {
       "method": "POST",
@@ -5609,7 +5390,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1039
+      "line": 1126
     },
     {
       "method": "POST",
@@ -5624,7 +5405,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1313
+      "line": 1402
     },
     {
       "method": "POST",
@@ -5642,7 +5423,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1301
+      "line": 1390
     },
     {
       "method": "POST",
@@ -5657,7 +5438,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1317
+      "line": 1406
     },
     {
       "method": "POST",
@@ -5672,7 +5453,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1315
+      "line": 1404
     },
     {
       "method": "POST",
@@ -5687,7 +5468,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1318
+      "line": 1407
     },
     {
       "method": "POST",
@@ -5705,7 +5486,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1300
+      "line": 1389
     },
     {
       "method": "POST",
@@ -5753,7 +5534,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1298
+      "line": 1387
     },
     {
       "method": "POST",
@@ -5771,7 +5552,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1299
+      "line": 1388
     },
     {
       "method": "GET",
@@ -5908,7 +5689,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1220
+      "line": 1309
     },
     {
       "method": "POST",
@@ -5926,7 +5707,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1208
+      "line": 1297
     },
     {
       "method": "POST",
@@ -5941,7 +5722,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1224
+      "line": 1313
     },
     {
       "method": "POST",
@@ -5956,7 +5737,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1222
+      "line": 1311
     },
     {
       "method": "POST",
@@ -5971,7 +5752,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1225
+      "line": 1314
     },
     {
       "method": "POST",
@@ -5989,7 +5770,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1207
+      "line": 1296
     },
     {
       "method": "POST",
@@ -6037,7 +5818,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1205
+      "line": 1294
     },
     {
       "method": "POST",
@@ -6055,7 +5836,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1206
+      "line": 1295
     },
     {
       "method": "GET",
@@ -6088,7 +5869,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1356
+      "line": 1445
     },
     {
       "method": "POST",
@@ -6110,7 +5891,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1347
+      "line": 1436
     },
     {
       "method": "POST",
@@ -6125,7 +5906,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1360
+      "line": 1449
     },
     {
       "method": "POST",
@@ -6140,7 +5921,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1358
+      "line": 1447
     },
     {
       "method": "POST",
@@ -6155,7 +5936,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1361
+      "line": 1450
     },
     {
       "method": "POST",
@@ -6177,7 +5958,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1346
+      "line": 1435
     },
     {
       "method": "POST",
@@ -6192,7 +5973,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 992
+      "line": 1079
     },
     {
       "method": "POST",
@@ -6209,7 +5990,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1068
+      "line": 1157
     },
     {
       "method": "POST",
@@ -6226,7 +6007,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1069
+      "line": 1158
     },
     {
       "method": "POST",
@@ -6243,7 +6024,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1070
+      "line": 1159
     },
     {
       "method": "POST",
@@ -6258,7 +6039,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1095
+      "line": 1184
     },
     {
       "method": "POST",
@@ -6275,7 +6056,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1072
+      "line": 1161
     },
     {
       "method": "POST",
@@ -6292,7 +6073,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 1075
+      "line": 1164
     },
     {
       "method": "POST",
@@ -6307,7 +6088,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1092
+      "line": 1181
     },
     {
       "method": "POST",
@@ -6322,7 +6103,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1093
+      "line": 1182
     },
     {
       "method": "POST",
@@ -6337,7 +6118,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1091
+      "line": 1180
     },
     {
       "method": "POST",
@@ -6352,7 +6133,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1087
+      "line": 1176
     },
     {
       "method": "POST",
@@ -6367,7 +6148,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1089
+      "line": 1178
     },
     {
       "method": "POST",
@@ -6382,7 +6163,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1090
+      "line": 1179
     },
     {
       "method": "GET",
@@ -6401,7 +6182,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 978
+      "line": 1065
     },
     {
       "method": "POST",
@@ -6420,7 +6201,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 974
+      "line": 1061
     },
     {
       "method": "POST",
@@ -6435,7 +6216,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 997
+      "line": 1084
     },
     {
       "method": "POST",
@@ -6450,7 +6231,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 994
+      "line": 1081
     },
     {
       "method": "POST",
@@ -6465,7 +6246,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 1005
+      "line": 1092
     },
     {
       "method": "POST",
@@ -6480,7 +6261,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 998
+      "line": 1085
     },
     {
       "method": "POST",
@@ -6499,7 +6280,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 973
+      "line": 1060
     },
     {
       "method": "GET",
@@ -6518,7 +6299,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 983
+      "line": 1070
     },
     {
       "method": "POST",
@@ -6537,7 +6318,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 970
+      "line": 1057
     },
     {
       "method": "POST",
@@ -6556,7 +6337,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 972
+      "line": 1059
     },
     {
       "method": "POST",
@@ -6605,7 +6386,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 969
+      "line": 1056
     },
     {
       "method": "POST",
@@ -6620,7 +6401,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/router.go",
-      "line": 995
+      "line": 1082
     },
     {
       "method": "POST",
@@ -6639,7 +6420,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 971
+      "line": 1058
     },
     {
       "method": "GET",
@@ -8269,7 +8050,7 @@
       "handler": "Delete",
       "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "system:backup:export"
+        "system:backup:remove"
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/dbbackup/router.go",
@@ -8751,7 +8532,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/router.go",
-      "line": 520
+      "line": 536
     },
     {
       "method": "POST",
@@ -10756,20 +10537,17 @@
     {
       "method": "POST",
       "path": "/workorder/categories",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrderCategoriesRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupWorkOrderCategoriesWriteRouter",
       "isWrite": true,
       "handler": "CreateCategory",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:category:list",
-        "ops:workorder:category:add",
-        "ops:workorder:category:edit",
-        "ops:workorder:category:delete"
+        "ops:workorder:category:add"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 57
+      "line": 97
     },
     {
       "method": "POST",
@@ -10780,50 +10558,41 @@
       "handler": "GetCategoryByID",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:category:list",
-        "ops:workorder:category:add",
-        "ops:workorder:category:edit",
-        "ops:workorder:category:delete"
+        "ops:workorder:category:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 56
+      "line": 78
     },
     {
       "method": "POST",
       "path": "/workorder/categories/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrderCategoriesRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupWorkOrderCategoriesWriteRouter",
       "isWrite": true,
       "handler": "DeleteCategory",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:category:list",
-        "ops:workorder:category:add",
-        "ops:workorder:category:edit",
         "ops:workorder:category:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 59
+      "line": 99
     },
     {
       "method": "POST",
       "path": "/workorder/categories/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrderCategoriesRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupWorkOrderCategoriesWriteRouter",
       "isWrite": true,
       "handler": "UpdateCategory",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:category:list",
-        "ops:workorder:category:add",
-        "ops:workorder:category:edit",
-        "ops:workorder:category:delete"
+        "ops:workorder:category:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 58
+      "line": 98
     },
     {
       "method": "POST",
@@ -10834,14 +10603,11 @@
       "handler": "GetEnabledCategories",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:category:list",
-        "ops:workorder:category:add",
-        "ops:workorder:category:edit",
-        "ops:workorder:category:delete"
+        "ops:workorder:category:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 55
+      "line": 77
     },
     {
       "method": "POST",
@@ -10852,14 +10618,11 @@
       "handler": "ListCategories",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:category:list",
-        "ops:workorder:category:add",
-        "ops:workorder:category:edit",
-        "ops:workorder:category:delete"
+        "ops:workorder:category:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 54
+      "line": 76
     },
     {
       "method": "POST",
@@ -10872,38 +10635,35 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 124
+      "line": 189
     },
     {
       "method": "POST",
       "path": "/workorder/config/update",
       "mountGroup": "r",
-      "setup": "SetupWorkOrderConfigRouter",
+      "setup": "SetupWorkOrderConfigWriteRouter",
       "isWrite": true,
       "handler": "UpdateConfig",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(local)",
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 125
+      "line": 198
     },
     {
       "method": "POST",
       "path": "/workorder/orders",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrdersRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupWorkOrdersWriteRouter",
       "isWrite": true,
       "handler": "Create",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:add"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 31
+      "line": 60
     },
     {
       "method": "POST",
@@ -10914,68 +10674,56 @@
       "handler": "GetByID",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 32
+      "line": 30
     },
     {
       "method": "POST",
       "path": "/workorder/orders/:id/assign",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrdersRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupWorkOrdersWriteRouter",
       "isWrite": true,
       "handler": "Assign",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 37
+      "line": 62
     },
     {
       "method": "POST",
       "path": "/workorder/orders/:id/assign-duty",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrdersRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupWorkOrdersWriteRouter",
       "isWrite": true,
       "handler": "AssignToTodayDuty",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 38
+      "line": 63
     },
     {
       "method": "POST",
       "path": "/workorder/orders/:id/comments",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrdersRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupWorkOrdersWriteRouter",
       "isWrite": true,
       "handler": "AddComment",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 43
+      "line": 65
     },
     {
       "method": "POST",
@@ -10986,32 +10734,26 @@
       "handler": "GetComments",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 42
+      "line": 33
     },
     {
       "method": "POST",
       "path": "/workorder/orders/:id/delete",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrdersRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupWorkOrdersWriteRouter",
       "isWrite": true,
       "handler": "Delete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
         "ops:workorder:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 34
+      "line": 66
     },
     {
       "method": "POST",
@@ -11022,68 +10764,56 @@
       "handler": "GetHistory",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 46
+      "line": 36
     },
     {
       "method": "POST",
       "path": "/workorder/orders/:id/status",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrdersRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupWorkOrdersWriteRouter",
       "isWrite": true,
       "handler": "UpdateStatus",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 39
+      "line": 64
     },
     {
       "method": "POST",
       "path": "/workorder/orders/:id/update",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrdersRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupWorkOrdersWriteRouter",
       "isWrite": true,
       "handler": "Update",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 33
+      "line": 61
     },
     {
       "method": "POST",
       "path": "/workorder/orders/batch-delete",
-      "mountGroup": "r",
-      "setup": "SetupWorkOrdersRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupWorkOrdersWriteRouter",
       "isWrite": true,
       "handler": "BatchDelete",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
         "ops:workorder:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 30
+      "line": 67
     },
     {
       "method": "POST",
@@ -11094,10 +10824,7 @@
       "handler": "List",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
@@ -11112,10 +10839,7 @@
       "handler": "GetMyPending",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
@@ -11134,7 +10858,7 @@
       ],
       "registeredDeadTable": true,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 92
+      "line": 132
     },
     {
       "method": "POST",
@@ -11145,14 +10869,11 @@
       "handler": "ListRatings",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 79
+      "line": 119
     },
     {
       "method": "POST",
@@ -11163,14 +10884,11 @@
       "handler": "GetRatingStatistics",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 80
+      "line": 120
     },
     {
       "method": "POST",
@@ -11181,10 +10899,7 @@
       "handler": "GetStatusStatistics",
       "permKind": "RequirePermissions",
       "permCodes": [
-        "ops:workorder:list",
-        "ops:workorder:add",
-        "ops:workorder:edit",
-        "ops:workorder:delete"
+        "ops:workorder:list"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
@@ -11193,38 +10908,32 @@
     {
       "method": "POST",
       "path": "/workorder/periodic/templates",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
+      "mountGroup": "Add>groups.Add",
+      "setup": "SetupPeriodicWorkOrderWriteRouter",
       "isWrite": true,
       "handler": "CreatePeriodic",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
-        "ops:workorder:periodic:delete"
+        "ops:workorder:periodic:add"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 105
+      "line": 178
     },
     {
       "method": "POST",
       "path": "/workorder/periodic/templates/:id/delete",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
+      "mountGroup": "Delete>groups.Delete",
+      "setup": "SetupPeriodicWorkOrderWriteRouter",
       "isWrite": true,
       "handler": "DeletePeriodic",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
         "ops:workorder:periodic:delete"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 107
+      "line": 180
     },
     {
       "method": "POST",
@@ -11242,7 +10951,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 113
+      "line": 153
     },
     {
       "method": "POST",
@@ -11260,7 +10969,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 112
+      "line": 152
     },
     {
       "method": "POST",
@@ -11278,7 +10987,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 114
+      "line": 154
     },
     {
       "method": "POST",
@@ -11296,25 +11005,22 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 115
+      "line": 155
     },
     {
       "method": "POST",
       "path": "/workorder/periodic/templates/:id/update",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
+      "mountGroup": "Edit>groups.Edit",
+      "setup": "SetupPeriodicWorkOrderWriteRouter",
       "isWrite": true,
       "handler": "UpdatePeriodic",
-      "permKind": "RequirePermissions",
+      "permKind": "RequireStrictPermissions(field)",
       "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
-        "ops:workorder:periodic:delete"
+        "ops:workorder:periodic:edit"
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 106
+      "line": 179
     },
     {
       "method": "POST",
@@ -11332,7 +11038,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 103
+      "line": 144
     },
     {
       "method": "POST",
@@ -11350,7 +11056,7 @@
       ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 104
+      "line": 145
     },
     {
       "method": "POST",
@@ -11363,7 +11069,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 133
+      "line": 206
     }
   ],
   "deferred": {

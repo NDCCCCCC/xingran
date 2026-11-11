@@ -331,6 +331,8 @@ export const PERMISSION_CODES = {
     list: "system:backup:list",
     export: "system:backup:export",
     restore: "system:backup:restore",
+    // task-3 G4 整改：备份删除独立码（此前删除按钮复用 export，2026-11-11 拆出）。
+    remove: "system:backup:remove",
   },
 } as const;
 
