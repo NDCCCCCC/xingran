@@ -286,14 +286,18 @@ func TestSetupTopologyRouter_BindsCorrectHandler(t *testing.T) {
 		"SetupTopologyRouter must construct TopologyHandler with FilterRuleService + db + core")
 }
 
-// TestSetupTopologyRouter_NoPermissionMiddleware asserts topology routes are
-// intentionally permissionless (Phase 56 dev/debug endpoints — no prod perm).
-func TestSetupTopologyRouter_NoPermissionMiddleware(t *testing.T) {
+// TestSetupTopologyRouter_PermissionMiddleware asserts topology (MAC filter
+// rules) routes carry endpoint-level permission middleware (task-4 杂项 RBAC):
+// MAC 过滤规则归 MAC 域 —— 读端点 ANY-of(network:mac:query)、
+// 写端点 strict(network:mac:rule:edit)。写操作不得无防护，debug-surface 论据
+// 不成立（GET /rules/effective 仅读；create/update/delete 是配置写）。
+func TestSetupTopologyRouter_PermissionMiddleware(t *testing.T) {
 	src := readFile(t, "topology_router.go")
 
-	// Documented as debug-only — should not apply RequirePermissions
-	assert.NotContains(t, src, "middleware.RequirePermissions",
-		"SetupTopologyRouter is a debug surface; must NOT use RequirePermissions middleware")
+	assert.Contains(t, src, "middleware.RequirePermissions",
+		"SetupTopologyRouter read endpoints must apply RequirePermissions (network:mac:query)")
+	assert.Contains(t, src, "middleware.RequireStrictPermissions",
+		"SetupTopologyRouter write endpoints must apply RequireStrictPermissions (network:mac:rule:edit)")
 }
 
 // TestSetupNetworkRouter_CallsDelegateRouters asserts SetupNetworkRouter
