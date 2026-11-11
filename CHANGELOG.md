@@ -5,6 +5,28 @@ All notable changes to XingRan-Next are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v1.56 候选
+
+### Added
+
+**数据库全量备份与恢复（PR #83，feat/db-backup-export-restore）**
+
+- 后端 `internal/api/v1/dbbackup/` + `internal/services/dbbackup/`：pg_dump/pg_restore 全库备份导出（异步任务 + taskId 轮询）、上传 zip 导入恢复、定期备份计划（cron + 保留份数）、多存储后端、备份记录下载/删除、pg_dump 能力预检（`GET /system/db-backup/capabilities`）
+- 权限模型（85-03 RBAC-01 读写分离）：读组 ANY-of `system:backup:list|export|restore`（含 `GET /:id/download` 下载端点，**无独立 download 权限码**）；写组逐动作严格权限——export→`system:backup:export`、restore→`system:backup:restore`、plan 保存/备份删除→`system:backup:export`
+- 前端 `src/pages/system/backup/` + `dbBackupApi`：备份记录列表/统计、立即备份、导入恢复 Modal、计划配置 Tab、按钮门控与后端权限码逐一对齐（下载/删除/保存计划均用 `system:backup:export`，恢复用 `system:backup:restore`）
+- 下载/上传端点在 `security.request_encryption.exclude_paths` 中豁免（二进制流不走 SM2+SM4 响应加密）
+
+**系统设置页收敛与低密度页面 Tab 化（PR #84，76fd19ce）**
+
+- 系统设置页目录化平铺：左侧文档目录 + 右侧五分类（邮箱配置 / API 通知配置 / 验证码背景图 / 经理同步 / 备份与恢复）单页锚点闭环；备份与恢复并入设置页 `backup-restore` 分类
+- 同步漂移告警并入「AD域控配置」第 3 个 Tab；值班节假日/配置说明并入值班管理、工单分类并入工单管理（Tab 化）；删除 31 个旧壳/残留文件
+- 菜单与权限迁移（migration 241/242/243）：隐藏 7 个旧 C 菜单，F 按钮权限原值改挂宿主菜单；权限码零改动
+- PageTable 表格区统一包 Card；设置页 Sider 竖线误命中从源头修复（!important 预算不升反降）
+
+### Changed
+
+- `scripts/scan-routes.cjs`：路由扫描前先剥 Go 注释（字符串字面量保护、等长替换保行号），注释掉的废弃路由不再入库 `scripts/route-registry.json`（本次清理 workorder 5 条 + rpa 3 条等共 9 条注释假路由，总路由 724 → 715）
+
 ## [v1.20.1] - 2026-07-09 — 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)
 
 ### Added
