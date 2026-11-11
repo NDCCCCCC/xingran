@@ -32,7 +32,7 @@
  *   0 = 应门控页面全部已门控（绿）；1 = 存在未覆盖页面 或 脚本自身错误（红）。
  *
  * 86-05（Task 5.2）硬断言升级：把「未覆盖即 exit 1」升为三条同时成立的硬断言 ——
- *   ① 覆盖率恒等式：已门控（不含豁免）+ 豁免 == EXPECTED_PAGE_COUNT（当前 79，见下方裁决注释）；
+ *   ① 覆盖率恒等式：已门控（不含豁免）+ 豁免 == EXPECTED_PAGE_COUNT（当前 74，见下方裁决注释）；
  *   ② 已门控覆盖完整：应门控页面数 == 已门控页面数；
  *   ③ 未覆盖页面数 == 0。
  *   另：豁免与已门控**双向互斥**（豁免里挂着已门控页 → exit 1；未豁免且未门控 → exit 1），
@@ -69,9 +69,18 @@ const exemptionsFile = path.join(scriptDir, "gating-exemptions.json");
 //   useActionPermission().decide(PERMISSION_CODES.systemBackup.*)，导出/恢复/删除/
 //   保存计划/下载均按权限点门控，不需要新增 N/A 豁免；恒等式以
 //   EXPECTED_PAGE_COUNT=79 重新成立（已门控 28 + 豁免 51 = 79）。
-const EXPECTED_PAGE_COUNT = 79;
+// feat-frontend-settings-consolidation 裁决（2026-11-11，Lead）：页面菜单收敛
+//   删除 5 个页面目录（duty/holidays、duty/config、workorder/categories、
+//   system/settings-page、system/captcha-background），页面总数 79 → 74。
+//   同批清单变更：① 上述 5 页的悬空豁免移除；② `system/settings` 页改造为
+//   目录化平铺后各分类按权限码显隐（命中 useActionPermission 门控特征），
+//   从 non-route-page 豁免移入应门控清单；③ 新增 manager-orgs / manager-rules
+//   两个旧路由兼容薄壳页（无写入口，门控由转发目标 manager-sync.tsx 承担），
+//   按 non-route-page 豁免登记。豁免 51 → 47；恒等式以 EXPECTED_PAGE_COUNT=74
+//   重新成立（已门控 27 + 豁免 47 = 74）。
+const EXPECTED_PAGE_COUNT = 74;
 /** 口径断言：N/A 豁免页数（增减须同批改本常量并在 86-STATE.md 说明理由） */
-const EXPECTED_EXEMPTION_COUNT = 51;
+const EXPECTED_EXEMPTION_COUNT = 47;
 /** 豁免分类白名单 */
 const EXEMPTION_CATEGORIES = [
   "no-permission-code",

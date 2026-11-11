@@ -59,6 +59,16 @@ var ActiveMigrations = []struct {
 	{239, "network_device_sys_object_id"},
 	// quick 261110-tbq：全库备份菜单/权限/配置 seed（按维护约定同步登记）。
 	{240, "db_backup"},
+	// 系统设置页合并：隐藏旧入口菜单（经理同步规则/机构、数据备份与恢复），
+	// 并把它们的 F 按钮权限（manager 4 + backup 3）改挂到「系统设置」菜单下。
+	// 按维护约定同步登记。
+	{241, "settings_consolidate_menus"},
+	// v1.56：同步漂移告警并入 AD 域控配置页（旧 C 菜单隐藏 + 4 个 F 权限改挂
+	// 域控配置菜单）。按维护约定同步登记。
+	{242, "ad_drift_alert_merge_menu"},
+	// 低密度页面 Tab 化：隐藏 duty/holidays、duty/config、workorder/categories
+	// 三个独立 C 菜单，并把其 F 按钮权限改挂宿主页菜单。按维护约定同步登记。
+	{243, "low_density_menus"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

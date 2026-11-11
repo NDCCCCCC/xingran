@@ -5,16 +5,29 @@
 import { Modal, Form, DatePicker } from "antd";
 // Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
 import { AppSelect } from "@/components/ui";
+// Phase 69 DICT-03：假日类型下拉按字典 duty_holiday_type 渲染（由父页面拉取后透传；
+// 未传或字典为空时回落静态常量，模态框本身不依赖 react-query）
+import type { DictItem } from "@/hooks/useDict";
 import { HOLIDAY_NAME_OPTIONS, HOLIDAY_TYPE_OPTIONS, HOLIDAY_REMARK_OPTIONS } from "../constants";
 
 interface HolidayModalProps {
   visible: boolean;
   onOk: () => void;
   onCancel: () => void;
+  /** duty_holiday_type 字典数据（父页面 useDict 拉取后透传；空数组回落静态选项） */
+  holidayTypeDict?: DictItem[];
 }
 
-export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
+export function HolidayModal({ visible, onOk, onCancel, holidayTypeDict = [] }: HolidayModalProps) {
   const [form] = Form.useForm();
+
+  // 假日类型字典（duty_holiday_type）：空数组时回落静态 HOLIDAY_TYPE_OPTIONS
+  const holidayTypeOptions =
+    holidayTypeDict.length > 0
+      ? holidayTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))
+      : HOLIDAY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }));
+  // 字典配了 isDefault 就用它，否则沿用本页既有默认值 custom
+  const defaultHolidayType = holidayTypeDict.find((d) => d.isDefault)?.dictValue || "custom";
 
   const handleOk = async () => {
     await onOk();
@@ -49,13 +62,9 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
           name="holidayType"
           label="类型"
           rules={[{ required: true }]}
-          initialValue="custom"
+          initialValue={defaultHolidayType}
         >
-          <AppSelect
-            allowClear
-            showSearch={false}
-            options={HOLIDAY_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
-          />
+          <AppSelect allowClear showSearch={false} options={holidayTypeOptions} />
         </Form.Item>
         <Form.Item name="isOffday" label="是否休息" valuePropName="checked" initialValue={true}>
           <AppSelect

@@ -101,10 +101,18 @@ function renderPage(cat?: string): void {
   );
 }
 
-/** antd v6 Select 交互 helper：mouseDown 打开 dropdown → 点击目标 option 文本 */
-async function selectAntdOption(optionText: string): Promise<void> {
-  const selectEl = document.querySelector(".ant-select");
-  if (!selectEl) throw new Error("ant-select not found");
+/**
+ * antd v6 Select 交互 helper：mouseDown 打开 dropdown → 点击目标 option 文本。
+ *
+ * v1.56 目录化后用户设置页三类内容**同时平铺**（不再只渲染激活分类），
+ * 页面里会同时存在「密度模式」与「默认分页大小」两个 Select —— 必须按索引定位，
+ * 否则默认取第一个（密度）会把分页用例的目标 option 找不到。
+ * （DOM 顺序：界面设置无 Select → 布局设置密度 Select=0 → 数据设置分页 Select=1）
+ */
+async function selectAntdOption(optionText: string, selectIndex = 0): Promise<void> {
+  const selects = document.querySelectorAll(".ant-select");
+  const selectEl = selects[selectIndex];
+  if (!selectEl) throw new Error(`ant-select[${selectIndex}] not found`);
 
   await act(async () => {
     fireEvent.mouseDown(selectEl as HTMLElement);
@@ -167,7 +175,8 @@ describe("用户设置页 — Phase 70-05 D-06 行式设置项接线", () => {
   it("用例3: 分页大小 Select 选 50 → updateDataPageSize(50)（数字参数）", async () => {
     renderPage("data");
 
-    await selectAntdOption("50 条/页");
+    // 平铺后页面有两个 Select：索引 0 = 密度模式，索引 1 = 默认分页大小
+    await selectAntdOption("50 条/页", 1);
 
     await waitFor(() => {
       expect(mocks.updateDataPageSize).toHaveBeenCalledTimes(1);

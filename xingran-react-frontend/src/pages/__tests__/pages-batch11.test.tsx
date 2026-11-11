@@ -1,5 +1,5 @@
 /**
- * Phase 88 batch11 — notice 组件/duty config+holidays/knowledge view 渲染
+ * Phase 88 batch11 — notice 组件/duty 配置与节假日面板/knowledge view 渲染
  */
 import { describe, it, expect, vi } from "vitest";
 
@@ -12,8 +12,9 @@ import { renderPageWithEndpoints } from "@/test/utils/renderPage";
 import { NoticeList } from "../system/notice/components/NoticeList";
 import { NoticeStatisticsCard } from "../system/notice/components/NoticeStatistics";
 import { ChannelSelector } from "../system/notice/components/ChannelSelector";
-import DutyConfigPage from "../duty/config";
-import DutyHolidaysPage from "../duty/holidays";
+// 原独立页 duty/config、duty/holidays 已并入 duty/management 的 Tab，测试直接渲染其面板组件
+import { DutyConfig as DutyConfigPanel } from "../duty/management/components/DutyConfig";
+import { HolidayManagement } from "../duty/management/components/HolidayManagement";
 import KnowledgeViewPage from "../knowledge/view";
 
 async function expectRenders(ui: React.ReactElement, endpoints: Record<string, unknown> = {}) {
@@ -38,11 +39,28 @@ describe("batch11 渲染", () => {
   it("notice/ChannelSelector", async () => {
     await expectRenders((<ChannelSelector selectedChannels={[]} onChange={vi.fn()} />) as unknown);
   });
-  it("duty/config 页", async () => {
-    await expectRenders(<DutyConfigPage />);
+  it("duty 配置面板", async () => {
+    await expectRenders(
+      <DutyConfigPanel config={null} loading={false} saving={false} onSave={vi.fn()} />
+    );
   });
-  it("duty/holidays 页", async () => {
-    await expectRenders(<DutyHolidaysPage />);
+  it("duty 节假日面板", async () => {
+    await expectRenders(
+      <HolidayManagement
+        holidays={[]}
+        loading={false}
+        holidayYear={2026}
+        availableYears={[2026]}
+        onYearChange={vi.fn()}
+        onRefresh={vi.fn()}
+        onAdd={vi.fn()}
+        onBatchAdd={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onImport={vi.fn()}
+        onDownloadTemplate={vi.fn()}
+      />
+    );
   });
   it("knowledge/view 页", async () => {
     await expectRenders(<KnowledgeViewPage />);

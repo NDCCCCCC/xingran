@@ -73,13 +73,15 @@ describe("ADConfigPage 渲染", () => {
     expect(baseElement.textContent).toBeDefined();
   });
 
-  it("存在『配置列表』『对账』两个 Tab 标签且默认停留在配置列表", async () => {
+  it("存在『配置列表』『对账』『漂移告警』三个 Tab 标签且默认停留在配置列表", async () => {
     const { container, getByText } = renderWithProviders(<ADConfigPage />, {
       route: "/ad-domain/configs",
       endpoints,
     });
     expect(getByText("配置列表")).toBeTruthy();
     expect(getByText("对账")).toBeTruthy();
+    // migration_242：原独立菜单「同步漂移告警」并入本页第三个 Tab
+    expect(getByText("漂移告警")).toBeTruthy();
     await waitForActiveTab(container, "配置列表");
   });
 

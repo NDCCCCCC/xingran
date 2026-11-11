@@ -35,10 +35,8 @@ import {
   type APIConfigType,
   type AuthType,
 } from "@/lib/notificationConfigApi";
-import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { StatCards } from "@/components/shared";
 
 // 配置类型枚举（形态分类器产物：children <Option> → options）
 const CONFIG_TYPE_OPTIONS = [
@@ -67,56 +65,20 @@ const APIConfigPage: FC = () => {
   const [configs, setConfigs] = useState<APINotificationConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 搜索筛选（configType + 状态；名称筛选输入框已于 70-07 移除，同 email-config 注）
-  const [searchForm] = Form.useForm();
-  const [configTypeFilter, setConfigTypeFilter] = useState<APIConfigType | undefined>(undefined);
-  const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
-
-  // 统计卡轻请求
-  const [totalCount, setTotalCount] = useState(0);
-  const [enabledCount, setEnabledCount] = useState(0);
-  const [disabledCount, setDisabledCount] = useState(0);
-
-  // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
-
   // 编辑模态框相关状态
   const [modalVisible, setModalVisible] = useState(false);
   const [editForm] = Form.useForm();
   const [editingConfig, setEditingConfig] = useState<APINotificationConfig | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // 统计卡轻请求：status 0/1 各一次只取 total（API 配置 0=启用/1=停用）
-  const loadStatistics = async () => {
-    try {
-      const [allRes, enabledRes, disabledRes] = await Promise.all([
-        getAPINotificationConfigList({ page: 1, pageSize: 1 }),
-        getAPINotificationConfigList({ page: 1, pageSize: 1, status: 0 }),
-        getAPINotificationConfigList({ page: 1, pageSize: 1, status: 1 }),
-      ]);
-      const data = allRes as { data: { total: number } };
-      const eData = enabledRes as { data: { total: number } };
-      const dData = disabledRes as { data: { total: number } };
-      setTotalCount(data.data.total);
-      setEnabledCount(eData.data.total);
-      setDisabledCount(dData.data.total);
-    } catch (error) {
-      console.error("加载API配置统计失败:", error);
-    }
-  };
-
-  // 加载API通知配置列表
+  // 加载API通知配置列表（设置页平铺：配置条数为个位数，一次拉全量、不翻页）
   const loadConfigs = async () => {
     setLoading(true);
     try {
-      const result = (await getAPINotificationConfigList({
-        page: paginationProps.current,
-        pageSize: paginationProps.pageSize,
-        configType: configTypeFilter,
-        status: statusFilter,
-      })) as { data: { list: APINotificationConfig[]; total: number } };
+      const result = (await getAPINotificationConfigList({ page: 1, pageSize: 100 })) as {
+        data: { list: APINotificationConfig[]; total: number };
+      };
       setConfigs(result.data.list);
-      setTotal(result.data.total);
     } catch (error) {
       console.error("加载API配置失败:", error);
       message.error("加载API配置失败，请刷新重试");
@@ -167,7 +129,6 @@ const APIConfigPage: FC = () => {
       editForm.resetFields();
       setEditingConfig(null);
       loadConfigs();
-      loadStatistics();
     } catch (error: unknown) {
       if (isFormValidationError(error)) {
         return;
@@ -184,30 +145,10 @@ const APIConfigPage: FC = () => {
       await deleteAPINotificationConfig(id);
       message.success("删除成功");
       loadConfigs();
-      loadStatistics();
     } catch (_error) {
       message.error("删除失败");
     }
   };
-
-  // 搜索处理
-  const handleSearch = () => {
-    const values = searchForm.getFieldsValue();
-    setConfigTypeFilter(values.configType);
-    setStatusFilter(values.status);
-    setCurrent(1);
-  };
-
-  // 重置搜索
-  const handleResetSearch = () => {
-    searchForm.resetFields();
-    setConfigTypeFilter(undefined);
-    setStatusFilter(undefined);
-    setCurrent(1);
-  };
-
-  // 启用占比
-  const enabledPct = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0;
 
   // 类型 Tag 标签映射（统一走 xr-tag 中性 — 移除 preset cyan/purple/orange）
   const configTypeLabelMap: Record<APIConfigType, string> = {
@@ -318,97 +259,32 @@ const APIConfigPage: FC = () => {
     },
   ];
 
+  // 设置页平铺：无筛选/分页依赖，挂载时拉一次全量即可
   useEffect(() => {
-    loadConfigs();
-    loadStatistics();
+    void loadConfigs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paginationProps.current, paginationProps.pageSize, configTypeFilter, statusFilter]);
+  }, []);
 
   return (
     <>
-      {/* 统计卡行：3 卡 — 总配置数 / 启用 / 停用（不加第 4 卡——configType 分布由工具栏筛选承载） */}
-      <StatCards
-        items={[
-          { label: "总配置数", value: totalCount, trend: "全部推送渠道", ratio: 1 },
-          {
-            label: "启用",
-            value: enabledCount,
-            trend: `占比 ${enabledPct}%`,
-            tone: "green",
-            ratio: totalCount ? enabledCount / totalCount : 0,
-          },
-          {
-            label: "停用",
-            value: disabledCount,
-            trend: "可随时恢复",
-            tone: "gray",
-            ratio: totalCount ? disabledCount / totalCount : 0,
-          },
-        ]}
-      />
-
-      {/* 工具栏卡：configType 筛选 + 状态筛选 + 新增配置（名称搜索待后端支持，70-07 移除死输入框） */}
-      <Card style={{ marginBottom: 14 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
-        >
-          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="configType" label="配置类型">
-              {/* 形态分类器②④：配置类型固定 3 项（业务禁搜） */}
-              <AppSelect
-                placeholder="全部类型"
-                style={{ width: 140 }}
-                allowClear
-                showSearch={false}
-                options={CONFIG_TYPE_OPTIONS}
-              />
-            </Form.Item>
-            <Form.Item name="status" label="状态">
-              {/* 形态分类器②④：状态固定 2 项（业务禁搜） */}
-              <AppSelect
-                placeholder="全部状态"
-                style={{ width: 140 }}
-                allowClear
-                showSearch={false}
-                options={STATUS_ENUM_OPTIONS}
-              />
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button onClick={handleResetSearch}>重置</Button>
-                <Button type="primary" onClick={handleSearch}>
-                  搜索
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
+      {/* 表格卡：双层纸感表格（.xr-table-zebra 绿灰表头 + 斑马纹）
+          设置页平铺：统计卡与筛选栏已移除（配置条数为个位数），新增入口收进卡片标题右侧 */}
+      <Card
+        extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
             新增配置
           </Button>
-        </div>
-      </Card>
-
-      {/* 表格卡：双层纸感表格（.xr-table-zebra 绿灰表头 + 斑马纹） */}
-      <Card>
+        }
+      >
         <Table
           columns={columns}
           dataSource={configs}
           loading={loading}
           rowKey="id"
           scroll={{ x: 1200 }}
-          pagination={paginationProps}
+          pagination={false}
           className="xr-table-zebra"
           size="medium"
-          onChange={(pagination) => {
-            setCurrent(pagination.current ?? 1);
-            setPageSize(pagination.pageSize ?? 10);
-          }}
           locale={{
             emptyText: (
               <Empty

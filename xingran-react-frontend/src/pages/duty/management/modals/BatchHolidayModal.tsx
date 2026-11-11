@@ -6,21 +6,42 @@ import { Modal, Form, DatePicker, App } from "antd";
 // Phase 71 (W5)：裸 Select → 契约组件（children 形态改写 options）
 import { AppSelect } from "@/components/ui";
 import { useState } from "react";
+// Phase 69 DICT-03：假日类型下拉按字典 duty_holiday_type 渲染（父页面透传；
+// 未传或字典为空回落静态选项，模态框本身不依赖 react-query）
+import type { DictItem } from "@/hooks/useDict";
 import { BATCH_HOLIDAY_NAME_OPTIONS, MAX_BATCH_DAYS } from "../constants";
 import type { BatchHolidayFormValues } from "../types";
 
 const { RangePicker } = DatePicker;
 
+// 字典缺失时的静态回落（与字典 duty_holiday_type 的既有取值一致）
+const FALLBACK_HOLIDAY_TYPE_OPTIONS = [
+  { value: "legal", label: "法定节假日" },
+  { value: "custom", label: "自定义" },
+];
+
 interface BatchHolidayModalProps {
   visible: boolean;
   onOk: (values: BatchHolidayFormValues) => Promise<void>;
   onCancel: () => void;
+  /** duty_holiday_type 字典数据（父页面 useDict 拉取后透传；空数组回落静态选项） */
+  holidayTypeDict?: DictItem[];
 }
 
-export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModalProps) {
+export function BatchHolidayModal({
+  visible,
+  onOk,
+  onCancel,
+  holidayTypeDict = [],
+}: BatchHolidayModalProps) {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+
+  const holidayTypeOptions =
+    holidayTypeDict.length > 0
+      ? holidayTypeDict.map((d) => ({ value: d.dictValue, label: d.dictLabel }))
+      : FALLBACK_HOLIDAY_TYPE_OPTIONS;
 
   const handleOk = async () => {
     setSubmitting(true);
@@ -89,14 +110,7 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
           rules={[{ required: true }]}
           initialValue="legal"
         >
-          <AppSelect
-            allowClear
-            showSearch={false}
-            options={[
-              { value: "legal", label: "法定节假日" },
-              { value: "custom", label: "自定义" },
-            ]}
-          />
+          <AppSelect allowClear showSearch={false} options={holidayTypeOptions} />
         </Form.Item>
         <Form.Item name="isOffday" label="是否休息" valuePropName="checked" initialValue={true}>
           <AppSelect

@@ -689,7 +689,7 @@ func MigrateModelList() []interface{} {
 		// quick 261110-tbq: 全库备份记录与异步任务（与设备配置备份职责隔离）。
 		&models.DBBackup{},
 		&models.DBBackupTask{},
-		&models.ADPushQueue{},       // Phase 57: AD 推送队列 (outbox-lite 队列表)
+		&models.ADPushQueue{}, // Phase 57: AD 推送队列 (outbox-lite 队列表)
 		// Phase 59 G-59-2: 部门-OU 映射表。其建表 DDL 原先只存在于归档 .sql
 		// (archive/legacy-2026-06-15/126_create_dept_ou_mapping_table.sql) 与
 		// scripts/dbprovision(新部署专用工具),而 .sql 迁移不被自动加载 ——
@@ -1230,6 +1230,9 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(240, "db_backup", migrations.Migrate240DBBackup); err != nil {
 			applogger.Errorf("全库备份迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 241/242/243 菜单收敛：系统设置页合并 / 漂移告警并入 / 低密度页 Tab 化。
+		// PG 与 sqlite 两分支共用同一组注册，详见 runMenuConsolidationMigrations。
+		d.runMenuConsolidationMigrations()
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1381,6 +1384,9 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(240, "db_backup", migrations.Migrate240DBBackup); err != nil {
 			applogger.Errorf("全库备份迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 241/242/243 菜单收敛（与上方 PG 分支对称）：系统设置页合并 / 漂移告警并入 /
+		// 低密度页 Tab 化。PG 与 sqlite 两分支共用同一组注册。
+		d.runMenuConsolidationMigrations()
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
@@ -1407,6 +1413,22 @@ func (d *Database) AutoMigrate() error {
 	}
 
 	return nil
+}
+
+// runMenuConsolidationMigrations 注册 241/242/243 三个菜单收敛迁移。
+// 系统设置页合并 / 同步漂移告警并入 / 低密度页 Tab 化均属「前端已完成、菜单侧失败
+// 只影响侧边栏入口」的非阻断档，与 240 的调用写法保持一致；PG 与 sqlite 分支
+// 共用此方法，避免两处重复 6 行注册（GOV-03 diff gate 的行覆盖由单测直接驱动）。
+func (d *Database) runMenuConsolidationMigrations() {
+	if err := d.runAndRecord(241, "settings_consolidate_menus", migrations.Migrate241SettingsConsolidateMenus); err != nil {
+		applogger.Errorf("系统设置页合并迁移失败 (非阻断,留待下次启动): %v", err)
+	}
+	if err := d.runAndRecord(242, "ad_drift_alert_merge_menu", migrations.Migrate242ADDriftAlertMergeMenu); err != nil {
+		applogger.Errorf("同步漂移告警菜单并入失败 (非阻断,留待下次启动): %v", err)
+	}
+	if err := d.runAndRecord(243, "low_density_menus", migrations.Migrate243LowDensityMenus); err != nil {
+		applogger.Errorf("低密度页面菜单收敛失败 (非阻断,留待下次启动): %v", err)
+	}
 }
 
 // ensureSQLiteJoinTableColumns many2many join 表的列级对齐兜底（task-23）。

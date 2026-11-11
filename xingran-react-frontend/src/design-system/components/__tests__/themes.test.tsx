@@ -14,6 +14,19 @@ import LayoutSwitcher from "../LayoutSwitcher";
 import PageTitle from "../PageTitle";
 import { SettingsShell } from "../SettingsShell";
 
+// jsdom 下 antd Grid.useBreakpoint 无法可靠推导断点，固定桌面分支（lg=true），
+// 保证 SettingsShell 走 Sider 目录（.xr-settings-nav）而非窄屏 Segmented 降级。
+vi.mock("antd", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("antd")>();
+  return {
+    ...actual,
+    Grid: {
+      ...actual.Grid,
+      useBreakpoint: () => ({ lg: true }),
+    },
+  };
+});
+
 vi.mock("@/store/settingsStore", () => ({
   useSettingsStore: vi.fn((sel?: unknown) => {
     const state = {
@@ -110,9 +123,13 @@ describe("design-system/components — themes", () => {
     wrap(<SettingsShell categories={cats} defaultCat="a" />, {
       initialEntries: ["/?cat=a"],
     });
-    expect(screen.getByText("分类A")).toBeTruthy();
-    expect(screen.getByText("分类B")).toBeTruthy();
+    // 目录化平铺后，每个分类名同时出现在目录项与右侧区块标题两处
+    expect(screen.getAllByText("分类A").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("分类B").length).toBeGreaterThan(0);
     expect(screen.getByText("内容A")).toBeTruthy();
+    expect(screen.getByText("内容B")).toBeTruthy();
+    // 桌面端目录（左侧导航）渲染
+    expect(document.querySelector(".xr-settings-nav")).toBeTruthy();
   });
 
   it("SettingsShell falls back to defaultCat on invalid param", () => {

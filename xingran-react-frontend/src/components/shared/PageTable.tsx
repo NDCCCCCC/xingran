@@ -19,7 +19,7 @@
  * 新列表页唯一合法列表数据层入口（Phase 66 lint 增量门强制）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Table } from "antd";
+import { Button, Card, Table } from "antd";
 import type { FormInstance } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import type { TableProps } from "antd";
@@ -97,6 +97,10 @@ export interface PageTableRenderContext<T> {
  * PageTable — 内建三态（loading=Table 蒙层 / 空态=antd 默认或 EmptyStateWithAction /
  * 错误态=ErrorAlertWithRetry）与分页 showTotal 契约（63 §1 口径：
  * `共 {total} 条 / {pages} 页`；total=0 不渲染）。
+ *
+ * 布局：children 业务区（统计卡等）→ 搜索卡（SearchForm 自带 Card）→ 表格卡
+ * （Card 包裹工具栏/错误条 + Table）。与基准页 system/user/index.tsx 的
+ * 「筛选一张卡 + 表格一张卡」视觉一致（白底圆角卡片）。
  */
 function PageTableImpl<T extends object>({
   request,
@@ -258,55 +262,59 @@ function PageTableImpl<T extends object>({
           onRefresh={handleRefresh}
         />
       )}
-      {(toolbar !== undefined || batchDelete !== undefined) && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 16,
-          }}
-        >
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {toolbar}
-            {batchDelete && (
-              <BatchDeleteButton
-                selectedCount={selectedRowKeys.length}
-                onConfirm={handleBatchDeleteConfirm}
-                target={batchDelete.target}
-              />
-            )}
+      {/* 表格区：白底圆角 Card 包裹（与基准页 system/user/index.tsx 的「筛选一张卡 + 表格一张卡」布局一致；
+          工具栏/错误条同属表格区，随表格一并入卡，children 业务区与搜索卡仍在卡外） */}
+      <Card>
+        {(toolbar !== undefined || batchDelete !== undefined) && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {toolbar}
+              {batchDelete && (
+                <BatchDeleteButton
+                  selectedCount={selectedRowKeys.length}
+                  onConfirm={handleBatchDeleteConfirm}
+                  target={batchDelete.target}
+                />
+              )}
+            </div>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              aria-label="刷新"
+              title="刷新"
+              onClick={handleRefresh}
+            />
           </div>
-          <Button
-            type="text"
-            icon={<ReloadOutlined />}
-            aria-label="刷新"
-            title="刷新"
-            onClick={handleRefresh}
-          />
-        </div>
-      )}
-      {loadError !== null && (
-        <ErrorAlertWithRetry error={loadError as Error} onRetry={() => void loadData()} />
-      )}
-      <Table<T>
-        columns={mergedColumns}
-        dataSource={data}
-        loading={loading}
-        rowKey={rowKey}
-        rowSelection={builtInRowSelection}
-        locale={showEmptyAction ? { emptyText: emptyAction } : undefined}
-        pagination={{
-          current,
-          pageSize: effectivePageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal,
-        }}
-        onChange={manager.handleTableChange}
-        {...rest}
-      />
+        )}
+        {loadError !== null && (
+          <ErrorAlertWithRetry error={loadError as Error} onRetry={() => void loadData()} />
+        )}
+        <Table<T>
+          columns={mergedColumns}
+          dataSource={data}
+          loading={loading}
+          rowKey={rowKey}
+          rowSelection={builtInRowSelection}
+          locale={showEmptyAction ? { emptyText: emptyAction } : undefined}
+          pagination={{
+            current,
+            pageSize: effectivePageSize,
+            total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal,
+          }}
+          onChange={manager.handleTableChange}
+          {...rest}
+        />
+      </Card>
     </div>
   );
 }

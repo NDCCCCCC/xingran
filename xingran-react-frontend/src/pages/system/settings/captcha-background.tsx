@@ -20,7 +20,6 @@ import * as captchaService from "@/services/captcha";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { StatCards } from "@/components/shared";
 
 // 难度级别枚举（形态分类器产物：children <Option> → options）
 const DIFFICULTY_LEVEL_OPTIONS = [
@@ -281,51 +280,15 @@ const CaptchaBackgroundSettingsPage: FC = () => {
     statusFilter,
   ]);
 
-  // 启用占比（反转语义：enabledCount 即 status=1 计数）
-  const enabledPct =
-    statistics && statistics.totalCount > 0
-      ? Math.round((statistics.enabledCount / statistics.totalCount) * 100)
-      : 0;
-
   return (
     <>
-      {/* 统计卡行：4 卡 — 总数量（默认）/ 启用（green）/ 禁用（gray）/ 总使用次数（gold） */}
-      <StatCards
-        items={[
-          {
-            label: "总数量",
-            value: statistics?.totalCount ?? 0,
-            trend: "全部背景图资产",
-            ratio: 1,
-          },
-          {
-            label: "启用数量",
-            value: statistics?.enabledCount ?? 0,
-            trend: `占比 ${enabledPct}%`,
-            tone: "green",
-            ratio:
-              statistics && statistics.totalCount > 0
-                ? statistics.enabledCount / statistics.totalCount
-                : 0,
-          },
-          {
-            label: "禁用数量",
-            value: statistics?.disabledCount ?? 0,
-            trend: "不参与抽取",
-            tone: "gray",
-            ratio:
-              statistics && statistics.totalCount > 0
-                ? statistics.disabledCount / statistics.totalCount
-                : 0,
-          },
-          {
-            label: "总使用次数",
-            value: statistics?.totalUsage ?? 0,
-            trend: "累计验证码展示",
-            tone: "gold",
-          },
-        ]}
-      />
+      {/* 统计摘要：设置页平铺后不再占用 4 张统计卡，压成一行小字（数据源不变） */}
+      {statistics && (
+        <div className="xr-settings-section-desc" style={{ marginBottom: 12 }}>
+          共 {statistics.totalCount} 张 · 启用 {statistics.enabledCount} · 禁用{" "}
+          {statistics.disabledCount} · 累计使用 {statistics.totalUsage} 次
+        </div>
+      )}
 
       {/* 工具栏卡：紧凑筛选（无独立搜索区）+ 右侧按钮组 */}
       <Card style={{ marginBottom: 14 }}>

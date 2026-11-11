@@ -30,10 +30,8 @@ import {
   type EmailConfigCreateRequest,
   type EmailConfigUpdateRequest,
 } from "@/lib/notificationConfigApi";
-import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
-import { StatCards } from "@/components/shared";
 
 // 状态枚举（形态分类器产物：children <Option> → options）
 const STATUS_ENUM_OPTIONS = [
@@ -47,21 +45,6 @@ const EmailConfigPage: FC = () => {
   const [configs, setConfigs] = useState<EmailConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 统计卡轻请求（status 0/1 各一次只取 total，零后端改动 — email 0=启用/1=停用）
-  const [totalCount, setTotalCount] = useState(0);
-  const [enabledCount, setEnabledCount] = useState(0);
-  const [disabledCount, setDisabledCount] = useState(0);
-
-  // 搜索表单
-  // 注：后端 list 端点仅支持 status 筛选（notification_config_handler.go 只绑定
-  // current/pageSize/status），配置名称筛选输入框已于 70-07 移除（后端支持后可从
-  // git 历史恢复）。
-  const [searchForm] = Form.useForm();
-  const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
-
-  // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
-
   // 编辑模态框相关状态
   const [modalVisible, setModalVisible] = useState(false);
   const [editForm] = Form.useForm();
@@ -73,36 +56,14 @@ const EmailConfigPage: FC = () => {
   const [testForm] = Form.useForm();
   const [testing, setTesting] = useState(false);
 
-  // 统计卡轻请求：status 0/1 各一次只取 total
-  const loadStatistics = async () => {
-    try {
-      const [allRes, enabledRes, disabledRes] = await Promise.all([
-        getEmailConfigList({ page: 1, pageSize: 1 }),
-        getEmailConfigList({ page: 1, pageSize: 1, status: 0 }),
-        getEmailConfigList({ page: 1, pageSize: 1, status: 1 }),
-      ]);
-      const data = allRes as { data: { total: number } };
-      const eData = enabledRes as { data: { total: number } };
-      const dData = disabledRes as { data: { total: number } };
-      setTotalCount(data.data.total);
-      setEnabledCount(eData.data.total);
-      setDisabledCount(dData.data.total);
-    } catch (error) {
-      console.error("加载邮箱配置统计失败:", error);
-    }
-  };
-
-  // 加载邮箱配置列表
+  // 加载邮箱配置列表（设置页平铺：配置条数为个位数，一次拉全量、不翻页）
   const loadConfigs = async () => {
     setLoading(true);
     try {
-      const result = (await getEmailConfigList({
-        page: paginationProps.current,
-        pageSize: paginationProps.pageSize,
-        status: statusFilter,
-      })) as { data: { list: EmailConfig[]; total: number } };
+      const result = (await getEmailConfigList({ page: 1, pageSize: 100 })) as {
+        data: { list: EmailConfig[]; total: number };
+      };
       setConfigs(result.data.list);
-      setTotal(result.data.total);
     } catch (error) {
       console.error("加载邮箱配置失败:", error);
       message.error("加载邮箱配置失败，请刷新重试");
@@ -156,7 +117,6 @@ const EmailConfigPage: FC = () => {
       editForm.resetFields();
       setEditingConfig(null);
       loadConfigs();
-      loadStatistics();
     } catch (error: unknown) {
       if (isFormValidationError(error)) {
         return;
@@ -173,7 +133,6 @@ const EmailConfigPage: FC = () => {
       await deleteEmailConfig(id);
       message.success("删除成功");
       loadConfigs();
-      loadStatistics();
     } catch (_error) {
       message.error("删除失败");
     }
@@ -207,23 +166,6 @@ const EmailConfigPage: FC = () => {
       setTesting(false);
     }
   };
-
-  // 搜索处理
-  const handleSearch = () => {
-    const values = searchForm.getFieldsValue();
-    setStatusFilter(values.status);
-    setCurrent(1);
-  };
-
-  // 重置搜索
-  const handleResetSearch = () => {
-    searchForm.resetFields();
-    setStatusFilter(undefined);
-    setCurrent(1);
-  };
-
-  // 启用占比 = enabled/total * 100（保留一位小数向下取整百分比）
-  const enabledPct = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0;
 
   // 表格列定义
   const columns: ColumnsType<EmailConfig> = [
@@ -327,87 +269,32 @@ const EmailConfigPage: FC = () => {
     },
   ];
 
+  // 设置页平铺：无筛选/分页依赖，挂载时拉一次全量即可
   useEffect(() => {
-    loadConfigs();
-    loadStatistics();
+    void loadConfigs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paginationProps.current, paginationProps.pageSize, statusFilter]);
+  }, []);
 
   return (
     <>
-      {/* 统计卡行：3 卡 — 总配置数 / 启用 / 停用 */}
-      <StatCards
-        items={[
-          { label: "总配置数", value: totalCount, trend: "全部通知渠道", ratio: 1 },
-          {
-            label: "启用",
-            value: enabledCount,
-            trend: `占比 ${enabledPct}%`,
-            tone: "green",
-            ratio: totalCount ? enabledCount / totalCount : 0,
-          },
-          {
-            label: "停用",
-            value: disabledCount,
-            trend: "可随时恢复",
-            tone: "gray",
-            ratio: totalCount ? disabledCount / totalCount : 0,
-          },
-        ]}
-      />
-
-      {/* 工具栏卡：状态筛选 / 新增配置（名称搜索待后端支持，70-07 移除死输入框） */}
-      <Card style={{ marginBottom: 14 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
-        >
-          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="status" label="状态">
-              {/* 形态分类器②④：邮件配置状态（业务禁搜） */}
-              <AppSelect
-                placeholder="全部状态"
-                style={{ width: 140 }}
-                allowClear
-                showSearch={false}
-                options={STATUS_ENUM_OPTIONS}
-              />
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button onClick={handleResetSearch}>重置</Button>
-                <Button type="primary" onClick={handleSearch}>
-                  搜索
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
+      {/* 表格卡：双层纸感表格（.xr-table-zebra 绿灰表头 + 斑马纹）
+          设置页平铺：统计卡与筛选栏已移除（配置条数为个位数），新增入口收进卡片标题右侧 */}
+      <Card
+        extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
             新增配置
           </Button>
-        </div>
-      </Card>
-
-      {/* 表格卡：双层纸感表格（.xr-table-zebra 绿灰表头 + 斑马纹） */}
-      <Card>
+        }
+      >
         <Table
           columns={columns}
           dataSource={configs}
           loading={loading}
           rowKey="id"
           scroll={{ x: 1200 }}
-          pagination={paginationProps}
+          pagination={false}
           className="xr-table-zebra"
           size="medium"
-          onChange={(pagination) => {
-            setCurrent(pagination.current ?? 1);
-            setPageSize(pagination.pageSize ?? 10);
-          }}
           locale={{
             emptyText: (
               <Empty

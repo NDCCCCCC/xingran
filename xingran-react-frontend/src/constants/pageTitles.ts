@@ -8,7 +8,10 @@ export const PAGE_TITLES = {
   MONITOR_DASHBOARD: "监控仪表盘",
   HOME: "首页",
   NOTICE_DETAIL: "通知详情",
-  // Phase 144 ALRT-03: 同步漂移告警页标题
+  // Phase 144 ALRT-03：同步漂移告警标题。
+  // migration_242 起该功能并入「AD 域控配置」页第三个 Tab（标签名「漂移告警」，
+  // 由 Tabs 自带 label，无需走本表）；此标题仅保留给旧直达链接的薄壳页
+  // src/pages/system/ad-drift-alert/index.tsx（兼容壳，不再有独立菜单入口）。
   AD_DRIFT_ALERT: "同步漂移告警",
 } as const;
 
@@ -20,7 +23,7 @@ export const SPECIAL_PATH_TITLES: Record<string, string> = {
   "/": PAGE_TITLES.HOME,
   "/dashboard": PAGE_TITLES.DASHBOARD,
   "/monitor/dashboard": PAGE_TITLES.MONITOR_DASHBOARD,
-  // Phase 144 ALRT-03: 菜单驱动动态路由的标题兜底
+  // Phase 144 ALRT-03（migration_242 后仅作旧直达链接的标题兜底）
   "/system/ad-drift-alert": PAGE_TITLES.AD_DRIFT_ALERT,
 } as const;
 

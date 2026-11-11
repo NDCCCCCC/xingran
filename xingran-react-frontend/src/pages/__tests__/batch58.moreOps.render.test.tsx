@@ -13,7 +13,8 @@ vi.mock("@/lib/api", async () => {
 import { renderPageWithEndpoints } from "@/test/utils/renderPage";
 import LocationAliasDrawer from "../operations/workstations/LocationAliasDrawer";
 import WorkorderStatistics from "../workorder/statistics";
-import WorkorderCategories from "../workorder/categories";
+// 原独立页 workorder/categories 已并入 orders 页 Tab，这里渲染迁入的 Tab 组件
+import { CategoryManagement as WorkorderCategories } from "../workorder/orders/components/CategoryManagement";
 
 async function renderAndAssert(
   page: React.ReactElement,

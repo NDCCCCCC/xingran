@@ -1,3 +1,11 @@
+/**
+ * 工单分类管理（工单管理页「工单分类」Tab）
+ *
+ * 由原独立页面 src/pages/workorder/categories/index.tsx 迁入：
+ * 分类是工单管理的一部分（新增/编辑工单时选分类），不再独占菜单。
+ * 逻辑零改动，仅去掉页面容器 <div className="p-6">（Tab 内容由父页面承载内边距）。
+ */
+
 import { useState, useEffect } from "react";
 import type { FC } from "react";
 import { Button, Form, Modal, InputNumber, Space, Tag, App, Card, Tree, Radio } from "antd";
@@ -22,7 +30,7 @@ import {
 import { isFormValidationError } from "@/utils/errorHandler";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 
-const WorkOrderCategoryPage: FC = () => {
+export const CategoryManagement: FC = () => {
   const { message } = App.useApp();
   const [editForm] = Form.useForm();
 
@@ -168,7 +176,7 @@ const WorkOrderCategoryPage: FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div>
       <Card title="工单分类管理">
         <div className="mb-4">
           <Space>
@@ -298,5 +306,3 @@ const WorkOrderCategoryPage: FC = () => {
     </div>
   );
 };
-
-export default WorkOrderCategoryPage;

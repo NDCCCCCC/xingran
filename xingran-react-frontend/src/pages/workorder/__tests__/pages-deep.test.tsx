@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 import WorkOrderPage from "../orders";
-import CategoriesPage from "../categories";
+import { CategoryManagement as CategoriesPage } from "../orders/components/CategoryManagement";
 import StatisticsPage from "../statistics";
 
 async function waitText(text: string, timeoutMs = 6000): Promise<boolean> {

@@ -1,22 +1,26 @@
 /**
- * Phase 70-02 — SettingsShell Wave 0 单测（D-03 / D-04 行为锁定）
+ * SettingsShell 单测（v1.56 目录化改造后重写）
+ *
+ * 改造前锁定「一次只显示一个分类」；目录化后语义变为：
+ *   左侧目录 = 文档目录，右侧**全部分类纵向平铺**，目录点击 = 锚点滚动 + URL 双写。
  *
  * 用例覆盖：
- *   1. ?cat= 驱动：URL 参数决定激活分类。
- *   2. 非法回退：?cat=invalid 经白名单校验后回退 defaultCat，不抛错。
- *   3. replace 语义：setSearchParams 调用参数含 replace:true，不污染 history。
- *   4. 断点降级：mock Grid.useBreakpoint 驱动 Sider/Segmented 分支。
- *   5. 可达性：激活分类项带 aria-current="true"。
+ *   1. 平铺：全部分类内容同时渲染（不再互相排斥）。
+ *   2. ?cat= 定位：URL 参数决定目录激活项（aria-current 恰好一个）。
+ *   3. 点击目录：URL 同步为 `?cat=key#key`（MemoryRouter 探针断言）+ 触发 scrollIntoView。
+ *   4. 非法 ?cat= 回退 defaultCat，不抛错。
+ *   5. 断点降级：桌面走 Sider 目录、窄屏走 Segmented 目录，两者内容同样平铺。
+ *   6. 区块锚点：每分类一个 section，id = key，aria-labelledby 指向区块标题。
  *
- * 关键 mock 策略：vi.mock("antd") 仅替换 Grid.useBreakpoint，保留其他 antd 导出，
- * 避免破坏 Layout/Segmented 等组件渲染（importActual 透传）。
+ * mock 策略：vi.mock("antd") 仅替换 Grid.useBreakpoint，保留其他 antd 导出；
+ * jsdom 无 scrollIntoView 实现，用 prototype 打桩捕捉调用。
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 import { screen, fireEvent } from "@testing-library/dom";
 import { App } from "antd";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 
 // ---- Polyfill: antd v6 ResizeObserver (jsdom 缺失) ----
@@ -69,170 +73,152 @@ const testCategories: SettingsCategory[] = [
   },
 ];
 
-function Wrapper({ children }: { children: ReactNode }) {
+/** URL 探针：断言目录点击后 search + hash 同步（MemoryRouter 不暴露 history 浏览器栈） */
+function LocationProbe(): ReactNode {
+  const location = useLocation();
+  return <div data-testid="location-probe">{location.search + location.hash}</div>;
+}
+
+function Wrapper({
+  children,
+  url = "/system/settings-page",
+}: {
+  children?: ReactNode;
+  url?: string;
+}) {
   return (
-    <MemoryRouter initialEntries={["/system/settings-page"]}>
-      <App>{children}</App>
+    <MemoryRouter initialEntries={[url]}>
+      <App>
+        {children}
+        <LocationProbe />
+      </App>
     </MemoryRouter>
   );
 }
 
-describe("SettingsShell — Phase 70-02 D-03/D-04 Wave 0", () => {
+function renderShell(url = "/system/settings-page"): void {
+  render(
+    <Wrapper url={url}>
+      <SettingsShell categories={testCategories} defaultCat="email" />
+    </Wrapper>
+  );
+}
+
+describe("SettingsShell — v1.56 目录化（左侧目录 + 右侧平铺）", () => {
+  const scrollSpy = vi.fn();
+
   beforeEach(() => {
     mockBreakpoint = { lg: true };
+    scrollSpy.mockClear();
+    // jsdom 未实现 scrollIntoView
+    HTMLElement.prototype.scrollIntoView = scrollSpy;
   });
 
   afterEach(() => {
     mockBreakpoint = { lg: true };
   });
 
-  it("用例1: ?cat=api 驱动激活分类（初始 URL 含参数时直接定位 api）", () => {
-    render(
-      <MemoryRouter initialEntries={["/system/settings-page?cat=api"]}>
-        <App>
-          <SettingsShell categories={testCategories} defaultCat="email" />
-        </App>
-      </MemoryRouter>
-    );
+  it("用例1: 全部分类内容同时平铺渲染（不再一次只显示一个）", () => {
+    renderShell("/system/settings-page?cat=api");
 
-    // api 内容渲染
+    expect(screen.getByTestId("content-email")).toBeInTheDocument();
     expect(screen.getByTestId("content-api")).toBeInTheDocument();
-    // 默认分类（email）内容不渲染
-    expect(screen.queryByTestId("content-email")).not.toBeInTheDocument();
+    expect(screen.getByTestId("content-captcha")).toBeInTheDocument();
+  });
 
-    // 激活项 aria-current=true
+  it("用例2: ?cat=api 决定目录激活项，aria-current 恰好一个", () => {
+    renderShell("/system/settings-page?cat=api");
+
     const apiBtn = screen.getByRole("button", { name: /API配置/ });
     expect(apiBtn).toHaveAttribute("aria-current", "true");
 
-    // 非激活项无 aria-current
     const emailBtn = screen.getByRole("button", { name: /邮箱配置/ });
     expect(emailBtn).not.toHaveAttribute("aria-current");
+
+    const activeBtns = screen
+      .getAllByRole("button")
+      .filter((b) => b.getAttribute("aria-current") === "true");
+    expect(activeBtns).toHaveLength(1);
   });
 
-  it("用例2: ?cat=invalid 非法值回退 defaultCat，不抛错", () => {
-    expect(() =>
-      render(
-        <MemoryRouter initialEntries={["/system/settings-page?cat=invalid"]}>
-          <App>
-            <SettingsShell categories={testCategories} defaultCat="email" />
-          </App>
-        </MemoryRouter>
-      )
-    ).not.toThrow();
+  it("用例3: 点击目录 → URL 同步为 ?cat=key#key 且触发 scrollIntoView", () => {
+    renderShell("/system/settings-page");
 
-    // 回退到默认 email 内容
-    expect(screen.getByTestId("content-email")).toBeInTheDocument();
-    expect(screen.queryByTestId("content-api")).not.toBeInTheDocument();
+    scrollSpy.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: /验证码背景图/ }));
 
-    // email 项激活
+    // URL 双写：search 参数兼容旧链接，hash 提供锚点可分享
+    expect(screen.getByTestId("location-probe")).toHaveTextContent("?cat=captcha#captcha");
+    // 点击后滚动到对应区块（smooth）
+    expect(scrollSpy).toHaveBeenCalled();
+    const lastCall = scrollSpy.mock.calls[scrollSpy.mock.calls.length - 1];
+    expect(lastCall[0]).toMatchObject({ behavior: "smooth", block: "start" });
+  });
+
+  it("用例4: ?cat=invalid 回退 defaultCat，不抛错", () => {
+    expect(() => renderShell("/system/settings-page?cat=invalid")).not.toThrow();
+
     const emailBtn = screen.getByRole("button", { name: /邮箱配置/ });
     expect(emailBtn).toHaveAttribute("aria-current", "true");
   });
 
-  it("用例3: 点击分类项触发 replace:true 的 setSearchParams（不污染 history）", () => {
-    const setSearchParamsSpy = vi.fn();
-
-    // 用 spy 替换 useSearchParams 返回值以断言调用参数
-    vi.doMock("react-router-dom", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("react-router-dom")>();
-      return {
-        ...actual,
-        useSearchParams: () => [new URLSearchParams("?cat=email"), setSearchParamsSpy],
-      };
-    });
-
-    // doMock 在模块层不会重渲染已导入的 SettingsShell；改为端到端断言 history.length
-    // 简化路径：渲染后点击 captcha 按钮，断言 history.length 不变 + URL 变化（经 MemoryRouter）
-    const { rerender } = render(
-      <Wrapper>
-        <SettingsShell categories={testCategories} defaultCat="email" />
-      </Wrapper>
-    );
-
-    // 初始 history.length
-    const initialHistoryLength = window.history.length;
-
-    // 点击 captcha 分类
-    const captchaBtn = screen.getByRole("button", { name: /验证码背景图/ });
-    fireEvent.click(captchaBtn);
-
-    // 重新渲染以驱动 URL 状态变化（MemoryRouter state 仅在初始化时固化；此处断言组件响应 setSearchParams 即可）
-    expect(captchaBtn).toBeInTheDocument();
-    expect(initialHistoryLength).toBeGreaterThanOrEqual(1);
-
-    // 清理 spy mock 以免污染其它用例
-    vi.doUnmock("react-router-dom");
-    vi.doMock("react-router-dom", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("react-router-dom")>();
-      return actual;
-    });
-    rerender(
-      <Wrapper>
-        <SettingsShell categories={testCategories} defaultCat="email" />
-      </Wrapper>
-    );
-  });
-
-  it("用例4a: 桌面端（mockBreakpoint.lg=true）渲染 Sider 导航，无 Segmented", () => {
+  it("用例5a: 桌面端渲染 Sider 目录白卡，无 Segmented", () => {
     mockBreakpoint = { lg: true };
-    render(
-      <Wrapper>
-        <SettingsShell categories={testCategories} defaultCat="email" />
-      </Wrapper>
-    );
+    renderShell();
 
-    // 桌面端有左导航白卡
-    const nav = document.querySelector(".xr-settings-nav");
-    expect(nav).not.toBeNull();
-
-    // Sider className 正确应用
-    const sider = document.querySelector(".xr-settings-sider");
-    expect(sider).not.toBeNull();
-
-    // Segmented 组件（ant-segmented）在桌面端不存在
+    expect(document.querySelector(".xr-settings-nav")).not.toBeNull();
+    expect(document.querySelector(".xr-settings-sider")).not.toBeNull();
     expect(document.querySelector(".ant-segmented")).toBeNull();
   });
 
-  it("用例4b: 窄屏（mockBreakpoint.lg=false）降级为 Segmented 块，无 Sider 导航", () => {
+  it("用例5b: 窄屏降级为 Segmented 目录，无 Sider，但内容同样全部平铺", () => {
     mockBreakpoint = { lg: false };
-    render(
-      <Wrapper>
-        <SettingsShell categories={testCategories} defaultCat="email" />
-      </Wrapper>
-    );
+    renderShell();
 
-    // Segmented 渲染
     expect(document.querySelector(".ant-segmented")).not.toBeNull();
-
-    // 左导航白卡不存在（窄屏走 Segmented 分支）
     expect(document.querySelector(".xr-settings-nav")).toBeNull();
     expect(document.querySelector(".xr-settings-sider")).toBeNull();
 
-    // 内容仍渲染（窄屏内容区全宽）
     expect(screen.getByTestId("content-email")).toBeInTheDocument();
+    expect(screen.getByTestId("content-api")).toBeInTheDocument();
+    expect(screen.getByTestId("content-captcha")).toBeInTheDocument();
   });
 
-  it('用例5: 激活分类项带 aria-current="true"，非激活项无该属性', () => {
+  it("用例6: 每分类一个锚点 section（id = key，aria-labelledby 指向区块标题）", () => {
+    renderShell();
+
+    for (const c of testCategories) {
+      const section = document.querySelector(`section#${c.key}`);
+      expect(section).not.toBeNull();
+      expect(section?.getAttribute("data-settings-section")).toBe(c.key);
+
+      const titleId = section?.getAttribute("aria-labelledby");
+      expect(titleId).toBe(`settings-${c.key}-title`);
+      expect(document.getElementById(titleId as string)?.textContent).toContain(c.label);
+    }
+  });
+
+  it("用例7: 权限码过滤 —— 未就绪时不隐藏（避免闪烁）", () => {
+    // 权限集未加载时 useActionPermission 返回 loading，decide().visible = true
+    const gatedCategories: SettingsCategory[] = [
+      ...testCategories,
+      {
+        key: "manager",
+        label: "经理同步",
+        icon: <span />,
+        content: <div data-testid="content-manager">content-manager</div>,
+        permission: "ops:manager:rule:list",
+      },
+    ];
+
     render(
       <Wrapper>
-        <SettingsShell categories={testCategories} defaultCat="email" />
+        <SettingsShell categories={gatedCategories} defaultCat="email" />
       </Wrapper>
     );
 
-    const allBtns = screen.getAllByRole("button");
-
-    // 至少 3 个分类按钮
-    expect(allBtns.length).toBeGreaterThanOrEqual(3);
-
-    // aria-current=true 恰好 1 个
-    const activeBtns = allBtns.filter((b) => b.getAttribute("aria-current") === "true");
-    expect(activeBtns).toHaveLength(1);
-
-    // 激活按钮文本为 defaultCat 对应 label
-    expect(activeBtns[0]).toHaveTextContent("邮箱配置");
-
-    // 至少 1 个非激活按钮无 aria-current
-    const inactiveBtns = allBtns.filter((b) => !b.hasAttribute("aria-current"));
-    expect(inactiveBtns.length).toBeGreaterThanOrEqual(1);
+    // 未就绪 → 仍渲染（不闪烁）
+    expect(screen.getByTestId("content-manager")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /经理同步/ })).toBeInTheDocument();
   });
 });

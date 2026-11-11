@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 // Phase 71 (W5)：裸 Input → 契约组件
 import { AppInput } from "@/components/ui";
 import { Button, Table, Modal, Form, InputNumber, Switch, Space, message, Card, Tag } from "antd";
@@ -15,6 +15,9 @@ import { Drawer, Tabs } from "antd";
 import { useLocation } from "react-router-dom";
 import AccountPoolTab from "./AccountPoolTab";
 import ReconciliationTab from "./ReconciliationTab";
+import DriftAlertTab from "./components/DriftAlertTab";
+import { onADDriftAlert } from "@/store/noticeStore";
+import { getAppMessage } from "@/utils/antdMessage";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -68,6 +71,41 @@ const ADConfigPage: FC = () => {
   const [testingConfig, setTestingConfig] = useState<string | null>(null);
   const [syncingConfig, setSyncingConfig] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState<{ [key: string]: ADSyncResult }>({});
+
+  // migration_242：「漂移告警」Tab 刷新信号（primitive）。
+  // WS 订阅在**页面级**挂载（而非 Tab 内）—— 无论当前停在哪个 Tab，
+  // 收到 ad_sync_drift_alert 都能全局提示并让告警 Tab 数据变脏；切到该 Tab /
+  // 再次收到告警时通过该 token 让 Tab 刷新状态卡与触发记录。
+  const [driftAlertRefreshToken, setDriftAlertRefreshToken] = useState(0);
+
+  // 页面级 WS 订阅：onADDriftAlert 只订阅 noticeStore 的模块级 listener Set，
+  // **不新建 WebSocket 连接**（全局唯一 /system/ws/notices 连接由 noticeStore 维护）。
+  // cleanup 返回退订函数，卸载后不再响应。
+  useEffect(() => {
+    const unsubscribe = onADDriftAlert((event) => {
+      const title = event.title ?? "AD 同步漂移告警";
+      const detail =
+        event.memberCount !== undefined && event.distinctGroups !== undefined
+          ? `成员数 ${event.memberCount} / 组数 ${event.distinctGroups}`
+          : "检测到 AD 同步数据漂移";
+      getAppMessage().warning(`${title}：${detail}`);
+      setDriftAlertRefreshToken((n) => n + 1);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  /** Tab 切换：进入「漂移告警」时补一次刷新（Tab 首次挂载已有首屏加载，不重复请求） */
+  const handleTabChange = useCallback(
+    (key: string) => {
+      setActiveTab(key);
+      if (key === "drift-alert") {
+        setDriftAlertRefreshToken((n) => n + 1);
+      }
+    },
+    [setActiveTab]
+  );
 
   // 排序状态
   const [_orderByColumn, setOrderByColumn] = useState<string>("createdAt");
@@ -363,7 +401,7 @@ const ADConfigPage: FC = () => {
     <Card>
       <Tabs
         activeKey={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         items={[
           {
             key: "configs",
@@ -590,6 +628,15 @@ const ADConfigPage: FC = () => {
             key: "reconciliation",
             label: "对账",
             children: <ReconciliationTab />,
+          },
+          {
+            // migration_242：原独立菜单「同步漂移告警」并入本页（migration_238 的
+            // C 型菜单已隐藏）。三个子组件与 WS 订阅口径保持不变，仅挂载位置改变。
+            // Tab 本身不门控：真实鉴权在后端 RequireStrictPermissions，
+            // 「立即检测」按钮在 Tab 内按 system:adDriftAlert:trigger 三态门控。
+            key: "drift-alert",
+            label: "漂移告警",
+            children: <DriftAlertTab refreshToken={driftAlertRefreshToken} />,
           },
         ]}
       />
