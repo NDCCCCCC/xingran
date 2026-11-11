@@ -32,7 +32,7 @@
  *   0 = 应门控页面全部已门控（绿）；1 = 存在未覆盖页面 或 脚本自身错误（红）。
  *
  * 86-05（Task 5.2）硬断言升级：把「未覆盖即 exit 1」升为三条同时成立的硬断言 ——
- *   ① 覆盖率恒等式：已门控（不含豁免）+ 豁免 == EXPECTED_PAGE_COUNT（76）；
+ *   ① 覆盖率恒等式：已门控（不含豁免）+ 豁免 == EXPECTED_PAGE_COUNT（当前 79，见下方裁决注释）；
  *   ② 已门控覆盖完整：应门控页面数 == 已门控页面数；
  *   ③ 未覆盖页面数 == 0。
  *   另：豁免与已门控**双向互斥**（豁免里挂着已门控页 → exit 1；未豁免且未门控 → exit 1），
@@ -63,7 +63,13 @@ const exemptionsFile = path.join(scriptDir, "gating-exemptions.json");
 //   三态门控（useActionPermission + PERMISSION_CODES.adDriftAlert.trigger /
 //   :edit），不需要新增豁免；恒等式以 EXPECTED_PAGE_COUNT=78 重新成立。
 //   原 v1.51 裁决保留：2026-11-01 新增 port-audits 审计页（76→77）。
-const EXPECTED_PAGE_COUNT = 78;
+// quick 261110-tbq 裁决（2026-11-11，Lead）：新增业务页
+//   `src/pages/system/backup/index.tsx`（数据备份与恢复），页面总数 78 → 79。
+//   该页已自带三态门控：BackupListTab / BackupPlanTab / RestoreModal 统一走
+//   useActionPermission().decide(PERMISSION_CODES.systemBackup.*)，导出/恢复/删除/
+//   保存计划/下载均按权限点门控，不需要新增 N/A 豁免；恒等式以
+//   EXPECTED_PAGE_COUNT=79 重新成立（已门控 28 + 豁免 51 = 79）。
+const EXPECTED_PAGE_COUNT = 79;
 /** 口径断言：N/A 豁免页数（增减须同批改本常量并在 86-STATE.md 说明理由） */
 const EXPECTED_EXEMPTION_COUNT = 51;
 /** 豁免分类白名单 */
