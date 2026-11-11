@@ -11,32 +11,22 @@
   },
   {
     "url": "/monitor/jobs",
-    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobActions.ts",
-    "reason": "断链追踪：前端定时任务管理页（monitor/job）调 POST /monitor/jobs 系列，后端 SetupJobRouter（internal/api/v1/scheduler/job_router.go，@Router /monitor/jobs）存在但未在 internal/api/router.go 挂载，registry 因此无任何 job 路由。属后端路由漏挂载，需 lead 决策：恢复挂载或下线前端页面；追踪：定时任务管理模块。"
+    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。"
   },
   {
     "url": "/monitor/jobs/${id}/update",
-    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobActions.ts",
-    "reason": "同 /monitor/jobs：SetupJobRouter 未挂载导致整组 /monitor/jobs/* 断链，见上一条 reason。"
+    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。"
   },
   {
     "url": "/monitor/jobs/${id}/delete",
-    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobActions.ts",
-    "reason": "同 /monitor/jobs：SetupJobRouter 未挂载，见上一条 reason。"
+    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。"
   },
   {
     "url": "/monitor/jobs/${id}/status",
-    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobActions.ts",
-    "reason": "同 /monitor/jobs：SetupJobRouter 未挂载，见上一条 reason。"
+    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。"
   },
   {
     "url": "/monitor/jobs/logs/statistics",
-    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobData.ts",
-    "reason": "同 /monitor/jobs：SetupJobRouter 未挂载（含 /logs/list /logs/statistics /logs/clean），见上一条 reason。"
-  },
-  {
-    "url": "/system/dicts/refresh-cache",
-    "file": "xingran-react-frontend/src/pages/system/dict/hooks/useDictActions.ts",
-    "reason": "断链追踪：字典管理页「刷新缓存」按钮调 POST /system/dicts/refresh-cache，后端无该端点（仅 /system/configs/refresh-cache，语义为参数缓存）。修复需后端补字典缓存刷新端点或前端移除按钮，非 URL 字符级小修；追踪：字典管理刷新缓存功能。"
+    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。（无 file 限定：该 URL 在 hooks/useJobData.ts 与 index.tsx 多处调用）"
   }
 ]
