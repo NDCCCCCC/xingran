@@ -26,6 +26,26 @@
  *   - Go migration 里的权限字符串字面量      → 同上，仅用于 c 方向
  *   - `archive/` 目录（历史归档，不再执行）→ 不扫描
  *
+ * 全量对账（feat/frontend-url-cross-check · task-5，修复三类作用域盲区）：
+ *   盲区1（已修复）：旧版作用域仅由 TS 模块前缀驱动——凡 permissionCodes.ts 无对应
+ *     模块前缀的域（ops:rpa、monitor、vdi、asset:reconciliation、ops:duty 等）四向检查
+ *     全部静默跳过。现新增「全集驱动」逐码对账：全集 = TS 码 ∪ config.go 常量 ∪
+ *     seed F 型 perms ∪ 路由挂载操作码，对**不属于任何 TS 模块作用域**的码做四向
+ *     存在性检查（后端常量 / TS 声明 / sys_menu.perms / 路由挂载）；TS 作用域内的码
+ *     仍由下方模块循环的 a-d 检查覆盖，二者互补、不重复报错。
+ *   盲区2（已修复）：新增路由挂载层扫描——读取 scripts/route-registry.json（由
+ *     scripts/scan-routes.cjs 生成，含每条路由的 permCodes）；路由使用的操作码必须
+ *     ∈ 已定义集合（TS ∪ Go 常量 ∪ 菜单种子），否则报错；config.go 定义但
+ *     「路由 ∪ 菜单种子」双零的码报「孤儿码」警告（warning 级，不阻断）。
+ *     C 型页面本体码（恰好等于某 TS 模块前缀的路由码，如 system:user）沿用旧口径
+ *     不参与操作码比对——它们由菜单种子 C 型声明覆盖。
+ *   盲区3（TODO，不实现）：「前端 API 调用 ↔ 权限门控」维度（页面零门控检测）与
+ *     scripts/check-gating-coverage.mjs 的页级门控覆盖职责重叠，由该脚本负责，
+ *     本脚本不重复建设。
+ *   存量豁免：修复后暴露的历史漂移登记在
+ *     scripts/permission-drift-exemptions.json，每条必须带非空 reason 且
+ *     grandfathered=true（schema 校验强制）——豁免仅限存量，新代码不允许进豁免。
+ *
  * 用法：node scripts/check-permission-codes.mjs
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -39,6 +59,8 @@ const repoRoot = path.resolve(frontendRoot, "..");
 const TS_FILE = path.join(frontendRoot, "src", "constants", "permissionCodes.ts");
 const GO_CONFIG = path.join(repoRoot, "pkg", "permission", "config.go");
 const MIGRATIONS_DIR = path.join(repoRoot, "internal", "core", "db", "migrations");
+const ROUTE_REGISTRY = path.join(repoRoot, "scripts", "route-registry.json");
+const DRIFT_EXEMPTIONS_FILE = path.join(scriptDir, "permission-drift-exemptions.json");
 
 /** 权限码形态：至少两段、段内小写字母数字下划线连字符（放宽支持连字符 - 以适配 ops:floor-plan:edit 等码） */
 const PERM_LITERAL = /^[a-z][a-z0-9_-]*(?::[A-Za-z0-9_-]+)+$/;
@@ -272,6 +294,60 @@ function collectMigrationFiles(dir) {
   return files;
 }
 
+// ==================== 路由挂载层解析（盲区2） ====================
+
+/**
+ * 从 scripts/route-registry.json 提取路由实际挂载的权限码。
+ * @param {{ routes?: Array<{ permCodes?: string[] }> }} registry
+ * @returns Set<string> 仅收符合 PERM_LITERAL 形态的操作码
+ */
+function parseRoutePermCodes(registry) {
+  const codes = new Set();
+  const routes = Array.isArray(registry?.routes) ? registry.routes : [];
+  for (const route of routes) {
+    for (const code of route.permCodes ?? []) {
+      if (PERM_LITERAL.test(code)) codes.add(code);
+    }
+  }
+  return codes;
+}
+
+/**
+ * 加载存量漂移豁免清单（schema 强校验）。
+ * 每条必须：code 非空、reason 非空、grandfathered === true。
+ * 违反任一即抛错（exit 1）——新代码不允许进豁免（task-5 裁定）。
+ */
+function loadDriftExemptions() {
+  const byCode = new Map();
+  try {
+    const raw = JSON.parse(readFileSync(DRIFT_EXEMPTIONS_FILE, "utf8"));
+    const entries = Array.isArray(raw?.exemptions) ? raw.exemptions : [];
+    for (const entry of entries) {
+      if (!entry?.code || !String(entry.code).trim()) {
+        throw new Error(`豁免条目缺少 code：${JSON.stringify(entry)}`);
+      }
+      if (!entry.reason || !String(entry.reason).trim()) {
+        throw new Error(`豁免条目 ${entry.code} 缺少非空 reason`);
+      }
+      if (entry.grandfathered !== true) {
+        throw new Error(
+          `豁免条目 ${entry.code} 缺少 grandfathered:true —— 豁免仅限存量漂移，新代码不允许登记`
+        );
+      }
+      if (byCode.has(entry.code)) {
+        throw new Error(`豁免条目重复：${entry.code}`);
+      }
+      byCode.set(entry.code, entry);
+    }
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      throw new Error(`豁免清单 JSON 解析失败：${e.message}`);
+    }
+    throw e;
+  }
+  return byCode;
+}
+
 // ==================== 主流程 ====================
 
 function main() {
@@ -311,10 +387,21 @@ function main() {
     }
   }
 
-  console.log("=== 权限码映射表双向校验（v1.24 PERM-06）===");
+  console.log("=== 权限码映射表双向校验（v1.24 PERM-06 + 全量对账 task-5）===");
   console.log(`前端映射表: ${TS_FILE}`);
   console.log(`后端常量  : ${GO_CONFIG}（${goCodes.size} 个）`);
   console.log(`菜单种子  : ${MIGRATIONS_DIR}（F 型按钮 ${menuFType.size} 个）`);
+
+  // 路由挂载层 + 存量豁免（盲区1/2 修复）
+  const routeRegistry = JSON.parse(readFileSync(ROUTE_REGISTRY, "utf8"));
+  const routeCodes = parseRoutePermCodes(routeRegistry);
+  const driftExemptions = loadDriftExemptions();
+  console.log(
+    `路由挂载  : ${ROUTE_REGISTRY}（操作码 ${routeCodes.size} 个，源自 ${routeRegistry.totals?.routes ?? "?"} 条路由）`
+  );
+  console.log(`存量豁免  : ${driftExemptions.size} 条（permission-drift-exemptions.json，全部 grandfathered）`);
+
+  const exempt = (code) => driftExemptions.has(code);
 
   for (const { module, entries } of tsModules) {
     const codes = entries.map((e) => e.code);
@@ -341,15 +428,23 @@ function main() {
 
     console.log(`\n[${module}] 作用域 ${scope}`);
 
-    // a. TS 声明但后端常量没有
+    // a. TS 声明但后端常量没有（存量豁免码跳过）
     for (const code of tsCodes) {
       if (!backendScope.has(code)) {
+        if (exempt(code)) {
+          console.log(`  ⏸ ${code}（存量豁免：后端常量缺失）`);
+          continue;
+        }
         errors.push(`[${module}] TS 声明了 ${code}，但后端 pkg/permission/config.go 无对应常量`);
       }
     }
-    // b. 后端常量有但 TS 没声明
+    // b. 后端常量有但 TS 没声明（存量豁免码跳过）
     for (const code of backendScope) {
       if (!tsCodes.has(code)) {
+        if (exempt(code)) {
+          console.log(`  ⏸ ${code}（存量豁免：TS 声明缺失）`);
+          continue;
+        }
         errors.push(`[${module}] 后端常量 ${code} 存在，但 TS 映射表未声明`);
       }
     }
@@ -361,19 +456,94 @@ function main() {
         console.log(`  ⏳ ${code} 在 85 新码待播种白名单内（c 类跳过；87 播种后必须清空白名单）`);
         continue;
       }
+      if (exempt(code)) {
+        console.log(`  ⏸ ${code}（存量豁免：sys_menu 声明缺失）`);
+        continue;
+      }
       errors.push(
         `[${module}] TS 声明了 ${code}，但 migrations 的 sys_menu.perms 未声明（该权限永远不会被授予）`
       );
     }
-    // d. 菜单 F 型按钮有但 TS 没声明
+    // d. 菜单 F 型按钮有但 TS 没声明（存量豁免码跳过）
     for (const code of menuScope) {
       if (!tsCodes.has(code)) {
+        if (exempt(code)) {
+          console.log(`  ⏸ ${code}（存量豁免：F 型按钮无 TS 声明）`);
+          continue;
+        }
         errors.push(`[${module}] sys_menu 声明了 F 型权限 ${code}，但 TS 映射表未声明`);
       }
     }
 
     console.log(`  TS 声明 ${tsCodes.size} 个：${[...tsCodes].sort().join(", ")}`);
     console.log(`  后端常量 ${backendScope.size} 个 / 菜单 F 型 ${menuScope.size} 个`);
+  }
+
+  // ---------- 全量对账（盲区1 修复：全集驱动，不限 TS 前缀作用域） ----------
+  // 全集 = TS 码 ∪ config.go 常量 ∪ seed F 型 perms ∪ 路由操作码。
+  // TS 模块作用域内的码已由上方 a-d 检查覆盖；此处只对**不属于任何 TS
+  // 模块作用域**的码做四向存在性检查，二者互补不重复。
+  const tsAllCodes = new Set(tsModules.flatMap(({ entries }) => entries.map((e) => e.code)));
+  const tsScopes = tsModules.map(({ entries }) => {
+    const c0 = entries[0]?.code ?? "";
+    return `${c0.slice(0, c0.lastIndexOf(":"))}:`;
+  });
+  const menuAll = new Set([...menuFType, ...menuUntyped]);
+  const allCodes = new Set([...tsAllCodes, ...goCodes, ...menuFType, ...routeCodes]);
+  // C 型页面本体码（旧口径：不参与操作码比对）——段数 < 3 的码（monitor、
+  // system:user、system:dict 等）是页面/目录访问权限，不是操作码；操作码对账
+  // 仅针对 ≥3 段的「域:资源(可选):动作」码。它们由菜单 C 型声明与路由页面级
+  // RequirePermissions 保证，不参与四向存在性检查与孤儿判定。
+  const isPageLevelCode = (code) => code.split(":").length < 3;
+  const unscoped = [...allCodes].filter(
+    (code) =>
+      !tsScopes.some((scope) => code.startsWith(scope)) && !isPageLevelCode(code)
+  );
+
+  console.log(`\n=== 全量对账（全集 ${allCodes.size} 码，其中 TS 作用域外 ${unscoped.length} 码）===`);
+  let unscopedExempt = 0;
+  for (const code of unscoped.sort()) {
+    const missing = [];
+    if (!goCodes.has(code)) missing.push("后端常量(config.go)");
+    if (!tsAllCodes.has(code)) missing.push("TS声明(permissionCodes.ts)");
+    if (!menuAll.has(code)) missing.push("sys_menu.perms");
+    if (missing.length === 0) continue;
+    if (exempt(code)) {
+      unscopedExempt++;
+      continue;
+    }
+    errors.push(
+      `[全量对账] ${code} 缺失声明方向：${missing.join(" / ")}（存量漂移须登记豁免，新代码必须补全声明）`
+    );
+  }
+
+  // ---------- 路由挂载层检查（盲区2 修复） ----------
+  // 路由使用的操作码必须 ∈ 已定义集合（TS ∪ Go 常量 ∪ 菜单种子）；
+  // C 型页面本体码不参与（由菜单种子 C 型声明保证）。
+  const defined = new Set([...tsAllCodes, ...goCodes, ...menuAll]);
+  for (const code of [...routeCodes].sort()) {
+    if (isPageLevelCode(code)) continue;
+    if (defined.has(code) || exempt(code)) continue;
+    errors.push(
+      `[路由挂载] 路由使用了未定义的权限码 ${code}（不在 TS / config.go / sys_menu 任何一处）`
+    );
+  }
+
+  // 孤儿码：config.go 定义但「路由挂载 ∪ 菜单种子」双零 —— warning 级，不阻断。
+  // C 型页面本体码不参与孤儿判定（它们经菜单 C 型声明使用，不走路由 permCodes）。
+  const orphanCodes = [...goCodes]
+    .filter((code) => !routeCodes.has(code) && !menuAll.has(code) && !isPageLevelCode(code))
+    .sort();
+  if (orphanCodes.length > 0) {
+    console.log(
+      `\n⚠ 孤儿码 ${orphanCodes.length} 个（config.go 定义但路由 + 菜单种子均未使用，warning 不阻断）：`
+    );
+    for (const code of orphanCodes) console.log(`  ⚠ ${code}`);
+  }
+  if (unscopedExempt > 0) {
+    console.log(
+      `\nℹ 全量对账中 ${unscopedExempt} 码按存量豁免跳过 —— 后续 task-3 整改落地后须逐条清理豁免。`
+    );
   }
 
   // 白名单硬断言（RBAC-06 防永久化）。
@@ -420,7 +590,7 @@ function main() {
     process.exit(1);
   }
 
-  console.log("\n✓ 双向零漂移（TS ↔ 后端常量 ↔ sys_menu 菜单种子）");
+  console.log("\n✓ 双向零漂移 + 全量对账零漂移（TS ↔ 后端常量 ↔ sys_menu ↔ 路由挂载）");
   process.exit(0);
 }
 
