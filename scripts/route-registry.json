@@ -4,7 +4,7 @@
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
     "mounts": 220,
-    "routes": 724,
+    "routes": 715,
     "writeRoutes": 317,
     "deferredWriteRoutes": 138
   },
@@ -7091,19 +7091,6 @@
     },
     {
       "method": "POST",
-      "path": "/rpa/workers/:id/heartbeat",
-      "mountGroup": "r",
-      "setup": "SetupWorkerRouter",
-      "isWrite": false,
-      "handler": "Heartbeat",
-      "permKind": null,
-      "permCodes": [],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 86
-    },
-    {
-      "method": "POST",
       "path": "/rpa/workers/:id/scale-down",
       "mountGroup": "r",
       "setup": "SetupWorkerRouter",
@@ -7182,19 +7169,6 @@
     },
     {
       "method": "POST",
-      "path": "/rpa/workers/progress",
-      "mountGroup": "r",
-      "setup": "SetupWorkerRouter",
-      "isWrite": false,
-      "handler": "Progress",
-      "permKind": null,
-      "permCodes": [],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 87
-    },
-    {
-      "method": "POST",
       "path": "/rpa/workers/register",
       "mountGroup": "r",
       "setup": "SetupPublicWorkerRouter",
@@ -7205,19 +7179,6 @@
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 30
-    },
-    {
-      "method": "POST",
-      "path": "/rpa/workers/register",
-      "mountGroup": "r",
-      "setup": "SetupWorkerRouter",
-      "isWrite": false,
-      "handler": "Register",
-      "permKind": null,
-      "permCodes": [],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/rpa/rpa_router.go",
-      "line": 85
     },
     {
       "method": "POST",
@@ -11072,42 +11033,6 @@
     },
     {
       "method": "POST",
-      "path": "/workorder/periodic/templates",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
-      "isWrite": false,
-      "handler": "",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
-        "ops:workorder:periodic:delete"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 109
-    },
-    {
-      "method": "POST",
-      "path": "/workorder/periodic/templates/:id",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
-      "isWrite": false,
-      "handler": "core",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
-        "ops:workorder:periodic:delete"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 110
-    },
-    {
-      "method": "POST",
       "path": "/workorder/periodic/templates/:id/delete",
       "mountGroup": "templates",
       "setup": "SetupPeriodicWorkOrderRouter",
@@ -11123,78 +11048,6 @@
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
       "line": 107
-    },
-    {
-      "method": "POST",
-      "path": "/workorder/periodic/templates/:id/disable",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
-      "isWrite": false,
-      "handler": "core",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
-        "ops:workorder:periodic:delete"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 112
-    },
-    {
-      "method": "POST",
-      "path": "/workorder/periodic/templates/:id/enable",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
-      "isWrite": false,
-      "handler": "core",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
-        "ops:workorder:periodic:delete"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 111
-    },
-    {
-      "method": "POST",
-      "path": "/workorder/periodic/templates/:id/generate",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
-      "isWrite": false,
-      "handler": "core",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
-        "ops:workorder:periodic:delete"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 113
-    },
-    {
-      "method": "POST",
-      "path": "/workorder/periodic/templates/:id/logs",
-      "mountGroup": "templates",
-      "setup": "SetupPeriodicWorkOrderRouter",
-      "isWrite": false,
-      "handler": "core",
-      "permKind": "RequirePermissions",
-      "permCodes": [
-        "ops:workorder:periodic:list",
-        "ops:workorder:periodic:add",
-        "ops:workorder:periodic:edit",
-        "ops:workorder:periodic:delete"
-      ],
-      "registeredDeadTable": false,
-      "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 114
     },
     {
       "method": "POST",

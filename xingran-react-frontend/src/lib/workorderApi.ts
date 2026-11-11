@@ -587,21 +587,10 @@ export function deletePeriodicTemplate(id: string): Promise<BaseResponse<{ messa
   return post(`/workorder/periodic/templates/${id}/delete`);
 }
 
-export function enablePeriodicTemplate(id: string): Promise<BaseResponse<{ message: string }>> {
-  return post(`/workorder/periodic/templates/${id}/enable`);
-}
-
-export function disablePeriodicTemplate(id: string): Promise<BaseResponse<{ message: string }>> {
-  return post(`/workorder/periodic/templates/${id}/disable`);
-}
-
-export function generateWorkOrderNow(id: string): Promise<BaseResponse<WorkOrder>> {
-  return post(`/workorder/periodic/templates/${id}/generate`);
-}
-
-export function getPeriodicLogs(id: string): Promise<BaseResponse<PeriodicWorkOrderLog[]>> {
-  return post(`/workorder/periodic/templates/${id}/logs`, {});
-}
+// FIX broken-links-batch1：enable/disable/generate/logs 四个 API 已下线。
+// 后端 internal/api/v1/workorder/workorder_router.go 中对应路由为历史注释（已废弃的
+// 函数式 handler，勿恢复注册），现行周期工单路由仅提供 list/statistics/create/update/delete。
+// 前端此前调用它们必然 404，故一并移除定义、调用方与按钮渲染。
 
 // ==================== 工单配置 API ====================
 

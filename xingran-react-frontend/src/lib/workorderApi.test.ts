@@ -26,11 +26,7 @@ import {
   createWorkOrderRating,
   deletePeriodicTemplate,
   deleteWorkOrder,
-  disablePeriodicTemplate,
-  enablePeriodicTemplate,
-  generateWorkOrderNow,
   getMyPendingWorkOrders,
-  getPeriodicLogs,
   getPeriodicTemplateList,
   getRatingStatistics,
   getWorkOrder,
@@ -164,22 +160,16 @@ describe("workorderApi — 周期性模板", () => {
     expect(mockPost).toHaveBeenCalledWith("/workorder/periodic/templates/list", params);
   });
 
-  it("update / enable / disable / generate / logs 按 ID 拼接", async () => {
+  // FIX broken-links-batch1：enable / disable / generate / logs 四个 API 已下线
+  // （后端路由为历史注释、已废弃，调用必 404），不再有对应断言。
+  it("update / delete 按 ID 拼接", async () => {
     mockPost.mockResolvedValue(OK);
     await updatePeriodicTemplate("t1", { name: "周报" });
     expect(mockPost).toHaveBeenNthCalledWith(1, "/workorder/periodic/templates/t1/update", {
       name: "周报",
     });
-    await enablePeriodicTemplate("t1");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/workorder/periodic/templates/t1/enable");
-    await disablePeriodicTemplate("t1");
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/workorder/periodic/templates/t1/disable");
-    await generateWorkOrderNow("t1");
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/workorder/periodic/templates/t1/generate");
-    await getPeriodicLogs("t1");
-    expect(mockPost).toHaveBeenNthCalledWith(5, "/workorder/periodic/templates/t1/logs", {});
     await deletePeriodicTemplate("t1");
-    expect(mockPost).toHaveBeenNthCalledWith(6, "/workorder/periodic/templates/t1/delete");
+    expect(mockPost).toHaveBeenNthCalledWith(2, "/workorder/periodic/templates/t1/delete");
   });
 });
 

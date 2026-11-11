@@ -45,6 +45,59 @@ function walkGoFiles(dir, acc = []) {
 
 const rel = (p) => path.relative(REPO_ROOT, p).split(path.sep).join("/");
 
+/**
+ * 剥掉 Go 源码中的注释（行注释双斜线与块注释斜线星号），返回等长文本：
+ * 注释内字符一律替换为空格（换行保留），因此基于原文的行号计算（lineAt 等）不受影响，
+ * 后续所有正则（reReg / reGroup / reUse 等）都不会再匹配到注释里的假路由。
+ * 字符串字面量（"..."、'...'、`...`）内的 // 与 /* 不视为注释，先进入字符串状态保护。
+ */
+function stripGoComments(text) {
+  const out = text.split("");
+  let i = 0, n = text.length;
+  const blank = (j) => { if (out[j] !== "\n") out[j] = " "; };
+  while (i < n) {
+    const ch = text[i];
+    // 行注释：到行尾为止
+    if (ch === "/" && text[i + 1] === "/") {
+      while (i < n && text[i] !== "\n") blank(i++);
+      continue;
+    }
+    // 块注释：/* ... */（支持嵌套，与 gc 行为一致）
+    if (ch === "/" && text[i + 1] === "*") {
+      let depth = 0;
+      blank(i++); blank(i++);
+      depth = 1;
+      while (i < n && depth > 0) {
+        if (text[i] === "/" && text[i + 1] === "*") { blank(i++); blank(i++); depth++; continue; }
+        if (text[i] === "*" && text[i + 1] === "/") { blank(i++); blank(i++); depth--; continue; }
+        blank(i++);
+      }
+      continue;
+    }
+    // 双引号字符串 / rune 字面量（含转义）
+    if (ch === '"' || ch === "'") {
+      const strCh = ch;
+      i++;
+      while (i < n) {
+        if (text[i] === "\\") { i += 2; continue; }
+        if (text[i] === strCh) { i++; break; }
+        if (text[i] === "\n") break; // 未闭合，退回行级处理，避免吞掉整个文件
+        i++;
+      }
+      continue;
+    }
+    // 反引号 raw string：无转义，直至配对反引号
+    if (ch === "`") {
+      i++;
+      while (i < n && text[i] !== "`") i++;
+      if (i < n) i++;
+      continue;
+    }
+    i++;
+  }
+  return out.join("");
+}
+
 /** 从字符串 s 的 fromIndex（须停在某个 "(" 上）做括号平衡，返回 { body, end } */
 function balancedParens(s, fromIndex) {
   let depth = 0, i = fromIndex, inStr = false, strCh = "";
@@ -124,7 +177,9 @@ function matchPath(pattern, p) {
  *   setupDefs:     Map name -> { param, bodyStart, bodyEnd(文本 index 范围) }
  */
 function parseFile(file, constMap) {
-  const text = fs.readFileSync(file, "utf8");
+  // 先剥注释（等长替换、行号不变）：主扫描(:reReg over text)与 setup 函数体第二处 reReg
+  // （作用于 analysis.text 的切片 bodyText）同时生效，注释里的假路由不再入库。
+  const text = stripGoComments(fs.readFileSync(file, "utf8"));
   const lineAt = (idx) => text.slice(0, idx).split(/\r?\n/).length;
 
   const groups = new Map();

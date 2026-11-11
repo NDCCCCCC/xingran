@@ -398,6 +398,32 @@ POST /network/ports/write/port-binding
 
 **MAC 格式**（per vendor CLI 规范）：Huawei/H3C = `AA-BB-CC-DD-EE-FF`（per-byte hyphenated）；Ruijie = `aabb.ccdd.eeff`（Cisco H.H.H 3-pair dotted lowercase）。service 层 `NormalizeMACAddress` 接受冒号/连字符/无分隔/cisco 点多种输入格式，归一后按厂商转换。
 
+### 数据库全量备份与恢复（v1.56）
+
+PR #83 引入的 `/system/db-backup/*` 端点族，读写分离 + 逐动作严格权限（85-03 RBAC-01）。权限码共 3 个操作码：`system:backup:list` / `system:backup:export` / `system:backup:restore`（页面本体码 `system:backup` 不参与端点鉴权）。
+
+**端点与权限对照：**
+
+| 路径 | 方法 | 权限 | 说明 |
+|------|------|------|------|
+| `/system/db-backup/list` | POST | 读组 ANY-of（list/export/restore 任一） | 备份记录分页 |
+| `/system/db-backup/statistics` | POST | 读组 ANY-of | 统计卡 |
+| `/system/db-backup/capabilities` | GET | 读组 ANY-of | pg_dump/pg_restore 能力预检 |
+| `/system/db-backup/tasks/:id` | GET | 读组 ANY-of | 异步任务状态轮询 |
+| `/system/db-backup/plan` | GET | 读组 ANY-of | 读取备份计划（敏感字段脱敏） |
+| `/system/db-backup/:id/download` | GET | 读组 ANY-of（**无独立 download 权限码**） | 下载备份 zip（二进制流，不套 response 包装） |
+| `/system/db-backup/export` | POST | `system:backup:export`（严格） | 触发导出，返回 taskId |
+| `/system/db-backup/restore` | POST | `system:backup:restore`（严格） | 上传 zip 并触发恢复，返回 taskId |
+| `/system/db-backup/plan` | POST | `system:backup:export`（严格） | 保存备份计划 |
+| `/system/db-backup/:id/delete` | POST | `system:backup:export`（严格） | 删除备份记录与文件 |
+
+**关键契约：**
+
+- **下载端点没有独立 download 权限码**：`GET /:id/download` 挂在读组（ANY-of list/export/restore），前端下载按钮统一用 `system:backup:export` 门控（export 是 list/restore 的超集场景中最常见的备份管理员权限，且与删除/保存计划同码，最小权限面）。
+- **下载与上传（restore）端点**已在 `security.request_encryption.exclude_paths` 豁免：zip 是二进制流，不能被 SM2+SM4 响应加密中间件当 JSON 加密；其余端点正常走加密链。
+- **异步任务**：export / restore 均返回 taskId，前端经 `GET /tasks/:id` 轮询（响应结构见上文「异步任务响应」）。
+- **操作日志**：导出/恢复/删除/下载均记 operlog（OperTypeExport / OperTypeImport / OperTypeDelete / OperTypeDownload），敏感字段（数据库口令等）经 `RecordWithBody` 自动脱敏。
+
 ## 前端调用规范
 
 ### API调用函数使用

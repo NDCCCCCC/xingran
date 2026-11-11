@@ -9,9 +9,7 @@ import type { FormInstance } from "antd/es/form";
 import {
   getPeriodicTemplateList,
   getPeriodicTemplateStatistics,
-  getPeriodicLogs,
   type PeriodicWorkOrderTemplate,
-  type PeriodicWorkOrderLog,
 } from "@/lib/workorderApi";
 import {
   getEnabledWorkOrderCategories,
@@ -37,14 +35,12 @@ export interface UseTemplateDataReturn {
   users: SimpleUser[];
   dutyPools: DutyPool[];
   statistics: TemplateStatistics;
-  logs: PeriodicWorkOrderLog[];
   selectedTemplate: PeriodicWorkOrderTemplate | null;
 
   // 数据加载方法
   fetchList: (page?: number, pageSize?: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
   fetchDutyPools: () => Promise<void>;
-  fetchLogs: (templateId: string) => Promise<void>;
   setSelectedTemplate: (template: PeriodicWorkOrderTemplate | null) => void;
 }
 
@@ -60,7 +56,6 @@ export function useTemplateData(
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
   const { data: users = [] } = useUserOptions();
   const [dutyPools, setDutyPools] = useState<DutyPool[]>([]);
-  const [logs, setLogs] = useState<PeriodicWorkOrderLog[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<PeriodicWorkOrderTemplate | null>(null);
   const [statistics, setStatistics] = useState<TemplateStatistics>({
     total: 0,
@@ -131,15 +126,8 @@ export function useTemplateData(
     }
   }, []);
 
-  // 获取执行记录
-  const fetchLogs = useCallback(async (templateId: string) => {
-    try {
-      const result = await getPeriodicLogs(templateId);
-      setLogs(result.data || []);
-    } catch (error) {
-      console.error("获取执行记录失败:", error);
-    }
-  }, []);
+  // FIX broken-links-batch1：fetchLogs 已下线 —— getPeriodicLogs 指向后端已废弃
+  // （注释、未注册）的 /workorder/periodic/templates/:id/logs 路由，必然 404。
 
   return {
     dataSource,
@@ -149,12 +137,10 @@ export function useTemplateData(
     users,
     dutyPools,
     statistics,
-    logs,
     selectedTemplate,
     fetchList,
     fetchCategories,
     fetchDutyPools,
-    fetchLogs,
     setSelectedTemplate,
   };
 }
