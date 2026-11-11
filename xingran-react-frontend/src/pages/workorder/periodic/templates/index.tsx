@@ -14,8 +14,6 @@ import {
   Card,
   Row,
   Col,
-  Drawer,
-  Timeline,
   Switch,
   TreeSelect,
 } from "antd";
@@ -26,10 +24,6 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  PlayCircleOutlined,
-  PauseCircleOutlined,
-  HistoryOutlined,
-  ThunderboltOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
@@ -53,24 +47,13 @@ interface TemplateTableColumnsProps {
   current: number;
   pageSize: number;
   handleEdit: (record: PeriodicWorkOrderTemplate) => void;
-  handleToggleEnabled: (record: PeriodicWorkOrderTemplate) => void;
-  handleGenerateNow: (id: string) => void;
-  handleViewLogs: (record: PeriodicWorkOrderTemplate) => void;
   handleDelete: (id: string) => void;
 }
 
 function getTemplateTableColumns(
   props: TemplateTableColumnsProps
 ): ColumnsType<PeriodicWorkOrderTemplate> {
-  const {
-    current,
-    pageSize,
-    handleEdit,
-    handleToggleEnabled,
-    handleGenerateNow,
-    handleViewLogs,
-    handleDelete,
-  } = props;
+  const { current, pageSize, handleEdit, handleDelete } = props;
 
   return [
     {
@@ -159,24 +142,9 @@ function getTemplateTableColumns(
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
           },
-          {
-            key: "toggle",
-            label: record.isEnabled ? "禁用" : "启用",
-            icon: record.isEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />,
-            onClick: () => handleToggleEnabled(record),
-          },
-          {
-            key: "generate",
-            label: "立即生成",
-            icon: <ThunderboltOutlined />,
-            onClick: () => handleGenerateNow(record.id),
-          },
-          {
-            key: "logs",
-            label: "执行记录",
-            icon: <HistoryOutlined />,
-            onClick: () => handleViewLogs(record),
-          },
+          // FIX broken-links-batch1：禁用/启用、立即生成、执行记录三个按钮已下线。
+          // 它们分别调用 enable/disablePeriodicTemplate、generateWorkOrderNow、
+          // getPeriodicLogs，指向后端已废弃（注释、未注册）的路由，必然 404。
           {
             key: "delete",
             label: "删除",
@@ -227,7 +195,6 @@ const PeriodicTemplatePage: FC = () => {
   const [editForm] = Form.useForm();
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [logsDrawerVisible, setLogsDrawerVisible] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize } = usePagination();
@@ -241,13 +208,9 @@ const PeriodicTemplatePage: FC = () => {
     users,
     dutyPools,
     statistics,
-    logs,
-    selectedTemplate,
     fetchList,
     fetchCategories,
     fetchDutyPools,
-    fetchLogs,
-    setSelectedTemplate,
   } = useTemplateData(form, paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
 
   // 使用操作管理 Hook
@@ -257,8 +220,6 @@ const PeriodicTemplatePage: FC = () => {
     handleAdd,
     handleEdit,
     handleDelete,
-    handleToggleEnabled,
-    handleGenerateNow,
     handleSave,
   } = useTemplateActions({
     onLoad: fetchList,
@@ -297,13 +258,6 @@ const PeriodicTemplatePage: FC = () => {
     setModalVisible(true);
   };
 
-  // 查看执行记录
-  const handleViewLogs = async (record: PeriodicWorkOrderTemplate) => {
-    setSelectedTemplate(record);
-    setLogsDrawerVisible(true);
-    await fetchLogs(record.id);
-  };
-
   // 保存弹窗
   const handleModalOk = async () => {
     await handleSave(editForm);
@@ -315,9 +269,6 @@ const PeriodicTemplatePage: FC = () => {
     current: paginationProps.current ?? 1,
     pageSize: paginationProps.pageSize ?? 10,
     handleEdit: handleOpenEditModal,
-    handleToggleEnabled,
-    handleGenerateNow,
-    handleViewLogs,
     handleDelete,
   });
 
@@ -580,50 +531,6 @@ const PeriodicTemplatePage: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-
-      {/* 执行记录抽屉 */}
-      <Drawer
-        title="执行记录"
-        placement="right"
-        size={500}
-        open={logsDrawerVisible}
-        onClose={() => setLogsDrawerVisible(false)}
-      >
-        {selectedTemplate && (
-          <div>
-            <p>
-              <strong>模板名称：</strong>
-              {selectedTemplate.templateName}
-            </p>
-            <p>
-              <strong>已生成工单：</strong>
-              {selectedTemplate.totalGenerated}
-            </p>
-
-            {logs.length === 0 ? (
-              <p className="text-gray-400 mt-4">暂无执行记录</p>
-            ) : (
-              <Timeline
-                className="mt-4"
-                items={logs.map((log) => ({
-                  color: log.status === "success" ? "green" : "red",
-                  content: (
-                    <>
-                      <div>
-                        <strong>{formatDateTime(log.executedAt)}</strong>
-                        <Tag color={log.status === "success" ? "green" : "red"} className="ml-2">
-                          {log.status === "success" ? "成功" : "失败"}
-                        </Tag>
-                      </div>
-                      <p className="mt-1">{log.result || log.errorMsg}</p>
-                    </>
-                  ),
-                }))}
-              />
-            )}
-          </div>
-        )}
-      </Drawer>
     </div>
   );
 };
