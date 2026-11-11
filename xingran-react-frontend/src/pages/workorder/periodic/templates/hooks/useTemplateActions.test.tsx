@@ -20,10 +20,18 @@ vi.mock("@/lib/workorderApi", async (importOriginal) => {
     createPeriodicTemplate: vi.fn().mockResolvedValue({ data: {} }),
     updatePeriodicTemplate: vi.fn().mockResolvedValue({ data: {} }),
     deletePeriodicTemplate: vi.fn().mockResolvedValue({ data: {} }),
+    enablePeriodicTemplate: vi.fn().mockResolvedValue({ data: {} }),
+    disablePeriodicTemplate: vi.fn().mockResolvedValue({ data: {} }),
+    generateWorkOrderNow: vi.fn().mockResolvedValue({ data: {} }),
   };
 });
 
 import { useTemplateActions } from "../hooks/useTemplateActions";
+import {
+  enablePeriodicTemplate,
+  disablePeriodicTemplate,
+  generateWorkOrderNow,
+} from "@/lib/workorderApi";
 
 function Wrap({ children }: { children: React.ReactNode }) {
   return (
@@ -39,16 +47,15 @@ beforeEach(() => {
 });
 
 describe("useTemplateActions", () => {
-  it("initial editingRecord=null + handlers 存在", () => {
+  it("initial editingRecord=null + 6 handlers 存在", () => {
     const { result } = renderHook(() => useTemplateActions({ onLoad: vi.fn() }), { wrapper: wrap });
     expect(result.current.editingRecord).toBeNull();
     expect(typeof result.current.handleAdd).toBe("function");
     expect(typeof result.current.handleEdit).toBe("function");
     expect(typeof result.current.handleDelete).toBe("function");
+    expect(typeof result.current.handleToggleEnabled).toBe("function");
+    expect(typeof result.current.handleGenerateNow).toBe("function");
     expect(typeof result.current.handleSave).toBe("function");
-    // FIX broken-links-batch1：废弃 API 动作已下线，不得再出现
-    expect(result.current).not.toHaveProperty("handleToggleEnabled");
-    expect(result.current).not.toHaveProperty("handleGenerateNow");
   });
 
   it("handleDelete 调 API + onLoad", async () => {
@@ -58,6 +65,38 @@ describe("useTemplateActions", () => {
       await result.current.handleDelete("t1");
     });
     expect(onLoad).toHaveBeenCalledTimes(1);
+  });
+
+  it("handleToggleEnabled isEnabled=true 调 disable 端点 + onLoad", async () => {
+    const onLoad = vi.fn();
+    const { result } = renderHook(() => useTemplateActions({ onLoad }), { wrapper: wrap });
+    await act(async () => {
+      await result.current.handleToggleEnabled({ id: "t1", isEnabled: true } as unknown);
+    });
+    expect(disablePeriodicTemplate).toHaveBeenCalledWith("t1");
+    expect(enablePeriodicTemplate).not.toHaveBeenCalled();
+    expect(onLoad).toHaveBeenCalledTimes(1);
+  });
+
+  it("handleToggleEnabled isEnabled=false 调 enable 端点 + onLoad", async () => {
+    const onLoad = vi.fn();
+    const { result } = renderHook(() => useTemplateActions({ onLoad }), { wrapper: wrap });
+    await act(async () => {
+      await result.current.handleToggleEnabled({ id: "t1", isEnabled: false } as unknown);
+    });
+    expect(enablePeriodicTemplate).toHaveBeenCalledWith("t1");
+    expect(disablePeriodicTemplate).not.toHaveBeenCalled();
+    expect(onLoad).toHaveBeenCalledTimes(1);
+  });
+
+  it("handleGenerateNow 调 generate 端点 + onLoad", async () => {
+    const onLoad = vi.fn();
+    const { result } = renderHook(() => useTemplateActions({ onLoad }), { wrapper: wrap });
+    await act(async () => {
+      await result.current.handleGenerateNow("t1");
+    });
+    expect(generateWorkOrderNow).toHaveBeenCalledWith("t1");
+    expect(onLoad).toHaveBeenCalled();
   });
 
   it("setEditingRecord 直写 state", () => {

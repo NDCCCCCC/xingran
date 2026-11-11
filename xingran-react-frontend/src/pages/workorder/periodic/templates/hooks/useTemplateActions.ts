@@ -11,6 +11,9 @@ import {
   createPeriodicTemplate,
   updatePeriodicTemplate,
   deletePeriodicTemplate,
+  enablePeriodicTemplate,
+  disablePeriodicTemplate,
+  generateWorkOrderNow,
   type PeriodicWorkOrderTemplate,
   type CreatePeriodicTemplateRequest,
   type UpdatePeriodicTemplateRequest,
@@ -29,6 +32,8 @@ export interface UseTemplateActionsReturn {
   handleAdd: (editForm: FormInstance<unknown>) => void;
   handleEdit: (record: PeriodicWorkOrderTemplate, editForm: FormInstance<unknown>) => void;
   handleDelete: (id: string) => Promise<void>;
+  handleToggleEnabled: (record: PeriodicWorkOrderTemplate) => Promise<void>;
+  handleGenerateNow: (id: string) => Promise<void>;
   handleSave: (editForm: FormInstance<unknown>) => Promise<void>;
 }
 
@@ -87,9 +92,40 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
     [onLoad, message]
   );
 
-  // FIX broken-links-batch1：handleToggleEnabled / handleGenerateNow 已下线。
-  // 它们分别调用 enable/disablePeriodicTemplate 与 generateWorkOrderNow，
-  // 指向后端已废弃（注释、未注册）的路由，必然 404，故连同按钮一并移除。
+  // 切换启用状态
+  const handleToggleEnabled = useCallback(
+    async (record: PeriodicWorkOrderTemplate) => {
+      try {
+        if (record.isEnabled) {
+          await disablePeriodicTemplate(record.id);
+          message.success("已禁用");
+        } else {
+          await enablePeriodicTemplate(record.id);
+          message.success("已启用");
+        }
+        onLoad();
+      } catch (error: unknown) {
+        const err = error instanceof Error ? error.message : "操作失败";
+        message.error(err);
+      }
+    },
+    [onLoad, message]
+  );
+
+  // 立即生成工单
+  const handleGenerateNow = useCallback(
+    async (id: string) => {
+      try {
+        await generateWorkOrderNow(id);
+        message.success("工单生成成功");
+        onLoad();
+      } catch (error: unknown) {
+        const err = error instanceof Error ? error.message : "生成失败";
+        message.error(err);
+      }
+    },
+    [onLoad, message]
+  );
 
   // 保存
   const handleSave = useCallback(
@@ -157,6 +193,8 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
     handleAdd,
     handleEdit,
     handleDelete,
+    handleToggleEnabled,
+    handleGenerateNow,
     handleSave,
   };
 }

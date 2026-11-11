@@ -106,12 +106,13 @@ func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 		templates.POST("/:id/update", handler.UpdatePeriodic)
 		templates.POST("/:id/delete", handler.DeletePeriodic)
 
-		// 历史注释、已废弃：以下 5 行为早期函数式 handler 路由（getPeriodicTemplate / enablePeriodicTemplate 等），均已注释、未启用；现行周期工单路由由上方 templates.POST(... → handler.* 方法) 注册。保留作追溯，勿据此判断为待办或可启用实现。
-		// templates.POST("/:id", getPeriodicTemplate(core))
-		// templates.POST("/:id/enable", enablePeriodicTemplate(core))
-		// templates.POST("/:id/disable", disablePeriodicTemplate(core))
-		// templates.POST("/:id/generate", generateWorkOrderNow(core))
-		// templates.POST("/:id/logs", getPeriodicLogs(core))
+		// 模板动作（启停 / 立即生成 / 执行记录）——与前端 workorderApi 对齐。
+		// 历史上这 4 条路由因路由重构（cd306b359）丢失 HTTP 通路而仅存注释，
+		// service 层 PeriodicService 实现一直可用，现已恢复注册。
+		templates.POST("/:id/enable", handler.EnablePeriodic)
+		templates.POST("/:id/disable", handler.DisablePeriodic)
+		templates.POST("/:id/generate", handler.GeneratePeriodic)
+		templates.POST("/:id/logs", handler.GetPeriodicLogs)
 	}
 }
 

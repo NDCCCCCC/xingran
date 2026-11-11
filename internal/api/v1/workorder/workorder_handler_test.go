@@ -205,14 +205,17 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	`).Error)
 
 	// sys_periodic_workorder_log 周期模板执行记录
+	// 列对齐 models.PeriodicWorkOrderLog（id/template_id/work_order_id/executed_at/job_id/status/result/error_msg）
 	require.NoError(t, db.Exec(`
 		CREATE TABLE sys_periodic_workorder_log (
 			id TEXT PRIMARY KEY,
 			template_id TEXT NOT NULL,
 			executed_at DATETIME,
 			work_order_id TEXT,
+			job_id TEXT,
 			status TEXT,
-			error_message TEXT
+			result TEXT,
+			error_msg TEXT
 		)
 	`).Error)
 

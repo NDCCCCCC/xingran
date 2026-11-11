@@ -715,6 +715,103 @@ func (h *WorkOrderHandler) DeletePeriodic(c *gin.Context) {
 	response.Success(c, gin.H{"message": "删除成功"})
 }
 
+// EnablePeriodic 启用周期性工单模板
+// @Summary 启用周期性工单模板
+// @Description 启用指定周期性工单模板，恢复 Cron 调度
+// @Tags 工单管理
+// @Produce json
+// @Param id path string true "模板ID"
+// @Success 200 {object} response.Response
+// @Router /workorder/periodic/templates/{id}/enable [post]
+func (h *WorkOrderHandler) EnablePeriodic(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, apperrors.ParamMissing("模板ID"))
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	err := h.service.Periodic().EnableTemplate(c.Request.Context(), id, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "启用周期性工单模板") {
+		return
+	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "周期性工单", operlog.OperTypeEnable)
+	response.Success(c, gin.H{"message": "启用成功"})
+}
+
+// DisablePeriodic 禁用周期性工单模板
+// @Summary 禁用周期性工单模板
+// @Description 禁用指定周期性工单模板，停止 Cron 调度
+// @Tags 工单管理
+// @Produce json
+// @Param id path string true "模板ID"
+// @Success 200 {object} response.Response
+// @Router /workorder/periodic/templates/{id}/disable [post]
+func (h *WorkOrderHandler) DisablePeriodic(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, apperrors.ParamMissing("模板ID"))
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	err := h.service.Periodic().DisableTemplate(c.Request.Context(), id, userID.(string))
+	if !responseHelpers.HandleServiceError(c, err, "禁用周期性工单模板") {
+		return
+	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "周期性工单", operlog.OperTypeDisable)
+	response.Success(c, gin.H{"message": "禁用成功"})
+}
+
+// GeneratePeriodic 立即生成周期性工单
+// @Summary 立即生成周期性工单
+// @Description 跳过 Cron 调度，根据模板立即生成一条工单
+// @Tags 工单管理
+// @Produce json
+// @Param id path string true "模板ID"
+// @Success 200 {object} response.Response
+// @Router /workorder/periodic/templates/{id}/generate [post]
+func (h *WorkOrderHandler) GeneratePeriodic(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, apperrors.ParamMissing("模板ID"))
+		return
+	}
+
+	workOrder, err := h.service.Periodic().GenerateWorkOrder(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "生成周期性工单") {
+		return
+	}
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "周期性工单", operlog.OperTypeCreate)
+	response.Success(c, workOrder)
+}
+
+// GetPeriodicLogs 获取周期性工单执行记录
+// @Summary 获取周期性工单执行记录
+// @Description 返回指定模板的周期性执行记录列表（最新在前）
+// @Tags 工单管理
+// @Produce json
+// @Param id path string true "模板ID"
+// @Success 200 {object} response.Response
+// @Router /workorder/periodic/templates/{id}/logs [post]
+func (h *WorkOrderHandler) GetPeriodicLogs(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, apperrors.ParamMissing("模板ID"))
+		return
+	}
+
+	logs, err := h.service.Periodic().GetLogs(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "获取周期性工单执行记录") {
+		return
+	}
+
+	response.Success(c, logs)
+}
+
 // ==================== 工单配置 ====================
 
 // GetConfig 获取工单配置
