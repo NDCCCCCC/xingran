@@ -42,6 +42,7 @@ database:
   max_open_conns: 50
   max_idle_conns: 10
   max_lifetime: 1800
+  # SQLite 模式导出走纯 Go VACUUM INTO，不需要 pg_dump；整库恢复需停服离线执行。
 
 # 内存 cache — 无需 Redis
 cache:
@@ -90,3 +91,4 @@ security:
     exclude_paths:
       - "/api/v1/system/auth/public-key"
       - "/api/v1/system/auth/test-sm2"
+      - "/api/v1/system/db-backup/*"   # 全库备份二进制流

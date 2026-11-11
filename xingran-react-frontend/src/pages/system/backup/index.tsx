@@ -1,0 +1,181 @@
+/**
+ * 数据备份与恢复（quick 261110-tbq，CONTRACT.md 第 1/5 节）。
+ *
+ * 页面结构：Tabs「备份列表 / 备份计划」+ 全页异步任务进度条。
+ * - 列表：StatCards + 工具栏 + Table（useTableManager + usePagination）。
+ * - 计划：Form（启用开关 / CronSelector / 保留份数 / 存储后端 + 条件配置字段）。
+ * - 触发导出/恢复后拿到 taskId，父页面统一每 2s 轮询 task(id)，终态停止并刷新列表。
+ */
+import { useCallback, useEffect, useMemo, useState, type FC } from "react";
+import { useLocation } from "react-router-dom";
+import { App, Alert, Card, Progress, Space, Tabs, Tag } from "antd";
+import { DatabaseOutlined, ScheduleOutlined } from "@ant-design/icons";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
+import { dbBackupApi } from "@/lib/dbBackupApi";
+import { handleApiError } from "@/utils/errorHandler";
+import type { TaskView } from "@/types/backup";
+import type { AsyncTask, BackupTabKey } from "./types";
+import { TASK_STATUS_COLOR, TASK_STATUS_TEXT } from "./types";
+import BackupListTab from "./components/BackupListTab";
+import BackupPlanTab from "./components/BackupPlanTab";
+
+/** 轮询间隔（毫秒） */
+const POLL_INTERVAL_MS = 2000;
+
+const DataBackupPage: FC = () => {
+  const { message } = App.useApp();
+  const location = useLocation();
+
+  // 记忆当前 Tab（切走/刷新后仍停留在上次面板）
+  const [activeTab, setActiveTab] = usePersistedStateController<BackupTabKey>({
+    keyPrefix: location.pathname,
+    keySuffix: "activeTab",
+    defaultValue: "list",
+  });
+
+  // 由子组件触发的异步任务（导出 / 恢复）。taskId 稳定后才会重建定时器。
+  const [asyncTask, setAsyncTask] = useState<AsyncTask | null>(null);
+  const [taskView, setTaskView] = useState<TaskView | null>(null);
+  // 终态刷新用递增 token（作为列表刷新的稳定信号，避免把回调塞进轮询依赖）
+  const [listRefreshToken, setListRefreshToken] = useState(0);
+
+  /** 触发一个异步任务：立即进入轮询（终态由轮询 effect 处理） */
+  const startTask = useCallback((task: AsyncTask) => {
+    setTaskView(null);
+    setAsyncTask(task);
+  }, []);
+
+  /** 任务结束（成功/失败）后的统一收口：停轮询 + 提示 + 刷新列表 */
+  const handleTaskSettled = useCallback(
+    (view: TaskView) => {
+      setAsyncTask(null);
+      if (view.status === "success") {
+        message.success(
+          view.taskType === "restore" ? "恢复完成，列表已刷新" : "备份完成，列表已刷新"
+        );
+      } else {
+        message.error(view.errorMessage || "任务执行失败，请查看操作日志");
+      }
+      setListRefreshToken((token) => token + 1);
+    },
+    [message]
+  );
+
+  const taskId = asyncTask?.taskId;
+  const taskKind = asyncTask?.kind;
+
+  // 轮询：依赖仅含稳定值（taskId / handleTaskSettled），不会因渲染反复重建定时器。
+  // taskKind 只用于进度条文案，不进依赖，避免无谓重建。
+  useEffect(() => {
+    if (!taskId) return;
+
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const view = await dbBackupApi.task(taskId);
+        if (cancelled) return;
+        setTaskView(view);
+        if (view.status === "success" || view.status === "failed") {
+          handleTaskSettled(view);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        // 查询失败也停止轮询，避免无限报错循环
+        handleApiError(error, "查询备份任务进度");
+        setAsyncTask(null);
+      }
+    };
+
+    // 立即查一次，之后每 2s 轮询
+    void poll();
+    const timer = window.setInterval(() => void poll(), POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [taskId, handleTaskSettled]);
+
+  const progressCard = useMemo(() => {
+    if (!asyncTask || !taskView) return null;
+    const status = taskView.status;
+    const isTerminal = status === "success" || status === "failed";
+    const percent = Math.max(0, Math.min(100, taskView.progress ?? 0));
+    return (
+      <Card size="small" style={{ marginBottom: 16 }}>
+        <Space orientation="vertical" style={{ width: "100%" }} size="small">
+          <Space size="medium" wrap>
+            <span>异步任务：{taskKind === "restore" ? "导入恢复" : "立即备份"}</span>
+            <Tag color={TASK_STATUS_COLOR[status] ?? "default"}>
+              {TASK_STATUS_TEXT[status] ?? status}
+            </Tag>
+            <span>阶段：{taskView.stage || "-"}</span>
+            <span>任务 ID：{taskView.id}</span>
+          </Space>
+          <Progress
+            percent={percent}
+            status={
+              status === "failed"
+                ? "exception"
+                : status === "success"
+                  ? "success"
+                  : "active"
+            }
+          />
+          {status === "failed" && taskView.errorMessage && (
+            <Alert type="error" showIcon title="任务失败" description={taskView.errorMessage} />
+          )}
+          {!isTerminal && (
+            <Alert
+              type="info"
+              showIcon
+              title="任务执行中"
+              description="请勿关闭页面，任务完成后会自动刷新备份列表。"
+            />
+          )}
+        </Space>
+      </Card>
+    );
+  }, [asyncTask, taskView, taskKind]);
+
+  const tabItems = useMemo(
+    () => [
+      {
+        key: "list" as const,
+        label: (
+          <span>
+            <DatabaseOutlined />
+            备份列表
+          </span>
+        ),
+        children: (
+          <BackupListTab
+            onStartTask={startTask}
+            refreshToken={listRefreshToken}
+            taskRunning={asyncTask !== null}
+          />
+        ),
+      },
+      {
+        key: "plan" as const,
+        label: (
+          <span>
+            <ScheduleOutlined />
+            备份计划
+          </span>
+        ),
+        children: <BackupPlanTab />,
+      },
+    ],
+    [startTask, listRefreshToken, asyncTask]
+  );
+
+  return (
+    <div>
+      {progressCard}
+      <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key as BackupTabKey)} items={tabItems} />
+    </div>
+  );
+};
+
+export default DataBackupPage;

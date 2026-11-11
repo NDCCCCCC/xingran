@@ -1294,16 +1294,15 @@ body {
   border: 1px solid rgb(254, 202, 202) !important;
 }
 
+/* Info 提示框：统一白底 + 中性描边 + 主文字色（暗色随 --bg-elevated 自适应）。
+   历史坑：曾用深绿 --theme-primary-light 作背景却未调亮文字，导致「深底深字」不可读；
+   收敛为与卡片一致的 surface 配色，禁止再为一个页面打局部补丁。 */
 .ant-alert-info {
-  background: var(--theme-primary-light) !important;
-  border: 1px solid var(--theme-primary-lighter) !important;
-}
-
-/* 导入弹窗「导入说明」：覆盖 .ant-alert-info 的绿底黑字，收敛为白底 + 中性描边。 */
-.ant-alert.excel-import-notice {
   background: var(--bg-elevated) !important;
   border: 1px solid var(--border-base) !important;
+  color: var(--text-primary) !important;
 }
+.ant-alert-info .ant-alert-message, .ant-alert-info .ant-alert-description { color: var(--text-primary) !important; }
 
 /* ========================================
    Message 消息提示

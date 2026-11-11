@@ -256,6 +256,13 @@ export const PERMISSION_CODES = {
     edit: "system:adDriftAlert:edit",
     trigger: "system:adDriftAlert:trigger",
   },
+  // quick 261110-tbq：全库备份与恢复。只放 3 个 F 型操作码；
+  // C 型页面本体权限 system:backup 按文件头惯例不进本表，在下方单独导出。
+  systemBackup: {
+    list: "system:backup:list",
+    export: "system:backup:export",
+    restore: "system:backup:restore",
+  },
 } as const;
 
 /**
@@ -273,6 +280,13 @@ export const PERMISSION_CODES = {
  *   - system:adDriftAlert:trigger   （写：trigger）
  */
 export const SYSTEM_AD_DRIFT_ALERT_PERM = "system:adDriftAlert";
+
+/**
+ * quick 261110-tbq：全库备份与恢复 **C 型页面本体**权限码。
+ * 与 pkg/permission/config.go 常量、migration_240 播种的 sys_menu.perms 逐字一致。
+ * 按文件头惯例不进 PERMISSION_CODES 操作码表，单独导出供页面/文档核对。
+ */
+export const SYSTEM_BACKUP_PERM = "system:backup";
 
 /** 模块键名（如 systemUser） */
 export type PermissionModuleKey = keyof typeof PERMISSION_CODES;

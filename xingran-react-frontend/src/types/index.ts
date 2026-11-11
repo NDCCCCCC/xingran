@@ -39,3 +39,5 @@ export * from "./baidu-map";
 
 // ==================== VDI 类型 ====================
 export * from "./vdi";
+
+export * from "./backup";

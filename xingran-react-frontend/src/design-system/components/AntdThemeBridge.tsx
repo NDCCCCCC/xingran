@@ -143,6 +143,12 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           borderRadius: 8,
           itemActiveBg: "transparent",
         },
+        // Alert info 语义：全局 colorInfo 复用品牌绿，会让 info 图标/边框也发绿。
+        // 这里在组件级把 info 的图标色收敛为中性文本色，配合 index.css 的
+        // .ant-alert-info 白底规则，杜绝「深绿底 + 深色字」类对比度问题复发。
+        Alert: {
+          colorInfo: board.fg,
+        },
         // 输入框: focus 环用品牌绿 (Phase 66 · G2/COMP-04 焦点环 2px)
         // Phase 89 · X-1b: colorBgContainer 已删除，回落全局 token（分模式色板）
         Input: {

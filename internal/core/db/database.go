@@ -686,6 +686,9 @@ func MigrateModelList() []interface{} {
 		&models.ConfigExecutionDetail{},
 		&models.ConfigBackup{},
 		&models.ConfigRestoreTask{}, // Phase 93: 配置恢复任务 (D-15 异步编排载体)
+		// quick 261110-tbq: 全库备份记录与异步任务（与设备配置备份职责隔离）。
+		&models.DBBackup{},
+		&models.DBBackupTask{},
 		&models.ADPushQueue{},       // Phase 57: AD 推送队列 (outbox-lite 队列表)
 		// Phase 59 G-59-2: 部门-OU 映射表。其建表 DDL 原先只存在于归档 .sql
 		// (archive/legacy-2026-06-15/126_create_dept_ou_mapping_table.sql) 与
@@ -1219,9 +1222,13 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(238, "ad_drift_alert_menu_perm_seed", migrations.Migrate238ADDriftAlert); err != nil {
 			applogger.Errorf("同步漂移告警菜单/权限/配置 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
-		// B-3 / v1.56：sys_object_id 可空列（网络设备 + 发现结果中转表）。
+		// B-3 / v1.56：sys_object_id 列（网络设备 + 发现结果中转表）。
 		if err := d.runAndRecord(239, "network_device_sys_object_id", migrations.Migrate239NetworkDeviceSysObjectID); err != nil {
 			applogger.Errorf("sys_object_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// quick 261110-tbq：全库备份菜单/权限/配置 seed + 表 DDL。
+		if err := d.runAndRecord(240, "db_backup", migrations.Migrate240DBBackup); err != nil {
+			applogger.Errorf("全库备份迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
@@ -1368,6 +1375,11 @@ func (d *Database) AutoMigrate() error {
 		// B-3 / v1.56：sys_object_id 可空列（与上方 PG 分支对称）。
 		if err := d.runAndRecord(239, "network_device_sys_object_id", migrations.Migrate239NetworkDeviceSysObjectID); err != nil {
 			applogger.Errorf("sys_object_id 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// quick 261110-tbq：全库备份菜单/权限/配置 seed（与上方 PG 分支对称；
+		// 两张表由 MigrateModelList 的 AutoMigrate 在 sqlite 分支建表）。
+		if err := d.runAndRecord(240, "db_backup", migrations.Migrate240DBBackup); err != nil {
+			applogger.Errorf("全库备份迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)

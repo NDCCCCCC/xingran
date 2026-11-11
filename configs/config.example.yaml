@@ -41,6 +41,10 @@ database:
   max_open_conns: 25                              # Phase 62-DBG-01: 10→25 缓解 my-menus 池饥饿
   max_idle_conns: 10                              # 跟随 max_open_conns 等比调整
   max_lifetime: 1800
+  # 全库备份外部工具路径（可选）：未装 postgresql-client 时填绝对路径，留空走 PATH。
+  # backup:
+  #   pg_dump_path: "/usr/lib/postgresql/16/bin/pg_dump"
+  #   pg_restore_path: "/usr/lib/postgresql/16/bin/pg_restore"
 
 # 缓存配置 - Redis
 # 环境变量: REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
@@ -102,6 +106,7 @@ security:
       - "/api/v1/rpa/workers/register"
       - "/api/v1/rpa/workers/*/heartbeat"
       - "/api/v1/rpa/workers/progress"
+      - "/api/v1/system/db-backup/*"   # 全库备份二进制流
     require_encryption: false
   response_encryption:
     enabled: false

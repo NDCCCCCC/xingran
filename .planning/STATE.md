@@ -282,6 +282,7 @@ Last activity: 2026-11-09 — v1.55 roadmap created
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261109-wdu | 清偿 v1.55 收档挂账 A 类代码缺口：3 项低风险代码（trunk operlog / computeByWorkstation append / 发现导入事务与 Save Error，含 2 组红绿回归断言）+ A-2 两份 e2e 脚本物理合并到 `tests/e2e/` + A-3 就近单测豁免登记；B/C 保持挂账 | 2026-11-09 | `6c21bf47`（代码/规范）+ 本提交（规划） | `.planning/quick/261109-wdu-v1-55-3-trunk-operlog-computebyworkstati/` |
+| 261110-tbq | 数据库全量备份导出/导入恢复：系统管理独立菜单 + 异步任务轮询 + cron 定期 + local/OSS/FTP/SMB 四存储 + pg_dump/VACUUM INTO + 权限/迁移/审计全链路（完整生产级） | 2026-11-11 | 待用户授权提交 | [261110-tbq-oss-ftp-smb-cron](./quick/261110-tbq-oss-ftp-smb-cron/) |
 
 ### Todos（v1.52 / Phases 130-133，历史归档）
 

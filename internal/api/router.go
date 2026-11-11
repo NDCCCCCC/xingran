@@ -8,6 +8,7 @@ import (
 	v1 "github.com/xingran-next/xingran-go-backend/internal/api/v1"
 	agentV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/agent"
 	assetV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/asset"
+	dbbackupV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/dbbackup"
 	dutyV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/duty"
 	v1_knowledge "github.com/xingran-next/xingran-go-backend/internal/api/v1/knowledge"
 	monitorV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/monitor"
@@ -518,6 +519,28 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 					Add:    strictUserRouteGroup(configsWrites, permission.ConfigAdd, core),
 					Edit:   strictUserRouteGroup(configsWrites, permission.ConfigEdit, core),
 					Remove: strictUserRouteGroup(configsWrites, permission.ConfigRemove, core),
+				}, core)
+			}
+
+			// 全库备份与恢复（quick 261110-tbq）：读组 ANY-of，写组严格兄弟组。
+			// 下载/上传端点已在 security.request_encryption.exclude_paths 中豁免
+			// （二进制流不能被 SM2+SM4 响应加密中间件当 JSON 加密）。
+			dbBackups := authorized.Group("/db-backup")
+			dbBackups.Use(middleware.RequirePermissions([]string{
+				string(permission.SystemBackupList),
+				string(permission.SystemBackupExport),
+				string(permission.SystemBackupRestore),
+			}, core))
+			{
+				dbbackupV1.SetupDBBackupRouter(dbBackups, core)
+			}
+			dbBackupsWrites := authorized.Group("/db-backup")
+			{
+				dbbackupV1.SetupDBBackupWriteRouter(dbbackupV1.DBBackupWriteRouteGroups{
+					Export:  strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupExport, core),
+					Restore: strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupRestore, core),
+					Edit:    strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupExport, core),
+					Remove:  strictUserRouteGroup(dbBackupsWrites, permission.SystemBackupExport, core),
 				}, core)
 			}
 

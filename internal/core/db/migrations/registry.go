@@ -57,6 +57,8 @@ var ActiveMigrations = []struct {
 	// 注：234-238 已存在于 database.go 调用块但未录入本清单（历史漂移，保持现状不扩改）；
 	// 本轮只按维护约定同步新增的 239。
 	{239, "network_device_sys_object_id"},
+	// quick 261110-tbq：全库备份菜单/权限/配置 seed（按维护约定同步登记）。
+	{240, "db_backup"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。

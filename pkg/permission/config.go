@@ -90,6 +90,13 @@ const (
 	SystemConfig PermissionCode = "system:config"
 	SystemNotice PermissionCode = "system:notice"
 
+	// 全库备份与恢复（quick 261110-tbq）：C 本体码不进 PERMISSION_CODES 表，
+	// 三个 F 型子码与前端 constants/permissionCodes.ts、migrations 三处同步。
+	SystemBackup        PermissionCode = "system:backup"
+	SystemBackupList    PermissionCode = "system:backup:list"
+	SystemBackupExport  PermissionCode = "system:backup:export"
+	SystemBackupRestore PermissionCode = "system:backup:restore"
+
 	// 工单评价权限（FIX-06 / Phase 136 接线 RatingService）。
 	// 独立写码：评价创建属于业务写操作，挂严格单一权限点，不与工单 CRUD 写码共用。
 	WorkOrderRatingCreate PermissionCode = "ops:workorder:rating:create"
@@ -547,6 +554,12 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/configs", "POST", ConfigAdd, "新增参数配置"},
 		{"/system/configs/:id/update", "POST", ConfigEdit, "编辑参数配置"},
 		{"/system/configs/:id/delete", "POST", ConfigRemove, "删除参数配置"},
+
+		// 全库备份与恢复（quick 261110-tbq）；读端点不登记（由读组 ANY-of 放行）。
+		{"/system/db-backup/export", "POST", SystemBackupExport, "触发全库备份导出"},
+		{"/system/db-backup/restore", "POST", SystemBackupRestore, "导入并恢复全库备份"},
+		{"/system/db-backup/plan", "POST", SystemBackupExport, "保存全库备份计划"},
+		{"/system/db-backup/:id/delete", "POST", SystemBackupExport, "删除全库备份记录"},
 
 		// 字典管理（类型/数据共用 system:dict:* 码族，XingRan 惯例）
 		{"/system/dicts/types", "POST", DictTypeAdd, "新增字典类型"},
