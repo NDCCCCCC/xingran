@@ -142,6 +142,7 @@ go test ./tests/e2e/...
 |------|------|
 | `build-embedded.bat/.sh`、`build-linux.bat`、`build_linux.sh` | 本地构建（产物统一 `out/`） |
 | `check-route-registry.mjs`、`scan-routes.cjs`、`route-registry.json` | 路由注册表门禁 |
+| `check-frontend-api-urls.mjs`、`frontend-url-exemptions.json` | 前端 API URL ↔ 后端路由交叉校验（读 route-registry.json，消费方 scripts/frontend-url-exemptions.json 为豁免登记，reason 必填） |
 | `check-status-literals.sh` | 状态字面量门禁 |
 | `check-bundle.sh` | vendor chunks 校验（D-07） |
 | `generate_swagger.sh` | Swagger 生成（Windows 版在 `build/`） |

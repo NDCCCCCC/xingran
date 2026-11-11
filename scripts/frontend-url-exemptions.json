@@ -1,0 +1,92 @@
+[
+  {
+    "url": "/ad-domain/groups/${id}/members/add",
+    "file": "xingran-react-frontend/src/lib/adDomainApi.ts",
+    "reason": "断链追踪：addADGroupMember 调 POST /ad-domain/groups/:id/members/add，后端仅有 POST /ad-domain/groups/:id/members（GetGroupMembers，查列表语义），增删成员端点未实现。修复需后端补端点或前端改交互，非 URL 字符级小修；待后端补 /members/add /members/remove（或前端改走整组更新）后移除本条。追踪：AD域控组成员管理。"
+  },
+  {
+    "url": "/ad-domain/groups/${id}/members/remove",
+    "file": "xingran-react-frontend/src/lib/adDomainApi.ts",
+    "reason": "同 /members/add：后端未实现成员移除端点，见上一条 reason。"
+  },
+  {
+    "url": "/ad-domain/mappings/${id}",
+    "file": "xingran-react-frontend/src/lib/adDomainApi.ts",
+    "reason": "断链追踪：getMapping(id) 调 GET /ad-domain/mappings/:id，后端无 /ad-domain/mappings/* 任何路由（整组 CRUD 均未注册）；getMappingList/createMapping/updateMapping/deleteMapping 调用方为 0，属遗留死代码。待下线整组 mapping API 函数（连带 removeResourceApi 工厂）后移除本条。"
+  },
+  {
+    "url": "/system/settings/config/theme/default",
+    "file": "xingran-react-frontend/src/lib/defaultThemeApi.ts",
+    "reason": "断链追踪：getDefaultThemeConfig/setDefaultThemeConfig 被 pages/system/settings/default-theme.tsx 活跃调用，后端无 /system/settings/config/theme/* 路由（默认主题配置后端未实现）。修复需后端实现端点或下线页面，非小修；追踪：默认主题配置功能。"
+  },
+  {
+    "url": "/system/settings/config/theme/sync",
+    "file": "xingran-react-frontend/src/lib/defaultThemeApi.ts",
+    "reason": "同 theme/default：后端未实现 syncUserThemeToDefault 端点，见上一条 reason。"
+  },
+  {
+    "url": "/system/settings/notification/api-notification-configs/${id}/test",
+    "file": "xingran-react-frontend/src/lib/notificationConfigApi.ts",
+    "reason": "断链追踪：testApiNotificationConfig 调 POST .../api-notification-configs/:id/test，后端仅实现 email-configs/:id/test，API 通知配置的连通性测试端点缺失；当前调用方为 0（死代码）。待后端补 test 端点或前端下线该函数后移除本条。"
+  },
+  {
+    "url": "/workorder/orders/${id}/rating",
+    "file": "xingran-react-frontend/src/lib/workorderApi.ts",
+    "reason": "断链追踪：旧评价 API createWorkOrderRating 走 /workorder/orders/:id/rating，后端 Phase 136 已迁移到 /workorder/orders/ratings（V2，见 workorder_router.go SetupWorkOrderRatings*Router）；WorkOrderRatingModal 仍 import 旧函数。修复=Modal 切换到 V2 函数（submitWorkOrderRating/listWorkOrderRatings/fetchWorkOrderRatingStats），属业务改动待专项处理；追踪：工单评价 Modal V2 迁移。"
+  },
+  {
+    "url": "/workorder/orders/${id}/ratings",
+    "file": "xingran-react-frontend/src/lib/workorderApi.ts",
+    "reason": "同旧评价路径 /rating：getWorkOrderRatings 待迁移到 V2 listWorkOrderRatings，见上一条 reason。"
+  },
+  {
+    "url": "/workorder/orders/${id}/rating-statistics",
+    "file": "xingran-react-frontend/src/lib/workorderApi.ts",
+    "reason": "同旧评价路径 /rating：getRatingStatistics（调用方为 0）待下线或迁移 V2 fetchWorkOrderRatingStats，见上一条 reason。"
+  },
+  {
+    "url": "/api/v1/ad/groups/sync",
+    "file": "xingran-react-frontend/src/pages/ad/SyncMonitor/index.tsx",
+    "reason": "断链追踪：SyncMonitor 页面（未挂载到路由，疑似遗留死页面）调 POST /api/v1/ad/groups/sync（双重前缀 + 旧 ad 前缀），后端现为 /ad-domain/* 且无该 sync 触发端点。待确认页面是否下线；下线后移除本条。"
+  },
+  {
+    "url": "/api/v1/ad/groups/sync/status",
+    "file": "xingran-react-frontend/src/pages/ad/SyncMonitor/index.tsx",
+    "reason": "同 SyncMonitor 死页面：后端现为 /ad-domain/groups/sync-status（连字符形态），旧路径无匹配，见上一条 reason。"
+  },
+  {
+    "url": "/api/v1/ad/groups/sync/logs",
+    "file": "xingran-react-frontend/src/pages/ad/SyncMonitor/index.tsx",
+    "reason": "同 SyncMonitor 死页面：后端无 /ad/groups/sync/logs 端点，见上一条 reason。"
+  },
+  {
+    "url": "/monitor/jobs",
+    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobActions.ts",
+    "reason": "断链追踪：前端定时任务管理页（monitor/job）调 POST /monitor/jobs 系列，后端 SetupJobRouter（internal/api/v1/scheduler/job_router.go，@Router /monitor/jobs）存在但未在 internal/api/router.go 挂载，registry 因此无任何 job 路由。属后端路由漏挂载，需 lead 决策：恢复挂载或下线前端页面；追踪：定时任务管理模块。"
+  },
+  {
+    "url": "/monitor/jobs/${id}/update",
+    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobActions.ts",
+    "reason": "同 /monitor/jobs：SetupJobRouter 未挂载导致整组 /monitor/jobs/* 断链，见上一条 reason。"
+  },
+  {
+    "url": "/monitor/jobs/${id}/delete",
+    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobActions.ts",
+    "reason": "同 /monitor/jobs：SetupJobRouter 未挂载，见上一条 reason。"
+  },
+  {
+    "url": "/monitor/jobs/${id}/status",
+    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobActions.ts",
+    "reason": "同 /monitor/jobs：SetupJobRouter 未挂载，见上一条 reason。"
+  },
+  {
+    "url": "/monitor/jobs/logs/statistics",
+    "file": "xingran-react-frontend/src/pages/monitor/job/hooks/useJobData.ts",
+    "reason": "同 /monitor/jobs：SetupJobRouter 未挂载（含 /logs/list /logs/statistics /logs/clean），见上一条 reason。"
+  },
+  {
+    "url": "/system/dicts/refresh-cache",
+    "file": "xingran-react-frontend/src/pages/system/dict/hooks/useDictActions.ts",
+    "reason": "断链追踪：字典管理页「刷新缓存」按钮调 POST /system/dicts/refresh-cache，后端无该端点（仅 /system/configs/refresh-cache，语义为参数缓存）。修复需后端补字典缓存刷新端点或前端移除按钮，非 URL 字符级小修；追踪：字典管理刷新缓存功能。"
+  }
+]
