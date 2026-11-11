@@ -26,9 +26,9 @@ export const SYSTEM_MENU = "/system/menu"; // 菜单管理
 export const SYSTEM_DEPT = "/system/dept"; // 部门管理
 export const SYSTEM_DICT = "/system/dict"; // 字典管理
 export const SYSTEM_NOTICE = "/system/notice"; // 通知公告
-// Phase 144 ALRT-03: 同步漂移告警页（菜单驱动动态路由，componentLoader glob 自动收
-// src/pages/system/ad-drift-alert/index.tsx；App.tsx 不含静态路由表，禁止改）
-export const SYSTEM_AD_DRIFT_ALERT = "/system/ad-drift-alert";
+// Phase 144 ALRT-03 的「同步漂移告警」独立路由已于 migration_242 并入
+// 「AD 域控配置」页（配置列表 / 对账 / 漂移告警 三个 Tab），
+// 不再导出 SYSTEM_AD_DRIFT_ALERT 常量，避免新增代码继续指向旧入口。
 
 // ============================================
 // 网络设备相关路由
@@ -41,7 +41,6 @@ export const NETWORK_DISCOVERIES = "/network/discoveries"; // 设备发现
 // 工单管理相关路由
 // ============================================
 export const WORKORDER_ORDERS = "/workorder/orders"; // 工单管理
-export const WORKORDER_CATEGORIES = "/workorder/categories"; // 工单分类
 export const WORKORDER_STATISTICS = "/workorder/statistics"; // 工单统计
 
 // ============================================

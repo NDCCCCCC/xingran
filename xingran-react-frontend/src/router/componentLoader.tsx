@@ -241,15 +241,15 @@ export function createLazyComponent(componentPath: string): ComponentType {
   const moduleLoader = ComponentLoader.componentModules[fullPath];
 
   if (!moduleLoader) {
-    console.error(`[createLazyComponent] Module not found: ${fullPath}`);
-    // 返回错误组件（非 lazy）
+    console.warn(`[createLazyComponent] Component not migrated: ${fullPath}`);
+    // glob 未命中的兜底（最小内联组件）：菜单已收敛/迁移（如 241/242/243 菜单合并）
+    // 后，旧直达 URL 仍可能生成路由但组件目录已删除 —— 渲染友好的「页面已迁移」
+    // 提示，而不是技术性的加载失败报错。
     return () => (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">页面加载失败</h2>
-          <p className="text-gray-600">组件路径: {componentPath}</p>
-          <p className="text-gray-500 text-sm mt-2">未找到模块: {fullPath}</p>
-          <p className="text-gray-400 text-xs mt-1">请确保文件路径正确</p>
+          <h2 className="text-xl font-semibold mb-2">页面已迁移</h2>
+          <p className="text-gray-600">该页面已并入其它功能页，请从左侧菜单选择新入口访问。</p>
         </div>
       </div>
     );

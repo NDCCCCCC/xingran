@@ -102,6 +102,11 @@ describe("ALRT-03 onADDriftAlert 订阅契约（复用全局唯一 WS）", () =>
   it("全局唯一连接：本 phase 前端文件不出现第二条 new WebSocket", () => {
     const files = [
       "src/store/noticeStore.ts",
+      // migration_242：漂移告警已并入 AD 域控配置页第三个 Tab。
+      // 页面级订阅（不新建 WS）现在挂在 ad-domain/configs/index.tsx；
+      // 旧 ad-drift-alert 页保留为薄壳（同上口径），子组件仍在原目录。
+      "src/pages/ad-domain/configs/index.tsx",
+      "src/pages/ad-domain/configs/components/DriftAlertTab.tsx",
       "src/pages/system/ad-drift-alert/index.tsx",
       "src/pages/system/ad-drift-alert/components/StatusCards.tsx",
       "src/pages/system/ad-drift-alert/components/TriggerLogTable.tsx",

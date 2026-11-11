@@ -1230,6 +1230,23 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(240, "db_backup", migrations.Migrate240DBBackup); err != nil {
 			applogger.Errorf("全库备份迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 系统设置页合并：隐藏旧入口菜单（经理同步规则/机构、数据备份与恢复），
+		// 并把它们的 F 按钮权限改挂到「系统设置」菜单下。
+		if err := d.runAndRecord(241, "settings_consolidate_menus", migrations.Migrate241SettingsConsolidateMenus); err != nil {
+			applogger.Errorf("系统设置页合并迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v1.56：同步漂移告警并入「AD域控配置」页 —— 隐藏旧 C 菜单、4 个
+		// system:adDriftAlert:* F 权限改挂域控配置菜单并精准授权。非阻断：
+		// 前端 Tab 已可直接使用，菜单侧失败只影响侧边栏入口展示。
+		if err := d.runAndRecord(242, "ad_drift_alert_merge_menu", migrations.Migrate242ADDriftAlertMergeMenu); err != nil {
+			applogger.Errorf("同步漂移告警菜单并入失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 低密度页面 Tab 化：duty/holidays、duty/config 并入值班管理页，
+		// workorder/categories 并入工单管理页 —— 隐藏三个独立 C 菜单并把其 F 权限
+		// 改挂宿主菜单。非阻断：前端合并已完成，菜单侧失败只影响侧边栏入口展示。
+		if err := d.runAndRecord(243, "low_density_menus", migrations.Migrate243LowDensityMenus); err != nil {
+			applogger.Errorf("低密度页面菜单收敛失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: Phase 84 PMODEL-04 迁移记录表 —— 必须先于所有 runAndRecord 执行。
 		if err := d.runAndRecord(225, "schema_migrations_table", migrations.Migrate225SchemaMigrationsTable); err != nil {
@@ -1380,6 +1397,18 @@ func (d *Database) AutoMigrate() error {
 		// 两张表由 MigrateModelList 的 AutoMigrate 在 sqlite 分支建表）。
 		if err := d.runAndRecord(240, "db_backup", migrations.Migrate240DBBackup); err != nil {
 			applogger.Errorf("全库备份迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 系统设置页合并（与上方 PG 分支对称）：隐藏旧入口菜单 + 按钮权限改挂。
+		if err := d.runAndRecord(241, "settings_consolidate_menus", migrations.Migrate241SettingsConsolidateMenus); err != nil {
+			applogger.Errorf("系统设置页合并迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v1.56：同步漂移告警菜单并入 AD 域控配置页（与上方 PG 分支对称）。
+		if err := d.runAndRecord(242, "ad_drift_alert_merge_menu", migrations.Migrate242ADDriftAlertMergeMenu); err != nil {
+			applogger.Errorf("同步漂移告警菜单并入失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 低密度页面 Tab 化菜单收敛（与上方 PG 分支对称）。
+		if err := d.runAndRecord(243, "low_density_menus", migrations.Migrate243LowDensityMenus); err != nil {
+			applogger.Errorf("低密度页面菜单收敛失败 (非阻断,留待下次启动): %v", err)
 		}
 		if err := d.runAndRecord(231, "port_write_audit_operator_index", migrations.Migrate231PortWriteAuditOperatorIndex); err != nil {
 			applogger.Errorf("端口写审计 operator 索引迁移失败 (非阻断,留待下次启动): %v", err)

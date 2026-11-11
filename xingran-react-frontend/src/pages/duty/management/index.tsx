@@ -17,6 +17,9 @@ import {
 import dayjs from "dayjs";
 import { getDutyPoolList, type Holiday } from "@/lib/dutyApi";
 import { useUserOptions } from "@/hooks/useUserOptions";
+// Phase 69 DICT-03：假日类型下拉按字典 duty_holiday_type 渲染（原独立页 duty/holidays 的
+// 行为并入本页 Tab 后，字典拉取收敛到页面层，模态框通过 props 接收）
+import { useDict } from "@/hooks/useDict";
 import type { DutyPool } from "@/lib/dutyApi";
 import { WeeklyView, HolidayManagement, DutyConfig } from "./components";
 import { HolidayModal, BatchHolidayModal } from "./modals";
@@ -39,6 +42,9 @@ export default function DutyManagement() {
 
   // 用户选项（共享缓存，5min stale）
   const { data: _users = [] } = useUserOptions();
+
+  // 假日类型字典（共享缓存，供新增/批量新增弹窗的类型下拉使用）
+  const { data: holidayTypeDict = [] } = useDict("duty_holiday_type");
 
   // ==================== 其他状态 ====================
   const location = useLocation();
@@ -271,6 +277,7 @@ export default function DutyManagement() {
       {/* 节假日模态框 */}
       <HolidayModal
         visible={holidayModalVisible}
+        holidayTypeDict={holidayTypeDict}
         onOk={handleHolidayModalOk}
         onCancel={() => setHolidayModalVisible(false)}
       />
@@ -278,6 +285,7 @@ export default function DutyManagement() {
       {/* 批量添加节假日模态框 */}
       <BatchHolidayModal
         visible={holidayBatchModalVisible}
+        holidayTypeDict={holidayTypeDict}
         onOk={handleBatchHolidayOk}
         onCancel={() => setHolidayBatchModalVisible(false)}
       />

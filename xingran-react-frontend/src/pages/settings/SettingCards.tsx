@@ -3,7 +3,8 @@
  * react-refresh 要求常量注册表文件不含组件定义）
  *
  * 结构：
- *   - 行式设置项（D-06）：每行 label + 描述 + 右对齐控件，Antd Card 分组包裹
+ *   - 行式设置项（D-06）：每行 label + 描述 + 右对齐控件，Antd Card 分组包裹。
+ *     v1.56 目录化后分类标题由 SettingsShell 的区块标题（<h2>）承担，Card 不再重复 title。
  *     （消费 70-02 已落地的 .xr-settings-card-row* CSS 契约）。
  *   - 明暗模式 = 分段卡片选择器（IC-2，.xr-settings-segmented-card*，button + radio 语义）。
  *
@@ -84,7 +85,7 @@ export const AppearanceSettingsCard: FC = () => {
       : "xr-settings-segmented-card";
 
   return (
-    <Card title="界面设置">
+    <Card>
       <div className="xr-settings-card-row">
         <div>
           <div className="xr-settings-card-row-label">明暗模式</div>
@@ -146,7 +147,7 @@ export const LayoutSettingsCard: FC = () => {
   const handleUpdate = useSaveSetting();
 
   return (
-    <Card title="布局设置">
+    <Card>
       <div className="xr-settings-card-row">
         <div>
           <div className="xr-settings-card-row-label">密度模式</div>
@@ -197,7 +198,7 @@ export const DataSettingsCard: FC = () => {
   const handleUpdate = useSaveSetting();
 
   return (
-    <Card title="数据设置">
+    <Card>
       <div className="xr-settings-card-row">
         <div>
           <div className="xr-settings-card-row-label">默认分页大小</div>

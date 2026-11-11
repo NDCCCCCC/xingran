@@ -407,9 +407,9 @@ body {
 }
 
 /* ========================================
-   Sidebar 侧边栏
+   Sidebar 侧边栏（:not() 排除设置页业务内嵌 Sider，避免右侧竖线与内容白卡描边重叠成双线）
    ======================================== */
-.ant-layout-sider {
+.ant-layout-sider:not(.xr-settings-sider) {
   background: var(--sidebar-bg) !important;
   border-right: 1px solid var(--sidebar-border) !important;
   width: var(--sidebar-width);
@@ -2931,10 +2931,15 @@ body {
 /* 全部仅消费 var(--theme-*) / var(--sidebar-*) 令牌，零手写 hex（QA-02 lint 门锁）。
    后续 plan (70-03/04/05/06/07) 仅在 TSX 里写 className，不再改 CSS。 */
 
-/* ---------- Settings 骨架（Sider 透明 + 左导航白卡 + 右内容白卡） ---------- */
+/* ---------- Settings 骨架（Sider 透明 + 左导航白卡 + 右内容白卡） ----------
+   竖线修复见全局 .ant-layout-sider:not(.xr-settings-sider)：设置页 Sider 不命中该规则。
+   目录跟随滚动：内容平铺后左侧目录 sticky 贴在内容白卡顶部。 */
 .xr-settings-sider {
   background: transparent !important;
   flex-shrink: 0;
+  position: sticky;
+  top: var(--theme-spacing-lg);
+  align-self: flex-start;
 }
 
 .xr-settings-nav {
@@ -2993,6 +2998,40 @@ body {
   padding: var(--theme-spacing-xl);
   flex: 1;
   min-width: 0;
+}
+
+/* ---------- 设置页平铺区块（目录化：一个分类 = 一个锚点区块） ----------
+   scroll-margin-top 让锚点落点避开吸顶 Header。 */
+.xr-settings-section {
+  scroll-margin-top: 88px;
+}
+.xr-settings-section + .xr-settings-section {
+  margin-top: var(--theme-spacing-xl);
+  padding-top: var(--theme-spacing-xl);
+  border-top: 1px solid var(--theme-border-primary);
+}
+.xr-settings-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--theme-spacing-sm);
+  margin: 0 0 var(--theme-spacing-md);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--theme-text-primary);
+}
+.xr-settings-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-primary);
+  font-size: 16px;
+}
+.xr-settings-section-desc {
+  margin: calc(-1 * var(--theme-spacing-sm)) 0 var(--theme-spacing-md);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--theme-text-secondary);
 }
 
 /* ---------- 设置行（用户设置：行 label/desc + 右侧控件） ---------- */

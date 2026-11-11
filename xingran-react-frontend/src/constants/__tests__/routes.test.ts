@@ -78,10 +78,6 @@ describe("constants/routes", () => {
       expect(routes.WORKORDER_ORDERS).toBe("/workorder/orders");
     });
 
-    it("WORKORDER_CATEGORIES", () => {
-      expect(routes.WORKORDER_CATEGORIES).toBe("/workorder/categories");
-    });
-
     it("WORKORDER_STATISTICS", () => {
       expect(routes.WORKORDER_STATISTICS).toBe("/workorder/statistics");
     });

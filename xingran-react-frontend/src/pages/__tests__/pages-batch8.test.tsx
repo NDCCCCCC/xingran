@@ -12,7 +12,8 @@ import { renderPageWithEndpoints } from "@/test/utils/renderPage";
 import VDIServerConfig from "../vdi/VDIServerConfig";
 import "../vdi/VirtualMachineDetail";
 import WorkOrderStatisticsPage from "../workorder/statistics";
-import WorkOrderCategoryPage from "../workorder/categories";
+// 原独立页 workorder/categories 已并入 orders 页 Tab，这里渲染迁入的 Tab 组件
+import { CategoryManagement as WorkOrderCategoryPage } from "../workorder/orders/components/CategoryManagement";
 import ADOuPage from "../ad-domain/ous";
 import ADConfigPage from "../ad-domain/configs";
 import ADLogsPage from "../ad-domain/logs";

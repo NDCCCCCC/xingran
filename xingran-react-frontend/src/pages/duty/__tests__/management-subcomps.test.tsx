@@ -5,15 +5,13 @@ import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ConfigProvider } from "antd";
-import dayjs from "dayjs";
 
 import { GenerateScheduleModal } from "../management/components/GenerateScheduleModal";
 import { DutyConfig } from "../management/components/DutyConfig";
 import { HolidayManagement } from "../management/components/HolidayManagement";
 import { ManualScheduleModal } from "../management/modals/ManualScheduleModal";
 import { BatchHolidayModal } from "../management/modals/BatchHolidayModal";
-import { HolidayEditModal } from "../holidays/modals/EditModal";
-import { HolidayBatchModal } from "../holidays/modals/BatchModal";
+import { HolidayModal } from "../management/modals/HolidayModal";
 
 function wrap(ui: React.ReactElement) {
   return render(
@@ -135,40 +133,16 @@ describe("duty — ManualScheduleModal / BatchHolidayModal", () => {
   });
 });
 
-describe("duty — HolidayEditModal / HolidayBatchModal", () => {
-  it("HolidayEditModal renders for new record", () => {
-    const { baseElement } = wrap(
-      <HolidayEditModal
-        open
-        editingRecord={null}
-        year={2026}
-        availableYears={[2026]}
-        holidayTypeDict={[]}
-        onOk={vi.fn()}
-        onCancel={vi.fn()}
-      />
-    );
+describe("duty — HolidayModal（节假日新增/编辑，字典驱动类型）", () => {
+  it("HolidayModal renders open form fields", () => {
+    const { baseElement } = wrap(<HolidayModal visible onOk={vi.fn()} onCancel={vi.fn()} />);
     expect(baseElement.innerHTML.length).toBeGreaterThan(100);
   });
 
-  it("HolidayBatchModal renders batch rows", () => {
+  it("HolidayModal closed no crash", () => {
     const { baseElement } = wrap(
-      <HolidayBatchModal
-        open
-        batchHolidays={[
-          {
-            holidayDate: dayjs("2026-10-01"),
-            holidayName: "国庆",
-            holidayType: "legal",
-            isOffday: true,
-            year: 2026,
-          },
-        ]}
-        holidayTypeDict={[]}
-        onOk={vi.fn()}
-        onCancel={vi.fn()}
-      />
+      <HolidayModal visible={false} onOk={vi.fn()} onCancel={vi.fn()} />
     );
-    expect(baseElement.innerHTML).toContain("国庆");
+    expect(baseElement).not.toBeNull();
   });
 });

@@ -173,92 +173,82 @@ const CommandDispatch: FC = () => {
         ]}
       />
 
-      {/* 主要内容 */}
-      <Card>
-        <div style={{ marginBottom: 16 }}>
-          <Form form={searchForm} layout="inline">
-            <Form.Item label="状态">
-              {/* 形态分类器①/②：children 写法改写 options；执行状态固定 4 项 → 显式禁搜 */}
-              <AppSelect
-                placeholder="请选择状态"
-                className="user-form-input"
-                style={{ width: 120 }}
-                onChange={() => {
+      {/* 筛选区（原型 .filter-bar）：独立 Card，下方表格另起一张白卡 */}
+      <Card style={{ marginBottom: 16 }}>
+        <Form form={searchForm} layout="inline">
+          <Form.Item label="状态">
+            {/* 形态分类器①/②：children 写法改写 options；执行状态固定 4 项 → 显式禁搜 */}
+            <AppSelect
+              placeholder="请选择状态"
+              className="user-form-input"
+              style={{ width: 120 }}
+              onChange={() => {
+                handleSuccess();
+              }}
+              showSearch={false}
+              options={STATUS_OPTIONS}
+            />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button
+                aria-label="查询"
+                title="查询"
+                icon={<SearchOutlined />}
+                onClick={() => {
                   handleSuccess();
                 }}
-                showSearch={false}
-                options={STATUS_OPTIONS}
-              />
-            </Form.Item>
-            <Form.Item>
-              <Space>
+              >
+                查询
+              </Button>
+              <Button
+                aria-label="刷新"
+                title="刷新"
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  handleSuccess();
+                }}
+              >
+                刷新
+              </Button>
+              {/* Phase 86 W3：快速命令 —— 条件渲染（networkCommand.execute） */}
+              {permExecute.visible && (
                 <Button
-                  aria-label="查询"
-                  title="查询"
-                  icon={<SearchOutlined />}
-                  onClick={() => {
-                    handleSuccess();
-                  }}
+                  type="primary"
+                  icon={<ThunderboltOutlined />}
+                  onClick={openDispatchModal}
+                  aria-label="快速命令"
+                  title={permExecute.hint ?? "快速命令"}
+                  disabled={permExecute.disabled}
                 >
-                  查询
+                  快速命令
                 </Button>
-                <Button
-                  aria-label="刷新"
-                  title="刷新"
-                  icon={<ReloadOutlined />}
-                  onClick={() => {
-                    handleSuccess();
-                  }}
-                >
-                  刷新
-                </Button>
-                {/* Phase 86 W3：快速命令 —— 条件渲染（networkCommand.execute） */}
-                {permExecute.visible && (
-                  <Button
-                    type="primary"
-                    icon={<ThunderboltOutlined />}
-                    onClick={openDispatchModal}
-                    aria-label="快速命令"
-                    title={permExecute.hint ?? "快速命令"}
-                    disabled={permExecute.disabled}
-                  >
-                    快速命令
-                  </Button>
-                )}
-                {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
-                    （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
-                    ready 无 networkCommand.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
-                {permExport.visible && (
-                  <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
-                    <NetworkExport
-                      entityType="command"
-                      entityName="命令分发"
-                      filters={Object.fromEntries(
-                        Object.entries(
-                          searchForm.getFieldsValue() as Record<string, unknown>
-                        ).filter(([, v]) => v !== undefined && v !== null && v !== "")
-                      )}
-                      current={paginationProps?.current ?? 1}
-                      pageSize={paginationProps?.pageSize ?? 10}
-                    />
-                  </span>
-                )}
-              </Space>
-            </Form.Item>
-          </Form>
-          {/* 批量导出 Modal */}
+              )}
+              {/* Phase 86 W3：批量导出 —— 门控点 = `<NetworkExport>` 组件元素本身
+                  （「导出」按钮在 `NetworkExport.tsx:120` 组件内部，页面上无独立触发按钮）。
+                  ready 无 networkCommand.export → 整个组件（含其内部「导出」按钮）不在 DOM。 */}
+              {permExport.visible && (
+                <span title={permExport.hint} aria-disabled={permExport.disabled || undefined}>
+                  <NetworkExport
+                    entityType="command"
+                    entityName="命令分发"
+                    filters={Object.fromEntries(
+                      Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                        ([, v]) => v !== undefined && v !== null && v !== ""
+                      )
+                    )}
+                    current={paginationProps?.current ?? 1}
+                    pageSize={paginationProps?.pageSize ?? 10}
+                  />
+                </span>
+              )}
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
 
-          <BatchExportModal
-            visible={batchModalVisible}
-
-            onConfirm={handleBatchExport}
-
-            onCancel={() => setBatchModalVisible(false)}
-
-            loading={batchExporting}
-          />
-        </div>
-
+      {/* 表格区：独立 Card 包裹（白底圆角），与基准页 system/user 一致 */}
+      <Card>
         <Table
           columns={columns}
           dataSource={executions}
@@ -286,6 +276,14 @@ const CommandDispatch: FC = () => {
           }}
         />
       </Card>
+
+      {/* 批量导出 Modal */}
+      <BatchExportModal
+        visible={batchModalVisible}
+        onConfirm={handleBatchExport}
+        onCancel={() => setBatchModalVisible(false)}
+        loading={batchExporting}
+      />
 
       {/* 命令分发模态框 */}
       <CommandDispatchModal

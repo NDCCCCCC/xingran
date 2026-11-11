@@ -5,10 +5,10 @@
  *   1. status=1 记录渲染「启用」徽标（xr-tag-green）—— captcha 例外语义 1=启用。
  *   2. status=0 记录渲染「禁用」徽标（中性 xr-tag，无 green）。
  *   3. 启停操作文案取反：status=1 卡提供「禁用」动作、status=0 卡提供「启用」动作。
- *   4. statistics fixture（totalCount/enabledCount/disabledCount/totalUsage）渲染 4 张统计卡数值。
+ *   4. statistics fixture（totalCount/enabledCount/disabledCount/totalUsage）渲染一行统计摘要。
  *
  * 关键语义（70-RESEARCH Pitfall 1）：captcha 背景 status 与全局「0=启用」惯例相反，
- * 后端契约为 1=启用 / 0=禁用，统计卡与网格墙徽标均按 status===1 取「启用」，勿「纠正」。
+ * 后端契约为 1=启用 / 0=禁用，统计摘要与网格墙徽标均按 status===1 取「启用」，勿「纠正」。
  *
  * Mock 策略：vi.mock("@/services/captcha") 直通可控 fixture（vi.hoisted 规避 factory
  * 提升导致的 TDZ）；渲染三件套与 SettingsShell.test.tsx 同款（ResizeObserver stub +
@@ -156,24 +156,25 @@ describe("captcha-background 网格墙 — Phase 70-04 D-08 status 反转语义�
     expect(disabledCard.queryByRole("button", { name: "禁用" })).not.toBeInTheDocument();
   });
 
-  it("用例4: statistics fixture 渲染 4 张统计卡数值（总数量/启用数量/禁用数量/总使用次数）", async () => {
+  it("用例4: statistics fixture 压成一行统计摘要（总/启用/禁用/累计使用），不再渲染 4 张统计卡", async () => {
     getListMock.mockResolvedValue({ items: [enabledBg], total: 1 });
     getStatsMock.mockResolvedValue(statsFixture);
     renderPage();
 
     expect(await screen.findByText("forest-01.png")).toBeInTheDocument();
 
-    // 统计为独立异步请求，waitFor 至 4 卡数值就位（顺序：总数 5 / 启用 3 / 禁用 2 / 使用 42）
+    // v1.56 设置页平铺：统计卡改为一行小字摘要（数据源不变：5 / 3 / 2 / 42）
     await waitFor(() => {
-      const values = Array.from(document.querySelectorAll(".stat-value")).map(
-        (el) => el.textContent
-      );
-      expect(values).toEqual(["5", "3", "2", "42"]);
+      expect(screen.getByText(/共 5 张/)).toBeInTheDocument();
     });
 
-    expect(screen.getByText("总数量")).toBeInTheDocument();
-    expect(screen.getByText("启用数量")).toBeInTheDocument();
-    expect(screen.getByText("禁用数量")).toBeInTheDocument();
-    expect(screen.getByText("总使用次数")).toBeInTheDocument();
+    const summary = screen.getByText(/共 5 张/);
+    expect(summary.textContent).toContain("启用 3");
+    expect(summary.textContent).toContain("禁用 2");
+    expect(summary.textContent).toContain("累计使用 42 次");
+
+    // 统计卡已移除
+    expect(document.querySelector(".stat-value")).toBeNull();
+    expect(screen.queryByText("总数量")).not.toBeInTheDocument();
   });
 });

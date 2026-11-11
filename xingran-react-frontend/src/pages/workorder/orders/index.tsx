@@ -3,6 +3,8 @@
  */
 
 import { useState, useCallback, useMemo, type FC } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import { StatCards } from "@/components/shared";
 import {
@@ -21,6 +23,7 @@ import {
   Radio,
   TreeSelect,
   Alert,
+  Tabs,
 } from "antd";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
@@ -32,6 +35,8 @@ import {
   CheckCircleOutlined,
   EyeOutlined,
   StarOutlined,
+  FileTextOutlined,
+  FolderOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
@@ -53,6 +58,8 @@ import {
 } from "@/lib/workorderApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import WorkOrderRatingModal from "./components/WorkOrderRatingModal";
+// 工单分类（原独立页 pages/workorder/categories 并入本页「工单分类」Tab）
+import { CategoryManagement } from "./components/CategoryManagement";
 
 // 导入提取的常量、工具和 Hook
 import { STATUS_CONFIG, PRIORITY_CONFIG, TYPE_CONFIG } from "./constants";
@@ -241,6 +248,14 @@ const WorkOrderPage: FC = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [commentForm] = Form.useForm();
+
+  // 主 Tab（工单列表 / 工单分类）—— 与原 duty/management 同款按路径持久化
+  const location = useLocation();
+  const [activeTab, setActiveTab] = usePersistedStateController<string>({
+    keyPrefix: location.pathname,
+    keySuffix: "activeTab",
+    defaultValue: "list",
+  });
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -501,184 +516,213 @@ const WorkOrderPage: FC = () => {
 
   return (
     <div className="p-6">
-      {/* 统计卡片：统一走 <StatCards>，保留原 stats.total > 10 条件 */}
-      <StatCards
-        show={stats.total > 10}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
-          { label: "总工单", value: stats.total },
-          { label: "待处理", value: stats.pending, tone: "gold" },
-          { label: "处理中", value: stats.processing },
-          { label: "已完成", value: stats.completed, tone: "green" },
-          { label: "已关闭", value: stats.closed, tone: "gray" },
+          {
+            key: "list",
+            label: (
+              <span>
+                <FileTextOutlined />
+                工单列表
+              </span>
+            ),
+            children: (
+              <>
+                {/* 统计卡片：统一走 <StatCards>，保留原 stats.total > 10 条件 */}
+                <StatCards
+                  show={stats.total > 10}
+                  items={[
+                    { label: "总工单", value: stats.total },
+                    { label: "待处理", value: stats.pending, tone: "gold" },
+                    { label: "处理中", value: stats.processing },
+                    { label: "已完成", value: stats.completed, tone: "green" },
+                    { label: "已关闭", value: stats.closed, tone: "gray" },
+                  ]}
+                />
+                {/* 批量删除按钮：沿用原统计区条件与 disabled 语义，功能不丢 */}
+                {stats.total > 10 && (
+                  <div className="mb-4">
+                    <Button
+                      type="primary"
+                      danger
+                      disabled={selectedRowKeys.length === 0}
+                      onClick={handleBatchDelete}
+                    >
+                      批量删除 ({selectedRowKeys.length})
+                    </Button>
+                  </div>
+                )}
+
+                {/* 筛选表单和操作按钮 */}
+                <Card style={{ marginBottom: 16 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      flexWrap: "wrap",
+                      gap: "16px",
+                    }}
+                  >
+                    <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+                      <Form.Item name="workOrderNo" label="工单编号">
+                        <AppInput
+                          placeholder="请输入工单编号"
+                          className="user-form-input"
+                          style={{ width: 150 }}
+                        />
+                      </Form.Item>
+                      <Form.Item name="title" label="标题">
+                        <AppInput
+                          placeholder="请输入标题"
+                          className="user-form-input"
+                          style={{ width: 150 }}
+                        />
+                      </Form.Item>
+                      <Form.Item name="categoryId" label="分类">
+                        <TreeSelect
+                          placeholder="请选择分类"
+                          allowClear
+                          className="user-form-input"
+                          style={{ width: 150 }}
+                          treeData={categoryTree}
+                          showSearch
+                          treeNodeFilterProp="title"
+                        />
+                      </Form.Item>
+                      <Form.Item name="type" label="类型">
+                        <AppSelect
+                          placeholder="请选择类型"
+                          showSearch={false}
+                          className="user-form-input"
+                          style={{ width: 100 }}
+                          options={Object.entries(TYPE_CONFIG).map(([key, { text }]) => ({
+                            value: key,
+                            label: text,
+                          }))}
+                        />
+                      </Form.Item>
+                      <Form.Item name="priority" label="优先级">
+                        <AppSelect
+                          placeholder="请选择优先级"
+                          showSearch={false}
+                          className="user-form-input"
+                          style={{ width: 100 }}
+                          options={Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => ({
+                            value: Number(key),
+                            label: text,
+                          }))}
+                        />
+                      </Form.Item>
+                      <Form.Item name="status" label="状态">
+                        <AppSelect
+                          placeholder="请选择状态"
+                          showSearch={false}
+                          className="user-form-input"
+                          style={{ width: 100 }}
+                          options={Object.entries(STATUS_CONFIG).map(([key, { text }]) => ({
+                            value: Number(key),
+                            label: text,
+                          }))}
+                        />
+                      </Form.Item>
+                      <Form.Item name="assigneeId" label="处理人">
+                        <AppSelect
+                          placeholder="请选择处理人"
+                          showSearch
+                          className="user-form-input"
+                          style={{ width: 120 }}
+                          optionFilterProp="label"
+                          onSearch={() => {}}
+                          options={(users || [])
+                            .filter((user) => user.id)
+                            .map((user) => ({
+                              value: user.id,
+                              label: user.nickName || user.username,
+                            }))}
+                        />
+                      </Form.Item>
+                      <Form.Item>
+                        <Space>
+                          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                            查询
+                          </Button>
+                          <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                            重置
+                          </Button>
+                        </Space>
+                      </Form.Item>
+                    </Form>
+                    <Space>
+                      {selectedRowKeys.length > 0 && (
+                        <Button
+                          type="primary"
+                          onClick={handleBatchDelete}
+                          style={{ color: "var(--theme-error)", borderColor: "var(--theme-error)" }}
+                        >
+                          批量删除 ({selectedRowKeys.length})
+                        </Button>
+                      )}
+                      <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                        新增工单
+                      </Button>
+                    </Space>
+                  </div>
+                  {selectedRowKeys.length > 0 && (
+                    <Alert
+                      title={
+                        <span>
+                          已选择 <strong>{selectedRowKeys.length}</strong> 个工单，
+                          <Button
+                            type="link"
+                            size="small"
+                            onClick={() => setSelectedRowKeys([])}
+                            style={{ padding: 0 }}
+                          >
+                            取消选择
+                          </Button>
+                        </span>
+                      }
+                      type="info"
+                      showIcon
+                      style={{ marginTop: 12 }}
+                    />
+                  )}
+                </Card>
+
+                {/* 工单表格 */}
+                <Card>
+                  <Table
+                    rowKey="id"
+                    columns={columns}
+                    dataSource={dataSource}
+                    loading={loading}
+                    scroll={{ x: 1400 }}
+                    rowSelection={{
+                      selectedRowKeys,
+                      onChange: setSelectedRowKeys,
+                    }}
+                    pagination={paginationProps}
+                    onChange={handleTableChange}
+                  />
+                </Card>
+              </>
+            ),
+          },
+          {
+            key: "categories",
+            label: (
+              <span>
+                <FolderOutlined />
+                工单分类
+              </span>
+            ),
+            children: <CategoryManagement />,
+          },
         ]}
       />
-      {/* 批量删除按钮：沿用原统计区条件与 disabled 语义，功能不丢 */}
-      {stats.total > 10 && (
-        <div className="mb-4">
-          <Button
-            type="primary"
-            danger
-            disabled={selectedRowKeys.length === 0}
-            onClick={handleBatchDelete}
-          >
-            批量删除 ({selectedRowKeys.length})
-          </Button>
-        </div>
-      )}
-
-      {/* 筛选表单和操作按钮 */}
-      <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "16px",
-          }}
-        >
-          <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="workOrderNo" label="工单编号">
-              <AppInput
-                placeholder="请输入工单编号"
-                className="user-form-input"
-                style={{ width: 150 }}
-              />
-            </Form.Item>
-            <Form.Item name="title" label="标题">
-              <AppInput
-                placeholder="请输入标题"
-                className="user-form-input"
-                style={{ width: 150 }}
-              />
-            </Form.Item>
-            <Form.Item name="categoryId" label="分类">
-              <TreeSelect
-                placeholder="请选择分类"
-                allowClear
-                className="user-form-input"
-                style={{ width: 150 }}
-                treeData={categoryTree}
-                showSearch
-                treeNodeFilterProp="title"
-              />
-            </Form.Item>
-            <Form.Item name="type" label="类型">
-              <AppSelect
-                placeholder="请选择类型"
-                showSearch={false}
-                className="user-form-input"
-                style={{ width: 100 }}
-                options={Object.entries(TYPE_CONFIG).map(([key, { text }]) => ({
-                  value: key,
-                  label: text,
-                }))}
-              />
-            </Form.Item>
-            <Form.Item name="priority" label="优先级">
-              <AppSelect
-                placeholder="请选择优先级"
-                showSearch={false}
-                className="user-form-input"
-                style={{ width: 100 }}
-                options={Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => ({
-                  value: Number(key),
-                  label: text,
-                }))}
-              />
-            </Form.Item>
-            <Form.Item name="status" label="状态">
-              <AppSelect
-                placeholder="请选择状态"
-                showSearch={false}
-                className="user-form-input"
-                style={{ width: 100 }}
-                options={Object.entries(STATUS_CONFIG).map(([key, { text }]) => ({
-                  value: Number(key),
-                  label: text,
-                }))}
-              />
-            </Form.Item>
-            <Form.Item name="assigneeId" label="处理人">
-              <AppSelect
-                placeholder="请选择处理人"
-                showSearch
-                className="user-form-input"
-                style={{ width: 120 }}
-                optionFilterProp="label"
-                onSearch={() => {}}
-                options={(users || [])
-                  .filter((user) => user.id)
-                  .map((user) => ({
-                    value: user.id,
-                    label: user.nickName || user.username,
-                  }))}
-              />
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                  查询
-                </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                  重置
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-          <Space>
-            {selectedRowKeys.length > 0 && (
-              <Button
-                type="primary"
-                onClick={handleBatchDelete}
-                style={{ color: "var(--theme-error)", borderColor: "var(--theme-error)" }}
-              >
-                批量删除 ({selectedRowKeys.length})
-              </Button>
-            )}
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-              新增工单
-            </Button>
-          </Space>
-        </div>
-        {selectedRowKeys.length > 0 && (
-          <Alert
-            title={
-              <span>
-                已选择 <strong>{selectedRowKeys.length}</strong> 个工单，
-                <Button
-                  type="link"
-                  size="small"
-                  onClick={() => setSelectedRowKeys([])}
-                  style={{ padding: 0 }}
-                >
-                  取消选择
-                </Button>
-              </span>
-            }
-            type="info"
-            showIcon
-            style={{ marginTop: 12 }}
-          />
-        )}
-      </Card>
-
-      {/* 工单表格 */}
-      <Card>
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={dataSource}
-          loading={loading}
-          scroll={{ x: 1400 }}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
-          }}
-          pagination={paginationProps}
-          onChange={handleTableChange}
-        />
-      </Card>
 
       {/* 新增/编辑弹窗 */}
       <Modal
