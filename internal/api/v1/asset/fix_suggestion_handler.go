@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -25,7 +25,8 @@ import (
 //   - Accept / Reject / Apply / Rollback            写端点(必 operlog)
 //
 // 写端点严格顺序(D-A4-04):
-//   service → invalidate cache → operlog → response
+//
+//	service → invalidate cache → operlog → response
 type FixSuggestionHandler struct {
 	service asset.FixSuggestionService
 	core    *core.Core

@@ -29,11 +29,11 @@ import (
 // ============================================================================
 
 type mockReconciliationStatistics struct {
-	SummaryFunc           func(ctx context.Context, filter assetSvc.StatsFilter) (*assetSvc.SummaryResult, error)
-	ByConflictTypeFunc    func(ctx context.Context, filter assetSvc.StatsFilter) (map[string]int64, error)
-	BySeverityFunc        func(ctx context.Context, filter assetSvc.StatsFilter) (map[string]int64, error)
-	HealthTrendFunc       func(ctx context.Context, filter assetSvc.StatsFilter) ([]assetSvc.TrendPoint, error)
-	TopUnresolvedFunc     func(ctx context.Context, limit int) ([]assetSvc.ExceptionSummary, error)
+	SummaryFunc            func(ctx context.Context, filter assetSvc.StatsFilter) (*assetSvc.SummaryResult, error)
+	ByConflictTypeFunc     func(ctx context.Context, filter assetSvc.StatsFilter) (map[string]int64, error)
+	BySeverityFunc         func(ctx context.Context, filter assetSvc.StatsFilter) (map[string]int64, error)
+	HealthTrendFunc        func(ctx context.Context, filter assetSvc.StatsFilter) ([]assetSvc.TrendPoint, error)
+	TopUnresolvedFunc      func(ctx context.Context, limit int) ([]assetSvc.ExceptionSummary, error)
 	ExceptionRuleStatsFunc func(ctx context.Context) ([]assetSvc.RuleStats, error)
 }
 

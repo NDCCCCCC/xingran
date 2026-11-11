@@ -36,13 +36,13 @@ import (
 // ============================================================================
 
 type mockFixSuggestionService struct {
-	ListFixSuggestionsFunc func(ctx context.Context, params *assetSvc.FixSuggestionListParams) (*base.PageResult, error)
-	GetByIDFunc            func(ctx context.Context, id string) (*assetSvc.FixSuggestionDetail, error)
-	StatsFunc              func(ctx context.Context, windowDays int) (*assetSvc.FixSuggestionStatsResponse, error)
-	AcceptFunc             func(ctx context.Context, id, userID string) error
-	RejectFunc             func(ctx context.Context, id, userID, reason string) error
-	ApplyFunc              func(ctx context.Context, id, userID string) error
-	RollbackFunc           func(ctx context.Context, id, userID, reason string) error
+	ListFixSuggestionsFunc     func(ctx context.Context, params *assetSvc.FixSuggestionListParams) (*base.PageResult, error)
+	GetByIDFunc                func(ctx context.Context, id string) (*assetSvc.FixSuggestionDetail, error)
+	StatsFunc                  func(ctx context.Context, windowDays int) (*assetSvc.FixSuggestionStatsResponse, error)
+	AcceptFunc                 func(ctx context.Context, id, userID string) error
+	RejectFunc                 func(ctx context.Context, id, userID, reason string) error
+	ApplyFunc                  func(ctx context.Context, id, userID string) error
+	RollbackFunc               func(ctx context.Context, id, userID, reason string) error
 	GenerateFixSuggestionsFunc func(ctx context.Context) (int, error)
 }
 
