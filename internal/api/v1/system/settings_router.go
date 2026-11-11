@@ -29,3 +29,28 @@ func SetupSettingsRouter(r *gin.RouterGroup, core *core.Core) {
 	r.GET("/preferences", settingsHandler.GetUserPreferences)
 	r.PUT("/preferences", settingsHandler.UpdateUserPreferences)
 }
+
+// SetupDefaultThemeRouter 设置默认主题配置路由（task-7）。
+// 权限（system:config）由 router.go 的 themeConfig 组级中间件挂载，此处不重复。
+// 端点与前端 src/lib/defaultThemeApi.ts 一一对应：
+//   GET  /system/settings/config/theme/default → GetDefaultThemeConfig
+//   POST /system/settings/config/theme/default → SetDefaultThemeConfig
+//   POST /system/settings/config/theme/sync    → SyncUserThemeToDefault
+func SetupDefaultThemeRouter(r *gin.RouterGroup, core *core.Core) {
+	var themeConfigService systemServices.ConfigService
+	if core.DataCacheService != nil {
+		themeConfigService = systemServices.NewConfigServiceWithCache(
+			core.DB.GetDB(),
+			systemServices.NewCacheProvider(core.DataCacheService),
+			core.CacheConfigService,
+		)
+	} else {
+		themeConfigService = systemServices.NewConfigService(core.DB.GetDB())
+	}
+	themeService := systemServices.NewDefaultThemeService(core.DB.GetDB(), themeConfigService)
+	themeHandler := NewDefaultThemeHandler(themeService).WithCore(core)
+
+	r.GET("/default", themeHandler.GetDefaultThemeConfig)
+	r.POST("/default", themeHandler.SetDefaultThemeConfig)
+	r.POST("/sync", themeHandler.SyncUserThemeToDefault)
+}

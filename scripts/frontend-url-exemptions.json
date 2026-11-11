@@ -1,7 +1,1 @@
-[
-  {
-    "url": "/system/settings/config/theme/default",
-    "file": "xingran-react-frontend/src/lib/defaultThemeApi.ts",
-    "reason": "断链追踪：getDefaultThemeConfig/setDefaultThemeConfig 被 pages/system/settings/default-theme.tsx 活跃调用，后端无 /system/settings/config/theme/* 路由（默认主题配置后端未实现）。修复需后端实现端点或下线页面，非小修；追踪：默认主题配置功能。"
-  }
-]
+[]

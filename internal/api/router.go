@@ -239,6 +239,14 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				systemV1.SetupColumnConfigRouter(columnConfig, core)
 			}
 
+			// 默认主题配置（task-7：前端 default-theme.tsx 依赖的 3 条端点）。
+			// 管理操作，权限与相邻 notificationConfigs 一致（system:config，不新增码）。
+			themeConfig := authorized.Group("/settings/config/theme")
+			themeConfig.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
+			{
+				systemV1.SetupDefaultThemeRouter(themeConfig, core)
+			}
+
 			// 通知配置管理（需要系统配置权限）
 			notificationConfigs := authorized.Group("/settings/notification")
 			notificationConfigs.Use(middleware.RequirePermissions([]string{permSystemConfig}, core))
