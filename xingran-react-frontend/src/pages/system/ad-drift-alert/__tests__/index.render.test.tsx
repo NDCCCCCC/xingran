@@ -43,7 +43,6 @@ const h = vi.hoisted(() => {
       wsEnabled: true,
       webhookEnabled: false,
       webhookConfigId: "",
-      webhookTemplate: "",
       baseline: "20,4",
     })
   );
