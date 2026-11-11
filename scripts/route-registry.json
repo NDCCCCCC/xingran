@@ -6667,8 +6667,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "AnalyzeFailure",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 134
@@ -6680,8 +6682,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "ClassifyError",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 136
@@ -6693,8 +6697,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "Decide",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 131
@@ -6706,8 +6712,10 @@
       "setup": "SetupAIRouter",
       "isWrite": true,
       "handler": "GenerateScript",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 127
@@ -6719,8 +6727,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "OptimizeScript",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 128
@@ -6732,8 +6742,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "GetSelectorAlternatives",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 143
@@ -6745,8 +6757,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "GetBestSelector",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 141
@@ -6758,8 +6772,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "RecordSelectorFailure",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 140
@@ -6771,8 +6787,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "RecordSelectorSuccess",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 139
@@ -6784,8 +6802,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "ScoreSelector",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 142
@@ -6797,8 +6817,10 @@
       "setup": "SetupAIRouter",
       "isWrite": false,
       "handler": "SuggestFix",
-      "permKind": null,
-      "permCodes": [],
+      "permKind": "RequireStrictPermissions",
+      "permCodes": [
+        "rpa:ai:use"
+      ],
       "registeredDeadTable": false,
       "file": "internal/api/v1/rpa/rpa_router.go",
       "line": 135

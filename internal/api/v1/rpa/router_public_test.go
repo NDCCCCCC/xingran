@@ -226,13 +226,14 @@ func TestSetupRPARouter_CallsSetupFunction(t *testing.T) {
 func TestSetupTaskRouter_Smoke(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mock := &mockTaskService{}
-	h := NewTaskHandler(mock, nil).WithCore(&core.Core{
+	c := &core.Core{
 		CoreInfra:    &core.CoreInfra{DB: &db.Database{}},
 		CoreServices: &core.CoreServices{},
-	})
+	}
+	h := NewTaskHandler(mock, nil).WithCore(c)
 	engine := gin.New()
 	group := engine.Group("/tasks")
-	SetupTaskRouter(group, h)
+	SetupTaskRouter(group, h, c)
 
 	// All 8 routes are registered
 	assert.Equal(t, 8, len(engine.Routes()), "expected 8 routes registered")
@@ -274,13 +275,14 @@ func TestSetupWorkerRouter_Smoke(t *testing.T) {
 func TestSetupExecutionRouter_Smoke(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mock := &mockExecutionService{}
-	h := NewExecutionHandler(mock, nil).WithCore(&core.Core{
+	c := &core.Core{
 		CoreInfra:    &core.CoreInfra{DB: &db.Database{}},
 		CoreServices: &core.CoreServices{},
-	})
+	}
+	h := NewExecutionHandler(mock, nil).WithCore(c)
 	engine := gin.New()
 	group := engine.Group("/executions")
-	SetupExecutionRouter(group, h)
+	SetupExecutionRouter(group, h, c)
 
 	// 9 routes: list, statistics, :id, :id/cancel, :id/logs, :id/download,
 	// :id/batch-report, :id/human-intervention (GET + POST) — gin.Routes()
@@ -293,56 +295,34 @@ func TestSetupExecutionRouter_Smoke(t *testing.T) {
 func TestSetupAIRouter_Smoke(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mock := &mockAIService{}
-	h := NewAIHandler(mock).WithCore(&core.Core{
+	c := &core.Core{
 		CoreInfra:    &core.CoreInfra{DB: &db.Database{}},
 		CoreServices: &core.CoreServices{},
-	})
+	}
+	h := NewAIHandler(mock).WithCore(c)
 	engine := gin.New()
 	group := engine.Group("/ai")
-	SetupAIRouter(group, h)
+	SetupAIRouter(group, h, c)
 
 	// 11 routes
 	assert.Equal(t, 11, len(engine.Routes()), "expected 11 routes registered")
 }
 
-// TestSetupFlowRouter_Smoke covers SetupFlowRouter.
-func TestSetupFlowRouter_Smoke(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// ServiceGroup is needed for flow router; it requires a real DB to
-	// construct real services. Use minimal DB-less invocation — but
-	// NewFlowControlService/NewErrorHandlingService/NewDataMapperService
-	// all accept a *gorm.DB, so pass nil and rely on no-op behavior.
-	//
-	// However, the construction itself may not panic even with nil DB.
-	services := &rpa.ServiceGroup{}
-	testCore := &core.Core{
-		CoreInfra:    &core.CoreInfra{DB: &db.Database{}},
-		CoreServices: &core.CoreServices{},
-	}
-
-	engine := gin.New()
-	group := engine.Group("/flow")
-
-	defer func() {
-		if r := recover(); r != nil {
-			t.Logf("SetupFlowRouter panicked (expected without DB): %v", r)
-		}
-	}()
-	SetupFlowRouter(group, services, testCore)
-}
+// TestSetupFlowRouter 已随 flow 组下线（2026-11-11）删除：flow 7 端点为执行
+// 引擎内部能力直接暴露、前端零调用，注册与 SetupFlowRouter 一并移除。
 
 // TestSetupCredentialRouter_Smoke covers SetupCredentialRouter.
 func TestSetupCredentialRouter_Smoke(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mock := &mockCredentialService{}
-	h := NewCredentialHandler(mock).WithCore(&core.Core{
+	c := &core.Core{
 		CoreInfra:    &core.CoreInfra{DB: &db.Database{}},
 		CoreServices: &core.CoreServices{},
-	})
+	}
+	h := NewCredentialHandler(mock).WithCore(c)
 	engine := gin.New()
 	group := engine.Group("/credentials")
-	SetupCredentialRouter(group, h)
+	SetupCredentialRouter(group, h, c)
 
 	// 7 routes: list, create, :id, :id/update, :id/delete, sessions/list, sessions/:id/invalidate
 	assert.Equal(t, 7, len(engine.Routes()), "expected 7 routes registered")

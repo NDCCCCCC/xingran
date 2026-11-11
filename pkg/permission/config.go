@@ -120,6 +120,30 @@ const (
 	NoticeEdit   PermissionCode = "system:notice:edit"
 	NoticeRemove PermissionCode = "system:notice:remove"
 
+	// RPA 域权限（2026-11-11 rpa 域 RBAC 接通：/rpa 组此前仅 JWT+OperLog 零权限）。
+	// task/execution/worker 三组 8 码已由 menu_catalog_seed.sql 播种 F 型按钮
+	// （父菜单「RPA 管理」）；worker:edit 与 credential/ai 四组为本批新码，
+	// 播种见 migration_245（rpa RBAC F 型按钮）。credentials/ai 命名对齐
+	// network:credential:* 惯例（无 ops 前缀），删除权限统一 remove（D-04）。
+	RpaTaskList    PermissionCode = "ops:rpa:task:list"
+	RpaTaskAdd     PermissionCode = "ops:rpa:task:add"
+	RpaTaskEdit    PermissionCode = "ops:rpa:task:edit"
+	RpaTaskRemove  PermissionCode = "ops:rpa:task:delete"
+	RpaTaskExecute PermissionCode = "ops:rpa:task:execute"
+
+	RpaExecutionList   PermissionCode = "ops:rpa:execution:list"
+	RpaExecutionCancel PermissionCode = "ops:rpa:execution:cancel"
+
+	RpaWorkerMonitor PermissionCode = "ops:rpa:worker:monitor"
+	RpaWorkerEdit    PermissionCode = "ops:rpa:worker:edit"
+
+	RpaCredentialList   PermissionCode = "rpa:credential:list"
+	RpaCredentialAdd    PermissionCode = "rpa:credential:add"
+	RpaCredentialEdit   PermissionCode = "rpa:credential:edit"
+	RpaCredentialRemove PermissionCode = "rpa:credential:remove"
+
+	RpaAiUse PermissionCode = "rpa:ai:use"
+
 	// 日志管理权限
 	OperLogList   PermissionCode = "monitor:operlog:list"
 	OperLogView   PermissionCode = "monitor:operlog:view"

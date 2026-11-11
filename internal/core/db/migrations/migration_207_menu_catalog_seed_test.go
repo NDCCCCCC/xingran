@@ -37,7 +37,7 @@ func aliveMenuCount(t *testing.T, db *gorm.DB) int64 {
 	return count
 }
 
-// TestMigrate207FreshDBSeedsFullCatalog 全新库: 种子 271 条规范目录
+// TestMigrate207FreshDBSeedsFullCatalog 全新库: 种子 277 条规范目录（migration_245 同源追加 rpa 6 码后）
 // (239 历史 + 4 条全库备份菜单 quick 261110-tbq + 4 条漂移告警 F 权限 migration_242),
 // 顶级根齐全, 无悬空 parent_id, 重复执行幂等。
 func TestMigrate207FreshDBSeedsFullCatalog(t *testing.T) {
@@ -47,8 +47,8 @@ func TestMigrate207FreshDBSeedsFullCatalog(t *testing.T) {
 		t.Fatalf("Migrate207 first run: %v", err)
 	}
 
-	if got := aliveMenuCount(t, db); got != 271 {
-		t.Fatalf("alive menu count = %d, want 271", got)
+	if got := aliveMenuCount(t, db); got != 277 {
+		t.Fatalf("alive menu count = %d, want 277", got)
 	}
 
 	// 规范顶级根: 系统管理 + 运维管理
@@ -86,8 +86,8 @@ func TestMigrate207FreshDBSeedsFullCatalog(t *testing.T) {
 	if err := Migrate207SeedCanonicalMenuCatalog(db); err != nil {
 		t.Fatalf("Migrate207 second run: %v", err)
 	}
-	if got := aliveMenuCount(t, db); got != 271 {
-		t.Fatalf("after re-run alive menu count = %d, want 271", got)
+	if got := aliveMenuCount(t, db); got != 277 {
+		t.Fatalf("after re-run alive menu count = %d, want 277", got)
 	}
 }
 
@@ -120,8 +120,8 @@ func TestMigrate207RespectsUserDeletion(t *testing.T) {
 	if c != 0 {
 		t.Fatalf("user-deleted menu %s was resurrected by seed", victim.ID)
 	}
-	if got := aliveMenuCount(t, db); got != 270 {
-		t.Fatalf("alive menu count = %d, want 270", got)
+	if got := aliveMenuCount(t, db); got != 276 {
+		t.Fatalf("alive menu count = %d, want 276", got)
 	}
 }
 
@@ -214,17 +214,17 @@ func TestMigrate207ReconcilesLegacyOpsTree(t *testing.T) {
 		t.Fatalf("alive 运维管理 roots = %d, want 1", opsRoots)
 	}
 
-	// 规范目录全量就位: 271 存活 (遗留 3 条已软删不计)
-	if got := aliveMenuCount(t, db); got != 271 {
-		t.Fatalf("alive menu count = %d, want 271", got)
+	// 规范目录全量就位: 277 存活 (遗留 3 条已软删不计)
+	if got := aliveMenuCount(t, db); got != 277 {
+		t.Fatalf("alive menu count = %d, want 277", got)
 	}
 
 	// 幂等重跑
 	if err := Migrate207SeedCanonicalMenuCatalog(db); err != nil {
 		t.Fatalf("Migrate207 re-run: %v", err)
 	}
-	if got := aliveMenuCount(t, db); got != 271 {
-		t.Fatalf("after re-run alive menu count = %d, want 271", got)
+	if got := aliveMenuCount(t, db); got != 277 {
+		t.Fatalf("after re-run alive menu count = %d, want 277", got)
 	}
 }
 
@@ -260,8 +260,8 @@ func TestMigrate207GrantPathIntegration(t *testing.T) {
 	if err := db.Model(&models.RoleMenu{}).Where("role_id = ?", adminRole.ID).Count(&granted).Error; err != nil {
 		t.Fatalf("count grants: %v", err)
 	}
-	if granted != 271 {
-		t.Fatalf("admin grants = %d, want 271", granted)
+	if granted != 277 {
+		t.Fatalf("admin grants = %d, want 277", granted)
 	}
 
 	// 读取链路 (menuService.GetUserMenus 语义): 授权 ∩ 存活 ∩ 正常 ∩ 可见
