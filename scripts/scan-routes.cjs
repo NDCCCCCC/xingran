@@ -191,8 +191,8 @@ function parseFile(file, constMap) {
   const reGroup = /([A-Za-z_][\w.]*)\s*:?=\s*([A-Za-z_][\w.]*)\.Group\("([^"]*)"\)/g;
   const reUse = /([A-Za-z_][\w.]*)\.Use\(middleware\.(Require\w+)\s*\(/g;
   const reReg = /([A-Za-z_][\w.]*)\.(POST|GET|PUT|DELETE|PATCH)\s*\(/g;
-  const reCall = /\b(?:[A-Za-z_][\w.]*\.)?(Setup[A-Z]\w*)\s*\(/g;
-  const reDef = /func\s+(Setup[A-Z]\w*)\s*\(\s*([A-Za-z_]\w*)\s+(?:\*gin\.RouterGroup|UserWriteRouteGroups|[A-Za-z_*][\w.]*)/g;
+  const reCall = /\b(?:[A-Za-z_][\w.]*\.)?((?:Setup|Register)[A-Z]\w*)\s*\(/g;
+  const reDef = /func\s+((?:Setup|Register)[A-Z]\w*)\s*\(\s*([A-Za-z_]\w*)\s+(?:\*gin\.RouterGroup|UserWriteRouteGroups|[A-Za-z_*][\w.]*)/g;
 
   let m;
   while ((m = reGroup.exec(text)) !== null) groups.set(m[1], { parent: m[2], prefix: m[3] });
@@ -339,7 +339,7 @@ function scanRoutes() {
 
     // 1) 收集 setup 调用点（先于 registration，避免把调用点里的 .Group() 误当注册）
     const calls = [];
-    const reCall = /\b(?:[A-Za-z_][\w.]*\.)?(Setup[A-Z]\w*)\s*\(/g;
+    const reCall = /\b(?:[A-Za-z_][\w.]*\.)?((?:Setup|Register)[A-Z]\w*)\s*\(/g;
     let m;
     while ((m = reCall.exec(bodyText)) !== null) {
       const before = bodyText.slice(Math.max(0, m.index - 6), m.index);
@@ -448,7 +448,7 @@ function scanRoutes() {
 
     // 4) 函数体内的路由注册（排除 setup 调用点区间内的误匹配）
     const callSpans = [];
-    const reCallSpan = /\b(?:[A-Za-z_][\w.]*\.)?(Setup[A-Z]\w*)\s*\(/g;
+    const reCallSpan = /\b(?:[A-Za-z_][\w.]*\.)?((?:Setup|Register)[A-Z]\w*)\s*\(/g;
     while ((m = reCallSpan.exec(bodyText)) !== null) {
       const { end } = balancedParens(bodyText, reCallSpan.lastIndex - 1);
       callSpans.push([m.index, end]);

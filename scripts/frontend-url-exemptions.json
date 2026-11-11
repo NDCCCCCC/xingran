@@ -3,30 +3,5 @@
     "url": "/system/settings/config/theme/default",
     "file": "xingran-react-frontend/src/lib/defaultThemeApi.ts",
     "reason": "断链追踪：getDefaultThemeConfig/setDefaultThemeConfig 被 pages/system/settings/default-theme.tsx 活跃调用，后端无 /system/settings/config/theme/* 路由（默认主题配置后端未实现）。修复需后端实现端点或下线页面，非小修；追踪：默认主题配置功能。"
-  },
-  {
-    "url": "/system/settings/config/theme/sync",
-    "file": "xingran-react-frontend/src/lib/defaultThemeApi.ts",
-    "reason": "同 theme/default：后端未实现 syncUserThemeToDefault 端点，见上一条 reason。"
-  },
-  {
-    "url": "/monitor/jobs",
-    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。"
-  },
-  {
-    "url": "/monitor/jobs/${id}/update",
-    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。"
-  },
-  {
-    "url": "/monitor/jobs/${id}/delete",
-    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。"
-  },
-  {
-    "url": "/monitor/jobs/${id}/status",
-    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。"
-  },
-  {
-    "url": "/monitor/jobs/logs/statistics",
-    "reason": "scan-routes.cjs 解析盲区（非真断链）：SetupJobRouter 经 monitor_router.go RegisterJobRoutes 间接注册，扫描器不追踪间接调用层，registry 无 jobs 路由。路由实际已挂载且已接 monitor:job:* RBAC（PR task-1）。盲区修复后本豁免应删除。（无 file 限定：该 URL 在 hooks/useJobData.ts 与 index.tsx 多处调用）"
   }
 ]
