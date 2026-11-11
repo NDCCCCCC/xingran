@@ -4,19 +4,7 @@
  */
 
 import { useState, useEffect, type FC } from "react";
-import {
-  Button,
-  Form,
-  Table,
-  Modal,
-  Space,
-  Tag,
-  Card,
-  Row,
-  Col,
-  Switch,
-  TreeSelect,
-} from "antd";
+import { Button, Form, Table, Modal, Space, Tag, Card, Row, Col, Switch, TreeSelect } from "antd";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import {
   PlusOutlined,
@@ -214,16 +202,10 @@ const PeriodicTemplatePage: FC = () => {
   } = useTemplateData(form, paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
 
   // 使用操作管理 Hook
-  const {
-    editingRecord,
-    setEditingRecord,
-    handleAdd,
-    handleEdit,
-    handleDelete,
-    handleSave,
-  } = useTemplateActions({
-    onLoad: fetchList,
-  });
+  const { editingRecord, setEditingRecord, handleAdd, handleEdit, handleDelete, handleSave } =
+    useTemplateActions({
+      onLoad: fetchList,
+    });
 
   // 初始化加载
   useEffect(() => {
