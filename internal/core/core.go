@@ -19,6 +19,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	assetSvc "github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/internal/services/dbbackup"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/services/vdi"
@@ -576,6 +577,25 @@ func (c *Core) initSchedulerAndTasks() error {
 		// 注册部门到AD同步定时任务
 		scheduler.RegisterDeptSyncTasks(c.Scheduler)
 		applogger.Infof("部门到AD同步定时任务注册完成")
+
+		// quick 261110-tbq：全库备份内置 cron 任务。
+		// 周期/开关/存储后端存 sys_config，Service.RunScheduled 内部按固定 tick
+		// 门控，改配置无需重启；sys_job 写一行让定时任务页只读可见。
+		dbCfg := dbbackup.DatabaseConfig{
+			Type:          c.Config.Database.Type,
+			Path:          c.Config.Database.Path,
+			Host:          c.Config.Database.Host,
+			Port:          c.Config.Database.Port,
+			User:          c.Config.Database.User,
+			Password:      c.Config.Database.Password,
+			DBName:        c.Config.Database.DBName,
+			SSLMode:       c.Config.Database.SSLMode,
+			PgDumpPath:    c.Config.Database.Backup.PgDumpPath,
+			PgRestorePath: c.Config.Database.Backup.PgRestorePath,
+		}
+		dbBackupSvc := dbbackup.NewService(c.GetDB(), dbCfg, nil, "")
+		scheduler.RegisterDBBackupTasks(c.Scheduler, c.GetDB(), dbBackupSvc)
+		applogger.Infof("全库备份定时任务注册完成")
 
 		// 设置全局数据库访问器，供定时任务使用（必须在同步周期性工单任务之前）
 		scheduler.SetDB(c)

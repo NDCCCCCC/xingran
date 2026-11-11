@@ -1392,6 +1392,44 @@ const C14_EXEMPTIONS = [
   );
 }
 
+// ---- C15 Alert 配色契约守护（阻断「深底深字」类问题复发） ----
+// 背景：.ant-alert-info 曾用 --theme-primary-light(#1a6839 深绿) 作背景而未同步
+// 调亮文字，出现「深绿底 + 深色字」几乎不可读（备份页任务执行中、Excel 导入说明
+// 均中招），历史上还因此产生过 .excel-import-notice 局部补丁。根治做法是全局
+// 统一为 surface 白底 + 中性描边 + 显式主文字色，并禁止再引入局部补丁/深色变量。
+{
+  const alertInfoBlock = indexCss.match(/\.ant-alert-info\s*\{([\s\S]*?)\}/);
+  const block = alertInfoBlock ? alertInfoBlock[1] : "";
+  const bad = [];
+  if (!alertInfoBlock) {
+    bad.push(".ant-alert-info 规则缺失");
+  } else {
+    if (!block.includes("var(--bg-elevated)")) bad.push("未使用 --bg-elevated 作为背景");
+    if (!block.includes("var(--border-base)")) bad.push("未使用 --border-base 作为描边");
+    if (!block.includes("color: var(--text-primary)")) bad.push("未显式声明主文字色");
+    // 深绿品牌变量绝不能再当 Alert 背景（该变量是渐变亮端，实测 #1a6839）
+    if (block.includes("--theme-primary-light"))
+      bad.push("再次把深绿 --theme-primary-light 用作背景");
+  }
+  // 局部特例补丁不得复活：一个页面一个补丁正是问题反复出现的根因
+  if (/\.ant-alert\.excel-import-notice/.test(indexCss)) {
+    bad.push("复活了 .excel-import-notice 局部补丁");
+  }
+  // 任意 Alert 规则里都不允许再出现深底变量作 background
+  const alertBlocks = indexCss.match(/\.ant-alert-[\w-]+\s*\{[\s\S]*?\}/g) || [];
+  for (const b of alertBlocks) {
+    if (/background[^;]*--theme-primary(?!-lighter|-50|-subtle)/.test(b)) {
+      bad.push("Alert 规则里出现 --theme-primary 系深色背景变量");
+      break;
+    }
+  }
+  check(
+    "C15 Alert info 白底契约（阻断深底深字复发）",
+    bad.length === 0,
+    bad.length ? bad.join(" | ") : "C15 PASS：白底 + 中性描边 + 显式文字色，无局部补丁"
+  );
+}
+
 console.log("----");
 console.log(`结果: ${failures === 0 ? "ALL PASS" : failures + " 项 FAIL"}`);
 process.exit(failures === 0 ? 0 : 1);

@@ -68,8 +68,9 @@ const HARD_ALLOWED: Record<string, number> = {
   "vdiApi.ts": 0,
 };
 
-/** 17 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试
- *  v1.54 Phase 144：新增 adDriftAlertApi.ts（5 个 POST 端点，非 CRUD 形状，warning 档登记 0）→ 16→17 */
+/** 18 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试
+ *  v1.54 Phase 144：新增 adDriftAlertApi.ts（5 个 POST 端点，非 CRUD 形状，warning 档登记 0）→ 16→17
+ *  quick 261110-tbq：新增 dbBackupApi.ts（全库备份业务端点 + download 薄壳，非 CRUD 形状，warning 档登记 0）→ 17→18 */
 const EXPECTED_FILES = [
   "adDomainApi.ts",
   "adDriftAlertApi.ts",
@@ -77,6 +78,7 @@ const EXPECTED_FILES = [
   "api/networkApi.ts",
   "assetApi.ts",
   "columnConfigApi.ts",
+  "dbBackupApi.ts",
   "defaultThemeApi.ts",
   "dutyApi.ts",
   "knowledgeApi.ts",
@@ -103,6 +105,7 @@ const WARNING_WHITELIST: Record<string, number> = {
   profileApi: 0, // D-06 非 CRUD：单例 profile + 密码 + 头像，无资源集合语义
   columnConfigApi: 0, // D-06 非 CRUD：按 pageKey 存取，无标准 CRUD 路径形状
   defaultThemeApi: 0, // 合并入仓：3 个配置同步函数（getDefaultThemeConfig/setDefaultThemeConfig/syncUserThemeToDefault），plain-literal URL 不含 CRUD 后缀
+  dbBackupApi: 0, // quick 261110-tbq：全库备份业务端点（list/statistics/export/restore/plan/capabilities）+ downloadFile 薄壳；无 CRUD 后缀模板字符串，非 createResourceApi 形状
   notificationConfigApi: 0, // 整文件 KEEP：GET list / PUT /{id} / DELETE 动词 + page 参数，传输语义四处与工厂不同构（模板字符串 URL 亦无 CRUD 后缀）
   assetApi: 0, // 整文件 KEEP：reconciliation/fixSuggestion 全部解包 res.data 返回裸数据，与工厂「返回 BaseResponse」契约不同；无 CRUD 后缀形状模板命中
   // —— 部分委托文件的 KEEP 残留（delete 统一保持单参 post 直调：既有测试锁定

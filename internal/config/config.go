@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/spf13/viper"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
-	"github.com/spf13/viper"
 )
 
 // Config 应用配置。
@@ -98,6 +98,16 @@ type DatabaseConfig struct {
 	MaxOpenConns int    `mapstructure:"max_open_conns"`
 	MaxIdleConns int    `mapstructure:"max_idle_conns"`
 	MaxLifetime  int    `mapstructure:"max_lifetime"`
+	// Backup 为全库备份模块的外部工具路径配置（可选）。
+	// 部署机未把 PostgreSQL 客户端加入 PATH 时，在此填 pg_dump / pg_restore 的
+	// 绝对路径；也可在参数管理页用 sys.database.backup.pg_dump_path 覆盖（热生效）。
+	Backup DatabaseBackupConfig `mapstructure:"backup"`
+}
+
+// DatabaseBackupConfig 全库备份外部工具路径配置。
+type DatabaseBackupConfig struct {
+	PgDumpPath    string `mapstructure:"pg_dump_path"`
+	PgRestorePath string `mapstructure:"pg_restore_path"`
 }
 
 // CacheConfig 缓存配置。

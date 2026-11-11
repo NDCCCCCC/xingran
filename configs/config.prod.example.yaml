@@ -54,6 +54,11 @@ database:
   max_open_conns: 50          # 生产环境按并发调整（参考 PG max_connections）
   max_idle_conns: 10
   max_lifetime: 1800          # 连接最大生命周期（秒）
+  # 全库备份外部工具路径（可选）：生产机若未安装 PostgreSQL 客户端，必须填 pg_dump /
+  # pg_restore 的绝对路径，或确保它们在 PATH 中；也可在参数管理页热覆盖。
+  # backup:
+  #   pg_dump_path: "/usr/lib/postgresql/16/bin/pg_dump"
+  #   pg_restore_path: "/usr/lib/postgresql/16/bin/pg_restore"
 
 # ----------------------------------------------------------------------------
 # 缓存配置 - Redis
@@ -142,6 +147,7 @@ security:
       - "/api/v1/rpa/workers/register"      # RPA Worker 注册
       - "/api/v1/rpa/workers/*/heartbeat"   # RPA Worker 心跳
       - "/api/v1/rpa/workers/progress"      # RPA Worker 进度上报
+      - "/api/v1/system/db-backup/*"       # 全库备份：导出/下载/导入/恢复二进制流
     require_encryption: true   # 生产环境建议强制（先 false 灰度，验证后改 true）
 
   # 响应加密配置
