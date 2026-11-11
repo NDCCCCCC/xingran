@@ -4,9 +4,9 @@
   "writeHandlerBasis": "WRITE_HANDLER regex on handler name (same as tmp_scan_final.cjs)",
   "totals": {
     "mounts": 220,
-    "routes": 715,
-    "writeRoutes": 317,
-    "deferredWriteRoutes": 138
+    "routes": 719,
+    "writeRoutes": 320,
+    "deferredWriteRoutes": 141
   },
   "routes": [
     {
@@ -10695,7 +10695,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 123
+      "line": 124
     },
     {
       "method": "POST",
@@ -10708,7 +10708,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 124
+      "line": 125
     },
     {
       "method": "POST",
@@ -11051,6 +11051,78 @@
     },
     {
       "method": "POST",
+      "path": "/workorder/periodic/templates/:id/disable",
+      "mountGroup": "templates",
+      "setup": "SetupPeriodicWorkOrderRouter",
+      "isWrite": true,
+      "handler": "DisablePeriodic",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "ops:workorder:periodic:list",
+        "ops:workorder:periodic:add",
+        "ops:workorder:periodic:edit",
+        "ops:workorder:periodic:delete"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/workorder/workorder_router.go",
+      "line": 113
+    },
+    {
+      "method": "POST",
+      "path": "/workorder/periodic/templates/:id/enable",
+      "mountGroup": "templates",
+      "setup": "SetupPeriodicWorkOrderRouter",
+      "isWrite": true,
+      "handler": "EnablePeriodic",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "ops:workorder:periodic:list",
+        "ops:workorder:periodic:add",
+        "ops:workorder:periodic:edit",
+        "ops:workorder:periodic:delete"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/workorder/workorder_router.go",
+      "line": 112
+    },
+    {
+      "method": "POST",
+      "path": "/workorder/periodic/templates/:id/generate",
+      "mountGroup": "templates",
+      "setup": "SetupPeriodicWorkOrderRouter",
+      "isWrite": true,
+      "handler": "GeneratePeriodic",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "ops:workorder:periodic:list",
+        "ops:workorder:periodic:add",
+        "ops:workorder:periodic:edit",
+        "ops:workorder:periodic:delete"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/workorder/workorder_router.go",
+      "line": 114
+    },
+    {
+      "method": "POST",
+      "path": "/workorder/periodic/templates/:id/logs",
+      "mountGroup": "templates",
+      "setup": "SetupPeriodicWorkOrderRouter",
+      "isWrite": false,
+      "handler": "GetPeriodicLogs",
+      "permKind": "RequirePermissions",
+      "permCodes": [
+        "ops:workorder:periodic:list",
+        "ops:workorder:periodic:add",
+        "ops:workorder:periodic:edit",
+        "ops:workorder:periodic:delete"
+      ],
+      "registeredDeadTable": false,
+      "file": "internal/api/v1/workorder/workorder_router.go",
+      "line": 115
+    },
+    {
+      "method": "POST",
       "path": "/workorder/periodic/templates/:id/update",
       "mountGroup": "templates",
       "setup": "SetupPeriodicWorkOrderRouter",
@@ -11114,7 +11186,7 @@
       "permCodes": [],
       "registeredDeadTable": false,
       "file": "internal/api/v1/workorder/workorder_router.go",
-      "line": 132
+      "line": 133
     }
   ],
   "deferred": {
@@ -11804,6 +11876,21 @@
         "path": "/workorder/periodic/templates/:id/delete",
         "method": "POST",
         "handler": "DeletePeriodic"
+      },
+      {
+        "path": "/workorder/periodic/templates/:id/disable",
+        "method": "POST",
+        "handler": "DisablePeriodic"
+      },
+      {
+        "path": "/workorder/periodic/templates/:id/enable",
+        "method": "POST",
+        "handler": "EnablePeriodic"
+      },
+      {
+        "path": "/workorder/periodic/templates/:id/generate",
+        "method": "POST",
+        "handler": "GeneratePeriodic"
       },
       {
         "path": "/workorder/periodic/templates/:id/update",
