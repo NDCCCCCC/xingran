@@ -1881,8 +1881,8 @@ body {
   width: var(--sidebar-collapsed-width);
 }
 
-/* 部门列表侧边栏：全库统一 250px（范本 = 系统管理用户页部门列）。 */
-.dept-list-sider {
+/* 部门列表侧边栏：统一 250px。选择器须带 .ant-layout-sider 前缀——全局 :412 规则因 :not() 修复 specificity 升至 (0,2,0)，单类 border-right:none 会被压制再现竖线。 */
+.ant-layout-sider.dept-list-sider {
   width: 250px;
   max-width: 250px;
   min-width: 250px;
