@@ -83,28 +83,96 @@ func get228Menu(t *testing.T, db *gorm.DB, component string) (models.Menu, bool)
 	return menu, true
 }
 
-// TestMigrate228ActivatesHiddenDutyPoolMenu 值班池：visible=0/status=1/meta.hidden
-// 三重不可达 → 修复为 visible=1/status=0/hidden=false；重复执行幂等。
-func TestMigrate228ActivatesHiddenDutyPoolMenu(t *testing.T) {
+// TestMigrate228DoesNotActivateDutyPoolMenu 值班池：228 修订后不再激活为可见可用。
+//
+// 锁定：无论 duty/pools 行原本是「隐藏停用」还是「被 228 旧逻辑改过的可见可用」，
+// 228 执行后都不产生把该行改成 visible=1/status=0 的 UPDATE —— 行状态逐列保持不变
+// （visible / status / meta.Hidden 都不被 228 触碰）。存量行归位由 migration_249 负责。
+func TestMigrate228DoesNotActivateDutyPoolMenu(t *testing.T) {
+	cases := []struct {
+		name    string
+		visible models.VisibleType
+		status  models.MenuStatus
+		hidden  bool
+	}{
+		{"隐藏停用基线(seed 0/1)", models.VisibleHidden, models.MenuStatusStop, true},
+		{"被旧228改成可见可用(1/0)", models.VisibleShow, models.MenuStatusNormal, false},
+		{"幽灵态(visible=0/status=0)", models.VisibleHidden, models.MenuStatusNormal, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			db := freshSQLiteDBForMigrate228(t)
+
+			path := "pools"
+			component := "duty/pools/index"
+			perms := "ops:duty:pools:view"
+			seed := models.Menu{
+				MenuName:  "值班池管理",
+				ParentID:  strPtr228("e7d2962c-43c1-4302-be00-ff8e4e1878fb"),
+				Path:      &path,
+				Component: &component,
+				MenuType:  models.MenuTypeMenu,
+				Visible:   tc.visible,
+				Status:    tc.status,
+				Perms:     &perms,
+				Meta:      &models.MenuMeta{Title: "值班池管理", Hidden: tc.hidden},
+			}
+			seed.ID = "c4a5ff39-96ad-48d5-b1c1-543ef88f8373"
+			if err := db.Create(&seed).Error; err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			// models.Menu.Visible 有 `gorm:"default:1"`；db.Create 遇到零值(visible=0)
+			// 会套用该默认值，导致 seed 落库即变 visible=1，把「228 未改动」误判成
+			// 「228 激活」。这里用 Updates(map) 强制写入用例期望的初值（map 不受 default 影响）。
+			if err := db.Model(&models.Menu{}).Where("id = ?", seed.ID).
+				Updates(map[string]interface{}{
+					"visible": tc.visible,
+					"status":  tc.status,
+					"meta":    &models.MenuMeta{Title: "值班池管理", Hidden: tc.hidden},
+				}).Error; err != nil {
+				t.Fatalf("force seed state: %v", err)
+			}
+
+			for run := 1; run <= 2; run++ {
+				if err := Migrate228ServerSortMenus(db); err != nil {
+					t.Fatalf("run %d: %v", run, err)
+				}
+				menu, ok := get228Menu(t, db, component)
+				if !ok {
+					t.Fatalf("run %d: 值班池菜单丢失（228 不应删除行）", run)
+				}
+				// 228 完全不碰 duty/pools：三列逐项与初始态一致
+				if menu.Visible != tc.visible || menu.Status != tc.status {
+					t.Fatalf("run %d: 228 改动了 duty/pools: visible=%d status=%d, 期望保持 %d/%d",
+						run, menu.Visible, menu.Status, tc.visible, tc.status)
+				}
+				if menu.Meta == nil || menu.Meta.Hidden != tc.hidden {
+					t.Fatalf("run %d: 228 改动了 meta.Hidden: got %v, want %v",
+						run, menu.Meta, tc.hidden)
+				}
+			}
+		})
+	}
+}
+
+// TestMigrate228KeepsDutySchedulesIdempotentFix 排班：228 仍保留幂等保底（可见可用）。
+func TestMigrate228KeepsDutySchedulesIdempotentFix(t *testing.T) {
 	db := freshSQLiteDBForMigrate228(t)
 
-	visible := models.VisibleHidden
-	status := models.MenuStatusStop
-	path := "pools"
-	component := "duty/pools/index"
-	perms := "ops:duty:pools:view"
+	component := "duty/schedules/index"
+	path := "schedules"
+	perms := "ops:duty:schedule:list"
 	seed := models.Menu{
-		MenuName: "值班池管理",
-		ParentID: strPtr228("e7d2962c-43c1-4302-be00-ff8e4e1878fb"),
-		Path:     &path,
+		MenuName:  "排班管理",
+		ParentID:  strPtr228("e7d2962c-43c1-4302-be00-ff8e4e1878fb"),
+		Path:      &path,
 		Component: &component,
 		MenuType:  models.MenuTypeMenu,
-		Visible:   visible,
-		Status:    status,
+		Visible:   models.VisibleHidden, // 存量脏数据
+		Status:    models.MenuStatusStop,
 		Perms:     &perms,
-		Meta:      &models.MenuMeta{Title: "值班池管理", Hidden: true},
 	}
-	seed.ID = "c4a5ff39-96ad-48d5-b1c1-543ef88f8373"
+	seed.ID = "d2280000-0000-4000-8000-000000000001"
 	if err := db.Create(&seed).Error; err != nil {
 		t.Fatalf("seed: %v", err)
 	}
@@ -115,13 +183,10 @@ func TestMigrate228ActivatesHiddenDutyPoolMenu(t *testing.T) {
 		}
 		menu, ok := get228Menu(t, db, component)
 		if !ok {
-			t.Fatalf("run %d: 菜单丢失", run)
+			t.Fatalf("run %d: 排班菜单丢失", run)
 		}
 		if menu.Visible != models.VisibleShow || menu.Status != models.MenuStatusNormal {
-			t.Fatalf("run %d: visible=%d status=%d, 期望 1/0", run, menu.Visible, menu.Status)
-		}
-		if menu.Meta == nil || menu.Meta.Hidden {
-			t.Fatalf("run %d: meta.Hidden 期望 false", run)
+			t.Fatalf("run %d: 排班 visible=%d status=%d, 期望 1/0", run, menu.Visible, menu.Status)
 		}
 	}
 }
@@ -251,7 +316,7 @@ func TestMigrate228IdempotentNoOp(t *testing.T) {
 	}
 	// 4 参照 + 2 预置 = 6；重复执行不得产生重复行
 	if total != 6 {
-		t.Fatalf("菜单总数期望 7, 实际 %d（存在重复插入）", total)
+		t.Fatalf("菜单总数期望 6, 实际 %d（存在重复插入）", total)
 	}
 }
 

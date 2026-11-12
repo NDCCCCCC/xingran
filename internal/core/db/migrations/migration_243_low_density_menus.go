@@ -9,16 +9,35 @@ package migrations
 //	② pages/duty/config          → pages/duty/management（「值班配置」Tab）
 //	③ pages/workorder/categories → pages/workorder/orders（「工单分类」Tab）
 //
-// 页面没了但菜单还在，用户点进去就是空白页/加载失败，故必须收敛菜单。
+// 页面没了但菜单还在；若菜单仍是 status=0，用户点进去就是已删页面的空白页/加载失败，
+// 故必须收敛菜单。
+//
+// 【隐藏判定的真实语义（修正旧注释「路由/侧边栏隐藏判定均基于 visible」）】
+//   - visible 只挡侧边栏：xingran-react-frontend/src/components/layout/sidebar.tsx:94-99
+//     以 visible===1 过滤菜单项；visible=0 只是不显示在侧边栏。
+//   - status 才挡路由：后端 internal/services/system/menu_service.go:497 的
+//     /my-menus/all 只按 status=0 过滤，被下发的菜单才会由 routeGenerator.ts 生成路由
+//     （routeGenerator.ts:62-95 本身不过滤 visible/status/meta.hidden）。
+//     因此 status=0 的残留行会生成幽灵路由（指向已删页面）。
+//   - status 同时牵动鉴权：pkg/middleware/permission.go:144-150 的精确匹配 SQL
+//     带 AND m.status = normal，Step2 hasInheritedButtonPerm(:203-208) 同样要求载体行
+//     status=0。把 status 改成 1 会让该菜单的 perms 不再参与授权判定。
+//   - 回滚必须同时改 visible + status（只改其一会留下侧边栏项或幽灵路由）；
+//     且本迁移每次启动都重跑（database.go 的 runAndRecord 不检查版本是否已应用），
+//     管理员手工改回后下次启动会被再次隐藏/停用。
+//   - 策略一致性：migration_241 只改 visible（migration_241:28），242/243 改
+//     visible+status；本迁移统一按「可见侧边栏 + 可用路由 + 授权」三者的真实口径
+//     使用 visible=0/status=1，不再沿用「均基于 visible」的旧错误注释。
 //
 // 三件事（全部幂等；菜单不存在即跳过，绝不新建）：
-//   - 隐藏上述 C 型菜单：visible=0（隐藏，前端 Sidebar 以 visible===1 过滤）、
-//     status=1（停用，与 canonical seed 里 duty/pools、duty/holidays 的既有口径一致）。
-//     保留行与 sys_role_menu 关联不动 —— 不丢授权历史，回滚只需把 visible/status 改回。
+//   - 把所有未软删的匹配 C 型菜单统一到 visible=0 / status=1（批量条件 UPDATE，
+//     只更新非目标态行），消除 status=0 残留导致的幽灵路由；行保留、
+//     sys_role_menu 关联不动 —— 不丢授权历史，回滚只需把 visible/status 改回。
 //   - 把这些菜单下的 F 型按钮权限改挂宿主 C 菜单（parent_id 迁移，perms 原值不变），
 //     避免角色授权树里出现「父菜单已隐藏、按钮孤儿」的分支。
-//   - 不触碰 meta JSONB：前端路由/侧边栏的隐藏判定均基于 visible，与 meta.hidden 无关
-//     （routeGenerator.ts / Sidebar.tsx），改 meta 反而引入 PG/SQLite 方言差异。
+//     改挂独立于状态归位：单行改挂失败仅跳过该行、不阻断其余行的归位。
+//   - 不触碰 meta JSONB：前端路由生成不看 meta.hidden，改 meta 反而引入
+//     PG/SQLite 方言差异。
 //
 // 双方言：纯 GORM 条件更新，无 ::text / ON CONFLICT / gen_random_uuid() 等 PG 专属语法。
 // 非阻断：调用方 WARN，下次启动重试。
@@ -82,9 +101,9 @@ func Migrate243LowDensityMenus(db *gorm.DB) error {
 	return nil
 }
 
-// hideMergedPageMenu 处理单个合并项：隐藏页面菜单 + F 子权限改挂宿主。
+// hideMergedPageMenu 处理单个合并项：状态归位（所有未软删匹配 C 行）+ F 子权限改挂宿主。
 func hideMergedPageMenu(db *gorm.DB, item lowDensityMenuMigration) error {
-	// 1) 定位被合并的页面菜单（C 型，未软删）
+	// 1) 定位被合并的页面菜单（C 型，未软删）—— GORM 默认软删作用域自动过滤软删行。
 	var pageMenus []models.Menu
 	if err := db.Where("component IN ?", item.pageComponents).
 		Where("menu_type = ?", models.MenuTypeMenu).
@@ -97,40 +116,52 @@ func hideMergedPageMenu(db *gorm.DB, item lowDensityMenuMigration) error {
 		return nil
 	}
 
-	// 2) 定位宿主菜单（F 权限改挂目标）；找不到就只隐藏、不改挂
+	// 2) 定位宿主菜单（F 权限改挂目标）；找不到就只归位状态、不改挂
 	hostID, hostErr := findHostMenuID(db, item.hostComponents)
 	if hostErr != nil && !errors.Is(hostErr, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("查询宿主菜单失败: %w", hostErr)
 	}
 
+	// 3) 状态归位：所有未软删的匹配 C 行统一到 visible=0/status=1。
+	//    批量条件 UPDATE（只命中非目标态行，已是 0/1 的行不产生无意义写），
+	//    天然覆盖 Find 捞出的全部重复行；独立于 F 改挂，避免单行改挂失败阻塞幽灵路由清理。
+	//    Model(&models.Menu{}) 带 gorm.DeletedAt → 默认追加 deleted_at IS NULL，只作用于活行。
+	stateRes := db.Model(&models.Menu{}).
+		Where("component IN ?", item.pageComponents).
+		Where("menu_type = ?", models.MenuTypeMenu).
+		Where("visible <> ? OR status <> ?", models.VisibleHidden, models.MenuStatusStop).
+		Updates(map[string]interface{}{
+			"visible": models.VisibleHidden,
+			"status":  models.MenuStatusStop,
+		})
+	if stateRes.Error != nil {
+		return fmt.Errorf("归位页面菜单状态失败: %w", stateRes.Error)
+	}
+	if stateRes.RowsAffected > 0 {
+		log.Printf("[迁移] migration 243 归位 %d 条「%s」C 行 → visible=0/status=1",
+			stateRes.RowsAffected, item.name)
+	}
+
+	// 4) 逐行改挂 F 型按钮权限（perms 原值保持不变）。
+	//    注意：即使该行已是 0/1（隐藏+停用）也要执行改挂 —— 状态归位的短路
+	//    只针对隐藏 UPDATE，不能跳过 F 改挂（历史 fixture 全用 VisibleShow 起手，
+	//    未覆盖「已 hidden+stop 但 F 未改挂」态，现由单测
+	//    TestMigrate243AlreadyHiddenStillReparents 锁定）。
+	//    单行失败仅记录日志并继续，不阻断已经完成的状态归位。
 	for i := range pageMenus {
 		menu := &pageMenus[i]
-
-		// 3) F 型按钮权限改挂宿主（perms 原值保持不变）
-		if hostID != "" && hostID != menu.ID {
-			moved, err := reparentButtonPermissions(db, menu.ID, hostID)
-			if err != nil {
-				return fmt.Errorf("改挂 F 型权限失败(menu=%s): %w", menu.ID, err)
-			}
-			if moved > 0 {
-				log.Printf("[迁移] migration 243 改挂 F 权限 %d 条: %s → 宿主 %s（%s）",
-					moved, menu.ID, hostID, item.name)
-			}
-		}
-
-		// 4) 隐藏 + 停用（已是目标态则不产生 UPDATE）
-		if menu.Visible == models.VisibleHidden && menu.Status == models.MenuStatusStop {
+		if hostID == "" || hostID == menu.ID {
 			continue
 		}
-		if err := db.Model(&models.Menu{}).
-			Where("id = ?", menu.ID).
-			Updates(map[string]interface{}{
-				"visible": models.VisibleHidden,
-				"status":  models.MenuStatusStop,
-			}).Error; err != nil {
-			return fmt.Errorf("隐藏页面菜单失败(menu=%s): %w", menu.ID, err)
+		moved, err := reparentButtonPermissions(db, menu.ID, hostID)
+		if err != nil {
+			log.Printf("[迁移] migration 243 WARNING 改挂 F 权限失败(menu=%s): %v, 跳过该行", menu.ID, err)
+			continue
 		}
-		log.Printf("[迁移] migration 243 隐藏菜单: %s（%s）", menu.MenuName, item.name)
+		if moved > 0 {
+			log.Printf("[迁移] migration 243 改挂 F 权限 %d 条: %s → 宿主 %s（%s）",
+				moved, menu.ID, hostID, item.name)
+		}
 	}
 
 	return nil

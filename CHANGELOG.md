@@ -23,9 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 菜单与权限迁移（migration 241/242/243）：隐藏 7 个旧 C 菜单，F 按钮权限原值改挂宿主菜单；权限码零改动
 - PageTable 表格区统一包 Card；设置页 Sider 竖线误命中从源头修复（!important 预算不升反降）
 
+**运维须知（PR #84 菜单与权限迁移，发布/回滚必读）**
+
+- **菜单缓存失效**：migration 241/242/243 用裸 `db.Model(...).Updates()` 直接改 `sys_menu`，绕过 menuService，不触发 `internal/services/system/menu_cache_impl.go` 的 `InvalidateMenuCache`（仅菜单写操作 Create/Update/Delete/BatchDelete/UpdateStatus 时调用）；叠加三层缓存——前端内存 `xingran-react-frontend/src/services/cache/TTLMenuCache.ts:12` 5min、sessionStorage `xingran-react-frontend/src/router/DynamicRoutes.tsx:35` 30min（`MENU_CACHE_VERSION=1` 不因数据变更失效）、后端 user-scoped 30min。故发布后最长约 30 分钟用户仍可能看到旧侧边栏/旧菜单；生效方式为等 TTL、菜单管理页写操作触发 `fetchAll(true)` 强刷、或重新登录/401 清缓存，**不需发版**。
+- **回滚须知**：`internal/core/db/database.go:1559` 的 `runAndRecord` 不检查版本是否已应用，迁移每次启动重跑，管理员手工把 `visible/status` 改回后下次启动会被再次隐藏；且 `status` 牵动鉴权（`pkg/middleware/permission.go:144-150` 的 `m.status=normal`），回滚必须**同时**处理 visible 与 status，只改 visible 会让旧路由重新出现。
+- **隐藏策略边界**：保留菜单行与 `sys_role_menu` 授权行、只改 visible/status，不回收授权，可逆；彻底回收（删除重复行/清理授权）需单独评审。
+
 ### Changed
 
 - `scripts/scan-routes.cjs`：路由扫描前先剥 Go 注释（字符串字面量保护、等长替换保行号），注释掉的废弃路由不再入库 `scripts/route-registry.json`（本次清理 workorder 5 条 + rpa 3 条等共 9 条注释假路由，总路由 724 → 715）
+- 菜单收敛补强（migration 248/249）：248 补 `ops:workorder:category:list` 的 `status=0` F 型授权载体（修工单分类 Tab 并入后非超管读接口恒 403），249 把所有未软删的 `duty/pools` C 行归位 `visible=0/status=1`（消除 228 历史激活与存量重复行造成的双入口）；同步修订 228 不再激活值班池、243 批量归位全部重复行并修正隐藏判定注释，`registry.go` 补登记 244-249（清偿 `MissingRecords` 对账欠账）。两者均为幂等、双方言、非阻断迁移，不删菜单行、不回收 `sys_role_menu` 授权。
 
 ## [v1.21] - 2026-10-22 — AD 双向同步队列化改造 (AD Two-way Sync Queue)
 
