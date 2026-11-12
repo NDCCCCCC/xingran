@@ -69,6 +69,18 @@ var ActiveMigrations = []struct {
 	// 低密度页面 Tab 化：隐藏 duty/holidays、duty/config、workorder/categories
 	// 三个独立 C 菜单，并把其 F 按钮权限改挂宿主页菜单。按维护约定同步登记。
 	{243, "low_density_menus"},
+	// PR #87 全域 RBAC 治理：4 组 F 型权限种子。按维护约定补登记（此前 database.go
+	// 两分支已注册但漏入本清单，MissingRecords 会把它们误判为 Extra）。
+	{244, "monitor_permission_f_type_seed"},
+	{245, "rpa_permission_f_type_seed"},
+	{246, "backup_remove_permission_f_type_seed"},
+	{247, "misc_rbac_f_type_seed"},
+	// 工单分类读权限载体：补 ops:workorder:category:list 的 status=0 F 行
+	// （工单分类 Tab 并入工单管理页后读接口缺载体会恒 403）。按维护约定同步登记。
+	{248, "category_list_perm"},
+	// duty/pools 菜单状态归位：所有未软删 C 行统一 visible=0/status=1，
+	// 消除 228 历史激活与存量重复行造成的双入口。按维护约定同步登记。
+	{249, "duty_pools_menu_state"},
 }
 
 // ReconcileResult 对账结果：registry 与库内 sys_schema_migrations 记录的差异。
