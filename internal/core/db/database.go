@@ -1189,16 +1189,6 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(247, "misc_rbac_f_type_seed", migrations.Migrate247MiscRbacFTypeSeed); err != nil {
 			applogger.Errorf("杂项 RBAC 权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
-		// 工单分类读权限载体：ops:workorder:category:list 的 status=0 F 行（工单分类 Tab 并入
-		// 工单管理页后仍依赖 /workorder/categories/* 读接口，缺载体会让非超管角色恒 403）。**非阻断**。
-		if err := d.runAndRecord(248, "category_list_perm", migrations.Migrate248CategoryListPerm); err != nil {
-			applogger.Errorf("工单分类读权限载体迁移失败 (非阻断,留待下次启动): %v", err)
-		}
-		// duty/pools 菜单状态归位：所有未软删的 C 行统一 visible=0/status=1（与 seed 基线一致），
-		// 消除 228 历史激活 + 存量重复行造成的「独立页 + Tab」双入口与侧边栏重复项。**非阻断**。
-		if err := d.runAndRecord(249, "duty_pools_menu_state", migrations.Migrate249DutyPoolsMenuState); err != nil {
-			applogger.Errorf("值班池菜单状态归位迁移失败 (非阻断,留待下次启动): %v", err)
-		}
 		// v1.51 TIDY-01: 服务端排序 4 页面菜单注册/修复 (值班池/排班/知识文章/网络模板)。**非阻断**：
 		// 菜单不可达只影响 4 个页面路由与排序入口，不影响登录/主链路；单页面失败不阻断其余页面。
 		if err := d.runAndRecord(228, "server_sort_menus", migrations.Migrate228ServerSortMenus); err != nil {
@@ -1373,14 +1363,6 @@ func (d *Database) AutoMigrate() error {
 		if err := d.runAndRecord(247, "misc_rbac_f_type_seed", migrations.Migrate247MiscRbacFTypeSeed); err != nil {
 			applogger.Errorf("杂项 RBAC 权限种子迁移失败 (非阻断,留待下次启动): %v", err)
 		}
-		// sqlite 分支: 工单分类读权限载体 status=0 F 行（双方言迁移）。**非阻断**。
-		if err := d.runAndRecord(248, "category_list_perm", migrations.Migrate248CategoryListPerm); err != nil {
-			applogger.Errorf("工单分类读权限载体迁移失败 (非阻断,留待下次启动): %v", err)
-		}
-		// sqlite 分支: duty/pools 菜单状态归位（双方言迁移）。**非阻断**。
-		if err := d.runAndRecord(249, "duty_pools_menu_state", migrations.Migrate249DutyPoolsMenuState); err != nil {
-			applogger.Errorf("值班池菜单状态归位迁移失败 (非阻断,留待下次启动): %v", err)
-		}
 		// sqlite 分支: v1.51 TIDY-01 服务端排序 4 页面菜单注册/修复 (双方言迁移)。
 		if err := d.runAndRecord(228, "server_sort_menus", migrations.Migrate228ServerSortMenus); err != nil {
 			applogger.Errorf("服务端排序 4 页面菜单迁移失败 (非阻断,留待下次启动): %v", err)
@@ -1468,10 +1450,11 @@ func (d *Database) AutoMigrate() error {
 	return nil
 }
 
-// runMenuConsolidationMigrations 注册 241/242/243 三个菜单收敛迁移。
-// 系统设置页合并 / 同步漂移告警并入 / 低密度页 Tab 化均属「前端已完成、菜单侧失败
-// 只影响侧边栏入口」的非阻断档，与 240 的调用写法保持一致；PG 与 sqlite 分支
-// 共用此方法，避免两处重复 6 行注册（GOV-03 diff gate 的行覆盖由单测直接驱动）。
+// runMenuConsolidationMigrations 注册 241/242/243/248/249 五个菜单收敛迁移。
+// 系统设置页合并 / 同步漂移告警并入 / 低密度页 Tab 化 / 工单分类读权限载体 /
+// duty/pools 状态归位均属「前端已完成、菜单侧失败只影响侧边栏入口」的非阻断档，
+// 与 240 的调用写法保持一致；PG 与 sqlite 分支共用此方法，避免两处重复注册
+// （GOV-03 diff gate 的行覆盖由 database_menu_migrations_test.go 直接驱动）。
 func (d *Database) runMenuConsolidationMigrations() {
 	if err := d.runAndRecord(241, "settings_consolidate_menus", migrations.Migrate241SettingsConsolidateMenus); err != nil {
 		applogger.Errorf("系统设置页合并迁移失败 (非阻断,留待下次启动): %v", err)
@@ -1481,6 +1464,16 @@ func (d *Database) runMenuConsolidationMigrations() {
 	}
 	if err := d.runAndRecord(243, "low_density_menus", migrations.Migrate243LowDensityMenus); err != nil {
 		applogger.Errorf("低密度页面菜单收敛失败 (非阻断,留待下次启动): %v", err)
+	}
+	// 248：补 ops:workorder:category:list 的 status=0 F 授权载体（工单分类 Tab 并入
+	// 工单管理页后仍依赖 /workorder/categories/* 读接口，缺载体非超管恒 403）。
+	if err := d.runAndRecord(248, "category_list_perm", migrations.Migrate248CategoryListPerm); err != nil {
+		applogger.Errorf("工单分类读权限载体迁移失败 (非阻断,留待下次启动): %v", err)
+	}
+	// 249：duty/pools 所有未软删 C 行归位 visible=0/status=1，消除 228 历史激活
+	// 与存量重复行造成的「独立页 + Tab」双入口与侧边栏重复项。
+	if err := d.runAndRecord(249, "duty_pools_menu_state", migrations.Migrate249DutyPoolsMenuState); err != nil {
+		applogger.Errorf("值班池菜单状态归位迁移失败 (非阻断,留待下次启动): %v", err)
 	}
 }
 
