@@ -1,0 +1,635 @@
+{
+  "$comment": "task-5 存量漂移豁免清单（check-permission-codes.mjs 全量对账 + 路由挂载检查）。schema：每条必须 code / reason 非空 / grandfathered===true，脚本强制校验、缺字段即 exit 1。豁免仅限存量历史漂移，新代码不允许登记；task-3 granularity 整改与权限码回补 phase 落地后逐条清理。",
+  "exemptions": [
+    {
+      "code": "asset:reconciliation:dashboard",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:exception:create",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:exception:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:exception:test",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:exception:update",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:export",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:fix:accept",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:fix:apply",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:fix:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:fix:reject",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:fix:rollback",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:fix:stats",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "asset:reconciliation:markResolved",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：asset:reconciliation 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "network:mac:query",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：network:mac 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "network:port:query",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：network:port 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "network:port:write",
+      "reason": "存量漂移（TS 声明缺失）：network:port 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:ad:computer:detail",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:ad 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:ad:computer:detail（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:ad 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:ad:computer:view",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:ad 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:ad:log:view",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:ad 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:ad:ou:view",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:ad 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:config:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:holiday:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:holiday:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:holiday:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:holiday:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:my:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:pool:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:pool:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:pool:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:pool:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:schedule:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:schedule:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:schedule:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:duty:schedule:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:duty 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:article:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:article:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:article:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:article:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:article:publish",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:article:view",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:category:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:category:add（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:knowledge 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:category:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:category:delete（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:knowledge 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:category:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:category:edit（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:knowledge 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:category:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:category:list（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:knowledge 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:convert",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:tag:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:tag:add（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:knowledge 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:tag:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:tag:delete（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:knowledge 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:tag:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:tag:edit（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:knowledge 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:tag:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:knowledge 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:knowledge:tag:list（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:knowledge 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:add（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:category:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:category:add（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:category:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:category:delete（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:category:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:category:edit（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:category:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:delete（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:edit（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:periodic:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:periodic:add（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:periodic:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:periodic:delete（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:periodic:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:periodic:edit（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：ops:workorder 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "ops:workorder:periodic:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：ops:workorder 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:apikey:add",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:apikey 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:apikey:edit",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:apikey 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:apikey:list",
+      "reason": "存量漂移（TS 声明缺失）：system:apikey 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:apikey:remove",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:apikey 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:backup:remove",
+      "reason": "存量漂移（TS声明）：system:backup 域历史接线不完整，TS声明 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:config:add",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:config 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:config:edit",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:config 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:config:list",
+      "reason": "存量漂移（TS 声明缺失）：system:config 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:config:remove",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:config 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:config:view",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:config 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:dict:add",
+      "reason": "存量漂移（TS 声明缺失）：system:dict 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:dict:edit",
+      "reason": "存量漂移（TS 声明缺失）：system:dict 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:dict:list",
+      "reason": "存量漂移（TS 声明缺失）：system:dict 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:dict:remove",
+      "reason": "存量漂移（TS 声明缺失）：system:dict 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:dict:view",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:dict 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:notice:add",
+      "reason": "存量漂移（TS 声明缺失）：system:notice 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:notice:edit",
+      "reason": "存量漂移（TS 声明缺失）：system:notice 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:notice:list",
+      "reason": "存量漂移（TS 声明缺失）：system:notice 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:notice:remove",
+      "reason": "存量漂移（TS 声明缺失）：system:notice 域历史接线不完整，TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "system:notice:view",
+      "reason": "存量漂移（TS 声明缺失 + 菜单种子缺失）：system:notice 域历史接线不完整，TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:account:create",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:account 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:account:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:account 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:account:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:account 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:account:reset",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:account 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:server 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:delete",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：vdi:server 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:delete（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：vdi:server 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:server 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失 + 菜单种子缺失）：vdi:server 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) / sys_menu.perms 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:list（不在",
+      "reason": "存量漂移（路由使用了该码但四处均无定义）：vdi:server 域历史接线不完整，路由未定义 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:query",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:server 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:remove",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:server 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:server:test",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:server 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:add",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:bind",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:config",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:console",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:edit",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:list",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:query",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:remove",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:rename",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:restart",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:start",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:stop",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    },
+    {
+      "code": "vdi:vm:sync",
+      "reason": "存量漂移（后端常量缺失 + TS 声明缺失）：vdi:vm 域历史接线不完整，后端常量(config.go) / TS声明(permissionCodes.ts) 均未声明或未定义。task-3 granularity 整改与权限码回补 phase 落地后须逐条清理本豁免。",
+      "grandfathered": true
+    }
+  ]
+}

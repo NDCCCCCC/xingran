@@ -54,11 +54,6 @@ func TestLookupResourceAction_Hit(t *testing.T) {
 		{"system:post", "edit", PostEdit},
 		{"system:post", "remove", PostRemove},
 		// system:workstation 5 项
-		{"system:workstation", "list", WorkstationList},
-		{"system:workstation", "view", WorkstationView},
-		{"system:workstation", "add", WorkstationAdd},
-		{"system:workstation", "edit", WorkstationEdit},
-		{"system:workstation", "remove", WorkstationRemove},
 		// system:dict 5 项
 		{"system:dict", "list", DictTypeList},
 		{"system:dict", "view", DictTypeView},
@@ -85,13 +80,12 @@ func TestLookupResourceAction_Hit(t *testing.T) {
 		{"system:notice", "remove", NoticeRemove},
 		// system:apikey 5 项
 		{"system:apikey", "list", APIKeyList},
-		{"system:apikey", "view", APIKeyView},
 		{"system:apikey", "add", APIKeyAdd},
 		{"system:apikey", "edit", APIKeyEdit},
 		{"system:apikey", "remove", APIKeyRemove},
 	}
 
-	require.Len(t, cases, 59, "D-02 应覆盖 11 个 resource 的全部 action 组合 = 8+6+5*9 = 59 项")
+	require.Len(t, cases, 53, "D-02 resource action 组合（task-4 清理后：8+6+5*8+4 = 53 项；workstation 域删除、apikey view 删除）")
 
 	for _, c := range cases {
 		t.Run(c.resource+":"+c.action, func(t *testing.T) {
@@ -120,7 +114,7 @@ func TestLookupResourceAction_UnmappedAction(t *testing.T) {
 }
 
 // TestMapKeys_AllSystemModules 断言返回的 resources 包含全部 D-02 资源名,
-// 共 11 项(含 system:apikey,这是 Phase 61 新增的 resource)。
+// 共 10 项（task-4 孤儿码清理后 system:workstation 域删除，system:apikey 保留）。
 func TestMapKeys_AllSystemModules(t *testing.T) {
 	resources, _ := MapKeys()
 	sort.Strings(resources)
@@ -135,9 +129,8 @@ func TestMapKeys_AllSystemModules(t *testing.T) {
 		"system:post",
 		"system:role",
 		"system:user",
-		"system:workstation",
 	}
-	assert.Equal(t, expected, resources, "MapKeys 必须返回 D-02 全部 11 个 resource")
+	assert.Equal(t, expected, resources, "MapKeys 必须返回 D-02 全部 10 个 resource")
 }
 
 // TestMapKeys_ActionVocabularyAligned 断言 actions 包含 D-04 词汇子集。

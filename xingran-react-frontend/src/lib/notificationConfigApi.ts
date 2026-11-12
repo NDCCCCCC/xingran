@@ -189,10 +189,9 @@ export const deleteAPINotificationConfig = (id: string) => {
   return del(`/system/settings/notification/api-notification-configs/${id}`);
 };
 
-// 测试API通知配置
-export const testAPINotificationConfig = (id: string) => {
-  return post(`/system/settings/notification/api-notification-configs/${id}/test`);
-};
+// FIX broken-links-batch2（task-6）：testAPINotificationConfig 已删除 —— 其端点
+// /api-notification-configs/:id/test 后端未实现（仅 email-configs/:id/test 存在），
+// 且调用方为 0（死代码）。testEmailConfig 有真实调用方，保留。
 
 // ==================== Cron表达式 ====================
 

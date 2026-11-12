@@ -27,6 +27,181 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `scripts/scan-routes.cjs`：路由扫描前先剥 Go 注释（字符串字面量保护、等长替换保行号），注释掉的废弃路由不再入库 `scripts/route-registry.json`（本次清理 workorder 5 条 + rpa 3 条等共 9 条注释假路由，总路由 724 → 715）
 
+## [v1.21] - 2026-10-22 — AD 双向同步队列化改造 (AD Two-way Sync Queue)
+
+### Added
+
+- AD 推送队列（`sys_ad_push_queue`）：AD 变更不再直推，用户更新/删除在业务事务内入队异步推送，靠部分唯一索引实现同对象合并语义，队列写失败即整体回滚、不留残留
+- 队列排水执行器（ADPushDrainer）：重试退避曲线、六状态跃迁状态机、按 AD DN 分组推送（每组一次账号池故障切换），并由 cron 定时任务常态化执行
+- 全量同步末尾对 AD 端已消失的用户/OU/计算机按类别自动软删除，带 LDAP 0 条拒绝 + 拟删超 50% 拒绝双闸门保护
+
+### Fixed
+
+- 软删除用户在登录或批量同步时被误恢复：登录路径与批量同步均增加 DN 身份校验，被拒项计入 Skipped 并绕开降级管道
+- 软删行唯一键冲突导致同步失败：OU/Group/User/Computer 四类 upsert 支持软删行复活
+- AD 组成员同步半途失败导致永久丢成员：成员重建包进事务、重放幂等
+
+## [v1.22] - 2026-10-27 — 前端公用组件整治 (Frontend Shared Component Governance)
+
+### Added
+
+- 列表契约组件四件套：PageTable（受控分页表格）、SearchForm（schema 驱动搜索区）、FormModal（防重复提交+脏检查）、RemoteSelect（防抖+竞态守卫），并以 system/post 双试点起步
+- 统一输入契约组件 AppInput / AppSelect（默认交互下沉、逃生口保留），eslint 双闸拦截裸组件
+- 危险操作唯一入口 ConfirmDelete（声明式 + helper + 批量按钮三形态），统一「删除后不可恢复」文案
+
+### Fixed
+
+- 51 个列表页分页口径错误（总条数被算成页数）全线修正；备份/发现页翻页断链接通恢复
+- 批量删除补二次确认、提交中禁止取消弹窗、假入口（假编辑/假下载/空 Tab）删除
+
+### Changed
+
+- 存量页面分批迁移到契约组件（discoveries/backups/devices/cache 等四页净减约千行）；状态色、日期格式、裸 hex 颜色全站收敛并建立豁免登记制
+
+## [v1.23] - 2026-10-28 — 前端契约全量收尾与遗留清偿 (Contract Rollout Completion)
+
+### Added
+
+- AppTextArea 契约组件落地并全量接入，文本输入框支持一键清空（用户主诉闭环）
+
+### Fixed
+
+- 分页状态恢复 bug（PageTable 挂载硬编码回写根因）实机复验通过
+- 7 项历史 debug 遗留全部终结（Cisco MAC 采集、双执行、历史查询归一化、scrapligo、空因诊断端点等）
+
+### Changed
+
+- 契约组件六波迁移 121 个文件：裸组件归零、豁免清零；lint 债大幅清偿（eslint no-explicit-any 958→0、warnings 1366→34）并上线预算断言门禁防回退
+
+## [v1.24] - 2026-10-28 — 视觉回归修复与遗留债务清偿 (Visual Regression Fixes)
+
+### Fixed
+
+- 全站文本输入框双重外框（用户主诉，309 个输入框受影响）根因修复，双框元素 3→0，错误态恢复品牌红
+- 行操作权限越权（只读角色调用删除接口返回 200 且真删数据）：新增严格权限匹配中间件 + 前端三态门控 + 权限码双向校验
+- F5 刷新后回退到 /dashboard 的问题（含回归测试红绿验证）
+
+### Changed
+
+- devices 页拆分重构（714→306 行）；eslint 存量 51 项清零并接入 CI 门禁
+
+## [v1.25] - 2026-10-30 — 全站权限治理与样式收敛 (Site-wide Permission Governance & Style Convergence)
+
+### Changed
+
+- 全站权限治理与样式收敛（10 个 phase / 41 个 plan），后续在 v1.51 作为基线同步收口
+
+## [v1.26] - 2026-08-22 — 后端测试覆盖率提升 (Backend Test Coverage Lift)
+
+### Added
+
+- PR diff 覆盖率 ≥80% 的 CI 门禁（GOV-03）
+
+### Changed
+
+- 后端整体测试覆盖率 25.9% → 55.5%：vdi、rpa、network/system/agent handler、operations、asset、pkg 工具包等多包批量补测
+
+## [v1.27] - 2026-08-29 — 测试与 CI 稳定性治理 (Test & CI Stability)
+
+### Fixed
+
+- 一批 CI flaky 测试根因治理（时区依赖、CPU 差值断言、sqlite 内存库关闭时序等）
+- knowledge 查询歧义列、权限测试断言等零散缺陷
+
+### Changed
+
+- 前端组件/页面测试多批次补齐（shared、network、system、workorder 等模块）；里程碑审计与文档债清偿（7 phases 收口）
+
+## [v1.29] - 2026-09-06 — 缺陷复查集中修复 (Recheck Fixes)
+
+### Fixed
+
+- 同设备恢复互斥原子化（部分唯一索引）；崩溃恢复收敛 pending 任务，防止设备永久死锁
+- 备份恢复端点权限收口（专用权限子组）；workstation 列表分页上限恢复（修复平面图/3D 视图静默截断）；多个 List 端点分页归一化
+- 删除 WebSocket handler 遗留读循环（消除双读者/双写者崩溃风险）；WS origin 校验收紧
+- reconciliation 排序死分支、工单吞错上抛、角色批删缓存失效、config_backup 留痕补全等零散缺陷
+
+## [v1.51] - 2026-11-01 — 端口写生产级操作体验与平台质量收口 (Production-grade Port Write)
+
+### Added
+
+- 端口写 dry-run 预览与命令预览 UI：下发前生成将执行的命令序列供人工确认
+- 批量端口写实时进度（SSE/WebSocket，清偿 v1.20 遗留的批量路径 BATCH-05）
+- critical 操作执行前抓取端口状态快照、失败时自动回滚恢复
+- 多用户并发写互斥（同端口同一时刻仅允许一个写会话）与设备不可达预检
+- 能力扩展：trunk/hybrid VLAN 修改、端口安全（port-security / sticky MAC / 静态绑定）、Cisco IOS-XE/XR 第 4 厂商支持、端口写审计明细可视化
+
+### Changed
+
+- 平台技术债同步清偿（addomain 等包测试补齐、覆盖率阈值恢复）
+
+## [v1.51.1] - 2026-11-02
+
+### Fixed
+
+- 锐捷 TrunkSetHybrid 命令渲染修正与 port_binding 参数顺序修复
+
+## [v1.51.2] - 2026-11-02
+
+### Changed
+
+- 前端目录由 `ruoyi-react-frontend` 改名为 `xingran-react-frontend`
+
+## [v1.52] - 2026-11-08 — 运维域数据权限统一收口 (Data Scope Unification)
+
+### Added
+
+- 数据权限单一真实源 ScopeProvider：可见部门集统一实现并注入运维域 26 处挂载；20 个读端点统一可见集过滤（缓存 key 增加 scope 维度），四域写端点越界显式 403、批量按可见集裁剪，Excel 导入逐行校验（PR #76 / milestone v1.52）
+- xingran-cli 支持 Excel 导入导出（8 类实体 × import/export/template）、Stdin 管道流式输入与 `-o` 多格式输出（table/csv/yaml）、命令树扩展至 12 模块 551 端点（PR #71 / #73 / #68）
+- 工位导入增强：表头别名识别、引用解析分批、状态联动保留（PR #69）
+
+### Changed
+
+- CI 耗时大幅缩短（后端 8m→4m，消除前端 15m 超时）（PR #74）
+
+### Fixed
+
+- xingran-cli `--web` 交互登录三处缺陷修复并支持自定义 token 路径（PR #70）
+- 工位导入跳过引用关联的问题修复（PR #75）
+
+> 注：本段除 PR #76（v1.52 里程碑主体）外，还并入 PR #67~#75（2026-11-03 至 2026-11-07 合并、无独立 tag 的提交）。（含至 2026-11-07 的合并）
+
+## [v1.53] - 2026-11-08 — 开放项全量清偿 (Open Items Clearout)
+
+### Fixed
+
+- AD push 队列补 enable 方向与身份校验/双向压制，全量同步增加指数退避节流，常态化同步漂移告警服务
+- 用户导出、工单评价端点接通前端入口；权限码 seed 修复五个读权限码恒 403 的问题
+- 设备发现结果补持久化查询链路；rpa-worker 双副本去 browser stub 并修复前端副本基线编译
+- 值班轮换排序双路径对齐、3 厂商 × 3 参数端口物理参数写闭环、对账物化视图 30s 超时配置化、登录加密 benchmark 空桩补国密实测
+- 从 git 历史重建 5 份缺失 UAT 清单并建立 79 条人工验证统一跟踪表
+
+### Changed
+
+- 清理 Swagger 死文件与生成脚本产物路径收敛；全仓临时清单权威引用清理并归档
+
+## [v1.54] - 2026-11-09 — 真实代码缺口清偿 (Real Code Gap Fixes)
+
+### Added
+
+- 同步漂移告警通道收口：后端 5 个端点（状态/日志/配置/更新/触发）+ migration 238 菜单权限，前端菜单驱动告警页面（状态卡/日志/配置/立即检测/WS 实时）
+- 端口写物理参数收口：型号级能力矩阵（speed/duplex/mtu，含 Cisco/Maipu 显式不支持）、批量物理参数接入、前端 18 种写动作与证据等级徽标
+
+### Fixed
+
+- 发现设备导入从空实现改为真实导入：按 IP 去重后单事务批量写入网络设备表
+- 同步漂移告警改走通知发布链路（修复铃铛收不到）+ WS 全员广播 + 通用 Webhook（凭证脱敏）
+
+## [v1.55] - 2026-11-09 — LOCKED 残余根治 (Locked Residual Root-cause Fixes)
+
+### Fixed
+
+- 数据权限侧信道根治：响应删除规模字段、越界行静默跳过，新增差分攻击测试（N 变化响应逐字节相等）；统一 ScopedDB 读链强制数据权限过滤
+- rooms/photos 数据权限「连挂都没挂」的端点补齐挂载；写端点越界几何保存防误删
+- 数据库方言机制重构：删除 `RightCast` 字符串方言改语义枚举，两处 raw CTE 收敛为唯一共享合并实现
+- 对账缓存失效改广播模式（写后立即一致，修复 `invalidateCache` 空函数）；`pbkdf2SM3` 增加输入校验与黄金向量测试
+- operlog e2e 静态门禁 Go 单测化（原 shell 静态段从未真正生效的缺口收口）
+
 ## [v1.20.1] - 2026-07-09 — 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)
 
 ### Added

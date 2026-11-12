@@ -28,6 +28,8 @@ import { batchExport } from "@/lib/api/networkApi";
 import { useTableManager } from "@/hooks/useTableManager";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { handleApiError } from "@/utils/errorHandler";
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { useState, useEffect, useMemo } from "react";
 import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
@@ -54,6 +56,11 @@ const MACAddressPage: FC = () => {
   const breakpoint = useBreakpoint();
   const isMobile = !!breakpoint.xs;
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // RBAC 门控（task-4：mac 组接线，后端 batch-delete strict(network:mac:remove)）：
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permMacRemove = permGate.decide(PERMISSION_CODES.networkMac.remove);
 
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
 
@@ -491,16 +498,18 @@ const MACAddressPage: FC = () => {
                 current={paginationProps.current}
                 pageSize={paginationProps.pageSize}
               />
-              <Button
-                aria-label="批量删除"
-                title="批量删除"
-                icon={<DeleteOutlined />}
-                onClick={handleBatchDelete}
-                disabled={selectedRowKeys.length === 0}
-                style={{ color: "var(--theme-error)" }}
-              >
-                批量删除 ({selectedRowKeys.length})
-              </Button>
+              {permMacRemove.visible && (
+                <Button
+                  aria-label="批量删除"
+                  title="批量删除"
+                  icon={<DeleteOutlined />}
+                  onClick={handleBatchDelete}
+                  disabled={selectedRowKeys.length === 0 || permMacRemove.disabled}
+                  style={{ color: "var(--theme-error)" }}
+                >
+                  批量删除 ({selectedRowKeys.length})
+                </Button>
+              )}
             </Space>
             {/* 批量导出 Modal */}
 

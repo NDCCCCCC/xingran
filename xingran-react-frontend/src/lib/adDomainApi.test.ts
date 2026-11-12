@@ -18,15 +18,12 @@ vi.mock("./api", () => ({
 }));
 
 import {
-  addADGroupMember,
   batchSyncADUsersDirect,
   createADConfig,
   createADServiceAccount,
-  createMapping,
   createOUGroupMapping,
   deleteADConfig,
   deleteADServiceAccount,
-  deleteMapping,
   deleteOUGroupMapping,
   disableADServiceAccount,
   disableADUser,
@@ -47,14 +44,11 @@ import {
   getADUserIds,
   getADUserList,
   getDeptOUMismatchList,
-  getMapping,
-  getMappingList,
   getOUDeptMapping,
   getOUGroupMappings,
   getOUGroupMappingsByOU,
   listADServiceAccounts,
   moveADUser,
-  removeADGroupMember,
   syncADData,
   syncADGroups,
   syncADSingleGroup,
@@ -64,7 +58,6 @@ import {
   updateADGroup,
   updateADServiceAccount,
   updateADUser,
-  updateMapping,
   updateOUDeptMapping,
   updateOUGroupMapping,
 } from "./adDomainApi";
@@ -168,24 +161,15 @@ describe("adDomainApi — 用户组", () => {
     });
   });
 
-  it("成员管理:getADGroupMembers(默认分页)/addADGroupMember/removeADGroupMember", async () => {
+  it("成员查询:getADGroupMembers(默认分页)", async () => {
     mockPost.mockResolvedValue(OK);
     await getADGroupMembers("g1", "c1");
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/ad-domain/groups/g1/members", {
+    expect(mockPost).toHaveBeenCalledWith("/ad-domain/groups/g1/members", {
       configId: "c1",
       current: 1,
       pageSize: 10,
     });
-    await addADGroupMember("g1", "c1", "CN=u1");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/ad-domain/groups/g1/members/add", {
-      configId: "c1",
-      userDn: "CN=u1",
-    });
-    await removeADGroupMember("g1", "c1", "CN=u1");
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/ad-domain/groups/g1/members/remove", {
-      configId: "c1",
-      userDn: "CN=u1",
-    });
+    // FIX broken-links-batch2（task-6）：add/removeADGroupMember 已下线（后端未实现）。
   });
 
   it("组同步:syncADGroups / syncADSingleGroup / getADGroupSyncStatus", async () => {
@@ -267,44 +251,6 @@ describe("adDomainApi — 用户与电脑", () => {
       configId: "c1",
       computerDn: "CN=PC1",
     });
-  });
-});
-
-describe("adDomainApi — 部门组映射(legacy)", () => {
-  beforeEach(() => {
-    mockGet.mockReset();
-    mockPost.mockReset();
-  });
-
-  it("getMappingList 注入默认分页;getMapping GET /:id", async () => {
-    mockPost.mockResolvedValueOnce(OK);
-    mockGet.mockResolvedValueOnce(OK);
-    await getMappingList({ adConfigId: "c1" });
-    expect(mockPost).toHaveBeenCalledWith("/ad-domain/mappings/list", {
-      adConfigId: "c1",
-      current: 1,
-      pageSize: 10,
-    });
-    await getMapping("m1");
-    expect(mockGet).toHaveBeenCalledWith("/ad-domain/mappings/m1");
-  });
-
-  it("createMapping POST 根端点;updateMapping POST /:id/update", async () => {
-    mockPost.mockResolvedValue(OK);
-    const create = { deptId: "d1", adGroupId: "g1", adConfigId: "c1" };
-    await createMapping(create);
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/ad-domain/mappings", create);
-    await updateMapping("m1", { syncEnabled: false });
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/ad-domain/mappings/m1/update", {
-      syncEnabled: false,
-    });
-  });
-
-  it("deleteMapping POST /:id/delete（URL 历史笔误 '}' 随 94-03 工厂化委托修复,原必然 404）", async () => {
-    mockPost.mockReset();
-    mockPost.mockResolvedValueOnce(OK);
-    await deleteMapping("m1");
-    expect(mockPost).toHaveBeenCalledWith("/ad-domain/mappings/m1/delete", {});
   });
 });
 

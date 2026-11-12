@@ -76,10 +76,26 @@ func mountCaptchaRouter8003(t *testing.T, c *core.Core) *gin.Engine {
 }
 
 // mountCaptchaBackgroundRouter8003 真 SetupCaptchaBackgroundRouter 装配。
+//
+// task-4 后 SetupCaptchaBackgroundRouter 挂端点级 RequirePermissions/RequireStrict，
+// 请求需携带权限上下文：本 helper 注入测试 user_id 并在测试 DB 播种 role_key='admin'
+// 超管（pkg/middleware isSuperAdmin 直通），用例语义（handler 行为）不受影响。
 func mountCaptchaBackgroundRouter8003(t *testing.T, c *core.Core) *gin.Engine {
 	t.Helper()
+	require.NoError(t, c.DB.GetDB().AutoMigrate(&models.Role{}, &models.UserRole{}))
+	testUserID := "capbg-8003-admin"
+	adminRole := models.Role{RoleKey: "admin", RoleName: "超管(8003测试)"}
+	require.NoError(t, c.DB.GetDB().Where(models.Role{RoleKey: "admin"}).
+		FirstOrCreate(&adminRole).Error)
+	require.NoError(t, c.DB.GetDB().Where(models.UserRole{UserID: testUserID, RoleID: adminRole.ID}).
+		FirstOrCreate(&models.UserRole{UserID: testUserID, RoleID: adminRole.ID}).Error)
+
 	router := gin.New()
 	group := router.Group("/api/v1/system/captcha-background")
+	group.Use(func(ctx *gin.Context) {
+		ctx.Set("user_id", testUserID)
+		ctx.Next()
+	})
 	SetupCaptchaBackgroundRouter(group, c)
 	return router
 }

@@ -19,6 +19,8 @@ import type {
 import * as captchaService from "@/services/captcha";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 
 // 难度级别枚举（形态分类器产物：children <Option> → options）
@@ -98,6 +100,13 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
+
+  // RBAC 门控（task-4：captchaBackground 码孤儿转正，后端端点级 strict 单码）：
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permCbAdd = permGate.decide(PERMISSION_CODES.systemCaptchaBackground.add);
+  const permCbEdit = permGate.decide(PERMISSION_CODES.systemCaptchaBackground.edit);
+  const permCbRemove = permGate.decide(PERMISSION_CODES.systemCaptchaBackground.remove);
 
   // 使用全局分页 hook（list API 契约不变）
   const { paginationProps, setCurrent, setTotal } = usePagination();
@@ -365,16 +374,25 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             />
           </Space>
           <Space>
-            <Button icon={<PictureOutlined />} onClick={handlePreload}>
-              预加载缓存
-            </Button>
-            <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              onClick={() => setUploadModalVisible(true)}
-            >
-              上传背景图
-            </Button>
+            {permCbEdit.visible && (
+              <Button
+                icon={<PictureOutlined />}
+                onClick={handlePreload}
+                disabled={permCbEdit.disabled}
+              >
+                预加载缓存
+              </Button>
+            )}
+            {permCbAdd.visible && (
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                disabled={permCbAdd.disabled}
+                onClick={() => setUploadModalVisible(true)}
+              >
+                上传背景图
+              </Button>
+            )}
           </Space>
         </div>
       </Card>
@@ -424,25 +442,41 @@ const CaptchaBackgroundSettingsPage: FC = () => {
                 </div>
                 {/* 卡脚行 2：文字链接操作（启停文案 = 当前 status 取反） */}
                 <div className="xr-row-ops xr-captcha-card-ops" style={{ padding: "0 8px 8px" }}>
-                  <Button type="link" size="small" onClick={() => handleToggle(record.id)}>
-                    {record.status === 1 ? "禁用" : "启用"}
-                  </Button>
-                  <Button type="link" size="small" onClick={() => openEditModal(record)}>
-                    编辑
-                  </Button>
-                  <Button
-                    type="link"
-                    size="small"
-                    className="xr-op-danger"
-                    onClick={() => {
-                      confirmDelete({
-                        target: `验证码背景 ${record.fileName}`,
-                        onDelete: () => handleDelete(record.id),
-                      });
-                    }}
-                  >
-                    删除
-                  </Button>
+                  {permCbEdit.visible && (
+                    <Button
+                      type="link"
+                      size="small"
+                      disabled={permCbEdit.disabled}
+                      onClick={() => handleToggle(record.id)}
+                    >
+                      {record.status === 1 ? "禁用" : "启用"}
+                    </Button>
+                  )}
+                  {permCbEdit.visible && (
+                    <Button
+                      type="link"
+                      size="small"
+                      disabled={permCbEdit.disabled}
+                      onClick={() => openEditModal(record)}
+                    >
+                      编辑
+                    </Button>
+                  )}
+                  {permCbRemove.visible && (
+                    <Button
+                      type="link"
+                      size="small"
+                      className="xr-op-danger"
+                      onClick={() => {
+                        confirmDelete({
+                          target: `验证码背景 ${record.fileName}`,
+                          onDelete: () => handleDelete(record.id),
+                        });
+                      }}
+                    >
+                      删除
+                    </Button>
+                  )}
                 </div>
               </div>
             ))

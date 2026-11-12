@@ -19,8 +19,8 @@ import (
 //
 // Phase 44 R3 / Plan 44-02 Task 3: 加 baselineSvc 字段(降噪基线 Snapshot/Compare)。
 type ReconciliationExceptionHandler struct {
-	service    asset.ReconciliationExceptionService
-	core       *core.Core
+	service     asset.ReconciliationExceptionService
+	core        *core.Core
 	baselineSvc asset.ReconciliationBaselineService
 }
 
@@ -118,6 +118,7 @@ func (h *ReconciliationExceptionHandler) GetRuleByID(c *gin.Context) {
 //  2. service.Create 失败(含 ValidateCIDR/Actions/SeverityOverride/Reason) → 500
 //  3. success path 末尾 operlog.Record(OperTypeCreate) → 写 sys_oper_log
 //  4. response.Success(rule)
+//
 // @Summary 创建例外规则
 // @Description 创建新的资产对账例外规则（校验 CIDR / Actions / Severity / Reason）
 // @Tags 资产管理
@@ -153,6 +154,7 @@ func (h *ReconciliationExceptionHandler) CreateRule(c *gin.Context) {
 //  1. URL 参数 :id + body(UpdateExceptionRuleRequest)
 //  2. service.Update 失败(含校验 / 不存在) → 500
 //  3. success path 末尾 operlog.Record(OperTypeUpdate)
+//
 // @Summary 更新例外规则
 // @Description 按 ID 更新资产对账例外规则
 // @Tags 资产管理
@@ -194,6 +196,7 @@ func (h *ReconciliationExceptionHandler) UpdateRule(c *gin.Context) {
 //  1. URL 参数 :id
 //  2. service.Delete 失败(规则不存在) → 500
 //  3. success path 末尾 operlog.Record(OperTypeDelete)
+//
 // @Summary 删除例外规则
 // @Description 软删除指定例外规则
 // @Tags 资产管理
@@ -279,6 +282,7 @@ func (h *ReconciliationExceptionHandler) TestRule(c *gin.Context) {
 //  1. baselineSvc.Snapshot 失败 → 500
 //  2. success path 末尾 operlog.Record(OperTypeUpdate) → 写 sys_oper_log
 //  3. response.Success(snapshot)
+//
 // @Summary 记录降噪基线
 // @Description 将当前对账异常计数记录为降噪基线（覆盖现有 baseline，R3 部署前必须调用）
 // @Tags 资产管理
@@ -312,6 +316,7 @@ func (h *ReconciliationExceptionHandler) SnapshotBaseline(c *gin.Context) {
 //  1. baselineSvc.Compare 失败(含 "未找到基线") → 400(前端依赖此状态码显示引导提示)
 //  2. 其他 service 失败 → 500
 //  3. success → response.Success(result)
+//
 // @Summary 对比降噪基线
 // @Description 对比当前异常计数与基线，返回下降百分比（无基线时返回 400）
 // @Tags 资产管理
@@ -355,6 +360,7 @@ func (h *ReconciliationExceptionHandler) CompareBaseline(c *gin.Context) {
 //  2. service.ImportFromExcel 调 excel_service.ImportData 写入 + 后处理 scope_id + TEXT[]
 //  3. success path 末尾 operlog.Record(OperTypeImport) → 写 sys_oper_log
 //  4. response.Success(result)
+//
 // @Summary Excel 导入例外规则
 // @Description 上传 Excel 文件批量导入例外规则
 // @Tags 资产管理

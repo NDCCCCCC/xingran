@@ -10,9 +10,9 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // ModuleReconciliation operlog 模块名常量 (D-16)
@@ -136,6 +136,7 @@ func (h *ReconciliationHandler) GetExceptionByID(c *gin.Context) {
 // 与其他 resolve 模式的区别:
 //   - 不联动 workorder 关闭(workorder 单独在 workorder UI 关闭,D-A4-04 锁定)
 //   - 不触发重检(7d 静默期已兜底,人工重检反而打破静默设计)
+//
 // @Summary 人工解决对账异常
 // @Description 人工解决指定对账异常（可附处理说明，不联动工单/不触发重检）
 // @Tags 资产管理
@@ -285,8 +286,8 @@ func (h *ReconciliationHandler) GetByWorkstation(c *gin.Context) {
 		// 静默降级:返回结构保留但 Assets 清空,前端 HealthBadge 会渲染 "-"
 		result.Assets = []asset.AssetHealthItem{}
 		result.HealthScore = asset.HealthScore{
-			Total:    0,
-			Trend:    []asset.TrendPoint{},
+			Total: 0,
+			Trend: []asset.TrendPoint{},
 		}
 	}
 

@@ -78,9 +78,20 @@ const exemptionsFile = path.join(scriptDir, "gating-exemptions.json");
 //   两个旧路由兼容薄壳页（无写入口，门控由转发目标 manager-sync.tsx 承担），
 //   按 non-route-page 豁免登记。豁免 51 → 47；恒等式以 EXPECTED_PAGE_COUNT=74
 //   重新成立（已门控 27 + 豁免 47 = 74）。
-const EXPECTED_PAGE_COUNT = 74;
+const EXPECTED_PAGE_COUNT = 73;
 /** 口径断言：N/A 豁免页数（增减须同批改本常量并在 86-STATE.md 说明理由） */
-const EXPECTED_EXEMPTION_COUNT = 47;
+// monitor RBAC 接线（2026-11-11）：monitor/cache、monitor/job、monitor/logs 三页
+// 铺开权限门控（PERMISSION_CODES.monitor* 区块落地）后移出豁免清单，豁免 47 → 44；
+// 同批移除悬空豁免 src/pages/ad/SyncMonitor（页面目录已删除）44 → 43；
+// 恒等式以 EXPECTED_PAGE_COUNT=73 重新成立（已门控 30 + 豁免 43 = 73）。
+// rpa RBAC 接线（2026-11-11 task-2）：operations/rpa/tasks 页铺开
+// PERMISSION_CODES.rpaTask 门控（新增/执行/编辑/删除），已门控 30 → 31；
+// 同批从 gating-exemptions.json 移除该页（原豁免理由「rpa 区块未声明」已消失），
+// 豁免 43 → 42；恒等式以 EXPECTED_PAGE_COUNT=73 重新成立（已门控 31 + 豁免 42 = 73）。
+// 杂项 RBAC（2026-11-12 task-4）：network/mac 页铺开 networkMac.remove 门控、
+// network/mac/history 页旧字面量 network:mac:export 收口到 PERMISSION_CODES.networkMac.query，
+// 两页移出豁免清单，豁免 42 → 40；恒等式重成立（已门控 33 + 豁免 40 = 73）。
+const EXPECTED_EXEMPTION_COUNT = 40;
 /** 豁免分类白名单 */
 const EXEMPTION_CATEGORIES = [
   "no-permission-code",

@@ -24,13 +24,13 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 

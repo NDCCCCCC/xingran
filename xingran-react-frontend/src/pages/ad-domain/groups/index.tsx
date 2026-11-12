@@ -16,21 +16,12 @@ import {
 } from "antd";
 import type { TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
-import {
-  ReloadOutlined,
-  PlusOutlined,
-  MinusCircleOutlined,
-  SyncOutlined,
-  InfoCircleOutlined,
-} from "@ant-design/icons";
+import { ReloadOutlined, SyncOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
   getADGroupList,
   getADGroupMembers,
-  addADGroupMember,
-  removeADGroupMember,
   updateADGroup,
-  getADUserList,
   getADOUTree,
   syncADGroups,
   getADGroupSyncStatus,
@@ -40,7 +31,6 @@ import {
   type ADGroupSyncStatus,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import { confirmDelete } from "@/components/shared/confirmDelete";
 // ⚠️ 直接引模块路径（不走 @/components/shared 桶文件）：桶文件 re-export 了
 // FloorPlanEditor → @react-three/fiber → three.js，引入它会让本页的动态 import
 // （既有测试的 `await import(...)`）显著变慢并触发超时（实测）。
@@ -87,8 +77,7 @@ const ADGroupPage: FC = () => {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ADGroup | null>(null);
 
-  const [addMemberVisible, setAddMemberVisible] = useState(false);
-  const [availableUsers, setAvailableUsers] = useState<ADUser[]>([]);
+  // availableUsers/addMemberVisible 已随「添加成员」弹窗下线（task-6）。
 
   const [searchGroupName, setSearchGroupName] = useState<string>();
   const [ouList, setOUList] = useState<Array<{ dn: string; name: string }>>([]);
@@ -295,44 +284,10 @@ const ADGroupPage: FC = () => {
     }
   };
 
-  const handleAddMember = async () => {
-    if (!selectedConfig) return;
-
-    try {
-      const res = await getADUserList({ configId: selectedConfig, current: 1, pageSize: 50 });
-      if (res.code === 0) {
-        setAvailableUsers(res.data?.list ?? []);
-      }
-      setAddMemberVisible(true);
-    } catch {
-      message.error("获取用户列表失败");
-    }
-  };
-
-  const handleAddMemberConfirm = async (userDn: string) => {
-    if (!selectedGroup || !selectedConfig) return;
-
-    try {
-      await addADGroupMember(selectedGroup.id, selectedConfig, userDn);
-      message.success("添加成员成功");
-      setAddMemberVisible(false);
-      fetchMembers(selectedGroup.groupDn);
-    } catch (error) {
-      message.error((error as Error).message || "添加成员失败");
-    }
-  };
-
-  const handleRemoveMember = async (userDn: string) => {
-    if (!selectedGroup || !selectedConfig) return;
-
-    try {
-      await removeADGroupMember(selectedGroup.id, selectedConfig, userDn);
-      message.success("移除成员成功");
-      fetchMembers(selectedGroup.groupDn);
-    } catch (error) {
-      message.error((error as Error).message || "移除成员失败");
-    }
-  };
+  // FIX broken-links-batch2（task-6）：handleAddMember / handleAddMemberConfirm /
+  // handleRemoveMember 及「添加成员」按钮、弹窗已下线 —— add/removeADGroupMember
+  // 指向 /groups/:id/members/add|remove，后端未实现，点击必然 404。成员查询列表保留。
+  // 恢复时参考 git 历史与 scripts/frontend-url-exemptions.json 对应条目。
 
   const groupColumns: ColumnsType<ADGroup> = [
     {
@@ -430,32 +385,10 @@ const ADGroupPage: FC = () => {
       dataIndex: "department",
       key: "department",
     },
-    {
-      title: "操作",
-      key: "action",
-      render: (_: unknown, record: ADUser) =>
-        // Phase 86 W4：移除成员是写入口（改组成员关系）→ ops:ad:group:edit；
-        // 触发器是裸 Button + confirmDelete → 门控点落在触发按钮本身
-        // （条件渲染 + disabled + 提示），confirmDelete.ts 零改动。
-        permGroupEdit.visible && (
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<MinusCircleOutlined />}
-            disabled={permGroupEdit.disabled}
-            title={permGroupEdit.hint}
-            onClick={() => {
-              confirmDelete({
-                target: `AD 成员 ${record.userDn}`,
-                onDelete: () => handleRemoveMember(record.userDn),
-              });
-            }}
-          >
-            移除
-          </Button>
-        ),
-    },
+    // FIX broken-links-batch2（task-6）：原「移除」成员按钮已下线 —— 其调用的
+    // removeADGroupMember 指向 /groups/:id/members/remove，后端未实现（仅 /members
+    // 查询存在），点击必然 404。恢复时参考 git 历史与 scripts/frontend-url-exemptions.json
+    // 本条目（若已清理则以 git log 为准）。
   ];
 
   return (
@@ -572,20 +505,8 @@ const ADGroupPage: FC = () => {
         onClose={() => setDrawerVisible(false)}
       >
         <Space orientation="vertical" style={{ width: "100%" }} size="medium">
-          <Space>
-            {/* Phase 86 W4：添加成员是写入口 → ops:ad:group:edit */}
-            {permGroupEdit.visible && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                disabled={permGroupEdit.disabled}
-                title={permGroupEdit.hint}
-                onClick={handleAddMember}
-              >
-                添加成员
-              </Button>
-            )}
-          </Space>
+          {/* FIX broken-links-batch2（task-6）：原「添加成员」按钮已下线（后端
+              /groups/:id/members/add 未实现），恢复时参考 git 历史。 */}
           <Table
             columns={memberColumns}
             dataSource={members}
@@ -627,45 +548,6 @@ const ADGroupPage: FC = () => {
             <AppTextArea rows={4} />
           </Form.Item>
         </Form>
-      </Modal>
-
-      {/* 添加成员弹窗 */}
-      <Modal
-        title="添加成员"
-        open={addMemberVisible}
-        onCancel={() => setAddMemberVisible(false)}
-        footer={null}
-        width={600}
-      >
-        <Table
-          columns={[
-            { title: "用户名", dataIndex: "username", key: "username" },
-            { title: "显示名", dataIndex: "displayName", key: "displayName" },
-            {
-              title: "操作",
-              key: "action",
-              render: (_: unknown, record: ADUser) =>
-                // Phase 86 W4：弹窗内「添加」是真正的写触发点（调 addADGroupMember）
-                // → ops:ad:group:edit。抽屉里的「添加成员」入口已门控，此处再门控一次
-                // （纵深防御：弹窗内的确认点不能只依赖触发按钮）。
-                permGroupEdit.visible && (
-                  <Button
-                    type="link"
-                    icon={<PlusOutlined />}
-                    disabled={permGroupEdit.disabled}
-                    title={permGroupEdit.hint}
-                    onClick={() => handleAddMemberConfirm(record.userDn)}
-                  >
-                    添加
-                  </Button>
-                ),
-            },
-          ]}
-          dataSource={availableUsers}
-          rowKey="id"
-          pagination={{ pageSize: 10 }}
-          size="small"
-        />
       </Modal>
     </Card>
   );

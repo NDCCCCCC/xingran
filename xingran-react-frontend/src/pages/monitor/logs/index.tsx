@@ -38,6 +38,8 @@ import type { BaseResponse, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { confirmDelete } from "@/components/shared";
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -100,6 +102,14 @@ const LogMonitor: React.FC = () => {
     keySuffix: "activeTab",
     defaultValue: "oper",
   });
+
+  // RBAC 门控（monitor 域权限码接线，后端清空端点 strict 单码）：
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permClearLogs =
+    activeTab === "login"
+      ? permGate.decide(PERMISSION_CODES.monitorLoginLog.remove)
+      : permGate.decide(PERMISSION_CODES.monitorOperLog.remove);
 
   // 服务端排序:field 对应后端 operLogAllowedSortFields 白名单 key
   const operSorterMetas = useMemo(
@@ -304,15 +314,18 @@ const LogMonitor: React.FC = () => {
                     >
                       刷新
                     </Button>
-                    <Button
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={handleClearLogs}
-                      aria-label="清空日志"
-                      title="清空日志"
-                    >
-                      清空
-                    </Button>
+                    {permClearLogs.visible && (
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={handleClearLogs}
+                        disabled={permClearLogs.disabled}
+                        aria-label="清空日志"
+                        title="清空日志"
+                      >
+                        清空
+                      </Button>
+                    )}
                   </Space>
                 </Col>
               </Row>
@@ -375,15 +388,18 @@ const LogMonitor: React.FC = () => {
                     >
                       刷新
                     </Button>
-                    <Button
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={handleClearLogs}
-                      aria-label="清空日志"
-                      title="清空日志"
-                    >
-                      清空
-                    </Button>
+                    {permClearLogs.visible && (
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={handleClearLogs}
+                        disabled={permClearLogs.disabled}
+                        aria-label="清空日志"
+                        title="清空日志"
+                      >
+                        清空
+                      </Button>
+                    )}
                   </Space>
                 </Col>
               </Row>

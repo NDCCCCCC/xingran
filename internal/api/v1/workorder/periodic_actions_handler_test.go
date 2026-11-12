@@ -277,6 +277,15 @@ func TestSetupPeriodicWorkOrderRouter_RegistersActionRoutes(t *testing.T) {
 	group := engine.Group("/workorder/periodic")
 
 	SetupPeriodicWorkOrderRouter(group, setupRouterTestCore(t, gormDB))
+	// task-3 G1 整改：模板主体写端点（""/:id/update/:id/delete）拆至 strict 写组，
+	// 注册形态对齐 router.go（各动作组为 /workorder/periodic/templates 兄弟组）。
+	writeCore := setupRouterTestCore(t, gormDB)
+	writeGroups := engine.Group("/workorder/periodic/templates")
+	SetupPeriodicWorkOrderWriteRouter(PeriodicWorkOrderWriteRouteGroups{
+		Add:    writeGroups.Group(""),
+		Edit:   writeGroups.Group(""),
+		Delete: writeGroups.Group(""),
+	}, writeCore)
 
 	registered := map[string]bool{}
 	for _, ri := range engine.Routes() {

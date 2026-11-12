@@ -80,14 +80,8 @@ var resourceActionMap = map[string]map[string]PermissionCode{
 		"remove": PermissionCode(PostRemove),
 	},
 
-	// 工位管理:5 个 action
-	"system:workstation": {
-		"list":   PermissionCode(WorkstationList),
-		"view":   PermissionCode(WorkstationView),
-		"add":    PermissionCode(WorkstationAdd),
-		"edit":   PermissionCode(WorkstationEdit),
-		"remove": PermissionCode(WorkstationRemove),
-	},
+	// 工位管理:已迁 ops:workstation:* 域
+	// [2026-11-12 task-4] 旧 system:workstation 映射块删除（端点已下线，见 endpoint-perm map 同步清理）
 
 	// 字典管理:5 个 action
 	"system:dict": {
@@ -125,10 +119,9 @@ var resourceActionMap = map[string]map[string]PermissionCode{
 		"remove": PermissionCode(NoticeRemove),
 	},
 
-	// API Key 管理:5 个 action
+	// API Key 管理:4 个 action（view 已删，task-4 孤儿码清理）
 	"system:apikey": {
 		"list":   PermissionCode(APIKeyList),
-		"view":   PermissionCode(APIKeyView),
 		"add":    PermissionCode(APIKeyAdd),
 		"edit":   PermissionCode(APIKeyEdit),
 		"remove": PermissionCode(APIKeyRemove),

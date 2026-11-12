@@ -23,6 +23,8 @@ interface GetJobColumnsParams {
   handleViewLogs: (record: JobInfo) => void;
   openModal: (record: JobInfo) => void;
   handleDelete: (record: JobInfo) => void;
+  /** RBAC：启停=编辑语义（monitor:job:edit），由调用方 useActionPermission 透传三态决策 */
+  canToggleStatus?: boolean;
   /** 服务端排序受控箭头（字段名对齐后端 jobAllowedSortFields） */
   getSortOrder: (field: string) => "ascend" | "descend" | null;
 }
@@ -35,6 +37,7 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
     openModal,
     handleDelete,
     getSortOrder,
+    canToggleStatus = true,
   } = params;
 
   return [
@@ -85,14 +88,18 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
       render: (status: number, record: JobInfo) => (
         <Space>
           {renderJobStatusTag(status)}
-          <Tooltip title={status === 0 ? "暂停任务" : "启动任务"}>
-            <Button
-              type="text"
-              size="small"
-              icon={status === 0 ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-              onClick={() => handleToggleStatus(record)}
-            />
-          </Tooltip>
+          {/* RBAC：启停=编辑语义（monitor:job:edit），canToggleStatus 由调用方三态门控透传；
+              未授权时隐藏按钮，后端对应端点仍有 strict 单码兜底 */}
+          {canToggleStatus && (
+            <Tooltip title={status === 0 ? "暂停任务" : "启动任务"}>
+              <Button
+                type="text"
+                size="small"
+                icon={status === 0 ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                onClick={() => handleToggleStatus(record)}
+              />
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -123,6 +130,8 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
             key: "execute",
             label: "立即执行",
             icon: <PlayCircleOutlined />,
+            // RBAC：后端 strict(monitor:job:run)
+            permission: "monitor:job:run",
             onClick: () => handleExecute(record),
           },
           {
@@ -135,6 +144,8 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
             key: "edit",
             label: "编辑",
             icon: <EditOutlined />,
+            // RBAC：后端 strict(monitor:job:edit)
+            permission: "monitor:job:edit",
             onClick: () => openModal(record),
           },
           {
@@ -142,6 +153,8 @@ export function getJobColumns(params: GetJobColumnsParams): ColumnsType<JobInfo>
             label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
+            // RBAC：后端 strict(monitor:job:remove)
+            permission: "monitor:job:remove",
             onClick: () => {
               confirmDelete({
                 target: `定时任务 ${record.jobName}`,

@@ -114,11 +114,11 @@ func newReconciliationHandler(svc assetSvc.ReconciliationService, c *core.Core) 
 // ============================================================================
 
 type mockReconciliationService struct {
-	ListExceptionsFunc    func(ctx context.Context, params *assetSvc.ExceptionListParams) (*base.PageResult, error)
-	GetByIDFunc           func(ctx context.Context, id string) (*models.SysDataReconciliation, error)
-	ResolveExceptionFunc  func(ctx context.Context, id, userID string, note *string) error
-	RefreshFunc           func(ctx context.Context) (int, int, int, int, error)
-	GetByWorkstationFunc  func(ctx context.Context, wsID, window string) (*assetSvc.ByWorkstationResponse, error)
+	ListExceptionsFunc   func(ctx context.Context, params *assetSvc.ExceptionListParams) (*base.PageResult, error)
+	GetByIDFunc          func(ctx context.Context, id string) (*models.SysDataReconciliation, error)
+	ResolveExceptionFunc func(ctx context.Context, id, userID string, note *string) error
+	RefreshFunc          func(ctx context.Context) (int, int, int, int, error)
+	GetByWorkstationFunc func(ctx context.Context, wsID, window string) (*assetSvc.ByWorkstationResponse, error)
 }
 
 func (m *mockReconciliationService) ListExceptions(ctx context.Context, params *assetSvc.ExceptionListParams) (*base.PageResult, error) {

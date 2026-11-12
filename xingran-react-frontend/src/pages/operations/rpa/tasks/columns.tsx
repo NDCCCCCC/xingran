@@ -13,12 +13,17 @@ export interface TaskColumnsParams {
   handleEdit: (record: Task) => void;
   handleDelete: (id: string) => void;
   handleExecute: (id: string, name: string) => void;
+  /** rpa RBAC 门控（migration_245 同源）：调用方组件内 decide 后传入，普通函数内不调 hook */
+  canExecute: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   /** 由 useServerSort 注入,返回字段当前排序方向 */
   getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
-  const { handleEdit, handleDelete, handleExecute, getSortOrder } = params;
+  const { handleEdit, handleDelete, handleExecute, getSortOrder, canExecute, canEdit, canDelete } =
+    params;
 
   return [
     {
@@ -85,24 +90,30 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
       fixed: "right",
       render: (_: unknown, record: Task) => {
         const actions = [
-          {
+          canExecute && {
             key: "execute",
             label: "执行",
             icon: <PlayCircleOutlined />,
             onClick: () => handleExecute(record.id, record.taskName || record.name || ""),
           },
-          {
+          canEdit && {
             key: "edit",
             label: "编辑",
             onClick: () => handleEdit(record),
           },
-          {
+          canDelete && {
             key: "delete",
             label: "删除",
             danger: true,
             onClick: () => handleDelete(record.id),
           },
-        ];
+        ].filter(Boolean) as {
+          key: string;
+          label: string;
+          danger?: boolean;
+          icon?: React.ReactNode;
+          onClick: () => void;
+        }[];
         return <ActionButtons actions={actions} />;
       },
     },

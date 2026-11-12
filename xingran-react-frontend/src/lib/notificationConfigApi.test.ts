@@ -28,7 +28,6 @@ import {
   getCommonCronExpressions,
   getEmailConfig,
   getEmailConfigList,
-  testAPINotificationConfig,
   testEmailConfig,
   updateAPINotificationConfig,
   updateEmailConfig,
@@ -117,11 +116,7 @@ describe("notificationConfigApi — API 通知配置", () => {
     expect(mockDel).toHaveBeenCalledWith(`${API_BASE}/a1`);
   });
 
-  it("testAPINotificationConfig POST /:id/test", async () => {
-    mockPost.mockResolvedValueOnce({ code: 0 });
-    await testAPINotificationConfig("a1");
-    expect(mockPost).toHaveBeenCalledWith(`${API_BASE}/a1/test`);
-  });
+  // FIX broken-links-batch2（task-6）：testAPINotificationConfig 用例已删除（后端无 test 端点、调用方 0）。
 });
 
 describe("notificationConfigApi — 常量与 cron", () => {

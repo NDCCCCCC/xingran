@@ -36,6 +36,8 @@ import { useFormModalForm } from "@/components/shared/hooks/useFormModalForm";
 import { handleApiError } from "@/utils/errorHandler";
 import { ErrorAlertWithRetry } from "@/components/shared";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { useActionPermission } from "@/components/shared/useActionPermission";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 
 // 导入提取的文件
 import type { CacheInfo, CacheMonitor } from "./types";
@@ -132,6 +134,10 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
 const CacheManager: FC = () => {
   const { message } = App.useApp();
   const [monitor, setMonitor] = useState<CacheMonitor | null>(null);
+  // RBAC 门控（monitor 域权限码接线，后端缓存写端点 strict(monitor:cache:clean)）：
+  // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
+  const permGate = useActionPermission();
+  const permCacheClean = permGate.decide(PERMISSION_CODES.monitorCache.clean);
   const [monitorError, setMonitorError] = useState<unknown>(null);
   const [operateModalVisible, setOperateModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
@@ -398,15 +404,18 @@ const CacheManager: FC = () => {
             >
               导出当前筛选结果
             </Button>
-            <Button
-              aria-label="清空全部缓存"
-              title="清空全部缓存"
-              icon={<DeleteOutlined />}
-              style={{ color: "var(--theme-error)" }}
-              onClick={handleClearAll}
-            >
-              清空
-            </Button>
+            {permCacheClean.visible && (
+              <Button
+                aria-label="清空全部缓存"
+                title="清空全部缓存"
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error)" }}
+                disabled={permCacheClean.disabled}
+                onClick={handleClearAll}
+              >
+                清空
+              </Button>
+            )}
           </Space>
         }
       >
