@@ -61,6 +61,14 @@ func Migrate248CategoryListPerm(db *gorm.DB) error {
 		log.Println("Migration 248: WARNING sys_menu 表不存在, 跳过 (非阻断)")
 		return nil
 	}
+	// 瘦库/残缺 sys_menu（缺 perms、menu_type 等列）不能静默降级：否则 runAndRecord
+	// 会把「什么都没做成」记成成功版本，下次启动不再重试，且错误被 continue 吞掉。
+	// 这里显式返回 error，交给调用方非阻断 WARN + 下次启动重试（与 241/242/243/249 同口径）。
+	for _, col := range []string{"perms", "menu_type", "component", "parent_id", "status"} {
+		if !db.Migrator().HasColumn(&models.Menu{}, col) {
+			return fmt.Errorf("migration 248 sys_menu 缺列 %s, 留待下次启动重试", col)
+		}
+	}
 
 	if len(categoryListPermFTypeSeedCodes) != len(categoryListPermSeeds) {
 		return fmt.Errorf("migration 248 致命漂移: F_TYPE 声明数(%d) != 种子表数(%d)",
