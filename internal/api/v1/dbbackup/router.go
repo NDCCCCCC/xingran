@@ -6,10 +6,14 @@
 package dbbackup
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/dbbackup"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // DBBackupWriteRouteGroups 全库备份**写操作**路由分组（85-03 RBAC-01 逐动作拆分）。
@@ -97,6 +101,50 @@ func NewDBBackupHandler(core *core.Core) *DBBackupHandler {
 	if core == nil {
 		return &DBBackupHandler{service: nil, core: nil}
 	}
+
+	// 备份计划凭据加密器（dbbackup.RegisterCredentialCipher）已在 core.Init 注册：
+	// core.Init 不依赖路由装配，定时任务 svc 与任意部署形态都可用；此处不再重复注册。
+
+	// 注册恢复收尾的进程内菜单/权限缓存清理钩子。
+	// 整库恢复替换 sys_user/sys_menu/sys_role 等鉴权表后，必须清掉缓存里的旧
+	// 菜单树/角色权限/用户详情/权限判定结果，否则恢复后仍按旧鉴权放行。
+	// 这里按缓存键前缀逐模式删除（core.Cache 自动补 "xingran:" 前缀，故用不带
+	// 前缀的 pattern），覆盖 system/cache_keys.go 中 menu/role/user/perm/dept/config
+	// 与 middleware 的严格权限缓存前缀。失败仅返回 error 由收尾处记日志、不阻断终态。
+	cache := core.Cache
+	dbbackup.RegisterRestoreCacheFlusher(func(ctx context.Context) error {
+		if cache == nil {
+			return fmt.Errorf("core.Cache 未初始化，无法清理恢复后缓存")
+		}
+		patterns := []string{
+			"menu:*", "role:*", "user:*", "dept:*", "post:*", "dict:*",
+			"config:*", "permission:*",
+			// "strict|" 是 pkg/middleware/permission.go strictCacheKeyPrefix 的真实键前缀
+			// （竖线分隔符，不是笔误），尾部 * 为 Redis glob 通配。
+			"strict|*", "cache:*",
+		}
+		var firstErr error
+		for _, pattern := range patterns {
+			keys, err := cache.Keys(ctx, pattern)
+			if err != nil {
+				if firstErr == nil {
+					firstErr = fmt.Errorf("查询缓存键 %q: %w", pattern, err)
+				}
+				applogger.Warnf("[全库备份] 恢复收尾查询缓存键 %q 失败: %v", pattern, err)
+				continue
+			}
+			if len(keys) == 0 {
+				continue
+			}
+			if err := cache.MDelete(ctx, keys...); err != nil {
+				if firstErr == nil {
+					firstErr = fmt.Errorf("删除缓存键 %q: %w", pattern, err)
+				}
+				applogger.Warnf("[全库备份] 恢复收尾删除缓存键 %q 失败: %v", pattern, err)
+			}
+		}
+		return firstErr
+	})
 
 	svc := dbbackup.NewService(core.GetDB(), dbCfg, nil, "")
 	return &DBBackupHandler{

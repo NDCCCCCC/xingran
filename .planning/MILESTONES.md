@@ -1,6 +1,17 @@
-> ℹ️ 本文件为各里程碑**收档时点快照**（含当时的 Known Gaps / deferred 表述），仅供追溯；当前状态以 `.planning/STATE.md` frontmatter、`.planning/ROADMAP.md` / `.planning/MILESTONES.md` 为准。例如本文 v1.24 段落「Known Gaps 转 v1.25 候选，用户裁定暂不立项」是当时记录，实际 v1.25 已全部立项并 SHIPPED（见 PROJECT.md:201）。
+> ℹ️ 除顶部「当前里程碑」段外，本文件为各里程碑**收档时点快照**（含当时的 Known Gaps / deferred 表述），仅供追溯；当前状态以 `.planning/STATE.md` frontmatter、`.planning/ROADMAP.md` / `.planning/MILESTONES.md` 为准。例如本文 v1.24 段落「Known Gaps 转 v1.25 候选，用户裁定暂不立项」是当时记录，实际 v1.25 已全部立项并 SHIPPED（见 PROJECT.md:201）。
 
 # Milestones
+
+## 当前里程碑：v1.56 候选（进行中 / 未正式立项）
+
+**Status:** v1.56 候选（进行中 / 未正式立项）· 口径来源 `CHANGELOG.md` `## [Unreleased] — v1.56 候选` + `.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md`（draft，未跑 `/gsd-new-milestone`）｜同步口径见 `.planning/STATE.md` frontmatter / `.planning/state.json` / `.planning/ROADMAP.md` 当前段。
+
+- **候选期内已落地代码（非收档）**：数据库全量备份导出/导入恢复（PR #83）、系统设置页收敛与低密度页面 Tab 化（PR #84）、菜单与权限迁移 241/242/243 + 补强 248/249、B 类 quick（261110-161 / f5g / jci）。
+- **SHIPPED 判定**：按 `.planning/notes/SHIPPED-DEFINITION.md` —— 代码绿（build/test/lint/门禁全过）+ 关键 UAT 通过 + 对外文档同步，三者齐备才允许标 SHIPPED；当前无真实环境 UAT 证据，只能标 `code-complete·verification-pending`，**本段不得写成 SHIPPED**。
+- **验证状态**：79 条人工验证跟踪表（`.planning/notes/261108-human-verification-tracker.md`）全部「已排期·待执行」，**0 勾选 / 0 已完成**；三桶排期与解锁路径见 `.planning/notes/UAT-EXECUTION-PLAN.md`，真机端口写 UAT（29 条现场真机债，tracker §六）排第一。本环境无生产 PG 写授权、无真机，只能排期不能执行。
+- **纪律**：以下 v1.55 及更早条目为**收档时点快照**（含当时 Known Gaps / deferred 表述），仅供追溯；不因本段口径统一而清空或改写。
+
+---
 
 ## v1.55 LOCKED 残余根治 (Shipped: 2026-11-09)
 

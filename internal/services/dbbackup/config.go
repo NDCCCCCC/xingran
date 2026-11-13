@@ -2,6 +2,7 @@ package dbbackup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,6 +15,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // 本文件负责备份计划的持久化（sys_config）与定时门控。
@@ -138,8 +140,26 @@ func normalizeStorageType(s string) StorageType {
 }
 
 // loadPlan 从 sys_config 读取完整备份计划（每 tick / 每次 GetPlan 都重读，
-// 保证改配置无需重启）。凭据字段只存在于返回的 Plan 中，绝不写日志。
+// 保证改配置无需重启）。
+//
+// 凭据字段（OSS accessKey/secretKey、FTP password）在 sys_config 中以 SM4 密文
+// 形式存放，这里逐字段解密后返回真实值供存储适配器使用；返回值只存在于内存中的
+// Plan，绝不写日志（日志/审计脱敏由 API 层与 operlog 承担）。
+// 解密失败不静默吞掉：明确报错，避免把密文串当凭据交给远端导致难排查的失败。
+// 配置页展示场景请用 loadPlanTolerant（降级不整体失败）。
 func loadPlan(ctx context.Context, db *gorm.DB) (*Plan, error) {
+	return loadPlanOpts(ctx, db, true)
+}
+
+// loadPlanTolerant GetPlan（备份配置页展示）专用降级读取：凭据解密失败（如
+// SM4_KEY 被更换、装配未完成）时记告警、相应字段置空串并返回计划主体，页面
+// 仍可查看/编辑非敏感配置；空串在出参上表现为「未配置」，绝不回吐密文。
+// 定时任务与 savePlan 回填必须用严格 loadPlan，不得换用本函数。
+func loadPlanTolerant(ctx context.Context, db *gorm.DB) (*Plan, error) {
+	return loadPlanOpts(ctx, db, false)
+}
+
+func loadPlanOpts(ctx context.Context, db *gorm.DB, strict bool) (*Plan, error) {
 	keys := []string{
 		cfgKeyEnabled, cfgKeyCron, cfgKeyRetention, cfgKeyStorage,
 		cfgKeyOSSEndpoint, cfgKeyOSSBucket, cfgKeyOSSAccessKey, cfgKeyOSSSecretKey, cfgKeyOSSUseSSL,
@@ -155,6 +175,24 @@ func loadPlan(ctx context.Context, db *gorm.DB) (*Plan, error) {
 		vals[k] = v
 	}
 
+	// 三个凭据字段：逐字段解密。字段集合与 savePlan 的加密字段必须一致，
+	// 否则会出现「写进去是密文、读出来还是密文」的错配。
+	// 解密失败时字段保持空串（绝不把密文串当真值交给调用方），错误收集后由
+	// 严格/降级两种模式分别决定整体失败还是置空返回。
+	var credErrs []error
+	accessKey, err := decryptCredential(vals[cfgKeyOSSAccessKey])
+	if err != nil {
+		credErrs = append(credErrs, fmt.Errorf("读取备份计划 OSS accessKey: %w", err))
+	}
+	secretKey, err := decryptCredential(vals[cfgKeyOSSSecretKey])
+	if err != nil {
+		credErrs = append(credErrs, fmt.Errorf("读取备份计划 OSS secretKey: %w", err))
+	}
+	ftpPassword, err := decryptCredential(vals[cfgKeyFTPPassword])
+	if err != nil {
+		credErrs = append(credErrs, fmt.Errorf("读取备份计划 FTP password: %w", err))
+	}
+
 	p := &Plan{
 		Enabled:   parseBool(vals[cfgKeyEnabled], false),
 		Cron:      strings.TrimSpace(vals[cfgKeyCron]),
@@ -163,15 +201,15 @@ func loadPlan(ctx context.Context, db *gorm.DB) (*Plan, error) {
 		OSS: OSSConfig{
 			Endpoint:  vals[cfgKeyOSSEndpoint],
 			Bucket:    vals[cfgKeyOSSBucket],
-			AccessKey: vals[cfgKeyOSSAccessKey],
-			SecretKey: vals[cfgKeyOSSSecretKey],
+			AccessKey: accessKey,
+			SecretKey: secretKey,
 			UseSSL:    parseBool(vals[cfgKeyOSSUseSSL], true),
 		},
 		FTP: FTPConfig{
 			Host:      vals[cfgKeyFTPHost],
 			Port:      parseIntDefault(vals[cfgKeyFTPPort], defaultFTPPort),
 			User:      vals[cfgKeyFTPUser],
-			Password:  vals[cfgKeyFTPPassword],
+			Password:  ftpPassword,
 			RemoteDir: vals[cfgKeyFTPRemoteDir],
 		},
 		SMB: SMBConfig{Path: vals[cfgKeySMBPath]},
@@ -182,11 +220,28 @@ func loadPlan(ctx context.Context, db *gorm.DB) (*Plan, error) {
 	if strings.TrimSpace(p.FTP.RemoteDir) == "" {
 		p.FTP.RemoteDir = defaultFTPDir
 	}
+
+	// 严格模式：任一凭据解密失败则整体失败（定时任务 / savePlan 回填路径，
+	// 避免拿半份计划执行远端上传或用空值覆盖真实凭据）。
+	if strict && len(credErrs) > 0 {
+		return nil, errors.Join(credErrs...)
+	}
+	// 降级模式：记告警后返回计划主体（解密失败的字段已为空串）。
+	for _, credErr := range credErrs {
+		applogger.Warnf("[全库备份] %v（展示降级：凭据字段置空，配置页仍可用）", credErr)
+	}
 	return p, nil
 }
 
 // savePlan 把完整计划写回 sys_config。operator 仅用于审计留痕（本层不写 operlog）。
-// 敏感凭据按字面写入 sys_config（不在 manifest / operlog 出现，由 handler 脱敏）。
+//
+// 敏感凭据（OSS accessKey/secretKey、FTP password）改为 **SM4 字段加密后落库**：
+// 绝不把明文或脱敏占位符写进 sys_config；不在 manifest / operlog 出现，
+// 由 handler 出参脱敏为 ******。
+//
+// 占位符兼容（双保险，API 层 handler.mergePlanMaskedSecrets 已做一次）：
+// 若调用方直接传了 "******" 或空串（用户未改凭据），这里再次读取当前计划中的真实
+// 凭据回填，确保「用户未改凭据时不能把占位符写成真值」，也绝不误清空已有凭据。
 func savePlan(ctx context.Context, db *gorm.DB, p *Plan, operator string) error {
 	if p == nil {
 		return fmt.Errorf("备份计划不能为 nil")
@@ -209,6 +264,58 @@ func savePlan(ctx context.Context, db *gorm.DB, p *Plan, operator string) error 
 		normalized.FTP.RemoteDir = defaultFTPDir
 	}
 
+	// 显式清空（__CLEAR__ 标记 → 空串落库 = 删除凭据）。清空后的空串在形态上
+	// 与「未改动的空串」无法区分，故用 cleared 集合记录清空意图，回填时跳过
+	// 这些字段，避免旧凭据被回填逻辑复活。
+	cleared := map[string]bool{}
+	if isCredentialClear(normalized.OSS.AccessKey) {
+		normalized.OSS.AccessKey = ""
+		cleared["ossAK"] = true
+	}
+	if isCredentialClear(normalized.OSS.SecretKey) {
+		normalized.OSS.SecretKey = ""
+		cleared["ossSK"] = true
+	}
+	if isCredentialClear(normalized.FTP.Password) {
+		normalized.FTP.Password = ""
+		cleared["ftpPwd"] = true
+	}
+
+	// 占位符/空串回填：只要有一个敏感字段表示「未改动」，就读取当前计划取真值。
+	// 注意读的是「解密后的真实凭据」，回填后再统一加密写回，不会出现二次加密。
+	if isCredentialUnchanged(normalized.OSS.AccessKey) ||
+		isCredentialUnchanged(normalized.OSS.SecretKey) ||
+		isCredentialUnchanged(normalized.FTP.Password) {
+		current, err := loadPlan(ctx, db)
+		if err != nil {
+			return fmt.Errorf("读取当前备份计划以回填未改动的凭据失败: %w", err)
+		}
+		if isCredentialUnchanged(normalized.OSS.AccessKey) && !cleared["ossAK"] {
+			normalized.OSS.AccessKey = current.OSS.AccessKey
+		}
+		if isCredentialUnchanged(normalized.OSS.SecretKey) && !cleared["ossSK"] {
+			normalized.OSS.SecretKey = current.OSS.SecretKey
+		}
+		if isCredentialUnchanged(normalized.FTP.Password) && !cleared["ftpPwd"] {
+			normalized.FTP.Password = current.FTP.Password
+		}
+	}
+
+	// 逐字段加密：写路径 fail-closed，cipher 未注册且有真实凭据时拒绝落库，
+	// 不把明文回退写进 sys_config。空串保持空串（未配置语义）。
+	encAccessKey, err := encryptCredential(normalized.OSS.AccessKey)
+	if err != nil {
+		return err
+	}
+	encSecretKey, err := encryptCredential(normalized.OSS.SecretKey)
+	if err != nil {
+		return err
+	}
+	encFTPPassword, err := encryptCredential(normalized.FTP.Password)
+	if err != nil {
+		return err
+	}
+
 	pairs := map[string]string{
 		cfgKeyEnabled:      strconv.FormatBool(normalized.Enabled),
 		cfgKeyCron:         normalized.Cron,
@@ -216,13 +323,13 @@ func savePlan(ctx context.Context, db *gorm.DB, p *Plan, operator string) error 
 		cfgKeyStorage:      string(normalized.Storage),
 		cfgKeyOSSEndpoint:  normalized.OSS.Endpoint,
 		cfgKeyOSSBucket:    normalized.OSS.Bucket,
-		cfgKeyOSSAccessKey: normalized.OSS.AccessKey,
-		cfgKeyOSSSecretKey: normalized.OSS.SecretKey,
+		cfgKeyOSSAccessKey: encAccessKey,
+		cfgKeyOSSSecretKey: encSecretKey,
 		cfgKeyOSSUseSSL:    strconv.FormatBool(normalized.OSS.UseSSL),
 		cfgKeyFTPHost:      normalized.FTP.Host,
 		cfgKeyFTPPort:      strconv.Itoa(normalized.FTP.Port),
 		cfgKeyFTPUser:      normalized.FTP.User,
-		cfgKeyFTPPassword:  normalized.FTP.Password,
+		cfgKeyFTPPassword:  encFTPPassword,
 		cfgKeyFTPRemoteDir: normalized.FTP.RemoteDir,
 		cfgKeySMBPath:      normalized.SMB.Path,
 	}

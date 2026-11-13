@@ -233,6 +233,16 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, 
 		})
 	})
 
+	// 只读版本出口（公开、无认证，与 /health 同级同权限面，不新增 RBAC 权限点）。
+	// 复用根级 engine 直接注册，挂在 /api/v1 之外，故不经过 JWT/权限/加解密中间件；
+	// 仅返回 version 一个字段，不含任何配置、密钥、运行时环境信息。
+	// 该出口与 /health 一样无认证，供部署流水线校验发布版本（curl /version）。
+	engine.GET("/version", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"version": Version,
+		})
+	})
+
 	// pprof 性能分析端点（仅调试/开发环境）
 	// 遵循 Go 最佳实践：在生产环境禁用 pprof
 	if cfg.Server.Mode != "release" {

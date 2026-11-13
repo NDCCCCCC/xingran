@@ -103,8 +103,20 @@ export default defineConfig(({ mode }) => {
   // 这样 CI/本地可用 `VITE_BASE=... npm run build` 直接覆盖，无需改动 .env 文件。
   const base = process.env.VITE_BASE || env.VITE_BASE || "/";
 
+  // 应用版本号注入：从构建时环境变量 / .env.<mode> 读取，不经 package.json
+  // （package.json version 固定 0.0.0，不参与版本口径）。
+  // process.env 优先（CI `APP_VERSION=v1.56.0 npm run build` 直接覆盖），
+  // 其次 loadEnv 读取的 .env 文件；都没有则回落 "dev"。
+  // Release 口径与后端 -ldflags -X main.Version 使用同一个版本号。
+  const appVersion =
+    process.env.APP_VERSION || process.env.VITE_APP_VERSION || env.VITE_APP_VERSION || "dev";
+
   return {
     base,
+    // 编译期把 __APP_VERSION__ 替换为 JSON 字符串字面量，供「关于」组件展示。
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion),
+    },
     plugins: [
       react(),
       tailwindcss(),

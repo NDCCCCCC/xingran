@@ -1,6 +1,24 @@
 # Roadmap: RuoYi-Next 运维管理系统
 
-## Current Milestone: v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix)
+## Current Milestone: v1.56 候选（进行中 / 未正式立项）
+
+**Status:** v1.56 候选（进行中 / 未正式立项）· `code-complete·verification-pending` | 口径来源 `CHANGELOG.md` `## [Unreleased] — v1.56 候选` + `.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md`（draft，未跑 `/gsd-new-milestone`、未重建 REQUIREMENTS / phase）｜同步口径见 `.planning/STATE.md` frontmatter / `.planning/state.json` / `.planning/MILESTONES.md` 顶部。
+
+**Goal:** 把候选期内已落地的代码改动（数据库全量备份导出/导入恢复、系统设置页收敛与低密度页面 Tab 化、菜单与权限迁移 241/242/243 + 补强 248/249、B 类 quick 261110-161 / f5g / jci）按 `.planning/notes/SHIPPED-DEFINITION.md` 补齐「代码绿 + 关键 UAT 通过 + 对外文档同步」三项，再正式立项并收档。
+
+**当前段硬约束**:
+- **不得标 SHIPPED**：无真实环境 UAT 证据只允许 `code-complete·verification-pending`（见 `.planning/notes/SHIPPED-DEFINITION.md`）；本环境无生产 PG 写授权、无真机，只能排期不能执行。
+- **79 条人工验证**：`.planning/notes/261108-human-verification-tracker.md` 全部「已排期·待执行」，**0 勾选 / 0 已完成**；三桶分类 / 优先级 / 解锁路径见 `.planning/notes/UAT-EXECUTION-PLAN.md`，真机端口写 UAT（29 条现场真机债，tracker §六）排第一。
+- **候选草案**：`v156-MILESTONE-DRAFT.md` 的 phase 152-155 为候选骨架（152/154 已由 quick 执行、153 用户裁定暂缓、155 可选），**未走 `/gsd-plan-phase` 正式立项**，不伪造 phase 完成。
+- **历史段不清空**：下方 v1.55 段及 `<details>` 折叠的 v1.54~v1.20 历史里程碑均为**已收档快照**，完整保留、仅供追溯。
+
+### Phases（当前里程碑）
+
+- 无（v1.56 候选尚未正式立项、未生成 GSD phase）；正式立项后按 `v156-MILESTONE-DRAFT.md` 从 152 续编重建。
+
+---
+
+## 上一里程碑（已收档，非当前状态）：v1.55 LOCKED 残余根治 (Locked Residual Root-Cause Fix)
 
 **Status:** ✅ SHIPPED 2026-11-09 · INITIATED/ROADMAP CREATED 2026-11-09 | Phases **145-151**（编号延续 v1.54 结束于 144，**不重置**）| **23 REQ / 7 Phase / 100% 映射 / 100% 交付**（CRYPTO-04 按硬 gate 合规跳过并登记；收档计数修正：立项期「24 REQ」把 optional 标注误计入，逐组实证 = 23） | **W1 `145 ∥ 146 ∥ 147` → W2 `148 ∥ 149 ∥ 150`（函数级归属表凭证）→ W3 `151` 最后执行，全部完成** | **① 的 A(150)+B(151) 均完成 → P1-5 侧信道根治达成；6 项 LOCKED / 7 子项全部从根源清偿** | 全量回归闸门全绿（go build / go test ./... / tsc / lint:ci ALL PASS / 全量 vitest / check-route-registry 713 零漂移）
 
@@ -400,4 +418,5 @@
 </details>
 
 ---
-*Roadmap v1.55 created: 2026-11-09 by gsd-roadmapper（Phases 145-151，24 REQ / 100% mapped / W1 `145∥146∥147` → W2 `148∥149∥150`（函数级归属表凭证）→ W3 `151` 最后执行）；v1.54 当前段完整保留为折叠 `<details>` 历史段（含 3 个 phase 详情 / 并行冲突面 / 关键约束 / Known Gaps），历史里程碑 SHIPPED 列表（v1.54~v1.20）与 v1.53~v1.24 Phases 详情保留为折叠 `<details>`；当前段沿用本仓手工编辑惯例；提交由 Lead 统一执行*
+*历史脚注（v1.55 收档时点，非当前状态）：Roadmap v1.55 created: 2026-11-09 by gsd-roadmapper（Phases 145-151，24 REQ / 100% mapped / W1 `145∥146∥147` → W2 `148∥149∥150`（函数级归属表凭证）→ W3 `151` 最后执行）；v1.54 当前段完整保留为折叠 `<details>` 历史段（含 3 个 phase 详情 / 并行冲突面 / 关键约束 / Known Gaps），历史里程碑 SHIPPED 列表（v1.54~v1.20）与 v1.53~v1.24 Phases 详情保留为折叠 `<details>`；提交由 Lead 统一执行。*
+*当前状态脚注（2026-11-12）：本文件顶部 `## Current Milestone: v1.56 候选（进行中 / 未正式立项）` 为当前权威段；v1.55 段已改标「上一里程碑（已收档，非当前状态）」。当前段沿用本仓手工编辑惯例；SHIPPED 判定见 `.planning/notes/SHIPPED-DEFINITION.md`，UAT 排期见 `.planning/notes/UAT-EXECUTION-PLAN.md`。*

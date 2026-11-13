@@ -1,8 +1,10 @@
 <!-- generated-by: gsd-doc-writer -->
 
-# XingRan-Next 企业级权限管理系统
+# XingRan-Next 企业 IT 运维统一管理平台
 
-XingRan-Next 是基于若依 (XingRan) 开源管理系统的全新重构版本，采用 **Go + React** 双端分离架构，并集成 **国密 SM2/SM3/SM4 算法** 满足等保合规要求。系统面向企业内部运维、业务、数据可视化的统一管理平台，在保留传统 RBAC 权限模型的基础上扩展了 3D 楼宇可视化、AD 域同步、网络设备纳管、工位/机房运维、RPA 自动化等企业级场景能力。
+> 产品定位、三类角色、三个可量化成功指标与「不做什么」边界，见 [docs/PRODUCT.md](docs/PRODUCT.md)（唯一权威说明）。
+
+XingRan-Next 是**企业 IT 运维统一管理平台**（不是「权限管理系统」；RBAC 仅为底座能力之一），基于 Go + React 双端分离架构，并集成 **国密 SM2/SM3/SM4 算法** 满足等保合规要求。系统把楼宇/工位/资产、网络设备、AD 域账号、VDI 桌面、工单值班、监控告警与操作审计收敛到一个平台，在统一 RBAC 底座之上扩展了 3D 楼宇可视化、AD 域同步、网络设备纳管、工位/机房运维、RPA 自动化等企业级场景能力，让运维任务可批量、可追溯、可度量。
 
 ## 核心特性
 
@@ -32,7 +34,7 @@ XingRan-Next 是基于若依 (XingRan) 开源管理系统的全新重构版本�
 | 缓存 | Redis | go-redis/v9 v9.7.0 |
 | 认证 | JWT 双 Token + 国密 | golang-jwt/jwt v5.2.1、tjfoc/gmsm v1.4.1 |
 | 任务调度 | robfig/cron | v3.0.1 |
-| 网络设备 | Scrapli + gosnmp + TextFSM | scrapligo v1.3.3、gosnmp v1.35.0 |
+| 网络设备 | Scrapli + gosnmp + TextFSM | scrapligo v1.4.2、gosnmp v1.35.0 |
 | Excel | excelize | v2.10.0 |
 | 配置 | Viper | v1.19.0 |
 | 日志 | logrus + lumberjack | v1.9.3 / v2.2.1 |
@@ -44,12 +46,12 @@ XingRan-Next 是基于若依 (XingRan) 开源管理系统的全新重构版本�
 |------|------|------|
 | 框架 | React + TypeScript | 19.2 / 5.9 |
 | 构建 | Vite | 7.2 |
-| UI | Ant Design | 6.1 |
+| UI | Ant Design | ^6.6.4 |
 | 样式 | Tailwind CSS | 4.1 |
-| 状态管理 | Zustand + TanStack Query | 5.0 / 5.90 |
-| 路由 | react-router-dom | 7.10 |
-| 3D | three + @react-three/fiber + @react-three/drei | 0.182 / 9.5 / 10.7 |
-| 图表 | ECharts | 6.0 |
+| 状态管理 | Zustand + TanStack Query | 5.0 / ^5.103.1 |
+| 路由 | react-router-dom | ^7.18.4 |
+| 3D | three + @react-three/fiber + @react-three/drei | ^0.186.0 / ^9.7.0 / ^10.7.8 |
+| 图表 | ECharts | ^6.1.0 |
 | 地图 | @uiw/react-baidu-map | 2.7 |
 | 国密 | sm-crypto | 0.3.13 |
 | 测试 | Vitest | 4.0 |
@@ -219,7 +221,7 @@ cp configs/config.prod.yaml configs/config.yaml
 
 ### Docker 部署
 
-仓库根目录当前未提供 `docker-compose.yml`（详见 `docs/部署和运维文档.md`）；如需容器化部署，请参考该文档自行构建镜像。
+仓库根目录当前未提供 `docker-compose.yml`；容器化编排方案见 [docs/deployment/docker-compose.md](docs/deployment/docker-compose.md)（Docker Compose 一键编排），生产 systemd 方案见 [docs/deployment/deployment.md](docs/deployment/deployment.md)。
 
 ### 部署前检查清单
 
@@ -235,26 +237,32 @@ cp configs/config.prod.yaml configs/config.yaml
 
 | 文档 | 涵盖内容 |
 |------|----------|
-| [项目概述和架构设计](docs/项目概述和架构设计.md) | 系统分层、模块划分、关键设计 |
-| [开发规范](docs/开发规范.md) | Go/React 编码规范、状态值约定、API 约定 |
-| [API 响应规范](docs/API响应规范.md) | 统一响应格式、错误码、分页 |
-| [安全和认证设计（国密）](docs/安全和认证设计（国密）.md) | JWT 双 Token、SM2/SM3/SM4 加解密、RBAC |
-| [数据库设计](docs/数据库设计.md) | 表结构、命名、迁移管理 |
-| [部署和运维文档](docs/部署和运维文档.md) | 生产环境部署、监控、备份 |
-| [EXCEL_IMPORT_GUIDE](docs/EXCEL_IMPORT_GUIDE.md) | Excel 批量导入指南 |
-| [缓存架构演进说明](docs/缓存架构演进说明.md) / [cache_usage](docs/cache_usage.md) | 双层缓存设计、Redis 键前缀 |
-| [Swagger 文档实施总结](docs/Swagger文档实施总结.md) | Swagger 注解与生成流程 |
-| [统一错误处理实施总结](docs/统一错误处理实施总结.md) | 错误码与异常处理 |
-| [网络设备批量管理功能实施计划](docs/网络设备批量管理功能实施计划.md) / [网络设备连接状态机设计文档](docs/网络设备连接状态机设计文档.md) | Scrapli/SNMP/TextFSM 集成 |
-| [RPA 系统设计方案](docs/RPA系统设计方案.md) / [RPA 系统完成状态报告](docs/RPA系统完成状态报告.md) | RPA 架构与开发进度 |
-| [上传下载功能设计](docs/上传下载功能设计.md) | 文件上传下载方案 |
+| [产品定义（一页纸）](docs/PRODUCT.md) | 统一产品名、定位、三类角色、三个成功指标、边界（权威） |
+| [文档地图](docs/README.md) | docs/ 全量索引与历史归档例外声明 |
+| [管理员使用手册](docs/管理员使用手册.md) | 管理员操作与故障排查（§21 常见问题） |
+| [架构/项目概述和架构设计](docs/architecture/项目概述和架构设计.md) | 系统分层、模块划分、关键设计 |
+| [规范/开发规范](docs/standards/开发规范.md) | Go/React 编码规范、状态值约定、API 约定 |
+| [规范/API 响应规范](docs/standards/API响应规范.md) | 统一响应格式、错误码、分页 |
+| [架构/安全和认证设计（国密）](docs/architecture/安全和认证设计（国密）.md) | JWT 双 Token、SM2/SM3/SM4 加解密、RBAC |
+| [架构/数据库设计](docs/architecture/数据库设计.md) | 表结构、命名、迁移管理 |
+| [部署/生产部署指南](docs/deployment/deployment.md) | 生产环境部署、监控、备份 |
+| [部署/Docker Compose](docs/deployment/docker-compose.md) | 容器化一键编排 |
+| [指南/EXCEL_IMPORT_GUIDE](docs/guides/EXCEL_IMPORT_GUIDE.md) | Excel 批量导入指南 |
+| [归档/缓存架构演进说明](docs/archive/缓存架构演进说明.md) / [指南/cache_usage](docs/guides/cache_usage.md) | 双层缓存设计、Redis 键前缀 |
+| [归档/Swagger 文档实施总结](docs/archive/Swagger文档实施总结.md) | Swagger 注解与生成流程 |
+| [归档/统一错误处理实施总结](docs/archive/统一错误处理实施总结.md) | 错误码与异常处理 |
+| [指南/错误码速查](docs/guides/错误码速查.md) | 错误码可读说明索引（从手册与 API 规范摘列） |
+| [指南/FAQ 索引](docs/guides/FAQ-索引.md) | 常见问题索引（对应手册 §21） |
+| [归档/网络设备批量管理功能实施计划](docs/archive/网络设备批量管理功能实施计划.md) / [归档/网络设备连接状态机设计文档](docs/archive/网络设备连接状态机设计文档.md) | Scrapli/SNMP/TextFSM 集成 |
+| [模块/RPA 系统设计方案](docs/modules/rpa/RPA系统设计方案.md) / [归档/RPA 系统完成状态报告](docs/archive/RPA系统完成状态报告.md) | RPA 架构与开发进度 |
+| [指南/上传下载功能设计](docs/guides/上传下载功能设计.md) | 文件上传下载方案 |
 | [部署/login-encryption-deployment](docs/deployment/login-encryption-deployment.md) | 登录加密部署说明 |
 | [安全/login-encryption-security](docs/security/login-encryption-security.md) | 登录加密安全设计 |
 
 ## 贡献指南
 
 1. Fork 仓库并创建特性分支：`git checkout -b feature/your-feature`
-2. 遵循 `docs/开发规范.md` 编写代码（Handler-Service 模式、接口+私有实现、状态值约定）
+2. 遵循 [规范/开发规范](docs/standards/开发规范.md) 编写代码（Handler-Service 模式、接口+私有实现、状态值约定）
 3. 提交前本地验证：
    ```bash
    go build ./...      # 后端编译

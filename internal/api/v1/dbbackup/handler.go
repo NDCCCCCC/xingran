@@ -17,6 +17,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services/dbbackup"
 	"github.com/xingran-next/xingran-go-backend/internal/utils"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -26,9 +27,8 @@ const dbBackupModuleName = "数据备份"
 const (
 	// restoreUploadMaxSize 恢复上传 zip 大小上限（2GB），防止超大文件打满磁盘。
 	restoreUploadMaxSize int64 = 2 << 30
-	// planMaskPlaceholder 敏感字段脱敏占位符：前端回传该值时保留原凭据不覆盖。
-	planMaskPlaceholder = "******"
 	// planOperParamMaxBytes 计划保存 operlog 摘要上限（与 operlog.FilterSensitiveParams 的 8192 对齐）。
+	// 敏感字段脱敏占位符复用服务层导出常量 dbbackup.PlanMaskPlaceholder（单一权威，避免双份漂移）。
 	planOperParamMaxBytes = 8192
 	// restoreUploadFilePattern os.CreateTemp 的模板，落在系统临时目录（os.TempDir），
 	// 生成随机文件名 + .zip 后缀，不落仓库 data/ 目录。
@@ -123,6 +123,10 @@ func (h *DBBackupHandler) GetTask(c *gin.Context) {
 
 // Download 下载备份 zip（GET /:id/download）。
 // 用 c.File 输出二进制流，不套 response 包装；operlog 在 c.File 之前记录。
+//
+// ⚠️ 安全告警：备份包含全库敏感数据（用户口令散列、个人信息、业务数据等），
+// 下载即等同于导出整库明文。此处显式留日志 + 前端下载按钮二次提示（见
+// BackupListTab.handleDownload），下载端点 operlog 记录操作人与文件 ID 供追溯。
 func (h *DBBackupHandler) Download(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -136,6 +140,8 @@ func (h *DBBackupHandler) Download(c *gin.Context) {
 		return
 	}
 
+	// 显式告警日志：备份包含全库敏感数据，落审计供事后追溯（不打印文件内容/路径以外信息）。
+	applogger.Warnf("[全库备份] ⚠️ 备份包含全库敏感数据：下载备份 id=%s（操作人已由 operlog 记录）", id)
 	// 契约第 8 节：下载端点 operlog.Record(OperTypeDownload) 必须在 c.File 之前。
 	h.record(c, operlog.OperTypeDownload)
 	c.File(path)
@@ -382,13 +388,13 @@ func maskPlanSecrets(p *dbbackup.Plan) {
 		return
 	}
 	if p.OSS.AccessKey != "" {
-		p.OSS.AccessKey = planMaskPlaceholder
+		p.OSS.AccessKey = dbbackup.PlanMaskPlaceholder
 	}
 	if p.OSS.SecretKey != "" {
-		p.OSS.SecretKey = planMaskPlaceholder
+		p.OSS.SecretKey = dbbackup.PlanMaskPlaceholder
 	}
 	if p.FTP.Password != "" {
-		p.FTP.Password = planMaskPlaceholder
+		p.FTP.Password = dbbackup.PlanMaskPlaceholder
 	}
 }
 
@@ -400,7 +406,10 @@ func maskPlanSecrets(p *dbbackup.Plan) {
 // "******" 与 "" 都表示「用户未改动，保留原值」——空串凭据本身无业务意义，
 // 若当作「清空」反而会导致管理员一保存计划就丢失 OSS/FTP 凭据。
 func (h *DBBackupHandler) mergePlanMaskedSecrets(c *gin.Context, p *dbbackup.Plan) error {
-	keep := func(v string) bool { return v == planMaskPlaceholder || strings.TrimSpace(v) == "" }
+	// keep =「未改动」：占位符或空串（前端 261110-tbq 约定）。显式清空标记
+	// dbbackup.CredentialClearMarker 不属于 keep，原样透传给服务层 savePlan
+	// 置空落库，实现「管理员可显式删除已配置凭据」。
+	keep := func(v string) bool { return v == dbbackup.PlanMaskPlaceholder || strings.TrimSpace(v) == "" }
 	needMerge := keep(p.OSS.AccessKey) || keep(p.OSS.SecretKey) || keep(p.FTP.Password)
 	if !needMerge {
 		return nil

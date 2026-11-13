@@ -307,3 +307,86 @@ psql -h localhost -U postgres -d xingran -f check_duplicate_menus.sql
    - 两脚本的 `-o` 均已由 `docs` 改为 `internal/docs`，产物落 `internal/docs/`（与 `docs/archive/ARCHIVE-INDEX.md`「swaggo 产物位置调整」节一致）；`docs/` 下 5 份 Swagger 死文件已删除；
    - `cmd/main.go` 已补 `_ ".../internal/docs"` blank import，`internal/docs/docs.go` 的 `swag.Register` 生效，`/swagger/*any` 可加载到规范；
    - Windows 上从任意 cwd 直接运行 `generate_swagger.bat` 即可，无需再手动确认 `cmd/main.go` 路径。
+
+## 版本注入构建与 Release 版本口径
+
+### 后端：`-ldflags -X main.Version`
+
+`cmd/main.go` 的 `var Version = "dev"` 保持可注入（缺省 `"dev"`，本地 `go run` / 未注入构建即此值）。发布构建用 `-ldflags -X` 把版本号写进二进制：
+
+```bash
+# 本地自检（产物落到系统临时目录，不落仓库；仓库内正式构建产物一律 out/）
+go build -ldflags "-X main.Version=v1.56.0-rc" -o /tmp/xr-verify ./cmd/main.go
+
+# Windows（MSYS bash，同样落仓库外）
+go build -ldflags "-X main.Version=v1.56.0" -o /tmp/xr-backend.exe ./cmd/main.go
+
+# 生产 Linux 构建（正式发布时产物统一落 out/，见上文「构建产物路径」）
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+  go build -ldflags "-s -w -X main.Version=v1.56.0" -o out/xingran-backend-linux ./cmd/main.go
+
+# 校验注入是否生效（启动后另开终端；也可看启动日志「版本: v1.56.0」）
+curl -s http://localhost:9000/version    # => {"version":"v1.56.0"}
+curl -s http://localhost:9000/health     # => 含 "version":"v1.56.0"
+```
+
+注意 `-X` 的目标必须是包级字符串变量 `main.Version`（`main` 包路径，不是模块路径）；`-ldflags` 含空格时整体加引号。
+
+### 版本出口与权限说明
+
+- `GET /health`：既有公开只读健康检查，返回 `status`、`version`、`time` 三个字段，无认证。
+- `GET /version`：**本次新增的只读版本出口**，响应体**只有 `version` 一个字段**，不返回任何配置、密钥、环境变量或运行时信息。
+
+两者都注册在 `cmd/main.go` 的 `setupRoutes` 中、挂在 Gin engine 根级（`/api/v1` 之外），与 `internal/api/router.go` 里带 `JWTAuth` 的 `monitor` 组、`rpaPublic` Worker 通道完全隔离：**不经过 JWT / RBAC 权限 / 请求响应加解密中间件**，即「公开、无认证、只读」。因为复用的是 `/health` 已有的根级公开只读暴露面，**未新增认证或权限面**，也未在 `internal/api/router.go` 增加任何路由。该出口与 `/health` 同权限，仅供部署流水线做发布版本校验；如需收紧，应在网关/反向代理层统一按路径限制，不要在业务代码里单独加认证（会破坏既有 health 探活链路）。
+
+> 说明：经排查 `internal/api/router.go` 现有无认证组只有 `rpaPublic`（RPA Worker 业务通道），`monitor` 组挂了 `JWTAuth`，**没有可复用的无认证只读版本端点**；且该文件不在本次改动所有权内，故版本出口落在 `cmd/main.go` 与 `/health` 同级。
+
+### 前端：`__APP_VERSION__` 编译期注入
+
+`xingran-react-frontend/vite.config.ts` 用 `define` 把 `__APP_VERSION__` 替换为 JSON 字符串字面量，**不读取也不修改 `package.json`**（其 `version` 固定 `0.0.0`，不参与版本口径）。来源优先级：
+
+```bash
+# 1) CI / 命令行环境变量（process.env 优先，推荐）
+APP_VERSION=v1.56.0 npm run build
+# 或
+VITE_APP_VERSION=v1.56.0 npm run build
+
+# 2) .env.production / .env.<mode> 里写 VITE_APP_VERSION=v1.56.0
+# 3) 都没有 → 回落 "dev"
+```
+
+`src/vite-env.d.ts` 声明了 `declare const __APP_VERSION__: string`；`src/components/AboutCard.tsx` 是「关于」展示组件，读取该常量显示版本号，可在个人中心或系统设置页面引入（见下文接入示例）。
+
+### Release 版本口径（前后端同源）
+
+一次 Release 只用一个版本号（如 `v1.56.0`，预发布用 `v1.56.0-rc` 这类 SemVer 字符串），**前后端必须由同一个 CI 变量同时注入**：
+
+| 端 | 注入方式 | 载体 | 未注入时 |
+|----|----------|------|----------|
+| 后端 | `go build -ldflags "-X main.Version=$RELEASE_VERSION"` | 二进制内 `main.Version` | `dev` |
+| 前端 | `APP_VERSION=$RELEASE_VERSION npm run build` | `__APP_VERSION__` 编译期常量 | `dev` |
+
+口径要点：
+
+1. **唯一来源**：CI 流水线定义 `RELEASE_VERSION`（取自 Git tag / 发布单），分别传给后端 `-ldflags` 与前端 `APP_VERSION`，禁止两处各写一份字面量。
+2. **不改 `package.json`**：前端 `version` 字段保持 `0.0.0` 仅为 npm 占位，不是发布版本号，避免双源不一致。
+3. **可校验**：发布后 `curl /version`（或 `/health`）得到的 `version` 应等于前端「关于」里显示的版本号，也等于 `RELEASE_VERSION`；三者不一致即视为发布未生效。
+4. **本地开发**：未注入时前后端都显示 `dev`，属预期，不代表 Release。
+
+### 「关于」组件接入示例（供页面维护者使用）
+
+本次改动只在 `src/` 下**新建**组件与类型声明，未改动既有个人中心 / 系统设置页面（严格文件所有权）。页面维护者在 `src/pages/profile/index.tsx` 或 `src/pages/settings/` 中按需引入即可：
+
+```tsx
+import AboutCard from "@/components/AboutCard";
+
+// 个人中心：放在「我的值班」Card 之后
+<Row gutter={[16, 16]} className="mt-4">
+  <Col span={24}>
+    <AboutCard />
+  </Col>
+</Row>
+
+// 或系统设置：作为新分类卡片的 content
+// { key: "about", label: "关于", icon: <InfoCircleOutlined />, content: <AboutCard />, maxWidth: 760 }
+```

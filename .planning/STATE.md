@@ -1,14 +1,15 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.55
-milestone_name: LOCKED 残余根治 (Locked Residual Root-Cause Fix)
-current_phase_name: roadmap created
-status: v1.55 SHIPPED 2026-11-09 (Awaiting next milestone)
-stopped_at: v1.53 SHIPPED & ARCHIVED（8/8 Phase、21/21 条开放项全覆盖、全量回归全绿、GSD 归档与权威交回完成）；下一步 `/gsd-new-milestone`
-last_updated: "2026-11-10T06:27:10.500Z"
-last_activity: 2026-11-10
-last_activity_desc: 完成 quick 261110-jci（B-1 config 契约漂移清偿）
+milestone: v1.56
+milestone_name: v1.56 候选（进行中 / 未正式立项）· B 类中型改动 + 备份恢复与设置页收敛
+current_phase_name: candidate / 未正式立项（无 GSD phase）
+status: v1.56 候选（进行中 / 未正式立项）
+stopped_at: v1.56 候选进行中（CHANGELOG [Unreleased] 已登记备份恢复 / 设置页收敛；v156-MILESTONE-DRAFT.md 为草案、尚未跑 /gsd-new-milestone）；下一步按 notes/SHIPPED-DEFINITION.md 补齐真实环境验收证据后正式立项
+last_updated: "2026-11-12T10:22:14.000Z"
+last_activity: 2026-11-12
+last_activity_desc: 统一当前状态口径为 v1.56 候选（进行中）；修 frontmatter / 正文标题 / stopped_at 三处矛盾；79 条人工验证全部「已排期·待执行」保持 0 勾选 / 0 已完成
 state_head: "0bf29976a2b316e7be4b66be2ff961961227dfd2"
+# 下列 progress 为 v1.55（已收档）的快照，非 v1.56 候选进度；v1.56 候选尚未正式立项、无 phase
 progress:
   total_phases: 7
   completed_phases: 7
@@ -21,7 +22,13 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.55 SHIPPED 2026-11-09（7/7 Phase：145/146/147/148/149/150/151 全部完成；24/24 REQ 交付，含 CRYPTO-04 按硬 gate 合规跳过；**① 的 A(150)+B(151) 均完成 → P1-5 侧信道根治达成**；6 项 LOCKED / 7 子项全部从根源清偿）
+**Status**: v1.56 候选（进行中 / 未正式立项）— `CHANGELOG.md` `## [Unreleased] — v1.56 候选` 已登记「数据库全量备份与恢复」「系统设置页收敛与低密度页面 Tab 化」；`.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md` 为候选草案，尚未跑 `/gsd-new-milestone`、未重建 REQUIREMENTS / ROADMAP phase。上一里程碑 v1.55 已于 2026-11-09 SHIPPED & ARCHIVED（完整收档快照见 `.planning/MILESTONES.md`）。按 [`.planning/notes/SHIPPED-DEFINITION.md`](notes/SHIPPED-DEFINITION.md)：当前仅可标 **code-complete·verification-pending**，79 条人工验证 0 勾选、无真实环境验收证据前不得标 SHIPPED
+**Current Milestone**: **v1.56 候选（进行中 / 未正式立项）**
+- **口径来源**：`CHANGELOG.md` `## [Unreleased] — v1.56 候选` + `.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md`（draft，未跑 `/gsd-new-milestone`）；与 `state.json` / `MILESTONES.md` 顶部 / `ROADMAP.md` 当前段同步。
+- **候选期内已落地代码（非收档）**：数据库全量备份导出/导入恢复（PR #83）、系统设置页收敛与低密度页面 Tab 化（PR #84）、菜单与权限迁移 241/242/243 + 补强 248/249、B 类 quick（261110-161 / f5g / jci）；均为候选期内已落地代码，**未取得真实环境 UAT 证据**。
+- **SHIPPED 判定**：见 [`.planning/notes/SHIPPED-DEFINITION.md`](notes/SHIPPED-DEFINITION.md) —— 代码绿 + 关键 UAT 通过 + 对外文档同步三者齐备才允许标 SHIPPED；当前无 UAT 证据，只能标 `code-complete·verification-pending`。
+- **验证状态**：[`.planning/notes/261108-human-verification-tracker.md`](notes/261108-human-verification-tracker.md) 79 条全部「已排期·待执行」，**0 勾选 / 0 已完成**；三桶排期与解锁路径见 [`.planning/notes/UAT-EXECUTION-PLAN.md`](notes/UAT-EXECUTION-PLAN.md)，真机端口写 UAT（29 条现场真机债，tracker §六）排第一。本环境无生产 PG 写授权、无真机，只能排期不能执行。
+
 **Last activity**: 2026-11-09
 **Prior activity**: 2026-11-09 - v1.55 SHIPPED：W1（145 AUDIT / 146 CRYPTO / 147 CACHE）+ W2（148 DIALECT / 149 SCOPE / 150 侧信道 A）并行 + W3（151 统一 ScopedDB，单独执行）；3 波共 7 个 gsd-planner + 2 个 plan-checker + 7 个 gsd-executor + Lead 集成；全量回归闸门全绿（go build / go test ./... / tsc / lint:ci ALL PASS / 全量 vitest / check-route-registry 713 零漂移）；79 条人工验证跟踪表保持 0 勾选、验证类残余不伪造闭环
 **Prior activity**: 2026-11-09 - v1.55 INITIATED：6 项 LOCKED 残余从根源根治（深度根因报告 + 5 项决策拍板 + 24 REQ 草案）；跳过领域研究；FUTURE-01 随 ① 关闭；79 条人工验证跟踪表保持 0 勾选
@@ -37,7 +44,7 @@ progress:
 **Prior activity (3)**: 2026-10-28 — v1.23 SHIPPED & ARCHIVED（Phases 69-75, 22/22 REQ satisfied）
 **Prior activity (4)**: 2026-10-27 — v1.23 roadmap CREATED（Phases 69-75, 22/22 REQ mapped）
 
-## Current Milestone: v1.53 开放项全量清偿 (Phases 134-141) — ✅ SHIPPED & ARCHIVED 2026-11-08
+## 历史基线：v1.53 开放项全量清偿 (Phases 134-141) — ✅ SHIPPED & ARCHIVED 2026-11-08（以下为非当前状态，仅供追溯；当前状态见上方 v1.56 候选段）
 
 **Goal:** 以 `.planning/REQUIREMENTS.md` 的 **24 REQ** 为基线（对应 2026-11-08 开放项盘点的 21 条历史计数），按「代码可修 / 待人工验证 / 已裁定接受」三类分别闭环，使收档时每条开放项都有可核对的结论与证据。
 
@@ -103,14 +110,15 @@ progress:
 
 ## Current Position
 
-Phase: Not started (roadmap created)
+Milestone: v1.56 候选（进行中 / 未正式立项）
+Phase: 未正式立项（candidate，无 GSD phase 编号；候选草案 phase 152-155 见 `v156-MILESTONE-DRAFT.md`）
 Plan: —
-Status: Defining requirements
-Last activity: 2026-11-09 — v1.55 roadmap created
+Status: code-complete·verification-pending（代码候选已落地，关键 UAT / 真实环境验收证据缺失；见 `notes/SHIPPED-DEFINITION.md`）
+Last activity: 2026-11-12 — 当前状态口径统一为 v1.56 候选（进行中）；79 条人工验证完成排期、保持 0 勾选 / 0 已完成
 
 ## 历史归档（v1.25 及更早，已 SHIPPED / ARCHIVED；以下为非当前状态，仅供追溯）
 
-> 本节及后续子标题（进度快照、Phase 依赖速查、执行期决策、立项范围、Accumulated Context 等）为 **v1.25 及更早里程碑**的归档记录，**均非当前状态**；当前状态一律以文档上半段 **v1.55 active** 与 `## Current Position` 为准（v1.54 终态见上方「历史基线」段与 `.planning/MILESTONES.md` v1.54 条目，v1.53 及更早见 `.planning/MILESTONES.md`）。
+> 本节及后续子标题（进度快照、Phase 依赖速查、执行期决策、立项范围、Accumulated Context 等）为 **v1.25 及更早里程碑**的归档记录，**均非当前状态**；当前状态一律以文档上半段 **v1.56 候选（进行中）当前状态段** 与 `## Current Position` 为准（v1.54 终态见上方「历史基线」段与 `.planning/MILESTONES.md` v1.54 条目，v1.53 及更早见 `.planning/MILESTONES.md`）。
 
 ### v1.25 真实进度快照（历史，2026-10-29 晚，Lead 实跑复核）
 
@@ -306,13 +314,13 @@ Last activity: 2026-11-09 — v1.55 roadmap created
 See: `.planning/PROJECT.md`（updated 2026-11-08 after v1.53 SHIPPED & ARCHIVED）
 
 **Core value:** 端到端的运维可观测与可审计——每个写操作都留下可追溯记录（谁、何时、改了什么、从哪来、改前改后），敏感字段自动脱敏；配合 Excel 批量管理与引用自动解析（部门名 → UUID），运维人员对整个 IT 资产域拥有唯一可信的系统记录。
-**Current focus:** 无 · v1.53 SHIPPED & ARCHIVED；权威已交回 GSD 自动生成的 ROADMAP / REQUIREMENTS / STATE / MILESTONES
+**Current focus:** v1.56 候选（进行中 / 未正式立项）；按 `notes/SHIPPED-DEFINITION.md` 当前仅 `code-complete·verification-pending`，待真实环境 UAT 证据后正式立项收档。上一里程碑 v1.55 已 SHIPPED，权威口径见 `MILESTONES.md` / `ROADMAP.md` 当前段。
 
 ## Session
 
-**Last session:** 2026-11-08T17:55:00+08:00
-**Stopped at:** v1.53 SHIPPED & ARCHIVED（8/8 Phase、21/21 条开放项全覆盖、全量回归全绿、GSD 归档与权威交回完成）；下一步 `/gsd-new-milestone`
-**Resume file:** 无（归档产物见 `.planning/milestones/v1.53-*`，人工验证跟踪见 `.planning/notes/261108-human-verification-tracker.md`）
+**Last session:** 2026-11-12T18:22:00+08:00
+**Stopped at:** v1.56 候选（进行中 / 未正式立项）：`CHANGELOG.md` [Unreleased] 已登记备份恢复 / 设置页收敛，候选草案 `v156-MILESTONE-DRAFT.md` 尚未跑 `/gsd-new-milestone`；79 条人工验证已排期、0 勾选 / 0 已完成（本环境无生产 PG 写授权、无真机，只能排期不能执行）。下一步按 `notes/SHIPPED-DEFINITION.md` 补齐真实环境验收证据后正式立项。
+**Resume file:** 无（当前状态见本文件 frontmatter / 上方 v1.56 候选段；人工验证跟踪见 `.planning/notes/261108-human-verification-tracker.md`，排期见 `.planning/notes/UAT-EXECUTION-PLAN.md`）
 
 ## Deferred Items
 
@@ -346,8 +354,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Operator Next Steps
 
-- `/gsd-new-milestone` — 启动下一里程碑（v1.55 已 SHIPPED，7/7 Phase、24/24 REQ、6 项 LOCKED 残余全部从根源清偿；权威仍由 GSD 自动生成体系承载，`REQUIREMENTS.md` 已按工作流清空待重建）
-- 人工验证跟踪表 `.planning/notes/261108-human-verification-tracker.md` 的 **79 条待执行项保持 0 勾选**，需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物；FIX-01/04/09/13 验证类残余**不伪造闭环**
+- `/gsd-new-milestone` — 把 **v1.56 候选**正式立项（当前仅 `code-complete·verification-pending`：`CHANGELOG.md` [Unreleased] 代码已落地，但按 `notes/SHIPPED-DEFINITION.md` 尚缺关键 UAT 与真实环境验收证据；v1.55 已 SHIPPED 归档，7/7 Phase、23/23 REQ、6 项 LOCKED 残余全部从根源清偿）。正式立项前先按 `notes/UAT-EXECUTION-PLAN.md` 解锁三桶排期。
+- 人工验证跟踪表 `.planning/notes/261108-human-verification-tracker.md` 的 **79 条「已排期·待执行」项保持 0 勾选 / 0 已完成**（逐条 owner / W1-W4 计划窗口 / 前置授权 / 证据落盘格式见该表，三桶解锁路径见 `notes/UAT-EXECUTION-PLAN.md`），需生产 PG 只读 / 写授权 / 现场真机 / DBA 回传后按 `notes/261108-uat-writeback-policy.md` 回写 GSD 产物；FIX-01/04/09/13 验证类残余**不伪造闭环**
 - LOCKED 残余裁定原文 `.planning/notes/261108-v153-locked-residuals.md` 保持只读（v1.55 收档已更正其 :61 承载声明并关闭 FUTURE-01）；清偿结论见本表 v1.55 行与 `MILESTONES.md` v1.55 条目
 - **下一里程碑取数**：v1.55 收档后仍待人工的行（79 条 0 勾选 / FIX-01/04/09/13 / `TEST_PG_DSN` 双跑 / 149/150 UAT 重跑窗口）与 `MILESTONES.md` v1.55 Known Gaps 的**最新处置行**为准。注意：trunk operlog / `computeByWorkstation` append / 两份脚本重复副本 / 两 handler 403 透传 / forbidigo 扩面 / `physical_e2e_test.go` 归位 / 发现导入事务与 Save Error 均已由 261109-wdu + 261110-161 清偿，**不再是取数项**；11-10 起 B-1 config 契约漂移亦由 261110-jci 清偿。B-2 暂缓 / B-4 自动回滚本体（按推荐不做，诚实性短板已补）/ B-6 白名单全仓收敛（另立 phase）为登记性候选。
 - v1.55 交付证据：7 份 `.planning/phases/{145..151}-*/*-SUMMARY.md` + `149-UAT-RECHECK.md` + `150-UAT-BACKFILL.md`；根因判定 `.planning/notes/261109-v154-locked-root-cause-analysis.md`；草案 `.planning/notes/261109-v155-requirements-draft.md`

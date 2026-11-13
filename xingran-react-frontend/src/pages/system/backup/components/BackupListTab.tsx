@@ -6,7 +6,7 @@
  * dbBackupApi；破坏性操作统一用 handleApiError / handleSuccess 出口。
  */
 import { useCallback, useEffect, useMemo, useState, type FC } from "react";
-import { App, Alert, Button, Card, Space, Table, Tag, Tooltip } from "antd";
+import { App, Alert, Button, Card, Space, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   CloudUploadOutlined,
@@ -31,7 +31,16 @@ import { formatFileSize } from "@/utils/tableHelpers";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import type { BackupRecord, BackupStatistics } from "@/types/backup";
 import type { AsyncTask } from "../types";
-import { SOURCE_TEXT, STATUS_TAG_COLOR, STATUS_TEXT, STORAGE_TEXT } from "../types";
+import {
+  DOWNLOAD_SENSITIVE_CONFIRM_TEXT,
+  RESTORE_RELOGIN_NOTICE,
+  SOURCE_TEXT,
+  SQLITE_OFFLINE_COMMAND,
+  SQLITE_OFFLINE_NOTICE,
+  STATUS_TAG_COLOR,
+  STATUS_TEXT,
+  STORAGE_TEXT,
+} from "../types";
 import RestoreModal from "./RestoreModal";
 
 interface BackupListTabProps {
@@ -141,13 +150,19 @@ const BackupListTab: FC<BackupListTabProps> = ({ onStartTask, refreshToken, task
     }
   }, [message, onStartTask]);
 
-  /** 下载备份 zip（downloadFile 唯一权威封装） */
-  const handleDownload = useCallback(async (record: BackupRecord) => {
-    try {
-      await dbBackupApi.download(record.id, record.fileName);
-    } catch (error) {
-      handleApiError(error, "下载备份文件");
-    }
+  /** 下载备份 zip：先二次提示「备份包含全库敏感数据」，再走 downloadFile 唯一权威封装 */
+  const handleDownload = useCallback((record: BackupRecord) => {
+    confirmDelete({
+      title: "确认下载备份",
+      target: `备份文件（${record.fileName}）`,
+      actionLabel: "确认下载",
+      actionContext: "下载备份文件",
+      contentText: DOWNLOAD_SENSITIVE_CONFIRM_TEXT,
+      successText: "已开始下载，请妥善保管全库敏感数据",
+      onDelete: async () => {
+        await dbBackupApi.download(record.id, record.fileName);
+      },
+    });
   }, []);
 
   /** 删除备份记录（confirmDelete 二次确认，权限内建） */
@@ -287,9 +302,28 @@ const BackupListTab: FC<BackupListTabProps> = ({ onStartTask, refreshToken, task
 
   const pgDumpMissing =
     capabilities !== null && capabilities.dbType !== "sqlite" && !capabilities.pgDumpAvailable;
+  // 依据 capabilities() 的 dbType 常驻显示 SQLite 离线恢复说明（不依赖失败信息）。
+  const isSQLite = capabilities?.dbType === "sqlite";
 
   return (
     <div>
+      {isSQLite && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title="SQLite 整库恢复需停服离线执行"
+          description={
+            <div>
+              <div>{SQLITE_OFFLINE_NOTICE}</div>
+              <div style={{ marginTop: 8 }}>离线命令入口：</div>
+              <Typography.Text code copyable={{ text: SQLITE_OFFLINE_COMMAND }}>
+                {SQLITE_OFFLINE_COMMAND}
+              </Typography.Text>
+            </div>
+          }
+        />
+      )}
       {capabilities && !capabilities.pgDumpAvailable && capabilities.dbType !== "sqlite" && (
         <Alert
           type="warning"
@@ -299,6 +333,20 @@ const BackupListTab: FC<BackupListTabProps> = ({ onStartTask, refreshToken, task
           description={capabilities.hint}
         />
       )}
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        title="备份包含全库敏感数据"
+        description="备份包含全库敏感数据（用户口令散列、个人信息、业务数据等），下载即等同于导出整库明文，请按最高敏感级妥善保管。"
+      />
+      <Alert
+        type="warning"
+        showIcon
+        style={{ marginBottom: 16 }}
+        title="恢复后需重新登录"
+        description={RESTORE_RELOGIN_NOTICE}
+      />
       <StatCards items={statItems} />
 
       <Card style={{ marginBottom: 16 }}>
@@ -349,6 +397,7 @@ const BackupListTab: FC<BackupListTabProps> = ({ onStartTask, refreshToken, task
       <RestoreModal
         open={restoreOpen}
         taskRunning={taskRunning}
+        capabilities={capabilities}
         onClose={() => setRestoreOpen(false)}
         onStartTask={onStartTask}
       />

@@ -4,24 +4,38 @@
  * 上传范式对齐 duty/holidays/index.tsx 的 <Upload customRequest>；
  * 二次确认走 confirmDelete（全仓唯一命令式危险操作入口，lint 禁止裸 Modal.confirm），
  * 文案明确「覆盖现有全部数据 + 系统自动生成恢复前备份」。
+ *
+ * 前置提示（不依赖失败）：父页面把 capabilities() 结果传入，当 dbType === "sqlite"
+ * 时常驻显示「SQLite 整库恢复需停服离线执行」说明与离线命令入口，避免用户直到
+ * 失败才在 errorMessage 里看到命令（后端 restorer.go 的降级路径）。
  */
-import { App, Alert, Modal, Upload } from "antd";
+import { App, Alert, Modal, Typography, Upload } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import type { FC } from "react";
 import { confirmDelete } from "@/components/shared";
 import { dbBackupApi } from "@/lib/dbBackupApi";
+import type { Capabilities } from "@/types/backup";
 import type { AsyncTask } from "../types";
-import { RESTORE_CONFIRM_TEXT } from "../types";
+import { RESTORE_CONFIRM_TEXT, SQLITE_OFFLINE_COMMAND, SQLITE_OFFLINE_NOTICE } from "../types";
 
 interface RestoreModalProps {
   open: boolean;
   taskRunning: boolean;
   onClose: () => void;
   onStartTask: (task: AsyncTask) => void;
+  /** 能力预检结果：dbType === "sqlite" 时常驻展示离线恢复提示 */
+  capabilities: Capabilities | null;
 }
 
-const RestoreModal: FC<RestoreModalProps> = ({ open, taskRunning, onClose, onStartTask }) => {
+const RestoreModal: FC<RestoreModalProps> = ({
+  open,
+  taskRunning,
+  onClose,
+  onStartTask,
+  capabilities,
+}) => {
   const { message } = App.useApp();
+  const isSQLite = capabilities?.dbType === "sqlite";
 
   /** 选择文件后：先二次确认，确认通过才真正上传（customRequest 不立即发请求） */
   const handleCustomRequest = (options: {
@@ -69,14 +83,31 @@ const RestoreModal: FC<RestoreModalProps> = ({ open, taskRunning, onClose, onSta
       onCancel={onClose}
       footer={null}
       destroyOnHidden
-      width={520}
+      width={560}
     >
+      {isSQLite && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title="SQLite 整库恢复需停服离线执行"
+          description={
+            <div>
+              <div>{SQLITE_OFFLINE_NOTICE}</div>
+              <div style={{ marginTop: 8 }}>离线命令入口：</div>
+              <Typography.Text code copyable={{ text: SQLITE_OFFLINE_COMMAND }}>
+                {SQLITE_OFFLINE_COMMAND}
+              </Typography.Text>
+            </div>
+          }
+        />
+      )}
       <Alert
         type="warning"
         showIcon
         style={{ marginBottom: 16 }}
         title="高风险操作"
-        description="恢复将覆盖现有全部数据，操作前系统会自动生成一份恢复前备份。请确认已选择正确的备份文件。"
+        description="恢复将覆盖现有全部数据、期间不可写入、恢复后需重新登录，操作前系统会自动生成一份恢复前备份。请确认已选择正确的备份文件。"
       />
       <Upload.Dragger
         accept=".zip"

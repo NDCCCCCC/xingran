@@ -210,6 +210,16 @@ func (c *Core) Init() error {
 		applogger.Warnf("AD 域 SM4 加密器未设置，密码将使用 AES-legacy 回退")
 	}
 
+	// 全库备份计划凭据加密器：与 AD 域共用同一把 SM4_KEY。在 core.Init 注册
+	// （而非 dbbackup 路由装配处），不依赖路由是否挂载——core.go 的定时任务
+	// svc 及任意装配形态都能解密/加密 sys_config 中的凭据密文。
+	if c.SM4Cipher != nil {
+		dbbackup.RegisterCredentialCipher(c.SM4Cipher)
+		applogger.Infof("全库备份凭据 SM4 加密器已设置")
+	} else {
+		applogger.Warnf("全库备份凭据 SM4 加密器未设置，已加密备份凭据将无法解密")
+	}
+
 	// 1-4. 数据库连接 / 迁移 / 基础数据 / 默认角色与菜单
 	if err := c.initDBAndData(); err != nil {
 		return err

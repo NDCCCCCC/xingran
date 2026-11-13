@@ -36,6 +36,11 @@ type fakeDumpExecutor struct {
 	tables    []string
 	dumpBytes []byte
 	dumpErr   error
+	// restoreErr 非空时 Restore 直接返回该错误（用于 SQLite 离线恢复降级路径单测）。
+	restoreErr error
+	// restoreGate 非 nil 时 Restore 先阻塞等待该 channel 关闭，用于把恢复任务
+	// 停在「维护模式中」以稳定观测 IsRestoring() 状态机（避免快速失败路径的竞态）。
+	restoreGate <-chan struct{}
 
 	mu            sync.Mutex
 	calls         int // Dump 调用次数（RunScheduled 门控断言）
@@ -63,8 +68,17 @@ func (f *fakeDumpExecutor) Restore(ctx context.Context, source string, cfg Datab
 	f.mu.Lock()
 	f.restoreCalls++
 	f.restoredPaths = append(f.restoredPaths, source)
+	err := f.restoreErr
+	gate := f.restoreGate
 	f.mu.Unlock()
-	return nil
+	if gate != nil {
+		select {
+		case <-gate:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return err
 }
 
 func (f *fakeDumpExecutor) TableNames(ctx context.Context, cfg DatabaseConfig) ([]string, error) {
@@ -246,6 +260,12 @@ func TestGetPlan_SavePlan(t *testing.T) {
 	db := newTestDB(t)
 	exec := &fakeDumpExecutor{tables: []string{}, dumpBytes: []byte("X")}
 	svc := newTestService(t, db, exec)
+	// savePlan 现对敏感凭据做 SM4 字段加密（fail-closed），单测需注册一个测试 cipher。
+	// 用 t.Cleanup 复位，避免污染依赖「未注册 cipher」的其它用例。
+	// 注意：RegisterCredentialCipher 是包级状态，本测试**不可**加 t.Parallel
+	// （并行会与其它用例互踩注册器）；后续新增用例同样遵守此约束。
+	RegisterCredentialCipher(testSM4Cipher(t))
+	t.Cleanup(func() { RegisterCredentialCipher(nil) })
 
 	// 默认值（未 seed 任何键）
 	p, err := svc.GetPlan(context.Background())
@@ -274,7 +294,7 @@ func TestGetPlan_SavePlan(t *testing.T) {
 		t.Fatalf("SavePlan/GetPlan 往返丢失字段: %+v", got)
 	}
 	if got.OSS.AccessKey != "AK" || got.OSS.SecretKey != "SK" || got.FTP.Password != "P" {
-		t.Fatalf("凭据往返丢失（应原样存 sys_config）: %+v", got)
+		t.Fatalf("凭据加解密往返丢失（密文落库、读取时解出真值）: %+v", got)
 	}
 	if got.OSS.UseSSL != false {
 		t.Fatalf("UseSSL=false 未保留: %+v", got.OSS)
@@ -831,6 +851,54 @@ func TestRestoreSQLite_DoesNotCloseGlobalDBPool(t *testing.T) {
 	}
 	if _, statErr := os.Stat(livePath); statErr != nil {
 		t.Fatalf("在线恢复不应替换原库文件: %v", statErr)
+	}
+}
+
+// ========== 10.5 SQLite 恢复降级路径（端到端：任务终态 + 需重新登录 + 维护标志复位） ==========
+
+// TestTriggerRestore_SQLiteOfflineDegrade 覆盖「SQLite 整库恢复需停服离线执行」的
+// 端到端降级路径：注入 Restore 返回 ErrSQLiteOfflineRestoreRequired 的 fake，
+// 走完整 TriggerRestore → runTask → runRestore → failTask，断言：
+//   - 任务终态 failed，errorMessage 含离线 CLI 命令与「需重新登录」提示；
+//   - 成功/失败都清缓存收口（这里未注册钩子，仅记日志，不阻断终态）；
+//   - IsRestoring 在失败路径后复位为 false（维护模式不会卡死）。
+func TestTriggerRestore_SQLiteOfflineDegrade(t *testing.T) {
+	restoring.Store(false)
+	RegisterRestoreCacheFlusher(nil)
+	t.Cleanup(func() {
+		restoring.Store(false)
+		RegisterRestoreCacheFlusher(nil)
+	})
+
+	db := newTestDB(t)
+	// SQLite 配置（newTestService 默认即 SQLite），Restore 返回离线恢复降级错误。
+	exec := &fakeDumpExecutor{
+		tables: []string{"sys_user"}, dumpBytes: []byte("X"),
+		restoreErr: fmt.Errorf("已将恢复产物落到 /data/live.db.pending_restore；请停服后执行 "+
+			"`go run ./scripts/ops/db-backup-restore.go -db /data/live.db -pending /data/live.db.pending_restore`"),
+	}
+	svc := newTestService(t, db, exec)
+	upload := buildValidContainer(t)
+
+	id, err := svc.TriggerRestore(context.Background(), upload, "tester")
+	if err != nil {
+		t.Fatalf("TriggerRestore 失败: %v", err)
+	}
+	final := waitTask(t, svc, id, 30*time.Second)
+	if final.Status != models.DBBackupTaskFailed {
+		t.Fatalf("SQLite 降级应标 failed，实得 status=%s", final.Status)
+	}
+	if !strings.Contains(final.ErrorMessage, "db-backup-restore.go") {
+		t.Fatalf("降级信息应含离线命令入口: %s", final.ErrorMessage)
+	}
+	if !strings.Contains(final.ErrorMessage, "需重新登录") {
+		t.Fatalf("降级信息应含「需重新登录」一致性提示: %s", final.ErrorMessage)
+	}
+	if exec.restoreCallCount() != 1 {
+		t.Fatalf("Restore 应被调用 1 次，实得 %d", exec.restoreCallCount())
+	}
+	if IsRestoring() {
+		t.Fatal("失败路径收尾后 IsRestoring 必须复位为 false")
 	}
 }
 

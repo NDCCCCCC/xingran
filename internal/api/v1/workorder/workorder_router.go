@@ -147,8 +147,11 @@ func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 		// 模板动作（启停 / 立即生成 / 执行记录）——与前端 workorderApi 对齐。
 		// 历史上这 4 条路由因路由重构（cd306b359）丢失 HTTP 通路而仅存注释，
 		// service 层 PeriodicService 实现一直可用，现已恢复注册。
-		// 口径记录（task-3）：enable/disable/generate/logs 这 4 条 86 新路由
-		// 按任务书豁免「保持继承组口径」——继续挂本 ANY-of 组，不迁 strict。
+		//
+		// RBAC 例外 RBAC-EXC-01（不得静默保留）：这 4 条 86 新端点按任务书
+		// 豁免、仍挂本 ANY-of 读组，未按 #87 全域治理口径迁 strict 写组。
+		// 理由 / 风险 / 清偿窗口 / 到期复核见 scripts/RBAC-EXCEPTIONS.md。
+		// 迁移时需同步补权限码播种与前端门控，故本轮仅登记不迁。
 		templates.POST("/:id/enable", handler.EnablePeriodic)
 		templates.POST("/:id/disable", handler.DisablePeriodic)
 		templates.POST("/:id/generate", handler.GeneratePeriodic)
@@ -164,8 +167,9 @@ type PeriodicWorkOrderWriteRouteGroups struct {
 }
 
 // SetupPeriodicWorkOrderWriteRouter 设置周期工单模板写路由（严格写组）。
-// 仅模板主体 CRUD 拆入 strict；enable/disable/generate 4 条 86 新路由豁免
-// （口径见 SetupPeriodicWorkOrderRouter 内注释）。
+// 仅模板主体 CRUD 拆入 strict；enable/disable/generate/logs 4 条 86 新路由
+// 按 RBAC-EXC-01 豁免、仍挂 ANY-of 读组（口径见 SetupPeriodicWorkOrderRouter
+// 内注释与 scripts/RBAC-EXCEPTIONS.md）。
 //
 //	新增   POST /workorder/periodic/templates            → ops:workorder:periodic:add
 //	编辑   POST /workorder/periodic/templates/:id/update → ops:workorder:periodic:edit
