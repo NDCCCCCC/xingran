@@ -109,12 +109,11 @@ import {
   // 菜单种子在用的图标（menu_catalog_seed.sql）——此前未进静态注册表，
   // 导致对应菜单项无图标渲染（AntD Menu 无 .ant-menu-item-icon 容器，
   // 文字缩进比同级有图标项左移约 24px，同级菜单排版参差）。
+  // 注：DotChartOutlined / FundOutlined 已在上方 import，避免重复声明。
   FormOutlined,
   BuildOutlined,
   ControlOutlined,
-  DotChartOutlined,
   EnvironmentOutlined,
-  FundOutlined,
   RobotOutlined,
   SyncOutlined,
   UnorderedListOutlined,
@@ -226,12 +225,11 @@ export const STATIC_ICON_REGISTRY: Record<string, FC<any>> = {
   FlagOutlined,
   TagOutlined,
   // 菜单种子在用图标（补注册表缺失项，详见 import 段注释）
+  // 注：DotChartOutlined / FundOutlined 已在注册表上方，避免重复键。
   FormOutlined,
   BuildOutlined,
   ControlOutlined,
-  DotChartOutlined,
   EnvironmentOutlined,
-  FundOutlined,
   RobotOutlined,
   SyncOutlined,
   UnorderedListOutlined,
