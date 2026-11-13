@@ -106,6 +106,19 @@ import {
   DislikeOutlined,
   FlagOutlined,
   TagOutlined,
+  // 菜单种子在用的图标（menu_catalog_seed.sql）——此前未进静态注册表，
+  // 导致对应菜单项无图标渲染（AntD Menu 无 .ant-menu-item-icon 容器，
+  // 文字缩进比同级有图标项左移约 24px，同级菜单排版参差）。
+  FormOutlined,
+  BuildOutlined,
+  ControlOutlined,
+  DotChartOutlined,
+  EnvironmentOutlined,
+  FundOutlined,
+  RobotOutlined,
+  SyncOutlined,
+  UnorderedListOutlined,
+  CloudDownloadOutlined,
 } from "@ant-design/icons";
 import type { FC } from "react";
 
@@ -212,6 +225,17 @@ export const STATIC_ICON_REGISTRY: Record<string, FC<any>> = {
   DislikeOutlined,
   FlagOutlined,
   TagOutlined,
+  // 菜单种子在用图标（补注册表缺失项，详见 import 段注释）
+  FormOutlined,
+  BuildOutlined,
+  ControlOutlined,
+  DotChartOutlined,
+  EnvironmentOutlined,
+  FundOutlined,
+  RobotOutlined,
+  SyncOutlined,
+  UnorderedListOutlined,
+  CloudDownloadOutlined,
 };
 
 // ========================================
@@ -349,6 +373,15 @@ export const iconCategories = {
     "DislikeOutlined",
     "FlagOutlined",
     "TagOutlined",
+    // 菜单种子在用图标（此前未进注册表/分类，见 STATIC_ICON_REGISTRY 注释）
+    "FormOutlined",
+    "BuildOutlined",
+    "ControlOutlined",
+    "EnvironmentOutlined",
+    "RobotOutlined",
+    "SyncOutlined",
+    "UnorderedListOutlined",
+    "CloudDownloadOutlined",
   ],
 };
 
@@ -531,6 +564,36 @@ export function getIconComponent(iconName?: string | null): React.ReactNode {
   }
 
   return undefined;
+}
+
+/**
+ * 侧边栏专用：图标缺失时返回**透明占位图标**，保证同级菜单项的文字左缩进一致。
+ *
+ * 背景：Ant Design Menu 的图标占位靠 `.ant-menu-item-icon` 容器实现——
+ * 有 icon 时该容器存在（宽 16px + 右间距），无 icon 时整个容器不渲染，
+ * 导致同层级中「有图标项」的文字比「无图标项」右移约 24px，形成参差。
+ * 侧边栏菜单同级并排时（运维管理 → 工单系统 / 值班管理 / 知识库文章）该错位
+ * 视觉上尤其明显。
+ *
+ * 方案：统一渲染一个不可见（visibility:hidden）的占位图标，保留占位宽度，
+ * 不引入任何可见的额外图标语义。
+ *
+ * @param iconName - 图标名称
+ * @returns 图标节点；无图标时返回透明占位
+ */
+export function getSidebarIconComponent(iconName?: string | null): React.ReactNode {
+  const icon = getIconComponent(iconName);
+  if (icon) return icon;
+  // 占位用 .anticon 类：AntD 既有规则 `.ant-menu-item .anticon` 已定义
+  // min-width/margin-right（图标位宽度），内联 visibility:hidden 使其不可见。
+  // 这样不新增任何 CSS 规则即可让同级菜单文字左缩进一致。
+  return (
+    <span
+      className="anticon sidebar-icon-placeholder"
+      aria-hidden="true"
+      style={{ visibility: "hidden" }}
+    />
+  );
 }
 
 // ========================================

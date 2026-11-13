@@ -91,7 +91,11 @@ const EXPECTED_PAGE_COUNT = 73;
 // 杂项 RBAC（2026-11-12 task-4）：network/mac 页铺开 networkMac.remove 门控、
 // network/mac/history 页旧字面量 network:mac:export 收口到 PERMISSION_CODES.networkMac.query，
 // 两页移出豁免清单，豁免 42 → 40；恒等式重成立（已门控 33 + 豁免 40 = 73）。
-const EXPECTED_EXEMPTION_COUNT = 40;
+// 周期工单 RBAC（2026-11-13 RBAC-EXC-01 清偿）：workorder/periodic/templates 页
+// 铺开 PERMISSION_CODES.workorderPeriodic 门控（编辑/启停/生成/执行记录/删除），
+// 移出豁免清单（原理由「前端权限码清单无 workorder 区块」已随本次补齐而消失），
+// 豁免 40 → 39；恒等式重成立（已门控 34 + 豁免 39 = 73）。
+const EXPECTED_EXEMPTION_COUNT = 39;
 /** 豁免分类白名单 */
 const EXEMPTION_CATEGORIES = [
   "no-permission-code",
