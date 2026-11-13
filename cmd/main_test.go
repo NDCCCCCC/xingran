@@ -1,9 +1,14 @@
 package main
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 )
 
 // TestMain_AllowedOrigins_FromConfig_NotWildcard verifies that main.go does NOT
@@ -38,6 +43,31 @@ func TestMain_AllowedOrigins_FromConfig_NotWildcard(t *testing.T) {
 	// Log direction for visibility
 	if !strings.Contains(src, hardcodedWildcard) {
 		t.Log("allowedOrigins is not hardcoded to wildcard — correct direction")
+	}
+}
+
+// TestHandleVersion_ReturnsVersionField 覆盖 /version 出口 handler：
+// 200 + 仅含 version 字段（不含配置/密钥/运行时信息）。
+func TestHandleVersion_ReturnsVersionField(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/version", nil)
+
+	handleVersion(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("应返回 200，实得 %d", w.Code)
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("响应应为 JSON: %v", err)
+	}
+	if body["version"] != Version {
+		t.Fatalf("version 字段应=%q，实得 %v", Version, body["version"])
+	}
+	if len(body) != 1 {
+		t.Fatalf("响应应仅含 version 一个字段，实得 %v", body)
 	}
 }
 

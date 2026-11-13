@@ -2,6 +2,7 @@ package dbbackup
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -220,3 +221,92 @@ func TestCredentialCipher_ClearMarkerDeletes(t *testing.T) {
 		t.Fatalf("未改动凭据应保留原值: got=%+v", got)
 	}
 }
+
+// TestLoadPlan_DecryptFail_StrictErrors 库中已是密文但 cipher 未注册时，
+// 严格 loadPlan 必须整体失败（fail-closed），且错误挂 ErrCredentialDecrypt。
+func TestLoadPlan_DecryptFail_StrictErrors(t *testing.T) {
+	db := newTestDB(t)
+	exec := &fakeDumpExecutor{tables: []string{}, dumpBytes: []byte("X")}
+	svc := newTestService(t, db, exec)
+
+	// 先注册 cipher 写入密文，再注销模拟「SM4_KEY/装配缺失」。
+	RegisterCredentialCipher(testSM4Cipher(t))
+	first := &Plan{
+		Enabled: false, Cron: "0 0 2 * * *", Retention: 7, Storage: StorageOSS,
+		OSS: OSSConfig{AccessKey: "AK", SecretKey: "SK", UseSSL: true},
+		FTP: FTPConfig{Password: "PWD"},
+	}
+	if err := svc.SavePlan(context.Background(), first, "admin"); err != nil {
+		t.Fatalf("写入密文失败: %v", err)
+	}
+	RegisterCredentialCipher(nil)
+	t.Cleanup(func() { RegisterCredentialCipher(nil) })
+
+	_, err := loadPlan(context.Background(), db)
+	if !errors.Is(err, ErrCredentialDecrypt) {
+		t.Fatalf("严格读取应报 ErrCredentialDecrypt，实得 %v", err)
+	}
+}
+
+// TestGetPlan_DecryptFail_TolerantDegrades 库中密文 + cipher 未注册时，
+// GetPlan 走降级路径：不报错、凭据字段置空、非敏感字段照常返回。
+func TestGetPlan_DecryptFail_TolerantDegrades(t *testing.T) {
+	db := newTestDB(t)
+	exec := &fakeDumpExecutor{tables: []string{}, dumpBytes: []byte("X")}
+	svc := newTestService(t, db, exec)
+
+	RegisterCredentialCipher(testSM4Cipher(t))
+	first := &Plan{
+		Enabled: true, Cron: "0 0 3 * * *", Retention: 5, Storage: StorageOSS,
+		OSS: OSSConfig{Endpoint: "s3.example.com", AccessKey: "AK", SecretKey: "SK", UseSSL: true},
+		FTP: FTPConfig{Password: "PWD"},
+	}
+	if err := svc.SavePlan(context.Background(), first, "admin"); err != nil {
+		t.Fatalf("写入密文失败: %v", err)
+	}
+	RegisterCredentialCipher(nil)
+	t.Cleanup(func() { RegisterCredentialCipher(nil) })
+
+	got, err := svc.GetPlan(context.Background())
+	if err != nil {
+		t.Fatalf("降级读取不应报错: %v", err)
+	}
+	if got.OSS.AccessKey != "" || got.OSS.SecretKey != "" || got.FTP.Password != "" {
+		t.Fatalf("解密失败字段应置空，实得 %+v", got)
+	}
+	if got.OSS.Endpoint != "s3.example.com" || got.Cron != "0 0 3 * * *" || !got.Enabled {
+		t.Fatalf("非敏感字段应照常返回: %+v", got)
+	}
+}
+
+// TestSavePlan_BackfillLoadPlanError_KeepsFailClosed 库中密文 + cipher 未注册
+// 时，SavePlan 的「未改动回填」读取（严格 loadPlan）失败 → 保存整体失败，
+// 绝不把空串/占位符当真值落库。
+func TestSavePlan_BackfillLoadPlanError_KeepsFailClosed(t *testing.T) {
+	db := newTestDB(t)
+	exec := &fakeDumpExecutor{tables: []string{}, dumpBytes: []byte("X")}
+	svc := newTestService(t, db, exec)
+
+	RegisterCredentialCipher(testSM4Cipher(t))
+	first := &Plan{
+		Enabled: false, Cron: "0 0 2 * * *", Retention: 7, Storage: StorageOSS,
+		OSS: OSSConfig{AccessKey: "AK", SecretKey: "SK", UseSSL: true},
+		FTP: FTPConfig{Password: "PWD"},
+	}
+	if err := svc.SavePlan(context.Background(), first, "admin"); err != nil {
+		t.Fatalf("写入密文失败: %v", err)
+	}
+	RegisterCredentialCipher(nil)
+	t.Cleanup(func() { RegisterCredentialCipher(nil) })
+
+	// 用户未改凭据（占位符）→ 回填读取失败 → SavePlan 报错。
+	unchanged := &Plan{
+		Enabled: false, Cron: "0 0 2 * * *", Retention: 7, Storage: StorageOSS,
+		OSS: OSSConfig{AccessKey: PlanMaskPlaceholder, SecretKey: PlanMaskPlaceholder, UseSSL: true},
+		FTP: FTPConfig{Password: PlanMaskPlaceholder},
+	}
+	if err := svc.SavePlan(context.Background(), unchanged, "admin"); err == nil {
+		t.Fatal("回填读取失败时 SavePlan 应报错（fail-closed）")
+	}
+}
+

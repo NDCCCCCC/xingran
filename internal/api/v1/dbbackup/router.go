@@ -13,6 +13,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/dbbackup"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
@@ -111,39 +112,8 @@ func NewDBBackupHandler(core *core.Core) *DBBackupHandler {
 	// 这里按缓存键前缀逐模式删除（core.Cache 自动补 "xingran:" 前缀，故用不带
 	// 前缀的 pattern），覆盖 system/cache_keys.go 中 menu/role/user/perm/dept/config
 	// 与 middleware 的严格权限缓存前缀。失败仅返回 error 由收尾处记日志、不阻断终态。
-	cache := core.Cache
 	dbbackup.RegisterRestoreCacheFlusher(func(ctx context.Context) error {
-		if cache == nil {
-			return fmt.Errorf("core.Cache 未初始化，无法清理恢复后缓存")
-		}
-		patterns := []string{
-			"menu:*", "role:*", "user:*", "dept:*", "post:*", "dict:*",
-			"config:*", "permission:*",
-			// "strict|" 是 pkg/middleware/permission.go strictCacheKeyPrefix 的真实键前缀
-			// （竖线分隔符，不是笔误），尾部 * 为 Redis glob 通配。
-			"strict|*", "cache:*",
-		}
-		var firstErr error
-		for _, pattern := range patterns {
-			keys, err := cache.Keys(ctx, pattern)
-			if err != nil {
-				if firstErr == nil {
-					firstErr = fmt.Errorf("查询缓存键 %q: %w", pattern, err)
-				}
-				applogger.Warnf("[全库备份] 恢复收尾查询缓存键 %q 失败: %v", pattern, err)
-				continue
-			}
-			if len(keys) == 0 {
-				continue
-			}
-			if err := cache.MDelete(ctx, keys...); err != nil {
-				if firstErr == nil {
-					firstErr = fmt.Errorf("删除缓存键 %q: %w", pattern, err)
-				}
-				applogger.Warnf("[全库备份] 恢复收尾删除缓存键 %q 失败: %v", pattern, err)
-			}
-		}
-		return firstErr
+		return flushRestoreCaches(ctx, core.Cache)
 	})
 
 	svc := dbbackup.NewService(core.GetDB(), dbCfg, nil, "")
@@ -151,4 +121,40 @@ func NewDBBackupHandler(core *core.Core) *DBBackupHandler {
 		service: svc,
 		core:    core,
 	}
+}
+
+// flushRestoreCaches 恢复收尾按前缀清理进程内菜单/权限缓存（具名包级函数，
+// 便于单测直接驱动全部成功/失败分支；注册闭包仅做参数捕获）。
+func flushRestoreCaches(ctx context.Context, c cache.Cache) error {
+	if c == nil {
+		return fmt.Errorf("core.Cache 未初始化，无法清理恢复后缓存")
+	}
+	patterns := []string{
+		"menu:*", "role:*", "user:*", "dept:*", "post:*", "dict:*",
+		"config:*", "permission:*",
+		// "strict|" 是 pkg/middleware/permission.go strictCacheKeyPrefix 的真实键前缀
+		// （竖线分隔符，不是笔误），尾部 * 为 Redis glob 通配。
+		"strict|*", "cache:*",
+	}
+	var firstErr error
+	for _, pattern := range patterns {
+		keys, err := c.Keys(ctx, pattern)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("查询缓存键 %q: %w", pattern, err)
+			}
+			applogger.Warnf("[全库备份] 恢复收尾查询缓存键 %q 失败: %v", pattern, err)
+			continue
+		}
+		if len(keys) == 0 {
+			continue
+		}
+		if err := c.MDelete(ctx, keys...); err != nil {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("删除缓存键 %q: %w", pattern, err)
+			}
+			applogger.Warnf("[全库备份] 恢复收尾删除缓存键 %q 失败: %v", pattern, err)
+		}
+	}
+	return firstErr
 }

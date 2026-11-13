@@ -41,6 +41,8 @@ type fakeDumpExecutor struct {
 	// restoreGate 非 nil 时 Restore 先阻塞等待该 channel 关闭，用于把恢复任务
 	// 停在「维护模式中」以稳定观测 IsRestoring() 状态机（避免快速失败路径的竞态）。
 	restoreGate <-chan struct{}
+	// dumpPanic 非 nil 时 Dump 直接 panic（覆盖 runTask panic recover 兜底路径）。
+	dumpPanic error
 
 	mu            sync.Mutex
 	calls         int // Dump 调用次数（RunScheduled 门控断言）
@@ -50,6 +52,10 @@ type fakeDumpExecutor struct {
 
 func (f *fakeDumpExecutor) Dump(ctx context.Context, target string, cfg DatabaseConfig) (string, error) {
 	f.mu.Lock()
+	if f.dumpPanic != nil {
+		f.mu.Unlock()
+		panic(f.dumpPanic)
+	}
 	f.calls++
 	f.mu.Unlock()
 	if f.dumpErr != nil {
@@ -899,6 +905,58 @@ func TestTriggerRestore_SQLiteOfflineDegrade(t *testing.T) {
 	}
 	if IsRestoring() {
 		t.Fatal("失败路径收尾后 IsRestoring 必须复位为 false")
+	}
+}
+
+// ========== 11. pg_dump 缺失的可诊断降级（运行时故障回归守护） ==========
+// ========== 10.6 panic recover 兜底与 flusher 报错收口 ==========
+
+// TestTriggerExport_DumpPanic_FailsTask 覆盖 runTask 的 panic recover 兜底：
+// Dump 中途 panic 时任务必须落终态 failed（含 panic 信息），进程不崩溃。
+func TestTriggerExport_DumpPanic_FailsTask(t *testing.T) {
+	db := newTestDB(t)
+	exec := &fakeDumpExecutor{tables: []string{"sys_user"}, dumpPanic: fmt.Errorf("boom-in-dump")}
+	svc := newTestService(t, db, exec)
+
+	id, err := svc.TriggerExport(context.Background(), SourceManual, "tester")
+	if err != nil {
+		t.Fatalf("TriggerExport 失败: %v", err)
+	}
+	final := waitTask(t, svc, id, 30*time.Second)
+	if final.Status != models.DBBackupTaskFailed {
+		t.Fatalf("panic 后应标 failed，实得 %s", final.Status)
+	}
+	if !strings.Contains(final.ErrorMessage, "boom-in-dump") {
+		t.Fatalf("错误信息应含 panic 原因: %s", final.ErrorMessage)
+	}
+}
+
+// TestTriggerRestore_FlusherError_DoesNotBlockTerminal 覆盖恢复收尾一致性中
+// 「缓存清理钩子报错只记日志、不阻断任务终态」的分支（restore_consistency.go）。
+func TestTriggerRestore_FlusherError_DoesNotBlockTerminal(t *testing.T) {
+	restoring.Store(false)
+	RegisterRestoreCacheFlusher(func(context.Context) error {
+		return fmt.Errorf("cache flush boom")
+	})
+	t.Cleanup(func() {
+		restoring.Store(false)
+		RegisterRestoreCacheFlusher(nil)
+	})
+
+	db := newTestDB(t)
+	exec := &fakeDumpExecutor{tables: []string{"sys_user"}, dumpBytes: []byte("X")}
+	svc := newTestService(t, db, exec)
+	upload := buildValidContainer(t)
+
+	id, err := svc.TriggerRestore(context.Background(), upload, "tester")
+	if err != nil {
+		t.Fatalf("TriggerRestore 失败: %v", err)
+	}
+	final := waitTask(t, svc, id, 30*time.Second)
+	// 本地 fake 场景下恢复可能成功或失败（取决于降级路径），关键断言是：
+	// flusher 报错不得吞掉/改变终态写入，任务必须有明确 status。
+	if final.Status != models.DBBackupTaskSuccess && final.Status != models.DBBackupTaskFailed {
+		t.Fatalf("终态必须是 success/failed，实得 %s", final.Status)
 	}
 }
 
