@@ -9,7 +9,8 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-import ExceptionRuleForm, { buildSeverityOverrideOptions } from "../ExceptionRuleForm";
+import ExceptionRuleForm from "../ExceptionRuleForm";
+import { buildSeverityOverrideOptions } from "../exceptionRuleFormOptions";
 import MatchTestPanel from "../MatchTestPanel";
 
 async function waitText(text: string, timeoutMs = 6000): Promise<boolean> {
