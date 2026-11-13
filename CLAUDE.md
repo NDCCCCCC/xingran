@@ -136,12 +136,13 @@ internal/
 │   ├── knowledge/   # Knowledge base
 │   └── monitor/     # Server monitoring, cache monitoring, logs
 ├── services/        # Business logic layer (modularized)
-│   ├── system/      # System services with cache implementations
+│   ├── system/      # Modular system services (cache impls via CacheProvider)
 │   ├── operations/  # Operations management services
 │   ├── scheduler/   # Job scheduling services
 │   ├── workorder/   # Work order services
 │   ├── monitor/     # Monitoring services
-│   └── *_cache_service.go  # Legacy cache services (dept, role, dict, menu, user, post)
+│   ├── addomain/    # AD domain management
+│   └── data_cache_service.go  # Generic cache service (wrapped by adapter)
 ├── models/          # Data models (GORM)
 ├── core/            # Core modules (DB, Cache, JWT, SM4, Device, Scheduler)
 ├── config/          # Configuration management
@@ -180,13 +181,13 @@ pkg/                 # Public packages (reusable)
      }
      ```
 
-2. **Dual Cache Architecture**
-   - **Legacy**: Root-level `*_cache_service.go` files (dept, role, dict, menu, user, post)
-     - Used by `core.Core` for backward compatibility
-     - Wrap `DataCacheService` with business logic
-   - **New**: `internal/services/system/*_cache_impl.go`
+2. **Unified Cache Architecture**（legacy 根级 `*_cache_service.go` 已删除）
+   - `internal/services/system/*_cache_impl.go`
      - Use `CacheProvider` interface for decoupling
      - Support both cached and non-cached implementations
+   - `internal/api/v1/system/cache_adapter.go`（`NewDataCacheAdapter`）把通用
+     `DataCacheService` 适配为 `CacheProvider`；业务代码一律面向 `CacheProvider`，
+     不直连 `DataCacheService`
 
 3. **Middleware Chain**: Auth → Permission → Encryption → Handler
 
@@ -586,7 +587,7 @@ LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify
 
 **Cache key patterns:**
 - Use helper functions like `GetDictDataByTypeKey(dictType)` instead of hardcoding
-- Constants defined in root-level `*_cache_service.go` files
+- Constants defined in `internal/services/system/cache_keys.go`
 
 **CRITICAL: Cache Key Prefix Handling**
 - Redis prefix is set to `xingran` in `internal/core/core.go:342`
@@ -661,14 +662,6 @@ LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify
 - API: `docs/API响应规范.md`
 - Security: `docs/安全和认证设计（国密）.md`
 
-**Legacy Services (still used by core):**
-- `internal/services/dept_service.go`
-- `internal/services/role_cache_service.go`
-- `internal/services/dict_cache_service.go`
-- `internal/services/menu_cache_service.go`
-- `internal/services/user_cache_service.go`
-- `internal/services/post_cache_service.go`
-
 ---
 
 ## Development Workflow
@@ -696,15 +689,17 @@ LDAPS/StartTLS certificate verification is controlled by the `ad.tls_skip_verify
 
 ### Working with Cache
 
-- **New code**: Use `internal/services/system/` pattern with `CacheProvider` interface
-- **Existing code**: May use legacy `*_cache_service.go` files in root
+- **All code**: Use `internal/services/system/` pattern with `CacheProvider` interface
+  （legacy 根级 `*_cache_service.go` 已删除，勿再引用）
 - **Cache keys**: Use helper functions, don't hardcode strings
 - **Invalidation**: Call `Invalidate*Cache()` methods after mutations
 
 ### Common Gotchas
 
 - **Scheduler confusion**: `internal/scheduler/` (engine) ≠ `api/v1/scheduler/` (job management)
-- **Cache dual architecture**: Legacy root files vs new `system/` implementations
+- **Cache architecture**: Legacy root-level `*_cache_service.go` files have been removed;
+  all caching goes through `CacheProvider` (`internal/services/system/*_cache_impl.go`
+  + `internal/api/v1/system/cache_adapter.go`)
 - **Import paths**: Use full module path `github.com/xingran-next/xingran-go-backend/...`
 - **Context propagation**: Always pass `c.Request.Context()` to service methods
 - **Response wrapper**: Use `response.Success()` and `response.Error()`, not raw JSON
@@ -1219,9 +1214,9 @@ type CacheProvider interface {
 ```
 - Cached version: reads/writes Redis
 - Non-cached version: pass-through to DB
-### Dual Cache Architecture
-- **Legacy**: Root-level `*_cache_service.go` files wrapping `DataCacheService`
-- **New**: `internal/services/system/*_cache_impl.go` using `CacheProvider` interface
+### Unified Cache Architecture
+- `internal/services/system/*_cache_impl.go` using `CacheProvider` interface
+- `DataCacheService` 经 `internal/api/v1/system/cache_adapter.go` 适配后注入
 ## Entry Points
 - **HTTP**: `cmd/main.go` → `internal/api/router.go` → module routers
 - **WebSocket**: `internal/websocket/` for real-time connections
