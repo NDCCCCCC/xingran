@@ -37,6 +37,8 @@ import {
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { reconciliationApi } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
+import { useDict } from "@/hooks/useDict";
+import { buildDictLabelIndex, resolveDictLabel } from "@/components/reconciliation/dictLabels";
 import ExceptionRuleForm, {
   type ExceptionRuleFormValues,
 } from "@/components/asset/reconciliation/ExceptionRuleForm";
@@ -70,6 +72,15 @@ const ExceptionRulesPage: React.FC = () => {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
+
+  // 字典驱动:例外动作 / 严重度覆盖 的文案优先取字典
+  const { data: exceptionActionDict = [] } = useDict("asset_reconciliation_exception_action");
+  const { data: severityDict = [] } = useDict("asset_reconciliation_severity");
+  const exceptionActionLabels = useMemo(
+    () => buildDictLabelIndex(exceptionActionDict).labels,
+    [exceptionActionDict]
+  );
+  const severityLabels = useMemo(() => buildDictLabelIndex(severityDict).labels, [severityDict]);
 
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -230,7 +241,7 @@ const ExceptionRulesPage: React.FC = () => {
           <Space size={4} wrap>
             {(actions ?? []).map((a) => (
               <Tag key={a} color={actionTagColor(a)}>
-                {a}
+                {resolveDictLabel(a, exceptionActionLabels)}
               </Tag>
             ))}
           </Space>
@@ -241,7 +252,9 @@ const ExceptionRulesPage: React.FC = () => {
         dataIndex: "severityOverride",
         key: "severityOverride",
         width: 100,
-        render: (v?: string | null) => (v ? <Tag color="blue">{v}</Tag> : "-"),
+        render: (v?: string | null) => (
+          <Tag color="blue">{v ? resolveDictLabel(v, severityLabels) : "-"}</Tag>
+        ),
       },
       {
         title: "范围",
@@ -327,7 +340,7 @@ const ExceptionRulesPage: React.FC = () => {
         ),
       },
     ],
-    [deleteMutation]
+    [deleteMutation, exceptionActionLabels, severityLabels]
   );
 
   return (

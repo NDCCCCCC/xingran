@@ -9,12 +9,49 @@ import { formatDate } from "@/utils/datetime";
 import type { Holiday } from "@/lib/dutyApi";
 import { usePagination } from "@/hooks/usePagination";
 import { createSorter } from "@/utils/tableHelpers";
+// 节假日类型字典（duty_holiday_type）：父页面 useDict 拉取后透传，组件内只做解析
+import type { DictItem } from "@/hooks/useDict";
 
 interface ImportOptions {
   file: File;
   onProgress?: (event: { percent: number }) => void;
   onSuccess?: (response?: unknown) => void;
   onError?: (error: Error) => void;
+}
+
+// 节假日类型静态回退映射（字典为空/未命中时使用）
+const HOLIDAY_TYPE_COLOR_MAP: Record<string, string> = {
+  legal: "red",
+  workday: "orange",
+  custom: "blue",
+};
+const HOLIDAY_TYPE_TEXT_MAP: Record<string, string> = {
+  legal: "法定节假日",
+  workday: "调休工作日",
+  custom: "自定义",
+};
+
+// antd Tag 预设色（字典 listClass 归一用）
+const TAG_COLOR_PRESETS = ["success", "processing", "error", "warning", "default", "info"];
+
+/**
+ * 解析节假日类型标签色：字典 listClass 优先 → 静态回退色板 → antd 默认色。
+ */
+function resolveHolidayTypeColor(dictItem: DictItem | undefined, type: string): string {
+  const listClass = dictItem?.listClass;
+  if (listClass) {
+    // 字典写作 "primary"，antd Tag 预设色名是 "processing"
+    const normalized = listClass === "primary" ? "processing" : listClass;
+    if (TAG_COLOR_PRESETS.includes(normalized)) return normalized;
+  }
+  return HOLIDAY_TYPE_COLOR_MAP[type] ?? "default";
+}
+
+/**
+ * 解析节假日类型文案：字典 dictLabel 优先 → 静态回退映射 → 原始值（不把未知值吞成空）。
+ */
+function resolveHolidayTypeText(dictItem: DictItem | undefined, type: string): string {
+  return dictItem?.dictLabel || HOLIDAY_TYPE_TEXT_MAP[type] || type || "-";
 }
 
 interface HolidayManagementProps {
@@ -30,6 +67,11 @@ interface HolidayManagementProps {
   onDelete: (id: string) => void;
   onImport: (options: ImportOptions) => void;
   onDownloadTemplate: () => void;
+  /**
+   * duty_holiday_type 字典数据（父页面 useDict 拉取后透传）。
+   * 字典优先 → 静态回退映射 → 原始值/"-"（未知值不被吞成空）。
+   */
+  holidayTypeDict?: DictItem[];
 }
 
 export const HolidayManagement: React.FC<HolidayManagementProps> = ({
@@ -45,6 +87,7 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
   onDelete,
   onImport,
   onDownloadTemplate,
+  holidayTypeDict = [],
 }) => {
   // 使用全局分页 hook
   const { paginationProps } = usePagination();
@@ -70,17 +113,13 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
       width: 100,
       sorter: createSorter<Holiday>("holidayType", "string"),
       render: (type: string) => {
-        const colorMap: Record<string, string> = {
-          legal: "red",
-          workday: "orange",
-          custom: "blue",
-        };
-        const textMap: Record<string, string> = {
-          legal: "法定节假日",
-          workday: "调休工作日",
-          custom: "自定义",
-        };
-        return <Tag color={colorMap[type]}>{textMap[type]}</Tag>;
+        // 字典（duty_holiday_type）命中 → 字典文案；未命中回退静态映射；皆无显示原始值
+        const dictItem = holidayTypeDict.find((d) => d.dictValue === type);
+        return (
+          <Tag color={resolveHolidayTypeColor(dictItem, type)}>
+            {resolveHolidayTypeText(dictItem, type)}
+          </Tag>
+        );
       },
     },
     {

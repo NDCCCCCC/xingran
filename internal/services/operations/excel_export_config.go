@@ -1,12 +1,24 @@
 package operations
 
+import (
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
+)
+
 type ExcelExportField struct {
-	Field     string                 // 导出字段名（对应数据库或计算字段）
-	Header    string                 // Excel列标题
-	DBField   string                 // 数据库字段名（可选，如果与Field不同）
-	Options   map[interface{}]string // 枚举值映射
-	Join      *JoinConfig            // 关联查询配置（可选）
-	Formatter string                 // 格式化器名称（可选）
+	Field   string                 // 导出字段名（对应数据库或计算字段）
+	Header  string                 // Excel列标题
+	DBField string                 // 数据库字段名（可选，如果与Field不同）
+	Options map[interface{}]string // 枚举值映射
+	// DictType 绑定数据字典类型（如 "ops_workstation_type"）。
+	//
+	// Options 是导出模板的静态快照，管理员在字典管理页新增枚举项
+	// （如工位类型新增「虚拟工位」）后 Options 不含新值 → 导出列显示原始数字。
+	// 配置 DictType 后，Options 未命中时按字典 dictValue 反查 dictLabel。
+	// 留空 = 保持静态 Options 行为。
+	DictType  string      // 绑定的数据字典类型
+	Join      *JoinConfig // 关联查询配置（可选）
+	Formatter string      // 格式化器名称（可选）
 }
 
 // RightFieldKind 表达「关联右表字段的类型语义」，供 service 决定 id 比较表达式。
@@ -121,13 +133,13 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 					Field:   "isExternalOrg",
 					Header:  "是否外部机构",
 					DBField: "is_external_org",
-					Options: map[interface{}]string{int(0): "否", int(1): "是"},
+					Options: map[interface{}]string{int(models.AssetNBFStatusNo): "否", int(models.AssetNBFStatusYes): "是"},
 				},
 				{
 					Field:   "status",
 					Header:  "状态",
 					DBField: "status",
-					Options: map[interface{}]string{int(0): "正常", int(1): "停用"},
+					Options: map[interface{}]string{int(models.DeptStatusNormal): "正常", int(models.DeptStatusStop): "停用"},
 				},
 				{
 					Field:   "remark",
@@ -161,7 +173,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "orgId", Header: "所属机构ID", DBField: "org_id"},
 				{Field: "totalFloors", Header: "楼层数", DBField: "total_floors"},
 				{Field: "status", Header: "状态", DBField: "status",
-					Options: map[interface{}]string{int(0): "正常", int(1): "停用"}},
+					Options: map[interface{}]string{int(operations.BuildingStatusNormal): "正常", int(operations.BuildingStatusStopped): "停用"}},
 				{Field: "remark", Header: "备注", DBField: "remark"},
 				{Field: "createdAt", Header: "创建时间", DBField: "created_at"},
 				{Field: "updatedAt", Header: "更新时间", DBField: "updated_at"},
@@ -192,7 +204,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "floorNo", Header: "楼层号", DBField: "floor_no"},
 				{Field: "area", Header: "面积(㎡)", DBField: "area"},
 				{Field: "status", Header: "状态", DBField: "status",
-					Options: map[interface{}]string{int(0): "正常", int(1): "停用"}},
+					Options: map[interface{}]string{int(operations.FloorStatusNormal): "正常", int(operations.FloorStatusStopped): "停用"}},
 				{Field: "remark", Header: "备注", DBField: "remark"},
 				{Field: "createdAt", Header: "创建时间", DBField: "created_at"},
 				{Field: "updatedAt", Header: "更新时间", DBField: "updated_at"},
@@ -225,11 +237,11 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "deviceSerial", Header: "设备序列号", DBField: "device_serial"},
 				{Field: "deviceName", Header: "设备名称", DBField: "device_name"},
 				{Field: "deviceModel", Header: "设备型号", DBField: "device_model"},
-				{Field: "workstationType", Header: "工位类型", DBField: "workstation_type",
-					Options: map[interface{}]string{int(0): "固定工位", int(1): "灵活工位", int(2): "管理工位"}},
+				{Field: "workstationType", Header: "工位类型", DBField: "workstation_type", DictType: "ops_workstation_type",
+					Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
 				{Field: "location", Header: "位置描述", DBField: "location"},
 				{Field: "status", Header: "状态", DBField: "status",
-					Options: map[interface{}]string{int(0): "空闲", int(1): "占用", int(2): "维护"}},
+					Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
 				{Field: "remark", Header: "备注", DBField: "description"},
 				{Field: "createdAt", Header: "创建时间", DBField: "created_at"},
 				{Field: "updatedAt", Header: "更新时间", DBField: "updated_at"},
@@ -259,7 +271,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 					Join: &JoinConfig{Table: "ops_floors", LeftField: "floor_id",
 						RightField: "id", SelectField: "name", As: "floorName"}},
 				{Field: "status", Header: "状态", DBField: "status",
-					Options: map[interface{}]string{int(0): "正常", int(1): "停用"}},
+					Options: map[interface{}]string{int(operations.RoomStatusNormal): "正常", int(operations.RoomStatusStopped): "停用"}},
 				{Field: "remark", Header: "备注", DBField: "remark"},
 				{Field: "createdAt", Header: "创建时间", DBField: "created_at"},
 				{Field: "updatedAt", Header: "更新时间", DBField: "updated_at"},
@@ -293,7 +305,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "positionDesc", Header: "位置描述", DBField: "position_desc"},
 				{Field: "assetNumber", Header: "资产编号", DBField: "asset_number"},
 				{Field: "status", Header: "状态", DBField: "status",
-					Options: map[interface{}]string{int(0): "正常", int(1): "故障", int(2): "报废"}},
+					Options: map[interface{}]string{int(operations.RoomDeviceStatusNormal): "正常", int(operations.RoomDeviceStatusFault): "故障", int(operations.RoomDeviceStatusScrapped): "报废"}},
 				{Field: "remark", Header: "备注", DBField: "remark"},
 				{Field: "createdAt", Header: "创建时间", DBField: "created_at"},
 				{Field: "updatedAt", Header: "更新时间", DBField: "updated_at"},
@@ -338,7 +350,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "carrierContactPhone", Header: "联系人电话", DBField: "carrier_contact_phone"},
 				{Field: "monthlyFee", Header: "月租费用", DBField: "monthly_fee"},
 				{Field: "status", Header: "状态", DBField: "status",
-					Options: map[interface{}]string{int(0): "正常", int(1): "故障", int(2): "停用"}},
+					Options: map[interface{}]string{int(operations.LineStatusNormal): "正常", int(operations.LineStatusFault): "故障", int(operations.LineStatusDisabled): "停用"}},
 				{Field: "remark", Header: "备注", DBField: "remark"},
 				{Field: "createdAt", Header: "创建时间", DBField: "created_at"},
 				{Field: "updatedAt", Header: "更新时间", DBField: "updated_at"},
@@ -374,7 +386,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 					Join: &JoinConfig{Table: "sys_device_port_status", LeftField: "port_id",
 						RightField: "id", RightFieldKind: RightFieldUUID, SelectField: "interface_name", As: "portName", SkipSoftDelete: true}}, // sys_device_port_status 是硬删除表(无 deleted_at 列)
 				{Field: "status", Header: "状态", DBField: "status",
-					Options: map[interface{}]string{int(0): "正常", int(1): "故障", int(2): "停用"}},
+					Options: map[interface{}]string{int(operations.InfoPointStatusNormal): "正常", int(operations.InfoPointStatusFault): "故障", int(operations.InfoPointStatusDisabled): "停用"}},
 				{Field: "remark", Header: "备注", DBField: "remark"},
 				{Field: "createdAt", Header: "创建时间", DBField: "created_at"},
 				{Field: "updatedAt", Header: "更新时间", DBField: "updated_at"},

@@ -14,9 +14,11 @@
  * 实际数据流:由 Plan 02 接入 sys_data_reconciliation WHERE resolved_at IS NOT NULL
  *   ORDER BY resolved_at DESC 的实时查询,Plan 01 仅固定组件契约。
  */
-import React from "react";
+import React, { useMemo } from "react";
 import { Timeline, Skeleton, Empty, Tag } from "antd";
 import { formatDateTime, FORMAT_DATETIME_MINUTE } from "@/utils/datetime";
+import { useDict } from "@/hooks/useDict";
+import { buildDictLabelIndex, resolveDictLabel, CONFLICT_TYPE_LABELS } from "./dictLabels";
 import { HealthBadge } from "./HealthBadge";
 
 export interface TimelineRecord {
@@ -33,16 +35,14 @@ export interface ReconciliationTimelineProps {
   loading: boolean;
 }
 
-const CONFLICT_TYPE_LABELS: Record<string, string> = {
-  A: "正常",
-  B: "物理有/责任人无",
-  C: "物理有/责任人不一致",
-  D: "物理无/责任人有",
-  E: "三路均无",
-  F: "AD 单独不一致",
-};
-
 const TimelineInner: React.FC<ReconciliationTimelineProps> = ({ records, loading }) => {
+  // 字典驱动:冲突类型文案优先取字典(管理员新增枚举项后立即可见)
+  const { data: conflictTypeDict = [] } = useDict("asset_reconciliation_conflict_type");
+  const conflictTypeLabels = useMemo(
+    () => buildDictLabelIndex(conflictTypeDict).labels,
+    [conflictTypeDict]
+  );
+
   if (loading) {
     return <Skeleton active paragraph={{ rows: 3 }} />;
   }
@@ -59,7 +59,9 @@ const TimelineInner: React.FC<ReconciliationTimelineProps> = ({ records, loading
         content: (
           <>
             <div>
-              <Tag color="default">{CONFLICT_TYPE_LABELS[r.conflictType] ?? r.conflictType}</Tag>
+              <Tag color="default">
+                {resolveDictLabel(r.conflictType, conflictTypeLabels, CONFLICT_TYPE_LABELS)}
+              </Tag>
               <span style={{ marginLeft: 8 }}>
                 检出: {formatDateTime(r.detectedAt, FORMAT_DATETIME_MINUTE)}
               </span>

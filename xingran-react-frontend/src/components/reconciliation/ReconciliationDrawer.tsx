@@ -18,13 +18,16 @@
  * Phase 45 R4 / Plan 02 (SC9): 申请例外按钮携带 workstationId + assetIp + conflictType
  * 三个 query 参数,跳转后由 /asset/reconciliation/exception-rules/new 页面 useSearchParams 解析
  */
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Drawer, Tabs, Tag, Descriptions, Button, Skeleton, Empty, message } from "antd";
 import { ReconciliationTimeline, type TimelineRecord } from "./ReconciliationTimeline";
+import { CONFLICT_TYPE_LABELS } from "./dictLabels";
 import { ExceptionMatchList, type ExceptionRuleItem } from "./ExceptionMatchList";
 import { useAssetHealth } from "./hooks/useAssetHealth";
 import { useReconciliationVisibility } from "./hooks/useReconciliationVisibility";
 import { reconciliationApi, type ExceptionListItem } from "@/lib/assetApi";
+import { useDict } from "@/hooks/useDict";
+import { buildDictLabelIndex, resolveDictLabel, resolveDictTagColor } from "./dictLabels";
 
 export type DrawerTabKey = "summary" | "timeline" | "exception";
 
@@ -46,6 +49,10 @@ export interface ReconciliationDrawerProps {
   onApplyException?: () => void;
 }
 
+/**
+ * 严重度静态回退色板(字典未加载/未命中时才用)。
+ * 字典 asset_reconciliation_severity 的 listClass/cssClass 优先。
+ */
 const SEVERITY_COLOR: Record<string, string> = {
   low: "default",
   medium: "warning",
@@ -65,6 +72,16 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
   onApplyException,
 }) => {
   const visible = useReconciliationVisibility();
+
+  // 字典驱动:冲突类型 / 严重度的文案与颜色优先取字典
+  const { data: conflictTypeDict = [] } = useDict("asset_reconciliation_conflict_type");
+  const { data: severityDict = [] } = useDict("asset_reconciliation_severity");
+  const conflictTypeIndex = useMemo(
+    () => buildDictLabelIndex(conflictTypeDict),
+    [conflictTypeDict]
+  );
+  const severityIndex = useMemo(() => buildDictLabelIndex(severityDict), [severityDict]);
+
   const [timeline, setTimeline] = useState<TimelineRecord[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [rules, setRules] = useState<ExceptionRuleItem[]>([]);
@@ -200,14 +217,28 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
           <Descriptions.Item label="资产编号">{asset.assetCode}</Descriptions.Item>
           <Descriptions.Item label="冲突类型">
             {asset.conflictType ? (
-              <Tag color="default">{asset.conflictType}</Tag>
+              <Tag color="default">
+                {resolveDictLabel(
+                  asset.conflictType,
+                  conflictTypeIndex.labels,
+                  CONFLICT_TYPE_LABELS
+                )}
+              </Tag>
             ) : (
               <Tag color="success">健康</Tag>
             )}
           </Descriptions.Item>
           <Descriptions.Item label="严重程度">
             {asset.severity ? (
-              <Tag color={SEVERITY_COLOR[asset.severity] ?? "default"}>{asset.severity}</Tag>
+              <Tag
+                color={resolveDictTagColor(
+                  asset.severity,
+                  severityIndex,
+                  SEVERITY_COLOR[asset.severity]
+                )}
+              >
+                {resolveDictLabel(asset.severity, severityIndex.labels)}
+              </Tag>
             ) : (
               "-"
             )}

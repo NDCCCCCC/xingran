@@ -15,9 +15,11 @@
  *
  * Phase 45 R4 / Plan 02: 抽屉 "申请例外" 跳转携带 assetIp + conflictType 预填
  */
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { List, Tag, Empty, Spin, Button, Space } from "antd";
 import { formatDate } from "@/utils/datetime";
+import { useDict } from "@/hooks/useDict";
+import { buildDictLabelIndex, resolveDictLabel } from "./dictLabels";
 
 export interface ExceptionRuleItem {
   id: string;
@@ -74,6 +76,13 @@ const ListInner: React.FC<ExceptionMatchListProps> = ({
   conflictType,
   onCreateRule,
 }) => {
+  // 字典驱动:例外动作文案优先取字典(未命中时回退原始动作值,保持原展示)
+  const { data: exceptionActionDict = [] } = useDict("asset_reconciliation_exception_action");
+  const actionLabels = useMemo(
+    () => buildDictLabelIndex(exceptionActionDict).labels,
+    [exceptionActionDict]
+  );
+
   // Plan 02 锁定(SC9): 申请例外按钮携带 assetIp + conflictType query 参数
   // (ReconciliationDrawer 顶部"申请例外"按钮携带 workstationId + assetIp + conflictType 三个参数,
   //  本组件的"去创建例外规则"按钮只携带 assetIp + conflictType 两个参数 — 因为本组件在例外规则 Tab,
@@ -119,7 +128,7 @@ const ListInner: React.FC<ExceptionMatchListProps> = ({
             <Space size={4} wrap style={{ marginTop: 4 }}>
               {rule.exceptionActions.map((a) => (
                 <Tag key={a} color={actionTagColor(a)}>
-                  {a}
+                  {resolveDictLabel(a, actionLabels)}
                 </Tag>
               ))}
             </Space>
