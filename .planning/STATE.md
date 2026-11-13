@@ -20,6 +20,11 @@ progress:
 
 # Project State
 
+> **接手文档（2026-11-13）**：[`.planning/notes/261113-hardcode-audit-handoff.md`](notes/261113-hardcode-audit-handoff.md)
+> —— 硬编码专项会话（PR #90~#94）的交付清单与**剩余任务 R1~R15**（按优先级、含精确行号、
+> 风险前置、禁止误操作清单与接手基线复核命令）。后续会话请从该文档取剩余任务，勿依据
+> 已 archived 的 `HANDOFF.json` 恢复工作。本文件 `STATE.md` 仍是里程碑状态的权威口径。
+
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: v1.56 候选（进行中 / 未正式立项）— `CHANGELOG.md` `## [Unreleased] — v1.56 候选` 已登记「数据库全量备份与恢复」「系统设置页收敛与低密度页面 Tab 化」；`.planning/quick/261110-161-*/v156-MILESTONE-DRAFT.md` 为候选草案，尚未跑 `/gsd-new-milestone`、未重建 REQUIREMENTS / ROADMAP phase。上一里程碑 v1.55 已于 2026-11-09 SHIPPED & ARCHIVED（完整收档快照见 `.planning/MILESTONES.md`）。按 [`.planning/notes/SHIPPED-DEFINITION.md`](notes/SHIPPED-DEFINITION.md)：当前仅可标 **code-complete·verification-pending**，79 条人工验证 0 勾选、无真实环境验收证据前不得标 SHIPPED
