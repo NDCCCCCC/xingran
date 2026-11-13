@@ -51,6 +51,7 @@ import {
   CopyOutlined,
   EyeOutlined,
   DownloadOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
@@ -58,6 +59,7 @@ import { formatDateTime } from "@/utils/datetime";
 import type { Dayjs } from "dayjs";
 import { useTableQuery } from "@/hooks/useTableQuery";
 import { useColumnConfig, type ColumnConfig } from "@/hooks/useColumnConfig";
+import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { queryMACHistory, exportMACHistory } from "@/lib/api/networkApi";
 import type { MACHistoryRecord, MACHistoryQueryParams } from "@/lib/api/networkApi";
 import { MACEventsTimeline } from "@/components/network";
@@ -227,7 +229,14 @@ const MACHistoryPage: React.FC = () => {
   const total = pageData?.total ?? 0;
 
   // 列配置(D-08)
-  const { visibleColumns, config: _config } = useColumnConfig({
+  const [showColumnConfig, setShowColumnConfig] = useState(false);
+  const {
+    visibleColumns,
+    config,
+    saving: configSaving,
+    saveConfig,
+    resetConfig,
+  } = useColumnConfig({
     pageKey: "mac.history.list",
     defaultColumns: defaultHistoryColumns,
     enableCache: true,
@@ -686,6 +695,15 @@ const MACHistoryPage: React.FC = () => {
               >
                 重置
               </Button>
+              {/* 列配置入口(D-08 / 14-05):打开列配置抽屉,配置态由 useColumnConfig 持有 */}
+              <Button
+                aria-label="列配置"
+                title="列配置"
+                icon={<SettingOutlined />}
+                onClick={() => setShowColumnConfig(true)}
+              >
+                列配置
+              </Button>
               {/* 14-04 注入的导出按钮 — prop 名称 exportScope='current'|'all' 保留,工具栏查询/重置按钮之后位置不变 */}
               {canExport && (
                 <>
@@ -747,8 +765,16 @@ const MACHistoryPage: React.FC = () => {
         {isMobile ? renderCardList() : renderTable()}
       </Card>
 
-      {/* 列配置抽屉(D-08):此处仅占位,具体抽屉 UI 由 14-05 提供 */}
-      {/* TODO(14-05):挂载 ColumnConfigModal,传入 config / saveConfig / resetConfig */}
+      {/* 列配置抽屉(D-08 / 14-05):由 useColumnConfig 驱动配置态,弹窗组件复用 shared/ColumnConfigModal */}
+      <ColumnConfigModal
+        visible={showColumnConfig}
+        config={config}
+        defaultConfig={defaultHistoryColumns}
+        onSave={saveConfig}
+        onReset={resetConfig}
+        onClose={() => setShowColumnConfig(false)}
+        saving={configSaving}
+      />
     </div>
   );
 };

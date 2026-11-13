@@ -35,6 +35,7 @@ import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
 import type { PeriodicWorkOrderTemplate } from "@/lib/workorderApi";
 import ActionButtons from "@/components/shared/ActionButtons";
+import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { confirmDelete } from "@/components/shared/confirmDelete";
 import { StatCards } from "@/components/shared";
 import CronSelector from "@/components/CronSelector";
@@ -157,24 +158,32 @@ function getTemplateTableColumns(
             key: "edit",
             label: "编辑",
             icon: <EditOutlined />,
+            // RBAC-EXC-01 清偿后端已按逐动作严格权限挂载，前端同步门控。
+            permission: PERMISSION_CODES.workorderPeriodic.edit,
             onClick: () => handleEdit(record),
           },
           {
             key: "toggle",
             label: record.isEnabled ? "禁用" : "启用",
             icon: record.isEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />,
+            // 启用/停用是两个独立权限码，按当前状态取对应码。
+            permission: record.isEnabled
+              ? PERMISSION_CODES.workorderPeriodic.disable
+              : PERMISSION_CODES.workorderPeriodic.enable,
             onClick: () => handleToggleEnabled(record),
           },
           {
             key: "generate",
             label: "立即生成",
             icon: <ThunderboltOutlined />,
+            permission: PERMISSION_CODES.workorderPeriodic.generate,
             onClick: () => handleGenerateNow(record.id),
           },
           {
             key: "logs",
             label: "执行记录",
             icon: <HistoryOutlined />,
+            permission: PERMISSION_CODES.workorderPeriodic.logs,
             onClick: () => handleViewLogs(record),
           },
           {
@@ -182,6 +191,7 @@ function getTemplateTableColumns(
             label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
+            permission: PERMISSION_CODES.workorderPeriodic.delete,
             onClick: () => {
               confirmDelete({
                 target: `周期工单模板 ${record.templateName}`,

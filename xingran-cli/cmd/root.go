@@ -1,7 +1,9 @@
 // Package cmd 组装 XingRan CLI 的 cobra 命令树。
 //
 // 组装点：Encryptor（internal/crypto）与 Authenticator（internal/auth）
-// 由本层的 wiring 函数注入 Client；两个模块完成后替换 TODO 即可。
+// 由本层的 wiring 函数注入 Client（见 auth_cmds.go 的
+// wiringEncryptor / wiringAuthenticator）。两个模块均已实现，
+// 此处只负责命令树组装与全局 flag 声明。
 package cmd
 
 import (

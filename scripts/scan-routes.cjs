@@ -409,7 +409,10 @@ function scanRoutes() {
     for (const call of calls) {
       // 形态 A：struct literal  SetupX(pkg.UserWriteRouteGroups{Field: strictUserRouteGroup(var, permission.X, ...), ...})
       // 85-02：泛化为 *WriteRouteGroups（Role/Menu/Post/Dept 各域写组结构体同名后缀）
-      const litMatch = call.argsText.match(/\w*WriteRouteGroups\s*\{([\s\S]*?)\}/);
+      // RBAC-EXC-01 清偿（2026-11-13）：再泛化到 *RouteGroups（周期工单动作用
+      // PeriodicWorkOrderActionRouteGroups，非 Write 后缀），否则动作端点会被
+      // 扫描器漏识别 → 登记表误判为「陈旧条目」并丢失其权限点登记。
+      const litMatch = call.argsText.match(/\w*(?:Write|Action)RouteGroups\s*\{([\s\S]*?)\}/);
       if (litMatch) {
         const fieldMounts2 = new Map();
         // task-3（2026-11-11）：兼容字面量码 strictLiteralRouteGroup(parent, "ops:x:y", core)。

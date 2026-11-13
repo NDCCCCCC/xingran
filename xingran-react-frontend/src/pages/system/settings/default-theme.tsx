@@ -15,6 +15,7 @@ import {
   syncUserThemeToDefault,
 } from "@/lib/defaultThemeApi";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * 主题模式选项
@@ -43,11 +44,15 @@ const DefaultThemePage: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // 获取当前用户ID（用于同步功能）
+  // 获取当前用户ID（用于「从当前用户配置同步」功能）。
+  // 数据源是 authStore 的登录用户；登录前 store.user 为 null，
+  // 此时保持 null，handleSync 会给出「无法获取当前用户ID」提示而不是同步到错误用户。
   useEffect(() => {
-    // TODO: 从 auth store 或其他地方获取当前用户ID
-    // 这里暂时使用硬编码的用户ID，实际应该从认证状态获取
-    setCurrentUserId("chenchao-076");
+    const unsubscribe = useAuthStore.subscribe((state) => {
+      setCurrentUserId(state.user?.id ?? null);
+    });
+    setCurrentUserId(useAuthStore.getState().user?.id ?? null);
+    return unsubscribe;
   }, []);
 
   // 加载默认主题配置

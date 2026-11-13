@@ -13,18 +13,39 @@
 
 ## 一、例外条目
 
-### RBAC-EXC-01 · 周期工单模板 4 条 86 新端点（保留 ANY-of 读组）
+### RBAC-EXC-01 · 周期工单模板 4 条 86 新端点 ✅ 已清偿（2026-11-13）
 
 | 字段 | 内容 |
 | --- | --- |
 | **id** | `RBAC-EXC-01` |
 | **端点** | `POST /workorder/periodic/templates/:id/enable`<br>`POST /workorder/periodic/templates/:id/disable`<br>`POST /workorder/periodic/templates/:id/generate`<br>`POST /workorder/periodic/templates/:id/logs` |
-| **登记位置** | `internal/api/v1/workorder/workorder_router.go` `SetupPeriodicWorkOrderRouter`（4 条挂 `templates := r.Group("/templates")` 继承 ANY-of 读组）；`internal/api/router.go` 的 `periodic` 组挂 `RequirePermissions` ANY-of（`ops:workorder:periodic:list/add/edit/delete`） |
-| **当前挂载** | 继承组 ANY-of 读组，**未**迁 `RequireStrictPermissions` 严格写组 |
-| **对照** | 同模块模板主体 CRUD（`Create/Update/DeletePeriodic`）已在 `SetupPeriodicWorkOrderWriteRouter` 走 strict 写组（逐动作 `ops:workorder:periodic:add/edit/delete`） |
-| **reason** | 见第二节「理由」 |
-| **window（清偿窗口）** | `phase: 下一权限治理专项（#87 后续）/ 截止 2027-03-31`（窗口到期前必须迁移或复核收窄） |
-| **review（到期复核）** | 见第四节 |
+| **登记位置** | `internal/api/v1/workorder/workorder_router.go` `SetupPeriodicWorkOrderActionRouter`（4 条挂逐动作 strict 组）；`internal/api/router.go` 的 `periodicActions` 组 |
+| **当前挂载** | ✅ 已迁 `RequireStrictPermissions` 严格写组（逐动作单一权限点） |
+| **对照** | 同模块模板主体 CRUD（`Create/Update/DeletePeriodic`）在 `SetupPeriodicWorkOrderWriteRouter` 走 strict 写组（逐动作 `ops:workorder:periodic:add/edit/delete`） |
+| **清偿结果** | 4 条端点按 #87 逐动作口径全部迁 strict 写组，权限码拆分见下表；播种迁移 `migration_250_workorder_periodic_action_perm_seed.go` 补齐 F 型授权载体 |
+| **原 reason** | 见第二节「理由」（历史留档） |
+| **原 window（清偿窗口）** | `截止 2027-03-31`（**已于 2026-11-13 提前清偿**） |
+| **review（到期复核）** | 见第四节（已执行并通过） |
+
+**清偿后逐动作权限码：**
+
+| 端点 | 权限码 | 语义 |
+| --- | --- | --- |
+| `POST /workorder/periodic/templates/:id/enable` | `ops:workorder:periodic:enable` | 写（状态变更） |
+| `POST /workorder/periodic/templates/:id/disable` | `ops:workorder:periodic:disable` | 写（状态变更） |
+| `POST /workorder/periodic/templates/:id/generate` | `ops:workorder:periodic:generate` | 写（生成工单） |
+| `POST /workorder/periodic/templates/:id/logs` | `ops:workorder:periodic:logs` | 只读（执行记录，独立码不与写动作混用） |
+
+**清偿落地清单（全链路缺一即回退）：**
+
+1. `pkg/permission/config.go`：新增 4 个权限码常量 + `GetRoutePermissions()` 路由表登记；
+2. `internal/core/db/migrations/migration_250_workorder_periodic_action_perm_seed.go`：F 型授权载体播种（父 C 菜单 `ops:workorder:periodic:list`）+ 精准授权给持父菜单角色；
+3. `internal/core/db/database.go`：注册 `runAndRecord(250, ...)`；
+4. 前端 `src/constants/permissionCodes.ts`：`workorderPeriodic` 域常量；
+5. 前端 `src/pages/workorder/periodic/templates/index.tsx`：5 个动作按钮接 `permission` 三态门控；
+6. `internal/api/v1/workorder/workorder_router.go`：新增 `SetupPeriodicWorkOrderActionRouter`；
+7. `internal/api/router.go`：构建 `periodicActions` 逐动作 strict 组；
+8. `internal/api/v1/workorder/rbac_exception_test.go`：断言反转为「已迁 strict 组 / 不在读组」。
 
 ---
 
@@ -60,7 +81,7 @@
 ## 四、清偿路径与到期复核
 
 **清偿目标**：`RBAC-EXC-01` → 0（4 条端点全部迁 strict 写组，或任务书
-明确撤销豁免）。清偿动作（需在有对应文件所有权的专项中执行）：
+明确撤销豁免）。✅ **已于 2026-11-13 完成**，落地清单见第一节表格。原始清偿动作为：
 
 1. `pkg/permission/config.go` 增 4 个动作权限码常量（或复用 `ops:workorder:periodic:edit`
    但需逐动作独立码以符合 #87「逐动作」口径）；
@@ -83,13 +104,12 @@
 
 ## 五、代码锚点（注释引用本文档的位置）
 
-- `internal/api/v1/workorder/workorder_router.go` `SetupPeriodicWorkOrderRouter`
-  内 4 条路由上方注释：`RBAC-EXC-01 / scripts/RBAC-EXCEPTIONS.md`。
-- `internal/api/v1/workorder/workorder_router.go` `SetupPeriodicWorkOrderWriteRouter`
-  函数注释：说明仅模板主体 CRUD 拆 strict、4 动作例外见文档。
-- `internal/api/router.go` `periodic` 组注释：标注例外 id 与文档路径。
-- `internal/api/v1/workorder/rbac_exception_test.go`：断言文档存在、含条目 id、
-  且源码注释引用文档路径（防「静默保留例外」）。
+- `internal/api/v1/workorder/workorder_router.go` `SetupPeriodicWorkOrderActionRouter`
+  函数注释：标注 `RBAC-EXC-01` 已清偿与逐动作权限码清单。
+- `internal/api/router.go` `periodicActions` 组注释：标注例外 id 与文档路径。
+- `internal/api/v1/workorder/rbac_exception_test.go`：断言文档记录清偿结果、
+  4 条端点在 strict 动作组内、不在 ANY-of 读组、且源码注释引用文档路径
+  （防「静默回退到读组」）。
 
 ---
 
@@ -98,3 +118,4 @@
 | 日期 | 变更 | 结果 |
 | --- | --- | --- |
 | 2026-11-12 | 登记 `RBAC-EXC-01`：#86 恢复的 4 条周期工单动作端点按任务书豁免、保留 ANY-of 读组；补理由 / 风险 / 清偿窗口；代码注释引用本文档 | 例外不再静默保留，可审计、可清偿 |
+| 2026-11-13 | **清偿** `RBAC-EXC-01`：4 条动作端点按 #87 逐动作口径迁 `RequireStrictPermissions` 严格写组（enable/disable/generate/logs 各独立码）；同步落地权限码常量、migration_250 F 型播种、前端门控常量与按钮门控；守卫测试断言反转为「已迁 strict 组 / 不在读组」 | 例外归零，权限放大风险消除；非超管角色经 migration_250 授权后功能不消失 |
