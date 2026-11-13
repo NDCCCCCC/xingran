@@ -17,7 +17,15 @@ vi.mock("@/lib/api/networkApi", () => ({
 
 import { createApiMock } from "@/test/utils/createApiMock";
 import { renderWithProviders } from "@/test/utils/renderWithProviders";
+import { QueryClient } from "@tanstack/react-query";
 import DeviceDiscoveryPage from "../index";
+
+// 页面已迁 useDict("network_device_type")，需要 react-query 上下文；
+// 与 devices/index.render.test.tsx 同惯例：每个用例独立 QueryClient，禁用重试。
+function renderPage() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return renderWithProviders(<DeviceDiscoveryPage />, { queryClient: qc });
+}
 
 describe("DeviceDiscoveryPage 渲染（PageTable 契约链路）", () => {
   beforeEach(() => {
@@ -27,7 +35,7 @@ describe("DeviceDiscoveryPage 渲染（PageTable 契约链路）", () => {
   it("空数据 → 渲染不抛错（antd 默认空态，无分页文案）", async () => {
     const api = createApiMock("/network/discoveries/list");
     api.endpoint.mockResolvedValue({ data: { list: [], total: 0 } });
-    const { baseElement, container } = renderWithProviders(<DeviceDiscoveryPage />);
+    const { baseElement, container } = renderPage();
     await waitFor(() => {
       expect(container.querySelector(".ant-table")).not.toBeNull();
     });
@@ -54,7 +62,7 @@ describe("DeviceDiscoveryPage 渲染（PageTable 契约链路）", () => {
         total: 1,
       },
     });
-    renderWithProviders(<DeviceDiscoveryPage />);
+    renderPage();
     await waitFor(
       () => {
         expect(screen.getAllByText("扫描任务A").length).toBeGreaterThan(0);
@@ -72,7 +80,7 @@ describe("DeviceDiscoveryPage 渲染（PageTable 契约链路）", () => {
     statsApi.endpoint.mockResolvedValue({
       data: { total: 9, pending: 1, running: 2, completed: 3, failed: 4, totalDevices: 5 },
     });
-    const { container } = renderWithProviders(<DeviceDiscoveryPage />);
+    const { container } = renderPage();
     await waitFor(() => {
       expect(container.querySelector(".ant-table")).not.toBeNull();
     });
@@ -87,7 +95,7 @@ describe("DeviceDiscoveryPage 渲染（PageTable 契约链路）", () => {
     api.endpoint.mockRejectedValue(new Error("网络异常"));
     const statsApi = createApiMock("/network/discoveries/statistics");
     statsApi.endpoint.mockResolvedValue({ data: {} });
-    const { container } = renderWithProviders(<DeviceDiscoveryPage />);
+    const { container } = renderPage();
     await waitFor(() => {
       expect(container.querySelector(".ant-alert-error")).not.toBeNull();
     });
@@ -98,7 +106,7 @@ describe("DeviceDiscoveryPage 渲染（PageTable 契约链路）", () => {
   it("C 类 1 接线：选择状态后搜索请求参数携带 status", async () => {
     const api = createApiMock("/network/discoveries/list");
     api.endpoint.mockResolvedValue({ data: { list: [], total: 0 } });
-    renderWithProviders(<DeviceDiscoveryPage />);
+    renderPage();
     await waitFor(() => {
       expect(screen.getAllByRole("combobox").length).toBeGreaterThan(0);
     });
@@ -136,7 +144,7 @@ describe("DeviceDiscoveryPage 渲染（PageTable 契约链路）", () => {
         total: 1,
       },
     });
-    renderWithProviders(<DeviceDiscoveryPage />);
+    renderPage();
     await waitFor(
       () => {
         expect(screen.getAllByText("扫描任务A").length).toBeGreaterThan(0);

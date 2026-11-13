@@ -25,13 +25,22 @@ import { Card, Row, Col, Spin, Empty, Alert, Badge, Tag, App } from "antd";
 import { StatCards } from "@/components/shared";
 import ReactECharts from "@/components/charts/EChartsWrapper";
 import { useDashboard } from "@/hooks/useDashboard";
+import { useDict } from "@/hooks/useDict";
 import { useReconciliationWebSocket } from "@/hooks/useReconciliationWebSocket";
 import { reconciliationApi } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  buildDictLabelIndex,
+  resolveDictLabel,
+  resolveDictTagColor,
+  CONFLICT_TYPE_LABELS,
+  type DictLabelIndex,
+} from "@/components/reconciliation/dictLabels";
 
 /** 7d 默认窗口,后续可加 30d/90d 切换 */
 const DEFAULT_WINDOW_DAYS = 7;
 
+/** 严重度静态回退色板(字典未配置 listClass/cssClass 时使用) */
 const SEVERITY_COLORS: Record<string, string> = {
   low: "var(--theme-success)",
   medium: "var(--theme-info)",
@@ -39,9 +48,49 @@ const SEVERITY_COLORS: Record<string, string> = {
   critical: "var(--theme-error)",
 };
 
-/** 饼图按冲突类型 fallback 顺序(保证 seed merge 6 keys 都在) */
+/** 字典 listClass/cssClass(antd 预设色) → ECharts 可用的 CSS 颜色 */
+const LIST_CLASS_CSS_COLOR: Record<string, string> = {
+  success: "var(--theme-success)",
+  processing: "var(--theme-info)",
+  info: "var(--theme-info)",
+  primary: "var(--theme-info)",
+  warning: "var(--theme-warning)",
+  error: "var(--theme-error)",
+  danger: "var(--theme-error)",
+  default: "var(--theme-info)",
+};
+
+/** 饼图按冲突类型 fallback 顺序(字典空态时保证 seed merge 6 keys 都在) */
 const CONFLICT_TYPE_FALLBACK = ["A", "B", "C", "D", "E", "F"];
+/** 柱状图按严重度 fallback 顺序(字典空态时使用) */
 const SEVERITY_FALLBACK = ["low", "medium", "high", "critical"];
+
+/**
+ * 柱状图颜色:字典 listClass/cssClass 优先 → 既有静态色板 fallback → 中性色兜底。
+ * 复用共享工具 resolveDictTagColor 把字典写法归一为 antd 预设色,再转 CSS 颜色。
+ */
+function resolveSeverityChartColor(key: string, index: DictLabelIndex): string {
+  const hasDictColor = Boolean(index.listClass[key] || index.cssClass[key]);
+  if (hasDictColor) {
+    return LIST_CLASS_CSS_COLOR[resolveDictTagColor(key, index)] ?? "var(--theme-info)";
+  }
+  return SEVERITY_COLORS[key] ?? "var(--theme-info)";
+}
+
+/**
+ * 展示文案 → 原始 value 反查(图表点击兜底)。
+ * 图例/x 轴已换成 dictLabel,绝不能把它直接拼进 URL;这里按三级回退口径
+ * 还原成 dictValue,字典与静态回退都查不到时返回 undefined(调用方不跳转)。
+ */
+function findDictValueByLabel(
+  label: string,
+  labels: Record<string, string>,
+  fallbackKeys: string[],
+  fallbackLabels?: Record<string, string>
+): string | undefined {
+  const keys = Object.keys(labels).length > 0 ? Object.keys(labels) : fallbackKeys;
+  return keys.find((key) => resolveDictLabel(key, labels, fallbackLabels) === label);
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -49,6 +98,15 @@ const Dashboard = () => {
   const queryClient = useQueryClient();
   const { summary, byConflictType, bySeverity, healthTrend, isLoading, isError } =
     useDashboard(DEFAULT_WINDOW_DAYS);
+
+  // 字典驱动:冲突类型 / 严重度的分类集合与展示文案优先取字典
+  const { data: conflictTypeDict = [] } = useDict("asset_reconciliation_conflict_type");
+  const { data: severityDict = [] } = useDict("asset_reconciliation_severity");
+  const conflictTypeIndex = useMemo(
+    () => buildDictLabelIndex(conflictTypeDict),
+    [conflictTypeDict]
+  );
+  const severityIndex = useMemo(() => buildDictLabelIndex(severityDict), [severityDict]);
 
   // Phase 43 R2: 订阅 critical 异常/工单 WS 事件
   // 收到事件后 hook 自动 queryClient.invalidateQueries,这里 onCriticalEvent
@@ -101,12 +159,16 @@ const Dashboard = () => {
     return { excPct, woPct, critPct };
   }, [baselineCompareQuery.data]);
 
-  // 饼图 option — 6 keys(空数据 0)
+  // 饼图 option — 分类集合用字典 value 驱动(新增字典项自动进分布图),
+  // 图例/标签展示字典文案,原始 value 存进 dictValue 供点击跳转用。
   const pieOption = useMemo(() => {
     const dataMap = byConflictType.data ?? {};
-    const data = CONFLICT_TYPE_FALLBACK.map((key) => ({
-      name: key,
+    const dictKeys = Object.keys(conflictTypeIndex.labels);
+    const keys = dictKeys.length > 0 ? dictKeys : CONFLICT_TYPE_FALLBACK;
+    const data = keys.map((key) => ({
+      name: resolveDictLabel(key, conflictTypeIndex.labels, CONFLICT_TYPE_LABELS),
       value: Number(dataMap[key] ?? 0),
+      dictValue: key,
     }));
     return {
       tooltip: {
@@ -126,17 +188,22 @@ const Dashboard = () => {
         },
       ],
     };
-  }, [byConflictType.data]);
+  }, [byConflictType.data, conflictTypeIndex]);
 
-  // 柱状图 option — 4 severity keys
+  // 柱状图 option — 分类集合用字典 value 驱动(新增 severity 字典项自动进分布图),
+  // x 轴展示字典文案,原始 value 存进 dictValue 供点击跳转用。
   const barOption = useMemo(() => {
     const dataMap = bySeverity.data ?? {};
-    const categories = SEVERITY_FALLBACK;
+    const dictKeys = Object.keys(severityIndex.labels);
+    const categories = dictKeys.length > 0 ? dictKeys : SEVERITY_FALLBACK;
     const values = categories.map((k) => Number(dataMap[k] ?? 0));
     return {
       tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
       grid: { left: 40, right: 20, top: 30, bottom: 30 },
-      xAxis: { type: "category", data: categories },
+      xAxis: {
+        type: "category",
+        data: categories.map((k) => resolveDictLabel(k, severityIndex.labels)),
+      },
       yAxis: { type: "value", minInterval: 1 },
       series: [
         {
@@ -144,14 +211,15 @@ const Dashboard = () => {
           type: "bar",
           data: values.map((v, i) => ({
             value: v,
-            itemStyle: { color: SEVERITY_COLORS[categories[i]] },
+            itemStyle: { color: resolveSeverityChartColor(categories[i], severityIndex) },
+            dictValue: categories[i],
           })),
           barWidth: "50%",
           label: { show: true, position: "top" },
         },
       ],
     };
-  }, [bySeverity.data]);
+  }, [bySeverity.data, severityIndex]);
 
   // 趋势图 option — 3 条线(openCount / criticalCount / newCount)
   const lineOption = useMemo(() => {
@@ -193,16 +261,34 @@ const Dashboard = () => {
   // routeGenerator.resolvePath 会拼成 'assets/exceptions'。原代码写成
   // '/asset/reconciliation/exceptions' 是单数 + 长路径,React Router 找不到 → fallback /dashboard。
   // D-05 双向打通:饼图 click 应跳到异常列表并用 type 预填筛选。
-  const onPieClick = (params: { name?: string }) => {
-    if (!params?.name) return;
-    navigate(`/assets/exceptions?type=${encodeURIComponent(params.name)}`);
+  // query 只放原始 value:优先取 series.data.dictValue,兜底用 label 反查,
+  // 绝不把字典展示文案(dictLabel)塞进 URL。
+  const onPieClick = (params: { name?: string; data?: { dictValue?: string } }) => {
+    const rawValue =
+      params?.data?.dictValue ??
+      (params?.name
+        ? findDictValueByLabel(
+            params.name,
+            conflictTypeIndex.labels,
+            CONFLICT_TYPE_FALLBACK,
+            CONFLICT_TYPE_LABELS
+          )
+        : undefined);
+    if (!rawValue) return;
+    navigate(`/assets/exceptions?type=${encodeURIComponent(rawValue)}`);
   };
 
   // 柱状图 click → /assets/exceptions?severity=low|medium|high|critical
   // 同上:路径必须是前端动态路由注册的实际路径,后端 API 路径 /api/v1/... 不可用。
-  const onBarClick = (params: { name?: string }) => {
-    if (!params?.name) return;
-    navigate(`/assets/exceptions?severity=${encodeURIComponent(params.name)}`);
+  // x 轴已换成字典文案,query 只放原始 value,不把 label 塞进 URL。
+  const onBarClick = (params: { name?: string; data?: { dictValue?: string } }) => {
+    const rawValue =
+      params?.data?.dictValue ??
+      (params?.name
+        ? findDictValueByLabel(params.name, severityIndex.labels, SEVERITY_FALLBACK)
+        : undefined);
+    if (!rawValue) return;
+    navigate(`/assets/exceptions?severity=${encodeURIComponent(rawValue)}`);
   };
 
   // 错误兜底

@@ -3,6 +3,8 @@
 import type { BuildingItem } from "./types";
 import { WORKSTATION_STATUS_COLORS } from "./constants";
 import { getBMapGL, type BMapGLNamespace, type BMapPoint } from "@/types/baidu-map";
+import type { DictItem } from "@/hooks/useDict";
+import { buildDictLabelIndex, resolveDictLabel } from "@/components/reconciliation/dictLabels";
 
 // ============ 通用辅助函数 ============
 
@@ -160,25 +162,38 @@ export function getWorkstationStatusText(status: number): string {
 }
 
 /**
- * 获取工位类型文本
- * @param type 类型值（0=固定, 1=灵活, 2=管理）
+ * 工位类型文案静态回退映射。
+ * 工位类型是数据字典 ops_workstation_type，管理员可新增类型（如 3=虚拟工位）；
+ * 字典为空 / 接口异常 / 未命中时沿用本映射，保证字典接入前后展示行为一致。
+ */
+const WORKSTATION_TYPE_FALLBACK_LABELS: Record<string, string> = {
+  "0": "固定",
+  "1": "灵活",
+  "2": "管理",
+};
+
+/**
+ * 获取工位类型文本（字典驱动，三级回退）。
+ * 1) 字典命中（dictValue → dictLabel）优先；
+ * 2) 字典未命中降级静态映射（固定 / 灵活 / 管理）；
+ * 3) 两者皆无保留原兜底文案「未知」（不吞成空串）。
+ * 字典数据由上层 React 组件 useDict("ops_workstation_type") 后透传；
+ * 不传 dictItems 时等价于原静态 switch（既有调用 / 测试零变更）。
+ * @param type 类型值
+ * @param dictItems 可选字典项数组
  * @returns 类型文本
  */
-export function getWorkstationTypeText(type: number): string {
-  switch (type) {
-    case 0:
-      return "固定";
-    case 1:
-      return "灵活";
-    case 2:
-      return "管理";
-    default:
-      return "未知";
-  }
+export function getWorkstationTypeText(type: number, dictItems?: ReadonlyArray<DictItem>): string {
+  const { labels } = buildDictLabelIndex(dictItems ? [...dictItems] : undefined);
+  const resolved = resolveDictLabel(String(type), labels, WORKSTATION_TYPE_FALLBACK_LABELS);
+  // resolveDictLabel 未命中时回原始值，这里还原本模块既有的「未知」兜底文案
+  return resolved === String(type) ? "未知" : resolved;
 }
 
 /**
  * 获取工位状态颜色（十六进制）
+ * 颜色按 status / type 数值静态取色，与字典文案解耦：管理员新增工位类型
+ * （如 type=3）不新增色值，类型文案由 ops_workstation_type 字典覆盖。
  * @param workstation 工位数据
  * @returns 颜色值（十六进制数字）
  */
@@ -344,6 +359,8 @@ export function convertApiWorkstations(
 
 /**
  * 计算工位统计数据
+ * flexible / fixed 按 type 数值聚合（1 / 0），属于统计口径而非「取值 → 文案」映射；
+ * 字典 ops_workstation_type 仅覆盖展示文案，不改这里的数值过滤。
  * @param workstations 工位数据数组
  * @returns 统计数据
  */

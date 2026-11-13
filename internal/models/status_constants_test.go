@@ -83,6 +83,13 @@ var watchedStatusPrefixes = []string{
 	"WorkstationDeviceStatus", "AssetStatus", "AssetNBFStatus",
 	// Phase 69 batch 3 additions (untyped int; AD pool state machine + RPA credential)
 	"ADAccountStatus", "RPACredentialStatus",
+	// 2026-11-13 补登记：以下族定义在 internal/models 根包但前缀漏登记，
+	// 导致 TestStatusConstantsStability / TestNoStatusLiteralUsage 出现静默覆盖空洞。
+	// 注意 RPA 根包族是「遗留定义」：生产代码统一用 internal/models/rpa 子包
+	// （服务层全部走 rpamodels.*），根包模型仅被 models 包内单测引用；此处登记
+	// 是为冻结取值防漂移，而非宣称它们是生产事实源。详见 rpa.go / database.go 注释。
+	"CaptchaBg", "TaskStatus", "TaskPriority", "RPAExecutionStatus",
+	"WorkerStatus", "ScheduleStatus", "Difficulty",
 }
 
 // expectedStatusValues pins the documented (name -> value) mapping of every
@@ -207,8 +214,39 @@ var expectedStatusValues = map[string]int{
 	"WorkOrderStatusPending":    0, // 待处理
 	"WorkOrderStatusProcessing": 1, // 处理中
 	"WorkOrderStatusCompleted":  2, // 已完成
-	"WorkOrderStatusClosed":    3, // 已关闭
-	"WorkOrderStatusRejected":  4, // 已拒绝
+	"WorkOrderStatusClosed":     3, // 已关闭
+	"WorkOrderStatusRejected":   4, // 已拒绝
+	// 2026-11-13 补登记（captcha_background.go）——现状冻结：
+	// 该族 1=启用/0=禁用 与全局「0=正常/启用」约定相反，但代码内部自洽且贯穿
+	// core / handler / DB default:1 与前端，属历史设计；改极性需配套数据迁移 +
+	// 前后端联动，故此处只锁定不改动，防止未来被误「归一化」而破坏线上数据。
+	"CaptchaBgDisabled": 0, // 禁用
+	"CaptchaBgEnabled":  1, // 启用（反转族，见上注）
+	"DifficultyEasy":    1, // 简单
+	"DifficultyMedium":  2, // 中等
+	"DifficultyHard":    3, // 困难
+	// 2026-11-13 补登记（rpa.go 根包遗留枚举）——现状冻结：
+	// 与 internal/models/rpa 子包同名族取值不同（如 TaskStatus / TaskPriority），
+	// 但根包模型无生产引用（database.go 明确「无引用遗留定义」）。此处登记是防漂移，
+	// 真正的事实源是子包；未来若要删除根包整族，须同步迁移 models 包内单测。
+	"TaskStatusDraft":             0, // 草稿
+	"TaskStatusEnabled":           1, // 启用
+	"TaskStatusDisabled":          2, // 停用
+	"TaskPriorityLow":             0, // 低
+	"TaskPriorityMedium":          1, // 中
+	"TaskPriorityHigh":            2, // 高
+	"RPAExecutionStatusPending":   0, // 待执行
+	"RPAExecutionStatusRunning":   1, // 执行中
+	"RPAExecutionStatusCompleted": 2, // 已完成
+	"RPAExecutionStatusFailed":    3, // 执行失败
+	"RPAExecutionStatusCancelled": 4, // 已取消
+	"WorkerStatusOffline":         0, // 离线
+	"WorkerStatusOnline":          1, // 在线
+	"WorkerStatusBusy":            2, // 忙碌
+	"WorkerStatusError":           3, // 错误
+	"ScheduleStatusActive":        0, // 激活
+	"ScheduleStatusInactive":      1, // 未激活
+	"ScheduleStatusPaused":        2, // 暂停
 }
 
 // TestStatusConstantsStability asserts each watched constant is pinned to its
@@ -383,18 +421,18 @@ func isWatchedStatusConst(name string) bool {
 // constraints (non-DB status values, static SQL that cannot be parameterized)
 // belong here.
 var statusLiteralWhitelist = map[string]string{
-	"geocoding_service.go":                "百度地图 API 返回码（非 DB status，F 簇契约）",
-	"sqlite_reconciliation_views.go":      "sqlite 视图 DDL 静态 SQL，禁改",
-	"task_service.go":                     "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
-	"asset_service.go":                    "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
-	"building_service.go":                 "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
-	"dedicated_line_service.go":          "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
-	"floor_service.go":                    "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
-	"infopoint_service.go":               "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
-	"room_device_service.go":              "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
-	"server_room_service.go":              "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
-	"captcha_background.go":               "captcha difficulty levels []int{1,2,3}, not DB status",
-	"device_discovery_service.go":         "discovery service Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"geocoding_service.go":           "百度地图 API 返回码（非 DB status，F 簇契约）",
+	"sqlite_reconciliation_views.go": "sqlite 视图 DDL 静态 SQL，禁改",
+	"task_service.go":                "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"asset_service.go":               "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"building_service.go":            "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"dedicated_line_service.go":      "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"floor_service.go":               "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"infopoint_service.go":           "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"room_device_service.go":         "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"server_room_service.go":         "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"captcha_background.go":          "captcha difficulty levels []int{1,2,3}, not DB status",
+	"device_discovery_service.go":    "discovery service Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
 }
 
 // TestNoStatusLiteralUsage scans all business code under internal/ (excluding
@@ -549,7 +587,7 @@ func collectStatusLiteralHits(f *ast.File, fset *token.FileSet) []int {
 				}
 				return false
 			}
-			if (isStatusIdentOrSel(n.X) || isStatusIdentOrSel(n.Y)) {
+			if isStatusIdentOrSel(n.X) || isStatusIdentOrSel(n.Y) {
 				var lit *ast.BasicLit
 				if bl, ok := n.X.(*ast.BasicLit); ok && bl.Kind == token.INT {
 					lit = bl

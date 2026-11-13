@@ -36,12 +36,17 @@ import { PageTable } from "@/components/shared";
 import { createDeleteAction } from "@/components/shared/ActionButtons";
 import { PERMISSION_CODES } from "@/constants/permissionCodes";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { useDict } from "@/hooks/useDict";
 import { handleApiError, isFormValidationError } from "@/utils/errorHandler";
 
 const statusSearchOptions = STATUS_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value }));
 
 const DeviceDiscoveryPage: FC = () => {
   const { message } = App.useApp();
+
+  // 设备类型文案走字典 network_device_type：发现结果表 / 结果弹窗列随字典管理页变化；
+  // 字典空态 / 接口异常时回退静态映射，行为与迁移前一致。
+  const { data: deviceTypeDict = [] } = useDict("network_device_type");
 
   // Phase 86 W3（RBAC-02）：操作级权限门控（三态 ready / loading / error）。
   // ⚠️ 判定必须走 useActionPermission —— 禁止用 permissions.length === 0 判「未就绪」。
@@ -309,6 +314,7 @@ const DeviceDiscoveryPage: FC = () => {
         currentDiscovery={currentDiscovery}
         discoveredDevices={discoveredDevices}
         loading={resultsLoading}
+        deviceTypeDict={deviceTypeDict}
         onImport={handleImport}
         importVisible={permImport.visible}
         importDisabled={permImport.disabled}

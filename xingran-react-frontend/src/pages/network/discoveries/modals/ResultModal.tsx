@@ -4,9 +4,10 @@
  */
 
 import { Modal, Table, Space, Button } from "antd";
-import type { ColumnsType } from "antd/es/table";
 import { ImportOutlined } from "@ant-design/icons";
 import type { DeviceDiscovery } from "@/types";
+import type { DictItem } from "@/hooks/useDict";
+import { getDeviceColumns } from "../columns";
 
 export interface ResultModalProps {
   open: boolean;
@@ -20,17 +21,13 @@ export interface ResultModalProps {
   importVisible?: boolean;
   importDisabled?: boolean;
   importHint?: string;
+  /**
+   * 设备类型字典（network_device_type）——由页面层 useDict 提供。
+   * 不传 = 退化为静态映射（字典空态 / 接口异常），行为与迁移前一致。
+   */
+  deviceTypeDict?: DictItem[];
   onClose: () => void;
 }
-
-// 发现结果表格列
-const resultColumns: ColumnsType<Record<string, unknown>> = [
-  { title: "设备名称", dataIndex: "deviceName", key: "deviceName" },
-  { title: "IP地址", dataIndex: "ipAddress", key: "ipAddress" },
-  { title: "厂商", dataIndex: "vendor", key: "vendor" },
-  { title: "型号", dataIndex: "model", key: "model" },
-  { title: "设备类型", dataIndex: "deviceType", key: "deviceType" },
-];
 
 export function ResultModal({
   open,
@@ -41,8 +38,11 @@ export function ResultModal({
   importVisible = true,
   importDisabled = false,
   importHint,
+  deviceTypeDict,
   onClose,
 }: ResultModalProps) {
+  // 列定义复用 discoveries/columns 工厂：字典经页面层透传，三级回退口径统一
+  const resultColumns = getDeviceColumns<Record<string, unknown>>(deviceTypeDict);
   return (
     <Modal
       title={`发现结果 - ${currentDiscovery?.taskName || ""}`}

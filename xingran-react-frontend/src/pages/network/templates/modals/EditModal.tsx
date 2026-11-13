@@ -3,10 +3,13 @@
  * 模板编辑模态框
  */
 
+import { useMemo } from "react";
 import { Modal, Form, Space } from "antd";
 // Phase 71 (W4)：裸 Input/Select/TextArea → 契约组件
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import type { ConfigTemplate } from "@/types";
+import type { DictItem } from "@/hooks/useDict";
+import { buildDictOptions } from "@/components/reconciliation/dictLabels";
 import { VENDOR_OPTIONS, DEVICE_TYPE_OPTIONS } from "../constants";
 
 export interface TemplateEditModalProps {
@@ -14,6 +17,12 @@ export interface TemplateEditModalProps {
   editingTemplate: ConfigTemplate | null;
   onOk: () => Promise<void>;
   onCancel: () => void;
+  /**
+   * 设备类型字典（network_device_type）——由页面层 useDict 提供。
+   * 不传 / 字典空态时回退静态 DEVICE_TYPE_OPTIONS，行为与迁移前一致；
+   * 传入后管理员新增的字典项可在「适用设备」下拉里选到。
+   */
+  deviceTypeDict?: DictItem[];
 }
 
 export function TemplateEditModal({
@@ -21,8 +30,17 @@ export function TemplateEditModal({
   editingTemplate,
   onOk,
   onCancel,
+  deviceTypeDict,
 }: TemplateEditModalProps) {
   const [form] = Form.useForm();
+
+  // 字典优先 → 静态选项 fallback：字典空态 / 接口异常时保持原 5 项不变
+  const deviceTypeOptions = useMemo(() => {
+    const dictOptions = buildDictOptions(deviceTypeDict).filter((opt) => Boolean(opt.label));
+    return dictOptions.length > 0
+      ? dictOptions
+      : DEVICE_TYPE_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value }));
+  }, [deviceTypeDict]);
 
   return (
     <Modal
@@ -77,7 +95,7 @@ export function TemplateEditModal({
               placeholder="通用"
               style={{ width: 150 }}
               showSearch={false}
-              options={DEVICE_TYPE_OPTIONS}
+              options={deviceTypeOptions}
             />
           </Form.Item>
         </Space>

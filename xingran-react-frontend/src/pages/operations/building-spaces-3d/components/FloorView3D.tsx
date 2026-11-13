@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState, useCallback } from "react";
+import { useDict, type DictItem } from "@/hooks/useDict";
 import { Card, Descriptions, Button, Space, Spin, Alert, Tag, Row, Col } from "antd";
 import { ArrowLeftOutlined, ApartmentOutlined, DesktopOutlined } from "@ant-design/icons";
 import { useVisualizationStore } from "@/store/visualizationStore";
@@ -129,7 +130,7 @@ const FloorView3D: React.FC = () => {
                 // 工位点击事件处理
               }}
             />
-            {workstations.length > 0 && <WorkstationList workstations={workstations} />}
+            {workstations.length > 0 && <WorkstationListWithDict workstations={workstations} />}
           </>
         )}
       </Card>
@@ -247,16 +248,30 @@ const StatCard: React.FC<StatCardProps> = ({ value, label, color }) => (
 
 interface WorkstationListProps {
   workstations: WorkstationData[];
+  /** ops_workstation_type 字典项，由上层 useDict 提供；缺省时走静态兜底 */
+  dictItems?: ReadonlyArray<DictItem>;
 }
 
-const WorkstationList: React.FC<WorkstationListProps> = ({ workstations }) => (
+/**
+ * 工位列表字典桥接：仅在列表非空时挂载，内部 useDict 拉取字典并透传给卡片。
+ * 分离出本组件是为了让无字典数据的纯渲染路径（如空列表测试）不依赖
+ * QueryClientProvider —— useDict 只在真正需要展示类型文案时执行。
+ */
+const WorkstationListWithDict: React.FC<{ workstations: WorkstationData[] }> = ({
+  workstations,
+}) => {
+  const { data: typeDict = [] } = useDict("ops_workstation_type");
+  return <WorkstationList workstations={workstations} dictItems={typeDict} />;
+};
+
+const WorkstationList: React.FC<WorkstationListProps> = ({ workstations, dictItems }) => (
   <div style={styles.workstationListContainer}>
     <h4 style={styles.workstationListTitle}>
       <DesktopOutlined /> 工位列表 ({workstations.length} 个)
     </h4>
     <div style={styles.workstationGrid}>
       {workstations.map((workstation) => (
-        <WorkstationCard key={workstation.id} workstation={workstation} />
+        <WorkstationCard key={workstation.id} workstation={workstation} dictItems={dictItems} />
       ))}
     </div>
   </div>
@@ -264,13 +279,15 @@ const WorkstationList: React.FC<WorkstationListProps> = ({ workstations }) => (
 
 interface WorkstationCardProps {
   workstation: WorkstationData;
+  /** ops_workstation_type 字典项，透传给类型文案解析 */
+  dictItems?: ReadonlyArray<DictItem>;
 }
 
-const WorkstationCard: React.FC<WorkstationCardProps> = ({ workstation }) => {
+const WorkstationCard: React.FC<WorkstationCardProps> = ({ workstation, dictItems }) => {
   const statusColor = getWorkstationStatusColorCSS(workstation.status);
   const _typeColor = getWorkstationTypeColorCSS(workstation.type);
   const statusText = getWorkstationStatusText(workstation.status);
-  const typeText = getWorkstationTypeText(workstation.type);
+  const typeText = getWorkstationTypeText(workstation.type, dictItems);
 
   return (
     <Card

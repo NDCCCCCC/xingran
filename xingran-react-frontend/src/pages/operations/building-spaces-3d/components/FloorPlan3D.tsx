@@ -4,6 +4,7 @@
  */
 
 import { useRef, useState, useMemo } from "react";
+import { useDict, type DictItem } from "@/hooks/useDict";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -77,6 +78,8 @@ interface Workstation3DProps {
   position: [number, number, number];
   onClick?: () => void;
   isSelected?: boolean;
+  /** ops_workstation_type 字典项，由上层 useDict 提供；缺省时走静态兜底 */
+  dictItems?: ReadonlyArray<DictItem>;
 }
 
 const Workstation3D: React.FC<Workstation3DProps> = ({
@@ -84,6 +87,7 @@ const Workstation3D: React.FC<Workstation3DProps> = ({
   position,
   onClick,
   isSelected,
+  dictItems,
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -108,7 +112,7 @@ const Workstation3D: React.FC<Workstation3DProps> = ({
   });
 
   const statusText = getWorkstationStatusText(workstation.status);
-  const typeText = getWorkstationTypeText(workstation.type);
+  const typeText = getWorkstationTypeText(workstation.type, dictItems);
 
   return (
     <group ref={groupRef} position={position}>
@@ -479,9 +483,15 @@ const TooltipRow: React.FC<TooltipRowProps> = ({ label, value, valueColor }) => 
 interface FloorPlanSceneProps {
   workstations: WorkstationData[];
   onWorkstationClick?: (workstation: WorkstationData) => void;
+  /** ops_workstation_type 字典项，透传给单个工位的 tooltip 文案解析 */
+  dictItems?: ReadonlyArray<DictItem>;
 }
 
-const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({ workstations, onWorkstationClick }) => {
+const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({
+  workstations,
+  onWorkstationClick,
+  dictItems,
+}) => {
   const groupRef = useRef<THREE.Group>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -529,6 +539,7 @@ const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({ workstations, onWorksta
             position={[pos.x, 0, pos.z]}
             onClick={() => handleWorkstationClick(ws)}
             isSelected={selectedId === ws.id}
+            dictItems={dictItems}
           />
         );
       })}
@@ -548,6 +559,10 @@ const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({ workstations, onWorksta
 // ============ 主组件 ============
 
 const FloorPlan3D: React.FC<FloorPlan3DProps> = ({ workstations, onWorkstationClick }) => {
+  // 字典驱动：管理员新增工位类型（如 3=虚拟工位）时 tooltip 显示字典标签。
+  // hook 必须无条件调用，故置于空数据早退之前；Canvas 外取值避免 R3F context 割裂。
+  const { data: typeDict = [] } = useDict("ops_workstation_type");
+
   if (workstations.length === 0) {
     return <EmptyView />;
   }
@@ -574,7 +589,11 @@ const FloorPlan3D: React.FC<FloorPlan3DProps> = ({ workstations, onWorkstationCl
           maxDistance={CAMERA_CONFIG.MAX_DISTANCE}
         />
 
-        <FloorPlanScene workstations={workstations} onWorkstationClick={onWorkstationClick} />
+        <FloorPlanScene
+          workstations={workstations}
+          onWorkstationClick={onWorkstationClick}
+          dictItems={typeDict}
+        />
       </Canvas>
 
       {/* 操作提示 */}

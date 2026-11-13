@@ -5,6 +5,8 @@
 import type { BuildingItem } from "./types";
 import { MARKER_COLORS, STATUS_TEXT } from "./constants";
 import type { BMapPoint } from "@/types/baidu-map";
+import type { DictItem } from "@/hooks/useDict";
+import { buildDictLabelIndex, resolveDictLabel } from "@/components/reconciliation/dictLabels";
 
 /**
  * Base64 编码（正确处理 Unicode 字符）
@@ -60,23 +62,38 @@ export function getWorkstationStatusText(status: number): string {
 }
 
 /**
- * 获取工位类型文本
+ * 工位类型文案静态回退映射。
+ * 工位类型是数据字典 ops_workstation_type，管理员可新增类型（如 3=虚拟工位）；
+ * 字典为空 / 接口异常 / 未命中时沿用本映射，保证字典接入前后展示行为一致。
  */
-export function getWorkstationTypeText(type: number): string {
-  switch (type) {
-    case 0:
-      return STATUS_TEXT.WORKSTATION.FIXED;
-    case 1:
-      return STATUS_TEXT.WORKSTATION.FLEXIBLE;
-    case 2:
-      return STATUS_TEXT.WORKSTATION.MANAGEMENT;
-    default:
-      return "未知";
-  }
+const WORKSTATION_TYPE_FALLBACK_LABELS: Record<string, string> = {
+  "0": STATUS_TEXT.WORKSTATION.FIXED,
+  "1": STATUS_TEXT.WORKSTATION.FLEXIBLE,
+  "2": STATUS_TEXT.WORKSTATION.MANAGEMENT,
+};
+
+/**
+ * 获取工位类型文本（字典驱动，三级回退）。
+ * 1) 字典命中（dictValue → dictLabel）优先；
+ * 2) 字典未命中降级静态映射（固定 / 灵活 / 管理）；
+ * 3) 两者皆无保留原兜底文案「未知」（不吞成空串）。
+ * 字典数据由上层 React 组件 useDict("ops_workstation_type") 后透传；
+ * 不传 dictItems 时等价于原静态 switch（既有调用 / 测试零变更）。
+ * @param type 类型值
+ * @param dictItems 可选字典项数组
+ * @returns 类型文本
+ */
+export function getWorkstationTypeText(type: number, dictItems?: ReadonlyArray<DictItem>): string {
+  const { labels } = buildDictLabelIndex(dictItems ? [...dictItems] : undefined);
+  const resolved = resolveDictLabel(String(type), labels, WORKSTATION_TYPE_FALLBACK_LABELS);
+  // resolveDictLabel 未命中时回原始值，这里还原本模块既有的「未知」兜底文案
+  return resolved === String(type) ? "未知" : resolved;
 }
 
 /**
  * 获取工位颜色（3D 场景）
+ * 颜色按 status / type 数值静态取色，与字典文案解耦；新增工位类型由
+ * ops_workstation_type 字典覆盖展示文案，不新增色值。
  */
 export function getWorkstationColor(workstation: { status: number; type: number }): number {
   if (workstation.status === 1) return 0xd32f2f; // 占用 - 深红色

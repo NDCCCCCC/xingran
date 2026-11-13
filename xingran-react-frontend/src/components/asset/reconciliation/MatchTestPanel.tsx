@@ -27,10 +27,33 @@ import { ExperimentOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { reconciliationApi } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
+import { useDict } from "@/hooks/useDict";
+import {
+  buildDictLabelIndex,
+  resolveDictLabel,
+  resolveDictTagColor,
+  type DictLabelIndex,
+} from "@/components/reconciliation/dictLabels";
 
 interface MatchTestPanelProps {
   /** 嵌入 Drawer 时不显示外层 Card padding */
   embedded?: boolean;
+}
+
+/** 严重度静态回退色板(字典未配置 listClass/cssClass 时使用,保持原展示行为) */
+const SEVERITY_FALLBACK_COLORS: Record<string, string> = {
+  critical: "red",
+  high: "volcano",
+  medium: "orange",
+  low: "green",
+};
+
+/**
+ * 严重度 Tag 配色:字典 listClass/cssClass 优先 → 既有静态色板 fallback → default。
+ * 复用共享工具 resolveDictTagColor,避免重复造颜色解析逻辑。
+ */
+function resolveSeverityTagColor(sev: string, index: DictLabelIndex): string {
+  return resolveDictTagColor(sev, index, SEVERITY_FALLBACK_COLORS[sev]);
 }
 
 interface MatchedRule {
@@ -55,6 +78,10 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm<TestInput>();
   const [testInput, setTestInput] = useState<TestInput>({ ip: "" });
+
+  // 字典驱动:severityOverride / finalSeverity 的文案与颜色优先取字典
+  const { data: severityDict = [] } = useDict("asset_reconciliation_severity");
+  const severityIndex = useMemo(() => buildDictLabelIndex(severityDict), [severityDict]);
 
   // queryKey 入参对象 useMemo 稳定(CLAUDE.md useEffect 强约束)
   const stableQueryKey = useMemo(
@@ -128,7 +155,14 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
       dataIndex: "severityOverride",
       key: "severityOverride",
       width: 100,
-      render: (v?: string | null) => (v ? <Tag color="blue">{v}</Tag> : "-"),
+      render: (v?: string | null) =>
+        v ? (
+          <Tag color={resolveSeverityTagColor(v, severityIndex)}>
+            {resolveDictLabel(v, severityIndex.labels)}
+          </Tag>
+        ) : (
+          "-"
+        ),
     },
     {
       title: "范围",
@@ -218,7 +252,9 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
               <span style={{ color: "var(--theme-text-tertiary)", marginRight: 8 }}>
                 最终严重度:
               </span>
-              <Tag color={severityColor(finalSeverity)}>{finalSeverity || "-"}</Tag>
+              <Tag color={resolveSeverityTagColor(finalSeverity, severityIndex)}>
+                {finalSeverity ? resolveDictLabel(finalSeverity, severityIndex.labels) : "-"}
+              </Tag>
             </div>
           </Space>
         </Card>
@@ -260,21 +296,6 @@ function actionColor(action: string): string {
       return "purple";
     case "skip_severity":
       return "blue";
-    default:
-      return "default";
-  }
-}
-
-function severityColor(sev: string): string {
-  switch (sev) {
-    case "critical":
-      return "red";
-    case "high":
-      return "volcano";
-    case "medium":
-      return "orange";
-    case "low":
-      return "green";
     default:
       return "default";
   }

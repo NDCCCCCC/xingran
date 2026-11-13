@@ -20,6 +20,7 @@ import { getTemplateColumns } from "./columns";
 import { TemplateEditModal, TemplatePreviewModal, TemplateVariablesModal } from "./modals";
 import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
+import { useDict } from "@/hooks/useDict";
 import NetworkExport from "@/components/shared/NetworkExport";
 import {
   BatchExportModal,
@@ -48,6 +49,10 @@ const TemplateManagement: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setTotal } = usePagination();
+
+  // 设备类型下拉与表格 Tag 走字典 network_device_type：字典管理页改 label / 新增类型后
+  // 搜索、编辑下拉与列表 Tag 随之变化；字典空态 / 接口异常时回退静态 DEVICE_TYPE_OPTIONS。
+  const { data: deviceTypeDict = [] } = useDict("network_device_type");
 
   const {
     templates,
@@ -186,6 +191,7 @@ const TemplateManagement: FC = () => {
     openModal: (record: ConfigTemplate) => openModal(record, editForm),
     getColumnSortOrder,
     sorterMetas,
+    deviceTypeDict,
   });
 
   // 批量导出
@@ -392,6 +398,7 @@ const TemplateManagement: FC = () => {
       {/* 编辑模态框 */}
       <TemplateEditModal
         open={editModalVisible}
+        deviceTypeDict={deviceTypeDict}
         editingTemplate={editingTemplate}
         onOk={async () => {
           await handleCreate(editingTemplate, editForm, handleSuccess);

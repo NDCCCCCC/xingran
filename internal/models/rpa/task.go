@@ -43,9 +43,10 @@ type Task struct {
 	Script      json.RawMessage `gorm:"type:jsonb;not null" json:"script"`
 	Timeout     int             `gorm:"column:timeout_seconds;default:300" json:"timeout"`
 	RetryCount  int             `gorm:"column:retry_count;default:0" json:"retryCount"`
-	Priority    TaskPriority    `gorm:"default:5" json:"priority"`
-	Status      TaskStatus      `gorm:"default:0" json:"status"`
-	Tags        string          `gorm:"size:500" json:"tags"`
+	Priority    TaskPriority    `gorm:"default:1" json:"priority"` // default:1 = TaskPriorityMedium；原 default:5 超出 0-3 枚举域
+
+	Status TaskStatus `gorm:"default:0" json:"status"`
+	Tags   string     `gorm:"size:500" json:"tags"`
 }
 
 // TableName 指定表名
