@@ -18,7 +18,7 @@ import {
 // Phase 71 (W1)：裸 Input/Select/Input.TextArea → 契约组件。
 // 说明：本页 Input 仍在 antd 导入中——因为 <Input.Password>（成员表达式）不在
 // 本波迁移面（P65/P70 selector 只拦 TextArea 形态的成员表达式），见 SUMMARY 跳过项。
-import { AppInput, AppTextArea } from "@/components/ui";
+import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
 import { StatCards } from "@/components/shared";
 import {
   UserOutlined,
@@ -34,6 +34,9 @@ import { isFormValidationError } from "@/utils/errorHandler";
 import { LOGIN, DUTY_MY_DUTY } from "@/constants/routes";
 import type { UserProfile } from "@/types";
 import { formatDateTime, FORMAT_DATE_SHORT } from "@/utils/datetime";
+import { useDict } from "@/hooks/useDict";
+import { formatGender } from "@/pages/system/user/utils";
+import { GENDER_OPTIONS } from "@/pages/system/user/constants";
 import { Link } from "react-router-dom";
 
 // 性别枚举（形态分类器产物：options 形态，供 AppSelect 使用）
@@ -48,6 +51,9 @@ const ProfilePage: FC = () => {
   const [dutyStats, setDutyStats] = useState<MyDutyStats | null>(null);
   const [dutyStatsLoading, setDutyStatsLoading] = useState(false);
   const updateUser = useAuthStore((s) => s.updateUser);
+  // 性别是数据字典（sys_user_sex）：管理员可新增/改标签，故展示与下拉都走字典，
+  // 字典空态/接口异常时回退静态 GENDER_OPTIONS。
+  const { data: genderDict = [] } = useDict("sys_user_sex");
 
   // 加载个人信息
   const loadProfile = async () => {
@@ -200,7 +206,7 @@ const ProfilePage: FC = () => {
               <Descriptions.Item label="用户名">{profile.username}</Descriptions.Item>
               <Descriptions.Item label="昵称">{profile.nickname || "-"}</Descriptions.Item>
               <Descriptions.Item label="性别">
-                {profile.gender === 0 ? "未知" : profile.gender === 1 ? "男" : "女"}
+                {formatGender(profile.gender, genderDict)}
               </Descriptions.Item>
               <Descriptions.Item label="邮箱">{profile.email || "-"}</Descriptions.Item>
               <Descriptions.Item label="手机号">{profile.phone || "-"}</Descriptions.Item>
@@ -336,7 +342,15 @@ const ProfilePage: FC = () => {
           <Form.Item label="性别" name="gender" initialValue={0}>
             {/* 形态分类器：原 children 形态 <Option> 改写为 options 形态——AppSelect 无条件
                 设 optionFilterProp="label"，children 形态下该 prop 指向不存在的字段（破坏性，
-                PITFALLS 2.2）。3 项固定枚举 < 8，故 showSearch 自动为 false。 */}
+                PITFALLS 2.2）。3 项固定枚举 < 8，故 showSearch 自动为 false。
+                options 由 sys_user_sex 字典生成（字典优先），空态回退静态 GENDER_OPTIONS。 */}
+            <AppSelect
+              options={
+                genderDict.length > 0
+                  ? genderDict.map((d) => ({ label: d.dictLabel, value: Number(d.dictValue) }))
+                  : GENDER_OPTIONS
+              }
+            />
           </Form.Item>
 
           <Form.Item

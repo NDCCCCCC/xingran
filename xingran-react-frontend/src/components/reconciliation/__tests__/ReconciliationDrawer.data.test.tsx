@@ -32,6 +32,7 @@ import { ReconciliationDrawer } from "../ReconciliationDrawer";
 const TIMELINE_ENDPOINT = "/asset/reconciliation/exception/list";
 const RULE_ENDPOINT = "/asset/reconciliation/exception-rule/list";
 const HEALTH_ENDPOINT = "/asset/reconciliation/by-workstation";
+const DICT_ENDPOINT = "/system/dicts/data/list";
 
 /**
  * 工位健康数据 fixture —— Drawer 的资产详情（assetCode 等）来自
@@ -184,5 +185,37 @@ describe("ReconciliationDrawer 数据加载", () => {
       }
     );
     expect(await screen.findByText("历史变更")).not.toBeNull();
+  });
+
+  it("字典命中 → 摘要 Tab 显示 dictLabel(冲突类型/严重度)", async () => {
+    const { screen } = await renderPageWithEndpoints(
+      <ReconciliationDrawer
+        open={true}
+        onClose={vi.fn()}
+        selectedAssetId="asset-1"
+        workstationId="ws-1"
+        assetCode="AST-001"
+        activeTab="summary"
+        onTabChange={vi.fn()}
+      />,
+      {
+        endpoints: {
+          [TIMELINE_ENDPOINT]: timelineFixture,
+          [RULE_ENDPOINT]: ruleFixture,
+          [HEALTH_ENDPOINT]: healthFixture,
+          [DICT_ENDPOINT]: {
+            data: {
+              list: [
+                { id: "d1", dictLabel: "B类-物理有/责任人无", dictValue: "B", listClass: "error" },
+                { id: "d2", dictLabel: "高", dictValue: "high", listClass: "error" },
+              ],
+              total: 2,
+            },
+          },
+        },
+      }
+    );
+    expect(await screen.findByText("B类-物理有/责任人无")).not.toBeNull();
+    expect(await screen.findByText("高")).not.toBeNull();
   });
 });

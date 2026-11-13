@@ -9,7 +9,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-import ExceptionRuleForm from "../ExceptionRuleForm";
+import ExceptionRuleForm, { buildSeverityOverrideOptions } from "../ExceptionRuleForm";
 import MatchTestPanel from "../MatchTestPanel";
 
 async function waitText(text: string, timeoutMs = 6000): Promise<boolean> {
@@ -44,6 +44,51 @@ describe("components/asset/reconciliation — ExceptionRuleForm", () => {
     );
     await new Promise((r) => setTimeout(r, 800));
     expect(document.body.innerHTML.length).toBeGreaterThan(100);
+  });
+
+  it("字典命中 → 下拉显示 dictLabel(冲突类型/例外动作/严重度)", async () => {
+    await renderPageWithEndpoints(
+      <ExceptionRuleForm
+        open
+        initialValues={{
+          name: "测试规则",
+          conflictTypes: ["B"],
+          exceptionActions: ["silence"],
+          severityOverride: "high",
+        }}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+      {
+        endpoints: {
+          "/system/dicts/data/list": {
+            data: {
+              list: [
+                { id: "d1", dictLabel: "B类-物理有/责任人无", dictValue: "B", listClass: "error" },
+                { id: "d2", dictLabel: "静默期", dictValue: "silence", listClass: "default" },
+                { id: "d3", dictLabel: "高", dictValue: "high", listClass: "error" },
+                { id: "d4", dictLabel: "紧急", dictValue: "critical", listClass: "error" },
+              ],
+              total: 4,
+            },
+          },
+        },
+      }
+    );
+    expect(await waitText("B类-物理有/责任人无")).toBe(true);
+    expect(await waitText("静默期")).toBe(true);
+    expect(await waitText("高")).toBe(true);
+  });
+
+  it("severity_override 选项剔除 critical(后端 CHECK 约束)", () => {
+    const options = buildSeverityOverrideOptions([
+      { id: "d1", dictLabel: "低", dictValue: "low" },
+      { id: "d2", dictLabel: "中", dictValue: "medium" },
+      { id: "d3", dictLabel: "高", dictValue: "high" },
+      { id: "d4", dictLabel: "紧急", dictValue: "critical" },
+    ]);
+    expect(options.map((o) => o.value)).toEqual(["", "low", "medium", "high"]);
+    expect(options.some((o) => o.value === "critical")).toBe(false);
   });
 });
 

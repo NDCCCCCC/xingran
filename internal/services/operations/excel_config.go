@@ -33,6 +33,18 @@ type ExcelColumn struct {
 	UpsertKey bool        // 是否作为Upsert的唯一键（用于判断重复记录）
 	DBField   string      // 数据库字段名（可选，如果与Field不同，例如 workstationName -> workstation_name）
 	Default   interface{} // 当Excel值为空时的默认值
+	// DictType 绑定数据字典类型（如 "ops_workstation_type"）。
+	//
+	// 用途：Options 是**导入/导出模板的静态快照**，管理员在字典管理页新增枚举项
+	// （如工位类型新增「虚拟工位」）后，Options 不含新值 → 导入侧原样透传字符串
+	// 写入整型列（脏数据/写入报错），导出侧输出原始数字（管理员看不懂）。
+	// 配置 DictType 后：
+	//   - 导入：Options 未命中时按字典 dictLabel 反查 dictValue；
+	//   - 导出：Options 未命中时按字典 dictValue 反查 dictLabel。
+	// 两侧共用同一字典 → 新增枚举项无需改代码。
+	//
+	// 留空 = 保持静态 Options 行为（Options 未命中时导入原样透传）。
+	DictType string
 }
 
 // ReferenceSkip 是引用配置的哨兵值：标记该列**不参与**引用解析。
@@ -163,7 +175,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "name", Header: "工位名称", Aliases: []string{"工位", "工位编号", "工位号", "工位代码"}, Required: true, MaxLength: 100, DBField: "workstation_name"},
 			{Field: "buildingName", Header: "所属楼宇", Aliases: []string{"所属楼宇名称", "楼宇", "楼宇名称", "所属楼栋", "楼栋", "所属建筑", "建筑"}, MaxLength: 100, Reference: "ops_buildings.name", DBField: "building_id"},                         // Excel列名：所属楼宇
 			{Field: "floorName", Header: "所属楼层名称", Aliases: []string{"所属楼层", "所在楼层", "所在楼层名称", "楼层", "楼层名称"}, Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id", DependsOn: "buildingName"}, // 依赖 buildingName 的解析结果
-			{Field: "workstationType", Header: "工位类型", Aliases: []string{"类型"}, DBField: "workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
+			{Field: "workstationType", Header: "工位类型", Aliases: []string{"类型"}, DBField: "workstation_type", DictType: "ops_workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
 			{Field: "status", Header: "状态", Aliases: []string{"工位状态"}, DBField: "status", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
 			// 部门代码：按 sys_dept.dept_code 解析为 dept_id；与既有 deptName 共存时以本字段为准；
 			// 本字段为空且 deptName 非空时走名称匹配回退，向后兼容老模板。
@@ -270,7 +282,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "purchaseDate", Header: "购买日期", MaxLength: 50, DBField: "purchase_date"},
 			{Field: "warrantyDate", Header: "保修到期", MaxLength: 50, DBField: "warranty_date"},
 			{Field: "powerConsumption", Header: "功耗(W)", DBField: "power_consumption"},
-			{Field: "status", Header: "状态", DBField: "status", Options: map[interface{}]string{0: "正常", 1: "故障", 2: "报废"}},
+			{Field: "status", Header: "状态", DBField: "status", Options: map[interface{}]string{int(models.RoomDeviceStatusNormal): "正常", int(models.RoomDeviceStatusFault): "故障", int(models.RoomDeviceStatusScrap): "报废"}},
 			{Field: "remark", Header: "备注", Aliases: []string{"说明", "描述"}, MaxLength: 500, DBField: "remark"},
 		},
 	},

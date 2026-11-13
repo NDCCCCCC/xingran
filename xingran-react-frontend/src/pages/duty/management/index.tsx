@@ -3,7 +3,7 @@
  * Duty Management Page
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { Tabs, Button, Modal, Form } from "antd";
@@ -43,8 +43,14 @@ export default function DutyManagement() {
   // 用户选项（共享缓存，5min stale）
   const { data: _users = [] } = useUserOptions();
 
-  // 假日类型字典（共享缓存，供新增/批量新增弹窗的类型下拉使用）
+  // 假日类型字典（共享缓存，供新增/批量新增弹窗的类型下拉、列表类型列、Excel 导入白名单使用）
   const { data: holidayTypeDict = [] } = useDict("duty_holiday_type");
+
+  // 字典值集合（Excel 导入的类型白名单：字典值 ∪ 静态 fallback）
+  const holidayTypeValues = useMemo(
+    () => holidayTypeDict.map((d) => d.dictValue),
+    [holidayTypeDict]
+  );
 
   // ==================== 其他状态 ====================
   const location = useLocation();
@@ -147,9 +153,10 @@ export default function DutyManagement() {
 
   const handleImport = useCallback(
     (options: ImportOptions) => {
-      handleHolidayImport(options, holidayData.batchCreate);
+      // 传入字典值集合：新增的节假日类型不再被静态白名单拒绝
+      handleHolidayImport(options, holidayData.batchCreate, holidayTypeValues);
     },
-    [holidayData]
+    [holidayData, holidayTypeValues]
   );
 
   const handleBatchHolidayOk = useCallback(
@@ -230,6 +237,7 @@ export default function DutyManagement() {
             children: (
               <HolidayManagement
                 holidays={holidayData.holidays}
+                holidayTypeDict={holidayTypeDict}
                 loading={holidayData.loading}
                 holidayYear={holidayData.holidayYear}
                 availableYears={holidayData.availableYears}

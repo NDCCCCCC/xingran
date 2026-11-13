@@ -1508,6 +1508,17 @@ func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (any, erro
 				return k, nil
 			}
 		}
+		// Options 未命中：若该列绑定了数据字典（DictType），按字典反查 dictValue。
+		//
+		// 背景：Options 是模板的静态快照，管理员在字典管理页新增枚举项
+		// （如工位类型新增「虚拟工位」）后 Options 不含新值。此前实现直接
+		// 原样透传字符串 → 写入整型列（workstation_type）产生脏数据或写入报错。
+		// 绑定字典后新增枚举项无需改代码即可导入。
+		if col.DictType != "" {
+			if dictValue, ok := s.lookupDictValue(col.DictType, value); ok {
+				return dictValue, nil
+			}
+		}
 		return value, nil
 	}
 
@@ -1519,6 +1530,59 @@ func (s *ExcelService) parseFieldValue(col ExcelColumn, value string) (any, erro
 	}
 
 	return value, nil
+}
+
+// lookupDictValue 按字典类型与字典标签反查字典值（dictValue）。
+//
+// 用于 Options 静态快照未命中时的兜底：管理员在字典管理页新增的枚举项
+// （如工位类型「虚拟工位」）可直接被 Excel 导入识别，无需改代码。
+//
+// 口径：
+//   - 只取 status=0（正常）的字典项，停用项不参与匹配；
+//   - dictValue 必须是整数（枚举类字典的值语义），否则视为字典配置错误不匹配；
+//   - 查库失败（表不存在等）返回 ok=false，调用方按原逻辑透传，不阻断导入。
+func (s *ExcelService) lookupDictValue(dictType, label string) (int, bool) {
+	if s.db == nil || dictType == "" || label == "" {
+		return 0, false
+	}
+	var items []models.DictData
+	if err := s.db.WithContext(context.Background()).
+		Model(&models.DictData{}).
+		Where("dict_type = ? AND status = ?", dictType, models.DictStatusNormal).
+		Where("dict_label = ?", label).
+		Find(&items).Error; err != nil {
+		return 0, false
+	}
+	for _, item := range items {
+		v, err := strconv.Atoi(strings.TrimSpace(item.DictValue))
+		if err != nil {
+			continue // 字典值非整数 → 该字典类型不是枚举语义，不匹配
+		}
+		return v, true
+	}
+	return 0, false
+}
+
+// lookupDictLabel 按字典类型与字典值反查字典标签（dictLabel）。
+//
+// 用于导出侧 Options 静态快照未命中时的兜底：字典新增枚举项导出为可读标签，
+// 与导入侧 lookupDictValue 形成同一字典的双向闭环。
+func (s *ExcelService) lookupDictLabel(dictType string, value any) (string, bool) {
+	if s.db == nil || dictType == "" {
+		return "", false
+	}
+	var items []models.DictData
+	if err := s.db.WithContext(context.Background()).
+		Model(&models.DictData{}).
+		Where("dict_type = ? AND status = ?", dictType, models.DictStatusNormal).
+		Where("dict_value = ?", fmt.Sprintf("%v", value)).
+		Find(&items).Error; err != nil {
+		return "", false
+	}
+	if len(items) > 0 && items[0].DictLabel != "" {
+		return items[0].DictLabel, true
+	}
+	return "", false
 }
 
 func (s *ExcelService) validateUniqueness(ctx context.Context, config ExcelConfig, data map[string]any, rowNum int) []ImportError {
@@ -1715,6 +1779,13 @@ func (s *ExcelService) formatCellValue(col ExcelColumn, row map[string]any) stri
 	if col.Options != nil {
 		if str, ok := col.Options[value]; ok {
 			return str
+		}
+		// Options 未命中：绑定字典的列按 dictValue 反查 dictLabel，
+		// 使字典新增枚举项（如「虚拟工位」）导出为可读标签而非原始数字。
+		if col.DictType != "" {
+			if label, ok := s.lookupDictLabel(col.DictType, value); ok {
+				return label
+			}
 		}
 	}
 

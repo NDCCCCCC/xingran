@@ -10,11 +10,23 @@ import { getAppMessage } from "@/utils/antdMessage";
 import dayjs from "dayjs";
 import type { HolidayExcelRow, ImportOptions, HolidayCreateData } from "../types";
 
-const VALID_HOLIDAY_TYPES = ["legal", "workday", "custom"] as const;
-type HolidayType = "legal" | "workday" | "custom";
+/** 静态 fallback 类型白名单（字典不可用/未命中时的行为基线） */
+const STATIC_VALID_HOLIDAY_TYPES = ["legal", "workday", "custom"] as const;
 
-function isValidHolidayType(value: string): value is HolidayType {
-  return VALID_HOLIDAY_TYPES.includes(value as HolidayType);
+/**
+ * 计算导入允许的节假日类型集合 = 字典值集合 ∪ 静态 fallback。
+ *
+ * 背景：节假日类型是数据字典（duty_holiday_type），管理员可新增类型。
+ * 静态白名单会让新增类型的 Excel 导入报「类型值不正确」，
+ * 这里改为「字典值 ∪ 静态值」，不传字典值时保持原静态白名单行为。
+ */
+export function resolveValidHolidayTypes(dictValues?: readonly string[]): string[] {
+  const allowed = new Set<string>(STATIC_VALID_HOLIDAY_TYPES);
+  for (const value of dictValues ?? []) {
+    const trimmed = value?.trim();
+    if (trimmed) allowed.add(trimmed);
+  }
+  return [...allowed];
 }
 
 const TEMPLATE_DATA = [
@@ -46,29 +58,47 @@ function getRowName(row: HolidayExcelRow, rowNum: number): string {
   return holidayName;
 }
 
-function getRowType(row: HolidayExcelRow, rowNum: number): HolidayType {
+function getRowType(row: HolidayExcelRow, rowNum: number, allowedTypes: readonly string[]): string {
   const holidayTypeRaw = row["类型(legal/workday/custom)"] || row["类型"] || "custom";
-  if (!isValidHolidayType(holidayTypeRaw)) {
+  if (!allowedTypes.includes(holidayTypeRaw)) {
     throw new Error(
-      `第 ${rowNum} 行：类型值不正确 (${holidayTypeRaw})，应为 legal、workday 或 custom`
+      `第 ${rowNum} 行：类型值不正确 (${holidayTypeRaw})，应为 ${allowedTypes.join("、")}`
     );
   }
   return holidayTypeRaw;
 }
 
-function parseHolidayRow(row: HolidayExcelRow, rowNum: number): HolidayCreateData {
+function parseHolidayRow(
+  row: HolidayExcelRow,
+  rowNum: number,
+  allowedTypes: readonly string[]
+): HolidayCreateData {
   const dateStr = getRowDate(row, rowNum);
   const holidayName = getRowName(row, rowNum);
-  const holidayType = getRowType(row, rowNum);
+  const holidayType = getRowType(row, rowNum, allowedTypes);
 
   return {
     holidayDate: dateStr,
     holidayName,
     isOffday: row["是否休息(true/false)"] !== false,
-    holidayType: holidayType,
+    // 字典可扩展节假日类型，值域宽于前端既有联合类型
+    holidayType: holidayType as HolidayCreateData["holidayType"],
     year: dayjs(dateStr).year(),
     remark: row["备注"] || "",
   };
+}
+
+/**
+ * 校验并解析节假日 Excel 行（可传字典值集合扩展类型白名单）。
+ * @param rows Excel 行数据
+ * @param dictValues duty_holiday_type 字典的 dictValue 集合（不传则仅静态白名单）
+ */
+export function validateHolidayRows(
+  rows: HolidayExcelRow[],
+  dictValues?: readonly string[]
+): HolidayCreateData[] {
+  const allowedTypes = resolveValidHolidayTypes(dictValues);
+  return rows.map((row, index) => parseHolidayRow(row, index + 2, allowedTypes));
 }
 
 export async function downloadHolidayTemplate() {
@@ -83,7 +113,8 @@ export async function downloadHolidayTemplate() {
 
 export async function handleHolidayImport(
   options: ImportOptions,
-  batchCreate: (holidays: HolidayCreateData[]) => Promise<boolean | void>
+  batchCreate: (holidays: HolidayCreateData[]) => Promise<boolean | void>,
+  holidayTypeValues?: readonly string[]
 ): Promise<void> {
   const { file, onProgress, onSuccess, onError } = options;
 
@@ -115,7 +146,7 @@ export async function handleHolidayImport(
         throw new Error("Excel 文件为空");
       }
 
-      const holidays = jsonData.map((row, index) => parseHolidayRow(row, index + 2));
+      const holidays = validateHolidayRows(jsonData, holidayTypeValues);
 
       await batchCreate(holidays);
       onSuccess?.(undefined);

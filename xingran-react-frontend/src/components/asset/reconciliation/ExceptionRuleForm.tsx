@@ -21,9 +21,11 @@
  * 使用 reconciliationApi.exceptionRule.{create,update} (CLAUDE.md 强约束:不用 raw axios)
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Form, DatePicker, Radio, Modal, App } from "antd";
 import { AppInput, AppSelect, AppTextArea } from "@/components/ui";
+import { useDict, type DictItem } from "@/hooks/useDict";
+import { buildDictOptions, type DictOption } from "@/components/reconciliation/dictLabels";
 import dayjs, { type Dayjs } from "dayjs";
 
 export interface ExceptionRuleFormValues {
@@ -46,7 +48,8 @@ interface ExceptionRuleFormProps {
   onCancel: () => void;
 }
 
-const CONFLICT_TYPE_OPTIONS = [
+/** 冲突类型静态回退选项(字典为空/未命中时才用) */
+const CONFLICT_TYPE_OPTIONS: DictOption[] = [
   { label: "B 物理有/声明无", value: "B" },
   { label: "C 物理声明不匹配", value: "C" },
   { label: "D 仅声明", value: "D" },
@@ -54,7 +57,8 @@ const CONFLICT_TYPE_OPTIONS = [
   { label: "F AD 账号不一致", value: "F" },
 ];
 
-const EXCEPTION_ACTION_OPTIONS = [
+/** 例外动作静态回退选项(字典为空/未命中时才用) */
+const EXCEPTION_ACTION_OPTIONS: DictOption[] = [
   { label: "no_alert 不告警", value: "no_alert" },
   { label: "no_notice 不通知", value: "no_notice" },
   { label: "no_workorder 不转工单", value: "no_workorder" },
@@ -62,12 +66,43 @@ const EXCEPTION_ACTION_OPTIONS = [
   { label: "silence 静默", value: "silence" },
 ];
 
-const SEVERITY_OVERRIDE_OPTIONS = [
+/** 严重度覆盖静态回退选项(字典为空/未命中时才用) */
+const SEVERITY_OVERRIDE_OPTIONS: DictOption[] = [
   { label: "(不覆盖)", value: "" },
   { label: "low", value: "low" },
   { label: "medium", value: "medium" },
   { label: "high", value: "high" },
 ];
+
+/**
+ * severity_override 的后端硬约束:
+ *   DB CHECK 约束 chk_recon_exc_severity_override 仅允许 low/medium/high,
+ *   不含 critical(override 是"降级"语义,不允许升到 critical)。
+ *   因此即使字典 asset_reconciliation_severity 里存在 critical,
+ *   也不放进严重度覆盖下拉,避免提交被后端拒绝。
+ */
+const SEVERITY_OVERRIDE_EXCLUDED_VALUES = ["critical"];
+
+/** 冲突类型选项:字典优先(管理员新增枚举项即可选到),字典为空回退静态常量 */
+export function buildConflictTypeOptions(dict: DictItem[] | undefined): DictOption[] {
+  const options = buildDictOptions(dict);
+  return options.length > 0 ? options : CONFLICT_TYPE_OPTIONS;
+}
+
+/** 例外动作选项:字典优先,字典为空回退静态常量 */
+export function buildExceptionActionOptions(dict: DictItem[] | undefined): DictOption[] {
+  const options = buildDictOptions(dict);
+  return options.length > 0 ? options : EXCEPTION_ACTION_OPTIONS;
+}
+
+/** 严重度覆盖选项:字典优先(剔除 critical),字典为空回退静态常量 */
+export function buildSeverityOverrideOptions(dict: DictItem[] | undefined): DictOption[] {
+  const options = buildDictOptions(dict).filter(
+    (option) => !SEVERITY_OVERRIDE_EXCLUDED_VALUES.includes(option.value)
+  );
+  if (options.length === 0) return SEVERITY_OVERRIDE_OPTIONS;
+  return [{ label: "(不覆盖)", value: "" }, ...options];
+}
 
 const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
   open,
@@ -77,6 +112,23 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
 }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm<ExceptionRuleFormValues>();
+
+  // 字典驱动:三组下拉选项均取字典(字典为空/未命中时回退静态常量)
+  const { data: conflictTypeDict = [] } = useDict("asset_reconciliation_conflict_type");
+  const { data: exceptionActionDict = [] } = useDict("asset_reconciliation_exception_action");
+  const { data: severityDict = [] } = useDict("asset_reconciliation_severity");
+  const conflictTypeOptions = useMemo(
+    () => buildConflictTypeOptions(conflictTypeDict),
+    [conflictTypeDict]
+  );
+  const exceptionActionOptions = useMemo(
+    () => buildExceptionActionOptions(exceptionActionDict),
+    [exceptionActionDict]
+  );
+  const severityOverrideOptions = useMemo(
+    () => buildSeverityOverrideOptions(severityDict),
+    [severityDict]
+  );
   const [submitting, setSubmitting] = useState(false);
   const [scopeType, setScopeType] = useState<"global" | "dept" | "user">(
     initialValues?.scopeType ?? "global"
@@ -158,12 +210,12 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           <AppInput placeholder="192.168.x.x/16" />
         </Form.Item>
 
-        <Form.Item label="冲突类型" name="conflictTypes" extra="留空 = 匹配全部 B-F 类型">
+        <Form.Item label="冲突类型" name="conflictTypes" extra="留空 = 匹配全部冲突类型">
           <AppSelect
             mode="multiple"
             showSearch={false}
             placeholder="选择类型,留空匹配全部"
-            options={CONFLICT_TYPE_OPTIONS}
+            options={conflictTypeOptions}
           />
         </Form.Item>
 
@@ -177,7 +229,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
             mode="multiple"
             showSearch={false}
             placeholder="选择动作"
-            options={EXCEPTION_ACTION_OPTIONS}
+            options={exceptionActionOptions}
           />
         </Form.Item>
 
@@ -186,7 +238,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           name="severityOverride"
           extra="覆盖原始 severity(取最低);不含 critical(Pitfall 8)"
         >
-          <AppSelect showSearch={false} options={SEVERITY_OVERRIDE_OPTIONS} />
+          <AppSelect showSearch={false} options={severityOverrideOptions} />
         </Form.Item>
 
         <Form.Item label="范围类型" name="scopeType">

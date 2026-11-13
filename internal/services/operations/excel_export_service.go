@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
@@ -274,6 +275,13 @@ func (s *excelExportServiceImpl) formatExportCellValue(
 				return str
 			}
 		}
+		// Options 未命中：绑定字典的列按 dictValue 反查 dictLabel，
+		// 使字典新增枚举项（如「虚拟工位」）导出为可读标签而非原始数字。
+		if col.DictType != "" {
+			if label, ok := s.lookupExportDictLabel(col.DictType, value); ok {
+				return label
+			}
+		}
 	}
 
 	if col.Field == "createdAt" || col.Field == "updatedAt" {
@@ -283,6 +291,28 @@ func (s *excelExportServiceImpl) formatExportCellValue(
 	}
 
 	return fmt.Sprintf("%v", value)
+}
+
+// lookupExportDictLabel 按字典类型与字典值反查字典标签（dictLabel）。
+//
+// 用于导出侧 Options 静态快照未命中时的兜底：字典新增枚举项导出为可读标签，
+// 与导入侧 lookupDictValue 形成同一字典的双向闭环。
+func (s *excelExportServiceImpl) lookupExportDictLabel(dictType string, value any) (string, bool) {
+	if s.db == nil || dictType == "" {
+		return "", false
+	}
+	var items []models.DictData
+	if err := s.db.WithContext(context.Background()).
+		Model(&models.DictData{}).
+		Where("dict_type = ? AND status = ?", dictType, models.DictStatusNormal).
+		Where("dict_value = ?", fmt.Sprintf("%v", value)).
+		Find(&items).Error; err != nil {
+		return "", false
+	}
+	if len(items) > 0 && items[0].DictLabel != "" {
+		return items[0].DictLabel, true
+	}
+	return "", false
 }
 
 // unwrapInterface 递归解包 GORM 在 Find(&mapSlice) 下产生的指针包装.
