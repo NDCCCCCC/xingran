@@ -15,7 +15,7 @@
  *   不在本扫描口径内（Shared Pattern 5：前置参数注入不进工厂，勿误伤）。
  *
  * 断言双档（镜像 cache_invariants_92_test.go 的 allowedResidues 等值锁）：
- *   - 硬档：opsApi/rpaApi/vdiApi（对象形态，94-02 已接工厂）——实际计数必须逐文件
+ *   - 硬档：opsApi/vdiApi（对象形态，94-02 已接工厂）——实际计数必须逐文件
  *     == HARD_ALLOWED 登记基线（超出 = 新模板回归；减少 = 白名单腐烂，双向 fail）。
  *     基线非 0 的原因：迁移矩阵在这两文件内显式登记的 KEEP 结构（locationAliasApi /
  *     workstationDeviceApi / vmApi accounts 子资源族）含 CRUD 后缀形状模板。
@@ -46,7 +46,7 @@ const LIB_DIR = dirname(fileURLToPath(import.meta.url));
 const EXEMPT_FILES = new Set(["api.ts", "apiFactory.ts", "download.ts"]);
 
 /** 硬档：对象形态三文件，94-02 已接入 createResourceApi，新增模板残留即回归 */
-const HARD_TIER_FILES = ["opsApi.ts", "rpaApi.ts", "vdiApi.ts"] as const;
+const HARD_TIER_FILES = ["opsApi.ts", "vdiApi.ts"] as const;
 
 const HARD_TIER = new Set<string>(HARD_TIER_FILES);
 
@@ -58,19 +58,18 @@ const HARD_TIER = new Set<string>(HARD_TIER_FILES);
  *     参数 + create 注入 scope:"workstation"，硬套工厂即行为变更）+
  *     workstationDeviceApi.update/delete（全异构对象 setPrimaryAndSave/syncAD 族中
  *     的两处标准形状方法）
- *   - rpaApi.ts 0：对象族已全量接入工厂（94-02）；Phase 100 spread→pick 后仍 0
  *   - vdiApi.ts 0：Phase 100 D-100-11 accounts 族删除后清零
  *     （原基线 1 = vmApi.deleteAccount，URL 恰为 /delete 后缀形状）；手写 CRUD 模板残留 0
  */
 const HARD_ALLOWED: Record<string, number> = {
   "opsApi.ts": 4,
-  "rpaApi.ts": 0,
   "vdiApi.ts": 0,
 };
 
-/** 18 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试
+/** 17 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试
  *  v1.54 Phase 144：新增 adDriftAlertApi.ts（5 个 POST 端点，非 CRUD 形状，warning 档登记 0）→ 16→17
- *  quick 261110-tbq：新增 dbBackupApi.ts（全库备份业务端点 + download 薄壳，非 CRUD 形状，warning 档登记 0）→ 17→18 */
+ *  quick 261110-tbq：新增 dbBackupApi.ts（全库备份业务端点 + download 薄壳，非 CRUD 形状，warning 档登记 0）→ 17→18
+ *  feat/frontend-url-cross-check：删除 rpaApi.ts（生产零导入死代码，仅 3 个测试引用）→ 18→17 */
 const EXPECTED_FILES = [
   "adDomainApi.ts",
   "adDriftAlertApi.ts",
@@ -88,7 +87,6 @@ const EXPECTED_FILES = [
   "notificationConfigApi.ts",
   "opsApi.ts",
   "profileApi.ts",
-  "rpaApi.ts",
   "vdiApi.ts",
   "workorderApi.ts",
 ];
@@ -252,11 +250,11 @@ describe("apiFactory invariants — src/lib/*Api.ts 手写 CRUD 模板扫描（D
     files.map((f) => [f, scanFile(f, readFileSync(join(LIB_DIR, f), "utf-8"))])
   );
 
-  it("扫描范围恰为 17 个业务 *Api.ts（3 对象形态 + 12 扁平/KEEP + 2 子目录），不越 src/lib 半步", () => {
+  it("扫描范围恰为 17 个业务 *Api.ts（2 对象形态 + 13 扁平/KEEP + 2 子目录），不越 src/lib 半步", () => {
     expect(files).toEqual(EXPECTED_FILES);
   });
 
-  it("硬档 opsApi/rpaApi/vdiApi 模板残留 == 登记基线（新增模板 = 回归，双向 fail）", () => {
+  it("硬档 opsApi/vdiApi 模板残留 == 登记基线（新增模板 = 回归，双向 fail）", () => {
     const drifted = HARD_TIER_FILES.filter(
       (f) => (hitsByFile.get(f) ?? []).length !== HARD_ALLOWED[f]
     );
@@ -297,25 +295,17 @@ describe("apiFactory invariants — src/lib/*Api.ts 手写 CRUD 模板扫描（D
  * Phase 100 D-100-2/D-100-5: 对象 keys 基线锁（方法集防回增的第二道守卫）。
  *
  * AST 模板扫描管「手写 CRUD 模板」，keys 等值断言管「方法集漂移」——
- * 每个对象实际 keys == 后端已注册路由的实测存活集（D-100-9 端态;
- * D-100-12 register/heartbeat 前端方法已删,后端公开路由保留）。
+ * 每个对象实际 keys == 后端已注册路由的实测存活集（D-100-9 端态）。
  * 新增方法（含幽灵 batch/statistics/searchOptions 回流）或私删方法双向即红。
  *
- * 基线数值与 rpaApi.test.ts / vdiApi.test.ts 末尾 keys 断言互指（必须一致）;
+ * feat/frontend-url-cross-check：rpaApi.ts 生产零导入（全仓仅 3 个测试引用），
+ * 连同 rpaApi.test.ts 一并删除，故此处 RPA 四组 keys 基线移除；VDI 两组保留。
+ * 基线数值与 vdiApi.test.ts 末尾 keys 断言互指（必须一致）;
  * 对账依据见 .planning/phases/100-frontend-contract-fixes/RECONCILIATION.md。
  */
-import { aiApi, executionApi, taskApi, workerApi } from "./rpaApi";
 import { vdiServerApi, vmApi } from "./vdiApi";
 
 const POST_CLEANUP_BASELINE: Record<string, string[]> = {
-  // taskApi: rpa_router.go:48-53（list/get/create/update/delete 工厂 + execute 手写）
-  taskApi: ["create", "delete", "execute", "get", "list", "update"],
-  // workerApi: rpa_router.go:64/:66（statistics 为 D-100-9 无参收窄版）
-  workerApi: ["list", "statistics"],
-  // executionApi: rpa_router.go:84-89（list/get/statistics 工厂 + cancel/logs 手写）
-  executionApi: ["cancel", "get", "list", "logs", "statistics"],
-  // aiApi: rpa_router.go:101-108
-  aiApi: ["analyzeFailure", "decide", "generateScript", "optimizeScript"],
   // vmApi: vm_router.go:18-43 + D-100-10 补注册的 /operate（accounts 族 D-100-11 已删）
   vmApi: [
     "batchOperate",
@@ -341,10 +331,6 @@ const POST_CLEANUP_BASELINE: Record<string, string[]> = {
 
 describe("apiFactory invariants — Phase 100 对象 keys 基线（D-100-2/D-100-5）", () => {
   const exported: Record<string, object> = {
-    taskApi,
-    workerApi,
-    executionApi,
-    aiApi,
     vmApi,
     vdiServerApi,
   };

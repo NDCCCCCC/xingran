@@ -1,12 +1,12 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.55",
+  "milestone": "v1.56",
   "phases": [],
   "next": {
-    "command": "/gsd-discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd-new-milestone",
+    "label": "v1.56 候选（进行中 / 未正式立项）",
+    "reason": "CHANGELOG [Unreleased] 已登记 v1.56 候选（备份恢复 / 设置页收敛）；v156-MILESTONE-DRAFT.md 为草案、尚未跑 /gsd-new-milestone。当前状态口径见 STATE.md frontmatter 与 notes/SHIPPED-DEFINITION.md"
   },
-  "updated_at": "2026-11-09T01:28:23.674Z"
+  "updated_at": "2026-11-12T10:22:14.000Z"
 }

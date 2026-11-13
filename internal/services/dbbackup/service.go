@@ -300,9 +300,11 @@ func (s *service) Statistics(ctx context.Context) (map[string]interface{}, error
 	}, nil
 }
 
-// GetPlan 读取备份计划（每调用重读 sys_config，改配置无需重启）
+// GetPlan 读取备份计划（每调用重读 sys_config，改配置无需重启）。
+// 用降级读取：凭据解密失败（如 SM4_KEY 被更换）时相应字段置空返回计划主体，
+// 保证备份配置页不因解密失败整页不可用；密文绝不回吐，空串=「未配置」。
 func (s *service) GetPlan(ctx context.Context) (*Plan, error) {
-	return loadPlan(ctx, s.db)
+	return loadPlanTolerant(ctx, s.db)
 }
 
 // SavePlan 保存备份计划
@@ -404,6 +406,7 @@ func (s *service) TriggerRestore(ctx context.Context, uploadPath, operator strin
 // failed / panic recover 全部路径）负责 os.Remove(uploadPath)。路径由闭包参数
 // 捕获，保证 recover 路径也能删到，不依赖任务表字段。
 func (s *service) runTask(baseCtx context.Context, taskID, taskType, source, operator, uploadPath string) {
+	isRestore := taskType == models.DBBackupTaskTypeRestore
 	// 上传临时文件清理只执行一次（正常收尾或 panic 兜底都可能触发）
 	var cleanupOnce sync.Once
 	cleanupUpload := func() {
@@ -417,13 +420,30 @@ func (s *service) runTask(baseCtx context.Context, taskID, taskType, source, ope
 			}
 		})
 	}
-	// defer 只做 panic 兜底：cleanup（Once 防重复）+ recover + failTask。
-	// 正常路径的清理由下方终态写入后显式同步完成，不依赖 defer 调度时机。
+	// 恢复一致性收口只执行一次：正常路径显式同步调用，panic 路径由 defer 兜底，
+	// 两条路径互斥但都经过本闭包，用 Once 保证「清缓存 + 记录会话失效」不重不漏。
+	// 详见 restore_consistency.go（本项目无全局会话失效入口，采用「需重新登录」最小实现）。
+	var consistencyOnce sync.Once
+	finalizeConsistency := func() {
+		if !isRestore {
+			return
+		}
+		consistencyOnce.Do(func() {
+			s.finalizeRestoreConsistency(baseCtx, taskID)
+		})
+	}
+	// defer 只做 panic 兜底：cleanup + 恢复一致性收口 + recover + failTask。
+	// 正常路径的清理由下方终态写入前显式同步完成，不依赖 defer 调度时机。
 	defer func() {
 		cleanupUpload()
 		if r := recover(); r != nil {
 			applogger.Errorf("[全库备份] 任务 panic (taskID=%s): %v", taskID, r)
-			s.failTask(taskID, fmt.Sprintf("任务执行异常: %v", r))
+			finalizeConsistency()
+			msg := fmt.Sprintf("任务执行异常: %v", r)
+			if isRestore {
+				msg = withReloginNotice(msg)
+			}
+			s.failTask(taskID, msg)
 		}
 	}()
 
@@ -445,10 +465,10 @@ func (s *service) runTask(baseCtx context.Context, taskID, taskType, source, ope
 	}
 
 	var runErr error
-	if taskType == models.DBBackupTaskTypeExport {
-		runErr = s.runExport(baseCtx, taskID, source, operator)
-	} else {
+	if isRestore {
 		runErr = s.runRestore(baseCtx, taskID, uploadPath, operator)
+	} else {
+		runErr = s.runExport(baseCtx, taskID, source, operator)
 	}
 	// 先清理上传临时文件、再写任务终态：
 	// waitTask 一旦从 DB 读到 success/failed 就会返回并立刻 os.Stat 校验文件已删，
@@ -456,10 +476,19 @@ func (s *service) runTask(baseCtx context.Context, taskID, taskType, source, ope
 	// 此处保证「查到终态」时文件必已删除；panic recover 的 defer 仍兜底。
 	cleanupUpload()
 
+	// 恢复任务收尾一致性（success / failed 两条路径都必须经过，panic 由 defer 兜底）：
+	// 整库恢复替换了 sys_user/sys_menu/sys_role 等鉴权表，必须清进程内菜单/权限
+	// 缓存，并在任务结果里写明确「需重新登录」。详见 restore_consistency.go。
+	finalizeConsistency()
+
 	if runErr != nil {
-		s.failTask(taskID, runErr.Error())
+		msg := runErr.Error()
+		if isRestore {
+			msg = withReloginNotice(msg)
+		}
+		s.failTask(taskID, msg)
 	} else {
-		s.succeedTask(taskID)
+		s.succeedTask(taskID, isRestore)
 	}
 }
 
@@ -487,15 +516,23 @@ func (s *service) failTask(taskID, message string) {
 	applogger.Warnf("[全库备份] 任务失败 (taskID=%s): %s", taskID, message)
 }
 
-// succeedTask 收敛终态 success
-func (s *service) succeedTask(taskID string) {
+// succeedTask 收敛终态 success。
+// isRestore=true 时把 stage 写成「完成（需重新登录）」：整库恢复替换了鉴权表，
+// 但本项目无全局会话失效入口（TokenBlacklistService 只能按已知 token 逐个拉黑），
+// 故在任务结果里明确要求前端/用户重新登录，以丢弃旧 token 并重建会话。
+// 前端会据此常驻提示，禁止留空。
+func (s *service) succeedTask(taskID string, isRestore bool) {
+	stage := stageRestoreDone
+	if isRestore {
+		stage = stageRestoreDoneWithRelogin
+	}
 	now := time.Now()
 	if err := s.db.Model(&models.DBBackupTask{}).
 		Where("id = ?", taskID).
 		Updates(map[string]interface{}{
 			"status":        models.DBBackupTaskSuccess,
 			"progress":      progressDone,
-			"stage":         "完成",
+			"stage":         stage,
 			"error_message": "",
 			"completed_at":  &now,
 		}).Error; err != nil {
@@ -638,6 +675,14 @@ func (s *service) runExport(baseCtx context.Context, taskID, source, operator st
 // runRestore 恢复全流程：
 // ① 校验容器 → ② 恢复前自动全量备份（失败即中止）→ ③ 解压校验 → ④ 灌库。
 func (s *service) runRestore(baseCtx context.Context, taskID, uploadPath, operator string) error {
+	// 维护模式状态机（A8 契约 dbbackup.IsRestoring 的写入端）：
+	// 进入恢复即置 true，A8 的全局中间件据此拦截并发写入；用 defer 复位，
+	// 覆盖 success / failed / panic 展开的全部退出路径（panic 会继续向上传播到
+	// runTask 的 recover，defer 仍先执行复位，不会出现「卡在维护模式」）。
+	// 这是 restoring 唯一的生产写入点，导出任务与其它模块不得改动。
+	restoring.Store(true)
+	defer restoring.Store(false)
+
 	// ① 快速校验（不做昂贵动作前先拒绝非法上传）
 	s.updateProgress(taskID, progressVerify, stageVerify)
 	if _, err := verifyContainerOnly(uploadPath); err != nil {

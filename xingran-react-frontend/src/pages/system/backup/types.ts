@@ -86,4 +86,31 @@ export const TASK_STATUS_COLOR: Record<string, string> = {
 
 /** 二次确认正文（破坏性操作，必须显式告知覆盖语义与自动恢复前备份） */
 export const RESTORE_CONFIRM_TEXT =
-  "恢复将覆盖现有全部数据，操作前系统会自动生成一份恢复前备份。确认使用 {target} 进行恢复吗？";
+  "恢复将覆盖现有全部数据、期间不可写入、恢复后需重新登录，操作前系统会自动生成一份恢复前备份。确认使用 {target} 进行恢复吗？";
+
+/**
+ * SQLite 整库恢复的离线执行入口提示。
+ *
+ * 依据 dbBackupApi.capabilities() 返回的 dbType === "sqlite" 常驻显示（列表页 + RestoreModal），
+ * 不能只在失败后把命令塞进 errorMessage。SQLite 在线服务的连接池持有库文件句柄，
+ * 整库替换必须停服后由离线 CLI 完成，在线端点只会把产物落到 `.pending_restore`
+ * 并降级报错（见后端 restorer.go）。命令里的 `<sqlite-db-path>` / `<pending-file>`
+ * 为占位符，真实路径以后端失败信息为准。
+ */
+export const SQLITE_OFFLINE_NOTICE =
+  "SQLite 整库恢复需停服离线执行：在线端点只生成 .pending_restore 产物，不会替换运行中的库。请停服后执行离线恢复命令，再启动服务并重新登录。";
+
+export const SQLITE_OFFLINE_COMMAND =
+  "go run ./scripts/ops/db-backup-restore.go -db <sqlite-db-path> -pending <pending-file>";
+
+/** 备份包含全库敏感数据，下载前二次提示 */
+export const DOWNLOAD_SENSITIVE_CONFIRM_TEXT =
+  "备份包含全库敏感数据（用户口令散列、个人信息、业务数据等），下载即等同于导出整库明文。请确认已获得授权并妥善保管，确认下载 {target} 吗？";
+
+/**
+ * 「需重新登录」常驻提示（后端无全局会话失效入口的最小实现）。
+ * 后端整库恢复会替换 sys_user/sys_menu/sys_role 等鉴权表，进程内菜单/权限缓存
+ * 会被清理，但已签发的 JWT 无法由服务端统一作废，故要求所有已登录会话重新登录。
+ */
+export const RESTORE_RELOGIN_NOTICE =
+  "整库恢复会替换用户/角色/菜单等鉴权数据，恢复后所有已登录会话需重新登录以重建会话与权限缓存。";

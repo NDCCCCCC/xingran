@@ -205,6 +205,12 @@ func strictLiteralRouteGroup(parent *gin.RouterGroup, perm string, core *core.Co
 func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	r.Use(middleware.RequestID())
 
+	// 整库恢复期写入阻断（A8 / #87）：必须挂在最靠近入口的全局位置，
+	// 早于 JWT / 权限 / 请求解密 / handler。dbbackup.IsRestoring() 为 true 时
+	// 拦截所有写请求并直接返回 503，避免恢复动作覆盖并发写入；标志复位后
+	// 逐请求动态读取、自动放行。详见 internal/api/restore_write_guard.go。
+	r.Use(RestoreWriteGuard())
+
 	setupEncryptionMiddlewares(r, core)
 	noticeHub := setupNoticeHub(r, core)
 
@@ -795,6 +801,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 周期性工单模板管理（task-3 G1 整改：仅模板主体 CRUD 拆 strict 写组；
 		// enable/disable/generate/logs 4 条 86 新路由按任务书豁免，保持继承组口径）。
+		// RBAC 例外 RBAC-EXC-01：理由/风险/清偿窗口见 scripts/RBAC-EXCEPTIONS.md，
+		// 不得静默保留例外；此处 ANY-of 与 #87 严格写组口径的差异以该文档为准。
 		periodic := workorder.Group("/periodic")
 		periodic.Use(middleware.RequirePermissions([]string{
 			"ops:workorder:periodic:list",

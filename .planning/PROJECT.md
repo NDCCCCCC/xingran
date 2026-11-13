@@ -351,11 +351,13 @@ previous_update: 2026-11-09 v1.55 milestone INITIATED（LOCKED 残余根治：6 
 
 **Todo（历史归档）:** .planning/todos/done/v1.17-reconciliation-decisions.md（v1.17 已 SHIPPED 2026-07-03，T1-T30 为 2026-06-27 原始计划，勿再推进）
 
-# RuoYi-Next 运维管理系统
+# XingRan-Next
+
+> 产品定位、角色、成功指标与边界以 [docs/PRODUCT.md](../docs/PRODUCT.md) 为唯一权威说明；本文件其余正文为历史规划记录，保留原文不改。
 
 ## What This Is
 
-RuoYi-Nect is a Go backend + React frontend enterprise IT operations
+XingRan-Next is a Go backend + React frontend enterprise IT operations
 management system. It has evolved from a workstation-import
 association feature (v1.0) into a multi-domain platform covering:
 

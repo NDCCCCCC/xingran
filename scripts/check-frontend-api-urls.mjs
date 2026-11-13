@@ -10,17 +10,28 @@
  *   1. 只提取「确定是后端 API 调用」上下文中的 URL 字面量：
  *      - ./api 导出的传输函数 post/get/put/del/postFormData（含 api.post 等）第一参；
  *      - downloadFile / downloadFilePost 第一参；
- *      - apiFactory 的 createResourceApi({ basePath }) —— 工厂派生的 8 个端点
- *        （base、/list、/:p、/:p/update、/:p/delete、/batch、/statistics、
- *        /dropdown-options）也纳入校验。
+ *      - apiFactory 的 createResourceApi({ basePath }) —— 工厂派生端点也纳入校验，
+ *        但改为「按工厂变量实际被消费的方法精确派生」（见第 5 点）。
  *      页面里的 navigate('/login')、<Link to=...>、路由表等前端路由不在上述
  *      函数上下文中，天然不会被提取。
  *   2. 注释内容先剥离（保持行结构），注释里的示例 URL 不校验。
- *   3. 模板字符串 `${...}` 槽位一律归一化为 :p；gin 路由 :xxx 也归一化为 :p；
+ *   3. 模板字符串 ${...} 槽位一律归一化为 :p；gin 路由 :xxx 也归一化为 :p；
  *      纯数字段归一化为 :p。匹配用逐段通配（:p 匹配任意单段）。
  *   4. 前缀：axios baseURL 统一为 "/api/v1"（src/lib/api.ts），registry 路径
  *      不带该前缀；前端个别调用误带 /api/v1（双重前缀，本身就是隐患）剥离后
  *      参与比对，缺失即 FAIL。
+ *   5. 工厂派生精确化（WARN 清零整改）：
+ *      旧版对每个 createResourceApi 调用机械派生 8 条 URL，即使前端只 pick 了
+ *      其中 1~3 个方法（其余是「工厂生成但从未被调用」的幽灵端点），于是产生
+ *      16 条静默放行的 WARN。现按同文件内该工厂变量的实际消费形态派生：
+ *        - const x = createResourceApi(...) + x.list / x.get / ... → 仅派生
+ *          被引用方法对应的 URL；
+ *        - export const x = createResourceApi(...)（导出对象，外部页面消费，
+ *          文件内不可静态判定）→ 8 方法全派生；
+ *        - { ...x } spread 展开 → 8 方法全派生；
+ *        - 一个方法都没消费的局部工厂变量 → 不派生任何 URL，仅打印提示。
+ *      这样「后端无实现 + 前端未调用」的死派生函数不再进入校验集合，从源头
+ *      消除 WARN，而不是靠豁免掩盖。
  *
  * 已知漏检面（有意不报，控制误报）：
  *   - 非上述函数名的自定义封装（如 dataFetcher 内部拼 URL 后再调 api.*）；
@@ -28,11 +39,20 @@
  *   - 测试文件（*.test.* / __tests__）中的 mock URL；
  *   - createResourceApi 之外的工厂/生成器若引入新派生端点模式，需在本脚本同步。
  *
+ * 严格模式（整改后启用）：
+ *   - 任何「显式调用字面量不匹配」或「工厂派生不匹配」都使 exit=1，不再静默
+ *     放行 WARN。存量已清零，新出现的派生不匹配必须改 URL / 删死方法 / 补后端
+ *     路由 / 登记待实现台账，四选一。
+ *   - 「确有需求但后端暂未实现」的派生端点登记在下方 PENDING_DERIVED 台账，
+ *     强制 reason + 清偿窗口（window），命中登记的派生不产生 WARN、不计入豁免
+ *     命中、不写进 frontend-url-exemptions.json；到期须复核清除。
+ *
  * 豁免：scripts/frontend-url-exemptions.json，条目 { url, file?, reason }，
  * reason 必填；url 为归一化前的原始 URL（可含模板槽原样写法）。
+ * 治理规则见 scripts/EXEMPTIONS-POLICY.md。
  *
  * 用法：node scripts/check-frontend-api-urls.mjs（由 lint:ci 链尾调用）
- * 退出码：0 全过；1 存在不匹配/配置错误。
+ * 退出码：0 全过；1 存在不匹配/配置错误/工厂派生 WARN。
  */
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -43,6 +63,17 @@ const repoRoot = path.resolve(scriptDir, "..");
 const frontendRoot = path.join(repoRoot, "xingran-react-frontend");
 const registryPath = path.join(repoRoot, "scripts", "route-registry.json");
 const exemptionsPath = path.join(repoRoot, "scripts", "frontend-url-exemptions.json");
+
+// ---------- 待实现派生端点台账（不产生 WARN、不计入豁免命中） ----------
+// 仅用于「确有需求但后端暂未实现」的工厂派生端点；强制 reason + 清偿窗口。
+// file 为相对 repoRoot 的 POSIX 路径；method ∈ DERIVED_METHODS；
+// window 为清偿窗口（如 "Phase N 之前" / "2026-Q4"），到期须复核清除。
+// 整改当下为 0 条：存量 16 条 WARN 全部是「前端未调用的死派生」，已由精确派生
+// 从校验集合中移除，无需登记任何待实现项。
+const PENDING_DERIVED = [
+  // { file: "xingran-react-frontend/src/lib/xxxApi.ts", basePath: "/xxx",
+  //   method: "statistics", reason: "...", window: "...", }
+];
 
 // ---------- 后端 registry ----------
 const registry = JSON.parse(readFileSync(registryPath, "utf8"));
@@ -117,6 +148,26 @@ function fail(msg) {
   process.exit(1);
 }
 
+// ---------- 待实现台账 schema 校验（reason + 清偿窗口必填） ----------
+const DERIVED_METHODS = [
+  "create",
+  "list",
+  "get",
+  "update",
+  "delete",
+  "batch",
+  "statistics",
+  "searchOptions",
+];
+for (const [i, p] of PENDING_DERIVED.entries()) {
+  if (!p.file || !p.basePath || !DERIVED_METHODS.includes(p.method))
+    fail(`待实现台账 #${i} 缺少合法 file / basePath / method`);
+  if (!p.reason || typeof p.reason !== "string" || !p.reason.trim())
+    fail(`待实现台账 #${i}（${p.file} ${p.method}）缺少 reason`);
+  if (!p.window || typeof p.window !== "string" || !p.window.trim())
+    fail(`待实现台账 #${i}（${p.file} ${p.method}）缺少清偿窗口 window`);
+}
+
 // ---------- 前端扫描 ----------
 const SCAN_DIRS = ["src/lib", "src/api", "src/pages", "src/components", "src/hooks"];
 const EXTS = [".ts", ".tsx"];
@@ -188,8 +239,32 @@ function normalizeFrontendUrl(raw) {
 /** 传输函数名（第一参为 URL） */
 const CALL_RE =
   /(?:^|[^\w.$])(post|get|put|del|postFormData|downloadFile|downloadFilePost|api\.(?:post|get|put|delete))\s*(?:<[^>()]*>)?\s*\(\s*(["'`])((?:\\.|(?!\2).)*?)\2/gs;
+/**
+ * 工厂调用：捕获 (export 前缀, 变量名, config body)。
+ * 变量名用于在同一文件内查找实际被消费的方法，实现精确派生。
+ */
 const FACTORY_RE =
-  /createResourceApi\s*(?:<[^>]*>)?\s*\(\s*\{([^}]*)\}/gs;
+  /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*createResourceApi\s*(?:<[^>()]*>)?\s*\(\s*\{([\s\S]*?)\}\s*\)\s*;/g;
+
+/** 工厂方法 → 派生 URL（b 为已去尾斜杠的 basePath，d 为 dropdownPath） */
+function derivedUrl(method, b, d) {
+  switch (method) {
+    case "create": return b;
+    case "list": return `${b}/list`;
+    case "get": return `${b}/:p`;
+    case "update": return `${b}/:p/update`;
+    case "delete": return `${b}/:p/delete`;
+    case "batch": return `${b}/batch`;
+    case "statistics": return `${b}/statistics`;
+    case "searchOptions": return `${b}${d}`;
+    default: return null;
+  }
+}
+
+/** 转义正则元字符（变量名安全嵌入动态正则） */
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function extractFromFile(absPath) {
   const rel = path.relative(repoRoot, absPath).replace(/\\/g, "/");
@@ -198,7 +273,6 @@ function extractFromFile(absPath) {
 
   for (const m of text.matchAll(CALL_RE)) {
     const fn = m[1];
-    const quote = m[2];
     const rawUrl = m[3];
     if (!rawUrl.startsWith("/")) continue; // 相对路径/空串不校验
     // 模板字符串槽位 → :p；普通字符串中的 ${} 不存在
@@ -213,26 +287,47 @@ function extractFromFile(absPath) {
     });
   }
 
-  // apiFactory 派生端点
+  // apiFactory 派生端点（精确派生：只包含该工厂变量实际被消费的方法）
   for (const m of text.matchAll(FACTORY_RE)) {
-    const body = m[1];
+    const isExported = Boolean(m[1]);
+    const varName = m[2];
+    const body = m[3];
     const base = body.match(/basePath\s*:\s*["'`]([^"'`]+)["'`]/);
     const dropdown = body.match(/dropdownPath\s*:\s*["'`]([^"'`]+)["'`]/);
     if (!base || !base[1].startsWith("/")) continue;
     const b = base[1].replace(/\/$/, "");
+    const d = dropdown && dropdown[1].startsWith("/") ? dropdown[1] : "/dropdown-options";
     const line = lineOf(text, m.index);
-    const derived = [
-      b,
-      `${b}/list`,
-      `${b}/:p`,
-      `${b}/:p/update`,
-      `${b}/:p/delete`,
-      `${b}/batch`,
-      `${b}/statistics`,
-      `${b}${dropdown && dropdown[1].startsWith("/") ? dropdown[1] : "/dropdown-options"}`,
-    ];
-    for (const u of derived)
-      found.push({ file: rel, line, url: u, rawUrl: u, context: "createResourceApi", derived: true });
+
+    // 该变量是否被 spread 展开（{ ...x }）——展开即 8 方法全暴露，静态不可再收窄
+    const spread = new RegExp(`\\.\\.\\.${escapeRegExp(varName)}\\b`).test(text);
+    // 该变量被显式引用的方法集合（x.list / x.get / ...）
+    const used = new Set();
+    const refRe = new RegExp(`\\b${escapeRegExp(varName)}\\.([A-Za-z]+)\\b`, "g");
+    for (const r of text.matchAll(refRe)) {
+      if (DERIVED_METHODS.includes(r[1])) used.add(r[1]);
+    }
+
+    // 导出对象（外部消费）或 spread → 8 方法全派生；否则仅派生实际引用的方法
+    const methods = isExported || spread ? DERIVED_METHODS : DERIVED_METHODS.filter((x) => used.has(x));
+    if (methods.length === 0) {
+      console.log(`[frontend-api-urls] 提示：${rel}:${line} 工厂变量 ${varName} 未消费任何方法（疑似死变量，建议删除）`);
+    }
+
+    for (const method of methods) {
+      const u = derivedUrl(method, b, d);
+      if (u === null) continue;
+      found.push({
+        file: rel,
+        line,
+        url: u,
+        rawUrl: u,
+        context: "createResourceApi",
+        derived: true,
+        derivedMethod: method,
+        derivedBase: b,
+      });
+    }
   }
   return found;
 }
@@ -256,9 +351,18 @@ const uniq = all.filter((e) => {
   return true;
 });
 
+const isPending = (e) =>
+  PENDING_DERIVED.some(
+    (p) =>
+      p.file === e.file &&
+      p.basePath === e.derivedBase &&
+      p.method === e.derivedMethod,
+  );
+
 const usedExemptions = new Set();
 const failures = [];
 const warns = [];
+const pendingHits = [];
 const matchedCount = { total: 0 };
 for (const e of uniq) {
   const { normalized } = normalizeFrontendUrl(e.url);
@@ -276,8 +380,12 @@ for (const e of uniq) {
     usedExemptions.add(exIdx);
     continue;
   }
-  // 工厂派生端点前端未必实际调用（8 个方法由 createResourceApi 一并生成），
-  // 不匹配只降级 WARN，不阻断 CI；显式调用字面量不匹配才 FAIL。
+  // 已登记「待实现」的派生端点：不产生 WARN、不阻断，仅提示到期复核
+  if (e.derived && isPending(e)) {
+    pendingHits.push(e);
+    continue;
+  }
+  // 严格模式：工厂派生不匹配与显式调用字面量不匹配一律阻断（exit=1）
   if (e.derived) {
     warns.push({ ...e, normalized });
     continue;
@@ -288,19 +396,33 @@ for (const e of uniq) {
 // ---------- 输出 ----------
 console.log(`[frontend-api-urls] 扫描 ${files.length} 个文件，提取 ${uniq.length} 条前端 API URL；` +
   `后端 registry ${backendRoutes.length} 条路由；命中 ${matchedCount.total} 条，` +
-  `豁免命中 ${usedExemptions.size} 条，工厂派生告警 ${warns.length} 条，不匹配 ${failures.length} 条。`);
+  `豁免命中 ${usedExemptions.size} 条，工厂派生告警 ${warns.length} 条，` +
+  `待实现登记 ${pendingHits.length} 条，不匹配 ${failures.length} 条。`);
+
+for (const p of pendingHits) {
+  const entry = PENDING_DERIVED.find(
+    (x) => x.file === p.file && x.basePath === p.derivedBase && x.method === p.derivedMethod,
+  );
+  console.log(`  PENDING(待实现，清偿窗口 ${entry.window}) ${p.file}:${p.line}  ${p.url}  —— ${entry.reason}`);
+}
 
 for (const w of warns)
-  console.log(`  WARN(工厂派生，未必被调用) ${w.file}:${w.line}  ${w.url}  后端无匹配`);
+  console.log(`  WARN(工厂派生) ${w.file}:${w.line}  ${w.url}  后端无匹配（${w.derivedMethod}）`);
 
 for (const f of failures) {
   console.error(`  FAIL ${f.file}:${f.line}  ${f.url}  （归一化 ${f.normalized}，上下文 ${f.context}，后端路由无匹配）`);
 }
+
+if (warns.length) {
+  console.error(`\n[frontend-api-urls] 存在 ${warns.length} 条工厂派生 URL 在后端 route-registry.json 中无匹配。`);
+  console.error("  处置：删除该死派生方法 / 修正 URL / 补后端路由 / 在 PENDING_DERIVED 登记待实现（须写 reason + 清偿窗口）。");
+}
 if (failures.length) {
   console.error(`\n[frontend-api-urls] 存在 ${failures.length} 条前端 URL 在后端 route-registry.json 中无匹配。`);
   console.error("  处置：改 URL / 下线调用 / 在 scripts/frontend-url-exemptions.json 登记（必须写 reason）。");
-  process.exit(1);
 }
+// 严格模式：任何 WARN 或不匹配都使 exit=1
+if (warns.length || failures.length) process.exit(1);
 
 const unused = exemptions.filter((_, i) => !usedExemptions.has(i));
 for (const u of unused)
